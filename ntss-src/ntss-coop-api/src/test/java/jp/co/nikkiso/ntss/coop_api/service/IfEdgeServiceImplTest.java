@@ -25,8 +25,8 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -58,22 +58,22 @@ import jp.co.nikkiso.ntss.core.entity.MstCoopFacility;
 @Sql("classpath:resource.script/IfEdgeServiceImplTest/IfEdgeServiceImplTest.db5.before.sql")
 public class IfEdgeServiceImplTest {
   //
-  @MockBean
+  @MockitoBean
   private IfEdgeMntMessageHandler handler;
 
-  @SpyBean
+  @MockitoSpyBean
   IfEdgeMntSessionManager ifEdgeMntSessionManager;
 
-  @MockBean
+  @MockitoBean
   WebSocketSession session;
 
-  @MockBean
+  @MockitoBean
   WebSocketConfig config;
 
-  @SpyBean
+  @MockitoSpyBean
   IfEdgeConfigulation ifEdgeConfigulation;
 
-  @SpyBean
+  @MockitoSpyBean
   IfEdgeServiceImpl service;
 
   /** 連携エッジクライアント接続状態のDao */

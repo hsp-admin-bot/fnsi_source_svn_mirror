@@ -37,6 +37,9 @@ export default {};
 </script>
 
 <style scoped>
+@import "../../assets/styles/master-maintenance/modal.css";
+@import "../../assets/styles/modal.css";
+
 /*
  * TODO 以下のように、cssのパスをエイリアスで設定できるようにしたい。
  * @import "@/assets/styles/modal.css";
@@ -44,10 +47,8 @@ export default {};
  * webpackでエイリアスを設定すればできそう。
  * https://vue-loader-v14.vuejs.org/ja/configurations/asset-url.html
  */
-@import "../../assets/styles/master-maintenance/modal.css";
-@import "../../assets/styles/modal.css";
-
-.custom-modal-body >>> .k-textbox {
+.custom-modal-body :deep(.k-textbox) {
   font-size: unset;
+  box-sizing: border-box;
 }
 </style>

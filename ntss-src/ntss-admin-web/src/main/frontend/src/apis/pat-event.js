@@ -1,7 +1,7 @@
 /**
  * 患者イベント系API
  */
-import {ApiHelper} from "@/apis/AxiosHelper";
+import { ApiHelper } from "@/apis/AxiosHelper";
 import store from "@/stores";
 
 /**
@@ -9,6 +9,15 @@ import store from "@/stores";
  */
 const URL_BASE_PAT_EVENT = "/pat_event";
 
+function withSelectedPatId(params = undefined, selectedPatId) {
+  if (selectedPatId === null || selectedPatId === undefined || selectedPatId === "") {
+    return params;
+  }
+  return {
+    ...(params || {}),
+    selectedPatId
+  };
+}
 
 /**
  * sys_data_set項目の取得
@@ -28,17 +37,17 @@ export function sendRequestGetSysDataSetText() {
  * sys_data_Setの結果を取得
  * @param {Object} params
  */
-export function sendRequestGetSysDataSetResult(params){
+export function sendRequestGetSysDataSetResult(params) {
   return getWithLoader(`${URL_BASE_PAT_EVENT}/dataset-result`, params);
 }
 // add マスタ一覧 1･施設切替を可能とする 孔s start
-export function sendRequestGetSysDataSetResultByFacilityCd(params, facilityCd){
+export function sendRequestGetSysDataSetResultByFacilityCd(params, facilityCd) {
   return getWithLoader(`${URL_BASE_PAT_EVENT}/dataset-result/${facilityCd}`, params);
 }
 // add マスタ一覧 1･施設切替を可能とする 孔s end
 
 // add 10409 曜日パターン変更の患者イベント修正 関  start
-export function sendRequestGetLinkageMessageConfirm(params){
+export function sendRequestGetLinkageMessageConfirm(params) {
   return getWithLoader(`${URL_BASE_PAT_EVENT}/linkageMessageConfirm`, params);
 }
 // add 10409 曜日パターン変更の患者イベント修正 関  end
@@ -104,8 +113,8 @@ export function sendRequestGetMstCategoryList() {
  * 患者イベント：テンプレート,カテゴリ，サブカテゴリ項目の取得
  * @param {string} facilityCd 施設コード指定
  */
-export function sendRequestGetPatEventMaster(facilityCd = "") {
-  return getWithLoader(`${URL_BASE_PAT_EVENT}/collect-master`,{facilityCd:facilityCd});
+export function sendRequestGetPatEventMaster(facilityCd = "", selectedPatId) {
+  return getWithLoader(`${URL_BASE_PAT_EVENT}/collect-master`, withSelectedPatId({ facilityCd }, selectedPatId));
 }
 
 /**
@@ -131,8 +140,7 @@ export function sendRequestGetPatEventRecordList(params) {
  */
 export function sendRequestGetPatEventRecordListSharing(params) {
   return getWithLoader(
-    `${URL_BASE_PAT_EVENT}/sharingInfo/${params.patId}/${params.startDate}/${
-    params.endDate}`
+    `${URL_BASE_PAT_EVENT}/sharingInfo/${params.patId}/${params.startDate}/${params.endDate}`
   );
 }
 
@@ -140,9 +148,10 @@ export function sendRequestGetPatEventRecordListSharing(params) {
  * 患者イベント情報取得
  * @param {*} params イベントコード
  */
-export function sendRequestGetPatEventRecord(params) {
+export function sendRequestGetPatEventRecord(params, selectedPatId) {
   return getWithLoader(
-    `${URL_BASE_PAT_EVENT}/${params.patEventCd}`
+    `${URL_BASE_PAT_EVENT}/${params.patEventCd}`,
+    withSelectedPatId(undefined, selectedPatId)
   );
 }
 
@@ -160,11 +169,11 @@ export function sendRequestGetPatEventRecordSharing(params) {
  * 患者イベント情報取得
  * @param {*} params オーダ番号
  */
-export function sendRequestGetPatEventRecordByOrdNo(params) {
+export function sendRequestGetPatEventRecordByOrdNo(params, selectedPatId) {
   const URL_SUB_ORDNO = "ordno";
   return getWithLoader(
     `${URL_BASE_PAT_EVENT}/${URL_SUB_ORDNO}/${params.ordNo}`,
-    { facilityCd: params.facilityCd }
+    withSelectedPatId({ facilityCd: params.facilityCd }, selectedPatId)
   );
 }
 
@@ -174,7 +183,7 @@ export function sendRequestGetPatEventRecordByOrdNo(params) {
  */
 export function sendRequestPostPatEventRecord(params) {
   return postWithLoader(
-    `${URL_BASE_PAT_EVENT}/create/`, params
+    `${URL_BASE_PAT_EVENT}/create`, params
   );
 }
 
@@ -241,16 +250,17 @@ export function sendRequestGetOrdMainRecord(params) {
 /**
  * シェーマ用のスタンプ文字リスト取得
  */
-export function sendRequestGetTextStampCollection() {
+export function sendRequestGetTextStampCollection(selectedPatId) {
   return getWithLoader(
-    `${URL_BASE_PAT_EVENT}/text-stamp/collection`
+    `${URL_BASE_PAT_EVENT}/text-stamp/collection`,
+    withSelectedPatId(undefined, selectedPatId)
   );
 }
 
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {Record<string, unknown>} [params] パラメータ
  */
 function getWithLoader(url, params = undefined) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -262,8 +272,8 @@ function getWithLoader(url, params = undefined) {
 
 /**
  * 共通ローダを実行するPUTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function putWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -275,8 +285,8 @@ function putWithLoader(url, params) {
 
 /**
  * 共通ローダを実行するPOSTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function postWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -290,9 +300,10 @@ function postWithLoader(url, params) {
  * 患者イベント情報取得(観察記録)
  * @param {*} params イベントコード
  */
- export function sendRequestGetPatEventObserveRecord(params) {
+export function sendRequestGetPatEventObserveRecord(params, selectedPatId) {
   return getWithLoader(
-    `${URL_BASE_PAT_EVENT}/getObserveRecordByCd/${params.patEventCd}`
+    `${URL_BASE_PAT_EVENT}/getObserveRecordByCd/${params.patEventCd}`,
+    withSelectedPatId(undefined, selectedPatId)
   );
 }
 
@@ -300,9 +311,10 @@ function postWithLoader(url, params) {
  * 患者イベント情報取得(紹介状)
  * @param {*} patEventCd イベントコード
  */
- export function sendRequestGetPatIntroLetter(patEventCd) {
+export function sendRequestGetPatIntroLetter(patEventCd, selectedPatId) {
   return getWithLoader(
-    `${URL_BASE_PAT_EVENT}/getPatIntroLetterByCd/${patEventCd}`
+    `${URL_BASE_PAT_EVENT}/getPatIntroLetterByCd/${patEventCd}`,
+    withSelectedPatId(undefined, selectedPatId)
   );
 }
 
@@ -329,14 +341,12 @@ export function sendRequestGetPatEventObserveRecordsByCondition(params) {
   if (params.offset != null) {
     getParams.offset = params.offset;
   }
-  // add #12462 患者情報共有 20260330 start
   if (params.patShareMode != null) {
     getParams.patShareMode = params.patShareMode;
   }
   if (params.otherFacilityCd != null) {
     getParams.otherFacilityCd = params.otherFacilityCd;
   }
-  // add #12462 患者情報共有 20260330 end
   return getWithLoader(
     `${URL_BASE_PAT_EVENT}/getObserveRecords/${params.patId}/${params.startDate}/${params.endDate}`,
     getParams

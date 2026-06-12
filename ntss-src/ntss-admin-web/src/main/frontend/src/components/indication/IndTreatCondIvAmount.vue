@@ -123,8 +123,8 @@
       /> -->
       <custom-input-number-pro
         :placeholder = "LiquidAmountSetPlaceholder"
-        :initVal="getLiquidAmountString.initValue"
-        :value="getLiquidAmountString.editValue"
+        :initVal="displayInputValue.initValue"
+        :value="displayInputValue.editValue"
         :step="0.1"
         :min="0"
         :max="999"
@@ -175,16 +175,16 @@
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 // mod FNSI-【1006】最新の改修対象一覧の412対応 韓 start
-// import { mapGetters } from "vuex";
-import { mapGetters, mapMutations } from "vuex";
+// import { mapGetters } from "@/compat/vue/vuex";
+import { mapGetters, mapMutations } from "@/compat/vue/vuex";
 // mod FNSI-【1006】最新の改修対象一覧の412対応 韓 end
 import IndTreatCondBase from "@/components/indication/IndTreatCondBase";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // mod 10150 治療条件変更時のonline、offline補液関連 関  start
 import {
   simpleAccDivision, accSub,divide, accMulti, toFixedWithRoundingMode
 } from "@/functions/common/NumberFunctions.js";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 // mod 10150 治療条件変更時のonline、offline補液関連 関  end
 export default {
   mixins: [IndTreatCondBase],
@@ -222,31 +222,14 @@ export default {
     //   };
     // },
     // del 不具合 #5920 dou end
-    // 補液量を取得
-    //mod FutreNetWeb+SI課題管理No5641&&5670対応 于 start
-    getLiquidAmountString() {
-      if ( this.calLiquidAmount() && this.calLiquidAmount().editValue == -1 && this.calLiquidAmount().initValue != -1){
-        // //mod FNSI-7194
-        this.$refs.amountInput.classObject["custom-input-number-edited"] = true;
-        // //mod FNSI-7194
-        // #10196 数値IFのスタイル全不正 linjunfeng start
-        // return "";
-        this.displayInputValue.editValue = null;
-        return this.displayInputValue;
-        // #10196 数値IFのスタイル全不正 linjunfeng end
-      // add #IES_5920 dou start
-      } else if ( this.calLiquidAmount() && this.calLiquidAmount().editValue == -1 && this.calLiquidAmount().initValue == -1){
-        // #10196 数値IFのスタイル全不正 linjunfeng start
-        // return "";
-        this.displayInputValue.editValue = null;
-        return this.displayInputValue;
-        // #10196 数値IFのスタイル全不正 linjunfeng end
-      // add #IES_5920 dou end
-      } else {
-        return this.calLiquidAmount();
+    // 補液量入力表示値（副作用なし）
+    liquidAmountInputValue() {
+      const editValue = this.displayInputValue.editValue;
+      if (editValue == -1) {
+        return null;
       }
+      return editValue;
     },
-    //mod FutreNetWeb+SI課題管理No5641&&5670対応 于 end
 
     // del 不具合 #5920 dou start
     //add FutreNetWeb+SI課題管理No5641&&5670対応 于 start
@@ -278,6 +261,16 @@ export default {
     }
   },
 
+  watch: {
+    isShowIndModal: "refreshLiquidAmount",
+    deviceMode: "refreshLiquidAmount",
+    liquidCalPriority: "refreshLiquidAmount",
+    liquidSpeed: "refreshLiquidAmount",
+    treatTime: "refreshLiquidAmount",
+    liquidDelayTiming: "refreshLiquidAmount",
+    ihdfLiquidTotal: "refreshLiquidAmount",
+  },
+
   // add FNSI-【1006】最新の改修対象一覧の412対応 韓 start
   methods: {
     ...mapMutations("pat-viewer-treat-cond", ["setLiquidAmount"]),
@@ -286,6 +279,24 @@ export default {
       return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd));
     },
     // add #10359 編集権限の動作不正 dengshen end
+    refreshLiquidAmount() {
+      if (!this.isShowIndModal) {
+        return;
+      }
+      this.calLiquidAmount();
+      this.setLiquidAmountSetPlaceholder();
+      this.syncLiquidAmountEditedStyle();
+    },
+    syncLiquidAmountEditedStyle() {
+      if (this.checkEditCount() === 0) {
+        this.displayInputValue.initValue = this.displayInputValue.editValue;
+      }
+      this.$nextTick(() => {
+        if (this.$refs.amountInput) {
+          this.$refs.amountInput.isEdited = this.checkEditCount() !== 0;
+        }
+      });
+    },
     // 補液量を算出
     calLiquidAmount() {
       if (this.isShowIndModal) {
@@ -319,8 +330,7 @@ export default {
               //     )
               //   )
                 liquidAmount = toFixedWithRoundingMode(divide(Number(accMulti(
-                  this.liquidSpeed,accSub(this.treatTime, this.liquidDelayTiming)
-                )), 60), 1, BigNumber.ROUND_DOWN);
+                  this.liquidSpeed,accSub(this.treatTime, this.liquidDelayTiming))), 60), 1, BigNumber.ROUND_DOWN);
 
                 // mod 10150 治療条件変更時のonline、offline補液関連 関  end
               // 補液速度×(治療時間-補液開始遅延時間)
@@ -382,18 +392,13 @@ export default {
           // del #IES_5920 dou end
           //add #7194 2022/8/29 OHDF・OHFで濾過率から算出に設定すると補液速度と補液量が不適切 gaoey end
           this.displayInputValue.editValue = liquidAmount;
-          //add 8204 周安寧 start
-          if (this.deviceMode === 10){
-            /* modify by chamaojia 2023-04-20 [8537] 判断条件の追加  --start */
-            // 最初の計算で初期値を変更し、緑枠と保存の問題を解決
-            if (this.displayInputValue.firstCalculateFlag && isCalculateFlag) {
-              this.displayInputValue.initValue = liquidAmount
-              this.displayInputValue.firstCalculateFlag = false;
-            }
-            // this.displayInputValue.initValue = liquidSpeed
-            /* modify by chamaojia 2023-04-20 [8537] 判断条件の追加  --end */
+          /* modify by chamaojia 2023-04-20 [8537] 判断条件の追加  --start */
+          // 初回表示時の自動計算結果を初期値として扱い、未編集の緑枠を防ぐ
+          if (this.displayInputValue.firstCalculateFlag && isCalculateFlag) {
+            this.displayInputValue.initValue = liquidAmount;
+            this.displayInputValue.firstCalculateFlag = false;
           }
-          //add 8204 周安寧 end
+          /* modify by chamaojia 2023-04-20 [8537] 判断条件の追加  --end */
           this.setLiquidAmount(liquidAmount);
           // del 不具合 #5920 dou start
           // this.isAutoCal = true;
@@ -414,7 +419,7 @@ export default {
     },
     // add 不具合 #5920 dou start
     setLiquidAmountSetPlaceholder() {
-      if (this.calLiquidAmount().editValue == -1) {
+      if (this.displayInputValue.editValue == -1) {
         this.isAutoCal = true;
         this.LiquidAmountSetPlaceholder = "濾過率から算出";
       } else {
@@ -429,7 +434,7 @@ export default {
     this.treatItemCd = "20";
     this.unit = "L";
     // add 不具合 #5920 dou start
-    this.setLiquidAmountSetPlaceholder();
+    this.refreshLiquidAmount();
     // add 不具合 #5920 dou end
   }
 };
@@ -469,11 +474,12 @@ ons-row {
   box-sizing: border-box;
   display: inline-flex;
 }
+ 
 /* add 不具合 #5920 dou start */
-.action-condition-input >>> .text-input::-webkit-input-placeholder {
+.action-condition-input :deep(.text-input::-webkit-input-placeholder) {
   color: black;
 }
-.nogreen >>> .text-input{
+.nogreen :deep(.text-input){
   border: 2px inset #ebebe4 !important;
 }
 /* add 不具合 #5920 dou end */

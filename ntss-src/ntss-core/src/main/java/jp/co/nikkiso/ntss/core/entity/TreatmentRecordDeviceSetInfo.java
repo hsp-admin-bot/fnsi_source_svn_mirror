@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.core.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import lombok.AllArgsConstructor;
 import org.seasar.doma.Entity;
 import org.seasar.doma.Table;
@@ -14,7 +14,7 @@ import org.seasar.doma.jdbc.entity.NamingType;
 @Entity(immutable = true, naming = NamingType.SNAKE_LOWER_CASE)
 @Table(name = "ord_main")
 @AllArgsConstructor
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class TreatmentRecordDeviceSetInfo extends BaseBlankEntity {
   /* del by shiyw 2024-01-31 [#10196]ord_mainのデータ定義の修正 --start */
 //  /**

@@ -13,7 +13,7 @@
               name="identification"
               id="input-distribution"
               @click="switchGraphType(GRAPH_TYPE.DISTRIBUTION);"
-              :checked="graphType === GRAPH_TYPE.DISTRIBUTION ? 'checked': ''"
+              :checked="graphType === GRAPH_TYPE.DISTRIBUTION"
               :disabled="!validGraphSetting"
             />
             <label ref="distribution" for="input-distribution" class="label first-of-type">分布</label>
@@ -23,7 +23,7 @@
               name="identification"
               id="input-progress"
               @click="switchGraphType(GRAPH_TYPE.PROGRESS);"
-              :checked="graphType === GRAPH_TYPE.PROGRESS ? 'checked': ''"
+              :checked="graphType === GRAPH_TYPE.PROGRESS"
               :disabled="!validGraphSetting"
             />
             <label for="input-progress" class="label last-of-type">経過</label>
@@ -120,7 +120,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -217,12 +217,12 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
 import commonSearchArea from "@/components/common/CommonSearchArea";
-import { EventBus } from "@/eventBus.js";
-import moment from "moment";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import dayjs from "@/compat/date/dayjs";
 import PopoverMixin from "@/components/PopoverMixin";
 import store from "@/stores";
 import { getCurrentFunctionCd } from "@/router/routing-helper";
@@ -235,6 +235,9 @@ import DateInput from "@/components/common/DateInput.vue";
 //#5590 2023/04/20 ×を常に表示するように修正 張博 end
 // add #11065 【03】編集権限バグ修正 関 start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
+import { getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+import nameDuplication3Img from "../../assets/name_duplication3.png";
+
 // add #11065 【03】編集権限バグ修正 関 end
 
 export default {
@@ -250,10 +253,10 @@ export default {
 
   data() {
     const defaultCondition = {
-      startDate: moment()
+      startDate: dayjs()
         .subtract(3, "months")
         .format("YYYY-MM-DD"),
-      endDate: moment().format("YYYY-MM-DD")
+      endDate: dayjs().format("YYYY-MM-DD")
     };
 
     return {
@@ -290,7 +293,7 @@ export default {
       conditionList: [],
       // add FNSI-同姓同名の患者を登録した際に通知トーストでその旨を確認 李 start
       // 同姓同名アイコン
-      image_src_same: require('../../assets/name_duplication3.png'),
+      image_src_same: nameDuplication3Img,
       isNameFlg: false,
       // add FNSI-同姓同名の患者を登録した際に通知トーストでその旨を確認 李 end
       destroyDragHandler: null
@@ -369,10 +372,12 @@ export default {
 
       // add FNSI-4829 同姓同名、入院患者表示形式 liumx start
       if(this.patient && this.patient.in_out_class == '1'){
-        document.getElementById("setColorPurle").getElementsByTagName("select")[0].style.color="#A356A3";
+        const setColorPurle = getScopedElementById("setColorPurle", this.$el || null);
+        if (setColorPurle?.getElementsByTagName("select")?.[0]) setColorPurle.getElementsByTagName("select")[0].style.color="#A356A3";
       }
       else {
-        document.getElementById("setColorPurle").getElementsByTagName("select")[0].style.color="black";
+        const setColorPurle = getScopedElementById("setColorPurle", this.$el || null);
+        if (setColorPurle?.getElementsByTagName("select")?.[0]) setColorPurle.getElementsByTagName("select")[0].style.color="black";
       }
 
       // 患者選択プルダウンリスト 選択値設定
@@ -393,10 +398,12 @@ export default {
       else this.isNameFlg = false;
       // add FNSI-4829 同姓同名、入院患者表示形式 liumx start
       if (this.selectedPat && this.selectedPat.pat_personal_main.in_out_class == '1') {
-        document.getElementById("setColorPurle").getElementsByTagName("select")[0].style.color="#A356A3";
+        const setColorPurle = getScopedElementById("setColorPurle", this.$el || null);
+        if (setColorPurle?.getElementsByTagName("select")?.[0]) setColorPurle.getElementsByTagName("select")[0].style.color="#A356A3";
       }
       else {
-        document.getElementById("setColorPurle").getElementsByTagName("select")[0].style.color="black";
+        const setColorPurle = getScopedElementById("setColorPurle", this.$el || null);
+        if (setColorPurle?.getElementsByTagName("select")?.[0]) setColorPurle.getElementsByTagName("select")[0].style.color="black";
       }
       // add FNSI-4829 同姓同名、入院患者表示形式 liumx end
     },
@@ -423,14 +430,6 @@ export default {
     ]),
     // add FNSI-4829 同姓同名、入院患者表示形式 liumx start
     getColorPurple(str){
-      const funcCd = getCurrentFunctionCd();
-      if (this.typeflag == "scatter") { // 分布
-        this.printFlag = 0;
-        store.dispatch("report/getMstReport", {funcCd: funcCd,printFlag: 0});
-      } else if (this.typeflag == "line" && this.printFlag == 1) { // 経過
-        this.printFlag = 1;
-        store.dispatch("report/getMstReport", {funcCd: funcCd,printFlag: 1});
-      }
       if(str && str.in_out_class == '1'){
         return "color-purple";
       }else{
@@ -449,10 +448,10 @@ export default {
       }
       if (type == "scatter") { // 分布
         this.printFlag = 0;
-        store.dispatch("report/getMstReport", {funcCd: funcCd,printFlag: 0});
+        store.dispatch("report/getMstReport", {funcCd: funcCd,printFlag: 0, selectedPatId: this.selectedPatId});
       } else if (type == "line" && this.printFlag == 1) { // 経過
         this.printFlag = 1;
-        store.dispatch("report/getMstReport", {funcCd: funcCd,printFlag: 1});
+        store.dispatch("report/getMstReport", {funcCd: funcCd,printFlag: 1, selectedPatId: this.selectedPatId});
       }
       if (type === this.GRAPH_TYPE.PROGRESS && !this.patient) {
         this.$ons.notification.alert({
@@ -513,8 +512,8 @@ export default {
      */
     search() {
       if (
-        moment(this.condition.inProgress.startDate) >
-        moment(this.condition.inProgress.endDate)
+        dayjs(this.condition.inProgress.startDate) >
+        dayjs(this.condition.inProgress.endDate)
       ) {
         const tempDate = this.condition.inProgress.startDate;
         this.condition.inProgress.startDate = this.condition.inProgress.endDate;
@@ -575,7 +574,7 @@ export default {
       this.switchGraphType(plot.graphType);
     },
     hideArrowDate() {
-      const getInputDateClass = document.getElementsByClassName("input-search-date");
+      const getInputDateClass = getScopedElementsByClassName("input-search-date", this.$el || null);
       getInputDateClass[0].addEventListener('keydown', (event) => {
           if (event.key == "ArrowDown" || event.key == "ArrowUp") {
             event.preventDefault();
@@ -638,11 +637,12 @@ export default {
         scrollState.down = false;
         event.stopPropagation();
       };
+      const ownerDocument = target.ownerDocument || this.$el?.ownerDocument || document;
       this.destroyDragHandler = () => {
         if (target) {
           target.removeEventListener("mousedown", handleMouseDown);
-          document.removeEventListener("mousemove", handleMouseMove);
-          document.removeEventListener("mouseup", handleMouseUp);
+          ownerDocument.removeEventListener("mousemove", handleMouseMove);
+          ownerDocument.removeEventListener("mouseup", handleMouseUp);
         }
         handleMouseDown = null;
         handleMouseMove = null;
@@ -650,8 +650,8 @@ export default {
         this.destroyDragHandler = null;
       };
       target.addEventListener("mousedown", handleMouseDown);
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+      ownerDocument.addEventListener("mousemove", handleMouseMove);
+      ownerDocument.addEventListener("mouseup", handleMouseUp);
     },
     // add #11065 【03】編集権限バグ修正 関 start
     getItemAuthorized(pageCd, itemCd) {
@@ -668,27 +668,29 @@ export default {
     //add 63449分割グラフの経過画面から治療記録に遷移し、パンくずリストで９分割グラフ画面に戻ると経過ではなく分布画面が表示される zhao end
     this.search();
     this.setSelectedPatient(null);
+    this.onSetHeaderInfo = (data) => this.setHeaderInfo(data);
+    this.onSetPatList = (data) => this.setPatList(data);
     // add 性能改善メモリ不足 shan start
-    EventBus.$off("setHeaderInfo");
+    EventBus.$off("setHeaderInfo", this.onSetHeaderInfo);
     //mod 63449分割グラフの経過画面から治療記録に遷移し、パンくずリストで９分割グラフ画面に戻ると経過ではなく分布画面が表示される zhao start
     //EventBus.$off("setPatList");
-    EventBus.$off("setPatList", data => this.setPatList(data));
+    EventBus.$off("setPatList", this.onSetPatList);
     //mod 63449分割グラフの経過画面から治療記録に遷移し、パンくずリストで９分割グラフ画面に戻ると経過ではなく分布画面が表示される zhao end
     // add 性能改善メモリ不足 shan end
 
-    EventBus.$on("setHeaderInfo", data => this.setHeaderInfo(data));
-    EventBus.$on("setPatList", data => this.setPatList(data));
+    EventBus.$on("setHeaderInfo", this.onSetHeaderInfo);
+    EventBus.$on("setPatList", this.onSetPatList);
   },
   mounted() {
     this.initDragHandler();
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     this.destroyDragHandler?.();
-    EventBus.$off("setHeaderInfo");
+    EventBus.$off("setHeaderInfo", this.onSetHeaderInfo);
     //mod 63449分割グラフの経過画面から治療記録に遷移し、パンくずリストで９分割グラフ画面に戻ると経過ではなく分布画面が表示される zhao start
     //EventBus.$off("setPatList");
-    EventBus.$off("setPatList", data => this.setPatList(data));
+    EventBus.$off("setPatList", this.onSetPatList);
     //mod 63449分割グラフの経過画面から治療記録に遷移し、パンくずリストで９分割グラフ画面に戻ると経過ではなく分布画面が表示される zhao end
     // dataの初期化
     //add 63449分割グラフの経過画面から治療記録に遷移し、パンくずリストで９分割グラフ画面に戻ると経過ではなく分布画面が表示される zhao start
@@ -747,13 +749,17 @@ input[type="radio"] {
   -webkit-appearance: none;
 }
 
-.popover-area >>> .popover-mask {
+.popover-area :deep(.popover-mask) {
   z-index: 100 !important;
 }
-.popover-area >>> .popover {
+.popover-area :deep(.popover) {
   z-index: 200 !important;
 }
-ons-popover >>> .popover--top {
+ons-popover :deep(.popover--top) {
+  width: 30em;
+}
+
+.popover-area :deep(.popover--top) {
   width: 30em;
 }
 .button {
@@ -786,7 +792,7 @@ ons-popover >>> .popover--top {
   flex: 1 1 auto;
   min-width: 30em;
 }
-.custom-search >>> .condition-search-icon-area {
+.custom-search :deep(.condition-search-icon-area) {
   position: inherit;
 }
 .custom-pull-down {
@@ -822,7 +828,7 @@ ons-popover >>> .popover--top {
 .custom-header-item::-webkit-scrollbar {
   display: none;
 }
-ons-select >>> .select-input {
+ons-select :deep(.select-input) {
   font-size: 1.5em;
   line-height: 1.1em;
 }
@@ -847,4 +853,8 @@ ons-select >>> .select-input {
   color: black;
 }
 /* add FNSI-4829 同姓同名、入院患者表示形式 liumx end */
+
+:deep(.mid-height){
+  font-family: -apple-system,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif!important;
+}
 </style>

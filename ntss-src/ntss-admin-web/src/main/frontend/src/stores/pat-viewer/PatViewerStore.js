@@ -4,8 +4,8 @@ import {mstPatViewerLayoutDefine, vitalMonitorGraphInoutDefine} from "@/constant
 import {sendRequestGetMstSupportSettingData as getMstSupportSettingData} from "@/apis/mst-support-setting-maintenance";
 import { dialyzer, dialyzerTabooAllergy, dialyzerTabooAllergyDeleted, equipment, equipmentAllergy, equipmentClass, equipmentTabooAllergy, medicateTiming, medicine, medicineAllergy, medicineClass, medicineIncludeDeleted, medicineMix, medicineMixAllergy, medicineMixIncludeDeleted, medicineMixTabooAllergy, medicineTabooAllergy, mstPatViewerLayout, procedure, treatment, treatmentDel, va } from "@/functions/mst/MstGetters";
 import store from "@/stores";
-import moment from "moment";
-import BigNumber from "bignumber.js";
+import dayjs from "@/compat/date/dayjs";
+import BigNumber from "@/compat/number/bignumber";
 import {defaultMstDeviceInfo} from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
 import {sendRequestFindPhysicalInfo} from "@/apis/pat-viewer";
 import {sendRequestGetMstFacilityByCd} from "@/apis/facility";
@@ -21,6 +21,18 @@ import {
   getThreshold,
   getSeriesMarker
 } from "@/functions/pat-viewer/PatViewerFunctions";
+
+function hasSelectedPatId(selectedPatId) {
+  return selectedPatId !== null && selectedPatId !== undefined && selectedPatId !== "";
+}
+
+function selectedPatIdParams(selectedPatId) {
+  return hasSelectedPatId(selectedPatId) ? { selectedPatId } : undefined;
+}
+
+function selectedPatIdConfig(selectedPatId) {
+  return hasSelectedPatId(selectedPatId) ? { params: { selectedPatId } } : undefined;
+}
 
 /**
  * 画面表示用 各表示項目のデータ構造の雛形
@@ -59,7 +71,6 @@ const layoutDispData_data = {
   dataItem: null
 };
 
-/* add by chamaojia 2026-03-27 [12462] 患者情報共有->患者経過総合ビューア --start */
 const TABOO_CLASS_PREFIX = "【禁忌】";
 const ALLERGY_CLASS_PREFIX = "【ｱﾚﾙｷﾞｰ】";
 const TABOO_ALLERGY_CLASS_PREFIX = "【禁忌・ｱﾚﾙｷﾞｰ】";
@@ -75,15 +86,633 @@ function getTabooAllergyPrefix(isTaboo, isAllergy) {
 }
 
 function isTabooAllergy(name) {
-
-  if (name.startsWith(TABOO_CLASS_PREFIX) 
-    || name.startsWith(ALLERGY_CLASS_PREFIX) 
-    || name.startsWith(TABOO_ALLERGY_CLASS_PREFIX)) {
+  if (
+    name.startsWith(TABOO_CLASS_PREFIX) ||
+    name.startsWith(ALLERGY_CLASS_PREFIX) ||
+    name.startsWith(TABOO_ALLERGY_CLASS_PREFIX)
+  ) {
     return true;
   }
   return false;
 }
-/* add by chamaojia 2026-03-27 [12462] 患者情報共有->患者経過総合ビューア --end */
+
+
+// #12505 接頭文字対応 ligh add start
+/** 表示名先頭の禁忌・アレルギー接頭辞のみ除去（その他の接頭辞は維持） */
+function stripTabooAllergyPrefixFromName(name) {
+  if (typeof name !== "string") {
+    return name;
+  }
+  let result = name;
+  const tags = [TABOO_ALLERGY_CLASS_PREFIX, TABOO_CLASS_PREFIX, ALLERGY_CLASS_PREFIX];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const tag of tags) {
+      if (result.startsWith(tag)) {
+        result = result.slice(tag.length);
+        changed = true;
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+/** 実績表示時：分類不一致・期限切れ・削除済み系の接頭辞のみ除去（禁忌・アレルギー接頭辞は別途処理） */
+function removeClassificationPrefix(name) {
+  if (typeof name !== "string") {
+    return name;
+  }
+  let result = name;
+  const tags = [
+    "【削除済み含む】",
+    "【分類不一致】",
+    "【期限切れ】",
+    "【削除済み】",
+  ];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const tag of tags) {
+      if (result.startsWith(tag)) {
+        result = result.slice(tag.length);
+        changed = true;
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+/** 実績表示用：ord保存名称から分類系接頭辞のみ除去し、禁忌・アレルギー接頭辞は維持 */
+function normalizeStoredNameForRstDisplay(displayName, rstDialysisState) {
+  if (displayName == null || displayName === "" || rstDialysisState == "0") {
+    return displayName;
+  }
+  const str = String(displayName);
+  const tabooPrefix = extractLeadingTabooAllergyTags(str);
+  const baseName = removeClassificationPrefix(stripTabooAllergyPrefixFromName(str));
+  return tabooPrefix + baseName;
+}
+
+/** 調製薬 mixInfo 取得（通常マスタに無い cd も Allergy/削除込みから参照） */
+function findMixRowWithMixInfo(getters, medicineMixCd) {
+  const lists = [
+    getters.getMstMedicineMixData,
+    getters.getMstMedicineMixAllergyData,
+    getters.getMstMedicineMixIncludeDeletedData,
+  ];
+  for (const list of lists) {
+    if (!list?.length) {
+      continue;
+    }
+    const row = list.find(item => item.medicineMixCd == medicineMixCd);
+    if (row?.mixInfo) {
+      return row;
+    }
+  }
+  return null;
+}
+
+function parsePatTabooDetailList(detailInfo) {
+  if (!detailInfo) {
+    return [];
+  }
+  try {
+    const parsed =
+      typeof detailInfo === "string" ? JSON.parse(detailInfo) : detailInfo;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function resolvePatTabooForMedicineCd(getters, medicineCd) {
+  let taboo = false;
+  let allergy = false;
+  for (const item of getters.getPatTabooAllergy || []) {
+    if (String(item.classType) === "1" && item.cd == medicineCd) {
+      if (item.taboo) {
+        taboo = true;
+      }
+      if (item.allergy) {
+        allergy = true;
+      }
+    }
+    const detailList = parsePatTabooDetailList(item.detailInfo);
+    if (!detailList.some(el => el.cd == medicineCd)) {
+      continue;
+    }
+    if (
+      item.tabooAllergyClass == "1" ||
+      item.taboo === true ||
+      item.taboo == 1
+    ) {
+      taboo = true;
+    }
+    if (
+      item.tabooAllergyClass == "2" ||
+      item.allergy === true ||
+      item.allergy == 1
+    ) {
+      allergy = true;
+    }
+  }
+  return { taboo, allergy };
+}
+
+/** 調製薬剤の構成薬から禁忌・アレルギーを判定（構成薬単体には接頭辞を付けない） */
+function resolveMixComponentTabooAllergy(getters, medicineMixCd) {
+  const medicineMixData = findMixRowWithMixInfo(getters, medicineMixCd);
+  if (!medicineMixData?.mixInfo) {
+    return { taboo: false, allergy: false };
+  }
+  let taboo = false;
+  let allergy = false;
+  let mixInfo;
+  try {
+    mixInfo = JSON.parse(medicineMixData.mixInfo);
+  } catch (e) {
+    return { taboo: false, allergy: false };
+  }
+  for (const medicineData of mixInfo) {
+    const patFlags = resolvePatTabooForMedicineCd(getters, medicineData.cd);
+    if (patFlags.taboo) {
+      taboo = true;
+    }
+    if (patFlags.allergy) {
+      allergy = true;
+    }
+    const mstMed = getters.getMstMedicineAllergyData?.find(
+      m => m.medicineCd == medicineData.cd
+    );
+    if (mstMed?.isTaboo) {
+      taboo = true;
+    }
+    if (mstMed?.isAllergy) {
+      allergy = true;
+    }
+    if (
+      typeof mstMed?.tabooAllergy === "string" &&
+      mstMed.tabooAllergy !== ""
+    ) {
+      if (mstMed.tabooAllergy.includes(TABOO_ALLERGY_CLASS_PREFIX)) {
+        taboo = true;
+        allergy = true;
+      } else {
+        if (mstMed.tabooAllergy.includes(TABOO_CLASS_PREFIX)) {
+          taboo = true;
+        }
+        if (mstMed.tabooAllergy.includes(ALLERGY_CLASS_PREFIX)) {
+          allergy = true;
+        }
+      }
+    }
+    const compStatusPrefix = mstMed ? getPrefix({ ...mstMed }) : "";
+    const compTabooPart = extractLeadingTabooAllergyTags(compStatusPrefix);
+    if (compTabooPart.includes(TABOO_ALLERGY_CLASS_PREFIX)) {
+      taboo = true;
+      allergy = true;
+    } else {
+      if (compTabooPart.includes(TABOO_CLASS_PREFIX)) {
+        taboo = true;
+      }
+      if (compTabooPart.includes(ALLERGY_CLASS_PREFIX)) {
+        allergy = true;
+      }
+    }
+    // 構成薬：禁忌込みマスタと通常マスタの名称差分（Popover/getMstListCompose と同系）
+    const mstMedTaboo = getters.getMstMedicineTabooAllergyData?.find(
+      m => m.medicineCd == medicineData.cd
+    );
+    const mstMedNormal =
+      getters.getMstMedicineAllergyData?.find(m => m.medicineCd == medicineData.cd) ||
+      getters.getMstMedicineData?.find(m => m.medicineCd == medicineData.cd) ||
+      getters.getMstMedicineIncludeDeletedData?.find(
+        m => m.medicineCd == medicineData.cd
+      ) ||
+      mstMed;
+    if (
+      mstMedTaboo?.medicineName &&
+      mstMedNormal?.medicineName &&
+      mstMedTaboo.medicineName !== mstMedNormal.medicineName
+    ) {
+      const compPrefix = extractTabooAllergyPrefixFromMasterNames(
+        mstMedTaboo.medicineName,
+        mstMedNormal.medicineName
+      );
+      if (compPrefix.includes(TABOO_ALLERGY_CLASS_PREFIX)) {
+        taboo = true;
+        allergy = true;
+      } else {
+        if (compPrefix.includes(TABOO_CLASS_PREFIX)) {
+          taboo = true;
+        }
+        if (compPrefix.includes(ALLERGY_CLASS_PREFIX)) {
+          allergy = true;
+        }
+      }
+    }
+    if (taboo && allergy) {
+      break;
+    }
+  }
+  return { taboo, allergy };
+}
+
+/** 調製薬剤マスタ（禁忌アレルギー込み）の isTaboo / isAllergy フラグ */
+function resolveMixTabooFromMasterFlags(getters, medicineMixCd) {
+  const mstMix = getters.getMstMedicineMixAllergyData.find(
+    m => m.medicineMixCd == medicineMixCd
+  );
+  if (!mstMix) {
+    return { taboo: false, allergy: false };
+  }
+  return {
+    taboo: !!mstMix.isTaboo,
+    allergy: !!mstMix.isAllergy,
+  };
+}
+
+/** 名称差分の先頭から禁忌・アレルギー接頭辞のみ連続抽出（期限切れ等は含めない） */
+function extractLeadingTabooAllergyTags(prefixPart) {
+  if (typeof prefixPart !== "string" || prefixPart === "") {
+    return "";
+  }
+  const tags = [TABOO_ALLERGY_CLASS_PREFIX, TABOO_CLASS_PREFIX, ALLERGY_CLASS_PREFIX];
+  let result = "";
+  let remaining = prefixPart;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const tag of tags) {
+      if (remaining.startsWith(tag)) {
+        result += tag;
+        remaining = remaining.slice(tag.length);
+        changed = true;
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+function extractTabooAllergyPrefixFromMasterNames(tabooName, subName) {
+  if (
+    typeof tabooName !== "string" ||
+    typeof subName !== "string" ||
+    tabooName === subName ||
+    subName === "" ||
+    !tabooName.endsWith(subName)
+  ) {
+    return "";
+  }
+  const rawPrefix = tabooName.slice(0, tabooName.length - subName.length);
+  return extractLeadingTabooAllergyTags(rawPrefix);
+}
+
+function resolveMixTabooPrefixFromMasterNames(getters, medicineMixCd) {
+  const mstTaboo = getters.getMstMedicineMixTabooAllergyData.find(
+    m => m.medicineMixCd == medicineMixCd
+  );
+  if (!mstTaboo?.medicineMixName) {
+    return { tabooPrefix: "", comparedSubName: null };
+  }
+  const mstNormal = getters.getMstMedicineMixData.find(
+    m => m.medicineMixCd == medicineMixCd
+  );
+  const mstAllergy = getters.getMstMedicineMixAllergyData.find(
+    m => m.medicineMixCd == medicineMixCd
+  );
+  const subCandidates = [
+    mstAllergy?.medicineMixName,
+    mstNormal?.medicineMixName,
+  ].filter(name => typeof name === "string" && name !== "");
+  for (const subName of subCandidates) {
+    if (mstTaboo.medicineMixName === subName) {
+      continue;
+    }
+    const tabooPrefix = extractTabooAllergyPrefixFromMasterNames(
+      mstTaboo.medicineMixName,
+      subName
+    );
+    if (tabooPrefix) {
+      return { tabooPrefix, comparedSubName: subName };
+    }
+  }
+  return { tabooPrefix: "", comparedSubName: subCandidates[0] || null };
+}
+
+function displayNameHasTabooAllergyPrefix(name) {
+  if (typeof name !== "string") {
+    return false;
+  }
+  return (
+    name.startsWith(TABOO_ALLERGY_CLASS_PREFIX) ||
+    name.startsWith(TABOO_CLASS_PREFIX) ||
+    name.startsWith(ALLERGY_CLASS_PREFIX)
+  );
+}
+
+function resolveMixMedicineNameForMstCase11(
+  getters,
+  code,
+  classType,
+  treatDate,
+  mstRecord,
+  mstTabooRow
+) {
+  const mstTaboo =
+    mstTabooRow ||
+    getters.getMstMedicineMixTabooAllergyData.find(m => m.medicineMixCd == code);
+  const mstNormal = getters.getMstMedicineMixData.find(
+    m => m.medicineMixCd == code
+  );
+  const subName = mstNormal?.medicineMixName || mstRecord?.medicineMixName;
+  if (
+    mstTaboo?.medicineMixName &&
+    subName &&
+    mstTaboo.medicineMixName !== subName
+  ) {
+    return {
+      name: mstTaboo.medicineMixName,
+      isTabooAllergy: true,
+    };
+  }
+  // case10（通常薬剤）と同様：getPrefix + 構成薬禁忌の補完
+  let prefix = getPrefix({
+    normalClassType: classType,
+    treatDate,
+    ...mstRecord,
+  });
+  let isTabooAllergy = !!(mstRecord.isTaboo || mstRecord.isAllergy);
+
+  if (
+    typeof mstRecord.tabooAllergy === "string" &&
+    mstRecord.tabooAllergy !== "" &&
+    !prefix.includes(TABOO_ALLERGY_CLASS_PREFIX) &&
+    !prefix.startsWith(TABOO_CLASS_PREFIX) &&
+    !prefix.startsWith(ALLERGY_CLASS_PREFIX)
+  ) {
+    prefix = mstRecord.tabooAllergy + prefix;
+    isTabooAllergy = true;
+  }
+
+  if (!isTabooAllergy) {
+    const comp = resolveMixComponentTabooAllergy(getters, code);
+    if (comp.taboo || comp.allergy) {
+      const tabooPrefix = getTabooAllergyPrefix(comp.taboo, comp.allergy) || "";
+      if (
+        tabooPrefix &&
+        !prefix.includes(TABOO_ALLERGY_CLASS_PREFIX) &&
+        !prefix.startsWith(TABOO_CLASS_PREFIX) &&
+        !prefix.startsWith(ALLERGY_CLASS_PREFIX)
+      ) {
+        prefix = tabooPrefix + prefix;
+      }
+      isTabooAllergy = true;
+    }
+  }
+
+  const name = prefix + mstRecord.medicineMixName;
+  return { name, isTabooAllergy };
+}
+
+/** 実績時は期限切れ・削除系接頭辞を除去し、予定時はそのまま（禁忌接頭辞のみ別途付け直し） */
+function normalizeMedicineNameForRstDisplay(displayName, rstDialysisState) {
+  if (displayName == null || displayName === "") {
+    return displayName;
+  }
+  const strippedTaboo = stripTabooAllergyPrefixFromName(String(displayName));
+  if (rstDialysisState == "0") {
+    return strippedTaboo;
+  }
+  return removeClassificationPrefix(strippedTaboo);
+}
+
+function applyMixMedicineTabooAllergyDisplay(
+  getters,
+  medicineMixCd,
+  displayName,
+  rstDialysisState = "0"
+) {
+  const mstTabooRow = getters.getMstMedicineMixTabooAllergyData.find(
+    m => m.medicineMixCd == medicineMixCd
+  );
+  if (displayNameHasTabooAllergyPrefix(displayName) && rstDialysisState == "0") {
+    return { name: displayName, isTabooAllergy: true };
+  }
+
+  const mstMixAllergy = getters.getMstMedicineMixAllergyData?.find(
+    m => m.medicineMixCd == medicineMixCd
+  );
+  if (
+    rstDialysisState == "0" &&
+    typeof mstMixAllergy?.tabooAllergy === "string" &&
+    mstMixAllergy.tabooAllergy !== ""
+  ) {
+    const baseName = normalizeMedicineNameForRstDisplay(displayName, rstDialysisState);
+    return {
+      name: mstMixAllergy.tabooAllergy + baseName,
+      isTabooAllergy: true,
+    };
+  }
+
+  const baseName = normalizeMedicineNameForRstDisplay(displayName, rstDialysisState);
+  let comp = resolveMixComponentTabooAllergy(getters, medicineMixCd);
+  let tabooPrefix = "";
+  let hasTabooAllergy = false;
+
+  if (!(comp.taboo || comp.allergy)) {
+    comp = resolveMixTabooFromMasterFlags(getters, medicineMixCd);
+  }
+
+  if (comp.taboo || comp.allergy) {
+    tabooPrefix = getTabooAllergyPrefix(comp.taboo, comp.allergy) || "";
+    hasTabooAllergy = !!tabooPrefix;
+  }
+  if (!tabooPrefix && mstMixAllergy) {
+    const mixStatusPrefix = getPrefix({ ...mstMixAllergy });
+    tabooPrefix = extractLeadingTabooAllergyTags(mixStatusPrefix);
+    hasTabooAllergy = !!tabooPrefix;
+  }
+  if (!tabooPrefix) {
+    const mstResolved = resolveMixTabooPrefixFromMasterNames(getters, medicineMixCd);
+    tabooPrefix = mstResolved.tabooPrefix;
+    hasTabooAllergy = !!tabooPrefix;
+  }
+
+  return {
+    name: tabooPrefix + baseName,
+    isTabooAllergy: hasTabooAllergy,
+  };
+}
+
+/** ord 保存名称是否已含禁忌・アレルギー接頭辞（実績時の表示判定のみ） */
+function resolveOrdStoredMixTabooAllergyFlag(displayName) {
+  return (
+    displayNameHasTabooAllergyPrefix(displayName) || isTabooAllergy(displayName)
+  );
+}
+
+function applyMixTabooToTreatCondValue(
+  getters,
+  findConvertDataForTreatDate,
+  copyTreatmentData,
+  treatCondItemData,
+  colIndex
+) {
+  // 実績済みは ord の value_name_1 のみ表示（後から登録された禁忌は反映しない）
+  if (findConvertDataForTreatDate.rstDialysisState != "0") {
+    const ordValue = findConvertDataForTreatDate[`value${colIndex}`];
+    if (ordValue != null && ordValue !== "") {
+      const normalized = normalizeStoredNameForRstDisplay(
+        ordValue,
+        findConvertDataForTreatDate.rstDialysisState
+      );
+      findConvertDataForTreatDate[`value${colIndex}`] = normalized;
+      findConvertDataForTreatDate[`isTabooAllergy${colIndex}`] =
+        treatCondItemData.medicine_type == 2
+          ? resolveOrdStoredMixTabooAllergyFlag(normalized)
+          : isTabooAllergy(normalized);
+    }
+    return;
+  }
+  if (treatCondItemData.medicine_type != 2) {
+    return;
+  }
+  const patId = copyTreatmentData[findConvertDataForTreatDate.treatDate]?.patId;
+  if (!patId) {
+    return;
+  }
+  const currentValue = findConvertDataForTreatDate[`value${colIndex}`];
+  if (currentValue == null || currentValue === "") {
+    return;
+  }
+  const applied = applyMixMedicineTabooAllergyDisplay(
+    getters,
+    treatCondItemData.value,
+    currentValue,
+    findConvertDataForTreatDate.rstDialysisState
+  );
+  findConvertDataForTreatDate[`value${colIndex}`] = applied.name;
+  findConvertDataForTreatDate[`isTabooAllergy${colIndex}`] = applied.isTabooAllergy;
+}
+
+function normalizeMedicineTypeValue(medicineType) {
+  const t = Number(medicineType);
+  return t >= 9999990 ? t - 9999999 : t;
+}
+
+/** 投与薬剤：調製薬は mix 判定＋予定/実績接頭辞、通常薬は従来どおり患者禁忌（予定のみ） */
+function applyMedicineDisplayTabooAllergy(
+  getters,
+  medicineType,
+  medicineCd,
+  displayName,
+  rstDialysisState = "0"
+) {
+  if (displayName == null || displayName === "") {
+    return { name: displayName, isTabooAllergy: false };
+  }
+  if (normalizeMedicineTypeValue(medicineType) == 2) {
+    const baseName = normalizeMedicineNameForRstDisplay(displayName, rstDialysisState);
+    return applyMixMedicineTabooAllergyDisplay(
+      getters,
+      medicineCd,
+      baseName,
+      rstDialysisState
+    );
+  }
+  const flags = resolvePatTabooForMedicineCd(getters, medicineCd);
+  if (flags.taboo || flags.allergy) {
+    const prefix = getTabooAllergyPrefix(flags.taboo, flags.allergy) || "";
+    return {
+      name: prefix + stripTabooAllergyPrefixFromName(displayName),
+      isTabooAllergy: true,
+    };
+  }
+  return {
+    name: displayName,
+    isTabooAllergy:
+      displayNameHasTabooAllergyPrefix(displayName) || isTabooAllergy(displayName),
+  };
+}
+
+function applyMedicineRowTabooAllergyForInd(getters, mediCurrent, displayName, rstDialysisState) {
+  if (displayName == null || displayName === "") {
+    return { name: displayName, isTabooAllergy: false };
+  }
+  if (rstDialysisState != "0") {
+    if (normalizeMedicineTypeValue(mediCurrent.medicine_type) == 2) {
+      const normalized = normalizeStoredNameForRstDisplay(displayName, rstDialysisState);
+      return {
+        name: normalized,
+        isTabooAllergy: resolveOrdStoredMixTabooAllergyFlag(normalized),
+      };
+    }
+    return {
+      name: normalizeStoredNameForRstDisplay(displayName, rstDialysisState),
+      isTabooAllergy: isTabooAllergy(displayName),
+    };
+  }
+  return applyMedicineDisplayTabooAllergy(
+    getters,
+    mediCurrent.medicine_type,
+    mediCurrent.cd,
+    displayName,
+    rstDialysisState
+  );
+}
+
+function resolveMedicineNameForConvertRow(mediCurrent, mediMst, ordInfo, readOnly) {
+  if (normalizeMedicineTypeValue(mediCurrent.medicine_type) == 2) {
+    return mediCurrent.name;
+  }
+  const isReadOnly = readOnly != null ? readOnly : ordInfo.readOnly;
+  return isReadOnly || ordInfo.rstDialysisState == "0"
+    ? mediCurrent.name
+    : mediMst.name;
+}
+// #12505 接頭文字対応 ligh add end
+
+/**
+ * グラフ横軸の開始・終了日をヘッダー表示日（getDateList）に合わせる
+ * 治療日のみ表示などで列が飛ぶ場合、治療データのキー範囲とずれるのを防ぐ
+ */
+const getPatViewerChartAxisDateRange = (getters, copyTreatmentData) => {
+  const dateList = getters.getDateList || [];
+  const period = getters.getSelectedPeriod + "";
+  if (["1", "2", "3"].includes(period) && dateList.length > 0) {
+    return {
+      startDate: dayjs(dateList[0], "YYYYMMDD").startOf("day"),
+      endDate: dayjs(dateList[dateList.length - 1], "YYYYMMDD").endOf("day")
+    };
+  }
+  const keys = Object.keys(copyTreatmentData);
+  const lastIndex = keys.length - 1;
+  return {
+    startDate: dayjs(keys[0] || dateList[0], "YYYYMMDD").startOf("day"),
+    endDate: dayjs(keys[lastIndex] || dateList[dateList.length - 1], "YYYYMMDD").endOf("day")
+  };
+};
+
+/** null/空文字/不正JSONを安全にオブジェクトへ変換（#11255） */
+const parsePatViewerJson = value => {
+  if (value == null || value === "") {
+    return null;
+  }
+  if (typeof value === "object") {
+    return value;
+  }
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    return null;
+  }
+};
+
 // xrangeタイプデータの重複日付結合関数
 const mergeXrangeData = (arr) => {
   let dates = [];
@@ -92,7 +721,7 @@ const mergeXrangeData = (arr) => {
     let currentDate = start;
     while (currentDate <= end) {
       dates.push({ date: currentDate, count: Number(count) });
-      currentDate = moment(currentDate).add(1, "days").format("YYYYMMDD");
+      currentDate = dayjs(currentDate).add(1, "days").format("YYYYMMDD");
     }
   });
 
@@ -118,6 +747,26 @@ const mergeXrangeData = (arr) => {
   });
 
   return result.map(item => [item.start, item.end, item.count.toString()]);
+};
+
+const hasTreatmentPlan = treatmentRows => {
+  if (!Array.isArray(treatmentRows)) {
+    return false;
+  }
+
+  return treatmentRows.some(row => {
+    if (!row) {
+      return false;
+    }
+
+    for (const date in row) {
+      if (null !== row[date] && undefined !== row[date]) {
+        return true;
+      }
+    }
+
+    return false;
+  });
 };
 
 export default {
@@ -413,6 +1062,7 @@ export default {
     treatDate: null,
 
     ordNoList: [],
+    allData: [],
 
     // 死亡フラグ
     is_die: false,
@@ -477,16 +1127,11 @@ export default {
     bedAndMachine:[],
     //add 5619 装置と紐づいていないベッドも表示 張 end
     treatDateList: [],
-    /* add by chamaojia 2026-03-27 [12462] 患者情報共有->患者経過総合ビューア --start */
-    patTabooAllergy: [],
-    /* add by chamaojia 2026-03-27 [12462] 患者情報共有->患者経過総合ビューア --end */
-    allData:[],
+    patTabooAllergy: []
   },
 
   getters: {
-    /* add by chamaojia 2026-03-27 [12462] 患者情報共有->患者経過総合ビューア --start */
-    getPatTabooAllergy : state => state.patTabooAllergy,
-    /* add by chamaojia 2026-03-27 [12462] 患者情報共有->患者経過総合ビューア --end */
+    getPatTabooAllergy: state => state.patTabooAllergy,
     // add FNSI-横展開-日付検索条件 関 start
     // 抽出条件
     getCondition: state => state.condition,
@@ -892,16 +1537,12 @@ export default {
      * 一覧上の治療予定の有無
      */
     getIsTreatPlan(state) {
-      let isPlan = false;
-      if (0 !== state.treatmentData.length) {
-        // 一覧上に治療予定が入ってればtrueを返す
-        for (const date in state.treatmentData[0]) {
-          if (null !== state.treatmentData[0][date]) {
-            isPlan = true;
-          }
-        }
+      // 一覧上に治療予定が入ってればtrueを返す
+      if (hasTreatmentPlan(state.treatmentData)) {
+        return true;
       }
-      return isPlan;
+      // #10196で表示・操作系は直近治療日データを参照するため、同じ宿主チェーンで判定する
+      return hasTreatmentPlan(state.recentTreatmentDate);
     },
 
     /**
@@ -926,6 +1567,9 @@ export default {
 
     getOrdNoList(state) {
       return state.ordNoList;
+    },
+    getAllData(state) {
+      return state.allData;
     },
 
     getIsDie(state) {
@@ -993,9 +1637,6 @@ export default {
       return state.addIndMediInfo;
     },
     // add 9200 kangjie 20230912 end
-    getAllData(state) {
-      return state.allData;
-    },
 
   },
 
@@ -1237,8 +1878,6 @@ export default {
     setMstTreatmentData(state, mstTreatmentData) {
       state.mstTreatmentData = mstTreatmentData;
     },
-
-    /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
     addMstTreatmentData(state, mstTreatmentData) {
       const baseList = Array.isArray(state.mstTreatmentData) ? state.mstTreatmentData : [];
       const addList = Array.isArray(mstTreatmentData) ? mstTreatmentData : [];
@@ -1295,7 +1934,6 @@ export default {
       });
       state.mstMedicineMixData = [...baseList, ...uniqueAddList];
     },
-    /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
 
     // mod 9339 特殊浄化に治療方法変更してもNa注入プログラムが入りのままとなる。 関 start
      /**
@@ -1545,7 +2183,7 @@ export default {
       state.physicalInfo = physicalInfo.sort(
         // 登録日が新しいもの順にソートする
         // @ts-ignore
-        (a, b) => moment(b.exam_date) - moment(a.exam_date)
+        (a, b) => dayjs(b.exam_date).valueOf() - dayjs(a.exam_date).valueOf()
       );
     },
 
@@ -1567,6 +2205,9 @@ export default {
       state.ordNoMediList = ordNoMediList;
     },
     //add FNSI内容修正 バグ284、286 姜 end
+    setAllData(state, dataList) {
+      state.allData = dataList;
+    },
 
     // add FNSI-予定内容遅延問題対応 李 start
     setIndPlanCreateDate(state, indPlanCreateDate) {
@@ -1596,15 +2237,10 @@ export default {
     ,setTabooEquipment(state, tabooEquipment) {
       state.tabooEquipment = tabooEquipment;
     },
-//add FutreNetWeb+SI課題管理 no.6422 劉全航 end
-    setAllData(state, dataList) {
-      state.allData = dataList;
-    },
-    /* add by chamaojia 2026-03-27 [12462] 患者情報共有->患者経過総合ビューア --start */
     setPatTabooAllergy(state, patTabooAllergy) {
       state.patTabooAllergy = patTabooAllergy;
     },
-    /* add by chamaojia 2026-03-27 [12462] 患者情報共有->患者経過総合ビューア --end */
+//add FutreNetWeb+SI課題管理 no.6422 劉全航 end
   },
 
   actions: {
@@ -1658,7 +2294,7 @@ export default {
         case "3":
           for (let i = 0; ; i++) {
             // // 1～足していく(最初は0)
-            const addDay = moment(startDay)
+            const addDay = dayjs(startDay)
               .add(i, "days")
               .format("YYYYMMDD");
 
@@ -1674,10 +2310,10 @@ export default {
         case "4":
           for (let i = 0; i < 12; i++) {
             if (i === 0) {
-              dayList.push(moment(startDay).format("YYYYMMDD"));
+              dayList.push(dayjs(startDay).format("YYYYMMDD"));
             } else {
               dayList.push(
-                moment(startDay)
+                dayjs(startDay)
                   .add(i, "weeks")
                   .format("YYYYMMDD")
               );
@@ -1687,10 +2323,10 @@ export default {
         case "5":
           for (let i = 0; i < 6; i++) {
             if (i === 0) {
-              dayList.push(moment(startDay).format("YYYYMMDD"));
+              dayList.push(dayjs(startDay).format("YYYYMMDD"));
             } else {
               dayList.push(
-                moment(startDay)
+                dayjs(startDay)
                   .add(i, "months")
                   .format("YYYYMMDD")
               );
@@ -1700,10 +2336,10 @@ export default {
         case "6":
           for (let i = 0; i < 12; i++) {
             if (i === 0) {
-              dayList.push(moment(startDay).format("YYYYMMDD"));
+              dayList.push(dayjs(startDay).format("YYYYMMDD"));
             } else {
               dayList.push(
-                moment(startDay)
+                dayjs(startDay)
                   .add(i, "months")
                   .format("YYYYMMDD")
               );
@@ -1713,10 +2349,10 @@ export default {
         case "7":
           for (let i = 0; i < 3; i++) {
             if (i === 0) {
-              dayList.push(moment(startDay).format("YYYYMMDD"));
+              dayList.push(dayjs(startDay).format("YYYYMMDD"));
             } else {
               dayList.push(
-                moment(startDay)
+                dayjs(startDay)
                   .add(i, "year")
                   .format("YYYYMMDD")
               );
@@ -1742,11 +2378,12 @@ export default {
     /**
      * 指定施設にて装置が割りついているベッド+装置情報の一覧を取得する
      */
-    async getBedAndMachine({ commit }, { facilityCd }) {
+    async getBedAndMachine({ commit }, { facilityCd, selectedPatId }) {
       // API実行
       // TODO: MstGetter.jsでは未実装のため、一時的に下記で実施(形式が他と異なっているため)
       const response = await ApiHelper.get("/mstInfo/getByFacilityCd", {
-        facility_cd: facilityCd
+        facility_cd: facilityCd,
+        ...selectedPatIdParams(selectedPatId)
       }).catch(err => {
         throw err;
       });
@@ -1756,11 +2393,12 @@ export default {
     },
     //add 5619 装置と紐づいていないベッドも表示 張 end
     //add no4878 メイン画面と編集画面で削除済み、期限切れ、分類不一致、禁忌アレルギーの接頭付けが一致していない 張 start
-    async getMstBedAll({ commit }, { facilityCd }) {
+    async getMstBedAll({ commit }, { facilityCd, selectedPatId }) {
       // API実行
       // TODO: MstGetter.jsでは未実装のため、一時的に下記で実施(形式が他と異なっているため)
       const response = await ApiHelper.get("/mstInfo/selectAllByFacilityCd", {
-        facility_cd: facilityCd
+        facility_cd: facilityCd,
+        ...selectedPatIdParams(selectedPatId)
       }).catch(err => {
         throw err;
       });
@@ -1776,7 +2414,7 @@ export default {
      * クールマスタを取得
      * @param {string} facilityCd 施設コード
      */
-    async getMstKur({ commit }, { facilityCd }) {
+    async getMstKur({ commit }, { facilityCd, selectedPatId }) {
       // // API実行
       // const response = await kur(facilityCd).catch(err => {
       //   throw err;
@@ -1784,7 +2422,8 @@ export default {
       // TODO: 上記で用意されている関数ではエラーとなるため、一時的に下記で実施
       const response = await ApiHelper.get("/mstInfo/mstKur", {
         facility_cd: facilityCd,
-        is_del: "0"
+        is_del: "0",
+        ...selectedPatIdParams(selectedPatId)
       }).catch(err => {
         throw err;
       });
@@ -1835,10 +2474,11 @@ export default {
      * VAマスタを取得(削除されたを含む)
      * @param {string} facilityCd 施設コード
      */
-    async getMstDelVa({ commit }, { facilityCd }) {
+    async getMstDelVa({ commit }, { facilityCd, selectedPatId }) {
       // API実行
       const requestParam = {
-        facilityCd: facilityCd
+        facilityCd: facilityCd,
+        ...selectedPatIdParams(selectedPatId)
       };
 
       const response = await ApiHelper.get("/mstInfo/mstVaDel", requestParam)
@@ -2109,7 +2749,7 @@ export default {
      * 手技マスタを取得
      * @param {string} facilityCd 施設コード
      */
-    async getMstProcedure({ commit }, { facilityCd }) {
+    async getMstProcedure({ commit }, { facilityCd, selectedPatId }) {
       // API実行
       const response = await procedure(facilityCd).catch(err => {
         throw err;
@@ -2117,7 +2757,8 @@ export default {
       // add 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
       const tableName = "mst_procedure";
       const mstselector = await ApiHelper.get(
-        `/report_designer/master/${tableName}`
+        `/report_designer/master/${tableName}`,
+        selectedPatIdParams(selectedPatId)
       ).catch(err => {
         throw err;
       });
@@ -2135,7 +2776,7 @@ export default {
      * 投与タイミングマスタを取得
      * @param {string} facilityCd 施設コード
      */
-    async getMstMedicateTiming({ commit }, { facilityCd }) {
+    async getMstMedicateTiming({ commit }, { facilityCd, selectedPatId }) {
       // API実行
       const response = await medicateTiming(facilityCd).catch(err => {
         throw err;
@@ -2143,7 +2784,8 @@ export default {
       // add 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
       const tableName = "mst_medicate_timing";
       const mstselector = await ApiHelper.get(
-        `/report_designer/master/${tableName}`
+        `/report_designer/master/${tableName}`,
+        selectedPatIdParams(selectedPatId)
       ).catch(err => {
         throw err;
       });
@@ -2177,7 +2819,7 @@ export default {
      * 患者経過総合ビューアレイアウトマスタを取得し、表示用に加工
      * @param {string} facilityCd 施設コード
      */
-    async getDispLayoutItemList({ commit }, { facilityCd }) {
+    async getDispLayoutItemList({ commit }, { facilityCd, selectedPatId }) {
       // API実行
       const response = await mstPatViewerLayout(facilityCd)
         .catch(err => {
@@ -2190,7 +2832,7 @@ export default {
       }
 
       // 施設拡張設定を取得(ビューアレイアウトマスタ内非表示項目取得)
-      const responseFacility = await sendRequestGetMstFacilityByCd(facilityCd)
+      const responseFacility = await sendRequestGetMstFacilityByCd(facilityCd, selectedPatId)
         .catch(error => {
           throw error;
         });
@@ -2247,7 +2889,7 @@ export default {
 
         eleMstLayout.dispItemInfo.forEach(eleMstCategory => {
           // add FNSI-投薬支援仕様更新「投薬支援マスタ」 周 start
-          if (eleMstCategory.categoryNo === 1028 && eleMstCategory.hasOwnProperty("medicineGroupCd") && eleMstCategory.medicineGroupCd) {
+          if (eleMstCategory.categoryNo === 1028 && Object.prototype.hasOwnProperty.call(eleMstCategory, "medicineGroupCd") && eleMstCategory.medicineGroupCd) {
             commit("setSelectedMedicineSupport", eleMstCategory.medicineGroupCd);
             return;
           }
@@ -2420,7 +3062,6 @@ export default {
      * @param baseDate 基準日の格納
      * @returns {Promise<void>}
      */
-    /* upd by chamaojia 2026-03-17 [12462] 患者情報共有->患者経過総合ビューア --start */
     async getOrdMainOfIndMediInfo (
         { dispatch, commit },
         { facilityCd, patId, startTime, patShareMode }
@@ -2435,7 +3076,6 @@ export default {
       });
       commit("setAddIndMediInfo",response.data);
     },
-    /* upd by chamaojia 2026-03-17 [12462] 患者情報共有->患者経過総合ビューア --end */
 
     // add 9200 by kangjie 20230912 end
     /**
@@ -2448,8 +3088,9 @@ export default {
      */
     async getOrdMain(
       { dispatch, commit },
-      { facilityCd, patId, startDay, endDay, weekPattern }
+      { facilityCd, patId, startDay, endDay, weekPattern, selectedPatId }
     ) {
+      const resolvedSelectedPatId = selectedPatId ?? store.getters["pat-info/selectedPatId"];
       // APIの引数作成
       const sendData = {};
       // 施設コード
@@ -2464,12 +3105,10 @@ export default {
       sendData.week_pattern = weekPattern;
 
 
-      let startDayTmp = moment(startDay).add(-7, "days").format("YYYYMMDD");
-      let endDayTmp = moment(endDay).add(7, "days").format("YYYYMMDD");
-      /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
+      let startDayTmp = dayjs(startDay).add(-7, "days").format("YYYYMMDD");
+      let endDayTmp = dayjs(endDay).add(7, "days").format("YYYYMMDD");
       const patientShareMode = store.getters["account-edit/getPatientShareMode"];
       const patientShareFacilityCdMode = store.getters["account-edit/getPatientShareFacilityCdMode"];
-      // 0: マージ  1: 自施設
       const patShareMode = patientShareMode == 0 && !patientShareFacilityCdMode ? 0 : 1;
       const sendDataTmp = {};
       // 施設コード
@@ -2484,33 +3123,42 @@ export default {
       sendDataTmp.ind_end_date = endDayTmp;
       sendDataTmp.patShareMode = patShareMode;
       const responseTmp = await ApiHelper.post(
-        // "/mainData/sharingInfo/TreatDateList",
         "/mainData/sharingInfo/getOrdMainInfo",
         sendDataTmp
       ).catch(err => {
         throw err;
       });
-      /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
       const responsData = responseTmp.data.filter(item => {
-        return moment(item.treatDate).isBetween(startDay, endDay, null, '[]');
+        return dayjs(item.treatDate).isBetween(startDay, endDay, null, '[]');
       });
-
       //#11397  start
       commit("setAllData", responsData);
       //#11397  end
+      
+      // #12505 接頭文字対応 ligh add start
+      // 治療条件・調製薬剤の禁忌判定に使用（共有モード以外でも編集画面と同様に取得）
+      try {
+        const patTabooAllergyRes = await ApiHelper.get(
+          `/patInfo/selectPatTabooAllergyByPatId/${facilityCd}/${patId}`
+        );
+        commit("setPatTabooAllergy", patTabooAllergyRes.data || []);
+      } catch (e) {
+        commit("setPatTabooAllergy", []);
+      }
+      // #12505 接頭文字対応 ligh add end
 
       let resMniMonitors = [];
       if (responsData && responsData.length > 0) {
         let mntMachineStates = [];
         let ordNoList = [];
-        let bodyDataList = [];
-        /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
         let ordNoToShrList = [];
         let monitorsReqList = [];
+        let bodyDataList = [];
         for (const ordInfo of responsData) {
           monitorsReqList.push({
-              "facility_cd": ordInfo.facilityCd, "ord_no": ordInfo.ordNo
-            });
+            facility_cd: ordInfo.facilityCd,
+            ord_no: ordInfo.ordNo
+          });
           if (ordInfo.readOnly) {
             ordNoToShrList.push(ordInfo.ordNo);
           }
@@ -2521,22 +3169,28 @@ export default {
             });
           } // add by shiyw  2024-01-01 #10236 不要なapi呼び出しを減らす：rstDialysisState=3の場合のみ、mnt _ machine _ state.monitor _ dataデータを取得する必要があります
         }
-        
+
         if (patShareMode == 0 && ordNoToShrList.length > 0) {
-          const shrMstResponse = await ApiHelper.post("/mstInfo/getMstInfoByOrdNo", ordNoToShrList);
+          const shrMstResponse = await ApiHelper.configPost(
+            "/mstInfo/getMstInfoByOrdNo",
+            ordNoToShrList,
+            selectedPatIdConfig(resolvedSelectedPatId)
+          );
           commit("addMstTreatmentData", shrMstResponse.data["mstTreatment"]);
           commit("addMstProcedureData", shrMstResponse.data["mstProcedure"]);
           commit("addMstMedicateTimingData", shrMstResponse.data["mstMedicateTiming"]);
           commit("addMstMedicineMixData", shrMstResponse.data["mstMedicineMix"]);
 
-          // 現在の患者に紐づく共有患者の禁忌情報を取得する
-          const patTabooAllergyRes = await ApiHelper.get(`/patInfo/selectPatTabooAllergyByPatId/${facilityCd}/${patId}`);
-          commit("setPatTabooAllergy", patTabooAllergyRes.data);
+          // const patTabooAllergyRes = await ApiHelper.get(`/patInfo/selectPatTabooAllergyByPatId/${facilityCd}/${patId}`);
+          // commit("setPatTabooAllergy", patTabooAllergyRes.data);
         }
-        /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
 
         if(bodyDataList.length > 0) {
-          const mntMachineStateTmp = await ApiHelper.post("/mainData/getMniMonitorByFacilityCdAndPatIdAndOrdNo", bodyDataList);
+          const mntMachineStateTmp = await ApiHelper.configPost(
+            "/mainData/getMniMonitorByFacilityCdAndPatIdAndOrdNo",
+            bodyDataList,
+            selectedPatIdConfig(resolvedSelectedPatId)
+          );
           let mntMachineStateData = mntMachineStateTmp.data;
           for (const ordInfo of responsData) {
             let mntMachineState = mntMachineStateData.filter(item => {
@@ -2548,10 +3202,11 @@ export default {
             });
           }
         }
-        /* upd by chamaojia 2026-03-14 [12462] 患者情報共有->患者経過総合ビューア --start */
-        // const  resMniMonitorTmp = await  ApiHelper.get(`/status_list/mni_monitors/${ordNoList}/${facilityCd}`);
-        const resMniMonitorTmp = await ApiHelper.post("/status_list/mni_monitors", monitorsReqList);
-        /* upd by chamaojia 2026-03-14 [12462] 患者情報共有->患者経過総合ビューア --end */
+        const resMniMonitorTmp = await ApiHelper.configPost(
+          "/status_list/mni_monitors",
+          monitorsReqList,
+          selectedPatIdConfig(resolvedSelectedPatId)
+        );
         let resMniMonitorData = resMniMonitorTmp.data;
         for (const ordInfo of responsData) {
           let resMniMonitor = resMniMonitorData.filter(item => {
@@ -2563,7 +3218,6 @@ export default {
             resMniMonitor: {data: resMniMonitor}
           });
         }
-
         commit("setResMniMonitors", resMniMonitors);
         commit("setMntMachineStates", mntMachineStates);
       }
@@ -2571,12 +3225,9 @@ export default {
       // 患者身体情報も取得
       let physical = [];
       if (patId) {
-        /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
-        // physical = await sendRequestFindPhysicalInfo(patId).catch(err => {
         physical = await sendRequestFindPhysicalInfo(patId, patShareMode).catch(err => {
           throw err;
         });
-        /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
       }
 
       // 表示用にデータを加工
@@ -2746,8 +3397,8 @@ export default {
     ) {
 
       this.dateArray = getDayArr(startDay,endDay);
-      let startDayTmp = moment(startDay).format("YYYYMMDD");
-      let endDayTmp = moment(endDay).format("YYYYMMDD");
+      let startDayTmp = dayjs(startDay).format("YYYYMMDD");
+      let endDayTmp = dayjs(endDay).format("YYYYMMDD");
       const sendDataTmp = {};
       // 施設コード
       sendDataTmp.facility_cd = facilityCd;
@@ -2766,7 +3417,7 @@ export default {
         throw err;
       });
       const responsData = responseTmp.data.filter(item => {
-        return moment(item.treatDate).isBetween(startDay, endDay, null, '[]');
+        return dayjs(item.treatDate).isBetween(startDay, endDay, null, '[]');
       });
 
       // 表示用にデータを加工
@@ -2851,7 +3502,7 @@ export default {
       const searchDateListTmp = deepCopy(getters.getDateList);
       let searchDateList = [];
       for (let i = -7; i < 0; i++) {
-        searchDateList.push(moment(searchDateListTmp[0]).add(i, "days").format("YYYYMMDD"));
+        searchDateList.push(dayjs(searchDateListTmp[0]).add(i, "days").format("YYYYMMDD"));
       }
       searchDateListTmp.forEach(item => {
         searchDateList.push(item);
@@ -2859,10 +3510,10 @@ export default {
 
       // mod FNSI-障害票一覧_患者経過総合ビューアNo.16-19(指示の切り替わりポイントを赤くする) 李 start
       // for (let i = 1; i < 8; i++) {
-      //   searchDateList.push(moment(searchDateList[searchDateList.length - 1]).add(i, "days").format("YYYYMMDD"));
+      //   searchDateList.push(dayjs(searchDateList[searchDateList.length - 1]).add(i, "days").format("YYYYMMDD"));
       // }
       for (let i = 1; i < 8; i++) {
-        searchDateList.push(moment(searchDateList[searchDateList.length - 1]).add(1, "days").format("YYYYMMDD"));
+        searchDateList.push(dayjs(searchDateList[searchDateList.length - 1]).add(1, "days").format("YYYYMMDD"));
       }
       // mod FNSI-障害票一覧_患者経過総合ビューアNo.16-19(指示の切り替わりポイントを赤くする) 李 end
 
@@ -2910,16 +3561,14 @@ export default {
      * @param {string} endDay 抽出終了日(YYYYMMDD形式)
      */
     async getPatExamMain({ dispatch }, { patId, startDay, endDay, patShareMode }) {
-      /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
       const sendData = {};
       sendData.patShareMode = patShareMode;
       const response = await ApiHelper.post(
-        // `/exam/TreatDateList/${patId}/${startDay}/${endDay}`
-        `/exam/TreatDateList/${patId}/${startDay}/${endDay}`, sendData
+        `/exam/TreatDateList/${patId}/${startDay}/${endDay}`,
+        sendData
       ).catch(err => {
         throw err;
       });
-      /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
 
       // 表示用にデータを加工
       await dispatch("convertRowExamMainData", response.data);
@@ -2957,8 +3606,8 @@ export default {
           // 一致する治療日のデータを抽出
           //mod FNSI-7230 劉全航 start
           // const date = new Date(item.regExamDate);
-          // const dateStr = moment(date, "YYYYMMDD").format("YYYYMMDD");
-          const dateStr = moment(item.regExamDate).format("YYYYMMDD");
+          // const dateStr = dayjs(date, "YYYYMMDD").format("YYYYMMDD");
+          const dateStr = dayjs(item.regExamDate).format("YYYYMMDD");
           //mod FNSI-7230 劉全航 end
           if (dateStr === element) {
             return true;
@@ -2988,16 +3637,14 @@ export default {
      * @param {string} startDay 抽出開始日(YYYYMMDD形式)
      */
     async getExamMainDataLastDate({ dispatch }, { patId, startDay, patShareMode}) {
-      /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
       const sendData = {};
       sendData.patShareMode = patShareMode;
       const response = await ApiHelper.post(
-        // `/exam/TreatDateList/${patId}/${startDay}`
-        `/exam/TreatDateList/${patId}/${startDay}`, sendData
+        `/exam/TreatDateList/${patId}/${startDay}`,
+        sendData
       ).catch(err => {
         throw err;
       });
-      /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
 
       // 表示用にデータを加工
       await dispatch("convertLastExamMainData", response.data);
@@ -3023,16 +3670,14 @@ export default {
      * @param {string} endDay 抽出終了日(YYYYMMDD形式)
      */
     async getPatRadMain({ dispatch }, { patId, startDay, endDay, patShareMode }) {
-      /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
       const sendData = {};
       sendData.patShareMode = patShareMode;
       const response = await ApiHelper.post(
-        // `/rad/TreatDateList/${patId}/${startDay}/${endDay}`
-        `/rad/TreatDateList/${patId}/${startDay}/${endDay}`, sendData
+        `/rad/TreatDateList/${patId}/${startDay}/${endDay}`,
+        sendData
       ).catch(err => {
         throw err;
       });
-      /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
 
       // 表示用にデータを加工
       await dispatch("convertRowRadMainData", response.data);
@@ -3070,8 +3715,8 @@ export default {
           // 一致する治療日のデータを抽出
           //mod FNSI-7230 劉全航 start
           // const date = new Date(item.regRadDate);
-          // const dateStr = moment(date, "YYYYMMDD").format("YYYYMMDD");
-          const dateStr = moment(item.regRadDate).format("YYYYMMDD");
+          // const dateStr = dayjs(date, "YYYYMMDD").format("YYYYMMDD");
+          const dateStr = dayjs(item.regRadDate).format("YYYYMMDD");
           //mod FNSI-7230 劉全航
           if (dateStr === element) {
             return true;
@@ -3101,16 +3746,14 @@ export default {
      * @param {string} startDay 抽出開始日(YYYYMMDD形式)
      */
     async getPatRadMainLastDate({ dispatch }, { patId, startDay, patShareMode}) {
-      /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
       const sendData = {};
       sendData.patShareMode = patShareMode;
       const response = await ApiHelper.post(
-        // `/rad/TreatDateList/${patId}/${startDay}`
-        `/rad/TreatDateList/${patId}/${startDay}`, sendData
+        `/rad/TreatDateList/${patId}/${startDay}`,
+        sendData
       ).catch(err => {
         throw err;
       });
-      /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
 
       // 表示用にデータを加工
       await dispatch("convertLastRadDate", response.data);
@@ -3198,10 +3841,8 @@ export default {
      * @param {string} startDay 抽出開始日(YYYYMMDD形式)
      * @param {string} endDay 抽出終了日(YYYYMMDD形式)
      */
-    /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
     async getLetterData({ dispatch }, { patId, startDay, endDay, patShareMode }) {
       const response = await ApiHelper.post(
-        // `/pat_event/selectByLetterDate/${patId}/${startDay}/${endDay}`
         `/pat_event/selectByLetterDate/${patId}/${startDay}/${endDay}/${patShareMode}`
       ).catch(err => {
         throw err;
@@ -3210,7 +3851,6 @@ export default {
       // 表示用にデータを加工
       await dispatch("letterData", response.data);
     },
-    /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
     async letterData({ commit }, targetData) {
 
       // DB取得データ(pat_exam_main)をディープコピーして加工データに使用
@@ -3228,11 +3868,9 @@ export default {
      */
     //mod #9738 患者経過総合ビューアで検査依頼、一般撮影検査依頼、招待状、処方、患者イベントのデータが正常に表示されない zy start
     // async getPrescriptionData({ commit }, { patId,facilityCd}) {
-    /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
     async getPrescriptionData({ commit }, { patId,facilityCd,startDay,endDay, patShareMode}) {
       const response = await ApiHelper.post(
         // `/pat-prescription/prescriptionDateList/${patId}/${facilityCd}`
-        // `/pat-prescription/prescriptionDateList/${patId}/${facilityCd}/${startDay}/${endDay}`
         `/pat-prescription/prescriptionDateList/${patId}/${facilityCd}/${startDay}/${endDay}/${patShareMode}`
         //mod #9738 患者経過総合ビューアで検査依頼、一般撮影検査依頼、招待状、処方、患者イベントのデータが正常に表示されない zy end
       ).catch(err => {
@@ -3243,7 +3881,6 @@ export default {
       commit("setPrescriptionDataList", response.data);
       // await dispatch("convertPrescriptionData", response.data);
     },
-    /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
 
     // /**
     //  * 取得した処方を加工
@@ -3281,68 +3918,75 @@ export default {
         return [];
       }
 
-      dispatch("getDispLayoutItemForSubCategory", {
-        layoutCd: selectLayoutCd,
-        categoryNo: 1, // 治療情報
-        subCategoryNo: 1 // 治療予定
-      }).then(searchDispLayoutItemList => {
-        if (!searchDispLayoutItemList || 0 === searchDispLayoutItemList.length) {
-          return [];
+      const searchDispLayoutItemList = await dispatch(
+        "getDispLayoutItemForSubCategory",
+        {
+          layoutCd: selectLayoutCd,
+          categoryNo: 1, // 治療情報
+          subCategoryNo: 1 // 治療予定
+        }
+      );
+      if (!searchDispLayoutItemList || 0 === searchDispLayoutItemList.length) {
+        return [];
+      }
+
+      const value1Tasks = [];
+
+      // 表示用データの作成
+      searchDispLayoutItemList.forEach(eleDispItem => {
+        // 対象番号の表示項目を抽出
+        let findConvertData = convertData.find(item => {
+          return eleDispItem.itemNo === item.itemNo;
+        });
+
+        // 対象番号が存在しない場合、雛形構造を追加
+        if (!findConvertData) {
+          const temp = deepCopy(layoutDispData);
+          temp.itemNo = eleDispItem.itemNo;
+          temp.itemName = eleDispItem.itemName;
+          findConvertData = temp;
+          convertData.push(findConvertData);
         }
 
-        // 表示用データの作成
-        searchDispLayoutItemList.forEach(eleDispItem => {
-          // 対象番号の表示項目を抽出
-          let findConvertData = convertData.find(item => {
-            return eleDispItem.itemNo === item.itemNo;
+        // 表示分日付(期間)ループ
+        searchDateList.forEach(eleDate => {
+          // 対象日付の抽出
+          let findConvertDataForTreatDate = findConvertData.data.find(item => {
+            return item.treatDate === eleDate;
           });
-
-          // 対象番号が存在しない場合、雛形構造を追加
-          if (!findConvertData) {
-            const temp = deepCopy(layoutDispData);
-            temp.itemNo = eleDispItem.itemNo;
-            temp.itemName = eleDispItem.itemName;
-            findConvertData = temp;
-            convertData.push(findConvertData);
+          // 対象日付のデータが存在しない場合、雛形構造を追加
+          if (!findConvertDataForTreatDate) {
+            const temp = deepCopy(layoutDispData_data);
+            temp.treatDate = eleDate;
+            findConvertDataForTreatDate = temp;
+            findConvertData.data.push(findConvertDataForTreatDate);
           }
 
-          // 表示分日付(期間)ループ
-          searchDateList.forEach(eleDate => {
-            // 対象日付の抽出
-            let findConvertDataForTreatDate = findConvertData.data.find(item => {
-              return item.treatDate === eleDate;
-            });
-            // 対象日付のデータが存在しない場合、雛形構造を追加
-            if (!findConvertDataForTreatDate) {
-              const temp = deepCopy(layoutDispData_data);
-              temp.treatDate = eleDate;
-              findConvertDataForTreatDate = temp;
-              findConvertData.data.push(findConvertDataForTreatDate);
-            }
+          // 対象日付に治療情報が存在するかを確認
+          if (!copyTreatmentData[findConvertDataForTreatDate.treatDate]) {
+            return; // forEachでのcontinueの代替
+          }
 
-            // 対象日付に治療情報が存在するかを確認
-            if (!copyTreatmentData[findConvertDataForTreatDate.treatDate]) {
-              return; // forEachでのcontinueの代替
-            }
-
-            // オーダ番号を格納
-            findConvertDataForTreatDate.ordNo =
-              copyTreatmentData[findConvertDataForTreatDate.treatDate].ordNo;
-            if (copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly) {
-              findConvertDataForTreatDate.isNotClickable = true;
-            }
-            // 治療状況の値を画面表示用に変換し格納
-            dispatch(
-              "getDialysisStateMessage",
-              copyTreatmentData[findConvertDataForTreatDate.treatDate]
-                .rstDialysisState
-            ).then(ele => {
-              findConvertDataForTreatDate.value1 = ele.dispData;
-            });
-          });
+          // オーダ番号を格納
+          findConvertDataForTreatDate.ordNo =
+            copyTreatmentData[findConvertDataForTreatDate.treatDate].ordNo;
+          if (copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly) {
+            findConvertDataForTreatDate.isNotClickable = true;
+          }
+          // 治療状況の値を画面表示用に変換し格納（return前に完了させる）
+          const cell = findConvertDataForTreatDate;
+          const rstDialysisState =
+            copyTreatmentData[findConvertDataForTreatDate.treatDate]
+              .rstDialysisState;
+          value1Tasks.push(
+            dispatch("getDialysisStateMessage", rstDialysisState).then(ele => {
+              cell.value1 = ele.dispData;
+            })
+          );
         });
       });
-      // mod FNSI-性能を最適化する 李 end
+
+      await Promise.all(value1Tasks);
 
       return convertData;
     },
@@ -3370,7 +4014,7 @@ export default {
         const searchDateListTmp = getters.getDateList;
         // 左端画面表示治療日 - 7
         for (let i = -7; i < 0; i++) {
-          searchDateList.push(moment(searchDateListTmp[0]).add(i, "days").format("YYYYMMDD"));
+          searchDateList.push(dayjs(searchDateListTmp[0]).add(i, "days").format("YYYYMMDD"));
         }
         // 画面表示治療日
         searchDateListTmp.forEach(item => {
@@ -3378,7 +4022,7 @@ export default {
         });
         // 右端画面表示治療日 + 7
         for (let i = 1; i < 8; i++) {
-          searchDateList.push(moment(searchDateList[searchDateList.length - 1]).add(1, "days").format("YYYYMMDD"));
+          searchDateList.push(dayjs(searchDateList[searchDateList.length - 1]).add(1, "days").format("YYYYMMDD"));
         }
         // ord_mainの取得
         copyTreatmentData = getters.getTreatmentDataTmp[listIndex];
@@ -3562,19 +4206,16 @@ export default {
                 let dw =
                   copyTreatmentData[findConvertDataForTreatDate.treatDate]
                     .indDw;
-                /* upd by chamaojia 2026-03-14 [12462] 患者情報共有->患者経過総合ビューア --start */
-                // findConvertDataForTreatDate.isNotClickable = false;
                 findConvertDataForTreatDate.isNotClickable = copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly;
-                /* upd by chamaojia 2026-03-14 [12462] 患者情報共有->患者経過総合ビューア --end */
                 if (dw === null || dw === undefined) {
                   // indDwが取得できないならば身体情報から治療日最直近のDWを取得
                   const baseDate = findConvertDataForTreatDate.treatDate;
-                  const tDate = moment(baseDate, "YYYYMMDD").add(1, "day");
+                  const tDate = dayjs(baseDate, "YYYYMMDD").add(1, "day");
                   for (const physicalInfo of getters.getPhysicalInfo) {
                     if (
                       physicalInfo &&
                       physicalInfo.exam_date &&
-                      moment(physicalInfo.exam_date) < tDate
+                      dayjs(physicalInfo.exam_date) < tDate
                     ) {
                       // 治療日より未来の登録日を除外する
                       if (
@@ -3721,10 +4362,7 @@ export default {
                 break;
 
               case 2: // VA
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                // if(findConvertDataForTreatDate.rstDialysisState!="0"){
                 if(findConvertDataForTreatDate.rstDialysisState!="0" || copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly){
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */  
                   // 指示：VA名
                   if(indCondInfoFlag && JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].indCondInfo)["2"]){
                     findConvertDataForTreatDate.indVAName = JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].indCondInfo)["2"].value_name_1;
@@ -3736,27 +4374,8 @@ export default {
                 }
                 // VA
                 if (copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly) {
-                  /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                  // const param = {
-                  //   vaCd : treatCondItemData.value
-                  // }
-                  // ApiHelper.get("/mstInfo/mstVa/getVaName", param).then((res) => {
-                  //   if (i === 1) {
-                  //     if (findConvertDataForTreatDate.rstDialysisState == "0") {
-                  //       findConvertDataForTreatDate[`value${i}`] = response.name;
-                  //     } else {
-                  //       findConvertDataForTreatDate[`value${i}`] = findConvertDataForTreatDate.indVAName;
-                  //     }
-                  //   } else {
-                  //     findConvertDataForTreatDate[`value${i}`] = findConvertDataForTreatDate.rstVAName;
-                  //   }
-                  //   findConvertDataForTreatDate[`value${i}`] = res.data;
-                  // });
-
                   const vaName = i === 1 ? findConvertDataForTreatDate.indVAName : findConvertDataForTreatDate.rstVAName;
                   findConvertDataForTreatDate[`value${i}`] = vaName;
-                  /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
-                  
                 } else {
                   dispatch("getMstRecordInState", {
                     mstClass: 4,
@@ -3814,10 +4433,7 @@ export default {
 				//add #10196 ord_mainのデータ定義から外れているデータ登録・参照処理の修正 zhaoqi 20240516 end
               case 5: // ダイアライザ
                 // FNSI-修正 マスタ削除の対応 wangchen add start
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                // if(findConvertDataForTreatDate.rstDialysisState!="0"){
                 if(findConvertDataForTreatDate.rstDialysisState!="0" || copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly){
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
                   // 指示：ダイアライザ名
                   /* upd EOL対応内部 #7021 by ztc 2023-07-12 --start */
                   if(indCondInfoFlag && JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].indCondInfo)["5"]) {
@@ -3831,33 +4447,11 @@ export default {
                 }
                 // FNSI-修正 マスタ削除の対応 wangchen add end
                 if (copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly) {
-                  /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                  // const param = {
-                  //   dialyzerCd: treatCondItemData.value,
-                  //   patId: selectedPatId
-                  // }
-                  // ApiHelper.get("/mstInfo/mstDialyzer/getDialyzerSharingInfo", param).then((res) => {
-                  //   if (i === 1) {
-                  //     if (findConvertDataForTreatDate.rstDialysisState == "0") {
-                  //       findConvertDataForTreatDate[`value${i}`] = res.data.dialyzerName;
-                  //     } else {
-                  //       findConvertDataForTreatDate[`value${i}`] = findConvertDataForTreatDate.indDialyzerName;
-                  //     }
-                  //   } else {
-                  //     findConvertDataForTreatDate[`value${i}`] = findConvertDataForTreatDate.rstDialyzerName;
-                  //   }
-                  //   findConvertDataForTreatDate[`isTabooAllergy${i}`] = res.data.isTabooAllergy;
-                  //   // 使用期限の判定
-                  //   findConvertDataForTreatDate.isExpired = !fitTermCheck(res.data.useStartDate, res.data.useEndDate, findConvertDataForTreatDate.treatDate);
-                  // });
-
                   const dialyzerName = i === 1 ? findConvertDataForTreatDate.indDialyzerName : findConvertDataForTreatDate.rstDialyzerName;
                   if (i === 1 && findConvertDataForTreatDate.rstDialysisState == "0") {
-                    // ダイアライザ
-                    const tabooAllergyClassType = "4";
                     const tabooAllergyInfos = getters.getPatTabooAllergy.filter(item =>
                       item.patId == copyTreatmentData[findConvertDataForTreatDate.treatDate].patId &&
-                      item.classType == tabooAllergyClassType &&
+                      item.classType == "4" &&
                       item.cd == treatCondItemData.value
                     );
                     if (tabooAllergyInfos && tabooAllergyInfos.length > 0) {
@@ -3872,8 +4466,6 @@ export default {
                     findConvertDataForTreatDate[`value${i}`] = dialyzerName;
                     findConvertDataForTreatDate[`isTabooAllergy${i}`] = isTabooAllergy(dialyzerName);
                   }
-                  /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
-
                 } else {
                   if (treatCondItemData.value_name_1) {
                     // ダイアライザ
@@ -3964,10 +4556,7 @@ export default {
 
               case 6: // 吸着カラム
                 // FNSI-修正 マスタ削除の対応 wangchen add start
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                // if(findConvertDataForTreatDate.rstDialysisState!="0"){
                 if(findConvertDataForTreatDate.rstDialysisState!="0" || copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly){
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
                   // 指示：医療材料名
                   /* upd EOL対応内部 #7021 by ztc 2023-07-12 --start */
                   if(indCondInfoFlag && JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].indCondInfo)["6"]) {
@@ -3982,12 +4571,10 @@ export default {
               //mod 8752 【IES起票】患者経過総合ビューア画面にて表示されない項目がある 張 start
               // break;
               // FNSI-修正 マスタ削除の対応 wangchen add end
+              // falls through
               case 7: // 1次膜
                 // FNSI-修正 マスタ削除の対応 wangchen add start
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                // if(findConvertDataForTreatDate.rstDialysisState!="0"){
                 if(findConvertDataForTreatDate.rstDialysisState!="0" || copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly){
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
                   /* upd EOL対応内部 #7021 by ztc 2023-07-12 --start */
                   // 指示：医療材料名
                   findConvertDataForTreatDate.indEquipmentName = indCondInfoFlag && JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].indCondInfo)["7"]?JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].indCondInfo)["7"].value_name_1:"";
@@ -3997,12 +4584,10 @@ export default {
                 }
               // break;
               // FNSI-修正 マスタ削除の対応 wangchen add end
+              // falls through
               case 8: // 2次膜
                 // FNSI-修正 マスタ削除の対応 wangchen add start
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                // if(findConvertDataForTreatDate.rstDialysisState!="0"){
                 if(findConvertDataForTreatDate.rstDialysisState!="0" || copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly){
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
                   /* upd EOL対応内部 #7021 by ztc 2023-07-12 --start */
                   // 指示：医療材料名
                   findConvertDataForTreatDate.indEquipmentName = indCondInfoFlag && JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].indCondInfo)["8"]?JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].indCondInfo)["8"].value_name_1:"";
@@ -4010,14 +4595,11 @@ export default {
                   findConvertDataForTreatDate.rstEquipmentName = rstCondInfoFlag && JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].rstCondInfo)["8"]?JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].rstCondInfo)["8"].value_name_1:"";
                   /* upd EOL対応内部 #7021 by ztc 2023-07-12 --end */
                 }
-              // break;
               // FNSI-修正 マスタ削除の対応 wangchen add end
+              // falls through
               case 9:
                 // FNSI-修正 マスタ削除の対応 wangchen add start
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                // if(findConvertDataForTreatDate.rstDialysisState!="0"){
                 if(findConvertDataForTreatDate.rstDialysisState!="0" || copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly){
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
                   /* upd EOL対応内部 #7021 by ztc 2023-07-12 --start */
                   // 指示：医療材料名
                   if(indCondInfoFlag && JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].indCondInfo)["9"]) {
@@ -4031,12 +4613,10 @@ export default {
                 }
               // break;
               // FNSI-修正 マスタ削除の対応 wangchen add end
+              /* falls through */
               case 10:
                 // FNSI-修正 マスタ削除の対応 wangchen add start
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                // if(findConvertDataForTreatDate.rstDialysisState!="0"){
                 if(findConvertDataForTreatDate.rstDialysisState!="0" || copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly){
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
                   /* upd EOL対応内部 #7021 by ztc 2023-07-12 --start */
                   // 指示：医療材料名
                   if(indCondInfoFlag && JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].indCondInfo)["10"]) {
@@ -4050,12 +4630,10 @@ export default {
                 }
               // break;
               // FNSI-修正 マスタ削除の対応 wangchen add end
+              /* falls through */
               case 11:
                 // FNSI-修正 マスタ削除の対応 wangchen add start
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                // if(findConvertDataForTreatDate.rstDialysisState!="0"){
                 if(findConvertDataForTreatDate.rstDialysisState!="0" || copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly){
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
                   /* upd EOL対応内部 #7021 by ztc 2023-07-12 --start */
                   // 指示：医療材料名
                   if(indCondInfoFlag && JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].indCondInfo)["11"]) {
@@ -4070,12 +4648,10 @@ export default {
               // break;
               //mod 8752 【IES起票】患者経過総合ビューア画面にて表示されない項目がある 張 end
               // FNSI-修正 マスタ削除の対応 wangchen add end
+              /* falls through */
               case 13:
                 // FNSI-修正 マスタ削除の対応 wangchen add start
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                // if(findConvertDataForTreatDate.rstDialysisState!="0"){
                 if(findConvertDataForTreatDate.rstDialysisState!="0" || copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly){
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */  
                   /* upd EOL対応内部 #7021 by ztc 2023-07-12 --start */
                   // 指示：医療材料名
                   if(indCondInfoFlag && JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate].indCondInfo)["13"]) {
@@ -4089,40 +4665,14 @@ export default {
                 }
                 // FNSI-修正 マスタ削除の対応 wangchen add end
                 if (copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly) {
-                  /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                  // const param = {
-                  //   equipmentCd: treatCondItemData.value,
-                  //   patId: selectedPatId
-                  // }
-                  // ApiHelper.get("/mstInfo/mstEquipment/getEquipmentSharingInfo", param).then((res) => {
-                  //   // findConvertDataForTreatDate[`value${i}`] = res.data.prefix + res.data.equipmentName;
-                  //   if (i === 1) {
-                  //     if (findConvertDataForTreatDate.rstDialysisState == "0") {
-                  //       // mod #9987 コンバートによるアレルギーの調製薬剤の参照側修正 20240321 ztc start
-                  //       // findConvertDataForTreatDate[`value${i}`] = res.data.prefix + res.data.equipmentName;
-                  //       findConvertDataForTreatDate[`value${i}`] = res.data.equipmentName.includes(response.data.prefix) ?
-                  //       res.data.equipmentName : res.data.prefix + res.data.equipmentName;
-                  //       // mod #9987 コンバートによるアレルギーの調製薬剤の参照側修正 20240321 ztc end
-                  //     } else {
-                  //       findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1.includes(response.data.prefix) ? treatCondItemData.value_name_1 : response.data.prefix + treatCondItemData.value_name_1;
-                  //     }
-                  //   } else {
-                  //     findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1.includes(response.data.prefix) ? treatCondItemData.value_name_1 : response.data.prefix + treatCondItemData.value_name_1;
-                  //   }
-                  //   findConvertDataForTreatDate[`isTabooAllergy${i}`] = res.data.isTabooAllergy;
-                  //   // 使用期限の判定
-                  //   findConvertDataForTreatDate.isExpired = !fitTermCheck(res.data.useStartDate, res.data.useEndDate, findConvertDataForTreatDate.treatDate);
-                  // });
-
                   const ordMainInfo = copyTreatmentData[findConvertDataForTreatDate.treatDate];
-                  const equipmentName = i === 1 ? JSON.parse(ordMainInfo.indCondInfo)[findConvertData.itemNo].value_name_1 
-                                                : JSON.parse(ordMainInfo.rstCondInfo)[findConvertData.itemNo].value_name_1;
+                  const equipmentName = i === 1
+                    ? JSON.parse(ordMainInfo.indCondInfo)[findConvertData.itemNo].value_name_1
+                    : JSON.parse(ordMainInfo.rstCondInfo)[findConvertData.itemNo].value_name_1;
                   if (i === 1 && findConvertDataForTreatDate.rstDialysisState == "0") {
-                    // ダイアライザ
-                    const tabooAllergyClassType = "3";
                     const tabooAllergyInfos = getters.getPatTabooAllergy.filter(item =>
-                      item.patId == copyTreatmentData[findConvertDataForTreatDate.treatDate].patId &&
-                      item.classType == tabooAllergyClassType &&
+                      item.patId == ordMainInfo.patId &&
+                      item.classType == "3" &&
                       item.cd == treatCondItemData.value
                     );
                     if (tabooAllergyInfos && tabooAllergyInfos.length > 0) {
@@ -4133,12 +4683,10 @@ export default {
                       findConvertDataForTreatDate[`value${i}`] = equipmentName;
                       findConvertDataForTreatDate[`isTabooAllergy${i}`] = false;
                     }
-
                   } else {
                     findConvertDataForTreatDate[`value${i}`] = equipmentName;
                     findConvertDataForTreatDate[`isTabooAllergy${i}`] = isTabooAllergy(equipmentName);
                   }
-                  /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
                 } else {
                   // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
                   let classTypeObj = {
@@ -4295,8 +4843,6 @@ export default {
               case 12:
               case 29:
                 // 12:シングルニードル使用、29:IP使用選択
-                treatCondValue =
-                  '0' == treatCondItemData.value ? "使用しない" : "使用する"; // mod #9973 value Number→文字列  shiyw
                 if ('0' == treatCondItemData.value) { // mod #9973 value Number→文字列  shiyw
                   treatCondValue = "使用しない";
                 } else if ('1' == treatCondItemData.value) { // mod #9973 value Number→文字列  shiyw
@@ -4331,92 +4877,23 @@ export default {
                 }
                 //add #10196 ord_mainのデータ定義から外れているデータ登録・参照処理の修正 zhaoqi 20240516 end
                 if (copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly) {
-                  /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                  // if (treatCondItemData.medicine_type == 2) {
-                  //   const param = {
-                  //     medicineMixCd: treatCondItemData.value,
-                  //     patId: selectedPatId
-                  //   }
-                  //   ApiHelper.get("/mstInfo/mstMedicineMix/getMedicineMixSharingInfo", param).then((res) => {
-                  //     // findConvertDataForTreatDate[`value${i}`] = res.data.prefix + res.data.medicineMixName;
-                  //     if (i === 1) {
-                  //       if (findConvertDataForTreatDate.rstDialysisState == "0") {
-                  //         // mod #9987 コンバートによるアレルギーの調製薬剤の参照側修正 20240321 ztc start
-                  //         // findConvertDataForTreatDate[`value${i}`] = res.data.prefix + res.data.medicineMixName;
-                  //         findConvertDataForTreatDate[`value${i}`] = res.data.medicineMixName.includes(res.data.prefix) ?
-                  //         res.data.medicineMixName : res.data.prefix + res.data.medicineMixName;
-                  //         // mod #9987 コンバートによるアレルギーの調製薬剤の参照側修正 20240321 ztc end
-                  //       } else {
-                  //         findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1.includes(response.data.prefix) ? treatCondItemData.value_name_1 : response.data.prefix + treatCondItemData.value_name_1;
-                  //       }
-                  //     } else {
-                  //       findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1.includes(response.data.prefix) ? treatCondItemData.value_name_1 : response.data.prefix + treatCondItemData.value_name_1;
-                  //     }
-                  //     findConvertDataForTreatDate[`isTabooAllergy${i}`] = res.data.isTabooAllergy;
-                  //     findConvertDataForTreatDate.isExpired = !fitTermCheck(res.data.useStartDate, res.data.useEndDate, findConvertDataForTreatDate.treatDate);
-                  //   });
-                  // } else {
-                  //   const param = {
-                  //     medicineCd: treatCondItemData.value,
-                  //     patId: selectedPatId
-                  //   }
-                  //   ApiHelper.get("/mstInfo/mstMedicine/getMedicineSharingInfo", param).then((res) => {
-                  //     // findConvertDataForTreatDate[`value${i}`] = res.data.prefix + res.data.medicineName;
-                  //     if (i === 1) {
-                  //       if (findConvertDataForTreatDate.rstDialysisState == "0") {
-                  //         findConvertDataForTreatDate[`value${i}`] = res.data.prefix + res.data.medicineName;
-                  //       } else {
-                  //         findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1.includes(response.data.prefix) ? treatCondItemData.value_name_1 : response.data.prefix + treatCondItemData.value_name_1;
-                  //       }
-                  //     } else {
-                  //       findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1.includes(response.data.prefix) ? treatCondItemData.value_name_1 : response.data.prefix + treatCondItemData.value_name_1;
-                  //     }
-                  //     findConvertDataForTreatDate[`isTabooAllergy${i}`] = res.data.isTabooAllergy;
-                  //     findConvertDataForTreatDate.isExpired = !fitTermCheck(res.data.useStartDate, res.data.useEndDate, findConvertDataForTreatDate.treatDate);
-                  //   });
-                  // }
-                
                   findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1;
                   findConvertDataForTreatDate[`isTabooAllergy${i}`] = isTabooAllergy(treatCondItemData.value_name_1);
 
-                  if (i === 1 && findConvertDataForTreatDate.rstDialysisState == "0") {
-                    const patId = copyTreatmentData[findConvertDataForTreatDate.treatDate].patId;
-                    if (treatCondItemData.medicine_type == 2) {   // 調製薬剤
-                      const medicineMixData = getters.getMstMedicineMixData.find(item =>
-                        item.medicineMixCd == treatCondItemData.value
+                  if (findConvertDataForTreatDate.rstDialysisState == "0") {
+                    if (treatCondItemData.medicine_type == 2) {
+                      const applied = applyMixMedicineTabooAllergyDisplay(
+                        getters,
+                        treatCondItemData.value,
+                        findConvertDataForTreatDate[`value${i}`],
+                        findConvertDataForTreatDate.rstDialysisState
                       );
-                      if (medicineMixData) {
-                        const mixInfo = JSON.parse(medicineMixData.mixInfo)
-                        let taboo = false;
-                        let allergy = false;
-                        for (let medicineData of mixInfo) {
-                          const tabooAllergyInfo = getters.getPatTabooAllergy.find(item =>
-                            item.patId == patId &&
-                            item.classType == "1" &&
-                            item.cd == medicineData.cd
-                          );
-
-                          if (tabooAllergyInfo) {
-                            if (tabooAllergyInfo.taboo) {
-                              taboo = true;
-                            }
-                            if (tabooAllergyInfo.allergy) {
-                              allergy = true;
-                            }
-                          }
-
-                          if (taboo && allergy) break;
-                        }
-
-                        if (taboo || allergy) {
-                          findConvertDataForTreatDate[`isTabooAllergy${i}`] = true;
-                          findConvertDataForTreatDate[`value${i}`] = getTabooAllergyPrefix(taboo, allergy) + treatCondItemData.value_name_1;
-
-                        }
-                      }
-                    } else {  // 薬剤
+                      findConvertDataForTreatDate[`value${i}`] = applied.name;
+                      findConvertDataForTreatDate[`isTabooAllergy${i}`] = applied.isTabooAllergy;
+                    } else if (i === 1) {
+                      const currentPatId = copyTreatmentData[findConvertDataForTreatDate.treatDate].patId;
                       const tabooAllergyInfo = getters.getPatTabooAllergy.find(item =>
-                        item.patId == patId &&
+                        item.patId == currentPatId &&
                         item.classType == "1" &&
                         item.cd == treatCondItemData.value
                       );
@@ -4425,8 +4902,15 @@ export default {
                         findConvertDataForTreatDate[`value${i}`] = getTabooAllergyPrefix(tabooAllergyInfo.taboo, tabooAllergyInfo.allergy) + treatCondItemData.value_name_1;
                       }
                     }
+                  } else {
+                    applyMixTabooToTreatCondValue(
+                      getters,
+                      findConvertDataForTreatDate,
+                      copyTreatmentData,
+                      treatCondItemData,
+                      i
+                    );
                   }
-                  /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
                 } else {
                   // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
                   const deviceModeOnline = [DEVICEMODE.OHDF, DEVICEMODE.OHF, DEVICEMODE.I_HDF];
@@ -4445,7 +4929,11 @@ export default {
                       // 「"2": 調製薬剤」「11: 調製薬剤マスタ（禁忌アレルギー込み）」「10: 薬剤マスタ（禁忌アレルギー込み）」
                       mstClass: treatCondItemData.medicine_type == 2 ? 11 : 10,
                       code: treatCondItemData.value,
-                      notExistReturnValue: "削除済み"
+                      // #12505 接頭文字対応 ligh edit start
+                      notExistReturnValue: "削除済み",
+                      classType: classTypeObj[findConvertData.itemNo],
+                      treatDate: findConvertDataForTreatDate.treatDate,
+                      // #12505 接頭文字対応 ligh edit end
                     }).then(response => {
                       // 治療条件の値を格納
                       // mod FNSI-障害票一覧_患者経過総合ビューア_初期表示#3。 周 start
@@ -4453,23 +4941,31 @@ export default {
                       // findConvertDataForTreatDate[`isTabooAllergy${i}`] = response.isTabooAllergy;
                       if (response) {
                         if (response.prefix) {
+                          // #12505 接頭文字対応 ligh edit start
                           //mod 8007 患者経過総合ビューアで薬剤が「削除済み」で表示される時がある 張 start
                           // findConvertDataForTreatDate[`value${i}`] = response.prefix + treatCondItemData.value_name_1;
                           // findConvertDataForTreatDate.value1 = response.prefix + treatCondItemData.value_name_1;
                           // findConvertDataForTreatDate.value2 = treatCondItemData.value_name_1;
-                          findConvertDataForTreatDate[`value${i}`] = i === 1 ? response.prefix + treatCondItemData.value_name_1 : treatCondItemData.value_name_1;
-                          if (i === 1) {
-                            if (findConvertDataForTreatDate.rstDialysisState == "0") {
-                              /* modify by chamaojia 2024-02-28 [10196] "response.name" already contains "prefix" --start */
-                              findConvertDataForTreatDate[`value${i}`] = response.name;
-                              /* modify by chamaojia 2024-02-28 [10196] "response.name" already contains "prefix" --end */
-                            } else {
-                              findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1.includes(response.prefix) ? treatCondItemData.value_name_1 : response.prefix + treatCondItemData.value_name_1;
-                            }
-                          } else {
-                            findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1.includes(response.prefix) ? treatCondItemData.value_name_1 : response.prefix + treatCondItemData.value_name_1;
-                          }
+                          // findConvertDataForTreatDate[`value${i}`] = i === 1 ? response.prefix + treatCondItemData.value_name_1 : treatCondItemData.value_name_1;
+                          // if (i === 1) {
+                          //   if (findConvertDataForTreatDate.rstDialysisState == "0") {
+                          //     /* modify by chamaojia 2024-02-28 [10196] "response.name" already contains "prefix" --start */
+                          //     findConvertDataForTreatDate[`value${i}`] = response.name;
+                          //     /* modify by chamaojia 2024-02-28 [10196] "response.name" already contains "prefix" --end */
+                          //   } else {
+                          //     findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1.includes(response.prefix) ? treatCondItemData.value_name_1 : response.prefix + treatCondItemData.value_name_1;
+                          //   }
+                          // } else {
+                          //   findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1.includes(response.prefix) ? treatCondItemData.value_name_1 : response.prefix + treatCondItemData.value_name_1;
+                          // }
                           //mod 8007 患者経過総合ビューアで薬剤が「削除済み」で表示される時がある 張 end
+                          if (findConvertDataForTreatDate.rstDialysisState == "0") {
+                            findConvertDataForTreatDate[`value${i}`] = response.name;
+                          } else {
+                            findConvertDataForTreatDate[`value${i}`] =
+                              treatCondItemData.value_name_1;
+                          }
+                          // #12505 接頭文字対応 ligh edit end
                           findConvertDataForTreatDate[`isTabooAllergy${i}`] = response.isTabooAllergy;
                         } else {
                           // mod 8374 2023-02-20 15:20 薬剤分類が抗凝固剤の調製薬剤で指示を発行しても分類不一致と表示される 張 start
@@ -4503,18 +4999,30 @@ export default {
                           // findConvertDataForTreatDate.value1 = treatCondItemData.value_name_1;
                           // findConvertDataForTreatDate.value2 = treatCondItemData.value_name_1;
                           // findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1;
-                          if (i === 1) {
-                            if (findConvertDataForTreatDate.rstDialysisState == "0") {
-                              findConvertDataForTreatDate[`value${i}`] = response.name;
-                            } else {
-                              findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1;
-                            }
+                          if (findConvertDataForTreatDate.rstDialysisState == "0") {
+                            findConvertDataForTreatDate[`value${i}`] = response.name;
                           } else {
                             findConvertDataForTreatDate[`value${i}`] = treatCondItemData.value_name_1;
                           }
                           //mod 8007 患者経過総合ビューアで薬剤が「削除済み」で表示される時がある 張 end
                           //mod FNSI-5678 劉全航 end
                         }
+                        // #12505 接頭文字対応 ligh edit start
+                        if (
+                          treatCondItemData.medicine_type == 2 &&
+                          response?.name &&
+                          findConvertDataForTreatDate.rstDialysisState == "0"
+                        ) {
+                          findConvertDataForTreatDate[`value${i}`] = response.name;
+                        }
+                        applyMixTabooToTreatCondValue(
+                          getters,
+                          findConvertDataForTreatDate,
+                          copyTreatmentData,
+                          treatCondItemData,
+                          i
+                        );
+                        // #12505 接頭文字対応 ligh edit end
                         // mod FNSI-障害票一覧_患者経過総合ビューア_初期表示#3。 周 end
                         var numbers = "";
                         var decPoint = "";
@@ -4718,6 +5226,22 @@ export default {
                         }
                         //mod 8007 患者経過総合ビューアで薬剤が「削除済み」で表示される時がある 張 end
                         findConvertDataForTreatDate[`isTabooAllergy${i}`] = response.isTabooAllergy;
+                        // #12505 接頭文字対応 ligh edit start
+                        if (
+                          treatCondItemData.medicine_type == 2 &&
+                          response?.name &&
+                          findConvertDataForTreatDate.rstDialysisState == "0"
+                        ) {
+                          findConvertDataForTreatDate[`value${i}`] = response.name;
+                        }
+                        applyMixTabooToTreatCondValue(
+                          getters,
+                          findConvertDataForTreatDate,
+                          copyTreatmentData,
+                          treatCondItemData,
+                          i
+                        );
+                        // #12505 接頭文字対応 ligh edit end
                         // 使用期限の判定
                         findConvertDataForTreatDate.isExpired = !fitTermCheck(response.useStartDate, response.useEndDate, findConvertDataForTreatDate.treatDate);
                         var numbers = ""
@@ -5248,7 +5772,7 @@ export default {
         const searchDateListTmp = getters.getDateList;
         // 左端画面表示治療日 - 7
         for (let i = -7; i < 0; i++) {
-          searchDateList.push(moment(searchDateListTmp[0]).add(i, "days").format("YYYYMMDD"));
+          searchDateList.push(dayjs(searchDateListTmp[0]).add(i, "days").format("YYYYMMDD"));
         }
         // 画面表示治療日
         searchDateListTmp.forEach(item => {
@@ -5256,7 +5780,7 @@ export default {
         });
         // 右端画面表示治療日 + 7
         for (let i = 1; i < 8; i++) {
-          searchDateList.push(moment(searchDateList[searchDateList.length - 1]).add(1, "days").format("YYYYMMDD"));
+          searchDateList.push(dayjs(searchDateList[searchDateList.length - 1]).add(1, "days").format("YYYYMMDD"));
         }
         // ord_mainの取得
         copyTreatmentData = getters.getTreatmentDataTmp[listIndex];
@@ -5364,19 +5888,17 @@ export default {
               // add 1006-398 指示の切り替わりポイントを赤くする 陳 end
               // 治療方法名をマスタから取得(マスタに存在しない場合は"削除済み"とする)
               if (copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly) {
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                // const param = {
-                //   treatmentCd: treatMethodCd
-                // }
-                // ApiHelper.get("/mstInfo/mstTreatment/getTreatmentName", param).then((res) => {
-                //   findConvertDataForTreatDate[`value${i}`] = res.data;
-                // });
-
-                const treatmentName = 1 === i ? findConvertDataForTreatDate.indTreatmentName : findConvertDataForTreatDate.rstTreatmentName;
+                const treatmentName = 1 === i
+                  ? findConvertDataForTreatDate.indTreatmentName
+                  : findConvertDataForTreatDate.rstTreatmentName;
                 findConvertDataForTreatDate[`value${i}`] = treatmentName;
-                /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
                 findConvertDataForTreatDate.isNotClickable = true;
               } else {
+                if (i === 1 && findConvertDataForTreatDate.indTreatmentName) {
+                  findConvertDataForTreatDate.value1 = findConvertDataForTreatDate.indTreatmentName;
+                } else if (i === 2 && findConvertDataForTreatDate.rstTreatmentName) {
+                  findConvertDataForTreatDate.value2 = findConvertDataForTreatDate.rstTreatmentName;
+                }
                 dispatch("getMstRecordInState", {
                   mstClass: 1,
                   code: treatMethodCd,
@@ -5430,7 +5952,7 @@ export default {
         const searchDateListTmp = getters.getDateList;
         // 左端画面表示治療日 - 7
         for (let i = -7; i < 0; i++) {
-          searchDateList.push(moment(searchDateListTmp[0]).add(i, "days").format("YYYYMMDD"));
+          searchDateList.push(dayjs(searchDateListTmp[0]).add(i, "days").format("YYYYMMDD"));
         }
         // 画面表示治療日
         searchDateListTmp.forEach(item => {
@@ -5438,7 +5960,7 @@ export default {
         });
         // 右端画面表示治療日 + 7
         for (let i = 1; i < 8; i++) {
-          searchDateList.push(moment(searchDateList[searchDateList.length - 1]).add(1, "days").format("YYYYMMDD"));
+          searchDateList.push(dayjs(searchDateList[searchDateList.length - 1]).add(1, "days").format("YYYYMMDD"));
         }
         // ord_mainの取得
         copyTreatmentData = getters.getTreatmentDataTmp[listIndex];
@@ -5520,7 +6042,7 @@ export default {
           // FNSI-修正 マスタ削除の対応 wangchen add start
           // 治療状況
           findConvertDataForTreatDate.rstDialysisState = copyTreatmentData[findConvertDataForTreatDate.treatDate].rstDialysisState;
-          if(findConvertDataForTreatDate.rstDialysisState!="0"){
+          if(findConvertDataForTreatDate.rstDialysisState!="0" || copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly){
             if(eleDispItem.itemName=="クール"){
               // 指示：クール名
               findConvertDataForTreatDate.indKurName = copyTreatmentData[findConvertDataForTreatDate.treatDate].indKurName;
@@ -5564,19 +6086,18 @@ export default {
                 } else {
                   // クール名をマスタから取得(マスタに存在しない場合は"削除済み"とする)
                   if (copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly) {
-                    /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                    // const param = {
-                    //   kurCd: code
-                    // }
-                    // ApiHelper.get("/mstInfo/mstKur/getKurName", param).then((res) => {
-                    //   findConvertDataForTreatDate[`value${i}`] = res.data;
-                    // });
-
-                    const kurName = 1 === i ? copyTreatmentData[findConvertDataForTreatDate.treatDate].indKurName 
-                                            : copyTreatmentData[findConvertDataForTreatDate.treatDate].rstKurName;
+                    const kurName = 1 === i
+                      ? copyTreatmentData[findConvertDataForTreatDate.treatDate].indKurName
+                      : copyTreatmentData[findConvertDataForTreatDate.treatDate].rstKurName;
                     findConvertDataForTreatDate[`value${i}`] = kurName;
-                    /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
                   } else {
+                    if (i === 1) {
+                      if (findConvertDataForTreatDate.rstDialysisState != "0" && findConvertDataForTreatDate.indKurName) {
+                        findConvertDataForTreatDate[`value${i}`] = findConvertDataForTreatDate.indKurName;
+                      }
+                    } else if (findConvertDataForTreatDate.rstKurName) {
+                      findConvertDataForTreatDate[`value${i}`] = findConvertDataForTreatDate.rstKurName;
+                    }
                     dispatch("getMstRecordInState", {
                       mstClass: 2,
                       code,
@@ -5620,8 +6141,8 @@ export default {
                   // スケジュール(治療開始時刻)の値を格納
                   findConvertDataForTreatDate[`value${i}`] =
                     1 === i
-                      ? moment(code, "HHmm").format("HH:mm")
-                      : moment(code).format("HH:mm");
+                      ? dayjs(code, "HHmm").format("HH:mm")
+                      : dayjs(code).format("HH:mm");
                 }
               }
               break;
@@ -5645,19 +6166,18 @@ export default {
                 } else {
                   // ベッド名をマスタから取得(マスタに存在しない場合は"削除済み"とする)
                   if (copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly) {
-                    /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-                    // const param = {
-                    //   bedCd: code
-                    // }
-                    // ApiHelper.get("/mstInfo/mstBed/getBedName", param).then((res) => {
-                    //   findConvertDataForTreatDate[`value${i}`] = res.data;
-                    // });
-                    const bedName = 1 === i ? copyTreatmentData[findConvertDataForTreatDate.treatDate].indBedName 
-                                            : copyTreatmentData[findConvertDataForTreatDate.treatDate].rstBedName;
+                    const bedName = 1 === i
+                      ? copyTreatmentData[findConvertDataForTreatDate.treatDate].indBedName
+                      : copyTreatmentData[findConvertDataForTreatDate.treatDate].rstBedName;
                     findConvertDataForTreatDate[`value${i}`] = bedName;
-                    /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
-
                   } else {
+                    if (i === 1) {
+                      if (findConvertDataForTreatDate.rstDialysisState != "0" && findConvertDataForTreatDate.indBedName) {
+                        findConvertDataForTreatDate[`value${i}`] = findConvertDataForTreatDate.indBedName;
+                      }
+                    } else if (findConvertDataForTreatDate.rstBedName) {
+                      findConvertDataForTreatDate[`value${i}`] = findConvertDataForTreatDate.rstBedName;
+                    }
                     dispatch("getMstRecordInState", {
                       mstClass: 3,
                       code,
@@ -5706,7 +6226,7 @@ export default {
      */
     async convertMedicinetData(
       { getters, dispatch, commit, state },
-      { listIndex, selectLayoutCd, isMakeStructionColorData = false }
+      { listIndex, selectLayoutCd, isMakeStructionColorData = false, selectedPatId }
     ) {
       // 加工した表示用データ格納用
       const convertData = [];
@@ -5746,7 +6266,8 @@ export default {
       // add 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
       const tableName = "mst_medicine_class";
       const mstselector = await ApiHelper.get(
-        `/report_designer/master/${tableName}`
+        `/report_designer/master/${tableName}`,
+        selectedPatIdParams(selectedPatId)
       ).catch(err => {
         throw err;
       });
@@ -5804,83 +6325,81 @@ export default {
               });
               // add 7886 施設設定マスタ＞No.106, 107の表示・動作不備 end
               // 項目列に「投与薬剤分類名」を表示する場合、日付列に「投与薬剤名」を表示する
-              
-              /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
               if (ordInfo.readOnly) {
                 mediCurrent.name = indMediInfo[i].name;
                 mediCurrent.unit = indMediInfo[i].unit;
                 mediCurrent.class_name = indMediInfo[i].class_name;
                 mediCurrent.decPoint = indMediInfo[i].decPoint;
-                mediCurrent.isTabooAllergy = isTabooAllergy(indMediInfo[i].name);
-                if (ordInfo.rstDialysisState == "0") {
-                  if (mediCurrent.medicine_type == 2) {   // 調製薬剤 
-                    const medicineMixData = getters.getMstMedicineMixData.find(item =>
-                          item.medicineMixCd == mediCurrent.cd
-                    );
-                    if (medicineMixData) {
-                      const mixInfo = JSON.parse(medicineMixData.mixInfo)
-                      let taboo = false;
-                      let allergy = false;
-                      for (let medicineData of mixInfo) {
-                        const tabooAllergyInfo = getters.getPatTabooAllergy.find(item =>
-                          item.patId == ordInfo.patId &&
-                          item.classType == "1" &&
-                          item.cd == medicineData.cd
-                        );
-
-                        if (tabooAllergyInfo) {
-                          if (tabooAllergyInfo.taboo) {
-                            taboo = true;
-                          }
-                          if (tabooAllergyInfo.allergy) {
-                            allergy = true;
-                          }
-                        }
-
-                        if (taboo && allergy) break;
-                      }
-
-                      if (taboo || allergy) {
-                        mediCurrent.isTabooAllergy = true;
-                        mediCurrent.name = getTabooAllergyPrefix(taboo, allergy) + indMediInfo[i].name
-                      }
-                    }
-                  } else {  // 薬剤
-                    const tabooAllergyInfo = getters.getPatTabooAllergy.find(item =>
-                      item.patId == ordInfo.patId &&
-                      item.classType == "1" &&
-                      item.cd == mediCurrent.cd
-                    );
-                    if (tabooAllergyInfo) {
-                      mediCurrent.isTabooAllergy = true;
-                      mediCurrent.name = getTabooAllergyPrefix(tabooAllergyInfo.taboo, tabooAllergyInfo.allergy) + indMediInfo[i].name
-                    }
-                  }
-                }
+                // #12505 接頭文字対応 ligh edit start
+                const appliedReadOnly = applyMedicineRowTabooAllergyForInd(
+                  getters,
+                  mediCurrent,
+                  mediCurrent.name,
+                  ordInfo.rstDialysisState
+                );
+                mediCurrent.name = appliedReadOnly.name;
+                mediCurrent.isTabooAllergy = appliedReadOnly.isTabooAllergy;
               } else {
                 if (isDisplayClassName) {
                   if (ordInfo.rstDialysisState == "0") {
                     mediCurrent.name = mediMst.name;
                     mediCurrent.unit = mediMst.unit;
                     mediCurrent.class_name = mediClassMst.name;
+                    const appliedInd = applyMedicineRowTabooAllergyForInd(
+                      getters,
+                      mediCurrent,
+                      mediCurrent.name,
+                      ordInfo.rstDialysisState
+                    );
+                    mediCurrent.name = appliedInd.name;
+                    mediCurrent.isTabooAllergy = appliedInd.isTabooAllergy;
+                  } else if (mediCurrent.medicine_type == 2) {
+                    const appliedActualClass = applyMedicineRowTabooAllergyForInd(
+                      getters,
+                      mediCurrent,
+                      mediCurrent.name,
+                      ordInfo.rstDialysisState
+                    );
+                    mediCurrent.name = appliedActualClass.name;
+                    mediCurrent.isTabooAllergy = appliedActualClass.isTabooAllergy;
+                  } else {
+                    mediCurrent.isTabooAllergy = false;
                   }
-                  mediCurrent.isTabooAllergy = false;
                   mediCurrent.decPoint = mediMst.decPoint;
                 } else {
                   if (ordInfo.rstDialysisState == "0") {
                     mediCurrent.name = mediMst.name;
                     mediCurrent.unit = mediMst.unit;
                     mediCurrent.class_name = mediClassMst.name;
+                    const appliedInd = applyMedicineRowTabooAllergyForInd(
+                      getters,
+                      mediCurrent,
+                      mediCurrent.name,
+                      ordInfo.rstDialysisState
+                    );
+                    mediCurrent.name = appliedInd.name;
+                    mediCurrent.isTabooAllergy = appliedInd.isTabooAllergy;
+                  } else if (mediCurrent.medicine_type == 2) {
+                    const appliedInd = applyMedicineRowTabooAllergyForInd(
+                      getters,
+                      mediCurrent,
+                      mediCurrent.name,
+                      ordInfo.rstDialysisState
+                    );
+                    mediCurrent.name = appliedInd.name;
+                    mediCurrent.isTabooAllergy = appliedInd.isTabooAllergy;
                   } else {
                     if (mediMst.prefix) {
-                      mediCurrent.name = mediCurrent.name.includes(mediMst.prefix) ? mediCurrent.name : mediMst.prefix + mediCurrent.name;
+                      mediCurrent.name = mediCurrent.name.includes(mediMst.prefix)
+                        ? mediCurrent.name
+                        : mediMst.prefix + mediCurrent.name;
                     }
+                    mediCurrent.isTabooAllergy = mediMst.isTabooAllergy;
                   }
-                  mediCurrent.isTabooAllergy = mediMst.isTabooAllergy;
+                  // #12505 接頭文字対応 ligh edit end
                   mediCurrent.decPoint = mediMst.decPoint;
                 }
               }
-              /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
 
               convertData.push({
                 data: [],
@@ -5888,13 +6407,9 @@ export default {
                 itemName: isDisplayClassName ? mediCurrent.class_name || mediClassMst.name : mediCurrent.name,
                 // FNSI-投与薬剤の補助画面を追加 周 add start
                 // 薬剤名称
-                /* upd by chamaojia 2026-03-24 [12462] 患者情報共有->患者経過総合ビューア --start */
-                // medicineName: mediMst.name,
-                medicineName: ordInfo.readOnly ? mediCurrent.name : mediMst.name,
+                medicineName: resolveMedicineNameForConvertRow(mediCurrent, mediMst, ordInfo),
                 // 分類名称
-                // className: mediClassMst.name,
                 className: ordInfo.readOnly ? (mediCurrent.class_name ? mediCurrent.class_name : "未分類") : mediClassMst.name,
-                /* upd by chamaojia 2026-03-24 [12462] 患者情報共有->患者経過総合ビューア --end */
                 // add 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
                 //薬剤分類マスタ表示順
                 classCdIndex:classCdIndex === -1 ? 999999 : classCdIndex,
@@ -5932,11 +6447,9 @@ export default {
                 // add #8142 患者経過総合ビューアおよび患者カレンダーが開かなくなる。削除済み、期限切れ、禁忌アレルギーの表示不具合 dou start
                 isDelFlag: mediMst.isDelFlag,
                 // add #8142 患者経過総合ビューアおよび患者カレンダーが開かなくなる。削除済み、期限切れ、禁忌アレルギーの表示不具合 dou end
-                /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
                 readOnly: ordInfo.readOnly,
                 facilityCd: ordInfo.facilityCd,
                 patId: ordInfo.patId
-                /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
               });
             }
           }
@@ -5983,17 +6496,22 @@ export default {
                 });
                 // add 7886 施設設定マスタ＞No.106, 107の表示・動作不備 end
                 // 項目列に「投与薬剤分類名」を表示する場合、日付列に「投与薬剤名」を表示する
-                if (isDisplayClassName) {
-                  mediCurrent.isTabooAllergy = false;
-                  mediCurrent.decPoint = mediMst.decPoint;
-                } else {
-                  if (mediMst.prefix) {
-                    mediCurrent.name = mediCurrent.name.includes(mediMst.prefix) ? mediCurrent.name : mediMst.prefix + mediCurrent.name;
-                  }
-                  mediCurrent.isTabooAllergy = mediMst.isTabooAllergy;
-                  mediCurrent.decPoint = mediMst.decPoint;
-                }
+                const appliedRstRow = applyMedicineRowTabooAllergyForInd(
+                  getters,
+                  mediCurrent,
+                  mediCurrent.name,
+                  ordInfo.rstDialysisState
+                );
+                mediCurrent.name = appliedRstRow.name;
+                mediCurrent.isTabooAllergy =
+                  normalizeMedicineTypeValue(mediCurrent.medicine_type) == 2
+                    ? appliedRstRow.isTabooAllergy
+                    : appliedRstRow.isTabooAllergy || !!mediMst.isTabooAllergy;
+                mediCurrent.decPoint = mediMst.decPoint;
+                // #12505 接頭文字対応 ligh edit end
 
+                const selectedPatId = store.getters["pat-info/selectedPatId"];
+                const readOnly = ordInfo.patId != selectedPatId ? true : false;
                 convertData.push({
                   data: [],
                   // 列名称(分類表示有の場合、薬剤分類名称 / 分類表示無の場合、薬剤名称)
@@ -6034,11 +6552,9 @@ export default {
                   // add #8142 患者経過総合ビューアおよび患者カレンダーが開かなくなる。削除済み、期限切れ、禁忌アレルギーの表示不具合 dou start
                   isDelFlag: mediMst.isDelFlag,
                   // add #8142 患者経過総合ビューアおよび患者カレンダーが開かなくなる。削除済み、期限切れ、禁忌アレルギーの表示不具合 dou end
-                  /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
                   readOnly: ordInfo.readOnly,
                   facilityCd: ordInfo.facilityCd,
                   patId: ordInfo.patId
-                  /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
                 });
               }
             }
@@ -6097,7 +6613,6 @@ export default {
               });
               // add 7886 施設設定マスタ＞No.106, 107の表示・動作不備 end
               // 項目列に「投与薬剤分類名」を表示する場合、日付列に「投与薬剤名」を表示する
-              /* upd by chamaojia 2026-03-17 [12462] 患者情報共有->患者経過総合ビューア --start */
               const selectedPatId = store.getters["pat-info/selectedPatId"];
               const readOnly = ordInfo.patId != selectedPatId;
               if (readOnly) {
@@ -6105,30 +6620,76 @@ export default {
                 mediCurrent.unit = indMediInfo[i].unit;
                 mediCurrent.class_name = indMediInfo[i].class_name;
                 mediCurrent.decPoint = indMediInfo[i].decPoint;
+                // #12505 接頭文字対応 ligh edit start
+                const appliedCacheReadOnly = applyMedicineRowTabooAllergyForInd(
+                  getters,
+                  mediCurrent,
+                  mediCurrent.name,
+                  ordInfo.rstDialysisState
+                );
+                mediCurrent.name = appliedCacheReadOnly.name;
+                mediCurrent.isTabooAllergy = appliedCacheReadOnly.isTabooAllergy;
               } else {
                 if (isDisplayClassName) {
                   if (ordInfo.rstDialysisState == "0") {
                     mediCurrent.name = mediMst.name;
                     mediCurrent.unit = mediMst.unit;
                     mediCurrent.class_name = mediClassMst.name;
+                    const appliedCacheInd = applyMedicineRowTabooAllergyForInd(
+                      getters,
+                      mediCurrent,
+                      mediCurrent.name,
+                      ordInfo.rstDialysisState
+                    );
+                    mediCurrent.name = appliedCacheInd.name;
+                    mediCurrent.isTabooAllergy = appliedCacheInd.isTabooAllergy;
+                  } else if (mediCurrent.medicine_type == 2) {
+                    const appliedCacheActualClass = applyMedicineRowTabooAllergyForInd(
+                      getters,
+                      mediCurrent,
+                      mediCurrent.name,
+                      ordInfo.rstDialysisState
+                    );
+                    mediCurrent.name = appliedCacheActualClass.name;
+                    mediCurrent.isTabooAllergy = appliedCacheActualClass.isTabooAllergy;
+                  } else {
+                    mediCurrent.isTabooAllergy = false;
                   }
-                  mediCurrent.isTabooAllergy = false;
                   mediCurrent.decPoint = mediMst.decPoint;
                 } else {
                   if (ordInfo.rstDialysisState == "0") {
                     mediCurrent.name = mediMst.name;
                     mediCurrent.unit = mediMst.unit;
                     mediCurrent.class_name = mediClassMst.name;
+                    const appliedCacheInd = applyMedicineRowTabooAllergyForInd(
+                      getters,
+                      mediCurrent,
+                      mediCurrent.name,
+                      ordInfo.rstDialysisState
+                    );
+                    mediCurrent.name = appliedCacheInd.name;
+                    mediCurrent.isTabooAllergy = appliedCacheInd.isTabooAllergy;
+                  } else if (mediCurrent.medicine_type == 2) {
+                    const appliedCacheInd = applyMedicineRowTabooAllergyForInd(
+                      getters,
+                      mediCurrent,
+                      mediCurrent.name,
+                      ordInfo.rstDialysisState
+                    );
+                    mediCurrent.name = appliedCacheInd.name;
+                    mediCurrent.isTabooAllergy = appliedCacheInd.isTabooAllergy;
                   } else {
                     if (mediMst.prefix) {
-                      mediCurrent.name = mediCurrent.name.includes(mediMst.prefix) ? mediCurrent.name : mediMst.prefix + mediCurrent.name;
+                      mediCurrent.name = mediCurrent.name.includes(mediMst.prefix)
+                        ? mediCurrent.name
+                        : mediMst.prefix + mediCurrent.name;
                     }
+                    mediCurrent.isTabooAllergy = mediMst.isTabooAllergy;
                   }
-                  mediCurrent.isTabooAllergy = mediMst.isTabooAllergy;
+                  // #12505 接頭文字対応 ligh edit end
                   mediCurrent.decPoint = mediMst.decPoint;
                 }
               }
-              /* upd by chamaojia 2026-03-17 [12462] 患者情報共有->患者経過総合ビューア --end */
 
               convertData.push({
                 data: [],
@@ -6136,13 +6697,14 @@ export default {
                 itemName: isDisplayClassName ? mediCurrent.class_name || mediClassMst.name : mediCurrent.name,
                 // FNSI-投与薬剤の補助画面を追加 周 add start
                 // 薬剤名称
-                /* upd by chamaojia 2026-03-24 [12462] 患者情報共有->患者経過総合ビューア --start */
-                // medicineName: mediMst.name,
-                medicineName: readOnly ? mediCurrent.name : mediMst.name,
+                medicineName: resolveMedicineNameForConvertRow(
+                  mediCurrent,
+                  mediMst,
+                  ordInfo,
+                  readOnly
+                ),
                 // 分類名称
-                // className: mediClassMst.name,
-                className: readOnly ? (mediCurrent.class_name ? mediCurrent.class_name :"未分類") : mediClassMst.name,
-                /* upd by chamaojia 2026-03-24 [12462] 患者情報共有->患者経過総合ビューア --end */
+                className: readOnly ? (mediCurrent.class_name ? mediCurrent.class_name : "未分類") : mediClassMst.name,
                 // add 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
                 //薬剤分類マスタ表示順
                 classCdIndex:classCdIndex === -1 ? 9999999 : classCdIndex + 9999999,
@@ -6180,11 +6742,9 @@ export default {
                 // add #8142 患者経過総合ビューアおよび患者カレンダーが開かなくなる。削除済み、期限切れ、禁忌アレルギーの表示不具合 dou start
                 isDelFlag: mediMst.isDelFlag,
                 // add #8142 患者経過総合ビューアおよび患者カレンダーが開かなくなる。削除済み、期限切れ、禁忌アレルギーの表示不具合 dou end
-                /* add by chamaojia 2026-03-17 [12462] 患者情報共有->患者経過総合ビューア --start */
                 readOnly: readOnly,
                 facilityCd: ordInfo.facilityCd,
                 patId: ordInfo.patId
-                /* add by chamaojia 2026-03-17 [12462] 患者情報共有->患者経過総合ビューア --end */
               });
             }
           }
@@ -6229,16 +6789,16 @@ export default {
                 });
                 // add 7886 施設設定マスタ＞No.106, 107の表示・動作不備 end
                 // 項目列に「投与薬剤分類名」を表示する場合、日付列に「投与薬剤名」を表示する
-                if (isDisplayClassName) {
-                  mediCurrent.isTabooAllergy = false;
-                  mediCurrent.decPoint = mediMst.decPoint;
-                } else {
-                  if (mediMst.prefix) {
-                    mediCurrent.name = mediCurrent.name.includes(mediMst.prefix) ? mediCurrent.name : mediMst.prefix + mediCurrent.name;
-                  }
-                  mediCurrent.isTabooAllergy = mediMst.isTabooAllergy;
-                  mediCurrent.decPoint = mediMst.decPoint;
-                }
+                const appliedCacheRstRow = applyMedicineRowTabooAllergyForInd(
+                  getters,
+                  mediCurrent,
+                  mediCurrent.name,
+                  ordInfo.rstDialysisState
+                );
+                mediCurrent.name = appliedCacheRstRow.name;
+                mediCurrent.isTabooAllergy =
+                  appliedCacheRstRow.isTabooAllergy || !!mediMst.isTabooAllergy;
+                mediCurrent.decPoint = mediMst.decPoint;
 
                 convertData.push({
                   data: [],
@@ -6280,11 +6840,9 @@ export default {
                   // add #8142 患者経過総合ビューアおよび患者カレンダーが開かなくなる。削除済み、期限切れ、禁忌アレルギーの表示不具合 dou start
                   isDelFlag: mediMst.isDelFlag,
                   // add #8142 患者経過総合ビューアおよび患者カレンダーが開かなくなる。削除済み、期限切れ、禁忌アレルギーの表示不具合 dou end
-                  /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --start */
-                  readOnly: ordInfo.patId != selectedPatId ? true : false,
+                  readOnly: readOnly,
                   facilityCd: ordInfo.facilityCd,
                   patId: ordInfo.patId
-                  /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --end */
                 });
               }
             }
@@ -6320,10 +6878,7 @@ export default {
             treatDate: treatData,
             value1: null,
             // add #10266 患者経過総合ビューアの投与薬剤、医療材料、指示コメントの新規追加行 linjunfeng start
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-            // isShowAddImg: ordInfo ? true : false,
             isShowAddImg: ordInfo && !ordInfo.readOnly ? true : false,
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             // add #10266 患者経過総合ビューアの投与薬剤、医療材料、指示コメントの新規追加行 linjunfeng end
             // add #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
             isDisabled1: !indCondInfo && ordInfo ? !!ordInfo.ordNo : false,
@@ -6469,33 +7024,77 @@ export default {
             // if (tempData.value1 !== null) {
             if (ind && tempData.value1 !== null) {
               // mod FNSI-期限切れ削除済みと表示するの修正 李 end
-              /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --start */
-              // let indName = ordInfo.rstDialysisState == "0" && !ordInfo.readOnly ? mediMst.name : ind.name;
               let indName = ordInfo.rstDialysisState == "0" && !ordInfo.readOnly ? mediMst.name : convertData[i].medicineName;
-              /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --end */
               // mod FNSI-期限切れ削除済みと表示するの修正 李 start
               // if (ind.name) indName = mediMst.prefix + indName;
               // tempData.value1 = `[${indName}] ${tempData.value1}`;
-              if (ind.name && mediMst.prefix) indName = indName.includes(mediMst.prefix) ? indName : mediMst.prefix + indName;
-              tempData.value1 = `${indName} ${tempData.value1}`;
+              if (ind.name && mediMst.prefix && ordInfo.rstDialysisState == "0") {
+                indName = indName.includes(mediMst.prefix) ? indName : mediMst.prefix + indName;
+              }
+              // #12505 接頭文字対応 ligh edit start
+              if (ordInfo.rstDialysisState == "0") {
+                const appliedCell = applyMedicineDisplayTabooAllergy(
+                  getters,
+                  convertData[i].medicineType,
+                  convertData[i].cd,
+                  indName,
+                  ordInfo.rstDialysisState
+                );
+                indName = appliedCell.name;
+                tempData.isTabooAllergy1 =
+                  appliedCell.isTabooAllergy || !!mediMst.isTabooAllergy;
+              } else {
+                indName = normalizeStoredNameForRstDisplay(indName, ordInfo.rstDialysisState);
+                if (normalizeMedicineTypeValue(convertData[i].medicineType) == 2) {
+                  tempData.isTabooAllergy1 = resolveOrdStoredMixTabooAllergyFlag(indName);
+                } else {
+                  tempData.isTabooAllergy1 = mediMst.isTabooAllergy;
+                }
+              }
+              // #12505 接頭文字対応 ligh edit end
+              const displayIndName = String(indName).replace(/^\[/, "").replace(/\]$/, "");
+              tempData.value1 = `[${displayIndName}] ${tempData.value1}`;
               // mod FNSI-期限切れ削除済みと表示するの修正 李 end
-              tempData.isTabooAllergy1 = mediMst.isTabooAllergy;
             }
 
             // mod FNSI-バグ対応1.xlsxのバグ２「未登録」->空白 対応 韓 start
             // if (tempData.value2 !== null && tempData.value2 !== "未登録") {
-            if (tempData.value2 !== null && tempData.value2 !== " ") {
-              // mod FNSI-バグ対応1.xlsxのバグ２「未登録」->空白 対応 韓 end
-              let rstName = rst.name || mediMst.name;
-              // mod FNSI-期限切れ削除済みと表示するの修正 李 start
-              // if (rst.name) rstName = mediMst.prefix + rstName;
-              //mod 8007 患者経過総合ビューアで薬剤が「削除済み」で表示される時がある 張 start
-              // if (rst.name && mediMst.prefix) rstName = mediMst.prefix + rstName;
-              // if (rst.name) rstName = rstName;
-              //mod 8007 患者経過総合ビューアで薬剤が「削除済み」で表示される時がある 張 end
-              // mod FNSI-期限切れ削除済みと表示するの修正 李 end
-              tempData.value2 = `[${rstName}] ${tempData.value2}`;
-              tempData.isTabooAllergy2 = mediMst.isTabooAllergy;
+              if (tempData.value2 !== null && tempData.value2 !== " ") {
+                // mod FNSI-バグ対応1.xlsxのバグ２「未登録」->空白 対応 韓 end
+                let rstName = rst.name || mediMst.name;
+                if (
+                  normalizeMedicineTypeValue(convertData[i].medicineType) == 2 &&
+                  ordInfo.rstDialysisState == "0"
+                ) {
+                  rstName =
+                    rst.name ||
+                    normalizeMedicineNameForRstDisplay(mediMst.name, "0");
+                  const appliedRstCell = applyMedicineDisplayTabooAllergy(
+                    getters,
+                    convertData[i].medicineType,
+                    convertData[i].cd,
+                    rstName,
+                    ordInfo.rstDialysisState
+                  );
+                  rstName = appliedRstCell.name;
+                  tempData.isTabooAllergy2 =
+                    appliedRstCell.isTabooAllergy || !!mediMst.isTabooAllergy;
+                } else if (ordInfo.rstDialysisState != "0") {
+                  rstName = normalizeStoredNameForRstDisplay(
+                    rst.name || convertData[i].medicineName,
+                    ordInfo.rstDialysisState
+                  );
+                  tempData.isTabooAllergy2 =
+                    normalizeMedicineTypeValue(convertData[i].medicineType) == 2
+                      ? resolveOrdStoredMixTabooAllergyFlag(rstName)
+                      : mediMst.isTabooAllergy;
+                } else if (normalizeMedicineTypeValue(convertData[i].medicineType) == 2) {
+                  rstName = rst.name || convertData[i].medicineName;
+                  tempData.isTabooAllergy2 = resolveOrdStoredMixTabooAllergyFlag(rstName);
+                } else {
+                  tempData.isTabooAllergy2 = mediMst.isTabooAllergy;
+                }
+                tempData.value2 = `[${rstName}] ${tempData.value2}`;
             }
           }
 
@@ -6556,7 +7155,7 @@ export default {
      */
     async convertEquipmentData(
       { getters, dispatch, commit },
-      { listIndex, isMakeStructionColorData = false }
+      { listIndex, isMakeStructionColorData = false, selectedPatId }
     ) {
       // 加工した表示用データ格納用
       const convertData = [];
@@ -6581,12 +7180,14 @@ export default {
       // add 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
       const tableName = "mst_equipment_class";
       const mstselector = await ApiHelper.get(
-        `/report_designer/master/${tableName}`
+        `/report_designer/master/${tableName}`,
+        selectedPatIdParams(selectedPatId)
       ).catch(err => {
         throw err;
       });
       const mstselectorDialyzer = await ApiHelper.get(
-        `/report_designer/master/mst_dialyzer`
+        `/report_designer/master/mst_dialyzer`,
+        selectedPatIdParams(selectedPatId)
       ).catch(err => {
         throw err;
       });
@@ -6622,10 +7223,7 @@ export default {
               treatDate: treatData
               // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
             });
-            
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
             if (ordInfo.readOnly) {
-              // 医療材料  ダイアライザ
               if (ordInfo.rstDialysisState == "0") {
                 const tabooAllergyClassType = equipmentCurrent.equip_type == 0 ? "3" : "4";
                 const tabooAllergyInfos = getters.getPatTabooAllergy.filter(item =>
@@ -6636,7 +7234,7 @@ export default {
                 if (tabooAllergyInfos && tabooAllergyInfos.length > 0) {
                   const tabooAllergyInfo = tabooAllergyInfos[0];
                   equipmentCurrent.isTabooAllergy = true;
-                  equipmentCurrent.name = getTabooAllergyPrefix(tabooAllergyInfo.taboo, tabooAllergyInfo.allergy) + equipmentCurrent.name
+                  equipmentCurrent.name = getTabooAllergyPrefix(tabooAllergyInfo.taboo, tabooAllergyInfo.allergy) + equipmentCurrent.name;
                 } else {
                   equipmentCurrent.isTabooAllergy = false;
                 }
@@ -6653,7 +7251,6 @@ export default {
                 }
               }
             }
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             // add 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
             let classCdIndex
             if(equipmentCurrent.equip_type === 0 ){
@@ -6675,10 +7272,7 @@ export default {
               amount: equipmentCurrent.amount,
               unit: equipmentCurrent.unit,
               equipType: equipmentCurrent.equip_type || 0,
-              /* upd by chamaojia 2026-03-27 [12462] 患者情報共有->患者経過総合ビューア --start */
-              // isTabooAllergy: equipMst.isTabooAllergy,
               isTabooAllergy: ordInfo.readOnly ? equipmentCurrent.isTabooAllergy : equipMst.isTabooAllergy,
-              /* upd by chamaojia 2026-03-27 [12462] 患者情報共有->患者経過総合ビューア --end */
               // 使用期限の判定用に追加
               useStartDate: equipMst.useStartDate,
               useEndDate: equipMst.useEndDate,
@@ -6686,9 +7280,7 @@ export default {
               index: equipMst.index,
               classCdIndex : classCdIndex === -1 ? 999999 : classCdIndex,
               isDelFlag: equipMst.isDelFlag,
-              /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
               readOnly: ordInfo.readOnly
-              /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             });
           }
         }
@@ -6719,7 +7311,7 @@ export default {
             if(equipmentCurrent.equip_type === 0 ){
               classCdIndex = mstselector.data.findIndex(el => el.code == equipMst.classCd);
             } else {
-              classCdIndex = classCdIndex = Number("999999" + mstselectorDialyzer.data.findIndex(el => el.code == equipmentCurrent.cd));
+              classCdIndex = Number("999999" + mstselectorDialyzer.data.findIndex(el => el.code == equipmentCurrent.cd));
             }
             // add 7886 施設設定マスタ＞No.106, 107の表示・動作不備 end
             convertData.push({
@@ -6746,9 +7338,7 @@ export default {
               // add #8142 患者経過総合ビューアおよび患者カレンダーが開かなくなる。削除済み、期限切れ、禁忌アレルギーの表示不具合 dou start
               isDelFlag: equipMst.isDelFlag,
               // add #8142 患者経過総合ビューアおよび患者カレンダーが開かなくなる。削除済み、期限切れ、禁忌アレルギーの表示不具合 dou end
-              /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
               readOnly: ordInfo.readOnly
-              /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             });
             // del FNSI-障害票一覧_患者経過総合ビューア_初期表示#6。 周 start
             // }
@@ -6781,9 +7371,7 @@ export default {
             isDelFlag: item.isDelFlag,
             useStartDate: item.useStartDate,
             useEndDate: item.useEndDate,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
             readOnly: item.readOnly
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
           });
         }
       });
@@ -6806,10 +7394,7 @@ export default {
             treatDate: treatData,
             value1: null,
             value2: null,
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-            // isShowAddImg: ordInfo ? true : false,
             isShowAddImg: ordInfo && !ordInfo.readOnly ? true : false,
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
             isNotClickable: !indCondInfo && ordInfo ? !!ordInfo.ordNo : false,
             isDisabled1: !indCondInfo && ordInfo ? !!ordInfo.ordNo : false,
@@ -6930,7 +7515,7 @@ export default {
         const searchDateListTmp = getters.getDateList;
         // 左端画面表示治療日 - 7
         for (let i = -7; i < 0; i++) {
-          searchDateList.push(moment(searchDateListTmp[0]).add(i, "days").format("YYYYMMDD"));
+          searchDateList.push(dayjs(searchDateListTmp[0]).add(i, "days").format("YYYYMMDD"));
         }
         // 画面表示治療日
         searchDateListTmp.forEach(item => {
@@ -6938,7 +7523,7 @@ export default {
         });
         // 右端画面表示治療日 + 7
         for (let i = 1; i < 8; i++) {
-          searchDateList.push(moment(searchDateList[searchDateList.length - 1]).add(1, "days").format("YYYYMMDD"));
+          searchDateList.push(dayjs(searchDateList[searchDateList.length - 1]).add(1, "days").format("YYYYMMDD"));
         }
         // ord_mainの取得
         copyTreatmentData = getters.getTreatmentDataTmp[listIndex];
@@ -7034,10 +7619,7 @@ export default {
           }
           // add 1006-398 指示の切り替わりポイントを赤くする 陳 end
           // add #10266 患者経過総合ビューアの投与薬剤、医療材料、指示コメントの新規追加行 linjunfeng start
-          /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-          // tempCell.isShowAddImg = copyTreatmentData[eleDate] ? true : false;
           tempCell.isShowAddImg = copyTreatmentData[eleDate] && !copyTreatmentData[eleDate].readOnly ? true : false;
-          /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
           // add #10266 患者経過総合ビューアの投与薬剤、医療材料、指示コメントの新規追加行 linjunfeng end
           tempRow.data.push(tempCell);
         });
@@ -7169,8 +7751,8 @@ export default {
       const copyLastExamMainData = getters.getLastExamMainData;
       var str = "";
       if(copyLastExamMainData) {
-        let dateTemp = moment(copyLastExamMainData).format("YYYY/MM/DD")
-        const week = moment(copyLastExamMainData).day();
+        let dateTemp = dayjs(copyLastExamMainData).format("YYYY/MM/DD")
+        const week = dayjs(copyLastExamMainData).day();
         let weekList = ["日", "月", "火", "水", "木", "金", "土"];
         let tWeek = "(" + weekList[week] + ")";
         str = "\n前回検査予定日：".concat("\n").concat(dateTemp).concat(tWeek);
@@ -7372,8 +7954,8 @@ export default {
       const copyLastRadDate = getters.getLastRadDate;
       var str = "";
       if(copyLastRadDate) {
-        let dateTemp = moment(copyLastRadDate).format("YYYY/MM/DD")
-        const week = moment(copyLastRadDate).day();
+        let dateTemp = dayjs(copyLastRadDate).format("YYYY/MM/DD")
+        const week = dayjs(copyLastRadDate).day();
         let weekList = ["日", "月", "火", "水", "木", "金", "土"];
         let tWeek = "(" + weekList[week] + ")";
         str = "\n前回検査予定日：".concat("\n").concat(dateTemp).concat(tWeek);
@@ -7676,7 +8258,7 @@ export default {
               // 対象日付にレコードが存在するかを確認
               // add 7342 紹介状のイベント日付が登録日になる 張 start
               // if (patEvent.eventStartDate !== findConvertDataForTreatDate.treatDate) {
-              if (moment(patEvent.reportDate).format("YYYYMMDD")!== findConvertDataForTreatDate.treatDate) {
+              if (dayjs(patEvent.reportDate).format("YYYYMMDD")!== findConvertDataForTreatDate.treatDate) {
                 // add 7342 紹介状のイベント日付が登録日になる 張 end
                 return; // forEachでのcontinueの代替
               }
@@ -8052,7 +8634,7 @@ export default {
               if (patEvent.issue_date !== eleDate) {
                 return; // forEachでのcontinueの代替
               }
-              if (eleDispItem.itemName = "処方") {
+              if (eleDispItem.itemName === "処方") {
                 findConvertDataForTreatDate.value1 = patEvent.syohou;
                 findConvertDataForTreatDate.value2 = patEvent.syohou;
               }
@@ -8149,12 +8731,14 @@ export default {
 
           findConvertDataForTreatDate.isNotClickable = copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly;
           // add #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
-          const indCondInfo = JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate]['indCondInfo']);
+          const indCondInfo = parsePatViewerJson(
+            copyTreatmentData[findConvertDataForTreatDate.treatDate]["indCondInfo"]
+          );
           // add #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
           for (let i = 1; i <= 2; i++) {
             const columnName = 1 === i ? "indTareInfo" : "rstTareInfo";
             // 対象風袋データが存在する場合、その値を格納納
-            let indTareInfo = JSON.parse(
+            let indTareInfo = parsePatViewerJson(
               copyTreatmentData[eleDate][columnName]
             );
             // 値がなければ処理終了
@@ -8172,8 +8756,12 @@ export default {
             }
 
             // 実績の場合、後体重測定時の風袋を取得
-            if (2 === i) {
+            if (2 === i && indTareInfo && indTareInfo.after) {
               indTareInfo = indTareInfo.after;
+            }
+
+            if (!indTareInfo || typeof indTareInfo !== "object") {
+              continue;
             }
 
             for (const tareItem in indTareInfo) {
@@ -8294,12 +8882,14 @@ export default {
             copyTreatmentData[findConvertDataForTreatDate.treatDate].ordNo;
           findConvertDataForTreatDate.isNotClickable = copyTreatmentData[findConvertDataForTreatDate.treatDate].readOnly;
           // add #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
-          const indCondInfo = JSON.parse(copyTreatmentData[findConvertDataForTreatDate.treatDate]['indCondInfo']);
+          const indCondInfo = parsePatViewerJson(
+            copyTreatmentData[findConvertDataForTreatDate.treatDate]["indCondInfo"]
+          );
           // add #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
           for (let i = 1; i <= 2; i++) {
             const columnName = 1 === i ? "indOffWaterInfo" : "rstOffWaterInfo";
             // 対象風袋データが存在する場合、その値を格納
-            const offWater = JSON.parse(copyTreatmentData[eleDate][columnName]);
+            let offWater = parsePatViewerJson(copyTreatmentData[eleDate][columnName]);
             // 値がなければ処理終了
             if (!offWater) {
               findConvertDataForTreatDate[`value${i}`] = null;
@@ -8308,6 +8898,15 @@ export default {
                 findConvertDataForTreatDate.isDisabled1 = true;
               }
               // add #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
+              continue;
+            }
+
+            // 実績の場合、後体重測定時の除水補正を取得
+            if (2 === i && offWater && offWater.after) {
+              offWater = offWater.after;
+            }
+
+            if (!offWater || typeof offWater !== "object") {
               continue;
             }
 
@@ -8408,26 +9007,10 @@ export default {
           })();
 
         if (ordInfo) {
-          //add 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 start
-          // 装置モードをマスタから取得
-          // 治療方法マスタ
-          let mstRecord = getters.getMstTreatmentData.find(mstData => {
-            return mstData.treatmentCd === ordInfo.indTreatmentCd;
-          });
-          //add 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 end
-          // add 9339 特殊浄化に治療方法変更してもNa注入プログラムが入りのままとなる。 関 start
-          if (!mstRecord) {
-            mstRecord = getters.getMstTreatmentDataIsDel.find(mstDataDel => {
-              return mstDataDel.treatmentCd === ordInfo.indTreatmentCd;
-            });
-          }
-          // add 9339 特殊浄化に治療方法変更してもNa注入プログラムが入りのままとなる。 関 end
           convertData[0].data.push({
             ordNo: ordInfo.ordNo,
             treatDate: treatData,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
             facilityCd: ordInfo.facilityCd,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             value1: mode ? "ON" : "OFF",
             type: "chart",
             data: null,
@@ -8467,9 +9050,7 @@ export default {
           convertData[1].data.push({
             ordNo: ordInfo.ordNo,
             treatDate: treatData,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
             facilityCd: ordInfo.facilityCd,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             //mod 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 start
             // mod #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
             value1: mode ? "ON" : "OFF",
@@ -8497,10 +9078,7 @@ export default {
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
             isDisabled: !ordInfo.indCondInfo,
             // isNotClickable: ordInfo.readOnly
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-            // isNotClickable: ordInfo.readOnly || !ordInfo.indCondInfo,
             isNotClickable: !ordInfo.indCondInfo,
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
           });
         } else {
@@ -8582,27 +9160,11 @@ export default {
           })();
 
         if (ordInfo) {
-          //add 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 start
-          // 装置モードをマスタから取得
-          // 治療方法マスタ
-          let mstRecord = getters.getMstTreatmentData.find(mstData => {
-            return mstData.treatmentCd === ordInfo.indTreatmentCd;
-          });
-          //add 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 end
-          // add 9339 特殊浄化に治療方法変更してもNa注入プログラムが入りのままとなる。 関 start
-          if (!mstRecord) {
-            mstRecord = getters.getMstTreatmentDataIsDel.find(mstDataDel => {
-              return mstDataDel.treatmentCd === ordInfo.indTreatmentCd;
-            });
-          }
-          // add 9339 特殊浄化に治療方法変更してもNa注入プログラムが入りのままとなる。 関 end
 
           convertData[0].data.push({
             ordNo: ordInfo.ordNo,
             treatDate: treatData,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
             facilityCd: ordInfo.facilityCd,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             value1: mode ? "ON" : "OFF",
             type: "chart",
             data: null,
@@ -8616,9 +9178,7 @@ export default {
           convertData[1].data.push({
             ordNo: ordInfo.ordNo,
             treatDate: treatData,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
             facilityCd: ordInfo.facilityCd,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             //mod 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 start
             // mod #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
             value1: mode ? "ON" : "OFF",
@@ -8653,10 +9213,7 @@ export default {
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
             isDisabled: !ordInfo.indCondInfo,
             // isNotClickable: ordInfo.readOnly
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-            // isNotClickable: ordInfo.readOnly || !ordInfo.indCondInfo,
             isNotClickable: !ordInfo.indCondInfo,
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
           });
         } else {
@@ -8766,28 +9323,12 @@ export default {
           })();
 
         if (ordInfo) {
-          //add 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 start
-          // 装置モードをマスタから取得
-          // 治療方法マスタ
-          let mstRecord = getters.getMstTreatmentData.find(mstData => {
-            return mstData.treatmentCd === ordInfo.indTreatmentCd;
-          });
-          //add 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 end
-          // add 9339 特殊浄化に治療方法変更してもNa注入プログラムが入りのままとなる。 関 start
-          if (!mstRecord) {
-            mstRecord = getters.getMstTreatmentDataIsDel.find(mstDataDel => {
-              return mstDataDel.treatmentCd === ordInfo.indTreatmentCd;
-            });
-          }
-          // add 9339 特殊浄化に治療方法変更してもNa注入プログラムが入りのままとなる。 関 end
 
 
           convertData[0].data.push({
             ordNo: ordInfo.ordNo,
             treatDate: treatData,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
             facilityCd: ordInfo.facilityCd,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             //mod 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 start
             // mod #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
             value1: modeBFluid && modeDialysate ? "ON" : "OFF",
@@ -8818,16 +9359,14 @@ export default {
           convertData[1].data.push({
             ordNo: ordInfo.ordNo,
             treatDate: treatData,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
             facilityCd: ordInfo.facilityCd,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
-            //mod 7926　【デグレ】特殊血液浄化でB液濃度プログラムが活性化　赵 start
+            //mod 7926 【デグレ】特殊血液浄化でB液濃度プログラムが活性化 赵 start
             //mod 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 start
             // mod #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
             value1: modeBFluid && modeDialysate ? "ON" : "OFF",
             // value1:mstRecord.deviceMode!=9? modeBFluid && modeDialysate ? "ON" : "OFF":null,
             //mod 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 end
-            //mod 7926　【デグレ】特殊血液浄化でB液濃度プログラムが活性化　赵 end
+            //mod 7926 【デグレ】特殊血液浄化でB液濃度プログラムが活性化 赵 end
             type: "chart",
             data: modeBFluid && modeDialysate ? dialysateInfo : null,
             //add 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 start
@@ -8860,10 +9399,7 @@ export default {
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
             isDisabled: !ordInfo.indCondInfo,
             // isNotClickable: ordInfo.readOnly
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-            // isNotClickable: ordInfo.readOnly || !ordInfo.indCondInfo,
             isNotClickable: !ordInfo.indCondInfo,
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
           });
 
@@ -8886,9 +9422,7 @@ export default {
           convertData[2].data.push({
             ordNo: ordInfo.ordNo,
             treatDate: treatData,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
             facilityCd: ordInfo.facilityCd,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             //mod 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 start
             // mod #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
             value1: modeBFluid && modeDialysate ? "ON" : "OFF",
@@ -8929,10 +9463,7 @@ export default {
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
             isDisabled: !ordInfo.indCondInfo,
             // isNotClickable: ordInfo.readOnly
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-            // isNotClickable: ordInfo.readOnly || !ordInfo.indCondInfo,
             isNotClickable: !ordInfo.indCondInfo,
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
           });
         } else {
@@ -9188,9 +9719,7 @@ export default {
           convertData[0].data.push({
             ordNo: ordInfo.ordNo,
             treatDate: treatData,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
             facilityCd: ordInfo.facilityCd,
-            /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             //mod 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 start
             // mod #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
             value1: deviceMode != 6 ? qdSwitch || qbSwitch ? "ON" : "OFF" : null,
@@ -9217,10 +9746,7 @@ export default {
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
             isDisabled: !ordInfo.indCondInfo,
             // isNotClickable: ordInfo.readOnly
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-            // isNotClickable: ordInfo.readOnly || !ordInfo.indCondInfo,
             isNotClickable: !ordInfo.indCondInfo,
-            /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
             // add #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
           });
           // mod bug #6038 修正 chen end
@@ -9367,9 +9893,7 @@ export default {
           convertData[0].data.push({
             ordNo: ordInfo.ordNo,
             treatDate: treatData,
-            /* add by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --start */
             facilityCd: ordInfo.facilityCd,
-            /* add by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --end */
             value1: deviceMode === iHdfMode ? "ON" : null,
             type: "chart",
             data: deviceMode === iHdfMode ? ihdfInfo : null,
@@ -9386,10 +9910,7 @@ export default {
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
             isDisabled: !ordInfo.indCondInfo,
             // isNotClickable: ordInfo.readOnly
-            /* upd by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --start */
-            // isNotClickable: ordInfo.readOnly || !ordInfo.indCondInfo,
             isNotClickable: !ordInfo.indCondInfo,
-            /* upd by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --end */
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
           });
         } else {
@@ -9413,7 +9934,7 @@ export default {
      */
     // mod FNSI-検査日設定変更 楊 start
     // convertDiaysisProgram({ getters }, { listIndex }) {
-    async convertDiaysisProgram({ getters }, { listIndex }) {
+    async convertDiaysisProgram({ getters }, { listIndex, selectedPatId }) {
       // mod FNSI-検査日設定変更 楊 end
       // 加工した表示用データ格納用
       const convertData = [
@@ -9477,18 +9998,13 @@ export default {
             // temp.isDisabled = mstRecord.deviceMode==9?true:false,
             // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc end
               //add 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 end
-              // 治療情報が存在すればオーダー番号を格納
+            // 治療情報が存在すればオーダー番号を格納
             temp.ordNo = ordInfo.ordNo;
-            /* add by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --start */
             temp.facilityCd = ordInfo.facilityCd;
-            /* add by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --end */
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
             temp.isDisabled = !ordInfo.indCondInfo;
             // temp.isNotClickable = ordInfo.readOnly;
-            /* upd by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --start */
-            // temp.isNotClickable = ordInfo.readOnly || !ordInfo.indCondInfo;
             temp.isNotClickable = !ordInfo.indCondInfo;
-            /* upd by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --end */
             // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
           }
           // 装置設定情報
@@ -9526,26 +10042,27 @@ export default {
                 // 装置プログラム切替がONの場合のみ値格納
                 if ("1" === dia["282"]) {
                   // mod FNSI-検査日設定変更 楊 start
-                  // temp.value1 = moment(treatDate, "YYYYMMDD").format(
+                  // temp.value1 = dayjs(treatDate, "YYYYMMDD").format(
                   //   "YYYY/MM/DD"
                   // );
 
                   let ordNo = dia["ord_no"];
                   if (ordNo === undefined || ordNo === "") {
                     // 値がないので今日の日付けを格納
-                    temp.value1 = moment(treatDate, "YYYYMMDD").format(
+                    temp.value1 = dayjs(treatDate, "YYYYMMDD").format(
                       "YYYY/MM/DD"
                     );
                   } else {
                     // ordNoより、検査日を格納
                     const res = await ApiHelper.get(
-                      `/mainData/getOrdMainByOrdNo/${dia["ord_no"]}`
+                      `/mainData/getOrdMainByOrdNo/${dia["ord_no"]}`,
+                      selectedPatIdParams(selectedPatId)
                     ).catch(err => {
                       throw err;
                     })
-                    temp.value1 = res ? moment(res.data.treatDate, "YYYYMMDD").format(
+                    temp.value1 = res ? dayjs(res.data.treatDate, "YYYYMMDD").format(
                       "YYYY/MM/DD"
-                    ) : moment(treatDate, "YYYYMMDD").format(
+                    ) : dayjs(treatDate, "YYYYMMDD").format(
                       "YYYY/MM/DD"
                     );
                   }
@@ -9623,16 +10140,11 @@ export default {
           //add 6925　治療モードを変更した際の制限事項，注意メッセージについて　張 end
           // 治療情報が存在すればオーダー番号を格納
           temp.ordNo = ordInfo.ordNo;
-          /* add by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --start */
           temp.facilityCd = ordInfo.facilityCd;
-          /* add by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --end */
           // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
           temp.isDisabled = !ordInfo.indCondInfo;
           // temp.isNotClickable = ordInfo.readOnly;
-          /* upd by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --start */
-          // temp.isNotClickable = ordInfo.readOnly || !ordInfo.indCondInfo;
           temp.isNotClickable = !ordInfo.indCondInfo;
-          /* upd by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --end */
           // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
           // 装置設定情報
           const deviceSetInfo =
@@ -9676,7 +10188,7 @@ export default {
     //   { getters },
     //   { listIndex, layout, facilityCd, patId, weekPattern }
     // ) {
-    async convertVitalInfo({ state, getters, commit }, { listIndex, layout, facilityCd, patId, weekPattern}) {
+    async convertVitalInfo({ state, getters, commit }, { listIndex, layout, facilityCd, patId, weekPattern, selectedPatId}) {
       if (!listIndex) {
         listIndex = 0;
       }
@@ -9725,15 +10237,19 @@ export default {
         const itemKeyArr = series.map(record => record.no);
         // mod #10077 by zhangruixue 2023-12-8  end
         vitalInfo.forEach(rec => {
-          // mod #12462 患者情報共有->患者経過総合ビューア fang start
-          let isHandle = true
-          if(facilityCd != rec.facilityCd) {
-            const compareNo = itemNo.replace('Z', '')
-            if(Number(compareNo) > 10000) {
-              isHandle = false
+          rec.monitorData && Object.keys(rec.monitorData).forEach(itemNo => {
+            // mod #12462 患者情報共有->患者経過総合ビューア fang start
+            let isHandle = true
+            if(facilityCd != rec.facilityCd) {
+              const compareNo = String(itemNo).replace('Z', '')
+              if(Number(compareNo) > 10000) {
+                isHandle = false
+              }
             }
-          }
-          if(isHandle) {
+            if(!isHandle) {
+              return;
+            }
+            // mod #12462 患者情報共有->患者経過総合ビューア fang end
             const pstNo = isNaN(itemNo) ? itemNo : parseInt(itemNo);
             // 表示された項目のみを処理すると判断する
             if (itemKeyArr.indexOf(pstNo) != -1) {
@@ -9747,19 +10263,18 @@ export default {
                 // tempArr[pstNo] = [...[], [rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo]), rec.dataType]];
                 //mod #10077 by zhangruixue 2024-2-20  end
               } else {
-                  // tempArr[pstNo] = [...tempArr[pstNo], [rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo])]];
-                  // 配列追加値の性能が悪く、pushに置き換える
-                  // tempArr[pstNo] = [...tempArr[pstNo], [rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo]), rec.dataType]];
-                  //mod #10077 by zhangruixue 2024-2-20  start
-                  if(isStringNumeric(convertToHalfWidth(rec.monitorData[itemNo]))){
-                    tempArr[pstNo].push([rec.occurDate, Number(convertToHalfWidth(rec.monitorData[itemNo])), rec.dataType])
-                  }
-                  //mod #10077 by zhangruixue 2024-2-20  end
-                  // 8574 mod 患者経過総合ビューアにてグラフ項目が正しく表示されない 張 end
+                // tempArr[pstNo] = [...tempArr[pstNo], [rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo])]];
+                // 配列追加値の性能が悪く、pushに置き換える
+                // tempArr[pstNo] = [...tempArr[pstNo], [rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo]), rec.dataType]];
+                //mod #10077 by zhangruixue 2024-2-20  start
+                if(isStringNumeric(convertToHalfWidth(rec.monitorData[itemNo]))){
+                  tempArr[pstNo].push([rec.occurDate, Number(convertToHalfWidth(rec.monitorData[itemNo])), rec.dataType])
+                }
+                //mod #10077 by zhangruixue 2024-2-20  end
+                // 8574 mod 患者経過総合ビューアにてグラフ項目が正しく表示されない 張 end
               }
             }
-          }
-          // mod #12462 患者情報共有->患者経過総合ビューア fang end
+          });
         });
 
         const chartData = series.map(record => {
@@ -9785,18 +10300,11 @@ export default {
       };
 
       let chartData = [];
-      const lastIndex = Object.keys(copyTreatmentData).length - 1;
       const period = getters.getSelectedPeriod;
       const isLongPeriod = ["4", "5", "6", "7"].includes(period);
-      let startDate = moment(
-        Object.keys(copyTreatmentData)[0] || getters.getDateList[0],
-        "YYYYMMDD"
-      ).startOf("day");
-      let endDate = moment(
-        Object.keys(copyTreatmentData)[lastIndex] ||
-        getters.getDateList[getters.getDateList.length - 1],
-        "YYYYMMDD"
-      ).endOf("day");
+      const chartAxisRange = getPatViewerChartAxisDateRange(getters, copyTreatmentData);
+      let startDate = chartAxisRange.startDate;
+      let endDate = chartAxisRange.endDate;
 
       // 12週以降の場合、APIにリクエストをして期間内のデータを取得
       if (isLongPeriod) {
@@ -9833,7 +10341,8 @@ export default {
             resMniMonitor = resMniMonitorTmp[0].resMniMonitor;
           } else {
             resMniMonitor = await ApiHelper.get(
-              `/status_list/mni_monitor/${ordInfo.ordNo}`
+              `/status_list/mni_monitor/${ordInfo.ordNo}`,
+              selectedPatIdParams(selectedPatId)
             ).catch(err => {
               throw err;
             })
@@ -9887,7 +10396,7 @@ export default {
           // 実績データ「実績情報から取得」
           for (const vitalItem of vitalInfo) {
             for (const key of filterArr) {
-              if (vitalItem.monitorData && vitalItem.monitorData.hasOwnProperty(key)) {
+              if (vitalItem.monitorData && Object.prototype.hasOwnProperty.call(vitalItem.monitorData, key)) {
                 // バイタル・モニタ情報存在場合
                 vitalResultArr.push(vitalItem.monitorData[key]);
               }
@@ -9999,7 +10508,8 @@ export default {
               resMniMonitor = resMniMonitorTmp[0].resMniMonitor;
             } else {
               resMniMonitor = await ApiHelper.get(
-                `/status_list/mni_monitor/${ordInfo.ordNo}`
+                `/status_list/mni_monitor/${ordInfo.ordNo}`,
+                selectedPatIdParams(selectedPatId)
               ).catch(err => {
                 throw err;
               })
@@ -10055,7 +10565,7 @@ export default {
           // 実績データ「実績情報から取得」
           for (const vitalItem of vitalInfo) {
             for (const key of filterArr) {
-              if (vitalItem.monitorData && vitalItem.monitorData.hasOwnProperty(key)) {
+              if (vitalItem.monitorData && Object.prototype.hasOwnProperty.call(vitalItem.monitorData, key)) {
                 // バイタル・モニタ情報存在場合
                 vitalResultArr.push(vitalItem.monitorData[key]);
               }
@@ -10158,7 +10668,7 @@ export default {
       if (period + "" === "1" || period + "" === "2" || period + "" === "3") {
         let days = endDate.diff(startDate, 'days');
         for (let i = 1; i < days; i++) {
-          let daytmp = moment(startDate.format("YYYY-MM-DD"));
+          let daytmp = dayjs(startDate.format("YYYY-MM-DD"));
           daytmp = daytmp.add(i, 'days');
           let strDay = daytmp.format("YYYYMMDD");
           if (!Object.keys(copyTreatmentData).includes(strDay) &&
@@ -10172,9 +10682,9 @@ export default {
           if (daytmpS === "") {
             daytmpS = breakDay;
           } else {
-            if (moment(daytmp).add(1, 'days').format("YYYYMMDD") !== breakDay) {
-              let fromD = moment(daytmpS).startOf('day');
-              let toD = moment(daytmp).add(1, 'days').startOf('day');
+            if (dayjs(daytmp).add(1, 'days').format("YYYYMMDD") !== breakDay) {
+              let fromD = dayjs(daytmpS).startOf('day');
+              let toD = dayjs(daytmp).add(1, 'days').startOf('day');
               let breakItem = {
                 from: fromD.valueOf(),
                 to: toD.valueOf()
@@ -10186,8 +10696,8 @@ export default {
           daytmp = breakDay;
         });
         if (daytmp !== daytmpS) {
-          let fromD = moment(daytmpS).startOf('day');
-          let toD = moment(daytmp).add(1, 'days').startOf('day');
+          let fromD = dayjs(daytmpS).startOf('day');
+          let toD = dayjs(daytmp).add(1, 'days').startOf('day');
           let breakItem = {
             from: fromD.valueOf(),
             to: toD.valueOf()
@@ -10195,8 +10705,8 @@ export default {
           breaks.push(breakItem);
         }
         if (daytmpS !== "" && breaks.length === 0) {
-          let fromD = moment(daytmpS).startOf('day');
-          let toD = moment(daytmp).add(1, 'days').startOf('day');
+          let fromD = dayjs(daytmpS).startOf('day');
+          let toD = dayjs(daytmp).add(1, 'days').startOf('day');
           let breakItem = {
             from: fromD.valueOf(),
             to: toD.valueOf()
@@ -10226,7 +10736,7 @@ export default {
      * @param {number} patId 患者ID
      * @param {string} weekPattern 取得曜日(※全曜日の場合、[{'text': '全','done': true,'value': 0}]) ※要検討
      */
-    async convertVitalInfoDuringTreatment({ state, getters, commit }, { listIndex, layout, facilityCd, patId, weekPattern}) {
+    async convertVitalInfoDuringTreatment({ state, getters, commit }, { listIndex, layout, facilityCd, patId, weekPattern, selectedPatId}) {
       if (!listIndex) {
         listIndex = 0;
       }
@@ -10251,38 +10761,39 @@ export default {
             // mod #12462 患者情報共有->患者経過総合ビューア fang start
             let isHandle = true
             if(facilityCd != rec.facilityCd) {
-              const compareNo = itemNo.replace('Z', '')
+              const compareNo = String(itemNo).replace('Z', '')
               if(Number(compareNo) > 10000) {
                 isHandle = false
               }
             }
-            if(isHandle) {
-              const pstNo = isNaN(itemNo) ? itemNo : parseInt(itemNo);
-              if (!tempArr[pstNo]) {
-                // 8574 mod 患者経過総合ビューアにてグラフ項目が正しく表示されない 張 start
-                // tempArr[pstNo] = [...[], [rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo]), rec.ordNo]];
-                //mod #10077 by zhangruixue 2024-2-20  start
-                if(isStringNumeric(convertToHalfWidth(rec.monitorData[itemNo]))){
-                  tempArr[pstNo] = [...[], [rec.occurDate, Number(convertToHalfWidth(rec.monitorData[itemNo])), rec.ordNo, rec.dataType]];
-                }
-                // tempArr[pstNo] = [...[], [rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo]), rec.ordNo, rec.dataType]];
-                //mod #10077 by zhangruixue 2024-2-20  end
-              } else {
-                // tempArr[pstNo] = [...tempArr[pstNo], [rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo]), rec.ordNo]];
-                /* modify by chamaojia 2023-10-12 [9713] 配列追加値のパフォーマンス最適化  --start */
-                // 配列追加値の性能が悪く、pushに置き換える
-                // tempArr[pstNo] = [...tempArr[pstNo], [rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo]), rec.ordNo, rec.dataType]];
-                //mod #10077 by zhangruixue 2024-2-20  start
-                if(isStringNumeric(convertToHalfWidth(rec.monitorData[itemNo]))){
-                  tempArr[pstNo].push([rec.occurDate, Number(convertToHalfWidth(rec.monitorData[itemNo])), rec.ordNo, rec.dataType]);
-                }
-                // tempArr[pstNo].push([rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo]), rec.ordNo, rec.dataType]);
-                //mod #10077 by zhangruixue 2024-2-20  end
-                /* modify by chamaojia 2023-10-12 [9713] 配列追加値のパフォーマンス最適化  --end */
-                // 8574 mod 患者経過総合ビューアにてグラフ項目が正しく表示されない 張 end
-              }
+            if(!isHandle) {
+              return;
             }
             // mod #12462 患者情報共有->患者経過総合ビューア fang end
+            const pstNo = isNaN(itemNo) ? itemNo : parseInt(itemNo);
+            if (!tempArr[pstNo]) {
+              // 8574 mod 患者経過総合ビューアにてグラフ項目が正しく表示されない 張 start
+              // tempArr[pstNo] = [...[], [rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo]), rec.ordNo]];
+              //mod #10077 by zhangruixue 2024-2-20  start
+              if(isStringNumeric(convertToHalfWidth(rec.monitorData[itemNo]))){
+                tempArr[pstNo] = [...[], [rec.occurDate, Number(convertToHalfWidth(rec.monitorData[itemNo])), rec.ordNo, rec.dataType]];
+              }
+              // tempArr[pstNo] = [...[], [rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo]), rec.ordNo, rec.dataType]];
+              //mod #10077 by zhangruixue 2024-2-20  end
+            } else {
+              // tempArr[pstNo] = [...tempArr[pstNo], [rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo]), rec.ordNo]];
+              /* modify by chamaojia 2023-10-12 [9713] 配列追加値のパフォーマンス最適化  --start */
+              // 配列追加値の性能が悪く、pushに置き換える
+              // tempArr[pstNo] = [...tempArr[pstNo], [rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo]), rec.ordNo, rec.dataType]];
+              //mod #10077 by zhangruixue 2024-2-20  start
+              if(isStringNumeric(convertToHalfWidth(rec.monitorData[itemNo]))){
+                tempArr[pstNo].push([rec.occurDate, Number(convertToHalfWidth(rec.monitorData[itemNo])), rec.ordNo, rec.dataType]);
+              }
+              // tempArr[pstNo].push([rec.occurDate, isNaN(rec.monitorData[itemNo]) ? rec.monitorData[itemNo] : Number(rec.monitorData[itemNo]), rec.ordNo, rec.dataType]);
+              //mod #10077 by zhangruixue 2024-2-20  end
+              /* modify by chamaojia 2023-10-12 [9713] 配列追加値のパフォーマンス最適化  --end */
+              // 8574 mod 患者経過総合ビューアにてグラフ項目が正しく表示されない 張 end
+            }
           });
         });
         const chartData = series.map(record => {
@@ -10306,18 +10817,11 @@ export default {
         return chartData;
       };
       let chartData = [];
-      const lastIndex = Object.keys(copyTreatmentData).length - 1;
       const period = getters.getSelectedPeriod;
       const isLongPeriod = ["4", "5", "6", "7"].includes(period);
-      let startDate = moment(
-        Object.keys(copyTreatmentData)[0] || getters.getDateList[0],
-        "YYYYMMDD"
-      ).startOf("day");
-      let endDate = moment(
-        Object.keys(copyTreatmentData)[lastIndex] ||
-        getters.getDateList[getters.getDateList.length - 1],
-        "YYYYMMDD"
-      ).endOf("day");
+      const chartAxisRange = getPatViewerChartAxisDateRange(getters, copyTreatmentData);
+      let startDate = chartAxisRange.startDate;
+      let endDate = chartAxisRange.endDate;
 
       // 12週以降の場合、APIにリクエストをして期間内のデータを取得
       if (isLongPeriod) {
@@ -10332,7 +10836,8 @@ export default {
             resMniMonitor = resMniMonitorTmp[0].resMniMonitor;
           } else {
             resMniMonitor = await ApiHelper.get(
-              `/status_list/mni_monitor/${ordInfo.ordNo}`
+              `/status_list/mni_monitor/${ordInfo.ordNo}`,
+              selectedPatIdParams(selectedPatId)
             ).catch(err => {
               throw err;
             })
@@ -10375,7 +10880,7 @@ export default {
           // 実績データ「実績情報から取得」
           for (const vitalItem of vitalInfo) {
             for (const key of filterArr) {
-              if (vitalItem.monitorData && vitalItem.monitorData.hasOwnProperty(key)) {
+              if (vitalItem.monitorData && Object.prototype.hasOwnProperty.call(vitalItem.monitorData, key)) {
                 // バイタル・モニタ情報存在場合
                 vitalResultArr.push(vitalItem.monitorData[key]);
               }
@@ -10467,7 +10972,8 @@ export default {
             resMniMonitor = resMniMonitorTmp[0].resMniMonitor;
           } else {
             resMniMonitor = await ApiHelper.get(
-              `/status_list/mni_monitor/${ordInfo.ordNo}`
+              `/status_list/mni_monitor/${ordInfo.ordNo}`,
+              selectedPatIdParams(selectedPatId)
             ).catch(err => {
               throw err;
             })
@@ -10509,7 +11015,7 @@ export default {
           // 実績データ「実績情報から取得」
           for (const vitalItem of vitalInfo) {
             for (const key of filterArr) {
-              if (vitalItem.monitorData && vitalItem.monitorData.hasOwnProperty(key)) {
+              if (vitalItem.monitorData && Object.prototype.hasOwnProperty.call(vitalItem.monitorData, key)) {
                 // バイタル・モニタ情報存在場合
                 vitalResultArr.push(vitalItem.monitorData[key]);
               }
@@ -10585,40 +11091,38 @@ export default {
         });
         chartData = createChartData(vitalInfo);
       }
-      let days = endDate.diff(startDate, 'days');
       let chartDataRange = [];
-      // (グラフ)チャートデータレンジ(横軸範囲)の作成
-      for (let i = 0; i < days; i++) {
-        let startDateTmp = moment(startDate.valueOf()).add(i, 'days').startOf('day');
-        let endDateTmp = moment(startDate.valueOf()).add(i + 1, 'days').startOf('day');
-        let treatDate = startDateTmp.format("YYYYMMDD");
+      // (グラフ)チャートデータレンジ(横軸範囲)の作成 — ヘッダー日付列と列数を一致させる
+      getters.getDateList.forEach(treatDate => {
+        let startDateTmp = dayjs(treatDate, "YYYYMMDD").startOf('day');
+        let endDateTmp = dayjs(treatDate, "YYYYMMDD").add(1, 'days').startOf('day');
         let ordInfo = copyTreatmentData[treatDate];
         // 予定・実績作成済の場合
         if (ordInfo !== undefined && ordInfo !== null) {
           // 透析前体重測定日時
-          let rstWeightBeforeDate = ordInfo.rstWeightInfo ? (JSON.parse(ordInfo.rstWeightInfo).weight_before_date === undefined || JSON.parse(ordInfo.rstWeightInfo).weight_before_date === null ? null : moment(JSON.parse(ordInfo.rstWeightInfo).weight_before_date)) : null;
+          let rstWeightBeforeDate = ordInfo.rstWeightInfo ? (JSON.parse(ordInfo.rstWeightInfo).weight_before_date === undefined || JSON.parse(ordInfo.rstWeightInfo).weight_before_date === null ? null : dayjs(JSON.parse(ordInfo.rstWeightInfo).weight_before_date)) : null;
           if (rstWeightBeforeDate !== null) {
             startDateTmp = rstWeightBeforeDate;
           } else {
             // 治療開始時刻
-            let rstStartDate = ordInfo.rstStartDate ? (ordInfo.rstStartDate === undefined || ordInfo.rstStartDate === null ? null : moment(ordInfo.rstStartDate)) : null;
+            let rstStartDate = ordInfo.rstStartDate ? (ordInfo.rstStartDate === undefined || ordInfo.rstStartDate === null ? null : dayjs(ordInfo.rstStartDate)) : null;
             if (rstStartDate !== null) {
               startDateTmp = rstStartDate;
             } else {
-              startDateTmp = moment(startDate.valueOf()).add(i, 'days').startOf('day');
+              startDateTmp = dayjs(startDate, "YYYYMMDD").startOf('day');
             }
           }
           // 透析後体重測定日時
-          let rstWeightAfterDate = ordInfo.rstWeightInfo ? (JSON.parse(ordInfo.rstWeightInfo).weight_after_date === undefined || JSON.parse(ordInfo.rstWeightInfo).weight_after_date === null ? null : moment(JSON.parse(ordInfo.rstWeightInfo).weight_after_date)) : null;
+          let rstWeightAfterDate = ordInfo.rstWeightInfo ? (JSON.parse(ordInfo.rstWeightInfo).weight_after_date === undefined || JSON.parse(ordInfo.rstWeightInfo).weight_after_date === null ? null : dayjs(JSON.parse(ordInfo.rstWeightInfo).weight_after_date)) : null;
           if (rstWeightAfterDate !== null) {
             endDateTmp = rstWeightAfterDate;
           } else {
             // 治療終了時刻
-            let rstEndDate = ordInfo.rstEndDate ? (ordInfo.rstEndDate === undefined || ordInfo.rstEndDate === null ? null : moment(ordInfo.rstEndDate)) : null;
+            let rstEndDate = ordInfo.rstEndDate ? (ordInfo.rstEndDate === undefined || ordInfo.rstEndDate === null ? null : dayjs(ordInfo.rstEndDate)) : null;
             if (rstEndDate !== null) {
               endDateTmp = rstEndDate;
             } else {
-              endDateTmp = moment(startDateTmp.format("YYYYMMDD").valueOf()).add(1, 'days').startOf('day');
+              endDateTmp = dayjs(startDateTmp.format("YYYYMMDD").valueOf()).add(1, 'days').startOf('day');
             }
           }
         }
@@ -10628,13 +11132,12 @@ export default {
           startDate: startDateTmp,
           endDate: endDateTmp
         });
-      }
+      });
       // (グラフ)描画データの作成
       for (let i = 0; i < chartDataRange.length; i++) {
         let ordNo = chartDataRange[i].ordNo;
         let chartStartDate = chartDataRange[i].startDate;
         let chartEndDate = chartDataRange[i].endDate;
-        let treatDate = chartDataRange[i].treatDate;
         let convertChartData = [];
         let copyChartData = deepCopy(chartData);
         // (グラフ)チャートデータの再作成
@@ -10646,18 +11149,16 @@ export default {
           copyChartDataItem.data = result;
           convertChartData.push(copyChartDataItem);
         });
-        if (getters.getDateList.includes(treatDate)) {
-          convertData[0].data.push({
-            type: "chart-rst",
-            chartData: convertChartData,
-            chartXAxisMin: chartStartDate.valueOf(),
-            chartXAxisMax: chartEndDate.valueOf(),
-            chartDisplayPeriod: period,
-            yAxis: yAxis,
-            chartType: "line",
-            showLegend: true
-          });
-        }
+        convertData[0].data.push({
+          type: "chart-rst",
+          chartData: convertChartData,
+          chartXAxisMin: chartStartDate.valueOf(),
+          chartXAxisMax: chartEndDate.valueOf(),
+          chartDisplayPeriod: period,
+          yAxis: yAxis,
+          chartType: "line",
+          showLegend: true
+        });
       }
       return convertData;
     },
@@ -10860,7 +11361,7 @@ export default {
                 case "re_loop_rate_main":
                   if (rec.weightInfo.recrcl_rt && rec.weightInfo.recrcl_rt.valid_no > 0) {
                     const validNo = rec.weightInfo.recrcl_rt.valid_no;
-                    if (rec.weightInfo.recrcl_rt.hasOwnProperty(validNo)) {
+                    if (Object.prototype.hasOwnProperty.call(rec.weightInfo.recrcl_rt, validNo)) {
                       if (rec.weightInfo.recrcl_rt[validNo].rate != null) {
                         dataIn = Number(rec.weightInfo.recrcl_rt[validNo].rate);
                       }
@@ -10888,7 +11389,7 @@ export default {
                 case "re_loop_rate_main_blood_flow":
                   if (rec.weightInfo.recrcl_rt && rec.weightInfo.recrcl_rt.valid_no > 0) {
                     const validNo = rec.weightInfo.recrcl_rt.valid_no;
-                    if (rec.weightInfo.recrcl_rt.hasOwnProperty(validNo)) {
+                    if (Object.prototype.hasOwnProperty.call(rec.weightInfo.recrcl_rt, validNo)) {
                       if (rec.weightInfo.recrcl_rt[validNo].bld_vl != null) {
                         dataIn = Number(rec.weightInfo.recrcl_rt[validNo].bld_vl);
                       }
@@ -11151,19 +11652,11 @@ export default {
       };
 
       let chartData = [];
-      const lastIndex = Object.keys(copyTreatmentData).length - 1;
       const period = getters.getSelectedPeriod;
       const isLongPeriod = ["4", "5", "6", "7"].includes(period);
-      // TODO: pushするために一時的にコメントアウト
-      let startDate = moment(
-        Object.keys(copyTreatmentData)[0] || getters.getDateList[0],
-        "YYYYMMDD"
-      ).startOf("day");
-      let endDate = moment(
-        Object.keys(copyTreatmentData)[lastIndex] ||
-        getters.getDateList[getters.getDateList.length - 1],
-        "YYYYMMDD"
-      ).endOf("day");
+      const chartAxisRange = getPatViewerChartAxisDateRange(getters, copyTreatmentData);
+      let startDate = chartAxisRange.startDate;
+      let endDate = chartAxisRange.endDate;
 
       // 12週以降の場合、APIにリクエストをして期間内のデータを取得
       if (isLongPeriod) {
@@ -11223,7 +11716,7 @@ export default {
             weightInfo: weightInfo,
             dw: ordInfo.rstDw,
             treatDate: ordInfo.treatDate,
-            startTime: ordInfo.rstStartDate ? moment(ordInfo.rstStartDate).format("HHmm") : Number(ordInfo.indTreatStartTime)
+            startTime: ordInfo.rstStartDate ? dayjs(ordInfo.rstStartDate).format("HHmm") : Number(ordInfo.indTreatStartTime)
           });
         }
       }
@@ -11270,7 +11763,7 @@ export default {
             if (key === "rst_dw") {
               // DW場合
               weightResultArr.push(weightItem.dw);
-            } else if (weightItem.weightInfo && weightItem.weightInfo.hasOwnProperty(key)) {
+            } else if (weightItem.weightInfo && Object.prototype.hasOwnProperty.call(weightItem.weightInfo, key)) {
               // 体重情報存在場合
               weightResultArr.push(weightItem.weightInfo[key]);
             }
@@ -11347,7 +11840,7 @@ export default {
       if (period + "" === "1" || period + "" === "2" || period + "" === "3") {
         let days = endDate.diff(startDate, 'days');
         for (let i = 1; i < days; i++) {
-          let daytmp = moment(startDate.format("YYYY-MM-DD"));
+          let daytmp = dayjs(startDate.format("YYYY-MM-DD"));
           daytmp = daytmp.add(i, 'days');
           let strDay = daytmp.format("YYYYMMDD");
           if (!Object.keys(copyTreatmentData).includes(strDay) &&
@@ -11361,9 +11854,9 @@ export default {
           if (daytmpS === "") {
             daytmpS = breakDay;
           } else {
-            if (moment(daytmp).add(1, 'days').format("YYYYMMDD") !== breakDay) {
-              let fromD = moment(daytmpS).startOf('day');
-              let toD = moment(daytmp).add(1, 'days').startOf('day');
+            if (dayjs(daytmp).add(1, 'days').format("YYYYMMDD") !== breakDay) {
+              let fromD = dayjs(daytmpS).startOf('day');
+              let toD = dayjs(daytmp).add(1, 'days').startOf('day');
               let breakItem = {
                 from: fromD.valueOf(),
                 to: toD.valueOf()
@@ -11375,8 +11868,8 @@ export default {
           daytmp = breakDay;
         });
         if (daytmp !== daytmpS) {
-          let fromD = moment(daytmpS).startOf('day');
-          let toD = moment(daytmp).add(1, 'days').startOf('day');
+          let fromD = dayjs(daytmpS).startOf('day');
+          let toD = dayjs(daytmp).add(1, 'days').startOf('day');
           let breakItem = {
             from: fromD.valueOf(),
             to: toD.valueOf()
@@ -11384,8 +11877,8 @@ export default {
           breaks.push(breakItem);
         }
         if (daytmpS !== "" && breaks.length === 0) {
-          let fromD = moment(daytmpS).startOf('day');
-          let toD = moment(daytmp).add(1, 'days').startOf('day');
+          let fromD = dayjs(daytmpS).startOf('day');
+          let toD = dayjs(daytmp).add(1, 'days').startOf('day');
           let breakItem = {
             from: fromD.valueOf(),
             to: toD.valueOf()
@@ -11419,7 +11912,7 @@ export default {
     // ) {
     // mod FNSI-投薬支援仕様更新「予測値」「回帰直線」 周 start
     // async convertExamResultInfo({ getters }, { listIndex, layout, patId }) {
-    async convertExamResultInfo({ getters }, { listIndex, layout, facilityCd, patId }) {
+    async convertExamResultInfo({ getters }, { listIndex, layout, facilityCd, patId, selectedPatId }) {
       // mod FNSI-投薬支援仕様更新「予測値」「回帰直線」 周 end
       const convertData = [
         {
@@ -11516,8 +12009,6 @@ export default {
                 return dateA < dateB ? -1 : 1;
               }
             });
-          } else {
-            record.data = record.data;
           }
           // mod #10174【因島】患者経過総合ビューアの長期間表示にて検査項目に対して区分の選択肢がない 関 end
           return record;
@@ -11533,13 +12024,13 @@ export default {
         }
         const detailInfo = JSON.parse(mst.detailInfo);
 
-        if (!(detailInfo.hasOwnProperty("examItemCycling") && detailInfo.examItemCycling)) {
+        if (!(Object.prototype.hasOwnProperty.call(detailInfo, "examItemCycling") && detailInfo.examItemCycling)) {
           return null;
         }
         const itemNoInfo = detailInfo.examItemCycling;
 
         // 投薬支援⇒予測値無効場合
-        if (!(itemNoInfo && itemNoInfo?.[0]?.hasOwnProperty("value") && itemNoInfo[0].value)) {
+        if (!(itemNoInfo && Object.prototype.hasOwnProperty.call(itemNoInfo?.[0] ?? {}, "value") && itemNoInfo[0].value)) {
           return null;
         }
         return itemNoInfo[0].value.toString();
@@ -11553,32 +12044,25 @@ export default {
         }
         const detailInfo = JSON.parse(mst.detailInfo);
 
-        if (!(detailInfo.hasOwnProperty("examItemRegression") && detailInfo.examItemRegression)) {
+        if (!(Object.prototype.hasOwnProperty.call(detailInfo, "examItemRegression") && detailInfo.examItemRegression)) {
           return null;
         }
         const itemNoInfo = detailInfo.examItemRegression;
 
         // 投薬支援⇒回帰直線無効場合
-        if (!(itemNoInfo && itemNoInfo?.[0]?.hasOwnProperty("value") && itemNoInfo[0].value)) {
+        if (!(itemNoInfo && Object.prototype.hasOwnProperty.call(itemNoInfo?.[0] ?? {}, "value") && itemNoInfo[0].value)) {
           return null;
         }
         return itemNoInfo[0].value.toString();
       };
       // add FNSI-投薬支援仕様更新「回帰直線」 周 end
 
-      const lastIndex = Object.keys(copyTreatmentData).length - 1;
       const period = getters.getSelectedPeriod;
       const isLongPeriod = ["4", "5", "6", "7"].includes(period);
-      let chartData = [];
-      let startDate = moment(
-        Object.keys(copyTreatmentData)[0] || getters.getDateList[0],
-        "YYYYMMDD"
-      ).startOf("day");
-      let endDate = moment(
-        Object.keys(copyTreatmentData)[lastIndex] ||
-        getters.getDateList[getters.getDateList.length - 1],
-        "YYYYMMDD"
-      ).endOf("day");
+      let chartData;
+      const chartAxisRange = getPatViewerChartAxisDateRange(getters, copyTreatmentData);
+      let startDate = chartAxisRange.startDate;
+      let endDate = chartAxisRange.endDate;
 
       // add FNSI-投薬支援仕様更新「投薬支援マスタ」 周 start
       // 選択中投薬支援マスト情報を取得
@@ -11611,22 +12095,20 @@ export default {
       } else {
         endDate = endDate.add(1, "day").startOf("day");
       }
-      // RestAPI実行
-      /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
       const sendData = {};
       const patientShareMode = store.getters["account-edit/getPatientShareMode"];
       const patientShareFacilityCdMode = store.getters["account-edit/getPatientShareFacilityCdMode"];
-      // 0: マージ  1: 自施設
       sendData.patShareMode = patientShareMode == 0 && !patientShareFacilityCdMode ? 0 : 1;
+      // RestAPI実行
       const response = await ApiHelper.post(
-        // `/exam/TreatDateList/${patId}/${startDate.format("YYYYMMDD")}/${endDate.format("YYYYMMDD")}`
-        `/exam/TreatDateList/${patId}/${startDate.format("YYYYMMDD")}/${endDate.format("YYYYMMDD")}`, sendData
+        `/exam/TreatDateList/${patId}/${startDate.format("YYYYMMDD")}/${endDate.format("YYYYMMDD")}`,
+        sendData
       ).catch(err => {
         throw err;
       });
-      /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
       // add IES_6849【試験T】【結合テスト】グラーフ関連：【計画】画面の【検査結果グラーフ】グラフは2桁小さいまま残っていません 関 start
-      const responseItem = await ApiHelper.get(`/exam/examRecord/examItem/${facilityCd}`
+      const responseItem = await ApiHelper.get(`/exam/examRecord/examItem/${facilityCd}`,
+        selectedPatIdParams(selectedPatId)
       ).catch(err => {
         throw err;
       });
@@ -11805,24 +12287,24 @@ export default {
               );
             })
               .forEach(ord => {
-                predictionData.push([moment(ord.suppliesBaseDate).format("YYYY-MM-DD HH:mm:ss"), Number(ord.indRstValue)]);
+                predictionData.push([dayjs(ord.suppliesBaseDate).format("YYYY-MM-DD HH:mm:ss"), Number(ord.indRstValue)]);
                 examResultArr.push(Number(ord.indRstValue));
               });
           } else if (hasRegression && subCategory.itemNo === shien_kaikichokusen && regressionValue) {
             // 回帰直線「関数算出」
             const regressionSeries = getGraphDataForRegression(
-              moment(endDate).format("YYYYMMDD"),
+              dayjs(endDate).format("YYYYMMDD"),
               period,
               regressionValue,
               examData
             );
             for (let index = 0; (regressionSeries && index < regressionSeries.intDataCnt); index++) {
               if (regressionSeries.dtmDataDate[index]) {
-                regressionData.push([moment(regressionSeries.dtmDataDate[index]).format("YYYY-MM-DD HH:mm:ss"), Number(regressionSeries.dblDataValue[index])]);
+                regressionData.push([dayjs(regressionSeries.dtmDataDate[index]).format("YYYY-MM-DD HH:mm:ss"), Number(regressionSeries.dblDataValue[index])]);
                 examResultArr.push(Number(regressionSeries.dblDataValue[index]));
                 // 分割
                 if (index % 2 === 1) {
-                  regressionData.push([moment(regressionSeries.dtmDataDate[index]).format("YYYY-MM-DD HH:mm:ss"), null]);
+                  regressionData.push([dayjs(regressionSeries.dtmDataDate[index]).format("YYYY-MM-DD HH:mm:ss"), null]);
                 }
               }
             }
@@ -11928,7 +12410,7 @@ export default {
             marker: getSeriesMarker(subCategory.itemPoint, subCategory.itemColor),
             data: seriesData,
             // add #10174【因島】患者経過総合ビューアの長期間表示にて検査項目に対して区分の選択肢がない 関 start
-            ...(subCategory.hasOwnProperty('itemExamClass') ? { examClass: subCategory.itemExamClass } : {})
+            ...(Object.prototype.hasOwnProperty.call(subCategory, 'itemExamClass') ? { examClass: subCategory.itemExamClass } : {})
             // add #10174【因島】患者経過総合ビューアの長期間表示にて検査項目に対して区分の選択肢がない 関 end
           });
         });
@@ -11940,7 +12422,7 @@ export default {
       if (period + "" === "1" || period + "" === "2" || period + "" === "3") {
         let days = endDate.diff(startDate, 'days');
         for (let i = 1; i < days; i++) {
-          let daytmp = moment(startDate.format("YYYY-MM-DD"));
+          let daytmp = dayjs(startDate.format("YYYY-MM-DD"));
           daytmp = daytmp.add(i, 'days');
           let strDay = daytmp.format("YYYYMMDD");
           if (!Object.keys(copyTreatmentData).includes(strDay) &&
@@ -11954,9 +12436,9 @@ export default {
           if (daytmpS === "") {
             daytmpS = breakDay;
           } else {
-            if (moment(daytmp).add(1, 'days').format("YYYYMMDD") !== breakDay) {
-              let fromD = moment(daytmpS).startOf('day');
-              let toD = moment(daytmp).add(1, 'days').startOf('day');
+            if (dayjs(daytmp).add(1, 'days').format("YYYYMMDD") !== breakDay) {
+              let fromD = dayjs(daytmpS).startOf('day');
+              let toD = dayjs(daytmp).add(1, 'days').startOf('day');
               let breakItem = {
                 from: fromD.valueOf(),
                 to: toD.valueOf()
@@ -11968,8 +12450,8 @@ export default {
           daytmp = breakDay;
         });
         if (daytmp !== daytmpS) {
-          let fromD = moment(daytmpS).startOf('day');
-          let toD = moment(daytmp).add(1, 'days').startOf('day');
+          let fromD = dayjs(daytmpS).startOf('day');
+          let toD = dayjs(daytmp).add(1, 'days').startOf('day');
           let breakItem = {
             from: fromD.valueOf(),
             to: toD.valueOf()
@@ -11977,8 +12459,8 @@ export default {
           breaks.push(breakItem);
         }
         if (daytmpS !== "" && breaks.length === 0) {
-          let fromD = moment(daytmpS).startOf('day');
-          let toD = moment(daytmp).add(1, 'days').startOf('day');
+          let fromD = dayjs(daytmpS).startOf('day');
+          let toD = dayjs(daytmp).add(1, 'days').startOf('day');
           let breakItem = {
             from: fromD.valueOf(),
             to: toD.valueOf()
@@ -12003,6 +12485,7 @@ export default {
      * 実績情報
      */
     async convertRstInfo({ getters }, { facilityCd, listIndex, subCategory }) {
+      const selectedPatId = store.getters["pat-info/selectedPatId"];
       // 加工した表示用データ格納用
       const convertData = [
         {
@@ -12037,11 +12520,7 @@ export default {
             temp.ordNo = ordInfo.ordNo;
             // 実績コードを格納
             temp.rstCd = subCategory.rstCd;
-            
-            /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --start */
-            // temp.isNotClickable = ordInfo.readOnly;
             temp.isNotClickable = false;
-            /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --end */
             // JSONデータ格納用
             const obj = {};
 
@@ -12049,14 +12528,14 @@ export default {
               // 実績:治療開始日時
               case 1:
                 temp.value1 = ordInfo.rstStartDate
-                  ? moment(ordInfo.rstStartDate).format("YYYY/MM/DD HH:mm")
+                  ? dayjs(ordInfo.rstStartDate).format("YYYY/MM/DD HH:mm")
                   : null;
                 break;
 
               // 実績:治療終了日時
               case 2:
                 temp.value1 = ordInfo.rstEndDate
-                  ? moment(ordInfo.rstEndDate).format("YYYY/MM/DD HH:mm")
+                  ? dayjs(ordInfo.rstEndDate).format("YYYY/MM/DD HH:mm")
                   : null;
                 break;
 
@@ -12119,8 +12598,8 @@ export default {
                 if (!date) {
                   temp.value1 = null;
                 } else {
-                  const isValidDate = moment(date, "YYYY-MM-DDTHH:mm:ss.SSSZ", true).isValid();
-                  temp.value1 = isValidDate ? moment(date).format(
+                  const isValidDate = dayjs(date, "YYYY-MM-DDTHH:mm:ss.SSSZ", true).isValid();
+                  temp.value1 = isValidDate ? dayjs(date).format(
                       "YYYY/MM/DD HH:mm"
                     ) : date;
                 }
@@ -12161,8 +12640,8 @@ export default {
                 if (!date) {
                   temp.value1 = null;
                 } else {
-                  const isValidDate = moment(date, "YYYY-MM-DDTHH:mm:ss.SSSZ", true).isValid();
-                  temp.value1 = isValidDate ? moment(date).format(
+                  const isValidDate = dayjs(date, "YYYY-MM-DDTHH:mm:ss.SSSZ", true).isValid();
+                  temp.value1 = isValidDate ? dayjs(date).format(
                       "YYYY/MM/DD HH:mm"
                     ) : date;
                 }
@@ -12216,7 +12695,7 @@ export default {
               // 実績:透析記録確認日時
               case 16:
                 temp.value1 = ordInfo.recSetDate
-                  ? moment(ordInfo.recSetDate).format("YYYY/MM/DD HH:mm")
+                  ? dayjs(ordInfo.recSetDate).format("YYYY/MM/DD HH:mm")
                   : null;
                 break;
 
@@ -12238,7 +12717,7 @@ export default {
                 /*temp.value1 = ordInfo.pullLeaveAmount
                   ? `${ordInfo.pullLeaveAmount.toFixed(2)} L`
                   : null;*/
-                const indfPll = JSON.parse(ordInfo.rstWeightInfo) ? JSON.parse(ordInfo.rstWeightInfo).ihdf_pll : null
+                var indfPll = JSON.parse(ordInfo.rstWeightInfo) ? JSON.parse(ordInfo.rstWeightInfo).ihdf_pll : null
                 temp.value1 = indfPll
                   // mod #IES_6501 dou start
                   // ? `${Number(indfPll).toFixed(2)} L`
@@ -12289,7 +12768,7 @@ export default {
                   // 前体重測定日時を格納
                   temp.value1 = JSON.parse(ordInfo.rstWeightInfo)
                     .weight_before_date
-                    ? moment(
+                    ? dayjs(
                       JSON.parse(ordInfo.rstWeightInfo).weight_before_date
                     ).format("YYYY/MM/DD HH:mm")
                     : null;
@@ -12336,7 +12815,7 @@ export default {
                   // 後体重測定日時を格納
                   temp.value1 = JSON.parse(ordInfo.rstWeightInfo)
                     .weight_after_date
-                    ? moment(
+                    ? dayjs(
                       JSON.parse(ordInfo.rstWeightInfo).weight_after_date
                     ).format("YYYY/MM/DD HH:mm")
                     : null;
@@ -12365,7 +12844,7 @@ export default {
                 if (ordInfo.rstWeightInfo) {
                   // CTR測定日時を格納
                   temp.value1 = JSON.parse(ordInfo.rstWeightInfo).ctr_measure_date
-                    ? moment(JSON.parse(ordInfo.rstWeightInfo).ctr_measure_date).format("YYYY/MM/DD HH:mm")
+                    ? dayjs(JSON.parse(ordInfo.rstWeightInfo).ctr_measure_date).format("YYYY/MM/DD HH:mm")
                     : null;
                   break;
                 }
@@ -12378,7 +12857,7 @@ export default {
                   // CTR測定時体重を格納
                   const rstWeightInfo = JSON.parse(ordInfo.rstWeightInfo);
                   //mod FNSI-7134 劉全航 start
-                  // temp.value1 = _.has(rstWeightInfo, "ctr_weight")
+                  // temp.value1 = Object.prototype.hasOwnProperty.call(rstWeightInfo, "ctr_weight")
                   // ? `${rstWeightInfo.ctr_weight.toFixed(2)} kg`
                   // : null;
                   temp.value1 = rstWeightInfo.ctr_weight
@@ -12446,10 +12925,10 @@ export default {
                     temp.value1 = "0.00L"
                     break;
                   case "3":
-                    let mntMachineStateTmp = getters.getMntMachineStates.filter(item => {
+                    var mntMachineStateTmp = getters.getMntMachineStates.filter(item => {
                       return item.ordNo == ordInfo.ordNo;
                     });
-                    let mntMachineStateResponse = mntMachineStateTmp[0].mntMachineState;
+                    var mntMachineStateResponse = mntMachineStateTmp[0].mntMachineState;
                     //mod 2023-03-24 7134 患者経過総合ビューアを開くとデベロッパーツールでエラー発生 張 start
                     // temp.value1 = JSON.parse(mntMachineStateResponse.data.monitorData)["5"]
                     //   ? `${Number(JSON.parse(mntMachineStateResponse.data.monitorData)["5"]).toFixed(2)} L`
@@ -12633,10 +13112,7 @@ export default {
 
                 if (ordInfo && ordInfo.rstDialysisState != '0') {
                   /*add FNSI-改修内容5394 任 start*/
-                  /* upd by chamaojia 2026-03-20 [12462] 患者情報共有->患者経過総合ビューア --start */
-                  // const vitalMonitor = await sendRequestGetTreatmentRecordVitalMonitor(facilityCd, ordInfo.ordNo);
-                  const vitalMonitor = await sendRequestGetTreatmentRecordVitalMonitor(ordInfo.facilityCd, ordInfo.ordNo);
-                  /* upd by chamaojia 2026-03-20 [12462] 患者情報共有->患者経過総合ビューア --end */
+                  const vitalMonitor = await sendRequestGetTreatmentRecordVitalMonitor(ordInfo.facilityCd, ordInfo.ordNo, selectedPatId);
                   if (vitalMonitor.data.length > 0) {
                     if (obj.bp_class === 1) {
                       //前
@@ -12725,10 +13201,7 @@ export default {
                 }
 
                 if (ordInfo && ordInfo.rstDialysisState != '0') {
-                  /* upd by chamaojia 2026-03-20 [12462] 患者情報共有->患者経過総合ビューア --start */
-                  // const vitalMonitor = await sendRequestGetTreatmentRecordVitalMonitor(facilityCd, ordInfo.ordNo);
-                  const vitalMonitor = await sendRequestGetTreatmentRecordVitalMonitor(ordInfo.facilityCd, ordInfo.ordNo);
-                  /* upd by chamaojia 2026-03-20 [12462] 患者情報共有->患者経過総合ビューア --end */
+                  const vitalMonitor = await sendRequestGetTreatmentRecordVitalMonitor(ordInfo.facilityCd, ordInfo.ordNo, selectedPatId);
                   /*add FNSI-改修内容5394 任 start*/
                   if (vitalMonitor.data.length > 0) {
                     //mod FNSI-5394 劉全航 start
@@ -12827,8 +13300,8 @@ export default {
                         var complaint=false;
                         existComplaint.forEach(i => {
                           if (i.complaint) {
-                            let treat_name = "";
-                            let treat_medicine_name = ""
+                            let treat_name;
+                            let treat_medicine_name;
                             const rstInfo = obj.rstTreatmentInfo;
                             for (let i0 = 0; i0 < rstInfo.length; i0++) {
                               complaint=false;
@@ -12919,7 +13392,7 @@ export default {
                   // 内容を格納
                   temp.value1 =
                     controlData[i] ?
-                      moment(controlData[i].occur_date).format('HH:mm') + " " + controlData[i].complaint :
+                      dayjs(controlData[i].occur_date).format('HH:mm') + " " + controlData[i].complaint :
                       "";
                   temp.value2 =controlData[i];
 
@@ -12950,7 +13423,7 @@ export default {
                   // add FNSI-回診記録を追加 李 start
                   if (!obj.rstRoundsInfo.length) {
                     // 内容を格納
-                    temp.value1 = moment(obj.rstRoundsInfo.reg_date_time).format('HH:mm');
+                    temp.value1 = dayjs(obj.rstRoundsInfo.reg_date_time).format('HH:mm');
                     temp.isRstRoundsFlg = true;
                   } else {
                     // add FNSI-回診記録を追加 李 end
@@ -13026,7 +13499,7 @@ export default {
     ) {
       // 検索用表示項目リスト(引数のlayoutCdから表示項目情報を抽出)
       const filter1 = deepCopy(getters.getDispLayoutItemListData).find(item => {
-        return layoutCd === item.layoutCd;
+        return Number(layoutCd) === Number(item.layoutCd);
       });
 
       if (!filter1 || !filter1.dispItemInfo) {
@@ -13177,7 +13650,7 @@ export default {
           // } else {
           //   translationData.name = mstRecord.bedName;
           // }
-          const badInfo = getters.getMstAllBed.find(bed => {
+          var badInfo = getters.getMstAllBed.find(bed => {
             return bed.bedCd === code;
           });
           if (!mstRecord) {
@@ -13340,7 +13813,7 @@ export default {
             return translationData;
             // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
           } else {
-            let prefix = ""; // 先頭につける文字列（【禁忌】など）
+            let prefix; // 先頭につける文字列（【禁忌】など）
             // 禁忌・アレルギー判定
             // 素の薬剤マスタから名称が変わっているか(Java側で定冠詞をつけているか)で判定
             // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
@@ -13425,7 +13898,6 @@ export default {
             return translationData;
             // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
           } else {
-            let prefix = ""; // 先頭につける文字列（【禁忌】など）
             // 禁忌・アレルギー判定
             // 素の調製薬剤マスタから名称が変わっているか(Java側で定冠詞をつけているか)で判定
             // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
@@ -13435,10 +13907,17 @@ export default {
             // } else {
             //   translationData.isTabooAllergy = false;
             // }
-            prefix = getPrefix({normalClassType:classType, treatDate, ...mstRecord})
-            translationData.isTabooAllergy = (mstRecord.isTaboo || mstRecord.isAllergy) ? true : false
-            // translationData.name = mstRecord.medicineMixName;
-            translationData.name = prefix + mstRecord.medicineMixName;
+            // #12505 接頭文字対応 ligh edit start
+            const mixDisplay = resolveMixMedicineNameForMstCase11(
+              getters,
+              code,
+              classType,
+              treatDate,
+              mstRecord
+            );
+            translationData.name = mixDisplay.name;
+            translationData.isTabooAllergy = mixDisplay.isTabooAllergy;
+            // #12505 接頭文字対応 ligh edit end
             // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
             translationData.unit = mstRecord.unit;
             translationData.classCd = mstRecord.classCd;
@@ -13507,7 +13986,7 @@ export default {
             return translationData;
           // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
           } else {
-            let prefix = ""; // 先頭につける文字列（【禁忌】など）
+            let prefix; // 先頭につける文字列（【禁忌】など）
             // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
             // 禁忌・アレルギー判定
             // 素の医療材料マスタから名称が変わっているか(Java側で定冠詞をつけているか)で判定
@@ -13577,7 +14056,7 @@ export default {
             return translationData;
             // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
           } else {
-            let prefix = ""; // 先頭につける文字列（【禁忌】など）
+            let prefix; // 先頭につける文字列（【禁忌】など）
             // 禁忌・アレルギー判定
             // 素のダイアライザーマスタから名称が変わっているか(Java側で定冠詞をつけているか)で判定
             // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
@@ -13658,7 +14137,7 @@ export default {
      * @param {string} facilityCd 施設コード
      * @param {number} patId 患者ID
      */
-    async convertDrugInfo({ getters }, { listIndex, layout, facilityCd, patId }) {
+    async convertDrugInfo({ getters }, { listIndex, layout, facilityCd, patId, selectedPatId }) {
       const convertData = [
         {
           itemName: layout.categoryName,
@@ -13677,16 +14156,9 @@ export default {
       // 期間情報を取得
       const period = getters.getSelectedPeriod;
       const isLongPeriod = ["4", "5", "6", "7"].includes(period);
-      const treatmentDataLastIndex = Object.keys(copyTreatmentData).length - 1;
-      let startDate = moment(
-        Object.keys(copyTreatmentData)[0] || getters.getDateList[0],
-        "YYYYMMDD"
-      ).startOf("day");
-      let endDate = moment(
-        Object.keys(copyTreatmentData)[treatmentDataLastIndex] ||
-        getters.getDateList[getters.getDateList.length - 1],
-        "YYYYMMDD"
-      ).endOf("day");
+      const chartAxisRange = getPatViewerChartAxisDateRange(getters, copyTreatmentData);
+      let startDate = chartAxisRange.startDate;
+      let endDate = chartAxisRange.endDate;
 
       // add FNSI-投薬支援仕様更新「投薬支援マスタ」 周 start
       // 選択中投薬支援マスト情報を取得
@@ -13701,19 +14173,19 @@ export default {
         switch (item.shuukei) {
           // 週「月曜日（今週）～月曜日（来週）」
           case 2:
-            return moment(item.kaishi).add(1, 'weeks').day(1).format("YYYYMMDD");
+            return dayjs(item.kaishi).add(1, 'weeks').day(1).format("YYYYMMDD");
           // 2週「月曜日（今週）～月曜日（再来週）」
           case 3:
-            return moment(item.kaishi).add(2, 'weeks').day(1).format("YYYYMMDD");
+            return dayjs(item.kaishi).add(2, 'weeks').day(1).format("YYYYMMDD");
           // 月「１日（今月）～１日（来月）」
           case 4:
-            return moment(item.kaishi).add(1, 'months').startOf('month').format("YYYYMMDD");
+            return dayjs(item.kaishi).add(1, 'months').startOf('month').format("YYYYMMDD");
           // 3ヶ月
           case 5:
-            return moment(item.kaishi).add(3, 'months').startOf('month').format("YYYYMMDD");
+            return dayjs(item.kaishi).add(3, 'months').startOf('month').format("YYYYMMDD");
           // 日
           default:
-            return moment(item.kaishi).add(1, 'days').format("YYYYMMDD");
+            return dayjs(item.kaishi).add(1, 'days').format("YYYYMMDD");
         }
       };
 
@@ -13827,7 +14299,8 @@ export default {
         //add 8574  患者経過総合ビューアにてグラフ項目が正しく表示されない 張 start
         // ➁RestAPI実行「薬効換算マスタ情報を取得」
         const mstMedicineGroup = await ApiHelper.get("/mstInfo/mstMedicineGroup", {
-          facilityCd: facilityCd
+          facilityCd: facilityCd,
+          ...selectedPatIdParams(selectedPatId)
         }).catch(err => {
           throw err;
         });
@@ -13890,9 +14363,9 @@ export default {
               // 「ヘッダー」、「明細」共に指定されていない場合、「日」単位での集計とする。
               shuukei: itemDate === -1 ? (summaryDate === -1 ? 1 : summaryDate) : itemDate,
               // 期間開始
-              kaishi: moment(startDate).format("YYYYMMDD"),
+              kaishi: dayjs(startDate).format("YYYYMMDD"),
               // 期間終了
-              shuuryou: moment(endDate).format("YYYYMMDD")
+              shuuryou: dayjs(endDate).format("YYYYMMDD")
             }));
             // 表示データを作成「集計」
             // mod FNSI-投薬支援仕様更新「目標投与量」 周 start
@@ -13910,13 +14383,13 @@ export default {
               }
               const detailInfo = JSON.parse(selectedMedicineSupportItem.detailInfo);
 
-              if (!(detailInfo.hasOwnProperty("medicineESA") && detailInfo.medicineESA)) {
+              if (!(Object.prototype.hasOwnProperty.call(detailInfo, "medicineESA") && detailInfo.medicineESA)) {
                 return null;
               }
               const itemNoInfo = detailInfo.medicineESA;
 
               // 投薬支援⇒目標値無効場合
-              if (!(itemNoInfo && itemNoInfo[0].hasOwnProperty("value") && itemNoInfo[0].value)) {
+              if (!(itemNoInfo && Object.prototype.hasOwnProperty.call(itemNoInfo[0], "value") && itemNoInfo[0].value)) {
                 return null;
               }
               let itemNo = itemNoInfo[0].value.toString();
@@ -14031,8 +14504,8 @@ export default {
                   }
                 });
               } else if (mstGroup && chartType === "xrange") { // 処方
-                const start = moment(startDate).format("YYYYMMDD");
-                const end = moment(endDate).format("YYYYMMDD");
+                const start = dayjs(startDate).format("YYYYMMDD");
+                const end = dayjs(endDate).format("YYYYMMDD");
                 const regMedicineInfo = JSON.parse(mstGroup.regMedicineInfo).filter(item => item.del === "0");
 
                 regMedicineInfo.forEach(medicineInfo => {
@@ -14055,7 +14528,7 @@ export default {
                     const startDate = item.suppliesBaseDate;
                     let endDate;
                     if (item.frequencyFlg === "0") { // 日分
-                      endDate = item.frequencyNum ? moment(startDate).add(Number(item.frequencyNum) - 1, "days").format("YYYYMMDD") : startDate;
+                      endDate = item.frequencyNum ? dayjs(startDate).add(Number(item.frequencyNum) - 1, "days").format("YYYYMMDD") : startDate;
                     } else if (item.frequencyFlg === "1") { // 回分
                       endDate = startDate;
                     }
@@ -14131,7 +14604,7 @@ export default {
                 const startDate = item.suppliesBaseDate;
                 let endDate;
                 if (item.frequencyFlg === "0") { // 日分
-                  endDate = item.frequencyNum ? moment(startDate).add(Number(item.frequencyNum) - 1, "days").format("YYYYMMDD") : startDate;
+                  endDate = item.frequencyNum ? dayjs(startDate).add(Number(item.frequencyNum) - 1, "days").format("YYYYMMDD") : startDate;
                 } else if (item.frequencyFlg === "1") { // 回分
                   endDate = startDate;
                 }
@@ -14275,7 +14748,7 @@ export default {
       if (period + "" === "1" || period + "" === "2" || period + "" === "3") {
         let days = endDate.diff(startDate, 'days');
         for (let i = 1; i < days; i++) {
-          let daytmp = moment(startDate.format("YYYY-MM-DD"));
+          let daytmp = dayjs(startDate.format("YYYY-MM-DD"));
           daytmp = daytmp.add(i, 'days');
           let strDay = daytmp.format("YYYYMMDD");
           if (!Object.keys(copyTreatmentData).includes(strDay) &&
@@ -14289,9 +14762,9 @@ export default {
           if (daytmpS === "") {
             daytmpS = breakDay;
           } else {
-            if (moment(daytmp).add(1, 'days').format("YYYYMMDD") !== breakDay) {
-              let fromD = moment(daytmpS).startOf('day');
-              let toD = moment(daytmp).add(1, 'days').startOf('day');
+            if (dayjs(daytmp).add(1, 'days').format("YYYYMMDD") !== breakDay) {
+              let fromD = dayjs(daytmpS).startOf('day');
+              let toD = dayjs(daytmp).add(1, 'days').startOf('day');
               let breakItem = {
                 from: fromD.valueOf(),
                 to: toD.valueOf()
@@ -14303,8 +14776,8 @@ export default {
           daytmp = breakDay;
         });
         if (daytmp !== daytmpS) {
-          let fromD = moment(daytmpS).startOf('day');
-          let toD = moment(daytmp).add(1, 'days').startOf('day');
+          let fromD = dayjs(daytmpS).startOf('day');
+          let toD = dayjs(daytmp).add(1, 'days').startOf('day');
           let breakItem = {
             from: fromD.valueOf(),
             to: toD.valueOf()
@@ -14312,8 +14785,8 @@ export default {
           breaks.push(breakItem);
         }
         if (daytmpS !== "" && breaks.length === 0) {
-          let fromD = moment(daytmpS).startOf('day');
-          let toD = moment(daytmp).add(1, 'days').startOf('day');
+          let fromD = dayjs(daytmpS).startOf('day');
+          let toD = dayjs(daytmp).add(1, 'days').startOf('day');
           let breakItem = {
             from: fromD.valueOf(),
             to: toD.valueOf()
@@ -14342,7 +14815,7 @@ export default {
      * @param {string} facilityCd 施設コード
      * @param {number} patId 患者ID
      */
-    async convertComprehensiveInfo({ state, getters, commit }, { listIndex, layout, facilityCd, patId, weekPattern }) {
+    async convertComprehensiveInfo({ state, getters, commit }, { listIndex, layout, facilityCd, patId, weekPattern, selectedPatId }) {
       const convertData = [
         {
           itemName: layout.categoryName,
@@ -14379,16 +14852,9 @@ export default {
       // 期間情報を取得
       const period = getters.getSelectedPeriod;
       const isLongPeriod = ["4", "5", "6", "7"].includes(period);
-      const treatmentDataLastIndex = Object.keys(copyTreatmentData).length - 1;
-      let startDate = moment(
-        Object.keys(copyTreatmentData)[0] || getters.getDateList[0],
-        "YYYYMMDD"
-      ).startOf("day");
-      let endDate = moment(
-        Object.keys(copyTreatmentData)[treatmentDataLastIndex] ||
-        getters.getDateList[getters.getDateList.length - 1],
-        "YYYYMMDD"
-      ).endOf("day");
+      const chartAxisRange = getPatViewerChartAxisDateRange(getters, copyTreatmentData);
+      let startDate = chartAxisRange.startDate;
+      let endDate = chartAxisRange.endDate;
 
       // add FNSI-投薬支援仕様更新「投薬支援マスタ」 周 start
       // 選択中投薬支援マスト情報を取得
@@ -14523,19 +14989,19 @@ export default {
         switch (item.shuukei) {
           // 週「月曜日（今週）～月曜日（来週）」
           case 2:
-            return moment(item.kaishi).add(1, 'weeks').day(1).format("YYYYMMDD");
+            return dayjs(item.kaishi).add(1, 'weeks').day(1).format("YYYYMMDD");
           // 2週「月曜日（今週）～月曜日（再来週）」
           case 3:
-            return moment(item.kaishi).add(2, 'weeks').day(1).format("YYYYMMDD");
+            return dayjs(item.kaishi).add(2, 'weeks').day(1).format("YYYYMMDD");
           // 月「１日（今月）～１日（来月）」
           case 4:
-            return moment(item.kaishi).add(1, 'months').startOf('month').format("YYYYMMDD");
+            return dayjs(item.kaishi).add(1, 'months').startOf('month').format("YYYYMMDD");
           // 3ヶ月
           case 5:
-            return moment(item.kaishi).add(3, 'months').startOf('month').format("YYYYMMDD");
+            return dayjs(item.kaishi).add(3, 'months').startOf('month').format("YYYYMMDD");
           // 日
           default:
-            return moment(item.kaishi).add(1, 'days').format("YYYYMMDD");
+            return dayjs(item.kaishi).add(1, 'days').format("YYYYMMDD");
         }
       };
 
@@ -14555,7 +15021,7 @@ export default {
       // DW取得「条件送信前のみ」
       const getDW = treatDate => {
         const result = patDwInfo?.find((item) => {
-          return item.dw && moment(item.examDate).format('YYYYMMDD') <= moment(treatDate).format('YYYYMMDD')
+          return item.dw && dayjs(item.examDate).format('YYYYMMDD') <= dayjs(treatDate).format('YYYYMMDD')
         })?.dw || null;
         return result;
       };
@@ -14564,9 +15030,9 @@ export default {
       const torie_jisseki_taijuu = (treatDate, startTime) => {
         let result = null;
         for (const weightItem of weights) {
-          if (moment(treatDate) > moment(weightItem.treatDate)) {
+          if (dayjs(treatDate) > dayjs(weightItem.treatDate)) {
             break;
-          } else if (moment(treatDate) === moment(weightItem.treatDate) && startTime > weightItem.startTime) {
+          } else if (dayjs(treatDate) === dayjs(weightItem.treatDate) && startTime > weightItem.startTime) {
             break;
           }
           result = weightItem;
@@ -14633,45 +15099,25 @@ export default {
       // グラフタイプ「治療条件、治療方法」
       const taipu_jouken = item => {
         switch (item) {
-          // ＤＷ「rst_dw2」
-          case chiryou_jouken_39:
-          // 目標体重「target_weight」
-          case chiryou_jouken_03:
-          // 血流量「blood_flow」
-          case chiryou_jouken_14:
-          // 透析液流量「dialysate_flow_rate」
-          case chiryou_jouken_16:
-          // 補液量「fluid_volume2」
-          case chiryou_jouken_20:
-          // 抗凝固剤ワンショット量「anticoagulant_one_shot_amount」
-          case chiryou_jouken_26:
-          // 抗凝固剤持続速度「anticoagulant_duration」
-          case chiryou_jouken_27:
-          // 抗凝固剤持続総量「anticoagulant_sustained_total_amount」
-          case chiryou_jouken_28:
-          // 抗凝固剤総量「total_amount_of_anticoagulant」
-          case chiryou_jouken_26add28:
-            // 折れ線
+          case chiryou_jouken_39: // ＤＷ「rst_dw2」
+          case chiryou_jouken_03: // 目標体重「target_weight」
+          case chiryou_jouken_14: // 血流量「blood_flow」
+          case chiryou_jouken_16: // 透析液流量「dialysate_flow_rate」
+          case chiryou_jouken_20: // 補液量「fluid_volume2」
+          case chiryou_jouken_26: // 抗凝固剤ワンショット量「anticoagulant_one_shot_amount」
+          case chiryou_jouken_27: // 抗凝固剤持続速度「anticoagulant_duration」
+          case chiryou_jouken_28: // 抗凝固剤持続総量「anticoagulant_sustained_total_amount」
+          case chiryou_jouken_26add28: // 抗凝固剤総量「total_amount_of_anticoagulant」
             return "line";
-          // 治療時間「treatment_time」
-          case chiryou_jouken_01:
-            // 棒グラフ
+          case chiryou_jouken_01: // 治療時間「treatment_time」
             return "column";
-          // 治療方法「method_of_treatment」
-          case chiryou_houhou:
-          // ダイアライザ「dializer」
-          case chiryou_jouken_05:
-          // 吸着カラム
-          case chiryou_jouken_05_06:
-          // 1次膜
-          case chiryou_jouken_05_07:
-          // 2次膜
-          case chiryou_jouken_05_08:
-          // 補液「fluid_infusion」
-          case chiryou_jouken_19:
-          // 抗凝固剤「anticoagulant」
-          case chiryou_jouken_25:
-            // 帯グラフ「カスタム」
+          case chiryou_houhou: // 治療方法「method_of_treatment」
+          case chiryou_jouken_05: // ダイアライザ「dializer」
+          case chiryou_jouken_05_06: // 吸着カラム
+          case chiryou_jouken_05_07: // 1次膜
+          case chiryou_jouken_05_08: // 2次膜
+          case chiryou_jouken_19: // 補液「fluid_infusion」
+          case chiryou_jouken_25: // 抗凝固剤「anticoagulant」
             return "custom";
           default:
             return "";
@@ -14737,31 +15183,31 @@ export default {
         switch (type) {
           case mstMethod:
             // 治療方法「治療方法マスタ⇒治療方法名」
-            const mstRecordMethod = getters.getMstTreatmentData.find(mstData => {
+            var mstRecordMethod = getters.getMstTreatmentData.find(mstData => {
               return mstData.treatmentCd === code;
             });
             return mstRecordMethod ? mstRecordMethod.treatmentName : "[削除済み]";
           case mstDializer:
             // ダイアライザ「ダイアライザマスタ⇒型番」
-            const mstRecordDialyzer = getters.getMstDialyzerData.find(mstData => {
+            var mstRecordDialyzer = getters.getMstDialyzerData.find(mstData => {
               return mstData.dialyzerCd == code; // mod #9973 value Number→文字列 互換性のある処理  shiyw
             });
             return mstRecordDialyzer ? mstRecordDialyzer.modelNumber : "[削除済み]";
           case mstEquipment:
             // 医療材料「医療材料マスタ⇒医療材料名」
-            const mstRecordEquipment = getters.getMstEquipmentData.find(mstData => {
+            var mstRecordEquipment = getters.getMstEquipmentData.find(mstData => {
               return mstData.equipmentCd == code; // mod #9973 value Number→文字列 互換性のある処理  shiyw
             });
             return mstRecordEquipment ? mstRecordEquipment.equipmentName : "[削除済み]";
           case mstMedicine:
             // 通常薬剤「薬剤マスタ⇒薬剤名」
-            const mstRecordMedicine = getters.getMstMedicineAllergyData.find(mstData => {
+            var mstRecordMedicine = getters.getMstMedicineAllergyData.find(mstData => {
               return mstData.medicineCd == code; // mod #9973 value Number→文字列 互換性のある処理  shiyw
             });
             return mstRecordMedicine ? mstRecordMedicine.medicineName : "[削除済み]";
           case mstMedicineMix:
               // 調製薬剤「調製薬剤マスタ⇒調製薬剤名」
-            const mstRecordMedicineMix = getters.getMstMedicineMixTabooAllergyData.find(mstData => {
+            var mstRecordMedicineMix = getters.getMstMedicineMixTabooAllergyData.find(mstData => {
               return mstData.medicineMixCd == code;  // mod #9973 value Number→文字列 互換性のある処理  shiyw
             });
             return mstRecordMedicineMix ? mstRecordMedicineMix.medicineMixName : "[削除済み]";
@@ -14925,7 +15371,7 @@ export default {
               .forEach(p => {
                 if (pushed) {
                   x = p.treatDate;
-                  x2 = moment(p.treatDate).add(1, 'days').format("YYYYMMDD");
+                  x2 = dayjs(p.treatDate).add(1, 'days').format("YYYYMMDD");
                   pushed = false;
                 } else {
                   if (x === p.treatDate) {
@@ -14933,17 +15379,17 @@ export default {
                     return;
                   } else if (x2 === p.treatDate) {
                     // 「治療日＝終了日」連続データ「マージ」
-                    x2 = moment(p.treatDate).add(1, 'days').format("YYYYMMDD");
+                    x2 = dayjs(p.treatDate).add(1, 'days').format("YYYYMMDD");
                   } else {
                     seriesSubItem.push([
                       x,
                       // x2,
-                      moment(x2).subtract(1, 'seconds'),
+                      dayjs(x2).subtract(1, 'seconds'),
                       0
                     ]);
                     // pushed = true;
                     x = p.treatDate;
-                    x2 = moment(p.treatDate).add(1, 'days').format("YYYYMMDD");
+                    x2 = dayjs(p.treatDate).add(1, 'days').format("YYYYMMDD");
                   }
                 }
               });
@@ -14952,7 +15398,7 @@ export default {
               seriesSubItem.push([
                 x,
                 // x2,
-                moment(x2).subtract(1, 'seconds'),
+                dayjs(x2).subtract(1, 'seconds'),
                 0
               ]);
             }
@@ -14977,7 +15423,7 @@ export default {
           const dializers = [];
           for (const conditionItem of conditions) {
             const condInfo = ind_rst_class === "1" ? conditionItem.indCondInfo : (ind_rst_class === "2" ? conditionItem.rstCondInfo : null);
-            if (condInfo && condInfo.hasOwnProperty(no) && condInfo[no].value && !cond05.find(p => { return p.condCode == condInfo[no].value; })) {
+            if (condInfo && Object.prototype.hasOwnProperty.call(condInfo, no) && condInfo[no].value && !cond05.find(p => { return p.condCode == condInfo[no].value; })) {
               cond05.push({
                 condCode: condInfo[no].value,
                 condClass: ind_rst_class,
@@ -14992,7 +15438,7 @@ export default {
                 });
               }
             }
-            if (condInfo && condInfo.hasOwnProperty(no06) && condInfo[no06].value && !cond06.find(p => { return p.condCode == condInfo[no06].value; })) { // mod #9973 value Number→文字列  shiyw
+            if (condInfo && Object.prototype.hasOwnProperty.call(condInfo, no06) && condInfo[no06].value && !cond06.find(p => { return p.condCode == condInfo[no06].value; })) { // mod #9973 value Number→文字列  shiyw
               cond06.push({
                 condCode: condInfo[no06].value,
                 condClass: ind_rst_class,
@@ -15007,7 +15453,7 @@ export default {
                 });
               }
             }
-            if (condInfo && condInfo.hasOwnProperty(no07) && condInfo[no07].value && !cond07.find(p => { return p.condCode == condInfo[no07].value; })) { // mod #9973 value Number→文字列  shiyw
+            if (condInfo && Object.prototype.hasOwnProperty.call(condInfo, no07) && condInfo[no07].value && !cond07.find(p => { return p.condCode == condInfo[no07].value; })) { // mod #9973 value Number→文字列  shiyw
               cond07.push({
                 condCode: condInfo[no07].value,
                 condClass: ind_rst_class,
@@ -15022,7 +15468,7 @@ export default {
                 });
               }
             }
-            if (condInfo && condInfo.hasOwnProperty(no08) && condInfo[no08].value && !cond08.find(p => { return p.condCode == condInfo[no08].value; })) { // mod #9973 value Number→文字列  shiyw
+            if (condInfo && Object.prototype.hasOwnProperty.call(condInfo, no08) && condInfo[no08].value && !cond08.find(p => { return p.condCode == condInfo[no08].value; })) { // mod #9973 value Number→文字列  shiyw
               cond08.push({
                 condCode: condInfo[no08].value,
                 condClass: ind_rst_class,
@@ -15051,15 +15497,15 @@ export default {
             // 対象データを取得
             conditions.filter(p => {
               // 指示・治療方法情報
-              // if (dializer.condClass === "1" && p.indCondInfo && p.indCondInfo.hasOwnProperty(dializer.no)) {
-              if (dializer.condClass === "1" && p.indCondInfo && p.indCondInfo.hasOwnProperty(dializer.no)
+              // if (dializer.condClass === "1" && p.indCondInfo && Object.prototype.hasOwnProperty.call(p.indCondInfo, dializer.no)) {
+              if (dializer.condClass === "1" && p.indCondInfo && Object.prototype.hasOwnProperty.call(p.indCondInfo, dializer.no)
                 &&p.indCondInfo[dializer.no]&&p.indCondInfo[dializer.no].value
                 &&p.indCondInfo[dializer.no].value==dializer.condCode) {
                 return true;
               }
               // 実績・治療方法情報
-              // if (dializer.condClass === "2" && p.rstCondInfo && p.rstCondInfo.hasOwnProperty(dializer.no)) {
-              if (dializer.condClass === "2" && p.rstCondInfo && p.rstCondInfo.hasOwnProperty(dializer.no)
+              // if (dializer.condClass === "2" && p.rstCondInfo && Object.prototype.hasOwnProperty.call(p.rstCondInfo, dializer.no)) {
+              if (dializer.condClass === "2" && p.rstCondInfo && Object.prototype.hasOwnProperty.call(p.rstCondInfo, dializer.no)
                 &&p.rstCondInfo[dializer.no]&&p.rstCondInfo[dializer.no].value
                 &&p.rstCondInfo[dializer.no].value==dializer.condCode) {
                 return true;
@@ -15084,7 +15530,7 @@ export default {
               .forEach(p => {
                 if (pushed) {
                   x = p.treatDate;
-                  x2 = moment(p.treatDate).add(1, 'days').format("YYYYMMDD");
+                  x2 = dayjs(p.treatDate).add(1, 'days').format("YYYYMMDD");
                   pushed = false;
                 } else {
                   if (x === p.treatDate) {
@@ -15092,17 +15538,17 @@ export default {
                     return;
                   } else if (x2 === p.treatDate) {
                     // 「治療日＝終了日」連続データ「マージ」
-                    x2 = moment(p.treatDate).add(1, 'days').format("YYYYMMDD");
+                    x2 = dayjs(p.treatDate).add(1, 'days').format("YYYYMMDD");
                   } else {
                     seriesSubItem.push([
                       x,
                       // x2,
-                      moment(x2).subtract(1, 'seconds'),
+                      dayjs(x2).subtract(1, 'seconds'),
                       0
                     ]);
                     // pushed = true;
                     x = p.treatDate;
-                    x2 = moment(p.treatDate).add(1, 'days').format("YYYYMMDD");
+                    x2 = dayjs(p.treatDate).add(1, 'days').format("YYYYMMDD");
                   }
                 }
               });
@@ -15111,7 +15557,7 @@ export default {
               seriesSubItem.push([
                 x,
                 // x2,
-                moment(x2).subtract(1, 'seconds'),
+                dayjs(x2).subtract(1, 'seconds'),
                 0
               ]);
             }
@@ -15129,7 +15575,7 @@ export default {
           const fluids = [];
           for (const conditionItem of conditions) {
             const condInfo = ind_rst_class === "1" ? conditionItem.indCondInfo : (ind_rst_class === "2" ? conditionItem.rstCondInfo : null);
-            if (condInfo && condInfo.hasOwnProperty(no) && condInfo[no].value && !fluids.find(p => { return p.condCode == condInfo[no].value; })) { // mod #9973 value Number→文字列  shiyw
+            if (condInfo && Object.prototype.hasOwnProperty.call(condInfo, no) && condInfo[no].value && !fluids.find(p => { return p.condCode == condInfo[no].value; })) { // mod #9973 value Number→文字列  shiyw
               fluids.push({
                 condCode: condInfo[no].value,
                 condClass: ind_rst_class,
@@ -15157,15 +15603,15 @@ export default {
             // 対象データを取得
             conditions.filter(p => {
               // 指示・治療方法情報
-              // if (fluid.condClass === "1" && p.indCondInfo && p.indCondInfo.hasOwnProperty(fluid.no)) {
-              if (fluid.condClass === "1" && p.indCondInfo && p.indCondInfo.hasOwnProperty(fluid.no)
+              // if (fluid.condClass === "1" && p.indCondInfo && Object.prototype.hasOwnProperty.call(p.indCondInfo, fluid.no)) {
+              if (fluid.condClass === "1" && p.indCondInfo && Object.prototype.hasOwnProperty.call(p.indCondInfo, fluid.no)
                 &&p.indCondInfo[fluid.no]&&p.indCondInfo[fluid.no].value
                 &&p.indCondInfo[fluid.no].value==fluid.condCode) {
                 return true;
               }
               // 実績・治療方法情報
-              // if (fluid.condClass === "2" && p.rstCondInfo && p.rstCondInfo.hasOwnProperty(fluid.no)) {
-              if (fluid.condClass === "2" && p.rstCondInfo && p.rstCondInfo.hasOwnProperty(fluid.no)
+              // if (fluid.condClass === "2" && p.rstCondInfo && Object.prototype.hasOwnProperty.call(p.rstCondInfo, fluid.no)) {
+              if (fluid.condClass === "2" && p.rstCondInfo && Object.prototype.hasOwnProperty.call(p.rstCondInfo, fluid.no)
                 &&p.rstCondInfo[fluid.no]&&p.rstCondInfo[fluid.no].value
                 &&p.rstCondInfo[fluid.no].value==fluid.condCode) {
                 return true;
@@ -15190,7 +15636,7 @@ export default {
               .forEach(p => {
                 if (pushed) {
                   x = p.treatDate;
-                  x2 = moment(p.treatDate).add(1, 'days').format("YYYYMMDD");
+                  x2 = dayjs(p.treatDate).add(1, 'days').format("YYYYMMDD");
                   pushed = false;
                 } else {
                   if (x === p.treatDate) {
@@ -15198,17 +15644,17 @@ export default {
                     return;
                   } else if (x2 === p.treatDate) {
                     // 「治療日＝終了日」連続データ「マージ」
-                    x2 = moment(p.treatDate).add(1, 'days').format("YYYYMMDD");
+                    x2 = dayjs(p.treatDate).add(1, 'days').format("YYYYMMDD");
                   } else {
                     seriesSubItem.push([
                       x,
                       // x2,
-                      moment(x2).subtract(1, 'seconds'),
+                      dayjs(x2).subtract(1, 'seconds'),
                       0
                     ]);
                     // pushed = true;
                     x = p.treatDate;
-                    x2 = moment(p.treatDate).add(1, 'days').format("YYYYMMDD");
+                    x2 = dayjs(p.treatDate).add(1, 'days').format("YYYYMMDD");
                   }
                 }
               });
@@ -15217,7 +15663,7 @@ export default {
               seriesSubItem.push([
                 x,
                 // x2,
-                moment(x2).subtract(1, 'seconds'),
+                dayjs(x2).subtract(1, 'seconds'),
                 0
               ]);
             }
@@ -15235,7 +15681,7 @@ export default {
           const anticoagulants = [];
           for (const conditionItem of conditions) {
             const condInfo = ind_rst_class === "1" ? conditionItem.indCondInfo : (ind_rst_class === "2" ? conditionItem.rstCondInfo : null);
-            if (condInfo && condInfo.hasOwnProperty(no) && condInfo[no].value && !anticoagulants.find(p => { return p.condCode == condInfo[no].value; })) { // mod #9973 value Number→文字列  shiyw
+            if (condInfo && Object.prototype.hasOwnProperty.call(condInfo, no) && condInfo[no].value && !anticoagulants.find(p => { return p.condCode == condInfo[no].value; })) { // mod #9973 value Number→文字列  shiyw
               anticoagulants.push({
                 condCode: condInfo[no].value,
                 condClass: ind_rst_class,
@@ -15264,15 +15710,15 @@ export default {
             // 対象データを取得
             conditions.filter(p => {
               // 指示・治療方法情報
-              // if (anticoagulant.condClass === "1" && p.indCondInfo && p.indCondInfo.hasOwnProperty(anticoagulant.no)) {
-              if (anticoagulant.condClass === "1" && p.indCondInfo && p.indCondInfo.hasOwnProperty(anticoagulant.no)
+              // if (anticoagulant.condClass === "1" && p.indCondInfo && Object.prototype.hasOwnProperty.call(p.indCondInfo, anticoagulant.no)) {
+              if (anticoagulant.condClass === "1" && p.indCondInfo && Object.prototype.hasOwnProperty.call(p.indCondInfo, anticoagulant.no)
                 &&p.indCondInfo[anticoagulant.no]&&p.indCondInfo[anticoagulant.no].value
                 &&p.indCondInfo[anticoagulant.no].value==anticoagulant.condCode) {
                 return true;
               }
               // 実績・治療方法情報
-              // if (anticoagulant.condClass === "2" && p.rstCondInfo && p.rstCondInfo.hasOwnProperty(anticoagulant.no)) {
-              if (anticoagulant.condClass === "2" && p.rstCondInfo && p.rstCondInfo.hasOwnProperty(anticoagulant.no)
+              // if (anticoagulant.condClass === "2" && p.rstCondInfo && Object.prototype.hasOwnProperty.call(p.rstCondInfo, anticoagulant.no)) {
+              if (anticoagulant.condClass === "2" && p.rstCondInfo && Object.prototype.hasOwnProperty.call(p.rstCondInfo, anticoagulant.no)
                 &&p.rstCondInfo[anticoagulant.no]&&p.rstCondInfo[anticoagulant.no].value
                 &&p.rstCondInfo[anticoagulant.no].value==anticoagulant.condCode) {
                 return true;
@@ -15297,7 +15743,7 @@ export default {
               .forEach(p => {
                 if (pushed) {
                   x = p.treatDate;
-                  x2 = moment(p.treatDate).add(1, 'days').format("YYYYMMDD");
+                  x2 = dayjs(p.treatDate).add(1, 'days').format("YYYYMMDD");
                   pushed = false;
                 } else {
                   if (x === p.treatDate) {
@@ -15305,18 +15751,18 @@ export default {
                     return;
                   } else if (x2 === p.treatDate) {
                     // 「治療日＝終了日」連続データ「マージ」
-                    x2 = moment(p.treatDate).add(1, 'days').format("YYYYMMDD");
+                    x2 = dayjs(p.treatDate).add(1, 'days').format("YYYYMMDD");
                   } else {
                     seriesSubItem.push([
                       x,
                       // mod 9592 複合グラフが正しく表示しない zy start
                       // x2
-                      moment(x2).subtract(1, 'seconds'),
+                      dayjs(x2).subtract(1, 'seconds'),
                       0
                     ]);
                     // pushed = true;
                     x = p.treatDate;
-                    x2 = moment(p.treatDate).add(1, 'days').format("YYYYMMDD");
+                    x2 = dayjs(p.treatDate).add(1, 'days').format("YYYYMMDD");
                   }
                 }
               });
@@ -15325,7 +15771,7 @@ export default {
               seriesSubItem.push([
                 x,
                 // x2,
-                moment(x2).subtract(1, 'seconds'),
+                dayjs(x2).subtract(1, 'seconds'),
                 0
               ]);
             }
@@ -15453,7 +15899,7 @@ export default {
               // mod #11773
               if (weightItem.weightInfo.recrcl_rt && weightItem.weightInfo.recrcl_rt["valid_no"]) {
                 const validNo = weightItem.weightInfo.recrcl_rt["valid_no"];
-                if (weightItem.weightInfo.recrcl_rt.hasOwnProperty(validNo)) {
+                if (Object.prototype.hasOwnProperty.call(weightItem.weightInfo.recrcl_rt, validNo)) {
                   if (weightItem.weightInfo.recrcl_rt[validNo].rate != null) {
                     val = Number(weightItem.weightInfo.recrcl_rt[validNo].rate);
                   }
@@ -15465,7 +15911,7 @@ export default {
               // mod #11773
               if (weightItem.weightInfo.recrcl_rt && weightItem.weightInfo.recrcl_rt["valid_no"]) {
                 const validNo = weightItem.weightInfo.recrcl_rt["valid_no"];
-                if (weightItem.weightInfo.recrcl_rt.hasOwnProperty(validNo)) {
+                if (Object.prototype.hasOwnProperty.call(weightItem.weightInfo.recrcl_rt, validNo)) {
                   if (weightItem.weightInfo.recrcl_rt[validNo].bld_vl != null) {
                     val = Number(weightItem.weightInfo.recrcl_rt[validNo].bld_vl);
                   }
@@ -15527,7 +15973,7 @@ export default {
 
         for (const vitalItem of mniMonitor) {
           let val = null;
-          if (vitalItem.monitorData && vitalItem.monitorData.hasOwnProperty(itemNo)) {
+          if (vitalItem.monitorData && Object.prototype.hasOwnProperty.call(vitalItem.monitorData, itemNo)) {
             // バイタル・モニタ情報存在場合
             if (vitalItem.monitorData[itemNo] != null) {
               //mod #10077 by zhangruixue 2024-2-20  start
@@ -15659,9 +16105,9 @@ export default {
           // 「ヘッダー」、「明細」共に指定されていない場合、「日」単位での集計とする。
           shuukei: itemDate,
           // 期間開始
-          kaishi: moment(startDate).format("YYYYMMDD"),
+          kaishi: dayjs(startDate).format("YYYYMMDD"),
           // 期間終了
-          shuuryou: moment(endDate).format("YYYYMMDD")
+          shuuryou: dayjs(endDate).format("YYYYMMDD")
         }));
 
         // 表示データを作成「集計」
@@ -15748,8 +16194,8 @@ export default {
               }
             });
           } else if (mstGroup && chartType === "xrange") { // 処方
-            const start = moment(startDate).format("YYYYMMDD");
-            const end = moment(endDate).format("YYYYMMDD");
+            const start = dayjs(startDate).format("YYYYMMDD");
+            const end = dayjs(endDate).format("YYYYMMDD");
             const regMedicineInfo = JSON.parse(mstGroup.regMedicineInfo).filter(item => item.del === "0");
 
             regMedicineInfo.forEach(medicineInfo => {
@@ -15772,7 +16218,7 @@ export default {
                 const startDate = item.suppliesBaseDate;
                 let endDate;
                 if (item.frequencyFlg === "0") { // 日分
-                  endDate = item.frequencyNum ? moment(startDate).add(Number(item.frequencyNum) - 1, "days").format("YYYYMMDD") : startDate;
+                  endDate = item.frequencyNum ? dayjs(startDate).add(Number(item.frequencyNum) - 1, "days").format("YYYYMMDD") : startDate;
                 } else if (item.frequencyFlg === "1") { // 回分
                   endDate = startDate;
                 }
@@ -15853,7 +16299,7 @@ export default {
             const startDate = item.suppliesBaseDate;
             let endDate;
             if (item.frequencyFlg === "0") { // 日分
-              endDate = item.frequencyNum ? moment(startDate).add(Number(item.frequencyNum) - 1, "days").format("YYYYMMDD") : startDate;
+              endDate = item.frequencyNum ? dayjs(startDate).add(Number(item.frequencyNum) - 1, "days").format("YYYYMMDD") : startDate;
             } else if (item.frequencyFlg === "1") { // 回分
               endDate = startDate
             }
@@ -15919,13 +16365,13 @@ export default {
         }
         const detailInfo = JSON.parse(mst.detailInfo);
 
-        if (!(detailInfo.hasOwnProperty("medicineESA") && detailInfo.medicineESA)) {
+        if (!(Object.prototype.hasOwnProperty.call(detailInfo, "medicineESA") && detailInfo.medicineESA)) {
           return null;
         }
         const itemNoInfo = detailInfo.medicineESA;
 
         // 投薬支援⇒目標値無効場合
-        if (!(itemNoInfo && itemNoInfo[0].hasOwnProperty("value") && itemNoInfo[0].value)) {
+        if (!(itemNoInfo && Object.prototype.hasOwnProperty.call(itemNoInfo[0], "value") && itemNoInfo[0].value)) {
           return null;
         }
         let itemNo = itemNoInfo[0].value.toString();
@@ -15951,9 +16397,9 @@ export default {
           // 「ヘッダー」、「明細」共に指定されていない場合、「日」単位での集計とする。
           shuukei: itemDate,
           // 期間開始
-          kaishi: moment(startDate).format("YYYYMMDD"),
+          kaishi: dayjs(startDate).format("YYYYMMDD"),
           // 期間終了
-          shuuryou: moment(endDate).format("YYYYMMDD")
+          shuuryou: dayjs(endDate).format("YYYYMMDD")
         }));
 
         rangeData.forEach(item => {
@@ -16008,13 +16454,13 @@ export default {
         }
         const detailInfo = JSON.parse(mst.detailInfo);
 
-        if (!(detailInfo.hasOwnProperty("examItemCycling") && detailInfo.examItemCycling)) {
+        if (!(Object.prototype.hasOwnProperty.call(detailInfo, "examItemCycling") && detailInfo.examItemCycling)) {
           return null;
         }
         const itemNoInfo = detailInfo.examItemCycling;
 
         // 投薬支援⇒予測値無効場合
-        if (!(itemNoInfo && itemNoInfo?.[0]?.hasOwnProperty("value") && itemNoInfo[0].value)) {
+        if (!(itemNoInfo && Object.prototype.hasOwnProperty.call(itemNoInfo?.[0] ?? {}, "value") && itemNoInfo[0].value)) {
           return null;
         }
         return itemNoInfo[0].value.toString();
@@ -16047,9 +16493,9 @@ export default {
           // 「ヘッダー」、「明細」共に指定されていない場合、「日」単位での集計とする。
           shuukei: itemDate,
           // 期間開始
-          kaishi: moment(startDate).format("YYYYMMDD"),
+          kaishi: dayjs(startDate).format("YYYYMMDD"),
           // 期間終了
-          shuuryou: moment(endDate).format("YYYYMMDD")
+          shuuryou: dayjs(endDate).format("YYYYMMDD")
         }));
 
         rangeData.forEach(item => {
@@ -16100,13 +16546,13 @@ export default {
         }
         const detailInfo = JSON.parse(mst.detailInfo);
 
-        if (!(detailInfo.hasOwnProperty("examItemRegression") && detailInfo.examItemRegression)) {
+        if (!(Object.prototype.hasOwnProperty.call(detailInfo, "examItemRegression") && detailInfo.examItemRegression)) {
           return null;
         }
         const itemNoInfo = detailInfo.examItemRegression;
 
         // 投薬支援⇒回帰直線無効場合
-        if (!(itemNoInfo && itemNoInfo?.[0]?.hasOwnProperty("value") && itemNoInfo[0].value)) {
+        if (!(itemNoInfo && Object.prototype.hasOwnProperty.call(itemNoInfo?.[0] ?? {}, "value") && itemNoInfo[0].value)) {
           return null;
         }
         return itemNoInfo[0].value.toString();
@@ -16119,11 +16565,11 @@ export default {
 
         for (let index = 0; (series && index < series.intDataCnt); index++) {
           if (series.dtmDataDate[index]) {
-            seriesSubData.push([moment(series.dtmDataDate[index]).format("YYYY-MM-DD HH:mm:ss"), Number(series.dblDataValue[index])]);
+            seriesSubData.push([dayjs(series.dtmDataDate[index]).format("YYYY-MM-DD HH:mm:ss"), Number(series.dblDataValue[index])]);
             valSubData.push(Number(series.dblDataValue[index]));
             // 分割
             if (index % 2 === 1) {
-              seriesSubData.push([moment(series.dtmDataDate[index]).format("YYYY-MM-DD HH:mm:ss"), null]);
+              seriesSubData.push([dayjs(series.dtmDataDate[index]).format("YYYY-MM-DD HH:mm:ss"), null]);
             }
           }
         }
@@ -16155,7 +16601,7 @@ export default {
         // マスト情報を処理「情報フラグ設定」
         layout.categoryItem.forEach(category => {
           category.subCategoryItem.forEach(subCategory => {
-            if (subCategory.hasOwnProperty("itemDivision") && subCategory.itemDivision) {
+            if (Object.prototype.hasOwnProperty.call(subCategory, "itemDivision") && subCategory.itemDivision) {
               const itemDivision = subCategory.itemDivision.toString();
               switch (itemDivision) {
                 case taishou_kubun_jouken:
@@ -16235,7 +16681,7 @@ export default {
                 // 実績はrst_dw
                 dw: ordInfo.rstDw,
                 treatDate: ordInfo.treatDate,
-                startTime: ordInfo.rstStartDate ? moment(ordInfo.rstStartDate).format("HHmm") : Number(ordInfo.indTreatStartTime),
+                startTime: ordInfo.rstStartDate ? dayjs(ordInfo.rstStartDate).format("HHmm") : Number(ordInfo.indTreatStartTime),
                 lastWeightAfter:ordInfo.lastWeightAfter
               });
             }
@@ -16272,7 +16718,7 @@ export default {
             patPhysicalInfo.forEach(p => {
               patDwInfoTemp.push({
                 dw: p.dw,
-                examDate: moment(p.exam_date).format("YYYY-MM-DDTHH:mm:ss.SSSZ")
+                examDate: dayjs(p.exam_date).format("YYYY-MM-DDTHH:mm:ss.SSSZ")
               });
             });
             patDwInfo.push(
@@ -16297,7 +16743,8 @@ export default {
               ord = resMniMonitorTmp[0].resMniMonitor;
             } else {
               ord = await ApiHelper.get(
-                `/status_list/mni_monitor/${ordInfo.ordNo}`
+                `/status_list/mni_monitor/${ordInfo.ordNo}`,
+                selectedPatIdParams(selectedPatId)
               ).catch(err => {
                 throw err;
               })
@@ -16326,7 +16773,7 @@ export default {
                     tempMonitorData = filterResult
                   }
                 }
-                
+
                 mniMonitor.push({
                   monitorData: tempMonitorData,
                   occurDate: monitorItem.occur_date
@@ -16338,21 +16785,21 @@ export default {
 
         // RestAPI実行「患者検査結果を取得」patExamMain
         if (hasExam || hasRegression) {
-          /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
           const sendData = {};
           const patientShareMode = store.getters["account-edit/getPatientShareMode"];
           const patientShareFacilityCdMode = store.getters["account-edit/getPatientShareFacilityCdMode"];
-          // 0: マージ  1: 自施設
           sendData.patShareMode = patientShareMode == 0 && !patientShareFacilityCdMode ? 0 : 1;
           const ord = await ApiHelper.post(
-            // `/exam/TreatDateList/${patId}/${startDate.format("YYYYMMDD")}/${endDate.format("YYYYMMDD")}`
-            `/exam/TreatDateList/${patId}/${startDate.format("YYYYMMDD")}/${endDate.format("YYYYMMDD")}`, sendData
+            `/exam/TreatDateList/${patId}/${startDate.format("YYYYMMDD")}/${endDate.format("YYYYMMDD")}`,
+            sendData
           ).catch(err => {
             throw err;
           });
-          /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
           // mod #12462 患者情報共有->患者経過総合ビューア fang start
-          const responseItem = await ApiHelper.get(`/exam/examRecord/examItem/${facilityCd}`).catch(err => {
+          const responseItem = await ApiHelper.get(
+            `/exam/examRecord/examItem/${facilityCd}`,
+            selectedPatIdParams(selectedPatId)
+          ).catch(err => {
             throw err;
           });
           for (const examRecord of ord.data) {
@@ -16405,7 +16852,8 @@ export default {
         }
         // ➁RestAPI実行「薬効換算マスタ情報を取得」
         const mstMedicineGroup = await ApiHelper.get("/mstInfo/mstMedicineGroup", {
-          facilityCd: facilityCd
+          facilityCd: facilityCd,
+          ...selectedPatIdParams(selectedPatId)
         }).catch(err => {
           throw err;
         });
@@ -16421,7 +16869,7 @@ export default {
           let min = category.graphMin ? Number(category.graphMin) : 0;
           category.subCategoryItem.forEach(subCategory => {
             let convertSeries = null;
-            if (subCategory.hasOwnProperty("itemDivision") && subCategory.itemDivision) {
+            if (Object.prototype.hasOwnProperty.call(subCategory, "itemDivision") && subCategory.itemDivision) {
               const itemDivision = subCategory.itemDivision.toString();
               switch (itemDivision) {
                 case taishou_kubun_jouken:
@@ -16435,7 +16883,7 @@ export default {
                   } else if (subCategory.itemNo === shien_kaikichokusen) {
                     // 回帰直線「関数算出」
                     const regressionSeries = getGraphDataForRegression(
-                      moment(endDate).format("YYYYMMDD"),
+                      dayjs(endDate).format("YYYYMMDD"),
                       period,
                       getRegressionValue(selectedMedicineSupportItem),
                       patExamMain
@@ -16647,7 +17095,7 @@ export default {
       if (period + "" === "1" || period + "" === "2" || period + "" === "3") {
         let days = endDate.diff(startDate, 'days');
         for (let i = 1; i < days; i++) {
-          let daytmp = moment(startDate.format("YYYY-MM-DD"));
+          let daytmp = dayjs(startDate.format("YYYY-MM-DD"));
           daytmp = daytmp.add(i, 'days');
           let strDay = daytmp.format("YYYYMMDD");
           if (!Object.keys(copyTreatmentData).includes(strDay) &&
@@ -16661,9 +17109,9 @@ export default {
           if (daytmpS === "") {
             daytmpS = breakDay;
           } else {
-            if (moment(daytmp).add(1, 'days').format("YYYYMMDD") !== breakDay) {
-              let fromD = moment(daytmpS).startOf('day');
-              let toD = moment(daytmp).add(1, 'days').startOf('day');
+            if (dayjs(daytmp).add(1, 'days').format("YYYYMMDD") !== breakDay) {
+              let fromD = dayjs(daytmpS).startOf('day');
+              let toD = dayjs(daytmp).add(1, 'days').startOf('day');
               let breakItem = {
                 from: fromD.valueOf(),
                 to: toD.valueOf()
@@ -16675,8 +17123,8 @@ export default {
           daytmp = breakDay;
         });
         if (daytmp !== daytmpS) {
-          let fromD = moment(daytmpS).startOf('day');
-          let toD = moment(daytmp).add(1, 'days').startOf('day');
+          let fromD = dayjs(daytmpS).startOf('day');
+          let toD = dayjs(daytmp).add(1, 'days').startOf('day');
           let breakItem = {
             from: fromD.valueOf(),
             to: toD.valueOf()
@@ -16684,8 +17132,8 @@ export default {
           breaks.push(breakItem);
         }
         if (daytmpS !== "" && breaks.length === 0) {
-          let fromD = moment(daytmpS).startOf('day');
-          let toD = moment(daytmp).add(1, 'days').startOf('day');
+          let fromD = dayjs(daytmpS).startOf('day');
+          let toD = dayjs(daytmp).add(1, 'days').startOf('day');
           let breakItem = {
             from: fromD.valueOf(),
             to: toD.valueOf()
@@ -16889,14 +17337,14 @@ function isStringNumeric(str) {
  * @return {Array} ['2023-07-01', '2023-07-01'...., '2023-08-01']
  */
 function getDayArr(startDay, endDay) {
-  let startVal = moment(startDay).format('YYYYMMDD');
-  let endVal = moment(endDay).format('YYYYMMDD');
+  let startVal = dayjs(startDay).format('YYYYMMDD');
+  let endVal = dayjs(endDay).format('YYYYMMDD');
   let dayArr = []
-  while (moment(startVal).isBefore(moment(endVal))) {
+  while (dayjs(startVal).isBefore(dayjs(endVal))) {
     dayArr.push(startVal)
-    startVal = moment(startVal).add(1, 'day').format('YYYYMMDD')
+    startVal = dayjs(startVal).add(1, 'day').format('YYYYMMDD')
   }
-  dayArr.push(moment(endDay).format('YYYYMMDD'))
+  dayArr.push(dayjs(endDay).format('YYYYMMDD'))
   return dayArr
 }
 //内部remine 5840  add ljx end
@@ -17102,9 +17550,9 @@ function getGraphDataForRegression (dtmSDateTime, intDispRange, regressionCode, 
       if (intIdx == 0) {
         devTag.dtmStartDate = paramDtmStartDate;
       } else {
-        devTag.dtmStartDate = moment(udtDev[intIdx - 1].dtmEndDate).add(1, "days").format("YYYYMMDD");
+        devTag.dtmStartDate = dayjs(udtDev[intIdx - 1].dtmEndDate).add(1, "days").format("YYYYMMDD");
       }
-      devTag.dtmEndDate = moment(paramDtmStartDate).add(paramIntDevDays * (intIdx + 1), "days").format("YYYYMMDD");
+      devTag.dtmEndDate = dayjs(paramDtmStartDate).add(paramIntDevDays * (intIdx + 1), "days").format("YYYYMMDD");
       udtDev.push(devTag);
     }
     return udtDev;
@@ -17119,7 +17567,7 @@ function getGraphDataForRegression (dtmSDateTime, intDispRange, regressionCode, 
       // 回帰直線算出用データ格納構造体
       udtCalc: null
     };
-    let lngDataCnt = 0;   // 開始点からの日数
+    let lngDataCnt;   // 開始点からの日数
 
     //  検査値データを基に、[X変動]の合計、[共変動]の合計を求める
     paramUdtCalc.dblAveDate = paramUdtCalc.intDatacntDev / 2;                                 // 日数の平均値（中心点）
@@ -17130,7 +17578,7 @@ function getGraphDataForRegression (dtmSDateTime, intDispRange, regressionCode, 
     // 対象の区間内を繰り返す
     for (let intCnt = paramUdtCalc.intStartCnt; intCnt <= (paramUdtCalc.intStartCnt + paramUdtCalc.intDatacntDev - 1); intCnt++) {
       // 開始点からの間隔（日数）を取得する
-      lngDataCnt = moment(paramDtmStartDate).diff(moment(paramUdtItem_Exa.dtmDataDate[intCnt]), "days", true);
+      lngDataCnt = dayjs(paramDtmStartDate).diff(dayjs(paramUdtItem_Exa.dtmDataDate[intCnt]), "days", true);
       // 日数と検査値の共変動を求める
       paramUdtCalc.dblChgValueBoth = paramUdtCalc.dblChgValueBoth + ((lngDataCnt - paramUdtCalc.dblAveDate) * (paramUdtItem_Exa.dblDataValue[intCnt] - paramUdtCalc.dblAveExam));
       // 日数の変動値を求める
@@ -17159,7 +17607,7 @@ function getGraphDataForRegression (dtmSDateTime, intDispRange, regressionCode, 
   const kaikichokusen_keisan_kaishi = (paramDtmStartDate, paramDblStartPoint, paramUdtItem_Reg) => {
     //回帰直線データ値を設定（開始点）
     //分割開始点のDate
-    paramUdtItem_Reg.dtmDataDate.push(moment(paramDtmStartDate).format("YYYY-MM-DD HH:mm:ss"));
+    paramUdtItem_Reg.dtmDataDate.push(dayjs(paramDtmStartDate).format("YYYY-MM-DD HH:mm:ss"));
     //開始点を設定
     paramUdtItem_Reg.dblDataValue.push(paramDblStartPoint);
 
@@ -17196,7 +17644,7 @@ function getGraphDataForRegression (dtmSDateTime, intDispRange, regressionCode, 
       }
 
       // 分割終了点のDate
-      paramUdtItem_Reg.dtmDataDate.push(moment(paramDtmEndDate).format("YYYY-MM-DD HH:mm:ss"));
+      paramUdtItem_Reg.dtmDataDate.push(dayjs(paramDtmEndDate).format("YYYY-MM-DD HH:mm:ss"));
       paramUdtItem_Reg.intDataCnt++;
     }
 
@@ -17290,7 +17738,7 @@ function getGraphDataForRegression (dtmSDateTime, intDispRange, regressionCode, 
         for (const examItem of examRecord.examInfo) {
           // 検査情報存在場合
           if (examItem.item_cd.toString() === paramRegressionCode && examItem.result) {
-            udtItem_Exa.dtmDataDate.push(moment(examRecord.examDate).format("YYYY-MM-DD HH:mm:ss"));
+            udtItem_Exa.dtmDataDate.push(dayjs(examRecord.examDate).format("YYYY-MM-DD HH:mm:ss"));
             //mod #10398 文字型の検査項目に対して検査値の桁合わせ処理が行われる zy start
             // udtItem_Exa.dblDataValue.push(Number(examItem.result));
             udtItem_Exa.dblDataValue.push(Number(convertToHalfWidth(examItem.result)));
@@ -17313,7 +17761,7 @@ function getGraphDataForRegression (dtmSDateTime, intDispRange, regressionCode, 
   // 表示範囲（分割日数）取得
   const intDevDays = kaikichokusen_bunkatsu_nissuu(intDispRange);
   // 回帰直線分割範囲取得
-  const udtDev = kaikichokusen_bunkatsu_kikan(moment(dtmSDateTime).subtract((intDevDays * lines), "days").format("YYYYMMDD"), intDevDays, lines);
+  const udtDev = kaikichokusen_bunkatsu_kikan(dayjs(dtmSDateTime).subtract((intDevDays * lines), "days").format("YYYYMMDD"), intDevDays, lines);
   // 分割範囲の回帰直線算出用データ「mudtRegressionCalcTag」
   let udtCalc = {
     // 検査値の開始番号
@@ -17350,7 +17798,7 @@ function getGraphDataForRegression (dtmSDateTime, intDispRange, regressionCode, 
     // 開始点の設定を行う
     if (udtCalc.dblStartPoint == 0) {
       // 分割範囲の判定
-      if (moment(udtItem_Exa.dtmDataDate[intCnt]).format("YYYYMMDD") > moment(udtDev[intCntDev].dtmEndDate).format("YYYYMMDD")) {
+      if (dayjs(udtItem_Exa.dtmDataDate[intCnt]).format("YYYYMMDD") > dayjs(udtDev[intCntDev].dtmEndDate).format("YYYYMMDD")) {
         // 分割範囲内にデータが１つもない場合
         // 開始点／終了点（Data,Valueはクリアのまま）
         if (intCntDev < (lines - 1)) {
@@ -17375,7 +17823,7 @@ function getGraphDataForRegression (dtmSDateTime, intDispRange, regressionCode, 
     }
 
     // 分割範囲の判定（データが現在の分割範囲を超えた場合）
-    if (moment(udtItem_Exa.dtmDataDate[intCnt]).format("YYYYMMDD") > moment(udtDev[intCntDev].dtmEndDate).format("YYYYMMDD")) {
+    if (dayjs(udtItem_Exa.dtmDataDate[intCnt]).format("YYYYMMDD") > dayjs(udtDev[intCntDev].dtmEndDate).format("YYYYMMDD")) {
       // 分割範囲のデータ算出・設定（終了点）
       const calcResult = kaikichokusen_keisan_shuuryou(intDevDays, udtDev[intCntDev].dtmEndDate, deepCopy(udtItem_Exa), deepCopy(udtItem_Reg), deepCopy(udtCalc));
       udtItem_Exa = calcResult.udtItem_Exa;
@@ -17432,7 +17880,6 @@ function getGraphDataForRegression (dtmSDateTime, intDispRange, regressionCode, 
 
   // 最後の分割範囲のデータ算出・設定（終了点）
   const calcLastResult = kaikichokusen_keisan_shuuryou(intDevDays, udtDev[intCntDev].dtmEndDate, deepCopy(udtItem_Exa), deepCopy(udtItem_Reg), deepCopy(udtCalc));
-  udtItem_Exa = calcLastResult.udtItem_Exa;
   udtItem_Reg = calcLastResult.udtItem_Reg;
 
   // 回帰直線用データの不足分配列を作成する
@@ -17496,8 +17943,8 @@ function otherFacilityPatExamMainConvert(facilityCd, compareFacilityCd ,patExamM
         }
       }
     }
-  } 
-  
+  }
+
   let reuslt = []
   if(patExamMain && patExamMain.length > 0 && convertExamItemBases.length > 0) {
     for(let i = 0; i < patExamMain.length; i++) {

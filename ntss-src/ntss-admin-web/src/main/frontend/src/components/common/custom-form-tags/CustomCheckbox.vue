@@ -5,7 +5,7 @@
       :value="editValue"
       :disabled="disabled"
       @change="changeValue"
-      v-on="$listeners"
+      v-bind="$attrs"
     />
     <span> <slot></slot> </span>
   </label>
@@ -30,6 +30,7 @@ import baseCustomForm from "@/components/common/custom-form-tags/BaseCustomForm"
  *   ⇒ editValueの値はチェック時に1、未チェック時に0となる
  */
 export default {
+  inheritAttrs: false,
   mixins: [baseCustomForm],
 
   props: {
@@ -106,7 +107,7 @@ export default {
   user-select: none;
 }
 
-.disabled-opacity >>> ons-checkbox {
+.disabled-opacity :deep(ons-checkbox) {
   /* 非活性時の不透明度を上げる(onsenのデフォルトだと見づらい) */
   opacity: 1;
 }

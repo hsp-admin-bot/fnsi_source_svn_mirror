@@ -39,7 +39,7 @@
         v-model="condition.startDate"
         @blur="checkInputStartDate"
         @handleClearInput="clearInputStartDate"
-        data-vv-scope="condition"
+        data-validation-scope="condition"
         enabledBlank
       />
       <common-calendar
@@ -65,7 +65,7 @@
         v-model="condition.endDate"
         @blur="checkInputEndDate"
         @handleClearInput="clearInputEndDate"
-        data-vv-scope="condition"
+        data-validation-scope="condition"
         enabledBlank
       />
       <common-calendar
@@ -213,11 +213,6 @@
               ]"
               @click="rowClear(listDate)"
             >
-            <!-- {{
-              showDelExam(listDate.examSetCd)
-              + showExamName(listDate.examSetCd)
-              + showRegOrderClass[listDate.regOrderClass]
-            }} -->
               {{
                 isOtherFacility(listDate)
                   ? buildOtherFacilityText(listDate)
@@ -227,16 +222,16 @@
                     + showRegOrderClass[listDate.regOrderClass]
                   )
               }}
-            <span
-              v-if="isOtherFacility(listDate)"
-              :ref="'showDetail_' + listDate.examSetCd"
-              :key="'detail_' + listDate.examSetCd"
-              class="warning-icon"
-              @click.stop="openOtherFacilityPopover(listDate)"
-            >
-              ❗
-            </span>
-          </td>
+              <span
+                v-if="isOtherFacility(listDate)"
+                :ref="'showDetail_' + listDate.examSetCd"
+                :key="'detail_' + listDate.examSetCd"
+                class="warning-icon"
+                @click.stop="openOtherFacilityPopover(listDate)"
+              >
+                ❗
+              </span>
+            </td>
             <!-- mod 10618検査セットマスタ、検査項目マスタ、一般撮影検査依頼マスタ編集時に関連データを補正する zhao end-->
             <td
               class="ntss-list-header-th-sticky"
@@ -248,7 +243,7 @@
               v-show="getIsShowBloodGlucoseExam"
             >
               <img
-                src="img/exam-request/32-32_1b.png"
+                :src="publicAssetPath('img/exam-request/32-32_1b.png')"
                 class="maru-symbol"
                 v-if="listDate.headerflg && getBloodGlucoseExam(listDate.patId)"
               />
@@ -321,7 +316,7 @@
     <!--    add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start-->
     <div v-if="messageDialogInfo.isDialogVisible">
       <message-dialog
-        :visible.sync="messageDialogInfo.isDialogVisible"
+        v-model:visible="messageDialogInfo.isDialogVisible"
         :message-cd="messageDialogInfo.messageCd"
         :type="messageDialogInfo.type"
         :string-params="messageDialogInfo.stringParams"
@@ -333,10 +328,10 @@
     <!-- 患者IDカラムを表示する -->
     <v-ons-popover
       cancelable
-      :visible.sync="popoverHeader.popoverVisible"
+      v-model:visible="popoverHeader.popoverVisible"
       :target="popoverHeader.popoverTarget"
       direction="down"
-      :class="fontSizeSet"
+      :class="[fontSizeSet, 'exam-request-period-header-popover']"
     >
       <div class="popover-content-div">
         <div v-show="popoverHeader.field !== 'date'" style="padding: 1em;">
@@ -374,15 +369,10 @@
     <v-ons-popover
       v-if="otherFacilityDetailVisible"
       cancelable
-      :class="[fontSizeSet, 'vons-popover']"
-      :visible.sync="otherFacilityDetailVisible"
+      v-model:visible="otherFacilityDetailVisible"
       :target="otherFacilityDetailTarget"
-      :direction="
-        popoverDisplayDirection(
-          otherFacilityDetailTarget,
-          otherFacilityDetailVisible
-        )
-      "
+      :direction="popoverDisplayDirection(otherFacilityDetailTarget, otherFacilityDetailVisible)"
+      :class="[fontSizeSet, 'vons-popover']"
       mask-color="rgba(0, 0, 0, 0)"
       @preshow="popoverPreShow"
       @postshow="popoverPostShow"
@@ -396,6 +386,7 @@
 </template>
 
 <script>
+import { publicAssetPath } from "@/compat/assets/public-path";
 // 検査セット
 import { sendRequestAllExamSetListByFacility } from "@/apis/exam-request";
 // 検査項目
@@ -404,8 +395,8 @@ import { MASTER_DELETE_DISPLAY } from "@/constants/TreatmentRecord";
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
-import { mapGetters, mapActions, mapState } from "vuex";
-import moment from "moment";
+import { mapGetters, mapActions, mapState } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
 import {
   CANCEL,
   SAVED,
@@ -453,11 +444,14 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from "@/functions/common/MessageFormat";
 import DateInput from "@/components/common/DateInput";
-import { EventBus } from "@/eventBus";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { getHolidayStyle } from "@/functions/common/CommonFunctions";
 import { updateSort, getSortedClass } from "@/functions/SortFunctions";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
+import nameDuplicationImg from "../../assets/name_duplication.png";
+import { setKendoPopupSurfaceStyles } from "@/functions/common/KendoFunctions";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
 import setDetail from "@/components/exam-request/ExamRequestPeriodSetDetail";
 
 export default {
@@ -472,14 +466,13 @@ export default {
     // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm end
     "common-calendar": commonCalender,
     "date-input": DateInput,
-    "set-detail": setDetail
+    "set-detail": setDetail,
   },
-  // mixins: [NextTransitionMixin, IndUserSelectMixin, PopoverMixin, PrintMixin],
   mixins: [NextTransitionMixin, IndUserSelectMixin, PopoverMixin],
   data() {
     return {
       // 同姓同名アイコン
-      image_src_same: require("../../assets/name_duplication.png"),
+      image_src_same: nameDuplicationImg,
       gridHeight: 740,
       headerHeight: 31,
       // 検査区分の省略表示文字列
@@ -569,7 +562,12 @@ export default {
       "getSchExtEndDate",
     ]),
     ...mapGetters("exam-request/daily", ["getPeriodType"]),
-    ...mapGetters("pat-info", ["searchedPatList", "getIsOtherFacility", "getOtherFacilityCd"]),
+    ...mapGetters("pat-info", [
+      "searchedPatList",
+      "getIsOtherFacility",
+      "getOtherFacilityCd",
+      "selectedPatId",
+    ]),
     ...mapGetters("window-size", {
       windowHeight: "getWindowHeight",
       windowWidth: "getSplittedWidth"
@@ -577,8 +575,8 @@ export default {
     ...mapGetters("account-edit", [
       "getFontSize",
       "getDefaultSetting",
-      "getPatientShareMode",//自施設(1) or 他施設(0)
-      "getPatientShareFacilityCdMode"//施設cd
+      "getPatientShareMode",
+      "getPatientShareFacilityCdMode",
     ]),
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("account-edit", ["getUserId", "getUserName", "getDefaultSetting"]),
@@ -603,9 +601,9 @@ export default {
           result["width"] = "5rem";
         }
         if (date !== "") {
-          const dateMoment = moment(date);
-          const dateCurrent = moment().format("YYYYMMDD");
-          // const dateCurrent = moment();
+          const dateMoment = dayjs(date);
+          const dateCurrent = dayjs().format("YYYYMMDD");
+          // const dateCurrent = dayjs();
           if (dateMoment.isBefore(dateCurrent)) {
             result["background-color"] = BACKGROUND_HEADER_PAST_DAY;
           }
@@ -676,16 +674,14 @@ export default {
         const hasExamPattern = this.getPatExamPatternList.some(pattern => (
           patId && patId === String(pattern.patId)
           && examSetCd && examSetCd === String(pattern.orderExamSetCd)
-          && regOrderClass && regOrderClass === String(pattern.regOrderClass)
-        ));
+          && regOrderClass && regOrderClass === String(pattern.regOrderClass)));
         if (hasExamPattern) return true;
 
         // 期間内のexamDataがあれば出力
         const examDataKeys = Object.keys(examRequest.examData);
         return examDataKeys.some(key => (
           (!dateStart || key >= dateStart)
-          && (!dateEnd || key <= dateEnd)
-        ));
+          && (!dateEnd || key <= dateEnd)));
       });
       resFilter.forEach(examRequest => {
         const pat = this.patSimpleSearch[examRequest.patId];
@@ -755,13 +751,25 @@ export default {
         this.setPeriodType(value); // ストアに反映
       },
     },
-    // 画面印刷時、content-containerに倍率調整用のscroll-adjustzoomクラスを付与するかのフラグ ※PrintMixin.jsのcomputedを上書き
-    adjustZoom() {
-      // 詳細の場合のみ倍率調整実施
-      return this.chkDetailSimple === "1";
-    }
   },
   methods: {
+    publicAssetPath,
+    popoverPreShow,
+    popoverPostShow,
+    popoverPosthide,
+    getExamRequestElementById(id) {
+      return getScopedElementById(id, this.$el || null);
+    },
+    getExamRequestElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || null);
+    },
+    queryExamRequestSelector(selector) {
+      return queryScopedSelector(selector, this.$el || null);
+    },
+    queryExamRequestSelectorAll(selector) {
+      return queryScopedSelectorAll(selector, this.$el || null);
+    },
+
     // 共通ローダー設定
     ...mapActions("loading-screen", [
       "startLoadingScreen",
@@ -797,28 +805,26 @@ export default {
       "clearHolidays"
     ]),
     getExamAuthorized,
-    popoverPreShow,
-    popoverPostShow,
-    popoverPosthide,
+
     // ウインドウ変更時の高さ補正
     calculateGridHeight() {
       // 表示期間などの表示領域
-      const upperButtons = document.getElementById("upper-buttons");
-      const upBtnsHeight = upperButtons.offsetHeight;
+      const upperButtons = this.getExamRequestElementById("upper-buttons");
+      const upBtnsHeight = upperButtons?.offsetHeight || 0;
 
       // 下部ボタンの表示領域
-      const bottomButtons = document.getElementById("bottom-buttons");
-      const btmBtnsHeight = bottomButtons.offsetHeight;
+      const bottomButtons = this.getExamRequestElementById("bottom-buttons");
+      const btmBtnsHeight = bottomButtons?.offsetHeight || 0;
 
       // 表示期間、表、下部ボタン全体の表示領域
-      const mainId = document.getElementById("main-id");
-      const mainIdHeight = mainId.offsetHeight;
+      const mainId = this.getExamRequestElementById("main-id");
+      const mainIdHeight = mainId?.offsetHeight || 0;
 
       // 表エリアの高さ (15px引く)
       const gridHeightC = mainIdHeight - upBtnsHeight - btmBtnsHeight - 15;
 
       // テーブルヘッダの高さ算出
-      const tableHtml = document.getElementsByClassName("grid-record-list")[0];
+      const tableHtml = this.getExamRequestElementsByClassName("grid-record-list")[0];
       if (tableHtml) {
         // テーブルのHTMLが存在する場合
         this.headerHeight = tableHtml.firstElementChild.offsetHeight;
@@ -829,18 +835,17 @@ export default {
       // Android対策
       if (this.isAndroid && !this.addedTransitionEvent) {
         // CSSトランジションする要素(button--materialクラス)を取得
-        const transitionButtons = document.getElementsByClassName("button--material");
+        const transitionButtons = this.getExamRequestElementsByClassName("button--material");
         const transitionButton = Array.from(transitionButtons).find(
-          el => el.innerText.trim() === "再表示"
-        );
+          el => el.innerText.trim() === "再表示");
         if (!transitionButton) return;
         // トランジション終了を検知する
         transitionButton.addEventListener("transitionend", event => {
           if (event.propertyName === "font-size") {
             // トランジション要素ごとに発火するので、１回に絞る
-            const upBtnsHeight = upperButtons.offsetHeight;
-            const btmBtnsHeight = bottomButtons.offsetHeight;
-            const mainIdHeight = mainId.offsetHeight;
+            const upBtnsHeight = upperButtons?.offsetHeight || 0;
+            const btmBtnsHeight = bottomButtons?.offsetHeight || 0;
+            const mainIdHeight = mainId?.offsetHeight || 0;
             const gridHeightC = mainIdHeight - upBtnsHeight - btmBtnsHeight - 15;
             this.gridHeight = gridHeightC;
           }
@@ -881,13 +886,10 @@ export default {
           // title: "更新確認",
           // message: "{dateFormat}の予定を一括中止します、よろしいですか？",
           if (await confirmIsOk(DIALOG_MESSAGES[13000029], dateFormat)) {
-	    // mod #12462 患者情報共有 Ji start
-            // this.dayAllClear(formatToYyyymmdd(data.date));
             this.dayAllClear({
               targetDate: formatToYyyymmdd(data.date),
-              facilityCd: this.getFacilityCd
+              facilityCd: this.getFacilityCd,
             });
-	    // mod #12462 患者情報共有 Ji end
           }
           break;
         }
@@ -905,10 +907,8 @@ export default {
     // 検査セット行をクリックした際のクリア処理
     async rowClear(celObj) {
       // 編集可能な権限があるかどうかを判断する
-      // add #12462 患者情報共有 Ji start
-      if (this.isOtherFacility(celObj)) return;
-      // add #12462 患者情報共有 Ji end
       if (!checkExamAuthorized()) return;
+      if (this.isOtherFacility(celObj)) return;
 
       const { patId, regOrderClass, examSetCd, examData } = celObj;
       const targetName = this.showExamName(examSetCd) + this.showRegOrderClass[regOrderClass];
@@ -921,7 +921,7 @@ export default {
 
       // 検査セットが登録されている日付ごとに処理する
       const editedDate = [];
-      const todayMoment = moment();
+      const todayMoment = dayjs();
       Object.keys(examData).forEach(date => {
         // 過去日の依頼は中止対象にしない
         if (todayMoment.isAfter(date, "day")) return;
@@ -958,8 +958,7 @@ export default {
           target.status !== CANCEL
           && String(target.orderExamSetCd) === String(examSetCd)
           && String(target.patId) === String(patId)
-          && String(target.regOrderClass) === String(regOrderClass)
-        ) {
+          && String(target.regOrderClass) === String(regOrderClass)) {
           this.editPatternDetail(target, examPatternListCopy, savePatExamPatternCopy);
         }
       });
@@ -973,8 +972,12 @@ export default {
       });
     },
     async getPatSame() {
-      const thisPatSimpleSearch = await ApiHelper.post("/patInfo/getPatSameAndInOutClass", {
+      const thisPatSimpleSearch = await ApiHelper.configPost("/patInfo/getPatSameAndInOutClass", {
         facilityCdList: [this.getFacilityCd],
+      }, {
+        params: {
+          selectedPatId: this.selectedPatId
+        }
       });
       this.patSimpleSearch = thisPatSimpleSearch.data;
     },
@@ -991,8 +994,7 @@ export default {
     // 保存実施
     async executeUpload(request) {
       const requestJournal = [].concat(...["0", "1", "2"].map(
-        aClass => request.filter(item => item.regOrderClass == aClass)
-      ));
+        aClass => request.filter(item => item.regOrderClass == aClass)));
       const params = {
         request,
         requestJournal,
@@ -1008,7 +1010,7 @@ export default {
         // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
         this.messageDialogInfo
         // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm end
-      );
+        );
     },
     // 患者名取得
     getPatName(patId) {
@@ -1024,6 +1026,7 @@ export default {
     },
     // 日付が患者毎のスケジュール延長最終日を超える日付かを判定
     unableEdit(celObj, setDate) {
+      if (this.isOtherFacility(celObj)) return true;
       const schExtEndDateYyyymmdd = getSchExtEndDateWithPatMainList(this.patMainList, celObj.patId);
       return schExtEndDateYyyymmdd < setDate;
     },
@@ -1031,6 +1034,7 @@ export default {
     editSchedule(celObj, setDate) {
       // 編集可能な権限があるかどうかを判断する
       if (!checkExamAuthorized()) return;
+      if (this.isOtherFacility(celObj)) return;
 
       let targetObj = this.getEditExamRequestList.filter(item => item.patId === celObj.patId);
       if (!celObj.headerflg) {
@@ -1043,7 +1047,7 @@ export default {
         // 締切フラグの設定
         let deadlineFlg = "0";
         if (this.getDeadlineCondition.deadlineFlg) {
-          if (moment(getDeadlineDate(this.getDeadlineCondition)).isAfter(moment(setDate))) {
+          if (dayjs(getDeadlineDate(this.getDeadlineCondition)).isAfter(dayjs(setDate))) {
             deadlineFlg = "1";
           }
         }
@@ -1095,30 +1099,24 @@ export default {
         // ヘッダーをクリックした場合の処理
         Object.keys(targetObj[0].examItemSet).forEach(regOrderClassKey => {
           Object.keys(targetObj[0].examItemSet[regOrderClassKey]).forEach(examSetCdKey => {
-	   // add #12462 患者情報共有 Ji start
-            const examItem =
-              targetObj[0].examItemSet[regOrderClassKey][examSetCdKey];
-
-            const cellFacility =
-              examItem.facilityCd && examItem.facilityCd[setDate];
-
+            const examItem = targetObj[0].examItemSet[regOrderClassKey][examSetCdKey];
+            const cellFacility = examItem.facilityCd && examItem.facilityCd[setDate];
             if (cellFacility && cellFacility !== this.getFacilityCd) {
               return;
             }
-	    // add #12462 患者情報共有 Ji end
             // クリックされたセルの状態によって、フラグを更新する
-            switch(targetObj[0].examItemSet[regOrderClassKey][examSetCdKey]["data"][setDate]) {
+            switch(examItem["data"][setDate]) {
               case SAVED: {
                 // 依頼ありの場合、中止指示にする
                 targetObj[0]["data"][setDate] -=  1;
-                targetObj[0].examItemSet[regOrderClassKey][examSetCdKey]["data"][setDate] = CANCEL;
+                examItem["data"][setDate] = CANCEL;
                 break;
               }
               case ADD:
               case ADD_WARNING: {
                 // 未保存の依頼があった場合、削除する
                 targetObj[0]["data"][setDate] -= 1;
-                delete targetObj[0].examItemSet[regOrderClassKey][examSetCdKey]["data"][setDate];
+                delete examItem["data"][setDate];
               }
             }
           })
@@ -1148,7 +1146,7 @@ export default {
           && patId === String(item.patId)
           && examPattern === item.examPattern
           && examWeek === item.examWeek
-        ))
+          && this.getFacilityCd === item.facilityCd))
         : [];
     },
     // 患者名行のパターン列の表示用データを生成：スタイル
@@ -1192,7 +1190,6 @@ export default {
         class: "",
         style: "",
       };
-      // mod #12462 患者情報共有 Ji start
       let { patId, examSetCd, regOrderClass, ownPatId } = celObj;
       const matchPatId = ownPatId || patId;
       if (patId) patId = String(patId);
@@ -1200,20 +1197,10 @@ export default {
       if (examSetCd) examSetCd = String(examSetCd);
       if (regOrderClass) regOrderClass = String(regOrderClass);
       const { examPattern, examWeek } = setData;
-      // const targetExamPattern = (
-      //   patId && examSetCd && regOrderClass && examPattern && examWeek
-      // ) && this.getPatExamPatternList.find(item => (
-      //   patId === String(item.patId)
-      //   && examSetCd === String(item.orderExamSetCd)
-      //   && regOrderClass === String(item.regOrderClass)
-      //   && examPattern === item.examPattern
-      //   && examWeek === item.examWeek
-      // ));
       const targetExamPattern =
         matchPatId && examSetCd && regOrderClass && examPattern && examWeek &&
         this.getPatExamPatternList.find(item => {
           const targetPatId = item.ownPatId || item.patId;
-
           return (
             String(matchPatId) === String(targetPatId) &&
             examSetCd === String(item.orderExamSetCd) &&
@@ -1222,7 +1209,6 @@ export default {
             examWeek === item.examWeek
           );
         });
-      // mod #12462 患者情報共有 Ji end
       if (targetExamPattern) {
         // 様々な状況のアイコン変化を補足する
         switch (targetExamPattern.status) {
@@ -1230,12 +1216,12 @@ export default {
             // 予定有無を判別して画像を変える
             if (hasTreatmentPatternOnWeek(targetExamPattern)) {
               Object.assign(imgAttrs, {
-                src: "img/exam-request/32-32_0.png",
+                src: publicAssetPath("img/exam-request/32-32_0.png"),
                 class: "symbol-request-cancel td-img",
               });
             } else {
               Object.assign(imgAttrs, {
-                src: "img/exam-request/32-32_4.png",
+                src: publicAssetPath("img/exam-request/32-32_4.png"),
                 class: "symbol-request-cancel td-img",
               });
             }
@@ -1244,13 +1230,13 @@ export default {
             // 予定有無を判別して画像を変える
             if (hasTreatmentPatternOnWeek(targetExamPattern)) {
               Object.assign(imgAttrs, {
-                src: "img/exam-request/32-32_2.png",
+                src: publicAssetPath("img/exam-request/32-32_2.png"),
                 class: "symbol-request-saved td-img",
                 style: `background-color: ${FILLCOLOR_DEFAULT};`,
               });
             } else {
               Object.assign(imgAttrs, {
-                src: "img/exam-request/32-32_3.png",
+                src: publicAssetPath("img/exam-request/32-32_3.png"),
                 class: "symbol-request-saved td-img",
                 style: `background-color: ${FILLCOLOR_DEFAULT};`,
               });
@@ -1260,13 +1246,13 @@ export default {
             // 予定有無を判別して画像を変える
             if (hasTreatmentPatternOnWeek(targetExamPattern)) {
               Object.assign(imgAttrs, {
-                src: "img/exam-request/32-32_2.png",
+                src: publicAssetPath("img/exam-request/32-32_2.png"),
                 class: "symbol-request-unsaved td-img",
                 style: `background-color: ${FILLCOLOR_DEFAULT};`,
               });
             } else {
               Object.assign(imgAttrs, {
-                src: "img/exam-request/32-32_3.png",
+                src: publicAssetPath("img/exam-request/32-32_3.png"),
                 class: "symbol-request-unsaved td-img",
                 style: `background-color: ${FILLCOLOR_DEFAULT};`,
               });
@@ -1297,12 +1283,10 @@ export default {
         }
         rtn["background-color"] = BACKGROUND_ROW_PATNAME;
       } else {
-        // add #12462 患者情報共有 Ji start
         if (this.isOtherFacility(celObj)) {
           rtn["background-color"] = "#9c9c9c";
           return rtn;
         }
-	// add #12462 患者情報共有 Ji end
         // 患者名行以外
         const dateCurrent = formatToYyyymmdd();
         if (setDate < dateCurrent) {
@@ -1313,11 +1297,9 @@ export default {
     },
     // 編集されているセルを示す緑色をセルに付与する
     addEditedColor(celObj, setDate) {
-      // add #12462 患者情報共有 Ji start
       if (!celObj.headerflg && this.isOtherFacility(celObj)) {
         return ["other-facility-disabled"];
       }
-      // add #12462 患者情報共有 Ji end
       // 患者毎のスケジュール延長最終日を超える日付はグレーアウトする
       if (this.unableEdit(celObj, setDate)) {
         return ["uneditable"];
@@ -1389,10 +1371,9 @@ export default {
     setOneCheck(patId) {
       this.checkPatId = patId ? patId : null;
       // 患者のチェックボックスを取得しチェックが入れられたか外されたか判定
-      const patCheckbox = document.getElementsByClassName("pat-list-item");
+      const patCheckbox = this.getExamRequestElementsByClassName("pat-list-item");
       const isChecked = Array.from(patCheckbox).some(checkbox => (
-        (patId === parseInt(checkbox.value)) && checkbox.checked
-      ));
+        (patId === parseInt(checkbox.value)) && checkbox.checked));
       // 患者のチェックが外された際はスケジュール作成処理が行われないようcheckedPatIdを空にする
       this.setCheckedPatId(isChecked ? [this.checkPatId] : null);
     },
@@ -1406,7 +1387,7 @@ export default {
     },
     checkInputDateCore(conditionName) {
       const condition = this.condition;
-      const inputDate = condition[conditionName] ? moment(condition[conditionName]) : "";
+      const inputDate = condition[conditionName] ? dayjs(condition[conditionName]) : "";
       if (inputDate && (!inputDate.isValid() || inputDate.isAfter(this.getSchExtEndDate))) {
         // 入力された日付が存在しないか、最大値より未来の場合、最大値を表示する
         condition[conditionName] = this.getSchExtEndDate;
@@ -1465,8 +1446,7 @@ export default {
         // 日付は前回と同じ範囲か
         if (
           startDate !== this.getStartToEndDate.showStartDate
-          || endDate !== this.getStartToEndDate.showEndDate
-        ) {
+          || endDate !== this.getStartToEndDate.showEndDate) {
           this.updateStartToEndDate({
             showStartDate: startDate,
             showEndDate: endDate,
@@ -1509,9 +1489,10 @@ export default {
         patIdList,
         startDate: "",
         endDate: this.condition.endDate.replace(/-/g, "/"),
-	// add #12462 患者情報共有 Ji start
-        patientShareMode: (this.getIsOtherFacility === false || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd)) ? 1 : this.getPatientShareMode
-	// add #12462 患者情報共有 Ji end
+        patientShareMode: (
+          this.getIsOtherFacility === false
+          || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd)
+        ) ? 1 : this.getPatientShareMode,
       }).then(() => {
         // 表示リスト生成
         this.generateSortedList();
@@ -1531,11 +1512,11 @@ export default {
       });
     },
     // dropDownを開いた時にデータに応じて表示枠を広げる
-    addMaxContentStyle() {
+    addMaxContentStyle(event) {
+      this.onIndUserDropdownOpen(event);
       this.$nextTick(() => {
-        const targetStyle = document.getElementsByClassName("k-animation-container")[0].firstElementChild.style;
-        targetStyle.width = "max-content";
-        targetStyle.bottom = "0px";
+        setKendoPopupSurfaceStyles(event, { width: "max-content", bottom: "0px" }, this.$el);
+        this.onIndUserDropdownOpen(event);
       });
     },
     // 院内の患者IDを取得する。
@@ -1592,44 +1573,24 @@ export default {
       if (regOrderClass) regOrderClass = String(regOrderClass);
       const { examPattern, examWeek } = setData;
       // 処理を実行する検査パターンをフィルタリング
-      // mod #12462 患者情報共有 Ji start
-      // const targetList = this.getPatExamPatternList.filter(
-      //   !celObj.headerflg ? (item => (
-      //     patId === String(item.patId)
-      //     && examSetCd === String(item.orderExamSetCd)
-      //     && regOrderClass === String(item.regOrderClass)
-      //     && examPattern === item.examPattern
-      //     && examWeek === item.examWeek
-      //   )) : (item => (
-      //     item.status !== CANCEL
-      //     && patId === String(item.patId)
-      //     && examPattern === item.examPattern
-      //     && examWeek === item.examWeek
-      //   ))
-      // );
       const targetList = this.getPatExamPatternList.filter(item => {
         if (celObj.facilityCd && celObj.facilityCd !== this.getFacilityCd) {
           return false;
         }
         if (!celObj.headerflg) {
-          return (
-            patId === String(item.patId) &&
-            examSetCd === String(item.orderExamSetCd) &&
-            regOrderClass === String(item.regOrderClass) &&
-            examPattern === item.examPattern &&
-            examWeek === item.examWeek
-          );
-        } else {
-          return (
-            item.status !== CANCEL &&
-            patId === String(item.patId) &&
-            examPattern === item.examPattern &&
-            examWeek === item.examWeek &&
-            this.getFacilityCd === item.facilityCd
-          );
+          return patId === String(item.patId)
+            && examSetCd === String(item.orderExamSetCd)
+            && regOrderClass === String(item.regOrderClass)
+            && examPattern === item.examPattern
+            && examWeek === item.examWeek;
         }
+        return item.status !== CANCEL
+          && patId === String(item.patId)
+          && examPattern === item.examPattern
+          && examWeek === item.examWeek
+          && this.getFacilityCd === item.facilityCd;
       });
-      // mod #12462 患者情報共有 Ji end
+
       // フィルタリングされた検査パターンの中から中止されているものを取得
       const cancelLength = targetList.filter(item => item.status === CANCEL).length
       const unified = (!cancelLength || cancelLength === targetList.length);
@@ -1654,7 +1615,7 @@ export default {
           target.status !== CANCEL
           && setData.examPattern && setData.examPattern === target.examPattern
           && setData.examWeek && setData.examWeek === target.examWeek
-        ) {
+          && target.facilityCd === this.getFacilityCd) {
           this.editPatternDetail(target, examPatternListCopy, savePatExamPatternCopy);
         }
       });
@@ -1681,8 +1642,8 @@ export default {
                       item.examPatternCd.toString() === target.examPatternCd.toString()
               })
             // ステータスをSAVEDにして削除フラグを0にする
-            this.$set(target, 'status', SAVED);
-            this.$set(target, 'isDel', 0);
+            target.status = SAVED;
+            target.isDel = 0;
             // 保存用のパターンリストから対象を削除
             if (wasSavedIndex >= 0) savePatExamPatternCopy.splice(wasSavedIndex, 1);
             break;
@@ -1699,7 +1660,7 @@ export default {
             })
           if (wasAdd) {
             // ステータスをADDにする
-            this.$set(target, 'status', ADD);
+            target.status = ADD;
             // 保存用のパターンリストに対象を追加
             savePatExamPatternCopy.push(target);
             break;
@@ -1708,8 +1669,8 @@ export default {
         }
         case SAVED: {
           // ステータスをCANCELににて削除フラグをたてる
-          this.$set(target, 'status', CANCEL);
-          this.$set(target, 'isDel', 1);
+          target.status = CANCEL;
+          target.isDel = 1;
           // 保存用のパターンリストに追加する
           savePatExamPatternCopy.push(target);
           break;
@@ -1790,7 +1751,7 @@ export default {
     getSortKey(data) {
       if (data.date !== "") {
         // 日付ヘッダ 
-        return moment(data.date).format("YYYYMMDD");
+        return dayjs(data.date).format("YYYYMMDD");
       } else {
         // 検査パターン
         const { examPattern, examWeek } = data.setData;
@@ -1806,109 +1767,58 @@ export default {
       const list = this.examRequestListInDisplayPeriod.slice();
       this.sortedList = sortList(list, this.sort, this.getPatRowCellNumber, this.getPatExamPatternFiltered);
     },
-    // add #12462 患者情報共有 Ji start
-    /**
-     * 他施設の検査セット情報を取得してキャッシュに保持する
-     * @param facilityCd 
-     */
-    loadOtherFacilityExamSet(facilityCd) {
-      if (this.otherFacilityCache[facilityCd]) return;
-      // 指定施設の検査セット一覧を取得
-      sendRequestAllExamSetListByFacility(facilityCd)
-        .then(response => {
-          const dispExamSet = [];
-          const getExamSetName = [];
-          const delExamSetItem = [];
-          response.data.forEach(item => {
-            if (item.isDisp === "0") {
-              dispExamSet.push(item.examSetCd);
+    loadOtherFacilityExamSet(facilityCd, patId) {
+      if (!facilityCd || this.otherFacilityCache[facilityCd]) return;
+      const selectedPatId = this.selectedPatId ?? patId;
+      sendRequestAllExamSetListByFacility(facilityCd, selectedPatId).then(response => {
+        const dispExamSet = [];
+        const getExamSetName = [];
+        const delExamSetItem = [];
+        response.data.forEach(item => {
+          if (item.isDisp === "0") {
+            dispExamSet.push(item.examSetCd);
+          }
+          getExamSetName.push(item);
+          const setItems = JSON.parse(item.examItemInfo);
+          setItems.forEach(setItem => {
+            if (this.dispExamSetItem.includes(Number(setItem.exam_item_cd))) {
+              delExamSetItem.push(item.examSetCd);
             }
-            getExamSetName.push(item);
-            const setItems = JSON.parse(item.examItemInfo);
-            setItems.forEach(setItem => {
-              if (
-                this.dispExamSetItem.includes(
-                  Number(setItem.exam_item_cd)
-                )
-              ) {
-                delExamSetItem.push(item.examSetCd);
-              }
-            });
-          });
-          this.$set(this.otherFacilityCache, facilityCd, {
-            dispExamSet,
-            getExamSetName,
-            delExamSetItem
           });
         });
+        this.otherFacilityCache = {
+          ...this.otherFacilityCache,
+          [facilityCd]: {
+            dispExamSet,
+            getExamSetName,
+            delExamSetItem,
+          },
+        };
+      });
     },
-    /**
-     * 他施設データ用の表示文字列生成
-     * @param row 
-     */
     buildOtherFacilityText(row) {
       const facilityCd = row.facilityCd;
-      // 未取得の場合は取得処理を実行
-      this.loadOtherFacilityExamSet(facilityCd);
+      this.loadOtherFacilityExamSet(facilityCd, row.patId);
       const cache = this.otherFacilityCache[facilityCd];
       if (!cache) return "";
       const setCd = Number(row.examSetCd);
       let delText = "";
       if (cache.dispExamSet.includes(setCd)) {
         delText = MASTER_DELETE_DISPLAY.DELETED;
-      } else if (
-        cache.delExamSetItem.includes(setCd)
-      ) {
+      } else if (cache.delExamSetItem.includes(setCd)) {
         delText = MASTER_DELETE_DISPLAY.INCLUDE_DELETED;
       }
-      const exam = cache.getExamSetName.find(
-          item => item.examSetCd == row.examSetCd
-        );
+      const exam = cache.getExamSetName.find(item => item.examSetCd == row.examSetCd);
       const name = exam ? exam.examSetName : "";
-      return (
-        delText
-        + name
-        + this.showRegOrderClass[row.regOrderClass]
-      );
+      return delText + name + this.showRegOrderClass[row.regOrderClass];
     },
-    // add #12462 患者情報共有 Ji end
-    /** 列幅の再計算を行い、固定列の位置調整処理 */
-    updateLeftPosition() {
-      this.$nextTick(() => {
-        setTimeout(() => {
-          // チェックボックス列
-          const checkBoxHeader = document.querySelector('.col-sticky-check');
-          const checkBoxWidth = checkBoxHeader ? checkBoxHeader.offsetWidth : 0;
-          // 患者ID列
-          const hospIdHeader = document.querySelector('.col-sticky-id');
-          const hospIdVisible = this.isShowHospPatId;
-          const hospIdWidth = hospIdVisible && hospIdHeader ? hospIdHeader.offsetWidth : 0;
-          // 患者名列の left を更新
-          // NOTE: 患者名列を特定させるclass を設定するため、col-sticky-names を設定（スタイルはなし） 
-          const patNameHeader = document.querySelector('.col-sticky-names');
-          const patNameCells = document.querySelectorAll('.col-sticky-names');
-          const patNameLeft = checkBoxWidth + hospIdWidth;
-          if (patNameHeader) patNameHeader.style.left = `${patNameLeft}px`;
-          patNameCells.forEach(cell => cell.style.left = `${patNameLeft}px`);
-          // 血糖検査列の left を更新
-          const bloodClass = !hospIdVisible ? '.col-sticky-blood-glucose-exams' : '.col-sticky-blood-glucose-exam';
-          const bloodHeader = document.querySelector(bloodClass);
-          const bloodCells = document.querySelectorAll(bloodClass);
-          const patNameWidth = patNameHeader?.offsetWidth || 0;
-          const bloodLeft = checkBoxWidth + hospIdWidth + patNameWidth;
-          if (bloodHeader) bloodHeader.style.left = `${bloodLeft}px`;
-          bloodCells.forEach(cell => cell.style.left = `${bloodLeft}px`);
-        }, 50);
-      });
-    },
-    // add #12462 患者情報共有 Ji start
     isOtherFacility(listDate) {
-      return listDate.facilityCd && listDate.facilityCd != this.getFacilityCd
+      return !!listDate?.facilityCd && listDate.facilityCd != this.getFacilityCd;
     },
-    async openOtherFacilityPopover(listDate) {
-      this.otherFacilityDetailList = listDate.setInfo ?? []
+    openOtherFacilityPopover(listDate) {
+      this.otherFacilityDetailList = listDate.setInfo ?? [];
       this.$nextTick(() => {
-        let ref = this.$refs['showDetail_' + listDate.examSetCd];
+        let ref = this.$refs[`showDetail_${listDate.examSetCd}`];
         if (Array.isArray(ref)) {
           ref = ref[0];
         }
@@ -1917,36 +1827,49 @@ export default {
         this.otherFacilityDetailVisible = true;
       });
     },
-    /**
-     * @description 表示方向
-     */
     popoverDisplayDirection(popoverTarget, visible) {
-      if (!visible) return null;
+      if (!visible || !popoverTarget) return null;
+      const elemPosition = popoverTarget.$el
+        ? popoverTarget.$el.getBoundingClientRect()
+        : popoverTarget.getBoundingClientRect();
+      let direction = "right";
 
-      if (popoverTarget) {
-        const elemPosition = popoverTarget.$el
-          ? popoverTarget.$el.getBoundingClientRect()
-          : popoverTarget.getBoundingClientRect();
-        let direction = "right";
-
-        if (this.windowHeight <= 420) {
-          // heightが狭い(スマホ横とか)ときは上下じゃ途切れるので右か左に表示
-          if (elemPosition.right < this.windowWidth / 2) {
-            direction = "right";
-          } else {
-            direction = "left";
-          }
-        } else if (this.windowWidth - elemPosition.right < 500) {
-          if (elemPosition.top < this.windowHeight / 2) {
-            direction = "down";
-          } else {
-            direction = "up";
-          }
-        }
-        return direction;
+      if (this.windowHeight <= 420) {
+        direction = elemPosition.right < this.windowWidth / 2 ? "right" : "left";
+      } else if (this.windowWidth - elemPosition.right < 500) {
+        direction = elemPosition.top < this.windowHeight / 2 ? "down" : "up";
       }
+      return direction;
     },
-    // add #12462 患者情報共有 Ji end
+    /** 列幅の再計算を行い、固定列の位置調整処理 */
+    updateLeftPosition() {
+      this.$nextTick(() => {
+        setTimeout(() => {
+          // チェックボックス列
+          const checkBoxHeader = this.queryExamRequestSelector('.col-sticky-check');
+          const checkBoxWidth = checkBoxHeader ? checkBoxHeader.offsetWidth : 0;
+          // 患者ID列
+          const hospIdHeader = this.queryExamRequestSelector('.col-sticky-id');
+          const hospIdVisible = this.isShowHospPatId;
+          const hospIdWidth = hospIdVisible && hospIdHeader ? hospIdHeader.offsetWidth : 0;
+          // 患者名列の left を更新
+          // NOTE: 患者名列を特定させるclass を設定するため、col-sticky-names を設定（スタイルはなし） 
+          const patNameHeader = this.queryExamRequestSelector('.col-sticky-names');
+          const patNameCells = this.queryExamRequestSelectorAll('.col-sticky-names');
+          const patNameLeft = checkBoxWidth + hospIdWidth;
+          if (patNameHeader) patNameHeader.style.left = `${patNameLeft}px`;
+          patNameCells.forEach(cell => cell.style.left = `${patNameLeft}px`);
+          // 血糖検査列の left を更新
+          const bloodClass = !hospIdVisible ? '.col-sticky-blood-glucose-exams' : '.col-sticky-blood-glucose-exam';
+          const bloodHeader = this.queryExamRequestSelector(bloodClass);
+          const bloodCells = this.queryExamRequestSelectorAll(bloodClass);
+          const patNameWidth = patNameHeader?.offsetWidth || 0;
+          const bloodLeft = checkBoxWidth + hospIdWidth + patNameWidth;
+          if (bloodHeader) bloodHeader.style.left = `${bloodLeft}px`;
+          bloodCells.forEach(cell => cell.style.left = `${bloodLeft}px`);
+        }, 50);
+      });
+    },
   },
   watch: {
     // 検索リストに表示されている患者
@@ -1962,8 +1885,8 @@ export default {
     },
     // 表示範囲日付(ヘッダ側の検査セット処理に連動させる)
     getStartToEndDate() {
-      const startDate = this.getStartToEndDate.showStartDate ? moment(this.getStartToEndDate.showStartDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
-      const endDate = this.getStartToEndDate.showEndDate ? moment(this.getStartToEndDate.showEndDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
+      const startDate = this.getStartToEndDate.showStartDate ? dayjs(this.getStartToEndDate.showStartDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
+      const endDate = this.getStartToEndDate.showEndDate ? dayjs(this.getStartToEndDate.showEndDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
       if (this.condition.startDate !== startDate) {
         this.condition.startDate = startDate;
       }
@@ -1976,8 +1899,7 @@ export default {
       // 全選択チェック
       this.allCheckFlg = !!(
         this.allCheckPatIdList.length
-        && this.examSetTargetList.length === this.allCheckPatIdList.length
-      );
+        && this.examSetTargetList.length === this.allCheckPatIdList.length);
     },
     windowHeight() {
       this.calculateGridHeight();
@@ -1987,6 +1909,12 @@ export default {
     },
     getFontSize() {
       this.calculateGridHeight();
+    },
+    getPatientShareMode() {
+      this.showCalendar();
+    },
+    getPatientShareFacilityCdMode() {
+      this.showCalendar();
     },
     isChanged() {
       this.setIsDataChanged(this.isChanged);
@@ -2006,8 +1934,7 @@ export default {
       handler(newSort) {
         if (
           newSort.key !== this.prevSort.key ||
-          newSort.isAsc !== this.prevSort.isAsc
-        ) {
+          newSort.isAsc !== this.prevSort.isAsc) {
           this.generateSortedList();
           this.prevSort = { ...newSort };
         }
@@ -2028,14 +1955,6 @@ export default {
         this.updateLeftPosition();
       });
     },
-    // add #12462 患者情報共有 Ji start
-    getPatientShareMode() {
-      this.showCalendar();
-    },
-    getPatientShareFacilityCdMode() {
-      this.showCalendar();
-    }
-    // add #12462 患者情報共有 Ji end
   },
   async created() {
     this.startLoadingScreen();
@@ -2043,10 +1962,10 @@ export default {
     // 患者別画面のデータが残っている場合があるためクリアしておく
     this.clearSearchedExamRequest();
 
-    sendRequestGetDispExamItemListForFacilityCd(this.getFacilityCd).then(response => {
+    sendRequestGetDispExamItemListForFacilityCd(this.getFacilityCd, this.selectedPatId).then(response => {
       this.dispExamSetItem = response.data;
     });
-    sendRequestAllExamSetListByFacility(this.getFacilityCd).then(response => {
+    sendRequestAllExamSetListByFacility(this.getFacilityCd, this.selectedPatId).then(response => {
       response.data.forEach(item => {
         if (item.isDisp === "0") {
           this.dispExamSet.push(item.examSetCd);
@@ -2067,7 +1986,7 @@ export default {
     this.setCalendarCheckedDate(null);
 
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = getScopedWindow(this.$el || this)?.navigator?.userAgent || "";
     if (ua.match(/Android/)) {
       this.isAndroid = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -2117,14 +2036,14 @@ export default {
         }
       } else {
         // 本日の日付をセット
-        const setDate = moment();
+        const setDate = dayjs();
         this.condition.startDate = setDate.format("YYYY-MM-DD");
         this.condition.endDate = setDate.add(3, "months").format("YYYY-MM-DD");
       }
     }
     if (this.$route.params.fromFacilityCalendar) {
       // 施設カレンダーから日付が渡された場合
-      const dayViewMoment = moment(this.$route.params.fromFacilityCalendar.date);
+      const dayViewMoment = dayjs(this.$route.params.fromFacilityCalendar.date);
       if (dayViewMoment.isValid()) {
         this.condition.endDate
           = this.condition.startDate
@@ -2140,15 +2059,17 @@ export default {
     this.searchedPatListClone = JSON.parse(JSON.stringify(this.searchedPatList));
 
     // 締切設定を取得
-    await this.setExamDeadline(this.getFacilityCd);
+    await this.setExamDeadline({
+      facilityCd: this.getFacilityCd,
+      selectedPatId: this.selectedPatId
+    });
 
     // データを取得してカレンダーに表示する
     this.showCalendar();
     // 指示者ドロップダウンの設定
     this.getIndUserList(
       AUTHORITY_CODES.IND_EXAM_EDIT,
-      AUTHORITY_CODES.IND_EXAM_PEDIT
-    ).then(response => {
+      AUTHORITY_CODES.IND_EXAM_PEDIT).then(response => {
       this.doctorList = response.doctorList;
       this.$nextTick(() => {
         this.selectDoctor = response.iniSelectId;
@@ -2169,7 +2090,7 @@ export default {
   },
   mounted() {
     this.$nextTick(() => {
-      const headers = document.querySelectorAll('.manual-width');
+      const headers = this.queryExamRequestSelectorAll('.manual-width');
       headers.forEach((el) => {
         const observer = new ResizeObserver(() => {
           this.updateLeftPosition(); // 幅変更時に再計算
@@ -2191,7 +2112,7 @@ export default {
   beforeUpdate() {
     this.calculateGridHeight();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.clearHolidays(); // storeの休日マスタをクリア
     EventBus.$off("refresh", this.refresh);
     EventBus.$off("addSchedule", this.generateSortedList);
@@ -2400,34 +2321,54 @@ input[type="radio"] {
 .maru-symbol {
   width: 0.9em;
 }
-ons-popover >>> .popover--top {
+ons-popover :deep(.popover--top) {
   max-width: 18em;
 }
-ons-popover >>> .popover--top > .popover__content {
+
+.exam-request-period-header-popover :deep(.popover--top) {
+  width: 18em;
+  min-width: 0;
+  max-width: 18em;
+}
+ons-popover :deep(.popover--top > .popover__content) {
   font-size: 1.6em;
   height: auto;
   min-height: 0;
 }
-ons-popover >>> .popover--top > .popover__content label {
+
+.exam-request-period-header-popover :deep(.popover--top > .popover__content) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-size: 1.6em;
+  height: auto;
+  min-height: 0;
+}
+ons-popover :deep(.popover--top > .popover__content label) {
+  width: 5em;
+}
+
+.exam-request-period-header-popover :deep(.popover--top > .popover__content label) {
   width: 5em;
 }
 .popover-content-row {
   margin-bottom: 10px;
 }
-.popover-content >>> .popover--top,
-.popover-content >>> .popover--right,
-.popover-content >>> .popover--left,
-.popover-content >>> .popover--bottom {
+.popover-content :deep(.popover--top),
+.popover-content :deep(.popover--right),
+.popover-content :deep(.popover--left),
+.popover-content :deep(.popover--bottom) {
   width: initial;
 }
-.popover-content-header >>> .popover__content {
+.popover-content-header :deep(.popover__content) {
   width: 200px;
   min-height: auto;
 }
 .popover-content-div {
   margin: 5px;
 }
-.exam-control-cell >>> .td-img {
+.exam-control-cell :deep(.td-img) {
   width: 1.2em;
   height: auto;
   position: absolute;
@@ -2474,16 +2415,13 @@ ons-popover >>> .popover--top > .popover__content label {
   pointer-events: none;
 }
 @media print {
-  /** ヘッダ固定 */
   .ntss-list-header-th-sticky {
     position: sticky !important;
   }
-  /** スクロールコンテナ */
   .scroll-table {
     overflow: hidden !important;
     height: auto !important;
   }
-  /** 下部ボタン非表示 */
   #bottom-buttons {
     display: none;
   }

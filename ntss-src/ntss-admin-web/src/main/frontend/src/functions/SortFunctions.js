@@ -103,7 +103,7 @@ export function sortableCompare(a, b, sortField, isAsc, options = {}) {
     nullOrderRule = {},       // 空欄位置の制御
     notUseSortKeyMap = false, // SORT_KEY_MAPを未使用とするか
     orderAsNumberFields = [], // 数値化できるものは数値でソートするフィールド
-    orderAsTimeFields = [], 　// 時刻形式（hh:mm）にフォーマットしてソートするフィールド
+    orderAsTimeFields = [],  // 時刻形式（hh:mm）にフォーマットしてソートするフィールド
   } = options;
   
   let sortFieldName = sortField;

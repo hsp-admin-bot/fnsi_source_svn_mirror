@@ -117,7 +117,7 @@ public class DeviceEdgeConnectServiceImpl implements DeviceEdgeConnectService {
       long start = System.currentTimeMillis();
       // リクエスト処理
       ResponseEntity<Object> response = rt.exchange(request, Object.class);
-      HttpStatus status = response.getStatusCode();
+      HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
       long cost = System.currentTimeMillis() - start;
       Map<String, Object> map = new HashMap<>();
       map.put("logType", "RESTTEMPLATE-LOG");

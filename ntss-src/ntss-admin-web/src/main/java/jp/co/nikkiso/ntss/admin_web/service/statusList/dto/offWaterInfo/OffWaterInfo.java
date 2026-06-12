@@ -2,8 +2,8 @@ package jp.co.nikkiso.ntss.admin_web.service.statusList.dto.offWaterInfo;
 
 import java.math.BigDecimal;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」の改修 江 start
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;

@@ -4,7 +4,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="custom-ons-list-header">
+        <template #body>
+<div class="custom-ons-list-header">
       <div id="self-measure-result-modal-content">
         <!-- 対象機種・バージョン設定 -->
         <div class="target-machine-setting">
@@ -252,7 +253,9 @@
         </div>
       </div>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+        <template #footer>
+<div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="btn2-cancel denial-btn" @click="cancel">キャンセル</v-ons-button>
       </div>
@@ -260,13 +263,14 @@
         <v-ons-button :disabled="buttonFlag" class="common-style-select-button registration-btn" @click="registration">確定</v-ons-button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import _ from "underscore";
-import { mapActions, mapGetters } from "vuex";
+import _ from "@/compat/collections/lodash";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import { MACHINE_MODEL } from "@/constants/machineModel";
 import { UFRC, BLOOD_LEAKAGE, DIALYSATE_FLOW_RATE, CONCENTRATION } from "@/constants/mstSelfMeasureResultDefine";
@@ -276,8 +280,9 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
+import { EventBus } from "@/compat/vue/event-bus.js";
 import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro"
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 import { toFixed } from "@/functions/common/NumberFunctions";
 
 export default {
@@ -696,14 +701,17 @@ export default {
 
       // state.masterRecordListにマージ
       const index = masterRecordList.data.findIndex(
-        masterRecord => masterRecord.code === editedRecord.code
+        masterRecord => String(masterRecord.code) === String(editedRecord.code)
       );
-      masterRecordList.data[index] = editedRecord;
+      if (index >= 0) {
+        editedRecord.code = masterRecordList.data[index].code;
+        masterRecordList.data[index] = editedRecord;
+      }
 
       // TODO: 対症療法的なので直したい。
       // 配列の要素を入れ替えただけでは、「stateの変更」とみなしてくれず、一覧が再描画されなかった。
       // state.masterRecordListをwatchする（？）
-      if (!this.validationValueChange(this.initMasterRecordList[index], masterRecordList.data[index])) {
+      if (index >= 0 && !this.validationValueChange(this.initMasterRecordList[index], masterRecordList.data[index])) {
         this.setMasterRecordList(undefined);
       }
       this.setMasterRecordList(masterRecordList);
@@ -888,6 +896,7 @@ export default {
      * モーダル画面を閉じる処理
      */
     closeModalWindow() {
+      EventBus.$emit("onCloseMasterEditModal");
       // state.editRecordを空にする
       this.editRecordBeEmpty();
       this.hideModal();
@@ -935,7 +944,7 @@ export default {
       arrList.push(val["machineType"])
     }
     for (const arr of this.getMachineTypeList) {
-      if(arr.hasOwnProperty("model") == false) {
+      if(Object.prototype.hasOwnProperty.call(arr, "model") === false) {
         // mod #7849-自己診断判定マスタ詳細に表記が不足している 赵 start
         // if (!arrList.includes(arr["dispMachineName"].split(" ")[0])) {
         // if (!arrList.includes(arr["dispMachineName"].split(" ")[0].replace(/[\r\n]/g, "").replace(/\ +/g, ""))) {
@@ -948,7 +957,7 @@ export default {
         //   )
         // }
         if(arr["dispMachineName"] != null){
-        if (!arrList.includes(arr["dispMachineName"].split(" ")[0].replace(/[\r\n]/g, "").replace(/\ +/g, ""))) {
+        if (!arrList.includes(arr["dispMachineName"].split(" ")[0].replace(/[\r\n]/g, "").replace(/ +/g, ""))) {
           this.comboMachineType.push(
             {
               machineType: arr["dispMachineName"].split(" ")[0],

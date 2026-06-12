@@ -192,7 +192,7 @@
 
     <v-ons-popover
       cancelable
-      :visible.sync="popoverInfo.popoverVisible"
+      v-model:visible="popoverInfo.popoverVisible"
       :target="popoverInfo.popoverTarget"
       :direction="popoverInfo.popoverDirection"
       :class="[fontSizeSet, 'popover-style']"
@@ -299,13 +299,13 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import {
   mstPatViewerLayoutDefine,
   selectInfoOptions
 } from "@/constants/mstPatViewerLayoutDefine";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import vuedraggable from "vuedraggable";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
 import MasterSelector from "@/components/common/master-selector/MasterSelector";
 import { ApiHelper } from "@/apis/AxiosHelper";
@@ -318,7 +318,7 @@ export default {
   mixins: [PopoverMixin],
 
   components: {
-    draggable: vuedraggable,
+    draggable: VueDraggable,
     "custom-input-number": customInputNumber,
     "pop-over": MasterSelector
   },
@@ -446,7 +446,6 @@ export default {
     },
 
     selectedList() {
-      let retArr = [];
       const settingLeft = deepCopy(this.selectedSettingLeft);
       const settingRight = deepCopy(this.selectedSettingRight);
 
@@ -457,7 +456,7 @@ export default {
       settingRight.max = settingRight.max.editValue;
 
       // グラフ縦線左右を1つの配列にまとめ
-      retArr = [
+      const retArr = [
         ...this.selectedListLeft.map(item => {
           return { ...item, ...settingLeft };
         }),
@@ -611,10 +610,8 @@ export default {
               subCategoryOther => {
                 return (
                   subCategoryOther.subCategoryNo ===
-                  srcSubCategory.subCategoryNo
-                );
-              }
-            );
+                  srcSubCategory.subCategoryNo);
+              });
 
             // 編集中マスタに項目が存在しないと非表示にする
             if (!destSubCategory) {
@@ -887,8 +884,8 @@ export default {
         // 大項目がバイタル情報の場合
       } else if (
         (2 <= categoryNo && categoryNo <= 11) ||
-        (1002 <= categoryNo && categoryNo <= 1019) // 1012 -> 1019: 投与薬剤グラフ と 処方薬剤グラフ
-      ) {
+        (1002 <= categoryNo && categoryNo <= 1019)
+      ) { // 1012 -> 1019: 投与薬剤グラフ と 処方薬剤グラフ
         isDispIcon = true;
       }
       return isDispIcon;
@@ -1298,7 +1295,7 @@ export default {
   margin: 4px;
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 500px;
   height: 100%;
   padding: 25px;
@@ -1355,7 +1352,7 @@ export default {
   margin-left: 5px;
 }
 
-.graph-setting >>> label {
+.graph-setting :deep(label) {
   margin-right: 5px;
 }
 </style>

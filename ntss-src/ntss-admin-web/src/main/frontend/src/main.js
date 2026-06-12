@@ -1,90 +1,132 @@
-// The Vue build version to load with the `import` command
-// (runtime-only or standalone) has been set in webpack.base.conf with an alias.
-import Vue from "vue";
-import App from "@/App";
-import router from "@/router";
-import store from "@/stores";
-import VueOnsen from "vue-onsenui";
+/**
+ * アプリエントリ（Vue2 main.js と同等のグローバル登録を Vue3 / createApp で再構成）
+ */
+import { createApp } from "@/compat/vue/runtime";
+import $ from "@/compat/jquery";
+import "@/compat/kendo/theme.css";
+import "@/compat/assets/fontawesome.css";
+import PublicAssetsCompat from "@/compat/assets/public-path.js";
+
+import { GridNoRecords as KendoVueGridNoRecords } from "@/compat/kendo/native-grid";
+import Highcharts, { HighchartsVue } from "@/compat/charts/highcharts";
+import VCalendar from "@/compat/calendar/v-calendar";
+
+import App from "./App.vue";
+import router from "./router";
+import store from "./stores";
 import "./registerServiceWorker";
-import "./FabServiceWorker";
-import Layout from "@/views/LayoutView";
-import LayoutSplit from "@/views/LayoutSplitView";
-import LayoutContent from "@/views/LayoutContentView";
-import VeeValidate, { Validator } from "vee-validate";
-import customMessages from "@/validators/messages";
-import alpha_num_symbol from "@/validators/alpha-num-symbol.js";
-import KendoGridMixin from "@/components/KendoGridMixin";
-import Notifications from "vue-notification";
 
-// Font Awesome のメインファイルを import
-import "@fortawesome/fontawesome-free-webfonts/css/fontawesome.css";
-// 使用するカテゴリーのファイルを import
-import "@fortawesome/fontawesome-free-webfonts/css/fa-brands.css";
-import "@fortawesome/fontawesome-free-webfonts/css/fa-regular.css";
-import "@fortawesome/fontawesome-free-webfonts/css/fa-solid.css";
-import "onsenui/css/onsenui.css";
-import "onsenui/css/onsenui-core.css";
-import "onsenui/css/onsen-css-components.css";
-import "@progress/kendo-ui";
-import "@progress/kendo-theme-bootstrap/dist/all.css";
-import { Grid, GridInstaller } from "@progress/kendo-grid-vue-wrapper";
-import { LayoutInstaller } from "@progress/kendo-layout-vue-wrapper";
-import { DropdownsInstaller } from "@progress/kendo-dropdowns-vue-wrapper";
-import {
-  DataSource,
-  DataSourceInstaller
-} from "@progress/kendo-datasource-vue-wrapper";
-import { ValidatorInstaller } from "@progress/kendo-validator-vue-wrapper";
-import { BarcodesInstaller } from "@progress/kendo-barcodes-vue-wrapper";
-import { UploadInstaller } from "@progress/kendo-upload-vue-wrapper";
-import "vue-grid-layout";
-import VCalendar from 'v-calendar';
+import VueOnsenBridge from "@/compat/onsen/components";
+import VTouch from "@/components/common/VTouch.vue";
+import TouchKeyboard from "@/compat/keyboard/TouchKeyboard.vue";
+import LayoutView from "@/views/LayoutView.vue";
+import LayoutSplitView from "@/views/LayoutSplitView.vue";
+import LayoutContentView from "@/views/LayoutContentView.vue";
+import VCard from "@/components/common/VCard.vue";
 
-import { Grid as NativeGrid } from '@progress/kendo-vue-grid'
-import VueSanitize from "vue-sanitize";
+import DirectivesPlugin from "@/directives/directive.js";
+import NtssLogger from "@/ntssLogger.js";
+import KendoGridMixin from "@/components/KendoGridMixin.js";
+import KendoGrid from "@/compat/kendo/KendoGrid.vue";
+import KendoGridColumn from "@/compat/kendo/KendoGridColumn.vue";
+import KendoGridToolbar from "@/compat/kendo/KendoGridToolbar.vue";
+import KendoDataSource from "@/compat/kendo/KendoDataSource.vue";
+import KendoSchedulerView from "@/compat/kendo/KendoSchedulerView.vue";
+import KendoTabStrip from "@/compat/kendo/KendoTabStrip.vue";
+// Layout 系は Vue2 実装を再確認した結果、Kendo 側は TabStrip のみを実使用対象とする。
+// ntss-layout / ntss-layout-split / ntss-layout-content は引き続きアプリ独自レイアウトを利用する。
+import KendoUpload from "@/compat/kendo/KendoUpload.vue";
+import KendoQrCode from "@/compat/kendo/KendoQrCode.vue";
+import KendoDropDownList from "@/compat/kendo/KendoDropDownList.vue";
+import KendoMultiSelect from "@/compat/kendo/KendoMultiSelect.vue";
+import KendoScheduler from "@/compat/kendo/KendoScheduler.vue";
+import { installKendoNativeWidgets } from "@/compat/kendo/native-widgets.js";
+import { prepareKendoJQueryServices } from "@/compat/kendo/kendo-jquery-services.js";
+import ValidationMixin from "@/compat/validation/validation-mixin";
+import VeeValidateCompat from "@/compat/validation/plugin.js";
+import Vue3TouchEventsCompat from "@/compat/touch/vue3-touch-events.js";
 
-// ロガー読込
-import Logger from "./ntssLogger"
-import Directives from './directives/directive.js'
-Vue.use(Directives)
-Vue.use(Logger);
+import SanitizeCompat, { sanitizeText } from "@/compat/sanitize";
+import NotificationCompat from "@/compat/notification";
+import GlobalOnsAlertDialog from "@/components/common/onsen/GlobalOnsAlertDialog";
+import "@/compat/styles/legacy-font.css";
+import FontSizeSetCompatMixin from "@/compat/styles/font-size-set-compat.js";
 
-Vue.config.productionTip = false;
+globalThis.$ = $;
+globalThis.jQuery = $;
+globalThis.global = globalThis;
 
-Vue.use(VueOnsen);
-Vue.use(GridInstaller);
-Vue.use(DropdownsInstaller);
-Vue.use(DataSourceInstaller);
-Vue.use(LayoutInstaller);
-Vue.use(BarcodesInstaller);
-Vue.use(UploadInstaller);
-Vue.use(Notifications);
-Vue.use(VueSanitize);
-// カスタマイズしたメッセージを読ませる
-Vue.use(VeeValidate, customMessages);
-Vue.use(ValidatorInstaller);
-Validator.localize("ja", customMessages);
+if (typeof globalThis !== "undefined") {
+  globalThis.$ = $;
+  globalThis.jQuery = $;
+}
 
-Validator.extend("alpha_num_symbol", alpha_num_symbol);
+async function bootstrap() {
+  try {
+    // Kendo jQuery は QRCode / Validator / DataSource の jQuery フォールバックとして利用する
+    await prepareKendoJQueryServices();
+    installKendoNativeWidgets();
 
-Vue.component("ntss-layout", Layout);
-Vue.component("ntss-layout-split", LayoutSplit);
-Vue.component("ntss-layout-content", LayoutContent);
-Vue.mixin(KendoGridMixin);
-Vue.use(VCalendar, {
-  componentPrefix: 'vc'
-});
-Vue.component('kendo-grid-native', NativeGrid);
+    const app = createApp(App);
 
-Vue.config.productionTip = false;
+    app.config.globalProperties.$ = $;
+    app.config.globalProperties.jQuery = $;
+    app.config.globalProperties.$sanitize = sanitizeText;
 
-new Vue({
-  components: {
-    Grid,
-    DataSource,
-    DataSourceInstaller
-  },
-  router,
-  store,
-  render: h => h(App)
-}).$mount("#app");
+    app.use(SanitizeCompat);
+    app.use(PublicAssetsCompat);
+    app.use(Vue3TouchEventsCompat);
+    app.use(VeeValidateCompat);
+
+    app.use(store);
+    app.use(router);
+    app.use(HighchartsVue?.default || HighchartsVue, { highcharts: Highcharts });
+    app.use(VueOnsenBridge);
+    app.use(DirectivesPlugin);
+    app.use(NtssLogger);
+    app.use(NotificationCompat);
+
+    app.mixin(ValidationMixin);
+    app.mixin(FontSizeSetCompatMixin);
+    app.mixin(KendoGridMixin);
+
+    app.component("ntss-layout", LayoutView);
+    app.component("ntss-layout-split", LayoutSplitView);
+    app.component("ntss-layout-content", LayoutContentView);
+    app.component("v-card", VCard);
+    app.component("grid-norecords", KendoVueGridNoRecords);
+    app.component("kendo-grid", KendoGrid);
+    app.component("kendo-grid-column", KendoGridColumn);
+    app.component("kendo-grid-toolbar", KendoGridToolbar);
+    app.component("kendo-datasource", KendoDataSource);
+    app.component("kendo-scheduler-view", KendoSchedulerView);
+    app.component("kendo-tabstrip", KendoTabStrip);
+    app.component("kendo-upload", KendoUpload);
+    app.component("ntss-upload", KendoUpload);
+    app.component("kendo-qrcode", KendoQrCode);
+    app.component("kendo-dropdownlist", KendoDropDownList);
+    app.component("kendo-multiselect", KendoMultiSelect);
+    app.component("kendo-scheduler", KendoScheduler);
+    app.component("VTouch", VTouch);
+    app.component("vue-touch-keyboard", TouchKeyboard);
+
+    app.use(VCalendar, {
+      componentPrefix: "vc"
+    });
+
+    const appInstance = app.mount("#app");
+    const scopedDocument = appInstance?.$el?.ownerDocument || document;
+
+    const globalOnsDialogRoot = scopedDocument.createElement("div");
+    globalOnsDialogRoot.id = "ons-alert-dialog-global-root";
+    scopedDocument.body.appendChild(globalOnsDialogRoot);
+    const globalOnsDialogApp = createApp(GlobalOnsAlertDialog);
+    globalOnsDialogApp.use(store);
+    globalOnsDialogApp.use(VueOnsenBridge);
+    globalOnsDialogApp.mount(globalOnsDialogRoot);
+  } catch (error) {
+    console.error("[bootstrap] failed to initialize app", error);
+  }
+}
+
+bootstrap();

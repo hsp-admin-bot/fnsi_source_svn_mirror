@@ -7,8 +7,8 @@
     <table>
       <thead>
         <tr>
-          <template v-for="(column, index) in normalizedColumnDefinition">
-            <th v-if="!validationField(column.field)" :key="index">
+          <template v-for="(column, index) in normalizedColumnDefinition" :key="index">
+            <th v-if="!validationField(column.field)">
               <span>{{ column.title }}</span>
             </th>
           </template>
@@ -16,8 +16,8 @@
       </thead>
       <tbody>
         <tr>
-          <template v-for="(column, index) in normalizedColumnDefinition">
-            <td v-if="!validationField(column.field)" :key="index">
+          <template v-for="(column, index) in normalizedColumnDefinition" :key="index">
+            <td v-if="!validationField(column.field)">
               <div v-if="getSchemaByField(column.field).type === 'string'">
                 <input type="text"
                   :placeholder="getValueByField(column.field)"
@@ -51,7 +51,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * サンプルに記載する情報

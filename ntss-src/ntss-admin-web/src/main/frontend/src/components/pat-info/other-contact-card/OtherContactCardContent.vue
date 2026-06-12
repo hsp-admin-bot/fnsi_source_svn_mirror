@@ -15,7 +15,10 @@
         :class="classObjectItem(json)"
       >
         <table class="card-table">
-          {{
+          <tbody>
+          <tr class="card-index-row">
+            <td colspan="3">
+              {{
             index + 1
           }}
           <!--mod FNSI-画面部品デザイン じょはく start-->
@@ -28,6 +31,8 @@
             <v-ons-icon icon="fa-trash"/>
           </button>
           <br />
+            </td>
+          </tr>
           <tr>
             <td></td>
             <td colspan="2">
@@ -46,25 +51,43 @@
             <td>
               <custom-input
                 :value="getPatDataJsonArray(json, 'pat_id')"
-                :disabled="hasPatId(json) || !getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="hasPatId(json) || !getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
               />
             </td>
             <td class="item-data">
-              <v-ons-button
-                :ref="'btnSelectPat' + index"
-                class="common-style-select-button btn3-normal pat-btn-margin-right"
-                @click="selectOtherPat(index)"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
-              >
-                選択
-              </v-ons-button>
-              <v-ons-button
-                class="common-style-select-button btn2-cancel"
-                @click="clearPatID(json)"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
-              >
-                クリア
-              </v-ons-button>
+              <span class="other-contact-master-actions">
+                <common-master-selector
+                  :ref="'ocms' + index"
+                  :masterType="MasterType.OTHER_CONTACT_PAT_PAT_INFO"
+                  :facilityCd="facilityCd"
+                  :patientId="selectedPatId"
+                  :extraParams="otherContactComposeExtraParams(index)"
+                  :initItem="otherContactPatRowItem(index)"
+                  :editItem="otherContactPatRowItem(index)"
+                  :popoverAnchorElement="getOtherContactPatPopoverAnchor(index)"
+                  :btnVisible="false"
+                  :btnName="'選択'"
+                  :isVisible="false"
+                  :btnClass="'common-style-select-button btn3-normal pat-btn-margin-right'"
+                  :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+                  @popover-return="onOtherContactPatComposeReturn"
+                />
+                <v-ons-button
+                  :ref="`btnSelectPat${index}`"
+                  class="common-style-select-button btn3-normal pat-btn-margin-right"
+                  @click="selectOtherPat(index)"
+                  :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+                >
+                  選択
+                </v-ons-button>
+                <v-ons-button
+                  class="common-style-select-button btn2-cancel"
+                  @click="clearPatID(json)"
+                  :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+                >
+                  クリア
+                </v-ons-button>
+              </span>
             </td>
           </tr>
           <tr>
@@ -73,7 +96,7 @@
               <custom-simple-textarea-a
                 ref="last_name"
                 :value="getPatDataJsonArray(json, 'last_name')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 :is-required="json.ctl_no.editValue >= 0"
                 placeholder="姓"
                 form-name="氏名(姓)"
@@ -85,7 +108,7 @@
               <custom-simple-textarea-a
                 ref="first_name"
                 :value="getPatDataJsonArray(json, 'first_name')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 :is-required="json.ctl_no.editValue >= 0"
                 placeholder="名"
                 form-name="氏名(名)"
@@ -100,7 +123,7 @@
               <custom-simple-textarea-a
                 ref="last_name_kana"
                 :value="getPatDataJsonArray(json, 'last_name_kana')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 placeholder="セイ"
                 form-name="フリガナ(セイ)"
                 style="vertical-align: middle;"
@@ -111,7 +134,7 @@
               <custom-simple-textarea-a
                 ref="first_name_kana"
                 :value="getPatDataJsonArray(json, 'first_name_kana')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 placeholder="メイ"
                 form-name="フリガナ(メイ)"
                 style="vertical-align: middle;"
@@ -125,26 +148,31 @@
               <custom-simple-textarea-a
                 :value="getPatDataJsonArray(json, 'relation_name')"
                 :display-string="relationName(json)"
-                :disabled="hasRelationCd(json) || !getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="hasRelationCd(json) || !getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 style="vertical-align: middle;"
               />
             </td>
             <td class="item-data">
-              <v-ons-button
-                :ref="'btnSelectRelation' + index"
-                class="common-style-select-button btn3-normal pat-btn-margin-right"
-                @click="selectRelation(index, popoverDataRelation)"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
-              >
-                選択
-              </v-ons-button>
-              <v-ons-button
-                class="common-style-select-button btn2-cancel"
-                @click="clearRelationCd(index, json)"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
-              >
-                クリア
-              </v-ons-button>
+              <span class="other-contact-master-actions">
+                <common-master-selector
+                  :masterType="MasterType.RELATIONSHIP_PAT_INFO"
+                  :facilityCd="facilityCd"
+                  :initItem="{ value: getPatDataJsonArray(json, 'relation_cd').initValue }"
+                  :editItem="{ value: getPatDataJsonArray(json, 'relation_cd').editValue }"
+                  :btnName="'選択'"
+                  :isVisible="false"
+                  :btnClass="'common-style-select-button btn3-normal pat-btn-margin-right'"
+                  :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+                  @popover-return="setRelation($event, index)"
+                />
+                <v-ons-button
+                  class="common-style-select-button btn2-cancel"
+                  @click="clearRelationCd(index, json)"
+                  :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+                >
+                  クリア
+                </v-ons-button>
+              </span>
             </td>
           </tr>
           <tr>
@@ -155,7 +183,7 @@
               <custom-input
                 ref="zip_cd"
                 :value="getPatDataJsonArray(json, 'zip_cd')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 :validators="[]"
                 type="tel"
                 maxlength="7"
@@ -165,7 +193,7 @@
             <td class="item-data">
               <v-ons-button
                 class="common-style-select-button  btn3-normal"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 @click="
                   showAddressSearchModal(setAddressValues(json));
                   mapVisible = true;
@@ -182,7 +210,7 @@
             <td colspan="2" class="item-data">
               <com-textarea
                 class="comTextarea"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 :content="getPatDataJsonArray(json, 'address')"
                 :idTextarea="'com-textarea-other-contact-address' + index"
                 cssClass="textarea-custom-text-font textarea-resize-vertical"
@@ -197,7 +225,7 @@
               <custom-input
                 ref="tel1"
                 :value="getPatDataJsonArray(json, 'tel1')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 :validators="[]"
                 type="tel"
                 form-name="電話番号"
@@ -212,7 +240,7 @@
               <custom-input
                 ref="tel2"
                 :value="getPatDataJsonArray(json, 'tel2')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 :validators="[]"
                 type="tel"
                 form-name="電話番号2"
@@ -225,7 +253,7 @@
               <custom-input
                 ref="fax"
                 :value="getPatDataJsonArray(json, 'fax')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 :validators="[]"
                 type="tel"
                 form-name="FAX"
@@ -238,7 +266,7 @@
               <custom-input
                 ref="e_mail"
                 :value="getPatDataJsonArray(json, 'e_mail')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 :validators="[]"
                 type="email"
                 form-name="Email"
@@ -250,7 +278,7 @@
             <td colspan="2" class="item-data">
               <custom-simple-textarea-a
                 :value="getPatDataJsonArray(json, 'work_name')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 style="vertical-align: middle;"
               />
             </td>
@@ -262,7 +290,7 @@
               <custom-input
                 ref="work_tel"
                 :value="getPatDataJsonArray(json, 'work_tel')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 :validators="[]"
                 type="tel"
                 form-name="勤務先電話番号"
@@ -276,7 +304,7 @@
             <td colspan="2" class="item-data">
               <com-textarea
                 class="comTextarea"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 :content="getPatDataJsonArray(json, 'memo1')"
                 :idTextarea="'com-textarea-other-contact-memo1' + index"
                 cssClass="textarea-custom-text-font textarea-resize-vertical"
@@ -289,7 +317,7 @@
             <td colspan="2" class="item-data">
               <com-textarea
                 class="comTextarea"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 :content="getPatDataJsonArray(json, 'memo2')"
                 :idTextarea="'com-textarea-other-contact-memo2'+index"
                 cssClass="textarea-custom-text-font textarea-resize-vertical"
@@ -297,24 +325,13 @@
               />
             </td>
           </tr>
+          
+        
+          </tbody>
         </table>
       </div>
     </draggable>
 
-    <!-- 患者選択 -->
-    <pop-over
-      v-bind="popoverDataPatId"
-      :target-position-element="popoverTargetPat"
-      @popover-close="closePopover(popoverDataPatId)"
-      @popover-return="setPatContactInfo($event.value)"
-    />
-    <!-- 続柄選択 -->
-    <pop-over
-      v-bind="popoverDataRelation"
-      :target-position-element="popoverTargetRelation"
-      @popover-close="closePopover(popoverDataRelation)"
-      @popover-return="setRelation($event)"
-    />
   </div>
 </template>
 
@@ -322,10 +339,10 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized, deepCopy } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapActions } from "vuex";
-import { mapGetters } from "vuex";
+import { mapActions } from "@/compat/vue/vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
 // add 編集権限の適用 liang start
 // del #10359 編集権限の動作不正 dengshen start
@@ -335,11 +352,17 @@ import baseCardContent from "@/components/pat-info/base-components/BaseCardConte
 // add 編集権限の適用 liang end
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import _ from "@/compat/collections/lodash";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 
 export default {
   name: 'OtherContactCard',
   mixins: [baseCardContent],
+  components: {
+    "common-master-selector": commonMasterSelector
+  },
   data() {
     return {
       arrRelation: [],
@@ -359,9 +382,9 @@ export default {
       // editFlag: null,
       // // add 編集権限の適用 liang end
       // del #10359 編集権限の動作不正 dengshen end
-      popoverDataPatId: {},
-      popoverDataRelation: {},
+      MasterType,
       selectedIndex: null,
+      resolvedPatIdByRow: {},
       patContactInfoKeys: [
         "zip_cd",
         "address",
@@ -376,6 +399,7 @@ export default {
       ],
       mapVisible: false,
       mapUpdateTarget: null,
+      selectPatInfoAddressEventName: null,
 
     };
   },
@@ -409,21 +433,7 @@ export default {
       }
     },
 
-    // マスタ選択ポップオーバーの表示位置とする対象コンポーネント
-    popoverTargetPat() {
-      // 初期表示時は未選択なのでnull
-      return this.selectedIndex === null
-        ? null
-        : this.$refs[`btnSelectPat${this.selectedIndex}`][0];
-    },
-
-    // マスタ選択ポップオーバーの表示位置とする対象コンポーネント
-    popoverTargetRelation() {
-      // 初期表示時は未選択なのでnull
-      return this.selectedIndex === null
-        ? null
-        : this.$refs[`btnSelectRelation${this.selectedIndex}`][0];
-    },
+    // 続柄の選択は CommonMasterSelector に移行済み
     // add by maxueqiang bug:3722 連絡先の住所検索結果に本人情報の住所検索結果が表示される
     setAddressValues(){
       return function(json) {
@@ -446,48 +456,42 @@ export default {
       });
     },
 
-    mstRelation() {
-      this.popoverDataRelation = this.createPopoverData(
-        "続柄",
-        null,
-        null,
-        "続柄名",
-        this.mstRelation,
-        "relationshipCd",
-        "relationshipName",
-        null
-      );
-    }
+    // 続柄の選択は CommonMasterSelector に移行済み
   },
 
   async created() {
     this.refreshData()
-    const eventBusName = this.isCreationPat ? "selectPatInfoAddressOtherContactNew" : "selectPatInfoAddressOtherContactChange";
-    EventBus.$on(eventBusName, event => {
+    this.selectPatInfoAddressEventName = this.isCreationPat ? "selectPatInfoAddressOtherContactNew" : "selectPatInfoAddressOtherContactChange";
+    EventBus.$off(this.selectPatInfoAddressEventName, this.onSelectPatInfoAddress);
+    EventBus.$on(this.selectPatInfoAddressEventName, this.onSelectPatInfoAddress);
+  },
+  // add bug #7125 修正 chen start
+  beforeUnmount() {
+    // mod #10789 新患登録画面を経由すると患者情報の住所が上書きできなくなる 本田 start
+    // EventBus.$off("selectPatInfoAddressOtherContact")
+    if (this.selectPatInfoAddressEventName) {
+      EventBus.$off(this.selectPatInfoAddressEventName, this.onSelectPatInfoAddress);
+    }
+    // mod #10789 新患登録画面を経由すると患者情報の住所が上書きできなくなる 本田 end
+  },
+  // add bug #7125 修正 chen end
+
+  methods: {
+    onSelectPatInfoAddress(event) {
       if (!this.mapVisible) return;
 
       this.setPatDataJsonArray(this.mapUpdateTarget, "address", event.address);
       this.setPatDataJsonArray(this.mapUpdateTarget, "zip_cd", event.zipCd);
       this.mapVisible = false;
       this.mapUpdateTarget = null;
-    });
-  },
-  // add bug #7125 修正 chen start
-  beforeDestroy() {
-    // mod #10789 新患登録画面を経由すると患者情報の住所が上書きできなくなる 本田 start
-    // EventBus.$off("selectPatInfoAddressOtherContact")
-    const eventBusName = this.isCreationPat ? "selectPatInfoAddressOtherContactNew" : "selectPatInfoAddressOtherContactChange";
-    EventBus.$off(eventBusName);
-    // mod #10789 新患登録画面を経由すると患者情報の住所が上書きできなくなる 本田 end
-    // dataの初期化
-    Object.assign(this.$data, this.$options.data());
-  },
-  // add bug #7125 修正 chen end
-
-  methods: {
+    },
     ...mapActions("multi-modal", ["showAddressSearchModal"]),
     getItemAuthorized(pageCd, itemCd) {
       return getAuthorized(pageCd, itemCd);
+    },
+    getOtherContactPatPopoverAnchor(index) {
+      const ref = this.$refs[`btnSelectPat${index}`];
+      return ref ? (Array.isArray(ref) ? ref[0] : ref) : null;
     },
     addFocusEvent(event){
       let element = event.target;
@@ -549,26 +553,43 @@ export default {
         value = patMain[0].pat_id;
       }
 
-      this.popoverDataPatId = this.createPopoverData(
-        "患者",
-        null,
-        null,
-        "患者名",
-        this.patPersonalMain,
-        "pat_id",
-        "pat_last_name",
-        null,
-        "pat_first_name",
-        value
-      );
+      this.resolvedPatIdByRow = {
+        ...this.resolvedPatIdByRow,
+        [index]: value
+      };
+      this.selectedIndex = index;
+      await this.$nextTick();
+      const cmsRef = this.$refs[`ocms${index}`];
+      const cms = cmsRef && (cmsRef[0] || cmsRef);
+      if (cms && typeof cms.openPopover === "function") {
+        await cms.openPopover();
+      }
+    },
 
-      this.selectPopoverData(index, this.popoverDataPatId);
+    otherContactComposeExtraParams(index) {
+      const json = this.jsonArray[index];
+      const hospPatId = json && json.pat_id ? json.pat_id.editValue : null;
+      return {
+        excludePatId: this.selectedPatId != null ? String(this.selectedPatId) : "",
+        initHospPatId: hospPatId != null && hospPatId !== "" ? String(hospPatId) : ""
+      };
+    },
+
+    otherContactPatRowItem(index) {
+      const value = this.resolvedPatIdByRow[index];
+      return { value: value != null ? value : null };
+    },
+
+    onOtherContactPatComposeReturn(data) {
+      const selectedPatId = data != null ? data.value : null;
+      this.setPatContactInfo(selectedPatId);
     },
 
     // add bug #7125 修正 chen start
     async refreshData() {
       const requestParam = {
-        facilityCd: this.selectedFacilityCd == "" ? this.facilityCd : this.selectedFacilityCd
+        facilityCd: this.selectedFacilityCd == "" ? this.facilityCd : this.selectedFacilityCd,
+        selectedPatId: this.selectedPatId
       };
 
       // add by maxueqiang ,課題６＿マスタ削除・期限切れ・禁忌アレル...
@@ -599,6 +620,8 @@ export default {
                 : item.relationshipName,
           }));
       this.selectedIndex = null;
+      this.resolvedPatIdByRow = {};
+      this.syncArrRelationFromJsonArray();
       this.initRecord = deepCopy(this.editRecord);
     },
 
@@ -606,29 +629,23 @@ export default {
     setJsonIndex(json, index) {
       this.selectJson = json;
       this.selectIndex = index;
-      this.deleteJsonArray( this.arrayColName, this.selectJson, this.selectIndex );
+      this.deleteJsonArray( this.arrayColName, this.selectJson, this.selectIndex);
     },
     // add FNSI-画面部品デザイン じょはく end
-
-    selectPopoverData(index, popoverData) {
-      this.selectedIndex = null;
-      // 選択ボタンを押した位置を保持
-      this.selectedIndex = index;
-      // ポップオーバーを表示
-      this.showPopover(popoverData);
-    },
 
     // 選択したIDとテーブル名pat_main内で一致した患者データを返す
     getPatPersonalMainRecord(selectedPatId) {
       return this.patPersonalMain.find(
-        element => element.pat_id === selectedPatId
+        element =>
+          element.pat_id === selectedPatId ||
+          String(element.pat_id) === String(selectedPatId)
       );
     },
 
     // ポップオーバー確定イベントハンドラ
     setPatContactInfo(selectedPatId) {
       // add FNSI-連絡先のID選択と続柄選択で、クリアボタンを無くし、未登録を選択することでクリアと同等の動きにする liang start
-      if ( selectedPatId == null || selectedPatId === "" ) {
+      if ( selectedPatId == null || selectedPatId === "") {
         this.setPatDataJsonArray(this.jsonArray[this.selectedIndex], "pat_id", null);
         this.setPatDataJsonArray(this.jsonArray[this.selectedIndex], "last_name", null);
         this.setPatDataJsonArray(this.jsonArray[this.selectedIndex], "first_name", null);
@@ -680,20 +697,10 @@ export default {
       }
     },
 
-    // ポップオーバー確定イベントハンドラ
-    setRelation(selectedMst) {
-      this.arrRelation[this.selectedIndex] = selectedMst.value;
-      // 選択ボタンを押した項目に続柄を設定
-      this.setPatDataJsonArray(
-        this.jsonArray[this.selectedIndex],
-        "relation_cd",
-        selectedMst.value
-      );
-      this.setPatDataJsonArray(
-        this.jsonArray[this.selectedIndex],
-        "relation_name",
-        selectedMst.text
-      );
+    setRelation(selectedMst, index) {
+      this.arrRelation[index] = selectedMst?.value;
+      this.setPatDataJsonArray(this.jsonArray[index], "relation_cd", selectedMst?.value);
+      this.setPatDataJsonArray(this.jsonArray[index], "relation_name", selectedMst?.text);
     },
 
     // IDクリア
@@ -728,17 +735,18 @@ export default {
       this.setPatDataJsonArray(json, "relation_name", null);
     },
 
+    syncArrRelationFromJsonArray() {
+      this.arrRelation = this.jsonArray.map(item => item?.relation_cd?.initValue ?? null);
+    },
+
     // 続柄名称取得
     relationName(json) {
       if (this.hasRelationCd(json)) {
-        // コードがセットされている場合はマスタ名称
-        if (this.arrRelation.length < this.jsonArray.length) {
-          // add FNSI-7967 治療状況リスト，マップから治療記録を開いた後に患者を切り替えて表示できない時がある 房 start
-          if (this.jsonArray[this.arrRelation.length].relation_cd) {
-            this.arrRelation[this.arrRelation.length] = this.jsonArray[this.arrRelation.length].relation_cd.initValue;
-          }
-          // add FNSI-7967 治療状況リスト，マップから治療記録を開いた後に患者を切り替えて表示できない時がある 房 end
+        const selectedRelationName = this.getPatDataJsonArray(json, "relation_name").editValue;
+        if (selectedRelationName) {
+          return selectedRelationName;
         }
+        // コードがセットされている場合はマスタ名称
         // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
         // return this.mstCdToName(
         return this.mstCdToNameIncludeDeleted(
@@ -785,30 +793,13 @@ export default {
     async setContentData(newValue, paramName, index) {
       this.setPatDataJsonArray(this.jsonArray[index], paramName, newValue);
     },
-    selectRelation(index, popoverDataRelation) {
-      popoverDataRelation.popoverContentDataset = popoverDataRelation.popoverContentDataset.filter(
-          item => !item.text.includes("【削除済み】")
-      );
-      const relationshipCd = this.arrRelation[index]
-      this.popoverDataRelation.popoverContentSelected.value = relationshipCd;
-      if (this.arrRelation[index]) {
-        const matchedRelations  = this.delMstRelations.filter(item => item.relationshipCd === relationshipCd);
-        if (matchedRelations.length > 0) {
-          popoverDataRelation.popoverContentDataset.push({
-            value: matchedRelations[0].relationshipCd,
-            text: matchedRelations[0].relationshipName,
-            fnValue: "",
-          })
-        }
-      }
-      this.selectPopoverData(index, popoverDataRelation);
-    },
+    // 続柄の選択は CommonMasterSelector に移行済み
     // mod 患者名入力チェック不正について、対応する。 dengshen start
     // filterInput(e){
     //   e.target.value = e.target.value.replace(/[`~!@#$%^&*()_\-+=<>?:"{}|,./;'\\[\]·~！@#￥%……&*（）——\-+={}|《》？：“”【】、；‘’，。、]/g, '').replace(/\s/g, "");
     // },
     filterInput: _.debounce(function (e) {
-      e.target.value = e.target.value.replace(/[`~!@#$%^&*()_\-+=<>?:"{}|,./;'\\[\]·~！@#￥%……&*（）——\-+={}|《》？：“”【】、；‘’，。、＃⃣⃣]/g, '').replace(/\s/g, "");
+      e.target.value = e.target.value.replace(/[`~!@#$%^&*()_+=<>?:"{}|,./;'\\[\]·~！@#￥%……&*（）——+={}|《》？：“”【】、；‘’，。、＃-]/g, '').replace(/\s/g, "");
     }),
     // mod 患者名入力チェック不正について、対応する。 dengshen end
   }
@@ -819,10 +810,13 @@ export default {
 <style src="../base-components/BaseCardStyle.css" scoped></style>
 <style scoped>
 /* カード個別のスタイルはここ */
+.card-table .card-index-row td {
+  padding: 0;
+}
 .zip-hyphen {
   font-size: 10px;
 }
-.card-table >>> textarea.custom-textarea {
+.card-table :deep(textarea.custom-textarea) {
   color: black !important;
 }
 .custom-textarea-edited {
@@ -833,5 +827,22 @@ export default {
 }
 .custom-textarea-invalid {
   background-color: rgba(255, 0, 0, 0.5);
+}
+:deep(ons-checkbox.checkbox) {
+  margin-top: 0;
+}
+
+/* CommonMasterSelector 根が v-ons-col で幅100%になり後続ボタンが折り返すのを防ぐ */
+.other-contact-master-actions {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  vertical-align: middle;
+}
+.other-contact-master-actions :deep(ons-col),
+.other-contact-master-actions :deep(.v-ons-col) {
+  width: auto;
+  flex: 0 0 auto;
 }
 </style>

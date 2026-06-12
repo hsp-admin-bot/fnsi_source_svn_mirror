@@ -1,11 +1,12 @@
 /** * 治療記録の子機能 実績情報ページ */
 <template>
   <submenu-base v-if="hasOrdNo">
-    <div slot="main" id="result-component">
+    <template #main>
+      <div id="result-component">
       <v-ons-list class="treatment-record-accordion">
         <v-ons-list-item
           expandable
-          :expanded.sync="isExpandedResult"
+          v-model:expanded="isExpandedResult"
           id="result-sub"
         >
           <label>実績情報</label>
@@ -21,7 +22,7 @@
         </v-ons-list-item>
         <v-ons-list-item
           expandable
-          :expanded.sync="isExpandedPuncture"
+          v-model:expanded="isExpandedPuncture"
           id="puncture-user-sub"
         >
           <label>穿刺者</label>
@@ -38,7 +39,7 @@
         </v-ons-list-item>
         <v-ons-list-item
           expandable
-          :expanded.sync="isExpandedReturn"
+          v-model:expanded="isExpandedReturn"
           id="return-user-sub"
         >
           <label>返血者</label>
@@ -56,7 +57,7 @@
         </v-ons-list-item>
         <v-ons-list-item
           expandable
-          :expanded.sync="isExpandedCharge"
+          v-model:expanded="isExpandedCharge"
           id="charge-user-sub"
         >
           <label>担当者</label>
@@ -71,8 +72,10 @@
           />
         </v-ons-list-item>
       </v-ons-list>
-    </div>
-    <div slot="footer" class="flex-container treatment-submenu" >
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container treatment-submenu" >
       <div class="denial-btn-area">
         <v-ons-button
           class="button denial-btn btn2-cancel"
@@ -89,11 +92,13 @@
         >保存</v-ons-button
         >
       </div>
-    </div>
+      </div>
+    </template>
   </submenu-base>
 </template>
 
 <script>
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized} from "@/functions/common/CommonFunctions.js";
 //add #12300 20260427 zhaojinzhao start
@@ -101,7 +106,9 @@ import { isJsonChanged} from "@/functions/common/CommonFunctions.js";
 //add #12300 20260427 zhaojinzhao end
 // add #10359 編集権限の動作不正 dengshen end
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc start
-import {mapActions, mapGetters, mapMutations} from "vuex";
+import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end
 import SubmenuBase from "@/components/treatment-record/SubmenuBaseComponent";
 import ResultSubComponent from "@/components/treatment-record/submenu/result/ResultSubComponent";
@@ -128,7 +135,7 @@ import {
   // 治療方法マスタ取得API
   sendRequestGetMstTreatment,
 } from "@/apis/treatment-record";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add FNSI 1006 No.538 治療記録 外部連携APIを呼び出 start -- Sanjingye Sun 20210112
 import { createJournal } from "@/apis/journal";
 // add FNSI 1006 No.538 治療記録 外部連携APIを呼び出 end -- Sanjingye Sun 20210112
@@ -138,10 +145,8 @@ import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from "@/functions/common/MessageFormat";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import dayjs from "@/compat/date/dayjs";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
-import isEqualWith from 'lodash/isEqualWith';
-import cloneDeep from 'lodash/cloneDeep';
-import moment from 'moment';
 
 export default {
   // mod #10359 編集権限の動作不正 dengshen start
@@ -264,7 +269,7 @@ export default {
       //   return false;
       // }
       // del #10359 編集権限の動作不正 dengshen end
-      return this.isChanged && this.$validator.errors.items.length === 0;
+      return this.isChanged && this.validationErrors.length === 0;
     },
 
     isReadOnly() {
@@ -310,7 +315,10 @@ export default {
         return;
       }
       this.startLoadingScreen();
-      await this.getTreatmentRecordResult(this.getOrdNo).then(async(response) => {
+      await this.getTreatmentRecordResult({
+        ordNo: this.getOrdNo,
+        selectedPatId: this.selectedPatId
+      }).then(async(response) => {
         // FNSI-add 診療科表示不正 徐 end
         // add #8896 条件送信後の治療記録画面で名称をマスタ参照している項目がある 20230701 ztc start
         this.initResponseData = JSON.parse(JSON.stringify(response.data));
@@ -364,6 +372,19 @@ export default {
       //   this.$router.push({ name: "treatment-record" });
       // });
     },
+    isValidIsoDateTime(value) {
+      if (!value) {
+        return false;
+      }
+      const isoFormats = [
+        "YYYY-MM-DDTHH:mm:ss.SSSZ",
+        "YYYY-MM-DDTHH:mm:ssZ",
+        "YYYY-MM-DDTHH:mm:ss",
+        "YYYY-MM-DDTHH:mmZ",
+        "YYYY-MM-DDTHH:mm"
+      ];
+      return isoFormats.some(format => dayjs(value, format, true).isValid());
+    },
     /**
      * 日付項目をDate型に変換
      */
@@ -387,7 +408,7 @@ export default {
       if (this.actualModel.rst_puncture_user_info !== null) {
         // 穿刺時刻
         let rstPunctureDate = null;
-        if (this.actualModel.rst_puncture_user_info.date && moment(this.actualModel.rst_puncture_user_info.date, moment.ISO_8601, true).isValid()) {
+        if (this.actualModel.rst_puncture_user_info.date && this.isValidIsoDateTime(this.actualModel.rst_puncture_user_info.date)) {
           rstPunctureDate = new Date(
             this.actualModel.rst_puncture_user_info.date
           );
@@ -402,7 +423,7 @@ export default {
       if (this.actualModel.rst_return_user_info !== null) {
         // 返血時刻
         let rstReturnDate = null;
-        if (this.actualModel.rst_return_user_info.date && moment(this.actualModel.rst_return_user_info.date, moment.ISO_8601, true).isValid()) {
+        if (this.actualModel.rst_return_user_info.date && this.isValidIsoDateTime(this.actualModel.rst_return_user_info.date)) {
           rstReturnDate = new Date(this.actualModel.rst_return_user_info.date);
           rstReturnDate.setSeconds(0, 0);
           this.actualModel.rst_return_user_info.date = dateFormat.utc2Jst(rstReturnDate);
@@ -440,7 +461,7 @@ export default {
      * 取得した治療方法マスタはmstTreatmentに格納する.
      */
     async getMstTreatment() {
-      const response = await sendRequestGetMstTreatment();
+      const response = await sendRequestGetMstTreatment(undefined, this.selectedPatId);
       this.mstTreatment = response.data;
     },
 
@@ -685,7 +706,7 @@ export default {
       // add FNSI 1006 No.538 治療記録 外部連携APIを呼び出 start -- Sanjingye Sun 20210112
       createJournal(params);
       // add FNSI 1006 No.538 治療記録 外部連携APIを呼び出 end -- Sanjingye Sun 20210112
-      let elements = document.getElementsByClassName("custom-input-edited");
+      let elements = getScopedElementsByClassName("custom-input-edited", this.$el || null);
       for (let i = elements.length - 1; i >= 0; i--) {
         elements[i].classList.remove("custom-input-edited");
       }
@@ -807,8 +828,7 @@ export default {
         //add #12300 20260427 zhaojinzhao
         this.isTrueChanged()
       } else {
-        this.$set(this.actualModel, "rst_puncture_user_info", value)
-        //add #12300 20260427 zhaojinzhao
+        ((this.actualModel)["rst_puncture_user_info"] = value)
         this.isTrueChanged()
       }
     },
@@ -822,8 +842,7 @@ export default {
       //add #12300 20260427 zhaojinzhao
         this.isTrueChanged()
       } else {
-        this.$set(this.actualModel, "rst_return_user_info", value)
-       //add #12300 20260427 zhaojinzhao
+        ((this.actualModel)["rst_return_user_info"] = value)
         this.isTrueChanged()
       }
     },
@@ -837,8 +856,7 @@ export default {
       //add #12300 20260427 zhaojinzhao
         this.isTrueChanged()
       } else {
-        this.$set(this.actualModel, "rst_charge_user_info", value);
-       //add #12300 20260427 zhaojinzhao
+        ((this.actualModel)["rst_charge_user_info"] = value);
         this.isTrueChanged()
       }
     },
@@ -1010,7 +1028,7 @@ export default {
     refresh() {
       // 子機能ボタンエリアの更新
       this.$emit("update");
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       //mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 start
@@ -1027,7 +1045,7 @@ export default {
     },
      // add 10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
      eventBusRefresh() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       if (this.isChanged && this.alertFlag) {
@@ -1072,28 +1090,28 @@ export default {
   // created() {
   async created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // FNSI-add 診療科表示不正 徐 end
     // 子コンポーネントで使用するコンボリストを取得
     const emptyOption = { text: null, cd: null };
     // クール
-    this.getKurComboList().then(
+    this.getKurComboList({ selectedPatId: this.selectedPatId }).then(
       (response) => (this.comboList.kur = response.data)
     );
     // ベッド
-    this.getBedComboList().then(
+    this.getBedComboList({ selectedPatId: this.selectedPatId }).then(
       (response) => (this.comboList.bed = response.data)
     );
     // 病棟
-    this.getWardComboList().then((response) => {
+    this.getWardComboList({ selectedPatId: this.selectedPatId }).then((response) => {
       this.comboList.ward = [emptyOption].concat(response.data);
     });
     // 診療科
-    this.getCourseComboList().then((response) => {
+    this.getCourseComboList({ selectedPatId: this.selectedPatId }).then((response) => {
       this.comboList.course = [emptyOption].concat(response.data);
     });
     // 治療方法マスタ
-    this.getTreatmentMethodComboList().then((response) => {
+    this.getTreatmentMethodComboList({ selectedPatId: this.selectedPatId }).then((response) => {
       this.comboList.treatment = [emptyOption].concat(response.data);
     });
     // イベント登録
@@ -1113,7 +1131,7 @@ export default {
   },
   // add 共有設定の追加 周雨晴 2020/09/22 start
   mounted() {
-    const submenu = document.getElementsByClassName("select-btn");
+    const submenu = getScopedElementsByClassName("select-btn", this.$el || null);
     if (
       this.getSharedFacilityCd !== undefined &&
       this.getSharedFacilityCd != null
@@ -1137,7 +1155,7 @@ export default {
     }
     // add 共有設定の追加 周雨晴 2020/09/22 end
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
     // del refresh方法処理不正について、対応する。 dengshen start
@@ -1166,5 +1184,8 @@ export default {
 #charge-user-sub {
   overflow: hidden;
   border: 1px solid #dddddd;
+}
+:deep(.common-style-select-button){
+  margin-left: 5px !important;
 }
 </style>

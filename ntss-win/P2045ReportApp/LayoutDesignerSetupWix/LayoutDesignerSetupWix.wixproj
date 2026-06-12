@@ -12,7 +12,7 @@
       ProductCode は UpgradeCodeGuid + ProductVersion から自動生成される（UUID v5）
       UpgradeCodeGuid は絶対に変えない
     -->
-    <ProductVersion>2.0.41</ProductVersion>
+    <ProductVersion>2.0.42</ProductVersion>
     <UpgradeCodeGuid>29F50B52-E763-4F77-AA5E-DFE362DD19EB</UpgradeCodeGuid>
     <DefineConstants>
       SrcDesigner=$(MSBuildProjectDirectory)\..\LayoutDesigner\;

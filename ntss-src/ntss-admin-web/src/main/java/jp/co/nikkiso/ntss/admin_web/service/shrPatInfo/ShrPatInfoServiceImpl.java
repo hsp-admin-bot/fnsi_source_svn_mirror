@@ -1,15 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.service.shrPatInfo;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jp.co.nikkiso.ntss.admin_web.config.AwsConfiguration;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
@@ -43,7 +36,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
@@ -62,12 +54,20 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -113,10 +113,10 @@ public class ShrPatInfoServiceImpl implements ShrPatInfoService {
    * @return s3 S3オブジェクト
    */
   @Autowired
-  private AwsConfiguration awsS3;
+  private S3Client s3;
 
-  private AmazonS3 s3() {
-    return awsS3.s3();
+  private S3Client s3() {
+    return s3;
   }
 
 
@@ -381,12 +381,16 @@ public class ShrPatInfoServiceImpl implements ShrPatInfoService {
       } else {
         try (InputStream inputStream = file.getInputStream()) {
 
-          s3().deleteObject(new DeleteObjectRequest(s3BucketInFcd, path));
+          s3().deleteObject(DeleteObjectRequest.builder()
+            .bucket(s3BucketInFcd)
+            .key(path)
+            .build());
 
-          ObjectMetadata metadata = new ObjectMetadata();
-          metadata.setContentLength(file.getSize());
-
-          s3().putObject(new PutObjectRequest(s3BucketInFcd, path, inputStream, metadata));
+          s3().putObject(PutObjectRequest.builder()
+            .bucket(s3BucketInFcd)
+            .key(path)
+            .contentLength(file.getSize())
+            .build(), RequestBody.fromInputStream(inputStream, file.getSize()));
 
         } catch (Exception e) {
           throw e;
@@ -445,11 +449,16 @@ public class ShrPatInfoServiceImpl implements ShrPatInfoService {
     } else {
       try (InputStream inputStream = file.getInputStream()) {
 
-        s3().deleteObject(new DeleteObjectRequest(s3BucketInFcd, path));
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setContentLength(file.getSize());
         // S3アップロード
-        s3().putObject(new PutObjectRequest(s3BucketInFcd, path, file.getInputStream(), metadata));
+        s3().deleteObject(DeleteObjectRequest.builder()
+          .bucket(s3BucketInFcd)
+          .key(path)
+          .build());
+        s3().putObject(PutObjectRequest.builder()
+          .bucket(s3BucketInFcd)
+          .key(path)
+          .contentLength(file.getSize())
+          .build(), RequestBody.fromInputStream(inputStream, file.getSize()));
         // DB更新
         //        patEventDao.updateOnlyResultParams(pat_event_cd, result_params);
       } catch (Exception e) {
@@ -488,13 +497,14 @@ public class ShrPatInfoServiceImpl implements ShrPatInfoService {
       byte[] content = null;
       content = Files.readAllBytes(path);
       // 16進数文字列に変換
-      String hexString = DatatypeConverter.printHexBinary(content);
+      String hexString = HexFormat.of().withUpperCase().formatHex(content);
       return hexString;
     } else {
-      S3Object object = s3().getObject(new GetObjectRequest(s3BucketInFcd, filepath));
-
       // レスポンス用データ生成
-      try (InputStream is = object.getObjectContent(); ByteArrayOutputStream os = new ByteArrayOutputStream();) {
+      try (ResponseInputStream<GetObjectResponse> is = s3().getObject(GetObjectRequest.builder()
+        .bucket(s3BucketInFcd)
+        .key(filepath)
+        .build()); ByteArrayOutputStream os = new ByteArrayOutputStream();) {
         byte[] buffer = new byte[1024];
         while (true) {
           int len = is.read(buffer);
@@ -505,7 +515,7 @@ public class ShrPatInfoServiceImpl implements ShrPatInfoService {
         }
         byte[] content = os.toByteArray();
         // 16進数文字列に変換
-        String hexString = DatatypeConverter.printHexBinary(content);
+        String hexString = HexFormat.of().withUpperCase().formatHex(content);
         return hexString;
       } catch (Exception e) {
         throw e;
@@ -694,7 +704,7 @@ public class ShrPatInfoServiceImpl implements ShrPatInfoService {
 
   @Override
   public List<PatientInfoSharing> patientDetailsDown(String facilityCd)
-    throws JsonProcessingException {
+    throws JacksonException {
     List<String> facilityCdList =new ArrayList<>();
     facilityCdList.add(facilityCd);
     FacilitySettingInfo settingValue
@@ -792,7 +802,7 @@ public class ShrPatInfoServiceImpl implements ShrPatInfoService {
   }
 
   @Override
-  public Map<String, List<String>> correspondingFacilities(String facilityCd) throws JsonProcessingException {
+  public Map<String, List<String>> correspondingFacilities(String facilityCd) throws JacksonException {
     return getCorrespondingFacilities(facilityCd);
   }
 
@@ -830,7 +840,10 @@ public class ShrPatInfoServiceImpl implements ShrPatInfoService {
       } else {
         if (!path.isEmpty()) {
           // S3ファイル削除
-          s3().deleteObject(new DeleteObjectRequest(s3BucketInFcd, path));
+          s3().deleteObject(DeleteObjectRequest.builder()
+            .bucket(s3BucketInFcd)
+            .key(path)
+            .build());
         }
       }
     }
@@ -950,9 +963,9 @@ public class ShrPatInfoServiceImpl implements ShrPatInfoService {
    *
    * @param facilityCd 施設コード
    * @return "fromCorresponding" と "toCorresponding" を含む Map
-   * @throws JsonProcessingException JSON 解析例外
+   * @throws JacksonException JSON 解析例外
    */
-  private Map<String, List<String>> getCorrespondingFacilities(String facilityCd) throws JsonProcessingException {
+  private Map<String, List<String>> getCorrespondingFacilities(String facilityCd) throws JacksonException {
     ObjectMapper mapper = new ObjectMapper();
     Map<String, List<String>> map = new HashMap<>();
 

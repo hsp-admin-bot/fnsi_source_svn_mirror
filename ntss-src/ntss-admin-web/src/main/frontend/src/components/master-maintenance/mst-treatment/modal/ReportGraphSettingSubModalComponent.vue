@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="main-content">
+        <template #body>
+<div class="main-content">
       <div class="list-content">
         <div class="scroll-table">
           <table id="sys-medicine-list" class="ntss-list" style="position: inherit;">
@@ -243,7 +244,8 @@
                     :data-text-field="'text'"
                     :data-value-field="'value'"
                     style="width: 100%;z-index:1;font-size: inherit;"
-                    class="common-style-input" />
+                    class="common-style-input report-graph-plot-type-dropdown"
+                    @open="applyPlotTypeDropdownStyle" />
                 </td>
                 <!-- プロット色 -->
                 <td class="ntss-list-body-td">
@@ -329,7 +331,9 @@
         </div>
       </div>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+        <template #footer>
+<div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <button class="btn2-cancel button denial-btn" @click="cancel">キャンセル</button>
       </div>
@@ -337,11 +341,12 @@
         <button class="btn1-execute button registration-btn" :disabled="!isChanged" @click="reflect">確定</button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import SubModalBase from "@/components/modals/SubModalBase";
 import MultiSubModalMixin from "@/components/modals/MultiSubModalMixin";
 // 1つの帳票グラフ設定を保持するモデル
@@ -718,6 +723,41 @@ export default {
       const plotType = REPORT_GRAPH.SELECT_ITEM_PLOT_TYPE.find(e => e.value === plotTypeValue);
       return plotType ? plotType.text : "";
     },
+    applyPlotTypeDropdownStyle(e) {
+      const sender = e?.sender;
+      const applyStyle = () => {
+        const popup = sender?.popup?.element?.[0]
+          || sender?.popup?.wrapper?.[0]
+          || null;
+        if (!popup) {
+          return;
+        }
+        const legacyFont = "\"Osaka,'ＭＳ Ｐゴシック','MS PGothic',Sans-Serif\"";
+        [popup, popup.querySelector(".k-popup"), popup.querySelector(".k-list-container")]
+          .filter(Boolean)
+          .forEach(element => {
+            element.style.setProperty("width", "49.7812px", "important");
+            element.style.setProperty("min-width", "49.7812px", "important");
+            element.style.setProperty("font-family", legacyFont, "important");
+            element.style.setProperty("font-size", "16.5px", "important");
+            element.style.setProperty("font-stretch", "100%", "important");
+            element.style.setProperty("font-style", "normal", "important");
+            element.style.setProperty("font-weight", "400", "important");
+            element.style.setProperty("line-height", "24.75px", "important");
+            element.style.setProperty("white-space", "normal", "important");
+          });
+        popup.querySelectorAll(".k-item, .k-list-item, .k-list-item-text, [role='option']").forEach(element => {
+          element.style.setProperty("font-family", legacyFont, "important");
+          element.style.setProperty("font-size", "16.5px", "important");
+          element.style.setProperty("font-stretch", "100%", "important");
+          element.style.setProperty("font-style", "normal", "important");
+          element.style.setProperty("font-weight", "400", "important");
+          element.style.setProperty("line-height", "24.75px", "important");
+        });
+      };
+      applyStyle();
+      requestAnimationFrame(applyStyle);
+    },
     /**
      * 表示項目が変更された場合のイベントハンドラ
      * 未選択が選択された場合にそれ以外の項目を初期化する.
@@ -1087,6 +1127,10 @@ tr:nth-child(2n){
 ons-input .text-input {
   font-size: 1.5em;
 }
+
+ons-input :deep(.text-input) {
+  font-size: 1.5em;
+}
 .graph-color {
   font-size: 1.25em;
   margin: 5px 10px;
@@ -1100,6 +1144,15 @@ ons-input .text-input {
  * GoogleChromeの場合だと小さく表示されてしまう事象を解決する為です.
  */
 .plot-type-td {
-   font-family: "Osaka,'ＭＳ Ｐゴシック','MS PGothic',Sans-Serif";
+  font-family: "Osaka,'ＭＳ Ｐゴシック','MS PGothic',Sans-Serif", Osaka, 'ＭＳ Ｐゴシック', 'MS PGothic', sans-serif;
 }
+
+.plot-type-td :deep(.report-graph-plot-type-dropdown),
+.plot-type-td :deep(.report-graph-plot-type-dropdown .k-input-value-text),
+.plot-type-td :deep(.report-graph-plot-type-dropdown .k-input-inner) {
+  font-family: "Osaka,'ＭＳ Ｐゴシック','MS PGothic',Sans-Serif", Osaka, 'ＭＳ Ｐゴシック', 'MS PGothic', sans-serif;
+  font-size: 16.5px;
+  line-height: 24.75px;
+}
+
 </style>

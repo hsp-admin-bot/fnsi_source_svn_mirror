@@ -379,7 +379,7 @@ public class MniMonitorDaoTest {
     }
 
     // 実行
-    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList, Collections.EMPTY_LIST);
+    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList, Collections.EMPTY_LIST, null);
 
     // 検証
     assertNotNull(result);
@@ -437,7 +437,7 @@ public class MniMonitorDaoTest {
     }
 
     // 実行
-    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList, Collections.EMPTY_LIST);
+    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList, Collections.EMPTY_LIST, null);
 
     // 検証
     assertNotNull(result);
@@ -462,7 +462,7 @@ public class MniMonitorDaoTest {
     sysMonitorItemList.add(sysMonitorItem);
 
     // 実行
-    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList,Collections.EMPTY_LIST);
+    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList,Collections.EMPTY_LIST, null);
 
     // 検証
     assertNotNull(result);
@@ -491,7 +491,7 @@ public class MniMonitorDaoTest {
     sysMonitorItemList.add(sysMonitorItem);
 
     // 実行
-    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList,Collections.EMPTY_LIST);
+    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList,Collections.EMPTY_LIST, null);
 
     // 検証
     assertNotNull(result);
@@ -516,7 +516,7 @@ public class MniMonitorDaoTest {
     sysMonitorItemList.add(sysMonitorItem);
 
     // 実行
-    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList,Collections.EMPTY_LIST);
+    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList,Collections.EMPTY_LIST, null);
 
     // 検証
     assertNotNull(result);
@@ -541,7 +541,7 @@ public class MniMonitorDaoTest {
     sysMonitorItemList.add(sysMonitorItem);
 
     // 実行
-    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList,Collections.EMPTY_LIST);
+    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList,Collections.EMPTY_LIST, null);
 
     // 検証
     assertNotNull(result);
@@ -574,7 +574,7 @@ public class MniMonitorDaoTest {
     dataTypeArray.add((short)5);
 
     // 実行
-    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList, dataTypeArray);
+    List<MniMonitor> result = mniMonitorDao.selectMonitorDataByMoniDataNo(ordNo, sysMonitorItemList, dataTypeArray, null);
 
     // 検証
     assertNotNull(result);

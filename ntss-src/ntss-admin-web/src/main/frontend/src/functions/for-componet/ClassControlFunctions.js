@@ -17,7 +17,7 @@ export const makeRequiredClassConrtoller = (required) => {
     const newObject = makeClassObject(required, invalid);
     if (
       current["input-style-required"] === newObject["input-style-required"]
-      && current["input-style-invalid"] === newObject["input-style-required"]
+      && current["input-style-invalid"] === newObject["input-style-invalid"]
     ) {
       return current;
     }

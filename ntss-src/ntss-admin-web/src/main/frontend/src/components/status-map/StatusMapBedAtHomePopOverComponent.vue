@@ -56,7 +56,7 @@ import {
   DIALISYS_STATE,
   COMM_ERROR
 } from "@/constants/statusMapConstants.js";
-import { mapActions } from "vuex";
+import { mapActions } from "@/compat/vue/vuex";
 
 export default {
   components: {

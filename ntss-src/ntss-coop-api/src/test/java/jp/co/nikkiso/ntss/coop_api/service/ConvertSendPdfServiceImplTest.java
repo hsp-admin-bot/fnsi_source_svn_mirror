@@ -13,7 +13,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,13 +28,13 @@ import jp.co.nikkiso.ntss.core.exception.NtssException;
 @Transactional
 @Sql("classpath:resource.script/ConvertSendPdfServiceImplTest/ConvertSendPdfServiceImplTest.db5.before.sql")
 public class ConvertSendPdfServiceImplTest extends BaseServiceTest {
-  @SpyBean
+  @MockitoSpyBean
   ConvertSendPdfServiceImpl service;
-  @SpyBean
+  @MockitoSpyBean
   ConvertSendCommonServiceImpl commonServiceImpl;
   @Autowired
   SysCoopJournalDao sysCoopJournalDao;
-  @SpyBean
+  @MockitoSpyBean
   FileUtil fileUtil;
 
   /**

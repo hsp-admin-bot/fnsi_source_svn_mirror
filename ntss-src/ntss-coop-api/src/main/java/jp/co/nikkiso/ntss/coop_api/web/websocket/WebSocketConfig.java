@@ -1,5 +1,7 @@
 package jp.co.nikkiso.ntss.coop_api.web.websocket;
 
+
+import jp.co.nikkiso.ntss.core.utils.Ec2MetadataHelper;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -11,8 +13,6 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
-
-import com.amazonaws.util.EC2MetadataUtils;
 
 import jp.co.nikkiso.ntss.coop_api.config.IfEdgeConfigulation;
 import jp.co.nikkiso.ntss.coop_api.service.LogService;
@@ -84,7 +84,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
       eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
       logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI, null);
-      ip = EC2MetadataUtils.getInstanceInfo().getPrivateIp();
+      ip = Ec2MetadataHelper.getPrivateIp();
     }
     // add 2020-12-08 No.718：各APIのログ出力→共通ログ 孫 start
     eventLogMessage.setInvokeClass(this.getClass().getName());

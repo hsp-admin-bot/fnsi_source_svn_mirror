@@ -1,0 +1,144 @@
+import java.nio.charset.StandardCharsets
+
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.6'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.fnsi'
+version = '1.0.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+        vendor = JvmVendorSpec.AMAZON
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext['tomcat.version'] = '11.0.22'
+
+dependencies {
+    // Web
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api:3.0.3'
+
+    // AOP
+    implementation 'org.springframework.boot:spring-boot-starter-aspectj'
+
+    // Security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // Data
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+
+    // DB
+    runtimeOnly 'org.postgresql:postgresql:42.7.11'
+    testImplementation 'org.postgresql:postgresql:42.7.11'
+
+    // JSON
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.21'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.21.3'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.21.3'
+
+    // JWT
+    implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok:1.18.46'
+    annotationProcessor 'org.projectlombok:lombok:1.18.46'
+
+    // Config processor
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.named('processResources') {
+    dependsOn(':docdb4-helper:fatJar')
+    from(project(':docdb4-helper').tasks.named('fatJar')) {
+        into 'helper'
+    }
+}
+
+bootJar {
+    archiveFileName = 'fnsi-cloud-convert-server.jar'
+    mainClass = 'com.fnsi.cloudconverter.CloudConverterApplication'
+
+    doLast {
+        def jarFile = archiveFile.get().asFile
+        def launchScript = '''#!/bin/sh
+set -e
+if [ -n "$JAVA_HOME" ]; then
+  JAVA_CMD="$JAVA_HOME/bin/java"
+else
+  JAVA_CMD="java"
+fi
+exec "$JAVA_CMD" $JAVA_OPTS -jar "$0" "$@"
+
+'''
+        def existingBytes = jarFile.bytes
+        def scriptBytes = launchScript.getBytes(StandardCharsets.UTF_8)
+
+        def output = new ByteArrayOutputStream(scriptBytes.length + existingBytes.length)
+        output.write(scriptBytes)
+        output.write(existingBytes)
+        jarFile.bytes = output.toByteArray()
+        jarFile.setExecutable(true, false)
+    }
+}
+
+def converterDbSetting = { String propertyName, String envName, String defaultValue ->
+    if (project.hasProperty(propertyName)) {
+        return project.property(propertyName).toString()
+    }
+    def envValue = System.getenv(envName)
+    return (envValue != null && !envValue.isBlank()) ? envValue : defaultValue
+}
+
+def configureConverterDbCommand = { JavaExec task, String command, String description ->
+    task.group = 'database'
+    task.description = description
+    task.dependsOn(tasks.named('classes'))
+    task.classpath = sourceSets.main.runtimeClasspath
+    task.mainClass = 'com.fnsi.cloudconverter.tools.ConverterDbScriptCli'
+    task.args(command)
+    task.systemProperty 'converter.db.host', converterDbSetting('converterDbHost', 'CONVERTER_DB_HOST', 'localhost')
+    task.systemProperty 'converter.db.port', converterDbSetting('converterDbPort', 'CONVERTER_DB_PORT', '5433')
+    task.systemProperty 'converter.db.name', converterDbSetting('converterDbName', 'CONVERTER_DB_NAME', 'convert_db')
+    task.systemProperty 'converter.db.schema', converterDbSetting('converterDbSchema', 'CONVERTER_DB_SCHEMA', 'public')
+    task.systemProperty 'converter.db.username', converterDbSetting('converterDbUser', 'CONVERTER_DB_USER', 'postgres')
+    task.systemProperty 'converter.db.password', converterDbSetting('converterDbPassword', 'CONVERTER_DB_PASSWORD', 'postgres')
+    task.systemProperty 'converter.db.adminDatabase', converterDbSetting('converterDbAdminDatabase', 'CONVERTER_ADMIN_DB_NAME', 'postgres')
+}
+
+tasks.register('migrateConverterDb', JavaExec) { task ->
+    configureConverterDbCommand(
+            task,
+            'migrate',
+            'Applies convert_db SQL scripts without starting the server.'
+    )
+}
+
+tasks.register('initConverterDb', JavaExec) { task ->
+    configureConverterDbCommand(
+            task,
+            'init',
+            'Drops and recreates convert_db, then applies all convert_db SQL scripts from scratch.'
+    )
+}

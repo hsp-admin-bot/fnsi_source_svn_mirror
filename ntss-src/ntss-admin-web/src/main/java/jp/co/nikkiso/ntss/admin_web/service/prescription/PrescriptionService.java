@@ -3,7 +3,7 @@ package jp.co.nikkiso.ntss.admin_web.service.prescription;
 
 import java.util.List;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import jp.co.nikkiso.ntss.admin_web.request.prescription.MedicineSelectionRequest;
 import jp.co.nikkiso.ntss.admin_web.request.prescription.OrdPrescriptionDTO;
@@ -26,7 +26,9 @@ public interface PrescriptionService {
      * @return 薬剤選択
      *
      */
-    public List<MedicineSelection> searchMedicineSelection(MedicineSelectionRequest request);
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
+    public List<MedicineSelection> searchMedicineSelection(MedicineSelectionRequest request, String facilityCd);
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
 
     /**
      * 処方歴検索.
@@ -103,7 +105,9 @@ public interface PrescriptionService {
      */
     //mod #12462 患者共有情報 by zrx start
 //    List<PrescriptionList> getPrescriptionList(List<Long> patIdList, String issueDate, List<String> prescriptionTypeList);
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
     List<PrescriptionList> getPrescriptionList(List<Long> patIdList, String issueDate, List<String> prescriptionTypeList, Integer patientShareMode,String facilityCd);
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
     //mod #12462 患者共有情報 by zrx end
   // mod #9738 患者経過総合ビューアで検査依頼、一般撮影検査依頼、招待状、処方、患者イベントのデータが正常に表示されない zy start
 //    List<PrescriptionCount> getPrescriptionCount(String patId, String facilityCd);

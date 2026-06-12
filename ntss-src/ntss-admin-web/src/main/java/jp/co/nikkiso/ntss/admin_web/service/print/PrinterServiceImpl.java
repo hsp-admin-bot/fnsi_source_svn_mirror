@@ -1,15 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.service.print;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jp.co.nikkiso.ntss.admin_web.config.AwsConfiguration;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.response.creatingReport.PrinterInfo;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
@@ -27,14 +19,9 @@ import jp.co.nikkiso.ntss.core.entity.custom.MstPrinter;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
-// #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
-import jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils;
-// #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
+
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
-// #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
-import org.springframework.aop.framework.AopProxyUtils;
-// #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -78,8 +65,16 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
-import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
 /**
  * プリンターマスタのサービスクラス.
@@ -123,13 +118,8 @@ public class PrinterServiceImpl implements PrinterService {
   private String printTmpDir;
 
   /*add FNSI-改修内容転入時の紹介状取込ができない 任 start*/
-  @Autowired(required = false)
-  private AmazonS3 s3;
   @Autowired
-  private AwsConfiguration awsS3;
-  private AmazonS3 s3() {
-    return awsS3.s3();
-  }
+  private S3Client s3;
   /*add FNSI-改修内容転入時の紹介状取込ができない 任 end*/
 
   @Autowired
@@ -330,6 +320,7 @@ public class PrinterServiceImpl implements PrinterService {
         .contentType(MediaType.APPLICATION_JSON)
         .header("SSECCAYEK", "NTSS-NKK-ESM-TDC-YSK")
         .body(jsonBody.toString());
+
 // #9698 アプリケーションログの内容修正 20260328 mod yangxuewang start
       long start = System.currentTimeMillis();
       ResponseEntity<Object> response = rt.exchange(request, Object.class);
@@ -712,7 +703,7 @@ public class PrinterServiceImpl implements PrinterService {
       // 一時ファイル
       String baseName = path.replace("/", "_");
       File cacheFile = getCacheFile(baseName, null);
-      try (InputStream inputStream = file.getInputStream()) {
+      try {
         // ファイルの読み込みが可能ならば処理を開始
         Path cacheDirPath = Paths.get(this.cacheDir);
 
@@ -742,15 +733,12 @@ public class PrinterServiceImpl implements PrinterService {
           return path;
         }
         // 古い同名ファイルが存在する場合があるので削除する
-        s3().deleteObject(new DeleteObjectRequest(s3BucketInFcd, path));
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setContentLength(file.getSize());
-        // S3アップロード
-        s3().putObject(new PutObjectRequest(s3BucketInFcd, path, file.getInputStream(), metadata));
+        deleteObject(s3BucketInFcd, path);
+        putMultipartObject(s3BucketInFcd, path, file);
         // キャッシュにデータを保存
         Files.write(cacheFile.toPath(), file.getBytes());
         // キャッシュファイルの日付情報をS3と合わせる
-        long lastModified = s3().getObjectMetadata(s3BucketInFcd, path).getLastModified().getTime();
+        long lastModified = getObjectLastModified(s3BucketInFcd, path);
         cacheFile.setLastModified(lastModified);
         return path;
       } catch (IOException e) {
@@ -793,7 +781,7 @@ public class PrinterServiceImpl implements PrinterService {
     String baseName = filePath.replace("/", "_");
     File cacheFile = getCacheFile(baseName, null);
     try {
-      lastModified = s3().getObjectMetadata(s3Bucket, filePath).getLastModified().getTime();
+      lastModified = getObjectLastModified(s3Bucket, filePath);
       // 古いキャッシュファイルを削除 (画像ファイルパスが等しく、更新日時部分が異なっているファイルを削除対象とする)
       Path cacheDirPath = Paths.get(this.cacheDir);
       if (Files.exists(cacheDirPath)) {
@@ -833,9 +821,8 @@ public class PrinterServiceImpl implements PrinterService {
         }
         return cacheFile.toString();
       } else {
-        S3Object object = s3().getObject(new GetObjectRequest(s3Bucket, filePath));
         try (
-          InputStream is = object.getObjectContent();
+          ResponseInputStream<GetObjectResponse> is = getObjectStream(s3Bucket, filePath);
           ByteArrayOutputStream os = new ByteArrayOutputStream();) {
           byte[] buffer = new byte[1024];
           while (true) {
@@ -847,7 +834,7 @@ public class PrinterServiceImpl implements PrinterService {
           }
           // キャッシュにデータを保存
           Files.write(cacheFile.toPath(), os.toByteArray());
-          long lastModified2 = s3().getObjectMetadata(s3Bucket, filePath).getLastModified().getTime();
+          long lastModified2 = getObjectLastModified(s3Bucket, filePath);
           cacheFile.setLastModified(lastModified2);
           return cacheFile.toString();
         } catch (Exception e) {
@@ -868,6 +855,39 @@ public class PrinterServiceImpl implements PrinterService {
       logService.log(LogLevel.ERROR, eventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI, null);
     }
     return "";
+  }
+
+  private ResponseInputStream<GetObjectResponse> getObjectStream(String bucket, String path) {
+    return s3.getObject(GetObjectRequest.builder()
+        .bucket(bucket)
+        .key(path)
+        .build());
+  }
+
+  private long getObjectLastModified(String bucket, String path) {
+    return s3.headObject(HeadObjectRequest.builder()
+        .bucket(bucket)
+        .key(path)
+        .build())
+      .lastModified()
+      .toEpochMilli();
+  }
+
+  private void deleteObject(String bucket, String path) {
+    s3.deleteObject(DeleteObjectRequest.builder()
+        .bucket(bucket)
+        .key(path)
+        .build());
+  }
+
+  private void putMultipartObject(String bucket, String path, MultipartFile file) throws IOException {
+    try (InputStream inputStream = file.getInputStream()) {
+      s3.putObject(PutObjectRequest.builder()
+          .bucket(bucket)
+          .key(path)
+          .contentLength(file.getSize())
+          .build(), RequestBody.fromInputStream(inputStream, file.getSize()));
+    }
   }
 
   /* add by lvzongheng  2023-02-01 [Transaction,CodeOptimization]  start */

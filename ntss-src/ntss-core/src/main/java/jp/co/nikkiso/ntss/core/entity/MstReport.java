@@ -13,8 +13,8 @@ import org.seasar.doma.jdbc.entity.NamingType;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.entity.entityListener.BaseEntityListener;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
@@ -121,7 +121,7 @@ public class MstReport extends BaseEntity {
       try {
         ReportPath obj = objectMapper.readValue(value, ReportPath.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("帳票マスタのファイルパス情報設定内容が不正です") {
         };
       }
@@ -136,7 +136,7 @@ public class MstReport extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -184,7 +184,7 @@ public class MstReport extends BaseEntity {
       try {
         AdditionalInfo obj = objectMapper.readValue(value, AdditionalInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("帳票マスタの追加情報設定内容が不正です") {
         };
       }
@@ -199,7 +199,7 @@ public class MstReport extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -278,7 +278,7 @@ public class MstReport extends BaseEntity {
       try {
         Extraction obj = objectMapper.readValue(value, Extraction.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("帳票マスタのファイルパス情報設定内容が不正です") {
         };
       }
@@ -293,7 +293,7 @@ public class MstReport extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -543,7 +543,7 @@ public class MstReport extends BaseEntity {
       try {
         ReportHstInfo obj = objectMapper.readValue(value, ReportHstInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("帳票マスタの帳票更新履歴情報設定内容が不正です") {
         };
       }
@@ -558,7 +558,7 @@ public class MstReport extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }

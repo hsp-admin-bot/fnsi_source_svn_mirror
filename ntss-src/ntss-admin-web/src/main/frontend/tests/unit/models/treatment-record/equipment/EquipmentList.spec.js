@@ -26,15 +26,8 @@ describe("EquipmentList#toString", () => {
       `,"cd":1000` +
       `,"name":"equipmentName"` +
       `,"short_name":"equipmentShortName"` +
-      `,"needle_type":0` +
       `,"amount":1` +
       `,"unit":"L"` +
-      `,"ind_user_id":4000` +
-      `,"ind_user_last_name":"indLast"` +
-      `,"ind_user_first_name":"indFirst"` +
-      `,"upd_user_id":5000` +
-      `,"upd_user_last_name":"updLast"` +
-      `,"upd_user_first_name":"updFirst"` +
       // mod #7475 �R���o�[�g����ord_main�Ƀf�[�^������Ȍ`�ŃR���o�[�g����Ă��Ȃ� dou start
       //`,"input_class":"2"` +
       `,"input_class":2` +
@@ -67,15 +60,8 @@ describe("EquipmentList#toString", () => {
       `,"cd":1000` +
       `,"name":"equipmentName"` +
       `,"short_name":"equipmentShortName"` +
-      `,"needle_type":0` +
       `,"amount":1` +
       `,"unit":"L"` +
-      `,"ind_user_id":4000` +
-      `,"ind_user_last_name":"indLast"` +
-      `,"ind_user_first_name":"indFirst"` +
-      `,"upd_user_id":5000` +
-      `,"upd_user_last_name":"updLast"` +
-      `,"upd_user_first_name":"updFirst"` +
       // mod #7475 �R���o�[�g����ord_main�Ƀf�[�^������Ȍ`�ŃR���o�[�g����Ă��Ȃ� dou start
       //`,"input_class":"2"` +
       `,"input_class":2` +
@@ -91,15 +77,8 @@ describe("EquipmentList#toString", () => {
       `,"cd":1000` +
       `,"name":"equipmentName2"` +
       `,"short_name":"equipmentShortName"` +
-      `,"needle_type":0` +
       `,"amount":2` +
       `,"unit":"L"` +
-      `,"ind_user_id":4000` +
-      `,"ind_user_last_name":"indLast"` +
-      `,"ind_user_first_name":"indFirst"` +
-      `,"upd_user_id":5000` +
-      `,"upd_user_last_name":"updLast"` +
-      `,"upd_user_first_name":"updFirst"` +
       // mod #7475 �R���o�[�g����ord_main�Ƀf�[�^������Ȍ`�ŃR���o�[�g����Ă��Ȃ� dou start
       //`,"input_class":"2"` +
       `,"input_class":2` +

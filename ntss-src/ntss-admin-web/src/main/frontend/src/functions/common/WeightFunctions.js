@@ -1,4 +1,4 @@
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 import {
   dialysisState,
   weightScaleClass,
@@ -7,11 +7,22 @@ import {
 } from "@/constants/weightDefine";
 
 /**
+ * gram 換算用：有限の number のみ通す（null / undefined / 非数値 / NaN / Infinity は不可）
+ * @param {*} gramValue
+ * @returns {boolean}
+ */
+const isFiniteGramNumber = gramValue =>
+  typeof gramValue === "number" && Number.isFinite(gramValue);
+
+/**
  * @description 主に風袋で使用、グラムをキログラム化し、小数点3位を切り捨て
- * @param {Number} gramValue グラム重量
- * @returns {Boolean}
+ * @param {*} gramValue グラム重量
+ * @returns {Number}
  */
 export const tareG2Kg = gramValue => {
+  if (gramValue == null || !isFiniteGramNumber(gramValue)) {
+    return 0;
+  }
   const totalWeight = new BigNumber(
     Math.floor(new BigNumber(gramValue).div(10).toNumber())
   )
@@ -22,10 +33,13 @@ export const tareG2Kg = gramValue => {
 
 /**
  * @description 主に除水補正で使用、グラムをキログラム化し、小数点3位を切り上げ
- * @param {Number} gramValue グラム重量
- * @returns {Boolean}
+ * @param {*} gramValue グラム重量
+ * @returns {Number}
  */
 export const offWaterG2Kg = gramValue => {
+  if (gramValue == null || !isFiniteGramNumber(gramValue)) {
+    return 0;
+  }
   const totalWeight = new BigNumber(
     Math.ceil(new BigNumber(gramValue).div(10).toNumber())
   )

@@ -1,4 +1,4 @@
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 
 /**
  * @description 符号付き小数判定
@@ -136,7 +136,7 @@ export function accAdd(...addends) {
     // try to find out the largest digit among these params,and push this number into temp array.
     // if some addend is not a number, it will not participate in calculation.
     for (let aIdx in addends) {
-      let tempNum = ZERO_STRING;
+      let tempNum;
       try {
         tempNum = addends[aIdx].toString();
         if (!isDecimal(tempNum)) continue;
@@ -177,8 +177,8 @@ export function accAdd(...addends) {
  * @returns {number} result
  */
 export function accSub(subtrahend, minuend) {
-  let result = 0;
-  let s, m, tp1, tp2, p = 0;
+  let result;
+  let s, m, tp1, tp2, p;
 
   s = isDecimal(subtrahend.toString()) ? Number(subtrahend) : 0
   m = isDecimal(minuend.toString()) ? Number(minuend) : 0;
@@ -208,7 +208,7 @@ export function accMulti(...multipliers) {
   if (multipliers) {
     if (multipliers.length === 1) return multipliers[0];
     for (let key in multipliers) {
-      let tempNum = ZERO_STRING;
+      let tempNum;
       try {
         tempNum = multipliers[key].toString();
         if (!isDecimal(tempNum)) continue;
@@ -236,7 +236,7 @@ export function accMulti(...multipliers) {
  */
 export function simpleAccDivision(divider, dividend) {
   let tDivider, pDivider = 0;
-  let tDividend = 1, pDividend = 0;
+  let tDividend, pDividend = 0;
 
   tDivider = isDecimal(divider.toString()) ? divider : 0;
   tDividend = isDecimal(dividend.toString())? dividend : 0;

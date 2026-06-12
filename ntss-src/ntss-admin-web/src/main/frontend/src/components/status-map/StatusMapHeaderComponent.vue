@@ -12,8 +12,8 @@
             name="identification"
             value="1"
             id="input-bed-name"
-            @click="changeTreatStateMode(true);"
-            :checked=" isTreatStateMode === true ? 'checked' : ''"
+            @change="changeTreatStateMode(true)"
+            :checked="treatStateModeUi"
           />
           <!-- mod FNSI-redmine#3965 付 start -->
           <!-- <label for="input-bed-name" class="label first-of-type">治療状況</label> -->
@@ -25,8 +25,8 @@
             name="identification"
             value="2"
             id="input-machine-name"
-            @click="changeTreatStateMode(false);"
-            :checked=" isTreatStateMode === false ? 'checked' : ''"
+            @change="changeTreatStateMode(false)"
+            :checked="!treatStateModeUi"
           />
           <!-- mod FNSI-redmine#3965 付 start -->
           <!-- <label for="input-machine-name" class="label last-of-type">スケジュール</label> -->
@@ -70,10 +70,10 @@
     <v-ons-popover
       cancelable
       v-if="popoverVisible"
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
-      :class="fontSizeSet"
+      :class="[fontSizeSet, 'status-map-header-popover']"
       @preshow="popoverPreShow"
       @postshow="popoverPostShow"
       @posthide="dialogClosed(); popoverPosthide($event)"
@@ -268,15 +268,17 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { getScopedElementById, getScopedSessionStorage, getScopedDocument } from "@/functions/common/LayoutMeasureHelper";
+
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 // mod #10359 編集権限の動作不正 dengshen start
 // import { deepCopy } from "@/functions/common/CommonFunctions";
 import { deepCopy, getAuthorized } from "@/functions/common/CommonFunctions.js";
 // mod #10359 編集権限の動作不正 dengshen end
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import PopoverMixin from "@/components/PopoverMixin";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 //指示者リスト取得
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
@@ -320,6 +322,8 @@ export default {
       msgDiaLog: DIALOG_MESSAGES["99999995"].message,
       showErrorStartDate: false,
       /*add FNSI-改修内容日付のチェックの追加対応。 付 end*/
+      // ラジオボタン表示用（store更新前にUIを同期する）
+      treatStateModeUi: true,
       // 共通検索エリア部品に表示するデータのリスト
       conditionList: []
       // add FNSI-redmine#3965 付 start
@@ -373,7 +377,7 @@ export default {
     selectCurrentDate() {
       const date = this.getConditionTreatMapCurrentDate;
       if (date) {
-        return moment(date).format("YYYY/MM/DD");
+        return dayjs(date).format("YYYY/MM/DD");
       } else {
         return "----/--/--";
       }
@@ -430,7 +434,7 @@ export default {
       // 抽出条件セット
       // ダイアログでの操作中は、コピーを表示する
       this.viewCondition = deepCopy(this.conditionFilter);
-      this.viewCondition.currentDateTime = moment(
+      this.viewCondition.currentDateTime = dayjs(
         this.viewCondition.currentDateTime
       ).format("YYYY-MM-DD");
       /*add FNSI-改修内容日付のチェックの追加対応。 付 start*/
@@ -441,7 +445,8 @@ export default {
     /*add FNSI-改修内容日付のチェックの追加対応。 付 start*/
     showMsg(){
       //#10715:日付IF修正Start
-      if (document.getElementById("data-datetime").validationMessage)
+      const dataDateTime = getScopedElementById("data-datetime", this.$el || this);
+      if (dataDateTime?.validationMessage)
       this.showErrorStartDate = true;
       else
       this.showErrorStartDate = false;
@@ -489,16 +494,21 @@ export default {
         return true;
       }
       if (`${statusLayoutNo}` !== `${this.viewCondition.statusLayoutNo}`) {
+        // console.log(
+        //   "conditionChange/statusLayoutIndex is %o",
+        //   statusLayoutIndex
+        // );
         return true;
       }
       if (`${kurCd}` !== `${this.viewCondition.kurCd}`) {
+        // console.log("conditionChange/kurIndex is %o", kurIndex);
         return true;
       }
       if (`${bedLayoutId}` !== `${this.viewCondition.bedLayoutId}`) {
         return true;
       }
       if (nextPatValue !== this.viewCondition.nextPatValue) {
-        // console.log("conditionChange/nextPatValue is %o", nextPatValue);
+        // console.log("conditionChange/nextpatgroupid is %o", nextpatgroupid);
         return true;
       }
 
@@ -512,6 +522,7 @@ export default {
       return false;
     },
     async changeTreatStateMode(displayFlag) {
+      this.treatStateModeUi = displayFlag;
       await this.setTreatStateMode(displayFlag);
       this.setFilterSignal(true);
       EventBus.$emit("removeShowChip");
@@ -548,7 +559,7 @@ export default {
     },
     dialogClosed() {
       this.viewCondition = deepCopy(this.conditionFilter);
-      this.viewCondition.currentDateTime = moment(
+      this.viewCondition.currentDateTime = dayjs(
         this.viewCondition.currentDateTime
       ).format("YYYY-MM-DD");
       // console.log("date is %o.", this.viewCondition.currentDateTime);
@@ -607,16 +618,24 @@ export default {
       	condList.push({ name:"ベッドグループ", text:"すべて" });
       }
       // add #11285 機能帳票の印刷情報対応② 高 start
-      sessionStorage.setItem('roomBedGroupNameStatusMap', JSON.stringify(condList.find(item => item.name === "ベッドグループ").text));
+      getScopedSessionStorage(this.$el || this).setItem('roomBedGroupNameStatusMap', JSON.stringify(condList.find(item => item.name === "ベッドグループ").text));
       // add #11285 機能帳票の印刷情報対応② 高 end
       // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
       const kurItem = condList.find(item => item.name === "クール");
-      sessionStorage.setItem('kurGroupNameStatusList', JSON.stringify(kurItem ? kurItem.text : ""));
+      getScopedSessionStorage(this.$el || this).setItem('kurGroupNameStatusList', JSON.stringify(kurItem ? kurItem.text : ""));
       // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy end
       this.conditionList = condList;
     }
   },
   watch: {
+    isTreatStateMode: {
+      handler(val) {
+        if (val !== null) {
+          this.treatStateModeUi = val;
+        }
+      },
+      immediate: true,
+    },
     getSelectBedInfo() {
       this.bedData = this.getSelectBedInfo;
     },
@@ -628,7 +647,7 @@ export default {
       deep: true
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -636,7 +655,7 @@ export default {
     EventBus.$emit("addLeftmostHeaderMargin");
     this.setConditionList();
     // add FNSI-redmine#3965 付 start
-    this.startGaMenWidth = document.body.clientWidth;
+    this.startGaMenWidth = (getScopedDocument(this.$el || this)?.body?.clientWidth || 0);
     // add FNSI-redmine#3965 付 end
   },
   async created() {
@@ -747,9 +766,13 @@ input[type="checkbox"] {
 v-ons-icon.loupe-icon {
   color: gray;
 }
+ons-popover :deep(.popover__content) {
+    min-width: 420px;
+  }
+
 /* mod FNSI-dialog表示不全 付 start */
 @media screen and (min-width: 1400px) {
-  ons-popover >>> .popover__content {
+  .status-map-header-popover :deep(.popover__content) {
     min-width: 420px;
   }
 }

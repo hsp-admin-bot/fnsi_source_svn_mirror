@@ -54,12 +54,10 @@ export default {
       type: Boolean,
       default: false
     },
-    // add #12462 患者情報共有 Ji start
     otherFacility: {
       type: Boolean,
       default: false
     }
-    // add #12462 患者情報共有 Ji end
   },
 
   data() {

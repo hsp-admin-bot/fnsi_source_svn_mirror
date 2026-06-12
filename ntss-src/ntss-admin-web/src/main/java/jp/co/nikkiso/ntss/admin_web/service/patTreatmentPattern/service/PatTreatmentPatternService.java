@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.service.patTreatmentPattern.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.patTreatmentPattern.model.PatTreatmentPatternDelta;
 import jp.co.nikkiso.ntss.admin_web.service.patTreatmentPattern.model.PatTreatmentPatternFieldEnum;
@@ -239,7 +239,7 @@ public class PatTreatmentPatternService {
     });
     try {
       editDto.setPatchJson(OBJECT_MAPPER.writeValueAsString(patchMap));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new IllegalStateException("Failed to serialize patch JSON", e);
     }
     return editDto;

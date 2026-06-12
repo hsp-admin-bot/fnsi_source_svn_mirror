@@ -14,7 +14,7 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target=false
@@ -44,10 +44,10 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapActions } from "vuex";
-import { EventBus } from "@/eventBus";
+import { mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 import {ApiHelper} from "@/apis/AxiosHelper";
 import {deepCopy} from "@/functions/common/CommonFunctions";
@@ -249,7 +249,7 @@ export default {
     EventBus.$emit("addLeftmostHeaderMargin");
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("setSortMode", this.setSortMode);
     EventBus.$off("clearHeaderSearch", this.clearHeaderSearch);
     // add #9590 start

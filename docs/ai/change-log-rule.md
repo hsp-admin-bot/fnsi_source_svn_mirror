@@ -3,7 +3,7 @@
 新規作成ファイルは、そのままでは `svn diff` に内容が出ない場合があります。
 そのため、新規作成ファイルのDIFFを作成する場合は、以下の手順で一時的にSVNの追加予定状態にしてからDIFFを生成し、DIFF生成後に追加予定状態を解除してください。
 
-## 基本方針
+## 新規作成ファイルの基本方針
 
 * 新規作成ファイルは、一時的に `svn add` してから `svn diff` を実行してください。
 * `svn diff` の結果は、`>` リダイレクトではなく `Out-File -Encoding utf8` で `.patch` ファイルに保存してください。
@@ -23,6 +23,22 @@
 4. svn revert で svn add 状態を解除する
 5. svn status で対象ファイルが追加予定状態ではなくなったことを確認する
 6. descフォルダ内に、DIFF内容を説明するMDファイルをpatchと同じファイル名で作成してください
+雛形
+    N行目～M行目
+        修正点：hogehogeに対する修正
+            内容：fugaをhogeに変更
+    N行目～M行目
+        修正点：hogehogeに対する修正
+            内容：fugaをhogeに変更
+```
+
+## ファイル編集の処理手順
+
+ファイル編集の場合は、以下の順序で処理してください。
+
+```text
+1. svn diff でDIFFを生成し、Out-File -Encoding utf8 でpatchファイルに保存する
+2. descフォルダ内に、DIFF内容を説明するMDファイルをpatchと同じファイル名で作成してください
 雛形
     N行目～M行目
         修正点：hogehogeに対する修正
@@ -76,25 +92,24 @@ DIFF生成後、対象ファイルは以下の状態になっていることを�
 
 これは、ファイル自体は作業ディレクトリに存在しているが、SVNの追加予定状態ではないことを意味します。
 
-
 ````markdown
-## DIFF生成コマンド
+    ## DIFF生成コマンド
 
-```powershell
-svn status "<対象ファイルパス>"
-svn add "<対象ファイルパス>"
-svn diff "<対象ファイルパス>" | Out-File -FilePath "<DIFFファイルパス>" -Encoding utf8
-svn revert "<対象ファイルパス>"
-svn status "<対象ファイルパス>"
-```
+    ```powershell
+    svn status "<対象ファイルパス>"
+    svn add "<対象ファイルパス>"
+    svn diff "<対象ファイルパス>" | Out-File -FilePath "<DIFFファイルパス>" -Encoding utf8
+    svn revert "<対象ファイルパス>"
+    svn status "<対象ファイルパス>"
+    ```
 
-## SVN状態
+    ## SVN状態
 
-```text
-DIFF生成のために一時的に svn add を実行した。
-DIFF生成後、svn revert により追加予定状態を解除した。
-対象ファイルは作業ディレクトリ上に残し、SVN管理外の状態に戻した。
-```
+    ```text
+    DIFF生成のために一時的に svn add を実行した。
+    DIFF生成後、svn revert により追加予定状態を解除した。
+    対象ファイルは作業ディレクトリ上に残し、SVN管理外の状態に戻した。
+    ```
 
 ````
 

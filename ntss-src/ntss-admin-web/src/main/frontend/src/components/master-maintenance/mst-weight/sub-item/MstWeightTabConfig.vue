@@ -55,10 +55,7 @@
           @change="onNameChange()"
         />
       </div>
-      <!-- #11987 2025.11.28 mod スケールベッド対応 設定の非表示 TDC渡辺 start  -->
-      <!--<div class="vertical-div">-->
       <div class="vertical-div" v-if="!isScaleBed">
-      <!-- #11987 2025.11.28 mod スケールベッド対応 設定の非表示 TDC渡辺 end  -->
         <label class="scale-label">体重計通信ポート</label>
         <!-- mod FNSI-体重計番号の変更 徐 start -->
         <!-- <custom-input
@@ -201,10 +198,7 @@
           @change="onBedGroupCdChange()"
         />
       </div>
-      <!-- #11987 2025.11.28 mod スケールベッド対応 設定の非表示 TDC渡辺 start  -->
-      <!--<div class="vertical-div">-->
       <div class="vertical-div" v-if="!isScaleBed">
-      <!-- #11987 2025.11.28 mod スケールベッド対応 設定の非表示 TDC渡辺 end  -->
         <label class="scale-label">カードリーダー有無</label>
         <custom-select
           class="scale-input"
@@ -249,14 +243,16 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import customInput from "@/components/common/custom-form-tags/CustomInput";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
 import customSelect from "@/components/common/custom-form-tags/CustomSelect";
 import { roomBedGroup } from "@/functions/mst/MstGetters.js";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getScopedElementsByClassName } from '@/functions/common/LayoutMeasureHelper';
+import { messageFormat } from "@/functions/common/MessageFormat";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 
 export default {
@@ -358,13 +354,14 @@ export default {
       columnDefinition: "getColumns",
       editRecord: "getEditRecord"
     }),
-    // #11987 2025.11.28 add スケールベッド対応 スケールベッド判断 TDC渡辺 start
     isScaleBed() {
-      return this.getValueByField('weightType') === '1';
+      return this.getValueByField("weightType") === "1";
     }
-    // #11987 2025.11.28 add スケールベッド対応 スケールベッド判断 TDC渡辺 end
   },
   methods: {
+    getWeightConfigElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || this);
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("mst-weight", ["fetchComPortList"]),
     ...mapActions("mst-weight", {
@@ -399,8 +396,7 @@ export default {
       // roomBedGroup(this.facilityCd).then(response => {
       roomBedGroup(this.getFacilitySwitch).then(response => {
         const bedGroup = response.filter(
-          r => r.isDel !== "1" && r.groupClass === 2
-        ); // 有効な透析室のみ
+          r => r.isDel !== "1" && r.groupClass === 2); // 有効な透析室のみ
         for (const item of bedGroup) {
           this.cmbRoomInfo.push({
             value: item.roomBedGroupCd,
@@ -412,6 +408,117 @@ export default {
     getValueByField(field) {
       return this.editRecord[field];
     },
+    initWeightInfoFromEditRecord() {
+      // 内部処理用ローカル配列に、入力項目をコピー
+      for (const num in this.columnDefinition) {
+        if (this.columnDefinition[num].field === "code") {
+          // 主キー
+          this.weightInfo.weightCd.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.weightCd.editValue = this.weightInfo.weightCd.initValue;
+        } else if (this.columnDefinition[num].field === "name") {
+          // 体重計名称
+          this.weightInfo.weightName.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.weightName.editValue = this.weightInfo.weightName.initValue;
+        } else if (this.columnDefinition[num].field === "weightNo") {
+          // 体重計番号
+          this.weightInfo.weightNo.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.weightNo.editValue = this.weightInfo.weightNo.initValue;
+        } else if (this.columnDefinition[num].field === "portName") {
+          // 接続ポート
+          this.weightInfo.portName.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.portName.editValue = this.weightInfo.portName.initValue;
+        } else if (this.columnDefinition[num].field === "deviceClass") {
+          // 体重計機種
+          this.weightInfo.deviceClass.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.deviceClass.editValue = this.weightInfo.deviceClass.initValue;
+          // add FNSI-田中衡機の追加 徐 start
+          if (String(this.weightInfo.deviceClass.editValue) === "1") {
+            this.deviceFlg = true;
+          } else {
+            this.deviceFlg = false;
+          }
+          // add FNSI-田中衡機の追加 徐 end
+        } else if (this.columnDefinition[num].field === "isAutoSendBefore") {
+          // 前体重自動送信
+          this.weightInfo.isAutoSendBefore.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.isAutoSendBefore.editValue = this.weightInfo.isAutoSendBefore.initValue;
+        } else if (this.columnDefinition[num].field === "isAutoSendAfter") {
+          // 後体重自動送信
+          this.weightInfo.isAutoSendAfter.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.isAutoSendAfter.editValue = this.weightInfo.isAutoSendAfter.initValue;
+        } else if (this.columnDefinition[num].field === "waitAutoSendBefore") {
+          // 前体重自動送信待ち時間
+          this.weightInfo.waitAutoSendBefore.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.waitAutoSendBefore.editValue = this.weightInfo.waitAutoSendBefore.initValue;
+        } else if (this.columnDefinition[num].field === "waitAutoSendAfter") {
+          // 後体重自動送信待ち時間
+          this.weightInfo.waitAutoSendAfter.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.waitAutoSendAfter.editValue = this.weightInfo.waitAutoSendAfter.initValue;
+        } else if (this.columnDefinition[num].field === "isDefaultPrintBefore") {
+          // 前体重印刷初期状態
+          this.weightInfo.isDefaultPrintBefore.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.isDefaultPrintBefore.editValue = this.weightInfo.isDefaultPrintBefore.initValue;
+        } else if (this.columnDefinition[num].field === "isDefaultPrintAfter") {
+          // 後体重印刷初期状態
+          this.weightInfo.isDefaultPrintAfter.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.isDefaultPrintAfter.editValue = this.weightInfo.isDefaultPrintAfter.initValue;
+        } else if (this.columnDefinition[num].field === "printerClass") {
+          // プリンタ機種
+          this.weightInfo.printerClass.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.printerClass.editValue = this.weightInfo.printerClass.initValue;
+        } else if (this.columnDefinition[num].field === "bedGroupCd") {
+          // 所属透析室
+          this.weightInfo.bedGroupCd.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.bedGroupCd.editValue = this.weightInfo.bedGroupCd.initValue;
+        } else if (this.columnDefinition[num].field === "isHasCardReader") {
+          // カードリーダー有無
+          this.weightInfo.isHasCardReader.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.isHasCardReader.editValue = this.weightInfo.isHasCardReader.initValue;
+          // add FNSI-田中衡機の追加 徐 start
+        } else if (this.columnDefinition[num].field === "dataSendInterval") {
+          // 測定値送信間隔
+          this.weightInfo.dataSendInterval.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.dataSendInterval.editValue = this.weightInfo.dataSendInterval.initValue;
+        } else if (this.columnDefinition[num].field === "dataSelectType") {
+          // データ初期種別
+          this.weightInfo.dataSelectType.initValue = this.getValueByField(
+            this.columnDefinition[num].field
+          );
+          this.weightInfo.dataSelectType.editValue = this.weightInfo.dataSelectType.initValue;
+        }
+        // add FNSI-田中衡機の追加 徐 end
+      }
+    },
 
     getSchemaByField(field) {
       return this.schema.model.fields[field];
@@ -420,6 +527,29 @@ export default {
     updateEditRecord(key, value) {
       this.editRecord[key] = value;
       this.setEditRecord(this.editRecord);
+    },
+    syncEditRecord() {
+      // ローカル保持している入力値を、親画面の確定処理前にstoreへ同期する。
+      const editRecord = {
+        ...this.editRecord,
+        code: this.weightInfo.weightCd.editValue,
+        weightNo: this.weightInfo.weightNo.editValue,
+        name: this.weightInfo.weightName.editValue,
+        portName: this.weightInfo.portName.editValue,
+        deviceClass: this.weightInfo.deviceClass.editValue,
+        isAutoSendBefore: this.weightInfo.isAutoSendBefore.editValue,
+        isAutoSendAfter: this.weightInfo.isAutoSendAfter.editValue,
+        waitAutoSendBefore: this.weightInfo.waitAutoSendBefore.editValue,
+        waitAutoSendAfter: this.weightInfo.waitAutoSendAfter.editValue,
+        isDefaultPrintBefore: this.weightInfo.isDefaultPrintBefore.editValue,
+        isDefaultPrintAfter: this.weightInfo.isDefaultPrintAfter.editValue,
+        printerClass: this.weightInfo.printerClass.editValue,
+        bedGroupCd: this.weightInfo.bedGroupCd.editValue,
+        isHasCardReader: this.weightInfo.isHasCardReader.editValue,
+        dataSendInterval: this.weightInfo.dataSendInterval.editValue,
+        dataSelectType: this.weightInfo.dataSelectType.editValue
+      };
+      this.setEditRecord(editRecord);
     },
     // 数値変更
     onWeightNoChange() {
@@ -430,7 +560,7 @@ export default {
     },
     // 名称変更
     onNameChange() {
-      document.getElementsByClassName("custom-input-required")[0].classList.remove("custom-input-invalid");
+      this.getWeightConfigElementsByClassName("custom-input-required")[0].classList.remove("custom-input-invalid");
       this.updateEditRecord("name", this.weightInfo.weightName.editValue);
     },
     // ポート名称変更
@@ -581,7 +711,7 @@ export default {
               : ""
           }
           ${
-            !validationResult.nameLengthValid
+            !validationResult.nameLengthValid 
             // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
             // ? "名称が長すぎます。<br>"
             ? messageFormat(DIALOG_MESSAGES["00200076"].message)
@@ -590,10 +720,10 @@ export default {
           }
         `;
       if(!validationResult.nameValid){
-        document.getElementsByClassName("custom-input-required")[0]?.classList?.add("custom-input-invalid");
+        this.getWeightConfigElementsByClassName("custom-input-required")[0]?.classList?.add("custom-input-invalid");
       }
       if(!validationResult.idValid){
-        document.getElementsByClassName("input-number-required")[0]?.classList?.add("input-number-invalid");
+        this.getWeightConfigElementsByClassName("input-number-required")[0]?.classList?.add("input-number-invalid");
       }
       // ダイアログ表示
       this.$ons.notification.alert({
@@ -605,120 +735,17 @@ export default {
   },
   created() {
     // 端末判別
-    if (navigator.userAgent.match(/Android/)) {
+    if (((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").match(/Android/)) {
       this.androidFlg = true;
     }
     this.setupRoomCombo();
   },
   mounted() {
-    // 内部処理用ローカル配列に、入力項目をコピー
-    for (const num in this.columnDefinition) {
-      if (this.columnDefinition[num].field === "code") {
-        // 主キー
-        this.weightInfo.weightCd.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.weightCd.editValue = this.weightInfo.weightCd.initValue;
-      } else if (this.columnDefinition[num].field === "name") {
-        // 体重計名称
-        this.weightInfo.weightName.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.weightName.editValue = this.weightInfo.weightName.initValue;
-      } else if (this.columnDefinition[num].field === "weightNo") {
-        // 体重計番号
-        this.weightInfo.weightNo.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.weightNo.editValue = this.weightInfo.weightNo.initValue;
-      } else if (this.columnDefinition[num].field === "portName") {
-        // 接続ポート
-        this.weightInfo.portName.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.portName.editValue = this.weightInfo.portName.initValue;
-      } else if (this.columnDefinition[num].field === "deviceClass") {
-        // 体重計機種
-        this.weightInfo.deviceClass.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.deviceClass.editValue = this.weightInfo.deviceClass.initValue;
-        // add FNSI-田中衡機の追加 徐 start
-        if (String(this.weightInfo.deviceClass.editValue) === "1") {
-          this.deviceFlg = true;
-        } else {
-          this.deviceFlg = false;
-        }
-        // add FNSI-田中衡機の追加 徐 end
-      } else if (this.columnDefinition[num].field === "isAutoSendBefore") {
-        // 前体重自動送信
-        this.weightInfo.isAutoSendBefore.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.isAutoSendBefore.editValue = this.weightInfo.isAutoSendBefore.initValue;
-      } else if (this.columnDefinition[num].field === "isAutoSendAfter") {
-        // 後体重自動送信
-        this.weightInfo.isAutoSendAfter.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.isAutoSendAfter.editValue = this.weightInfo.isAutoSendAfter.initValue;
-      } else if (this.columnDefinition[num].field === "waitAutoSendBefore") {
-        // 前体重自動送信待ち時間
-        this.weightInfo.waitAutoSendBefore.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.waitAutoSendBefore.editValue = this.weightInfo.waitAutoSendBefore.initValue;
-      } else if (this.columnDefinition[num].field === "waitAutoSendAfter") {
-        // 後体重自動送信待ち時間
-        this.weightInfo.waitAutoSendAfter.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.waitAutoSendAfter.editValue = this.weightInfo.waitAutoSendAfter.initValue;
-      } else if (this.columnDefinition[num].field === "isDefaultPrintBefore") {
-        // 前体重印刷初期状態
-        this.weightInfo.isDefaultPrintBefore.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.isDefaultPrintBefore.editValue = this.weightInfo.isDefaultPrintBefore.initValue;
-      } else if (this.columnDefinition[num].field === "isDefaultPrintAfter") {
-        // 後体重印刷初期状態
-        this.weightInfo.isDefaultPrintAfter.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.isDefaultPrintAfter.editValue = this.weightInfo.isDefaultPrintAfter.initValue;
-      } else if (this.columnDefinition[num].field === "printerClass") {
-        // プリンタ機種
-        this.weightInfo.printerClass.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.printerClass.editValue = this.weightInfo.printerClass.initValue;
-      } else if (this.columnDefinition[num].field === "bedGroupCd") {
-        // 所属透析室
-        this.weightInfo.bedGroupCd.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.bedGroupCd.editValue = this.weightInfo.bedGroupCd.initValue;
-      } else if (this.columnDefinition[num].field === "isHasCardReader") {
-        // カードリーダー有無
-        this.weightInfo.isHasCardReader.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.isHasCardReader.editValue = this.weightInfo.isHasCardReader.initValue;
-        // add FNSI-田中衡機の追加 徐 start
-      } else if (this.columnDefinition[num].field === "dataSendInterval") {
-        // 測定値送信間隔
-        this.weightInfo.dataSendInterval.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.dataSendInterval.editValue = this.weightInfo.dataSendInterval.initValue;
-      } else if (this.columnDefinition[num].field === "dataSelectType") {
-        // データ初期種別
-        this.weightInfo.dataSelectType.initValue = this.getValueByField(
-          this.columnDefinition[num].field
-        );
-        this.weightInfo.dataSelectType.editValue = this.weightInfo.dataSelectType.initValue;
-      }
-      // add FNSI-田中衡機の追加 徐 end
+    this.initWeightInfoFromEditRecord();
+  },
+  watch: {
+    "editRecord.code"() {
+      this.initWeightInfoFromEditRecord();
     }
   }
 };
@@ -758,12 +785,12 @@ export default {
   text-align: left;
 }
 
-.input-number-required >>> input[type="number"] {
+.input-number-required :deep(input[type="number"]) {
   color: black;
   background-color: #ffff99;
 }
 
-.input-number-invalid >>> input[type="number"] {
+.input-number-invalid :deep(input[type="number"]) {
   color: black;
   background-color: rgba(255, 0, 0, 0.7);
 }

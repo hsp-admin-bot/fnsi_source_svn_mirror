@@ -1,8 +1,9 @@
 package jp.co.nikkiso.ntss.core.utils;
 
-import com.mongodb.ConnectionString;
+import com.mongodb.MongoCredential;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoTimeoutException;
+import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
@@ -16,7 +17,9 @@ import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -30,20 +33,23 @@ public class MongoHealthCheckService {
   @Autowired
   private EventLoggerFactory eventLoggerFactory;
 
-  @Value("${spring.data.mongodb.host}")
+  @Value("${spring.mongodb.host}")
   private String host;
 
-  @Value("${spring.data.mongodb.port}")
+  @Value("${spring.mongodb.port}")
   private String port;
 
-  @Value("${spring.data.mongodb.database}")
+  @Value("${spring.mongodb.database}")
   private String database;
 
-  @Value("${spring.data.mongodb.username}")
+  @Value("${spring.mongodb.username}")
   private String username;
 
-  @Value("${spring.data.mongodb.password}")
+  @Value("${spring.mongodb.password}")
   private String password;
+
+  @Value("${spring.mongodb.authentication-database:${spring.mongodb.database}}")
+  private String authenticationDatabase;
 
   @Value("${spring.application.name}")
   private String serviceName;
@@ -98,15 +104,15 @@ public class MongoHealthCheckService {
       return;
     }
     long startTime = 0;
-    String connectionString = "mongodb://"+ host +":"+ port;
     int timeoutMs = 30000;
-    // 接続文字列オブジェクトの作成
-    ConnectionString connString = new ConnectionString(connectionString);
-    MongoClientSettings updatedSettings = MongoClientSettings.builder()
-      .applyConnectionString(connString)
+    MongoClientSettings.Builder settingsBuilder = MongoClientSettings.builder()
+      .applyToClusterSettings(builder -> builder.hosts(Collections.singletonList(new ServerAddress(host, Integer.parseInt(port)))))
       // springboot-stata-mongodbで構成されたタイムアウトは、デフォルトの構成を上書きできない30秒です。したがって、この構成は無効です
-      .applyToSocketSettings(builder -> builder.readTimeout(timeoutMs, TimeUnit.MILLISECONDS))
-      .build();
+      .applyToSocketSettings(builder -> builder.readTimeout(timeoutMs, TimeUnit.MILLISECONDS));
+    if (StringUtils.hasText(username)) {
+      settingsBuilder.credential(MongoCredential.createCredential(username, authenticationDatabase, password.toCharArray()));
+    }
+    MongoClientSettings updatedSettings = settingsBuilder.build();
     // MongoDBクライアントの作成
     MongoClient mongoClient = MongoClients.create(updatedSettings); // 连接到 MongoDB 服务
     try {

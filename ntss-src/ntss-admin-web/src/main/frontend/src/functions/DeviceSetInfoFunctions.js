@@ -76,13 +76,13 @@ export const updateDeviceSetInfo = (
 export const createUpdateData = (data, flag, sizeComparisonData) => {
   const updateData = {};
   // DBデータ画面キー
-  let screen_key = "";
+  let screen_key;
   // DBデータタグキー(装置設定タグ、次患者タグ)
-  let first_key = "";
+  let first_key;
   // DBデータAorBorCタグ
-  let second_key = "";
+  let second_key;
   // 数値キー
-  let thrid_key = "";
+  let thrid_key;
   // 変更回数
   let changeCount = 0;
   // 上限下限値キー(内部データ)
@@ -154,7 +154,7 @@ export const createUpdateData = (data, flag, sizeComparisonData) => {
       }
     }
   }
-  let sendData = {};
+  let sendData;
   if (flag === 0) {
     if (changeCount > 0) {
       sendData = updateData;

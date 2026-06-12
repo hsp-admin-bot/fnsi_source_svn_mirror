@@ -10,13 +10,14 @@ import org.seasar.doma.Update;
 import org.seasar.doma.jdbc.SelectOptions;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 利用者マスタ(個人情報DB)のDaoインタフェース.
  */
 @Dao
 @ConfigAutowireablePersonalDb
-public interface MstPersonalUserDao {
+public interface MstPersonalUserDao extends MasterDao<Map<String, Object>> {
 
   /**
    * 利用者IDに紐づくユーザを取得.
@@ -77,6 +78,10 @@ public interface MstPersonalUserDao {
    */
   @Select
   List<MstPersonalUser> selectAll(String facilityCd, String isDel);
+
+  @Override
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
 
   // add #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
   @Select

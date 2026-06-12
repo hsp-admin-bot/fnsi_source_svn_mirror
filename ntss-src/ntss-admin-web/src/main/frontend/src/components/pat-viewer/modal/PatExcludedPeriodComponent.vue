@@ -1,7 +1,8 @@
 /** * 除外期間 */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="main-content">
+    <template #body>
+      <div class="main-content">
       <div class="padding-top" style="display: flex; flex-wrap: wrap; align-items: center;">
         <label class="padding-left ex-period-lb-nowrap">患者ID: {{ hospPatId }}</label>
         <div class="ex-period-flex-nowrap" style="align-items: center;">
@@ -41,8 +42,8 @@
             </tr>
           </thead>
           <tbody>
-            <template v-for="(data, index) in dateList">
-              <tr :key="index">
+            <template v-for="(data, index) in dateList" :key="index">
+              <tr>
                 <td class="align-center mon-list-body-td">
                   {{ index + 1 }}
                 </td>
@@ -55,7 +56,7 @@
                       type="date"
                       name="dialysis-from-date"
                       max="9999-12-31"
-                      v-validate="'date_format:yyyy-MM-dd'"
+                      v-rules="'date_format:yyyy-MM-dd'"
                       v-model="data.exceptionPeriodFrom"
                       @keyup="showStartMsg(index)"
                     /> -->
@@ -64,7 +65,7 @@
                       class="ntss-input-date ntss-control-size"
                       :classes="isEdited(index, 'exceptionPeriodFrom')"
                       name="dialysis-from-date"
-                      v-validate="'date_format:yyyy-MM-dd'"
+                      v-rules="'date_format:yyyy-MM-dd'"
                       v-model="data.exceptionPeriodFrom"
                       @handleClearInput="data.exceptionPeriodFrom = null"
                       @keyup="showStartMsg(index)"
@@ -82,7 +83,7 @@
                       type="date"
                       name="dialysis-to-date"
                       max="9999-12-31"
-                      v-validate="'date_format:yyyy-MM-dd'"
+                      v-rules="'date_format:yyyy-MM-dd'"
                       v-model="data.exceptionPeriodTo"
                       @keyup="showEndMsg(index)"
                     /> -->
@@ -91,7 +92,7 @@
                       class="ntss-input-date ntss-control-size"
                       :classes="isEdited(index, 'exceptionPeriodTo')"
                       name="dialysis-to-date"
-                      v-validate="'date_format:yyyy-MM-dd'"
+                      v-rules="'date_format:yyyy-MM-dd'"
                       v-model="data.exceptionPeriodTo"
                       @handleClearInput="data.exceptionPeriodTo = null"
                       @keyup="showEndMsg(index)"
@@ -119,23 +120,26 @@
           </tbody>
         </table>
       </div>
-    </div>
-    <!-- 閉じる、保存ボタン -->
-    <div slot="footer" class="flex-container">
+      </div>
+      <!-- 閉じる、保存ボタン -->
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <!-- mod FNSI-患者経過総合ビューア 画面デザイン 徐 start -->
       <!-- <button class="common-style-cancel-button button" @click="cancel">閉じる</button>
       <button class="common-style-ok-button button" @click="reflect">保存</button> -->
       <button class="btn2-cancel button" style="width: 80px;padding-top: 8px;" @click="cancel">閉じる</button>
       <button class="btn1-execute button" style="width: 80px;padding-top: 8px;" @click="reflect">保存</button>
       <!-- mod FNSI-患者経過総合ビューア 画面デザイン 徐 end -->
-    </div>
+          </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import { ApiHelper } from "@/apis/AxiosHelper";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import SubModalBase from "@/components/modals/SubModalBase";
 import MultiSubModalMixin from "@/components/modals/MultiSubModalMixin";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
@@ -143,13 +147,15 @@ import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.j
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end;
 //FNSI-修正 #5660子ページのデータが保存すると、親ページが更新する lijiaxing add start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //FNSI-修正 #5660子ページのデータが保存すると、親ページが更新する lijiaxing add end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 //#5590 2023/04/20 ×を常に表示するように修正 張博 start
 import DateInput from "@/components/common/DateInput.vue";
+import nameDuplication3Img from "@/assets/name_duplication3.png";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 //#5590 2023/04/20 ×を常に表示するように修正 張博 end
 
 export default {
@@ -171,7 +177,7 @@ export default {
       patName: "",
       // 同姓同名
       isSame: "",
-      image_src_same: require("@/assets/name_duplication3.png"),
+      image_src_same: nameDuplication3Img,
       msgDiaLog: DIALOG_MESSAGES["99999995"].message,
       nextPatList: [
         { no: 0, name: "" },
@@ -202,10 +208,11 @@ export default {
         id: "dateFrom-" + e,
         scope: "dateFrom-" + e,
       };
-      if (this.dateList[e]["exceptionPeriodFrom"] && document.getElementById("dateFrom-" + e).validationMessage) {
-        this.$validator.errors.items.push(saveButtonErrorFlg);
+      const dateFromElement = getScopedElementById("dateFrom-" + e, this.$el || this);
+      if (this.dateList[e]["exceptionPeriodFrom"] && dateFromElement?.validationMessage) {
+        this.pushValidationError(saveButtonErrorFlg);
       } else {
-        this.$validator.errors.removeById("dateFrom-" + e);
+        this.removeValidationErrorById("dateFrom-" + e);
       }
     },
     showEndMsg(e) {
@@ -214,10 +221,11 @@ export default {
         id: "dateTo-" + e,
         scope: "dateTo-" + e,
       };
-      if (this.dateList[e]["exceptionPeriodTo"] && document.getElementById("dateTo-" + e).validationMessage) {
-        this.$validator.errors.items.push(saveButtonErrorFlg);
+      const dateToElement = getScopedElementById("dateTo-" + e, this.$el || this);
+      if (this.dateList[e]["exceptionPeriodTo"] && dateToElement?.validationMessage) {
+        this.pushValidationError(saveButtonErrorFlg);
       } else {
-        this.$validator.errors.removeById("dateTo-" + e);
+        this.removeValidationErrorById("dateTo-" + e);
       }
     },
     /**
@@ -231,7 +239,7 @@ export default {
      * 確定ボタン押下時イベント処理
      */
     reflect() {
-      if (this.$validator.errors.items.length > 0) {
+      if (this.validationErrors.length > 0) {
         this.$ons.notification.alert({
           // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
           // title: "チェックエラー",
@@ -301,7 +309,7 @@ export default {
     ...mapGetters("user", ["getFacilityCd"]),
   },
   
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -351,7 +359,6 @@ export default {
     // 編集前のデータを退避
     this.initDateList = JSON.parse(JSON.stringify(this.dateList));
   },
-  watch: {},
 };
 </script>
 

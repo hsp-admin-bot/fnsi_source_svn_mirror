@@ -1,17 +1,24 @@
 /**
- * 生体モニタリングページ
+ * 生体モニタリングページ（一覧）
+ * レイアウトは BasePage.vue を extends（テンプレートは重複しない）
  */
 <script>
-import Vue from 'vue';
-import BasePage from '@/components/BasePage';
-import HeaderItem from '@/components/header-contents/BioMonitoringListHeaderItem';
-import MainItem from '@/components/main-contents/BioMonitoringListMainItem';
+import BasePage from "@/components/BasePage.vue";
+import HeaderItem from "@/components/header-contents/BioMonitoringListHeaderItem.vue";
+import MainItem from "@/components/main-contents/BioMonitoringListMainItem.vue";
 
-export default Vue.extend(BasePage).extend({
-  pageTitle: '生体モニタリング',
+export default {
+  name: "BioMonitoringPage",
+  extends: BasePage,
   components: {
-    'header-content': HeaderItem,
-    'main-content': MainItem,
+    "header-content": HeaderItem,
+    "main-content": MainItem
   },
-});
+  data() {
+    return {
+      /** vue2 の pageTitle と同等（パンくず用・BasePage の component） */
+      component: "生体モニタリング"
+    };
+  }
+};
 </script>

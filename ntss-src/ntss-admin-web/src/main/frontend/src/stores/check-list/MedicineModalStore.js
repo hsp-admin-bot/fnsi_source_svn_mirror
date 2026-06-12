@@ -15,8 +15,8 @@ import {
 import { deepCopy } from "@/functions/common/CommonFunctions";
 // @ts-ignore
 import { dateFormat } from "@/functions/common/DateTimeUtils";
-import moment from "moment";
-import BigNumber from "bignumber.js";
+import dayjs from "@/compat/date/dayjs";
+import BigNumber from "@/compat/number/bignumber";
 // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
 import { medicineAllergy, medicineMixAllergy } from "@/functions/mst/MstGetters.js";
 import { getPrefix } from "@/functions/common/CommonFunctions";
@@ -94,7 +94,7 @@ export default {
       // 取得データの変換
       const data = response.data;
       // add 10962 サインイン直後にチェックリスト画面で0/0のチェック項目を表示しようとすると処理中のままになる 関  start
-      let patId = null;
+      let patId;
       if (data.patId) {
         patId = data.patId;
       } else {
@@ -210,8 +210,8 @@ export default {
               eDate = new Date(ary[idx].effect_date);
             }
             const eDateTimeLocal = eDate
-              ? moment(eDate).format("YYYY-MM-DDTHH:mm")
-              : moment(new Date()).format("YYYY-MM-DDTHH:mm");
+              ? dayjs(eDate).format("YYYY-MM-DDTHH:mm")
+              : dayjs(new Date()).format("YYYY-MM-DDTHH:mm");
 
             // 実施者
             let userId = ary[idx].effect_user_id;
@@ -471,8 +471,8 @@ export default {
               eDate = new Date(ary[idx].effect_date);
             }
             const eDateTimeLocal = eDate
-              ? moment(eDate).format("YYYY-MM-DDTHH:mm")
-              : moment(new Date()).format("YYYY-MM-DDTHH:mm");
+              ? dayjs(eDate).format("YYYY-MM-DDTHH:mm")
+              : dayjs(new Date()).format("YYYY-MM-DDTHH:mm");
 
             // 実施者
             let userId = ary[idx].effect_user_id;
@@ -562,7 +562,7 @@ export default {
       }
 
       // リストに取得した薬剤名をセット
-      let treatMedicine = null;
+      let treatMedicine;
       for (let mediItem of mediList) {
         treatMedicine = null;
         if (mediItem.medicine_type === "1") {
@@ -626,7 +626,7 @@ export default {
      */
     setCheckInfo({ state, commit }, item) {
       const medicList = state.selectMediList;
-      let chgRecord = null;
+      let chgRecord;
       for (let i = 0; i < medicList.length; i++) {
         if (medicList[i].no === item.no) {
           chgRecord = medicList[i];
@@ -652,8 +652,8 @@ export default {
             // 現在時刻
             let nowTime = new Date();
             const nowTimeStr = nowTime
-              ? moment(nowTime).format("YYYY-MM-DDTHH:mm")
-              : moment(new Date()).format("YYYY-MM-DDTHH:mm");
+              ? dayjs(nowTime).format("YYYY-MM-DDTHH:mm")
+              : dayjs(new Date()).format("YYYY-MM-DDTHH:mm");
             /* modify by chamaojia 2024-02-01 [10196] Date formatting --start */
             chgRecord.effect_date = dateFormat.utc2Jst(nowTime);
             /* modify by chamaojia 2024-02-01 [10196] Date formatting --end */
@@ -712,10 +712,24 @@ export default {
      * @param {*} rowData チェック行のデータ
      */
     setCheckInfoChangeData({ state, commit }, { rowData, idx }) {
+      // mod #12462 チェックリスト->投与薬剤->実施者 error zrx start
+      if (!rowData || !state.selectMediList || !state.selectMediList.length) {
+        return;
+      }
+      // MedicineModal 実施者のみ変更時は idx を渡さないため、rowData.no から行を特定する
+      const list = state.selectMediList;
+      const listIdx =
+        idx != null && list[idx] != null
+          ? idx
+          : list.findIndex((r) => r.no === rowData.no);
+      if (listIdx < 0 || list[listIdx] == null) {
+        return;
+      }
       let setEffectFlg = true;
-      let setEffectDate = state.selectMediList[idx].effect_date;
-      let setEffectUserId = state.selectMediList[idx].effect_user_id;
-      let setEffectDateStr = state.selectMediList[idx].effect_date_str;
+      let setEffectDate = list[listIdx].effect_date;
+      let setEffectUserId = list[listIdx].effect_user_id;
+      let setEffectDateStr = list[listIdx].effect_date_str;
+      // mod #12462 チェックリスト->投与薬剤->実施者 error zrx end
 
       // 実施時刻が変更された場合
       if (rowData.effect_date !== undefined) {
@@ -747,12 +761,12 @@ export default {
 
       if (setEffectDate) {
         setEffectDateStr = setEffectDate
-          ? moment(setEffectDate).format("YYYY-MM-DDTHH:mm")
-          : moment(new Date()).format("YYYY-MM-DDTHH:mm");
+          ? dayjs(setEffectDate).format("YYYY-MM-DDTHH:mm")
+          : dayjs(new Date()).format("YYYY-MM-DDTHH:mm");
       }
 
       const medicList = state.selectMediList;
-      let chgRecord = null;
+      let chgRecord;
       for (let i = 0; i < medicList.length; i++) {
         if (medicList[i].no === rowData.no) {
           chgRecord = medicList[i];
@@ -907,7 +921,7 @@ export default {
 
         return { result: true };
       } else {
-        return { result: false, message: response.errorMessage };
+        return { result: false, message: response?.data?.errorMessage ?? "登録に失敗しました。" };
       }
     }
   },

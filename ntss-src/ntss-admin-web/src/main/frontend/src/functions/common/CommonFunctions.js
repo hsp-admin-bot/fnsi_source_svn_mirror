@@ -1,14 +1,70 @@
-import $ from "jquery";
-import _ from "underscore";
-import moment from "moment";
+
+import dayjs from "@/compat/date/dayjs";
 // add #10359 編集権限の動作不正 dengshen start
 import store from "@/stores";
-import {PAGE_AUTHORITY_CODES} from "@/constants/pageAuthorities";
+import { PAGE_AUTHORITY_CODES } from "@/constants/pageAuthorities";
+
 // add #10359 編集権限の動作不正 dengshen end
 // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-import {fitTermCheck} from "@/functions/common/DateTimeUtils";
+import { fitTermCheck } from "@/functions/common/DateTimeUtils";
+
 // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
 import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
+
+import _ from "@/compat/collections/lodash";
+import $ from "@/compat/jquery";
+
+/** Object.prototype.hasOwnProperty の安全ラッパー */
+export function hasOwn(obj, key) {
+  return obj != null && Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+/**
+ * Underscore mapObject 相当（プレーンオブジェクトの各値を変換）
+ * @param {Record<string, any>} obj
+ * @param {(value: any, key: string, object: object) => any} iteratee
+ */
+export function mapObject(obj, iteratee) {
+  if (obj == null || typeof obj !== "object" || Array.isArray(obj)) {
+    return {};
+  }
+  const out = {};
+  for (const k of Object.keys(obj)) {
+    out[k] = iteratee(obj[k], k, obj);
+  }
+  return out;
+}
+
+/**
+ * Underscore isObject 相当（null 以外の object 型）
+ */
+export function isObjectLoose(v) {
+  return v != null && typeof v === "object";
+}
+
+/** Underscore _.isObject と同等（function も true） */
+export function isUnderscoreObject(v) {
+  return v != null && (typeof v === "object" || typeof v === "function");
+}
+
+/**
+ * Underscore propertyOf 相当。path はキー配列（例: [1, "value"]）
+ * @param {object} obj
+ * @returns {(path: string|number|Array<string|number>) => any}
+ */
+export function propertyOf(obj) {
+  return function (path) {
+    if (obj == null) return undefined;
+    if (!Array.isArray(path)) {
+      return obj[path];
+    }
+    let cur = obj;
+    for (const p of path) {
+      cur = cur == null ? undefined : cur[p];
+    }
+    return cur;
+  };
+}
 
 /**
  * 日時文字列のフォーマット
@@ -19,11 +75,11 @@ import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } f
  */
 export const formatDatetime = (datetimeString, formatTo, formatFrom = null) => {
   if (formatFrom === null) {
-    return datetimeString === "" ? "" : moment(datetimeString).format(formatTo);
+    return datetimeString === "" ? "" : dayjs(datetimeString).format(formatTo);
   }
   return datetimeString === ""
     ? ""
-    : moment(datetimeString, formatFrom).format(formatTo);
+    : dayjs(datetimeString, formatFrom).format(formatTo);
 };
 
 /**
@@ -32,7 +88,64 @@ export const formatDatetime = (datetimeString, formatTo, formatFrom = null) => {
  * @return {Object}
  */
 export const deepCopy = obj => {
-  return $.extend(true, _.isArray(obj) ? [] : {}, obj);
+  return $.extend(true, Array.isArray(obj) ? [] : {}, obj);
+};
+
+/**
+ * 施設設定などで保存されている「配列文字列」を安全に配列へ変換
+ * eval を使わず、JSON 文字列 / 単純な配列表現 / 既存配列を許容する
+ * @param {any} value
+ * @return {string[]}
+ */
+export const parseStoredArray = value => {
+  if (Array.isArray(value)) {
+    return value.map(item => String(item));
+  }
+  if (value == null) {
+    return [];
+  }
+
+  const raw = String(value).trim();
+  if (raw === "") {
+    return [];
+  }
+
+  const tryParse = source => {
+    const parsed = JSON.parse(source);
+    if (Array.isArray(parsed)) {
+      return parsed.map(item => String(item));
+    }
+    return null;
+  };
+
+  try {
+    const parsed = tryParse(raw);
+    if (parsed) {
+      return parsed;
+    }
+  } catch (_) {
+    // JSON 形式ではない場合は次の候補を試す
+  }
+
+  try {
+    const parsed = tryParse(raw.replace(/'/g, '"'));
+    if (parsed) {
+      return parsed;
+    }
+  } catch (_) {
+    // 単純配列表現として解釈する
+  }
+
+  const match = raw.match(/^\[(.*)\]$/s);
+  if (!match) {
+    return [];
+  }
+
+  return match[1]
+    .split(",")
+    .map(item => item.trim())
+    .filter(item => item !== "")
+    .map(item => item.replace(/^['"]|['"]$/g, ""));
 };
 
 /**
@@ -136,14 +249,15 @@ export const deserializeJsonColumn = (record, jsonColumnNames) => {
   const deserializedObj = deepCopy(record);
   for (const colName of jsonColumnNames) {
     // 指定したJSONカラムがレコードに存在するかチェック
-    if (!_.contains(_.keys(record), colName)) {
+    if (!Object.keys(record).includes(colName)) {
       throw new Error(`JSONカラム[${colName}]は存在しません。`);
     }
     try {
       deserializedObj[colName] = JSON.parse(record[colName]);
     } catch (ex) {
       throw new Error(
-        `JSONカラムのデシリアライズに失敗しました。(カラム:${colName})`
+        `JSONカラムのデシリアライズに失敗しました。(カラム:${colName})`,
+        { cause: ex }
       );
     }
   }
@@ -163,14 +277,15 @@ export const serializeJsonColumn = (record, jsonColumnNames) => {
   const serializedObj = deepCopy(record);
   for (const colName of jsonColumnNames) {
     // 指定したJSONカラムがレコードに存在するかチェック
-    if (!_.contains(_.keys(record), colName)) {
+    if (!Object.keys(record).includes(colName)) {
       throw new Error(`JSONカラム[${colName}]は存在しません。`);
     }
     try {
       serializedObj[colName] = JSON.stringify(record[colName]);
     } catch (ex) {
       throw new Error(
-        `JSONカラムのシリアライズに失敗しました。(カラム:${colName})`
+        `JSONカラムのシリアライズに失敗しました。(カラム:${colName})`,
+        { cause: ex }
       );
     }
   }
@@ -185,18 +300,18 @@ export const serializeJsonColumn = (record, jsonColumnNames) => {
  * @param {String} mstNameColumn カラム名(マスタ名称)
  * @return {String} マスタ名称
  */
-export const mstCdToName = function(
+export function mstCdToName(
   mstData,
   mstCd,
   mstCdColumn,
   mstNameColumn
 ) {
   if (mstData !== null && mstData.length > 0 && mstCd !== null) {
-    if (!_.has(mstData[0], mstCdColumn)) {
+    if (!hasOwn(mstData[0], mstCdColumn)) {
       // console.log(`カラム名(マスタコード)がマスタに存在しません。`);
       return "削除済み";
     }
-    if (!_.has(mstData[0], mstNameColumn)) {
+    if (!hasOwn(mstData[0], mstNameColumn)) {
       // console.log(`カラム名(マスタ名称)がマスタに存在しません。`);
       return "削除済み";
     }
@@ -209,7 +324,7 @@ export const mstCdToName = function(
     }
     return mstRecord[mstNameColumn];
   }
-};
+}
 
 // add #10659 削除済み含むの接頭文字対応 ztc 20241025 ztc start
 /**
@@ -220,18 +335,18 @@ export const mstCdToName = function(
  * @param {String} mstNameColumn カラム名(マスタ名称)
  * @return {String} マスタ名称
  */
-export const mstCdToCountryName = function(
+export function mstCdToCountryName(
   mstData,
   mstCd,
   mstCdColumn,
   mstNameColumn
 ) {
   if (mstData !== null && mstData.length > 0 && mstCd !== null) {
-    if (!_.has(mstData[0], mstCdColumn)) {
+    if (!hasOwn(mstData[0], mstCdColumn)) {
       // console.log(`カラム名(マスタコード)がマスタに存在しません。`);
       return "削除済み";
     }
-    if (!_.has(mstData[0], mstNameColumn)) {
+    if (!hasOwn(mstData[0], mstNameColumn)) {
       // console.log(`カラム名(マスタ名称)がマスタに存在しません。`);
       return "削除済み";
     }
@@ -244,7 +359,7 @@ export const mstCdToCountryName = function(
     }
     return mstRecord[mstNameColumn];
   }
-};
+}
 // add #10659 削除済み含むの接頭文字対応 ztc 20241025 ztc end
 
 /**
@@ -255,17 +370,17 @@ export const mstCdToCountryName = function(
  * @param {String} mstNameColumn カラム名(マスタ名称)
  * @return {String} マスタ名称
  */
-export const mstCdToNameFreeWord = function(
+export function mstCdToNameFreeWord(
   mstData,
   mstCd,
   mstCdColumn,
   mstNameColumn
 ) {
   if (mstData !== null && mstData.length > 0 && mstCd !== null && !isNaN(mstCd)) {
-    if (!_.has(mstData[0], mstCdColumn)) {
+    if (!hasOwn(mstData[0], mstCdColumn)) {
       return null;
     }
-    if (!_.has(mstData[0], mstNameColumn)) {
+    if (!hasOwn(mstData[0], mstNameColumn)) {
       return null
     }
     // mod 8304 【デグレ】実績マージを実行すると診療情報の一部が削除済みとなる 関 start
@@ -278,7 +393,7 @@ export const mstCdToNameFreeWord = function(
     return mstRecord[mstNameColumn];
   }
   return null;
-};
+}
 
 /**
  * マスタコードを名称に変換(削除済の場合は名称に【削除】を付与して返却)
@@ -289,7 +404,7 @@ export const mstCdToNameFreeWord = function(
  * @param {Boolean} isDeleted 【削除済み】を必ず付与するか（defaultはfalse）
  * @return {String} マスタ名称
  */
-export const mstCdToNameIncludeDeleted = function(
+export function mstCdToNameIncludeDeleted(
   mstData,
   mstCd,
   mstCdColumn,
@@ -297,10 +412,10 @@ export const mstCdToNameIncludeDeleted = function(
   isDeleted = false
 ) {
   if (mstData !== null && mstData.length > 0 && mstCd !== null) {
-    if (!_.has(mstData[0], mstCdColumn)) {
+    if (!hasOwn(mstData[0], mstCdColumn)) {
       return "削除済み";
     }
-    if (!_.has(mstData[0], mstNameColumn)) {
+    if (!hasOwn(mstData[0], mstNameColumn)) {
       return "削除済み";
     }
     // mod 8304 【デグレ】実績マージを実行すると診療情報の一部が削除済みとなる 関 start
@@ -327,7 +442,7 @@ export const mstCdToNameIncludeDeleted = function(
     return mstRecord[mstNameColumn];
   }
   return null;
-};
+}
 
 // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
 /**
@@ -339,7 +454,7 @@ export const mstCdToNameIncludeDeleted = function(
  * @param {Boolean} isDeleted 【削除済み】を必ず付与するか（defaultはfalse）
  * @return {String} マスタ名称
  */
-export const mstCdToNameIncludeExpiredAndDeleted = function(
+export function mstCdToNameIncludeExpiredAndDeleted(
   mstData,
   mstCd,
   mstCdColumn,
@@ -347,10 +462,10 @@ export const mstCdToNameIncludeExpiredAndDeleted = function(
   isDeleted = false
 ) {
   if (mstData !== null && mstData.length > 0 && mstCd !== null) {
-    if (!_.has(mstData[0], mstCdColumn)) {
+    if (!hasOwn(mstData[0], mstCdColumn)) {
       return "削除済み";
     }
-    if (!_.has(mstData[0], mstNameColumn)) {
+    if (!hasOwn(mstData[0], mstNameColumn)) {
       return "削除済み";
     }
 
@@ -359,7 +474,7 @@ export const mstCdToNameIncludeExpiredAndDeleted = function(
       return "削除済み";
     }
 
-    let today = moment().format("YYYY-MM-DD");
+    let today = dayjs().format("YYYY-MM-DD");
     let expired = "";
     if (mstRecord.useEndDate && today < mstRecord.useEndDate) {
       expired = "【期限切れ】";
@@ -380,7 +495,7 @@ export const mstCdToNameIncludeExpiredAndDeleted = function(
     return expired + mstRecord[mstNameColumn];
   }
   return null;
-};
+}
 // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
 
 /**
@@ -448,7 +563,7 @@ export const convertToHalfWidth= (convertToHalfStr) =>{
 /**
  * 画面項目権限設定
  * @param pageCd 画面名
- * @param itemCd　項目名
+ * @param itemCd 項目名
  * @returns {Boolean}権限判定結果
  */
 export const getAuthorized = (pageCd, itemCd) => {
@@ -517,15 +632,41 @@ export const getPrefix = ({ isTaboo, isAllergy, normalClassType, classType, trea
   }
   
   // 削除済み
+  // #12505 接頭文字対応 ligh edit start
+  // 調製薬剤本体が削除済みかつ構成薬に削除ありの場合、両方付与
   if (isDisp == 0 || isDel == 1) {
     prefix += DELETE_PREFIX;
-  } else if (isIncludeDel) { // 削除済み含む
+  }
+  if (isIncludeDel) {
     prefix += INCLUDE_DELETED_PREFIX;
   }
+  // #12505 接頭文字対応 ligh edit end
   
   return prefix;
 };
 // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
+/**
+ * 送信後接頭文字追加
+ * 禁忌、アレルギー、の接頭文字対応
+ * @param {Boolean} isTaboo 禁忌
+ * @param {Boolean} isAllergy アレルギー
+ * @returns {String} つなぎ合わせた接頭辞です
+ */
+export const getPrefixSend = ({ isTaboo, isAllergy }) => {
+  const TABOO_CLASS_PREFIX = "【禁忌】";
+  const ALLERGY_CLASS_PREFIX = "【ｱﾚﾙｷﾞｰ】";
+  const TABOO_ALLERGY_CLASS_PREFIX = "【禁忌・ｱﾚﾙｷﾞｰ】";
+  let prefix = "";
+  if (isTaboo && isAllergy) {
+    prefix += TABOO_ALLERGY_CLASS_PREFIX;
+  } else if (isTaboo && !isAllergy) {
+    prefix += TABOO_CLASS_PREFIX;
+  } else if (!isTaboo && isAllergy) {
+    prefix += ALLERGY_CLASS_PREFIX;
+  }
+  return prefix;
+};
+
 /**
  * 休日のスタイル取得
  * @param date 日付文字列
@@ -533,17 +674,17 @@ export const getPrefix = ({ isTaboo, isAllergy, normalClassType, classType, trea
  * @return 休日のスタイル (ntss.cssに定義)
  */
 export const getHolidayStyle = (date, normalBackground) => {
-  if (!moment(date).isValid()) {
+  if (!dayjs(date).isValid()) {
     return "";
   }
   const holidays = store.getters["mst-holiday/getHolidays"];
-  const week = moment(date).day();
+  const week = dayjs(date).day();
   let cssString = 
     week === 0 ? "list-header-sunday" :
     week === 6 ? (normalBackground ? "normal-background-saturday" : "list-header-saturday") :
     "";
 
-  if (holidays[moment(date).format("YYYY-MM-DD")]) {
+  if (holidays[dayjs(date).format("YYYY-MM-DD")]) {
     cssString = "list-header-holiday";
   }
 
@@ -569,10 +710,33 @@ export const initForceSignOutFlag = async (targetStore, facilitySettingNo) => {
  * 使用した主な実装方法はLoginView.vueのコードを参照してください
  */
 export const changeShowPassword = (event) => {
-  const input = event.target.previousElementSibling;
+  const target = event?.currentTarget || event?.target;
+  if (!target) {
+    return;
+  }
+
+  const wrapper = typeof target.closest === 'function'
+    ? target.closest('.password-wrapper')
+    : null;
+  const input = wrapper?.querySelector?.('input, .text-input, .ons-input__control, .text-input__input')
+    || target.previousElementSibling;
+
+  if (!input || typeof input.getAttribute !== 'function' || typeof input.setAttribute !== 'function') {
+    return;
+  }
+
   const type = input.getAttribute('type');
-  input.setAttribute('type', type === 'password' ? 'text' : 'password');
-  event.target.setAttribute('icon', type === 'password' ? 'fa-eye-slash' : 'fa-eye');
+  const nextType = type === 'password' ? 'text' : 'password';
+  input.setAttribute('type', nextType);
+
+  const nextIcon = nextType === 'password' ? 'fa-eye' : 'fa-eye-slash';
+  if (typeof target.setAttribute === 'function') {
+    target.setAttribute('icon', nextIcon);
+  }
+  if (target.classList) {
+    target.classList.remove('fa-eye', 'fa-eye-slash');
+    target.classList.add(nextIcon);
+  }
 }
 
 /**
@@ -668,4 +832,91 @@ export const containsTabooAllergyTag = (name) => {
   if (typeof name !== 'string') return false;
   const tags = ['【禁忌】', '【ｱﾚﾙｷﾞｰ】', '【禁忌・ｱﾚﾙｷﾞｰ】'];
   return tags.some(tag => name.includes(tag));
+};
+
+
+//#11219 カスタム HTML 安全フィルタ関数
+export const customSanitizer = (rawHtml) => {
+  if (!rawHtml) return '';
+
+  const parser = new DOMParser();
+  const decodedHtml = rawHtml.replace(/\\"/g, '"');
+  const doc = parser.parseFromString(decodedHtml, 'text/html');
+
+  // 1. タグのホワイトリスト：'IMG' を追加
+  const allowedTags = ['P', 'SPAN', 'BR', 'B', 'STRONG', 'I', 'EM', 'DEL', 'U', 'IMG'];
+
+  // 2. スタイルのホワイトリスト：従来どおり、画像向けに width/height を追加
+  const allowedStyles = [
+    'font-family', 'font-size', 'color', 'background-color',
+    'text-decoration', 'white-space', 'width', 'height'
+  ];
+
+  const sanitizeNode = (node) => {
+    var htmlText = ''
+    Array.from(node.childNodes).forEach(child => {
+      if (child.nodeType === 1) {
+        const tagName = child.tagName;
+
+        // タグが許可されているか確認
+        // console.log(allowedTags.includes(tagName),tagName);
+        if (!allowedTags.includes(tagName)) {
+          // 1. child ノードを文字列に変換する（タグ自体を含む）
+          const nodeAsString = child.outerHTML;
+          // 2. テキストノードを作成し、直前に変換した文字列を内容とする
+          // 注意：createTextNode は < > などの文字を自動エスケープし、ブラウザによる HTML 解析を防ぐ
+          const textNode = document.createTextNode(nodeAsString);
+          child.parentNode.replaceChild(textNode, child);
+          return;
+        }
+
+        // --- 属性処理ロジック ---
+        const styles = child.style;
+        const safeStylePairs = [];
+        let safeSrc = '';
+
+        // スタイルを処理
+        allowedStyles.forEach(prop => {
+          const value = styles.getPropertyValue(prop);
+          if (value) safeStylePairs.push(`${prop}: ${value}`);
+        });
+
+        // IMG の src 属性を専用処理
+        if (tagName === 'IMG') {
+          const src = child.getAttribute('src') || '';
+          // 安全検証：http、https、base64 画像のみ許可
+          if (src.match(/^(https?:\/\/|data:image\/)/i)) {
+            safeSrc = src;
+          } else {
+            const nodeAsString = child.outerHTML;
+            // 2. テキストノードを作成し、直前に変換した文字列を内容とする
+            // 注意：createTextNode は < > などの文字を自動エスケープし、ブラウザによる HTML 解析を防ぐ
+            const textNode = document.createTextNode(nodeAsString);
+            child.parentNode.replaceChild(textNode, child);
+            return;
+          }
+        }
+
+        // 元の属性をすべて削除（onerror、onclick などを除去）
+        while (child.attributes.length > 0) {
+          child.removeAttribute(child.attributes[0].name);
+        }
+
+        // 安全な属性を再設定
+        if (safeStylePairs.length > 0) {
+          child.setAttribute('style', safeStylePairs.join('; '));
+        }
+        if (tagName === 'IMG' && safeSrc) {
+          child.setAttribute('src', safeSrc);
+          // 画像がコンテナをはみ出さないようデフォルトスタイルを付与
+          child.style.maxWidth = '100%';
+        }
+
+        sanitizeNode(child);
+      }
+    });
+  };
+
+  sanitizeNode(doc.body);
+  return doc.body.innerHTML;
 };

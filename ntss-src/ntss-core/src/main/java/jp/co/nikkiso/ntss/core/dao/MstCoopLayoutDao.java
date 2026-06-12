@@ -135,6 +135,13 @@ public interface MstCoopLayoutDao {
    */
   @Select
   List<MstCoopLayout> selectMstCoopLayoutByFacilityCdOrCoopCdOrCoopCdSub(MstCoopLayout mstCoopLayout);
+
+  @Select
+  List<MstCoopLayout> selectSource(String coopVersion, String coopCd, String direction);
+
+  @Select
+  List<MstCoopLayout> selectCurrentByFacilityCd(String facilityCd);
+
   /**
    * 連携レイアウトを登録
    * @param mstCoopLayouts 連携レイアウトオブジェクト

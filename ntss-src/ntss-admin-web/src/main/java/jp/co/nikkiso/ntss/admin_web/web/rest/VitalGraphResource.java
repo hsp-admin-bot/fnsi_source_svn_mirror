@@ -3,19 +3,22 @@ package jp.co.nikkiso.ntss.admin_web.web.rest;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.response.vital.VitalGraphDefineResponse;
 import jp.co.nikkiso.ntss.admin_web.service.VitalGraphService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
-
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 
@@ -36,13 +39,21 @@ public class VitalGraphResource {
   @Autowired
   LogEventUtils logEventUtils;
   // wp アプリケーションログの適正化 Add End
+
+  @Autowired
+  private FacilityAccessService facilityAccessService;
   /**
    * モニタグラフ設定取得./graph-define
    * @return
    */
   @GetMapping("/graph-define/{facilityCd}")
   public ResponseEntity<?> getVitalGraphDefine(
-    @PathVariable String facilityCd) {
+    @PathVariable String facilityCd,
+    @RequestParam(required = false) Long selectedPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.VITAL + "/getBbsInfo";

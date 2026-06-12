@@ -4,8 +4,8 @@
  * 使い方はBigEvalに準拠
  */
 
-import BigNumber from "bignumber.js";
-import BigEval from "bigeval";
+import BigNumber from "@/compat/number/bignumber";
+import BigEval from "@/compat/number/bigeval";
 
 let _bigNum = BigNumber;
 let _bigEval = BigEval;

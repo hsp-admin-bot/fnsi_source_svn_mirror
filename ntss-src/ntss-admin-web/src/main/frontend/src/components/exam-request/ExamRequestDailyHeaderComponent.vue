@@ -17,7 +17,7 @@
     <!-- ポップアップ -->
     <v-ons-popover
       cancelable
-      :visible.sync='popoverVisible'
+      v-model:visible='popoverVisible'
       :target='popoverTarget'
       :direction='popoverDirection'
       :cover-target=false
@@ -101,9 +101,10 @@
 </template>
 
 <script>
-import _ from 'lodash';
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import _ from "@/compat/collections/lodash";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+
+import { EventBus } from "@/compat/vue/event-bus.js";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 import DateInput from "@/components/common/DateInput.vue";
@@ -133,7 +134,7 @@ export default {
         RegOrderClassTextSet[1].value,
         RegOrderClassTextSet[2].value,
       ],
-      showScheduledOnly: true,
+      showScheduledOnly: false,
     };
     return {
       popoverVisible: false,
@@ -357,7 +358,7 @@ export default {
     const initDate = toKeyDate(this.getStartToEndDate.showStartDate);
     // add #12500 「検査依頼一覧(一日)」画面の機能帳票対応 高 start
     // 検査依頼(一覧／一日) {"disp_status":"2","report_class":"1,2,8,9,10"}
-    store.dispatch("report/getMstReport", {funcCd: "02101",printFlag: 2});
+    store.dispatch("report/getMstReport", {funcCd: "02101",printFlag: 2, selectedPatId: this.selectedPatId});
     // 印刷パラメータ要求
     EventBus.$on("requestReportParams", this.requestrReportParams);
     // add #12500 「検査依頼一覧(一日)」画面の機能帳票対応 高 end
@@ -370,7 +371,7 @@ export default {
     this.setConditionList();
   },
   // add #12500 「検査依頼一覧(一日)」画面の機能帳票対応 高 start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("requestReportParams", this.requestrReportParams);
   },
   // add #12500 「検査依頼一覧(一日)」画面の機能帳票対応 高 end

@@ -25,10 +25,10 @@ import java.util.Map;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlConfig;
@@ -56,13 +56,13 @@ import jp.co.nikkiso.ntss.core.exception.NtssException;
 @Sql("classpath:resource.script/JournalConvertSendResourceTest/ConvertSendTextServiceImplTest.db5.before.sql")
 @Sql(value = "classpath:resource.script/ConvertSendServiceImplTest/db4.before.sql", config = @SqlConfig(dataSource = DataSourceName.AUTH, transactionManager = TransactionManagerName.AUTH))
 public class JournalConvertSendResourceTest extends AbstractResourceTest {
-  @SpyBean
+  @MockitoSpyBean
   private ConvertSendCommonService convertSendService;
-  @MockBean
+  @MockitoBean
   ClockWrapper clockWrapper;
-  @SpyBean
+  @MockitoSpyBean
   private SysCoopJournalDao sysCoopJournalDao;
-  @SpyBean
+  @MockitoSpyBean
   private ConvertCommonService convertCommonService;
 
   @Test

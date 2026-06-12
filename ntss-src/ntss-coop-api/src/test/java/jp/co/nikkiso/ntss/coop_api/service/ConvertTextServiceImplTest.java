@@ -18,7 +18,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,13 +39,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ConvertTextServiceImplTest {
 
-  @SpyBean
+  @MockitoSpyBean
   ConvertTextServiceImpl convertTextServiceImpl;
 
-  @SpyBean
+  @MockitoSpyBean
   SysCoopJournalDao sysCoopJournalDao;
 
-  @SpyBean
+  @MockitoSpyBean
   MstCoopLayoutDao mstCoopLayoutDao;
 
   @Test

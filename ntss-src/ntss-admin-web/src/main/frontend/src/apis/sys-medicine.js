@@ -11,10 +11,10 @@ const URL_BASE = "/sys_medicine";
 
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {*} url URL
- * @param {*} param パラメータ
+ * @param {string} url URL
+ * @param {unknown} [params] パラメータ
  */
-function getWithLoader(url, params) {
+function getWithLoader(url, params = undefined) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
   store.dispatch("loading-screen/setLoadingScreenVisible", true);
   return ApiHelper.get(url, params).finally(() =>
@@ -24,7 +24,7 @@ function getWithLoader(url, params) {
 
 /**
  * 標準医薬品マスタを取得する.
- * @returns 標準医薬品マスタのリスト
+ * @returns {Promise} 標準医薬品マスタのリスト
  */
 export function sendRequestGetSysMedicineAll() {
   return getWithLoader(`${URL_BASE}/getSysMedicineAll`);

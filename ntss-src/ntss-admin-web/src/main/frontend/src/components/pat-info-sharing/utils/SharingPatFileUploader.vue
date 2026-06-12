@@ -31,9 +31,12 @@ const DEFAULT_MAX_SIZE = "20480";
 export default {
   name: "CommonFileUploader",
   props: {
+    modelValue: {
+      type: Array,
+      default: undefined,
+    },
     value: {
       type: Array,
-      required: true,
       default: () => [],
     },
     disabled: {
@@ -95,9 +98,10 @@ export default {
         this.payload.push(file.rawFile);
       }
       const updatedInfo = [
-        ...this.value,
+        ...this.fileInfo,
         ...e.files.map((i) => ({ name: i.name, path: null })),
       ];
+      this.$emit("update:modelValue", updatedInfo);
       this.$emit("input", updatedInfo);
     },
     /**
@@ -107,14 +111,15 @@ export default {
       this.$emit("clear-error");
       const fileName = e.files[0].name;
       this.payload = this.payload.filter((f) => f.name !== fileName);
-      const updatedInfo = this.value.filter((i) => i.name !== fileName);
+      const updatedInfo = this.fileInfo.filter((i) => i.name !== fileName);
+      this.$emit("update:modelValue", updatedInfo);
       this.$emit("input", updatedInfo);
     },
     /**
      * ファイル存在チェック処理
      */
     async fileExistsCheck() {
-      const currentNames = this.value.map((i) => i.name);
+      const currentNames = this.fileInfo.map((i) => i.name);
       this.payload = this.payload.filter((f) => currentNames.includes(f.name));
       return "";
     },
@@ -122,7 +127,7 @@ export default {
      * 同名ファイルチェック処理
      */
     hasSameRecord(addfileList) {
-      const currentNames = new Set(this.value.map((file) => file.name));
+      const currentNames = new Set(this.fileInfo.map((file) => file.name));
       const hasDuplicateWithCurrent = addfileList.some((file) =>
         currentNames.has(file.name)
       );
@@ -131,8 +136,13 @@ export default {
       return hasDuplicateWithCurrent || hasDuplicateInNew;
     },
   },
+  computed: {
+    fileInfo() {
+      return this.modelValue !== undefined ? this.modelValue : this.value;
+    },
+  },
   watch: {
-    value(newValue) {
+    fileInfo(newValue) {
       if (!newValue || newValue.length === 0) {
         this.payload = [];
         const uploadWidget = this.$refs.upload.kendoWidget();
@@ -143,7 +153,7 @@ export default {
       this.payload = this.payload.filter(f => currentNames.includes(f.name));
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     Object.assign(this.$data, this.$options.data());
   },
 };

@@ -33,11 +33,12 @@ import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
 import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
 import jp.co.nikkiso.ntss.core.entity.OrdMain;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 @RestController
 @Slf4j
@@ -101,7 +102,23 @@ public class DeviceEdgeOrderResource {
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang start
   public ResponseEntity<?> PostOrderReadOptionByFacilityCd(
     // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
-    @PathVariable String facilityCd) {
+    @PathVariable String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+              !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/device-edge-list";
@@ -133,6 +150,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderReadOption(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/read_option";
@@ -186,6 +214,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderReadSettingValue(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/getBbsInfo";
@@ -238,6 +277,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderSendNextPatInfo(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
                                              @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     boolean isNextPatFlg = deviceEdgeOrderService.getIsNextPatInfo(request.getOrdNo());
     if(!isNextPatFlg) {
@@ -254,6 +304,17 @@ public class DeviceEdgeOrderResource {
   @PostMapping("/send_next_pat")
   public ResponseEntity<?> PostOrderSendNextPat(@RequestBody DeviceEdgeOrderRequest request,
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/send_next_pat";
@@ -307,6 +368,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderReloadComsvSetting(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/reload_comsv_setting";
@@ -360,6 +432,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderReloadTreatMaster(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/reload_complaint_master";
@@ -414,6 +497,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderReloadStaffMaster(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/reload_staff_master";
@@ -467,6 +561,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderSetUnknownPat(@RequestBody DeviceEdgeOrderRequest request,
  // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/set_unknown_pat";
@@ -516,6 +621,17 @@ public class DeviceEdgeOrderResource {
   @PostMapping("/cancel_condition")
   public ResponseEntity<?> PostOrderCancelCondition(@RequestBody DeviceEdgeOrderRequest request,
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/cancel_condition";
@@ -567,6 +683,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderChangeIndMedi(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) {
+    if(!ntssUser.isNkkAdminUser()) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/change_ind_medi";
@@ -617,6 +744,14 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderAfterWeight(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) {
+    if(!ntssUser.isNkkAdminUser()) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/after_weight";
@@ -667,6 +802,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderCheckStatus(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/check_status";
@@ -718,6 +864,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderReloadChecklistMaster(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/reload_checklist_master";
@@ -774,6 +931,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderCacheClear(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/chache_clear";
@@ -825,6 +993,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderReloadExamMaster(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/reload_exam_master";
@@ -881,6 +1060,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderStartTreatOffline(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) throws URISyntaxException, RuntimeException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/start_treat_offline";
@@ -945,6 +1135,15 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderEndTreatOffline(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null &&
+              !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // #10889 2024.09.05 mod 治療終了処理を修正 TDC片口 start
 //    // add FNSI-redime5618 fang start
@@ -967,7 +1166,7 @@ public class DeviceEdgeOrderResource {
 //        }
 //      });
 //      //add 9480 治療記録(オフライン運転終了指示) gjn end
-//      return new ResponseEntity<>(null, HttpStatus.OK);
+//      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //    }
 //    // add FNSI-redime5618 fang end
     try {
@@ -978,11 +1177,11 @@ public class DeviceEdgeOrderResource {
           // 非同期実行チェック計算
           webApiCallCommonUtil.doAutoCalculation(request.getOrdNo());
         });
-        return new ResponseEntity<>(null, HttpStatus.OK);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
       }
       if (result == DeviceEdgeOrderService.EndTreatResponse.ALREADY) {
         // ALREADY ならば更新不要（既に別ルートで治療終了されているなど）なのでそのままOKを返し終了
-        return new ResponseEntity<>(null, HttpStatus.OK);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
       }
       if (result == DeviceEdgeOrderService.EndTreatResponse.FAILED) {
         // FAILED ならば(次患者更新が)失敗だけど、コードを潜ると発生しないはずなのでここはおまじない
@@ -1055,6 +1254,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> postOrderReportUpdate(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
                                              @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/send_report_update";
@@ -1108,6 +1318,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> postOrderEndDateUpdate(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
                                              @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/send_end_date_update";
@@ -1161,6 +1382,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> postAllReportUpdateByPatId(@RequestBody DeviceEdgeOrderRequest request,
 // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
                                                @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/send_all_report_update_by_pat_id";
@@ -1208,6 +1440,17 @@ public class DeviceEdgeOrderResource {
   public ResponseEntity<?> PostOrderChangeTreatTime(@RequestBody DeviceEdgeOrderRequest request,
   // #9698 アプリケーションログの内容修正 20260401 mod yangxuewang end
                                            @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request != null && request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "request.getFacilityCd()=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     String mappingUrl = Uri.DEVICE_EDGE_ORDER + "/change_treat_time";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_DEVICE_EDGE_OPERATION, BEFORE_LOG_FLG_INFO, mappingUrl, null, request);

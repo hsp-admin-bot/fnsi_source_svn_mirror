@@ -4,15 +4,6 @@
 <template>
   <div class="ntss-send-condition-text">
     <div class="center">
-      <!-- #10822 2026.06.04 mod 印字タブ配下のタブスタイル修正 TDC石井 start -->
-        <!-- <ons-segment class="segment-button" id="segment" :index.sync="selectedSegmentId" ref="segmentBtnArea">
-        <button v-on:click="onSegmentClick(0)">前体重</button>
-        <button v-on:click="onSegmentClick(1)">後体重</button>
-        <template v-if="!isScaleBed">
-          <button v-on:click="onSegmentClick(2)">スケジュールなし</button>
-        </template>
-        <button v-on:click="onSegmentClick(3)">患者未登録</button>
-        </ons-segment> -->
       <div class="print-tabs" id="segment" ref="segmentBtnArea">
         <input id="print_seg_0" type="radio" name="print_seg" :checked="selectedSegmentId === 0" @change="onSegmentClick(0)" />
         <label class="print-tab-item" for="print_seg_0">前体重</label>
@@ -25,7 +16,6 @@
         <input id="print_seg_3" type="radio" name="print_seg" :checked="selectedSegmentId === 3" @change="onSegmentClick(3)" />
         <label class="print-tab-item" for="print_seg_3">患者未登録</label>
       </div>
-      <!-- #10822 2026.06.04 mod 印字タブ配下のタブスタイル修正 TDC石井 end -->
     </div>
     <div class="vertical-div">
       <div class="header-btn-area right" ref="headerBtnArea">
@@ -283,20 +273,20 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import customInput from "@/components/common/custom-form-tags/CustomInput";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
 import customSelect from "@/components/common/custom-form-tags/CustomSelect";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getHeaderHeight, getFooterMenuClientHeight, getLatestHeaderElement, getScopedElementById, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
-// #11987 2025.12.02 add スケールベッド対応 スケールベッドマスター画面追加 TDC渡辺 start
-import cloneDeep from "lodash/cloneDeep";
-// #11987 2025.12.02 add スケールベッド対応 スケールベッドマスター画面追加 TDC渡辺 end
 
 export default {
-  props: {},
+
   components: {
     "custom-input": customInput,
     "custom-input-number": customInputNumber,
@@ -314,9 +304,7 @@ export default {
       //mod マスタ詳細画面がありません破棄メッセージ 张博 end
       //Android端末で編集中であることを示すフラグ
       androidFlg: false,
-       // #11987 2025.11.28 add スケールベッド対応 修正データのセット TDC渡辺 start
       editRecordClone: {}
-      // #11987 2025.11.28 add スケールベッド対応 修正データのセット TDC渡辺 end
     };
   },
   computed: {
@@ -440,13 +428,10 @@ export default {
         });
       }
       return retList;
-    }
-    // #11987 2025.12.08 add スケールベッド スケールベッド設定判断 TDC渡辺 start
-    ,
-    isScaleBed() {
-      return this.editRecordClone?.weightType === '1';
     },
-    // #11987 2025.12.08 add スケールベッド スケールベッド設定判断 end
+    isScaleBed() {
+      return this.editRecordClone?.weightType === "1";
+    }
   },
   methods: {
     ...mapActions("master-maintenance", [
@@ -679,20 +664,18 @@ export default {
     calculateGridHeight() {
       if (!this.getIsGridEditing) {
         const wh = this.windowHeight;
-        const hh = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .pop().offsetHeight;
+        const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
         const th = Array.prototype.slice
-          .call(document.getElementsByClassName("tab_item"))
+          .call(queryScopedSelectorAll(".tab_item", this.$el || this))
           .shift().offsetHeight;
         const segmentBtnAreaEl = this.$refs.segmentBtnArea;
         const segmentBtnAreaHeight = segmentBtnAreaEl ? segmentBtnAreaEl.offsetHeight : 0;
         const headerBtnAreaEl = this.$refs.headerBtnArea;
         const headerBtnAreaHeight = headerBtnAreaEl ? headerBtnAreaEl.offsetHeight : 0;
-        const gfh = document.getElementById("detail-footer").offsetHeight;
+        const gfh = getScopedElementById("detail-footer", this.$el || this).offsetHeight;
         const fmh =
           this.isDispMenu === 1
-            ? document.getElementById("footer-menu").offsetHeight
+            ? getFooterMenuClientHeight(this.$el || null)
             : 0;
 
         // ntssListの高さ設定(ウィンドウ高さ－ヘッダー高さ－タブ高さ－セグメントボタンエリア高さ－追加ボタンエリア高さ－メニューバー高さ－確定/キャンセルボタンエリア高さ)
@@ -717,9 +700,7 @@ export default {
      * タブ切り替え時、表示内容を切り替える
      */
     onSegmentClick(selectedId) {
-
       const currentId = this.selectedSegmentId;
-
       //入力項目のチェック
       if (!this.validateOnRegistration()) {
         this.setSegmentClickBackColor(currentId);
@@ -737,20 +718,10 @@ export default {
      * タブ切り替え時、アクティブボタンの設定
      */
     setSegmentClickBackColor(index) {
-      // #10822 2026.06.04 mod 印字タブ配下のタブスタイル修正 TDC石井 start
-      // // #11987 2026.03.12 add スケールベッド スケールベッド設定判断 TDC渡辺 start
-      // // スケールベッドの場合、非表示となるスケージュールなし設定がないための処理
-      // if ((this.isScaleBed) && (index === 3)){
-      //   index = 2;
-      // }
-      // // #11987 2026.03.12 add スケールベッド スケールベッド設定判断 TDC渡辺 end
-      // 
-      // document.getElementById("segment").setActiveButton(index);
-      
-      // ラジオボタン式タブに置換したため、対応する input.checked を立てる
-      const el = document.getElementById(`print_seg_${index}`);
-      if (el) { el.checked = true; }
-      // #10822 2026.06.04 mod 印字タブ配下のタブスタイル修正 TDC石井 end
+      const el = this.$el?.querySelector?.(`#print_seg_${index}`);
+      if (el) {
+        el.checked = true;
+      }
     },
     /**
      * 表示データを表示順で並べ替える
@@ -795,7 +766,7 @@ export default {
     // 初期データを編集用にコピー
     initDispEditSettingData(jsonData) {
       for (const key in jsonData) {
-        if (jsonData.hasOwnProperty(key)) {
+        if (Object.prototype.hasOwnProperty.call(jsonData, key)) {
           for (const row of jsonData[key]) {
             let integerPoint = 0;
             let decimalPoint = 0;
@@ -867,7 +838,7 @@ export default {
     saveEditRecord() {
       let jsonRecord = { before: [], after: [], no_schedule: [], no_pat: [] };
       for (const key in this.editSettings) {
-        if (this.editSettings.hasOwnProperty(key)) {
+        if (Object.prototype.hasOwnProperty.call(this.editSettings, key)) {
           for (const row of this.editSettings[key]) {
             const item = {
               ctl_no: row.ctl_no.editValue,
@@ -1003,7 +974,7 @@ export default {
     this.editRecordOnComponent = JSON.parse(this.editRecord.printSetting);
     this.setDispSettingData(this.editRecord);
     // 端末判別
-    if (navigator.userAgent.match(/Android/)) {
+    if (((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").match(/Android/)) {
       this.androidFlg = true;
     }
     // 検査マスタ取得
@@ -1026,11 +997,9 @@ export default {
     //mod マスタ詳細画面がありません破棄メッセージ 张博 start
     this.olddispDataList=JSON.stringify(this.dispDataList)
     //mod マスタ詳細画面がありません破棄メッセージ 张博 end
-    // #11987 2025.12.02 add スケールベッド対応 スケールベッドマスター画面追加 TDC渡辺 start
     this.editRecordClone = cloneDeep(this.editRecord);
-    // #11987 2025.12.02 add スケールベッド対応 スケールベッドマスター画面追加 TDC渡辺 end
   },
-  destroyed() {
+  unmounted() {
     this.clearData();
   }
 };
@@ -1136,7 +1105,6 @@ export default {
   align-content: flex-start;
 }
 
-/* #10822 2026.06.04 add 印字タブ配下のタブスタイル修正 TDC石井 start */
 /* [印字タブ] サブタブ全体 */
 .print-tabs {
   margin-top: 10px;
@@ -1160,15 +1128,16 @@ export default {
   cursor: pointer;
 }
 
-.print-tab-item:hover { opacity: 0.75; }
+.print-tab-item:hover {
+  opacity: 0.75;
+}
 
-/* ラジオ本体は非表示 */
-input[name="print_seg"] { display: none; }
+input[name="print_seg"] {
+  display: none;
+}
 
-/* 選択中タブのスタイル */
 .print-tabs input:checked + .print-tab-item {
   background-color: #2a8bc4;
   color: #fff;
 }
-/* #10822 2026.06.04 add 印字タブ配下のタブスタイル修正 TDC石井 end */
 </style>

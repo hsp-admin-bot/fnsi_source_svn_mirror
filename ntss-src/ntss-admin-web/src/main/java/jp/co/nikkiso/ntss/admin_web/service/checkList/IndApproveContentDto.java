@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.service.checkList;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import lombok.Data;
 
 import java.util.ArrayList;
@@ -152,9 +152,9 @@ public class IndApproveContentDto {
   /**
    * JSON文字列化して取得
    * @return
-   * @throws JsonProcessingException 文字列化失敗
+   * @throws JacksonException 文字列化失敗
    */
-  public String getStringValue() throws JsonProcessingException {
+  public String getStringValue() throws JacksonException {
     ObjectMapper mapper = new ObjectMapper();
     return mapper.writeValueAsString(this.value);
   }

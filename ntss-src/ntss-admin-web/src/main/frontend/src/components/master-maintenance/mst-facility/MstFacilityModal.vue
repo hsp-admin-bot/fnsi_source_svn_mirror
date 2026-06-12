@@ -11,7 +11,7 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import CommonTextArea from "@/components/common/CommonTextArea";
 

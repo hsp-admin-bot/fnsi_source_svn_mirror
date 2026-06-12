@@ -38,10 +38,10 @@
               :src="image_src_same"
             />
           </div>
-          <!-- mod FNSI-改修内容施設イベント选择子画面样式修正 関　start -->
+          <!-- mod FNSI-改修内容施設イベント选择子画面样式修正 関 start -->
           <!-- <div style="width: calc(100% - 130px);float: right;margin-left: 0.25em;"> -->
           <div class="modelTitleName_box">
-            <!-- mod FNSI-改修内容施設イベント选择子画面样式修正 関　end -->
+            <!-- mod FNSI-改修内容施設イベント选择子画面样式修正 関 end -->
             <span
               class="item-name"
               v-if="item.cdType"
@@ -59,7 +59,8 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import nameDuplicationImg from "@/assets/name_duplication.png";
 
 export default {
   props: {
@@ -77,7 +78,7 @@ export default {
   },
   data() {
     return {
-      image_src_same: require("../../../assets/name_duplication.png"),
+      image_src_same: nameDuplicationImg,
       // 直前のチェック項目インデックス
       latestCheckedIndex: null,
     };

@@ -24,6 +24,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 @RestController
 @RequestMapping(Uri.SYS_COOP_NO)
@@ -46,7 +47,16 @@ public class SysCoopNoResource {
    * @return
    */
   @GetMapping("/getByFacility/{facilityCd}")
-  public ResponseEntity<?> selectSysCoopNoByFacilityCd(@PathVariable String facilityCd) {
+  public ResponseEntity<?> selectSysCoopNoByFacilityCd(@PathVariable String facilityCd,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 mod 20260421 start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.SYS_COOP_NO + "/getByFacility";
@@ -122,5 +132,9 @@ public class SysCoopNoResource {
    */
   private String getMethodName() {
     return Thread.currentThread().getStackTrace()[2].getMethodName();
+  }
+
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    return ntssUser != null && (ntssUser.isNkkAdminUser() || facilityCd == null || facilityCd.equals(ntssUser.getFacilityCd()));
   }
 }

@@ -12,20 +12,17 @@
 </template>
 
 <script>
-import { Chart } from "highcharts-vue";
-import Highcharts from "highcharts";
-import moment from "moment";
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { Chart } from "@/compat/charts/highcharts";
+import Highcharts from "@/compat/charts/highcharts";
+import dayjs from "@/compat/date/dayjs";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import elementResizeDetectorMaker from "@/compat/resize/element-resize-detector";
+
 import { generateDates } from "@/utils/util";
 import graphDataMixins from "./graphDataMixins";
 // add FNSI-長期の薬剤グラフの表示を改善「235」 周 start
 // Load the xrange module.
-import * as Xrange from 'highcharts/modules/xrange';
-// Initialize xrange module.
-Xrange(Highcharts);
-// add FNSI-長期の薬剤グラフの表示を改善「235」 周 end
-import elementResizeDetectorMaker from "element-resize-detector";
+
 const erd = elementResizeDetectorMaker({
   strategy: "scroll"
 });
@@ -78,7 +75,7 @@ export default {
           // 隠しシリーズを無視
           ignoreHiddenSeries: false,
           height: 150,
-          margin: [0, -1, 20, 0],
+          margin: [0, -1, 16, 0],
           events: {
             load() {
               var xAxis = this.xAxis[0];
@@ -102,17 +99,21 @@ export default {
           max: this.categories?.length ? (this.categories.length - 1) : undefined,
           tickmarkPlacement: 'on',
           className: "highcharts-x-axis",
-          tickLength: 10,
+          tickLength: 3,
           displayPeriod: this.displayPeriod,
           caculateTickPositions: this.caculateTickPositions,
-          gridLineWidth: 0,
+          gridLineWidth: 1,
           title: {
             enabled: false
           },
           plotLines: null,
           labels: {
+            y: 12,
+            style: {
+              fontSize: "11px"
+            },
             formatter() {
-              const date = moment(this.value);
+              const date = dayjs(this.value);
               const isLongPeriod = ["4", "5", "6", "7"].includes(
                 this.axis.userOptions.displayPeriod
               );
@@ -262,12 +263,24 @@ export default {
 
   mounted() {
     this.isMounted = true;
-    // 親コンポネントリサイズ時にグラフのサイズを合わせて
-    erd.listenTo(this.$parent.$el, () => {
-      if (this.$refs[this.dispDataItem]) {
-        this.$refs[this.dispDataItem]?.chart?.reflow();
+    this.$nextTick(() => {
+      const chart = this.$refs[this.dispDataItem]?.chart;
+      if (chart) {
+        this.syncPatViewerChartAxis(chart, {
+          tickPositions: this.chartOptions.xAxis.tickPositions,
+          plotLines: this.chartOptions.xAxis.plotLines || []
+        });
       }
     });
+    // 親コンポネントリサイズ時にグラフのサイズを合わせて
+    const resizeHost = this.getResizeHostElement();
+    if (resizeHost) {
+      erd.listenTo(resizeHost, () => {
+        if (this.$refs[this.dispDataItem]) {
+          this.$refs[this.dispDataItem]?.chart?.reflow();
+        }
+      });
+    }
   },
 
   watch: {
@@ -292,9 +305,10 @@ export default {
     this.init();
   },
 
-  beforeDestroy() {
-    if (this.$parent?.$el) {
-      erd.uninstall(this.$parent.$el);
+  beforeUnmount() {
+    const resizeHost = this.getResizeHostElement();
+    if (resizeHost) {
+      erd.uninstall(resizeHost);
     }
     if (this.observer) {
       this.observer.disconnect();
@@ -307,7 +321,7 @@ export default {
       }
       chartRef.chart = null;
     }
-    
+
     this.chartOptions = null;
     this.shouldRenderChart = false;
     // dataの初期化
@@ -315,14 +329,29 @@ export default {
   },
 
   methods: {
+    getResizeHostElement() {
+      return this.$el?.parentElement || null;
+    },
     ...mapActions("pat-viewer", [
       "setTickPositions",
     ]),
     init() {
+      this.applyPatViewerChartBottomLayout(this.chartOptions);
+      this.chartOptions.yAxis = this.buildYAxisWithGrid(this.yAxis);
       this.chartOptions.xAxis.plotLines = this.caculatePlotLines();
       this.chartOptions.xAxis.categories = generateDates(this.xAxisMin, this.xAxisMax, this.displayPeriod !== "4");
       this.chartOptions.xAxis.tickPositions = this.caculateTickPositions();
       this.chartOptions.series = this.seriesData(this.xAxisMin, this.xAxisMax);
+      this.$nextTick(() => {
+        const chart = this.$refs[this.dispDataItem]?.chart;
+        if (!chart) {
+          return;
+        }
+        this.syncPatViewerChartAxis(chart, {
+          tickPositions: this.chartOptions.xAxis.tickPositions,
+          plotLines: this.chartOptions.xAxis.plotLines || []
+        });
+      });
     },
     resizeChart() {
       if (!this.$refs?.[this.dispDataItem]?.chart) return;
@@ -344,7 +373,7 @@ export default {
           let currentDate = start;
           while (currentDate <= end) {
             dates.push({ date: currentDate, count: Number(count) });
-            currentDate = moment(currentDate).add(1, "days").format("YYYYMMDD");
+            currentDate = dayjs(currentDate).add(1, "days").format("YYYYMMDD");
           }
         });
 
@@ -394,7 +423,7 @@ export default {
         switch(item.type) {
           case "column": {
             const dataMap = item.data.reduce((map, entry) => {
-              const dateKey = moment(entry[0]).format("YYYYMMDD");
+              const dateKey = dayjs(entry[0]).format("YYYYMMDD");
               map[dateKey] = entry;
               return map;
             }, {});
@@ -455,7 +484,7 @@ export default {
               tooltip: {
                 shared: true,
                 formatter() {
-                  let headerEle = `<span>${moment(this.x).format("YYYY年M月D日(dd)")}</span>`;
+                  let headerEle = `<span>${dayjs(this.x).format("YYYY年M月D日(dd)")}</span>`;
                   this.points.forEach(point => {
                     headerEle += `<br><span style='color:${point.color}'>●</span>${point.series.name}(${point.series.userOptions.dateType}): <b>${point.point.y}</b>`;
                   });
@@ -499,8 +528,8 @@ export default {
                 return {
                   x: x - 0.5,
                   x2: x2 - 0.5,
-                  startDate: moment(i[0]).format('YYYY年M月D日(dd)'),
-                  endDate: moment(i?.[1]).format('YYYY年M月D日(dd)'),
+                  startDate: dayjs(i[0]).format('YYYY年M月D日(dd)'),
+                  endDate: dayjs(i?.[1]).format('YYYY年M月D日(dd)'),
                   y: y
                 };
               })
@@ -534,10 +563,15 @@ export default {
   opacity: 0.2;
   /* add FNSI-4400 グラフの要素凡例表示非表示アイコンの透過 liumx end */
 }
-::v-deep .highcharts-x-axis .highcharts-grid-line {
-  stroke: unset;
+:deep(.highcharts-x-axis .highcharts-grid-line),
+:deep(.highcharts-yaxis-grid .highcharts-grid-line) {
+  stroke: #e6e6e6;
+  stroke-width: 1px;
 }
-::v-deep .highcharts-legend-item text {
+:deep(.highcharts-xaxis-labels text) {
+  font-size: 11px;
+}
+:deep(.highcharts-legend-item text) {
   fill: #333333 !important;
 }
 .chart-position {

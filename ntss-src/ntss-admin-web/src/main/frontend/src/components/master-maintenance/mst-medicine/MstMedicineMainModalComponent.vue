@@ -208,7 +208,7 @@
           min="0"
           :class="handleJudgeEdited(inputModel.unit_converted_amount, 'unit_converted_amount')"
           :step="this.unitStep"
-          @keydown.69.prevent
+          @keydown="preventScientificNotationInput"
           @blur="blurValueUnitConvertAmount"
           @change="changeValueUnitConvertAmount"
           @input="inputValueUnitConvertAmount"
@@ -239,7 +239,7 @@
           min="0"
           :class="handleJudgeEdited(inputModel.unit_converted_amount_second, 'unit_converted_amount_second')"
           :step="this.unitStepSecond"
-          @keydown.69.prevent
+          @keydown="preventScientificNotationInput"
           @blur="blurValueUnitConvertAmountSecond"
           @change="changeValueUnitConvertAmountSecond"
           @input="inputValueUnitConvertAmountSecond"
@@ -308,7 +308,7 @@
           min="0"
           :class="handleJudgeEdited(inputModel.anticoagulant_original_quantity, 'anticoagulant_original_quantity')"
           :step="this.unitStep"
-          @keydown.69.prevent
+          @keydown="preventScientificNotationInput"
           @blur="blurValueAntiOriginQuantity"
           @change="changeValueAntiOriginQuantity"
           @input="inputValueUnitConvertAmount"
@@ -334,7 +334,7 @@
           type="number"
           step="0.1"
           :class="handleJudgeEdited(inputModel.after_anticoagulant_quantity, 'after_anticoagulant_quantity')"
-          @keydown.69.prevent
+          @keydown="preventScientificNotationInput"
           @blur="blurValueAfterAntiQuantity"
           input-id="after-anticoagulant-quantity"
           v-model="inputModel.after_anticoagulant_quantity">
@@ -503,24 +503,24 @@
 </template>
 
 <script>
-import moment from "moment";
-import BigNumber from "bignumber.js";
-import { mapActions, mapGetters } from "vuex";
+import dayjs from "@/compat/date/dayjs";
+import BigNumber from "@/compat/number/bignumber";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import customCheckbox from "@/components/common/custom-form-tags/CustomCheckbox.vue";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 //#5590 2023/04/18 ×を常に表示するように修正 張博 start
 import DateInput from "@/components/common/DateInput.vue";
 //#5590 2023/04/18 ×を常に表示するように修正 張博 end
-import cloneDeep from "lodash/cloneDeep";
-// add #10713 小数点以下桁数指定を0～8までにする linjunfeng start
-import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro';
-// add #10713 小数点以下桁数指定を0～8までにする linjunfeng end
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import { getModalBodyElement, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
 
 export default {
   mixins: [MasterMaintenanceMixin],
@@ -611,7 +611,7 @@ export default {
         num = 0;
       }
       var data = BigNumber(10).exponentiatedBy(BigNumber(num).negated()).valueOf();
-      return data;
+      return parseFloat(data);
     },
 
     // レセ単位小数部桁数取得
@@ -630,7 +630,7 @@ export default {
         num = 0;
       }
       var data = BigNumber(10).exponentiatedBy(BigNumber(num).negated()).valueOf();
-      return data;
+      return parseFloat(data);
     },
 
   },
@@ -727,12 +727,12 @@ export default {
         if (newVal.useStartDate ==="Invalid date" || newVal.useStartDate === null || newVal.useStartDate === "") {
           this.editRecordClone["useStartDate"] = null;
         } else {
-          this.editRecordClone["useStartDate"] = moment(newVal.useStartDate).format("YYYYMMDD");
+          this.editRecordClone["useStartDate"] = dayjs(newVal.useStartDate).format("YYYYMMDD");
         }
         if (newVal.useEndDate ==="Invalid date" || newVal.useEndDate === null || newVal.useEndDate === "") {
           this.editRecordClone["useEndDate"]  = null;
         } else {
-          this.editRecordClone["useEndDate"]  = moment(newVal.useEndDate).format("YYYYMMDD");
+          this.editRecordClone["useEndDate"]  = dayjs(newVal.useEndDate).format("YYYYMMDD");
         }
         // add FNSI-分類変更のメッセージ表示 李 start
         if (this.classCd && this.classCd != newVal.class_cd) {
@@ -771,6 +771,11 @@ export default {
     },
   },
   methods: {
+    preventScientificNotationInput(event) {
+      if (event.key === "e" || event.key === "E") {
+        event.preventDefault();
+      }
+    },
     // delete start #9301
     // ...mapActions("master-maintenance",
     // ["findFacilitySettingInfo"]
@@ -783,8 +788,8 @@ export default {
 
     // 指示単位小数部桁数変更時の処理
     changeValuePoint() {
-      var returnVal = 0;
-      var num = 0;
+      var returnVal;
+      var num;
       var decPoint = this.getDecimalPoint;
       // 入力値上限または下限チェック
       if(decPoint !== null){
@@ -827,7 +832,7 @@ export default {
         // #10713 小数点以下桁数指定を0～8までにする linjunfeng end
         this.inputModel.unit_decimal_point_second = decPoint;
       }
-      var returnVal = 0;
+      var returnVal;
       // レセ換算指示基準数量
       var num = this.inputModel.unit_converted_amount_second;
       var decStep = BigNumber(10).exponentiatedBy(BigNumber(decPoint)).valueOf();
@@ -923,9 +928,9 @@ export default {
 
     // 指数整数変換
     convertExponential(num,decPoint){
-      var decStep = 0;
-      var setStep = 0;
-      var setNum = 0;
+      var decStep;
+      var setStep;
+      var setNum;
       decStep = BigNumber(10).exponentiatedBy(BigNumber(decPoint)).valueOf();
       setStep = BigNumber(10).exponentiatedBy(BigNumber(decPoint).negated()).valueOf();
       num = BigNumber(num).multipliedBy(BigNumber(decStep)).valueOf();
@@ -1143,12 +1148,12 @@ export default {
     if(this.editRecord["useStartDate"] === null){
       this.inputModel.useStartDate = null;
     }else{
-      this.inputModel.useStartDate = moment(this.editRecord["useStartDate"]).format("YYYY-MM-DD");
+      this.inputModel.useStartDate = dayjs(this.editRecord["useStartDate"]).format("YYYY-MM-DD");
     }
     if(this.editRecord["useEndDate"] === null){
       this.inputModel.useEndDate = null;
     }else{
-      this.inputModel.useEndDate = moment(this.editRecord["useEndDate"]).format("YYYY-MM-DD");
+      this.inputModel.useEndDate = dayjs(this.editRecord["useEndDate"]).format("YYYY-MM-DD");
     }
     this.inputModel.medicate_timing_cd = this.editRecord["medicateTimingCd"];
     this.inputModel.procedure_cd = this.editRecord["procedureCd"];
@@ -1176,10 +1181,10 @@ export default {
   },
   async mounted() {
     // 縦スクロールバー表示
-    let modalObj = document.getElementsByClassName("modal-body");
-    if (modalObj.length >= 1){
-      modalObj[0].classList.remove("modal-overflow-hidden");
-      modalObj[0]?.classList?.add("modal-scroll");
+    const modalObj = getModalBodyElement(this.$el || this);
+    if (modalObj){
+      modalObj.classList.remove("modal-overflow-hidden");
+      modalObj?.classList?.add("modal-scroll");
     }
     //画面表示
     this.changeValuePoint();
@@ -1188,14 +1193,14 @@ export default {
     this.$nextTick(() => {
       this.inputModel_clone = JSON.parse(JSON.stringify(this.inputModel))
       setTimeout(() => {
-        let checkBoxStyle = document.getElementsByClassName("checkbox__checkmark checkbox--material__checkmark")
+        let checkBoxStyle = getScopedElementsByClassName("checkbox__checkmark checkbox--material__checkmark", this.$el || this)
         for (let i = 0; i < 3; i++) {
           if (checkBoxStyle[0] !== undefined) {
             checkBoxStyle[0].classList.remove("checkbox--material__checkmark");
           }
         }
-        let radioStyle = document.getElementsByClassName("radio-button__input radio-button--material__input radio-button--round__input")
-        let spanStyle = document.getElementsByClassName("radio-button__checkmark radio-button--material__checkmark radio-button--round__checkmark")
+        let radioStyle = getScopedElementsByClassName("radio-button__input radio-button--material__input radio-button--round__input", this.$el || this)
+        let spanStyle = getScopedElementsByClassName("radio-button__checkmark radio-button--material__checkmark radio-button--round__checkmark", this.$el || this)
         for (let i = 0; i < 5; i++) {
           if (spanStyle[0] !== undefined && radioStyle[0] !== undefined) {
             radioStyle[0].classList.remove("radio-button--material__input");
@@ -1212,9 +1217,9 @@ export default {
   /**
    * 画面を破棄する時の処理
    */
-  beforeDestroy() {
+  beforeUnmount() {
     // 標準医薬品マスタ検索画面が閉じられた時のイベント解除する.
-    EventBus.$off("applySysMedicineSubModal");
+    EventBus.$off("applySysMedicineSubModal", this.closeSelectSysMedicineModal);
   }
 };
 </script>
@@ -1390,7 +1395,7 @@ table tr {
     max-width:90%;
   }
 }
-::v-deep .custom-input-edited>input[type="number"], ::v-deep .custom-input-edited>input[type="date"], ::v-deep .custom-input-edited>select{
+:deep(.custom-input-edited>input[type="number"]), :deep(.custom-input-edited>input[type="date"]), :deep(.custom-input-edited>select){
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;

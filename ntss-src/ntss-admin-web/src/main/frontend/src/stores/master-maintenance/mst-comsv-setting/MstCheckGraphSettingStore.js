@@ -2,7 +2,7 @@ import { sendRequestGetMstExamItemSortForComsv } from "../../../apis/exam-Record
 
 export default {
   namespaced: true,
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   state: {
     mstExamItemsList: []
   },
@@ -24,9 +24,8 @@ export default {
       // });
 
       await sendRequestGetMstExamItemSortForComsv(facilityCd).then( res => {
-        if(res) {
-          commit('setMstExamItemsList',  res.data[0].orderSettings.items);
-        }
+        const items = res?.data?.[0]?.orderSettings?.items;
+        commit("setMstExamItemsList", Array.isArray(items) ? items : []);
       });
       // #9477 2023.11.17 chg 検査項目マスタで「仮想端末表示がONのもの」を100件まで取得 TDC山崎 end
     },
@@ -40,9 +39,8 @@ export default {
       // });
 
       await sendRequestGetMstExamItemSortForComsv(facilityCd).then( res => {
-        if(res) {
-          commit('setMstExamItemsList',  res.data[0].orderSettings.items);
-        }
+        const items = res?.data?.[0]?.orderSettings?.items;
+        commit("setMstExamItemsList", Array.isArray(items) ? items : []);
       });
       // #9477 2023.11.17 chg 検査項目マスタで「仮想端末表示がONのもの」を100件まで取得 TDC山崎 end
     }

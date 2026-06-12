@@ -1,9 +1,9 @@
 package jp.co.nikkiso.ntss.web_api.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
@@ -228,9 +228,9 @@ public class ExamResultCalcUtilServiceImpl implements ExamResultCalcUtilService 
    * @param examResultParam
    * @param inputDecimalFigure
    * @param examItemCd
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
-  private void systemComputeTacBun (ExamResultParam examResultParam, Integer inputDecimalFigure, Long examItemCd) throws JsonProcessingException {
+  private void systemComputeTacBun (ExamResultParam examResultParam, Integer inputDecimalFigure, Long examItemCd) throws JacksonException {
     //TODO 1.現在の検査結果から今回のすべての検査結果を取得し、検査時間順にソートし、最も時間の小さい透析前BUN値と所在するグループを取り出した
     String todayBunBefor = ""; //今回の透析前
     String lastBunAfter = ""; //前回透析後
@@ -536,9 +536,9 @@ public class ExamResultCalcUtilServiceImpl implements ExamResultCalcUtilService 
    * @param patExamMainListAll
    * @param patExamMainListGroup
    * @param examItemCd
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
-  private void filterGroupOutTacBunExamRsult (List<PatExamMain> patExamMainListAll, List<PatExamMain> patExamMainListGroup, Long examItemCd) throws JsonProcessingException {
+  private void filterGroupOutTacBunExamRsult (List<PatExamMain> patExamMainListAll, List<PatExamMain> patExamMainListGroup, Long examItemCd) throws JacksonException {
     List<PatExamMain> patExamMainListOut = new ArrayList<>();
     //非計算グループ内のメンバーをフィルタする
     for (PatExamMain patExamMain : patExamMainListAll) {
@@ -618,9 +618,9 @@ public class ExamResultCalcUtilServiceImpl implements ExamResultCalcUtilService 
    * @param facilityCd
    * @param ret
    * @param patExamMainList
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
-  private void saveExamRsultToDb (String facilityCd, Double ret, List<PatExamMain> patExamMainList) throws JsonProcessingException {
+  private void saveExamRsultToDb (String facilityCd, Double ret, List<PatExamMain> patExamMainList) throws JacksonException {
     if (ret != null) {
       if (patExamMainList != null && patExamMainList.size() > 0) {
         //TAC _mstにおけるBUNのデータ
@@ -726,10 +726,10 @@ public class ExamResultCalcUtilServiceImpl implements ExamResultCalcUtilService 
    * @param examResult
    * @return ExamResult
    * @throws ParseException
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   private ExamResult systemStandardCalculationItemHandle(List<Long> recalculationExamItem, List<String> lstCalculated, List<PatExamMainExamResultInfo> examResultInfo,
-                                                         ExamResultParam examResultParam, ExamResult examResult) throws ParseException, JsonProcessingException {
+                                                         ExamResultParam examResultParam, ExamResult examResult) throws ParseException, JacksonException {
     // 検査結果を1件ずつ確認して計算項目の再計算を行う
     examResult = this.getExamResult(examResultParam);
     for (int idx = 0; idx < examResultInfo.size(); idx++) {
@@ -1566,7 +1566,7 @@ public class ExamResultCalcUtilServiceImpl implements ExamResultCalcUtilService 
       //取得当时の検査结果
       examResultInfos = null != patExamMain1 && (patExamMain1.getExamResultInfo() == null || patExamMain1.getExamResultInfo().isEmpty()) ?
         new ArrayList<>() : new ObjectMapper().readValue(patExamMain1.getExamResultInfo(), new TypeReference<List<PatExamMainExamResultInfo>>() {});
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -3781,7 +3781,7 @@ public class ExamResultCalcUtilServiceImpl implements ExamResultCalcUtilService 
                 /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
                 // List<PatUniquePhysicalInfo> patUniquePhysicalInfo = patUniqueDao.selectPhysicalInfoOfOrderNewest(examResultParam.getPatId());
                 List<PatUniquePhysicalInfo> patUniquePhysicalInfo = patUniqueDao.selectPhysicalInfoOfOrderNewest(examResultParam.getPatId(), 1);
-                /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
+                /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
                 BigDecimal height = null;
                 //10140 パラメータが不足している場合は、計算せずにnullに戻ります
                 if (patUniquePhysicalInfo.size() > 0) {
@@ -4535,9 +4535,9 @@ public class ExamResultCalcUtilServiceImpl implements ExamResultCalcUtilService 
    * @param selectExam
    * @param selectItem
    * @return
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
-  private boolean getValuePatExamItem (PatExamMain selectExam, MstExamItem selectItem) throws JsonProcessingException {
+  private boolean getValuePatExamItem (PatExamMain selectExam, MstExamItem selectItem) throws JacksonException {
     String strAddWordVal = "";
     List<PatExamMainExamResultInfo> examResultInfo = new ArrayList<>();
     examResultInfo = selectExam.getExamResultInfo() == null || selectExam.getExamResultInfo().isEmpty() ? new ArrayList<>()

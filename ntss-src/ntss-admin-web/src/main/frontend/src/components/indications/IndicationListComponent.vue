@@ -854,7 +854,7 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapActions, mapMutations, mapGetters } from "vuex";
+import { mapActions, mapMutations, mapGetters } from "@/compat/vue/vuex";
 import Indication from "@/apis/indication";
 // add  FNSI-権限 陳 start
 // del #10359 編集権限の動作不正 dengshen start
@@ -864,8 +864,8 @@ import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
 // add  FNSI-権限 陳 end
 // add 画面印刷プレビューと印刷の実現 黄 start
 import { getCurrentFunctionCd } from "@/router/routing-helper";
-import { EventBus } from "@/eventBus.js";
-import moment from "moment";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import dayjs from "@/compat/date/dayjs";
 // add 画面印刷プレビューと印刷の実現 黄 end
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -884,6 +884,9 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 import { sortableCompare } from "@/functions/SortFunctions";
+import okImg from "../../assets/ok.png";
+import nameDuplicationImg from "../../assets/name_duplication.png";
+import { getScopedSessionStorage } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   name: "IndicationListComponent",
@@ -903,7 +906,7 @@ export default {
       // del #10359 編集権限の動作不正 dengshen end
       isLoading: false,
       loadingMessage: "",
-      okIcon: require("../../assets/ok.png"),
+      okIcon: okImg,
       sortName: false,
       INDICATIONTYPE: {
         RECEIVER1: "receiver1",
@@ -934,7 +937,7 @@ export default {
       // add #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao end
       // add 画面印刷プレビューと印刷の実現 陳 start
       dataArray: null,
-      image_src_same: require('../../assets/name_duplication.png'),
+      image_src_same: nameDuplicationImg,
       // add 画面印刷プレビューと印刷の実現 陳 end
       /**
        * 指示単位 key：ソート項目 value：apiレスポンスfield
@@ -1164,7 +1167,7 @@ export default {
       var pathIds = new Array();
       if(this.isTreatmentUnit){
         if(this.treatmentIndications != null){
-          if(this.treatmentIndications.every(item => item.hasOwnProperty('pat_id'))) {
+          if(this.treatmentIndications.every(item => Object.prototype.hasOwnProperty.call(item, 'pat_id'))) {
             pathIds = this.treatmentIndications.map(({ pat_id }) => pat_id);
           }
           else {
@@ -1174,7 +1177,7 @@ export default {
       }
       else {
         if(this.sortedIndicationsList != null){
-          if(this.sortedIndicationsList.every(item => item.hasOwnProperty('pat_id'))) {
+          if(this.sortedIndicationsList.every(item => Object.prototype.hasOwnProperty.call(item, 'pat_id'))) {
             pathIds = this.sortedIndicationsList.map(({ pat_id }) => pat_id);
           }
           else {
@@ -1189,9 +1192,9 @@ export default {
       // 機能コード判定
       if (param.substring(0, 3) === getCurrentFunctionCd().substring(0, 3)) {
         // 機能一致
-        //add #9558 機能帳票で正しく変数が引き渡されていない 杜天成　start
+        //add #9558 機能帳票で正しく変数が引き渡されていない 杜天成 start
         let flgPat = this.$route.path === '/indication/list/' ? null : this.selectedPatId;
-        //mod #9558 機能帳票で正しく変数が引き渡されていない 杜天成　start
+        //mod #9558 機能帳票で正しく変数が引き渡されていない 杜天成 start
         //let dateTodate = this.treatmentIndications[0].treat_date ? this.treatmentIndications[0].treat_date : this.dataArray.date;
         // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
         // let dateTodate = this.treatmentIndications[0] == undefined ? this.dataArray.date
@@ -1203,11 +1206,12 @@ export default {
           dateTodate = this.dataArray.date;
         }
         // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
-        //mod #9558 機能帳票で正しく変数が引き渡されていない 杜天成　end
-        //add #9558 機能帳票で正しく変数が引き渡されていない 杜天成　end
+        //mod #9558 機能帳票で正しく変数が引き渡されていない 杜天成 end
+        //add #9558 機能帳票で正しく変数が引き渡されていない 杜天成 end
         // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
-        this.bedCdListString = JSON.parse(sessionStorage.getItem('roomBedGroupNameStatusList')) || '';
-        this.kurGroupName = JSON.parse(sessionStorage.getItem('kurGroupNameStatusList')) || '';
+        const scopedSessionStorage = getScopedSessionStorage(this.$el);
+        this.bedCdListString = JSON.parse(scopedSessionStorage.getItem('roomBedGroupNameStatusList')) || '';
+        this.kurGroupName = JSON.parse(scopedSessionStorage.getItem('kurGroupNameStatusList')) || '';
         let patGroups = null;
         if(this.getStorSimlpSearchQurey.selectedPatGroupNames) {
           patGroups = this.getStorSimlpSearchQurey.selectedPatGroupNames;
@@ -1226,7 +1230,7 @@ export default {
           //patId: flgPat,
           facilityCd: this.getFacilityCd,
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: moment(dateTodate).format('YYYYMMDD'),
+          //dialysisDate: dayjs(dateTodate).format('YYYYMMDD'),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
           // mod #9558機能帳票でパラメータが正しく渡されていない 杜天成 end
@@ -1234,7 +1238,7 @@ export default {
           // patIds: this.searchedPatList != null ? this.searchedPatList.map(({ pat_id }) => pat_id) :[],
           // mod #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
           // patIds: this.sortedIndicationsList != null ?
-          //   (this.sortedIndicationsList.every(item => item.hasOwnProperty('pat_id')) ?
+          //   (this.sortedIndicationsList.every(item => Object.prototype.hasOwnProperty.call(item, 'pat_id')) ?
           //       this.sortedIndicationsList.map(({ pat_id }) => pat_id) :
           //       this.sortedIndicationsList.map(({ patId }) => patId)
           //   ) :
@@ -1244,27 +1248,27 @@ export default {
           // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 end
           // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 end
           //mod 5984 機能帳票でパラメータが正しく渡されていない 吉 start
-          // date: moment(Date.now()).format("YYYY/MM/DD"),
+          // date: dayjs(Date.now()).format("YYYY/MM/DD"),
           functionCd:'02801',
           // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 start
-          // date: moment(this.dataArray.fromDate).format("YYYY/MM/DD"),
+          // date: dayjs(this.dataArray.fromDate).format("YYYY/MM/DD"),
           // //mod 5984 機能帳票でパラメータが正しく渡されていない 吉 end
           // fromDate: this.dataArray.fromDate,
           // toDate: this.dataArray.toDate
           // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 start
-          // date: moment(this.treatmentIndications[0].treat_date).format("YYYY/MM/DD"),
+          // date: dayjs(this.treatmentIndications[0].treat_date).format("YYYY/MM/DD"),
           // mod #9558機能帳票でパラメータが正しく渡されていない 杜天成 start
-         // date: moment(this.date).format("YYYY/MM/DD"),
-          date: moment(dateTodate).format('YYYY/MM/DD'),
+         // date: dayjs(this.date).format("YYYY/MM/DD"),
+          date: dayjs(dateTodate).format('YYYY/MM/DD'),
           // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 end
           //mod 5984 機能帳票でパラメータが正しく渡されていない 吉 end
           // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 start
-          // fromDate: moment(this.treatmentIndications[0].treat_date).format("YYYY/MM/DD"),
-          // toDate: moment(this.treatmentIndications[0].treat_date).format("YYYY/MM/DD"),
-          //fromDate: moment(this.date).format("YYYY/MM/DD"),
-          fromDate: moment(dateTodate).format('YYYY/MM/DD'),
-          //toDate: moment(this.date).format("YYYY/MM/DD"),
-          toDate: moment(dateTodate).format('YYYY/MM/DD'),
+          // fromDate: dayjs(this.treatmentIndications[0].treat_date).format("YYYY/MM/DD"),
+          // toDate: dayjs(this.treatmentIndications[0].treat_date).format("YYYY/MM/DD"),
+          //fromDate: dayjs(this.date).format("YYYY/MM/DD"),
+          fromDate: dayjs(dateTodate).format('YYYY/MM/DD'),
+          //toDate: dayjs(this.date).format("YYYY/MM/DD"),
+          toDate: dayjs(dateTodate).format('YYYY/MM/DD'),
           // mod #9558機能帳票でパラメータが正しく渡されていない 杜天成 end
           // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 end
           // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 end
@@ -1936,7 +1940,7 @@ export default {
         param._ids = indication._id;
       }
       // add by zs 2023-03-06 [#6118無期限予定の中止：js foreach call journalをjava batch call journalに変更] --start
-      let treatDate = moment(new Date()).format("YYYYMMDD");
+      let treatDate = dayjs(new Date()).format("YYYYMMDD");
       let ope_cd_all = "";
       switch (columnName) {
         case this.INDICATIONTYPE.RECEIVER1:
@@ -1965,7 +1969,7 @@ export default {
 
 // add FNSI 1006 No.538 外部連携APIを呼び出 陳 start
     // del by zs 2023-03-06 [#6118無期限予定の中止：js foreach call journalをjava batch call journalに変更] --start
-    //   let treatDate = moment(new Date()).format("YYYYMMDD");
+    //   let treatDate = dayjs(new Date()).format("YYYYMMDD");
     //   let userid = this.getUserId;
     //   let ope_cd = "";
     //   let ope_cd_all = "";
@@ -2213,7 +2217,7 @@ export default {
          sorted = list.sort((a, b) => {
           const diffA = a.total - a[dataField];
           const diffB = b.total - b[dataField];
-          // ** 分母内指示受けor指示承認件数　／　指示変更レコード数 **
+          // ** 分母内指示受けor指示承認件数 ／ 指示変更レコード数 **
           // ** 未処理残件数＝指示変更レコード数－分母内指示受けor指示承認件 **
           // 昇順の場合：第1ソートキー：未処理残件数 降順, 第2ソートキー：指示変更レコード数 昇順
           // 降順の場合：第1ソートキー：未処理残件数 昇順, 第2ソートキー：指示変更レコード数 降順
@@ -2409,7 +2413,7 @@ export default {
   },
   // add FNSI-改修内容表示順でソート 付 end
   // add 画面印刷プレビューと印刷の実現 黄 start
-  beforeDestroy () {
+  beforeUnmount () {
     // 印刷パラメータ要求
     EventBus.$off("requestReportParams", this.requestrReportParams);
     EventBus.$off("setDateParams", this.getDateParams);

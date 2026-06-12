@@ -50,7 +50,7 @@
             <template v-for="(col, cIdx) in dataColumns">
               <td
                 v-if="col.field === 'bedName'"
-                :key="cIdx"
+                :key="col.field"
                 :class="[getBedNameStateClass(record), 'ntss-list-body-td']"
                 :style="{
                   width: columnWidthList[cIdx],
@@ -61,7 +61,7 @@
               </td>
               <td
                 v-if="col.field === 'hospPatId'"
-                :key="cIdx"
+                :key="col.field"
                 class="ntss-list-body-td"
                 :style="{
                   width: columnWidthList[cIdx],
@@ -72,7 +72,7 @@
               </td>
               <td
                 v-else-if="col.field === 'kurCd'"
-                :key="cIdx"
+                :key="col.field"
                 class="ntss-list-body-td"
                 :style="{
                   width: columnWidthList[cIdx],
@@ -83,7 +83,7 @@
               </td>
               <pat-name-cell-template
                 v-else-if="col.field === 'patName'"
-                :key="cIdx"
+                :key="col.field"
                 class="ntss-list-body-td"
                 :data-item="record"
                 field="patName"
@@ -94,7 +94,7 @@
               ></pat-name-cell-template>
               <td
                 v-else-if="col.field === 'rstDialysisState'"
-                :key="cIdx"
+                :key="col.field"
                 class="ntss-list-body-td"
                 :style="{
                   width: columnWidthList[cIdx],
@@ -126,7 +126,7 @@
               </td>
               <td
                 v-else-if="col.field === 'scaleValue'"
-                :key="cIdx"
+                :key="col.field"
                 class="ntss-list-body-td"
                 :style="{
                   width: columnWidthList[cIdx],
@@ -140,7 +140,7 @@
               </td>
               <td
                 v-else-if="col.field === 'weightValue'"
-                :key="cIdx"
+                :key="col.field"
                 class="ntss-list-body-td"
                 :style="{
                   width: columnWidthList[cIdx],
@@ -154,7 +154,7 @@
               </td>
               <td
                 v-else-if="col.field === 'detail'"
-                :key="cIdx"
+                :key="col.field"
                 :class="`${
                   record['isConnect'] !== '1'
                     ? 'process-state-td-99'
@@ -185,7 +185,7 @@
               </td>
               <td
                 v-else-if="col.field === 'send'"
-                :key="cIdx"
+                :key="col.field"
                 class="ntss-list-body-td"
                 :style="{
                   width: columnWidthList[cIdx],
@@ -213,7 +213,7 @@
               </td>
               <td
                 v-else-if="col.field === 'weightScaleStatus'"
-                :key="cIdx"
+                :key="col.field"
                 class="ntss-list-body-td"
                 :style="{
                   width: columnWidthList[cIdx],
@@ -337,7 +337,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import {
   getSortedClass,
@@ -350,7 +350,7 @@ import {
   sendRequestPostSendConditionScaleBed,
   sendRequestPostSendAfterWeightScaleBed,
 } from "@/apis/scale-bed";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { SCALE_BED_AUTO_SETTING } from "@/constants/facilitySetting";
 import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
 import ScaleBedWebSocketComponent from "./ScaleBedWebSocketComponent.vue";
@@ -359,6 +359,7 @@ import {
   addColResizeListeners,
   removeColResizeListeners,
 } from "@/functions/common/ColResizeFunctions";
+import { getHeaderHeight, getFooterMenuClientHeight, getLatestHeaderElement, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 // メッセージダイアログの定数
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 
@@ -715,22 +716,16 @@ export default {
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       const wh = this.windowHeight;
-      const hc = Array.prototype.slice
-        .call(document.getElementsByClassName("header"))
-        .shift();
-      const hh = hc ? hc.clientHeight : 0;
+      const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
       const fmh =
-        (this.isDispMenu === 1
-          ? document.getElementById("footer-menu").clientHeight
-          : 0) + 5;
+        (this.isDispMenu === 1 ? getFooterMenuClientHeight(this.$el || null) : 0) + 5;
       this.toolbarHeight = wh - hh - fmh - 3;
       this.mainHeight = wh - hh - fmh;
       this.toolbarHeight =
         this.toolbarHeight < 340 ? this.mainHeight : this.toolbarHeight;
 
-      const guideClientHeight = document.getElementById("area_usage_guide")
-        ? document.getElementById("area_usage_guide").clientHeight
-        : 0;
+      const guideClientHeight =
+        getScopedElementById("area_usage_guide", this.$el || this)?.clientHeight || 0;
       this.mainAreaHeight = this.toolbarHeight - guideClientHeight;
     },
     editBackgroundColor() {
@@ -1059,7 +1054,7 @@ export default {
         }
       } else {
         // フォールバック：DOMから取得
-        const headers = document.querySelectorAll("th");
+        const headers = this.$el?.querySelectorAll("th") || [];
         headers.forEach((header) => {
           returnValue.push(header.clientWidth);
         });
@@ -1089,7 +1084,7 @@ export default {
         onWidthChanged: ({ index, cell }) => {
           const width = parseFloat(cell.style.width);
           if (!isNaN(width)) {
-            this.$set(this.columnWidthList, index, `${width}px`);
+            this.columnWidthList[index] = `${width}px`;
           }
         },
         onFinishResize: () => {
@@ -1144,8 +1139,10 @@ export default {
             isNaN(minWidth) ? 0 : minWidth
           );
           this.columnWidthList.splice(i, 1, restoredWidth + "px");
-          document.getElementsByClassName("manual-width")[i].style.width =
-            restoredWidth + "px";
+          const target = this.$el?.getElementsByClassName("manual-width")?.[i];
+          if (target) {
+            target.style.width = restoredWidth + "px";
+          }
         }
       }
     }
@@ -1157,14 +1154,15 @@ export default {
       this.setupColResizeListeners();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.colResizeInfo) {
       removeColResizeListeners(this.colResizeInfo);
       this.colResizeInfo = null;
     }
     this.dataSource = [];
-    window.clearTimeout(this.timerId);
-    EventBus.$off("refresh");
+    const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+    ownerWindow.clearTimeout(this.timerId);
+    EventBus.$off("refresh", this.refresh);
     // 共通ローダー:表示カウントリセット
     this.resetLoadingScreenVisibleCount();
   },
@@ -1345,106 +1343,106 @@ export default {
 }
 
 /** 透析準備 */
-.status-list-page >>> .dialysis-state-td-0,
-.status-list-page >>> .process-state-td-01,
-.status-list-page >>> .process-state-td-07,
-.status-list-page >>> .process-state-td-08,
-.status-list-page >>> .process-state-td-09,
-.status-list-page >>> .process-state-td-20,
-.status-list-page >>> .process-state-td-29,
-.status-list-page >>> .process-state-td-40,
-.status-list-page >>> .process-state-td-45,
-.status-list-page >>> .process-state-td-61,
-.status-list-page >>> .process-state-td-A0,
-.status-list-page >>> .process-state-td-A5,
-.status-list-page >>> .process-state-td-A6,
-.status-list-page >>> .process-state-td-A7,
-.status-list-page >>> .process-state-td-AE,
-.status-list-page >>> .process-state-td-B0,
-.status-list-page >>> .process-state-td-B8,
-.status-list-page >>> .process-state-td-BC {
+.status-list-page :deep(.dialysis-state-td-0),
+.status-list-page :deep(.process-state-td-01),
+.status-list-page :deep(.process-state-td-07),
+.status-list-page :deep(.process-state-td-08),
+.status-list-page :deep(.process-state-td-09),
+.status-list-page :deep(.process-state-td-20),
+.status-list-page :deep(.process-state-td-29),
+.status-list-page :deep(.process-state-td-40),
+.status-list-page :deep(.process-state-td-45),
+.status-list-page :deep(.process-state-td-61),
+.status-list-page :deep(.process-state-td-A0),
+.status-list-page :deep(.process-state-td-A5),
+.status-list-page :deep(.process-state-td-A6),
+.status-list-page :deep(.process-state-td-A7),
+.status-list-page :deep(.process-state-td-AE),
+.status-list-page :deep(.process-state-td-B0),
+.status-list-page :deep(.process-state-td-B8),
+.status-list-page :deep(.process-state-td-BC) {
   background-color: #ffffff !important;
   color: black;
 }
 
 /** 洗浄・消毒 */
-.status-list-page >>> .process-state-td-02,
-.status-list-page >>> .process-state-td-03,
-.status-list-page >>> .process-state-td-04,
-.status-list-page >>> .process-state-td-05,
-.status-list-page >>> .process-state-td-06,
-.status-list-page >>> .process-state-td-23,
-.status-list-page >>> .process-state-td-24,
-.status-list-page >>> .process-state-td-25,
-.status-list-page >>> .process-state-td-26,
-.status-list-page >>> .process-state-td-27,
-.status-list-page >>> .process-state-td-28,
-.status-list-page >>> .process-state-td-46,
-.status-list-page >>> .process-state-td-47,
-.status-list-page >>> .process-state-td-62,
-.status-list-page >>> .process-state-td-63,
-.status-list-page >>> .process-state-td-64,
-.status-list-page >>> .process-state-td-65,
-.status-list-page >>> .process-state-td-A8,
-.status-list-page >>> .process-state-td-A9,
-.status-list-page >>> .process-state-td-AA,
-.status-list-page >>> .process-state-td-AB,
-.status-list-page >>> .process-state-td-AC,
-.status-list-page >>> .process-state-td-AD,
-.status-list-page >>> .process-state-td-B1,
-.status-list-page >>> .process-state-td-B2,
-.status-list-page >>> .process-state-td-B6,
-.status-list-page >>> .process-state-td-B7,
-.status-list-page >>> .process-state-td-B9,
-.status-list-page >>> .process-state-td-BA,
-.status-list-page >>> .process-state-td-BB {
+.status-list-page :deep(.process-state-td-02),
+.status-list-page :deep(.process-state-td-03),
+.status-list-page :deep(.process-state-td-04),
+.status-list-page :deep(.process-state-td-05),
+.status-list-page :deep(.process-state-td-06),
+.status-list-page :deep(.process-state-td-23),
+.status-list-page :deep(.process-state-td-24),
+.status-list-page :deep(.process-state-td-25),
+.status-list-page :deep(.process-state-td-26),
+.status-list-page :deep(.process-state-td-27),
+.status-list-page :deep(.process-state-td-28),
+.status-list-page :deep(.process-state-td-46),
+.status-list-page :deep(.process-state-td-47),
+.status-list-page :deep(.process-state-td-62),
+.status-list-page :deep(.process-state-td-63),
+.status-list-page :deep(.process-state-td-64),
+.status-list-page :deep(.process-state-td-65),
+.status-list-page :deep(.process-state-td-A8),
+.status-list-page :deep(.process-state-td-A9),
+.status-list-page :deep(.process-state-td-AA),
+.status-list-page :deep(.process-state-td-AB),
+.status-list-page :deep(.process-state-td-AC),
+.status-list-page :deep(.process-state-td-AD),
+.status-list-page :deep(.process-state-td-B1),
+.status-list-page :deep(.process-state-td-B2),
+.status-list-page :deep(.process-state-td-B6),
+.status-list-page :deep(.process-state-td-B7),
+.status-list-page :deep(.process-state-td-B9),
+.status-list-page :deep(.process-state-td-BA),
+.status-list-page :deep(.process-state-td-BB) {
   background-color: #00b0f0 !important;
   color: black;
 }
 
 /** 条件送信済み */
-.status-list-page >>> .dialysis-state-td-1,
-.status-list-page >>> .dialysis-state-td-2 {
+.status-list-page :deep(.dialysis-state-td-1),
+.status-list-page :deep(.dialysis-state-td-2) {
   background-color: #42cb92 !important;
 }
 
 /** 治療中 */
-.status-list-page >>> .dialysis-state-td-3,
-.status-list-page >>> .process-state-td-10,
-.status-list-page >>> .process-state-td-11,
-.status-list-page >>> .process-state-td-21,
-.status-list-page >>> .process-state-td-22,
-.status-list-page >>> .process-state-td-41,
-.status-list-page >>> .process-state-td-42,
-.status-list-page >>> .process-state-td-43,
-.status-list-page >>> .process-state-td-44,
-.status-list-page >>> .process-state-td-60,
-.status-list-page >>> .process-state-td-A1,
-.status-list-page >>> .process-state-td-A2,
-.status-list-page >>> .process-state-td-A3,
-.status-list-page >>> .process-state-td-A4,
-.status-list-page >>> .process-state-td-B3,
-.status-list-page >>> .process-state-td-B4,
-.status-list-page >>> .process-state-td-B5 {
+.status-list-page :deep(.dialysis-state-td-3),
+.status-list-page :deep(.process-state-td-10),
+.status-list-page :deep(.process-state-td-11),
+.status-list-page :deep(.process-state-td-21),
+.status-list-page :deep(.process-state-td-22),
+.status-list-page :deep(.process-state-td-41),
+.status-list-page :deep(.process-state-td-42),
+.status-list-page :deep(.process-state-td-43),
+.status-list-page :deep(.process-state-td-44),
+.status-list-page :deep(.process-state-td-60),
+.status-list-page :deep(.process-state-td-A1),
+.status-list-page :deep(.process-state-td-A2),
+.status-list-page :deep(.process-state-td-A3),
+.status-list-page :deep(.process-state-td-A4),
+.status-list-page :deep(.process-state-td-B3),
+.status-list-page :deep(.process-state-td-B4),
+.status-list-page :deep(.process-state-td-B5) {
   background-color: #2ca06f !important;
   color: #fff !important;
 }
 
 /** 通信エラー */
-.status-list-page >>> .process-state-td-99 {
+.status-list-page :deep(.process-state-td-99) {
   background-color: #ff6699 !important;
   color: black;
 }
 
 /** 治療終了 */
-.status-list-page >>> .dialysis-state-td-4,
-.status-list-page >>> .dialysis-state-td-5 {
+.status-list-page :deep(.dialysis-state-td-4),
+.status-list-page :deep(.dialysis-state-td-5) {
   color: #fff !important;
   background-color: #557769 !important;
 }
 
 /** 実績確定 */
-.status-list-page >>> .dialysis-state-td-6 {
+.status-list-page :deep(.dialysis-state-td-6) {
   color: #fff !important;
   background-color: rgb(0, 26, 0) !important;
 }

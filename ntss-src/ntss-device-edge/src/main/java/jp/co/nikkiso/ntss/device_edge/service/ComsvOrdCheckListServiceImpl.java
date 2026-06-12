@@ -57,11 +57,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
@@ -1858,7 +1858,7 @@ public class ComsvOrdCheckListServiceImpl implements ComsvOrdCheckListService {
         }
       }
 
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
@@ -2104,7 +2104,7 @@ public class ComsvOrdCheckListServiceImpl implements ComsvOrdCheckListService {
       }
       // #11589 2025.03.10 add アイテムについてマスタの並び順で表示を行う TDC米沢 end
 
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -2270,7 +2270,7 @@ public class ComsvOrdCheckListServiceImpl implements ComsvOrdCheckListService {
       }
       // #11589 2025.03.10 add アイテムについてマスタの並び順で表示を行う TDC米沢 end
 
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
@@ -2432,7 +2432,7 @@ public class ComsvOrdCheckListServiceImpl implements ComsvOrdCheckListService {
       }
       // #11589 2025.03.10 add アイテムについてマスタの並び順で表示を行う TDC米沢 end
 
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
@@ -2526,7 +2526,7 @@ public class ComsvOrdCheckListServiceImpl implements ComsvOrdCheckListService {
       try {
         OrdChecklistRegEquipInfo obj = objectMapper.readValue(value, OrdChecklistRegEquipInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang end
@@ -2541,7 +2541,7 @@ public class ComsvOrdCheckListServiceImpl implements ComsvOrdCheckListService {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -3032,7 +3032,7 @@ public class ComsvOrdCheckListServiceImpl implements ComsvOrdCheckListService {
     JsonNode node = null;
     try {
       node = map.readTree(strSetting);
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
       EventLogMessage eventLogMessage = new EventLogMessage();
@@ -3072,7 +3072,7 @@ public class ComsvOrdCheckListServiceImpl implements ComsvOrdCheckListService {
       JsonNode setting = null;
       try {
         setting = map.readTree(node.get(i).toString());
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -3095,7 +3095,7 @@ public class ComsvOrdCheckListServiceImpl implements ComsvOrdCheckListService {
       JsonNode funclist = null;
       try {
         funclist = map.readTree(setting.get("funclist").toString());
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -3113,7 +3113,7 @@ public class ComsvOrdCheckListServiceImpl implements ComsvOrdCheckListService {
         JsonNode list = null;
         try {
           list = map.readTree(funclist.get(j).toString());
-        } catch (IOException e) {
+        } catch (tools.jackson.core.JacksonException e) {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -3578,7 +3578,7 @@ public class ComsvOrdCheckListServiceImpl implements ComsvOrdCheckListService {
         JsonNode jsonNode = jsonNode_array.get(lop);
         recvCheckListParam param = new recvCheckListParam();
         // jsonNodeは読み取り専用のため、ObjectNodeに変換
-        ObjectNode objectNode = jsonNode.deepCopy();
+        ObjectNode objectNode = jsonNode.deepCopy().asObject();
 
         int no = objectNode.get("itemNumber").asInt();
         param.setItemNumber((short) no);
@@ -3605,7 +3605,7 @@ public class ComsvOrdCheckListServiceImpl implements ComsvOrdCheckListService {
           regDate = new Timestamp(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX").parse(regStr).getTime());
         }
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end

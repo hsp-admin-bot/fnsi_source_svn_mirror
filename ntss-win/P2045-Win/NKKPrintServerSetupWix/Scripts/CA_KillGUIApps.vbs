@@ -17,6 +17,12 @@ If Err.Number = 0 Then
   Next
   ForceKillProcess "FNWSiPrintServerTool.exe"
 
+  Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'NKKPrintServerTool.exe'")
+  For Each oProc In oItems
+    uRet = oProc.Terminate(0)
+  Next
+  ForceKillProcess "NKKPrintServerTool.exe"
+  
   Set oItems = oWMI.ExecQuery("Select * from Win32_Service Where Name = 'NKKPrintServer'")
   For Each oSvc In oItems
     If LCase(oSvc.State) = "running" Then

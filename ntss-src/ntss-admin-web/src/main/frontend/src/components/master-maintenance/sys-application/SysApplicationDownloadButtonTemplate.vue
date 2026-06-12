@@ -8,15 +8,16 @@
 </template>
 
 <script>
-import axios from "axios";
+import axios from "@/compat/http/axios";
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { triggerScopedDownload } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   name: "downloadButtonTemplate",
+  props: ['templateArgs'],
   data() {
     return {
-      templateArgs: {},
       downloadPath: "",
     };
   },
@@ -34,39 +35,73 @@ export default {
     /** ファイルダウンロード処理 */
     async handleDownload(e) {
       e.preventDefault();
-      const fullPath = this.templateArgs.path;
-      if (!fullPath) return;
-
-      const fileName = fullPath.split(/[/\\]/).pop();
-      const baseUrl = window.location.origin;
-      const newPath = `${baseUrl}/ntss-admin-web/${fileName}`;
-      let finalPath = '';
-
-      if (await this.checkFileExists(newPath)) {
-        // 最新版が格納されている方からダウンロード
-        finalPath = newPath;
-      } else {
-        const publicIndex = fullPath.indexOf('public');
-        if (publicIndex !== -1) {
-          // 従来の格納先からダウンロード
-          finalPath = fullPath.substring(publicIndex + 'public'.length + 1).replace(/\\/g, '/');
-        }
-      }
-
-      if (await this.checkFileExists(finalPath)) {
-        const link = document.createElement('a');
-        link.href = finalPath;
-        link.download = '';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        this.$ons.notification.alert(
-          messageFormat(DIALOG_MESSAGES['00200009'].message),
-          { title: DIALOG_MESSAGES['00200009'].title }
-        );
-      }
-    }
+      // mod #11660 単体アプリの自己アップデート修正 limingzhe start
+      // const fullPath = this.templateArgs.path;
+      // if (!fullPath) return;
+      //
+      // const fileName = fullPath.split(/[/\\]/).pop();
+      // const baseUrl = window.location.origin;
+      // const newPath = `${baseUrl}/ntss-admin-web/${fileName}`;
+      // let finalPath = '';
+      //
+      // if (await this.checkFileExists(newPath)) {
+      //   // 最新版が格納されている方からダウンロード
+      //   finalPath = newPath;
+      // } else {
+      //   const publicIndex = fullPath.indexOf('public');
+      //   if (publicIndex !== -1) {
+      //     // 従来の格納先からダウンロード
+      //     finalPath = fullPath.substring(publicIndex + 'public'.length + 1).replace(/\\/g, '/');
+      //   }
+      // }
+      //
+      // if (await this.checkFileExists(finalPath)) {
+      //   const link = document.createElement('a');
+      //   link.href = finalPath;
+      //   link.download = '';
+      //   document.body.appendChild(link);
+      //   link.click();
+      //   document.body.removeChild(link);
+      // } else {
+      //   this.$ons.notification.alert(
+      //     messageFormat(DIALOG_MESSAGES['00200009'].message),
+      //     { title: DIALOG_MESSAGES['00200009'].title }
+      //   );
+      // }
+      const filename = this.templateArgs.filename;
+      if (!filename) return;
+      let response = await axios
+        .post("/ntss-admin-web/api/application/download", {
+          filename: this.templateArgs.filename
+        }, {
+          responseType: "blob"
+        })
+        .then(function (response) {
+          var blob = null;
+          const contentDis = response.headers["content-disposition"];
+          var fileName = contentDis.slice(contentDis.lastIndexOf("filename=") + 9);
+          fileName = decodeURI(fileName);
+          if (response.headers["content-type"] == "application/msi") {
+            blob = new Blob([response.data], { type: "application/msi" });
+          }
+          if (!blob) {
+            return;
+          }
+          let link = window.document.createElement("a");
+          link.href = window.URL.createObjectURL(blob);
+          link.download = fileName;
+          document.body.append(link);
+          link.click();
+          link.remove();
+        })
+        .catch(error => {
+          this.$ons.notification.alert(
+            messageFormat(DIALOG_MESSAGES['00200009'].message),
+            { title: DIALOG_MESSAGES['00200009'].title }
+          );
+        });
+      // mod #11660 単体アプリの自己アップデート修正 limingzhe end
+    },
   }
 };
 </script>

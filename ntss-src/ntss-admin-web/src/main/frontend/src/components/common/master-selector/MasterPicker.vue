@@ -27,12 +27,14 @@
 
     <pop-over
       v-bind="popoverData"
-      :target-position-element="$refs.popoverButton"
+      :target-position-element="getPopoverTargetResolved()"
       :biz-direction="bizDirection"
       :hasUnregisteredOption="hasUnregisteredOption"
       :isSelectionRequired="isSelectionRequired"
       @popover-close="closePopover"
       @popover-return="handlePopoverReturn"
+      @master-load-more="$emit('master-load-more')"
+      @master-reset-request="$emit('master-reset-request', $event)"
     />
   </v-ons-col>
 </template>
@@ -43,6 +45,13 @@ import MasterPopover from "@/components/common/master-selector/MasterPopover";
 
 export default {
   name: "MasterSelector2",
+  emits: [
+    "create-popover-data",
+    "popover-close",
+    "popover-return",
+    "master-load-more",
+    "master-reset-request",
+  ],
 
   components: {
     "show-selected-item": CustomDivShowSelectedItem,
@@ -91,8 +100,14 @@ export default {
       default: true
     },
 
+    /** btnVisible=false 時は内蔵ボタンが表示されないため、親の外部ボタン等を POP 基準にする */
+    popoverAnchorElement: {
+      default: null,
+    },
+
     hasUnregisteredOption: {
-      type: Boolean
+      type: Boolean,
+      default: true
     },
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
     buttonName: {
@@ -122,6 +137,9 @@ export default {
 
   watch: {
     initItem: {
+      // add #10937 20260428 Ji start
+      immediate: true,
+      // add #10937 20260428 Ji end
       handler(val) {
         this.innerInitItem = { ...val };
       },
@@ -149,6 +167,31 @@ export default {
   },
 
   methods: {
+    getPopoverTargetResolved() {
+      const ext = this.popoverAnchorElement;
+      if (this.isValidExternalPopoverAnchor(ext)) {
+        return ext;
+      }
+      const btn = this.$refs.popoverButton;
+      if (btn != null) {
+        return btn;
+      }
+      return this.$el;
+    },
+
+    isValidExternalPopoverAnchor(ext) {
+      if (ext == null || ext === false || ext === "") return false;
+      if (typeof ext !== "object") return false;
+      if (typeof ext.getBoundingClientRect === "function") return true;
+      if (
+        ext.$el != null &&
+        typeof ext.$el.getBoundingClientRect === "function"
+      ) {
+        return true;
+      }
+      return false;
+    },
+
     onSelectClick() {
       this.$emit("create-popover-data");
     },

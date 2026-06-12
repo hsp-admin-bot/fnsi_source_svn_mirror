@@ -8,6 +8,8 @@ import {
   sendRequestGetMstMedicineClassWithoutLoaderByFacilityCd,
   sendRequestGetMstProcedureWithoutLoaderIncludeDeletedByFacilityCd
 } from "@/apis/treatment-record";
+import { getMasterConfig } from "@/components/common/master-selector/builder/masterPopoverConfig";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 
 export default {
   data() {
@@ -21,62 +23,17 @@ export default {
      */
     fetchMedicineAll(facilityCd) {
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
-      const item = {
-          lists: [
-            {
-              id: "list1",
-              name: "固定分类",
-              sourceType: "FIXED",
-              fixedItems: [
-                { value: 0, text: "すべて" },
-                { value: "1", text: "通常薬剤" },
-                { value: "2", text: "調製薬剤" }
-              ],
-              keyMapping: [
-                { keyName: "key_type", valueFrom: "value" }
-              ]
-            },
-            {
-              id: "list2",
-              name: "药剂分类MST",
-              sourceType: "MST",
-              mstSource: {
-                mstCode: "mstMedicineClassDaoImpl",
-                sqlParams: { facilityCd: facilityCd }
-              },
-              keyMapping: [
-                { keyName: "key_class", valueFrom: "classCd" }
-              ]
-            },
-            {
-              id: "list3",
-              name: "通常药剂 + 调制药剂 合并",
-              sourceType: "MST_COMBINED",
-              mstSourceList: [
-                {
-                  mstCode: "mstMedicineDaoImpl",
-                  sourceTag: "1",
-                  sqlParams: { facilityCd: facilityCd,patId:this.selectedPatId ? String(this.selectedPatId) : null },
-                  keyMapping: [
-                    { keyName: "key_type", valueFrom: "sourceTag" },
-                    { keyName: "key_class", valueFrom: "classCd" },
-                    { keyName: "key_cd", valueFrom: "medicineCd" }
-                  ]
-                },
-                {
-                  mstCode: "mstMedicineMixDaoImpl",
-                  sourceTag: "2",
-                  sqlParams: { facilityCd: facilityCd,patId:this.selectedPatId ? String(this.selectedPatId) : null },
-                  keyMapping: [
-                    { keyName: "key_type", valueFrom: "sourceTag" },
-                    { keyName: "key_class", valueFrom: "classCd" },
-                    { keyName: "key_cd", valueFrom: "medicineMixCd" }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
+      const context = {
+        facilityCd: facilityCd,
+        patientId: this.selectedPatId ? String(this.selectedPatId) : null,
+        extraParams: {
+          treatDate: "",
+          rstInfo: { rstName: "", rstUnit: "" }
+        },
+        dialysisState: 0,
+        allowedFields: {}
+      };
+      const item = getMasterConfig(MasterType.MEDICATION_TREATMENT_RECORD, context);
       return Promise.all([
         getMedicineAllWithoutLoaderByFacilityCd(facilityCd),
         sendRequestGetMstMedicineClassWithoutLoaderByFacilityCd(facilityCd),

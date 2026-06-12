@@ -1,91 +1,22 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-<meta charset="utf-8">
-<title>devTools</title>
+  <meta charset="utf-8" />
+  <title>開発ツール</title>
 </head>
+<body></body>
 <script type="text/javascript">
 
-    function createLargeObject () {
-        const largeObject = {};
-        for (let i = 0; i < 500; i++) {
-            largeObject[`${i}`] = `${i}`;
-        }
-        return largeObject;
-    }
+  let count = 0;
 
-    function createLargeObjectArray () {
-        const largeObject = createLargeObject();
-        const largeObjectArray = [];
-        for (let i = 0; i < 50; i++) {
-            largeObjectArray.push(largeObject);
-        }
-        return largeObjectArray;
-    }
+  function updateConsoleStatus() {
+    window.parent.consoleStatus = "off";
+    return false;
+  }
 
-    function now () {
-        return new Date().getTime();
-    }
-    function calculateTime (func) {
-        const start = now();
-        func();
-        return now() - start;
-    }
-
-    let largeObjectArray = createLargeObjectArray();
-    // 閾値回数より大きくなります
-    var count = 0;
-    function consoleStatus(){
-      const tablePrintTime = calculateTime(() => {console.table(largeObjectArray);});
-      const logPrintTime = calculateTime(() => {console.log(largeObjectArray);});
-      console.clear();
-      if (tablePrintTime - logPrintTime > 10 ) {
-        count+=1;
-      }
-      if(tablePrintTime - logPrintTime > 10 && count >= 3){
-        window.parent.consoleStatus = "on";
-        return true;
-      }
-      if (tablePrintTime - logPrintTime <= 10){
-        count =0;
-        window.parent.consoleStatus = "off";
-        return false;
-      }
-      return false;
-    }
-    function isOpenConsole(){
-      let num = 0;
-      for (let i = 0; i < 3; i++) {
-        const tablePrintTime = calculateTime(() => {console.table(largeObjectArray);});
-        const logPrintTime = calculateTime(() => {console.log(largeObjectArray);});
-        console.clear();
-
-        if(tablePrintTime - logPrintTime > 10){
-          num+=1;
-        }else{
-          num =0;
-        }
-      }
-      if (num ==3) {
-        return true;
-      }
-      return false;
-    }
-
-    setInterval(function() {
-        var userMenu = window.parent.document.getElementById('user-menu');
-        if (userMenu) {
-          var className = userMenu.parentNode.className;
-          // Floating ball red
-          if (className == 'dev-tool-unlocked') {
-            return;
-          }
-        } else {
-          return;
-        }
-      consoleStatus();
-    }, 1000);
+  function isOpenConsole() {
+    return false;
+  }
 </script>
-<body></body>
 </html>
+

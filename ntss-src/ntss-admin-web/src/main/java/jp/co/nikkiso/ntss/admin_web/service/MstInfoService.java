@@ -2,10 +2,12 @@ package jp.co.nikkiso.ntss.admin_web.service;
 
 import jp.co.nikkiso.ntss.admin_web.request.masterMaintenance.job.MstJobRequest;
 import jp.co.nikkiso.ntss.admin_web.request.mstInfo.MstInfoRequest;
+import jp.co.nikkiso.ntss.admin_web.request.mstMaster.MstMasterRequest;
 import jp.co.nikkiso.ntss.admin_web.response.MedicineResponse;
 import jp.co.nikkiso.ntss.admin_web.response.MedicineResponseExtends;
 import jp.co.nikkiso.ntss.admin_web.response.mstDialyzer.DialyzerSharingInfoResponse;
 import jp.co.nikkiso.ntss.admin_web.response.mstEquipment.EquipmentSharingInfoResponse;
+import jp.co.nikkiso.ntss.admin_web.response.mstMaster.MstMasterResponse;
 import jp.co.nikkiso.ntss.admin_web.response.mstMedicine.MedicineSharingInfoResponse;
 import jp.co.nikkiso.ntss.admin_web.response.mstMedicineMix.MedicineMixSharingInfoResponse;
 import jp.co.nikkiso.ntss.admin_web.response.mstMedicineMix.MstMedicineMixDto;
@@ -587,6 +589,10 @@ public interface MstInfoService {
    */
   List<MstPersonalUser> getMstPersonalUserNameByIdList(List<Long> listUserId);
 
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  MstPersonalUser selectMstPersonalUserByUserId(Long userId);
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
   /*
    * VAマスタ
    */
@@ -1063,4 +1069,8 @@ public interface MstInfoService {
   //add #12462 患者情報共有- 患者カレンダー zrx start
   Map<String, Object> getShrMstInfoByPatId(MstInfoRequest mstInfoRequest);
   //add #12462 患者情報共有- 患者カレンダー zrx end
+
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang start
+  List<MstMasterResponse> getMstIndTreatInfos(String facilityCd, MstMasterRequest req);
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang end
 }

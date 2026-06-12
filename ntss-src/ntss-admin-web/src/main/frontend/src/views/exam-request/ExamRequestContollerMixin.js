@@ -1,7 +1,7 @@
 /**
  * 検査依頼系Viewの共通処理
  */
-import { mapGetters, mapMutations } from "vuex";
+import { mapGetters, mapMutations } from "@/compat/vue/vuex";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import {
   isRequestDetail,
@@ -13,7 +13,7 @@ export default {
     return {
       controller: null,
       controllerData: {
-        // created時のthis.$router.currentRoute.nameの値
+        // created時のthis.$route.nameの値
         selfRouterName: "",
         // 破棄確認制御情報
         confirmDiscardChangesState: {
@@ -125,9 +125,9 @@ export default {
   },
   created() {
     this.controller = this;
-    this.controllerData.selfRouterName = this.$router.currentRoute.name;
+    this.controllerData.selfRouterName = this.$route.name;
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     this.controller = null;
     this.controllerData = null;

@@ -5,7 +5,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
 
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 
 /**
  * マップのリストの要素のうち、指定された条件を満たすものを別のマップで置換するユーティリティクラス。

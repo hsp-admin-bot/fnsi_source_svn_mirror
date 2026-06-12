@@ -5,6 +5,9 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.request.sysMonitorItem.SysMonitorItemRequest;
 import jp.co.nikkiso.ntss.admin_web.service.SysMonitorItemService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import jp.co.nikkiso.ntss.core.entity.SysMonitorItem;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -14,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Collections;
@@ -40,15 +44,25 @@ public class SysMonitorItemResource {
   // wp アプリケーションログの適正化 Add Start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // wp アプリケーションログの適正化 Add End
   /**
    * 指定された条件に該当するモニタ項目を取得する.
    *
    * @param sysMonitorItemRequest リクエスト情報(検索条件)
    * @return 該当するモニタ項目のリスト
-   */
+  */
   @GetMapping("/sys_monitor_item")
-  public ResponseEntity<?> getSysMonitorItem(SysMonitorItemRequest sysMonitorItemRequest) {
+  public ResponseEntity<?> getSysMonitorItem(SysMonitorItemRequest sysMonitorItemRequest,
+                                             @RequestParam(required = false) Long selectedPatId,
+                                             @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, ntssUser.getFacilityCd(), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.TREATMENT_RECORD + "/sys_monitor_item";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,

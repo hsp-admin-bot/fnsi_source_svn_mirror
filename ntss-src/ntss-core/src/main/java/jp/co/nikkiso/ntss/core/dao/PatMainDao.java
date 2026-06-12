@@ -129,6 +129,11 @@ public interface PatMainDao {
   @Update(sqlFile = true)
   int updateIsSame(List<Long> patIdList, String is_same);
 
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260427 start
+  @Update(sqlFile = true)
+  int updateIsSameByFacilityCd(List<Long> patIdList, String is_same, String facilityCd);
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260427 end
+
   @Update(sqlFile = true)
   int updateStartTareAndOffWater(Long patId, String offWaterInfo, String tareInfo);
 
@@ -180,6 +185,11 @@ public interface PatMainDao {
    */
   @Select
   PatMain selectById(Long patId);
+
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+  @Select
+  long countByPatIdAndFacilityCd(long patId, String facilityCd);
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
 
   /**
    * 患者情報の治療状況更新
@@ -295,6 +305,11 @@ public interface PatMainDao {
    */
   @Update(sqlFile = true)
   int updateAcceptanceStatusInfoById(Long patId, String acceptanceStatusInfo);
+
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260427 start
+  @Update(sqlFile = true)
+  int updateAcceptanceStatusInfoByIdFacilityCd(Long patId, String acceptanceStatusInfo, String facilityCd);
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260427 end
 
   // add 2020-08-08 FNSI-仕様追加 カード読み込み時にIdmでカード有効無効なチェック処理 夏 start
   /**
@@ -432,7 +447,7 @@ public interface PatMainDao {
    */
   @Select
   List<Long> selectPadIdListByWheelChairCd(String facilityCd,Long wheelChairCd);
-  
+
   /**
    * 指定車いすの割当解除
    * @param wheelChairCd 車いすコード
@@ -440,7 +455,7 @@ public interface PatMainDao {
    */
   @Update(sqlFile = true)
   int updateWheelChairCdDel(Long wheelChairCd);
-  
+
   /**
    * 車いす個人所有
    * @param patId 患者ID
@@ -448,4 +463,15 @@ public interface PatMainDao {
    */
   @Update(sqlFile = true)
   int updateIsWheelChair(Long patId);
+
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang start
+  /**
+   * 患者取得用
+   * @param facilityCd 施設コード
+   * @param patIds 患者ID
+   * @return 抽出条件を満たした患者の患者
+   */
+  @Select
+  List<PatMain> selectByPatIds(String facilityCd, List<Long> patIds);
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang end
 }

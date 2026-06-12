@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.response.bbsInfo.BbsInfoResponse;
@@ -9,6 +9,7 @@ import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.BbsInfoService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.admin_web.web.rest.util.PaginationUtils;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
@@ -45,6 +46,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 掲示板登録情報系
@@ -62,6 +64,9 @@ public class BbsInfoResource {
   // wangzuo アプリケーションログの適正化 Add Start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // wangzuo アプリケーションログの適正化 Add End
   /**
    * 掲示板登録情報取得(施設指定)
@@ -75,6 +80,18 @@ public class BbsInfoResource {
     @AuthenticationPrincipal NtssUser ntssUser
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
+    // 外部入力 facility_cd は session.facilityCd と直接比較し、他施設の掲示板参照を防止する。
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facility_cd != null && !facility_cd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "facility_cd=" + facility_cd + " ";
+        InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
+
     String mappingUrl = Uri.BBS_INFO + "/getBbsInfo";
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
     // 外部入力 facility_cd は session.facilityCd と直接比較し、他施設の掲示板参照を防止する。
@@ -122,6 +139,7 @@ public class BbsInfoResource {
    */
   @GetMapping("/getBbsInfoById/{selectedBbsCtlNo}")
   public ResponseEntity<BbsInfo> getBbsInfoByNo(@PathVariable long selectedBbsCtlNo,
+                                                @RequestParam(required = false) Long selectedPatId,
                                                 // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
                                                 @AuthenticationPrincipal NtssUser ntssUser
                                                 // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
@@ -134,14 +152,9 @@ public class BbsInfoResource {
 
     try {
       BbsInfo bbsInfo = bbsInfoService.getBbsInfoByNo(selectedBbsCtlNo);
-      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
-      // 外部入力 selectedBbsCtlNo で取得した掲示の facility_cd を照合し、他施設の掲示参照を防止する。
-      if(!ntssUser.isNkkAdminUser()) {
-//        if (bbsInfo != null && bbsInfo.getFacility_cd() != null && !bbsInfo.getFacility_cd().equals(ntssUser.getFacilityCd())) {
-//          return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
-//        }
+      if (bbsInfo != null && !facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, bbsInfo.getFacility_cd(), selectedPatId)) {
+          return ResponseEntity.status(HttpStatus.FORBIDDEN).<BbsInfo>build();
       }
-      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
       // wangzuo アプリケーションログの適正化 Add Start
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_BBS_INFO, AFTER_LOG_FLG_INFO, mappingUrl, null, selectedBbsCtlNo);
       // wangzuo アプリケーションログの適正化 Add End
@@ -153,7 +166,7 @@ public class BbsInfoResource {
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_BBS_INFO, AFTER_LOG_FLG_ERROR, mappingUrl, null, ExcetionStackTraceToString(e));
       // wangzuo アプリケーションログの適正化 Add End
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 mod yangxuewang end
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
   }
@@ -230,6 +243,19 @@ public class BbsInfoResource {
     @AuthenticationPrincipal NtssUser ntssUser
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
+    // 外部入力 bbs_ctl_no で取得した掲示の facility_cd を照合し、他施設の掲示更新を防止する。
+    if(!ntssUser.isNkkAdminUser()) {
+      BbsInfo bbsInfoByNo = bbsInfoService.getBbsInfoByNo(bbs_ctl_no);
+      if (bbsInfoByNo != null && bbsInfoByNo.getFacility_cd() != null && !bbsInfoByNo.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "bbsInfoByNo.getFacility_cd()=" + bbsInfoByNo.getFacility_cd() + " ";
+        InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
+
     String mappingUrl = Uri.BBS_INFO + "/updateBbs";
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
     // 外部入力 bbs_ctl_no で取得した掲示の facility_cd を照合し、他施設の掲示更新を防止する。
@@ -362,6 +388,19 @@ public class BbsInfoResource {
                                         @AuthenticationPrincipal NtssUser ntssUser
                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
+    // 外部入力 bbs_ctl_no で取得した掲示の facility_cd を照合し、他施設の掲示削除を防止する。
+    if(!ntssUser.isNkkAdminUser()) {
+      BbsInfo bbsInfoByNo = bbsInfoService.getBbsInfoByNo(bbs_ctl_no);
+      if (bbsInfoByNo != null && bbsInfoByNo.getFacility_cd() != null && !bbsInfoByNo.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "bbsInfoByNo.getFacility_cd()=" + bbsInfoByNo.getFacility_cd() + " ";
+        InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
+
     String mappingUrl = Uri.BBS_INFO + "/deleteBbs";
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
     // 外部入力 bbs_ctl_no で取得した掲示の facility_cd を照合し、他施設の掲示削除を防止する。
@@ -418,6 +457,18 @@ public class BbsInfoResource {
     @AuthenticationPrincipal NtssUser ntssUser
 // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 end
   ) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
+    // 外部入力 facility_cd は session.facilityCd と直接比較し、検索範囲を現在施設に限定する。
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facility_cd != null && !facility_cd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "facility_cd=" + facility_cd + " ";
+        InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
+
     String mappingUrl = Uri.BBS_INFO + "/getBbsSearchResult";
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
     // 外部入力 facility_cd は session.facilityCd と直接比較し、検索範囲を現在施設に限定する。
@@ -457,7 +508,7 @@ public class BbsInfoResource {
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_BBS_INFO, AFTER_LOG_FLG_ERROR, mappingUrl, facility_cd, ExcetionStackTraceToString(e));
       // wangzuo アプリケーションログの適正化 Add End
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 mod yangxuewang end
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -469,6 +520,18 @@ public class BbsInfoResource {
     @AuthenticationPrincipal NtssUser ntssUser
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
   ) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
+    // 外部入力 facility_cd は session.facilityCd と直接比較し、カレンダー掲示検索を現在施設に限定する。
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facility_cd != null && !facility_cd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "facility_cd=" + facility_cd + " ";
+        InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
+
 
     // wangzuo アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.BBS_INFO + "/getBbsSearchResultForCalendar";
@@ -505,7 +568,7 @@ public class BbsInfoResource {
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_BBS_INFO, AFTER_LOG_FLG_ERROR, mappingUrl, facility_cd, ExcetionStackTraceToString(e));
       // wangzuo アプリケーションログの適正化 Add End
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 mod yangxuewang end
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
   //  add 6216 施設イベントの表示条件の不正 zhao start
@@ -518,6 +581,18 @@ public class BbsInfoResource {
     @AuthenticationPrincipal NtssUser ntssUser
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
   ) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
+    // 外部入力 facility_cd は session.facilityCd と直接比較し、facCalLayoutCd の絞り込みも現在施設内に限定する。
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facility_cd != null && !facility_cd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "facility_cd=" + facility_cd + " ";
+        InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
+
     String mappingUrl = Uri.BBS_INFO + "/getBbsSearchResultForCalendar";
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
     // 外部入力 facility_cd は session.facilityCd と直接比較し、facCalLayoutCd の絞り込みも現在施設内に限定する。
@@ -548,7 +623,7 @@ public class BbsInfoResource {
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_BBS_INFO, AFTER_LOG_FLG_ERROR, mappingUrl, facility_cd, ExcetionStackTraceToString(e));
       // wangzuo アプリケーションログの適正化 Add End
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 mod yangxuewang end
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
   //  add 6216 施設イベントの表示条件の不正 zhao end
@@ -586,7 +661,7 @@ public class BbsInfoResource {
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_BBS_INFO, AFTER_LOG_FLG_ERROR, mappingUrl, null, ExcetionStackTraceToString(e));
       // wangzuo アプリケーションログの適正化 Add End
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 mod yangxuewang end
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -604,15 +679,19 @@ public class BbsInfoResource {
     @AuthenticationPrincipal NtssUser ntssUser
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
   ) throws Exception {
-    String mappingUrl = Uri.BBS_INFO + "/getUserAuthentication";
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
     // 外部入力 facility_cd は session.facilityCd と直接比較し、利用者権限情報の施設切替参照を防止する。
     if(!ntssUser.isNkkAdminUser()) {
       if (facility_cd != null && !facility_cd.equals(ntssUser.getFacilityCd())) {
-        return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "facility_cd=" + facility_cd + " ";
+        InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).<MstUserAuthentication>build();
       }
     }
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
+
+    String mappingUrl = Uri.BBS_INFO + "/getUserAuthentication";
 
     // wangzuo アプリケーションログの適正化 Add Start
 
@@ -634,7 +713,7 @@ public class BbsInfoResource {
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_BBS_INFO, AFTER_LOG_FLG_ERROR, mappingUrl, facility_cd, ExcetionStackTraceToString(e));
       // wangzuo アプリケーションログの適正化 Add End
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 mod yangxuewang end
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -665,7 +744,7 @@ public class BbsInfoResource {
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_BBS_INFO, AFTER_LOG_FLG_ERROR, mappingUrl, null, ExcetionStackTraceToString(e));
       // wangzuo アプリケーションログの適正化 Add End
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 mod yangxuewang end
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -683,6 +762,20 @@ public class BbsInfoResource {
     @AuthenticationPrincipal NtssUser ntssUser
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
+    // パス変数 bbsInfo に含まれる facility_cd を session.facilityCd と照合し、他施設掲示への添付アップロードを防止する。
+    if (!ntssUser.isNkkAdminUser()) {
+      String[] bbs = bbsInfo.split("&");
+      String facility_cd = bbs[0];
+      if (facility_cd != null && !facility_cd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "facility_cd=" + facility_cd + " ";
+        InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
+
     // wangzuo アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.BBS_INFO + "/files";
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
@@ -716,7 +809,7 @@ public class BbsInfoResource {
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_BBS_INFO, AFTER_LOG_FLG_ERROR, mappingUrl, null, ExcetionStackTraceToString(e));
       // wangzuo アプリケーションログの適正化 Add End
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 mod yangxuewang end
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -734,6 +827,19 @@ public class BbsInfoResource {
     @RequestBody List<Map<String, String>> fileInfo,
     @AuthenticationPrincipal NtssUser ntssUser
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
+    // 外部入力 bbs_ctl_no で取得した掲示の facility_cd を照合し、他施設掲示の添付削除を防止する。
+    if(!ntssUser.isNkkAdminUser()) {
+      BbsInfo bbsInfoByNo = bbsInfoService.getBbsInfoByNo(bbs_ctl_no);
+      if (bbsInfoByNo != null && bbsInfoByNo.getFacility_cd() != null && !bbsInfoByNo.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "bbsInfoByNo.getFacility_cd()=" + bbsInfoByNo.getFacility_cd() + " ";
+        InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
+
     String mappingUrl = Uri.BBS_INFO + "/deleteBbsFileAttachment";
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
     // 外部入力 bbs_ctl_no で取得した掲示の facility_cd を照合し、他施設掲示の添付削除を防止する。
@@ -766,7 +872,7 @@ public class BbsInfoResource {
       // wangzuo アプリケーションログの適正化 Add End
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 mod yangxuewang end
 
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -781,6 +887,19 @@ public class BbsInfoResource {
     @AuthenticationPrincipal NtssUser ntssUser
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
+    // 外部入力 bbs_ctl_no で取得した掲示の facility_cd を照合し、他施設掲示の添付情報更新を防止する。
+    if (!ntssUser.isNkkAdminUser()) {
+      BbsInfo bbsInfoByNo = bbsInfoService.getBbsInfoByNo(bbs_ctl_no);
+      if (bbsInfoByNo != null && bbsInfoByNo.getFacility_cd() != null && !bbsInfoByNo.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "bbsInfoByNo.getFacility_cd()=" + bbsInfoByNo.getFacility_cd() + " ";
+        InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw end
+
     String mappingUrl = Uri.BBS_INFO + "/updateBbsFileInfo";
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 shiyw start
     // 外部入力 bbs_ctl_no で取得した掲示の facility_cd を照合し、他施設掲示の添付情報更新を防止する。

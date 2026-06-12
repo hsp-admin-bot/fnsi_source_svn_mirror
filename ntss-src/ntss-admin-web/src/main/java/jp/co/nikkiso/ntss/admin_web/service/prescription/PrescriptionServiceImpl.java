@@ -65,6 +65,7 @@ import jp.co.nikkiso.ntss.core.logevent.LogServiceCore;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.EventLoggerFactory;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 @Service
 public class PrescriptionServiceImpl implements PrescriptionService {
@@ -112,16 +113,22 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
   @Autowired
   private LogService logService;
-  //add #12462 患者情報共有 zrx start
+
   @Autowired
-  private PatNameIdentificationDao patNameIdentificationDao ;
+  private PatNameIdentificationDao patNameIdentificationDao;
 
   @Autowired
   private MaterialsSharingPatientInfomationService materialsSharingPatientInfomationService;
-  //add #12462 患者情報共有 zrx end
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
+
 
   @Override
-  public List<MedicineSelection> searchMedicineSelection(MedicineSelectionRequest request) {
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
+  public List<MedicineSelection> searchMedicineSelection(MedicineSelectionRequest request, String facilityCd) {
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd hh:mm:ss.SSS");
     EventLogMessage elm = new EventLogMessage();
     elm.setLogMessage("searchMedicineSelection begin:" + sdf.format(new Date()));
@@ -129,7 +136,9 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     List<MedicineSelection> matchMedicationPrescription = new ArrayList<>();
     List<MedicineSelection> resultList = new ArrayList<>();
     List<MedicineSelection> medicineSelectionList =  new ArrayList<>();
-    medicineSelectionList = medicineSelectionDao.selectByFacilityCdJoinMstSelector(request.getFacilityCd(), request.getPatId());
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
+    medicineSelectionList = medicineSelectionDao.selectByFacilityCdJoinMstSelector(facilityCd, request.getPatId());
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
     List<SysGenericMedicineSelection> sysGenericMedicineSelectionList =  new ArrayList<>();
     sysGenericMedicineSelectionList = medicineSelectionDao.searchSysGenericMedicine(request.getPatId());
     for(MedicineSelection ms : medicineSelectionList){
@@ -188,14 +197,11 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     Long[] ordPrescriptionNoList = new Long[ordPrescriptionNoArrayList.size()];
     ordPrescriptionNoArrayList.toArray(ordPrescriptionNoList);
 
-
-
     List<OrdPrescription> ordPrescriptions = ordPrescriptionDao.searchPrescriptionHistory(
       request.getPatId(), request.getFacilityCd(), issueDateFrom,
       issueDateTo, request.getPrescriptionType(), request.getIssueState(), null,
       ordPrescriptionNoList);
 
-    //add 過去の病院記録を調べる #12462 患者情報共有 zrx start
     if ("0".equals(request.getPatientShareMode())) {
       List<PatNameIdentification> srcPatIds = patNameIdentificationDao.getListPatIdSrcFromPatTo(request.getPatId());
       for (PatNameIdentification srcPatId : srcPatIds) {
@@ -203,11 +209,10 @@ public class PrescriptionServiceImpl implements PrescriptionService {
           srcPatId.getPatIdSrc(), srcPatId.getFacilityCdSrc(), issueDateFrom,
           issueDateTo, request.getPrescriptionType(), request.getIssueState(), null,
           ordPrescriptionNoList);
-        if (null != list && !list.isEmpty()) {
+        if (list != null && !list.isEmpty()) {
           ordPrescriptions.addAll(list);
         }
       }
-      //add 過去の病院記録を調べる #12462 患者情報共有 zrx end
     }
     return ordPrescriptions;
   }
@@ -444,7 +449,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     wheresPre.append(" WHERE\n");
     wheresPre.append(" ord_prescription_no = " + ordPrescriptionNo + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommonPre = getLogCommon(ordPrescriptionDao, tableNamePre, wheresPre, getEventLogMessage());
+    DataUpdateLogCommonNew logCommonPre = getLogCommon(tableNamePre, wheresPre, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResultPre = logCommonPre.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -478,7 +483,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     wheresPer.append(" WHERE\n");
     wheresPer.append(" ord_prescription_no = " + ordPrescriptionNo + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommonPer = getLogCommon(ordPersonalPrescriptionDao, tableNamePer, wheresPer, getEventLogMessage());
+    DataUpdateLogCommonNew logCommonPer = getLogCommon(tableNamePer, wheresPer, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResultPer = logCommonPer.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -770,40 +775,35 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     return mstFacilityDao.getFacilityNameByCd(facilityCd);
   }
 
-  //mod #12462 患者共有情報 by zrx start
   @Override
-//  public List<PrescriptionList> getPrescriptionList(List<Long> patIdList, String issueDate, List<String> prescriptionTypeList) {
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
   public List<PrescriptionList> getPrescriptionList(List<Long> patIdList, String issueDate,
-                                                    List<String> prescriptionTypeList, Integer patientShareMode,String facilityCd) {
-//    return ordPrescriptionDao.getPrescriptionList(patIdList, issueDate, prescriptionTypeList);
-    //add #12462 患者共有情報 by zrx start
-    List<PrescriptionList> resultLsit = new ArrayList<>();
-    resultLsit = ordPrescriptionDao.getPrescriptionList(patIdList, issueDate, prescriptionTypeList);
-    if(patientShareMode != null && patientShareMode == 0) {
-      for(Long patId : patIdList) {
-        List<PrescriptionList> srcResultLsit = new ArrayList<>();
+      List<String> prescriptionTypeList, Integer patientShareMode, String facilityCd) {
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
+    List<PrescriptionList> resultList = ordPrescriptionDao.getPrescriptionList(patIdList, issueDate, prescriptionTypeList, facilityCd);
+    if (patientShareMode != null && patientShareMode == 0) {
+      for (Long patId : patIdList) {
         List<PatNameIdentification> srcPatIds = materialsSharingPatientInfomationService.getListPatIdSrcFromPatTo(patId);
-        if(srcPatIds != null && !srcPatIds.isEmpty()) {
-          List<Long> srcPatIdLsit = new ArrayList<>();
-          for (PatNameIdentification patIdsrc : srcPatIds) {
-            srcPatIdLsit.add(patIdsrc.getPatIdSrc());
+        if (srcPatIds != null && !srcPatIds.isEmpty()) {
+          List<Long> srcPatIdList = new ArrayList<>();
+          for (PatNameIdentification patIdSrc : srcPatIds) {
+            srcPatIdList.add(patIdSrc.getPatIdSrc());
           }
-          srcResultLsit = ordPrescriptionDao.getPrescriptionList(srcPatIdLsit, issueDate, prescriptionTypeList);
-          if(srcResultLsit != null && !srcResultLsit.isEmpty()) {
-            srcResultLsit.forEach(item -> item.setPatId(patId));
-            resultLsit.addAll(srcResultLsit);
+          List<PrescriptionList> srcResultList =
+            ordPrescriptionDao.getPrescriptionList(srcPatIdList, issueDate, prescriptionTypeList, null);
+          if (srcResultList != null && !srcResultList.isEmpty()) {
+            srcResultList.forEach(item -> item.setPatId(patId));
+            resultList.addAll(srcResultList);
           }
         }
       }
-      if(!resultLsit.isEmpty()) {
-        resultLsit = this.filterPrescription(resultLsit,facilityCd);
+      if (!resultList.isEmpty()) {
+        resultList = this.filterPrescription(resultList, facilityCd);
       }
     }
-    return resultLsit;
-    //add #12462 患者共有情報 by zrx end
+    return resultList;
   }
 
-  //add #12462 患者共有情報 by zrx start
   public List<PrescriptionList> filterPrescription(List<PrescriptionList> resultList, String facilityCd) {
     LocalDate today = LocalDate.now();
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
@@ -814,7 +814,6 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     List<PrescriptionList> finalResult = new ArrayList<>();
 
     for (List<PrescriptionList> group : groupMap.values()) {
-
       PrescriptionList source = group.stream()
         .filter(item -> facilityCd.equals(item.getFacilityCd()))
         .filter(this::hasAnyValue)
@@ -844,10 +843,10 @@ public class PrescriptionServiceImpl implements PrescriptionService {
           nullList.add(item);
           continue;
         }
-        LocalDate issueDate = parseDate(item.getIssueDate(), formatter);
-        if (issueDate.isAfter(today)) {
+        LocalDate itemIssueDate = parseDate(item.getIssueDate(), formatter);
+        if (itemIssueDate.isAfter(today)) {
           futureList.add(item);
-        } else if (issueDate.isBefore(today)) {
+        } else if (itemIssueDate.isBefore(today)) {
           pastList.add(item);
         }
       }
@@ -887,7 +886,9 @@ public class PrescriptionServiceImpl implements PrescriptionService {
       int remainSize = totalLimit;
 
       for (PrescriptionList item : tempList) {
-        if (remainSize <= 0) break;
+        if (remainSize <= 0) {
+          break;
+        }
         if (item != null) {
           finalResult.add(item);
           remainSize--;
@@ -904,6 +905,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
       || item.getIndTreatmentName() != null
       || item.getIssueState2() != null;
   }
+
   private LocalDate parseDate(String date, DateTimeFormatter formatter) {
     return LocalDate.parse(date, formatter);
   }
@@ -911,8 +913,6 @@ public class PrescriptionServiceImpl implements PrescriptionService {
   private boolean isSameFacility(PrescriptionList item, String facilityCd) {
     return facilityCd.equals(item.getFacilityCd());
   }
-  //add #12462 患者共有情報 by zrx end
-
   // add FNSI-改修内容イベント一覧の日付直下に、施設名を表示する dou end
 
   // 対象処方件数取得
@@ -1268,11 +1268,11 @@ public class PrescriptionServiceImpl implements PrescriptionService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

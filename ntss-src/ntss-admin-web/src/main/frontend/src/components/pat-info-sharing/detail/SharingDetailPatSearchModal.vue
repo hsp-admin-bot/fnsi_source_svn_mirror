@@ -3,10 +3,11 @@
     @onClose="closePatSearchModal"
     class="send-condition-pat-modal-base"
   >
-    <div slot="header">
+    <template #header>
       <component :is="header"></component>
-    </div>
-    <div slot="body" class="modal-body-wrapper">
+    </template>
+    <template #body>
+      <div class="modal-body-wrapper">
       <div id="send-condition-pat-modal-search-area">
         <div class="filter-content date-value search-input-group">
           <label class="input-label">フリーワード</label>
@@ -127,38 +128,41 @@
           </tr>
         </table>
       </div>
-    </div>
+      </div>
+    </template>
 
-    <div slot="footer" class="flex-container">
-      <div class="denial-btn-area" style="background: none">
-        <v-ons-button
-          class="btn2-cancel common-style-cancel-button"
-          @click="closePatSearchModal"
-        >
-          キャンセル
-        </v-ons-button>
+    <template #footer>
+      <div class="flex-container">
+        <div class="denial-btn-area" style="background: none">
+          <v-ons-button
+            class="btn2-cancel common-style-cancel-button"
+            @click="closePatSearchModal"
+          >
+            キャンセル
+          </v-ons-button>
+        </div>
+        <div class="registration-btn-area" style="background: none">
+          <v-ons-button
+            class="button btn1-execute registration-btn btn-save"
+            @click="savePatSearchModal"
+            :disabled="this.selectedRowIndex === null"
+          >
+            保存
+          </v-ons-button>
+        </div>
       </div>
-      <div class="registration-btn-area" style="background: none">
-        <v-ons-button
-          class="button btn1-execute registration-btn btn-save"
-          @click="savePatSearchModal"
-          :disabled="this.selectedRowIndex === null"
-        >
-          保存
-        </v-ons-button>
-      </div>
-    </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions, mapMutations } from "vuex";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 import {
   PAT_BLOOD_TYPE_ABO_OPTIONS,
   PAT_PERSONAL_MAIN_COL_PAT_SEX_OPTIONS,
 } from "@/constants/PatInfo.js";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 import DateInput from "@/components/common/DateInput.vue";
 import {
@@ -166,6 +170,7 @@ import {
   getSortedClass,
   sortableCompare,
 } from "@/functions/SortFunctions";
+import nameDuplicationImg from "../../../assets/name_duplication.png";
 
 export default {
   name: "sharingDetailPatSearchModal",
@@ -198,7 +203,7 @@ export default {
       },
       checkedOrdValue: [],
       initialized: false,
-      image_src_same: require("../../../assets/name_duplication.png"),
+      image_src_same: nameDuplicationImg,
     };
   },
   computed: {
@@ -407,7 +412,7 @@ export default {
     this.originalTitle = this.$store.state["multi-modal"].modalTitle;
     this.setTitle("患者選択");
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.setTitle(this.originalTitle);
     this.initialized = false;
   },
@@ -492,7 +497,7 @@ export default {
   align-items: flex-start !important;
   height: auto !important;
 }
-::v-deep .same-icon {
+:deep(.same-icon) {
   flex-shrink: 0;
   width: 16px;
   height: 16px;

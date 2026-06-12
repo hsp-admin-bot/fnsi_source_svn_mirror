@@ -89,7 +89,7 @@
           >
             <v-ons-row
                 v-for="(item, index) in getEditRecord"
-                :key="`${item.uniqueId}-${index}`"
+                :key="item.uniqueId"
                 class="prescription-detail-row"
                 :class="{
                   'sortable-chosen': isDraggItem(index),
@@ -102,19 +102,19 @@
               <v-ons-col class="custom-btn-area">
                 <v-ons-row class="custom-button-figure">
                   <v-ons-col class="row-buttons">
-                    <span class="row-buttons-span">
+                    <span class="row-buttons-span row-buttons-icons">
                       <ons-toolbar-button
                         class="close-btn manual-close-btn"
-                        style="line-height: 1.875em;"
-                        @click="deleteCols(index)"
+                        @mousedown.stop
+                        @click.stop="deleteCols(index)"
                       >
                         <ons-icon icon="fa-times"></ons-icon>
                       </ons-toolbar-button>
                       <ons-toolbar-button 
-                        class="close-btn manual-close-btn" 
+                        class="close-btn manual-close-btn dragg btnSpecial" 
                         :class="{ 'moved-row': isMoved(item.uniqueId) }" 
                       >
-                        <ons-icon icon="fa-sort" class="dragg"></ons-icon>
+                        <ons-icon icon="fa-sort"></ons-icon>
                       </ons-toolbar-button>
                     </span>
                     <v-ons-col>
@@ -162,8 +162,8 @@
                     ></v-ons-input>
                   </v-ons-col>
                   <v-ons-col class="col-rp custom-element-input-area-inner" v-else-if="itemChild.type == 'text-readonly' && itemChild.hidden == false">
-                    <ons-toolbar-button class="toolbar-button-rp">
-                      <ons-icon icon="fa-sort" class="dragg dragg-rp"></ons-icon>
+                    <ons-toolbar-button class="toolbar-button-rp dragg dragg-rp">
+                      <ons-icon icon="fa-sort"></ons-icon>
                     </ons-toolbar-button>
                     <v-ons-input
                       type="text"
@@ -189,8 +189,8 @@
                       style="width:-webkit-fill-available;"
                       @change="onOpen(index)"
                       :class="isEditedDataList(item, itemChild.itemName, 'ons')">
-                      <template v-for="item in timeList">
-                        <option :key="item" :value="item">{{ item }}</option>
+                      <template v-for="item in timeList" :key="item">
+                        <option :value="item">{{ item }}</option>
                       </template>
                     </v-ons-select>
                   </v-ons-col>
@@ -240,8 +240,8 @@
                         :class="isEditedDataList(item, itemChild.itemName, 'ons')"
                         @change="onOpen(index)"
                     >
-                      <template v-for="item in getUnit(itemChild.dataList)">
-                        <option :key="item" :value="item">{{ item }}</option>
+                      <template v-for="item in getUnit(itemChild.dataList)" :key="item">
+                        <option :value="item">{{ item }}</option>
                       </template>
                     </v-ons-select>
                   </v-ons-col>
@@ -278,11 +278,11 @@
                     >追加</v-ons-button>
                     <v-ons-popover
                       cancelable
-                      :visible.sync="popoverVisible"
+                      v-model:visible="popoverVisible"
                       :target="popoverTarget"
                       :direction="popoverDirection"
                       :cover-target="false"
-                      :class="[fontSizeSet, 'grid']"
+                      :class="[fontSizeSet, 'grid', 'prescription-set-add-popover']"
                       @preshow="popoverPreShow"
                       @postshow="popoverPostShow"
                       @posthide="popoverPosthide"
@@ -311,30 +311,32 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import vuedraggable from "vuedraggable";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import customInput from "@/components/common/custom-form-tags/CustomInput";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { getModalBodyElement, getScopedDocument, queryScopedSelector } from '@/functions/common/LayoutMeasureHelper';
 import MasterSelector from "@/components/common/master-selector/MasterSelector";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import PatPrescriptionMixin from "@/components/pat-prescription/PatPrescriptionMixin";
 import PopoverMixin from "@/components/PopoverMixin";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import { messageFormat } from "@/functions/common/MessageFormat";
+
 import {
   popoverPostShow,
   popoverPosthide,
   popoverPreShow
 } from "@/functions/common/CommonPopoverFunctions";
-import { EventBus } from "@/eventBus";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { messageFormat } from "@/functions/common/MessageFormat";
 
 export default {
   mixins: [MasterMaintenanceMixin, PopoverMixin, PatPrescriptionMixin],
   props: ["propsIsHideMainList"],
   components: {
     "custom-input": customInput,
-    "draggable": vuedraggable,
+    "draggable": VueDraggable,
     "pop-over": MasterSelector,
   },
 
@@ -395,15 +397,15 @@ export default {
     this.setLoadingScreenVisible(false);
   },
   mounted() {
-    window.addEventListener("resize", this.calculateGridHeight, false);
-    document.addEventListener("mousedown", this.handleMousedown);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.calculateGridHeight, false);
+    this.getPrescriptionSetOwnerDocument().addEventListener("mousedown", this.handleMousedown);
     
     // モーダル画面の高さ調整
     this.calculateGridHeight();
   },
-  beforeDestroy() {
-    window.removeEventListener("resize", this.calculateGridHeight, false);
-    document.removeEventListener("mousedown", this.handleMousedown);
+  beforeUnmount() {
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.calculateGridHeight, false);
+    this.getPrescriptionSetOwnerDocument().removeEventListener("mousedown", this.handleMousedown);
   },
   watch: {
     getFontSize() {
@@ -418,6 +420,15 @@ export default {
     },
   },
   methods: {
+    getPrescriptionSetOwnerDocument() {
+      return getScopedDocument(this.$el || null);
+    },
+    getCurrentModalBody() {
+      return getModalBodyElement(this.$el) || null;
+    },
+    getPrescriptionSetElement(selector) {
+      return this.getCurrentModalBody()?.querySelector?.(selector) || this.$el?.querySelector?.(selector) || queryScopedSelector(selector, this.$el);
+    },
     ...mapActions("master-maintenance", {
       setMasterEditRecord: "setEditRecord"
     }),
@@ -507,8 +518,15 @@ export default {
      */
     calculateGridHeight(){
       // 10は画面下部の余白
-      const newHeight = document.getElementsByClassName("modal-body")[0].clientHeight - document.getElementsByClassName("upper")[0].clientHeight - 10;
-      document.getElementsByClassName("prescription-wrapper")[0].style.height = newHeight + "px"
+      const wrapper = this.getPrescriptionSetElement('.prescription-wrapper');
+      if (!wrapper) {
+        return;
+      }
+      const newHeight = (this.getCurrentModalBody()?.clientHeight || 0) - (this.getPrescriptionSetElement('.upper')?.clientHeight || 0) - 10;
+      const nextHeight = `${newHeight}px`;
+      if (wrapper.style.height !== nextHeight) {
+        wrapper.style.height = nextHeight;
+      }
     },
 
     /** 確定ボタンの活性or非活性 */
@@ -575,7 +593,7 @@ export default {
         `;
 
       if(!validationResult.nameValid) {
-        document.getElementsByClassName("custom-input-required")[0]?.classList?.add("custom-input-invalid");
+        this.getPrescriptionSetElement('.custom-input-required')?.classList?.add('custom-input-invalid');
       }
       // ダイアログ表示
       this.$ons.notification.alert({
@@ -586,7 +604,7 @@ export default {
     },
     /** エラースタイルを解除する */
     warningCancel() {
-      document.getElementsByClassName("custom-input-required")[0].classList.remove("custom-input-invalid");
+      this.getPrescriptionSetElement('.custom-input-required')?.classList?.remove('custom-input-invalid');
     }, 
   }
 };
@@ -597,7 +615,24 @@ export default {
   .popover__content hr {
     width: 100%;
   }
+
+  .popover-style .popover__content hr {
+    width: 100%;
+  }
+
+  .prescription-set-add-popover .popover__content hr {
+    width: 100%;
+  }
+
   .popover__content ons-row {
+    height: auto;
+  }
+
+  .popover-style .popover__content ons-row {
+    height: auto;
+  }
+
+  .prescription-set-add-popover .popover__content ons-row {
     height: auto;
   }
 </style>
@@ -676,17 +711,23 @@ ons-row {
   vertical-align: middle;
   background-color: white;
 }
-.input >>> .text-input {
+.input :deep(.text-input) {
   height: 2em;
   line-height: 2em;
 }
-.input >>> .text-input:disabled {
+.input :deep(.text-input:disabled) {
   opacity: 1;
 }
-ons-input#add >>> input {
+ons-input#add :deep(input) {
   text-align: center;
 }
-ons-popover >>> div {
+ons-popover :deep(div) {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 5px;
+}
+
+.grid :deep(div) {
   display: flex;
   flex-wrap: wrap;
   padding: 5px;
@@ -699,10 +740,10 @@ ons-popover >>> div {
 label {
   color: var(--ntss-base-color);
 }
-.rp-input >>> input {
+.rp-input :deep(input) {
   background-color: #ddd;
 }
-.add-btn >>> input {
+.add-btn :deep(input) {
   background-color: #ddd;
 }
 .select-input {
@@ -717,7 +758,7 @@ label {
   display: flex;
   align-items: center;
 }
-.disabled-input >>> .text-input:disabled {
+.disabled-input :deep(.text-input:disabled) {
   opacity: 1;
   border: 0.5px solid rgb(169,169,169);
 }
@@ -730,10 +771,10 @@ label {
     width: 4.0em;
   }
 }
-.datalist >>> input::-webkit-calendar-picker-indicator {
+.datalist :deep(input::-webkit-calendar-picker-indicator) {
   display: none;
 }
-.datalist >>> input {
+.datalist :deep(input) {
   background-color: #F7F7F7
 }
 .datalist {
@@ -741,7 +782,7 @@ label {
   justify-content: center;
   align-items: center;
 }
-.number-input >>> input{
+.number-input :deep(input){
   background-color: #F7F7F7;
 }
 .row-buttons {
@@ -755,13 +796,24 @@ label {
 .toolbar-button-rp {
   padding: 5px;
   margin-right: 3px;
+  color: var(--toolbar-button-color, #0076ff);
+}
+.toolbar-button-rp :deep(ons-icon),
+.toolbar-button-rp :deep(.ons-icon) {
+  color: inherit;
+  font-size: 17px;
+  line-height: 1;
 }
 .toolbar-button--material {
   margin: 0 7% !important;
   padding: 0 !important;
 }
 .row-buttons-span {
-  width: 4em;
+ 
+  /***#9846 start */
+  /***width: 4em;*/
+  width: 50%;
+  /***#9846 end */
   text-align: center;
 }
 @media screen and (max-width: 1200px) {
@@ -781,12 +833,18 @@ label {
 }
 .custom-btn-area {
   max-width: 8em;
+  /***#9846 start */
+  min-width: 120px;
+  /***#9846 end */
   display: flex;
   justify-content: center;
   align-items: center;
 }
 .custom-input-area {
-  height: 3.0rem;
+  /*** #9846 add  start*/
+  /*height: 3.0rem;*/
+  min-height: 3.0rem;
+  /***#9846 add  end*/
   display: flex;
   justify-content: flex-start;
 }
@@ -803,7 +861,7 @@ label {
   align-items: center;
   justify-content: center;
 }
-::v-deep .k-button {
+:deep(.k-button) {
   background: #fff;
   border: none;
   box-shadow: none;
@@ -874,6 +932,36 @@ li {
 .ghost {
   opacity: 0.5;
 }
+.row-buttons-icons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: 100%;
+}
+.row-buttons-icons .manual-close-btn {
+  margin: 5px;
+  padding: 0 3px;
+  min-width: auto;
+  flex-shrink: 0;
+  color: var(--toolbar-button-color, #0076ff);
+}
+/***#9846 start */
+.row-buttons-icons .btnSpecial {
+  margin-right:0!important;
+}
+/***#9846 end */
+.row-buttons-icons .manual-close-btn :deep(ons-icon),
+.row-buttons-icons .manual-close-btn :deep(.ons-icon) {
+  color: inherit;
+  font-size: 17px;
+  line-height: 1;
+}
+:deep(.layout-item-fallback) {
+  z-index: 9999;
+  pointer-events: none;
+  box-sizing: border-box;
+  color: var(--toolbar-button-color, #0076ff);
+}
 .moved-row {
   background-color: #ccffcc;
 }
@@ -886,8 +974,8 @@ li {
 .prescription-detail-row {
   display: flex;
   flex-wrap: nowrap;
-  align-items: center;
   width: 100%;
+  height: 48px;
 }
 /* 左：処方列（削除/並び替え/追加ボタンのエリア）を固定幅に */
 .prescription-detail-row > .custom-btn-area {
@@ -899,7 +987,6 @@ li {
   flex: 1 1 auto;
   min-width: 0;
 }
-
 /* NOTE: 区分「薬剤のF1/F2」用「ons-row width:100%」対応 */
 .rx-drug-f1-wrap,
 .rx-drug-f2-wrap {

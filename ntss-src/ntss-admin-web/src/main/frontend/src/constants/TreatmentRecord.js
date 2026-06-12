@@ -1301,8 +1301,8 @@ export const MASTER_DELETE_DISPLAY = {
 
 export const MASTER_TERM_CUT = {
   CUT : "【期限切れ】",
-  //#8484　医療材料選択IFのリスト不正　Start
+  //#8484 医療材料選択IFのリスト不正 Start
   CUT_PART : "【期限切れ", // 日付を伴う期限切れ接頭辞の定型接頭辞パーツ
-  //#8484　医療材料選択IFのリスト不正　End
+  //#8484 医療材料選択IFのリスト不正 End
   INCLUDE_DELETED : "【期限切れ含む】"
 }

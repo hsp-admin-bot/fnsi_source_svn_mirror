@@ -97,6 +97,7 @@
         </v-ons-input> -->
         <custom-input-number-pro
           :value="inputModel.normal_value_lower"
+          :init-val="initInputModel.normal_value_lower"
           :max="precision(inputModel.input_decimal_figure, 999999)"
           :min="precision(inputModel.input_decimal_figure, -999999)"
           :step="inputNumberStepValue"
@@ -139,6 +140,7 @@
         </v-ons-input> -->
         <custom-input-number-pro
           :value="inputModel.normal_value_upper"
+          :init-val="initInputModel.normal_value_upper"
           :max="precision(inputModel.input_decimal_figure, 999999)"
           :min="precision(inputModel.input_decimal_figure, -999999)"
           :step="inputNumberStepValue"
@@ -183,6 +185,7 @@
         </v-ons-input> -->
         <custom-input-number-pro
           :value="inputModel.normal_value_lower_m"
+          :init-val="initInputModel.normal_value_lower_m"
           :max="precision(inputModel.input_decimal_figure, 999999)"
           :min="precision(inputModel.input_decimal_figure, -999999)"
           :step="inputNumberStepValue"
@@ -225,6 +228,7 @@
         </v-ons-input> -->
         <custom-input-number-pro
           :value="inputModel.normal_value_upper_m"
+          :init-val="initInputModel.normal_value_upper_m"
           :max="precision(inputModel.input_decimal_figure, 999999)"
           :min="precision(inputModel.input_decimal_figure, -999999)"
           :step="inputNumberStepValue"
@@ -269,6 +273,7 @@
         </v-ons-input> -->
         <custom-input-number-pro
           :value="inputModel.normal_value_lower_w"
+          :init-val="initInputModel.normal_value_lower_w"
           :max="precision(inputModel.input_decimal_figure, 999999)"
           :min="precision(inputModel.input_decimal_figure, -999999)"
           :step="inputNumberStepValue"
@@ -311,6 +316,7 @@
         </v-ons-input> -->
         <custom-input-number-pro
           :value="inputModel.normal_value_upper_w"
+          :init-val="initInputModel.normal_value_upper_w"
           :max="precision(inputModel.input_decimal_figure, 999999)"
           :min="precision(inputModel.input_decimal_figure, -999999)"
           :step="inputNumberStepValue"
@@ -373,6 +379,7 @@
         </v-ons-input> -->
         <custom-input-number-pro
           :value="inputModel.input_decimal_figure"
+          :init-val="initInputModel.input_decimal_figure"
           :max="8"
           :min="0"
           :step="1"
@@ -418,6 +425,7 @@
         </v-ons-input> -->
         <custom-input-number-pro
           :value="inputModel.input_lower"
+          :init-val="initInputModel.input_lower"
           :max="precision(inputModel.input_decimal_figure, 999999)"
           :min="precision(inputModel.input_decimal_figure, -999999)"
           :step="inputNumberStepValue"
@@ -460,6 +468,7 @@
         </v-ons-input> -->
         <custom-input-number-pro
           :value="inputModel.input_upper"
+          :init-val="initInputModel.input_upper"
           :max="precision(inputModel.input_decimal_figure, 999999)"
           :min="precision(inputModel.input_decimal_figure, -999999)"
           :step="inputNumberStepValue"
@@ -504,6 +513,7 @@
         </v-ons-input> -->
         <custom-input-number-pro
           :value="inputModel.graph_lower"
+          :init-val="initInputModel.graph_lower"
           :max="precision(inputModel.input_decimal_figure, 999999)"
           :min="precision(inputModel.input_decimal_figure, -999999)"
           :step="inputNumberStepValue"
@@ -545,6 +555,7 @@
         </v-ons-input> -->
         <custom-input-number-pro
           :value="inputModel.graph_upper"
+          :init-val="initInputModel.graph_upper"
           :max="precision(inputModel.input_decimal_figure, 999999)"
           :min="precision(inputModel.input_decimal_figure, -999999)"
           :step="inputNumberStepValue"
@@ -824,18 +835,19 @@
 </template>
 
 <script>
-import { mapActions, mapGetters, mapState } from "vuex";
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import { mapActions, mapGetters, mapState } from "@/compat/vue/vuex";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import { examItemSystemDefaultCalcList } from "@/constants/mstExamItemDefine";
 import EditExamFormulaComponent from "@/components/master-maintenance/mst-exam-item/EditExamFormulaComponent";
 import { ApiHelper } from "@/apis/AxiosHelper.js";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
-import cloneDeep from "lodash/cloneDeep";
-import isEqualWith from "lodash/isEqualWith";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
 import { customComparator } from "@/utils/util"
 // add #10713 小数点以下桁数指定を0～8までにする linjunfeng start
 import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro';
@@ -1026,11 +1038,14 @@ export default {
       this.inputModel.exam_calc = this.getStrFormula;
     },
     getIsShowEditFormulaModal() {
-      var modalHeader = document.getElementsByClassName("modal-header");
+      const modalHeader = this.getMasterEditModalHeader();
+      if (!modalHeader) {
+        return;
+      }
       if (this.getIsShowEditFormulaModal){
-        modalHeader[0].style.display="none";
+        modalHeader.style.display="none";
       } else {
-        modalHeader[0].style.display="block";
+        modalHeader.style.display="block";
       }
     },
     comboSpitzIsInHospital:function(){
@@ -1050,10 +1065,33 @@ export default {
       if (flg === false) {
         this.inputModel.spitz_cd = "";
       }
-      this.handleEditBorderColor('spitz-is-in-hospital');
     }
   },
   methods: {
+    requestViewForceUpdate() {
+      if (this.$?.isMounted) {
+        this.$forceUpdate();
+      }
+    },
+    getScopedElementById(id) {
+      return getScopedElementById(id, this);
+    },
+    getScopedElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this);
+    },
+    getScopedQuery(selector) {
+      return queryScopedSelector(selector, this);
+    },
+    getScopedQueryAll(selector) {
+      return queryScopedSelectorAll(selector, this);
+    },
+    getMasterEditModalHeader() {
+      const modalContainer = this.$el?.closest?.(".modal-container");
+      return Array.from(modalContainer?.children || []).find(element =>
+        element.classList?.contains("modal-header")
+      ) || null;
+    },
+
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("mst-exam-item", [
       "setIsShowEditFormulaModal",
@@ -1140,7 +1178,7 @@ export default {
         this.blurFlg = false
       }
       this.focusFlg[index] = false;
-      this.$forceUpdate();
+      this.requestViewForceUpdate();
     },
     // mod #5589 2023/04/11 数値IFのスタイル全不正 林峻峰 start
     handleMouseWheel(e, min, max, step, index) {
@@ -1168,7 +1206,7 @@ export default {
           step = step.slice(0,21);
         if (pointNum < 0 && step.indexOf('-') < 0)
           step = step.slice(0,20);
-        if (pointNum == 0 )
+        if (pointNum == 0)
           step = step.slice(0,1);
       }
       let value = parseFloat(e.target.value);
@@ -1211,30 +1249,99 @@ export default {
     handleFocus(index){
         this.focusFlg[index] = true
     },
+    normalizeEditCompareValue(value) {
+      if (value === undefined || value === null || value === "") {
+        return null;
+      }
+      return value;
+    },
+    normalizeEditCompareNumber(value) {
+      const normalized = this.normalizeEditCompareValue(value);
+      if (normalized === null) {
+        return null;
+      }
+      const num = Number(normalized);
+      return Number.isNaN(num) ? normalized : num;
+    },
+    isNumericEditField(key) {
+      return [
+        "normal_value_lower",
+        "normal_value_upper",
+        "normal_value_lower_m",
+        "normal_value_upper_m",
+        "normal_value_lower_w",
+        "normal_value_upper_w",
+        "input_integer_figure",
+        "input_decimal_figure",
+        "input_lower",
+        "input_upper",
+        "graph_lower",
+        "graph_upper",
+      ].includes(key);
+    },
+    isEditFieldChanged(key) {
+      let initValue = this.normalizeEditCompareValue(this.initInputModel[key]);
+      let editValue = this.normalizeEditCompareValue(this.inputModel[key]);
+      if (["formulaId", "default_calc_exam_item_cd"].includes(key)) {
+        if (initValue === "0") {
+          initValue = null;
+        }
+        if (editValue === "0") {
+          editValue = null;
+        }
+      }
+      if (key === "exam_calc" && initValue === "1") {
+        initValue = null;
+      }
+      if (this.isNumericEditField(key)) {
+        return this.normalizeEditCompareNumber(initValue) !== this.normalizeEditCompareNumber(editValue);
+      }
+      return initValue != editValue;
+    },
+    resolveEditBorderElement(id) {
+      const escapedId = typeof CSS !== "undefined" && typeof CSS.escape === "function"
+        ? CSS.escape(id)
+        : id;
+      return this.getScopedElementById(id)
+        || queryScopedSelector(`ons-select[input-id="${id}"] select.select-input`, this)
+        || queryScopedSelector(`ons-select[select-id="${id}"] select.select-input`, this)
+        || queryScopedSelector(`ons-select select.select-input#${escapedId}`, this);
+    },
+    applyEditBorder(element, edited) {
+      if (!element) {
+        return;
+      }
+      element.style.border = edited ? "2px solid green" : "";
+    },
+    getInitialProgressFlags() {
+      const flag = this.initInputModel.dialysis_progress_flag || "0";
+      return {
+        flag1: flag === "1" || flag === "3",
+        flag2: flag === "2" || flag === "3",
+      };
+    },
+    updateProgressFlagEditedVisual() {
+      const init = this.getInitialProgressFlags();
+      const flag1El = this.getScopedElementById("progressFlag1-font");
+      const flag2El = this.getScopedElementById("progressFlag2-font");
+      if (flag1El) {
+        flag1El.style.color = this.progressFlag !== init.flag1 ? "green" : "";
+      }
+      if (flag2El) {
+        flag2El.style.color = this.progressFlag2 !== init.flag2 ? "green" : "";
+      }
+    },
     // #8629 編集を行った項目が緑枠にならない。修正 林峻峰 start
-    handleEditBorderColor(key){
-      const id = key.replaceAll('_', '-');
-      let initValue = this.initInputModel[key] ? this.initInputModel[key] : null;
-      let editValue = this.inputModel[key] ? this.inputModel[key] : null;
-      if (['formulaId', 'default_calc_exam_item_cd'].includes(key) && initValue === '0') {
-        initValue = null
+    handleEditBorderColor(key) {
+      if (key === "is_in_hospital") {
+        return;
       }
-      if (['formulaId', 'default_calc_exam_item_cd'].includes(key) && editValue === '0') {
-        editValue = null
+      if (["progressFlag1", "progressFlag2"].includes(key)) {
+        this.updateProgressFlagEditedVisual();
+        return;
       }
-      if (['exam_calc'].includes(key) && initValue === '1') {
-        initValue = null
-      }
-      if (document.getElementById(id)) {
-        document.getElementById(id).style.border = initValue != editValue ? '2px solid green' : ''
-      }
-      if (id === 'spitz-is-in-hospital') {
-        document.getElementById(id).style.border = this.inputModal.is_in_hospital === 1 ? '2px solid green' : ''
-      }
-      if (['progressFlag1', 'progressFlag2'].includes(id)) {
-        document.getElementById('progressFlag1-font').style.color = this.progressFlag ? 'green' : '';
-        document.getElementById('progressFlag2-font').style.color = this.progressFlag2 ? 'green' : '';
-      }
+      const id = key.replaceAll("_", "-");
+      this.applyEditBorder(this.resolveEditBorderElement(id), this.isEditFieldChanged(key));
     },
     // #8629 編集を行った項目が緑枠にならない。修正 林峻峰 end
      /**
@@ -1298,7 +1405,7 @@ export default {
         this.progressFlag2 = e.target.checked;
         this.handleEditBorderColor('progressFlag2');
       }
-      if ( this.progressFlag && this.progressFlag2 ){
+      if ( this.progressFlag && this.progressFlag2){
         this.inputModel.dialysis_progress_flag = "3";
       }else if (this.progressFlag2){
         this.inputModel.dialysis_progress_flag = "2";
@@ -1420,7 +1527,7 @@ export default {
         message: message
       });
       if (this.inputModel.exam_item_name == "" || this.inputModel.exam_item_name == null) {
-        document.getElementsByClassName("input-required")[0]?.classList?.add("input-invalid");
+        this.getScopedElementsByClassName("input-required")[0]?.classList?.add("input-invalid");
       }
       return false;
     },
@@ -1437,7 +1544,7 @@ export default {
       this.inputModel.jlac10_cd = selectedMstExamMatome.examMatomeCd;
       if (!this.inputModel.exam_item_name || this.inputModel.exam_item_name == "") this.inputModel.exam_item_name = selectedMstExamMatome.analyticalMaterialName;
 
-      if ((!this.inputModel.unit || this.inputModel.unit == "") && selectedMstExamMatome.referenceUnit && selectedMstExamMatome.referenceUnit != "" )
+      if ((!this.inputModel.unit || this.inputModel.unit == "") && selectedMstExamMatome.referenceUnit && selectedMstExamMatome.referenceUnit != "")
       this.inputModel.unit = selectedMstExamMatome.referenceUnit; this.inputModel.data_type = "1";
 
       if ((!this.inputModel.unit || this.inputModel.unit == "") && (!selectedMstExamMatome.referenceUnit || selectedMstExamMatome.referenceUni == ""))
@@ -1473,41 +1580,41 @@ export default {
       }
     },
     inputDecimalFigureChange(){
-      if (document.getElementById('normal-value-lower')) {
-        document.getElementById('normal-value-lower').value = this.inputModel.normal_value_lower = this.inputModel.normal_value_lower ? Number(this.inputModel.normal_value_lower).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.normal_value_lower;
+      if (this.getScopedElementById('normal-value-lower')) {
+        this.getScopedElementById('normal-value-lower').value = this.inputModel.normal_value_lower = this.inputModel.normal_value_lower ? Number(this.inputModel.normal_value_lower).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.normal_value_lower;
       }
-      if (document.getElementById('normal-value-upper')) {
-        document.getElementById('normal-value-upper').value = this.inputModel.normal_value_upper = this.inputModel.normal_value_upper ? Number(this.inputModel.normal_value_upper).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.normal_value_upper;
+      if (this.getScopedElementById('normal-value-upper')) {
+        this.getScopedElementById('normal-value-upper').value = this.inputModel.normal_value_upper = this.inputModel.normal_value_upper ? Number(this.inputModel.normal_value_upper).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.normal_value_upper;
       }
-      if (document.getElementById('normal-value-lower-m')) {
-        document.getElementById('normal-value-lower-m').value = this.inputModel.normal_value_lower_m = this.inputModel.normal_value_lower_m ? Number(this.inputModel.normal_value_lower_m).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.normal_value_lower_m;
+      if (this.getScopedElementById('normal-value-lower-m')) {
+        this.getScopedElementById('normal-value-lower-m').value = this.inputModel.normal_value_lower_m = this.inputModel.normal_value_lower_m ? Number(this.inputModel.normal_value_lower_m).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.normal_value_lower_m;
       }
-      if (document.getElementById('normal-value-upper-m')) {
-        document.getElementById('normal-value-upper-m').value = this.inputModel.normal_value_upper_m = this.inputModel.normal_value_upper_m ? Number(this.inputModel.normal_value_upper_m).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.normal_value_upper_m;
+      if (this.getScopedElementById('normal-value-upper-m')) {
+        this.getScopedElementById('normal-value-upper-m').value = this.inputModel.normal_value_upper_m = this.inputModel.normal_value_upper_m ? Number(this.inputModel.normal_value_upper_m).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.normal_value_upper_m;
       }
-      if (document.getElementById('normal-value-lower-w')) {
-        document.getElementById('normal-value-lower-w').value = this.inputModel.normal_value_lower_w = this.inputModel.normal_value_lower_w ? Number(this.inputModel.normal_value_lower_w).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.normal_value_lower_w;
+      if (this.getScopedElementById('normal-value-lower-w')) {
+        this.getScopedElementById('normal-value-lower-w').value = this.inputModel.normal_value_lower_w = this.inputModel.normal_value_lower_w ? Number(this.inputModel.normal_value_lower_w).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.normal_value_lower_w;
       }
-      if (document.getElementById('normal-value-upper-w')) {
-        document.getElementById('normal-value-upper-w').value = this.inputModel.normal_value_upper_w = this.inputModel.normal_value_upper_w ? Number(this.inputModel.normal_value_upper_w).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.normal_value_upper_w;
+      if (this.getScopedElementById('normal-value-upper-w')) {
+        this.getScopedElementById('normal-value-upper-w').value = this.inputModel.normal_value_upper_w = this.inputModel.normal_value_upper_w ? Number(this.inputModel.normal_value_upper_w).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.normal_value_upper_w;
       }
-      if (document.getElementById('input-lower')) {
-        document.getElementById('input-lower').value = this.inputModel.input_lower = this.inputModel.input_lower ? Number(this.inputModel.input_lower).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.input_lower;
+      if (this.getScopedElementById('input-lower')) {
+        this.getScopedElementById('input-lower').value = this.inputModel.input_lower = this.inputModel.input_lower ? Number(this.inputModel.input_lower).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.input_lower;
       }
-      if (document.getElementById('input-upper')) {
-        document.getElementById('input-upper').value = this.inputModel.input_upper = this.inputModel.input_upper ? Number(this.inputModel.input_upper).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.input_upper;
+      if (this.getScopedElementById('input-upper')) {
+        this.getScopedElementById('input-upper').value = this.inputModel.input_upper = this.inputModel.input_upper ? Number(this.inputModel.input_upper).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.input_upper;
       }
-      if (document.getElementById('graph-lower')) {
-        document.getElementById('graph-lower').value = this.inputModel.graph_lower = this.inputModel.graph_lower ? Number(this.inputModel.graph_lower).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.graph_lower;
+      if (this.getScopedElementById('graph-lower')) {
+        this.getScopedElementById('graph-lower').value = this.inputModel.graph_lower = this.inputModel.graph_lower ? Number(this.inputModel.graph_lower).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.graph_lower;
       }
-      if (document.getElementById('graph-upper')) {
-        document.getElementById('graph-upper').value = this.inputModel.graph_upper = this.inputModel.graph_upper ? Number(this.inputModel.graph_upper).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.graph_upper;
+      if (this.getScopedElementById('graph-upper')) {
+        this.getScopedElementById('graph-upper').value = this.inputModel.graph_upper = this.inputModel.graph_upper ? Number(this.inputModel.graph_upper).toFixed(this.inputModel.input_decimal_figure) : this.inputModel.graph_upper;
       }
     },
     // add #8629 テキストボックス内の上下ボタン、マウスホイールによる数値変更の動作不正 林峻峰 end
     setCss(value) {
-      if(value && document.getElementsByClassName("input-invalid")[0])
-        document.getElementsByClassName("input-invalid")[0].classList.remove("input-invalid");
+      if(value && this.getScopedElementsByClassName("input-invalid")[0])
+        this.getScopedElementsByClassName("input-invalid")[0].classList.remove("input-invalid");
     },
   },
   async created() {
@@ -1681,14 +1788,14 @@ export default {
   },
   async mounted() {
     // 縦スクロールバー表示
-    let modalObj = document.getElementsByClassName("modal-body");
+    let modalObj = this.getScopedElementsByClassName("modal-body");
     if (modalObj.length >= 1){
       modalObj[0].classList.remove("modal-overflow-hidden");
       modalObj[0]?.classList?.add("modal-scroll");
     }
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("applyMstExamMatome", this.closeSelectMstExamMatome);
   },
   // add 性能改善メモリ不足 shan end
@@ -1815,11 +1922,11 @@ table tr {
   }
 }
 
-.input-required >>> input {
+.input-required :deep(input) {
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> input {
+.input-invalid :deep(input) {
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }

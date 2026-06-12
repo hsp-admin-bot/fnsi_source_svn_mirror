@@ -1,6 +1,7 @@
 package jp.co.nikkiso.ntss.core.dao;
 
 import java.util.List;
+import java.util.Map;
 
 import org.seasar.doma.Dao;
 import org.seasar.doma.Select;
@@ -11,7 +12,7 @@ import jp.co.nikkiso.ntss.core.entity.MstAddition;
 
 @ConfigAutowireable
 @Dao
-public interface MstAdditionDao {
+public interface MstAdditionDao extends MasterDao<Map<String, Object>>{
 
   /**
    * 加算マスタトマスタ：対象施設の加算ト取得用
@@ -37,4 +38,7 @@ public interface MstAdditionDao {
   @Select
   List<MstAddition> selectAllName(List<Integer> additionCds);
   // add #10245 帳票用患者情報履歴mongoDBのマスタ変更影響問題 limingzhe end
+
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
 }

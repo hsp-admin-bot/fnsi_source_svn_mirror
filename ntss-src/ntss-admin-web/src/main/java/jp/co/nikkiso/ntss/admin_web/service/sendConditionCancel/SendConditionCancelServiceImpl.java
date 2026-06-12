@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.service.sendConditionCancel;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.WebApiProperties;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.OrdMainConst.DialysisState;
 import jp.co.nikkiso.ntss.admin_web.response.sendConditionCancel.SendConditionCancelResponse;
@@ -75,6 +75,7 @@ import java.util.Map;
 import java.util.Objects;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 
 
@@ -147,6 +148,10 @@ public class SendConditionCancelServiceImpl implements SendConditionCancelServic
   // add #10739 コンバート施設で指示受け(治療単位)が表示されない 関 start
   @Autowired
   private PatIndApproveDao patIndApproveDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // add #10739 コンバート施設で指示受け(治療単位)が表示されない 関 end
 
   /**
@@ -422,7 +427,7 @@ public class SendConditionCancelServiceImpl implements SendConditionCancelServic
       wheres.append(" WHERE\n");
       wheres.append(" ord_no = " + ordNo + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -755,7 +760,7 @@ public class SendConditionCancelServiceImpl implements SendConditionCancelServic
       wheres.append(" ord_no = " + ordNo  + "\n");
       // logCommon設定
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(mntMachineStateDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       //DB更新ログ出力ロジック wp end
@@ -800,7 +805,7 @@ public class SendConditionCancelServiceImpl implements SendConditionCancelServic
       wheres.append(" data_type = 1" + "\n");
 
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(mniMonitorDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -900,7 +905,7 @@ public class SendConditionCancelServiceImpl implements SendConditionCancelServic
       wheres.append(" ord_no = " + ordNo + "\n");
 
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(mntMachineStateDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -1340,11 +1345,11 @@ public class SendConditionCancelServiceImpl implements SendConditionCancelServic
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

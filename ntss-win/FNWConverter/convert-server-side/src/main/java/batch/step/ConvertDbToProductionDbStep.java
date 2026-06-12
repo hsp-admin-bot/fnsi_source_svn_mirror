@@ -32,17 +32,18 @@ import batch.part.InfomationSchemaControl;
 import batch.part.PsqlCopyUtils;
 import batch.part.StreamThread;
 import batch.part.TableNameToDbType;
-import com.amazonaws.util.CollectionUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.util.CollectionUtils;
+import tools.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.Setter;
 import org.postgresql.util.PGobject;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.Step;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
@@ -98,7 +99,7 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
     private ApplicationContext appContext;
 
     @Autowired
-    private StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
 
     @Autowired
     private ConvertKeyConfig convertKeyConfig;
@@ -156,6 +157,27 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
         String nextProcessingFile = chunkContext.getStepContext().getJobExecutionContext().get(ApplicationConst.PromotionKeys.NEXT_PROCESSING_FILE).toString();
         String inputFilePath = chunkContext.getStepContext().getJobParameters().get(JobParameterKeys.INPUT_FILE_PATH).toString();
 
+        executeUploadPatEventIfNeeded(nextProcessingFile, facilityCd, chunkContext, globalContext);
+
+        //mod 2022-04-01   判断条件の修正  鄭  start
+        int indexFile = nextProcessingFile.indexOf("indicatorShoe");
+        //mod 2022-04-01   判断条件の修正  鄭  end
+        //add 2022-05-07  #6886 判断条件の修正  鄭  start
+        int patmongo = nextProcessingFile.indexOf("pat(mongo)");
+        //add 2022-05-07 #6886  判断条件の修正  鄭  END
+
+        if (indexFile != -1 || patmongo != -1) {
+            return executeFinishSpecialFile(nextProcessingFile, facilityCd);
+        } else {
+            return executeConvertTable(nextProcessingFile, inputFilePath, facilityCd, chunkContext, globalContext);
+        }
+        // add 7853-差分コンバートで更新/削除ができない 楊 end
+        // del 7853-差分コンバートで更新/削除ができない 楊 start
+    }
+
+    // pat_eventテーブルのS3ファイルアップロード処理
+    private void executeUploadPatEventIfNeeded(String nextProcessingFile, String facilityCd,
+                                               ChunkContext chunkContext, GlobalContext globalContext) {
         // add 2022-11-15 bug #7882 患者イベントのVA画像がコンバートされていない 孫 start
         // pat_eventのデータをCopyしましたの場合、S3にファイルをアップロードする
         if ("pat_event".equals(PsqlCopyUtils.getTableName(nextProcessingFile))) {
@@ -178,15 +200,10 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
             eventLoggerUtil.recordLog(facilityCd, eventLogMessageS3_2, LogLevel.INFO);
         }
         // add 2022-11-15 bug #7882 患者イベントのVA画像がコンバートされていない 孫 end
+    }
 
-        //mod 2022-04-01   判断条件の修正  鄭  start
-        int indexFile = nextProcessingFile.indexOf("indicatorShoe");
-        //mod 2022-04-01   判断条件の修正  鄭  end
-        //add 2022-05-07  #6886 判断条件の修正  鄭  start
-        int patmongo = nextProcessingFile.indexOf("pat(mongo)");
-        //add 2022-05-07 #6886  判断条件の修正  鄭  END
-
-        if (indexFile != -1 || patmongo != -1) {
+    // indicatorShoe/pat(mongo)特殊ファイルの早期終了処理
+    private RepeatStatus executeFinishSpecialFile(String nextProcessingFile, String facilityCd) {
             //ログ
             EventLogMessage eventLogMessage = eventLoggerUtil.getEventLogMessage("Copyコマンド正常終了",
                     facilityCd, "execute(StepContribution contribution, ChunkContext chunkContext)");
@@ -202,7 +219,11 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                 }
             }
             return RepeatStatus.FINISHED;
-        } else {
+    }
+
+    // テーブル毎の初回/差分コンバート本処理
+    private RepeatStatus executeConvertTable(String nextProcessingFile, String inputFilePath, String facilityCd,
+                                             ChunkContext chunkContext, GlobalContext globalContext) throws Exception {
             String tableName = PsqlCopyUtils.getTableName(nextProcessingFile);
             //add 6886 zc start
             if (Set.of("pat_personal_main_history",
@@ -254,9 +275,6 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                 throw e;
             }
         }
-        // add 7853-差分コンバートで更新/削除ができない 楊 end
-        // del 7853-差分コンバートで更新/削除ができない 楊 start
-    }
 
     /**
      * 初回コンバートの場合
@@ -271,6 +289,19 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
         GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
         String inputPath = chunkContext.getStepContext().getJobParameters().get(JobParameterKeys.INPUT_FILE_PATH).toString();
         String fromDb_table_prefix = environment.getProperty("datasource." + ApplicationConst.DbType.NKK5 + ".table_prefix");
+        firstConvertCleanupErrorOrdNo(globalContext, facilityCd);
+        // sqlファイルから、コピーsqlを取得する
+        File fileConvertDbToProductionDbStep = new File(inputPath + "/ConvertDbToProductionDbStep.txt");
+        // コンバートDBから本番DBにテーブルデータを登録ファイル 一行目：テープル、二～四行目：sqlCommand
+        if (fileConvertDbToProductionDbStep.exists() && 0 != fileConvertDbToProductionDbStep.length()) {
+            firstConvertRunCopyCommands(fileConvertDbToProductionDbStep, tableName, facilityCd, chunkContext);
+            firstConvertProcessTableTriggers(tableName, currSeq, facilityCd, fromDb_table_prefix);
+            firstConvertFinalize(tableName, nextProcessingFile, fileConvertDbToProductionDbStep, facilityCd);
+        }
+    }
+
+    // 初回コンバート前のord_main/ord_scheduleエラーデータ削除
+    private void firstConvertCleanupErrorOrdNo(GlobalContext globalContext, String facilityCd) {
         // add #10143 djy start
         // mod #10418 SQL注入対策：パラメータバインディング start
         if (globalContext.ErrorOrdNo != null) {
@@ -280,10 +311,11 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
         }
         // mod #10418 SQL注入対策：パラメータバインディング end
         // add #10143 djy end
-        // sqlファイルから、コピーsqlを取得する
-        File fileConvertDbToProductionDbStep = new File(inputPath + "/ConvertDbToProductionDbStep.txt");
-        // コンバートDBから本番DBにテーブルデータを登録ファイル 一行目：テープル、二～四行目：sqlCommand
-        if (fileConvertDbToProductionDbStep.exists() && 0 != fileConvertDbToProductionDbStep.length()) {
+    }
+
+    // 初回コンバートのコピーコマンド実行
+    private void firstConvertRunCopyCommands(File fileConvertDbToProductionDbStep, String tableName, String facilityCd,
+                                             ChunkContext chunkContext) throws Exception {
             String[] command = new String[3];
             List<String> sqlConvertDbToProductionDbStep = utils.readFile(fileConvertDbToProductionDbStep);
             if ("\\".equals(System.getProperty("file.separator"))) {
@@ -300,11 +332,28 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                 eventLoggerUtil.recordLog(facilityCd, eventLogMessagetodo1, LogLevel.INFO);
                 this.runCommand(command, tableName, facilityCd);
             }
+    }
+
+    // 初回コンバート後のテーブル別トリガ代替処理
+    private void firstConvertProcessTableTriggers(String tableName, Integer currSeq, String facilityCd,
+                                                  String fromDb_table_prefix) {
             //ord_mainトリガの置換
             if (tableName.equals("ord_main")) {
+                firstConvertProcessOrdMainTrigger(currSeq, facilityCd, fromDb_table_prefix);
+            }else if (tableName.equals("mst_bed")) {
+                firstConvertProcessMstBedTrigger(currSeq, facilityCd, fromDb_table_prefix);
+                // #8753 旧通信項目がDBに登録されていないこと ADD by Zhoutao START
+            } else if ("mst_machine_record_control".equals(tableName)) {
+                firstConvertProcessMstMachineRecordControl(facilityCd);
+                // #8753 ADD by Zhoutao END
+            }
+    }
+
+    // 初回コンバート後のord_mainトリガ代替処理
+    private void firstConvertProcessOrdMainTrigger(Integer currSeq, String facilityCd, String fromDb_table_prefix) {
                 // add #9839 wzy start
                 // mod #10418 SQL注入対策：パラメータバインディング start
-                String update_ord_main_sql = "select facility_cd, ord_no, treat_date, ind_kur_cd, ind_bed_cd, pat_id, treat_week, ind_cond_info, rst_weight_info from " + fromDb_table_prefix + tableName
+        String update_ord_main_sql = "select facility_cd, ord_no, treat_date, ind_kur_cd, ind_bed_cd, pat_id, treat_week, ind_cond_info, rst_weight_info from " + fromDb_table_prefix + "ord_main"
                         + " where facility_cd = ? and ord_no > ?";
                 List<OrdMain> ordNoList1 = namedParameterJdbcTemplateNkk5.getJdbcOperations().query(update_ord_main_sql, new Object[]{facilityCd, currSeq}, new BeanPropertyRowMapper<>(OrdMain.class));
                 String mst_kur_sql = "select A.kur_cd, A.kur_start_time, A.kur_end_time, A.kur_standard_start_time from mst_kur A where A.is_del = '0' AND facility_cd = ? order by A.kur_cd";
@@ -328,7 +377,7 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                     if (0 != mstKur.size()) {
                         List<OrdSchedule> dummyScheduleList = this.insertOrdSchedule1(om, mstKur);
                         // add #8805 【デグレ】ツール出力時にエラーが検出されていないがエラーメッセージが表示され進まない ZS end
-                        if (!CollectionUtils.isNullOrEmpty(dummyScheduleList))
+                        if (!CollectionUtils.isEmpty(dummyScheduleList))
                             osParamList.addAll(dummyScheduleList);
                     }
                 }
@@ -336,11 +385,14 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                 // 治療スケジュール一括挿入のParams
                 namedParameterJdbcTemplateNkk5.batchUpdate(insertOrdScheduleSQL, SqlParameterSourceUtils.createBatch(osParamList));
                 // add #9839 wzy end
-            }else if (tableName.equals("mst_bed")) {
+    }
+
+    // 初回コンバート後のmst_bedトリガ代替処理
+    private void firstConvertProcessMstBedTrigger(Integer currSeq, String facilityCd, String fromDb_table_prefix) {
                 //add mst _bedが新しく挿入したデータのリスト start
                 // mod #10418 SQL注入対策：パラメータバインディング start
                 String update_mnt_machine_state="WITH mac AS ( \n" +
-                        "SELECT b.facility_cd,bed_cd, bed_name, b.machine_no,m.machine_type_cd,m.machine_serial FROM  " + fromDb_table_prefix + tableName +"  b "+
+                        "SELECT b.facility_cd,bed_cd, bed_name, b.machine_no,m.machine_type_cd,m.machine_serial FROM  " + fromDb_table_prefix + "mst_bed" +"  b "+
                         "LEFT JOIN "  + fromDb_table_prefix +"mst_machine m on  b.machine_no=m.machine_no  " +
                         "  WHERE b.facility_cd = ? and m.facility_cd = ?    and  b.is_disp='1' AND b.bed_cd > ?) " +
                         "UPDATE "+ fromDb_table_prefix +"mnt_machine_state " +
@@ -359,8 +411,9 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                 // mod #10418 SQL注入対策：パラメータバインディング end
                 //add mst _bedが新しく挿入したデータのリスト end
             }
-            // #8753 旧通信項目がDBに登録されていないこと ADD by Zhoutao START
-            else if ("mst_machine_record_control".equals(tableName)) {
+
+    // 初回コンバート後のmst_machine_record_control削除処理
+    private void firstConvertProcessMstMachineRecordControl(String facilityCd) {
                 // 旧通信項目を削除する
                 // mod #10418 SQL注入対策：パラメータバインディング start
                 String delMstMachineRecordControl = "delete from mst_machine_record_control where facility_cd = ?"
@@ -372,8 +425,10 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                 namedParameterJdbcTemplateNkk5.getJdbcOperations().update(delMstMachineRecordControl, facilityCd);
                 // mod #10418 SQL注入対策：パラメータバインディング end
             }
-            // #8753 ADD by Zhoutao END
 
+    // 初回コンバート完了後の後処理（ファイル移動・ログ出力等）
+    private void firstConvertFinalize(String tableName, String nextProcessingFile,
+                                      File fileConvertDbToProductionDbStep, String facilityCd) {
             // 処理完了したファイルを完了フォルダへ移動
             this.moveInputFile(nextProcessingFile);
             //　Copyコマンド正常終了場合、ファイル削除
@@ -383,7 +438,6 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                     facilityCd, "ConvertDbToProductionDbStep");
             eventLoggerUtil.recordLog(facilityCd, eventLogMessagetodo1, LogLevel.INFO);
         }
-    }
 
     // 差分コンバートの場合
     private void diffConvert(String tableName, List<String> columnNameList, Integer currSeq, String nextProcessingFile,String inputFilePath, String facilityCd) throws Exception {
@@ -407,17 +461,34 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
         TableNameToDbType tableNameToDbType = new TableNameToDbType(appContext);
         String registDbType = tableNameToDbType.getDbTypeByTableName(tableName);
 
-        // add #8400 LL start
-        boolean processMstSelector = false;
+        String delSql = diffConvertBuildDelSql(tableName, pKey, facilityCd, globalContext);
+        boolean processMstSelector = diffConvertProcessConvertNotData(inputFilePath, tableName, facilityCd,
+                registDbType, columnNameListUpd, delSql, globalContext);
+        List<Integer> updatedConvertIds = diffConvertProcessUpdateKeys(inputFilePath, tableName, facilityCd,
+                registDbType, columnNameListUpd, pKey, delSql, globalContext, processMstSelector);
+        diffConvertProcessNewKeys(inputFilePath, tableName, columnNameList, currSeq, facilityCd, registDbType,
+                pKey, globalContext, processMstSelector, updatedConvertIds);
+        diffConvertProcessAlternativeBranches(inputFilePath, tableName, columnNameList, facilityCd, registDbType,
+                tableKey, delSql, globalContext, processMstSelector);
+        diffConvertFinalize(nextProcessingFile, tableName, facilityCd);
+    }
 
-        // add #8400 LL end
-
-
+    // 差分コンバート用削除SQLの組み立て
+    private String diffConvertBuildDelSql(String tableName, String pKey, String facilityCd, GlobalContext globalContext) {
         String delSql = "delete from " + tableName + " where " + pKey + " in (" + globalContext.sqlKeys + ")";
         // SQL Injection protection: escape single quotes for psql script context
         if (globalContext.hasFacilityCd) {
             delSql += " and facility_cd = '" + facilityCd + "'";
         }
+        return delSql;
+    }
+
+    // ConvertNotData対象テーブルの差分コピー処理
+    private boolean diffConvertProcessConvertNotData(String inputFilePath, String tableName, String facilityCd,
+                                                     String registDbType, List<String> columnNameListUpd, String delSql, GlobalContext globalContext) throws Exception {
+        // add #8400 LL start
+        boolean processMstSelector = false;
+        // add #8400 LL end
         //add #12229  convert ->本番DB  start
         if (utils.ConvertNotData.contains(tableName)) {
             if (globalContext.sqlKeys.isEmpty() || utils.onlyInsertList.contains(tableName)) {
@@ -429,6 +500,13 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
             processMstSelector = true;
         }
         //add #12229  end
+        return processMstSelector;
+    }
+
+    // 差分コンバートの更新キー（sqlKeys）コピー処理
+    private List<Integer> diffConvertProcessUpdateKeys(String inputFilePath, String tableName, String facilityCd,
+                                                       String registDbType, List<String> columnNameListUpd, String pKey, String delSql,
+                                                       GlobalContext globalContext, boolean processMstSelector) throws Exception {
         // 更新部分Copyコマンドを作成（本番キー含む）
         //add #11998 start
         List<Integer> updatedConvertIds = new ArrayList<>();
@@ -483,7 +561,13 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                 updatedConvertIds = namedParameterJdbcTemplateConvert.getJdbcOperations().queryForList(sqlSelectConvertId, new Object[]{facilityCd}, Integer.class);
             }
         }
+        return updatedConvertIds;
+    }
 
+    // 差分コンバートの新規キー（sqlNewKeys/sqlDisNoKeys）コピー処理
+    private void diffConvertProcessNewKeys(String inputFilePath, String tableName, List<String> columnNameList,
+                                           Integer currSeq, String facilityCd, String registDbType, String pKey, GlobalContext globalContext,
+                                           boolean processMstSelector, List<Integer> updatedConvertIds) throws Exception {
         // 新規部分Copyコマンドを作成（本番キーなし）
         // mod #8400 LL start
         // mod zl start ord_main差分
@@ -504,18 +588,7 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
             }
             String sqlCnd = " and " + key + " in (" + globalContext.sqlNewKeys + ")";
             if (!StringUtils.isEmpty(globalContext.sqlNewKeys)) {
-                //add #11998 start
-                if (tableName.equals("mst_comsv_setting")) {
-                    sqlCnd = " and convert_id in (" + globalContext.sqlNewKeys + ")";
-                }
-                //add #11998 end
-                //add 10378_23 start
-                if ("pat_coop_detail".equals(tableName)) {
-                    //add 11998 start
-                    sqlCnd = " and coop_save_no is null";
-                    //add 11998 end
-                }
-                //add 10378_23 end
+                sqlCnd = diffConvertBuildNewKeysSqlCnd(tableName, globalContext, sqlCnd);
                 String[] commandins = psqlCopyUtils.createCopyCommandUpd(inputFilePath, tableName, columnNameList,
                         facilityCd, sqlCnd, registDbType, 0,true);
 
@@ -545,6 +618,45 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                 processOrdMainDiffNewRstFnDialysisNos(inputFilePath, facilityCd, columnNameList);
             }
 
+            diffConvertProcessNewKeysTriggers(tableName, currSeq, facilityCd, globalContext, updatedConvertIds);
+        }
+    }
+
+    // 差分新規キー用のSQL条件組み立て
+    private String diffConvertBuildNewKeysSqlCnd(String tableName, GlobalContext globalContext, String sqlCnd) {
+        //add #11998 start
+        if (tableName.equals("mst_comsv_setting")) {
+            sqlCnd = " and convert_id in (" + globalContext.sqlNewKeys + ")";
+        }
+        //add #11998 end
+        //add 10378_23 start
+        if ("pat_coop_detail".equals(tableName)) {
+            //add 11998 start
+            sqlCnd = " and coop_save_no is null ";
+            //add 11998 end
+        }
+        //add 10378_23 end
+
+        //add #10923 GX連携の施設について一般撮影検査が分離してコンバートされていない start
+        if ("pat_rad_main".equals(tableName)) {
+            sqlCnd = " and rad_result_cd is null ";
+        }
+        //add #10923 GX連携の施設について一般撮影検査が分離してコンバートされていない start
+
+        //add 11667 日常点検コンバート修正 start
+        if ("mst_mainte_layout_hst".equals(tableName)) {
+            sqlCnd = " and concat_ws('', edition_no) in (" + globalContext.sqlNewKeys + ")";
+        }
+        if ("mst_mainte_category_hst".contains(tableName)){
+            sqlCnd = " and mainte_category_cd > "+globalContext.sqlNewKeys ;
+        }
+        //add 11667 日常点検コンバート修正 end
+        return sqlCnd;
+    }
+
+    // 差分新規部分データのトリガ代替処理
+    private void diffConvertProcessNewKeysTriggers(String tableName, Integer currSeq, String facilityCd,
+                                                   GlobalContext globalContext, List<Integer> updatedConvertIds) {
             //差分新規部分データトリガ処理
             if (tableName.equals("ord_main")) {
                 processInsertOrdMainTrigger(currSeq,facilityCd);
@@ -576,10 +688,18 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
             }
             // add #12230 差分コンバートにより元に戻ってしまう項目がある limingzhe end
         }
+
+    // 新規キー処理以外の差分分岐（mst_machine_record_control / 全削除全挿入）
+    private void diffConvertProcessAlternativeBranches(String inputFilePath, String tableName,
+                                                       List<String> columnNameList, String facilityCd, String registDbType, String tableKey, String delSql,
+                                                       GlobalContext globalContext, boolean processMstSelector) throws Exception {
+        if ((!StringUtils.isEmpty(globalContext.sqlNewKeys) || !StringUtils.isEmpty(globalContext.sqlDisNoKeys)) && !processMstSelector) {
+            return;
+        }
         // add #11399 djy start
 
         // #8753 旧通信項目がDBに登録されていないこと ADD by Zhoutao START
-        else if ("mst_machine_record_control".equals(tableName)) {
+        if ("mst_machine_record_control".equals(tableName)) {
             // 旧通信項目を削除する
             String delMstMachineRecordControl = "delete from mst_machine_record_control where facility_cd = ?"
                     + " and machine_record_cd not in (select machine_record_cd from mst_machine_record)";
@@ -609,6 +729,10 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
         }
         // mod zl end
         // add #8992-4 pat_event zs end
+    }
+
+    // 差分コンバート完了後の後処理（Mongo更新・ファイル移動等）
+    private void diffConvertFinalize(String nextProcessingFile, String tableName, String facilityCd) {
         // MongoＤＢ更新
         //6886 zc start
         setMongoDate(nextProcessingFile, facilityCd, tableName);
@@ -657,6 +781,15 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
     private void processDeleteOrdMainTrigger(String facilityCd) {
         GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
         String fromDb_table_prefix = environment.getProperty("datasource." + ApplicationConst.DbType.NKK5 + ".table_prefix");
+        String[] ordNumberArray = globalContext.sqlKeys.split(",");
+        processDeleteOrdMainTriggerRebuildSchedule(facilityCd, fromDb_table_prefix, globalContext);
+        processDeleteOrdMainTriggerUpdateMotionRecord(facilityCd, fromDb_table_prefix, ordNumberArray);
+        processDeleteOrdMainTriggerUpdateWeightScale(facilityCd, ordNumberArray);
+    }
+
+    // ord_main更新時のord_schedule再構築処理
+    private void processDeleteOrdMainTriggerRebuildSchedule(String facilityCd, String fromDb_table_prefix,
+                                                            GlobalContext globalContext) {
         // mod #10472 delete lsn start
         String del = "DELETE FROM ord_schedule WHERE ord_no IN (:ordNoList) AND facility_cd = :facilityCd";
         Map<String, Object> params = new HashMap<>();
@@ -701,15 +834,18 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
             // add #8805 【デグレ】ツール出力時にエラーが検出されていないがエラーメッセージが表示され進まない ZS start
             List<OrdSchedule> dummyScheduleList = this.insertOrdSchedule(om);
             // add #8805 【デグレ】ツール出力時にエラーが検出されていないがエラーメッセージが表示され進まない ZS end
-            if (!CollectionUtils.isNullOrEmpty(dummyScheduleList)) osParamList.addAll(dummyScheduleList);
+            if (!CollectionUtils.isEmpty(dummyScheduleList)) osParamList.addAll(dummyScheduleList);
         }
 
         // 治療スケジュール一括挿入のParams
         namedParameterJdbcTemplateNkk5.batchUpdate(insertOrdScheduleSQL, SqlParameterSourceUtils.createBatch(osParamList));
         // #8942 DB負荷を低減する為に、一括挿入に処理を修正する Mod by Zhoutao END
+    }
 
+    // ord_main更新時のmnt_motion_record ord_no更新処理
+    private void processDeleteOrdMainTriggerUpdateMotionRecord(String facilityCd, String fromDb_table_prefix,
+                                                               String[] ordNumberArray) {
         // 9778 差分ord_main登録の場合、mnt_motion_record、項目「ord_no」を更新 start
-        String[] ordNumberArray = globalContext.sqlKeys.split(",");
         StringBuilder upOrdSqlBufferTonkk5 = new StringBuilder();
         upOrdSqlBufferTonkk5.append(" WITH ord AS(SELECT DISTINCT ");
         upOrdSqlBufferTonkk5.append(" ord.facility_cd,  ord.ord_no, b.machine_type_cd,b.machine_serial, ord.rst_cond_send_date , ord.rst_return_home_date ");
@@ -752,6 +888,10 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
             }
         });
         // 9778 差分ord_main登録の場合、mnt_motion_record、項目「ord_no」を更新 end
+    }
+
+    // ord_main更新時のord_weight_scale更新処理
+    private void processDeleteOrdMainTriggerUpdateWeightScale(String facilityCd, String[] ordNumberArray) {
         // add #10835 体重計測定記録の一部がFNWからコンバートされていない zkm start
         // 実際作成中の体重測定履歴の空欄項目をord_mianから再設定する
         StringBuilder updOrdWeightScaleToNkk5 = new StringBuilder();
@@ -819,6 +959,13 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
     private void processInsertOrdMainTrigger(Integer currSeq,String facilityCd) {
 
         String fromDb_table_prefix = environment.getProperty("datasource." + ApplicationConst.DbType.NKK5 + ".table_prefix");
+        processInsertOrdMainTriggerRebuildSchedule(currSeq, facilityCd, fromDb_table_prefix);
+        processInsertOrdMainTriggerUpdateMotionRecord(currSeq, facilityCd, fromDb_table_prefix);
+        processInsertOrdMainTriggerUpdateWeightScale(currSeq, facilityCd);
+    }
+
+    // ord_main新規挿入時のord_schedule構築処理
+    private void processInsertOrdMainTriggerRebuildSchedule(Integer currSeq, String facilityCd, String fromDb_table_prefix) {
         //取得したord _mainテーブルの現在の最大シーケンス新規に挿入された新しいデータ番号を取得する
         // mod #8805 【デグレ】ツール出力時にエラーが検出されていないがエラーメッセージが表示され進まない ZS start
         String ord_main_sql = "select facility_cd, ord_no, treat_date, ind_kur_cd, ind_bed_cd, pat_id, treat_week, ind_cond_info, rst_weight_info from " + fromDb_table_prefix + "ord_main"
@@ -846,12 +993,15 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
             // add #8805 【デグレ】ツール出力時にエラーが検出されていないがエラーメッセージが表示され進まない ZS start
             List<OrdSchedule> dummyScheduleList = this.insertOrdSchedule(om);
             // add #8805 【デグレ】ツール出力時にエラーが検出されていないがエラーメッセージが表示され進まない ZS end
-            if (!CollectionUtils.isNullOrEmpty(dummyScheduleList)) osParamList.addAll(dummyScheduleList);
+            if (!CollectionUtils.isEmpty(dummyScheduleList)) osParamList.addAll(dummyScheduleList);
         }
         // 治療スケジュール一括挿入のParams
         namedParameterJdbcTemplateNkk5.batchUpdate(insertOrdScheduleSQL, SqlParameterSourceUtils.createBatch(osParamList));
         //  #8942 DB負荷を低減する為に、一括挿入に処理を修正する Mod by Zhoutao Start
+    }
 
+    // ord_main新規挿入時のmnt_motion_record ord_no更新処理
+    private void processInsertOrdMainTriggerUpdateMotionRecord(Integer currSeq, String facilityCd, String fromDb_table_prefix) {
         // 9778 差分ord_main登録の場合、mnt_motion_record、項目「ord_no」を更新 start
         StringBuilder upOrdSqlBufferTonkk5 = new StringBuilder();
         upOrdSqlBufferTonkk5.append(" WITH ord AS(SELECT DISTINCT ");
@@ -893,7 +1043,10 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
             }
         });
         // 9778 差分ord_main登録の場合、mnt_motion_record、項目「ord_no」を更新 end
+    }
 
+    // ord_main新規挿入時のord_weight_scale更新処理
+    private void processInsertOrdMainTriggerUpdateWeightScale(Integer currSeq, String facilityCd) {
         // add #10835 体重計測定記録の一部がFNWからコンバートされていない zkm start
         StringBuilder updOrdWeightScaleToNkk5 = new StringBuilder();
         updOrdWeightScaleToNkk5.append("""
@@ -933,6 +1086,7 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                               and ord_weight_scale.measure_date >=o.rst_accept_date
                               and ord_weight_scale.measure_date <=o.rst_return_home_date
                             """);
+        Integer IntcurrSeq = currSeq;
         jdbcTemplateNkk5.batchUpdate(updOrdWeightScaleToNkk5.toString(), new BatchPreparedStatementSetter() {
             @Override
             public void setValues(PreparedStatement ps, int i) throws SQLException {
@@ -972,6 +1126,11 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
         Map<String, Object> sqlParams = new HashMap<>();
         sqlParams.put("keys", keyList);             // IN 句に使用するリスト
         sqlParams.put("facilityCd", facilityCd); // テナントコード
+        processDeleteMstMachineTriggerApplyChanges(mst_machine_del, sqlParams);
+    }
+
+    // mst_machine削除トリガの機器毎更新処理
+    private void processDeleteMstMachineTriggerApplyChanges(String mst_machine_del, Map<String, Object> sqlParams) {
         //add #11333 djy start
         List<MstMachine> mstMachineListDb5 = namedParameterJdbcTemplateNkk5.query(mst_machine_del, sqlParams, new BeanPropertyRowMapper<>(MstMachine.class));
         //add #11333 djy end
@@ -989,6 +1148,16 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
             //add #11333 djy end
             // add #9689 コンバート施設で次患者情報か更新されない zs start
             if ("0".equals(mm.getIsDisp())) {
+                processDeleteMstMachineTriggerHandleIsDispOff(mm, mstMachinesDb5);
+            } else if ("1".equals(mm.getIsDisp())) {
+                processDeleteMstMachineTriggerHandleIsDispOn(mm, mstMachinesDb5);
+            }
+            // add #9689 コンバート施設で次患者情報か更新されない zs end
+        }
+    }
+
+    // is_disp=0のmst_machine削除時mnt_machine_state/mst_bed更新
+    private void processDeleteMstMachineTriggerHandleIsDispOff(MstMachine mm, List<MstMachine> mstMachinesDb5) {
                 // add #9689 コンバート施設で次患者情報か更新されない zs end
                 //mnt _を削除machine_stateテーブル関連データ
                 // SQLインジェクション対策：文字列連結の代わりにパラメータ化クエリを使用
@@ -1005,7 +1174,10 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                 //add  end
                 //mnt _を削除machine_stateテーブルトリガの論理実行（mnt _ machine _ stateにdeleteトリガはありません）
                 // add #9689 コンバート施設で次患者情報か更新されない zs start
-            } else if ("1".equals(mm.getIsDisp())) {
+    }
+
+    // is_disp=1のmst_machine更新時mnt_machine_state更新
+    private void processDeleteMstMachineTriggerHandleIsDispOn(MstMachine mm, List<MstMachine> mstMachinesDb5) {
                 //mod #11333 djy start
                 // SQLインジェクション対策：StringBuilder連結の代わりにパラメータ化クエリを使用
                 StringBuilder sqlBuilder = new StringBuilder();
@@ -1050,9 +1222,6 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                 }
                 //mod #11333 djy end
             }
-            // add #9689 コンバート施設で次患者情報か更新されない zs end
-        }
-    }
 
     /**
      * mst_machine Insert Triggerの代替処理
@@ -1340,6 +1509,17 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
             Date date = new Date();
 
             // add #10534 pat_main_history, pat_unique_history, pat_personal_main_historyのcollectionにlatest_flagを追加する。 zkm start
+            Map<String, String> maxUpdateMap = setMongoDatePrepareLatestFlag(tableName, facilityCd, rs);
+            // add #10534 pat_main_history, pat_unique_history, pat_personal_main_historyのcollectionにlatest_flagを追加する。 zkm end
+
+            rs.forEach(r -> setMongoDateProcessHistoryRow(r, tableName, facilityCd, date, maxUpdateMap, patgroupdetailhistorylist));
+            setMongoDateCleanupConvertDb(inputFilePath, tableName, facilityCd, patUniqueHistoryEntityList);
+        }
+    }
+
+
+    // latest_flag準備とmaxUpdateMap構築
+    private Map<String, String> setMongoDatePrepareLatestFlag(String tableName, String facilityCd, List<Map<String, Object>> rs) {
             Map<String, String> maxUpdateMap = new HashMap<>();
             if (latestFlagTableList.contains(tableName)) {
                 List<String> patIds = rs.stream().map(data -> data.get("pat_id")).filter(Objects::nonNull).distinct().map(Object::toString).toList();
@@ -1365,11 +1545,26 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                     maxUpdateMap.put(key.toString(), values.get(0).get("up_date").toString());
                 });
             }
-            // add #10534 pat_main_history, pat_unique_history, pat_personal_main_historyのcollectionにlatest_flagを追加する。 zkm end
+        return maxUpdateMap;
+    }
 
-            rs.forEach(r -> {
-                Map<String, Object> item = r;
+    // 履歴1行分のMongoDB挿入処理
+    private void setMongoDateProcessHistoryRow(Map<String, Object> r, String tableName, String facilityCd, Date date,
+                                               Map<String, String> maxUpdateMap, List<PatGroupDetailHistoryEntity> patgroupdetailhistorylist) {
                 if (tableName.equals("pat_personal_main_history")) {
+                    setMongoDateInsertPatPersonalMainHistoryRow(r, facilityCd, date, maxUpdateMap);
+                } else if (tableName.equals("pat_insurance_history")) {
+                    setMongoDateInsertPatInsuranceHistoryRow(r, facilityCd, date);
+                } else if (tableName.equals("pat_main_history")) {
+                    setMongoDateInsertPatMainHistoryRow(r, facilityCd, date, maxUpdateMap);
+                } else if (tableName.equals("pat_group_detail_history")) {
+                    setMongoDateInsertPatGroupDetailHistoryRow(r, facilityCd, date, patgroupdetailhistorylist);
+                }
+    }
+
+    // pat_personal_main_history行のMongoDB挿入
+    private void setMongoDateInsertPatPersonalMainHistoryRow(Map<String, Object> r, String facilityCd, Date date, Map<String, String> maxUpdateMap) {
+        Map<String, Object> item = r;
                     PatPersonalMainHistoryEntity patpersonalmainhistory = new PatPersonalMainHistoryEntity();
                     patpersonalmainhistory.setPatId(parseStringOrNull(item,"pat_id"));
                     patpersonalmainhistory.setFnPatId(parseStringOrNull(item,"fn_pat_id"));
@@ -1438,7 +1633,10 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                                 facilityCd, "JdbcBatchSqlItemWriter.write(final List<? extends T> items)");
                         eventLoggerUtil.recordLog(facilityCd, eventLogMessage9, LogLevel.DEBUG);
                     }
-                } else if (tableName.equals("pat_insurance_history")) {
+    }
+    // pat_insurance_history行のMongoDB挿入
+    private void setMongoDateInsertPatInsuranceHistoryRow(Map<String, Object> r, String facilityCd, Date date) {
+        Map<String, Object> item = r;
                     PatInsuranceHistoryEntity patinsurancehistory = new PatInsuranceHistoryEntity();
                     patinsurancehistory.setInsuranceCd(parseStringOrNull(item,"insurance_cd"));
                     patinsurancehistory.setPatId(parseStringOrNull(item,"pat_id"));
@@ -1475,7 +1673,10 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                                 facilityCd, "JdbcBatchSqlItemWriter.write(final List<? extends T> items)");
                         eventLoggerUtil.recordLog(facilityCd, eventLogMessage9, LogLevel.DEBUG);
                     }
-                } else if (tableName.equals("pat_main_history")) {
+    }
+    // pat_main_history行のMongoDB挿入
+    private void setMongoDateInsertPatMainHistoryRow(Map<String, Object> r, String facilityCd, Date date, Map<String, String> maxUpdateMap) {
+        Map<String, Object> item = r;
                     PatMainHistoryEntity patmainhistory = new PatMainHistoryEntity();
                     patmainhistory.setPatId(parseStringOrNull(item,"pat_id"));
                     patmainhistory.setFacilityCd(parseStringOrNull(item,"facility_cd"));
@@ -1544,7 +1745,10 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                                 facilityCd, "JdbcBatchSqlItemWriter.write(final List<? extends T> items)");
                         eventLoggerUtil.recordLog(facilityCd, eventLogMessage9, LogLevel.DEBUG);
                     }
-                } else if (tableName.equals("pat_group_detail_history")) {
+    }
+    // pat_group_detail_history行のMongoDB挿入
+    private void setMongoDateInsertPatGroupDetailHistoryRow(Map<String, Object> r, String facilityCd, Date date, List<PatGroupDetailHistoryEntity> patgroupdetailhistorylist) {
+        Map<String, Object> item = r;
                     PatGroupDetailHistoryEntity patgroupdetailhistory = new PatGroupDetailHistoryEntity();
                     patgroupdetailhistory.setPatId(parseStringOrNull(item,"pat_id"));
                     patgroupdetailhistory.setFacilityCd(parseStringOrNull(item,"facility_cd"));
@@ -1565,7 +1769,9 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                         eventLoggerUtil.recordLog(facilityCd, eventLogMessage9, LogLevel.DEBUG);
                     }
                 }
-            });
+    // convert_dbテーブル削除と入力ファイル削除
+    private void setMongoDateCleanupConvertDb(String inputFilePath, String tableName, String facilityCd,
+                                              List<PatUniqueHistoryEntity> patUniqueHistoryEntityList) {
             //pat_unique_history一括mongodb挿入
             if (tableName.equals("pat_unique_history") && patUniqueHistoryEntityList.size() > 0) {
                 try {
@@ -1582,11 +1788,10 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
             File fileDbStep = new File(inputFilePath);
             fileDbStep.delete();
         }
-    }
 
     @Bean(name = STEP_NAME)
     public Step step() {
-        return stepBuilderFactory.get(STEP_NAME)
+        return new StepBuilder(STEP_NAME, jobRepository)
                 .tasklet(this)
                 .listener(new PromotionListener())
                 .build();
@@ -1611,10 +1816,21 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
         Long patId = retInfo.getPatId();
         Long indBedCd = indBedCdTemp.longValue();
 
-        List<OrdSchedule> result = new LinkedList<>();
-
         // ベッドとクールが未登録でなければダミースケジュール登録情報リスト作成処理実施
         if ((0 != indKurCd) && (0 != indBedCd)) {
+            Long treatTime = insertOrdScheduleResolveTreatTime(retInfo);
+            List<MstKur> mstKur = insertOrdScheduleLoadMstKur(facilityCdRet);
+            if (mstKur.isEmpty()) {
+                return null;
+            }
+            return insertOrdScheduleBuildDummySchedules(retInfo, ordNo, facilityCdRet, treatDate, indKurCd, patId, indBedCd, treatTime, mstKur);
+        }
+
+        return null;
+    }
+
+    // insertOrdSchedule用の治療時間取得
+    private Long insertOrdScheduleResolveTreatTime(OrdMain retInfo) {
             Long treatTime = null;
             // 治療時間(指示:治療条件情報)設定
             String indCondInfoTmp = retInfo.getIndCondInfo();
@@ -1633,7 +1849,11 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                     treatTime = 0L;
                 }
             }
+        return treatTime;
+    }
 
+    // insertOrdSchedule用のクールマスタ取得
+    private List<MstKur> insertOrdScheduleLoadMstKur(String facilityCdRet) {
             // メインスケジュールの治療日、クール(クール内標準治療開始時刻)、治療時間から治療終了予定日時の日時を算出
             List<MstKur> mstKur = null;
             if (null == mstKur) {
@@ -1642,9 +1862,13 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                         "and master_physical_name = 'mst_kur') ms where A.facility_cd = ms.facility_cd and A.kur_cd = ms.code and A.is_del = '0' order by ms.index";
                 mstKur = namedParameterJdbcTemplateNkk5.getJdbcOperations().query(mst_kur_sql, new Object[]{facilityCdRet}, new BeanPropertyRowMapper<>(MstKur.class));
             }
-            if (mstKur.isEmpty()) {
-                return null;
+            return mstKur;
             }
+
+    // insertOrdSchedule用のダミースケジュールリスト構築
+    private List<OrdSchedule> insertOrdScheduleBuildDummySchedules(OrdMain retInfo, Long ordNo, String facilityCdRet,
+                                                                   String treatDate, long indKurCd, Long patId, Long indBedCd, Long treatTime, List<MstKur> mstKur) {
+        List<OrdSchedule> result = new LinkedList<>();
             List<MstKur> currentKur = mstKur.stream().filter(info -> Long.parseLong(info.getKurCd().toString()) == indKurCd).collect(Collectors.toList());
             if (currentKur.isEmpty()) {
                 return null;
@@ -1699,9 +1923,6 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
             return result;
         }
 
-        return null;
-    }
-
     /**
      * クールマスタの拡張情報を格納するクラス
      */
@@ -1743,10 +1964,16 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
         Long patId = retInfo.getPatId();
         Long indBedCd = indBedCdTemp.longValue();
 
-        List<OrdSchedule> result = new LinkedList<>();
-
         // ベッドとクールが未登録でなければダミースケジュール登録情報リスト作成処理実施
         if ((0 != indKurCd) && (0 != indBedCd)) {
+            Long treatTime = insertOrdSchedule1ResolveTreatTime(retInfo);
+            return insertOrdSchedule1BuildDummySchedules(retInfo, ordNo, facilityCdRet, treatDate, indKurCd, patId, indBedCd, treatTime, mstKur);
+        }
+        return null;
+    }
+
+    // insertOrdSchedule1用の治療時間取得
+    private Long insertOrdSchedule1ResolveTreatTime(OrdMain retInfo) {
             Long treatTime = null;
             // 治療時間(指示:治療条件情報)設定
             String indCondInfoTmp = retInfo.getIndCondInfo();
@@ -1765,7 +1992,13 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                     treatTime = 0L;
                 }
             }
+        return treatTime;
+    }
 
+    // insertOrdSchedule1用のダミースケジュールリスト構築
+    private List<OrdSchedule> insertOrdSchedule1BuildDummySchedules(OrdMain retInfo, Long ordNo, String facilityCdRet,
+                                                                    String treatDate, long indKurCd, Long patId, Long indBedCd, Long treatTime, List<MstKur> mstKur) {
+        List<OrdSchedule> result = new LinkedList<>();
             // メインスケジュールの治療日、クール(クール内標準治療開始時刻)、治療時間から治療終了予定日時の日時を算出
             List<MstKur> currentKur = mstKur.stream().filter(info -> Long.parseLong(info.getKurCd().toString()) == indKurCd).collect(Collectors.toList());
             if (currentKur.isEmpty()) {
@@ -1818,8 +2051,6 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                 }
             }
             return result;
-        }
-        return null;
     }
 
     /**
@@ -1921,13 +2152,18 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
 
     // add #10661 limingyang start
     private void updatePatInsuranceHistory(String facilityCd) {
+        updatePatInsuranceHistoryExecute(facilityCd, updatePatInsuranceHistoryBuildSql());
+    }
 
-        EventLogMessage eventLogMessage = new EventLogMessage();
-        MapSqlParameterSource parameters = new MapSqlParameterSource()
-                .addValue("facility_cd", facilityCd);
-        try {
-            // SQL
-                String update_pat_insurance_history = """
+    // pat_insurance_history.insu_set_info更新SQLの組み立て
+    private String updatePatInsuranceHistoryBuildSql() {
+        return updatePatInsuranceHistoryBuildSqlPart1() + updatePatInsuranceHistoryBuildSqlPart2()
+                + updatePatInsuranceHistoryBuildSqlPart3();
+    }
+
+    // pat_insurance_history更新SQL前半（CTE A）
+    private String updatePatInsuranceHistoryBuildSqlPart1() {
+        return """
                 WITH A AS (
                     SELECT
                         pat_id,reg_date,
@@ -1948,6 +2184,12 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                     insu_class = 0
                     AND facility_cd = :facility_cd 
                     ),
+                    """;
+                        }
+                
+                        // pat_insurance_history更新SQL後半（CTE BB/B）
+                        private String updatePatInsuranceHistoryBuildSqlPart2() {
+                            return """
                     BB AS (
                     SELECT
                         pat_id,reg_date,
@@ -1993,6 +2235,12 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                     FROM
                         BB
                     ),
+                    """;
+                                            }
+
+                                            // pat_insurance_history更新SQL後半（CTE CC以降）
+                                            private String updatePatInsuranceHistoryBuildSqlPart3() {
+                                                return """
                     CC AS (
                     SELECT
                         pat_id,reg_date,
@@ -2050,7 +2298,14 @@ public class ConvertDbToProductionDbStep extends StepStartEndListener implements
                     AND facility_cd = :facility_cd
                     AND insu_class = 2;
                 """;
+                                            }
 
+    // pat_insurance_history.insu_set_info更新の実行
+    private void updatePatInsuranceHistoryExecute(String facilityCd, String update_pat_insurance_history) {
+        EventLogMessage eventLogMessage = new EventLogMessage();
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+                .addValue("facility_cd", facilityCd);
+        try {
             int count = namedParameterJdbcTemplateConvert.update(update_pat_insurance_history, parameters);
             //ログ
             eventLogMessage = eventLoggerUtil.getEventLogMessage(String.format("pat_insurance_history.insu_set_info更新成功%d件", count),

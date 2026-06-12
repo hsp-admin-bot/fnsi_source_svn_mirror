@@ -4,8 +4,8 @@ import jp.co.nikkiso.ntss.coop_api.aspect.LogAspector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * At the end of the request, clear the FacilityCdTL in ThreadLocal for current Thread

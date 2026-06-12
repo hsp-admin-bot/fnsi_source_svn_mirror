@@ -6,7 +6,7 @@
     :visible="popoverVisible"
     :target="popoverTarget"
     direction="down"
-    cover-target="true"
+    :cover-target="true"
     @preshow="popoverPreShow"
     @postshow="popoverPostShow"
     @posthide="
@@ -64,9 +64,9 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
-import encoding from "encoding-japanese";
-import csv from "csv-parser";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import encoding from "@/compat/encoding/encoding-japanese";
+import { parse } from "@/compat/csv/parse";
 import PopoverMixin from "@/components/PopoverMixin";
 import csvTemplate from "@/components/master-maintenance/MasterExportCsvTemplate.js";
 import { MstComplaint } from "@/models/master-maintenance/mst-complaint/MstComplaint";
@@ -90,11 +90,14 @@ import {
 import { messageFormat } from "@/functions/common/MessageFormat";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
-import cloneDeep from "lodash/cloneDeep";
-import BigNumber from "bignumber.js";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import BigNumber from "@/compat/number/bignumber";
 import { toFixed } from "@/functions/common/NumberFunctions";
 // #12200 2026.02.03 mod 装置マスタの特定項目の初期値を追加 TDC米沢 start
 import { DATE_FORMAT, dateFormat } from "@/functions/common/DateTimeUtils.js";
+import _ from "@/compat/collections/lodash";
+import { findAncestorWithAnyKey } from "@/functions/common/ComponentOwnerResolver";
+import { triggerScopedDownload } from "@/functions/common/LayoutMeasureHelper";
 // #12200 2026.02.03 mod 装置マスタの特定項目の初期値を追加 TDC米沢 end
 
 // 自己診断判定マスタ デフォルト値
@@ -122,7 +125,8 @@ export default {
       csvFileName: null,
       csvData: [],
       reader: null,
-      stream: null,
+      importMaxCode: 0,
+      csvHeaders: [],
       newRecordCdComplaint: -100000, // 一覧画面の「愁訴追加」ボタン押下時に採番するcodeと競合しないようにする
       newRecordCdCompTreatment: -100000, // 一覧画面の「処置追加」ボタン押下時に採番するcodeと競合しないようにする
       comboMachineTypeObj: {},
@@ -189,14 +193,8 @@ export default {
         maxCode = this.getListMaxCode(this.getMasterRecordList.data);
       }
       if (e.target.files.length > 0) {
-        this.stream = csv();
-        this.stream.on("data", (val) => {
-          if (this.isReconfiguration) {
-            this.handleTransformData(val);
-          } else {
-            this.onData(val, ++maxCode);
-          }
-        });
+        this.importMaxCode = maxCode || 0;
+        this.csvHeaders = [];
         // modify #9595 #9542、#9304、#10151仮想スクロールテーブルの再構築 end
         this.csvFileName = e.target.files[0].name;
         let csvFileNameNum = this.csvFileName.lastIndexOf(".");
@@ -204,9 +202,7 @@ export default {
         if (
           this.csvFileName.substring(
             csvFileNameNum,
-            this.csvFileName.length
-          ) === `.csv`
-        ) {
+            this.csvFileName.length) === `.csv`) {
           // 選択されたファイルを読み込む
           this.reader.readAsBinaryString(e.target.files[0]);
         } else {
@@ -345,8 +341,7 @@ export default {
     },
     addComplaintRow(data) {
       const numberOfComplaint = this.allMstComplaints.filter(
-        (e) => e.isDel === false
-      ).length;
+        (e) => e.isDel === false).length;
       let mstComplaint = {
         complaint_cd: this.newRecordCdComplaint,
         complaint_name: data["complaint_name"], // MstComplaintモデルのデフォルト値が""のため、""をnullに置換しない
@@ -361,8 +356,7 @@ export default {
       this.newRecordCdComplaint--;
 
       const numberOfCompTreatment = this.allMstCompTreatments.filter(
-        (e) => e.isDel === false
-      ).length;
+        (e) => e.isDel === false).length;
       if (!data["in_hosp_a_startdate"].match("^\\d{4}\\d{2}\\d{2}$"))
         data["in_hosp_a_startdate"] = null;
       if (!data["in_hosp_b_startdate"].match("^\\d{4}\\d{2}\\d{2}$"))
@@ -666,19 +660,27 @@ export default {
       });
       // add #10142 装置記録マスタにてメッセージを変更したCSV取り込みを行ったが更新されない linjunfeng end
     },
+    resolveMasterCsvOwner() {
+      return findAncestorWithAnyKey(this, ["masterCsvVisible", "columns"], { maxDepth: 12 }) || this;
+    },
+    getFileInputElement() {
+      return this.$el?.querySelector?.("#fileElem") || null;
+    },
     handleCancel() {
-      if (document.querySelector("#fileElem")) {
-        document.querySelector("#fileElem").value = null;
+      const fileInput = this.getFileInputElement();
+      if (fileInput) {
+        fileInput.value = null;
       }
       this.csvFileName = null;
-      this.$parent.masterCsvVisible = false;
+      this.resolveMasterCsvOwner().masterCsvVisible = false;
     },
     /**
      * キャンセルボタンクリック時ハンドラ.
      */
     onCancel() {
-      if (document.querySelector("#fileElem")) {
-        document.querySelector("#fileElem").value = null;
+      const fileInput = this.getFileInputElement();
+      if (fileInput) {
+        fileInput.value = null;
       }
       this.csvFileName = null;
       this.$emit("popover-close", null);
@@ -704,8 +706,7 @@ export default {
             //masterNamesArray += `${item.name},${item.listDetails.replaceAll(',',' ')}\n`;
             masterNamesArray += `${item.name},${item.listDetails.replaceAll(
               "\r\n",
-              " "
-            )}\n`;
+              " ")}\n`;
             //mod 10291 【たくしん会】処方のコンバートが正しくない zhao end
           });
         }
@@ -722,8 +723,7 @@ export default {
             if (isQuotation)
               item.machineRecordMessage = `${item.machineRecordMessage.replace(
                 /"/g,
-                '""'
-              )}`;
+                '""')}`;
             if (isComma)
               item.machineRecordMessage = `"${item.machineRecordMessage}"`;
             masterNamesArray += `${item.code},${item.machineRecordMessage},${item.dispFlg}\n`;
@@ -746,10 +746,7 @@ export default {
 
       // csv書き込みの実装
       const blob = new Blob([uint8s], { type: "text/csv" });
-      let link = document.createElement("a");
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `${this.masterName}.csv`;
-      link.click();
+      triggerScopedDownload({ blob, filename: `${this.masterName}.csv`, root: this.$el });
 
       // ポップアップを閉じる
       this.onCancel();
@@ -767,7 +764,7 @@ export default {
       const fields = this.getMasterRecordList.schema.model.fields;
       const reg = new RegExp("^[0-9]{4}$");
       Object.keys(fields).forEach((k) => {
-        if (fields[k].hasOwnProperty("defaultValue")) {
+        if (Object.prototype.hasOwnProperty.call(fields[k], "defaultValue")) {
           d[k] = fields[k].defaultValue;
         } else if (fields[k].type === "string") {
           d[k] = "";
@@ -792,8 +789,9 @@ export default {
         if (!csvTemplate.has(this.masterPhysicalName))
           value = data[fieldInfo.title];
         let masterName = this.masterPhysicalName;
-        if (this.$parent.columns) {
-          this.$parent.columns.forEach((e) => {
+        const columns = this.resolveMasterCsvOwner()?.columns || [];
+        if (columns.length) {
+          columns.forEach((e) => {
             if (
               e.title == fieldInfo.title &&
               e.dataType == "combo1" &&
@@ -903,16 +901,12 @@ export default {
           // mod redmine 5774 CSV日期输入正确时改修 宋qy start
           value &&
           new Date(
-            value.replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3")
-          ) instanceof Date &&
+            value.replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3")) instanceof Date &&
           !isNaN(
             new Date(
-              value.replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3")
-            ).getTime()
-          )
+              value.replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3")).getTime())
             ? (d[name] = new Date(
-                value.replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3")
-              ))
+                value.replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3")))
             : (d[name] = new Date());
           // mod redmine 5774 CSV日期输入正确时改修 宋qy end
         } else if (fieldInfo.type === "combo2" || fieldInfo.type === "modal") {
@@ -1046,6 +1040,7 @@ export default {
     fileLoad() {
       // csv取込内容をクリアする
       this.csvData = [];
+      this.csvHeaders = [];
       // 文字コードを変換する
       const result = this.reader.result;
       const charCodes = [];
@@ -1058,7 +1053,42 @@ export default {
         .convert(charCodes, "unicode", "sjis")
         .concat([13, 10]);
       // mod #6279 CSV取込で取込実行してもデータの登録が行われない luantian end
-      this.stream.write(encoding.codeToString(unicodes));
+      const csvText = encoding.codeToString(unicodes);
+
+      parse(
+        csvText,
+        {
+          columns: (header) => {
+            this.csvHeaders = [...header];
+            return header;
+          },
+          skip_empty_lines: true,
+          bom: true,
+          relax_column_count: true
+        },
+        (error, records) => {
+          if (error) {
+            this.$ons.notification.alert({
+              title: DIALOG_MESSAGES["00200037"].title,
+              message: messageFormat(
+                DIALOG_MESSAGES["00200037"].message,
+                this.csvFileName)
+            });
+            this.onCancel();
+            return;
+          }
+
+          if (this.isReconfiguration) {
+            records.forEach((val) => {
+              this.handleTransformData(val);
+            });
+          } else {
+            let maxCode = this.importMaxCode || 0;
+            records.forEach((val) => {
+              this.onData(val, ++maxCode, this.csvHeaders);
+            });
+          }
+        });
     },
     // add #9595 #9542、#9304、#10151仮想スクロールテーブルの再構築 start
     handleTransformData(data) {
@@ -1104,7 +1134,7 @@ export default {
     /**
      * csvファイルから取り込んだ内容をキャッシュする.
      */
-    onData(data, code) {
+    onData(data, code, csvHeaders = this.csvHeaders) {
       // 空行は取り込まない
       if (Object.keys(data).length > 0) {
         this.csvData.push({
@@ -1114,8 +1144,7 @@ export default {
       }
       //ju start
       if (this.csvData.length != 0) {
-        this.stream.headers;
-        const csvTitleArrayCSV = this.stream.headers;
+        const csvTitleArrayCSV = csvHeaders;
         let csvTitleArrayJS;
         if (csvTemplate.has(this.masterPhysicalName)) {
           csvTitleArrayJS = csvTemplate.get(this.masterPhysicalName).title;
@@ -1195,7 +1224,7 @@ export default {
       if (this.isReconfiguration) {
         fieldInfo.fieldName = fieldInfo.camelFieldName;
         value = data[fieldInfo.camelFieldName];
-        if (!data.hasOwnProperty(fieldInfo.camelFieldName)) {
+        if (!Object.prototype.hasOwnProperty.call(data, fieldInfo.camelFieldName)) {
           return;
         }
       }
@@ -1353,10 +1382,7 @@ export default {
           if (
             isNaN(
               new Date(
-                value.replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3")
-              ).getTime()
-            )
-          ) {
+                value.replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3")).getTime())) {
             // mod redmine 5774 CSV日期输入正确时改修 宋qy end
             typeStr = "日付";
           }
@@ -1452,10 +1478,10 @@ export default {
 </script>
 
 <style scoped>
-.csv-import-popover >>> .popover {
+.csv-import-popover :deep(.popover) {
   width: auto;
 }
-.csv-import-popover >>> .popover__content {
+.csv-import-popover :deep(.popover__content) {
   width: 410px;
 }
 .csv-import-area {

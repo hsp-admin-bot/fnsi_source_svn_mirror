@@ -1,29 +1,36 @@
 
 <style scoped>
-  .sortkey-popover >>> .popover__content {
+  .sortkey-popover :deep(.popover__content) {
     width: auto;
     font-size: 1.5em;
   }
-  .report-list-popover >>> .popover__content {
+  .report-list-popover :deep(.popover__content) {
     min-height: 90px;
   }
   /*スマホサイズで並び替えの表示が切れる場合がある  5935  shan   start*/
   @media screen and (max-width: 600px) {
-    .sortkey-popover >>> .popover--right {
-      /* mod 5935 スマホサイズで並び替えの表示が切れる場合がある 王永吉 start */
-      /* right: 130px !important;*/
+    .sortkey-popover :deep(.popover--right) {
       right: 60px !important;
-      /* mod 5935 スマホサイズで並び替えの表示が切れる場合がある 王永吉 end */
+
       top: 25px !important;
     }
-    .sortkey-popover >>>  .popover--right__arrow {
+    /* mod 5935 スマホサイズで並び替えの表示が切れる場合がある 王永吉 start */
+    /* right: 130px !important;*/
+    /* mod 5935 スマホサイズで並び替えの表示が切れる場合がある 王永吉 end */
+    .sortkey-popover :deep(.popover--right__arrow) {
       width: 0px !important;
     }
   }
+
   /* スマホサイズで並び替えの表示が切れる場合がある  5935  shan   end*/
-  .sortkey-popover >>> .popover__content {
+  .sortkey-popover :deep(.popover__content) {
     width: auto;
     font-size: 1.5em;
+  }
+  .sortkey-popover table th {
+    background: none !important;
+    background-image: none !important;
+    height: 0em !important;
   }
 </style>
 <template>
@@ -72,7 +79,7 @@
                   :class="{'tr-highlight': (item.id == selectedReportID)}"
                   style="word-break: break-all;"
                   v-for="item in filteredData"
-                  :key="item.id" t
+                  :key="item.id"
                   @click="selectRow(item.id, item.reportClass, item.reportType, undefined, true)"
                 >
                 <!--mod #11293 水質検査帳票の課題対応 limingzhe end-->
@@ -158,7 +165,7 @@
               <tr v-for="p in sortedPatList" :key="p.pat_id" style="word-break: break-all;">
                 <!--mod 項目別(印刷情報一覧)の項目が実装されない  吉 end-->
                 <td width="10%" class="text-center">
-                  <v-ons-checkbox v-if="p.flag == 1" v-model="selectedPatients" :value="p.pat_id" @click="setSelectedPatient(p.pat_id,p.kur_name,p.bed_name)"/>
+                  <v-ons-checkbox v-if="p.flag == 1" v-model="selectedPatients" :value="p.pat_id" @change="setSelectedPatient(p.pat_id,p.kur_name,p.bed_name)"/>
                   <v-ons-checkbox v-else :disabled="true"  />
                 </td>
                 <td :width="reportHidden.indexOf(selectedReportClassID) < 0 ? '18%' : '40%'" class="hosp-pat-id-body">{{p.hosp_pat_id}}</td>
@@ -193,7 +200,7 @@
 
         <v-ons-popover
           cancelable
-          :visible.sync="popoverVisible"
+          v-model:visible="popoverVisible"
           :target="popoverTarget"
           :direction="popoverDirection"
           :cover-target="coverTarget"
@@ -206,10 +213,11 @@
             </div>
             <div style="border: 1px solid #b5b5b5; min-width: 15em;">
               <table style="border: none; width: 100%">
-                <tr>
-                  <span>第1ソート条件</span>
-                </tr>
-                <tr>
+                <tbody>
+                  <tr>
+                    <td colspan="2"><span>第1ソート条件</span></td>
+                  </tr>
+                  <tr>
                   <td>
                     <v-ons-select
                       name="sort_key_a"
@@ -247,7 +255,7 @@
                   </td>
                 </tr>
                 <tr>
-                  <span>第2ソート条件</span>
+                  <td colspan="2"><span>第2ソート条件</span></td>
                 </tr>
                 <tr>
                   <td>
@@ -287,7 +295,7 @@
                   </td>
                 </tr>
                 <tr>
-                  <span>第3ソート条件</span>
+                  <td colspan="2"><span>第3ソート条件</span></td>
                 </tr>
                 <tr>
                   <td>
@@ -326,6 +334,7 @@
                     <label for="c_desc">降順</label>
                   </td>
                 </tr>
+                </tbody>
               </table>
             </div>
             <div style="display: flex; justify-content: space-between; padding-top: 10px;">
@@ -344,7 +353,7 @@
         </v-ons-popover>
         <v-ons-popover
           cancelable
-          :visible.sync="popoverExportVisible"
+          v-model:visible="popoverExportVisible"
           :target="popoverExportTarget"
           :direction="popoverExportDirection"
           :cover-target="coverExportTarget"
@@ -385,7 +394,7 @@
         </v-ons-popover>
         <v-ons-popover
           cancelable
-          :visible.sync="popoverPrintLableVisible"
+          v-model:visible="popoverPrintLableVisible"
           :target="popoverPrintLableReport"
           :direction="popoverExportDirection"
           :class="[fontSizeSet, 'sortkey-popover']"
@@ -451,37 +460,24 @@
                 >
               </div>
               <div style="margin: 0.6em;">
-                <div class="table w-full" style="border: none; width: 100%">
+                <table class="table w-full" style="border: none; table-layout: fixed;">
                   <thead>
-                  <tr>
-                    <th></th>
-                    <!--mod FNSI-改修内容ラベル開始位置がテンプレートと不一致 任 start-->
-                    <!--<th
-                      class="th-titla"
-                      v-for="(valCol, index) in tabVale[0]"
-                      :key="index"
-                    >
-                      {{ (index += 1) }}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                <tr v-for="(valRow, index) in tabVale" :key="index">
-                  <th class="th-titla-body">{{ (index += 1) }}</th>
-                  <td v-for="(value, ind) in valRow" :key="ind">-->
-                    <th
-                      class="th-titla"
-                      v-for="(valCol, index) in tabVale"
-                      :key="index"
-                    >
-                      {{ (index += 1) }}
-                    </th>
-                  </tr>
+                    <tr>
+                      <th></th>
+                      <!--mod FNSI-改修内容ラベル開始位置がテンプレートと不一致 任 start-->
+                      <th
+                        class="th-titla th-td-body"
+                        v-for="(valCol, index) in tabVale"
+                        :key="index"
+                      >
+                        {{ index += 1 }}
+                      </th>
+                    </tr>
                   </thead>
                   <tbody>
-                  <tr v-for="(valRow, index) in tabVale[0]" :key="index">
-                    <th class="th-titla-body">{{ (index += 1) }}</th>
-                    <td v-for="(value, ind) in tabVale" :key="ind">
+                    <tr v-for="(valRow, index) in tabVale[0]" :key="index">
+                      <th class="th-titla-body">{{ index += 1 }}</th>
+                      <td class="th-td-body" v-for="(value, ind) in tabVale" :key="ind">
                       <!--mod FNSI-改修内容ラベル開始位置がテンプレートと不一致 任 end-->
                       <div
                         class="print-lable"
@@ -496,7 +492,7 @@
                     <td></td>
                   </tr>
                   </tbody>
-                </div>
+                </table>
               </div>
             </div>
             <div>
@@ -513,7 +509,7 @@
         <v-ons-popover
           cancelable
           :class="[fontSizeSet, 'user-menu-item-popover report-list-popover']"
-          :visible.sync="popoverPrintVisible"
+          v-model:visible="popoverPrintVisible"
           :target="popoverPrintTarget"
           :direction="popoverPrintDirection"
         >
@@ -531,8 +527,8 @@
             class="printer-selection"
           >
           <!-- mod #12107 帳票印刷失敗通知が行われない limingzhe 20251114 end -->
-            <template v-for="item in getMstPrinters">
-              <option :key="item.printerCd" :value="item.printerCd">{{ item.dispPrinterName }}</option>
+            <template v-for="item in getMstPrinters" :key="item.printerCd">
+              <option :value="item.printerCd">{{ item.dispPrinterName }}</option>
             </template>
           </v-ons-select>
           <div class="button-area flex-container" style="flex-direction: row-reverse;">
@@ -720,7 +716,7 @@
                 <label for="range_time" id="range_time_id">期間指定</label>
                 <!--mod 8486 CSSの修正により、ファイル保存問題が発生  吉 end-->
                 <div :class="(dataCondition.timeType == 'range_time') ? 'active':'disabled'">
-                  <span>
+                  <span style="display: inline-flex; align-items: center;">
                     <!-- mod FNSI-期間指定 じょはく start-->
                     <!-- <input type="date" class="custom-input-date ntss-input-date" v-model="dataCondition.fromDate" />-->
                     <!--del   日付のチェックの追加対応 吉 start-->
@@ -750,7 +746,7 @@
                     <!--add   日付のチェックの追加対応 吉 end-->
                   </span>
                   <span>~</span>
-                  <span>
+                  <span style="display: inline-flex; align-items: center;">
                     <!-- mod FNSI-期間指定 じょはく start-->
                     <!-- <input type="date" class="custom-input-date ntss-input-date" v-model="dataCondition.toDate" />-->
                     <!--del   日付のチェックの追加対応 吉 start-->
@@ -800,12 +796,14 @@
                   <!--mod FNSI-No.341 患者リストのソート項目不足 吉 start-->
                   <!--<input type="date" class="custom-input-date ntss-input-date" v-model="dataCondition.specifyDate" />
                   <common-calendar v-model="dataCondition.specifyDate" />-->
-                  <date-input :classes="'custom-input-date ntss-input-date specifyDate'"
-                        @keyup="showMsg(2)"
-                        v-model="dataCondition.specifyDate"
-                        isRequired
-                        />
-                  <common-calendar v-model="dataCondition.specifyDate"   class="calender specifyDate-comment"/>
+                  <span style="display: inline-flex; align-items: center;">
+                    <date-input :classes="'custom-input-date ntss-input-date specifyDate'"
+                          @keyup="showMsg(2)"
+                          v-model="dataCondition.specifyDate"
+                          isRequired
+                          />
+                    <common-calendar v-model="dataCondition.specifyDate"   class="calender specifyDate-comment"/>
+                  </span>
                   <br/>
                   <span class="error-message" v-if="showErrorSpecifyDate">{{
                     this.msgDiaLog
@@ -845,7 +843,7 @@
                 <!--mod #11226 患者情報系historyの取得条件見直し②  房 start-->
                 <div :class="(dataCondition.timeType == 'inspection_date') && dataCondition.dateKind === 'exam_date' ? 'active':'disabled'">
                   <!--mod #11226 患者情報系historyの取得条件見直し②  房 end-->
-                  <span>
+                  <span style="display: inline-flex; align-items: center;">
                     <!--mod FNSI-No.341 患者リストのソート項目不足 吉 start-->
                     <!--<input type="date" class="custom-input-date ntss-input-date" v-model="dataCondition.inspectionDate" />
                     <common-calendar v-model="dataCondition.inspectionDate" />-->
@@ -862,13 +860,13 @@
                           />
                           <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 end -->
                     <common-calendar v-model="dataCondition.inspectionDate" class="calender inspectionDate-comment"/>
-                  <span class="error-message" v-if="showErrorInspectionDate">{{
-                    this.msgDiaLog
-                  }}</span>
+                    <span class="error-message" v-if="showErrorInspectionDate">{{
+                      this.msgDiaLog
+                    }}</span>
                     <!--mod FNSI-No.341 患者リストのソート項目不足 吉 end-->
                   </span>
                   <span>~</span>
-                  <span style="white-space: nowrap">
+                  <span style="display: inline-flex; align-items: center; white-space: nowrap">
                   <!-- mod FNSI-改修内容4392bug修正 関 start -->
                     <!-- <v-ons-select name="text" input-id="text" class="d-inline-flex" style="width: 20%" v-model="dataCondition.key"> -->
                     <v-ons-select name="text" input-id="text" class="d-inline-flex" style="width: 80px" v-model="dataCondition.key">
@@ -1178,8 +1176,8 @@
                 class="printer-selection-preview"
               >
               <!-- mod #12107 帳票印刷失敗通知が行われない limingzhe 20251114 end -->
-                <template v-for="item in getMstPrinters">
-                  <option :key="item.printerCd" :value="item.printerCd">{{ item.dispPrinterName }}</option>
+                <template v-for="item in getMstPrinters" :key="item.printerCd">
+                  <option :value="item.printerCd">{{ item.dispPrinterName }}</option>
                 </template>
               </v-ons-select>
               <!-- mod #12107 帳票印刷失敗通知が行われない limingzhe start -->
@@ -1203,9 +1201,10 @@
 </template>
 
 <script>
-  import {mapActions, mapGetters, mapMutations} from "vuex";
-  import axios from "axios";
-  import moment from "moment";
+import {getScopedElementById, getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll, getScopedDocument, getScopedWindow, triggerScopedDownload, getScopedJQuery as createScopedJQuery} from "@/functions/common/LayoutMeasureHelper";
+  import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
+  import axios from "@/compat/http/axios";
+  import dayjs from "@/compat/date/dayjs";
   import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
   import {ApiHelper} from "@/apis/AxiosHelper.js";
   import {formatDatetime} from "@/functions/common/CommonFunctions";
@@ -1215,7 +1214,7 @@
   import {equipmentClass, medicineClass,examSetClass} from "@/functions/mst/MstGetters.js";
   // mod #11603 検査予定のラベル出力とフィルタ機能 高 end
   // add FNSI-改修内容 画面ボタンの位置調整 穆 start
-  import {EventBus} from "@/eventBus.js";
+  import {EventBus} from "@/compat/vue/event-bus.js";
   // add FNSI-改修内容 画面ボタンの位置調整 穆 end
   /*add FNSI-改修内容日付のチェックの追加対応。 吉 start*/
   import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
@@ -1226,13 +1225,15 @@
   //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
   import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
   import {deepCopy} from "../../functions/common/CommonFunctions";
+  import $$ from "@/compat/jquery";
   //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
   // jQureyを宣言（'$'はvue.jsで使用されているため、'$$'で宣言）
-  const $$ = require("jquery");
+
   //#5590 2023/04/20 ×を常に表示するように修正 張博 start
   import DateInput from "@/components/common/DateInput.vue";
   //#5590 2023/04/20 ×を常に表示するように修正 張博 end
   import { updateSort, getSortedClass, sortableCompare } from "@/functions/SortFunctions";
+import nameDuplicationImg from "../../assets/name_duplication.png";
 
   export default {
     mixins: [PopoverMixin],
@@ -1243,7 +1244,7 @@
         currentPatIds:[],
         //add 8507 2023-4-6 zhaoqj  ローラデータローディング end
         //同姓同名アイコン
-        image_src_same: require('../../assets/name_duplication.png'),
+        image_src_same: nameDuplicationImg,
         staorMap:[],
         scrwidth: {
           width:'1080px'
@@ -1382,10 +1383,10 @@
 		    // add #11226 患者情報系historyの取得条件見直し② limingzhe end
         dataCondition: {
           timeType: "specify_date",
-          fromDate: moment().format("YYYY-MM-DD"),
-          toDate: moment().format("YYYY-MM-DD"),
-          specifyDate: moment().format("YYYY-MM-DD"),
-          inspectionDate: moment().format("YYYY-MM-DD"),
+          fromDate: dayjs().format("YYYY-MM-DD"),
+          toDate: dayjs().format("YYYY-MM-DD"),
+          specifyDate: dayjs().format("YYYY-MM-DD"),
+          inspectionDate: dayjs().format("YYYY-MM-DD"),
           key: "after",
           numDay: 0,
           regOrderClass: ["1", "2"],
@@ -1433,6 +1434,7 @@
         revokeURL: null,
         allSelectedMode: true, // 対象患者リスト検索前、基準日変更時点の全体チェックボックスのON/OFF状態
         initflag: true, // 初期化フラグ true: 画面表示時、帳票変更時、false: データ抽出条件変更時
+        isApplyingDataCondition: false,
         isRegOrderClassActive: false,
         sortPopoverBtnClick: false, // 並び替えポップオーバー内のボタンが押下されたかを判定するフラグ
         // add #11354 【たくしん会：改良】帳票画面データ抽出条件に「処方箋区分」を追加 高 start
@@ -1449,43 +1451,39 @@
     },
     // add Aspose.cells関連問題対応 鄭爽 start
     mounted(){
-      window.addEventListener('mousewheel', this.handleScroll)
+      getScopedWindow(this.$el || null)?.addEventListener('mousewheel', this.handleScroll);
     },
     // add Aspose.cells関連問題対応 鄭爽 end
     async created() {
       // 画面名称取得
-      this.selfScreenName = this.$router.currentRoute.name;
-      var mstReport = null;
+      this.selfScreenName = this.$route.name;
+      var mstReport;
       this.setLoadingScreenMessage("処理中・・・");
       this.setLoadingScreenVisible(true);
       // add FNSI-改修内容 画面ボタンの位置調整 穆 start
-      EventBus.$on("exportMsg", (param) =>{
-        this.showExportPopover(param.paramEvent, param.paramDirection, param.paramCoverTarget);
-      });
+      EventBus.$off("exportMsg", this.onExportMsg);
+      EventBus.$on("exportMsg", this.onExportMsg);
       /*add FNSI-改修内容パンくずリスト対応 任 start*/
+      EventBus.$off("refresh", this.refresh);
       EventBus.$on("refresh", this.refresh);
       /*add FNSI-改修内容パンくずリスト対応 任 end*/
-      EventBus.$on("printMsg", (param) =>{
-        this.generateValueTable(param.paramEvent, param.paramDirection, param.paramCoverTarget);
-      });
+      EventBus.$off("printMsg", this.onPrintMsg);
+      EventBus.$on("printMsg", this.onPrintMsg);
       // del #11055 画面の最新状態を元に帳票出力するようにする 高 start
-      // EventBus.$on("msg", (param) =>{
+      // old msg listener:
       //   this.showPopover(param.paramEvent, param.paramDirection, param.paramCoverTarget);
-      // });
       // del #11055 画面の最新状態を元に帳票出力するようにする 高 end
       // add #11055 画面の最新状態を元に帳票出力するようにする 高 start
-      EventBus.$on("msg", async (param) =>{
-        setTimeout(() => {
-          this.showPopover(param.paramEvent, param.paramDirection, param.paramCoverTarget);
-        }, 0);
-      });
+      EventBus.$off("msg", this.onMsg);
+      EventBus.$on("msg", this.onMsg);
       EventBus.$emit("invokeSearch");
       // add #11055 画面の最新状態を元に帳票出力するようにする 高 end
+      EventBus.$off("previewFileMsg", this.previewFile);
+      EventBus.$off("printFileMsg", this.printFile);
       EventBus.$on("previewFileMsg", this.previewFile);
       EventBus.$on("printFileMsg", this.printFile);
-      EventBus.$on("printerSelectMsg", (param) =>{
-        this.showPrintPopover(param.paramEvent, param.paramDirection, param.paramCoverTarget);
-      });
+      EventBus.$off("printerSelectMsg", this.onPrinterSelectMsg);
+      EventBus.$on("printerSelectMsg", this.onPrinterSelectMsg);
       // add FNSI-改修内容 画面ボタンの位置調整 穆 end
       try {
         // mod #699,700,751 陳 start
@@ -1690,7 +1688,7 @@
         // スクロールが最後尾に達した時に追加読み込みを行う
         //del 4870 プレビュー画面で画面最下部に到達すると読み込みが生じる 吉 start
           $$(() => {
-           $$("#scrollArea").on("scroll", () => {
+           this.scopedJQuery()("#scrollArea").on("scroll", () => {
              //add 8507 2023-4-4 zhaoqj  ローラデータローディング start
              const inputData = this.processData();
              if (inputData) {
@@ -1746,7 +1744,7 @@
         console.log(error);
       }
 
-      this.scrwidth.width= document.body.offsetWidth+"px";
+      this.scrwidth.width= (getScopedDocument(this.$el || null)?.body?.offsetWidth || 0)+"px";
       //add  精算時間は治療日と同期している  吉 start
       this.syntime();
       //add  精算時間は治療日と同期している  吉 end
@@ -1760,20 +1758,23 @@
     },
 
     // add FNSI-改修内容 画面ボタンの位置調整 穆 start
-    beforeDestroy() {
-      EventBus.$off("exportMsg");
+    beforeUnmount() {
+      EventBus.$off("exportMsg", this.onExportMsg);
       // #9271 他の画面への切り替え時のパンくずクリックは有効になりません。 linjunfeng start
       // EventBus.$off("refresh");
       EventBus.$off("refresh", this.refresh);
       // #9271 他の画面への切り替え時のパンくずクリックは有効になりません。 linjunfeng end
-      EventBus.$off("msg");
-      EventBus.$off("previewFileMsg");
-      EventBus.$off("printFileMsg");
-      EventBus.$off("printMsg");
-      EventBus.$off("printerSelectMsg");
+      EventBus.$off("msg", this.onMsg);
+      EventBus.$off("previewFileMsg", this.previewFile);
+      EventBus.$off("printFileMsg", this.printFile);
+      EventBus.$off("printMsg", this.onPrintMsg);
+      EventBus.$off("printerSelectMsg", this.onPrinterSelectMsg);
       this.hideItemPopover();
-      window.removeEventListener('mousewheel', this.handleScroll)
-      window.removeEventListener("focus", this.revokeURL);
+      const ownerWindow = getScopedWindow(this.$el || null);
+      ownerWindow?.removeEventListener('mousewheel', this.handleScroll);
+      if (this.revokeURL) {
+        ownerWindow?.removeEventListener("focus", this.revokeURL);
+      }
       // dataの初期化
       Object.assign(this.$data, this.$options.data());
     },
@@ -2168,17 +2169,49 @@
       modalVisible(newVal) {
         if (newVal) {
           // on status is open
-          window.addEventListener('mousewheel', this.handleScroll);
-          window.addEventListener('DOMMouseScroll', this.handleScroll); // Firefox
+          const ownerWindow = getScopedWindow(this.$el || null);
+          ownerWindow?.addEventListener('mousewheel', this.handleScroll);
+          ownerWindow?.addEventListener('DOMMouseScroll', this.handleScroll); // Firefox
         } else {
           // off status is close
-          window.removeEventListener('mousewheel', this.handleScroll);
-          window.removeEventListener('DOMMouseScroll', this.handleScroll);
+          const ownerWindow = getScopedWindow(this.$el || null);
+          ownerWindow?.removeEventListener('mousewheel', this.handleScroll);
+          ownerWindow?.removeEventListener('DOMMouseScroll', this.handleScroll);
         }
       }
       // add #11151 帳票画面「プレビュー」のページ送りが機能しないことがある 吉 end
     },
     methods: {
+      scopedJQuery() {
+        return createScopedJQuery(this.$el || this, $$) || $$;
+      },
+    getScopedElementById(id) {
+      return getScopedElementById(id, this);
+    },
+    getScopedElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this);
+    },
+    getScopedQuery(selector) {
+      return queryScopedSelector(selector, this);
+    },
+    getScopedQueryAll(selector) {
+      return queryScopedSelectorAll(selector, this);
+    },
+      onExportMsg(param) {
+        this.showExportPopover(param.paramEvent, param.paramDirection, param.paramCoverTarget);
+      },
+      onPrintMsg(param) {
+        this.generateValueTable(param.paramEvent, param.paramDirection, param.paramCoverTarget);
+      },
+      async onMsg(param) {
+        setTimeout(() => {
+          this.showPopover(param.paramEvent, param.paramDirection, param.paramCoverTarget);
+        }, 0);
+      },
+      onPrinterSelectMsg(param) {
+        this.showPrintPopover(param.paramEvent, param.paramDirection, param.paramCoverTarget);
+      },
+
       ...mapActions("loading-screen", [
         "setLoadingScreenMessage",
         "setLoadingScreenVisible"
@@ -2212,7 +2245,7 @@
           // add #11985 定期点検一覧帳票が正常に出せない limingzhe start
           || this.selectedReportTypeId === 5
           // add #11985 定期点検一覧帳票が正常に出せない limingzhe end
-        ))) {
+          ))) {
         // mod #11973 日常点検一覧帳票が正常に出せない limingzhe end
         // mod #11293 水質検査帳票の課題対応 limingzhe end
           this.isRegOrderClassActive = false;
@@ -2269,10 +2302,9 @@
         if (this.isRegOrderClassActive) {
           // 一つでもチェックされていた場合はメッセージを表示しない
           if (
-            document.getElementById("before_dialysis").checked ||
-            document.getElementById("after_dialysis").checked ||
-            document.getElementById("other").checked
-          ) {
+            this.getScopedElementById("before_dialysis").checked ||
+            this.getScopedElementById("after_dialysis").checked ||
+            this.getScopedElementById("other").checked) {
             return false;
           }
 
@@ -2287,11 +2319,11 @@
       },
       // add #6962 「並び替えボタンが機能しない」について、再対応 鄧シン start
       isRefresh(){
-        const scrollAreaHeight = $$("#scrollArea").innerHeight();
-        const scrollHeight = $$("#scrollArea").get(0).scrollHeight;
+        const scrollAreaHeight = this.scopedJQuery()("#scrollArea").innerHeight();
+        const scrollHeight = this.scopedJQuery()("#scrollArea").get(0).scrollHeight;
         const bottom = Math.floor(scrollHeight - scrollAreaHeight);
         if (this.isRedrawing !== true && this.scrollControl) {
-          const scrollTop = Math.ceil($$("#scrollArea").scrollTop());
+          const scrollTop = Math.ceil(this.scopedJQuery()("#scrollArea").scrollTop());
           if (bottom <= scrollTop && bottom > 0) {
             if(this.reportOption != 0){
               if( this.maxCount < this.selectedPatients.length){
@@ -2438,7 +2470,7 @@
         this.setChkViewLetterActive();
 
         // 期間指定終了の日数を保持
-        this.dataCondition.rangeEndNum = moment(this.dataCondition.toDate).diff(moment(this.dataCondition.fromDate), 'days');
+        this.dataCondition.rangeEndNum = dayjs(this.dataCondition.toDate).diff(dayjs(this.dataCondition.fromDate), 'days');
         // データ抽出条件取得処理
         if(null != id && getDataConditionFlag){
           await this.getSortList(id);
@@ -2478,7 +2510,7 @@
           // add #11985 定期点検一覧帳票が正常に出せない limingzhe start
           || reportType === 5
           // add #11985 定期点検一覧帳票が正常に出せない limingzhe end
-        )){
+          )){
         // mod #11973 日常点検一覧帳票が正常に出せない limingzhe end
           this.multiTotalID = this.selectedReportID;
         }
@@ -2505,35 +2537,19 @@
               );
               if(response.data.length != 0){
                 if(null == showFlag || showFlag== 1){
-                  var arr1 = this.patList.filter((item) => {
-                    var biaoji = false;
-                    for(var i=0;i<response.data.length;i++){
-                      if(response.data[i] == item.pat_id.toString()){
-                        item.flag=1;
-                        biaoji=true;
-                        return item;
-                      }
-                    }
-                    if(!biaoji){
-                      item.flag = 0;
-                    }
+                  const arr1 = this.patList.filter((item) => {
+                    const exists = response.data.some((patId) => patId == item.pat_id.toString());
+                    item.flag = exists ? 1 : 0;
+                    return exists;
                   });
                   this.$nextTick(() => {
                     this.patList=arr1;
                   });
                 }else{
                   this.patList.filter((item) => {
-                    var biaoji = false;
-                    for(var i=0;i<response.data.length;i++){
-                      if(response.data[i] == item.pat_id.toString()){
-                        item.flag=1;
-                        biaoji=true;
-                        return item;
-                      }
-                    }
-                    if(!biaoji){
-                      item.flag = 0; // 予定のみの患者の印刷チェックボックスを無効にしないようにする修正の一次対応
-                    }
+                    const exists = response.data.some((patId) => patId == item.pat_id.toString());
+                    item.flag = exists ? 1 : 0; // 予定のみの患者の印刷チェックボックスを無効にしないようにする修正の一次対応
+                    return item;
                   });
                 }
               }else{
@@ -2604,7 +2620,7 @@
               response.data.dataCond.letterCategory = ["0", "1"];
             }
             // response.data が DEFAULT_CONDITION の全てのキーを持っていれば true、1つでも欠けていれば false を isConData に代入
-            const isConData = Object.keys(DEFAULT_CONDITION).every(key => response.data.hasOwnProperty(key));
+            const isConData = Object.keys(DEFAULT_CONDITION).every(key => Object.prototype.hasOwnProperty.call(response.data, key));
             this.editDataCondition(isConData ? response.data : DEFAULT_CONDITION);
           } catch (error) {
             getErrorMessage('ReportMenuListComponent.vue', 'getSortList', error);
@@ -2614,6 +2630,7 @@
       },
       // データ抽出条件を画面用に設定する処理
       editDataCondition(data) {
+        this.isApplyingDataCondition = true;
         /* 並び替え情報設定 */
         if (data.sortList != null) {
           this.sortTemp = data.sortList.map(item => ({
@@ -2694,6 +2711,9 @@
         // add #11603 検査予定のラベル出力とフィルタ機能 高 end
         /* 検査設定 */
         this.inspectCheckBox = data.inspect == 1;
+        this.$nextTick(() => {
+          this.isApplyingDataCondition = false;
+        });
       },
       async showAllOrSome(){
         if(this.showAllflag){
@@ -2712,6 +2732,9 @@
       },
       // showAllOrSome()のthis.showAllflagを変更しないバージョン
       showAllOrSomeWithoutFlagChange(){
+        if (this.isApplyingDataCondition) {
+          return;
+        }
         if(this.showAllflag){
           // mod #11293 水質検査帳票の課題対応 limingzhe start
           //this.selectRow(this.selectedReportID,this.selectedReportClassID,1)
@@ -2736,7 +2759,7 @@
           } else {
             this.selectedPatients = selected.filter(patId => {
               // 対象患者一覧に一度登場した患者のチェックON/OFF状態を返す
-              if (this.savedSelectedPatients.hasOwnProperty(patId)) {
+              if (Object.prototype.hasOwnProperty.call(this.savedSelectedPatients, patId)) {
                 return this.savedSelectedPatients[patId];
               }
               // 対象患者一覧に初めて登場した患者のチェックON/OFFは現在の全体チェックボックスのON/OFF状態を返す
@@ -2763,7 +2786,6 @@
         var medicines = null;
         var equipments = null;
         // add #11603 検査予定のラベル出力とフィルタ機能 高 start
-        // eslint-disable-next-line no-unused-vars
         var examSets = null;
         // add #11603 検査予定のラベル出力とフィルタ機能 高 end
         // フィルタリング患者の処理が終了しない限り,ページの遷移を行い,会報システムエラーを行います。林峻峰 start
@@ -3078,7 +3100,7 @@
         const dataCond = {
           dateType,
           periodType,
-          rangeEndNum: moment(dCond.toDate).diff(moment(dCond.fromDate), 'days'), // 期間指定終了の日数
+          rangeEndNum: dayjs(dCond.toDate).diff(dayjs(dCond.fromDate), 'days'), // 期間指定終了の日数
           beforeAfter,
           numDay: dCond.numDay,
           regOrderClass: dCond.regOrderClass,
@@ -3160,8 +3182,8 @@
         try {
           if (this.dataCondition.timeType === "range_time") {
             // 期間指定
-            const treatDateStart = moment(this.dataCondition.fromDate).format("YYYYMMDD");
-            const treatDateEnd = moment(this.dataCondition.toDate).format("YYYYMMDD");
+            const treatDateStart = dayjs(this.dataCondition.fromDate).format("YYYYMMDD");
+            const treatDateEnd = dayjs(this.dataCondition.toDate).format("YYYYMMDD");
             const response = await ApiHelper.post("/patInfo/getBedAndPatInfoRange", {
               facilityCd: this.facilityCd,
               patIds: Object.keys(pats),
@@ -3171,7 +3193,7 @@
             return response.data;
           } else if (this.dataCondition.timeType === "specify_date") {
             // 1日指定
-            const treatDate = moment(this.dataCondition.specifyDate).format("YYYYMMDD");
+            const treatDate = dayjs(this.dataCondition.specifyDate).format("YYYYMMDD");
             const response = await ApiHelper.post("/patInfo/getBedAndPatInfoRange", {
               facilityCd: this.facilityCd,
               patIds: Object.keys(pats),
@@ -3198,8 +3220,8 @@
               fromDate = tmpDate2;
               toDate = tmpDate1;
             }
-            const treatDateStart = moment(fromDate).format("YYYYMMDD");
-            const treatDateEnd = moment(toDate).format("YYYYMMDD");
+            const treatDateStart = dayjs(fromDate).format("YYYYMMDD");
+            const treatDateEnd = dayjs(toDate).format("YYYYMMDD");
             const response = await ApiHelper.post("/patInfo/getBedAndPatInfoRange", {
               facilityCd: this.facilityCd,
               patIds: Object.keys(pats),
@@ -3379,7 +3401,7 @@
         if (!this.modalVisible) return;
         const inputData = this.processData();
         if (inputData && inputData.reportClass !== 1) return;
-        const scrollArea = document.getElementById("scrollArea");
+        const scrollArea = this.getScopedElementById("scrollArea");
         if (!scrollArea) return;
         const scrollTop = scrollArea.scrollTop;
         const scrollHeight = scrollArea.scrollHeight;
@@ -3408,7 +3430,7 @@
       // mod #11151 帳票画面「プレビュー」のページ送りが機能しないことがある 吉 end
       // add Aspose.cells関連問題対応 鄭爽 end
       postShow() {
-        var modal = document.getElementById("modal-content");
+        var modal = this.getScopedElementById("modal-content");
         // mod  デベロッパーツールに表示されたエラーをないように修正する。 吉 start
         // modal.scrollTop = 0;
         if(null != modal){
@@ -3664,7 +3686,7 @@
             return;
           }
           // add 2020-09-17 FNSI-不良修正 レイアウトデザイナーで削除後エラー処理追加 夏 end
-          var blob = null;
+          var blob;
           const contentDis = response.headers["content-disposition"];
           var fileName = contentDis.slice(contentDis.lastIndexOf("filename=") + 9);
           fileName = decodeURI(fileName);
@@ -3678,15 +3700,10 @@
           if (!blob) {
             return;
           }
-          let link = window.document.createElement("a");
-          link.href = window.URL.createObjectURL(blob);
-          link.download = fileName;
-          document.body.append(link);
-          link.click();
-          link.remove();
-          this.revokeURL = () => URL.revokeObjectURL(link.href);
-          window.addEventListener("focus", this.revokeURL, {
-            once: true
+          triggerScopedDownload({
+            blob,
+            filename: fileName,
+            root: this.$el || null
           });
           return;
         }
@@ -3809,8 +3826,7 @@
           }
           else if(response.data == "レポート無"
             || response.data == "テンプレートがない"
-            || response.data.includes("ExceedingMaxPageSetting")
-          ){
+            || response.data.includes("ExceedingMaxPageSetting")){
             getErrorMessage('ReportMenuListComponent.vue', 'printFile', "帳票印刷が失敗しました。");
             this.showErrorMessage(DIALOG_MESSAGES[12000207].message);
           }
@@ -3891,16 +3907,16 @@
             // add #11985 定期点検一覧帳票が正常に出せない limingzhe start
             || this.selectedReportTypeId === 5
             // add #11985 定期点検一覧帳票が正常に出せない limingzhe end
-          )))
+            )))
           || (this.selectedReportClassID === 11 && (
             this.selectedReportTypeId === 3 || this.selectedReportTypeId === 4
             // add #11985 定期点検一覧帳票が正常に出せない limingzhe start
             || this.selectedReportTypeId === 5
             // add #11985 定期点検一覧帳票が正常に出せない limingzhe end
-          ) && this.selectedMachines.length > 0)
+            ) && this.selectedMachines.length > 0)
           || (this.selectedReportClassID === 7 && this.selectedMachines.length > 0)
           // mod #11973 日常点検一覧帳票が正常に出せない limingzhe end
-        ) {
+          ) {
         // mod #11293 水質検査帳票の課題対応 limingzhe end
           // mod UT帳票No.112 患者無しの場合、印刷とプレビュー不良の対応 夏 end
           /*** データ抽出条件 ** */
@@ -4106,7 +4122,6 @@
 
           // add #11603 検査予定のラベル出力とフィルタ機能 高 start
           // 検査セット
-          // eslint-disable-next-line no-unused-vars
           let examSetType = null;
           if(this.selectedReportClassID && this.selectedReportClassID !== 7
             && this.multiTotalID !== this.selectedReportID && this.extractCondition[this.selectedReportClassID]['isExamSet']) {
@@ -4552,22 +4567,22 @@
       /*add FNSI-改修内容日付のチェックの追加対応。 吉 start*/
       showMsg(flag){
         if(flag == "0"){
-          this.showErrorFromDate = this.dataCondition.fromDate ? document.getElementsByClassName("fromDate")[0].validationMessage !== "" : false;
+          this.showErrorFromDate = this.dataCondition.fromDate ? this.getScopedElementsByClassName("fromDate")[0].validationMessage !== "" : false;
         }
         if(flag == "1"){
-          this.showErrorToDate = this.dataCondition.toDate ? document.getElementsByClassName("toDate")[0].validationMessage !== "" : false;
+          this.showErrorToDate = this.dataCondition.toDate ? this.getScopedElementsByClassName("toDate")[0].validationMessage !== "" : false;
         }
         if(flag == "2"){
-          this.showErrorSpecifyDate = this.dataCondition.specifyDate ? document.getElementsByClassName("specifyDate")[0].validationMessage !== "" : false;
+          this.showErrorSpecifyDate = this.dataCondition.specifyDate ? this.getScopedElementsByClassName("specifyDate")[0].validationMessage !== "" : false;
         }
         if(flag == "3"){
-          this.showErrorInspectionDate = this.dataCondition.inspectionDate ? document.getElementsByClassName("inspectionDate")[0].validationMessage !== "" : false;
+          this.showErrorInspectionDate = this.dataCondition.inspectionDate ? this.getScopedElementsByClassName("inspectionDate")[0].validationMessage !== "" : false;
         }
         /*this.checkDate();*/
       },
       /*add FNSI-改修内容パンくずリスト対応 任 start*/
       async refresh(){
-        if (this.selfScreenName !== this.$router.currentRoute.name) {
+        if (this.selfScreenName !== this.$route.name) {
           return;
         }
         this.setLoadingScreenVisible(true);
@@ -4674,7 +4689,7 @@
           conditionMessage +="帳票種別:全て"+ '、';
         }
         // del 8486 CSSの修正により、ファイル保存問題が発生  吉 start
-        // var elements =  document.getElementsByClassName("condition")[2];
+        // var elements =  this.getScopedElementsByClassName("condition")[2];
         // var parOne=elements.children[0];
         // if(null != parOne){
         //   // 基準日の設定
@@ -4753,88 +4768,88 @@
         // del 8486 CSSの修正により、ファイル保存問題が発生  吉 end
         // add 8486 CSSの修正により、ファイル保存問題が発生  吉 start
         // 基準日の設定
-        if (document.getElementById("dialysis_date").checked) {
-          conditionMessage += document.getElementById("dialysis_date_id").textContent + '、';
+        if (this.getScopedElementById("dialysis_date").checked) {
+          conditionMessage += this.getScopedElementById("dialysis_date_id").textContent + '、';
         // add #11226 患者情報系historyの取得条件見直し② limingzhe start
-        } else if (document.getElementById("issue_date").checked)  {
-          conditionMessage += document.getElementById("issue_date_id").textContent + '、';
+        } else if (this.getScopedElementById("issue_date").checked)  {
+          conditionMessage += this.getScopedElementById("issue_date_id").textContent + '、';
         // add #11226 患者情報系historyの取得条件見直し② limingzhe end
-        } else if (document.getElementById("letter_issue_date").checked)  {
-          conditionMessage += document.getElementById("letter_issue_date_id").textContent + '、';
-        } else if (document.getElementById("all_date").checked)  {
-          conditionMessage += document.getElementById("all_date_id").textContent + '、';
+        } else if (this.getScopedElementById("letter_issue_date").checked)  {
+          conditionMessage += this.getScopedElementById("letter_issue_date_id").textContent + '、';
+        } else if (this.getScopedElementById("all_date").checked)  {
+          conditionMessage += this.getScopedElementById("all_date_id").textContent + '、';
         } else {
-          conditionMessage += document.getElementById("exam_date_id").textContent + '、';
+          conditionMessage += this.getScopedElementById("exam_date_id").textContent + '、';
         }
         // 期間指定
-        if (document.getElementById("range_time").checked) {
-          conditionMessage += document.getElementById("range_time_id").textContent + '、';
+        if (this.getScopedElementById("range_time").checked) {
+          conditionMessage += this.getScopedElementById("range_time_id").textContent + '、';
           conditionMessage += this.dataCondition.fromDate + '、';
           conditionMessage += this.dataCondition.toDate + '、';
-        } else if(document.getElementById("specify_date").checked){
-          conditionMessage += document.getElementById("specify_date_id").textContent + '、';
+        } else if(this.getScopedElementById("specify_date").checked){
+          conditionMessage += this.getScopedElementById("specify_date_id").textContent + '、';
           conditionMessage += this.dataCondition.specifyDate + '、';
         }else{
-          conditionMessage += document.getElementById("inspection_date_id").textContent + '、';
+          conditionMessage += this.getScopedElementById("inspection_date_id").textContent + '、';
           conditionMessage += this.dataCondition.inspectionDate + " " + this.dataCondition.key + " "+ this.dataCondition.numDay + '、';
         }
         // 検査区分
-        if(document.getElementById("before_dialysis").checked){
-          conditionMessage += document.getElementById("before_dialysis_id").textContent + '、';
+        if(this.getScopedElementById("before_dialysis").checked){
+          conditionMessage += this.getScopedElementById("before_dialysis_id").textContent + '、';
         }
-        if(document.getElementById("after_dialysis").checked){
-          conditionMessage += document.getElementById("after_dialysis_id").textContent + '、';
+        if(this.getScopedElementById("after_dialysis").checked){
+          conditionMessage += this.getScopedElementById("after_dialysis_id").textContent + '、';
         }
-        if(document.getElementById("other").checked){
-          conditionMessage += document.getElementById("other_id").textContent + '、';
+        if(this.getScopedElementById("other").checked){
+          conditionMessage += this.getScopedElementById("other_id").textContent + '、';
         }
         // 処方区分
-        if(document.getElementById("viewPreOut").checked){
-          conditionMessage += document.getElementById("viewPreOut_id").textContent + '、';
+        if(this.getScopedElementById("viewPreOut").checked){
+          conditionMessage += this.getScopedElementById("viewPreOut_id").textContent + '、';
         }
-        if(document.getElementById("viewPreIn").checked){
-          conditionMessage += document.getElementById("viewPreIn_id").textContent + '、';
+        if(this.getScopedElementById("viewPreIn").checked){
+          conditionMessage += this.getScopedElementById("viewPreIn_id").textContent + '、';
         }
         // 紹介区分
-        if(document.getElementById("viewMovingOut").checked){
-          conditionMessage += document.getElementById("viewMovingOut_id").textContent + '、';
+        if(this.getScopedElementById("viewMovingOut").checked){
+          conditionMessage += this.getScopedElementById("viewMovingOut_id").textContent + '、';
         }
-        if(document.getElementById("viewMovingIn").checked){
-          conditionMessage += document.getElementById("viewMovingIn_id").textContent + '、';
+        if(this.getScopedElementById("viewMovingIn").checked){
+          conditionMessage += this.getScopedElementById("viewMovingIn_id").textContent + '、';
         }
         // 医療材料
         if(this.selectEquipmentAll){
-          conditionMessage += document.getElementById("equipment_all_id").textContent + '、';
+          conditionMessage += this.getScopedElementById("equipment_all_id").textContent + '、';
         }
         if(this.EQUIPMENT.checkedList){
           for(var i=0;i<this.EQUIPMENT.checkedList.length;i++){
             var id = "equiment"+this.EQUIPMENT.checkedList[i];
-            conditionMessage += document.getElementById(id).textContent + '、';
+            conditionMessage += this.getScopedElementById(id).textContent + '、';
           }
         }
         // 薬剤
         if(this.selectMedicineAll){
-          conditionMessage += document.getElementById("medicine_all_id").textContent + '、';
+          conditionMessage += this.getScopedElementById("medicine_all_id").textContent + '、';
         }
         if(this.MEDICINE.checkedList){
-          for(var i=0;i<this.MEDICINE.checkedList.length;i++){
-            var id = "medicine"+this.MEDICINE.checkedList[i];
-            conditionMessage += document.getElementById(id).textContent + '、';
+          for (let i = 0; i < this.MEDICINE.checkedList.length; i++) {
+            const id = "medicine" + this.MEDICINE.checkedList[i];
+            conditionMessage += this.getScopedElementById(id).textContent + '、';
           }
         }
         // 検査
         // mod #11035 ラベルでデータ抽出条件の「採血管」が常に出力される limingzhe start
         // if(this.selectCheckAll){
-        //   conditionMessage += document.getElementById("check_all_id").textContent + '、';
+        //   conditionMessage += this.getScopedElementById("check_all_id").textContent + '、';
         // }
         // if(this.CHECKLIST.checkedList){
         //   for(var i=0;i<this.CHECKLIST.checkedList.length;i++){
         //     var id = "checkList"+this.CHECKLIST.checkedList[i];
-        //     conditionMessage += document.getElementById(id).textContent + '、';
+        //     conditionMessage += this.getScopedElementById(id).textContent + '、';
         //   }
         // }
         if(this.inspectCheckBox){
-          conditionMessage += document.getElementById("check_all_id").textContent + '、';
+          conditionMessage += this.getScopedElementById("check_all_id").textContent + '、';
         }
         // mod #11035 ラベルでデータ抽出条件の「採血管」が常に出力される limingzhe end
         // add 8486 CSSの修正により、ファイル保存問題が発生  吉 end
@@ -4853,7 +4868,7 @@
             });
         }
         await ApiHelper.post(
-          "/report_menu/setLogEven/",{
+          "/report_menu/setLogEven",{
             payload: msg
           }
         ).catch((error) => {
@@ -4871,16 +4886,16 @@
             // 期間指定終了の日数取得
             const num = this.dataCondition.rangeEndNum ? Number(this.dataCondition.rangeEndNum) : 0;
             this.dataCondition.fromDate=date;
-            this.dataCondition.toDate=moment(date).add(num, 'days').format("YYYY-MM-DD");
+            this.dataCondition.toDate=dayjs(date).add(num, 'days').format("YYYY-MM-DD");
             this.dataCondition.specifyDate=date;
             this.dataCondition.inspectionDate=date;
           } else {
             // 現在設定されている期間指定の日数を取得
-            const oldNum = moment(this.dataCondition.toDate).diff(moment(this.dataCondition.fromDate), 'days');
+            const oldNum = dayjs(this.dataCondition.toDate).diff(dayjs(this.dataCondition.fromDate), 'days');
             // 期間指定終了の日数が設定されており、現在の期間指定終了の日数と異なる場合
             if (this.dataCondition.rangeEndNum !== undefined && this.dataCondition.rangeEndNum !== oldNum) {
               // 最新の日数と差分がある場合、最新の日数から算出する
-              this.dataCondition.toDate=moment(this.dataCondition.fromDate).add(this.dataCondition.rangeEndNum, 'days').format("YYYY-MM-DD");
+              this.dataCondition.toDate=dayjs(this.dataCondition.fromDate).add(this.dataCondition.rangeEndNum, 'days').format("YYYY-MM-DD");
             }
           }
         }
@@ -4888,14 +4903,13 @@
       //add  5605  李明 start
       resetScrollTop(){
         this.$nextTick(()=>{
-          document.getElementById("scrollArea").scrollTop = 0
+          this.getScopedElementById("scrollArea").scrollTop = 0
         })
       },
       //add  5605  李明 end
     }
   };
 </script>
-
 
 <style lang="scss" scoped>
 //add  5605  李明 start
@@ -5102,6 +5116,7 @@
     .disabled {
       pointer-events: none;
       opacity: 0.6;
+
     }
     .active {
       opacity: 1;
@@ -5298,6 +5313,9 @@
     white-space: nowrap;
     overflow: hidden;
   }
+  .th-td-body {
+    width: 22px;
+    padding: 0.2px;
+  }
 </style>
 <!--mod 4748 5269 5402治療方法ごとの治療経過表での出力ができない  吉 end-->
-

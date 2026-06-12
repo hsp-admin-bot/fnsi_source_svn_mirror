@@ -2,10 +2,11 @@
 <template>
   <modal-base @onClose="close" class="custom-modal">
     <!-- グラフ -->
-    <div slot="body" class="result-modal">
+    <template #body>
+    <div class="result-modal">
       <kendo-tabstrip ref="tabContainer" @select="changeTab">
         <ul>
-          <li ref="tabBatch" class="k-state-active kendoTab">
+          <li ref="tabBatch" class="kendoTab">
             <div class="kendoText">一括</div>
           </li>
           <li ref="tabList" class="kendoTab">
@@ -65,7 +66,7 @@
                 :id = "'time'"
                 @change="changeTime()"
                 :disabled="!hasTreatmentRecordAuthority"
-                v-validate="'date_format:HH:mm'"
+                v-rules="'date_format:HH:mm'"
                 v-model="collectionTime"
               ></v-ons-input> -->
               <time-input
@@ -172,7 +173,7 @@
                               if (rst.index === rec.surveyTypeCd) { rst.val = val }
                           })
                       } else {
-                          resultValue.push( { 'index': rec.surveyTypeCd, 'val': val } )
+                          resultValue.push( { 'index': rec.surveyTypeCd, 'val': val })
                       }
                   }"
                   @blur="handleBlur(rec,$event,index)"
@@ -209,7 +210,7 @@
         </div>
         <v-ons-popover
           cancelable
-          :visible.sync="popoverVisible"
+          v-model:visible="popoverVisible"
           :target="popoverTarget"
           :cover-target="false"
           :direction="popoverDirection"
@@ -385,9 +386,9 @@
                     <tbody>
                       <!--mod FNSI-水質管理_青田の対応 徐 start-->
                       <!--<template v-for="(rec) in listItem">-->
-                      <template v-for="(rec, index) in showItemList">
+                      <template v-for="(rec, index) in showItemList" :key="rec.cd">
                       <!--mod FNSI-水質管理_青田の対応 徐 end-->
-                        <tr :key="rec.cd" valign="middle" v-if="rec.show">
+                        <tr valign="middle" v-if="rec.show">
                           <!--add FNSI-水質管理_青田の対応 徐 start-->
                           <td class="check-box sticky-col-checkbox">
                             <!-- mod FNSI-redmine4790 徐 start -->
@@ -400,8 +401,7 @@
                              <v-ons-checkbox
                               :input-id="'select-' + index"
                               v-model="selectedList"
-                              :value="index + 1"
-                              @click="changeCheck(index + 1)"
+                              :value="String(index + 1)"
                               :disabled="!hasTreatmentRecordAuthority"
                             ></v-ons-checkbox>
                             <!-- mod FNSI-redmine4790 徐 end -->
@@ -419,7 +419,7 @@
                             <v-ons-input
                               style="width: auto"
                               type="time"
-                              v-validate="'date_format:HH:mm'"
+                              v-rules="'date_format:HH:mm'"
                               v-model="rec.surveyData.time"
                             ></v-ons-input>
                           </td>
@@ -577,9 +577,9 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <template v-for="(rec, index) in showItemList"> <!--mod #11047 数値IF修正 情 start-->
+                      <template v-for="(rec, index) in showItemList" :key="rec.pointCd"> <!--mod #11047 数値IF修正 情 start-->
                         <!-- <tr :key="rec.cd" valign="middle" v-if="rec.show">  -->
-                        <tr :key="rec.pointCd" valign="middle" v-if="rec.show">
+                        <tr valign="middle" v-if="rec.show">
                           <!--mod #11047 数値IF修正 情 end-->
                           <td align="center">
                             <label v-if="+rec.surveyData.plan === 1">〇</label>
@@ -592,7 +592,7 @@
                               :disabled="!hasTreatmentRecordAuthority"
                               style="width: auto"
                               type="time"
-                              v-validate="'date_format:HH:mm'"
+                              v-rules="'date_format:HH:mm'"
                               v-model="rec.surveyData.time"
                               :id="'time_' + index"
                               :class="classObject"
@@ -753,7 +753,9 @@
       </kendo-tabstrip>
     </div>
     <!-- フッター -->
-    <div slot="footer" class="flex-container flex-container-footer">
+    </template>
+    <template #footer>
+      <div class="flex-container flex-container-footer">
       <div class="denial-btn-area" style="background:none">
         <!-- mod FNSI-権限 徐 start -->
         <!-- <button :disabled="!hasTreatmentRecordAuthority" class="button denial-btn" @click="close">キャンセル</button> -->
@@ -817,7 +819,8 @@
         <!-- mod 画面スタイル(ボタン)対応 徐 end -->
         <!-- mod  FNSI-権限 姜 end -->
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 
 </template>
@@ -827,10 +830,11 @@
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
 import ModalBase from "@/components/modals/ModalBase";
-import { mapActions, mapGetters, mapMutations } from "vuex";
-import $ from "jquery";
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
+import $ from "@/compat/jquery";
+
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -854,11 +858,14 @@ import TimeInput from "@/components/common/TimeInput.vue";
 import store from "@/stores";
 // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 end
 import DateInput from "@/components/common/DateInput.vue";
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
+import BigNumber from "@/compat/number/bignumber";
 //add #11047 数値IF修正【最優先】 張玲 start
-import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro'
-import BigNumber from "bignumber.js";
+
 //add #11047 数値IF修正【最優先】 張玲 end
 import { updateSort, getSortedClass, sortableCompare } from "@/functions/SortFunctions";
+
+import { getScopedElementById, getScopedSessionStorage } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
     // add  FNSI-権限 姜 start
@@ -878,8 +885,7 @@ export default {
       // add FNSI-水質管理_青田の対応 徐 start
       selectedList: [],
       // mod FutreNetWeb+SI課題管理No5505 趙 start
-      // selectedAllList: [],
-      selectedAllList: ["-1"],
+      selectedAllList: [],
       // mod FutreNetWeb+SI課題管理No5505 趙 end
       toggleShowobject: true,
       toggleShowPred: false,
@@ -1064,8 +1070,7 @@ export default {
       this.initListItem = this.initListItem ? this.initListItem.sort(
         (a, b) =>
           this.listItem.findIndex(x => x.pointCd === a.pointCd) -
-          this.listItem.findIndex(x => x.pointCd === b.pointCd)
-      ) : null;
+          this.listItem.findIndex(x => x.pointCd === b.pointCd)) : null;
       
       return this.listItem;
     },
@@ -1126,7 +1131,7 @@ export default {
     });
     this.mstSurveyType.forEach(item => {
       const targetId = "title-" + item.surveyTypeCd;
-      const targetLabel = document.getElementById(targetId);
+      const targetLabel = getScopedElementById(targetId, this);
       if (targetLabel != null) {
         const maxCharSize = Math.max(...charSizes) + 1;
         const val = maxCharSize > this.minWidth ? maxCharSize : this.minWidth;
@@ -1147,42 +1152,34 @@ export default {
   watch: {
     // add FNSI-水質管理_青田の対応 徐 start
     selectedList(value) {
-      // mod FutreNetWeb+SI課題管理No5505 趙 start
-      // if(value.length===this.listItem.length)
-      // {
-      //   this.selectedAllList = ["-1"];
-      // }else{
-      //   this.selectedAllList = [];
-      // }
-      var list = [];
-      var k = 0;
-      this.listItem.forEach(item => {
-        if (item.show) {
-          list.push((k + 1).toString())
-        }
-        k = k + 1;
-      });
-      if(list.length != 0 && value.length == list.length)
-      {
-        this.selectedAllList = ["-1"];
-      }else{
-        this.selectedAllList = [];
+      const normalized = this.normalizeSelectedList(value);
+      const raw = Array.isArray(value) ? value : [];
+      if (normalized.length !== raw.length || normalized.some((v, i) => v !== String(raw[i]))) {
+        this.selectedList = normalized;
+        return;
       }
       //add #9558 水質管理一覧のヘッダ部から個別画面に遷移すると、機能帳票の制御が「一覧」のままになる 杜 start
       if (this.selectedAllList.length == 0) {
         let maListNew = [];
-        for (var index = 0 ;index < value.length;index++) {
-          maListNew[index] = this.listItem[parseInt(value[index]) - 1];
+        for (var index = 0; index < normalized.length; index++) {
+          maListNew[index] = this.listItem[parseInt(normalized[index], 10) - 1];
         }
         this.maList = maListNew;
       }
       EventBus.$emit("getMaList", this.maList);
       //add #9558 水質管理一覧のヘッダ部から個別画面に遷移すると、機能帳票の制御が「一覧」のままになる 杜 end
-      // mod FutreNetWeb+SI課題管理No5505 趙 end
+      this.$nextTick(() => {
+        this.changeShow();
+      });
     },
     // add FNSI-水質管理_青田の対応 徐 end
     selectTabId() {
       this.setActiveTab();
+      if (this.selectTabId === 1) {
+        this.$nextTick(() => {
+          this.syncSelectedAllList(this.selectedList);
+        });
+      }
     },
     pickerCd(value) {
       this.setPickerCd(value);
@@ -1219,13 +1216,12 @@ export default {
 
     const date = new Date();
     if (!this.controlDisp.isDisableDate) {
-      this.inspectionDay = moment(date).format("YYYY-MM-DD");
-      const currentTime = moment(date.getTime()).format("HH:mm");
+      this.inspectionDay = dayjs(date).format("YYYY-MM-DD");
+      const currentTime = dayjs(date.getTime()).format("HH:mm");
       this.collectionTime = currentTime.toString();
     } else {
-      this.inspectionDay = moment(this.inspectionDate.code).format(
-        "YYYY-MM-DD"
-      );
+      this.inspectionDay = dayjs(this.inspectionDate.code).format(
+        "YYYY-MM-DD");
     }
     // 検査日を退避
     this.backupInspectionDay = this.inspectionDay;    
@@ -1236,12 +1232,12 @@ export default {
     // add FNSI-水質検査結果登録で備考欄を追加する 周 start
     // 水質検査結果備考登録画面が閉じられた時のイベントを登録する.
     // add 性能改善メモリ不足 shan start
-    EventBus.$off("applyWaterResultMemoEditSubModal");
+    EventBus.$off("applyWaterResultMemoEditSubModal", this.closeWaterResultMemoEditSubModal);
     // add 性能改善メモリ不足 shan end
     EventBus.$on("applyWaterResultMemoEditSubModal", this.closeWaterResultMemoEditSubModal);
     // add FNSI-水質検査結果登録で備考欄を追加する 周 end
     // add FNSI-改修内容6512修正 xuty start
-    EventBus.$off("applyWaterResultMemoEditSubModalChange");
+    EventBus.$off("applyWaterResultMemoEditSubModalChange", this.closeWaterResultMemoEditSubModalChange);
     EventBus.$on("applyWaterResultMemoEditSubModalChange", this.closeWaterResultMemoEditSubModalChange);
     // add FNSI-改修内容6512修正 xuty end
   },
@@ -1250,11 +1246,12 @@ export default {
   /**
    * 画面を破棄する時の処理
    */
-  beforeDestroy() {
+  beforeUnmount() {
     // 水質検査結果備考登録画面が閉じられた時のイベント解除する.
-    EventBus.$off("applyWaterResultMemoEditSubModal");
+    EventBus.$off("applyWaterResultMemoEditSubModal", this.closeWaterResultMemoEditSubModal);
+    EventBus.$off("applyWaterResultMemoEditSubModalChange", this.closeWaterResultMemoEditSubModalChange);
   },
-  destroyed() {
+  unmounted() {
     // add #9558 機能帳票で正しく変数が引き渡されていない limingzhe start
     EventBus.$emit("isCheckResultFunc");
     // add #9558 機能帳票で正しく変数が引き渡されていない limingzhe end
@@ -1265,6 +1262,14 @@ export default {
   // add FNSI-水質検査結果登録で備考欄を追加する 周 end
 
   methods: {
+    requestViewForceUpdate() {
+      if (this.$?.isMounted) {
+        this.$forceUpdate();
+      }
+    },
+    getTabContainerWidget() {
+      return this.$refs.tabContainer?.kendoWidget?.() || null;
+    },
     // 共通ローダー設定
     ...mapActions("loading-screen", ["setLoadingScreenVisible"]),
     ...mapActions("multi-modal", ["hideModal"]),
@@ -1306,8 +1311,29 @@ export default {
       return userInfoList;
     },
     // add  FNSI-権限 姜 end
+    getTabItemIndex(item) {
+      if (!item?.parentNode?.children) {
+        return 0;
+      }
+      return Array.prototype.indexOf.call(item.parentNode.children, item);
+    },
+    syncTabHeaderState(tabId) {
+      const tabs = [this.$refs.tabBatch, this.$refs.tabList];
+      tabs.forEach((tab, index) => {
+        if (tab) {
+          tab.classList.toggle("k-state-active", index === tabId);
+        }
+      });
+    },
     changeTab(e) {
-      this.setSelectTabId($(e.item).index());
+      const tabId = typeof e?.itemIndex === "number" ? e.itemIndex : this.getTabItemIndex(e?.item);
+      this.syncTabHeaderState(tabId);
+      this.setSelectTabId(tabId);
+      if (tabId === 1) {
+        this.$nextTick(() => {
+          this.syncSelectedAllList(this.selectedList);
+        });
+      }
     },
     //add #11047 数値IF修正【最優先】 張玲 start
     /**
@@ -1380,14 +1406,26 @@ export default {
     },
     //add #11047 数値IF修正【最優先】 張玲 end
     // add FNSI-水質管理_青田の対応 徐 start
-    changeCheck(selected) {
-      var index = this.selectedList.indexOf(selected + "");
-      if (index >= 0) {
-        this.selectedList.splice(index,1);
-      } else {
-        this.selectedList.push(selected + "")
-      }
-      this.changeShow();
+    normalizeSelectedList(value) {
+      return [...new Set((Array.isArray(value) ? value : []).map(v => String(v)))];
+    },
+    getSelectableListIndices() {
+      const indices = [];
+      this.listItem.forEach((item, k) => {
+        if (item.show) {
+          indices.push(String(k + 1));
+        }
+      });
+      return indices;
+    },
+    syncSelectedAllList(selectedList) {
+      const normalized = this.normalizeSelectedList(selectedList);
+      const selectable = this.getSelectableListIndices();
+      const isAllSelected =
+        selectable.length > 0 &&
+        selectable.length === normalized.length &&
+        selectable.every(id => normalized.includes(id));
+      this.selectedAllList = isAllSelected ? ["-1"] : [];
     },
     changeShow() {
       this.showListItem(this.listItem, 1);
@@ -1403,32 +1441,32 @@ export default {
       const inspectorClassList = [];
       if (flg == 1) {
         for (var i = 0; i < list.length; i++) {
-          if (document.getElementById('value_' + i) != null && document.getElementById('value_' + i).classList.length > 0
-            && document.getElementById('value_' + i).classList.contains("custom-input-edited")){
+          if (getScopedElementById('value_' + i, this) != null && getScopedElementById('value_' + i, this).classList.length > 0
+            && getScopedElementById('value_' + i, this).classList.contains("custom-input-edited")){
             valueClassList.push("custom-input-edited");
           } else {
             valueClassList.push("");
           }
-          if (document.getElementById('time_' + i) != null && document.getElementById('time_' + i).classList.length > 0
-            && document.getElementById('time_' + i).classList.contains("custom-input-edited")){
+          if (getScopedElementById('time_' + i, this) != null && getScopedElementById('time_' + i, this).classList.length > 0
+            && getScopedElementById('time_' + i, this).classList.contains("custom-input-edited")){
             timeClassList.push("custom-input-edited");
           } else {
             timeClassList.push("");
           }
-          if (document.getElementById('text_' + i) != null && document.getElementById('text_' + i).classList.length > 0
-            && document.getElementById('text_' + i).classList.contains("custom-select-edited")){
+          if (getScopedElementById('text_' + i, this) != null && getScopedElementById('text_' + i, this).classList.length > 0
+            && getScopedElementById('text_' + i, this).classList.contains("custom-select-edited")){
             textClassList.push("custom-select-edited");
           } else {
             textClassList.push("");
           }
-          if (document.getElementById('picker_' + i) != null && document.getElementById('picker_' + i).classList.length > 0
-            && document.getElementById('picker_' + i).classList.contains("custom-select-edited")){
+          if (getScopedElementById('picker_' + i, this) != null && getScopedElementById('picker_' + i, this).classList.length > 0
+            && getScopedElementById('picker_' + i, this).classList.contains("custom-select-edited")){
             pickerClassList.push("custom-select-edited");
           } else {
             pickerClassList.push("");
           }
-          if (document.getElementById('inspector_' + i) != null && document.getElementById('inspector_' + i).classList.length > 0
-            && document.getElementById('inspector_' + i).classList.contains("custom-select-edited")){
+          if (getScopedElementById('inspector_' + i, this) != null && getScopedElementById('inspector_' + i, this).classList.length > 0
+            && getScopedElementById('inspector_' + i, this).classList.contains("custom-select-edited")){
             inspectorClassList.push("custom-select-edited");
           } else {
             inspectorClassList.push("");
@@ -1478,64 +1516,50 @@ export default {
       var thislist = list;
       setTimeout(() => {
         for (var i = 0; i < thislist.length; i++) {
-          if (document.getElementById('select-' + i) != null) {
+          if (getScopedElementById('select-' + i, this) != null) {
             if (showList.indexOf(i + 1 + "") !== -1) {
-              document.getElementById('select-' + i).checked = true;
+              getScopedElementById('select-' + i, this).checked = true;
               this.showItem.push(list[i]);
             } else {
-              document.getElementById('select-' + i).checked = false;
+              getScopedElementById('select-' + i, this).checked = false;
             }
           }
           if (valueClassList.length > 0) {
-            if (document.getElementById('value_' + i) != null) {
-              document.getElementById('value_' + i).classList.remove("custom-input-edited");
+            if (getScopedElementById('value_' + i, this) != null) {
+              getScopedElementById('value_' + i, this).classList.remove("custom-input-edited");
               if (valueClassList[i] != "") {
-                document.getElementById('value_' + i)?.classList?.add(valueClassList[i]);
+                getScopedElementById('value_' + i, this)?.classList?.add(valueClassList[i]);
               }
             }
-            if (document.getElementById('time_' + i) != null) {
-              document.getElementById('time_' + i).classList.remove("custom-input-edited");
+            if (getScopedElementById('time_' + i, this) != null) {
+              getScopedElementById('time_' + i, this).classList.remove("custom-input-edited");
               if (timeClassList[i] != "") {
-                document.getElementById('time_' + i)?.classList?.add(timeClassList[i]);
+                getScopedElementById('time_' + i, this)?.classList?.add(timeClassList[i]);
               }
             }
-            if (document.getElementById('text_' + i) != null) {
-              document.getElementById('text_' + i).classList.remove("custom-select-edited");
+            if (getScopedElementById('text_' + i, this) != null) {
+              getScopedElementById('text_' + i, this).classList.remove("custom-select-edited");
               if (textClassList[i] != "") {
-                document.getElementById('text_' + i)?.classList?.add(textClassList[i]);
+                getScopedElementById('text_' + i, this)?.classList?.add(textClassList[i]);
               }
             }
-            if (document.getElementById('picker_' + i) != null) {
-              document.getElementById('picker_' + i).classList.remove("custom-select-edited");
+            if (getScopedElementById('picker_' + i, this) != null) {
+              getScopedElementById('picker_' + i, this).classList.remove("custom-select-edited");
               if (pickerClassList[i] != "") {
-                document.getElementById('picker_' + i)?.classList?.add(pickerClassList[i]);
+                getScopedElementById('picker_' + i, this)?.classList?.add(pickerClassList[i]);
               }
             }
-            if (document.getElementById('inspector_' + i) != null) {
-              document.getElementById('inspector_' + i).classList.remove("custom-select-edited");
+            if (getScopedElementById('inspector_' + i, this) != null) {
+              getScopedElementById('inspector_' + i, this).classList.remove("custom-select-edited");
               if (inspectorClassList[i] != "") {
-                document.getElementById('inspector_' + i)?.classList?.add(inspectorClassList[i]);
+                getScopedElementById('inspector_' + i, this)?.classList?.add(inspectorClassList[i]);
               }
             }
           }
         }
       }, 100)
-      sessionStorage.setItem('selectedList', JSON.stringify(this.selectedList));
-      // add FutreNetWeb+SI課題管理No5505 趙 start
-      var k =0;
-      var listshow = [];
-      this.listItem.forEach(item => {
-        if (item.show) {
-          listshow.push((k + 1).toString())
-        }
-        k = k + 1;
-      });
-      if(listshow.length != 0 && listshow.length == this.selectedList.length){
-        this.selectedAllList = ["-1"];
-      }else{
-        this.selectedAllList = [];
-      }
-      // add FutreNetWeb+SI課題管理No5505 趙 end
+      getScopedSessionStorage(this.$el || this).setItem('selectedList', JSON.stringify(this.selectedList));
+      this.syncSelectedAllList(this.selectedList);
       // add #12262 定期点検画面の機能帳票で装置毎の点検一覧と記録簿が出せない limingzhe start
       this.setSurveyResultList(list);
       // add #12262 定期点検画面の機能帳票で装置毎の点検一覧と記録簿が出せない limingzhe end
@@ -1551,11 +1575,13 @@ export default {
         // mod #10054 破棄確認・保存活性(複数変更含む)・削除対応_水質管理 20231225 ztc end
       }
       if (this.setCheckedFlg) {
+        const initialSelected = [];
         for (var i = 0; i < list.length; i++) {
           if (list[i].surveyData.index === 1) {
-            this.selectedList.push(i + 1 + "");
+            initialSelected.push(String(i + 1));
           }
         }
+        this.selectedList = initialSelected;
         this.setCheckedFlg = false;
       }
       list = this.showListItem(list, 0);
@@ -1598,15 +1624,32 @@ export default {
       this.listItem[this.surveyRecordForMemo.index].surveyData.memo = this.surveyRecordForMemo.memo;
     },
     // add FNSI-改修内容6512修正 xuty end
-    setActiveTab() {
-      const tabContainer = this.$refs.tabContainer.kendoWidget();
-      if (this.selectTabId === 1) {
-        tabContainer.enable(this.$refs.tabList);
-        tabContainer.activateTab(this.$refs.tabList);
-      } else {
-        tabContainer.enable(this.$refs.tabBatch);
-        tabContainer.activateTab(this.$refs.tabBatch);
+    setActiveTab(retryCount = 0) {
+      const tabContainer = this.getTabContainerWidget();
+      const tabList = this.$refs.tabList;
+      const tabBatch = this.$refs.tabBatch;
+      if (!tabContainer || !tabList || !tabBatch) {
+        // Vue3 では KendoTabStrip の jQuery widget 生成が親 mounted より後になる場合があるため、Vue2 と同じ初期タブ反映を widget 準備後に行う。
+        if (retryCount < 10) {
+          this.$nextTick(() => {
+            const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+            ownerWindow.setTimeout(() => {
+              if (!this.$?.isUnmounted) {
+                this.setActiveTab(retryCount + 1);
+              }
+            }, 0);
+          });
+        }
+        return;
       }
+      if (this.selectTabId === 1) {
+        tabContainer.enable(tabList);
+        tabContainer.activateTab(tabList);
+      } else {
+        tabContainer.enable(tabBatch);
+        tabContainer.activateTab(tabBatch);
+      }
+      this.syncTabHeaderState(this.selectTabId);
     },
 
     isDispSurveyType(cd) {
@@ -1680,7 +1723,7 @@ export default {
           callback: answer => {
             if (answer === 1) {
               // add FNSI-水質管理_青田の対応 徐 start
-              sessionStorage.setItem('breakCheck', JSON.stringify("1"));
+              getScopedSessionStorage(this.$el || this).setItem('breakCheck', JSON.stringify("1"));
               // add FNSI-水質管理_青田の対応 徐 end
               this.hideModal();
             }
@@ -1689,7 +1732,7 @@ export default {
         return;
       }
       // add FNSI-水質管理_青田の対応 徐 start
-      sessionStorage.setItem('breakCheck', JSON.stringify("1"));
+      getScopedSessionStorage(this.$el || this).setItem('breakCheck', JSON.stringify("1"));
       // add FNSI-水質管理_青田の対応 徐 end
       this.hideModal();
     },
@@ -1711,9 +1754,9 @@ export default {
         // mod FNSI-水質管理_青田の対応 徐 start
         /*let result = 0;
           if ("value" === key) {
-            result = document.getElementById('value-' + item.surveyTypeCd).value;
+            result = getScopedElementById('value-' + item.surveyTypeCd, this).value;
           }else if ("text" === key) {
-            result = document.getElementById('text-' + item.surveyTypeCd).value;
+            result = getScopedElementById('text-' + item.surveyTypeCd, this).value;
           }
           item.surveyData[key] = +result;*/
 
@@ -1721,12 +1764,12 @@ export default {
         if (item.show) {
           let result = 0;
           if ("value" === key) {
-            result = document.getElementById('value-' + item.surveyTypeCd).value;
+            result = getScopedElementById('value-' + item.surveyTypeCd, this).value;
             if (result) {
               item.surveyData[key] = result;
             }
           }else if ("text" === key) {
-            result = document.getElementById('text-' + item.surveyTypeCd).value;
+            result = getScopedElementById('text-' + item.surveyTypeCd, this).value;
             if (result && result !== "0") {
               item.surveyData[key] = result;
             }
@@ -1744,12 +1787,11 @@ export default {
       let surveyData = [];
 
       let listInspectionDateDb = await this.getSurveyRecordDB(
-        moment(this.inspectionDay).format("YYYYMMDD"),
-        moment(this.inspectionDay).format("YYYYMMDD")
-      );
+        dayjs(this.inspectionDay).format("YYYYMMDD"),
+        dayjs(this.inspectionDay).format("YYYYMMDD"));
       if (listInspectionDateDb && listInspectionDateDb.length) {
         const existRecord = listInspectionDateDb.find(r => {
-          const date = moment(r.inspectionDate).format("YYYY-MM-DD");
+          const date = dayjs(r.inspectionDate).format("YYYY-MM-DD");
 
           return date == this.inspectionDay;
         });
@@ -1780,7 +1822,7 @@ export default {
         {
           surveyRecordNo: surveyRecordNo,
           facilityCd: this.getFacilityCd,
-          inspectionDate: moment(this.inspectionDay).format(),
+          inspectionDate: dayjs(this.inspectionDay).format(),
           surveyData: surveyData,
           isDisp: "1",
           isDel: "0"
@@ -1800,8 +1842,8 @@ export default {
     },
     // (一括)結果初期値の追加
     addInitialValue(cd, value, text, index) {
-      const currentInputBox = document.getElementById("value-" + cd);
-      const currentDDL = document.getElementById("text-" + cd);
+      const currentInputBox = getScopedElementById("value-" + cd, this);
+      const currentDDL = getScopedElementById("text-" + cd, this);
       if (currentInputBox.value === null || currentInputBox.value === "") {
         // -----数値-----
         currentInputBox.value = value;
@@ -1818,11 +1860,11 @@ export default {
           // -----初期文字列-----
           // #11047 数値IF修正【最優先】 linjunfeng start
           // currentDDL.text = this.checkText(text);
-          // this.$set(this.textValue, index, this.checkText(text));
+          // this._compatSet(this.textValue, index, this.checkText(text));
           // currentDDL?.classList?.add("custom-select-edited");
           currentDDL.text = this.checkText(text) == '' ? 1 : this.checkText(text);
-          this.$set(this.textValue, index, currentDDL.text);
-          if (currentDDL.text != 1 ) {
+          ((this.textValue)[index] = currentDDL.text);
+          if (currentDDL.text != 1) {
             currentDDL?.classList?.add("custom-select-edited");
           }
           // #11047 数値IF修正【最優先】 linjunfeng end
@@ -1832,7 +1874,7 @@ export default {
     },
     // (一括)初期文字列の変更
     changeInitialText(cd) {
-      const currentDLL = document.getElementById("text-" + cd);
+      const currentDLL = getScopedElementById("text-" + cd, this);
       const currentValue = Number(currentDLL.value);
       const initValue = 1;
       if (initValue !== currentValue) {
@@ -1859,11 +1901,11 @@ export default {
         //mod #11945 水質管理 結果文字列に関する複数のバグ zrx start
         // return JSON.parse(this.getResultText.get(surveyTypeCd));
         const resultTextList = JSON.parse(this.getResultText.get(surveyTypeCd));
-        var selectedDate = moment(this.inspectionDay).format("YYYYMMDD");
+        var selectedDate = dayjs(this.inspectionDay).format("YYYYMMDD");
         let copyList = JSON.parse(JSON.stringify(this.mntWaterSurvey));
         const filtered = copyList.flatMap(item =>
           item.surveyData.filter(d => {
-            const date = moment(d.inspectionDate).format("YYYYMMDD");
+            const date = dayjs(d.inspectionDate).format("YYYYMMDD");
             return date == selectedDate;
           })
         );
@@ -1907,7 +1949,7 @@ export default {
 
       let listInspectionDateDb = [];
       let response = [];
-      var selectedDate = moment(this.inspectionDay).format("YYYYMMDD");
+      var selectedDate = dayjs(this.inspectionDay).format("YYYYMMDD");
       var startDate = selectedDate;
       var endDate = selectedDate;
       const url = `waterSurvey/filter`;
@@ -1933,7 +1975,7 @@ export default {
       let surveyRecordNo = null;
       if (listInspectionDateDb && listInspectionDateDb.length) {
         const existRecord = listInspectionDateDb.find(r => {
-          const date = moment(r.inspectionDate).format("YYYYMMDD")
+          const date = dayjs(r.inspectionDate).format("YYYYMMDD")
           return date == selectedDate;
         });
         if (existRecord) {
@@ -1948,7 +1990,7 @@ export default {
          * 選択した日付に基づいて調査データをフィルタリングする
          */
         const filtered = rec.surveyData.filter(d => {
-          const date = moment(d.inspectionDate).format("YYYYMMDD");
+          const date = dayjs(d.inspectionDate).format("YYYYMMDD");
           return date == selectedDate;
         });
         if (filtered && filtered.length) {
@@ -2066,7 +2108,7 @@ export default {
                 listPointCd: JSON.stringify(listPointCd)
               };
               // add FNSI-水質管理_青田の対応 徐 start
-              sessionStorage.setItem('breakCheck', JSON.stringify("1"));
+              getScopedSessionStorage(this.$el || this).setItem('breakCheck', JSON.stringify("1"));
               if (flg == 1) {
               // add FNSI-水質管理_青田の対応 徐 end
               await ApiHelper.post(
@@ -2137,7 +2179,7 @@ export default {
           if (this.selectedList.indexOf(i0 + 1 + "") >= 0) {
             // 単位の更新
             const targetId = "unit-" + this.listItem[i0].surveyTypeCd;
-            const targetLabel = document.getElementById(targetId);
+            const targetLabel = getScopedElementById(targetId, this);
             if (targetLabel != null) {
               this.listItem[i0].surveyData.unit = targetLabel.innerText;
             }
@@ -2146,7 +2188,7 @@ export default {
         }
       }
       this.updateData(saveItem);
-      sessionStorage.setItem('breakCheck', JSON.stringify("1"));
+      getScopedSessionStorage(this.$el || this).setItem('breakCheck', JSON.stringify("1"));
       // mod FNSI-水質管理_青田の対応 徐 end
       this.arrValidateResult = [];
     },
@@ -2190,7 +2232,7 @@ export default {
       const inputBoxMaxLength = event.currentTarget.value.length > Math.max(...inputBoxLengths) ? event.currentTarget.value.length : Math.max(...inputBoxLengths);
       this.mstSurveyType.forEach(item => {
         const targetId = "value-" + item.surveyTypeCd;
-        const targetInputBox = document.getElementById(targetId);
+        const targetInputBox = getScopedElementById(targetId, this);
         if (targetInputBox != null) {
           targetInputBox.style = "width: " + inputBoxMaxLength + "em;"
         }
@@ -2202,7 +2244,7 @@ export default {
       const inputBoxMaxLength = event.currentTarget.value.length > Math.max(...inputBoxLengthList) ? event.currentTarget.value.length : Math.max(...inputBoxLengthList);
       for (var i = 0; i < this.listItem.length; i++) {
         const targetId = name + "_" + i;
-        const targetInputBox = document.getElementById(targetId);
+        const targetInputBox = getScopedElementById(targetId, this);
         if (targetInputBox != null) {
           targetInputBox.style = "width: " + inputBoxMaxLength + "em;"
         }
@@ -2286,7 +2328,7 @@ export default {
         value = max[surveyType.integerDigits];
       }
       this.resultValue[rec.surveyTypeCd] = parseFloat(value.toFixed(decimal[surveyType.integerDigits]))
-      this.$forceUpdate();
+      this.requestViewForceUpdate();
     },
     handleMouseWheels(rec, e, index) {
       if (!this.focusFlg[index]) {
@@ -2315,7 +2357,7 @@ export default {
         value = max;
       }
       rec.surveyData.value = parseFloat(value.toFixed(3))
-      this.$forceUpdate();
+      this.requestViewForceUpdate();
     },
     // (一括)結果のフォーカスアウト
     handleBlur(rec, e, index) {
@@ -2345,7 +2387,7 @@ export default {
         // add #11047 数値IF修正【最優先】 linjunfeng end
         e.currentTarget.classList.remove("custom-input-edited");
       }
-      this.$forceUpdate();
+      this.requestViewForceUpdate();
       // del #11047 数値IF修正【最優先】 linjunfeng start
       // 結果入力幅の調整処理
       // const inputBoxLengths = this.getInputBoxLengths(rec.surveyTypeCd);
@@ -2460,7 +2502,7 @@ export default {
         this.listItem[index].surveyData.value = findItem.initialValue;
         event.currentTarget?.classList?.add("custom-input-edited");
         // -----初期文字列
-        const currentDLL = document.getElementById("text_" + index);
+        const currentDLL = getScopedElementById("text_" + index, this);
         if (currentDLL.value === null || currentDLL.value === "" || currentDLL.value === "1") {
           this.listItem[index].surveyData.text = this.checkText(findItem.initialString);
           currentDLL?.classList?.add("custom-select-edited");
@@ -2513,14 +2555,14 @@ export default {
       } else {
         event.currentTarget.classList.remove("custom-input-edited");
       }
-      this.$forceUpdate();
+      this.requestViewForceUpdate();
     },
     // (一覧)既定値の一括更新
     updateDefaultValue() {
       // 一括更新処理
       for (var i = 0; i < this.listItem.length; i++) {
-        const targetInputBox = document.getElementById("value_" + i);
-        const targetDDL = document.getElementById("text_" + i);
+        const targetInputBox = getScopedElementById("value_" + i, this);
+        const targetDDL = getScopedElementById("text_" + i, this);
         const surveyTypeCd = this.listItem[i].surveyTypeCd;
         const mstSurveyTypeItem = this.mstSurveyType.find(item => item.surveyTypeCd === surveyTypeCd);
         // -----数値-----
@@ -2554,7 +2596,7 @@ export default {
     updateSelectedOption(event, name) {
       // 一括更新処理
       for (var i = 0; i < this.listItem.length; i++) {
-        const targetDDL = document.getElementById(name + "_" + i);
+        const targetDDL = getScopedElementById(name + "_" + i, this);
         if (targetDDL != null) {
           const currentValue = Number(event.currentTarget.value);
           targetDDL.value = currentValue;
@@ -2582,7 +2624,7 @@ export default {
       const replaceOptionList = this.replaceOptionList(optionList);
       const options = this.getOptions(replaceOptionList);
       const replaceOptions = this.replaceOptions(options);
-      const select = this.getSelect(replaceOptions);
+      const select = this.getSelect(replaceOptions, event.currentTarget?.ownerDocument);
       // (採取者・検査者)オプションの削除
       while (0 < event.currentTarget.childNodes.length) {
         const childNode = event.currentTarget.childNodes[0];
@@ -2612,7 +2654,7 @@ export default {
     changeParentSelectedOption(event) {
       const optionList = this.getOptionList(event.currentTarget);
       const options = this.getOptions(optionList);
-      const select = this.getSelect(options);
+      const select = this.getSelect(options, event.currentTarget?.ownerDocument);
       // (採取者・検査者)オプションの削除
       while (0 < event.currentTarget.childNodes.length) {
         const childNode = event.currentTarget.childNodes[0];
@@ -2626,7 +2668,7 @@ export default {
       const optionList = this.getOptionList(event.currentTarget);
       
       const options = this.getOptions(optionList);
-      const select = this.getSelect(options);
+      const select = this.getSelect(options, event.currentTarget?.ownerDocument);
       // (採取者・検査者)オプションの削除
       while (0 < event.currentTarget.childNodes.length) {
         const childNode = event.currentTarget.childNodes[0];
@@ -2692,10 +2734,11 @@ export default {
       return mainOptions.concat(sortedOptions);
     },
     // (採取者・検査者)選択肢の取得
-    getSelect(options) {
-      const select = document.createElement("select");
+    getSelect(options, ownerDocument = null) {
+      const targetDocument = ownerDocument || this.$el?.ownerDocument || document;
+      const select = targetDocument.createElement("select");
       options.forEach(item => {
-        const option = document.createElement("option");
+        const option = targetDocument.createElement("option");
         option.text = item.text;
         option.value = item.value;
         if (item.value === "0") {
@@ -2805,7 +2848,7 @@ export default {
       const filterSurveyType = this.mstSurveyType.filter(item => item.surveyTypeCd !== surveyTypeCd);
       filterSurveyType.forEach(item => {
         const targetId = "value-" + item.surveyTypeCd;
-        const targetTextBox = document.getElementById(targetId);
+        const targetTextBox = getScopedElementById(targetId, this);
         if (targetTextBox != null) {
           const val = targetTextBox.value != null ? targetTextBox.value.length : 0;
           inputBoxLengths.push(val);
@@ -2818,7 +2861,7 @@ export default {
       const inputBoxLengthList = [];
       for (var i = 0; i < this.listItem.length; i++) {
         const targetId = name + "_" + i;
-        const targetTextBox = document.getElementById(targetId);
+        const targetTextBox = getScopedElementById(targetId, this);
         if (targetTextBox != null) {
           const val = targetTextBox.value != null ? targetTextBox.value.length : 0;
           inputBoxLengthList.push(val);
@@ -2846,7 +2889,7 @@ export default {
      */
     setDefaultTime(listItem) {
       if (listItem.surveyData.value !== "" && listItem.surveyData.time === "") {
-        listItem.surveyData.time = moment(new Date().getTime()).format("HH:mm");
+        listItem.surveyData.time = dayjs(new Date().getTime()).format("HH:mm");
       }
     },
     // 昇順/降順のclassを作成
@@ -2870,8 +2913,15 @@ export default {
   font-size: inherit !important;
 }
 
-.k-content,
+.result-modal :deep(.k-content),
 .display-area {
+  overflow: auto;
+  /* del FNSI-改修内容6374修正 xuty start */
+  /* min-width: 120em; */
+  /* del FNSI-改修内容6374修正 xuty end */
+}
+
+.result-modal :deep(.k-tabstrip-content) {
   overflow: auto;
   /* del FNSI-改修内容6374修正 xuty start */
   /* min-width: 120em; */
@@ -2887,7 +2937,7 @@ export default {
 }
 
 /** padding を上書き補正*/
-.k-tabstrip > .k-content {
+.result-modal :deep(.k-tabstrip > .k-content) {
   padding: 1.5rem;
   /** 一瞬余分なスクロールバーが発生する為 */
   /* del FNSI-改修内容「ヘッダー」を「固定」に変更 江 start */
@@ -2899,23 +2949,55 @@ export default {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }
-.k-state-active {
+
+.result-modal :deep(.k-tabstrip-content.k-content) {
+  /*
+   * Vue2 では、この画面のタブ内容 div 自体が k-content になり、
+   * template の inline style="padding:0px" が最終表示に効いていた。
+   * Vue3/Kendo 2026 では k-tabstrip-content が外側 wrapper になるため、
+   * Vue2 の最終 DOM 表示に合わせて、この画面の wrapper padding だけを 0 に戻す。
+   */
+  padding: 0;
+  background-color: var(--ntss-base-background-color);
+  color: var(--ntss-base-color);
+}
+
+.result-modal :deep(.k-tabstrip-content:focus),
+.result-modal :deep(.k-tabstrip-content.k-focus),
+.result-modal :deep(.k-tabstrip>.k-content:focus),
+.result-modal :deep(.k-tabstrip>.k-content.k-focus) {
+  outline-color: transparent !important;
+}
+
+.result-modal :deep(.k-tabstrip-top>.k-content),
+.result-modal :deep(.k-tabstrip-top>.k-tabstrip-content) {
+  border-block-start-width: 1px !important;
+}
+.result-modal :deep(.k-state-active) {
   background-color: var(--ntss-base-background-color) !important;
   border-color: var(--ntss-border-color) !important;
   /* del 6374 水質検査結果登録画面レイアウト不備 張 start  */
   /* border-bottom-color: transparent !important; */
   /* del 6374 水質検査結果登録画面レイアウト不備 張 end */
 }
-.k-tabstrip-items {
+
+.result-modal :deep(.k-active) {
+  background-color: var(--ntss-base-background-color) !important;
+  border-color: var(--ntss-border-color) !important;
+  /* del 6374 水質検査結果登録画面レイアウト不備 張 start  */
+  /* border-bottom-color: transparent !important; */
+  /* del 6374 水質検査結果登録画面レイアウト不備 張 end */
+}
+.result-modal :deep(.k-tabstrip-items) {
   border-color: var(--ntss-border-color) !important;
   font-size: 1.5em;
 }
 
-.k-tabstrip-items li.k-item:first-child {
+.result-modal :deep(.k-tabstrip-items li.k-item:first-child) {
   border-right: unset !important;
 }
 
-.k-tabstrip-items .k-item {
+.result-modal :deep(.k-tabstrip-items .k-item) {
   border-radius: unset !important;
   border: 1px solid transparent;
   width: 7em;
@@ -2966,16 +3048,53 @@ table.grid-record-list td > * {
 .ntss-list-header-th-sticky {
   z-index: 1;
   white-space: unset;
-  /* mod FNSI-バグ 水質管理532 徐 start */
-  /* add FNSI-保存ボタン上の線との間に隙間がないように修正する。 周 start */
-  /* top: -25px; */
-  /* add FNSI-保存ボタン上の線との間に隙間がないように修正する。 周 end */
+   
+   
+   
+   
   top: -1px;
-  /* mod FNSI-バグ 水質管理532 徐 end */
+   
 }
 
-.result-modal >>> .k-tabstrip-wrapper {
+/* mod FNSI-バグ 水質管理532 徐 start */
+/* add FNSI-保存ボタン上の線との間に隙間がないように修正する。 周 start */
+/* top: -25px; */
+/* add FNSI-保存ボタン上の線との間に隙間がないように修正する。 周 end */
+/* mod FNSI-バグ 水質管理532 徐 end */
+.result-modal :deep(.k-tabstrip-wrapper),
+.result-modal :deep(.k-tabstrip.k-widget) {
   height: 100% !important;
+}
+
+/*
+ * Vue2 の WaterResultModal は kendo-tabstrip-wrapper が body 高さを受け、
+ * その中で一括/一覧タブの内容領域が残り高さを使う。
+ * Vue3/Kendo 2026 では items/content-wrapper が増えるため、
+ * この画面の高さ契約だけを page 側で flex に戻す。
+ */
+.result-modal :deep(.k-tabstrip.k-widget) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.result-modal :deep(.k-tabstrip-items-wrapper),
+.result-modal :deep(.k-tabstrip-items) {
+  flex: 0 0 auto;
+}
+
+.result-modal :deep(.k-tabstrip-content-wrapper),
+.result-modal :deep(.k-tabstrip > .k-content) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.result-modal :deep(.k-tabstrip-content.k-content),
+.result-modal :deep(.k-tabstrip > .k-content) {
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
 }
 
 .multi-result {
@@ -3200,7 +3319,7 @@ th {
   color: green;
   font-weight: bold;
 }
-.custom-input-edited >>> input {
+.custom-input-edited :deep(input) {
   border: 2px #008000 solid !important;
   color: #1f1f21 !important;
   outline: 0 !important;
@@ -3214,7 +3333,7 @@ th {
 }
 /* add FNSI-改修内容「水質管理の表示」を「修正」に変更 江 end */
 /* add FNSI-保存ボタン上の線との間に隙間がないように修正する。 周 start */
-.k-widget.k-header.k-tabstrip.k-floatwrap.k-tabstrip-top{
+.result-modal :deep(.k-widget.k-header.k-tabstrip.k-floatwrap.k-tabstrip-top) {
   overflow-y: auto;
 }
 /* add FNSI-保存ボタン上の線との間に隙間がないように修正する。 周 end */
@@ -3233,7 +3352,7 @@ th {
 
 @media print {
   /** 横向き印刷時は横幅を収める */
-  .modal-mask >>> .modal-container {
+  .modal-mask :deep(.modal-container) {
     width: 99% !important;
   }
   .single-result {
@@ -3241,7 +3360,7 @@ th {
     width: fit-content;
     height: auto !important;
   }
-  .result-modal >>> .k-tabstrip-wrapper {
+  .result-modal :deep(.k-tabstrip-wrapper) {
     margin-left: -10px;
   }
   .result-modal .k-content {
@@ -3251,14 +3370,14 @@ th {
   td {
     padding: 0 3px 0 3px;
   }
-  
+
   /* 改ページ制御 */
   .fixed-area tr,
   .scroll-area tr {
     break-inside: avoid;
     page-break-inside: avoid;
   }
-  
+
   /*
    * 固定列
    */
@@ -3269,8 +3388,8 @@ th {
   }
   .sticky-col-checkbox {
     width: 1em;
-  } 
-   /* 装置名 */
+  }
+  /* 装置名 */
   .fixed-area table th:nth-child(2),
   .fixed-area table td:nth-child(2) { width: 10em !important; min-width: 10em !important; max-width: 10em !important; }
   /* 種別 */
@@ -3289,7 +3408,7 @@ th {
   /* 採取時刻 */
   .scroll-area table th:nth-child(2),
   .scroll-area table td:nth-child(2),
-  .scroll-area >>> .time-wrapper { width: 6em !important; min-width: 6em !important; max-width: 6em !important; }
+  .scroll-area :deep(.time-wrapper) { width: 6em !important; min-width: 6em !important; max-width: 6em !important; }
   /* 採取者 */
   .scroll-area table th:nth-child(3),
   .scroll-area table td:nth-child(3) { width: 7em !important; min-width: 7em !important; max-width: 7em !important; }
@@ -3305,10 +3424,26 @@ th {
   .scroll-area table th:nth-child(6),
   .scroll-area table td:nth-child(6),
   .memo { width: 8em !important; min-width: 8em !important; max-width: 8em !important; }
-  
+
   /* フッターボタン*/
   .flex-container {
     justify-content: unset;
+  }
+}
+:deep(.result-modal .k-tabstrip-items .k-item:not(.k-active):active){
+  background-color: #72a8de !important;
+  color: #ffffff !important;
+}
+:deep(.time-input .k-icon.k-i-close) {
+  position: absolute !important;
+  top: calc(50% + 1px) !important;
+  transform: translateY(-50%) !important;
+}
+@supports (-webkit-touch-callout: none) {
+  :deep(.time-input .k-icon.k-i-close.close-btn::before) {
+    top: -3px !important;
+    -webkit-transform: translateY(-3px) !important;
+    transform: translateY(-3px) !important;
   }
 }
 </style>

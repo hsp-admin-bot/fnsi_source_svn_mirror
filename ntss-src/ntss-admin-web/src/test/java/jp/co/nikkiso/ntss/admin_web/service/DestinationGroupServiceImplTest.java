@@ -11,7 +11,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import jp.co.nikkiso.ntss.admin_web.response.destinationGroup.DestinationGroupNameResponse;
@@ -31,7 +31,7 @@ public class DestinationGroupServiceImplTest {
   /**
    * 送信先グループDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstDestinationGroupDao destinationGroupDao;
 
   /**

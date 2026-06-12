@@ -32,10 +32,6 @@ export default {
       return !isDetailHeaderView;
     }
   },
-  methods: {},
-  mounted() {},
-  created() {},
-  destroyed() { },
-  watch: {}
+
 };
 </script>

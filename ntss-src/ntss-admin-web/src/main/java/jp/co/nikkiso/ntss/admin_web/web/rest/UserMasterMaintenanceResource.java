@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import jp.co.nikkiso.ntss.core.dao.MstFacilityDao;
+import jp.co.nikkiso.ntss.core.dao.MstPersonalUserDao;
 import jp.co.nikkiso.ntss.core.entity.MstFacility;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
@@ -31,13 +33,18 @@ import jp.co.nikkiso.ntss.admin_web.service.FacilitySettingService;
 import jp.co.nikkiso.ntss.admin_web.service.MstFacilityService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.master.user.MstUserService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
+import jp.co.nikkiso.ntss.core.entity.MstPersonalUser;
+import jp.co.nikkiso.ntss.core.entity.MstUser;
+import jp.co.nikkiso.ntss.core.entity.MstUserAuthentication;
 import jp.co.nikkiso.ntss.core.entity.custom.MstUserData;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 利用者マスタ画面のResourceクラス.
@@ -46,6 +53,9 @@ import java.util.HashMap;
 @Slf4j
 @RequestMapping(Uri.MASTER_MAINTENANCE)
 public class UserMasterMaintenanceResource {
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
 
   /**
    * 利用者一覧Service.
@@ -74,6 +84,11 @@ public class UserMasterMaintenanceResource {
   @Autowired
   private MstFacilityDao mstFacilityDao;
 
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+  @Autowired
+  private MstPersonalUserDao mstPersonalUserDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
   /**
    * 利用者マスタデータ取得.
    *
@@ -83,6 +98,12 @@ public class UserMasterMaintenanceResource {
    */
   @GetMapping("/mst_user/{facilityCd}")
   public ResponseEntity<?> getMasterData(@PathVariable String facilityCd, @AuthenticationPrincipal NtssUser ntssUser) {
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+        if (!hasFacilityAccess(ntssUser, facilityCd)) {
+            return new ResponseEntity<>("security check error", HttpStatus.FORBIDDEN);
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -112,6 +133,12 @@ public class UserMasterMaintenanceResource {
    */
   @GetMapping("/mst_user/mst_personal_user/{facilityCd}")
   public ResponseEntity<?> getMasterUserJobData(@PathVariable String facilityCd, @AuthenticationPrincipal NtssUser ntssUser) {
+// #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+        if (!hasFacilityAccess(ntssUser, facilityCd)) {
+            return new ResponseEntity<>("security check error", HttpStatus.FORBIDDEN);
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -141,6 +168,12 @@ public class UserMasterMaintenanceResource {
    */
   @GetMapping("/mst_user/sortList/{facilityCd}")
   public ResponseEntity<?> getSortMasterData(@PathVariable String facilityCd, @AuthenticationPrincipal NtssUser ntssUser) {
+// #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+        if (!hasFacilityAccess(ntssUser, facilityCd)) {
+            return new ResponseEntity<>("security check error", HttpStatus.FORBIDDEN);
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -196,7 +229,15 @@ public class UserMasterMaintenanceResource {
    *
    */
   @GetMapping("/mst_user/mst_job/{facilityCd}")
-  public ResponseEntity<?> getJobData(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getJobData(@PathVariable String facilityCd,
+                                      @RequestParam(required = false) Long selectedPatId,
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                        @AuthenticationPrincipal NtssUser ntssUser
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -223,7 +264,17 @@ public class UserMasterMaintenanceResource {
    *
    */
   @GetMapping("/mst_user/add_user/{facilityCd}")
-  public ResponseEntity<?> insertNewUser(@PathVariable String facilityCd) {
+  public ResponseEntity<?> insertNewUser(@PathVariable String facilityCd,
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                            @AuthenticationPrincipal NtssUser ntssUser
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+        if (!hasFacilityAccess(ntssUser, facilityCd)) {
+            return new ResponseEntity<>("security check error", HttpStatus.FORBIDDEN);
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -241,7 +292,17 @@ public class UserMasterMaintenanceResource {
    * @return
    */
   @GetMapping("/mst_user/get_vpn_set/{facilityCd}")
-  public ResponseEntity<?> getVpnSet(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getVpnSet(@PathVariable String facilityCd,
+                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                       @AuthenticationPrincipal NtssUser ntssUser
+                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if (!hasFacilityAccess(ntssUser, facilityCd)) {
+          return new ResponseEntity<>("security check error", HttpStatus.FORBIDDEN);
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     String loginUrl = "";
     HashMap<String, String> resData = new HashMap<>();
     // 施設マスタのVPNセットを取得
@@ -404,7 +465,23 @@ public class UserMasterMaintenanceResource {
    *
    */
   @PutMapping("/mst_user/administrator/{userId}/{adminFlg}")
-  public ResponseEntity<?> updateAdministratorFlg(@PathVariable String userId, @PathVariable String adminFlg) {
+  public ResponseEntity<?> updateAdministratorFlg(@PathVariable String userId, @PathVariable String adminFlg,
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                    @AuthenticationPrincipal NtssUser ntssUser
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstPersonalUser userInfo = mstInfoService.selectMstPersonalUserByUserId(Long.valueOf(userId));
+        if (userInfo != null && userInfo.getFacilityCd() != null && !userInfo.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                  "userInfo.getFacilityCd()=" + userInfo.getFacilityCd() + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -433,7 +510,23 @@ public class UserMasterMaintenanceResource {
    *
    */
   @PutMapping("/mst_user/patientShared/{userId}/{patientSharedFlg}")
-  public ResponseEntity<?> updatePatientSharedFlg(@PathVariable String userId, @PathVariable String patientSharedFlg) {
+  public ResponseEntity<?> updatePatientSharedFlg(@PathVariable String userId, @PathVariable String patientSharedFlg,
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                     @AuthenticationPrincipal NtssUser ntssUser
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+       if(!ntssUser.isNkkAdminUser()) {
+         MstPersonalUser userInfo = mstInfoService.selectMstPersonalUserByUserId(Long.valueOf(userId));
+         if (userInfo != null && userInfo.getFacilityCd() != null && !userInfo.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+           // #11205 mod 20260421 start
+           String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "userId=" + userId + " " + "userInfo.getFacilityCd()=" + userInfo.getFacilityCd();
+           InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+           return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+           // #11205 mod 20260421 end
+         }
+       }
+       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -490,7 +583,17 @@ public class UserMasterMaintenanceResource {
    *
    */
   @GetMapping("/mst_user/password/{facilityCd}/{userId}")
-  public ResponseEntity<?> updatePassword(@PathVariable String facilityCd, @PathVariable String userId) {
+  public ResponseEntity<?> updatePassword(@PathVariable String facilityCd, @PathVariable String userId,
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                            @AuthenticationPrincipal NtssUser ntssUser
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+        if (!hasFacilityAccess(ntssUser, facilityCd) || !hasPersonalUserAccess(ntssUser, Long.valueOf(userId))) {
+            return new ResponseEntity<>("security check error", HttpStatus.FORBIDDEN);
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -510,7 +613,17 @@ public class UserMasterMaintenanceResource {
   *
   */
   @GetMapping("/mst_user/pat_password/{facilityCd}/{userId}")
-  public ResponseEntity<?> updatePatPassword(@PathVariable String facilityCd, @PathVariable String userId) {
+  public ResponseEntity<?> updatePatPassword(@PathVariable String facilityCd, @PathVariable String userId,
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+        if (!hasFacilityAccess(ntssUser, facilityCd) || !hasPersonalUserAccess(ntssUser, Long.valueOf(userId))) {
+            return new ResponseEntity<>("security check error", HttpStatus.FORBIDDEN);
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -646,7 +759,25 @@ public class UserMasterMaintenanceResource {
    *
    */
   @PutMapping("/mst_user/failure_cnt/{userId}")
-  public ResponseEntity<?> updateFailureCnt(@PathVariable String userId) {
+  public ResponseEntity<?> updateFailureCnt(@PathVariable String userId,
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                              @AuthenticationPrincipal NtssUser ntssUser
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstUserAuthentication mstUserAuthentication = mstUserService.selectMstUserAuthenticationByUserId(Long.valueOf(userId));
+        if (mstUserAuthentication != null &&
+          mstUserAuthentication.getFacilityCd() != null &&
+          !mstUserAuthentication.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          // #11205 mod 20260421 start
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "userId=" + userId + " " + "mstUserAuthentication.getFacilityCd()=" + mstUserAuthentication.getFacilityCd();
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          // #11205 mod 20260421 end
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -673,7 +804,25 @@ public class UserMasterMaintenanceResource {
    *
    */
   @PutMapping("/mst_user/delete/{userId}")
-  public ResponseEntity<?> deleteUser(@PathVariable String userId) {
+  public ResponseEntity<?> deleteUser(@PathVariable String userId,
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                        @AuthenticationPrincipal NtssUser ntssUser
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstUser mstUser = mstUserService.getByUserId(Long.valueOf(userId));
+        if (mstUser != null &&
+          mstUser.getFacilityCd() != null &&
+          !mstUser.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                  "mstUser.getFacilityCd()=" + mstUser.getFacilityCd() + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -778,7 +927,17 @@ public class UserMasterMaintenanceResource {
    *
    */
   @GetMapping("/mst_user/user_email_address/{userEmailAddress}")
-  public ResponseEntity<?> getDeleteTargetEmailAddress(@PathVariable String userEmailAddress) {
+  public ResponseEntity<?> getDeleteTargetEmailAddress(@PathVariable String userEmailAddress,
+                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                         @AuthenticationPrincipal NtssUser ntssUser
+                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+        if (!hasUserEmailAccess(ntssUser, userEmailAddress)) {
+            return new ResponseEntity<>("security check error", HttpStatus.FORBIDDEN);
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -806,7 +965,25 @@ public class UserMasterMaintenanceResource {
    *
    */
   @PutMapping("/mst_user/user_email_address/delete")
-  public ResponseEntity<?> deleteEmailAddress(@RequestBody List<MstUserData> userEmailAddress) {
+  public ResponseEntity<?> deleteEmailAddress(@RequestBody List<MstUserData> userEmailAddress,
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                @AuthenticationPrincipal NtssUser ntssUser
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        for (MstUserData emailAddress : userEmailAddress) {
+          MstUser mstUser = mstUserService.getByUserId(emailAddress.getUserId());
+          if (mstUser != null && mstUser.getFacilityCd() != null && !mstUser.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                    "mstUser.getFacilityCd()=" + mstUser.getFacilityCd() + " ";
+            InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -834,7 +1011,23 @@ public class UserMasterMaintenanceResource {
    *
    */
   @PutMapping("/mst_user/chg_job/{userId}/{jobCd}")
-  public ResponseEntity<?> updateJobCd(@PathVariable String userId, @PathVariable String jobCd) {
+  public ResponseEntity<?> updateJobCd(@PathVariable String userId, @PathVariable String jobCd,
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                         @AuthenticationPrincipal NtssUser ntssUser
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstPersonalUser userInfo = mstInfoService.selectMstPersonalUserByUserId(Long.valueOf(userId));
+        if (userInfo != null && userInfo.getFacilityCd() != null && !userInfo.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                  "userInfo.getFacilityCd()=" + userInfo.getFacilityCd() + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -862,7 +1055,23 @@ public class UserMasterMaintenanceResource {
    *
    */
   @PutMapping("/mst_user/updatePersonalInfo")
-  public ResponseEntity<?> updateUserPersonalInfo(@RequestBody MstUserData userPersonalInfo) {
+  public ResponseEntity<?> updateUserPersonalInfo(@RequestBody MstUserData userPersonalInfo,
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                    @AuthenticationPrincipal NtssUser ntssUser
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstPersonalUser userInfo = mstInfoService.selectMstPersonalUserByUserId(userPersonalInfo.getUserId());
+        if (userInfo != null && userInfo.getFacilityCd() != null && !userInfo.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          // #11205 mod 20260421 start
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "userId=" + userPersonalInfo.getUserId() + " " + "userInfo.getFacilityCd()=" + userInfo.getFacilityCd();
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          // #11205 mod 20260421 end
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -893,7 +1102,22 @@ public class UserMasterMaintenanceResource {
   @PutMapping("/mst_user/mstSelecter/UpdIns/{facilityCd}")
   public ResponseEntity<?> updateMstUserSelecter(
     @PathVariable String facilityCd,
-    @RequestBody List<Map<String, Object>> data) {
+    @RequestBody List<Map<String, Object>> data,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+          // #11205 mod 20260421 start
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd;
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          // #11205 mod 20260421 end
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -910,7 +1134,7 @@ public class UserMasterMaintenanceResource {
       return new ResponseEntity<>(new MasterUpdateResponse(AdminWebMessage.Error.DB_UPDATE_ERROR.getMessage()),
           HttpStatus.BAD_REQUEST);
     }
-}
+  }
 
   /**
    * アクセスカードを無効
@@ -918,7 +1142,26 @@ public class UserMasterMaintenanceResource {
    * @return マスタデータ更新
    */
   @PutMapping("/mst_user/disableAccessCard/{userId}")
-  public ResponseEntity<?> disableAccessCard(@PathVariable(name = "userId", required = true) long userId) {
+  public ResponseEntity<?> disableAccessCard(@PathVariable(name = "userId", required = true) long userId,
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstUserAuthentication mstUserAuthentication = mstUserService.selectMstUserAuthenticationByUserId(Long.valueOf(userId));
+        if (mstUserAuthentication != null &&
+          mstUserAuthentication.getFacilityCd() != null &&
+          !mstUserAuthentication.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          // #11205 mod 20260421 start
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "userId=" + userId + " " + "mstUserAuthentication.getFacilityCd()=" + mstUserAuthentication.getFacilityCd();
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          // #11205 mod 20260421 end
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     try {
       MasterUpdateResponse response = mstUserService.disableAccessCard(userId);
       return new ResponseEntity<>(response, HttpStatus.OK);
@@ -939,7 +1182,23 @@ public class UserMasterMaintenanceResource {
    *
    */
   @PutMapping("/mst_user/upd_signin_date/{userId}")
-  public ResponseEntity<?> updateSigninDate(@PathVariable String userId) {
+  public ResponseEntity<?> updateSigninDate(@PathVariable String userId,
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                              @AuthenticationPrincipal NtssUser ntssUser
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstPersonalUser userInfo = mstInfoService.selectMstPersonalUserByUserId(Long.valueOf(userId));
+        if (userInfo != null && userInfo.getFacilityCd() != null && !userInfo.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                  "userInfo.getFacilityCd()=" + userInfo.getFacilityCd() + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     try {
       MasterUpdateResponse response = mstUserService.updateSigninDate(Long.parseLong(userId));
       return new ResponseEntity<>(response, HttpStatus.OK);
@@ -951,4 +1210,54 @@ public class UserMasterMaintenanceResource {
           HttpStatus.BAD_REQUEST);
     }
   }
+
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+      boolean hasAccess = ntssUser == null
+        || ntssUser.isNkkAdminUser()
+        || facilityCd == null
+        || facilityCd.isEmpty()
+        || facilityCd.equals(ntssUser.getFacilityCd());
+      // #11205 mod 20260421 start
+      if (!hasAccess) {
+        InvestigateLogUtils.info("UserMasterMaintenanceResource.hasFacilityAccess", "facilityCd=" + facilityCd + ", ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null"));
+      }
+      // #11205 mod 20260421 end
+      return hasAccess;
+    }
+
+  private boolean hasPersonalUserAccess(NtssUser ntssUser, Long userId) {
+      if (ntssUser == null || ntssUser.isNkkAdminUser() || userId == null) {
+        return true;
+      }
+
+      MstPersonalUser userInfo = mstInfoService.selectMstPersonalUserByUserId(userId);
+      boolean hasAccess = userInfo == null
+        || userInfo.getFacilityCd() == null
+        || userInfo.getFacilityCd().equals(ntssUser.getFacilityCd());
+      // #11205 mod 20260421 start
+      if (!hasAccess) {
+        InvestigateLogUtils.info("UserMasterMaintenanceResource.hasPersonalUserAccess", "userId=" + userId + ", userInfo.getFacilityCd()=" + userInfo.getFacilityCd() + ", ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd());
+      }
+      // #11205 mod 20260421 end
+      return hasAccess;
+    }
+
+  private boolean hasUserEmailAccess(NtssUser ntssUser, String userEmailAddress) {
+      if (ntssUser == null || ntssUser.isNkkAdminUser()) {
+        return true;
+      }
+
+      List<MstPersonalUser> personalUserList = mstPersonalUserDao.selectByUserEmailAddressList(userEmailAddress);
+      for (MstPersonalUser mstPersonalUser : personalUserList) {
+        String facilityCd = mstPersonalUser.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() && !facilityCd.equals(ntssUser.getFacilityCd())) {
+          // #11205 mod 20260421 start
+          InvestigateLogUtils.info("UserMasterMaintenanceResource.hasUserEmailAccess", "userEmailAddress=" + userEmailAddress + ", facilityCd=" + facilityCd + ", ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd());
+          return false;
+          // #11205 mod 20260421 end
+        }
+      }
+
+      return true;
+    }
 }

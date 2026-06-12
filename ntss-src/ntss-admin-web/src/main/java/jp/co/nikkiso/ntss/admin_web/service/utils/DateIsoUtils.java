@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.admin_web.service.utils;
 
-import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;

@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.response.statusList;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ArrayNode;
 
 import jp.co.nikkiso.ntss.admin_web.response.FlagAndMessageBaseResponse;
 import lombok.Getter;

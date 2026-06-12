@@ -4,13 +4,12 @@ spring:
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration,
              org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
-  data:
-    mongodb:
-      host: 192.168.100.11
-      port: 27017
-      database: ntss
-      username: nkk
-      password: nkk
+  mongodb:
+    host: 192.168.100.11
+    port: 27017
+    database: ntss
+    username: nkk
+    password: nkk
   datasource:
     default:
       jdbc-url: jdbc:postgresql://192.168.100.10:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified

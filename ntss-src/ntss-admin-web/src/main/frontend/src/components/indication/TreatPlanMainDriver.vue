@@ -112,8 +112,7 @@
 </template>
 
 <script>
-/* eslint-disable */
-// import Vue from 'vue';
+// import Vue from "@/compat/vue/runtime";
 import TreatPlanCopy from "@/components/indication/TreatPlanCopy";
 import TreatPlanMove from "@/components/indication/TreatPlanMove";
 import ChangeDayOfWeekPattern from "@/components/indication/ChangeDayOfWeekPattern";

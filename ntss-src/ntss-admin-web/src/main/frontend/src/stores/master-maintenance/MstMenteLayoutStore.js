@@ -2,14 +2,13 @@ import {
   sendRequestGetMachineTypeList,
   sendRequestGetAllMachineByFacilityCd,
   sendRequestGetAllCategoryByFacilityCd,
-  senRequestGetListLayoutByLayoutClassAndFacilityCd
+  sendRequestGetListLayoutByLayoutClassAndFacilityCd
 } from "@/apis/mst-mente-layout";
 
 export default {
   namespaced: true,
   strict: true,
   state: {
-    // 型式マスタリスト（全件）
     machineTypeList: [],
     listMachine: [],
     categoryList: [],
@@ -49,10 +48,14 @@ export default {
         commit("setCategoryList", data);
       });
     },
-    async senRequestGetListLayoutByLayoutClassAndFacilityCd({ commit }, facilityCd) {
-      await senRequestGetListLayoutByLayoutClassAndFacilityCd(facilityCd).then(res => {
+    async sendRequestGetListLayoutByLayoutClassAndFacilityCd({ commit }, facilityCd) {
+      await sendRequestGetListLayoutByLayoutClassAndFacilityCd(facilityCd).then(res => {
         commit("setLayoutGroupList", res.data);
       });
+    },
+    /** @deprecated 旧アクション名のタイポ互換 */
+    async senRequestGetListLayoutByLayoutClassAndFacilityCd({ dispatch }, facilityCd) {
+      return dispatch("sendRequestGetListLayoutByLayoutClassAndFacilityCd", facilityCd);
     },
   },
   mutations: {

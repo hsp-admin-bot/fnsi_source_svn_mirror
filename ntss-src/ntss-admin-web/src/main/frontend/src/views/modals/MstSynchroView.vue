@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="close">
-    <div slot="body" class="div-mst-synchro">
+    <template #body>
+      <div class="div-mst-synchro">
       <div class="div-list">
         <p>マスタ選択</p>
         <hr>
@@ -31,8 +32,10 @@
           </option>
         </v-ons-select>
       </div>
-    </div>
-    <div slot="footer" class="flex-container">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <button class="button btn2-cancel denial-btn" @click="close">閉じる</button>
       </div>
@@ -43,14 +46,15 @@
       <div class="registration-btn-area" style="background:none">
         <button class="button btn1-execute registration-btn" @click="startSynchro">同期開始</button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
@@ -107,8 +111,7 @@ export default {
     isDeviceEdgeList() {
       return (
         -1 !==
-        this.isDisabledDeviceEdgeList.findIndex(e => e === this.selectMstTable)
-      );
+        this.isDisabledDeviceEdgeList.findIndex(e => e === this.selectMstTable));
     }
   },
   methods: {
@@ -219,8 +222,7 @@ export default {
               // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
             });
           }
-        }
-      );
+        });
     }
 
     // 初期選択
@@ -242,7 +244,7 @@ export default {
 .alert-style {
   width: auto;
 }
-.div-mst-synchro>>>.select-input {
+.div-mst-synchro :deep(.select-input) {
   font-size: 1em;
   line-height: 1em;
 }

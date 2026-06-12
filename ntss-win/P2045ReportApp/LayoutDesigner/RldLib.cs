@@ -1555,7 +1555,8 @@ namespace LayoutDesigner
             try
             {
                 // sys_data_setの全レコードを読み込む
-                NKKWebAccessResponse wRestRet = await NKKWebAccess.Get("sys_data_set取得", $"{NKKWebAccess.BaseUri}{RldConst.Uri.WEB_APP}/api/report_designer/sys_data_sets/", NKKWebAccess.SKIP_OTP);
+                //NKKWebAccessResponse wRestRet = await NKKWebAccess.Get("sys_data_set取得", $"{NKKWebAccess.BaseUri}{RldConst.Uri.WEB_APP}/api/report_designer/sys_data_sets/", NKKWebAccess.SKIP_OTP);
+                NKKWebAccessResponse wRestRet = await NKKWebAccess.Get("sys_data_set取得", $"{NKKWebAccess.BaseUri}{RldConst.Uri.WEB_APP}/api/report_designer/sys_data_sets", NKKWebAccess.SKIP_OTP);
 
                 // 属性値が異なっていればセットするローカル関数
                 void setIfNotEqual(System.Xml.XmlAttribute attribute, string value)

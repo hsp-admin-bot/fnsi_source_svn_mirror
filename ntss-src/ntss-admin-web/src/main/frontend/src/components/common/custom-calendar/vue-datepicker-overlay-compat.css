@@ -1,0 +1,691 @@
+/* Vue2 Pikaday month/year and day-state visual compatibility.
+   Scope only to shared custom-calendar @vuepic menu/panel instances. */
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year {
+  position: relative !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 26px !important;
+  color: var(--ntss-calendar-title-label-color) !important;
+  background-color: var(--ntss-calendar-title-label-background-color) !important;
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%, transparent 50%, transparent 50%, rgba(0,0,0,.1) 100%) !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-title {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-label {
+  position: relative !important;
+  display: inline-block !important;
+  box-sizing: border-box !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 5px 3px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  color: var(--ntss-calendar-title-label-color) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 20px !important;
+  cursor: pointer !important;
+  overflow: hidden !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-label:hover,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-label:focus-within {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  color: var(--ntss-calendar-title-label-color) !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-label > span {
+  display: inline-block !important;
+  pointer-events: none !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select {
+  position: absolute !important;
+  z-index: 9998 !important;
+  top: 5px !important;
+  left: 0 !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  width: auto !important;
+  min-width: 100% !important;
+  max-width: none !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  color: #000000 !important;
+  font-size: 14px !important;
+  line-height: normal !important;
+  opacity: 0 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  appearance: auto !important;
+  -webkit-appearance: menulist !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-year-select {
+  min-width: 55px !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-select {
+  min-width: 45px !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  font-size: 14px !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option:checked {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  background-image: linear-gradient(#ffffff, #ffffff) !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .dp__btn.dp--arrow-btn-nav {
+  position: absolute !important;
+  top: 0 !important;
+  z-index: 1 !important;
+  width: 26px !important;
+  min-width: 26px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: transparent !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  overflow: hidden !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .ntss-calendar-nav-prev {
+  left: 0 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .ntss-calendar-nav-next {
+  right: 0 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .dp__btn.dp--arrow-btn-nav::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: 0 !important;
+  height: 0 !important;
+  transform: translate(-50%, -50%) !important;
+  opacity: .85 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .ntss-calendar-nav-prev::before {
+  margin-left: -1px !important;
+  border-top: 5px solid transparent !important;
+  border-bottom: 5px solid transparent !important;
+  border-right: 6px solid #25485a !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .ntss-calendar-nav-next::before {
+  margin-left: 1px !important;
+  border-top: 5px solid transparent !important;
+  border-bottom: 5px solid transparent !important;
+  border-left: 6px solid #25485a !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__date_hover:not(.dp__active_date):not(:hover) {
+  background: transparent !important;
+  text-decoration: none !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__date_hover.dp__cell_offset:not(.dp__active_date):not(:hover) .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__date_hover.dp__cell_disabled:not(.dp__active_date):not(:hover) .ntss-calendar-day {
+  color: #c5c5c5 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__date_hover:hover,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__pointer:hover {
+  background-color: var(--ntss-calendar-button-hover-background-color) !important;
+  color: #ffffff !important;
+  text-decoration: underline !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__date_hover:hover .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__pointer:hover .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__active_date:hover .ntss-calendar-day {
+  color: #ffffff !important;
+}
+
+/* Vue2 Pikaday parity: the month-year slot must occupy the full header width;
+   otherwise the @vuepic wrapper flex metrics pull the nav arrows toward the title. */
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp--header-wrap,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp--header-wrap > .dp__month_year_wrap,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__month_year_wrap:has(.ntss-calendar-month-year) {
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year {
+  position: relative !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 28px !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-title {
+  height: 30px !important;
+  min-height: 30px !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .ntss-calendar-nav {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: auto !important;
+  width: 26px !important;
+  min-width: 26px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .ntss-calendar-nav-prev {
+  left: 4px !important;
+  right: auto !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .ntss-calendar-nav-next {
+  left: auto !important;
+  right: 4px !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .ntss-calendar-nav::before {
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+/* Vue2 Pikaday: days from previous/next month are displayed but not selectable
+   unless a dedicated opt-in exists.  @vuepic marks them as offset cells, so
+   block pointer selection and keep their visual state disabled. */
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__calendar_item:has(.dp__cell_offset) {
+  pointer-events: none !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_offset:not(.has-event),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_disabled:not(.has-event) {
+  cursor: default !important;
+  pointer-events: none !important;
+  background: transparent !important;
+  color: #c5c5c5 !important;
+  text-decoration: none !important;
+  opacity: 1 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_offset:not(.has-event) .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_disabled:not(.has-event) .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-disabled:not(.has-event) {
+  color: #c5c5c5 !important;
+  cursor: default !important;
+  text-decoration: none !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_offset:not(.has-event):hover,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_disabled:not(.has-event):hover {
+  background: transparent !important;
+  color: #c5c5c5 !important;
+  text-decoration: none !important;
+}
+
+/* Vue2 Pikaday hover: hover/active selectable day uses gray background with white text,
+   while the selected day keeps the selected blue background. */
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__date_hover:not(.dp__cell_offset):not(.dp__cell_disabled):not(.dp__active_date):not(:has(.ntss-calendar-day.custom-span-selected)):hover,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__pointer:not(.dp__cell_offset):not(.dp__cell_disabled):not(.dp__active_date):not(:has(.ntss-calendar-day.custom-span-selected)):hover {
+  background-color: #8a8a8a !important;
+  color: #ffffff !important;
+  text-decoration: underline !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__date_hover:not(.dp__cell_offset):not(.dp__cell_disabled):not(.dp__active_date):hover .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__pointer:not(.dp__cell_offset):not(.dp__cell_disabled):not(.dp__active_date):hover .ntss-calendar-day {
+  color: #ffffff !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__active_date,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__active_date:hover {
+  background: #3296db !important;
+  color: #ffffff !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__active_date .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__active_date:hover .ntss-calendar-day {
+  color: #ffffff !important;
+}
+
+/* Vue2 Pikaday default button background: selectable days in the displayed month
+   are slightly gray by default.  Offset/disabled days stay visually inactive and
+   must not inherit this active selectable-day background. */
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__pointer:not(.dp__cell_offset):not(.dp__cell_disabled):not(.dp__active_date):not(.dp__range_start):not(.dp__range_end):not(:hover):not(:has(> .has-event)):not(:has(.ntss-calendar-day.custom-span-selected)),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__date_hover:not(.dp__cell_offset):not(.dp__cell_disabled):not(.dp__active_date):not(.dp__range_start):not(.dp__range_end):not(:hover):not(:has(> .has-event)):not(:has(.ntss-calendar-day.custom-span-selected)) {
+  background-color: #f5f5f5 !important;
+  background-image: none !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_offset:not(.has-event),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_disabled:not(.has-event),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_offset:not(.has-event):not(:hover),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_disabled:not(.has-event):not(:hover) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_offset.dp__cell_disabled:not(.has-event):has(.custom-span-selected){
+  background-color: #00b050 !important;
+  opacity: 0.3 !important;
+  border-radius: 3px !important;
+  box-shadow: inset 0 1px 3px #0076c9 !important;
+}
+
+/* Vue2 Pikaday header metrics: keep a single continuous title bar, tighten
+   the year/month label gap, and pin previous/next arrows to the bar edges. */
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year {
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-title {
+  gap: 2px !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-label {
+  padding-left: 1px !important;
+  padding-right: 1px !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .ntss-calendar-nav,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .dp__btn.dp--arrow-btn-nav {
+  width: 24px !important;
+  min-width: 24px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .ntss-calendar-nav-prev {
+  left: 0 !important;
+  right: auto !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .ntss-calendar-nav-next {
+  left: auto !important;
+  right: 0 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .ntss-calendar-nav-prev::before {
+  margin-left: 0 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year .ntss-calendar-nav-next::before {
+  margin-left: 0 !important;
+}
+
+/* Vue2 Pikaday header full-width parity: @vuepic adds horizontal padding to
+   .dp__month_year_wrap, which shifts the custom previous/next buttons inward.
+   Reset that wrapper padding inside the custom-calendar menu so the title bar
+   and arrow hit areas align with the popup edges like Vue2. */
+.dp--menu-wrapper.ntss-custom-calendar-menu .dp__menu.ntss-custom-calendar-panel .dp--header-wrap,
+.dp__menu.ntss-custom-calendar-panel .dp--header-wrap {
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.dp--menu-wrapper.ntss-custom-calendar-menu .dp__menu.ntss-custom-calendar-panel .dp--header-wrap > .dp__month_year_wrap,
+.dp__menu.ntss-custom-calendar-panel .dp--header-wrap > .dp__month_year_wrap,
+.dp--menu-wrapper.ntss-custom-calendar-menu .dp__menu.ntss-custom-calendar-panel .dp__month_year_wrap:has(.ntss-calendar-month-year),
+.dp__menu.ntss-custom-calendar-panel .dp__month_year_wrap:has(.ntss-calendar-month-year) {
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+.dp--menu-wrapper.ntss-custom-calendar-menu .dp__menu.ntss-custom-calendar-panel .ntss-calendar-month-year,
+.dp__menu.ntss-custom-calendar-panel .ntss-calendar-month-year {
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 24px !important;
+}
+
+.dp--menu-wrapper.ntss-custom-calendar-menu .dp__menu.ntss-custom-calendar-panel .ntss-calendar-month-year .ntss-calendar-nav,
+.dp--menu-wrapper.ntss-custom-calendar-menu .dp__menu.ntss-custom-calendar-panel .ntss-calendar-month-year .dp__btn.dp--arrow-btn-nav,
+.dp__menu.ntss-custom-calendar-panel .ntss-calendar-month-year .ntss-calendar-nav,
+.dp__menu.ntss-custom-calendar-panel .ntss-calendar-month-year .dp__btn.dp--arrow-btn-nav {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+.dp--menu-wrapper.ntss-custom-calendar-menu .dp__menu.ntss-custom-calendar-panel .ntss-calendar-month-year .ntss-calendar-nav-prev,
+.dp__menu.ntss-custom-calendar-panel .ntss-calendar-month-year .ntss-calendar-nav-prev {
+  left: 0 !important;
+  right: auto !important;
+}
+
+.dp--menu-wrapper.ntss-custom-calendar-menu .dp__menu.ntss-custom-calendar-panel .ntss-calendar-month-year .ntss-calendar-nav-next,
+.dp__menu.ntss-custom-calendar-panel .ntss-calendar-month-year .ntss-calendar-nav-next {
+  left: auto !important;
+  right: 0 !important;
+}
+
+/* Vue2 Pikaday parity fine tuning after replacing @vuepic overlay with native select.
+   Keep selectable displayed-month day text black until it is actually selected or hovered. */
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__pointer:not(.dp__cell_offset):not(.dp__cell_disabled):not(.dp__active_date):not(.dp__today):not(.dp__range_start):not(.dp__range_end):not(:hover),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__date_hover:not(.dp__cell_offset):not(.dp__cell_disabled):not(.dp__active_date):not(.dp__today):not(.dp__range_start):not(.dp__range_end):not(:hover) {
+  color: #333333 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__pointer:not(.dp__cell_offset):not(.dp__cell_disabled):not(.dp__active_date):not(.dp__today):not(.dp__range_start):not(.dp__range_end):not(:hover) .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__date_hover:not(.dp__cell_offset):not(.dp__cell_disabled):not(.dp__active_date):not(.dp__today):not(.dp__range_start):not(.dp__range_end):not(:hover) .ntss-calendar-day {
+  color: #333333 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option {
+  color: #000000 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option:checked {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  background-image: linear-gradient(#ffffff, #ffffff) !important;
+}
+
+
+/* Vue2 Pikaday native select parity: selected/previously-selected item in the
+   opened year/month dropdown must keep black text; do not inherit Vue3 active-day white text. */
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option:checked,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option:checked:hover,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option:checked:focus {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  background-image: linear-gradient(#ffffff, #ffffff) !important;
+}
+
+/* Vue2 Pikaday native select inactive-selected parity.
+   In Chromium/Windows, the popup may keep the selected option text in the
+   system HighlightText color even after the blue highlight is no longer painted.
+   Force the inactive checked option back to black text, and only use white text
+   while the option is actually active/hovered. */
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  color-scheme: light !important;
+  text-shadow: none !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option:checked,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option:checked:not(:hover):not(:active):not(:focus) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
+  box-shadow: inset 0 0 0 1000px #ffffff !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option:checked:hover,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option:checked:active,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option:checked:focus,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option:hover,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option:active,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-month-year-select option:focus {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-color: #2b78d4 !important;
+  background-image: none !important;
+  box-shadow: inset 0 0 0 1000px #2b78d4 !important;
+}
+
+/* @vuepic floating-ui may paint at (0,0) before NTSS layout; hide until positioned. */
+body > .dp--menu-wrapper:has(.dp__menu.ntss-custom-calendar-panel):not(.ntss-custom-calendar-panel-positioned),
+.dp--menu-wrapper.ntss-custom-calendar-panel-positioning {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.dp__menu.ntss-custom-calendar-panel:not(.ntss-custom-calendar-panel-ready) {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 配列 selected-dates（TreatPlanCopy 等）: 選択可能な治療日も青背景 */
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.has-event:not(.has-custom-event):not(.is-disabled),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.has-event:not(.has-custom-event):not(.dp__cell_disabled) {
+  background: var(--ntss-calendar-button-is-disabled-background-color, #005da9) !important;
+  background-color: var(--ntss-calendar-button-is-disabled-background-color, #005da9) !important;
+  background-image: none !important;
+  border-radius: 3px !important;
+  opacity: 1 !important;
+  color: #ffffff !important;
+}
+
+/* ntss.css: 治療日ハイライトは disabled セルの transparent 指定より優先する */
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_offset.has-event.is-disabled:not(.has-custom-event),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_disabled.has-event.is-disabled:not(.has-custom-event),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_disabled.has-event.is-disabled:not(.has-custom-event):not(:hover),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.has-event.is-disabled:not(.has-custom-event) {
+  background: #005da9 !important;
+  background-color: #005da9 !important;
+  background-image: none !important;
+  box-shadow: inset 0 1px 3px #0076c9 !important;
+  border-radius: 3px !important;
+  opacity: 0.75 !important;
+  color: #ffffff !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_disabled.has-custom-event,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_disabled.has-custom-event:not(:hover),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.has-custom-event {
+  background: #9acd32 !important;
+  background-color: #9acd32 !important;
+  background-image: none !important;
+  border-radius: 3px !important;
+  opacity: 0.75 !important;
+  color: #ffffff !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_disabled.custom-span-selected.has-event,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.custom-span-selected.has-event {
+  background: #00b050 !important;
+  background-color: #00b050 !important;
+  background-image: none !important;
+  border-radius: 3px !important;
+  opacity: 1 !important;
+  color: #ffffff !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_disabled.custom-span-double-selected.has-event,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.custom-span-double-selected.has-event {
+  background: #adff2f !important;
+  background-color: #adff2f !important;
+  background-image: none !important;
+  border-radius: 3px !important;
+  opacity: 1 !important;
+  color: #ffffff !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.has-event:not(.has-custom-event):hover,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.has-custom-event:hover {
+  background-color: var(--ntss-calendar-button-is-disabled-background-color, #005da9) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  text-decoration: none !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.has-custom-event:hover {
+  background-color: #9acd32 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.has-event .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.has-custom-event .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.custom-span-selected.has-event .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.custom-span-double-selected.has-event .ntss-calendar-day {
+  color: #ffffff !important;
+  background: transparent !important;
+}
+
+/* 治療日ハイライト最終優先: 内層 span.has-event でも外層セルに反映（f5f5f5 / #33aaff より後勝ち） */
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner:has(> .ntss-calendar-day.has-event):not(:has(> .has-custom-event)):not(:has(> .is-disabled)):not(.is-disabled):not(.dp__cell_offset),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__pointer:has(> .ntss-calendar-day.has-event):not(:has(> .has-custom-event)):not(:has(> .is-disabled)):not(.is-disabled):not(.dp__cell_offset),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__date_hover:has(> .ntss-calendar-day.has-event):not(:has(> .has-custom-event)):not(:has(> .is-disabled)):not(.is-disabled):not(.dp__cell_offset) {
+  background: var(--ntss-calendar-button-is-disabled-background-color, #005da9) !important;
+  background-color: var(--ntss-calendar-button-is-disabled-background-color, #005da9) !important;
+  background-image: none !important;
+  border-radius: 3px !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+  text-decoration: none !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner:has(> .ntss-calendar-day.has-event.is-disabled):not(:has(> .has-custom-event)),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__cell_offset.has-event:not(:has(> .has-custom-event)) {
+  background: #005da9 !important;
+  background-color: #005da9 !important;
+  background-image: none !important;
+  box-shadow: inset 0 1px 3px #0076c9 !important;
+  border-radius: 3px !important;
+  color: #ffffff !important;
+  opacity: 0.75 !important;
+  text-decoration: none !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner:has(> .has-custom-event) {
+  background: #9acd32 !important;
+  background-color: #9acd32 !important;
+  background-image: none !important;
+  border-radius: 3px !important;
+  color: #ffffff !important;
+  opacity: 0.75 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner:has(> .ntss-calendar-day.has-event) .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner:has(> .has-custom-event) .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__pointer:has(> .ntss-calendar-day.has-event) .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__date_hover:has(> .ntss-calendar-day.has-event) .ntss-calendar-day {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background: transparent !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-day.has-event:not(.has-custom-event) {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+  border-radius: 3px !important;
+  background: var(--ntss-calendar-button-is-disabled-background-color, #005da9) !important;
+  background-color: var(--ntss-calendar-button-is-disabled-background-color, #005da9) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-day.has-event.is-disabled:not(.has-custom-event) {
+  box-shadow: inset 0 1px 3px #0076c9 !important;
+  opacity: 0.75 !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .ntss-calendar-day.has-custom-event {
+  background: #9acd32 !important;
+  background-color: #9acd32 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* グリッド選択不可の日（今日ボタンで v-model のみ更新）は dp__today / dp__active_date でも灰色 */
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__today.dp__cell_disabled,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__today.is-disabled,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__today.ntss-calendar-disabled,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__active_date.is-disabled:not(.has-event),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__active_date.ntss-calendar-disabled:not(.has-event),
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__active_date.dp__cell_disabled:not(.has-event) {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  color: #c5c5c5 !important;
+  font-weight: normal !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__today.dp__cell_disabled .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__today.is-disabled .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__today.ntss-calendar-disabled .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__active_date.is-disabled:not(.has-event) .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__active_date.ntss-calendar-disabled:not(.has-event) .ntss-calendar-day,
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) .dp__cell_inner.dp__active_date.dp__cell_disabled:not(.has-event) .ntss-calendar-day {
+  color: #c5c5c5 !important;
+  -webkit-text-fill-color: #c5c5c5 !important;
+  background: transparent !important;
+}

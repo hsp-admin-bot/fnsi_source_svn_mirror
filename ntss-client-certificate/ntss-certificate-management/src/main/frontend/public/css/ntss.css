@@ -1,3 +1,4 @@
+
 ons-modal .modal-mask {
   background-color: transparent;
 }
@@ -100,6 +101,7 @@ body {
   /* touchAction属性 */
   touch-action: auto !important;
   overscroll-behavior-y: none;
+  -webkit-text-size-adjust: 100%;
 }
 
 /******************************************/
@@ -363,6 +365,7 @@ ons-popover.popoverProvisional .popover__content {
   border-top: none;
   white-space: pre;
   text-align: left;
+
 }
 
 /* TODO 装置記録詳細から既存を撤収できたら、名前修正する */
@@ -2108,12 +2111,14 @@ td.deviceSetInfo-weight-content {
   border-color: var(--master-maintenance-kgrid-border-color);
 }
 .master-maintenance-page .k-grid table {
+  font-size: 0.9em !important;
   border-right: 1px solid #fafafa;
 }
 .master-maintenance-page .k-widget,
 .master-maintenance-page .k-button,
 .master-maintenance-page .k-dropdown {
-  font-size: 1.0em;
+  box-sizing: border-box;
+  font-size: 0.8em !important;
 }
 .master-maintenance-page .k-input {
   font-size: 1.0em;
@@ -2359,7 +2364,7 @@ td.deviceSetInfo-weight-content {
   background-color: var(--treatment-record-input-background-color);
 }
 _::-webkit-full-page-media, _:future, :root .k-edit-cell > .k-dropdown > .k-dropdown-wrap {
-  pointer-events: none;
+  pointer-events: none !important;
 }
 
 .alert-dialog--warn {
@@ -2622,4 +2627,11 @@ ons-button.nik-btn {
 #kendo_day > .k-grid .k-header:first-child,
 #kendo_kur > .k-grid .k-header:first-child {
   border-left-width: 1px;
+}
+.search-toolbar {
+  font-size: 0.9em;
+  width: 12%;
+}
+.search-toolbar:focus {
+ box-shadow: none!important;
 }

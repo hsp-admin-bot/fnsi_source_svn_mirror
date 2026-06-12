@@ -1,11 +1,12 @@
 package jp.co.nikkiso.ntss.admin_web.service;
 
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import jp.co.nikkiso.ntss.core.config.PersonalDb;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.FindIterable;
@@ -39,6 +40,7 @@ import jp.co.nikkiso.ntss.api.service.deathRelatedProcess.DeathServiceImpl;
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.FacilitySettingNo;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.NotificationDefinition;
+import jp.co.nikkiso.ntss.core.constant.CoreConstant.TransactionManagerName;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
@@ -183,6 +185,7 @@ import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.ObjectUtils;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -245,6 +248,7 @@ import static jp.co.nikkiso.ntss.core.logevent.DataUpdateLogInfoUtil.convertStri
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 
 /* add by chenshijie  2023-02-02 [CodeOptimization]  start */
@@ -448,6 +452,10 @@ public class PatInfoService {
   @Autowired
   private IndHistoryService indHistoryService;
 
+  @Autowired
+  @PersonalDb
+  private Config personalDbConfig;
+
   private static final String FORMAT_DATE = "yyyyMMddHHmmssSSS";
   // #10443 Import necessary recourse END
 
@@ -469,7 +477,6 @@ public class PatInfoService {
   @Autowired
   private MstTabooAllergyDao mstTabooAllergyDao;
   /* add by chamaojia 2026-03-27 [12462] 患者情報共有->患者経過総合ビューア --end */
-
   // #10710
   /** ジャーナル作成のServiceインターフェース */
   @Autowired
@@ -482,7 +489,7 @@ public class PatInfoService {
   private PatNameIdentificationDao patNameIdentificationDao;
   //add #12462 患者共有情報- 患者カレンダー  by zrx end
 
-  @Transactional
+  @Transactional(TransactionManagerName.ALL)
   public Long create(Map<String, String> payload) throws Exception {
     // 各レコードのJSONを対応するクラスにマッピング
     log.info("create pat is begin"+System.currentTimeMillis());
@@ -1951,12 +1958,13 @@ public class PatInfoService {
    * @param patGroupDiff
    * @throws Exception
    */
+  @Transactional(TransactionManagerName.ALL)
   public void updateById(Long pat_id, Map<String, String> payload,JSONObject patGroupDiff) throws Exception {
     updateById(pat_id, payload, patGroupDiff, null);
   }
   // add 10626 データリストのCTR・DW一括登録修正 房 end
 
-  @Transactional
+  @Transactional(TransactionManagerName.ALL)
   // mod 6931 【デグレ】患者情報を編集した際ログに編集していない感染症を編集した記録が残る 周安寧　start
   //public void updateById(Long pat_id, Map<String, String> payload) throws Exception {
   // mod 10626 データリストのCTR・DW一括登録修正 房 start
@@ -2561,6 +2569,10 @@ public class PatInfoService {
   @Autowired
   private IndHistoryMakeService indHistoryMakeService;
 
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
+
   public void createJournalForInsertLog(String logDate, PatUnique patUniqueHaiTa) {
 	    try {
 	      IndHistory indHistory = new IndHistory();
@@ -2614,7 +2626,7 @@ public class PatInfoService {
       return "";
     }
     String returnValue = "";
-    Config config = Config.get(patPersonalMainDao);
+    Config config = personalDbConfig;
     SelectBuilder selectBuilder = SelectBuilder.newInstance(config);
     selectBuilder.sql("select personal_info_encrypt('" + inData +"') as encrypt_value");
     List<Map<String, Object>> results = selectBuilder.getMapResultList(MapKeyNamingType.NONE);
@@ -3402,7 +3414,7 @@ public class PatInfoService {
     try {
       ObjectMapper mapper = new ObjectMapper();
       // add #11159 特定の患者だけ患者情報編集時にエラーが発生する ztc 20241003 start
-      mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+      mapper = mapper.rebuild().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build();
       // add #11159 特定の患者だけ患者情報編集時にエラーが発生する ztc 20241003 end
       PatUnique patUnique = mapper.readValue(payload.get("pat_unique"), PatUnique.class);
       //add 11007 「pat_unique_history」で「facility_cd」が登録されていない zhao start
@@ -3762,8 +3774,10 @@ public class PatInfoService {
    * @param payload
    * @throws Exception
    */
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 start
   @Transactional
-  public void updateIsSame(Map<String, String> payload) throws Exception {
+  public void updateIsSame(Map<String, String> payload, String facilityCd) throws Exception {
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 end
     ObjectMapper mapper = new ObjectMapper();
     List<Long> patIdList = mapper.readValue(payload.get("patIdList"), new TypeReference<List<Long>>() {});
     String is_same = payload.get("is_same");
@@ -3776,7 +3790,7 @@ public class PatInfoService {
     wheres.append(" WHERE\n");
     wheres.append(inStr + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -3784,10 +3798,20 @@ public class PatInfoService {
     //7206 mod 同姓同名のチェックが正しく行われない 趙 start
     int updateCount = 0;
     if(patIdList.size()==1){
-      patMainDao.updateIsSame(patIdList, is_same);
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 start
+      if (facilityCd != null && !facilityCd.isEmpty()) {
+        updateCount = patMainDao.updateIsSameByFacilityCd(patIdList, is_same, facilityCd);
+      } else {
+        updateCount = patMainDao.updateIsSame(patIdList, is_same);
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 end
 
       // mod #10436 同姓同名フラグの更新時に対になる患者のpat_main_historyがinsertされていない zhao start
-      isSameToMoGo(patIdList.get(0));
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 start
+      if (updateCount > 0) {
+        isSameToMoGo(patIdList.get(0));
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 end
       // mod #10436 同姓同名フラグの更新時に対になる患者のpat_main_historyがinsertされていない zhao end
     }
     //7206 mod 同姓同名のチェックが正しく行われない 趙 end
@@ -3848,8 +3872,10 @@ public class PatInfoService {
   }
 
   // add FNSI-保険選択の変更 関 start
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260427 start
   @Transactional
-  public int updateInsuranceSelectById(Long pat_id, Long insuranceCd , Integer isSelected) {
+  public int updateInsuranceSelectById(Long pat_id, Long insuranceCd , Integer isSelected, String facilityCd) {
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260427 end
 
     // DB更新ログ出力ロジック wangzuo Start
     String tableName = "pat_insurance";
@@ -3858,12 +3884,19 @@ public class PatInfoService {
     wheresClear.append(" WHERE\n");
     wheresClear.append(" pat_id = " + pat_id + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommonClear = getLogCommon(patInsuranceDao, tableName, wheresClear, getEventLogMessage());
+    DataUpdateLogCommonNew logCommonClear = getLogCommon(tableName, wheresClear, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResultClear = logCommonClear.setInfo();
     // DB更新ログ出力ロジック wangzuo End
 
-    int clearSelect = patInsuranceDao.clearSelectByPatId(pat_id);
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 start
+    int clearSelect;
+    if (!ObjectUtils.isEmpty(facilityCd)) {
+      clearSelect = patInsuranceDao.clearSelectByPatIdFacilityCd(pat_id, facilityCd);
+    } else {
+      clearSelect = patInsuranceDao.clearSelectByPatId(pat_id);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 end
 
     // DB更新ログ出力ロジック wangzuo Start
     // 更新後データ取得、差分あれば、log出力
@@ -3877,12 +3910,19 @@ public class PatInfoService {
     wheresUpdate.append(" WHERE\n");
     wheresUpdate.append(" insurance_cd = " + insuranceCd + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommonUpdate = getLogCommon(patInsuranceDao, tableName, wheresUpdate, getEventLogMessage());
+    DataUpdateLogCommonNew logCommonUpdate = getLogCommon(tableName, wheresUpdate, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResultUpdate = logCommonUpdate.setInfo();
     // DB更新ログ出力ロジック wangzuo End
 
-    int updateSelect = patInsuranceDao.updateSelectByCd(insuranceCd , isSelected);
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 start
+    int updateSelect;
+    if (!ObjectUtils.isEmpty(facilityCd)) {
+      updateSelect = patInsuranceDao.updateSelectByCdFacilityCd(insuranceCd, isSelected, facilityCd);
+    } else {
+      updateSelect = patInsuranceDao.updateSelectByCd(insuranceCd , isSelected);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 end
 
     // DB更新ログ出力ロジック wangzuo Start
     // 更新後データ取得、差分あれば、log出力
@@ -3933,7 +3973,7 @@ public class PatInfoService {
         if (null != mrbg && StringUtils.hasText(mrbg.getBedList())){
           try {
             bedCdList.addAll(mapper.readValue(mrbg.getBedList(), new TypeReference<List<Long>>(){}));
-          } catch (IOException e) {
+          } catch (tools.jackson.core.JacksonException e) {
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -4160,7 +4200,7 @@ public class PatInfoService {
             if (StringUtils.hasText(mrbg.getBedList())) {
               try {
                 bedCdList.addAll(mapper.readValue(mrbg.getBedList(), new TypeReference<List<Long>>(){}));
-              } catch (IOException e) {
+              } catch (tools.jackson.core.JacksonException e) {
                 // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
                 // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -4186,7 +4226,7 @@ public class PatInfoService {
         if (null != mrbg && StringUtils.hasText(mrbg.getBedList())){
           try {
             simpleSearchBedCdList.addAll(mapper.readValue(mrbg.getBedList(), new TypeReference<List<Long>>(){}));
-          } catch (IOException e) {
+          } catch (tools.jackson.core.JacksonException e) {
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -4649,7 +4689,7 @@ public List<PatPersonalMain> getPatByFacilityCd(List<String> facilityCdList) {
       wheres.append(" pat_id = " + pat_id + "\n");
       // logCommon設定
       String tableNameMain = "pat_main";
-      DataUpdateLogCommonNew logCommonMain = getLogCommon(patMainDao, tableNameMain, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommonMain = getLogCommon(tableNameMain, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResultMain = logCommonMain.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -4682,7 +4722,7 @@ public List<PatPersonalMain> getPatByFacilityCd(List<String> facilityCdList) {
 
       // logCommon設定
       String tableNamePer = "pat_personal_main";
-      DataUpdateLogCommonNew logCommonPer = getLogCommon(patPersonalMainDao, tableNamePer, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommonPer = getLogCommon(tableNamePer, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResultPer = logCommonPer.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -4711,7 +4751,7 @@ public List<PatPersonalMain> getPatByFacilityCd(List<String> facilityCdList) {
 
       // logCommon設定
       String tableNameUni = "pat_unique";
-      DataUpdateLogCommonNew logCommonUni = getLogCommon(patUniqueDao, tableNameUni, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommonUni = getLogCommon(tableNameUni, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResultUni = logCommonUni.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -4743,7 +4783,7 @@ public List<PatPersonalMain> getPatByFacilityCd(List<String> facilityCdList) {
 //      wheresOrd.append(" WHERE\n");
 //      wheresOrd.append(" pat_id = " + pat_id + "\n");
 //      // logCommon設定
-//      DataUpdateLogCommonNew logCommonOrd = getLogCommon(ordMainDao, tableNameOrd, wheresOrd, getEventLogMessage());
+//      DataUpdateLogCommonNew logCommonOrd = getLogCommon(tableNameOrd, wheresOrd, getEventLogMessage());
 //      // ログ出力カラム情報及び更新前データ情報取得
 //      boolean setResultOrd = logCommonOrd.setInfo();
       // del 12005 患者削除時の予定中止は行われるが検査依頼・一般撮影検査依頼の削除が行われない zkm end
@@ -4893,7 +4933,7 @@ public List<PatPersonalMain> getPatByFacilityCd(List<String> facilityCdList) {
       wheres.append(" WHERE\n");
       wheres.append(" pat_id = " + patId + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -5722,7 +5762,9 @@ public List<PatPersonalMain> getPatByFacilityCd(List<String> facilityCdList) {
 
   // add FNSI-患者情報共有よりの改修 江 end
   // add MongoDB共通インターフェース 関 start
-  public List getPatHistory(Map<String, ?> payload) {
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260427 start
+  public List getPatHistory(Map<String, ?> payload, String facilityCd) {
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260427 end
     try {
       List list = new ArrayList<Object>();
       String collection = "";
@@ -5752,6 +5794,11 @@ public List<PatPersonalMain> getPatByFacilityCd(List<String> facilityCdList) {
         Date toDate = DateIsoUtils.dateToISODate(strToDate);
         arr.add(lt("ins_date", toDate));
       }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260427 start
+      if (!ObjectUtils.isEmpty(facilityCd)) {
+        arr.add(eq("facility_cd", facilityCd));
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260427 end
       if (arr.size() > 1) {
         bson = and(arr);
       }
@@ -5878,11 +5925,11 @@ public List<PatPersonalMain> getPatByFacilityCd(List<String> facilityCdList) {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -6828,7 +6875,7 @@ public List<PatPersonalMain> getPatByFacilityCd(List<String> facilityCdList) {
             if (StringUtils.hasText(mrbg.getBedList())) {
               try {
                 bedCdList.addAll(mapper.readValue(mrbg.getBedList(), new TypeReference<List<Long>>(){}));
-              } catch (IOException e) {
+              } catch (tools.jackson.core.JacksonException e) {
                 // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
                 // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -6854,7 +6901,7 @@ public List<PatPersonalMain> getPatByFacilityCd(List<String> facilityCdList) {
         if (null != mrbg && StringUtils.hasText(mrbg.getBedList())){
           try {
             simpleSearchBedCdList.addAll(mapper.readValue(mrbg.getBedList(), new TypeReference<List<Long>>(){}));
-          } catch (IOException e) {
+          } catch (tools.jackson.core.JacksonException e) {
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -7004,7 +7051,7 @@ public List<PatPersonalMain> getPatByFacilityCd(List<String> facilityCdList) {
    * @return
    */
   public List<PatTabooAllergyRes> selectPatTabooAllergyByPatId(String facilityCd, Long patId)
-          throws JsonProcessingException {
+          throws JacksonException {
 
     // 患者（共有含む）情報を取得
     List<PatMain> patMains = patMainDao.selectSharePatByPatId(facilityCd, patId);
@@ -7040,7 +7087,7 @@ public List<PatPersonalMain> getPatByFacilityCd(List<String> facilityCdList) {
           continue;
         }
 
-        // category=1～4 はその場で結果生成
+        // category=1-4 はその場で結果生成
         resultList.add(buildRes(
                 patMain.getPat_id(),
                 categoryClass,
@@ -7095,13 +7142,13 @@ public List<PatPersonalMain> getPatByFacilityCd(List<String> facilityCdList) {
     // 重複データを除去し、taboo / allergy を OR 条件でマージする
     Map<String, PatTabooAllergyRes> mergedMap = resultList.stream()
             .collect(Collectors.toMap(
-                    //  キー：patId + classType + cd で一意化
+                    // キー：patId + classType + cd で一意化
                     res -> res.getPatId() + "_" + res.getClassType() + "_" + res.getCd(),
 
-                    //  値：そのまま
+                    // 値：そのまま
                     Function.identity(),
 
-                    //  重複時のマージ処理
+                    // 重複時のマージ処理
                     (existing, incoming) -> {
                       // taboo：どちらか true なら true
                       existing.setTaboo(existing.isTaboo() || incoming.isTaboo());

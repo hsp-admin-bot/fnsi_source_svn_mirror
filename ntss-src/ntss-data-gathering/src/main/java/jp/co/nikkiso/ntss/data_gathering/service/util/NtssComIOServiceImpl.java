@@ -6,7 +6,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils;
 import org.springframework.aop.framework.AopProxyUtils;
@@ -98,7 +98,7 @@ public class NtssComIOServiceImpl implements NtssComIOService {
       long start = System.currentTimeMillis();
       // リクエスト処理
       ResponseEntity<HttpStatus> response = rt.exchange(request, HttpStatus.class);
-      HttpStatus status = response.getStatusCode();
+      HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
       long cost = System.currentTimeMillis() - start;
       Map<String, Object> map = new HashMap<>();
       map.put("logType", "RESTTEMPLATE-LOG");

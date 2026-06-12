@@ -5,7 +5,7 @@ import jp.co.nikkiso.ntss.core.dao.MstUserDao;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
@@ -60,7 +60,7 @@ public class IndicationResultResourceIntegrationTest extends AbstractResourceInt
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/indication-result/{pat_id}/list", patId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .param("treat_date_from", treatDateFrom)
       .param("treat_date_to", treatDateTo)
       .with(csrf()));

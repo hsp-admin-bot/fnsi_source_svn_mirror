@@ -92,22 +92,15 @@
 </template>
 
 <script>
+import { getScopedElementsByClassName, queryScopedSelectorAll, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 /* eslint-disable */
-import { mapState, mapActions,mapGetters  } from 'vuex';
-import Vue from 'vue';
-import VueHighcharts from 'vue-highcharts';
-import Highcharts from 'highcharts';
-import loadBoost from 'highcharts/modules/boost';
+import { mapState, mapActions,mapGetters  } from "@/compat/vue/vuex";
+import Highcharts from '@/compat/charts/highcharts';
+import { Boost as loadBoost } from '@/compat/charts/highcharts';
 
 loadBoost(Highcharts);
-Vue.use(VueHighcharts, { Highcharts });
-
-
 export default {
-  components: {
-    VueHighcharts
-  },
-  name: 'c',
+    name: 'c',
   data: {
     grptime1: 4,  // デフォルト4時間
     grptime2: 4,  // デフォルト4時間
@@ -179,9 +172,7 @@ export default {
       return this.$store.state.listGraph.detailGraphIndex;
     }
   },
-  data() {
-    return {};
-  },
+
   methods: {
     ...mapActions('listGraph', {
       setDefaultOption: 'setDefaultOption',
@@ -212,9 +203,10 @@ export default {
       });
     },
     setDefaultDetail() {
-      let legendElem = window.getComputedStyle(document.getElementsByClassName('ntss-monitoring-legend-style')[0], null);
-      let legendHoverElem = window.getComputedStyle(document.getElementsByClassName('ntss-monitoring-legend-hover-style')[0], null);
-      let legendHiddenElem = window.getComputedStyle(document.getElementsByClassName('ntss-monitoring-legend-hidden-style')[0], null);
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      let legendElem = ownerWindow.getComputedStyle(getScopedElementsByClassName('ntss-monitoring-legend-style', this.$el || null)[0], null);
+      let legendHoverElem = ownerWindow.getComputedStyle(getScopedElementsByClassName('ntss-monitoring-legend-hover-style', this.$el || null)[0], null);
+      let legendHiddenElem = ownerWindow.getComputedStyle(getScopedElementsByClassName('ntss-monitoring-legend-hidden-style', this.$el || null)[0], null);
       let legendColor = {
         legendColor:legendElem.getPropertyValue('color'),
         hoverColor:legendHoverElem.getPropertyValue('color'),
@@ -242,20 +234,20 @@ export default {
       {
 
         // 左のシンボルマークを削除
-        if (document.getElementById('divleft' + i).hasChildNodes())
+        if (getScopedElementById('divleft' + i, this.$el || null).hasChildNodes())
         {
-          while (document.getElementById('divleft' + i).childNodes.length > 0)
+          while (getScopedElementById('divleft' + i, this.$el || null).childNodes.length > 0)
           {
-            document.getElementById('divleft' + i).removeChild(document.getElementById('divleft'+ i).firstChild)
+            getScopedElementById('divleft' + i, this.$el || null).removeChild(getScopedElementById('divleft'+ i, this.$el || null).firstChild)
           }
         }
 
         // 右のシンボルマークを削除
-        if (document.getElementById('divright' + i).hasChildNodes())
+        if (getScopedElementById('divright' + i, this.$el || null).hasChildNodes())
         {
-          while (document.getElementById('divright' + i).childNodes.length > 0)
+          while (getScopedElementById('divright' + i, this.$el || null).childNodes.length > 0)
           {
-            document.getElementById('divright' + i).removeChild(document.getElementById('divright' + i).firstChild)
+            getScopedElementById('divright' + i, this.$el || null).removeChild(getScopedElementById('divright' + i, this.$el || null).firstChild)
           }
         }
       }
@@ -272,13 +264,16 @@ export default {
             if(this.graphsettings.detail.moni_graph[i].graph_info.moni_info[j].y_axis == 0)
             {
               //要素を取得
-              divPosition = document.getElementById('divleft'+( i + 1));
+              divPosition = getScopedElementById('divleft'+( i + 1), this.$el || null);
             }
             else{
-              divPosition = document.getElementById('divright' +( i + 1));
+              divPosition = getScopedElementById('divright' +( i + 1), this.$el || null);
             }
             //divの生成
-            var symbolPosition = document.createElement('div');
+            const ownerDocument = divPosition?.ownerDocument || this.$el?.ownerDocument || document;
+
+            //divの生成
+            var symbolPosition = ownerDocument.createElement('div');
             //挿入する文字の生成
             symbolPosition.innerHTML = '●';
             //styleを設定
@@ -391,7 +386,7 @@ export default {
     this.setPatientHeaderParameter();
 
     // リスト画面の要素にクラス名を追加
-    Array.prototype.forEach.call(document.querySelectorAll('.page'),function(elm){
+    Array.prototype.forEach.call(queryScopedSelectorAll('.page', this.$el || null),function(elm){
       if( elm.classList.contains('ntss-monitoring-listMainItem') == false ) {
         elm?.classList?.add('ntss-monitoring-detailMainItem');
       }
@@ -401,7 +396,7 @@ export default {
     this.showFrameMode = this.$store.state.listGraph.frameShowMode;
     if( this.showFrameMode == 1 ) {
       // 詳細画面の幅を残り領域すべてにする
-      let elm_page   = document.getElementsByClassName("ntss-monitoring-detailMainItem")[0];
+      let elm_page   = getScopedElementsByClassName("ntss-monitoring-detailMainItem", this.$el || null)[0];
       let elm_header = elm_page.lastChild.firstChild;
       let elm_main   = elm_page.lastChild.lastChild;
       elm_page?.classList?.add("ntss-monitoring-split-frame-detail");
@@ -411,55 +406,54 @@ export default {
 
     setTimeout( () => {
       // 一覧画面を表示する
-      let elm_page = document.getElementsByClassName("ntss-monitoring-listMainItem")[0];
+      let elm_page = getScopedElementsByClassName("ntss-monitoring-listMainItem", this.$el || null)[0];
       elm_page.style.display = "block";
 
       // リサイズイベント発生
-      window.dispatchEvent( new Event('resize'));
+      (this.$el?.ownerDocument?.defaultView || window).dispatchEvent(new Event('resize'));
 
       // フレーム分割ありの場合
       if( this.showFrameMode == 1 ) {
         // 一覧画面のパンくずリスト「生体モニタリング詳細」を消去する
-        let elm = document.querySelectorAll('.ntss-monitoring-listMainItem .breadcrumb-content > li')[1];
+        let elm = queryScopedSelectorAll('.ntss-monitoring-listMainItem .breadcrumb-content > li', this.$el || null)[1];
         elm.style.display = "none";
         // 詳細画面のパンくずリスト「生体モニタリング」を消去する
-        elm = document.querySelectorAll('.ntss-monitoring-detailMainItem .breadcrumb-content > li')[0];
+        elm = queryScopedSelectorAll('.ntss-monitoring-detailMainItem .breadcrumb-content > li', this.$el || null)[0];
         elm.style.display = "none";
       }
     }, 2500 );
 
     setTimeout( () => {
       // 一覧画面を表示する
-      let elm_page = document.getElementsByClassName("ntss-monitoring-listMainItem")[0];
+      let elm_page = getScopedElementsByClassName("ntss-monitoring-listMainItem", this.$el || null)[0];
       elm_page.style.display = "block";
 
       // リサイズイベント発生
-      window.dispatchEvent( new Event('resize'));
+      (this.$el?.ownerDocument?.defaultView || window).dispatchEvent(new Event('resize'));
     }, 5000 );
 
     setTimeout( () => {
       // 一覧画面を表示する
-      let elm_page = document.getElementsByClassName("ntss-monitoring-listMainItem")[0];
+      let elm_page = getScopedElementsByClassName("ntss-monitoring-listMainItem", this.$el || null)[0];
       elm_page.style.display = "block";
 
       // リサイズイベント発生
-      window.dispatchEvent( new Event('resize'));
+      (this.$el?.ownerDocument?.defaultView || window).dispatchEvent(new Event('resize'));
     }, 8000 );
   },
-  updated() {
-  },
-  beforeDestroy()
+
+  beforeUnmount()
   {
     // 表示中画面番号セット
     this.setDispNo(0);
 
     // 一覧画面を元に戻す
-    Array.prototype.forEach.call(document.querySelectorAll('.ntss-monitoring-split-frame-list'),function(elm){
+    Array.prototype.forEach.call(queryScopedSelectorAll('.ntss-monitoring-split-frame-list', this.$el || null),function(elm){
       elm.classList.remove('ntss-monitoring-split-frame-list');
     });
 
     // 選択状態を解除
-    let elm = document.getElementsByClassName("ntss-monitoring-select-machine-list")[0];
+    let elm = getScopedElementsByClassName("ntss-monitoring-select-machine-list", this.$el || null)[0];
     if( elm != undefined && elm.classList.contains("ntss-monitoring-select-machine-list") == true ) {
       elm.style.border = "";
       elm.classList.remove("ntss-monitoring-select-machine-list");

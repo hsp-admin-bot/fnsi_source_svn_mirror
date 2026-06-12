@@ -10,7 +10,7 @@ const URL_BASE = "/master_maintenance/mst_graph_setting";
 
 /**
  * P-Ca9分割グラフ一覧の取得
- * @param {*} facilityCd
+ * @param {string} facilityCd 施設コード
  */
 export function sendRequestGetMstGraphSettingData(facilityCd) {
   return ApiHelper.get(`${URL_BASE}/${facilityCd}`);
@@ -22,14 +22,19 @@ export function sendRequestGetMstGraphSettingData(facilityCd) {
 export function sendRequestGetMstGraph() {
   return ApiHelper.get(`${URL_BASE}/mst_facility`);
 }
-//FNSI-修正 設定値の大小チェック対応 Huangxl add start
+// FNSI-修正 設定値の大小チェック対応 Huangxl add start
 /**
- * sendRequestGetValueSignInByFacilityCd
- * @param {*} facilityCd 
+ * 施設別サインイン用設定値取得
+ * @param {string} facilityCd 施設コード
  */
 export function sendRequestGetValueSignInByFacilityCd(facilityCd) {
   return ApiHelper.get(`${URL_BASE}/get_value_signin/${facilityCd}`);
 }
+
+/**
+ * API から取得したグラフ設定を画面用に数値へ展開する（setting[0] を参照してプロパティを付与）
+ * @param {object} setting ミューテート対象
+ */
 export function formatGraphSettings(setting) {
   setting.limitLowerThresholdX = parseFloat(setting[0].limitLowerThresholdX);
   setting.limitLowerThresholdY = parseFloat(setting[0].limitLowerThresholdY);
@@ -41,10 +46,11 @@ export function formatGraphSettings(setting) {
   setting.limitUpperY = parseFloat(setting[0].limitUpperY);
 }
 /**
- * 設定不備の条件
- * @param { Object } graphSetting
+ * 設定不備メッセージ（HTML 断片）を組み立てる
+ * @param {Array<Record<string, string>>} graphSetting グラフ設定行（先頭行を使用）
+ * @returns {string}
  */
- export function settingErrorMessage(setting) {
+export function settingErrorMessage(setting) {
   let missingSettingStatus = "";
 
   // ①X軸グラフ閾値上限 ≦ X軸グラフ閾値下限
@@ -72,7 +78,7 @@ export function formatGraphSettings(setting) {
   }
   // ③Y軸グラフ上限値 ＜ Y軸グラフ閾値上限
   if (parseFloat(setting[0].limitUpperY) < parseFloat(setting[0].limitUpperThresholdY)) {
-    missingSettingStatus += "<br>Y軸グラフ上限値 ＜ y軸グラフ閾値上限";
+    missingSettingStatus += "<br>Y軸グラフ上限値 ＜ Y軸グラフ閾値上限";
   }
 
   // ④X軸グラフ上限値 ≦ X軸グラフ下限値
@@ -85,4 +91,4 @@ export function formatGraphSettings(setting) {
   }
   return missingSettingStatus;
 }
-//FNSI-修正 設定値の大小チェック対応 Huangxl add end
+// FNSI-修正 設定値の大小チェック対応 Huangxl add end

@@ -41,11 +41,10 @@
 </template>
 
 <script>
-import Vue from "vue";
-import moment from "moment";
-import VueTouch from "vue-touch";
-import { mapGetters, mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import dayjs from "@/compat/date/dayjs";
+import VTouch from "@/components/common/VTouch.vue";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { deserializeJsonColumn } from "@/functions/common/CommonFunctions";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
@@ -55,13 +54,15 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
 // mod #6107 2023/03/22 メッセージボックス全調整 張博 end
-
-Vue.use(VueTouch);
+import { customSanitizer } from "@/functions/common/CustomSanitizer";
 
 /**
  * @description 掲示板詳細情報ページ用ヘッダー
  */
 export default {
+  components: {
+    VTouch,
+  },
   data() {
     return {
       // デシリアライズ対象のjsonbカラム名
@@ -72,9 +73,11 @@ export default {
       // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 start
       answer: null,
       abanDoning: 0,
+      answerHandler: null,
+      isNotEditedHandler: null,
       // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 end
       /* add by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --start */
-      onIsNotEdited: null
+      onIsNotEdited: null,
       /* add by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --end */
     };
   },
@@ -101,7 +104,7 @@ export default {
       if (this.selectedBbs === null || this.selectedBbs.reg_date === null) {
         return null;
       }
-      return moment(this.selectedBbs.reg_date).format("YYYY/MM/DD HH:mm");
+      return dayjs(this.selectedBbs.reg_date).format("YYYY/MM/DD HH:mm");
     },
 
     /**
@@ -118,7 +121,7 @@ export default {
       if (this.selectedBbs === null || this.selectedBbs.upd_date === null) {
         return null;
       }
-      return moment(this.selectedBbs.up_date).format("YYYY/MM/DD HH:mm");
+      return dayjs(this.selectedBbs.up_date).format("YYYY/MM/DD HH:mm");
     },
 
     /**
@@ -161,30 +164,24 @@ export default {
     // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 start
     EventBus.$off("refresh", this.refresh);
     EventBus.$on("refresh", this.refresh);
-    EventBus.$off("answer");
-    EventBus.$on("answer", data => (this.answer = data));
+    this.answerHandler = data => (this.answer = data);
+    EventBus.$off("answer", this.answerHandler);
+    EventBus.$on("answer", this.answerHandler);
     // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 end
     // 掲示板詳細内容の編集有無を取得
     // add 性能改善メモリ不足 shan start
     /* update by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --start */
     // EventBus.$off("isNotEdited", this.isNotEdited);
-    EventBus.$off("isNotEdited", this.onIsNotEdited);
     // add 性能改善メモリ不足 shan end
-    // EventBus.$on("isNotEdited", data => (this.isNotEdited = data));
-    this.onIsNotEdited = (data) => {
-      this.isNotEdited = data;
-    };
-    EventBus.$on("isNotEdited", this.onIsNotEdited);
-    /* update by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --end */
+    this.isNotEditedHandler = data => (this.isNotEdited = data);
+    EventBus.$off("isNotEdited", this.isNotEditedHandler);
+    EventBus.$on("isNotEdited", this.isNotEditedHandler);
   },
 
-   beforeDestroy() {
-    /* update by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --start */
-    // EventBus.$off("isNotEdited", this.isNotEdited);
-    EventBus.$off("isNotEdited", this.onIsNotEdited);
-    /* update by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --end */
+   beforeUnmount() {
+    EventBus.$off("isNotEdited", this.isNotEditedHandler);
     // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 start
-    EventBus.$off("answer", data => (this.answer = data));
+    EventBus.$off("answer", this.answerHandler);
     EventBus.$off("refresh", this.refresh);
     // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 end
   },
@@ -226,7 +223,7 @@ export default {
      */
     async setSelectedBbsInfo(selectedBbsCtlNo) {
       // add 新規作成時に、selectedBbsCtlNoはヌルの場合、エラー発生について、対応する。 dengshen start
-      if (!!!selectedBbsCtlNo){
+      if (!selectedBbsCtlNo){
         return;
       }
       // add 新規作成時に、selectedBbsCtlNoはヌルの場合、エラー発生について、対応する。 dengshen end
@@ -246,6 +243,7 @@ export default {
         deserializeRecordList,
         this.jsonColumns
       );
+       bbsInfo.html_content=customSanitizer(bbsInfo.html_content)
       // sotreに設定
       this.setSelectedBbs(bbsInfo);
       // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 start

@@ -16,9 +16,9 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlConfig;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -31,7 +31,7 @@ import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.DataSourceName;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.TransactionManagerName;
 
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSession;
 import java.util.Collections;
 
 /**
@@ -55,7 +55,7 @@ public class LoginTest {
   /**
    * 利用者権限ServiceのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private UserAuthorityService userAuthorityService;
 
   /**

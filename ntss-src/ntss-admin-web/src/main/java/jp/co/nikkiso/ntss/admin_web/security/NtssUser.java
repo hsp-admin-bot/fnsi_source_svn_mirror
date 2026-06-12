@@ -115,10 +115,9 @@ public class NtssUser extends User {
   // #11205 -ペンテスト2－4認可制御の不備  add 20260325 shiyw start
   public boolean isNkkAdminUser() {
     /*
-      mst_personal_user.administrator == 1
       mst_personal_user.facility_cd == 'nkknkk'
     */
-    return Objects.equals(facilityCd, CoreConstant.Administrator.NKK_FACILITY_CD) && Objects.equals(administrator, 1);
+    return Objects.equals(facilityCd, CoreConstant.Administrator.NKK_FACILITY_CD);
   }
   // #11205 -ペンテスト2－4認可制御の不備  add 20260325 shiyw end
 }

@@ -23,9 +23,14 @@
 </template>
 
 <script>
-import { EventBus } from "@/eventBus.js";
-import { mapGetters, mapActions } from "vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import {
+  queryScopedSelector,
+  queryScopedSelectorAll
+} from "@/functions/common/LayoutMeasureHelper";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import LayoutMixin from "@/views/LayoutMixin";
+
 export default {
   mixins: [LayoutMixin],
   data() {
@@ -50,11 +55,17 @@ export default {
   watch: {
     splittedWidth() {
       // 最低表示幅を下回ったら付けるスタイル
-      const objList = document.getElementsByClassName("content-box");
-      if (this.splittedWidth < this.contentBoxWidth){
-        objList[objList.length - 1].style.transform = "translate3d(calc(" + this.contentBoxWidth + "px - var(--width)), 0px, 0px)";
+      const scopedDocument = this.$el?.ownerDocument || document;
+      const objList = queryScopedSelectorAll(".content-box", scopedDocument);
+      const target = objList[objList.length - 1];
+      if (!target) {
+        return;
+      }
+
+      if (this.splittedWidth < this.contentBoxWidth) {
+        target.style.transform = `translate3d(calc(${this.contentBoxWidth}px - var(--width)), 0px, 0px)`;
       } else {
-        objList[objList.length - 1].style.transform = "";
+        target.style.transform = "";
       }
     },
     /**
@@ -83,7 +94,13 @@ export default {
     }
   },
   mounted() {
-    this.contentBoxWidth = Number(window.getComputedStyle(document.querySelector('.content-box')).minWidth.replace('px',''));
+    const scopedDocument = this.$el?.ownerDocument || document;
+    const contentBox = queryScopedSelector(".content-box", scopedDocument);
+    if (contentBox) {
+      this.contentBoxWidth = Number(
+        (contentBox.ownerDocument?.defaultView || this.$el?.ownerDocument?.defaultView || window).getComputedStyle(contentBox).minWidth.replace("px", "")
+      );
+    }
   }
 };
 </script>

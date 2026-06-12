@@ -18,13 +18,13 @@ import org.seasar.doma.jdbc.entity.NamingType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonToken;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
 import jp.co.nikkiso.ntss.core.entity.entityListener.BaseEntityListener;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
@@ -349,7 +349,7 @@ public class SysDataSet extends BaseEntity {
       try {
         Detail[] obj = objectMapper.readValue(value, Detail[].class);
         details = Arrays.asList(obj);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("データセットの詳細設定内容が不正です") {
         };
       }
@@ -364,7 +364,7 @@ public class SysDataSet extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -417,10 +417,10 @@ public class SysDataSet extends BaseEntity {
    * JSONの値が「文字列」の場合はそのまま文字列として、
    * 「配列」の場合は配列全体をJSON文字列として読み込む。
    */
-  public static class FieldNameDeserializer extends JsonDeserializer<String> {
+  public static class FieldNameDeserializer extends ValueDeserializer<String> {
 
       @Override
-      public String deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+      public String deserialize(JsonParser p, DeserializationContext ctxt) throws JacksonException {
           // 現在のJSONトークンを取得
           JsonToken currentToken = p.currentToken();
 
@@ -466,7 +466,7 @@ public class SysDataSet extends BaseEntity {
           PreSqlInfoItem[] obj = objectMapper.readValue(value, PreSqlInfoItem[].class);
           items = Arrays.asList(obj);
         }
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("データセットの事前取得データ情報設定内容が不正です") {
         };
       }
@@ -481,7 +481,7 @@ public class SysDataSet extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -518,7 +518,7 @@ public class SysDataSet extends BaseEntity {
       try {
         ReportClasses obj = objectMapper.readValue(value, ReportClasses.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("sys_data_setテーブルreport_classの値が不正です") {
         };
       }
@@ -533,7 +533,7 @@ public class SysDataSet extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }

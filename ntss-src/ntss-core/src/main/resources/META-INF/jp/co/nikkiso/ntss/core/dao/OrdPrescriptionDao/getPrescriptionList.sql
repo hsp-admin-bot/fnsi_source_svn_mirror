@@ -9,6 +9,11 @@ WITH  data1 AS (
       WHERE is_del = '0'                                                                                             -- 削除フラグ
         AND is_disp = '1'                                                                                            -- 表示フラグ
         AND pat_id IN /* patIdList */(0)                                                                             -- 患者ID
+        -- #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
+        /*%if facilityCd != null */
+        AND facility_cd = /* facilityCd */''
+        /*%end*/
+        -- #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
      )
     , data1_1 AS (
      SELECT ROW_NUMBER () OVER ( PARTITION BY pat_id ORDER BY issue_state, prescription_type, ord_prescription_no ) AS row_num
@@ -76,11 +81,16 @@ WITH  data1 AS (
             ,CASE WHEN ind_bed_cd = 0 THEN '未登録' ELSE ind_bed_name END AS ind_bed_name
             ,ind_bed_cd
             ,CASE WHEN ind_treatment_cd = 0 THEN '未登録' ELSE ind_treatment_name END AS ind_treatment_name
-            ,ind_treatment_cd
+            ,ind_treatment_cd 
        FROM ord_main main
       WHERE main.is_del = '0'
         AND main.treat_date = /* issueDate */''
-        AND pat_id IN /* patIdList */(0)
+        AND pat_id IN /* patIdList */(0) 
+        -- #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
+        /*%if facilityCd != null */
+        AND main.facility_cd = /* facilityCd */''
+        /*%end*/
+        -- #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
      )
      , mss_treatment as (
      SELECT ROW_NUMBER() OVER() AS idx
@@ -97,7 +107,7 @@ WITH  data1 AS (
           FROM mst_selector mss
         CROSS JOIN LATERAL jsonb_to_recordset(mss.order_settings -> 'items') AS ms(code BIGINT)
         WHERE master_physical_name = 'mst_bed'
-     )
+     )     
      , order_data2 AS (
       SELECT DISTINCT ON  (pat_id) pat_id
              ,treat_date
@@ -146,6 +156,11 @@ WITH  data1 AS (
        LEFT JOIN order_data2 main                                                                                    -- 治療情報
          ON pat_main.pat_id = main.pat_id                                                                            -- 患者ID
       WHERE pat_main.pat_id IN /* patIdList */(0)                                                                    -- 患者ID
+        -- #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
+        /*%if facilityCd != null */
+        AND pat_main.facility_cd = /* facilityCd */''
+        /*%end*/
+        -- #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
       ORDER BY data6.pat_id                                                                                          -- 患者ID
           , data6.ord_no                                                                                             -- 順序
           , data6.issue_date DESC                                                                                    -- 交付日

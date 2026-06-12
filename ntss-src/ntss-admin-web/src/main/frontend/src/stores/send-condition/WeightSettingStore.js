@@ -56,7 +56,7 @@ const defaultWeight = {
 };
 
 export default {
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   namespaced: true,
   state: {
     wheelChairList: [], // 車いすマスタ一式設定

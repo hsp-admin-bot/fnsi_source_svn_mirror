@@ -61,7 +61,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -155,13 +155,14 @@
           <v-ons-col width="70%" vertical-align="center" style="white-space: nowrap;">
             <!-- 検査間隔 ≠ 年間複数日 -->
             <span v-if="!inProgressIntervalState.isMultiDays">
-              <input
-                type="date"
+              <date-input
                 style="width: auto;"
                 class="ntss-input-date ntss-custom-input"
+                classes="date-input-unjust-size"
                 @blur="checkInputDate('startDate')"
                 :max="maxDate"
                 v-model="condition.inProgress.startDate"
+                isRequired
               />
               <common-calendar
                 v-model="condition.inProgress.startDate"
@@ -230,7 +231,7 @@
     <v-ons-popover
       cancelable
       v-if="zoomPopoverVisible"
-      :visible.sync="zoomPopoverVisible"
+      v-model:visible="zoomPopoverVisible"
       :target="zoomPopoverTarget"
       :class="[fontSizeSet, examSetListPop]"
       @preshow="popoverPreShow"
@@ -279,9 +280,10 @@
 
 <!-- スクリプト処理 -->
 <script>
-import moment from "moment";
-import { EventBus } from "@/eventBus";
-import { mapGetters, mapActions } from "vuex";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { findAncestorWithAnyKey } from "@/functions/common/ComponentOwnerResolver";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import {
   CANCEL,
@@ -307,6 +309,9 @@ import { HISTORY_KEY_EXAM_REQUEST_DETAIL } from "@/router/exam-request/HistoryKe
 import { messageFormat } from "@/functions/common/MessageFormat";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import DateInput from "@/components/common/DateInput";
+import statusMapFullScreenImg from "../../assets/status-map-full-screen.png";
+import { getLayoutRootElement, getScopedElementsByClassName, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
+
 import {
   formatToYyyymmdd,
   formatToInputDate,
@@ -359,7 +364,7 @@ export default {
       // カレンダーで選択した日付のリスト
       selectedCalendarInProgress: [],
       selectedCalendarInUsed: [],
-      image_src_full_screen: require("../../assets/status-map-full-screen.png"),
+      image_src_full_screen: statusMapFullScreenImg,
       // 一時退避データ
       tmpCondition: null,
       minDate: "",
@@ -400,6 +405,16 @@ export default {
     ]),
     ...mapGetters("pat-info", ["searchedPatList", "selectedPatId"]),
 
+    // 表示領域の幅をCSS変数を利用して書き換える
+    areaWidthStyle() {
+      // モバイル端末とで幅を分ける
+      const ua = getScopedWindow(this.$el || this)?.navigator?.userAgent || "";
+      if (ua.match(/Android/) || ua.match(/iPhone|iPad/)) {
+        return { "width": "6rem" };
+      } else {
+        return { "width": "15rem" };
+      }
+    },
     inProgressIntervalState() {
       return checkIntervalState(this.condition.inProgress.setInterval);
     },
@@ -410,16 +425,14 @@ export default {
       // 必須：曜日
       if (
         this.inProgressIntervalState.isWeekRepeat
-        && inProgress.selectedDayOfWeek === null
-      ) {
+        && inProgress.selectedDayOfWeek === null) {
         rtn = false;
       }
       // 必須：検査タイミング
       if (
         inProgress.chkBeforeDialysis === false
         && inProgress.chkAfterDialysis === false
-        && inProgress.chkOther === false
-      ) {
+        && inProgress.chkOther === false) {
         rtn = false;
       }
       // 必須：指示期間(開始)
@@ -452,15 +465,13 @@ export default {
       // 検査間隔
       if (setInterval != null) {
         const text = this.setIntervalList.find(
-          item => item.value === setInterval
-        )?.name || "";
+          item => item.value === setInterval)?.name || "";
         condList.push({ name: "検査間隔", text });
       }
       // 曜日
       if (selectedDayOfWeek != null) {
         const text = this.indWeeks.find(
-          item => item.value === selectedDayOfWeek
-        )?.text || "";
+          item => item.value === selectedDayOfWeek)?.text || "";
         condList.push({ name: "曜日", text });
       }
       // 透析前
@@ -614,12 +625,12 @@ export default {
       // 印刷パラメータを応答
       // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 杜天成 start
       const { startDate, endDate } = this.condition.inUsed;
-      const fromDate = moment(startDate).format("YYYY/MM/DD");
-      const toDate = endDate ? moment(endDate).format("YYYY/MM/DD") : fromDate;
+      const fromDate = dayjs(startDate).format("YYYY/MM/DD");
+      const toDate = endDate ? dayjs(endDate).format("YYYY/MM/DD") : fromDate;
       // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 杜天成 end
-      //add #9558 機能帳票で正しく変数が引き渡されていない 杜天成　start
+      //add #9558 機能帳票で正しく変数が引き渡されていない 杜天成 start
       const patId = this.$route.path === "/exam-request/" ? null : this.selectedPatId;
-      //add #9558 機能帳票で正しく変数が引き渡されていない 杜天成　end
+      //add #9558 機能帳票で正しく変数が引き渡されていない 杜天成 end
       // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
       // const reportParams = {
       //   facilityCd: this.getFacilityCd,
@@ -732,15 +743,14 @@ export default {
       // 年間複数日 でない場合は年間カレンダーでの選択結果をクリアする
       if (
         this.selectedCalendarInProgress.length
-        && !this.inProgressIntervalState.isMultiDays
-      ) {
+        && !this.inProgressIntervalState.isMultiDays) {
         this.selectedCalendarInProgress = [];
       }
 
       // 指示期間開始日と終了日が逆転していないこと
       if (inProgress.startDate && inProgress.endDate) {
-        const startDate = moment(inProgress.startDate);
-        const endDate = moment(inProgress.endDate);
+        const startDate = dayjs(inProgress.startDate);
+        const endDate = dayjs(inProgress.endDate);
         if (endDate.isBefore(startDate)) {
           this.showAfterStartDateDialog();
           return;
@@ -761,8 +771,7 @@ export default {
       const inProgressStr = JSON.stringify(inProgress);
       if (
         JSON.stringify(this.condition.inUsed) !== inProgressStr
-        || this.selectedCalendarInUsed != this.selectedCalendarInProgress
-      ) {
+        || this.selectedCalendarInUsed != this.selectedCalendarInProgress) {
         this.condition.inUsed = JSON.parse(inProgressStr);
         this.selectedCalendarInUsed = this.selectedCalendarInProgress;
       }
@@ -788,13 +797,15 @@ export default {
     },
     async getTargetDateList(
       conditionInUsed = { ...this.condition.inUsed },
-      isPopoverCheck = false
-    ) {
+      isPopoverCheck = false) {
       let targetDateList = [];
       this.setOutsideSchExtPatList([]);
       let patInfoList = null;
       if (!isPopoverCheck) {
-        patInfoList = await this.getPatInfoList(this.getExamSetTargetList);
+        patInfoList = await this.getPatInfoList({
+          patIdList: this.getExamSetTargetList,
+          selectedPatId: this.selectedPatId
+        });
       }
       // 検査間隔に応じて対象日付を取得する処理を実施
       switch (conditionInUsed.setInterval) {
@@ -889,7 +900,7 @@ export default {
         return;
       }
       await this.addSchedule(examSetCd);
-      
+
       // 検査セット追加イベント発火
       EventBus.$emit("addSchedule");
     },
@@ -916,8 +927,7 @@ export default {
         // 指定日1回分 か 年間複数日 の場合は検査セットパターンに登録しない
         if (
           condition.endDate
-          || !checkIntervalState(condition.setInterval).isWeekRepeat
-        ) return;
+          || !checkIntervalState(condition.setInterval).isWeekRepeat) return;
 
         // 検査セットから検査依頼情報、ラベル情報を取得
         const examSet = this.getExamSetNameList.find(item => item.examSetCd == examSetCd);
@@ -925,9 +935,9 @@ export default {
         const orderLabelInfo = examSet.labelInfo;
         // reg_exam_date には、最初の対象日（初回の検査日時）を格納
         const targetDate = targetDateList[0];
-        const regExamDate = targetDate ? moment(targetDate).toDate() : null;
-        const examFromDate = moment(condition.startDate).toDate();
-        const examToDate = moment("2099/12/31").toDate();
+        const regExamDate = targetDate ? dayjs(targetDate).toDate() : null;
+        const examFromDate = dayjs(condition.startDate).toDate();
+        const examToDate = dayjs("2099/12/31").toDate();
 
         // セット対象の患者ID毎に登録データを作成
         this.getExamSetTargetList.forEach(targetId => {
@@ -959,11 +969,11 @@ export default {
               orderLabelInfo,
               status: ADD,
               isDel: 0,
+              facilityCd: this.getFacilityCd,
             };
             // 同じパターンが登録予定リストに存在するか確認
             const addFlg = this.getSavePatExamPattern.some(patternObj => (
-              JSON.stringify(patternObj) === JSON.stringify(addPtObj)
-            ));
+              JSON.stringify(patternObj) === JSON.stringify(addPtObj)));
             // 同じパターンがDB保存済みであるか確認
             const savedFlg = this.getPatExamPatternList.some(item => (
               item.status === SAVED
@@ -971,8 +981,7 @@ export default {
               && String(item.orderExamSetCd) === String(addPtObj.orderExamSetCd)
               && String(item.regOrderClass) === String(addPtObj.regOrderClass)
               && item.examPattern === addPtObj.examPattern
-              && item.examWeek === addPtObj.examWeek
-            ));
+              && item.examWeek === addPtObj.examWeek));
             if (!addFlg && !savedFlg) {
               this.getSavePatExamPattern.push(addPtObj);
               this.setPatExamPatternList([...this.getPatExamPatternList, addPtObj]);
@@ -988,8 +997,7 @@ export default {
         }
         const isExist = this.getExamPatternColumnList.some(item => (
           item.examPattern === addPtCol.examPattern
-          && item.examWeek === addPtCol.examWeek
-        ));
+          && item.examWeek === addPtCol.examWeek));
         if (!isExist) {
           this.setExamPatternColumnList([...this.getExamPatternColumnList, addPtCol]);
         }
@@ -1003,12 +1011,10 @@ export default {
       // 無期限の場合は追加対象患者の最大スケジュール延長最終日までの日付に絞る
       const endlessRepeat = (
         checkIntervalState(condition.setInterval).isWeekRepeat
-        && !condition.endDate
-      );
+        && !condition.endDate);
       if (endlessRepeat) {
         const maxSchExtEndDate = "" + Math.max(...(
-          Object.values(this.getPatExtInfoList).map(info => info.schExtEndDate)
-        ));
+          Object.values(this.getPatExtInfoList).map(info => info.schExtEndDate)));
         targetDateList = targetDateList.filter(targetDate => targetDate <= maxSchExtEndDate);
       }
       // 日付データに追加する
@@ -1043,8 +1049,7 @@ export default {
           const treatDateObj = this.getOrdMainTreatDateList.find(item => item.pat_id === targetObj.patId);
           const flg = (
             treatDateObj == null
-            || !treatDateObj.treat_date.includes(targetDate)
-          ) ? ADD_WARNING : ADD;
+            || !treatDateObj.treat_date.includes(targetDate)) ? ADD_WARNING : ADD;
 
           const regOrderClassList = [];
           // 検査タイミング(前)
@@ -1081,8 +1086,7 @@ export default {
       // 締切フラグの設定
       const deadlineFlg = (
         this.getDeadlineCondition.deadlineFlg
-        && moment(getDeadlineDate(this.getDeadlineCondition)).isAfter(addDate)
-      ) ? "1": "0";
+        && dayjs(getDeadlineDate(this.getDeadlineCondition)).isAfter(addDate)) ? "1": "0";
 
       const examItemSetWithOrderClass = examItemSet[regOrderClass];
       if (!examItemSetWithOrderClass[examSetCd]) {
@@ -1091,9 +1095,7 @@ export default {
           data:{},
           status: {},
           isLock: {},
-	  // add #12462 患者情報共有 Ji start
-          facilityCd: {}
-	  // add #12462 患者情報共有 Ji end
+          facilityCd: {},
         };
       }
       if (data[addDate] == null) {
@@ -1122,16 +1124,17 @@ export default {
           break;
         }
       }
-      // add #12462 患者情報共有 Ji end
       if (!examItemSetWithSetCd.facilityCd[addDate]) {
         examItemSetWithSetCd.facilityCd[addDate] = this.getFacilityCd;
       }
-      // add #12462 患者情報共有 Ji end
+    },
+    resolveHistoryOwner() {
+      return findAncestorWithAnyKey(this, ["historyKey"], { maxDepth: 10 }) || this;
     },
     // ExamSetTargetListを登録対象の患者に更新する
     refreshExamSetTargetList() {
       const patIdList = [];
-      if (this.$parent.historyKey === HISTORY_KEY_EXAM_REQUEST_DETAIL) {
+      if (this.resolveHistoryOwner().historyKey === HISTORY_KEY_EXAM_REQUEST_DETAIL) {
         // 検査依頼詳細画面では現在開いている患者を対象にする
         if (this.selectedPatId) {
           patIdList.push(this.selectedPatId);
@@ -1139,7 +1142,7 @@ export default {
       } else {
         // 検査依頼一覧画面では現在チェックされている患者を対象にする
         // 患者のチェックボックス取得
-        const patCheckbox = Array.from(document.getElementsByClassName("pat-list-item"));
+        const patCheckbox = Array.from(getScopedElementsByClassName("pat-list-item", getLayoutRootElement(this.$el || this) || this.$el || this));
         patCheckbox.forEach(checkbox => {
           if (checkbox.checked) {
             patIdList.push(checkbox.value);
@@ -1154,7 +1157,7 @@ export default {
       // 追加対象患者が選択されていない場合は処理しない
       if (!this.getExamSetTargetList.length) return;
 
-      const checkboxValue = document.getElementsByClassName("exam-set-list-item");
+      const checkboxValue = getScopedElementsByClassName("exam-set-list-item", this.$el || this);
       for (let count = 0; count < checkboxValue.length; count++) {
         if (checkboxValue[count]?.checked) {
           await this.addSchedule(this.getExamSetNameList[count].examSetCd);
@@ -1162,7 +1165,7 @@ export default {
         // スケジュール作成期間外の患者が存在する場合は処理終了
         if (this.getOutsideSchExtPatList.length) break;
       }
-      
+
       // 検査セット追加イベント発火
       EventBus.$emit("addSchedule");
     },
@@ -1173,7 +1176,7 @@ export default {
       // 未入力なら処理しない
       if (!inputValue) return;
 
-      const inputDate = moment(inputValue, "YYYY-MM-DD", true);
+      const inputDate = dayjs(inputValue, "YYYY-MM-DD", true);
       if (!inputDate.isValid()) {
         // 無効な日付なら空白にする
         inProgress[targetName] = "";
@@ -1224,10 +1227,14 @@ export default {
   async created() {
     await this.executeWithLoadingScreen(async () => {
       // 検査セットのデータ取得とstoreへの登録
-      const nameList = await this.searchExamSetNameList(this.getFacilityCd);
+      const nameList = await this.searchExamSetNameList({
+        facilityCd: this.getFacilityCd,
+        selectedPatId: this.selectedPatId
+      });
       // 検査セットソート順データ取得
-      const sort = await ApiHelper.get("/mstInfo/mst_exam_set/mstSelector/", {
-        facilityCd: this.getFacilityCd
+      const sort = await ApiHelper.get("/mstInfo/mst_exam_set/mstSelector", {
+        facilityCd: this.getFacilityCd,
+        selectedPatId: this.selectedPatId
       }).catch(error => {
         getErrorMessage("ExamRequestHeaderComponent.vue", "created", error);
         throw error;
@@ -1247,7 +1254,7 @@ export default {
       }
 
       // 本日の日付をセット
-      this.condition.inUsed.startDate = this.minDate = moment().format("YYYY-MM-DD");
+      this.condition.inUsed.startDate = this.minDate = dayjs().format("YYYY-MM-DD");
       this.$nextTick(() => {
         if (this.getCommonConditionList) {
           // Storeに保存された依頼条件情報がある場合はその内容から入力値を復元する
@@ -1271,7 +1278,7 @@ export default {
       // add 10121 検査セットのラジオボタンのチェックをした際に患者に検査セットが追加されていない 関  end
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // 印刷パラメータ要求
     EventBus.$off("requestReportParams", this.requestrReportParams);
     EventBus.$off("emptyExamSet", this.emptyExamSet);
@@ -1390,12 +1397,12 @@ export default {
   padding-left: 6px;
 }
 
-.exam-set-list-pop >>> .popover,
-.exam-set-list-pop-detail >>> .popover {
+.exam-set-list-pop :deep(.popover),
+.exam-set-list-pop-detail :deep(.popover) {
   width: auto;
 }
-.exam-set-list-pop >>> .popover__content,
-.exam-set-list-pop-detail >>> .popover__content {
+.exam-set-list-pop :deep(.popover__content),
+.exam-set-list-pop-detail :deep(.popover__content) {
   width: 450px;
 }
 
@@ -1420,8 +1427,12 @@ export default {
     width: 55%
   }
 }
+ons-popover :deep(.popover__content) {
+  min-width: 17.0rem;
+  }
+
 @media screen and (max-width: 640px) {
-  ons-popover >>> .popover__content {
+  .exam-request-header :deep(.popover__content) {
   min-width: 17.0rem;
   }
 }

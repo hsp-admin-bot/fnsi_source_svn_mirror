@@ -4,9 +4,6 @@
 import { ApiHelper } from "@/apis/AxiosHelper";
 import store from "@/stores";
 
-/**
- * 加算用URL
- */
 const MAIN_DATA = "/api/mainData";
 
 /**
@@ -18,7 +15,7 @@ function getUserFacilityCd() {
 
 /**
  * マスターデータ取得.
- * @param {*} url マスター取得API用URL
+ * @param {string} url マスター取得API用URL
  */
 function getMaster(url) {
   return getWithLoader(url, {
@@ -28,19 +25,18 @@ function getMaster(url) {
 
 /**
  * 加算情報取得
- * @param {*} params
- * @param {number} facilityCd 施設コード
- * @param {number} patId 患者ID
- * @param {number} ordNo オーダー番号
+ * @param {Record<string, unknown>} params クエリパラメータ
  */
 export function sendRequestGetByTreatInfo(params) {
-  return ApiHelper.get("/mainData/addition-info", params);
+  return ApiHelper.get("/mainData/addition-info", {
+    ...params,
+    selectedPatId: params.selectedPatId ?? params.patId
+  });
 }
 
 /**
  * 指定患者の加算情報取得
- * @param {number} facilityCd 施設コード
- * @param {number} patId 患者ID
+ * @param {{ facilityCd: string; patId: string|number }} params
  */
 export function sendRequestGetPatAddInfo(params) {
   return getWithLoader(
@@ -50,45 +46,33 @@ export function sendRequestGetPatAddInfo(params) {
 
 /**
  * 略称リスト取得
- * @param {number} facilityCd 施設コード
- * @param {number} patId 患者ID
- * @param {number} ordNo オーダー番号
+ * @param {Record<string, unknown>} params クエリパラメータ
  */
 export function sendRequestGetShortNameList(params) {
-  return getWithLoader(
-    `${MAIN_DATA}/shortname-list`, params
-  );
+  return getWithLoader(`${MAIN_DATA}/shortname-list`, params);
 }
 
 /**
  * 実績加算情報更新
- * @param {*} params 施設コード
- * @param {number} facilityCd 施設コード
- * @param {number} patId 患者ID
- * @param {number} ordNo オーダー番号
+ * @param {Record<string, unknown>} params 更新ペイロード
  */
 export function sendRequestPutOrdAdditionList(params) {
-  return putWithLoader(
-    `/mainData/updateOrdAdditionInfo`, params
-  );
+  return putWithLoader("/mainData/updateOrdAdditionInfo", params);
 }
 
 /**
  * 加算マスター取得
  */
-  // mod #12462 患者情報共有 Ji start
 export function sendRequestGetMstAddition(facilityCd) {
-  // return getMaster("/mstInfo/mstAddition");
-  return ApiHelper.get("/mstInfo/mstAddition", { facilityCd });
-  // mod #12462 患者情報共有 Ji end
+  if (facilityCd) {
+    return ApiHelper.get("/mstInfo/mstAddition", { facilityCd });
+  }
+  return getMaster("/mstInfo/mstAddition");
 }
 
 /**
  * 加算情報毎の前回算定日取得
- * @param {*} params
- * @param {number} ordNo オーダー番号
- * @param {number} patId 患者ID
- * @param {String} treatDate 治療日 YYYYMMDD
+ * @param {Record<string, unknown>} params クエリパラメータ
  */
 export function sendRequestGetAdditionDateList(params) {
   return ApiHelper.get("/addition_info/calculationDateList", params);
@@ -96,8 +80,8 @@ export function sendRequestGetAdditionDateList(params) {
 
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {Record<string, unknown>} [params] パラメータ
  */
 function getWithLoader(url, params = undefined) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -109,8 +93,8 @@ function getWithLoader(url, params = undefined) {
 
 /**
  * 共通ローダを実行するPUTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function putWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");

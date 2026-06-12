@@ -1,13 +1,20 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+import tools.jackson.databind.ObjectMapper;
+import jp.co.nikkiso.ntss.admin_web.request.sharePatient.ReceivedPatientInfoInput;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
+import jp.co.nikkiso.ntss.core.entity.PatPersonalMain;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -68,8 +75,23 @@ public class MaterialsSharingPatientInfomationResource {
 	 * @throws Exception
 	 */
 	@PostMapping("/sharePatientInfo/getPublicPatient")
-	public ResponseEntity<List<?>> getPublicPatientList(@RequestBody List<PatPersonalMainData> patPersonalMainDataLst)
-			throws Exception {
+	public ResponseEntity<List<?>> getPublicPatientList(@RequestBody List<PatPersonalMainData> patPersonalMainDataLst,
+                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                      @AuthenticationPrincipal NtssUser ntssUser
+                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        for (PatPersonalMainData patPersonalMainData : patPersonalMainDataLst) {
+          if (patPersonalMainData.getFacility_cd() != null && !patPersonalMainData.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facility_cd=" + patPersonalMainData.getFacility_cd() + " " + "pat_id=" + patPersonalMainData.getPat_id() + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
 		List<PatientInfo> publicPatientLst = infomationService.selectPatInfoPulic(patPersonalMainDataLst);
 		return new ResponseEntity<>(publicPatientLst, HttpStatus.OK);
@@ -117,7 +139,20 @@ public class MaterialsSharingPatientInfomationResource {
 	 * @throws Exception
 	 */
 	@PostMapping("/sharingPatientInfo/getDstFacilities")
-	public ResponseEntity<List<?>> getDstFacilities(@RequestBody DstPatientRequest request) throws Exception {
+	public ResponseEntity<List<?>> getDstFacilities(@RequestBody DstPatientRequest request,
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (request.getFacilityCdLogin() != null && !request.getFacilityCdLogin().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCdLogin=" + request.getFacilityCdLogin() + " " + "patId=" + request.getPatId() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(new ArrayList<>(), HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.PAT_NAME_IDENTIFICATION + "/sharingPatientInfo/getDstFacilities";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -142,7 +177,20 @@ public class MaterialsSharingPatientInfomationResource {
 	 * @throws Exception
 	 */
 	@PostMapping("/sharingPatientInfo/getSrcFacilities")
-	public ResponseEntity<List<?>> getSrcFacilities(@RequestBody SrcPatientRequest request) throws Exception {
+	public ResponseEntity<List<?>> getSrcFacilities(@RequestBody SrcPatientRequest request,
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        if (request.getFacilityCdLogin() != null && !request.getFacilityCdLogin().equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>(new ArrayList<>(), HttpStatus.FORBIDDEN);
+        }
+      }
+    }catch (Exception ignored) {}
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.PAT_NAME_IDENTIFICATION + "/sharingPatientInfo/getSrcFacilities";
@@ -168,7 +216,29 @@ public class MaterialsSharingPatientInfomationResource {
 	 * @throws Exception
 	 */
 	@PutMapping("/sharingPatientInfo/updateSrcFacilities")
-	public ResponseEntity<?> updateSrcFacilities(@RequestBody SrcPatientRequest request) throws Exception {
+	public ResponseEntity<?> updateSrcFacilities(@RequestBody SrcPatientRequest request,
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+                                               ) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (request.getReceivedPatientInfos() != null && !request.getReceivedPatientInfos().isEmpty()) {
+          for (ReceivedPatientInfoInput receivedPatientInfo : request.getReceivedPatientInfos()) {
+            Map<String, String> payload = receivedPatientInfo.getPayload();
+            if (payload != null && !payload.isEmpty()) {
+              ObjectMapper mapper = new ObjectMapper();
+              PatPersonalMain patPersonalMain = mapper.readValue(payload.get("pat_personal_main"), PatPersonalMain.class);
+              if (patPersonalMain.getFacility_cd() != null && !patPersonalMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+                String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facility_cd=" + patPersonalMain.getFacility_cd() + " " + "pat_id=" + patPersonalMain.getPat_id() + " ";
+                InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+            }
+          }
+        }
+      }
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.PAT_NAME_IDENTIFICATION + "/sharingPatientInfo/updateSrcFacilities";

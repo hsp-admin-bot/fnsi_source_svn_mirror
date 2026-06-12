@@ -30,6 +30,7 @@ import jp.co.nikkiso.ntss.core.entity.MstPersonalUser;
 import jp.co.nikkiso.ntss.core.exception.DataSourceInconsistencyException;
 
 import java.util.Objects;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 /**
  * 仮ユーザー画面の実装クラス.
@@ -70,6 +71,10 @@ public class ProvisionalUserServiceImpl implements ProvisionalUserService {
 
   @Autowired
   private LogServiceCore logServiceCore;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // DB更新ログ出力ロジック wangzuo End
 
   @Autowired
@@ -184,7 +189,7 @@ public class ProvisionalUserServiceImpl implements ProvisionalUserService {
     wheres.append(" WHERE\n");
     wheres.append(" user_id = " + userId + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(mstUserDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -274,11 +279,11 @@ public class ProvisionalUserServiceImpl implements ProvisionalUserService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

@@ -13,7 +13,7 @@
 <script>
 import listHeader from "@/components/master-maintenance/mst-weight/MstWeightRecordListHeaderComponent";
 import detailHeader from "@/components/master-maintenance/IndividualMasterHeaderComponent";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 export default {
   data() {
@@ -35,15 +35,14 @@ export default {
       this.isDetailHeader = val;
     }
   },
-  mounted() {},
+
   created() {
     EventBus.$on("setIsDetailHeaderView", this.setIsDetailHeaderView);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("setIsDetailHeaderView", this.setIsDetailHeaderView);
   },
   // add 性能改善メモリ不足 shan end
-  watch: {}
 };
 </script>

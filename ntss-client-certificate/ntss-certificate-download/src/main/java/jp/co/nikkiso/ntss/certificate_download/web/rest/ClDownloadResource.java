@@ -20,6 +20,10 @@ import jp.co.nikkiso.ntss.certificate_download.constant.ClientCertificateConstan
 import jp.co.nikkiso.ntss.certificate_download.security.NtssUser;
 import jp.co.nikkiso.ntss.certificate_download.service.P12CombineService;
 import jp.co.nikkiso.ntss.certificate_download.service.log.LogService;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import jp.co.nikkiso.ntss.core.dao.ClDetailsDao;
 import jp.co.nikkiso.ntss.core.entity.ClDetail;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
@@ -29,7 +33,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-@Service
+@RestController
 @RequestMapping(Uri.CLDOWNLOAD)
 public class ClDownloadResource {
 

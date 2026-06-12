@@ -2,8 +2,12 @@
 <template>
   <ntss-layout>
     <!-- パンくずを表示しない -->
-    <header-component style="margin-bottom: 35px;" slot='header-content' />
-    <main-component slot='main-content' ref='mainComponent' :history-key="historyKey" />
+    <template #header-content>
+      <header-component style="margin-bottom: 35px;" />
+    </template>
+    <template #main-content>
+      <main-component ref="mainComponent" :history-key="historyKey" />
+    </template>
   </ntss-layout>
 </template>
 
@@ -13,7 +17,7 @@ import MainComponent from "@/components/pat-home-dialysis/PatHomeDialysisMainFra
 import ViewHelper from "@/views/ViewHelperMixin";
 import { HISTORY_KEY_PAT_HOME_DIALYSIS } from "@/router/pat-home-dialysis/HistoryKeyConstants";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc start
-import {mapGetters, mapMutations} from "vuex";
+import {mapGetters, mapMutations} from "@/compat/vue/vuex";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import {messageFormat} from "@/functions/common/MessageFormat";
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";

@@ -25,8 +25,8 @@
 }
 
 /* カスタム系スタイル指定 */
-.device-input-number >>> .custom-input-number,
-.device-input-time >>> .custom-input-time {
+.device-input-number :deep(.custom-input-number),
+.device-input-time :deep(.custom-input-time) {
   /* mod 装置設定外結障害No8対応 趙 start */
   /*mod #6461-文字サイズ：特大のときに一部設定値が見切れる 徐博 start*/
   /* width: 70px; */
@@ -34,6 +34,13 @@
   /*width: 76px;*/
   /*mod #6461-文字サイズ：特大のときに一部設定値が見切れる 徐博 end*/
   /* mod 装置設定外結障害No8対応 趙 end */
+}
+
+/* ラジオボタンとラベル文字の間隔 */
+.device-info-cell :deep(.custom-radio ons-radio),
+.device-info-cell-value :deep(.custom-radio ons-radio),
+.auto-alert-cell :deep(.custom-radio ons-radio) {
+  margin-right: 9px;
 }
 
 /* 各表示項目・内容 */
@@ -82,11 +89,11 @@
   .device-info-content-area {
     min-width: none !important;
   }
-  ::v-deep .highcharts-container {
+  :deep(.highcharts-container) {
     width: 100% !important;
     height: auto !important;
   }
-  ::v-deep .highcharts-root{
+  :deep(.highcharts-root) {
     width: 100% !important;
   }
 }

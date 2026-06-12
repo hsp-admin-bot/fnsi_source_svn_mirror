@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.request.creatingReport.ReportByCdRequest;
 import jp.co.nikkiso.ntss.admin_web.request.creatingReport.ReportRequest;
 import jp.co.nikkiso.ntss.api.service.report.ReportS3Service;
@@ -8,9 +8,9 @@ import org.jsoup.Jsoup;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
 import org.springframework.test.context.jdbc.Sql;
@@ -57,7 +57,7 @@ public class ReportResourceIntegrationTest extends AbstractResourceIntegrationTe
   /**
    * 帳票取得のServiceのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private ReportS3Service reportS3Service;
 
   /**
@@ -103,7 +103,7 @@ public class ReportResourceIntegrationTest extends AbstractResourceIntegrationTe
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.post("/api/report/creating-report")
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -166,7 +166,7 @@ public class ReportResourceIntegrationTest extends AbstractResourceIntegrationTe
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.post("/api/report/creating-report")
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -213,7 +213,7 @@ public class ReportResourceIntegrationTest extends AbstractResourceIntegrationTe
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.post("/api/report/creating-report/{reportCd}", reportCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -275,7 +275,7 @@ public class ReportResourceIntegrationTest extends AbstractResourceIntegrationTe
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.post("/api/report/creating-report/{reportCd}", reportCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -300,7 +300,7 @@ public class ReportResourceIntegrationTest extends AbstractResourceIntegrationTe
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/report/mst-report/{funcCd}", funcCd)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))

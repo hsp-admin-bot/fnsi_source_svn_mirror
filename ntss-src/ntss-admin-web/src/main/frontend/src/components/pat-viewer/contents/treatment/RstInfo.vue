@@ -12,7 +12,7 @@
 /**
  * Vue関連
  */
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 
 /**
  * ベースコンポーネント
@@ -101,7 +101,7 @@ export default {
     });
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -130,11 +130,9 @@ export default {
       }
       // 直近日を取得
       const recentDate = this.getRecentBaseDate();
-      /* add by chamaojia 2026-03-25 [12462] 患者情報共有->患者経過総合ビューア --start */
       if (!recentDate) {
         return;
       }
-      /* add by chamaojia 2026-03-25 [12462] 患者情報共有->患者経過総合ビューア --end */
       // 直近日の治療予定に実績が存在するかチェック
       const rstInfo = rowInfo.data.find(
         ({ ordNo }) => ordNo === this.ordMainData[recentDate].ordNo
@@ -268,5 +266,5 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 </style>

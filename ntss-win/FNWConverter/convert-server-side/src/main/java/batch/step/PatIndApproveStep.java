@@ -5,12 +5,13 @@ import batch.listener.JobStartEndLIstener;
 import batch.part.ProgressManagement;
 import batch.part.StreamThread;
 import batch.part.TableNameToDbType;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.Step;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -36,7 +37,7 @@ public class PatIndApproveStep  implements Tasklet {
 
     public static final String STEP_NAME = "PatIndApproveStep";
     @Autowired
-    private StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
     @Autowired
     ProgressManagement progressManagement;
     @Autowired
@@ -167,7 +168,37 @@ public class PatIndApproveStep  implements Tasklet {
         try{
             DataSource convertDbDs = (DataSource) appContext.getBean(ApplicationConst.DbType.CONVERT);
             StringBuilder ind_Pat_Ind_Approve = new StringBuilder();
-            ind_Pat_Ind_Approve.append("""
+            appendAddPatIndApproveInsertSql(ind_Pat_Ind_Approve);
+            MapSqlParameterSource params = new MapSqlParameterSource();
+            params.addValue("facility_cd", facilityCd);
+            NamedParameterJdbcTemplate machineJdbcTemplate = new NamedParameterJdbcTemplate(convertDbDs);
+            int count = machineJdbcTemplate.update(ind_Pat_Ind_Approve.toString(), params);
+            eventLogMessage = eventLoggerUtil.getEventLogMessage(String.format("pat_ind_approve更新成功%d件", count),
+                    facilityCd, "addPatIndDpprove()");
+            eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.INFO);
+        } catch (Exception e) {
+            //ログ
+            eventLogMessage = eventLoggerUtil.getEventLogMessage("pat_ind_approve更新に失敗しました！ " + e.getMessage(),
+                    facilityCd, "addPatIndDpprove()");
+            eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.ERROR);
+        }
+    }
+
+    /**
+     * pat_ind_approve INSERT用SQL全文をStringBuilderへ追加する
+     */
+    private void appendAddPatIndApproveInsertSql(StringBuilder ind_Pat_Ind_Approve) {
+        appendAddPatIndApproveMediCommentEquipCte(ind_Pat_Ind_Approve);
+        appendAddPatIndApproveCondInfoCte(ind_Pat_Ind_Approve);
+        appendAddPatIndApproveContentMapInsert(ind_Pat_Ind_Approve);
+    }
+
+    /**
+     * INSERT用SQL：medi_info／comment_info／equip_info CTEを追加する
+     */
+    private void appendAddPatIndApproveMediCommentEquipCte(StringBuilder sb) {
+        sb.append("""
+
                            WITH medi_info AS (
                              SELECT
                                ord_no,
@@ -252,6 +283,15 @@ public class PatIndApproveStep  implements Tasklet {
                              GROUP BY
                                ord_no
                            ),
+
+""");
+    }
+
+    /**
+     * INSERT用SQL：cond_info CTEを追加する
+     */
+    private void appendAddPatIndApproveCondInfoCte(StringBuilder sb) {
+        sb.append("""
                            cond_info AS (
                              	 SELECT
                                ord_no,
@@ -849,6 +889,15 @@ public class PatIndApproveStep  implements Tasklet {
                                rst_dialysis_state = '6'
                                AND ord_main.facility_cd = :facility_cd
                                AND ind_cond_info IS NOT NULL
+
+""");
+    }
+
+    /**
+     * INSERT用SQL：content_map CTEとINSERT文を追加する
+     */
+    private void appendAddPatIndApproveContentMapInsert(StringBuilder sb) {
+        sb.append("""
                            ),  content_map as(
                            SELECT
                            	 ord_main.ord_no,
@@ -997,20 +1046,8 @@ public class PatIndApproveStep  implements Tasklet {
                                                                FROM ord_main ord  left join  pat_ind_approve pat  on ord.ord_no=pat.ord_no and  pat.facility_cd= ord.facility_cd
                                                                left join  contentformap cmap  on ord.ord_no=cmap.ord_no 
                                                                where ord.ind_cond_info is not null and   pat.ord_no IS NULL AND ord.facility_cd=:facility_cd
-                    """);
-            MapSqlParameterSource params = new MapSqlParameterSource();
-            params.addValue("facility_cd", facilityCd);
-            NamedParameterJdbcTemplate machineJdbcTemplate = new NamedParameterJdbcTemplate(convertDbDs);
-            int count = machineJdbcTemplate.update(ind_Pat_Ind_Approve.toString(), params);
-            eventLogMessage = eventLoggerUtil.getEventLogMessage(String.format("pat_ind_approve更新成功%d件", count),
-                    facilityCd, "addPatIndDpprove()");
-            eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.INFO);
-        } catch (Exception e) {
-            //ログ
-            eventLogMessage = eventLoggerUtil.getEventLogMessage("pat_ind_approve更新に失敗しました！ " + e.getMessage(),
-                    facilityCd, "addPatIndDpprove()");
-            eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.ERROR);
-        }
+                    
+""");
     }
 
     private void copyPatIndApprove(String inputFilePath,boolean isDel, String facilityCd) throws Exception {
@@ -1020,6 +1057,13 @@ public class PatIndApproveStep  implements Tasklet {
         String productionDbType = tableNameToDbType.getDbTypeByTableName(tableName);
         // 実行するコピーコマンドの組み立て
         String[] command = createCopyCommand(inputFilePath,tableName, ApplicationConst.DbType.CONVERT, productionDbType, facilityCd, isDel);
+        executePatIndApproveCopyCommand(facilityCd, tableName, command);
+    }
+
+    /**
+     * pat_ind_approveのpsqlコピーコマンドを実行する
+     */
+    private void executePatIndApproveCopyCommand(String facilityCd, String tableName, String[] command) throws Exception {
         // システムコール
         Runtime runtime = Runtime.getRuntime();
         EventLogMessage eventLogMessage = eventLoggerUtil.getEventLogMessage("pat_ind_approveコピーコマンド実行：" + command[2],
@@ -1061,6 +1105,16 @@ public class PatIndApproveStep  implements Tasklet {
             String fromDbType,
             String toDbType,
             String facilityCd,boolean isDel) {
+        CopyDbConnectionInfo connInfo = resolveCopyDbConnectionInfo(fromDbType, toDbType);
+        String sqlDelete = buildCopySqlDeleteClause(isDel, facilityCd);
+        String sql = buildCopySelectSql(facilityCd, isDel);
+        return assembleCopyShellCommand(inputFilePath, tableName, connInfo, sqlDelete, sql);
+    }
+
+    /**
+     * コピー元・先DBの接続情報を取得する
+     */
+    private CopyDbConnectionInfo resolveCopyDbConnectionInfo(String fromDbType, String toDbType) {
         String jdbcUrl = environment.getProperty("datasource." + fromDbType + ".jdbc-url");
         String userName = environment.getProperty("datasource." + fromDbType + ".username");
         String jdbcUrlConvert = environment.getProperty("datasource." + toDbType + ".jdbc-url");
@@ -1073,6 +1127,13 @@ public class PatIndApproveStep  implements Tasklet {
         String toHostIp = jdbcUrlConvert.split("/")[2].split(":")[0];
         String toDbUser = userNameConvert;
         String toDbName = jdbcUrlConvert.split("/")[3];
+        return new CopyDbConnectionInfo(fromHostIp, fromDbUser, fromDbName, toHostIp, toDbUser, toDbName);
+    }
+
+    /**
+     * isDel時の削除SQLオプション文字列を組み立てる
+     */
+    private String buildCopySqlDeleteClause(boolean isDel, String facilityCd) {
         String sqlDelete = "";
         if(isDel){
             String  sqlDel= " delete from pat_ind_approve " +
@@ -1082,14 +1143,13 @@ public class PatIndApproveStep  implements Tasklet {
                     " and  facility_cd ='" + facilityCd + "'";
             sqlDelete = " -c \"" + sqlDel + "\"";
         }
-        // 登録先DBスキーマを取得
-        String toDb_table_prefix = environment.getProperty(toDbUser+ "_prefix");
-        toDb_table_prefix = toDb_table_prefix == null ? "" : toDb_table_prefix;
+        return sqlDelete;
+    }
 
-        // 登録列名リストをカンマ区切りに変換
-        String registColumnNames ="ord_no,check_user1_cd, check_user2_cd,approve_user1_cd,approve_user2_cd,check_user1_time,check_user2_time,approve_user1_time,approve_user2_time," +
-                "reg_date,up_date,is_content_changed,is_content_appd_changed,check_content,approve_content,is_user1_checked,is_user2_checked,is_user1_approved," +
-                "is_user2_approved,facility_cd,content_for_map";
+    /**
+     * コピー元SELECT SQLを組み立てる
+     */
+    private String buildCopySelectSql(String facilityCd, boolean isDel) {
         // データ取得SQL生成
         String sql ="SELECT ind.ord_no ,NULL,NULL,NULL, NULL,NULL,NULL,NULL,NULL,to_timestamp(to_char(CURRENT_DATE, 'YYYY-MM-DD HH24:MI:SS'), 'YYYY-MM-DD HH24:MI:SS')," +
                 "to_timestamp(NULL, 'YYYY-MM-DD HH24:MI:SS'), '1','1','{}', '{}','0','0','0','0'," +
@@ -1102,16 +1162,31 @@ public class PatIndApproveStep  implements Tasklet {
                     "ind.facility_cd,content_for_map  FROM pat_ind_approve ind  INNER JOIN  convert_pat_ind_approve_ord_no ordno ON ordno.ord_no = ind.ord_no AND ordno.facility_cd = ind.facility_cd " +
                     " where  ind.facility_cd='" + facilityCd + "' ";
         }
+        return sql;
+    }
+
+    /**
+     * psqlコピー用シェルコマンド配列を組み立てる
+     */
+    private String[] assembleCopyShellCommand(String inputFilePath, String tableName,
+                                              CopyDbConnectionInfo connInfo, String sqlDelete, String sql) {
+        String toDb_table_prefix = environment.getProperty(connInfo.toDbUser+ "_prefix");
+        toDb_table_prefix = toDb_table_prefix == null ? "" : toDb_table_prefix;
+
+        // 登録列名リストをカンマ区切りに変換
+        String registColumnNames ="ord_no,check_user1_cd, check_user2_cd,approve_user1_cd,approve_user2_cd,check_user1_time,check_user2_time,approve_user1_time,approve_user2_time," +
+                "reg_date,up_date,is_content_changed,is_content_appd_changed,check_content,approve_content,is_user1_checked,is_user2_checked,is_user1_approved," +
+                "is_user2_approved,facility_cd,content_for_map";
         GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
         String tmpCopyCsvFile = inputFilePath + globalContext.tmpCopyCsvDir + tableName + ".csv";
         // 実行するコピーコマンドの組み立て
         String copyCommand = "psql"
                 + " -h "
-                + fromHostIp
+                + connInfo.fromHostIp
                 + " -U "
-                + fromDbUser
+                + connInfo.fromDbUser
                 + " -d "
-                + fromDbName
+                + connInfo.fromDbName
                 + " -c \"\\copy "
                 + "("
                 + sql
@@ -1119,11 +1194,11 @@ public class PatIndApproveStep  implements Tasklet {
                 + " && "
                 + "psql"
                 + " -h "
-                + toHostIp
+                + connInfo.toHostIp
                 + " -U "
-                + toDbUser
+                + connInfo.toDbUser
                 + " -d "
-                + toDbName
+                + connInfo.toDbName
                 + " -1 "
                 + sqlDelete
                 + " -c \"\\copy " + toDb_table_prefix
@@ -1144,11 +1219,64 @@ public class PatIndApproveStep  implements Tasklet {
         return command;
     }
 
+    /**
+     * コピー処理用DB接続情報
+     */
+    private static class CopyDbConnectionInfo {
+        private final String fromHostIp;
+        private final String fromDbUser;
+        private final String fromDbName;
+        private final String toHostIp;
+        private final String toDbUser;
+        private final String toDbName;
 
+        private CopyDbConnectionInfo(String fromHostIp, String fromDbUser, String fromDbName,
+                                     String toHostIp, String toDbUser, String toDbName) {
+            this.fromHostIp = fromHostIp;
+            this.fromDbUser = fromDbUser;
+            this.fromDbName = fromDbName;
+            this.toHostIp = toHostIp;
+            this.toDbUser = toDbUser;
+            this.toDbName = toDbName;
+        }
+    }
     private void updateContentForMapControl(String facilityCd) {
         DataSource convertDbDs = (DataSource) appContext.getBean(ApplicationConst.DbType.CONVERT);
         StringBuilder ind_Pat_Ind_Approve = new StringBuilder();
-        ind_Pat_Ind_Approve.append("""  
+        appendUpdateContentForMapSql(ind_Pat_Ind_Approve);
+        EventLogMessage eventLogMessage = new EventLogMessage();
+        try {
+            MapSqlParameterSource parameters = new MapSqlParameterSource()
+                    .addValue("facility_cd", facilityCd);
+            NamedParameterJdbcTemplate machineJdbcTemplate = new NamedParameterJdbcTemplate(convertDbDs);
+            int count = machineJdbcTemplate.update(ind_Pat_Ind_Approve.toString(), parameters);
+            //ログ
+            eventLogMessage = eventLoggerUtil.getEventLogMessage(String.format("pat_ind_approve変更成功%d件", count),
+                    facilityCd, "updateContentForMapControl()");
+            eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.INFO);
+        } catch (Exception e) {
+            //ログ
+            eventLogMessage = eventLoggerUtil.getEventLogMessage("pat_ind_approve変更に失敗しました！ " + e.getMessage(),
+                    facilityCd, "updateContentForMapControl()");
+            eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.ERROR);
+        }
+    }
+
+    /**
+     * content_for_map UPDATE用SQL全文をStringBuilderへ追加する
+     */
+    private void appendUpdateContentForMapSql(StringBuilder ind_Pat_Ind_Approve) {
+        appendUpdateContentForMapMediCommentEquipCte(ind_Pat_Ind_Approve);
+        appendUpdateContentForMapCondInfoCte(ind_Pat_Ind_Approve);
+        appendUpdateContentForMapUpdateStatement(ind_Pat_Ind_Approve);
+    }
+
+    /**
+     * UPDATE用SQL：medi_info／comment_info／equip_info CTEを追加する
+     */
+    private void appendUpdateContentForMapMediCommentEquipCte(StringBuilder sb) {
+        sb.append("""
+  
 			   WITH medi_info AS (
                              SELECT
                                ord_no,
@@ -1233,6 +1361,15 @@ public class PatIndApproveStep  implements Tasklet {
                              GROUP BY
                                ord_no
                            ),
+
+""");
+    }
+
+    /**
+     * UPDATE用SQL：cond_info CTEを追加する
+     */
+    private void appendUpdateContentForMapCondInfoCte(StringBuilder sb) {
+        sb.append("""
                            cond_info AS (
                              	 SELECT
                                ord_no,
@@ -1830,6 +1967,15 @@ public class PatIndApproveStep  implements Tasklet {
                                rst_dialysis_state = '6'
                                AND ord_main.facility_cd = :facility_cd
                                AND ind_cond_info IS NOT NULL
+
+""");
+    }
+
+    /**
+     * UPDATE用SQL：content_map CTEとUPDATE文を追加する
+     */
+    private void appendUpdateContentForMapUpdateStatement(StringBuilder sb) {
+        sb.append("""
                            ),  content_map as(
                            SELECT
                            	 ord_main.ord_no,
@@ -1937,28 +2083,13 @@ public class PatIndApproveStep  implements Tasklet {
 				 		where	pat_ind_approve.content_for_map is  null and   pat_ind_approve.ord_no=cmap.ord_no
 							and	pat_ind_approve.facility_cd=:facility_cd
 								
-				""");
-        EventLogMessage eventLogMessage = new EventLogMessage();
-        try {
-            MapSqlParameterSource parameters = new MapSqlParameterSource()
-                    .addValue("facility_cd", facilityCd);
-            NamedParameterJdbcTemplate machineJdbcTemplate = new NamedParameterJdbcTemplate(convertDbDs);
-            int count = machineJdbcTemplate.update(ind_Pat_Ind_Approve.toString(), parameters);
-            //ログ
-            eventLogMessage = eventLoggerUtil.getEventLogMessage(String.format("pat_ind_approve変更成功%d件", count),
-                    facilityCd, "updateContentForMapControl()");
-            eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.INFO);
-        } catch (Exception e) {
-            //ログ
-            eventLogMessage = eventLoggerUtil.getEventLogMessage("pat_ind_approve変更に失敗しました！ " + e.getMessage(),
-                    facilityCd, "updateContentForMapControl()");
-            eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.ERROR);
-        }
+				
+""");
     }
 
     @Bean(name=STEP_NAME)
     public Step step() {
-        return stepBuilderFactory.get(STEP_NAME)
+        return new StepBuilder(STEP_NAME, jobRepository)
                 .tasklet(this)
                 .build();
     }

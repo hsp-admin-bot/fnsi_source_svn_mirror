@@ -1,10 +1,10 @@
 package jp.co.nikkiso.ntss.admin_web.service.treatmentRecord.mergeHandler.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.service.treatmentRecord.mergeHandler.TreatmentRecordMergeChainHandler;
 import jp.co.nikkiso.ntss.core.dao.MstMachineDao;
@@ -162,7 +162,7 @@ public class UpdateOrdDataChainHandler extends TreatmentRecordMergeChainHandler 
         baseOrdMainData.setRstRoundsInfo(rstRoundInfoJsonNode.toString());
       }
 
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new NtssException("マージデータのJSON書式不整合、マージ処理できない。", e);
     }
 
@@ -201,7 +201,7 @@ public class UpdateOrdDataChainHandler extends TreatmentRecordMergeChainHandler 
    * @param megMediInfo マージデータの投与薬剤情報
    * @return  番号整合後の投与薬剤情報
    */
-  private JsonNode mediCtlNoReintegration(String rstMediInfo, String megMediInfo) throws JsonProcessingException {
+  private JsonNode mediCtlNoReintegration(String rstMediInfo, String megMediInfo) throws JacksonException {
 
     rstMediInfo = StringUtils.isNotEmpty(rstMediInfo) ? rstMediInfo : JSON_ARRAY_EMPTY;
     megMediInfo = StringUtils.isNotEmpty(megMediInfo) ? megMediInfo : JSON_ARRAY_EMPTY;
@@ -233,7 +233,7 @@ public class UpdateOrdDataChainHandler extends TreatmentRecordMergeChainHandler 
    * @param baseEquipInfo 医材情報
    * @return  マージ後の医材情報
    */
-  private JsonNode equipmentReintegration(String baseEquipInfo) throws JsonProcessingException {
+  private JsonNode equipmentReintegration(String baseEquipInfo) throws JacksonException {
     baseEquipInfo = StringUtils.isNotEmpty(baseEquipInfo) ? baseEquipInfo : JSON_ARRAY_EMPTY;
 
     JsonNode rstEquipJsonNode = objectMapper.readTree(baseEquipInfo);
@@ -275,7 +275,7 @@ public class UpdateOrdDataChainHandler extends TreatmentRecordMergeChainHandler 
    * @return  整合後の回診記録
    */
   private JsonNode roundInfoReintegration(String rstRoundInfo
-    , String rstIndComment) throws JsonProcessingException {
+    , String rstIndComment) throws JacksonException {
 
     rstRoundInfo = StringUtils.isNotEmpty(rstRoundInfo) ? rstRoundInfo : JSON_OBJECT_EMPTY;
 

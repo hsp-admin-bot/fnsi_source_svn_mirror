@@ -3,11 +3,11 @@
     v-model="selectedValue"
     :class="classObject"
     :disabled="disabled"
-    v-on="$listeners"
+    v-bind="$attrs"
     @blur="delFocusCss($event)"
     @focus="addFocusCss($event)"
   >
-    <!-- #10266 スケジュール親/子ヘッダー押下　NG linjunfeng start -->
+    <!-- #10266 スケジュール親/子ヘッダー押下 NG linjunfeng start -->
     <!-- <option
       v-for="(option, index) in options"
       :key="index"
@@ -19,14 +19,13 @@
       :value="option.value"
       v-show="option.isShow !== false"
     >
-    <!-- #10266 スケジュール親/子ヘッダー押下　NG linjunfeng end -->
+    <!-- #10266 スケジュール親/子ヘッダー押下 NG linjunfeng end -->
       {{ option.displayValue }}
     </option>
   </v-ons-select>
 </template>
 
 <script>
-import _ from "underscore";
 // 共通タグ用ベースコンポーネント
 import baseCustomForm from "@/components/common/custom-form-tags/BaseCustomForm";
 
@@ -47,6 +46,7 @@ import baseCustomForm from "@/components/common/custom-form-tags/BaseCustomForm"
  *   ⇒ 項目1、または項目2を選択可能なプルダウンメニュー
  */
 export default {
+  inheritAttrs: false,
   mixins: [baseCustomForm],
 
   props: {
@@ -56,12 +56,12 @@ export default {
       validator: options => {
         return options.every(
           option =>
-            // #10266 スケジュール親/子ヘッダー押下　NG linjunfeng start
-            // _.keys(option).length === 2 &&
-            _.keys(option).length >= 2 &&
-            // #10266 スケジュール親/子ヘッダー押下　NG linjunfeng end
-            _.has(option, "value") &&
-            _.has(option, "displayValue")
+            // #10266 スケジュール親/子ヘッダー押下 NG linjunfeng start
+            // Object.keys(option).length === 2 &&
+            Object.keys(option).length >= 2 &&
+            // #10266 スケジュール親/子ヘッダー押下 NG linjunfeng end
+            Object.prototype.hasOwnProperty.call(option, "value") &&
+            Object.prototype.hasOwnProperty.call(option, "displayValue")
         );
       }
     },

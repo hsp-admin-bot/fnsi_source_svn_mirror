@@ -7,7 +7,7 @@
     :class="classObject"
     :disabled="disabled"
     @blur="validate()"
-    v-on="$listeners"
+    v-bind="$attrs"
   /> -->
   <!-- mod 患者名入力チェック不正について、対応する。 dengshen start -->
   <!-- <v-ons-input -->
@@ -29,7 +29,7 @@
     :class="classObject"
     :disabled="disabled"
     @blur="delFocusCss($event)"
-    v-on="$listeners"
+    v-bind="$attrs"
     @focus="addFocusCss($event)"
     @input="inputValue($event)"
     @keydown="keydownup($event)"
@@ -61,6 +61,7 @@ import {
  *     :display-string="マスタの名称" />
  */
 export default {
+  inheritAttrs: false,
   mixins: [baseCustomForm],
 
   props: {
@@ -75,6 +76,10 @@ export default {
     wheelChangeUse: {
       default: false
     },
+    wheelEmptyInitValue: {
+      type: String,
+      default: null
+    },
     datetype: {
       type: String,
       default: null
@@ -83,21 +88,22 @@ export default {
       type: String,
       default: null
     },
-    //#10866:日付(不定型)の部品修正・検証NG対応　Start
-    foucusIN_SV: {
-      type:String,
-      default: null
-    }
-    //#10866:日付(不定型)の部品修正・検証NG対応　End
+    //#10866:日付(不定型)の部品修正・検証NG対応 Start
+    // foucusIN_SV: {
+    //   type:String,
+    //   default: null
+    // }
+    //#10866:日付(不定型)の部品修正・検証NG対応 End
     //#10866：日付(不定型)の部品修正End
   },
-  //#10866:日付(不定型)の部品修正・検証NG対応　Start
+  //#10866:日付(不定型)の部品修正・検証NG対応 Start
   data() {
     return {
-      wheelChangeOn: false
+      wheelChangeOn: false,
+      foucusIN_SV: null
     };
   },
-  //#10866:日付(不定型)の部品修正・検証NG対応　End
+  //#10866:日付(不定型)の部品修正・検証NG対応 End
   computed: {
     // 入力欄に表示する値
     valueInput: {
@@ -145,7 +151,7 @@ export default {
     keydownup(event) {
       if (this.datetype == null) return;
 
-      //TAG　:datetype指定のみ対応
+      //TAG :datetype指定のみ対応
       let start_txt = ((event.target.value != undefined) && event.target.value != null && event.target.value != '') ? parseInt(event.target.value,10) : 0;
       //↑キー押下
       if (event.key != undefined && event.key === 'ArrowUp') {
@@ -205,23 +211,23 @@ export default {
     addFocusCss(event){
       let element = event.target;
       element?.classList?.add("custom-input-edited");
-      //#10866:日付(不定型)の部品修正・検証NG対応　Start
+      //#10866:日付(不定型)の部品修正・検証NG対応 Start
       //フォーカスイン時：不定型フィールド名保持(不定型フィールドは通番含む管理)
       if (this.wheelChangeUse) this.wheelChangeOn = true;
       this.foucusIN_SV = this.datetype;
-      //#10866:日付(不定型)の部品修正・検証NG対応　End
+      //#10866:日付(不定型)の部品修正・検証NG対応 End
     },
     delFocusCss(event){
       if(!this.isEdited){
         let element = event.target;
         element.classList.remove("custom-input-edited");
-        //#10866:日付(不定型)の部品修正・検証NG対応　Start
+        //#10866:日付(不定型)の部品修正・検証NG対応 Start
         //フォーカスアウト時：：不定型フィールド名クリア
         if (this.wheelChangeUse) this.wheelChangeOn = false;
         event.preventDefault();
       }
       this.foucusIN_SV = null;
-      //#10866:日付(不定型)の部品修正・検証NG対応　End
+      //#10866:日付(不定型)の部品修正・検証NG対応 End
     },
     // add FNSI-inputの色 鄭 end
     //#10866：日付(不定型)の部品修正Start
@@ -230,9 +236,32 @@ export default {
      * @summary マウスホイールでの入力値の増減を可能にする
      */
     wheelChangeValue(event) {
-      //#10866:日付(不定型)の部品修正・検証NG対応　Start
-      const element = document.activeElement;
-      if (element.value === "") {
+      // wheelChangeUse を明示した不定型日付入力のみホイール変更を許可する
+      if (!this.wheelChangeUse || this.datetype == null) {
+        const ownerDocument = event?.target?.ownerDocument || this.$el?.ownerDocument || (typeof document !== "undefined" ? document : null);
+        const activeElement = ownerDocument?.activeElement || null;
+        const rootEl = this.$el;
+        const isFocusedCurrentInput =
+          activeElement === event?.target ||
+          activeElement === rootEl ||
+          (typeof rootEl?.contains === "function" && rootEl.contains(activeElement));
+        const eventTargetValue =
+          (event?.target && typeof event.target.value !== "undefined")
+            ? event.target.value
+            : this.editValue;
+        if (
+          this.wheelEmptyInitValue !== null &&
+          isFocusedCurrentInput &&
+          (eventTargetValue === "" || eventTargetValue === null || typeof eventTargetValue === "undefined")
+        ) {
+          this.editValue = this.wheelEmptyInitValue;
+        }
+        return;
+      }
+      //#10866:日付(不定型)の部品修正・検証NG対応 Start
+      const ownerDocument = event?.target?.ownerDocument || this.$el?.ownerDocument || (typeof document !== "undefined" ? document : null);
+      const element = ownerDocument?.activeElement || event?.target;
+      if (element?.value === "") {
         //現在不定型フィールド位置の値が空の場合
         if (this.foucusIN_SV != this.datetype) {
           //前回保持不定型フィールド比較：異なる場合ホーイル起動停止
@@ -244,7 +273,7 @@ export default {
         }
       } else if (this.foucusIN_SV ===  null) this.wheelChangeOn = false;
       if (!this.wheelChangeOn) return;
-      //#10866:日付(不定型)の部品修正・検証NG対応　End
+      //#10866:日付(不定型)の部品修正・検証NG対応 End
       //wheelChangeUse指定のみ対応
       let start_int = ((event.target.value != undefined) && event.target.value != null && event.target.value != '') ? parseInt(event.target.value,10) : 0;
         // マウスホイールの向き

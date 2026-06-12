@@ -40,7 +40,7 @@
             // serviceInstaller1
             // 
             this.serviceInstaller1.Description = "クライアントから印刷要求を受け取り、接続されたプリンタに出力します";
-            this.serviceInstaller1.DisplayName = "FNWSi 印刷サーバーアプリ";
+            this.serviceInstaller1.DisplayName = "FNWSi 印刷サーバーサービス";
             this.serviceInstaller1.ServiceName = "NKKPrintServer";
             this.serviceInstaller1.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
             // 

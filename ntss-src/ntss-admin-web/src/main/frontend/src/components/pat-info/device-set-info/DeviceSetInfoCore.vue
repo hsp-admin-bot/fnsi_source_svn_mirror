@@ -9,8 +9,7 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 
 export default {
   // 共通タグコンポーネント読み込み
-  components: {},
-  props: {},
+
 
   data() {
     return {
@@ -5547,12 +5546,6 @@ export default {
               data[key].editValue;
           }
         }
-      }
-      let sendData = {};
-      if (table_flag === 0) {
-        sendData.pat = updateData;
-      } else {
-        sendData = updateData;
       }
       return updateData;
     },

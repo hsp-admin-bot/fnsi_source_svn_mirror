@@ -1,11 +1,12 @@
 <template>
   <div class="simple-search-area">
-    <div @click="isConditonVisible = !isConditonVisible">
+    <div @click="checkConditonVisible">
       <div class="color-header search-header">検索条件</div>
     </div>
     <div v-show="isConditonVisible" class="search-area-border">
       <div style="overflow-x: hidden; overflow-y: auto;">
         <table class="search-area" style="white-space: nowrap;">
+      <tbody>
           <!-- bug #3854 修正 chen start -->
             <!-- <input style="display:none" type="text"/>
           <input style="display:none" type="password" autocomplete="new-password"/> -->
@@ -22,7 +23,7 @@
 <!--              <input v-model="treatDate" class="ntss-input-date" type="date" />-->
 <!--              <common-calendar v-model="treatDate" />-->
               <div class="radio_box_dis">
-                <div>
+                <div style="display: inline-flex; align-items: center;">
                   <!-- #5590 2023/04/19 ×を常に表示するように修正 林峻峰 start -->
                   <!-- <div class="date-input">
                     <input v-model="treatDate" class="ntss-input-date treatDate" max="9999-12-31" id="date-input" @keyup="showStartMsg" @blur="getStartDate" type="date" />
@@ -233,7 +234,8 @@
               </v-ons-select>
             </td>
           </tr>
-        </table>
+        
+      </tbody></table>
      </div>
 
       <span class="button-area">
@@ -308,9 +310,9 @@
 </template>
 
 <script>
-  import _ from "underscore";
-  import moment from "moment";
-  import {mapActions, mapGetters, mapMutations} from "vuex";
+  import _ from "@/compat/collections/lodash";
+  import dayjs from "@/compat/date/dayjs";
+  import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
   import {ApiHelper} from "@/apis/AxiosHelper";
   import PatGroup from "@/apis/pat-group";
   import {FUNC_PAT_GROUP} from "@/constants/function-code";
@@ -329,7 +331,7 @@
   import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
   /*add FNSI-改修内容日付のチェックの追加対応。 吉 end*/
   // add FNSI-No.341 患者リストのソート項目不足 吉 start
-  import {EventBus} from "@/eventBus.js";
+  import {EventBus} from "@/compat/vue/event-bus.js";
   // mod FNSI-改修内容 ｶｽﾀﾑ検索を選択した後、「検索」ボタンをクリックすると、ページにエラーが表示されます dou end
   // add FNSI-No.341 患者リストのソート項目不足  吉 end
   //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
@@ -338,6 +340,7 @@
   import { confirmAllowDiscardChangesInRequestList } from "@/functions/exam-request/ExamRequestFunctions";
   import { confirmAllowDiscardChangesInMultiPatList } from "@/components/multi-pat-list/Functions";
   import { getKurCds } from "@/functions/modals/default-setting/defaultSettingUtils";
+import { getFooterMenuClientHeight, getMainContentAreaElement } from "@/functions/common/LayoutMeasureHelper";
 
 /**
  * @description 簡易検索
@@ -366,7 +369,7 @@ export default {
       cardDiff:true,
       // add 7778 limingyang end
       freeWord: "",
-      treatDate: moment().format("YYYY-MM-DD"),
+      treatDate: dayjs().format("YYYY-MM-DD"),
       treatDayOfWeekList: [],
       kurCdList: [],
       bedGroupCd: 0,
@@ -514,15 +517,17 @@ export default {
   watch: {
     isConditonVisible() {
       setTimeout(() => {
-        if (document.getElementsByClassName("pat-list-area") && document.getElementsByClassName("pat-list-area")[0]) {
+        const patListArea = this.getPatListAreaElement();
+        const patListGridArea = this.getPatListGridAreaElement();
+        if (patListArea) {
           const wh = this.windowHeight;
-          const tableTop = document.getElementsByClassName("pat-list-area")[0].getBoundingClientRect().top;
+          const tableTop = patListArea.getBoundingClientRect().top;
           const fmh =
             (this.isDispMenu === 1
-              ? document.getElementById("footer-menu").clientHeight
+              ? getFooterMenuClientHeight(this.$el || null)
               : 0);
-          document.getElementsByClassName("pat-list-area")[0].style.height = (wh - tableTop - fmh - 10) + "px";
-        }else if(document.getElementsByClassName("pat-list-grid-area") && document.getElementsByClassName("pat-list-grid-area")[0]){
+          patListArea.style.height = (wh - tableTop - fmh - 10) + "px";
+        } else if (patListGridArea) {
           // 機能別患者リストの高さ調整のイベントを発火
           EventBus.$emit("calculatePatListGridHeight");
         }
@@ -530,7 +535,7 @@ export default {
     },
     // 機能名称の有無で表示するリストの切替を実施
     srcFuncName() {
-      if (this.srcFuncName !== "" ) {
+      if (this.srcFuncName !== "") {
         // 検索条件を閉じる
         this.isConditonVisible = false;
       } else {
@@ -546,11 +551,7 @@ export default {
       this.setPatSearchedTreatDate(this.treatDate);
       // add 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 関 end
       setTimeout(() => {
-        if(document.getElementsByClassName("treatDate")[0].validationMessage !== ""){
-          this.showErrorStartDate = !(document.getElementsByClassName("treatDate")[0].value === "" && document.getElementsByClassName("treatDate-comment")[0].value !== "");
-        }else{
-          this.showErrorStartDate = false;
-        }
+        this.syncTreatDateValidation();
       }, 100);
     },
     /*add FNSI-改修内容日付のチェックの追加対応。 吉 end*/
@@ -647,8 +648,8 @@ export default {
     // add 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 関 end
   },
   // add #11055 画面の最新状態を元に帳票出力するようにする 高 start
-  beforeDestroy() {
-    EventBus.$off("invokeSearch");
+  beforeUnmount() {
+    EventBus.$off("invokeSearch", this.search);
   },
   // add #11055 画面の最新状態を元に帳票出力するようにする 高 end
   methods: {
@@ -1004,6 +1005,19 @@ export default {
       this.$emit("handleClickChange")
       //add 5368 患者の入外状態の色変更が正しく行われない 吉 end
     },
+    checkConditonVisible(){
+      this.isConditonVisible = !this.isConditonVisible;
+      //9846 start
+      this.$nextTick(() => {
+        setTimeout(() => {
+          EventBus.$emit("calculateTableHeight");
+          if (this.getPatListGridAreaElement()) {
+            EventBus.$emit("calculatePatListGridHeight");
+          }
+        }, 50);
+      });
+      //9846 end
+    },
     // add 11315 【たくしん会】患者検索の患者リストのソートが正しく動作しない 関 start
     simpleConditions() {
       return {
@@ -1036,7 +1050,7 @@ export default {
       this.clearSearchedPatList();
       // 各条件初期化
       this.freeWord = "";
-      this.treatDate = moment().format("YYYY-MM-DD");
+      this.treatDate = dayjs().format("YYYY-MM-DD");
       this.rstDialysisState = []; // 予定／実績チェックボックスOFF
       this.treatDayOfWeekList = [];
       this.kurCdList = [];
@@ -1102,7 +1116,7 @@ export default {
       this.freeWord = "";
       /*mod FNSI-改修内容日付のチェックの追加対応。 吉 start*/
       // this.treatDate = "";
-      this.treatDate = moment().format("YYYY-MM-DD");
+      this.treatDate = dayjs().format("YYYY-MM-DD");
       this.$nextTick(() => {
         this.treatDate = "";
       });
@@ -1364,11 +1378,41 @@ export default {
     setDateFunc(){
       return false;
     },
+    getMainContentScope() {
+      return getMainContentAreaElement(this.$el || null) || this.$el?.ownerDocument || document;
+    },
+    getScopedClassElement(className) {
+      if (!className) {
+        return null;
+      }
+      const localRoot = this.$el || null;
+      const localElement = localRoot?.getElementsByClassName?.(className)?.[0] || null;
+      if (localElement) {
+        return localElement;
+      }
+      const mainContentRoot = this.getMainContentScope();
+      return mainContentRoot?.getElementsByClassName?.(className)?.[0] || null;
+    },
+    getPatListAreaElement() {
+      return this.getMainContentScope()?.getElementsByClassName?.("pat-list-area")?.[0] || null;
+    },
+    getPatListGridAreaElement() {
+      return this.getMainContentScope()?.getElementsByClassName?.("pat-list-grid-area")?.[0] || null;
+    },
+    syncTreatDateValidation() {
+      const treatDateElement = this.getScopedClassElement("treatDate");
+      const treatDateCommentElement = this.getScopedClassElement("treatDate-comment");
+      if (treatDateElement?.validationMessage !== "") {
+        this.showErrorStartDate = !(treatDateElement?.value === "" && treatDateCommentElement?.value !== "");
+      } else {
+        this.showErrorStartDate = false;
+      }
+    },
     showStartMsg(){
-      this.showErrorStartDate = document.getElementsByClassName("treatDate")[0].validationMessage !== "";
+      this.showErrorStartDate = this.getScopedClassElement("treatDate")?.validationMessage !== "";
     },
     getStartDate(){
-      this.showErrorStartDate = document.getElementsByClassName("treatDate")[0].validationMessage !== "";
+      this.showErrorStartDate = this.getScopedClassElement("treatDate")?.validationMessage !== "";
     },
     /*add FNSI-改修内容日付のチェックの追加対応。 吉 end*/
     // add FutreNetWeb+SI課題管理 No4072 趙 start
@@ -1380,7 +1424,7 @@ export default {
       // 患者检索：检索结果不正 linjunfeng end
       EventBus.$emit("calculateTableHeight");
       setTimeout(() => {
-        if(document.getElementsByClassName("pat-list-grid-area") && document.getElementsByClassName("pat-list-grid-area")[0]){
+        if (this.getPatListGridAreaElement()) {
           // 機能別患者リストの高さ調整のイベントを発火
           EventBus.$emit("calculatePatListGridHeight");
         }
@@ -1409,7 +1453,7 @@ export default {
     
       } catch (error) {
         getErrorMessage("SimpleSearch.vue", "loadMasterData", "[SearchPatSimple.vue]loadMasterData(): マスタ取得失敗");
-        throw new Error("[SearchPatSimple.vue]loadMasterData(): マスタ取得失敗");
+        throw new Error("[SearchPatSimple.vue]loadMasterData(): マスタ取得失敗", { cause: error });
       }
     }
   }
@@ -1430,6 +1474,10 @@ select {
 
 .search-area {
   width: 100%;
+  /*** #9846 start */
+  max-width: 100%;
+  table-layout: fixed;
+  /*** #9846 end */
 }
 
 .search-area tr th {
@@ -1521,8 +1569,26 @@ label {
 }
 /* add 患者検索フォントサイズ対応 趙 end */
 
-::v-deep .k-input{
+:deep(.k-input),
+:deep(.k-multiselect.k-input) {
   width: 200px !important;
+}
+
+:deep(.k-input-inner) {
+  width: 200px !important;
+}
+
+.simple-search-area :deep(.k-legacy-multiselect.k-input) {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.simple-search-area :deep(.k-legacy-multiselect .k-input-inner.k-input),
+.simple-search-area :deep(.k-legacy-multiselect input.k-input) {
+  width: auto !important;
+  min-width: 20px !important;
+  max-width: none !important;
+  flex-basis: 20px !important;
 }
 .radio_dis{
   display: flex;
@@ -1548,7 +1614,13 @@ label {
   padding: 4px 0;
 }
 /* #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end */
+
 .treatDate-comment{
+
   width: 25px;
+}
+.simple-search-area :deep(.k-legacy-multiselect .k-input-inner.k-input),
+.simple-search-area :deep(.k-legacy-multiselect input.k-input) {
+  padding: 0.375rem 0.75rem !important;
 }
 </style>

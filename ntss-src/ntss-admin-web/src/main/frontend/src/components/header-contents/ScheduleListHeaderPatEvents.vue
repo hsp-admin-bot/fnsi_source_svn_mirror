@@ -12,9 +12,9 @@
 
 <script>
 // ライブラリ
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 //日付処理用
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 export default {
   computed: {
@@ -24,14 +24,14 @@ export default {
       let startDate = 0;
       let endDate = 0;
       if (this.getHeaderDispInfo && this.getHeaderDispInfo.treatDate) {
-        const treatDate = moment(this.getHeaderDispInfo.treatDate, "YYYYMMDD");
+        const treatDate = dayjs(this.getHeaderDispInfo.treatDate, "YYYYMMDD");
         this.getPatEvents.forEach(item => {
-          startDate = moment(item.eventStartDate)
+          startDate = dayjs(item.eventStartDate)
               .hours(0)
               .minutes(0)
               .seconds(0)
               .milliseconds(0);
-          endDate = moment(item.eventEndDate)
+          endDate = dayjs(item.eventEndDate)
               .add(1, "d")
               .hours(0)
               .minutes(0)
@@ -51,7 +51,7 @@ export default {
   },
   methods: {
     formatDate(date) {
-      const mDate = moment(date);
+      const mDate = dayjs(date);
 
       if (mDate.hours() === 0 && mDate.minutes() === 0) {
         return mDate.format("M/DD");

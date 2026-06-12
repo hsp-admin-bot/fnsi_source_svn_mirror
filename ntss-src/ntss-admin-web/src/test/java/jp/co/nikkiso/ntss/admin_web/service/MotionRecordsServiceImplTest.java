@@ -20,7 +20,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -57,19 +57,19 @@ public class MotionRecordsServiceImplTest {
   /**
    * 装置動作記録DaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MntMotionRecordDao mntMotionRecordDao;
 
   /**
    * データ収集管理DaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MntGatheringManageDao mntGatheringManageDao;
 
   /**
    * 利用者マスタ(個人情報DB)DaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstPersonalUserDao mstPersonalUserDao;
 
   /**

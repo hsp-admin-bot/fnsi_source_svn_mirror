@@ -23,6 +23,10 @@ import jp.co.nikkiso.ntss.monitoring.web.dto.MonitorParameterDto;
 import jp.co.nikkiso.ntss.monitoring.web.dto.MonitorParameterDtoEx;
 import jp.co.nikkiso.ntss.monitoring.service.logger.LogEventUtils;
 
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+
 @CrossOrigin(origins = "*") // 別ドメインからのテスト用にアクセスすることを許可
 @RestController
 @RequestMapping("/api/mni_monitor")

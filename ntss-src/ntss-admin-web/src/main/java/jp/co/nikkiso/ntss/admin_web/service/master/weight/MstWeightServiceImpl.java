@@ -5,15 +5,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
-import static jp.co.nikkiso.ntss.core.dao.MasterMaintenanceGenericDao.*;
-
-import java.util.*;
 import java.util.stream.Collectors;
 
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
-import jp.co.nikkiso.ntss.core.entity.*;
+import jp.co.nikkiso.ntss.core.entity.MstSelector;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

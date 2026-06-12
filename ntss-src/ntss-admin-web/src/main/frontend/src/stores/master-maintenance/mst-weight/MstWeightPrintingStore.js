@@ -402,7 +402,7 @@ import { deepCopy } from "@/functions/common/CommonFunctions";
 import {sendRequestGetMstExamItem, sendRequestGetMstExamItemByFacilityCd} from "@/apis/mst-weight-maintenance";
 
 export default {
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   namespaced: true,
   state: {
     // -----------------------------------------

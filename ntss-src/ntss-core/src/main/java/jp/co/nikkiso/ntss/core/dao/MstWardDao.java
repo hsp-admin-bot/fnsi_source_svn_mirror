@@ -1,6 +1,7 @@
 package jp.co.nikkiso.ntss.core.dao;
 
 import java.util.List;
+import java.util.Map;
 
 import org.seasar.doma.Dao;
 import org.seasar.doma.Select;
@@ -11,7 +12,10 @@ import jp.co.nikkiso.ntss.core.entity.MstWard;
 
 @ConfigAutowireable
 @Dao
-public interface MstWardDao {
+public interface MstWardDao extends MasterDao<Map<String, Object>> {
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
+
   @Select
   List<MstWard> selectAll(SelectOptions options, MstWard params);
 

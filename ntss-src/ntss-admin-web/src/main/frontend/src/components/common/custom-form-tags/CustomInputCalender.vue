@@ -1,6 +1,8 @@
 <template>
   <span>
     <common-calendar
+      v-if="isCalendarMounted"
+      ref="calendar"
       v-model="calendarValue"
       class="calender"
       :disabled="disabled"
@@ -10,22 +12,34 @@
       :disable-dates-before="disableDatesBefore"
       :disable-dates-after="disableDatesAfter"
     />
+    <button
+      v-else
+      type="button"
+      class="ntss-btn-outset calendar calender"
+      :disabled="disabled"
+      :value="displayDateValue || ''"
+      @click.stop.prevent="activateCalendar"
+    >
+      <v-ons-icon icon="fa-calendar" />
+    </button>
   </span>
 </template>
 
 <script>
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // 共通タグ用ベースコンポーネント
 import baseCustomForm from "@/components/common/custom-form-tags/BaseCustomForm";
 // 共通カレンダーコンポーネント
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
+import { VOnsIcon } from "@/compat/onsen/components";
 
 /**
  * @description 共通日付入力タグ
  */
 export default {
   components: {
-    "common-calendar": commonCalender
+    "common-calendar": commonCalender,
+    VOnsIcon
   },
 
   mixins: [baseCustomForm],
@@ -91,7 +105,17 @@ export default {
       type: Object,
       default: () => {}
     },
+    lazyCalendar: {
+      type: Boolean,
+      default: true
+    },
 
+  },
+
+  data() {
+    return {
+      isCalendarMounted: !this.lazyCalendar && !this.disabled
+    };
   },
 
   computed: {
@@ -99,7 +123,7 @@ export default {
     displayDateValue() {
       return this.editValue === null
         ? null
-        : moment(this.editValue).format("YYYY-MM-DD");
+        : dayjs(this.editValue).format("YYYY-MM-DD");
     },
 
     calendarValue: {
@@ -130,9 +154,18 @@ export default {
   },
 
   methods: {
+    activateCalendar() {
+      if (this.disabled) {
+        return;
+      }
+      this.isCalendarMounted = true;
+      this.$nextTick(() => {
+        this.$refs.calendar?.openMenu?.();
+      });
+    },
     inputValue(value) {
       // YYYY-MM-DDで入力されるのでYYYYMMDDに変換
-      this.editValue = value === "" ? null : moment(value).format("YYYYMMDD");
+      this.editValue = value === "" ? null : dayjs(value).format("YYYYMMDD");
 
       // プロパティで受け取った関数を呼び出す
       this.callBackFunc(this.editValue, this.arguments);

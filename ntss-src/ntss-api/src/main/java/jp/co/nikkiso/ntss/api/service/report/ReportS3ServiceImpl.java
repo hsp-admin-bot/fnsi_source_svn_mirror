@@ -1,13 +1,6 @@
 package jp.co.nikkiso.ntss.api.service.report;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.amazonaws.util.IOUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.api.service.LogService;
 import jp.co.nikkiso.ntss.api.service.onPremise.OnPremiseService;
@@ -25,14 +18,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -56,7 +56,7 @@ class ReportS3ServiceImpl implements ReportS3Service {
    * Amazon S3.
    */
   @Autowired(required = false)
-  private AmazonS3 s3;
+  private S3Client s3;
 
   /**
    * 帳票ファイルをキャッシュするディレクトリ
@@ -198,8 +198,7 @@ class ReportS3ServiceImpl implements ReportS3Service {
 
       // S3オブジェクト取得
       // レスポンス用データ生成
-      try (S3Object object = s3.getObject(new GetObjectRequest(bucket, filePath));
-           InputStream inputStream = object.getObjectContent();
+      try (ResponseInputStream<GetObjectResponse> inputStream = getObjectStream(bucket, filePath);
            ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
         // add 2021-04-26 外部連携:log内容を改善 孫 start
@@ -313,7 +312,7 @@ class ReportS3ServiceImpl implements ReportS3Service {
 //        return flag;
 //      }
       bucket = bucket.replace("s3://", "");
-      boolean flag1 = s3.doesObjectExist(bucket,filePath);
+      boolean flag1 = doesObjectExist(bucket, filePath);
       if (flag1) {
         return true;
       }else{
@@ -359,17 +358,13 @@ class ReportS3ServiceImpl implements ReportS3Service {
       throw new NtssException(e.getMessage());
     }
     if (status.equals("off")) {
-      File file = srcFilePath.toFile();
-
-      try (FileInputStream fis = new FileInputStream(file)) {
-        // アップロードファイルの準備
-        ObjectMetadata om = new ObjectMetadata();
-        om.setContentLength(file.length());
-
-        final PutObjectRequest putRequest = new PutObjectRequest(bucket, destFilePath, fis, om);
-
+      try {
+        final PutObjectRequest putRequest = PutObjectRequest.builder()
+          .bucket(bucket)
+          .key(destFilePath)
+          .build();
         // アップロード
-        s3.putObject(putRequest);
+        s3.putObject(putRequest, RequestBody.fromFile(srcFilePath));
       } catch (Exception e) {
         // エラーメッセージをログ出力
         EventLogMessage eventLogMessage = new EventLogMessage();
@@ -418,9 +413,9 @@ class ReportS3ServiceImpl implements ReportS3Service {
     try {
       if (status.equals("off")) {
         // オンプレミス環境ではない為、S3からファイルを取得
-        S3Object object = s3.getObject(new GetObjectRequest(bucket, filePath));
-        S3ObjectInputStream inputStream = object.getObjectContent();
-        resultByte =  IOUtils.toByteArray(inputStream);
+        try (ResponseInputStream<GetObjectResponse> inputStream = getObjectStream(bucket, filePath)) {
+          resultByte = inputStream.readAllBytes();
+        }
 
       } else {
         // オンプレミス環境の為、フォルダからファイルを取得
@@ -451,6 +446,30 @@ class ReportS3ServiceImpl implements ReportS3Service {
     }
 
     return resultByte;
+  }
+
+  private ResponseInputStream<GetObjectResponse> getObjectStream(String bucket, String filePath) {
+    return s3.getObject(GetObjectRequest.builder()
+      .bucket(bucket)
+      .key(filePath)
+      .build());
+  }
+
+  private boolean doesObjectExist(String bucket, String filePath) {
+    try {
+      s3.headObject(HeadObjectRequest.builder()
+        .bucket(bucket)
+        .key(filePath)
+        .build());
+      return true;
+    } catch (NoSuchKeyException e) {
+      return false;
+    } catch (S3Exception e) {
+      if (e.statusCode() == 404) {
+        return false;
+      }
+      throw e;
+    }
   }
 
 }

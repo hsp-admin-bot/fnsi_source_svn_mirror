@@ -14,7 +14,7 @@
     <!-- add FNSI-borderの追加 徐 end -->
     <time-input
       :classes="'text-input ' +classes"
-      :value="dateValue"
+      v-model="dateValue"
       :disabled="disabled"
       @blur="onBlur"
       @change="onBlur"
@@ -35,7 +35,15 @@ export default {
     TimeInput
   },
   // #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end
+  // Vue3 は v-model の既定が modelValue / update:modelValue。
+  // Vue2 互換で @input リスナーも親が利用しているため input も合わせて emit する。
+  emits: ["update:modelValue", "input", "focus"],
   props: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
+      type: String
+    },
+    // Vue2 互換: :value バインディング
     value: {
       type: String
     },
@@ -58,11 +66,16 @@ export default {
   // add FNSI-borderの追加 徐 start
   data(){
     return{
-      dateValue: this.value,
+      dateValue: this.modelValue ?? this.value ?? null,
       initTime:"",
       indexNum:0
     }
   // add FNSI-borderの追加 徐 end
+  },
+  computed: {
+    externalValue() {
+      return this.modelValue !== undefined ? this.modelValue : this.value;
+    },
   },
   methods: {
     onBlur(ev) {
@@ -71,7 +84,10 @@ export default {
         const timeControl = this.$el.querySelector('input[type="time"]');
         timeControl.value = null;
       }
-      this.$emit("input", ev.target.value ? ev.target.value : null, this.index);
+      const emitted = ev.target.value ? ev.target.value : null;
+      this.dateValue = emitted;
+      this.$emit("update:modelValue", emitted, this.index);
+      this.$emit("input", emitted, this.index);
       // add FNSI-borderの追加 徐 start
       if (ev.target.value === this.initTime) {
         let element = ev.target;
@@ -82,6 +98,7 @@ export default {
     handleClearInput(){
       this.dateValue = null
       if (this.index !== undefined) {
+        this.$emit("update:modelValue", null, this.index);
         this.$emit("input", null, this.index);
       }
     },
@@ -103,9 +120,9 @@ export default {
     // add 6827 入力欄の編集済み表現不正（治療記録＞バイタル） 房 end
   },
   watch: {
-    value(newValue) {
-      this.dateValue = newValue;
-    }
+    externalValue(newValue) {
+      this.dateValue = newValue ?? null;
+    },
   },
 };
 </script>

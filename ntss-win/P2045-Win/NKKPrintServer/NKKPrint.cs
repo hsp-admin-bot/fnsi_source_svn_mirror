@@ -377,11 +377,16 @@ namespace NKKPrintServer
                 // add 2021-03-25 クライアント証明書検索キーを追加 孫 end
 
                 // 最新ファイルダウンロード先フォルダ
-                DownloadSourceFolder = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFolder", string.Empty).Trim();
+                // del #11660 単体アプリの自己アップデート修正 高 start
+                //DownloadSourceFolder = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFolder", string.Empty).Trim();
+                // del #11660 単体アプリの自己アップデート修正 高 end
 
                 // add オンプレでの自己アップデートに対応 孫 start
                 // 最新ファイル取得先ファイル名
-                DownloadSourceFileName = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFileName", "NKKPrintServer.zip").Trim();
+                // del #11660 単体アプリの自己アップデート修正 高 start
+                //DownloadSourceFileName = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFileName", "NKKPrintServer.zip").Trim();
+                //DownloadSourceFileName = "NKKPrintServerUpdate.zip";
+                // del #11660 単体アプリの自己アップデート修正 高 end
                 // add オンプレでの自己アップデートに対応 孫 end
 
                 // 印刷サーバーアプリ番号

@@ -12,7 +12,7 @@ import java.util.Map;
 
 @ConfigAutowireable
 @Dao
-public interface MstMedicineMixDao extends MasterDao<Map<String,Object>>{
+public interface MstMedicineMixDao extends MasterDao<Map<String,Object>>, UnifiedByCodeListDao {
   @Select
   List<MstMedicineMix> selectAll(SelectOptions options, MstMedicineMix params);
 // FNSI-修正 マスタ削除の対応 chen add start
@@ -123,4 +123,8 @@ public interface MstMedicineMixDao extends MasterDao<Map<String,Object>>{
   @Select
   List<MstMedicineMix> selectByOrdNoList(List<Long> ordNoList);
   /* add by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --end */
+
+  @Override
+  @Select
+  List<Map<String, Object>> selectAllStatusByCodeList(List<Integer> codeList);
 }

@@ -1,4 +1,4 @@
--- upd by chamaojia 2026-03-14 [12462] ���ҏ�񋤗L->���Ҍo�ߑ����r���[�A --start
+-- upd by chamaojia 2026-03-14 [12462] 患者情報共有->患者経過総合ビューア --start
 /*%if patShareMode == 0 */
 WITH pat_ids AS (
     SELECT /*patId*/0 AS pat_id
@@ -46,4 +46,4 @@ AND
 AND
   a.use_type = 3
 ;
--- upd by chamaojia 2026-03-14 [12462] ���ҏ�񋤗L->���Ҍo�ߑ����r���[�A --end
+-- upd by chamaojia 2026-03-14 [12462] 患者情報共有->患者経過総合ビューア --end

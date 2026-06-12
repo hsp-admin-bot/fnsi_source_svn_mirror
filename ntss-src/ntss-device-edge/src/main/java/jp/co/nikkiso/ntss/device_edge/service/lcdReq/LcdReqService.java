@@ -3,7 +3,7 @@ package jp.co.nikkiso.ntss.device_edge.service.lcdReq;
 import java.sql.Timestamp;
 import java.util.List;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 
 import jp.co.nikkiso.ntss.core.entity.custom.lcdReq.LcdReq32;
 import jp.co.nikkiso.ntss.core.entity.custom.lcdReq.LcdReq36;
@@ -61,9 +61,9 @@ public interface LcdReqService {
 
   /**
    * 仮想端末情報（検査結果・検査グラフ）サービス
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
-  List<LcdReqExamResponse> lcdReqExamResult(Long patId) throws JsonProcessingException;
+  List<LcdReqExamResponse> lcdReqExamResult(Long patId) throws JacksonException;
 
   /**
    * 仮想端末情報（穿刺／回収／担当）サービス

@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.response.treatmentRecord;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.entity.TreatmentRecordMonitor;
 import lombok.AllArgsConstructor;
@@ -20,7 +20,7 @@ import java.util.List;
 @NoArgsConstructor
 @Getter
 @Setter
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class MonitorData {
 
   /**

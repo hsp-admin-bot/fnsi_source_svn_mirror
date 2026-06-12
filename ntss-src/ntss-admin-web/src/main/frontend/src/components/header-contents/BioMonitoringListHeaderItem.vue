@@ -71,11 +71,11 @@
 
     <!-- 抽出ダイアログ[始] -->
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target=false
-                   :class="fontSizeSet"
+                   :class="[fontSizeSet, 'bio-monitoring-list-condition-popover']"
                    >
       <div style='margin:10px;'>
       <!-- <v-ons-card style='width:350px;'> -->
@@ -184,8 +184,11 @@
 </template>
 
 <script>
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
+import { EventBus } from "@/compat/vue/event-bus.js";
 /* eslint-disable */
-import { mapState, mapActions } from 'vuex';
+import { mapState, mapActions } from "@/compat/vue/vuex";
 import PopoverMixin from "@/components/PopoverMixin";
 
 export default {
@@ -317,7 +320,7 @@ export default {
 
       // 患者名
       // 入力された検索文字列
-      let searchname = document.getElementById('searchname').value;
+      let searchname = getScopedElementById('searchname', this.$el || this)?.value || '';
       if(visiblestate == true && searchname != '')
       {
         // 患者名、患者名カナ検索、患者名アルファベットがすべてnullの場合は非表示
@@ -584,7 +587,11 @@ export default {
   margin-left: 5px;
   line-height: 20px;
 }
-ons-popover >>> .popover__content {
+ons-popover :deep(.popover__content) {
+  min-width: 400px;
+}
+
+.bio-monitoring-list-condition-popover :deep(.popover__content) {
   min-width: 400px;
 }
 </style>

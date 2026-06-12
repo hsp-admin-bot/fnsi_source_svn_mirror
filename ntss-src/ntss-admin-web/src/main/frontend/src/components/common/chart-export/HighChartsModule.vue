@@ -6,10 +6,10 @@
 </template>
 
 <script>
-import VueHighcharts from "vue-highcharts";
-import Highcharts from "highcharts";
-import Boost from "highcharts/modules/boost";
-import Vue from "vue";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
+import Highcharts from "@/compat/charts/highcharts";
+import { Boost } from "@/compat/charts/highcharts";
 import {ApiHelper} from "@/apis/AxiosHelper";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
 import {sendRequestCreatingReportByFromData} from "@/apis/report";
@@ -19,16 +19,12 @@ import {
   replaceUnavailableFonts,
   findFirstAvailableFont
 } from "@/stores/fontUtils";
-import ons from "onsenui";
-
-Vue.use(VueHighcharts);
+import { showAlertDialog } from "@/functions/common/OnsenFunctions";
 Boost(Highcharts);
 
 export default {
   name: "HighChartsModule",
-  props: {
 
-  },
   data() {
     return {
       maxSize: 10485760 //upload最大限
@@ -52,7 +48,7 @@ export default {
       // }
       if(inputData.reportClass == 1) {
         imageResponse = await ApiHelper.post(
-          "/report_menu/getReportImage/",
+          "/report_menu/getReportImage",
           inputData
         );
       }
@@ -153,11 +149,14 @@ export default {
         // mod #11737 グラフがセルサイズにフィットしないときがある 吉 start
         // const chartObj = Highcharts.chart('highcharts-config', chartOptions, () => {
         // });
-        const container = document.getElementById('highcharts-config');
-        const scale = 1 / window.devicePixelRatio;
-        container.style.transform = `scale(${scale})`;
-        container.style.transformOrigin = 'top left';
-        const chartObj = Highcharts.chart('highcharts-config', chartOptions);
+        const container = getScopedElementById('highcharts-config', this.$el || this);
+        const ownerWindow = this.$el?.ownerDocument?.defaultView || (typeof window !== "undefined" ? window : null);
+        const scale = 1 / (ownerWindow?.devicePixelRatio || 1);
+        if (container?.style) {
+          container.style.transform = `scale(${scale})`;
+          container.style.transformOrigin = 'top left';
+        }
+        const chartObj = Highcharts.chart(container || 'highcharts-config', chartOptions);
         // mod #11737 グラフがセルサイズにフィットしないときがある 吉 end
         const svgObj = chartObj.getSVG({
           chart: {
@@ -165,8 +164,12 @@ export default {
             height: imageInfos[index].height
           }
         });
-        let svgHtmlElement = new DOMParser().parseFromString(svgObj, 'text/html').body.childNodes[0];
-        let canvas = document.createElement('canvas');
+        let svgHtmlElement = new (ownerWindow?.DOMParser || DOMParser)().parseFromString(svgObj, 'text/html').body.childNodes[0];
+        const ownerDocument = this.$el?.ownerDocument || (typeof document !== 'undefined' ? document : null);
+        if (!ownerDocument) {
+          return;
+        }
+        let canvas = ownerDocument.createElement('canvas');
         // mod #11737 グラフがセルサイズにフィットしないときがある 吉 start
         // canvas.width = imageInfos[index].width;
         // let tempHeight = 0;
@@ -180,7 +183,7 @@ export default {
         // let ctx = canvas.getContext('2d');
         const width = imageInfos[index].width;
         const height = imageInfos[index].height || svgHtmlElement.height.baseVal.value;
-        const dpr = window.devicePixelRatio;
+        const dpr = ownerWindow?.devicePixelRatio || 1;
         canvas.width = width * dpr;
         canvas.height = height * dpr;
         canvas.style.width = `${width}px`;
@@ -188,10 +191,10 @@ export default {
         const ctx = canvas.getContext('2d');
         ctx.scale(dpr, dpr);
         // mod #11737 グラフがセルサイズにフィットしないときがある 吉 end
-        let data = new XMLSerializer().serializeToString(svgHtmlElement);
+        let data = new (ownerWindow?.XMLSerializer || XMLSerializer)().serializeToString(svgHtmlElement);
         let svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
-        let url = URL.createObjectURL(svgBlob);
-        let image = new Image();
+        let url = (ownerWindow?.URL || URL).createObjectURL(svgBlob);
+        let image = new (ownerWindow?.Image || Image)();
         image.src = url;
         let pngBlob;
         await new Promise(resolve => {
@@ -200,7 +203,7 @@ export default {
         // ctx.drawImage(image, 0, 0, imageInfos[index].width, tempHeight);
             ctx.drawImage(image, 0, 0, width, height);
         // mod #11737 グラフがセルサイズにフィットしないときがある 吉 end
-            URL.revokeObjectURL(url);
+            (ownerWindow?.URL || URL).revokeObjectURL(url);
             await new Promise(resolve1 => {
           // mod #11737 グラフがセルサイズにフィットしないときがある 吉 start
           //  canvas.toBlob(blob => {
@@ -253,7 +256,7 @@ export default {
       // add #12107 帳票印刷失敗通知が行われない limingzhe start
       .catch(error => {
         if (error.response.status === 400) {
-          ons.notification.alert({
+          showAlertDialog({
             title: DIALOG_MESSAGES[12000207].title,
             message: DIALOG_MESSAGES[12000207].message
           });

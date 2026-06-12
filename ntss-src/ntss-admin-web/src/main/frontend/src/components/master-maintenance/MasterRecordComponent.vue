@@ -1,10 +1,22 @@
 /**
  * マスタメンテナンスデータページ  MainContent
+ * 感染症マスタ
+ * インプラントマスタ
+ * 重症度マスタ
+ * 搬送区分マスタ
+ * 透析困難マスタ
+ * 診療科マスタ
+ * 病棟マスタ
+ * 保険マスタ
+ * 加算・管理料マスタ
  */
 <template>
-  <div class='main-content-area master-maintenance-page'>
-    <div class='ntss-list' :style="ntssListStyles" v-kendo-validator="kendoValidatorSetup">
-      <kendo-grid-toolbar class="k-grid-toolbar kendo-grid-toolbar-style print-grid-style" :style="heightStyles">
+  <div class='main-content-area master-maintenance-page' :class="{
+    'master-mst-monitor-graph': masterPhysicalName === 'mst_monitor_graph',
+    'master-mst-vital-graph': masterPhysicalName === 'mst_vital_graph',
+  }">
+    <div class='ntss-list' ref="ntssList" :style="ntssListStyles">
+      <div class="k-grid-toolbar kendo-grid-toolbar-style print-grid-style" :style="heightStyles">
         <div id="grid-header" class='header-btn-area right'>
           <!-- mod 画面デザイン 對應 王 start-->
           <!-- <v-ons-button modifier="outline" class="toolbar-btn" style="float: left;" v-show="!isSortMode && isAllowAddRecord && isAddButton" @click="addRow()">追加</v-ons-button>-->
@@ -16,7 +28,7 @@
               <label class="fab-font-color">編集</label>
             </v-ons-col>
             <v-ons-col width="55%" vertical-align="center">
-              <v-ons-switch modifier="outline" class="custom-switch" v-model="allowEdit" />
+              <v-ons-switch modifier="outline" v-model="allowEdit" />
             </v-ons-col>
           </v-ons-row>
           <!-- mod 画面デザイン 對應 王 end-->
@@ -39,153 +51,8 @@
           <v-ons-button class="btn3-normal toolbar-btn" v-show="!isSortMode && isAllowSort && isToRankButton" @click="toRankEditBtnClick()">並び順表示</v-ons-button>
           <v-ons-button class="btn3-normal toolbar-btn" v-show="isSortMode && isAllowSort" @click="sortBtnClick()">反映</v-ons-button>
         </div>
-        <kendo-grid id="grid" ref="grid" :class="fontSizeSet"
-            :data-source="dataSourceItems"
-            :editable="true"
-            :selectable="true"
-            :reorderable="false"
-            :height=kendoGridHeight
-            :scrollable="true"
-            :beforeEdit=modifyEditStart
-            :edit=addInputAssist
-            :cellClose=editEnd
-            @save="onEditSave"
-            @databound="onDataBoundKendoGrid">
-            <template v-for="(column, index) in columns" >
-              <kendo-grid-column v-if="column.field === '$modalType'"
-                :key="index"
-                :title="column.title == null || column.title == '' ? ' ' : column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :attributes="{ class: 'btn3-kendo-normal' }"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                :command="{ text: '詳細', click: showMasterEditModal }">
-              </kendo-grid-column>
-              <kendo-grid-column
-                v-else-if="column.title === '在宅'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="! facilityHemoDialysis"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-              />
-              <kendo-grid-column v-else-if="column.dataType === 'date'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                @editor="eachModelCalendar">
-              </kendo-grid-column>
-              <kendo-grid-column v-else-if="column.field === 'leftDataIndex' || column.field === 'rightDataIndex'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                @editor="comboEditor">
-              </kendo-grid-column>
-              <kendo-grid-column v-else-if="column.dataType === 'color'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                :template="column.colorTemplate"
-                :editor="colorEditor">
-              </kendo-grid-column>
-              <kendo-grid-column v-else-if="column.dataType === 'textarea'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                @editor="textareaEditor">
-              </kendo-grid-column>
-              <!-- #11047 No7 治療記録モニタグラフマスタ＞詳細 左グラフ上限 左グラフ下限 右グラフ上限 右グラフ下限 マイナス値の入力ができない。linjunfeng start -->
-              <!-- <kendo-grid-column v-else-if="column.dataType === 'number'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                :round="false"
-                :restrictDecimals="true"
-                @editor="numericEditor">
-              </kendo-grid-column> -->
-              <kendo-grid-column v-else-if="column.dataType === 'number'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                :round="false"
-                :restrictDecimals="true"
-                @template="(dataItem) => formatValue(dataItem, column)"
-                @editor="numericEditor">
-              </kendo-grid-column>
-              <!-- #11047 No7 治療記録モニタグラフマスタ＞詳細 左グラフ上限 左グラフ下限 右グラフ上限 右グラフ下限 マイナス値の入力ができない。linjunfeng end -->
-              <!-- redmine 5344 日常点検を選択した場合も内容3が登録できる 宋qy start -->
-              <kendo-grid-column v-else-if="column.field === 'mainteContent3'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :template="column.textTemplate"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                @editor="stringEditor">
-              </kendo-grid-column>
-              <!-- redmine 5344 日常点検を選択した場合も内容3が登録できる 宋qy end -->
-              <kendo-grid-column v-else
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :template="column.textTemplate"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values">
-              </kendo-grid-column>
-            </template>
-        </kendo-grid>
-      </kendo-grid-toolbar>
+        <div id="grid" ref="gridEl" :class="[fontSizeSet, 'ntss-kendo-grid-legacy', 'master-record-direct-jq-grid']"></div>
+      </div>
       <div id="grid-footer">
         <!-- add スクロールの位置を維持 楊 start -->
         <!-- <v-ons-row width="100%"  v-show="!isSortMode" > -->
@@ -218,16 +85,15 @@
 </template>
 
 <script>
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
-import { EventBus } from "@/eventBus";
-import moment from "moment";
-import $ from "jquery";
-import { Validator } from "@progress/kendo-validator-vue-wrapper";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import dayjs from "@/compat/date/dayjs";
+
 import MasterCsvComponent from "@/components/master-maintenance/MasterCsvComponent";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
-import Vue from "vue";
+import { createApp, markRaw } from "@/compat/vue/runtime";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
 import { mstVitalGraphDefine } from "@/constants/mstVitalGraph";
@@ -235,6 +101,9 @@ import { mstPatViewerLayout } from "@/constants/mstPatViewerLayout";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { MASTER_DELETE_DISPLAY } from "@/constants/TreatmentRecord";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+// #11205 -ペンテスト2－4認可制御の不備  mst_holiday標準データは専用API  add 20260507 start
+import { sendRequestFindMstHolidayNikkisoCorporateData } from "@/apis/master-maintenance";
+// #11205 -ペンテスト2－4認可制御の不備  add 20260507 end
 import {
   sendRequestFindRecordListByFacilityCd,
 } from "@/apis/master-maintenance";
@@ -251,14 +120,325 @@ import { messageFormat } from "@/functions/common/MessageFormat";
 import indUserSetting from "@/components/pat-info/ind-user-setting/IndUserSettingModal";
 import BigNumber from "bignumber.js";
 import { deleteDataProcessing } from "@/functions/mst/MasterMaintenanceFunctions";
+import { syncKendoGridLockedRowHeights } from "@/utils/kendoGridLockedSync";
 
 /**
  * TODO
  * more: モーダルで編集した項目が、一覧上で「編集済み（三角マーク）」をつけたい。
  */
+import { getScopedElementById, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import kendo from "@progress/kendo-ui";
+import $ from "jquery";
+import { bindGridEditorEnterToCloseCell } from "@/compat/kendo/grid-edit";
+import {
+  createJQueryValidator,
+  destroyJQueryValidator,
+} from "@/compat/kendo/kendo-jquery.js";
+
+function createDirectDataSource(options) {
+  return new kendo.data.DataSource(options);
+}
+
+function getDirectWidgetSelectedIndex(widget) {
+  if (!widget) {
+    return -1;
+  }
+  if (typeof widget.select === "function") {
+    return widget.select();
+  }
+  return widget.selectedIndex ?? -1;
+}
+
+function getDirectWidgetDataAt(widget, index) {
+  if (!widget) {
+    return null;
+  }
+  if (typeof widget.dataItem === "function") {
+    return widget.dataItem(index);
+  }
+  return widget.dataSource?.data?.()?.[index] || null;
+}
+
+function getDirectWidgetValue(widget) {
+  const inputValue = widget?.element?.get?.(0)?.value;
+  if (inputValue !== undefined && inputValue !== null && inputValue !== "") {
+    const parsed = String(inputValue).replace(/,/g, "");
+    try {
+      if (BigNumber(parsed).isFinite()) {
+        return BigNumber(parsed).toNumber();
+      }
+    } catch (_error) {
+      // fall through
+    }
+  }
+  return typeof widget?.value === "function" ? widget.value() : widget?.element?.val?.();
+}
+
+function setDirectWidgetValue(widget, value) {
+  if (typeof widget?.value === "function") {
+    widget.value(value);
+  } else {
+    widget?.element?.val?.(value);
+  }
+}
+
+function mountDirectNumericTextBox(element, options) {
+  const $element = $(element);
+  $element.kendoNumericTextBox(options);
+  return $element.data("kendoNumericTextBox");
+}
+
+function getDirectNumericTextElements(widget) {
+  const elements = [];
+  const add = (input) => {
+    if (input && !elements.includes(input)) {
+      elements.push(input);
+    }
+  };
+  add(widget?.element?.get?.(0));
+  add(widget?._text?.get?.(0));
+  const wrapper = widget?.wrapper?.get?.(0);
+  wrapper?.querySelectorAll?.("input.k-input-inner, input.k-input, input.text-input")?.forEach(add);
+  return elements;
+}
+
+function getDirectNumericTextElement(widget) {
+  return getDirectNumericTextElements(widget)[0] || null;
+}
+
+function toPlainNumericText(value) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+  const normalized = String(value).replace(/,/g, "");
+  try {
+    return BigNumber(normalized).toFixed();
+  } catch (_error) {
+    return normalized;
+  }
+}
+
+function stripNumericInputCommas(input) {
+  if (!input || typeof input.value !== "string" || !input.value.includes(",")) {
+    return;
+  }
+  const selectionStart = input.selectionStart;
+  const selectionEnd = input.selectionEnd;
+  const stripped = input.value.replace(/,/g, "");
+  const removed = input.value.length - stripped.length;
+  input.value = stripped;
+  if (selectionStart !== null && selectionEnd !== null) {
+    const nextPos = Math.max(0, selectionStart - removed);
+    input.setSelectionRange(nextPos, nextPos);
+  }
+}
+
+
+function syncDirectNumericTextBoxDisplay(widget, value) {
+  const plainValue = toPlainNumericText(value);
+  getDirectNumericTextElements(widget).forEach((textInput) => {
+    textInput.setAttribute("inputmode", "decimal");
+    const isFocused = textInput.ownerDocument?.activeElement === textInput;
+    if (isFocused && textInput.value.replace(/,/g, "") === plainValue) {
+      stripNumericInputCommas(textInput);
+      return;
+    }
+    if (!isFocused) {
+      textInput.value = plainValue;
+    }
+  });
+}
+
+function clampNumericEditorBounds(value, min, max, hasMin, hasMax) {
+  if (hasMax && value > max) {
+    return max;
+  }
+  if (hasMin && value < min) {
+    return min;
+  }
+  return value;
+}
+
+function loopNumericEditorBounds(value, min, max, hasMin, hasMax) {
+  if (!hasMin || !hasMax) {
+    return clampNumericEditorBounds(value, min, max, hasMin, hasMax);
+  }
+  if (value > max) {
+    return min;
+  }
+  if (value < min) {
+    return max;
+  }
+  return value;
+}
+
+function resolveNumericEditorWheelDelta(event) {
+  const originalEvent = event.originalEvent || event;
+  if (originalEvent.wheelDelta) {
+    return originalEvent.wheelDelta > 0 ? 1 : -1;
+  }
+  if (originalEvent.deltaY) {
+    return originalEvent.deltaY < 0 ? 1 : -1;
+  }
+  if (originalEvent.detail) {
+    return originalEvent.detail > 0 ? -1 : 1;
+  }
+  return 0;
+}
+
+function applyNumericEditorWheelStep(rawValue, delta, step, min, max, hasMin, hasMax, loop = false) {
+  const current = rawValue !== "" && rawValue !== null && rawValue !== undefined && !isNaN(parseFloat(rawValue))
+    ? parseFloat(rawValue)
+    : (hasMin ? min : 0);
+  if (loop && hasMin && hasMax) {
+    if (delta > 0) {
+      return current >= max ? min : current + step;
+    }
+    if (delta < 0) {
+      return current <= min ? max : current - step;
+    }
+    return current;
+  }
+  let value = current;
+  if (delta > 0) {
+    value += step;
+  } else if (delta < 0) {
+    value -= step;
+  }
+  return clampNumericEditorBounds(value, min, max, hasMin, hasMax);
+}
+
+function bindMasterRecordNumericEditorWheel(widget, handler) {
+  getDirectNumericTextElements(widget).forEach((input) => {
+    if (input.__ntssMasterRecordWheelInstalled) {
+      return;
+    }
+    input.__ntssMasterRecordWheelInstalled = true;
+    let wheelHandled = false;
+    const onWheel = (event) => {
+      if (wheelHandled) {
+        event.preventDefault();
+        return;
+      }
+      wheelHandled = true;
+      globalThis.setTimeout(() => {
+        wheelHandled = false;
+      }, 0);
+      handler(event, input);
+    };
+    input.addEventListener("wheel", onWheel, { passive: false });
+  });
+}
+
+function toUngroupedKendoNumberFormat(format, decimals) {
+  const normalizedFormat = String(format || "");
+  const match = normalizedFormat.match(/^n(\d*)$/i);
+  if (!match) {
+    return normalizedFormat;
+  }
+  const decimalPlaces = match[1] === "" ? Number(decimals || 0) : Number(match[1]);
+  if (!Number.isFinite(decimalPlaces) || decimalPlaces <= 0) {
+    return "0";
+  }
+  return `0.${"0".repeat(decimalPlaces)}`;
+}
+
+const MASTER_RECORD_DATE_FIELDS = new Set([
+  "useStartDate",
+  "useEndDate",
+  "inHospAStartdate",
+  "inHospBStartdate",
+]);
+
+/** 水質検査種別マスタ：整数部桁数・小数部桁数の入力範囲 */
+const WATER_SURVEY_TYPE_DIGIT_MIN = 1;
+const WATER_SURVEY_TYPE_DIGIT_MAX = 8;
+/** 水質検査種別マスタ：小数部桁数変更時に連動する閾値・グラフ・初期値フィールド */
+const WATER_SURVEY_THRESHOLD_FIELDS = [
+  "upperThreshold",
+  "lowerThreshold",
+  "graphUpperLimit",
+  "graphLowerLimit",
+  "initialValue",
+];
+/** 水質検査種別マスタ：閾値・グラフ・結果初期値の丸め（四捨五入） */
+const WATER_SURVEY_ROUND_MODE = BigNumber.ROUND_HALF_UP;
+
+function parseWaterSurveyDigit(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function toWaterSurveyBigNumber(value) {
+  return BigNumber(String(value).replace(/,/g, ""));
+}
+
+/**
+ * 閾値等を小数部桁数で四捨五入し、整数部桁数の上下限に収める。
+ * 例: 整数部1・小数部2 → 上限9.99 のとき 9.99999 は 10.00 に丸まった後 9.99 になる。
+ */
+function roundAndClampWaterSurveyThresholdValue(rawValue, integerDigits, decimalDigits) {
+  if (rawValue === null || rawValue === undefined || rawValue === "") {
+    return rawValue;
+  }
+  const decimals = parseWaterSurveyDigit(decimalDigits, 0);
+  const integers = parseWaterSurveyDigit(integerDigits, WATER_SURVEY_TYPE_DIGIT_MIN);
+  let next = toWaterSurveyBigNumber(rawValue).decimalPlaces(decimals, WATER_SURVEY_ROUND_MODE);
+  const max = BigNumber(10).pow(integers).minus(BigNumber(10).pow(-decimals));
+  const min = BigNumber(10).pow(integers).negated().plus(BigNumber(10).pow(-decimals));
+  if (next.isGreaterThan(max)) {
+    next = max;
+  } else if (next.isLessThan(min)) {
+    next = min;
+  }
+  return next.toNumber();
+}
+
+/** 開発時のみ: useStartDate 等の k-dirty-cell 調査用。localStorage.setItem("masterRecordDirtyDebug", "0") で OFF */
+const MASTER_RECORD_DIRTY_DEBUG_KEY = "masterRecordDirtyDebug";
+
+function isMasterRecordDirtyDebugEnabled() {
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+  try {
+    return globalThis.localStorage?.getItem(MASTER_RECORD_DIRTY_DEBUG_KEY) !== "0";
+  } catch (_error) {
+    return true;
+  }
+}
+
+function formatMasterRecordDateYmd(value) {
+  if (value == null || value === "") {
+    return value;
+  }
+  const formatted = dayjs(value);
+  return formatted.isValid() ? formatted.format("YYYYMMDD") : String(value);
+}
+
+function isMasterRecordFieldValueEqual(originalValue, currentValue, field) {
+  if ((originalValue === "" && currentValue == null) || (originalValue == null && currentValue === "")) {
+    return true;
+  }
+  if (MASTER_RECORD_DATE_FIELDS.has(field)) {
+    const originalYmd = formatMasterRecordDateYmd(originalValue);
+    const currentYmd = formatMasterRecordDateYmd(currentValue);
+    if (originalYmd == null || originalYmd === "") {
+      return currentYmd == null || currentYmd === "";
+    }
+    return originalYmd === currentYmd;
+  }
+  return originalValue == currentValue;
+}
+
+const {
+  updated: masterMaintenanceUpdated,
+  ...MasterRecordMaintenanceMixin
+} = MasterMaintenanceMixin;
+void masterMaintenanceUpdated;
+
 export default {
-  mixins: [NextTransitionMixin, MasterMaintenanceMixin],
-  Validator,
+  mixins: [NextTransitionMixin, MasterRecordMaintenanceMixin],
   components: {
     "master-csv": MasterCsvComponent,
     "ind-user-setting": indUserSetting,
@@ -311,6 +491,18 @@ export default {
         top: 0,
         left: 0
       },
+      __masterRecordSortApplying: false,
+      /** セル編集保存中は masterRecords watcher による DataSource 全件更新を抑止 */
+      __masterRecordInlineEdit: false,
+      masterRecordRowVisualRafIds: null,
+      __masterRecordFullVisualRaf: null,
+      /** ユーザーが手入力で変更した sortRank の code 一覧（反映後の採番差分と区別） */
+      masterRecordSortEditedCodes: null,
+      masterRecordRestoreScrollPending: false,
+      validationTooltipPlacementTimers: [],
+      validationTooltipPlacementRafId: null,
+      validationTooltipPlacementIntervalId: null,
+      validationTooltipObserver: null,
       //自画面の名称
       selfScreenName: "",
       masterCsvVisible: false,
@@ -391,6 +583,7 @@ export default {
       isEdited: "isEdited",
       hasValueColumn: "hasValueColumn",
       isRecordModified: "isRecordModified",
+      masterRecordListRevision: "getMasterRecordListRevision",
       comparisonRecordModel: "getComparisonRecordModel",
       getFacilityList: "getFacilityList"
     }),
@@ -436,7 +629,7 @@ export default {
         }
         let mstHolidayNkks = this.mstHolidayNkkData.filter(e=>e.class == "0");
         let mstHolidays = this.getFilteredMasterRecordList.data.filter(e=>e.class == "0");
-        if (mstHolidayNkks.length> 0 ){
+        if (mstHolidayNkks.length> 0){
           let strMstHoliday = mstHolidays.map(e=> String(e.year));
           let that = this;
           let strMasterRecord = this.getMasterRecordList.data.map(e=> String(e.year));
@@ -486,12 +679,19 @@ export default {
       return this.masterPhysicalName == "mst_exam_item";
     },
     isChanged() {
-      const data = this.getMasterRecordList.data;
-      return (
-        this.getStateUserAccountInfo !== null &&
-        data !== undefined &&
-        (this.isRecordModified || (this.kendoValidator && !this.kendoValidator.validate()))
-      );
+      if (this.getStateUserAccountInfo === null) {
+        return false;
+      }
+      const data = this.getMasterRecordList?.data;
+      if (data === undefined) {
+        return false;
+      }
+      // edit / revert 後に isRecordModified を確実に再評価させる
+      void this.masterRecordListRevision;
+      if (this.kendoValidator && !this.kendoValidator.validate()) {
+        return true;
+      }
+      return !!this.isRecordModified;
     },
     isMobileDevice() {
       return this.iosFlg || this.androidFlg;
@@ -508,127 +708,989 @@ export default {
     // add 9664 by kangjie 20231211 end
     windowHeight() {
       this.calculateColumnsWidth();
+      this.storeMasterRecordGridScrollForLayout();
       this.calculateGridHeight();
-      this.calculateGridWidth();
+      this.resizeDirectGrid();
     },
     windowWidth() {
       this.calculateColumnsWidth();
+      this.storeMasterRecordGridScrollForLayout();
       this.calculateGridHeight();
-      this.calculateGridWidth();
+      this.resizeDirectGrid();
     },
     isDispMenu() {
       this.calculateColumnsWidth();
+      this.storeMasterRecordGridScrollForLayout();
       this.calculateGridHeight();
-      this.calculateGridWidth();
+      this.resizeDirectGrid();
     },
     getFontSize() {
       this.calculateColumnsWidth();
+      this.storeMasterRecordGridScrollForLayout();
       this.calculateGridHeight();
-      this.calculateGridWidth();
+      this.resizeDirectGrid();
     },
-    columns:function(val){
-      this.$nextTick(function(){
-        if (val.length > 1)
-        this.setLoadingScreenVisible(false);
+    isSortMode() {
+      // isSortMode 変更後、mixin の disableColumns()/editableColumns() が
+      // this.columns の hidden・editable を書き換えるため $nextTick で Kendo に同期する。
+      // Skill 7: 全列ループは locked 列の再レイアウトを引き起こすため禁止。
+      // 表示/非表示は並び順関連の 3 列のみ操作する。
+      // editable はすべての列の内部オブジェクトに反映（hide/show は呼ばない）。
+      const SORT_TOGGLE_FIELDS = ['dummy', 'sortRank', 'sortInputTime'];
+      this.$nextTick(() => {
+        const grid = this.getKendoGrid();
+        if (!grid) return;
+        this.columns.forEach(col => {
+          if (!col.field) return;
+          // 1. 表示 / 非表示は並び順列のみ
+          if (SORT_TOGGLE_FIELDS.includes(col.field)) {
+            if (col.hidden) {
+              grid.hideColumn(col.field);
+            } else {
+              grid.showColumn(col.field);
+            }
+          }
+          // 2. editable を Kendo 内部列オブジェクトに直接反映（全列）
+          const kendoCol = grid.columns.find(kc => kc.field === col.field);
+          if (kendoCol) {
+            kendoCol.editable = col.editable;
+          }
+        });
+        if (!this.__masterRecordSortApplying) {
+          this.syncMasterRecordSortColumnLayout();
+        }
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => this.refreshMasterRecordSortRankVisuals());
+        });
       });
     },
-    masterRecords () {
+    columns(val) {
+      this.$nextTick(() => {
+        if (val.length > 1) {
+          this.initKendoGrid();
+          this.setLoadingScreenVisible(false);
+        }
+      });
+    },
+    masterRecords() {
+      if (this.__masterRecordSortApplying || this.__masterRecordInlineEdit) {
+        return;
+      }
+      // Vue2 と同様に常に DataSource を更新する。
       this.dataSourceItems = this.generatedGridData();
+      this.$nextTick(() => {
+        const grid = this.getKendoGrid();
+        if (!grid?.dataSource || !grid.table?.[0]) return;
+        // 追加行の場合はスクロール位置を保存しない（dataBound で最下部にスクロール）
+        if (!this.__pendingScrollToBottom && !this.masterRecordKeepScrollAfterSave) {
+          // setGridScrollPosition と同じ要素から読み取って一致させる
+          const scrollable = this.getGridScrollContainer();
+          this._scrollToRestoreAfterDataBound = {
+            top: scrollable?.scrollTop || 0,
+            left: scrollable?.scrollLeft || 0,
+          };
+        }
+        this.setGridDataSource(this.dataSourceItems);
+      });
     }
   },
+  unmounted() {
+    if (this.masterRecordRowVisualRafIds) {
+      this.masterRecordRowVisualRafIds.forEach(id => cancelAnimationFrame(id));
+      this.masterRecordRowVisualRafIds.clear();
+    }
+    if (this.__masterRecordFullVisualRaf != null) {
+      cancelAnimationFrame(this.__masterRecordFullVisualRaf);
+      this.__masterRecordFullVisualRaf = null;
+    }
+    this._calendarApp?.unmount();
+    this._calendarApp = null;
+    try { this._directGridWidget?.destroy(); } catch (_e) {}
+    this._directGridWidget = null;
+    destroyJQueryValidator(this.$refs.ntssList);
+    this.kendoValidator = null;
+    this.teardownValidationTooltipPlacement();
+  },
   methods: {
+    // --- Kendo Grid 初期化 ---
+    getKendoGrid() {
+      return this._directGridWidget || null;
+    },
+    getGridSearchRoot() {
+      const widget = this.getKendoGrid();
+      return (
+        widget?.wrapper?.[0]
+        || widget?.element?.[0]
+        || this.getMasterRecordGridElement()
+        || null
+      );
+    },
+    getKendoGridDataSourceItems() {
+      const collection = this.getKendoGrid()?.dataSource?.data?.();
+      return collection ? Array.from(collection) : [];
+    },
+    findActiveGridEditCell(root) {
+      const grid = this.getKendoGrid();
+      const lockedCell = grid?.lockedTable?.find?.(".k-edit-cell")?.[0];
+      if (lockedCell) {
+        return lockedCell;
+      }
+      const mainCell = grid?.table?.find?.(".k-edit-cell")?.[0];
+      if (mainCell) {
+        return mainCell;
+      }
+      const searchRoot = root || this.getGridSearchRoot();
+      return (
+        searchRoot?.querySelector?.(".k-grid-content-locked .k-edit-cell")
+        || searchRoot?.querySelector?.(".k-grid-content .k-edit-cell")
+        || searchRoot?.querySelector?.(".k-edit-cell")
+        || null
+      );
+    },
+    findGridScrollContentForEditCell(root, editCell) {
+      const lockedContent = editCell?.closest?.(".k-grid-content-locked");
+      if (lockedContent) {
+        return lockedContent;
+      }
+      const scrollContent = editCell?.closest?.(".k-grid-content");
+      if (scrollContent) {
+        return scrollContent;
+      }
+      return (
+        root?.querySelector?.(".k-grid-content-locked")
+        || root?.querySelector?.(".k-grid-content")
+        || null
+      );
+    },
+    findVisibleValidationTooltip(editCell) {
+      if (!editCell) {
+        return null;
+      }
+      const candidates = editCell.querySelectorAll(
+        ".k-invalid-msg, .k-tooltip-error, .k-validator-tooltip, .k-tooltip.k-tooltip-validation"
+      );
+      for (const element of candidates) {
+        if (element?.classList?.contains?.("k-hidden")) {
+          continue;
+        }
+        const text = element.textContent?.trim?.() || "";
+        const hasMessage = text.length > 0 || element.querySelector?.(".k-tooltip-content");
+        if (hasMessage || element.classList.contains("k-tooltip-error")) {
+          return element;
+        }
+      }
+      return null;
+    },
+    resetValidationTooltipCalloutDirection(editCell) {
+      editCell?.querySelectorAll?.(".k-callout")?.forEach?.((callout) => {
+        callout.classList.remove("k-callout-s", "k-callout-e", "k-callout-w");
+        callout.classList.add("k-callout-n");
+      });
+    },
+    setValidationTooltipCalloutDirection(tooltip, above) {
+      const callout = tooltip?.querySelector?.(".k-callout");
+      if (!callout) {
+        return;
+      }
+      if (above) {
+        callout.classList.remove("k-callout-n", "k-callout-e", "k-callout-w");
+        callout.classList.add("k-callout-s");
+      } else {
+        callout.classList.remove("k-callout-s", "k-callout-e", "k-callout-w");
+        callout.classList.add("k-callout-n");
+      }
+    },
+    isLastDataSourceEditRow(editRow) {
+      if (!editRow) {
+        return false;
+      }
+      const grid = this.getKendoGrid();
+      const dataItem = grid?.dataItem?.(editRow);
+      const items = this.getKendoGridDataSourceItems();
+      if (!items.length) {
+        return false;
+      }
+      const lastItem = items[items.length - 1];
+      if (dataItem && lastItem) {
+        return dataItem === lastItem || dataItem.uid === lastItem.uid;
+      }
+      const rowUid = editRow.getAttribute("data-uid");
+      return !!rowUid && lastItem?.uid === rowUid;
+    },
+    isLastVisibleTbodyRow(editRow) {
+      const tbody = editRow?.closest?.("tbody");
+      if (!tbody) {
+        return false;
+      }
+      const dataRows = tbody.querySelectorAll(":scope > tr[data-uid]");
+      if (!dataRows.length) {
+        return false;
+      }
+      return dataRows[dataRows.length - 1] === editRow;
+    },
+    isEditRowInVisibleBottomBand(editCell, content) {
+      const editRow = editCell?.closest?.("tr");
+      if (!editRow || !content) {
+        return false;
+      }
+      const contentRect = content.getBoundingClientRect();
+      const rowRect = editRow.getBoundingClientRect();
+      const rowBottomGap = contentRect.bottom - rowRect.bottom;
+      if (rowBottomGap < 52) {
+        return true;
+      }
+      const tbody = editRow.closest("tbody");
+      if (!tbody) {
+        return false;
+      }
+      const dataRows = Array.from(tbody.querySelectorAll(":scope > tr[data-uid]"));
+      const rowIndex = dataRows.indexOf(editRow);
+      if (rowIndex < 0) {
+        return false;
+      }
+      return rowIndex >= dataRows.length - 2;
+    },
+    shouldPlaceValidationTooltipAbove(editCell, content, anchor, tooltip) {
+      const editRow = editCell?.closest?.("tr");
+      const anchorRect = anchor.getBoundingClientRect();
+      const contentRect = content.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const rowRect = editRow?.getBoundingClientRect?.() || anchorRect;
+      const tooltipHeight = Math.max(
+        tooltip.offsetHeight || 0,
+        tooltip.scrollHeight || 0,
+        tooltipRect.height || 0,
+        36
+      );
+      const spaceBelow = contentRect.bottom - anchorRect.bottom;
+      const rowBottomGap = contentRect.bottom - rowRect.bottom;
+      const overflowsBelow =
+        tooltipRect.height > 0 && tooltipRect.bottom > contentRect.bottom - 2;
+      const projectedOverflow =
+        anchorRect.bottom + tooltipHeight + 4 > contentRect.bottom;
+      return (
+        overflowsBelow
+        || projectedOverflow
+        || spaceBelow < tooltipHeight + 4
+        || rowBottomGap < tooltipHeight + 8
+        || this.isEditRowInVisibleBottomBand(editCell, content)
+        || this.isLastDataSourceEditRow(editRow)
+        || this.isLastVisibleTbodyRow(editRow)
+      );
+    },
+    applyValidationTooltipPlacement() {
+      const root = this.getGridSearchRoot();
+      if (!root) {
+        return;
+      }
+      const editCell = this.findActiveGridEditCell(root);
+      const content = this.findGridScrollContentForEditCell(root, editCell);
+      if (!content || !editCell) {
+        return;
+      }
+      const tooltip = this.findVisibleValidationTooltip(editCell);
+      if (!tooltip) {
+        return;
+      }
+      root.querySelectorAll(".ntss-validation-above").forEach((element) => {
+        if (element !== editCell) {
+          element.classList.remove("ntss-validation-above");
+          this.resetValidationTooltipCalloutDirection(element);
+        }
+      });
+      const anchor =
+        editCell.querySelector(".k-input.k-textbox, .k-picker, .k-input")
+        || editCell.querySelector(
+          "input, textarea, select, .k-input-inner, .k-textbox"
+        )
+        || editCell;
+      const needsAbove = this.shouldPlaceValidationTooltipAbove(
+        editCell,
+        content,
+        anchor,
+        tooltip
+      );
+      if (needsAbove) {
+        editCell.classList.add("ntss-validation-above");
+      } else {
+        editCell.classList.remove("ntss-validation-above");
+      }
+      this.setValidationTooltipCalloutDirection(tooltip, needsAbove);
+    },
+    stopValidationTooltipPlacementWatch() {
+      const ownerWindow = this.getGridSearchRoot()?.ownerDocument?.defaultView || window;
+      if (this.validationTooltipPlacementIntervalId) {
+        ownerWindow.clearInterval?.(this.validationTooltipPlacementIntervalId);
+        this.validationTooltipPlacementIntervalId = null;
+      }
+    },
+    startValidationTooltipPlacementWatch() {
+      this.stopValidationTooltipPlacementWatch();
+      const ownerWindow = this.getGridSearchRoot()?.ownerDocument?.defaultView || window;
+      let attempts = 0;
+      const tick = () => {
+        attempts += 1;
+        this.applyValidationTooltipPlacement();
+        const root = this.getGridSearchRoot();
+        const editCell = this.findActiveGridEditCell(root);
+        const tooltip = this.findVisibleValidationTooltip(editCell);
+        if (!tooltip || attempts >= 5) {
+          this.stopValidationTooltipPlacementWatch();
+        }
+      };
+      tick();
+      this.validationTooltipPlacementIntervalId = ownerWindow.setInterval?.(tick, 100);
+    },
+    clearValidationTooltipPlacementTimers() {
+      const ownerWindow = this.getGridSearchRoot()?.ownerDocument?.defaultView || window;
+      this.validationTooltipPlacementTimers.forEach((timerId) => {
+        ownerWindow.clearTimeout?.(timerId);
+      });
+      this.validationTooltipPlacementTimers = [];
+      if (this.validationTooltipPlacementRafId) {
+        ownerWindow.cancelAnimationFrame?.(this.validationTooltipPlacementRafId);
+        this.validationTooltipPlacementRafId = null;
+      }
+    },
+    scheduleValidationTooltipPlacement() {
+      this.clearValidationTooltipPlacementTimers();
+      const ownerWindow = this.getGridSearchRoot()?.ownerDocument?.defaultView || window;
+      const run = () => this.applyValidationTooltipPlacement();
+      run();
+      this.$nextTick(run);
+      this.validationTooltipPlacementRafId = ownerWindow.requestAnimationFrame?.(() => {
+        this.validationTooltipPlacementRafId = ownerWindow.requestAnimationFrame?.(() => {
+          this.validationTooltipPlacementRafId = null;
+          run();
+        }) || null;
+      }) || null;
+      const timerId = ownerWindow.setTimeout?.(run, 80);
+      if (timerId) {
+        this.validationTooltipPlacementTimers.push(timerId);
+      }
+      this.startValidationTooltipPlacementWatch();
+    },
+    installValidationTooltipPlacementObserver() {
+      this.teardownValidationTooltipPlacementObserver();
+      const root = this.getGridSearchRoot();
+      const scrollAreas = [
+        root?.querySelector?.(".k-grid-content"),
+        root?.querySelector?.(".k-grid-content-locked"),
+        root,
+      ].filter(Boolean);
+      if (!scrollAreas.length || typeof MutationObserver === "undefined") {
+        return;
+      }
+      const ownerWindow = scrollAreas[0].ownerDocument?.defaultView || window;
+      const onMutation = () => {
+        if (this.validationTooltipPlacementRafId) {
+          ownerWindow.cancelAnimationFrame?.(this.validationTooltipPlacementRafId);
+        }
+        this.validationTooltipPlacementRafId = ownerWindow.requestAnimationFrame?.(() => {
+          this.validationTooltipPlacementRafId = null;
+          this.applyValidationTooltipPlacement();
+        }) || null;
+      };
+      this.validationTooltipObserver = new MutationObserver(onMutation);
+      scrollAreas.forEach((scrollArea) => {
+        this.validationTooltipObserver.observe(scrollArea, {
+          childList: true,
+          subtree: true,
+        });
+      });
+    },
+    teardownValidationTooltipPlacementObserver() {
+      this.validationTooltipObserver?.disconnect?.();
+      this.validationTooltipObserver = null;
+    },
+    clearMasterRecordValidationTooltipPlacementState() {
+      this.getGridSearchRoot()?.querySelectorAll?.(".ntss-validation-above")?.forEach?.((element) => {
+        element.classList.remove("ntss-validation-above");
+        this.resetValidationTooltipCalloutDirection(element);
+      });
+    },
+    teardownValidationTooltipPlacement() {
+      this.clearValidationTooltipPlacementTimers();
+      this.stopValidationTooltipPlacementWatch();
+      this.teardownValidationTooltipPlacementObserver();
+      this.clearMasterRecordValidationTooltipPlacementState();
+    },
+    // MasterMaintenanceMixin の getGridRef() / getGridWidget() を上書き
+    // （mixin は this.$refs.grid を期待しているが、jQuery 命令式では gridEl を使うため）
+    getGridRef() {
+      return this.$refs.gridEl || null;
+    },
+    getGridWidget() {
+      return this.getKendoGrid();
+    },
+    buildColumns() {
+      return this.columns.map(column => {
+        const base = {
+          field:    column.field,
+          title:    column.title == null || column.title === '' ? ' ' : column.title,
+          hidden:   column.hidden,
+          locked:   column.locked,
+          editable: column.editable,
+          width:    column.width,
+          format:   column.format,
+          values:   column.values,
+        };
+        if (column.field === '$modalType') {
+          return { ...base, attributes: { class: 'btn3-kendo-normal' },
+                   command: { text: '詳細', click: event => this.showMasterEditModal(event) } };
+        }
+        if (column.title === '在宅') {
+          return { ...base, hidden: !this.facilityHemoDialysis };
+        }
+        if (column.dataType === 'date') {
+          return { ...base, editor: (container, opts) => this.eachModelCalendar(container, opts) };
+        }
+        if (column.field === 'leftDataIndex' || column.field === 'rightDataIndex') {
+          return {
+            ...base,
+            template: (dataItem) => this.formatMonitorGraphItemLabel(dataItem?.[column.field]),
+            editor: (container, opts) => this.comboEditor(container, opts),
+          };
+        }
+        if (column.dataType === 'color') {
+          return { ...base, template: column.colorTemplate,
+                   editor: (container, opts) => this.colorEditor(container, opts) };
+        }
+        if (column.dataType === 'textarea') {
+          return { ...base, editor: (container, opts) => this.textareaEditor(container, opts) };
+        }
+        if (column.dataType === 'number') {
+          return { ...base, template: (dataItem) => this.formatValue(dataItem, column),
+                   editor: (container, opts) => this.numericEditor(container, opts) };
+        }
+        if (column.field === 'mainteContent3') {
+          return { ...base, template: column.textTemplate,
+                   editor: (container, opts) => this.stringEditor(container, opts) };
+        }
+        return { ...base, template: column.textTemplate };
+      });
+    },
+    initKendoGrid() {
+      const el = this.$refs.gridEl;
+      if (!el) return;
+      if (this._directGridWidget) {
+        this.applyMasterRecordColumnsContract();
+        this.setGridDataSource(this.dataSourceItems);
+        this.scheduleMasterRecordGridLayoutContract();
+        this.$nextTick(() => {
+          this.installValidationTooltipPlacementObserver();
+        });
+        return;
+      }
+      $(el).kendoGrid({
+        dataSource:  this.dataSourceItems,
+        editable:    true,
+        selectable:  true,
+        reorderable: false,
+        height:      this.kendoGridHeight,
+        scrollable:  true,
+        columns:     this.buildColumns(),
+        beforeEdit:  (e) => this.modifyEditStart(e),
+        edit:        (e) => this.addInputAssist(e),
+        cellClose:   (e) => this.masterRecordCellClose(e),
+        save:        (e) => this.onEditSave(e),
+        dataBound: (e) => {
+          this.onDataBoundKendoGrid(e);
+          this.scheduleMasterRecordGridLayoutContract();
+          if (this.__pendingScrollToBottom) {
+            // 追加行: 横スクロール0・縦スクロール最下部
+            this.__pendingScrollToBottom = false;
+            this.masterRecordKeepScrollAfterSave = false;
+            this.masterRecordSavedScrollPosition = null;
+            this._scrollToRestoreAfterDataBound = null;
+            this.scrollPosition.left = 0;
+            const scrollToAddedRowBottom = () => {
+              const content = this.getGridScrollContainer();
+              const top = content ? Math.max(0, content.scrollHeight - content.clientHeight) : 0;
+              this.applyMasterRecordGridScrollToWidget(top, 0, e.sender);
+            };
+            this.$nextTick(() => {
+              scrollToAddedRowBottom();
+              requestAnimationFrame(scrollToAddedRowBottom);
+            });
+          } else if (this.masterRecordSavedScrollPosition || this._scrollToRestoreAfterDataBound) {
+            // その他: 保存したスクロール位置を復元
+            const pos = this.masterRecordSavedScrollPosition || this._scrollToRestoreAfterDataBound;
+            if (!this.masterRecordSavedScrollPosition) {
+              this._scrollToRestoreAfterDataBound = null;
+            }
+            this.restoreMasterRecordSavedGridScrollPosition(e.sender, pos);
+          }
+          if (!this.__pendingScrollToBottom && !this.__masterRecordInlineEdit) {
+            this.scheduleMasterRecordFullVisualRefresh();
+          }
+          this.installValidationTooltipPlacementObserver();
+          this.scheduleValidationTooltipPlacement();
+        },
+      });
+      // widget を markRaw で保存（Vue の Proxy 対象から除外してパフォーマンス問題を防ぐ）
+      this._directGridWidget = markRaw($(el).data('kendoGrid'));
+      // kendo-validator を命令式で初期化（v-kendo-validator ディレクティブの代替）
+      const ntssList = this.$refs.ntssList;
+      if (ntssList) {
+        destroyJQueryValidator(ntssList);
+        this.kendoValidator = createJQueryValidator(ntssList, this.kendoValidatorSetup);
+      }
+      // Grid DOM 生成後にレイアウトを再計算（ロック列コンテナ幅を正しく適用）
+      this.$nextTick(() => {
+        this.installMasterRecordGridScrollListener();
+        this.calculateColumnsWidth();
+        this.calculateGridHeight();
+        this.scheduleMasterRecordGridLayoutContract();
+      });
+    },
+    installMasterRecordGridScrollListener() {
+      const content = this.getGridScrollContainer();
+      if (!content || content.__masterRecordScrollBound) {
+        return;
+      }
+      content.__masterRecordScrollBound = true;
+      content.addEventListener("scroll", () => {
+        const pos = this.readMasterRecordCurrentGridScrollPosition();
+        this.scrollPosition.top = pos.top || 0;
+        this.scrollPosition.left = pos.left || 0;
+        if (!this.masterRecordKeepScrollAfterSave) {
+          clearTimeout(this.masterRecordSavedScrollClearTimer);
+          this.masterRecordSavedScrollClearTimer = null;
+          this._scrollToRestoreAfterDataBound = null;
+        }
+      }, { passive: true });
+    },
+    applyMasterRecordColumnsContract() {
+      const grid = this.getKendoGrid();
+      if (!grid) {
+        return;
+      }
+      const nextColumns = this.buildColumns();
+      const currentSignature = (grid.columns || []).map(col => `${col.field || ""}:${col.hidden ? 1 : 0}:${col.locked ? 1 : 0}:${col.width || ""}`).join("|");
+      const nextSignature = nextColumns.map(col => `${col.field || ""}:${col.hidden ? 1 : 0}:${col.locked ? 1 : 0}:${col.width || ""}`).join("|");
+      if (currentSignature !== nextSignature) {
+        grid.setOptions({ columns: nextColumns });
+        this.restoreMasterRecordSavedGridScrollPosition(grid);
+        return;
+      }
+      nextColumns.forEach(column => {
+        const gridColumn = grid.columns.find(col => col.field === column.field);
+        if (gridColumn) {
+          gridColumn.editable = column.editable;
+          gridColumn.values = column.values;
+          gridColumn.hidden = column.hidden;
+          if (column.field === "leftDataIndex" || column.field === "rightDataIndex") {
+            gridColumn.template = column.template;
+          }
+        }
+      });
+    },
+    applyMasterRecordGridStyleContract() {
+      const root = this.getGridRootEl?.() || this.$refs.gridEl;
+      if (!root) {
+        return;
+      }
+      root.classList.add(
+        "ntss-kendo-grid-legacy",
+        "k-widget",
+        "k-grid",
+        "k-editable",
+        "k-display-block",
+        "master-record-direct-jq-grid"
+      );
+      root.querySelectorAll("th").forEach(th => th.classList.add("k-header"));
+      [".k-grid-content tbody", ".k-grid-content-locked tbody"].forEach(selector => {
+        root.querySelectorAll(`${selector} tr`).forEach((tr, index) => {
+          tr.classList.add("k-master-row");
+          tr.classList.toggle("k-alt", index % 2 === 1);
+        });
+      });
+      root.querySelectorAll(".k-grid-content tbody td, .k-grid-content-locked tbody td").forEach(td => {
+        td.classList.add("k-td", "k-table-td");
+      });
+      this.calculateGridWidth();
+      this._repairLockedLayout();
+    },
+    scheduleMasterRecordGridLayoutContract() {
+      if (this._masterRecordLayoutRafId != null) {
+        cancelAnimationFrame(this._masterRecordLayoutRafId);
+      }
+        this._masterRecordLayoutRafId = requestAnimationFrame(() => {
+          this.calculateGridWidth();
+          this.applyMasterRecordGridStyleContract();
+          this._masterRecordLayoutRafId = requestAnimationFrame(() => {
+            this._masterRecordLayoutRafId = null;
+            this.calculateGridWidth();
+            this.applyMasterRecordGridStyleContract();
+            this.refreshMasterRecordEditedVisualState();
+            if (this.masterRecordKeepScrollAfterSave) {
+              this.restoreMasterRecordSavedGridScrollPosition();
+            }
+          });
+        });
+    },
+    applyMasterRecordLockedWidthContract(lockedWidthStyle) {
+      if (!lockedWidthStyle) return;
+      // Vue2/Kendo2019 wrapper では locked header/content が grid 直下にあり、width 指定だけで固定列幅が保持されていた。
+      // Vue3/Kendo2026 jq 版では locked content が k-grid-container 配下の flex item になり、width だけでは小窓で shrink する。
+      // HTML を Vue2 へ戻さず、Vue2 と同じ「固定列領域は dummy 10px + locked 列幅を保持する」布局契約だけを補う。
+      [this.getGridLockedHeaderEl(), this.getGridLockedContentEl()].forEach(container => {
+        if (!container) return;
+        container.style.width = lockedWidthStyle;
+        container.style.minWidth = lockedWidthStyle;
+        container.style.maxWidth = lockedWidthStyle;
+        container.style.flex = `0 0 ${lockedWidthStyle}`;
+        container.style.flexBasis = lockedWidthStyle;
+        container.style.flexShrink = '0';
+        const table = container.querySelector?.('table');
+        if (table) {
+          table.style.width = lockedWidthStyle;
+          table.style.minWidth = lockedWidthStyle;
+        }
+      });
+    },
+    // direct jq では Vue2 wrapper が内部で行っていた locked/non-locked の最終同期だけを軽量補正する。
+    _repairLockedLayout() {
+      const el = this.$refs.gridEl;
+      if (!el) return;
+      const gridContentEl = this.getGridContentEl();
+      const gridLockedContentEl = this.getGridLockedContentEl();
+      if (gridContentEl && gridLockedContentEl && !this.androidFlg && !this.iosFlg) {
+        const height = gridContentEl.clientHeight || gridContentEl.offsetHeight;
+        if (height > 0) {
+          gridLockedContentEl.style.height = `${height}px`;
+          gridLockedContentEl.style.maxHeight = `${height}px`;
+        }
+        gridLockedContentEl.scrollTop = gridContentEl.scrollTop;
+      }
+      const lockedWidthStyle = this.getGridLockedHeaderEl()?.style?.width
+        || this.getGridLockedContentEl()?.style?.width;
+      this.applyMasterRecordLockedWidthContract(lockedWidthStyle);
+      if (gridContentEl) {
+        try {
+          gridContentEl.dispatchEvent(new Event('scroll', { bubbles: true }));
+        } catch (_error) {
+          $(gridContentEl).trigger('scroll');
+        }
+      }
+      const gridRoot = this.getGridRootEl() || this.$refs.gridEl;
+      if (gridRoot) {
+        const forceRowSync = !!gridRoot.querySelector?.(".master-record-textarea-editor");
+        syncKendoGridLockedRowHeights(gridRoot, { force: forceRowSync });
+      }
+    },
+    calculateGridWidth() {
+      this.applyDirectGridLockedWidthContract();
+      this.applyDirectGridLockedHeightContract();
+    },
+    /** 並び順列 show/hide 後に locked 領域幅を再計算（hideColumn だけでは列幅が残る） */
+    syncMasterRecordSortColumnLayout() {
+      const grid = this.getKendoGrid();
+      if (!grid) {
+        return;
+      }
+      this.storeMasterRecordGridScrollForLayout();
+      const scrollTop = this._layoutScrollTop ?? 0;
+      const scrollLeft = this._layoutScrollLeft ?? 0;
+      try {
+        grid.resize(true);
+      } catch (_error) { /* noop */ }
+      this.calculateGridWidth();
+      this._repairLockedLayout();
+      this.applyMasterRecordGridScrollToWidget(scrollTop, scrollLeft, grid);
+    },
+    storeMasterRecordGridScrollForLayout() {
+      const pending = this.masterRecordKeepScrollAfterSave
+        ? (this.masterRecordSavedScrollPosition || this._scrollToRestoreAfterDataBound)
+        : null;
+      if (pending) {
+        this._layoutScrollTop = pending.top || 0;
+        this._layoutScrollLeft = pending.left || 0;
+      } else {
+        const pos = this.readMasterRecordCurrentGridScrollPosition();
+        this._layoutScrollTop = pos.top || 0;
+        this._layoutScrollLeft = pos.left || 0;
+      }
+      this.scrollPosition.top = this._layoutScrollTop;
+      this.scrollPosition.left = this._layoutScrollLeft;
+    },
+    restoreMasterRecordGridScrollForLayout() {
+      const top = this._layoutScrollTop ?? this.scrollPosition.top ?? 0;
+      const left = this._layoutScrollLeft ?? this.scrollPosition.left ?? 0;
+      this.applyMasterRecordGridScrollToWidget(top, left);
+    },
+    resizeDirectGrid() {
+      const grid = this.getKendoGrid();
+      if (!grid) return;
+      this.storeMasterRecordGridScrollForLayout();
+      const scrollTop = this._layoutScrollTop ?? 0;
+      const scrollLeft = this._layoutScrollLeft ?? 0;
+      try {
+        try {
+          grid.closeCell?.();
+        } catch (_closeError) {
+          // 編集中でなくても closeCell は失敗し得る。resize は継続する。
+        }
+        const height = Number(this.kendoGridHeight) || 0;
+        const root = this.getGridRootEl?.() || this.$refs.gridEl;
+        if (height > 0) {
+          root?.style && (root.style.height = `${height}px`);
+          root?.style && (root.style.maxHeight = `${height}px`);
+          root?.style && (root.style.overflow = "hidden");
+          grid.wrapper?.height?.(height);
+          grid.element?.height?.(height);
+        }
+        grid.setOptions({ height: this.kendoGridHeight });
+        grid.resize(true);
+        this.applyDirectGridLockedWidthContract();
+        this.applyDirectGridLockedHeightContract();
+        this.applyMasterRecordGridScrollToWidget(scrollTop, scrollLeft, grid);
+        // resize で tbody が再描画されると master-edited-row 等の手動配色が消える。
+        this.refreshMasterRecordEditedVisualState();
+        this.$nextTick(() => {
+          this.restoreMasterRecordGridScrollForLayout();
+          this.refreshMasterRecordEditedVisualState();
+          requestAnimationFrame(() => {
+            this.restoreMasterRecordGridScrollForLayout();
+            this.refreshMasterRecordEditedVisualState();
+          });
+        });
+      } catch (_error) { /* noop */ }
+    },
+    getDirectGridVisibleLockedWidthPx() {
+      const root = this.getGridRootEl?.() || this.$refs.gridEl;
+      const fontSize = parseFloat(getComputedStyle(root || document.body).fontSize || "16") || 16;
+      return (this.columns || []).reduce((sum, column) => {
+        if (!column.locked || column.hidden) return sum;
+        const width = `${column.width || ""}`.trim();
+        if (width.endsWith("em")) return sum + parseFloat(width) * fontSize;
+        if (width.endsWith("px")) return sum + parseFloat(width);
+        const numeric = parseFloat(width);
+        return sum + (Number.isFinite(numeric) ? numeric : 0);
+      }, 0);
+    },
+    applyDirectGridLockedWidthContract() {
+      const root = this.getGridRootEl?.() || this.$refs.gridEl;
+      const width = this.getDirectGridVisibleLockedWidthPx();
+      if (!root || !width) return;
+      const px = `${Math.ceil(width)}px`;
+      root.querySelectorAll(".k-grid-header-locked,.k-grid-content-locked,.k-grid-header-locked > table,.k-grid-content-locked > table").forEach(element => {
+        element.style.width = px;
+        element.style.minWidth = px;
+      });
+    },
+    applyDirectGridLockedHeightContract() {
+      const content = this.getGridContentEl();
+      const lockedContent = this.getGridLockedContentEl();
+      if (!content || !lockedContent) return;
+      lockedContent.style.height = `${content.clientHeight}px`;
+      lockedContent.style.maxHeight = `${content.clientHeight}px`;
+    },
+    // MasterMaintenanceMixin の setGridDataSource をオーバーライド。
+    // ① setDataSource() はスクロール位置をリセットするため dataSource.data() 方式を採用。
+    // ② dataSource.data() は pageSize が設定された DataSource では先頭ページのみ返すことがある。
+    //    そのため、常に this.masterRecords.data（Vuex の完全データ）を直接渡す。
+    setGridDataSource(_dataSource) {
+      const grid = this.getKendoGrid();
+      if (!grid?.dataSource) return;
+      try {
+        const raw = Array.isArray(this.masterRecords?.data)
+          ? this.masterRecords.data
+          : [];
+        grid.dataSource.data(raw);
+      } catch (_e) {}
+    },
+    // mixin の getGridScrollPosition は仮想スクロール前提で
+    //   scrollable.lastChild.scrollTop (= table の 0) を ?? で取って常に 0 を返すバグがある。
+    // 普通スクロールの場合、scrollable.scrollTop（= .k-grid-content の scrollTop）が正しい値。
+    getGridScrollPosition() {
+      const scrollable = this.getGridScrollContainer();
+      return {
+        top:  scrollable?.scrollTop  || 0,
+        left: scrollable?.scrollLeft || 0,
+      };
+    },
+    setGridScrollPosition(position = {}) {
+      const top = position.top || 0;
+      const left = position.left || 0;
+      this.applyMasterRecordGridScrollToWidget(top, left);
+      const content = this.getGridScrollContainer();
+      if (content) {
+        try {
+          content.dispatchEvent(new Event('scroll', { bubbles: true }));
+        } catch (_error) {
+          $(content).trigger('scroll');
+        }
+      }
+    },
+    readMasterRecordCurrentGridScrollPosition() {
+      const grid = this.getKendoGrid();
+      const content = grid?.content?.[0] || this.getGridContentEl?.() || null;
+      const scrollable = this.getGridScrollContainer();
+      const virtualScrollbar = grid?.virtualScrollable?.verticalScrollbar?.[0] || null;
+      const topValues = [virtualScrollbar?.scrollTop, content?.scrollTop, scrollable?.scrollTop]
+        .map(value => Number(value))
+        .filter(value => Number.isFinite(value));
+      const leftValues = [content?.scrollLeft, scrollable?.scrollLeft]
+        .map(value => Number(value))
+        .filter(value => Number.isFinite(value));
+      return {
+        top: topValues.length ? Math.max(...topValues) : 0,
+        left: leftValues.length ? Math.max(...leftValues) : 0,
+      };
+    },
+    saveMasterRecordGridScrollPosition() {
+      const position = this.readMasterRecordCurrentGridScrollPosition();
+      this.scrollPosition.top = position.top || 0;
+      this.scrollPosition.left = position.left || 0;
+      this.masterRecordSavedScrollPosition = {
+        top: this.scrollPosition.top,
+        left: this.scrollPosition.left,
+      };
+      this._scrollToRestoreAfterDataBound = { ...this.masterRecordSavedScrollPosition };
+      this.masterRecordKeepScrollAfterSave = true;
+      this.setScrollTopPosition(this.scrollPosition.top);
+      this.setScrollLeftPosition(this.scrollPosition.left);
+    },
+    restoreMasterRecordSavedGridScrollPosition(widget = null, position = null) {
+      const pos = position || this.masterRecordSavedScrollPosition || this._scrollToRestoreAfterDataBound;
+      if (!pos) {
+        return;
+      }
+      clearTimeout(this.masterRecordSavedScrollClearTimer);
+      this.masterRecordSavedScrollClearTimer = null;
+      const restore = () => this.applyMasterRecordGridScrollToWidget(pos.top || 0, pos.left || 0, widget);
+      restore();
+      this.$nextTick(() => {
+        restore();
+        requestAnimationFrame(restore);
+      });
+      this.masterRecordSavedScrollClearTimer = setTimeout(() => {
+        this.masterRecordKeepScrollAfterSave = false;
+        this.masterRecordSavedScrollPosition = null;
+        this._scrollToRestoreAfterDataBound = null;
+        this.masterRecordSavedScrollClearTimer = null;
+      }, 3000);
+    },
+    rollbackMasterRecordSavedGridScroll() {
+      if (!this.masterRecordKeepScrollAfterSave && !this.masterRecordSavedScrollPosition) {
+        return;
+      }
+      this.restoreMasterRecordSavedGridScrollPosition();
+    },
+    // --- ここまで Kendo Grid 初期化 ---
+    getGridContentElement() {
+      return this.getGridContentEl?.() || null;
+    },
+    getMasterRecordScopeRoot() {
+      return this.$el || this.$refs.gridEl || null;
+    },
+    getMasterRecordGridElement() {
+      return this.$refs.gridEl || this.getMasterRecordScopeRoot()?.querySelector?.('#grid') || getScopedElementById("grid", this.getMasterRecordScopeRoot());
+    },
+    getMasterRecordGridHeaderWrap() {
+      const root = this.getGridRootEl?.() || this.$refs.gridEl;
+      return root?.querySelector?.(".k-grid-header-wrap") || null;
+    },
+    getMasterRecordEditorRoot(container = null) {
+      return container?.[0] || container?.get?.(0) || this.getMasterRecordGridElement() || this.getMasterRecordScopeRoot() || null;
+    },
+    getMasterRecordEditorElement(selector, container = null) {
+      const editorRoot = this.getMasterRecordEditorRoot(container);
+      return editorRoot?.querySelector?.(selector)
+        || this.getMasterRecordGridElement()?.querySelector?.(selector)
+        || queryScopedSelector(selector, this.getMasterRecordGridElement() || this.getMasterRecordScopeRoot())
+        || null;
+    },
+    getMasterRecordResizeTargetEl(container = null) {
+      return this.getMasterRecordEditorRoot(container)?.querySelector?.('.resize-obs-target')
+        || this.getMasterRecordGridElement()?.querySelector?.('.resize-obs-target')
+        || queryScopedSelector('.resize-obs-target', this.getMasterRecordGridElement() || this.getMasterRecordScopeRoot())
+        || null;
+    },
+    getMasterRecordDirtyCells() {
+      return queryScopedSelectorAll('.k-dirty', this.getMasterRecordGridElement() || this.getMasterRecordScopeRoot());
+    },
+    handleAddValidateArrow() {
+      MasterMaintenanceMixin.methods.handleAddValidateArrow.call(this);
+      this.scheduleValidationTooltipPlacement();
+    },
+    addInputAssist(ev) {
+      MasterMaintenanceMixin.methods.addInputAssist.call(this, ev);
+      this.$nextTick(() => {
+        this.scheduleValidationTooltipPlacement();
+      });
+    },
+    masterRecordCellClose(ev) {
+      this.clearMasterRecordValidationTooltipPlacementState();
+      MasterMaintenanceMixin.methods.editEnd.call(this, ev);
+    },
     // add 9664 by kangjie 20231211 start
     ...mapMutations("pat-info", ["setSelectedPat", "setIsPatInfoVisible", "setIndUserList", "setIsIndUserSetting", "setIndUserId", "setIsPatInfoChaned"]),
     // add 9664 by kangjie 20231211 end
     // #9976 マスタ画面で保存を行うとスクロール位置が先頭になる start
-    ...mapMutations("master-maintenance", ["setScrollTopPosition", "setScrollLeftPosition"]),
+    ...mapMutations("master-maintenance", ["setScrollTopPosition", "setScrollLeftPosition", "bumpMasterRecordListRevision"]),
     // #9976 マスタ画面で保存を行うとスクロール位置が先頭になる end
 
     // #8519 【デグレ】編集した項目のバッググラウンドが黄緑にならない 訾浩 start
-    editBackgroundColor() {
-      this.$nextTick(() => {
-        // グリッドが表示されていなかったら処理終了
-        const gridHeader = this.$refs.grid.$el.firstChild;
-        if (gridHeader.textContent === " ") {
-          return;
-        }
-        gridHeader?.classList?.add("master-grid-header");
-        // del #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（データリストレイアウトマスタ画面）20231106 ztc start
-        // 共通定型文マスタ：「保存」ボタン⇒非活性、編集場所のスタイル⇒未編集 林峻峰 start
-        //const gridLock = this.$refs.grid.$el.children[1].children[0].children[1];
-        // 共通定型文マスタ：「保存」ボタン⇒非活性、編集場所のスタイル⇒未編集 林峻峰 end
-        // del #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（データリストレイアウトマスタ画面）20231106 ztc end
-        // グリッドにレコードがなければ処理終了
-        if (!this.$refs.grid.$el.lastChild.lastChild.tBodies) {
-          return;
-        }
-        // 固定列、可変列、データソースの取得
-        const tbodyc = this.$refs.grid.$el.lastChild.lastChild
-          .tBodies[0].children;
-        // del #8598 「検査再計算ツールで対象患者と再計算項目の選択ができず計算ができない」について、対応する。 dengshen start
-        // let lockTbodyc = this.$refs.grid.$el.children[1].lastChild
-        //   .tBodies[0].children;
-        // del #8598 「検査再計算ツールで対象患者と再計算項目の選択ができず計算ができない」について、対応する。 dengshen end
-        const gridData = this.$refs.grid.dataSource;
-        if (this.$refs.grid.$el.children[1].lastChild.tBodies != undefined) {
-          // mod #8598 「検査再計算ツールで対象患者と再計算項目の選択ができず計算ができない」について、対応する。 dengshen start
-          // lockTbodyc =
-          let lockTbodyc =
-            // mod #8598 「検査再計算ツールで対象患者と再計算項目の選択ができず計算ができない」について、対応する。 dengshen end
-            this.$refs.grid.$el.children[1].lastChild.tBodies[0].children;
+    paintMasterRecordGridVisuals() {
+      // グリッドが表示されていなかったら処理終了
+      const gridHeader = this.getGridHeaderEl();
+      if (!gridHeader || gridHeader.textContent === " ") {
+        return;
+      }
+      gridHeader?.classList?.add("master-grid-header");
+      // グリッドにレコードがなければ処理終了
+      if (!this.getGridTableEl()?.tBodies) {
+        return;
+      }
+      // 固定列、可変列、データソースの取得
+      const tbodyc = this.getGridBodyRows();
+      const gridData = this.getGridDataSource();
+      if (this.getGridLockedTableEl()?.tBodies != undefined) {
+        let lockTbodyc = (this.getGridLockedTbodyEl()?.children || []);
 
-          // 列の行数は固定・可変で同一なため可変列の行数を使用
-          for (let rwCount = 0; rwCount < tbodyc.length; rwCount++) {
-            const currentTrc = tbodyc[rwCount].children;
-            const currentLockTrc = lockTbodyc[rwCount].children;
+        // 列の行数は固定・可変で同一なため可変列の行数を使用
+        for (let rwCount = 0; rwCount < tbodyc.length; rwCount++) {
+          const currentTrc = tbodyc[rwCount].children;
+          const currentLockTrc = lockTbodyc[rwCount].children;
 
-            // 並び順の色変更
-            this.changeSortColor(currentLockTrc);
-            // 編集項目の色を変更
-            let edited = this.changeEditColor(currentTrc, currentLockTrc);
-            // 削除対象を判定
-            const deleted = this.isDeleteRow(currentTrc);
-            // モーダルからの編集も色を変更する
-            if (this.isEdited(gridData._view[rwCount].code)) {
-              edited = true;
-            }
-            // del #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（データリストレイアウトマスタ画面）20231106 ztc start
-            // 共通定型文マスタ：「保存」ボタン⇒非活性、編集場所のスタイル⇒未編集 林峻峰 start
-            // if (this.getMasterRecordListOld && this.getMasterRecordListOld[rwCount] && this.getMasterRecordList.data && this.getMasterRecordList.data[rwCount].operation) {
-            //   this.getMasterRecordListOld[rwCount].operation = this.getMasterRecordList.data[rwCount].operation
-            // }
-            // if (this.getMasterRecordListOld && this.getMasterRecordListOld[rwCount]&& this.getMasterRecordList.data &&this.getMasterRecordList.data[rwCount].upDate) {
-            //   console.log('delete')
-            //   delete this.getMasterRecordList.data[rwCount].upDate
-            // }
-            // if (this.getMasterRecordListOld && this.getMasterRecordListOld[rwCount]&& this.getMasterRecordList.data && this.getMasterRecordListOld[rwCount].upDate) {
-            //   delete this.getMasterRecordListOld[rwCount].upDate
-            // }
-            // if (this.getMasterRecordListOld&& this.getMasterRecordList.data && this.getMasterRecordList.data[rwCount].$modalType === undefined) {
-            //   delete this.getMasterRecordList.data[rwCount].$modalType
-            // }
-            // if (this.getMasterRecordListOld && this.getMasterRecordList.data && this.getMasterRecordList.data[rwCount] && this.getMasterRecordList.data[rwCount].occupations && this.getMasterRecordListOld[rwCount] && this.getMasterRecordListOld[rwCount].occupations) {
-            //   this.getMasterRecordList.data[rwCount].occupations = JSON.stringify(JSON.parse(this.getMasterRecordList.data[rwCount].occupations).sort());
-            //   this.getMasterRecordListOld[rwCount].occupations = JSON.stringify(JSON.parse(this.getMasterRecordListOld[rwCount].occupations).sort());
-            // }
-            // if (this.getMasterRecordListOld && this.getMasterRecordList.data && JSON.stringify(this.getMasterRecordListOld[rwCount]) === JSON.stringify(this.getMasterRecordList.data[rwCount])) {
-            //   edited = false;
-            //   if (gridLock && gridLock.children && gridLock.children[rwCount] && gridLock.children[rwCount].children && gridLock.children[rwCount].children[3] && gridLock.children[rwCount].children[3].children[0]) {
-            //     gridLock.children[rwCount].children[3].children[0].remove();
-            //     gridLock.children[rwCount].children[3].setAttribute('class', '');
-            //   }
-            // }
-            // 共通定型文マスタ：「保存」ボタン⇒非活性、編集場所のスタイル⇒未編集 林峻峰 end
-            // del #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（データリストレイアウトマスタ画面）20231106 ztc end
-            // 並び順以外の項目が変更されていた場合は、削除か修正にあわせて並び順より後の項目の背景色を変更
-            this.changeRowColor(currentTrc, currentLockTrc, edited, deleted);
-            // データ参照エラーコンボの背景色を変更
-            if (this.masterPhysicalName !== "mst_medicine") {
-              this.changeRefErrorComboColor(currentTrc, deleted, currentLockTrc);
-            }
+          // 並び順の色変更（手入力で変更した行のみ）
+          const rowRecord = gridData._view?.[rwCount];
+          if (rowRecord && this.isMasterRecordSortRankEdited(rowRecord)) {
+            this.applyMasterRecordSortRankVisual(currentLockTrc);
+          } else {
+            this.clearMasterRecordSortRankVisual(currentLockTrc);
+          }
+          // 編集項目の色を変更
+          let edited = this.changeEditColor(currentTrc, currentLockTrc);
+          // 削除対象を判定
+          const deleted = this.isDeleteRow(currentTrc);
+          // モーダルからの編集も色を変更する
+          if (this.isEdited(gridData._view[rwCount].code)) {
+            edited = true;
+          }
+          // 並び順以外の項目が変更されていた場合は、削除か修正にあわせて並び順より後の項目の背景色を変更
+          this.changeRowColor(currentTrc, currentLockTrc, edited, deleted);
+          // データ参照エラーコンボの背景色を変更
+          if (this.masterPhysicalName !== "mst_medicine") {
+            this.changeRefErrorComboColor(currentTrc, deleted, currentLockTrc);
           }
         }
+      }
+    },
+    editBackgroundColor() {
+      this.$nextTick(() => {
+        this.paintMasterRecordGridVisuals();
       });
+    },
+    /** resize / 列幅再計算後に編集行の緑背景を即時復元する（MstBed と同方針） */
+    refreshMasterRecordEditedVisualState() {
+      if (this.__masterRecordSortApplying || this.__masterRecordInlineEdit) {
+        return;
+      }
+      this.paintMasterRecordGridVisuals();
     },
     // #8519 【デグレ】編集した項目のバッググラウンドが黄緑にならない 訾浩 end
     ...mapActions("multi-modal", ["showMasterEdit", "showMstExamItemRecManagementModal"]),
@@ -676,25 +1738,75 @@ export default {
       this.defaultProcedureCd = defaultProcedureData?.data || null;
     },
     // add end #9301
+    /**
+     * DBのYYYYMMDD形式をKendo日付列表示用のDateに変換する.
+     * @param {*} value 日付値
+     * @returns {Date|*} 変換後のDate、または変換不要時は元の値
+     */
+    yyyymmddToDate(value) {
+      if (value == null || value === "") {
+        return value;
+      }
+      if (value instanceof Date) {
+        return value;
+      }
+      const str = String(value);
+      const fromYyyymmdd = dayjs(str, "YYYYMMDD", true);
+      if (fromYyyymmdd.isValid()) {
+        return fromYyyymmdd.toDate();
+      }
+      const fromIsoDate = dayjs(str, "YYYY-MM-DD", true);
+      if (fromIsoDate.isValid()) {
+        return fromIsoDate.toDate();
+      }
+      const fromIsoDateTime = str.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+      if (fromIsoDateTime) {
+        return new Date(
+          Number(fromIsoDateTime[1]),
+          Number(fromIsoDateTime[2]) - 1,
+          Number(fromIsoDateTime[3])
+        );
+      }
+      return value;
+    },
+    /**
+     * 使用開始日・使用終了日をグリッド表示用に変換する.
+     * @param {Array} data マスタレコード一覧
+     */
+    convertUseTermDatesForGrid(data) {
+      if (!Array.isArray(data)) {
+        return;
+      }
+      const dateFields = ["useStartDate", "useEndDate"];
+      if (this.masterPhysicalName === "mst_treatment" || this.masterPhysicalName === "mst_procedure") {
+        dateFields.push("inHospAStartdate", "inHospBStartdate");
+      }
+      data.forEach(row => {
+        dateFields.forEach(field => {
+          if (row[field] != null && row[field] !== "") {
+            row[field] = this.yyyymmddToDate(row[field]);
+          }
+        });
+      });
+    },
     // グリッドのデータ再表示
     gridDataRefresh() {
-      const grid = this.$refs.grid;
-      grid.dataSource = this.generatedGridData();
+      this.dataSourceItems = this.generatedGridData();
+      this.setGridDataSource(this.dataSourceItems);
     },
-    generatedGridData() {
-      let that = this;
-      // eslint-disable-next-line no-undef
-      return new kendo.data.DataSource({
-        //6661:スクロールバー異常
-        // pageSize: 30,
-        transport: {
-          read: function (e) {
-            if (that.masterRecords.data != null)
-              e.success(that.masterRecords.data);
-          },
-        },
-        schema: that.masterRecords.schema,
-      });
+    getMasterRecordGridPageSize() {
+      const rowHeight = this.getGridRootEl?.()?.querySelector?.('.k-grid-content tr')?.clientHeight || 40;
+      const gridHeight = Number(this.kendoGridHeight) || this.$refs.gridEl?.offsetHeight || 900;
+      return Math.max(1, Math.ceil(gridHeight / rowHeight) + 5);
+    },
+    generatedGridData(source = this.masterRecords) {
+      const data = Array.isArray(source?.data) ? source.data : [];
+      const schema = source?.schema || {};
+      return markRaw(createDirectDataSource({
+        //6661:スクロールバー異常 - pageSize は設定しない（Vue2 と同じ動作）
+        data,
+        schema,
+      }));
     },
     // 施設一覧のデータを取得
     findFacilityList() {
@@ -744,10 +1856,11 @@ export default {
       if(this.prevFacilityCd != e.sender._old) {
         // 選択施設の拡張設定を取得
         var newFacilityAdvancedSettings = {};
-        let selectedIndex = e.sender.selectedIndex;
+        let selectedIndex = getDirectWidgetSelectedIndex(e.sender);
         try {
-          if (e.sender.dataSource.options.data[selectedIndex].advancedSettings) {
-            newFacilityAdvancedSettings = JSON.parse(e.sender.dataSource.options.data[selectedIndex].advancedSettings);
+          const selectedFacility = getDirectWidgetDataAt(e.sender, selectedIndex);
+          if (selectedFacility?.advancedSettings) {
+            newFacilityAdvancedSettings = JSON.parse(selectedFacility.advancedSettings);
           }
         } catch(error) {
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
@@ -805,6 +1918,8 @@ export default {
     }),
     ...mapActions("mst-synchro", ["startMstSynchro"]),
     eachModelCalendar(container, data) {
+      console.log('data',data);
+      
       if (this.androidFlg === true) {
         // Androidの場合は、HTML5のカレンダーを表示
         $(`<input type="date" name="${data.field}" />`).appendTo(container);
@@ -830,10 +1945,13 @@ export default {
         }
         // #5590 2023/04/20 ×を常に表示するように修正 林峻峰 end
         $(
-          `<span style="position:relative"><input type="date" style="width:8em" id="displayedDummyEditor" class="ntss-input-date" min="1880-01-01" max="2099-12-31" value="${nowDtatString}"/><input type="date" id="hiddenDateInputEditor" name="${data.field}" style="display: none;"/><span id="clear" class="k-icon k-i-close close-btn" title="clear" style="position:absolute;left:75%;top:1px;color: #212529;z-index:9999999" ></span></span>`
-        ).appendTo(container);
+          `<span style="position:relative"><input type="date" style="width:8em" id="displayedDummyEditor" class="ntss-input-date" min="1880-01-01" max="2099-12-31" value="${nowDtatString}"/><input type="date" id="hiddenDateInputEditor" name="${data.field}" style="display: none;"/><span id="clear" class="k-icon k-i-close close-btn" title="clear" style="position:absolute;left:75%;top:-1px;color: #212529;z-index:9999999" ></span></span>`).appendTo(container);
+        const getEditorElement = (selector) => this.getMasterRecordEditorElement(selector, container);
+        const displayedDummyEditor = getEditorElement("#displayedDummyEditor");
+        const hiddenDateInputEditor = getEditorElement("#hiddenDateInputEditor");
+        const clearButton = getEditorElement("#clear");
         // フォーカスアウトで編集データを反映するイベントを発火
-        document.getElementById("displayedDummyEditor").addEventListener("blur", function(ev) {
+        displayedDummyEditor?.addEventListener("blur", function(ev) {
           if (!moveOutFlg) {
             return;
           }
@@ -841,7 +1959,7 @@ export default {
           let resultData;
           const dayData = new Date(ev.target.value);
           // 初期と編集後の値が空欄の場合、更新レコードとして判断しない
-          if (ev.target.value === "" && !hasInitValue ) {
+          if (ev.target.value === "" && !hasInitValue) {
             resultData = "";
             nowDtatString = "";
             hasInitValue = true;
@@ -850,30 +1968,39 @@ export default {
           }
           // 変更前の値と比較し、同じ値の場合は処理しない。又は、初期値がない場合、必ず処理する。
           if (!hasInitValue || nowDtatString != resultData) {
-            document.getElementById("hiddenDateInputEditor").value = resultData;
+            hiddenDateInputEditor.value = resultData;
             // name="${data.field}" で割り当てた箇所に付与されているchangeメソッドを発火します。次いで@saveの処理が発生します。
-            $(document.getElementById("hiddenDateInputEditor")).trigger('change');
+            $(hiddenDateInputEditor).trigger('change');
           }
         });
 
-        let commonCalenderPicker = new (Vue.extend(commonCalender))();
-        commonCalenderPicker.$on("input", value => {
-          document.getElementById("hiddenDateInputEditor").value = value;
-          // name="${data.field}" で割り当てた箇所に付与されているchangeメソッドを発火します。次いで@saveの処理が発生します。
-          $(document.getElementById("hiddenDateInputEditor")).trigger('change');
+        const editorDocument = this.getMasterRecordEditorRoot(container)?.ownerDocument || this.$el?.ownerDocument || document;
+        const commonCalenderMountNode = editorDocument.createElement("span");
+        container.append(commonCalenderMountNode);
+        // 前回のカレンダーアプリを破棄（メモリリーク防止）
+        this._calendarApp?.unmount();
+        this._calendarApp = null;
+        const commonCalenderApp = createApp(commonCalender, {
+          onInput: value => {
+            hiddenDateInputEditor.value = value;
+            // name="${data.field}" で割り当てた箇所に付与されているchangeメソッドを発火します。次いで@saveの処理が発生します。
+            $(hiddenDateInputEditor).trigger('change');
+            this.getKendoGrid()?.closeCell?.();
+          }
         });
-        commonCalenderPicker.$mount();
+        this._calendarApp = commonCalenderApp;
+        let commonCalenderPicker = commonCalenderApp.mount(commonCalenderMountNode);
+        console.log('commonCalenderPicker',commonCalenderPicker);
         commonCalenderPicker.setSilently(nowDtatString);
-        container.append(commonCalenderPicker.$el);
         //  #5590 2023/05/15 iPadでSafariを使うと、数字に×が被る。修正 張博 start
-        const userAgent = window.navigator.userAgent;
+        const userAgent = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
         if (userAgent.indexOf("Intel Mac OS") > -1) {
-           document.getElementById("displayedDummyEditor").addEventListener("change", (ev) => {
-           document.getElementById("hiddenDateInputEditor").value = ev.target.value;
-           $(document.getElementById("hiddenDateInputEditor")).trigger('change');
+           displayedDummyEditor?.addEventListener("change", (ev) => {
+           hiddenDateInputEditor.value = ev.target.value;
+           $(hiddenDateInputEditor).trigger('change');
         });
         }else{
-          document.getElementById("displayedDummyEditor").addEventListener("change", (ev) => {
+          displayedDummyEditor?.addEventListener("change", (ev) => {
               commonCalenderPicker.setSilently(ev.target.value);
         });
         }
@@ -881,82 +2008,268 @@ export default {
         // #5590 2023/04/20 ×を常に表示するように修正 林峻峰 start
         // let clear = `<span id="clear" class="k-icon k-i-close close-btn" title="clear" style="position:relative;right:65px;bottom:1px;color: #212529;z-index:9999999" ></span>`
         // container.append(clear);
-        document.getElementById("clear").addEventListener("mousedown", function(ev) {
-          document.getElementById("hiddenDateInputEditor").value = null;
-          $(document.getElementById("hiddenDateInputEditor")).trigger('change');
+        clearButton?.addEventListener("mousedown", function(ev) {
+          hiddenDateInputEditor.value = null;
+          $(hiddenDateInputEditor).trigger('change');
         });
         // #5590 2023/04/20 ×を常に表示するように修正 林峻峰 end
         //  #5590 2023/05/12 iPadでSafariを使うと、数字に×が被る。修正 張博 start
-        document.getElementById("clear").addEventListener("touchstart", function(ev) {
-          document.getElementById("hiddenDateInputEditor").value = null;
-          $(document.getElementById("hiddenDateInputEditor")).trigger('change');
+        clearButton?.addEventListener("touchstart", function(ev) {
+          hiddenDateInputEditor.value = null;
+          $(hiddenDateInputEditor).trigger('change');
         });
         //  #5590 2023/05/12 iPadでSafariを使うと、数字に×が被る。修正 張博 end
       }
     },
     comboEditor(container, data) {
-      if(this.masterPhysicalName == "mst_monitor_graph") {
-        data.values = this.mstMonitorGraphItem
-        // add #11047 No7 治療記録モニタグラフマスタ＞詳細 左グラフ上限 左グラフ下限 右グラフ上限 右グラフ下限 マイナス値の入力ができない。linjunfeng start
-        let that = this;
-        // add #11047 No7 治療記録モニタグラフマスタ＞詳細 左グラフ上限 左グラフ下限 右グラフ上限 右グラフ下限 マイナス値の入力ができない。linjunfeng end
-        $(`<input class="k-textbox" name="${data.field}"/>`)
-          .appendTo(container)
-          .kendoDropDownList({
-            dataSource: data.values,
-            dataTextField: "text",
-            dataValueField: "value",
-            change:function(e){
-              const reg = e.sender.filterInput[0].value;
-              if (reg === "" || reg === null) {
-                data.model[data.field] = data.values[e.sender.selectedIndex].value;
-              } else {
-                let temp = [];
-                data.values.forEach(e => {
-                  if (e.text.toString().search(reg) !== -1) {
-                    temp.push(e);
-                  }
-                });
-                data.model[data.field] = temp[e.sender.selectedIndex].value;
-              }
-              // add #11047 No7 治療記録モニタグラフマスタ＞詳細 左グラフ上限 左グラフ下限 右グラフ上限 右グラフ下限 マイナス値の入力ができない。linjunfeng start
-              const sysMonitorItemObj = that.sysMonitorItemList.find(item => item.moni_data_no == data.model[data.field]);
-              const setData = (key, min ,max) => {
-                if (data.model[key] > max) {
-                    data.model[key] = max;
-                  }
-                  if (data.model[key] < min) {
-                    data.model[key] = min;
-                  }
-              };
-              if (sysMonitorItemObj) {
-                const decimals = sysMonitorItemObj.decimal_figure;
-                const min = sysMonitorItemObj.lower /  Math.pow(10, decimals);
-                const max = sysMonitorItemObj.upper /  Math.pow(10, decimals);
-                if (data.field == "leftDataIndex") {
-                  setData('leftGraphLowerLimit', min, max);
-                  setData('leftGraphUpperLimit', min, max);
-                }
-                if (data.field == "rightDataIndex") {
-                  setData('rightGraphLowerLimit', min, max);
-                  setData('rightGraphUpperLimit', min, max);
-                }
-              } else {
-                const masterField = that.getMasterRecordList.schema.model.fields;
-                if (data.field == "leftDataIndex") {
-                  setData('leftGraphUpperLimit', masterField['leftGraphLowerLimit'].validation.min, masterField['leftGraphLowerLimit'].validation.max);
-                  setData('leftGraphLowerLimit', masterField['leftGraphUpperLimit'].validation.min, masterField['leftGraphUpperLimit'].validation.max);
-                }
-                if (data.field == "rightDataIndex") {
-                  setData('rightGraphLowerLimit', masterField['rightGraphLowerLimit'].validation.min, masterField['rightGraphLowerLimit'].validation.max);
-                  setData('rightGraphLowerLimit', masterField['rightGraphLowerLimit'].validation.min, masterField['rightGraphLowerLimit'].validation.max);
-                }
-              }
-              // add #11047 No7 治療記録モニタグラフマスタ＞詳細 左グラフ上限 左グラフ下限 右グラフ上限 右グラフ下限 マイナス値の入力ができない。linjunfeng end
-            },
-            filter: "contains",
-          });
+      if (this.masterPhysicalName !== "mst_monitor_graph") {
+        return;
       }
+      const that = this;
+      const $container = $(container);
+      const $input = $(`<input name="${data.field}" />`).appendTo($container);
+      const resolveDropdownEditCell = () => {
+        const grid = that.getKendoGrid();
+        const editField = grid?.editable?.options?.fields?.field
+          || grid?.editable?.options?.field;
+        if (editField && editField !== data.field) {
+          return $();
+        }
+        if ($container.is("td, .k-table-td")) {
+          return $container;
+        }
+        const $fromContainer = $container.closest("td, .k-table-td");
+        if ($fromContainer.length) {
+          return $fromContainer;
+        }
+        return $(grid?.editable?.element).closest("td, .k-table-td");
+      };
+      let selectionCommitted = false;
+      const finishSelection = (selectedValue) => {
+        if (selectionCommitted || selectedValue === null || selectedValue === undefined) {
+          return;
+        }
+        selectionCommitted = true;
+        that.applyMonitorGraphDataIndexLimits(data, selectedValue);
+        const storeRows = that.getMasterRecordList?.data;
+        if (Array.isArray(storeRows)) {
+          const storeRow = storeRows.find(row => String(row.code) === String(data.model.code));
+          if (storeRow) {
+            storeRow[data.field] = selectedValue;
+          }
+        }
+        const dropdown = $input.data("kendoDropDownList");
+        const displayText = that.getMonitorGraphItemDisplayText(selectedValue);
+        if (that.isMasterRecordAddedRow(data.model)) {
+          data.model[data.field] = selectedValue;
+          that.markMasterRecordModelFieldDirty(data.model, data.field);
+          if (dropdown?.destroy) {
+            dropdown.destroy();
+          }
+          const $cell = resolveDropdownEditCell();
+          if ($cell.length) {
+            $cell
+              .attr("data-field", data.field)
+              .removeClass("k-edit-cell k-invalid master-deleted-combo");
+            $cell[0].querySelectorAll?.(
+              ".k-invalid-msg, .k-tooltip-validation, .k-tooltip-error"
+            )?.forEach?.(node => node.remove());
+            $cell.empty();
+            that.markMasterRecordGridCellDirty($cell[0], data.field);
+            if (displayText) {
+              $cell[0].appendChild($cell[0].ownerDocument.createTextNode(displayText));
+            }
+          }
+          const grid = that.getKendoGrid();
+          if (grid?.editable) {
+            grid.editable = null;
+          }
+          $cell.closest("tr").removeClass("k-grid-edit-row");
+          that.scheduleMasterRecordDropdownEditorCommit(data.model, data.field, selectedValue);
+          return;
+        }
+        if (typeof data.model.set === "function") {
+          data.model.set(data.field, selectedValue);
+        } else {
+          data.model[data.field] = selectedValue;
+        }
+        that.getKendoGrid()?.closeCell?.();
+        that.scheduleMasterRecordDropdownEditorCommit(data.model, data.field, selectedValue);
+      };
+      $input.kendoDropDownList({
+        dataSource: that.mstMonitorGraphItem,
+        dataTextField: "text",
+        dataValueField: "value",
+        valuePrimitive: true,
+        value: data.model[data.field],
+        filter: "contains",
+        select(e) {
+          finishSelection(e.dataItem?.value);
+        },
+        change(e) {
+          if (typeof e.sender.value === "function") {
+            finishSelection(e.sender.value());
+          }
+        },
+      });
+      $input.data("kendoDropDownList")?.wrapper?.css("width", "100%");
+    },
+    getMonitorGraphItemDisplayText(value) {
+      if (value === null || value === undefined || value === "") {
+        return "";
+      }
+      const match = this.mstMonitorGraphItem.find(item => String(item.value) === String(value));
+      return match ? String(match.text) : String(value);
+    },
+    applyMonitorGraphDataIndexLimits(data, selectedValue) {
+      const sysMonitorItemObj = this.sysMonitorItemList.find(item => item.moni_data_no == selectedValue);
+      const setData = (key, min, max) => {
+        if (data.model[key] > max) {
+          data.model[key] = max;
+        }
+        if (data.model[key] < min) {
+          data.model[key] = min;
+        }
+      };
+      if (sysMonitorItemObj) {
+        const decimals = sysMonitorItemObj.decimal_figure;
+        const min = sysMonitorItemObj.lower / Math.pow(10, decimals);
+        const max = sysMonitorItemObj.upper / Math.pow(10, decimals);
+        if (data.field === "leftDataIndex") {
+          setData("leftGraphLowerLimit", min, max);
+          setData("leftGraphUpperLimit", min, max);
+        }
+        if (data.field === "rightDataIndex") {
+          setData("rightGraphLowerLimit", min, max);
+          setData("rightGraphUpperLimit", min, max);
+        }
+      } else {
+        const masterField = this.getMasterRecordList.schema.model.fields;
+        if (data.field === "leftDataIndex") {
+          setData("leftGraphUpperLimit", masterField.leftGraphLowerLimit.validation.min, masterField.leftGraphLowerLimit.validation.max);
+          setData("leftGraphLowerLimit", masterField.leftGraphUpperLimit.validation.min, masterField.leftGraphUpperLimit.validation.max);
+        }
+        if (data.field === "rightDataIndex") {
+          setData("rightGraphLowerLimit", masterField.rightGraphLowerLimit.validation.min, masterField.rightGraphLowerLimit.validation.max);
+          setData("rightGraphUpperLimit", masterField.rightGraphUpperLimit.validation.min, masterField.rightGraphUpperLimit.validation.max);
+        }
+      }
+    },
+    formatMonitorGraphItemLabel(value) {
+      const text = this.getMonitorGraphItemDisplayText(value);
+      return text ? this.$sanitize(text) : "";
+    },
+    isMasterRecordAddedRow(model) {
+      if (!model) {
+        return false;
+      }
+      if (Number(model.operation) === 1 || model.isAddRow === true) {
+        return true;
+      }
+      const storeRow = this.getMasterRecordList?.data?.find(
+        row => row && String(row.code) === String(model.code)
+      );
+      return !!storeRow && Number(storeRow.operation) === 1;
+    },
+    applyMasterRecordDropdownCellLabel(model, field, value) {
+      const displayText = this.getMonitorGraphItemDisplayText(
+        value !== null && value !== undefined
+          ? value
+          : (typeof model?.get === "function" ? model.get(field) : model?.[field])
+      );
+      const $cell = this.findMasterRecordGridCellElement(model, field);
+      if (!$cell?.length) {
+        return;
+      }
+      const el = $cell[0];
+      $cell.removeClass("k-edit-cell k-invalid master-deleted-combo");
+      const marker = el.querySelector(".k-dirty");
+      if (String($cell.text() || "").trim() === String(displayText || "").trim()) {
+        return;
+      }
+      Array.from(el.childNodes).forEach(node => {
+        if (node !== marker) {
+          el.removeChild(node);
+        }
+      });
+      if (displayText) {
+        el.appendChild(el.ownerDocument.createTextNode(displayText));
+      }
+    },
+    getMasterRecordLeafColumnIndex(field, locked) {
+      const grid = this.getKendoGrid();
+      if (!grid || !field) {
+        return -1;
+      }
+      let index = 0;
+      for (const col of grid.columns || []) {
+        if (!col?.field || col.hidden) {
+          continue;
+        }
+        if (!!col.locked !== !!locked) {
+          continue;
+        }
+        if (col.field === field) {
+          return index;
+        }
+        index += 1;
+      }
+      return -1;
+    },
+    findMasterRecordGridCellElement(model, field) {
+      const grid = this.getKendoGrid();
+      if (!grid || !model || !field) {
+        return $();
+      }
+      const $editable = grid.editable?.element;
+      const editField = grid.editable?.options?.fields?.field || grid.editable?.options?.field;
+      if ($editable?.length && editField === field) {
+        const $editCell = $editable.closest("td");
+        if ($editCell.length) {
+          return $editCell;
+        }
+      }
+      const uid = typeof model.uid === "function" ? model.uid() : model.uid;
+      const root = $(grid.wrapper || grid.element || this.getMasterRecordGridElement() || []);
+      if (uid) {
+        const $byAttr = root.find(`tr[data-uid="${uid}"] td[data-field="${field}"]`);
+        if ($byAttr.length) {
+          return $byAttr;
+        }
+      }
+      const column = (grid.columns || []).find(col => col.field === field);
+      const isLocked = !!column?.locked;
+      const cellIndex = this.getMasterRecordLeafColumnIndex(field, isLocked);
+      if (cellIndex < 0) {
+        return $();
+      }
+      const findInTable = ($table) => {
+        if (!$table?.length) {
+          return $();
+        }
+        if (uid) {
+          const $row = $table.find(`tr[data-uid="${uid}"]`);
+          const $cell = $row.children().eq(cellIndex);
+          if ($cell.length) {
+            return $cell;
+          }
+        }
+        let $found = $();
+        $table.find("tr").each(function() {
+          const item = grid.dataItem(this);
+          if (item && String(item.code) === String(model.code)) {
+            $found = $(this).children().eq(cellIndex);
+            return false;
+          }
+        });
+        return $found;
+      };
+      const $cell = isLocked ? findInTable(grid.lockedTable) : findInTable(grid.tbody);
+      if ($cell.length) {
+        return $cell;
+      }
+      const $fallback = findInTable(grid.tbody);
+      return $fallback.length ? $fallback : findInTable(grid.lockedTable);
     },
     colorEditor(container, data) {
       // const dummyField = $("<input/>")
@@ -966,7 +2279,7 @@ export default {
 
       // const colorPicker = $("<input/>")
       //   .appendTo(container)
-      //   .kendoColorPicker({
+      //   .mountColorPicker({
       //     value: data.model[data.field],
       //     palette: "basic",
       //     tileSize: {
@@ -982,11 +2295,20 @@ export default {
       //   });
 
       // // パレットを開く
-      // colorPicker.data("kendoColorPicker").open();
-      const dummyField = $(`<input type = "color" data-bind="value:${data.field}" width: 4em; />`).appendTo(container);
-          this.$nextTick(() => {
-            dummyField.click();
-          });
+      // colorPicker.open();
+      const dummyField = $(`<input type="color" data-bind="value:${data.field}" style="inline-size: 50px !important;" />`).appendTo(container);
+      this.$nextTick(() => {
+        const colorInput = dummyField[0];
+        const ownerWindow = colorInput?.ownerDocument?.defaultView || window;
+        ownerWindow.requestAnimationFrame(() => {
+          colorInput?.focus?.({ preventScroll: true });
+          try {
+            colorInput?.showPicker?.();
+          } catch (_error) {
+            colorInput?.click?.();
+          }
+        });
+      });
     },
     /**
      * @description textarea(改行可能なテキストボックス)用のkendo editor
@@ -995,14 +2317,25 @@ export default {
       if (this.masterPhysicalName == "mst_mainte_detail" && (!data.model.isCmt || data.model.isCmt == "0")) {
         return;
       }
-      $(
-        `<textarea name="${data.field}" class="k-valid k-textarea resize-obs-target" style="font-size: 1.0em; width:100%; resize: vertical; max-height: 65vh;"/>`
+      const $textarea = $(
+        `<textarea name="${data.field}" class="k-valid k-textarea resize-obs-target master-record-textarea-editor" style="font-size: 1.0em; width:100%; height:6.8em; min-height:6.8em; overflow-y:auto; resize:vertical; max-height:65vh; box-sizing:border-box;"/>`
       ).appendTo(container);
-      this.resizeObserver = new ResizeObserver(entries => {
-        // テキストエリアのリサイズに応じてkendo-gridをリサイズする
-        this.calculateGridWidth();
+      const textareaEl = $textarea[0];
+      if (!textareaEl) {
+        return;
+      }
+      if (this.resizeObserver != null) {
+        this.resizeObserver.disconnect();
+      }
+      // 手動リサイズ時のみ locked 列と行高を同期（入力による自動伸長は行わない）
+      this.resizeObserver = new ResizeObserver(() => {
+        this.scheduleMasterRecordGridLayoutContract();
       });
-      this.resizeObserver.observe(document.querySelector('.resize-obs-target'));
+      this.resizeObserver.observe(textareaEl);
+      // セル編集開始直後は locked / body 行高がずれるため、スクロール前に同期する
+      this.$nextTick(() => {
+        this.scheduleMasterRecordGridLayoutContract();
+      });
     },
     numericEditor(container, options) {
       // ダイアライザマスタ変更  杜 start
@@ -1059,7 +2392,7 @@ export default {
       // #11047 No7 治療記録モニタグラフマスタ＞詳細 左グラフ上限 左グラフ下限 右グラフ上限 右グラフ下限 マイナス値の入力ができない。linjunfeng end
       }else if (this.masterPhysicalName == "mst_dialyzer") {
         parameter = { format, decimals, round: false, min: masterField.validation.min, max: masterField.validation.max, step :Math.pow(10,-decimals),};
-        if (masterField.validation.required ) {
+        if (masterField.validation.required) {
           // mod #5589 2023/04/07 数値IFのスタイル全不正 林峻峰 start
           //strinput = '<input data-bind="value:' + options.field + '"required="true" validationMessage ="'+masterField.validation.validationMessage+'" /> ';
           strinput = '<input id="myInputNumber" style="text-align:right" data-bind="value:' + options.field + '"required="true" validationMessage ="'+masterField.validation.validationMessage+'" /> ';
@@ -1074,28 +2407,42 @@ export default {
         parameter = { format, decimals, round: false, min: masterField.validation.min, max: masterField.validation.max, step :Math.pow(10,-decimals),};
       }
       // add 水質検査種別マスタ 閾値・グラフ上限、下限と結果初期値の小数桁数が小数部桁数を無視している 孔s start
-      else if (this.masterPhysicalName == "mst_water_survey_type" ) {
-        if( options.field=="decimalDigits" || options.field=="integerDigits" ) {
+      else if (this.masterPhysicalName == "mst_water_survey_type") {
+        if( options.field=="decimalDigits" || options.field=="integerDigits") {
             // #11047 水質検査種別マスタ 閾値・グラフ上限、下限と整数部桁数の関係設定追加 Mod by Zt Start
-            parameter = { format, decimals, round: false, min: masterField.validation.min, max: masterField.validation.max
-              , change: (e)=>this.numericalCollation(e, options, masterField.validation.max, masterField.validation.min)};
+            parameter = {
+              format,
+              decimals,
+              round: false,
+              min: WATER_SURVEY_TYPE_DIGIT_MIN,
+              max: WATER_SURVEY_TYPE_DIGIT_MAX,
+              step: 1,
+              change: (e) => this.numericalCollation(
+                e,
+                options,
+                WATER_SURVEY_TYPE_DIGIT_MAX,
+                WATER_SURVEY_TYPE_DIGIT_MIN
+              )
+            };
             // #11047 水質検査種別マスタ 閾値・グラフ上限、下限と整数部桁数の関係設定追加 Mod by Zt End
         }
         if (options.field=="upperThreshold" || options.field=="lowerThreshold" ||
           options.field=="graphUpperLimit" || options.field=="graphLowerLimit" ||
           options.field=="initialValue"
         ) {
-          let decimalDigits = options.model.decimalDigits && options.model.decimalDigits > 0 ? options.model.decimalDigits : 0;
-          let integerDigits = options.model.integerDigits && options.model.integerDigits > 0 ? options.model.integerDigits : 0;
-          let max = Math.pow(10, integerDigits)-Math.pow(10, -decimalDigits);
-          // mod redmine 6316 水質検査値でマイナス値の入力が実施できる 宋qy start
-          // #11047 数値IF修正 mod by Z.T. Start
-          // let min = 0;
-          let min = Math.pow(10,integerDigits) * -1 + Math.pow(10,-decimalDigits);
-          // #11047 数値IF修正 mod by Z.T. end
-          // mod redmine 6316 水質検査値でマイナス値の入力が実施できる 宋qy end
-          let formatTemp ="n"+decimalDigits;
-          parameter = { format: formatTemp, decimals: decimalDigits, round: false, step: Math.pow(10,-decimalDigits).toFixed(decimalDigits), min: min, max: max};
+          const bounds = this.getWaterSurveyThresholdBounds(
+            options.model.integerDigits,
+            options.model.decimalDigits
+          );
+          const formatTemp = "n" + bounds.decimalDigits;
+          parameter = {
+            format: formatTemp,
+            decimals: bounds.decimalDigits,
+            round: false,
+            step: Math.pow(10, -bounds.decimalDigits).toFixed(bounds.decimalDigits),
+            min: bounds.min,
+            max: bounds.max,
+          };
         }
       } else if (this.masterPhysicalName === "mst_medicine_support") {
         parameter = { format, decimals, round: false, step :Math.pow(10,-decimals)};
@@ -1107,104 +2454,230 @@ export default {
       let parameterStep = parameter.step ? BigNumber(parameter.step).toNumber() : 1
       let parameterFormat = parameter.format;
       let parameterRound = parameter.round;
-      let parameterMin = parameter.min ? BigNumber(parameter.min).toNumber() : 0
-      let parameterMax = parameter.max ? BigNumber(parameter.max).toNumber() : 999999
+      let parameterMin = parameter.min !== undefined && parameter.min !== null
+        ? BigNumber(parameter.min).toNumber()
+        : 0;
+      let parameterMax = parameter.max !== undefined && parameter.max !== null
+        ? BigNumber(parameter.max).toNumber()
+        : 999999;
+      const hasParameterMin = parameter.min !== undefined && parameter.min !== null;
+      const hasParameterMax = parameter.max !== undefined && parameter.max !== null;
+      const parameterEditorFormat = toUngroupedKendoNumberFormat(parameterFormat, parameterDecimals);
+      const isWaterSurveyThresholdEditor = this.isWaterSurveyThresholdField(options.field);
+      const isWaterSurveyDigitEditor = this.masterPhysicalName === "mst_water_survey_type"
+        && (options.field === "integerDigits" || options.field === "decimalDigits");
+
+      const normalizeNumericEditorValue = (rawValue) => {
+        let value = rawValue;
+        if (value === null || value === undefined || value === "") {
+          return value;
+        }
+        if (this.masterPhysicalName == "mst_monitor_graph") {
+          value = this.roundValue(value, parameter.decimals, BigNumber.ROUND_HALF_UP);
+        } else if (this.masterPhysicalName == "mst_water_survey_type") {
+          if (this.isWaterSurveyThresholdField(options.field)) {
+            return roundAndClampWaterSurveyThresholdValue(
+              value,
+              options.model.integerDigits,
+              options.model.decimalDigits
+            );
+          }
+          value = this.roundValue(value, parameter.decimals, WATER_SURVEY_ROUND_MODE);
+        }
+        if ("mst_medicate_timing" == this.masterPhysicalName && "alertTime" == options.field && value === null) {
+          value = 0;
+        }
+        if (!isWaterSurveyThresholdEditor) {
+          if (value > parameterMax) {
+            value = parameterMax;
+          } else if (value < parameterMin) {
+            value = parameterMin;
+          }
+        }
+        return value;
+      };
 
       // #11047 水質検査種別マスタ 閾値・グラフ上限、下限と整数部桁数の関係設定追加 Add by Zt Start
       let changeEvent = parameter.change
           ? parameter.change : (e) => {
-            let value = e.sender._value;
-            // add #11047 No7 治療記録モニタグラフマスタ＞詳細 左グラフ上限 左グラフ下限 右グラフ上限 右グラフ下限 マイナス値の入力ができない。linjunfeng start
-            if (this.masterPhysicalName == "mst_monitor_graph") {
-              options.model[options.field] = this.roundValue(value, parameter.decimals, BigNumber.ROUND_HALF_UP);
-            }
-            // add #11047 No7 治療記録モニタグラフマスタ＞詳細 左グラフ上限 左グラフ下限 右グラフ上限 右グラフ下限 マイナス値の入力ができない。linjunfeng end
-            if (this.masterPhysicalName == "mst_water_survey_type") {
-              options.model[options.field] = this.roundValue(value, parameter.decimals, BigNumber.ROUND_DOWN);
-            }
-
-            // add 11455 投与タイミングマスタ>治療開始後通知時間にNULLが設定出来る zkm start
-            if ("mst_medicate_timing" == this.masterPhysicalName && "alertTime" == options.field) {
-              options.model[options.field] = null === value ? 0 : value;
-            }
-            // add 11455 投与タイミングマスタ>治療開始後通知時間にNULLが設定出来る zkm end
-
-            // 数値範囲内かどうかの確認
-            if (value > parameterMax) {
-              options.model[options.field] = parameterMax
-            } else if (value <  parameterMin) {
-              options.model[options.field] = parameterMin
-            }
-            document.getElementById("grid").onmousewheel = () => {
-              return true
+            const gridElement = this.getMasterRecordGridElement();
+            if (gridElement) {
+              gridElement.onmousewheel = () => {
+                return true
+              }
             }
           }
       // #11047 水質検査種別マスタ 閾値・グラフ上限、下限と整数部桁数の関係設定追加 Add by Zt End
 
-      $(strinput).appendTo(container).kendoNumericTextBox({
+      const numericTextBox = mountDirectNumericTextBox($(strinput).appendTo(container)[0], {
         decimals: parameterDecimals,
         step: parameterStep,
+        ...(isWaterSurveyDigitEditor ? {
+          ignoreFieldValidationBounds: true,
+          loopBounds: {
+            min: WATER_SURVEY_TYPE_DIGIT_MIN,
+            max: WATER_SURVEY_TYPE_DIGIT_MAX
+          }
+        } : {}),
+        ...(!isWaterSurveyDigitEditor && hasParameterMin ? { min: parameterMin } : {}),
+        ...(!isWaterSurveyDigitEditor && hasParameterMax ? { max: parameterMax } : {}),
         // #11047 No7 治療記録モニタグラフマスタ＞詳細 左グラフ上限 左グラフ下限 右グラフ上限 右グラフ下限 マイナス値の入力ができない。linjunfeng start
-        // format: "n0",
-        format: parameterFormat,
+        format: parameterEditorFormat,
         // #11047 No7 治療記録モニタグラフマスタ＞詳細 左グラフ上限 左グラフ下限 右グラフ上限 右グラフ下限 マイナス値の入力ができない。linjunfeng end
         round: parameterRound,
-        spin: (e) => {
-          const numericTextBox = $("#myInputNumber").data("kendoNumericTextBox");
-          let value = numericTextBox.value();
-          
-          // 数値範囲内かどうかの確認
-          if (value > parameterMax) {
-            value = parameterMin;
-          } else if (value < parameterMin) {
-            value = parameterMax;
+        ...(isWaterSurveyThresholdEditor ? { padDecimalPlaces: false } : {}),
+        spin: () => {
+          let value = getDirectWidgetValue(numericTextBox);
+
+          if (!isWaterSurveyDigitEditor) {
+            value = clampNumericEditorBounds(
+              value,
+              parameterMin,
+              parameterMax,
+              hasParameterMin,
+              hasParameterMax
+            );
           }
-          
+
           // 指数表記を通常表記に変換
           value = BigNumber(value).toFixed();
-          // UIの表示を更新
-          numericTextBox.value(value);
+          // model は Grid save 時に更新する（spin 中に書くと onEditSave で old==new となり保存不可になる）
+          setDirectWidgetValue(numericTextBox, value);
           numericTextBox.element.val(value);
-          
-          document.getElementById("grid").onmousewheel = () => {
-            return true
+          syncDirectNumericTextBoxDisplay(numericTextBox, value);
+
+          const gridElement = this.getMasterRecordGridElement();
+          if (gridElement) {
+            gridElement.onmousewheel = () => {
+              return true
+            }
           }
         },
         // #11047 水質検査種別マスタ 閾値・グラフ上限、下限と整数部桁数の関係設定追加 Mod by Zt
-        change: changeEvent
+        change: (e) => {
+          if (parameter.change) {
+            changeEvent(e);
+            const modelValue = options.model[options.field];
+            if (modelValue !== null && modelValue !== undefined && modelValue !== "") {
+              setDirectWidgetValue(numericTextBox, modelValue);
+              numericTextBox.element.val(modelValue);
+              syncDirectNumericTextBoxDisplay(numericTextBox, modelValue);
+            } else if (isWaterSurveyDigitEditor && e.sender?._value !== null && e.sender?._value !== undefined && e.sender?._value !== "") {
+              options.model[options.field] = e.sender._value;
+              setDirectWidgetValue(numericTextBox, e.sender._value);
+              numericTextBox.element.val(e.sender._value);
+              syncDirectNumericTextBoxDisplay(numericTextBox, e.sender._value);
+            }
+            return;
+          }
+          const normalizedValue = normalizeNumericEditorValue(e.sender._value);
+          if (!isWaterSurveyThresholdEditor) {
+            options.model[options.field] = normalizedValue;
+          }
+          if (normalizedValue !== null && normalizedValue !== undefined && normalizedValue !== "") {
+            setDirectWidgetValue(numericTextBox, normalizedValue);
+            if (!isWaterSurveyThresholdEditor) {
+              numericTextBox.element.val(normalizedValue);
+              syncDirectNumericTextBoxDisplay(numericTextBox, normalizedValue);
+            } else {
+              syncDirectNumericTextBoxDisplay(numericTextBox, normalizedValue);
+            }
+          }
+          const gridElement = this.getMasterRecordGridElement();
+          if (gridElement) {
+            gridElement.onmousewheel = () => {
+              return true
+            }
+          }
+        }
       });
       this.$nextTick(() => {
-        document.getElementById("grid").onmousewheel = () => {
-          return false
+        const gridElement = this.getMasterRecordGridElement();
+        if (gridElement) {
+          gridElement.onmousewheel = () => {
+            return false
+          }
         }
-        $("#myInputNumber").prev().attr("type", "number")
-        const numericTextBox = $("#myInputNumber").data("kendoNumericTextBox");
-        numericTextBox.element.on("mousewheel", (event)=>{
-          let delta = (event.originalEvent.wheelDelta && (event.originalEvent.wheelDelta > 0 ? 1 : -1)) ||
-                      (event.originalEvent.detail && (event.originalEvent.wheelDelta > 0 ? -1 : 1))
-          let value = event.target.value;
-          value = value !== "" ? parseFloat(value) : 0;   
-
-          if (delta > 0) {
-            // 滑ります
-            value += parameterStep
-          } else {
-            // 下がります
-            value -= parameterStep
+        if (!isWaterSurveyThresholdEditor && !isWaterSurveyDigitEditor) {
+          numericTextBox.element.attr("type", "number");
+          if (hasParameterMin) {
+            numericTextBox.element.attr("min", parameterMin);
           }
-          // 数値範囲内かどうかの確認
-          if (value > parameterMax) {
-            value = parameterMin
-          } else if (value <  parameterMin) {
-            value = parameterMax
+          if (hasParameterMax) {
+            numericTextBox.element.attr("max", parameterMax);
           }
-          event.target.value = value.toFixed(this.getDecimalPointLength(parameterStep));
-        })
+          numericTextBox.element.attr("step", parameterStep);
+          getDirectNumericTextElements(numericTextBox).forEach((input) => {
+            if (hasParameterMin) {
+              input.setAttribute("min", String(parameterMin));
+            }
+            if (hasParameterMax) {
+              input.setAttribute("max", String(parameterMax));
+            }
+            input.setAttribute("step", String(parameterStep));
+          });
+        } else if (isWaterSurveyDigitEditor) {
+          numericTextBox.element.attr("step", parameterStep);
+          getDirectNumericTextElements(numericTextBox).forEach((input) => {
+            input.setAttribute("step", String(parameterStep));
+            input.removeAttribute("min");
+            input.removeAttribute("max");
+          });
+        }
+        if (!isWaterSurveyThresholdEditor) {
+          syncDirectNumericTextBoxDisplay(numericTextBox, getDirectWidgetValue(numericTextBox));
+        }
+        if (!isWaterSurveyDigitEditor) {
+          bindMasterRecordNumericEditorWheel(numericTextBox, (event, input) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const delta = resolveNumericEditorWheelDelta(event);
+            if (!delta) {
+              return;
+            }
+            const nextValue = applyNumericEditorWheelStep(
+              input.value,
+              delta,
+              parameterStep,
+              parameterMin,
+              parameterMax,
+              hasParameterMin,
+              hasParameterMax,
+              false
+            );
+            const formattedValue = Number(
+              BigNumber(nextValue).toFixed(this.getDecimalPointLength(parameterStep))
+            );
+            setDirectWidgetValue(numericTextBox, formattedValue);
+            input.value = String(formattedValue);
+            syncDirectNumericTextBoxDisplay(numericTextBox, formattedValue);
+            numericTextBox.trigger("change");
+          });
+        }
         numericTextBox.element.on("blur", () => {
-          document.getElementById("grid").onmousewheel = () => {
-            return true
+          const gridElement = this.getMasterRecordGridElement();
+          if (gridElement) {
+            gridElement.onmousewheel = () => {
+              return true
+            }
           }
           numericTextBox?.trigger("change")
+          const normalizedValue = normalizeNumericEditorValue(getDirectWidgetValue(numericTextBox));
+          if (!isWaterSurveyThresholdEditor) {
+            options.model[options.field] = normalizedValue;
+          }
+          if (normalizedValue !== null && normalizedValue !== undefined && normalizedValue !== "") {
+            setDirectWidgetValue(numericTextBox, normalizedValue);
+            if (isWaterSurveyThresholdEditor) {
+              return;
+            }
+            numericTextBox.element.val(normalizedValue);
+            syncDirectNumericTextBoxDisplay(numericTextBox, normalizedValue);
+            const input = numericTextBox.element?.get?.(0);
+            if (input && input.ownerDocument?.activeElement !== input) {
+              input.value = String(normalizedValue);
+            }
+          }
         })
         numericTextBox.element.on("focusin paste", (event) => {
           // kendoNumericTextBoxの仕様で極度に小さい値or大きい値のペーストは無効となり元の値がevent.target.valueに設定される
@@ -1213,11 +2686,12 @@ export default {
           setTimeout(() => {
             const value = event.target.value;
             if (value !== "") {
-              // 指数表記を通常表記に変換
-              event.target.value = BigNumber(value).toFixed();
+              event.target.value = BigNumber(String(value).replace(/,/g, "")).toFixed();
             }
+            stripNumericInputCommas(event.target);
           }, 0);
-        })
+        });
+        bindGridEditorEnterToCloseCell(this.getKendoGrid(), container);
       })
       // add #5589 2023/04/07 数値IFのスタイル全不正 林峻峰 end
      // ダイアライザマスタ変更  杜 end
@@ -1229,11 +2703,77 @@ export default {
      * @param {*} roundingMode BigNumberの丸めモード
      */
     roundValue(value, decimals, roundingMode) {
-      if (decimals == 0) {
-        return value != null ? Math.floor(value) : null;
-      } else {
-        return value != null ? BigNumber(value).decimalPlaces(decimals, roundingMode).toNumber() : null;
+      if (value == null) {
+        return null;
       }
+      const places = Number(decimals) || 0;
+      return BigNumber(value).decimalPlaces(places, roundingMode).toNumber();
+    },
+    isWaterSurveyThresholdField(field) {
+      return this.masterPhysicalName === "mst_water_survey_type"
+        && WATER_SURVEY_THRESHOLD_FIELDS.includes(field);
+    },
+    getWaterSurveyThresholdBounds(integerDigits, decimalDigits) {
+      const decimals = parseWaterSurveyDigit(decimalDigits, 0);
+      const integers = parseWaterSurveyDigit(integerDigits, WATER_SURVEY_TYPE_DIGIT_MIN);
+      const max = BigNumber(10).pow(integers).minus(BigNumber(10).pow(-decimals)).toNumber();
+      const min = BigNumber(10).pow(integers).negated().plus(BigNumber(10).pow(-decimals)).toNumber();
+      return { min, max, decimalDigits: decimals, integerDigits: integers };
+    },
+    syncWaterSurveyThresholdsAfterDigitChange(model) {
+      if (this.masterPhysicalName !== "mst_water_survey_type" || !model) {
+        return false;
+      }
+      let changed = false;
+      WATER_SURVEY_THRESHOLD_FIELDS.forEach((field) => {
+        const rawValue = model[field];
+        if (rawValue === null || rawValue === undefined || rawValue === "") {
+          return;
+        }
+        const nextValue = roundAndClampWaterSurveyThresholdValue(
+          rawValue,
+          model.integerDigits,
+          model.decimalDigits
+        );
+        if (!isMasterRecordFieldValueEqual(rawValue, nextValue, field)) {
+          model[field] = nextValue;
+          this.markMasterRecordModelFieldDirty(model, field);
+          changed = true;
+        }
+      });
+      return changed;
+    },
+    /** 小数部/整数部桁数変更後：閾値等を丸めて store へ反映し表示を更新する */
+    commitWaterSurveyThresholdsAfterDigitChange(model, options = {}) {
+      if (this.masterPhysicalName !== "mst_water_survey_type" || !model) {
+        return false;
+      }
+      const { deferVisual = false } = options;
+      const changed = this.syncWaterSurveyThresholdsAfterDigitChange(model);
+      if (!changed) {
+        return false;
+      }
+      this.__masterRecordInlineEdit = true;
+      this.edit({ editRecord: model, isSortMode: this.isSortMode });
+      this.$nextTick(() => {
+        this.__masterRecordInlineEdit = false;
+        const run = () => this.scheduleMasterRecordRowVisualRefresh(model, { deferUntilCellClose: deferVisual });
+        if (deferVisual) {
+          requestAnimationFrame(run);
+        } else {
+          run();
+        }
+        const grid = this.getKendoGrid();
+        grid?.refresh?.();
+      });
+      return true;
+    },
+    formatWaterSurveyThresholdDisplay(value, decimalDigits) {
+      if (value === null || value === undefined || value === "") {
+        return "";
+      }
+      const decimals = Number(decimalDigits) || 0;
+      return BigNumber(String(value).replace(/,/g, "")).decimalPlaces(decimals, WATER_SURVEY_ROUND_MODE).toFixed();
     },
     // mod #5589 2023/04/07 数値IFのスタイル全不正 林峻峰 start
     getDecimalPointLength(number){
@@ -1250,56 +2790,19 @@ export default {
 
       // 数値範囲内かどうかの確認
       let value = e.sender._value;
-      if (!value) {
-        options.model[options.field] = parameterMin
+      if (value === null || value === undefined || value === "") {
+        options.model[options.field] = parameterMin;
       } else if (value > parameterMax) {
-        options.model[options.field] = parameterMax
-      } else if (value <  parameterMin) {
-        options.model[options.field] = parameterMin
+        options.model[options.field] = parameterMax;
+      } else if (value < parameterMin) {
+        options.model[options.field] = parameterMin;
+      } else {
+        options.model[options.field] = value;
       }
       // #11047 水質検査種別マスタ 閾値・グラフ上限、下限と整数部桁数の関係設定追加 Mod by Zt Start
 
-      if (options.field=="decimalDigits" || options.field=="integerDigits") {
-        let decimalDigits = options.model.decimalDigits&&options.model.decimalDigits>0?options.model.decimalDigits:0;
-        let integerDigits = options.model.integerDigits&&options.model.integerDigits>0?options.model.integerDigits:0;
-        let max = Math.pow(10,integerDigits)-Math.pow(10,-decimalDigits);
-        // #11047 数値IF修正 mod by Z.T. Start
-        let min = Math.pow(10,integerDigits) * -1 + Math.pow(10,-decimalDigits);
-        // #11047 数値IF修正 mod by Z.T. end
-        let updateList = [];
-        updateList.push({name: "upperThreshold", value: options.model["upperThreshold"]});
-        updateList.push({name: "lowerThreshold", value: options.model["lowerThreshold"]});
-        updateList.push({name: "graphUpperLimit", value: options.model["graphUpperLimit"]});
-        updateList.push({name: "graphLowerLimit", value: options.model["graphLowerLimit"]});
-        updateList.push({name: "initialValue", value: options.model["initialValue"]});
-
-        updateList.forEach(item=>{
-          if (options.field=="decimalDigits") {
-            // #11047 数値IF修正【最優先】 linjunfeng start
-            // if(item.value.toString().split(".")[1] && item.value.toString().split(".")[1].length > decimalDigits){
-            if(item.value != null && item.value.toString().split(".")[1] && item.value.toString().split(".")[1].length > decimalDigits){
-              // #11047 数値IF修正【最優先】 linjunfeng end
-              // #11047 数値IF修正 mod by Z.T. Start
-              // item.value.toFixed(decimalDigits) > max ? options.model[item.name]=max : options.model[item.name]=item.value.toFixed(decimalDigits);
-              item.value.toFixed(decimalDigits) > max
-                ? options.model[item.name]=max : options.model[item.name] = item.value.toFixed(decimalDigits);
-              item.value.toFixed(decimalDigits) < min
-                ? options.model[item.name]=min : options.model[item.name] = item.value.toFixed(decimalDigits);
-              // #11047 数値IF修正 mod by Z.T. end
-            }
-          }
-          if (options.field=="integerDigits") {
-            // #11047 数値IF修正 mod by Z.T. Start
-            // if (item.value && item.value > max) {
-            //   options.model[item.name]=max;
-            // }
-            if (item.value) {
-              if (item.value > max)  options.model[item.name] = max;
-              if (item.value < min) options.model[item.name] = min;
-            }
-            // #11047 数値IF修正 mod by Z.T. End
-          }
-        })
+      if (options.field === "decimalDigits" || options.field === "integerDigits") {
+        this.commitWaterSurveyThresholdsAfterDigitChange(options.model, { deferVisual: true });
       }
     },
     // add 水質検査種別マスタ 閾値・グラフ上限、下限と結果初期値の小数桁数が小数部桁数を無視している 孔s end
@@ -1357,14 +2860,25 @@ export default {
           // add redmine 5702 溶解装置のトレンドグラフ 宋qy start
           if (this.masterPhysicalName === "mst_trend_graph_template" || this.masterPhysicalName === "mst_trend_graph_monitor_set") {
             for (let i = 0; i < response.data.localDataSource.data.length; i++) {
-              if (response.data.localDataSource.data[i].model === "003" && response.data.localDataSource.data[i].comFormatCd === "I" ) {
+              if (response.data.localDataSource.data[i].model === "003" && response.data.localDataSource.data[i].comFormatCd === "I") {
                 response.data.localDataSource.data[i].model = "006";
-              } else if (response.data.localDataSource.data[i].model === "003" && response.data.localDataSource.data[i].comFormatCd === "J" ) {
+              } else if (response.data.localDataSource.data[i].model === "003" && response.data.localDataSource.data[i].comFormatCd === "J") {
                 response.data.localDataSource.data[i].model = "007";
               }
             }
           }
           // add redmine 5702 溶解装置のトレンドグラフ 宋qy end
+
+          // 使用開始日・使用終了日: API(YYYYMMDD)をKendo日付列表示用に変換
+          if (
+            this.masterPhysicalName === "mst_equipment"
+            || this.masterPhysicalName === "mst_dialyzer"
+            || this.masterPhysicalName === "mst_medicine"
+            || this.masterPhysicalName === "mst_treatment"
+            || this.masterPhysicalName === "mst_procedure"
+          ) {
+            this.convertUseTermDatesForGrid(response.data.localDataSource.data);
+          }
 
           // editableをKendoUI用にfunctionオブジェクトに変換
           const toFunction = response.data.columns;
@@ -1445,18 +2959,38 @@ export default {
             }
             // add FNSI-修正 マスタ削除の対応 Du end
             /* add スクロールの位置を維持 楊 start */
-            // document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].scrollTop = this.lastScrollTop;
-            // document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].scrollLeft = this.lastScrollLeft;
+            const restoreAfterFindList = () => {
+              if (this.masterRecordKeepScrollAfterSave && this.masterRecordSavedScrollPosition) {
+                const saved = { ...this.masterRecordSavedScrollPosition };
+                this.applyMasterRecordGridScrollToWidget(saved.top || 0, saved.left || 0);
+                this.setScrollTopPosition(saved.top || 0);
+                this.setScrollLeftPosition(saved.left || 0);
+                return;
+              }
+              const savedTop = this.getScrollTopPosition;
+              const savedLeft = this.getScrollLeftPosition;
+              this.applyMasterRecordGridScrollToWidget(savedTop || 0, savedLeft || 0);
+            };
+            restoreAfterFindList();
+            this.$nextTick(() => {
+              restoreAfterFindList();
+              requestAnimationFrame(restoreAfterFindList);
+            });
             /* add スクロールの位置を維持 楊 end */
 
             // #9976 マスタ画面で保存を行うとスクロール位置が先頭になる start
             // ストアからスクロール位置を取得してデータ表示域に設定
-            this.$refs.grid.$el.lastChild.scrollTop = this.getScrollTopPosition;
-            this.$refs.grid.$el.lastChild.scrollLeft = this.getScrollLeftPosition;
+            // Vue2 は this.$refs.grid.$el.lastChild を使用。Vue3 では同一要素を返す getGridScrollHostEl() で代替。
+            const gridScrollHost = this.getGridScrollHostEl();
+            if (gridScrollHost && !(this.masterRecordKeepScrollAfterSave && this.masterRecordSavedScrollPosition)) {
+              gridScrollHost.scrollTop = this.getScrollTopPosition;
+              gridScrollHost.scrollLeft = this.getScrollLeftPosition;
+            }
             // #9976 マスタ画面で保存を行うとスクロール位置が先頭になる end
           });
           // 初期データ内容を保存
           this.setComparisonRecordModel();
+          this.resetMasterRecordSortEditedCodes();
           // 色カラムのテンプレート生成
           this.columns.filter(column => column.dataType === "color")
             .forEach(column => {
@@ -1467,12 +3001,11 @@ export default {
             });
 
           // add 水質検査種別マスタ 閾値・グラフ上限、下限と結果初期値の小数桁数が小数部桁数を無視している 孔s start
-          if(this.masterPhysicalName === "mst_water_survey_type" ){
+          if(this.masterPhysicalName === "mst_water_survey_type"){
             this.columns.filter(column => (
               column.field=="upperThreshold" || column.field=="lowerThreshold" ||
               column.field=="graphUpperLimit" || column.field=="graphLowerLimit" ||
-              column.field=="initialValue"
-            ))
+              column.field=="initialValue"))
               .forEach(column => {
                 column.format = "";
               });
@@ -1543,6 +3076,717 @@ export default {
       // カラム定義情報を取得
       this.findColumnInfo();
     },
+    readMasterRecordGridScrollFromGridWidget(grid) {
+      if (!grid?.content?.[0]) {
+        return { top: 0, left: 0 };
+      }
+      const virtualScrollbar = grid.virtualScrollable?.verticalScrollbar?.[0];
+      const c = grid.content[0];
+      const top = virtualScrollbar?.scrollTop ?? c.lastChild?.scrollTop ?? c.scrollTop;
+      const left =
+        typeof grid._scrollLeft !== "undefined" && grid._scrollLeft !== null
+          ? grid._scrollLeft
+          : c.scrollLeft;
+      return { top, left };
+    },
+    applyMasterRecordGridScrollToWidget(top, left, widgetOverride) {
+      const grid = widgetOverride || this.getKendoGrid();
+      if (!grid) {
+        return;
+      }
+      this.scrollPosition.top = top;
+      this.scrollPosition.left = left;
+      if (grid.virtualScrollable?._scrollTo) {
+        grid.virtualScrollable._scrollTo(top);
+      }
+      if (grid.virtualScrollable?.verticalScrollbar?.[0]) {
+        grid.virtualScrollable.verticalScrollbar[0].scrollTop = top;
+      }
+      if (grid.content?.[0]) {
+        grid.content[0].scrollTop = top;
+        grid.content[0].scrollLeft = left;
+      }
+      if (grid.lockedContent?.[0]) {
+        grid.lockedContent[0].scrollTop = top;
+      }
+      const headerWrap = this.getMasterRecordGridHeaderWrap();
+      if (headerWrap) {
+        headerWrap.scrollLeft = left;
+      }
+      if (typeof grid._scrollLeft !== "undefined") {
+        grid._scrollLeft = left;
+      }
+      if (grid.scrollables && typeof grid.scrollables.each === "function") {
+        grid.scrollables.each((i, el) => {
+          if (!grid.content?.[0] || el !== grid.content[0]) {
+            if (el && typeof el.scrollLeft === "number") {
+              el.scrollLeft = left;
+            }
+          }
+        });
+      }
+    },
+    restoreMasterRecordGridScroll() {
+      const top = this.scrollPosition.top || 0;
+      const left = this.scrollPosition.left || 0;
+      const run = () => this.applyMasterRecordGridScrollToWidget(top, left);
+      this.masterRecordRestoreScrollPending = true;
+      requestAnimationFrame(run);
+      this.$nextTick(run);
+      [0, 32, 80].forEach(ms => setTimeout(run, ms));
+    },
+    syncMasterGridEditedRowState() {
+      if (this.__masterRecordSortApplying || this.__masterRecordInlineEdit) {
+        return;
+      }
+      this.scheduleMasterRecordFullVisualRefresh();
+    },
+    /** dataBound / syncMasterGridEditedRowState からの全行背景色更新を rAF で1回にまとめる */
+    scheduleMasterRecordFullVisualRefresh() {
+      if (this.__masterRecordFullVisualRaf != null) {
+        cancelAnimationFrame(this.__masterRecordFullVisualRaf);
+      }
+      this.__masterRecordFullVisualRaf = requestAnimationFrame(() => {
+        this.__masterRecordFullVisualRaf = null;
+        if (this.__masterRecordInlineEdit || this.__masterRecordSortApplying) {
+          return;
+        }
+        this.paintMasterRecordGridVisuals();
+      });
+    },
+    clearMasterRecordGridAutoSort() {
+      const ds = this.getKendoGrid()?.dataSource;
+      if (!ds?.sort) {
+        return;
+      }
+      try {
+        ds.sort([]);
+      } catch (_error) {
+        // noop
+      }
+    },
+    //Mixin内のメソッドを実行 ソートボタンクリック
+    // toRankEditBtnClick() {
+    //   MasterMaintenanceMixin.methods.toRankEditBtnClick.call(this);
+    //   this.$nextTick(() => {
+    //     this.clearMasterRecordGridAutoSort();
+    //     requestAnimationFrame(() => {
+    //       requestAnimationFrame(() => this.refreshMasterRecordSortRankVisuals());
+    //     });
+    //   });
+    // },
+    sortBtnClick() {
+      // モーダル確定時にスクロール位置が戻ってしまう問題の対処
+      this.cacheGridScrollPosition(this.scrollPosition);
+      EventBus.$emit('onCloseMasterEditModal', this.onCloseMasterEditModal);
+
+      const tempData = deepCopy(this.getMasterRecordList.data);
+      this.isSortMode = false;
+      this.editableColumns();
+      this.showSortColumn();
+      this.sort();
+      this.isSorted = this.sortChange(tempData);
+      EventBus.$emit('setSortMode', this.isSortMode);
+      this.$nextTick(() => this.syncMasterRecordSortColumnLayout());
+    },
+    onDataBoundKendoGrid(ev) {
+      if (this.__masterRecordSortApplying) {
+        return;
+      }
+      if (!this.masterRecordRestoreScrollPending) {
+        MasterMaintenanceMixin.methods.onDataBoundKendoGrid.call(this, ev);
+        return;
+      }
+      MasterMaintenanceMixin.methods.onDataBoundKendoGrid.call(this, ev);
+      this.masterRecordRestoreScrollPending = false;
+      this.$nextTick(() => {
+        requestAnimationFrame(() => {
+          const top = this.scrollPosition.top || 0;
+          const left = this.scrollPosition.left || 0;
+          this.applyMasterRecordGridScrollToWidget(top, left, ev.sender);
+        });
+      });
+    },
+    getMasterRecordRowsByUid(uid) {
+      if (!uid) {
+        return { row: null, lockedRow: null };
+      }
+      const root = this.getMasterRecordGridElement();
+      return {
+        row: root?.querySelector?.(`.k-grid-content tr[data-uid="${uid}"], .k-virtual-scrollable-wrap tr[data-uid="${uid}"]`) || null,
+        lockedRow: root?.querySelector?.(`.k-grid-content-locked tr[data-uid="${uid}"]`) || null,
+      };
+    },
+    // Vue3 升级初期に追加していた組件レベルの changeSortColor / 補助メソッド群
+    // (changeSortColorByRow, getDirectSortColorCellByField, getDirectSortColorRowFromCells,
+    //  isDirectSortColorLockedRow, getDirectSortColorVisibleColumnsForRow) は
+    // requestAnimationFrame と Kendo cellClose の k-dirty-cell 付与順が競合し、
+    // sortRank セルが黄色にならないケースがあった。
+    //
+    // 現在は MasterRecordVirtualScrollableComponent.vue と同じく
+    // `td.k-dirty-cell[data-field="sortRank"]` を直接 CSS で黄色にする方式を採用
+    // (本ファイル末尾 <style scoped> を参照)。
+    // editBackgroundColor / applyMasterRecordRowVisual から呼ばれる
+    // `this.changeSortColor(currentLockTrc)` は MasterMaintenanceMixin.js 側の
+    // mixin 実装にフォールバックし、Vue2 と同等の master-sort-edited class 付与経路も
+    // 二重防御として残る。
+    resetMasterRecordSortEditedCodes() {
+      this.masterRecordSortEditedCodes = new Set();
+    },
+    markMasterRecordSortRankEdited(record, edited = true) {
+      if (record?.code == null || record?.code === "") {
+        return;
+      }
+      if (!this.masterRecordSortEditedCodes) {
+        this.resetMasterRecordSortEditedCodes();
+      }
+      const code = String(record.code);
+      if (edited) {
+        this.masterRecordSortEditedCodes.add(code);
+      } else {
+        this.masterRecordSortEditedCodes.delete(code);
+      }
+    },
+    isMasterRecordSortRankEdited(record) {
+      if (!record) {
+        return false;
+      }
+      const dirtyFields = this.getMasterRecordRemainingDirtyFields(record);
+      if (dirtyFields.includes("sortRank")) {
+        return true;
+      }
+      if (record.code == null || record.code === "") {
+        return false;
+      }
+      return !!this.masterRecordSortEditedCodes?.has(String(record.code));
+    },
+    clearMasterRecordSortRankVisual(currentLockTrc) {
+      const sortIdx = this.getColumnIndex("sortRank");
+      const dummyIdx = this.getColumnIndex("dummy");
+      if (sortIdx >= 0 && currentLockTrc[sortIdx]) {
+        currentLockTrc[sortIdx].classList.remove("master-sort-edited");
+      }
+      if (dummyIdx > -1 && currentLockTrc[dummyIdx]) {
+        currentLockTrc[dummyIdx].classList.remove("master-sort-edited");
+      }
+    },
+    applyMasterRecordSortRankVisual(currentLockTrc) {
+      this.changeSortColor(currentLockTrc);
+      const sortIdx = this.getColumnIndex("sortRank");
+      const dummyIdx = this.getColumnIndex("dummy");
+      if (sortIdx >= 0 && currentLockTrc[sortIdx]) {
+        currentLockTrc[sortIdx].classList.add("master-sort-edited");
+      }
+      if (dummyIdx > -1 && currentLockTrc[dummyIdx]) {
+        currentLockTrc[dummyIdx].classList.add("master-sort-edited");
+      }
+    },
+    /** 並び順列の show/hide や dataBound 後に、変更済み sortRank の黄色を復元する */
+    refreshMasterRecordSortRankVisuals() {
+      const data = this.getMasterRecordList?.data;
+      if (!Array.isArray(data)) {
+        return;
+      }
+      const grid = this.getKendoGrid();
+      data.forEach(record => {
+        if (!this.isMasterRecordSortRankEdited(record)) {
+          return;
+        }
+        let lockedRow = this.getMasterRecordRowsByUid(record.uid).lockedRow;
+        if (!lockedRow && grid && record.code != null) {
+          const root = this.getMasterRecordGridElement();
+          lockedRow = root?.querySelector?.(
+            `.k-grid-content-locked tr[data-uid="${record.uid}"]`
+          ) || null;
+          if (!lockedRow && root) {
+            lockedRow = Array.from(root.querySelectorAll(".k-grid-content-locked tr")).find(tr => {
+              const item = grid.dataItem?.(tr);
+              return item && String(item.code) === String(record.code);
+            }) || null;
+          }
+        }
+        const currentLockTrc = lockedRow?.children;
+        if (currentLockTrc?.length) {
+          this.applyMasterRecordSortRankVisual(currentLockTrc);
+        }
+      });
+    },
+    clearMasterRecordRowVisualState(record, { clearDirty = false, preserveSortVisual = false } = {}) {
+      const sortVisualFields = new Set(["sortRank", "dummy"]);
+      const rowVisualClasses = ["master-edited-row", "master-deleted-row"];
+      const cellVisualClasses = ["master-edited-cell", "master-edited-row", "master-deleted-row"];
+      const rows = this.getMasterRecordRowsByUid(record?.uid);
+      [rows.row, rows.lockedRow].filter(Boolean).forEach(row => {
+        row.classList.remove(...rowVisualClasses);
+        Array.from(row.children || []).forEach(cell => {
+          const field = cell.getAttribute?.("data-field");
+          const isSortVisualCell = sortVisualFields.has(field);
+          if (preserveSortVisual && isSortVisualCell) {
+            return;
+          }
+          if (isSortVisualCell) {
+            cell.classList.remove("master-sort-edited");
+            if (clearDirty) {
+              cell.classList.remove("k-dirty-cell");
+              cell.querySelectorAll(".k-dirty").forEach(marker => marker.remove());
+            }
+            return;
+          }
+          cell.classList.remove(...cellVisualClasses, "master-sort-edited", "master-deleted-combo");
+          if (clearDirty) {
+            cell.classList.remove("k-dirty-cell");
+            cell.querySelectorAll(".k-dirty").forEach(marker => marker.remove());
+          }
+        });
+      });
+    },
+    applyMasterRecordRowVisual(record, { preserveSortVisual = false } = {}) {
+      const rows = this.getMasterRecordRowsByUid(record?.uid);
+      const row = rows.row;
+      if (!row) {
+        return;
+      }
+      const currentTrc = row.children || [];
+      const currentLockTrc = rows.lockedRow?.children || [];
+      const remainingDirty = this.getMasterRecordRemainingDirtyFields(record);
+      const sortRankEdited = this.isMasterRecordSortRankEdited(record);
+      const operation = Number(record?.operation || 0);
+      const isUneditedAddRow = operation === 1 && record?.edited !== true;
+      const hasNonSortDirty = !isUneditedAddRow && remainingDirty.some(key => key !== "sortRank");
+      const operationIsEdited = operation > 1;
+      const rowIsEdited = hasNonSortDirty
+        || operationIsEdited
+        || !!record?.edited
+        || this.isEdited(record?.code);
+      const shouldPreserveSortVisual = preserveSortVisual || sortRankEdited;
+
+      this.clearMasterRecordRowVisualState(record, {
+        clearDirty: !rowIsEdited && !sortRankEdited,
+        preserveSortVisual: shouldPreserveSortVisual,
+      });
+
+      if (sortRankEdited) {
+        this.applyMasterRecordSortRankVisual(currentLockTrc);
+      } else if (rowIsEdited) {
+        this.changeSortColor(currentLockTrc);
+      }
+      const edited = rowIsEdited && (
+        this.changeEditColor(currentTrc, currentLockTrc)
+        || operationIsEdited
+        || !!record?.edited
+        || this.isEdited(record?.code)
+      );
+      const deleted = this.isDeleteRow(currentTrc);
+      this.changeRowColor(currentTrc, currentLockTrc, edited, deleted);
+      if (this.masterPhysicalName !== "mst_medicine") {
+        this.changeRefErrorComboColor(currentTrc, deleted, currentLockTrc);
+      }
+    },
+    scheduleMasterRecordRowVisualRefresh(record, options = {}) {
+      if (!record) {
+        return;
+      }
+      const { deferUntilCellClose = false, preserveSortVisual = false } = options;
+      const key = record.uid || record.code || "__unknown__";
+      if (!this.masterRecordRowVisualRafIds) {
+        this.masterRecordRowVisualRafIds = new Map();
+      }
+      const pendingId = this.masterRecordRowVisualRafIds.get(key);
+      if (pendingId != null) {
+        cancelAnimationFrame(pendingId);
+      }
+      const run = () => {
+        this.masterRecordRowVisualRafIds.delete(key);
+        this.applyMasterRecordRowVisual(record, { preserveSortVisual });
+      };
+      const scheduleRun = () => {
+        if (deferUntilCellClose) {
+          // Kendo cellClose → k-dirty-cell 付与後に実行（並び順黄色・原値復帰）
+          requestAnimationFrame(() => requestAnimationFrame(run));
+          return;
+        }
+        const rafId = requestAnimationFrame(run);
+        this.masterRecordRowVisualRafIds.set(key, rafId);
+      };
+      if (deferUntilCellClose) {
+        this.$nextTick(scheduleRun);
+      } else {
+        scheduleRun();
+      }
+    },
+    scheduleMasterRecordDropdownEditorCommit(model, field, value) {
+      if (!model || !field) {
+        return;
+      }
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      const runFallbackCommit = () => {
+        // 追加行(operation=1)は closeCell だけでは cell に反映されないため fallback を実行する
+        if (!model || Number(model.operation) > 1) {
+          return;
+        }
+        const event = {
+          model,
+          sender: this.getKendoGrid?.(),
+          values: { [field]: value }
+        };
+        const revertedToOriginal = this.finalizeMasterRecordFieldIfRevertedToOriginal(event, field, value);
+        this.applyMasterRecordDropdownCellLabel(model, field, value);
+        if (revertedToOriginal) {
+          this.scheduleMasterRecordRowVisualRefresh(model, { deferUntilCellClose: true });
+          return;
+        }
+        if (model[field] != value) {
+          this.onEditSave(event);
+        } else {
+          this.onSave(event);
+          this.scheduleMasterRecordRowVisualRefresh(model, { deferUntilCellClose: true });
+        }
+      };
+      this.$nextTick(() => {
+        if (typeof ownerWindow.requestAnimationFrame === "function") {
+          ownerWindow.requestAnimationFrame(runFallbackCommit);
+        } else {
+          ownerWindow.setTimeout(runFallbackCommit, 0);
+        }
+      });
+    },
+    /**
+     * セル編集保存時は全グリッド refresh / editBackgroundColor を避け、
+     * 変更行のみ背景色を更新する（mst-graph-setting の onDirectGridSave と同方針）。
+     */
+    onSave(ev) {
+      const currentScrollPosition = this.getGridScrollPosition();
+      this.scrollLeft = currentScrollPosition.left ?? ev.sender?._scrollLeft ?? 0;
+      this.scrollTop = currentScrollPosition.top ?? 0;
+      this.editFlg = true;
+      this.editingFlg = false;
+      this.applyKendoSaveValuesToModel(ev);
+      this.syncMasterRecordAddedRowEditedState(ev.model);
+      this.__masterRecordInlineEdit = true;
+      this.edit({ editRecord: ev.model, isSortMode: this.isSortMode });
+      this.$nextTick(() => {
+        this.__masterRecordInlineEdit = false;
+      });
+    },
+    findMasterRecordOriginalRow(model) {
+      const originalList = JSON.parse(this.comparisonRecordModel || "[]");
+      if (!Array.isArray(originalList) || !model) {
+        return null;
+      }
+      return originalList.find(row => String(row.code) === String(model.code)) || null;
+    },
+    /** 表示中レコードの並び順（code 列）が comparisonRecordModel と一致するか */
+    isMasterRecordSortOrderSameAsOriginal() {
+      let comparisonList;
+      try {
+        comparisonList = JSON.parse(this.comparisonRecordModel || "[]");
+      } catch {
+        return false;
+      }
+      if (!Array.isArray(comparisonList)) {
+        return false;
+      }
+      const currentData = this.getMasterRecordList?.data;
+      if (!Array.isArray(currentData)) {
+        return false;
+      }
+      const compareSortOrder = (a, b) => {
+        const rankDiff = (Number(a.sortRank) || 0) - (Number(b.sortRank) || 0);
+        if (rankDiff !== 0) {
+          return rankDiff;
+        }
+        return (Number(a.sortInputTime) || 0) - (Number(b.sortInputTime) || 0);
+      };
+      const visibleOriginal = comparisonList.filter(row => row.isDisp === "1");
+      const visibleCurrent = currentData.filter(row => row.isDisp === "1");
+      if (visibleOriginal.length !== visibleCurrent.length) {
+        return false;
+      }
+      const originalOrder = [...visibleOriginal].sort(compareSortOrder).map(row => String(row.code));
+      const currentOrder = [...visibleCurrent].sort(compareSortOrder).map(row => String(row.code));
+      return originalOrder.length === currentOrder.length
+        && originalOrder.every((code, index) => code === currentOrder[index]);
+    },
+    getMasterRecordRemainingDirtyFields(model) {
+      const dirtyFields = model?.dirtyFields;
+      if (!dirtyFields || typeof dirtyFields !== "object") {
+        return [];
+      }
+      return Object.keys(dirtyFields).filter(key => key !== "dirty" && dirtyFields[key]);
+    },
+    getMasterRecordAddRowFieldDefaultValue(field) {
+      const schemaField = this.getMasterRecordList?.schema?.model?.fields?.[field];
+      if (schemaField && Object.prototype.hasOwnProperty.call(schemaField, "defaultValue")) {
+        return schemaField.defaultValue;
+      }
+      if (schemaField?.type === "string" || schemaField?.type === "textarea") {
+        return "";
+      }
+      if (schemaField?.type === "number") {
+        return 0;
+      }
+      if (schemaField?.type === "color") {
+        return "#000000";
+      }
+      return null;
+    },
+    normalizeMasterRecordAddRowCompareValue(value, field) {
+      if (value == null) {
+        return "";
+      }
+      if (MASTER_RECORD_DATE_FIELDS.has(field)) {
+        return formatMasterRecordDateYmd(value) || "";
+      }
+      return String(value);
+    },
+    isMasterRecordAddedRowDeleteEdited(record) {
+      return String(record?.isDisp) === "0" || String(record?.isDel) === "1";
+    },
+    isMasterRecordAddedRowBusinessField(field) {
+      const ignoredFields = new Set([
+        "uid",
+        "code",
+        "operation",
+        "edited",
+        "dirty",
+        "dirtyFields",
+        "parent",
+        "sortRank",
+        "dummy",
+        "skipSearch",
+        "sortInputTime",
+        "upDate",
+        "isAddRow",
+        "isDisp",
+        "isDel",
+      ]);
+      if (!field || field.startsWith("_") || ignoredFields.has(field)) {
+        return false;
+      }
+      return (this.columns || []).some(column => {
+        return column?.field === field && column.hidden !== true;
+      });
+    },
+    isMasterRecordAddedRowEffectivelyEdited(record) {
+      if (!record) {
+        return false;
+      }
+      if (this.isMasterRecordAddedRowDeleteEdited(record)) {
+        return true;
+      }
+      return this.getMasterRecordRemainingDirtyFields(record)
+        .filter(field => this.isMasterRecordAddedRowBusinessField(field))
+        .some(field => {
+          const value = this.normalizeMasterRecordAddRowCompareValue(record[field], field).trim();
+          const defaultValue = this.normalizeMasterRecordAddRowCompareValue(
+            this.getMasterRecordAddRowFieldDefaultValue(field),
+            field
+          ).trim();
+          return value !== defaultValue;
+        });
+    },
+    clearMasterRecordModelDirtyState(model) {
+      if (!model) {
+        return;
+      }
+      if (typeof model.set === "function") {
+        model.set("dirty", false);
+      } else {
+        model.dirty = false;
+      }
+      if (model.dirtyFields && typeof model.dirtyFields === "object") {
+        Object.keys(model.dirtyFields).forEach(key => delete model.dirtyFields[key]);
+      }
+    },
+    syncMasterRecordAddedRowEditedState(model) {
+      if (!this.isMasterRecordAddedRow(model)) {
+        return;
+      }
+      model.edited = this.isMasterRecordAddedRowEffectivelyEdited(model);
+      if (!model.edited) {
+        this.clearMasterRecordModelDirtyState(model);
+      }
+    },
+    markMasterRecordModelFieldDirty(model, field) {
+      if (!model || !field) {
+        return;
+      }
+      if (!model.dirtyFields || typeof model.dirtyFields !== "object") {
+        model.dirtyFields = {};
+      }
+      model.dirtyFields[field] = true;
+      model.dirty = true;
+    },
+    markMasterRecordGridCellDirty(cell, field) {
+      const el = cell?.[0] || cell;
+      if (!el?.classList) {
+        return;
+      }
+      if (field) {
+        el.setAttribute("data-field", field);
+      }
+      el.classList.add("k-dirty-cell");
+      if (el.querySelector(".k-dirty")) {
+        return;
+      }
+      const marker = el.ownerDocument?.createElement?.("span");
+      if (!marker) {
+        return;
+      }
+      marker.className = "k-dirty";
+      el.insertBefore(marker, el.firstChild || null);
+    },
+    clearMasterRecordDirtyCellByField(model, field) {
+      if (!model?.uid || !field) {
+        return;
+      }
+      const root = this.getMasterRecordGridElement();
+      if (!root) {
+        return;
+      }
+      const selector = `tr[data-uid="${model.uid}"] td[data-field="${field}"]`;
+      root.querySelectorAll(selector).forEach(cell => {
+        cell.classList.remove("k-dirty-cell", "master-edited-cell", "master-edited-row");
+        cell.querySelectorAll(".k-dirty").forEach(marker => marker.remove());
+      });
+    },
+    syncMasterRecordStoreRowWithoutOperation(model) {
+      const data = this.getMasterRecordList?.data;
+      if (!Array.isArray(data) || !model) {
+        return;
+      }
+      const code = model.code;
+      data.forEach(row => {
+        if (String(row.code) !== String(code)) {
+          return;
+        }
+        delete row.operation;
+        row.edited = false;
+      });
+      delete model.operation;
+      model.edited = false;
+    },
+    /**
+     * 編集終了時に初期値へ戻っている場合、Kendo dirty 表示と store の operation を解除する。
+     * @returns {boolean} 初期値へ戻した場合 true
+     */
+    finalizeMasterRecordFieldIfRevertedToOriginal(e, field, newValue) {
+      const model = e?.model;
+      if (!model || !field || model.operation === 1) {
+        return false;
+      }
+      if (typeof model.isNew === "function" && model.isNew()) {
+        return false;
+      }
+      const originalRow = this.findMasterRecordOriginalRow(model);
+      if (!originalRow) {
+        return false;
+      }
+      if (!isMasterRecordFieldValueEqual(originalRow[field], newValue, field)) {
+        return false;
+      }
+      // 並び順は数値が原値でも、反映後に行位置が変わっている場合は編集扱いを維持する
+      if (field === "sortRank" && !this.isMasterRecordSortOrderSameAsOriginal()) {
+        return false;
+      }
+
+      if (model.dirtyFields) {
+        delete model.dirtyFields[field];
+      }
+      this.clearMasterRecordDirtyCellByField(model, field);
+
+      const remainingDirtyFields = this.getMasterRecordRemainingDirtyFields(model);
+      const nonSortDirtyFields = remainingDirtyFields.filter(key => key !== "sortRank");
+      if (nonSortDirtyFields.length > 0) {
+        this.bumpMasterRecordListRevision();
+        return true;
+      }
+
+      if (typeof model.set === "function") {
+        model.set("dirty", false);
+      } else {
+        model.dirty = false;
+      }
+      if (model.dirtyFields) {
+        Object.keys(model.dirtyFields).forEach(key => delete model.dirtyFields[key]);
+      }
+      if (model.operation != null && model.operation !== 1) {
+        delete model.operation;
+      }
+      model.edited = false;
+      this.syncMasterRecordStoreRowWithoutOperation(model);
+      this.bumpMasterRecordListRevision();
+      return true;
+    },
+    /**
+     * 開発時のみ: 使用開始日などの dirty 状態を Console に出力する。
+     * OFF: localStorage.setItem("masterRecordDirtyDebug", "0")
+     * ON:  localStorage.removeItem("masterRecordDirtyDebug")
+     */
+    logMasterRecordDirtyDebug(e, field, oldValue, newValue, phase = "beforeSave") {
+      if (!isMasterRecordDirtyDebugEnabled()) {
+        return;
+      }
+      if (!field || !MASTER_RECORD_DATE_FIELDS.has(field)) {
+        return;
+      }
+      const model = e?.model;
+      const originalList = JSON.parse(this.comparisonRecordModel || "[]");
+      const originalRow = originalList.find(row => String(row.code) === String(model?.code));
+      const originalValue = originalRow?.[field];
+      const newYmd = formatMasterRecordDateYmd(newValue);
+      const originalYmd = formatMasterRecordDateYmd(originalValue);
+      const oldYmd = formatMasterRecordDateYmd(oldValue);
+      const modelValue = typeof model?.get === "function" ? model.get(field) : model?.[field];
+      const gridEl = this.getMasterRecordGridElement();
+      const rowSelector = model?.uid ? `tr[data-uid="${model.uid}"]` : null;
+      const dirtyCell = rowSelector
+        ? gridEl?.querySelector?.(`${rowSelector} td.k-dirty-cell[data-field="${field}"]`)
+        : null;
+      const dirtyMarker = dirtyCell?.querySelector?.(".k-dirty");
+
+      console.groupCollapsed(
+        `[MasterRecord dirty] ${phase} | ${field} | code=${model?.code ?? "?"}`
+      );
+      console.table({
+        phase,
+        field,
+        code: model?.code,
+        master: this.masterPhysicalName,
+        oldValue,
+        newValue,
+        modelValue,
+        originalValue,
+        oldYmd,
+        newYmd,
+        originalYmd,
+        sameAsOriginalByYmd: newYmd === originalYmd,
+        oldEqualsNew: oldValue == newValue,
+        modelDirty: model?.dirty,
+        dirtyFieldFlag: model?.dirtyFields?.[field],
+        operation: model?.operation,
+        willCallOnSave: oldValue != newValue,
+        hasDirtyCellClass: !!dirtyCell,
+        hasDirtyMarker: !!dirtyMarker,
+      });
+      console.log("dirtyFields", model?.dirtyFields ? { ...model.dirtyFields } : model?.dirtyFields);
+      if (oldValue instanceof Date && newValue instanceof Date) {
+        console.log("timestamp diff (new - old):", newValue.getTime() - oldValue.getTime());
+      }
+      if (originalValue != null && newValue != null) {
+        const originalDate = dayjs(originalValue);
+        const newDate = dayjs(newValue);
+        if (originalDate.isValid() && newDate.isValid()) {
+          console.log(
+            "timestamp diff (new - original):",
+            newDate.valueOf() - originalDate.valueOf()
+          );
+        }
+      }
+      console.log("disable debug: localStorage.setItem('masterRecordDirtyDebug', '0'); location.reload()");
+      console.log("enable debug:  localStorage.removeItem('masterRecordDirtyDebug'); location.reload()");
+      console.groupEnd();
+    },
     setFilterCondition(condition) {
       this.condition.recordName = condition.recordName;
       this.condition.includeDeleted = condition.includeDeleted;
@@ -1575,16 +3819,66 @@ export default {
         if (e.values.mainteClass == "1") e.model.ansPattern = "0";
         if (e.values.mainteClass == "2") e.model.ansPattern = "1" ;
       }
-      if (this.masterPhysicalName == "mst_water_survey_type" && ["upperThreshold", "lowerThreshold", "graphUpperLimit", "graphLowerLimit", "initialValue"].includes(field)) {
-        e.values[field] = this.roundValue(e.values[field], e.model.decimalDigits, BigNumber.ROUND_DOWN);
+      if (this.masterPhysicalName == "mst_water_survey_type" && WATER_SURVEY_THRESHOLD_FIELDS.includes(field)) {
+        e.values[field] = roundAndClampWaterSurveyThresholdValue(
+          e.values[field],
+          e.model.integerDigits,
+          e.model.decimalDigits
+        );
+      }
+      if (this.masterPhysicalName === "mst_water_survey_type"
+        && (field === "decimalDigits" || field === "integerDigits")) {
+        if (e.values[field] !== undefined && e.values[field] !== null && e.values[field] !== "") {
+          e.model[field] = e.values[field];
+        }
+        this.commitWaterSurveyThresholdsAfterDigitChange(e.model, { deferVisual: true });
       }
       
       // 値変更時のみonSaveを実行
       // onSaveを無条件で実行すると値変更しなくても行色が編集状態となる
       const oldValue = e.model[field];
       const newValue = e.values[field];
+      this.logMasterRecordDirtyDebug(e, field, oldValue, newValue, "beforeSave");
+
       if (oldValue != newValue) {
-        this.onSave(e)
+        const skipStaleAddRowDropdownSave =
+          this.masterPhysicalName === "mst_monitor_graph"
+          && this.isMasterRecordAddedRow(e.model)
+          && (field === "leftDataIndex" || field === "rightDataIndex")
+          && (newValue === 0 || newValue === null || newValue === "")
+          && oldValue !== null
+          && oldValue !== ""
+          && oldValue !== 0;
+        if (!skipStaleAddRowDropdownSave) {
+          this.onSave(e);
+        }
+      }
+      const revertedToOriginal = this.finalizeMasterRecordFieldIfRevertedToOriginal(e, field, newValue);
+      if (field === "sortRank") {
+        if (revertedToOriginal) {
+          this.markMasterRecordSortRankEdited(e.model, false);
+        } else if (oldValue != newValue || this.isMasterRecordSortRankEdited(e.model)) {
+          this.markMasterRecordSortRankEdited(e.model, true);
+        }
+      }
+      if (revertedToOriginal || oldValue != newValue) {
+        const preserveSortVisual = field !== "sortRank" && this.isMasterRecordSortRankEdited(e.model);
+        const deferAddRowDropdownVisual =
+          this.masterPhysicalName === "mst_monitor_graph"
+          && this.isMasterRecordAddedRow(e.model)
+          && (field === "leftDataIndex" || field === "rightDataIndex");
+        this.scheduleMasterRecordRowVisualRefresh(e.model, {
+          deferUntilCellClose: revertedToOriginal || deferAddRowDropdownVisual,
+          preserveSortVisual,
+        });
+      }
+      if (isMasterRecordDirtyDebugEnabled()) {
+        const debugPhase = revertedToOriginal
+          ? "afterRevert"
+          : (oldValue != newValue ? "afterSave" : "afterSkipOnSave");
+        requestAnimationFrame(() => {
+          this.logMasterRecordDirtyDebug(e, field, oldValue, newValue, debugPhase);
+        });
       }
     },
     //日常・定期点検項目マスタ 列の関連
@@ -1609,8 +3903,8 @@ export default {
       // add FNSI-修正 マスタ削除の対応 Du end
       // add 医療材料セットマスタ 編集の時、スクロール位置を取得 start 鞠
       if (this.masterPhysicalName == "mst_equipment") {
-        const grid = $("div.k-grid-content")[0];
-        this.scrollPosition.left = grid.scrollLeft;
+        const grid = this.getGridContentElement();
+        this.scrollPosition.left = grid?.scrollLeft || 0;
       }
       // add 医療材料セットマスタ 編集の時、スクロール位置を取得 end 鞠
       this.editStart(e)
@@ -1665,8 +3959,7 @@ export default {
       this.setIndUserId(null);
       // 指示者情報を取得
       const response = await ApiHelper.get(
-        `/facilities/${this.getStateUserAccountInfo.facilityCd}/personal-user/job/doctor`
-      ).catch(error => {
+        `/facilities/${this.getStateUserAccountInfo.facilityCd}/personal-user/job/doctor`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
         getErrorMessage('PatInfoCardList.vue', 'checkIndUserSetting', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
@@ -1688,11 +3981,8 @@ export default {
       }
     },
     async saveRecordPopUpModel(){
-      // #9976 マスタ画面で保存を行うとスクロール位置が先頭になる start
-      // 保存ボタン押下時のスクロールバー位置をストアに保存
-      this.setScrollTopPosition( this.$refs.grid.$el.lastChild.scrollTop );
-      this.setScrollLeftPosition( this.$refs.grid.$el.lastChild.scrollLeft );
-      // #9976 マスタ画面で保存を行うとスクロール位置が先頭になる end
+      // 保存ボタン押下時のスクロール位置を保持し、保存後の再取得で復元する。
+      this.saveMasterRecordGridScrollPosition();
 
       if (this.masterPhysicalName === 'mst_treatment') {
         const editRecord = this.getUpdateRecordList.filter(item => (item.operation === 2))
@@ -1718,8 +4008,10 @@ export default {
 
       // グリッドでエラーが発生している場合は処理を中断
       if (!this.kendoValidator.validate()) {
+        this.scheduleValidationTooltipPlacement();
         // 共通ローダー：表示終了
         this.setLoadingScreenVisible(false);
+        this.rollbackMasterRecordSavedGridScroll();
         return;
       }
       /* add 内部#6279 by zhangruixue 2023-06-15 --start */
@@ -1738,6 +4030,7 @@ export default {
             message: messageFormat(DIALOG_MESSAGES['22010001'].message, '治療方法')
           });
           this.setLoadingScreenVisible(false);
+          this.rollbackMasterRecordSavedGridScroll();
           return;
         }
       }
@@ -2085,6 +4378,7 @@ export default {
             message: message
           });
           this.setLoadingScreenVisible(false);
+          this.rollbackMasterRecordSavedGridScroll();
           return;
         }
       }
@@ -2111,11 +4405,14 @@ export default {
           }
         }
       }
-      this.$refs.grid.$el.lastChild.scrollTop = this.getScrollTopPosition;
-      this.$refs.grid.$el.lastChild.scrollLeft = this.getScrollLeftPosition;
+      const scrollContent = this.getKendoGrid()?.content?.[0];
+      if (scrollContent) {
+        scrollContent.scrollTop  = this.getScrollTopPosition;
+        scrollContent.scrollLeft = this.getScrollLeftPosition;
+      }
       // add 休日マスタ 障害対応No217 追加重複の情報（年）チェック end
 
-      if ((this.masterPhysicalName === "mst_treatment" || this.masterPhysicalName === "mst_comsv_setting" )&& this.getUpdateRecordList.filter(item => (item.operation === 2)).length != 0) {
+      if ((this.masterPhysicalName === "mst_treatment" || this.masterPhysicalName === "mst_comsv_setting")&& this.getUpdateRecordList.filter(item => (item.operation === 2)).length != 0) {
         let mstMachineList = [];
         await Promise.all([
           ApiHelper.get(`/master_maintenance/mst_machine/data/${this.getFacilitySwitch}`).then(response => {
@@ -2175,6 +4472,7 @@ export default {
             message: messageFormat(DIALOG_MESSAGES['22010001'].message, '装置モード')
           });
           this.setLoadingScreenVisible(false);
+          this.rollbackMasterRecordSavedGridScroll();
           return;
         }
         /* mod 内部#6279 by zhangruixue 2023-06-15 --start */
@@ -2223,6 +4521,7 @@ export default {
       if (message.length !== 0) {
         //共通ローダー：表示終了
         this.setLoadingScreenVisible(false);
+        this.rollbackMasterRecordSavedGridScroll();
         this.$ons.notification.alert({
           // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
           // title: "チェックエラー",
@@ -2256,12 +4555,10 @@ export default {
         this.masterPhysicalName === 'mst_equipment_class' ||
         this.masterPhysicalName === 'mst_equipment' ||
         this.masterPhysicalName === 'mst_medicine' ||
-        this.masterPhysicalName === 'mst_medicine_mix'
-      ){
+        this.masterPhysicalName === 'mst_medicine_mix'){
         let tempData = null;
         await ApiHelper.get(
-          `/master_maintenance/${this.masterPhysicalName}/data/${this.facilitylistValue}`
-        ).then(response => {
+          `/master_maintenance/${this.masterPhysicalName}/data/${this.facilitylistValue}`).then(response => {
           tempData = response.data.localDataSource.data
         });
         for (let i = 0; i < this.getMasterRecordList.data.length; i++) {
@@ -2350,8 +4647,8 @@ export default {
       );
       let startDateStr = new Date().getFullYear()-1 +"-"+new Date().getMonth()+"-"+new Date().getDate()
       let endDateStr = new Date().getFullYear()+1 +"-"+new Date().getMonth()+"-"+new Date().getDate()
-      let startDate = moment(startDateStr).format("YYYYMMDD");
-      let endDate = moment(endDateStr).format("YYYYMMDD");
+      let startDate = dayjs(startDateStr).format("YYYYMMDD");
+      let endDate = dayjs(endDateStr).format("YYYYMMDD");
       let url = `waterSurvey/filter`;
       let postParams = {
         startDate,
@@ -2431,7 +4728,7 @@ export default {
                 count += 1
               }
             }
-            if (count !== editRecord.length  && this.getUpdateRecordList.length === this.oldLocalDataSource.length ) {
+            if (count !== editRecord.length  && this.getUpdateRecordList.length === this.oldLocalDataSource.length) {
               // mod #7327 治療方法マスタ操作時の動作がおかしい 付 start
               // let changetips = null
               let msg = ''
@@ -2514,6 +4811,7 @@ export default {
         })
         .catch(error => {
           this.setLoadingScreenVisible(false);
+          this.rollbackMasterRecordSavedGridScroll();
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
           getErrorMessage('MasterRecordComponent.vue', 'updateRecordListByFacilityCd' , error);
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -2573,11 +4871,24 @@ export default {
           return dataItem[column.field] != null ? Number(dataItem[column.field]).toFixed(decimals) : "";
         }
       }
+      if (this.isWaterSurveyThresholdField(column.field)) {
+        const thresholdValue = dataItem[column.field];
+        if (thresholdValue === null || thresholdValue === undefined || thresholdValue === "") {
+          return "";
+        }
+        const decimalDigits = dataItem.decimalDigits && dataItem.decimalDigits > 0 ? dataItem.decimalDigits : 0;
+        const normalized = roundAndClampWaterSurveyThresholdValue(
+          thresholdValue,
+          dataItem.integerDigits,
+          decimalDigits
+        );
+        return this.formatWaterSurveyThresholdDisplay(normalized, decimalDigits);
+      }
       // #11241 11047残バグ：数値入力欄がnullと表示する linjunfeng start
       // return dataItem[column.field];
       let value = dataItem[column.field] ?? "";
       if (value !== "") {
-        value = BigNumber(value).toFixed();　// 指数表記を通常表記に変換
+        value = BigNumber(value).toFixed(); // 指数表記を通常表記に変換
       }
       return value;
       // #11241 11047残バグ：数値入力欄がnullと表示する linjunfeng end
@@ -2773,6 +5084,7 @@ export default {
     addRow(holidayNkkYear, holidayNkkCode) {
       // グリッドでエラーが発生している場合は処理を中断
       if (!this.kendoValidator.validate()) {
+        this.scheduleValidationTooltipPlacement();
         return;
       }
 
@@ -2844,9 +5156,7 @@ export default {
       }
       if (this.masterPhysicalName == "mst_medicine_mix") {
         d.classCd = -1;
-        // add #11801 治療条件.抗凝固剤に調整薬剤をセットしたときに配布リストの出力が不適切 susny start
         d.medicineSetNum = 1;
-        // add #11801 治療条件.抗凝固剤に調整薬剤をセットしたときに配布リストの出力が不適切 susny end
       }
 
       if (this.masterPhysicalName === "mst_water_survey_type") {
@@ -2877,16 +5187,16 @@ export default {
         d.iconInfo = JSON.stringify(deepCopy(MST_DEFAULT_VALUE.mst_menu_group.iconInfo));
       }
 
-      // データ行を一番下に追加してスクロールダウン
-      this.lastScrollTop = this.$refs.grid.$el.lastChild.scrollHeight;
-
+      // 追加行用フラグを立てる。実際の DataSource 更新と最下部スクロールは
+      // masterRecords watch + dataBound に一任する（二重更新を避ける）
+      this.scrollPosition.left = 0;
+      this.__pendingScrollToBottom = true;
       this.edit({ editRecord: d, isSortMode: this.isSortMode, isHolidayNkk:holidayNkkYear ? true : undefined});
-      this.dataSourceItems = this.generatedGridData();
-      this.isRecordModified && this.editBackgroundColor(this.masterPhysicalName);
+      this.scheduleMasterRecordRowVisualRefresh(d);
       // add 医療材料セットマスタ 追加の時、スクロール位置を取得 start 鞠
       if (this.masterPhysicalName == "mst_equipment") {
-        const grid = $("div.k-grid-content")[0];
-        this.scrollPosition.left = grid.scrollLeft;
+        const grid = this.getGridContentElement();
+        this.scrollPosition.left = grid?.scrollLeft || 0;
       }
       // add 医療材料セットマスタ 追加の時、スクロール位置を取得 end 鞠
     },
@@ -2961,7 +5271,7 @@ export default {
         // add #11047 No7 治療記録モニタグラフマスタ＞詳細 左グラフ上限 左グラフ下限 右グラフ上限 右グラフ下限 マイナス値の入力ができない。linjunfeng start
         this.sysMonitorItemList = sysMonitorItem;
         // add #11047 No7 治療記録モニタグラフマスタ＞詳細 左グラフ上限 左グラフ下限 右グラフ上限 右グラフ下限 マイナス値の入力ができない。linjunfeng end
-        let monitorItemList = sysMonitorItem.filter( s => s.is_disp === '1' )
+        let monitorItemList = sysMonitorItem.filter( s => s.is_disp === '1')
           .map( item => {
             return {
               value: item.moni_data_no,
@@ -2989,7 +5299,7 @@ export default {
       if (this.masterPhysicalName == "mst_mainte_detail" && (!data.model.mainteClass || data.model.mainteClass == "1")) {
         return;
       } else {
-        $(`<input type="text" name="${data.field}" class="k-input k-textbox k-valid"/>`).appendTo(container);
+        // $(`<input type="text" name="${data.field}" class="k-input k-textbox k-valid"/>`).appendTo(container);
       }
     },
     // redmine 5344 日常点検を選択した場合も内容3が登録できる 宋qy end
@@ -3048,15 +5358,20 @@ export default {
       this.getDefaultCd();
     }
     // add end #9301
-    if (this.masterPhysicalName == "mst_holiday" && this.getFacilitySwitch != "nkknkk") {
+    // #11205 -ペンテスト2－4認可制御の不備  sendRequestFindRecordListByFacilityCd(mst_holiday,nkknkk)廃止→専用API  mod 20260507 start
+    if (
+      this.masterPhysicalName == "mst_holiday" &&
+      this.getFacilitySwitch != "nkknkk"
+    ) {
       let responseData = "";
-      await sendRequestFindRecordListByFacilityCd("mst_holiday","nkknkk").then(
+      await sendRequestFindMstHolidayNikkisoCorporateData().then(
         response => {
           responseData = response.data.localDataSource.data;
         }
       );
       this.mstHolidayNkkData = responseData;
     }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
     // mod マスタ一覧 1･施設切替を可能とする 孔s end
     this.calculateColumnsWidth();
 
@@ -3096,52 +5411,53 @@ export default {
     await this.setCondition(this.condition)
     // add #8541 ベッドグループ・透析室マスタ画面にて、虫眼鏡に抽出条件を入力後、検索すると、【透析室・ベッドグループ名】列が隠される。 付 end
     // 端末判別
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toLowerCase();
     if (/android/.test(ua)) {
       this.androidFlg = true;
     } else if (/iphone|ipad|mac|os/.test(ua)) {
       this.iosFlg = true;
     }
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     EventBus.$on("onCloseMasterEditModal", this.onCloseMasterEditModal);
     // EventBus.$on("refresh", this.refresh);
 
   },
   updated() {
-    if (!this.isRecordModified) {
-      const kDirtyCell = document.getElementsByClassName('k-dirty');
-      if (kDirtyCell.length > 0) {
-        for(let i=0; i<kDirtyCell.length; i++){
-          kDirtyCell[i].setAttribute('class', '');
-        }
-      }
+    if (this.masterRecordRestoreScrollPending) {
+      this.$nextTick(() => this.restoreMasterRecordGridScroll());
     }
-    // Storeの更新等で画面が再描画された場合に背景色を変更
-    // #8519 【デグレ】編集した項目のバッググラウンドが黄緑にならない 訾浩 start
-    this.isRecordModified && this.editBackgroundColor();
-    // #8519 【デグレ】編集した項目のバッググラウンドが黄緑にならない 訾浩 end
-    this.$nextTick(() => {
-      this.calculateColumnsWidth();
-      this.calculateGridHeight();
-      this.calculateGridWidth();
-    });
   },
 
   mounted() {
     this.$nextTick(() => {
-      this.calculateColumnsWidth();
-      this.calculateGridHeight();
-      this.calculateGridWidth();
+      if (this.columns.length > 1) {
+        this.initKendoGrid();
+      } else {
+        this.calculateColumnsWidth();
+        this.calculateGridHeight();
+        this.calculateGridWidth();
+      }
     });
     EventBus.$on("refresh", this.refresh);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("onCloseMasterEditModal", this.onCloseMasterEditModal);
     EventBus.$off("refresh", this.refresh);
     if (this.resizeObserver != null) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
     }
+    if (this._masterRecordLayoutRafId != null) {
+      cancelAnimationFrame(this._masterRecordLayoutRafId);
+      this._masterRecordLayoutRafId = null;
+    }
+    clearTimeout(this.masterRecordSavedScrollClearTimer);
+    this.masterRecordSavedScrollClearTimer = null;
+    try { this._directGridWidget?.destroy?.(); } catch (_error) {}
+    this._directGridWidget = null;
+    destroyJQueryValidator(this.$refs.ntssList);
+    this.kendoValidator = null;
+    this.teardownValidationTooltipPlacement();
     this.setMasterRecordList([])
   }
 };
@@ -3177,82 +5493,167 @@ export default {
 .csv-btn {
   margin-right: 1em;
 }
-.k-grid-toolbar {
+.kendo-grid-toolbar-style {
   padding: 0.1em 0.3em;
 }
-.kendo-grid-toolbar-style >>> .k-tooltip.k-tooltip-validation {
+.kendo-grid-toolbar-style :deep(.k-tooltip.k-tooltip-validation) {
   width: auto;
 }
-
-.kendo-grid-toolbar-style
-  >>> .k-grid
+.kendo-grid-toolbar-style :deep(.k-grid
   tr:nth-child(n + 3):last-child
   .k-tooltip.k-tooltip-validation
-  .k-callout {
+  .k-callout) {
   border-bottom: 0;
   border-top: 6px solid #000;
   top: unset;
   bottom: -6px;
 }
-
-.kendo-grid-toolbar-style
-  >>> .k-grid
+.kendo-grid-toolbar-style :deep(.k-grid
   tr:nth-child(n + 3):last-child
-  .k-tooltip.k-tooltip-validation {
+  .k-tooltip.k-tooltip-validation) {
   bottom: 38px;
+  top: auto;
 }
-/* 内部 患者経過総合ビューアレイアウトマスタ】最後から2行目レイアウト名は空にしなければならないとmessage表示します start */
-.kendo-grid-toolbar-style
-  >>> .k-grid
+.kendo-grid-toolbar-style :deep(.k-grid
   tr:nth-last-child(2):nth-child(n + 2)
-  .k-tooltip.k-tooltip-validation {
+  .k-tooltip.k-tooltip-validation) {
   bottom: 38px;
+  top: auto;
 }
-.kendo-grid-toolbar-style
-  >>> .k-grid
+.kendo-grid-toolbar-style :deep(.k-grid
   tr:nth-last-child(2):nth-child(n + 2)
   .k-tooltip.k-tooltip-validation
-  .k-callout {
+  .k-callout) {
   border-bottom: 0;
   border-top: 6px solid #000;
   top: unset;
   bottom: -6px;
 }
-/* 内部 患者経過総合ビューアレイアウトマスタ】最後から2行目レイアウト名は空にしなければならないとmessage表示します end */
-.kendo-grid-toolbar-style >>> .k-edit-cell {
+.kendo-grid-toolbar-style :deep(.k-edit-cell) {
   position: relative;
   overflow: visible;
 }
+/* left は指定しない：input 直後への Kendo 挿入位置を維持し、セル基準 left:0 で左上にずれるのを防ぐ */
+.kendo-grid-toolbar-style :deep(.k-edit-cell > .k-invalid-msg:not(.k-hidden)),
+.kendo-grid-toolbar-style :deep(.k-edit-cell > .k-form-error:not(.k-hidden)),
+.kendo-grid-toolbar-style :deep(.k-edit-cell > .k-validator-tooltip:not(.k-hidden)),
+.kendo-grid-toolbar-style :deep(.k-edit-cell > .k-tooltip-error:not(.k-hidden)) {
+  position: absolute;
+  top: calc(100% + 2px);
+  bottom: auto;
+  z-index: 10;
+  width: auto;
+  min-width: 10em;
+  max-width: min(24em, 90vw);
+  margin: 0;
+  white-space: normal;
+  display: flex !important;
+  align-items: flex-start;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: normal !important;
+  line-height: 1.4 !important;
+  box-sizing: border-box;
+  transform: none !important;
+}
 
-.kendo-grid-toolbar-style >>> .k-grid-content > .k-selectable {
+/* Editable の .k-tooltip-content は Kendo tooltip 既定の font-size を継承し、太く見えやすい */
+.kendo-grid-toolbar-style :deep(.k-edit-cell .k-tooltip-content) {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: normal !important;
+  line-height: 1.4 !important;
+}
+
+/* JS ntss-validation-above：スクロール領域下端で tooltip をセル上に表示 */
+.kendo-grid-toolbar-style :deep(td.k-edit-cell.ntss-validation-above > .k-invalid-msg),
+.kendo-grid-toolbar-style :deep(td.k-edit-cell.ntss-validation-above .k-invalid-msg.k-tooltip-error),
+.kendo-grid-toolbar-style :deep(td.k-edit-cell.ntss-validation-above .k-tooltip.k-tooltip-error),
+.kendo-grid-toolbar-style :deep(td.k-edit-cell.ntss-validation-above .k-tooltip.k-tooltip-validation),
+.kendo-grid-toolbar-style :deep(td.k-edit-cell.ntss-validation-above .k-validator-tooltip),
+.master-record-direct-jq-grid :deep(td.k-edit-cell.ntss-validation-above > .k-invalid-msg),
+.master-record-direct-jq-grid :deep(td.k-edit-cell.ntss-validation-above .k-invalid-msg.k-tooltip-error),
+.master-record-direct-jq-grid :deep(td.k-edit-cell.ntss-validation-above .k-tooltip.k-tooltip-error),
+.master-record-direct-jq-grid :deep(td.k-edit-cell.ntss-validation-above .k-tooltip.k-tooltip-validation),
+.master-record-direct-jq-grid :deep(td.k-edit-cell.ntss-validation-above .k-validator-tooltip),
+.master-record-direct-jq-grid :deep(.k-grid-content-locked tbody > tr:nth-last-child(-n + 2) td.k-edit-cell > .k-invalid-msg),
+.master-record-direct-jq-grid :deep(.k-grid-content-locked tbody > tr:nth-last-child(-n + 2) td.k-edit-cell .k-tooltip.k-tooltip-error) {
+  position: absolute !important;
+  left: 0 !important;
+  bottom: 39px !important;
+  top: auto !important;
+  /* margin-top: 0 !important; */
+  overflow: visible !important;
+  padding:9px 15px !important;
+  align-items: center;
+  margin: 0.5em;
+}
+.kendo-grid-toolbar-style :deep(td.k-edit-cell.ntss-validation-above .k-callout.k-callout-s),
+.master-record-direct-jq-grid :deep(td.k-edit-cell.ntss-validation-above .k-callout.k-callout-s),
+.master-record-direct-jq-grid :deep(.k-grid-content-locked tbody > tr:nth-last-child(-n + 2) td.k-edit-cell .k-callout.k-callout-n) {
+  top: auto !important;
+  bottom: calc(-12px) !important;
+  border-bottom-color: transparent !important;
+  border-block-start-color: #000000 !important;
+}
+
+.kendo-grid-toolbar-style :deep(.k-grid-content > .k-selectable) {
   box-shadow: 1px 0px 0px 0px white;
   border-right: 1px solid transparent;
 }
 
-.kendo-grid-toolbar-style >>> .k-grid-header-locked > table {
+/* 表データ位置は維持したまま、縦スクロールバーのみを右へ微調整する。 */
+.kendo-grid-toolbar-style :deep(.k-grid-content) {
+  margin-right: -2px;
+  padding-right: 2px;
+}
+
+/* Vue2 direct jq 画面: 表頭 .k-link の cursor を default に（列ソート無しの誤表示防止） */
+.kendo-grid-toolbar-style :deep(.k-grid-header th),
+.kendo-grid-toolbar-style :deep(.k-grid-header .k-table-th),
+.kendo-grid-toolbar-style :deep(.k-grid-header .k-link),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked th),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked .k-table-th),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked .k-link) {
+  border-right-color: currentColor;
+  cursor: default;
+}
+
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked > table) {
   border-right-width: 0px;
 }
 
-.kendo-grid-toolbar-style >>> .k-grid-header-locked {
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked) {
   border-right: 1px solid var(--ntss-list-border-color) !important;
+  border-inline-end-color: var(--ntss-list-border-color) !important;
 }
 
-.kendo-grid-toolbar-style >>> .k-grid-content-locked {
+/* Kendo UI 2026 の locked grid は header/content が flex item になるため、
+   Vue2 と同じ固定列幅契約を CSS でも補強する。実幅は JS 側で width/min-width/flex-basis に同期する。 */
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked),
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked) {
+  flex-shrink: 0;
+}
+
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked) {
   z-index: 1;
+  border-inline-end-color: var(--ntss-border-color) !important;
   box-shadow: 1px 0px 0px 0px var(--ntss-border-color) !important;
+  overflow-y: scroll !important;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked::-webkit-scrollbar) {
+  display: none;
 }
 
-.kendo-grid-toolbar-style >>> .k-grid-header-locked > table {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked > .k-selectable) {
   border-right-width: 0px;
 }
-
-.kendo-grid-toolbar-style >>> .k-grid-content-locked > .k-selectable {
-  border-right-width: 0px;
-}
-
 
 @media print {
-  .print-grid-style >>> .k-grid {
+  .print-grid-style :deep(.k-grid) {
     border: none !important;
   }
 }
@@ -3261,13 +5662,86 @@ export default {
   transform-origin: center;
   touch-action: manipulation;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked {
-  overflow-y: scroll !important;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+:deep(.k-widget textarea:not(.master-record-textarea-editor)){
+  height: 6.8em;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked::-webkit-scrollbar {
-  display: none;
+/* Grid 内 textarea 編集: 行高を固定し、複数行は内部スクロール（locked 列ずれ防止） */
+.kendo-grid-toolbar-style :deep(textarea.master-record-textarea-editor) {
+  height: 6.8em;
+  min-height: 6.8em;
+  overflow-y: auto;
+  resize: vertical;
+  box-sizing: border-box;
+  display: block;
 }
+/* Vue2 Kendo Grid clipped normal list cells by column width.
+   Vue3 direct jqGrid can leave generated td elements without that default,
+   so restore the common display contract here instead of fixing each master. */
+.kendo-grid-toolbar-style :deep(.k-grid-content td:not(.k-edit-cell)),
+.kendo-grid-toolbar-style :deep(.k-grid-content .k-table-td:not(.k-edit-cell)),
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked td:not(.k-edit-cell)),
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked .k-table-td:not(.k-edit-cell)) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 並び順 (sortRank) の黄色は master-sort-edited のみ（手入力変更行を Set で管理）。
+   k-dirty-cell ベースだと反映後の grid.refresh で全行が黄色になるため使わない。 */
+.kendo-grid-toolbar-style :deep(.k-grid td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid td.master-sort-edited:hover),
+.kendo-grid-toolbar-style :deep(.k-grid td.master-sort-edited.k-hover),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-td.master-sort-edited:hover),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-td.master-sort-edited.k-hover),
+.kendo-grid-toolbar-style :deep(.k-grid tr.master-sort-edited > td),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row.master-sort-edited > .k-table-td),
+.kendo-grid-toolbar-style :deep(.k-grid tr:hover > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr.k-hover > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr.k-selected > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr.k-selected:hover > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr.k-selected.k-hover > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr.k-state-selected > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr.k-state-selected:hover > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr.k-state-selected.k-hover > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr[aria-selected="true"] > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr[aria-selected="true"]:hover > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr[aria-selected="true"].k-hover > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr.master-edited-row > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr.master-edited-row:hover > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr.master-edited-row.k-hover > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid tr.k-grid-edit-row > td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row:hover > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row.k-hover > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row.k-selected > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row.k-selected:hover > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row.k-selected.k-hover > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row.k-state-selected > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row.k-state-selected:hover > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row.k-state-selected.k-hover > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row[aria-selected="true"] > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row[aria-selected="true"]:hover > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row[aria-selected="true"].k-hover > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row.master-edited-row > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row.master-edited-row:hover > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row.master-edited-row.k-hover > .k-table-td.master-sort-edited),
+.kendo-grid-toolbar-style :deep(.k-grid .k-table-row.k-grid-edit-row > .k-table-td.master-sort-edited) {
+  color: #000000 !important;
+  background: #ffff66 !important;
+  background-color: #ffff66 !important;
+}
+.kendo-grid-toolbar-style :deep(td.master-sort-edited[data-field="sortRank"]) .k-dirty {
+  border-width: 0;
+}
+:deep(input[type="date"].ntss-input-date),
+:deep(.k-i-close){
+  font-weight: 200 !important;
+}
+/* 治療記録モニタグラフマスタ / 治療記録バイタルグラフマスタ: theme.css の line-height: 2em !important を上書き */
+.master-maintenance-page.master-mst-monitor-graph :deep(.ntss-kendo-grid-legacy td),
+.master-maintenance-page.master-mst-monitor-graph :deep(.ntss-kendo-grid-legacy .k-table-td),
+.master-maintenance-page.master-mst-vital-graph :deep(.ntss-kendo-grid-legacy td),
+.master-maintenance-page.master-mst-vital-graph :deep(.ntss-kendo-grid-legacy .k-table-td) {
+  line-height: 1.5em !important;
+}
+
 </style>

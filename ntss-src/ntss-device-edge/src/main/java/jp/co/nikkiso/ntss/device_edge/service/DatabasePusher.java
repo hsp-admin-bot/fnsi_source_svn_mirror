@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
-import com.amazonaws.util.StringUtils;
 import com.google.common.base.Strings;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.dao.MniMonitorDao;
@@ -1754,7 +1753,7 @@ public class DatabasePusher {
     }
     rcd.setLogType(nClass);
     // mod FNSI-バグ 通信サーバ 高 start
-    if(StringUtils.isNullOrEmpty(machineRecordCd)) {
+    if(Strings.isNullOrEmpty(machineRecordCd)) {
       rcd.setMachineRecordMessage(items.getItemValue(TelegramKey.KEY_MSG));
     }
     // mod FNSI-バグ 通信サーバ 高 end

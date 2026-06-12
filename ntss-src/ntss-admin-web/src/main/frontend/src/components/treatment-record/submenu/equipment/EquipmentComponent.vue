@@ -4,17 +4,20 @@
  */
 <template>
   <submenu-base v-if="hasOrdNo">
-    <div slot="main" id="equipment-component" style="width: calc(100% - 1px);">
+    <template #main>
+      <div id="equipment-component" style="width: calc(100% - 1px);">
       <div>
         <table class="treatment-record-list">
           <thead>
             <tr>
-              <div>
+              <th colspan="4" style="background-image: none;">
+                <div>
                 <!-- mod #10359 編集権限の動作不正 start -->
                 <!-- <v-ons-button class="button toolbar-btn btn3-normal" :disabled="!isShared" style="float: left;" @click="addRow()">追加</v-ons-button> -->
                 <v-ons-button class="button toolbar-btn btn3-normal" :disabled="!isShared||!getItemAuthorized('TreatmentRecord', 'default_authority')" style="float: left;" @click="addRow()">追加</v-ons-button>
                 <!-- mod #10359 編集権限の動作不正 end -->
-              </div>
+                </div>
+              </th>
             </tr>
             <tr>
               <th class="ntss-list-header-th-sticky">医療材料名</th>
@@ -24,16 +27,16 @@
             </tr>
           </thead>
           <tbody>
-            <template v-for="(data, index) in rstEquipInfoList.value()">
-              <tr :key="index" :class="['ntss-list-body-tr', data.isNew ? 'added-item' : '', data.be_deleted ? 'deleted-item' : '']">
+            <template v-for="(data, index) in rstEquipInfoList.value()" :key="index">
+              <tr :class="['ntss-list-body-tr', data.isNew ? 'added-item' : '', data.be_deleted ? 'deleted-item' : '']">
                 <td class="ntss-list-body-td equipment-selector-td" style="min-width:22em">
-                  <v-ons-row>
+                  <!-- <v-ons-row>
                     <v-ons-col>
                       <show-selected-item
                         :propEditValue="rstEquipInfoListAsMaster[index].name"
                         propBackgroundColor="#ebebe4"
                       />
-                    </v-ons-col>
+                    </v-ons-col> -->
                     <!-- 医療材料の選択ボタン -->
                     <!-- mod #10359 編集権限の動作不正 start -->
                     <!-- <com-master-selector
@@ -47,20 +50,25 @@
                       v-model="rstEquipInfoListAsMaster[index]"
                       @input="onSelectEquipment"
                     /> -->
-                    <com-master-selector
-                      :index="index"
-                      name="equipment-all"
-                      labelName=""
-                      :showLabelName="false"
-                      :readMasterData="fetchEquipmentAndEquipmentClass"
-                      :masterDefine="masterDefine"
-                      v-model="rstEquipInfoListAsMaster[index]"
-                      @input="onSelectEquipment"
-                      :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
-                      :isActiveBtn="false"
+                    <common-master-selector
+                      :masterType="MasterType.EQUIPMENT_TREATMENT_RECORD"
+                      :initItem="{ text: rstEquipInfoListAsMaster[index].name, value: rstEquipInfoListAsMaster[index].cd, unit: rstEquipInfoListAsMaster[index].unit }"
+                      :editItem="{ text: data.name, value: data.cd, unit: data.unit }"
+                      :patientId="selectedPatId"
+                      :extraParams="buildEquipmentSelectorExtraParams(index, data)"
+                      :facilityCd="getFacilityCd"
+                      :dialysisState="getDialysisState"
+                      :hasChangedOption="true"
+                      :changeOptionMode="'nameAndUnit'"
+                      :selectedItemClass="'com-basic-sub-input'"
+                      :hasUnregisteredOption="false"
+                      :backgroundColor="'#ebebe4'"
+                      :btnClass="'com-basic-sub-btn'"
+                      :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
+                      @popover-return="masterUpdateInput($event, index)"
                     />
                     <!-- mod #10359 編集権限の動作不正 end -->
-                  </v-ons-row>
+                  <!-- </v-ons-row> -->
                 </td>
                 <td class="ntss-list-body-td" style="min-width:3em">
                   <!-- 医療材料の数量入力 -->
@@ -113,14 +121,13 @@
                     name="amount"
                     :invalidArray="['0']"
                     :required="true"
-                    v-model="data.amount"
+                    :value="data.amount"
                     :disabled="!isShared || !getItemAuthorized('TreatmentRecord', 'default_authority')"
                     :min="0"
                     :max="9999"
                     :step="1"
-                    :loop-flg="true"
-                    :initial-value-lock="true"
-                    @handlerInput="(val) =>{ data.amount = val;onInputAmount(index) }"
+                    :roll-flag="true"
+                    @handlerInput="(val) =>{ data.amount = Number(val);onInputAmount(index) }"
                   />
                   <!-- #10196 数値IFのスタイル全不正 linjunfeng end -->
                   <!-- mod #10359 編集権限の動作不正 end -->
@@ -130,7 +137,7 @@
                 <td class="ntss-list-body-td" style="min-width:4em">{{ data.unit }}</td>
                 <!-- 削除ボタン -->
                 <td class="align-center ntss-list-body-td">
-                  <button class="ntss-btn-outset button-delete" @click="deleteEquipInfo(index)" :disabled="!isShared">
+                  <button class="ntss-btn-outset button-delete" :disabled="!isShared" @click="deleteEquipInfo(index)">
                     <v-ons-icon icon="fa-trash"/>
                   </button>
                 </td>
@@ -139,8 +146,10 @@
           </tbody>
         </table>
       </div>
-    </div>
-    <div slot="footer" class="flex-container justify-content-flex-end">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container justify-content-flex-end">
       <div class="registration-btn-area">
 <!--        mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc start-->
 <!--        <v-ons-button class="button registration-btn btn1-execute"  :disabled="(editFlag && !canSave) || isReadOnly || !isShared" @click="updateEquipInfo">-->
@@ -153,13 +162,14 @@
         </v-ons-button>
 
       </div>
-    </div>
+      </div>
+    </template>
   </submenu-base>
 </template>
 
 <script>
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc start
-import {mapGetters, mapActions, mapMutations} from "vuex";
+import {mapGetters, mapActions, mapMutations} from "@/compat/vue/vuex";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end
 //#8484　医療材料選択IFのリスト不正 追加修正　Start
 import { fitTermCheck } from "@/functions/common/DateTimeUtils";
@@ -168,9 +178,7 @@ import SubmenuBase from "@/components/treatment-record/SubmenuBaseComponent";
 import { Equipment } from "@/models/treatment-record/equipment/Equipment";
 import { EquipmentList } from "@/models/treatment-record/equipment/EquipmentList";
 import {
-  sendRequestGetMstEquipmentTabooAllergy,
-  sendRequestGetMstEquipmentClass,
-  sendRequestGetMstDialyzerTabooAllergy
+  sendRequestGetMstEquipmentClass
 } from "@/apis/treatment-record";
 import CommonMasterSelectorComponent from "@/components/common/master-selector/TreatmentRecordSelectorComponent";
 import { equipmentAll } from "@/components/common/master-selector/MasterSelectorDefinitions";
@@ -180,9 +188,10 @@ import { CODES } from "@/constants/TreatmentRecord";
 // import { AUTHORITY_CODES } from "@/constants/userAuthority";
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 end
 import CommonNumberInputComponent from "@/components/treatment-record/submenu/common/CommonNumberInputComponent";
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
 import CustomDivShowSelectedItem from "@/components/common/custom-form-tags/CustomDivShowSelectedItem";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
@@ -201,7 +210,11 @@ import {
   // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
 // add #10359 編集権限の動作不正 end
 // add #9848+9849 数値IFのスタイル全不正 linjunfeng start
-import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro'
+import { parseStoredArray } from "@/functions/common/CommonFunctions";
+import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
+
 // add #9848+9849 数値IFのスタイル全不正 linjunfeng end
 export default {
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 start
@@ -216,9 +229,11 @@ export default {
     // add #9848+9849 数値IFのスタイル全不正 linjunfeng start
     "custom-input-number-pro": CustomInputNumberPro,
     // add #9848+9849 数値IFのスタイル全不正 linjunfeng end
+    "common-master-selector": commonMasterSelector,
   },
   data() {
     return {
+      MasterType,
       rstDialysisState: undefined,
       rstEquipInfoList: new EquipmentList(),
       rstEquipInfoListAsMaster: [],
@@ -251,7 +266,7 @@ export default {
       windowWidth: "getMainWindowWidth"
     }),
     ...mapGetters("pat-info", ["selectedPatId"]),
-    ...mapGetters("treatment-record/common", ["getSharedFacilityCd","getDialysisState"]),
+
     canDelete() {
       return this.rstEquipInfoList.beDeleted();
     },
@@ -262,6 +277,7 @@ export default {
       "getOrdNo",
       "getOrd",
       "getSharedFacilityCd",
+      "getDialysisState",
       //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
       "getTreatDate"
        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
@@ -493,6 +509,7 @@ export default {
           let name = "";
           let cd = null;
           let equip_type = info.equip_type ?? 0;
+          const unit = info && info.unit != null ? info.unit : null;
           const equipment = this.findEquipByCdFromMstAndOrdMain(info.cd, equip_type, index);
 
           // 既存変更ID
@@ -501,7 +518,7 @@ export default {
             const mstInfo = null;
             // #8203以外のチケットで見直す予定のため、一旦このロジックはこのままとする
             // TODO: 見直し後に接頭辞を引き続き利用する場合は定数化する
-            if (mstInfo  && mstInfo.hasOwnProperty("isDel") && mstInfo.isDel ==="1") {
+            if (mstInfo  && Object.prototype.hasOwnProperty.call(mstInfo, "isDel") && mstInfo.isDel ==="1") {
               // 引き当てたマスタレコードが日機装の保守作業により削除されたものである場合
               if (this.isPastInfo) {
                 name = `${info.name}【削除済み含む】`; // 【削除済み含む】⇒調製薬剤マスタとの突き合わせた結果、一部の薬剤がマスタから削除されている場合の接尾辞(医療材料、ダイアライザでは付与することがないので不要)
@@ -539,7 +556,9 @@ export default {
             }
           }
 
-          return new Master(cd, name);
+          const m = new Master(cd, name);
+          m.unit = unit;
+          return m;
         });
     },
     // mod #11586 治療記録＞医療材料にてダイアライザを追加すると保存できない。 関 end
@@ -555,7 +574,7 @@ export default {
       }
 
       return equipType === 1
-        ? this.latestDialyzer.find((e) => e.dialyzerCd == cd?.replace("dialyzer", ""))
+        ? this.latestDialyzer.find((e) => String(e.dialyzerCd) === String(cd))
         : this.latestEquipment.find((e) => e.equipmentCd == cd);
     },
     comparisonExistingChangeCd (equipment, index, cd) {
@@ -582,6 +601,53 @@ export default {
       equipInfo.setUpdUser(this.stateUserAccountInfo);
       this.rstEquipInfoList.refreshEquipmentAndClass(index);
     },
+    masterUpdateInput(data = {}, index) {
+      const isDialyzer = String(data && data.key_class != null ? data.key_class : "") === "-2";
+      const cd = data && data.value != null ? data.value : null;
+      const masterCd = cd != null && cd !== "" ? Number(cd) : null;
+      const row = this.rstEquipInfoList.get(index);
+      row.cd = masterCd;
+      row.name = data && data.text != null ? data.text : null;
+      row.unit = data && data.unit != null && data.unit !== "" ? data.unit : null;
+      row.equip_type = isDialyzer ? 1 : 0;
+      if (isDialyzer) {
+        row.class_cd = null;
+        row.class_name = null;
+        row.class_type = null;
+      } else {
+        row.class_cd = data && data.classCd != null ? data.classCd : (data && data.key_class != null ? data.key_class : row.class_cd);
+        row.class_name = row.class_name;
+        row.class_type = row.class_type;
+      }
+      row.setUpdUser(this.stateUserAccountInfo);
+    },
+    buildEquipmentSelectorExtraParams(index, rowData) {
+      const excludeEquipment = [];
+      const excludeDialyzer = [];
+
+      (this.rstEquipInfoList?.value?.() || []).forEach((item, i) => {
+        if (i === index) return;
+        if (!item || item.be_deleted) return;
+
+        const cd = item.cd;
+        if (cd == null || cd === "") return;
+
+        const equipType = item.equip_type != null ? item.equip_type : detectEquipTypeFromCode(cd);
+        if (equipType === 1) {
+          excludeDialyzer.push(cd);
+        } else {
+          excludeEquipment.push(cd);
+        }
+      });
+
+      return {
+        treatDate: this.getTreatDate,
+        equipType: rowData?.equip_type,
+        actualName: this.rstEquipInfoListAsMaster?.[index]?.name || rowData?.name || "",
+        excludeEquipmentCdList: excludeEquipment.length ? excludeEquipment.join(",") : null,
+        excludeDialyzerCdList: excludeDialyzer.length ? excludeDialyzer.join(",") : null
+      };
+    },
 
     onInputChangeAmount(amount) {
       this.editFlag = false;
@@ -595,10 +661,6 @@ export default {
         // if (newVal !== initialVal) {
         if (newVal != initialVal) {
           // add 9973 -4 by kangjie 20231030 end
-          // 過去実積以外は医療材料・医療材料分類マスタを更新
-          if (!this.isPastInfo) {
-            this.rstEquipInfoList.refreshEquipmentAndClass(index);
-          }
           this.rstEquipInfoList
             .get(index)
             .setUpdUser(this.stateUserAccountInfo);
@@ -615,7 +677,10 @@ export default {
       this.rstEquipInfoList.deleteAll();
       this.rstEquipInfoListInitial.deleteAll();
       // 治療情報の取得
-      const response = await this.getTreatmentRecordEquipInfo(this.getOrdNo);
+      const response = await this.getTreatmentRecordEquipInfo({
+        ordNo: this.getOrdNo,
+        selectedPatId: this.selectedPatId
+      });
       // マスタ類の取得
       const mstEquipmentResponse = await this.fetchEquipmentAndEquipmentClass();
       this.latestEquipment = mstEquipmentResponse[0].data;
@@ -633,38 +698,40 @@ export default {
         var facility_cd = this.getFacilityCd;
         const displayOrder = await ApiHelper.get(
           "/mainData/displayOrder",
-          {facility_cd}
-        ).catch(err => {
-          getErrorMessage('EquipmentComponent.vue', 'init', error);
+          {
+            facility_cd,
+            selectedPatId: this.selectedPatId
+          }).catch(err => {
+          getErrorMessage('EquipmentComponent.vue', 'init', err);
           throw err;
         });
         const paramJson = {};
         paramJson.facilityCd = this.getFacilityCd;
+        paramJson.selectedPatId = this.selectedPatId;
         const mstEquipment = await ApiHelper.get(
           "/mstInfo/mstEquipment",
-          paramJson
-        ).catch(error => {
+          paramJson).catch(error => {
           getErrorMessage('EquipmentComponent.vue', 'init', error);
           throw error;
         });
         this.mstEquipmentInfo = mstEquipment.data;
         const tableName = "mst_equipment_class";
         const mstselector = await ApiHelper.get(
-          `/report_designer/master/${tableName}`
-        ).catch(err => {
-          getErrorMessage('EquipmentComponent.vue', 'init', error);
+          `/report_designer/master/${tableName}`,
+          { selectedPatId: this.selectedPatId }).catch(err => {
+          getErrorMessage('EquipmentComponent.vue', 'init', err);
           throw err;
         });
         const mstselectorDialyzer = await ApiHelper.get(
-        `/report_designer/master/mst_dialyzer`
-        ).catch(err => {
+        `/report_designer/master/mst_dialyzer`,
+        { selectedPatId: this.selectedPatId }).catch(err => {
           throw err;
         });
 
         // 医療材料(ダイアライザ含む)一覧の並び替え(医療材料>未分類の医療材料>ダイアライザ)
         this.rsrEquipNewData = mstselectorDialyzer.data;
         for(let i = 0 ; i< equipInfoArray.length ; i++) {
-          if (equipInfoArray[i].equip_type === 0 ){
+          if (equipInfoArray[i].equip_type === 0){
             for (let j = 0 ; j< this.mstEquipmentInfo.length ; j++) {
               if (equipInfoArray[i].cd === this.mstEquipmentInfo[j].equipmentCd) {
                 equipInfoArray[i].index = j;
@@ -688,7 +755,7 @@ export default {
         if (displayOrder.data) {
           let medOrderNo = displayOrder.data.find(item => item.facilitySettingNo == '3006');
           if (medOrderNo) {
-            let medOrderNoValueArray = eval(medOrderNo.value);
+            let medOrderNoValueArray = parseStoredArray(medOrderNo.value);
             let sortKeyObj = [];
             for (let i = 0; i < medOrderNoValueArray.length; i++) {
               switch (medOrderNoValueArray[i]) {
@@ -708,14 +775,10 @@ export default {
       }
 
       equipInfoArray.forEach(json => {
-        // ダイアライザのIDを判別できるように補正
-        if (json.equip_type === 1) {
-          json.cd = `dialyzer${json.cd}`;
-        }
         this.rstEquipInfoListInitial.add(Equipment.of(json));
       });
 
-      this.syncCurrentEquipmentUnit(equipInfoArray).forEach(json => {
+      equipInfoArray.forEach(json => {
         this.rstEquipInfoList.add(Equipment.of(json));
       });
       if (this.noDeleteData.length > 0) {
@@ -725,8 +788,13 @@ export default {
         this.noDeleteData = [];
       }
 
-      // 医療材料一覧を表示するために治療情報の実績:医療材料(ダイアライザ含む)よりリストを生成する.
-      this.equipInfoListFromOrdMain();
+      this.rstEquipInfoListAsMaster = this.rstEquipInfoList
+        .value()
+        .map(info => {
+          const m = new Master(info && info.cd != null ? info.cd : null, info && info.name != null ? info.name : "");
+          m.unit = info && info.unit != null ? info.unit : null;
+          return m;
+        });
       // 最新の医療材料マスタ、ダイヤライザマスタと医療材料分類マスタを
       // rstEquipInfoList(EquipmentListクラス。医療材料情報（rst_equip_info）の集合を表現)に設定
       this.rstEquipInfoList.latestEquipmentList = this.latestEquipment;
@@ -751,7 +819,7 @@ export default {
         props.push(obj)
       }
       var cps = [];
-      var asc = true;
+      var asc;
       if (props.length < 1) {
         for (var p in item1) {
           if (item1[p] > item2[p]) {
@@ -860,11 +928,10 @@ export default {
       });
       // ダイアライザのID補正を除去
       equipmentList.list.forEach(obj => {
-        if (typeof obj.cd === "string" && obj.cd.indexOf("dialyzer") !== -1) {
+        if (obj.equip_type === 1) {
           // ダイアライザ用の内部展開したコード表現をDB永続化用のコードに戻す
           obj.cd = decryptDialyzerCdToPersistentCode(obj.cd);
           obj.class_cd = null;
-          obj.equip_type = 1;
         } else {
           obj.equip_type = 0;
         }
@@ -904,7 +971,7 @@ export default {
     refresh() {
       // 子機能ボタンエリアの更新
       this.$emit("update");
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       // mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue
@@ -919,7 +986,7 @@ export default {
     },
     // add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
     eventBusRefresh() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       if (this.isChanged && this.alertFlag) {
@@ -997,7 +1064,7 @@ export default {
   },
   async created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // イベント登録
     EventBus.$on("refresh", this.eventBusRefresh);
     // OrdMainレコードをチェックする
@@ -1009,7 +1076,7 @@ export default {
   /**
    * コンポーネント破棄前.
    */
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化(メモリリークに対する基本的な対応)
     Object.assign(this.$data, this.$options.data());
     // add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
@@ -1038,11 +1105,11 @@ export default {
 .scroll-table {
   width: 1px;
 }
-.equipment-selector-td >>> ons-col.text-value {
+.equipment-selector-td :deep(ons-col.text-value) {
   display: flex;
   align-items: center;
 }
-.equipment-selector-td >>> .select-btn {
+.equipment-selector-td :deep(.select-btn) {
   font-size: 1em;
 }
 .toolbar-btn {
@@ -1068,5 +1135,13 @@ export default {
 /* 削除ボタン */
 .button-delete {
   max-width: 25px;
+}
+:deep(.com-basic-sub-btn) {
+  margin-left: 5px;
+}
+:deep(.com-basic-sub-input) {
+  min-width: 11em;
+  width: 100%;
+  background-color: #ebebe4;
 }
 </style>

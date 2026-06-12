@@ -24,7 +24,7 @@ import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
@@ -34,7 +34,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
 import jp.co.nikkiso.ntss.admin_web.constant.RestDocMessage;
@@ -186,7 +186,7 @@ public class FacilityResourceIntegrationTest extends AbstractResourceIntegration
 
     // API実行
     ResultActions result =  mockMvc.perform(RestDocumentationRequestBuilders.put("/api/facilities/staff_facility/{userId}", userId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isOk())
@@ -233,7 +233,7 @@ public class FacilityResourceIntegrationTest extends AbstractResourceIntegration
 
     // API実行
     ResultActions result =  mockMvc.perform(RestDocumentationRequestBuilders.put("/api/facilities/staff_facility/{userId}", userId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isBadRequest())
@@ -271,7 +271,7 @@ public class FacilityResourceIntegrationTest extends AbstractResourceIntegration
 
     // API実行
     ResultActions result =  mockMvc.perform(RestDocumentationRequestBuilders.put("/api/facilities/staff_facility/{userId}", userId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isBadRequest())

@@ -22,6 +22,7 @@ import jp.co.nikkiso.ntss.core.entity.custom.CusMainteCategoryResult;
 import jp.co.nikkiso.ntss.core.entity.custom.CusMenteCategoryResponse;
 import jp.co.nikkiso.ntss.core.entity.custom.CusMenteDetailResult;
 import jp.co.nikkiso.ntss.core.entity.custom.DetailResult;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.map.HashedMap;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -31,8 +32,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.dao.DevMenteMainDao;
 import jp.co.nikkiso.ntss.core.dao.MstMachineDao;
@@ -57,6 +58,7 @@ import jp.co.nikkiso.ntss.core.entity.MstMenteLayoutGroup;
 import jp.co.nikkiso.ntss.core.entity.MstSelector;
 import org.springframework.util.StringUtils;
 
+@Slf4j
 @Service
 public class MstMenteLayoutServiceImpl implements MstMenteLayoutService {
 
@@ -351,7 +353,8 @@ public class MstMenteLayoutServiceImpl implements MstMenteLayoutService {
     if (layout == null || StringUtils.isEmpty(layout.getDetailInfo1())) {
       return new ArrayList<MstMenteDetail>();
     }
-    return getListDetailByCategoryIdList(layout.getDetailInfo1(), facilityCd, machineNo);
+    List<MstMenteDetail> result = getListDetailByCategoryIdList(layout.getDetailInfo1(), facilityCd, machineNo);
+    return result;
     // mod #12055 日常点検仕様変更(#9451)のレイアウトデザイナー対応 limingzhe end
   }
 
@@ -716,6 +719,159 @@ public class MstMenteLayoutServiceImpl implements MstMenteLayoutService {
   }
 
   /**
+   * （日常点検用）リクエスト内で取得済みのマスタ情報を使って、
+   * レイアウトのグループリストに含まれる点検項目を作成する。
+   */
+  private List<MstMenteDetail> getListDetailByCategoryIdListFromCache(
+      String strCategoryIdList,
+      String machineTypeCd,
+      List<CusMenteCategoryResponse> categoryInfoList,
+      List<MstMenteDetail> detailMasterList)
+      throws Exception {
+    if (StringUtils.isEmpty(strCategoryIdList)) {
+      return new ArrayList<MstMenteDetail>();
+    }
+
+    ObjectMapper mapper = new ObjectMapper();
+    List<CategoryDetailResult> categoryList = mapper.readValue(strCategoryIdList,
+      new TypeReference<List<CategoryDetailResult>>() {});
+    List<Long> layoutCdList = new ArrayList<Long>();
+    for (CategoryDetailResult category : categoryList) {
+      if (category.getIsDisp()) {
+        layoutCdList.add(category.getCd());
+      }
+    }
+
+    List<MstMenteCategory> listCategorysTmp = new ArrayList<MstMenteCategory>();
+    if (categoryInfoList != null && !categoryInfoList.isEmpty()) {
+      for (CusMenteCategoryResponse categoryInfo : categoryInfoList) {
+        if (!layoutCdList.contains(categoryInfo.getMainteCategoryCd())) {
+          continue;
+        }
+        MstMenteCategory category = new MstMenteCategory();
+        category.setMenteCategoryCd(categoryInfo.getMainteCategoryCd());
+        category.setEditionNo(categoryInfo.getEditionNo());
+        category.setCategoryName(categoryInfo.getCategoryName());
+        category.setDetail(categoryInfo.getDetail());
+        category.setMainteClass(categoryInfo.getMainteClass());
+        listCategorysTmp.add(category);
+      }
+    }
+
+    List<MstMenteCategory> listCategorys = new ArrayList<MstMenteCategory>();
+    for (Long layoutCd : layoutCdList) {
+      for (MstMenteCategory category : listCategorysTmp) {
+        if (layoutCd.equals(category.getMenteCategoryCd()) && hasCategoryMachineType(category, machineTypeCd)) {
+          listCategorys.add(category);
+          break;
+        }
+      }
+    }
+
+    List<MstMenteDetail> mstMenteDetailList = new ArrayList<MstMenteDetail>();
+    if (detailMasterList == null || detailMasterList.isEmpty()) {
+      return mstMenteDetailList;
+    }
+
+    for (MstMenteCategory category : listCategorys) {
+      List<DetailResult> detailList = mapper.readValue(category.getDetailList(),
+        new TypeReference<List<DetailResult>>() {});
+      for (DetailResult detail : detailList) {
+        if (detail == null || StringUtils.isEmpty(detail.getCode())) continue;
+        if ("1".equals(detail.getIsDisp())) {
+          for (MstMenteDetail mstMenteDetail : detailMasterList) {
+            if (detail.getCode().equals(mstMenteDetail.getMenteDetailCd())) {
+              MstMenteDetail mstMenteDetailNew = new MstMenteDetail();
+              BeanUtils.copyProperties(mstMenteDetail, mstMenteDetailNew);
+              mstMenteDetailNew.setMenteCategoryCd(category.getMenteCategoryCd());
+              mstMenteDetailNew.setMenteContent3(String.valueOf(category.getEditionNo()));
+              mstMenteDetailList.add(mstMenteDetailNew);
+            }
+          }
+        }
+      }
+    }
+    return mstMenteDetailList;
+  }
+
+  private String hstKey(Long cd, Integer editionNo) {
+    return String.valueOf(cd) + ":" + String.valueOf(editionNo);
+  }
+
+  private List<CusMainteCategoryResult> getUniqueCategoryResults(
+      ObjectMapper mapper, List<DevMenteMain> listInspection)
+      throws Exception {
+    Map<String, CusMainteCategoryResult> uniqueMap = new HashMap<String, CusMainteCategoryResult>();
+    if (listInspection == null || listInspection.isEmpty()) {
+      return new ArrayList<CusMainteCategoryResult>();
+    }
+    for (DevMenteMain inspection : listInspection) {
+      List<CusMainteCategoryResult> categoryWithEditionList = mapper.readValue(
+        inspection.getMainteCategoryCd(),
+        new TypeReference<List<CusMainteCategoryResult>>() {});
+      for (CusMainteCategoryResult categoryResult : categoryWithEditionList) {
+        String key = hstKey(categoryResult.getMainteCategoryCd(), categoryResult.getEditionNo());
+        if (!uniqueMap.containsKey(key)) {
+          uniqueMap.put(key, categoryResult);
+        }
+      }
+    }
+    return new ArrayList<CusMainteCategoryResult>(uniqueMap.values());
+  }
+
+  private List<CusMenteDetailResult> getUniqueDetailResults(
+      ObjectMapper mapper, List<DevMenteMain> listInspection)
+      throws Exception {
+    Map<String, CusMenteDetailResult> uniqueMap = new HashMap<String, CusMenteDetailResult>();
+    if (listInspection == null || listInspection.isEmpty()) {
+      return new ArrayList<CusMenteDetailResult>();
+    }
+    for (DevMenteMain inspection : listInspection) {
+      List<CusMenteDetailResult> listInspectionResult = mapper.readValue(
+        inspection.getDetail(),
+        new TypeReference<List<CusMenteDetailResult>>() {});
+      for (CusMenteDetailResult detailResult : listInspectionResult) {
+        String key = hstKey(detailResult.getDetail_cd(), detailResult.getDetail_edi());
+        if (!uniqueMap.containsKey(key)) {
+          uniqueMap.put(key, detailResult);
+        }
+      }
+    }
+    return new ArrayList<CusMenteDetailResult>(uniqueMap.values());
+  }
+
+  private Map<String, MstMainteLayoutHst> createLayoutHstMap(List<MstMainteLayoutHst> layoutHstList) {
+    Map<String, MstMainteLayoutHst> result = new HashMap<String, MstMainteLayoutHst>();
+    if (layoutHstList != null) {
+      for (MstMainteLayoutHst layoutHst : layoutHstList) {
+        result.put(hstKey(layoutHst.getMainteLayoutCd(), layoutHst.getEditionNo()), layoutHst);
+      }
+    }
+    return result;
+  }
+
+  private Map<String, MstMainteCategoryHst> createCategoryHstMap(
+      List<MstMainteCategoryHst> categoryHstList) {
+    Map<String, MstMainteCategoryHst> result = new HashMap<String, MstMainteCategoryHst>();
+    if (categoryHstList != null) {
+      for (MstMainteCategoryHst categoryHst : categoryHstList) {
+        result.put(hstKey(categoryHst.getMainteCategoryCd(), categoryHst.getEditionNo()), categoryHst);
+      }
+    }
+    return result;
+  }
+
+  private Map<String, MstMainteDetailHst> createDetailHstMap(List<MstMainteDetailHst> detailHstList) {
+    Map<String, MstMainteDetailHst> result = new HashMap<String, MstMainteDetailHst>();
+    if (detailHstList != null) {
+      for (MstMainteDetailHst detailHst : detailHstList) {
+        result.put(hstKey(detailHst.getMainteDetailCd(), detailHst.getEditionNo()), detailHst);
+      }
+    }
+    return result;
+  }
+
+  /**
    * {@inheritDoc}
    */
   @Override
@@ -733,17 +889,40 @@ public class MstMenteLayoutServiceImpl implements MstMenteLayoutService {
     List<CusMenteCategoryResponse> categoryInfoList = mstMenteCategoryDao
       .selectAllByFacility(facilityCd, MainteClass.DAILY);
     // 装置の型式に対応するグループを持つレイアウトマスタのみを取得する
+    List<MstMenteLayout> dailyLayoutList = mstMenteLayoutDao.selectDailyLayoutByMachineNo(facilityCd, machineNo);
     List<MstMenteLayout> listLayout = getLayoutListByMachineType(
-      mstMenteLayoutDao.selectDailyLayoutByMachineNo(facilityCd, machineNo),
-      machineTypeCd, categoryInfoList);
+      dailyLayoutList, machineTypeCd, categoryInfoList);
     // 点検結果データを取得する
+    List<DevMenteMain> rawInspectionList =
+      devMenteMainDao.selectResultInspectionByMachineAndMainteDateAndClass(
+        facilityCd, MainteClass.DAILY, machineNo, mainteDate, mainteDate);
     List<DevMenteMain> listInspection = devMenteMainService
-      .modifyTypeOverlapOfDailyInspection(
-        devMenteMainDao.selectResultInspectionByMachineAndMainteDateAndClass(
-          facilityCd, MainteClass.DAILY, machineNo, mainteDate, mainteDate));
+      .modifyTypeOverlapOfDailyInspection(rawInspectionList);
 
     // 点検結果にしか存在しないレイアウトコードがあれば処理対象に追加する
     addLayoutFromResult(facilityCd, listInspection, listLayout);
+
+    List<MstMenteDetail> detailMasterList = mstMenteDetailDao.selectByFacilityCdList(facilityCd);
+
+    List<MstMainteLayoutHst> layoutHstBatch = new ArrayList<MstMainteLayoutHst>();
+    List<MstMainteCategoryHst> categoryHstBatch = new ArrayList<MstMainteCategoryHst>();
+    List<MstMainteDetailHst> detailHstBatch = new ArrayList<MstMainteDetailHst>();
+    if (listInspection != null && !listInspection.isEmpty()) {
+      layoutHstBatch = mstMainteLayoutHstDao.selectByListIdAndEdition(facilityCd, listInspection);
+
+      List<CusMainteCategoryResult> uniqueCategoryResults = getUniqueCategoryResults(mapper, listInspection);
+      if (!uniqueCategoryResults.isEmpty()) {
+        categoryHstBatch = mstMainteCategoryHstDao.selectByListIdAndEdition(uniqueCategoryResults);
+      }
+
+      List<CusMenteDetailResult> uniqueDetailResults = getUniqueDetailResults(mapper, listInspection);
+      if (!uniqueDetailResults.isEmpty()) {
+        detailHstBatch = mstMainteDetailHstDao.selectByListIdAndEdition(uniqueDetailResults);
+      }
+    }
+    Map<String, MstMainteLayoutHst> layoutHstMap = createLayoutHstMap(layoutHstBatch);
+    Map<String, MstMainteCategoryHst> categoryHstMap = createCategoryHstMap(categoryHstBatch);
+    Map<String, MstMainteDetailHst> detailHstMap = createDetailHstMap(detailHstBatch);
 
     List<HashedMap<String, Object>> results = new ArrayList<>();
     for (MstMenteLayout layoutItem : listLayout) {
@@ -754,10 +933,14 @@ public class MstMenteLayoutServiceImpl implements MstMenteLayoutService {
           // 点検結果データが存在しているレイアウトの場合
           check = true;
 
-          MstMainteLayoutHst layoutHst = mstMainteLayoutHstDao
-            .selectByIdAndEdition(
-              facilityCd, layoutItem.getMenteLayoutCd(),
-              inspection.getMainteLayoutEdition());
+          MstMainteLayoutHst layoutHst = layoutHstMap.get(
+            hstKey(layoutItem.getMenteLayoutCd(), inspection.getMainteLayoutEdition()));
+          if (layoutHst == null) {
+            layoutHst = mstMainteLayoutHstDao
+              .selectByIdAndEdition(
+                facilityCd, layoutItem.getMenteLayoutCd(),
+                inspection.getMainteLayoutEdition());
+          }
           layoutItem.setLayoutName(layoutHst.getLayoutName());
           layoutItem.setLayoutHeader(layoutHst.getLayoutHeader());
           layoutItem.setEditionNo(layoutHst.getEditionNo());
@@ -772,8 +955,17 @@ public class MstMenteLayoutServiceImpl implements MstMenteLayoutService {
             new TypeReference<List<CusMainteCategoryResult>>() {});
           List<MstMainteCategoryHst> categoryHstList = new ArrayList<>();
           if (categoryWithEditionList.size() > 0) {
-            categoryHstList = mstMainteCategoryHstDao
-              .selectByListIdAndEdition(categoryWithEditionList);
+            for (CusMainteCategoryResult categoryResult : categoryWithEditionList) {
+              MstMainteCategoryHst categoryHst = categoryHstMap.get(
+                hstKey(categoryResult.getMainteCategoryCd(), categoryResult.getEditionNo()));
+              if (categoryHst != null) {
+                categoryHstList.add(categoryHst);
+              }
+            }
+            if (categoryHstList.size() < categoryWithEditionList.size()) {
+              categoryHstList = mstMainteCategoryHstDao
+                .selectByListIdAndEdition(categoryWithEditionList);
+            }
           }
           List<MstMainteCategoryHst> categoryList = categoryHstList.stream()
             .map(categoryHst -> {
@@ -788,19 +980,34 @@ public class MstMenteLayoutServiceImpl implements MstMenteLayoutService {
           List<CusMenteDetailResult> listInspectionResult = mapper.readValue(
             inspection.getDetail(),
             new TypeReference<List<CusMenteDetailResult>>() {});
-          List<MstMainteDetailHst> detailsTmp = mstMainteDetailHstDao
-            .selectByListIdAndEdition(listInspectionResult);
           List<MstMainteDetailHst> details = new ArrayList<MstMainteDetailHst>();
           for (CusMenteDetailResult cusMenteDetailResult : listInspectionResult) {
-            for (MstMainteDetailHst detailTmp : detailsTmp) {
-              if (cusMenteDetailResult.getDetail_cd().equals(detailTmp.getMainteDetailCd())) {
-                MstMainteDetailHst detailNew = new MstMainteDetailHst();
-                BeanUtils.copyProperties(detailTmp, detailNew);
-                detailNew.setMainteCategoryCd(cusMenteDetailResult.getCate_cd());
-                detailNew.setMainteContent3(
-                  String.valueOf(cusMenteDetailResult.getCate_edi()));
-                details.add(detailNew);
-                break;
+            MstMainteDetailHst detailTmp = detailHstMap.get(
+              hstKey(cusMenteDetailResult.getDetail_cd(), cusMenteDetailResult.getDetail_edi()));
+            if (detailTmp != null) {
+              MstMainteDetailHst detailNew = new MstMainteDetailHst();
+              BeanUtils.copyProperties(detailTmp, detailNew);
+              detailNew.setMainteCategoryCd(cusMenteDetailResult.getCate_cd());
+              detailNew.setMainteContent3(
+                String.valueOf(cusMenteDetailResult.getCate_edi()));
+              details.add(detailNew);
+            }
+          }
+          if (details.size() < listInspectionResult.size()) {
+            List<MstMainteDetailHst> detailsTmp = mstMainteDetailHstDao
+              .selectByListIdAndEdition(listInspectionResult);
+            details = new ArrayList<MstMainteDetailHst>();
+            for (CusMenteDetailResult cusMenteDetailResult : listInspectionResult) {
+              for (MstMainteDetailHst detailTmp : detailsTmp) {
+                if (cusMenteDetailResult.getDetail_cd().equals(detailTmp.getMainteDetailCd())) {
+                  MstMainteDetailHst detailNew = new MstMainteDetailHst();
+                  BeanUtils.copyProperties(detailTmp, detailNew);
+                  detailNew.setMainteCategoryCd(cusMenteDetailResult.getCate_cd());
+                  detailNew.setMainteContent3(
+                    String.valueOf(cusMenteDetailResult.getCate_edi()));
+                  details.add(detailNew);
+                  break;
+                }
               }
             }
           }
@@ -821,8 +1028,8 @@ public class MstMenteLayoutServiceImpl implements MstMenteLayoutService {
 
         // categoryList に入っているグループの点検項目だけに絞り込んだリストを作成する
         List<MstMenteDetail> details = filterDetailsByCategoryList(
-          mstMenteLayoutService.getListDetailInLayoutForDailyInspection(
-            facilityCd, layoutItem.getMenteLayoutCd(), machineNo),
+          getListDetailByCategoryIdListFromCache(
+            layoutItem.getDetailInfo1(), machineTypeCd, categoryInfoList, detailMasterList),
           categoryList);
         if (details != null && !details.isEmpty()) {
           layoutShowItem.put("detail", details);
@@ -858,14 +1065,15 @@ public class MstMenteLayoutServiceImpl implements MstMenteLayoutService {
     rightNow.add(Calendar.MONTH, 0 - numOfMonth);
     String mainteDateHistory = format.format(rightNow.getTime());
     // 点検結果データを取得する
-    List<DevMenteMain> listInspection = devMenteMainService.modifyTypeOverlapOfDailyInspection(
+    List<DevMenteMain> rawInspectionList =
       devMenteMainDao.selectResultInspectionByMachineAndMainteDateAndClass(
-        facilityCd, MainteClass.DAILY, machineNo, mainteDate, mainteDateHistory));
+        facilityCd, MainteClass.DAILY, machineNo, mainteDate, mainteDateHistory);
+    List<DevMenteMain> listInspection = devMenteMainService.modifyTypeOverlapOfDailyInspection(rawInspectionList);
     // 装置の型式に対応するグループを持つレイアウトマスタのみを取得する
     HashedMap<String, String> listInspectionShowItem = new HashedMap<String, String>();
+    List<MstMenteLayout> dailyLayoutList = mstMenteLayoutDao.selectDailyLayoutByMachineNo(facilityCd, machineNo);
     List<MstMenteLayout> listLayoutTmp = getLayoutListByMachineType(
-      mstMenteLayoutDao.selectDailyLayoutByMachineNo(facilityCd, machineNo),
-      machineTypeCd, categoryInfoList);
+      dailyLayoutList, machineTypeCd, categoryInfoList);
     List<MstMenteLayout> listLayout = new ArrayList<MstMenteLayout>();
     for (MstMenteLayout mstMenteLayout : listLayoutTmp) {
       String layoutItemKey = "" + mstMenteLayout.getMenteLayoutCd();
@@ -881,10 +1089,20 @@ public class MstMenteLayoutServiceImpl implements MstMenteLayoutService {
         listInspectionShowItem.put(layoutItemKey, "");
         // 点検結果が持つレイアウトコードで削除済みも含めたレイアウトマスタデータを取得し
         // listLayout に追加する
-        listLayout.add(
-          mstMenteLayoutDao.selectLayoutByIDWithDeleted(layoutCd));
+        listLayout.add(mstMenteLayoutDao.selectLayoutByIDWithDeleted(layoutCd));
       }
     }
+
+    List<MstMenteDetail> detailMasterList = mstMenteDetailDao.selectByFacilityCdList(facilityCd);
+
+    List<MstMainteDetailHst> detailHstBatch = new ArrayList<MstMainteDetailHst>();
+    if (listInspection != null && !listInspection.isEmpty()) {
+      List<CusMenteDetailResult> uniqueDetailResults = getUniqueDetailResults(mapper, listInspection);
+      if (!uniqueDetailResults.isEmpty()) {
+        detailHstBatch = mstMainteDetailHstDao.selectByListIdAndEdition(uniqueDetailResults);
+      }
+    }
+    Map<String, MstMainteDetailHst> detailHstMap = createDetailHstMap(detailHstBatch);
 
     List<HashedMap<String, Object>> results = new ArrayList<>();
     for (MstMenteLayout layoutItem : listLayout) {
@@ -907,8 +1125,8 @@ public class MstMenteLayoutServiceImpl implements MstMenteLayoutService {
           layoutItem.getDetailInfo1(), machineTypeCd, categoryInfoList);
         // categoryList に入っているグループの点検項目だけに絞り込んだリストを作成する
         List<MstMenteDetail> details = filterDetailsByCategoryList(
-          mstMenteLayoutService.getListDetailInLayoutForDailyInspection(
-            facilityCd, layoutItem.getMenteLayoutCd(), machineNo),
+          getListDetailByCategoryIdListFromCache(
+            layoutItem.getDetailInfo1(), machineTypeCd, categoryInfoList, detailMasterList),
           categoryList);
         if (details != null && !details.isEmpty()) {
           layoutShowItem.put("detail", details);
@@ -929,7 +1147,17 @@ public class MstMenteLayoutServiceImpl implements MstMenteLayoutService {
           List<CusMenteDetailResult> listInspectionResult = mapper.readValue(
             inspection.getDetail(),
             new TypeReference<List<CusMenteDetailResult>>() {});
-          List<MstMainteDetailHst> detailsTmp = mstMainteDetailHstDao.selectByListIdAndEdition(listInspectionResult);
+          List<MstMainteDetailHst> detailsTmp = new ArrayList<MstMainteDetailHst>();
+          for (CusMenteDetailResult cusMenteDetailResult : listInspectionResult) {
+            MstMainteDetailHst detailTmp = detailHstMap.get(
+              hstKey(cusMenteDetailResult.getDetail_cd(), cusMenteDetailResult.getDetail_edi()));
+            if (detailTmp != null) {
+              detailsTmp.add(detailTmp);
+            }
+          }
+          if (detailsTmp.size() < listInspectionResult.size()) {
+            detailsTmp = mstMainteDetailHstDao.selectByListIdAndEdition(listInspectionResult);
+          }
           for (CusMenteDetailResult cusMenteDetailResult : listInspectionResult) {
             Long detailCd = cusMenteDetailResult.getDetail_cd();
             Integer detailEdition = cusMenteDetailResult.getDetail_edi();
@@ -964,7 +1192,7 @@ public class MstMenteLayoutServiceImpl implements MstMenteLayoutService {
       // レイアウトマスタとしては削除されていないレイアウトを
       // レイアウトマスタの表示順に従った位置にするために
       // 選択肢マスタが持つ表示順を使ってソートしなおす
-
+      
       // レイアウトマスタの表示順を取得
       List<MstSelector.Item> orderItems = null;
       MstSelector mstSelector = mstSelectorDao.selectByName(facilityCd, "mst_mainte_layout");

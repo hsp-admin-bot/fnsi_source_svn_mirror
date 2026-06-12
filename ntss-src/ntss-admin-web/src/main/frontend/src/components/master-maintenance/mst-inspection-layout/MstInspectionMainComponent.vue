@@ -57,6 +57,7 @@
         <v-ons-col class="word-border" :style="cateStyle">装置型式</v-ons-col>
         <v-ons-col>
           <kendo-multiselect
+            v-if="isMachineDataReady"
             v-model="listMachineSelected"
             :data-source="listMachineData"
             data-text-field="textMachine"
@@ -165,21 +166,22 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
-import vuedraggable from "vuedraggable";
-import { cloneDeep, isEqual } from "lodash";
-import moment from "moment";
-import { EventBus } from "@/eventBus";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
+import { cloneDeep, isEqual } from "@/compat/collections/lodash";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { messageFormat } from "@/functions/common/MessageFormat";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import {
   MainteClass,
   MainteClassList,
 } from "@/constants/mainteConstants";
+import { getScopedElement } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   components: {
-    draggable: vuedraggable,
+    draggable: VueDraggable,
   },
   data() {
     const periodicInspectionData = {
@@ -201,6 +203,7 @@ export default {
       mainteClassList: MainteClassList,
       listMachineData: [],
       listMachineSelected: [],
+      isMachineDataReady: false,
       // 日常点検用点検項目グループ選択情報
       dailyData: {
         categories: [],
@@ -290,12 +293,10 @@ export default {
 
       const convertInfo1 = (
         this.getEditRecord.detailInfo1
-        && JSON.parse(this.getEditRecord.detailInfo1)
-      ) || [];
+        && JSON.parse(this.getEditRecord.detailInfo1)) || [];
       const convertInfo2 = (
         this.getEditRecord.detailInfo2
-        && JSON.parse(this.getEditRecord.detailInfo2)
-      ) || [];
+        && JSON.parse(this.getEditRecord.detailInfo2)) || [];
       if (this.isLayoutClassDaily) {
         // 日常点検用の場合は点検項目グループの並び替え操作がないので
         // 単に点検項目グループマスタの並び順でリストを作成し、
@@ -317,8 +318,7 @@ export default {
       } else if (this.isLayoutClassPeriodic) {
         const typeInfo = (
           this.getEditRecord.typeInfo
-          && JSON.parse(this.getEditRecord.typeInfo)
-        ) || [];
+          && JSON.parse(this.getEditRecord.typeInfo)) || [];
         this.listMachineSelected = typeInfo;
 
         // 定期点検用の場合は点検項目グループの並び替え操作があるので
@@ -376,7 +376,7 @@ export default {
            if (!category.isDisp) return;
            dispList.push({
             category,
-            upDateValue: moment(category.upDate).valueOf(),
+            upDateValue: dayjs(category.upDate).valueOf(),
            });
         });
         // グループマスタの更新日時降順＞コード降順の優先度順でソートする
@@ -395,8 +395,7 @@ export default {
           dispList.slice(index + 1).forEach(({ category }) => {
             if (!category.isDisp) return;
             if (item.category.typeCdList.some(
-              type => category.typeCdList.includes(type)
-            )) {
+              type => category.typeCdList.includes(type))) {
               category.isDisp = false;
             }
           });
@@ -618,7 +617,9 @@ export default {
       const iaElement = this.$refs.itemAreaDiv;
       if (!iaElement) return;
 
-      const mr = document.getElementsByClassName("mst_mainte_layout")[0].getBoundingClientRect();
+      const mainteLayout = getScopedElement(this.$el || this, ".mst_mainte_layout");
+      if (!mainteLayout) return;
+      const mr = mainteLayout.getBoundingClientRect();
       const ir = iaElement.getBoundingClientRect();
 
       // 一覧部とモーダルの下部を比較し高さの計算値を取得
@@ -659,12 +660,11 @@ export default {
       this.sendRequestGetAllCategoryByFacilityCd(this.getFacilitySwitch),
     ]);
     // 取得したマスタデータを加工
-    this.getListMachine.forEach(item => {
-      this.listMachineData.push({
-        textMachine: item.machineType,
-        valueMachine: item.machineTypeCd,
-      });
-    });
+    this.listMachineData = this.getListMachine.map(item => ({
+      textMachine: item.machineType,
+      valueMachine: item.machineTypeCd,
+    }));
+    this.isMachineDataReady = true;
 
     // #9451対応時のメモ：
     // kendo-multiselect の data-source に指定している
@@ -684,12 +684,15 @@ export default {
   mounted() {
     // モーダル要素のリサイズ監視
     this.resizeObserver = new ResizeObserver(this.resizeMstMainteLayout);
-    this.resizeObserver.observe(document.getElementsByClassName("mst_mainte_layout")[0]);
+    const mainteLayout = getScopedElement(this.$el || this, ".mst_mainte_layout");
+    if (mainteLayout) {
+      this.resizeObserver.observe(mainteLayout);
+    }
 
     // 画面生成が完了後、リサイズ処理
     this.resizeMstMainteLayout();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // モーダル要素のリサイズ監視解除
     this.resizeObserver.disconnect();
     this.resizeObserver = null;
@@ -781,7 +784,7 @@ const setDisabledByTypeInfo = aData => {
   background-color: rgba(255, 0, 0, 1);
 }
 
-.custom-input-area >>> .text-input {
+.custom-input-area :deep(.text-input) {
   padding: 2px;
   color: #333333;
 }
@@ -797,7 +800,7 @@ const setDisabledByTypeInfo = aData => {
   line-height: 27px;
 }
 
-.custom-select-input-area >>> .select-input {
+.custom-select-input-area :deep(.select-input) {
   color: #333333;
   font-family: Arial, Helvetica, sans-serif;
   padding: 2px;

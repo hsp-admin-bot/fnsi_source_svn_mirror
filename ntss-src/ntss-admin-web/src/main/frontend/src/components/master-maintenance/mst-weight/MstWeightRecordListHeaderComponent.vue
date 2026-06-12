@@ -14,7 +14,7 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target=false
@@ -52,8 +52,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 
@@ -76,7 +76,6 @@ export default {
       conditionList: []
     };
   },
-  computed: {},
   methods: {
     ...mapActions("master-maintenance", ["setCondition"]),
     // -----------------------------------------
@@ -155,7 +154,7 @@ export default {
     EventBus.$on("setSortMode", this.setSortMode);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("setSortMode", this.setSortMode);
   },
   // add 性能改善メモリ不足 shan end

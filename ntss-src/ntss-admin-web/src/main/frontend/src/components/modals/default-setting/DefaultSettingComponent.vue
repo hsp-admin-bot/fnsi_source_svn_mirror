@@ -36,8 +36,10 @@
 </template>
 
 <script>
-  import _ from "underscore";
-  import {mapActions, mapGetters} from "vuex";
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+
+  import _ from "@/compat/collections/lodash";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   import {sendRequestGetDefaultSettingDispOrder} from "@/apis/User";
   import {
     FUNC_BBS_INFO,
@@ -114,9 +116,8 @@
   import defIndicationResultSet from "@/components/modals/default-setting/contents/indicationResultSettingCard";
   // 患者情報共有
   import defPatInfoSharingSet from "@/components/modals/default-setting/contents/patInfoSharingCard";
-  // #11987 2026.01.16 add スケールベッド TDC伊東 start
+  // スケールベッド
   import defScaleBedSet from "@/components/modals/default-setting/contents/scaleBedSettingCard";
-  // #11987 2026.01.16 add スケールベッド TDC伊東 end
   //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
   import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
   //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
@@ -124,12 +125,12 @@
   import defPeriodicInspectionSet from "@/components/modals/default-setting/contents/periodicInspectionSettingCard";
   // 日常点検
   import defDailyCheckSet from "@/components/modals/default-setting/contents/dailyCheckSettingCard";
-  import { EventBus } from "@/eventBus.js";
+  import { EventBus } from "@/compat/vue/event-bus.js";
   // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
   import { messageFormat } from '@/functions/common/MessageFormat';
   import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
   // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
-  import cloneDeep from "lodash/cloneDeep";
+  import cloneDeep from "@/compat/collections/lodash/cloneDeep";
   import { PATIENT_SEARCH } from "@/constants/defaultSettingConstants";
 
 export default {
@@ -211,14 +212,12 @@ export default {
           funcCode: FUNC_STATUS_MAP,
           dispOrder: null
         },
-        // #11987 2026.01.16 add スケールベッドカードを追加 TDC伊東 start
         {
           componentName: "defScaleBedSet",
           ref: "scaleBedSettingCard",
           funcCode: FUNC_SCALE_BED,
           dispOrder: null
         },
-        // #11987 2026.01.16 add スケールベッドカードを追加 TDC伊東 end
         {
           componentName: "defMeasureHistorySetting",
           ref: "measureHistorySettingCard",
@@ -453,7 +452,7 @@ export default {
       //mod FNSI-5687 劉全航 end
     }
   },
-
+  
   methods: {
     ...mapActions("account-edit", ["getUserAccountInfo", "updateDefaultSetting"]),
     ...mapActions("loading-screen", [
@@ -600,7 +599,7 @@ export default {
       if(PATIENT_SEARCH.KEY_NAME in saveDataList){
         delete saveDataList[PATIENT_SEARCH.KEY_NAME][PATIENT_SEARCH.KEY_NAME_KUR_CD_LIST]
         // クールを除いた結果空になる場合はキーごと削除する
-        if(Object.keys(saveDataList[PATIENT_SEARCH.KEY_NAME]).length === 0 ){
+        if(Object.keys(saveDataList[PATIENT_SEARCH.KEY_NAME]).length === 0){
           delete saveDataList[PATIENT_SEARCH.KEY_NAME]
         }
       }
@@ -611,13 +610,28 @@ export default {
      * Gridの高さを調整する
      */
     calculateGridHeight() {
-      const contentsHeight = document.getElementsByClassName(
-        "tab-contents-area"
-      )[0].clientHeight;
-      const footerHeight = this.showFooter ? document.getElementsByClassName(
-        "common-tab-footer"
-      )[0].clientHeight : 0;
+      const contentsHeight = getScopedElementsByClassName(
+        "tab-contents-area",
+        this.$el || this
+      )[0]?.clientHeight || 0;
+      const footerHeight = this.showFooter ? getScopedElementsByClassName(
+        "common-tab-footer",
+        this.$el || this
+      )[0]?.clientHeight || 0 : 0;
       this.contentsAreaHeight = contentsHeight - footerHeight - 10;
+    },
+    onIsChanged(obj) {
+      if(obj.value){
+        if(!this.componentSet.has(obj.componentName)){
+          this.changeNumber += 1;
+          this.componentSet.add(obj.componentName);
+        }
+      }else{
+        if(this.componentSet.has(obj.componentName)){
+          this.changeNumber -= 1;
+          this.componentSet.delete(obj.componentName);
+        }
+      }
     }
   },
   watch: {
@@ -655,44 +669,23 @@ export default {
       tmpObj = tmpObj.length !== 0 ? tmpObj[0] : [];
       obj.dispOrder = tmpObj.dispOrder ? Number(tmpObj.dispOrder) : null;
     });
-    // #11987 2026.01.15 mod スケールベッドを除外してセット TDC伊東 start
-    // this.tmpDefaultSettingObj = this.defaultSettingObj
-    // useFunction配列を取得
-    const useFunction = this.$store.state.facility.useFunction || [];
-    // スケールベッド機能が有効か判定
-    if(useFunction.includes(FUNC_SCALE_BED)){
-      // スケールベッド機能が有効な場合のみセット
-      this.tmpDefaultSettingObj = this.defaultSettingObj;
-    }
-    else{
-      // スケールベッド機能が無効なので、スケールベッドカードを除く
-      this.tmpDefaultSettingObj = this.defaultSettingObj.filter(obj => obj.funcCode !== FUNC_SCALE_BED);
-    }
-    // #11987 2026.01.15 mod スケールベッドを除外してセット TDC伊東 end
+    const useFunction = this.$store?.state?.facility?.useFunction || [];
+    this.tmpDefaultSettingObj = useFunction.includes(FUNC_SCALE_BED)
+      ? this.defaultSettingObj
+      : this.defaultSettingObj.filter(obj => obj.funcCode !== FUNC_SCALE_BED);
   },
   async mounted() {
     this.$nextTick(() => {
       this.calculateGridHeight();
     });
     //add FNSI-5687 劉全航 start
-    EventBus.$on("isChanged", (obj)=> {
-      if(obj.value){
-        if(!this.componentSet.has(obj.componentName)){
-          this.changeNumber += 1;
-          this.componentSet.add(obj.componentName);
-        }
-      }else{
-        if(this.componentSet.has(obj.componentName)){
-          this.changeNumber -= 1;
-          this.componentSet.delete(obj.componentName);
-        }
-      }
-    });
+    EventBus.$off("isChanged", this.onIsChanged);
+    EventBus.$on("isChanged", this.onIsChanged);
     //add FNSI-5687 劉全航 end
   }
   //add FNSI-5687 劉全航 start
-  ,async beforeDestroy() {
-    EventBus.$off("isChanged", {});
+  ,beforeUnmount() {
+    EventBus.$off("isChanged", this.onIsChanged);
   }
   //add FNSI-5687 劉全航 end
 };
@@ -722,46 +715,46 @@ export default {
 .right {
   text-align: right;
 }
-.common-tab-content >>> ons-row {
+.common-tab-content :deep(ons-row) {
   height: auto;
 }
-.common-tab-content >>> .tab-item {
+.common-tab-content :deep(.tab-item) {
   margin-bottom: 5px;
 }
 
-::v-deep .record-accordion {
+:deep(.record-accordion) {
   background-color: var(--body-background-color);
   background-image: none;
   font-size: inherit;
   font-family: inherit;
 }
-::v-deep .record-accordion .card-header {
+:deep(.record-accordion .card-header) {
   border: 1px solid;
 }
-::v-deep .record-accordion .card-contents {
+:deep(.record-accordion .card-contents) {
   border: 1px solid #dddddd;
   border-top-style: hidden;
   background-color: var(--ntss-base-background-color);
 }
-::v-deep .record-accordion .card-contents table th {
+:deep(.record-accordion .card-contents table th) {
   background-image: none !important;
 }
-::v-deep .record-accordion .list-item {
+:deep(.record-accordion .list-item) {
   padding: 0;
   margin-bottom: 2px;
 }
-::v-deep .record-accordion div.list-item__top {
+:deep(.record-accordion div.list-item__top) {
   padding: 0;
 }
-::v-deep .record-accordion div.list-item__center {
+:deep(.record-accordion div.list-item__center) {
   padding: 0 0 0 0.5em;
   min-height: unset;
   height: calc(2em + 2px); /* box-sizing:border-box;なので、高さにborder上下2px加算する */
 }
-::v-deep .record-accordion div.list-item__right {
+:deep(.record-accordion div.list-item__right) {
   display: none;
 }
-::v-deep .record-accordion div.list-item__expandable-content {
+:deep(.record-accordion div.list-item__expandable-content) {
   padding: 0.3em 0.5em;
   overflow-x: auto;
 }

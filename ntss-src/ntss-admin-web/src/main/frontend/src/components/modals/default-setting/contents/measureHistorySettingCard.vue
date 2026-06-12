@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -78,9 +78,9 @@
 </template>
 
  <script>
-   import {mapGetters, mapActions} from "vuex";
+   import {mapGetters, mapActions} from "@/compat/vue/vuex";
    /*add FNSI-改修内容4214 任 start*/
-   import $ from "jquery";
+
    /*add FNSI-改修内容4214 任 end*/
    import {KEY_NAME_MEASURE_HISTORY} from "@/constants/defaultSettingConstants";
    import {deepCopy} from "@/functions/common/CommonFunctions";
@@ -89,12 +89,11 @@
    import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
    //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
    //add FNSI-5687 劉全航 start
-   import { EventBus } from "@/eventBus.js";
+   import { EventBus } from "@/compat/vue/event-bus.js";
+import { getScopedElementById, isScopedElementDisplayInline } from "@/functions/common/LayoutMeasureHelper";
    //add FNSI-5687 劉全航 end
 
 export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -210,7 +209,7 @@ export default {
     // クールとベッドの一覧取得
     //mod 8646 【デグレ】スケジュール表のベッドグループの表示が不正 張 start
     // sendRequestGetKurSelector(1).then(response => {
-    sendRequestGetKurSelector(undefined,this.facilityCd).then(response => {
+    await sendRequestGetKurSelector(undefined,this.facilityCd).then(response => {
     //mod 8646 【デグレ】スケジュール表のベッドグループの表示が不正 張 end
       // 取得したクール一覧情報をセット
       this.mstKurSelector = response.data.kurSelector;
@@ -237,9 +236,15 @@ export default {
       } else {
         if (this.editRecord[KEY_NAME_MEASURE_HISTORY.KEY_NAME_KUR_CD] == null) {
           this.editRecord[KEY_NAME_MEASURE_HISTORY.KEY_NAME_KUR_CD] = this.initialValue[KEY_NAME_MEASURE_HISTORY.KEY_NAME_KUR_CD];
+        } else if (!this.mstKurSelector.some(kur => +kur.kurCd === +this.editRecord[KEY_NAME_MEASURE_HISTORY.KEY_NAME_KUR_CD])) {
+          // NOTE: マスタ削除された場合、「-1 : すべて」を再設定
+          this.editRecord[KEY_NAME_MEASURE_HISTORY.KEY_NAME_KUR_CD] = "-1";
         }
         if (this.editRecord[KEY_NAME_MEASURE_HISTORY.KEY_NAME_BED_GROUP_CD] == null) {
           this.editRecord[KEY_NAME_MEASURE_HISTORY.KEY_NAME_BED_GROUP_CD] = this.initialValue[KEY_NAME_MEASURE_HISTORY.KEY_NAME_BED_GROUP_CD];
+        } else if (!this.mstBedGroupList.some(bg => +bg.bedGroupCd === +this.editRecord[KEY_NAME_MEASURE_HISTORY.KEY_NAME_BED_GROUP_CD])) {
+          // NOTE: マスタ削除された場合、「0 : すべて」を再設定
+          this.editRecord[KEY_NAME_MEASURE_HISTORY.KEY_NAME_BED_GROUP_CD] = 0;
         }
         if (this.editRecord[KEY_NAME_MEASURE_HISTORY.KEY_NAME_FREEWORD] == null) {
           this.editRecord[KEY_NAME_MEASURE_HISTORY.KEY_NAME_FREEWORD] = this.initialValue[KEY_NAME_MEASURE_HISTORY.KEY_NAME_FREEWORD];
@@ -250,8 +255,14 @@ export default {
         this.initialValue = deepCopy(this.editRecord);
       }
       /*add FNSI-改修内容4214 任 start*/
-      if($("#phone-show-measure-history").css("display") === "inline"){
-        document.getElementById("phone-show-measure-history").innerText =  document.getElementById("phone-show-measure-history").innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+      if(isScopedElementDisplayInline("phone-show-measure-history", this.$el || this)){
+        const phoneShowElement = getScopedElementById("phone-show-measure-history", this.$el || this);
+
+        if (phoneShowElement) {
+
+          phoneShowElement.innerText = phoneShowElement.innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+
+        }
       }
       /*add FNSI-改修内容4214 任 end*/
       // 共通ローダー表示終了
@@ -259,8 +270,6 @@ export default {
       this.isExpanded = this.defaultExpanded;
     });
   },
-  mounted() {
-  }
 };
 </script>
 

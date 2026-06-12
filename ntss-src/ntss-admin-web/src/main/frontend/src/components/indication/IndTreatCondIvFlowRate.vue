@@ -130,18 +130,19 @@
       /> -->
       <custom-input-number-pro
         :placeholder="LiquidSpeedSetPlaceholder"
-        :initVal="getLiquidSpeedString.initValue"
-        :value="getLiquidSpeedString.editValue"
+        :initVal="displayInputValue.initValue"
+        :value="displayInputValue.editValue"
         :step="0.01"
         :min="minValueLquid"
         :max="999.99"
         :emptyVal="null"
-        :disabled="isDisabled || isDisabledFromTreatMethod || getIsUseFlagIvFlowRate || isAutoCal || !getItemAuthorized('Indication', 'default_authority')"
+        :disabled="isFlowRateInputDisabled"
         class="action-condition-input ntss-custom-input-cond"
+        :class="isFlowRateInputDisabled ? 'nogreen' : ''"
         style="width: 140px"
         ref="flowRateInput"
         @blur="onLiquidSpeedtBlur"
-        @handlerInput="(val) =>{ getLiquidSpeedString.editValue = val }"
+        @handlerInput="(val) =>{ displayInputValue.editValue = val }"
       />
       <!-- #10196 数値IFのスタイル全不正 linjunfeng end -->
       <!-- #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240108 linjunfeng end -->
@@ -173,15 +174,15 @@
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 // mod FNSI-【1006】最新の改修対象一覧の412対応 韓 start
-// import { mapGetters } from "vuex";
-import {mapGetters, mapMutations} from "vuex";
+// import { mapGetters } from "@/compat/vue/vuex";
+import {mapGetters, mapMutations} from "@/compat/vue/vuex";
 // mod FNSI-【1006】最新の改修対象一覧の412対応 韓 end
 import IndTreatCondBase from "@/components/indication/IndTreatCondBase";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import {
   simpleAccDivision, accSub, accMulti, divide, minusDecimal, toFixedWithRoundingMode
 } from "@/functions/common/NumberFunctions.js";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 export default {
   mixins: [IndTreatCondBase],
   // add 不具合 #5920 dou start
@@ -222,42 +223,23 @@ export default {
     //   };
     // },
     // del 不具合 #5920 dou end
-    // 補液速度を取得
-    //mod FutreNetWeb+SI課題管理No5641&&5670対応 于 start
-    getLiquidSpeedString() {
-      // mod #1050 piao start
-      let constCalLiquidSpeed = this.calLiquidSpeed();
-      if (constCalLiquidSpeed && constCalLiquidSpeed.editValue == -1 && constCalLiquidSpeed.initValue != -1) {
-        //mod FNSI-7194
-        this.$refs.flowRateInput.classObject["custom-input-number-edited"] = true;
-        //mod FNSI-7194
-        // #10196 数値IFのスタイル全不正 linjunfeng start
-        // return "";
-        this.displayInputValue.editValue = null;
-        return this.displayInputValue;
-        // #10196 数値IFのスタイル全不正 linjunfeng end
-      // add #IES_5920 dou start
-      } else if (constCalLiquidSpeed && constCalLiquidSpeed.editValue == -1 && constCalLiquidSpeed.initValue == -1) {
-        // mod 10150 治療条件変更時のonline、offline補液関連 関  start
-        // #10196 数値IFのスタイル全不正 linjunfeng start
-        // return "";
-        // this.displayInputValue.editValue = null;
-        if (this.liquidCalPriority != null && this.liquidCalPriority != '3') {
-          this.displayInputValue.editValue = Number(0).toFixed(2);
-          this.isAutoCal = false;
-        }else{
-          this.displayInputValue.editValue = null;
-        }
-        // mod 10150 治療条件変更時のonline、offline補液関連 関  end
-        return this.displayInputValue;
-        // #10196 数値IFのスタイル全不正 linjunfeng end
-      // add #IES_5920 dou end
-      } else {
-        return constCalLiquidSpeed;
+    // 補液速度入力表示値（副作用なし）
+    liquidSpeedInputValue() {
+      const editValue = this.displayInputValue.editValue;
+      if (editValue == -1) {
+        return null;
       }
-      // mod #1050 piao end
+      return editValue;
     },
-    //mod FutreNetWeb+SI課題管理No5641&&5670対応 于 end
+    isFlowRateInputDisabled() {
+      return (
+        this.isDisabled ||
+        this.isDisabledFromTreatMethod ||
+        this.getIsUseFlagIvFlowRate ||
+        this.isAutoCal ||
+        !this.getItemAuthorized("Indication", "default_authority")
+      );
+    },
     // add FNSI-【1006】最新の改修対象一覧の412対応 韓 end
     // del 不具合 #5920 dou start
     //add FutreNetWeb+SI課題管理No5641&&5670対応 于 start
@@ -284,33 +266,42 @@ export default {
         //HD
         case 0:
           return true;
-          break;
         //ECUM
         case 1:
           return true;
-          break;
         // add 9664補液及び透析液仕様修正します yangqingzhe end
         //HDF
         case 2:
           return true;
-          break;
         //HF
         case 3:
           return true;
-          break;
         //AFBF
         case 6:
           return true;
-          break;
         //I-HDF
         case 10:
           return true;
-          break;
         default:
           return false;
       }
       //mod 5532 操作範囲＞補液速度が反映されない 張 end
     }
+  },
+
+  watch: {
+    isShowIndModal: "refreshLiquidSpeed",
+    isMst: "refreshLiquidSpeed",
+    deviceMode: "refreshLiquidSpeed",
+    liquidCalPriority: "refreshLiquidSpeed",
+    liquidAmount: "refreshLiquidSpeed",
+    treatTime: "refreshLiquidSpeed",
+    liquidDelayTiming: "refreshLiquidSpeed",
+    bloodFlowRate: "refreshLiquidSpeed",
+    liquidRateBefore: "refreshLiquidSpeed",
+    liquidRateAfter: "refreshLiquidSpeed",
+    liquidSelection: "refreshLiquidSpeed",
+    ihdfLiquidSpeed: "refreshLiquidSpeed",
   },
 
   // add FNSI-【1006】最新の改修対象一覧の412対応 韓 start
@@ -321,6 +312,35 @@ export default {
       return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd));
     },
     // add #10359 編集権限の動作不正 dengshen end
+    refreshLiquidSpeed() {
+      if (!this.isShowIndModal && !this.isMst) {
+        return;
+      }
+      this.calLiquidSpeed();
+      this.applyLiquidSpeedDisplayValue();
+      this.setLiquidSpeedSetPlaceholder();
+      this.syncLiquidSpeedEditedStyle();
+    },
+    applyLiquidSpeedDisplayValue() {
+      const { editValue, initValue } = this.displayInputValue;
+      if (editValue == -1 && initValue == -1) {
+        if (this.liquidCalPriority != null && this.liquidCalPriority != "3") {
+          this.displayInputValue.editValue = Number(0).toFixed(2);
+          this.isAutoCal = false;
+          if (this.displayInputValue.firstCalculateFlag) {
+            this.displayInputValue.initValue = this.displayInputValue.editValue;
+            this.displayInputValue.firstCalculateFlag = false;
+          }
+        }
+      }
+    },
+    syncLiquidSpeedEditedStyle() {
+      this.$nextTick(() => {
+        if (this.$refs.flowRateInput) {
+          this.$refs.flowRateInput.isEdited = this.checkEditCount() !== 0;
+        }
+      });
+    },
     // 補液速度を算出
     calLiquidSpeed() {
       // add 補液速度を補液量/治療時間で計算して(2つの変更で再計算)、非活性 王 start
@@ -400,9 +420,7 @@ export default {
             liquidSpeed = toFixedWithRoundingMode(
               accMulti(
               accMulti(this.bloodFlowRate,liquidRate)
-              ,60
-              ) / 100000, 2, BigNumber.ceil
-            );
+              ,60) / 100000, 2, BigNumber.ceil);
             // mod 10150 治療条件変更時のonline、offline補液関連 関  end
             // add #8816「OHDF・OHFの補液計算優先項目による補液量設定と補液速度が不正」について、対応する。 dengshen start
             this.isAutoCal = true;
@@ -455,20 +473,13 @@ export default {
           //add #7194 2022/8/29 OHDF・OHFで濾過率から算出に設定すると補液速度と補液量が不適切 gaoey end
           // del #IES_5920 dou end
           this.displayInputValue.editValue = liquidSpeed;
-          //add 8204 周安寧 start
-          if (this.deviceMode === 2 ||
-            this.deviceMode === 3 ||
-            this.deviceMode === 6 || this.deviceMode === 10) {
-            /* modify by chamaojia 2023-04-20 [8537] 判断条件の追加  --start */
-            // 最初の計算で初期値を変更し、緑枠と保存の問題を解決
-            if (this.displayInputValue.firstCalculateFlag && isCalculateFlag) {
-              this.displayInputValue.initValue = liquidSpeed
-              this.displayInputValue.firstCalculateFlag = false;
-            }
-            // this.displayInputValue.initValue = liquidSpeed
-            /* modify by chamaojia 2023-04-20 [8537] 判断条件の追加  --end */
+          /* modify by chamaojia 2023-04-20 [8537] 判断条件の追加  --start */
+          // 初回表示時の自動計算結果を初期値として扱い、未編集の緑枠を防ぐ
+          if (this.displayInputValue.firstCalculateFlag && isCalculateFlag) {
+            this.displayInputValue.initValue = liquidSpeed;
+            this.displayInputValue.firstCalculateFlag = false;
           }
-          //add 8204 周安寧 end
+          /* modify by chamaojia 2023-04-20 [8537] 判断条件の追加  --end */
           this.setLiquidSpeed(liquidSpeed);
           // del 不具合 #5920 dou start
           // this.isAutoCal = true;
@@ -498,7 +509,7 @@ export default {
     },
     // add 不具合 #5920 dou start
     setLiquidSpeedSetPlaceholder() {
-      if (this.calLiquidSpeed().editValue == -1) {
+      if (this.displayInputValue.editValue == -1) {
         this.isAutoCal = true;
         this.LiquidSpeedSetPlaceholder = "濾過率から算出";
       } else {
@@ -513,7 +524,7 @@ export default {
     this.treatItemCd = "24";
     this.unit = "L/h";
     // add 不具合 #5920 dou start
-    this.setLiquidSpeedSetPlaceholder();
+    this.refreshLiquidSpeed();
     // add 不具合 #5920 dou end
   }
 };
@@ -553,11 +564,14 @@ ons-row {
   box-sizing: border-box;
   display: inline-flex;
 }
+ 
 /* add 不具合 #5920 dou start */
-.action-condition-input >>> .text-input::-webkit-input-placeholder {
+.action-condition-input :deep(.text-input::-webkit-input-placeholder) {
   color: black;
 }
-
+.nogreen :deep(.text-input) {
+  border: 2px inset #ebebe4 !important;
+}
 /* add 不具合 #5920 dou end */
 </style>
 <!-- add redmine 4595 数値入力IFのスタイル不正 宋qy end -->

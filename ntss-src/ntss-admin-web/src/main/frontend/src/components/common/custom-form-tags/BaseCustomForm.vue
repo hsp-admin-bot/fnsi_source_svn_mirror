@@ -136,7 +136,8 @@ export default {
       //「コメント」内容未变更时，输入框样式表示为内容变更的样式。
       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20240103 ztc start
       // return this.initValue !== this.editValue;
-      return this.initValue != this.editValue;
+      // return this.initValue != this.editValue;
+      return (this.initValue ?? "") !== (this.editValue ?? "");
       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20240103 ztc end
     }
   },

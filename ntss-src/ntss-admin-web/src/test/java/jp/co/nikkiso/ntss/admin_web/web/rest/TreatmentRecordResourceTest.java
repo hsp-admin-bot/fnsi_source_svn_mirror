@@ -48,16 +48,16 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.response.treatmentRecord.RecirculationRate;
 import jp.co.nikkiso.ntss.admin_web.response.treatmentRecord.TreatmentRecordSummary;
 import jp.co.nikkiso.ntss.admin_web.service.treatmentRecord.TreatmentRecordMonitorService;
@@ -91,25 +91,25 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
   /**
    * 治療記録Service.
    */
-  @MockBean
+  @MockitoBean
   private TreatmentRecordService treatmentRecordService;
 
   /**
    * 治療記録(モニタ)Service.
    */
-  @MockBean
+  @MockitoBean
   private TreatmentRecordMonitorService treatmentRecordMonitorService;
 
   /**
    * 治療記録(装置設定)Service.
    */
-  @MockBean
+  @MockitoBean
   private TreatmentRecordSettingService treatmentRecordSettingService;
 
   /**
    * 治療記録(回診記録)Service.
    */
-  @MockBean
+  @MockitoBean
   private TreatmentRecordRoundService treatmentRecordRoundService;
 
   /**
@@ -296,7 +296,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/summary", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getTreatmentRecordSummary(ordNo);
@@ -331,7 +331,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/summary", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getTreatmentRecordSummary(ordNo);
@@ -362,7 +362,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/summary", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getTreatmentRecordSummary(ordNo);
@@ -387,7 +387,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/summary", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getTreatmentRecordSummary(ordNo);
@@ -415,7 +415,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/result", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getTreatmentRecordResult(ordNo);
@@ -475,7 +475,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/result", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getTreatmentRecordResult(ordNo);
@@ -504,7 +504,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordResult(anyLong(), any());
@@ -532,7 +532,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordResult(anyLong(), any());
@@ -560,7 +560,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(mapper.writeValueAsString(request)).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(0)).updateTreatmentRecordResult(anyLong(), any());
@@ -586,7 +586,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(mapper.writeValueAsString(request)).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordResult(anyLong(), any());
@@ -613,7 +613,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(mapper.writeValueAsString(request)).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(0)).updateTreatmentRecordResult(anyLong(), any());
@@ -639,7 +639,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(mapper.writeValueAsString(request)).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordResult(anyLong(), any());
@@ -665,7 +665,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(mapper.writeValueAsString(request)).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordResult(anyLong(), any());
@@ -693,7 +693,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(mapper.writeValueAsString(request)).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(0)).updateTreatmentRecordResult(anyLong(), any());
@@ -720,7 +720,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(mapper.writeValueAsString(request)).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordResult(anyLong(), any());
@@ -748,7 +748,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(mapper.writeValueAsString(request)).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(0)).updateTreatmentRecordResult(anyLong(), any());
@@ -775,7 +775,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(mapper.writeValueAsString(request)).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordResult(anyLong(), any());
@@ -805,7 +805,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/medi_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
       .andExpect(jsonPath("$.treat_date", is("20190201")))
@@ -836,7 +836,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/condition", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getTreatmentRecordCondition(ordNo);
@@ -868,7 +868,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/equip_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
       .andExpect(jsonPath("$.rst_dialysis_state", is("0")))
@@ -896,7 +896,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/medi_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isInternalServerError())
     ;
 
@@ -921,7 +921,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/condition", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getTreatmentRecordCondition(ordNo);
@@ -946,7 +946,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/equip_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isInternalServerError())
     ;
 
@@ -975,7 +975,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/equip_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordEquipInfo(anyLong(), any());
@@ -1003,7 +1003,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/equip_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordEquipInfo(anyLong(), any());
@@ -1031,7 +1031,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/condition", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordCondition(anyLong(), any());
@@ -1059,7 +1059,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/condition", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordCondition(anyLong(), any());
@@ -1087,7 +1087,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 //
 //    // API実行
 //    ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/condition", ordNo)
-//      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+//      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 //
 //    // 検証
 //    verify(treatmentRecordService, times(0)).updateTreatmentRecordCondition(anyLong(), any());
@@ -1112,7 +1112,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/recirculation-rate", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getRecirculationRate(ordNo);
@@ -1145,7 +1145,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/medi_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordMediInfo(anyLong(), any());
@@ -1172,7 +1172,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/weight", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getTreatmentRecordWeight(ordNo);
@@ -1206,7 +1206,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/medi_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordMediInfo(anyLong(), any());
@@ -1230,7 +1230,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/weight", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getTreatmentRecordWeight(ordNo);
@@ -1259,7 +1259,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/weight", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordWeight(anyLong(), any());
@@ -1287,7 +1287,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/weight", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordWeight(anyLong(), any());
@@ -1313,7 +1313,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/weight", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordWeight(anyLong(), any());
@@ -1338,7 +1338,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{pat_id}/latest-ord-no", patId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getLatestOrdNo(anyLong(), any());
@@ -1364,7 +1364,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{pat_id}/latest-ord-no", patId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getLatestOrdNo(anyLong(), any());
@@ -1396,7 +1396,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/addition", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
       .andExpect(jsonPath("$.pat_id", is(10)))
@@ -1429,7 +1429,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/addition", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordService, times(1)).getTreatmentRecordAddition(ordNo);
@@ -1458,7 +1458,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/addition", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordAddition(anyLong(), any());
@@ -1486,7 +1486,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/addition", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).updateTreatmentRecordAddition(anyLong(), any());
@@ -1512,7 +1512,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/addition", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(mapper.writeValueAsString(request)).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(0)).updateTreatmentRecordAddition(anyLong(), any());
@@ -1538,7 +1538,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/addition", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(mapper.writeValueAsString(request)).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(0)).updateTreatmentRecordAddition(anyLong(), any());
@@ -1570,7 +1570,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/vital-monitor", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$[0].bio_moni_ctl_no", is(vitalMonitors.get(0).getBioMoniCtlNo().intValue())))
       .andExpect(jsonPath("$[0].data_type", is(vitalMonitors.get(0).getDataType().intValue())))
@@ -1608,7 +1608,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/vital-monitor", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", hasSize(0)))
     ;
@@ -1642,7 +1642,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/monitor", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$[0].bio_moni_ctl_no", is(moniMonitors.get(0).getBioMoniCtlNo().intValue())))
       .andExpect(jsonPath("$[0].monitor_data", is(moniMonitors.get(0).getMonitorData())))
@@ -1680,7 +1680,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/monitor", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", hasSize(0)))
     ;
@@ -1720,7 +1720,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/setting", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$[0].receive_date", is("2019-06-13T09:00:00.000+09:00")))
       .andExpect(jsonPath("$[0].treat_condition", is("{\"a\": \"aaa\", \"b\": \"bbb\"}")))
@@ -1757,7 +1757,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/rst-device-set-info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
       .andExpect(jsonPath("$.rst_device_set_info", is("{\"a\": \"aaa\", \"b\": \"bbb\"}")))
@@ -1791,7 +1791,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     ResultActions result =
       mockMvc
         .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/rst-device-set-info", ordNo)
-          .contentType(MediaType.APPLICATION_JSON_UTF8));
+          .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordSettingService, times(1))
@@ -1823,7 +1823,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/rst-rounds-info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
       .andExpect(jsonPath("$.rst_rounds_info", is("{\"cd\": 1, \"name\": \"name1\"}")))
@@ -1856,7 +1856,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
     ResultActions result =
       mockMvc
         .perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/rst-rounds-info", ordNo)
-          .contentType(MediaType.APPLICATION_JSON_UTF8));
+          .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordRoundService, times(1))
@@ -1886,7 +1886,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/rst-rounds-info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordRoundService, times(1)).updateTreatmentRecordRoundsInfo(anyLong(), any());
@@ -1914,7 +1914,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/rst-rounds-info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordRoundService, times(1)).updateTreatmentRecordRoundsInfo(anyLong(), any());
@@ -1958,7 +1958,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/vital-monitor-data", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).insertOrUpdateTreatmentRecordForMniMonitor(anyLong(), any(), anyLong());
@@ -1998,7 +1998,7 @@ public class TreatmentRecordResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/vital-monitor-data", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordService, times(1)).insertOrUpdateTreatmentRecordForMniMonitor(anyLong(), any(), anyLong());

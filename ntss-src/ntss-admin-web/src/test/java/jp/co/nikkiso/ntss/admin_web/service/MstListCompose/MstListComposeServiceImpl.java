@@ -1,12 +1,12 @@
 package jp.co.nikkiso.ntss.admin_web.service.MstListCompose;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.dao.MasterDao;
 import jp.co.nikkiso.ntss.core.dto.MstListCompose.request.*;
 import jp.co.nikkiso.ntss.core.dto.MstListCompose.response.MstListComposeResponse;
 import jp.co.nikkiso.ntss.core.dto.MstListCompose.response.MstListComposeWrapper;
-
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -50,7 +50,7 @@ public class MstListComposeServiceImpl implements MstListComposeService {
 
     try {
       InvestigateLogUtils.info("12441", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(out), "12441");
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new RuntimeException(e);
     }
 

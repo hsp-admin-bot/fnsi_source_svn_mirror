@@ -219,7 +219,7 @@ public class PatIntroductionLetterResource {
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_INTRO_LETTER, AFTER_LOG_FLG_INFO, mappingUrl, null,
         Arrays.asList(patId, reportCd));
       // wp アプリケーションログの適正化 Add End
-			return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
 		} catch (Exception e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
@@ -233,7 +233,7 @@ public class PatIntroductionLetterResource {
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_INTRO_LETTER, AFTER_LOG_FLG_ERROR, mappingUrl, null, ExcetionStackTraceToString(e));
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
       // wp アプリケーションログの適正化 Add End
-			return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
 		}
 	}
 
@@ -402,7 +402,7 @@ public class PatIntroductionLetterResource {
 //          }
 //        }
 //        reportMenuService.IntroductionLetterPrintPdfReport(byteMap,reportName, mstReport.getDefaultPrinter());
-//        return new ResponseEntity<>(null, HttpStatus.OK);
+//        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //      } catch (Exception e) {
 //        e.printStackTrace();
 //      }
@@ -575,7 +575,7 @@ public class PatIntroductionLetterResource {
 //      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_INTRO_LETTER, AFTER_LOG_FLG_INFO, mappingUrl, null,
 //        null);
 //      // wp アプリケーションログの適正化 Add End
-//			return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+//			return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
 //		}
 //		String reportName = "IntroductionLetter";
 //		Long reportCd = Long.parseLong(payload.get("reportCd").toString());
@@ -602,7 +602,7 @@ public class PatIntroductionLetterResource {
 //      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_INTRO_LETTER, AFTER_LOG_FLG_INFO, mappingUrl, null,
 //        null);
 //      // wp アプリケーションログの適正化 Add End
-//			return new ResponseEntity<>(null, HttpStatus.OK);
+//			return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //		} catch (Exception e) {
 //
 //      // wp アプリケーションログの適正化 Add Start
@@ -786,7 +786,7 @@ public class PatIntroductionLetterResource {
 //      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_INTRO_LETTER, AFTER_LOG_FLG_INFO, mappingUrl, null,
 //        null);
 //      // wp アプリケーションログの適正化 Add End
-//			return new ResponseEntity<>(null, HttpStatus.OK);
+//			return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
       /* del by gaojuncheng  2023-02-01 [CodeOptimization]  end */
 
       /* add by gaojuncheng  2023-02-01 [CodeOptimization]  start */

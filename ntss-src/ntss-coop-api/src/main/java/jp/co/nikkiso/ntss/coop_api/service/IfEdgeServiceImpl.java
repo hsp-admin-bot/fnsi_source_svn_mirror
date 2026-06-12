@@ -32,7 +32,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.coop_api.config.IfEdgeConfigulation;
 import jp.co.nikkiso.ntss.coop_api.request.IfEdgeWebsocketRequest;
@@ -169,7 +169,7 @@ public class IfEdgeServiceImpl implements IfEdgeService {
 
       // ヘッダ作成
       HttpHeaders headers = new HttpHeaders();
-      headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+      headers.setContentType(MediaType.APPLICATION_JSON);
       /* add by chamaojia 2024-06-21 [10574] communication security related additions --start */
       headers.set(headerKey, headerValue);
       /* add by chamaojia 2024-06-21 [10574] communication security related additions --end */

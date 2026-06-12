@@ -3,10 +3,13 @@
  */
  <template>
   <modal-base @onClose="closePatSearchModal" class="send-condition-pat-modal-base">
-    <div slot="header">
+    <template #header>
+      <div>
       <component :is="header"></component>
     </div>
-    <div slot="body">
+    </template>
+    <template #body>
+      <div>
       <v-ons-row id="send-condition-pat-modal-search-area">
         <!-- 指定日 -->
         <div class="filter-content date-value">
@@ -18,24 +21,24 @@
               type="date"
               @change="onChangeDate"
               v-model="targetDate"
-              v-validate="'required|date_format:yyyy-MM-dd'"
+              v-rules="'required|date_format:yyyy-MM-dd'"
             />
             <common-calendar v-model="targetDate" @input="onChangeDate" />-->
             <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 start -->
             <!-- <input
               id="weight-pat-search-date-input"
-              data-vv-scope="targetDate"
+              data-validation-scope="targetDate"
               class="ntss-input-date ntss-control-size"
               name="weight-pat-search-date-input"
               type="date"
               @change="onChangeDate"
               v-model="targetDate"
               max="9999-12-31"
-              v-validate="'required|date_format:yyyy-MM-dd'"
+              v-rules="'required|date_format:yyyy-MM-dd'"
             /> -->
             <date-input
               id="weight-pat-search-date-input"
-              data-vv-scope="targetDate"
+              data-validation-scope="targetDate"
               class="ntss-input-date ntss-control-size"
               name="weight-pat-search-date-input"
               @change="onChangeDate"
@@ -45,7 +48,7 @@
             <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 end -->
             <common-calendar v-model="targetDate" @input="onChangeDate" />
             <span class="error-message">{{
-              errors.first("targetDate.weight-pat-search-date-input")
+              getValidationError("targetDate.weight-pat-search-date-input")
             }}</span>
             <!-- add FNSI-横展開 日付のチェックの追加 徐 end -->
           </div>
@@ -129,7 +132,7 @@
               </th>
             </tr>
           </thead>
-          <tr
+                    <tr
             v-for="(scheduleData, idx) in scheduleList"
             :key="idx"
             :id="'pat-modal-row-' + scheduleData.ordNo"
@@ -186,11 +189,13 @@
           <!-- mod FutreNetWeb+SI課題管理No6855 趙 end -->
           <!-- mod FNSI-4681 同時条件送信の予定選択画面の案内文のエリアが短い、案内文が不適切 liumx end -->
           </tr>
-        </table>
+                </table>
       </div>
     </div>
+    </template>
 
-    <div slot="footer" class="flex-container">
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <!-- FNSI-add 画面スタイル(ボタン)対応 徐 start -->
         <!-- <v-ons-button class="button denial-btn" @click="closePatSearchModal">キャンセル</v-ons-button> -->
@@ -214,13 +219,14 @@
         <!-- FNSI-add 画面スタイル(ボタン)対応 徐 end -->
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import { ApiHelper } from "@/apis/AxiosHelper";
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import {
   dialysisStateMsg,
   weightScaleClassByDialysisState
@@ -229,11 +235,11 @@ import {
   dialysisState
   // @ts-ignore
 } from "@/constants/weightDefine";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 // 特殊浄化の治療種別コード
 import { deviceModeConstant } from "@/constants/weightDefine";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -245,6 +251,7 @@ import DateInput from "@/components/common/DateInput.vue";
 import store from "@/stores";
 // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 end
 import { updateSort, getSortedClass, sortableCompare } from "@/functions/SortFunctions";
+import { getModalBodyElement, queryElementBySelectors, queryElementsBySelectors } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   name: "patSearchModal",
@@ -260,7 +267,7 @@ export default {
     return {
       header: "",
       // 選択日付
-      targetDate: moment().format("YYYY-MM-DD"),
+      targetDate: dayjs().format("YYYY-MM-DD"),
       // 複数選択用選択情報
       selectedOrdNoList: [null, null],
       filter: {
@@ -340,7 +347,7 @@ export default {
           className: "patBirthdayBody",
           width: 2,
           centerAlign: false,
-          text: src => src.patBirthday ? moment(src.patBirthday).format("YYYY/MM/DD") : "",
+          text: src => src.patBirthday ? dayjs(src.patBirthday).format("YYYY/MM/DD") : "",
           // FNSI-add 入院・同姓同名配布 徐 start
           style: src => (src.inOutClass ? "text-align: left;" : "text-align: left;")
           // FNSI-add 入院・同姓同名配布 徐 end
@@ -402,13 +409,12 @@ export default {
         text: src => dialysisStateMsg(src.rstDialysisState)
       };
     },
+
     /**
      * ヘッダ領域の高さを返す
      */
     headerAreaHeight() {
-      const elem = document.getElementById(
-        "send-condition-pat-modal-search-area"
-      );
+      const elem = this.getSearchAreaElement();
       if (elem) {
         return elem.clientHeight;
       }
@@ -450,7 +456,7 @@ export default {
       const targetDateNum = targetDate.replace(/-/g, "");
       if (
         Number(
-          moment()
+          dayjs()
             .add(1, "days")
             .format("YYYYMMDD") - Number(targetDateNum)
         ) < 0
@@ -462,6 +468,15 @@ export default {
     }
   },
   methods: {
+    getSearchAreaElement() {
+      return queryElementBySelectors(['#send-condition-pat-modal-search-area'], this.$el || null);
+    },
+    getPatModalRowElement(ordNo) {
+      return queryElementBySelectors([`#pat-modal-row-${ordNo}`], this.$el || null);
+    },
+    getSelectedRowElements() {
+      return Array.from(queryElementsBySelectors(['.pat-modal-selected-row'], this.$el || null) || []);
+    },
     ...mapActions("multi-modal", ["hideModal"]),
     ...mapActions("send-condition/scale", ["setSelectOrdNo", "setInputPatId"]),
     ...mapActions("send-condition/schedule", [
@@ -476,6 +491,12 @@ export default {
     ...mapActions("send-condition/weight", ["setFocus", "setSelectedPats"]),
     //mod #9558 機能帳票でパラメータが正しく渡されていない 房 end
   // add 8449【デグレ】体重測定画面を開くと患者名欄が緑枠（変更状態）になる zhao end
+    isSameValue(left, right) {
+      if (left === null || left === undefined || right === null || right === undefined) {
+        return left === right;
+      }
+      return String(left) === String(right);
+    },
     findKurSelectorByCode(kurCd) {
       return (this.getMstKurSelector || []).find(
         selector => `${selector.code}` === `${kurCd}`
@@ -488,13 +509,26 @@ export default {
       const selector = this.findKurSelectorByCode(kurCd);
       return selector ? selector.name : "全クール";
     },
+    isSelectedBedGroupAll() {
+      const selectedBedGroup = this.filter.selectBedGroup;
+      return selectedBedGroup === null
+        || selectedBedGroup === undefined
+        || String(selectedBedGroup) === ""
+        || Number(selectedBedGroup) <= 0;
+    },
+    findSelectedBedGroup() {
+      if (this.isSelectedBedGroupAll()) {
+        return null;
+      }
+      return (this.getMstBedGroupList || []).find(bg => String(bg.roomBedGroupCd) === String(this.filter.selectBedGroup)) || null;
+    },
     dialysisStartDate(rstStartDate) {
       // 治療開始日が過去ならば表示
       if (rstStartDate) {
-        const startDate = moment(new Date(rstStartDate));
-        const currentDate = moment();
+        const startDate = dayjs(new Date(rstStartDate));
+        const currentDate = dayjs();
         if (startDate.format("YYYYMMDD") < currentDate.format("YYYYMMDD")) {
-          return `${moment(startDate).format("YYYY/MM/DD")} 開始`;
+          return `${dayjs(startDate).format("YYYY/MM/DD")} 開始`;
         }
       }
       return null;
@@ -515,7 +549,7 @@ export default {
           fromDate: this.targetDate,
           toDate: this.targetDate,
           kurNames: this.getSelectedKurName(this.filter.selectKur),
-          bedCdListString: this.filter.selectBedGroup <= '0' ? "全ベッド" : this.getMstBedGroupList.find(bg => bg.roomBedGroupCd === this.filter.selectBedGroup).roomBedGroupName,
+          bedCdListString: this.isSelectedBedGroupAll() ? "全ベッド" : (this.findSelectedBedGroup()?.roomBedGroupName || "全ベッド"),
           bedCds: this.scheduleList.map(i => i.bedCd).filter((id, i, arr) => arr.indexOf(id) === i),
           patIds: this.scheduleList.map(item => item.patId).filter((id, i, arr) => arr.indexOf(id) === i),
           ordNos: this.scheduleList.map(item => item.ordNo).filter((id, i, arr) => arr.indexOf(id) === i),
@@ -527,7 +561,7 @@ export default {
     onChangeDate() {
       // 対象日付の変更
       if (this.targetDate == null) {
-        this.targetDate = moment().format("YYYY-MM-DD");
+        this.targetDate = dayjs().format("YYYY-MM-DD");
       }
       if (this.targetDate == "") {
         this.setScheduleList([]);
@@ -535,7 +569,7 @@ export default {
       }
       const targetDate = this.targetDate.replace(/-/g, "");
       let isPast = false;
-      if (Number(targetDate) - Number(moment().format("YYYYMMDD")) < 0) {
+      if (Number(targetDate) - Number(dayjs().format("YYYYMMDD")) < 0) {
         // 過去日
         isPast = true;
       }
@@ -574,7 +608,7 @@ export default {
     changeCheckBox(ordNo, checked) {
       this.checkedOrdValue[ordNo] = checked;
       // 行変更
-      let rowElem = document.getElementById(`pat-modal-row-${ordNo}`);
+      let rowElem = this.getPatModalRowElement(ordNo);
       if (checked) {
         rowElem?.classList?.add("pat-modal-selected-row");
       } else {
@@ -583,9 +617,7 @@ export default {
     },
     // 行選択状態削除
     clearSelectRow() {
-      for (let elem of document.getElementsByClassName(
-        "pat-modal-selected-row"
-      )) {
+      for (let elem of this.getSelectedRowElements()) {
         elem.classList.remove("pat-modal-selected-row");
       }
     },
@@ -733,18 +765,18 @@ export default {
           if (`${this.filter.selectKur}` !== "-1") {
             isFilteringKur =
               dat.kurCd !== null &&
-              `${dat.kurCd}` === `${this.filter.selectKur}`;
+              this.isSameValue(dat.kurCd, this.filter.selectKur);
           }
 
           // ベッドグループフィルター作成
           let isFilteringBed = true;
-          if (this.filter.selectBedGroup > 0) {
+          if (!this.isSelectedBedGroupAll()) {
             isFilteringBed = false;
-            let bedGroup = this.getMstBedGroupList.find(bg => bg.roomBedGroupCd === this.filter.selectBedGroup);
-            if (bedGroup !== null && bedGroup.bedList)
+            const bedGroup = this.findSelectedBedGroup();
+            if (bedGroup && Array.isArray(bedGroup.bedList))
             {
               for (const bedCd of bedGroup.bedList) {
-                if (dat.bedCd === bedCd) {
+                if (String(dat.bedCd) === String(bedCd)) {
                   isFilteringBed = true;
                   break;
                 }
@@ -756,11 +788,11 @@ export default {
           let isTargetPat = true;
           if (this.getFilteringHospPatId) {
             // 抽出患者指定ありかつ対象ならばtrue
-            isTargetPat = dat.hospPatId === this.getFilteringHospPatId;
+            isTargetPat = this.isSameValue(dat.hospPatId, this.getFilteringHospPatId);
             if (
               !this.initialized &&
               isTargetPat &&
-              dat.rstDialysisState === dialysisState.dialysis
+              this.isSameValue(dat.rstDialysisState, dialysisState.dialysis)
             ) {
               // 抽出患者指定ありかつ対象患者で、治療中オーダーならば治療中表示フィルタ初期値を有効にする
               // （その場合はあらかじめ表示しないとわかりづらいため）
@@ -769,7 +801,7 @@ export default {
             if (
               !this.initialized &&
               isTargetPat &&
-              dat.rstDialysisState === dialysisState.checkedSendCondition
+              this.isSameValue(dat.rstDialysisState, dialysisState.checkedSendCondition)
             ) {
               // 抽出患者指定ありかつ対象患者で、確認済みオーダーならば確認済み表示フィルタ初期値を有効にする
               // （その場合はあらかじめ表示しないとわかりづらいため）
@@ -781,14 +813,14 @@ export default {
           if (!this.filter.isFilterTreating) {
             // 治療中以外ならtrue
             isFilteringTreating =
-              dat.rstDialysisState !== dialysisState.dialysis;
+              !this.isSameValue(dat.rstDialysisState, dialysisState.dialysis);
           }
           // 確認済みフィルタ作成
           let isFilteringChecked = true;
           if (!this.filter.isFilterChecked) {
             // 条件確認済み以外ならtrue
             isFilteringChecked =
-              dat.rstDialysisState !== dialysisState.checkedSendCondition;
+              !this.isSameValue(dat.rstDialysisState, dialysisState.checkedSendCondition);
           }
           const retValue =
             isFilteringKur &&
@@ -797,7 +829,7 @@ export default {
             isFilteringChecked &&
             isTargetPat;
           const selectedIdx = this.selectedOrdNoList.findIndex(
-            ord => ord === dat.ordNo
+            ord => this.isSameValue(ord, dat.ordNo)
           );
           if (!retValue && selectedIdx >= 0) {
             // 選択済み項目が非表示になった場合は選択済みでなくす
@@ -882,19 +914,14 @@ export default {
     // モーダルの高さからtableコンポーネント領域の高さを算出
     calculateTableHeight() {
       // mod FNSI-redMine #4462対応  陳 start
-      // const ah = this.headerAreaHeight;
-      let ah = 0;
-      const elem = document.getElementById(
-        "send-condition-pat-modal-search-area"
-      )
-      if(elem.clientHeight) {
-
-        ah = document.getElementById("send-condition-pat-modal-search-area").clientHeight;
-      }
+      const ah = Number(this.getSearchAreaElement()?.clientHeight || 0);
       // mod FNSI-redMine #4462対応  陳 end
-      const mbh = Array.prototype.slice
-        .call(document.getElementsByClassName("modal-body"))
-        .shift().clientHeight;
+      const modalBodyElement = getModalBodyElement(this.$el || null)
+        || queryElementBySelectors([".modal-body", ".modal-body-search", ".modal-body-no-footer"], this.$el || null);
+      const mbh = Number(modalBodyElement?.clientHeight || 0);
+      if (mbh <= 0) {
+        return;
+      }
 
       this.tableHeight = mbh - ah - 3;
       this.tableHeight = this.tableHeight < 100 ? 100 : this.tableHeight;
@@ -918,8 +945,8 @@ export default {
             g => g.roomBedGroupCd === this.getSelectedMstWeight.bedGroupCd
           );
           /* mod #9600 by zhangruixue 2023-08-23  --start */
-          // this.$set(this.filter, "selectBedGroup", defaultBedGroupIdx);
-          this.$set(this.filter, "selectBedGroup", this.getMstBedGroupList[defaultBedGroupIdx]?.roomBedGroupCd);
+          // this._compatSet(this.filter, "selectBedGroup", defaultBedGroupIdx);
+          ((this.filter)["selectBedGroup"] = this.getMstBedGroupList[defaultBedGroupIdx]?.roomBedGroupCd);
           /* mod #9600 by zhangruixue 2023-08-23  --end */
         }
       });
@@ -934,7 +961,7 @@ export default {
       this.calculateTableHeight();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.setFilteringHospPatId(null);
     this.initialized = false;
     // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
@@ -956,8 +983,8 @@ export default {
     },
     'filter.selectBedGroup'() {
       let name = '';
-      if (this.filter.selectBedGroup > 0) {
-        let bedGroup = this.getMstBedGroupList.find(bg => bg.roomBedGroupCd === this.filter.selectBedGroup);
+      if (!this.isSelectedBedGroupAll()) {
+        const bedGroup = this.findSelectedBedGroup();
         if (bedGroup !== null )
         {
           name = bedGroup.roomBedGroupName

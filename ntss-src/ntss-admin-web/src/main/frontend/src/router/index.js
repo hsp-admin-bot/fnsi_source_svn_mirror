@@ -1,7 +1,10 @@
-import Vue from "vue";
-import Router from "vue-router";
+import {
+  createRouter,
+  createWebHashHistory,
+  hydrateLegacyRouteParams,
+  normalizeLegacyNamedRouteLocation
+} from "@/compat/vue/router";
 import store from "@/stores";
-import _ from "underscore";
 
 import LoginView from "@/views/LoginView";
 import LoginViewHomeDialysis from "@/views/LoginViewHomeDialysis";
@@ -55,34 +58,28 @@ import SplitGraphRoutes from "@/router/split-graph";
 import ScaleBedRoutes from "@/router/scale-bed";
 
 import { getInitialRouterName, getCurrentFunctionCd } from "@/router/routing-helper";
+import { setRouterInstance } from "@/compat/vue/router-facade.js";
 import { HISTORY_KEY_OPERATION_VIEWER_MACHINE } from "@/router/operation-viewer/HistoryKeyConstants";
 import { HISTORY_KEY_MASTER_MAINTENANCE_RECORD } from "@/router/master-maintenance/HistoryKeyConstants";
+import { HISTORY_KEY_INDICATION_LIST } from "@/router/indication/HistoryKeyConstants";
 
 import RoutingDefs from "@/router/json/routing-defs.json";
-/* add by chamaojia 2022-12-06 [5958] 定数ファイル参照の追加 --start */
-import {persistStorePaths} from "@/constants/persistStorePaths";
-import {SESSION_STORAGE_KEY} from "@/constants/sessionStorageConstants";
-/* add by chamaojia 2022-12-06 [5958] 定数ファイル参照の追加 --end */
-// add #10359、#10331 編集権限について、対応する。 dengshen start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
-import VueOnsen from "vue-onsenui";
-// add #10359、#10331 編集権限について、対応する。 dengshen end
-// mod #10371 編集権限について、対応する。 dengshen start
-// add #10371 BVMS/加算情報の権限がないメッセージが表示され遷移できない 20241012 ztc start
+import { persistStorePaths } from "@/constants/persistStorePaths";
+import { SESSION_STORAGE_KEY } from "@/constants/sessionStorageConstants";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { showAlertDialog } from "@/functions/common/OnsenFunctions";
 import {
-  FUNC_STATUS_LIST_LARGEDISP, FUNC_TREATMENT_RECORD_LIST_ADDITIONINFO,
+  FUNC_INDICATION_JPN_NAME,
+  FUNC_STATUS_LIST_LARGEDISP,
+  FUNC_TREATMENT_RECORD_LIST_ADDITIONINFO,
   FUNC_TREATMENT_RECORD_lIST_BVMS,
   transAuthorityList
 } from "@/constants/function-code";
-// mod #10371 編集権限について、対応する。 dengshen end
-import {ADVANCED_SETTINGS} from "@/constants/advancedSettings";
-// add #10371 BVMS/加算情報の権限がないメッセージが表示され遷移できない 20241012 ztc end
+import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
 
-Vue.use(Router);
-
-const router = new Router({
-  mode: "hash",
+const router = createRouter({
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: "/",
@@ -521,12 +518,16 @@ const router = new Router({
   ]
 });
 
-// redmine 4242 マスタ表示時、デベロッパーツールに"Uncaught (in promise) TypeError"と表示される 宋qy start
-const originalPush = Router.prototype.push;
-Router.prototype.push = function push(location) {
-  return originalPush.call(this, location).catch(err => err);
-}
-// redmine 4242 マスタ表示時、デベロッパーツールに"Uncaught (in promise) TypeError"と表示される 宋qy end
+setRouterInstance(router);
+
+/**
+ * Vue Router 4 が破棄する Vue2 の未宣言 params 文脈を、各ガード・画面の参照前に復元する。
+ */
+router.beforeEach((to, from) => {
+  hydrateLegacyRouteParams(to);
+  hydrateLegacyRouteParams(from);
+  return true;
+});
 
 /**
  * サインイン済かどうか
@@ -536,165 +537,313 @@ function isLoggedIn() {
   return dispUserId !== null && dispUserId !== "";
 }
 
-// ナビゲーションガード
-router.beforeEach((to, from, next) => {
-  /* add by chamaojia 2022-12-06 [5958] vuexstoreへの永続的なデータの書き込みが必要 --start */
-  const refreshFlag = sessionStorage.getItem(SESSION_STORAGE_KEY.REFRESH_FLAG)
-  if (refreshFlag === "1") {
-    for (const storePath of persistStorePaths) {
-      const storeStr = sessionStorage.getItem(storePath);
-      // 読みだしたらセッションストレージからは削除しておく
-      sessionStorage.removeItem(storePath);
-      if (storeStr !== null && storeStr !== "null") {
-        const storeNameArr = storePath.split(".");
-        if (storeNameArr.length === 1) {
-          store.state[storeNameArr[0]] = JSON.parse(storeStr);
-        } else if (storeNameArr.length === 2) {
-          store.state[storeNameArr[0]][storeNameArr[1]] = JSON.parse(storeStr);
-        } else if (storeNameArr.length === 3) {
-          store.state[storeNameArr[0]][storeNameArr[1]][storeNameArr[2]] = JSON.parse(storeStr);
-        }
+/**
+ * 永続化データ復元
+ */
+function restorePersistStoreFromSession() {
+  const scopedSessionStorage = globalThis?.sessionStorage;
+      const refreshFlag = scopedSessionStorage?.getItem(SESSION_STORAGE_KEY.REFRESH_FLAG);
+  if (refreshFlag !== "1") return;
+
+  for (const storePath of persistStorePaths) {
+    const storeStr = scopedSessionStorage?.getItem(storePath);
+    scopedSessionStorage?.removeItem(storePath);
+
+    if (storeStr !== null && storeStr !== "null") {
+      const storeNameArr = storePath.split(".");
+      if (storeNameArr.length === 1) {
+        store.state[storeNameArr[0]] = JSON.parse(storeStr);
+      } else if (storeNameArr.length === 2) {
+        store.state[storeNameArr[0]][storeNameArr[1]] = JSON.parse(storeStr);
+      } else if (storeNameArr.length === 3) {
+        store.state[storeNameArr[0]][storeNameArr[1]][storeNameArr[2]] = JSON.parse(storeStr);
       }
     }
-    sessionStorage.setItem(SESSION_STORAGE_KEY.REFRESH_FLAG, "9")
   }
-  /* add by chamaojia 2022-12-06 [5958] vuexstoreへの永続的なデータの書き込みが必要 --end */
-  // サインイン未済アクセス対策
-  if (to.name !== "signin" && to.name !== "signinhome" && !isLoggedIn()) {
-    // サインイン画面へ遷移
-    next({ name: "signin" });
-    return;
-  }
-  // 機能コードがない場合、権限処理 何 start
+
+  globalThis?.sessionStorage?.setItem(SESSION_STORAGE_KEY.REFRESH_FLAG, "9");
+}
+
+/**
+ * ルーティング定義から機能権限対象を取得
+ */
+function resolveRoutingItem(to) {
   const ROUTING_ITEMS = RoutingDefs.routing_defs.routing_items;
   const url = to.path.split("/");
-  if (url) {
-    // mod #10371 編集権限について、対応する。 dengshen start
-    // const routerName = url[1];
-    let routerName = url[1];
-    if (routerName == "operation-viewer") {
-      if (to.path == "/operation-viewer/machines") {
-        routerName = "operation-viewer-general-machines";
-      } else if (to.path == "/operation-viewer/facilities") {
-        routerName = "operation-viewer-admin-facilities";
-      } else {
-        routerName = "operation-viewer-specified-motion-record";
+  if (!url) return null;
+
+  let routerName = url[1];
+
+  if (routerName === "operation-viewer") {
+    if (to.path === "/operation-viewer/machines") {
+      routerName = "operation-viewer-general-machines";
+    } else if (to.path === "/operation-viewer/facilities") {
+      routerName = "operation-viewer-admin-facilities";
+    } else {
+      routerName = "operation-viewer-specified-motion-record";
+    }
+  }
+
+  if (routerName === "treatment-record" && to.path === "/treatment-record/list/observation") {
+    routerName = "observe-record";
+  }
+
+  return ROUTING_ITEMS.find((e) => {
+    return e.router_name === routerName || (e.routes && e.routes.includes(routerName));
+  });
+}
+
+/**
+ * 権限メッセージ表示
+ */
+function showPermissionAlert(label) {
+  showAlertDialog({
+    title: DIALOG_MESSAGES[12000315].title,
+    message: messageFormat(DIALOG_MESSAGES[12000315].message, label)
+  });
+}
+
+const pendingReportRequests = new Map();
+
+function fetchMstReportOnce(funcCd, printFlag = 0) {
+  const requestKey = `${funcCd}:${printFlag}`;
+  if (pendingReportRequests.has(requestKey)) {
+    return pendingReportRequests.get(requestKey);
+  }
+
+  const promise = store.dispatch("report/getMstReport", {
+    funcCd,
+    printFlag
+  }).finally(() => {
+    pendingReportRequests.delete(requestKey);
+  });
+
+  pendingReportRequests.set(requestKey, promise);
+  return promise;
+}
+
+
+function isIndicationDetailRouteName(routeName) {
+  return [
+    "indication-receive-detail",
+    "indication-approve-detail",
+    "indication-receive-details",
+    "indication-approve-details"
+  ].includes(String(routeName || ""));
+}
+
+function isIndicationUnitDetailRouteName(routeName) {
+  return ["indication-receive-details", "indication-approve-details"].includes(String(routeName || ""));
+}
+
+function getIndicationUnitDetailRouteName(routeName) {
+  if (String(routeName || "").includes("approve")) {
+    return "indication-approve-details";
+  }
+  return "indication-receive-details";
+}
+
+function getIndicationDetailPatId(to) {
+  return to?.params?.patId ?? to?.params?.ordNo ?? null;
+}
+
+function getIndicationDetailIdsFromStore(patId) {
+  if (patId == null) {
+    return [];
+  }
+  const sourceLists = [
+    store.getters["indication/sortedIndications"],
+    store.getters["indication/sortedIndicationsList"],
+    store.state?.indication?.indications,
+    store.state?.indication?.sortedIndicationsList
+  ];
+  for (const sourceList of sourceLists) {
+    const list = Array.isArray(sourceList) ? sourceList : [];
+    const found = list.find((item) => String(item?.patId ?? item?.pat_id) === String(patId));
+    if (Array.isArray(found?._id)) {
+      return found._id;
+    }
+    if (found?._id != null) {
+      return [found._id];
+    }
+  }
+  return [];
+}
+
+function needsIndicationBreadcrumbReset(targetRouteName) {
+  const histories = store.getters["bread-crumb/getHistory"] || [];
+  if (!Array.isArray(histories) || histories.length === 0) {
+    return true;
+  }
+  const hasIndicationParent = histories.some((item) => item?.routerName === "indication");
+  const hasForeignHistory = histories.some((item) => {
+    const routerName = String(item?.routerName || "");
+    return routerName && !routerName.startsWith("indication");
+  });
+  const indicationDetailCount = histories.filter((item) => {
+    return isIndicationDetailRouteName(item?.routerName);
+  }).length;
+  const currentTargetCount = histories.filter((item) => item?.routerName === targetRouteName).length;
+  return !hasIndicationParent || hasForeignHistory || indicationDetailCount > 1 || currentTargetCount > 1;
+}
+
+function resetIndicationBreadcrumbRoot() {
+  store.dispatch("bread-crumb/resetHistory");
+  store.dispatch("bread-crumb/resetKeepHistory");
+  store.dispatch("bread-crumb/addHistory", {
+    depth: 1,
+    title: FUNC_INDICATION_JPN_NAME,
+    routerName: "indication",
+    historyKey: HISTORY_KEY_INDICATION_LIST
+  });
+}
+
+function normalizeIndicationDetailRoute(to) {
+  if (!isIndicationDetailRouteName(to?.name)) {
+    return null;
+  }
+
+  const isTreatmentUnit = store.getters["indication/isTreatmentUnit"];
+  const targetRouteName = isTreatmentUnit === false
+    ? getIndicationUnitDetailRouteName(to.name)
+    : String(to.name || "");
+
+  if (needsIndicationBreadcrumbReset(targetRouteName)) {
+    resetIndicationBreadcrumbRoot();
+  }
+
+  if (isTreatmentUnit !== false || isIndicationUnitDetailRouteName(to.name)) {
+    return null;
+  }
+
+  const patId = getIndicationDetailPatId(to);
+  if (patId == null || patId === "") {
+    return null;
+  }
+
+  const ids = getIndicationDetailIdsFromStore(patId);
+  const method = String(to.name || "").includes("approve") ? "approve" : "receive";
+  return normalizeLegacyNamedRouteLocation({
+    name: targetRouteName,
+    params: {
+      patId,
+      method,
+      ...(ids.length > 0 ? { _id: ids } : {})
+    },
+    query: to.query || {}
+  }, router);
+}
+
+/**
+ * beforeEach 1
+ * session restore / signin check / 権限チェック
+ */
+router.beforeEach((to, from) => {
+  restorePersistStoreFromSession();
+
+  if (to.name !== "signin" && to.name !== "signinhome" && !isLoggedIn()) {
+    return { name: "signin" };
+  }
+
+  const indicationDetailRedirect = normalizeIndicationDetailRoute(to);
+  if (indicationDetailRedirect) {
+    return indicationDetailRedirect;
+  }
+
+  const item = resolveRoutingItem(to);
+  const userFuncs = store.getters["account-edit/getAuthorizedFunctions"];
+
+  if (item && userFuncs && userFuncs.indexOf(item.function_cd) === -1) {
+    const functionObj = Object.values(transAuthorityList).find((e) => e.code === item.function_cd);
+
+    if (to.path === "/treatment-record/list/observation") {
+      if (to.meta) {
+        to.meta.depth = 2;
       }
-    }
-    // add #10371 使用許可機能権限OFF時に動作不正 20240528 ztc start
-    if (routerName == "treatment-record" && to.path == "/treatment-record/list/observation") {
-      routerName = "observe-record";
-    }
-    // add #10371 使用許可機能権限OFF時に動作不正 20240528 ztc end
-    // mod #10371 編集権限について、対応する。 dengshen end
-    const item = ROUTING_ITEMS.find(e => {
-      return (e.router_name === routerName ||
-        (e.routes && e.routes.includes(routerName)));
-    });
-    // add #10359、#10331 編集権限について、対応する。 dengshen start
-    // const userFuncs = store.getters["account-edit/getUseFunctions"];
-    const userFuncs = store.getters["account-edit/getAuthorizedFunctions"];
-    // add #10359、#10331 編集権限について、対応する。 dengshen start
-    if (item && userFuncs) {
-      if (userFuncs.indexOf(item.function_cd) == -1) {
-        // add #10359、#10331 編集権限について、対応する。 dengshen start
-        // 指定されたコードから機能名を取得
-        const functionObj = Object.values(transAuthorityList).find(e => e.code === item.function_cd);
-        Vue.use(VueOnsen);
-        // add #10371 使用許可機能権限OFF時に動作不正 20240528 ztc start
-        if(routerName == 'observe-record'){
-          to.meta.depth = 2 && VueOnsen.notification.alert({
-            title: DIALOG_MESSAGES[12000315].title,
-            message: messageFormat(DIALOG_MESSAGES[12000315].message, functionObj.label)
-          });
-          next({ name: getInitialRouterName() });
-          store.dispatch("bread-crumb/resetKeepHistory");
-          return;
-        } else{
-          // add #10371 使用許可機能権限OFF時に動作不正 20240528 ztc end
-          to.meta.depth < 2 && VueOnsen.notification.alert({
-            // title: "権限エラー",
-            // message: functionName+"を操作する権限がありません。管理者に確認してください。"
-            title: DIALOG_MESSAGES[12000315].title,
-            message: messageFormat(DIALOG_MESSAGES[12000315].message, functionObj.label)
-          });
-          // add #10359、#10331 編集権限について、対応する。 dengshen start
-          //前URL戻る
-          next({ name: from.name });
-          return;
-        }
-      }
-    }
-    // add #10371 使用許可機能権限OFF時に動作不正 20240528 ztc start
-    const advcdValuesList = [];
-    const advancedSettings = store.getters["user/getAdvancedSettings"];
-    if(advancedSettings) {
-      Object.keys(advancedSettings).length && advancedSettings.func_advcds.forEach(item => {
-        advcdValuesList.push(item.func_advcd);
-      });
-    }
-    // mod #10371 BVMS/加算情報の権限がないメッセージが表示され遷移できない 20241012 ztc start
-    const largedispUrl = '/status-list-large/largedisp';
-    const bvmsUrl = '/treatment-record/list/bvms';
-    const additionInfoUrl = '/treatment-record/list/addition-info';
-    const advancedCorrespondences = {
-      [largedispUrl]: ADVANCED_SETTINGS.ENABLE_ZOOM,
-      [bvmsUrl]: ADVANCED_SETTINGS.BVMS,
-      [additionInfoUrl]: ADVANCED_SETTINGS.ADDITION_INFO
-    };
-    const advancedCorrespondName = {
-      // 拡張機能: 穿刺返血大画面表示
-      [ADVANCED_SETTINGS.ENABLE_ZOOM]: FUNC_STATUS_LIST_LARGEDISP,
-      // 拡張機能: BVMS
-      [ADVANCED_SETTINGS.BVMS]: FUNC_TREATMENT_RECORD_lIST_BVMS,
-      // 拡張機能: 加算情報
-      [ADVANCED_SETTINGS.ADDITION_INFO]: FUNC_TREATMENT_RECORD_LIST_ADDITIONINFO
-    };
-    const advcdValues = advancedCorrespondences[to.path];
-    if (advcdValues && !advcdValuesList.includes(advcdValues)) {
-      Vue.use(VueOnsen);
-      to.meta.depth = 2 && VueOnsen.notification.alert({
-        title: DIALOG_MESSAGES[12000315].title,
-        message: messageFormat(DIALOG_MESSAGES[12000315].message, advancedCorrespondName[advcdValues])
-      });
-      next({name: getInitialRouterName()});
+      showPermissionAlert(functionObj?.label || "");
       store.dispatch("bread-crumb/resetKeepHistory");
-      return;
+      return { name: getInitialRouterName() };
     }
-    // mod #10371 BVMS/加算情報の権限がないメッセージが表示され遷移できない 20241012 ztc end
+
+    if (!to.meta || to.meta.depth < 2) {
+      showPermissionAlert(functionObj?.label || "");
+      return from?.name ? { name: from.name } : { name: getInitialRouterName() };
+    }
   }
-  // add #10371 使用許可機能権限OFF時に動作不正 20240528 ztc end
-  // 機能コードがない場合、権限処理 何 end
-  next();
+
+  const advcdValuesList = [];
+  const advancedSettings = store.getters["user/getAdvancedSettings"];
+  if (advancedSettings && Object.keys(advancedSettings).length) {
+    advancedSettings.func_advcds.forEach((item) => {
+      advcdValuesList.push(item.func_advcd);
+    });
+  }
+
+  const largedispUrl = "/status-list-large/largedisp";
+  const bvmsUrl = "/treatment-record/list/bvms";
+  const additionInfoUrl = "/treatment-record/list/addition-info";
+
+  const advancedCorrespondences = {
+    [largedispUrl]: ADVANCED_SETTINGS.ENABLE_ZOOM,
+    [bvmsUrl]: ADVANCED_SETTINGS.BVMS,
+    [additionInfoUrl]: ADVANCED_SETTINGS.ADDITION_INFO
+  };
+
+  const advancedCorrespondName = {
+    [ADVANCED_SETTINGS.ENABLE_ZOOM]: FUNC_STATUS_LIST_LARGEDISP,
+    [ADVANCED_SETTINGS.BVMS]: FUNC_TREATMENT_RECORD_lIST_BVMS,
+    [ADVANCED_SETTINGS.ADDITION_INFO]: FUNC_TREATMENT_RECORD_LIST_ADDITIONINFO
+  };
+
+  const advcdValues = advancedCorrespondences[to.path];
+  if (advcdValues && !advcdValuesList.includes(advcdValues)) {
+    if (to.meta) {
+      to.meta.depth = 2;
+    }
+    showPermissionAlert(advancedCorrespondName[advcdValues]);
+    store.dispatch("bread-crumb/resetKeepHistory");
+    return { name: getInitialRouterName() };
+  }
+
+  return true;
 });
-router.beforeEach((to, from, next) => {
-  // WhitePage対策（不正URLアクセス検出）
+
+/**
+ * beforeEach 2
+ * WhitePage対策
+ */
+router.beforeEach((to) => {
   if (!to.matched.length) {
-    // ナビゲーション停止 ＆ 初期画面へ遷移
-    next({ name: getInitialRouterName() });
-    return;
+    return { name: getInitialRouterName() };
   }
-  next();
+  return true;
 });
-router.beforeEach((to, from, next) => {
-  // アクセス履歴管理
-  if (to.meta.depth) {
-    // ブラウザバック時にアクセス保持履歴から除外するための遷移元名を保持
-    store.dispatch("bread-crumb/setFromName",{fromName: from.name});
-    // 階層リセット＆設定
+
+/**
+ * beforeEach 3
+ * アクセス履歴管理
+ */
+router.beforeEach((to, from) => {
+  const toRoute = hydrateLegacyRouteParams(to);
+  const toParams = toRoute?.params || {};
+  const toQuery = toRoute?.query || {};
+  if (toRoute.meta.depth) {
+    store.dispatch("bread-crumb/setFromName", { fromName: from.name });
     store.dispatch("window-size/resetCurrentDepth");
-    store.dispatch("window-size/setCurrentDepth", to.meta.depth);
+    store.dispatch("window-size/setCurrentDepth", toRoute.meta.depth);
 
     let accessKey = "footer";
     let hasSameName = true;
-    if (!_.has(to.params, "footer")) {
-      // footer以外から遷移なら
+
+    if (
+      !Object.prototype.hasOwnProperty.call(toParams, "footer") &&
+      !Object.prototype.hasOwnProperty.call(toQuery, "footer")
+    ) {
       const keepHistoryList = store.getters["bread-crumb/getKeepHistory"].map(
-        item => item.routerName
+        (item) => item.routerName
       );
       hasSameName = false;
-      if (!keepHistoryList.includes(to.name)) {
-        // 重複していないならアクセス保持履歴追加
+      if (!keepHistoryList.includes(toRoute.name)) {
         accessKey = null;
         hasSameName = true;
       }
@@ -702,56 +851,58 @@ router.beforeEach((to, from, next) => {
 
     if (hasSameName) {
       store.dispatch("bread-crumb/addKeepHistory", {
-        depth: to.meta.depth,
-        title: to.meta.title,
-        routerName: to.name,
-        historyKey: to.meta.historyKey,
+        depth: toRoute.meta.depth,
+        title: toRoute.meta.title,
+        routerName: toRoute.name,
+        historyKey: toRoute.meta.historyKey,
         accessKey
       });
     }
 
-    // アクセス履歴追加
     store.dispatch("bread-crumb/addHistory", {
-      depth: to.meta.depth,
-      title: to.meta.title,
-      routerName: to.name,
-      historyKey: to.meta.historyKey
+      depth: toRoute.meta.depth,
+      title: toRoute.meta.title,
+      routerName: toRoute.name,
+      historyKey: toRoute.meta.historyKey
     });
   } else {
-    // アクセス履歴リセット
     store.dispatch("bread-crumb/resetHistory");
   }
-  next();
+
+  return true;
 });
-router.beforeEach((to, from, next) => {
+
+/**
+ * beforeEach 4
+ * ログイン画面・モーダル初期化
+ */
+router.beforeEach((to) => {
   if (to.name === "signin") {
-    // テーマリセット
     store.dispatch("account-edit/resetTheme");
   }
-  // モーダル画面リセット
+
   store.dispatch("multi-modal/hideModal");
-  // サブモーダル画面リセット
   store.dispatch("multi-sub-modal/hideModal");
-  next();
+
+  return true;
 });
-router.afterEach(to => {
+
+router.afterEach((to) => {
   const isAdminUser = store.getters["user/isAdminUser"];
   if (
     isAdminUser &&
     to.meta.historyKey === HISTORY_KEY_OPERATION_VIEWER_MACHINE
   ) {
-    // パンくずに施設名を付加
-    const facilityName =
-      store.getters["operation-viewer/machine/getFacilityName"];
+    const facilityName = store.getters["operation-viewer/machine/getFacilityName"];
     store.dispatch("bread-crumb/resetTitle", {
       depth: to.meta.depth,
       newTitle: `${to.meta.title}(${facilityName})`
     });
   }
 });
-router.afterEach(to => {
+
+router.afterEach((to) => {
   if (to.meta.historyKey === HISTORY_KEY_MASTER_MAINTENANCE_RECORD) {
-    // マスタ編集：パンくずにマスタ名を付加
     const masterName = store.getters["master-maintenance/getLogicalMasterName"];
     store.dispatch("bread-crumb/resetTitle", {
       depth: to.meta.depth,
@@ -759,6 +910,7 @@ router.afterEach(to => {
     });
   }
 });
+
 // mod #12152 治療記録の各詳細画面で機能帳票が無効化する 高 start
 // router.afterEach(() => {
 //   // 機能コードから帳票マスタ情報を取得
@@ -770,12 +922,12 @@ router.afterEach(to => {
 //     // mod FNSI-#522、IES364 選択された機能により、対象の帳票を表示する。 夏 end
 //   }
 // });
-router.beforeResolve(async (to, from, next) => {
+router.beforeResolve(async () => {
   const funcCd = getCurrentFunctionCd();
   if (funcCd) {
-    await store.dispatch("report/getMstReport", { funcCd: funcCd, printFlag: 0 });
+    await fetchMstReportOnce(funcCd, 0);
   }
-  next();
+  return true;
 });
 // mod #12152 治療記録の各詳細画面で機能帳票が無効化する 高 end
 

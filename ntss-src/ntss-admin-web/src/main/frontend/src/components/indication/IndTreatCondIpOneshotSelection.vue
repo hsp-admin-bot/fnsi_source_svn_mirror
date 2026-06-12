@@ -25,7 +25,7 @@
     </v-ons-col>
     <div v-if="isOneshotChangeDialogVisible">
       <message-dialog
-        :visible.sync="isOneshotChangeDialogVisible"
+        v-model:visible="isOneshotChangeDialogVisible"
         :message-cd="22020001"
         type="1"
       />
@@ -37,10 +37,10 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import IndTreatCondBase from "@/components/indication/IndTreatCondBase";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 export default {
   components: {
     "message-dialog": messageDialog

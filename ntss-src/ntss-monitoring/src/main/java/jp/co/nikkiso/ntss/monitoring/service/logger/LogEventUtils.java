@@ -11,6 +11,14 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_MESSAGE_ERROR;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_MESSAGE_INFO;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_MESSAGE;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.LOG_MESSAGE_SLASH;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.LOG_MESSAGE_SPACE;
 
 /**
  * wangzuo アプリケーションログの適正化
@@ -83,7 +91,7 @@ public class LogEventUtils {
     EventLogMessage eventLogMessage = new EventLogMessage();
 
     // サービス名
-    eventLogMessage.setServiceName(LoggingConstant.MODULE_NAME.NTSS_M_NOTICE + "," + LoggingConstant.SERVICE_NAME.FNSI);
+    eventLogMessage.setServiceName(LoggingConstant.MODULE_NAME.NTSS_MONITORING + "," + LoggingConstant.SERVICE_NAME.FNSI);
 
     if (!StringUtils.isEmpty(facilityCd)) {
       eventLogMessage.setFacilityCd(facilityCd);

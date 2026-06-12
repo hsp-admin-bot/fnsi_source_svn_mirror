@@ -30,14 +30,20 @@
   </div>
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
-import {EventBus} from "@/eventBus";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import ExtendedCustomInputNumber from "@/components/master-maintenance/mst-pat-event-template/sub-item/ExtendedCustomInputNumber";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 export default {
   name: "MstPatEventTemplateFile",
+  components: {
+    "extended-custom-input-number": ExtendedCustomInputNumber
+  },
   props: ["propsIndex"],
   data() {
     return {
@@ -81,7 +87,6 @@ export default {
       }
     }
   },
-  watch: {},
   created() {
     //フィールド追加時にcreatedイベントが起動
     //モーダルウィンドウ起動時の入力値を取得
@@ -101,8 +106,17 @@ export default {
       }
     }
   },
-  mounted() {},
+
   methods: {
+    getTemplateElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || this);
+    },
+    queryTemplateSelector(selector) {
+      return queryScopedSelector(selector, this.$el || this);
+    },
+    queryTemplateSelectorAll(selector) {
+      return queryScopedSelectorAll(selector, this.$el || this);
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("mst-pat-event-template", [
       "setInputParams",
@@ -115,6 +129,9 @@ export default {
 
     getSchemaByField(field) {
       return this.schema.model.fields[field];
+    },
+    isEmptyValue(value) {
+      return value === null || value === undefined || value === "";
     },
     
     /**
@@ -232,8 +249,8 @@ export default {
           this.textMaxValueRecord.editValue = this.textMaxValue;
         }
       }
-      if(e.target.value && document.getElementsByClassName(e.target.name)[0])
-      document.getElementsByClassName(e.target.name)[0].classList.remove("input-invalid");
+      if(e.target.value && this.getTemplateElementsByClassName(e.target.name)[0])
+      this.getTemplateElementsByClassName(e.target.name)[0].classList.remove("input-invalid");
     },
     updateRecord(e){
       this.decimalDigitsIncreaseFlg = false;
@@ -291,7 +308,7 @@ export default {
       const fieldName = this.getInputParams[this.propsIndex].field_name;
       fieldNameValid = fieldName !== null && fieldName !== "";
       return {
-        maxSize: 0 <= maxSize && maxSize!="",
+        maxSize: !this.isEmptyValue(maxSize) && !isNaN(maxSize) && 0 <= Number(maxSize),
         formatClassValid: 0 <= formatClass,
         fieldNameValid: fieldNameValid
       };
@@ -305,10 +322,10 @@ export default {
         return true;
       }
       if(!validationResult.maxSize) {
-        document.getElementsByClassName("textMaxValue"+this.propsIndex)[0]?.classList?.add("input-invalid");
+        this.getTemplateElementsByClassName("textMaxValue"+this.propsIndex)[0]?.classList?.add("input-invalid");
       }
       if(!validationResult.fieldNameValid) {
-        document.getElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
+        this.getTemplateElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
       }
       // メッセージ組み立て
       // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
@@ -362,11 +379,11 @@ export default {
   border-collapse: collapse;
 }
 
-.input-required >>> input{
+.input-required :deep(input){
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> input{
+.input-invalid :deep(input){
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }

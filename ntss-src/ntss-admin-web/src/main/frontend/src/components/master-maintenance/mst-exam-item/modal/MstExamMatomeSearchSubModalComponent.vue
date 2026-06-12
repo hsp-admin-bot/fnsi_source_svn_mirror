@@ -4,7 +4,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="main-content">
+        <template #body>
+<div class="main-content">
       <div class="filter-content">
         <v-ons-row>
           <!-- #10826 検査項目マスタ＞詳細＞臨床検査マスタ検索 linjunfeng start -->
@@ -79,7 +80,9 @@
         </div>
       </div>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+        <template #footer>
+<div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <button class="button denial-btn btn2-cancel" @click="cancel">キャンセル</button>
       </div>
@@ -87,17 +90,19 @@
         <button class="button registration-btn btn1-execute" :disabled="!isSelected" @click="reflect">確定</button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import SubModalBase from "@/components/modals/SubModalBase";
 import MultiSubModalMixin from "@/components/modals/MultiSubModalMixin";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper.js";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import { getScopedElementsByClassName, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
 
 export default {
@@ -222,7 +227,7 @@ export default {
      */
     clearSelectRow() {
       // 選択済の行をクリアする.
-      Array.from(document.getElementsByClassName("selected-row")).forEach(element => {
+      getScopedElementsByClassName("selected-row", this.$el || this).forEach(element => {
         element.classList.remove("selected-row");
       });
       // 選択済フラグ
@@ -235,7 +240,7 @@ export default {
       // 選択行をクリア
       this.clearSelectRow();
       // クリック要素取得
-      const clickElement = document.getElementById("sys-medicine-row-" + index);
+      const clickElement = getScopedElementById("sys-medicine-row-" + index, this.$el || this);
       // 要素無し.
       if (!clickElement) {
         return;
@@ -321,11 +326,11 @@ export default {
 /**
  * 絞込条件エリア内のons-rowのスタイル
  */
-.filter-content >>> ons-row {
+.filter-content :deep(ons-row) {
   margin-top: 5px;
 }
 /* add #10826 フリーワードのフォントが表のフォントと異なる。 linjunfeng start */
-.filter-content >>> input {
+.filter-content :deep(input) {
   font-family: inherit;
 }
 /* add #10826 フリーワードのフォントが表のフォントと異なる。 linjunfeng end */

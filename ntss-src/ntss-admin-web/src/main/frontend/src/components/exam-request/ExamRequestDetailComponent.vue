@@ -2,7 +2,7 @@
  * 患者個別検査依頼
  */
 <template>
-  <div class="main-content-area" id="examrequest-detail">
+  <div class="main-content-area">
     <exam-header-component class="request-header-component" style="font-size: .667em;"/>
     <!-- 上部ボタン部 -->
     <div id="upper-buttons">
@@ -18,7 +18,7 @@
         v-model="condition.startDate"
         @blur="checkInputStartDate"
         @handleClearInput="clearInputStartDate"
-        data-vv-scope="condition"
+        data-validation-scope="condition"
         enabledBlank
       />
       <common-calendar
@@ -39,7 +39,7 @@
         v-model="condition.endDate"
         @blur="checkInputEndDate"
         @handleClearInput="clearInputEndDate"
-        data-vv-scope="condition"
+        data-validation-scope="condition"
         enabledBlank
       />
       <common-calendar
@@ -53,7 +53,8 @@
     <div class="scroll-table" :style="gridHeightStyle" ref="examrequestrecorddetailgrid">
       <!-- 表示テーブル -->
       <table class="grid-record-list" style="width: max-content;">
-        <tr class="thead">
+        <tbody>
+          <tr class="thead">
           <th
             v-for="(dateItem, index) in getExamDateListDetail"
             :key="index"
@@ -88,7 +89,7 @@
             class="examrequest-label exam-control-cell"
           >
             <!-- 治療予定欄の表示内容を生成 -->
-            <img v-if="hasScheduleTreatment(dateItem, selectedPatId)" src="img/exam-request/32-32_2.png" class="symbol-request-saved td-img"/>
+            <img v-if="hasScheduleTreatment(dateItem, selectedPatId)" :src="publicAssetPath('img/exam-request/32-32_2.png')" class="symbol-request-saved td-img"/>
           </td>
         </tr>
         <tr
@@ -101,22 +102,15 @@
             class="ntss-list-header-th-sticky col-sticky-name manual-width"
             style="padding-left: 1em; padding-right: 1em; white-space: unset;"
           >
-            <span @click="rowClear(listDate)">
-              <!-- {{
-              showDelExam(listDate.examSetCd)
-              + showExamName(listDate.examSetCd)
-              + showRegOrderClass[listDate.regOrderClass]
-            }} -->
-              {{
-                isOtherFacility(listDate)
-                  ? buildOtherFacilityText(listDate)
-                  : (
-                    showDelExam(listDate.examSetCd)
-                    + showExamName(listDate.examSetCd)
-                    + showRegOrderClass[listDate.regOrderClass]
-                  )
-              }}
-            </span>
+            <span @click="rowClear(listDate)">{{
+              isOtherFacility(listDate)
+                ? buildOtherFacilityText(listDate)
+                : (
+                  showDelExam(listDate.examSetCd)
+                  + showExamName(listDate.examSetCd)
+                  + showRegOrderClass[listDate.regOrderClass]
+                )
+            }}</span>
           </td>
           <!-- mod 10618検査セットマスタ、検査項目マスタ、一般撮影検査依頼マスタ編集時に関連データを補正する zhao end-->
           <!-- 日付列 -->
@@ -152,6 +146,8 @@
             <img v-else v-bind="getImgAttributesForPattern(listDate, data)">
           </td>
         </tr>
+      
+        </tbody>
       </table>
     </div>
     <!-- 下部ボタン部 -->
@@ -185,7 +181,7 @@
     <!--    add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start-->
     <div v-if="messageDialogInfo.isDialogVisible">
       <message-dialog
-        :visible.sync="messageDialogInfo.isDialogVisible"
+        v-model:visible="messageDialogInfo.isDialogVisible"
         :message-cd="messageDialogInfo.messageCd"
         :type="messageDialogInfo.type"
         :string-params="messageDialogInfo.stringParams"
@@ -198,6 +194,7 @@
 </template>
 
 <script>
+import { publicAssetPath } from "@/compat/assets/public-path";
 import store from "@/stores";
 // 検査セット
 import { sendRequestGetMstExamSetList, sendRequestAllExamSetListByFacility } from "@/apis/exam-request";
@@ -208,9 +205,9 @@ import ExamRequestHeaderComponent from "@/components/exam-request/ExamRequestPer
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
-import { mapGetters, mapActions } from "vuex";
-import moment from "moment";
-import { EventBus } from "@/eventBus";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import {
   CANCEL,
   SAVED,
@@ -251,6 +248,8 @@ import {
 import DateInput from "@/components/common/DateInput";
 import { getHolidayStyle } from "@/functions/common/CommonFunctions";
 import messageDialog from "@/components/common/message-dialog/MessageDialog.vue";
+import { setKendoPopupSurfaceStyles } from "@/functions/common/KendoFunctions";
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
 import PrintMixin from "@/components/PrintMixin";
 
 export default {
@@ -304,13 +303,13 @@ export default {
       dispExamSet: [],
       delExamSetItem: [],
       dispExamSetItem: [],
+      otherFacilityCache: {},
       ignoreWatchSelectedPatId: false,
       // add 10618検査セットマスタ、検査項目マスタ、一般撮影検査依頼マスタ編集時に関連データを補正する zhao start
       getExamSetName: [],
       // add 10618検査セットマスタ、検査項目マスタ、一般撮影検査依頼マスタ編集時に関連データを補正する zhao end
-      scrollQuerySelector: ".scroll-table", // スクロールコンテナ
-      addClassTargetQuerySelector: ["table.grid-record-list"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
-      otherFacilityCache: {}
+      scrollQuerySelector: ".scroll-table",
+      addClassTargetQuerySelector: ["table.grid-record-list"],
     };
   },
   computed: {
@@ -341,9 +340,10 @@ export default {
       "searchedPatList",
       "selectedPat",
       "inSelectPatAtPatHeaderCreated",
-      "getIsOtherFacility", 
-      "getOtherFacilityCd"
+      "getIsOtherFacility",
+      "getOtherFacilityCd",
     ]),
+    ...mapGetters("pat-info", { patInfoSelectedPatId: "selectedPatId" }),
     ...mapGetters("window-size", {
       windowHeight: "getWindowHeight",
       windowWidth: "getSplittedWidth",
@@ -352,8 +352,8 @@ export default {
       "getFontSize",
       "getDefaultSetting",
       "isDispMenu",
-      "getPatientShareMode",//自施設(1) or 他施設(0)
-      "getPatientShareFacilityCdMode"//施設cd
+      "getPatientShareMode",
+      "getPatientShareFacilityCdMode",
     ]),
     ...mapGetters("user", ["getFacilityCd"]),
 
@@ -369,7 +369,7 @@ export default {
         }
 
         if (date !== "") {
-          const dateMoment = moment(date);
+          const dateMoment = dayjs(date);
           const dateCurrent = formatToYyyymmdd();
           if (dateMoment.isBefore(dateCurrent)) {
             result["background-color"] = BACKGROUND_HEADER_PAST_DAY;
@@ -419,16 +419,14 @@ export default {
         const hasExamPattern = this.getPatExamPatternList.some(pattern => (
           patId && patId === String(pattern.patId)
           && examSetCd && examSetCd === String(pattern.orderExamSetCd)
-          && regOrderClass && regOrderClass === String(pattern.regOrderClass)
-        ));
+          && regOrderClass && regOrderClass === String(pattern.regOrderClass)));
         if (hasExamPattern) return true;
 
         // 期間内のexamDataがあれば出力
         const examDataKeys = Object.keys(examRequest.examData);
         return examDataKeys.some(key => (
           (!dateStart || key >= dateStart)
-          && (!dateEnd || key <= dateEnd)
-        ));
+          && (!dateEnd || key <= dateEnd)));
       });
     },
     disableDatesAfter() {
@@ -439,6 +437,7 @@ export default {
     },
   },
   methods: {
+    publicAssetPath,
     // 共通ローダー設定
     ...mapActions("loading-screen", [
       "startLoadingScreen",
@@ -479,18 +478,18 @@ export default {
     // ウインドウ変更時の高さ補正
     calculateGridHeight() {
       // 表示期間などの表示領域
-      const upperButtons = document.getElementById("upper-buttons");
+      const upperButtons = getScopedElementById("upper-buttons", this.$el || this);
       const upBtnsHeight = upperButtons.offsetHeight;
 
       // 下部ボタンの表示領域
-      const bottomButtons = document.getElementById("bottom-buttons");
+      const bottomButtons = getScopedElementById("bottom-buttons", this.$el || this);
       const btmBtnsHeight = bottomButtons.offsetHeight;
 
-      const examHeader = document.getElementById("header-item");
+      const examHeader = getScopedElementById("header-item", this.$el || this);
       this.examHeaderHeight = examHeader.offsetHeight;
 
       // 表示期間、表、下部ボタン全体の表示領域
-      const mainId = document.getElementById("main-id");
+      const mainId = getScopedElementById("main-id", this.$el || this);
       const mainIdHeight = mainId.offsetHeight;
 
       // 表エリアの高さ (15px引く)
@@ -501,10 +500,9 @@ export default {
       // Android対策
       if (this.isAndroid && !this.addedTransitionEvent) {
         // CSSトランジションする要素(button--materialクラス)を取得
-        const transitionButtons = document.getElementsByClassName("button--material");
+        const transitionButtons = getScopedElementsByClassName("button--material", this.$el || this);
         const transitionButton = Array.from(transitionButtons).find(
-          el => el.innerText.trim() === "再表示"
-        );
+          el => el.innerText.trim() === "再表示");
         if (!transitionButton) return;
         // トランジション終了を検知する
         transitionButton.addEventListener("transitionend", event => {
@@ -540,10 +538,9 @@ export default {
           // title: "更新確認",
           // message: "{dateFormat}の予定を一括中止します、よろしいですか？",
           if (await confirmIsOk(DIALOG_MESSAGES[13000029], dateFormat)) {
-            // this.dayAllClear(formatToYyyymmdd(data.date));
             this.dayAllClear({
               targetDate: formatToYyyymmdd(data.date),
-              facilityCd: this.getFacilityCd
+              facilityCd: this.getFacilityCd,
             });
           }
           break;
@@ -562,8 +559,8 @@ export default {
     // 検査セット行をクリックした際のクリア処理
     async rowClear(celObj) {
       // 編集可能な権限があるかどうかを判断する
-      if (this.isOtherFacility(celObj)) return;
       if (!checkExamAuthorized()) return;
+      if (this.isOtherFacility(celObj)) return;
 
       const { patId, regOrderClass, examSetCd, examData } = celObj;
       const targetName = this.showExamName(examSetCd) + this.showRegOrderClass[regOrderClass];
@@ -576,7 +573,7 @@ export default {
 
       // 検査セットが登録されている日付ごとに処理する
       const editedDate = [];
-      const todayMoment = moment();
+      const todayMoment = dayjs();
       Object.keys(examData).forEach(date => {
         // 過去日の依頼は中止対象にしない
         if (todayMoment.isAfter(date, "day")) return;
@@ -613,8 +610,7 @@ export default {
           target.status !== CANCEL
           && String(target.orderExamSetCd) === String(examSetCd)
           && String(target.patId) === String(patId)
-          && String(target.regOrderClass) === String(regOrderClass)
-        ) {
+          && String(target.regOrderClass) === String(regOrderClass)) {
           this.editPatternDetail(target, examPatternListCopy, savePatExamPatternCopy);
         }
       });
@@ -654,13 +650,13 @@ export default {
         // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
         this.messageDialogInfo
         // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm end
-      );
+        );
     },
     // カレンダークリック時の処理
     editSchedule(celObj, setDate) {
       // 編集可能な権限があるかどうかを判断する
-      if (this.isOtherFacility(celObj)) return;
       if (!checkExamAuthorized()) return;
+      if (this.isOtherFacility(celObj)) return;
 
       let targetObj = this.getEditExamRequestList.filter(function(item){
           if (item.patId == celObj.patId) return true;
@@ -676,7 +672,7 @@ export default {
         // 締切フラグの設定
         let deadlineFlg = "0";
         if (this.getDeadlineCondition.deadlineFlg) {
-          if (moment(getDeadlineDate(this.getDeadlineCondition)).isAfter(moment(setDate))) {
+          if (dayjs(getDeadlineDate(this.getDeadlineCondition)).isAfter(dayjs(setDate))) {
             deadlineFlg = "1";
           }
         }
@@ -730,28 +726,24 @@ export default {
       } else {
         Object.keys(targetObj[0].examItemSet).forEach(regOrderClassKey => {
           Object.keys(targetObj[0].examItemSet[regOrderClassKey]).forEach(examSetCdKey => {
-            const examItem =
-              targetObj[0].examItemSet[regOrderClassKey][examSetCdKey];
-
-            const cellFacility =
-              examItem.facilityCd && examItem.facilityCd[setDate];
-
+            const examItem = targetObj[0].examItemSet[regOrderClassKey][examSetCdKey];
+            const cellFacility = examItem.facilityCd && examItem.facilityCd[setDate];
             if (cellFacility && cellFacility !== this.getFacilityCd) {
               return;
             }
             // クリックされたセルの状態によって、フラグを更新する
-            switch(targetObj[0].examItemSet[regOrderClassKey][examSetCdKey]["data"][setDate]) {
+            switch(examItem["data"][setDate]) {
               case SAVED: {
                 // 依頼ありの場合、中止指示にする
                 targetObj[0]["data"][setDate] -=  1;
-                targetObj[0].examItemSet[regOrderClassKey][examSetCdKey]["data"][setDate] = CANCEL;
+                examItem["data"][setDate] = CANCEL;
                 break;
               }
               case ADD:
               case ADD_WARNING: {
                 // 未保存の依頼があった場合、削除する
                 targetObj[0]["data"][setDate] -= 1;
-                delete targetObj[0].examItemSet[regOrderClassKey][examSetCdKey]["data"][setDate];
+                delete examItem["data"][setDate];
               }
             }
           })
@@ -774,7 +766,7 @@ export default {
           && patId === String(item.patId)
           && examPattern === item.examPattern
           && examWeek === item.examWeek
-        ))
+          && this.getFacilityCd === item.facilityCd))
         : [];
     },
     // 患者名行のパターン列の表示用データを生成：スタイル
@@ -815,14 +807,12 @@ export default {
       if (regOrderClass) regOrderClass = String(regOrderClass);
       const { examPattern, examWeek } = setData;
       const targetExamPattern = (
-        patId && examSetCd && regOrderClass && examPattern && examWeek
-      ) && this.getPatExamPatternList.filter(item => (
+        patId && examSetCd && regOrderClass && examPattern && examWeek) && this.getPatExamPatternList.filter(item => (
         patId === String(item.patId)
         && examSetCd === String(item.orderExamSetCd)
         && regOrderClass === String(item.regOrderClass)
         && examPattern === item.examPattern
-        && examWeek === item.examWeek
-      )).pop();
+        && examWeek === item.examWeek)).pop();
       if (targetExamPattern) {
         // 様々な状況のアイコン変化を補足する
         switch (targetExamPattern.status) {
@@ -830,12 +820,12 @@ export default {
             // 予定有無を判別して画像を変える
             if (hasTreatmentPatternOnWeek(targetExamPattern)) {
               Object.assign(imgAttrs, {
-                src: "img/exam-request/32-32_0.png",
+                src: publicAssetPath("img/exam-request/32-32_0.png"),
                 class: "symbol-request-cancel td-img",
               });
             } else {
               Object.assign(imgAttrs, {
-                src: "img/exam-request/32-32_4.png",
+                src: publicAssetPath("img/exam-request/32-32_4.png"),
                 class: "symbol-request-cancel td-img",
               });
             }
@@ -844,13 +834,13 @@ export default {
             // 予定有無を判別して画像を変える
             if (hasTreatmentPatternOnWeek(targetExamPattern)) {
               Object.assign(imgAttrs, {
-                src: "img/exam-request/32-32_2.png",
+                src: publicAssetPath("img/exam-request/32-32_2.png"),
                 class: "symbol-request-saved td-img",
                 style: `background-color: ${FILLCOLOR_DEFAULT};`,
               });
             } else {
               Object.assign(imgAttrs, {
-                src: "img/exam-request/32-32_3.png",
+                src: publicAssetPath("img/exam-request/32-32_3.png"),
                 class: "symbol-request-saved td-img",
                 style: `background-color: ${FILLCOLOR_DEFAULT};`,
               });
@@ -860,13 +850,13 @@ export default {
             // 予定有無を判別して画像を変える
             if (hasTreatmentPatternOnWeek(targetExamPattern)) {
               Object.assign(imgAttrs, {
-                src: "img/exam-request/32-32_2.png",
+                src: publicAssetPath("img/exam-request/32-32_2.png"),
                 class: "symbol-request-unsaved td-img",
                 style: `background-color: ${FILLCOLOR_DEFAULT};`,
               });
             } else {
               Object.assign(imgAttrs, {
-                src: "img/exam-request/32-32_3.png",
+                src: publicAssetPath("img/exam-request/32-32_3.png"),
                 class: "symbol-request-unsaved td-img",
                 style: `background-color: ${FILLCOLOR_DEFAULT};`,
               });
@@ -877,30 +867,30 @@ export default {
       return imgAttrs;
     },
 
-    // mod #12462 患者情報共有 Ji start
-    fontColor(celObj, setDate) {
+    fontColor(celObj, setDate = null) {
+      if (setDate == null) {
+        setDate = celObj;
+        celObj = null;
+      }
       const rtn = {};
+      if (celObj?.facilityCd && this.isOtherFacility(celObj)) {
+        rtn["background-color"] = "#9c9c9c";
+        return rtn;
+      }
       const dateCurrent = formatToYyyymmdd();
-      if (setDate && moment(setDate).isBefore(dateCurrent)) {
+      if (setDate && dayjs(setDate).isBefore(dateCurrent)) {
         rtn["background-color"] = BACKGROUND_COLUMN_PAST_DAY;
       }
       if (this.getCalendarCheckedDate != null) {
         this.changeScroll();
       }
-      if (celObj.facilityCd && this.isOtherFacility(celObj)) {
-        rtn["background-color"] = "#9c9c9c";
-        return rtn;
-      }
       return rtn;
     },
-    // mod #12462 患者情報共有 Ji end
     // 編集されているセルを示す緑色をセルに付与する
     addEditedColor(celObj, setDate) {
-      // add #12462 患者情報共有 Ji start
       if (!celObj.headerflg && this.isOtherFacility(celObj)) {
         return ["other-facility-disabled"];
       }
-      // add #12462 患者情報共有 Ji end
       return this.chkCellEdit(celObj?.examData[setDate]);
     },
     // カウント文字の文字色（パターン列）
@@ -909,13 +899,9 @@ export default {
       if (celObj.headerflg) {
         // 患者名行
         rtn["background-color"] = BACKGROUND_ROW_PATNAME;
+      } else if (celObj.facilityCd && this.isOtherFacility(celObj)) {
+        rtn["background-color"] = "#9c9c9c";
       }
-      // add #12462 患者情報共有 Ji start
-      if (this.isOtherFacility(celObj)) {
-          rtn["background-color"] = "#9c9c9c";
-          return rtn;
-        }
-      // add #12462 患者情報共有 Ji end
       return rtn;
     },
     // 編集されているセルを示す緑色をセルに付与する（パターン列）
@@ -937,8 +923,7 @@ export default {
         && examSetCd === String(item.orderExamSetCd)
         && regOrderClass === String(item.regOrderClass)
         && examPattern === String(item.examPattern)
-        && examWeek === String(item.examWeek)
-      )).pop();
+        && examWeek === String(item.examWeek))).pop();
       if (targetExamPattern) {
         classNames = this.chkCellEdit(targetExamPattern.status);
       }
@@ -958,7 +943,7 @@ export default {
     },
     checkInputDateCore(conditionName) {
       const condition = this.condition;
-      const inputDate = condition[conditionName] ? moment(condition[conditionName]) : "";
+      const inputDate = condition[conditionName] ? dayjs(condition[conditionName]) : "";
       if (inputDate && (!inputDate.isValid() || inputDate.isAfter(this.getSchExtEndDate))) {
         // 入力された日付が存在しないか、最大値より未来の場合、最大値を表示する
         condition[conditionName] = this.getSchExtEndDate;
@@ -1008,8 +993,7 @@ export default {
         // 日付は前回と同じ範囲か
         if (
           startDate !== this.getStartToEndDate.showStartDate
-          || endDate !== this.getStartToEndDate.showEndDate
-        ) {
+          || endDate !== this.getStartToEndDate.showEndDate) {
           this.updateStartToEndDate({
             showStartDate: startDate,
             showEndDate: endDate,
@@ -1040,6 +1024,7 @@ export default {
       store.dispatch("report/getMstReport", {
         funcCd: "02102",
         printFlag: this.selectedPatId ? 1 : null,
+        selectedPatId: this.patInfoSelectedPatId
       });
       // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 end
 
@@ -1048,9 +1033,10 @@ export default {
         patIdList: this.patIdList,
         startDate: "",
         endDate: this.condition.endDate.replace(/-/g, "/"),
-	// add #12462 患者情報共有 Ji start
-        patientShareMode: (this.getIsOtherFacility === false || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd)) ? 1 : this.getPatientShareMode
-        // add #12462 患者情報共有 Ji end
+        patientShareMode: (
+          this.getIsOtherFacility === false
+          || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd)
+        ) ? 1 : this.getPatientShareMode,
       }).then(() => {
         // 共通ローダー:表示終了
         this.finishLoadingScreen();
@@ -1087,11 +1073,11 @@ export default {
       this.redisplay();
     },
     // dropDownを開いた時にデータに応じて表示枠を広げる
-    addMaxContentStyle() {
+    addMaxContentStyle(event) {
+      this.onIndUserDropdownOpen(event);
       this.$nextTick(() => {
-        const targetStyle = document.getElementsByClassName("k-animation-container")[0].firstElementChild.style;
-        targetStyle.width = "max-content";
-        targetStyle.bottom = "0px";
+        setKendoPopupSurfaceStyles(event, { width: "max-content", bottom: "0px" }, this.$el);
+        this.onIndUserDropdownOpen(event);
       });
     },
     // 検査パターンセルクリック時の処理
@@ -1106,44 +1092,23 @@ export default {
       if (regOrderClass) regOrderClass = String(regOrderClass);
       const { examPattern, examWeek } = setData;
       // 処理を実行する検査パターンをフィルタリング
-      // mod #12462 患者情報共有 Ji start
-      // const targetList = this.getPatExamPatternList.filter(
-      //   !celObj.headerflg ? (item => (
-      //     patId === String(item.patId)
-      //     && examSetCd === String(item.orderExamSetCd)
-      //     && regOrderClass === String(item.regOrderClass)
-      //     && examPattern === item.examPattern
-      //     && examWeek === item.examWeek
-      //   )) : (item => (
-      //     item.status !== CANCEL
-      //     && patId === String(item.patId)
-      //     && examPattern === item.examPattern
-      //     && examWeek === item.examWeek
-      //   ))
-      // );
       const targetList = this.getPatExamPatternList.filter(item => {
         if (celObj.facilityCd && celObj.facilityCd !== this.getFacilityCd) {
           return false;
         }
         if (!celObj.headerflg) {
-          return (
-            patId === String(item.patId) &&
-            examSetCd === String(item.orderExamSetCd) &&
-            regOrderClass === String(item.regOrderClass) &&
-            examPattern === item.examPattern &&
-            examWeek === item.examWeek
-          );
-        } else {
-          return (
-            item.status !== CANCEL &&
-            patId === String(item.patId) &&
-            examPattern === item.examPattern &&
-            examWeek === item.examWeek &&
-            this.getFacilityCd === item.facilityCd
-          );
+          return patId === String(item.patId)
+            && examSetCd === String(item.orderExamSetCd)
+            && regOrderClass === String(item.regOrderClass)
+            && examPattern === item.examPattern
+            && examWeek === item.examWeek;
         }
+        return item.status !== CANCEL
+          && patId === String(item.patId)
+          && examPattern === item.examPattern
+          && examWeek === item.examWeek
+          && this.getFacilityCd === item.facilityCd;
       });
-      // mod #12462 患者情報共有 Ji end
 
       // フィルタリングされた検査パターンの中から中止されているものを取得
       const cancelLength = targetList.filter(item => item.status === CANCEL).length;
@@ -1169,10 +1134,7 @@ export default {
           target.status !== CANCEL
           && setData.examPattern && setData.examPattern === target.examPattern
           && setData.examWeek && setData.examWeek === target.examWeek
-	  // add #12462 患者情報共有 Ji start
-          && target.facilityCd === this.getFacilityCd
-	  // add #12462 患者情報共有 Ji end
-        ) {
+          && target.facilityCd === this.getFacilityCd) {
           this.editPatternDetail(target, examPatternListCopy, savePatExamPatternCopy);
         }
       });
@@ -1199,8 +1161,8 @@ export default {
                       item.examPatternCd.toString() === target.examPatternCd.toString()
               })
             // ステータスをSAVEDにして削除フラグを0にする
-            this.$set(target, 'status', SAVED);
-            this.$set(target, 'isDel', 0);
+            target.status = SAVED;
+            target.isDel = 0;
             // 保存用のパターンリストから対象を削除
             if (wasSavedIndex >= 0) savePatExamPatternCopy.splice(wasSavedIndex, 1);
             break;
@@ -1217,7 +1179,7 @@ export default {
             })
           if (wasAdd) {
             // ステータスをADDにする
-            this.$set(target, 'status', ADD);
+            target.status = ADD;
             // 保存用のパターンリストに対象を追加
             savePatExamPatternCopy.push(target);
             break;
@@ -1226,8 +1188,8 @@ export default {
         }
         case SAVED: {
           // ステータスをCANCELににて削除フラグをたてる
-          this.$set(target, 'status', CANCEL);
-          this.$set(target, 'isDel', 1);
+          target.status = CANCEL;
+          target.isDel = 1;
           // 保存用のパターンリストに追加する
           savePatExamPatternCopy.push(target);
           break;
@@ -1264,10 +1226,9 @@ export default {
     },
     changeScroll() {
       this.$nextTick(() => {
-        const elements = Array.from(document.querySelector(".grid-record-list").getElementsByTagName("th"));
+        const elements = Array.from(queryScopedSelector(".grid-record-list", this.$el || this)?.getElementsByTagName("th") || []);
         const target = elements.find(element => (
-          moment(element.outerText).format("YYYY/MM/DD").indexOf(this.getCalendarCheckedDate) !== -1
-        ));
+          dayjs(element.outerText).format("YYYY/MM/DD").indexOf(this.getCalendarCheckedDate) !== -1));
         if (target) {
           this.examRequesttable.scrollTop = target.offsetTop - 42;
         }
@@ -1298,6 +1259,55 @@ export default {
     },
     // add 10618検査セットマスタ、検査項目マスタ、一般撮影検査依頼マスタ編集時に関連データを補正する zhao end
 
+    isOtherFacility(listDate) {
+      return !!listDate?.facilityCd && listDate.facilityCd != this.getFacilityCd;
+    },
+    loadOtherFacilityExamSet(facilityCd, patId) {
+      if (!facilityCd || this.otherFacilityCache[facilityCd]) return;
+      const selectedPatId = this.patInfoSelectedPatId ?? patId;
+      sendRequestAllExamSetListByFacility(facilityCd, selectedPatId).then(response => {
+        const dispExamSet = [];
+        const getExamSetName = [];
+        const delExamSetItem = [];
+        response.data.forEach(item => {
+          if (item.isDisp === "0") {
+            dispExamSet.push(item.examSetCd);
+          }
+          getExamSetName.push(item);
+          const setItems = JSON.parse(item.examItemInfo);
+          setItems.forEach(setItem => {
+            if (this.dispExamSetItem.includes(Number(setItem.exam_item_cd))) {
+              delExamSetItem.push(item.examSetCd);
+            }
+          });
+        });
+        this.otherFacilityCache = {
+          ...this.otherFacilityCache,
+          [facilityCd]: {
+            dispExamSet,
+            getExamSetName,
+            delExamSetItem,
+          },
+        };
+      });
+    },
+    buildOtherFacilityText(row) {
+      const facilityCd = row.facilityCd;
+      this.loadOtherFacilityExamSet(facilityCd, row.patId);
+      const cache = this.otherFacilityCache[facilityCd];
+      if (!cache) return "";
+      const setCd = Number(row.examSetCd);
+      let delText = "";
+      if (cache.dispExamSet.includes(setCd)) {
+        delText = MASTER_DELETE_DISPLAY.DELETED;
+      } else if (cache.delExamSetItem.includes(setCd)) {
+        delText = MASTER_DELETE_DISPLAY.INCLUDE_DELETED;
+      }
+      const exam = cache.getExamSetName.find(item => item.examSetCd == row.examSetCd);
+      const name = exam ? exam.examSetName : "";
+      return delText + name + this.showRegOrderClass[row.regOrderClass];
+    },
+
     /**
      * 休日のスタイル取得
      */
@@ -1320,75 +1330,6 @@ export default {
         }
       });
     },
-    // add #12462 患者情報共有 Ji start
-    isOtherFacility(listDate) {
-      return listDate.facilityCd != this.getFacilityCd
-    },
-    /**
-     * 他施設の検査セット情報を取得してキャッシュに保持する
-     * @param facilityCd 
-     */
-    loadOtherFacilityExamSet(facilityCd) {
-      if (this.otherFacilityCache[facilityCd]) return;
-      // 指定施設の検査セット一覧を取得
-      sendRequestAllExamSetListByFacility(facilityCd)
-        .then(response => {
-          const dispExamSet = [];
-          const getExamSetName = [];
-          const delExamSetItem = [];
-          response.data.forEach(item => {
-            if (item.isDisp === "0") {
-              dispExamSet.push(item.examSetCd);
-            }
-            getExamSetName.push(item);
-            const setItems = JSON.parse(item.examItemInfo);
-            setItems.forEach(setItem => {
-              if (
-                this.dispExamSetItem.includes(
-                  Number(setItem.exam_item_cd)
-                )
-              ) {
-                delExamSetItem.push(item.examSetCd);
-              }
-            });
-          });
-          this.$set(this.otherFacilityCache, facilityCd, {
-            dispExamSet,
-            getExamSetName,
-            delExamSetItem
-          });
-        });
-    },
-    /**
-     * 他施設データ用の表示文字列生成
-     * @param row 
-     */
-    buildOtherFacilityText(row) {
-      const facilityCd = row.facilityCd;
-      // 未取得の場合は取得処理を実行
-      this.loadOtherFacilityExamSet(facilityCd);
-      const cache = this.otherFacilityCache[facilityCd];
-      if (!cache) return "";
-      const setCd = Number(row.examSetCd);
-      let delText = "";
-      if (cache.dispExamSet.includes(setCd)) {
-        delText = MASTER_DELETE_DISPLAY.DELETED;
-      } else if (
-        cache.delExamSetItem.includes(setCd)
-      ) {
-        delText = MASTER_DELETE_DISPLAY.INCLUDE_DELETED;
-      }
-      const exam = cache.getExamSetName.find(
-          item => item.examSetCd == row.examSetCd
-        );
-      const name = exam ? exam.examSetName : "";
-      return (
-        delText
-        + name
-        + this.showRegOrderClass[row.regOrderClass]
-      );
-    },
-    // add #12462 患者情報共有 Ji end
   },
   watch: {
     async selectedPat() {
@@ -1423,8 +1364,8 @@ export default {
     },
     // 表示範囲日付(ヘッダ側の検査セット処理に連動させる)
     getStartToEndDate() {
-      const startDate = this.getStartToEndDate.showStartDate ? moment(this.getStartToEndDate.showStartDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
-      const endDate = this.getStartToEndDate.showEndDate ? moment(this.getStartToEndDate.showEndDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
+      const startDate = this.getStartToEndDate.showStartDate ? dayjs(this.getStartToEndDate.showStartDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
+      const endDate = this.getStartToEndDate.showEndDate ? dayjs(this.getStartToEndDate.showEndDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
       if (this.condition.startDate !== startDate) {
         this.condition.startDate = startDate;
       }
@@ -1451,37 +1392,26 @@ export default {
       this.isRouteGamenFlg = true;
       this.redisplay();
     },
+    getPatientShareMode() {
+      this.showCalendar();
+    },
     // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
     "messageDialogInfo.isDialogVisible"(isShow) {
       this.isUpdating = isShow ? false : this.isUpdating;
     },
     // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm end
-    // add #12462 患者情報共有 Ji start
-    getPatientShareMode() {
-      this.showCalendar();
-    },
-    // add #12462 患者情報共有 Ji end
   },
   created() {
-    // add #12462 患者情報共有 Ji start
-    // if(this.getAllExamSetList.length == 0){
-    //   sendRequestAllExamSetListByFacility(this.getFacilityCd).then(response => {
-    //     // NOTE: Function側でも利用できるようにstoreにも保存
-    //     this.setAllExamSetList(response.data);
-    //   });
-    // }
-    // add #12462 患者情報共有 Ji end
-    
     // 休日マスタの休日を取得
     this.fetchHolidays(this.getFacilityCd);
     
     // 一覧画面のデータが残っている場合があるためクリアしておく
     this.clearSearchedExamRequest();
 
-    sendRequestGetDispExamItemListForFacilityCd(this.getFacilityCd).then(response => {
+    sendRequestGetDispExamItemListForFacilityCd(this.getFacilityCd, this.patInfoSelectedPatId).then(response => {
       this.dispExamSetItem = response.data;
     });
-    sendRequestGetMstExamSetList(this.getFacilityCd).then(response => {
+    sendRequestGetMstExamSetList(this.getFacilityCd, this.patInfoSelectedPatId).then(response => {
       response.data.forEach(item => {
         if (item.isDisp === "0") {
           this.dispExamSet.push(item.examSetCd);
@@ -1501,7 +1431,7 @@ export default {
     });
 
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = getScopedWindow(this.$el || this)?.navigator?.userAgent || "";
     if (ua.match(/Android/)) {
       this.isAndroid = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -1518,7 +1448,7 @@ export default {
         setShowDateToCondition(this.condition, this.getStartToEndDate);
       } else {
         // 本日の日付をセット
-        const setDate = moment();
+        const setDate = dayjs();
         this.condition.startDate = setDate.format("YYYY-MM-DD");
         this.condition.endDate = setDate.add(3, "months").format("YYYY-MM-DD");
       }
@@ -1554,8 +1484,7 @@ export default {
     // 指示者ドロップダウンの設定
     this.getIndUserList(
       AUTHORITY_CODES.IND_EXAM_EDIT,
-      AUTHORITY_CODES.IND_EXAM_PEDIT
-    ).then(response => {
+      AUTHORITY_CODES.IND_EXAM_PEDIT).then(response => {
       this.doctorList = response.doctorList;
       this.$nextTick(() => {
         this.selectDoctor = response.iniSelectId;
@@ -1568,10 +1497,13 @@ export default {
      * @see Function.checkAndCreateSaveExamData
      */
     if (this.getAllExamSetList.length == 0) {
-      sendRequestAllExamSetListByFacility(this.getFacilityCd).then(({ data }) => this.setAllExamSetList(data));
+      sendRequestAllExamSetListByFacility(this.getFacilityCd, this.patInfoSelectedPatId).then(({ data }) => this.setAllExamSetList(data));
     }
     // 締切設定を取得
-    this.setExamDeadline(this.getFacilityCd);
+    this.setExamDeadline({
+      facilityCd: this.getFacilityCd,
+      selectedPatId: this.patInfoSelectedPatId
+    });
 
     this.updatePatMainList();
   },
@@ -1585,7 +1517,7 @@ export default {
 
     EventBus.$on("refresh", this.refresh);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.clearHolidays(); // storeの休日マスタをクリア
     EventBus.$off("refresh", this.refresh);
 
@@ -1594,15 +1526,6 @@ export default {
   },
 };
 </script>
-
-<style>
-@media print {
-  /** 検査依頼 tableレイアウト崩れ回避 */
-  body:has(#examrequest-detail) #main-id {
-    display: inline-block;
-  }
-}
-</style>
 
 <style scoped>
 #upper-buttons {
@@ -1745,7 +1668,7 @@ span.blood-glucose-wrapper {
   margin-right: 5px;
   line-height: 30px;
 }
-.exam-control-cell >>> .td-img {
+.exam-control-cell :deep(.td-img) {
   width: 1em;
   height: auto;
   margin-top: 2px;
@@ -1776,24 +1699,20 @@ span.blood-glucose-wrapper {
   pointer-events: none;
 }
 @media print {
-  /** ヘッダ固定 */
   .ntss-list-header-th-sticky {
     position: sticky !important;
   }
-  /** スクロールコンテナ */
   .scroll-table {
     overflow: hidden !important;
     height: auto !important;
   }
   table.grid-record-list {
     display: table;
-  }  
-  /** 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
+  }
   table.scroll-rightmost {
     position: relative;
     float: right;
   }
-  /** 下部ボタン非表示 */
   #bottom-buttons {
     display: none;
   }

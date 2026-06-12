@@ -137,7 +137,7 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import selectionList from "@/components/common/list-selector/SelectionList.vue";
 import customInput from "@/components/common/custom-form-tags/CustomInput";
@@ -145,10 +145,11 @@ import customSelect from "@/components/common/custom-form-tags/CustomSelect";
 import { createItemListData } from "@/functions/for-componet/ListSelector.js";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
 // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_ベッドグループ・透析室マスタ 20240104 linjunfeng start
 import { deepCopy } from "@/functions/common/CommonFunctions";
+import { getModalContainerElement, getModalBodyElement, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
 // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_ベッドグループ・透析室マスタ 20240104 linjunfeng end
 export default {
   components: {
@@ -200,8 +201,7 @@ export default {
     bedGroupClassList() {
       //ベッドグループ区分と区分名(1：ベッドグループ、2：透析室、3：その他) 取得
       const mstBedGroupClass = this.getColumns.find(
-        col => col.field === "groupClass"
-      ).values;
+        col => col.field === "groupClass").values;
 
       //custom-input用の配列を作成
       const customMstBedGroupClass = mstBedGroupClass.map(item => {
@@ -340,15 +340,15 @@ export default {
     }
     this.calculateGridHeight();
     // mod redmine 5349 連携コード1～3の判別不可 宋qy start
-    window.addEventListener("resize", this.calculateGridHeight, false);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.calculateGridHeight, false);
     // mod redmine 5349 連携コード1～3の判別不可 宋qy end
    //最初のボタンはグレーで表示されます
     setTimeout(() => {
       EventBus.$emit("mstHolidayRegistered", true);
     }, 200);
   },
-  beforeDestroy() {
-    window.removeEventListener("resize", this.calculateGridHeight, false);
+  beforeUnmount() {
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.calculateGridHeight, false);
   },
   watch: {
     getFontSize(value) {
@@ -422,13 +422,29 @@ export default {
     },
   },
   methods: {
+    getCurrentModalContainer() {
+      return getModalContainerElement(this.$el) || null;
+    },
+    getCurrentModalBody() {
+      return getModalBodyElement(this.$el) || null;
+    },
+    getBedGroupElement(selector) {
+      return this.getCurrentModalBody()?.querySelector?.(selector) || this.getCurrentModalContainer()?.querySelector?.(selector) || this.$el?.querySelector?.(selector) || queryScopedSelector(selector, this.$el);
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
     calculateGridHeight(value){
-      document.getElementsByClassName("multi-select-list")[0].style.fontSize = ""
-      let newHeight = document.getElementsByClassName("modal-body")[0].clientHeight - document.getElementsByClassName("upper")[0].clientHeight-
-                      document.getElementsByClassName("select-upper")[0].clientHeight - 45;
-      document.getElementsByClassName("multi-select-list")[0].style
-      document.getElementsByClassName("select-area")[0].style.height = newHeight + "px"
+      const multiSelectList = this.getBedGroupElement('.multi-select-list');
+      const modalBody = this.getCurrentModalBody();
+      const upper = this.getBedGroupElement('.upper');
+      const selectUpper = this.getBedGroupElement('.select-upper');
+      const selectArea = this.getBedGroupElement('.select-area');
+      if (multiSelectList) {
+        multiSelectList.style.fontSize = '';
+      }
+      let newHeight = (modalBody?.clientHeight || 0) - (upper?.clientHeight || 0) - (selectUpper?.clientHeight || 0) - 45;
+      if (selectArea) {
+        selectArea.style.height = newHeight + 'px';
+      }
     },
     /**
      * @description 項目全選択処理
@@ -617,7 +633,7 @@ export default {
   width: 30.5vw;
 }
 
-.freeword-area >>> .text-input {
+.freeword-area :deep(.text-input) {
   font-size: unset;
 }
 
@@ -659,7 +675,7 @@ export default {
   width: 35vw;
 }
 
-.select-item-list >>> .item-label {
+.select-item-list :deep(.item-label) {
   padding-top: 0.2em;
   padding-bottom: 0.2em;
 }

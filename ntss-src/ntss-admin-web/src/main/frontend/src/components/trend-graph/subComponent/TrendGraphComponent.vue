@@ -3,35 +3,40 @@
  */
 <template>
   <div class="expandable-content">
-    <div slot="main" id="graph-component" style="width:100%;">
-      <div class="chart-area">
-        <highcharts :options="createChartData()"></highcharts>
+    <div id="graph-component" style="width:100%;">
+      <div class="chart-area highcharts-config">
+        <highcharts ref="trendChart" :options="chartOptions"></highcharts>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import Vue from "vue";
-import { mapGetters } from "vuex";
-import VueHighcharts from "vue-highcharts";
-import Highcharts from "highcharts";
-import Boost from "highcharts/modules/boost";
-import highchartsMore from "highcharts/highcharts-more";
+import { mapGetters } from "@/compat/vue/vuex";
+import { Chart } from "@/compat/charts/highcharts";
+import Highcharts from "@/compat/charts/highcharts";
+import { Boost } from "@/compat/charts/highcharts";
+import { HighchartsMore as highchartsMore } from "@/compat/charts/highcharts";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
 
-Vue.use(VueHighcharts);
 Boost(Highcharts);
 highchartsMore(Highcharts);
+
+// Highcharts v9 相当: X軸の基準線と目盛り線を同色にする（v12 既定値では色がずれる）
+const X_AXIS_STROKE_COLOR = "#ccd6eb";
 
 // グラフデータのテンプレート
 const CHART_OPTIONS_TEMPLATE = {
   chart: {
     marginRight: 50,
     marginLeft: 45,
+    marginBottom: 50,
+    // Highcharts v12: プロット領域の枠線（v9 では左右が閉じて見えていた）
+    plotBorderWidth: 1,
+    plotBorderColor: X_AXIS_STROKE_COLOR,
     reflow: true
     // add FNSI-redmine#3962 付 start
     // ,height: '400px'
@@ -52,8 +57,16 @@ const CHART_OPTIONS_TEMPLATE = {
   xAxis: {
     type: "datetime",
     scrollbar: {
-        enabled: true
+      enabled: true
     },
+    // Highcharts v12: 中間の目盛り・縦グリッドを表示（v9 相当）
+    gridLineWidth: 1,
+    gridLineColor: "#e6e6e6",
+    lineColor: X_AXIS_STROKE_COLOR,
+    lineWidth: 1,
+    tickColor: X_AXIS_STROKE_COLOR,
+    tickWidth: 1,
+    tickLength: 5,
     dateTimeLabelFormats: {
       // don't display the dummy year
       minute: "%Y/%m/%d<br/>%H:%M",
@@ -62,6 +75,11 @@ const CHART_OPTIONS_TEMPLATE = {
       week: "%Y<br/>%m/%d",
       month: "%Y/%m",
       year: "%Y"
+    },
+    labels: {
+      style: {
+        color: "inherit"
+      }
     }
   },
   yAxis: [
@@ -71,6 +89,11 @@ const CHART_OPTIONS_TEMPLATE = {
       min: 0,
       max: 100,
       alignTicks: false,
+      lineWidth: 1,
+      lineColor: X_AXIS_STROKE_COLOR,
+      tickWidth: 1,
+      tickColor: X_AXIS_STROKE_COLOR,
+      tickLength: 5,
       labels: {
         align: "left",
         x: -28,
@@ -89,6 +112,11 @@ const CHART_OPTIONS_TEMPLATE = {
       // max: 30,
       alignTicks: false,
       opposite: true, // 右側のy軸とする
+      lineWidth: 1,
+      lineColor: X_AXIS_STROKE_COLOR,
+      tickWidth: 1,
+      tickColor: X_AXIS_STROKE_COLOR,
+      tickLength: 5,
       allowDecimals: true,
       labels: {
         align: "right",
@@ -120,6 +148,14 @@ const CHART_OPTIONS_TEMPLATE = {
 };
 
 export default {
+  components: {
+    highcharts: Chart
+  },
+  data() {
+    return {
+      chartOptions: deepCopy(CHART_OPTIONS_TEMPLATE)
+    };
+  },
   computed: {
     ...mapGetters("trend-graph", [
       "getMonitorDataList",
@@ -144,7 +180,30 @@ export default {
       return this.getGraphItemList;
     }
   },
+  watch: {
+    getSelectedTemplate: {
+      handler() {
+        this.refreshChartOptions();
+      },
+      deep: true
+    },
+    getConditionInfo: {
+      handler() {
+        this.refreshChartOptions();
+      },
+      deep: true
+    },
+    getMonitorDataList() {
+      this.refreshChartOptions();
+    }
+  },
+  mounted() {
+    this.refreshChartOptions();
+  },
   methods: {
+    refreshChartOptions() {
+      this.chartOptions = this.createChartData();
+    },
     /**
      * グラフ用データ生成
      */
@@ -260,6 +319,15 @@ export default {
         }
 
         options.series = seriesArr;
+        if (plotMinTime != null) {
+          options.xAxis.min = plotMinTime;
+        }
+        if (plotMaxTime != null) {
+          options.xAxis.max = plotMaxTime;
+        }
+        // 表示期間の左右端でプロット領域を切る（v9 相当）
+        options.xAxis.startOnTick = false;
+        options.xAxis.endOnTick = false;
       }
       return options;
     },
@@ -313,9 +381,6 @@ export default {
       return r;
     }
   },
-  destroyed() {
-    // グラフデータをクリア
-  }
 };
 </script>
 
@@ -327,10 +392,22 @@ export default {
 }
 .chart-area {
   width: 100%;
+  max-width: 100%;
   margin: auto;
-  min-width: 900px;
+}
+.highcharts-config {
+  overflow: auto;
+}
+:deep(.highcharts-plot-border),
+:deep(.highcharts-axis.highcharts-xaxis .highcharts-axis-line),
+:deep(.highcharts-axis.highcharts-xaxis .highcharts-tick),
+:deep(.highcharts-axis.highcharts-yaxis .highcharts-axis-line),
+:deep(.highcharts-axis.highcharts-yaxis .highcharts-tick) {
+  stroke: #ccd6eb;
 }
 #graph-component {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
 }
 </style>

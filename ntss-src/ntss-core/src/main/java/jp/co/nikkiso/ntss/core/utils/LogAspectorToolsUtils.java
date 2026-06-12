@@ -1,9 +1,9 @@
 package jp.co.nikkiso.ntss.core.utils;
 
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.JoinPoint;
@@ -22,8 +22,8 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
@@ -97,7 +97,7 @@ public class LogAspectorToolsUtils {
     try {
       String jsonResult = mapper.writeValueAsString(result);
       json.put("value", jsonResult);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       e.getMessage();
     }
 

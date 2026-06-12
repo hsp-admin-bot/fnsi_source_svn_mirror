@@ -4,6 +4,7 @@
     <template #body>
       <div id="m-content" class="modal-body-content">
         <table>
+          <tbody>
           <tr>
             <td width="25%">保険区分</td>
             <td>
@@ -39,6 +40,7 @@
               </div>
             </td>
           </tr>
+          </tbody>
         </table>
 
         <!-- 保険 (insu_class == 0) -->
@@ -49,6 +51,7 @@
           v-if="getDataFromJson(selectedJson,'insu_class').editValue == 0"
         >
           <table class="card-table">
+            <tbody>
             <tr>
               <td>保険名</td>
               <td class="flex-area">
@@ -61,9 +64,9 @@
                 />
                 <div class="short-name-area">
                   <v-ons-button
-                    ref="popoverButton"
+                    ref="insurancePopoverAnchorHoken"
                     class="common-style-select-button btn3-normal"
-                    @click="showPopover"
+                    @click="openInsuranceMasterPopover($event)"
                     :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                   >検索</v-ons-button>
                   <span>略称</span>
@@ -172,13 +175,14 @@
               <td>
                 <div>
                   <div class="radio-group">
-                    <custom-radio
-                      :value="getInsuranceInfoJson('insu_info', 'cki_class')"
-                      radio-value="0"
-                      name="cki_class"
-                      class="margin-radio"
-                      :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-                    >対象外</custom-radio>
+                    <span class="margin-radio">
+                      <custom-radio
+                        :value="getInsuranceInfoJson('insu_info', 'cki_class')"
+                        radio-value="0"
+                        name="cki_class"
+                        :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+                      >対象外</custom-radio>
+                    </span>
                     <custom-radio
                       :value="getInsuranceInfoJson('insu_info', 'cki_class')"
                       radio-value="1"
@@ -187,13 +191,14 @@
                     >対象者</custom-radio>
                   </div>
                   <div class="radio-group">
-                    <custom-radio
-                      :value="getInsuranceInfoJson('insu_info', 'cki_class')"
-                      radio-value="2"
-                      name="cki_class"
-                      class="margin-radio-right"
-                      :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-                    >1000円対象者</custom-radio>
+                    <span class="margin-radio-right">
+                      <custom-radio
+                        :value="getInsuranceInfoJson('insu_info', 'cki_class')"
+                        radio-value="2"
+                        name="cki_class"
+                        :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+                      >1000円対象者</custom-radio>
+                    </span>
                     <custom-radio
                       :value="getInsuranceInfoJson('insu_info', 'cki_class')"
                       radio-value="3"
@@ -210,13 +215,14 @@
                 <div>
                   <div class="d-flex flex-row">
                     <div class="radio-group">
-                      <custom-radio
-                        :value="getInsuranceInfoJson('insu_info', 'kki_class')"
-                        radio-value="0"
-                        name="kki_class"
-                        class="margin-radio"
-                        :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-                      >対象外</custom-radio>
+                      <span class="margin-radio">
+                        <custom-radio
+                          :value="getInsuranceInfoJson('insu_info', 'kki_class')"
+                          radio-value="0"
+                          name="kki_class"
+                          :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+                        >対象外</custom-radio>
+                      </span>
                       <custom-radio
                         :value="getInsuranceInfoJson('insu_info', 'kki_class')"
                         radio-value="1"
@@ -241,13 +247,14 @@
               <td>
                 <div>
                   <div class="radio-group">
-                    <custom-radio
-                      :value="getInsuranceInfoJson('insu_info', 'und_six')"
-                      radio-value="0"
-                      name="und_six"
-                      class="margin-radio"
-                      :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-                    >対象外</custom-radio>
+                    <span class="margin-radio">
+                      <custom-radio
+                        :value="getInsuranceInfoJson('insu_info', 'und_six')"
+                        radio-value="0"
+                        name="und_six"
+                        :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+                      >対象外</custom-radio>
+                    </span>
                     <custom-radio
                       :value="getInsuranceInfoJson('insu_info', 'und_six')"
                       radio-value="1"
@@ -310,6 +317,7 @@
                 />
               </td>
             </tr>
+            </tbody>
           </table>
         </div>
 
@@ -320,6 +328,7 @@
           v-if="getDataFromJson(selectedJson,'insu_class').editValue == 1"
         >
           <table class="card-table">
+            <tbody>
             <tr>
               <td>公費名</td>
               <td class="flex-area">
@@ -332,9 +341,9 @@
                 />
                 <div class="short-name-area">
                   <v-ons-button
-                    ref="popoverButton"
+                    ref="insurancePopoverAnchorKohi"
                     class="common-style-select-button btn3-normal"
-                    @click="showPopover"
+                    @click="openInsuranceMasterPopover($event)"
                     :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                   >検索</v-ons-button>
                   略称
@@ -443,6 +452,7 @@
                 >確認</v-ons-button>
               </td>
             </tr>
+            </tbody>
           </table>
         </div>
 
@@ -453,6 +463,7 @@
           v-if="getDataFromJson(selectedJson,'insu_class').editValue == 2"
         >
           <table class="card-table">
+            <tbody>
             <tr>
               <td>セット名</td>
               <td class="flex-area">
@@ -568,6 +579,7 @@
                 />
               </td>
             </tr>
+            </tbody>
           </table>
         </div>
 
@@ -578,6 +590,7 @@
           v-if="getDataFromJson(selectedJson,'insu_class').editValue == 3"
         >
           <table class="card-table">
+            <tbody>
             <tr>
               <td>名称</td>
               <td>
@@ -614,14 +627,25 @@
                 />
               </td>
             </tr>
+            </tbody>
           </table>
         </div>
 
-        <pop-over
-          v-bind="popoverData"
-          :target-position-element="$refs.popoverButton"
-          @popover-close="closePopover"
-          @popover-return="selectedInsurance"
+        <common-master-selector
+          ref="insuranceCms"
+          :masterType="MasterType.INSURANCE_PAT_INFO"
+          :facilityCd="insuranceModalFacilityCd"
+          :extraParams="{ insuType: String(tmpInsuClass === '' || tmpInsuClass === null ? '0' : tmpInsuClass) }"
+          :initItem="insuranceMasterEditItem"
+          :editItem="insuranceMasterEditItem"
+          :popoverAnchorElement="
+            insuranceMasterPopoverAnchorEl || getInsuranceMasterPopoverAnchor()
+          "
+          :btnVisible="false"
+          :btnName="'検索'"
+          :isVisible="false"
+          @popover-return="onInsuranceComposeReturn"
+          @popover-close="onInsuranceMasterPopoverClose"
         />
       </div>
     </template>
@@ -664,24 +688,26 @@
 </template>
 
 <script>
+import { getScopedElementsByClassName, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
-import MasterSelector from "@/components/common/master-selector/MasterSelector";
 import CommonTextArea from "@/components/common/CommonTextArea";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
-import moment from "moment";
-import { mapGetters, mapActions } from "vuex";
+import dayjs from "@/compat/date/dayjs";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import insuSelect from "@/components/pat-info/insurance-info-card/custom-item/InsuSelect.vue";
 import { decodeEditableRecord, extractChangesRecord } from '@/functions/PatInfoFunctions';
-import { EventBus } from "@/eventBus.js";
-import cloneDeep from "lodash/cloneDeep";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 
 const JSON_EMPTY = {
   editValue: null,
@@ -693,7 +719,7 @@ export default {
   components: {
     ModalBase,
     "message-dialog": messageDialog,
-    "pop-over": MasterSelector,
+    "common-master-selector": commonMasterSelector,
     "insu-select": insuSelect,
     "com-textarea": CommonTextArea
   },
@@ -718,17 +744,8 @@ export default {
       cardDiff: true,
       originJson: null,
       isHaitaErrDialogVisible: false,
-      popoverData: {
-        popoverVisible: false,
-        popoverDisplayDirection: "bottom",
-        popoverTitleHeader: "保険選択",
-        popoverFilterLabel: "",
-        popoverFilterDataset: [],
-        popoverContentLabel: "保険名",
-        popoverContentDataset: [],
-        popoverSearchQuery: "",
-        popoverContentSelected: ""
-      }
+      MasterType,
+      insuranceMasterPopoverAnchorEl: null
     };
   },
 
@@ -788,8 +805,21 @@ export default {
       }
       return "";
     },
-    insuranceValue() {
-      return this.getInsuranceInfoJson('insu_info', 'insu_name').editValue;
+
+    insuranceModalFacilityCd() {
+      return this.getIsOtherFacility ? this.getOtherFacilityCd : this.facilityCd;
+    },
+
+    insuranceMasterEditItem() {
+      if (!this.selectedJson) {
+        return { value: null };
+      }
+      const insuClass = Number(this.selectedJson.insu_class.editValue);
+      const insuName = this.getDataFromJson(this.selectedJson, "insu_name").editValue;
+      const hit = (this.mstInsurance || []).find(
+        item => item.name === insuName && Number(item.insuType) === insuClass
+      );
+      return { value: hit ? hit.code : null };
     }
   },
   
@@ -797,27 +827,6 @@ export default {
     this.originJson = cloneDeep(this.selectedJson);
   },
 
-  watch: {
-    tmpInsuClass(value) {
-      if (!this.mstInsurance) return;
-      const filteredData = this.mstInsurance.filter(item => {
-        return item.insuType === Number(value);
-      });
-      this.popoverData.popoverContentDataset = filteredData.map(item => {
-        return { value: item.code, text: item.name };
-      });
-    },
-    insuranceValue: {
-      handler(editValue) {
-        this.popoverData.popoverContentSelected =
-          cloneDeep(this.popoverData.popoverContentDataset.find(
-            value => value.text == editValue
-          )) || { value: null, fnValue: {}, text: "" };
-      },
-      immediate: true
-    }
-  },
-  
   methods: {
     ...mapActions("loading-screen", ["setLoadingScreenMessage", "setLoadingScreenVisible"]),
     ...mapActions("pat-insurance", ["setSelectedInsuranceJson", "setInsuranceList", "setReloadRequired", "setIsCreate"]),
@@ -878,7 +887,7 @@ export default {
     },
 
     radioChange() {
-      let arr = document.getElementsByClassName("custom-input-required");
+      let arr = getScopedElementsByClassName("custom-input-required", this.$el || document);
       for (let i = 0; i < arr.length; i++) {
         if (arr[i].classList.contains("custom-input-invalid")) {
           arr[i].classList.remove("custom-input-invalid");
@@ -890,30 +899,90 @@ export default {
       this.setDataFromJson(
         this.insuranceList[this.selectedIndex],
         "check_date",
-        moment().format("YYYYMMDD")
+        dayjs().format("YYYYMMDD")
       );
     },
 
-    showPopover() {
-      EventBus.$emit("getInsuranceInfo", this.getInsuranceInfoJson('insu_info', 'insu_name'));
-      this.popoverData.popoverVisible = true;
+    getInsuranceMasterPopoverAnchor() {
+      const cls =
+        this.selectedJson && this.selectedJson.insu_class != null
+          ? Number(this.selectedJson.insu_class.editValue)
+          : NaN;
+      const refName =
+        cls === 1 ? "insurancePopoverAnchorKohi" : "insurancePopoverAnchorHoken";
+      const ref = this.$refs[refName];
+      return ref ? (Array.isArray(ref) ? ref[0] : ref) : null;
     },
 
-    closePopover() {
-      this.popoverData.popoverVisible = false;
+    insurancePopoverAnchorFromEvent(evt) {
+      const target = evt && evt.currentTarget;
+      if (!target) return null;
+      if (typeof target.getBoundingClientRect === "function") return target;
+      return target.$el != null ? target.$el : target;
     },
 
-    selectedInsurance(data) {
-      const selectedInsu = this.mstInsurance.find(e => e.code === data.value);
+    onInsuranceMasterPopoverClose() {
+      this.insuranceMasterPopoverAnchorEl = null;
+    },
+
+    async openInsuranceMasterPopover(evt) {
+      this.insuranceMasterPopoverAnchorEl = this.insurancePopoverAnchorFromEvent(evt);
+      const cls =
+        this.selectedJson && this.selectedJson.insu_class != null
+          ? Number(this.selectedJson.insu_class.editValue)
+          : 0;
+      let insuNameTarget;
+      if (cls === 1) {
+        insuNameTarget = this.getInsuranceInfoJson("insu_pub_info", "insu_name");
+      } else if (cls === 2) {
+        insuNameTarget = this.getInsuranceInfoJson("insu_set_info", "insu_name");
+      } else {
+        insuNameTarget = this.getInsuranceInfoJson("insu_info", "insu_name");
+      }
+      EventBus.$emit("getInsuranceInfo", insuNameTarget);
+      await this.$nextTick();
+      const ref = this.$refs.insuranceCms;
+      const cms = ref && (ref[0] || ref);
+      if (cms && typeof cms.openPopover === "function") {
+        await cms.openPopover();
+      }
+    },
+
+    onInsuranceComposeReturn(data) {
+      const selectedInsu =
+        data != null && data.value != null
+          ? (this.mstInsurance || []).find(e => String(e.code) === String(data.value)) || data
+          : null;
       const json = this.insuranceList[this.selectedIndex];
       if (selectedInsu) {
-        this.setDataFromJson(json, "insu_name", selectedInsu.name);
-        this.setDataFromJson(json, "insu_name_short", selectedInsu.insuNameShort);
+        const insuName =
+          selectedInsu.name ??
+          selectedInsu.insu_name ??
+          (typeof selectedInsu.text === "string"
+            ? selectedInsu.text.replace(/^【削除済み】/, "")
+            : null);
+        if (insuName == null) {
+          this.setDataFromJson(json["insu_info"], "insu_pat_name", null);
+          this.setDataFromJson(json, "insu_name", null);
+          this.setDataFromJson(json, "insu_name_short", null);
+          if (+json.insu_class.editValue == 0) {
+            this.setDataFromJson(json["insu_info"], "futan-g", null);
+            this.setDataFromJson(json["insu_info"], "futan-n", null);
+          }
+          return;
+        }
+        const shortName =
+          selectedInsu.insuNameShort ??
+          selectedInsu.insu_name_short ??
+          selectedInsu.nameShort ??
+          null;
+        this.setDataFromJson(json, "insu_name", insuName);
+        this.setDataFromJson(json, "insu_name_short", shortName);
         if (+json.insu_class.editValue == 0) {
           // 保険の場合
           let insuPatObj = this.getInsuranceInfoJson('insu_info', 'insu_pat_name');
           if (null == insuPatObj.editValue || undefined == insuPatObj.editValue) {
-            this.setDataFromJson(json["insu_info"], "insu_pat_name", selectedInsu.name);
+            this.setDataFromJson(json["insu_info"], "insu_pat_name", insuName);
           }
           this.setDataFromJson(json["insu_info"], "futan-g", selectedInsu.futanG);
           this.setDataFromJson(json["insu_info"], "futan-n", selectedInsu.futanN);
@@ -974,7 +1043,7 @@ export default {
         message: messageFormat(DIALOG_MESSAGES[13000004].message),
         callback: answer => {
           if (answer === 1) {
-            const customInputRequired = document.getElementsByClassName("custom-input-required");
+            const customInputRequired = getScopedElementsByClassName("custom-input-required", this.$el || document);
             for (let i = 0; i < customInputRequired.length; i++) {
               if (customInputRequired[i].classList.contains("custom-input-invalid")) {
                 customInputRequired[i].classList.remove("custom-input-invalid");
@@ -1018,7 +1087,7 @@ export default {
       if (answer === 1) {
         if (!this.selectedJson["is_new"]) {
           this.setDataFromJson(this.selectedJson, "is_disp", "0");
-          this.setDataFromJson(this.selectedJson, "up_date", moment().format("YYYY-MM-DD HH:mm:ss"));
+          this.setDataFromJson(this.selectedJson, "up_date", dayjs().format("YYYY-MM-DD HH:mm:ss"));
           const decodeJsonArray = decodeEditableRecord(this.selectedJson);
           
           this.setLoadingScreenVisible(true);
@@ -1109,10 +1178,10 @@ export default {
       if (insuName === null || insuName.trim() === "") {
         let arr = null;
         switch (insuClass) {
-          case 1: arr = document.getElementById("publicexpenseName"); break;
-          case 2: arr = document.getElementById("setName"); break;
-          case 3: arr = document.getElementById("ownexpenseName"); break;
-          default: arr = document.getElementById("hokenname"); break;
+          case 1: arr = getScopedElementById("publicexpenseName", this.$el || document); break;
+          case 2: arr = getScopedElementById("setName", this.$el || document); break;
+          case 3: arr = getScopedElementById("ownexpenseName", this.$el || document); break;
+          default: arr = getScopedElementById("hokenname", this.$el || document); break;
         }
         if (arr) arr.classList.add("custom-input-invalid");
         title = DIALOG_MESSAGES[12000194].title;
@@ -1182,7 +1251,7 @@ export default {
     },
 
     async updateInsurance(decodeJsonArray) {
-      decodeJsonArray.up_date = moment().format("YYYY-MM-DD HH:mm:ss");
+      decodeJsonArray.up_date = dayjs().format("YYYY-MM-DD HH:mm:ss");
       await ApiHelper.put(`/patInfo/updatePatInsu`, decodeJsonArray)
         .catch(error => {
           getErrorMessage('InsuranceInfoAddEditModal.vue', 'updateInsurance', "保険変更を失敗しました。");
@@ -1200,8 +1269,7 @@ export default {
     }
   },
 
-  beforeDestroy() {
-    Object.assign(this.$data, this.$options.data());
+  beforeUnmount() {
   }
 };
 </script>

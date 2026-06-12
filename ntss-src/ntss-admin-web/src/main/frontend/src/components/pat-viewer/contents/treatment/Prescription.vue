@@ -14,7 +14,7 @@
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * ベースコンポーネント
@@ -97,7 +97,7 @@ export default {
     });
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -129,11 +129,15 @@ export default {
         })
     },
 
-    onTitleClick(event) {
+    onTitleClick(event, dispDataList = []) {
+      const cellInfo = dispDataList
+        .flatMap((row) => row?.data || [])
+        .find((item) => item?.treatDate);
+      if (!cellInfo) return;
       const treatDateList = [cellInfo.treatDate, new Date()];
         this.preSetTreatBaseDate(treatDateList).then(() => {
           this.$router.push({ name: "prescription"});
-          this.$router.push({ name: "pat-prescription", params: { condition: event}});
+          this.$router.push({ name: "pat-prescription", params: { condition: cellInfo}});
         })
     }
   }

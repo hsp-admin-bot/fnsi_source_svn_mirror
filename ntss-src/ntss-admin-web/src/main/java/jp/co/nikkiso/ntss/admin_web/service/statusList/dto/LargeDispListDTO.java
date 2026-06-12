@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.admin_web.service.statusList.dto;
 
-import java.io.IOException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -8,8 +7,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.entity.custom.LargeDispMonitorData;
 import lombok.AllArgsConstructor;
@@ -174,7 +173,7 @@ public class LargeDispListDTO {
   }
 
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
-  public void setIsMediDone(String mediInfo)  throws IOException {
+  public void setIsMediDone(String mediInfo)  throws tools.jackson.core.JacksonException {
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
     if (!Objects.equals(mediInfo, "") && mediInfo != null) {
       // JSON配列パース
@@ -194,7 +193,7 @@ public class LargeDispListDTO {
             break;
           }
         }
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -347,21 +346,21 @@ public class LargeDispListDTO {
      */
     // 最新時刻格納用変数(初期値は1970年をセット)
     LocalDateTime latestDate = LocalDateTime.of(1970, 1, 1, 0, 0);
-    
+
     if (rstDialysisState.equals("1") || rstDialysisState.equals("2")) {
       // 条件送信～治療開始前
-  
+
       if (moniListDistinct.size() != 0) {
         // 測定済みの場合は最新血圧測定日時と現在時刻で判定。
         for (LargeDispMonitorData moniData: moniListDistinct) {
           LocalDateTime occurDate = this.timestampToLocalDateTime(moniData.getOccurDate());
-  
+
           // 最新の測定日時を取得
           if (!Objects.isNull(occurDate) && occurDate.isAfter(latestDate)) {
             latestDate = occurDate;
           }
         }
-        
+
       } else {
         // 未測定の場合は条件送信日時と現在時刻で判定。
         LocalDateTime condSendDate = this.timestampToLocalDateTime(this.condSendDate);
@@ -369,19 +368,19 @@ public class LargeDispListDTO {
           latestDate = condSendDate;
         }
       }
-            
-      // 時刻の差を判定 
+
+      // 時刻の差を判定
       // (現在時刻 - 血圧測定間隔) ＞ 最新血圧測定日時or条件送信日時 のときにfalseになる。
       if (nowDate.minusMinutes(bpmiInterval).isAfter(latestDate)) {
         this.isBpMeasure = false;
       }
-      
+
     } else if (rstDialysisState.equals("3")) {
       // 治療開始
-      
+
       // 治療開始時間
       LocalDateTime startDate = this.timestampToLocalDateTime(this.startDate);
-      
+
       // 治療開始前測定済みフラグ
       Stream<LargeDispMonitorData> moniListBeforeStart = moniListDistinct.stream().filter(moniData -> {
         LocalDateTime occurDate = this.timestampToLocalDateTime(moniData.getOccurDate());
@@ -395,7 +394,7 @@ public class LargeDispListDTO {
         return !Objects.isNull(startDate) && !Objects.isNull(occurDate) && occurDate.isAfter(startDate);
       });
       Boolean isExistAfterStart = moniListAfterStart.count() > 0;
-      
+
       // 測定状況によって判定基準を変える
       if (isExistBeforeStart && !isExistAfterStart) {
         // 治療開始前測定済み＋治療開始後測定なしの場合は治療開始日時と現在時刻で判定。
@@ -407,7 +406,7 @@ public class LargeDispListDTO {
         // 治療開始前測定なし＋治療開始後測定ありの場合は最新血圧測定日時と現在時刻で判定。
         for (LargeDispMonitorData moniData: moniListDistinct) {
           LocalDateTime occurDate = this.timestampToLocalDateTime(moniData.getOccurDate());
-  
+
           // 最新の測定日時を取得
           if (!Objects.isNull(occurDate) && occurDate.isAfter(latestDate)) {
             latestDate = occurDate;
@@ -418,33 +417,33 @@ public class LargeDispListDTO {
         this.isBpMeasure = false;
         return;
       }
-      
-      // 時刻の差を判定 
+
+      // 時刻の差を判定
       // (現在時刻 - 血圧測定間隔) ＞ 治療開始日時or最新血圧測定日時 のときにfalseになる。
       if (nowDate.minusMinutes(bpmiInterval).isAfter(latestDate)) {
         this.isBpMeasure = false;
       }
-      
+
     } else if (rstDialysisState.equals("4") || rstDialysisState.equals("5")) {
       // 治療終了～後体重測定済み
-      
+
       if (moniListDistinct.size() != 0) {
         // 測定データありの場合は最新血圧測定日時と現在時刻で判定。
         for (LargeDispMonitorData moniData: moniListDistinct) {
           LocalDateTime occurDate = this.timestampToLocalDateTime(moniData.getOccurDate());
-  
+
           // 最新の測定日時を取得
           if (!Objects.isNull(occurDate) && occurDate.isAfter(latestDate)) {
             latestDate = occurDate;
           }
         }
-  
-        // 時刻の差を判定 
+
+        // 時刻の差を判定
         // (現在時刻 - 血圧測定間隔) ＞ 最新血圧測定日時 のときにfalseになる。
         if (nowDate.minusMinutes(bpmiInterval).isAfter(latestDate)) {
           this.isBpMeasure = false;
         }
-        
+
       } else {
         // 測定なしの場合は強制点灯。
         this.isBpMeasure = false;

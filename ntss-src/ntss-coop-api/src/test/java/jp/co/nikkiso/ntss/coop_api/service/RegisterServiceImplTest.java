@@ -14,7 +14,7 @@ import org.apache.commons.beanutils.BeanUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlConfig;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -41,13 +41,13 @@ import jp.co.nikkiso.ntss.core.exception.NtssException;
 @Sql("classpath:resource.script/RegisterServiceImplTest/loopTestJournal.sql")
 public class RegisterServiceImplTest extends BaseServiceTest {
 
-  @SpyBean
+  @MockitoSpyBean
   private RegisterServiceImpl registerServiceImpl;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatMainDao patMainDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatPersonalMainDao patPersonalMainDao;
 
   @Test

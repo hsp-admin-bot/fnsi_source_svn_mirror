@@ -11,7 +11,6 @@
         cssClass="resize-fit-content textarea-custom-text-font textarea-resize-vertical"
         @input="resetCss"
         @set-content-data="setContentDataForURL"
-        @blur="commitText"
       />
       <button
         class="k-button k-button-icontext btn3-normal no-flex-shrink"
@@ -24,9 +23,8 @@
       <div class="param-contain enable-flex-grow">
         <label>パラメータ:</label>
         <div :class="wrapperClassList">
-          <template v-for="item in parameters">
+          <template v-for="item in parameters" :key="item.name">
             <button
-              :key="item.name"
               class="k-button k-button-icontext params btn3-normal"
               @click="addParams(item.text)"
             >{{ item.name }}</button>
@@ -81,7 +79,7 @@
       :direction="popoverDirection"
       :cover-target="false"
       :target="popoverTarget"
-      :visible.sync="isDisplay"
+      v-model:visible="isDisplay"
       :class="popoverClassList"
     >
       <div class="popover-content">
@@ -109,15 +107,17 @@
 </template>
 
 <script>
+import { resolveRefElement } from "@/functions/common/LayoutMeasureHelper";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import CommonTextArea from "@/components/common/CommonTextArea";
 import CustomTextarea from "@/components/common/custom-form-tags/CustomTextarea";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import { UrlLinkParameters, replacePrameters, openUrlLinkTest } from '@/functions/UrlLinkFunctions';
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 import { MST_DEFAULT_VALUE } from "@/constants/masterDefineDetail";
+import { messageFormat } from "@/functions/common/MessageFormat";
 
 const DefaultValues = JSON.parse(JSON.stringify(MST_DEFAULT_VALUE.mst_url_link_register.urlInfo));
 
@@ -191,6 +191,13 @@ export default {
   mounted() {
     this.previewImages();
     this.emitNotChangedState(true);
+    this.bindUrlTextareaBlurListener();
+  },
+  updated() {
+    this.bindUrlTextareaBlurListener();
+  },
+  beforeUnmount() {
+    this.unbindUrlTextareaBlurListener();
   },
   watch: {
     textIcon() {
@@ -209,19 +216,99 @@ export default {
       EventBus.$emit("mstHolidayRegistered", state);
     },
 
+    getUrlTextareaElement() {
+      return resolveRefElement(this, "urlComTextarea")?.querySelector("#textarea-url") || null;
+    },
+
+    bindUrlTextareaBlurListener() {
+      this.$nextTick(() => {
+        const textarea = this.getUrlTextareaElement();
+        if (!textarea) {
+          return;
+        }
+        if (!this._onUrlTextareaBlur) {
+          this._onUrlTextareaBlur = () => this.commitText({ syncFromDom: true });
+        }
+        if (!this._onUrlTextareaInput) {
+          this._onUrlTextareaInput = () => {
+            const el = this.getUrlTextareaElement();
+            if (!el) {
+              return;
+            }
+            this.strUrl = el.value;
+            this.updateUrlValidationState();
+          };
+        }
+        if (this._urlTextareaBlurTarget === textarea) {
+          return;
+        }
+        this.unbindUrlTextareaBlurListener();
+        this._urlTextareaBlurTarget = textarea;
+        textarea.addEventListener("blur", this._onUrlTextareaBlur);
+        textarea.addEventListener("input", this._onUrlTextareaInput);
+        this.syncUrlTextareaBackground();
+      });
+    },
+
+    unbindUrlTextareaBlurListener() {
+      const textarea = this._urlTextareaBlurTarget;
+      if (textarea && this._onUrlTextareaBlur) {
+        textarea.removeEventListener("blur", this._onUrlTextareaBlur);
+      }
+      if (textarea && this._onUrlTextareaInput) {
+        textarea.removeEventListener("input", this._onUrlTextareaInput);
+      }
+      this._urlTextareaBlurTarget = null;
+    },
+
     addParams(key) {
-      const textarea = this.$refs.urlComTextarea.$el.querySelector("#textarea-url");
+      const textarea = this.getUrlTextareaElement();
+      if (!textarea) {
+        return;
+      }
       const cursorPosition = textarea.selectionStart;
-      this.strUrl = this.strUrl.slice(0, cursorPosition) + key + this.strUrl.slice(cursorPosition);
+      const newValue =
+        this.strUrl.slice(0, cursorPosition) + key + this.strUrl.slice(cursorPosition);
+      this.strUrl = newValue;
+      textarea.value = newValue;
       this.commitText();
       // value の変更によって selectionStart がゼロに変化するのを待ってから設定しなおす
       setTimeout(() => {
         textarea.selectionEnd = textarea.selectionStart = cursorPosition + key.length;
       }, 0);
     },
-    commitText() {
+    syncUrlTextareaBackground() {
+      const textarea = this.getUrlTextareaElement();
+      if (!textarea) {
+        return;
+      }
+      if (this.isInputInvalid) {
+        textarea.style.backgroundColor = "rgba(255, 0, 0, 1)";
+        return;
+      }
+      textarea.style.backgroundColor = "#ffff99";
+    },
+    updateUrlValidationState() {
+      const trimmed = (this.strUrl ?? "").trim();
+      if (trimmed.length === 0 || isUrl(trimmed)) {
+        this.urlErrorShown = false;
+        this.isInputInvalid = false;
+      }
+      this.syncUrlTextareaBackground();
+    },
+    commitText({ syncFromDom = false } = {}) {
+      if (syncFromDom) {
+        const textarea = this.getUrlTextareaElement();
+        if (textarea && typeof textarea.value === "string") {
+          this.strUrl = textarea.value;
+        }
+      }
       this.strUrl = this.strUrl.trim();
       this.urlErrorShown = this.strUrl.length > 0 && this.isUrlInvalid;
+      if (!this.urlErrorShown) {
+        this.isInputInvalid = false;
+      }
+      this.syncUrlTextareaBackground();
       this.setEditRecordUrlInfo();
     },
     setEditRecordUrlInfo() {
@@ -241,9 +328,7 @@ export default {
       });
     },
     resetCss() {
-      if (this.isInputInvalid) {
-        this.isInputInvalid = false;
-      }
+      this.updateUrlValidationState();
     },
     async showPopover(event) {
       this.strUrlcp.initValue = this.strUrlcp.editValue = await replacePrameters(this.strUrl);
@@ -252,7 +337,7 @@ export default {
       await this.resizeTextarea();
     },
     testUrl() {
-      openUrlLinkTest(this.strUrlcp.initValue);
+      openUrlLinkTest(this.strUrlcp.initValue, this.$el);
       this.isDisplay = false;
     },
     /**
@@ -270,6 +355,7 @@ export default {
     validateOnRegistration() {
       if (this.isUrlInvalid) {
         this.isInputInvalid = true; // エラー時に背景色を赤にするためのフラグON
+        this.syncUrlTextareaBackground();
       }
       
       const validationResult = this.validateData();
@@ -404,13 +490,14 @@ export default {
 
     setContentDataForURL(newValue) {
       this.strUrl = newValue;
+      this.updateUrlValidationState();
     },
 
     async resizeTextarea() {
       // textaraeの非表示状態が解除されてscrollHeightが有効な値になってから
       // heightの設定処理を行う
       await this.$nextTick();
-      const el = this.$refs.urlTestComTextarea.$el;
+      const el = resolveRefElement(this, "urlTestComTextarea");
       el.style.height = `${el.scrollHeight + 5}px`;
     }
   }
@@ -418,7 +505,7 @@ export default {
 </script>
 
 <style scoped>
-.test-url-popover >>> .popover__content {
+.test-url-popover :deep(.popover__content) {
   width: auto;
   padding: 10px;
 }
@@ -439,13 +526,17 @@ export default {
 .input-url label {
   margin-right: 5px;
 }
-.input-required >>> textarea {
+.input-required :deep(textarea) {
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> textarea {
+.input-invalid :deep(textarea) {
   color: black;
   background-color: rgba(255, 0, 0, 1);
+}
+/* CustomTextarea の #F7F7F7 より優先して必須入力の黄色を復元する */
+.input-url .comTextarea.input-required:not(.input-invalid) :deep(textarea) {
+  background-color: #ffff99 !important;
 }
 .btn-ok {
   width: 5em;

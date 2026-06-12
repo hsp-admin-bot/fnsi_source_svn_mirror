@@ -16,7 +16,9 @@ import jp.co.nikkiso.ntss.admin_web.service.sysSignManager.SysSigninManagerServi
 import jp.co.nikkiso.ntss.admin_web.service.userAccount.ProvisionalUserService;
 import jp.co.nikkiso.ntss.admin_web.service.userAccount.UserAccountService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
+import jp.co.nikkiso.ntss.core.dao.MstUserDao;
 import jp.co.nikkiso.ntss.core.entity.MstPersonalUser;
+import jp.co.nikkiso.ntss.core.entity.MstUser;
 import jp.co.nikkiso.ntss.core.entity.UserAuthentication;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
@@ -28,18 +30,20 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.http.HttpSession;
-import javax.validation.Valid;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * アカウント編集画面のResourceクラス.
@@ -77,6 +81,10 @@ public class UserResource {
 
   @Autowired
   LogService logService;
+
+  @Autowired
+  private MstUserDao mstUserDao;
+
   /**
    * 仮ユーザー情報変更.
    *
@@ -85,6 +93,14 @@ public class UserResource {
    */
   @PutMapping("/provisional")
   public ResponseEntity<?> alterProvisionalInfo(@RequestBody AlterProvisionalInfoRequest request, @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 mod 20260421 start
+    if (!hasFacilityAccess(ntssUser, request.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + request.getFacilityCd() + " " + "dispUserIdPre=" + request.getDispUserIdPre() + " " + "dispUserIdNew=" + request.getDispUserIdNew() + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -113,9 +129,10 @@ public class UserResource {
    *
    * @param ntssUser NTSS認証ユーザー
    * @return アカウント情報のResponse
-   */
+  */
   @GetMapping("")
-  public ResponseEntity<?> getUserAccountInfo(@AuthenticationPrincipal NtssUser ntssUser) {
+  public ResponseEntity<?> getUserAccountInfo(@RequestParam(required = false) Long selectedPatId,
+                                              @AuthenticationPrincipal NtssUser ntssUser) {
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -136,7 +153,20 @@ public class UserResource {
    * @return ユーザー情報のResponse
    */
   @GetMapping("/get_by_id/{userId}")
-  public ResponseEntity<?> getUserInfoById(@PathVariable Long userId) {
+  public ResponseEntity<?> getUserInfoById(
+      @PathVariable Long userId,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 mod 20260421 start
+    if (!hasUserAccess(ntssUser, userId)) {
+      MstUser mstUser = mstUserDao.selectById(userId);
+      if (mstUser != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstUser.getFacilityCd() + " " + "userId=" + userId;
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -151,9 +181,52 @@ public class UserResource {
 
   }
 
+  @PostMapping("/get_by_ids")
+  public ResponseEntity<?> getUserInfoByIds(
+    @RequestBody List<Long> userIdList,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+
+    // ログ出力
+    EventLogMessage eventLogMessage = new EventLogMessage();
+    eventLogMessage.setLogMessage("REST request to get user account info batch");
+    logService.log(LogLevel.DEBUG, eventLogMessage, "", SERVICE_NAME.FNSI, null);
+
+    // 1. バッチでユーザーにクエリを実行する
+    List<MstUser> mstUserList = mstUserDao.selectByListId(userIdList);
+
+    if (mstUserList == null || mstUserList.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    // 2. 権限フィルタリング + アセンブリ結果
+    List<UserAccountResponse> resultList = new ArrayList<>();
+
+    for (MstUser mstUser : mstUserList) {
+
+      Long userId = mstUser.getUserId();
+
+      UserAccountResponse response = userAccountService.createUserAccountResponse(userId);
+
+      if (response != null) {
+        resultList.add(response);
+      }
+    }
+
+    return new ResponseEntity<>(resultList, HttpStatus.OK);
+  }
+
   /*add FNSI-改修内容全体の合否が俯瞰できるように修正 任 start*/
   @GetMapping("/getAllUser/{facilityCd}")
-  public ResponseEntity<?> getAllUser(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getAllUser(@PathVariable String facilityCd,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 mod 20260421 start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+
     List<MstPersonalUser> response = userAccountService.selectAllUser(facilityCd);
     return new ResponseEntity<>(response, response == null ? HttpStatus.INTERNAL_SERVER_ERROR : HttpStatus.OK);
   }
@@ -165,7 +238,20 @@ public class UserResource {
    * @return response
    */
   @PutMapping("")
-  public ResponseEntity<?> editUserAccountInfo(@Valid @RequestBody UpdateUserAccountInfoRequest request) {
+  public ResponseEntity<?> editUserAccountInfo(
+      @RequestBody UpdateUserAccountInfoRequest request,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 mod 20260421 start
+    if (!hasUserAccess(ntssUser, request.getUserId())) {
+      MstUser mstUser = mstUserDao.selectById(request.getUserId());
+      if (mstUser != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstUser.getFacilityCd() + " " + "userId=" + request.getUserId();
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+
     //add #12657 【securify】SQLインジェクション(High) zrx start
     if (!isAlphanumericSixChars(request.getFacilityCd())) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -326,7 +412,19 @@ public class UserResource {
   @GetMapping("/checkMatchCurrentPassword")
   public ResponseEntity<?> checkMatchCurrentPassword(
       @RequestParam(value = "userId") Long userId,
-      @RequestParam(value = "CurrentPassword") String CurrentPassword) {
+      @RequestParam(value = "CurrentPassword") String CurrentPassword,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 mod 20260421 start
+    if (!hasUserAccess(ntssUser, userId)) {
+      MstUser mstUser = mstUserDao.selectById(userId);
+      if (mstUser != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstUser.getFacilityCd() + " " + "userId=" + userId;
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to Match current password with mst_user_authentication password : "+ userId);
@@ -348,7 +446,19 @@ public class UserResource {
   public ResponseEntity<?> isAvailablePassword(
       @RequestParam(value = "userId") Long userId,
       @RequestParam(value = "newPassword") String newPassword,
-      @RequestParam(value = "facilityCd") String facilityCd) {
+      @RequestParam(value = "facilityCd") String facilityCd,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 mod 20260421 start
+    if (!hasFacilityAccess(ntssUser, facilityCd) || !hasUserAccess(ntssUser, userId)) {
+      MstUser mstUser = mstUserDao.selectById(userId);
+      if (mstUser != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "userId=" + userId;
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to Check if password is available");
@@ -356,7 +466,7 @@ public class UserResource {
     // 現在のパスワードとDB上のパスワードの突合せ
     return new ResponseEntity<>(userAccountService.isAvailablePassword(userId, newPassword, facilityCd), HttpStatus.OK);
   }
-	
+
   // add #12587 スタッフ切替 start
   /**
    * ログイン可能な施設取得
@@ -368,4 +478,20 @@ public class UserResource {
     return new ResponseEntity<List<UserAuthentication>> (userAccountService.getCanLoginFacilities(userId), HttpStatus.OK);
   }
   // add #12587 スタッフ切替 end
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    return ntssUser == null
+      || ntssUser.isNkkAdminUser()
+      || facilityCd == null
+      || facilityCd.equals(ntssUser.getFacilityCd());
+  }
+
+  private boolean hasUserAccess(NtssUser ntssUser, Long userId) {
+    if (ntssUser == null || ntssUser.isNkkAdminUser() || userId == null) {
+      return true;
+    }
+    MstUser mstUser = mstUserDao.selectById(userId);
+    return mstUser == null || mstUser.getFacilityCd() == null
+      || mstUser.getFacilityCd().equals(ntssUser.getFacilityCd());
+  }
+
 }

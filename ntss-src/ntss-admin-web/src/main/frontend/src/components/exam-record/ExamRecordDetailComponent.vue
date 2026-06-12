@@ -31,37 +31,16 @@
     <div class='exam-record-detail-main-content' style = "overflow-y:auto; overflow-x:auto; position:relative; top:5px;">
       <!-- チェックリスト一覧のグリッド -->
       <div id='examrecorddetailgrid'>
-        <kendo-grid class = 'exam-detail-list'
+        <div
+          class='exam-detail-list ntss-kendo-grid-legacy'
           ref='examrecorddetailgrid'
-          :data-source='examDetailDataSource'
-          :editable='false'
-          :reorderable='false'
-          :resizable='true'
-          :selectable='"cell"'
-          :height='kendoGridHeight'
-          :scrollable='true'
-          :data-bound="setFontColor"
-          :data-binding="dataBound"
-          :change="onClickChange"
-        >
-        <kendo-grid-column v-for='category in examRecordDetailGridColumns' :key="category.length"
-          :headerTemplate='category.headerTemplate'
-          :title='category.title'
-          :width='category.width'
-          :field='category.field'
-          :columns='category.columns'
-          :hidden='category.hidden'
-          :locked='category.locked'
-          :lockable='category.lockable'
-        >
-        </kendo-grid-column>
-        </kendo-grid>
+        ></div>
       </div>
     </div>
 
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -86,7 +65,7 @@
               class="ntss-input-date"
               style="padding-right: unset"
               v-model='localCondition.examDateSt'
-              v-validate="'date_format:yyyy-MM-dd'" /> -->
+              v-rules="'date_format:yyyy-MM-dd'" /> -->
             <date-input
               input-id="treatDateSt"
               name="treatDateSt"
@@ -95,7 +74,7 @@
               class="ntss-input-date"
               style="padding-right: unset"
               v-model="localCondition.examDateSt"
-              v-validate="'date_format:yyyy-MM-dd'"
+              v-rules="'date_format:yyyy-MM-dd'"
               @handleClearInput="localCondition.examDateSt = ''"
             />
             <!-- #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end -->
@@ -117,7 +96,7 @@
               class="ntss-input-date"
               style="padding-right: unset"
               v-model='localCondition.examDateEd'
-              v-validate="'date_format:yyyy-MM-dd'" /> -->
+              v-rules="'date_format:yyyy-MM-dd'" /> -->
             <date-input
               input-id="treatDateEd"
               name="treatDateEd"
@@ -126,24 +105,24 @@
               class="ntss-input-date"
               style="padding-right: unset"
               v-model="localCondition.examDateEd"
-              v-validate="'date_format:yyyy-MM-dd'"
+              v-rules="'date_format:yyyy-MM-dd'"
               @handleClearInput="localCondition.examDateEd = ''"
             />
             <!-- #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end -->
             <common-calendar v-model="localCondition.examDateEd" />
           </v-ons-col>
         </v-ons-row>
-        <v-ons-row v-show="errors.has('treatDateSt')">
+        <v-ons-row v-show="hasValidationError('treatDateSt')">
           <td>
-            <p v-show="errors.has('treatDateSt')" class="error-message">
-              {{ errors.first('treatDateSt') }}
+            <p v-show="hasValidationError('treatDateSt')" class="error-message">
+              {{ getValidationError('treatDateSt') }}
             </p>
           </td>
         </v-ons-row>
-        <v-ons-row v-show="errors.has('treatDateEd')">
+        <v-ons-row v-show="hasValidationError('treatDateEd')">
           <td>
-            <p v-show="errors.has('treatDateEd')" class="error-message">
-              {{ errors.first('treatDateEd') }}
+            <p v-show="hasValidationError('treatDateEd')" class="error-message">
+              {{ getValidationError('treatDateEd') }}
             </p>
           </td>
         </v-ons-row>
@@ -191,8 +170,8 @@
           <v-ons-col vertical-align='center'>
             <v-ons-select input-id='examSetCd' v-model="localCondition.examGraphCd">
               <option :value="defaultSelect"></option>
-              <template v-for='(option, index) in getExamSetNameList'>
-                 <option v-if="option.graphSet == 1" :key="index" :value="option.examSetCd">
+              <template v-for='(option, index) in getExamSetNameList' :key="index">
+                 <option v-if="option.graphSet == 1" :value="option.examSetCd">
                   {{ option.examSetName }}
                 </option>
               </template>
@@ -216,9 +195,8 @@
   // add #10359 編集権限の動作不正 dengshen start
   import { getAuthorized } from "@/functions/common/CommonFunctions.js";
   // add #10359 編集権限の動作不正 dengshen end
-  import Kendo from "@progress/kendo-ui";
-  import {mapActions, mapGetters, mapMutations} from "vuex";
-  import {EventBus} from "@/eventBus.js";
+  import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
+  import {EventBus} from "@/compat/vue/event-bus.js";
   import NextTransitionMixin from "@/components/NextTransitionMixin";
   import {deepCopy} from "@/functions/common/CommonFunctions";
   import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
@@ -229,8 +207,10 @@
   import {popoverPosthide, popoverPostShow, popoverPreShow} from "@/functions/common/CommonPopoverFunctions";
   import { makeDefaultCondition, findExamSet } from "@/functions/exam-record/ExamRecordFunctions";
 
-  import moment from "moment";
-  import $$ from "jquery";
+  import dayjs from "@/compat/date/dayjs";
+  import $$ from "@/compat/jquery";
+  import kendo from "@progress/kendo-ui";
+
   // del #10359 編集権限の動作不正 dengshen start
   // //mod 編集権限の適用 劉全航 start
   // import {AUTHORITY_CODES} from "@/constants/userAuthority.js";
@@ -248,8 +228,92 @@
   // add #10619 患者選択状態で検査結果に遷移した際にパンくずリストの配列が不正となる。 linjunfeng end
   // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 start
   import store from "@/stores";
+import { getLatestHeaderElement, getHeaderHeight, getFooterMenuClientHeight, getScopedElementById, getScopedWindow, nextLayoutFrame, resolveRefElement } from "@/functions/common/LayoutMeasureHelper";
+import {
+  getKendoGridSelectedCellIndex,
+  getKendoGridSelectedDataItem,
+  getKendoGridSelectedRowIndex,
+  isKendoGridSelectionInLockedContent,
+} from "@/compat/kendo/dom.js";
+
   // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 end
   import PrintMixin from "@/components/PrintMixin";
+
+function createDataSource(options) {
+  return new kendo.data.DataSource(options || {});
+}
+
+function getExamDetailGridElement(target) {
+  if (!target) return null;
+  if (target.jquery) return target[0] || null;
+  if (target.element?.jquery) return target.element[0] || null;
+  if (target.element instanceof Element) return target.element;
+  if (target.$el instanceof Element) return target.$el;
+  if (target instanceof Element) return target;
+  return null;
+}
+
+function getExamDetailGridWidget(target) {
+  if (!target) return null;
+  if (target.dataSource && target.element) return target;
+  const element = getExamDetailGridElement(target);
+  return element ? $$(element).data("kendoGrid") : null;
+}
+
+function findKendoGridContent(target) {
+  return getExamDetailGridElement(target)?.querySelector?.(".k-grid-content") || null;
+}
+
+function findKendoGridHeader(target) {
+  return getExamDetailGridElement(target)?.querySelector?.(".k-grid-header") || null;
+}
+
+function findKendoGridHeaderWrap(target) {
+  return getExamDetailGridElement(target)?.querySelector?.(".k-grid-header-wrap") || null;
+}
+
+function findKendoGridLockedContent(target) {
+  return getExamDetailGridElement(target)?.querySelector?.(".k-grid-content-locked") || null;
+}
+
+function findKendoGridLockedRows(target) {
+  const element = getExamDetailGridElement(target);
+  return Array.from(element?.querySelectorAll?.(".k-grid-content-locked tbody tr") || []);
+}
+
+function findKendoGridBodyRows(target) {
+  const element = getExamDetailGridElement(target);
+  return Array.from(element?.querySelectorAll?.(".k-grid-content tbody tr") || []);
+}
+
+function findKendoGridHeaderCells(target) {
+  const element = getExamDetailGridElement(target);
+  return Array.from(element?.querySelectorAll?.(".k-grid-header-wrap th[data-field], .k-grid-header-wrap .k-table-th[data-field]") || []);
+}
+
+function getKendoGridDataItem(target, row) {
+  return getExamDetailGridWidget(target)?.dataItem?.(row) || null;
+}
+
+function getKendoGridDataItems(target) {
+  const widget = getExamDetailGridWidget(target);
+  const data = widget?.dataSource?.view?.() || widget?.dataSource?.data?.() || [];
+  return typeof data.toJSON === "function" ? data.toJSON() : Array.from(data || []);
+}
+
+function syncKendoGridLockedContentScroll(target, options = {}) {
+  const content = findKendoGridContent(target);
+  const lockedContent = findKendoGridLockedContent(target);
+  if (!content || !lockedContent) return;
+  lockedContent.scrollTop = content.scrollTop;
+  if (options.touch) {
+    try {
+      content.dispatchEvent(new Event("scroll", { bubbles: true }));
+    } catch (_error) {
+      try { $$(content).trigger("scroll"); } catch (_innerError) { /* noop */ }
+    }
+  }
+}
 
 export default {
 props: {
@@ -268,6 +332,7 @@ props: {
   // beforeRouteLeave(to, from, next) {
   async beforeRouteLeave(to, from, next) {
   // #10619 患者選択状態で検査結果に遷移した際にパンくずリストの配列が不正となる。 linjunfeng end
+    this.isRouteLeaving = true;
     if(to.fullPath.indexOf("exam-record") > -1){
       // 遷移先が検査結果系画面：初期化しない
     }else{
@@ -285,6 +350,8 @@ props: {
             if (answer === 1) {
               this.setIsPatInfoChaned(false);
               next();
+            } else {
+              this.isRouteLeaving = false;
             }
           }
         });
@@ -326,13 +393,17 @@ props: {
         top: 0,
         left: 0
       },
+      directGridWidget: null,
+      directGridColumnSignature: "",
+      directGridLayoutRafId: null,
+      isRouteLeaving: false,
       //mod 編集権限の適用 劉全航 end
       // 共通検索エリア部品に表示するデータのリスト
       conditionList: [],
       selfScreenName: "",
       setScrollPosition: null,
       scrollQuerySelector: ".k-grid-content", // スクロールコンテナ
-      addClassTargetQuerySelector: [".k-grid-header-wrap table, .k-grid-content table"], // scroll-rightmostクラスを付与する対象のクエリセレクタ,
+      addClassTargetQuerySelector: [".k-grid-header-wrap table, .k-grid-content table"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
       isLoadingTriggered: false
     };
   },
@@ -351,12 +422,8 @@ props: {
       isDispMenu: "isDispMenu",
       getFontSize: "getFontSize",
       getStateUserAccountInfo: "getStateUserAccountInfo",
-      //20260316 liyanze-z add 自施設(1) or 他施設(0)
-      getPatientShareMode:"getPatientShareMode"
+      getPatientShareMode: "getPatientShareMode"
     }),
-    //liyanze-z 20260324 add start
-    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd"]),
-    //liyanze-z 20260324 add end
     heightStyles() {
       // main部の高さをCSS変数を利用して書き換え
       return { "--height": `${this.kendoGridToolbarHeight}px` };
@@ -371,17 +438,21 @@ props: {
       "getExamDefaultSex",
       "getExamResultDispOrder",
     ]),
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 start
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 start
     ...mapGetters("exam-record/modal", [
       "getIsOpenFlag"
     ]),
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 end
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 end
     ...mapGetters("pat-info", ["selectedPatId","selectedPatSex"]),
     ...mapGetters("split-graph", ["getExamRecordDate"]),
     ...mapGetters("loading-screen", ["getLoadingScreenVisible"]),
     ...mapGetters("account-edit", ["getDefaultSetting"]),
     // add #10619 患者選択状態で検査結果に遷移した際にパンくずリストの配列が不正となる。 linjunfeng start
-    ...mapGetters("pat-info", ["isPatInfoChaned"]),
+    ...mapGetters("pat-info", [
+      "isPatInfoChaned",
+      "getIsOtherFacility",
+      "getOtherFacilityCd"
+    ]),
     // add #10619 患者選択状態で検査結果に遷移した際にパンくずリストの配列が不正となる。 linjunfeng end
     examDetailDataSource() {
       // mod #7035-検査結果の値がない項目も画面に表示される（exam_rst連携で受信した検査結果（空値）の項目） 徐博 start
@@ -390,7 +461,7 @@ props: {
         dataObj = this.replaceObjData(dataObj, "NaN", "")
       }
       // storeからデータを取得
-      return new Kendo.data.DataSource({
+      return createDataSource({
         // data: this.getExamDetailDataSource
         data: dataObj
       });
@@ -410,7 +481,7 @@ props: {
      * OKボタンがクリックできるかどうか.
      */
     canSave() {
-      return this.$validator.errors.items.length === 0 && !!this.selectedPatId;
+      return this.validationErrors.length === 0 && !!this.selectedPatId;
     },
 
     isDisabled(){
@@ -425,6 +496,244 @@ props: {
     },
   },
   methods: {
+    getExamRecordGridRef() {
+      return this.$refs.examrecorddetailgrid || null;
+    },
+    getExamRecordGridWidget() {
+      return this.directGridWidget || getExamDetailGridWidget(this.getExamRecordGridRef());
+    },
+    getExamRecordGridColumns() {
+      return this.getExamRecordGridWidget()?.columns || [];
+    },
+    clearExamRecordGridSelection() {
+      return this.getExamRecordGridWidget()?.clearSelection?.();
+    },
+    resizeExamRecordGridColumn(column, width) {
+      return this.getExamRecordGridWidget()?.resizeColumn?.(column, width);
+    },
+    isExamRecordResultField(field) {
+      return /^M.+Cd$/.test(String(field || ""));
+    },
+    findExamRecordDetailColumnByField(field, columns = this.examRecordDetailGridColumns || []) {
+      if (!field) {
+        return null;
+      }
+      for (const column of columns) {
+        if (column.field === field) {
+          return column;
+        }
+        if (Array.isArray(column.columns)) {
+          const child = this.findExamRecordDetailColumnByField(field, column.columns);
+          if (child) {
+            return child;
+          }
+        }
+      }
+      return null;
+    },
+    getSelectedGridCellElement(sender) {
+      let selected = null;
+      try {
+        selected = sender?.select?.();
+      } catch (_error) {
+        selected = null;
+      }
+      const element = selected?.[0] || selected?.get?.(0) || selected;
+      return element?.matches?.("td,th") ? element : element?.closest?.("td,th") || null;
+    },
+    getFieldFromColumnsByIndex(columns, index) {
+      const safeIndex = Number(index);
+      if (!Number.isInteger(safeIndex) || safeIndex < 0) {
+        return null;
+      }
+      return columns?.[safeIndex]?.field || null;
+    },
+    getSelectedExamRecordField(sender) {
+      const selectedCell = this.getSelectedGridCellElement(sender);
+      const cellField = selectedCell?.getAttribute?.("data-field");
+      if (this.isExamRecordResultField(cellField)) {
+        return cellField;
+      }
+
+      const columns = sender?.columns || [];
+      const kendoCellIndex = getKendoGridSelectedCellIndex(sender);
+      const columnField = this.getFieldFromColumnsByIndex(columns, kendoCellIndex);
+      if (this.isExamRecordResultField(columnField)) {
+        return columnField;
+      }
+
+      const nativeCellIndex = selectedCell?.cellIndex;
+      const nonLockedColumns = columns.filter(column => !column.locked);
+      const nonLockedField = this.getFieldFromColumnsByIndex(nonLockedColumns, nativeCellIndex);
+      if (this.isExamRecordResultField(nonLockedField)) {
+        return nonLockedField;
+      }
+
+      const visibleNonLockedColumns = nonLockedColumns.filter(column => !column.hidden);
+      const visibleNonLockedField = this.getFieldFromColumnsByIndex(visibleNonLockedColumns, nativeCellIndex);
+      if (this.isExamRecordResultField(visibleNonLockedField)) {
+        return visibleNonLockedField;
+      }
+
+      const headerField = findKendoGridHeaderCells(sender)[kendoCellIndex]?.getAttribute?.("data-field");
+      return this.isExamRecordResultField(headerField) ? headerField : null;
+    },
+    normalizeDirectGridColumn(column = {}) {
+      const normalized = {
+        headerTemplate: column.headerTemplate,
+        title: column.title,
+        width: column.width,
+        field: column.field,
+        hidden: !!column.hidden,
+        locked: !!column.locked,
+        lockable: column.lockable,
+        attributes: column.attributes,
+        headerAttributes: column.headerAttributes,
+      };
+      if (column.isOtherFacility != null) {
+        normalized.isOtherFacility = column.isOtherFacility;
+      }
+      if (Array.isArray(column.columns)) {
+        normalized.columns = column.columns.map(child => this.normalizeDirectGridColumn(child));
+      }
+      return normalized;
+    },
+    buildDirectGridColumns() {
+      return (this.examRecordDetailGridColumns || []).map(column => this.normalizeDirectGridColumn(column));
+    },
+    getDirectGridColumnSignature() {
+      return JSON.stringify((this.examRecordDetailGridColumns || []).map(column => ({
+        field: column.field,
+        title: column.title,
+        width: column.width,
+        hidden: !!column.hidden,
+        locked: !!column.locked,
+        isOtherFacility: !!column.isOtherFacility,
+        attributes: column.attributes,
+        headerAttributes: column.headerAttributes,
+        childCount: Array.isArray(column.columns) ? column.columns.length : 0,
+      })));
+    },
+    installDirectGridFacade() {
+      const root = this.getExamRecordGridRef();
+      if (!root) return;
+      root.kendoWidget = () => this.getExamRecordGridWidget();
+      root.gridWidget = () => this.getExamRecordGridWidget();
+      root.gridColumns = () => this.getExamRecordGridColumns();
+      root.clearGridSelection = () => this.clearExamRecordGridSelection();
+      root.resizeGridColumn = (column, width) => this.resizeExamRecordGridColumn(column, width);
+      root.rebuildGrid = ({ preserveScroll = true } = {}) => this.refreshExamRecordGrid(preserveScroll);
+    },
+    applyDirectGridColumnsContract() {
+      const widget = this.getExamRecordGridWidget();
+      if (!widget) return;
+      const nextSignature = this.getDirectGridColumnSignature();
+      if (this.directGridColumnSignature !== nextSignature) {
+        widget.setOptions({ columns: this.buildDirectGridColumns() });
+        this.directGridColumnSignature = nextSignature;
+      }
+    },
+    initDirectGridIfReady() {
+      const root = this.getExamRecordGridRef();
+      if (!root || !Array.isArray(this.examRecordDetailGridColumns) || this.examRecordDetailGridColumns.length === 0) {
+        return;
+      }
+      const existing = $$(root).data("kendoGrid");
+      if (existing) {
+        this.directGridWidget = existing;
+        this.installDirectGridFacade();
+        this.applyDirectGridColumnsContract();
+        this.refreshExamRecordGrid(true);
+        return;
+      }
+      $$(root).kendoGrid({
+        dataSource: this.examDetailDataSource,
+        columns: this.buildDirectGridColumns(),
+        editable: false,
+        reorderable: false,
+        resizable: true,
+        selectable: "cell",
+        height: this.kendoGridHeight,
+        scrollable: true,
+        dataBound: event => {
+          this.applyDirectGridStyleContract();
+          this.dataBound();
+          this.setFontColor(event);
+          this.resizeSelectRows();
+        },
+        change: event => this.onClickChange(event),
+      });
+      this.directGridWidget = $$(root).data("kendoGrid") || null;
+      this.directGridColumnSignature = this.getDirectGridColumnSignature();
+      this.installDirectGridFacade();
+      this.scheduleDirectGridLayoutContract();
+    },
+    applyDirectGridStyleContract() {
+      const root = this.getExamRecordGridRef();
+      if (!root) return;
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-display-block");
+      root.querySelectorAll("th, .k-table-th").forEach(th => th.classList.add("k-header"));
+      [".k-grid-content tbody", ".k-grid-content-locked tbody"].forEach(selector => {
+        root.querySelectorAll(selector).forEach(tbody => {
+          Array.from(tbody.children || []).forEach((tr, index) => {
+            tr.classList.add("k-master-row");
+            tr.classList.toggle("k-alt", index % 2 === 1);
+          });
+        });
+      });
+      root.querySelectorAll(".k-grid-content tbody td, .k-grid-content-locked tbody td").forEach(td => td.classList.add("k-td", "k-table-td"));
+    },
+    scheduleDirectGridLayoutContract() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+      }
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.directGridLayoutRafId = null;
+        const widget = this.getExamRecordGridWidget();
+        if (widget) {
+          widget.setOptions({ height: this.kendoGridHeight });
+          widget.resize?.(true);
+        }
+        this.applyDirectGridStyleContract();
+        if (widget) {
+          this.setFontColor({ sender: widget });
+        }
+      });
+    },
+    destroyDirectGrid() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+        this.directGridLayoutRafId = null;
+      }
+      const root = this.getExamRecordGridRef();
+      const widget = this.getExamRecordGridWidget();
+      widget?.destroy?.();
+      if (root) {
+        root.innerHTML = "";
+      }
+      this.directGridWidget = null;
+      this.directGridColumnSignature = "";
+    },
+    refreshExamRecordGrid(preserveScroll = true) {
+      if (this.isRouteLeaving) return null;
+      const root = this.getExamRecordGridRef();
+      if (!root) return null;
+      const position = preserveScroll ? { ...this.scrollPosition } : { top: 0, left: 0 };
+      const widget = this.getExamRecordGridWidget();
+      if (!widget) {
+        this.initDirectGridIfReady();
+        return null;
+      }
+      this.applyDirectGridColumnsContract();
+      widget.setDataSource(this.examDetailDataSource);
+      this.scheduleDirectGridLayoutContract();
+      this.$nextTick(() => {
+        if (preserveScroll) {
+          this.restoreScrollPosition(position);
+        }
+      });
+      return widget;
+    },
     ...mapActions("multi-modal", [
       "showExamRecordModal",
       "showExamRecordGraphModal"
@@ -450,9 +759,9 @@ props: {
     ]),
     ...mapActions("exam-record/modal", ["setExamModalDataSource"]),
     ...mapActions("split-graph", ["setExamRecordDate"]),
-    // mod 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 start
+    // mod 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 start
     ...mapMutations("exam-record/modal", ["setModalState", "setIsOpenFlag"]),
-    // mod 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 end
+    // mod 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 end
     // add #10619 患者選択状態で検査結果に遷移した際にパンくずリストの配列が不正となる。 linjunfeng start
     ...mapMutations("pat-info", ["setIsPatInfoChaned"]),
     // add #10619 患者選択状態で検査結果に遷移した際にパンくずリストの配列が不正となる。 linjunfeng end
@@ -489,7 +798,7 @@ props: {
         }
         return obj
       } else {
-        return obj = obj === val ? replace :obj;
+        return obj === val ? replace : obj;
       }
     },
     // add #7035-検査結果の値がない項目も画面に表示される（exam_rst連携で受信した検査結果（空値）の項目） 徐博 end
@@ -508,7 +817,7 @@ props: {
     // add ##11152 検査結果(個別)で機能帳票のパラメータに「検査セット」を追加 limingzhe end
     requestrReportParams(param) {
       // 機能コード判定
-      // mod 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 start
+      // mod 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 start
       if (param.substring(0, 3) === getCurrentFunctionCd().substring(0, 3) && !this.getIsOpenFlag) {
         // add #11285 機能帳票の印刷情報対応② 高 start
         var expressCondCd="";
@@ -536,7 +845,7 @@ props: {
           patGroups = "すべて";
         }
         // add #11285 機能帳票の印刷情報対応② 高 end
-        // mod 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 end
+        // mod 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 end
         // 機能一致
         var patFalg;
         if (this.selectedPatId === null) {
@@ -551,17 +860,17 @@ props: {
           //patIds: patFalg,
           facilityCd: this.getFacilityCd,
           //add #9558 機能帳票でパラメータが正しく渡されていない 房 start
-          //date: moment(this.localCondition.examDateSt).format("YYYY/MM/DD"),
+          //date: dayjs(this.localCondition.examDateSt).format("YYYY/MM/DD"),
           //add #9558 機能帳票でパラメータが正しく渡されていない 房 end
-          //fromDate: moment(this.localCondition.examDateSt).format("YYYY/MM/DD"),
-          //toDate: moment(this.localCondition.examDateEd).format("YYYY/MM/DD"),
-          date: this.localCondition.examDateSt != null ? moment(this.localCondition.examDateSt).format("YYYYMMDD") : (this.localCondition.examDateEd != null ? moment(this.localCondition.examDateEd).format("YYYYMMDD") : moment(new Date()).format("YYYYMMDD")),
-          fromDate: this.localCondition.examDateSt != null ? moment(this.localCondition.examDateSt).format("YYYYMMDD") : (this.localCondition.examDateEd != null ? moment(this.localCondition.examDateEd).format("YYYYMMDD") : moment(new Date()).format("YYYYMMDD")),
-          toDate: this.localCondition.examDateEd != null ? moment(this.localCondition.examDateEd).format("YYYYMMDD") : (this.localCondition.examDateSt != null ? moment(this.localCondition.examDateSt).format("YYYYMMDD") : moment(new Date()).format("YYYYMMDD")),
+          //fromDate: dayjs(this.localCondition.examDateSt).format("YYYY/MM/DD"),
+          //toDate: dayjs(this.localCondition.examDateEd).format("YYYY/MM/DD"),
+          date: this.localCondition.examDateSt != null ? dayjs(this.localCondition.examDateSt).format("YYYYMMDD") : (this.localCondition.examDateEd != null ? dayjs(this.localCondition.examDateEd).format("YYYYMMDD") : dayjs(new Date()).format("YYYYMMDD")),
+          fromDate: this.localCondition.examDateSt != null ? dayjs(this.localCondition.examDateSt).format("YYYYMMDD") : (this.localCondition.examDateEd != null ? dayjs(this.localCondition.examDateEd).format("YYYYMMDD") : dayjs(new Date()).format("YYYYMMDD")),
+          toDate: this.localCondition.examDateEd != null ? dayjs(this.localCondition.examDateEd).format("YYYYMMDD") : (this.localCondition.examDateSt != null ? dayjs(this.localCondition.examDateSt).format("YYYYMMDD") : dayjs(new Date()).format("YYYYMMDD")),
           // mod #11679 複数患者帳票で「透析条件.補液量」が出ない 20250527 limingzhe start
-          //dialysisDate: moment(new Date()).format("YYYYMMDD"),
+          //dialysisDate: dayjs(new Date()).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: this.localCondition.examDateSt != null ? moment(this.localCondition.examDateSt).format("YYYYMMDD") : (this.localCondition.examDateEd != null ? moment(this.localCondition.examDateEd).format("YYYYMMDD") : moment(new Date()).format("YYYYMMDD")),
+          //dialysisDate: this.localCondition.examDateSt != null ? dayjs(this.localCondition.examDateSt).format("YYYYMMDD") : (this.localCondition.examDateEd != null ? dayjs(this.localCondition.examDateEd).format("YYYYMMDD") : dayjs(new Date()).format("YYYYMMDD")),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           // mod #11679 複数患者帳票で「透析条件.補液量」が出ない 20250527 limingzhe end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
@@ -593,149 +902,115 @@ props: {
       // データ形式(data_type)が1:数値のもののみクリック時イベントを発火
       let self = this;
       // モーダル表示
-      $$("th[role='columnheader']").off("click").on("click", function (e) {
-        const field = $$(this).data("field");
-        if (!field) return;
-
-        const column = self.examRecordDetailGridColumns
-          .flatMap(c => c.columns || [c])
-          .find(c => c.field === field);
-
+      $$("th[role='columnheader']", resolveRefElement(this, "examrecorddetailgrid") || this.$el).off("click").on("click", function(e) {
+        const field = $$(this).data("field") || this.getAttribute("data-field");
+        const column = self.findExamRecordDetailColumnByField(field);
         if (column?.isOtherFacility) {
           e.preventDefault();
           e.stopPropagation();
           return false;
         }
-
+        e.preventDefault();
         self.onClick(e);
       });
       // ポップアップ表示
-      $$("th[data-field=examItemName]").off("click");
-      $$("th[data-field=normalValue]").off("click");
+      $$("th[data-field=examItemName]", resolveRefElement(this, "examrecorddetailgrid") || this.$el).off("click");
+      $$("th[data-field=normalValue]", resolveRefElement(this, "examrecorddetailgrid") || this.$el).off("click");
     },
     // グリッドクリック時
     onClickChange(event) {
-      const grid = event.sender;
-      if (!grid) return;
-
-      const selectedCell = grid.select();
-
-      const isBodyCell = selectedCell.is("td") &&
-        selectedCell.closest("tbody").length > 0;
-
-      if (!isBodyCell) {
-        event.preventDefault();
-        return;
-      }
-
-      const colIndex = grid.cellIndex(selectedCell);
-      const field = grid.columns[colIndex]?.field;
-
-      const column = this.examRecordDetailGridColumns.find(c => {
-        if (c.columns) {
-          return c.columns.some(sub => sub.field === field);
-        }
-        return c.field === field;
-      });
-
-      if (column?.isOtherFacility) {
-        grid.clearSelection();
-        event.preventDefault();
-        return;
-      }
       if (event.sender) {
-          this.setFontColor(event);
-          const selRow = this.$refs.examrecorddetailgrid.kendoWidget().select().closest("tr");
-          let selRowData = this.$refs.examrecorddetailgrid.kendoWidget().dataItem(selRow);
-          let selRowIndex = "";
-          const selcolIndex = event.sender.cellIndex(event.sender.select().closest("td"));
+          const selectedCell = this.getSelectedGridCellElement(event.sender);
+          const isBodyCell = selectedCell?.matches?.("td") &&
+            selectedCell.closest?.("tbody");
+          if (!isBodyCell) {
+            event.preventDefault?.();
+            return;
+          }
 
-          if (event.sender.select().closest(event.sender.lockedContent).length) {
-            //固定行押下のケース：グラフ選択と背景色付け
-            let selectFlg = "noselect";
-            selRowIndex = $$("tr", event.sender.lockedContent).index(event.sender.select().closest("tr"));
+          const selectedField = this.getSelectedExamRecordField(event.sender);
+          const selectedColumn = this.findExamRecordDetailColumnByField(selectedField);
+          if (selectedColumn?.isOtherFacility) {
+            this.clearExamRecordGridSelection();
+            event.preventDefault?.();
+            return;
+          }
+          this.setFontColor(event);
+          const selRowData = getKendoGridSelectedDataItem(event.sender);
+          let selRowIndex = "";
+          if (!selRowData) {
+            return;
+          }
+
+          if (isKendoGridSelectionInLockedContent(event.sender)) {
+            // 固定列：グラフ用行選択のトグル
+            selRowIndex = getKendoGridSelectedRowIndex(event.sender, { locked: true });
             if (selRowIndex == -1) {
-              //ヘッダーは無効化
               return;
             }
-            //選択済5件未満かつ選択対象外コード：追加
-            //選択済データの押下：削除
-            if(this.selectItems.length < 5 && !this.selectItems.some(str => String(selRowData.examItemCd) === str)){
-              this.selectItems.push(String(selRowData.examItemCd));
-              selectFlg = "selected";
-            }else if(this.selectItems.some(str => String(selRowData.examItemCd) === str)){
-              this.selectItems.splice(this.selectItems.indexOf(String(selRowData.examItemCd)), 1);
+            const examItemCd = String(selRowData.examItemCd);
+            const selectedIndex = this.selectItems.indexOf(examItemCd);
+            if (selectedIndex >= 0) {
+              this.selectItems.splice(selectedIndex, 1);
+            } else if (this.selectItems.length < 5) {
+              this.selectItems.push(examItemCd);
             }
-            //画面再表示
-            const tbodyc = this.$refs.examrecorddetailgrid.$el.children[1].lastChild.tBodies[0].children;
-            const tbodyc2 = this.$refs.examrecorddetailgrid.$el.children[2].lastChild.tBodies[0].children;
-            if(selectFlg ==="selected"){
-              for(let columnNo = 0;columnNo < tbodyc[selRowIndex].children.length; columnNo++){
-              tbodyc[selRowIndex].children[columnNo]?.classList?.add("kendo-grid-style-selected");
-              }
-              for(let columnNo2 = 0;columnNo2 < tbodyc2[selRowIndex].children.length; columnNo2++){
-              tbodyc2[selRowIndex].children[columnNo2]?.classList?.add("kendo-grid-style-selected");
-              }
-            }else{
-              for(let columnNo = 0;columnNo < tbodyc[selRowIndex].children.length; columnNo++){
-                tbodyc[selRowIndex].children[columnNo].classList.remove("kendo-grid-style-selected");
-              }
-              for(let columnNo2 = 0;columnNo2 < tbodyc2[selRowIndex].children.length; columnNo2++){
-                tbodyc2[selRowIndex].children[columnNo2].classList.remove("kendo-grid-style-selected");
-              }
-            }
-            //storeにデータセット
+            this.syncGraphSelectionHighlight();
             this.setDetailSelectItems(deepCopy(this.selectItems));
+            // セル選択(k-selected)は行ハイライトと別管理のため、トグル後に解除
+            this.clearExamRecordGridSelection();
 
           } else {
             //可変行押下のケース：
-            const headarData = $$("th[role='columnheader']");
-            selRowIndex = $$("tr", event.sender.content).index(event.sender.select().closest("tr"));
+            selRowIndex = getKendoGridSelectedRowIndex(event.sender, { locked: false });
             if(selRowIndex == -1){
               return;
             }
-            if ($$(headarData[selcolIndex]).data("field")) {
+            const field = this.getSelectedExamRecordField(event.sender);
+            if (field) {
               this.setModalState(1);
-              const field = $$(headarData[selcolIndex]).data("field")
-              this.setExamModalDataSource({field:field,facilityCd:this.getFacilityCd,patId:this.selectedPatId,patSex:this.selectedPatSex,defaultSex:this.getExamDefaultSex}).then(() => {
+              this.setExamModalDataSource({field:field,facilityCd:this.getFacilityCd,patId:this.selectedPatId,selectedPatId:this.selectedPatId,patSex:this.selectedPatSex,defaultSex:this.getExamDefaultSex}).then(() => {
                 // 表示
                 this.showExamRecordModal();
                 // 選択解除
-                this.$refs.examrecorddetailgrid.kendoWidget().clearSelection();
+                this.clearExamRecordGridSelection();
               });
             }
           }
       }
     },
 
-    //画面リサイズ時再処理
-    resizeSelectRows(){
-      // #8368対応時のメモ：
-      // this.$refs.examrecorddetailgrid.$el.lastChild.lastChild
-      // （＝this.$refs.examrecorddetailgrid.$el.children[2].lastChild）は
-      // 検索結果が1件以上ある場合はtable要素になるが、
-      // 検索結果が0件の場合はdiv要素になるため、
-      // その要素のプロパティにtBodiesが存在する
-      // （＝table要素である≒検索結果が1件以上ある）場合のみ
-      // tBodies内の要素に選択行の見た目にするCSSクラスを設定する処理を行っている
-      if(this.$refs.examrecorddetailgrid.$el.lastChild.lastChild.tBodies){
-        const tbodyc = this.$refs.examrecorddetailgrid.$el.children[1].lastChild.tBodies[0].children;
-        const tbodyc2 = this.$refs.examrecorddetailgrid.$el.children[2].lastChild.tBodies[0].children;
-
-        const gridData = this.$refs.examrecorddetailgrid.dataSource.options.data;
-        if(gridData){
-          gridData.forEach((dataRow, index) => {
-            if(this.selectItems.indexOf(String(dataRow.examItemCd)) >= 0){
-              for(let columnNo = 0;columnNo < tbodyc[index].children.length; columnNo++){
-                tbodyc[index].children[columnNo]?.classList?.add("kendo-grid-style-selected");
-              }
-              for(let columnNo2 = 0;columnNo2 < tbodyc2[index].children.length; columnNo2++){
-                tbodyc2[index].children[columnNo2]?.classList?.add("kendo-grid-style-selected");
-              }
-            }
-          });
-        }
+    /** グラフ選択行の背景を selectItems と同期（全行クリア後に再付与） */
+    syncGraphSelectionHighlight() {
+      const root = resolveRefElement(this, "examrecorddetailgrid");
+      if (!root) {
+        return;
       }
+      root.querySelectorAll(".kendo-grid-style-selected").forEach(td => {
+        td.classList.remove("kendo-grid-style-selected");
+      });
+      const gridData = getKendoGridDataItems(this.$refs.examrecorddetailgrid);
+      if (!gridData?.length || !this.selectItems.length) {
+        return;
+      }
+      const mainRows = root.querySelector(".k-grid-content table")?.tBodies?.[0]?.rows;
+      const lockedRows = root.querySelector(".k-grid-content-locked table")?.tBodies?.[0]?.rows;
+      const applyRowHighlight = row => {
+        if (!row) {
+          return;
+        }
+        [...row.cells].forEach(td => td?.classList?.add("kendo-grid-style-selected"));
+      };
+      gridData.forEach((dataRow, index) => {
+        if (this.selectItems.includes(String(dataRow.examItemCd))) {
+          applyRowHighlight(mainRows?.[index]);
+          applyRowHighlight(lockedRows?.[index]);
+        }
+      });
+    },
+    // 画面リサイズ・dataBound 後にグラフ選択行の見た目を復元
+    resizeSelectRows() {
+      this.syncGraphSelectionHighlight();
     },
 
     // -----------------------------------------
@@ -786,8 +1061,7 @@ props: {
         (this.localCondition.examDateSt != this.getDetailCondition.examDateSt)
         || (this.localCondition.examDateEd != this.getDetailCondition.examDateEd)
         || (this.localCondition.examSetCd != this.getDetailCondition.examSetCd)
-        || (this.localCondition.outRange != this.getDetailCondition.outRange)
-      );
+        || (this.localCondition.outRange != this.getDetailCondition.outRange));
 
       // 抽出条件登録
       this.setDetailCondition(this.localCondition);
@@ -817,14 +1091,12 @@ props: {
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       const wh = this.windowHeight;
-      const hh = Array.prototype.slice
-        .call(document.getElementsByClassName("header"))
-        .shift().clientHeight;
+      const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
       const fmh =
         (this.isDispMenu === 1
-          ? document.getElementById("footer-menu").clientHeight
+          ? getFooterMenuClientHeight(this.$el || null)
           : 0) + 5;
-      const buttonArea = document.getElementById("examrecorddetailhead").clientHeight;
+      const buttonArea = getScopedElementById("examrecorddetailhead", this.$el || this)?.clientHeight || 0;
       this.kendoGridToolbarHeight = wh - hh - fmh - 10;
       this.kendoGridToolbarHeight =
       this.kendoGridToolbarHeight < 340 ? 340 : this.kendoGridToolbarHeight;
@@ -833,9 +1105,8 @@ props: {
     },
     setHeaderStyle() {
       // ヘッダーにスタイル適用
-      this.$refs.examrecorddetailgrid.$el.firstElementChild?.classList?.add(
-        "master-grid-header"
-      );
+      resolveRefElement(this, "examrecorddetailgrid")?.firstElementChild?.classList?.add(
+        "master-grid-header");
     },
     // 抽出条件変更イベント
     setFilterCondition(chgflg) {
@@ -858,11 +1129,14 @@ props: {
       colsetting[4].hidden = !this.localCondition.normalRange;
       colsetting[5].hidden = !this.localCondition.unitDisplay;
       this.setExamRecordDetailColumn(colsetting);
+      this.$nextTick(() => {
+        this.refreshExamRecordGrid(true);
+      });
     },
 
     // データ更新
     setExamRecord() {
-      if (this.selfScreenName === this.$router.currentRoute.name) {
+      if (this.selfScreenName === this.$route.name) {
         this.dataLoad();
       }
     },
@@ -871,18 +1145,24 @@ props: {
       this.setLoadingScreenVisible(true);
       const examDateOrder = this.getExamResultDispOrder === DISP_ORDER_LEFT_PAST ? "asc" : "desc";
       // 表示データ設定
-      await this.setExamDetailSelectData(
-        {
-          facilityCd: this.getFacilityCd, 
-          examDateOrder: examDateOrder,
-          patientShareMode: (this.getIsOtherFacility === false || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd)) ? 1 : this.getPatientShareMode
-
-        }
-      );
+      await this.setExamDetailSelectData({
+        facilityCd: this.getFacilityCd,
+        examDateOrder: examDateOrder,
+        patientShareMode:
+          this.getIsOtherFacility === false ||
+          (this.getOtherFacilityCd !== null &&
+            this.getOtherFacilityCd !== this.getFacilityCd)
+            ? 1
+            : this.getPatientShareMode,
+        selectedPatId: this.selectedPatId,
+      });
       // 共通ローダー:表示終了
       this.setLoadingScreenVisible(false);
       // レコード列表示制御
       this.filteredExamRecord();
+      this.$nextTick(() => {
+        this.refreshExamRecordGrid(true);
+      });
       if (this.firstRender) {
         this.$nextTick(() => {
           this.scrollFromRight();
@@ -891,13 +1171,17 @@ props: {
       }
 
       this.$nextTick(() => {
-        const gridContent = document.querySelector(".k-grid-content");
+        const gridRoot = resolveRefElement(this, "examrecorddetailgrid");
+        const gridContent = findKendoGridContent(gridRoot);
+        if (!gridContent) {
+          return;
+        }
         this.setScrollPosition = () => {
           this.scrollPosition = {
             top: gridContent.scrollTop,
             left: gridContent.scrollLeft
           };
-        }
+        };
         gridContent.addEventListener("scroll", this.setScrollPosition);
       });
     },
@@ -906,31 +1190,37 @@ props: {
       //add FNSI-患者カレンダに表示する予定の不足情報を追加する 江 start
       if(this.getCondition.examDate != "" && this.getCondition.examDate != null && this.getCondition.examDate != undefined){
         var scrollleftWidth = 0;
-        for(let colIndex = 0; colIndex < document.querySelector(".k-grid-header-wrap").getElementsByTagName("th").length; colIndex++){
-          if(document.querySelector(".k-grid-header-wrap").getElementsByTagName("th")[colIndex].outerText.indexOf(this.getCondition.examDate) != -1){
-            scrollleftWidth = document.querySelector(".k-grid-header-wrap").getElementsByTagName("th")[colIndex].offsetLeft;
+        const gridRoot = resolveRefElement(this, "examrecorddetailgrid");
+        const headerWrap = findKendoGridHeaderWrap(gridRoot);
+        const gridContent = findKendoGridContent(gridRoot);
+        const headers = headerWrap?.getElementsByTagName("th") || [];
+        for(let colIndex = 0; colIndex < headers.length; colIndex++){
+          if(headers[colIndex].outerText.indexOf(this.getCondition.examDate) != -1){
+            scrollleftWidth = headers[colIndex].offsetLeft;
             break;
           }
         }
         this.scrollPosition.left = scrollleftWidth;
-        this.$refs.examrecorddetailgrid.$el.children[2].scrollLeft = scrollleftWidth;
+        if (gridContent) {
+          gridContent.scrollLeft = scrollleftWidth;
+        }
       }
       //add FNSI-患者カレンダに表示する予定の不足情報を追加する 江 end
       // スクロール位置を最新データに合わせる
       let lastColumnId;
       if(this.getExamResultDispOrder === DISP_ORDER_LEFT_PAST){
-        const numberOfColumns = this.$refs.examrecorddetailgrid.kendoWidget().columns.length;
-        lastColumnId = this.$refs.examrecorddetailgrid.kendoWidget().columns[numberOfColumns - 1].headerAttributes.id;
+        const numberOfColumns = this.getExamRecordGridColumns().length;
+        lastColumnId = this.getExamRecordGridColumns()[numberOfColumns - 1]?.headerAttributes?.id;
       } else {
-        lastColumnId = this.$refs.examrecorddetailgrid.kendoWidget().columns[6].headerAttributes.id;
+        lastColumnId = this.getExamRecordGridColumns()[6]?.headerAttributes?.id;
       }
-      const lastColumnElement = document.getElementById(lastColumnId);
+      const lastColumnElement = getScopedElementById(lastColumnId, this.$el || this);
       if (lastColumnElement) lastColumnElement.scrollIntoView();
     },
     setFontColor(e){
-      const lockrows = e.sender.content.find("tr");
-      lockrows.each(function(index, row) {
-        const dataItem = e.sender.dataItem(row);
+      const lockrows = findKendoGridBodyRows(e.sender);
+      lockrows.forEach((row) => {
+        const dataItem = getKendoGridDataItem(e.sender, row);
         const dataColumns = e.sender.columns;
         // mod FNSI-Fix Bug 関 start
         // for (let i = 5; i < dataColumns.length; i++) {
@@ -940,56 +1230,38 @@ props: {
           if (dataItem[value.field+"Class"] == "H") {
             // mod FNSI-Fix Bug 関 start
             // row.children[i-2].style.color = "red";
-            row.children[i-3].style.color = "var(--kendo-grid-style-high-class-color)";
+            if(row.children[i-3]){
+              row.children[i-3].style.color = "var(--kendo-grid-style-high-class-color)";
+            }
             // mod FNSI-Fix Bug 関 end
           } else if (dataItem[value.field+"Class"] == "L") {
             // mod FNSI-Fix Bug 関 start
             // row.children[i-2].style.color = "blue";
-            row.children[i-3].style.color = "var(--kendo-grid-style-low-class-color)";
+            if(row.children[i-3]){
+              row.children[i-3].style.color = "var(--kendo-grid-style-low-class-color)";
+            }
             // mod FNSI-Fix Bug 関 end
           }
         }
       });
       // 高さの調整処理もdata-boundに連動して実施(kendo-gridのlockedオプション使用時に高さがずれる件の対応)
       this.$nextTick(() => {
-        const headerHeight = document.getElementsByClassName("k-grid-header")[0].offsetHeight + 2;
-        const scrolObj = document.getElementsByClassName("k-grid-content k-auto-scrollable")[0];
+        const gridRoot = resolveRefElement(this, "examrecorddetailgrid");
+        const header = findKendoGridHeader(gridRoot);
+        const scrolObj = findKendoGridContent(gridRoot);
+        const lockedPane = findKendoGridLockedContent(gridRoot);
+        if (!header || !scrolObj || !lockedPane) {
+          return;
+        }
+        const headerHeight = header.offsetHeight + 2;
         let lockRowHeight = this.kendoGridHeight - headerHeight;
-        // PCでの表示時のみ、スクロールバー分の不要な高さが発生する為、高さの調整を行う
         if (!this.androidFlg && !this.iosFlg && (scrolObj.scrollWidth > scrolObj.clientWidth)) {
           lockRowHeight -= 17;
         }
-        document.getElementsByClassName("k-grid-content-locked")[0].style.height = lockRowHeight + "px";
+        lockedPane.style.height = lockRowHeight + "px";
       });
-      const lockedContent = document.querySelector('.k-grid-content-locked');
-      const scrollableContent = document.querySelector('.k-grid-content');
-      if (lockedContent) {
-        let startY = 0;
-        // タッチ開始位置を記録（iOS/Android対応）
-        lockedContent.addEventListener('touchstart', (e) => {
-          startY = e.touches[0].clientY;
-        }, { passive: false });
-
-        lockedContent.addEventListener('touchmove', (e) => {
-          // タッチ移動に応じてスクロール（iOS/Android対応）
-          const deltaY = startY - e.touches[0].clientY;
-          lockedContent.scrollTop += deltaY;
-          startY = e.touches[0].clientY;
-          e.preventDefault(); // 慣性スクロールを有効にするために必要
-        }, { passive: false });
-      }
-
-      if (lockedContent && scrollableContent) {
-        // 固定列のスクロールに応じて可動列を同期（縦スクロールの一体化）
-        lockedContent.addEventListener('scroll', () => {
-          scrollableContent.scrollTop = lockedContent.scrollTop;
-        });
-
-        // 可動列のスクロールに応じて固定列を同期（双方向同期）
-        scrollableContent.addEventListener('scroll', () => {
-          lockedContent.scrollTop = scrollableContent.scrollTop;
-        });
-      }
+      const gridRoot = resolveRefElement(this, "examrecorddetailgrid");
+      syncKendoGridLockedContentScroll(gridRoot, { touch: true });
     },
     // グリッドクリック時
     onClick(event) {
@@ -997,18 +1269,18 @@ props: {
         this.setModalState(1);
         const field = $$(event.currentTarget).data("field")
 
-        this.setExamModalDataSource({field:field,facilityCd:this.getFacilityCd,patId:this.selectedPatId,patSex:this.selectedPatSex,defaultSex:this.getExamDefaultSex}).then(() => {
+        this.setExamModalDataSource({field:field,facilityCd:this.getFacilityCd,patId:this.selectedPatId,selectedPatId:this.selectedPatId,patSex:this.selectedPatSex,defaultSex:this.getExamDefaultSex}).then(() => {
           // 表示
           this.showExamRecordModal();
           // 選択解除
-          this.$refs.examrecorddetailgrid.kendoWidget().clearSelection();
+          this.clearExamRecordGridSelection();
         });
       }
     },
     // 新規作成
     createExamRecord() {
       this.setModalState(0);
-      this.setExamModalDataSource({field:null,facilityCd:this.getFacilityCd,patId:this.selectedPatId,patSex:this.selectedPatSex,defaultSex:this.getExamDefaultSex}).then(() => {
+      this.setExamModalDataSource({field:null,facilityCd:this.getFacilityCd,patId:this.selectedPatId,selectedPatId:this.selectedPatId,patSex:this.selectedPatSex,defaultSex:this.getExamDefaultSex}).then(() => {
         // 表示
         this.showExamRecordModal();
       });
@@ -1021,10 +1293,14 @@ props: {
         this.showExamRecordGraphModal();
       }
     },
-    restoreScrollPosition() {
-      const gridContent = document.querySelector(".k-grid-content");
-      gridContent.scrollTop = this.scrollPosition.top;
-      gridContent.scrollLeft = this.scrollPosition.left;
+    restoreScrollPosition(position = this.scrollPosition) {
+      const gridContent = findKendoGridContent(resolveRefElement(this, "examrecorddetailgrid"));
+      if (!gridContent) {
+        return;
+      }
+      gridContent.scrollTop = position.top || 0;
+      gridContent.scrollLeft = position.left || 0;
+      syncKendoGridLockedContentScroll(resolveRefElement(this, "examrecorddetailgrid"), { touch: true });
     },
     // -----------------------------------------
     // 共通検索エリア部品に表示するデータのリストを作成
@@ -1124,8 +1400,8 @@ props: {
 
       if (this.getExamRecordDate) {
         // 9分割グラフから検査結果に遷移した場合
-        this.localCondition.examDateSt = moment(this.getExamRecordDate).subtract(1, "months").format("YYYY-MM-DD");
-        this.localCondition.examDateEd = moment(this.getExamRecordDate).add(1, "months").format("YYYY-MM-DD");
+        this.localCondition.examDateSt = dayjs(this.getExamRecordDate).subtract(1, "months").format("YYYY-MM-DD");
+        this.localCondition.examDateEd = dayjs(this.getExamRecordDate).add(1, "months").format("YYYY-MM-DD");
         this.setExamRecordDate(null);
       }
 
@@ -1147,64 +1423,101 @@ props: {
       // 選択したデータの検査日を表示条件の開始日終了日に設定する。検査セットは未指定状態にする。異常値のみ表示もOFFとする。
       this.localCondition.examDateSt
         = this.localCondition.examDateEd
-        = moment(this.$route.params.condition.treatDate, "YYYY/MM/DD").format(DATE_FORMAT);
+        = dayjs(this.$route.params.condition.treatDate, "YYYY/MM/DD").format(DATE_FORMAT);
       this.localCondition.examSetCd = -1;
       this.localCondition.outRange = false;
     },
-    triggerLoad(){
-      if (this.isLoadingTriggered) return
-      this.isLoadingTriggered = true
+    triggerLoad() {
+      if (this.isLoadingTriggered) return;
+      this.isLoadingTriggered = true;
 
-      // 共通ローダー:表示名設定
-      this.setLoadingScreenMessage("処理中・・・")
-      this.dataLoad()
+      this.setLoadingScreenMessage("処理中・・・");
+      this.dataLoad();
 
       this.$nextTick(() => {
-        this.isLoadingTriggered = false
-      })
-        
-    }
+        this.isLoadingTriggered = false;
+      });
+    },
   },
   watch: {
+    getExamRecordDetailColumn: {
+      handler() {
+        this.$nextTick(() => {
+          this.refreshExamRecordGrid(true);
+        });
+      },
+      deep: true
+    },
+    getExamDetailDataSource: {
+      handler() {
+        this.$nextTick(() => {
+          this.refreshExamRecordGrid(true);
+        });
+      },
+      deep: true
+    },
     // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 start
     'localCondition.examPatId':{
       handler(newValue) {
         if(newValue == null){
-          store.dispatch("report/getMstReport", {funcCd: "01802",printFlag: null});
+          store.dispatch("report/getMstReport", {funcCd: "01802",printFlag: null, selectedPatId: this.selectedPatId});
         }else {
-          store.dispatch("report/getMstReport", {funcCd: "01802",printFlag: 1});
+          store.dispatch("report/getMstReport", {funcCd: "01802",printFlag: 1, selectedPatId: this.selectedPatId});
         }
       }
   },
     // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 end
     windowHeight() {
+      // // iosPWA時の画面幅変更時:
+      // // app.vueのhandleResizeWindow実行後にcalculateGridHeightを実行するため、200ミリ秒待つ
+      // const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      // if(this.iosFlg && ownerWindow.matchMedia('(display-mode: standalone)').matches){
+      //   ownerWindow.setTimeout(() => {
+      //     this.calculateGridHeight();
+      //   }, 200);
+      // }else{
+      //   this.calculateGridHeight();
+      // }
+
+      //#9846 start
+      // resize時はstore更新直後だとheader/footer/buttonAreaのlayoutが未確定のため、
+      // nextTick + nextLayoutFrame後に計測し、Kendo Gridへも反映する
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      const runAfterLayout = () => {
+        this.$nextTick(() => {
+          nextLayoutFrame(this.$el || this).then(() => {
+            this.calculateGridHeight();
+            this.scheduleDirectGridLayoutContract();
+          });
+        });
+      };
       // iosPWA時の画面幅変更時:
       // app.vueのhandleResizeWindow実行後にcalculateGridHeightを実行するため、200ミリ秒待つ
-      if(this.iosFlg && window.matchMedia('(display-mode: standalone)').matches){
-        setTimeout(() => {
-          this.calculateGridHeight();
-        }, 200);
-      }else{
-        this.calculateGridHeight();
+      if (this.iosFlg && ownerWindow.matchMedia('(display-mode: standalone)').matches) {
+        ownerWindow.setTimeout(runAfterLayout, 200);
+      } else {
+        runAfterLayout();
       }
+      //#9846 start
     },
     isDispMenu() {
       this.calculateGridHeight();
     },
     getFontSize() {
       // 印刷中はスキップ
-      if (this.isPrint) return;      
-      
+      if (this.isPrint) return;
+
       // 各項目の幅を自動調整する機能を呼び出すためにcolumnサイズを変更する（変更前と同じ値で呼び出す）
-      let setWidth = parseInt(this.$refs.examrecorddetailgrid.kendoWidget().columns[0].width);
-      this.$refs.examrecorddetailgrid.kendoWidget().resizeColumn(this.$refs.examrecorddetailgrid.kendoWidget().columns[0], setWidth);
+      const firstColumn = this.getExamRecordGridColumns()[0];
+      let setWidth = parseInt(firstColumn?.width, 10);
+      this.resizeExamRecordGridColumn(firstColumn, setWidth);
       this.calculateGridHeight();
       setTimeout(() => {
         this.restoreScrollPosition();
       }, 50);
     },
     sidebarWidth(){
-      $$(window).trigger('resize');
+      $$(getScopedWindow(this.$el || this)).trigger('resize');
     },
     async selectedPatId() {
       // 再表示条件：選択したpatIdがnullではなく、また今表示しているidでもない場合
@@ -1250,21 +1563,19 @@ props: {
         });
       }
     },
-    //liyanze-z 20260316 add start
-    getPatientShareMode(newVal, oldVal){
+    getPatientShareMode() {
       this.triggerLoad();
     },
-    getOtherFacilityCd(){
+    getOtherFacilityCd() {
       this.triggerLoad();
-    },
-    //liyanze-z 20260316 add end
+    }
   },
   created() {
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 start
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 start
     this.setIsOpenFlag(false);
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 end
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 end
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     EventBus.$on("filterList", this.setFilterCondition);
     EventBus.$on("detailUpdate", this.setExamRecord);
     /*add FNSI-改修内容6326 任 start*/
@@ -1295,7 +1606,7 @@ props: {
     this.setLoadingScreenVisible(true);
 
     // 端末判別
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = (getScopedWindow(this.$el || this)?.navigator?.userAgent || "").toLowerCase();
     if (/android/.test(ua)) {
       this.androidFlg = true;
     } else if (/iphone|ipad|mac|os/.test(ua)) {
@@ -1304,17 +1615,29 @@ props: {
 
     // 初期性別未設定判定フラグセット
     if (this.getExamDefaultSex == null) {
-      await this.examSelectDefaultSex(this.getFacilityCd);
+      await this.examSelectDefaultSex({
+        facilityCd: this.getFacilityCd,
+        selectedPatId: this.selectedPatId
+      });
     }
     if (this.getExamSetNameList == null) {
       // 検査セットデータ生成処理：
-      await this.examSetNameList(this.getFacilityCd);
+      await this.examSetNameList({
+        facilityCd: this.getFacilityCd,
+        selectedPatId: this.selectedPatId
+      });
       // 検査セットソート順データセット処理
-      await this.setSortNameList(this.getFacilityCd);
+      await this.setSortNameList({
+        facilityCd: this.getFacilityCd,
+        selectedPatId: this.selectedPatId
+      });
     }
     // 検査結果画面表示順設定セット
     if (this.getExamResultDispOrder == null) {
-      await this.resultDispOrderSetting(this.getFacilityCd);
+      await this.resultDispOrderSetting({
+        facilityCd: this.getFacilityCd,
+        selectedPatId: this.selectedPatId
+      });
     }
 
     // 検索条件の初期設定
@@ -1340,19 +1663,23 @@ props: {
     this.setLoadingScreenVisible(false);
   },
   updated() {
+    if (this.isRouteLeaving) return;
     this.$nextTick(() => {
       // ヘッダーにスタイル適用
       this.setHeaderStyle();
-      this.resizeSelectRows();
+      setTimeout(() => {
+        this.resizeSelectRows();
+        this.scheduleDirectGridLayoutContract();
+      },10)
     });
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     this.clearHolidays(); // storeの休日マスタをクリア
-    EventBus.$off("filterList");
-    EventBus.$off("detailUpdate");
+    EventBus.$off("filterList", this.setFilterCondition);
+    EventBus.$off("detailUpdate", this.setExamRecord);
     /*add FNSI-改修内容6807 劉智博 start*/
-    EventBus.$off("flashData");
+    EventBus.$off("flashData", this.filteredExamRecord);
     /*add FNSI-改修内容6807 劉智博 end*/
     // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 start
     // EventBus.$off("requestReportParams");
@@ -1362,8 +1689,9 @@ props: {
     // EventBus.$off("refresh");
     EventBus.$off("refresh", this.setExamRecord);
     // #9271 他の画面への切り替え時のパンくずクリックは有効になりません。 linjunfeng end
-    const gridContent = document.querySelector(".k-grid-content");
+    const gridContent = findKendoGridContent(resolveRefElement(this, "examrecorddetailgrid"));
     gridContent && gridContent.removeEventListener("scroll", this.setScrollPosition);
+    this.destroyDirectGrid();
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -1380,14 +1708,14 @@ props: {
 }
 </style>
 <style scoped>
-.exam-record-detail-main-content >>> .master-grid-header {
+.exam-record-detail-main-content :deep(.master-grid-header) {
   background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
 }
-.exam-record-detail-main-content >>> th.k-first {
+.exam-record-detail-main-content :deep(th.k-first) {
   background-color: #333333;
   background-image: none;
 }
-.exam-record-detail-main-content >>> th.k-first ~ th {
+.exam-record-detail-main-content :deep(th.k-first ~ th) {
   background-color: #333333;
   background-image: none;
 }
@@ -1411,7 +1739,7 @@ props: {
   flex: 0;
   background-color: var(--ntss-base-background-color);
 }
-.exam-record-detail-popover >>> .popover {
+.exam-record-detail-popover :deep(.popover) {
   width: 31em;
 }
 
@@ -1423,29 +1751,136 @@ props: {
     white-space: normal;
   }
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked) {
   overflow-y: scroll !important;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked::-webkit-scrollbar {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked::-webkit-scrollbar) {
   display: none;
 }
+
+:deep(.k-grid th),
+:deep(.k-grid td) {
+    padding: 0.25rem 0.75rem !important;
+    height: 2em!important;
+}
+
+/* :deep(.k-grid .k-table-th),
+:deep(.k-grid .k-table-td) {
+    padding: 0.25rem 0.75rem !important;
+    height: 2em;
+} */
+
+:deep(.kendo-grid-style-page .k-grid-header-wrap th) {
+    
+    height: 2em!important;
+}
+
+:deep(.kendo-grid-style-page .k-grid tr) {
+    height: 2em!important;
+}
+
+#examrecorddetailgrid :deep(.k-grid-header-wrap .k-grid-header-table tr){
+  padding: 1px 3px 3px 3px;
+  height: 2em!important;
+}
+#examrecorddetailgrid :deep(.k-grid-header-wrap .k-grid-header-table .k-table-th){
+  border-color:#fff;
+}
+#examrecorddetailgrid :deep(.k-grid .k-header .k-link) {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+}
+
+#examrecorddetailgrid :deep(.k-grid .k-column-title) {
+  white-space: normal !important;
+  display: inline-block;
+}
+
+:deep(.k-grid-header){
+  background-image: linear-gradient(hsla(0, 0%, 100%, .3), transparent 50%, transparent 0, rgba(0, 0, 0, .1));
+  background-color: var(--ntss-list-header-background-color);
+}
+:deep(.k-grid-header-wrap){
+  border-right:1px solid #fff;
+}
+:deep(.k-grid-header-locked .k-grid-header-table){
+  height:stretch;
+}
+:deep(.k-grid .k-grid-content-locked ){
+  border-color: rgba(33, 37, 41, .125)!important;
+}
+#examrecorddetailgrid :deep(.k-grid-content ){
+  background-color: transparent!important;
+}
+
+/* セル選択(k-selected)時は見た目を変えない（グラフ行選択 .kendo-grid-style-selected のみハイライト） */
+#examrecorddetailgrid :deep(td.k-selected:not(.kendo-grid-style-selected)),
+#examrecorddetailgrid :deep(td.k-state-selected:not(.kendo-grid-style-selected)),
+#examrecorddetailgrid :deep(.k-table-td.k-selected:not(.kendo-grid-style-selected)),
+#examrecorddetailgrid :deep(.k-table-td.k-state-selected:not(.kendo-grid-style-selected)),
+#examrecorddetailgrid :deep(tr.k-selected > td:not(.kendo-grid-style-selected)),
+#examrecorddetailgrid :deep(tr.k-state-selected > td:not(.kendo-grid-style-selected)),
+#examrecorddetailgrid :deep(.k-table-row.k-selected > .k-table-td:not(.kendo-grid-style-selected)),
+#examrecorddetailgrid :deep(.k-table-row.k-state-selected > .k-table-td:not(.kendo-grid-style-selected)) {
+  /* background-color: unset !important;
+  background-image: none !important; */
+  box-shadow: none !important;
+  outline: none !important;
+  /* !important なし — 基準値外(H/L)の inline color を優先 */
+  color: inherit;
+}
+
+#examrecorddetailgrid :deep(td.kendo-grid-style-selected),
+#examrecorddetailgrid :deep(.k-table-td.kendo-grid-style-selected) {
+  background-color: var(--master-maintenance-kgrid-selected-background-color) !important;
+}
+
+#examrecorddetailgrid :deep(th.k-header:has(.other-facility-header)),
+#examrecorddetailgrid :deep(th.other-facility-header) {
+  pointer-events: none;
+  color: #999;
+}
+
+#examrecorddetailgrid :deep(.k-grid-content td.other-facility-cell) {
+  pointer-events: none;
+  background-color: #0000001a !important;
+  color: #999 !important;
+}
+
+#examrecorddetailgrid :deep(.k-grid-content tr.k-alt td.other-facility-cell) {
+  background-color: #ccc !important;
+}
+
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+}
+
+
 @media print {  
   /** スクロールコンテナ */
-  .exam-record-detail-main-content >>> .k-grid-header-wrap,
-  .exam-record-detail-main-content >>> .k-grid-content {
+  .exam-record-detail-main-content :deep(.k-grid-header-wrap),
+  .exam-record-detail-main-content :deep(.k-grid-content){
     overflow: hidden !important;
     height: auto !important;
   }
   
   /** 固定列調整 */
-  .exam-record-detail-main-content >>> .k-grid-content-locked {
+  .exam-record-detail-main-content :deep(.k-grid-content-locked){
     height: auto !important;
   }
   /** 固定列枠線 */
-  .exam-record-detail-main-content >>> .k-grid-header-locked::after {
+  .exam-record-detail-main-content :deep(.k-grid-header-locked::after){
     content: "";
     position: absolute;
     top: 0;
@@ -1455,7 +1890,7 @@ props: {
     background: var(--master-maintenance-kgrid-header-background-color);
     pointer-events: none;
   }
-  .exam-record-detail-main-content >>> .k-grid-content-locked::after {
+  .exam-record-detail-main-content :deep(.k-grid-content-locked::after){
     content: "";
     position: absolute;
     top: 0;
@@ -1466,42 +1901,27 @@ props: {
     pointer-events: none;
   }
   /** ヘッダのズレ原因を除去 */
-  .exam-record-detail-main-content >>> .k-grid-header {
+  .exam-record-detail-main-content :deep(.k-grid-header){
     padding-right: 0 !important;
   }
   /** gridの幅 */
-  .exam-record-detail-main-content >>> .k-grid {
+  .exam-record-detail-main-content :deep(.k-grid){
     width: 100vw;
     height: auto !important;
   }
   /** 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
   /* 右端時固定列最前面表示*/
-  .exam-record-detail-main-content:has(table.scroll-rightmost) >>> .k-grid-content-locked,
-  .exam-record-detail-main-content:has(table.scroll-rightmost) >>> .k-grid-header-locked {
+  .exam-record-detail-main-content:has(table.scroll-rightmost) :deep(.k-grid-content-locked),
+  .exam-record-detail-main-content:has(table.scroll-rightmost) :deep(.k-grid-header-locked){
     z-index: 1;
   }
   .main-content-area:has(table.scroll-rightmost) {
     margin-left: -1px !important;
   }
-  .exam-record-detail-main-content >>> .k-grid-header-wrap:has(table.scroll-rightmost),
-  .exam-record-detail-main-content >>> .k-grid-content:has(table.scroll-rightmost) {
+  .exam-record-detail-main-content :deep(.k-grid-header-wrap:has(table.scroll-rightmost)),
+  .exam-record-detail-main-content :deep(.k-grid-content:has(table.scroll-rightmost)){
     position: static;
   }
 }
-.exam-detail-list >>> th.k-header:has(.other-facility-header) {
-  pointer-events: none;
-  color: #999;
-}
-.exam-detail-list >>> th.other-facility-header {
-  pointer-events: none;
-  color: #999;
-}
-.exam-detail-list >>> .k-grid-content td.other-facility-cell {
-  pointer-events: none;
-  background-color: #0000001a !important;
-  color: #999 !important;
-}
-.exam-detail-list >>> .k-grid-content tr.k-alt td.other-facility-cell {
-  background-color: #ccc !important;
-}
+
 </style>

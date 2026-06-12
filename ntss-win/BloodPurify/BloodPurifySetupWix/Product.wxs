@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   BloodPurify WiX v4 インストーラー
-  製品名   : BloodPurify
-  バージョン: 2.0.2
-  メーカー : Nikkiso
+  製品名   : BloodPurify(特殊浄化通信アプリ)
+  バージョン: 2.0.0
+  メーカー : NIKKISO
   インストール先: C:\FNWSiTools\FNWSiBloodPurify
 
   画面フロー:
@@ -11,10 +11,9 @@
 
   機能:
     - 日本語 UI
-    - サイレントインストール(/quiet): 設定ダイアログをスキップ
+    - サイレントインストール(/quiet): 既存 config を使用、なければデフォルト値
     - バージョンダウングレード検知・ブロック
     - 実行中プロセスを自動終了（アップグレード/アンインストール時）
-    - アンインストール時に BloodPurify.config を保持
 -->
 <?include GeneratedProductCode.wxi?>
 
@@ -34,15 +33,15 @@
     Compressed="yes"
     Scope="perMachine">
 
-    <SummaryInformation Description="BloodPurify インストーラー" Keywords="インストーラー" />
+    <SummaryInformation Description="特殊浄化通信アプリ インストーラー" Keywords="インストーラー" />
     <MediaTemplate EmbedCab="yes" />
 
     <!-- ============================== アイコン ============================== -->
     <Icon Id="BloodPurifyIcon" SourceFile="$(var.SrcSetup)BloodPurify.ico" />
 
     <Property Id="ARPPRODUCTICON" Value="BloodPurifyIcon" />
-    <Property Id="ARPCONTACT"     Value="Nikkiso" />
-    <Property Id="ARPCOMMENTS"    Value="BloodPurify" />
+    <Property Id="ARPCONTACT"     Value="NIKKISO" />
+    <Property Id="ARPCOMMENTS"    Value="特殊浄化通信アプリ" />
     <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
 
     <!-- インストール後の「再起動してください」ダイアログを非表示にする -->
@@ -90,15 +89,14 @@
     <!-- ============================== ディレクトリ構成 ============================== -->
     <!--
       デフォルト: C:\FNWSiTools\FNWSiBloodPurify
-      TARGETDIR(C:\) > FNWSITOOLS(FNWSiTools) > INSTALLFOLDER(FNWSiBloodPurify)
     -->
     <StandardDirectory Id="TARGETDIR">
       <Directory Id="FNWSITOOLS" Name="FNWSiTools">
         <Directory Id="INSTALLFOLDER" Name="FNWSiBloodPurify" />
       </Directory>
     </StandardDirectory>
-    <StandardDirectory Id="WindowsFolder" />
     <StandardDirectory Id="DesktopFolder" />
+    <StandardDirectory Id="WindowsFolder" />
 
     <!-- ============================== コンポーネント ============================== -->
 
@@ -114,12 +112,12 @@
                   On="uninstall" />
     </Component>
 
-    <!-- (2) 設定ファイル BloodPurify.config（ユーザー設定を保持） -->
+    <!-- (2) アプリ設定ファイル（アンインストール時にユーザー設定を保持） -->
     <Component Id="C_BloodPurifyConfig"
                Guid="{D170051B-C9A0-420E-924B-B9D740100002}"
                Directory="INSTALLFOLDER"
-               Permanent="yes"
-               NeverOverwrite="yes">
+               NeverOverwrite="yes"
+               Permanent="yes">
       <File Id="F_BloodPurifyConfig"
             Source="$(var.SrcBin)BloodPurify.config"
             KeyPath="yes" />
@@ -142,6 +140,15 @@
             KeyPath="yes" />
     </Component>
 
+    <!-- (4) 共有 DLL 群 -->
+    <ComponentGroup Id="CG_SharedDlls" Directory="INSTALLFOLDER">
+      <Component Guid="{D170051B-C9A0-420E-924B-B9D740100011}"><File Source="$(var.SrcBin)NKKCommon.dll" /></Component>
+      <Component Guid="{D170051B-C9A0-420E-924B-B9D740100017}"><File Source="$(var.SrcBin)Ionic.Zip.dll" /></Component>
+      <Component Guid="{D170051B-C9A0-420E-924B-B9D740100012}"><File Source="$(var.SrcBin)LayoutDesignerUtilityLib.dll" /></Component>
+      <Component Guid="{D170051B-C9A0-420E-924B-B9D740100013}"><File Source="$(var.SrcBin)SignInLib.dll" /></Component>
+      <Component Guid="{D170051B-C9A0-420E-924B-B9D740100014}"><File Source="$(var.SrcBin)ComDialysisDevice.dll" /></Component>
+      <Component Guid="{D170051B-C9A0-420E-924B-B9D740100015}"><File Source="$(var.SrcBin)TcpSocket.dll" /></Component>
+    </ComponentGroup>
 
     <!-- (5) デスクトップショートカット -->
     <Component Id="C_DesktopShortcuts"
@@ -164,20 +171,9 @@
                          Action="removeOnUninstall" />
     </Component>
 
-    <!-- (4) 共有 DLL 群 -->
-    <ComponentGroup Id="CG_SharedDlls" Directory="INSTALLFOLDER">
-      <Component Guid="{D170051B-C9A0-420E-924B-B9D740100011}"><File Source="$(var.SrcBin)NKKCommon.dll" /></Component>
-      <Component Guid="{D170051B-C9A0-420E-924B-B9D740100017}"><File Source="$(var.SrcBin)Ionic.Zip.dll" /></Component>
-      <Component Guid="{D170051B-C9A0-420E-924B-B9D740100012}"><File Source="$(var.SrcBin)LayoutDesignerUtilityLib.dll" /></Component>
-      <Component Guid="{D170051B-C9A0-420E-924B-B9D740100013}"><File Source="$(var.SrcBin)SignInLib.dll" /></Component>
-      <Component Guid="{D170051B-C9A0-420E-924B-B9D740100014}"><File Source="$(var.SrcBin)ComDialysisDevice.dll" /></Component>
-      <Component Guid="{D170051B-C9A0-420E-924B-B9D740100015}"><File Source="$(var.SrcBin)TcpSocket.dll" /></Component>
-      <Component Guid="{D170051B-C9A0-420E-924B-B9D740100016}"><File Source="$(var.SrcBin)System.ValueTuple.dll" /></Component>
-    </ComponentGroup>
-
     <!-- ============================== フィーチャー ============================== -->
     <Feature Id="ProductFeature"
-             Title="BloodPurify"
+             Title="FNWSi Blood Purify"
              Level="1"
              ConfigurableDirectory="INSTALLFOLDER">
       <ComponentRef Id="C_BloodPurify" />
@@ -185,7 +181,6 @@
       <ComponentRef Id="C_DeviceCsv" />
       <ComponentRef Id="C_NkkMonDefine" />
       <ComponentRef Id="C_DesktopShortcuts" />
-
       <ComponentGroupRef Id="CG_SharedDlls" />
     </Feature>
 
@@ -230,11 +225,12 @@
                   Return="check" />
 
     <!-- ============================== シーケンス ============================== -->
+
     <InstallExecuteSequence>
       <!-- 旧バージョンを早期削除（InstallInitialize 直後） -->
       <RemoveExistingProducts After="InstallInitialize" />
 
-      <!-- 実行中プロセスを終了（常時） -->
+      <!-- 実行中プロセスを終了してからファイル操作（アップグレード/修復/アンインストール共通） -->
       <Custom Action="KillRunningInstances" Before="RemoveFiles" Condition="1" />
 
       <!-- 新規インストール / 修復 / アップグレード時: 設定ダイアログ -->
@@ -249,7 +245,6 @@
     <!-- ============================== UI ============================== -->
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
 
-    <!-- ライセンス同意ダイアログをスキップ -->
     <UI>
       <Dialog Id="RunningProcessesDlg" Width="370" Height="270" Title="FNWSi Blood Purify">
         <Control Id="BannerBitmap" Type="Bitmap"
@@ -298,7 +293,7 @@
       <Publish Dialog="WelcomeDlg" Control="Next"
                Event="NewDialog" Value="RunningProcessesDlg"
                Order="2" Condition="NOT Installed AND RUNNING_PROCESSES" />
-      <Publish Dialog="WelcomeDlg"    Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="3" Condition="NOT Installed AND NOT RUNNING_PROCESSES" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="3" Condition="NOT Installed AND NOT RUNNING_PROCESSES" />
 
       <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
                Event="DoAction" Value="CA_DetectRunningProcesses"
@@ -310,7 +305,7 @@
                Event="NewDialog" Value="VerifyReadyDlg"
                Order="3" Condition="Installed AND NOT RUNNING_PROCESSES" />
 
-      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"    Order="2" Condition="1" />
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2" Condition="1" />
     </UI>
 
   </Package>

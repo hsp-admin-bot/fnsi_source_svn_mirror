@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.device_edge.service;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,9 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.dao.MstMachineDao;
 import jp.co.nikkiso.ntss.core.entity.MstMachine;
@@ -117,7 +115,7 @@ public class MstMachineServiceImpl implements MstMachineService {
       //     MachineOptionDTO machineOption = mapper.readValue(mstMachine.getMachineOption(), MachineOptionDTO.class);
       //     options = machineOption.createOptionHexString();
       //
-      //   } catch (JsonParseException e) {
+      //   } catch (JacksonException e) {
       //     e.printStackTrace();
       //   } catch (JsonMappingException e) {
       //     e.printStackTrace();
@@ -130,31 +128,7 @@ public class MstMachineServiceImpl implements MstMachineService {
         try {
           MachineOptionDTO machineOption = mapper.readValue(mstMachine.getMachineOption(), MachineOptionDTO.class);
           options = machineOption.createOptionHexString();
-        } catch (JsonParseException e) {
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
-//      e.printStackTrace();
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang start
-          EventLogMessage eventLogMessage = new EventLogMessage();
-          eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
-          if (facility_cd != null) {
-            eventLogMessage.setFacilityCd(facility_cd);
-          }
-          logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang end
-        } catch (JsonMappingException e) {
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
-//      e.printStackTrace();
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang start
-          EventLogMessage eventLogMessage = new EventLogMessage();
-          eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
-          if (facility_cd != null) {
-            eventLogMessage.setFacilityCd(facility_cd);
-          }
-          logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang end
-        } catch (IOException e) {
+        } catch (JacksonException e) {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end

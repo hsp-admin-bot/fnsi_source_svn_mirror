@@ -25,6 +25,7 @@ import jp.co.nikkiso.ntss.core.entity.custom.AdditionInfoOrdMain;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 
 import static java.util.Collections.emptyList;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 
 /**
@@ -54,7 +55,21 @@ public class AdditionCalculationResource {
    * @return
    */
   @PutMapping("/calculation")
-  public ResponseEntity<Void> calculationAddition(@RequestBody AdditionCalculationRequest request) {
+  public ResponseEntity<Void> calculationAddition(@RequestBody AdditionCalculationRequest request,
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wangzuo アプリケーションログの適正化 Add Start
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage(this.getClass().getName() + "calculationAddition実施開始：" + "/calculation/");

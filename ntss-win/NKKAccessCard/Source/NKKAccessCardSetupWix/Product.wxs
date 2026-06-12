@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   NKKAccessCard WiX v4 インストーラー
-  製品名   : FNSiカードアプリ
-  バージョン: 2.0.2
-  メーカー : Nikkiso
+  製品名   : NKKAccessCard(FNSiカードアプリ)
+  バージョン: 2.0.0
+  メーカー : NIKKISO
   インストール先: C:\FNWSiTools\FNWSiAccessCard
 
   画面フロー:
@@ -39,11 +39,10 @@
 
     <!-- ============================== アイコン ============================== -->
     <Icon Id="NKKAccessCardIcon" SourceFile="$(var.SrcSetup)NKKAccessCardService.ico" />
-
 	  
     <Property Id="ARPPRODUCTICON" Value="NKKAccessCardIcon" />
     <Property Id="ARPCONTACT"     Value="NIKKISO" />
-    <Property Id="ARPCOMMENTS"    Value="FNWSi Access Card" />
+    <Property Id="ARPCOMMENTS"    Value="FNSiカードアプリ" />
     <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
 
     <!-- インストール後の「再起動してください」ダイアログを非表示にする -->
@@ -51,6 +50,8 @@
 
     <!-- Restart Manager を無効化（FilesInUse ダイアログ抑制） -->
     <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+
+    <!-- 起動中プロセス/サービスの検出結果（UIシーケンス→Executeシーケンスへ伝搬） -->
     <Property Id="RUNNING_PROCESSES" Secure="yes" />
 
     <!-- インストール先を常に C: ドライブに固定 -->
@@ -64,6 +65,7 @@
                       Name="Release"
                       Type="raw" />
     </Property>
+    <!-- NETFRAMEWORK45 が空でなければ .NET 4.x 以上インストール済み -->
     <Launch Condition="NETFRAMEWORK45"
             Message="!(loc.LaunchConditionNetFx45)" />
 
@@ -91,7 +93,6 @@
     <!-- ============================== ディレクトリ構成 ============================== -->
     <!--
       デフォルト: C:\FNWSiTools\FNWSiAccessCard
-      TARGETDIR(C:\) > FNWSITOOLS(FNWSiTools) > INSTALLFOLDER(FNWSiAccessCard)
     -->
     <StandardDirectory Id="TARGETDIR">
       <Directory Id="FNWSITOOLS" Name="FNWSiTools">
@@ -115,11 +116,11 @@
             Source="$(var.SrcService)FNWSiAccessCard.exe"
             KeyPath="yes" />
       <RemoveFile Id="RF_InstallState"
-                  Name="NKKAccessCardService.InstallState"
+                  Name="FNWSiAccessCard.InstallState"
                   On="uninstall" />
     </Component>
 
-    <!-- (2) カードツールアプリ (FNWSiAccessCardTool.exe) -->
+    <!-- (2) 管理ツール (FNWSiAccessCardTool.exe) -->
     <Component Id="C_NKKAccessCardTool"
                Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560002}"
                Directory="INSTALLFOLDER">
@@ -133,7 +134,7 @@
                Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560040}"
                Directory="AccessCardProgramsFolder">
       <Shortcut Id="S_AccessCardTool"
-                Name="FNWeb+Si カード保守ツール"
+                Name="カード保守ツール"
                 Target="[INSTALLFOLDER]FNWSiAccessCardTool.exe"
                 WorkingDirectory="INSTALLFOLDER"
                 Icon="NKKAccessCardIcon"
@@ -183,7 +184,7 @@
             KeyPath="yes" />
     </Component>
 
-    <!-- (6) 共有 DLL 群・依存ファイル -->
+    <!-- (6) 共有 DLL 群 -->
     <ComponentGroup Id="CG_SharedDlls" Directory="INSTALLFOLDER">
       <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560010}"><File Source="$(var.SrcService)NKKAccessCard.dll" /></Component>
       <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560011}"><File Source="$(var.SrcService)SuperSocket.SocketBase.dll" /></Component>
@@ -204,7 +205,7 @@
       <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560026}"><File Source="$(var.SrcTool)NKKAccessCardTool.config" /></Component>
     </ComponentGroup>
 
-    <!-- (7) FNWSiAccessCardTool.exe.config（ツールアプリ設定ファイル） -->
+    <!-- (7) FNWSiAccessCardTool.exe.config（アプリ設定ファイル） -->
     <Component Id="C_NKKAccessCardToolConfig"
                Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560030}"
                Directory="INSTALLFOLDER">
@@ -224,7 +225,7 @@
 
     <!-- ============================== フィーチャー ============================== -->
     <Feature Id="ProductFeature"
-             Title="FNSiカードアプリ"
+             Title="FNWSi Access Card"
              Level="1"
              ConfigurableDirectory="INSTALLFOLDER">
       <ComponentRef Id="C_NKKAccessCardService" />
@@ -258,7 +259,7 @@
                   Impersonate="no"
                   Return="ignore" />
 
-    <!-- InstallUtil.exe でサービスをインストール -->
+    <!-- InstallUtil.exe でサービスをインストール（ProjectInstaller.Commit で設定画面も表示） -->
     <CustomAction Id="InstallServiceWithInstaller"
                   Directory="WindowsFolder"
                   ExeCommand="Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe /LogToConsole=false /LogFile= [InstallServiceWithInstaller]"
@@ -266,21 +267,30 @@
                   Impersonate="no"
                   Return="check" />
 
-    <!-- 交互安装用：起動中プロセス/サービス検出 -->
+    <!--
+      起動中プロセス/サービス検出
+        - InstallUtil.Commit 側で起動できなかったケースを補完
+        - 条件: サイレント(UILevel<5) のインストール時は常に実行
+    -->
     <CustomAction Id="CA_DetectRunningProcesses"
                   Execute="immediate"
                   Return="ignore"
                   Script="vbscript"
                   ScriptSourceFile="Scripts\CA_DetectRunningProcesses.vbs" />
 
-    <!-- 交互安装用：「終了して続行」押下時にGUI終了 + サービス停止 -->
+
+    <!--
+    	「終了して続行」押下時
+        - NKKAccessCardTool.exe / FNWSiAccessCardTool.exe 強制終了
+        - サービスは後続の UninstallServiceWithInstaller (deferred/elevated) が停止する
+    -->
     <CustomAction Id="CA_KillGUIApps"
                   Execute="immediate"
                   Return="ignore"
                   Script="vbscript"
                   ScriptSourceFile="Scripts\CA_KillGUIApps.vbs" />
 
-    <!-- 静默インストール時のサービス起動兜底 -->
+    <!-- サイレントインストール時のサービス起動（フォールバック） -->
     <CustomAction Id="StartServiceAfterInstallSilent"
                   Directory="SystemFolder"
                   ExeCommand="cmd.exe /c sc start NKKAccessCardService &gt; nul 2&gt;&amp;1"
@@ -288,7 +298,7 @@
                   Impersonate="no"
                   Return="ignore" />
 
-    <!-- 交互安装完了后，自动起動工具 -->
+    <!-- インタラクティブインストールが完了したら、ツールを自動的に起動します -->
     <CustomAction Id="StartAccessCardToolAfterInstall"
                   Directory="SystemFolder"
                   ExeCommand="cmd.exe /c start &quot;&quot; &quot;[INSTALLFOLDER]FNWSiAccessCardTool.exe&quot;"
@@ -301,26 +311,23 @@
       <!-- InstallValidate を抑制: サービス稼働中の FilesInUse タイムアウトを回避 -->
       <InstallValidate Condition="0" />
 
-      <!-- 旧バージョンを早期削除（InstallInitialize 直後） -->
+      <!-- 旧バージョンを早期削除（InstallInitialize 直後） → ファイルロックなしで新ファイルをインストール可能 -->
       <RemoveExistingProducts After="InstallInitialize" />
 
       <!-- 常に sc stop + sc delete でサービス停止・削除（RemoveFiles 前） -->
-      <Custom Action="UninstallServiceWithInstaller" Before="RemoveFiles"
-              Condition="1" />
+      <Custom Action="UninstallServiceWithInstaller" Before="RemoveFiles" Condition="1" />
 
-      <!-- 交互安装分支（UILevel>=5） -->
+      <!-- 新規インストール / 修復時: InstallFiles 後に ProjectInstaller 実行（設定画面） -->
       <Custom Action="SetInstallServiceProperty" Before="InstallServiceWithInstaller"
               Condition="NOT REMOVE AND UILevel &gt;= 5" />
-
-      <!-- 静默安装分支（UILevel<5） -->
       <Custom Action="SetInstallServicePropertySilent" Before="InstallServiceWithInstaller"
               Condition="NOT REMOVE AND UILevel &lt; 5" />
       <Custom Action="InstallServiceWithInstaller" After="InstallFiles"
               Condition="NOT REMOVE" />
       <Custom Action="StartServiceAfterInstallSilent" After="InstallServiceWithInstaller"
               Condition="NOT REMOVE AND UILevel &lt; 5" />
-      <!-- 交互安装（用户会话）时才启动托盘。静默(/quiet)在 SYSTEM 会话执行该 CA 会导致托盘跑到 Session 0 看不见，
-           静默更新场景应依赖“托盘自身 watcher（用户会话）”来拉起新托盘。 -->
+      <!-- インタラクティブインストール（ユーザーセッション）時のみトレイを起動する。サイレント(/quiet)では SYSTEM セッションで本 CA を実行するとトレイが Session 0 に出て表示されない。
+           サイレント更新時は「トレイ側 watcher（ユーザーセッション）」が新トレイを起動する前提とする。 -->
       <Custom Action="StartAccessCardToolAfterInstall" After="InstallFinalize"
               Condition="NOT REMOVE AND UILevel &gt;= 5" />
     </InstallExecuteSequence>
@@ -331,11 +338,13 @@
     <!-- ライセンス同意ダイアログをスキップ -->
     <UI>
       <Dialog Id="RunningProcessesDlg" Width="370" Height="270" Title="FNWSi Access Card">
+        <!-- バナー -->
         <Control Id="BannerBitmap" Type="Bitmap"
                  X="0" Y="0" Width="370" Height="44"
                  TabSkip="no" Text="WixUI_Bmp_Banner" />
         <Control Id="BannerLine" Type="Line"
                  X="0" Y="44" Width="370" Height="0" />
+        <!-- タイトル・説明 -->
         <Control Id="Title" Type="Text"
                  X="15" Y="6" Width="300" Height="15"
                  Transparent="yes" NoPrefix="yes"
@@ -343,6 +352,7 @@
         <Control Id="Description" Type="Text"
                  X="25" Y="23" Width="290" Height="15"
                  Text="インストール前にアプリケーションを終了してください。" />
+        <!-- 本文 -->
         <Control Id="RunningAppsLabel" Type="Text"
                  X="20" Y="58" Width="330" Height="30"
                  Text="以下のアプリケーション/サービスが実行中のため、インストールを継続できません。" />
@@ -352,8 +362,10 @@
         <Control Id="NoteLabel" Type="Text"
                  X="20" Y="152" Width="330" Height="60"
                  Text="「終了して続行」をクリックすると、上記アプリケーションを自動的に終了してインストールを継続します。" />
+        <!-- フッター -->
         <Control Id="BottomLine" Type="Line"
                  X="0" Y="234" Width="370" Height="0" />
+        <!-- 戻るボタン -->
         <Control Id="Back" Type="PushButton"
                  X="155" Y="243" Width="56" Height="17"
                  Text="&lt; 戻る">
@@ -380,7 +392,9 @@
       <Publish Dialog="WelcomeDlg" Control="Next"
                Event="NewDialog" Value="RunningProcessesDlg"
                Order="2" Condition="NOT Installed AND RUNNING_PROCESSES" />
-      <Publish Dialog="WelcomeDlg"    Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="3" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="NewDialog" Value="InstallDirDlg"
+               Order="3" Condition="NOT Installed" />
 
       <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
                Event="DoAction" Value="CA_DetectRunningProcesses"
@@ -391,8 +405,9 @@
       <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
                Event="NewDialog" Value="VerifyReadyDlg"
                Order="3" Condition="Installed AND NOT RUNNING_PROCESSES" />
-
-      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"    Order="2" Condition="1" />
+      <Publish Dialog="InstallDirDlg" Control="Back"
+               Event="NewDialog" Value="WelcomeDlg"
+               Order="2" Condition="1" />
     </UI>
 
   </Package>

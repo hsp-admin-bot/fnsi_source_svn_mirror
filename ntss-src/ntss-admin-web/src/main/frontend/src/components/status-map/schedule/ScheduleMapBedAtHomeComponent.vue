@@ -17,7 +17,6 @@ import {
 } from "@/constants/statusMapConstants.js";
 
 export default {
-  components: {},
   mixins: [NextTransitionMixin, PatHeaderControlMixin],
   computed: {
     bedDivClass() {
@@ -68,16 +67,11 @@ export default {
     }
   },
   props: ["bedData", "historyKey", "isPopoverScroll"],
-  methods: {},
-  watch: {},
-  beforeCreate() {},
-  created() {},
-  beforeMount() {},
-  mounted() {},
-  beforeUpdate() {},
-  updated() {},
-  beforeDestroy() { },
-  destroyed() { }
+
+
+
+
+
 };
 </script>
 <style scoped>

@@ -4,7 +4,7 @@
 
 import { sendRequestGetEntryList } from "@/apis/status-list";
 import { sendRequestGetMstFacilitySettingValue } from "@/apis/facility-setting";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { DISP_CHARGE1_NOTSET, DISP_CHARGE2_NOTSET } from "@/constants/facilitySetting";
 
 // state
@@ -43,7 +43,7 @@ const actions = {
       item.isNow = false;
       item.isAfter = false;
     };
-    const formatDispTime = value => value ? moment(value).format("H:mm") : "--:--";
+    const formatDispTime = value => value ? dayjs(value).format("H:mm") : "--:--";
 
     // 透析前
     const beforeRtnList = [];

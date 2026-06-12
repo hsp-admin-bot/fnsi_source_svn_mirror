@@ -1,10 +1,9 @@
 package jp.co.nikkiso.ntss.admin_web.response.statusList;
 
-import java.io.IOException;
 import java.util.Objects;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.response.FlagAndMessageBaseResponse;
 import lombok.Getter;
@@ -42,7 +41,7 @@ public class CheckMediDoneResponse extends FlagAndMessageBaseResponse {
 
   // Setter
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
-  public void setIsMediDone(String mediInfo) throws IOException {
+  public void setIsMediDone(String mediInfo) throws tools.jackson.core.JacksonException {
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
     if (!Objects.equals(mediInfo, "") && mediInfo != null) {
       // JSON配列パース
@@ -64,7 +63,7 @@ public class CheckMediDoneResponse extends FlagAndMessageBaseResponse {
             break;
           }
         }
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end

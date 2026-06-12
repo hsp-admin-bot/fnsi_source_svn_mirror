@@ -16,7 +16,7 @@
           ref="segment"
           id="segment"
           class="send-condition-scale-mode-segment"
-          :index.sync="scaleMode"
+          v-model:index="scaleMode"
         >
           <button
             @click="onSegmentClick(0)"
@@ -354,8 +354,8 @@
         :visible="diaView"
         :style="(height = '100px')"
       >
-        <span slot="title">治療条件分類エラー</span>
-        <template slot="footer">
+        <template #title><span>治療条件分類エラー</span></template>
+        <template #footer>
           <v-ons-alert-dialog-button @click="diaView = false"
             >OK</v-ons-alert-dialog-button
           >
@@ -416,8 +416,8 @@
         :visible="diaView"
         :style="(height = '100px')"
       >
-        <span slot="title">治療条件分類エラー</span>
-        <template slot="footer">
+        <template #title><span>治療条件分類エラー</span></template>
+        <template #footer>
           <v-ons-alert-dialog-button @click="diaView = false"
             >キャンセル</v-ons-alert-dialog-button
           >
@@ -474,15 +474,15 @@
       <!--mod redmine#7185 centOS7サポート切れ zkq start -->
       <!-- <v-ons-alert-dialog modifier="rowfooter" :title="'マスタ期限切れエラー'" :footer="{
         OK: () => mstOverdueDiaView = false
-      }" :visible="mstOverdueDiaView" :style="height='100px'">    <span slot="title">治療条件分類エラー</span>
-          <template slot="footer"> -->
+      }" :visible="mstOverdueDiaView" :style="height='100px'">    <template #title><span>治療条件分類エラー</span>
+          <template #footer> -->
       <v-ons-alert-dialog
         modifier="rowfooter"
         :visible="mstOverdueDiaView"
         :style="(height = '100px')"
       >
-        <span slot="title">マスタ期限切れエラー</span>
-        <template slot="footer">
+        <template #title><span>マスタ期限切れエラー</span></template>
+        <template #footer>
           <v-ons-alert-dialog-button @click="mstOverdueDiaView = false"
             >OK</v-ons-alert-dialog-button
           >
@@ -543,8 +543,8 @@
         :visible="mstOverdueDiaView"
         :style="(height = '100px')"
       >
-        <span slot="title">マスタ期限切れエラー</span>
-        <template slot="footer">
+        <template #title><span>マスタ期限切れエラー</span></template>
+        <template #footer>
           <v-ons-alert-dialog-button @click="mstOverdueDiaView = false"
             >キャンセル</v-ons-alert-dialog-button
           >
@@ -607,8 +607,8 @@
         :visible="mstDelDiaView"
         :style="(height = '100px')"
       >
-        <span slot="title">マスタ削除エラー</span>
-        <template slot="footer">
+        <template #title><span>マスタ削除エラー</span></template>
+        <template #footer>
           <v-ons-alert-dialog-button @click="mstDelDiaView = false"
             >OK</v-ons-alert-dialog-button
           >
@@ -669,8 +669,8 @@
         :visible="mstDelDiaView"
         :style="(height = '100px')"
       >
-        <span slot="title">マスタ削除エラー</span>
-        <template slot="footer">
+        <template #title><span>マスタ削除エラー</span></template>
+        <template #footer>
           <v-ons-alert-dialog-button @click="mstDelDiaView = false"
             >キャンセル</v-ons-alert-dialog-button
           >
@@ -725,7 +725,7 @@
     <v-ons-popover
       cancelable
       class="zoom-popover"
-      :visible.sync="zoomPopoverVisible"
+      v-model:visible="zoomPopoverVisible"
       :target="zoomPopoverTarget"
       :direction="zoomPopoverDirection"
     >
@@ -756,7 +756,7 @@
 // add #7524 2022/11/10 同日同クールで同時に透析治療が実施できてしまう dou start
 import { ApiHelper } from "@/apis/AxiosHelper";
 // add #7524 2022/11/10 同日同クールで同時に透析治療が実施できてしまう dou end
-import { mapGetters, mapActions, mapMutations } from "vuex";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 import SendConditionSimpleMainItem from "@/components/send-condition/SendConditionSimpleMainComponent";
 import SendConditionBeforeDetailMainItem from "@/components/send-condition/SendConditionBeforeDetailMainComponent";
 import SendConditionAfterDetailMainItem from "@/components/send-condition/SendConditionAfterDetailMainComponent";
@@ -778,8 +778,8 @@ import {
 } from "@/constants/weightDefine";
 
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import { EventBus } from "@/eventBus.js";
-import moment from "moment";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import dayjs from "@/compat/date/dayjs";
 import { createJournal } from "@/apis/journal";
 import { getCurrentFunctionCd } from "@/router/routing-helper";
 // add FNSI-体重測定・条件送信 「クール設定／ベッド設定」ボタンは条件により非活性 鄭博尹 start
@@ -804,6 +804,10 @@ import { messageFormat } from "@/functions/common/MessageFormat";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
 import MODAL_TITLE from "@/components/common/ModalTitleContrast.js";
+import statusMapNormalScreenImg from "../../assets/status-map-normal-screen.png";
+import { getLatestHeaderElement, getHeaderHeight, getFooterMenuClientHeight, getScopedElementById, getScopedElementsByClassName, getScopedLocalStorage, getScopedUserAgent, getViewportHeight } from "@/functions/common/LayoutMeasureHelper";
+import { getOnsAlertDialogScopedElementsByClassName } from "@/functions/common/OnsenFunctions";
+
 const FLG_TRUE = "1",
   FLG_FALSE = "0";
 
@@ -950,7 +954,7 @@ export default {
       zoomPopoverVisible: false,
       zoomPopoverTarget: null,
       zoomPopoverDirection: "down",
-      image_src_normal_screen: require("../../assets/status-map-normal-screen.png"),
+      image_src_normal_screen: statusMapNormalScreenImg,
       selfScreenName: "",
       // 編集後クリックキャンセ,未提示破棄popup画面
       initWeightValue: 0,
@@ -1043,9 +1047,7 @@ export default {
       "getIsShowIndModal",
       "getSettingIndData",
     ]),
-    // #11987 2026.02.10 add スケールベッドからの呼び出しに対応 TDC片口 start
     ...mapGetters("scale-bed/send-cond", ["getIsFromScaleBed", "getScaleBedValue"]),
-    // #11987 2026.02.10 add スケールベッドからの呼び出しに対応 TDC片口 end
     // add FNSI-体重計画面 徐 start
     ...mapGetters("app", ["getQueryParameters"]),
     // add FNSI-体重計画面 徐 end
@@ -1124,8 +1126,8 @@ export default {
           val = this.getWeightColorSetting.form;
         }
         /* パンくずリスト背景色を設定 */
-        const elm = document.getElementsByClassName("breadcrumb-area");
-        if (elm) {
+        const elm = getScopedElementsByClassName("breadcrumb-area", this.$el || null);
+        if (elm && elm[0]) {
           elm[0].style.backgroundColor = val;
         }
         return val;
@@ -1392,7 +1394,7 @@ export default {
             // #12236 体重測定の動作不正 linjunfeng start
             // if (!this.getIsHasOrdWeightScale) {
             if (!this.getMeasuredValue) {
-            // #12236 体重測定の動作不正 linjunfeng end
+            // #12236 体重測定の動作不正 linjunfeng end  
               // 体重値未測定の場合は一時保存
               return {
                 btnText: "保存",
@@ -1683,7 +1685,7 @@ export default {
     },
     getHeight() {
       // 縦を計算
-      const sah = document.getElementById("main-id").clientHeight;
+      const sah = getScopedElementById("main-id", this.$el || null)?.clientHeight || 0;
 
       return "width: " + sah / 2 + "px";
     },
@@ -1826,9 +1828,7 @@ export default {
     // add FNSI-分類不一致判断の追加 徐 start
     ...mapMutations("send-condition/scale/message", ["resetMessage"]),
     // add FNSI-分類不一致判断の追加 徐 end
-    // #11987 2026.02.10 add スケールベッドからの呼び出しに対応 TDC片口 start
     ...mapActions("scale-bed/send-cond", ["resetScaleBedToWeightView"]),
-    // #11987 2026.02.10 add スケールベッドからの呼び出しに対応 TDC片口 end
     toggleShowMessage() {
       this.isShowMessageArea = !this.isShowMessageArea;
     },
@@ -1880,6 +1880,19 @@ export default {
     },
     // add FNSI-田中衡機の追加 徐 end
     /**
+     * refresh 時に測定モードを「体重」(0) に戻し、vue-onsenui 3.x の v-ons-segment が
+     * active-index を DOM に渡さないため、ネイティブ ons-segment の高亮を明示同期する。
+     */
+    applyRefreshScaleModeDefault() {
+      this.setScaleMode(weightScaleMode.weight);
+      this.$nextTick(() => {
+        const seg = this.$refs.segment?.$el;
+        if (seg?.setActiveButton) {
+          seg.setActiveButton(weightScaleMode.weight, { reject: false });
+        }
+      });
+    },
+    /**
      * 指示更新による画面更新処理
      */
     // mod #10054 破棄確認・保存活性(複数変更含む)・削除対応_測定 20240105 ztc start
@@ -1894,11 +1907,12 @@ export default {
           message: messageFormat(DIALOG_MESSAGES[13000004].message),
           callback: (answer) => {
             if (answer === 1) {
-              if (this.selfScreenName !== this.$router.currentRoute.name) {
+              if (this.selfScreenName !== this.$route.name) {
                 return;
               }
               this.$nextTick(() => {
                 if (this.isShowing) {
+                  this.applyRefreshScaleModeDefault();
                   if (
                     this.getSelectedOrdNo.ordNo === null &&
                     this.getInputPatId !== null
@@ -1916,11 +1930,12 @@ export default {
           },
         });
       } else {
-        if (this.selfScreenName !== this.$router.currentRoute.name) {
+        if (this.selfScreenName !== this.$route.name) {
           return;
         }
         this.$nextTick(() => {
           if (this.isShowing) {
+            this.applyRefreshScaleModeDefault();
             if (
               this.getSelectedOrdNo.ordNo === null &&
               this.getInputPatId !== null
@@ -1935,7 +1950,7 @@ export default {
           }
         });
       }
-      // if (this.selfScreenName !== this.$router.currentRoute.name) {
+      // if (this.selfScreenName !== this.$route.name) {
       //   return;
       // }
       // this.$nextTick(() => {
@@ -1978,7 +1993,7 @@ export default {
           : null,
         pat_id: this.getPatId,
         ord_no: this.getSelectedOrdNo.ordNo,
-        base_date: moment().format("YYYYMMDD"),
+        base_date: dayjs().format("YYYYMMDD"),
         user_id: this.getUserId,
       });
       // add FNSI-外部連携APIの修正 徐 end
@@ -1994,7 +2009,7 @@ export default {
           : null,
         pat_id: this.getPatId,
         ord_no: this.getSelectedOrdNo.ordNo,
-        base_date: moment().format("YYYYMMDD"),
+        base_date: dayjs().format("YYYYMMDD"),
         user_id: this.getUserId,
       });
     },
@@ -2041,18 +2056,12 @@ export default {
           ordNo: this.getSelectedOrdNo.ordNo,
           ordNo2: this.getSelectedOrdNo.ordNo2,
           facilityCd: this.facilityCd,
-          // #11987 2026.03.27 add スケールベッドから呼び出された場合の測定値追加 TDC片口 start
           isScaleBed: this.getIsFromScaleBed,
           scaleBedMeasureValue: this.getScaleBedValue,
-          // #11987 2026.03.27 add スケールベッドから呼び出された場合の測定値追加 TDC片口 end
         }).then((r) => {
-          // #11987 2026.05.20 スケールベッドから呼び出された場合の測定値をセットする。 TDC渡辺 start
-          //スケールベッドから呼び出された場合は、スケールベッドの測定値をセットする
-          if(this.getIsFromScaleBed) {
-              this.setMeasuredValue(this.getScaleBedValue);
+          if (this.getIsFromScaleBed) {
+            this.setMeasuredValue(this.getScaleBedValue);
           }
-          // #11987 2026.05.20 add スケールベッドから呼び出された場合の測定値をセットする。 TDC渡辺 end
-
           if (r) {
             this.setSelectedPatHeader(this.getPatId);
             // 前回後体重
@@ -2621,7 +2630,7 @@ export default {
         // 施設コード
         settingData.facilityCd = this.facilityCd;
         // 開始日
-        settingData.startDate = moment().format("YYYY-MM-DD");
+        settingData.startDate = dayjs().format("YYYY-MM-DD");
         // 終了日
         settingData.endDate = settingData.startDate;
         // 開始日操作不可
@@ -2633,7 +2642,7 @@ export default {
         // 選択された曜日以外すべてfalseに変更
         for (let i = 0; i < 7; i++) {
           settingData[this.changeWeekStr(i)] =
-            i !== moment().day() ? false : true;
+            i !== dayjs().day() ? false : true;
         }
         // 治療予定作成モーダルを直接呼び出す
         this.showIndModal({
@@ -2667,13 +2676,11 @@ export default {
         // オーダー番号
         settingData.ordNo = ordNo;
         // 開始日(一番左の日付)
-        settingData.startDate = moment(treatDate, "YYYYMMDD").format(
-          "YYYY-MM-DD"
-        );
+        settingData.startDate = dayjs(treatDate, "YYYYMMDD").format(
+          "YYYY-MM-DD");
         // 終了日(一番右の日付)
-        settingData.endDate = moment(treatDate, "YYYYMMDD").format(
-          "YYYY-MM-DD"
-        );
+        settingData.endDate = dayjs(treatDate, "YYYYMMDD").format(
+          "YYYY-MM-DD");
         // 開始日操作不可
         settingData.startDateEdit = true;
         // 終了日操作不可
@@ -2683,7 +2690,7 @@ export default {
         // 選択された曜日以外をfalseへ変更
         for (let i = 0; i < 7; i++) {
           settingData[this.changeWeekStr(i)] =
-            i !== moment(treatDate, "YYYYMMDD").day() ? false : true;
+            i !== dayjs(treatDate, "YYYYMMDD").day() ? false : true;
         }
 
         // 子コンポーネントへ渡すデータ
@@ -2730,13 +2737,11 @@ export default {
       // オーダー番号
       settingData.ordNo = this.getSelectedOrdNo.ordNo;
       // 開始日
-      settingData.startDate = moment(this.getTreatDate[0], "YYYYMMDD").format(
-        "YYYY-MM-DD"
-      );
+      settingData.startDate = dayjs(this.getTreatDate[0], "YYYYMMDD").format(
+        "YYYY-MM-DD");
       // 終了日
-      settingData.endDate = moment(this.getTreatDate[0], "YYYYMMDD").format(
-        "YYYY-MM-DD"
-      );
+      settingData.endDate = dayjs(this.getTreatDate[0], "YYYYMMDD").format(
+        "YYYY-MM-DD");
       // 開始日操作不可
       settingData.startDateEdit = true;
       // 終了日操作不可
@@ -2746,7 +2751,7 @@ export default {
       // 選択された曜日以外をfalseへ変更
       for (let i = 0; i < 7; i++) {
         settingData[this.changeWeekStr(i)] =
-          i !== moment(this.getTreatDate[0], "YYYYMMDD").day() ? false : true;
+          i !== dayjs(this.getTreatDate[0], "YYYYMMDD").day() ? false : true;
       }
 
       // 子コンポーネントへ渡すデータ
@@ -2907,8 +2912,7 @@ export default {
                 this.getScaleClass === weightScaleClass.noSchedule) && // 前体重測定時であること
               (this.getMachineStateError === machineSendable.patVerified ||
                 this.getIsCurrentDialysisStateEqualDialysisState(
-                  dialysisState.checkedSendCondition
-                )) && // 装置、またはオーダーが条件確認済みであること
+                  dialysisState.checkedSendCondition)) && // 装置、またはオーダーが条件確認済みであること
               !this.primaryOrderIsPurification.isPurification && // 特殊浄化治療でないこと
               this.getMachineState[0].isCommonComFormatProtocol !== "1" && // 医器工でないこと
               this.getMachineState[0].isOffline !== "1" // オフライン装置でないこと
@@ -3005,10 +3009,9 @@ export default {
             // }
             // });
             // mod #10054 破棄確認・保存活性(複数変更含む)・削除対応_測定 20231219 ztc end
-            /* modify by chamaojia 2024-12-20 [11387] 【たくしん会】前/後体重測定時に重量測定モードとなる　V1.0B --end */
+            /* modify by chamaojia 2024-12-20 [11387] 【たくしん会】前/後体重測定時に重量測定モードとなる V1.0B --end */
           }
-        }
-      );
+        });
       // add 10553 連携イベント発生部分不正 関 start
       if (this.inOutFlag) {
         this.createCoopJournal();
@@ -3089,20 +3092,12 @@ export default {
       //共通ローダー：表示終了
       this.setLoadingScreenVisible(false);
       this.setIsInitialized(true);
-
-      // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 start
-      //
-      ////mod #12064 体重測定画面の重量測定モードで「お乗りください」の音声が流れる。 zrx start
-      //// this.playAudio(this.getWeightAudioSetting).patOk();
-      //if (this.getScaleClass !== weightScaleClass.scale) {
-      //  this.playAudio(this.getWeightAudioSetting).patOk();
-      //}
+      //mod #12064 体重測定画面の重量測定モードで「お乗りください」の音声が流れる。 zrx start
+      // this.playAudio(this.getWeightAudioSetting).patOk();
       if (this.getScaleClass !== weightScaleClass.scale && !this.getIsFromScaleBed) {
         this.playAudio(this.getWeightAudioSetting).patOk();
       }
       //mod #12064 体重測定画面の重量測定モードで「お乗りください」の音声が流れる。 zrx end
-      // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 end
-
       this.$nextTick(() => {
         this.calculateContentHeight();
       });
@@ -3299,9 +3294,7 @@ export default {
         weightInfo: this.getWeightConfigInfo,
         category: category,
         isPrint: this.isPrint ? FLG_TRUE : FLG_FALSE,
-        // #11987 2026.02.11 add スケールベッド状態書込み用のベッド番号を追加 TDC片口 start
         isScaleBed: this.getIsFromScaleBed,
-        // #11987 2026.02.11 add スケールベッド状態書込み用のベッド番号を追加 TDC片口 end
       })
         .then(async (r) => {
           // 条件送信成功
@@ -3419,9 +3412,8 @@ export default {
               error.response.data.mstDelFlgMsgList.length > 0
             ) {
               this.mstDelMsgList = error.response.data.mstDelFlgMsgList;
-              let buttonElem = document.getElementsByClassName(
-                "alert-dialog-button"
-              );
+              const buttonElem = getOnsAlertDialogScopedElementsByClassName(
+                this.$el || null, "alert-dialog-button", this.$el?.ownerDocument || document);
               for (let i = 0; i < buttonElem.length; i++) {
                 if (buttonElem[i].classList.length < 3) {
                   buttonElem[i]?.classList?.add(
@@ -3442,9 +3434,8 @@ export default {
               error.response.data.mstOverdueMsgList.length > 0
             ) {
               this.mstOverdueMsgList = error.response.data.mstOverdueMsgList;
-              let buttonElem = document.getElementsByClassName(
-                "alert-dialog-button"
-              );
+              const buttonElem = getOnsAlertDialogScopedElementsByClassName(
+                this.$el || null, "alert-dialog-button", this.$el?.ownerDocument || document);
               for (let i = 0; i < buttonElem.length; i++) {
                 if (buttonElem[i].classList.length < 3) {
                   buttonElem[i]?.classList?.add(
@@ -3465,9 +3456,8 @@ export default {
               error.response.data.errorMessagelist.length > 0
             ) {
               this.recordList = error.response.data.errorMessagelist;
-              let buttonElem = document.getElementsByClassName(
-                "alert-dialog-button"
-              );
+              const buttonElem = getOnsAlertDialogScopedElementsByClassName(
+                this.$el || null, "alert-dialog-button", this.$el?.ownerDocument || document);
               for (let i = 0; i < buttonElem.length; i++) {
                 if (buttonElem[i].classList.length < 3) {
                   buttonElem[i]?.classList?.add(
@@ -3720,13 +3710,9 @@ export default {
             // del 9728 サーマルプリンタからの印刷が実施されない　吉 end
             // add FNSI-分類不一致判断の追加 徐 end
           }
-          // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 start
-          //this.playAudio(this.getWeightAudioSetting).sendNg();
           if (!this.getIsFromScaleBed) {
             this.playAudio(this.getWeightAudioSetting).sendNg();
           }
-          // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 end
-
           this.isClicking = false;
           // 共通ローダー:表示終了
           this.setLoadingScreenVisible(false);
@@ -3743,6 +3729,7 @@ export default {
         weightInfo: this.getWeightConfigInfo,
         category: weightScaleMode.weightAndChair,
         isPrint: FLG_FALSE,
+        isScaleBed: this.getIsFromScaleBed,
       })
         .then(() => {
           // 保存成功
@@ -3773,12 +3760,9 @@ export default {
               message: error.response.data.errorMessage,
             });
           }
-          // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 start
-          //this.playAudio(this.getWeightAudioSetting).sendNg();
           if (!this.getIsFromScaleBed) {
             this.playAudio(this.getWeightAudioSetting).sendNg();
           }
-          // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 end
           this.isClicking = false;
           // 共通ローダー:表示終了
           this.setLoadingScreenVisible(false);
@@ -3795,6 +3779,7 @@ export default {
         weightInfo: this.getWeightConfigInfo,
         category: weightScaleMode.wheelChair,
         isPrint: FLG_FALSE,
+        isScaleBed: this.getIsFromScaleBed,
       })
         .then(() => {
           // 保存成功
@@ -3825,12 +3810,9 @@ export default {
               message: error.response.data.errorMessage,
             });
           }
-          // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 start
-          //this.playAudio(this.getWeightAudioSetting).sendNg();
           if (!this.getIsFromScaleBed) {
             this.playAudio(this.getWeightAudioSetting).sendNg();
           }
-          // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 end
           this.isClicking = false;
           // 共通ローダー:表示終了
           this.setLoadingScreenVisible(false);
@@ -3869,9 +3851,7 @@ export default {
         weightInfo: this.getWeightConfigInfo,
         category: category,
         isPrint: this.isPrint ? FLG_TRUE : FLG_FALSE,
-        // #11987 2026.02.11 add スケールベッド状態書込み用のベッド番号を追加 TDC片口 start
         isScaleBed: this.getIsFromScaleBed,
-        // #11987 2026.02.11 add スケールベッド状態書込み用のベッド番号を追加 TDC片口 end
       })
         .then((r) => {
           // 後体重送信成功
@@ -3962,12 +3942,9 @@ export default {
                 });
             }
           }
-          // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 start
-          //this.playAudio(this.getWeightAudioSetting).sendNg();
           if (!this.getIsFromScaleBed) {
             this.playAudio(this.getWeightAudioSetting).sendNg();
           }
-          // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 end
           this.isClicking = false;
           // 共通ローダー:表示終了
           this.setLoadingScreenVisible(false);
@@ -3984,6 +3961,7 @@ export default {
         weightInfo: this.getWeightConfigInfo,
         category: -1,
         isPrint: this.isPrint ? FLG_TRUE : FLG_FALSE,
+        isScaleBed: this.getIsFromScaleBed,
       })
         .then((r) => {
           // 保存成功
@@ -4080,12 +4058,9 @@ export default {
                 });
             }
           }
-          // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 start
-          //this.playAudio(this.getWeightAudioSetting).sendNg();
           if (!this.getIsFromScaleBed) {
             this.playAudio(this.getWeightAudioSetting).sendNg();
           }
-          // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 end
           this.isClicking = false;
           // 共通ローダー:表示終了
           this.setLoadingScreenVisible(false);
@@ -4100,11 +4075,9 @@ export default {
       });
     },
     // #10463 2024.06.13 add 測定モードが変わった場合に2回測定チェック用前回測定値をクリアする TDC米沢 end
-
     // 測定モード手動変更
     onSegmentClick(idx) {
-
-    if (
+      if (
         idx === weightScaleMode.weight &&
         this.getLastScaleMode === weightScaleMode.weight &&
         this.getLastScaleValue !== null
@@ -4499,32 +4472,58 @@ export default {
         this.setTreatingWheelScaleMode();
       }
     },
+    //#9846 start
+    onResize() {
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      clearTimeout(this._onResizeSyncTimer);
+      this._onResizeSyncTimer = ownerWindow.setTimeout(() => {
+        ownerWindow.requestAnimationFrame(() => {
+          const mainContent = getScopedElementsByClassName(
+            "send-condition-main-content",
+            this.$el || null
+          )[0];
+          const headContent = getScopedElementsByClassName(
+            "send-condition-head-content",
+            this.$el || null
+          )[0];
+          if (!mainContent || !headContent) {
+            return;
+          }
+          const hasVerticalScroll =
+            mainContent.scrollHeight > mainContent.clientHeight + 1;
+          const nextBoxSizing = hasVerticalScroll ? "border-box" : "";
+          const nextPadding = hasVerticalScroll
+            ? "0px 0px 10px 10px"
+            : "0px 10px 10px 10px";
+          if (
+            headContent.style.boxSizing === nextBoxSizing &&
+            headContent.style.padding === nextPadding
+          ) {
+            return;
+          }
+          headContent.style.boxSizing = nextBoxSizing;
+          headContent.style.padding = nextPadding;
+        });
+      }, 16);
+    },
+    //#9846 end
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateContentHeight() {
-      const wh = this.windowHeight;
-      const hh = Array.prototype.slice
-        .call(document.getElementsByClassName("header"))
-        .shift().clientHeight;
+      // store の windowHeight が未初期化(0)の間は実ビューポートを使う（LayoutMixin と同様）。初期描画で mainContentHeight が 100 に張り付き #main-id と不整合になるのを防ぐ
+      const wh = Number(this.windowHeight) || getViewportHeight(this.$el || document);
+      const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
       const fmh =
         (this.isDispMenu === 1
-          ? document.getElementById("footer-menu").clientHeight
+          ? getFooterMenuClientHeight(this.$el || null)
           : 0) + 5;
       this.mainContentHeight = wh - hh - fmh - 3;
       this.mainContentHeight =
         this.mainContentHeight < 100 ? 100 : this.mainContentHeight;
 
-      const cfh = Array.prototype.slice
-        .call(document.getElementsByClassName("send-condition-footer-content"))
-        .shift().clientHeight;
-      const csh = Array.prototype.slice
-        .call(document.getElementsByClassName("send-condition-head-segment"))
-        .shift().clientHeight;
-      const cmh = Array.prototype.slice
-        .call(document.getElementsByClassName("send-condition-message-content"))
-        .shift().clientHeight;
-      const cth = Array.prototype.slice
-        .call(document.getElementsByClassName("send-condtition-time-content"))
-        .shift().clientHeight;
+      const cfh = getScopedElementsByClassName("send-condition-footer-content", this.$el || null)[0]?.clientHeight || 0;
+      const csh = getScopedElementsByClassName("send-condition-head-segment", this.$el || null)[0]?.clientHeight || 0;
+      const cmh = getScopedElementsByClassName("send-condition-message-content", this.$el || null)[0]?.clientHeight || 0;
+      const cth = getScopedElementsByClassName("send-condtition-time-content", this.$el || null)[0]?.clientHeight || 0;
 
       this.scaleContentHeight =
         this.mainContentHeight - (cfh + csh + cmh + cth) + 12;
@@ -4533,17 +4532,20 @@ export default {
         this.mainContentHeight - (cfh + csh + cmh + cth) + 12;
 
       // スケジュールボタンのmax-width
-      const headerBtnAreaWidth = document.getElementById(
-        "send-condition-head-button-area"
-      ).clientWidth;
-      const scaleClassIconWidth = document.getElementById(
-        "send-condition-scale-class-icon"
-      ).clientWidth;
-      const control2IconWidth = document.getElementById(
-        "send-condition-control-2"
-      ).clientWidth;
+      const headerBtnAreaWidth = getScopedElementById(
+        "send-condition-head-button-area", this.$el || null)?.clientWidth || 0;
+      const scaleClassIconWidth = getScopedElementById(
+        "send-condition-scale-class-icon", this.$el || null)?.clientWidth || 0;
+      const control2IconWidth = getScopedElementById(
+        "send-condition-control-2", this.$el || null)?.clientWidth || 0;
       this.scheduleBtnMaxWidth =
         headerBtnAreaWidth - scaleClassIconWidth - control2IconWidth - 10;
+
+      //#9846 start
+      this.$nextTick(() => {
+        this.onResize()
+      })
+      //#9846 end
     },
     delayGoBack() {
       this.setLoadingScreenVisible(true);
@@ -4556,12 +4558,9 @@ export default {
       // del #10054 破棄確認・保存活性(複数変更含む)・削除対応_測定 20240105 ztc start
       // this.isClicking = false;
       // del #10054 破棄確認・保存活性(複数変更含む)・削除対応_測定 20240105 ztc end
-      // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 start
-      //this.playAudio(this.getWeightAudioSetting).sendOk();
       if (!this.getIsFromScaleBed) {
         this.playAudio(this.getWeightAudioSetting).sendOk();
       }
-      // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 end
       this.$router.go(-1);
       this.setLoadingScreenVisible(false);
       // mod FNSI-5622 時間を2000 msから500 msに調整 查 start
@@ -4582,9 +4581,9 @@ export default {
           ordNos: [this.getSelectedOrdNo.ordNo, this.getSelectedOrdNo.ordNo2],
           // add #5984 体重測定 コンテンツを追加する 孟堅 start
           functionCd: "01301",
-          date: moment(Date.now()).format("YYYYMMDD"), // 日付（1日）：今日
-          fromDate: moment(Date.now()).format("YYYY/MM/DD"), //  日付（期間）：今日から今日
-          toDate: moment(Date.now()).format("YYYY/MM/DD"),
+          date: dayjs(Date.now()).format("YYYYMMDD"), // 日付（1日）：今日
+          fromDate: dayjs(Date.now()).format("YYYY/MM/DD"), //  日付（期間）：今日から今日
+          toDate: dayjs(Date.now()).format("YYYY/MM/DD"),
           // add #5984 体重測定 コンテンツを追加する 孟堅 end
         };
         EventBus.$emit("sendReportParams", param);
@@ -4766,9 +4765,10 @@ export default {
                 // ズームする場所(ターゲット要素内座標)
                 const zoomPosX = Math.floor((newP1.x + newP2.x) / 2);
                 const zoomPosY = Math.floor((newP1.y + newP2.y) / 2);
-                const displayArea = document
-                  .getElementById("report-main")
-                  .getBoundingClientRect();
+                const displayArea = getScopedElementById("report-main", this.$el || null)?.getBoundingClientRect?.();
+                if (!displayArea) {
+                  break;
+                }
 
                 if (this.mouseListenerInf.zoomPos === null) {
                   this.mouseListenerInf.zoomPos = {
@@ -4838,11 +4838,14 @@ export default {
           (newMousePos.y - this.mouseListenerInf.basePoint.y),
       };
       // X軸方向への動き
+      const targetElement = getScopedElementById("target", this.$el || null);
+      const displayAreaElement = getScopedElementById("area-main", this.$el || null);
+      if (!targetElement || !displayAreaElement) {
+        return;
+      }
       const canvasWidth =
-        document.getElementById("target").clientWidth * this.targetScale;
-      const displayArea = document
-        .getElementById("area-main")
-        .getBoundingClientRect();
+        targetElement.clientWidth * this.targetScale;
+      const displayArea = displayAreaElement.getBoundingClientRect();
       this.targetTransForm.x = this.getTransform(
         canvasWidth,
         displayArea.width * this.targetScale,
@@ -4853,7 +4856,7 @@ export default {
 
       // y軸方向への動き
       const canvasHeight =
-        document.getElementById("target").clientHeight * this.targetScale;
+        targetElement.clientHeight * this.targetScale;
       this.targetTransForm.y = this.getTransform(
         canvasHeight,
         displayArea.height * this.targetScale,
@@ -4886,12 +4889,13 @@ export default {
     },
     // ベッドレイアウト表示位置調整
     adjustBedLayourtAreaPosition() {
-      const displayArea = document
-        .getElementById("area-main")
-        .getBoundingClientRect();
-      const targetArea = document
-        .getElementById("target")
-        .getBoundingClientRect();
+      const displayAreaElement = getScopedElementById("area-main", this.$el || null);
+      const targetElement = getScopedElementById("target", this.$el || null);
+      if (!displayAreaElement || !targetElement) {
+        return;
+      }
+      const displayArea = displayAreaElement.getBoundingClientRect();
+      const targetArea = targetElement.getBoundingClientRect();
       const areaX = displayArea.width / 2;
       const areaY = displayArea.height / 2;
 
@@ -4965,7 +4969,7 @@ export default {
           physicalInfoList: physicalInfoList,
           treatDate: this.getTreatDate[0]
             ? this.getTreatDate[0]
-            : moment().format("YYYYMMDD"),
+            : dayjs().format("YYYYMMDD"),
         }).then(() => {
           // DW未登録
           if (
@@ -5062,12 +5066,12 @@ export default {
       // this.adjustBedLayourtAreaPosition();
     },
     sliderVal(newVal) {
-      localStorage.setItem(LOCAL_STORAGE_KEY.WEIGHT_SCALE_ZOOM, newVal);
+      getScopedLocalStorage(this.$el || null).setItem(LOCAL_STORAGE_KEY.WEIGHT_SCALE_ZOOM, newVal);
     },
   },
   created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // add 性能改善メモリ不足 shan start
     EventBus.$off("refresh", this.refresh);
     EventBus.$off("isRefresh", this.refresh);
@@ -5198,12 +5202,9 @@ export default {
             // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
           });
         }
-        // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 start
-        //this.playAudio(this.getWeightAudioSetting).sendNg();
         if (!this.getIsFromScaleBed) {
           this.playAudio(this.getWeightAudioSetting).sendNg();
         }
-        // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 end
       });
     // デフォルト体重計設定読み込み
     this.fetchDefaultWeightSetting(this.facilityCd)
@@ -5235,19 +5236,16 @@ export default {
             // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
           });
         }
-        // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 start
-        //this.playAudio(this.getWeightAudioSetting).sendNg();
         if (!this.getIsFromScaleBed) {
           this.playAudio(this.getWeightAudioSetting).sendNg();
         }
-        // #11987 2026.05.20 mod スケールベッド対応 スケールベッドから呼び出された場合は音声ガイダンスは再生させない TDC渡辺 end
       });
 
     this.fetchWheelChairList(this.facilityCd);
     // add FNSI-体重測定・条件送信 「クール設定／ベッド設定」ボタンは条件により非活性 鄭 start
     this.setDisabled();
     // add FNSI-体重測定・条件送信 「クール設定／ベッド設定」ボタンは条件により非活性 鄭 end
-    const ua = navigator.userAgent;
+    const ua = getScopedUserAgent(this.$el || null);
     if (ua.match(/iPhone|Android/)) {
       this.isMobile = true;
     }
@@ -5260,11 +5258,11 @@ export default {
         : "体重計接続なし";
     var weekday = ["日", "月", "火", "水", "木", "金", "土"];
     this.ymdTime =
-      moment().format("YYYY/MM/DD") +
+      dayjs().format("YYYY/MM/DD") +
       "(" +
-      weekday[moment().day()] +
+      weekday[dayjs().day()] +
       ") " +
-      moment().format("HH:mm");
+      dayjs().format("HH:mm");
 
     this.ymdUpdateProc = setInterval(() => {
       // ymdtime更新処理(1秒ごと)
@@ -5275,25 +5273,23 @@ export default {
           : "体重計接続なし";
       var weekday = ["日", "月", "火", "水", "木", "金", "土"];
       this.ymdTime =
-        moment().format("YYYY/MM/DD") +
+        dayjs().format("YYYY/MM/DD") +
         "(" +
-        weekday[moment().day()] +
+        weekday[dayjs().day()] +
         ") " +
-        moment().format("HH:mm");
+        dayjs().format("HH:mm");
     }, 1000);
 
     // #10290 2024.03.09 add 施設設定により前体重許容範囲チェックを実施可否を決定する TDC米沢 start
     // 施設設定「前体重許容範囲チェックの実施可否」を読み込み、storeに設定する
     this.setIsBeforeWeightToleranceRangeCheck(this.facilityCd);
     // #10290 2024.03.09 add 施設設定により前体重許容範囲チェックを実施可否を決定する TDC米沢 end
-
   },
   mounted() {
     // エラーメッセージ非表示
     this.hideCheckMessage();
     this.$nextTick(() => {
       this.calculateContentHeight();
-
     });
     // 編集後クリックキャンセ,未提示破棄popup画面
     setTimeout(() => {
@@ -5304,7 +5300,7 @@ export default {
     // サイドメニュー、サイドメニュー開閉ボタンを非表示化
     this.setIsDispSidebarBtn(false);
 
-    let storedSliderVal = localStorage.getItem(
+    let storedSliderVal = getScopedLocalStorage(this.$el || null).getItem(
       LOCAL_STORAGE_KEY.WEIGHT_SCALE_ZOOM
     );
     if (storedSliderVal) {
@@ -5316,7 +5312,7 @@ export default {
       this.calculateContentHeight();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
     EventBus.$off("isRefresh", this.refresh); // 指示変更モーダル
     EventBus.$off("loadSendConditionView", this.loadInitialData);
@@ -5324,6 +5320,7 @@ export default {
     // 印刷パラメータ要求
     EventBus.$off("requestReportParams", this.requestrReportParams);
 
+ 
     // タイマーが動いている場合は停止させる
     clearTimeout(this.autoSendTimer);
     this.stopDelayAudio().patOk();
@@ -5332,14 +5329,10 @@ export default {
     clearInterval(this.ymdUpdateProc);
 
     // dataの初期化
-    Object.assign(this.$data, this.$options.data());
-
-    // #11987 2026.02.10 add スケールベッドからの呼び出しに対応 TDC片口 start
-    // スケールベッドモードの削除
     this.resetScaleBedToWeightView();
-    // #11987 2026.02.10 add スケールベッドからの呼び出しに対応 TDC片口 end
+    Object.assign(this.$data, this.$options.data());
   },
-  destroyed() {
+  unmounted() {
     this.setBaseOrdWeightNo(null);
     this.setIsInitialized(false);
     this.setMeasuredValue(0);
@@ -5592,9 +5585,7 @@ span.zoom-slider-label {
   background-size: 40px 40px;
   background-position: 0 0, 20px 20px;
 }
-.zoom-popover
-  >>> div.popover.popover--top
-  >>> div.popover__content.popover--top__content {
+.zoom-popover :deep(div.popover.popover--top div.popover__content.popover--top__content) {
   height: fit-content;
   min-height: unset;
 }

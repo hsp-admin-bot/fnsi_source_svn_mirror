@@ -1,7 +1,8 @@
 /** 加算情報 */
 <template>
   <submenu-base v-if="hasOrdNo">
-    <div slot="main" id="addition-component">
+    <template #main>
+      <div id="addition-component">
       <div>
         <div>
           <table class="addition-record-list">
@@ -74,8 +75,10 @@
           </table>
         </div>
       </div>
-    </div>
-    <div slot="footer" class="flex-container" v-if="mstAdditionList.length > 0">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container" v-if="mstAdditionList.length > 0">
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
       <div class="denial-btn-area">
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
@@ -110,20 +113,21 @@
         <!-- add FNSI-修正 権限関連 周雨晴 2020/09/27 end -->
       </div>
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
-    </div>
+      </div>
+    </template>
   </submenu-base>
 </template>
 
 <script>
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 start
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import SubmenuBase from "@/components/treatment-record/SubmenuBaseComponent";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
 // import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 import { formatDatetime } from "@/functions/common/CommonFunctions";
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // import { AUTHORITY_CODES } from "@/constants/userAuthority";
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 end
 import DateInput from "@/components/common/DateInput";
@@ -252,7 +256,7 @@ export default {
    */
   async created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
     // EventBus.$on("refresh", this.refresh);
     EventBus.$on("refresh", this.eventBusRefresh);
@@ -277,7 +281,7 @@ export default {
   /**
    *
    */
-  beforeDestroy() {
+  beforeUnmount() {
     // del refresh方法処理不正について、対応する。 dengshen start
     // EventBus.$off("refresh");
     // del refresh方法処理不正について、対応する。 dengshen end
@@ -319,17 +323,15 @@ export default {
     async refresh(){
       this.setMode("TREATMENT-RECORD");
 
-      if (this.selfScreenName !== this.$router.currentRoute.name || !this.getOrdNo) {
+      if (this.selfScreenName !== this.$route.name || !this.getOrdNo) {
         return;
       }
       const requestParam = {
-        // mod #12462 患者情報共有 Ji start
         facilityCd: this.getSharedFacilityCd,
         patId: this.selectedPatId,
         ordNo: this.getOrdNo,
         treatDate: this.getTreatDate,
-        ownFacility: this.isShared ? '1' : '0',
-	// mod #12462 患者情報共有 Ji end
+        ownFacility: this.isShared ? "1" : "0"
       };
       await Promise.all([
         this.sendRequestGetByPatInfo({
@@ -350,7 +352,7 @@ export default {
     },
      // add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
      eventBusRefresh() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       if (this.isChanged && this.alertFlag) {
@@ -470,7 +472,7 @@ export default {
     },
 
     getNowDate(){
-      return moment().format();
+      return dayjs().format();
     },
 
     // JSONの名前(orditem_name)または加算マスタの名前(additionName)を返す

@@ -27,7 +27,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.data_gathering.entity.MntGatheringManage;
 import jp.co.nikkiso.ntss.data_gathering.entity.MntMotionRecord;
@@ -1376,7 +1376,7 @@ public class DataGatheringService {
     EventLogMessage eventLogMessage = new EventLogMessage();
     // ファイル結合APIを呼び出し
     try {
-      UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(this.GetProperty("fileJoin.uri"))
+      UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(this.GetProperty("fileJoin.uri"))
           .queryParam("filePath", Base64.getEncoder().encodeToString(uploadPath.getBytes()))
           .queryParam("fileName", Base64.getEncoder().encodeToString(fileInfo.getBytes()));
       RestTemplate rt = new RestTemplate();

@@ -26,6 +26,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 患者情報の取得するResourceクラス
@@ -139,7 +140,19 @@ public class PatPersonalMainResource {
      * @return
      */
     @GetMapping("/getPatNameByFacilityCd/{facilityCd}")
-    public ResponseEntity<?> getPatNameByFacilityCd(@PathVariable String facilityCd) {
+    public ResponseEntity<?> getPatNameByFacilityCd(@PathVariable String facilityCd,
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+        @AuthenticationPrincipal NtssUser ntssUser
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+      if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+
       String mappingUrl = Uri.PAT_PERSONAL_MAIN + "/getPatNameByFacilityCd/{facilityCd}";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
           facilityCd);
@@ -155,7 +168,7 @@ public class PatPersonalMainResource {
         logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_ERROR, mappingUrl, null,
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
           ExcetionStackTraceToString(e));
-        return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
     }
 
@@ -166,7 +179,20 @@ public class PatPersonalMainResource {
      * @return
      */
     @GetMapping("/getPatNameByPatId/{patId}")
-    public ResponseEntity<?> getPatNameByPatId(@PathVariable Long patId) {
+    public ResponseEntity<?> getPatNameByPatId(@PathVariable Long patId,
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+        @AuthenticationPrincipal NtssUser ntssUser
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+      PatPersonalMain pat = PatPersonalMainDao.selectById(patId);
+      if (pat != null && !ntssUser.isNkkAdminUser() && !ntssUser.getFacilityCd().equals(pat.getFacility_cd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "pat.getFacility_cd()=" + pat.getFacility_cd() + " " + "patId=" + patId + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+
       String mappingUrl = Uri.PAT_PERSONAL_MAIN + "/getPatNameByPatId/{patId}";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
           patId);
@@ -183,7 +209,7 @@ public class PatPersonalMainResource {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
           ExcetionStackTraceToString(e));
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
-        return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
     }
 

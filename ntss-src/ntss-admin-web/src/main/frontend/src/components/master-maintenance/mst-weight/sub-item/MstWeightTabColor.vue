@@ -21,7 +21,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import customCheckbox from "@/components/common/custom-form-tags/CustomCheckbox.vue";
 export default {
   components: {
@@ -93,7 +93,7 @@ export default {
   },
   created() {
     // 端末判別
-    if (navigator.userAgent.match(/Android/)) {
+    if (((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").match(/Android/)) {
       this.androidFlg = true;
     }
   },

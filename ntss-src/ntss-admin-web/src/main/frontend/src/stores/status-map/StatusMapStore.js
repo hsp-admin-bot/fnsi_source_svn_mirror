@@ -15,7 +15,7 @@ import {
   sendRequestGetKur,
   sendRequestGetTreatmentStatusMapMachine,
   sendRequestGetOnscheduleTreatmentStatusList,
-  sendRequestGerStatusMapInfo,
+  sendRequestGetStatusMapInfo,
   sendRequestGetOrdSchedule,
   sendRequestGetLastestDialysisState,
   sendRequestCheckBeforeMoveOrdMain,
@@ -30,7 +30,7 @@ import {
 } from "@/apis/status-map";
 import { sendRequestGetKurSelector } from "@/apis/send-condition";
 import statusCommonFunctions from "@/components/status-list/StatusCommonFunction";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { MACHINE_MODEL } from "@/constants/machineModel";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import {
@@ -454,55 +454,55 @@ export default {
       }
 
       // add FNSI-redmine#4278 付 start
-    　if (defaultCondition !== undefined || layoutNumbers !== undefined) {
+     if (defaultCondition !== undefined || layoutNumbers !== undefined) {
       // add FNSI-redmine#4278 付 end
-          // 初回画面表示時のみデフォルト設定を適用
-          if (state.initFlg) {
-            if (defaultCondition) {
-              if (defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_BED_LAYOUT_ID] !== null) {
-                await dispatch(
-                  "setBedLayout",
-                  defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_BED_LAYOUT_ID]
-                );
-              }
-              if (defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_NEXT_PAT_VALUE] !== null) {
-                state.findState.conditionTreatMap.nextPatValue = defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_NEXT_PAT_VALUE];
-              }
-              if (defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_STATUS_LAYOUT_NO] !== null) {
-                await dispatch(
-                  "setStatusLayout",
-                  defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_STATUS_LAYOUT_NO]
-                );
-              }
-              if (defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_BED_GROUP_CD] !== null) {
-                const roomBedGroupCd = defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_BED_GROUP_CD];
-                const bedGroupExists = state.findState.candidate.comboBedGroupList.some(
-                  rbr => +rbr.roomBedGroupCd === +roomBedGroupCd
-                );
-                await dispatch("setBedGroup", bedGroupExists ? roomBedGroupCd : 0);
-              }
-              if (defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_KUR_CD] !== null) {
-                await dispatch(
-                  "setKur",
-                  defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_KUR_CD]
-                );
-              }
+        // 初回画面表示時のみデフォルト設定を適用
+        if (state.initFlg) {
+          if (defaultCondition) {
+            if (defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_BED_LAYOUT_ID] !== null) {
+              await dispatch(
+                "setBedLayout",
+                defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_BED_LAYOUT_ID]
+              );
             }
-            // 遷移時にレイアウト番号、ベッドレイアウト番号が指定されていれば適用
-            if (layoutNumbers) {
-              if (layoutNumbers.LAYOUTNO) {
-                await dispatch(
-                  "setStatusLayout",
-                  Number.parseInt(layoutNumbers.LAYOUTNO)
-                );
-              }
-              if (layoutNumbers.BEDLAYOUTNO) {
-                await dispatch(
-                  "setBedLayout",
-                  Number.parseInt(layoutNumbers.BEDLAYOUTNO)
-                );
-              }
+            if (defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_NEXT_PAT_VALUE] !== null) {
+              state.findState.conditionTreatMap.nextPatValue = defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_NEXT_PAT_VALUE];
             }
+            if (defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_STATUS_LAYOUT_NO] !== null) {
+              await dispatch(
+                "setStatusLayout",
+                defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_STATUS_LAYOUT_NO]
+              );
+            }
+            if (defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_BED_GROUP_CD] !== null) {
+              const roomBedGroupCd = defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_BED_GROUP_CD];
+              const bedGroupExists = state.findState.candidate.comboBedGroupList.some(
+                rbr => +rbr.roomBedGroupCd === +roomBedGroupCd
+              );
+              await dispatch("setBedGroup", bedGroupExists ? roomBedGroupCd : 0);
+            }
+            if (defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_KUR_CD] !== null) {
+              await dispatch(
+                "setKur",
+                defaultCondition[KEY_NAME_STATUS_MAP.KEY_NAME_KUR_CD]
+              );
+            }
+          }
+          // 遷移時にレイアウト番号、ベッドレイアウト番号が指定されていれば適用
+          if (layoutNumbers) {
+            if (layoutNumbers.LAYOUTNO) {
+              await dispatch(
+                "setStatusLayout",
+                Number.parseInt(layoutNumbers.LAYOUTNO)
+              );
+            }
+            if (layoutNumbers.BEDLAYOUTNO) {
+              await dispatch(
+                "setBedLayout",
+                Number.parseInt(layoutNumbers.BEDLAYOUTNO)
+              );
+            }
+          }
           state.initFlg = false;
         }
       }
@@ -732,7 +732,7 @@ export default {
           if (response.data.dcs) {
             const ordNoArray = response.data.dcs.filter(dat => dat.ordNo).map(dat => dat.ordNo)
             if (ordNoArray?.length > 0) {
-              const res = await sendRequestGerStatusMapInfo(ordNoArray, autoRefreshFlag);
+              const res = await sendRequestGetStatusMapInfo(ordNoArray, autoRefreshFlag);
               if (res?.status === 200) {
                 statusMapInfo = res.data;
               }
@@ -769,7 +769,7 @@ export default {
      */
     // async fetchStatusMapInfo({ commit }, ordNoArray) {
     //   if (ordNoArray.length > 0) {
-    //     const response = await sendRequestGerStatusMapInfo(ordNoArray);
+    //     const response = await sendRequestGetStatusMapInfo(ordNoArray);
     //     // console.log("fetchStatusMapInfo/response is %o", response);
     //     if (response.status === 200 && typeof response.data !== "undefined") {
     //       await commit("setStatusMapInfo", response.data);
@@ -821,10 +821,9 @@ export default {
      * @returns true：割り当てなし(空き)/false：割り当てあり
      */
     async checkEmptyBed(context, { treatDate, kurCd, bedCd
-      //add FNSI redmine 6588 劉祥霖　start
-      // mod/ #12465同患者同日同治療方法同クールの使用制限をしてもメッセージがでない tianqidong start
+      //add FNSI redmine 6588 劉祥霖 start
       ,facilityCd,ordNo,patId,indTreatmentCd
-      //add FNSI redmine 6588 劉祥霖　end
+      //add FNSI redmine 6588 劉祥霖 end
     }) {
       let ret = false;
       // 一覧取得
@@ -832,18 +831,16 @@ export default {
         treatDate
         , kurCd
         , bedCd
-        //add FNSI redmine 6588 劉祥霖　start
-        ,facilityCd,ordNo,patId
-        //add FNSI redmine 6588 劉祥霖　end
-        ,indTreatmentCd
-        // mod/ #12465同患者同日同治療方法同クールの使用制限をしてもメッセージがでない tianqidong end
+        //add FNSI redmine 6588 劉祥霖 start
+        ,facilityCd,ordNo,patId,indTreatmentCd
+        //add FNSI redmine 6588 劉祥霖 end
       ).then(response => {
-        //mod FNSI redmine 6588 劉祥霖　start
+        //mod FNSI redmine 6588 劉祥霖 start
         // if (response.data.length == 0) {
         //   ret = true;
         // }
         ret = response.data.msgCd;
-        //mod FNSI redmine 6588 劉祥霖　end
+        //mod FNSI redmine 6588 劉祥霖 end
       })
         .catch(err => {
           console.error(err);
@@ -859,7 +856,7 @@ export default {
       { state, commit, dispatch },
       treatmentSchedule
     ) {
-      let isSuccess = false;
+      let isSuccess;
       const selectedSchedule = state.selectedTreatmentSchedule;
       if (selectedSchedule?.treatment.ordNo) {
         if (!treatmentSchedule?.treatment?.ordNo) {
@@ -1063,7 +1060,7 @@ export default {
     async reFetchTreatmentStatus({ dispatch, state }, autoRefreshFlag) {
       await dispatch("fetchTreatmentStatus", {
         facilityCd: state.facilityCd,
-        treatDate: moment(
+        treatDate: dayjs(
           state.findState.conditionTreatMap.currentDateTime
         ).format("YYYYMMDD"),
         layoutNo: state.findState.conditionTreatMap.statusLayoutNo,
@@ -1316,7 +1313,7 @@ export default {
               };
 
               const model = treatmentData.model;
-              if (keyFilter.hasOwnProperty(model)) {
+              if (Object.prototype.hasOwnProperty.call(keyFilter, model)) {
                 const allowedKeys = keyFilter[model];
                 viewItems = viewItems.filter(e => {
                   const keyName = e.key_name.substring(0, 1);
@@ -1508,6 +1505,7 @@ export default {
           case MACHINE_MODEL.DRY_A:
           case MACHINE_MODEL.DRY_B:
           // add FNSI-insert DRY_A and DRY_B machine type 付 end
+          // falls through
           case MACHINE_MODEL.DAD: {
             return {
               viewItems: JSON.parse(
@@ -1590,7 +1588,7 @@ export default {
      */
     isDispTreatStatus(state) {
       return (treatData) => {
-        let ret = false;
+        let ret;
 
         // ベッドはクールでの表示の絞込を行う
         if (treatData.bedCd !== null && treatData.bedCd !== undefined) {
@@ -1682,10 +1680,10 @@ export default {
 
 // del #7138 【デグレ】治療状況リスト、マップの表示条件と対象実績表示内容の不正 dou start
 // function getCurrentDate() {
-//   return moment(new Date()).format("YYYYMMDD");
+//   return dayjs(new Date()).format("YYYYMMDD");
 // }
 // function getCurrentTime() {
-//   return moment(new Date()).format("HHmmss");
+//   return dayjs(new Date()).format("HHmmss");
 // }
 // /**
 //  * 現在クール
@@ -1731,7 +1729,7 @@ export default {
 //   let ret = "";
 //   // 現在日付取得
 //   const now = new Date();
-//   let checkDate = moment(now).format("YYYYMMDD");
+//   let checkDate = dayjs(now).format("YYYYMMDD");
 //
 //   // 現クール開始時刻を取得
 //   const currentKurStartDateTime = getCurrentKurStartDateTime(kurList);
@@ -1754,7 +1752,7 @@ export default {
 //   if (lop !== 0 && lop === kurList.length) {
 //     // 翌日判定
 //     now.setDate(now.getDate() + 1);
-//     ret = moment(now).format("YYYYMMDD") + getKurStartTime(kurList, kurList[0].kurCd);
+//     ret = dayjs(now).format("YYYYMMDD") + getKurStartTime(kurList, kurList[0].kurCd);
 //   }
 //
 //   return ret;
@@ -1825,7 +1823,7 @@ function compBedLayoutOrder(a, b) {
  */
 function compTreatDataAndBedLayoutOfMachine(treatData, bedLayout) {
   // ベッドコードが一致するデータを表示
-  let ret = false;
+  let ret;
   if (isBedLayoutMachineIsBed(bedLayout)) {
     // ベッドの場合
     ret =

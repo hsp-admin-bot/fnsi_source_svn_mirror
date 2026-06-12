@@ -4,4 +4,7 @@ report_path = /*rec.reportPath*/null,
 up_date = /*rec.upDate*/null
 where
   report_cd = /*rec.reportCd*/null
+  /*%if rec.facilityCd != null */
+  and facility_cd = /*rec.facilityCd*/null
+  /*%end*/
 ;

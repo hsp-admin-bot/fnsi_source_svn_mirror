@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel" class="custom-modal">
-    <div slot='body' style="height: 100%">
+    <template #body>
+      <div style="height: 100%">
       <v-ons-select name="report-list" class="select-content-style" size="100%" v-model="selectedReportCd">
         <option 
           v-for="(report, index) in reportList" :key="index"
@@ -11,7 +12,9 @@
         >{{report.reportName}}</option>
       </v-ons-select>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button denial-btn" @click="cancel">キャンセル</v-ons-button>
       </div>
@@ -19,13 +22,14 @@
         <v-ons-button class="button registration-btn" @click="registration" >確定</v-ons-button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 export default {
   name: "report-list",
@@ -93,7 +97,7 @@ export default {
   background-color: var(--ntss-list-background-color);
   color: var(--ntss-list-body-color);
 }
-ons-select.select-content-style >>> .select-input {
+ons-select.select-content-style :deep(.select-input) {
   height: 100% !important;
   font-size: 13.3333px;
 }

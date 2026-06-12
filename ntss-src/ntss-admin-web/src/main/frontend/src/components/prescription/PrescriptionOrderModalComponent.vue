@@ -195,7 +195,7 @@
 </template>
 
 <script>
-import { mapGetters, mapMutations, mapActions } from "vuex";
+import { mapGetters, mapMutations, mapActions } from "@/compat/vue/vuex";
 import UserAuthorityMixin from "@/components/common/UserAuthorityMixin";
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
@@ -208,6 +208,7 @@ import { deepCopy } from "@/functions/common/CommonFunctions";
 
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
 import DateInput from "@/components/common/DateInput.vue";
+import { getContentContainerElement, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   mixins: [UserAuthorityMixin,MultiModalMixin,IndUserSelectMixin],
@@ -219,7 +220,6 @@ export default {
     return {
       // 権限設定
       authorityCds: [ AUTHORITY_CODES.PRESCRIPTION_PEDIT, AUTHORITY_CODES.PRESCRIPTION_EDIT ],
-      count: document.querySelectorAll('input[id^="pre_"]:checked').length,
       items: [
       ],
       selectedItem: "",
@@ -234,6 +234,9 @@ export default {
     "getCondition",
     "getOrdPreNo"
     ]),
+    count() {
+      return Array.isArray(this.getOrdPreNo) ? this.getOrdPreNo.length : 0;
+    },
     isOrderSelectDoctor() {
       // 画面からデータを取得
       if(this.selectedPreDoctor == '2'){
@@ -261,6 +264,9 @@ export default {
      */
     cancel() {
       this.hideModal();
+    },
+    getPrintContentContainer() {
+      return getContentContainerElement(this.$el || null);
     },
     /**
      * 登録ボタン押下時イベント処理
@@ -323,30 +329,50 @@ export default {
     // 処方日:一覧画面指定日をセット
     this.issueDate = this.getCondition.searchDate;
     
-    window.onbeforeprint = () => {
+    const ownerWindow = getScopedWindow(this.$el || null);
+    this._printOwnerWindow = ownerWindow;
+    this._previousOnBeforePrint = ownerWindow?.onbeforeprint || null;
+    this._previousOnAfterPrint = ownerWindow?.onafterprint || null;
+    if (!ownerWindow) {
+      return;
+    }
+    ownerWindow.onbeforeprint = () => {
+        this._previousOnBeforePrint?.();
         //印刷不要な要素を非表示にする
-        document.getElementsByClassName('content-container')[0].style.display = 'none'
+        const contentContainer = this.getPrintContentContainer();
+        if (contentContainer) {
+          contentContainer.style.display = 'none';
+        }
       };
-      window.onafterprint = () => {
+      ownerWindow.onafterprint = () => {
         //隠し要素を放す
-        document.getElementsByClassName('content-container')[0].style.display = 'block'
+        const contentContainer = this.getPrintContentContainer();
+        if (contentContainer) {
+          contentContainer.style.display = 'block';
+        }
+        this._previousOnAfterPrint?.();
       };
   },
-  beforeDestroy () {
-    window.onbeforeprint = null
-    window.onafterprint = null
+  beforeUnmount () {
+    const ownerWindow = this._printOwnerWindow || getScopedWindow(this.$el || null);
+    if (ownerWindow) {
+      ownerWindow.onbeforeprint = this._previousOnBeforePrint || null;
+      ownerWindow.onafterprint = this._previousOnAfterPrint || null;
+    }
+    this._printOwnerWindow = null;
   }
 }
 </script>
 
 <style scoped>
+@import "../../assets/styles/modal.css";
+
 /* 印刷時スタイル */
 @media print {
   .print-none {
     display: none;
   }
 }
- @import "../../assets/styles/modal.css";
 
 .modal-container {
   width: 68%;
@@ -412,5 +438,8 @@ export default {
     width: 88%;
     height: 88%;
   }
+}
+:deep(.k-legacy-dropdownlist.k-dropdownlist.k-picker > .k-input-button.k-select, .k-dropdownlist.k-picker.k-legacy-dropdownlist > .k-input-button.k-select){
+  position: relative !important;
 }
 </style>

@@ -24,6 +24,7 @@ import jp.co.nikkiso.ntss.core.dao.PatObsRecDao;
 import jp.co.nikkiso.ntss.core.entity.PatObsRec;
 import jp.co.nikkiso.ntss.core.entity.custom.OrdMainPatObsRecCombo;
 import jp.co.nikkiso.ntss.core.entity.custom.PatObsRecView;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 @Service
 public class PatObsRecServiceImpl implements PatObsRecService {
@@ -44,6 +45,10 @@ public class PatObsRecServiceImpl implements PatObsRecService {
   private EventLoggerFactory eventLoggerFactory;
   @Autowired
   private LogServiceCore logServiceCore;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // DB更新ログ出力ロジック wangzuo End
 
   @Autowired
@@ -111,7 +116,7 @@ public class PatObsRecServiceImpl implements PatObsRecService {
       wheres.append(" WHERE\n");
       wheres.append(" is_confirm = '1'\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -158,7 +163,7 @@ public class PatObsRecServiceImpl implements PatObsRecService {
       wheres.append(" WHERE\n");
       wheres.append(" is_confirm = '1'\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -181,6 +186,12 @@ public class PatObsRecServiceImpl implements PatObsRecService {
   public List<PatObsRec> getObsRecByBbsCtlNo(Long bbsCtlNo) {
     return patObsRecDao.selectByBbsCtlNo(bbsCtlNo);
   }
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Override
+  public PatObsRec selectByObsRecNo(Long obsRecNo) {
+    return patObsRecDao.selectByCd(obsRecNo);
+  }
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
   // DB更新ログ出力ロジック wangzuo Start
   /**
@@ -210,11 +221,11 @@ public class PatObsRecServiceImpl implements PatObsRecService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

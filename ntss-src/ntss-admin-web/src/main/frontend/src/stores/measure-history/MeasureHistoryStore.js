@@ -6,8 +6,8 @@ import { sendRequestGetMstPersonalUser } from "@/apis/check-list";
 import {
   sendRequestGetKurSelector
 } from "@/apis/send-condition";
-import moment from "moment";
-import BigNumber from "bignumber.js";
+import dayjs from "@/compat/date/dayjs";
+import BigNumber from "@/compat/number/bignumber";
 
 export default {
   strict: true,
@@ -111,7 +111,7 @@ export default {
         const dataList = response.data.copyWithin(0, 0);
         dataList.forEach((value, index, array) => {
           // 測定日時
-          const momentDate = moment(array[index].measureDate);
+          const momentDate = dayjs(array[index].measureDate);
           array[index].measureDate = momentDate.format(dateformat);
 
           // 車いす情報

@@ -19,7 +19,7 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import jp.co.nikkiso.ntss.api.service.NameConcat.NameConcatService;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;

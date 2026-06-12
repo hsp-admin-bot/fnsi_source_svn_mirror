@@ -4,7 +4,7 @@
     <v-ons-popover
       :class="[fontSizeSet, 'popover-content popover-content-treatplan-menu']"
       cancelable
-      :visible.sync="showPopoverMenu"
+      v-model:visible="showPopoverMenu"
       :target="targetTreatPlanMenuPopover"
       :direction="directionTreatPlanMenuPopover"
       @preshow="popoverPreShow"
@@ -200,7 +200,7 @@
 
     <message-dialog
       class="message-dialog"
-      :visible.sync="isDieMessage"
+      v-model:visible="isDieMessage"
       :message-cd="12010003"
       type="1"
     />
@@ -210,19 +210,20 @@
 <script>
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
+import { findAncestorWithAnyKey } from "@/functions/common/ComponentOwnerResolver";
 // add #10359 編集権限の動作不正 dengshen end
 
 /**
  * Vue関連
  */
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 
 /**
  * 外部ライブラリ関連
  */
 // 日付操作
-import _ from "underscore";
-import moment from "moment";
+import _ from "@/compat/collections/lodash";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 共通操作
@@ -447,7 +448,7 @@ export default {
     },
 
     isDie() {
-      // const treatDate = moment(this.ordInfo.treatDate, "YYYY-MM-DD").format(
+      // const treatDate = dayjs(this.ordInfo.treatDate, "YYYY-MM-DD").format(
       //   "YYYYMMDD"
       // );
       // return treatDate > this.dieInfo.die_date;
@@ -466,13 +467,13 @@ export default {
      * 終了日の最大日(本日から一年未満)
      */
     maxDate() {
-      const day = moment().format("YYYYMMDD");
+      const day = dayjs().format("YYYYMMDD");
       // 一年後に最大日を設定
       let endMaxDate = this.schExtEndDate
-        ? moment(this.schExtEndDate, "YYYYMMDD")
-        : moment(day).add(1, "year");
-      endMaxDate = moment(endMaxDate).endOf("month");
-      return moment(endMaxDate).format("YYYY-MM-DD");
+        ? dayjs(this.schExtEndDate, "YYYYMMDD")
+        : dayjs(day).add(1, "year");
+      endMaxDate = dayjs(endMaxDate).endOf("month");
+      return dayjs(endMaxDate).format("YYYY-MM-DD");
     },
   },
 
@@ -529,12 +530,12 @@ export default {
      */
     getStartDay() {
       // 本日日付を格納
-      let day = moment().format("YYYY-MM-DD");
+      let day = dayjs().format("YYYY-MM-DD");
       if (this.dateList && 0 !== this.dateList.length) {
         // 本日日付と一覧に表示している開始日を比較
         // 本日より未来日の場合、その日付を設定
         // 本日より過去日の場合、本日日付を設定
-        const startday = moment(this.dateList[0]).format("YYYY-MM-DD");
+        const startday = dayjs(this.dateList[0]).format("YYYY-MM-DD");
         if (day < startday) {
           // 一覧に表示している日付の開始日を設定
           day = startday;
@@ -606,7 +607,7 @@ export default {
         // 選択された曜日以外をfalseへ変更
         for (let i = 0; i < 7; i++) {
           settingData[this.changeWeekStr(i)] =
-            i !== moment(this.ordInfo.treatDate, "YYYYMMDD").day()
+            i !== dayjs(this.ordInfo.treatDate, "YYYYMMDD").day()
               ? false
               : true;
         }
@@ -694,14 +695,12 @@ export default {
         settingData.endDateEdit = true;
       }
 
-      // 治療予定メニューポップオーバーを閉じる
-      this.hideTreatPlanMenuPopover();
-
-      // モーダル表示
+      // モーダルを先に表示し、ポップオーバー閉鎖時の白枠フラッシュを抑止
       this.showIndModal({
         dispComponentId: "ind-plan-delete",
         settingIndData: settingData
       });
+      this.hideTreatPlanMenuPopover();
     },
 
     /**
@@ -732,6 +731,16 @@ export default {
     /**
      * 手動実績作成
      */
+    getTreatPlanDialogOwner() {
+      return findAncestorWithAnyKey(this, ["messageDialogInfo"], { maxDepth: 16 }) || this;
+    },
+    showTreatPlanDialog(messageCd) {
+      const owner = this.getTreatPlanDialogOwner();
+      if (owner?.messageDialogInfo) {
+        owner.messageDialogInfo.messageCd = messageCd;
+        owner.messageDialogInfo.isDialogVisible = true;
+      }
+    },
     async showModalIndPlanRstCreate() {
       console.log("TreatPlanMenu.vue showModalIndPlanRstCreate this.startLoadingScreen();");
       this.startLoadingScreen();
@@ -752,7 +761,7 @@ export default {
       }
       //add FNSI-No.IES145 権限対応  吉 end
       // ポップオーバーを非表示にする
-      this.showPopoverMenu = false;
+      this.hideTreatPlanMenuPopover();
       // 権限チェックを行う
       if (!this.hasNextAuthority(FUNC_TREATMENT_RECORD)) {
         console.log("TreatPlanMenu.vue showModalIndPlanRstCreate return; this.finishLoadingScreen();");
@@ -761,8 +770,7 @@ export default {
       }
       if (this.getTreatmentData && (!this.getTreatmentData.indKurCd || !this.getTreatmentData.indBedCd)) {
         this.hideTreatPlanMenuPopover();
-        this.$parent.messageDialogInfo.messageCd = 99999997;
-        this.$parent.messageDialogInfo.isDialogVisible = true;
+        this.showTreatPlanDialog(99999997);
         console.log("TreatPlanMenu.vue showModalIndPlanRstCreate return; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         return;
@@ -780,8 +788,7 @@ export default {
         throw error;
       });
       if (undefined !== response.data.retMsg) {
-        this.$parent.messageDialogInfo.messageCd = response.data.retMsg;
-        this.$parent.messageDialogInfo.isDialogVisible = true;
+        this.showTreatPlanDialog(response.data.retMsg);
         // ポップオーバーを非表示
         this.hideTreatPlanMenuPopover();
         console.log("TreatPlanMenu.vue showModalIndPlanRstCreate return; this.finishLoadingScreen();");
@@ -799,7 +806,7 @@ export default {
           ord_no: ordNo,
 // mod 2021-10-22 #5890:Medicom連携ができない(受付情報(accept)) 孫 start
 //          base_date: this.ordInfo.treatDate,
-          base_date: moment(this.ordInfo.treatDate).format("YYYYMMDD"),
+          base_date: dayjs(this.ordInfo.treatDate).format("YYYYMMDD"),
 // mod 2021-10-22 #5890:Medicom連携ができない(受付情報(accept)) 孫 end
           user_id: this.getStateUserAccountInfo.userId
         };
@@ -867,7 +874,7 @@ export default {
           );
         }
       );
-      return _.mapObject(responsePat.data, patInfoJson =>
+      return _.mapValues(responsePat.data, patInfoJson =>
         JSON.parse(patInfoJson)
       );
     },
@@ -901,7 +908,7 @@ export default {
             dieInfo.die_date = `${year}${month}${day}`;
           }
         } else {
-          dieInfo.die_date = moment(date, "YYYY-MM-DD HH:mm:ss").format(
+          dieInfo.die_date = dayjs(date, "YYYY-MM-DD HH:mm:ss").format(
             "YYYYMMDD"
           );
         }
@@ -936,7 +943,7 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../css/style.scss";
+@use "../css/style.scss" as *;
 
 .message-dialog {
   z-index: 30000 !important;

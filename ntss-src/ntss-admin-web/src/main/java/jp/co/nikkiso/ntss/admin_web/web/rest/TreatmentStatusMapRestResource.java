@@ -14,7 +14,7 @@ import jp.co.nikkiso.ntss.admin_web.service.statusMap.StatusMapIndSchedule2Servi
 import jp.co.nikkiso.ntss.admin_web.web.rest.util.WebApiCallCommonUtil;
 // add FNSI-redmine 5461 劉祥霖　end
 // add FNSI-redmine 6588 劉祥霖　start
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.json.JSONObject;
 // add FNSI-redmine 6588 劉祥霖　start
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,6 +67,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 @RestController
 @Slf4j
@@ -134,6 +135,16 @@ public class TreatmentStatusMapRestResource {
   public ResponseEntity<?> getTreatmentStatusMapinfo(
       @PathVariable List<Long> ordNo,
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 mod 20260421 start
+    for (Long ord : ordNo) {
+      if (!hasOrdAccess(ntssUser, ord)) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null") + " " + "ordNo=" + ord + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 mod 20260421 end
+
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("getTreatmentStatusMapinfo/ ordNo is " + ordNo);
     logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_STATUS_MAP, SERVICE_NAME.FNSI, null);
@@ -158,7 +169,16 @@ public class TreatmentStatusMapRestResource {
    */
   @GetMapping("/user/{facilityCd}")
   public ResponseEntity<?> getUserList(
-      @PathVariable String facilityCd) {
+      @PathVariable String facilityCd,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 mod 20260421 start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null") + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("getUserList/ facilityCd is " + facilityCd);
     logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_STATUS_MAP, SERVICE_NAME.FNSI, null);
@@ -186,7 +206,16 @@ public class TreatmentStatusMapRestResource {
   public ResponseEntity<?> getNotAssignedList(
       @PathVariable String facilityCd,
       @PathVariable String treatDate,
-      @PathVariable Long bedCd) {
+      @PathVariable Long bedCd,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 mod 20260421 start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null") + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("getNotAssignedList/ facilityCd is . treatDate is . bedCd is ." + facilityCd + treatDate + bedCd);
     logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_STATUS_MAP, SERVICE_NAME.FNSI, null);
@@ -262,6 +291,14 @@ public class TreatmentStatusMapRestResource {
       //add FNSI redmine 6588 劉祥霖　end
      ,@PathVariable Long indTreatmentCd
   ) {
+    // #11205 mod 20260421 start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null") + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+
 
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("searchSchedule/ facilityCd is " + ntssUser.getFacilityCd() + ". treatDate is " + treatDate +". kurCd is " + kurCd + "]. bedCd is " + bedCd + "." );
@@ -338,6 +375,14 @@ public class TreatmentStatusMapRestResource {
       @PathVariable Long kurCd,
       @PathVariable Long bedCd,
       @PathVariable Long ordNo) {
+    // #11205 mod 20260421 start
+    if (!hasOrdAccess(ntssUser, ordNo)) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null") + " " + "ordNo=" + ordNo + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+
 
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("checkSchedule/ facilityCd is" + ntssUser.getFacilityCd() + ". treatDate is"  + treatDate + ". kurCd is " + kurCd + "]. bedCd is " + bedCd +
@@ -383,6 +428,14 @@ public class TreatmentStatusMapRestResource {
       @AuthenticationPrincipal NtssUser ntssUser,
       @PathVariable Long ordNo,
       @PathVariable Long bedCd) {
+    // #11205 mod 20260421 start
+    if (!hasOrdAccess(ntssUser, ordNo)) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null") + " " + "ordNo=" + ordNo + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+
 
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("checkBedStatus/ facilityCd is" + ntssUser.getFacilityCd() + ". ordNo is"  + ordNo + ". bedCd is " + bedCd + ".");
@@ -417,7 +470,24 @@ public class TreatmentStatusMapRestResource {
       @PathVariable Long bedCd,
       @PathVariable String treatDate,
       @PathVariable Long kurCd,
-      @PathVariable Long userId) {
+      @PathVariable Long userId,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain checkOrdMain = ordMainService.selectByOrdNo(ordNo);
+      if ((checkOrdMain != null && checkOrdMain.getFacilityCd() != null && !checkOrdMain.getFacilityCd().equals(ntssUser.getFacilityCd())) ||
+        !facilityCd.equals(ntssUser.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "ordNo=" + ordNo + " " + (checkOrdMain != null ? "patId=" + checkOrdMain.getPatId() : "") + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("assignOrdMain/facilityCd is . ordNo is . bedCd is . treatDate is . kurCd is . UserId is ." +
             facilityCd + ordNo + bedCd + treatDate + kurCd + userId);
@@ -467,7 +537,7 @@ public class TreatmentStatusMapRestResource {
       ResponseEntity<String> retDummy = webApiCallCommonUtil.operateDummySchedule(ordNoList, bedCd, kurCd, opeMode);
       if ((null == retDummy) || (HttpStatus.OK != retDummy.getStatusCode())) {
         logService.log(LogLevel.ERROR, eventLogMessage,"",SERVICE_NAME.FNSI, null);
-        return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
 
       //add FNSI redmine 6588 劉祥霖　end
@@ -535,7 +605,23 @@ public class TreatmentStatusMapRestResource {
   public ResponseEntity<?> unassigmentOrdMain(
       @PathVariable String facilityCd,
       @PathVariable Long ordNo,
-      @PathVariable Long userId) {
+      @PathVariable Long userId,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+      ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (!facilityCd.equals(ntssUser.getFacilityCd()) || !hasOrdAccess(ntssUser, ordNo)) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "ordNo=" + ordNo + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("security check error", HttpStatus.FORBIDDEN);
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("unassigmentOrdMain/facilityCd is . ordNo is . userId is ." + facilityCd + ordNo + userId);
     logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_STATUS_MAP, SERVICE_NAME.FNSI, null);
@@ -687,7 +773,24 @@ public class TreatmentStatusMapRestResource {
       @PathVariable Long ordNo,
       @PathVariable Long bedCd,
       @PathVariable Long userId,
-      @PathVariable String isSendCondition) {
+      @PathVariable String isSendCondition,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain checkOrdMain = ordMainService.selectByOrdNo(ordNo);
+      if ((checkOrdMain != null && checkOrdMain.getFacilityCd() != null && !checkOrdMain.getFacilityCd().equals(ntssUser.getFacilityCd())) ||
+        !facilityCd.equals(ntssUser.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "ordNo=" + ordNo + " " + (checkOrdMain != null ? "patId=" + checkOrdMain.getPatId() : "") + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("assignMoveOrdMain/facilityCd is . ordNo is . bedCd is . userId is ." +
         facilityCd + ordNo + bedCd + userId);
@@ -830,7 +933,32 @@ public class TreatmentStatusMapRestResource {
    * @return
    */
   @PutMapping("/check-ind/{ordNo}")
-  public ResponseEntity<?> updateCheckForMap(@PathVariable Long ordNo, @RequestBody HashMap<String, String> content) {
+  public ResponseEntity<?> updateCheckForMap(@PathVariable Long ordNo,
+                                             @RequestBody HashMap<String, String> content,
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                             @AuthenticationPrincipal NtssUser ntssUser
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+                                             ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain ordMain = ordMainService.selectByOrdNo(ordNo);
+      if (ordMain != null && ordMain.getFacilityCd() != null && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "ordMain.getFacilityCd()=" + ordMain.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain ordMain = ordMainService.selectByOrdNo(ordNo);
+      if (ordMain != null && ordMain.getFacilityCd() != null && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     try {
       treatmentStatusMapService.updatePatIndApproveCheckForMap(ordNo, content.get("content"));
       return new ResponseEntity<>(HttpStatus.OK);
@@ -859,7 +987,40 @@ public class TreatmentStatusMapRestResource {
   public ResponseEntity<?> assignSwapOrdMain(
       @PathVariable Long ordNo1,
       @PathVariable Long ordNo2,
-      @PathVariable Long userId) {
+      @PathVariable Long userId,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain checkOrdMain1 = ordMainService.selectByOrdNo(ordNo1);
+      OrdMain checkOrdMain2 = ordMainService.selectByOrdNo(ordNo2);
+      if ((checkOrdMain1 != null && checkOrdMain1.getFacilityCd() != null && !checkOrdMain1.getFacilityCd().equals(ntssUser.getFacilityCd())) ||
+        (checkOrdMain2 != null && checkOrdMain2.getFacilityCd() != null && !checkOrdMain2.getFacilityCd().equals(ntssUser.getFacilityCd()))) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ";
+        if (checkOrdMain1 != null && checkOrdMain1.getFacilityCd() != null) {
+          msg_11205_FORBIDDEN += "checkOrdMain1.getFacilityCd()=" + checkOrdMain1.getFacilityCd() + " ";
+        }
+        if (checkOrdMain2 != null && checkOrdMain2.getFacilityCd() != null) {
+          msg_11205_FORBIDDEN += "checkOrdMain2.getFacilityCd()=" + checkOrdMain2.getFacilityCd() + " ";
+        }
+        InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain checkOrdMain1 = ordMainService.selectByOrdNo(ordNo1);
+      OrdMain checkOrdMain2 = ordMainService.selectByOrdNo(ordNo2);
+      if ((checkOrdMain1 != null && checkOrdMain1.getFacilityCd() != null && !checkOrdMain1.getFacilityCd().equals(ntssUser.getFacilityCd())) ||
+        (checkOrdMain2 != null && checkOrdMain2.getFacilityCd() != null && !checkOrdMain2.getFacilityCd().equals(ntssUser.getFacilityCd()))) {
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("assignSwapOrdMain/ ordNo2 is . ordNo2 is . userId is ." + ordNo1 + ordNo2 + userId);
     logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_STATUS_MAP, SERVICE_NAME.FNSI, null);
@@ -930,7 +1091,7 @@ public class TreatmentStatusMapRestResource {
       ResponseEntity<String> retDummy1 = webApiCallCommonUtil.operateDummySchedule(ordNoList1, ordMain1BedCd, this.getKurCd(ordMain2).longValue(), opeMode);
       if ((null == retDummy1) || (HttpStatus.OK != retDummy1.getStatusCode())) {
         logService.log(LogLevel.ERROR, eventLogMessage,"",SERVICE_NAME.FNSI, null);
-        return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
 
       List<Long> ordNoList2 = new ArrayList<>();
@@ -940,12 +1101,12 @@ public class TreatmentStatusMapRestResource {
       ResponseEntity<String> retDummy2 = webApiCallCommonUtil.operateDummySchedule(ordNoList2, ordMain1BedCd, this.getKurCd(ordMain1).longValue(), opeMode);
       if ((null == retDummy2) || (HttpStatus.OK != retDummy2.getStatusCode())) {
         logService.log(LogLevel.ERROR, eventLogMessage,"",SERVICE_NAME.FNSI, null);
-        return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
 
       //add FNSI redmine 6588 劉祥霖　end
 
-      return new ResponseEntity<>(null, HttpStatus.OK);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     } catch (Exception e) {
       // エラーの場合
       eventLogMessage.setLogMessage("REST request error by assignSwapOrdMain : " + e.getMessage());
@@ -1230,7 +1391,16 @@ public class TreatmentStatusMapRestResource {
    * @return
    */
   @GetMapping("/getOrdMainByOrdNo/{ordNo}")
-  public ResponseEntity<OrdMain> getOrdMainByOrdNo(@PathVariable Long ordNo) {
+  public ResponseEntity<OrdMain> getOrdMainByOrdNo(@PathVariable Long ordNo,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+      // #11205 mod 20260421 start
+      if (!hasOrdAccess(ntssUser, ordNo)) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null") + " " + "ordNo=" + ordNo + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+      // #11205 mod 20260421 end
+
     try {
       OrdMain ordMain = ordMainService.selectByOrdNo(ordNo);
       return new ResponseEntity<>(ordMain, HttpStatus.OK);
@@ -1254,8 +1424,20 @@ public class TreatmentStatusMapRestResource {
    * @return
    */
   @GetMapping("/getOrdMainListByOrdNo/{ordNos}")
-  public ResponseEntity<List<OrdMain>> getOrdMainListByOrdNo(@PathVariable List<Long> ordNos) {
+  public ResponseEntity<List<OrdMain>> getOrdMainListByOrdNo(@PathVariable List<Long> ordNos,
+      @AuthenticationPrincipal NtssUser ntssUser) {
     try {
+      if (ntssUser != null && !ntssUser.isNkkAdminUser()) {
+        for (Long ordNo : ordNos) {
+          // #11205 mod 20260421 start
+          if (!hasOrdAccess(ntssUser, ordNo)) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+          // #11205 mod 20260421 end
+        }
+      }
       List<OrdMain> ordMains = ordMainService.selectListByOrdNo(ordNos);
       return new ResponseEntity<>(ordMains, HttpStatus.OK);
     } catch (Exception e) {
@@ -1318,4 +1500,21 @@ public class TreatmentStatusMapRestResource {
     }
 
   }
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    return ntssUser == null
+      || ntssUser.isNkkAdminUser()
+      || facilityCd == null
+      || facilityCd.equals(ntssUser.getFacilityCd());
+  }
+
+  private boolean hasOrdAccess(NtssUser ntssUser, Long ordNo) {
+    if (ntssUser == null || ntssUser.isNkkAdminUser()) {
+      return true;
+    }
+    OrdMain ordMain = ordMainService.selectByOrdNo(ordNo);
+    return ordMain == null
+      || ordMain.getFacilityCd() == null
+      || ordMain.getFacilityCd().equals(ntssUser.getFacilityCd());
+  }
+
 }

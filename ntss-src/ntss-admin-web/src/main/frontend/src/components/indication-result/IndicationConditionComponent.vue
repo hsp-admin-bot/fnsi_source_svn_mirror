@@ -9,34 +9,34 @@
         <!-- <input type="date" min='1880-01-01' max='2099-12-31' class="ntss-input-date ntss-control-size w-100" model-event="change" v-model="treatDateFrom" @blur="search" /> -->
         <date-input  min='1880-01-01' max='2099-12-31' class="ntss-input-date ntss-control-size w-100" @blur="search" v-model="treatDateFrom" @handleClearInput="treatDateFrom = null; search()" />
         <!-- #5590 2023/04/18 ×を常に表示するように修正 張博 end -->
-        <common-calendar v-model="treatDateFrom" @blur="search" @todayButtonClick="search" />
+        <common-calendar v-model="treatDateFrom" @input="search" @todayButtonClick="search" />
         <label class="adjust">&nbsp;&nbsp;〜&nbsp;&nbsp;</label>
       </div>
       <div class="grid-row flex-align-center">
         <!-- <input type="date" min='1880-01-01' max='2099-12-31' class="ntss-input-date ntss-control-size w-100" model-event="change" v-model="treatDateTo" @blur="search" /> -->
         <date-input  min='1880-01-01' max='2099-12-31' class="ntss-input-date ntss-control-size w-100" @blur="search" v-model="treatDateTo" @handleClearInput="treatDateTo = null; search()" />
         <!-- #5590 2023/04/18 ×を常に表示するように修正 張博 end -->
-        <common-calendar v-model="treatDateTo" @blur="search" @todayButtonClick="search" />
+        <common-calendar v-model="treatDateTo" @input="search" @todayButtonClick="search" />
         <label class="adjust">&nbsp;</label>
       </div>
       <div class="grid-row grid-align-default">
         <!-- mod FNSI-No.342 患者イベント、検査結果、検査予定、一般撮影検査予定、処方の表示、機能遷移に対応 李 start -->
-        <!-- <kendo-dropdownlist
+        <!-- <ntss-dropdown-list
           :data-source="filters"
           :data-text-field="'filterName'"
           :data-value-field="'filterId'"
           @select="onSelectFilter"
           style="width:100%;"
-        ></kendo-dropdownlist> -->
+        ></ntss-dropdown-list> -->
         <!-- mod 6463 文字サイズ：特大の際にレイアウトが崩れる 周安寧 start-->
-        <!-- <kendo-dropdownlist
+        <!-- <ntss-dropdown-list
           :data-source="filters"
           :data-text-field="'filterName'"
           :data-value-field="'filterId'"
           v-model="selectedFilter"
           @select="onSelectFilter"
           style="width:100%;"
-        ></kendo-dropdownlist> -->
+        ></ntss-dropdown-list> -->
         <kendo-dropdownlist
           :data-source="filters"
           :data-text-field="'filterName'"
@@ -57,7 +57,7 @@
         <!-- del FNSI-No.342 患者イベント、検査結果、検査予定、一般撮影検査予定、処方の表示、機能遷移に対応 李 end -->
           <!-- add FNSI-No.342 患者イベント、検査結果、検査予定、一般撮影検査予定、処方の表示、機能遷移に対応 李 start -->
           <!--mod 3879 表示項目を1つずつしか選択できない 吉 start-->
-          <!--<kendo-multiselect
+          <!--<ntss-multi-select
             v-if="expressCondList !== null"
             v-model="selectExpressCondList"
             :data-source="expressCondList"
@@ -136,8 +136,8 @@
 
 <script>
 // mod FNSI-No.342 患者イベント、検査結果、検査予定、一般撮影検査予定、処方の表示、機能遷移に対応 李 start
-// import { mapGetters } from "vuex";
-import { mapGetters, mapActions } from "vuex";
+// import { mapGetters } from "@/compat/vue/vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 // mod FNSI-No.342 患者イベント、検査結果、検査予定、一般撮影検査予定、処方の表示、機能遷移に対応 李 end
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 import { KEY_NAME_INDICATION_RESULT, DATE_CHOICES } from "@/constants/defaultSettingConstants";
@@ -146,7 +146,7 @@ import { deepCopy } from "@/functions/common/CommonFunctions";
 import { ApiHelper } from "@/apis/AxiosHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
 // #5590 2023/04/18 ×を常に表示するように修正 張博 start
 import DateInput from "@/components/common/DateInput.vue";

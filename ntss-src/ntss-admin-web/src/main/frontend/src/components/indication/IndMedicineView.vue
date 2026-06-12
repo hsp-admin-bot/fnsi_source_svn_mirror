@@ -2,7 +2,8 @@
 
 <template>
   <modal-base @onClose="hideModal">
-    <div slot="body" class="modal-container-custom" id="modal-indHistory">
+        <template #body>
+<div class="modal-container-custom" id="modal-indHistory">
       <div class="modal-contents">
         <v-ons-row>
           <v-ons-col>{{ dispDataItem.shiji_kaishi_nichi.label }}</v-ons-col>
@@ -46,7 +47,9 @@
         </v-ons-row>
       </div>
     </div>
-    <div slot="footer" class="modal-footer-custom">
+    </template>
+        <template #footer>
+<div class="modal-footer-custom">
       <v-ons-row>
         <v-ons-col>
           <v-ons-button class="btn3-normal width-padding" @click="hideModal">
@@ -55,13 +58,14 @@
         </v-ons-col>
       </v-ons-row>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -162,7 +166,7 @@ export default {
 
   methods: {
     dateFormat(txt) {
-      return moment(txt).format("YYYY/MM/DD");
+      return dayjs(txt).format("YYYY/MM/DD");
     },
     nameFormat(txt) {
       return txt.replace(this.MedicineString, "");
@@ -287,8 +291,8 @@ export default {
     });
   },
 
-  beforeDestroy() {
-    window.removeEventListener("resize", this.onResize);
+  beforeUnmount() {
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.onResize);
   }
 };
 </script>

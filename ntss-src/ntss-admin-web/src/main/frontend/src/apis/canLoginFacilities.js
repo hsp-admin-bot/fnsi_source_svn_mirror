@@ -3,25 +3,20 @@
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
 
-
 export function getCanLoginFacilities(facilityCd) {
   return ApiHelper.get(`/user/getCanLoginFacilities/${facilityCd}`);
 }
 
-
 export function getInfoRetrieve(data) {
-  return ApiHelper.post('/authentication/check_login',data);
+  return ApiHelper.post("/authentication/check_login", data);
 }
 
 export function getInfoOPT(data) {
   return ApiHelper.put(`/authentication/check_otp/${data.opt}/${data.secretKey}`);
 }
 
-
-
 export function sendRequestInsertPatExamMainOneOrder(setParam) {
-  // console.log(setParam);
-  return ApiHelper.post(`${URL_BASE}/examMain/insertOneOrder`,{
+  return ApiHelper.post(`${URL_BASE}/examMain/insertOneOrder`, {
     patId: setParam.patId,
     facilityCd: setParam.facilityCd,
     regExamDate: setParam.regExamDate,
@@ -33,4 +28,3 @@ export function sendRequestInsertPatExamMainOneOrder(setParam) {
     updStaff: setParam.staff
   });
 }
-

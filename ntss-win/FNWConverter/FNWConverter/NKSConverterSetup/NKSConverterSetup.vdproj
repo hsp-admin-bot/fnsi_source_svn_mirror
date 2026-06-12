@@ -7520,8 +7520,8 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:FNW2FNSI_Converter"
-        "ProductCode" = "8:{9E1131A4-C4F0-46C0-98F6-C5575DA79C15}"
-        "PackageCode" = "8:{9923DED8-2491-40A4-863F-CB368D003C2D}"
+        "ProductCode" = "8:{8467BAF3-B9EA-4550-BEBD-B152211E4FA7}"
+        "PackageCode" = "8:{8A938E70-2864-4974-A4CF-D3F6C77242EA}"
         "UpgradeCode" = "8:{D3D92813-23E0-4C96-B845-E9430C3E8F30}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"

@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.core.entity.xml;
 
-import javax.xml.bind.annotation.XmlAttribute;
+import jakarta.xml.bind.annotation.XmlAttribute;
 
 /**
  * 変換レイアウトの項目を表すクラス。（JAXBエンティティ）

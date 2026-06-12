@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.Configuration.Install;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -16,6 +17,41 @@ namespace NKSConverter
     [RunInstaller(true)]
     public partial class ProjectInstaller : System.Configuration.Install.Installer
     {
+        // インストーラ(InstallUtil.exe)経由で本アセンブリが実行される場合、
+        // FNWSiConvertTool.exe.config のバインディングリダイレクトは適用されない。
+        // そのため Oracle.ManagedDataAccess(23.x) の依存アセンブリ(System.Text.Json 等)の
+        // バージョン解決に失敗し、ProviderConfig の型初期化で例外となる。
+        // インストール先フォルダから単純名で依存 DLL を解決し、これを回避する。
+        static ProjectInstaller()
+        {
+            AppDomain.CurrentDomain.AssemblyResolve += ResolveDependencyFromInstallDir;
+        }
+
+        private static Assembly ResolveDependencyFromInstallDir(object sender, ResolveEventArgs args)
+        {
+            try
+            {
+                string simpleName = new AssemblyName(args.Name).Name;
+                string baseDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                if (string.IsNullOrEmpty(baseDir))
+                {
+                    return null;
+                }
+
+                string candidate = Path.Combine(baseDir, simpleName + ".dll");
+                if (File.Exists(candidate))
+                {
+                    return Assembly.LoadFrom(candidate);
+                }
+            }
+            catch
+            {
+                // 解決できない場合は既定の動作に委ねる
+            }
+
+            return null;
+        }
+
         // #12338 add Start
         // ===== Shortcut 定義 Start =====
         private const string ShortcutFileName = "コンバートツール.lnk";

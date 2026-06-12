@@ -22,20 +22,22 @@ eclipseJdt {
 
   def fp = file('.factorypath')
   outputs.file fp
-  clos += {
+  clos.add {
     fp.withWriter {
-      def domaJar = configurations.runtimeClasspath.find {
-        it.name.startsWith('doma-2')
+      def domaJar = configurations.annotationProcessor.find {
+        it.name.startsWith('doma-processor-')
       }
       new groovy.xml.MarkupBuilder(it).factorypath() {
-        factorypathentry(kind:'EXTJAR', id:domaJar, enabled:true, runInBatchMode:false)
+        if (domaJar != null) {
+          factorypathentry(kind:'EXTJAR', id:domaJar, enabled:true, runInBatchMode:false)
+        }
       }
     }
   }
 
   def prefs = { name, contents ->
     def f = file(".settings/$name")
-    clos += {
+    clos.add {
       f.text = contents.stripMargin()
     }
     outputs.file f

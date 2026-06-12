@@ -1,6 +1,7 @@
 package jp.co.nikkiso.ntss.core.dao;
 
 import java.util.List;
+import java.util.Map;
 import org.seasar.doma.Dao;
 import org.seasar.doma.Select;
 import org.seasar.doma.boot.ConfigAutowireable;
@@ -10,7 +11,7 @@ import jp.co.nikkiso.ntss.core.entity.MstMedicateTiming;
 
 @ConfigAutowireable
 @Dao
-public interface MstMedicateTimingDao {
+public interface MstMedicateTimingDao extends UnifiedByCodeListDao {
   @Select
   List<MstMedicateTiming> selectAll(SelectOptions options, MstMedicateTiming params);
 
@@ -34,5 +35,9 @@ public interface MstMedicateTimingDao {
   @Select
   List<MstMedicateTiming> selectByOrdNoList(List<Long> ordNoList);
   /* add by chamaojia 2026-03-24 [12462] 患者情報共有->患者経過総合ビューア --end */
+
+  @Override
+  @Select
+  List<Map<String, Object>> selectAllStatusByCodeList(List<Integer> codeList);
 
 }

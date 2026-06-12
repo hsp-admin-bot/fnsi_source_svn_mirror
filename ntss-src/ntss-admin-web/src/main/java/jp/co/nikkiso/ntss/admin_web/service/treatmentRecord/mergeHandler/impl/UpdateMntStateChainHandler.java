@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.service.treatmentRecord.mergeHandler.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.service.treatmentRecord.mergeHandler.TreatmentRecordMergeChainHandler;
 import jp.co.nikkiso.ntss.api.utils.DateTimeFormatUtil;
@@ -110,7 +110,7 @@ public class UpdateMntStateChainHandler extends TreatmentRecordMergeChainHandler
                 afterDate.atZone(ZoneId.of(TIME_ZONE_ASIA_TOKYO));
                 currBaseMachineState.setWeighAfterDate(Timestamp.valueOf(afterDate));
               }
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
               throw new NtssException("マージデータのJSON書式不整合、マージ処理できない。", e);
             }
           }

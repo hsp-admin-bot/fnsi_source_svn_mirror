@@ -3,7 +3,7 @@ package jp.co.nikkiso.ntss.admin_web.service;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import jp.co.nikkiso.ntss.admin_web.request.scheduleList.UpdateScheduleListDataRequest;
 import jp.co.nikkiso.ntss.admin_web.request.scheduleList.UpdateScheduleListDataRequestList;
 import jp.co.nikkiso.ntss.admin_web.response.OtherScheduleListResponse;
@@ -287,6 +287,6 @@ public abstract interface ScheduleListService {
   //add #10601 スケジュール表動作不正 end
 
   // add #11493 スケジュール表　更新不正 関 start
-  Boolean checkBatchMovePatExistance(String bodydata, String facilityCd) throws JsonProcessingException;
+  Boolean checkBatchMovePatExistance(String bodydata, String facilityCd) throws JacksonException;
   // add #11493 スケジュール表　更新不正 関 end
 }

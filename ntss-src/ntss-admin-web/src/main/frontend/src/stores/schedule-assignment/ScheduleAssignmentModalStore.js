@@ -10,7 +10,8 @@ import {
 } from "@/apis/schedule-assignment";
 
 import { sendRequestPatAssignmentDeviceEdges } from "@/apis/device-edge-order";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
+import { getScopedDocument, setScopedCookie } from "@/functions/common/LayoutMeasureHelper";
 import { addPatNameSortToList } from "@/functions/SortFunctions";
 
 export default {
@@ -130,7 +131,7 @@ export default {
       const data = response.data;
       // 治療日
       let weekList = ["", "月", "火", "水", "木", "金", "土", "日"];
-      let tDate = ""
+      let tDate;
       if (data.rstStartDate !== null) {
         // 治療開始日時
         const start = new Date(data.rstStartDate);
@@ -139,7 +140,7 @@ export default {
           weekNo = 7;
         }
         tDate
-          = moment(start).format("YYYY/MM/DD")
+          = dayjs(start).format("YYYY/MM/DD")
           + "("
           + weekList[weekNo]
           + ")";
@@ -232,8 +233,8 @@ export default {
       // 該当のスケジュール情報取得
       // mod FNSI-？？？？患者割り当て 徐 start
       /* const response = await sendRequestGetScheduleList({
-        startDate: moment(state.selectOrdMain.rstStartDate).format("YYYYMMDD"),
-        endDate: state.selectOrdMain.rstEndDate === null ? moment(new Date()).format("YYYYMMDD") : moment(state.selectOrdMain.rstEndDate).format("YYYYMMDD"),
+        startDate: dayjs(state.selectOrdMain.rstStartDate).format("YYYYMMDD"),
+        endDate: state.selectOrdMain.rstEndDate === null ? dayjs(new Date()).format("YYYYMMDD") : dayjs(state.selectOrdMain.rstEndDate).format("YYYYMMDD"),
         bedCd: state.selectOrdMain.bedCd
       });*/
       var startStartDate = state.selectOrdMain.treatDate;
@@ -319,10 +320,12 @@ export default {
       // add FNSI-外部連携api呼び出対応 陳 start
       var flg = "map";
       var arr, reg = new RegExp("(^| )flg@@([^;]*)(;|$)");
-      if (arr = document.cookie.match(reg)){
-        if(unescape(arr[2]) == 'list'){
+      const scopedDocument = getScopedDocument();
+      arr = (scopedDocument?.cookie || "").match(reg);
+      if (arr) {
+        if (unescape(arr[2]) == 'list') {
           flg = 'list';
-          document.cookie = "flg@@map; path=/";
+          setScopedCookie("flg@@map; path=/");
         }
       }
       // mod FNSI-外部連携api呼び出対応 陳 end

@@ -25,6 +25,7 @@ import {
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { findExamSet, getNormalValueKeys, getResultValueClass } from "@/functions/exam-record/ExamRecordFunctions";
 import { getHolidayStyle } from "@/functions/common/CommonFunctions";
+import { getAppClientWidth } from "@/functions/common/LayoutMeasureHelper";
 
 const getComponentInitialized = (state) => state.componentInitialized.header && state.componentInitialized.list;
 const resetComponentInitializedIfNeeds = (initialized, state) => {
@@ -156,11 +157,7 @@ export default {
     // 検査結果一覧：grid列項目作成
     resetExamRecordGridColumn({ commit }) {
       //画面幅を取得
-      let baseWidth = parseFloat(
-        window
-          .getComputedStyle(document.getElementById("app"), null)
-          .getPropertyValue("width")
-      );
+      let baseWidth = getAppClientWidth();
       //列幅定義
       let columnWidth = parseFloat(baseWidth / 10);
       if (baseWidth < 1000){
@@ -203,11 +200,7 @@ export default {
 
     // 検査結果詳細：grid列項目作成
     resetStatusDetailGridColumn({ commit }) {
-      let baseWidth = parseFloat(
-        window
-          .getComputedStyle(document.getElementById("app"), null)
-          .getPropertyValue("width")
-      );
+      let baseWidth = getAppClientWidth();
       //列幅定義
       let columnWidth = parseFloat(baseWidth / 8);
       //600px未満(スマートフォン) 600以上1080以下,1080以上（iphone/ipad/PCを想定）
@@ -265,14 +258,14 @@ export default {
      * 検査結果詳細データ項目検索取得処理
      */
     async setExamSelectData({ commit ,state}, selectData){
-      let resMstItem =null;
+      let resMstItem;
       let sortColumnData = [];
-      let resExamMain =null;
+      let resExamMain;
       let resExamPat = selectData.patIdList;
-      let patIdList = null;
+      let patIdList;
 
       // 最終検査日
-      let resExamLastDate = null;
+      let resExamLastDate;
 
       if(resExamPat.length >= 1){
         patIdList = resExamPat.map(function(element) {
@@ -287,11 +280,7 @@ export default {
       const viewDayType = state.condition.list.viewDayType;
 
       //画面幅を取得
-      let baseWidth = parseFloat(
-        window
-          .getComputedStyle(document.getElementById("app"), null)
-          .getPropertyValue("width")
-      );
+      let baseWidth = getAppClientWidth();
       //列幅定義
       let columnWidth = parseFloat(baseWidth / 10);
       if (baseWidth < 1000){
@@ -310,13 +299,13 @@ export default {
 
       try{
         //項目テーブルからデータ取得
-        resMstItem = await sendRequestGetMstExamItemList(selectData.facilityCd);
+        resMstItem = await sendRequestGetMstExamItemList(selectData.facilityCd, selectData.selectedPatId);
       }catch(e){
         // add by liuzhibo 2022-11-10[7042]検査結果一覧画面が開けないの修正 -- start /
         store.dispatch("loading-screen/setLoadingScreenVisible", false)
         // add by liuzhibo 2022-11-10[7042]検査結果一覧画面が開けないの修正 -- end /
         console.error(e);
-        throw new Error("検査項目マスタ取得エラー");
+        throw new Error("検査項目マスタ取得エラー", { cause: e });
       }
       //column列データ取得成功時
       if (resMstItem.status === 200 && resMstItem.data.length > 0 && resMstItem.data[0] !== null){
@@ -344,23 +333,27 @@ export default {
 
         try{
           //mainテーブルからデータ取得
-          //20260316 liyanze-z change  add requestkey start
-          //resExamMain = await sendRequestGetPatExamMainRecordList(patIdList, examStartDate, examEndDate);
-          resExamMain = await sendRequestGetPatExamMainRecordList(patIdList, examStartDate, examEndDate,selectData.patientShareMode);
-          //20260316 liyanze-z change  add requestkey end
-          resExamLastDate = await sendRequestGetPatExamMainPatIdLastDate(patIdList);
+          resExamMain = await sendRequestGetPatExamMainRecordList(
+            patIdList,
+            examStartDate,
+            examEndDate,
+            selectData.patientShareMode,
+            selectData.selectedPatId
+          );
+          resExamLastDate = await sendRequestGetPatExamMainPatIdLastDate(patIdList, selectData.selectedPatId);
         }catch(e){
           // add by liuzhibo 2022-11-10[7042]検査結果一覧画面が開けないの修正 -- start /
           store.dispatch("loading-screen/setLoadingScreenVisible", false)
           // add by liuzhibo 2022-11-10[7042]検査結果一覧画面が開けないの修正 -- end /
           console.error(e);
-          throw new Error("検査項目マスタ取得エラー");
+          throw new Error("検査項目マスタ取得エラー", { cause: e });
         }
         // 施設設定マスタから透析困難リセット機能の設定値を取得
         // bug:4686,add by maxueqiang start
         const urigetFacilitySettingValue = `/facilitySetting/getFacilitySettingValue`;
         const response = await ApiHelper.get(
-          `${urigetFacilitySettingValue}/${selectData.facilityCd}/${LAST_DEFINED_PERIOD}`
+          `${urigetFacilitySettingValue}/${selectData.facilityCd}/${LAST_DEFINED_PERIOD}`,
+          selectData.selectedPatId ? { selectedPatId: selectData.selectedPatId } : undefined
         ).catch(error => {
           //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
           getErrorMessage('ExamRecordStore.js', 'setExamSelectData', error);
@@ -395,10 +388,10 @@ export default {
                 continue;
               }
               //商品コードよりマスタの上限・下限値取得(共通・性別及び未設定時)
-              let checkValueUpper = null;
-              let checkValueLower = null;
-              let selectItemData = null;
-              let selectItemJlac10 = null;
+              let checkValueUpper;
+              let checkValueLower;
+              let selectItemData;
+              let selectItemJlac10;
 
               // 商品コードでマスタ検索してマスタ情報取得
               if(resMstItem.data.some(item => item["examItemCd"] == sortExamMainByDate[i].itemCd) &&
@@ -433,18 +426,16 @@ export default {
                 //ログインしている施設の検査項目をチェックして存在した場合この項目を優先で表示する
                 const selectItemByFacility = sortMstItemByDate.filter(item => item["facilityCd"] === selectData.facilityCd);
                 selectItemJlac10 = selectItemByFacility.length > 0 ? selectItemByFacility.find(item => item["jlac10Cd"] == sortExamMainByDate[i].jlac10Cd) : sortMstItemByDate.find(item => item["jlac10Cd"] == sortExamMainByDate[i].jlac10Cd);
-                
-                let isSameExamItemCd = selectItemJlac10.examItemCd!=sortExamMainByDate[i].itemCd;
-                let isSameFacilityCd = selectItemJlac10.facilityCd==sortExamMainByDate[i].facilityCd;
-                
-                if(isSameExamItemCd&&isSameFacilityCd){
+
+                const isSameExamItemCd = selectItemJlac10.examItemCd != sortExamMainByDate[i].itemCd;
+                const isSameFacilityCd = selectItemJlac10.facilityCd == sortExamMainByDate[i].facilityCd;
+                if (isSameExamItemCd && isSameFacilityCd) {
                   resExamPat[n]["item_"+ sortExamMainByDate[i].itemCd + "_order_" + sortExamMainByDate[i].regOrderClass]
                   = sortExamMainByDate[i].result;
-                }else{
+                } else {
                   resExamPat[n]["item_"+ selectItemJlac10.examItemCd + "_order_" + sortExamMainByDate[i].regOrderClass]
                   = sortExamMainByDate[i].result;
                 }
-                
 
                 resExamPat[n]["item_"+ selectItemJlac10.examItemCd + "_order_" + sortExamMainByDate[i].regOrderClass+ "_class"]
                 = sortExamMainByDate[i].hl;
@@ -507,13 +498,13 @@ export default {
         }
 
         //4.項目のソート順を変更
-        let sort = null;
+        let sort;
         try{
           //項目テーブルからデータ取得
-          sort = await sendRequestGetMstExamItemSort(selectData.facilityCd);
+          sort = await sendRequestGetMstExamItemSort(selectData.facilityCd, selectData.selectedPatId);
         }catch(e){
           console.error(e);
-          throw new Error("検査項目ソート順：mst_selectorエラー");
+          throw new Error("検査項目ソート順：mst_selectorエラー", { cause: e });
         }
         //4.1.検査セット ソート処理
         let sortList = [];
@@ -579,9 +570,9 @@ export default {
         }
       }
       // add FNSI-NO423入院患者名の配布 関 start
-      let patSimpleSearch = await ApiHelper.post("/patInfo/getPatSameAndInOutClass", {
-        facilityCdList: [selectData.facilityCd]
-      })
+        let patSimpleSearch = await ApiHelper.configPost("/patInfo/getPatSameAndInOutClass", {
+          facilityCdList: [selectData.facilityCd]
+        }, selectData.selectedPatId ? { params: { selectedPatId: selectData.selectedPatId } } : {})
       for (let index = 0; index < resExamPat.length; index++) {
         if (patSimpleSearch.data[resExamPat[index]["pat_id"]] != null) {
           resExamPat[index]["i_class"] = patSimpleSearch.data[resExamPat[index]["pat_id"]]["in_out_class"] == 1 ? "pat-name-in-hospital" : "";
@@ -597,7 +588,7 @@ export default {
     /**
      * 患者個別検査結果詳細データ項目検索取得処理
      */
-    async setExamDetailSelectData({ commit, state }, {facilityCd, examDateOrder,patientShareMode}){
+    async setExamDetailSelectData({ commit, state }, {facilityCd, examDateOrder, patientShareMode, selectedPatId}){
       // mod #8144 2023/05/23 正常範囲が表示されない項目もある ztc start
       const formatNumber = (targetFormatNum) => {
         if (targetFormatNum == null) return targetFormatNum;
@@ -616,15 +607,11 @@ export default {
       const examSet = findExamSet(state.condition.common.examSetCd, state.examSetNameList);
       const examItemInfo = examSet ? JSON.parse(examSet.examItemInfo) : null;
       let resExamItem = null;
-      let resExamMain = null;
+      let resExamMain;
 
       //2.column列フィールド検索処理
       //画面幅を取得
-      let baseWidth = parseFloat(
-        window
-          .getComputedStyle(document.getElementById("app"), null)
-          .getPropertyValue("width")
-      );
+      let baseWidth = getAppClientWidth();
       //列幅定義
       let columnWidth = parseFloat(baseWidth / 8);
       let columnArrayWidth = parseFloat(baseWidth / 8);
@@ -664,10 +651,10 @@ export default {
       
       try{
         //項目テーブルからデータ取得
-        resExamItem = await sendRequestGetMstExamItemList(facilityCd);
+        resExamItem = await sendRequestGetMstExamItemList(facilityCd, selectedPatId);
       }catch(e){
         console.error(e);
-        throw new Error("検査項目データ取得エラー");
+        throw new Error("検査項目データ取得エラー", { cause: e });
       }
       //column列データ取得成功時
       if (resExamItem.status === 200 && resExamItem.data.length > 0 && resExamItem.data[0] !== null
@@ -681,51 +668,40 @@ export default {
             examDateOrder,
             patientShareMode
           );
-          // jlac10他施設データの加算処理 start
-          const addResultMap = new Map();
+        const addResultMap = new Map();
 
-          resExamMain.data.forEach(main => {
-
-            //liyanze-z add start
-            const examListStart = JSON.parse(main.examResultInfo || '[]');
-            let newIds = []
-            examListStart.forEach(item => {
-              let tKey = item.item_cd + ""
-              newIds.push(tKey)
-              item.examMainCd = main.examMainCd;
-              item.facilityCd = main.facilityCd
-              item.regOrderClass = main.regOrderClass
-            })
-            main.ids = newIds;
-            main.examResultInfo = JSON.stringify(examListStart)
-            //liyanze-z add end
-
-            // 他施設のみ対象
-            if (main.facilityCd === facilityCd) return;
-
-            const examDateKey = main.resultExamDateName.slice(0, 8); // YYYYMMDD
-            const examList = JSON.parse(main.examResultInfo || '[]');
-
-            examList.forEach(item => {
-              if (item.jlac10_cd == null) return;
-              const key = [
-                main.patId,
-                examDateKey,
-                String(item.jlac10_cd)
-              ].join('_');
-
-              const val = Number(item.result);
-              if (Number.isNaN(val)) return;
-
-              addResultMap.set(key, (addResultMap.get(key) || 0) + val);
-            });
-            //liyanze-z add start
-            main.examResultInfo = JSON.stringify(examList)
-            //liyanze-z add end
+        resExamMain.data.forEach(main => {
+          const examListStart = JSON.parse(main.examResultInfo || "[]");
+          const newIds = [];
+          examListStart.forEach(item => {
+            const tKey = item.item_cd + "";
+            newIds.push(tKey);
+            item.examMainCd = main.examMainCd;
+            item.facilityCd = main.facilityCd;
+            item.regOrderClass = main.regOrderClass;
           });
-          // jlac10他施設データの加算処理 end
+          main.ids = newIds;
+          main.examResultInfo = JSON.stringify(examListStart);
 
-          
+          if (main.facilityCd === facilityCd) return;
+
+          const examDateKey = main.resultExamDateName.slice(0, 8);
+          const examList = JSON.parse(main.examResultInfo || "[]");
+          examList.forEach(item => {
+            if (item.jlac10_cd == null) return;
+            const key = [
+              main.patId,
+              examDateKey,
+              String(item.jlac10_cd)
+            ].join("_");
+
+            const val = Number(item.result);
+            if (Number.isNaN(val)) return;
+
+            addResultMap.set(key, (addResultMap.get(key) || 0) + val);
+          });
+          main.examResultInfo = JSON.stringify(examList);
+        });
         //4.画面詳細(column列データ)表示データ生成／mainテーブルデータ生成(resExamItem)
         for(var n=0;n<resExamMain.data.length;n++){
           let columnRecord = {};
@@ -736,6 +712,8 @@ export default {
           columnsRecord.field = "M" + String(resExamMain.data[n].examMainCd) + "Cd";
           columnsRecord.title = resExamMain.data[n].regOrderClassName;
           const isOtherFacility = resExamMain.data[n].facilityCd !== facilityCd;
+          columnsRecord.isOtherFacility = isOtherFacility;
+
           const dateObj =
           new Date(resExamMain.data[n].resultExamDateName.slice(0,4)
           + '/' + resExamMain.data[n].resultExamDateName.slice(4,6)
@@ -780,47 +758,45 @@ export default {
 
           let examRecordList = JSON.parse(resExamMain.data[n].examResultInfo);
 
-          // jlac10本施设データに他施設分を加算
-            if (resExamMain.data[n].facilityCd === facilityCd && examRecordList) {
-              const examDateKey = resExamMain.data[n].resultExamDateName.slice(0, 8);
+          if (resExamMain.data[n].facilityCd === facilityCd && examRecordList) {
+            const examDateKey = resExamMain.data[n].resultExamDateName.slice(0, 8);
 
-              examRecordList.forEach(item => {
-                if (item.jlac10_cd == null) return;
+            examRecordList.forEach(item => {
+              if (item.jlac10_cd == null) return;
 
-                const key = [
-                  resExamMain.data[n].patId,
-                  examDateKey,
-                  String(item.jlac10_cd)
-                ].join('_');
+              const key = [
+                resExamMain.data[n].patId,
+                examDateKey,
+                String(item.jlac10_cd)
+              ].join("_");
 
-                if (addResultMap.has(key)) {
-                  const baseVal = Number(item.result);
-                  const addVal = addResultMap.get(key);
+              if (addResultMap.has(key)) {
+                const baseVal = Number(item.result);
+                const addVal = addResultMap.get(key);
 
-                  if (!Number.isNaN(baseVal)) {
-                    item.result = baseVal + addVal;
-                  }
+                if (!Number.isNaN(baseVal)) {
+                  item.result = baseVal + addVal;
                 }
-              });
-            }
+              }
+            });
+          }
+
           //要注意：男女チェック時に施設設定マスタの性別指定なし時制御については未実装
           if(examRecordList != null){
             for(var i=0;i<resExamItem.data.length;i++){
-              //===0
               if (resExamItem.data[i].examClass == 0) {
-                let newList = []; 
+                const newList = [];
                 resExamItem.data[i].regOrderClassArr = [];
-                let tJlac10Cd = resExamItem.data[i].jlac10Cd; 
-                let tExamItemCd = resExamItem.data[i].examItemCd + ''; 
+                const tExamItemCd = resExamItem.data[i].examItemCd + "";
 
-                for(let g=0;g<resExamMain.data.length;g++){
-                  if(resExamMain.data[g].facilityCd == facilityCd){
-                    if(resExamMain.data[g].ids.indexOf(tExamItemCd)!=-1){
-                      newList.push(resExamMain.data[g].regOrderClass)
+                for (let g = 0; g < resExamMain.data.length; g++) {
+                  if (resExamMain.data[g].facilityCd == facilityCd) {
+                    if (resExamMain.data[g].ids.indexOf(tExamItemCd) != -1) {
+                      newList.push(resExamMain.data[g].regOrderClass);
                     }
                   }
                 }
-                if(newList.length!=0)resExamItem.data[i].regOrderClassArr = newList;
+                if (newList.length != 0) resExamItem.data[i].regOrderClassArr = newList;
               }
 
               //正常範囲値（デフォルトは入力上下限）
@@ -850,14 +826,14 @@ export default {
               // mod #8144 2023/05/23 正常範囲が表示されない項目もある ztc end
 
               for(var m=0;m< examRecordList.length;m++){
-
-                function setValue() {
+                const setValue = () => {
                   resExamItem.data[i]["M" + resExamMain.data[n].examMainCd+"Cd"] = examRecordList[m].result;
 
                   // 異常値の文字色判定
-                  resExamItem.data[i]["M" + resExamMain.data[n].examMainCd+"CdClass"] = getResultValueClass(examRecordList[m].result, checkValueLower, checkValueUpper);
-                                
-                   //チェックに文字が入っている場合：フラグを立てる
+                  resExamItem.data[i]["M" + resExamMain.data[n].examMainCd+"CdClass"] 
+                    = getResultValueClass(examRecordList[m].result, checkValueLower, checkValueUpper);
+                  
+                  //チェックに文字が入っている場合：フラグを立てる
                   if(resExamItem.data[i]["M" + resExamMain.data[n].examMainCd+"CdClass"]
                     && resExamItem.data[i]["M" + resExamMain.data[n].examMainCd+"CdClass"].length >= 1){
                     if(examItemInfo){
@@ -875,15 +851,13 @@ export default {
                   }
                   //画面表示フラグ：データが1件あれば表示へ
                   resExamItem.data[i]["hidden"] = false;
-                }
+                };
 
-                //same
-                if(facilityCd==examRecordList[m].facilityCd){
-                  if(resExamItem.data[i].examItemCd == examRecordList[m].item_cd){
-                    setValue()
+                if (facilityCd == examRecordList[m].facilityCd) {
+                  if (resExamItem.data[i].examItemCd == examRecordList[m].item_cd) {
+                    setValue();
                     break;
-
-                  }else{
+                  } else {
                     const item = resExamItem.data[i];
                     const record = examRecordList[m];
                     const main = resExamMain.data[n];
@@ -893,47 +867,42 @@ export default {
                     const flag = item.dialysisProgressFlag;
                     const isValidFlag = flag === 3 || flag === main.regOrderClass;
                     const isUsed = record.isUserTable != true;
-                    //!facilityCd
-                    const isSameFacility = item.facilityCd !== main.facilityCd
-                    if (isDifferentItem && isSameClass && isValidFlag&&isUsed&&isSameFacility) {
+                    const isSameFacility = item.facilityCd !== main.facilityCd;
+                    if (isDifferentItem && isSameClass && isValidFlag && isUsed && isSameFacility) {
                       setValue();
                       break;
                     }
                   }
-                }else{
-                  //合計
-                  //#12461 liyanze-z add
-
-                  if(examRecordList[m].exam_class == '0'){
-                    if(resExamItem.data[i].jlac10Cd!=null&&resExamItem.data[i].jlac10Cd == examRecordList[m].jlac10_cd&&resExamItem.data[i].examClass==0){
+                } else {
+                  if (examRecordList[m].exam_class == "0") {
+                    if (resExamItem.data[i].jlac10Cd != null && resExamItem.data[i].jlac10Cd == examRecordList[m].jlac10_cd && resExamItem.data[i].examClass == 0) {
                       if (!examRecordList[m].isUserTable) {
                         const valueToCheck = examRecordList[m].jlac10_cd;
-                        //のみ?
                         const count = resExamItem.data.filter(item => item.jlac10Cd === valueToCheck).length;
                         const regArr = resExamItem.data[i]?.regOrderClassArr;
 
                         if (count === 1 || (regArr && regArr.includes(examRecordList[m].regOrderClass))) {
-                            examRecordList[m].isUserTable = true;
-                            setValue();
-                            break;
+                          examRecordList[m].isUserTable = true;
+                          setValue();
+                          break;
                         }
                       }
                     }
                   }
 
-                  if(examRecordList[m].exam_class == '1'){
-                    if(resExamItem.data[i].defaultCalcExamItemCd == examRecordList[m].defaultCalcExamItemCd&&resExamItem.data[i].examClass==1){
-                      examRecordList[m].isUsedefaultCD = true;     
-                      examRecordList[m].isUserTable = true;     
-                      setValue()
-                        break;
+                  if (examRecordList[m].exam_class == "1") {
+                    if (resExamItem.data[i].defaultCalcExamItemCd == examRecordList[m].defaultCalcExamItemCd && resExamItem.data[i].examClass == 1) {
+                      examRecordList[m].isUsedefaultCD = true;
+                      examRecordList[m].isUserTable = true;
+                      setValue();
+                      break;
                     }
                   }
 
-                  if(examRecordList[m].exam_class == '2'){
-                    if(resExamItem.data[i].jlac10Cd!=null&&resExamItem.data[i].examClass==2&&resExamItem.data[i].jlac10Cd == examRecordList[m].jlac10_cd){
-                      examRecordList[m].isUserTable = true;   
-                      setValue()
+                  if (examRecordList[m].exam_class == "2") {
+                    if (resExamItem.data[i].jlac10Cd != null && resExamItem.data[i].examClass == 2 && resExamItem.data[i].jlac10Cd == examRecordList[m].jlac10_cd) {
+                      examRecordList[m].isUserTable = true;
+                      setValue();
                       break;
                     }
                   }
@@ -948,7 +917,7 @@ export default {
                 }
               }
             }
-            resExamMain.data[n].examResultInfo = JSON.stringify(examRecordList)
+            resExamMain.data[n].examResultInfo = JSON.stringify(examRecordList);
           }
           //columnデータセット:
           if(state.condition.detail.outRange && columnRecord["examOver"] == true){
@@ -971,13 +940,13 @@ export default {
           columnData.push(addColumn);
         }
 
-        let sort = null;
+        let sort;
         try{
           //項目テーブルからデータ取得
-          sort = await sendRequestGetMstExamItemSort(facilityCd);
+          sort = await sendRequestGetMstExamItemSort(facilityCd, selectedPatId);
         }catch(e){
           console.error(e);
-          throw new Error("検査項目ソート順：mst_selectorエラー");
+          throw new Error("検査項目ソート順：mst_selectorエラー", { cause: e });
         }
         //検査セット ソート処理
         let sortList = [];
@@ -1018,61 +987,43 @@ export default {
           }
         }
 
-        //liyanze-z add start
-        let tResData = resExamMain.data;
-        let allData = [];
-        if (Array.isArray(tResData)) {
-          tResData.forEach(item => {
+        const allData = [];
+        if (Array.isArray(resExamMain.data)) {
+          resExamMain.data.forEach(item => {
             if (item.examResultInfo) {
               try {
                 const parsed = JSON.parse(item.examResultInfo);
                 if (Array.isArray(parsed)) {
-                  const filtered = parsed.filter(item => item.isUserTable !== true);
+                  const filtered = parsed.filter(examItem => examItem.isUserTable !== true);
                   allData.push(...filtered);
-                  //allData.push(...parsed);
-                  //allData.push(...JSON.parse(JSON.stringify(parsed)));
                 }
-              } catch (e) {
+              } catch (_error) {
                 console.error("JSON parse error:", item.examResultInfo);
               }
             }
           });
         }
-        let map = new Map();
-        allData.forEach(item => {
-          const key = item.item_cd;
-          // if (!map.has(key)) {
-          //   map.set(key, item);
-          // } else {
-          //   const exist = map.get(key);
-          //   if (!exist.jlac10_cd && item.jlac10_cd) {
-          //     map.set(key, item);
-          //   }
-          // }
-        });
 
-        let examList = allData;
-        let resultArr = [];
-        const cleanVal = (v) =>{
+        const resultArr = [];
+        const cleanVal = v => {
           return (v === null || v === undefined || v === "null") ? "" : v;
-        }
-        examList.forEach(item => {
-          if(item.exam_class ==0&&facilityCd!=item.facilityCd&&(!item.jlac10_cd||item.isUserTable != true)){
-            //console.log(1)
-            let newKey = "M" + item.examMainCd + "Cd";
+        };
+        allData.forEach(item => {
+          if (item.exam_class == 0 && facilityCd != item.facilityCd && (!item.jlac10_cd || item.isUserTable != true)) {
+            const newKey = "M" + item.examMainCd + "Cd";
             const exist = resultArr.find(
-              r => r.examItemCd === item.item_cd
+              result => result.examItemCd === item.item_cd
             );
             if (exist) {
               exist[newKey] = item.result;
             } else {
-              let newObj = {
+              const newObj = {
                 consoleClass: "1",
                 dataType: "0",
                 defaultCalcExamItemCd: "",
                 facilityCd: "",
                 fnExamItemCd: "",
-                hidden: "false",
+                hidden: false,
                 isDel: "0",
                 isDisp: "1",
                 isInHospital: "1",
@@ -1098,25 +1049,17 @@ export default {
               resultArr.push(newObj);
             }
           }
-          
         });
-        
-        let willShowData = [];
+
         const front = sortExamItem.filter(a =>
           resultArr.some(b => b.examItemCd == a.examItemCd)
         );
         const back = resultArr.filter(b =>
           !sortExamItem.some(a => a.examItemCd == b.examItemCd)
         );
-        willShowData = [...front, ...back];
-        
-        // console.log(resultArr)
-        //console.log(willShowData)
-        // console.log(resExamItem.data)
-        sortExamItem = sortExamItem.concat(willShowData)
-        //console.log(sortExamItem)
-        //liyanze-z add end
-        
+        const willShowData = [...front, ...back];
+        sortExamItem = sortExamItem.concat(willShowData);
+
         //画面明細部
         await commit("setExamRecordDetailColumn",columnData);
         await commit("setExamDetailDataSource", sortExamItem);
@@ -1126,17 +1069,19 @@ export default {
     /**
      * セットリスト：ソート処理
      */
-    async setSortNameList({commit,state}, facilityCd) {
+    async setSortNameList({commit,state}, payload) {
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
       let nameList = await state.examSetNameList;
       let sortList = [];
       let sortNameList = [];
-      let sort = null;
+      let sort;
       // 更新画面生成時：患者検査結果テーブルより生成
       try{
-        sort = await sendRequestGetMstExamSetSort(facilityCd);
+        sort = await sendRequestGetMstExamSetSort(facilityCd, selectedPatId);
       }catch(e){
         console.error(e);
-        throw new Error("検査項目セット取得処理エラー");
+        throw new Error("検査項目セット取得処理エラー", { cause: e });
       }
       //検査セット ソート処理
       sort.data.forEach(e => sortList = sortList.concat(e.orderSettings.items));
@@ -1190,36 +1135,44 @@ export default {
     },
 
     // 性別未設定時参照先取得
-    examSelectDefaultSex({ commit }, facilityCd){
+    examSelectDefaultSex({ commit }, payload){
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
       commit("setExamDefaultSex", null);
-      return sendRequestGetMstFacilitySettingValue(facilityCd,"1017").then(response => {
+      return sendRequestGetMstFacilitySettingValue(facilityCd,"1017", selectedPatId).then(response => {
         commit("setExamDefaultSex", response.data);
         return Promise.resolve(response.data);
       });
     },
 
     // 検査結果ファイル取込時患者ID判定設定取得
-    patIdJudgSetting({ commit }, facilityCd){
+    patIdJudgSetting({ commit }, payload){
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
       commit("setCheckResultForFacility", null);
-      return sendRequestGetMstFacilitySettingValue(facilityCd,"3003").then(response => {
+      return sendRequestGetMstFacilitySettingValue(facilityCd,"3003", selectedPatId).then(response => {
         commit("setCheckResultForFacility", response.data);
         return Promise.resolve(response.data);
       });
     },
 
     // 検査結果画面表示順設定取得
-    resultDispOrderSetting({ commit }, facilityCd){
+    resultDispOrderSetting({ commit }, payload){
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
       commit("setExamResultDispOrder", null);
-      return sendRequestGetMstFacilitySettingValue(facilityCd,EXAM_RESULT_DISP_ORDER).then(response => {
+      return sendRequestGetMstFacilitySettingValue(facilityCd,EXAM_RESULT_DISP_ORDER, selectedPatId).then(response => {
         commit("setExamResultDispOrder", response.data);
         return Promise.resolve(response.data);
       });
     },
 
     // 検査セット一覧取得
-    examSetNameList({ commit }, facilityCd) {
+    examSetNameList({ commit }, payload) {
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
       commit("setExamSetNameList", []);
-      return sendRequestGetMstExamSetList(facilityCd).then(response => {
+      return sendRequestGetMstExamSetList(facilityCd, selectedPatId).then(response => {
         commit("setExamSetNameList", response.data);
         return Promise.resolve(response.data);
       });

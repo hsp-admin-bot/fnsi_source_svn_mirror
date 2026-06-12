@@ -1,7 +1,7 @@
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 export default {
   namespaced: true,
@@ -429,9 +429,11 @@ export default {
      * @param buttonInfo {Object} 表示情報
      */
     setShowTreatPlanMenuPopover({ commit }, { menuInfo }) {
+      // 表示前に一度 false にし、Store が true のまま残った場合でも watch が確実に発火する
+      commit("commitIsShowTreatPlanMenuPopover", false);
       // 治療日格納
       const treatDate = menuInfo.treatDate
-        ? moment(menuInfo.treatDate).format("YYYY-MM-DD")
+        ? dayjs(menuInfo.treatDate).format("YYYY-MM-DD")
         : "";
       commit("commitTreatDate", treatDate);
       // オーダー番号格納

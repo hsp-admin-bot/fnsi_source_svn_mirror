@@ -10,12 +10,13 @@ import batch.part.StreamThread;
 import de.siegmar.fastcsv.writer.CsvWriter;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.Step;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -153,7 +154,7 @@ public class MstSelectorStep extends StepStartEndListener implements Tasklet {
     private static final String MSTSELECTORTHEAD = "facility_cd,master_physical_name,order_settings,reg_date,up_date";
 
     @Autowired
-    private StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
 
     @Autowired
     Utils utils;
@@ -422,8 +423,7 @@ public class MstSelectorStep extends StepStartEndListener implements Tasklet {
 
         try {
             File fileNew = new File(csvfileName);
-            CsvWriter cw = new CsvWriter();
-            cw.write(fileNew, StandardCharsets.UTF_8, resultDataList);
+            writeCsv(fileNew.toPath(), resultDataList);
             String registColumnNames = MSTSELECTORTHEAD;
             String copyCommand = "psql"
                     + " -h "
@@ -579,15 +579,19 @@ public class MstSelectorStep extends StepStartEndListener implements Tasklet {
             process.getInputStream().close();
             process.getOutputStream().close();
             process.getErrorStream().close();
+            int exitCode = process.waitFor(); // 子プロセスの終了コードを取得
             process.destroy(); // 子プロセスを明示的に終了
             if (!org.springframework.util.ObjectUtils.isEmpty(et.getOutputString())) {
+                EventLogMessage elm = eventLoggerUtil.getEventLogMessage(et.getOutputString(),
+                        facilityCd, "processCmdSql(String[] cmd, boolean status)");
+                eventLoggerUtil.recordLog(facilityCd, elm, LogLevel.WARN);
+            }
+            if (exitCode != 0) {
                 exSuccess = false;
-                System.err.println("出力文字：" + et.getOutputString());
                 EventLogMessage elm = eventLoggerUtil.getEventLogMessage(et.getOutputString(),
                         facilityCd, "processCmdSql(String[] cmd, boolean status)");
                 eventLoggerUtil.recordLog(facilityCd, elm, LogLevel.ERROR);
             }
-            System.out.println("psqlコマンドの実行が完了しました！");
         } catch (IOException | InterruptedException e) {
             // TODO Auto-generated catch block
             eventLoggerUtil.recordLog(
@@ -600,10 +604,17 @@ public class MstSelectorStep extends StepStartEndListener implements Tasklet {
         }
         return exSuccess;
     }
+    private void writeCsv(Path path, Collection<String[]> rows) throws IOException {
+        try (CsvWriter csvWriter = CsvWriter.builder().build(path, StandardCharsets.UTF_8)) {
+            for (String[] row : rows) {
+                csvWriter.writeRecord(row);
+            }
+        }
+    }
 
     @Bean(name=STEP_NAME)
     public Step step() {
-        return stepBuilderFactory.get(STEP_NAME).listener(convertDeleteMstSelectorListener)
+        return new StepBuilder(STEP_NAME, jobRepository).listener(convertDeleteMstSelectorListener)
             .tasklet(this)
             .build();
     }

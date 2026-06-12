@@ -3,12 +3,13 @@
  */
  <template>
   <modal-base @onClose="closeMedicineModal">
-    <div slot="header">
+    <template #header>
       <component :is="header"></component>
-    </div>
+    </template>
     <!-- mod FNSI-redmine_#3904_グリッド表示を修正 周 start -->
     <!-- <div slot="body"> -->
-    <div slot="body" class="master-maintenance-page">
+    <template #body>
+      <div class="master-maintenance-page">
     <!-- mod FNSI-redmine_#3904_グリッド表示を修正 周 end -->
       <div id="medicine-modal-header">
         <!-- 患者情報 -->
@@ -58,7 +59,7 @@
       <div id="modal-body" class="grid-content-area k-grid">
       <!-- mod FNSI-redmine_#3904_グリッド表示を修正 周 end -->
         <!-- 投与薬剤のグリッド -->
-        <table class="checklist-modal-list custom-checklist-modal-list" :style="{ 'top':tableTop + 'px' }">
+        <table class="checklist-modal-list custom-checklist-modal-list medicine-modal-table">
           <thead>
             <tr>
               <th id="column-01" class="ntss-list-header-th-sticky">実施</th>
@@ -68,7 +69,7 @@
               <th id="column-05" class="ntss-list-header-th-sticky">実施者</th>
             </tr>
           </thead>
-          <tr
+                    <tr
             v-for="(medicineData, idx) in displayMedicineList"
             :key="idx"
             :class="'medicine-modal-row'"
@@ -83,8 +84,10 @@
               <!-- ></v-ons-checkbox> -->
               <v-ons-checkbox
                 :input-id="'checkbox-' + idx"
-                v-model="medicineData.effect_flg"
+                :model-value="!!medicineData.effect_flg"
                 :disabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
+                @click.stop
+                @change="onCheckboxChange(medicineData)"
               ></v-ons-checkbox>
               <!-- mod #10359 編集権限の動作不正 dengshen end -->
             </td>
@@ -115,64 +118,66 @@
               <!--   @change="onChangeDate(medicineData, idx)" -->
               <!-- /> -->
               <!--#10715:日付IF修正Start（必須追加+param修正）-->
-              <date-input
-                class="ntss-input-date"
-                :classes="'input-area ntss-input-date ntss-custom-input ntss-input-start-date date-input-required '"
-                v-model="medicineData.effect_date_str"
-                @handleClearInput="medicineData.effect_date_str = null"
-                v-show="medicineData.effect_flg"
-                :disabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
-                :isRequired="true"
-                :defaultDate="medicineData.effect_date_str"
-                @change="onChangeDate(medicineData, idx)"
-              />
-              <!--#10715:日付IF修正End（必須追加+param修正）-->
-              <!-- mod #10359 編集権限の動作不正 dengshen end -->
-              <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 end -->
-              <!-- mod #10359 編集権限の動作不正 dengshen start -->
-              <!-- <common-calendar -->
-              <!--   v-model="medicineData.effect_date_str" -->
-              <!--   v-show="medicineData.effect_flg" -->
-              <!--   :disabled="!editState" -->
-              <!--   @input="onChangeDate(medicineData, idx)" -->
-              <!-- /> -->
-              <common-calendar
-                v-model="medicineData.effect_date_str"
-                v-show="medicineData.effect_flg"
-                :disabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
-                @input="onChangeDate(medicineData, idx)"
-              />
-              <!-- mod #10359 編集権限の動作不正 dengshen end -->
-              <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 start -->
-              <!-- <input
-                type="time"
-                class="effect-input-time"
-                v-model="medicineData.effect_time_str"
-                v-show="medicineData.effect_flg"
-                :disabled="!editState"
-                @change="onChangeDate(medicineData, idx)"
-              /> -->
-              <!-- mod #10359 編集権限の動作不正 dengshen start -->
-              <!-- <time-input -->
-              <!--   class="effect-input-time" -->
-              <!--   v-model="medicineData.effect_time_str" -->
-              <!--   @handleClearInput="medicineData.effect_time_str = null" -->
-              <!--   v-show="medicineData.effect_flg" -->
-              <!--   :disabled="!editState" -->
-              <!--   @change="onChangeDate(medicineData, idx)" -->
-              <!-- /> -->
-              <!--#10715:日付IF修正Start（必須追加+param修正）-->
-              <time-input
-                class="effect-input-time"
-                v-model="medicineData.effect_time_str"
-                @handleClearInput="medicineData.effect_time_str = null"
-                v-show="medicineData.effect_flg"
-                :disabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
-                :isRequired="true"
-                :defaultTime="medicineData.effect_time_str"
-                :classes="'time-input-required '"
-                @change="onChangeDate(medicineData, idx)"
-              />
+              <div style="display: inline-flex; align-items: center">
+                <date-input
+                  class="ntss-input-date"
+                  :classes="'input-area ntss-input-date ntss-custom-input ntss-input-start-date date-input-required '"
+                  v-model="medicineData.effect_date_str"
+                  @handleClearInput="medicineData.effect_date_str = null"
+                  v-show="medicineData.effect_flg"
+                  :disabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
+                  :isRequired="true"
+                  :defaultDate="medicineData.effect_date_str"
+                  @change="onChangeDate(medicineData, idx)"
+                />
+                <!--#10715:日付IF修正End（必須追加+param修正）-->
+                <!-- mod #10359 編集権限の動作不正 dengshen end -->
+                <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 end -->
+                <!-- mod #10359 編集権限の動作不正 dengshen start -->
+                <!-- <common-calendar -->
+                <!--   v-model="medicineData.effect_date_str" -->
+                <!--   v-show="medicineData.effect_flg" -->
+                <!--   :disabled="!editState" -->
+                <!--   @input="onChangeDate(medicineData, idx)" -->
+                <!-- /> -->
+                <common-calendar
+                  v-model="medicineData.effect_date_str"
+                  v-show="medicineData.effect_flg"
+                  :disabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
+                  @input="onChangeDate(medicineData, idx)"
+                />
+                <!-- mod #10359 編集権限の動作不正 dengshen end -->
+                <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 start -->
+                <!-- <input
+                  type="time"
+                  class="effect-input-time"
+                  v-model="medicineData.effect_time_str"
+                  v-show="medicineData.effect_flg"
+                  :disabled="!editState"
+                  @change="onChangeDate(medicineData, idx)"
+                /> -->
+                <!-- mod #10359 編集権限の動作不正 dengshen start -->
+                <!-- <time-input -->
+                <!--   class="effect-input-time" -->
+                <!--   v-model="medicineData.effect_time_str" -->
+                <!--   @handleClearInput="medicineData.effect_time_str = null" -->
+                <!--   v-show="medicineData.effect_flg" -->
+                <!--   :disabled="!editState" -->
+                <!--   @change="onChangeDate(medicineData, idx)" -->
+                <!-- /> -->
+                <!--#10715:日付IF修正Start（必須追加+param修正）-->
+                <time-input
+                  class="effect-input-time"
+                  v-model="medicineData.effect_time_str"
+                  @handleClearInput="medicineData.effect_time_str = null"
+                  v-show="medicineData.effect_flg"
+                  :disabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
+                  :isRequired="true"
+                  :defaultTime="medicineData.effect_time_str"
+                  :classes="'time-input-required '"
+                  @change="onChangeDate(medicineData, idx)"
+                />
+              </div>
               <!--#10715:日付IF修正End（必須追加+param修正）-->
               <!-- mod #10359 編集権限の動作不正 dengshen end -->
               <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 end -->
@@ -192,27 +197,32 @@
               <!--   :value="userSelectorList[idx]" -->
               <!--   @changePersonalUser="onChangeStaff($event, medicineData, idx)" -->
               <!-- /> -->
-              <com-master-selector
+              <div
                 v-show="medicineData.effect_flg"
-                :isDisabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
-                select-id="effect_user_id"
-                name="effect_user_id"
-                :showLabelName="false"
-                :showClassFilter="true"
-                :readMasterData="fetchPersonalUserAll"
-                :masterDefine="personalUserDefine"
-                :index="idx"
-                :value="userSelectorList[idx]"
-                @changePersonalUser="onChangeStaff($event, medicineData, idx)"
-              />
+                class="medicine-practitioner-as-plain-label"
+              >
+                <common-master-selector
+                  :masterType="MasterType.PRACTITIONER_CHECK_LIST"
+                  :facilityCd="getFacilityCd"
+                  :btnDisabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
+                  :initItem="{ value: medicineData.effect_user_id }"
+                  :editItem="{ value: medicineData.effect_user_id, text: medicineData.effect_user_name }"
+                  :selectedItemClass="'selector-input'"
+                  :btnClass="'select-btn-self btn3-normal'"
+                  :btnName="'選択'"
+                  @popover-return="onPractitionerReturn($event, medicineData)"
+                />
+              </div>
               <!-- mod #10359 編集権限の動作不正 dengshen end -->
             </td>
           </tr>
-        </table>
+                </table>
       </div>
-    </div>
+      </div>
+    </template>
 
-    <div slot="footer" class="flex-container">
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <!-- mod FNSI-横展開 画面デザイン_チェックリスト機能分 周 start -->
         <!-- <v-ons-button class="button denial-btn" @click="closeMedicineModal">キャンセル</v-ons-button> -->
@@ -232,7 +242,8 @@
         <!-- mod #10359 編集権限の動作不正 dengshen end -->
         <!-- mod FNSI-横展開 画面デザイン_チェックリスト機能分 周 end -->
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
@@ -243,16 +254,14 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 import ModalBase from "@/components/modals/ModalBase";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 // mod 5984 機能帳票でパラメータが正しく渡されていない 歴 start
-// import { mapGetters, mapActions } from "vuex";
-import { mapGetters, mapActions, mapMutations } from "vuex";
+// import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 // mod 5984 機能帳票でパラメータが正しく渡されていない 歴 end
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { dateFormat } from "@/functions/common/DateTimeUtils";
 import CommonCalender from "@/components/common/custom-calendar/CustomCalendar";
-import CommonMasterSelectorComponent from "@/components/common/master-selector/CommonMasterSelectorComponent";
-import { sendRequestGetMstPersonalUser, sendRequestMstGetJobs } from "@/apis/user-selector-popover";
-import { practitioner } from "@/components/common/master-selector/MasterSelectorDefinitions";
-import { Master } from "@/models/common/master-selector-condition/Master";
+import CommonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 // add 5984 機能帳票でパラメータが正しく渡されていない 歴 start
 import store from "@/stores";
 import { getCurrentFunctionCd } from "@/router/routing-helper";
@@ -270,7 +279,7 @@ export default {
   components: {
     "modal-base": ModalBase,
     "common-calendar": CommonCalender,
-    "com-master-selector": CommonMasterSelectorComponent,
+    "common-master-selector": CommonMasterSelector,
     //#5590 2023/04/20 ×を常に表示するように修正 張博 start
     "date-input":DateInput,
     "time-input":TimeInput
@@ -284,8 +293,6 @@ export default {
       medicineGridToolbarHeight: 500,
       medicineGridHeight: 300,
       tableTop: 0,
-      personalUserDefine: practitioner,
-      userSelectorList: [],
       // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリスト 20231115 ztc start
       ignoreWatchSelectedMediList: true,
       isChanged: false,
@@ -294,6 +301,9 @@ export default {
     };
   },
   computed: {
+    MasterType() {
+      return MasterType;
+    },
     ...mapGetters("window-size", {
       windowHeight: "getWindowHeight"
     }),
@@ -395,17 +405,29 @@ export default {
     // add #10359 編集権限の動作不正 dengshen end
 
     // Windowの高さからGirdコンポーネント領域の高さを算出
+    getModalScopeElement() {
+      return this.$el?.closest?.(".modal-container, .modal-container-custom, .k-window-content, .k-dialog") || this.$el || null;
+    },
+    getModalBodyElement() {
+      return this.getModalScopeElement()?.querySelector?.(".modal-body") || this.$el?.querySelector?.(".modal-body") || null;
+    },
+    getMedicineHeaderElement() {
+      return this.getModalScopeElement()?.querySelector?.("#medicine-modal-header") || this.$el?.querySelector?.("#medicine-modal-header") || null;
+    },
+    getGridContentAreaElement() {
+      return this.getModalScopeElement()?.querySelector?.(".grid-content-area") || this.$el?.querySelector?.(".grid-content-area") || null;
+    },
     calculateGridHeight() {
       this.calculateGridTop();
 
       // モーダルのbodyの高さ
-      const mb = document.getElementsByClassName("modal-body")[0];
+      const mb = this.getModalBodyElement();
       /* add #9461  by zhangruixue 2023-08-17 --start */
       mb.style.overflowY = "unset"
       /* add #9461  by zhangruixue 2023-08-17 --start */
       const mh = mb ? mb.clientHeight : 0;
       // モーダルのヘッダの高さ
-      const hElm = document.getElementById("medicine-modal-header");
+      const hElm = this.getMedicineHeaderElement();
       const hh = hElm ? hElm.clientHeight : 0;
       this.medicineGridToolbarHeight = mh - hh;
       this.medicineGridToolbarHeight =
@@ -414,8 +436,13 @@ export default {
           : this.medicineGridToolbarHeight;
       this.medicineGridHeight = this.medicineGridToolbarHeight - 10;
       /* add #9461  by zhangruixue 2023-08-17 --start */
-      document.getElementsByClassName("grid-content-area")[0].style.overflowY = "auto";
-      document.getElementsByClassName("grid-content-area")[0].style.height = this.medicineGridHeight + "px"
+      const gridContentArea = this.getGridContentAreaElement();
+      if (gridContentArea) {
+        gridContentArea.style.overflowX = "auto";
+        gridContentArea.style.overflowY = "auto";
+        gridContentArea.style.height = this.medicineGridHeight + "px";
+        gridContentArea.style.width = "100%";
+      }
       /* add #9461  by zhangruixue 2023-08-17 --start */
       if (mh + hh === 0) {
         setTimeout(this.calculateGridHeight, 10);
@@ -436,7 +463,7 @@ export default {
     // 背景色セット
     editBackgroundColor() {
       this.$nextTick(() => {
-        const tBodyList = document.getElementsByClassName("medicine-modal-row");
+        const tBodyList = this.getModalScopeElement()?.getElementsByClassName?.("medicine-modal-row") || this.$el?.getElementsByClassName?.("medicine-modal-row") || [];
         if (tBodyList) {
           for (let rwCount = 0; rwCount < tBodyList.length; rwCount++) {
             const currentTrc = tBodyList[rwCount].children;
@@ -456,51 +483,75 @@ export default {
     changeRowColor(currentTrc, edited) {
       const addClass = "master-edited-row";
 
-      for (const trc of currentTrc) {
-        // 全項目の背景色を変更
+      for (let clCount = 0; clCount < currentTrc.length; clCount++) {
+        const cell = currentTrc[clCount];
+        if (!cell) {
+          continue;
+        }
         if (edited) {
-          trc?.classList?.add(addClass);
-        } else if (trc.classList.length > 0) {
-          trc.classList.remove(addClass);
+          cell.classList.add(addClass);
+        } else {
+          cell.classList.remove(addClass);
         }
       }
     },
     changeCellFont(currentTrc, data) {
       const addClass = "master-edited-cell";
 
-      // 投与時間
+      // 投与時間（日付・時刻入力のみ。ボタン類には付けない）
       const dateIdx = 3;
-      // 変更ありの場合
-      if (data.chgflg_effect_date) {
-        currentTrc[dateIdx].children[0]?.classList?.add(addClass);
-        currentTrc[dateIdx].children[2]?.classList?.add(addClass);
-      } else if (
-        currentTrc[dateIdx].classList.length > 0 &&
-        currentTrc[dateIdx].children[0]
-      ) {
-        currentTrc[dateIdx].children[0].classList.remove(addClass);
-        currentTrc[dateIdx].children[2].classList.remove(addClass);
+      const dateCell = currentTrc[dateIdx];
+      if (dateCell) {
+        const dateTargets = [dateCell.children[0], dateCell.children[2]].filter(Boolean);
+        if (data.chgflg_effect_date) {
+          dateTargets.forEach(el => el.classList.add(addClass));
+        } else {
+          dateTargets.forEach(el => el.classList.remove(addClass));
+        }
       }
 
-      // 実施者
+      // 実施者（共通マスタ選択の表示 DIV を旧 com-master-selector の label 風に見せるためラッパーあり）
       const userIdx = 4;
-      // 変更ありの場合
+      const userCell = currentTrc[userIdx];
+      const userMarkEl = userCell?.querySelector?.(".custom-div-show-selected-item");
       if (data.chgflg_effect_user_id) {
-        currentTrc[userIdx].children[0].children[0]?.classList?.add(addClass);
-      } else if (
-        currentTrc[userIdx].classList.length > 0 &&
-        currentTrc[dateIdx].children[0].children[0]
-      ) {
-        currentTrc[userIdx].children[0].children[0].classList.remove(addClass);
+        userMarkEl?.classList?.add(addClass);
+      } else if (userMarkEl) {
+        userMarkEl.classList.remove(addClass);
       }
+    },
+    canEditMedicineRow() {
+      return (
+        this.editState &&
+        this.getSelectOrdMain &&
+        this.getSelectOrdMain.rstDialysisState !== "0" &&
+        this.getSelectOrdMain.patId !== null &&
+        this.getItemAuthorized("CheckList", "default_authority")
+      );
+    },
+    applyCheckRowStyles() {
+      this.$nextTick(() => {
+        this.editBackgroundColor();
+      });
+    },
+    onCheckboxChange(rowData) {
+      if (!rowData || !this.canEditMedicineRow()) {
+        return;
+      }
+      this.setCheckInfo(rowData);
+      this.applyCheckRowStyles();
     },
     onChangeDate(rowData, idx) {
       rowData.effect_date = rowData.effect_date_str && rowData.effect_time_str
         ? new Date(dateFormat.utc2Jst(rowData.effect_date_str + "T" + rowData.effect_time_str))
         : null;
       //#10715:日付IF修正Start
-      if (rowData.effect_date !== null)
-          this.setCheckInfoChangeData({ rowData: rowData, idx: idx });
+      if (rowData.effect_date !== null) {
+        this.setCheckInfoChangeData({ rowData: rowData, idx: idx });
+        this.$nextTick(() => {
+          this.editBackgroundColor();
+        });
+      }
       //#10715:日付IF修正End
     },
     // グリッドクリックイベント
@@ -508,14 +559,9 @@ export default {
       // 条件送信後以降かつ？？？？患者ではない場合
       // mod #11710 チェックリスト実施時の挙動不正 関 start
       // mod #11065 【03】編集権限バグ修正 関 start
-      if (
-        rowData &&
-        this.editState &&
-        this.getSelectOrdMain.rstDialysisState !== "0" &&
-        this.getSelectOrdMain.patId !== null && this.getItemAuthorized('CheckList', 'default_authority')
-      ) {
+      if (rowData && this.canEditMedicineRow()) {
         this.setCheckInfo(rowData);
-        this.convertUserSelectors();
+        this.applyCheckRowStyles();
       }
       // mod #11065 【03】編集権限バグ修正 関 end
       // mod #11710 チェックリスト実施時の挙動不正 関 end
@@ -573,28 +619,15 @@ export default {
     },
     // モーダルの高さからGirdコンポーネント領域のTopを算出
     calculateGridTop() {
-      this.tableTop =
-        document.getElementById("medicine-modal-header").clientHeight + 3;
+      this.tableTop = (this.getMedicineHeaderElement()?.clientHeight || 0) + 3;
     },
-    fetchPersonalUserAll() {
-      return Promise.all([sendRequestGetMstPersonalUser(this.getFacilityCd), sendRequestMstGetJobs(this.getFacilityCd)]);
-    },
-    onChangeStaff(userInfo, rowData, index) {
-      if(userInfo) {
-        rowData.effect_user_id = userInfo.id;
-        this.userSelectorList[index].cd = userInfo.id;
-        this.userSelectorList[index].name = userInfo.lastName + " " + userInfo.firstName;
-      } else {
-        rowData.effect_user_id = null;
-        this.userSelectorList[index].cd = null;
-        this.userSelectorList[index].name = null;
-      }
-      this.setCheckInfoChangeData({ rowData: rowData, idx: index });
-    },
-    convertUserSelectors() {
-      this.userSelectorList = this.displayMedicineList.map(m => {
-        if (m.effect_user_id === null) return new Master();
-        return new Master(m.effect_user_id, m.effect_user_name);
+    onPractitionerReturn(item, rowData) {
+      if (!item) return;
+      rowData.effect_user_id = item.value ?? null;
+      rowData.effect_user_name = item.text ?? null;
+      this.setCheckInfoChangeData({ rowData: rowData });
+      this.$nextTick(() => {
+        this.editBackgroundColor();
       });
     },
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリスト 20231115 ztc start
@@ -645,13 +678,15 @@ export default {
           return;
         }
         this.changeButton();
+        this.$nextTick(() => {
+          this.editBackgroundColor();
+        });
       },
       deep: true
     },
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリスト 20231115 ztc end
   },
-  created() {
-  },
+
   updated() {
     // Storeの更新等で画面が再描画された場合に背景色を変更
     this.editBackgroundColor();
@@ -672,14 +707,14 @@ export default {
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリスト 20231115 ztc end
     this.$nextTick(() => {
       this.calculateGridHeight();
-      this.convertUserSelectors();
+      this.editBackgroundColor();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  destroyed() {
+  unmounted() {
     // add 5984 機能帳票でパラメータが正しく渡されていない 歴 start
     this.setSelectOrdMain({ selectOrdMain: null });
     const funcCd = getCurrentFunctionCd();
@@ -737,11 +772,14 @@ export default {
 
 .grid-content-area {
   font-size: 1em;
+  overflow: auto;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 .medicine-modal-row {
   background-color: white;
 }
-ons-input >>> .text-input {
+ons-input :deep(.text-input) {
   font-size: 100%;
 }
 .checklist-modal-list tr:hover {
@@ -751,8 +789,8 @@ ons-input >>> .text-input {
 .ntss-input-date {
   /* mod FNSI-障害票一覧_チェックリスト#9。 周 start */
   /* max-width: 6em; */
-  max-width: 7.5em;
-  min-width: 7.5em;
+  max-width: 8em;
+  min-width: 8em;
   /* mod FNSI-障害票一覧_チェックリスト#9。 周 end */
 }
 
@@ -766,7 +804,7 @@ ons-input >>> .text-input {
   font-size: 100%;
 }
 
-.ntss-list-body-td >>> ons-button.select-btn  {
+.ntss-list-body-td :deep(ons-button.select-btn)  {
   font-size: 1em;
 }
 
@@ -777,10 +815,17 @@ ons-input >>> .text-input {
 .master-maintenance-page .k-grid {
   position: inherit;
 }
-.checklist-modal-list {
-  position: inherit;
+.medicine-modal-table.checklist-modal-list {
+  position: relative;
+  top: auto !important;
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
 }
 /* add FNSI-redmine_#3904_グリッド表示を修正 周 end */
+:deep(.grid-content-area) {
+  overflow: auto;
+}
 /* add #9461  by zhangruixue 2023-08-17 --start */
 #column-01{
   z-index: 2;
@@ -792,6 +837,37 @@ ons-input >>> .text-input {
   z-index: 2;
 }
 /* add #9461  by zhangruixue 2023-08-17 --end */
+
+/* 本画面のみ：実施者は共通 CommonMasterSelector のまま、表示部を旧 label.theme 風（枠なしテキスト）に見せる */
+.medicine-practitioner-as-plain-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.medicine-practitioner-as-plain-label :deep(.custom-div-show-selected-item) {
+  border: none !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  min-height: unset !important;
+  background-color: transparent !important;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 5px !important;
+  word-break: break-all;
+  color: #1f1f21;
+}
+.medicine-practitioner-as-plain-label :deep(.custom-div-show-selected-item-edited) {
+  border: none !important;
+  box-shadow: none !important;
+}
+.medicine-practitioner-as-plain-label :deep(.selector-input) {
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  background-color: transparent !important;
+}
 
 @media print {
   #column-01 ,#column-02,#column-03,#column-04,#column-05{

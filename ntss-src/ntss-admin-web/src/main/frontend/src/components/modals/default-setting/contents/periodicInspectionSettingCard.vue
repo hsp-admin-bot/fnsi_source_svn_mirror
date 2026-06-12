@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -75,17 +75,15 @@
 </template>
 
  <script>
-   import {mapGetters, mapActions} from "vuex";
+   import {mapGetters, mapActions} from "@/compat/vue/vuex";
    import {DATE_CHOICES, PERIODIC_INSPECTION} from "@/constants/defaultSettingConstants";
    import {deepCopy} from "@/functions/common/CommonFunctions";
    import {ApiHelper} from "@/apis/AxiosHelper";
    //add FNSI-5687 劉全航 start
-   import { EventBus } from "@/eventBus.js";
+   import { EventBus } from "@/compat/vue/event-bus.js";
    //add FNSI-5687 劉全航 end
 
    export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -244,6 +242,9 @@
         }
         if (this.editRecord[PERIODIC_INSPECTION.KEY_NAME_BED_GROUP_CD] == null) {
           this.editRecord[PERIODIC_INSPECTION.KEY_NAME_BED_GROUP_CD] = this.initialValue[PERIODIC_INSPECTION.KEY_NAME_BED_GROUP_CD];
+        } else if (!this.mstBedGroup.some(bg => +bg.roomBedGroupCd === +this.editRecord[PERIODIC_INSPECTION.KEY_NAME_BED_GROUP_CD])) {
+          // NOTE: マスタ削除された場合、「0 : 未登録」を再設定
+          this.editRecord[PERIODIC_INSPECTION.KEY_NAME_BED_GROUP_CD] = null;
         }
         if (this.editRecord[PERIODIC_INSPECTION.KEY_NAME_MACHINE_TYPE_LIST] == null) {
           this.editRecord[PERIODIC_INSPECTION.KEY_NAME_MACHINE_TYPE_LIST] = this.initialValue[PERIODIC_INSPECTION.KEY_NAME_MACHINE_TYPE_LIST];
@@ -255,7 +256,5 @@
       this.isExpanded = this.defaultExpanded;
     });
   },
-  mounted() {
-  }
 };
 </script>

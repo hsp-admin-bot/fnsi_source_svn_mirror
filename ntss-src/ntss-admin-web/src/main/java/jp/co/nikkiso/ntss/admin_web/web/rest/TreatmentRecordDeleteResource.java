@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import static jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 治療記録(削除)のResourceクラス.
@@ -107,6 +108,14 @@ public class TreatmentRecordDeleteResource {
 
     //add #10412 次患者更新関連全体見直し対応 朴 start
     OrdMain beforOrdMain = ordMainDao.selectByOrdNo(ordNo);
+    if (beforOrdMain != null && beforOrdMain.getFacilityCd() != null
+      && (ntssUser == null || !beforOrdMain.getFacilityCd().equals(ntssUser.getFacilityCd()))) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + beforOrdMain.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "patId=" + beforOrdMain.getPatId() + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
     //add #10412 次患者更新関連全体見直し対応 朴 end
 
     //mod FNSI修正401対応 房 start

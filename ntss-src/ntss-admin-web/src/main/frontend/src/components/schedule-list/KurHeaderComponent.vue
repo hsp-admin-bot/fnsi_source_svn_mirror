@@ -13,7 +13,9 @@
 </template>
 
 <script>
-import moment from "moment";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
+import dayjs from "@/compat/date/dayjs";
 import {
   BACKGROUND_HEADER_PAST_DAY, } from "@/components/schedule-list/Definitions.js";
 export default {
@@ -99,11 +101,11 @@ export default {
       }
     }
   },
-  created() {},
+
   mounted() {
-    this.thisElem = document.getElementById(this.divId);
+    this.thisElem = this.$el?.id === this.divId ? this.$el : getScopedElementById(this.divId, this.$el || this);
   },
-  updated() {},
+
   methods: {
     /**
      *   表示データ組み立て処理
@@ -128,10 +130,10 @@ export default {
     buildDispStyle(treatDate) {
       this.thisElem.style.background = "";
       // 現在日付を取得する
-      const currentDate = moment(new Date()).format("YYYYMMDD");
+      const currentDate = dayjs(new Date()).format("YYYYMMDD");
 
       // 過去日の設定
-      if (moment(treatDate).format("YYYYMMDD") < currentDate) {
+      if (dayjs(treatDate).format("YYYYMMDD") < currentDate) {
         this.thisElem.style.background = BACKGROUND_HEADER_PAST_DAY;
       }
     }

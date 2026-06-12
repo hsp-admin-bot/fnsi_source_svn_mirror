@@ -12,9 +12,9 @@ import java.io.File;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -35,7 +35,7 @@ import jp.co.nikkiso.ntss.core.entity.MntIfEdgeManage.InnerEdgeResult;
 @Sql("classpath:resource.script/IfEdgeResourceTest/IfEdgeResourceTest.db5.before.sql")
 public class IfEdgeResourceTest extends AbstractResourceTest {
 
-  @MockBean
+  @MockitoBean
   IfEdgeServiceImpl service;
 
   @Test

@@ -3,13 +3,15 @@
  */
 <template>
   <modal-base @onClose="closeChecklistEditModal">
-    <div slot="header">
+    <template #header>
       <component :is="header"></component>
-    </div>
-    <div slot="body">
+    </template>
+    <template #body>
+      <div>
       <div>
         <!-- リスト名 -->
         <table class="grid-list custom-input-grid">
+      <tbody>
           <tr v-bind:class="{ 'changestyle': getSelectChecklistSetting.chgflg_listname }">
             <!--  mod redmine 5004 入力IFの位置不正 孔 start-->
             <!--  <td class="text-font-style">-->
@@ -32,8 +34,10 @@
               <!-- mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリストマスタ 張玲 2024/01/04 end-->
             </td>
           </tr>
-        </table>
+        
+      </tbody></table>
         <table class="grid-list">
+      <tbody>
           <tr>
             <!-- 工程 -->
             <!--  mod redmine 5004 入力IFの位置不正 孔 start-->
@@ -60,14 +64,15 @@
                 </option>
               </v-ons-select>
             </td>
-            <div class='header-btn-area right custom-toolbar-btn'>
+            <td class='header-btn-area right custom-toolbar-btn'>
               <!-- del チェックリスト設定画面の並び順変更を修正する。孔s start -->
               <!-- <v-ons-button modifier="outline" class="toolbar-btn" v-show="!isSortMode" @click="toRankEditBtnClick()">並び順表示</v-ons-button>
               <v-ons-button modifier="outline" class="toolbar-btn" v-show="isSortMode" @click="sortBtnClick()">反映</v-ons-button> -->
               <!-- del チェックリスト設定画面の並び順変更を修正する。孔s end -->
-            </div>
+            </td>
           </tr>
-        </table>
+        
+      </tbody></table>
 
         <div>
           <table class="grid-list">
@@ -131,10 +136,14 @@
                       {{ option.name }}
                     </option>
                   </v-ons-select> -->
-                  <v-ons-select v-model.number=category.func_class
-                    @change="changeKind(idx)"
+                  <v-ons-select
+                    :model-value="getFuncClassSelectValue(category.func_class)"
+                    @update:model-value="value => updateFuncClass(idx, value)"
                     :class="handleJudgeEdited(category.func_class, 'func_class', idx)">
-                    <option v-for='option in dataKindList' :key=option.length :value=option.func_class>
+                    <option
+                      v-for="option in dataKindList"
+                      :key="option.name"
+                      :value="getFuncClassSelectValue(option.func_class)">
                       {{ option.name }}
                     </option>
                   </v-ons-select>
@@ -210,11 +219,11 @@
                       :class="handleJudgeEdited(category.class_cd, 'class_cd', idx)" @change="changeListName()">
                    <!-- mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリストマスタ 張玲 2024/01/04 end-->
 
-                    <template v-for='option in getMstMedicineClassList' >
-                      <option  :key=option.length  v-if='option.list_name.indexOf("【削除済み】") !=-1' style="display:none" :value='option.class_cd'>
+                    <template v-for='option in getMstMedicineClassList' :key='option.class_cd'>
+                      <option v-if='option.list_name.indexOf("【削除済み】") !=-1' style="display:none" :value='option.class_cd'>
                         {{ option.list_name }}
                       </option>
-                      <option  :key=option.length  v-else :value='option.class_cd'>
+                      <option v-else :value='option.class_cd'>
                         {{ option.list_name }}
                       </option>
                     </template>
@@ -228,8 +237,10 @@
         </div>
       </div>
     </div>
+    </template>
 
-    <div slot="footer" class="flex-container footer">
+    <template #footer>
+      <div class="flex-container footer">
       <div class="denial-btn-area" style="background:none">
         <button class="btn2-cancel button denial-btn" @click="closeChecklistEditModal">キャンセル</button>
       </div>
@@ -239,13 +250,14 @@
         <button class="common-style-select-button button registration-btn" :disabled="registeredFlag" @click="saveChecklistEditModalStore">確定</button>
         <!-- mod チェックリスト設定画面の並び順変更を修正する。孔s end -->
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
 import CommonTextArea from "@/components/common/CommonTextArea";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
@@ -253,7 +265,8 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリストマスタ 張玲 2024/01/10 start
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリストマスタ 張玲 2024/01/10 end
 export default {
   name: "ChecklistEditModal",
@@ -307,6 +320,7 @@ export default {
       }
     }
   },
+
   created() {},
   //mod マスタ詳細画面がありません破棄メッセージ 张博 start
   watch:{
@@ -332,10 +346,13 @@ export default {
     //mod マスタ詳細画面がありません破棄メッセージ 张博 start
     // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリストマスタ 張玲 2024/01/10 start
     // this.getSelectChecklistSetting_init = JSON.stringify(this.getSelectChecklistSetting);
-    this.getSelectChecklistSetting_init = cloneDeep(this.getSelectChecklistSetting)
+    const normalizedSetting = cloneDeep(this.getSelectChecklistSetting);
+    this.normalizeFunclistFuncClass(normalizedSetting);
+    this.setSelectEditSetting(normalizedSetting);
+    this.getSelectChecklistSetting_init = cloneDeep(normalizedSetting);
     // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリストマスタ 張玲 2024/01/10 end
     //mod マスタ詳細画面がありません破棄メッセージ 张博 end
-    this.getSelectChecklistSetting_clone = JSON.parse(JSON.stringify(this.getSelectChecklistSetting))
+    this.getSelectChecklistSetting_clone = JSON.parse(JSON.stringify(normalizedSetting));
   },
   methods: {
     ...mapActions("multi-modal", ["hideModal"]),
@@ -385,21 +402,58 @@ export default {
       // this.isSortMode = false;
       // mod チェックリスト設定画面の並び順変更を修正する 孔s end
     },
+    normalizeFuncClassValue(funcClass) {
+      if (funcClass === null || funcClass === undefined || funcClass === "" || funcClass === "null") {
+        return null;
+      }
+      const parsed = Number(funcClass);
+      return Number.isNaN(parsed) ? null : parsed;
+    },
+    normalizeFunclistFuncClass(setting) {
+      if (!setting?.funclist) {
+        return;
+      }
+      setting.funclist.forEach(item => {
+        item.func_class = this.normalizeFuncClassValue(item.func_class);
+      });
+    },
+    getFuncClassSelectValue(funcClass) {
+      const normalized = this.normalizeFuncClassValue(funcClass);
+      if (normalized === null) {
+        return "null";
+      }
+      return String(normalized);
+    },
+    parseFuncClassSelectValue(value) {
+      return this.normalizeFuncClassValue(value);
+    },
+    updateFuncClass(idx, value) {
+      const setting = this.getSelectChecklistSetting;
+      setting.funclist[idx].func_class = this.parseFuncClassSelectValue(value);
+      this.setSelectEditSetting(setting);
+      this.changeKind(idx);
+    },
     // 種別変更イベント
     changeKind(idx) {
       // チェックリスト設定
       let setting = this.getSelectChecklistSetting;
+      setting.funclist[idx].func_class = this.normalizeFuncClassValue(
+        setting.funclist[idx].func_class,
+      );
 
       if (setting.funclist[idx].func_class === 1) {
         // 治療条件をセットした場合
-        setting.funclist[idx].class_cd = this.getCondList[0].class_cd;
+        const condList = this.getCondList;
+        setting.funclist[idx].class_cd = condList?.length ? condList[0].class_cd : null;
       } else if (setting.funclist[idx].func_class === 2) {
         // 医療材料をセットした場合
-        setting.funclist[idx].class_cd = this.getMstEquipClassList[0].class_cd;
+        const equipList = this.getMstEquipClassList;
+        setting.funclist[idx].class_cd = equipList?.length ? equipList[0].class_cd : null;
       //ADD チェックリストマスタ データ種別に「投与薬剤」を「医療材料」の下の選択肢に追加する 孔s start
       } else if (setting.funclist[idx].func_class === 3) {
         // 投与薬剤をセットした場合
-        setting.funclist[idx].class_cd = this.getMstMedicineClassList[0].class_cd;
+        const medicineList = this.getMstMedicineClassList;
+        setting.funclist[idx].class_cd = medicineList?.length ? medicineList[0].class_cd : null;
       //ADD チェックリストマスタ データ種別に「投与薬剤」を「医療材料」の下の選択肢に追加する 孔s end
       } else {
         // フリーワードまたは未登録をセットした場合
@@ -425,7 +479,7 @@ export default {
     },
     // 確定ボタン
     saveChecklistEditModalStore() {
-      // 内部 車いすマスタ　50以上文字文字チェックがない start
+      // 内部 車いすマスタ 50以上文字文字チェックがない start
       if (this.getSelectChecklistSetting.list_name && this.getSelectChecklistSetting.list_name.length > 50) {
           this.$ons.notification.alert({
             title: DIALOG_MESSAGES['00200101'].title,
@@ -433,7 +487,7 @@ export default {
           });
           return
         }
-        // 内部 車いすマスタ　50以上文字文字チェックがない end
+        // 内部 車いすマスタ 50以上文字文字チェックがない end
       // 編集内容を登録
       this.regEditData().then(res => {
         // 編集内容OK
@@ -441,7 +495,7 @@ export default {
           // モーダルを非表示に
           this.hideModal();
         } else {
-          for(let dom of document.getElementsByClassName("v-ons-input")){
+          for(let dom of getScopedElementsByClassName("v-ons-input", this.$el || this)){
             if(dom.value === ""){
               dom?.classList?.add("custom-input-invalid")
             }
@@ -560,10 +614,10 @@ export default {
   background-color: #ffff66;
 } */
 /* del チェックリスト設定画面の並び順変更を修正する。孔s end */
-/* ons-select /deep/ .select-input {
+/* ons-select :deep(.select-input){
   color: var(--ntss-base-color);
 }
-ons-select /deep/ .select-input option {
+ons-select :deep(.select-input option){
   color: #000;
 } */
 
@@ -576,7 +630,7 @@ ons-select /deep/ .select-input option {
 .ntss-list-body-tr:hover {
   background-color: var(--master-maintenance-kgrid-item-hover-background-color);
 }
-div >>> .textareaCheckList {
+div :deep(.textareaCheckList) {
   width: 100%;
   box-sizing: border-box;
   border-radius: 5px;
@@ -585,7 +639,7 @@ div >>> .textareaCheckList {
   height: 2em;
   border-radius: 5px;
 }
-div >>> .textareaCheckList:focus {
+div :deep(.textareaCheckList:focus) {
   border-top: 2px solid #9A9A9A;
   border-left: 2px solid #9A9A9A;
   border-bottom: 2px solid #EEEEEE;
@@ -593,11 +647,11 @@ div >>> .textareaCheckList:focus {
   box-sizing: border-box;
 }
 
-.custom-input-grid >>> .text-input {
+.custom-input-grid :deep(.text-input) {
   font-size: unset;
 }
 
-.custom-toolbar-btn >>> .toolbar-btn {
+.custom-toolbar-btn :deep(.toolbar-btn) {
   font-size: unset;
 }
 
@@ -605,7 +659,7 @@ div >>> .textareaCheckList:focus {
 	color: black;
 	background-color: rgba(255, 0, 0, 0.6);
 }
-::v-deep .custom-input-edited>input[type="number"], ::v-deep .custom-input-edited>select{
+:deep(.custom-input-edited>input[type="number"]), :deep(.custom-input-edited>select){
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;

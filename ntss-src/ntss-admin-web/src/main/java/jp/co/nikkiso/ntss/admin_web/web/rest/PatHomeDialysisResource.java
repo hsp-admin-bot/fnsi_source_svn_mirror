@@ -1,6 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -27,10 +28,12 @@ import jp.co.nikkiso.ntss.admin_web.response.patHomeDialysis.DialysisWeightRespo
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.patHomeDialysis.PatHomeDialysisService;
+import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.entity.PatHhdPattern;
 import jp.co.nikkiso.ntss.core.entity.custom.PatEventData;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 在宅透析患者向け用（pat-home-dialysis）系のリソースクラス
@@ -44,6 +47,9 @@ public class PatHomeDialysisResource {
    */
   @Autowired
   private PatHomeDialysisService patHomeDialysisService;
+
+  @Autowired
+  private OrdMainDao ordMainDao;
 
   @Autowired
 	LogService logService;
@@ -68,8 +74,17 @@ public class PatHomeDialysisResource {
    */
   @GetMapping("/getPatHhdPattern")
   public ResponseEntity<List<PatHhdPattern>> getPatHhdPatternByFacilityCd(
-      @RequestParam(value = "facility_cd", required = true) String facility_cd) throws URISyntaxException
+      @RequestParam(value = "facility_cd", required = true) String facility_cd,
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 end
+      ) throws URISyntaxException
   {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 start
+    if (!ntssUser.isNkkAdminUser() && !facility_cd.equals(ntssUser.getFacilityCd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 end
     List<PatHhdPattern> listRet = patHomeDialysisService.FindPatHhdPatternByFacilityCd(facility_cd);
     return new ResponseEntity<>(listRet, HttpStatus.OK);
   }
@@ -241,9 +256,20 @@ public class PatHomeDialysisResource {
       logService.log(LogLevel.DEBUG, eventLogMessage,FUNCTION_CODE.FUNC_PAT_HOME_DIALYSIS,SERVICE_NAME.FNSI, null);
 
     try {
+      Long ordNo = Long.parseLong(req.get("ordNo").toString());
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
+      if (ordMainDao.countByOrdNoAndFacilityCd(ntssUser.getFacilityCd(), Arrays.asList(ordNo)) == 0) {
+        if(InvestigateLogUtils.enable_log_for_11205) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        } else {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
       // レスポンス生成
       boolean response = patHomeDialysisService.updateWeightBefore(
-          Long.parseLong(req.get("ordNo").toString()),
+          ordNo,
           req.get("weightBefore").toString()
           );
       if(response){
@@ -283,9 +309,20 @@ public class PatHomeDialysisResource {
       logService.log(LogLevel.DEBUG, eventLogMessage,FUNCTION_CODE.FUNC_PAT_HOME_DIALYSIS,SERVICE_NAME.FNSI, null);
 
     try {
+      Long ordNo = Long.parseLong(req.get("ordNo").toString());
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
+      if (ordMainDao.countByOrdNoAndFacilityCd(ntssUser.getFacilityCd(), Arrays.asList(ordNo)) == 0) {
+        if(InvestigateLogUtils.enable_log_for_11205) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        } else {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
       // レスポンス生成
       boolean response = patHomeDialysisService.updateWeightAfter(
-          Long.parseLong(req.get("ordNo").toString()),
+          ordNo,
           req.get("weightAfter").toString()
           );
       if(response){
@@ -314,8 +351,21 @@ public class PatHomeDialysisResource {
    */
   @PutMapping("/insert")
   public ResponseEntity<?> savePatHhdPattern(
-      @RequestBody Map<String, String> request
+      @RequestBody Map<String, String> request,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
       ) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      String facilityCd = request.get("facilityCd");
+      if (facilityCd != null && !facilityCd.isEmpty() && !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "patId=" + request.get("patId") + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
     try {
       int response = patHomeDialysisService.insert(request);
       if (response > 0) {

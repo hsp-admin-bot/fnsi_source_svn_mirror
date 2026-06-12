@@ -6,8 +6,8 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
-import moment from "moment";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
 import { ApiHelper } from "@/apis/AxiosHelper";
 // このコンポーネントへ表示する情報を渡す
 import baseContent from "@/components/pat-viewer/contents/base/BaseContent";
@@ -103,7 +103,7 @@ export default {
     });
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -114,8 +114,8 @@ export default {
       "finishLoadingScreen",
     ]),
     async convertDrugInfo() {
-      let startDate = moment(this.dateList[0],"YYYYMMDD").startOf("day");
-      let endDate = moment(this.dateList[this.dateList.length - 1],"YYYYMMDD").endOf("day");
+      let startDate = dayjs(this.dateList[0],"YYYYMMDD").startOf("day");
+      let endDate = dayjs(this.dateList[this.dateList.length - 1],"YYYYMMDD").endOf("day");
 
       switch (this.selectedPeriod) {
         case "4":
@@ -312,10 +312,10 @@ export default {
 </script>
 
 <style scoped lang="scss">
-/* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 
-div /deep/ .list-content-col {
+/* 患者経過総合ビューア共通スタイル定義 */
+div :deep(.list-content-col) {
   width: 0px;
 }
 </style>

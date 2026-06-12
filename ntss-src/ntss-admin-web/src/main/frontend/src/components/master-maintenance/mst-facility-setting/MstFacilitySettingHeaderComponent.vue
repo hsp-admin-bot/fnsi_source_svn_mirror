@@ -14,7 +14,7 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target=false
@@ -46,8 +46,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 
@@ -182,7 +182,7 @@ export default {
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("処理中・・・");
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("setSortMode", this.setSortMode);
   },
   mounted() {

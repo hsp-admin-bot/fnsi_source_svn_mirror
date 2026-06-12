@@ -7,7 +7,7 @@
         <!-- mod FNSI-改修内容 画面ボタンの位置調整 穆 start -->
         <!-- <v-ons-col> -->
         <v-ons-col class="condition-search-col">
-        <div class="condition btn-group">
+        <div class="condition btn-group report-menu-header-buttons">
           <!-- mod #699,700,751 陳 start -->
 <!--          <v-ons-button-->
 <!--            class="common-style-select-button btn-width-fix"-->
@@ -36,7 +36,7 @@
             @click="showExportPopover($event, 'left', true)"
           >ファイル保存</v-ons-button> -->
           <v-ons-button
-            class="common-style-select-button btn-width-fix coment-higth btn3-normal"
+            class="common-style-select-button btn-width-fix coment-higth btn3-normal button"
             :class="isShowReport ? 'active':'disabled'"
             @click="showExportPopover($event, 'left', true)"
           >ファイル保存</v-ons-button>
@@ -56,12 +56,12 @@
             @click="showPopover($event, 'left', true)"
           >並び替え</v-ons-button>-->
           <v-ons-button
-            class="common-style-select-button btn-width-fix coment-higth btn3-normal"
+            class="common-style-select-button btn-width-fix coment-higth btn3-normal button"
             :class="this.selectedReportClassID == 8 ? 'active':'disabled'"
             @click="generateValueTable($event, 'left', true)"
           >ラベル開始位置</v-ons-button>
           <v-ons-button
-            class="common-style-select-button btn-width-fix coment-higth btn3-normal"
+            class="common-style-select-button btn-width-fix coment-higth btn3-normal button"
             :class="(this.selectedReportClassID && this.extractCondition[this.selectedReportClassID]['isSort']) ? 'active': 'disabled'"
             @click="showPopover($event, 'left', true)"
           >並び替え</v-ons-button>
@@ -118,12 +118,12 @@
             @click="showPrintPopover($event, 'down', true)"
           >印刷</v-ons-button> -->
           <v-ons-button
-            class="common-style-select-button btn-width-fix coment-higth btn3-normal"
+            class="common-style-select-button btn-width-fix coment-higth btn3-normal button"
             :class="isShowReport ? 'active':'disabled'"
             @click="previewFile"
           >プレビュー</v-ons-button>
           <v-ons-button
-            class="common-style-select-button btn-width-fix coment-higth btn3-normal"
+            class="common-style-select-button btn-width-fix coment-higth btn3-normal button"
             :class="isShowReport ? 'active':'disabled'"
             @click="showPrintPopover($event, 'down', true)"
           >印刷</v-ons-button>
@@ -140,12 +140,13 @@
 </template>
 
 <script>
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 // add FNSI-改修内容 画面ボタンの位置調整 穆 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import {
   EXTRACTION_CONDITION
 } from "@/constants/reportMenu.js";
-import {mapGetters} from "vuex";
+import {mapGetters} from "@/compat/vue/vuex";
 // add FNSI-改修内容 画面ボタンの位置調整 穆 end
 export default {
   // mod FNSI-改修内容 画面ボタンの位置調整 穆 start
@@ -161,33 +162,22 @@ export default {
         // add #11293 水質検査帳票の課題対応 limingzhe start
         selectedReportTypeId:null,
         // add #11293 水質検査帳票の課題対応 limingzhe end
-        extractCondition: EXTRACTION_CONDITION
+        extractCondition: EXTRACTION_CONDITION,
+        eventBusRegisterTimer: null
       };
     },
   created() {
-    setTimeout(() => {
-      EventBus.$on("selectedPatients", (param) =>{
-        this.selectedPatients = param.paramSelected;
-        this.selectedReportClassID = param.paramReportClassID;
-      });
-      // add #699,700,751 陳 start
-      EventBus.$on("selectedMachines", (param) =>{
-        this.selectedMachines = param.paramSelected;
-        // add #11293 水質検査帳票の課題対応 limingzhe start
-        this.selectedReportTypeId = param.selectedReportTypeId;
-        // add #11293 水質検査帳票の課題対応 limingzhe end
-      });
-      // add #699,700,751 陳 end
-    }, 200);
+    this.eventBusRegisterTimer = setTimeout(this.registerEventBusHandlers, 200);
     //add 4391   吉 start
     this.$nextTick(() => {
       this.gridSetting();
     });
     //add 4391   吉 end
   },
-  beforeDestroy() {
-    EventBus.$off("selectedPatients");
-    EventBus.$off("selectedMachines");
+  beforeUnmount() {
+    clearTimeout(this.eventBusRegisterTimer);
+    EventBus.$off("selectedPatients", this.onSelectedPatients);
+    EventBus.$off("selectedMachines", this.onSelectedMachines);
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -234,14 +224,32 @@ export default {
   },
   //add 4391   吉 end
   methods: {
+    onSelectedPatients(param) {
+      this.selectedPatients = param.paramSelected;
+      this.selectedReportClassID = param.paramReportClassID;
+    },
+    onSelectedMachines(param) {
+      this.selectedMachines = param.paramSelected;
+      // add #11293 水質検査帳票の課題対応 limingzhe start
+      this.selectedReportTypeId = param.selectedReportTypeId;
+      // add #11293 水質検査帳票の課題対応 limingzhe end
+    },
+    registerEventBusHandlers() {
+      EventBus.$off("selectedPatients", this.onSelectedPatients);
+      EventBus.$off("selectedMachines", this.onSelectedMachines);
+      EventBus.$on("selectedPatients", this.onSelectedPatients);
+      // add #699,700,751 陳 start
+      EventBus.$on("selectedMachines", this.onSelectedMachines);
+      // add #699,700,751 陳 end
+    },
     //add 4391   吉 start
     gridSetting(){
-      const heigths = document.getElementsByClassName("condition-search-col")[0].clientHeight;
-      document.getElementsByClassName("coment-higth")[0].style.height = heigths -20 + "px";
-      document.getElementsByClassName("coment-higth")[1].style.height = heigths -20 + "px";
-      document.getElementsByClassName("coment-higth")[2].style.height = heigths -20 + "px";
-      document.getElementsByClassName("coment-higth")[3].style.height = heigths -20 + "px";
-      document.getElementsByClassName("coment-higth")[4].style.height = heigths -20 + "px";
+      const heigths = Number(getScopedElementsByClassName("condition-search-col", this.$el || null)[0]?.clientHeight || 0);
+      getScopedElementsByClassName("coment-higth", this.$el || null)[0].style.height = heigths -20 + "px";
+      getScopedElementsByClassName("coment-higth", this.$el || null)[1].style.height = heigths -20 + "px";
+      getScopedElementsByClassName("coment-higth", this.$el || null)[2].style.height = heigths -20 + "px";
+      getScopedElementsByClassName("coment-higth", this.$el || null)[3].style.height = heigths -20 + "px";
+      getScopedElementsByClassName("coment-higth", this.$el || null)[4].style.height = heigths -20 + "px";
     },
     //add 4391   吉 end
     showExportPopover(event, direction, coverTarget = false) {
@@ -349,5 +357,39 @@ export default {
 //add 5935 スマホサイズで並び替えの表示が切れる場合がある 王永吉 end
 }
 // add FNSI-改修内容5765修正 関　end
+</style>
+<style lang="scss">
+.report-menu-header-buttons {
+  .button {
+    margin: 5px 0 0 5px;
+    cursor: pointer;
+  }
+
+  .common-style-select-button {
+    height: 30px;
+  }
+
+  .common-style-select-button.btn-width-fix {
+    width: 17% !important;
+    font-size: 1.1em !important;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .report-menu-header-buttons {
+    .common-style-select-button.btn-width-fix {
+      width: 8em !important;
+    }
+
+    .coment-higth {
+      height: 21px !important;
+    }
+
+    .button--material {
+      min-height: 0px;
+      line-height: 32px !important;
+    }
+  }
+}
 </style>
 <!-- add FNSI-改修内容 画面ボタンの位置調整 穆 end -->

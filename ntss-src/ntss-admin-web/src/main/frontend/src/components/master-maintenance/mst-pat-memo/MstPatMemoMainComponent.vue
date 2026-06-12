@@ -1,74 +1,29 @@
 /**
- * 患者メモマスタページ  MainContent
+ * 患者メモマスタページ(患者メモマスタ)  MainContent
  */
 <template>
   <div :class="['main-content-area', { 'no-scroll': isMobileDevice }, 'master-maintenance-page']">
-    <div class='ntss-list' :style="ntssListStyles" v-kendo-validator="kendoValidatorSetup">
-      <div v-if="isMobileDevice" id="grid-header" class="header-btn-area right" style="height: 30px;">
-        <v-ons-row style="width: 7em;">
-          <v-ons-col width="45%" vertical-align="center">
-            <label class="fab-font-color">編集</label>
-          </v-ons-col>
-          <v-ons-col width="55%" vertical-align="center">
-            <v-ons-switch modifier="outline" class="custom-switch" v-model="allowEdit" />
-          </v-ons-col>
-        </v-ons-row>
+    <div class="ntss-list" :style="ntssListStyles">
+      <div class="k-grid-toolbar k-header kendo-grid-toolbar-style" :style="heightStyles">
+        <div v-if="isMobileDevice" id="grid-header" class="header-btn-area right" style="height: 30px;">
+          <v-ons-row style="width: 7em;">
+            <v-ons-col width="45%" vertical-align="center">
+              <label class="fab-font-color">編集</label>
+            </v-ons-col>
+            <v-ons-col width="55%" vertical-align="center">
+              <v-ons-switch modifier="outline" v-model="allowEdit" />
+            </v-ons-col>
+          </v-ons-row>
+        </div>
+        <div
+          v-show="columns.length > 1"
+          id="grid-font-size"
+          ref="gridRoot"
+          :class="[fontSizeSet, 'content-style', 'ntss-kendo-grid-legacy', 'mst-pat-memo-direct-jq-grid']"
+        ></div>
       </div>
-      <kendo-grid-toolbar class="k-grid-toolbar kendo-grid-toolbar-style" :style="heightStyles">
-        <kendo-grid ref="grid" :class="fontSizeSet"
-            :data-source="masterRecords"
-            :editable="true"
-            :selectable="true"
-            :reorderable="false"
-            :height=kendoGridHeight
-            :scrollable="true"
-            :beforeEdit=onBeforeEdit
-            :edit=addInputAssist
-            :cellClose=editEnd
-            class="content-style"
-            @save="onSave"
-            @databound="onDataBoundKendoGrid">
-            <template v-for="(column, index) in columns" >
-              <kendo-grid-column v-if="column.field === 'name'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                @editor="nameEditor">
-              </kendo-grid-column>
-              <kendo-grid-column v-else-if="column.field === 'content'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                @editor="contentEditor">
-              </kendo-grid-column>
-              <kendo-grid-column v-else
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values">
-              </kendo-grid-column>
-            </template>
-        </kendo-grid>
-      </kendo-grid-toolbar>
       <div id="grid-footer">
-        <v-ons-row width="100%" v-show="!isSortMode" >
+        <v-ons-row width="100%" v-show="!isSortMode">
           <v-ons-col width="50%">
             <v-ons-button class="btn2-cancel button denial-btn" style="width: auto;" @click="cancel">キャンセル</v-ons-button>
           </v-ons-col>
@@ -77,29 +32,26 @@
           </v-ons-col>
         </v-ons-row>
       </div>
-    <master-csv
-      :popoverVisible="masterCsvVisible"
-      :popoverTarget="masterCsvTarget"
-      @popover-close="prehideCsvPopover"
-    />
-    <message-dialog
-      v-if="isDialogVisible"
-      :visible.sync="isDialogVisible"
-      :message-cd="messageCd"
-      type="5"
-      @confirm="setUpdateAllPatFlg"
-    />
+      <master-csv
+        :popoverVisible="masterCsvVisible"
+        :popoverTarget="masterCsvTarget"
+        @popover-close="prehideCsvPopover"
+      />
+      <message-dialog
+        v-if="isDialogVisible"
+        v-model:visible="isDialogVisible"
+        :message-cd="messageCd"
+        type="5"
+        @confirm="setUpdateAllPatFlg"
+      />
     </div>
   </div>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import NextTransitionMixin from "@/components/NextTransitionMixin";
-import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
-import { EventBus } from "@/eventBus.js";
-import { Validator } from "@progress/kendo-validator-vue-wrapper";
-import $ from "jquery";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+
 import MasterCsvComponent from "@/components/master-maintenance/MasterCsvComponent";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
@@ -109,19 +61,33 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { markRaw } from "@/compat/vue/runtime";
+import kendo from "@progress/kendo-ui";
+import $ from "jquery";
+import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 
 /**
  * TODO
  * more: モーダルで編集した項目が、一覧上で「編集済み（三角マーク）」をつけたい。
  */
+function installComponentJQuery() {
+  if (typeof window !== "undefined") {
+    window.$ = window.$ || $;
+    window.jQuery = window.jQuery || $;
+  }
+  if (typeof globalThis !== "undefined") {
+    globalThis.$ = globalThis.$ || $;
+    globalThis.jQuery = globalThis.jQuery || $;
+  }
+}
+
 export default {
-  mixins: [NextTransitionMixin, MasterMaintenanceMixin],
-  Validator,
-    components: {
+  components: {
     "master-csv": MasterCsvComponent,
     "message-dialog": messageDialog
   },
+  mixins: [MasterMaintenanceMixin],
   data() {
     return {
       recordList: [],
@@ -164,6 +130,9 @@ export default {
         top: 0,
         left: 0
       },
+      lastScrollTop: 0,
+      lastScrollLeft: 0,
+      preserveGridScrollAfterSave: false,
       //自画面の名称
       selfScreenName: "",
       masterCsvVisible: false,
@@ -178,6 +147,15 @@ export default {
       messageCd: null,
       lockedColumnsWidth: 0,
       allowEdit: true, // NOTE: true = 編集モード、 false = 閲覧モード
+      directGridWidget: null,
+      directGridMounted: false,
+      directGridDataSource: null,
+      directGridLayoutRafId: null,
+      directGridFilterRefreshRafId: null,
+      directGridScrollSyncRafId: null,
+      directGridRowVisualRafIds: markRaw(new Map()),
+      contentEditorResizeObserver: null,
+      kendoValidator: null
     };
   },
   computed: {
@@ -197,6 +175,14 @@ export default {
     },
     ntssListStyles() {
       return { display: this.columns.length == 1 ? "none" : "inherit" };
+    },
+    fontSizeSet() {
+      const names = ["small", "medium", "large", "x-large"];
+      return `font-size-set-${names[this.getFontSize] || "medium"}`;
+    },
+    masterConditionSignature() {
+      const condition = this.$store?.state?.["master-maintenance"]?.condition || this.condition || {};
+      return `${condition.recordName || ""}|${condition.includeDeleted ? 1 : 0}`;
     },
     ...mapGetters("master-maintenance", {
       getMasterRecordList: "getMasterRecordList",
@@ -238,8 +224,8 @@ export default {
 
         // 削除済み列が下に固まるのを防ぐためソート
         returnData.data.sort(function(a,b){
-          if( a.code < b.code ) return -1;
-          if( a.code > b.code ) return 1;
+          if( a.code < b.code) return -1;
+          if( a.code > b.code) return 1;
           return 0;
         });
       }
@@ -254,7 +240,7 @@ export default {
       return (
         this.getStateUserAccountInfo !== null &&
         data !== undefined &&
-        (this.isRecordModified || !this.kendoValidator.validate())
+        (this.isRecordModified || !this.validateDirectKendoGrid())
       );
     },
     isMobileDevice() {
@@ -263,30 +249,28 @@ export default {
   },
   watch: {
     windowHeight() {
-      this.calculateColumnsWidth();
-      this.calculateGridHeight();
-      this.calculateGridWidth();
+      this.scheduleDirectGridLayoutContract();
     },
     windowWidth() {
-      this.calculateColumnsWidth();
-      this.calculateGridHeight();
-      this.calculateGridWidth();
+      this.scheduleDirectGridLayoutContract();
     },
     isDispMenu() {
-      this.calculateColumnsWidth();
-      this.calculateGridHeight();
-      this.calculateGridWidth();
+      this.scheduleDirectGridLayoutContract();
     },
     getFontSize() {
-      this.calculateColumnsWidth();
-      this.calculateGridHeight();
-      this.calculateGridWidth();
+      this.scheduleDirectGridLayoutContract();
     },
-    columns:function(val){
-      this.$nextTick(function(){
-        if (val.length > 1)
-        this.setLoadingScreenVisible(false);
+    columns(val) {
+      this.$nextTick(() => {
+        if (val.length > 1) {
+          this.setLoadingScreenVisible(false);
+          this.initDirectGridIfReady();
+          this.scheduleDirectGridLayoutContract();
+        }
       });
+    },
+    masterConditionSignature() {
+      this.scheduleDirectGridFilterRefresh();
     }
   },
   methods: {
@@ -310,6 +294,592 @@ export default {
       setLoadingScreenMessage: "setLoadingScreenMessage",
       resetLoadingScreenVisibleCount:  "resetLoadingScreenVisibleCount"
     }),
+    getCurrentRouteName() {
+      return this.$router?.currentRoute?.value?.name || this.$router?.currentRoute?.name || this.$route?.name || "";
+    },
+    cancel() {
+      this.$router?.back?.();
+    },
+    // refresh() {
+    //   this.loadGridData();
+    // },
+    validateDirectKendoGrid() {
+      return true;
+    },
+    getColumnIndex(fieldName) {
+      return this.columns.findIndex(e => e.field === fieldName);
+    },
+    calculateColumnsWidth() {
+      const widthMap = [12, 14, 16, 18];
+      this.columnWidth = widthMap[Number(this.getFontSize || 1)] || 14;
+    },
+    calculateGridHeight() {
+      if (this.editingFlg) {
+        return;
+      }
+      const wh = Number(this.windowHeight) || window.innerHeight || 0;
+      const header = document.getElementsByClassName("header");
+      const headerHeight = header?.length ? header[header.length - 1].clientHeight : 0;
+      const footerMenu = document.getElementById("footer-menu");
+      const footerMenuHeight = (this.isDispMenu === 1 && footerMenu ? footerMenu.clientHeight : 0) + 5;
+      const mobileHeader = this.isMobileDevice ? 32 : 0;
+      this.kendoGridToolbarHeight = Math.max(100, wh - headerHeight - footerMenuHeight);
+      const gridFooter = document.getElementById("grid-footer");
+      const gridHeader = document.getElementById("grid-header");
+      this.kendoGridHeight = Math.max(160, this.kendoGridToolbarHeight - ((gridFooter?.clientHeight || 0) + (gridHeader?.clientHeight || mobileHeader)));
+    },
+    calculateGridWidth() {
+      if (this.editingFlg || this.isMasterGridEditInteractionActive()) {
+        return;
+      }
+      this.resizeDirectGrid();
+    },
+    disconnectContentEditorResizeObserver() {
+      if (!this.contentEditorResizeObserver) {
+        return;
+      }
+      try {
+        this.contentEditorResizeObserver.disconnect();
+      } catch (_error) {
+        // noop
+      }
+      this.contentEditorResizeObserver = null;
+    },
+    getGridRootEl() {
+      return this.$refs.gridRoot || null;
+    },
+    getDirectGridScrollContent() {
+      return (
+        this.getGridRootEl()?.querySelector?.(".k-grid-content:not(.k-grid-content-locked)")
+        || this.getGridRootEl()?.querySelector?.(".k-grid-content")
+        || null
+      );
+    },
+    getDirectGridLockedScrollContent() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-content-locked") || null;
+    },
+    getGridWidget() {
+      return this.directGridWidget || null;
+    },
+    getGridContentEl() {
+      return this.getDirectGridScrollContent();
+    },
+    getGridLockedContentEl() {
+      return this.getDirectGridLockedScrollContent();
+    },
+    getGridScrollHostEl() {
+      return this.getDirectGridScrollContent();
+    },
+    getGridScrollPosition() {
+      const content = this.getDirectGridScrollContent();
+      return { top: content?.scrollTop || 0, left: content?.scrollLeft || 0 };
+    },
+    setGridScrollPosition(position = {}) {
+      const content = this.getDirectGridScrollContent();
+      if (!content) {
+        return;
+      }
+      const top = position.top ?? 0;
+      const left = position.left ?? 0;
+      content.scrollTop = top;
+      content.scrollLeft = left;
+      this.scrollPosition.top = top;
+      this.scrollPosition.left = left;
+      this.lastScrollTop = top;
+      this.lastScrollLeft = left;
+      this.syncDirectGridLockedScrollPosition(top);
+    },
+    storeDirectGridScrollPosition() {
+      const position = this.getGridScrollPosition();
+      this.scrollPosition.top = position.top;
+      this.scrollPosition.left = position.left;
+      this.lastScrollTop = position.top;
+      this.lastScrollLeft = position.left;
+    },
+    restoreDirectGridScrollPosition() {
+      const top = this.scrollPosition.top ?? this.lastScrollTop ?? 0;
+      const left = this.scrollPosition.left ?? this.lastScrollLeft ?? 0;
+      this.setGridScrollPosition({ top, left });
+    },
+    scheduleDirectGridPostColumnScrollSync() {
+      if (this.directGridScrollSyncRafId != null) {
+        cancelAnimationFrame(this.directGridScrollSyncRafId);
+      }
+      this.directGridScrollSyncRafId = requestAnimationFrame(() => {
+        this.restoreDirectGridScrollPosition();
+        this.directGridScrollSyncRafId = requestAnimationFrame(() => {
+          this.directGridScrollSyncRafId = null;
+          this.restoreDirectGridScrollPosition();
+        });
+      });
+    },
+    setLastScroll() {
+      this.storeDirectGridScrollPosition();
+    },
+    getDirectGridDataSourceOption() {
+      const source = this.masterRecords || {};
+      return {
+        ...source,
+        data: Array.isArray(source.data) ? source.data : []
+      };
+    },
+    createDirectGridDataSource() {
+      this.directGridDataSource = markRaw(new kendo.data.DataSource(this.getDirectGridDataSourceOption()));
+      return this.directGridDataSource;
+    },
+    buildDirectGridColumns() {
+      return this.columns.map(column => {
+        const gridColumn = { ...column };
+        if (column.field === "name") {
+          gridColumn.editor = (container, options) => this.nameEditor(container, options);
+        }
+        if (column.field === "content" || column.dataType === "textarea") {
+          gridColumn.editor = (container, options) => this.contentEditor(container, options);
+        }
+        if (column.colorTemplate) {
+          gridColumn.template = column.colorTemplate;
+        }
+        return gridColumn;
+      });
+    },
+    initDirectGridIfReady() {
+      const root = this.getGridRootEl();
+      if (!this.directGridMounted || !root || this.columns.length <= 1) {
+        return;
+      }
+      if (this.directGridWidget) {
+        this.applyDirectGridColumnsContract();
+        this.scheduleDirectGridFilterRefresh();
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+      installComponentJQuery();
+      $(root).empty();
+      $(root).kendoGrid({
+        dataSource: this.createDirectGridDataSource(),
+        editable: true,
+        selectable: true,
+        reorderable: false,
+        height: this.kendoGridHeight,
+        scrollable: true,
+        beforeEdit: event => this.onBeforeEdit(event),
+        edit: event => this.addInputAssist?.(event),
+        cellClose: event => this.editEnd(event),
+        save: event => this.onDirectGridSave(event),
+        dataBound: event => this.onDirectGridDataBound(event),
+        columns: this.buildDirectGridColumns()
+      });
+      this.directGridWidget = markRaw($(root).data("kendoGrid"));
+      this.applyDirectGridStyleContract();
+      this.scheduleDirectGridLayoutContract();
+    },
+    destroyDirectGrid() {
+      if (this.directGridWidget) {
+        try {
+          this.directGridWidget.destroy();
+        } catch (_error) {
+          // noop
+        }
+      }
+      const root = this.getGridRootEl();
+      if (root) {
+        $(root).empty();
+      }
+      this.directGridWidget = null;
+    },
+    applyDirectGridColumnsContract() {
+      const grid = this.directGridWidget;
+      if (!grid) {
+        return;
+      }
+      const current = (grid.columns || []).map(column => `${column.field}:${column.hidden ? 1 : 0}`).join("|");
+      const next = (this.columns || []).map(column => `${column.field}:${column.hidden ? 1 : 0}`).join("|");
+      if (current !== next) {
+        grid.setOptions({ columns: this.buildDirectGridColumns() });
+      }
+    },
+    scheduleDirectGridFilterRefresh() {
+      if (!this.directGridWidget?.dataSource) {
+        return;
+      }
+      if (this.directGridFilterRefreshRafId != null) {
+        cancelAnimationFrame(this.directGridFilterRefreshRafId);
+      }
+      this.directGridFilterRefreshRafId = requestAnimationFrame(() => {
+        this.directGridFilterRefreshRafId = null;
+        this.refreshDirectGridDataFromMasterRecords(true);
+      });
+    },
+    refreshDirectGridDataFromMasterRecords(resetScroll = false) {
+      const grid = this.directGridWidget;
+      if (!grid?.dataSource) {
+        return;
+      }
+      const preservedScroll = !resetScroll ? {
+        top: this.scrollPosition.top ?? this.lastScrollTop ?? 0,
+        left: this.scrollPosition.left ?? this.lastScrollLeft ?? 0
+      } : null;
+      if (!resetScroll && !this.preserveGridScrollAfterSave) {
+        this.storeDirectGridScrollPosition();
+      }
+      grid.dataSource.data(this.getDirectGridDataSourceOption().data || []);
+      if (resetScroll) {
+        this.setGridScrollPosition({ top: 0, left: 0 });
+        this.preserveGridScrollAfterSave = false;
+      }
+      this.$nextTick(() => {
+        this.applyDirectGridStyleContract();
+        this.editBackgroundColor();
+        if (!resetScroll) {
+          const scroll = preservedScroll || {
+            top: this.scrollPosition.top ?? this.lastScrollTop ?? 0,
+            left: this.scrollPosition.left ?? this.lastScrollLeft ?? 0
+          };
+          this.setGridScrollPosition(scroll);
+          this.scheduleDirectGridPostColumnScrollSync();
+        }
+      });
+    },
+    gridDataRefresh() {
+      this.refreshDirectGridDataFromMasterRecords();
+    },
+    resizeDirectGrid() {
+      if (this.editingFlg || this.isMasterGridEditInteractionActive()) {
+        return;
+      }
+      const grid = this.directGridWidget;
+      if (!grid) {
+        return;
+      }
+      try {
+        grid.setOptions({ height: this.kendoGridHeight });
+        grid.resize(true);
+        this.applyDirectGridStyleContract();
+      } catch (_error) {
+        // noop
+      }
+    },
+    getDirectGridVisibleLockedWidthPx() {
+      const root = this.getGridRootEl();
+      const fontSize = parseFloat(getComputedStyle(root || document.body).fontSize || "16") || 16;
+      return (this.columns || []).reduce((sum, column) => {
+        if (!column.locked || column.hidden) {
+          return sum;
+        }
+        const width = `${column.width || ""}`.trim();
+        if (width.endsWith("em")) {
+          return sum + parseFloat(width) * fontSize;
+        }
+        if (width.endsWith("px")) {
+          return sum + parseFloat(width);
+        }
+        const numeric = parseFloat(width);
+        return sum + (Number.isFinite(numeric) ? numeric : 0);
+      }, 0);
+    },
+    applyDirectGridLockedWidthContract() {
+      const root = this.getGridRootEl();
+      const width = this.getDirectGridVisibleLockedWidthPx();
+      if (!root || !width) {
+        return;
+      }
+      const px = `${Math.ceil(width)}px`;
+      root.querySelectorAll(".k-grid-header-locked,.k-grid-content-locked,.k-grid-header-locked table,.k-grid-content-locked table").forEach(element => {
+        element.style.width = px;
+        element.style.minWidth = px;
+      });
+    },
+    applyDirectGridLockedHeightContract() {
+      const content = this.getDirectGridScrollContent();
+      const lockedContent = this.getDirectGridLockedScrollContent();
+      if (!content || !lockedContent) {
+        return;
+      }
+      const height = content.clientHeight;
+      if (height > 0) {
+        lockedContent.style.height = `${height}px`;
+        lockedContent.style.maxHeight = `${height}px`;
+      }
+    },
+    applyDirectGridStyleContract() {
+      const root = this.getGridRootEl();
+      if (!root) {
+        return;
+      }
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-editable", "k-display-block");
+      root.querySelectorAll("th").forEach(th => th.classList.add("k-header"));
+      root.querySelectorAll(".k-grid-content tr,.k-grid-content-locked tr").forEach((tr, index) => {
+        tr.classList.add("k-master-row");
+        if (index % 2 === 1) {
+          tr.classList.add("k-alt");
+        }
+      });
+      root.querySelectorAll("td").forEach(td => td.classList.add("k-td", "k-table-td"));
+      this.applyDirectGridLockedWidthContract();
+      this.applyDirectGridLockedHeightContract();
+      this.applyDirectGridLockedDividerContract();
+      this.applyDirectGridBackgroundContract();
+      this.syncDirectGridLockedScrollPosition();
+    },
+    applyDirectGridBackgroundContract() {
+      const root = this.getGridRootEl();
+      if (!root) {
+        return;
+      }
+      const computed = getComputedStyle(root);
+      const bodyBackgroundColor =
+        computed.getPropertyValue("--main-background-color").trim() || "#fafafa";
+      root.style.backgroundColor = bodyBackgroundColor;
+      [
+        ".k-grid-content-locked",
+        ".k-grid-content:not(.k-grid-content-locked)"
+      ].forEach(selector => {
+        root.querySelectorAll(selector).forEach(element => {
+          element.style.backgroundColor = bodyBackgroundColor;
+        });
+      });
+      root.querySelectorAll(".k-grid-content .k-selectable, .k-grid-content-locked .k-selectable").forEach(element => {
+        element.style.backgroundColor = bodyBackgroundColor;
+      });
+      const sampleHeaderCell = root.querySelector(".k-grid-header th, .k-grid-header .k-table-th");
+      const headerCellStyle = sampleHeaderCell ? getComputedStyle(sampleHeaderCell) : null;
+      const headerBackgroundColor =
+        headerCellStyle?.backgroundColor
+        || computed.getPropertyValue("--master-maintenance-kgrid-header-background-color").trim()
+        || "#333333";
+      const headerBackgroundImage =
+        headerCellStyle?.backgroundImage && headerCellStyle.backgroundImage !== "none"
+          ? headerCellStyle.backgroundImage
+          : "linear-gradient(rgba(255, 255, 255, 0.3) 0%, transparent 50%, transparent 50%, rgba(0, 0, 0, 0.1) 100%)";
+      [
+        ".k-grid-header",
+        ".k-grid-header-wrap",
+        ".k-grid-header-locked"
+      ].forEach(selector => {
+        root.querySelectorAll(selector).forEach(element => {
+          element.style.backgroundColor = headerBackgroundColor;
+          element.style.backgroundImage = headerBackgroundImage;
+        });
+      });
+    },
+    applyDirectGridLockedDividerContract() {
+      const root = this.getGridRootEl();
+      if (!root) {
+        return;
+      }
+      const computed = getComputedStyle(root);
+      const bodyDividerColor =
+        computed.getPropertyValue("--master-maintenance-kgrid-border-color").trim() || "#dee2e6";
+      const headerDividerColor =
+        computed.getPropertyValue("--ntss-list-border-color").trim() || "#dee2e6";
+
+      const mountDivider = (container, className, color) => {
+        if (!container) {
+          return;
+        }
+        container.style.position = "relative";
+        container.style.borderRight = "none";
+        container.style.boxShadow = "none";
+        let divider = container.querySelector(`:scope > .${className}`);
+        if (!divider) {
+          divider = document.createElement("div");
+          divider.className = className;
+          container.appendChild(divider);
+        }
+        divider.style.position = "absolute";
+        divider.style.top = "0";
+        divider.style.right = "0";
+        divider.style.width = "1px";
+        divider.style.height = "100%";
+        divider.style.background = color;
+        divider.style.pointerEvents = "none";
+        divider.style.zIndex = "2";
+      };
+
+      mountDivider(root.querySelector(".k-grid-header-locked"), "mst-pat-memo-locked-divider-header", headerDividerColor);
+      mountDivider(root.querySelector(".k-grid-content-locked"), "mst-pat-memo-locked-divider-body", bodyDividerColor);
+
+      const scrollContent = this.getDirectGridScrollContent();
+      if (scrollContent) {
+        scrollContent.style.boxShadow = "none";
+        const selectable = scrollContent.querySelector(":scope > .k-selectable");
+        if (selectable) {
+          selectable.style.boxShadow = "none";
+          selectable.style.borderRight = "none";
+        }
+      }
+
+      root.querySelectorAll(
+        ".k-grid-content-locked tbody td:last-child, .k-grid-content-locked tbody .k-table-td:last-child"
+      ).forEach(cell => {
+        cell.style.borderRightWidth = "0";
+        cell.style.borderRightColor = "transparent";
+      });
+
+      root.querySelectorAll(
+        ".k-grid-content:not(.k-grid-content-locked) tbody td:first-child, .k-grid-content:not(.k-grid-content-locked) tbody .k-table-td:first-child"
+      ).forEach(cell => {
+        cell.style.borderLeftWidth = "0";
+        cell.style.borderLeftColor = "transparent";
+      });
+
+      root.querySelectorAll(
+        ".k-grid-header-wrap th:first-child, .k-grid-header-wrap .k-table-th:first-child"
+      ).forEach(cell => {
+        cell.style.borderLeftWidth = "0";
+        cell.style.borderLeftColor = "transparent";
+      });
+    },
+    scheduleDirectGridLayoutContract() {
+      if (!this.preserveGridScrollAfterSave) {
+        this.storeDirectGridScrollPosition();
+      }
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+      }
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.calculateColumnsWidth();
+        if (!this.editingFlg && !this.isMasterGridEditInteractionActive()) {
+          this.calculateGridHeight();
+          this.resizeDirectGrid();
+        }
+        this.applyDirectGridStyleContract();
+        this.restoreDirectGridScrollPosition();
+        this.directGridLayoutRafId = requestAnimationFrame(() => {
+          this.directGridLayoutRafId = null;
+          if (!this.editingFlg && !this.isMasterGridEditInteractionActive()) {
+            this.resizeDirectGrid();
+          }
+          this.applyDirectGridStyleContract();
+          this.restoreDirectGridScrollPosition();
+          this.scheduleDirectGridPostColumnScrollSync();
+        });
+      });
+    },
+    syncDirectGridLockedScrollPosition(scrollTop = null) {
+      const lockedContent = this.getDirectGridLockedScrollContent();
+      const content = this.getDirectGridScrollContent();
+      if (!lockedContent) {
+        return;
+      }
+      lockedContent.scrollTop = scrollTop !== null && scrollTop !== undefined ? scrollTop : (content?.scrollTop || 0);
+    },
+    onDirectGridDataBound() {
+      this.applyDirectGridStyleContract();
+      this.editBackgroundColor();
+      this.restoreDirectGridScrollPosition();
+    },
+    onDirectGridSave(event) {
+      const model = event?.model;
+      if (!model) {
+        return;
+      }
+      Object.keys(event.values || {}).forEach(field => {
+        if (typeof model.set === "function") {
+          model.set(field, event.values[field]);
+        } else {
+          model[field] = event.values[field];
+        }
+      });
+      if (model.operation === 1) {
+        model.edited = true;
+      }
+      this.edit({ editRecord: model, isSortMode: this.isSortMode });
+      this.scheduleDirectGridCurrentRowVisual(model);
+    },
+    scheduleDirectGridCurrentRowVisual(record) {
+      const key = record?.uid || record?.code;
+      if (!key) {
+        return;
+      }
+      const oldId = this.directGridRowVisualRafIds.get(key);
+      if (oldId != null) {
+        cancelAnimationFrame(oldId);
+      }
+      const rafId = requestAnimationFrame(() => {
+        this.directGridRowVisualRafIds.delete(key);
+        this.applyDirectGridRowVisual(record);
+      });
+      this.directGridRowVisualRafIds.set(key, rafId);
+    },
+    applyDirectGridRowVisual(record) {
+      const root = this.getGridRootEl();
+      if (!root || !record?.uid) {
+        return;
+      }
+      root.querySelectorAll(`tr[data-uid="${record.uid}"]`).forEach(row => {
+        row.classList.toggle("master-edited-row", !!record.operation || !!record.edited);
+      });
+    },
+    editBackgroundColor() {
+      const grid = this.directGridWidget;
+      if (!grid?.tbody) {
+        return;
+      }
+      Array.from(grid.tbody.children()).forEach(row => {
+        const item = grid.dataItem(row);
+        if (item) {
+          row.classList.toggle("master-edited-row", !!item.operation || !!item.edited);
+        }
+      });
+    },
+    autoFitGridColumn(column) {
+      try {
+        this.directGridWidget?.autoFitColumn?.(column);
+      } catch (_error) {
+        // noop
+      }
+    },
+    autoFitGridColumns() {
+      const columns = this.directGridWidget?.columns || [];
+      for (let i = 0; i < columns.length; i++) {
+        if (["name"].includes(columns[i]?.field)) {
+          this.autoFitGridColumn(columns[i]);
+        }
+      }
+    },
+    showSortColumn() {
+      const sortRank = this.columns.find(column => column.field === "sortRank");
+      const dummy = this.columns.find(column => column.field === "dummy");
+      if (sortRank) {
+        sortRank.hidden = !(this.isAllowSort && this.isSortMode);
+      }
+      if (dummy) {
+        dummy.hidden = !sortRank?.hidden;
+      }
+      this.applyDirectGridColumnsContract();
+      this.applyDirectGridStyleContract();
+    },
+    convertToStr(messageArr) {
+      if (!messageArr || messageArr.length === 0) {
+        return "";
+      }
+      const unique = messageArr.reduce((acc, cur) => acc.includes(cur) ? acc : acc.concat(cur), []);
+      return "</br>&nbsp&nbsp・" + unique.join("</br>&nbsp&nbsp・");
+    },
+    validateRequired() {
+      const validateMessageArr = [];
+      const fields = this.getMasterRecordList?.schema?.model?.fields || {};
+      (this.getMasterRecordList?.data || []).filter(row => row.isDisp !== "0").forEach(row => {
+        Object.keys(fields).forEach(key => {
+          if (fields[key]?.validation?.required && row[key] !== null && row[key] === "") {
+            const columnInfo = this.columns.find(column => column.field == key);
+            if (columnInfo?.title) {
+              validateMessageArr.push(columnInfo.title);
+            }
+          }
+        });
+      });
+      return this.convertToStr(validateMessageArr);
+    },
+    importCsv(event = null) {
+      this.masterCsvTarget = event?.target || null;
+      this.masterCsvVisible = true;
+    },
+    prehideCsvPopover() {
+      this.masterCsvVisible = false;
+      this.refreshDirectGridDataFromMasterRecords();
+    },
     ...mapActions("mst-synchro", ["startMstSynchro"]),
     /**
      * @description 内容列のkendo editor
@@ -320,22 +890,29 @@ export default {
     /**
      * @description 内容列のkendo editor
      */
-    contentEditor(container, data) {
-      // mod redmine4548 列の変化による操作が困難です 孔 start
-      $(
-        // `<textarea name="${data.field}" class="k-valid k-textarea" style="font-size: 1.0em;resize: vertical;"/>`
-        `<textarea name="${data.field}" class="k-valid k-textarea resize-obs-target" style="font-size: 1.0em;resize: vertical;min-height: calc(0.75rem + 2em);width: 100%;height: 100%;max-height: 65vh;"/>`
-      ).appendTo(container);
-      // this.$refs.grid.kendoWidget().autoFitColumn(
-      //   this.columns.findIndex(c => c.field === data.field)
-      // );
-      // this.calculateGridWidth();
-      // mod redmine4548 列の変化による操作が困難です 孔 end
-      const resizeObserver = new ResizeObserver(entries => {
-        // テキストエリアのリサイズに応じてkendo-gridをリサイズする
-        this.calculateGridWidth();
+    contentEditor(container, options) {
+      const fieldName = options?.field;
+      if (!fieldName) {
+        return;
+      }
+      const $textarea = $(
+        `<textarea name="${fieldName}" class="k-valid k-textarea resize-obs-target" style="font-size: 1.0em;resize: vertical;min-height: calc(0.75rem + 2em);width: 100%;height: 100%;max-height: 65vh;"/>`
+      );
+      $textarea.appendTo(container);
+      this.disconnectContentEditorResizeObserver();
+      const textareaEl = $textarea[0];
+      if (textareaEl) {
+        this.contentEditorResizeObserver = new ResizeObserver(() => {
+          if (this.editingFlg || this.isMasterGridEditInteractionActive()) {
+            return;
+          }
+          this.calculateGridWidth();
+        });
+        this.contentEditorResizeObserver.observe(textareaEl);
+      }
+      this.$nextTick(() => {
+        textareaEl?.focus?.();
       });
-      resizeObserver.observe(document.querySelector('.resize-obs-target'));
     },
     // マスタ一覧のデータを取得
     findList() {
@@ -422,6 +999,22 @@ export default {
           this.$nextTick(() => {
             this.calculateGridHeight();
             this.calculateGridWidth();
+            this.initDirectGridIfReady();
+            this.refreshDirectGridDataFromMasterRecords();
+            this.scheduleDirectGridLayoutContract();
+            const savedScrollTop = this.scrollPosition.top ?? this.lastScrollTop ?? 0;
+            const savedScrollLeft = this.scrollPosition.left ?? this.lastScrollLeft ?? 0;
+            const restoreSavedScroll = () => {
+              this.setGridScrollPosition({ top: savedScrollTop, left: savedScrollLeft });
+            };
+            restoreSavedScroll();
+            this.$nextTick(() => {
+              restoreSavedScroll();
+              requestAnimationFrame(() => {
+                restoreSavedScroll();
+                this.preserveGridScrollAfterSave = false;
+              });
+            });
           });
           // null値があるか調べて、あったら空欄に変更する
           let records = this.getMasterRecordList;
@@ -485,12 +1078,16 @@ export default {
       // 共通ローダー:表示開始
       this.setLoadingScreenVisible(true);
       /* add スクロールの位置を維持 楊 start */
-      this.setLastScroll();
+      this.storeDirectGridScrollPosition();
+      this.preserveGridScrollAfterSave = true;
       /* add スクロールの位置を維持 楊 end */
+      this.directGridWidget?.closeCell?.();
       // グリッドでエラーが発生している場合は処理を中断
-      if (!this.kendoValidator.validate()) {
+      if (!this.validateDirectKendoGrid()) {
         // 共通ローダー：表示終了
         this.setLoadingScreenVisible(false);
+        this.preserveGridScrollAfterSave = false;
+        this.restoreDirectGridScrollPosition();
         return;
       }
 
@@ -522,6 +1119,8 @@ export default {
       if (message.length !== 0) {
         //共通ローダー：表示終了
         this.setLoadingScreenVisible(false);
+        this.preserveGridScrollAfterSave = false;
+        this.restoreDirectGridScrollPosition();
         this.$ons.notification.alert({
           // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
           // title: "チェックエラー",
@@ -541,6 +1140,8 @@ export default {
             //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
             getErrorMessage('MstPatMemoMainComponent.vue', 'saveRecord', error);
             //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
+            this.preserveGridScrollAfterSave = false;
+            this.restoreDirectGridScrollPosition();
             //共通ローダー：表示終了
             this.setLoadingScreenVisible(false);
             throw new Error(error);
@@ -578,6 +1179,8 @@ export default {
           //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
           getErrorMessage('MstPatMemoMainComponent.vue', 'setUpdateAllPatFlg', error);
           //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
+          this.preserveGridScrollAfterSave = false;
+          this.restoreDirectGridScrollPosition();
           if (error.response.status === 400) {
             this.$ons.notification.alert({
               // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
@@ -597,16 +1200,16 @@ export default {
       // 初期データ
       const initData = JSON.parse(this.comparisonRecordLocalModel);
       initData.sort(function(a,b){
-        if( a.code < b.code ) return -1;
-        if( a.code > b.code ) return 1;
+        if( a.code < b.code) return -1;
+        if( a.code > b.code) return 1;
         return 0;
       });
 
       // 編集中データ
       const gridData = this.getMasterRecordList;
       gridData.data.sort(function(a,b){
-        if( a.code < b.code ) return -1;
-        if( a.code > b.code ) return 1;
+        if( a.code < b.code) return -1;
+        if( a.code > b.code) return 1;
         return 0;
       });
 
@@ -641,71 +1244,16 @@ export default {
       // delete end #9590
       this.findList();
     },
-    /**
-     * KendoGridデータバインド時イベントハンドラ.
-     * 値変更時にスクロール位置が先頭に戻ってしまう問題の対処
-     *
-     * @param {*} ev イベント
-     */
-    onDataBoundKendoGrid(ev) {
-      // del redmine4548 列の変化による操作が困難です 孔 start
-      // this.autoFitGridColumns();
-      // del redmine4548 列の変化による操作が困難です 孔 end
-      // スクロール位置が先頭でない場合、その位置を保持する
-      const scrollTop = ev.sender.content[0].scrollTop;
-      const scrollLeft = ev.sender.content[0].scrollLeft;
-      if (scrollTop != 0) {
-        this.lastScrollTop = scrollTop;
-      }
-      if (scrollLeft != 0) {
-        this.lastScrollLeft = scrollLeft;
-      }
-
-      if (this.lastScrollTop != 0 || this.lastScrollLeft != 0) {
-        this.$nextTick(() => {
-          ev.sender.content[0].scrollTop = this.lastScrollTop;
-          ev.sender.content[0].scrollLeft = this.lastScrollLeft;
-          setTimeout(() => {
-            this.lastScrollTop = 0;
-            this.lastScrollLeft = 0;
-          }, 1000)
-        });
-      }
-      /* 固定列・可動列の縦スクロール同期 */
-      const lockedContent = this.$el.querySelector('.k-grid-content-locked');
-      const scrollableContent = this.$el.querySelector('.k-grid-content');
-      let isSyncingScroll = false;
-      if (lockedContent && scrollableContent) {
-        const syncScroll = (source, target) => {
-          if (isSyncingScroll) return;
-          isSyncingScroll = true;
-          target.scrollTop = source.scrollTop;
-          isSyncingScroll = false;
-        };
-        scrollableContent.addEventListener('scroll', () => syncScroll(scrollableContent, lockedContent));
-        lockedContent.addEventListener('scroll', () => syncScroll(lockedContent, scrollableContent));
-      }
-    },
-    // del redmine4548 列の変化による操作が困難です 孔 start
-    // autoFitGridColumns() {
-    //   for (let i = 0; i < this.$refs.grid.kendoWidget().columns.length; i++) {
-    //     if (["name", "content"].includes(this.$refs.grid.kendoWidget().columns[i].field)) {
-    //       this.$refs.grid.kendoWidget().autoFitColumn(i);
-    //     }
-    //   }
-    // }
-    // del redmine4548 列の変化による操作が困難です 孔 end
     onBeforeEdit(e) {
       if (this.isMobileDevice && !this.allowEdit) {
-        /* NOTE:
-         * モバイル系は、スワイプ・フリック操作で入力パッドが表示される。
-         * そのため、スクロール操作が損なわれるので、閲覧モードのときは
-         * 後続のイベントを発火させないように制御する。
-         */
         e.preventDefault();
         return;
       }
-      this.editStart(e);
+      this.editingFlg = true;
+    },
+    editEnd() {
+      this.disconnectContentEditorResizeObserver();
+      this.editingFlg = false;
     },
   },
   created() {
@@ -715,37 +1263,42 @@ export default {
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("処理中・・・");
     // 端末判別
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toLowerCase();
     if (/android/.test(ua)) {
       this.androidFlg = true;
     } else if (/iphone|ipad|mac|os/.test(ua)) {
       this.iosFlg = true;
     }
-    this.selfScreenName = this.$router.currentRoute.name;
-  },
-  updated() {
-    // Storeの更新等で画面が再描画された場合に背景色を変更
-    this.editBackgroundColor();
-    this.$nextTick(() => {
-      // del redmine4548 列の変化による操作が困難です 孔 start
-      // this.autoFitGridColumns();
-      // del redmine4548 列の変化による操作が困難です 孔 end
-      this.calculateColumnsWidth();
-      this.calculateGridHeight();
-      this.calculateGridWidth();
-    });
+    this.selfScreenName = this.getCurrentRouteName();
+    this.kendoValidator = { validate: () => this.validateDirectKendoGrid() };
   },
   mounted() {
+    this.directGridMounted = true;
     this.$nextTick(() => {
       this.calculateColumnsWidth();
       this.calculateGridHeight();
       this.calculateGridWidth();
+      this.initDirectGridIfReady();
+      this.scheduleDirectGridLayoutContract();
     });
     EventBus.$on("refresh", this.refresh);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
+    this.disconnectContentEditorResizeObserver();
+    this.destroyDirectGrid();
+    [
+      this.directGridLayoutRafId,
+      this.directGridFilterRefreshRafId,
+      this.directGridScrollSyncRafId
+    ].forEach(id => {
+      if (id != null) {
+        cancelAnimationFrame(id);
+      }
+    });
+    this.directGridRowVisualRafIds?.forEach?.(id => cancelAnimationFrame(id));
+    this.directGridRowVisualRafIds?.clear?.();
   }
   // add 性能改善メモリ不足 shan end
 };
@@ -753,6 +1306,9 @@ export default {
 
 <!-- 個別スタイル定義 -->
 <style scoped>
+.ntss-list {
+  height: 100%;
+}
 .right {
   text-align: right;
 }
@@ -781,44 +1337,102 @@ export default {
 .csv-btn {
   margin-right: 1em;
 }
-.k-grid-toolbar {
+.kendo-grid-toolbar-style {
   padding: 0.1em 0.3em;
 }
-.kendo-grid-toolbar-style >>> .k-tooltip.k-tooltip-validation {
+.kendo-grid-toolbar-style :deep(.k-tooltip.k-tooltip-validation) {
   width: auto;
 }
-.content-style >>> .k-grid-content{
+.content-style :deep(.k-grid-content) {
   white-space: pre-wrap;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content > .k-selectable {
-  box-shadow: 1px 0px 0px 0px white;
-  border-right: 1px solid transparent;
+/* Kendo 2026 では .k-grid td から overflow:hidden / text-overflow:ellipsis が削除されたため、
+   非編集状態のセルでテキストが折り返して全表示される。
+   Kendo 2019（Vue2）と同等の切り詰め表示を復元する。
+   編集中（.k-edit-cell）は Kendo の overflow:visible ルールが優先されるため影響しない。 */
+.content-style :deep(.k-grid-content td:not(.k-edit-cell)),
+.content-style :deep(.k-grid-content .k-table-td:not(.k-edit-cell)) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.kendo-grid-toolbar-style >>> .k-grid-header-locked > table {
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked > table) {
   border-right-width: 0px;
 }
-.kendo-grid-toolbar-style >>> .k-grid-header-locked {
-  border-right: 1px solid var(--ntss-list-border-color) !important;
+/* No列｜タイトル列の境界線: applyDirectGridLockedDividerContract で描画（Kendo 2026 対応） */
+.kendo-grid-toolbar-style :deep(.mst-pat-memo-locked-divider-header),
+.kendo-grid-toolbar-style :deep(.mst-pat-memo-locked-divider-body) {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1px;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked) {
   z-index: 1;
-  box-shadow: 1px 0px 0px 0px var(--ntss-border-color) !important;
+  overflow-y: scroll !important;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .custom-switch {
   transform: scale(0.85);
   transform-origin: center;
   touch-action: manipulation;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked {
-  overflow-y: scroll !important;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.kendo-grid-toolbar-style >>> .k-grid-content-locked::-webkit-scrollbar {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked::-webkit-scrollbar) {
   display: none;
 }
 .no-scroll {
   overflow-y: unset !important;
+}
+/* :deep(.k-textarea){
+  min-height: 50px !important;
+} */
+.mst-pat-memo-direct-jq-grid {
+  width: 100%;
+}
+/* Kendo 2026: 表体の列右余白が白(app-surface)になるため、Vue2 同等の灰色背景に戻す */
+.kendo-grid-toolbar-style :deep(.mst-pat-memo-direct-jq-grid.k-grid),
+.kendo-grid-toolbar-style :deep(.mst-pat-memo-direct-jq-grid .k-grid-content-locked),
+.kendo-grid-toolbar-style :deep(.mst-pat-memo-direct-jq-grid .k-grid-content:not(.k-grid-content-locked)),
+.kendo-grid-toolbar-style :deep(.mst-pat-memo-direct-jq-grid .k-grid-content .k-selectable) {
+  background-color: var(--main-background-color) !important;
+}
+/* 表頭の列右余白は th と同じグラデーション背景（単色 #333 だと削除列より黒く見える） */
+.kendo-grid-toolbar-style :deep(.mst-pat-memo-direct-jq-grid .k-grid-header),
+.kendo-grid-toolbar-style :deep(.mst-pat-memo-direct-jq-grid .k-grid-header-wrap),
+.kendo-grid-toolbar-style :deep(.mst-pat-memo-direct-jq-grid .k-grid-header-locked) {
+  background-color: var(--master-maintenance-kgrid-header-background-color) !important;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.3) 0%, transparent 50%, transparent 50%, rgba(0, 0, 0, 0.1) 100%) !important;
+}
+
+/* Vue2 kendo-grid wrapper style contract for this direct jq screen. */
+.kendo-grid-toolbar-style :deep(.toolbar-btn),
+.kendo-grid-toolbar-style :deep(.toolbar-btn *) {
+  font-family: inherit;
+}
+.kendo-grid-toolbar-style :deep(.k-grid-header th),
+.kendo-grid-toolbar-style :deep(.k-grid-header .k-table-th),
+.kendo-grid-toolbar-style :deep(.k-grid-header .k-link),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked th),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked .k-table-th),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked .k-link) {
+  border-right-color: currentColor;
+  cursor: default;
+}
+
+
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 </style>

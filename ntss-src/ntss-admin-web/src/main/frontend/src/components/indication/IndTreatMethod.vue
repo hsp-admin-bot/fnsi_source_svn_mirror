@@ -88,49 +88,19 @@
       </v-ons-row>
     </div>
 
-    <!-- 治療方法セットの投与薬剤を含んで変更する -->
+    <!-- 治療方法セットの投与薬剤を含んで変更する / 含まずに変更する -->
     <div v-if="showPlanCreate == 2 || showPlanCreate == 3">
-      <div v-if="showPlanCreate == 2">
-<!--        mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc start-->
-<!--        <ind-plan-create ref="incluceMediTreatPlan" :is-update-method="true" />-->
-        <ind-plan-create
-            ref="incluceMediTreatPlan"
-            @computedValueChanged="handleComputedValueChanged"
-            :is-update-method="true"
-        />
-<!--        mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc end-->
-      </div>
-
-      <!-- 治療方法セットの投与薬剤を含まずに変更する -->
-      <div v-else-if="showPlanCreate == 3">
-<!-- mod 6623 HD→HDF，HF，OHDF，OHF，I-HDFへ切り替えたときに表示されるメッセージが意味不明 張 start -->
-        <!-- <ind-plan-create
-          ref="disincludeMediTreatPlan"
-          :is-medi-info="false"
-          :is-commment-info="false"
-          :is-update-method="true"
-        /> -->
-<!--        mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc start-->
-<!--        <ind-plan-create-->
-<!--            ref="disincludeMediTreatPlan"-->
-<!--            :is-medi-info="false"-->
-<!--            :is-message="true"-->
-<!--            :is-update-method="true"-->
-<!--        />-->
-        <ind-plan-create
-          ref="disincludeMediTreatPlan"
-          @computedValueChanged="handleComputedValueChanged"
-          :is-medi-info="false"
-          :is-message="true"
-          :is-update-method="true"
-        />
-<!--        mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc end-->
-<!-- mod 6623 HD→HDF，HF，OHDF，OHF，I-HDFへ切り替えたときに表示されるメッセージが意味不明 張 end -->
-      </div>
+      <!-- radio2/radio3: 1インスタンスでprops切替（2↔3でAPI・重複idによるレイアウト崩れを防ぐ） -->
+      <ind-plan-create
+        ref="activePlanCreate"
+        @computedValueChanged="handleComputedValueChanged"
+        :is-update-method="true"
+        :is-medi-info="showPlanCreate == 2"
+      />
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="userMenuPopoverVisible"
+      v-model:visible="userMenuPopoverVisible"
       :target="userMenuPopoverTarget"
       :cover-target="false"
       :direction="userMenuPopoverDirection"
@@ -149,10 +119,11 @@
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 // mod FNSI-連携イベントの登録適正化 楊 start
-// import {mapActions} from "vuex";
-import {mapActions, mapGetters} from "vuex";
+// import {mapActions} from "@/compat/vue/vuex";
+import {mapActions, mapGetters} from "@/compat/vue/vuex";
 // mod FNSI-連携イベントの登録適正化 楊 end
 import { ApiHelper } from "@/apis/AxiosHelper";
+import IndicationOwnerMixin from "@/components/indication/IndicationOwnerMixin";
 import IndPlanCreate from "@/components/indication/IndPlanCreate";
 import PopoverMixin from "@/components/PopoverMixin";
 // add FNSI-指示値・装置設定・装置プログラムの相関チェック 安寧 start
@@ -161,8 +132,8 @@ import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.j
 /**
  * 日時取得
  */
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // mod FNSI-連携イベントの登録適正化 楊 start
 // add 8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。zhou start
 import { createJournalList } from "@/apis/journal";
@@ -176,7 +147,11 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { nextId } from "@/functions/common/id";
+import { messageFormat } from "@/functions/common/MessageFormat";
+
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 // add #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao start
 // del #11004 連携イベント発生部分不正 piao start
@@ -187,7 +162,7 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 export default {
   name: "IndTreatMethod",
 
-  mixins: [PopoverMixin],
+  mixins: [IndicationOwnerMixin, PopoverMixin],
 
   components: {
     "ind-plan-create": IndPlanCreate,
@@ -254,7 +229,7 @@ export default {
       ],
       indStartDate: this.startDate,
       indEndDate: this.endDate,
-      structData: this.$parent.$parent.structData,
+      structData: this._indicationFlowOwner().structData,
       /**
        * IndTreatMethod内の治療方法リスト
        */
@@ -307,7 +282,7 @@ export default {
 
     // add FNSI-画面デザイン【患者経過総合ビューア.xlsx】ラジオボタン対応 韓 start
     uniqueRadioName() {
-      return _.uniqueId("autoSelectRadio");
+      return nextId("autoSelectRadio");
     },
     // add FNSI-画面デザイン【患者経過総合ビューア.xlsx】ラジオボタン対応 韓 end
 
@@ -327,10 +302,10 @@ export default {
     // 治療方法リスト取得
     await this.getMstTreatmentList();
     // IndEditBaseで治療方法選択の最大選択数を1に設定
-    this.$parent.$parent.treatMaxSelectedItems = 1;
+    this._indicationDialogOwner().treatMaxSelectedItems = 1;
     this.selectedTreat = this.mstTreatmentList[0].treatmentCd;
     //FNSI-修正 #5525 横展開対応、xugj add start
-    this.$parent.$parent.isSendNextPatInfoFlg = true;
+    this._indicationResultOwner().isSendNextPatInfoFlg = true;
     //FNSI-修正 #5525 横展開対応、xugj add end
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc start
     this.initSelectedTreat = JSON.stringify(this.selectedTreat);
@@ -376,6 +351,13 @@ export default {
     // del FNSI-連携イベントの登録適正化 李 end
     changeTMC(value) {
       this.showPlanCreate = value;
+      if (value === "2" || value === "3") {
+        this.$nextTick(() => {
+          setTimeout(() => {
+            this.$refs.activePlanCreate?.refreshColumnWidth?.();
+          }, 500);
+        });
+      }
     },
 
     // 保存ボタン押下時処理
@@ -409,7 +391,7 @@ export default {
         // 治療方法コード
         sendJson.treatment_set_cd = Number(this.selectedTreat);
         // 更新日時
-        sendJson.up_date = moment().format("YYYY-MM-DD HH:mm:ss.SSS");
+        sendJson.up_date = dayjs().format("YYYY-MM-DD HH:mm:ss.SSS");
         // 患者ID
         sendJson.pat_id = structData.patId;
         // 開始日
@@ -479,7 +461,7 @@ export default {
         sendJson.creat = true;
         // add FNSI-7325 劉全航 end
         const response = await ApiHelper.post(
-          "/mainData/updatetByTreatSetCd2/",
+          "/mainData/updatetByTreatSetCd2",
           sendJson
         );
         // mod FNSI-障害票一覧_患者経過総合ビューアNo.47 李 end
@@ -797,8 +779,14 @@ export default {
         // }
         // add FNSI-濃度プログラムチェックの追加 楊 end
       } else if (this.showPlanCreate === "2") {
+        const activePlanCreate = this.$refs.activePlanCreate;
+        if (!activePlanCreate) {
+          console.log("IndTreatMethod.vue updateIndInfo return; activePlanCreate not found; this.finishLoadingScreen();");
+          this.finishLoadingScreen();
+          return;
+        }
         // 予定内容が選択されているかチェック
-        if (this.$refs.incluceMediTreatPlan.checkEdit()) {
+        if (activePlanCreate.checkEdit()) {
           this.showMessage(22010001, "予定内容");
           console.log("IndTreatMethod.vue updateIndInfo return; this.finishLoadingScreen();");
           this.finishLoadingScreen();
@@ -807,7 +795,7 @@ export default {
         }
         // IndPlanCreate の updateTreatMethod()を呼び出す
         if (
-          !(await this.$refs.incluceMediTreatPlan.updateTreatMethod(structData))
+          !(await activePlanCreate.updateTreatMethod(structData))
         ) {
           console.log("IndTreatMethod.vue updateIndInfo return; this.finishLoadingScreen();");
           this.finishLoadingScreen();
@@ -826,8 +814,14 @@ export default {
         }
         // mod FNSI-連携イベントの登録適正化 楊 end
       } else {
+        const activePlanCreate = this.$refs.activePlanCreate;
+        if (!activePlanCreate) {
+          console.log("IndTreatMethod.vue updateIndInfo return; activePlanCreate not found; this.finishLoadingScreen();");
+          this.finishLoadingScreen();
+          return;
+        }
         // 予定内容が選択されているかチェック
-        if (this.$refs.disincludeMediTreatPlan.checkEdit()) {
+        if (activePlanCreate.checkEdit()) {
           this.showMessage(22010001, "予定内容");
           console.log("IndTreatMethod.vue updateIndInfo return; this.finishLoadingScreen();");
           this.finishLoadingScreen();
@@ -836,7 +830,7 @@ export default {
         }
         // IndPlanCreate の updateTreatMethod()を呼び出す
         if (
-          !(await this.$refs.disincludeMediTreatPlan.updateTreatMethod(
+          !(await activePlanCreate.updateTreatMethod(
             structData
           ))
         ) {
@@ -1167,7 +1161,7 @@ export default {
     // mod 8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。zhou end
     hideModal() {
       /* モーダル閉じる */
-      this.$parent.$parent.$emit("hide-modal");
+      this._hideIndicationModal();
     },
 
     /**
@@ -1179,7 +1173,7 @@ export default {
           this.treatDateList = response.data.filter(item => {
             return (
               // 施設コードが一致し、表示フラグが1のものだけを取り出す
-              item.facilityCd === this.$parent.$parent.structData.facilityCd &&
+              item.facilityCd === this._indicationFlowOwner().structData.facilityCd &&
               "1" === item.isDisp
             );
           });
@@ -1289,18 +1283,23 @@ export default {
         default:
           break;
       }
-      this.$parent.$parent.messageDialogInfo.messageCd = msgCd;
-      this.$parent.$parent.messageDialogInfo.type = messageType;
-      this.$parent.$parent.messageDialogInfo.stringParams = stringParams;
-      this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+      this._indicationDialogOwner().messageDialogInfo.messageCd = msgCd;
+      this._indicationDialogOwner().messageDialogInfo.type = messageType;
+      this._indicationDialogOwner().messageDialogInfo.stringParams = stringParams;
+      this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
     },
 
     /**
      * 吹き出し表示処理
      */
+    getScopedElementByIdSafe(id) {
+      return getScopedElementById(id, this.$el || null);
+    },
     showPopOver(event, message) {
-      let pop = document.getElementById("popOverMessage");
-      pop.innerText = message;
+      const pop = this.getScopedElementByIdSafe("popOverMessage");
+      if (pop) {
+        pop.innerText = message;
+      }
       this.userMenuPopoverTarget = event;
       this.userMenuPopoverVisible = true;
     },

@@ -13,13 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
-import jp.co.nikkiso.ntss.admin_web.config.AwsConfiguration;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 import jp.co.nikkiso.ntss.core.dao.SysSystemDefineDao;
@@ -27,6 +23,9 @@ import jp.co.nikkiso.ntss.core.entity.SysSystemDefine;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
 public class FileControlServiceImpl implements FileControlService {
@@ -34,7 +33,7 @@ public class FileControlServiceImpl implements FileControlService {
    * Amazon S3.
    */
   @Autowired
-  private AwsConfiguration awsS3;
+  private S3Client s3;
   /**
    * システム設定のDaoインタフェース.
    */
@@ -46,10 +45,6 @@ public class FileControlServiceImpl implements FileControlService {
   */
   @Autowired
   private LogService logService;
-
-  private AmazonS3 s3() {
-    return awsS3.s3();
-  }
 
   // MOD #10637 2024/09/05 Thach Start
   
@@ -114,11 +109,13 @@ public class FileControlServiceImpl implements FileControlService {
 
         String path = filePath + "/" + file.getOriginalFilename();
 
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setContentLength(file.getSize());
-        metadata.setContentType(file.getContentType());
         // S3アップロード
-        s3().putObject(new PutObjectRequest(desBucket, path, file.getInputStream(), metadata));
+        s3.putObject(PutObjectRequest.builder()
+            .bucket(desBucket)
+            .key(path)
+            .contentLength(file.getSize())
+            .contentType(file.getContentType())
+            .build(), RequestBody.fromInputStream(inputStream, file.getSize()));
         return true;
       } catch (Exception e) {
         EventLogMessage eventLogMessage = new EventLogMessage();

@@ -44,6 +44,9 @@ namespace CoopEventCreateOrStopTool
             filePath = filepath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar;
             InitializeComponent();
             GetConfig();
+
+            // アイコンの設定
+            this.Icon = Properties.Resources.CoopEventCreateTool;
         }
 
         /// <summary>

@@ -4,6 +4,7 @@
 import { dateFormat } from "@/functions/common/DateTimeUtils";
 import { BvmsGraphFunctions } from "@/functions/treatment-record/BvmsGraphFunctions";
 import { ApiHelper } from "@/apis/AxiosHelper";
+import { createApiFormData } from "@/apis/ApiRuntime";
 import store from "@/stores";
 
 /**
@@ -13,19 +14,29 @@ function getUserFacilityCd() {
   return store.getters["user/getFacilityCd"];
 }
 
+function withSelectedPatId(params = undefined, selectedPatId) {
+  if (selectedPatId === null || selectedPatId === undefined || selectedPatId === "") {
+    return params;
+  }
+  return {
+    ...(params || {}),
+    selectedPatId
+  };
+}
+
 /**
  * マスターデータ取得.
- * @param {*} url マスター取得API用URL
+ * @param {string} url マスター取得API用URL
  */
-function getMaster(url) {
-  return getWithLoader(url, {
+function getMaster(url, selectedPatId = undefined) {
+  return getWithLoader(url, withSelectedPatId({
     facilityCd: getUserFacilityCd()
-  });
+  }, selectedPatId));
 }
 
 /**
  * マスターデータ取得（共通ローダ実行なし）.
- * @param {*} url マスター取得API用URL
+ * @param {string} url マスター取得API用URL
  */
 function getMasterWithoutLoader(url) {
   return ApiHelper.get(url, {
@@ -35,22 +46,23 @@ function getMasterWithoutLoader(url) {
 
 /**
  * マスターデータ取得（共通ローダ実行なし）.
- * @param {*} url マスター取得API用URL
+ * @param {string} url マスター取得API用URL
+ * @param {string} facilityCd 施設コード
  */
 function getMasterWithoutLoaderByFacilityCd(url, facilityCd) {
   return ApiHelper.get(url, {
-    facilityCd: facilityCd
+    facilityCd
   });
 }
 
 /**
  * 利用者マスターデータ取得(施設コードの指定が他のマスタとは異なる).
- * @param {*} url 利用者マスター取得API用URL
+ * @param {string} url 利用者マスター取得API用URL
  */
-function getMasterPersonal(url) {
-  return getWithLoader(url, {
+function getMasterPersonal(url, selectedPatId = undefined) {
+  return getWithLoader(url, withSelectedPatId({
     facility_cd: getUserFacilityCd()
-  });
+  }, selectedPatId));
 }
 
 /**
@@ -65,39 +77,40 @@ export function sendRequestGetLatestOrdNo(patId) {
  * 治療概要取得
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetTreatmentRecordSummary(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/summary`);
+export function sendRequestGetTreatmentRecordSummary(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/summary`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
  * 実績情報取得
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetTreatmentRecordResult(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/result`);
+export function sendRequestGetTreatmentRecordResult(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/result`, withSelectedPatId(undefined, selectedPatId));
 }
-//add 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 start
+// add 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 start
 /**
  * 共通診療情報取得
  * @param {*} facilityCd 施設コード
  * @param {*} patId 患者ID
  *
  */
-export function selectMedicalCareInfoByIdAndFacilityCd(facilityCd,patId){
+export function selectMedicalCareInfoByIdAndFacilityCd(facilityCd, patId) {
   return getWithLoader(
     `/patInfo/selectMedicalCareInfoByIdAndFacilityCd/${facilityCd}/${patId}`
   );
 }
-//add 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 end
+// add 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 end
 
 
 /**
  * 死活監視ステータス取得
  * @param {*} deviceEdgeNo 死活監視ステータス取得
  */
-export function sendRequestGetmonistatus(deviceEdgeNo) {
+export function sendRequestGetmonistatus(deviceEdgeNo, selectedPatId) {
   return ApiHelper.get(
-    `/treatment-record/monistatus/${deviceEdgeNo}`);
+    `/treatment-record/monistatus/${deviceEdgeNo}`,
+    withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
@@ -130,7 +143,7 @@ export function sendRequestUpdateTreatmentRecordResult(
  * ※処理区分に応じた治療条件の更新も行う.
  * @param {*} ordNo オーダ番号
  * @param {*} treatmentRecordResult 実績情報
- * @param {Integer} processType 処理区分
+ * @param {number} processType 処理区分
  */
 export function sendRequestUpdateTreatmentRecordResultWithCondition(
   ordNo,
@@ -157,8 +170,8 @@ export function sendRequestUpdateTreatmentRecordResultWithCondition(
  * 投与薬剤情報取得
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetTreatmentRecordMediInfo(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/medi_info`);
+export function sendRequestGetTreatmentRecordMediInfo(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/medi_info`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
@@ -186,8 +199,8 @@ export function sendRequestUpdateTreatmentRecordMediInfo(
  * 医療材料情報取得
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetTreatmentRecordEquipInfo(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/equip_info`);
+export function sendRequestGetTreatmentRecordEquipInfo(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/equip_info`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
@@ -214,8 +227,8 @@ export function sendRequestUpdateTreatmentRecordEquipInfo(
  * 治療条件取得
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetTreatmentRecordCondition(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/condition`);
+export function sendRequestGetTreatmentRecordCondition(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/condition`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
@@ -245,8 +258,8 @@ export function sendRequestUpdateTreatmentRecordCondition(
  * 体重情報取得
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetTreatmentRecordWeight(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/weight`);
+export function sendRequestGetTreatmentRecordWeight(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/weight`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
@@ -275,7 +288,7 @@ export function sendRequestGetTreatmentRecordAddition(ordNo) {
 /**
  * 指示コメント更新
  * @param {*} ordNo オーダ番号
- * @param {Object} treatmentRecordAddition 指示コメント情報
+ * @param {Record<string, unknown>} treatmentRecordAddition 指示コメント情報
  */
 export function sendRequestUpdateTreatmentRecordAddition(
   ordNo,
@@ -292,31 +305,31 @@ export function sendRequestUpdateTreatmentRecordAddition(
  * @param {*} facilityCd 施設番号
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetTreatmentRecordVitalMonitor(facilityCd,ordNo) {
-  return getWithLoader(`/treatment-record/${facilityCd}/${ordNo}/vital-monitor`);
+export function sendRequestGetTreatmentRecordVitalMonitor(facilityCd, ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${facilityCd}/${ordNo}/vital-monitor`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
  * モニタ取得
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetTreatmentRecordMonitor(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/monitor`);
+export function sendRequestGetTreatmentRecordMonitor(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/monitor`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
  * モニタグラフ設定取得
  */
-export function sendRequestGetMonitorGraphDefine() {
-  return getWithLoader(`/monitor/graph-define`);
+export function sendRequestGetMonitorGraphDefine(selectedPatId) {
+  return getWithLoader(`/monitor/graph-define`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
  * 愁訴処置情報取得
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetTreatmentRecordComplaint(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/complaint`);
+export function sendRequestGetTreatmentRecordComplaint(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/complaint`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
@@ -338,8 +351,8 @@ export function sendRequestUpdateTreatmentRecordComplaint(
 /**
  * 愁訴マスタ取得
  */
-export function sendRequestGetMstComplaint() {
-  return ApiHelper.get(`/complaint/mst-complaint`);
+export function sendRequestGetMstComplaint(selectedPatId) {
+  return ApiHelper.get(`/complaint/mst-complaint`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
@@ -360,8 +373,8 @@ export function sendRequestUpdateMstComplaint(mstComplaints) {
 /**
  * 処置マスタ取得
  */
-export function sendRequestGetMstCompTreatment() {
-  return ApiHelper.get(`/complaint/mst-comp-treatment`);
+export function sendRequestGetMstCompTreatment(selectedPatId) {
+  return ApiHelper.get(`/complaint/mst-comp-treatment`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
@@ -376,24 +389,24 @@ export function sendRequestUpdateMstCompTreatment(mstCompTreatments) {
  * 設定値読み込み履歴取得
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetTreatmentRecordSetting(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/setting`);
+export function sendRequestGetTreatmentRecordSetting(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/setting`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
  * 実績：装置設定情報取得
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetTreatmentRecordRstDeviceSetInfo(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/rst-device-set-info`);
+export function sendRequestGetTreatmentRecordRstDeviceSetInfo(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/rst-device-set-info`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
  * 実績：回診記録情報取得
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetTreatmentRecordRstRoundsInfo(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/rst-rounds-info`);
+export function sendRequestGetTreatmentRecordRstRoundsInfo(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/rst-rounds-info`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
@@ -403,7 +416,7 @@ export function sendRequestGetTreatmentRecordRstRoundsInfo(ordNo) {
  * rstRoundsInfoは以下のプロパティを持つ
  * {
  *   rst_rounds_info: string, 実績：回診記録情報
- *   up_date: String, 更新日時
+ *   up_date: string, 更新日時
  * }
  */
 export function sendRequestUpdateTreatmentRecordRstRoundsInfo(ordNo, rstRoundsInfo) {
@@ -414,8 +427,8 @@ export function sendRequestUpdateTreatmentRecordRstRoundsInfo(ordNo, rstRoundsIn
  * 指定されたオーダ番号に紐付くマージ対象の実績情報リストを取得する.
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetResultMergeList(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/result-merge`);
+export function sendRequestGetResultMergeList(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/result-merge`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
@@ -439,15 +452,15 @@ export function sendRequestPostOrderReadSettingValue(param) {
  * 治療方法マスタ取得
  * (サインインしている施設コードで絞り込み)
  */
-// mod #12462 患者情報共有 Ji start
-export function sendRequestGetMstTreatment(facilityCd) {
+export function sendRequestGetMstTreatment(facilityCd, selectedPatId) {
   if (facilityCd) {
-    return getWithLoader("/mstInfo/mstTreatment", {
+    return getWithLoader("/mstInfo/mstTreatment", withSelectedPatId({
       facilityCd: facilityCd
-    });
+    }, selectedPatId));
   }
-// mod #12462 患者情報共有 Ji end
-  return getMaster("/mstInfo/mstTreatment");
+  return getWithLoader("/mstInfo/mstTreatment", withSelectedPatId({
+    facilityCd: getUserFacilityCd()
+  }, selectedPatId));
 }
 
 /**
@@ -484,14 +497,14 @@ export function sendRequestGetMstDialyzerTabooAllergy(patId) {
  * ダイアライザマスタ取得.
  * (禁忌・アレルギー情報を含む)期限切れ除外
  */
-//#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
-export function sendRequestGetMstDialyzerTabooAllergyNoexpire(patId, TreatDate) {
+//#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 Start
+export function sendRequestGetMstDialyzerTabooAllergyNoexpire(patId, treatDate) {
   const strPatId = patId ? patId.toString() : "-1";
-  const  strTreatDate = (TreatDate != undefined && TreatDate != null) ? TreatDate : null;
+  const strTreatDate = (treatDate !== undefined && treatDate !== null) ? treatDate : null;
   const url = "/mstInfo/mstDialyzer/" + strPatId + "/" + strTreatDate;
   return getMaster(url);
 }
-//#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
+//#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 End
 
 /**
  * 薬剤マスタ取得.
@@ -542,8 +555,8 @@ export function sendRequestGetMstMedicineSetWithoutLoader() {
  * 薬剤分類マスタ取得.
  * (サインインしている施設コードで絞り込み)
  */
-export function sendRequestGetMstMedicineClass() {
-  return getMaster("/mstInfo/mstMedicineClass");
+export function sendRequestGetMstMedicineClass(selectedPatId = undefined) {
+  return getMaster("/mstInfo/mstMedicineClass", selectedPatId);
 }
 
 /**
@@ -619,18 +632,18 @@ export function sendRequestGetMstEquipmentTabooAllergyByClass(patId, classIdList
   return putWithLoader(url, classIdList);
 }
 
-//#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
+//#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 Start
 /**
  * 医療材料分類毎の医療材料マスタ取得(禁忌・アレルギー情報を含む).
  * (サインインしている施設コードで絞り込み)
  */
-export function sendRequestGetMstEquipmentTabooAllergyByClassNoexpire(patId, classIdList, TreatDate) {
+export function sendRequestGetMstEquipmentTabooAllergyByClassNoexpire(patId, classIdList, treatDate) {
   const strPatId = patId ? patId.toString() : "-1";
-  const  strTreatDate = (TreatDate != undefined && TreatDate != null) ? TreatDate : null;
+  const strTreatDate = (treatDate !== undefined && treatDate !== null) ? treatDate : null;
   const url = "/mstInfo/mstEquipment/" + strPatId + "/" + strTreatDate;
   return putWithLoader(url, classIdList);
 }
-//#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
+//#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 End
 
 /**
  * 医療材料分類マスタ取得.
@@ -644,7 +657,7 @@ export function sendRequestGetMstEquipmentClass() {
  * 医療材料分類マスタ取得.（削除済み含む）
  * (サインインしている施設コードで絞り込み)
  */
- export function sendRequestGetMstEquipmentClassIncludeDeleted() {
+export function sendRequestGetMstEquipmentClassIncludeDeleted() {
   return getMaster("/mstInfo/mstEquipmentClassIncludeDeleted");
 }
 
@@ -652,8 +665,8 @@ export function sendRequestGetMstEquipmentClass() {
  * 利用者マスタ取得.
  * (サインインしている施設コードで絞り込み)
  */
-export function sendRequestGetMstPersonalUser() {
-  return getMasterPersonal("/mstInfo/mstPersonalUser");
+export function sendRequestGetMstPersonalUser(selectedPatId = undefined) {
+  return getMasterPersonal("/mstInfo/mstPersonalUser", selectedPatId);
 }
 
 /**
@@ -676,7 +689,7 @@ export function sendRequestGetMstProcedureWithoutLoaderByFacilityCd(facilityCd) 
  * 手技マスタ（削除済み含む）取得（共通ローダ実行なし）.
  * (指定した施設コードで絞り込み)
  */
- export function sendRequestGetMstProcedureWithoutLoaderIncludeDeletedByFacilityCd(facilityCd) {
+export function sendRequestGetMstProcedureWithoutLoaderIncludeDeletedByFacilityCd(facilityCd) {
   return getMasterWithoutLoaderByFacilityCd("/mstInfo/mstProcedureIncludeDeleted", facilityCd);
 }
 
@@ -694,16 +707,16 @@ export function sendRequestGetWheelChair() {
  * 再循環率取得.
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetRecirculationRate(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/recirculation-rate`);
+export function sendRequestGetRecirculationRate(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/recirculation-rate`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {*} url URL
- * @param {*} param パラメータ
+ * @param {string} url URL
+ * @param {unknown} [params] パラメータ
  */
-function getWithLoader(url, params) {
+function getWithLoader(url, params = undefined) {
   /* modify by chamaojia 2022-10-26 [7217] クエリ判断の追加  --start */
   const screenMessage = store.getters["loading-screen/getLoadingScreenMessage"];
   if (screenMessage !== "処理中・・・") {
@@ -718,8 +731,8 @@ function getWithLoader(url, params) {
 
 /**
  * 共通ローダを実行するPUTリクエスト
- * @param {*} url URL
- * @param {*} param パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function putWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -731,9 +744,9 @@ function putWithLoader(url, params) {
 
 /**
  * 共通ローダを実行するPOST Configリクエスト
- * @param {*} url URL
- * @param {*} param パラメータ
- * @param {*} config 設定
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
+ * @param {Record<string, unknown>} config 設定
  */
 function configPostWithLoader(url, params, config) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -742,11 +755,11 @@ function configPostWithLoader(url, params, config) {
     store.dispatch("loading-screen/setLoadingScreenVisible", false)
   );
 }
-//add FNSI-8360 ljx start
+// add FNSI-8360 ljx start
 /**
  * 共通ローダを実行するPOSTリクエスト
- * @param { String } url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function postWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -755,11 +768,11 @@ function postWithLoader(url, params) {
     store.dispatch("loading-screen/setLoadingScreenVisible", false)
   );
 }
-//add FNSI-8360 ljx end
+// add FNSI-8360 ljx end
 /**
  * バイタル更新
  * @param {*} ordNo オーダ番号
- * @param {List} ordMonitors バイタル情報
+ * @param {unknown[]} ordMonitors バイタル情報
  */
 export function sendRequestUpdateTreatmentRecordVitalForMniMonitor(
   ordNo,
@@ -774,10 +787,11 @@ export function sendRequestUpdateTreatmentRecordVitalForMniMonitor(
 /**
  * オーダ番号に該当する治療方法マスタ取得.
  */
-export function sendRequestGetReportInfoByOrdNoWithLoader(ordNo) {
+export function sendRequestGetReportInfoByOrdNoWithLoader(ordNo, selectedPatId) {
   return getWithLoader(
-    `/treatment-record/${ordNo}/report-info`
-    );
+    `/treatment-record/${ordNo}/report-info`,
+    withSelectedPatId(undefined, selectedPatId)
+  );
 }
 
 /**
@@ -805,8 +819,8 @@ export function sendRequestCancelCondition(params) {
  * 装置マスタ取得.
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetMstMachineByOrdNoRst(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/mst-machine-rst`);
+export function sendRequestGetMstMachineByOrdNoRst(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/mst-machine-rst`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
@@ -814,15 +828,15 @@ export function sendRequestGetMstMachineByOrdNoRst(ordNo) {
  * @param {*} facilityCd 施設番号
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestGetMntMachineState(facilityCd,ordNo) {
-  return getWithLoader(`/treatment-record/${facilityCd}/${ordNo}/mnt-machine-state`);
+export function sendRequestGetMntMachineState(facilityCd, ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${facilityCd}/${ordNo}/mnt-machine-state`, withSelectedPatId(undefined, selectedPatId));
 }
 /**
  * 特殊浄化フラグ取得.
- * @param {*}} treatmentCd 治療方法コード
+ * @param {string} treatmentCd 治療方法コード
  */
-export function sendRequestGetIsPurification(treatmentCd) {
-  return getWithLoader(`/treatment-record/${treatmentCd}/is-purification`);
+export function sendRequestGetIsPurification(treatmentCd, selectedPatId) {
+  return getWithLoader(`/treatment-record/${treatmentCd}/is-purification`, withSelectedPatId(undefined, selectedPatId));
 }
 
 /**
@@ -875,21 +889,18 @@ export function getMedicineAllTabooAllergyFilterByType(patId, classType) {
  *                    { moniDataType: null, vitalMonitorClass: "2"}
  * @returns 条件に合致するモニタ項目のリスト
  */
-export function sendRequestGetSysMonitorItem(param) {
-  return getWithLoader(`/treatment-record/sys_monitor_item`, param);
+export function sendRequestGetSysMonitorItem(param, selectedPatId) {
+  return getWithLoader(`/treatment-record/sys_monitor_item`, withSelectedPatId(param, selectedPatId));
 }
 
 /**
  * 個別追加のモニタ項目マスタ取得.
- * @param { String } vitalMonitorClass バイタルモニタ区分
+ * @param {string} vitalMonitorClass バイタルモニタ区分
  * @returns 該当する個別追加モニタ項目マスタ
  */
-// mod #12462 患者情報共有 Ji start
 export function sendRequestGetMstAddMonitor(vitalMonitorClass, facilityCd) {
   return getWithLoader("/mstInfo/mstAddMonitorByClass", {
-    // facility_cd: getUserFacilityCd(),
-    facility_cd: facilityCd,
-// mod #12462 患者情報共有 Ji end
+    facility_cd: facilityCd ?? getUserFacilityCd(),
     vital_monitor_class: vitalMonitorClass
   });
 }
@@ -898,12 +909,9 @@ export function sendRequestGetMstAddMonitor(vitalMonitorClass, facilityCd) {
  * 追加のモニタ項目マスタ取得.
  * @returns 追加モニタ項目マスタ
  */
-// mod #12462 患者情報共有 Ji start
 export function sendRequestGetMstAddMonitorAll(facilityCd) {
   return getWithLoader("/mstInfo/mstAddMonitorByFacilityCd", {
-    // facility_cd: getUserFacilityCd()
-    facility_cd: facilityCd
-// mod #12462 患者情報共有 Ji end
+    facility_cd: facilityCd ?? getUserFacilityCd()
   });
 }
 // add 9858 治療記録＞モニタが治療記録モニタグラフマスタで指定した上下限値でグラフレンジが生成されない zy end
@@ -917,10 +925,19 @@ export function sendRequestGetBvGraph(param) {
   if (ordNo !== null) {
     return new Promise(function (resolve) {
       let graphName = "bvGraph";
-      //mod FNSI-8360画面切り替え時やグラフ切替時には共通ローダーを展開する ljx start
-      //ApiHelper.post(`/bvms/` + graphName + "/" + ordNo, param).then(function (response) {
-      postWithLoader(`/bvms/` + graphName + "/" + ordNo, param).then(function (response) {
-      //mod FNSI-8360画面切り替え時やグラフ切替時には共通ローダーを展開する ljx end
+      const selectedPatId = param.selectedPatId;
+      const body = { ...param };
+      delete body.selectedPatId;
+      const url = `/bvms/` + graphName + "/" + ordNo;
+      const queryParams = withSelectedPatId(undefined, selectedPatId);
+      store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
+      store.dispatch("loading-screen/setLoadingScreenVisible", true);
+      const request = queryParams
+        ? ApiHelper.configPost(url, body, { params: queryParams })
+        : ApiHelper.post(url, body);
+      request.finally(() =>
+        store.dispatch("loading-screen/setLoadingScreenVisible", false)
+      ).then(function (response) {
         resolve(BvmsGraphFunctions.mapGraph(response, graphName, param));
       });
     });
@@ -956,10 +973,19 @@ export function sendRequestGetDdmGraph(param) {
   if (ordNo !== null) {
     return new Promise(function (resolve) {
       let graphName = "ddmGraph";
-      //mod FNSI-8360画面切り替え時やグラフ切替時には共通ローダーを展開する ljx start
-      //ApiHelper.post(`/bvms/` + graphName + "/" + ordNo, param).then(function (response) {
-      postWithLoader(`/bvms/` + graphName + "/" + ordNo, param).then(function (response) {
-      //mod FNSI-8360画面切り替え時やグラフ切替時には共通ローダーを展開する ljx end
+      const selectedPatId = param.selectedPatId;
+      const body = { ...param };
+      delete body.selectedPatId;
+      const url = `/bvms/` + graphName + "/" + ordNo;
+      const queryParams = withSelectedPatId(undefined, selectedPatId);
+      store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
+      store.dispatch("loading-screen/setLoadingScreenVisible", true);
+      const request = queryParams
+        ? ApiHelper.configPost(url, body, { params: queryParams })
+        : ApiHelper.post(url, body);
+      request.finally(() =>
+        store.dispatch("loading-screen/setLoadingScreenVisible", false)
+      ).then(function (response) {
         resolve(BvmsGraphFunctions.mapGraph(response, graphName, param));
       });
     });
@@ -995,10 +1021,19 @@ export function sendRequestGetHtGraph(param) {
   if (ordNo !== null) {
     return new Promise(function (resolve) {
       let graphName = "htGraph";
-      //mod FNSI-8360画面切り替え時やグラフ切替時には共通ローダーを展開する ljx start
-      //ApiHelper.post(`/bvms/` + graphName + "/" + ordNo, param).then(function (response) {
-      postWithLoader(`/bvms/` + graphName + "/" + ordNo, param).then(function (response) {
-      //mod FNSI-8360画面切り替え時やグラフ切替時には共通ローダーを展開する ljx end
+      const selectedPatId = param.selectedPatId;
+      const body = { ...param };
+      delete body.selectedPatId;
+      const url = `/bvms/` + graphName + "/" + ordNo;
+      const queryParams = withSelectedPatId(undefined, selectedPatId);
+      store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
+      store.dispatch("loading-screen/setLoadingScreenVisible", true);
+      const request = queryParams
+        ? ApiHelper.configPost(url, body, { params: queryParams })
+        : ApiHelper.post(url, body);
+      request.finally(() =>
+        store.dispatch("loading-screen/setLoadingScreenVisible", false)
+      ).then(function (response) {
         resolve(BvmsGraphFunctions.mapGraph(response, graphName, param));
       });
     });
@@ -1069,13 +1104,12 @@ export function sendRequestGetRrGraphWithUploadFile(param) {
  * @param {*} param
  */
 function setFormData(param, isRrGraph) {
-  const formData = new FormData();
+  const formData = createApiFormData();
   formData.append("files", param.files, "file.csv");
   if (isRrGraph) {
     formData.append("graphY1From", param.graphY1From);
     formData.append("graphY1To", param.graphY1To);
-  }
-  else {
+  } else {
     formData.append("graph1Y1From", param.graph1Y1From);
     formData.append("graph1Y1To", param.graph1Y1To);
     formData.append("graph1Y2From", param.graph1Y2From);
@@ -1102,7 +1136,7 @@ export function sendRequestUpdateListComment(param) {
 
 /**
  * 治療記録削除処理.
- * @param {Integer} ordNo オーダ番号
+ * @param {number} ordNo オーダ番号
  */
 export function sendRequestDeleteTreatmentRecordRst(ordNo) {
   return putWithLoader(`/treatment-record/delete/${ordNo}`, ordNo);
@@ -1125,32 +1159,30 @@ export function sendOfflineTreatResultMerge(ordNo, resultData) {
  * 治療中情報有無判断
  * @param {*} ordNo オーダ番号
  */
-export function sendRequestTreatingOrdNo(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/treating_ordno`);
+export function sendRequestTreatingOrdNo(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/treating_ordno`, withSelectedPatId(undefined, selectedPatId));
 }
 
-//add FNSI-改修内容 グラフ様式修正 房 start
+// add FNSI-改修内容 グラフ様式修正 房 start
 /**
  * モニタグラフ設定取得
  */
-export function sendRequestGetVitalGraphDefine(facilityCd) {
-  return getWithLoader(`/vital/graph-define/${facilityCd}`);
+export function sendRequestGetVitalGraphDefine(facilityCd, selectedPatId) {
+  return getWithLoader(`/vital/graph-define/${facilityCd}`, withSelectedPatId(undefined, selectedPatId));
 }
-//add FNSI-改修内容 グラフ様式修正 房 end
+// add FNSI-改修内容 グラフ様式修正 房 end
 
-//add FNSI-改修内容 投薬変更のお知らせ修正 房 start
-export function sendGetNoticeMedi(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/medi_notice`);
+// add FNSI-改修内容 投薬変更のお知らせ修正 房 start
+export function sendGetNoticeMedi(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/medi_notice`, withSelectedPatId(undefined, selectedPatId));
 }
-//add FNSI-改修内容 投薬変更のお知らせ修正 房 end
+// add FNSI-改修内容 投薬変更のお知らせ修正 房 end
 /**
  * モニタ情報取得
  * @param {*} ordNo オーダ番号
  */
-// mod #12462 患者情報共有 Ji start
-export function sendRequestgetMonitorMsgRecord(ordNo, facilityCd) {
-  return getWithLoader(`/treatment-record/${ordNo}/monitor_record`,{facilityCd});
-// mod #12462 患者情報共有 Ji end
+export function sendRequestgetMonitorMsgRecord(ordNo, facilityCd, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/monitor_record`, withSelectedPatId({ facilityCd }, selectedPatId));
 }
 
 export function sendRequestUpdMonitorMsgRecord(MntMonitorMsgRecord) {
@@ -1172,16 +1204,17 @@ export function sendRequestGetResultMergeListForSelect(ordNo, startDate, endDate
 // #9315 2024.02.14 add オフライン治療開始後画面リロード処理 TDC片口 start
 /**
  * 現在治療状況を取得する
- * @param {Number} ordNo オーダ番号
+ * @param {number} ordNo オーダ番号
  */
-export function sendRequestGetTreatmentRecordCurrentRstDialysisState(ordNo) {
-  return getWithLoader(`/treatment-record/${ordNo}/current-dialysis-state`);
+export function sendRequestGetTreatmentRecordCurrentRstDialysisState(ordNo, selectedPatId) {
+  return getWithLoader(`/treatment-record/${ordNo}/current-dialysis-state`, withSelectedPatId(undefined, selectedPatId));
 }
 // #9315 2024.02.14 add オフライン治療開始後画面リロード処理 TDC片口 end
 // add #11471 ord_mian操作時の治療モードデータの登録 関 start
-export function sendRequestGetGetRstCondInfoSettingByOrdNo(ordNo) {
+export function sendRequestGetGetRstCondInfoSettingByOrdNo(ordNo, selectedPatId) {
   return getWithLoader(
-    `/treatment-record/${ordNo}/rst_cond_info_setting`
-    );
+    `/treatment-record/${ordNo}/rst_cond_info_setting`,
+    withSelectedPatId(undefined, selectedPatId)
+  );
 }
 // add #11471 ord_mian操作時の治療モードデータの登録 関 end

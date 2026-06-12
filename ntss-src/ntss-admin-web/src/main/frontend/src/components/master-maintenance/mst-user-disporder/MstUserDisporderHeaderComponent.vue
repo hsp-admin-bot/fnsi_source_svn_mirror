@@ -16,11 +16,9 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 export default {
-  components: {
-  },
   data() {
     return {
       condition: {
@@ -28,14 +26,7 @@ export default {
       },
     };
   },
-  computed: {
-  },
-  methods: {
-  },
-  created() {
-  },
-  destroyed() {
-  },
+
   mounted() {
     EventBus.$emit("addLeftmostHeaderMargin");
   }

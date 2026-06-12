@@ -25,7 +25,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.google.common.base.CaseFormat;
 
 import jp.co.nikkiso.ntss.admin_web.response.masterMaintenance.MasterColumn;
@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 @Service
 public class MstFacilitySettingServiceImpl implements MstFacilitySettingService {
@@ -106,6 +107,10 @@ public class MstFacilitySettingServiceImpl implements MstFacilitySettingService 
 
   @Autowired
   private PatMainDao patMainDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   @Autowired
   private LogService logService;
@@ -392,7 +397,7 @@ public class MstFacilitySettingServiceImpl implements MstFacilitySettingService 
           wheres.append("  facility_cd = '" + mstFacilitySetting.getFacilityCd() + "'" +"\n");
           // logCommon設定
           // logCommon設定
-          DataUpdateLogCommonNew logCommon = getLogCommon(mstFacilitySettingDao, mmsTbN, wheres, getEventLogMessage());
+          DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage());
           // ログ出力カラム情報及び更新前データ情報取得
           boolean setResult = logCommon.setInfo();
           //DB更新ログ出力ロジック wp end
@@ -524,11 +529,11 @@ public class MstFacilitySettingServiceImpl implements MstFacilitySettingService 
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

@@ -1,4 +1,4 @@
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { ITEM_LAYOUT, ITEM_UNIT, ROUTERLINK_FACILITY_CALENDAR_DETAIL } from "@/components/facility-calendar/Definitions.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 /**
@@ -60,15 +60,15 @@ export const createCalendarContentsForMasterLayout = (eventDataCollection, curre
       if (event.date) {
         addContentToCalendar(
           calendarContents,
-          moment(event.date).format('YYYYMMDD'),
+          dayjs(event.date).format('YYYYMMDD'),
           calendarContent
         );
       } else {
-        const startDate = moment(event.startDate);
-        const endDate = moment(event.endDate);
+        const startDate = dayjs(event.startDate);
+        const endDate = dayjs(event.endDate);
         const diffDays = endDate.diff(startDate, 'days');
         const dateRange = getDateRangeForSearchCondition(currentDate, null, null);
-        const endDateUserCanView = moment(dateRange.end);
+        const endDateUserCanView = dayjs(dateRange.end);
         const diffDaysUserCanView = endDateUserCanView.diff(startDate, 'days');
         addContentToCalendar(
           calendarContents,
@@ -109,8 +109,8 @@ export const createCalendarContentsForCalendar = (calendarContents, eventDataCol
         font_color:event.font_color
  /*  add FNSI-437 改修内容 施設イベントの施設カレンダー背景色指定の色調整掲示板への色反映 趙立強 start*/
       };
-      const startDate = moment(event.notice_fac_cal_start_date);
-      const endDate = moment(event.notice_fac_cal_end_date);
+      const startDate = dayjs(event.notice_fac_cal_start_date);
+      const endDate = dayjs(event.notice_fac_cal_end_date);
       let diffDays = endDate.diff(startDate, 'days');
       if (diffDays === 0 && (formattedDate(startDate) !== formattedDate(endDate))) {
         diffDays = 1;
@@ -121,10 +121,12 @@ export const createCalendarContentsForCalendar = (calendarContents, eventDataCol
         calendarContent
       );
       if (diffDays && diffDays > 0) {
+        let currentDate = startDate;
         for (let i = 0; i < diffDays; i++) {
+          currentDate = currentDate.add(1, "days");
           addContentToCalendar(
             calendarContents,
-            startDate.add(1, "days").format("YYYYMMDD"),
+            currentDate.format("YYYYMMDD"),
             calendarContent
           );
         }
@@ -248,8 +250,8 @@ export const getDateRangeForSearchCondition = (currentDate, startDate, endDate) 
   let start = startDate;
   let end = endDate;
   if (!startDate && !endDate && currentDate) {
-    start = moment(currentDate).subtract(1, "months").startOf("month").format("YYYYMMDD");
-    end = moment(currentDate).add(1, "months").endOf("month").format("YYYYMMDD");
+    start = dayjs(currentDate).subtract(1, "months").startOf("month").format("YYYYMMDD");
+    end = dayjs(currentDate).add(1, "months").endOf("month").format("YYYYMMDD");
   }
   return {
     start: JSON.parse(JSON.stringify(start)),
@@ -263,13 +265,13 @@ export const getDateRangeForSearchCondition = (currentDate, startDate, endDate) 
 export const formattedDate = (date) => {
   return date === null || date === ""
     ? null
-    : moment(date).format("YYYYMMDD");
+    : dayjs(date).format("YYYYMMDD");
 }
 
 export const revertDate = (date) => {
   return date === null || date === ""
     ? null
-    : moment(date).format("YYYY-MM-DD");
+    : dayjs(date).format("YYYY-MM-DD");
 }
 
 /**

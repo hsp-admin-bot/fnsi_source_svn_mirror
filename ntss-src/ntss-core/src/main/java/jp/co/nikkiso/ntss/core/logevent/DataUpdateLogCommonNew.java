@@ -8,7 +8,6 @@ import static jp.co.nikkiso.ntss.core.logevent.DataUpdateLogInfoUtil.getKeyWithP
 import static jp.co.nikkiso.ntss.core.logevent.DataUpdateLogInfoUtil.getKeyWithStep;
 import static jp.co.nikkiso.ntss.core.logevent.DataUpdateLogInfoUtil.isEqual;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -31,8 +30,9 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.entity.DataUpdateLogInfoEntity;
 import jp.co.nikkiso.ntss.core.entity.custom.WaterSurveyPoint;
@@ -90,6 +90,9 @@ public class DataUpdateLogCommonNew {
    */
   @Setter
   private Config config;
+
+  @Setter
+  private Config defaultDbConfig;
 
   @Setter
   private Object daoObject;
@@ -468,7 +471,7 @@ public class DataUpdateLogCommonNew {
       return this.config;
     }
 
-    return Config.get(this.daoObject);
+    return defaultDbConfig;
   }
 
   /**
@@ -1058,7 +1061,7 @@ public class DataUpdateLogCommonNew {
     TypeReference<List<Map<String, String>>> type = new TypeReference<List<Map<String, String>>>() {};
     try {
       changedList = mapper.readValue(strJson, type);
-    } catch(IOException e) {
+    } catch (JacksonException e) {
       System.err.println(e.getMessage());
     }
     return changedList;

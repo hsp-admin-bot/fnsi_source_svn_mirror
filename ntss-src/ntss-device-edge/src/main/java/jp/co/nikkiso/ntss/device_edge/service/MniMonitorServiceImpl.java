@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.device_edge.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.dao.MniMonitorDao;
 import jp.co.nikkiso.ntss.core.dao.MntMachineStateDao;
@@ -19,9 +19,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -41,6 +41,10 @@ public class MniMonitorServiceImpl implements MniMonitorService {
 
   @Autowired
   private LogServiceCore logServiceCore;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // DB更新ログ出力ロジック wangzuo End
 
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang start
@@ -174,7 +178,7 @@ public class MniMonitorServiceImpl implements MniMonitorService {
         // 対象のord_noのord_mainに再循環率を登録
         ordMainDao.updateWeightInfo(param.getOrdNo(), mapWeight.writeValueAsString(dto));
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
@@ -245,11 +249,11 @@ public class MniMonitorServiceImpl implements MniMonitorService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

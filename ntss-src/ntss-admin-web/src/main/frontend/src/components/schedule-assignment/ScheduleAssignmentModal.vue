@@ -3,10 +3,13 @@
  */
  <template>
   <modal-base @onClose="closeScheduleAssignmentModal">
-    <div slot="header">
+        <template #header>
+<div>
       <component :is="header"></component>
     </div>
-    <div slot="body">
+    </template>
+        <template #body>
+<div>
       <!-- add FNSI-？？？？患者割り当て 徐 start -->
       <div v-if="isShowEditModal">
         <schedule-assignment-edit-modal @close="closeDetailView" @comserverNotification="comserverNotification"/>
@@ -83,20 +86,20 @@
               type="radio"
               class="identification"
               name="assign"
-              value="1"
               id="input-schedule"
-              @click="changeModel(true);"
-              :checked="isMode === true ? 'checked' : ''"
+              v-model="isMode"
+              :value="true"
+              @change="onModeChange"
             />
             <label for="input-schedule" class="label first-of-type">スケジュール</label>
             <input
               type="radio"
               class="identification"
               name="assign"
-              value="2"
               id="input-patient"
-              @click="changeModel(false);"
-              :checked="isMode === false ? 'checked' : ''"
+              v-model="isMode"
+              :value="false"
+              @change="onModeChange"
             />
             <label for="input-patient" class="label last-of-type">患者名</label>
           </div>
@@ -243,7 +246,9 @@
       </div>
       <!-- add FNSI-？？？？患者割り当て 徐 end -->
     </div>
-    <div slot="footer" class="flex-container" v-if="!isShowEditModal">
+    </template>
+        <template #footer>
+<div class="flex-container" v-if="!isShowEditModal">
       <div class="denial-btn-area" style="background:none">
         <!-- mod 画面スタイル(ボタン)対応 徐 start -->
         <!-- <button
@@ -306,6 +311,7 @@
         <!-- mod FNSI-？？？？患者割り当て 徐 end -->
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
@@ -313,12 +319,12 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import moment from "moment";
-import Kendo from "@progress/kendo-ui";
+import dayjs from "@/compat/date/dayjs";
+import { createDataSource } from "@/functions/common/KendoFunctions";
 import ModalBase from "@/components/modals/ModalBase";
 import ScheduleAssignmentEditModal from "@/components/schedule-assignment/ScheduleAssignmentEditModal";
-import { mapGetters, mapActions} from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapGetters, mapActions} from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
@@ -329,6 +335,8 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 import {sendRequestFindPhysicalInfo} from "@/apis/pat-viewer";
 // add 10443 身体情報・DW・目標体重バグ 関  end
 import { sortableCompare } from "@/functions/SortFunctions";
+import nameDuplicationImg from "../../assets/name_duplication.png";
+import { getScopedElementById, getScopedElementsByClassName, resolveRefElement } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   name: "ScheduleAssignmentModal",
@@ -592,7 +600,7 @@ export default {
       // add FNSI-？？？？患者割り当て 徐 end
       selRowIndex: null,
       //同姓同名アイコン
-      image_src_same: require('../../assets/name_duplication.png'),
+      image_src_same: nameDuplicationImg,
       freeText: "",
       currentSort: null
     };
@@ -628,13 +636,13 @@ export default {
       if (this.getAssignmentFlag) {
         // 患者
         // storeからデータを取得
-        return new Kendo.data.DataSource({
+        return createDataSource({
           data: this.getPatlist
         });
       } else {
         // スケジュール
         // storeからデータを取得
-        return new Kendo.data.DataSource({
+        return createDataSource({
           data: this.getSchedulelist
         });
       }
@@ -661,9 +669,15 @@ export default {
     }
   },
   methods: {
+    getScheduleGridRef() {
+      return this.$refs.scheduleGrid || null;
+    },
+    getScheduleGridWidget() {
+      return this.getScheduleGridRef()?.gridWidget?.() || this.getScheduleGridRef()?.kendoWidget?.() || null;
+    },
     // mod FNSI-？？？？患者割り当てtitle名不正 付 start
     // ...mapActions("multi-modal", ["hideModal"]),
-    ...mapActions("multi-modal", ["showSchedule", "hideModal"]),
+    ...mapActions("multi-modal", ["hideModal"]),
     // mod FNSI-？？？？患者割り当てtitle名不正 付 end
     ...mapActions("schedule-assignment/modal", [
       "changeAssignmentFlag",
@@ -722,12 +736,13 @@ export default {
     // add #10359 編集権限の動作不正 dengshen end
     calculateGridHeight() {
       // モーダルのbodyの高さ
-      const mb = document.getElementsByClassName("modal-body")[0];
+      const modalBodies = getScopedElementsByClassName("modal-body", this.$el || null);
+      const mb = modalBodies.find((element) => Number(element?.clientHeight || 0) > 0) || modalBodies[0] || null;
       const mh = mb ? mb.clientHeight : 0;
       // モーダルのヘッダの高さ
-      const hElm = document.getElementById("schedulemodal-header");
+      const hElm = getScopedElementById("schedulemodal-header", this.$el || null);
       const hh = hElm ? hElm.clientHeight : 0;
-      const sElm = document.getElementById("schedulemodal-pat-search");
+      const sElm = getScopedElementById("schedulemodal-pat-search", this.$el || null);
       const sh = sElm ? sElm.clientHeight : 0;
       this.scheduleGridToolbarHeight = mh - hh - sh;
       this.scheduleGridToolbarHeight =
@@ -767,29 +782,22 @@ export default {
     onClick(event) {
       if (event.sender) {
         // 選択行取得
-        this.selRowIndex = this.$refs.scheduleGrid
-          .kendoWidget()
+        this.selRowIndex = this.getScheduleGridWidget()
           .select()
           .index();
 
         // 選択時のみ
         if (this.selRowIndex > -1) {
-          const selrow = this.$refs.scheduleGrid
-            .kendoWidget()
-            .select()
-            .closest("tr");
+          const scheduleGrid = this.getScheduleGridWidget();
+          const selrow = scheduleGrid?.select?.().closest("tr");
           // 選択情報
           // 患者ID
-          this.selPatId = this.$refs.scheduleGrid
-            .kendoWidget()
-            .dataItem(selrow).patId;
+          this.selPatId = scheduleGrid?.dataItem?.(selrow)?.patId;
           // ordNo
-          this.selOrdNo = this.$refs.scheduleGrid
-            .kendoWidget()
-            .dataItem(selrow).ordNo;
+          this.selOrdNo = scheduleGrid?.dataItem?.(selrow)?.ordNo;
 
           // 「登録」ボタン活性
-          this.setDisabledButton( false );
+          this.setDisabledButton( false);
         }
       }
     },
@@ -802,7 +810,7 @@ export default {
     async saveChecklist() {
 
       // 「登録」ボタン非活性
-      this.setDisabledButton( true );
+      this.setDisabledButton( true);
 
       if (this.getAssignmentFlag) {
         // 患者割当の場合
@@ -851,7 +859,7 @@ export default {
                     message: res.message
                   });
                   // 「登録」ボタン活性
-                  this.setDisabledButton( false );
+                  this.setDisabledButton( false);
                 } else {
                   // 通信サーバ通知処理
                   this.comserverNotification();
@@ -911,22 +919,10 @@ export default {
       }
     },
     // add FNSI-？？？？患者割り当て 徐 start
-    async changeModel(displayFlag) {
-      this.isMode = displayFlag;
-      this.changeAssignmentFlag(!displayFlag);
-      this.changeAssignment(!displayFlag);
-      // mod FNSI-？？？？患者割り当てtitle名不正 陳 start
-      // add FNSI-？？？？患者割り当てtitle名不正 付 start
-      // if (displayFlag) {
-        // this.showSchedule({title :"スケジュール割り当て"});
-        this.showSchedule({title :"？？？？患者治療割り当て"});
-      // } else {
-      //   this.showSchedule({title :"患者名割り当て"})
-      // }
-      // add FNSI-？？？？患者割り当てtitle名不正 付 end
-      // 行選択解除
+    onModeChange() {
+      this.changeAssignmentFlag(!this.isMode);
+      this.changeAssignment(!this.isMode);
       this.clearSelect();
-      // mod FNSI-？？？？患者割り当てtitle名不正 陳 end
       this.$nextTick(() => {
         this.calculateGridHeight();
       });
@@ -935,9 +931,9 @@ export default {
       // ソート後のリスト取得
       const sortedPatList = this.scheduleList.view();
       
-      this.structData.indStartDate = moment(this.getSelectOrdMain.viewTreatDate).format("YYYY-MM-DD");  // 治療開始日時
+      this.structData.indStartDate = dayjs(this.getSelectOrdMain.viewTreatDate).format("YYYY-MM-DD");  // 治療開始日時
 
-      this.structData.facilityCd = sortedPatList[this.selRowIndex].facilityCd;
+      this.structData.facilityCd = sortedPatList[this.selRowIndex].facility_cd;
       //add FNSI redmine 5923 start
       this.structData.hospPatId = sortedPatList[this.selRowIndex].hospPatId;
       //add FNSI redmine 5923 end
@@ -950,7 +946,6 @@ export default {
       // add FNSI 373,374修正対応 陳 end
 
       this.selectPat(sortedPatList[this.selRowIndex].patId);
-
       this.setStructData(this.structData);
       // add 10443 身体情報・DW・目標体重バグ 関  start
       // 患者身体情報も取得
@@ -1012,7 +1007,7 @@ export default {
                 EventBus.$emit("ScheduleAssignment", {
                   patId: this.getRequestData.patId,
                   ordNo: this.getRequestData.ordNo
-                } );
+                });
               } else if (answer === 1) {
                 // 再通知
                 this.comserverNotification();
@@ -1032,7 +1027,7 @@ export default {
           // EventBus.$emit("ScheduleAssignment", {
           //   patId: this.getRequestData.patId,
           //   ordNo: this.getRequestData.ordNo
-          // } );
+          // });
 
           // 割り当て完了メッセージ表示
           this.$ons.notification.alert({
@@ -1058,10 +1053,11 @@ export default {
     // 背景色セット
     editBackgroundColor() {
       this.$nextTick(() => {
-        if (this.$refs.scheduleGrid) {
-          let gridHeader = this.$refs.scheduleGrid.$el.firstChild;
-          if (gridHeader.classList === undefined) {
-            gridHeader = this.$refs.scheduleGrid.$el.firstElementChild;
+        const scheduleGridRoot = resolveRefElement(this, "scheduleGrid");
+        if (scheduleGridRoot) {
+          let gridHeader = scheduleGridRoot.firstChild;
+          if (gridHeader?.classList === undefined) {
+            gridHeader = scheduleGridRoot.firstElementChild;
           }
           gridHeader?.classList?.add("master-grid-header");
         }
@@ -1081,7 +1077,7 @@ export default {
       this.selPatId = null;
       this.selOrdNo = null;
       // ボタン非活性
-      this.setDisabledButton( true );
+      this.setDisabledButton( true);
     },
   },
   watch: {
@@ -1101,7 +1097,7 @@ export default {
   },
   async mounted() {
     // 「登録」ボタン非活性
-    this.setDisabledButton( true );
+    this.setDisabledButton( true);
     // 選択されたordNoのスケジュール取得
     await this.getOrderMainListByOrdNo();
     // 患者一覧情報取得
@@ -1148,7 +1144,7 @@ export default {
     window.removeEventListener("beforeprint", this.handleBeforePrint);
     window.removeEventListener("afterprint", this.handleAfterPrint);
   },
-  destroyed() {
+  unmounted() {
     EventBus.$emit("hideScheduleAssignmentModal");
   }
 };
@@ -1203,18 +1199,18 @@ input[type="radio"] {
 #schedulemodal-header {
   margin-left: 5px;
 }
-#schedule-grid >>> .k-grid .k-grid-content tr {
+#schedule-grid :deep(.k-grid .k-grid-content tr) {
   border-color: var(--master-maintenance-kgrid-border-color);
   color: var(--master-maintenance-kgrid-body-color);
   background-color: var(--master-maintenance-kgrid-item-background-color);
 }
-#schedule-grid >>> .k-grid .k-grid-content tr:nth-child(2n) {
+#schedule-grid :deep(.k-grid .k-grid-content tr:nth-child(2n)) {
   background-color: var(--ntss-list-content-2nd-background-color);
 }
-#schedule-grid >>> .k-grid tr.k-state-selected > td {
+#schedule-grid :deep(.k-grid tr.k-state-selected > td) {
   color: unset;
 }
-#schedule-grid >>> .k-grid-content {
+#schedule-grid :deep(.k-grid-content) {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }
@@ -1251,61 +1247,87 @@ input[type="radio"] {
   margin-right: 0.4em;
   white-space: nowrap;
 }
-#schedule-grid >>> .k-i-sort-asc-sm::before {
+#schedule-grid :deep(.k-i-sort-asc-sm::before) {
   content: "▲" !important;
   color: #ffffff;
 }
-#schedule-grid >>> .k-i-sort-desc-sm::before {
+#schedule-grid :deep(.k-i-sort-desc-sm::before) {
   content: "▼" !important;
   color: #ffffff;
 }
+ 
 /* 治療日は昇順アイコンを強制的に「降順」に見せる */
-#schedule-grid >>> th[data-field="treatDate"] .k-i-sort-asc-sm::before {
+#schedule-grid :deep(th[data-field="treatDate"] .k-i-sort-asc-sm::before) {
   content: "▼" !important;
   color: #ffffff;
 }
+ 
 /* 治療日は降順アイコンを強制的に「昇順」に見せる */
-#schedule-grid >>> th[data-field="treatDate"] .k-i-sort-desc-sm::before {
+#schedule-grid :deep(th[data-field="treatDate"] .k-i-sort-desc-sm::before) {
   content: "▲" !important;
   color: #ffffff;
+}
+
+#schedule-grid :deep(.k-grid-header) {
+  border: solid 1px var(--ntss-list-border-color);
 }
 @media print {
   /** モーダル高さ確保 */
-  .modal-mask >>> div {
+  .modal-mask :deep(div){
     height: auto !important;
   }
   /** レイアウト崩れ防止 */
-  div >>> .modal-wrapper:has(.indInfo-style-modal-container) {
+  div :deep(.modal-wrapper:has(.indInfo-style-modal-container)){
     display: inline-block !important;
     width: 100%;
   }
-  #schedule-grid >>> .k-grid .k-grid-header {
+  #schedule-grid :deep(.k-grid .k-grid-header){
     padding-right: 0 !important;
   }
   /** 表ヘッダー全ページに付与 */
-  #schedule-grid >>> .k-grid thead {
+  #schedule-grid :deep(.k-grid thead){
     display: table-header-group !important;
   }
   /** はみ出し防止 */
-  #schedule-grid >>> .k-grid,
-  #schedule-grid >>> .k-grid-content {
+  #schedule-grid :deep(.k-grid),
+  #schedule-grid :deep(.k-grid-content){
     width: 100% !important;
     overflow: visible !important;
   }
   /** 横幅をページ内に強制収める */
-  #schedule-grid >>> .k-grid table {
+  #schedule-grid :deep(.k-grid table){
     width: 100% !important;
     table-layout: fixed !important;
   }
   /** colgroupの固定幅を辞める */
-  #schedule-grid >>> col {
+  #schedule-grid :deep(col){
     width: auto !important;
   }
   /** 文字折り返す */
-  #schedule-grid >>> td,
-  #schedule-grid >>> th {
+  #schedule-grid :deep(td),
+  #schedule-grid :deep(th){
     white-space: normal !important;
     word-break: break-word;
   }
+}
+:deep(.k-grid .k-table-th){
+  border-color: #fff !important;
+}
+:deep(.k-grid-header){
+  background-image: linear-gradient(rgba(255, 255, 255, .3) 0%, transparent 50%, transparent 50%, rgba(0, 0, 0, .1) 100%);
+  background-color: #333333;
+}
+:deep(.k-sort-icon svg),
+:deep(.k-sort-icon .k-svg-icon) {
+  display: none !important;
+}
+:deep(th[aria-sort="ascending"] .k-sort-icon::before) {
+  color: #ffffff !important;
+  content: "▲";
+}
+
+:deep(th[aria-sort="descending"] .k-sort-icon::before) {
+  color: #ffffff !important;
+  content: "▼";
 }
 </style>

@@ -43,6 +43,7 @@ import jp.co.nikkiso.ntss.core.exception.NtssException;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 @Service
 public class DeliveryServiceImpl implements DeliveryService {
@@ -86,6 +87,10 @@ public class DeliveryServiceImpl implements DeliveryService {
 
   @Autowired
   private DeliveryServiceImpl deliveryServiceImpl;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   // mod 2022-11-02 bug #8028 応答待ちのジャーナルがあると、送信処理が実施されない 孫 start
 //  @Override
@@ -318,7 +323,7 @@ public class DeliveryServiceImpl implements DeliveryService {
       wheres.append(" and coop_result in ('0', 'R') ");
     }
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(sysCoopJournalDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -405,7 +410,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     wheres.append(" WHERE\n");
     wheres.append(inStr + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(sysCoopJournalDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -928,11 +933,11 @@ public class DeliveryServiceImpl implements DeliveryService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

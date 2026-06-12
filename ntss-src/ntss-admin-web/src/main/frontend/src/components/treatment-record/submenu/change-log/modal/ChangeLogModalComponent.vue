@@ -3,15 +3,16 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="change-log-base">
+    <template #body>
+      <div class="change-log-base">
       <div class="result-merge-candidates">
         <v-ons-row style="align-items: center;">
           <div class="change-log-list-header" style="margin-right: 0.5em;">
             <v-ons-select
               v-model="selectedRstEdition"
             >
-              <template v-for="item in editionsList">
-                <option :key="item.value" :value="item.value">{{ item.label }}</option>
+              <template v-for="item in editionsList" :key="item.value">
+                <option :value="item.value">{{ item.label }}</option>
               </template>
             </v-ons-select>
           </div>
@@ -50,8 +51,10 @@
           </tbody>
         </table>
       </div>
-    </div>
-    <div slot="footer" class="modal-footer-custom">
+      </div>
+    </template>
+    <template #footer>
+      <div class="modal-footer-custom">
       <v-ons-row>
         <v-ons-col>
           <v-ons-button class="btn2-cancel common-style-select-button" @click="cancel">
@@ -59,12 +62,13 @@
           </v-ons-button>
         </v-ons-col>
       </v-ons-row>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import ModalBase from "@/components/modals/ModalBase";
 import {sendRequestGetChangeLog} from "@/apis/log-reference";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
@@ -90,6 +94,7 @@ export default {
   },
   computed: {
     ...mapGetters("user", ["getFacilityCd"]),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     ...mapGetters("treatment-record/common", [
       "getOrdNo"
     ]),
@@ -219,7 +224,8 @@ export default {
      */
     async searchMinMax() {
       await ApiHelper.get(
-        `/mainData/getOrdMainByOrdNo/${this.getOrdNo}`
+        `/mainData/getOrdMainByOrdNo/${this.getOrdNo}`,
+        { selectedPatId: this.selectedPatId }
       )
       .then(async response => {
         if (response.data) {
@@ -244,7 +250,7 @@ export default {
       this.selectedRstEdition = this.rstEditionMax;
     },
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },

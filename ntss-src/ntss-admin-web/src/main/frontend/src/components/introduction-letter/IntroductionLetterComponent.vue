@@ -39,7 +39,7 @@
                   :disabled="getViewMode"
                   name="letterCategory"></v-ons-radio>-->
                 <v-ons-radio v-model="letterCategory" :value="1" input-id="in" modifier="round"
-                  @click="setReportFlagFalse" :disabled="getViewMode || this.getUpdateMode" class="radio-radio"
+                  @click="setReportFlagFalse" :disabled="getViewMode || this.getUpdateMode" style="margin-left: 5px;"
                   name="letterCategory"></v-ons-radio>
                 <!--mod FNSI-改修内容redmine4168 任 end-->
                 <label for="in">転入</label>
@@ -53,9 +53,19 @@
                   ref="reportStartDateInput"
                   max="9999-12-31"/>
                 <common-calendar v-model="reportStartDate" :disabled="getViewMode"/>-->
-                <input type="date" v-model="reportStartDate" :disabled="getViewMode || getReportIsDel === '1'" class="input ntss-input-date"
-                  :class="reportStartDateClassCtrl.classObject" ref="reportStartDateInput" max="9999-12-31"
-                  @focus="onFocusInStartDate" @input="onInputStartDate" @blur="onFocusOutStartDate()" />
+                <date-input
+                  v-model="reportStartDate"
+                  :disabled="getViewMode || getReportIsDel === '1'"
+                  class="input ntss-input-date"
+                  :class="reportStartDateClassCtrl.classObject"
+                  classes="date-input-required"
+                  ref="reportStartDateInput"
+                  max="9999-12-31"
+                  @focus="onFocusInStartDate"
+                  @input="onInputStartDate"
+                  @blur="onFocusOutStartDate()"
+                  isRequired
+                />
                 <common-calendar v-model="reportStartDate" :disabled="getViewMode || getReportIsDel === '1'"
                   @input="handleReportStartDateChange()" />
                 <!-- mod #12196 紹介状作成時に参照される各データが常に最新値になるのはNG zhao end-->
@@ -121,7 +131,7 @@
         <!--<div v-if="getUpdatePdf" v-html="getHtmlTemplate" id="content-html" align="center"></div>-->
         <!--mod 11488 紹介状登録内容保存時に帳票の版も記憶する 吉 start-->
         <!--<div v-if="getUpdatePdf" v-html="getHtmlTemplate" id="content-html-id" align="center"></div>-->
-        <div v-if="getUpdatePdf" v-html="getHtmlTemplate" id="content-html-id" align="center" v-show="pdfShow"></div>
+        <div v-if="getUpdatePdf" v-html="getHtmlTemplate" id="content-html-id" ref="contentHtml" align="center" v-show="pdfShow"></div>
         <!--mod 11488 紹介状登録内容保存時に帳票の版も記憶する 吉 end-->
         <!--mod 10499 紹介状画面でセルの縦配置設定が反映しない 吉 end-->
         <!--mod   Aspose.cells plug-in integration  吉 end-->
@@ -143,41 +153,45 @@
 </template>
 
 <script>
-/*add FNSI-改修内容redmain3772 范 start*/
-import $$ from "jquery";
-import { mapActions, mapGetters } from "vuex";
-/*mod FNSI-改修内容redmine4180 任 start*/
-/*import MasterSelector from "@/components/common/master-selector/MasterSelector";*/
-import MasterSelector from "@/components/common/master-selector/MasterSelectorFacility";
-/*mod FNSI-改修内容redmine4180 任 end*/
-import { makeRequiredClassConrtoller } from "@/functions/for-componet/ClassControlFunctions.js";
-import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
-/*add FNSI-改修内容転入時の紹介状取込ができない 任 start*/
-/* mod #12370 紹介状の転入の動作不正 修正 start */
-// import pdf from "vue-pdf"
-import PdfViewer from "@/components/common/PdfViewer.vue";
-/* mod #12370 紹介状の転入の動作不正 修正 end */
-/*add FNSI-改修内容転入転出の患者情報連動 任 start*/
-import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
-import CustomSimpleTextareaTypeB from "@/components/common/custom-form-tags/CustomSimpleTextareaTypeB";
-import moment from "moment";
-import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
-/*add FNSI-改修内容患者転入選択後、転出戻したら、画面の状態が元と違う 任 start*/
-import { EventBus } from "@/eventBus.js";
-/*add FNSI-改修内容患者転入選択後、転出戻したら、画面の状態が元と違う 任 end*/
-/*add FNSI-改修内容転入転出の患者情報連動 任 end*/
-/*add FNSI-改修内容転入時の紹介状取込ができない 任 end*/
-//FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
-import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
-/*add FNSI-改修内容redmain3772 范 end*/
-//FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
-/* add by chamaojia 2025-05-21 [11871]  --start */
-import { ApiHelper } from "@/apis/AxiosHelper";
-/* add by chamaojia 2025-05-21 [11871]  --end */
-// add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260424 start
-import { sendRequestPostImageUpload, sendRequestPostImageDelete } from "@/apis/pat-event";
-import { dateFormat } from "@/functions/common/DateTimeUtils.js";
-// add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260424 end
+import $$ from "@/compat/jquery";
+  /*add FNSI-改修内容redmain3772 范 start*/
+
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
+  /*mod FNSI-改修内容redmine4180 任 start*/
+  /*import MasterSelector from "@/components/common/master-selector/MasterSelector";*/
+  import MasterSelector from "@/components/common/master-selector/MasterSelectorFacility";
+  /*mod FNSI-改修内容redmine4180 任 end*/
+  import { makeRequiredClassConrtoller } from "@/functions/for-componet/ClassControlFunctions.js";
+  import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
+  /*add FNSI-改修内容転入時の紹介状取込ができない 任 start*/
+  /* mod #12370 紹介状の転入の動作不正 修正 start */
+  // import pdf from "vue-pdf"
+  import PdfViewer from "@/components/common/PdfViewer.vue";
+  /* mod #12370 紹介状の転入の動作不正 修正 end */
+  /*add FNSI-改修内容転入転出の患者情報連動 任 start*/
+  import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
+  import CustomSimpleTextareaTypeB from "@/components/common/custom-form-tags/CustomSimpleTextareaTypeB";
+  import dayjs from "@/compat/date/dayjs";
+  import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
+  /*add FNSI-改修内容患者転入選択後、転出戻したら、画面の状態が元と違う 任 start*/
+  import {EventBus} from "@/compat/vue/event-bus.js";
+  /*add FNSI-改修内容患者転入選択後、転出戻したら、画面の状態が元と違う 任 end*/
+  /*add FNSI-改修内容転入転出の患者情報連動 任 end*/
+  /*add FNSI-改修内容転入時の紹介状取込ができない 任 end*/
+  //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
+  import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
+  /*add FNSI-改修内容redmain3772 范 end*/
+  //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
+  /* add by chamaojia 2025-05-21 [11871]  --start */
+  import { ApiHelper } from "@/apis/AxiosHelper";
+  import { queryElementBySelectors,
+  getScopedJQuery as createScopedJQuery} from "@/functions/common/LayoutMeasureHelper";
+  // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260424 start
+  import { sendRequestPostImageUpload, sendRequestPostImageDelete } from "@/apis/pat-event";
+  import { dateFormat } from "@/functions/common/DateTimeUtils.js";
+  import DateInput from "@/components/common/DateInput";
+  // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260424 end
+  /* add by chamaojia 2025-05-21 [11871]  --end */
 
 /**
  * @description 紹介状作成コンポーネント
@@ -227,7 +241,7 @@ export default {
       /* add by chamaojia 2025-05-21 [11871]  --start */
       facilityNameList: [],
       /* add by chamaojia 2025-05-21 [11871]  --end */
-      // add 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 start
+      // add 11488 紹介状登録内容保存時に帳票の版も記憶する 1.1A  吉 start
       pdfShow: false,
       contentObserver: null,
       // add #12196 紹介状作成時に参照される各データが常に最新値になるのはNG zhao start
@@ -267,7 +281,8 @@ export default {
     /* mod #12370 紹介状の転入の動作不正 修正 end */
     "common-calendar": commonCalender,
     /*mod FNSI-改修内容転入時の紹介状取込ができない/転入転出の患者情報連動 任 end*/
-    "custom-simple-textarea-b": CustomSimpleTextareaTypeB
+    "custom-simple-textarea-b": CustomSimpleTextareaTypeB,
+    "date-input": DateInput,
   },
 
   computed: {
@@ -388,12 +403,12 @@ export default {
       // add FNSI-改修内容患者イベント(紹介状)施設選択の箇所に、施設マスタTBL⇒全施設マスタTBL、医療機関コードがkeyとして取得、保存する要 赵 end
     }
     this.timerAction = setInterval(() => {
-      // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe start
-      //const isF = document.querySelectorAll("td[id]");
-      const isF = document.querySelectorAll("td[excelCoordinate]");
-      // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe end
-      this.isFound = isF.length > 0;
-    }, 500);
+        // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe start
+        //const isF = document.querySelectorAll("td[id]");
+        const isF = this.getLetterCells();
+        // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe end
+        this.isFound = isF.length > 0;
+      }, 500);
     // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 start
     this.$nextTick(() => {
       setTimeout(() => {
@@ -408,28 +423,31 @@ export default {
       }, 500);
     });
     // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end
-    if (this.getHtmlTemplate && letterInfo) {
-      const letterData = letterInfo.letter_data;
-      if (letterData) {
-        try {
-          // mod #7162 紹介状画面で編集しても保存されないことを修正 劉 start
-          this.$nextTick(() => {
-            // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe start
-            // Object.keys(letterData).map(x => {
-            //   /*del FNSI-改修内容bug修正 任 start*/
-            //   if(x !== "pat-name-area"){
-            //     document.getElementById(`${x}`).innerHTML = letterData[x];
-            //   }
-            //   /*del FNSI-改修内容bug修正 任 end*/
-            // });
-            document.querySelectorAll("td[excelCoordinate]").forEach(tdElement => {
-              // もしくは letterData に対応する空文字列でない値が入っていない
-              // 以上の場合は書き戻し対象外とする
-              // mod 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 start
-              // if (!letterData[tdElement.getAttribute("excelCoordinate")]) return;
-              // tdElement.innerHTML = letterData[tdElement.getAttribute("excelCoordinate")];
 
-              // mod #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 start
+      if (this.getHtmlTemplate && letterInfo) {
+        const letterData = letterInfo.letter_data;
+        if (letterData) {
+          try {
+            // mod #7162 紹介状画面で編集しても保存されないことを修正 劉 start
+            this.$nextTick(() => {
+              // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe start
+              // Object.keys(letterData).map(x => {
+              //   /*del FNSI-改修内容bug修正 任 start*/
+              //   if(x !== "pat-name-area"){
+              //     document.getElementById(`${x}`).innerHTML = letterData[x];
+              //   }
+              //   /*del FNSI-改修内容bug修正 任 end*/
+              // });
+              document
+              .querySelectorAll("td[excelCoordinate]")
+              .forEach((tdElement) => {
+                // もしくは letterData に対応する空文字列でない値が入っていない
+                // 以上の場合は書き戻し対象外とする
+                // mod 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 start
+                // if (!letterData[tdElement.getAttribute("excelCoordinate")]) return;
+                // tdElement.innerHTML = letterData[tdElement.getAttribute("excelCoordinate")];
+
+                // mod #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 start
                 const coordinate = tdElement.getAttribute("excelCoordinate");
                 const cellData = letterData[coordinate];
                 if (!cellData) {
@@ -459,32 +477,33 @@ export default {
                     this.bindImageClickEvent(tdElement, coordinate);
                   }
                 }
-              // mod #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end
-              // del #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 start
+                // mod #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end
+
+                // del #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 start
                 // if (!letterData[tdElement.getAttribute("excelCoordinate")]) {
                 //   tdElement.innerHTML = "";
                 // } else {
                 //   tdElement.innerHTML =
                 //     letterData[tdElement.getAttribute("excelCoordinate")];
                 // }
-              // del #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end
+                // del #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end
 
-              // mod 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 end
-            });
-            // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe end
-          })
-          // mod #7162 紹介状画面で編集しても保存されないことを修正 劉 end
-        } catch (error) {
-          //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
-          getErrorMessage('IntroductionLetterComponent.vue', 'facility', error);
-          //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
-          return;
+                // mod 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 end
+              });
+              // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe end
+            })
+            // mod #7162 紹介状画面で編集しても保存されないことを修正 劉 end
+          } catch(error) {
+            //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
+            getErrorMessage('IntroductionLetterComponent.vue', 'facility', error);
+            //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
+            return;
+          }
         }
       }
-    }
-    // add 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 start
-    this.pdfShow = true;
-    // add 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 end
+      // add 11488 紹介状登録内容保存時に帳票の版も記憶する 1.1A  吉 start
+      this.pdfShow = true;
+      // add 11488 紹介状登録内容保存時に帳票の版も記憶する 1.1A  吉 end
   },
   watch: {
     reportStartDate() {
@@ -521,6 +540,29 @@ export default {
     }
   },
   methods: {
+    scopedJQuery() {
+      return createScopedJQuery(this.$el || this, $$) || $$;
+    },
+    getLetterRoot() {
+      return this.$refs.letterRoot || this.$el || document;
+    },
+    getLetterContentRoot() {
+      return this.$refs.contentHtml
+        || queryElementBySelectors(["#content-html-id", "#table_0", "#section"], this.getLetterRoot())
+        || null;
+    },
+    getLetterCells(root = null) {
+      const target = root || this.getLetterContentRoot() || this.getLetterRoot();
+      return Array.from(target?.querySelectorAll?.("td[excelCoordinate]") || []);
+    },
+    getLetterCellByCoordinate(key) {
+      if (!key) return null;
+      const matched = this.getLetterCells().find((cell) => cell.getAttribute?.("excelCoordinate") === key || cell.id === key);
+      return matched || queryElementBySelectors([`#${key}`, `[id="${key}"]`], this.getLetterContentRoot() || this.getLetterRoot());
+    },
+    getLetterInputValueElement() {
+      return queryElementBySelectors(["#input-value-name"], this.getLetterRoot());
+    },
     // add #12196 紹介状作成時に参照される各データが常に最新値になるのはNG zhao start
     ...mapActions("loading-screen", ["setLoadingScreenVisible"]),
     // add #12196 紹介状作成時に参照される各データが常に最新値になるのはNG zhao end
@@ -685,12 +727,7 @@ export default {
     },
     // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end
     handleResetControl() {
-      document
-        // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe start
-        //.querySelectorAll("td[id]")
-        .querySelectorAll("td[excelCoordinate]")
-        // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe end
-        .forEach(x => x.innerHTML = "");
+      this.getLetterCells().forEach(x => x.innerHTML="");
     },
     // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 start
     addImageUploadButtons() {
@@ -1318,14 +1355,8 @@ export default {
     // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end
     handleEnableControl() {
       const processedCoordinates = new Set();
-      document
-        // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe start
-        //.querySelectorAll("td[id]")
-        .querySelectorAll("td[excelCoordinate]")
-        // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe end
-        .forEach(x =>
-          /*add FNSI-改修内容redmine4410 任 start*/ {
-          if (x.className !== "pat-name-area") {
+      this.getLetterCells().forEach(x => {
+          if(x.className !== "pat-name-area"){
             // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 start
             const coordinate = x.getAttribute('excelCoordinate');
             if (processedCoordinates.has(coordinate)) {
@@ -1353,24 +1384,24 @@ export default {
             }
             // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end
             /*add FNSI-改修内容redmine4410 任 end*/
-            // add 9483　紹介状画面でVA画像の表示不良　吉 start
-            if (x.innerHTML.indexOf("data:image/png;base64") == -1) {
-              // add 9483　紹介状画面でVA画像の表示不良　吉 end
-              x.setAttribute("contenteditable", true)
-              // add 9483　紹介状画面でVA画像の表示不良　吉 start
-            }
-            // add 9483　紹介状画面でVA画像の表示不良　吉 end
+              // add 9483 紹介状画面でVA画像の表示不良 吉 start
+              if(x.innerHTML.indexOf("data:image/png;base64") == -1) {
+                // add 9483 紹介状画面でVA画像の表示不良 吉 end
+                x.setAttribute("contenteditable", true)
+                // add 9483 紹介状画面でVA画像の表示不良 吉 start
+              }
+              // add 9483 紹介状画面でVA画像の表示不良 吉 end
             /*add FNSI-改修内容redmine4410 任 start*/
             // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe start
-            // add 8417 【帳票】【紹介状（集計）】①薬剤の表示が不正　②患者情報の表示のずれが発生　③空白画面の出力問題  吉 start
+            // add 8417 【帳票】【紹介状（集計）】①薬剤の表示が不正 ②患者情報の表示のずれが発生 ③空白画面の出力問題  吉 start
             // const cellWidth = x.offsetWidth;
             // const textWidth = x.scrollWidth;
             // if (x.style.zoom == 1 || "" == x.style.zoom) {
             //   let scale = Math.min(1, cellWidth / textWidth);
             //   x.style.zoom = scale;
             // }
-            // add 8417 【帳票】【紹介状（集計）】①薬剤の表示が不正　②患者情報の表示のずれが発生　③空白画面の出力問題  吉 end
-            if (x.hasAttribute("isimage")) {
+            // add 8417 【帳票】【紹介状（集計）】①薬剤の表示が不正 ②患者情報の表示のずれが発生 ③空白画面の出力問題  吉 end
+            if(x.hasAttribute("isimage")){
               x.style.textAlign = 'left';
               x.style.verticalAlign = 'top';
               x.style.align = 'left';
@@ -1722,8 +1753,8 @@ export default {
       this.getFacilityName(data.value);
     },
     /*add FNSI-改修内容redmine4179 任 start*/
-    setValueName() {
-      this.inputValueName = document.getElementById("input-value-name").value
+    setValueName(){
+      this.inputValueName  = this.getLetterInputValueElement()?.value || this.inputValueName
       /* modify by chamaojia 2025-05-21 [11871]  --start */
       // const element = this.facilityList.find(item => item.facilityName === this.inputValueName);
       const element = this.facilityNameList.find(item => item.name === this.inputValueName);
@@ -1744,8 +1775,8 @@ export default {
     /** 紹介日を設定 */
     renewReportStartDate() {
       // 画面左イベントリストで選択済イベントの日付を紹介日にする
-      if (moment(this.getReportStartDate).isValid()) {
-        this.reportStartDate = moment(this.getReportStartDate).format("YYYY-MM-DD");
+      if (dayjs(this.getReportStartDate).isValid()) {
+        this.reportStartDate = dayjs(this.getReportStartDate).format("YYYY-MM-DD");
         return;
       }
       // 患者カレンダーから新規作成で遷移してきた場合、カレンダーでクリックした日付を紹介日にする
@@ -1754,7 +1785,7 @@ export default {
         return;
       }
       // 上記以外はシステム日付
-      this.reportStartDate = moment().format("YYYY-MM-DD");
+      this.reportStartDate = dayjs().format("YYYY-MM-DD");
     },
     showPopover() {
       this.popoverData.popoverVisible = true;
@@ -1801,7 +1832,8 @@ export default {
           this.letterList[letterIndex].letterInfo.initValue
         );
         Object.keys(letterInfo).map(x => {
-          document.getElementById(`${x}`).innerHTML = letterInfo[x];
+          const cell = this.getLetterCellByCoordinate(x);
+          if (cell) { cell.innerHTML = letterInfo[x]; }
         });
       } catch (error) {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
@@ -2455,7 +2487,7 @@ export default {
       // htmlTemplete による部分のみを処理対象とする
       // mod 10499 紹介状画面でセルの縦配置設定が反映しない 吉 start
       // const contentDiv = document.getElementById("content-html");
-      const contentDiv = document.getElementById("content-html-id");
+      const contentDiv = this.getLetterContentRoot();
       // mod 10499 紹介状画面でセルの縦配置設定が反映しない 吉 end
       if (!contentDiv) return;
       // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe start
@@ -2486,7 +2518,7 @@ export default {
       /*add FNSI-改修内容redmain3772 范 start*/
       // mod 10499 紹介状画面でセルの縦配置設定が反映しない 吉 start
       // $$("#content-html").show();
-      $$("#content-html-id").show();
+      this.scopedJQuery()("#content-html-id").show();
       // mod 10499 紹介状画面でセルの縦配置設定が反映しない 吉 end
       /*add FNSI-改修内容redmain3772 范 end*/
       // add #12196 紹介状作成時に参照される各データが常に最新値になるのはNG zhao start
@@ -2500,7 +2532,7 @@ export default {
       /*add FNSI-改修内容redmain3772 范 start*/
       // mod 10499 紹介状画面でセルの縦配置設定が反映しない 吉 start
       // $$("#content-html").hide();
-      $$("#content-html-id").hide();
+      this.scopedJQuery()("#content-html-id").hide();
       // mod 10499 紹介状画面でセルの縦配置設定が反映しない 吉 end
       /*add FNSI-改修内容redmain3772 范 end*/
       // add #12196 紹介状作成時に参照される各データが常に最新値になるのはNG zhao start
@@ -2514,7 +2546,6 @@ export default {
         this.contentObserver.disconnect();
       }
 
-
       this.contentObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList' || mutation.type === 'characterData') {
@@ -2523,8 +2554,7 @@ export default {
         });
       });
 
-
-      const contentElement = document.getElementById('content-html-id');
+      const contentElement = this.getLetterContentRoot();
       if (contentElement) {
 
         const config = {
@@ -2534,11 +2564,9 @@ export default {
           characterDataOldValue: true
         };
 
-
         this.contentObserver.observe(contentElement, config);
       }
     },
-
 
     handleContentChange(mutation) {
       this.$emit('content-changed', {
@@ -2557,11 +2585,61 @@ export default {
         this.reportStartDateInputInit !== this.reportStartDate && this.getReportFlag) {
         // 新規登録かつテンプレートが存在する場合、APIを呼び出す
         if (this.getUpdateMode === false && (this.getPathReal === null && !this.getIsNotExit)) {
+          let keyHandler = null;
+          setTimeout(() => {
+            const buttons = document.querySelectorAll(".alert-dialog-button");
+            if (!buttons.length) {
+              return;
+            }
+            let currentIndex = buttons.length - 1;
+            updateSelected();
+            function updateSelected() {
+              buttons.forEach(btn => {
+                btn.classList.remove(
+                  "keyboard-selected",
+                  "keyboard-left",
+                  "keyboard-right"
+                );
+              });
+
+              const current = buttons[currentIndex];
+              current.classList.add("keyboard-selected");
+              if (currentIndex === 0) {
+                current.classList.add("keyboard-left");
+              }
+              if (currentIndex === buttons.length - 1) {
+                current.classList.add("keyboard-right");
+              }
+            }
+            keyHandler = (e) => {
+              if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                currentIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+                updateSelected();
+              }
+              if (e.key === "ArrowRight") {
+                e.preventDefault();
+                currentIndex = (currentIndex + 1) % buttons.length;
+                updateSelected();
+              }
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const realButton = buttons[currentIndex].querySelector("button");
+                if (realButton) {
+                  realButton.click();
+                } else {
+                  buttons[currentIndex].click();
+                }
+              }
+            };
+            document.addEventListener("keydown", keyHandler);
+          }, 0);
           // 確認メッセージを出す
           this.$ons.notification.confirm({
             title: DIALOG_MESSAGES[12000014].title,
             message: DIALOG_MESSAGES[12000014].message,
             callback: answer => {
+              document.removeEventListener("keydown", keyHandler);
               if (answer === 1) {
                 this.beforeStep();
               } else if (answer === 0) {
@@ -2613,7 +2691,7 @@ export default {
         this.inputValueName = this.getFacilityName(this.getToFacilityCd);
         if (!this.getViewMode) {
           this.handleEnableControl();
-          // add 8417 【帳票】【紹介状（集計）】①薬剤の表示が不正　②患者情報の表示のずれが発生　③空白画面の出力問題  吉 start
+          // add 8417 【帳票】【紹介状（集計）】①薬剤の表示が不正 ②患者情報の表示のずれが発生 ③空白画面の出力問題  吉 start
           // del 10499 紹介状画面でセルの縦配置設定が反映しない 吉 start
           // document
           //   .querySelectorAll("td[id]")
@@ -2629,11 +2707,11 @@ export default {
           //     }
           //   });
           // del 10499 紹介状画面でセルの縦配置設定が反映しない 吉 end
-          // add 8417 【帳票】【紹介状（集計）】①薬剤の表示が不正　②患者情報の表示のずれが発生　③空白画面の出力問題  吉 end
+          // add 8417 【帳票】【紹介状（集計）】①薬剤の表示が不正 ②患者情報の表示のずれが発生 ③空白画面の出力問題  吉 end
         }
         // add 10499 紹介状画面でセルの縦配置設定が反映しない 吉 start
-        else {
-          document
+        else{
+          (this.getLetterContentRoot() || this.getLetterRoot())
             // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe start
             //.querySelectorAll("td[id]")
             .querySelectorAll("td[excelCoordinate]")
@@ -2691,88 +2769,37 @@ export default {
                 // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe end
               }
             });
-          // add 8417 【帳票】【紹介状（集計）】①薬剤の表示が不正　②患者情報の表示のずれが発生　③空白画面の出力問題  吉 end
+          // add 8417 【帳票】【紹介状（集計）】①薬剤の表示が不正 ②患者情報の表示のずれが発生 ③空白画面の出力問題  吉 end
         }
         // add 10499 紹介状画面でセルの縦配置設定が反映しない 吉 end
       }, 200);
       this.initContentObserver();
     })
-    // add 8417 【帳票】【紹介状（集計）】①薬剤の表示が不正　②患者情報の表示のずれが発生　③空白画面の出力問題  吉 start
-    const dom = document.getElementById('section')
-    document.addEventListener('click', (event) => {
-      // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe start
-      //document.querySelectorAll("td[id]").forEach(x =>{
-      document.querySelectorAll("td[excelCoordinate]").forEach(x => {
-        // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe end
-        if (x.className !== "pat-name-area") {
-          // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe start
-          // const cellWidth = x.offsetWidth;
-          // const textWidth = x.scrollWidth;
-          // if (x.style.zoom == 1) {
-          //   let scale = Math.min(1, cellWidth / textWidth);
-          //   x.style.zoom = scale;
-          // }
-          // del #11483 紹介状画面で大量のコンソールログ limingzhe start
-          // if(x.hasAttribute("isimage")){
-          //   x.style.textAlign = 'left';
-          //   x.style.verticalAlign = 'top';
-          //   x.style.align = 'left';
-          //   x.style.userSelect = 'none';
-          // }
-          // else
-          // del #11483 紹介状画面で大量のコンソールログ limingzhe end
-          if (x.hasAttribute("isshrink")) {
-            const cellWidth = x.offsetWidth;
-            const textWidth = x.scrollWidth;
-            if (x.style.zoom == 1) {
-              let scale = Math.min(1, cellWidth / textWidth);
-              x.style.zoom = scale;
-            }
+    // add 8417 【帳票】【紹介状（集計）】①薬剤の表示が不正 ②患者情報の表示のずれが発生 ③空白画面の出力問題  吉 start
+    this._letterClickHandler = (event) => {
+      this.getLetterCells().forEach((x) => {
+        if (x.className !== 'pat-name-area' && x.hasAttribute('isshrink')) {
+          const cellWidth = x.offsetWidth;
+          const textWidth = x.scrollWidth;
+          if (x.style.zoom == 1) {
+            const scale = Math.min(1, cellWidth / textWidth);
+            x.style.zoom = scale;
           }
-          // del #11483 紹介状画面で大量のコンソールログ limingzhe start
-          // else{
-          //   // x.style.whiteSpace = 'normal';
-          //   // x.style.wordWrap = 'break-word';
-          //   if (this.getHtmlTemplate && x.className) {
-          //     const regex = new RegExp(`\\.${x.className}\\s*\\{\\s*([\\s\\S]*?)\\s*\\}`, 'g');
-          //     const computedStyles = regex.exec(this.getHtmlTemplate);
-          //     if (computedStyles && computedStyles[0] && computedStyles[0]?.indexOf('white-space:nowrap;') > -1) {
-          //       x.style.overflow = 'hidden';
-          //       x.addEventListener('blur', () => {
-          //           x.innerHTML = x.innerHTML.replace(/<br>/g, '').replace(/\n/g, '');
-          //           x.scrollLeft = 0;
-          //       });
-          //     }
-          //     if (computedStyles && computedStyles[0] &&computedStyles[0]?.indexOf('text-align:right;') > -1) {
-          //       x.style.direction = 'rtl';
-          //     }
-          //     if(x.hasAttribute("isalignr")){
-          //       if (computedStyles && computedStyles[0] &&computedStyles[0]?.indexOf('text-align:general;') > -1) {
-          //         x.style.direction = 'rtl';
-          //       }
-          //     }
-          //   }
-          // }
-          // del #11483 紹介状画面で大量のコンソールログ limingzhe end
-          // mod #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe end
         }
       });
-      //紹介状の編集後取り消しボタンをクリックするとページエラーが発生します。
-      if (event.target.getAttribute('contenteditable')) {
-        event.target.style.zoom = 1;
-      } else {
+      if (event?.target?.style) {
         event.target.style.zoom = 1;
       }
-    })
-    // add 8417 【帳票】【紹介状（集計）】①薬剤の表示が不正　②患者情報の表示のずれが発生　③空白画面の出力問題  吉 end
+    };
+    (this.$el?.ownerDocument || document).addEventListener('click', this._letterClickHandler);
     // add #12196 紹介状作成時に参照される各データが常に最新値になるのはNG zhao start
     this.reportStartDateInputInit = this.reportStartDate;
     // add #12196 紹介状作成時に参照される各データが常に最新値になるのはNG zhao end
   },
-  beforeDestroy() {
-    // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 start
+  beforeUnmount() {
+    // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260521 start
     this.cleanupImageUploadButtonsComplete();
-    // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end
+    // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260521 end
     this.reportStartDateClassCtrl.destroy();
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
@@ -2780,8 +2807,11 @@ export default {
       this.contentObserver.disconnect();
       this.contentObserver = null;
     }
+    if (this._letterClickHandler) {
+      (this.$el?.ownerDocument || document).removeEventListener('click', this._letterClickHandler);
+    }
   },
-  destroyed() {
+  unmounted() {
     clearInterval(this.timerAction);
   }
 };
@@ -2920,15 +2950,15 @@ td textarea:focus {
   #content-html-id {
     padding-right: 2mm !important;
   }
-  #content-html-id /deep/ table {
+  #content-html-id :deep(table) {
     width: 100% !important;
   }
-  #content-html-id /deep/ #section {
+  #content-html-id :deep(#section) {
     padding: 0;
   }
   /* セルの固定幅を無効化 */
-  #content-html-id /deep/ td,
-  #content-html-id /deep/ th {
+  #content-html-id :deep(td),
+  #content-html-id :deep(th) {
     width: auto !important;
     max-width: 100% !important;
 
@@ -2938,7 +2968,7 @@ td textarea:focus {
   }
 }
 
-// add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 start
+/* add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 start */
 .image-upload-container {
   transition: opacity 0.3s;
   pointer-events: auto;
@@ -2972,5 +3002,5 @@ td[excelCoordinate][contenteditable="true"] {
 td[excelCoordinate][contenteditable="true"]:focus {
   outline: 2px solid #007bff;
 }
-// add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end
+/* add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end */
 </style>

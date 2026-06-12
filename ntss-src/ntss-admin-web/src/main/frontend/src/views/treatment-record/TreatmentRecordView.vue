@@ -3,18 +3,24 @@
 */
 <template>
   <ntss-layout>
-    <header-component slot="header-content" />
+    <template #header-content>
+      <header-component />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start -->
     <!-- <bread-crumbs-component slot='bread-crumbs-content' :history-key="historyKey" :no-split=true @refresh='refresh' /> -->
-    <bread-crumbs-component slot="bread-crumbs-content" :history-key="historyKey" :no-split="true" />
+    <template #bread-crumbs-content>
+      <bread-crumbs-component :history-key="historyKey" :no-split="true" />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng end -->
-    <main-component slot="main-content" ref="mainComponent" :history-key="historyKey" />
+    <template #main-content>
+      <main-component ref="mainComponent" :history-key="historyKey" />
+    </template>
   </ntss-layout>
 </template>
 
 <script>
-import { EventBus } from "@/eventBus.js";
-import { mapGetters, mapActions, mapMutations } from "vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 import HeaderComponent from "@/components/header-contents/PatHeader";
 import MainComponent from "@/components/treatment-record/TreatmentRecordMainComponent";
 import BreadCrumbsComponent from "@/components/BreadCrumbsComponent";
@@ -27,6 +33,8 @@ import {
 import { CODES } from "@/constants/TreatmentRecord.js";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { messageFormat } from "@/functions/common/MessageFormat";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc end
 const dialysisState1 = Number(CODES.DIALYSIS_STATE.AFTER_SEND_CONDITION.cd);
 const dialysisState5 = Number(CODES.DIALYSIS_STATE.AFTER_WEIGHT_MEASURING.cd);
@@ -70,8 +78,8 @@ export default {
       "selectedPat",
       "isPatInfoChaned",
       "isPatInfoVisible",
-      "getIsOtherFacility", 
-      "getOtherFacilityCd"
+      "getIsOtherFacility",
+      "getOtherFacilityCd",
     ]),
     ...mapGetters("treatment-record/common", [
       "getOrdNo",
@@ -91,24 +99,32 @@ export default {
    * 画面遷移前処理.
    * 遷移先のルータ名を退避する.
    */
-  // eslint-disable-next-line no-unused-vars
-  beforeRouteLeave(to, from, next) {
+  async beforeRouteLeave(to, from, next) {
     // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc start
     try {
       if (to.name != "signin" && !!this.isPatInfoChaned) {
-        this.setIsPatInfoChaned(false);
-        this.toRouterName = to.name;
-        next();
+        const answer = await new Promise((resolve) => {
+          this.$ons.notification.confirm({
+            title: DIALOG_MESSAGES[12000014].title,
+            message: messageFormat(DIALOG_MESSAGES[12000014].message),
+            callback: resolve,
+          });
+        });
+        if (answer === 1) {
+          this.setIsPatInfoChaned(false);
+          this.toRouterName = to.name;
+          next();
+        } else {
+          next(false);
+        }
       } else {
         this.toRouterName = to.name;
         next();
       }
     } catch (error) {
-      getErrorMessage("ExamRecordView.vue", "beforeRouteLeave", error);
+      getErrorMessage("TreatmentRecordView.vue", "beforeRouteLeave", error);
       next();
     }
-    // this.toRouterName = to.name;
-    // next();
     // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc end
   },
   methods: {
@@ -124,7 +140,11 @@ export default {
       "setOrd",
     ]),
     //add FNSI-修正 共有設定 房 start
-    ...mapMutations("treatment-record/common", ["setSharedFacilityCd", "setOrdNoDataSources", "setOrdNoDataReady"]),
+    ...mapMutations("treatment-record/common", [
+      "setSharedFacilityCd",
+      "setOrdNoDataSources",
+      "setOrdNoDataReady"
+    ]),
     //add FNSI-修正 共有設定 房 end
     ...mapGetters("app", ["getQueryParameters"]),
     ...mapActions("app", ["setQueryParameters"]),
@@ -142,18 +162,19 @@ export default {
       if (!this.selectedPatId) {
         return;
       }
-      // mod #12462 患者情報共有 Ji start
       this.setOrdNoDataReady(false);
       this.dataReady = false;
-      const sharedFlag = (this.getIsOtherFacility === false || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.facilityCd))
-        ? 0 
+      const sharedFlag = (
+        this.getIsOtherFacility === false ||
+        (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.facilityCd)
+      )
+        ? 0
         : (this.getPatientShareMode == 0 ? 1 : 0);
       return await getOrdNoListWithShared(
         this.selectedPatId,
         this.offset,
         this.limit,
-        // this.getSharedFlag == 0 ? 0 : 1,
-        sharedFlag,
+        sharedFlag
       ).then((response) => {
         let ordNoDataSources = response.data.sort((a, b) => {
           if (a.rstDialysisState === b.rstDialysisState) {
@@ -176,7 +197,6 @@ export default {
         this.setOrdNoDataReady(true);
         this.dataReady = true;
       });
-      // mod #12462 患者情報共有 Ji end
     },
     /**
      * 患者IDをもとにオーダ番号を取得し、再描画する.
@@ -219,7 +239,7 @@ export default {
           this.$router.push({ path: this.curRoute });
           // 取得されたordNoより治療状況（rstDialysisState）を取得。
           if (this.getOrdNoForSideBarRecord) {
-            await sendRequestGetOrdMainByOrdNo(this.getOrdNoForSideBarRecord).then(
+            await sendRequestGetOrdMainByOrdNo(this.getOrdNoForSideBarRecord, this.selectedPatId).then(
               (response) => {
                 let ordMainData = response.data;
                 if (ordMainData) {
@@ -236,7 +256,7 @@ export default {
           }
         } else {
           // リフレッシュ前の患者治療状況により、表示治療記録を分岐
-          let dataSourceFilter = [];
+          let dataSourceFilter;
           if (this.ordNoDataSources.length <= 0) {
             this.alertNotFound(null);
           } else if (this.getDialysisState === dialysisState6) {
@@ -420,6 +440,9 @@ export default {
         if (this.$route.name === 'treatment-observe-detail' && isSamePat) {
           return;
         }
+        if (isSamePat) {
+          return;
+        }
         this.refresh(false);
         /* modify by chamaojia 2022-10-26 [7217] 繰り返し呼び出しを削除する  --end */
       },
@@ -451,26 +474,24 @@ export default {
     // add FNSI-修正 共有設定 房 end
     // add FNSI-7967 治療状況リスト，マップから治療記録を開いた後に患者を切り替えて表示できない時がある 房 start
     getOrdNoForSideBarRecord() {
-      //mod 9559 teamsからの指摘　ljx start
+      //mod 9559 teamsからの指摘 ljx start
       //this.setOrdNo(this.getOrdNoForSideBarRecord);
-      //mod 9559 teamsからの指摘　ljx end
+      //mod 9559 teamsからの指摘 ljx end
     },
     // add FNSI-7967 治療状況リスト，マップから治療記録を開いた後に患者を切り替えて表示できない時がある 房 end
-    // add #12462 患者情報共有 Ji start
     getPatientShareMode() {
       this.refresh();
     },
     getPatientShareFacilityCdMode() {
       this.refresh();
-    }
-    // add #12462 患者情報共有 Ji end
+    },
   },
   /**
    * mounted
    */
   mounted() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // add 性能改善メモリ不足 shan start
     EventBus.$off("refresh", this.refresh);
     // add 性能改善メモリ不足 shan end
@@ -484,18 +505,21 @@ export default {
       "addConfirmTreatmentRecordSelectedPatIdChangeTasks",
       this.addConfirmSelectedPatIdChangeTasks
     );
-    if (this.getOrdNo || this.selectedPat) {
+    if (this.getOrdNo) {
+      return;
+    }
+    if (!this.selectedPatId) {
       return;
     }
     /* modify by chamaojia 2022-10-26 [7217] 繰り返し呼び出しを削除する  --start */
     this.refresh(false);
     /* modify by chamaojia 2022-10-26 [7217] 繰り返し呼び出しを削除する  --end */
   },
-  beforeDestroy() {
+  beforeUnmount() {
     if (
       !(
-        this.$router.currentRoute.fullPath == "/observe-record/list/detail" &&
-        Object.keys(this.$router.currentRoute.params).length === 0
+        this.$route.fullPath == "/observe-record/list/detail" &&
+        Object.keys(this.$route.params).length === 0
       )
     ) {
       // 本画面から、治療記録の観察記録の新規作成/編集画面に遷移するときは、ordNo維持の為、リフレッシュ処理を行わない

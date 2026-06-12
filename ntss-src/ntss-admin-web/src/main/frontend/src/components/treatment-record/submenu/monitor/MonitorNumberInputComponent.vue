@@ -79,11 +79,13 @@
 </template>
 
 <script>
+import { resolveRefElement } from "@/functions/common/LayoutMeasureHelper";
 import NumberInputMixin from "@/components/treatment-record/submenu/common/NumberInputMixin";
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
 // add #11047 ②治療記録＞バイタル モニタ入力範囲が0～ではない項目にて空欄にできない。  linjunfeng start
-import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro'
-import { EventBus } from "@/eventBus.js";
-import BigNumber from "bignumber.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
+
+import BigNumber from "@/compat/number/bignumber";
 // add #11047 ②治療記録＞バイタル モニタ入力範囲が0～ではない項目にて空欄にできない。  linjunfeng end
 
 export default {
@@ -93,8 +95,10 @@ export default {
     "custom-input-number-pro": CustomInputNumberPro
   },
   // add #11047 ②治療記録＞バイタル モニタ入力範囲が0～ではない項目にて空欄にできない。  linjunfeng end
+  emits: ["update:modelValue", "blur"],
   props: {
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       // #11047 ②治療記録＞バイタル モニタ入力範囲が0～ではない項目にて空欄にできない。  linjunfeng start
       // type: [Number]
       // mod #12448 治療記録のモニタを編集すると小数点以下が表示されない zkm start
@@ -143,13 +147,21 @@ export default {
       // 8453 2023/03/20 治療記録 【デグレ】治療記録>モニタにて全て表示が遅い 林峻峰 end
       //  del 8506 ljx end
       // add #11047 ②治療記録＞バイタル モニタ入力範囲が0～ではない項目にて空欄にできない。  linjunfeng start
-      currentValuePro: this.value == null ? null : this.value,
+      currentValuePro: this.modelValue == null ? null : this.modelValue,
       exSize: 3,
       componentsKey: 0
       // add #11047 ②治療記録＞バイタル モニタ入力範囲が0～ではない項目にて空欄にできない。  linjunfeng end
     }
   },
   methods: {
+    requestViewForceUpdate() {
+      if (this.$?.isMounted) {
+        this.$forceUpdate();
+      }
+    },
+    handleRefreshMonitorNumberInput() {
+      this.currentValuePro = this.formatValueByStep(this.initValue);
+    },
     onMyBlur(event){
       if (event.target.value == this.max && this.blurFlg) {
         this.currentValue = this.min;
@@ -158,7 +170,7 @@ export default {
         this.currentValue = this.max;
         this.blurFlg = false
       }
-      this.$forceUpdate();
+      this.requestViewForceUpdate();
       // console.log('blur',event)
       this.isOnFocus = false;
       // this.onBlur(event);
@@ -223,7 +235,7 @@ export default {
       this.inputStatus = true;
       this.isOnFocus = true;
       this.$nextTick(() => {
-        document.getElementById('myInput' + monitorUniqueId).focus()
+        getScopedElementById('myInput' + monitorUniqueId, this.$el || null)?.focus?.()
       })
     }*/
     //add 8453 2023/03/20 治療記録 【デグレ】治療記録>モニタにて全て表示が遅い 林峻峰 end
@@ -240,7 +252,7 @@ export default {
       const exSize = 1 + (1.1 * (Math.max(minDigit, maxDigit) + (decimalDigit ? decimalDigit + 0.5 : 0)));
       // #11047 ②治療記録＞バイタル モニタ入力範囲が0～ではない項目にて空欄にできない。  linjunfeng start
       // this.$refs.input.style.setProperty("--base-size", exSize);
-      this.$refs.input.$el.style.setProperty("--base-size", exSize);
+      resolveRefElement(this, "input")?.style?.setProperty("--base-size", exSize);
       this.exSize = exSize;
       // #11047 ②治療記録＞バイタル モニタ入力範囲が0～ではない項目にて空欄にできない。  linjunfeng end
     },
@@ -251,7 +263,7 @@ export default {
       // const formattedValue = (val == null || val === "") ? null : Number(val);
       const formattedValue = (val == null || val === "") ? null : val;
       // mod #12448 治療記録のモニタを編集すると小数点以下が表示されない zkm end
-      this.$emit('input', formattedValue);
+      this.$emit('update:modelValue', formattedValue);
       this.$emit('blur', val);
     },
     // add #11047 ②治療記録＞バイタル モニタ入力範囲が0～ではない項目にて空欄にできない。  linjunfeng end
@@ -266,11 +278,11 @@ export default {
   computed: {
     currentValue: {
       get() {
-        return this.value != null ? (this.value / this.base).toFixed(this.decimalLength) : null;
+        return this.modelValue != null ? (this.modelValue / this.base).toFixed(this.decimalLength) : null;
       },
       set(newVal) {
         this.$emit(
-          "input",
+          "update:modelValue",
           typeof newVal === "number" ? newVal * this.base : null
         );
       }
@@ -278,9 +290,9 @@ export default {
     // add 6827 入力欄の編集済み表現不正（治療記録＞バイタル） 房 start
     isChanged(){
       let isChanged = true;
-      if ((this.value === this.initValue) || 
-        (this.value === null && this.initValue === undefined) || 
-        (this.value === undefined && this.initValue === null)) {
+      if ((this.modelValue === this.initValue) || 
+        (this.modelValue === null && this.initValue === undefined) || 
+        (this.modelValue === undefined && this.initValue === null)) {
         if (this.isOnFocus) {
           isChanged = true;
         } else {
@@ -311,17 +323,19 @@ export default {
       this.componentsKey++;
     },
     // add #11047 ②治療記録＞バイタル モニタ入力範囲が0～ではない項目にて空欄にできない。  linjunfeng end
-    value(val) {
+    modelValue(val) {
       this.currentValuePro = this.formatValueByStep(val);
     }
   },
   mounted() {
     this.updateBaseSize();
     // add #11047 ②治療記録＞バイタル モニタ入力範囲が0～ではない項目にて空欄にできない。  linjunfeng start
-    EventBus.$on('refreshMonitorNumberInput', ()=>{
-      this.currentValuePro = this.formatValueByStep(this.initValue);
-    });
+    EventBus.$off('refreshMonitorNumberInput', this.handleRefreshMonitorNumberInput);
+    EventBus.$on('refreshMonitorNumberInput', this.handleRefreshMonitorNumberInput);
     // add #11047 ②治療記録＞バイタル モニタ入力範囲が0～ではない項目にて空欄にできない。  linjunfeng end
+  },
+  beforeUnmount() {
+    EventBus.$off('refreshMonitorNumberInput', this.handleRefreshMonitorNumberInput);
   },
 };
 

@@ -84,10 +84,12 @@
 </template>
 
 <script>
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import { getLatestHeaderElement, getHeaderHeight, getScopedElementsByClassName, getViewportWidth } from "@/functions/common/LayoutMeasureHelper";
+
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
 
 // 最高血圧
@@ -190,14 +192,10 @@ export default {
     // ウインドウ変更時の高さ、幅を調整
     calculateSize() {
       // ヘッダーの高さ
-      const header = document.getElementsByClassName("header");
-      let headerHeight = 0;
-      if (header.length !== 0) {
-        // フッター分 35px
-        headerHeight = header[0].offsetHeight + 35;
-      }
+      const latestHeader = getLatestHeaderElement(this.$el || document);
+      const headerHeight = latestHeader ? getHeaderHeight(latestHeader, 0) + 35 : 0;
       // 下部ボタン部の高さ
-      const bottomButtons = document.getElementsByClassName("bottom-buttons");
+      const bottomButtons = getScopedElementsByClassName("bottom-buttons", this.$el || document);
       // 下部ボタン部のmargin：15px
       let bottomButtonsHeight = 15;
       if (bottomButtons.length !== 0) {
@@ -207,13 +205,13 @@ export default {
       this.areaHeight = this.windowHeight - headerHeight - bottomButtonsHeight - 5;
 
       // 血圧、脈拍の幅
-      const bloodPressure = document.getElementsByClassName("blood-pressure-area");
+      const bloodPressure = getScopedElementsByClassName("blood-pressure-area", this.$el || document);
       let bloodPressureWidth = 0;
       if (bloodPressure.length !== 0) {
         bloodPressureWidth += bloodPressure[0].offsetWidth;
       }
       // 画面幅に応じてmargin補正
-      const clientWidth = document.documentElement.clientWidth;
+      const clientWidth = getViewportWidth();
       if (clientWidth > 550) {
         bloodPressureWidth += 80;
       } else {
@@ -363,8 +361,6 @@ export default {
       this.$router.push({ name: "pat-home-dialysis-weight-after" });
     }
   },
-  watch: {
-  },
   created() {
     // 戻るボタンの抑制
     history.pushState(null, null, null);
@@ -373,7 +369,7 @@ export default {
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("更新中・・・");
     // 画面リサイズ時のイベントを設定
-    window.addEventListener("resize", this.calculateSize);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.calculateSize);
     this.calculateSize();
 
     // 患者IDがない場合は何もしない
@@ -388,15 +384,14 @@ export default {
     }
 
   },
-  updated() {
-  },
-  beforeDestroy() {
+
+  beforeUnmount() {
     // ポーリングクリア
     this.endPolling();
   },
-  destroyed() {
+  unmounted() {
     // 画面を閉じたときにイベントを除去
-    window.removeEventListener("resize", this.calculateSize);
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.calculateSize);
   }
 };
 </script>

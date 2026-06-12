@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.core.utils;
 //add 10389 バックエンド患者リスト順序付け機能処理 gjn start
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.entity.MstWheelChair;
 import jp.co.nikkiso.ntss.core.entity.custom.OrdMainKurBed;
 import org.apache.commons.lang3.StringUtils;
@@ -390,7 +390,7 @@ public class PatSortCommonUtil {
 //                              Map<String, String> patInfoJson, List<OrdMainKurBed> ordList) {
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
   public static void sortList(List<Map<String, Object>> tmpPatList, List<Map<String, Object>> sortConditions,
-                              Map<String, String> patInfoJson, List<OrdMainKurBed> ordList, List<MstWheelChair> chairs) throws JsonProcessingException {
+                              Map<String, String> patInfoJson, List<OrdMainKurBed> ordList, List<MstWheelChair> chairs) throws JacksonException {
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
   // mod #11315 【たくしん会】患者検索の患者リストのソートが正しく動作しない　V1.0B zkm end
     // patInfoJsonクエリから返された結果に基づいて、次のソートに使用するtmpPatListデータを追加します。
@@ -407,7 +407,7 @@ public class PatSortCommonUtil {
         patUnique = mapper.readValue(patInfoJson.get("pat_unique"), new TypeReference<List<Map<String, Object>>>() {
         });
       }
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang start
 //      throwable.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang end

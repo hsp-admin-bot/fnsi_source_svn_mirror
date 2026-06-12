@@ -81,6 +81,13 @@ public class AdminWebConstant {
      */
     public static final String MACHINES = "/api/machines";
 
+    // add #11660 単体アプリの自己アップデート修正 limingzhe start
+    /**
+     * 対象アプリケーションと
+     */
+    public static final String APPLICATION = "/api/application";
+    // add #11660 単体アプリの自己アップデート修正 limingzhe end
+
     /**
      * データ収集ファイルダウンロード.
      */

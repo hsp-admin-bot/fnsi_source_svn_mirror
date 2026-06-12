@@ -2,20 +2,20 @@
  * P-Ca9分割グラフ管理マスタメンテナンスデータページ  MainContent
  */
 <template>
-  <div class='main-content-area master-maintenance-page'>
-    <div class='ntss-list' :style="ntssListStyles" v-kendo-validator="kendoValidatorSetup">
-      <div v-if="isMobileDevice" id="grid-header" class="header-btn-area right" style="height: 30px;">
-        <v-ons-row style="width: 7em;">
-          <v-ons-col width="45%" vertical-align="center">
-            <label class="fab-font-color">編集</label>
-          </v-ons-col>
-          <v-ons-col width="55%" vertical-align="center">
-            <v-ons-switch modifier="outline" class="custom-switch" v-model="allowEdit" />
-          </v-ons-col>
-        </v-ons-row>
-      </div>
-      <kendo-grid-toolbar class="k-grid-toolbar kendo-grid-toolbar-style" :style="heightStyles">
-        <div v-if="isMasterUser" class='header-btn-area right'>
+  <div class="main-content-area master-maintenance-page">
+    <div class="ntss-list" :style="ntssListStyles">
+      <div class="k-grid-toolbar k-header kendo-grid-toolbar-style" :style="heightStyles">
+        <div v-if="isMobileDevice" id="grid-header" class="header-btn-area right" style="height: 30px;">
+          <v-ons-row style="width: 7em;">
+            <v-ons-col width="45%" vertical-align="center">
+              <label class="fab-font-color">編集</label>
+            </v-ons-col>
+            <v-ons-col width="55%" vertical-align="center">
+              <v-ons-switch modifier="outline" v-model="allowEdit" />
+            </v-ons-col>
+          </v-ons-row>
+        </div>
+        <div v-if="isMasterUser" class="header-btn-area right">
           <!-- del マスタ一覧 1･施設切替を可能とする 王 start -->
           <!--          <kendo-dropdownlist-->
           <!--            v-model="facilitylistValue"-->
@@ -29,63 +29,15 @@
           <!--          </kendo-dropdownlist>-->
           <!-- del マスタ一覧 1･施設切替を可能とする 王 start -->
         </div>
-        <div v-else class='header-btn-area left'>
-        </div>
-        <kendo-grid id="grid" ref="grid" :class="fontSizeSet" style="clear: both;"
-          :data-source="masterRecords"
-          :editable="true"
-          :selectable="true"
-          :reorderable="false"
-          :height=kendoGridHeight
-          :scrollable="true"
-          :beforeEdit=editStart
-          :cellClose=editEnd
-          class="content-style"
-          @save="onSave"
-          @databound="onDataBoundKendoGrid">
-          <template v-for="(column, index) in columns" >
-            <kendo-grid-column v-if="column.title === '設定値'"
-              :key="index"
-              :title="column.title"
-              :field="column.field"
-              :hidden="column.hidden"
-              :editable="column.editable"
-              :width="column.width"
-              :format="column.format"
-              :values="column.values"
-              :encoded="column.encoded"
-              :template="column.colorTemplate"
-              :editor="editorInput"
-              >
-            </kendo-grid-column>
-            <kendo-grid-column v-else-if="column.field === 'dispOrder'"
-              :key="index"
-              :title="column.title"
-              :field="column.field"
-              :hidden="column.hidden"
-              :editable="column.editable"
-              width="4em"
-              :format="column.format"
-              :values="column.values"
-              :encoded="column.encoded"
-              :editor="editorInput"
-              >
-            </kendo-grid-column>
-            <kendo-grid-column v-else
-              :key="index"
-              :title="column.title"
-              :field="column.field"
-              :hidden="column.hidden"
-              :editable="column.editable"
-              :width="column.width"
-              :format="column.format"
-              :values="column.values"
-              :encoded="column.encoded"
-              >
-            </kendo-grid-column>
-          </template>
-        </kendo-grid>
-      </kendo-grid-toolbar>
+        <div v-else class="header-btn-area left"></div>
+        <div
+          v-show="columns.length > 1"
+          id="grid-font-size"
+          ref="gridRoot"
+          :class="[fontSizeSet, 'content-style', 'ntss-kendo-grid-legacy', 'mst-graph-setting-direct-jq-grid']"
+          style="clear: both;"
+        ></div>
+      </div>
       <!-- 高さ調整 -->
       <div id="grid-footer">
         <v-ons-row v-show="!isSortMode" width="100%">
@@ -112,7 +64,7 @@
       </div>
       <message-dialog
         v-if="isDialogVisible"
-        :visible.sync="isDialogVisible"
+        v-model:visible="isDialogVisible"
         :message-cd="messageCd"
         :string-params="stringParams"
         type="1"
@@ -122,15 +74,15 @@
 </template>
 
 <script>
+
+import { markRaw } from "@/compat/vue/runtime";
+import kendo from "@progress/kendo-ui";
 import $ from "jquery";
-import _ from "underscore";
-import moment from "moment";
-import { mapActions, mapGetters } from "vuex";
-import NextTransitionMixin from "@/components/NextTransitionMixin";
-import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
-import { Validator } from "@progress/kendo-validator-vue-wrapper";
+import _ from "@/compat/collections/lodash";
+import dayjs from "@/compat/date/dayjs";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import PatGroup from "@/apis/pat-group";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
@@ -142,17 +94,53 @@ import {
 } from "@/apis/mst-graph-setting-maintenance";
 //FNSI-修正 設定値の大小チェック対応 Huangxl add end
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
-// add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
-import { cloneDeep, isEqual } from "lodash";
+import { cloneDeep, isEqual } from "@/compat/collections/lodash";
+
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { withProgrammaticKendoUpdate } from "@/compat/kendo/legacy-sender.js";
+
+function installComponentJQuery() {
+  if (typeof window !== "undefined") {
+    window.$ = window.$ || $;
+    window.jQuery = window.jQuery || $;
+  }
+  if (typeof globalThis !== "undefined") {
+    globalThis.$ = globalThis.$ || $;
+    globalThis.jQuery = globalThis.jQuery || $;
+  }
+}
+
+function getKendoWidgetValue(widget) {
+  if (!widget) {
+    return null;
+  }
+  if (typeof widget.value === "function") {
+    return widget.value();
+  }
+  return widget._value;
+}
+
+function setKendoWidgetValue(widget, value) {
+  if (!widget) {
+    return;
+  }
+  if (typeof widget.value === "function") {
+    widget.value(value);
+  } else {
+    widget._value = value;
+  }
+}
+
+const GRAPH_SETTING_ON_OFF_OPTIONS = [
+  { id: "0", name: "OFF" },
+  { id: "1", name: "ON" }
+];
 
 export default {
   components: {
     "message-dialog": messageDialog
   },
-  mixins: [NextTransitionMixin, MasterMaintenanceMixin],
-  Validator,
   data() {
     return {
       // 初期状態で1列がないとその後の表示が行われないため初期列を定義
@@ -174,6 +162,7 @@ export default {
         rules: {},
         messages: {}
       },
+      kendoValidator: undefined,
       facilitylistValue: "",
 
       // DB取得個別ドロップダウンリスト表示項目
@@ -205,6 +194,15 @@ export default {
       allowEdit: true, // NOTE: true = 編集モード、 false = 閲覧モード
       // 初期値退避用オブジェクト
       originalDataSource: null,
+      directGridWidget: null,
+      directGridMounted: false,
+      directGridDataSource: null,
+      directGridLayoutRafId: null,
+      directGridFilterRefreshRafId: null,
+      directGridScrollSyncRafId: null,
+      directGridRowVisualRafIds: markRaw(new Map()),
+      pendingGridScrollRestore: null,
+      directGridNumericEditKeepUntil: 0
     };
   },
   computed: {
@@ -228,6 +226,14 @@ export default {
     },
     ntssListStyles() {
       return { display: this.columns.length === 1 ? "none" : "inherit" };
+    },
+    fontSizeSet() {
+      const names = ["small", "medium", "large", "x-large"];
+      return `font-size-set-${names[this.getFontSize] || "medium"}`;
+    },
+    masterConditionSignature() {
+      const condition = this.$store?.state?.["mst-graph-setting"]?.condition || this.condition || {};
+      return `${condition.recordName || ""}|${condition.includeDeleted ? 1 : 0}`;
     },
     ...mapGetters("mst-graph-setting", {
       getFacilityList: "getFacilityList",
@@ -257,7 +263,7 @@ export default {
         // add 9462 P-Ca９分割グラフ設定マスタのコンバートが正しくない zhao end
         (data.filter(row => row.operation > 0).length ||
           this.isSorted ||
-          !this.kendoValidator.validate())
+          !this.validateDirectKendoGrid())
       );
     },
 
@@ -270,19 +276,25 @@ export default {
   },
   watch: {
     windowHeight() {
-      this.calculateGridHeight();
+      this.scheduleDirectGridLayoutContract();
     },
     isDispMenu() {
-      this.calculateGridHeight();
+      this.scheduleDirectGridLayoutContract();
     },
     getFontSize() {
-      this.calculateGridHeight();
+      this.scheduleDirectGridLayoutContract();
     },
-    columns:function(val){
-      this.$nextTick(function(){
-        if (val.length > 1)
-        this.setLoadingScreenVisible(false);
+    columns(val) {
+      this.$nextTick(() => {
+        if (val.length > 1) {
+          this.setLoadingScreenVisible(false);
+          this.initDirectGridIfReady();
+          this.scheduleDirectGridLayoutContract();
+        }
       });
+    },
+    masterConditionSignature() {
+      this.scheduleDirectGridFilterRefresh();
     }
   },
   methods: {
@@ -307,25 +319,426 @@ export default {
       setLoadingScreenMessage: "setLoadingScreenMessage",
       resetLoadingScreenVisibleCount:  "resetLoadingScreenVisibleCount"
     }),
+    getCurrentRouteName() {
+      return this.$router?.currentRoute?.value?.name || this.$router?.currentRoute?.name || this.$route?.name || "";
+    },
+    validateDirectKendoGrid() {
+      return true;
+    },
+    getGridRootEl() {
+      return this.$refs.gridRoot || null;
+    },
+    getDirectGridScrollContent() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-content") || null;
+    },
+    getDirectGridLockedScrollContent() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-content-locked") || null;
+    },
+    getGridWidget() {
+      return this.directGridWidget || null;
+    },
+    getGridHeaderEl() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-header") || null;
+    },
+    getGridTableEl() {
+      return this.directGridWidget?.table?.[0] || this.getGridRootEl()?.querySelector?.(".k-grid-content table") || null;
+    },
+    getGridTbodyEl() {
+      return this.directGridWidget?.tbody?.[0] || this.getGridRootEl()?.querySelector?.(".k-grid-content tbody") || null;
+    },
+    getGridScrollPosition() {
+      const content = this.getDirectGridScrollContent();
+      return { top: content?.scrollTop || 0, left: content?.scrollLeft || 0 };
+    },
+    setGridScrollPosition(position = {}) {
+      const content = this.getDirectGridScrollContent();
+      if (!content) {
+        return;
+      }
+      content.scrollTop = position.top || 0;
+      content.scrollLeft = position.left || 0;
+      this.syncDirectGridLockedScrollPosition(content.scrollTop);
+      this.triggerDirectGridContentScroll();
+    },
+    savePendingGridScrollRestore(position = this.getGridScrollPosition()) {
+      this.pendingGridScrollRestore = {
+        top: position?.top || 0,
+        left: position?.left || 0
+      };
+    },
+    restorePendingGridScrollPosition() {
+      const position = this.pendingGridScrollRestore || this.getGridScrollPosition();
+      this.setGridScrollPosition(position);
+      return position;
+    },
+    scheduleDirectGridScrollRestore() {
+      if (this.directGridScrollSyncRafId != null) {
+        cancelAnimationFrame(this.directGridScrollSyncRafId);
+      }
+      this.directGridScrollSyncRafId = requestAnimationFrame(() => {
+        this.directGridScrollSyncRafId = requestAnimationFrame(() => {
+          this.directGridScrollSyncRafId = null;
+          this.restorePendingGridScrollPosition();
+        });
+      });
+    },
+    triggerDirectGridContentScroll() {
+      const content = this.getDirectGridScrollContent();
+      if (!content) {
+        return;
+      }
+      try {
+        content.dispatchEvent(new Event("scroll", { bubbles: true }));
+      } catch (_error) {
+        // noop
+      }
+      try {
+        $(content).trigger("scroll");
+      } catch (_error) {
+        // noop
+      }
+    },
+    calculateColumnsWidth() {
+      const widthMap = [12, 14, 16, 18];
+      this.columnWidth = widthMap[Number(this.getFontSize || 1)] || 14;
+    },
+
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       if (!this.editingFlg) {
-        const wh = this.windowHeight;
-        const hh = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .pop().clientHeight;
-        const fmh =
-          (this.isDispMenu === 1
-            ? document.getElementById("footer-menu").clientHeight
-            : 0) + 5;
+        const wh = Number(this.windowHeight) || window.innerHeight || 0;
+        const headerElements = Array.from(document.getElementsByClassName("header"));
+        const hh = headerElements.length ? headerElements[headerElements.length - 1].clientHeight : 0;
+        const footerMenu = document.getElementById("footer-menu");
+        const fmh = (this.isDispMenu === 1 && footerMenu ? footerMenu.clientHeight : 0) + 5;
         this.kendoGridToolbarHeight = wh - hh - fmh - 10;
         this.kendoGridToolbarHeight =
           this.kendoGridToolbarHeight < 340 ? 340 : this.kendoGridToolbarHeight;
 
-        const gfh = document.getElementById("grid-footer").clientHeight;
-        const hbh = document.querySelector(".header-btn-area").clientHeight;
+        const gridFooter = document.getElementById("grid-footer");
+        const gridHeader = document.getElementById("grid-header");
+        const gfh = gridFooter?.clientHeight || 0;
+        const hbh = gridHeader?.clientHeight || 0;
         this.kendoGridHeight = this.kendoGridToolbarHeight - (gfh + hbh);
       }
+    },
+    calculateGridWidth() {
+      this.resizeDirectGrid();
+    },
+    getDirectGridDataSourceOption() {
+      const source = this.masterRecords || {};
+      return {
+        ...source,
+        data: Array.isArray(source.data) ? source.data : []
+      };
+    },
+    createDirectGridDataSource() {
+      this.directGridDataSource = markRaw(new kendo.data.DataSource(this.getDirectGridDataSourceOption()));
+      return this.directGridDataSource;
+    },
+    buildDirectGridColumns() {
+      return this.columns.map(column => {
+        const gridColumn = { ...column };
+        if (column.title === "設定値") {
+          gridColumn.template = dataItem => this.dispValueTemplate(dataItem);
+          gridColumn.editor = (container, options) => this.editorInput(container, options);
+        } else if (column.field === "dispOrder") {
+          gridColumn.width = "4em";
+          gridColumn.editor = (container, options) => this.editorInput(container, options);
+        }
+        return gridColumn;
+      });
+    },
+    initDirectGridIfReady() {
+      const root = this.getGridRootEl();
+      if (!this.directGridMounted || !root || this.columns.length <= 1) {
+        return;
+      }
+      if (this.directGridWidget) {
+        this.applyDirectGridColumnsContract();
+        this.scheduleDirectGridFilterRefresh();
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+      installComponentJQuery();
+      $(root).empty();
+      $(root).kendoGrid({
+        dataSource: this.createDirectGridDataSource(),
+        editable: true,
+        selectable: true,
+        reorderable: false,
+        height: this.kendoGridHeight,
+        scrollable: true,
+        beforeEdit: event => this.editStart(event),
+        cellClose: event => this.editEnd(event),
+        save: event => this.onDirectGridSave(event),
+        dataBound: () => this.onDirectGridDataBound(),
+        columns: this.buildDirectGridColumns()
+      });
+      this.directGridWidget = markRaw($(root).data("kendoGrid"));
+      this.applyDirectGridStyleContract();
+      this.scheduleDirectGridLayoutContract();
+    },
+    destroyDirectGrid() {
+      if (this.directGridWidget) {
+        try {
+          this.directGridWidget.destroy();
+        } catch (_error) {
+          // noop
+        }
+      }
+      const root = this.getGridRootEl();
+      if (root) {
+        $(root).empty();
+      }
+      this.directGridWidget = null;
+    },
+    applyDirectGridColumnsContract() {
+      const grid = this.directGridWidget;
+      if (!grid) {
+        return;
+      }
+      const current = (grid.columns || []).map(column => `${column.field}:${column.hidden ? 1 : 0}`).join("|");
+      const next = (this.columns || []).map(column => `${column.field}:${column.hidden ? 1 : 0}`).join("|");
+      if (current !== next) {
+        grid.setOptions({ columns: this.buildDirectGridColumns() });
+      }
+    },
+    scheduleDirectGridFilterRefresh() {
+      if (!this.directGridWidget?.dataSource) {
+        return;
+      }
+      if (this.directGridFilterRefreshRafId != null) {
+        cancelAnimationFrame(this.directGridFilterRefreshRafId);
+      }
+      this.directGridFilterRefreshRafId = requestAnimationFrame(() => {
+        this.directGridFilterRefreshRafId = null;
+        this.refreshDirectGridDataFromMasterRecords(true);
+      });
+    },
+    refreshDirectGridDataFromMasterRecords(resetScroll = false) {
+      const grid = this.directGridWidget;
+      if (!grid?.dataSource) {
+        return;
+      }
+      const position = resetScroll
+        ? { top: 0, left: 0 }
+        : (this.pendingGridScrollRestore || this.getGridScrollPosition());
+      grid.dataSource.data(this.getDirectGridDataSourceOption().data || []);
+      this.$nextTick(() => {
+        this.applyDirectGridStyleContract();
+        this.editBackgroundColor();
+        this.setGridScrollPosition(position);
+      });
+    },
+    resizeDirectGrid() {
+      const grid = this.directGridWidget;
+      if (!grid) {
+        return;
+      }
+      try {
+        grid.setOptions({ height: this.kendoGridHeight });
+        grid.resize(true);
+        this.applyDirectGridStyleContract();
+      } catch (_error) {
+        // noop
+      }
+    },
+    getDirectGridVisibleLockedWidthPx() {
+      const root = this.getGridRootEl();
+      const fontSize = parseFloat(getComputedStyle(root || document.body).fontSize || "16") || 16;
+      return (this.columns || []).reduce((sum, column) => {
+        if (!column.locked || column.hidden) {
+          return sum;
+        }
+        const width = `${column.width || ""}`.trim();
+        if (width.endsWith("em")) {
+          return sum + parseFloat(width) * fontSize;
+        }
+        if (width.endsWith("px")) {
+          return sum + parseFloat(width);
+        }
+        const numeric = parseFloat(width);
+        return sum + (Number.isFinite(numeric) ? numeric : 0);
+      }, 0);
+    },
+    applyDirectGridLockedWidthContract() {
+      const root = this.getGridRootEl();
+      const width = this.getDirectGridVisibleLockedWidthPx();
+      if (!root || !width) {
+        return;
+      }
+      const px = `${Math.ceil(width)}px`;
+      root.querySelectorAll(".k-grid-header-locked,.k-grid-content-locked,.k-grid-header-locked table,.k-grid-content-locked table").forEach(element => {
+        element.style.width = px;
+        element.style.minWidth = px;
+      });
+    },
+    applyDirectGridLockedHeightContract() {
+      const content = this.getDirectGridScrollContent();
+      const lockedContent = this.getDirectGridLockedScrollContent();
+      if (!content || !lockedContent) {
+        return;
+      }
+      const height = content.clientHeight;
+      if (height > 0) {
+        lockedContent.style.height = `${height}px`;
+        lockedContent.style.maxHeight = `${height}px`;
+      }
+    },
+    applyDirectGridStyleContract() {
+      const root = this.getGridRootEl();
+      if (!root) {
+        return;
+      }
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-editable", "k-display-block");
+      root.querySelectorAll(".k-grid-header th, .k-grid-header .k-table-th").forEach(th => th.classList.add("k-header"));
+      [".k-grid-content tbody", ".k-grid-content-locked tbody"].forEach(selector => {
+        const tbody = root.querySelector(selector);
+        if (!tbody) {
+          return;
+        }
+        Array.from(tbody.children || []).forEach((tr, index) => {
+          tr.classList.add("k-master-row");
+          tr.classList.toggle("k-alt", index % 2 === 1);
+        });
+      });
+      root.querySelectorAll(".k-grid-content tbody td, .k-grid-content-locked tbody td").forEach(td => td.classList.add("k-td", "k-table-td"));
+      this.applyDirectGridLockedWidthContract();
+      this.applyDirectGridLockedHeightContract();
+      this.syncDirectGridLockedScrollPosition();
+    },
+    scheduleDirectGridLayoutContract() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+      }
+      if (!this.pendingGridScrollRestore) {
+        this.savePendingGridScrollRestore();
+      }
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.calculateColumnsWidth();
+        this.calculateGridHeight();
+        this.resizeDirectGrid();
+        this.applyDirectGridStyleContract();
+        this.restorePendingGridScrollPosition();
+        this.directGridLayoutRafId = requestAnimationFrame(() => {
+          this.directGridLayoutRafId = null;
+          this.resizeDirectGrid();
+          this.applyDirectGridStyleContract();
+          this.restorePendingGridScrollPosition();
+          this.scheduleDirectGridScrollRestore();
+        });
+      });
+    },
+    syncDirectGridLockedScrollPosition(scrollTop = null) {
+      const lockedContent = this.getDirectGridLockedScrollContent();
+      const content = this.getDirectGridScrollContent();
+      if (!lockedContent) {
+        return;
+      }
+      lockedContent.scrollTop = scrollTop !== null && scrollTop !== undefined ? scrollTop : (content?.scrollTop || 0);
+    },
+    onDirectGridDataBound() {
+      this.applyDirectGridStyleContract();
+      this.editBackgroundColor();
+      if (this.pendingGridScrollRestore) {
+        this.scheduleDirectGridScrollRestore();
+      }
+    },
+    onDirectGridSave(event) {
+      this.editingFlg = false;
+      const model = event?.model;
+      if (!model) return;
+
+      Object.keys(event.values || {}).forEach(field => {
+        const nextValue = event.values[field];
+        if (typeof model.set === "function") {
+          model.set(field, nextValue);
+        } else {
+          model[field] = nextValue;
+        }
+        if (Number(model.inputType) === 2 && field === "dispValue") {
+          if (typeof model.set === "function") {
+            model.set("value", nextValue);
+            model.set("val", nextValue);
+          } else {
+            model.value = nextValue;
+            model.val = nextValue;
+          }
+        }
+      });
+
+      const unchanged = this.handleUnchangedState(event);
+      if (unchanged) {
+        this.scheduleDirectGridCurrentRowVisual(model);
+        this.scheduleDirectGridLayoutContract();
+        this.scheduleDirectGridScrollRestore();
+        return;
+      }
+
+      this.edit({ editRecord: model, isSortMode: false });
+      if (model.operation === 1) model.edited = true;
+      this.scheduleDirectGridCurrentRowVisual(model);
+      this.scheduleDirectGridLayoutContract();
+      this.scheduleDirectGridScrollRestore();
+    },
+    scheduleGraphSettingDropdownEditorCommit(model) {
+      if (!model) {
+        return;
+      }
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      const runFallbackCommit = () => {
+        if (!model || Number(model.operation) > 0) {
+          return;
+        }
+        const values = { value: model.value ?? model.val ?? model.dispValue };
+        if (this.handleUnchangedState({ model, values })) {
+          this.scheduleDirectGridCurrentRowVisual(model);
+          this.scheduleDirectGridLayoutContract();
+          this.scheduleDirectGridScrollRestore();
+          return;
+        }
+        this.editingFlg = false;
+        this.edit({ editRecord: model, isSortMode: false });
+        if (Number(model.operation) > 0) {
+          model.edited = true;
+        }
+        this.scheduleDirectGridCurrentRowVisual(model);
+        this.scheduleDirectGridLayoutContract();
+        this.scheduleDirectGridScrollRestore();
+      };
+      this.$nextTick(() => {
+        if (typeof ownerWindow.requestAnimationFrame === "function") {
+          ownerWindow.requestAnimationFrame(runFallbackCommit);
+        } else {
+          ownerWindow.setTimeout(runFallbackCommit, 0);
+        }
+      });
+    },
+    scheduleDirectGridCurrentRowVisual(record) {
+      const key = record?.uid || record?.code || record?.graphSettingNo;
+      if (!key) {
+        return;
+      }
+      const oldId = this.directGridRowVisualRafIds.get(key);
+      if (oldId != null) {
+        cancelAnimationFrame(oldId);
+      }
+      const rafId = requestAnimationFrame(() => {
+        this.directGridRowVisualRafIds.delete(key);
+        this.applyDirectGridRowVisual(record);
+      });
+      this.directGridRowVisualRafIds.set(key, rafId);
+    },
+    applyDirectGridRowVisual(record) {
+      if (!record?.uid) {
+        return;
+      }
+      this.getDirectGridRowsByUid(record.uid).forEach(row => {
+        this.clearDirectGridRowVisual(row);
+        const edited = this.changeEditColor(row) || !!record.operation || !!record.edited;
+        this.changeRowColor(row, edited, false);
+      });
     },
     editStart(e) {
       if (this.isMobileDevice && !this.allowEdit) {
@@ -337,11 +750,15 @@ export default {
         e.preventDefault();
         return;
       }
-      if (this.androidFlg) {
-        this.editingFlg = true;
-      }
+      this.savePendingGridScrollRestore();
+      this.editingFlg = true;
     },
-    editEnd() {
+    editEnd(e) {
+      if (e?.model?.inputType == 2 && Date.now() <= this.directGridNumericEditKeepUntil) {
+        e?.preventDefault?.();
+        this.editingFlg = true;
+        return;
+      }
       this.editingFlg = false;
     },
 
@@ -359,126 +776,75 @@ export default {
       // 設定値リストのうちDB参照系をコールして再取得
       await this.setkendoGridDropList();
 
-      // apiをコールして施設設定マスタの値を取得
-      this.getGraphSettingDataList(this.facilitylistValue)
-        .then(async response => {
-          // editableをKendoUI用にfunctionオブジェクトに変換
-          const toFunction = response.data.columns;
-          toFunction.forEach(column => {
-            // 編集可否を関数化
-            column.editable = column.editable ? () => true : () => false;
-            // 列幅初期化
-            column["width"] = column.width ? column.width : "0";
-          });
-          this.columns = toFunction;
-          // 画面表示項目と値格納項目の分離
-          // mod #10198 検索した状態で保存すると保存が完了しない 宮崎 start
-          this.getMasterRecordList.data.forEach(columnData=> {
-            if(columnData.inputType === 4){
-              if (columnData.graphSettingNo === "2" || columnData.graphSettingNo === "3") {
-                columnData.optionValue = JSON.stringify(this.kendoGridDrop.mstExamItemList);
-              }
-              if (columnData.graphSettingNo >= "33" && columnData.graphSettingNo <= "42") {
-                columnData.optionValue = JSON.stringify(this.kendoGridDrop.patGroupList);
-              }
-              let jsonData = $.parseJSON(columnData.optionValue);
-
-              let matchData = jsonData.filter(function(item){
-                if(item.id == columnData.value) return true;
-              });
-              if (matchData.length > 0) {
-                columnData.dispValue = matchData[0].name;
-              } else if (jsonData.length > 0){
-                columnData.dispValue = jsonData[0].name;
-              }
-            } else {
-              columnData.dispValue = columnData.value;
-            }
-          });
-          this.setMasterRecordList(this.getMasterRecordList);
-          // mod #10198 検索した状態で保存すると保存が完了しない 宮崎 end
-
-          // 初期値退避用オブジェクトに検索結果をディープコピー
-          this.originalDataSource = cloneDeep(this.getMasterRecordList.data);
-
-          // 横スクロールバーを表示するために列幅を指定
-          this.columns.forEach(column => {
-            // 設定説明列の幅を拡張するように指定
-            column.width = column.field === "description" ? "24em" : "14em";
-            column.encoded = column.field === "description" ? false : true;
-            // #8612 ウィンドウサイズの変更で、マスタレイアウトが崩れる。林峻峰 start
-            // if (column.locked && column.dataType === "string" && column.field === "name") {
-            //   column.width = typeof column.width == 'string' ? Number(column.width.slice(0,-2)) * 16 : column.width * 16
-            // }
-            // #8612 ウィンドウサイズの変更で、マスタレイアウトが崩れる。林峻峰 end
-          });
-          // 先頭列ダミー要素追加（並び順列の変更内容が"かぶって"表示されてしまう事象の対応のため）
-          this.columns.unshift({
-            title: " ",
-            field: "dummy",
-            hidden: false,
-            editable: () => false,
-            width: "10px",
-            format: "",
-            values: null
-          });
-          // 色カラムのテンプレート生成
-          // mod 10878 P-Ca9分割グラフ設定マスタで検査マスタ指定が検索で選択できない zhao start
-          this.columns.filter(column => column.field === "dispValue")
-            .forEach(column => {
-              column.colorTemplate = (dataItem) => {
-                let value = dataItem[`${column.field}`];
-                let inputType = dataItem[`inputType`];
-                if (!value) value = "";
-                return value.toString().startsWith('#') && inputType == 1 ? `<div style='background-color: ${value}; width: 4em;'>&nbsp;</div>` : this.$sanitize(value);
-              }
-            });
-          // mod 10878 P-Ca9分割グラフ設定マスタで検査マスタ指定が検索で選択できない zhao end
-          // カラム幅等初期調整
-          // 編集モードによって並び順項目の表示・非表示を切り替える（この画面ではソート順変更の変更はしない）
-          // （先頭ダミー要素列と並び順列を交互に表示・非表示する）
-          const sortRankIndex = this.columns.findIndex(
-            col => col.field === "sortRank"
-          );
-
-          if (sortRankIndex >= 0) {
-            this.columns[sortRankIndex].hidden = true;
-            const dummyIndex = this.columns.findIndex(
-              col => col.field === "dummy"
-            );
-            if (dummyIndex >= 0) {
-              this.columns[dummyIndex].hidden = false;
-            }
-          }
-
-          this.$nextTick(() => {
-            this.calculateGridHeight();
-            // 元のスクロール位置に移動
-            /* mod スクロールの位置を維持 楊 start */
-            this.$refs.grid.$el.children[1].scrollTop = this.lastscrollTop;
-            this.$refs.grid.$el.children[1].scrollLeft = this.lastscrollLeft;
-            setTimeout(() => {
-              this.lastScrollTop = 0;
-              this.lastScrollLeft = 0;
-            }, 1000);
-            /* mod スクロールの位置を維持 楊 end */
-          });
-        })
-        .catch(error => {
-          //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
-          getErrorMessage('MstGraphSettingMainComponent.vue', 'findList', '指定されたマスタが見つかりません。');
-          //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
-          if (error.response && error.response.status === 400) {
-            this.$ons.notification.alert({
-              // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-              // title: "取得失敗",
-              // message: "指定されたマスタが見つかりません。"
-              title: DIALOG_MESSAGES[12000003].title,
-              message: messageFormat(DIALOG_MESSAGES[12000003].message),
-              // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
-            });
-          }
+      try {
+        const response = await this.getGraphSettingDataList(this.facilitylistValue);
+        const toFunction = response.data.columns;
+        toFunction.forEach(column => {
+          column.editable = column.editable ? () => true : () => false;
+          column["width"] = column.width ? column.width : "0";
         });
+        this.columns = toFunction;
+        // mod #10198 検索した状態で保存すると保存が完了しない 宮崎 start
+        this.getMasterRecordList.data.forEach(columnData => {
+          columnData.dispValue = this.resolveDispValueDisplay(columnData);
+        });
+        this.setMasterRecordList(this.getMasterRecordList);
+        // mod #10198 検索した状態で保存すると保存が完了しない 宮崎 end
+
+        this.originalDataSource = cloneDeep(this.getMasterRecordList.data);
+
+        this.columns.forEach(column => {
+          column.width = column.field === "description" ? "24em" : "14em";
+          column.encoded = column.field === "description" ? false : true;
+        });
+        this.columns.unshift({
+          title: " ",
+          field: "dummy",
+          hidden: false,
+          editable: () => false,
+          width: "10px",
+          format: "",
+          values: null
+        });
+
+        const sortRankIndex = this.columns.findIndex(
+          col => col.field === "sortRank"
+        );
+        if (sortRankIndex >= 0) {
+          this.columns[sortRankIndex].hidden = true;
+          const dummyIndex = this.columns.findIndex(
+            col => col.field === "dummy"
+          );
+          if (dummyIndex >= 0) {
+            this.columns[dummyIndex].hidden = false;
+          }
+        }
+
+        this.$nextTick(() => {
+          this.calculateGridHeight();
+          this.initDirectGridIfReady();
+          this.pendingGridScrollRestore = {
+            top: this.lastscrollTop,
+            left: this.lastscrollLeft
+          };
+          this.refreshDirectGridDataFromMasterRecords();
+          this.scheduleDirectGridLayoutContract();
+          this.setGridScrollPosition({ top: this.lastscrollTop, left: this.lastscrollLeft });
+          setTimeout(() => {
+            this.lastscrollTop = 0;
+            this.lastscrollLeft = 0;
+            this.pendingGridScrollRestore = null;
+          }, 1000);
+        });
+      } catch (error) {
+        getErrorMessage('MstGraphSettingMainComponent.vue', 'findList', '指定されたマスタが見つかりません。');
+        if (error.response && error.response.status === 400) {
+          this.$ons.notification.alert({
+            title: DIALOG_MESSAGES[12000003].title,
+            message: messageFormat(DIALOG_MESSAGES[12000003].message),
+          });
+        }
+      }
     },
     // 施設一覧のデータを取得
     findFacilityList() {
@@ -597,109 +963,198 @@ export default {
 
     editBackgroundColor() {
       this.$nextTick(() => {
-        const gridHeader = this.$refs.grid.$el.firstChild;
-        if (gridHeader.textContent === " ") {
+        if (this.editingFlg) {
+          return;
+        }
+        const gridHeader = this.getGridHeaderEl();
+        if (!gridHeader || gridHeader.textContent === " ") {
           return;
         }
         gridHeader?.classList?.add("master-grid-header");
-
-        // グリッドにレコードがなければ処理終了
-        if (!this.$refs.grid.$el.lastChild.lastChild.tBodies) {
-          return;
-        }
-
-        const tbodyc = this.$refs.grid.$el.lastChild.lastChild.tBodies[0]
-          .children;
-        for (let rwCount = 0; rwCount < tbodyc.length; rwCount++) {
-          const currentTrc = tbodyc[rwCount].children;
-
-          // 編集項目の色を変更
-          let edited = this.changeEditColor(currentTrc);
-
-          // 並び順以外の項目が変更されていた場合は、削除か修正にあわせて並び順より後の項目の背景色を変更
-          this.changeRowColor(currentTrc, edited, false);
+        this.refreshDirectGridDirtyVisualState();
+      });
+    },
+    getDirectGridRowsByUid(uid) {
+      const root = this.getGridRootEl();
+      if (!root || !uid) {
+        return [];
+      }
+      return Array.from(root.querySelectorAll(`.k-grid-content tbody tr[data-uid="${uid}"], .k-grid-content-locked tbody tr[data-uid="${uid}"]`));
+    },
+    isDirectGridLockedRow(row) {
+      return !!row?.closest?.(".k-grid-content-locked");
+    },
+    getDirectGridVisibleColumnsForRow(row) {
+      return (this.columns || []).filter(column => !column.hidden && !!column.locked === this.isDirectGridLockedRow(row));
+    },
+    getDirectGridCellField(row, cellIndex) {
+      return this.getDirectGridVisibleColumnsForRow(row)[cellIndex]?.field || null;
+    },
+    getDirectGridVisibleColumnOrder(fieldName) {
+      return (this.columns || []).filter(column => !column.hidden).findIndex(column => column.field === fieldName);
+    },
+    clearDirectGridRowVisual(row) {
+      Array.from(row?.children || []).forEach(cell => {
+        cell.classList.remove("master-edited-cell", "master-edited-row", "master-deleted-row");
+      });
+      row?.classList?.remove?.("master-edited-row", "master-deleted-row");
+    },
+    refreshDirectGridDirtyVisualState() {
+      const grid = this.directGridWidget;
+      if (!grid?.tbody) {
+        return;
+      }
+      Array.from(grid.tbody.children() || []).forEach(row => {
+        const record = grid.dataItem(row);
+        if (record) {
+          this.applyDirectGridRowVisual(record);
         }
       });
     },
-    changeEditColor(currentTrc) {
+    changeEditColor(row) {
       let edited = false;
-      // 変更されたセルの文字色を変更
-      for (let clCount = 0; clCount < currentTrc.length; clCount++) {
-        if (
-          this.isEditRow(currentTrc[clCount]) &&
-          clCount !== this.getColumnIndex("sortRank")
-        ) {
-          currentTrc[clCount]?.classList?.add("master-edited-cell");
+      Array.from(row?.children || []).forEach((cell, cellIndex) => {
+        const fieldName = this.getDirectGridCellField(row, cellIndex);
+        if (fieldName !== "sortRank" && this.isEditRow(cell)) {
+          cell.classList.add("master-edited-cell");
           edited = true;
         }
-      }
+      });
       return edited;
     },
     isEditRow(currentTd) {
       // 編集した行を判定
-      return currentTd.classList.contains("k-dirty-cell");
+      return currentTd?.classList?.contains("k-dirty-cell");
     },
-    changeRowColor(currentTrc, edited, deleted) {
-      // 並び順より後の項目の背景色を変更
-      if (edited || deleted) {
-        const addClass = deleted ? "master-deleted-row" : "master-edited-row";
-
-        for (
-          let clCount = this.getColumnIndex("sortRank") + 1;
-          clCount < currentTrc.length;
-          clCount++
-        ) {
-          currentTrc[clCount]?.classList?.add(addClass);
-        }
+    changeRowColor(row, edited, deleted) {
+      if (!edited && !deleted) {
+        return;
       }
+      const addClass = deleted ? "master-deleted-row" : "master-edited-row";
+      const sortRankOrder = this.getDirectGridVisibleColumnOrder("sortRank");
+      Array.from(row?.children || []).forEach((cell, cellIndex) => {
+        const fieldName = this.getDirectGridCellField(row, cellIndex);
+        const columnOrder = this.getDirectGridVisibleColumnOrder(fieldName);
+        if (sortRankOrder < 0 || columnOrder > sortRankOrder) {
+          cell.classList.add(addClass);
+        }
+      });
+      row?.classList?.add?.(addClass);
     },
     getColumnIndex(fieldName) {
       // 指定された項目がない場合はマイナスが返る
       return this.columns.findIndex(e => e.field === fieldName);
     },
+    parseJsonValue(value, fallback = []) {
+      if (value == null || value === "") {
+        return fallback;
+      }
+      if (typeof value !== "string") {
+        return value;
+      }
+      try {
+        return JSON.parse(value);
+      } catch (_error) {
+        return fallback;
+      }
+    },
+    syncGraphSettingOptionValue(columnData) {
+      const graphSettingNo = String(columnData.graphSettingNo ?? "");
+      if (graphSettingNo === "2" || graphSettingNo === "3") {
+        columnData.optionValue = JSON.stringify(this.kendoGridDrop.mstExamItemList);
+      } else if (graphSettingNo >= "33" && graphSettingNo <= "42") {
+        columnData.optionValue = JSON.stringify(this.kendoGridDrop.patGroupList);
+      }
+    },
+    getGraphSettingOptionList(columnData) {
+      this.syncGraphSettingOptionValue(columnData);
+      return this.parseJsonValue(columnData.optionValue, []);
+    },
+    resolveDispValueDisplay(columnData) {
+      const inputType = Number(columnData.inputType);
+      if ([4, 5, 9].includes(inputType)) {
+        const optionList = this.getGraphSettingOptionList(columnData);
+        const matched = optionList.find(
+          item => String(item.id) === String(columnData.value)
+        );
+        if (matched) {
+          return matched.name;
+        }
+        return columnData.dispValue ?? columnData.value ?? "";
+      }
+      if (inputType === 3) {
+        const matched = GRAPH_SETTING_ON_OFF_OPTIONS.find(
+          item => String(item.id) === String(columnData.value)
+        );
+        return matched ? matched.name : (columnData.dispValue ?? columnData.value ?? "");
+      }
+      if (inputType === 2 && columnData.value != null) {
+        return String(columnData.value);
+      }
+      return columnData.dispValue ?? columnData.value ?? "";
+    },
+    resolveSaveValueFromRecord(columnData) {
+      const inputType = Number(columnData.inputType);
+      if ([4, 5, 9].includes(inputType)) {
+        const optionList = this.getGraphSettingOptionList(columnData);
+        let matched = optionList.find(
+          item =>
+            item.name == columnData.dispValue &&
+            columnData.val &&
+            String(item.id) === String(columnData.val)
+        );
+        if (!matched && columnData.dispValue != null && columnData.dispValue !== "") {
+          matched = optionList.find(
+            item => String(item.name) === String(columnData.dispValue)
+          );
+        }
+        if (!matched && columnData.value != null && columnData.value !== "") {
+          matched = optionList.find(
+            item => String(item.id) === String(columnData.value)
+          );
+        }
+        return matched ? String(matched.id) : columnData.value;
+      }
+      if (inputType === 3) {
+        const matched = GRAPH_SETTING_ON_OFF_OPTIONS.find(
+          item => String(item.name) === String(columnData.dispValue)
+        );
+        return matched ? matched.id : columnData.value;
+      }
+      return columnData.dispValue;
+    },
+    dispValueTemplate(dataItem) {
+      const value = this.resolveDispValueDisplay(dataItem);
+      const inputType = Number(dataItem.inputType);
+      const display = value == null ? "" : String(value);
+      return display.startsWith("#") && inputType === 1
+        ? `<div style='background-color: ${display}; width: 4em;'>&nbsp;</div>`
+        : this.$sanitize(display);
+    },
 
     async saveRecord() {
       // 共通ローダー:表示開始
+      this.directGridWidget?.closeCell?.();
       this.setLoadingScreenVisible(true);
       /* add スクロールの位置を維持 楊 start */
-      this.lastscrollTop = document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].scrollTop;
-      this.lastscrollLeft = document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].scrollLeft;
+      const { top: scrollTop, left: scrollLeft } = this.getGridScrollPosition();
+      this.lastscrollTop = scrollTop;
+      this.lastscrollLeft = scrollLeft;
       /* add スクロールの位置を維持 楊 end */
-      // 必須入力チェック
+      await this.setkendoGridDropList();
+
+      // masterListの表示値から登録値を再設定(ドロップダウンリストの表示と値を再設定)
+      this.getMasterRecordList.data.forEach(columnData => {
+        if (columnData.operation === 2) {
+          columnData.value = this.resolveSaveValueFromRecord(columnData);
+        }
+      });
+      this.setMasterRecordList(this.getMasterRecordList);
+
       if (!this.isFilledRequired()) {
-        //共通ローダー：表示終了
         this.setLoadingScreenVisible(false);
         return;
       }
-
-      // masterListの表示値から登録値を再設定(ドロップダウンリストの表示と値を再設定)
-      //画面表示項目と値格納項目の再分離
-      this.getMasterRecordList.data.forEach(columnData=> {
-        if(columnData.inputType === 4 || columnData.inputType === 5 || columnData.inputType === 9){
-          //4:ドロップダウンリスト時
-          let jsonData = $.parseJSON(columnData.optionValue);
-
-          let matchData = jsonData.filter(function(item){
-            if(item.name == columnData.dispValue && columnData.val && columnData.val == item.id) return true;
-          });
-          if(matchData.length > 0){
-            columnData.value = matchData[0].id;
-          }
-
-        }else if (columnData.inputType === 3){
-          //3:ON/OFF設定時(トグル不可のためドロップダウンリストで代替)
-          let jsonData = [{"id":"0", "name":"OFF"},{"id":"1", "name":"ON"}];
-          let matchData = jsonData.filter(function(item){
-            if(item.name == columnData.dispValue ) return true;
-          });
-          columnData.value = matchData[0].id;
-
-        }else{
-          //2:数値入力 1:テキスト入力時
-          columnData.value = columnData.dispValue;
-        }
-      });
-      this.setMasterRecordList(this.getMasterRecordList); // mod #10198 検索した状態で保存すると保存が完了しない 宮崎
       //FNSI-修正 設定値の大小チェック対応 Huangxl add start
       if (!this.settingValidation()) {
         //共通ローダー：表示終了
@@ -723,7 +1178,7 @@ export default {
       }
 
       // 登録日時・更新日時用の現在日時
-      const now = moment().format("YYYY-MM-DDTHH:mm:ss.SSSZ");
+      const now = dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZ");
 
       const serializedInsertRecords = insertRecords.map(record =>
         JSON.stringify({
@@ -773,9 +1228,9 @@ export default {
     isFilledRequired() {
       if (
         this.getUpdateRecordList.some(
-          item => item.dispValue === null || item.dispValue === ""
-        )
-      ) {
+          item =>
+            item.operation === 2 &&
+            (item.dispValue === null || item.dispValue === ""))) {
         this.isDialogVisible = true;
         this.messageCd = 20010002;
         this.stringParams = ["設定値"];
@@ -826,7 +1281,7 @@ export default {
     // パンくずリストをクリックされた場合に呼び出される関数
     refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
-      if (this.selfScreenName === this.$router.currentRoute.name
+      if (this.selfScreenName === this.getCurrentRouteName()
           && document.getElementsByTagName("ons-alert-dialog").length === 0) {
         if (this.isChanged) {
           this.$ons.notification.confirm({
@@ -855,47 +1310,128 @@ export default {
      * @param data DB取得値
      */
     editorInput(container, data) {
-      if (data.model.inputType == 4 || data.model.inputType == 5 || data.model.inputType == 9 ) {
-      data.model.dispValue = data.model.val ? data.model.val : data.model.value;
-      $(`<input class="k-textbox" name="${data.field}"/>`)
-        .appendTo(container)
-        .kendoDropDownList({
-          dataSource: $.parseJSON(data.model.optionValue),
-          dataTextField: "name",
-          dataValueField: "id",
-          change:function(e){
-            //mod 10878 P-Ca9分割グラフ設定マスタで検査マスタ指定が検索で選択できない zhao start
-            //data.model["val"] = JSON.parse(data.model.optionValue)[e.sender.selectedIndex].id
-            //data.model.dispValue = JSON.parse(data.model.optionValue)[e.sender.selectedIndex].name
-            data.model["val"] = e.sender._valueBeforeCascade
-            data.model.dispValue = e.sender._oldText
-            //mod 10878 P-Ca9分割グラフ設定マスタで検査マスタ指定が検索で選択できない zhao end
-          },
-          filter: "contains",
-        })
-        .blur(() => {
-          const value = data.model["val"] || data.model["value"]
-          const optionValue = JSON.parse(data.model.optionValue).find(e => e.id === value)
-          if (optionValue && optionValue.name) {
-            data.model.dispValue = optionValue.name
+      if (data.model.inputType == 4 || data.model.inputType == 5 || data.model.inputType == 9) {
+        const optionValue = this.getGraphSettingOptionList(data.model);
+        const findById = candidate =>
+          optionValue.find(item => String(item.id) === String(candidate));
+        const findByName = candidate =>
+          optionValue.find(item => String(item.name) === String(candidate));
+        let initialValue = "";
+        const matchedByValue = findById(data.model.value);
+        if (matchedByValue) {
+          initialValue = matchedByValue.id;
+        }
+        const matchedByVal = findById(data.model.val);
+        if (matchedByVal) {
+          initialValue = matchedByVal.id;
+        }
+        if (!initialValue && data.model.dispValue != null) {
+          const matchedByDisp = findByName(data.model.dispValue);
+          if (matchedByDisp) {
+            initialValue = matchedByDisp.id;
+          }
+        }
+        const vm = this;
+        const applySelection = (widget, selectedValue) => {
+          const selectedItem = optionValue.find(
+            item => String(item.id) === String(selectedValue)
+          );
+          const normalizedValue = selectedItem
+            ? String(selectedItem.id)
+            : String(selectedValue ?? "");
+          if (widget && typeof widget.value === "function" && String(widget.value() ?? "") !== normalizedValue) {
+            withProgrammaticKendoUpdate(widget, () => widget.value(normalizedValue));
+          }
+          data.model.val = normalizedValue;
+          data.model.value = normalizedValue;
+          data.model.dispValue = selectedItem?.name || "";
+          return true;
+        };
+        const $dropDownInput = $(`<input class="k-textbox" name="${data.field}" data-bind="value:value"/>`).appendTo(container);
+        const dropDownWidget = $dropDownInput
+          .kendoDropDownList({
+            dataSource: optionValue,
+            dataTextField: "name",
+            dataValueField: "id",
+            value: String(initialValue),
+            change: function(e) {
+              vm.savePendingGridScrollRestore();
+              applySelection(e.sender, getKendoWidgetValue(e.sender));
+              vm.directGridWidget?.closeCell?.();
+              vm.scheduleGraphSettingDropdownEditorCommit(data.model);
+            },
+            filter: "contains"
+          }).data("kendoDropDownList");
+        $dropDownInput.blur(() => {
+          const value = data.model.val || data.model.value;
+          if (optionValue && value) {
+            const optionValueItem = optionValue.find(
+              item => String(item.id) === String(value)
+            );
+            if (optionValueItem?.name) {
+              data.model.dispValue = optionValueItem.name;
+            }
+          } else if (optionValue && data.model.dispValue) {
+            const optionValueItem = findByName(data.model.dispValue);
+            if (optionValueItem) {
+              data.model.val = String(optionValueItem.id);
+              data.model.value = String(optionValueItem.id);
+              data.model.dispValue = optionValueItem.name;
+            }
           }
         });
-
-      }else if(data.model.inputType == 3){
-        $(`<input class="k-textbox" name="${data.field}"/>`)
+        this.$nextTick(() => {
+          if (!dropDownWidget) {
+            return;
+          }
+          // 初期値が空でない場合は選択値を再適用し、表示を確実に反映する
+          if (initialValue !== "" && initialValue != null) {
+            dropDownWidget.value(String(initialValue));
+          }
+          // セル編集開始時にドロップダウンを自動展開する
+          setTimeout(() => dropDownWidget.open?.(), 0);
+        });
+      } else if (data.model.inputType == 3) {
+        const findOnOffById = candidate =>
+          GRAPH_SETTING_ON_OFF_OPTIONS.find(
+            item => String(item.id) === String(candidate)
+          );
+        const findOnOffByName = candidate =>
+          GRAPH_SETTING_ON_OFF_OPTIONS.find(
+            item => String(item.name) === String(candidate)
+          );
+        let onOffDisplayValue = findOnOffByName(data.model.dispValue)?.name || "";
+        if (!onOffDisplayValue) {
+          onOffDisplayValue =
+            findOnOffById(data.model.value)?.name ||
+            findOnOffById(data.model.val)?.name ||
+            "";
+        }
+        const vm = this;
+        $(`<input class="k-textbox" name="${data.field}" data-bind="value:dispValue"/>`)
           .appendTo(container)
           .kendoDropDownList({
-            dataSource: [{"id":"0", "name":"OFF"},{"id":"1", "name":"ON"}],
+            dataSource: GRAPH_SETTING_ON_OFF_OPTIONS,
             dataTextField: "name",
-            dataValueField: "name"
+            dataValueField: "name",
+            value: onOffDisplayValue,
+            change: function(e) {
+              vm.savePendingGridScrollRestore();
+              const selectedName = getKendoWidgetValue(e.sender);
+              const selectedItem = findOnOffByName(selectedName);
+              data.model.dispValue = selectedItem?.name || "";
+              data.model.value = selectedItem?.id ?? "";
+              data.model.val = selectedItem?.id ?? "";
+              vm.directGridWidget?.closeCell?.();
+              vm.scheduleGraphSettingDropdownEditorCommit(data.model);
+            }
           });
-
       }else if(data.model.inputType == 2){
         // mod #5589 2023/04/10 数値IFのスタイル全不正 林峻峰 start
         // var numberScope = $.parseJSON(data.model.optionValue);
         // $(`<input class="k-numerictextbox" name="${data.field}"/>`)
         //   .appendTo(container)
-        //   .kendoNumericTextBox({
+        //   .mountNumericTextBox({
         //     min: -9999999,
         //     max: 9999999
         //   });
@@ -904,40 +1440,116 @@ export default {
         let parameterMax = 9999999
         let parameterStep = 1
         let parameter = {step: parameterStep, format: "n0"}
+        let numericTextBox = null;
+        let pendingNumericValue = null;
+        const markNumericEdit = () => {
+          this.directGridNumericEditKeepUntil = Date.now() + 1000;
+        };
+        const setNumericModelValue = (value) => {
+          data.model[data.field] = value
+          data.model.value = value
+          data.model.val = value
+        };
+        const getNumericEditorValue = () => {
+          const rawValue = pendingNumericValue ??
+            numericTextBox?._value ??
+            numericTextBox?.element?.val?.() ??
+            numericTextBox?._text?.val?.() ??
+            data.model[data.field] ??
+            data.model.value;
+          const value = parseFloat(rawValue);
+          return Number.isNaN(value) ? 0 : value;
+        };
+        const setNumericEditorValue = (value) => {
+          pendingNumericValue = value;
+          setNumericModelValue(value);
+          if (numericTextBox) {
+            numericTextBox._value = value;
+          }
+          const displayValue = value == null ? "" : String(value);
+          const inputs = [];
+          const addInput = input => {
+            if (input && inputs.indexOf(input) === -1) {
+              inputs.push(input);
+            }
+          };
+          addInput(numericTextBox?.element?.get?.(0));
+          addInput(numericTextBox?._text?.get?.(0));
+          numericTextBox?.wrapper?.get?.(0)?.querySelectorAll?.("input").forEach(addInput);
+          inputs.forEach(input => {
+            input.value = displayValue;
+          });
+        };
         parameter.spin = ()=> {
-          let value = $('#myInputNumber').data('kendoNumericTextBox').value()
+          markNumericEdit();
+          let value = getNumericEditorValue()
           // 数値範囲内かどうかの確認
           if (value > parameterMax) {
-            $('#myInputNumber').data('kendoNumericTextBox').value(parameterMin)
+            setNumericEditorValue(parameterMin)
           } else if (value < parameterMin) {
-            $('#myInputNumber').data('kendoNumericTextBox').value(parameterMax)
+            setNumericEditorValue(parameterMax)
           }
-          document.getElementById('grid').onmousewheel = () => {
+          const gridElement = this.getGridRootEl();
+          if (gridElement) {
+            gridElement.onmousewheel = () => {
             return true
+          }
           }
         }
         parameter.change = (e)=> {
-          let value = e.sender._value
+          let value = pendingNumericValue !== null ? pendingNumericValue : e.sender._value
+          if (value == null || value === "") {
+            value = e.sender.element?.val?.()
+          }
+          value = parseFloat(value)
+          if (Number.isNaN(value)) {
+            value = 0
+          }
           // 数値範囲内かどうかの確認
           if (value > parameterMax) {
-            data.model[data.field] = parameterMax
+            value = parameterMax
           } else if (value <  parameterMin) {
-            data.model[data.field] = parameterMin
+            value = parameterMin
           }
-          document.getElementById('grid').onmousewheel = () => {
+          setNumericModelValue(value)
+          setNumericEditorValue(value)
+          pendingNumericValue = null;
+          const gridElement = this.getGridRootEl();
+          if (gridElement) {
+            gridElement.onmousewheel = () => {
             return true
           }
+          }
         }
-        $(strinput).appendTo(container).kendoNumericTextBox(parameter);
+        numericTextBox = $(strinput).appendTo(container).kendoNumericTextBox(parameter).data("kendoNumericTextBox");
         this.$nextTick(() => {
-          document.getElementById('grid').onmousewheel = () => {
+          const gridElement = this.getGridRootEl();
+          if (gridElement) {
+            gridElement.onmousewheel = () => {
             return false
           }
-          $('#myInputNumber').prev().attr('type','number')
-          $('#myInputNumber').data('kendoNumericTextBox').element.on("mousewheel", (event)=>{
-            let delta = (event.originalEvent.wheelDelta && (event.originalEvent.wheelDelta > 0 ? 1 : -1)) ||
-                        (event.originalEvent.detail && (event.originalEvent.wheelDelta > 0 ? -1 : 1))
-            let value = parseFloat($('#myInputNumber').data('kendoNumericTextBox').value())
+          }
+          const closeNumericCellEditor = () => {
+            const gridElement = this.getGridRootEl();
+            if (gridElement) {
+              gridElement.onmousewheel = () => {
+                return true
+              }
+            }
+            numericTextBox?.trigger("change");
+            this.directGridNumericEditKeepUntil = 0;
+            this.directGridWidget?.closeCell?.();
+          };
+          const handleNumericWheel = event => {
+            markNumericEdit();
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation?.();
+            const originalEvent = event.originalEvent || event;
+            let delta = (originalEvent.wheelDelta && (originalEvent.wheelDelta > 0 ? 1 : -1)) ||
+                        (originalEvent.deltaY && (originalEvent.deltaY < 0 ? 1 : -1)) ||
+                        (originalEvent.detail && (originalEvent.detail < 0 ? 1 : -1))
+            let value = getNumericEditorValue()
             if (delta > 0) {
               // 滑ります
               value += parameterStep
@@ -951,25 +1563,58 @@ export default {
             } else if (value <  parameterMin) {
               value = parameterMax
             }
-            $('#myInputNumber').data('kendoNumericTextBox').value(value)
+            setNumericEditorValue(value)
+          }
+          const wheelTargets = [
+            numericTextBox?.element?.get?.(0),
+            numericTextBox?._text?.get?.(0),
+            numericTextBox?.wrapper?.get?.(0)
+          ].filter((target, index, targets) => target && targets.indexOf(target) === index);
+          wheelTargets.forEach(target => {
+            target.addEventListener("wheel", handleNumericWheel, { capture: true, passive: false });
+            target.addEventListener("mousewheel", handleNumericWheel, { capture: true, passive: false });
+            target.addEventListener("DOMMouseScroll", handleNumericWheel, { capture: true, passive: false });
+          });
+          numericTextBox.element.on("keydown", (event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              closeNumericCellEditor();
+              return;
+            }
+            markNumericEdit();
           })
-          $('#myInputNumber').data('kendoNumericTextBox').element.on("blur", () => {
-            document.getElementById('grid').onmousewheel = () => {
-              return true
+          numericTextBox.element.on("blur", () => {
+            this.directGridNumericEditKeepUntil = 0;
+            const gridElement = this.getGridRootEl();
+            if (gridElement) {
+              gridElement.onmousewheel = () => {
+                return true
+              }
             }
             //6954 【EOL対応内部】【P-Ca9分割グラフ設定マスタ】报错 start zhao
-            if($('#myInputNumber').data('kendoNumericTextBox')){
-            $('#myInputNumber').data('kendoNumericTextBox').trigger('change')
+            if(numericTextBox){
+              numericTextBox.trigger('change')
             }
             //6954 【EOL対応内部】【P-Ca9分割グラフ設定マスタ】报错 end zhao
           })
+          numericTextBox.element.css("text-align", "right");
+          numericTextBox._text?.css?.("text-align", "right");
         })
         // mod #5589 2023/04/10 数値IFのスタイル全不正 林峻峰 end
       }else if(data.model.inputType == 1){
         if(data.model.dispValue.toString().startsWith('#')) {
-          const dummyField = $(`<input type = "color" data-bind="value:dispValue" width: 4em; />`).appendTo(container);
+          const dummyField = $(`<input type="color" data-bind="value:dispValue" style="inline-size: 50px !important;" />`).appendTo(container);
           this.$nextTick(() => {
-            dummyField.click();
+            const colorInput = dummyField[0];
+            const ownerWindow = colorInput?.ownerDocument?.defaultView || window;
+            ownerWindow.requestAnimationFrame(() => {
+              colorInput?.focus?.({ preventScroll: true });
+              try {
+                colorInput?.showPicker?.();
+              } catch (_error) {
+                colorInput?.click?.();
+              }
+            });
           });
         }else{
           $(`<textarea name="${data.field}" class="k-valid k-textarea" style="font-size: 1.0em;resize: vertical;width: 100%;height: 100%;max-height: 65vh;"/>`).appendTo(container)
@@ -985,46 +1630,49 @@ export default {
       }
     },
     onSave(ev) {
-      this.editingFlg = false;
-      this.edit({ editRecord: ev.model, isSortMode: false });
-
-      // 初期値と現在値を比較し、差分が無い場合はdirty状態を解除
-      this.handleUnchangedState(ev);
-
-      ev.sender.refresh();
-      if (ev.model.operation === 1) {
-        ev.model.edited = true;
-      }
-      // 状態に合わせて背景色を変更
-      this.editBackgroundColor();
+      this.onDirectGridSave(ev);
     },
     /**
      * 編集終了時に、初期値とセルの値が同一か判定し、同一の場合はGrid行のdirty状態を解除する
      * @param {Object} e - KendoGridのイベント引数
      */
     handleUnchangedState(e) {
-      const { graphSettingNo, inputType } = e.model;
-      const originalItem = this.originalDataSource.find((item) => {
-        return item.graphSettingNo === graphSettingNo;
-      });
+      const originalDataSource = Array.isArray(this.originalDataSource)
+        ? this.originalDataSource
+        : [];
+      if (originalDataSource.length === 0 || !e?.model || !e?.values) {
+        return;
+      }
 
-      // 編集フィールド取得
+      const { graphSettingNo } = e.model;
+      const originalItem = originalDataSource.find(item => {
+        return String(item.graphSettingNo) === String(graphSettingNo);
+      });
+      if (!originalItem) {
+        return;
+      }
+
       const editField = Object.keys(e.values)[0];
-      // 現在値取得
+      if (editField == null) {
+        return;
+      }
       const editedValue = e.values[editField];
-      // 初期値取得(プルダウン項目の場合は非表示のvalueカラムから取得)
-      const originalValue = [4, 5, 9].includes(Number(inputType))
-        ? originalItem?.['value']
+      const originalValue = [4, 5, 9].includes(Number(e.model.inputType))
+        ? originalItem?.value
         : originalItem?.[editField];
 
-      // 初期値と現在値を比較
       const isUnchanged = isEqual(originalValue, editedValue);
 
       if (isUnchanged) {
-        // 初期値と現在値に差が無い場合、行のdirty状態を解除
-        e.sender.dataSource.cancelChanges(e.model);
         delete e.model.operation;
+        e.model.edited = false;
+        if (e.model.dirtyFields) {
+          Object.keys(e.model.dirtyFields).forEach(k => delete e.model.dirtyFields[k]);
+        }
+        e.model.dirty = false;
+        return true;
       }
+      return false;
     },
     cancel() {
       // 前画面に戻る
@@ -1044,26 +1692,34 @@ export default {
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("処理中・・・");
     // 端末判別
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toLowerCase();
     if (/android/.test(ua)) {
       this.androidFlg = true;
     } else if (/iphone|ipad|mac|os/.test(ua)) {
       this.iosFlg = true;
     }
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.getCurrentRouteName();
     EventBus.$on("refresh", this.refresh);
   },
-  updated() {
-    // Storeの更新等で画面が再描画された場合に背景色を変更
-    this.editBackgroundColor();
-  },
   mounted() {
+    this.directGridMounted = true;
+    this.kendoValidator = { validate: () => this.validateDirectKendoGrid() };
     this.$nextTick(() => {
       this.calculateGridHeight();
+      this.initDirectGridIfReady();
+      this.scheduleDirectGridLayoutContract();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
+    [this.directGridLayoutRafId, this.directGridFilterRefreshRafId, this.directGridScrollSyncRafId].forEach(id => {
+      if (id != null) {
+        cancelAnimationFrame(id);
+      }
+    });
+    this.directGridRowVisualRafIds?.forEach?.(id => cancelAnimationFrame(id));
+    this.directGridRowVisualRafIds?.clear?.();
+    this.destroyDirectGrid();
   }
 };
 </script>
@@ -1095,15 +1751,51 @@ export default {
   line-height: 2em;
   width: auto;
 }
-.k-grid-toolbar {
+.kendo-grid-toolbar-style {
   padding: 0.1em 0.3em;
 }
-.content-style >>> .k-grid-content{
+.content-style :deep(.k-grid-content){
   white-space: pre-wrap;
 }
 .custom-switch {
   transform: scale(0.85);
   transform-origin: center;
   touch-action: manipulation;
+}
+.mst-graph-setting-direct-jq-grid {
+  width: 100%;
+}
+
+/* Vue2 kendo-grid wrapper style contract for this direct jq screen. */
+.kendo-grid-toolbar-style :deep(.toolbar-btn),
+.kendo-grid-toolbar-style :deep(.toolbar-btn *) {
+  font-family: inherit;
+}
+.kendo-grid-toolbar-style :deep(.k-grid-header th),
+.kendo-grid-toolbar-style :deep(.k-grid-header .k-table-th),
+.kendo-grid-toolbar-style :deep(.k-grid-header .k-link),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked th),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked .k-table-th),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked .k-link) {
+  border-right-color: currentColor;
+  cursor: default;
+}
+
+
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+}
+
+/* theme.css の line-height: 2em !important を上書き（jq 生成 td は scoped 直指定不可のため :deep） */
+.master-maintenance-page :deep(.ntss-kendo-grid-legacy td),
+.master-maintenance-page :deep(.ntss-kendo-grid-legacy .k-table-td) {
+  line-height: 1.5em !important;
 }
 </style>

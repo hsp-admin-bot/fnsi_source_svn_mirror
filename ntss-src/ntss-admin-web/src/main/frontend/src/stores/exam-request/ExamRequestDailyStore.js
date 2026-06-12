@@ -1,7 +1,7 @@
 /**
  * 検査依頼一覧(一日)用ストア
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { sendRequestPatExamMain } from "@/apis/exam-request";
 import { getDeadlineDate } from "@/functions/common/DateTimeUtils";
 import { sortSetCdList, toKeyDate } from "@/functions/exam-request/ExamRequestFunctions";
@@ -314,7 +314,7 @@ export default {
             targetSet.status[data.strExamDate] = data.examStatus;
             // 締切フラグに応じてロック状態を設定
             targetSet.isLock[data.strExamDate] = dlc.deadlineFlg
-              ? (moment(deadlineDate).isAfter(data.strExamDate) ? "1" : "0")
+              ? (dayjs(deadlineDate).isAfter(data.strExamDate) ? "1" : "0")
               : data.isLock;
           });
         });

@@ -1,13 +1,16 @@
 /**
  * 測定履歴モーダルPage
  */
- <template>
+<template>
   <modal-base @onClose="closeMeasureHistoryModal">
-    <div slot="header">
-      <component :is="header"></component>
-    </div>
-    <div slot="body" style="overflow-y: hidden;">
-      <div id="send-condition-weight-chart-area" style="height: 250px;">
+    <template #header>
+      <div>
+        <component :is="header"></component>
+      </div>
+    </template>
+    <template #body>
+      <div style="overflow-y: hidden;">
+        <div id="send-condition-weight-chart-area" style="height: 250px;">
         <!-- 体重履歴チャート表示予定領域 -->
         <highcharts :options="createChartData()" ref="highcharts"></highcharts>
       </div>
@@ -24,6 +27,7 @@
               >{{ column.colName }}</th>
             </tr>
           </thead>
+      <tbody>
           <tr
             v-for="(HistoryList, idx) in getHistoryModalList"
             :key="idx"
@@ -36,47 +40,105 @@
               style="text-align: left;"
             >{{ column.text(HistoryList) }}</td>
           </tr>
-          <tr style="height: 1.1rem;"></tr>
-        </table>
+          <tr style="height: 1.1rem;">
+            <td :colspan="columns.length" style="height: 1.1rem; padding: 0; border: none;"></td>
+          </tr>
+        
+      </tbody></table>
       </div>
     </div>
-    <div slot="footer" class="flex-container">
-      <div class="denial-btn-area" style="background:none">
+    </template>
+    <template #footer>
+      <div class="flex-container">
+        <div class="denial-btn-area" style="background:none">
         <!-- FNSI-add 画面スタイル(ボタン)対応 徐 start -->
         <!-- <v-ons-button class="button denial-btn" @click="closeMeasureHistoryModal">キャンセル</v-ons-button> -->
         <v-ons-button class="btn2-cancel denial-btn" @click="closeMeasureHistoryModal">キャンセル</v-ons-button>
         <!-- FNSI-add 画面スタイル(ボタン)対応 徐 end -->
+        </div>
       </div>
-    </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import Vue from "vue";
+import $$ from "@/compat/jquery";
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions } from "vuex";
-import VueHighcharts from "vue-highcharts";
-import Highcharts from "highcharts";
-import Boost from "highcharts/modules/boost";
-import moment from "moment";
-// jQureyを宣言（'$'はvue.jsで使用されているため、'$$'で宣言）
-const $$ = require("jquery");
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import Highcharts from "@/compat/charts/highcharts";
+import { Boost } from "@/compat/charts/highcharts";
+import dayjs from "@/compat/date/dayjs";
+// jQureyを宣言（'$'はvue.jsで使用されているため、'$$'で宣言）（vue2 は require、Vite では ESM の import）
+
 import { deepCopy } from "@/functions/common/CommonFunctions";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import { getModalBodyElement, getScopedElementById,
+  getScopedJQuery as createScopedJQuery} from "@/functions/common/LayoutMeasureHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
-
-Vue.use(VueHighcharts);
 Boost(Highcharts);
+
+// 軸線・枠線・グリッドを同色にする（#ccd6eb は青みがかって見えるため #cccccc を使用）
+const CHART_GRID_COLOR = "#cccccc";
 
 // グラフデータのsampleテンプレート
 const CHART_OPTIONS_TEMPLATE = {
   chart: {
     height: 250,
     type: "line",
+    marginTop: 27,
     marginRight: 27,
     marginLeft: 32,
-    reflow: true
+    // Highcharts v12: 上下辺は 1px、左右辺は render で 2px 個別描画
+    plotBorderWidth: 0,
+    reflow: true,
+    events: {
+      render: function () {
+        const chart = this;
+        if (chart.customLeftRightBorder) {
+          chart.customLeftRightBorder.forEach(line => line.destroy());
+        }
+        const left = chart.plotLeft;
+        const top = chart.plotTop;
+        const right = left + chart.plotWidth;
+        const bottom = top + chart.plotHeight;
+        chart.customPlotBorders = [
+          // 上辺（従来の plotBorder と同じ）
+          chart.renderer
+            .path(["M", left, top, "L", right, top])
+            .attr({
+              stroke:'#e1e1e1',
+              "stroke-width": 2,
+              fill: "none",
+              zIndex: 10
+            })
+            .add(),
+          // 左辺
+          chart.renderer
+            .path(["M", left, top, "L", left, bottom-40])
+            .attr({
+              stroke: '#d7d7d7',
+              "stroke-width": 2,
+              fill: "none",
+              zIndex: 10
+            })
+            .add(),
+          // 右辺
+          chart.renderer
+            .path(["M", right, top, "L", right, bottom-40])
+            .attr({
+              stroke: '#d7d7d7',
+              "stroke-width": 2,
+              fill: "none",
+              zIndex: 10
+            })
+            .add()
+        ];
+      }
+    },
+  },
+  time: {
+    useUTC: false
   },
   credits: {
     enabled: false
@@ -84,6 +146,15 @@ const CHART_OPTIONS_TEMPLATE = {
   title: false,
   xAxis: {
     type: "datetime",
+    offset: 0,
+    // 下辺は plotBorder で描画（axisLine と重ねると色がずれる）
+    lineWidth: 0,
+    tickColor: CHART_GRID_COLOR,
+    tickWidth: 1,
+    tickLength: 10,
+    // Highcharts v12: 縦グリッドを表示（v9 相当）
+    gridLineWidth: 1,
+    gridLineColor: CHART_GRID_COLOR,
     dateTimeLabelFormats: {
       // don't display the dummy year
       minute: "%Y/%m/%d<br/>%H:%M",
@@ -93,7 +164,15 @@ const CHART_OPTIONS_TEMPLATE = {
       month: "%Y/%m",
       year: "%Y"
     },
-    tickInterval: 1000 * 60 * 60 * 24 * 7
+    tickInterval: 1000 * 60 * 60 * 24 * 7,
+    showEmpty: true,
+    labels: {
+      y: 20,
+      style: {
+        fontSize:'11px',
+        color: "#666666"
+      }
+    }
   },
   yAxis: [
     {
@@ -103,6 +182,12 @@ const CHART_OPTIONS_TEMPLATE = {
       // max: 150,
       alignTicks: false,
       tickInterval: 30,
+      // Y軸の軸線・目盛りは非表示（左枠は plotBorder、ラベル横の短い線を出さない）
+      lineWidth: 0,
+      tickWidth: 0,
+      tickLength: 0,
+      gridLineWidth: 1,
+      gridLineColor: CHART_GRID_COLOR,
       labels: {
         align: "left",
         x: -28,
@@ -120,6 +205,10 @@ const CHART_OPTIONS_TEMPLATE = {
       tickInterval: 3,
       opposite: true, // 右側のy軸とする
       allowDecimals: true,
+      lineWidth: 0,
+      tickWidth: 0,
+      tickLength: 0,
+      gridLineWidth: 0,
       labels: {
         align: "right",
         x: 25
@@ -212,7 +301,6 @@ const CHART_OPTIONS_TEMPLATE = {
 export default {
   name: "measureHistoryModal",
   components: {
-    VueHighcharts,
     "modal-base": ModalBase
   },
   data() {
@@ -333,12 +421,12 @@ export default {
   created() {
     // スクロールが最後尾に達した時に追加読み込みを行う
     $$(() => {
-      $$("#historygrid").on("scroll", () => {
-        const scrollAreaHeight = $$("#historygrid").innerHeight();
-        const scrollHeight = $$("#historygrid").get(0).scrollHeight;
+      this.scopedJQuery()("#historygrid").on("scroll", () => {
+        const scrollAreaHeight = this.scopedJQuery()("#historygrid").innerHeight();
+        const scrollHeight = this.scopedJQuery()("#historygrid").get(0).scrollHeight;
         const bottom = Math.floor(scrollHeight - scrollAreaHeight);
         if (this.isRedrawing !== true) {
-          const scrollTop = $$("#historygrid").scrollTop();
+          const scrollTop = this.scopedJQuery()("#historygrid").scrollTop();
           if (bottom <= scrollTop && bottom > 0) {
             // 最後尾
             // alert("scroll");
@@ -356,10 +444,13 @@ export default {
       this.calculateGridHeight();
     });
   },
-  destroyed() {
+  unmounted() {
     this.resetHistoryModalList();
   },
   methods: {
+    scopedJQuery() {
+      return createScopedJQuery(this.$el || this, $$) || $$;
+    },
     ...mapActions("multi-modal", ["hideModal"]),
     ...mapActions("send-condition/scale", [
       "fetchHistoryModalList",
@@ -435,11 +526,10 @@ export default {
     },
     // モーダルの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
-      const ah = document.getElementById("send-condition-weight-chart-area")
-        .clientHeight;
-      const mbh = Array.prototype.slice
-        .call(document.getElementsByClassName("modal-body"))
-        .shift().clientHeight;
+      const chartArea = getScopedElementById("send-condition-weight-chart-area", this.$el || this);
+      const modalBody = getModalBodyElement(this.$el || this);
+      const ah = chartArea?.clientHeight || 0;
+      const mbh = modalBody?.clientHeight || 0;
 
       this.kendoGridHeight = mbh - ah - 3;
       console.log("this.kendoGridHeight: %o", mbh - ah - 3);
@@ -451,7 +541,7 @@ export default {
     },
     dataLoad() {
       let lastAfterWeightInfo = this.getWeightScaleConfigInfo;
-      let today = moment(new Date());
+      let today = dayjs(new Date());
       const info = {
         FacilityCd: this.getFacilityCd,
         isClear: true,
@@ -466,13 +556,13 @@ export default {
       let treatData = this.getHistoryModalList;
       let lastTreatData =
         treatData[this.getHistoryModalList.length - 1].treatDate;
-      // let today = moment(new Date());
+      // let today = dayjs(new Date());
       const info = {
         FacilityCd: this.getFacilityCd,
         isClear: true,
         patId: this.getPatId,
-        treatDate: moment(lastTreatData)
-          .add("days", -1)
+        treatDate: dayjs(lastTreatData)
+          .add(-1, "days")
           .format("YYYYMMDD"),
         previousWeightSourceClass: lastAfterWeightInfo.previousWeightSourceClass
       };
@@ -517,14 +607,43 @@ export default {
     overflow-wrap: break-word;
   }
 
-  #send-condition-weight-chart-area >>> .highcharts-container  {
+  #send-condition-weight-chart-area :deep(.highcharts-container){
     width: auto !important;
     height: auto !important;
   }
 
-  #send-condition-weight-chart-area >>> .highcharts-root  {
+  #send-condition-weight-chart-area :deep(.highcharts-root){
     width: 100%;
     height: 100%;
   }
+}
+
+/* Highcharts v12: 枠線・グリッド同色 */
+#send-condition-weight-chart-area :deep(.highcharts-plot-border),
+#send-condition-weight-chart-area :deep(.highcharts-grid-line) {
+  stroke: #cccccc;
+  stroke-width: 1px;
+}
+
+/* Y軸ラベル横の縦線・目盛りを非表示（v12 + 全局 CSS 会强制画出 axis-line） */
+#send-condition-weight-chart-area :deep(.highcharts-yaxis .highcharts-axis-line),
+#send-condition-weight-chart-area :deep(.highcharts-yaxis .highcharts-tick) {
+  display: none;
+}
+
+/* X軸日付ラベル（深灰 #333333） */
+#send-condition-weight-chart-area :deep(.highcharts-xaxis-labels text) {
+  color: #666666;
+  cursor: default;
+  font-size: 11px;
+  fill: #666666;
+  font-family: "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif;
+}
+:deep(.highcharts-legend-item-hidden text){
+  text-decoration:none !important;
+}
+:deep(.highcharts-legend-item-hidden>path){
+  stroke:#cccccc !important;
+  fill: #cccccc !important;
 }
 </style>

@@ -3,6 +3,7 @@ package batch.listener;
 import batch.ApplicationConst;
 import batch.ApplicationConst.JobParameterKeys;
 import batch.ApplicationConst.StopReason;
+import batch.config.CompletedFileConfig;
 import batch.config.ConvertPriorityConfig;
 import batch.config.ZipFileConfig;
 import batch.entity.MstMachine;
@@ -53,12 +54,13 @@ import net.lingala.zip4j.ZipFile;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.listener.JobExecutionListenerSupport;
-import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.core.listener.JobExecutionListener;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -81,6 +83,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
+import utils.ConvertQueue;
 import utils.GlobalContext;
 import utils.MasterDataService;
 import utils.Utils;
@@ -95,7 +98,7 @@ import web.logger.LogLevel;
  */
 @Scope("prototype")
 @Component
-public class JobStartEndLIstener extends JobExecutionListenerSupport {
+public class JobStartEndLIstener implements JobExecutionListener {
 
 
   @Autowired
@@ -169,7 +172,7 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
   @Qualifier("namedParameterJdbcTemplateConvert")
   private NamedParameterJdbcTemplate namedParameterJdbcTemplateConvert;
 
-    public List<String> sysTableNameList = new ArrayList<String>(
+  public List<String> sysTableNameList = new ArrayList<String>(
             Arrays.asList(
                     "sys_monitor_item",
                     "mst_treatment_status_disp_item",
@@ -189,11 +192,9 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
   @SneakyThrows
   @Override
   public void beforeJob(JobExecution jobExecution) {
-    super.beforeJob(jobExecution);
     JobParameters jobParameters = jobExecution.getJobParameters();
     String facilityCd = jobParameters.getString(JobParameterKeys.FACILITY_CD);
     GlobalContext globalContext = initGlobalContext(facilityCd);
-
     long jobInstanceId = jobExecution.getJobInstance().getInstanceId();
     String jobName = jobExecution.getJobInstance().getJobName();
     String inputFilePath = jobParameters.getString(JobParameterKeys.INPUT_FILE_PATH).toString();
@@ -201,24 +202,56 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
     String isRestart = jobParameters.getString(JobParameterKeys.RESTART);
 
     sysTable();
+
     /**
      * job起動前に10個のトリガを無効にする
      */
 
+      if (beforeJobCheckRunningAndRegister(facilityCd, globalContext, jobExecution, isRestart, jobInstanceId, jobName)) {
+          return;
+      }
+      String tmpCopyCopyFilePath = beforeJobSetupProgressAndTmpDir(jobExecution, facilityCd, globalContext, inputFilePath);
+      // add #7339 AWS側アプリが起動しない途中から開始されない yangmj start
+      // 処理対象のパス内のフォルダ構成を完了ファイル置き場にコピー
+
+      if (isRestart == null || isRestart.isEmpty()) {
+          if (beforeJobProcessZipFiles(jobExecution, facilityCd, inputFilePath)) {
+              return;
+          }
+          beforeJobProcessPreConvertTasks(inputFilePath, facilityCd, globalContext);
+          // add #7339 AWS側アプリが起動しない途中から開始されない yangmj start
+      }
+      // add #7339 AWS側アプリが起動しない途中から開始されない yangmj end
+
+      List<String> sqlFileList = beforeJobSearchSqlFiles(jobExecution, facilityCd, inputFilePath);
+      if (sqlFileList == null) {
+          return;
+      }
+      if (beforeJobValidateSqlFileList(jobExecution, facilityCd, isRestart, sqlFileList)) {
+          return;
+      }
+      beforeJobFinalizeSqlContext(jobExecution, sqlFileList, tmpCopyCopyFilePath, globalContext);
+  }
+
+    /**
+     * 起動中ジョブの確認・進捗登録・インポート済みテーブル読込を行う
+     * @return trueの場合は呼び出し元で処理を終了する
+     */
+    private boolean beforeJobCheckRunningAndRegister(String facilityCd, GlobalContext globalContext,
+                                                     JobExecution jobExecution, String isRestart, long jobInstanceId, String jobName) {
     // 起動中のジョブがないか確認
     if (isRestart == null || isRestart.isEmpty())
     {
       // add #7339 AWS側アプリが起動しない途中から開始されない yangmj end
       // 起動中のジョブがないか確認
       if (progressManagement.isRunning(facilityCd)) {
-        jobExecution.stop();
+        markJobStopping(jobExecution);
         //ログ
         EventLogMessage eventLogMessage = eventLoggerUtil.getEventLogMessage("ジョブ起動中のため停止",
                 facilityCd, "JobStartEndLIstener.beforeJob(JobExecution jobExecution)");
         eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.INFO);
-        //log.info("ジョブ起動中のため停止");
         stopReason = StopReason.MULTIPLE_ACTIVATION;
-        return;
+        return true;
       }
       // add #10859-6 djy start
       if(globalContext.AlreadyImportedTableSet == null || globalContext.AlreadyImportedTableSet.isEmpty()){
@@ -238,7 +271,15 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
       progressManagement.insertBatchStatus(facilityCd, progressManagement.STARTED, jobInstanceId, jobName);
       // add #7339 AWS側アプリが起動しない途中から開始されない yangmj start
     }
+        return false;
+    }
     // add #7339 AWS側アプリが起動しない途中から開始されない yangmj end
+    /**
+     * ジョブ開始時の進捗登録・ログ出力・一時ディレクトリ準備を行う
+     * @return 一時コピー用ディレクトリパス
+     */
+    private String beforeJobSetupProgressAndTmpDir(JobExecution jobExecution, String facilityCd,
+                                                   GlobalContext globalContext, String inputFilePath) {
     // ステータス更新用のIDを取得
     int convertProcId = progressManagement.getConvertProcId(facilityCd);
     ExecutionContext cxt = jobExecution.getExecutionContext();
@@ -248,14 +289,21 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
     EventLogMessage eventLogMessage1 = eventLoggerUtil.getEventLogMessage("ジョブ開始",
             facilityCd, "JobStartEndLIstener.beforeJob(JobExecution jobExecution)");
     eventLoggerUtil.recordLog(facilityCd, eventLogMessage1, LogLevel.INFO);
-    //log.info("ジョブ開始");
     globalContext.tmpCopyCsvDir = "/tmpCopyCsvDir/";
     String tmpCopyCopyFilePath = inputFilePath + globalContext.tmpCopyCsvDir;
+        try {
     Utils.deleteRecursively(tmpCopyCopyFilePath);
-    // add #7339 AWS側アプリが起動しない途中から開始されない yangmj start
-    // 処理対象のパス内のフォルダ構成を完了ファイル置き場にコピー
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return tmpCopyCopyFilePath;
+    }
 
-    if (isRestart == null || isRestart.isEmpty()) {
+    /**
+     * Zipファイルの検索と解凍を行う
+     * @return trueの場合は呼び出し元で処理を終了する
+     */
+    private boolean beforeJobProcessZipFiles(JobExecution jobExecution, String facilityCd, String inputFilePath) {
       // add #7339 AWS側アプリが起動しない途中から開始されない yangmj end
       // Zipファイルを検索し、見つかったら解凍する
       List<String> zipFileList;
@@ -269,11 +317,24 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
         eventLoggerUtil.recordLog(facilityCd, eventLogMessage2, LogLevel.INFO);
         //log.info("Zipファイル検索中にエラー：" + e.getMessage());
         stopReason = StopReason.ERROR;
-        return;
+          return true;
       }
 
       // フォルダ内のZipファイルを解凍する
       for (String zipFilePath : zipFileList) {
+          if (beforeJobExtractZipFile(jobExecution, facilityCd, inputFilePath, zipFilePath)) {
+              return true;
+          }
+      }
+        return false;
+    }
+
+    /**
+     * 単一Zipファイルの解凍と解凍後ファイルの削除を行う
+     * @return trueの場合は呼び出し元で処理を終了する
+     */
+    private boolean beforeJobExtractZipFile(JobExecution jobExecution, String facilityCd,
+                                            String inputFilePath, String zipFilePath) {
         //ログ
         EventLogMessage eventLogMessage3 = eventLoggerUtil.getEventLogMessage("Zipファイル解凍中：" + zipFilePath,
                 facilityCd, "JobStartEndLIstener.beforeJob(JobExecution jobExecution)");
@@ -315,10 +376,15 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
           eventLoggerUtil.recordLog(facilityCd, eventLogMessage4, LogLevel.INFO);
           //log.info("Zipファイル解凍中にエラー：" + e.getMessage());
           stopReason = StopReason.ERROR;
-          return;
+            return true;
         }
+        return false;
       }
 
+    /**
+     * コンバート前の各種削除・患者転院処理を行う
+     */
+    private void beforeJobProcessPreConvertTasks(String inputFilePath, String facilityCd, GlobalContext globalContext) {
       //add 11162 start
       processIsThreadForMntMotionRecord(facilityCd, globalContext);
       //add 11162 end
@@ -333,6 +399,18 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
       processDelOrdMainRst(inputFilePath,facilityCd);
       //add #10675 & #10676 djy end
 
+        beforeJobProcessPatSeriesFacility(inputFilePath, facilityCd);
+
+        // mod 10378-24-4 PatTreatmentPattern再構築対応 zkm start
+        // patient_treatment_pattern 削除処理
+        processDelPatientTreatmentPattern(inputFilePath, facilityCd, globalContext);
+        // mod 10378-24-4 PatTreatmentPattern再構築対応 zkm end
+    }
+
+    /**
+     * 患者転院（SYS_PAT_SERIES_FACILITY）に基づくord_main削除処理を行う
+     */
+    private void beforeJobProcessPatSeriesFacility(String inputFilePath, String facilityCd) {
             //7997
             try {
                 File dir = new File(inputFilePath);
@@ -404,16 +482,13 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
                         LogLevel.ERROR);
             }
             //7997
-
-            // mod 10378-24-4 PatTreatmentPattern再構築対応 zkm start
-      // patient_treatment_pattern 削除処理
-      processDelPatientTreatmentPattern(inputFilePath, facilityCd, globalContext);
-      // mod 10378-24-4 PatTreatmentPattern再構築対応 zkm end
-
-      // add #7339 AWS側アプリが起動しない途中から開始されない yangmj start
     }
-    // add #7339 AWS側アプリが起動しない途中から開始されない yangmj end
 
+    /**
+     * SQLファイルの検索・フィルタリングを行う
+     * @return SQLファイルリスト、エラー時はnull
+     */
+    private List<String> beforeJobSearchSqlFiles(JobExecution jobExecution, String facilityCd, String inputFilePath) {
     // 処理対象のSQLファイルを検索し、カンマ区切りでジョブ実行情報へ格納
     List<String> sqlFileList;
     try {
@@ -451,10 +526,19 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
       eventLoggerUtil.recordLog(facilityCd, eventLogMessage10, LogLevel.INFO);
       //log.info("SQLファイル検索中にエラー：" + e.getMessage());
       stopReason = StopReason.ERROR;
-      return;
+        return null;
     }
+        return sqlFileList;
+    }
+
+    /**
+     * SQLファイルリストの存在チェックを行う
+     * @return trueの場合は呼び出し元で処理を終了する
+     */
+    private boolean beforeJobValidateSqlFileList(JobExecution jobExecution, String facilityCd,
+                                                 String isRestart, List<String> sqlFileList) {
     if (sqlFileList.isEmpty() && isRestart == null) {
-      jobExecution.stop();
+      markJobStopping(jobExecution);
       progressManagement.createConvertTableStatus(jobExecution, "処理対象のSQLファイルなし");
       //ログ
       EventLogMessage eventLogMessage11 = eventLoggerUtil.getEventLogMessage("処理対象のSQLファイルなし",
@@ -462,9 +546,17 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
       eventLoggerUtil.recordLog(facilityCd, eventLogMessage11, LogLevel.INFO);
       //log.info("処理対象のSQLファイルなし");
       stopReason = StopReason.NO_TARGET;
-      return;
+        return true;
+    }
+        return false;
     }
 
+    /**
+     * SQLファイルリストのソート・ジョブコンテキスト格納・一時ディレクトリ作成を行う
+     */
+    private void beforeJobFinalizeSqlContext(JobExecution jobExecution, List<String> sqlFileList,
+                                             String tmpCopyCopyFilePath, GlobalContext globalContext) {
+        ExecutionContext cxt = jobExecution.getExecutionContext();
     // sqlFileListを優先度順にソート
     sqlFileList = convertPriorityConfig.sortSqlFileList(sqlFileList);
     String sqlFiles = String.join(",", sqlFileList);
@@ -901,37 +993,72 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
   // ジョブの終了後に実行
   @Override
   public void afterJob(JobExecution jobExecution) {
-        GlobalContext globalContext = localGlobal.get();
+      GlobalContext globalContext = afterJobCleanupGlobalContext();
 
-        //add #12229 start
-        masterDataService.reset(globalContext);
-        //add #12229 end
-        try {
-            localGlobal.remove();
-        } catch (Exception e) {
-            System.out.println("localGlobal-del-ERROR");
-        }
-        JobParameters jobParameters = jobExecution.getJobParameters();
-        String facilityCd = jobParameters.getString(JobParameterKeys.FACILITY_CD);
-    eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("====== afterJob  start ======",
-            facilityCd, "afterJob"), LogLevel.INFO);
-    if (globalContext.MstMachineList != null) {
-        globalContext.MstMachineList.clear();
+      JobParameters jobParameters = jobExecution.getJobParameters();
+      String facilityCd = jobParameters.getString(JobParameterKeys.FACILITY_CD);
+      eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("====== afterJob  start ======",
+              facilityCd, "afterJob"), LogLevel.INFO);
+      String facility_cd = jobExecution.getJobParameters().getString(JobParameterKeys.FACILITY_CD);
+      long jobInstanceId = jobExecution.getJobInstance().getInstanceId();
+      String jobName = jobExecution.getJobInstance().getJobName();
+      int convertProcId = progressManagement.getConvertProcId(facility_cd);
+      String exitCode = jobExecution.getExitStatus().getExitCode();
+      String inputFilePath = jobExecution.getJobParameters().getString(JobParameterKeys.INPUT_FILE_PATH).toString();
+
+      //#12548 コンバートツールでコンバート後に実行計画の更新を強制すること。 start
+      boolean containsDiffFolder = afterJobCheckDiffFolder(inputFilePath);
+      //#12548 コンバートツールでコンバート後に実行計画の更新を強制すること。 start
+
+      afterJobDeleteMstMedicine(facilityCd, facility_cd);
+      afterJobRunPostConvertProcesses(jobExecution, inputFilePath, facility_cd, facilityCd);
+
+      if (exitCode.equals(ExitStatus.COMPLETED.getExitCode())) {
+          afterJobHandleCompleted(jobExecution, globalContext, facilityCd, facility_cd, convertProcId,
+                  jobInstanceId, jobName, inputFilePath, containsDiffFolder);
+      } else if (exitCode.equals(ExitStatus.FAILED.getExitCode())) {
+          afterJobHandleFailed(jobExecution, facilityCd, facility_cd, convertProcId, jobInstanceId, jobName);
+      } else if (exitCode.equals(ExitStatus.STOPPED.getExitCode())) {
+          afterJobHandleStopped(jobExecution, facilityCd, facility_cd, convertProcId, jobInstanceId, jobName);
+      }
+  }
+
+    /**
+     * ジョブ終了時のGlobalContextクリーンアップを行う
+     * @return クリーンアップ前のGlobalContext
+     */
+    private GlobalContext afterJobCleanupGlobalContext() {
+    GlobalContext globalContext = localGlobal.get();
+
+    //add #12229 start
+    masterDataService.reset(globalContext);
+    //add #12229 end
+    try {
+      localGlobal.remove();
+    } catch (Exception e) {
+      System.out.println("localGlobal-del-ERROR");
     }
-    super.afterJob(jobExecution);
-    String facility_cd = jobExecution.getJobParameters().getString(JobParameterKeys.FACILITY_CD);
-    long jobInstanceId = jobExecution.getJobInstance().getInstanceId();
-    String jobName = jobExecution.getJobInstance().getJobName();
-    int convertProcId = progressManagement.getConvertProcId(facility_cd);
-    String exitCode = jobExecution.getExitStatus().getExitCode();
-    String inputFilePath = jobExecution.getJobParameters().getString(JobParameterKeys.INPUT_FILE_PATH).toString();
+    if (globalContext.MstMachineList != null) {
+      globalContext.MstMachineList.clear();
+    }
+        return globalContext;
+    }
 
+    /**
+     * 入力パスに差分フォルダが含まれるか確認する
+     */
+    private boolean afterJobCheckDiffFolder(String inputFilePath) {
     //#12548 コンバートツールでコンバート後に実行計画の更新を強制すること。 start
     File folder = new File(inputFilePath);
-    boolean containsDiffFolder = folder.exists() && folder.isDirectory()
+        return folder.exists() && folder.isDirectory()
             && Arrays.stream(folder.listFiles())
             .anyMatch(f -> f.isDirectory() && f.getName().contains("[diff]"));
-    //#12548 コンバートツールでコンバート後に実行計画の更新を強制すること。 start
+    }
+
+    /**
+     * mst_medicineの削除処理を行う
+     */
+    private void afterJobDeleteMstMedicine(String facilityCd, String facility_cd) {
     String selectSql = "SELECT 'TS' || SUBSTR(fn_set_medicine_cd, 3) " +
             "FROM mst_medicine_mix " +
             "WHERE facility_cd = ? " +
@@ -955,7 +1082,13 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
                       e.getClass().getName() + ".afterJob()"),
               LogLevel.ERROR);
     }
+    }
 
+    /**
+     * コンバート後の各種削除・更新・次患者更新処理を行う
+     */
+    private void afterJobRunPostConvertProcesses(JobExecution jobExecution, String inputFilePath,
+                                                 String facility_cd, String facilityCd) {
     // pat_group_detail 削除処理
     processDelPatGroupDetail(inputFilePath,facility_cd);
 
@@ -1002,7 +1135,14 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
     eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("====== 次患者更新 end ======",
             facilityCd, "afterJob"), LogLevel.INFO);
     // add #10859-6 djy end
-    if (exitCode.equals(ExitStatus.COMPLETED.getExitCode())) {
+    }
+
+    /**
+     * ジョブ正常終了時の後処理を行う
+     */
+    private void afterJobHandleCompleted(JobExecution jobExecution, GlobalContext globalContext,
+                                         String facilityCd, String facility_cd, int convertProcId, long jobInstanceId, String jobName,
+                                         String inputFilePath, boolean containsDiffFolder) {
 
       eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("====== ExitStatus.COMPLETED start ======",
               facilityCd, "afterJob"), LogLevel.INFO);
@@ -1036,6 +1176,23 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
       eventLoggerUtil.recordLog(facility_cd, eventLogMessage12, LogLevel.INFO);
       progressManagement.updateBatchStatus(convertProcId, facility_cd, progressManagement.COMPLETED, jobInstanceId, jobName);
       progressManagement.createConvertTableStatus(jobExecution, "ジョブ正常終了");
+        afterJobCleanupCompletedDirectories(globalContext, facility_cd, inputFilePath);
+        afterJobResetGlobalContextOnCompleted(globalContext);
+
+        eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("====== ExitStatus.COMPLETED end ======",
+                facilityCd, "afterJob"), LogLevel.INFO);
+
+        //#12548 コンバートツールでコンバート後に実行計画の更新を強制すること。 start
+        if(!containsDiffFolder){
+            CompletableFuture.runAsync(() -> AnalyzeExample(facility_cd));
+        }
+        //#12548 コンバートツールでコンバート後に実行計画の更新を強制すること。 end
+    }
+
+    /**
+     * 正常終了時の一時ディレクトリ・ファイル削除を行う
+     */
+    private void afterJobCleanupCompletedDirectories(GlobalContext globalContext, String facility_cd, String inputFilePath) {
       // ディレクトリ削除
       try {
         String tmpCopyCopyFilePath = inputFilePath + globalContext.tmpCopyCsvDir;
@@ -1054,6 +1211,12 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
                         e.getClass().getName() + ".afterJob()"),
                 LogLevel.ERROR);
       }
+    }
+
+    /**
+     * 正常終了時のGlobalContext各フィールドをリセットする
+     */
+    private void afterJobResetGlobalContextOnCompleted(GlobalContext globalContext) {
       // add zl start
       // 差分パターンのキーリストをクリア
       globalContext.updateKeyList = new ArrayList<>();
@@ -1074,17 +1237,13 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
       //add #12229->12380 end
       globalContext.mstTreatmentSet.clear();
         //add #12229->12380 end
-
-      eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("====== ExitStatus.COMPLETED end ======",
-              facilityCd, "afterJob"), LogLevel.INFO);
-
-      //#12548 コンバートツールでコンバート後に実行計画の更新を強制すること。 start
-      if(!containsDiffFolder){
-        CompletableFuture.runAsync(() -> AnalyzeExample(facility_cd));
       }
-      //#12548 コンバートツールでコンバート後に実行計画の更新を強制すること。 end
 
-    } else if (exitCode.equals(ExitStatus.FAILED.getExitCode())) {
+    /**
+     * ジョブ異常終了時の後処理を行う
+     */
+    private void afterJobHandleFailed(JobExecution jobExecution, String facilityCd, String facility_cd,
+                                      int convertProcId, long jobInstanceId, String jobName) {
 
       eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("====== ExitStatus.FAILED start ======",
               facilityCd, "afterJob"), LogLevel.INFO);
@@ -1100,8 +1259,13 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
 
       eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("====== ExitStatus.FAILED end ======",
               facilityCd, "afterJob"), LogLevel.INFO);
+    }
 
-    } else if (exitCode.equals(ExitStatus.STOPPED.getExitCode())) {
+    /**
+     * ジョブ停止時の後処理を行う
+     */
+    private void afterJobHandleStopped(JobExecution jobExecution, String facilityCd, String facility_cd,
+                                       int convertProcId, long jobInstanceId, String jobName) {
 
       eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("====== ExitStatus.STOPPED start ======",
               facilityCd, "afterJob"), LogLevel.INFO);
@@ -1130,8 +1294,6 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
             }
       eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("====== ExitStatus.STOPPED end ======",
               facilityCd, "afterJob"), LogLevel.INFO);
-
-    }
   }
   //#12548 コンバートツールでコンバート後に実行計画の更新を強制すること。 start
   private void AnalyzeExample(String  facility_cd) {
@@ -1172,6 +1334,32 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
     eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("====== afterJob  pat_group_detail 削除 start ======",
             facilityCd, "afterJob"), LogLevel.INFO);
     try {
+        filePatDel = null;
+        File dir = new File(inputFilePath);
+        findFileRecursively("Mst_DEL.txt", dir, false);
+        if (filePatDel != null) {
+            File f = new File(filePatDel);
+            if (f.exists()) {
+                processDelPatGroupDetailFromFile(f, facilityCd);
+                f.delete();
+            }
+        }
+    } catch (Exception e) {
+        //ログ
+        eventLoggerUtil.recordLog(
+                facilityCd,
+                eventLoggerUtil.getEventLogMessage(
+                        "JobStartEndLIstener.processDelPatGroupDetail(String inputFilePath,String facilityCd) pat_group_detail 削除処理：" + EventLoggerUtil.excetionStackTraceToString(e),
+                        facilityCd,
+                        e.getClass().getName() + ".processDelPatGroupDetail()"),
+                LogLevel.ERROR);
+    }
+  }
+
+    /**
+     * Mst_DEL.txtファイルからpat_group_detail削除パラメータを読み込み削除を実行する
+     */
+    private void processDelPatGroupDetailFromFile(File f, String facilityCd) {
       Map<String, String> patIDMap = new HashMap<>();
       Map<String, String> patGroupMap = new HashMap<>();
       String pat_group_cd = "";
@@ -1179,12 +1367,6 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
       // mod #10418 SQL注入対策：batchUpdateを使用してパラメータバインディング start
       List<Object[]> deleteParams = new ArrayList<>();
       // mod #10418 SQL注入対策：batchUpdateを使用してパラメータバインディング end
-      filePatDel = null;
-      File dir = new File(inputFilePath);
-      findFileRecursively("Mst_DEL.txt", dir, false);
-      if (filePatDel != null) {
-        File f = new File(filePatDel);
-        if (f.exists()) {
           try (FileInputStream fin = new FileInputStream(filePatDel);
                InputStreamReader reader = new InputStreamReader(fin);
                BufferedReader buffReader = new BufferedReader(reader)) {
@@ -1225,13 +1407,7 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
               deleteParams.add(new Object[]{facilityCd, pat_group_cd, pat_id});
               // mod #10418 SQL注入対策：batchUpdateを使用してパラメータバインディング end
             }
-            // mod #10418 SQL注入対策：batchUpdateを使用してパラメータバインディング start
-            if (!deleteParams.isEmpty()) {
-              String sql = "DELETE FROM pat_group_detail WHERE facility_cd = ? AND pat_group_cd = ? AND pat_id = ?";
-              jdbcTemplateConvert.batchUpdate(sql, deleteParams);
-              jdbcTemplateNkk5.batchUpdate(sql, deleteParams);
-            }
-            // mod #10418 SQL注入対策：batchUpdateを使用してパラメータバインディング end
+              processDelPatGroupDetailExecuteBatch(deleteParams);
           } catch (Exception e) {
             eventLoggerUtil.recordLog(
                     facilityCd,
@@ -1241,19 +1417,19 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
                             e.getClass().getName() + ".processDelPatGroupDetail()"),
                     LogLevel.ERROR);
           }
-          f.delete();
         }
+
+    /**
+     * pat_group_detailのバッチ削除を実行する
+     */
+    private void processDelPatGroupDetailExecuteBatch(List<Object[]> deleteParams) {
+        // mod #10418 SQL注入対策：batchUpdateを使用してパラメータバインディング start
+        if (!deleteParams.isEmpty()) {
+            String sql = "DELETE FROM pat_group_detail WHERE facility_cd = ? AND pat_group_cd = ? AND pat_id = ?";
+            jdbcTemplateConvert.batchUpdate(sql, deleteParams);
+            jdbcTemplateNkk5.batchUpdate(sql, deleteParams);
       }
-    } catch (Exception e) {
-      //ログ
-      eventLoggerUtil.recordLog(
-              facilityCd,
-              eventLoggerUtil.getEventLogMessage(
-                      "JobStartEndLIstener.processDelPatGroupDetail(String inputFilePath,String facilityCd) pat_group_detail 削除処理：" + EventLoggerUtil.excetionStackTraceToString(e),
-                      facilityCd,
-                      e.getClass().getName() + ".processDelPatGroupDetail()"),
-              LogLevel.ERROR);
-    }
+        // mod #10418 SQL注入対策：batchUpdateを使用してパラメータバインディング end
   }
 
   /**
@@ -1439,6 +1615,16 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
         MapSqlParameterSource parameters = new MapSqlParameterSource();
         parameters.addValue("facility_cd", facilityCd);
 
+          processUpdateSchExtEndDateSetNull(facilityCd, patIdList);
+          processUpdateSchExtEndDateSetEndDate(facilityCd, patIdList, parameters, endDate, formatter);
+      }
+    }
+  }
+
+    /**
+     * sch_ext_end_dateをnullに更新する
+     */
+    private void processUpdateSchExtEndDateSetNull(String facilityCd, List<String> patIdList) {
         // mod #10418 SQL注入対策：IN句を使用してパラメータバインディング start
         if (patIdList != null && !patIdList.isEmpty()) {
           eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("====== afterJob  sch_ext_end_date is null 更新 start ======",
@@ -1461,7 +1647,13 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
                   facilityCd, "afterJob"), LogLevel.INFO);
         }
         // mod #10418 SQL注入対策：IN句を使用してパラメータバインディング end
+    }
 
+    /**
+     * 対象患者のsch_ext_end_dateを終了日に更新する
+     */
+    private void processUpdateSchExtEndDateSetEndDate(String facilityCd, List<String> patIdList,
+                                                      MapSqlParameterSource parameters, LocalDate endDate, DateTimeFormatter formatter) {
         parameters.addValue("pat_id",patIdList.stream().map(m->Long.parseLong(m)).collect(Collectors.toList()));
         StringBuilder s=new StringBuilder();
         s.append("SELECT A.pat_id AS pat_id from (");
@@ -1497,8 +1689,6 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
 
         }
       }
-    }
-  }
 
   /**
    * ord_main登録の場合、pat_eventには、項目「ord_no」を更新
@@ -1707,6 +1897,28 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
     try {
       List<Long> ordNoList = ordMainList.stream().map(m -> m.getOrdNo()).collect(Collectors.toList());
       if (isRst) {
+          delOrdMainsForRst(ordMainList, jdbcTemplateConvert, jdbcTemplateNkk5, facilityCd, ordNoList);
+      } else {
+          delOrdMainsForScheduleCancel(ordMainList, jdbcTemplateConvert, jdbcTemplateNkk5, facilityCd, ordNoList);
+      }
+    } catch (Exception e) {
+        eventLoggerUtil.recordLog(
+                facilityCd,
+                eventLoggerUtil.getEventLogMessage(
+                        "delOrdMains(List<OrdMain> ordMainList, Boolean isRst, JdbcTemplate jdbcTemplateConvert, JdbcTemplate jdbcTemplateNkk5) ：" + EventLoggerUtil.excetionStackTraceToString(e),
+                        facilityCd,
+                        e.getClass().getName() + ".delOrdMains()"),
+                LogLevel.ERROR);
+        throw e;
+    }
+  }
+
+    /**
+     * 実績削除（isRst=true）時のord_main関連削除処理を行う
+     */
+    private void delOrdMainsForRst(List<OrdMain> ordMainList, JdbcTemplate jdbcTemplateConvert,
+                                   JdbcTemplate jdbcTemplateNkk5, String facilityCd, List<Long> ordNoList) {
+        EventLogMessage eventLogMessage = new EventLogMessage();
         List<OrdMain> ordMainDelList = ordMainList.stream().filter(o -> 0 == o.getFnPlural()).collect(Collectors.toList());
         List<OrdMain> ordMainUpdList = ordMainList.stream().filter(o -> 0 != o.getFnPlural()).collect(Collectors.toList());
         //ord_checklist
@@ -1756,7 +1968,14 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
                   facilityCd, "delOrdMain処理完了");
           eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.INFO);
         }
-      } else {
+    }
+
+    /**
+     * 予定中止（isRst=false）時のord_main関連削除処理を行う
+     */
+    private void delOrdMainsForScheduleCancel(List<OrdMain> ordMainList, JdbcTemplate jdbcTemplateConvert,
+                                              JdbcTemplate jdbcTemplateNkk5, String facilityCd, List<Long> ordNoList) {
+        EventLogMessage eventLogMessage = new EventLogMessage();
         //pat_event bbs_info
         delPatEvent(jdbcTemplateConvert, jdbcTemplateNkk5, ordMainList, facilityCd);
         eventLogMessage = eventLoggerUtil.getEventLogMessage("=================予定中止==============",
@@ -1792,17 +2011,6 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
         eventLogMessage = eventLoggerUtil.getEventLogMessage("=================予定中止==============",
                 facilityCd, "delOrdMain処理完了");
         eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.INFO);
-      }
-    } catch (Exception e) {
-      eventLoggerUtil.recordLog(
-              facilityCd,
-              eventLoggerUtil.getEventLogMessage(
-                      "delOrdMains(List<OrdMain> ordMainList, Boolean isRst, JdbcTemplate jdbcTemplateConvert, JdbcTemplate jdbcTemplateNkk5) ：" + EventLoggerUtil.excetionStackTraceToString(e),
-                      facilityCd,
-                      e.getClass().getName() + ".delOrdMains()"),
-              LogLevel.ERROR);
-      throw e;
-    }
   }
 
   /**
@@ -1902,6 +2110,16 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
    * @param ordMainList
    */
   private void delOrdMainRst(JdbcTemplate jdbcTemplateConvert, JdbcTemplate jdbcTemplateNkk5,List<OrdMain> ordMainList) {
+      String updOrdMainSql = buildDelOrdMainRstSql();
+      List<OrdMain> ordMains = prepareOrdMainListForRstReset(ordMainList);
+      updOrdMain(jdbcTemplateNkk5, updOrdMainSql, ordMains);
+      updOrdMain(jdbcTemplateConvert, updOrdMainSql, ordMains);
+  }
+
+    /**
+     * 実績削除用ord_main更新SQLを構築する
+     */
+    private String buildDelOrdMainRstSql() {
     StringBuilder stringBuilder = new StringBuilder();
     stringBuilder.append("UPDATE ord_main ");
     stringBuilder.append("SET ind_treatment_name = NULL, ");
@@ -1966,7 +2184,13 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
     stringBuilder.append("WHERE ");
     stringBuilder.append("ord_no = ? ");
     stringBuilder.append("and facility_cd = ?");
-    String updOrdMainSql = stringBuilder.toString();
+        return stringBuilder.toString();
+    }
+
+    /**
+     * 実績削除前にord_mainの指示情報JSONを整形する
+     */
+    private List<OrdMain> prepareOrdMainListForRstReset(List<OrdMain> ordMainList) {
     String[] mediAndEquipDeleteKeys = {"class_cd", "class_name",
             "class_type", "name", "short_name", "unit"};
     Timestamp timestamp = new Timestamp(System.currentTimeMillis());
@@ -2014,8 +2238,7 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
         ordMain.setIndCondInfo(indCondInfo.toString());
       }
     }
-    updOrdMain(jdbcTemplateNkk5, updOrdMainSql, ordMains);
-    updOrdMain(jdbcTemplateConvert, updOrdMainSql, ordMains);
+        return ordMains;
   }
 
   /**
@@ -2073,7 +2296,16 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
    */
   private OrdMainHst getOrdMainHstData(OrdMain ordMain) {
     OrdMainHst ordMainHst = new OrdMainHst();
+      mapOrdMainHstBasicAndIndFields(ordMain, ordMainHst);
+      mapOrdMainHstRstFields(ordMain, ordMainHst);
+      mapOrdMainHstMetaFields(ordMain, ordMainHst);
+      return ordMainHst;
+  }
 
+    /**
+     * OrdMainHstの基本情報・指示情報フィールドをマッピングする
+     */
+    private void mapOrdMainHstBasicAndIndFields(OrdMain ordMain, OrdMainHst ordMainHst) {
     ordMainHst.setOrdNo(toStringOrNull(ordMain.getOrdNo()));
     ordMainHst.setPatId(toStringOrNull(ordMain.getPatId()));
     ordMainHst.setFnPatId(valueOrNull(ordMain.getFnPatId()));
@@ -2098,7 +2330,12 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
     ordMainHst.setIndTareInfo(valueOrNull(ordMain.getIndTareInfo()));
     ordMainHst.setIndOffWaterInfo(valueOrNull(ordMain.getIndOffWaterInfo()));
     ordMainHst.setIndDeviceSetInfo(valueOrNull(ordMain.getIndDeviceSetInfo()));
+    }
 
+    /**
+     * OrdMainHstの実績情報フィールドをマッピングする
+     */
+    private void mapOrdMainHstRstFields(OrdMain ordMain, OrdMainHst ordMainHst) {
     ordMainHst.setRstFnDialysisNo(toStringOrNull(ordMain.getRstFnDialysisNo()));
     ordMainHst.setRstRelationDialysisNo(toStringOrNull(ordMain.getRstRelationDialysisNo()));
     ordMainHst.setRstEdition(toStringOrNull(ordMain.getRstEdition()));
@@ -2149,7 +2386,12 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
     ordMainHst.setRstTreatmentInfo(valueOrNull(ordMain.getRstTreatmentInfo()));
     ordMainHst.setRstTreatStaffInfo(valueOrNull(ordMain.getRstTreatStaffInfo()));
     ordMainHst.setRstRoundsInfo(valueOrNull(ordMain.getRstRoundsInfo()));
+    }
 
+    /**
+     * OrdMainHstのメタ情報・その他フィールドをマッピングする
+     */
+    private void mapOrdMainHstMetaFields(OrdMain ordMain, OrdMainHst ordMainHst) {
     ordMainHst.setIsDel("1");
     ordMainHst.setUpDate(toStringOrNull(ordMain.getUpDate()));
     ordMainHst.setRegDate(toStringOrNull(ordMain.getRegDate()));
@@ -2163,7 +2405,6 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
     ordMainHst.setInsDate(
             new SimpleDateFormat("yyyyMMddHHmmssSSS").format(new Date())
     );
-    return ordMainHst;
   }
 
 
@@ -2429,7 +2670,7 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
       jsonBody.put("send_condition_ord_no", "");
     }
     RestTemplate rt = new RestTemplate();
-    HttpStatus status = null;
+    int statusCode = -1;
     try {
       // 送信URI
       URI uri = new URI(setNextPatUrl);
@@ -2442,8 +2683,8 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
 
       // リクエスト処理
       ResponseEntity<String> response = rt.exchange(request, String.class);
-      status = response.getStatusCode();
-      if (HttpStatus.OK != status) {
+      statusCode = response.getStatusCode().value();
+      if (HttpStatus.OK.value() != statusCode) {
         retrunValue = 9;
         eventLogMessage = eventLoggerUtil.getEventLogMessage("次患者更新API接続成功、内部処理に失敗"+response.getBody(),
                 facilityCd, "JobStartEndLIstener.setNextPatInfo: MachineTypeCd:" + mstMachine.getMachineTypeCd() + ",MachineSerial:" + mstMachine.getMachineSerial());
@@ -2457,306 +2698,362 @@ public class JobStartEndLIstener extends JobExecutionListenerSupport {
     }
     return retrunValue;
   }
-  //add #10568 djy end
+  private void markJobStopping(JobExecution jobExecution) {
+    jobExecution.upgradeStatus(BatchStatus.STOPPING);
+    jobExecution.setExitStatus(ExitStatus.STOPPED);
+  }
 
-    public void sysTable() {
-        DataSource convertDs = (DataSource) appContext.getBean(ApplicationConst.DbType.CONVERT);
-        DataSource nkk5Ds = (DataSource) appContext.getBean(ApplicationConst.DbType.NKK5);
-        NamedParameterJdbcTemplate convertJdbcTemplate = new NamedParameterJdbcTemplate(convertDs);
-        NamedParameterJdbcTemplate nkk5JdbcTemplate = new NamedParameterJdbcTemplate(nkk5Ds);
-        for (String tableName : sysTableNameList) {
-            if (tableName.equals("sys_monitor_item")) {
-                String sql = "SELECT * FROM sys_monitor_item";
-                List<SysMonitorItem> nkk5EntityList = nkk5JdbcTemplate.getJdbcOperations().query(sql, new Object[]{}, new BeanPropertyRowMapper<>(SysMonitorItem.class));
-                List<SysMonitorItem> convertEntityList = convertJdbcTemplate.getJdbcOperations().query(sql, new Object[]{}, new BeanPropertyRowMapper<>(SysMonitorItem.class));
-                HashMap<String, SysMonitorItem> nkk5EntityMap = new HashMap();
-                for (SysMonitorItem nkk5Entity : nkk5EntityList) {
-                    nkk5EntityMap.put(nkk5Entity.getMoniDataNo(), nkk5Entity);
-                }
-                HashMap<String, SysMonitorItem> convertEntityMap = new HashMap();
-                for (SysMonitorItem convertEntity : convertEntityList) {
-                    convertEntityMap.put(convertEntity.getMoniDataNo(), convertEntity);
-                }
-                for (SysMonitorItem nkk5Entity : nkk5EntityList) {
-                    if (!convertEntityMap.containsKey(nkk5Entity.getMoniDataNo())) {
-                        sql = "INSERT INTO sys_monitor_item " +
-                                "(moni_data_no, moni_data_type, moni_data_name, moni_data_short_name, data_type, decimal_figure, unit, upper, lower, is_disp, vital_monitor_class, conv_item, reg_date, up_date) " +
-                                "VALUES (:moni_data_no, :moni_data_type, :moni_data_name, :moni_data_short_name, :data_type, :decimal_figure, :unit, :upper, :lower, :is_disp, :vital_monitor_class, :conv_item, :reg_date, :up_date )  ON CONFLICT DO NOTHING;";
-                        MapSqlParameterSource params = new MapSqlParameterSource();
-                        params.addValue("moni_data_no", nkk5Entity.getMoniDataNo());
-                        params.addValue("moni_data_type", nkk5Entity.getMoniDataType());
-                        params.addValue("moni_data_name", nkk5Entity.getMoniDataName());
-                        params.addValue("moni_data_short_name", nkk5Entity.getMoniDataShortName());
-                        params.addValue("data_type", nkk5Entity.getDataType());
-                        params.addValue("decimal_figure", nkk5Entity.getDecimalFigure());
-                        params.addValue("unit", nkk5Entity.getUnit());
-                        params.addValue("upper", nkk5Entity.getUpper());
-                        params.addValue("lower", nkk5Entity.getLower());
-                        params.addValue("is_disp", nkk5Entity.getIsDisp());
-                        params.addValue("vital_monitor_class", nkk5Entity.getVitalMonitorClass());
-                        params.addValue("conv_item", nkk5Entity.getConvItem(), Types.OTHER);
-                        params.addValue("reg_date", nkk5Entity.getRegDate());
-                        params.addValue("up_date", nkk5Entity.getUpDate());
-                        batchUpdate(convertJdbcTemplate.getJdbcTemplate(), sql, params);
-                    }
-                }
-                for (SysMonitorItem convertEntity : convertEntityList) {
-                    // exist in nkk5, exist in convert --> update convert
-                    if (nkk5EntityMap.containsKey(convertEntity.getMoniDataNo())) {
-                        SysMonitorItem nkk5Entity = nkk5EntityMap.get(convertEntity.getMoniDataNo());
-                        if (!convertEntity.equals(nkk5Entity)) {
-                            sql = "UPDATE  sys_monitor_item SET " +
-                                    "moni_data_type = :moni_data_type, " +
-                                    "moni_data_name = :moni_data_name, " +
-                                    "moni_data_short_name = :moni_data_short_name, " +
-                                    "data_type = :data_type, " +
-                                    "decimal_figure = :decimal_figure, " +
-                                    "unit = :unit, " +
-                                    "upper = :upper, " +
-                                    "lower = :lower, " +
-                                    "is_disp = :is_disp, " +
-                                    "vital_monitor_class = :vital_monitor_class, " +
-                                    "conv_item = :conv_item, " +
-                                    "reg_date = :reg_date, " +
-                                    "up_date = :up_date  WHERE moni_data_no = :moni_data_no";
-                            MapSqlParameterSource params = new MapSqlParameterSource();
-                            params.addValue("moni_data_type", nkk5Entity.getMoniDataType());
-                            params.addValue("moni_data_name", nkk5Entity.getMoniDataName());
-                            params.addValue("moni_data_short_name", nkk5Entity.getMoniDataShortName());
-                            params.addValue("data_type", nkk5Entity.getDataType());
-                            params.addValue("decimal_figure", nkk5Entity.getDecimalFigure());
-                            params.addValue("unit", nkk5Entity.getUnit());
-                            params.addValue("upper", nkk5Entity.getUpper());
-                            params.addValue("lower", nkk5Entity.getLower());
-                            params.addValue("is_disp", nkk5Entity.getIsDisp());
-                            params.addValue("vital_monitor_class", nkk5Entity.getVitalMonitorClass());
-                            params.addValue("conv_item", nkk5Entity.getConvItem(), Types.OTHER);
-                            params.addValue("reg_date", nkk5Entity.getRegDate());
-                            params.addValue("up_date", nkk5Entity.getUpDate());
-                            params.addValue("moni_data_no", nkk5Entity.getMoniDataNo());
-                            batchUpdate(convertJdbcTemplate.getJdbcTemplate(), sql, params);
-                        }
-                    }
-                    // not exist in nkk5, exist in convert --> del from convert
-                    if (!nkk5EntityMap.containsKey(convertEntity.getMoniDataNo())) {
-                        sql = "delete from sys_monitor_item  where moni_data_no= :moni_data_no";
-                        MapSqlParameterSource params = new MapSqlParameterSource();
-                        params.addValue("moni_data_no", convertEntity.getMoniDataNo());
-                        batchUpdate(convertJdbcTemplate.getJdbcTemplate(), sql, params);
-                    }
-                }
-            } else if (tableName.equals("mst_treatment_status_disp_item")) {
+  public void sysTable() {
+      DataSource convertDs = (DataSource) appContext.getBean(ApplicationConst.DbType.CONVERT);
+      DataSource nkk5Ds = (DataSource) appContext.getBean(ApplicationConst.DbType.NKK5);
+      NamedParameterJdbcTemplate convertJdbcTemplate = new NamedParameterJdbcTemplate(convertDs);
+      NamedParameterJdbcTemplate nkk5JdbcTemplate = new NamedParameterJdbcTemplate(nkk5Ds);
+    for (String tableName : sysTableNameList) {
+      if ("sys_monitor_item".equals(tableName)) {
+          syncSysMonitorItem(convertJdbcTemplate, nkk5JdbcTemplate);
+      } else if (tableName.equals("mst_treatment_status_disp_item")) {
+          syncMstTreatmentStatusDispItem(convertJdbcTemplate, nkk5JdbcTemplate);
+      } else if (tableName.equals("mst_machine_type")) {
+          syncMstMachineType(convertJdbcTemplate, nkk5JdbcTemplate);
+      } else if (tableName.equals("mst_machine_record")) {
+          syncMstMachineRecord(convertJdbcTemplate, nkk5JdbcTemplate);
+      }
+    }
+  }
 
-                String sql = "SELECT * FROM mst_treatment_status_disp_item";
-                List<MstTreatmentStatusDispItem> nkk5EntityList = nkk5JdbcTemplate.getJdbcOperations().query(sql, new Object[]{}, new BeanPropertyRowMapper<>(MstTreatmentStatusDispItem.class));
-                List<MstTreatmentStatusDispItem> convertEntityList = convertJdbcTemplate.getJdbcOperations().query(sql, new Object[]{}, new BeanPropertyRowMapper<>(MstTreatmentStatusDispItem.class));
-                HashMap<Integer, MstTreatmentStatusDispItem> nkk5EntityMap = new HashMap();
-                for (MstTreatmentStatusDispItem nkk5Entity : nkk5EntityList) {
-                    nkk5EntityMap.put(nkk5Entity.getItemCd(), nkk5Entity);
-                }
-                HashMap<Integer, MstTreatmentStatusDispItem> convertEntityMap = new HashMap();
-                for (MstTreatmentStatusDispItem convertEntity : convertEntityList) {
-                    convertEntityMap.put(convertEntity.getItemCd(), convertEntity);
-                }
-                for (MstTreatmentStatusDispItem nkk5Entity : nkk5EntityList) {
-                    if (!convertEntityMap.containsKey(nkk5Entity.getItemCd())) {
-                        sql = "INSERT INTO mst_treatment_status_disp_item " +
-                                "(item_cd, data_class, machine_class, item_name, table_name, field_name, json_key_name, disp_order, is_disp, is_del, reg_date, up_date, unit) " +
-                                "VALUES (:item_cd, :data_class, :machine_class, :item_name, :table_name, :field_name, :json_key_name, :disp_order,:is_disp, :is_del, :reg_date, :up_date, :unit )  ON CONFLICT DO NOTHING;";
-                        MapSqlParameterSource params = new MapSqlParameterSource();
-                        params.addValue("item_cd", nkk5Entity.getItemCd());
-                        params.addValue("data_class", nkk5Entity.getDataClass());
-                        params.addValue("machine_class", nkk5Entity.getMachineClass());
-                        params.addValue("item_name", nkk5Entity.getItemName());
-                        params.addValue("table_name", nkk5Entity.getTableName());
-                        params.addValue("field_name", nkk5Entity.getFieldName());
-                        params.addValue("json_key_name", nkk5Entity.getJsonKeyName());
-                        params.addValue("disp_order", nkk5Entity.getDispOrder());
-                        params.addValue("is_disp", nkk5Entity.getIsDisp());
-                        params.addValue("is_del", nkk5Entity.getIsDel());
-                        params.addValue("reg_date", nkk5Entity.getRegDate());
-                        params.addValue("up_date", nkk5Entity.getUpDate());
-                        params.addValue("unit", nkk5Entity.getUnit());
-                        batchUpdate(convertJdbcTemplate.getJdbcTemplate(), sql, params);
-                    }
-                }
-                for (MstTreatmentStatusDispItem convertEntity : convertEntityList) {
-                    // exist in nkk5, exist in convert --> update convert
-                    if (nkk5EntityMap.containsKey(convertEntity.getItemCd())) {
-                        MstTreatmentStatusDispItem nkk5Entity = nkk5EntityMap.get(convertEntity.getItemCd());
-                        if (!convertEntity.equals(nkk5Entity)) {
-                            sql = "UPDATE  sys_monitor_item SET " +
-                                    "data_class = :data_class, " +
-                                    "machine_class = :machine_class, " +
-                                    "item_name = :item_name, " +
-                                    "table_name = :table_name, " +
-                                    "field_name = :field_name, " +
-                                    "json_key_name = :json_key_name, " +
-                                    "disp_order = :disp_order, " +
-                                    "is_disp = :is_disp, " +
-                                    "is_del = :is_del, " +
-                                    "reg_date = :reg_date, " +
-                                    "up_date = :up_date, " +
-                                    "unit = :unit, WHERE item_cd = :item_cd";
-                            MapSqlParameterSource params = new MapSqlParameterSource();
-                            params.addValue("data_class", nkk5Entity.getDataClass());
-                            params.addValue("machine_class", nkk5Entity.getMachineClass());
-                            params.addValue("item_name", nkk5Entity.getItemName());
-                            params.addValue("table_name", nkk5Entity.getTableName());
-                            params.addValue("field_name", nkk5Entity.getFieldName());
-                            params.addValue("json_key_name", nkk5Entity.getJsonKeyName());
-                            params.addValue("disp_order", nkk5Entity.getDispOrder());
-                            params.addValue("is_disp", nkk5Entity.getIsDisp());
-                            params.addValue("is_del", nkk5Entity.getIsDel());
-                            params.addValue("reg_date", nkk5Entity.getRegDate());
-                            params.addValue("up_date", nkk5Entity.getUpDate());
-                            params.addValue("unit", nkk5Entity.getUnit());
-                            params.addValue("item_cd", nkk5Entity.getItemCd());
-                            batchUpdate(convertJdbcTemplate.getJdbcTemplate(), sql, params);
-                        }
-                    }
-                    // not exist in nkk5, exist in convert --> del from convert
-                    if (!nkk5EntityMap.containsKey(convertEntity.getItemCd())) {
-                        sql = "delete from mst_treatment_status_disp_item  where item_cd= :item_cd";
-                        MapSqlParameterSource params = new MapSqlParameterSource();
-                        params.addValue("item_cd", convertEntity.getItemCd());
-                        batchUpdate(convertJdbcTemplate.getJdbcTemplate(), sql, params);
-                    }
-                }
-            } else if (tableName.equals("mst_machine_type")) {
+    /**
+     * sys_monitor_itemテーブルのNKK5→Convert同期を行う
+     */
+    private void syncSysMonitorItem(NamedParameterJdbcTemplate convertJdbcTemplate, NamedParameterJdbcTemplate nkk5JdbcTemplate) {
+        String sql = "SELECT * FROM sys_monitor_item";
+        List<SysMonitorItem> nkk5EntityList = jdbcTemplateNkk5.query(sql, new BeanPropertyRowMapper<>(SysMonitorItem.class));
+        List<SysMonitorItem> convertEntityList = jdbcTemplateConvert.query(sql, new BeanPropertyRowMapper<>(SysMonitorItem.class));
+        HashMap<String, SysMonitorItem> nkk5EntityMap = new HashMap<>();
+        for (SysMonitorItem nkk5Entity : nkk5EntityList) {
+          nkk5EntityMap.put(nkk5Entity.getMoniDataNo(), nkk5Entity);
+        }
+        HashMap<String, SysMonitorItem> convertEntityMap = new HashMap<>();
+        for (SysMonitorItem convertEntity : convertEntityList) {
+          convertEntityMap.put(convertEntity.getMoniDataNo(), convertEntity);
+        }
+        syncSysMonitorItemInsertMissing(convertJdbcTemplate, nkk5EntityList, convertEntityMap);
+        syncSysMonitorItemUpdateAndDelete(convertJdbcTemplate, convertEntityList, nkk5EntityMap);
+    }
 
-                String sql = "SELECT * FROM mst_machine_type";
-                List<MstMachineType> nkk5EntityList = nkk5JdbcTemplate.getJdbcOperations().query(sql, new Object[]{}, new BeanPropertyRowMapper<>(MstMachineType.class));
-                List<MstMachineType> convertEntityList = convertJdbcTemplate.getJdbcOperations().query(sql, new Object[]{}, new BeanPropertyRowMapper<>(MstMachineType.class));
-                HashMap<String, MstMachineType> nkk5EntityMap = new HashMap();
-                for (MstMachineType nkk5Entity : nkk5EntityList) {
-                    nkk5EntityMap.put(nkk5Entity.getMachineTypeCd(), nkk5Entity);
-                }
-                HashMap<String, MstMachineType> convertEntityMap = new HashMap();
-                for (MstMachineType convertEntity : convertEntityList) {
-                    convertEntityMap.put(convertEntity.getMachineTypeCd(), convertEntity);
-                }
-                for (MstMachineType nkk5Entity : nkk5EntityList) {
-                    if (!convertEntityMap.containsKey(nkk5Entity.getMachineTypeCd())) {
-                        sql = "INSERT INTO mst_machine_type " +
-                                "(machine_type_cd, machine_type, model, maker, reg_date, up_date, com_type, treat_mode,over_nxseries) " +
-                                "VALUES (:machine_type_cd, :machine_type, :model, :maker, :reg_date, :up_date, :com_type, :treat_mode,:over_nxseries)  ON CONFLICT DO NOTHING;";
-                        MapSqlParameterSource params = new MapSqlParameterSource();
-                        params.addValue("machine_type_cd", nkk5Entity.getMachineTypeCd());
-                        params.addValue("machine_type", nkk5Entity.getMachineType());
-                        params.addValue("model", nkk5Entity.getModel());
-                        params.addValue("maker", nkk5Entity.getMaker());
-                        params.addValue("reg_date", nkk5Entity.getRegDate());
-                        params.addValue("up_date", nkk5Entity.getUpDate());
-                        params.addValue("com_type", nkk5Entity.getComType(), Types.OTHER);
-                        params.addValue("treat_mode", nkk5Entity.getTreatMode());
-                        params.addValue("over_nxseries", nkk5Entity.getOperatorId());
-                        batchUpdate(convertJdbcTemplate.getJdbcTemplate(), sql, params);
-                    }
-                }
-                for (MstMachineType convertEntity : convertEntityList) {
-                    // exist in nkk5, exist in convert --> update convert
-                    if (nkk5EntityMap.containsKey(convertEntity.getMachineTypeCd())) {
-                        MstMachineType nkk5Entity = nkk5EntityMap.get(convertEntity.getMachineTypeCd());
-                        if (!convertEntity.equals(nkk5Entity)) { // 需要重写equals() 和hashCode()
-                            sql = "UPDATE  mst_machine_type SET " +
-                                    "machine_type = :machine_type, " +
-                                    "model = :model, " +
-                                    "maker = :maker, " +
-                                    "reg_date = :reg_date, " +
-                                    "up_date = :up_date, " +
-                                    "com_type = :com_type, " +
-                                    "treat_mode = :treat_mode, " +
-                                    "over_nxseries = :over_nxseries  WHERE machine_type_cd = :machine_type_cd";
-                            MapSqlParameterSource params = new MapSqlParameterSource();
-                            params.addValue("machine_type", nkk5Entity.getMachineType());
-                            params.addValue("model", nkk5Entity.getModel());
-                            params.addValue("maker", nkk5Entity.getMaker());
-                            params.addValue("reg_date", nkk5Entity.getRegDate());
-                            params.addValue("up_date", nkk5Entity.getUpDate());
-                            params.addValue("com_type", nkk5Entity.getComType(), Types.OTHER);
-                            params.addValue("treat_mode", nkk5Entity.getTreatMode());
-                            params.addValue("over_nxseries", nkk5Entity.getOperatorId());
-                            params.addValue("machine_type_cd", nkk5Entity.getMachineTypeCd());
-                            batchUpdate(convertJdbcTemplate.getJdbcTemplate(), sql, params);
-                        }
-                    }
-                    // not exist in nkk5, exist in convert --> del from convert
-                    if (!nkk5EntityMap.containsKey(convertEntity.getMachineTypeCd())) {
-                        sql = "delete from mst_machine_type  where machine_type_cd= :machine_type_cd";
-                        MapSqlParameterSource params = new MapSqlParameterSource();
-                        params.addValue("machine_type_cd", convertEntity.getMachineTypeCd());
-                        batchUpdate(convertJdbcTemplate.getJdbcTemplate(), sql, params);
-                    }
-                }
-            } else if (tableName.equals("mst_machine_record")) {
-
-                String sql = "SELECT * FROM mst_machine_record";
-                List<MstMachineRecord> nkk5EntityList = nkk5JdbcTemplate.getJdbcOperations().query(sql, new Object[]{}, new BeanPropertyRowMapper<>(MstMachineRecord.class));
-                List<MstMachineRecord> convertEntityList = convertJdbcTemplate.getJdbcOperations().query(sql, new Object[]{}, new BeanPropertyRowMapper<>(MstMachineRecord.class));
-                HashMap<String, MstMachineRecord> nkk5EntityMap = new HashMap();
-                for (MstMachineRecord nkk5Entity : nkk5EntityList) {
-                    nkk5EntityMap.put(nkk5Entity.getMachineRecordCd(), nkk5Entity);
-                }
-                HashMap<String, MstMachineRecord> convertEntityMap = new HashMap();
-                for (MstMachineRecord convertEntity : convertEntityList) {
-                    convertEntityMap.put(convertEntity.getMachineRecordCd(), convertEntity);
-                }
-                for (MstMachineRecord nkk5Entity : nkk5EntityList) {
-                    if (!convertEntityMap.containsKey(nkk5Entity.getMachineRecordCd())) {
-                        sql = "INSERT INTO mst_machine_record " +
-                                "(machine_record_cd, machine_record_message, reg_date, up_date, is_default, log_class, target_model, disp_flg) " +
-                                "VALUES (:machine_record_cd, :machine_record_message, :reg_date, :up_date, :is_default, :log_class, :target_model, :disp_flg)  ON CONFLICT DO NOTHING;";
-                        MapSqlParameterSource params = new MapSqlParameterSource();
-                        params.addValue("machine_record_cd", nkk5Entity.getMachineRecordCd());
-                        params.addValue("machine_record_message", nkk5Entity.getMachineRecordMessage());
-                        params.addValue("reg_date", nkk5Entity.getRegDate());
-                        params.addValue("up_date", nkk5Entity.getUpDate());
-                        params.addValue("is_default", nkk5Entity.getIsDefault());
-                        params.addValue("log_class", nkk5Entity.getLogClass());
-                        params.addValue("target_model", nkk5Entity.getTargetModel());
-                        params.addValue("disp_flg", nkk5Entity.getDispFlg());
-                        batchUpdate(convertJdbcTemplate.getJdbcTemplate(), sql, params);
-                    }
-                }
-                for (MstMachineRecord convertEntity : convertEntityList) {
-                    // exist in nkk5, exist in convert --> update convert
-                    if (nkk5EntityMap.containsKey(convertEntity.getMachineRecordCd())) {
-                        MstMachineRecord nkk5Entity = nkk5EntityMap.get(convertEntity.getMachineRecordCd());
-                        if (!convertEntity.equals(nkk5Entity)) { // 需要重写equals() 和hashCode()
-                            sql = "UPDATE  mst_machine_record SET " +
-                                    "machine_record_message = :machine_record_message, " +
-                                    "reg_date = :reg_date, " +
-                                    "up_date = :up_date, " +
-                                    "is_default = :is_default, " +
-                                    "log_class = :log_class, " +
-                                    "target_model = :target_model, " +
-                                    "disp_flg = :disp_flgWHERE machine_record_cd = :machine_record_cd ";
-                            MapSqlParameterSource params = new MapSqlParameterSource();
-                            params.addValue("machine_record_message", nkk5Entity.getMachineRecordMessage());
-                            params.addValue("reg_date", nkk5Entity.getRegDate());
-                            params.addValue("up_date", nkk5Entity.getUpDate());
-                            params.addValue("is_default", nkk5Entity.getIsDefault());
-                            params.addValue("log_class", nkk5Entity.getLogClass());
-                            params.addValue("target_model", nkk5Entity.getTargetModel());
-                            params.addValue("disp_flg", nkk5Entity.getDispFlg());
-                            params.addValue("machine_record_cd", nkk5Entity.getMachineRecordCd());
-                            batchUpdate(convertJdbcTemplate.getJdbcTemplate(), sql, params);
-                        }
-                    }
-                    // not exist in nkk5, exist in convert --> del from convert
-                    if (!nkk5EntityMap.containsKey(convertEntity.getMachineRecordCd())) {
-                        sql = "delete from mst_machine_record  where machine_record_cd= :machine_record_cd";
-                        MapSqlParameterSource params = new MapSqlParameterSource();
-                        params.addValue("machine_record_cd", convertEntity.getMachineRecordCd());
-                        batchUpdate(convertJdbcTemplate.getJdbcTemplate(), sql, params);
-                    }
-                }
-            }
+    /**
+     * sys_monitor_itemの不足レコードをConvert DBへINSERTする
+     */
+    private void syncSysMonitorItemInsertMissing(NamedParameterJdbcTemplate convertJdbcTemplate,
+                                                 List<SysMonitorItem> nkk5EntityList, HashMap<String, SysMonitorItem> convertEntityMap) {
+        String sql;
+        for (SysMonitorItem nkk5Entity : nkk5EntityList) {
+          if (!convertEntityMap.containsKey(nkk5Entity.getMoniDataNo())) {
+            sql = "INSERT INTO sys_monitor_item "
+                    + "(moni_data_no, moni_data_type, moni_data_name, moni_data_short_name, data_type, decimal_figure, unit, upper, lower, is_disp, vital_monitor_class, conv_item, reg_date, up_date) "
+                    + "VALUES (:moni_data_no, :moni_data_type, :moni_data_name, :moni_data_short_name, :data_type, :decimal_figure, :unit, :upper, :lower, :is_disp, :vital_monitor_class, :conv_item, :reg_date, :up_date) ON CONFLICT DO NOTHING";
+            MapSqlParameterSource params = new MapSqlParameterSource();
+            params.addValue("moni_data_no", nkk5Entity.getMoniDataNo());
+            params.addValue("moni_data_type", nkk5Entity.getMoniDataType());
+            params.addValue("moni_data_name", nkk5Entity.getMoniDataName());
+            params.addValue("moni_data_short_name", nkk5Entity.getMoniDataShortName());
+            params.addValue("data_type", nkk5Entity.getDataType());
+            params.addValue("decimal_figure", nkk5Entity.getDecimalFigure());
+            params.addValue("unit", nkk5Entity.getUnit());
+            params.addValue("upper", nkk5Entity.getUpper());
+            params.addValue("lower", nkk5Entity.getLower());
+            params.addValue("is_disp", nkk5Entity.getIsDisp());
+            params.addValue("vital_monitor_class", nkk5Entity.getVitalMonitorClass());
+            params.addValue("conv_item", nkk5Entity.getConvItem(), Types.OTHER);
+            params.addValue("reg_date", nkk5Entity.getRegDate());
+            params.addValue("up_date", nkk5Entity.getUpDate());
+            batchUpdate(jdbcTemplateConvert, sql, params);
+          }
         }
     }
 
-    public static GlobalContext getGlobalContext() {
-        return localGlobal.get();
+    /**
+     * sys_monitor_itemの差分UPDATEおよびConvert側のみ存在するレコードのDELETEを行う
+     */
+    private void syncSysMonitorItemUpdateAndDelete(NamedParameterJdbcTemplate convertJdbcTemplate,
+                                                   List<SysMonitorItem> convertEntityList, HashMap<String, SysMonitorItem> nkk5EntityMap) {
+        String sql;
+        for (SysMonitorItem convertEntity : convertEntityList) {
+          if (nkk5EntityMap.containsKey(convertEntity.getMoniDataNo())) {
+            SysMonitorItem nkk5Entity = nkk5EntityMap.get(convertEntity.getMoniDataNo());
+            if (!convertEntity.equals(nkk5Entity)) {
+              sql = "UPDATE sys_monitor_item SET "
+                      + "moni_data_type = :moni_data_type, "
+                      + "moni_data_name = :moni_data_name, "
+                      + "moni_data_short_name = :moni_data_short_name, "
+                      + "data_type = :data_type, "
+                      + "decimal_figure = :decimal_figure, "
+                      + "unit = :unit, "
+                      + "upper = :upper, "
+                      + "lower = :lower, "
+                      + "is_disp = :is_disp, "
+                      + "vital_monitor_class = :vital_monitor_class, "
+                      + "conv_item = :conv_item, "
+                      + "reg_date = :reg_date, "
+                      + "up_date = :up_date WHERE moni_data_no = :moni_data_no";
+              MapSqlParameterSource params = new MapSqlParameterSource();
+              params.addValue("moni_data_type", nkk5Entity.getMoniDataType());
+              params.addValue("moni_data_name", nkk5Entity.getMoniDataName());
+              params.addValue("moni_data_short_name", nkk5Entity.getMoniDataShortName());
+              params.addValue("data_type", nkk5Entity.getDataType());
+              params.addValue("decimal_figure", nkk5Entity.getDecimalFigure());
+              params.addValue("unit", nkk5Entity.getUnit());
+              params.addValue("upper", nkk5Entity.getUpper());
+              params.addValue("lower", nkk5Entity.getLower());
+              params.addValue("is_disp", nkk5Entity.getIsDisp());
+              params.addValue("vital_monitor_class", nkk5Entity.getVitalMonitorClass());
+              params.addValue("conv_item", nkk5Entity.getConvItem(), Types.OTHER);
+              params.addValue("reg_date", nkk5Entity.getRegDate());
+              params.addValue("up_date", nkk5Entity.getUpDate());
+              params.addValue("moni_data_no", nkk5Entity.getMoniDataNo());
+              batchUpdate(jdbcTemplateConvert, sql, params);
+            }
+          }
+          if (!nkk5EntityMap.containsKey(convertEntity.getMoniDataNo())) {
+            sql = "DELETE FROM sys_monitor_item WHERE moni_data_no = :moni_data_no";
+            MapSqlParameterSource params = new MapSqlParameterSource();
+            params.addValue("moni_data_no", convertEntity.getMoniDataNo());
+            batchUpdate(jdbcTemplateConvert, sql, params);
+          }
+        }
     }
+
+    /**
+     * mst_treatment_status_disp_itemテーブルのNKK5→Convert同期を行う
+     */
+    private void syncMstTreatmentStatusDispItem(NamedParameterJdbcTemplate convertJdbcTemplate, NamedParameterJdbcTemplate nkk5JdbcTemplate) {
+        String sql = "SELECT * FROM mst_treatment_status_disp_item";
+        List<MstTreatmentStatusDispItem> nkk5EntityList = jdbcTemplateNkk5.query(sql, new BeanPropertyRowMapper<>(MstTreatmentStatusDispItem.class));
+        List<MstTreatmentStatusDispItem> convertEntityList = jdbcTemplateConvert.query(sql, new BeanPropertyRowMapper<>(MstTreatmentStatusDispItem.class));
+        HashMap<Integer, MstTreatmentStatusDispItem> nkk5EntityMap = new HashMap<>();
+        for (MstTreatmentStatusDispItem nkk5Entity : nkk5EntityList) {
+          nkk5EntityMap.put(nkk5Entity.getItemCd(), nkk5Entity);
+        }
+        HashMap<Integer, MstTreatmentStatusDispItem> convertEntityMap = new HashMap<>();
+        for (MstTreatmentStatusDispItem convertEntity : convertEntityList) {
+          convertEntityMap.put(convertEntity.getItemCd(), convertEntity);
+        }
+        syncMstTreatmentStatusDispItemInsertMissing(convertJdbcTemplate, nkk5EntityList, convertEntityMap);
+        syncMstTreatmentStatusDispItemUpdateAndDelete(convertJdbcTemplate, convertEntityList, nkk5EntityMap);
+    }
+
+    /**
+     * mst_treatment_status_disp_itemの不足レコードをConvert DBへINSERTする
+     */
+    private void syncMstTreatmentStatusDispItemInsertMissing(NamedParameterJdbcTemplate convertJdbcTemplate,
+                                                             List<MstTreatmentStatusDispItem> nkk5EntityList, HashMap<Integer, MstTreatmentStatusDispItem> convertEntityMap) {
+        String sql;
+        for (MstTreatmentStatusDispItem nkk5Entity : nkk5EntityList) {
+          if (!convertEntityMap.containsKey(nkk5Entity.getItemCd())) {
+            sql = "INSERT INTO mst_treatment_status_disp_item "
+                    + "(item_cd, data_class, machine_class, item_name, table_name, field_name, json_key_name, disp_order, is_disp, is_del, reg_date, up_date, unit) "
+                    + "VALUES (:item_cd, :data_class, :machine_class, :item_name, :table_name, :field_name, :json_key_name, :disp_order, :is_disp, :is_del, :reg_date, :up_date, :unit) ON CONFLICT DO NOTHING";
+            MapSqlParameterSource params = new MapSqlParameterSource();
+            params.addValue("item_cd", nkk5Entity.getItemCd());
+            params.addValue("data_class", nkk5Entity.getDataClass());
+            params.addValue("machine_class", nkk5Entity.getMachineClass());
+            params.addValue("item_name", nkk5Entity.getItemName());
+            params.addValue("table_name", nkk5Entity.getTableName());
+            params.addValue("field_name", nkk5Entity.getFieldName());
+            params.addValue("json_key_name", nkk5Entity.getJsonKeyName());
+            params.addValue("disp_order", nkk5Entity.getDispOrder());
+            params.addValue("is_disp", nkk5Entity.getIsDisp());
+            params.addValue("is_del", nkk5Entity.getIsDel());
+            params.addValue("reg_date", nkk5Entity.getRegDate());
+            params.addValue("up_date", nkk5Entity.getUpDate());
+            params.addValue("unit", nkk5Entity.getUnit());
+            batchUpdate(jdbcTemplateConvert, sql, params);
+          }
+        }
+    }
+
+    /**
+     * mst_treatment_status_disp_itemの差分UPDATEおよびConvert側のみ存在するレコードのDELETEを行う
+     */
+    private void syncMstTreatmentStatusDispItemUpdateAndDelete(NamedParameterJdbcTemplate convertJdbcTemplate,
+                                                               List<MstTreatmentStatusDispItem> convertEntityList, HashMap<Integer, MstTreatmentStatusDispItem> nkk5EntityMap) {
+        String sql;
+        for (MstTreatmentStatusDispItem convertEntity : convertEntityList) {
+          if (nkk5EntityMap.containsKey(convertEntity.getItemCd())) {
+            MstTreatmentStatusDispItem nkk5Entity = nkk5EntityMap.get(convertEntity.getItemCd());
+            if (!convertEntity.equals(nkk5Entity)) {
+              sql = "UPDATE mst_treatment_status_disp_item SET "
+                      + "data_class = :data_class, "
+                      + "machine_class = :machine_class, "
+                      + "item_name = :item_name, "
+                      + "table_name = :table_name, "
+                      + "field_name = :field_name, "
+                      + "json_key_name = :json_key_name, "
+                      + "disp_order = :disp_order, "
+                      + "is_disp = :is_disp, "
+                      + "is_del = :is_del, "
+                      + "reg_date = :reg_date, "
+                      + "up_date = :up_date, "
+                      + "unit = :unit WHERE item_cd = :item_cd";
+              MapSqlParameterSource params = new MapSqlParameterSource();
+              params.addValue("data_class", nkk5Entity.getDataClass());
+              params.addValue("machine_class", nkk5Entity.getMachineClass());
+              params.addValue("item_name", nkk5Entity.getItemName());
+              params.addValue("table_name", nkk5Entity.getTableName());
+              params.addValue("field_name", nkk5Entity.getFieldName());
+              params.addValue("json_key_name", nkk5Entity.getJsonKeyName());
+              params.addValue("disp_order", nkk5Entity.getDispOrder());
+              params.addValue("is_disp", nkk5Entity.getIsDisp());
+              params.addValue("is_del", nkk5Entity.getIsDel());
+              params.addValue("reg_date", nkk5Entity.getRegDate());
+              params.addValue("up_date", nkk5Entity.getUpDate());
+              params.addValue("unit", nkk5Entity.getUnit());
+              params.addValue("item_cd", nkk5Entity.getItemCd());
+              batchUpdate(jdbcTemplateConvert, sql, params);
+            }
+          }
+          if (!nkk5EntityMap.containsKey(convertEntity.getItemCd())) {
+            sql = "DELETE FROM mst_treatment_status_disp_item WHERE item_cd = :item_cd";
+            MapSqlParameterSource params = new MapSqlParameterSource();
+            params.addValue("item_cd", convertEntity.getItemCd());
+            batchUpdate(jdbcTemplateConvert, sql, params);
+          }
+        }
+    }
+
+    /**
+     * mst_machine_typeテーブルのNKK5→Convert同期を行う
+     */
+    private void syncMstMachineType(NamedParameterJdbcTemplate convertJdbcTemplate, NamedParameterJdbcTemplate nkk5JdbcTemplate) {
+        String sql = "SELECT * FROM mst_machine_type";
+        List<MstMachineType> nkk5EntityList = jdbcTemplateNkk5.query(sql, new BeanPropertyRowMapper<>(MstMachineType.class));
+        List<MstMachineType> convertEntityList = jdbcTemplateConvert.query(sql, new BeanPropertyRowMapper<>(MstMachineType.class));
+        HashMap<String, MstMachineType> nkk5EntityMap = new HashMap<>();
+        for (MstMachineType nkk5Entity : nkk5EntityList) {
+          nkk5EntityMap.put(nkk5Entity.getMachineTypeCd(), nkk5Entity);
+        }
+        HashMap<String, MstMachineType> convertEntityMap = new HashMap<>();
+        for (MstMachineType convertEntity : convertEntityList) {
+          convertEntityMap.put(convertEntity.getMachineTypeCd(), convertEntity);
+        }
+        for (MstMachineType nkk5Entity : nkk5EntityList) {
+          if (!convertEntityMap.containsKey(nkk5Entity.getMachineTypeCd())) {
+            sql = "INSERT INTO mst_machine_type "
+                    + "(machine_type_cd, machine_type, model, maker, reg_date, up_date, com_type, treat_mode) "
+                    + "VALUES (:machine_type_cd, :machine_type, :model, :maker, :reg_date, :up_date, :com_type, :treat_mode) ON CONFLICT DO NOTHING";
+            MapSqlParameterSource params = new MapSqlParameterSource();
+            params.addValue("machine_type_cd", nkk5Entity.getMachineTypeCd());
+            params.addValue("machine_type", nkk5Entity.getMachineType());
+            params.addValue("model", nkk5Entity.getModel());
+            params.addValue("maker", nkk5Entity.getMaker());
+            params.addValue("reg_date", nkk5Entity.getRegDate());
+            params.addValue("up_date", nkk5Entity.getUpDate());
+            params.addValue("com_type", nkk5Entity.getComType(), Types.OTHER);
+            params.addValue("treat_mode", nkk5Entity.getTreatMode());
+            batchUpdate(jdbcTemplateConvert, sql, params);
+          }
+        }
+        for (MstMachineType convertEntity : convertEntityList) {
+          if (nkk5EntityMap.containsKey(convertEntity.getMachineTypeCd())) {
+            MstMachineType nkk5Entity = nkk5EntityMap.get(convertEntity.getMachineTypeCd());
+            if (!convertEntity.equals(nkk5Entity)) {
+              sql = "UPDATE mst_machine_type SET "
+                      + "machine_type = :machine_type, "
+                      + "model = :model, "
+                      + "maker = :maker, "
+                      + "reg_date = :reg_date, "
+                      + "up_date = :up_date, "
+                      + "com_type = :com_type, "
+                      + "treat_mode = :treat_mode WHERE machine_type_cd = :machine_type_cd";
+              MapSqlParameterSource params = new MapSqlParameterSource();
+              params.addValue("machine_type", nkk5Entity.getMachineType());
+              params.addValue("model", nkk5Entity.getModel());
+              params.addValue("maker", nkk5Entity.getMaker());
+              params.addValue("reg_date", nkk5Entity.getRegDate());
+              params.addValue("up_date", nkk5Entity.getUpDate());
+              params.addValue("com_type", nkk5Entity.getComType(), Types.OTHER);
+              params.addValue("treat_mode", nkk5Entity.getTreatMode());
+              params.addValue("machine_type_cd", nkk5Entity.getMachineTypeCd());
+              batchUpdate(jdbcTemplateConvert, sql, params);
+            }
+          }
+          if (!nkk5EntityMap.containsKey(convertEntity.getMachineTypeCd())) {
+            sql = "DELETE FROM mst_machine_type WHERE machine_type_cd = :machine_type_cd";
+            MapSqlParameterSource params = new MapSqlParameterSource();
+            params.addValue("machine_type_cd", convertEntity.getMachineTypeCd());
+            batchUpdate(jdbcTemplateConvert, sql, params);
+          }
+        }
+    }
+
+    /**
+     * mst_machine_recordテーブルのNKK5→Convert同期を行う
+     */
+    private void syncMstMachineRecord(NamedParameterJdbcTemplate convertJdbcTemplate, NamedParameterJdbcTemplate nkk5JdbcTemplate) {
+        String sql = "SELECT * FROM mst_machine_record";
+        List<MstMachineRecord> nkk5EntityList = jdbcTemplateNkk5.query(sql, new BeanPropertyRowMapper<>(MstMachineRecord.class));
+        List<MstMachineRecord> convertEntityList = jdbcTemplateConvert.query(sql, new BeanPropertyRowMapper<>(MstMachineRecord.class));
+        HashMap<String, MstMachineRecord> nkk5EntityMap = new HashMap<>();
+        for (MstMachineRecord nkk5Entity : nkk5EntityList) {
+          nkk5EntityMap.put(nkk5Entity.getMachineRecordCd(), nkk5Entity);
+        }
+        HashMap<String, MstMachineRecord> convertEntityMap = new HashMap<>();
+        for (MstMachineRecord convertEntity : convertEntityList) {
+          convertEntityMap.put(convertEntity.getMachineRecordCd(), convertEntity);
+        }
+        for (MstMachineRecord nkk5Entity : nkk5EntityList) {
+          if (!convertEntityMap.containsKey(nkk5Entity.getMachineRecordCd())) {
+            sql = "INSERT INTO mst_machine_record "
+                    + "(machine_record_cd, machine_record_message, reg_date, up_date, is_default, log_class, target_model, disp_flg) "
+                    + "VALUES (:machine_record_cd, :machine_record_message, :reg_date, :up_date, :is_default, :log_class, :target_model, :disp_flg) ON CONFLICT DO NOTHING";
+            MapSqlParameterSource params = new MapSqlParameterSource();
+            params.addValue("machine_record_cd", nkk5Entity.getMachineRecordCd());
+            params.addValue("machine_record_message", nkk5Entity.getMachineRecordMessage());
+            params.addValue("reg_date", nkk5Entity.getRegDate());
+            params.addValue("up_date", nkk5Entity.getUpDate());
+            params.addValue("is_default", nkk5Entity.getIsDefault());
+            params.addValue("log_class", nkk5Entity.getLogClass());
+            params.addValue("target_model", nkk5Entity.getTargetModel());
+            params.addValue("disp_flg", nkk5Entity.getDispFlg());
+            batchUpdate(jdbcTemplateConvert, sql, params);
+          }
+        }
+        for (MstMachineRecord convertEntity : convertEntityList) {
+          if (nkk5EntityMap.containsKey(convertEntity.getMachineRecordCd())) {
+            MstMachineRecord nkk5Entity = nkk5EntityMap.get(convertEntity.getMachineRecordCd());
+            if (!convertEntity.equals(nkk5Entity)) {
+              sql = "UPDATE mst_machine_record SET "
+                      + "machine_record_message = :machine_record_message, "
+                      + "reg_date = :reg_date, "
+                      + "up_date = :up_date, "
+                      + "is_default = :is_default, "
+                      + "log_class = :log_class, "
+                      + "target_model = :target_model, "
+                      + "disp_flg = :disp_flg WHERE machine_record_cd = :machine_record_cd";
+              MapSqlParameterSource params = new MapSqlParameterSource();
+              params.addValue("machine_record_message", nkk5Entity.getMachineRecordMessage());
+              params.addValue("reg_date", nkk5Entity.getRegDate());
+              params.addValue("up_date", nkk5Entity.getUpDate());
+              params.addValue("is_default", nkk5Entity.getIsDefault());
+              params.addValue("log_class", nkk5Entity.getLogClass());
+              params.addValue("target_model", nkk5Entity.getTargetModel());
+              params.addValue("disp_flg", nkk5Entity.getDispFlg());
+              params.addValue("machine_record_cd", nkk5Entity.getMachineRecordCd());
+              batchUpdate(jdbcTemplateConvert, sql, params);
+            }
+          }
+          if (!nkk5EntityMap.containsKey(convertEntity.getMachineRecordCd())) {
+            sql = "DELETE FROM mst_machine_record WHERE machine_record_cd = :machine_record_cd";
+            MapSqlParameterSource params = new MapSqlParameterSource();
+            params.addValue("machine_record_cd", convertEntity.getMachineRecordCd());
+            batchUpdate(jdbcTemplateConvert, sql, params);
+          }
+        }
+      }
+
+  public static GlobalContext getGlobalContext() {
+    return localGlobal.get();
+  }
+
+  //add #10568 djy end
+
 }

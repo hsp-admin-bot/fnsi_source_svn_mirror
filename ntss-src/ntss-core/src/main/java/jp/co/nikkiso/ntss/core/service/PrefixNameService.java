@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.core.service;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.dao.DBAppWebAPIDao;
@@ -72,15 +72,17 @@ public class PrefixNameService {
       prefixName.append(tabooAllergyPrefix);
     }
 
-    // 【期限切れ】prefix supplementation
-    if (isDataExpired(useEndDate)) {
-      prefixName.append(CoreConstant.NamePrefixJapan.EXPIRED);
-    }
-
-    // 【削除済み】prefix supplementation
-    if (isDataDeleted(isDisp, isDel)) {
-      prefixName.append(CoreConstant.NamePrefixJapan.DELETED);
-    }
+    /* del by chamaojia 2026-01-16 [11072] マスタに関連する接頭語を削除する --start */
+    // // 【期限切れ】prefix supplementation
+    // if (isDataExpired(useEndDate)) {
+    //   prefixName.append(CoreConstant.NamePrefixJapan.EXPIRED);
+    // }
+    //
+    // // 【削除済み】prefix supplementation
+    // if (isDataDeleted(isDisp, isDel)) {
+    //   prefixName.append(CoreConstant.NamePrefixJapan.DELETED);
+    // }
+    /* del by chamaojia 2026-01-16 [11072] マスタに関連する接頭語を削除する --end */
 
     return prefixName.toString();
   }
@@ -95,17 +97,21 @@ public class PrefixNameService {
   public String getMedicineMixPrefixOfName(String patTabooAllergyInfo, List<MstTabooAllergy> tabooAllergyList, MstMedicineMix medicineMix) {
     Integer cd = medicineMix.getMedicineMixCd();
     String mixInfo = medicineMix.getMixInfo();
-    String facilityCd = medicineMix.getFacilityCd();
-    String isDisp = medicineMix.getIsDisp();
-    String isDel = medicineMix.getIsDel();
+    /* del by chamaojia 2026-01-16 [11072] マスタに関連する接頭語を削除する --start */
+    // String facilityCd = medicineMix.getFacilityCd();
+    // String isDisp = medicineMix.getIsDisp();
+    // String isDel = medicineMix.getIsDel();
+    /* del by chamaojia 2026-01-16 [11072] マスタに関連する接頭語を削除する --end */
     StringBuilder prefixName = new StringBuilder();
     JSONArray mixInfoJSONArray = ObjectUtils.isEmpty(mixInfo) ? new JSONArray() : new JSONArray(mixInfo);
 
     // 【禁忌・ｱﾚﾙｷﾞｰ】、【禁忌】、【ｱﾚﾙｷﾞｰ】prefix supplementation
     String tabooAllergyType = getTabooAllergyType(patTabooAllergyInfo, tabooAllergyList, "2", cd);
-    boolean isDataExpired = false;
-    boolean isDataIncludeDeleted = false;
-    boolean isDataDeleted = isDataDeleted(isDisp, isDel);
+    /* del by chamaojia 2026-01-16 [11072] マスタに関連する接頭語を削除する --start */
+    // boolean isDataExpired = false;
+    // boolean isDataIncludeDeleted = false;
+    // boolean isDataDeleted = isDataDeleted(isDisp, isDel);
+    /* del by chamaojia 2026-01-16 [11072] マスタに関連する接頭語を削除する --end */
 
     if (tabooAllergyType != null && !"3".equals(tabooAllergyType)) {
       Set<String> tabooAllergyTypeSet = new HashSet<>();
@@ -140,33 +146,35 @@ public class PrefixNameService {
       }
     }
 
-    for (int i = 0; i < mixInfoJSONArray.length(); i++) {
-      JSONObject mediObj = mixInfoJSONArray.getJSONObject(i);
-      if (mediObj == null || mediObj.get("cd") == null) {
-        continue;
-      }
-      Map<String,Object> mediMap = dBAppWebAPIDao.selectMedicineInfo(
-              facilityCd,
-              1,
-              Integer.valueOf(mediObj.get("cd").toString()));
-      if (mediMap != null) {
-        Object useEndDateObj = getValueFromMap(mediMap, "use_end_date");
-        String useEndDate = useEndDateObj == null ? null : useEndDateObj.toString();
-        if (isDataExpired(useEndDate)) {
-          isDataExpired = true;
-        }
-
-        if (!isDataDeleted) {
-          String isDispToSub = getValueFromMap(mediMap, "is_disp").toString();
-          String isDelToSub = getValueFromMap(mediMap, "is_del").toString();
-          if (isDataDeleted(isDispToSub, isDelToSub)) {
-            isDataIncludeDeleted = true;
-          }
-        }
-      } else {
-        isDataIncludeDeleted = true;
-      }
-    }
+    /* del by chamaojia 2026-01-16 [11072] マスタに関連する接頭語を削除する --start */
+    // for (int i = 0; i < mixInfoJSONArray.length(); i++) {
+    //   JSONObject mediObj = mixInfoJSONArray.getJSONObject(i);
+    //   if (mediObj == null || mediObj.get("cd") == null) {
+    //     continue;
+    //   }
+    //   Map<String,Object> mediMap = dBAppWebAPIDao.selectMedicineInfo(
+    //           facilityCd,
+    //           1,
+    //           Integer.valueOf(mediObj.get("cd").toString()));
+    //   if (mediMap != null) {
+    //     Object useEndDateObj = getValueFromMap(mediMap, "use_end_date");
+    //     String useEndDate = useEndDateObj == null ? null : useEndDateObj.toString();
+    //     if (isDataExpired(useEndDate)) {
+    //       isDataExpired = true;
+    //     }
+    //
+    //     if (!isDataDeleted) {
+    //       String isDispToSub = getValueFromMap(mediMap, "is_disp").toString();
+    //       String isDelToSub = getValueFromMap(mediMap, "is_del").toString();
+    //       if (isDataDeleted(isDispToSub, isDelToSub)) {
+    //         isDataIncludeDeleted = true;
+    //       }
+    //     }
+    //   } else {
+    //     isDataIncludeDeleted = true;
+    //   }
+    // }
+    /* del by chamaojia 2026-01-16 [11072] マスタに関連する接頭語を削除する --end */
 
     // 【禁忌・ｱﾚﾙｷﾞｰ】、【禁忌】、【ｱﾚﾙｷﾞｰ】prefix supplementation
     if (!ObjectUtils.isEmpty(tabooAllergyType)) {
@@ -181,19 +189,21 @@ public class PrefixNameService {
       prefixName.append(tabooAllergyPrefix);
     }
 
-    // 【期限切れ】prefix supplementation
-    if (isDataExpired) {
-      prefixName.append(CoreConstant.NamePrefixJapan.EXPIRED);
-    }
-
-    // 【削除済み】prefix supplementation
-    if (isDataDeleted) {
-      prefixName.append(CoreConstant.NamePrefixJapan.DELETED);
-    } else {
-      if (isDataIncludeDeleted) {
-        prefixName.append(CoreConstant.NamePrefixJapan.INCLUDE_DELETED);
-      }
-    }
+    /* del by chamaojia 2026-01-16 [11072] マスタに関連する接頭語を削除する --start */
+    // // 【期限切れ】prefix supplementation
+    // if (isDataExpired) {
+    //   prefixName.append(CoreConstant.NamePrefixJapan.EXPIRED);
+    // }
+    //
+    // // 【削除済み】prefix supplementation
+    // if (isDataDeleted) {
+    //   prefixName.append(CoreConstant.NamePrefixJapan.DELETED);
+    // } else {
+    //   if (isDataIncludeDeleted) {
+    //     prefixName.append(CoreConstant.NamePrefixJapan.INCLUDE_DELETED);
+    //   }
+    // }
+    /* del by chamaojia 2026-01-16 [11072] マスタに関連する接頭語を削除する --end */
 
     return prefixName.toString();
   }
@@ -273,7 +283,7 @@ public class PrefixNameService {
         // 禁忌・ｱﾚﾙｷﾞｰ
         return "3";
       }
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end

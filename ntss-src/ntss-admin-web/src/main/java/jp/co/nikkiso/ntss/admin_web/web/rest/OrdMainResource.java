@@ -1,10 +1,10 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.FlagType;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.OrdMainConst;
@@ -67,6 +67,7 @@ import jp.co.nikkiso.ntss.admin_web.service.shrPatInfo.ShrPatInfoService;
 import jp.co.nikkiso.ntss.admin_web.service.statusList.TreatmentStatusListService;
 import jp.co.nikkiso.ntss.admin_web.service.utils.MasterCacheHandler;
 import jp.co.nikkiso.ntss.admin_web.service.utils.StrUtils;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.admin_web.web.rest.util.IndicationUtils;
 import jp.co.nikkiso.ntss.admin_web.web.rest.util.JsonDataManager;
 import jp.co.nikkiso.ntss.admin_web.web.rest.util.OrdMainSchChangeUtils;
@@ -250,8 +251,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.annotation.Resource;
-import javax.validation.Valid;
+import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -313,8 +314,12 @@ import static jp.co.nikkiso.ntss.core.utils.IvCalAmountAndSpeedUtil.calIvAmountA
 import static jp.co.nikkiso.ntss.core.utils.IvCalAmountAndSpeedUtil.getCalParam;
 import static jp.co.nikkiso.ntss.core.utils.IvCalAmountAndSpeedUtil.getUpdateObject;
 import static jp.co.nikkiso.ntss.core.utils.LiquidCalculateUtils.getIhdfCalculateLiquidAmoutAndSpeed;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 // add FNSI-障害票一覧_患者経過総合ビューア.xlsxのNo.90(外結)対応 韓 end
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
+import jp.co.nikkiso.ntss.core.dao.MstBedDao;
+import jp.co.nikkiso.ntss.core.entity.MstBed;
 
 /**
  * オーダメインの{@link RestController}クラス
@@ -322,6 +327,9 @@ import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString
 @RestController
 @RequestMapping(Uri.MAIN_DATA)
 public class OrdMainResource {
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
 
   @Autowired
   OrdMainService ordMainService;
@@ -624,6 +632,10 @@ public class OrdMainResource {
 
   @Autowired
   private OrdMainDeleteService ordMainDeleteService;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+  @Autowired
+  private MstBedDao mstBedDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
   // add #11716 曜日パターン変更の不正 関 end
 
   // add #12462 患者情報共有->患者経過総合ビューア fang start
@@ -814,12 +826,26 @@ public class OrdMainResource {
    */
   @Autowired
   private MstExamItemDao mstExamItemDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   //add #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 20240410 ztc end
   // FNSI-投与薬剤の補助画面を追加 周 add start
   @GetMapping("/getIndMediInfoHistory/{patId}/{facilityCd}/{mediNo}")
   public ResponseEntity<String> selectIndMediInfoHistory(@PathVariable Long patId,
                                                          @PathVariable String facilityCd,
-                                                         @PathVariable Long mediNo) throws URISyntaxException {
+                                                         @PathVariable Long mediNo,
+                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                         @AuthenticationPrincipal NtssUser ntssUser
+                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     String result = ordMainDao.selectIndMediInfoHistory(patId, facilityCd, mediNo);
     return new ResponseEntity<>(result, HttpStatus.OK);
   }
@@ -829,7 +855,17 @@ public class OrdMainResource {
   @GetMapping("/getAllIndMediInfo/{patId}/{facilityCd}/{mediNo}")
   public ResponseEntity<String> selectAllIndMediInfo(@PathVariable Long patId,
                                                      @PathVariable String facilityCd,
-                                                     @PathVariable Long mediNo) throws URISyntaxException {
+                                                     @PathVariable Long mediNo,
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                     @AuthenticationPrincipal NtssUser ntssUser
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     String result = ordMainDao.selectAllIndMediInfo(patId, facilityCd, mediNo);
     return new ResponseEntity<>(result, HttpStatus.OK);
   }
@@ -838,7 +874,17 @@ public class OrdMainResource {
   // add FNSI5415-カレンダー内のセルの表示に時間がかかる 周 start
   @PostMapping("/patCalendar3MonthsList")
   public ResponseEntity<PatCalendarEvent> selectPatCalendarFor3Months(
-    @Validated @RequestBody ApiEntityOrdMain.ValiIndCommSearchConditions bodyData, BindingResult validationResult) {
+    @Validated @RequestBody ApiEntityOrdMain.ValiIndCommSearchConditions bodyData, BindingResult validationResult,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if (!hasFacilityAccess(ntssUser, bodyData.getFacility_cd())) {
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     String startDate = bodyData.getInd_start_date();
     String endDate = bodyData.getInd_end_date();
@@ -989,7 +1035,17 @@ public class OrdMainResource {
   public ResponseEntity<Long> selectPatMediniceNoCount(@PathVariable Long patId,
                                                        @PathVariable String facilityCd,
                                                        @PathVariable Long mediNo,
-                                                       @PathVariable List<String> youbi) throws URISyntaxException {
+                                                       @PathVariable List<String> youbi,
+                                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                       @AuthenticationPrincipal NtssUser ntssUser
+                                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     Long result = ordMainDao.countPatMediniceNo(patId, facilityCd, mediNo, youbi);
     return new ResponseEntity<>(result, HttpStatus.OK);
   }
@@ -1004,7 +1060,17 @@ public class OrdMainResource {
   @PostMapping("/KurAndTreatmentList")
   public ResponseEntity<List<OrdMainKurAndTreatmentList>> getOrdMainKurAndTreatmentList(
     @Validated @RequestBody ApiEntityOrdMain.ValiIndCommSearchConditions bodyData, BindingResult validationResult
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if (!validationResult.hasErrors() && !hasFacilityAccess(ntssUser, bodyData.getFacility_cd())) {
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     // 受信データログ出力
     //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 start
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -1031,7 +1097,7 @@ public class OrdMainResource {
         logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
         //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
       }
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     // 曜日パターン情報加工
@@ -1041,7 +1107,7 @@ public class OrdMainResource {
       weekPattern = IndicationUtils.getWeekPattern(bodyData.getWeek_pattern());
       if (null == weekPattern) {
         // 曜日パターン情報加工に発生した場合はパラメータ異常扱い
-        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
       }
     }
 
@@ -1058,7 +1124,7 @@ public class OrdMainResource {
     // 戻り値チェック
     if (null == listRet) {
       // 取得に失敗した場合は内部エラー扱い
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     return new ResponseEntity<>(listRet, HttpStatus.OK);
@@ -1076,6 +1142,17 @@ public class OrdMainResource {
         eventLogMessage.setLogMessage("test bodydata:" + bodyData.toString()
           + " id.ord_no:" + bodyData.getBefore_ord_no());
         logService.log(LogLevel.INFO, eventLogMessage, "", SERVICE_NAME.FNSI, null);
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260506 start
+        if (!ntssUser.isNkkAdminUser()) {
+          PatMain patMain = patMainDao.selectById(Long.parseLong(bodyData.getPat_id()));
+          if (patMain != null && patMain.getFacility_cd() != null &&
+            !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+            InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+              "patMain.getFacility_cd()=" + patMain.getFacility_cd() + " pat_id=" + bodyData.getPat_id() + " ", "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260506 end
         // 次患者用に移動前のデータを取得
         String facilityCd = bodyData.getFacility_cd();
         Long ordNo = Long.parseLong(bodyData.getBefore_ord_no());
@@ -1173,8 +1250,8 @@ public class OrdMainResource {
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
               logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
               // mod FNSI-検体検査の表示の修正 楊 start
-              // return new ResponseEntity<>("検体検査の日付更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
-              return new ResponseEntity<>("検査予定の日付更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+              // return new ResponseEntity<>("検体検査の日付更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
+              return new ResponseEntity<>("検査予定の日付更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
               // mod FNSI-検体検査の表示の修正 楊 end
 
             }
@@ -1207,8 +1284,8 @@ public class OrdMainResource {
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
               logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
               // mod FNSI-検体検査の表示の修正 楊 start
-              // return new ResponseEntity<>("検体検査のキャンセルに失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
-              return new ResponseEntity<>("検査予定のキャンセルに失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+              // return new ResponseEntity<>("検体検査のキャンセルに失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
+              return new ResponseEntity<>("検査予定のキャンセルに失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
               // mod FNSI-検体検査の表示の修正 楊 end
 
             }
@@ -1249,7 +1326,7 @@ public class OrdMainResource {
               }
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
               logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-              return new ResponseEntity<>("放射線検査の日付更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+              return new ResponseEntity<>("放射線検査の日付更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
             }
             break;
           case "2":
@@ -1274,7 +1351,7 @@ public class OrdMainResource {
               //mod FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
               eventLogMessage.setLogMessage(e.getMessage());
               logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-              return new ResponseEntity<>("放射線検査のキャンセルに失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+              return new ResponseEntity<>("放射線検査のキャンセルに失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
             }
             break;
           case "3":
@@ -1285,7 +1362,7 @@ public class OrdMainResource {
         }
       }
     }
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
   // add FNSI-425,426 姜 end
 
@@ -1299,7 +1376,17 @@ public class OrdMainResource {
   @PostMapping("/getPatTreatmentPattern")
   public ResponseEntity<List<PatTreatmentPattern>> getPatTreatmentPattern(
     @Validated @RequestBody ApiEntityOrdMain.ValiSearchPatTreatmentPattern bodyData, BindingResult validationResult
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, bodyData.getFacility_cd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     // 施設コード
     String facilityCd = bodyData.getFacility_cd();
     // 患者ID
@@ -1334,7 +1421,7 @@ public class OrdMainResource {
     );
     if (null == listRet) {
       // 失敗した場合、内部エラー処理
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     return new ResponseEntity<>(listRet, HttpStatus.OK);
   }
@@ -1343,7 +1430,17 @@ public class OrdMainResource {
   @PostMapping("/getPatTreatmentPattern/IndIndCommentInfo")
   public ResponseEntity<List<PatTreatmentPatternIndIndCommentInfo>> getPatTreatmentPatternIndCommentInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData, BindingResult validationResult
-  ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, bodyData.getFacility_cd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // 日付文字列変換
     Function<String, String> convertDate = (sdate) -> {
@@ -1406,11 +1503,21 @@ public class OrdMainResource {
   public ResponseEntity<List<MstTreatment>> getDeviceModeBytreatmentCd(
     @Validated @RequestBody ApiEntityOrdMain.ValiCommentCreate bodyData,
     BindingResult validationResult
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, bodyData.getFacility_cd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     List<MstTreatment> selectedTreat = mstTreatmentDao.selectByCdList(bodyData.getTreatmentCdList(), bodyData.getFacility_cd());
     if (null == selectedTreat) {
       // 失敗した場合、内部エラー処理
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     return new ResponseEntity<>(selectedTreat, HttpStatus.OK);
   }
@@ -1421,11 +1528,21 @@ public class OrdMainResource {
   @GetMapping("/getOrdMainByFacilityCd/{facilityCd}")
   public ResponseEntity<List<OrdMain>> getOrdMainByFacilityCd(
     @PathVariable String facilityCd
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     List<OrdMain> listRet = ordMainService.selectKurByFacilityCd(facilityCd);
     if (null == listRet) {
       // 失敗した場合、内部エラー処理
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     return new ResponseEntity<>(listRet, HttpStatus.OK);
   }
@@ -1433,14 +1550,24 @@ public class OrdMainResource {
   @GetMapping("/getPatName/{facilityCd}")
   public ResponseEntity<List<PatPersonalMain>> getPatName(
     @PathVariable String facilityCd
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     List<Long> patIdList = new ArrayList<>();
 
     List<PatPersonalMain> patList = patInfoService.getPatListName(patIdList, facilityCd);
 
     if (null == patList) {
       // 失敗した場合、内部エラー処理
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     return new ResponseEntity<>(patList, HttpStatus.OK);
   }
@@ -1476,9 +1603,18 @@ public class OrdMainResource {
   }
 
   @GetMapping("/getOrdMainByOrdNo/{ordNo}")
-  public ResponseEntity<OrdMain> getOrdMainByOrdNo(@PathVariable Long ordNo) {
+  public ResponseEntity<OrdMain> getOrdMainByOrdNo(@PathVariable Long ordNo,
+                                                   @RequestParam(required = false) Long selectedPatId,
+                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                   @AuthenticationPrincipal NtssUser ntssUser
+                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     try {
       OrdMain ordMain = ordMainService.selectByOrdNo(ordNo);
+      if (ordMain != null && !facilityAccessService.hasFacilityOrSelectedPatShareAccessForFacilityCds(
+          ntssUser, Collections.singletonList(ordMain.getFacilityCd()), selectedPatId)) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
       return new ResponseEntity<>(ordMain, HttpStatus.OK);
     } catch (Exception e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
@@ -1505,6 +1641,12 @@ public class OrdMainResource {
     @Validated @RequestBody ApiEntityOrdMain.ValiMoveTreatPlan bodyData, BindingResult validationResult,
     @AuthenticationPrincipal NtssUser ntssUser
   ) throws URISyntaxException {
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if (!hasFacilityAccess(ntssUser, bodyData.getFacility_cd())) {
+              return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     //   log.debug("REST request to update bodydata : {}", bodydata);
     //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 start
@@ -1587,7 +1729,7 @@ public class OrdMainResource {
       }
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
       logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-      return new ResponseEntity<>("治療予定の移動処理に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("治療予定の移動処理に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     // 別の治療予定と重複しないかのチェック
@@ -1718,7 +1860,7 @@ public class OrdMainResource {
       // 更新に失敗した場合は内部エラー扱い
       if (1 != updateCount) {
         // 引数は、ボディデータ、ヘッダーデータ、ステータス
-        return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
       //add 患者イベント设定后处理不正 修正 20230601 ztc start
       //9273
@@ -1769,7 +1911,7 @@ public class OrdMainResource {
         // add FNSI-障害票一覧_患者経過総合ビューア.xlsxのNo.79(外結)対応 韓 end
       );
       if (false == ret) {
-        return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
 
       if (! bodyData.getInd_kur_cd().equals("0") && ! bodyData.getInd_bed_cd().equals("0")) {
@@ -1788,7 +1930,7 @@ public class OrdMainResource {
           //mod FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
           eventLogMessage.setLogMessage(strMsg);
           logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-          return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+          return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
       }
 
@@ -1896,7 +2038,7 @@ public class OrdMainResource {
       String afterDate = bodyData.getDialysis_date_to().replaceAll("-", "");
       //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zy start
       if (beforeDateFormatted.equals(afterDateFormatted)) {
-        return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+        return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
       }
       //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zy end
       Map<String, String> paramsMoveInfo = new HashMap<String, String>();
@@ -2083,8 +2225,8 @@ public class OrdMainResource {
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
             logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
             // mod FNSI-検体検査の表示の修正 楊 start
-            // return new ResponseEntity<>("検体検査の日付更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
-            return new ResponseEntity<>("検査予定の日付更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            // return new ResponseEntity<>("検体検査の日付更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("検査予定の日付更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
             // mod FNSI-検体検査の表示の修正 楊 end
 
           }
@@ -2139,8 +2281,8 @@ public class OrdMainResource {
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
             logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
             // mod FNSI-検体検査の表示の修正 楊 start
-            // return new ResponseEntity<>("検体検査のキャンセルに失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
-            return new ResponseEntity<>("検査予定のキャンセルに失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            // return new ResponseEntity<>("検体検査のキャンセルに失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("検査予定のキャンセルに失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
             // mod FNSI-検体検査の表示の修正 楊 end
 
           }
@@ -2250,7 +2392,7 @@ public class OrdMainResource {
 
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
             logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-            return new ResponseEntity<>("放射線検査の日付更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("放射線検査の日付更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
           }
           break;
         case "2":
@@ -2303,7 +2445,7 @@ public class OrdMainResource {
             }
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
             logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-            return new ResponseEntity<>("放射線検査のキャンセルに失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("放射線検査のキャンセルに失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
           }
           break;
         case "3":
@@ -2349,7 +2491,7 @@ public class OrdMainResource {
       // 更新に失敗した場合は内部エラー扱い
       if (1 != updateCount) {
         // 引数は、ボディデータ、ヘッダーデータ、ステータス
-        return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
       int count = ordMaterialSaveService.updMaterialSaveBaseDateByOrdMain(Collections.singletonList(ordMain));
       // ダミースケジュール削除
@@ -2368,7 +2510,7 @@ public class OrdMainResource {
         false
       );
       if (false == ret) {
-        return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
       if (! bodyData.getInd_kur_cd().equals("0") && ! bodyData.getInd_bed_cd().equals("0")) {
         // ダミースケジュール処理
@@ -2383,7 +2525,7 @@ public class OrdMainResource {
           eventLogMessage = new EventLogMessage();
           eventLogMessage.setLogMessage(strMsg);
           logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-          return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+          return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
       }
       // 検査依頼結果の移動及び削除処理
@@ -2402,7 +2544,7 @@ public class OrdMainResource {
       //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zy start
       if (beforeDateFormatted.equals(afterDateFormatted)) {
 
-        return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+        return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
       }
       //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zy end
 
@@ -2515,7 +2657,7 @@ public class OrdMainResource {
             }
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
             logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-            return new ResponseEntity<>("検査予定の日付更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("検査予定の日付更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
           }
           break;
         case "2":
@@ -2533,7 +2675,7 @@ public class OrdMainResource {
             }
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
             logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-            return new ResponseEntity<>("検査予定のキャンセルに失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("検査予定のキャンセルに失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
           }
           break;
         case "3":
@@ -2563,7 +2705,7 @@ public class OrdMainResource {
             }
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
             logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-            return new ResponseEntity<>("放射線検査の日付更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("放射線検査の日付更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
           }
           break;
         case "2":
@@ -2585,7 +2727,7 @@ public class OrdMainResource {
             }
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
             logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-            return new ResponseEntity<>("放射線検査のキャンセルに失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("放射線検査のキャンセルに失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
           }
           break;
         case "3":
@@ -2621,7 +2763,7 @@ public class OrdMainResource {
         resultAllChangeBeforeDataInfoList.put("pat_exam_main", objectPatExamMainBeforeList);
 
         List<JournalCreateRequestPayload> journalList = journalCreatePayloadService.createJournalPayload(bodyData.getFacility_cd(), resultAllChangedDataInfoList, resultAllChangeBeforeDataInfoList, patIdList, updUserId, actionMode);
-        if (!org.apache.commons.collections.CollectionUtils.isEmpty(journalList)) {
+        if (!org.apache.commons.collections4.CollectionUtils.isEmpty(journalList)) {
           journalService.callCreateJournalForCtrNo(journalList);
         }
       }
@@ -2632,7 +2774,7 @@ public class OrdMainResource {
     }
     // add 10125 検査予定に関する連携イベント作成不備 関  end
 
-    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
   // add 10125 検査予定に関する連携イベント作成不備 関  start
   /**
@@ -2643,7 +2785,22 @@ public class OrdMainResource {
    * @throws URISyntaxException
    */
   @PostMapping("/moveTreatPlan2")
-  public ResponseEntity<UpdateScheduleListDataResponse> moveTreatPlan2(@RequestBody UpdateScheduleListDataRequestList request) throws URISyntaxException, RuntimeException {
+  public ResponseEntity<UpdateScheduleListDataResponse> moveTreatPlan2(@RequestBody UpdateScheduleListDataRequestList request,
+                                                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                       @AuthenticationPrincipal NtssUser ntssUser
+                                                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, RuntimeException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              String facilityCd = request.getFacilityCd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
     UpdateScheduleListDataResponse response = null;
 
@@ -2765,7 +2922,7 @@ public class OrdMainResource {
         patIdList.addAll(beforeIndScheduleInfoList.stream().map(o -> o.getPatId()).collect(Collectors.toList()));
         patIdList.addAll(afterIndScheduleInfoList.stream().map(o -> o.getPatId()).filter(Objects::nonNull).collect(Collectors.toList()));
         List<JournalCreateRequestPayload> journalList = journalCreatePayloadService.createJournalPayload(facilityCd, response.getResultAllChangedDataInfoList(), response.getResultAllChangeBeforeDataInfoList(), patIdList, updUserId, actionMode);
-        if (!org.apache.commons.collections.CollectionUtils.isEmpty(journalList)) {
+        if (!org.apache.commons.collections4.CollectionUtils.isEmpty(journalList)) {
           journalService.callCreateJournalForCtrNo(journalList);
         }
       } catch (Exception e) {
@@ -2791,7 +2948,30 @@ public class OrdMainResource {
   @PostMapping("copyTreatPlan")
   public ResponseEntity<String> copyTreatPlan(
     @Validated @RequestBody ApiEntityOrdMain.ValiCopyTreatPlan bodyData, BindingResult validationResult
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+          String facilityCd = bodyData.getFacility_cd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+              !facilityCd.equals(ntssUser.getFacilityCd())) {
+              InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+              return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+          if (bodyData.getOrd_no() != null && !bodyData.getOrd_no().isEmpty()) {
+              OrdMain ordMain = ordMainDao.selectByOrdNo(Long.valueOf(bodyData.getOrd_no()));
+              if (ordMain != null && ordMain.getFacilityCd() != null
+                  && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 start
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -2812,7 +2992,7 @@ public class OrdMainResource {
         //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
       }
       // 引数は、ボディデータ、ヘッダーデータ、ステータス
-      return new ResponseEntity<>("パラメータエラー", null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>("パラメータエラー", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
     //   log.debug("REST request to update bodydata : {}", bodydata);
     //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 start
@@ -2898,7 +3078,7 @@ public class OrdMainResource {
       }
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
       logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-      return new ResponseEntity<>("治療予定のコピー処理に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("治療予定のコピー処理に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     // 同日・同クール・同ベッドの治療予定が存在しないかチェック
@@ -3137,7 +3317,7 @@ public class OrdMainResource {
     JsonNode jsonNode = null;
     try {
       jsonNode = mapper.readTree(indDeviceSetInfo);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new RuntimeException(e);
     }
     ((ObjectNode) jsonNode.get("dia").get("dev").get("A")).remove("ord_no");
@@ -3149,7 +3329,7 @@ public class OrdMainResource {
     // 更新に失敗した場合は内部エラー扱い
     if (insOrdNo.equals(- 1L)) {
       // 引数は、ボディデータ、ヘッダーデータ、ステータス
-      return new ResponseEntity<>("レコードの作成に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("レコードの作成に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     // add #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao start
@@ -3205,7 +3385,7 @@ public class OrdMainResource {
         //mod FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
         eventLogMessage.setLogMessage(strMsg);
         logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-        return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
     }
 
@@ -3267,7 +3447,7 @@ public class OrdMainResource {
       resultAllChangedDataInfoList.put("ord_main", objectList);
 
       List<JournalCreateRequestPayload> journalList = journalCreatePayloadService.createJournalPayload(facilityCd, resultAllChangedDataInfoList, null, patIdList, updUserId, actionMode);
-      if (!org.apache.commons.collections.CollectionUtils.isEmpty(journalList)) {
+      if (!org.apache.commons.collections4.CollectionUtils.isEmpty(journalList)) {
         journalService.callCreateJournalForCtrNo(journalList);
       }
     } catch (Exception e) {
@@ -3466,7 +3646,7 @@ public class OrdMainResource {
 //                            ? new ArrayList<>()
 //                            : new ObjectMapper().readValue(findMstExamSet.get(0).getExamItemInfo(), new TypeReference<List<PatExamPatternExamOrderInfo>>() {
 //                    });
-//                } catch (JsonProcessingException e) {
+//                } catch (JacksonException e) {
 //                    e.printStackTrace();
 //                }
 //                if (!CollectionUtils.isEmpty(addExamOrderInfo)) {
@@ -3524,7 +3704,7 @@ public class OrdMainResource {
 //      String indCondInfo = ordMain.getIndCondInfo();
 //
 //      JsonNode indCondJsonNode = mapper.readTree(indCondInfo);
-//      Iterator<Entry<String, JsonNode>> indCondFields = indCondJsonNode.fields();
+//      Iterator<Entry<String, JsonNode>> indCondFields = indCondJsonNode.properties().iterator();
 //      while(indCondFields.hasNext()) {
 //        Entry<String, JsonNode> field = indCondFields.next();
 //        String key = field.getKey();
@@ -3541,7 +3721,7 @@ public class OrdMainResource {
 //      /* mod by shiyw 2024-03-28 #10196 ord_mainのデータ定義の修正:OrdMain.equipInfo/mediInfo/IndCommentInfoがnullの場合を考える --start */
 //      if(!ObjectUtils.isEmpty(indMediInfo)){
 //          JsonNode indMediJsonNode = mapper.readTree(indMediInfo);
-//          Iterator<Entry<String, JsonNode>> indMediIterator = indMediJsonNode.fields();
+//          Iterator<Entry<String, JsonNode>> indMediIterator = indMediJsonNode.properties().iterator();
 //          while (indMediIterator.hasNext()) {
 //              Entry<String, JsonNode> field = indMediIterator.next();
 //              String key = field.getKey();
@@ -3563,7 +3743,7 @@ public class OrdMainResource {
 //        /* mod by shiyw 2024-03-28 #10196 ord_mainのデータ定義の修正:OrdMain.equipInfo/mediInfo/IndCommentInfoがnullの場合を考える --start */
 //      if(!ObjectUtils.isEmpty(indEquipInfo)){
 //          JsonNode indEquipJsonNode = mapper.readTree(indEquipInfo);
-//          Iterator<Entry<String, JsonNode>> fields = indEquipJsonNode.fields();
+//          Iterator<Entry<String, JsonNode>> fields = indEquipJsonNode.properties().iterator();
 //          while (fields.hasNext()) {
 //              Entry<String, JsonNode> field = fields.next();
 //              String key = field.getKey();
@@ -3595,7 +3775,32 @@ public class OrdMainResource {
     @RequestHeader(value = "treat_item_cd_before", required = true) String treat_item_cd_before,
     @RequestHeader(value = "treat_item_cd_after", required = true) String treat_item_cd_after,
     @RequestBody OrdMain ordMain
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+          if (pat_id != null) {
+              PatMain patMain = patMainDao.selectById(Long.valueOf(pat_id));
+              if (patMain != null && patMain.getFacility_cd() != null &&
+                  !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+          if (kur_cd != null) {
+              MstKur mstKur = mstKurDao.selectByKurCd(kur_cd);
+              if (mstKur != null && mstKur.getFacilityCd() != null &&
+              !mstKur.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     int updatedCount = 0;
     HttpStatus status = HttpStatus.OK;
     List<JsonDataManager> listRet = new ArrayList<>();
@@ -3636,6 +3841,17 @@ public class OrdMainResource {
     @AuthenticationPrincipal NtssUser ntssUser,
     BindingResult validationResult
   ) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if (!ntssUser.isNkkAdminUser()) {
+          String facilityCd = bodyData.getFacility_cd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+              !facilityCd.equals(ntssUser.getFacilityCd())) {
+              InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+              return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
     if (Boolean.FALSE.toString().equals(bodyData.getIs_deadline())) {
@@ -3678,7 +3894,24 @@ public class OrdMainResource {
   @PostMapping("/updateOrdMainInfo")
   public ResponseEntity<String> updateOrdMainInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiUpdateIndCond bodyData, BindingResult validationResult
-  ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if (!validationResult.hasErrors()) {
+          if (!ntssUser.isNkkAdminUser()) {
+              String facilityCd = bodyData.getFacility_cd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     // 受信データログ出力
     // add FNSI-改修内容 患者経過総合ビューアレイアウトマスタにて非表示とした場合の変更点 穆 start
     // add FNSI-改修内容 患者経過総合ビューアレイアウトマスタにて非表示とした場合の変更点 穆 end
@@ -3720,7 +3953,7 @@ public class OrdMainResource {
         //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
       }
       // 引数は、ボディデータ、ヘッダーデータ、ステータス
-      return new ResponseEntity<>("パラメータエラー", null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>("パラメータエラー", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     // 選択された曜日の処理
@@ -3835,7 +4068,7 @@ public class OrdMainResource {
 
     //add 10390 患者情報-身体情報の保存時に500エラーが発生する zhao start
     if(ordMain.size()<=0){
-      return new ResponseEntity<>(new JSONObject("{}").toString(), null, HttpStatus.OK);
+      return new ResponseEntity<>(new JSONObject("{}").toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     }
     //add 10390 患者情報-身体情報の保存時に500エラーが発生する zhao end
 //    //add #10266 start
@@ -3932,13 +4165,13 @@ public class OrdMainResource {
 //        ObjectMapper mapper = new ObjectMapper();
 //        try {
 //          JsonNode jsonNode = mapper.readTree(bodyData.getInd_cond_info());
-//          jsonNode.fields().forEachRemaining(json -> {
+//          jsonNode.properties().iterator().forEachRemaining(json -> {
 //            ObjectNode value = (ObjectNode) json.getValue();
 //            value.remove("unit");
 //            value.remove("value_name_1");
 //          });
 //          bodyData.setInd_cond_info(jsonNode.toString());
-//        } catch (JsonProcessingException e) {
+//        } catch (JacksonException e) {
 //          throw new RuntimeException(e);
 //        }
 
@@ -4144,7 +4377,7 @@ public class OrdMainResource {
     //mod FNSI redmine 5161劉祥霖　start
     // 計算項目を非表示にした場合、メッセージを表示する。 OKボタンを押します
     // add #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない 20240229 ztc start
-    if (answerFlg.contains("8") && ordCondInfo.has(String.valueOf(26))) {
+    if (answerFlg.contains("8") && ordCondInfo.has(String.valueOf(26)) && condInfo.has(String.valueOf(26))) {
       //抗凝固剤ワンショット量
       JSONObject cond_26 = new JSONObject(String.valueOf(condInfo.getJSONObject(String.valueOf(26))));
       String value_26 = this.decimalPlaces(cond_26.get("value").toString());
@@ -4152,7 +4385,7 @@ public class OrdMainResource {
       antiCoagulantOneshotAmount = value_26;
       condInfo.put("26", cond_26);
     }
-    if (answerFlg.contains("9") && ordCondInfo.has(String.valueOf(27))) {
+    if (answerFlg.contains("9") && ordCondInfo.has(String.valueOf(27)) && condInfo.has(String.valueOf(27))) {
       //抗凝固剤持続速度
       JSONObject cond_27 = new JSONObject(String.valueOf(condInfo.getJSONObject(String.valueOf(27))));
       String value_27 = this.decimalPlaces(cond_27.get("value").toString());
@@ -4614,7 +4847,7 @@ public class OrdMainResource {
             logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
             HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
             //引数は、ボディデータ,ヘッダーデータ,ステータス
-            ResponseEntity<String> re = new ResponseEntity<>("装置設定情報の作成に失敗しました。", null, status);
+            ResponseEntity<String> re = new ResponseEntity<>("装置設定情報の作成に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
             return re;
           }
         }
@@ -4951,7 +5184,7 @@ public class OrdMainResource {
 //                  bodyData.getInd_start_date().replaceAll("-", ""),
 //                  indKurCd);
 //                if (HttpStatus.OK != response.getStatusCode()) {
-//                  return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//                  return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //                }
 //                if (0 != response.getBody().size()) {
 //                  // TODO-YSK:一時的な対応(ロールバック)
@@ -4997,7 +5230,7 @@ public class OrdMainResource {
                 //mod FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
                 eventLogMessage.setLogMessage(strMsg);
                 logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-                return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+                return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
               }
             }
           }
@@ -5020,7 +5253,7 @@ public class OrdMainResource {
           wheres.append(" WHERE\n");
           wheres.append(inStr + "\n");
           // logCommon設定
-          DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+          DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
           // ログ出力カラム情報及び更新前データ情報取得
           boolean setResult = logCommon.setInfo();
           AtomicInteger updateCount = new AtomicInteger();
@@ -5144,7 +5377,7 @@ public class OrdMainResource {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
       logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI,
         null);
-      return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     //add #10553 治療条件変更連携送信不正 関 start
     // 連携関連呼出
@@ -5187,7 +5420,7 @@ public class OrdMainResource {
 
       // Journal作成
       List<JournalCreateRequestPayload> journalList = journalCreatePayloadService.createJournalPayload(facilityCd, resultAllChangedDataInfoList, resultAllChangeBeforeDataInfoList, patIdList, updUserId, actionMode);
-      if (!org.apache.commons.collections.CollectionUtils.isEmpty(journalList)) {
+      if (!org.apache.commons.collections4.CollectionUtils.isEmpty(journalList)) {
         journalService.callCreateJournalForCtrNo(journalList);
       }
     } catch (Exception e) {
@@ -5268,7 +5501,7 @@ public class OrdMainResource {
       // add 11169 治療時間を長時間として指示変更した場合に、ダミースケジュールの衝突があると、不正な治療時間で更新してしまう。関 end
 //       if (-1 == patPatternCount) {
 //         // エラーログはサブ関数で出力済み
-//         return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//         return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //       }
     }
     //mod #10412 次患者更新関連全体見直し対応 朴 start
@@ -5494,7 +5727,7 @@ public class OrdMainResource {
     //journalService.callCreateJournalForCtrNo(ctlNoList);
     // add 2023-02-10 bug #8157 修正 chen end
     //del 8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。zhou start
-    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   private void setAnticoagulantUnit(List<OrdMain> sendAfterOrdMain, JSONObject indCondInfo) {
@@ -6011,7 +6244,24 @@ public class OrdMainResource {
    */
   @PostMapping("/createOrdMainMediInfoBatch")
   public ResponseEntity<String> createOrdMainMediInfoBatch(
-    @Validated @RequestBody List<ApiEntityOrdMain.ValiOrdMedi> bodyDataList ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException, ExecutionException, InterruptedException {
+    @Validated @RequestBody List<ApiEntityOrdMain.ValiOrdMedi> bodyDataList ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException, ExecutionException, InterruptedException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        for (ApiEntityOrdMain.ValiOrdMedi valiOrdMedi : bodyDataList) {
+          String facilityCd = valiOrdMedi.getFacility_cd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
     ApiEntityOrdMain.ValiOrdMedi valiOrdMedi = bodyDataList.get(0);
     if (Boolean.FALSE.toString().equals(valiOrdMedi.getIs_deadline())) {
@@ -6140,7 +6390,22 @@ public class OrdMainResource {
   @PostMapping("/updateOrdMainMediInfo")
   public ResponseEntity<String> updateOrdMainMediInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData, BindingResult validationResult
-  ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if (!ntssUser.isNkkAdminUser()) {
+          String facilityCd = bodyData.getFacility_cd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+              !facilityCd.equals(ntssUser.getFacilityCd())) {
+              InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+              return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
     if (Boolean.FALSE.toString().equals(bodyData.getIs_deadline())) {
@@ -6205,7 +6470,7 @@ public class OrdMainResource {
         ordMain = ordMain.stream().filter(ord -> "0".equals(ord.getRstDialysisState())).collect(Collectors.toList());
       }
       if(ordMain.size()<=0){
-        return new ResponseEntity<>(new JSONObject("{}").toString(), null, HttpStatus.OK);
+        return new ResponseEntity<>(new JSONObject("{}").toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
       }
       //add #10266 end
 
@@ -6995,7 +7260,7 @@ public class OrdMainResource {
       // add 2023-02-10 bug #8157 修正 chen start
       journalService.callCreateJournalForCtrNo(ctlNoList);
       // add 2023-02-10 bug #8157 修正 chen end
-      return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+      return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     }
     List<Integer> treatCdList = ordMain.stream().map(OrdMain::getIndTreatmentCd).distinct().collect(Collectors.toList());
     List<MstTreatment> mstTreatList = treatCdList.stream().map(treatCd -> mstTreatmentDao.selectByCd(treatCd)).collect(Collectors.toList());
@@ -7109,7 +7374,7 @@ public class OrdMainResource {
     // add 2023-02-10 bug #8157 修正 chen start
     journalService.callCreateJournalForCtrNo(ctlNoList);
     // add 2023-02-10 bug #8157 修正 chen end
-    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   /**
@@ -7122,7 +7387,22 @@ public class OrdMainResource {
   @PostMapping("/deleteOrdMainMediInfo")
   public ResponseEntity<String> deleteOrdMainMediInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData, BindingResult validationResult
-  ){
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+){
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = bodyData.getFacility_cd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
     if (Boolean.FALSE.toString().equals(bodyData.getIs_deadline())) {
@@ -7230,7 +7510,24 @@ public class OrdMainResource {
    */
   @PostMapping("/createOrdMainEquipInfoBatch")
   public ResponseEntity<String> createOrdMainEquipInfoBatch(
-    @Validated @RequestBody List<ApiEntityOrdMain.ValiOrdEquip> bodyDataList ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException, ExecutionException, InterruptedException {
+    @Validated @RequestBody List<ApiEntityOrdMain.ValiOrdEquip> bodyDataList ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException, ExecutionException, InterruptedException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        for (ApiEntityOrdMain.ValiOrdEquip valiOrdEquip : bodyDataList) {
+          String facilityCd = valiOrdEquip.getFacility_cd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
     ApiEntityOrdMain.ValiOrdEquip equip = bodyDataList.get(0);
@@ -7269,7 +7566,22 @@ public class OrdMainResource {
   @PostMapping("/updateOrdMainEquipInfo")
   public ResponseEntity<String> updateOrdMainEquipInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdEquip bodyData, BindingResult validationResult
-  ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if (!ntssUser.isNkkAdminUser()) {
+              String facilityCd = bodyData.getFacility_cd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
     if (Boolean.FALSE.toString().equals(bodyData.getIs_deadline())) {
@@ -7324,7 +7636,7 @@ public class OrdMainResource {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
       logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
       //#8484　医療材料選択IFのリスト不正　Start
-      return new ResponseEntity<>("DBの更新に失敗しました(更新対象治療情報リスト取得)。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("DBの更新に失敗しました(更新対象治療情報リスト取得)。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       //#8484　医療材料選択IFのリスト不正　End
     }
 
@@ -7333,7 +7645,7 @@ public class OrdMainResource {
       ordMain = ordMain.stream().filter(ord -> "0".equals(ord.getRstDialysisState())).collect(Collectors.toList());
     }
     if(ordMain.size()<=0){
-      return new ResponseEntity<>(new JSONObject("{}").toString(), null, HttpStatus.OK);
+      return new ResponseEntity<>(new JSONObject("{}").toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     }
     //add #10266 end
 
@@ -7577,7 +7889,7 @@ public class OrdMainResource {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
         logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
         //#8484　医療材料選択IFのリスト不正　Start
-        return new ResponseEntity<>("DBの更新に失敗しました(ord.setIndEquipInfo以降)。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>("DBの更新に失敗しました(ord.setIndEquipInfo以降)。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
         //#8484　医療材料選択IFのリスト不正　End
       }
 
@@ -7731,7 +8043,7 @@ public class OrdMainResource {
           }
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
           logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-          return new ResponseEntity<>("医療材料中止対象情報の作成に失敗しました 。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+          return new ResponseEntity<>("医療材料中止対象情報の作成に失敗しました 。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
         // 削除対象医療材料項目情報格納
         List<String> deleteTargetInfo = new ArrayList<String>();
@@ -7905,7 +8217,22 @@ public class OrdMainResource {
   @PostMapping("/deleteOrdMainEquipInfo")
   public ResponseEntity<String> deleteOrdMainEquipInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdEquip bodyData, BindingResult validationResult
-  ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = bodyData.getFacility_cd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
     if (Boolean.FALSE.toString().equals(bodyData.getIs_deadline())) {
@@ -7936,7 +8263,22 @@ public class OrdMainResource {
   // add FNSI redMine #5116対応 陳 start
   @PostMapping("getKurInfo")
   public ResponseEntity<String> getKurInfo(
-    @Validated @RequestBody ApiEntityOrdMain.ValiCreateTreatPlan bodyData, BindingResult validationResult) throws URISyntaxException, ParseException, JSONException {
+    @Validated @RequestBody ApiEntityOrdMain.ValiCreateTreatPlan bodyData, BindingResult validationResult,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, ParseException, JSONException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = bodyData.getFacility_cd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 //    mod FNSI redmine 劉祥霖 5923 start
     List<String> listInfo = ordMainDao.selectKurInfo(Long.parseLong(bodyData.getInd_bed_cd()),
       bodyData.getTreatDays().replace("-", ""));
@@ -7944,7 +8286,7 @@ public class OrdMainResource {
     JSONObject responseData = new JSONObject("{}");
     responseData.put("listInfo", listInfo);
 
-    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
   // add FNSI redMine #5116対応 陳 end
 
@@ -7961,6 +8303,22 @@ public class OrdMainResource {
   public ResponseEntity<String> insertByTreatSetCd(
     @Validated @RequestBody ApiEntityOrdMain.ValiCreateTreatPlan bodyData, BindingResult validationResult
     ,@AuthenticationPrincipal NtssUser ntssUser) throws URISyntaxException, ParseException, JSONException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if (!validationResult.hasErrors()) {
+              if (!ntssUser.isNkkAdminUser()) {
+                  List<MstTreatmentSet> listMstTreatSet = mstInfoService.findMstTreatmentSetByCd(Integer.parseInt(bodyData.getTreatment_set_cd()));
+                  for (MstTreatmentSet mstTreatmentSet : listMstTreatSet) {
+                      String facilityCd = mstTreatmentSet.getFacilityCd();
+                      if (facilityCd != null && !facilityCd.isEmpty() &&
+                          !facilityCd.equals(ntssUser.getFacilityCd())) {
+                          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+                      }
+                  }
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to insertByTreatSetCd OrdMain : " + bodyData.getTreatment_set_cd() + bodyData.getUp_date());
     logService.log(LogLevel.DEBUG, eventLogMessage, "", SERVICE_NAME.FNSI, null);
@@ -7985,14 +8343,14 @@ public class OrdMainResource {
         //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
       }
       // 引数は、ボディデータ、ヘッダーデータ、ステータス
-      return new ResponseEntity<>("パラメータエラー", null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>("パラメータエラー", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
     // 治療方法セット取得
     List<MstTreatmentSet> listMstTreatSet = mstInfoService.findMstTreatmentSetByCd(Integer.parseInt(bodyData.getTreatment_set_cd()));
     if (1 != listMstTreatSet.size()) {
       HttpStatus status = HttpStatus.BAD_REQUEST;
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      ResponseEntity<String> re = new ResponseEntity<>("治療方法セットマスタ参照エラー", null, status);
+      ResponseEntity<String> re = new ResponseEntity<>("治療方法セットマスタ参照エラー", (org.springframework.http.HttpHeaders) null, status);
       return re;
     }
     //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 start
@@ -8012,7 +8370,7 @@ public class OrdMainResource {
       //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
       HttpStatus status = HttpStatus.BAD_REQUEST;
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      ResponseEntity<String> re = new ResponseEntity<>("排他エラー", null, status);
+      ResponseEntity<String> re = new ResponseEntity<>("排他エラー", (org.springframework.http.HttpHeaders) null, status);
       return re;
     }
 
@@ -8023,7 +8381,7 @@ public class OrdMainResource {
     if (listPatMain.size() == 0) {
       HttpStatus status = HttpStatus.BAD_REQUEST;
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      ResponseEntity<String> re = new ResponseEntity<>("患者情報(pat_main)参照エラー", null, status);
+      ResponseEntity<String> re = new ResponseEntity<>("患者情報(pat_main)参照エラー", (org.springframework.http.HttpHeaders) null, status);
       return re;
     }
     PatMain patMain = listPatMain.get(0);
@@ -8087,7 +8445,7 @@ public class OrdMainResource {
           Long.parseLong(bodyData.getInd_kur_cd()));
         if (listInfoDummy.size() > 0) {
           responseData.put("errorMessage", "Dummy治療予定重複エラー");
-          return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+          return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
         }
         //add FNSI redmine 6588 劉祥霖 end
 
@@ -8102,7 +8460,7 @@ public class OrdMainResource {
         if (listInfo.size() > 0) {
 
           responseData.put("errorMessage", "3治療予定重複エラー");
-          return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+          return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
         }
 
         // 重複チェック
@@ -8115,7 +8473,7 @@ public class OrdMainResource {
         if (listInfo2.size() > 0) {
 
           responseData.put("errorMessage", "4治療予定重複エラー");
-          return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+          return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
         }
       }
 
@@ -9033,7 +9391,7 @@ public class OrdMainResource {
       logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
       HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      ResponseEntity<String> re = new ResponseEntity<>("登録用情報の作成に失敗しました。", null, status);
+      ResponseEntity<String> re = new ResponseEntity<>("登録用情報の作成に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
 
       return re;
     }
@@ -9098,7 +9456,7 @@ public class OrdMainResource {
       logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
       HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      ResponseEntity<String> re = new ResponseEntity<>("装置設定情報の作成に失敗しました。", null, status);
+      ResponseEntity<String> re = new ResponseEntity<>("装置設定情報の作成に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
       return re;
     }
     // add 10196 by kangjie 20240119 start
@@ -9291,7 +9649,7 @@ public class OrdMainResource {
 //        //レコード作成に失敗した場合
 //        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 //        //引数は、ボディデータ,ヘッダーデータ,ステータス
-//        ResponseEntity<String> re = new ResponseEntity<>("レコードの作成に失敗しました。", null, status);
+//        ResponseEntity<String> re = new ResponseEntity<>("レコードの作成に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
 //
 //        return re;
 //      } else {
@@ -9408,7 +9766,7 @@ public class OrdMainResource {
           logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
           HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
           //引数は、ボディデータ,ヘッダーデータ,ステータス
-          ResponseEntity<String> re = new ResponseEntity<>("風袋・除水補正情報の作成に失敗しました。", null, status);
+          ResponseEntity<String> re = new ResponseEntity<>("風袋・除水補正情報の作成に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
           return re;
         }
 
@@ -9442,7 +9800,7 @@ public class OrdMainResource {
             String strMsg = "患者治療パターン登録に失敗しました(スケジュール情報異常:[ベッドコード=" + ordMain.getIndBedCd() + "、治療開始時刻=" + ordMain.getIndTreatStartTime() + "、指示者=" + bodyData.getInd_user_id() + "、更新者=" + bodyData.getUpd_user_id() + "])";
             eventLogMessage.setLogMessage(strMsg);
             logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-            return new ResponseEntity<>("患者治療パターン情報の登録に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("患者治療パターン情報の登録に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
           }
           editData.setIndSchInfo(indSchInfo);
           // 治療条件
@@ -9463,7 +9821,7 @@ public class OrdMainResource {
           eventLogMessage.setLogMessage("insertByTreatSetCd Exception: " + e);
           logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
           HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-          ResponseEntity<String> re = new ResponseEntity<>("患者治療パターン情報の登録に失敗しました。", null, status);
+          ResponseEntity<String> re = new ResponseEntity<>("患者治療パターン情報の登録に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
           return re;
         }
 
@@ -9540,7 +9898,7 @@ public class OrdMainResource {
       resultAllChangedDataInfoList.put("ord_main", objectList);
 
       List<JournalCreateRequestPayload> journalList = journalCreatePayloadService.createJournalPayload(facilityCd, resultAllChangedDataInfoList, null, patIdList, updUserId, actionMode);
-      if (!org.apache.commons.collections.CollectionUtils.isEmpty(journalList)) {
+      if (!org.apache.commons.collections4.CollectionUtils.isEmpty(journalList)) {
         journalService.callCreateJournalForCtrNo(journalList);
       }
     } catch (Exception e) {
@@ -9560,8 +9918,8 @@ public class OrdMainResource {
     responseData.put("ordNoList", ordNoList.toString());
     // add FNSI-指示値・装置設定・装置プログラムの相関チェック 安寧 end
     // mod FNSI-指示値・装置設定・装置プログラムの相関チェック 安寧 start
-    //return new ResponseEntity<>(ordNoList.toString(), null, HttpStatus.OK);
-    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+    //return new ResponseEntity<>(ordNoList.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     // mod FNSI-指示値・装置設定・装置プログラムの相関チェック 安寧 end
   }
 
@@ -9648,7 +10006,7 @@ public class OrdMainResource {
 //        //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
 //      }
 //      // 引数は、ボディデータ、ヘッダーデータ、ステータス
-//      return new ResponseEntity<>("パラメータエラー", null, HttpStatus.BAD_REQUEST);
+//      return new ResponseEntity<>("パラメータエラー", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
 //    }
 //    //upd by ztc 2023-03-02 [Optimize runtime No.6968] --start
 //    // 治療方法セット取得
@@ -9656,7 +10014,7 @@ public class OrdMainResource {
 ////    if (1 != listMstTreatSet.size()) {
 ////      HttpStatus status = HttpStatus.BAD_REQUEST;
 //      //引数は、ボディデータ,ヘッダーデータ,ステータス
-////      return new ResponseEntity<>("治療方法セットマスタ参照エラー", null, status);
+////      return new ResponseEntity<>("治療方法セットマスタ参照エラー", (org.springframework.http.HttpHeaders) null, status);
 ////    }
 //    //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 start
 ////    eventLogMessage = new EventLogMessage();
@@ -9675,7 +10033,7 @@ public class OrdMainResource {
 //      //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
 ////      HttpStatus status = HttpStatus.BAD_REQUEST;
 //      //引数は、ボディデータ,ヘッダーデータ,ステータス
-////      return new ResponseEntity<>("排他エラー", null, status);
+////      return new ResponseEntity<>("排他エラー", (org.springframework.http.HttpHeaders) null, status);
 ////    }
 //    //upd by ztc 2023-03-02 [Optimize runtime No.6968] --end
 //    // 対象のpat_mainレコード(1人)を取得
@@ -9686,7 +10044,7 @@ public class OrdMainResource {
 ////    if (!listPatMain.isEmpty()) {
 ////      HttpStatus status = HttpStatus.BAD_REQUEST;
 //      //引数は、ボディデータ,ヘッダーデータ,ステータス
-////      return new ResponseEntity<>("患者情報(pat_main)参照エラー", null, status);
+////      return new ResponseEntity<>("患者情報(pat_main)参照エラー", (org.springframework.http.HttpHeaders) null, status);
 ////    }
 //    //upd by ztc 2023-03-02 [Optimize runtime No.6968] --end
 //    //upd by ztc 2023-03-02 [Optimize runtime No.6968] --start
@@ -9732,7 +10090,7 @@ public class OrdMainResource {
 ////          Long.parseLong(bodyData.getInd_kur_cd()));
 ////        if (!listInfoDummy.isEmpty()) {
 ////          responseData.put("errorMessage", "Dummy治療予定重複エラー");
-////          return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+////          return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 ////        }
 ////        //add FNSI redmine 6588 劉祥霖 end
 ////        // 重複チェック
@@ -9745,7 +10103,7 @@ public class OrdMainResource {
 ////          Long.parseLong(bodyData.getInd_kur_cd()));
 ////        if (!listInfo.isEmpty()) {
 ////          responseData.put("errorMessage", "3治療予定重複エラー");
-////          return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+////          return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 ////        }
 ////        // 重複チェック
 ////        List<String> listInfo2 = ordMainDao.selectOrdNoByTreatDateKurCd(
@@ -9756,7 +10114,7 @@ public class OrdMainResource {
 ////          Long.parseLong(bodyData.getInd_kur_cd()));
 ////        if (!listInfo2.isEmpty()) {
 ////          responseData.put("errorMessage", "4治療予定重複エラー");
-////          return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+////          return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 ////        }
 ////      }
 //      //upd by ztc 2023-03-02 [Optimize runtime No.6968] --end /
@@ -10543,7 +10901,7 @@ public class OrdMainResource {
 //      logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
 //      HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 //      //引数は、ボディデータ,ヘッダーデータ,ステータス
-//      ResponseEntity<String> re = new ResponseEntity<>("登録用情報の作成に失敗しました。", null, status);
+//      ResponseEntity<String> re = new ResponseEntity<>("登録用情報の作成に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
 //
 //      return re;
 //    }
@@ -10617,7 +10975,7 @@ public class OrdMainResource {
 //      logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
 //      HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 //      //引数は、ボディデータ,ヘッダーデータ,ステータス
-//      ResponseEntity<String> re = new ResponseEntity<>("装置設定情報の作成に失敗しました。", null, status);
+//      ResponseEntity<String> re = new ResponseEntity<>("装置設定情報の作成に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
 //      return re;
 //    }
 //    ordMain.setIndDeviceSetInfo(indDeviceSetInfo);
@@ -10796,7 +11154,7 @@ public class OrdMainResource {
 //        //レコード作成に失敗した場合
 //        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 //        //引数は、ボディデータ,ヘッダーデータ,ステータス
-//        ResponseEntity<String> re = new ResponseEntity<>("レコードの作成に失敗しました。", null, status);
+//        ResponseEntity<String> re = new ResponseEntity<>("レコードの作成に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
 //
 //        return re;
 //      } else {
@@ -10868,7 +11226,7 @@ public class OrdMainResource {
 //          logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
 //          HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 //          //引数は、ボディデータ,ヘッダーデータ,ステータス
-//          ResponseEntity<String> re = new ResponseEntity<>("風袋・除水補正情報の作成に失敗しました。", null, status);
+//          ResponseEntity<String> re = new ResponseEntity<>("風袋・除水補正情報の作成に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
 //          return re;
 //        }
 //
@@ -10913,7 +11271,7 @@ public class OrdMainResource {
 //            String strMsg = "患者治療パターン登録に失敗しました(スケジュール情報異常:[ベッドコード=" + ordMain.getIndBedCd() + "、治療開始時刻=" + ordMain.getIndTreatStartTime() + "、指示者=" + bodyData.getInd_user_id() + "、更新者=" + bodyData.getUpd_user_id() + "])";
 //            eventLogMessage.setLogMessage(strMsg);
 //            logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-//            return new ResponseEntity<>("患者治療パターン情報の登録に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//            return new ResponseEntity<>("患者治療パターン情報の登録に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //          }
 //          editData.setIndSchInfo(indSchInfo);
 //          // 治療条件
@@ -10934,7 +11292,7 @@ public class OrdMainResource {
 //          eventLogMessage.setLogMessage("insertByTreatSetCd Exception: " + e);
 //          logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
 //          HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-//          ResponseEntity<String> re = new ResponseEntity<>("患者治療パターン情報の登録に失敗しました。", null, status);
+//          ResponseEntity<String> re = new ResponseEntity<>("患者治療パターン情報の登録に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
 //          return re;
 //        }
 //
@@ -10988,8 +11346,8 @@ public class OrdMainResource {
 //    responseData.put("ordNoList", ordNoList.toString());
 //    // add FNSI-指示値・装置設定・装置プログラムの相関チェック 安寧 end
 //    // mod FNSI-指示値・装置設定・装置プログラムの相関チェック 安寧 start
-//    //return new ResponseEntity<>(ordNoList.toString(), null, HttpStatus.OK);
-//    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+//    //return new ResponseEntity<>(ordNoList.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
+//    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //    // mod FNSI-指示値・装置設定・装置プログラムの相関チェック 安寧 end
 //  }
 // del #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao end
@@ -11078,14 +11436,14 @@ public class OrdMainResource {
 //      if (1 != listMstTreatSet.size()) {
 //        HttpStatus status = HttpStatus.BAD_REQUEST;
 //        //引数は、ボディデータ,ヘッダーデータ,ステータス
-//        ResponseEntity<String> re = new ResponseEntity<>("治療方法セットマスタ参照エラー", null, status);
+//        ResponseEntity<String> re = new ResponseEntity<>("治療方法セットマスタ参照エラー", (org.springframework.http.HttpHeaders) null, status);
 //        return re;
 //          }
 //      Timestamp bodyUpdate = new Timestamp(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").parse(bodyData.getUp_date()).getTime());
 //      if (false == listMstTreatSet.get(0).getUpDate().equals(bodyUpdate)) {
 //        HttpStatus status = HttpStatus.BAD_REQUEST;
 //        //引数は、ボディデータ,ヘッダーデータ,ステータス
-//        ResponseEntity<String> re = new ResponseEntity<>("排他エラー", null, status);
+//        ResponseEntity<String> re = new ResponseEntity<>("排他エラー", (org.springframework.http.HttpHeaders) null, status);
 //        return re;
 //        }
 //      // 更新対象治療方法コードを格納
@@ -11198,7 +11556,7 @@ public class OrdMainResource {
 //        deleteBodyData.setDupulicate_treat_date(deleteDate.toString());
 //        deleteBodyData.setIs_unregistered_ind_history("true");
 //      } catch (Exception e) {
-//        return new ResponseEntity<>("治療予定中止用データ作成失敗", null, HttpStatus.BAD_REQUEST);
+//        return new ResponseEntity<>("治療予定中止用データ作成失敗", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
 //      }
 //      // add FNSI-チェックリスト仕様変更対応#401、#439_患者経過総合ビューア機能分。 周 start
 //      // 治療方法変更の場合「治療方法のみ変更」「対象外」
@@ -11522,7 +11880,7 @@ public class OrdMainResource {
 ////      ResponseEntity<String> deletePlan = this.deleteIndPlan(deleteBodyData, validationResult);
 //      // 治療予定中止の処理が異常だった場合
 ////      if (HttpStatus.OK != deletePlan.getStatusCode()) {
-////        return new ResponseEntity<>(deletePlan.getBody(), null, deletePlan.getStatusCode());
+////        return new ResponseEntity<>(deletePlan.getBody(), (org.springframework.http.HttpHeaders) null, deletePlan.getStatusCode());
 ////      }
 //      // 条件送信を行なった場合、メッセージを返す
 //      if (doCancelList.size() > 0) {
@@ -11560,12 +11918,12 @@ public class OrdMainResource {
 ////        // 指示履歴未登録フラグを立てる
 ////        bodyData.setIs_unregistered_history("true");
 ////      } catch (Exception e) {
-////        return new ResponseEntity<>("治療予定日リスト格納失敗", null, HttpStatus.BAD_REQUEST);
+////        return new ResponseEntity<>("治療予定日リスト格納失敗", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
 ////      }
 //      // 治療予定作成
 //      ResponseEntity<String> createPlan = this.insertByTreatSetCd(bodyData, validationResult, ntssUser);
 //      if (HttpStatus.OK != createPlan.getStatusCode()) {
-//        return new ResponseEntity<>(createPlan.getBody(), null, createPlan.getStatusCode());
+//        return new ResponseEntity<>(createPlan.getBody(), (org.springframework.http.HttpHeaders) null, createPlan.getStatusCode());
 //        //add 8117 治療方法編集画面から治療方法セットを適用すると既に設定しているクール・ベッド・治療開始時刻がすべて未登録となる 張 start
 //      }else if(new JSONObject(createPlan.getBody()).has("BedUnregistOrdList")){
 //        responseData.put("updateIndSchedule",new JSONObject(createPlan.getBody()).get("BedUnregistOrdList"));
@@ -11664,7 +12022,7 @@ public class OrdMainResource {
 ////      journalService.callCreateJournalForCtrNo(ctlNoList);
 ////      // add 2023-02-10 bug #8157 修正 chen end
 //      // del 8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。zhou end
-//      return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+//      return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //    } else {
 //      // 治療方法のみ変更する場合
 //      // 更新対象リストを取得
@@ -11821,7 +12179,7 @@ public class OrdMainResource {
 //        e.printStackTrace();
 //        eventLogMessage.setLogMessage(e.getMessage());
 //        logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-//        return new ResponseEntity<>("更新情報の作成に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//        return new ResponseEntity<>("更新情報の作成に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //      }
 //
 //      // 更新対象が存在する場合のみ、以下の処理を実行する
@@ -11841,7 +12199,7 @@ public class OrdMainResource {
 //          logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
 //          HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 //          //引数は、ボディデータ,ヘッダーデータ,ステータス
-//          ResponseEntity<String> re = new ResponseEntity<>("装置設定情報の作成に失敗しました。", null, status);
+//          ResponseEntity<String> re = new ResponseEntity<>("装置設定情報の作成に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
 //          return re;
 //        }
 //        List<Long> patIdList = new ArrayList<>();
@@ -12145,7 +12503,7 @@ public class OrdMainResource {
 //            if (listPatMain.size() == 0) {
 //              HttpStatus status = HttpStatus.BAD_REQUEST;
 //              //引数は、ボディデータ,ヘッダーデータ,ステータス
-//              ResponseEntity<String> re = new ResponseEntity<>("患者情報(pat_main)参照エラー", null, status);
+//              ResponseEntity<String> re = new ResponseEntity<>("患者情報(pat_main)参照エラー", (org.springframework.http.HttpHeaders) null, status);
 //              return re;
 //            }
 //            PatMain patMain = listPatMain.get(0);
@@ -12412,7 +12770,7 @@ public class OrdMainResource {
   // );
 ////             if (-1 == patPatternCount) {
 ////               // エラーログはサブ関数で出力済み
-////               return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+////               return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 ////             }
 //        }
 //
@@ -12520,7 +12878,7 @@ public class OrdMainResource {
 ////      journalService.callCreateJournalForCtrNo(ctlNoList);
 //      // add 2023-02-10 bug #8157 修正 chen end
 //        // del 8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。zhou end
-//      return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+//      return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //    }
 //  }
   //del #10412 次患者更新関連全体見直し対応 朴 end
@@ -12616,7 +12974,7 @@ public class OrdMainResource {
 //        HttpStatus status = HttpStatus.BAD_REQUEST;
 //        //引数は、ボディデータ,ヘッダーデータ,ステータス
 //        //upd by ztc 2023-03-02 [Optimize runtime No.6968] --start /
-//        return new ResponseEntity<>("治療方法セットマスタ参照エラー", null, status);
+//        return new ResponseEntity<>("治療方法セットマスタ参照エラー", (org.springframework.http.HttpHeaders) null, status);
 //        //upd by ztc 2023-03-02 [Optimize runtime No.6968] --end /
 //      }
 //      Timestamp bodyUpdate = new Timestamp(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").parse(bodyData.getUp_date()).getTime());
@@ -12626,7 +12984,7 @@ public class OrdMainResource {
 //        HttpStatus status = HttpStatus.BAD_REQUEST;
 //        //引数は、ボディデータ,ヘッダーデータ,ステータス
 //        //upd by ztc 2023-03-02 [Optimize runtime No.6968] --start /
-//        return new ResponseEntity<>("排他エラー", null, status);
+//        return new ResponseEntity<>("排他エラー", (org.springframework.http.HttpHeaders) null, status);
 //        //upd by ztc 2023-03-02 [Optimize runtime No.6968] --end /
 //      }
 //      // 更新対象治療方法コードを格納
@@ -12751,7 +13109,7 @@ public class OrdMainResource {
 //        deleteBodyData.setDupulicate_treat_date(deleteDate.toString());
 //        deleteBodyData.setIs_unregistered_ind_history("true");
 //      } catch (Exception e) {
-//        return new ResponseEntity<>("治療予定中止用データ作成失敗", null, HttpStatus.BAD_REQUEST);
+//        return new ResponseEntity<>("治療予定中止用データ作成失敗", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
 //      }
 //      // add FNSI-チェックリスト仕様変更対応#401、#439_患者経過総合ビューア機能分。 周 start
 //      // 治療方法変更の場合「治療方法のみ変更」「対象外」
@@ -13196,7 +13554,7 @@ public class OrdMainResource {
 ////      ResponseEntity<String> deletePlan = this.deleteIndPlan(deleteBodyData, validationResult);
 //      // 治療予定中止の処理が異常だった場合
 ////      if (HttpStatus.OK != deletePlan.getStatusCode()) {
-////        return new ResponseEntity<>(deletePlan.getBody(), null, deletePlan.getStatusCode());
+////        return new ResponseEntity<>(deletePlan.getBody(), (org.springframework.http.HttpHeaders) null, deletePlan.getStatusCode());
 ////      }
 //      // 条件送信を行なった場合、メッセージを返す
 //      if (doCancelList.size() > 0) {
@@ -13233,7 +13591,7 @@ public class OrdMainResource {
 ////        // 指示履歴未登録フラグを立てる
 ////        bodyData.setIs_unregistered_history("true");
 ////      } catch (Exception e) {
-////        return new ResponseEntity<>("治療予定日リスト格納失敗", null, HttpStatus.BAD_REQUEST);
+////        return new ResponseEntity<>("治療予定日リスト格納失敗", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
 ////      }
 //      // 治療予定作成
 //      //upd by ztc 2023-03-02 [Optimize runtime No.6968] --start /
@@ -13253,7 +13611,7 @@ public class OrdMainResource {
 //      ResponseEntity<String> createPlan = this.updateByTreatSetCd(bodyData, validationResult, ordMainList, user, ntssUser, listMstTreatSet.get(0), listPatMain);
 //      //upd by ztc 2023-03-02 [Optimize runtime No.6968] --end /
 //      if (HttpStatus.OK != createPlan.getStatusCode()) {
-//        return new ResponseEntity<>(createPlan.getBody(), null, createPlan.getStatusCode());
+//        return new ResponseEntity<>(createPlan.getBody(), (org.springframework.http.HttpHeaders) null, createPlan.getStatusCode());
 //        //add 8117 治療方法編集画面から治療方法セットを適用すると既に設定しているクール・ベッド・治療開始時刻がすべて未登録となる 張 start
 //      }else if(new JSONObject(createPlan.getBody()).has("BedUnregistOrdList")){
 //        responseData.put("updateIndSchedule",new JSONObject(createPlan.getBody()).get("BedUnregistOrdList"));
@@ -13563,7 +13921,7 @@ public class OrdMainResource {
 //        e.printStackTrace();
 //        eventLogMessage.setLogMessage(e.getMessage());
 //        logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-//        return new ResponseEntity<>("更新情報の作成に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//        return new ResponseEntity<>("更新情報の作成に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //      }
 //      // 更新対象が存在する場合のみ、以下の処理を実行する
 //      //upd by ztc 2023-03-02 [Optimize runtime No.6968] --start /
@@ -13583,7 +13941,7 @@ public class OrdMainResource {
 //          logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
 //          HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 //          //引数は、ボディデータ,ヘッダーデータ,ステータス
-//          ResponseEntity<String> re = new ResponseEntity<>("装置設定情報の作成に失敗しました。", null, status);
+//          ResponseEntity<String> re = new ResponseEntity<>("装置設定情報の作成に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
 //          return re;
 //        }
 ////        List<Long> patIdList = new ArrayList<>();
@@ -14002,7 +14360,7 @@ public class OrdMainResource {
 //              HttpStatus status = HttpStatus.BAD_REQUEST;
 //              //引数は、ボディデータ,ヘッダーデータ,ステータス
 //              //upd by ztc 2023-03-02 [Optimize runtime No.6968] --start /
-//              return new ResponseEntity<>("患者情報(pat_main)参照エラー", null, status);
+//              return new ResponseEntity<>("患者情報(pat_main)参照エラー", (org.springframework.http.HttpHeaders) null, status);
 //              //upd by ztc 2023-03-02 [Optimize runtime No.6968] --end /
 //            }
 //            PatMain patMain = listPatMain.get(0);
@@ -14364,7 +14722,7 @@ public class OrdMainResource {
 //          // mod 9281 日次処理にて正しくスケジュールが作成されない事がある 関 end
 ////             if (-1 == patPatternCount) {
 ////               // エラーログはサブ関数で出力済み
-////               return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+////               return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 ////             }
 //        }
 //        // 次患者更新
@@ -14512,7 +14870,7 @@ public class OrdMainResource {
 //          }
 //    //mod #10196 Ord_Material_Save operation 20240126 ztc end
 //    // add #9845 愁訴処置に入力した薬剤がord_material_saveに登録されない end
-//    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+//    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //        }
   //del #10412 次患者更新関連全体見直し対応 朴 end
 
@@ -14550,7 +14908,22 @@ public class OrdMainResource {
    * @throws Exception
    */
   @PostMapping("updateIndScheduleOnceForAll")
-  public ResponseEntity<?> updateIndScheduleOnceForAll(@RequestBody Map<String, String> params) throws Exception {
+  public ResponseEntity<?> updateIndScheduleOnceForAll(@RequestBody Map<String, String> params,
+                                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                       @AuthenticationPrincipal NtssUser ntssUser
+                                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws Exception {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              String facilityCd = params.get("facilityCd");
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
               String facilityCd = params.get("facilityCd");
     NtssUser user = (NtssUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     String pcKey = (user != null) ? user.getFacilityCd() + user.getSessionId() : facilityCd;
@@ -14628,12 +15001,26 @@ public class OrdMainResource {
    * @return  current processing progress
    */
   @GetMapping("/getUpdKurProcess/{facilityCd}")
-  public ResponseEntity<OrdMainForJournal> getUpdKurProcess(@PathVariable String facilityCd) {
+  public ResponseEntity<OrdMainForJournal> getUpdKurProcess(@PathVariable String facilityCd,
+                                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                            @AuthenticationPrincipal NtssUser ntssUser
+                                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     NtssUser user = (NtssUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     String pcKey = (user != null) ? user.getFacilityCd() + user.getSessionId() : facilityCd;
 
     OrdMainForJournal responseObj = ordMainService.getUpdKurProcess(pcKey);
-    if (Objects.isNull(responseObj)) new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+    if (Objects.isNull(responseObj)) new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 
     return new ResponseEntity<>(responseObj, HttpStatus.OK);
   }
@@ -14664,6 +15051,19 @@ public class OrdMainResource {
     ,@RequestParam(defaultValue = "004") String funcCd
     // add #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao end
   ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if (!validationResult.hasErrors()) {
+              if (!ntssUser.isNkkAdminUser()) {
+                  String facilityCd = bodyData.getFacility_cd();
+                  if (facilityCd != null && !facilityCd.isEmpty() &&
+                      !facilityCd.equals(ntssUser.getFacilityCd())) {
+                      InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+                  }
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     // mod #7235 2022-06-23 他のスケジュールと重複してベッド未登録となった際のイベントが作成されない 孟堅　end
     // 受信データログ出力
 //upd by ztc 2023-04-03 [Optimize runtime No.6118] --start
@@ -14709,7 +15109,7 @@ public class OrdMainResource {
         //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
       }
       // 引数は、ボディデータ、ヘッダーデータ、ステータス
-      return new ResponseEntity<>("パラメータエラー", null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>("パラメータエラー", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
     // 戻り値情報
     JSONObject responseData = new JSONObject("{}");
@@ -14774,7 +15174,7 @@ public class OrdMainResource {
       ordMain = ordMain.stream().filter(ord -> "0".equals(ord.getRstDialysisState())).collect(Collectors.toList());
     }
     if(ordMain.size()<=0){
-      return new ResponseEntity<>(new JSONObject("{}").toString(), null, HttpStatus.OK);
+      return new ResponseEntity<>(new JSONObject("{}").toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     }
     //add #10266 end
 
@@ -14825,7 +15225,7 @@ public class OrdMainResource {
               // クール情報を更新　(ind_kur_cd(更新前) →　edit_ind_kur_cd(更新後)へ)
               editedOrdMain.setIndKurCd(editedKurCd);
 
-            } catch (IOException e) {
+            } catch (tools.jackson.core.JacksonException e) {
               // TODO 自動生成された catch ブロック
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
@@ -14876,7 +15276,7 @@ public class OrdMainResource {
 //            bodyData.getInd_start_date().replaceAll("-", ""),
 //            Long.parseLong(bodyData.getEdit_ind_kur_cd()));
 //          if (HttpStatus.OK != response.getStatusCode()) {
-//            return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//            return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //          }
           List<OrdSchedule> scheduleInfo = ordMainSchChangeUtils.searchDuplicatedSchList(bodyData.getFacility_cd(), bodyData.getEdit_ind_kur_cd(), bodyData.getEdit_ind_bed_cd(), bodyData.getEdit_ind_treat_start_time(), ordNoList);
           // mod #11061 患者経過総合ビューア＞スケジュール編集でベッドのプルダウンリスト展開でDB負荷が高くシステムが操作不可となる。(恒久対応) zkm end
@@ -15354,7 +15754,7 @@ public class OrdMainResource {
 //            // add FNSI-【1006】最新の改修対象一覧のIES89対応 韓 end
 //          }
 //
-//          return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+//          return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //        }
         //del #11061 患者経過総合ビューア＞スケジュール編集でベッドのプルダウンリスト展開でDB負荷が高くシステムが操作不可となる。(恒久対応) zkm end
 
@@ -15475,7 +15875,7 @@ public class OrdMainResource {
           // del 2023-02-10 bug #8157 修正 chen end
           // add Change the call api [/journal/create] vue loop call to java back-end batch call 張 start
           if (false == ret) {
-            return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
           }
           // ダミースケジュール操作処理実施(クール未登録、ベッド未登録の場合はダミースケジュールを削除)
           String opeMode = "3";
@@ -15491,7 +15891,7 @@ public class OrdMainResource {
             //mod FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
             eventLogMessage.setLogMessage(strMsg);
             logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-            return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
           }
           //add #11061 患者経過総合ビューア＞スケジュール編集でベッドのプルダウンリスト展開でDB負荷が高くシステムが操作不可となる。(恒久対応) zkm start
         }
@@ -15519,7 +15919,7 @@ public class OrdMainResource {
             //mod FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
             eventLogMessage.setLogMessage(strMsg);
             logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-            return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
           }
           editData.setIndSchInfo(indSchInfo);
           int patPatternCount = patTreatmentPatternUtils.updatePatTreatmentPatternIndItem(
@@ -15557,7 +15957,7 @@ public class OrdMainResource {
 
 //            if (-1 == patPatternCount) {
 //              // エラーログはサブ関数で出力済み
-//              return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//              return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //            }
         }
          /*
@@ -15631,7 +16031,7 @@ public class OrdMainResource {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
       logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
       // 引数は、ボディデータ、ヘッダーデータ、ステータス
-      return new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     // del 8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。zhou start
     // add 2023-02-10 bug #8157 修正 chen start
@@ -15661,7 +16061,7 @@ public class OrdMainResource {
       resultAllChangeBeforeDataInfoList.put("ord_main", objectBeforeList);
 
       List<JournalCreateRequestPayload> journalList = journalCreatePayloadService.createJournalPayload(facilityCd, resultAllChangedDataInfoList, resultAllChangeBeforeDataInfoList, patIdList, updUserId, actionMode);
-      if (!org.apache.commons.collections.CollectionUtils.isEmpty(journalList)) {
+      if (!org.apache.commons.collections4.CollectionUtils.isEmpty(journalList)) {
         journalService.callCreateJournalForCtrNo(journalList);
       }
     } catch (Exception e) {
@@ -15671,7 +16071,7 @@ public class OrdMainResource {
     }
     // add #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao end
 
-    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   // add FNSI-改修内容 スケジュール移動に既に同一クール、治療が存在する場合、警告を出す（日付） 穆 start
@@ -15686,7 +16086,22 @@ public class OrdMainResource {
   @PostMapping("/changeDay/TreatDateList")
   public ResponseEntity<List<OrdMain>> getOrdMainTreatDateListDayInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiIndCommSearchConditions bodyData, BindingResult validationResult
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = bodyData.getFacility_cd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
     List<OrdMain> listRet = new ArrayList<>();
     try {
@@ -15728,7 +16143,23 @@ public class OrdMainResource {
   public ResponseEntity<List<OrdMainWithlastWeightAfter>> getOrdMainTreatDateList(
 //2019.01.29      public ResponseEntity<List<DummyOrdMain>> getOrdMainTreatDateList(
     @Validated @RequestBody ApiEntityOrdMain.ValiIndCommSearchConditions bodyData, BindingResult validationResult
-  ) throws URISyntaxException {
+  ,
+    @RequestParam(required = false) Long selectedPatId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    Long authSelectedPatId = selectedPatId;
+    if (authSelectedPatId == null && bodyData.getPat_id() != null && !bodyData.getPat_id().isEmpty()) {
+      authSelectedPatId = Long.parseLong(bodyData.getPat_id());
+    }
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(
+        ntssUser, bodyData.getFacility_cd(), authSelectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
 //2019.01.29    List<DummyOrdMain> listRet = new ArrayList<>();
 //        List<OrdMain> listRet = new ArrayList<>();
@@ -15810,7 +16241,22 @@ public class OrdMainResource {
   @PostMapping("/weekChangeTreatDateList")
   public ResponseEntity<List<OrdMain>> getWeekChangeOrdMainTreatDateList(
     @Validated @RequestBody ApiEntityOrdMain.ValiIndCommSearchConditions bodyData, BindingResult validationResult
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if (!ntssUser.isNkkAdminUser()) {
+              String facilityCd = bodyData.getFacility_cd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
     List<OrdMain> listRet = new ArrayList<>();
     try {
@@ -15838,7 +16284,24 @@ public class OrdMainResource {
   @PostMapping("/sharingInfo/getOrdMainOfIndMediInfo")
   public ResponseEntity<List<OrdMain>> getOrdMainOfIndMediInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiIndMediInfoSearchCondition bodyData,
-    BindingResult validationResult ){
+    BindingResult validationResult ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+){
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if (!validationResult.hasErrors()) {
+              if (!ntssUser.isNkkAdminUser()) {
+                  String facilityCd = bodyData.getFacilityCd();
+                  if (facilityCd != null && !facilityCd.isEmpty() &&
+                      !facilityCd.equals(ntssUser.getFacilityCd())) {
+                      InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+                  }
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     if (StringUtils.isEmpty(bodyData.getStartTime())){
       EventLogMessage eventLogMessage = new EventLogMessage();
       eventLogMessage.setSqlIdentification("getOrdMainOfIndMediInfo Exception: startTime is null");
@@ -15871,7 +16334,22 @@ public class OrdMainResource {
   @PostMapping("/sharingInfo/TreatDateList")
   public ResponseEntity<List<OrdMainSharingInfo>> getOrdMainTreatDateListSharingInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiIndCommSearchConditions bodyData, BindingResult validationResult
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if (!ntssUser.isNkkAdminUser()) {
+              String facilityCd = bodyData.getFacility_cd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
     List<OrdMainSharingInfo> listRet = new ArrayList<>();
     try {
@@ -15954,9 +16432,18 @@ public class OrdMainResource {
    *
    * @return 薬剤、医療材料の表示順
    * @throws URISyntaxException
-   */
+  */
   @GetMapping("/displayOrder")
-  public ResponseEntity<List<FacilitySettingNoDisplayOrder>> getDisplayOrder(@RequestParam(value = "facility_cd", required = true) String facilityCd) throws URISyntaxException {
+  public ResponseEntity<List<FacilitySettingNoDisplayOrder>> getDisplayOrder(@RequestParam(value = "facility_cd", required = true) String facilityCd,
+                                                                             @RequestParam(required = false) Long selectedPatId,
+                                                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                             @AuthenticationPrincipal NtssUser ntssUser
+                                                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
     HttpStatus status = HttpStatus.OK;
     List<FacilitySettingNoDisplayOrder> listDisplayOrder = new ArrayList<>();
     try {
@@ -15983,7 +16470,22 @@ public class OrdMainResource {
   // public ResponseEntity<List<OrdMain>> getOrdMainIsTreaOnlyTreatDateList(
   public ResponseEntity<List<OrdMainSharingInfo>> getOrdMainIsTreaOnlyTreatDateList(
     @Validated @RequestBody ApiEntityOrdMain.ValiIsTreatOnlyDateList bodyData, BindingResult validationResult
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              String facilityCd = bodyData.getFacility_cd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
     List<OrdMainSharingInfo> listRet = new ArrayList<>();
     try {
@@ -16021,7 +16523,22 @@ public class OrdMainResource {
   @PostMapping("/IsTreaOnlyTreatPastDateList")
   public ResponseEntity<List<OrdMain>> getOrdMainIsTreaOnlyTreatPastDateList(
     @Validated @RequestBody ApiEntityOrdMain.ValiIsTreatOnlyDateList bodyData, BindingResult validationResult
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              String facilityCd = bodyData.getFacility_cd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
     List<OrdMain> listRet = new ArrayList<>();
     try {
@@ -16051,7 +16568,22 @@ public class OrdMainResource {
    */
   @PostMapping("/WeekPerTreatCdList")
   public ResponseEntity<?> getWeekPerTreatCdList(
-    @RequestBody Map<String, String> param) {
+    @RequestBody Map<String, String> param,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              String facilityCd = param.get("facility_cd");
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
     List<String> listRet = new ArrayList<>();
     try {
@@ -16085,7 +16617,23 @@ public class OrdMainResource {
   @PostMapping("deleteIndPlan")
   public ResponseEntity<String> deleteIndPlan(
     @Validated @RequestBody ApiEntityOrdMain.ValiDeleteTreatPlan bodyData, BindingResult validationResult
-  ) throws URISyntaxException, ParseException, JSONException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, ParseException, JSONException {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260506 start
+      if(!ntssUser.isNkkAdminUser()) {
+        PatMain patMain = patMainDao.selectById(Long.parseLong(bodyData.getPat_id()));
+        if (patMain != null && patMain.getFacility_cd() != null &&
+          !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+            "patMain.getFacility_cd()=" + patMain.getFacility_cd() + " pat_id=" + bodyData.getPat_id() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260506 end
+
 
     //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 start
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -16120,7 +16668,7 @@ public class OrdMainResource {
       }
       HttpStatus status = HttpStatus.BAD_REQUEST;
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      ResponseEntity<String> re = new ResponseEntity<>("パラメータエラー", null, status);
+      ResponseEntity<String> re = new ResponseEntity<>("パラメータエラー", (org.springframework.http.HttpHeaders) null, status);
       return re;
     }
 
@@ -16208,7 +16756,7 @@ public class OrdMainResource {
       ordMainList = ordMainList.stream().filter(ord -> "0".equals(ord.getRstDialysisState())).collect(Collectors.toList());
     }
     if(ordMainList.size()<=0){
-      return new ResponseEntity<>(new JSONObject("{}").toString(), null, HttpStatus.OK);
+      return new ResponseEntity<>(new JSONObject("{}").toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     }
     //add #10266 end
 
@@ -16269,7 +16817,7 @@ public class OrdMainResource {
       JSONObject msgJson = new JSONObject("{}");
       msgJson.put("msgCdList", checkResponse.getMsgCdList());
 
-      return new ResponseEntity<>(msgJson.toString(), null, HttpStatus.OK);
+      return new ResponseEntity<>(msgJson.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     }
 
     Map<String, List<Object>> resultAllChangeBeforeDataInfoList = new HashMap<>();
@@ -16293,7 +16841,7 @@ public class OrdMainResource {
     if (0 > result.getDeletedOrdMainCount()) {
       HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      ResponseEntity<String> re = new ResponseEntity<>("レコードの更新に失敗しました。", null, status);
+      ResponseEntity<String> re = new ResponseEntity<>("レコードの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
       return re;
     } else if (result.getDeletedOrdMainCount() > 0) {
       // 治療予定の中止が実行されている場合
@@ -16325,7 +16873,7 @@ public class OrdMainResource {
       resultAllChangeBeforeDataInfoList.put("ord_main", objectList);
 
       List<JournalCreateRequestPayload> journalList = journalCreatePayloadService.createJournalPayload(facilityCd, null, resultAllChangeBeforeDataInfoList, patIdList, updUserId, actionMode);
-      if (!org.apache.commons.collections.CollectionUtils.isEmpty(journalList)) {
+      if (!org.apache.commons.collections4.CollectionUtils.isEmpty(journalList)) {
         journalService.callCreateJournalForCtrNo(journalList);
       }
     } catch (Exception e) {
@@ -16334,7 +16882,7 @@ public class OrdMainResource {
       logService.log(LogLevel.ERROR, eventLogMessage, LoggingConstant.FUNCTION_CODE.FUNC_SCHEDULE_LIST, SERVICE_NAME.FNSI, null);
     }
     // add #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao end
-    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
   // add #9273 施設設定マスタのNo105の設定どおり動かない。  start
   private void deleteEventAndBbs(@RequestBody @Validated ApiEntityOrdMain.ValiDeleteTreatPlan bodyData, Long patId, List<OrdMain> ordMainList) {
@@ -16427,6 +16975,18 @@ public class OrdMainResource {
     , @AuthenticationPrincipal NtssUser ntssUser
     // add #10553 ②死亡、転出、一時転出のスケジュール(治療、検査依頼、一般撮影検査依頼)の削除に合わせて連携イベントを発生させるように修正が必要 end
   ) throws URISyntaxException, ParseException, JSONException {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260506 start
+      if(!ntssUser.isNkkAdminUser()) {
+        PatMain patMain = patMainDao.selectById(Long.parseLong(bodyData.getPat_id()));
+        if (patMain != null && patMain.getFacility_cd() != null &&
+          !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+            "patMain.getFacility_cd()=" + patMain.getFacility_cd() + " pat_id=" + bodyData.getPat_id() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260506 end
+
 
     // バリデーションエラーチェック
     if (validationResult.hasErrors()) {
@@ -16440,7 +17000,7 @@ public class OrdMainResource {
       }
       HttpStatus status = HttpStatus.BAD_REQUEST;
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      ResponseEntity<String> re = new ResponseEntity<>("パラメータエラー", null, status);
+      ResponseEntity<String> re = new ResponseEntity<>("パラメータエラー", (org.springframework.http.HttpHeaders) null, status);
       return re;
     }
     List<Map<String, String>> moveOutDateInfoMapList = bodyData.getMove_out_date();
@@ -16553,7 +17113,7 @@ public class OrdMainResource {
         if (0 > count) {
           HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
           //引数は、ボディデータ,ヘッダーデータ,ステータス
-          ResponseEntity<String> re = new ResponseEntity<>("レコードの更新に失敗しました。", null, status);
+          ResponseEntity<String> re = new ResponseEntity<>("レコードの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
           return re;
         } else if (count > 0) {
           // 治療予定の中止が実行されている場合
@@ -16634,7 +17194,7 @@ public class OrdMainResource {
       }
     }
     // mod #10597 既往歴，入外・転入出による治療予定中止の動作が不正 20240514 ztc end
-    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   /***
@@ -16705,7 +17265,22 @@ public class OrdMainResource {
   @PostMapping("insertByOrdNo")
   public ResponseEntity<String> insertByOrdNo(
     @Validated @RequestBody ApiEntityOrdMain.ValiCreateTreatPlanByOrdNo bodyData, BindingResult validationResult
-  ) throws URISyntaxException, ParseException, JSONException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, ParseException, JSONException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              String facilityCd = bodyData.getFacility_cd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to insertByOrdNo OrdMain : " + bodyData.getOrd_no() + bodyData.getUp_date());
@@ -16731,7 +17306,7 @@ public class OrdMainResource {
         //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
       }
       // 引数は、ボディデータ、ヘッダーデータ、ステータス
-      return new ResponseEntity<>("パラメータエラー", null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>("パラメータエラー", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     /* modify by luchanghai  2023-02-01 [CodeOptimization,Transaction]  start */
@@ -16745,7 +17320,7 @@ public class OrdMainResource {
 //    if (1 != listOrdMainRet.size()) {
 //      HttpStatus status = HttpStatus.BAD_REQUEST;
 //      //引数は、ボディデータ,ヘッダーデータ,ステータス
-//      ResponseEntity<String> re = new ResponseEntity<>("治療情報参照エラー", null, status);
+//      ResponseEntity<String> re = new ResponseEntity<>("治療情報参照エラー", (org.springframework.http.HttpHeaders) null, status);
 //      return re;
 //    }
 //    //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 start
@@ -16766,7 +17341,7 @@ public class OrdMainResource {
 //      //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
 //      HttpStatus status = HttpStatus.BAD_REQUEST;
 //      //引数は、ボディデータ,ヘッダーデータ,ステータス
-//      ResponseEntity<String> re = new ResponseEntity<>("排他エラー", null, status);
+//      ResponseEntity<String> re = new ResponseEntity<>("排他エラー", (org.springframework.http.HttpHeaders) null, status);
 //      return re;
 //    }
 //
@@ -16777,7 +17352,7 @@ public class OrdMainResource {
 //    if (listPatMain.size() == 0) {
 //      HttpStatus status = HttpStatus.BAD_REQUEST;
 //      //引数は、ボディデータ,ヘッダーデータ,ステータス
-//      ResponseEntity<String> re = new ResponseEntity<>("患者情報(pat_main)参照エラー", null, status);
+//      ResponseEntity<String> re = new ResponseEntity<>("患者情報(pat_main)参照エラー", (org.springframework.http.HttpHeaders) null, status);
 //      return re;
 //    }
 //    PatMain patMain = listPatMain.get(0);
@@ -16834,7 +17409,7 @@ public class OrdMainResource {
 //        //レコード作成に失敗した場合
 //        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 //        //引数は、ボディデータ,ヘッダーデータ,ステータス
-//        ResponseEntity<String> re = new ResponseEntity<>("レコードの作成に失敗しました。", null, status);
+//        ResponseEntity<String> re = new ResponseEntity<>("レコードの作成に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
 //
 //        return re;
 //      } else {
@@ -16850,7 +17425,7 @@ public class OrdMainResource {
 //        String strMsg = "患者治療パターン登録に失敗しました(スケジュール情報異常:[ベッドコード=" + ordMain.getIndBedCd() + "、治療開始時刻=" + ordMain.getIndTreatStartTime() + "、指示者=" + bodyData.getInd_user_id() + "、更新者=" + bodyData.getUpd_user_id() + "])";
 //        eventLogMessage.setLogMessage(strMsg);
 //        logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-//        return new ResponseEntity<>("患者治療パターン情報の登録に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//        return new ResponseEntity<>("患者治療パターン情報の登録に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //      }
 //      editData.setTreatType(Double.parseDouble(bodyData.getTreat_type()));
 //      editData.setIndTreatStartDate(treatDays.getString(0));
@@ -16883,13 +17458,28 @@ public class OrdMainResource {
 //        );
 //      }
 //    }
-//    return new ResponseEntity<>(ordNoList.toString(), null, HttpStatus.OK);
+//    return new ResponseEntity<>(ordNoList.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     /* modify by luchanghai  2023-02-01 [CodeOptimization,Transaction]  end */
   }
   // add 10266 by kangjie 20240717 start
   @PostMapping("/treatDateList/calendarFirstTrun")
   public ResponseEntity<List<Map<String, Object>>> treatDateListCalendarFirstTrun(
-    @Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData, BindingResult validationResult) {
+    @Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData, BindingResult validationResult,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if (!ntssUser.isNkkAdminUser()) {
+          String facilityCd = bodyData.getFacility_cd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+              !facilityCd.equals(ntssUser.getFacilityCd())) {
+              InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+              return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     List<OrdMain> ordMain = new ArrayList();
     List<Map<String, Object>> ordMainList = new ArrayList();
     try {
@@ -16936,7 +17526,22 @@ public class OrdMainResource {
   @PostMapping("/treatDateList")
   public ResponseEntity<List<Map<String, Object>>> treatDateList(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData, BindingResult validationResult
-  ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260506 start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260506 end
+) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260506 start
+    String facilityCd = bodyData.getFacility_cd();
+    if (!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.isEmpty() && !facilityCd.equals(ntssUser.getFacilityCd())) {
+        InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+      facilityCd = ntssUser.getFacilityCd();
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260506 end
+
 
     // 選択された日付+曜日の処理
     String startDate = bodyData.getStart_date().replaceAll("-", "");
@@ -17010,7 +17615,22 @@ public class OrdMainResource {
   @PostMapping("/getOrdMainDataInfo")
   public ResponseEntity<List<OrdMain>> getOrdMainDataInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData, BindingResult validationResult
-  ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = bodyData.getFacility_cd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // 選択された日付+曜日の処理
     String startDate = bodyData.getStart_date().replaceAll("-", "");
@@ -17068,7 +17688,23 @@ public class OrdMainResource {
   @PostMapping("/getIndIndCommentInfo")
   public ResponseEntity<List<OrdMainIndIndCommentInfo>> getIndCommentInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData, BindingResult validationResult
-  ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260506 start
+      if(!ntssUser.isNkkAdminUser()) {
+        PatMain patMain = patMainDao.selectById(Long.parseLong(bodyData.getPat_id()));
+        if (patMain != null && patMain.getFacility_cd() != null &&
+          !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+            "patMain.getFacility_cd()=" + patMain.getFacility_cd() + " pat_id=" + bodyData.getPat_id() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260506 end
+
 
     // 日付文字列変換
     Function<String, String> convertDate = (sdate) -> {
@@ -17137,7 +17773,22 @@ public class OrdMainResource {
    * @return org.springframework.http.ResponseEntity<jp.co.nikkiso.ntss.core.entity.OrdMain>
    **/
   @PostMapping("/getFutureOrdMainConditionInfo")
-  public ResponseEntity<FutureOrdMainConditionInfo> getFutureOrdMainConditionInfo(@Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData, BindingResult validationResult) {
+  public ResponseEntity<FutureOrdMainConditionInfo> getFutureOrdMainConditionInfo(@Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData, BindingResult validationResult,
+                                                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = bodyData.getFacility_cd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     String startDate = bodyData.getStart_date().replaceAll("-", "");
     String endDate = bodyData.getEnd_date().compareTo("") != 0 ? bodyData.getEnd_date().replaceAll("-", "") : null;
     List<Integer> weeksArry = IndicationUtils.getWeekPattern((String) bodyData.getWeeks());
@@ -17193,7 +17844,22 @@ public class OrdMainResource {
   @PostMapping("/validIndEquipmentsList")
   public ResponseEntity<HashMap<String, List<Integer>>> validIndEquipmentsList(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData, BindingResult validationResult
-  ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if (!ntssUser.isNkkAdminUser()) {
+              String facilityCd = bodyData.getFacility_cd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     EventLogMessage eventLogMessage = new EventLogMessage();
     // 指示有効な医療材料 HashMap<医療材料区分, List<医療材料コード>>(医療材料コードに重複あり)
     HashMap<String, List<Integer>> tempEquipTypeAndEquipCdMap = new HashMap<>();
@@ -17286,7 +17952,22 @@ public class OrdMainResource {
   @PostMapping("/getTreatmentConditionSetting")
   public ResponseEntity<List<TreatmentConditionSetting>> getTreatmentConditionSetting(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData, BindingResult validationResult
-  ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              String facilityCd = bodyData.getFacility_cd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // 選択された日付+曜日の処理
     String startDate = bodyData.getStart_date().replaceAll("-", "");
@@ -17352,7 +18033,22 @@ public class OrdMainResource {
 //  @Transactional
   @PostMapping("updateWeekPatternInfo")
   public ResponseEntity<String> updateWeekPatternInfo(@Validated @RequestBody ApiEntityOrdMain.ValiWeekPattern bodyData
-  ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+  ,
+                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                      @AuthenticationPrincipal NtssUser ntssUser
+                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if (!ntssUser.isNkkAdminUser()) {
+              String facilityCd = bodyData.getFacility_cd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
     if (Boolean.FALSE.equals(bodyData.getIs_deadline())) {
@@ -17472,7 +18168,7 @@ public class OrdMainResource {
       }
 
       List<JournalCreateRequestPayload> journalList = journalCreatePayloadService.createJournalPayload(bodyData.getFacility_cd(), resultAllChangedDataInfoList, resultAllChangeBeforeDataInfoList, patIdList, updUserId, actionMode);
-      if (!org.apache.commons.collections.CollectionUtils.isEmpty(journalList)) {
+      if (!org.apache.commons.collections4.CollectionUtils.isEmpty(journalList)) {
         journalService.callCreateJournalForCtrNo(journalList);
       }
     } catch (Exception e) {
@@ -17483,7 +18179,7 @@ public class OrdMainResource {
     }
     // add #10553 end
 
-    return new ResponseEntity<>(response.getBody(), null, response.getStatus());
+    return new ResponseEntity<>(response.getBody(), (org.springframework.http.HttpHeaders) null, response.getStatus());
   }
 //    // 施設コード
 //    String facilityCd = bodyData.getFacility_cd();
@@ -17659,7 +18355,7 @@ public class OrdMainResource {
 //    if (0 > count) {
 //      HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 //      //引数は、ボディデータ,ヘッダーデータ,ステータス
-//      ResponseEntity<String> re = new ResponseEntity<>("レコードの更新に失敗しました。", null, status);
+//      ResponseEntity<String> re = new ResponseEntity<>("レコードの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
 //      return re;
 //    }
 //
@@ -17726,7 +18422,7 @@ public class OrdMainResource {
 //              calendar.getTime();
 //              int dateToMoveDayMonth = calendar.get(Calendar.MONTH) + 1;
 //              if (dateIntervalFlg && dateTmpMonDayMonth != dateToMoveDayMonth) {
-//                return new ResponseEntity<>("投与間隔月１のものが月を跨いだ、ご確認ください。", null, HttpStatus.OK);
+//                return new ResponseEntity<>("投与間隔月１のものが月を跨いだ、ご確認ください。", (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //              }
 //            } catch (ParseException e) {
 //              e.printStackTrace();
@@ -18050,8 +18746,8 @@ public class OrdMainResource {
 //          eventLogMessage.setLogMessage(e.getMessage());
 //          logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
 //          // mod FNSI-検体検査の表示の修正 楊 start
-//          // return new ResponseEntity<>("検体検査の日付更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
-//          return new ResponseEntity<>("検査予定の日付更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//          // return new ResponseEntity<>("検体検査の日付更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
+//          return new ResponseEntity<>("検査予定の日付更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //          // mod FNSI-検体検査の表示の修正 楊 end
 //        }
 //        break;
@@ -18072,8 +18768,8 @@ public class OrdMainResource {
 //          eventLogMessage.setLogMessage(e.getMessage());
 //          logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
 //          // mod FNSI-検体検査の表示の修正 楊 start
-//          // return new ResponseEntity<>("検体検査のキャンセルに失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
-//          return new ResponseEntity<>("検査予定のキャンセルに失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//          // return new ResponseEntity<>("検体検査のキャンセルに失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
+//          return new ResponseEntity<>("検査予定のキャンセルに失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //          // mod FNSI-検体検査の表示の修正 楊 end
 //
 //        }
@@ -18112,7 +18808,7 @@ public class OrdMainResource {
 //          EventLogMessage eventLogMessage = new EventLogMessage();
 //          eventLogMessage.setLogMessage(e.getMessage());
 //          logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-//          return new ResponseEntity<>("放射線検査の日付更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//          return new ResponseEntity<>("放射線検査の日付更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //        }
 //        break;
 //      case "2":
@@ -18131,7 +18827,7 @@ public class OrdMainResource {
 //          EventLogMessage eventLogMessage = new EventLogMessage();
 //          eventLogMessage.setLogMessage(e.getMessage());
 //          logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-//          return new ResponseEntity<>("放射線検査のキャンセルに失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//          return new ResponseEntity<>("放射線検査のキャンセルに失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //        }
 //        break;
 //      case "3":
@@ -18202,7 +18898,7 @@ public class OrdMainResource {
 //      asyncService.callCreateJournal(requestList);
 //    }
 //    requestList.clear();
-//    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+//    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //  }
   // #7068 mod 2022-11-22 患者経過総合ビューアで曜日パターン変更すると変更前の削除イベント・変更後の新規イベントが正しく作成されない   卓 END
 
@@ -18223,6 +18919,14 @@ public class OrdMainResource {
 
     //mod #10412 次患者更新関連全体見直し対応 朴 start
     OrdMain beforOrdMain = ordMainDao.selectByOrdNo(ord_no);
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (beforOrdMain.getFacilityCd() != null && !beforOrdMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     //mod 2023-03-02  6817 手動実績作成に失敗しても透析回数がカウントされてしまう 張 start
     // mod 11454 時間外加算自動処理が機能していない zkm start
@@ -18233,7 +18937,7 @@ public class OrdMainResource {
       conditionSendResultService.sendCondResultManualOnly(ord_no, ntssUser.getUserId());
     } catch (Exception e) {
       responseData.put("retMsg", 99999998);
-      return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+      return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     }
     // mod 11454 時間外加算自動処理が機能していない zkm end
 
@@ -18242,7 +18946,7 @@ public class OrdMainResource {
 
     // mod 11454 時間外加算自動処理が機能していない zkm start
 //    return ret;
-    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     // mod 11454 時間外加算自動処理が機能していない zkm end
     //add #10412 次患者更新関連全体見直し対応 朴 end
 
@@ -18258,7 +18962,7 @@ public class OrdMainResource {
 //    // メッセージ情報を格納
 //    if (ret.getStatusCode() != HttpStatus.OK) {
 //      responseData.put("retMsg", 99999998);
-//      return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+//      return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //    }
 //    //mod FNSI-6817 劉全航 end
 //    OrdMain ordMain = ordMainService.selectByOrdNo(ord_no);
@@ -18387,7 +19091,7 @@ public class OrdMainResource {
 //    treatmentStatusListService.middleCheck(ordMain);
     // mod #7660 2022/08/24 【デグレ】実績確定するまでの間は治療記録用紙に表示されない項目がある。 王永吉 end
     // add #7660 2022/08/22 【デグレ】実績確定するまでの間は治療記録用紙に表示されない項目がある。 王永吉 end
-//    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+//    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     //mod 2023-03-02  6817 手動実績作成に失敗しても透析回数がカウントされてしまう 張 end
   }
 
@@ -18400,8 +19104,23 @@ public class OrdMainResource {
    * @throws Exception
    */
   @PostMapping("/getOrdSearchResult")
-  public ResponseEntity<List<OrdChAp>> getOrdSearchResult(@RequestBody OrdSearchCondition searchConditions)
+  public ResponseEntity<List<OrdChAp>> getOrdSearchResult(@RequestBody OrdSearchCondition searchConditions,
+                                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                          @AuthenticationPrincipal NtssUser ntssUser
+                                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+)
     throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = searchConditions.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     if (null != searchConditions.getOrdSearchTreatmentCondition()) {
       searchConditions.setSearchType(0);
     } else if (null != searchConditions.getOrdSearchInstCondition()) {
@@ -18428,7 +19147,7 @@ public class OrdMainResource {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
       logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI,
         null);
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -19411,7 +20130,24 @@ public class OrdMainResource {
   public ResponseEntity<Void> updateOrdMainList(
     @Validated @RequestBody List<ApiEntityOrdMain.ValiUpdateIndCondInfo> bodyData,
     BindingResult validationResult
-  ) {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if (!ntssUser.isNkkAdminUser()) {
+              for (ApiEntityOrdMain.ValiUpdateIndCondInfo bodyDatum : bodyData) {
+                  String facilityCd = bodyDatum.getFacility_cd();
+                  if (facilityCd != null && !facilityCd.isEmpty() &&
+                      !facilityCd.equals(ntssUser.getFacilityCd())) {
+                      InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+                  }
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     try {
       for (ApiEntityOrdMain.ValiUpdateIndCondInfo ordMain : bodyData) {
@@ -19424,7 +20160,7 @@ public class OrdMainResource {
         param.setWeek_pattern(ordMain.getWeek_pattern());
 //        ResponseEntity<List<OrdMain>> ordMainInfoList = getOrdMainTreatDateList(param, validationResult);
 //        List<OrdMain> ordMainList = ordMainInfoList.getBody();
-        ResponseEntity<List<OrdMainWithlastWeightAfter>> ordMainInfoList = getOrdMainTreatDateList(param, validationResult);
+        ResponseEntity<List<OrdMainWithlastWeightAfter>> ordMainInfoList = getOrdMainTreatDateList(param, validationResult, null, ntssUser);
         List<OrdMainWithlastWeightAfter> ordMainList = ordMainInfoList.getBody();
 
         // updateOrdMainInfo関数実行(更新処理)
@@ -19479,7 +20215,7 @@ public class OrdMainResource {
           // 更新情報を設定
           ordMain.setInd_cond_info(Mapjson);
           // 更新
-          updateOrdMainInfo(ordMain, validationResult);
+          updateOrdMainInfo(ordMain, validationResult, ntssUser);
         }
 
       }
@@ -19546,7 +20282,7 @@ public class OrdMainResource {
     deviceEdgeOrder.setMachineNo(machineNo);
 
     ResponseEntity<?> res = deviceEdgeOrderResource.PostOrderCancelCondition(deviceEdgeOrder, null);
-    status = res.getStatusCode();
+    status = HttpStatus.valueOf(res.getStatusCode().value());
     if (status != HttpStatus.OK) {
       retMsg = "通信サーバーへの通知失敗";
       eventLogMessage.setLogMessage(className + "." + methodName + " " + retMsg);
@@ -19555,7 +20291,7 @@ public class OrdMainResource {
 
     eventLogMessage.setLogMessage(className + "." + methodName + " 処理終了");
     logService.log(LogLevel.INFO, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-    return new ResponseEntity<String>(retMsg, null, status);
+    return new ResponseEntity<String>(retMsg, (org.springframework.http.HttpHeaders) null, status);
   }
 
   private ResponseEntity<?> postOrderSendNextPat(String facilityCd, Integer deviceEdgeNo, Long machineNo) {
@@ -19568,11 +20304,11 @@ public class OrdMainResource {
     deviceEdgeOrder.setMachineNo(machineNo);
 
     ResponseEntity<?> res = deviceEdgeOrderResource.PostOrderSendNextPat(deviceEdgeOrder, null);
-    status = res.getStatusCode();
+    status = HttpStatus.valueOf(res.getStatusCode().value());
     if (status != HttpStatus.OK) {
       retMsg = "通信サーバーへの通知失敗";
     }
-    return new ResponseEntity<String>(retMsg, null, status);
+    return new ResponseEntity<String>(retMsg, (org.springframework.http.HttpHeaders) null, status);
   }
 
   /**
@@ -19736,8 +20472,8 @@ public class OrdMainResource {
                 }
                 logService.log(LogLevel.ERROR, eventLogMessageNew, "", LoggingConstant.SERVICE_NAME.FNSI, null);
                 // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang end
-                }
               }
+            }
             if (responseSetNextPatInfo != null) {
               JSONObject json = new JSONObject(responseSetNextPatInfo.getBody().toString());
               if (! json.has("isSuccess")) {
@@ -19823,8 +20559,8 @@ public class OrdMainResource {
                 }
                 logService.log(LogLevel.ERROR, eventLogMessageNew, "", LoggingConstant.SERVICE_NAME.FNSI, null);
                 // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang end
-                }
               }
+            }
             if (responseSetNextPatInfo != null) {
               JSONObject json = new JSONObject(responseSetNextPatInfo.getBody().toString());
               if (! json.has("isSuccess")) {
@@ -20117,7 +20853,22 @@ public class OrdMainResource {
   @PostMapping("/getOrdMainRegExamDateList")
   public ResponseEntity<List<PatExamMainData>> getOrdMainRegExamDateList(
     @Validated @RequestBody ApiEntityOrdMain.ValiIndCommSearchConditions bodyData, BindingResult validationResult
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = bodyData.getFacility_cd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
     //mod FNSI-6842 劉全航 start
 //    List<OrdMain> listRet = new ArrayList<>();
@@ -20165,7 +20916,21 @@ public class OrdMainResource {
   @PutMapping("/updateIndRstDw")
   public ResponseEntity<?> putUpdateIndRstDw(
     @Validated @RequestBody ApiEntityOrdMain.ValiIndRstDw bodyData
-  ) {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain ordMain = ordMainService.selectByOrdNo(bodyData.getOrd_no());
+      if (ordMain.getFacilityCd() != null && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 start
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("オーダー番号: " + bodyData.getOrd_no()
@@ -20185,10 +20950,10 @@ public class OrdMainResource {
       //mod FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
       eventLogMessage.setLogMessage("DWの更新に失敗しました。(オーダー番号=" + bodyData.getOrd_no());
       logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   /**
@@ -20204,7 +20969,24 @@ public class OrdMainResource {
   public ResponseEntity<List<OrdMainTreatDate>> getOrdNoList(
     @RequestParam(value = "pat_id") Long pat_id,
     @RequestParam(value = "page", required = true) Integer offset,
-    @RequestParam(value = "per_page", required = true) Integer limit) throws Exception {
+    @RequestParam(value = "per_page", required = true) Integer limit,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (pat_id != null) {
+          PatMain patMain = patMainDao.selectById(pat_id);
+          if (patMain != null && patMain.getFacility_cd() != null &&
+            !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+            InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     try {
       Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
       Page<OrdMainTreatDate> page = ordMainService.getOrdNoList(pageable, pat_id);
@@ -20227,7 +21009,31 @@ public class OrdMainResource {
   @GetMapping("/changeDay/maxTreatmentDate")
   public ResponseEntity<String> getMaxTreatmentDate(
     @RequestParam(value = "patId") String patId,
-    @RequestParam(value = "facilityCd") String facilityCd) throws Exception {
+    @RequestParam(value = "facilityCd") String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty()) {
+          if (!facilityCd.equals(ntssUser.getFacilityCd())) {
+            InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        if (patId != null && !patId.isEmpty()) {
+          PatMain patMain = patMainDao.selectById(Long.valueOf(patId));
+          String facility_cd = patMain.getFacility_cd();
+          if (facility_cd != null && !facility_cd.isEmpty() &&
+            !facility_cd.equals(ntssUser.getFacilityCd())) {
+            InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     try {
       String maxTreatmentDate = ordMainService.getMaxTreatmentDate(patId, facilityCd);
       return new ResponseEntity<>(maxTreatmentDate, HttpStatus.OK);
@@ -20249,7 +21055,21 @@ public class OrdMainResource {
   // add FNSI-FutreNetWeb+SI課題管理No.4362 李 end
 
   @PutMapping("/updateAdditionInfo")
-  public ResponseEntity<?> updateAdditionInfo(@Validated @RequestBody ApiEntityOrdMain.ValiIndRstDw bodyData) {
+  public ResponseEntity<?> updateAdditionInfo(@Validated @RequestBody ApiEntityOrdMain.ValiIndRstDw bodyData,
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                              @AuthenticationPrincipal NtssUser ntssUser
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain ordMain = ordMainService.selectByOrdNo(bodyData.getOrd_no());
+      if (ordMain.getFacilityCd() != null && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 start
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("オーダー番号: " + bodyData.getOrd_no()
@@ -20269,14 +21089,31 @@ public class OrdMainResource {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   @PutMapping("/updateOrdAdditionInfo")
-  public ResponseEntity<Void> updateAddInfoById(@RequestBody OrdAdditionInfoRequest request) {
+  public ResponseEntity<Void> updateAddInfoById(@RequestBody OrdAdditionInfoRequest request,
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                @AuthenticationPrincipal NtssUser ntssUser
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        EventLogMessage eventLogMessage = new EventLogMessage();
+        eventLogMessage.setLogMessage("セキュリティチェックの例外!");
+        logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
+
+        InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     try {
       List<AdditionInfo> checkList = patMainDao.selectAdditionInfo(request.getFacilityCd(), request.getPatId());
       Boolean patFlg = true;
@@ -20331,7 +21168,7 @@ public class OrdMainResource {
       wheres.append(" WHERE\n");
       wheres.append(" pat_id = " + request.getPatId() + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -20378,7 +21215,37 @@ public class OrdMainResource {
   public ResponseEntity<List<String>> getAdditionShortNameList(
     @RequestParam(value = "facilityCd", required = true) String facilityCd,
     @RequestParam(value = "patId", required = true) Long patId,
-    @RequestParam(value = "ordNo", required = true) Long ordNo) {
+    @RequestParam(value = "ordNo", required = true) Long ordNo,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+              if (ordNo != null) {
+                  OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+                  if (ordMain != null && ordMain.getFacilityCd() != null &&
+                      !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+                      InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+                  }
+              }
+              if (patId != null) {
+                  PatMain patMain = patMainDao.selectById(patId);
+                  if (patMain != null && patMain.getFacility_cd() != null &&
+                      !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+                      InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+                  }
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     try {
       List<String> resultList = ordMainService.getAdditionShortNameList(facilityCd, patId, ordNo);
       return new ResponseEntity<>(resultList, HttpStatus.OK);
@@ -20410,7 +21277,18 @@ public class OrdMainResource {
     @RequestParam(value = "ownFacility", required = true) String ownFacility,
     @RequestParam(value = "facilityCd", required = true) String facilityCd,
     @RequestParam(value = "patId", required = true) Long patId,
-    @RequestParam(value = "ordNo", required = true) Long ordNo) {
+    @RequestParam(value = "ordNo", required = true) Long ordNo,
+    @RequestParam(required = false) Long selectedPatId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
    // 0（false）1（true）
     List<OrdAdditionInfo> resultList;
     try {
@@ -20481,6 +21359,12 @@ public class OrdMainResource {
     @PathVariable String updateMode,
     @RequestBody List<Long> ordNoList,
     @AuthenticationPrincipal NtssUser ntssUser) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     // mod #7235 2022-06-13 他のスケジュールと重複してベッド未登録となった際のイベントが作成されない 孟堅　end
     try {
       // スケジュールリストの取得
@@ -20575,7 +21459,17 @@ public class OrdMainResource {
   public ResponseEntity<List<OrdMainKurBed>> selectByPatIdsWithBedAndKur(
     @RequestBody HashMap<String, List<Long>> payload,
     @PathVariable String facilityCd,
-    @PathVariable String treatDate) {
+    @PathVariable String treatDate,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     try {
       List<Long> patIds = payload.get("patIds");
       List<OrdMainKurBed> list = ordMainService.selectByPatIdsWithBedAndKur(patIds, facilityCd, treatDate);
@@ -20606,7 +21500,17 @@ public class OrdMainResource {
   @PostMapping("/getDuplicatedOrdList/{facilityCd}")
   public ResponseEntity<List<String>> getDuplicatedOrdList(
     @PathVariable String facilityCd,
-    @RequestBody List<Long> ordNoList) throws Exception {
+    @RequestBody List<Long> ordNoList,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     try {
       // スケジュールリストの取得
       List<String> updatedOrdList = ordMainService.getDuplicatedOrdList(facilityCd, ordNoList);
@@ -20641,7 +21545,17 @@ public class OrdMainResource {
     @PathVariable String facilityCd,
     @PathVariable Long patId,
     @PathVariable String fromDate,
-    @PathVariable String toDate) throws Exception {
+    @PathVariable String toDate,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     List<OrdMainTreatDate> result = ordMainDao.selectByPatIdAndTreatDate(facilityCd, patId, fromDate, toDate);
     return new ResponseEntity<>(result, HttpStatus.OK);
   }
@@ -20660,7 +21574,17 @@ public class OrdMainResource {
   public ResponseEntity<Boolean> getPatSwitchFlag(
     @PathVariable String facilityCd,
     @PathVariable Long ordNo,
-    @PathVariable String rstState) throws Exception {
+    @PathVariable String rstState,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     /* modify by luchanghai  2023-02-01 [CodeOptimization]  start */
     boolean patSwitchFlg = ordMainService.getPatSwitchFlag(facilityCd, ordNo, rstState);
@@ -20708,7 +21632,18 @@ public class OrdMainResource {
    */
   @GetMapping("/getByPatIdAndOrdNo/{patId}")
   public ResponseEntity<List<TreatmentRecordSetting>> getByPatIdAndOrdNo(
-    @PathVariable Long patId) throws Exception {
+    @PathVariable Long patId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    PatMain patMain = patMainDao.selectById(patId);
+    if (patMain != null && !hasFacilityAccess(ntssUser, patMain.getFacility_cd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     // 治療記録（設定値読み込み履歴情報）の取得
     List<TreatmentRecordSetting> response = ordMainService.getByPatIdAndOrdNo(patId);
     // レスポンス生成
@@ -20727,7 +21662,17 @@ public class OrdMainResource {
   @PostMapping("/getReservedOrdScheduleList/{facilityCd}/{treatDate}/{patId}")
   public ResponseEntity<List<OrdSchedule>> getReservedOrdScheduleList(
     @PathVariable String facilityCd,
-    @PathVariable String treatDate) throws Exception {
+    @PathVariable String treatDate,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     try {
       // mod FNSI-FutreNetWeb+SI課題管理No.4220 李 start
       // return new ResponseEntity<>(ordMainService.getReservedOrdScheduleByTreatDate(facilityCd, treatDate, patId), HttpStatus.OK);
@@ -20752,7 +21697,22 @@ public class OrdMainResource {
    */
   @PostMapping("/getPatUniqueList/{patId}")
   public ResponseEntity<PatUnique> getLetterDataList(
-    @PathVariable Long patId) throws Exception {
+    @PathVariable Long patId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        PatMain patMain = patMainDao.selectById(patId);
+        if (patMain != null && patMain.getFacility_cd() != null &&
+          !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     // 紹介状の取得
     PatUnique result = patInfoService.getLetterDataList(patId);
     return new ResponseEntity<>(result, HttpStatus.OK);
@@ -20770,7 +21730,22 @@ public class OrdMainResource {
   @PostMapping("/ord_material_save")
   public ResponseEntity<?> insertOrdSupplies(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdMaterialSave conditions
-  ) {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              String facilityCd = conditions.getFacility_cd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     /* add by zhaohan 2022-12-12 [6118] 定期予定発行、予定中止、治療指示変更に時間がかかる。 --start */
     MasterCacheHandler masterCacheHandler = MasterCacheHandler.get();
@@ -22413,7 +23388,20 @@ public class OrdMainResource {
     @RequestParam(value = "pat_id") Long pat_id,
     @RequestParam(value = "page", required = true) Integer offset,
     @RequestParam(value = "per_page", required = true) Integer limit,
-    @RequestParam(value = "shared_flag", required = true) String sharedFlag) throws Exception {
+    @RequestParam(value = "shared_flag", required = true) String sharedFlag,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (pat_id != null) {
+      PatMain patMain = patMainDao.selectById(pat_id);
+      if (patMain != null && !hasFacilityAccess(ntssUser, patMain.getFacility_cd())) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     try {
       String tempShareFlag = "0";
       if (sharedFlag != null && sharedFlag != "") {
@@ -24084,7 +25072,22 @@ public class OrdMainResource {
   @PostMapping("/getOrdMaterialSave")
   public ResponseEntity<List<OrdMaterialSaveCommon>> getOrdMaterialSave(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdMaterialSaveGraph bodyData, BindingResult validationResult
-  ) throws URISyntaxException {// 検査依頼結果の削除処理
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = bodyData.getFacility_cd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+// 検査依頼結果の削除処理
     try {
       List<OrdMaterialSaveCommon> listRet = ordMaterialSaveService.getOrdMaterialSaveForCommon(
         bodyData.getFacility_cd(),
@@ -24108,7 +25111,7 @@ public class OrdMainResource {
       }
       if (null == listRet) {
         // 失敗した場合、内部エラー処理
-        return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
       return new ResponseEntity<>(listRet, HttpStatus.OK);
     } catch (Exception e) {
@@ -24160,11 +25163,11 @@ public class OrdMainResource {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -24216,7 +25219,22 @@ public class OrdMainResource {
    * 治療方法コードで、治療方法名を取得する
    */
   public ResponseEntity<String> getMstTreatmentNameByCd(
-    @PathVariable("treatMethodCd") String treatMethodCd) throws URISyntaxException {
+    @PathVariable("treatMethodCd") String treatMethodCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = mstTreatmentDao.selectByCd(Integer.valueOf(treatMethodCd)).getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     String treatMethodName = ordMainService.selectMstTreatmentNameByCd(treatMethodCd);
     return new ResponseEntity<>(treatMethodName, HttpStatus.OK);
   }
@@ -24229,7 +25247,23 @@ public class OrdMainResource {
    */
   @GetMapping("/getMstBedNameByCd/{bedCd}")
   public ResponseEntity<String> getMstBedNameByCd(
-    @PathVariable("bedCd") String bedCd) throws URISyntaxException {
+    @PathVariable("bedCd") String bedCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstBed mstBed = mstBedDao.selectByBedCd(Long.valueOf(bedCd), "1", "0");
+        String facilityCd = mstBed.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     String treatMethodName = ordMainService.selectMstBedNameByCd(bedCd);
     return new ResponseEntity<>(treatMethodName, HttpStatus.OK);
   }
@@ -24239,7 +25273,22 @@ public class OrdMainResource {
    */
   @GetMapping("/getMstKurNameByCd/{kurCd}")
   public ResponseEntity<String> getMstKurNameByCd(
-    @PathVariable("kurCd") String kurCd) throws URISyntaxException {
+    @PathVariable("kurCd") String kurCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = mstKurDao.selectByKurCd(kurCd).getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     String treatMethodName = ordMainService.selectMstKurNameByCd(kurCd);
     return new ResponseEntity<>(treatMethodName, HttpStatus.OK);
   }
@@ -24247,7 +25296,22 @@ public class OrdMainResource {
 
   // redmine 4672  姜 start
   @PostMapping("/checkFuicchi")
-  public ResponseEntity<?> getMstKurNameByCd(@Validated @RequestBody ApiEntityOrdMain.CheckFuicchi bodyData) throws Exception {
+  public ResponseEntity<?> getMstKurNameByCd(@Validated @RequestBody ApiEntityOrdMain.CheckFuicchi bodyData,
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                             @AuthenticationPrincipal NtssUser ntssUser
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = bodyData.getFacility_cd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     SendConditionCheckResponse response = new SendConditionCheckResponse();
     response = ordMainService.checkFuicchi(bodyData);
 
@@ -24260,7 +25324,29 @@ public class OrdMainResource {
   public ResponseEntity<?> getEquipmentListByPatId(
     @RequestParam(value = "facilityCd") String facilityCd,
     @RequestParam(value = "treatDate") String treatDate,
-    @RequestParam(value = "patId") Long patId) {
+    @RequestParam(value = "patId") Long patId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+        if (patId != null) {
+          PatMain patMain = patMainDao.selectById(patId);
+          if (patMain != null && patMain.getFacility_cd() != null &&
+            !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+            InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     Integer date = Integer.valueOf(treatDate) - 1;
     HashMap<String, List<Integer>> map = ordMainService.selectPatOrdMainAfterTreatDate(patId, facilityCd, date.toString());
     return new ResponseEntity<>(map, HttpStatus.OK);
@@ -24269,7 +25355,19 @@ public class OrdMainResource {
   //add FutreNetWeb+SI課題管理 no.5485 劉全航 end
 // add 5928除水積算量の表示不正 張 start
   @PostMapping("/getMniMonitorByFacilityCdAndPatIdAndOrdNo")
-  public ResponseEntity<?> selectMonitorByFacilityCdAndPatIdAndOrdNo(@Validated @RequestBody List<MniMonitor> bodyDataList) {
+  public ResponseEntity<?> selectMonitorByFacilityCdAndPatIdAndOrdNo(@Validated @RequestBody List<MniMonitor> bodyDataList,
+                                                                     @RequestParam(required = false) Long selectedPatId,
+                                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                     @AuthenticationPrincipal NtssUser ntssUser
+                                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    List<String> facilityCdList = bodyDataList.stream()
+        .map(MniMonitor::getFacilityCd)
+        .collect(Collectors.toList());
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccessForFacilityCds(ntssUser, facilityCdList, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
     List<MntMachineState> mntMachineStates = mntMachineStateService.selectMonitorByFacilityCdAndPatIdAndOrdNo(bodyDataList);
 
     // List<MntMachineState> mntMachineStates = new ArrayList<MntMachineState>();
@@ -24295,7 +25393,22 @@ public class OrdMainResource {
    */
   // mod #10597 既往歴，入外・転入出による治療予定中止の動作が不正 20240514 ztc start
   @PostMapping("/patInfo/deleteTargetCount")
-  public ResponseEntity<?> deleteTargetCount(@RequestBody Map<String, Object> bodyData) {
+  public ResponseEntity<?> deleteTargetCount(@RequestBody Map<String, Object> bodyData,
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                             @AuthenticationPrincipal NtssUser ntssUser
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              String facilityCd = bodyData.get("facility_cd").toString();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
 //        List<OrdMain> listRet = new ArrayList<>();
     int reultCount = 0;
@@ -24360,7 +25473,18 @@ public class OrdMainResource {
    * @return
    */
   @GetMapping("/getMachineByOrdNo")
-  public ResponseEntity<?> getMachineByOrdNo(@RequestParam(value = "ordNo") Long ordNo, @RequestParam(value = "newTreatmentCd") Integer newTreatmentCd) {
+  public ResponseEntity<?> getMachineByOrdNo(@RequestParam(value = "ordNo") Long ordNo, @RequestParam(value = "newTreatmentCd") Integer newTreatmentCd,
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                             @AuthenticationPrincipal NtssUser ntssUser
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+    if (ordMain != null && !hasFacilityAccess(ntssUser, ordMain.getFacilityCd())) {
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     Boolean result = null;
     HttpStatus status = HttpStatus.OK;
     try {
@@ -24473,13 +25597,43 @@ public class OrdMainResource {
   //add FNSI-6924 劉全航 end
 
   @GetMapping("/getCountStateIsNotZero/{patId}/{startDate}")
-  public ResponseEntity<?> getCountStateIsNotZero(@PathVariable Long patId, @PathVariable String startDate) {
+  public ResponseEntity<?> getCountStateIsNotZero(@PathVariable Long patId, @PathVariable String startDate,
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        PatMain patMain = patMainDao.selectById(patId);
+        if (patMain != null && patMain.getFacility_cd() != null &&
+          !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie endd
+
     return new ResponseEntity<>(ordMainDao.countStateIsNotZero(patId, startDate), HttpStatus.OK);
   }
   @GetMapping("/getAllStateIsNotZero/{patId}/{startDate}")
   // add 8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。zhou start
 // mod by zs 2023-03-06 [#6118無期限予定の中止：js foreach call journalをjava batch call journalに変更] --start
-  public ResponseEntity<?> getAllStateIsNotZero(@PathVariable Long patId, @PathVariable String startDate) {
+  public ResponseEntity<?> getAllStateIsNotZero(@PathVariable Long patId, @PathVariable String startDate,
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                @AuthenticationPrincipal NtssUser ntssUser
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        PatMain patMain = patMainDao.selectById(patId);
+        if (patMain != null && patMain.getFacility_cd() != null &&
+          !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     return new ResponseEntity<>(ordMainDao.allStateIsNotZero(patId, startDate), HttpStatus.OK);
     // add 8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。zhou end
     // del 8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。zhou start
@@ -24581,8 +25735,8 @@ public class OrdMainResource {
       }
       logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang end
-      }
     }
+  }
   // add #7235 2022-06-13  他のスケジュールと重複してベッド未登録となった際のイベントが作成されない　孟堅 end
   // add #8315 ord_material_save.supplies_cd, supplies_class_medicine_mix_cdの登録・更新不正 dou start
   private String setMixDecimal(Map.Entry<String, Double> cdAmountenEntry, MstMedicineMix medicineMix) {
@@ -24678,7 +25832,7 @@ public class OrdMainResource {
         logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
       }
       // 引数は、ボディデータ、ヘッダーデータ、ステータス
-      return new ResponseEntity<>("パラメータエラー", null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>("パラメータエラー", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
     logService.log(LogLevel.INFO, eventLogMessage, "", SERVICE_NAME.FNSI, null);
 
@@ -24702,7 +25856,7 @@ public class OrdMainResource {
     // add 11061 治療方法変更治療時間が長すぎて他の予定と衝突する 関 start
     data.put("duplicatedOrdNoList",resultMap.get("duplicatedOrdNoList"));
     // add 11061 治療方法変更治療時間が長すぎて他の予定と衝突する 関 end
-    return new ResponseEntity<>(data.toString(), null, HttpStatus.OK);
+    return new ResponseEntity<>(data.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   private InvokeResult<Map<String,List>> checkAndUpdate(ApiEntityOrdMain.ValiCreateTreatPlan bodyData, NtssUser ntssUser) throws Exception {
@@ -24784,11 +25938,41 @@ public class OrdMainResource {
   // add 9339 特殊浄化に治療方法変更してもNa注入プログラムが入りのままとなる。 関  end
   //add 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy start
   @PostMapping("/getPatIndMmdicine")
-  public ResponseEntity<List<OrdMainMedicineDelete>> getPatIndMmdicine(@RequestBody OrdMainRequest ordMainRequest) {
+  public ResponseEntity<List<OrdMainMedicineDelete>> getPatIndMmdicine(@RequestBody OrdMainRequest ordMainRequest,
+                                                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                       @AuthenticationPrincipal NtssUser ntssUser
+                                                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = ordMainRequest.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     return new ResponseEntity(ordMainService.getPatIndMmdicine(ordMainRequest), HttpStatus.OK);
   }
   @PostMapping("/getPatIndAndRstMmdicine")
-  public ResponseEntity<List<OrdMainMedicineDelete>> getPatIndAndRstMmdicine(@RequestBody OrdMainRequest ordMainRequest) {
+  public ResponseEntity<List<OrdMainMedicineDelete>> getPatIndAndRstMmdicine(@RequestBody OrdMainRequest ordMainRequest,
+                                                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                             @AuthenticationPrincipal NtssUser ntssUser
+                                                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = ordMainRequest.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     return new ResponseEntity(ordMainService.getPatIndAndRstMmdicine(ordMainRequest), HttpStatus.OK);
   }
   //add 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy end
@@ -24804,6 +25988,17 @@ public class OrdMainResource {
   @PostMapping("/getTreatDateDw")
   public ResponseEntity<String> getTreatDateDw(@Valid @RequestBody ApiEntityOrdMain.ValiSearchTreatDateDw bodyData,@AuthenticationPrincipal NtssUser ntssUser
   ) throws Exception {
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+  if(!ntssUser.isNkkAdminUser()) {
+      String facilityCd = bodyData.getFacility_cd();
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+  }
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
   //mod #12660 【securify】SQLインジェクション(High) まとめ zrx end
 
     // mod 10742 治療方法変更時に治療方法セットを使うと、DWと同じに変更されてしまう 関  start
@@ -24816,7 +26011,7 @@ public class OrdMainResource {
     if ((null != bodyData.getWeek_pattern()) && (false == "".equals(bodyData.getWeek_pattern()))) {
       weekPattern = IndicationUtils.getWeekPattern(bodyData.getWeek_pattern());
       if (null == weekPattern) {
-        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
       }
     }
     Long ordNo = bodyData.getOrd_no() != null ? Long.parseLong(bodyData.getOrd_no()) : null;
@@ -25080,7 +26275,22 @@ public class OrdMainResource {
    * @throws URISyntaxException
    */
   @PostMapping("/updateWeekPatternInfo2")
-  public ResponseEntity<UpdateScheduleListDataResponse> updateWeekPatternInfo2(@Validated @RequestBody ApiEntityOrdMain.ValiWeekPattern bodyData) throws RuntimeException {
+  public ResponseEntity<UpdateScheduleListDataResponse> updateWeekPatternInfo2(@Validated @RequestBody ApiEntityOrdMain.ValiWeekPattern bodyData,
+                                                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                               @AuthenticationPrincipal NtssUser ntssUser
+                                                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws RuntimeException {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if (!ntssUser.isNkkAdminUser()) {
+              String facilityCd = bodyData.getFacility_cd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
 
     UpdateScheduleListDataResponse scheduleResponse = new UpdateScheduleListDataResponse();
@@ -25227,7 +26437,7 @@ public class OrdMainResource {
         patIdList.add(Long.parseLong(bodyData.getPat_id()));
 
         List<JournalCreateRequestPayload> journalList = journalCreatePayloadService.createJournalPayload(facilityCd, changeResponse.getResultAllChangedDataInfoList(), changeResponse.getResultAllChangeBeforeDataInfoList(), patIdList, updUserId, actionMode);
-        if (!org.apache.commons.collections.CollectionUtils.isEmpty(journalList)) {
+        if (!org.apache.commons.collections4.CollectionUtils.isEmpty(journalList)) {
           journalService.callCreateJournalForCtrNo(journalList);
         }
       } catch (Exception e) {
@@ -25392,7 +26602,12 @@ public class OrdMainResource {
    * @return キー：オーダー番号 値：返却用モデル のマップ
    */
   @GetMapping("/getOrdInfoListForPatListByOrdNo/{facilityCd}/{ordNos}")
-  public ResponseEntity<?> getOrdInfoListForPatListByOrdNo(@PathVariable String facilityCd, @PathVariable List<Long> ordNos)  throws URISyntaxException {
+  public ResponseEntity<?> getOrdInfoListForPatListByOrdNo(@PathVariable String facilityCd,
+                                                           @PathVariable List<Long> ordNos,
+                                                           @AuthenticationPrincipal NtssUser ntssUser)  throws URISyntaxException {
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     try {
       Map<String,OrdInfoListForPatListByOrdNoResponse> res = ordMainService.getOrdInfoListForPatListByOrdNo(facilityCd ,ordNos);
       return new ResponseEntity<>(res, HttpStatus.OK);
@@ -25449,6 +26664,18 @@ public class OrdMainResource {
     @RequestParam(defaultValue = "true") boolean sendCreateJournal,
     @RequestParam(defaultValue = "004") String funcCd
   ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if (!validationResult.hasErrors()) {
+      if (!ntssUser.isNkkAdminUser()) {
+        String fc = bodyData.getFacility_cd();
+        if (fc != null && !fc.isEmpty() && !fc.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
 
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -25752,7 +26979,7 @@ public class OrdMainResource {
           patIdList,
           updUserId,
           actionMode);
-        if (!org.apache.commons.collections.CollectionUtils.isEmpty(journalList)) {
+        if (!org.apache.commons.collections4.CollectionUtils.isEmpty(journalList)) {
           journalService.callCreateJournalForCtrNo(journalList);
         }
       } catch (Exception e) {
@@ -25773,4 +27000,18 @@ public class OrdMainResource {
 
     return new ResponseEntity<>(response, status);
   }
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    if (ntssUser == null || ntssUser.isNkkAdminUser()) {
+      return true;
+    }
+    boolean hasAccess = facilityCd != null && !facilityCd.isEmpty() && facilityCd.equals(ntssUser.getFacilityCd());
+    // #11205 mod 20260421 start
+    if (!hasAccess) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+    }
+    // #11205 mod 20260421 end
+    return hasAccess;
+  }
+
 }

@@ -16,6 +16,7 @@ import jp.co.nikkiso.ntss.core.entity.SysCoopJournal;
 import jp.co.nikkiso.ntss.core.entity.SysCoopNo;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
 import jp.co.nikkiso.ntss.core.logevent.DataUpdateLogCommonNew;
+import org.seasar.doma.jdbc.Config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 // #7068 add 2022-11-14 患者経過総合ビューアで曜日パターン変更すると変更前の削除イベント・変更後の新規イベントが正しく作成されない   卓 start
 @Service
@@ -41,6 +43,10 @@ public class OrdCoopNoServiceImpl implements OrdCoopNoService {
   private SysCoopNoService sysCoopNoService;
   @Autowired
   private MstCoopIniService mstCoopIniService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 //  @Autowired
 //  private EventLoggerFactory eventLoggerFactory;
 //  @Autowired
@@ -275,7 +281,7 @@ public class OrdCoopNoServiceImpl implements OrdCoopNoService {
     wheresOrd.append(" coop_ord_no = '" + journal.getCoopOrdNo() + "'\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommonOrd = JournalLogUtil.getLogCommon(ordCoopNoDao, tableNameOrd, wheresOrd, JournalLogUtil.getEventLogMessage());
+    DataUpdateLogCommonNew logCommonOrd = JournalLogUtil.getLogCommon(tableNameOrd, wheresOrd, JournalLogUtil.getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResultOrd = logCommonOrd.setInfo();
     // 更新後データ取得、差分あれば、log出力
@@ -395,7 +401,7 @@ public class OrdCoopNoServiceImpl implements OrdCoopNoService {
         wheresOrd.append(" coop_ord_no = '" + coopOrdNo + "'\n");
 
         // logCommon設定
-        DataUpdateLogCommonNew logCommonOrd = JournalLogUtil.getLogCommon(ordCoopNoDao, tableNameOrd, wheresOrd, JournalLogUtil.getEventLogMessage());
+        DataUpdateLogCommonNew logCommonOrd = JournalLogUtil.getLogCommon(tableNameOrd, wheresOrd, JournalLogUtil.getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResultOrd = logCommonOrd.setInfo();
 
@@ -512,7 +518,7 @@ public class OrdCoopNoServiceImpl implements OrdCoopNoService {
 //    DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
 //    logCommon.setEventLoggerFactory(eventLoggerFactory);
 //    logCommon.setLogServiceCore(logServiceCore);
-//    logCommon.setConfig(Config.get(dao));
+//    logCommon.setConfig(defaultDbConfig);
 //    logCommon.setTableName(tableName);
 //    logCommon.setWhereStr(whereStr);
 //    logCommon.setCommonEventLogMessage(eventLogMessage);

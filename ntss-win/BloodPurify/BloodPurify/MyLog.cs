@@ -13,6 +13,11 @@ namespace NKK.BloodPurify
         static private NKKLogging Nkkl = null;
 
         /// <summary>
+        /// ログファイル識別子
+        /// </summary>
+        internal const String LOG_FILE_EXT = @"BloodPurify";
+
+        /// <summary>
         /// 本クラスの各種機能を使用する前に呼び出す必要があるメソッド(※コンストラクタ的)
         /// </summary>
         static public void Init()
@@ -21,7 +26,7 @@ namespace NKK.BloodPurify
             {
                 Nkkl = NKKLogging.GetInstance();
 
-                Nkkl.LogExt = $"{Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}_{Dns.GetHostName()}";
+                Nkkl.LogExt = $"{LOG_FILE_EXT}_{Dns.GetHostName()}";
                 Nkkl.FirstWriteEvent = VersionInfos.GetVersionInfo; // exeやdllのファイル情報を出力
                 Nkkl.SessionId = $"{DateTime.Now:yyyyMMddHHmmss}_{System.Diagnostics.Process.GetCurrentProcess().Id}";
             }

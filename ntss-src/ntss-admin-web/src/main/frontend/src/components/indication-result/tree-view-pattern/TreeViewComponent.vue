@@ -33,6 +33,7 @@ import TreeViewPattern5Component from "@/components/indication-result/tree-view-
 import TreeViewPattern6Component from "@/components/indication-result/tree-view-pattern/TreeViewPattern6Component"
 
 export default {
+  name: "tree-item",
   components: {
     "tree-view-pattern-1": TreeViewPattern1Component,
     "tree-view-pattern-2": TreeViewPattern2Component,

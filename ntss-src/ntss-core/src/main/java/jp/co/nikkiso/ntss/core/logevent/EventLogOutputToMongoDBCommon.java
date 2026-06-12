@@ -55,6 +55,8 @@ import static jp.co.nikkiso.ntss.core.logevent.DataUpdateLogInfoUtil.convertStri
 import static jp.co.nikkiso.ntss.core.logevent.DataUpdateLogInfoUtil.executeSql;
 import static jp.co.nikkiso.ntss.core.logevent.DataUpdateLogInfoUtil.getKeyWithParent;
 import static jp.co.nikkiso.ntss.core.logevent.DataUpdateLogInfoUtil.getKeyWithStep;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
+import jp.co.nikkiso.ntss.core.config.PersonalDb;
 import static jp.co.nikkiso.ntss.core.logevent.DataUpdateLogInfoUtil.isEqual;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -107,6 +109,14 @@ public class EventLogOutputToMongoDBCommon {
    */
   @Autowired
   private SysFunctionDao sysFunctionDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
+
+  @Autowired
+  @PersonalDb
+  private Config personalDbConfig;
 
   /* del by chamaojia 2024-08-13 [10959] delete incorrect variable definitions --start */
   // /**
@@ -271,7 +281,7 @@ public class EventLogOutputToMongoDBCommon {
     if (this.config != null) {
       return this.config;
     }
-    return Config.get(this.indScheduleDao);
+    return defaultDbConfig;
   }
 
   /**
@@ -1053,7 +1063,7 @@ public class EventLogOutputToMongoDBCommon {
       return "";
     }
     String returnValue = "";
-    Config config = Config.get(patPersonalMainDao);
+    Config config = personalDbConfig;
     SelectBuilder selectBuilder = SelectBuilder.newInstance(config);
     selectBuilder.sql("select personal_info_encrypt('" + inData + "') as encrypt_value");
     List<Map<String, Object>> results = selectBuilder.getMapResultList(MapKeyNamingType.NONE);

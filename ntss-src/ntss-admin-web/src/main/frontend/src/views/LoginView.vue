@@ -197,14 +197,14 @@
 </template>
 
 <script>
-import { mapActions, mapGetters, mapMutations  } from "vuex";
+import { mapActions, mapGetters, mapMutations  } from "@/compat/vue/vuex";
 import { getRouterName, getInitialRouterName } from "@/router/routing-helper";
 import NotificationMessageMixin from "@/components/common/notification-message/NotificationMessageMixin";
 import loadingScreen from "@/components/common/LoadingScreen";
 import { TITLE } from "@/constants/sysUseConstants";
 import { LOCAL_STORAGE_KEY } from "@/constants/localStorageConstants";
-import axios from "axios";
-import moment from "moment";
+import axios from "@/compat/http/axios";
+import dayjs from "@/compat/date/dayjs";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { webPushSubscribe, saveNotificationList } from "@/functions/WebPushFunctions";
 import {
@@ -222,10 +222,10 @@ const uriGetCardAppPort = `/card_state/get_card_app_ports`;
 import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
 import { PASSWORD_VALIDITY_PERIOD } from "@/constants/facilitySetting";
 import UserAuthorityMixin from "@/components/common/UserAuthorityMixin";
-import { URL_SIGNIN, URL_SIGNIN_SECRETKEY, IS_SIGNIN_DISP} from "@/constants/facilitySetting";
+import { URL_SIGNIN, URL_SIGNIN_SECRETKEY, IS_SIGNIN_DISP } from "@/constants/facilitySetting";
 import { PATIENT_SEARCH } from "@/constants/defaultSettingConstants";
 import { deepCopy ,changeShowPassword} from "@/functions/common/CommonFunctions";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
@@ -234,6 +234,8 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 import { createTerminalUniqueString, deleteSignin, updateFavicons } from "@/functions/SigninFunction";
 /* add by chamaojia 2023-04-26 [5958] 共通jsを参照  --end */
 import { SESSION_STORAGE_KEY, SESSION_STORAGE_VALUE } from "@/constants/sessionStorageConstants";
+import { focusComponentInput, getAppElement, getScopedDocument, getScopedElementById,
+  getScopedWindow} from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   mixins: [NotificationMessageMixin, UserAuthorityMixin],
@@ -367,6 +369,9 @@ export default {
     // FNSI-修正 4082対応 xiebzh add end
   },
   methods: {
+    getLoginWindow() {
+      return getScopedWindow(this.$el || this);
+    },
     ...mapActions("account-edit", ["getUserAccountInfoSignIn", "clearUserAccountInfo"]),
     ...mapActions("user", {
       userSignIn: "signIn",
@@ -421,9 +426,7 @@ export default {
     ...mapMutations("websocket", ["setToastDuration"]),
     // フォーカスを移動する
     setFocus(ref) {
-      if (this.$refs[ref] && this.$refs[ref].$el && this.$refs[ref].$el._input) {
-        this.$refs[ref].$el._input.focus();
-      }
+      focusComponentInput(this.$refs[ref]);
     },
     /**
      * 既にサインインしている場合、サインイン済の施設と同じ施設かをチェックする.
@@ -536,9 +539,9 @@ export default {
         return true;
       }
       // 現在日時
-      const nowDate = moment(new Date());
+      const nowDate = dayjs(new Date());
       // パスワード変更日時
-      const regPasswordDate = moment(userInfo.regPasswordDate);
+      const regPasswordDate = dayjs(userInfo.regPasswordDate);
       // 差分
       const monthDiff = nowDate.diff(regPasswordDate, 'months');
       return monthDiff >= passwordValidityPeriod;
@@ -551,6 +554,8 @@ export default {
     // autoSignInFlag   ture: it's automatic login
     async signIn(autoSignInFlag = false) {
     /* modify by chamaojia 2025-03-18 [11587] new parameter 【autoSignInFlag】 --end */
+
+      autoSignInFlag = autoSignInFlag === true;
 
       //liyanze-z add
       this.isLoginRequest = true;
@@ -1018,7 +1023,7 @@ export default {
      */
     checkIsUrlDirect() {
       let parameters = JSON.parse(JSON.stringify(this.$route.query));
-      return parameters.hasOwnProperty("FUNC");
+      return Object.prototype.hasOwnProperty.call(parameters, "FUNC");
     },
     /**
      * URL指定で呼びだされた場合
@@ -1092,7 +1097,6 @@ export default {
           }
         } else if (status === 401 && this.getApiResult().message.includes("以下のいずれかの理由によりサインアウトしました")) {
           txtTitle = "サインアウト";
-          EventBus.$off();
         }
         this.isAlerting = true;
         this.$nextTick(() => {
@@ -1142,7 +1146,7 @@ export default {
      * 画像リサイズ処理
      */
     imgResize() {
-      let imgObj = document.getElementById("errorImg");
+      let imgObj = getScopedElementById("errorImg", this.$el || this);
       if (imgObj !== null) {
         this.$nextTick(() => {
           this.imgHeight = imgObj.clientHeight;
@@ -1169,11 +1173,11 @@ export default {
         this.patGroups = patGroups.data.patGroupInfo;
       } catch (error) {
         this.setLoadingScreenVisible(false);
-        throw new Error("[LoginView.vue]defaultSearchPat(): マスタ取得失敗");
+        throw new Error("[LoginView.vue]defaultSearchPat(): マスタ取得失敗", { cause: error });
       }
       
       // 初回検索用条件-検索サイドバーと同じ手順
-      const treatDate = moment().format("YYYYMMDD");
+      const treatDate = dayjs().format("YYYYMMDD");
       this.setSelectedTreatDate(treatDate);
       const conditions = this.createDefaultConditions(treatDate, facilityCd);
       // 簡易検索
@@ -1798,15 +1802,15 @@ export default {
 
       // サインインIF表示設定を取得
       await axios.get("/ntss-admin-web/api/facilities/MstFacilityHash/getIsSigninDisp?hashValue=" + encodeURI(this.getKey))
-      .then(response => {
-        // IF表示設定が非表示の場合はフラグをfalseにする
-        if(response?.data[IS_SIGNIN_DISP] === '0'){
-          this.isSigninDisp = false;
-        }
-      }).catch(() =>{
-        // APIエラー時はフラグをtrueに強制
-        this.isSigninDisp = true;
-      });
+        .then(response => {
+          // IF表示設定が非表示の場合はフラグをfalseにする
+          if (response?.data[IS_SIGNIN_DISP] === "0") {
+            this.isSigninDisp = false;
+          }
+        }).catch(() => {
+          // APIエラー時はフラグをtrueに強制
+          this.isSigninDisp = true;
+        });
 
       // ADD #7221 2023/02/05 BY HandsomeLin Start
       //   The purpose is to make the form logo and page title display earlier.
@@ -1815,13 +1819,13 @@ export default {
       }).then(response =>{
         // API結果セット
         this.useSetting = response.data != null ? response.data: 0;
-        document.title = TITLE[this.useSetting];
+        getScopedDocument(this.$el || this).title = TITLE[this.useSetting];
         // favicon設定
         updateFavicons(this.useSetting);
       }).catch(() =>{
         // APIエラー時パラメータをセット
         this.useSetting = 0;
-        document.title = TITLE[this.useSetting];
+        getScopedDocument(this.$el || this).title = TITLE[this.useSetting];
         // favicon設定
         updateFavicons(this.useSetting);
       });
@@ -1849,8 +1853,8 @@ export default {
       }
       //add FNSI-【1006】最新の改修対象一覧.NO54を追加 周安寧 end
       // 自動サインインイベント
-      window.removeEventListener("storage", this.autoSignIn);
-      window.addEventListener('storage', this.autoSignIn);
+      this.getLoginWindow().removeEventListener("storage", this.autoSignIn);
+      this.getLoginWindow().addEventListener('storage', this.autoSignIn);
       // パラメータが存在する場合はシステムエラー部を表示する
       if (Object.keys(this.$route.params).length > 0) {
         this.sysErrFlg = true;
@@ -1952,11 +1956,11 @@ export default {
       // }).then(response =>{
       //   // API結果セット
       //   this.useSetting = response.data != null ? response.data: 0;
-      //   document.title = TITLE[this.useSetting];
+      //   getScopedDocument(this.$el || this).title = TITLE[this.useSetting];
       // }).catch((error) =>{
       //   // APIエラー時パラメータをセット
       //   this.useSetting = 0;
-      //   document.title = TITLE[this.useSetting];
+      //   getScopedDocument(this.$el || this).title = TITLE[this.useSetting];
       // });
 
       // DEL #7221 2023/02/05 BY HandsomeLin End
@@ -2038,7 +2042,7 @@ export default {
       }
 
       // 画面幅変更時の処理
-      window.addEventListener("resize", this.imgResize);
+      this.getLoginWindow().addEventListener("resize", this.imgResize);
       // ブラウザクローズイベント
       // ※本イベントはタブ/ブラウザのクローズイベントなのでremoveすると発火しない為、
       //   removeしない.
@@ -2113,7 +2117,7 @@ export default {
   },
   mounted() {
     // add 10718 by kangjie 20240723 start
-    if (sessionStorage.getItem("consoleStatus") == 'on' &&
+    if (this.getLoginWindow().sessionStorage.getItem("consoleStatus") == 'on' &&
       !(sessionStorage.getItem(SESSION_STORAGE_KEY.NEEDS_CLEAN_STORE_BEFORE_SIGN_IN)
         === SESSION_STORAGE_VALUE.NEEDS_CLEAN_STORE_BEFORE_SIGN_IN.TRUE)) {
       this.$ons.notification.alert({
@@ -2132,13 +2136,13 @@ export default {
     }
 
     // 縦スクロール設定
-    document.getElementById("app").style.overflowY = "auto";
+    getAppElement(this.$el || this).style.overflowY = "auto";
     // システムエラー部の画像の縦幅を設定する
-    if (document.getElementById("errorImg") !== null) {
+    if (getScopedElementById("errorImg", this.$el || this) !== null) {
       const loopId = setInterval(
         (function(scope){
           return function() {
-            let imgSize = document.getElementById("errorImg").naturalWidth;
+            let imgSize = getScopedElementById("errorImg", scope.$el || scope)?.naturalWidth || 0;
             if (imgSize !== 0) {
               scope.imgResize();
               clearInterval(loopId);
@@ -2151,13 +2155,13 @@ export default {
       this.setFocus('userId');
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     clearInterval(this.socketInterval);
     // 画面を閉じたときにイベント/Styleを除去
-    window.removeEventListener("resize", this.imgResize);
-    document.getElementById("app").style.overflowY = "";
+    this.getLoginWindow().removeEventListener("resize", this.imgResize);
+    getAppElement(this.$el || this).style.overflowY = "";
     // 自動サインインイベント
-    window.removeEventListener("storage", this.autoSignIn);
+    this.getLoginWindow().removeEventListener("storage", this.autoSignIn);
   },
   watch: {
     getSocketIsConnected(value) {

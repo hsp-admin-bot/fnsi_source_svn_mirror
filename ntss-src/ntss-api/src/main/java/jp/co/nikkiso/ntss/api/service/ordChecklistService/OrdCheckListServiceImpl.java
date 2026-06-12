@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.api.service.ordChecklistService;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.dao.MstChecklistDao;
 import jp.co.nikkiso.ntss.core.dao.OrdChecklistDao;
 import jp.co.nikkiso.ntss.core.dao.OrdMainDao;

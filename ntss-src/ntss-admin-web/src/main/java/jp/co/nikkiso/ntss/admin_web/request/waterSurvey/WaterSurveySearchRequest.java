@@ -5,9 +5,9 @@ import java.util.List;
 import jp.co.nikkiso.ntss.admin_web.request.validator.NtssFlexibleDateTime;
 import jp.co.nikkiso.ntss.admin_web.request.validator.NtssFlexibleDateTimeParseMode;
 import lombok.Data;
-import javax.validation.constraints.Digits;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 
 /**
  * 水質調査の検索リクエスト

@@ -44,7 +44,6 @@
             @click="rangeDate"
           >検索</v-ons-button>
         </div>
-      </template>
       <div class="pat-header-item">
         <v-ons-button
           id="button-position"
@@ -56,7 +55,7 @@
 
     <v-ons-popover
       cancelable
-      :visible.sync="popoverInfo.popoverVisible"
+      v-model:visible="popoverInfo.popoverVisible"
       :target="popoverInfo.popoverTarget"
       :direction="popoverInfo.popoverDirection"
       :class="[fontSizeSet, 'popover-style']"
@@ -133,7 +132,7 @@
             <!-- 検索条件：入力エリア -->
             <v-ons-popover
               cancelable
-              :visible.sync="popoverVisible"
+              v-model:visible="popoverVisible"
               :target="popoverTarget"
               :direction="popoverDirection"
               :cover-target="false"
@@ -153,7 +152,6 @@
                     >{{ layout.patListLayoutName }}</option>
                   </v-ons-select>
                 </div>
-                <template>
                   <div v-show="isNeedDate" class="pat-header-item" style="margin-bottom: 1em;">
                     <span style="margin-right: 1em; width: 7em">期間指定開始</span>
                     <!--mod FNSI-改修内容日付のチェックの追加対応。 趙立強 start-->
@@ -175,7 +173,6 @@
                       :type="getTypeInput"
                       :max="getmax"
                       :isRequired="true"
-                      :default-date="defaultDate"
                       @blur="chkchange()"
                       v-model="searchCondition.startDate"
                     />
@@ -183,6 +180,7 @@
                     <!--mod FNSI-改修内容日付のチェックの追加対応。 趙立強 end-->
                     </span>
                     <span v-else>
+                      <!-- 集計(月別) -->
                       <input
                       input-id="startDate"
                       class="input-area-date start-date"
@@ -191,6 +189,7 @@
                       :max="getmax"
                       @blur="chkchange()"
                       v-model="searchCondition.startDate"
+                      v-month-wheel
                     />
                     <common-calendar v-if="getTypeInput ==='date' " class="calender start-date-comment" v-model="searchCondition.startDate" />
                     <!--mod FNSI-改修内容日付のチェックの追加対応。 趙立強 end-->
@@ -223,7 +222,6 @@
                       :type="getTypeInput"
                       :max="getmax"
                       :isRequired="true"
-                      :default-date="defaultDate"
                       @blur="chkchange()"
                       v-model="searchCondition.endDate"
                     />
@@ -231,6 +229,7 @@
                     <!--mod FNSI-改修内容日付のチェックの追加対応。 趙立強 end-->
                   </span>
                   <span v-else>
+                    <!-- 集計(月別) -->
                     <input
                       input-id="endDate"
                       class="input-area-date end-date"
@@ -239,6 +238,7 @@
                       :max="getmax"
                       @blur="chkchange()"
                       v-model="searchCondition.endDate"
+                      v-month-wheel
                     />
                   </span>
                   </div>
@@ -265,7 +265,6 @@
                     >実行</v-ons-button>
                     <!--mod FNSI-改修内容日付のチェックの追加対応。 趙立強 end-->
                   </div>
-                </template>
               </div>
             </v-ons-popover>
           </v-ons-col >
@@ -280,7 +279,7 @@
           </div>
           <v-ons-popover
             cancelable
-            :visible.sync="popoverInfo.popoverVisible"
+            v-model:visible="popoverInfo.popoverVisible"
             :target="popoverInfo.popoverTarget"
             :direction="popoverInfo.popoverDirection"
             :class="[fontSizeSet, 'popover-style']"
@@ -330,9 +329,9 @@
 </template>
 
 <script>
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
-import { mapGetters, mapActions } from "vuex";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { getMstLayout, filterLayoutMstByJob, confirmAllowDiscardChangesInMultiPatList } from "@/components/multi-pat-list/Functions.js";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -371,7 +370,9 @@ import {messageFormat} from "@/functions/common/MessageFormat";
 // add #10054 破棄確認・保存活性(複数変更含む)・削除対応_データリスト（患者情報） 20231221 ztc end
 //#10715:日付IF修正Start
 import DateInput from "@/components/common/DateInput.vue";
+import { queryScopedSelector, getMainContentAreaElement } from "@/functions/common/LayoutMeasureHelper";
 //#10715:日付IF修正End
+import { alertByKey } from "@/functions/common/OnsenFunctions";
 
 export default {
   components: {
@@ -468,8 +469,8 @@ export default {
       if (this.searchCondition.startDate === null || this.searchCondition.endDate === null) {
         return true;
       }
-      const startDate = moment(this.searchCondition.startDate);
-      const endDate = moment(this.searchCondition.endDate);
+      const startDate = dayjs(this.searchCondition.startDate);
+      const endDate = dayjs(this.searchCondition.endDate);
       if (endDate.isBefore(startDate)) {
         return true;
       }
@@ -493,11 +494,6 @@ export default {
       }
       return type;
     },
-    //#11059:定期点検履歴画面の日付IF修正Start
-    defaultDate() {
-      return "9999-99-99";
-    },
-    //#11059:定期点検履歴画面の日付IF修正End
     /** 選択中のレイアウト情報 */ 
     selectLayout() {
       if (this.layoutMst === null) return {};
@@ -539,16 +535,16 @@ export default {
     //#10715:日付IF修正End
   },
 
-  beforeDestroy() {
-    EventBus.$off("allowEditTrue");
-    Object.assign(this.$data, this.$options.data());
+  beforeUnmount() {
+    EventBus.$off("allowEditTrue", this.onAllowEditTrue);
+    Object.assign(this.$data, typeof this.$options.data === "function" ? this.$options.data.call(this) : {});
   },
   async created() {
     // add #7430 画面移行時に前の画面のDBへの要求が閉じてない dou start
     this.setLoadingScreenVisible(true);
     // add #7430 画面移行時に前の画面のDBへの要求が閉じてない dou end
-    EventBus.$off("allowEditTrue");
-    EventBus.$on("allowEditTrue", data => (this.allowEdit = data));
+    EventBus.$off("allowEditTrue", this.onAllowEditTrue);
+    EventBus.$on("allowEditTrue", this.onAllowEditTrue);
 
     // データリストレイアウトマスタ取得
     this.mstList = await getMstLayout(this.facilityCd).catch(error => {
@@ -567,10 +563,10 @@ export default {
       if (this.layoutMst == null || this.layoutMst.length === 0) {
         // storeクリア
         this.setSelectedDynamicLayout(null);
-        
-        alert("マスター画面に移動してレイアウトを選択してください");
+        // title: "データリストレイアウトマスタ未登録",
+        // message: "マスタが不足しているためデータリスト機能は使えません。\nマスタを登録してください。",
+        alertByKey(13000172);
         this.setLoadingScreenVisible(false);
-        // return;
       } else {
 // add FNSI-No.573 他の機能と検索操作が違っている dou end
 // add データリストの患者情報修正 陳 start
@@ -656,7 +652,7 @@ export default {
         this.defaultStartDate = calcTargetDate(defaultCondition[KEY_NAME_MULTI_PAT_LIST.KEY_NAME_START_DATE]);
         // add #11528 【たくしん会】データリスト並び順不正 房 start
         if(!this.defaultStartDate) {
-          this.defaultStartDate = moment().format(DATE_FORMAT)
+          this.defaultStartDate = dayjs().format(DATE_FORMAT)
         }
         // add #11528 【たくしん会】データリスト並び順不正 房 end
       }
@@ -703,6 +699,9 @@ export default {
     popoverPreShow,
     popoverPostShow,
     popoverPosthide,
+    onAllowEditTrue(data) {
+      this.allowEdit = data;
+    },
     //#10715:日付IF修正Start
     chkchange() {
         if (this.searchCondition.startDate === null || this.searchCondition.startDate === '' || this.searchCondition.startDate === '9999-99-99') this.searchCondition.startDate = this.searchConditionExec.startDate;
@@ -824,19 +823,19 @@ export default {
       }
       
       // 日付整合性チェック
-      let startDate = moment(this.searchCondition.startDate);
-      let endDate = moment(this.searchCondition.endDate);
+      let startDate = dayjs(this.searchCondition.startDate);
+      let endDate = dayjs(this.searchCondition.endDate);
       if (startDate.isAfter(endDate) || !startDate.isValid() || !endDate.isValid()) {
         return;
       }
       
       // add #11873【因島】データリスト「治療予定・実績」テンプレートでサーバダウン fang start
       if(this.selectLayout.templateCd === TREATMENT_PLAN_TREATMENT_RECORD) {
-        let tempCompareDate = moment(startDate.toDate().getTime());
+        let tempCompareDate = dayjs(startDate.toDate().getTime());
         let compareEndTime = tempCompareDate.add(3, 'months').toDate().getTime();
         let endTime = endDate.toDate().getTime();
         // mod 11182 個人設定画面 データリスト画面のテンプレート毎の期間の選択肢不正 zkm start
-        const startOfToday = moment().startOf('day').valueOf();
+        const startOfToday = dayjs().startOf('day').valueOf();
         let warnFlg = false;
         if (endTime > startOfToday) {
           if (startOfToday > compareEndTime) {
@@ -851,7 +850,7 @@ export default {
         if(warnFlg) {
           // mod 11182 個人設定画面 データリスト画面のテンプレート毎の期間の選択肢不正 zkm end
           // メインコンテンツ表示ありの場合、ファイル出力ボタンは活性のまま
-          const el = document.querySelector('.multi-pat-list');
+          const el = queryScopedSelector('.multi-pat-list', getMainContentAreaElement(this.$el || null) || this.$el || null);
           this.allowEdit = !el;
           return this.$ons.notification.alert(messageFormat(DIALOG_MESSAGES[14000001].message), {
             title: DIALOG_MESSAGES[14000001].title
@@ -918,43 +917,43 @@ export default {
       let endDate = "";
       switch (templateCd) {
         case TREATMENT_PLAN_TREATMENT_RECORD:
-          startDate = moment().startOf('month').add('month', -1).format("YYYY-MM-DD");
-          endDate = moment().endOf('month').format("YYYY-MM-DD");
+          startDate = dayjs().startOf('month').subtract(1, "month").format("YYYY-MM-DD");
+          endDate = dayjs().endOf('month').format("YYYY-MM-DD");
           break;
         case VITAL_MONITORS_COMPLAINTS_CD:
-          startDate = moment().startOf('month').add('month', -1).format("YYYY-MM-DD");
-          endDate = moment().endOf('month').format("YYYY-MM-DD");
+          startDate = dayjs().startOf('month').subtract(1, "month").format("YYYY-MM-DD");
+          endDate = dayjs().endOf('month').format("YYYY-MM-DD");
           break;
         case INSPECTION_RADIATION:
-          startDate = moment().startOf('month').add('month', -3).format("YYYY-MM-DD");
-          endDate = moment().endOf('month').format("YYYY-MM-DD");
+          startDate = dayjs().startOf('month').subtract(3, "month").format("YYYY-MM-DD");
+          endDate = dayjs().endOf('month').format("YYYY-MM-DD");
           break;
         case DATE_TEMPLATE_CD:
-          startDate = moment().startOf('month').add('month', -1).format("YYYY-MM-DD");
+          startDate = dayjs().startOf('month').subtract(1, "month").format("YYYY-MM-DD");
           // mod 11182 個人設定画面 データリスト画面のテンプレート毎の期間の選択肢不正 zkm start
-          // endDate = moment().endOf('month').format("YYYY-MM-DD");
-          endDate = moment().format("YYYY-MM-DD");
+          // endDate = dayjs().endOf('month').format("YYYY-MM-DD");
+          endDate = dayjs().format("YYYY-MM-DD");
           // mod 11182 個人設定画面 データリスト画面のテンプレート毎の期間の選択肢不正 zkm end
           break;
         case MONTH_TEMPLATE_CD:
-          startDate = moment().startOf('month').add('month', -11).format("YYYY-MM");
-          endDate = moment().endOf('month').format("YYYY-MM");
+          startDate = dayjs().startOf('month').subtract(11, "month").format("YYYY-MM");
+          endDate = dayjs().endOf('month').format("YYYY-MM");
           break;
         case EQUIPMENT_INFORMATION_WATER_QUALITY_SURVEY:
-          startDate = moment().add('year', -1).format("YYYY-MM-DD");
-          endDate = moment().format("YYYY-MM-DD");
+          startDate = dayjs().subtract(1, "year").format("YYYY-MM-DD");
+          endDate = dayjs().format("YYYY-MM-DD");
           break;
         case COLLECTIVE_DAILY_REGULAR:
-          startDate = moment().add('week', -2).format("YYYY-MM-DD");
-          endDate = moment().format("YYYY-MM-DD");
+          startDate = dayjs().subtract(2, "week").format("YYYY-MM-DD");
+          endDate = dayjs().format("YYYY-MM-DD");
           break;
         case EQUIPMENT_INFORMATION_SELF_DIAGNOSIS:
-          startDate = moment().add('week', -2).format("YYYY-MM-DD");
-          endDate = moment().format("YYYY-MM-DD");
+          startDate = dayjs().subtract(2, "week").format("YYYY-MM-DD");
+          endDate = dayjs().format("YYYY-MM-DD");
           break;
         case EQUIPMENT_INFORMATION_INSPECTION_DAILY_REGULAR:
-          startDate = moment().add('week', -2).format("YYYY-MM-DD");
-          endDate = moment().format("YYYY-MM-DD");
+          startDate = dayjs().subtract(2, "week").format("YYYY-MM-DD");
+          endDate = dayjs().format("YYYY-MM-DD");
           break;
         default:
           break;
@@ -963,7 +962,7 @@ export default {
         startDate = this.defaultStartDate;
         if (templateCd === MONTH_TEMPLATE_CD) {
           // 集計(月別) は日付フォーマット
-          startDate = moment(startDate).format("YYYY-MM");
+          startDate = dayjs(startDate).format("YYYY-MM");
         }
       }
       if (rangeDate.length === 0) {
@@ -1016,13 +1015,13 @@ export default {
       if (index >= 0) {
         switch (templateCd) {
         case MONTH_TEMPLATE_CD:
-          this.searchCondition.startDate = moment(rangeDate[index].dayObj.startDate).format("YYYY-MM");
-          this.searchCondition.endDate = moment(rangeDate[index].dayObj.endDate).format("YYYY-MM");
+          this.searchCondition.startDate = dayjs(rangeDate[index].dayObj.startDate).format("YYYY-MM");
+          this.searchCondition.endDate = dayjs(rangeDate[index].dayObj.endDate).format("YYYY-MM");
           this.copySearchCondition(updateExecDate);
           break;
         default:
-          this.searchCondition.startDate = moment(rangeDate[index].dayObj.startDate).format("YYYY-MM-DD");
-          this.searchCondition.endDate = moment(rangeDate[index].dayObj.endDate).format("YYYY-MM-DD");
+          this.searchCondition.startDate = dayjs(rangeDate[index].dayObj.startDate).format("YYYY-MM-DD");
+          this.searchCondition.endDate = dayjs(rangeDate[index].dayObj.endDate).format("YYYY-MM-DD");
           this.copySearchCondition(updateExecDate);
           break;
       }
@@ -1040,8 +1039,8 @@ export default {
     // calculateDate(startDate, endDate) {
     //   let startDateStr = startDate;
     //   let endDateStr = endDate;
-    //   let compareEndTime = moment(endDateStr);
-    //   let compareStartDate = moment(startDateStr);
+    //   let compareEndTime = dayjs(endDateStr);
+    //   let compareStartDate = dayjs(startDateStr);
     //   let tempCompareEndTime = compareStartDate.add(3, 'months').toDate().getTime();
     //   if(tempCompareEndTime < compareEndTime.toDate().getTime()) {
     //     return compareEndTime.subtract(3, "months").add(1, "days").format("YYYY-MM-DD");
@@ -1184,15 +1183,15 @@ ons-checkbox {
   width: 38%;
   /*add FNSI-改修内容 共通検索欄で検索条件の内容が長すぎの場合、スクロールバーが出てこない  趙立強 end */
 }
-.popover-area >>> .popover--top {
+.popover-area :deep(.popover--top) {
   width: 32em;
 }
-.popover-area >>> .popover--top__content {
+.popover-area :deep(.popover--top__content) {
   line-height: 2em;
   height: 100%;
 }
 /* add FNSI-No.573 他の機能と検索操作が違っている dou end */
-.popover-area >>> .popover-mask {
+.popover-area :deep(.popover-mask) {
   z-index: 999 !important;
 }
 </style>

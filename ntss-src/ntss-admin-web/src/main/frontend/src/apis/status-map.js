@@ -1,12 +1,7 @@
 /**
  * 治療状況マップ系API
  */
-
 import { ApiHelper } from "@/apis/AxiosHelper";
-
-/**
- * 一時ストア
- */
 import store from "@/stores";
 
 /**
@@ -34,7 +29,8 @@ export function sendRequestGetKur(facilityCd) {
 /**
  * 治療状況データを取得
  * /treatment_status_next_patient/{facilityCd}/{treatDate}/{layoutNo}
- * @param autoRefreshFlag 自動更新にloadingは必要ありません  true:loadingは不要
+ * @param {Record<string, unknown>} params 検索条件
+ * @param {boolean} autoRefreshFlag 自動更新にloadingは必要ありません  true:loadingは不要
  */
 export function sendRequestGetTreatmentStatusMapMachine(params, autoRefreshFlag) {
   const URL_SUB_TREATMENT_STATUS = "treatment_status_map";
@@ -48,10 +44,9 @@ export function sendRequestGetTreatmentStatusMapMachine(params, autoRefreshFlag)
     const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
     return ApiHelper.get(`${url}${queryParams}`);
     // return ApiHelper.get(`${URL_BASE_STATUS_LIST}/${URL_SUB_TREATMENT_STATUS}/${params.facilityCd}/${params.layoutNo}`);
-  } else {
-    return getWithLoader(url);
-    // return getWithLoader(`${URL_BASE_STATUS_LIST}/${URL_SUB_TREATMENT_STATUS}/${params.facilityCd}/${params.layoutNo}`);
   }
+  return getWithLoader(url);
+  // return getWithLoader(`${URL_BASE_STATUS_LIST}/${URL_SUB_TREATMENT_STATUS}/${params.facilityCd}/${params.layoutNo}`);
   /* modify by chamaojia 2024-03-27 [10303、10304] add interface input parameters 【nextPat】、【bedLayoutId】 --end */
   /* mod #8872 by zhangruixue 2023-06-21 --end */
   // mod bug 8514 修正 chen end
@@ -59,35 +54,40 @@ export function sendRequestGetTreatmentStatusMapMachine(params, autoRefreshFlag)
 
 /**
  * スケジュールデータを取得
- * @param {*} params 施設コード、治療日付、レイアウトマスタの番号
- * @param autoRefreshFlag 自動更新にloadingは必要ありません  true:loadingは不要
+ * @param {Record<string, unknown>} params 施設コード、治療日付、レイアウトマスタの番号
+ * @param {boolean} autoRefreshFlag 自動更新にloadingは必要ありません  true:loadingは不要
  */
 export function sendRequestGetOnscheduleTreatmentStatusList(params, autoRefreshFlag) {
   const URL_SUB_ONSCHEDULE_TREATMEND_STATUS = "treatment_status_map_onschedule";
   /* modify by chamaojia 2024-03-27 [10303、10304] add interface input parameters 【bedLayoutId】、【kurCd】 --start */
-  const url = `${URL_BASE_STATUS_LIST}/${URL_SUB_ONSCHEDULE_TREATMEND_STATUS}/${params.facilityCd}/${params.treatDate}/${params.layoutNo}/${params.bedGroupCd}/${params.bedLayoutId}/${params.kurCd}/`;
+  const normalizedBedLayoutId = params.bedLayoutId === "" || params.bedLayoutId === null || typeof params.bedLayoutId === "undefined" ? -1 : params.bedLayoutId;
+  const normalizedKurCd = params.kurCd === "" || params.kurCd === null || typeof params.kurCd === "undefined" ? -1 : params.kurCd;
+  const url = `${URL_BASE_STATUS_LIST}/${URL_SUB_ONSCHEDULE_TREATMEND_STATUS}/${params.facilityCd}/${params.treatDate}/${params.layoutNo}/${params.bedGroupCd}/${normalizedBedLayoutId}/${normalizedKurCd}`;
   if (autoRefreshFlag) {
     // 自動更新サインアウトON/OFFチェック
     const forceSignOutFlag = store.getters["status-map/map/getForceSignOutFlag"];
     const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
     return ApiHelper.get(`${url}${queryParams}`);
-  } else {
-    return getWithLoader(url);
   }
+  return getWithLoader(url);
   /* modify by chamaojia 2024-03-27 [10303、10304] add interface input parameters 【bedLayoutId】、【kurCd】 --end */
 }
 /* modify by chamaojia 2022-11-26 [6746] loading判定パラメータの追加要否  --end */
 
 /**
  * 指定したord_noの治療状況マップアイコン設定情報を取得
+ * @param {unknown[]} ordNoArray オーダー番号配列
+ * @param {boolean} autoRefreshFlag バックグラウンド取得
  */
-export function sendRequestGerStatusMapInfo(ordNoArray, autoRefreshFlag) {
+export function sendRequestGetStatusMapInfo(ordNoArray, autoRefreshFlag) {
   if (autoRefreshFlag) {
     return ApiHelper.get(`${URL_BASE_STATUS_MAP}/${ordNoArray.join(",")}?__background_call__=true`);
-  } else {
-    return getWithLoader(`${URL_BASE_STATUS_MAP}/${ordNoArray.join(",")}`);
   }
+  return getWithLoader(`${URL_BASE_STATUS_MAP}/${ordNoArray.join(",")}`);
 }
+
+/** @deprecated 誤字。{@link sendRequestGetStatusMapInfo} を使用 */
+export const sendRequestGerStatusMapInfo = sendRequestGetStatusMapInfo;
 // mod 画面リロードの修正 付 end
 
 export function sendRequestGetPersonalUserList(facilityCd) {
@@ -96,28 +96,37 @@ export function sendRequestGetPersonalUserList(facilityCd) {
 
 /**
  * 指定条件の治療スケジュールリストを取得
- * @param {*} treatDate
- * @param {*} kurCd
- * @param {*} bedCd
+ * @param {string} treatDate 治療日
+ * @param {string} kurCd クールコード
+ * @param {string} bedCd ベッドコード
+ * @param {string} [facilityCd] 施設コード
+ * @param {string|number} [ordNo] オーダー番号
+ * @param {string|number} [patId] 患者ID
  */
-export function sendRequestGetOrdSchedule(treatDate, kurCd, bedCd
-// mod/ #12465同患者同日同治療方法同クールの使用制限をしてもメッセージがでない tianqidong start
-  ,facilityCd,ordNo,patId,indTreatmentCd
-//add FNSI redmine 6588 劉祥霖　end
+export function sendRequestGetOrdSchedule(
+  treatDate,
+  kurCd,
+  bedCd,
+  // add FNSI redmine 6588 劉祥霖 start
+  facilityCd,
+  ordNo,
+  patId,
+  indTreatmentCd
+  // add FNSI redmine 6588 劉祥霖 end
 ) {
   return getWithLoader(
-    //mod FNSI redmine 6588 劉祥霖　start
+    // mod FNSI redmine 6588 劉祥霖 start
     `${URL_BASE_STATUS_MAP}/find-schedule/${treatDate}/${kurCd}/${bedCd}/${facilityCd}/${ordNo}/${patId}/${indTreatmentCd}`
-    // mod/ #12465同患者同日同治療方法同クールの使用制限をしてもメッセージがでない tianqidong end
-    //mod FNSI redmine 6588 劉祥霖　start
+    // mod FNSI redmine 6588 劉祥霖 end
   );
 }
 
 /**
  * 指定条件の治療スケジュールがあるか判断し、あれば治療状況を取得
- * @param {*} treatDate
- * @param {*} kurCd
- * @param {*} bedCd
+ * @param {string} treatDate 治療日
+ * @param {string} kurCd クールコード
+ * @param {string} bedCd ベッドコード
+ * @param {string|number} ordNo オーダー番号
  */
 export function sendRequestGetLastestDialysisState(treatDate, kurCd, bedCd, ordNo) {
   return getWithLoader(
@@ -127,8 +136,8 @@ export function sendRequestGetLastestDialysisState(treatDate, kurCd, bedCd, ordN
 
 /**
  * 治療予定のベッド移動前チェック結果を取得
- * @param {*} ordNo
- * @param {*} bedCd
+ * @param {string|number} ordNo オーダー番号
+ * @param {string} bedCd ベッドコード
  */
 export function sendRequestCheckBeforeMoveOrdMain(ordNo, bedCd) {
   return getWithLoader(
@@ -138,9 +147,9 @@ export function sendRequestCheckBeforeMoveOrdMain(ordNo, bedCd) {
 
 /**
  * ベッド未割当の治療情報の取得(モーダル向け)
- * @param {*} facilityCd
- * @param {*} treatDate
- * @param {*} bedCd
+ * @param {string} facilityCd 施設コード
+ * @param {string} treatDate 治療日
+ * @param {string} bedCd ベッドコード
  */
 export function sendRequestGetNotAssignedOrdMain(facilityCd, treatDate, bedCd) {
   return getWithLoader(
@@ -150,7 +159,7 @@ export function sendRequestGetNotAssignedOrdMain(facilityCd, treatDate, bedCd) {
 
 /**
  * 治療情報にスケジュールを割り当て
- * @param {*} params
+ * @param {Record<string, unknown>} params 割当パラメータ
  */
 export function sendRequestPutAssignScheduleOrdMain(params) {
   return putWithLoader(
@@ -162,7 +171,7 @@ export function sendRequestPutAssignScheduleOrdMain(params) {
 
 /**
  * 治療情報をベッド未割当
- * @param {*} params
+ * @param {Record<string, unknown>} params パラメータ
  */
 export function sendRequestPutUnassigmentScheduleOrdMain(params) {
   return putWithLoader(
@@ -201,7 +210,7 @@ export function sendRequestPutSwapScheduleOrdMain(params) {
 
 /**
  * 条件送信キャンセル[デバイスエッジへの通知]
- * @param {*} params
+ * @param {Record<string, unknown>} params パラメータ
  */
 export function sendRequestPostCancelCondition(params) {
   return postWithLoader(
@@ -209,9 +218,10 @@ export function sendRequestPostCancelCondition(params) {
     params
   );
 }
+
 /**
  * 条件送信キャンセル[DB関連処理]
- * @param {*} bedCd
+ * @param {string} bedCd ベッドコード
  */
 export function sendRequestPutSendConditionCancel(bedCd) {
   return putWithLoader(
@@ -219,10 +229,11 @@ export function sendRequestPutSendConditionCancel(bedCd) {
     null
   );
 }
+
 /**
  * 指示確認OK更新
- * @param {Number} ordNo 指示番号
- * @param {Object} param 指示情報
+ * @param {number} ordNo 指示番号
+ * @param {Record<string, unknown>} param 指示情報
  */
 export function sendRequestPutCheckForMap(ordNo, param) {
   return putWithLoader(`${URL_BASE_STATUS_MAP}/check-ind/${ordNo}`, param);
@@ -231,7 +242,7 @@ export function sendRequestPutCheckForMap(ordNo, param) {
 // mod 画面リロードの修正 付 start
 /**
  * 指定オーダー番号のスケジュール情報取得
- * @param {*} ordNo オーダー番号
+ * @param {string|number} ordNo オーダー番号
  */
 export function sendRequestGetOrdMainByOrdNo(ordNo) {
   return ApiHelper.get(`${URL_BASE_STATUS_MAP}/getOrdMainByOrdNo/${ordNo}`);
@@ -240,22 +251,22 @@ export function sendRequestGetOrdMainByOrdNo(ordNo) {
 
 // add FNSI-7217 バッチ操作インターフェイスを追加します 查 start
 /**
- * 指定オーダー番号のスケジュール情報取得
- * @param {*} ordNos オーダー番号
+ * 指定オーダー番号のスケジュール情報取得（複数）
+ * @param {string} ordNos オーダー番号（カンマ区切り等）
+ * @param {boolean} autoRefreshFlag バックグラウンド取得
  */
 export function sendRequestGetOrdMainListByOrdNo(ordNos, autoRefreshFlag) {
   if (autoRefreshFlag) {
     return ApiHelper.get(`${URL_BASE_STATUS_MAP}/getOrdMainListByOrdNo/${ordNos}?__background_call__=true`);
-  } else {
-    return getWithLoader(`${URL_BASE_STATUS_MAP}/getOrdMainListByOrdNo/${ordNos}`);
   }
+  return getWithLoader(`${URL_BASE_STATUS_MAP}/getOrdMainListByOrdNo/${ordNos}`);
 }
 // add FNSI-7217 バッチ操作インターフェイスを追加します 查 end
 
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} [params] パラメータ
  */
 function getWithLoader(url, params = undefined) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -267,8 +278,8 @@ function getWithLoader(url, params = undefined) {
 
 /**
  * 共通ローダを実行するPUTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function putWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -280,8 +291,8 @@ function putWithLoader(url, params) {
 
 /**
  * 共通ローダを実行するPOSTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function postWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -290,4 +301,3 @@ function postWithLoader(url, params) {
     store.dispatch("loading-screen/setLoadingScreenVisible", false)
   );
 }
-

@@ -13,13 +13,14 @@
 
 /* add by chamaojia 2023-08-30 [9599] バージョンアップ後は手動でjsを導入する必要があります  --start */
 // package.jsonのworkbox-webpack-pluginバージョンに対応
-importScripts("https://storage.googleapis.com/workbox-cdn/releases/6.6.0/workbox-sw.js");
+self.importScripts("https://storage.googleapis.com/workbox-cdn/releases/6.6.0/workbox-sw.js");
+const workboxRuntime = self.workbox;
 /* add by chamaojia 2023-08-30 [9599] バージョンアップ後は手動でjsを導入する必要があります  --end */
 
 // Force production builds
-workbox.setConfig({ debug: true });
+workboxRuntime.setConfig({ debug: true });
 
-workbox.core.setCacheNameDetails({prefix: "ReMS"});
+workboxRuntime.core.setCacheNameDetails({prefix: "ReMS"});
 
 //workbox.skipWaiting();
 //workbox.clientsClaim();
@@ -33,7 +34,7 @@ self.__precacheManifest = [].concat(self.__precacheManifest || self.__WB_MANIFES
 /* del by chamaojia 2023-08-30 [9599] 呼び出し関数が存在しません  --start */
 // workbox.precaching.suppressWarnings();
 /* del by chamaojia 2023-08-30 [9599] 呼び出し関数が存在しません  --end */
-workbox.precaching.precacheAndRoute(self.__precacheManifest, {});
+workboxRuntime.precaching.precacheAndRoute(self.__precacheManifest, {});
 
 
 // SWスクリプトのinstall イベント

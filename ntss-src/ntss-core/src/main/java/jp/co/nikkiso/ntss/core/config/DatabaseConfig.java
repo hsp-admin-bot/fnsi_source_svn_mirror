@@ -5,10 +5,15 @@ import jp.co.nikkiso.ntss.core.constant.CoreConstant.TransactionManagerName;
 import org.seasar.doma.boot.autoconfigure.DomaConfig;
 import org.seasar.doma.boot.autoconfigure.DomaConfigBuilder;
 import org.seasar.doma.boot.autoconfigure.DomaProperties;
+import org.seasar.doma.jdbc.DuplicateColumnHandler;
 import org.seasar.doma.jdbc.EntityListenerProvider;
+import org.seasar.doma.jdbc.JdbcLogger;
 import org.seasar.doma.jdbc.Naming;
+import org.seasar.doma.jdbc.ScriptFileLoader;
+import org.seasar.doma.jdbc.SqlBuilderSettings;
 import org.seasar.doma.jdbc.SqlFileRepository;
 import org.seasar.doma.jdbc.dialect.PostgresDialect;
+import org.seasar.doma.jdbc.statistic.StatisticManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -91,14 +96,7 @@ public class DatabaseConfig {
   @Bean
   @AuthDb
   DomaConfig configAuthDb(
-      SqlFileRepository sqlFileRepository, Naming naming, EntityListenerProvider provider) {
-    DomaConfigBuilder domaConfigBuilder = new DomaConfigBuilder()
-        .dialect(new PostgresDialect())
-        .sqlFileRepository(sqlFileRepository)
-        .naming(naming)
-        .entityListenerProvider(provider)
-        .dataSource(authDataSource());
-
+      SqlFileRepository sqlFileRepository, Naming naming, EntityListenerProvider provider, JdbcLogger jdbcLogger, DuplicateColumnHandler duplicateColumnHandler, ScriptFileLoader scriptFileLoader, SqlBuilderSettings sqlBuilderSettings, StatisticManager statisticManager) {
     DomaProperties domaProperties = new DomaProperties() {
       {
         setDataSourceName(DataSourceName.AUTH);
@@ -106,7 +104,18 @@ public class DatabaseConfig {
 
       }
     };
-    return new DomaConfig(domaConfigBuilder, domaProperties);
+    DomaConfigBuilder domaConfigBuilder = new DomaConfigBuilder(domaProperties)
+        .dialect(new PostgresDialect())
+        .jdbcLogger(jdbcLogger)
+        .sqlFileRepository(sqlFileRepository)
+        .naming(naming)
+        .entityListenerProvider(provider)
+        .duplicateColumnHandler(duplicateColumnHandler)
+        .scriptFileLoader(scriptFileLoader)
+        .sqlBuilderSettings(sqlBuilderSettings)
+        .statisticManager(statisticManager)
+        .dataSource(authDataSource());
+    return domaConfigBuilder.build();
   }
 
   /**
@@ -120,14 +129,7 @@ public class DatabaseConfig {
   @DefaultDb
   @Primary
   DomaConfig configDefaultDb(
-      SqlFileRepository sqlFileRepository, Naming naming, EntityListenerProvider provider) {
-
-    DomaConfigBuilder domaConfigBuilder = new DomaConfigBuilder()
-        .dialect(new PostgresDialect())
-        .sqlFileRepository(sqlFileRepository)
-        .naming(naming)
-        .entityListenerProvider(provider)
-        .dataSource(defaultDataSource());
+      SqlFileRepository sqlFileRepository, Naming naming, EntityListenerProvider provider, JdbcLogger jdbcLogger, DuplicateColumnHandler duplicateColumnHandler, ScriptFileLoader scriptFileLoader, SqlBuilderSettings sqlBuilderSettings, StatisticManager statisticManager) {
 
     DomaProperties domaProperties = new DomaProperties() {
       {
@@ -136,7 +138,18 @@ public class DatabaseConfig {
 
       }
     };
-    return new DomaConfig(domaConfigBuilder, domaProperties);
+    DomaConfigBuilder domaConfigBuilder = new DomaConfigBuilder(domaProperties)
+        .dialect(new PostgresDialect())
+        .jdbcLogger(jdbcLogger)
+        .sqlFileRepository(sqlFileRepository)
+        .naming(naming)
+        .entityListenerProvider(provider)
+        .duplicateColumnHandler(duplicateColumnHandler)
+        .scriptFileLoader(scriptFileLoader)
+        .sqlBuilderSettings(sqlBuilderSettings)
+        .statisticManager(statisticManager)
+        .dataSource(defaultDataSource());
+    return domaConfigBuilder.build();
   }
 
   /**
@@ -149,14 +162,7 @@ public class DatabaseConfig {
   @Bean
   @PersonalDb
   DomaConfig configPersonalDb(
-      SqlFileRepository sqlFileRepository, Naming naming, EntityListenerProvider provider) {
-
-    DomaConfigBuilder domaConfigBuilder = new DomaConfigBuilder()
-        .dialect(new PostgresDialect())
-        .sqlFileRepository(sqlFileRepository)
-        .naming(naming)
-        .entityListenerProvider(provider)
-        .dataSource(personalDataSource());
+      SqlFileRepository sqlFileRepository, Naming naming, EntityListenerProvider provider, JdbcLogger jdbcLogger, DuplicateColumnHandler duplicateColumnHandler, ScriptFileLoader scriptFileLoader, SqlBuilderSettings sqlBuilderSettings, StatisticManager statisticManager) {
 
     DomaProperties domaProperties = new DomaProperties() {
       {
@@ -165,7 +171,18 @@ public class DatabaseConfig {
 
       }
     };
-    return new DomaConfig(domaConfigBuilder, domaProperties);
+    DomaConfigBuilder domaConfigBuilder = new DomaConfigBuilder(domaProperties)
+        .dialect(new PostgresDialect())
+        .jdbcLogger(jdbcLogger)
+        .sqlFileRepository(sqlFileRepository)
+        .naming(naming)
+        .entityListenerProvider(provider)
+        .duplicateColumnHandler(duplicateColumnHandler)
+        .scriptFileLoader(scriptFileLoader)
+        .sqlBuilderSettings(sqlBuilderSettings)
+        .statisticManager(statisticManager)
+        .dataSource(personalDataSource());
+    return domaConfigBuilder.build();
   }
 
   /**

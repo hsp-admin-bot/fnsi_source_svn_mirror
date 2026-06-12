@@ -1,16 +1,35 @@
+/**
+ * ãƒžã‚¹ã‚¿æƒ…å ±ä¸€æ‹¬å–å¾—ï¼ˆmstInfoï¼‰
+ */
 import { ApiHelper } from "@/apis/AxiosHelper";
 import store from "@/stores";
-export function getMstInfo({ reqMstNamesArr }) {
+
+function withSelectedPatId(params = undefined, selectedPatId) {
+  if (selectedPatId === null || selectedPatId === undefined || selectedPatId === "") {
+    return params;
+  }
+  return {
+    ...(params || {}),
+    selectedPatId
+  };
+}
+
+/**
+ * @param {{ reqMstNamesArr: string[] }} param è¦æ±‚ã™ã‚‹ãƒžã‚¹ã‚¿åã®é…åˆ—
+ */
+export function getMstInfo({ reqMstNamesArr, selectedPatId }) {
   const facilityCd = store.state.user.facilityCd;
   store.dispatch("loading-screen/startLoadingScreen");
-  return ApiHelper.get(`mstInfo/getMstInfo`, {
-    facilityCd: facilityCd,
+  return ApiHelper.get(`mstInfo/getMstInfo`, withSelectedPatId({
+    facilityCd,
     reqMstNames: reqMstNamesArr.join(",")
-  }).finally(() => {
-    store.dispatch("loading-screen/finishLoadingScreen");
-  }).catch(() => {
-    store.dispatch("loading-screen/finishLoadingScreen");
-  });
+  }, selectedPatId))
+    .finally(() => {
+      store.dispatch("loading-screen/finishLoadingScreen");
+    })
+    .catch(() => {
+      store.dispatch("loading-screen/finishLoadingScreen");
+    });
 }
 
 
@@ -30,7 +49,7 @@ export function getMstOtherInfo(reqMstNamesArr,patId) {
 }
 //liyanze-z #12462 add api end
 
-/* add by chamaojia 2026-02-11 [11893] ƒLƒƒƒbƒVƒ…ŒyŒ¸‘Î‰ž --start */
+/* add by chamaojia 2026-02-11 [11893] ã‚­ãƒ£ãƒƒã‚·ãƒ¥è»½æ¸›å¯¾å¿œ --start */
 export function getMstInfoByPatId({ patId }) {
   const facilityCd = store.state.user.facilityCd;
   store.dispatch("loading-screen/startLoadingScreen");
@@ -43,4 +62,4 @@ export function getMstInfoByPatId({ patId }) {
     store.dispatch("loading-screen/finishLoadingScreen");
   });
 }
-/* add by chamaojia 2026-02-11 [11893] ƒLƒƒƒbƒVƒ…ŒyŒ¸‘Î‰ž --end */
+/* add by chamaojia 2026-02-11 [11893] ã‚­ãƒ£ãƒƒã‚·ãƒ¥è»½æ¸›å¯¾å¿œ --end */

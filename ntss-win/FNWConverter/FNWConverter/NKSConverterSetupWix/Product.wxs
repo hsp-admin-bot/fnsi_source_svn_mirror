@@ -2,8 +2,8 @@
 <!--
   FNW2FNSI_Converter WiX v4 インストーラー
   製品名   : FNWSi コンバートツール
-  バージョン: 2.0.24
-  メーカー : Nikkiso
+  バージョン: 2.0.0
+  メーカー : NIKKISO
   インストール先: C:\FNWSiTools\FNWSiConvertTool
 
   画面フロー:
@@ -34,15 +34,15 @@
     Compressed="yes"
     Scope="perMachine">
 
-    <SummaryInformation Description="FNW2FNSI コンバータツール インストーラー" Keywords="インストーラー" />
+    <SummaryInformation Description="FNWSi コンバートツール インストーラー" Keywords="インストーラー" />
     <MediaTemplate EmbedCab="yes" />
 
     <!-- ============================== アイコン ============================== -->
     <Icon Id="ConverterIcon" SourceFile="$(var.SrcBin)FNWSiConvertTool.exe" />
 
     <Property Id="ARPPRODUCTICON" Value="ConverterIcon" />
-    <Property Id="ARPCONTACT"     Value="Nikkiso" />
-    <Property Id="ARPCOMMENTS"    Value="FNW2FNSI コンバータツール" />
+    <Property Id="ARPCONTACT"     Value="NIKKISO" />
+    <Property Id="ARPCOMMENTS"    Value="FNWSi コンバートツール" />
     <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
 
     <Property Id="REBOOT"                    Value="ReallySuppress" />
@@ -76,8 +76,6 @@
                         Action="removeOnUninstall" />
     </Component>
 
-
-    <!-- 交互インストール用: 起動中プロセス表示 -->
     <Property Id="RUNNING_PROCESSES" Secure="yes" />
 
     <!-- ============================== .NET Framework 4.5 チェック ============================== -->
@@ -142,7 +140,7 @@
             Source="$(var.SrcBin)FNWSiConvertTool.exe"
             KeyPath="yes" />
       <RemoveFile Id="RF_InstallState"
-                  Name="FNW2FNSI_Converter.InstallState"
+                  Name="FNWSiConvertTool.InstallState"
                   On="uninstall" />
     </Component>
 
@@ -176,6 +174,23 @@
       <Component Guid="{D1000008-0000-4000-8000-000000000008}"><File Source="$(var.SrcBin)Newtonsoft.Json.dll" /></Component>
       <Component Guid="{D1000009-0000-4000-8000-000000000009}"><File Source="$(var.SrcBin)Oracle.ManagedDataAccess.dll" /></Component>
       <Component Guid="{D100000B-0000-4000-8000-00000000000B}"><File Source="$(var.SrcBin)ICSharpCode.SharpZipLib.dll" /></Component>
+      <!-- Oracle.ManagedDataAccess 23.x / SSH.NET 2025 の依存 DLL（net481）。
+           これらが無いと OracleConnection 生成時に ProviderConfig の型初期化で例外が発生する -->
+      <Component Guid="{D1000010-0000-4000-8000-000000000010}"><File Source="$(var.SrcBin)System.Text.Json.dll" /></Component>
+      <Component Guid="{D1000011-0000-4000-8000-000000000011}"><File Source="$(var.SrcBin)System.Text.Encodings.Web.dll" /></Component>
+      <Component Guid="{D1000012-0000-4000-8000-000000000012}"><File Source="$(var.SrcBin)System.Memory.dll" /></Component>
+      <Component Guid="{D1000013-0000-4000-8000-000000000013}"><File Source="$(var.SrcBin)System.Buffers.dll" /></Component>
+      <Component Guid="{D1000014-0000-4000-8000-000000000014}"><File Source="$(var.SrcBin)System.Diagnostics.DiagnosticSource.dll" /></Component>
+      <Component Guid="{D1000015-0000-4000-8000-000000000015}"><File Source="$(var.SrcBin)System.Collections.Immutable.dll" /></Component>
+      <Component Guid="{D1000016-0000-4000-8000-000000000016}"><File Source="$(var.SrcBin)System.Runtime.CompilerServices.Unsafe.dll" /></Component>
+      <Component Guid="{D1000017-0000-4000-8000-000000000017}"><File Source="$(var.SrcBin)System.Threading.Tasks.Extensions.dll" /></Component>
+      <Component Guid="{D1000018-0000-4000-8000-000000000018}"><File Source="$(var.SrcBin)System.Numerics.Vectors.dll" /></Component>
+      <Component Guid="{D1000019-0000-4000-8000-000000000019}"><File Source="$(var.SrcBin)System.IO.Pipelines.dll" /></Component>
+      <Component Guid="{D100001A-0000-4000-8000-00000000001A}"><File Source="$(var.SrcBin)System.Formats.Asn1.dll" /></Component>
+      <Component Guid="{D100001B-0000-4000-8000-00000000001B}"><File Source="$(var.SrcBin)Microsoft.Bcl.AsyncInterfaces.dll" /></Component>
+      <Component Guid="{D100001C-0000-4000-8000-00000000001C}"><File Source="$(var.SrcBin)BouncyCastle.Cryptography.dll" /></Component>
+      <Component Guid="{D100001D-0000-4000-8000-00000000001D}"><File Source="$(var.SrcBin)Microsoft.Extensions.DependencyInjection.Abstractions.dll" /></Component>
+      <Component Guid="{D100001E-0000-4000-8000-00000000001E}"><File Source="$(var.SrcBin)Microsoft.Extensions.Logging.Abstractions.dll" /></Component>
     </ComponentGroup>
 
     <!-- (5) Icons フォルダ -->
@@ -224,14 +239,14 @@
                   Impersonate="no"
                   Return="ignore" />
 
-    <!-- 交互インストール用: 起動中プロセス検出 -->
+    <!-- 起動中プロセス検出 -->
     <CustomAction Id="CA_DetectRunningProcesses"
                   Execute="immediate"
                   Return="ignore"
                   Script="vbscript"
                   ScriptSourceFile="Scripts\CA_DetectRunningProcesses.vbs" />
 
-    <!-- 交互インストール用: 「終了して続行」押下時に即時終了 -->
+    <!-- 「終了して続行」押下時に即時終了 -->
     <CustomAction Id="CA_KillGUIApps"
                   Execute="immediate"
                   Return="ignore"
@@ -290,7 +305,7 @@
     <InstallExecuteSequence>
       <RemoveExistingProducts After="InstallInitialize" />
 
-      <!-- 実行中プロセスを終了（常時） -->
+      <!-- 実行中プロセスを終了してからファイル操作（アップグレード/修復/アンインストール共通） -->
       <Custom Action="KillRunningInstances" Before="RemoveFiles" Condition="1" />
 
       <!-- アンインストール時（アップグレード除く）: 環境変数クリーンアップ -->
@@ -356,7 +371,7 @@
           <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
         </Control>
       </Dialog>
-      <!-- 交互: 起動中プロセスがある場合は RunningProcessesDlg へ -->
+
       <Publish Dialog="WelcomeDlg" Control="Next"
                Event="DoAction" Value="CA_DetectRunningProcesses" Order="1"
                Condition="NOT Installed" />
@@ -367,7 +382,6 @@
                Event="NewDialog" Value="InstallDirDlg" Order="3"
                Condition="NOT Installed AND NOT RUNNING_PROCESSES" />
 
-      <!-- 交互: 修復ボタン押下時も検出 -->
       <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
                Event="DoAction" Value="CA_DetectRunningProcesses"
                Order="1" Condition="Installed" />
@@ -377,7 +391,7 @@
       <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
                Event="NewDialog" Value="VerifyReadyDlg"
                Order="2" Condition="Installed AND NOT RUNNING_PROCESSES" />
-      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"    Order="2" Condition="1" />
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2" Condition="1" />
     </UI>
 
   </Package>

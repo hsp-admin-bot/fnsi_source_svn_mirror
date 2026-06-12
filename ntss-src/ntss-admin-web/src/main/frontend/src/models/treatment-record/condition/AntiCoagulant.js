@@ -2,7 +2,7 @@
  * 治療条件画面の抗凝固剤を表現するクラス
  */
 import { CODES } from "@/constants/TreatmentRecord";
-import { Master } from "@/models/common/master-selector-condition/Master";
+import { Master, isUnregisteredMaster } from "@/models/common/master-selector-condition/Master";
 import {
   numberToString,
   stringToNumber
@@ -431,7 +431,7 @@ export class AntiCoagulant {
               if (info[item.ANTI_COAGULANT_SPEED.cd] != undefined) {
                 info[item.ANTI_COAGULANT_SPEED.cd].unit = nullUnit ? null : this.speedUnit;
               }
-            }else if(this.antiCoagulant.name === ""){//「未登録」に変更する場合（nameが""）
+            }else if(isUnregisteredMaster(this.antiCoagulant)){//「未登録」に変更する場合
               info[item.ANTI_COAGULANT.cd] = this.getTemplate();
             }
             continue;
@@ -461,6 +461,36 @@ export class AntiCoagulant {
             if (info[item.ANTI_COAGULANT.cd]) {
                 info[item.ANTI_COAGULANT_TOTAL_AMOUNT.cd].unit = nullUnit ? null : info[item.ANTI_COAGULANT.cd].unit;
             }
+            continue;
+          case "oneShotAmountUnit":
+            if (!info[item.ANTI_COAGULANT.cd]) {
+              info[item.ANTI_COAGULANT.cd] = this.getTemplate();
+            }
+            info[item.ANTI_COAGULANT.cd].unit = nullUnit ? null : this.oneShotAmountUnit;
+            if (!info[item.ANTI_COAGULANT_ONE_SHOT_AMOUNT.cd]) {
+              info[item.ANTI_COAGULANT_ONE_SHOT_AMOUNT.cd] = this.createEmpty();
+            }
+            info[item.ANTI_COAGULANT_ONE_SHOT_AMOUNT.cd].unit = nullUnit ? null : this.oneShotAmountUnit;
+            if (!info[item.ANTI_COAGULANT_TOTAL_AMOUNT.cd]) {
+              info[item.ANTI_COAGULANT_TOTAL_AMOUNT.cd] = this.createEmpty();
+            }
+            info[item.ANTI_COAGULANT_TOTAL_AMOUNT.cd].unit = nullUnit ? null : this.totalAmountUnit;
+            if (!info[item.ANTI_COAGULANT_SPEED.cd]) {
+              info[item.ANTI_COAGULANT_SPEED.cd] = this.createEmpty();
+            }
+            info[item.ANTI_COAGULANT_SPEED.cd].unit = nullUnit ? null : this.speedUnit;
+            continue;
+          case "speedUnit":
+            if (!info[item.ANTI_COAGULANT_SPEED.cd]) {
+              info[item.ANTI_COAGULANT_SPEED.cd] = this.createEmpty();
+            }
+            info[item.ANTI_COAGULANT_SPEED.cd].unit = nullUnit ? null : this.speedUnit;
+            continue;
+          case "totalAmountUnit":
+            if (!info[item.ANTI_COAGULANT_TOTAL_AMOUNT.cd]) {
+              info[item.ANTI_COAGULANT_TOTAL_AMOUNT.cd] = this.createEmpty();
+            }
+            info[item.ANTI_COAGULANT_TOTAL_AMOUNT.cd].unit = nullUnit ? null : this.totalAmountUnit;
             continue;
           case "ipSpeed":
             info[item.IP_SPEED.cd] = this.createEmpty();
@@ -570,9 +600,6 @@ export class AntiCoagulant {
     if (!this.isObject(obj1)) {
       if (this.isNumber(obj1) && this.isNumber(obj2)) {
         return Number(obj1) == Number(obj2);
-      }
-      if (obj1 == '' && obj2 == null) {
-        return true;
       }
       return obj1 == obj2;
     }

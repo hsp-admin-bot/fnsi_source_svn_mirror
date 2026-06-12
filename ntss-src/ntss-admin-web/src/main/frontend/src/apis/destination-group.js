@@ -10,6 +10,7 @@ const URL_BASE = "/destination_group";
 
 /**
  * 送信先グループ名を取得
+ * @param {string} destinationGroupCd 送信先グループコード
  */
 export function sendRequestGetDestinationGroupName(destinationGroupCd) {
   return ApiHelper.get(`${URL_BASE}/${destinationGroupCd}/name`);

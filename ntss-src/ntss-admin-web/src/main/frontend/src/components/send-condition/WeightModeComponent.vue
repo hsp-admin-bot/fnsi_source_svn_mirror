@@ -60,6 +60,7 @@
           <div>{{ patSearchMessage }}</div>
         </div>
         <v-ons-input
+          ref="patIdInput"
           id="patIdID"
           class="weight-mode-pat-id-input"
           @keydown.enter="inputPatId($event.target.value)"
@@ -90,9 +91,10 @@
 
     <!-- テンキー -->
     <v-ons-popover
+      ref="numericPopover"
       cancelable
       id="numericPopOver"
-      :visible.sync="cavisible"
+      v-model:visible="cavisible"
       :target="popoverTarget"
       direction="down"
       class="popoverClass"
@@ -105,11 +107,11 @@
 
 <script>
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import { weightScaleClass } from "@/constants/weightDefine";
-import { EventBus } from "@/eventBus.js";
-import moment from "moment";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import dayjs from "@/compat/date/dayjs";
 import MasterSelector from "@/components/common/master-selector/MasterSelector";
 import PatHeaderControlMixin from "@/components/common/PatHeadControlMixin";
 // add 画面印刷プレビューと印刷の実現 陳 start
@@ -128,8 +130,17 @@ import store from "@/stores";
 // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 end
 import { MST_WEIGHT_EDIT_WITH_PAT_SELECTION, WEIGHT_MODE_MEASURE_HISTORY_BUTTON_DISPLAY } from "@/constants/facilitySetting";
 import { sendRequestGetMstFacilitySettingValue } from "@/apis/facility-setting";
-import VueTouchKeyboard from "vue-touch-keyboard/dist/vue-touch-keyboard";
-import "./../../../public/css/vue-touch-keyboard.css";
+import TouchKeyboard from "@/compat/keyboard/TouchKeyboard.vue";
+import { publicAssetPath } from "@/compat/assets/public-path";
+import {
+  appendScopedStylesheet,
+  getFooterMenuElement,
+  getScopedDocumentElement,
+  getScopedElementById,
+  getScopedLocalStorage,
+  getScopedUserAgent,
+  getViewportHeight,
+} from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   props: {
@@ -138,7 +149,7 @@ export default {
   },
   components: {
     "pop-over": MasterSelector,
-    "vue-touch-keyboard":VueTouchKeyboard.component,
+    "vue-touch-keyboard": TouchKeyboard,
   },
   mixins: [NextTransitionMixin, PatHeaderControlMixin],
   data() {
@@ -170,7 +181,7 @@ export default {
         useKbEvents: false,
         preventClickEvent: false
       },
-      image_src: require("@/../public/img/keyboard/keyboard.png"),
+      image_src: publicAssetPath("img/keyboard/keyboard.png"),
       popoverTarget: null,
       // テンキーで使用 end
       // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
@@ -186,7 +197,8 @@ export default {
     // add #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 end
     ...mapGetters("app", ["getQueryParameters"]),
     ...mapGetters("user", ["getFacilityCd"]),
-    ...mapGetters("account-edit", ["getStateUserAccountInfo", "isDispMenu"]),
+    ...mapGetters("account-edit", ["getStateUserAccountInfo", "isDispMenu", "getFontSize"]),
+    ...mapGetters("window-size", { windowHeight: "getWindowHeight" }),
     ...mapGetters("send-condition/weight", [
       "getWeightMode",
       "getMstWeightList",
@@ -246,7 +258,7 @@ export default {
         }
 
         /* パンくずリスト背景色を設定 */
-        const elm = document.getElementsByClassName("breadcrumb-area");
+        const elm = this.getBreadcrumbAreaElements();
         // add FNSI-体重計モードテンキーの追加  徐 start
         if (elm && elm.length > 0) {
           // add FNSI-体重計モードテンキーの追加  徐 end
@@ -257,7 +269,7 @@ export default {
         }
 
         /* その他エリアの背景色を設定 */
-        const weightModeTimeContent = document.getElementsByClassName("weight-mode-time-content");
+        const weightModeTimeContent = this.getWeightModeTimeContentElements();
         for (let elem of weightModeTimeContent) {
           elem.style.backgroundColor = bgColor;
           elem.style.paddingBottom = timeContentPaddingBottom;
@@ -278,6 +290,98 @@ export default {
     },
   },
   methods: {
+    getWeightModeOwnerDocument() {
+      return this.$el?.ownerDocument || document;
+    },
+    getWeightModeScopeRoot() {
+      return this.$el?.closest?.('.send-condition-main-content-area, .ntss-send-condition-content-area, .main-content-area, #app')
+        || this.$el
+        || this.getWeightModeOwnerDocument();
+    },
+    getPatIdHostElement() {
+      return this.$refs.patIdInput?.$el
+        || this.$el?.querySelector?.("#patIdID")
+        || this.getWeightModeScopeRoot()?.querySelector?.("#patIdID")
+        || this.getWeightModeOwnerDocument()?.getElementById?.("patIdID")
+        || null;
+    },
+    getPatIdInputElement() {
+      const patIdHostElement = this.getPatIdHostElement();
+      return patIdHostElement?.querySelector?.("input, .text-input")
+        || patIdHostElement?.firstElementChild
+        || patIdHostElement
+        || null;
+    },
+    getNumericPopoverElement() {
+      return this.$refs.numericPopover?.$el
+        || this.$el?.querySelector?.("#numericPopOver")
+        || this.getWeightModeScopeRoot()?.querySelector?.("#numericPopOver")
+        || this.getWeightModeOwnerDocument()?.getElementById?.("numericPopOver")
+        || null;
+    },
+    getBreadcrumbAreaElements() {
+      return Array.from(this.$el?.ownerDocument?.getElementsByClassName?.("breadcrumb-area") || []);
+    },
+    getWeightModeTimeContentElements() {
+      return Array.from(this.$el?.querySelectorAll?.(".weight-mode-time-content") || this.$el?.ownerDocument?.getElementsByClassName?.("weight-mode-time-content") || []);
+    },
+    /**
+     * レイアウトの #main-id（ntss-layout / LayoutView）の --height を再計算し、
+     * ビューポートからヘッダー・フッターを除いた領域に合わせる（LayoutMixin.calculateMainHeight と同趣旨）。
+     */
+    calculateContentHeight() {
+      const root = this.$el;
+      if (!root) {
+        return;
+      }
+      const mainEl =
+        root.closest?.("#main-id") ||
+        getScopedElementById("main-id", root.ownerDocument?.body || null);
+      if (!mainEl) {
+        return;
+      }
+      const wh = Number(this.windowHeight) || getViewportHeight(root);
+      const contentContainer = mainEl.closest?.(".content-container");
+      const headerEl = contentContainer?.querySelector?.(".header");
+      const hh = headerEl?.clientHeight ?? 0;
+
+      let hhTmp = 0;
+      if (this.getWeightMode?.isWeightMode) {
+        if (this.getFontSize + "" === "0") {
+          hhTmp = 100;
+        } else if (this.getFontSize + "" === "1") {
+          hhTmp = 125;
+        } else if (this.getFontSize + "" === "2") {
+          hhTmp = 137.5;
+        } else if (this.getFontSize + "" === "3") {
+          hhTmp = 162.5;
+        }
+      } else {
+        if (this.getFontSize + "" === "0") {
+          hhTmp = 85;
+        } else if (this.getFontSize + "" === "1") {
+          hhTmp = 97;
+        } else if (this.getFontSize + "" === "2") {
+          hhTmp = 104;
+        } else if (this.getFontSize + "" === "3") {
+          hhTmp = 115;
+        }
+      }
+
+      const fh =
+        this.isDispMenu === 1
+          ? (getFooterMenuElement(root)?.clientHeight || 0)
+          : 0;
+
+      let mainHeight;
+      if (hh !== 0) {
+        mainHeight = wh - (Number(hh) || hhTmp) - fh;
+      } else {
+        mainHeight = wh - fh;
+      }
+
+      mainEl.style.setProperty("--height", `${mainHeight}px`);
+    },
     ...mapActions("multi-modal", ["showPatSearch"]),
     ...mapActions("account-edit", ["setDispMenuBar", "setIsDispSidebarBtn"]),
     ...mapActions("send-condition/scale", [
@@ -338,9 +442,9 @@ export default {
           //mod #9558 機能帳票でパラメータが正しく渡されていない 房 end
           // add #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 end
           functionCd:"01301",
-          date: moment(Date.now()).format("YYYYMMDD"),     // 日付（1日）：今日
-          fromDate: moment(Date.now()).format("YYYY/MM/DD"), //  日付（期間）：今日から今日
-          toDate: moment(Date.now()).format("YYYY/MM/DD"),
+          date: dayjs(Date.now()).format("YYYYMMDD"),     // 日付（1日）：今日
+          fromDate: dayjs(Date.now()).format("YYYY/MM/DD"), //  日付（期間）：今日から今日
+          toDate: dayjs(Date.now()).format("YYYY/MM/DD"),
           // add #5984 体重測定 コンテンツを追加する 孟堅 end
         };
         EventBus.$emit("sendReportParams", param);
@@ -419,12 +523,11 @@ export default {
       store.dispatch("report/getMstReport", {funcCd: "01302",printFlag: 0});
 // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 end
   // add 8449【デグレ】体重測定画面を開くと患者名欄が緑枠（変更状態）になる zhao start
-      let isHospPatId = document.querySelector(".weight-mode-pat-id-input .text-input").value;
+      let isHospPatId = this.getPatIdInputElement()?.value || "";
       this.setIsHospPatId(isHospPatId);
   // add 8449【デグレ】体重測定画面を開くと患者名欄が緑枠（変更状態）になる zhao end
       // 条件セット
-      let today = new Date();
-      today = moment(today, "YYYYMMDD").format("YYYYMMDD");
+      const today = dayjs().format("YYYYMMDD");
       // FNSI-修正 ログ対応 徐 start
       let msg = "患者検索が[" + today + "]で検索しました。";
       let paramObj = {'message': msg, 'functionName': '患者検索'};
@@ -489,7 +592,7 @@ export default {
       // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 start
       store.dispatch("report/getMstReport", {funcCd: "01302",printFlag: 9});
       // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 end
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       this.setLoadingScreenVisible(true);
@@ -636,10 +739,7 @@ export default {
     },
     // 体重計モードの専用cssファイル読み込み
     readWeightModeCss() {
-      let themeCss = document.createElement("link");
-      themeCss.rel = "stylesheet";
-      themeCss.href = "./css/ntss_weight_mode.css";
-      document.head.appendChild(themeCss);
+      appendScopedStylesheet("./css/ntss_weight_mode.css", this.$el || null);
     },
     finishStartupLoading() {
       if (!this.finishLoading) {
@@ -647,21 +747,23 @@ export default {
         this.setLoadingScreenVisible(false);
       }
       this.setLoadingScreenVisible(false);
+      this.$nextTick(() => {
+        this.calculateContentHeight();
+      });
     },
     isMobileBrowser() {
-      return /android|iphone|ipad/i.test(navigator.userAgent);
+      return /android|iphone|ipad/i.test(getScopedUserAgent(this.$el || null));
     },
     focusPatInput() {
       if (!this.isMobileBrowser()) {
-        document.querySelector(".weight-mode-pat-id-input .text-input").focus();
+        this.getPatIdInputElement()?.focus?.();
       }
     },
     /**
      * テンキー表示
      */
     show() {
-      let patIdElem = document.getElementById("patIdID");
-      this.input = patIdElem.firstElementChild;
+      this.input = this.getPatIdInputElement();
       this.input.setAttribute("readonly", "readonly");
 
       this.selectAllInput(this.input);
@@ -685,7 +787,7 @@ export default {
     },
     // テンキー用関数 cancel: 画面テンキーを閉じる
     cancel() {
-      document.getElementById("numericPopOver").hide();
+      this.getNumericPopoverElement()?.hide?.();
       this.cavisible = false;
       if (this.getWeightMode.isWeightMode) {
         // 体重計モード時、テンキー閉じた時に患者ID入力欄へフォーカスする
@@ -740,7 +842,7 @@ export default {
   },
   created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // ADD #7221 2023/02/05 By HandsomeLin Start
     // In order to enter the scale mode as soon as possible.
     // ADD #7221 2023/02/05 By HandsomeLin End
@@ -751,9 +853,10 @@ export default {
       this.readWeightModeCss();
 
       // 全画面メッセージの表示をチェックする
-      let isFullScreenMsgShow = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY.FULL_SCREEN_MSG_SHOW));
+      const scopedLocalStorage = getScopedLocalStorage(this.$el || null);
+      let isFullScreenMsgShow = JSON.parse(scopedLocalStorage.getItem(LOCAL_STORAGE_KEY.FULL_SCREEN_MSG_SHOW));
       if (isFullScreenMsgShow) {
-        localStorage.removeItem(LOCAL_STORAGE_KEY.FULL_SCREEN_MSG_SHOW);
+        scopedLocalStorage.removeItem(LOCAL_STORAGE_KEY.FULL_SCREEN_MSG_SHOW);
 
         // 全画面にする
         this.$ons.notification.confirm({
@@ -763,11 +866,11 @@ export default {
           message: messageFormat(DIALOG_MESSAGES[13000127].message),
           // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
           callback: answer => {
-            if(answer === 1 )
+            if(answer === 1)
             {
               setTimeout(() => {
-                var element = document.documentElement
-                var requestMethod = element.requestFullScreen || element.webkitRequestFullScreen || element.mozRequestFullScreen || element.msRequestFullScreen;
+                var element = getScopedDocumentElement(this.$el || null);
+                var requestMethod = element?.requestFullScreen || element?.webkitRequestFullScreen || element?.mozRequestFullScreen || element?.msRequestFullScreen;
                 if (requestMethod) {
                   requestMethod.call(element);
                 }
@@ -802,7 +905,7 @@ export default {
           ? this.getWeightConfigInfo.weightName
           : "体重計接続なし";
     var weekday=["日","月","火","水","木","金","土"];
-    this.ymdTime = moment().format("YYYY/MM/DD") + "(" + weekday[moment().day()] + ") " + moment().format("HH:mm");
+    this.ymdTime = dayjs().format("YYYY/MM/DD") + "(" + weekday[dayjs().day()] + ") " + dayjs().format("HH:mm");
 
     this.ymdUpdateProc = setInterval(() => {
       // ymdtime更新処理(1秒ごと)
@@ -810,7 +913,7 @@ export default {
             ? this.getWeightConfigInfo.weightName
             : "体重計接続なし";
       var weekday=["日","月","火","水","木","金","土"];
-      this.ymdTime = moment().format("YYYY/MM/DD") + "(" + weekday[moment().day()] + ") " + moment().format("HH:mm");
+      this.ymdTime = dayjs().format("YYYY/MM/DD") + "(" + weekday[dayjs().day()] + ") " + dayjs().format("HH:mm");
     }, 1000);
 
     if (this.getWeightMode.isWeightMode) {
@@ -830,7 +933,7 @@ export default {
       }, 100);
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // #9271 他の画面への切り替え時のパンくずクリックは有効になりません。 linjunfeng start
     EventBus.$off("refresh", this.refresh);
     // #9271 他の画面への切り替え時のパンくずクリックは有効になりません。 linjunfeng end
@@ -859,7 +962,7 @@ export default {
         // 体重計モード時、患者選択モーダルを×かキャンセルで閉じた時に患者ID入力欄へフォーカスする
         this.focusPatInput();
       } else if(this.getIsHospPatId){
-        document.querySelector(".weight-mode-pat-id-input .text-input").focus();
+        this.getPatIdInputElement()?.focus?.();
       }
       this.setFocus("2");
     }
@@ -875,22 +978,23 @@ export default {
   margin: 5px;
   margin-top: 0;
 }
+ 
 /* #9556 測定患者選択画面にスクロールバーが常に表示される linjunfeng end */
-.popoverClass >>> .popover--top {
+.popoverClass :deep(.popover--top) {
   width: fit-content;
 }
-::v-deep .vue-touch-keyboard .keyboard .key.featured {
+:deep(.vue-touch-keyboard .keyboard .key.featured) {
   flex-grow: 86;
 }
-::v-deep .vue-touch-keyboard .keyboard .key.backspace {
+:deep(.vue-touch-keyboard .keyboard .key.backspace) {
   background-size: 1.25em;
 }
 /*
   ntss.cssで定義されたons-input .text-input:focusのスタイル打消し
   ※コンポーネントの<style>内に定義する関係でvue独自IDがセレクタに自動付与される。
-    その為、OnsenUIが自動挿入する要素に対してセレクタが当たらなくなる。これを回避する為に::v-deepを付与している。
+    その為、OnsenUIが自動挿入する要素に対してセレクタが当たらなくなる。これを回避する為に:deepを付与している。
 */
-::v-deep ons-input#patIdID .text-input:focus {
+:deep(ons-input#patIdID .text-input:focus) {
   border-width: 2px !important;
   border-style: inset !important;
   border-color: initial !important;

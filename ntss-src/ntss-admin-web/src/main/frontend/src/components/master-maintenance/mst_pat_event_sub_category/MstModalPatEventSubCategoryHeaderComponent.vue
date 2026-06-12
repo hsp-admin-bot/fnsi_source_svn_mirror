@@ -8,12 +8,7 @@
 <!-- スクリプト処理 -->
 <script>
 export default {
-  data() {
-    return {};
-  },
-  computed: {},
-  created() {},
-  destroyed() { },
-  methods: {}
+
+
 };
 </script>

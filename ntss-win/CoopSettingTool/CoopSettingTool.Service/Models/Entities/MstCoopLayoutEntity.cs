@@ -484,5 +484,23 @@ namespace CoopSettingTool.Service.Models
         {
             return (this.CoopSetting + this.CoopExtSetting + this.IsDel).GetHashCode();
         }
+
+        /// <summary>
+        /// Determines whether the specified layout is similar.
+        /// </summary>
+        /// <param name="layout">The layout.</param>
+        /// <returns><c>true</c> if the specified layout is similar; otherwise, <c>false</c>.</returns>
+        public bool IsSimilar(MstCoopLayoutEntity layout)
+        {
+            return layout != null
+                && string.Equals(this.CoopCd, layout.CoopCd, StringComparison.Ordinal)
+                && string.Equals(this.CoopCdIndex, layout.CoopCdIndex, StringComparison.Ordinal)
+                && string.Equals(this.CoopCdSub, layout.CoopCdSub, StringComparison.Ordinal)
+                && string.Equals(this.CoopFormat, layout.CoopFormat, StringComparison.Ordinal)
+                && string.Equals(this.CoopName, layout.CoopName, StringComparison.Ordinal)
+                && string.Equals(this.CoopVersion, layout.CoopVersion, StringComparison.Ordinal)
+                && string.Equals(this.Direction, layout.Direction, StringComparison.Ordinal)
+                && string.Equals(this.Description, layout.Description, StringComparison.Ordinal);
+        }
     }
 }

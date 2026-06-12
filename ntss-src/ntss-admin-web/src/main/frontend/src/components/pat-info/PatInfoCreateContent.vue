@@ -1,5 +1,5 @@
 <!-- 
-　新規患者登録・患者情報カード一覧
+ 新規患者登録・患者情報カード一覧
 -->
 <template>
   <main-content class="main-content">
@@ -29,41 +29,30 @@
 </template>
 
 <script>
-import { EventBus } from "@/eventBus.js";
-import { mapGetters, mapMutations } from "vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapGetters, mapMutations } from "@/compat/vue/vuex";
 import { patMemo } from "@/functions/mst/MstGetters.js";
 import { getDeviceSetInfoMst } from "@/components/deviceset-info/base-modules/DeviceSetInfoFunctions.js";
 import cardList from "@/components/pat-info/PatInfoCardList.vue";
 import PatInfoContentMixin from "@/components/pat-info/PatInfoContentMixin.js"
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import { getLatestHeaderElement, getHeaderHeight } from "@/functions/common/LayoutMeasureHelper";
+
 import { CREATE_CONTENT } from "@/components/pat-info/PatInfoConfig.js"
 
 export default {
   components: {
     "card-list": cardList
   },
+  inject: {
+    getNtssLayoutRootElement: { default: null },
+    getNtssFooterMenuElement: { default: null }
+  },
   mixins: [PatInfoContentMixin],
   mounted() {
-    EventBus.$off("switchSidebar")
-    EventBus.$on('switchSidebar',()=>{
-      let SideBarIsOpen = document.getElementById('patientSearchSidebarArea').style.cssText.toString().indexOf('transform:') === -1;
-      let BarIsOpen = document.getElementById('menu-bar-id').classList.contains('block')
-      let ClientWidth = document.documentElement.clientWidth;
-      if (!SideBarIsOpen) {
-        if (BarIsOpen) {
-          document.getElementById('card').style.width = (ClientWidth - 143) + 'px';
-        } else {
-          document.getElementById('card').style.width =  ClientWidth + 'px';
-        }
-      } else {
-        if (BarIsOpen) {
-          document.getElementById('card').style.width = (ClientWidth - 443) + 'px';
-        } else {
-          document.getElementById('card').style.width = (ClientWidth - 300) + 'px';
-        }
-      }
-    });
+    EventBus.$off("switchSidebar", this.handleSwitchSidebar);
+    EventBus.$on("switchSidebar", this.handleSwitchSidebar);
     this.calculateContentHeight();// add #10260 文字サイズ特大にしたときに保存、キャンセルボタンの高さに白背景があっていない。不要な余白の排除 宮崎
   },
   data() {
@@ -180,7 +169,7 @@ export default {
     };
   },
   computed: {
-    ...mapGetters("pat-info", ["getCardListScrollPos"]),
+    ...mapGetters("pat-info", ["getCardListScrollPos", "selectedPatId"]),
     ...mapGetters("user", { facilityCd: "getFacilityCd" }),
     ...mapGetters("account-edit", ["getTheme", "isDispMenu"]),
     ...mapGetters("account-edit", { getFontSize: "getFontSize" }),// add #10260 文字サイズ特大にしたときに保存、キャンセルボタンの高さに白背景があっていない。不要な余白の排除 宮崎
@@ -251,26 +240,42 @@ export default {
     },
     // add #10260 文字サイズ特大にしたときに保存、キャンセルボタンの高さに白背景があっていない。不要な余白の排除 宮崎 start
     windowHeight(val) {
-      let headerHeight = document.getElementsByClassName("header")[0].offsetHeight;
-      let footHeight = document.getElementById("footer-menu").clientHeight;
-      let cardListDOM = document.getElementsByClassName("card-list")[0];
-      let btnHeight = document.getElementsByClassName("right-exe-btn")[0].clientHeight;
-      let cardListNewHeight = val - headerHeight - footHeight - btnHeight - 4;
-      if (undefined !== cardListDOM) {
-        cardListDOM.style.height = cardListNewHeight + "px";
+      const cardListDOM = this.$refs.cardListDiv || this.getPatInfoFirstByClassName("card-list");
+      const btn = this.getPatInfoFirstByClassName("right-exe-btn");
+      if (!cardListDOM || !btn) {
+        return;
       }
+      const headerHeight = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
+      const footHeight = (typeof this.getNtssFooterMenuElement === "function"
+        ? this.getNtssFooterMenuElement()
+        : this.getPatInfoElementById("footer-menu"))?.clientHeight || 0;
+      const btnHeight = btn.clientHeight || 0;
+      const cardListNewHeight = val - headerHeight - footHeight - btnHeight - 4;
+      cardListDOM.style.height = `${cardListNewHeight}px`;
     },
     getFontSize() {
-      let headerHeight = document.getElementsByClassName("header")[0].offsetHeight;
-      let footHeight = document.getElementById("footer-menu").clientHeight;
-      let cardListDOM = document.getElementsByClassName("card-list")[0];
-      let btnHeight = document.getElementsByClassName("right-exe-btn")[0].clientHeight;
-      let cardListNewHeight = this.windowHeight - headerHeight - footHeight - btnHeight - 4;
-      cardListDOM.style.height = cardListNewHeight + "px";
+      const cardListDOM = this.$refs.cardListDiv || this.getPatInfoFirstByClassName("card-list");
+      const btn = this.getPatInfoFirstByClassName("right-exe-btn");
+      if (!cardListDOM || !btn) {
+        return;
+      }
+      const headerHeight = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
+      const footHeight = (typeof this.getNtssFooterMenuElement === "function"
+        ? this.getNtssFooterMenuElement()
+        : this.getPatInfoElementById("footer-menu"))?.clientHeight || 0;
+      const btnHeight = btn.clientHeight || 0;
+      const cardListNewHeight = this.windowHeight - headerHeight - footHeight - btnHeight - 4;
+      cardListDOM.style.height = `${cardListNewHeight}px`;
     },
     // add #10260 文字サイズ特大にしたときに保存、キャンセルボタンの高さに白背景があっていない。不要な余白の排除 宮崎 end
     isDispMenu() {
       this.calculateContentHeight();
+    },
+    windowWidth() {
+      this.syncCardListLayoutForSidebar();
+    },
+    isMenuBarShowing() {
+      this.syncCardListLayoutForSidebar();
     }
   },
   async created() {
@@ -290,10 +295,14 @@ export default {
       mstTareOffWater,
       tmpHostNotification
     ] = await Promise.all([
-      getDeviceSetInfoMst(this.facilityCd),
+      getDeviceSetInfoMst(this.facilityCd, this.selectedPatId),
       patMemo(this.facilityCd),
-      ApiHelper.get(`deviceSetInfo/getSysTareAndOffWaterById/${this.facilityCd}`),
-      ApiHelper.get(`deviceSetInfo/getSysHostNoticeById/${this.facilityCd}`)
+      ApiHelper.get(`deviceSetInfo/getSysTareAndOffWaterById/${this.facilityCd}`, {
+        selectedPatId: this.selectedPatId
+      }),
+      ApiHelper.get(`deviceSetInfo/getSysHostNoticeById/${this.facilityCd}`, {
+        selectedPatId: this.selectedPatId
+      })
     ]).catch(error => {
       getErrorMessage('PatInfoCreateContent.vue', 'created', error);
       throw new Error(error);
@@ -304,18 +313,72 @@ export default {
     this.mstHostNotificationInfo = JSON.parse(tmpHostNotification.data[0]);
   },
   // ページを離れたとき再び表示できるようにする
-  destroyed() {
-  },
+
   methods: {
     /* modify by shiyinwang 2022-08-26 [6119] Here, set true is more readable than toggle--start */
     ...mapMutations("pat-info", ["setIsPatInfoPageShowing", "setCardListScrollPos"]),
     /* modify by shiyinwang 2022-08-26 [6119] Here, set true is more readable than toggle--end */
+    handleSwitchSidebar() {
+      this.$nextTick(() => {
+        this.syncCardListLayoutForSidebar();
+        this.setMenuBarLeft();
+        this.$nextTick(() => {
+          this.$refs.cardListCreate?.updateMasonry?.();
+        });
+      });
+    },
+    syncCardListLayoutForSidebar() {
+      const style = this.cardListStyle;
+      this.setCardListStyle({
+        width: style.width,
+        marginLeft: style.marginLeft
+      });
+    },
+    // 11729 患者情報・新規患者登録画面のカード展開/折畳状態の保持不正 start
+    // menuDisplay() {
+    //   let SideBarIsHidden = document.getElementById('patientSearchSidebarArea').style.cssText.toString().indexOf('transform:') === -1;
+    //   let name = document.getElementById("menu-bar-id");
+    //   let width = document.body.clientWidth;
+    //   let nwidth = width - 143;
+    //   if (name.classList.contains("block")) {
+    //     this.direction = "right";
+    //     if (SideBarIsHidden) {
+    //       cardElem.style.width = (width - 300 ) + "px";
+    //     } else {
+    //       cardElem.style.width = width + "px";
+    //     }
+    //     document.getElementById("menu-btn").style.marginLeft = "-143px";
+    //     document.getElementById("menu-bar-id").setAttribute("class", "menu-bar-contents button-size none");
+    //     document.getElementById("card").style.marginLeft = "0px";
+    //   } else {
+    //     this.direction = "left";
+    //     document.getElementById("menu-btn").style.marginLeft = "-12px";
+    //     document.getElementById("menu-bar-id").setAttribute("class", "menu-bar-contents button-size block");
+    //     if (SideBarIsHidden) {
+    //       cardElem.style.width = (nwidth - 300) + "px";
+    //     } else {
+    //       cardElem.style.width = nwidth + "px";
+    //     }
+    //     document.getElementById("card").style.marginLeft = "143px";
+    //   }
+    //   let css = document.getElementsByClassName('menu-bar')[0].style.cssText;
+    //   let ReWidth = css.toString().replaceAll(' ','');
+    //   ReWidth = Number(ReWidth.substring(ReWidth.indexOf(':')+1,ReWidth.indexOf('p')));
+    //   if (!css) {
+    //     document.getElementsByClassName('menu-bar')[0].style.cssText = 'left: 143px;';
+    //   } else if (ReWidth >= 295 && ReWidth <= 305) {
+    //     document.getElementsByClassName('menu-bar')[0].style.cssText = 'left: 443px;';
+    //   }
+    // },
+    // 11729 患者情報・新規患者登録画面のカード展開/折畳状態の保持不正 end
     // add #10260 文字サイズ特大にしたときに保存、キャンセルボタンの高さに白背景があっていない。不要な余白の排除 宮崎 start
     calculateContentHeight() {
-      let headerHeight = document.getElementsByClassName("header")[0].offsetHeight;
+      let headerHeight = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
       let windowHeight = this.windowHeight;
-      const footHeight = document.getElementById("footer-menu").clientHeight;
-      let cardListDOM = document.getElementsByClassName("card-list")[0];
+      const footHeight = (typeof this.getNtssFooterMenuElement === "function"
+        ? this.getNtssFooterMenuElement()
+        : this.getPatInfoElementById("footer-menu"))?.clientHeight || 0;
+      let cardListDOM = this.$refs.cardListDiv || this.getPatInfoFirstByClassName("card-list");
       if (undefined === cardListDOM || null === cardListDOM) {
         return;
       }
@@ -336,16 +399,16 @@ export default {
     }
     // add #10260 文字サイズ特大にしたときに保存、キャンセルボタンの高さに白背景があっていない。不要な余白の排除 宮崎 end
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.setIsPatInfoPageShowing(false); // add by shiyinwang 2022-08-26 [6119] When leaving the patient information page, set the variable IsPatInfoPageShowing to false
-    EventBus.$off("switchSidebar");
+    EventBus.$off("switchSidebar", this.handleSwitchSidebar);
   }
 };
 </script>
 
 <style scoped>
 @media print {
-  .main-content >>> div {
+  .main-content :deep(div){
     height: auto !important;
   }
   /** 見出し開閉ボタン非表示 */

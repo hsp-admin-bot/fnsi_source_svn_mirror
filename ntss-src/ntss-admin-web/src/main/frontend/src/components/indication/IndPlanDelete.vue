@@ -2,8 +2,8 @@
 </template>
 <script>
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { EventBus } from "@/eventBus.js";
-import { mapActions, mapGetters } from "vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
 import {EXAM_SCHEDULE_CHANGE} from "@/constants/facilitySetting";
@@ -11,7 +11,10 @@ import {RAD_SCHEDULE_CHANGE} from "@/constants/facilitySetting";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { messageFormat } from '@/functions/common/MessageFormat';
+import IndicationOwnerMixin from '@/components/indication/IndicationOwnerMixin';
+import { getOnsAlertDialogFooterItems, getOnsAlertDialogFromEvent } from "@/functions/common/OnsenFunctions";
 export default {
+  mixins: [IndicationOwnerMixin],
   props: {
     patId: String,
     startDate: String,
@@ -57,12 +60,13 @@ export default {
     };
   },
   mounted() {
-    document.addEventListener('preshow', function(event) {
-        if (event.target.localName === 'ons-alert-dialog') {
-          const dialog = event.target;
-          const buttons = dialog.getElementsByClassName('alert-dialog-footer');
-          buttons[0].style.display = 'flex';
-          }
+    const ownerDocument = this.$el?.ownerDocument || document;
+    ownerDocument.addEventListener('preshow', function(event) {
+      const dialog = getOnsAlertDialogFromEvent(event);
+      const buttons = getOnsAlertDialogFooterItems(dialog);
+      if (buttons[0]) {
+        buttons[0].style.display = 'flex';
+      }
     });
   },
   computed: {
@@ -75,7 +79,7 @@ export default {
     selectedTreat() {}
 
     , patId: {
-      handle(newVal) {
+      handler(newVal) {
         this.currentPatId = newVal;
       },
       deep: true
@@ -124,8 +128,8 @@ export default {
         });
       }
       // 一般検査の締切日が過ぎている予定移動があります
-      if (hasMsgCdList && this.msgCdList.includes("70000033") 
-          && this.mstfacilitySettingExamValue != 3 
+      if (hasMsgCdList && this.msgCdList.includes("70000033")
+          && this.mstfacilitySettingExamValue != 3
           && this.facilitySettingExamValue != "3"
           && !cancelFlg
       ) {
@@ -194,12 +198,12 @@ export default {
         });
       }
       if (200 === response.status && undefined !== response.data.msgCd) {
-        this.$parent.$parent.messageDialogInfo.messageCd = parseInt(
+        this._indicationDialogOwner().messageDialogInfo.messageCd = parseInt(
           response.data.msgCd
         );
-        this.$parent.$parent.messageDialogInfo.type = "1";
-        this.$parent.$parent.messageDialogInfo.stringParams = ["中止"];
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.type = "1";
+        this._indicationDialogOwner().messageDialogInfo.stringParams = ["中止"];
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         this.finishLoadingScreen();
         return;
       }
@@ -217,7 +221,7 @@ export default {
       this.setResultUpdate(new Date());
       this.finishLoadingScreen();
       // モーダルを閉じる
-      this.$parent.$parent.$emit("hide-modal");
+      this._hideIndicationModal();
     },
     async deleteIndInfo(structData){
 
@@ -262,7 +266,7 @@ export default {
       sendJson.radDeadlineSelectedVal = this.radDeadlineSelectedVal;
 
       const response = await ApiHelper.post(
-        "/mainData/deleteIndPlan/",
+        "/mainData/deleteIndPlan",
         sendJson
       ).catch(error => {
         getErrorMessage('IndPlanDelete.vue', 'updateIndInfo', error);

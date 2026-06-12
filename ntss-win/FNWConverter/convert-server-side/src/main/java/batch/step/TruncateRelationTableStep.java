@@ -6,12 +6,13 @@ import batch.listener.PromotionListener;
 import batch.listener.StepStartEndListener;
 import batch.part.PsqlCopyUtils;
 import batch.part.InfomationSchemaControl;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.Step;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -40,7 +41,7 @@ public class TruncateRelationTableStep extends StepStartEndListener implements T
     private ApplicationContext appContext;
 
     @Autowired
-    private StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
 
     @Autowired
     ConvertPriorityConfig convertPriorityConfig;
@@ -125,7 +126,7 @@ public class TruncateRelationTableStep extends StepStartEndListener implements T
 
     @Bean(name=STEP_NAME)
     public Step step() {
-        return stepBuilderFactory.get(STEP_NAME)
+        return new StepBuilder(STEP_NAME, jobRepository)
             .tasklet(this)
             .listener(new PromotionListener())
             .build();

@@ -4,14 +4,14 @@ import jp.co.nikkiso.ntss.certificate_management.response.error.ErrorResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 import static jp.co.nikkiso.ntss.certificate_management.constant.ClientCertificateMessage.Error.SESSION_TIMEOUT_ERROR;
@@ -23,9 +23,10 @@ public class NtssAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
   /**
    * Response内容にJSONを書き込む.
+   * Boot 4 向けに JacksonJsonHttpMessageConverter を使用（役割は旧 MappingJackson2HttpMessageConverter と同じ）.
    */
   @Autowired
-  private MappingJackson2HttpMessageConverter httpMessageConverter;
+  private JacksonJsonHttpMessageConverter httpMessageConverter;
 
   /**
    * {@inheritDoc}
@@ -43,7 +44,7 @@ public class NtssAuthenticationEntryPoint implements AuthenticationEntryPoint {
       // ReponseにJSON書込
       httpMessageConverter.write(
         new ErrorResponse(SESSION_TIMEOUT_ERROR.getMessage()),
-        MediaType.APPLICATION_JSON_UTF8,
+        MediaType.APPLICATION_JSON,
         new ServletServerHttpResponse(response));
 
       return;

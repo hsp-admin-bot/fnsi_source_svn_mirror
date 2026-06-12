@@ -3,9 +3,10 @@
  */
 <template>
   <modal-base @onClose="onClickCancel">
-    <div slot="body">
-      <div class="expandable-content">
-        <v-ons-list class="treatment-record-accordion treatment-record-modal">
+    <template #body>
+      <div>
+      <div class="expandable-content treatment-record-modal">
+        <v-ons-list class="treatment-record-accordion">
           <div id="weight-modal">
             <com-number-display v-if="isInputAfterWeight()" labelName="透析前体重" unitName="kg" :digits="2" v-model="inputModel.weightBefore" />
             <!-- mod FNSI-共有を追加 王 20200921 start -->
@@ -38,7 +39,7 @@
             /> -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
              <com-title-number-input v-for="(tareInfo, index) in inputModel.tareInfos"
-              :key="`tareInfo` + index"
+              :key="`tareInfo_${index}`"
               :unitName="tareNumberInputParam.unit"
               :step="tareNumberInputParam.step"
               :inputMin="tareNumberInputParam.min"
@@ -53,7 +54,7 @@
             <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 end -->
             <!-- mod FNSI-共有を追加 王 20200921 end -->
             <hr>
-            <com-number-display labelName="風袋合計" :unitName="tareNumberInputParam.unit" :base="tareNumberInputParam.base" :digits="tareNumberInputParam.digits" v-model="inputModel.tareSum" />
+            <com-number-display labelName="風袋合計" :unitName="tareNumberInputParam.unit" :base="tareNumberInputParam.base" :digits="tareNumberInputParam.digits" :value="inputModel.tareSum" />
             <hr>
             <!-- mod FNSI-共有を追加 王 20200921 start -->
             <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 start -->
@@ -79,7 +80,8 @@
             <!-- mod FNSI-共有を追加 王 20200921 end -->
             <hr>
             <table class="weight-table">
-              <tr>
+      <tbody>
+                  <tr>
                 <td class="weight-col">
                   <!-- mod FNSI-共有を追加 王 20200921 start -->
                   <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 start -->
@@ -93,8 +95,9 @@
                   <!-- mod FNSI-共有を追加 王 20200921 end -->
                 </td>
               </tr>
-            </table>
-            <com-number-display v-if="!isInputAfterWeight()" labelName="目標体重" unitName="kg" :digits="2" v-model="inputModel.targetWeight" />
+                
+      </tbody></table>
+            <com-number-display v-if="!isInputAfterWeight()" labelName="目標体重" unitName="kg" :digits="2" :value="inputModel.targetWeight" />
             <!-- mod FNSI-共有を追加 王 20200921 start -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
             <com-group-button
@@ -119,7 +122,7 @@
             /> -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
              <com-title-number-input v-for="(offWaterInfo, index) in inputModel.offWaterInfos"
-              :key="`offWaterInfo` + index"
+              :key="`offWaterInfo_${index}`"
               :unitName="offWaterNumberInputParam.unit"
               :step="offWaterNumberInputParam.step"
               :inputMin="offWaterNumberInputParam.min"
@@ -134,10 +137,11 @@
             <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 end -->
             <!-- mod FNSI-共有を追加 王 20200921 end -->
             <hr>
-            <com-number-display labelName="除水補正合計" :unitName="offWaterNumberInputParam.unit" :base="offWaterNumberInputParam.base" :digits="offWaterNumberInputParam.digits" v-model="inputModel.offWaterSum" />
+            <com-number-display labelName="除水補正合計" :unitName="offWaterNumberInputParam.unit" :base="offWaterNumberInputParam.base" :digits="offWaterNumberInputParam.digits" :value="inputModel.offWaterSum" />
             <hr>
             <table class="weight-table">
-              <tr>
+      <tbody>
+                  <tr>
                 <td class="weight-col">
                   <!-- mod FNSI-共有を追加 王 20200921 start -->
                   <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 start -->
@@ -149,13 +153,16 @@
                   <!-- mod FNSI-共有を追加 王 20200921 end  -->
                 </td>
               </tr>
-            </table>
-            <com-number-display labelName="除水量制限" unitName="L" :digits="2" v-model="inputModel.offWaterLimit" />
+                
+      </tbody></table>
+            <com-number-display labelName="除水量制限" unitName="L" :digits="2" :value="inputModel.offWaterLimit" />
           </div>
         </v-ons-list>
       </div>
-    </div>
-    <div slot="footer" class="flex-container">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button denial-btn btn2-cancel" data-non-authorize="true" @click="onClickCancel">キャンセル</v-ons-button>
@@ -171,12 +178,15 @@
         <!-- mod FNSI-共有を追加 王 20200921 end -->
       </div>
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+
+import { mapGetters } from "@/compat/vue/vuex";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import CommonNumberInputComponent from "@/components/treatment-record/submenu/common/CommonNumberInputComponent";
@@ -188,7 +198,7 @@ import { CODES } from "@/constants/TreatmentRecord";
 import { sendRequestGetWheelChair } from "@/apis/treatment-record";
 import { wheelChair } from "@/components/common/master-selector/MasterSelectorDefinitions";
 import { WeightModal } from "@/models/treatment-record/weight/WeightModal";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
 //  add FNSI-修正 権限関連 周雨晴 2020/09/28 start
 //#10359 add 編集権限の動作不正 2024-06-05 卓 start
@@ -320,9 +330,12 @@ export default {
     onClickWeightCalculation() {
       this.inputModel.calcWeight(this.isInputAfterWeight());
       this.$nextTick(() => {
-        this.$refs[
+        const ref = this.$refs[
           !this.isInputAfterWeight() ? "weightBefore" : "weightAfter"
-        ].roundValue();
+        ];
+        ref.roundValue();
+        ref.currentValuePro = ref.currentValue;
+        ref.componentsKey++;
       });
     },
     /**
@@ -332,7 +345,10 @@ export default {
     onClickOffWaterCalculation() {
       this.inputModel.calcOffWater(this.isInputAfterWeight());
       this.$nextTick(() => {
-        this.$refs["targetOffWater"].roundValue();
+        const ref = this.$refs["targetOffWater"];
+        ref.roundValue();
+        ref.currentValuePro = ref.currentValue;
+        ref.componentsKey++;
       });
     },
     /**
@@ -399,7 +415,7 @@ export default {
   computed: {
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
-    ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
+    ...mapGetters("treatment-record/common", ["getSharedFacilityCd", "getDialysisState"]),
     ...mapGetters("mst-user", {getSharedFlag: "getIsRegisteredShared"}),
     ...mapGetters("user", {facilityCd: "getFacilityCd"}),
     isShared() {
@@ -426,7 +442,7 @@ export default {
   },
   // add FNSI-共有を追加 王 20200921 start
   mounted() {
-    const calBtn = document.getElementsByClassName("button select-btn");
+    const calBtn = getScopedElementsByClassName("button select-btn", this.$el || this);
     if (this.getSharedFacilityCd !== undefined && this.getSharedFacilityCd != null) {
       if (this.getSharedFlag === 1 && this.facilityCd !== this.getSharedFacilityCd) {
         for (let i = 0; i < calBtn.length; i++) {
@@ -473,7 +489,7 @@ export default {
 </script>
 
 <style scoped>
-#weight-modal >>> .title {
+#weight-modal :deep(.title) {
   max-width: unset;
 }
 .treatment-record-modal {
@@ -496,16 +512,16 @@ hr {
 .weight-col {
   padding: 0px;
 }
-.treatment-record-modal >>> ons-col.title {
+.treatment-record-modal :deep(ons-col.title) {
   flex: 0 0 40vw;
 }
-.treatment-record-modal >>> ons-col.num-value {
+.treatment-record-modal :deep(ons-col.num-value) {
   flex: 0 0 7em;
 }
-.treatment-record-modal >>> .num-value ons-input {
+.treatment-record-modal :deep(.num-value ons-input) {
   width: 7em;
 }
-.treatment-record-modal >>> ons-col.unit {
+.treatment-record-modal :deep(ons-col.unit) {
   margin-left: 4px;
 }
 </style>

@@ -320,16 +320,16 @@ export const KEY_NAME_INDICATION_RESULT  = {
 export const PAT_INFO_SHARING = {
   KEY_NAME: "pat_info_sharing",
   KEY_NAME_FREEWORD: "freeWord",
-  KEY_NAME_GENDER : "gender",
-  KEY_NAME_BLOODTYPE : "bloodType",
+  KEY_NAME_GENDER: "gender",
+  KEY_NAME_BLOODTYPE: "bloodType",
   KEY_NAME_BIRTHDAY_FROM: "birthdayFrom",
   KEY_NAME_BIRTHDAY_TO: "birthdayTo",
   KEY_NAME_FACILITY_CD_TO: "facilityCdTo",
-  KEY_NAME_FACILITY_CD_FROM : "facilityCdFrom",
-  KEY_NAME_IS_SHOW_SHARE_TO : "isShowShareTo",
+  KEY_NAME_FACILITY_CD_FROM: "facilityCdFrom",
+  KEY_NAME_IS_SHOW_SHARE_TO: "isShowShareTo",
   KEY_NAME_IS_SHOW_SHARE_FROM: "isShowShareFrom",
-  KEY_NAME_IS_SHOW_SHARE_REFUSE : "isShowShareRefuse",
-  KEY_NAME_IS_SHOW_SHARE : "isShowShare",
+  KEY_NAME_IS_SHOW_SHARE_REFUSE: "isShowShareRefuse",
+  KEY_NAME_IS_SHOW_SHARE: "isShowShare",
 }
 
 // #11987 2026.01.15 add スケールベッド TDC伊東 start

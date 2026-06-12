@@ -1,4 +1,5 @@
 import store from "@/stores";
+import { getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
 
 /** 外部リンクメニューマスタのURLに入れるパラメータ項目のenum */
 export const URL_PARAMS = {
@@ -62,6 +63,15 @@ const getValue = async (getter) => {
   return getter;
 };
 
+function openScopedUrlWindow(replacedLinkUrl, windowName, root = null) {
+  const scopedWindow = getScopedWindow(root);
+  const openedWindow = scopedWindow?.open?.("", windowName, "width=800,height=400") || null;
+  if (openedWindow?.location) {
+    openedWindow.location.href = replacedLinkUrl;
+  }
+  return openedWindow;
+}
+
 const staticData = {
   /** openUrlLinkTestで開いたwindow */
   urlLinkTest: null,
@@ -76,13 +86,12 @@ const staticData = {
  * ブラウザウィンドウを開く
  * @param {string} replacedLinkUrl パラメータ項目を最終的な値に置き換えたURL
  */
-export const openUrlLinkTest = (replacedLinkUrl) => {
+export const openUrlLinkTest = (replacedLinkUrl, root = null) => {
   if (staticData.urlLinkRegister) {
     staticData.urlLinkRegister.close();
     staticData.urlLinkRegister = null;
   }
-  staticData.urlLinkTest = window.open("", "myWindowLinkTest", "width=800,height=400");
-  staticData.urlLinkTest.location.href = replacedLinkUrl;
+  staticData.urlLinkTest = openScopedUrlWindow(replacedLinkUrl, "myWindowLinkTest", root);
 };
 /**
  * @description 外部リンクメニューのブラウザウィンドウを開くasync関数（フッターメニューボタン用）
@@ -91,12 +100,11 @@ export const openUrlLinkTest = (replacedLinkUrl) => {
  * @param {string} linkUrl 外部リンクメニューマスタで登録したURL
  * @returns {Promise<void>} ブラウザウィンドウを開くPromise
  */
-export const openUrlLinkRegister = async (linkUrl) => {
+export const openUrlLinkRegister = async (linkUrl, root = null) => {
   if (staticData.urlLinkTest) {
     staticData.urlLinkTest.close();
     staticData.urlLinkTest = null;
   }
   const replacedLinkUrl = await replacePrameters(linkUrl);
-  staticData.urlLinkRegister = window.open("", "myWindowLinkRegister", "width=800,height=400");
-  staticData.urlLinkRegister.location.href = replacedLinkUrl;
+  staticData.urlLinkRegister = openScopedUrlWindow(replacedLinkUrl, "myWindowLinkRegister", root);
 };

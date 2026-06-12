@@ -9,7 +9,7 @@
       <!-- mod #5589 2023/03/31 数値IFのスタイル全不正 張博 start -->
       <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
       <!-- <com-number-input labelName="透析前体重" unitName="kg" input-min-width="10em" :step=0.01 :min=0.00 :max=300.00 :initValue="initModel.weightBefore" :commandButton=weightBeforeDetailButton v-model="inputModel.weightBefore" :nonAuthorize="true" @blur="calcWeightDecreased" :required="false" :disabled="!isShared"/> -->
-      <com-number-input labelName="透析前体重" unitName="kg" input-min-width="10em" :step=0.01 :inputMin=0.00 :inputMax=300.00 :inputType='"number"' :initValue="initModel.weightBefore" :commandButton=weightBeforeDetailButton v-model="inputModel.weightBefore" :nonAuthorize="true" @blur="calcWeightDecreased(); setWeightBeforeDate()" :required="false" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared" :buttonDisabled="!isShared"/>
+      <com-number-input :key="'weightBefore-' + weightFieldsKey" labelName="透析前体重" unitName="kg" input-min-width="10em" :step=0.01 :inputMin=0.00 :inputMax=300.00 :inputType='"number"' :initValue="initModel.weightBefore" :commandButton=weightBeforeDetailButton :buttonDisabled="!isShared" v-model="inputModel.weightBefore" :nonAuthorize="true" @blur="calcWeightDecreased(); setWeightBeforeDate()" :required="false" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared"/>
       <!-- mod #5589 2023/03/31 数値IFのスタイル全不正 張博 end -->
       <!-- add FNSI-横展開 日付のチェックの追加 徐 start -->
       <!-- #5590 2023/04/19 ×を常に表示するように修正 林峻峰 start -->
@@ -38,12 +38,12 @@
       <!-- #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng end -->
       <!-- #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end -->
       <!-- add FNSI-横展開 日付のチェックの追加 徐 end -->
-      <com-number-display labelName="目標体重" unitName="kg" :digits="2" v-model="inputModel.targetWeight == -1 ? inputModel.rstDw : inputModel.targetWeight" :required="false"/>
+      <com-number-display labelName="目標体重" unitName="kg" :digits="2" :value="inputModel.targetWeight == -1 ? inputModel.rstDw : inputModel.targetWeight" :required="false"/>
      <!-- mod #5589 2023/03/31 数値IFのスタイル全不正 張博 start -->
       <!-- <com-number-input labelName="目標除水量" unitName="L" input-min-width="10em" :step=0.01 :min=0.00 :max=39.90 v-model="inputModel.waterRemovalTarget" :required="false" :disabled="!isShared" :initValue="initModel.waterRemovalTarget" /> -->
-      <com-number-input labelName="目標除水量" unitName="L" input-min-width="10em" :step=0.01 :inputMin=0.00 :inputMax=39.90 :inputType='"number"' v-model="inputModel.waterRemovalTarget" :required="false" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared" :initValue="initModel.waterRemovalTarget" />
+      <com-number-input :key="'waterRemovalTarget-' + weightFieldsKey" labelName="目標除水量" unitName="L" input-min-width="10em" :step=0.01 :inputMin=0.00 :inputMax=39.90 :inputType='"number"' v-model="inputModel.waterRemovalTarget" :required="false" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared" :initValue="initModel.waterRemovalTarget" />
       <!-- <com-number-input labelName="実績除水量" unitName="L" input-min-width="10em" :step=0.01 :min=0.00 :max=39.99 v-model="inputModel.waterRemovalRst" :required="false" :disabled="!isShared" :initValue="initModel.waterRemovalRst" /> -->
-      <com-number-input labelName="実績除水量" unitName="L" input-min-width="10em" :step=0.01 :inputMin=0.00 :inputMax=39.99 :inputType='"number"' v-model="inputModel.waterRemovalRst" :required="false" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared" :initValue="initModel.waterRemovalRst" />
+      <com-number-input :key="'waterRemovalRst-' + weightFieldsKey" labelName="実績除水量" unitName="L" input-min-width="10em" :step=0.01 :inputMin=0.00 :inputMax=39.99 :inputType='"number"' v-model="inputModel.waterRemovalRst" :required="false" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared" :initValue="initModel.waterRemovalRst" />
       <!-- <com-number-input labelName="実績補液量" unitName="L" input-min-width="10em" :step=0.01 :min=0.00 :max=999 v-model="inputModel.addWaterTotal" :required="false" :disabled="!isShared" :initValue="initModel.addWaterTotal" /> -->
       <com-number-input labelName="実績補液量" unitName="L" input-min-width="10em" :step=0.01 :inputMin=0.00 :inputMax=999 :inputType='"number"' v-model="inputModel.addWaterTotal" :required="false" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared" :initValue="initModel.addWaterTotal" />
       <!-- mod #5589 2023/03/31 数値IFのスタイル全不正 張博 end -->
@@ -57,7 +57,7 @@
       <!-- add FNSI-体重情報のJSONに四つカラムを追加 徐 end -->
      <!-- mod #5589 2023/03/31 数値IFのスタイル全不正 張博 start -->
       <!-- <com-number-input labelName="透析後体重" unitName="kg" input-min-width="10em" :step=0.01 :min=0.00 :max=300.00 :commandButton=weightAfterDetailButton v-model="inputModel.weightAfter" :nonAuthorize="true" @blur="calcWeightDecreased" :required="false" :disabled="!isShared" :initValue="initModel.weightAfter" /> -->
-      <com-number-input labelName="透析後体重" unitName="kg" input-min-width="10em" :step=0.01 :inputMin=0.00 :inputMax=300.00 :inputType='"number"' :commandButton=weightAfterDetailButton v-model="inputModel.weightAfter" :nonAuthorize="true" @blur="calcWeightDecreased(); setWeightAfterDate()" :required="false" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority')|| !isShared" :initValue="initModel.weightAfter" :buttonDisabled="!isShared"/>
+      <com-number-input :key="'weightAfter-' + weightFieldsKey" labelName="透析後体重" unitName="kg" input-min-width="10em" :step=0.01 :inputMin=0.00 :inputMax=300.00 :inputType='"number"' :commandButton=weightAfterDetailButton :buttonDisabled="!isShared" v-model="inputModel.weightAfter" :nonAuthorize="true" @blur="calcWeightDecreased(); setWeightAfterDate()" :required="false" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared" :initValue="initModel.weightAfter" />
       <!-- mod #5589 2023/03/31 数値IFのスタイル全不正 張博 end -->
       <!-- add FNSI-横展開 日付のチェックの追加 徐 start -->
       <!-- #5590 2023/04/19 ×を常に表示するように修正 林峻峰 start -->
@@ -74,14 +74,14 @@
       <!-- #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end -->
       <!-- add FNSI-横展開 日付のチェックの追加 徐 end -->
       <!-- mod FNSI-共有を追加 王 20200921 end -->
-      <com-number-display labelName="減少量" unitName="kg" :digits="2" v-model="inputModel.weightDecreased" :required="false"/>
+      <com-number-display labelName="減少量" unitName="kg" :digits="2" :value="inputModel.weightDecreased" :required="false"/>
     </div>
   </div>
 </template>
 
 <script>
 // mod FNSI-共有を追加 王 20200921 start
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 // mod FNSI-共有を追加 王 20200921 end
 import CommonNumberInputComponent from "@/components/treatment-record/submenu/common/CommonNumberInputComponent";
 import CommonNumberDisplayComponent from "@/components/treatment-record/submenu/common/CommonNumberDisplayComponent";
@@ -91,19 +91,21 @@ import {
   plusDecimal
 } from "@/functions/treatment-record/NumberFunctions.js";
 import { Weight } from "@/models/treatment-record/weight/Weight";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //#10359 add 編集権限の動作不正 2024-06-05 卓 start
 import { getAuthorized } from "@/functions/common/CommonFunctions";
 //#10359 add 編集権限の動作不正 2024-06-05 卓 end
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 export default {
   components: {
     "com-number-input": CommonNumberInputComponent,
     "com-number-display": CommonNumberDisplayComponent,
     "com-date-time-input": CommonDateTimeComponent
   },
+  emits: ["update:modelValue"],
   props: {
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: Weight
     },
 //#10359 del 編集権限の動作不正 2024-06-05 卓 end
@@ -129,22 +131,23 @@ export default {
       weightAfterDate: null,
       weightAfterTime: null,
       // #10044 時刻の時分どちらか一方でも消すると日付も消える linjunfeng end
+      weightFieldsKey: 0,
     };
   },
   watch: {
-    value() {
-      this.inputModel = this.value;
+    modelValue() {
+      this.inputModel = this.modelValue;
       //mod 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 start
-      Object.assign(this.initModel, this.value)
+      Object.assign(this.initModel, this.modelValue)
       // if (this.initFlag == 1) {
-      //   Object.assign(this.initModel, this.value)
+      //   Object.assign(this.initModel, this.modelValue)
       //   this.initFlag = 2;
       // }
       //mod 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 end
     },
     inputModel: {
       handler: function(val) {
-        this.$emit("input", val);
+        this.$emit("update:modelValue", val);
       },
       deep: true
     },
@@ -243,10 +246,10 @@ export default {
         const dialysisState = this.getDialysisState;
         if (1 <= dialysisState && dialysisState <= 2) {
           // 1,2の場合透析前測定日時に現在日時を反映
-          this.inputModel.weightBeforeDate =  moment(new Date()).startOf('minute').toDate();
+          this.inputModel.weightBeforeDate =  dayjs(new Date()).startOf('minute').toDate();
         }else if(3 <= dialysisState && dialysisState <= 6){
           // 3~6の場合透析前測定日時に治療開始日時を反映
-          this.inputModel.weightBeforeDate = moment(this.getRstStartDate).startOf('minute').toDate();
+          this.inputModel.weightBeforeDate = dayjs(this.getRstStartDate).startOf('minute').toDate();
         }
       }
     },
@@ -259,10 +262,10 @@ export default {
         const dialysisState = this.getDialysisState;
         if (1 <= dialysisState && dialysisState <= 5) {
           // 1~5の場合透析後測定日時に現在日時を反映
-          this.inputModel.weightAfterDate =  moment(new Date()).startOf('minute').toDate();
+          this.inputModel.weightAfterDate =  dayjs(new Date()).startOf('minute').toDate();
         }else if(dialysisState == 6){
           // 6の場合透析後測定日時に初版確定日時を反映
-          this.inputModel.weightAfterDate = moment(this.getRstEditionDate).startOf('minute').toDate();
+          this.inputModel.weightAfterDate = dayjs(this.getRstEditionDate).startOf('minute').toDate();
         }
       }
     },
@@ -308,9 +311,7 @@ export default {
       return getAuthorized(pageCd, itemCd);
     },
 //#10359 add 編集権限の動作不正 2024-06-05 卓 end
-  },
-  created() {
-    EventBus.$on("applyWeightModal", (isAfter, model, dialysisState) => {
+    applyWeightModal(isAfter, model, dialysisState) {
       if (!isAfter) {
         this.inputModel.modalBefore = model;
         this.inputModel.weightBefore = model.weightBefore;
@@ -341,11 +342,17 @@ export default {
 
       // 減少量の再計算する
       this.calcWeightDecreased();
-    });
+      // #10628 数値IF: モーダル確定後に親画面の数値入力表示を同期
+      this.weightFieldsKey++;
+    },
+  },
+  created() {
+    EventBus.$off("applyWeightModal", this.applyWeightModal);
+    EventBus.$on("applyWeightModal", this.applyWeightModal);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
-    EventBus.$off("applyWeightModal");
+  beforeUnmount() {
+    EventBus.$off("applyWeightModal", this.applyWeightModal);
   }
   // add 性能改善メモリ不足 shan end
 };

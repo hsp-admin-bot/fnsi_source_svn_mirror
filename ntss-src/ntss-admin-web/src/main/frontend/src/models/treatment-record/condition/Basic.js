@@ -2,7 +2,7 @@
  * 治療条件画面の基本条件を表現するクラス
  */
 import { CODES } from "@/constants/TreatmentRecord";
-import { Master } from "@/models/common/master-selector-condition/Master";
+import { Master, isUnregisteredMaster } from "@/models/common/master-selector-condition/Master";
 import { dateFormat } from "@/functions/common/DateTimeUtils";
 import {
   numberToString,
@@ -68,16 +68,23 @@ export class Basic {
       adsorption.value,
       adsorption.value_name_1
     );
+    this.adsorptionColumn.unit = adsorption.unit ?? null;
     this.primaryFilm = new Master(primary.value, primary.value_name_1);
+    this.primaryFilm.unit = primary.unit ?? null;
     this.secondaryFilm = new Master(secondary.value, secondary.value_name_1);
+    this.secondaryFilm.unit = secondary.unit ?? null;
     this.punctureNeedleA = new Master(punctureA.value, punctureA.value_name_1);
+    this.punctureNeedleA.unit = punctureA.unit ?? null;
     this.punctureNeedleV = new Master(punctureV.value, punctureV.value_name_1);
+    this.punctureNeedleV.unit = punctureV.unit ?? null;
     this.punctureNeedleSn = new Master(
       punctureSn.value,
       punctureSn.value_name_1
     );
+    this.punctureNeedleSn.unit = punctureSn.unit ?? null;
     // 血液回路
     this.bloodCircuit = new Master(bc.value, bc.value_name_1);
+    this.bloodCircuit.unit = bc.unit ?? null;
     // 血流量
     this.bloodFlow = blood.value;
     // シングルニードル使用
@@ -417,7 +424,7 @@ export class Basic {
               rstCondInfo[item.VA.cd] = this.getTemplate();
               rstCondInfo[item.VA.cd].value = numberToString(actualModel[key].cd);
               rstCondInfo[item.VA.cd].value_name_1 = actualModel[key].name;
-            }else if(this.va.name === ""){//「未登録」に変更する場合（nameが""
+            }else if(isUnregisteredMaster(this.va)){//「未登録」に変更する場合
               rstCondInfo[item.VA.cd] = this.createEmpty();
             }
             continue;
@@ -440,7 +447,7 @@ export class Basic {
               rstCondInfo[item.DIALYZER.cd].value_name_1 = actualModel[key].name;
               rstCondInfo[item.DIALYZER.cd].value_name_2 = maker;
               rstCondInfo[item.DIALYZER.cd].unit = "本";
-            }else if(this.dialyzer.name === ""){//「未登録」に変更する場合（nameが""
+            }else if(isUnregisteredMaster(this.dialyzer)){//「未登録」に変更する場合
               rstCondInfo[item.DIALYZER.cd] = this.getTemplateD();
               rstCondInfo[item.DIALYZER.cd].unit = "本";
             }
@@ -453,7 +460,7 @@ export class Basic {
               rstCondInfo[item.ADSORPTION_COLUMN.cd].value = numberToString(actualModel[key].cd);
               rstCondInfo[item.ADSORPTION_COLUMN.cd].value_name_1 = actualModel[key].name;
               rstCondInfo[item.ADSORPTION_COLUMN.cd].unit = unit6;
-            }else if(this.adsorptionColumn.name === ""){//「未登録」に変更する場合（nameが""）
+            }else if(isUnregisteredMaster(this.adsorptionColumn)){//「未登録」に変更する場合
               rstCondInfo[item.ADSORPTION_COLUMN.cd] = this.createEmpty();
             }
             continue;
@@ -465,7 +472,7 @@ export class Basic {
               rstCondInfo[item.PRIMARY_FILM.cd].value = numberToString(actualModel[key].cd);
               rstCondInfo[item.PRIMARY_FILM.cd].value_name_1 = actualModel[key].name;
               rstCondInfo[item.PRIMARY_FILM.cd].unit = unit7;
-            }else if(this.primaryFilm.name === ""){//「未登録」に変更する場合（nameが""）
+            }else if(isUnregisteredMaster(this.primaryFilm)){//「未登録」に変更する場合
               rstCondInfo[item.PRIMARY_FILM.cd] = this.createEmpty();
             }
             continue;
@@ -477,7 +484,7 @@ export class Basic {
               rstCondInfo[item.SECONDARY_FILM.cd].value = numberToString(actualModel[key].cd);
               rstCondInfo[item.SECONDARY_FILM.cd].value_name_1 = actualModel[key].name;
               rstCondInfo[item.SECONDARY_FILM.cd].unit = unit8;
-            }else if(this.secondaryFilm.name === ""){//「未登録」に変更する場合（nameが""）
+            }else if(isUnregisteredMaster(this.secondaryFilm)){//「未登録」に変更する場合
               rstCondInfo[item.SECONDARY_FILM.cd] = this.createEmpty();
             }
             continue;
@@ -492,7 +499,7 @@ export class Basic {
               if ((comparisonModel["singleNeedle"] == null || comparisonModel["singleNeedle"] == "1") && this.compareObjects(comparisonModel["punctureNeedleV"], actualModel["punctureNeedleV"])) {
                 rstCondInfo[item.PUNCTURE_NEEDLE_V.cd] = this.getTemplate();
               }
-            }else if(this.punctureNeedleA.name === ""){//「未登録」に変更する場合（nameが""）
+            }else if(isUnregisteredMaster(this.punctureNeedleA)){//「未登録」に変更する場合
               rstCondInfo[item.PUNCTURE_NEEDLE_A.cd] = this.createEmpty();
             }
             continue;
@@ -507,7 +514,7 @@ export class Basic {
               if ((comparisonModel["singleNeedle"] == null || comparisonModel["singleNeedle"] == "1")&& this.compareObjects(comparisonModel["punctureNeedleA"], actualModel["punctureNeedleA"])) {
                 rstCondInfo[item.PUNCTURE_NEEDLE_A.cd] = this.getTemplate();
               }
-            }else if (this.punctureNeedleV.name === "") {
+            }else if (isUnregisteredMaster(this.punctureNeedleV)) {
               rstCondInfo[item.PUNCTURE_NEEDLE_V.cd] = this.createEmpty();
             }
             continue;
@@ -519,7 +526,7 @@ export class Basic {
               rstCondInfo[item.PUNCTURE_NEEDLE_SN.cd].value = numberToString(actualModel[key].cd);
               rstCondInfo[item.PUNCTURE_NEEDLE_SN.cd].value_name_1 = actualModel[key].name;
               rstCondInfo[item.PUNCTURE_NEEDLE_SN.cd].unit = unit11;
-            }else if (this.punctureNeedleSn.name === "") {
+            }else if (isUnregisteredMaster(this.punctureNeedleSn)) {
               rstCondInfo[item.PUNCTURE_NEEDLE_SN.cd] = this.createEmpty();
             }
             continue;
@@ -531,7 +538,7 @@ export class Basic {
               rstCondInfo[item.BLOOD_CIRCUIT.cd].value = numberToString(actualModel[key].cd);
               rstCondInfo[item.BLOOD_CIRCUIT.cd].value_name_1 = actualModel[key].name;
               rstCondInfo[item.BLOOD_CIRCUIT.cd].unit = unit13;
-            }else if (this.bloodCircuit.name === "") {
+            }else if (isUnregisteredMaster(this.bloodCircuit)) {
               rstCondInfo[item.BLOOD_CIRCUIT.cd] = this.createEmpty();
             }
             continue;
@@ -598,9 +605,6 @@ export class Basic {
     if (!this.isObject(obj1)) {
       if (this.isNumber(obj1) && this.isNumber(obj2)) {
         return Number(obj1) == Number(obj2);
-      }
-      if (obj1 == '' && obj2 == null) {
-        return true;
       }
       return obj1 == obj2;
     }

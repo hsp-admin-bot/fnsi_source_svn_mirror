@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.request.authority.UserAuthorityRequest;
 import jp.co.nikkiso.ntss.admin_web.service.authority.UserAuthorityService;
 import jp.co.nikkiso.ntss.core.exception.NotExistException;
@@ -8,9 +8,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -53,7 +53,7 @@ public class UserAuthorityResourceTest extends AbstractResourceTest {
   /**
    * 利用者権限Service.
    */
-  @MockBean
+  @MockitoBean
   private UserAuthorityService userAuthorityService;
 
   /**
@@ -75,7 +75,7 @@ public class UserAuthorityResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/user-authority/{user_id}/list", userId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(userAuthorityService, times(1)).getAuthorizedAuthorities(userId);
@@ -106,7 +106,7 @@ public class UserAuthorityResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/user-authority/{user_id}/list", userId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(userAuthorityService, times(1)).getAuthorizedAuthorities(userId);
@@ -133,7 +133,7 @@ public class UserAuthorityResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/user-authority/login/list")
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(userAuthorityService, times(1)).getAuthorizedAuthorities(userId);
@@ -164,7 +164,7 @@ public class UserAuthorityResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/user-authority/login/list")
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(userAuthorityService, times(1)).getAuthorizedAuthorities(userId);
@@ -215,7 +215,7 @@ public class UserAuthorityResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/user-authority/list")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userAuthorityService, times(2)).updateAuthorizedAuthorities(anyLong(), anyList(), anyBoolean());
@@ -256,7 +256,7 @@ public class UserAuthorityResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/user-authority/list")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userAuthorityService, times(1)).updateAuthorizedAuthorities(anyLong(), anyList(), anyBoolean());

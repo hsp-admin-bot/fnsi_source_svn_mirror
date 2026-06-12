@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   NKKWeight WiX v4 インストーラー
-  製品名   : FNWSi 体重計アプリ
-  バージョン: 2.0.2
+  製品名   : NKKWeight(体重計アプリ)
+  バージョン: 2.0.0
   メーカー : NIKKISO
   インストール先: C:\FNWSiTools\FNWSiScale
 
@@ -14,7 +14,6 @@
     - サイレントインストール(/quiet): 既存 config を使用、なければデフォルト値
     - バージョンダウングレード警告（サイレント時は中止）
     - Windows サービス自動登録・起動・停止・削除
-    - アンインストール時に NKKWeight.config を保持
     - デスクトップショートカット: 既定では作成しない（INSTALLDESKTOPSHORTCUT=1 でオフライン体重計アプリのみ。NKKWeightScaleApp 同梱時のみ有効）
     - NKKWeightScaleApp.exe: 既定では MSI に同梱しない（ビルド時 IncludeNKKWeightScaleApp=1 で同梱）
 -->
@@ -46,7 +45,7 @@
 <?endif?>
 
     <Property Id="ARPPRODUCTICON" Value="NKKWeightIcon" />
-    <Property Id="ARPCONTACT"     Value="Nikkiso" />
+    <Property Id="ARPCONTACT"     Value="NIKKISO" />
     <Property Id="ARPCOMMENTS"    Value="体重計アプリ" />
     <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
 
@@ -60,7 +59,6 @@
     <Property Id="RUNNING_PROCESSES" Secure="yes" />
     <Property Id="SERVICE_WAS_RUNNING" Value="0" Secure="yes" />
 
-    <!-- WiX v4: WIXUI_INSTALLDIR は ui:WixUI の InstallDirectory 属性で自動設定される -->
     <!-- インストール先を常に C: ドライブに固定 -->
     <Property Id="ROOTDRIVE" Value="C:\" />
     <!-- FNWSiConvertToolSetup と同様: デスクトップショートカットは既定で作成しない（INSTALLDESKTOPSHORTCUT=1 で作成） -->
@@ -95,14 +93,13 @@
         Property="NEWERVERSIONALREADYINSTALLED" />
     </Upgrade>
 
-    <!-- ダウングレード禁止: 新バージョンが既にインストール済みの場合はエラー終了 -->
+    <!-- ダウングレード禁止 -->
     <Launch Condition="NOT NEWERVERSIONALREADYINSTALLED"
             Message="より新しいバージョンがインストール済みです。アンインストールしてから再度インストールしてください。" />
 
     <!-- ============================== ディレクトリ構成 ============================== -->
     <!--
       デフォルト: C:\FNWSiTools\FNWSiScale
-      TARGETDIR(C:\) > FNWSITOOLS(FNWSiTools) > INSTALLFOLDER(FNWSiScale)
     -->
     <StandardDirectory Id="TARGETDIR">
       <Directory Id="FNWSITOOLS" Name="FNWSiTools">
@@ -122,13 +119,12 @@
       <File Id="F_NKKWeightServiceExe"
             Source="$(var.SrcService)FNWSiScale.exe"
             KeyPath="yes" />
-      <!-- InstallUtil が残す .InstallState をアンインストール時に削除 -->
       <RemoveFile Id="RF_InstallState"
                   Name="FNWSiScale.InstallState"
                   On="uninstall" />
     </Component>
 
-    <!-- (2) 体重計アプリ (FNWSiScaleTool.exe) -->
+    <!-- (2) 管理ツール (FNWSiScaleTool.exe) -->
     <Component Id="C_NKKWeightTool"
                Guid="{2941EE11-64C3-4629-A8A0-B0A51FE45EEB}"
                Directory="INSTALLFOLDER">
@@ -189,7 +185,7 @@
             KeyPath="yes" />
     </Component>
 
-    <!-- (5) 共有 DLL 群・依存ファイル（NKKWeightService\bin\Release\ より） -->
+    <!-- (5) 共有 DLL 群 -->
     <ComponentGroup Id="CG_SharedDlls" Directory="INSTALLFOLDER">
       <Component Guid="{3AC7D5BA-237C-449B-B26F-76F5ABEDF209}"><File Source="$(var.SrcService)CsvHelper.dll" /></Component>
       <Component Guid="{DC109A44-AD09-4544-80E4-56901FB86F10}"><File Source="$(var.SrcService)Ionic.Zip.dll" /></Component>
@@ -199,7 +195,6 @@
       <Component Guid="{0A0014D9-D32C-4500-9DC1-A399165129C8}"><File Source="$(var.SrcService)NKKWeightScaleDB.dll.config" /></Component>
       <Component Guid="{BE6EC41B-CF5F-4CB6-8085-4DC6DA3DDF59}"><File Source="$(var.SrcService)Newtonsoft.Json.dll" /></Component>
       <Component Guid="{E24FDA25-78B0-4635-8ED3-A3DF9402D349}"><File Source="$(var.SrcService)SuperSocket.ClientEngine.dll" /></Component>
-      <Component Guid="{7DE401A3-7551-476A-A994-7BF82B023774}"><File Source="$(var.SrcService)System.ValueTuple.dll" /></Component>
       <Component Guid="{0A391D13-3452-42BA-9A39-137DC2E69BA4}"><File Source="$(var.SrcService)VBBarCode4.BarCode.4.dll" /></Component>
       <Component Guid="{2DE8896E-8985-4AE0-AB72-5258A4A98F31}"><File Source="$(var.SrcService)WebSocket4Net.dll" /></Component>
       <Component Guid="{872FD33F-786E-4A34-BD0A-B8CFB8B6A178}"><File Source="$(var.SrcService)FNWSiScale.exe.config" /></Component>
@@ -244,7 +239,7 @@
 
     <!-- ============================== フィーチャー ============================== -->
     <Feature Id="ProductFeature"
-             Title="体重計保守ツール"
+             Title="FNWSi Scale"
              Level="1"
              ConfigurableDirectory="INSTALLFOLDER">
       <ComponentRef Id="C_NKKWeightService" />
@@ -294,23 +289,16 @@
                   Return="check" />
 
     <!--
-      静默アップデート時のサービス起動兜底:
+      起動中プロセス/サービス検出
         - InstallUtil.Commit 側で起動できなかったケースを補完
         - 条件: サイレント(UILevel<5) のインストール時は常に実行
     -->
-    <CustomAction Id="StartServiceAfterInstallSilent"
-                  Directory="SystemFolder"
-                  ExeCommand="cmd.exe /c sc start NKKWeightService &gt; nul 2&gt;&amp;1"
-                  Execute="deferred"
-                  Impersonate="no"
-                  Return="ignore" />
 
     <!--
       ========== 起動中プロセス検出・強制終了カスタムアクション ==========
     -->
 
     <!--
-      CA_DetectRunningProcesses: UIシーケンスで実行（対話型インストール用）
         - NKKWeightTool.exe / FNWSiScaleTool.exe / NKKWeightService の起動状態を WMI で確認
         - RUNNING_PROCESSES: 起動中アプリ名一覧（ダイアログ表示用）
         - SERVICE_WAS_RUNNING: サービスが起動していた場合 "1"
@@ -333,8 +321,8 @@
                   ScriptSourceFile="Scripts\CA_DetectServiceStatus.vbs" />
 
     <!--
-      CA_KillGUIApps: UIシーケンスで実行（対話型インストール時のダイアログボタン用）
-        - NKKWeightTool.exe / FNWSiScaleTool.exe を WMI 経由で強制終了
+    	「終了して続行」押下時
+        - NKKWeightTool.exe / FNWSiScaleTool.exe 強制終了
         - サービスは後続の UninstallServiceWithInstaller (deferred/elevated) が停止する
     -->
     <CustomAction Id="CA_KillGUIApps"
@@ -343,6 +331,13 @@
                   Script="vbscript"
                   ScriptSourceFile="Scripts\CA_KillGUIApps.vbs" />
 
+    <CustomAction Id="StartServiceAfterInstallSilent"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c sc start NKKWeightService &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+		  
     <!-- サービス復元フラグ付き: インタラクティブ（UILevel>=5）でサービスが起動していた場合 -->
     <CustomAction Id="SetInstallServicePropertyRestore"
                   Property="InstallServiceWithInstaller"
@@ -356,11 +351,10 @@
     <!-- ============================== シーケンス ============================== -->
 
     <InstallExecuteSequence>
-      <!-- InstallValidate を抑制: サービス稼働中の FilesInUse タイムアウト（約11秒）を回避 -->
+      <!-- InstallValidate を抑制: サービス稼働中の FilesInUse タイムアウトを回避 -->
       <InstallValidate Condition="0" />
 
-      <!-- 旧バージョンを早期削除（InstallInitialize 直後）
-           → ファイルロックなしで新ファイルをインストール可能 -->
+      <!-- 旧バージョンを早期削除（InstallInitialize 直後） → ファイルロックなしで新ファイルをインストール可能 -->
       <RemoveExistingProducts After="InstallInitialize" />
 
       <!--
@@ -377,8 +371,7 @@
           - 修復:            サービス解除 → ファイルロック解放 → InstallFiles で上書き
           - アンインストール: サービス解除 → ファイル削除
       -->
-      <Custom Action="UninstallServiceWithInstaller" Before="RemoveFiles"
-              Condition="1" />
+      <Custom Action="UninstallServiceWithInstaller" Before="RemoveFiles" Condition="1" />
 
       <!--
         新規インストール / 修復時: InstallFiles 後にサービス登録・起動
@@ -393,14 +386,12 @@
           After=Restore の SilentRestore も実行しないことがあり、/servicewasrunning=1 が
           InstallUtil に届かずサービスが起動しない。
       -->
-      <!-- 交互安装分支（UILevel>=5） -->
       <Custom Action="SetInstallServiceProperty" Before="InstallServiceWithInstaller"
               Condition="NOT REMOVE AND UILevel &gt;= 5" />
       <!-- インタラクティブ（UILevel>=5）かつサービスが起動していた場合: /servicewasrunning=1 を付加 -->
       <Custom Action="SetInstallServicePropertyRestore" After="SetInstallServiceProperty"
               Condition="NOT REMOVE AND UILevel &gt;= 5 AND SERVICE_WAS_RUNNING = &quot;1&quot;" />
 
-      <!-- 静默安装分支（UILevel<5） -->
       <Custom Action="SetInstallServicePropertySilent" Before="InstallServiceWithInstaller"
               Condition="NOT REMOVE AND UILevel &lt; 5" />
       <!--
@@ -418,25 +409,10 @@
     </InstallExecuteSequence>
 
     <!-- ============================== UI ============================== -->
-    <!--
-      WixUI_InstallDir（日本語）:
-        [ようこそ] → [インストール先選択] → [確認] → [進捗] → [完了]
-      ライセンス同意ダイアログはなし
-    -->
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
 
-    <!--
-      ライセンス同意ダイアログをスキップ:
-        WelcomeDlg の Next ボタンを LicenseAgreementDlg → InstallDirDlg に変更
-        InstallDirDlg の Back ボタンを LicenseAgreementDlg → WelcomeDlg に変更
-      Order を既存（1）より高く（3/2）設定し、最後に発火したイベントで上書き。
-    -->
+    <!-- ライセンス同意ダイアログをスキップ -->
     <UI>
-      <!--
-        ======== 起動中アプリケーション検出ダイアログ ========
-        表示条件: WelcomeDlg の「次へ」押下時に CA_DetectRunningProcesses が
-                  RUNNING_PROCESSES を非空に設定した場合
-      -->
       <Dialog Id="RunningProcessesDlg" Width="370" Height="270" Title="FNWSi Scale">
         <!-- バナー -->
         <Control Id="BannerBitmap" Type="Bitmap"
@@ -519,8 +495,6 @@
       <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
                Event="NewDialog" Value="VerifyReadyDlg"
                Order="3" Condition="Installed AND NOT RUNNING_PROCESSES" />
-
-      <!-- InstallDirDlg の「戻る」は常に WelcomeDlg へ（RunningProcessesDlg 経由でも同様） -->
       <Publish Dialog="InstallDirDlg" Control="Back"
                Event="NewDialog" Value="WelcomeDlg"
                Order="2" Condition="1" />

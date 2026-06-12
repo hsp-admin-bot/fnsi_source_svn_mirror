@@ -14,19 +14,20 @@ import batch.listener.StepStartEndListener;
 import batch.part.ProgressManagement;
 import batch.part.PsqlCopyUtils;
 import batch.part.StreamThread;
-import com.amazonaws.util.CollectionUtils;
+import org.springframework.util.CollectionUtils;
 import com.google.gson.Gson;
 import com.zaxxer.hikari.HikariDataSource;
 import de.siegmar.fastcsv.writer.CsvWriter;
 import lombok.Getter;
 import lombok.Setter;
 import org.json.JSONObject;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.Step;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -99,7 +100,7 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
     private static final String ORDMATERIALSAVE = "ord_material_save";
 
     @Autowired
-    private StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
 
     @Autowired
     Utils utils;
@@ -153,7 +154,41 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
         String fromDb_table_prefix = environment.getProperty("datasource." + ApplicationConst.DbType.CONVERT + ".table_prefix");
 
         if (!nextProcessingFile.contains("[diff]")) {
-            // add #10859 houyulong start
+            executeNonDiffProcessing(chunkContext, globalContext, facilityCd, tableName, inputPath,
+                    convertJdbcTemplate, fromDb_table_prefix);
+        } else {
+            executeDiffProcessing(chunkContext, globalContext, facilityCd, tableName,
+                    convertJdbcTemplate, fromDb_table_prefix);
+        }
+        return RepeatStatus.FINISHED;
+    }
+
+    /**
+     * 非差分ファイルの派生データ処理を実行する
+     */
+    private void executeNonDiffProcessing(ChunkContext chunkContext,
+                                          GlobalContext globalContext, String facilityCd, String tableName, String inputPath,
+                                          NamedParameterJdbcTemplate convertJdbcTemplate, String fromDb_table_prefix) throws Exception {
+        // add #10859 houyulong start
+        String impType = resolveMaterialImpType(globalContext, facilityCd);
+        // add #10859 houyulong end
+
+        if ("ord_main".equals(tableName)) {
+            processOrdMainNonDiff(chunkContext, globalContext, facilityCd, inputPath,
+                    convertJdbcTemplate, fromDb_table_prefix, tableName, impType);
+        } else if ("mst_machine".equals(tableName)) {
+            processMstMachineNonDiff(globalContext, facilityCd, inputPath, convertJdbcTemplate,
+                    fromDb_table_prefix, tableName);
+        } else if ("ord_prescription".equals(tableName)) { //处方ord_prescription：ord_material_save add
+            processOrdPrescriptionNonDiff(chunkContext, globalContext, facilityCd,
+                    convertJdbcTemplate, impType);
+        }
+    }
+
+    /**
+     * 初回/追加のmaterialStatus（impType）を解決する
+     */
+    private String resolveMaterialImpType(GlobalContext globalContext, String facilityCd) {
             String impType = globalContext.materialStatus;
             if (impType.equals("初回")) {
                 String SQL = "SELECT COUNT(1) " +
@@ -170,9 +205,16 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
                 impType = (count != null && count > 0) ? "追加" : "初回";
                 globalContext.materialStatus = impType;
             }
-            // add #10859 houyulong end
+        return impType;
+    }
 
-            if ("ord_main".equals(tableName)) {
+    /**
+     * 非差分：ord_mainテーブルのスケジュール・材料保存処理
+     */
+    private void processOrdMainNonDiff(ChunkContext chunkContext,
+                                       GlobalContext globalContext, String facilityCd, String inputPath,
+                                       NamedParameterJdbcTemplate convertJdbcTemplate, String fromDb_table_prefix, String tableName,
+                                       String impType) throws IOException {
                 String ord_main_sql = "select facility_cd, ord_no, treat_date, ind_kur_cd, ind_bed_cd, pat_id, treat_week, " +
                         "ind_cond_info, ind_medi_info, ind_equip_info ,rst_cond_info,rst_medi_info,rst_equip_info,rst_treatment_info,is_confirm,rst_dialysis_state,fn_plural from "
                         + fromDb_table_prefix + tableName
@@ -198,7 +240,13 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
                     // mod #10843 djy end
                     // mod #10067 ord_material_saveのコンバートが正しくない 20240522 孟堅 end
                 }
-            } else if ("mst_machine".equals(tableName)) {
+    }
+
+    /**
+     * 非差分：mst_machineからmnt_machine_stateのCSVコピー処理
+     */
+    private void processMstMachineNonDiff(GlobalContext globalContext, String facilityCd, String inputPath,
+                                          NamedParameterJdbcTemplate convertJdbcTemplate, String fromDb_table_prefix, String tableName) {
                 Collection<String[]> resultDataList = new ArrayList<String[]>(Collections.EMPTY_LIST);
                 String mst_machine_sql = "select facility_cd, machine_type_cd, machine_serial, machine_no, machine_name, is_del, is_disp, reg_date, up_date from " + fromDb_table_prefix + tableName
                         + " where facility_cd = ? and is_disp='1' and machine_no > ?";
@@ -238,6 +286,13 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
                         // add #10153,#10191,#10249 djy end
                         resultDataList.add(mmsArray);
                 }
+        copyMntMachineStateCsv(facilityCd, csvfileName, resultDataList);
+    }
+
+    /**
+     * mnt_machine_stateのCSV作成とpsql COPY実行
+     */
+    private void copyMntMachineStateCsv(String facilityCd, String csvfileName, Collection<String[]> resultDataList) {
                 try {
                     String nkk5JdbcUrl = environment.getProperty("datasource." + ApplicationConst.DbType.NKK5 + ".jdbc-url");
                     String nkk5UserName = environment.getProperty("datasource." + ApplicationConst.DbType.NKK5 + ".username");
@@ -247,8 +302,7 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
                     String fromDbName = nkk5JdbcUrl.split("/")[3];
                     String registColumnNames = MSTMACHINE_COM;
                     File fileNew = new File(csvfileName);
-                    CsvWriter cw = new CsvWriter();
-                    cw.write(fileNew, StandardCharsets.UTF_8, resultDataList);
+                    writeCsv(fileNew.toPath(), resultDataList);
                     String copyCommand = "psql"
                             + " -h "
                             + fromHostIp
@@ -286,7 +340,14 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
                             , "OrderMainDerivedDataProcessingStep.execute()");
                     eventLoggerUtil.recordLog(facilityCd, eventLogMessageErr, LogLevel.ERROR);
                 }
-            } else if ("ord_prescription".equals(tableName)) { //处方ord_prescription：ord_material_save add
+    }
+
+    /**
+     * 非差分：ord_prescriptionからord_material_save（RP）処理
+     */
+    private void processOrdPrescriptionNonDiff(ChunkContext chunkContext,
+                                               GlobalContext globalContext, String facilityCd, NamedParameterJdbcTemplate convertJdbcTemplate,
+                                               String impType) {
                 Collection<String[]> resultDataList = new ArrayList<String[]>(Collections.EMPTY_LIST);
                 if (resultDataList.isEmpty()) {
                     resultDataList.add(ORD_MATERIAL_SAVE_COM.split(","));
@@ -311,13 +372,34 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
                     // add #10746 djy end
                 }
             }
-         }else {
+
+    /**
+     * 差分ファイルの派生データ処理を実行する
+     */
+    private void executeDiffProcessing(ChunkContext chunkContext,
+                                       GlobalContext globalContext, String facilityCd, String tableName,
+                                       NamedParameterJdbcTemplate convertJdbcTemplate, String fromDb_table_prefix) {
             // add #10859 houyulong start
             String omsDiffStartLog = "ord_materail_save 差分 移行開始";
             String omsDiffEndLog = "ord_materail_save 差分 移行終了";
             // add #10859 houyulong end
             if (!"".equals(globalContext.sqlKeys) || globalContext.seq > -1) { // #12229 modify !"".equals(utils.seq) to utils.seq > -1
                 if ("ord_main".equals(tableName)) {
+                processOrdMainDiff(chunkContext, globalContext, facilityCd,
+                        convertJdbcTemplate, fromDb_table_prefix, tableName, omsDiffStartLog, omsDiffEndLog);
+            } else if ("ord_prescription".equals(tableName)) {
+                processOrdPrescriptionDiff(chunkContext, globalContext, facilityCd,
+                        convertJdbcTemplate, omsDiffStartLog, omsDiffEndLog);
+            }
+        }
+    }
+
+    /**
+     * 差分：ord_mainの材料保存処理
+     */
+    private void processOrdMainDiff(ChunkContext chunkContext,
+                                    GlobalContext globalContext, String facilityCd, NamedParameterJdbcTemplate convertJdbcTemplate,
+                                    String fromDb_table_prefix, String tableName, String omsDiffStartLog, String omsDiffEndLog) {
                     String ord_main_sql = "select facility_cd, ord_no, treat_date, ind_kur_cd, ind_bed_cd, pat_id, treat_week, " +
                             // mod #10067 ord_material_saveのコンバートが正しくない 20240522 孟堅 start
                             "ind_cond_info, ind_medi_info, ind_equip_info ,rst_cond_info,rst_medi_info,rst_equip_info,rst_treatment_info,is_confirm,rst_dialysis_state,fn_plural from "
@@ -364,7 +446,14 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
                         // mod #10843 djy end
                         // add #10067 ord_material_saveのコンバートが正しくない 20240522 孟堅 end
                     }
-                } else if ("ord_prescription".equals(tableName)) {
+    }
+
+    /**
+     * 差分：ord_prescriptionの材料保存処理
+     */
+    private void processOrdPrescriptionDiff(ChunkContext chunkContext,
+                                            GlobalContext globalContext, String facilityCd, NamedParameterJdbcTemplate convertJdbcTemplate,
+                                            String omsDiffStartLog, String omsDiffEndLog) {
                     String sql = "select \n" +
                             "* \n" +
                             "from \n" +
@@ -413,11 +502,7 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
                         progressManagement.createConvertTableStatus(chunkContext.getStepContext().getStepExecution().getJobExecution(),omsDiffEndLog);
                         // add #10859-6 djy end
                         // add #10746 djy end
-                    }
-                }
-            }
         }
-        return RepeatStatus.FINISHED;
     }
 
     /**
@@ -464,7 +549,7 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
                 osParamList.add(schedule);
             }
             List<OrdSchedule> dummyScheduleList = this.insertOrdSchedule(om, machineJdbcTemplate);
-            if (!CollectionUtils.isNullOrEmpty(dummyScheduleList)) osParamList.addAll(dummyScheduleList);
+            if (!CollectionUtils.isEmpty(dummyScheduleList)) osParamList.addAll(dummyScheduleList);
         }
         String csvFilePath = inputPath + "/ord_schedule.csv";
         //##9839 wzy start
@@ -491,6 +576,25 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
         Long indBedCd = indBedCdTemp.longValue();
         List<OrdSchedule> result = new LinkedList<>();
         if ((0 != indKurCd) && (0 != indBedCd)) {
+            Long treatTime = resolveTreatTimeFromIndCondInfo(retInfo);
+            List<MstKur> mstKur = loadMstKurList(machineJdbcTemplate, facilityCdRet);
+            if (mstKur.isEmpty()) {
+                return null;
+            }
+            List<MstKur> currentKur = mstKur.stream().filter(info -> Long.parseLong(info.getKurCd().toString()) == indKurCd).collect(Collectors.toList());
+            if (currentKur.isEmpty()) {
+                return null;
+            }
+            return buildDummyScheduleList(retInfo, ordNo, facilityCdRet, treatDate, indKurCd, indBedCd, patId,
+                    treatTime, mstKur, currentKur);
+        }
+        return null;
+    }
+
+    /**
+     * ind_cond_infoから治療時間（分）を取得する
+     */
+    private Long resolveTreatTimeFromIndCondInfo(OrdMain retInfo) {
             Long treatTime = null;
             String indCondInfoTmp = retInfo.getIndCondInfo();
             if (indCondInfoTmp == null) {
@@ -508,19 +612,28 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
                     treatTime = 0L;
                 }
             }
+        return treatTime;
+    }
+
+    /**
+     * 施設のクールマスタ一覧を取得する
+     */
+    private List<MstKur> loadMstKurList(NamedParameterJdbcTemplate machineJdbcTemplate, String facilityCdRet) {
             List<MstKur> mstKur = null;
             if (null == mstKur) {
                 // SQLインジェクション対策：文字列連結の代わりに?プレースホルダーを使用
                 String mst_kur_sql = "select A.kur_cd, A.kur_start_time, A.kur_end_time, A.kur_standard_start_time from mst_kur A where A.is_del = '0' AND facility_cd = ? order by A.kur_cd";
                 mstKur = machineJdbcTemplate.getJdbcOperations().query(mst_kur_sql, new Object[]{facilityCdRet}, new BeanPropertyRowMapper<>(MstKur.class));
             }
-            if (mstKur.isEmpty()) {
-                return null;
-            }
-            List<MstKur> currentKur = mstKur.stream().filter(info -> Long.parseLong(info.getKurCd().toString()) == indKurCd).collect(Collectors.toList());
-            if (currentKur.isEmpty()) {
-                return null;
-            }
+        return mstKur;
+    }
+
+    /**
+     * 治療終了までのダミースケジュール一覧を生成する
+     */
+    private List<OrdSchedule> buildDummyScheduleList(OrdMain retInfo, Long ordNo, String facilityCdRet, String treatDate,
+                                                     long indKurCd, Long indBedCd, Long patId, Long treatTime, List<MstKur> mstKur, List<MstKur> currentKur) {
+        List<OrdSchedule> result = new LinkedList<>();
             DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
             DateTimeFormatter dayFormat = DateTimeFormatter.ofPattern("yyyyMMdd");
             LocalDateTime treatStartDay = LocalDateTime.parse(treatDate + "000000", dateFormat);
@@ -564,8 +677,6 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
                 }
             }
             return result;
-        }
-        return null;
     }
 
     /**
@@ -635,6 +746,19 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
         String fromHostIp = nkk5JdbcUrl.split("/")[2].split(":")[0];
         String fromDbUser = nkk5UserName;
         String fromDbName = nkk5JdbcUrl.split("/")[3];
+        CsvConvertContext csvContext = buildCsvConvertData(tableName, ordScheduleList, ordMaterialSaveList);
+        if (csvContext == null) {
+            return;
+        }
+        writeCsvAndExecuteCopy(facilityCd, tableName, csvfileName, fromHostIp, fromDbUser, fromDbName,
+                to_Db_table_prefix, csvContext);
+    }
+
+    /**
+     * CSV出力用のデータ行と登録列名を組み立てる
+     */
+    private CsvConvertContext buildCsvConvertData(String tableName, List<OrdSchedule> ordScheduleList,
+                                                  List<OrdMaterialSave> ordMaterialSaveList) {
         Collection<String[]> resultDataList = new ArrayList<String[]>(Collections.EMPTY_LIST);
         String registColumnNames = "";
         if (ORDSCHEDULE.equals(tableName) && !ordScheduleList.isEmpty()) {
@@ -664,13 +788,19 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
                 }
             }
         } else {
-            return;
+            return null;
         }
+        return new CsvConvertContext(registColumnNames, resultDataList);
+    }
 
+    /**
+     * CSVファイル書き込みとpsql COPY実行・一時ファイル削除
+     */
+    private void writeCsvAndExecuteCopy(String facilityCd, String tableName, String csvfileName, String fromHostIp,
+                                        String fromDbUser, String fromDbName, String to_Db_table_prefix, CsvConvertContext csvContext) {
         try {
             File fileNew = new File(csvfileName);
-            CsvWriter cw = new CsvWriter();
-            cw.write(fileNew, StandardCharsets.UTF_8, resultDataList);
+            writeCsv(fileNew.toPath(), csvContext.resultDataList);
             String copyCommand = "psql"
                     + " -h "
                     + fromHostIp
@@ -681,7 +811,7 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
                     + " -c \"\\copy " + to_Db_table_prefix
                     + tableName
                     + "("
-                    + registColumnNames
+                    + csvContext.registColumnNames
                     + ") FROM " + csvfileName + " WITH CSV HEADER\"";
             if (ORDSCHEDULE.equals(tableName)) {
                 System.err.println("Copy command executing: ord_schedule.csv：" + copyCommand);
@@ -708,6 +838,19 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
 
         } catch (Exception exception) {
             System.err.println(exception.toString());
+        }
+    }
+
+    /**
+     * CSV変換処理用のコンテキスト（登録列名とデータ行）
+     */
+    private static class CsvConvertContext {
+        private final String registColumnNames;
+        private final Collection<String[]> resultDataList;
+
+        private CsvConvertContext(String registColumnNames, Collection<String[]> resultDataList) {
+            this.registColumnNames = registColumnNames;
+            this.resultDataList = resultDataList;
         }
     }
 
@@ -740,15 +883,19 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
             process.getInputStream().close();
             process.getOutputStream().close();
             process.getErrorStream().close();
-            process.destroy();
+            int exitCode = process.waitFor(); // 子プロセスの終了コードを取得
+            process.destroy(); // 子プロセスを明示的に終了
             if (!org.springframework.util.ObjectUtils.isEmpty(et.getOutputString())) {
+                EventLogMessage elm = eventLoggerUtil.getEventLogMessage(et.getOutputString(),
+                        facilityCd, "processCmdSql(String[] cmd, boolean status)");
+                eventLoggerUtil.recordLog(facilityCd, elm, LogLevel.WARN);
+            }
+            if (exitCode != 0) {
                 exSuccess = false;
-                System.err.println("出力文字：" + et.getOutputString());
                 EventLogMessage elm = eventLoggerUtil.getEventLogMessage(et.getOutputString(),
                         facilityCd, "processCmdSql(String[] cmd, boolean status)");
                 eventLoggerUtil.recordLog(facilityCd, elm, LogLevel.ERROR);
             }
-            System.out.println("psqlコマンドの実行が完了しました！");
         } catch (IOException | InterruptedException e) {
             // TODO Auto-generated catch block
             eventLoggerUtil.recordLog(
@@ -764,10 +911,19 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
 
     @Bean(name = STEP_NAME)
     public Step step() {
-        return stepBuilderFactory.get(STEP_NAME)
+        return new StepBuilder(STEP_NAME, jobRepository)
                 .tasklet(this)
                 .build();
     }
+
+    private void writeCsv(Path path, Collection<String[]> rows) throws IOException {
+        try (CsvWriter csvWriter = CsvWriter.builder().build(path, StandardCharsets.UTF_8)) {
+            for (String[] row : rows) {
+                csvWriter.writeRecord(row);
+            }
+        }
+    }
+
     // add #10067 ord_material_saveのコンバートが正しくない 20240522 孟堅 start
     /***
      * 「OrdMaterialSave」のテータ作成処理です
@@ -858,7 +1014,7 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
         int retrunValue = 0;
         EventLogMessage eventLogMessage = new EventLogMessage();
         RestTemplate rt = new RestTemplate();
-        HttpStatus status = null;
+        int statusCode = -1;
         Gson gson = new Gson();
         String sendData = gson.toJson(ordMaterialSaveRequest);
         try {
@@ -873,8 +1029,8 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
 
             // リクエスト処理
             ResponseEntity<String> response = rt.exchange(request, String.class);
-            status = response.getStatusCode();
-            if (HttpStatus.OK != status) {
+            statusCode = response.getStatusCode().value();
+            if (HttpStatus.OK.value() != statusCode) {
                 retrunValue = 1;
                 eventLogMessage = eventLoggerUtil.getEventLogMessage("「OrdMaterialSave」API接続成功、内部処理に失敗: " + response.getBody()+"失敗メッセージ: "+sendData,
                         facilityCd, "OrderMainDerivedDataProcessingStep.sendOrdMaterialPostSaveRequest");
@@ -918,7 +1074,7 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
         int retrunValue = 0;
         EventLogMessage eventLogMessage = new EventLogMessage();
         RestTemplate rt = new RestTemplate();
-        HttpStatus status = null;
+        int statusCode = -1;
         JSONObject jsonBody = new JSONObject();
         jsonBody.put("ordRpCds", ordRpCdList);
         try {
@@ -933,8 +1089,8 @@ public class OrderMainDerivedDataProcessingStep extends StepStartEndListener imp
 
             // リクエスト処理
             ResponseEntity<String> response = rt.exchange(request, String.class);
-            status = response.getStatusCode();
-            if (HttpStatus.OK != status) {
+            statusCode = response.getStatusCode().value();
+            if (HttpStatus.OK.value() != statusCode) {
                 retrunValue = 1;
                 eventLogMessage = eventLoggerUtil.getEventLogMessage("「setOrdRPMaterialSave」API接続成功、内部処理に失敗: " + response.getBody()+"失敗メッセージ: "+ordRpCdList,
                         facilityCd, "OrderMainDerivedDataProcessingStep.sendOrdMaterialPostSaveRequest");

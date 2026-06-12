@@ -16,7 +16,7 @@ import { addPatNameSortToList } from "@/functions/SortFunctions";
 
 
 export default {
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   namespaced: true,
   state: {
     // 体重計モード

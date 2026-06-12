@@ -2,29 +2,24 @@ import org.gradle.internal.os.OperatingSystem
 
 buildscript {
   repositories {
-//    jcenter()
     mavenLocal()
     mavenCentral()
-    maven { url "https://start.spring.io/plugins-release" }
-    maven { url "https://start.spring.io/milestone" }
-    maven { url "https://plugins.gradle.org/m2/" }
+    maven { url = uri("https://start.spring.io/plugins-release") }
+    maven { url = uri("https://start.spring.io/milestone") }
+    maven { url = uri("https://plugins.gradle.org/m2/") }
   }
   dependencies {
     classpath "org.springframework.boot:spring-boot-gradle-plugin:${spring_boot_version}"
 //    classpath 'io.spring.gradle:propdeps-plugin:0.0.10.RELEASE'
-    classpath "com.github.node-gradle:gradle-node-plugin:3.5.1"
-    classpath "io.spring.gradle:dependency-management-plugin:1.0.7.RELEASE"
-    classpath "org.flywaydb:flyway-gradle-plugin:6.0.4"
+    classpath "io.spring.gradle:dependency-management-plugin:${dependency_management_plugin_version}"
   }
 }
 
 apply plugin: 'maven-publish'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'war'
-apply plugin: 'org.flywaydb.flyway'
 //apply plugin: 'propdeps'
 //apply plugin: 'propdeps-eclipse'
-apply plugin: 'com.github.node-gradle.node'
 apply plugin: 'io.spring.dependency-management'
 apply plugin: 'idea'
 defaultTasks 'bootRun'
@@ -82,8 +77,8 @@ jacoco {
 
 jacocoTestReport {
   reports {
-      xml.enabled false
-      csv.enabled false
+      xml.required = false
+      csv.required = false
   }
 }
 
@@ -102,13 +97,12 @@ description = ''
 repositories {
   mavenLocal()
   mavenCentral()
-//  jcenter()
-  maven { url 'https://start.spring.io/milestone' }
-  maven { url 'https://start.spring.io/snapshot' }
-  maven { url 'https://repository.jboss.org/nexus/content/repositories/releases' }
-  maven { url 'https://oss.sonatype.org/content/repositories/releases' }
-  maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
-  maven { url 'https://repo.maven.apache.org/maven2' }
+  maven { url = uri('https://start.spring.io/milestone') }
+  maven { url = uri('https://start.spring.io/snapshot') }
+  maven { url = uri('https://repository.jboss.org/nexus/content/repositories/releases') }
+  maven { url = uri('https://oss.sonatype.org/content/repositories/releases') }
+  maven { url = uri('https://oss.sonatype.org/content/repositories/snapshots') }
+  maven { url = uri('https://repo.maven.apache.org/maven2') }
 }
 
 dependencies {
@@ -117,37 +111,43 @@ dependencies {
   providedRuntime "org.springframework.boot:spring-boot-starter-tomcat"
   implementation "org.springframework.boot:spring-boot-starter-jdbc"
   implementation "org.springframework.boot:spring-boot-starter-actuator"
-  implementation 'org.springframework.cloud:spring-cloud-starter-aws-messaging:2.0.1.RELEASE'
-  implementation 'org.springframework.cloud:spring-cloud-aws-context:2.0.1.RELEASE'
   implementation "org.springframework.boot:spring-boot-starter-mail"
-  implementation "com.amazonaws:aws-java-sdk-ses:${aws_sdk_v1_version}"
-  implementation "com.amazonaws:aws-java-sdk-sns:${aws_sdk_v1_version}"
-  implementation 'org.projectlombok:lombok:1.18.28'
-  annotationProcessor 'org.projectlombok:lombok:1.18.28'
+  implementation "commons-codec:commons-codec"
+  implementation platform("software.amazon.awssdk:bom:${aws_sdk_v2_version}")
+  implementation "software.amazon.awssdk:auth"
+  implementation "software.amazon.awssdk:regions"
+  implementation "software.amazon.awssdk:url-connection-client"
+  implementation("software.amazon.awssdk:ses") {
+    exclude group: "software.amazon.awssdk", module: "apache-client"
+  }
+  implementation("software.amazon.awssdk:sns") {
+    exclude group: "software.amazon.awssdk", module: "apache-client"
+  }
+  implementation "org.projectlombok:lombok:${lombok_version}"
+  annotationProcessor "org.projectlombok:lombok:${lombok_version}"
   testImplementation ("org.springframework.boot:spring-boot-starter-test") {
     exclude group: 'com.vaadin.external.google', module: 'android-json'
   }
+  testImplementation "org.springframework.boot:spring-boot-starter-webmvc-test"
   testImplementation "org.springframework.boot:spring-boot-test"
   testImplementation "junit:junit"
   testImplementation "org.mockito:mockito-core"
   annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
-//  implementation 'org.mongodb:mongo-java-driver:3.10.1'
   implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
-  testCompileOnly 'org.projectlombok:lombok:1.18.28'
-  testAnnotationProcessor 'org.projectlombok:lombok:1.18.28'
-  implementation "org.springframework.boot:spring-boot-starter-aop"
+  testCompileOnly "org.projectlombok:lombok:${lombok_version}"
+  testAnnotationProcessor "org.projectlombok:lombok:${lombok_version}"
+  implementation "org.springframework.boot:spring-boot-starter-aspectj"
   implementation "org.seasar.doma.boot:doma-spring-boot-starter:${doma_spring_version}"
-  implementation "org.seasar.doma:doma:2.24.0"
-  annotationProcessor "org.seasar.doma:doma:2.24.0"
-  implementation group: 'com.google.guava', name: 'guava', version: '27.1-jre'
-  implementation "org.json:json:20180813"
+  implementation "org.seasar.doma:doma-core:${doma_core_version}"
+  annotationProcessor "org.seasar.doma:doma-processor:${doma_core_version}"
+  implementation "com.google.guava:guava:${guava_version}"
+  implementation "org.json:json:${json_java_version}"
 }
 
 clean { delete "target" }
 
 task cleanResources(type: Delete) { delete 'build/resources' }
 
-task wrapper(type: Wrapper) { gradleVersion = '7.2' }
 
 task stage(dependsOn: 'bootWar') {
 }
@@ -169,22 +169,26 @@ task copyConfig(type: Copy) {
 copyConfig.dependsOn deleteConfig
 compileJava.dependsOn copyConfig
 
-node {
- version = "${node_version}"
- npmVersion = "${npm_version}"
- download = project.hasProperty('nodeInstall')
- // Set the work directory where node_modules should be located
- nodeModulesDir = file("${project.projectDir}/src/main/webapp")
-}
-
 tasks.withType(Test) {
     systemProperty "file.encoding", "UTF-8"
 }
 
 // Doma2のSQLファイルをJavaのコンパイル前にコピーしておく
 // SQLファイルが存在するかしないとJavaのコンパイル時にSQLファイルが存在するかのチェックでエラーになるため。
-processResources.destinationDir = compileJava.destinationDir
-compileJava.dependsOn processResources
+def domaResources = ['doma.compile.config', 'META-INF/**/*.sql']
+task copyDomaResourcesJava(type: Copy) {
+  from sourceSets.main.resources.srcDirs
+  into compileJava.destinationDirectory
+  include domaResources
+}
+copyDomaResourcesJava.dependsOn copyConfig
+compileJava {
+  dependsOn copyDomaResourcesJava
+}
+processResources {
+  exclude domaResources
+}
 
-processResources.dependsOn cleanResources,bootBuildInfo
+processResources.dependsOn cleanResources, bootBuildInfo, copyConfig
 bootBuildInfo.mustRunAfter cleanResources
+

@@ -1,21 +1,26 @@
 <template>
-    <div slot="body" :class="['view', modalMessageSize]">
+<div
+    ref="viewScroll"
+    :class="['view', modalMessageSize]"
+    @scroll="onViewScroll"
+    @input.capture="onViewInputCapture"
+    @focusin="onViewFocusIn"
+  >
       <p>{{editRecord.name}}</p>
       <com-textarea
-        :content="listDetail"
+        :content="textareaInitialContent"
         idTextarea="com-textarea-take-medicine"
         cssClass="textarea"
-        defaultHeight="400px"
         @set-content-data="setContentData"
       />
   </div>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import CommonTextArea from "@/components/common/CommonTextArea";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 export default {
   name: "MstTakeMedicineModal",
   mixins: [MasterMaintenanceMixin],
@@ -26,6 +31,10 @@ export default {
     return {
       listDetail: "",
       initDetail: "",
+      // 入力のたびに content を更新すると CommonTextArea が再同期され、スクロール位置が先頭に戻る
+      textareaInitialContent: "",
+      savedViewScrollTop: 0,
+      restoreViewScrollFrameId: null,
     }
   },
   computed: {
@@ -51,11 +60,14 @@ export default {
       }
     }
   },
-    mounted() {
+  mounted() {
     //最初のボタンはグレーで表示されます
     setTimeout(() => {
-      EventBus.$emit("mstHolidayRegistered", true);
+      EventBus.$emit("mstHolidayRegistered", !this.isDetailChanged(this.listDetail));
     }, 200);
+  },
+  beforeUnmount() {
+    this.cancelRestoreViewScroll();
   },
   methods: {
     ...mapActions("master-maintenance", ["setEditRecord"]),
@@ -68,28 +80,70 @@ export default {
       EventBus.$emit("mstHolidayRegistered", false);
     },
 
-    setContentData(newValue) {
-      this.listDetail = newValue;
-      // mod 10291 【因島データ】 Convert '\r\n' (Windows) and '\n' (Unix Mac)  to  '\r\n' shiyw start
-      // var list = newValue.split("\n").join(",");
-      // while(list.substring(list.length - 1) == ','){
-      //   list = list.substring(0,list.length - 1);
-      // }
-      // this.editRecord.listDetails = list;
-      let resultText = this.lineBreakConversion(newValue);
-      while (resultText.endsWith('\r\n')) {
-        resultText = resultText.substring(0,resultText.length - 2);
+    onViewScroll() {
+      this.savedViewScrollTop = this.$refs.viewScroll?.scrollTop || 0;
+    },
+    onViewInputCapture(event) {
+      if (event.target?.tagName !== "TEXTAREA") {
+        return;
       }
-      this.editRecord.listDetails = resultText;
+      // textarea の高さ再計算より前にスクロール位置を保持する
+      this.savedViewScrollTop = this.$refs.viewScroll?.scrollTop || 0;
+    },
+    cancelRestoreViewScroll() {
+      if (this.restoreViewScrollFrameId !== null) {
+        cancelAnimationFrame(this.restoreViewScrollFrameId);
+        this.restoreViewScrollFrameId = null;
+      }
+    },
+    restoreViewScroll() {
+      const el = this.$refs.viewScroll;
+      if (!el) {
+        return;
+      }
+      const top = this.savedViewScrollTop;
+      const apply = () => {
+        el.scrollTop = top;
+      };
+      this.cancelRestoreViewScroll();
+      apply();
+      this.$nextTick(() => {
+        apply();
+        this.restoreViewScrollFrameId = requestAnimationFrame(() => {
+          apply();
+          this.restoreViewScrollFrameId = requestAnimationFrame(() => {
+            apply();
+            this.restoreViewScrollFrameId = null;
+          });
+        });
+      });
+    },
+    onViewFocusIn(event) {
+      if (event.target?.tagName !== "TEXTAREA") {
+        return;
+      }
+      this.onViewScroll();
+      this.restoreViewScroll();
+    },
+    setContentData(newValue) {
+      // textarea の element.value は \n のみ返すため、比較時は改行コードのみ揃える
+      const normalized = this.trimTrailingLineBreaks(newValue);
+      this.listDetail = normalized;
+      // mod 10291 【因島データ】 Convert '\r\n' (Windows) and '\n' (Unix Mac)  to  '\r\n' shiyw start
+      this.editRecord.listDetails = normalized;
       // mod 10291 【たくしん会】処方のコンバートが正しくない shiyw end
       this.setEditRecord(this.editRecord);
       //mod マスタ詳細画面がありません破棄メッセージ 张博 start
-      if (this.initDetail!==this.listDetail) {
+      if (this.isDetailChanged(newValue)) {
         this.changeButton();
-      }else{
+      } else {
         EventBus.$emit("mstHolidayRegistered", true);
       }
       //mod マスタ詳細画面がありません破棄メッセージ 张博 end
+      this.restoreViewScroll();
+    },
+    isDetailChanged(newValue) {
+      return this.lineBreakConversion(newValue ?? "") !== this.lineBreakConversion(this.initDetail ?? "");
     },
     //add 10291 【たくしん会】処方のコンバートが正しくない  shiyw start
     lineBreakConversion(text){
@@ -99,15 +153,23 @@ export default {
       const  regex = /\r?\n/g;
       let result = text.replaceAll(regex,'\r\n');
       return result
+    },
+    trimTrailingLineBreaks(text) {
+      let resultText = this.lineBreakConversion(text);
+      while (resultText.endsWith('\r\n')) {
+        resultText = resultText.substring(0, resultText.length - 2);
+      }
+      return resultText;
     }
     //add 10291 【因島データ】 Convert '\r\n' (Windows) and '\n' (Unix Mac)  to  '\r\n'  shiyw end
   },
   created() {
     //mod 10291 【因島データ】 Convert '\r\n' (Windows) and '\n' (Unix Mac)  to  '\r\n' shiyw start
     //var list = this.getSelectByField("listDetails").split(",");
-    this.listDetail = this.lineBreakConversion(this.getSelectByField("listDetails"));
+    this.listDetail = this.trimTrailingLineBreaks(this.getSelectByField("listDetails"));
     //mod 10291 【因島データ】 Convert '\r\n' (Windows) and '\n' (Unix Mac)  to  '\r\n' shiyw end
     this.initDetail = this.listDetail;
+    this.textareaInitialContent = this.listDetail;
   }
 }
 </script>
@@ -120,7 +182,7 @@ export default {
 
 .textarea{
   width: 100%;
-  height: 400px;
+  height: auto;
   font-size: unset;
 }
 

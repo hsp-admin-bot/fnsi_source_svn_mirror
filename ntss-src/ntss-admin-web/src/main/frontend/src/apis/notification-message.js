@@ -4,7 +4,7 @@
 import { ApiHelper } from "@/apis/AxiosHelper";
 
 /**
- * 通知取得（未通知）.
+ * 通知取得（未通知・バックグラウンド）
  */
 export function sendRequestGetNotificationMessage() {
   // UPD #8224 2023/02 BY HandsomeLin Start
@@ -14,7 +14,7 @@ export function sendRequestGetNotificationMessage() {
 
 // add bug 6531 修正 chen start
 /**
- * 通知取得（未通知）.
+ * 通知取得（未通知・ログイン用）
  */
 export function sendRequestGetNotificationMessageForLogin() {
   return ApiHelper.get("notification-message/login");
@@ -22,14 +22,12 @@ export function sendRequestGetNotificationMessageForLogin() {
 // add bug 6531 修正 chen end
 
 /**
- * 通知取得（全件）.
+ * 通知取得（全件）
+ * @param {string} payload URL サフィックス（例: 患者識別子など）
  */
 // mod FNSI-通知表示が遅いを修正 江 start
-// export function sendRequestGetNotificationMessageAll() {
-//   return ApiHelper.get("notification-message/all/");
-// }
 export function sendRequestGetNotificationMessageAll(payload) {
-  return ApiHelper.get("notification-message/all/"+payload);
+  return ApiHelper.get(`notification-message/all/${payload}`);
 }
 // mod FNSI-通知表示が遅いを修正 江 end
 
@@ -43,7 +41,7 @@ export function sendRequestGetNotificationMessageAll(payload) {
 
 /**
  * 未読/既読更新.
- * @param {*} payload 未読/既読情報
+ * @param {Record<string, unknown>} payload 未読/既読情報
  */
 export function sendRequestUpdateNotificationMessageStatus(payload) {
   return ApiHelper.put("notification-message/status", payload);
@@ -51,7 +49,7 @@ export function sendRequestUpdateNotificationMessageStatus(payload) {
 
 // add FNSI-通知既読更新を修正 江 start
 /**
- * 既読更新.
+ * 既読更新（全件）
  */
 export function sendRequestUpdateAllNotificationMessageisRead() {
   return ApiHelper.put("notification-message/allIsRead");
@@ -60,7 +58,7 @@ export function sendRequestUpdateAllNotificationMessageisRead() {
 
 /**
  * 通知メッセージ登録.
- * @param {*} payload 通知メッセージ情報
+ * @param {Record<string, unknown>} payload 通知メッセージ情報
  */
 export function sendRequestRegisterNotificationMessage(payload) {
   // mod FNSI-コードをマージ 江 start

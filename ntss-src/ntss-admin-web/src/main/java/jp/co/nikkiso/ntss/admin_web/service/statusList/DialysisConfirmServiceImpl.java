@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.service.statusList;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.request.patientCapture.JournalCreateRequestPayload;
 import jp.co.nikkiso.ntss.admin_web.request.statusList.CheckAfterWeightRequest;
@@ -57,7 +57,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -78,6 +77,7 @@ import java.util.regex.Pattern;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 
 @Service
@@ -135,6 +135,10 @@ public class DialysisConfirmServiceImpl implements DialysisConfirmService {
   private LogServiceCore logServiceCore;
   @Autowired
   private ObjectMapper mapper;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   /**
    * 確認ボタン押下時処理
@@ -197,7 +201,7 @@ public class DialysisConfirmServiceImpl implements DialysisConfirmService {
     wheresCheck.append(" WHERE\n");
     wheresCheck.append(" ord_no = ").append(ordNo).append("\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommonCheck = getLogCommon(ordMainDao, tableNameCheck, wheresCheck, eventLogMessage);
+    DataUpdateLogCommonNew logCommonCheck = getLogCommon(tableNameCheck, wheresCheck, eventLogMessage);
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResultCheck = logCommonCheck.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -331,7 +335,7 @@ public class DialysisConfirmServiceImpl implements DialysisConfirmService {
 
         //
         JsonNode nodeMedicalCareInfo = mapper.readTree(medicalCareInfo);
-        ObjectNode objectNode = nodeMedicalCareInfo.deepCopy();
+        ObjectNode objectNode = nodeMedicalCareInfo.deepCopy().asObject();
 
         // 治療方法を取得して患者基本情報の透析回数か浄化治療回数を更新
         MstTreatment treat = mstTreatmentDao.selectByCd(ordMain.getRstTreatmentCd());
@@ -437,7 +441,7 @@ public class DialysisConfirmServiceImpl implements DialysisConfirmService {
       for (int lop = 0; lop < jsonNode_array.size(); lop++) {
         JsonNode jsonNode = jsonNode_array.get(lop);
         // jsonNodeは読み取り専用のため、ObjectNodeに変換
-        ObjectNode objectNode = jsonNode.deepCopy();
+        ObjectNode objectNode = jsonNode.deepCopy().asObject();
 
         if (objectNode.get("effect_flg").asInt() != 1) {
           // 値の変更
@@ -459,7 +463,7 @@ public class DialysisConfirmServiceImpl implements DialysisConfirmService {
           rtnBuilder.append(",");
         }
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -527,7 +531,7 @@ public class DialysisConfirmServiceImpl implements DialysisConfirmService {
               userId, userName);
             allConfirmResponse.autoPrintResults.add(printR);
             // add FNSI-実績確定時自動印刷の修正 徐 start
-            if (!com.amazonaws.util.StringUtils.isNullOrEmpty(printR.autoPrintErrorMessage)) {
+            if (!org.springframework.util.ObjectUtils.isEmpty(printR.autoPrintErrorMessage)) {
               // add FNSI-実績確定時自動印刷の修正 徐 end
               EventLogMessage eventLogMessage = new EventLogMessage();
               eventLogMessage.setLogMessage(printR.autoPrintErrorMessage);
@@ -616,11 +620,11 @@ public class DialysisConfirmServiceImpl implements DialysisConfirmService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

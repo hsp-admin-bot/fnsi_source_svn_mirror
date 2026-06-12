@@ -23,7 +23,7 @@
         <img class="img-icon" :src="radiationMarker" v-if="this.bedData.treatment && !!this.bedData.treatment.ordNo && dispIndicator('radRequest')" @click="showRadRequests" />
 <!--        mod #10649 治療状況マップのスケジュール表示にてスケジュール割り当てができない【マニュアル検証指摘】20240618 ztc end-->
         <v-ons-popover
-          :visible.sync="patEventsVisible"
+          v-model:visible="patEventsVisible"
           :target="popoverTarget"
           :direction="popoverDirection"
           cancelable
@@ -36,7 +36,7 @@
           <pat-events/>
         </v-ons-popover>
         <v-ons-popover
-          :visible.sync="examRequestsVisible"
+          v-model:visible="examRequestsVisible"
           :target="popoverTarget"
           :direction="popoverDirection"
           cancelable
@@ -49,7 +49,7 @@
           <exam-requests/>
         </v-ons-popover>
         <v-ons-popover
-          :visible.sync="radRequestsVisible"
+          v-model:visible="radRequestsVisible"
           :target="popoverTarget"
           :direction="popoverDirection"
           cancelable
@@ -101,7 +101,7 @@
                   {{ changedViewData(viewItem) }} </span>
               </div>
               <div  id="changeinstructionline"  class="auto-event" v-else-if ="(changedViewData(viewItem) === '変更なし'
-                 || changedViewData(viewItem) === '　　　　')
+                 || changedViewData(viewItem) === '\u3000\u3000\u3000\u3000')
                  && viewItem.data_class == 109" @click="ChangeInstructionClik">
                  {{ viewItem.title }}：&nbsp;{{ changedViewData(viewItem) }}
               </div>
@@ -169,11 +169,11 @@
     <v-ons-popover
       v-if="headerPopoverShowFlag"
       cancelable
-      :visible.sync="headerPopoverShowFlag"
+      v-model:visible="headerPopoverShowFlag"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
-      :class="[fontSizeSet, 'button-area']"
+      :class="[fontSizeSet, 'button-area', 'schedule-map-bed-menu-popover']"
       @preshow="popoverPreShow"
       @postshow="popoverPostShow"
       @posthide="popoverPosthide"
@@ -236,6 +236,8 @@
 </template>
 
 <script>
+import { getAppElement } from "@/functions/common/LayoutMeasureHelper";
+
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
@@ -243,9 +245,9 @@ import StatusMapMarker from "@/components/status-map/StatusMapMarkerComponent";
 import StatusMapDonutGraph from "@/components/status-map/StatusMapDonutGraph";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import PatHeaderControlMixin from "@/components/common/PatHeadControlMixin";
-import { mapGetters, mapActions, mapMutations } from "vuex";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 import PopoverMixin from "@/components/PopoverMixin";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 //add FNSI redmine5436 fang start
 import {
   FUNC_EXAM_REQUEST,
@@ -258,32 +260,36 @@ import radRequest from "@/components/header-contents/ScheduleListHeaderRadReques
 //add FNSI redmine5436 fang end
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 //#10407:変更なしでも画面を表示させる Start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //#10407:変更なしでも画面を表示させる End
 import { INDICATOR_VALUE_SCHEDULE_MAP } from "@/constants/statusMapConstants";
+import inImg from "../../../assets/in.png";
+import outImg from "../../../assets/out.png";
+import nameDuplicationImg from "../../../assets/name_duplication.png";
+import { publicAssetPath } from "@/compat/assets/public-path";
 
 export default {
   data() {
     return {
-      image_src_in: require("../../../assets/in.png"),
-      image_src_out: require("../../../assets/out.png"),
-      image_src_infection_on: require("@/../public/img/schedule-list/mismatch_infection.png"),
-      image_src_infection_off: require("@/../public/img/schedule-list/match_infection.png"),
-      image_src_mo_on: require("@/../public/img/schedule-list/mismatch_treatment.png"),
-      image_src_mo_off: require("@/../public/img/schedule-list/match_treatment.png"),
-      image_src_v_on: require("@/../public/img/schedule-list/mismatch_va.png"),
-      image_src_v_off: require("@/../public/img/schedule-list/match_va.png"),
+      image_src_in: inImg,
+      image_src_out: outImg,
+      image_src_infection_on: "img/schedule-list/mismatch_infection.png",
+      image_src_infection_off: "img/schedule-list/match_infection.png",
+      image_src_mo_on: "img/schedule-list/mismatch_treatment.png",
+      image_src_mo_off: "img/schedule-list/match_treatment.png",
+      image_src_v_on: "img/schedule-list/mismatch_va.png",
+      image_src_v_off: "img/schedule-list/match_va.png",
       //add FNSI redmine5436 fang start
-      image_src_event_on: require("@/../public/img/schedule-list/mismatch_event.png"),
-      image_src_event_off: require("@/../public/img/schedule-list/match_event.png"),
-      image_src_inspection_on: require("@/../public/img/schedule-list/mismatch_inspection.png"),
-      image_src_inspection_off: require("@/../public/img/schedule-list/match_inspection.png"),
-      image_src_radiation_on: require("@/../public/img/schedule-list/mismatch_radiation.png"),
-      image_src_radiation_off: require("@/../public/img/schedule-list/match_radiation.png"),
+      image_src_event_on: "img/schedule-list/mismatch_event.png",
+      image_src_event_off: "img/schedule-list/match_event.png",
+      image_src_inspection_on: "img/schedule-list/mismatch_inspection.png",
+      image_src_inspection_off: "img/schedule-list/match_inspection.png",
+      image_src_radiation_on: "img/schedule-list/mismatch_radiation.png",
+      image_src_radiation_off: "img/schedule-list/match_radiation.png",
       //add FNSI redmine5436 fang end
-      image_weight: require("@/../public/img/weight/weight.png"),
-      image_treatment_record: require("@/../public/img/treatment-record/treatment-record.png"),
-      image_pat_viewer: require("@/../public/img/pat-viewer/pat-viewer.png"),
+      image_weight: publicAssetPath("img/weight/weight.png"),
+      image_treatment_record: publicAssetPath("img/treatment-record/treatment-record.png"),
+      image_pat_viewer: publicAssetPath("img/pat-viewer/pat-viewer.png"),
       headerPopoverShowFlag: false, //メニューの表示フラグ
       popoverTarget: null,
       popoverDirection: "down",
@@ -296,7 +302,7 @@ export default {
       patEventsVisible: false,
       //add FNSI redmine5436 fang end
       // add 同姓同名配布 linjunfeng start
-      image_src_same: require("../../../assets/name_duplication.png"),
+      image_src_same: nameDuplicationImg,
       // add 同姓同名配布 linjunfeng end
     };
   },
@@ -385,7 +391,7 @@ export default {
     bedDivClass() {
       let ret = "bed-inner";
       if (this.isPopoverScroll) {
-        ret = ret + " " + document.getElementById("app").getAttribute("class");
+        ret = ret + " " + (getAppElement(this.$el || this)?.getAttribute("class") || "");
       } else {
         ret = ret + " none-event";
       }
@@ -701,9 +707,9 @@ export default {
      */
     patName() {
       return this.bedData.treatment &&
-        this.bedData.treatment.hasOwnProperty("ordNo") &&
+        Object.prototype.hasOwnProperty.call(this.bedData.treatment, "ordNo") &&
         this.bedData.treatment.ordNo != null &&
-        this.bedData.treatment.hasOwnProperty("patId")
+        Object.prototype.hasOwnProperty.call(this.bedData.treatment, "patId")
         ? this.bedData.treatment.patId === null
           ? "？？？？"
           : this.bedData.treatment.patName
@@ -712,7 +718,7 @@ export default {
     // add FNSI-同姓同名患者の場合はアイコンを表示 付 start
     isSame() {
       return this.bedData.treatment
-      && this.bedData.treatment.hasOwnProperty("isSame")
+      && Object.prototype.hasOwnProperty.call(this.bedData.treatment, "isSame")
       && this.bedData.treatment.isSame != null
       ? this.bedData.treatment.isSame : "";
     },
@@ -844,7 +850,7 @@ export default {
       this.updateTreatmentPatList(this.getPatTreatmentScheduleToPatList);
       // 機能コード設定、選択 ord_no を保持
       this.setOrdNoForSideBarRecord(treatment.ordNo);
-      this.setSrcFuncName(this.$router.currentRoute.name);
+      this.setSrcFuncName(this.$route.name);
       // ordNoセット
       this.sendConditionSetSelectOrdNo({
         ordNo: treatment.ordNo,
@@ -867,7 +873,7 @@ export default {
       this.updateTreatmentPatList(this.getPatTreatmentScheduleToPatList);
       // 機能コード設定、選択 ord_no を保持
       this.setOrdNoForSideBarRecord(treatment.ordNo);
-      this.setSrcFuncName(this.$router.currentRoute.name);
+      this.setSrcFuncName(this.$route.name);
 
       this.setSelectedPatHeader(treatment.patId).then(() => {
         // ordNoセット
@@ -891,7 +897,7 @@ export default {
       this.updateTreatmentPatList(this.getPatTreatmentScheduleToPatList);
       // 機能コード設定、選択 ord_no を保持
       this.setOrdNoForSideBarRecord(treatment.ordNo);
-      this.setSrcFuncName(this.$router.currentRoute.name);
+      this.setSrcFuncName(this.$route.name);
 
       this.setSelectedPatHeader(treatment.patId).then(() => {
         // ordNoセット
@@ -922,7 +928,7 @@ export default {
       await this.setHeaderInfo(this.getSelectMachine());
 
       // 装置記録表示設定をstoreに設定
-      const today = moment(this.getConditionTreatMapCurrentDate).format("YYYY/MM/DD");
+      const today = dayjs(this.getConditionTreatMapCurrentDate).format("YYYY/MM/DD");
       const motionRecord = {
         motionRecordNo: 0, // 自己診断データの検索にはmotionRecordNoを使わないため、任意の数値を指定(nullだとエラーになる)
         dataType: 4,  // 4:自己診断 で固定
@@ -934,7 +940,7 @@ export default {
     },
     //add FNSI redmine5436 fang start
     showPatEvents(event) {
-      const today = moment(this.getConditionTreatMapCurrentDate).format("YYYYMMDD");
+      const today = dayjs(this.getConditionTreatMapCurrentDate).format("YYYYMMDD");
       if (this.bedData.statusMapInfo &&
         this.bedData.statusMapInfo.isEventMismatch) {
         this.setHeaderTreatDateInfo({
@@ -950,7 +956,7 @@ export default {
       }
     },
     showExamRequests(event) {
-      const today = moment(this.getConditionTreatMapCurrentDate).format("YYYYMMDD");
+      const today = dayjs(this.getConditionTreatMapCurrentDate).format("YYYYMMDD");
       if (this.bedData.statusMapInfo &&
         this.bedData.statusMapInfo.isInspectionMismatch) {
         this.setHeaderTreatDateInfo({
@@ -958,7 +964,7 @@ export default {
         });
         this.initExamRequests({
           patIdList: [this.bedData.statusMapInfo.patId],
-          startDate: moment(this.bedData.statusMapInfo.treatDate, 'YYYYMMDD').format('YYYY/MM/DD'),
+          startDate: dayjs(this.bedData.statusMapInfo.treatDate, 'YYYYMMDD').format('YYYY/MM/DD'),
           endDate: null
         });
         this.examRequestsVisible = true;
@@ -966,7 +972,7 @@ export default {
       }
     },
     showRadRequests(event) {
-      const today = moment(this.getConditionTreatMapCurrentDate).format("YYYYMMDD");
+      const today = dayjs(this.getConditionTreatMapCurrentDate).format("YYYYMMDD");
       if (this.bedData.statusMapInfo &&
         this.bedData.statusMapInfo.isRadiationMismatch) {
         this.setHeaderTreatDateInfo({
@@ -974,7 +980,7 @@ export default {
         });
         this.initRadRequests({
           patIdList: [this.bedData.statusMapInfo.patId],
-          startDate: moment(this.bedData.statusMapInfo.treatDate, 'YYYYMMDD').format('YYYY/MM/DD'),
+          startDate: dayjs(this.bedData.statusMapInfo.treatDate, 'YYYYMMDD').format('YYYY/MM/DD'),
           endDate: null
         });
         this.radRequestsVisible = true;
@@ -992,15 +998,11 @@ export default {
       return this.bedData.indicatorDispSchedule.includes(target);
     },
   },
-  watch: {},
-  beforeCreate() {},
-  created() {},
-  beforeMount() {},
-  mounted() {},
-  beforeUpdate() {},
-  updated() {},
-  beforeDestroy() { },
-  destroyed() { }
+
+
+
+
+
 };
 </script>
 <style scoped>
@@ -1093,7 +1095,6 @@ div.bed-color-is-dummy {
 }
 /*add FNSI-redmine 5461 劉祥霖 end*/
 
-
 div.bed-color-next-patient {
   background-color: var(--status-map-bed-state-color-next-patient);
   color: #000;
@@ -1164,12 +1165,22 @@ div.data-row-disp {
   padding: 2px 3px;
   border-radius: 3px;
 }
-/* mod FNSI-4460 文字サイズ：特大の際に遷移先が見切れる liumx start */
-ons-popover >>> .popover--top {
+ 
+ons-popover :deep(.popover--top) {
   width: 260px;
   min-height: initial;
 }
-ons-popover >>> .popover--top > .popover__content {
+
+/* mod FNSI-4460 文字サイズ：特大の際に遷移先が見切れる liumx start */
+.schedule-map-bed-menu-popover :deep(.popover--top) {
+  width: 260px;
+  min-height: initial;
+}
+ons-popover :deep(.popover--top > .popover__content) {
+  width: 260px;
+}
+
+.schedule-map-bed-menu-popover :deep(.popover--top > .popover__content) {
   width: 260px;
 }
 /* mod FNSI-4460 文字サイズ：特大の際に遷移先が見切れる liumx end */

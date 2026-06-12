@@ -5,11 +5,13 @@
   <div id="history-list" class="main-content-area" style="-webkit-overflow-scrolling:touch;">
     <table class="ntss-list">
       <thead>
-      <th class="alarm-list-color ntss-list-header-th-sticky" scope="col">&nbsp;</th>
-      <th class="ntss-list-header-th-sticky" scope="col">日付</th>
-      <th class="ntss-list-header-th-sticky" scope="col">ベッド名</th>
-      <th class="ntss-list-header-th-sticky" scope="col">患者名</th>
-      <th class="ntss-list-header-th-sticky" scope="col">内容</th>
+        <tr>
+          <th class="alarm-list-color ntss-list-header-th-sticky" scope="col">&nbsp;</th>
+          <th class="ntss-list-header-th-sticky" scope="col">日付</th>
+          <th class="ntss-list-header-th-sticky" scope="col">ベッド名</th>
+          <th class="ntss-list-header-th-sticky" scope="col">患者名</th>
+          <th class="ntss-list-header-th-sticky" scope="col">内容</th>
+        </tr>
       </thead>
       <tbody>
       <tr v-for="(dispItem,no) in customers1()" :key="no" class="ntss-list-body-tr">
@@ -30,18 +32,18 @@
 </template>
 
 <script>
-import Kendo from "@progress/kendo-ui";
-import { mapActions, mapGetters, mapMutations } from "vuex";
-import moment from "moment";
+import { createDataSource } from "@/functions/common/KendoFunctions";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
 // add FNSI-警報・報知追加 徐 start
 import { dateFormat } from "@/functions/common/DateTimeUtils.js";
 // add FNSI-警報・報知追加 徐 end
 // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 end
 
 export default {
-  props: {},
+
   // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 start
   watch: {
     getOccurDate (val) {
@@ -65,7 +67,7 @@ export default {
     ]),
     ...mapGetters("user", ["getFacilityCd"]),
     customers() {
-      return new Kendo.data.DataSource({
+      return createDataSource({
         data: this.alarmListSettings
       });
     },
@@ -112,11 +114,11 @@ export default {
       if (changeOccurDate == "") {
         // 日付指定がない時は今日？
         // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 start
-        let todayDate = (type == 'refresh' && (this.gainOccurDate != null) ? moment(this.gainOccurDate).format("YYYYMMDD") : (this.getOccurDate != null) ? moment(this.getOccurDate).format("YYYYMMDD") : moment(new Date()).format("YYYYMMDD"));
+        let todayDate = (type == 'refresh' && (this.gainOccurDate != null) ? dayjs(this.gainOccurDate).format("YYYYMMDD") : (this.getOccurDate != null) ? dayjs(this.getOccurDate).format("YYYYMMDD") : dayjs(new Date()).format("YYYYMMDD"));
         // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 end
         changeOccurDate = todayDate;
       } else {
-        changeOccurDate = moment(changeOccurDate).format("YYYYMMDD");
+        changeOccurDate = dayjs(changeOccurDate).format("YYYYMMDD");
       }
       const info = {
         facilityCd: this.getFacilityCd,
@@ -249,7 +251,7 @@ export default {
     // grid情報取得:初期
     this.loadData();
   },
-  destroyed() {
+  unmounted() {
     this.setIsAlarmDisplay(false);
     // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 start
     EventBus.$off("refresh", this.refresh);

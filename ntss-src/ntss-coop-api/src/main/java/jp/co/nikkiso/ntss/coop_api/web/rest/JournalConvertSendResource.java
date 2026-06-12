@@ -87,13 +87,13 @@ public class JournalConvertSendResource {
   @PostMapping("/externalCoopOperViwersend")
   public  ResponseEntity<?> externalCoopOperViwersend(@RequestBody JournalConvertSendRequest request){
     coopSendServiceImpl.externalCoopOperViwersend(request);
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   @PostMapping("/externalCoopOperViwerReceive")
   public ResponseEntity<?> externalCoopOperViwerReceive(@RequestBody JournalConvertReceiveRequest request){
     journalConvertReceiveResource.reconvert(request);
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
   // add #9406  外部連携稼働ビューア API呼び出しに失敗する 20231016 孟堅 end
   // del 2020-11-16 各API間の呼び出しフローの修正（エッジ主体からAWS主体へ）→負荷増加回避策が必要 孫 start

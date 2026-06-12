@@ -114,9 +114,11 @@
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import IndicationOwnerMixin from "@/components/indication/IndicationOwnerMixin";
 import CommonTextArea from "@/components/common/CommonTextArea";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 // #10777 患者経過総合ビューアでの指示コメント追加時指示コメント番号に101以上の番号が設定可能 linjunfeng start
 // add FNSI-画面デザイン【患者経過総合ビューア.xlsx】ラジオボタン対応 韓 start
 // import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
@@ -132,13 +134,16 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
 // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
-import { messageFormat } from '@/functions/common/MessageFormat';
+import { messageFormat } from "@/functions/common/MessageFormat";
+import $ from "@/compat/jquery";
+
 // mod #6107 2023/03/22 メッセージボックス全調整 張博 end
 // del #11004 連携イベント発生部分不正 piao start
 // import { sendRequestGetCoopIniSchModifySendClass } from "@/apis/treatment-record";
 // del #11004 連携イベント発生部分不正 piao end
 
 export default {
+  mixins: [IndicationOwnerMixin],
   components: {
     "com-textarea": CommonTextArea,
     // #10777 患者経過総合ビューアでの指示コメント追加時指示コメント番号に101以上の番号が設定可能 linjunfeng start
@@ -151,6 +156,8 @@ export default {
     // mod #11731_【因島：改良】指示コメント番号の指定方法 end
     // #10777 患者経過総合ビューアでの指示コメント追加時指示コメント番号に101以上の番号が設定可能 linjunfeng end
   },
+  // 親が @input リスナで使用するため input を明示宣言する。
+  emits: ["input"],
   props: {
     // add #10359 編集権限の動作不正 dengshen start
     isMst: {
@@ -432,11 +439,11 @@ export default {
       // mod #11731_【因島：改良】指示コメント番号の指定方法 start
       // if (stringParam) {
       if (messageCd && stringParam != null) {
-        this.$parent.$parent.messageDialogInfo.messageCd = messageCd;
-        this.$parent.$parent.messageDialogInfo.type = "1";
-        this.$parent.$parent.messageDialogInfo.stringParams = [stringParam];
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
-        // del #11731_【因島：改良】指示コメント番号の指定方法 (不用なログ) 
+        this._indicationDialogOwner().messageDialogInfo.messageCd = messageCd;
+        this._indicationDialogOwner().messageDialogInfo.type = "1";
+        this._indicationDialogOwner().messageDialogInfo.stringParams = [stringParam];
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
+        // del #11731_【因島：改良】指示コメント番号の指定方法 (不用なログ)
         // console.log("IndCommentCreate.vue updateIndInfo return; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         return;
@@ -493,8 +500,7 @@ export default {
       const startDate = structData.indStartDate.replace(/-/g, '');
       const endDate = structData.indEndDate == null ? null : structData.indEndDate.replace(/-/g, '');
       const searchData = await ApiHelper.get(
-        `/mainData/getByPatIdAndTreatDate/${structData.facilityCd}/${structData.patId}/${startDate}/${endDate}`
-      ).catch(error => {
+        `/mainData/getByPatIdAndTreatDate/${structData.facilityCd}/${structData.patId}/${startDate}/${endDate}`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndCommentCreate.vue', 'updateIndInfo', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -559,7 +565,7 @@ export default {
       // mod 10553 指示コメント編集連携送信 関  start
       // let modSendClass = await this.getSchModifySendClass();
       //データの送信
-      const response = await ApiHelper.post("/mainData/updateIndComment/", sendJson).catch(
+      const response = await ApiHelper.post("/mainData/updateIndComment", sendJson).catch(
         error => {
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
           getErrorMessage('IndCommentCreate.vue', 'updateIndInfo', error);
@@ -569,14 +575,13 @@ export default {
           // del #11731_【因島：改良】指示コメント番号の指定方法 end
           this.finishLoadingScreen();
           throw error;
-        }
-      )
+        })
 
       // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
       if (200 === response.status && 22020004 === response.data.msgCd) {
-        this.$parent.$parent.messageDialogInfo.messageCd = response.data.msgCd;
-        this.$parent.$parent.messageDialogInfo.type = "1";
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.messageCd = response.data.msgCd;
+        this._indicationDialogOwner().messageDialogInfo.type = "1";
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         console.log("IndCommentCreate.vue updateIndInfo return; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         return;
@@ -810,7 +815,7 @@ export default {
       // del #11731_【因島：改良】指示コメント番号の指定方法 end
       this.finishLoadingScreen();
       // モーダルを閉じる
-      this.$parent.$parent.$emit("hide-modal");
+      this._hideIndicationModal();
     },
 
     // add FNSI-【1006】最新の改修対象一覧のIES475対応 韓 start
@@ -880,23 +885,22 @@ export default {
           showMessage = true;
           messageCd = 22010001;
           messageType = "1";
-          this.$parent.$parent.messageDialogInfo.title = DIALOG_MESSAGES[22010001].title;
-          this.$parent.$parent.messageDialogInfo.stringParams = ["指示コメント"]
+          this._indicationDialogOwner().messageDialogInfo.title = DIALOG_MESSAGES[22010001].title;
+          this._indicationDialogOwner().messageDialogInfo.stringParams = ["指示コメント"]
         }
         // add #10266 編集の場合は、指示内容に空でないヒントを追加します。linjunfeng end
       }
-      this.$parent.$parent.messageDialogInfo.messageCd = messageCd;
-      this.$parent.$parent.messageDialogInfo.type = messageType;
-      this.$parent.$parent.messageDialogInfo.isDialogVisible = showMessage;
+      this._indicationDialogOwner().messageDialogInfo.messageCd = messageCd;
+      this._indicationDialogOwner().messageDialogInfo.type = messageType;
+      this._indicationDialogOwner().messageDialogInfo.isDialogVisible = showMessage;
       return showMessage;
     },
 
+    getScopedElementByIdSafe(id) {
+      return getScopedElementById(id, this.$el || null);
+    },
     getNextIndex() {
-      const element = document.getElementById("com-textarea-ind-comment" + this.textAreaIdIndex);
-      if (element) {
-        this.textAreaIdIndex = this.textAreaIdIndex + 1;
-      }
-      return this.textAreaIdIndex;
+      return (this.$ && this.$.uid) || 0;
     },
     setContentData(newValue) {
       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc start
@@ -930,11 +934,11 @@ export default {
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
     async resetComponentIndData(structData){
       if (this.isEdit()) {
-        this.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+        this._indicationDialogOwner().messageDialogInfo.messageCd = 70000028;
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-        this.$parent.$parent.messageDialogInfo.type = "9";
+        this._indicationDialogOwner().messageDialogInfo.type = "9";
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         return;
       }
       // #10196 指示コメントが複数ある場合に過去日を選択すると強制的に指示コメント１が選択状態となる。 linjunfeng start
@@ -944,7 +948,7 @@ export default {
       // #10196 指示コメントが複数ある場合に過去日を選択すると強制的に指示コメント１が選択状態となる。 linjunfeng end
       // #10266 開始日をに変更したが 指定した日付の指示コメントの内容が表示されていない　linjunfeng start
       else {
-        this.getComponentData(structData,2);
+        return this.getComponentData(structData,2);
       }
       // #10266 開始日をに変更したが 指定した日付の指示コメントの内容が表示されていない　linjunfeng end
     },
@@ -1065,7 +1069,7 @@ export default {
     // add #11731_【因島：改良】指示コメント番号の指定方法 start
     // 1～99の有効な指示コメント番号
     validRangeCommentNumbers() {
-      return [...Array(99).keys()].map(no => ++no);
+      return [...Array(99).keys()].map(no => no + 1);
     },
     /**
      * 未使用の指示コメント番号リストを作成する
@@ -1073,7 +1077,7 @@ export default {
      */
     async setUnusedCommentNumbers() {
       // 使用済みの指示コメント番号配列
-      const usedCommentNumbers = await this.getUsedCommentNo(this.$parent.$parent.structData);
+      const usedCommentNumbers = await this.getUsedCommentNo(this._indicationFlowOwner().structData);
 
       // 1～99の番号から使用済み指示コメント番号を除外する
       this.unusedCommentNumbers = this.validRangeCommentNumbers().filter(no => !usedCommentNumbers.includes(no));
@@ -1101,7 +1105,7 @@ export default {
      * 指示コメント情報と患者治療パターンを指定条件で検索して使用済みの指示コメント番号を返す
      * @param structData 指定条件
      * @return 指示コメント番号配列
-     */ 
+     */
     async getUsedCommentNo(structData) {
       // 検索条件
       const paramJson = {
@@ -1116,8 +1120,7 @@ export default {
       // 対象期間の治療情報の指示コメント情報を取得(開始日～終了日・曜日・治療方法・クールで絞り込み)
       const mdResponse = await ApiHelper.post(
         "/mainData/getIndIndCommentInfo",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         getErrorMessage('IndCommentCreate.vue', 'getUsedCommentNo', error);
         throw error;
       });
@@ -1130,8 +1133,7 @@ export default {
         // 患者治療パターンの指示コメント情報を取得(曜日・治療方法・クールで絞り込み)
         ptpResponse = await ApiHelper.post(
           "/mainData/getPatTreatmentPattern/IndIndCommentInfo",
-          paramJson
-        ).catch(error => {
+          paramJson).catch(error => {
           getErrorMessage('IndCommentCreate.vue', 'getUsedCommentNo', error);
           throw error;
         });
@@ -1154,7 +1156,7 @@ export default {
 
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
   async created() {
-    this.$parent.$parent.isDialogType9 = true;
+    this._indicationDialogOwner().isDialogType9 = true;
   }
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add end
 };
@@ -1188,11 +1190,11 @@ export default {
   /* add FNSI-薬剤指示画面等の画面崩れの修正 楊 end */
 }
 
-div >>> .comment-textarea-style {
+div :deep(.comment-textarea-style) {
   height: 2.5em;
 }
 
-.custom-textarea-required >>> textarea {
+.custom-textarea-required :deep(textarea) {
   background-color: #ffff99;
 }
 </style>

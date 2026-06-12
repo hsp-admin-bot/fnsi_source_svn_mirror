@@ -12,6 +12,7 @@ import jp.co.nikkiso.ntss.admin_web.service.nextpat.dto.PatPhysicalInfo;
 import jp.co.nikkiso.ntss.admin_web.service.sendConditionCancel.SendConditionCancelService;
 import jp.co.nikkiso.ntss.admin_web.web.rest.util.WebApiCallCommonUtil;
 import jp.co.nikkiso.ntss.api.utils.DateTimeFormatUtil;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.dao.BaseEntityDao;
 import jp.co.nikkiso.ntss.core.dao.MntMachineStateDao;
@@ -114,7 +115,8 @@ public class NextPatServiceImpl  implements NextPatService {
   private MstComsvSettingDao mstComsvSettingDao;
 
   @Autowired
-  private BaseEntityDao baseEntityDao;
+  @DefaultDb
+  private Config defaultDbConfig;
 
   /**
    * 次患者更新判定処理（マスタ変更）
@@ -2439,7 +2441,7 @@ public class NextPatServiceImpl  implements NextPatService {
 
   private  <T> List<T> getTableData(String facilityCd, String masterPhysicalName, Class<T> clazz) {
 
-    Config config = Config.get(baseEntityDao);
+    Config config = defaultDbConfig;
 
     // SelectBuilder
     SelectBuilder builder = SelectBuilder.newInstance(config);

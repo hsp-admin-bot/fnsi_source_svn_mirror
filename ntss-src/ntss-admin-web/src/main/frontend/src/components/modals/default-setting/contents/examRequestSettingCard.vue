@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -173,20 +173,19 @@
 </template>
 
  <script>
-   import {mapGetters, mapActions} from "vuex";
+   import {mapGetters, mapActions} from "@/compat/vue/vuex";
    /*add FNSI-改修内容4214 任 start*/
-   import $ from "jquery";
+
    /*add FNSI-改修内容4214 任 end*/
    import {DATE_CHOICES, EXAM_REQUEST} from "@/constants/defaultSettingConstants";
    import {deepCopy} from "@/functions/common/CommonFunctions";
    //add FNSI-5687 劉全航 start
-   import { EventBus } from "@/eventBus.js";
+   import { EventBus } from "@/compat/vue/event-bus.js";
    //add FNSI-5687 劉全航 end
    import { RegOrderClassTextSet } from "@/constants/examRequestConstants";
+import { getScopedElementById, isScopedElementDisplayInline } from "@/functions/common/LayoutMeasureHelper";
 
    export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -393,8 +392,14 @@
       // 画面編集用の検査区分
       this.examTypeListLocal = deepCopy(this.editRecord[EXAM_REQUEST.KEY_NAME_EXAM_TYPE_LIST] || []);
       /*add FNSI-改修内容4214 任 start*/
-      if($("#phone-show-exam-request").css("display") === "inline"){
-        document.getElementById("phone-show-exam-request").innerText =  document.getElementById("phone-show-exam-request").innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+      if(isScopedElementDisplayInline("phone-show-exam-request", this.$el || this)){
+        const phoneShowElement = getScopedElementById("phone-show-exam-request", this.$el || this);
+
+        if (phoneShowElement) {
+
+          phoneShowElement.innerText = phoneShowElement.innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+
+        }
       }
       /*add FNSI-改修内容4214 任 end*/
       // 共通ローダー表示終了
@@ -402,8 +407,6 @@
       this.isExpanded = this.defaultExpanded;
     });
   },
-  mounted() {
-  }
 };
 </script>
 

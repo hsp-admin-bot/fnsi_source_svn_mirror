@@ -6,6 +6,7 @@ import jp.co.nikkiso.ntss.admin_web.service.OrdMainService;
 import jp.co.nikkiso.ntss.admin_web.service.checkList.CheckListService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.treatmentRecord.TreatmentRecordResultMergeService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.admin_web.web.rest.util.WebApiCallCommonUtil;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
@@ -25,14 +26,16 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.annotation.Resource;
-import javax.validation.Valid;
+import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 治療記録（実績マージ）画面のResourceクラス.
@@ -41,6 +44,9 @@ import java.util.concurrent.ExecutorService;
 @RequestMapping(AdminWebConstant.Uri.TREATMENT_RECORD)
 @PreAuthorize("isAuthenticated()")
 public class TreatmentRecordResultMergeResource {
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
 
   /**
    * 治療記録（実績マージ）Service.
@@ -79,7 +85,24 @@ public class TreatmentRecordResultMergeResource {
   @GetMapping("/{ord_no}/result-merge")
   public ResponseEntity<?> getResultMergeList(
     @PathVariable("ord_no") Long ordNo,
+    @RequestParam(required = false) Long selectedPatId,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasOrdOrSelectedPatShareAccess(ntssUser, ordNo, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain checkOrdMain = ordMainService.selectByOrdNo(ordNo);
+      if (checkOrdMain != null && checkOrdMain.getFacilityCd() != null && !checkOrdMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + checkOrdMain.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "patId=" + checkOrdMain.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -222,7 +245,7 @@ public class TreatmentRecordResultMergeResource {
     // add 9324 治療記録（実績マージ情報）の更新 ord_checklistの変更 gjn end
 
     // レスポンス生成
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   //add FNSI修正486改修 房 start
@@ -240,6 +263,12 @@ public class TreatmentRecordResultMergeResource {
     @PathVariable("end_date") String endDate,
     @PathVariable("is_unknown") String isUnknown,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 start
+    if (!hasOrdAccess(ntssUser, ordNo)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -254,4 +283,16 @@ public class TreatmentRecordResultMergeResource {
   }
   //add FNSI修正486改修 房 end
 
+  private boolean hasOrdAccess(NtssUser ntssUser, Long ordNo) {
+    if (ntssUser == null) {
+      return false;
+    }
+    if (ntssUser.isNkkAdminUser()) {
+      return true;
+    }
+    OrdMain checkOrdMain = ordMainService.selectByOrdNo(ordNo);
+    return checkOrdMain == null
+      || checkOrdMain.getFacilityCd() == null
+      || checkOrdMain.getFacilityCd().equals(ntssUser.getFacilityCd());
+  }
 }

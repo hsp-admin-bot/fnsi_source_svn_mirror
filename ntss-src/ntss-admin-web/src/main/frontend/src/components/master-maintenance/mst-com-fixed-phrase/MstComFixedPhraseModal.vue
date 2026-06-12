@@ -96,7 +96,7 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import selectionList from "@/components/common/list-selector/SelectionList.vue";
 import { createItemListData } from "@/functions/for-componet/ListSelector.js";
@@ -104,7 +104,8 @@ import CommonTextArea from "@/components/common/CommonTextArea";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
+import { getModalBodyElement, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   components: {
@@ -240,8 +241,11 @@ export default {
     this.fixedPhraseInputValue.initValue = this.getEditRecord.name;
     this.fixedPhraseInputValue.editValue = this.getEditRecord.name;
     this.$nextTick(() => {
-      const element = document.getElementById("com-textarea-fixed-phrase");
-      this.resizeTextarea(element);
+      const element = this.getFixedPhraseTextarea();
+      if (element) {
+        this.resizeTextarea(element);
+      }
+      this.calculateGridHeight();
     });
 
     /* add 職種デフォルトを全件対象扱いとする 楊zc start */
@@ -257,24 +261,51 @@ export default {
   methods: {
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("loading-screen", ["setLoadingScreenVisible"]),
-    calculateGridHeight(value){
-      document.getElementsByClassName("multi-select-list")[0].style.fontSize = ""
-      let newHeight = document.getElementsByClassName("modal-body")[0].clientHeight - document.getElementsByClassName("upper")[0].clientHeight-
-                      document.getElementsByClassName("select-upper")[0].clientHeight - 70;
-      if(value == "0") {
-        document.getElementsByClassName("multi-select-list")[0].style.fontSize = "15px"
+    getCurrentModalBody() {
+      return getModalBodyElement(this.$el) || null;
+    },
+    getSelectionScopeRoot() {
+      return this.$el || null;
+    },
+    getFixedPhraseElement(selector) {
+      const scopeRoot = this.getSelectionScopeRoot();
+      return (
+        scopeRoot?.querySelector?.(selector) ||
+        queryScopedSelector(selector, scopeRoot)
+      );
+    },
+    getFixedPhraseTextarea() {
+      return (
+        this.$el?.querySelector?.("#com-textarea-fixed-phrase") ||
+        queryScopedSelector("#com-textarea-fixed-phrase", this.$el)
+      );
+    },
+    calculateGridHeight(value) {
+      const scopeRoot = this.getSelectionScopeRoot();
+      const multiSelectList = queryScopedSelector(".multi-select-list", scopeRoot);
+      const modalBody = this.getCurrentModalBody();
+      const upper = this.getFixedPhraseElement(".upper");
+      const selectUpper = this.getFixedPhraseElement(".select-upper");
+      const selectArea = this.getFixedPhraseElement(".select-area");
+      if (!multiSelectList || !modalBody || !upper || !selectUpper || !selectArea) {
+        return;
       }
-      if(value == "1") {
-        document.getElementsByClassName("multi-select-list")[0].style.fontSize = "17px"
+      multiSelectList.style.fontSize = "";
+      let newHeight =
+        modalBody.clientHeight - upper.clientHeight - selectUpper.clientHeight - 70;
+      if (value == "0") {
+        multiSelectList.style.fontSize = "15px";
       }
-      if(value == "2") {
-        document.getElementsByClassName("multi-select-list")[0].style.fontSize = "19px"
+      if (value == "1") {
+        multiSelectList.style.fontSize = "17px";
       }
-      if(value == "3") {
-        document.getElementsByClassName("multi-select-list")[0].style.fontSize = "21px"
+      if (value == "2") {
+        multiSelectList.style.fontSize = "19px";
       }
-      document.getElementsByClassName("multi-select-list")[0].style
-      document.getElementsByClassName("select-area")[0].style.height = newHeight + "px"
+      if (value == "3") {
+        multiSelectList.style.fontSize = "21px";
+      }
+      selectArea.style.height = newHeight + "px";
     },
     /**
      * @description 定型文更新
@@ -388,7 +419,9 @@ export default {
     },
 
     resizeTextarea(el) {
-      el.style.height = `${el.scrollHeight + 5}px`;
+      if (el) {
+        el.style.height = `${el.scrollHeight + 5}px`;
+      }
     },
     changeButton() {
       EventBus.$emit("mstHolidayRegistered", false);
@@ -423,9 +456,9 @@ export default {
   height: 2.5rem;
   width: 5rem;
 }
-/* add 画面のレイアウト、部品修正 楊zc end */
 
-div >>> .item-textarea {
+/* add 画面のレイアウト、部品修正 楊zc end */
+div :deep(.item-textarea) {
   width: 100%;
   box-sizing: border-box;
   padding: 5px 0;

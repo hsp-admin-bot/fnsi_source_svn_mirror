@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.request.periodicInspection.UpdateMainteMainRequest;
 import jp.co.nikkiso.ntss.admin_web.response.partsRunning.PartsRunningResponse;
@@ -9,6 +9,7 @@ import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.master.machine.MstMachineService;
+import jp.co.nikkiso.ntss.admin_web.service.master.user.MstUserService;
 import jp.co.nikkiso.ntss.admin_web.service.mente.DevMenteMainService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
@@ -51,6 +52,7 @@ import java.util.Map;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 検査結果のResourceクラス.
@@ -82,6 +84,10 @@ public class DevMenteMainResource {
   @Autowired
   LogEventUtils logEventUtils;
   // add FNSi5712アプリケーションログが出力しない 周 end
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+  @Autowired
+  private MstUserService mstUserService;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
 
   /**
    * 検索条件に該当する型式とベッドの装置情報一覧を取得する
@@ -113,7 +119,7 @@ public class DevMenteMainResource {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
         AFTER_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(ExcetionStackTraceToString(e)));
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -558,7 +564,37 @@ public class DevMenteMainResource {
   @PostMapping("/detail-update")
   //mod FNSI-No.757  タップやクリックだけで直接入力更新せず、意図して「確定」「キャンセル」を選ばせたい 吉 start
 //  public ResponseEntity<DevMenteMain> updateDetailCellClick(@RequestBody DevMenteMain devmenteMain) {
-  public ResponseEntity<DevMenteMain> updateDetailCellClick(@RequestBody List<Object> updateList) {
+  public ResponseEntity<DevMenteMain> updateDetailCellClick(@RequestBody List<Object> updateList,
+                                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                            @AuthenticationPrincipal NtssUser ntssUser
+                                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if(null != updateList && !updateList.isEmpty()){
+                  for(Object obj : updateList){
+                      Map<String,Object> map= (Map<String, Object>) obj;
+                      ObjectMapper objectMapper = new ObjectMapper();
+                      //mod 吉 start
+//          DevMenteMain ment =objectMapper.convertValue(map.get("item"), DevMenteMain.class);
+//          devMenteMainList.add(ment);
+                      if(null != map.get("item") && ""!= map.get("item")){
+                          DevMenteMain ment =objectMapper.convertValue(map.get("item"), DevMenteMain.class);
+                          String facilityCd = ment.getFacilityCd();
+                          if (facilityCd != null && !facilityCd.isEmpty() &&
+                              !facilityCd.equals(ntssUser.getFacilityCd())) {
+                              String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+                              InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                              return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+                          }
+                      }
+                      //mod 吉 end
+                  }
+              }
+
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     //mod FNSI-No.757  タップやクリックだけで直接入力更新せず、意図して「確定」「キャンセル」を選ばせたい 吉 end
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.MENTE_MAIN + "/detail-update";
@@ -627,7 +663,11 @@ public class DevMenteMainResource {
    * @return 検査結果削除
    */
   @PostMapping("/detail-del")
-  public ResponseEntity<DevMenteMain> delDetailCellClick(@RequestBody Map<String, Long> requestData) {
+  public ResponseEntity<DevMenteMain> delDetailCellClick(@RequestBody Map<String, Long> requestData,
+                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                         @AuthenticationPrincipal NtssUser ntssUser
+                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     String mappingUrl = Uri.MENTE_MAIN + "/detail-del";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_DAILY_CHECK,
       BEFORE_LOG_FLG_INFO, mappingUrl, null, Collections.singletonList(requestData));
@@ -636,7 +676,7 @@ public class DevMenteMainResource {
       if (devMenteNo == null) {
         return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
       }
-      devMenteMainService.delDetailWhenCellClick(devMenteNo);
+      devMenteMainService.delDetailWhenCellClick(devMenteNo, ntssUser.getFacilityCd());
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_DAILY_CHECK,
         AFTER_LOG_FLG_INFO, mappingUrl, null, List.of(requestData));
       return new ResponseEntity<>(HttpStatus.OK);
@@ -686,7 +726,7 @@ public class DevMenteMainResource {
                 bedGroup.getBedList(), new TypeReference<List<Long>>() {});
               listBedCd.addAll(bedList);
             }
-          } catch (IOException e) {
+          } catch (tools.jackson.core.JacksonException e) {
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -799,7 +839,25 @@ public class DevMenteMainResource {
    */
   @GetMapping("users-info")
   public ResponseEntity<List<MstPersonalUser>> getListPersonalUserByListId(
-      @RequestParam(name = "userIdList", required = true) List<Long> userIdList) {
+      @RequestParam(name = "userIdList", required = true) List<Long> userIdList,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              for (Long userId : userIdList) {
+                  String facilityCd = mstUserService.getByUserId(userId).getFacilityCd();
+                  if (facilityCd != null && !facilityCd.isEmpty() &&
+                      !facilityCd.equals(ntssUser.getFacilityCd())) {
+                      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "userId=" + userId + " ";
+                      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+                  }
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.MENTE_MAIN + "/users-info";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_DAILY_CHECK,
@@ -837,7 +895,23 @@ public class DevMenteMainResource {
    */
   @GetMapping("user-info/{userId}")
   public ResponseEntity<MstPersonalUser> getPersonalUserInfo(
-      @PathVariable(name = "userId", required = true) Long userId) {
+      @PathVariable(name = "userId", required = true) Long userId,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+          if(!ntssUser.isNkkAdminUser()) {
+              String facilityCd = mstUserService.getByUserId(userId).getFacilityCd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " facilityCd=" + facilityCd + " userId=" + userId + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.MENTE_MAIN + "/users-info/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_DAILY_CHECK,
@@ -929,7 +1003,11 @@ public class DevMenteMainResource {
    * @param payload {listMainNo(点検結果コードのリスト)}
    */
   @PostMapping("/delete")
-  public ResponseEntity<?> deleteInspectionResult(@RequestBody Map<String, List<Long>> payload) {
+  public ResponseEntity<?> deleteInspectionResult(@RequestBody Map<String, List<Long>> payload,
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.MENTE_MAIN + "/delete";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_DAILY_CHECK,
@@ -940,7 +1018,7 @@ public class DevMenteMainResource {
       if (listMainNo == null || listMainNo.isEmpty()) {
         return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
       }
-      boolean res = devMenteMainService.deleleMainteMain(listMainNo);
+      boolean res = devMenteMainService.deleleMainteMain(listMainNo, ntssUser.getFacilityCd());
       // add FNSi5712アプリケーションログが出力しない 周 start
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_DAILY_CHECK,
         AFTER_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(payload));
@@ -969,7 +1047,22 @@ public class DevMenteMainResource {
   /*add FNSI-改修内容定期点検画面で装置名の固定部をタップすると当該装置の運転時間を表示するモーダル画面が展開されるようにする 任 start*/
   @GetMapping("/parts_running/{facilityCd}/{machineTypeCd}/{machineSerial}")
   public ResponseEntity<?> getPartsRunning(@PathVariable String facilityCd, @PathVariable String machineTypeCd,
-                                           @PathVariable String machineSerial) {
+                                           @PathVariable String machineSerial,
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                           @AuthenticationPrincipal NtssUser ntssUser
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " facilityCd=" + facilityCd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.MENTE_MAIN + "/parts_running/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_DAILY_CHECK,
@@ -1002,7 +1095,11 @@ public class DevMenteMainResource {
    * @param req 一括予定中止する条件
    */
   @PostMapping("/delele_mainte_by_temDate")
-  public ResponseEntity<?> deleleMainteMainByTemDate(@RequestBody UpdateMainteMainRequest req) {
+  public ResponseEntity<?> deleleMainteMainByTemDate(@RequestBody UpdateMainteMainRequest req,
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                     @AuthenticationPrincipal NtssUser ntssUser
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.MENTE_MAIN + "/delele_mainte_by_temDate/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_DAILY_CHECK,
@@ -1016,7 +1113,7 @@ public class DevMenteMainResource {
       {
         return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
       }
-      boolean res = devMenteMainService.deleleMainteMainByTemDate(req);
+      boolean res = devMenteMainService.deleleMainteMainByTemDate(req, ntssUser.getFacilityCd());
       // add FNSi5712アプリケーションログが出力しない 周 start
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_DAILY_CHECK,
         AFTER_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(req));
@@ -1056,8 +1153,23 @@ public class DevMenteMainResource {
       @PathVariable(name = "startDate", required = true) String startDate,
       @PathVariable(name = "machineNo", required = true) Long machineNo,
       @PathVariable(name = "endDate", required = true) String endDate,
-      @PathVariable(name = "facilityCd", required = true) String facilityCd)
+      @PathVariable(name = "facilityCd", required = true) String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+)
       throws Exception {
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " facilityCd=" + facilityCd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
     String mappingUrl = Uri.MENTE_MAIN + "/getLayout/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_DAILY_CHECK,
       BEFORE_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(startDate, machineNo, endDate, facilityCd));

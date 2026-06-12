@@ -14,6 +14,7 @@
     >
       <!-- add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 end -->
       <table class="ntss-list" style="width: max-content; min-width: 100%;">
+        <thead>
         <!-- 項目 -->
         <!-- mod FNSI-改修内容 印刷不正の対応 xie start -->
         <!-- <thead> -->
@@ -37,6 +38,7 @@
             <span @click="setSort(item.itemKey)" :class="sortedClass(item.itemKey)" class="clickable-header-label">{{ item.itemName }}</span>
           </th>
         </tr>
+        </thead>
         <!-- mod FNSI-改修内容 印刷不正の対応 xie start -->
         <!-- </thead> -->
         <!-- mod FNSI-改修内容 印刷不正の対応 xie end -->
@@ -65,7 +67,7 @@
             @click="transitionBbsDetailed(bbs)"
           >
             <!-- FNSI-改修内容4193bug修正 関 end -->
-            <span v-if="bbs.pat_info.target === INDIVIDUALLY_USER">
+            <span v-if="bbs.pat_info&&bbs.pat_info.target === INDIVIDUALLY_USER">
               <span
                 v-for="(pat, patIndex) in getPatName(bbs.pat_info.detail)"
                 :key="patIndex"
@@ -73,10 +75,10 @@
                 {{ pat }}<br />
               </span>
             </span>
-            <span v-show="bbs.pat_info.target === ALL_USER">全患者</span>
+            <span v-show="bbs.pat_info&&bbs.pat_info.target === ALL_USER">全患者</span>
             <!-- mod FNSI-No.548  患者名の「なし」は記載不要 孫 start-->
             <!--<span v-show="bbs.pat_info.target === NOT_USER">なし</span>-->
-            <span v-show="bbs.pat_info.target === NOT_USER"></span>
+            <span v-show="bbs.pat_info&&bbs.pat_info.target === NOT_USER"></span>
             <!-- mod FNSI-No.548  患者名の「なし」は記載不要 孫 end-->
           </td>
           <!-- 内容 -->
@@ -87,10 +89,8 @@
             @click="transitionBbsDetailed(bbs)"
           >
             <!-- FNSI-改修内容4193bug修正 関 end -->
-            <template>
-              <span v-if="bbs.title" style="white-space: pre-wrap" v-html="bbs.title + '<br />' + bbs.html_content"></span>
-              <span v-else style="white-space: pre-wrap" v-html="bbs.html_content"></span>
-            </template>
+            <span v-if="bbs.title" style="white-space: pre-wrap" v-safe-html="bbs"></span>
+            <span v-else style="white-space: pre-wrap" v-safe-html="bbs"></span>
           </td>
           <!-- add FNSI-No.550 リストに掲載期間が必要。ソート条件を変更したときに、元に戻すために再検索する必要があるため。 陳 start -->
           <!-- 掲載期間 -->
@@ -120,6 +120,7 @@
           <td class="ntss-list-body-td" style="text-align: center">
             <!--mod FNSI-改修内容redmine4468 任 end-->
             <v-ons-button
+              v-if="bbs.staff_info"
               :class="[
                 'button-area',
                 getReadState(bbs.staff_info.read) === '未読'
@@ -164,7 +165,7 @@
 
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       direction="left"
       :cover-target="false"
@@ -239,10 +240,10 @@
 </template>
 
 <script>
-import _ from "underscore";
-import moment from "moment";
-import { mapActions, mapGetters, mapMutations } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import _ from "@/compat/collections/lodash";
+import dayjs from "@/compat/date/dayjs";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { updateBbsList } from "@/functions/BbsInfoFunctions.js";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -271,6 +272,9 @@ import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
 // mod #6107 2023/03/22 メッセージボックス全調整 張博 end
 import { getSortedClass, addPatNameSortToList, sortableCompare } from "@/functions/SortFunctions";
+import nameDuplicationImg from "../../assets/name_duplication.png";
+
+const uriPersonalUser = `/mstInfo/mstPersonalUser`;
 
 // 個人設定
 const uriUser = "/user/get_by_id";
@@ -313,7 +317,6 @@ export default {
   // mixins: [PopoverMixin, UserAuthorityMixin],
   mixins: [PopoverMixin, UserAuthorityMixin, ComponentGuardMixin],
   // mod FNSI-改修内容 権限関連 趙立強 end
-  components: {},
 
   data() {
     return {
@@ -394,7 +397,7 @@ export default {
       dataSearch: null,
 
       // add 入院・同姓同名配布 趙 start
-      image_src_same: require("../../assets/name_duplication.png"),
+      image_src_same: nameDuplicationImg,
       // add 入院・同姓同名配布 趙 end
 
       // add FNSI-改修内容 権限関連 趙立強 start
@@ -462,59 +465,6 @@ export default {
      * @summary 全てor未読のみ
      */
     searchedResults() {
-      // 検索結果から全てを表示するか未読のみ表示か切替
-      let bbsInfoList;
-      if (this.isOnlyUnread) {
-        // 未読のみフラグON
-        bbsInfoList = this.getBbsListOnlyUnread(this.sort);
-        if (this.selectCreatedBbs) {
-          // add FNSI-改修内容 掲示板バグ1 dou start
-          if (this.sort.length > 0) {
-            let sortFilter = this.sort.filter(
-              (x) => x.bbs_ctl_no == this.selectCreatedBbs.bbs_ctl_no
-            );
-            if (sortFilter.length > 0) {
-              let newBbs = this.selectCreatedBbs;
-              newBbs.pat_info = sortFilter[0].pat_info;
-              this.setSearchedBbsList(newBbs);
-            }
-          }
-          // add FNSI-改修内容 掲示板バグ1 dou end
-          //del  FNSI redmine 6185修正 関 start
-          // bbsInfoList.push(this.selectCreatedBbs);
-          // del  FNSI redmine 6185修正 関　end
-        }
-      } else {
-        // 検索結果全て
-        bbsInfoList = this.sort;
-      }
-      // 詳細画面スワイプで使用するため、storeに設定
-      // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 start
-      if (this.selectedCondition.sortColumn == "pat_info") {
-        bbsInfoList = this.getSortKind(this.setSortPat()).slice(
-          0,
-          this.selectedCondition.limitFrom + this.selectedCondition.limitTo
-        );
-        let keptBbs = this.searchedKeepBbsList;
-        keptBbs = keptBbs.slice(
-          0,
-          this.selectedCondition.limitFrom + this.selectedCondition.limitTo
-        );
-        this.setSearchedKeepBbsList(keptBbs);
-        // add 掲示板外結No20対応 趙 start
-        if (this.isOnlyUnread) {
-          bbsInfoList = this.getBbsListOnlyUnread(bbsInfoList);
-        }
-        // add 掲示板外結No20対応 趙 end
-      }
-      // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 start
-      // add 掲示板外結No20対応 趙 start
-      if (bbsInfoList != null && bbsInfoList.length != 0) {
-        bbsInfoList[0].count = bbsInfoList.length;
-      }
-      // add 掲示板外結No20対応 趙 end
-      this.setSearchedBbsList(bbsInfoList);
-
       return this.searchedBbsList;
     },
 
@@ -532,11 +482,10 @@ export default {
   watch: {
     // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 start
     searchedKeepBbsList() {
-      if (this.selectedCondition.limitFrom == 0) {
+      if (this.selectedCondition.limitFrom == 0 && this.$refs.ntssList) {
         this.$refs.ntssList.scrollTop = 0;
       }
     },
-    // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 end
     /**
      * @description 吹き出し患者数クリア
      * @summary height(患者数)が確定後、吹き出しを表示する。
@@ -619,17 +568,35 @@ export default {
     const keptBbs = this.searchedKeepBbsList;
     const ketpSearchCondition = this.selectedCondition;
     this.setSearchedKeepBbsList([]);
+    this.setSelectedCondition({
+      categoryFuncList: [],
+      categoryKindList: [],
+      freeWord: "",
+      noticeStartDate: dayjs().format("YYYY-MM-DD"),
+      noticeEndDate: dayjs().format("YYYY-MM-DD"),
+      dialysisDate: null,
+      kur: null,
+      roomBedGroup: { bedGroupCd: null, bedCdList: [] },
+      // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 start
+      limitFrom: 0,
+      limitTo: PAGE_SIZE,
+      /*mod FNSI-改修内容掲示板外结 任 start*/
+      /*userId: "****"*/
+      userId: null,
+      /*mod FNSI-改修内容掲示板外结 任 end*/
+      // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 end
+    });
 
     // 掲示板詳細内容の編集有無を取得
     this.onIsNotEdited = (data) => {
       this.isNotEdited = data;
     };
+    EventBus.$off("isNotEdited", this.onIsNotEdited);
+    EventBus.$off("addNew", this.onAddNew);
+    EventBus.$off("search", this.search);
     EventBus.$on("isNotEdited", this.onIsNotEdited);
-    EventBus.$on("addNew", (data) => {
-      if (data) {
-        this.search();
-      }
-    });
+    EventBus.$on("addNew", this.onAddNew);
+    EventBus.$on("search", this.search);
 
     // 既未読状態を一覧に表示するため、ログインユーザーと掲示板登録情報を紐づける
     const userId = this.getStateUserAccountInfo.userId;
@@ -642,6 +609,25 @@ export default {
     } else {
       this.setIsInitialDisp(false);
     }
+// fan add メモリにて利用者マスタ一覧取得 Start
+    let mstPersonalUser = this.getMstPersonalUser();
+    // メモリにて利用者マスタ一覧情報がない場合、APIを呼出する
+    if (!mstPersonalUser) {
+      // スタッフ選択肢
+      await ApiHelper.get(uriPersonalUser, {
+        facility_cd: this.facilityCd
+      }).then(
+        responsePersonalUser => {
+          mstPersonalUser = responsePersonalUser.data;
+        }
+      );
+    }
+    // スタッフ選択肢
+    //const mstPersonalUser = responsePersonalUser.data;
+    // fan add メモリにて利用者マスタ一覧取得 End
+    // 選択肢から自身を除外、個人設定では常に選択状態へ
+    const userName = mstPersonalUser.find(
+      (mst) => mst.userId === userId).userName;
 
     // 掲示板一覧画面同様、詳細画面でもログインユーザーと掲示板登録情報を紐づけるためstoreに格納
     this.setUserId(userId);
@@ -668,7 +654,7 @@ export default {
     this.settingBbs.sort_column = this.selectedCondition.sortColumn || null;
     this.settingBbs.sort_kind = this.selectedCondition.sortKind || null;
     
-    // this.search();
+    this.search();
     // this.patInfoList = responsePat.data;
     // // add 入院・同姓同名配布 趙 start
     // this.patIsSameList = responseIsSame.data;
@@ -679,9 +665,10 @@ export default {
     //FNSI-修正 #5407 xugj add end
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("isNotEdited", this.onIsNotEdited);
-    EventBus.$off("addNew");
+    EventBus.$off("addNew", this.onAddNew);
+    EventBus.$off("search", this.search);
     this.setSelectCreatedBbs(null);
     // dataの初期化
     Object.assign(this.$data, this.$options.data.call(this))
@@ -692,7 +679,6 @@ export default {
      ...mapActions("schedule-list", {
       setDispUserTime: "setDispUserTime",
     }), 
-     //add 10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない yqz end  
     ...mapActions("bbs-info", [
       "setSelectedBbs",
       "setIsLoadingBbs",
@@ -741,7 +727,12 @@ export default {
       const s = value.split("\n");
       return s;
     },
-
+    // add 10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない yqz end    
+    onAddNew(data) {
+      if (data) {
+        this.search();
+      }
+    },
     /**
      * @description 既読未読状態
      * @param { Object } staffInfo スタッフ情報
@@ -779,8 +770,7 @@ export default {
         return null;
       }
       // 遷移先一覧からルートパスに一致した名称を返す
-      return ROUTER_LIST.find((record) => record.routerName === routerPath)
-        .description;
+      return ROUTER_LIST.find((record) => record.routerName === routerPath)?.description;
     },
 
     /**
@@ -1189,7 +1179,7 @@ export default {
       }
 
       // 更新日時
-      const nowDate = moment().format();
+      const nowDate = dayjs().format();
       // DB更新
       await updateBbsList(
         [{ bbs_ctl_no: bbsCtlNo, staff_info: staffInfo }],
@@ -1234,9 +1224,8 @@ export default {
       // 個人設定から並び順を取得
       const userSettings = responseUser.data.userAccountInfo.userSettings;
       if (
-        _.has(userSettings, "personal_settings") &&
-        userSettings.personal_settings.length !== 0
-      ) {
+        Object.prototype.hasOwnProperty.call(userSettings, "personal_settings") &&
+        userSettings.personal_settings.length !== 0) {
         // 個人設定存在する場合
         const settings = userSettings.personal_settings;
         const settingBbsItem = [
@@ -1345,11 +1334,68 @@ export default {
           selectedCondition: searchCondition,
           facilityCd: this.facilityCd,
         });
+        this.computedSearchedBbsList();
         this.setIsNotRun(true);
-      
       });
     },
-
+    /**
+     * @description 検索結果の掲示板をstoreに設定
+     * @param { Array } bbsInfoList 掲示板一覧
+     * @returns { void }
+     */
+    computedSearchedBbsList() {
+      let bbsInfoList;
+      if (this.isOnlyUnread) {
+        // 未読のみフラグON
+        bbsInfoList = this.getBbsListOnlyUnread(this.sort);
+        if (this.selectCreatedBbs) {
+          // add FNSI-改修内容 掲示板バグ1 dou start
+          if (this.sort.length > 0) {
+            let sortFilter = this.sort.filter(
+              (x) => x.bbs_ctl_no == this.selectCreatedBbs.bbs_ctl_no
+            );
+            if (sortFilter.length > 0) {
+              let newBbs = this.selectCreatedBbs;
+              newBbs.pat_info = sortFilter[0].pat_info;
+              this.setSearchedBbsList(newBbs);
+            }
+          }
+          // add FNSI-改修内容 掲示板バグ1 dou end
+          // del  FNSI redmine 6185修正 関 start
+          // bbsInfoList.push(this.selectCreatedBbs);
+          // del  FNSI redmine 6185修正 関　end
+        }
+      } else {
+        // 検索結果全て
+        bbsInfoList = this.sort;
+      }
+      // 詳細画面スワイプで使用するため、storeに設定
+      // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 start
+      if (this.selectedCondition.sortColumn == "pat_info") {
+        bbsInfoList = this.getSortKind(this.setSortPat()).slice(
+          0,
+          this.selectedCondition.limitFrom + this.selectedCondition.limitTo
+        );
+        let keptBbs = this.searchedKeepBbsList;
+        keptBbs = keptBbs.slice(
+          0,
+          this.selectedCondition.limitFrom + this.selectedCondition.limitTo
+        );
+        this.setSearchedKeepBbsList(keptBbs);
+        // add 掲示板外結No20対応 趙 start
+        if (this.isOnlyUnread) {
+          bbsInfoList = this.getBbsListOnlyUnread(bbsInfoList);
+        }
+        // add 掲示板外結No20対応 趙 end
+      }
+      // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 start
+      // add 掲示板外結No20対応 趙 start
+      if (bbsInfoList != null && bbsInfoList.length != 0) {
+        bbsInfoList[0].count = bbsInfoList.length;
+      }
+      // add 掲示板外結No20対応 趙 end
+      this.setSearchedBbsList(bbsInfoList);
+    },
     /**
      * @description スクロールイベント
      */
@@ -1392,6 +1438,7 @@ export default {
           selectedCondition: searchCondition,
           facilityCd: this.facilityCd,
         });
+        this.computedSearchedBbsList();
         this.setIsNotRun(true);
       }
     },
@@ -1419,6 +1466,7 @@ export default {
         selectedCondition: searchCondition,
         facilityCd: this.facilityCd,
       });
+      this.computedSearchedBbsList();
       this.isLoadingBbs = false;
       // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 start
       this.setIsNotRun(true);
@@ -1430,7 +1478,7 @@ export default {
     formattedDate(date) {
       return date === null || date === ""
         ? null
-        : moment(date).format("YYYYMMDD");
+        : dayjs(date).format("YYYYMMDD");
     },
 
     searchData(inputData) {
@@ -1525,7 +1573,7 @@ export default {
   height: auto;
 }
 
-.custom-ons-button >>> .button {
+.custom-ons-button :deep(.button) {
   font-size: 1.5em;
 }
 
@@ -1546,7 +1594,7 @@ export default {
   height: auto;
 }
 
-.custom-content-popover >>> .popover__content {
+.custom-content-popover :deep(.popover__content) {
   width: 450px;
   height: 350px;
   padding: 7px;
@@ -1575,7 +1623,7 @@ export default {
 }
 
 @media screen and (min-height:700px) {
-  .custom-content-popover >>> .popover__content {
+  .custom-content-popover :deep(.popover__content) {
     max-height: 600px !important;
     height: 600px;
   }

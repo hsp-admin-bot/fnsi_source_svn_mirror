@@ -33,8 +33,8 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { systemSettings } from "@/constants/systemSettings";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import { compareKey } from "@/constants/deviceEdgeOperationDefine";
@@ -239,7 +239,7 @@ export default {
     // パンくずリストをクリックされた場合に呼び出される関数
     refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
-      if (this.selfScreenName === this.$router.currentRoute.name) {
+      if (this.selfScreenName === this.$route.name) {
         this.dataLoad();
       }
     },
@@ -269,7 +269,7 @@ export default {
   },
   created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // add 性能改善メモリ不足 shan start
     EventBus.$off("refresh", this.refresh);
     // add 性能改善メモリ不足 shan end
@@ -277,7 +277,7 @@ export default {
     this.dataLoad();
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
     clearTimeout(this.timerObj);
   }

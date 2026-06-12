@@ -61,7 +61,7 @@
                 />-->
               <device-date
                 id="deviceDate"
-                :disabled="true || isOtherFacilityRow()"
+                :disabled="true"
                 ref="required_date"
                 class="input-date custom-input-date custom-input"
                 :callBackFunc="dateInput"
@@ -94,7 +94,7 @@
                 class="input-text"
                 type="text"
                 :value="BWa"
-                :disabled="true || isOtherFacilityRow()"
+                :disabled="true"
               />
               <!-- #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng end -->
               kg
@@ -124,7 +124,7 @@
                   class="input-time"
                   type="text"
                   :value="dialysisDisplayTime"
-                  :disabled="true || isOtherFacilityRow()"
+                  :disabled="true"
                 />
                 <!-- #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng end -->
                 <!--mod FNSI-透析時間表示不全 楊 end -->
@@ -152,7 +152,7 @@
                   class="input-text"
                   type="text"
                   :value="device.value"
-                  :disabled="true || isOtherFacilityRow()"
+                  :disabled="true"
                 />
                 <!-- #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng end -->
                 {{ device.unit }}
@@ -185,7 +185,7 @@
                 class="input-text"
                 type="text"
                 :value="device.value"
-                :disabled="true || isOtherFacilityRow()"
+                :disabled="true"
               />
               <!-- #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng end -->
               {{ device.unit }}
@@ -263,7 +263,7 @@
                 class="input-text"
                 type="text"
                 :value="maxCalKtv"
-                :disabled="true || isOtherFacilityRow()"
+                :disabled="true"
               />
               <!-- #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng end -->
             </v-ons-col>
@@ -286,7 +286,7 @@
                 class="input-text"
                 type="text"
                 :value="minCalKtv"
-                :disabled="true || isOtherFacilityRow()"
+                :disabled="true"
               />
               <!-- #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng end -->
             </v-ons-col>
@@ -312,8 +312,8 @@
             <v-ons-button
               v-if="!isTreatRecord"
               class="common-style-ok-button"
-              @click="save() || isOtherFacilityRow()"
-              :disabled="!getItemAuthorized('Indication', 'default_authority')"
+              @click="save()"
+              :disabled="!getItemAuthorized('Indication', 'default_authority') || isOtherFacilityRow()"
             >
             <!-- mod #10359 編集権限の動作不正 dengshen end -->
               {{ saveButtonLabel }}
@@ -323,13 +323,13 @@
       </div>
 
       <message-dialog
-        :visible.sync="isDialogVisble"
+        v-model:visible="isDialogVisble"
         v-bind="dialogProps"
         type="1"
         @confirm="saveEdit"
       />
       <message-dialog
-        :visible.sync="isCancelDialogVisble"
+        v-model:visible="isCancelDialogVisble"
         v-bind="dialogProps"
         type="2"
         @confirm="cancelEdit"
@@ -342,9 +342,8 @@
 // add #10359 編集権限の動作不正 dengshen start
 import {deepCopy, getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import _ from "underscore";
-import moment from "moment";
-import { mapActions, mapGetters } from "vuex";
+import dayjs from "@/compat/date/dayjs";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import {
   DEVICE_TYPE_DIA,
@@ -355,13 +354,14 @@ import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetIn
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 
+import DeviceSetOwnerMixin from '@/components/deviceset-info/base-modules/DeviceSetOwnerMixin';
 /**
  * @description 透析量プログラム設定値編集画面
  */
 export default {
-  mixins: [baseEditor],
+  mixins: [DeviceSetOwnerMixin, baseEditor],
 
   props: {
     // add #10359 編集権限の動作不正 dengshen start
@@ -537,7 +537,7 @@ export default {
       // 指示装置設定画面のみ透析日を参照する。
       if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
         // 親のスタイル修正
-        this.$parent.styleObj = { "max-width": "550px", width: "100%" };
+        this._deviceSetDialogOwner().styleObj = { "max-width": "550px", width: "100%" };
       }
       //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
       this.initModelValue = JSON.parse(JSON.stringify(this.devA));
@@ -548,10 +548,9 @@ export default {
     },
 
     "selectedRegExamDate.value.editValue"(date) {
-      const selectedDate = moment(date, "YYYY-MM-DD").format("YYYYMMDD");
+      const selectedDate = dayjs(date, "YYYY-MM-DD").format("YYYYMMDD");
       const selectedOrdMainList = this.ordMainList.filter(
-        ord => ord.treatDate === selectedDate
-      );
+        ord => ord.treatDate === selectedDate);
       let selectedOrdMain = null;
       if (selectedOrdMainList.length > 0) {
         // 同じ日が複数ある場合は一番後ろ
@@ -587,11 +586,11 @@ export default {
       // 患者ID
       pat_id: String(this.selectedPatId),
       // 治療開始日(3ヶ月間前から当日まで)
-      ind_start_date: moment()
+      ind_start_date: dayjs()
         .subtract(3, "months")
         .format("YYYYMMDD"),
       // 治療終了日
-      ind_end_date: moment().format("YYYYMMDD"),
+      ind_end_date: dayjs().format("YYYYMMDD"),
       // 曜日パターン
       week_pattern: "[{'text': '全','done': false,'value': 0}]",
       // 登録時検査区分(透析前・後)
@@ -604,11 +603,11 @@ export default {
       // 患者ID
       pat_id: String(this.selectedPatId),
       // 治療開始日
-      ind_start_date: moment()
+      ind_start_date: dayjs()
         .subtract(3, "months")
         .format("YYYYMMDD"),
       // 治療終了日
-      ind_end_date: moment().format("YYYYMMDD"),
+      ind_end_date: dayjs().format("YYYYMMDD"),
       // 曜日パターン
       week_pattern: "[{'text': '全','done': false,'value': 0}]"
     };
@@ -630,8 +629,7 @@ export default {
       ] = await Promise.all([
         ApiHelper.post(
           `/mainData/getOrdMainRegExamDateList`,
-          RegExamDateParamJson
-        ),
+          RegExamDateParamJson),
         ApiHelper.post(`/mainData/TreatDateList`, paramJson)
       ]).catch(error => {
       //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
@@ -639,7 +637,21 @@ export default {
       //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
         // console.log(error);
       });
-      if (!_.has(this.devA, "ord_no") && this.devA) {
+      if (!this.deviceSetInfo) {
+        await new Promise(resolve => {
+          const unwatch = this.$watch(
+            () => this.deviceSetInfo,
+            val => {
+              if (val) {
+                unwatch();
+                resolve();
+              }
+            },
+            { immediate: true }
+          );
+        });
+      }
+      if (this.devA && !Object.prototype.hasOwnProperty.call(this.devA, "ord_no")) {
         this.devA.ord_no = {
           value: {
             // mod FNSI-ord_no入力変更 楊 start
@@ -653,13 +665,15 @@ export default {
       }
 
       // add FNSI-検査日入力不可変更 楊 start
-      const deviceDate = document.getElementById("deviceDate");
+      const deviceDate = this._deviceSetElementById("deviceDate");
       let elem2 = deviceDate?.children?.[0]?.children[1];
       // 検査日入力不可
-      elem2.disabled = false;
+      if (elem2) {
+        elem2.disabled = false;
+      }
       // add FNSI-検査日入力不可変更 楊 end
 
-      const selectedOrdNo = this.devA.ord_no.value.initValue;
+      const selectedOrdNo = this.devA?.ord_no?.value?.initValue ?? "";
       let selectedOrdMain = null;
       // 検査日設定
       this.mstRegExamDateList = responseRegExamDateList.data;
@@ -672,38 +686,36 @@ export default {
           //mod FNSI-6842 劉全航 start
         );
         selectedOrdMain = this.ordMainList.find(
-          ord => ord.ordNo === selectedOrdNo
-        );
+          ord => ord.ordNo === selectedOrdNo);
       }
       // 治療日設定
       this.mstTreatDateList = responseTreatDateList.data;
       const treatDateList = this.mstTreatDateList.map(ord => ord.treatDate);
       this.regExamDateList.custom = treatDateList.filter(
-        data => !this.regExamDateList.default.includes(data)
-    );
+        data => !this.regExamDateList.default.includes(data));
       this.setRegExamDateList(this.regExamDateList);
       const threeMonthsDateLsit = [];
       for (let i = 0; i < 100; i++) {
         threeMonthsDateLsit.push(
-          moment()
+          dayjs()
             .subtract(i, "days")
-            .format("YYYYMMDD")
-    );
+            .format("YYYYMMDD"));
       }
       const deleteDateLsit = threeMonthsDateLsit.filter(
-        data => !this.regExamDateList.default.includes(data)
-    );
+        data => !this.regExamDateList.default.includes(data));
       this.selectedRegExamDate.disabledDates = deleteDateLsit;
-      this.selectedRegExamDate.disableDatesBefore = moment()
+      this.selectedRegExamDate.disableDatesBefore = dayjs()
         .subtract(3, "months")
         .format("YYYYMMDD");
-      this.selectedRegExamDate.disableDatesAfter = moment().format("YYYYMMDD");
+      this.selectedRegExamDate.disableDatesAfter = dayjs().format("YYYYMMDD");
 
       if (selectedOrdMain) {
         this.setInitRegExamDate(selectedOrdMain.treatDate);
         this.setDiaysisProgramDate(selectedOrdMain);
         // add FNSI-検査日入力不可変更 楊 start
-        elem2.style.backgroundColor = "#EBEBE4";
+        if (elem2) {
+          elem2.style.backgroundColor = "#EBEBE4";
+        }
         // add FNSI-検査日入力不可変更 楊 end
       }
     }
@@ -712,7 +724,7 @@ export default {
     // add end #9444
 
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
-    this.$parent.$parent.isDialogType9 = true;
+    this._deviceSetDialogOwner().isDialogType9 = true;
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add end
   },
 
@@ -723,7 +735,15 @@ export default {
     ]),
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd));
+      return this.isMst || (this.isMst != true && !this.isOtherFacilityRow() && getAuthorized(pageCd, itemCd));
+    },
+    /**
+     * @description 該当行が他院情報かどうかを判定
+     * @returns {Boolean} true = 他施設のデータは参照のみ
+     */
+    isOtherFacilityRow() {
+      const facilityCd = this.getSettingIndChildData?.facilityCd;
+      return facilityCd ? facilityCd !== this.getFacilityCd : false;
     },
     // add #10359 編集権限の動作不正 dengshen end
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
@@ -1045,7 +1065,7 @@ export default {
      */
     saveEdit() {
       if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
-        this.$parent.$parent.updateDisable = false;
+        this._deviceSetDialogOwner().updateDisable = false;
       }
     },
 
@@ -1067,7 +1087,7 @@ export default {
       // 目標透析終了時体重(kg)
       if (ordMain.rstCondInfo) {
         const rstCondInfo = JSON.parse(ordMain.rstCondInfo);
-        if (_.has(rstCondInfo, "1")) {
+        if (rstCondInfo != null && Object.prototype.hasOwnProperty.call(rstCondInfo, "1")) {
           const timeMinute = rstCondInfo["1"].value;
           this.TX = timeMinute;
           if (timeMinute !== null && timeMinute !== "") {
@@ -1076,10 +1096,10 @@ export default {
             const minute = settingHour * 60;
             const settingMinute = timeMinute - minute;
             const time = `${settingHour}:${settingMinute}`;
-            this.dialysisDisplayTime = moment(time, "HH:mm").format("HH:mm");
+            this.dialysisDisplayTime = dayjs(time, "HH:mm").format("HH:mm");
           }
         }
-        if (_.has(rstCondInfo, "3")) {
+        if (rstCondInfo != null && Object.prototype.hasOwnProperty.call(rstCondInfo, "3")) {
           let targetWeight = rstCondInfo["3"].value;
           // mod #9973 shiyw start
           //if (targetWeight === -1) {
@@ -1090,22 +1110,22 @@ export default {
           }
           this.BW2 = targetWeight;
         }
-        if (_.has(rstCondInfo, "5")) {
+        if (rstCondInfo != null && Object.prototype.hasOwnProperty.call(rstCondInfo, "5")) {
           const dialyzerCd = rstCondInfo["5"].value;
           const selectedDialyzer = this.mstDialyzer.find(
               // mod #9973 shiyw start
             //mst => mst.dialyzerCd === dialyzerCd
             mst => mst.dialyzerCd == dialyzerCd
               // mod #9973 shiyw end
-          );
+              );
           if (selectedDialyzer) {
             this.KOA0 = selectedDialyzer.koa;
           }
         }
-        if (_.has(rstCondInfo, "14")) {
+        if (rstCondInfo != null && Object.prototype.hasOwnProperty.call(rstCondInfo, "14")) {
           this.QB = rstCondInfo["14"].value;
         }
-        if (_.has(rstCondInfo, "16")) {
+        if (rstCondInfo != null && Object.prototype.hasOwnProperty.call(rstCondInfo, "16")) {
           this.QD = rstCondInfo["16"].value;
         }
       }
@@ -1136,13 +1156,13 @@ export default {
       //     changeoverTimeList,
       //     maxStep,
       //     this.TX
-      //   );
+      //);
       //   this.aveQD = this.getAverageFlow(
       //     QDList,
       //     changeoverTimeList,
       //     maxStep,
       //     this.TX
-      //   );
+      //);
       // }
       // add 10196 by kangjie 20240202 end del rst_device_set_info
       /*
@@ -1204,8 +1224,7 @@ export default {
           // KoA(ml/min)
           this.KOA0,
           // 再循環率(%)※固定値
-          this.RR
-        );
+          this.RR);
         if (!isBodyVolume) {
           this.calValue = null;
           return;
@@ -1230,8 +1249,7 @@ export default {
           // 目標透析終了時体重(kg)
           this.BW2,
           // 除水量(kg)
-          this.DBWX
-        );
+          this.DBWX);
         if (!isMaxCalKtv) {
           // mod FNSI-KtV上下限値設定変更 楊 start
           // this.maxCalKtv = null;
@@ -1261,8 +1279,7 @@ export default {
           // 目標透析終了時体重(kg)
           this.BW2,
           // 除水量(kg)
-          this.DBWX
-        );
+          this.DBWX);
         if (!isMinCalKtv) {
           // mod FNSI-KtV上下限値設定変更 楊 start
           // this.minCalKtv = null;
@@ -1376,7 +1393,7 @@ export default {
     },
     // add FNSI-検査日入力不可変更 楊 start
     dateInput(){
-      const deviceDate = document.getElementById("deviceDate");
+      const deviceDate = this._deviceSetElementById("deviceDate");
       let elem2 = deviceDate.children[0].children[0];
       if (this.selectedRegExamDate.value.initValue === this.selectedRegExamDate.value.editValue){
         elem2.style.backgroundColor = "#EBEBE4";
@@ -1408,14 +1425,14 @@ export default {
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
     async resetComponentIndData(structData){
       if (this.isEdit()) {
-        this.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+        this._deviceSetDialogOwner().messageDialogInfo.messageCd = 70000028;
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-        this.$parent.$parent.messageDialogInfo.type = "9";
+        this._deviceSetDialogOwner().messageDialogInfo.type = "9";
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._deviceSetDialogOwner().messageDialogInfo.isDialogVisible = true;
         return;
       } else {
-        this.getComponentData(structData, 2);
+        return this.getComponentData(structData, 2);
       }
     },
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add end
@@ -1488,8 +1505,7 @@ export default {
       // 対象日時の治療情報取得(開始日付・治療方法・クールで絞り込み)
       let response = await ApiHelper.post(
         "/mainData/getOrdMainDataInfo",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         getErrorMessage('BvUfcEditor.vue', 'getComponentData', error);
         throw error;
       });
@@ -1524,19 +1540,9 @@ export default {
       EventBus.$emit("deviceSetChanged", !val);
       // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng end
     },
-    /**
-   * @description 該当行が他院情報かどうかを判定
-   * @returns {Boolean} true = 他施設のデータは参照のみ
-   */
-    isOtherFacilityRow() {
-      if (!this.getSettingIndChildData) {
-        return false
-      }
-      return this.getSettingIndChildData.facilityCd ? this.getSettingIndChildData.facilityCd !== this.getFacilityCd : false
-    },
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -1572,7 +1578,7 @@ export default {
 .input-text,
 .input-time ,
 /* add #11120 I-HDF設定内の破棄確認メッセージ不正 2024/09/12 情 start */
-.diaysis-program-input-number-pro ::v-deep.custom-common-number-input-pro
+.diaysis-program-input-number-pro :deep(.custom-common-number-input-pro)
 /* add #11120 I-HDF設定内の破棄確認メッセージ不正 2024/09/12 情 end */
 {
   width: 70px;
@@ -1589,7 +1595,7 @@ export default {
   .device-info-cell-name {
     flex: 0 0 45%;
   }
-  .device-info-cell-value >>> .custom-radio {
+  .device-info-cell-value :deep(.custom-radio) {
     display: block;
   }
 }

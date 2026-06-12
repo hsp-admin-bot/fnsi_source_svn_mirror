@@ -59,8 +59,10 @@ export default {
       this.onOk();
     },
     hasMatchedName(item) {
-      return !this.searchTextConformed ||
-        item.searchText.includes(this.searchTextConformed);
+      const needle = this.searchTextConformed;
+      if (!needle) return true;
+      const haystack = item && item.searchText != null ? String(item.searchText) : "";
+      return haystack.includes(needle);
     },
     /**
      * 明細行のクラス.

@@ -49,18 +49,21 @@
 </template>
 
 <script>
-import { mapGetters, mapActions, mapState } from "vuex";
+import { mapGetters, mapActions, mapState } from "@/compat/vue/vuex";
 import {
   sendRequestGetReportInfoByOrdNoWithLoader
 } from "@/apis/treatment-record";
-import $ from "jquery";
-import { EventBus } from "@/eventBus.js";
+
+import { EventBus } from "@/compat/vue/event-bus.js";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
 //add 6410 デグレ：機能帳票から「治療経過表」が消えている 吉 start
 import { getCurrentFunctionCd } from "@/router/routing-helper";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
+import $ from "@/compat/jquery";
+import { getScopedElementById, getScopedElementsByClassName, getScopedJQuery } from "@/functions/common/LayoutMeasureHelper";
+
 //add 6410 デグレ：機能帳票から「治療経過表」が消えている 吉 end
 const TOUCHSTART = "touchstart";
 const TOUCHMOVE = "touchmove";
@@ -77,36 +80,38 @@ export default {
     drag: {
       bind: function(el) {
         let oDiv = el;
-        let userMessage = navigator.userAgent.toLowerCase();
+        const ownerDocument = oDiv.ownerDocument || document;
+        const ownerWindow = ownerDocument.defaultView || window;
+        let userMessage = ownerWindow.navigator?.userAgent?.toLowerCase?.() || "";
         if (/ipad/i.test(userMessage)) {
           oDiv.addEventListener('touchstart', function(e) {
             let disX = e.changedTouches[0].clientX - oDiv.offsetLeft;
             let disY = e.changedTouches[0].clientY - oDiv.offsetTop;
-            document.addEventListener('touchmove', function(e){
+            ownerDocument.addEventListener('touchmove', function(e){
               let left = e.changedTouches[0].clientX - disX;
               let top = e.changedTouches[0].clientY - disY;
               oDiv.style.left = left + 'px';
               oDiv.style.top = top + 'px';
             }, false)
-            document.addEventListener('touchend', function(e){
-              document.ontouchmove = null;
-              document.ontouchend = null;
+            ownerDocument.addEventListener('touchend', function(e){
+              ownerDocument.ontouchmove = null;
+              ownerDocument.ontouchend = null;
             }, false)
           }, false)
         } else {
           oDiv.onmousedown = (e) => {
             let disX = e.clientX - oDiv.offsetLeft;
             let disY = e.clientY - oDiv.offsetTop;
-            document.onmousemove = (e) => {
+            ownerDocument.onmousemove = (e) => {
               let left = e.clientX - disX;
               let top = e.clientY - disY;
               oDiv.style.left = left + 'px';
               oDiv.style.top = top + 'px';
 
             };
-            document.onmouseup = (e) => {
-              document.onmousemove = null;
-              document.onmouseup = null;
+            ownerDocument.onmouseup = (e) => {
+              ownerDocument.onmousemove = null;
+              ownerDocument.onmouseup = null;
             }
           }
         }
@@ -153,7 +158,7 @@ export default {
           y: 0
         }
       },
-      target: document.getElementById("target"),
+      target: null,
       //自画面の名称
       selfScreenName: "",
       // レポート表示処理中フラグ
@@ -194,23 +199,24 @@ export default {
     },
     reportHTML() {
       // レポートをセット
-      let target = document.getElementById("target");
+      let target = getScopedElementById("target", this.$el || null);
       target.innerHTML = this.reportHTML;
 
       if (target.innerHTML) {
         // レポート1枚目の高さを取得
         /* modify by shiyinwang 2022-11-30 -- Aspose.cells plug-in integration --start */
         let table;
-        if($('#target').find('svg').length > 0){
-          table = $('#target').find('svg')[0]
+        const scopedJQuery = this.scopedJQuery();
+        if(scopedJQuery('#target').find('svg').length > 0){
+          table = scopedJQuery('#target').find('svg')[0]
         }else {
-          const targetDiv = $("#target").children('div')[0];
-          table = $("#" + targetDiv.id).children('table')[0];
+          const targetDiv = scopedJQuery("#target").children('div')[0];
+          table = targetDiv ? scopedJQuery("#" + targetDiv.id).children('table')[0] : null;
         }
         /* modify by shiyinwang 2022-11-30 -- Aspose.cells plug-in integration --end */
         const reportHeight = table ? table.clientHeight + 10 : 0;
         // スライダー値の設定
-        const submenuHeight = document.getElementsByClassName("submenu-area")[0].clientHeight;
+        const submenuHeight = Number(getScopedElementsByClassName("submenu-area", this.$el || null)[0]?.clientHeight || 0);
         const fitScale = submenuHeight / reportHeight * 100;
 
         // this.layoutState.sliderVal === 0 は、サインイン後の初回表示時、パンくず押下時(refresh)
@@ -223,7 +229,7 @@ export default {
         this.notchVal = (submenuHeight / reportHeight - this.minimumScale) / fitScale;
         // 初期位置の設定
         this.$nextTick(() => {
-          $("#target").css({
+          this.scopedJQuery()("#target").css({
             "left": "0px",
             "top":  "0px"
           });
@@ -278,13 +284,15 @@ export default {
     },
     getHeight(){
       // 縦を計算
-      const sah = document.getElementsByClassName("submenu-area")[0]
-        .clientHeight;
+      const sah = Number(getScopedElementsByClassName("submenu-area", this.$el || null)[0]?.clientHeight || 0);
 
       return 'width: ' + sah/2 + 'px';
     }
   },
   methods: {
+    scopedJQuery() {
+      return getScopedJQuery(this.$el || this, $) || $;
+    },
     ...mapActions("report", ["getReportHTMLByReportCd", "setCreateReportParam"]),
     ...mapActions("treatment-record/common", ["setLayoutState"]),
     //add 6410 デグレ：機能帳票から「治療経過表」が消えている 吉 start
@@ -301,22 +309,22 @@ export default {
           facilityCd: this.getFacilityCd,
           functionCd:"00601",
           // mod #9558 機能帳票で正しく変数が引き渡されていない 高 start
-          // date: moment(this.treatmentDate).format("YYYY/MM/DD"),
-          // fromDate: moment(this.treatmentDate).format("YYYY/MM/DD"),
-          // toDate: moment(this.treatmentDate).format("YYYY/MM/DD"),
+          // date: dayjs(this.treatmentDate).format("YYYY/MM/DD"),
+          // fromDate: dayjs(this.treatmentDate).format("YYYY/MM/DD"),
+          // toDate: dayjs(this.treatmentDate).format("YYYY/MM/DD"),
           // mod #11968 iPadで治療記録画面の機能帳票表示に失敗する 高　start
-          // date: this.treatmentDate == null ? moment(new Date()).format("YYYY/MM/DD") : moment(this.treatmentDate).format("YYYY/MM/DD"),
-          date: this.treatmentDate == null ? moment(new Date()).format("YYYY/MM/DD") : moment(this.treatmentDate, "YYYY/MM/DD(EE)").format("YYYY/MM/DD"),
+          // date: this.treatmentDate == null ? dayjs(new Date()).format("YYYY/MM/DD") : dayjs(this.treatmentDate).format("YYYY/MM/DD"),
+          date: this.treatmentDate == null ? dayjs(new Date()).format("YYYY/MM/DD") : dayjs(this.treatmentDate, "YYYY/MM/DD(EE)").format("YYYY/MM/DD"),
           // mod #11968 iPadで治療記録画面の機能帳票表示に失敗する 高　end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
-          // fromDate: this.treatmentDate == null ? moment(new Date()).format("YYYY/MM/DD") : moment(this.treatmentDate).format("YYYY/MM/DD"),
-          // toDate: this.treatmentDate == null ? moment(new Date()).format("YYYY/MM/DD") : moment(this.treatmentDate).format("YYYY/MM/DD"),
+          // fromDate: this.treatmentDate == null ? dayjs(new Date()).format("YYYY/MM/DD") : dayjs(this.treatmentDate).format("YYYY/MM/DD"),
+          // toDate: this.treatmentDate == null ? dayjs(new Date()).format("YYYY/MM/DD") : dayjs(this.treatmentDate).format("YYYY/MM/DD"),
           // mod #11968 iPadで治療記録画面の機能帳票表示に失敗する 高　start
-          // treatDate: this.treatmentDate == null ? moment(new Date()).format("YYYYMMDD") : moment(this.treatmentDate).format("YYYYMMDD"),
-          treatDate: this.treatmentDate == null ? moment(new Date()).format("YYYYMMDD") : moment(this.treatmentDate, "YYYYMMDD(EE)").format("YYYYMMDD"),
+          // treatDate: this.treatmentDate == null ? dayjs(new Date()).format("YYYYMMDD") : dayjs(this.treatmentDate).format("YYYYMMDD"),
+          treatDate: this.treatmentDate == null ? dayjs(new Date()).format("YYYYMMDD") : dayjs(this.treatmentDate, "YYYYMMDD(EE)").format("YYYYMMDD"),
           // mod #11968 iPadで治療記録画面の機能帳票表示に失敗する 高　end
-          fromDate: moment(new Date()).format("YYYYMMDD"),
-          toDate: moment(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYYMMDD"),
+          fromDate: dayjs(new Date()).format("YYYYMMDD"),
+          toDate: dayjs(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYYMMDD"),
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
           // mod #9558 機能帳票で正しく変数が引き渡されていない 高 end
         };
@@ -346,7 +354,7 @@ export default {
       // 複数のwatch対象から呼び出される処理の為、2重処理にならないようにフラグで管理
       this.repLoadFlg = true;
       // レポート表示
-      sendRequestGetReportInfoByOrdNoWithLoader(ordNo).then(res => {
+      sendRequestGetReportInfoByOrdNoWithLoader(ordNo, this.selectedPatId).then(res => {
         this.repLoadFlg = false;
         // ベッド・クール・治療方法未登録の場合（実績削除後のデータ）
         if (!res.data && !this.isNullPat) {
@@ -394,16 +402,14 @@ export default {
     },
     calculateReportArea() {
       // 縦を計算
-      const sah = document.getElementsByClassName("submenu-area")[0]
-        .clientHeight;
+      const sah = Number(getScopedElementsByClassName("submenu-area", this.$el || null)[0]?.clientHeight || 0);
       this.reportAreaHeight = sah;
 
       // 横を計算
-      const saw =
-        document.getElementsByClassName("submenu-area")[0].clientWidth - 60;
+      const saw = Number(getScopedElementsByClassName("submenu-area", this.$el || null)[0]?.clientWidth || 0) - 60;
       this.reportAreaWidth = saw;
 
-      const zoomSlider = document.getElementsByClassName("zoom-slider")[0];
+      const zoomSlider = getScopedElementsByClassName("zoom-slider", this.$el || null)[0];
       if (zoomSlider != undefined) {
         zoomSlider.style.width = sah/2+ 'px';
       }
@@ -411,11 +417,10 @@ export default {
 
     calculateReportAreaIsMenuOpen() {
       // 横のみを計算
-      const saw =
-        document.getElementsByClassName("submenu-area")[0].clientWidth - 60;
+      const saw = Number(getScopedElementsByClassName("submenu-area", this.$el || null)[0]?.clientWidth || 0) - 60;
       this.reportAreaWidth = saw;
 
-      let main = document.getElementById("report-main");
+      let main = getScopedElementById("report-main", this.$el || null);
       main.style.width = `calc(100% - ${this.getIsMenuOpen ? "(10em + 70px)" : "70px"} )`;
     },
     listenerStart(event) {
@@ -539,9 +544,10 @@ export default {
                 // ズームする場所(ターゲット要素内座標)
                 const zoomPosX = Math.floor((newP1.x + newP2.x) / 2);
                 const zoomPosY = Math.floor((newP1.y + newP2.y) / 2);
-                const displayArea = document
-                  .getElementById("report-main")
-                  .getBoundingClientRect();
+                const displayArea = getScopedElementById("report-main", this.$el || null)?.getBoundingClientRect?.();
+                if (!displayArea) {
+                  return;
+                }
 
                 if (this.mouseListenerInf.zoomPos === null) {
                   this.mouseListenerInf.zoomPos = {
@@ -627,10 +633,11 @@ export default {
       };
       // X軸方向への動き
       const canvasWidth =
-        document.getElementById("target").clientWidth * this.targetScale;
-      const displayArea = document
-        .getElementById("report-main")
-        .getBoundingClientRect();
+        Number(getScopedElementById("target", this.$el || null)?.clientWidth || 0) * this.targetScale;
+      const displayArea = getScopedElementById("report-main", this.$el || null)?.getBoundingClientRect?.();
+      if (!displayArea) {
+        return;
+      }
       this.targetTransForm.x = this.getTransform(
         canvasWidth,
         displayArea.width,
@@ -641,7 +648,7 @@ export default {
 
       // y軸方向への動き
       const canvasHeight =
-        document.getElementById("target").clientHeight * this.targetScale;
+        Number(getScopedElementById("target", this.$el || null)?.clientHeight || 0) * this.targetScale;
       this.targetTransForm.y = this.getTransform(
         canvasHeight,
         displayArea.height,
@@ -709,8 +716,10 @@ export default {
     // ベッドレイアウト表示位置調整
     adjustBLayourtAreaPosition() {
       if (this.targetTransForm.x === 0 || this.targetTransForm.y === 0) return;
-      const displayArea = document.getElementById("report-main").getBoundingClientRect();
-      const targetArea = document.getElementById("target").getBoundingClientRect();
+      const displayRoot = getScopedElementById("report-main", this.$el || null);
+      const targetRoot = getScopedElementById("target", this.$el || null);
+      const displayArea = displayRoot?.getBoundingClientRect?.();
+      const targetArea = targetRoot?.getBoundingClientRect?.();
       if (!displayArea || !targetArea ) return;
       const areaX = displayArea.width / 2;
       const areaY = displayArea.height / 2;
@@ -743,7 +752,7 @@ export default {
       //add 治療記録改修1 房 start
       this.errMessageText = "";
       //add 治療記録改修1 房 end
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       // レポートレイアウトの状態をクリア
@@ -790,7 +799,7 @@ export default {
   },
   created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
 
     // イベント解除
     EventBus.$on("refresh", this.refresh);
@@ -805,14 +814,14 @@ export default {
    * コンポーネント破棄
    */
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     // del refresh方法処理不正について、対応する。 dengshen start
     // EventBus.$off("refresh");
     // del refresh方法処理不正について、対応する。 dengshen end
     // add #9271 他の画面への切り替え時のパンくずクリックは有効になりません。 linjunfeng start
     EventBus.$off("refresh", this.refresh);
     // add #9271 他の画面への切り替え時のパンくずクリックは有効になりません。 linjunfeng end
-    EventBus.$off("savePatInfoSuccess");
+    EventBus.$off("savePatInfoSuccess", this.refresh);
     //add 6410 デグレ：機能帳票から「治療経過表」が消えている 吉 start
     // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 start
     // EventBus.$off("requestReportParams");
@@ -887,7 +896,7 @@ span.zoom-slider-label {
     left: 0px !important;
     top: 0px !important;
   }
-  #target >>> div {
+  #target :deep(div){
     width: fit-content;
   }
 }

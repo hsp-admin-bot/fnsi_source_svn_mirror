@@ -21,7 +21,7 @@ import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
-import javax.xml.bind.DatatypeConverter;
+import java.util.HexFormat;
 
 
 import jp.co.nikkiso.ntss.api.constant.ReportConstant;
@@ -435,7 +435,7 @@ public class DialReportServiceImpl implements DialReportService {
 
         // レスポンス用データ生成(16進数文字列に変換)
         byte[] data = zbaos.toByteArray();
-        ret = DatatypeConverter.printHexBinary(data);
+        ret = HexFormat.of().withUpperCase().formatHex(data);
 
         // add ログ改善対応 高 start
         eventLogMessage.setLogMessage("API DialReportService.getDialReportImage: " + " img1.width：" + width + " img1.height：" + height +

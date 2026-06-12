@@ -35,7 +35,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.databind.JavaType;
+import tools.jackson.databind.JavaType;
 
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
 import jp.co.nikkiso.ntss.core.dao.SysSystemDefineDao;

@@ -1,25 +1,28 @@
 package web.service;
 
-import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.impl.DefaultClaims;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import web.authentication.BaseUser;
 import web.config.EventLoggerUtil;
 import web.constant.LoggingConstant;
-import web.exception.InvalidTokenException;
 import web.constant.TokenConstant;
+import web.exception.InvalidTokenException;
 import web.logger.LogLevel;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HexFormat;
+import java.util.Map;
 
 @Service
 public class TokenServiceImpl implements TokenService {
@@ -39,21 +42,25 @@ public class TokenServiceImpl implements TokenService {
      */
     @Override
     public BaseUser retrieveBaseUser(String jwtToken) throws InvalidTokenException {
-        DefaultClaims claims = retrieveDefaultClaims(jwtToken);
+        Claims claims = retrieveClaims(jwtToken);
         Object tokenExpirationDateLong = claims.get(TokenConstant.TOKEN_EXPIRATION_DATE);
         Object userIdNumber = claims.get(TokenConstant.USER_ID);
         if (tokenExpirationDateLong == null || userIdNumber == null) {
             throw new InvalidTokenException("無効なトークン");
         }
-        if (new Date((Long) tokenExpirationDateLong).before(new Date())) {
+        if (new Date(((Number) tokenExpirationDateLong).longValue()).before(new Date())) {
             throw new InvalidTokenException("トークン有効期限エラー");
         }
         return new BaseUser(((Number) userIdNumber).longValue());
     }
 
-    private DefaultClaims retrieveDefaultClaims(String token) throws InvalidTokenException {
+    private Claims retrieveClaims(String token) throws InvalidTokenException {
         try {
-            return (DefaultClaims) Jwts.parser().setSigningKey(TokenConstant.SECRET_KEY).parse(token).getBody();
+            return Jwts.parser()
+                .verifyWith(resolveSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
         } catch (JwtException ex) {
             throw new InvalidTokenException("無効なトークン", ex);
         }
@@ -70,14 +77,14 @@ public class TokenServiceImpl implements TokenService {
         Calendar calendar = Calendar.getInstance();
         Map<String, Object> tokenData = new HashMap<>();
         tokenData.put(TokenConstant.USER_ID, baseUser.getId());
-        tokenData.put(TokenConstant.TOKEN_CREATE_DATE, calendar.getTime());
+        tokenData.put(TokenConstant.TOKEN_CREATE_DATE, calendar.getTimeInMillis());
         calendar.add(Calendar.MINUTE, tokenTimeOut);
-        tokenData.put(TokenConstant.TOKEN_EXPIRATION_DATE, calendar.getTime());
-        JwtBuilder jwtBuilder = Jwts.builder();
-        jwtBuilder.setExpiration(calendar.getTime());
-        jwtBuilder.setClaims(tokenData);
-        jwtBuilder.signWith(SignatureAlgorithm.HS512, TokenConstant.SECRET_KEY);
-        return jwtBuilder.compact();
+        tokenData.put(TokenConstant.TOKEN_EXPIRATION_DATE, calendar.getTimeInMillis());
+        return Jwts.builder()
+            .expiration(calendar.getTime())
+            .claims(tokenData)
+            .signWith(resolveSigningKey(), Jwts.SIG.HS512)
+            .compact();
     }
 
     /**
@@ -89,25 +96,15 @@ public class TokenServiceImpl implements TokenService {
     @Override
     public String jwtKeyGenerator(int keyLength) {
         try {
-            // KeyGeneratorオブジェクトを作成し、HMACSHA 256としてアルゴリズムを指定します
-            KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA256");
-            // SecureRandomによるランダムシードの取得
+            KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA512");
             SecureRandom secureRandom = new SecureRandom();
             keyGen.init(keyLength, secureRandom);
-            // ランダム鍵の生成
             SecretKey secretKey = keyGen.generateKey();
             if (secretKey != null) {
-                byte[] encodedKey = secretKey.getEncoded();
-                // あるいは16進表現を直接印刷することもできます
-                StringBuilder hexKey = new StringBuilder();
-                for (byte b : encodedKey) {
-                    hexKey.append(String.format("%02x", b));
-                }
-                return hexKey.toString();
-            } else {
-                System.out.println("鍵を生成できませんでした。");
-                return null;
+                return HexFormat.of().formatHex(secretKey.getEncoded());
             }
+            System.out.println("鍵を生成できませんでした。");
+            return null;
         } catch (NoSuchAlgorithmException e) {
             eventLoggerUtil.recordLog(
                     LoggingConstant.DEFAULT_FACILITYCD,
@@ -118,5 +115,9 @@ public class TokenServiceImpl implements TokenService {
                 LogLevel.ERROR);
             return null;
         }
+    }
+
+    private SecretKey resolveSigningKey() {
+        return Keys.hmacShaKeyFor(HexFormat.of().parseHex(TokenConstant.SECRET_KEY));
     }
 }

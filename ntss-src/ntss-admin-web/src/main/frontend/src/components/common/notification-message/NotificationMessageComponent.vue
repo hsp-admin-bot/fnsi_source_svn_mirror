@@ -1,66 +1,67 @@
-/**
- * 通知メッセージ表示コンポーネント
- */
 <template>
-  <notifications
-    group="message"
-    position="top right"
-    animation-name="notification-animation"
+  <div
     v-if="isLoggedIn && !isWeightMode"
+    class="vue-notification-group"
+    style="width: 300px; top: 0px; right: 0px;"
   >
-    <template slot="body" slot-scope="props">
-      <!-- mod FNSI-bug #4115「重要通知トーストのレイアウト不正」の不具合修正 start-->
-      <!-- <div class="notification-message"> -->
-      <div :class="props.item.data.message.isImportant ? 'important-message' : 'notification-message'">
-      <!-- mod FNSI-bug #4115「重要通知トーストのレイアウト不正」の不具合修正 end-->
-        <div class="content-area" @click="showNotificationMessage(), props.close()">
-          <!-- FNSI-「通知トーストに重要通知である旨が表示されない」の不具合修正 江 start -->
-          <!-- <div>{{ props.item.data.message.displayRegDate }}</div> -->
-          <div>{{ props.item.data.message.displayRegDate }}&nbsp;&nbsp;<i v-if="props.item.data.message.isImportant" class="important-i">重要</i>
-            <!-- add FNSI-同姓同名の患者を登録した際に通知トーストでその旨を確認 江 start -->
-            <img v-if="props.item.data.message.isSame" class='same-icon' :src="image_src_same" />
-            <!-- add FNSI-同姓同名の患者を登録した際に通知トーストでその旨を確認 江 end -->
-          </div>
-          <!-- FNSI-「通知トーストに重要通知である旨が表示されない」の不具合修正 江 end -->
-          <div>
-            <p>
-              <template v-for="(item, index) in props.item.text">
-                <span :key="index">
-                  {{ item + (index === 2 && props.item.text.length > 3 ? " ..." : "") }}
-                  <br>
-                </span>
-              </template>
-            </p>
-          </div>
+    <span></span>
+    <!-- mod FNSI-bug #4115「重要通知トーストのレイアウト不正」の不具合修正 start-->
+    <!-- <div class="notification-message"> -->
+    <div
+      v-for="item in notifications"
+      :key="item.id"
+      :class="item.data.message.isImportant ? 'important-message' : 'notification-message'"
+    >
+    <!-- mod FNSI-bug #4115「重要通知トーストのレイアウト不正」の不具合修正 end-->
+      <div class="content-area" @click="showNotificationMessage(); closeNotification(item.id)">
+        <!-- FNSI-「通知トーストに重要通知である旨が表示されない」の不具合修正 江 start -->
+        <!-- <div>{{ item.data.message.displayRegDate }}</div> -->
+        <div>{{ item.data.message.displayRegDate }}&nbsp;&nbsp;<i v-if="item.data.message.isImportant" class="important-i">重要</i>
+          <!-- add FNSI-同姓同名の患者を登録した際に通知トーストでその旨を確認 江 start -->
+          <img v-if="item.data.message.isSame" class='same-icon' :src="image_src_same" />
+          <!-- add FNSI-同姓同名の患者を登録した際に通知トーストでその旨を確認 江 end -->
         </div>
-        <div class="button-area">
-          <!-- mod FNSi6960通知の件数が残ったままになる chen start -->
-          <!-- <div @click="props.close"> -->
-          <div @click="onClose(props.item.data.message, props)">
-          <!-- mod FNSi6960通知の件数が残ったままになる chen end -->
-          <!-- #9190 通知の閉じるアイコンと、機能遷移アイコンが存在しない。start 訾浩 -->
-            <i class="icon ion-ios-close"></i>
-          </div>
-          <div
-            v-show="props.item.data.message.additionalInfo"
-            @click="onForward(props.item.data.message, props.close)"
-          >
-            <i class="icon ion-ios-redo"></i>
-            <!--#9190 通知の閉じるアイコンと、機能遷移アイコンが存在しない。end 訾浩 -->
-          </div>
+        <!-- FNSI-「通知トーストに重要通知である旨が表示されない」の不具合修正 江 end -->
+        <div>
+          <p>
+            <template v-for="(line, index) in item.text" :key="index">
+              <span>
+                {{ line + (index === 2 && item.text.length > 3 ? " ..." : "") }}
+                <br>
+              </span>
+            </template>
+          </p>
         </div>
       </div>
-    </template>
-  </notifications>
+      <div class="button-area">
+        <!-- mod FNSi6960通知の件数が残ったままになる chen start -->
+        <!-- <div @click="props.close"> -->
+        <div @click="onClose(item.data.message, item.id)">
+        <!-- mod FNSi6960通知の件数が残ったままになる chen end -->
+        <!-- #9190 通知の閉じるアイコンと、機能遷移アイコンが存在しない。start 訾浩 -->
+          <i class="icon ion-ios-close"></i>
+        </div>
+        <div
+          v-show="item.data.message.additionalInfo"
+          @click="onForward(item.data.message, () => closeNotification(item.id))"
+        >
+          <i class="icon ion-ios-redo"></i>
+          <!--#9190 通知の閉じるアイコンと、機能遷移アイコンが存在しない。end 訾浩 -->
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import NotificationMessageMixin from "@/components/common/notification-message/NotificationMessageMixin";
 import { NOTIFY_TOPIC_NOTIFICATION_MESSAGE, NOTIFY_TOPIC_FORCE_SIGNOUT } from "@/constants/websocketNotifyTopic";
 import { LOCAL_STORAGE_KEY } from "@/constants/localStorageConstants";
 // add FNSI-コードをマージ 江 start
 import { WS_RECONNECT_INTERVAL, READYSTATE } from "@/constants/websocketConstants";
+import nameDuplication3Img from "@/assets/name_duplication3.png";
+import { subscribeNotification } from "@/compat/notification";
 // add FNSI-コードをマージ 江 end
 
 export default {
@@ -79,8 +80,12 @@ export default {
       // add FNSI-コードをマージ 江 end
       // add FNSI-同姓同名の患者を登録した際に通知トーストでその旨を確認 江 start
       // 同姓同名アイコン
-      image_src_same: require('../../../assets/name_duplication3.png'),
+      image_src_same: nameDuplication3Img,
       // add FNSI-同姓同名の患者を登録した際に通知トーストでその旨を確認 江 end
+      notifications: [],
+      notificationSeq: 0,
+      notificationTimers: {},
+      notificationUnsubscribe: null
     };
   },
   computed: {
@@ -95,38 +100,6 @@ export default {
     ...mapGetters("websocket", ["getUrl", "getSocket", "getToastDuration"]),
     // mod FNSI-コードをマージ 江 end
     isLoggedIn() {
-      // add 7071 【デグレ】通知がされない 関俊楠 start
-      if (this.getStateUserAccountInfo !== null) {
-        clearInterval(this.webSocketConnectionManageProc);
-        this.connectingFlg = true;
-        this.webSocketConnect();
-        // 初回接続後にWebSocketの接続/切断を監視する
-        this.webSocketConnectionManageProc = setInterval(() => {
-          // サインイン画面以外且つ、サインイン済み
-          if (!(this.$router.currentRoute.name === "signin" || this.$router.currentRoute.name === "signinhome") && this.isLoggedIn) {
-            // WebSocket切断状態且つ、接続処理中でない場合
-            if (!this.getSocket && !this.connectingFlg) {
-              // 接続処理開始
-              this.connectingFlg = true;
-              setTimeout(() => {
-                if (!this.getUrl) {
-                  // リロードされた場合は、WebSocket接続先URLが消える為、URL取得から開始する
-                  this.webSocketConnect();
-                } else {
-                  this.connect();
-                  this.connectingFlg = false;
-                }
-              }, WS_RECONNECT_INTERVAL - 1000);
-            }
-          } else if (this.$router.currentRoute.name === "signin" || this.$router.currentRoute.name === "signinhome") {
-            // サインイン画面表示時、WebSocket接続中の場合は切断する
-            if (this.getSocket && this.getSocket.readyState === READYSTATE.OPEN) {
-              this.close();
-            }
-          }
-        }, 1000);
-        // add 7071 【デグレ】通知がされない 関俊楠 start
-      }
       // ユーザ情報取得未済の場合、falseを返す
       return this.getStateUserAccountInfo !== null;
     },
@@ -163,59 +136,13 @@ export default {
      */
     isLoggedIn(newValue) {
       if (newValue) {
-        // add FNSI-コードをマージ 江 start
-        clearInterval(this.webSocketConnectionManageProc);
-        this.connectingFlg = true;
-        // add FNSI-コードをマージ 江 end
-        // WebSocket接続
-        // mod FNSI-コードをマージ 江 start
-        // this.fetchConnectUrl().then(r => {
-        //   this.init({ url: r.data, facilityCd: this.getFacilityCd });
-        //   this.enableWsConnect = true;
-        //   this.connect();
-
-        //   this.notifyTopic = `${NOTIFY_TOPIC_NOTIFICATION_MESSAGE}/${this.getFacilityCd}`;
-        //   this.addWatchTopics({
-        //     topic: this.notifyTopic,
-        //     obj: this.notifyValue
-        //   });
-        // });
-        this.webSocketConnect();
-        // 初回接続後にWebSocketの接続/切断を監視する
-        this.webSocketConnectionManageProc = setInterval(() => {
-          // サインイン画面以外且つ、サインイン済み
-          if (!(this.$router.currentRoute.name === "signin" || this.$router.currentRoute.name === "signinhome") && this.isLoggedIn) {
-            // WebSocket切断状態且つ、接続処理中でない場合
-            if (!this.getSocket && !this.connectingFlg) {
-              // 接続処理開始
-              this.connectingFlg = true;
-              setTimeout(() => {
-                if (!this.getUrl) {
-                  // リロードされた場合は、WebSocket接続先URLが消える為、URL取得から開始する
-                  this.webSocketConnect();
-                } else {
-                  this.connect();
-                  this.connectingFlg = false;
-                }
-              }, WS_RECONNECT_INTERVAL - 1000);
-            }
-          } else if (this.$router.currentRoute.name === "signin" || this.$router.currentRoute.name === "signinhome") {
-            // サインイン画面表示時、WebSocket接続中の場合は切断する
-            if (this.getSocket && this.getSocket.readyState === READYSTATE.OPEN) {
-              this.close();
-            }
-          }
-        }, 1000);
-        // mod FNSI-コードをマージ 江 end
+        this.startWebSocketConnectionManage();
       } else {
         // WebSocket切断
         // add FNSI-コードをマージ 江 start
         // console.log("NotificationMessageComponent WebSocket接続切断 %o", new Date());
         // add FNSI-コードをマージ 江 end
-        this.enableWsConnect = false;
-        this.close();
-
-        this.removeWatchTopics(this.notifyTopic);
+        this.stopWebSocketConnectionManage();
       }
     },
     // del FNSI-コードをマージ 江 start
@@ -306,16 +233,87 @@ export default {
       }
     },
     // add FNSi6960通知の件数が残ったままになる chen start
-    onClose(message, props) {
+    onClose(message, notificationId) {
       console.log(message.no);
       this.updateNotificationMessageStatus({
         notification_message_nos: [message.no],
         is_read: "1"
-      })
-      props.close();
+      });
+      this.closeNotification(notificationId);
     },
     // add FNSi6960通知の件数が残ったままになる chen end
     // add FNSI-コードをマージ 江 start
+    normalizeNotificationText(text) {
+      if (Array.isArray(text)) {
+        return text;
+      }
+      if (text === undefined || text === null) {
+        return [];
+      }
+      return String(text).split("\n");
+    },
+    pushNotification(payload) {
+      const id = ++this.notificationSeq;
+      const notification = {
+        id,
+        text: this.normalizeNotificationText(payload.text),
+        data: payload.data || {}
+      };
+      this.notifications.unshift(notification);
+
+      const duration = Number(payload.duration) || 0;
+      if (duration > 0) {
+        this.notificationTimers[id] = setTimeout(() => {
+          this.closeNotification(id);
+        }, duration);
+      }
+    },
+    closeNotification(id) {
+      const timer = this.notificationTimers[id];
+      if (timer) {
+        clearTimeout(timer);
+        delete this.notificationTimers[id];
+      }
+      this.notifications = this.notifications.filter(notification => notification.id !== id);
+    },
+    startWebSocketConnectionManage() {
+      clearInterval(this.webSocketConnectionManageProc);
+      this.connectingFlg = true;
+      this.webSocketConnect();
+      // 初回接続後にWebSocketの接続/切断を監視する
+      this.webSocketConnectionManageProc = setInterval(() => {
+        // サインイン画面以外且つ、サインイン済み
+        if (!(this.$route.name === "signin" || this.$route.name === "signinhome") && this.isLoggedIn) {
+          // WebSocket切断状態且つ、接続処理中でない場合
+          if (!this.getSocket && !this.connectingFlg) {
+            // 接続処理開始
+            this.connectingFlg = true;
+            setTimeout(() => {
+              if (!this.getUrl) {
+                // リロードされた場合は、WebSocket接続先URLが消える為、URL取得から開始する
+                this.webSocketConnect();
+              } else {
+                this.connect();
+                this.connectingFlg = false;
+              }
+            }, WS_RECONNECT_INTERVAL - 1000);
+          }
+        } else if (this.$route.name === "signin" || this.$route.name === "signinhome") {
+          // サインイン画面表示時、WebSocket接続中の場合は切断する
+          if (this.getSocket && this.getSocket.readyState === READYSTATE.OPEN) {
+            this.close();
+          }
+        }
+      }, 1000);
+    },
+    stopWebSocketConnectionManage() {
+      clearInterval(this.webSocketConnectionManageProc);
+      this.webSocketConnectionManageProc = null;
+      this.connectingFlg = false;
+      this.enableWsConnect = false;
+      this.close();
+      this.removeWatchTopics(this.notifyTopic);
+    },
     /**
      * URL取得からTOPICの登録まで含むWebSocket接続
      */
@@ -336,15 +334,27 @@ export default {
           topic: this.notifyTopic,
           obj: this.notifyValue
         });
-        this.addWatchTopics({
-          topic: NOTIFY_TOPIC_FORCE_SIGNOUT,
-          obj: this.forceSignoutValue
-        });
+      }).catch(() => {
+        this.connectingFlg = false;
       });
     }
   },
-  beforeDestroy() {
+  mounted() {
+    this.notificationUnsubscribe = subscribeNotification((payload) => {
+      this.pushNotification(payload);
+    });
+    if (this.isLoggedIn) {
+      this.startWebSocketConnectionManage();
+    }
+  },
+  beforeUnmount() {
+    if (this.notificationUnsubscribe) {
+      this.notificationUnsubscribe();
+      this.notificationUnsubscribe = null;
+    }
     clearInterval(this.webSocketConnectionManageProc);
+    Object.values(this.notificationTimers).forEach(timer => clearTimeout(timer));
+    this.notificationTimers = {};
   }
     // add FNSI-コードをマージ 江 end
 };

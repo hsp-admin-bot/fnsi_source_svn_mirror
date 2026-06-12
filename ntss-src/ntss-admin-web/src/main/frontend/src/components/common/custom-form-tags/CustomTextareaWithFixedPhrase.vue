@@ -11,7 +11,7 @@
       @mouseleave="checkLongPress(0)"
       @touchstart="checkLongPress(1)"
       @touchend="checkLongPress(0)"
-      v-on="$listeners"
+      v-bind="$attrs"
       ref="popoverTarget"
     ></textarea>
     <pop-over-fixed-phrase
@@ -34,6 +34,7 @@ import MasterSelectorFixedPhrase from "@/components/common/master-selector/Maste
  * @description 共通テキストエリアタグ
  */
 export default {
+  inheritAttrs: false,
   data() {
     return {
       popoverData: {
@@ -87,8 +88,9 @@ export default {
      */
     insertPhrase(data) {
       // 定型文をテキストエリアに反映
-      this.$refs.popoverTarget.focus();
-      document.execCommand('insertText', false, data.text);
+      const target = this.$refs.popoverTarget;
+      target?.focus?.();
+      target?.ownerDocument?.execCommand?.('insertText', false, data.text);
     },
 
     /**

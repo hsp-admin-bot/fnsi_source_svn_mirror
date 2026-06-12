@@ -1,7 +1,7 @@
 /**
  * 利用者マスタ系API
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { ApiHelper } from "@/apis/AxiosHelper";
 /**
  * ストア系
@@ -55,7 +55,7 @@ export function sendRequestAddNewUser(params) {
  * @param {*} params
  */
 export function sendRequestAddNewPatUser(params) {
-  return ApiHelper.put(`${URL_BASE}/add_pat_user`,params);
+  return ApiHelper.put(`${URL_BASE}/add_pat_user`, params);
 }
 
 /**
@@ -69,7 +69,7 @@ export function sendRequestUpdateAdministratorFlg(userId, adminFlg) {
 
 /**
  * 患者共有フラグの更新
- * @param {*} userId 
+ * @param {*} userId
  * @param {*} patientSharedFlg
  */
 export function sendRequestUpdatePatientSharedFlg(userId, patientSharedFlg) {
@@ -92,12 +92,7 @@ export function sendRequestGetPatientSharedFlg(userId) {
  */
 export function sendRequestUpdatePassword(facilityCd, userId, patFlg) {
   // 通常の利用者向け/患者利用者向けでURLを分ける
-  let exeUrl = "";
-  if (patFlg) {
-    exeUrl = "pat_password";
-  } else {
-    exeUrl = "password";
-  }
+  const exeUrl = patFlg ? "pat_password" : "password";
   return getWithLoader(`${URL_BASE}/${exeUrl}/${facilityCd}/${userId}`);
 }
 
@@ -155,7 +150,7 @@ export function sendRequestGetMstJob(facilityCd) {
  * @param {*} userId
  * @param {*} jobCd
  */
-export function sendRequestUpdateJobCd(userId,jobCd) {
+export function sendRequestUpdateJobCd(userId, jobCd) {
   return putWithLoader(`${URL_BASE}/chg_job/${userId}/${jobCd}`);
 }
 
@@ -199,8 +194,8 @@ export function sendRequestDisableAccessCard(userId) {
 
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {Record<string, unknown>} [params] パラメータ
  */
 function getWithLoader(url, params = undefined) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -212,8 +207,8 @@ function getWithLoader(url, params = undefined) {
 
 /**
  * 共通ローダを実行するPUTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function putWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -240,14 +235,14 @@ function putWithLoader(url, params) {
  * 指定されたオブジェクトが持つDate型の値を文字列(YYYY-MM-DDTHH:mm:ss.SSS)に変換する.
  * リクエスト送信の際にDate型は、UTCとして文字列変換されてしまう.
  * 事前に文字列変換することで、意図しない日時に変換されることを回避する.
- * @param {*} o オブジェクト
+ * @param {Record<string, unknown>} o オブジェクト
  */
 function dateToString(o) {
   const toString = Object.prototype.toString;
   Object.keys(o)
     .filter(key => toString.call(o[key]).slice(8, -1) === "Date")
     .forEach(
-      key => (o[key] = moment(o[key]).format("YYYY-MM-DDTHH:mm:ss.SSS"))
+      key => (o[key] = dayjs(o[key]).format("YYYY-MM-DDTHH:mm:ss.SSS"))
     );
 }
 

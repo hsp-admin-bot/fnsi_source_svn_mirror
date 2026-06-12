@@ -1,15 +1,17 @@
 <template>
   <div class="pat-calendar" :class="classPatCalendar">
-    <kendo-dropdownlist
-      class="variable_width"
-      ref="dropdown"
-      :data-source="layoutMst"
-      data-text-field="layoutName"
-      data-value-field="layoutCd"
-      filter="contains"
-      @select="selectLayout"
-      v-model="initSelected"
-    />
+    <div class="dropdownlistWrap">
+        <kendo-dropdownlist
+        class="variable_width"
+        ref="dropdown"
+        :data-source="layoutMst"
+        data-text-field="layoutName"
+        data-value-field="layoutCd"
+        filter="contains"
+        @select="selectLayout"
+        v-model="initSelected"
+      />
+    </div>
     <!-- add #8091 2023/03/14 患者カレンダー/患者カレンダーレイアウトマスタの動作不正 林峻峰 start -->
     <span class="expand" :style="{left:expandStyle.left + 'px', top:expandStyle.top + 'px'}">
       <v-ons-checkbox :class="classPatCalendar" input-id="expand" v-model="expandFlg" @click="handleChangeExpand" />
@@ -21,7 +23,7 @@
         class="for-calendar"
         :class="classPatCalendar"
         :contents="calendarContents"
-        :base-date.sync="currentDate"
+        v-model:base-date="currentDate"
         :center-week-mode="true"
         :pat-id="patId"
         :expandFlg="expandFlg"
@@ -35,14 +37,14 @@
 </template>
 
 <script>
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // add #9562 患者カレンダーの表示が遅い 20240502 ztc start
-import { mapGetters, mapActions, mapMutations } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 // add #9562 患者カレンダーの表示が遅い 20240502 ztc end
 import ContentsCalendar from "@/components/common/contents-calendar/ContentsCalendar.vue";
 import { LAYOUT_CATEGORY_TREATINFO, LAYOUT_CATEGORY_VITALMONITORFLG_1, ROUTERLINK_BBSINFO, ROUTERLINK_EXAMRECORD_DETAIL, ROUTERLINK_EXAMREQUESTRECORD_DETAIL, ROUTERLINK_FACILITY_CALENDAR, ROUTERLINK_PATVIEWER, ROUTERLINK_PRESCRIPTIONRECORD_DETAIL, ROUTERLINK_RADEQUESTRECORD_DETAIL, ROUTERLINK_TREATMENTRECORD, VITAL_MONITOR_KEYS } from "./Definitions.js";
 //add FNSI-add refresh 江 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //add FNSI-add refresh 江 end
 import {
   createCalendarContents,
@@ -66,9 +68,7 @@ import { ApiHelper } from "@/apis/AxiosHelper";
 // add #9562 患者カレンダーの表示が遅い 20240502 ztc start
 import {
   getMstInfo,
-  //liyanze-z #12462 add other unitDecimalPoint  start 
   getMstOtherInfo
-  //liyanze-z #12462 add other unitDecimalPoint  end 
 } from "@/apis/mst-info";
 // add #9562 患者カレンダーの表示が遅い 20240502 ztc end
 import PrintMixin from "@/components/PrintMixin";
@@ -101,6 +101,7 @@ export default {
       prescriptionInfoRaw: null,
       patEventInfoRaw: null,
       bbsInfoRaw: null,
+      patMainList: [],
       //add FNSI-患者カレンダに表示する予定の不足情報を追加する 江 end
       layoutMst: [],
       isLoading: false,
@@ -121,14 +122,13 @@ export default {
       isChangePatIdOrLayout: false,
       // add #11347 【たくしん会】患者カレンダーで患者切替をしても前の患者の情報が表示し続ける linjunfeng end
       printTargetClass: ["calendar-body"],
-      //liyanze-z #12462 add other unitDecimalPoint  start 
-      otherMST:{},
-      isGetMstRequest:false,
-      //liyanze-z #12462 add other unitDecimalPoint  start 
+      otherMST: {},
+      isGetMstRequest: false
     };
   },
 
   computed: {
+    ...mapGetters("app", ["getRefresh"]),
     // ADD BUG 6330 修正 高 start
     ...mapGetters("pat-viewer", [
       "getDateList",
@@ -137,25 +137,19 @@ export default {
       "getTreatmentData",
       "getTreatBaseDate",
       "getSelectedCondition",
-      //liyanze-z add 12462 start
       "getMstMedicineMixData",
       "getPatTabooAllergy"
-      //liyanze-z add 12462 end
     ]),
-    //施舍切替互換性がある start
-    ...mapGetters("app", ["getRefresh"]),
-    //施舍切替互換性がある end
     //施設コード取得用
     ...mapGetters("user", ["getFacilityCd"]),
     // ADD BUG 6330 修正 高 end
     ...mapGetters("pat-info", {
       patId: "selectedPatId",
       patInfoRaw: "selectedPatIncludeDel",
-      //add #12462 患者情報共有 Ji start
-      getIsOtherFacility: "getIsOtherFacility", 
+      getIsOtherFacility: "getIsOtherFacility",
       getOtherFacilityCd: "getOtherFacilityCd"
-      //add #12462 患者情報共有 Ji end
     }),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     ...mapGetters("user", { facilityCd: "getFacilityCd" }),
     ...mapGetters("account-edit", {
       // mod 9941 患者カレンダーで内容保持がされていない。 関 start
@@ -165,10 +159,8 @@ export default {
       getAuthorizedFunctions: "getAuthorizedFunctions",
       // mod 9941 患者カレンダーで内容保持がされていない。 関 start
       // getSelectedLayout: "getSelectedLayout"}),
-      //add #12462 患者情報共有 Ji start
       getPatientShareMode: "getPatientShareMode",
-      getPatientShareFacilityCdMode: "getPatientShareFacilityCdMode",
-      //add #12462 患者情報共有 Ji end
+      getPatientShareFacilityCdMode: "getPatientShareFacilityCdMode"
     }),
     // mod 9941 患者カレンダーで内容保持がされていない。 関 end
     // add 9941 患者カレンダーで内容保持がされていない。 関 start
@@ -189,15 +181,15 @@ export default {
     classPatCalendar() {
       if (this.sidebarWidth === 0) {
         if (this.patId && this.getAuthorizedFunctions.includes(FUNC_PAT_EVENT)) {
-          return "close-btn-class"
+          return "close-btn-class checkbox"
         } else {
-          return "close-class"
+          return "close-class checkbox"
         }
       } else {
         if (this.patId && this.getAuthorizedFunctions.includes(FUNC_PAT_EVENT)) {
-          return "open-btn-class"
+          return "open-btn-class checkbox"
         } else {
-          return "open-class"
+          return "open-class checkbox"
         }
       }
     }
@@ -209,12 +201,10 @@ export default {
       
       // ヘッダで患者情報表示→保存時に選択済患者IDがクリア→再設定されるので、選択済患者IDがnullの場合は処理しない
       if (newValue === null) return;  
-      //liyanze-z #12462 add other unitDecimalPoint  start 
-      await this.getMstOther()
-      //liyanze-z #12462 add other unitDecimalPoint  end 
       
+      await this.getMstOther();
       // add bug 8091 修正 chen start
-      this.getMstByPat();
+      await this.getMstByPat();
       // add bug 8091 修正 chen end
       // #11347 【たくしん会】患者カレンダーで患者切替をしても前の患者の情報が表示し続ける linjunfeng start
       // await this.createCalendarContents(this.baseDate.isSame(this.currentDate, "month"));
@@ -241,7 +231,7 @@ export default {
     },
     // add FNSI-NO542再表示時に共通Loader画面を表示する。読み込みに時間がかかる場合がある。 関 start
     async initSelected() {
-      if (this.initSelected != null) {
+      if (this.initSelected != null && this.selectedLayout != null) {
         // #11347 【たくしん会】患者カレンダーで患者切替をしても前の患者の情報が表示し続ける linjunfeng start
         // await this.createCalendarContents(this.baseDate.isSame(this.currentDate, "month"));
         await this.createCalendarContents();
@@ -267,23 +257,21 @@ export default {
       }
     },
     // add FNSI-NO542再表示時に共通Loader画面を表示する。読み込みに時間がかかる場合がある。 関 end
-    //add #12462 患者情報共有 Ji start
     async getPatientShareMode() {
       await this.createCalendarContents();
     },
     async getPatientShareFacilityCdMode() {
       await this.createCalendarContents();
     },
-    //add #12462 患者情報共有 Ji end
   },
 
   async created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     this.setLoadingScreenMessage("処理中...");
     this.setLoadingScreenVisible(true);
     // 表示年月日
-    this.currentDate = moment();
+    this.currentDate = dayjs();
     // 各種マスタ取得
     try {
       const [requiredMst, extraMst] = await Promise.all([
@@ -309,16 +297,12 @@ export default {
           layoutName: patCalendarLayoutName,
           layoutInfo: dispItemInfo ? JSON.parse(dispItemInfo) : [],
           dispClass: dispClass
-        })
-    );
-    
+        }));
+
     if (this.patId) {
       // 患者に紐づくマスタ情報取得
-      this.getMstByPat();
-
-      //liyanze-z #12462 add other unitDecimalPoint  start 
-      await this.getMstOther()
-      //liyanze-z #12462 add other unitDecimalPoint  end 
+      await this.getMstByPat();
+      await this.getMstOther();
     }
 
     // サインインユーザのデフォルト設定を確認・設定
@@ -368,15 +352,15 @@ export default {
     this.setLoadingScreenVisible(false);
   },
 
-  beforeDestroy() {
-    //liyanze-z //施舍切替互換性がある start
-    if(this.getRefresh&&this.getRefresh.status == true){
+  beforeUnmount() {
+    if (this.getRefresh && this.getRefresh.status === true) {
       // add FNSI redmine 4257修正 鄧シン start
-       this.setSelectedLayoutForSave({
+      this.setSelectedLayoutForSave({
         selectedLayout: null
       });
-      this.expandFlg = null
-    }else{
+      this.expandFlg = null;
+      // add FNSI redmine 4257修正 鄧シン end
+    } else {
       // add FNSI redmine 4257修正 鄧シン start
       this.setSelectedLayoutForSave({
         selectedLayout: this.selectedLayout
@@ -386,17 +370,6 @@ export default {
       this.setExpandFlg(this.expandFlg);
       // add 9941 患者カレンダーで内容保持がされていない。 関 end
     }
-
-    // // add FNSI redmine 4257修正 鄧シン start
-    // this.setSelectedLayoutForSave({
-    //   selectedLayout: this.selectedLayout
-    // });
-
-
-    // add FNSI redmine 4257修正 鄧シン end
-    // add 9941 患者カレンダーで内容保持がされていない。 関 start
-    //this.setExpandFlg(this.expandFlg);
-    // add 9941 患者カレンダーで内容保持がされていない。 関 end
     // #9271 他の画面への切り替え時のパンくずクリックは有効になりません。 linjunfeng start
     // EventBus.$off("refresh");
     EventBus.$off("refresh", this.refreshData);
@@ -419,9 +392,7 @@ export default {
       "getOrdMain",
       "setDateList"
     ]),
-    //add #12462 患者情報共有 Ji start
     ...mapActions("pat-info", ["selectPat"]),
-    //add #12462 患者情報共有 Ji end
     // upd #9562 患者カレンダーの表示が遅い 20240502 ztc end
     ...mapActions("treatment-record/common", ["setOrdNo"]),
     ...mapActions("exam-request/list", {
@@ -472,7 +443,7 @@ export default {
         "mstTabooAllergyIncludeDeleted"
       ];
 
-      const response = await getMstInfo({ reqMstNamesArr });
+      const response = await getMstInfo({ reqMstNamesArr, selectedPatId: this.selectedPatId });
       if (response.status !== 200) return {};
     
       const data = response.data ?? {};
@@ -483,12 +454,11 @@ export default {
     
       return result;
     },
-    //liyanze-z #12462 add other unitDecimalPoint  start 
     async getMstOther() {
-      if(this.isGetMstRequest == true){
-        return
+      if (this.isGetMstRequest === true) {
+        return;
       }
-      this.isGetMstRequest = true
+      this.isGetMstRequest = true;
       const reqMstNamesArr = [
         "mstMedicineIncludeDeleted",
         "mstMedicineMixIncludeDeleted",
@@ -496,19 +466,17 @@ export default {
         "mstDialyzerIncludeDeleted",
         "mstTabooAllergyIncludeDeleted"
       ];
-      let sendPatId = this.patId
-      const response = await getMstOtherInfo(reqMstNamesArr,sendPatId);
+      const response = await getMstOtherInfo(reqMstNamesArr, this.patId);
       this.isGetMstRequest = false;
       if (response.status !== 200) return {};
-    
+
       const data = response.data ?? {};
       const result = {};
       reqMstNamesArr.forEach(key => {
         result[key] = data[key];
       });
-      this.otherMST = result
+      this.otherMST = result;
     },
-    //liyanze-z #12462 add other unitDecimalPoint  end 
     /**
      * 患者に紐づくマスタ情報を取得
      */
@@ -573,9 +541,9 @@ export default {
     /**
      * 基準日を元に表示開始日・終了日を設定
      */
-    setStartEndDay(startdate, enddate) {
+    async setStartEndDay(startdate, enddate) {
       // 一覧ヘッダーの日付リストの設定
-      this.setDateList({
+      await this.setDateList({
         // mod #8091 グラフは過去未来日は表示しません。 林峻峰 start
         // startDay: this.startDay,
         // endDay: this.endDay,
@@ -588,7 +556,7 @@ export default {
     },
     //add FNSI-add refresh 江 start
     async refreshData() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       // 共通ローダー:表示開始
@@ -619,13 +587,13 @@ export default {
           functionCd:"02401",
           //add 5984 機能帳票でパラメータが正しく渡されていない 吉 end
           //mod #9558 機能帳票でパラメータが正しく渡されていない 房 start
-          date: moment(this.currentDate).format("YYYY/MM/DD"),
-          fromDate: moment(this.currentDate).format("YYYY/MM/DD"),
-          toDate: moment(this.currentDate).add(1, "months").format("YYYY/MM/DD"),
+          date: dayjs(this.currentDate).format("YYYY/MM/DD"),
+          fromDate: dayjs(this.currentDate).format("YYYY/MM/DD"),
+          toDate: dayjs(this.currentDate).add(1, "months").format("YYYY/MM/DD"),
           //mod #9558 機能帳票でパラメータが正しく渡されていない 房 end
           // add #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: moment(this.currentDate).format("YYYYMMDD"),
+          //dialysisDate: dayjs(this.currentDate).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           // add #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
         };
@@ -665,74 +633,63 @@ export default {
      * @description カレンダー内容作成 データ再読込
      */
     async createCalendarContents() {
-      //add #12462 患者情報共有 liyanze start
-      const patientShareMode = (this.getIsOtherFacility === false || 
-      (this.getOtherFacilityCd !== null && 
-      this.getOtherFacilityCd !== this.getFacilityCd)) ? 1 : 
-      this.getPatientShareMode
-      let sendObj = {
-        selectedPatId:this.patId,
-        selectedFacility:(patientShareMode==1||this.getOtherFacilityCd !== null && 
-        this.getOtherFacilityCd !== this.getFacilityCd)?this.getFacilityCd:null
-      }
-      this.selectPat(sendObj)
-      //add #12462 患者情報共有 liyanze end
+      
       // カレンダー表示内容再作成
       this.calendarContents = [];
       
       this.setLoadingScreenVisible(true);
-
-      if (!this.patId) {
-        this.setLoadingScreenVisible(false);
-        return;
-      }
-      // add #11347 【たくしん会】患者カレンダーで患者切替をしても前の患者の情報が表示し続ける linjunfeng start
-      if (this.$refs.patCalendarRef.dateToday) {
-        this.currentDate = moment(this.$refs.patCalendarRef.dateToday);
-        this.isChangePatIdOrLayout = true;
-      }
-      // add #11347 【たくしん会】患者カレンダーで患者切替をしても前の患者の情報が表示し続ける linjunfeng end
-      
-      // カレンダー表示内容生成
-      await this.loadCalendarContents();
-      
-      // #11347 【たくしん会】患者カレンダーで患者切替をしても前の患者の情報が表示し続ける linjunfeng start
-      // this.$nextTick(()=>{
-      //   this.$refs.patCalendarRef.moveCurrentMonthForDate();
-      // })
-      requestAnimationFrame(() => {
-        this.isChangePatIdOrLayout = false;
-        if (!this.$refs?.patCalendarRef?.$refs?.calendarBody?.scrollTop) return;
-        if (this.$refs.patCalendarRef.$refs.calendarBody.scrollTop === 1) return;
-        let isoWeekTmp = moment(this.$refs.patCalendarRef.dateToday, "YYYY-MM-DD").isoWeek();
-        let isoWeekStart = moment(this.$refs.patCalendarRef.dateToday, "YYYY-MM-DD").isoWeekday(1).format('YYYY-MM-DD');
-        let yearTmp = moment(isoWeekStart, "YYYY-MM-DD").isoWeekYear();
-        // 当月の第1週を取得
-        const week = [...this.$refs.patCalendarRef.$refs.calendarBody.querySelectorAll("[id]")].find(
-          i => moment(i.id, "YYYYMMDD").isoWeek() === isoWeekTmp &&
-            moment(i.id, "YYYYMMDD").isoWeekYear() === yearTmp
-        );
-        if (week) {
-          this.$refs.patCalendarRef.scrollListeningFlag = false;
-          week.scrollIntoView();
-          this.$refs.patCalendarRef.$refs.calendarBody.scrollTop -= this.$refs.patCalendarRef.$refs.calendarBody.querySelector(
-          "thead"
-          ).clientHeight;
-
+      try {
+        if (!this.patId) {
+          return;
         }
-      });
-      // #11347 【たくしん会】患者カレンダーで患者切替をしても前の患者の情報が表示し続ける linjunfeng end
-      //add 5792患者カレンダ画面で患者を切り替えたときの動作がおかしい 張 statr
-      this.setLoadingScreenVisible(false);
-      //add 5792患者カレンダ画面で患者を切り替えたときの動作がおかしい 張 end
+        const patientShareMode = (this.getIsOtherFacility === false ||
+          (this.getOtherFacilityCd !== null &&
+            this.getOtherFacilityCd !== this.getFacilityCd)) ? 1 :
+          this.getPatientShareMode;
+        this.selectPat({
+          selectedPatId: this.patId,
+          selectedFacility: (patientShareMode == 1 ||
+            (this.getOtherFacilityCd !== null &&
+              this.getOtherFacilityCd !== this.getFacilityCd))
+            ? this.getFacilityCd
+            : null
+        });
+        // add #11347 【たくしん会】患者カレンダーで患者切替をしても前の患者の情報が表示し続ける linjunfeng start
+        if (this.$refs?.patCalendarRef?.dateToday) {
+          this.isChangePatIdOrLayout = true;
+          this.currentDate = dayjs(this.$refs.patCalendarRef.dateToday);
+        }
+        // add #11347 【たくしん会】患者カレンダーで患者切替をしても前の患者の情報が表示し続ける linjunfeng end
+        
+        // カレンダー表示内容生成
+        await this.loadCalendarContents();
+        
+        // #11347 【たくしん会】患者カレンダーで患者切替をしても前の患者の情報が表示し続ける linjunfeng start
+        // this.$nextTick(()=>{
+        //   this.$refs.patCalendarRef.moveCurrentMonthForDate();
+        // })
+        requestAnimationFrame(() => {
+          if (this.$refs?.patCalendarRef?.requestMoveCurrentMonthForDate) {
+            this.$refs.patCalendarRef.requestMoveCurrentMonthForDate();
+          }
+          this.isChangePatIdOrLayout = false;
+        });
+        // #11347 【たくしん会】患者カレンダーで患者切替をしても前の患者の情報が表示し続ける linjunfeng end
+      } catch (err) {
+        getErrorMessage('PatCalendar.vue', 'createCalendarContents', err);
+      } finally {
+        //add 5792患者カレンダ画面で患者を切り替えたときの動作がおかしい 張 statr
+        this.setLoadingScreenVisible(false);
+        //add 5792患者カレンダ画面で患者を切り替えたときの動作がおかしい 張 end
+      }
     },
     
     /** カレンダー表示内容生成 */
     async loadCalendarContents(direction) {
-      const startdate = this.currentDate.clone().subtract(1, "months").startOf("month").format("YYYYMMDD");
-      const enddate = this.currentDate.clone().add(1, "months").endOf("month").format("YYYYMMDD");
+      var startdate = dayjs(this.currentDate).subtract(1, "months").startOf("month").format("YYYYMMDD");
+      var enddate = dayjs(this.currentDate).add(1, "months").endOf("month").format("YYYYMMDD");
       // バイタル・モニタグラフの表示期間をセット
-      this.setStartEndDay(startdate, enddate);
+      await this.setStartEndDay(startdate, enddate);
       
       // マスタレイアウトを階層構造からフラット化
       const { layoutInfo = [] } = this.selectedLayout ?? {};
@@ -775,12 +732,11 @@ export default {
               weekPattern: `[{ 'text': '全', 'done': true, 'value': 0 }]`
             })
           : Promise.resolve(null);
-
-        //mod #12462 患者情報共有 Ji start
-        const patientShareMode = (this.getIsOtherFacility === false || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd)) ? 1 : this.getPatientShareMode
+        const patientShareMode = (this.getIsOtherFacility === false ||
+          (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd)) ? 1 :
+          this.getPatientShareMode;
         const [result3Months, resultOrdMain] = await Promise.all([
           getPatEventFor3Months(this.patId, this.facilityCd, this.currentDate, patientShareMode),
-        //mod #12462 患者情報共有 Ji end
           ordMainPromise
         ]);
         
@@ -793,9 +749,7 @@ export default {
         this.patEventInfoRaw = result3Months.patEventCountInfoList;
         this.patMainHisInfoRaw = result3Months.patMainHistoryList;
         this.bbsInfoRaw = result3Months.bbsInfoList;
-	//add #12462 患者情報共有 Ji start
-        this.patMainList = result3Months.patMainList
-	//add #12462 患者情報共有 Ji end
+        this.patMainList = result3Months.patMainList;
         
         // バイタル・モニタグラフの表示データをリストに格納
         for (const category of vitalCategories) {
@@ -824,22 +778,17 @@ export default {
           patEventInfo: this.patEventInfoRaw,
           patMainHisInfo: this.patMainHisInfoRaw,
           bbsInfo: this.bbsInfoRaw,
-	  //add #12462 患者情報共有 Ji start
-          patMainList:this.patMainList},
-	  //add #12462 患者情報共有 Ji end
+          patMainList: this.patMainList},
         this.currentDate
       );       
       // バイタル・モニタ用データをセット
       eventDataCollection[LAYOUT_CATEGORY_VITALMONITORFLG_1.key] = vitalInfoDataList;
-          
-      //liyanze-z #12462 add other unitDecimalPoint  start
-      let otherMstMedicineMixData = this.getMstMedicineMixData
-      let getOtherPatTabooAllergy = this.getPatTabooAllergy
-      this.mstList["getOthetMstMixData"] = otherMstMedicineMixData?otherMstMedicineMixData:[]
-      this.mstList["getOtherPatTabooAllergy"] = getOtherPatTabooAllergy?getOtherPatTabooAllergy:[]
-      this.mstList["otherMST"] = this.otherMST
-      //liyanze-z #12462 add other unitDecimalPoint  end 
-
+      const otherMstMedicineMixData = this.getMstMedicineMixData;
+      const getOtherPatTabooAllergy = this.getPatTabooAllergy;
+      this.mstList["getOthetMstMixData"] = otherMstMedicineMixData ? otherMstMedicineMixData : [];
+      this.mstList["getOtherPatTabooAllergy"] = getOtherPatTabooAllergy ? getOtherPatTabooAllergy : [];
+      this.mstList["otherMST"] = this.otherMST;
+    
       // カレンダー表示内容生成
       let tmpCalendarContents = createCalendarContents(
         selectedLayoutWithFlat,
@@ -890,9 +839,7 @@ export default {
     /**
      * @description ページ遷移
      */
-    //mod #12462 患者情報共有 Ji start
     moveToLink({ item, date, createNew = false, fCd }) {
-    //mod #12462 患者情報共有 Ji end
       const { routerLink, ordNo, categoryCd, subCategoryCd, startDate, endDate, bbsCtlNo } = item;
       
       if (routerLink === ROUTERLINK_EXAMRECORD_DETAIL){
@@ -935,9 +882,9 @@ export default {
           // フリーワード
           freeWord: "",
           // 掲載開始日
-          noticeStartDate: moment(startDate).format("YYYY-MM-DD"),
+          noticeStartDate: dayjs(startDate).format("YYYY-MM-DD"),
           // 掲載終了日
-          noticeEndDate: endDate ? moment(endDate).format("YYYY-MM-DD") : null,
+          noticeEndDate: endDate ? dayjs(endDate).format("YYYY-MM-DD") : null,
           // 治療日
           dialysisDate: null,
           // クール
@@ -947,17 +894,23 @@ export default {
         };
         this.setBbsSelectedCondition(searchCondition);
         this.setIsOnlyUnread(false);
-        this.setSelectedBbsInfo(bbsCtlNo).then(() => {
+        this.setSelectedBbsInfo({
+          bbsCtlNo,
+          selectedPatId: this.selectedPatId
+        }).then(() => {
           this.$router.push({ name: "bbs-info" });
           this.$router.push({ name: "facility-calendar-detail" });
         });
       }
       else if (routerLink === ROUTERLINK_FACILITY_CALENDAR){
         const model = {
-          currentDate: moment(date).format("YYYY-MM-DD")
+          currentDate: dayjs(date).format("YYYY-MM-DD")
         }
         // 施設カレンダー＞施設イベント詳細へ遷移
-        this.setSelectedBbsInfo(bbsCtlNo).then(() => {
+        this.setSelectedBbsInfo({
+          bbsCtlNo,
+          selectedPatId: this.selectedPatId
+        }).then(() => {
           this.$router.push({ name: "facility-calendar", params: { condition: model }});
           this.$router.push({ name: "facility-calendar-detail" });
         });
@@ -966,7 +919,7 @@ export default {
           this.setTreatBaseDate(date.format("YYYY-MM-DD")).then(() =>{
             this.$nextTick(() => {
               //患者経過総合ビューアへ遷移
-              this.$router.push({ name: "pat-viewer", params: {fCd} });
+              this.$router.push({ name: "pat-viewer", params: { fCd } });
             })
           })
         }
@@ -974,18 +927,18 @@ export default {
           if (createNew) {
             // 患者イベント画面に遷移(新規作成)
             const model = {
-              treatDate: moment(date).format('YYYY/MM/DD'),
-              eventStartDate: moment(date).format('YYYY-MM-DD'),
-              eventEndDate: moment(date).format('YYYY-MM-DD'),
+              treatDate: dayjs(date).format('YYYY/MM/DD'),
+              eventStartDate: dayjs(date).format('YYYY-MM-DD'),
+              eventEndDate: dayjs(date).format('YYYY-MM-DD'),
               createNew: createNew
             }
             this.$router.push({ name: routerLink , params: { condition: model }});
           } else {
             // 患者イベントが２件に分かれて患者カレンダーに表示される  5791  shan  start
             const model = {
-              treatDate: moment(date).format('YYYY/MM/DD'),
-              eventStartDate: moment(date).format('YYYY-MM-DD'),
-              eventEndDate: moment(date).format('YYYY-MM-DD'),
+              treatDate: dayjs(date).format('YYYY/MM/DD'),
+              eventStartDate: dayjs(date).format('YYYY-MM-DD'),
+              eventEndDate: dayjs(date).format('YYYY-MM-DD'),
               categoryCd: categoryCd ? categoryCd + "" : null,
               subCategoryCd: subCategoryCd ? subCategoryCd + "" : null,
               subCategoryName:"",
@@ -998,9 +951,7 @@ export default {
               patCalendarFlg: 1,
               // #10228 患者カレンダー ＞日付文字列押下(強制画面移動で患者イベントの新規登録状態に遷移) linjunfeng end
             }
-	    //mod #12462 患者情報共有 Ji start
-            this.$router.push({ name: routerLink , params: { condition: model, fCd, type:'pat-info' }});
-	    //mod #12462 患者情報共有 Ji end
+            this.$router.push({ name: routerLink , params: { condition: model, fCd, type: "pat-info" }});
           }
           // 患者イベントが２件に分かれて患者カレンダーに表示される  5791  shan  end
         }
@@ -1008,7 +959,10 @@ export default {
     },
     // add #8091 2023/03/14 患者カレンダー/患者カレンダーレイアウトマスタの動作不正 林峻峰 start
     handleChangeExpand(){
-      this.expandFlg = document.getElementById('expand').checked
+      const expandCheckbox = this.$refs?.expandArea?.querySelector?.('#expand');
+      if (expandCheckbox) {
+        this.expandFlg = expandCheckbox.checked;
+      }
     },
     backChangeExpandStyle(expandStyle) {
       this.expandStyle = expandStyle
@@ -1019,15 +973,34 @@ export default {
 </script>
 
 <style scoped>
-.pat-calendar >>> .k-dropdown-wrap {
+.pat-calendar :deep(.k-dropdown-wrap) {
   background-color: var(--main-background-color) !important;
   color: var(--ntss-list-body-color) !important;
   height: 1.7em;
 }
 
-.pat-calendar >>> .k-dropdown {
-  position: absolute;
+.pat-calendar :deep(.k-picker),
+.pat-calendar :deep(.k-input-inner) {
+  background-color: var(--main-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+  height: 1.7em;
 }
+.pat-calendar :deep(.k-input-value-text) {
+  color: var(--ntss-list-body-color) !important;
+}
+
+.dropdownlistWrap{
+  position: absolute;
+  box-shadow: none!important;
+}
+.pat-calendar :deep(.k-picker.k-focus) {
+  box-shadow: none!important;
+}
+.pat-calendar :deep(.k-picker) :hover {
+  border:1px solid #888;
+}
+
+
 /* add #8091 2023/03/14 患者カレンダー/患者カレンダーレイアウトマスタの動作不正 林峻峰 start */
 .expand{
   position: absolute;
@@ -1039,24 +1012,28 @@ export default {
 /* add #8091 2023/03/14 患者カレンダー/患者カレンダーレイアウトマスタの動作不正 林峻峰 end */
 
 @media screen and (max-width: 750px) {
-  .close-class.for-calendar /deep/.left-margin-area {
+  .close-class.for-calendar :deep(.left-margin-area) {
     min-width: 115px;
   }
 }
 
 @media screen and (max-width: 1050px) {
-  /* .open-class /deep/.variable_width {
+  /* .open-class :deep(.variable_width){
     width: 110px;
   } */
-  .open-class.for-calendar /deep/.left-margin-area {
+  .open-class.for-calendar :deep(.left-margin-area) {
     min-width: 115px;
   }
 }
-.pat-calendar >>> .k-input {
+.pat-calendar :deep(.k-input) {
   height: auto;
 }
 .pat-calendar {
   height: 100%;
   margin-left: 5px;
+}
+
+.pat-calendar :deep(.k-list-item-text){
+  font-family: Helvetica Neue, Helvetica, Arial, Osaka, Meiryo, sans-serif!important;
 }
 </style>

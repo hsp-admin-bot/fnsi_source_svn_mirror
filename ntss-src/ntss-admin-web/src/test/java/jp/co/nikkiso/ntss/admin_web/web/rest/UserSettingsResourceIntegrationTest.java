@@ -28,7 +28,7 @@ import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
@@ -37,7 +37,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
 import jp.co.nikkiso.ntss.admin_web.request.userSettings.AlterFontSizeRequest;
@@ -93,7 +93,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/font_size")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isOk())
@@ -139,7 +139,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/font_size")
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isBadRequest())
@@ -181,7 +181,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/font_size")
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isBadRequest())
@@ -214,7 +214,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/theme")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isOk())
@@ -260,7 +260,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/theme")
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isBadRequest())
@@ -301,7 +301,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/theme")
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isBadRequest())
@@ -338,7 +338,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/menu_bar")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isOk())
@@ -392,7 +392,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/menu_bar")
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isBadRequest())
@@ -437,7 +437,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/menu_bar")
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isBadRequest())
@@ -458,7 +458,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/user_settings/personal_settings/{tab_define_cd}", tabDeifineCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .with(csrf()));
 
     result
@@ -502,7 +502,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/user_settings/personal_settings/{tab_define_cd}/", tabDeifineCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .with(csrf()));
 
     result
@@ -544,7 +544,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/user_settings/personal_settings")
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf()));
 
@@ -587,7 +587,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/user_settings/personal_settings")
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf()));
 
@@ -620,7 +620,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/split_frame")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isOk())
@@ -665,7 +665,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/split_frame")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isBadRequest())
@@ -706,7 +706,7 @@ public class UserSettingsResourceIntegrationTest extends AbstractResourceIntegra
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/split_frame")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isBadRequest())

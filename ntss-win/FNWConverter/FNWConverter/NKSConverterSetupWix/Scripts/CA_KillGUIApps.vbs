@@ -11,11 +11,11 @@ Sub ForceKillProcess(ByVal processName)
 End Sub
 
 If Err.Number = 0 Then
-  Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'FNW2FNSI_Converter.exe'")
+  Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'FNWSiConvertTool.exe'")
   For Each oProc In oItems
     uRet = oProc.Terminate(0)
   Next
-  ForceKillProcess "FNW2FNSI_Converter.exe"
+  ForceKillProcess "FNWSiConvertTool.exe"
 End If
 
 Session.Property("RUNNING_PROCESSES") = ""

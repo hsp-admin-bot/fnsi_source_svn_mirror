@@ -13,8 +13,8 @@ import org.springframework.dao.DataAccessException;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.entity.entityListener.BaseEntityListener;
 import lombok.Getter;
@@ -124,7 +124,7 @@ public class MstSelector extends BaseEntity {
       try {
         OrderSettings obj = objectMapper.readValue(value, OrderSettings.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new DataAccessException("マスタセレクタの並び順設定内容が不正です") {
         };
       }
@@ -139,7 +139,7 @@ public class MstSelector extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }

@@ -15,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
@@ -24,6 +25,7 @@ import jp.co.nikkiso.ntss.admin_web.service.master.ReferenceComboService;
 import jp.co.nikkiso.ntss.core.entity.custom.ReferenceComboTargetTable;
 import lombok.extern.slf4j.Slf4j;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 
 /**
  * コンボボックス用のResourceクラス.
@@ -44,6 +46,9 @@ public class ComboResource {
   // wp アプリケーションログの適正化 Add Start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // wp アプリケーションログの適正化 Add End
 
   /**
@@ -59,7 +64,13 @@ public class ComboResource {
       @PathVariable("master_physical_name") String masterPhysicalName,
       @PathVariable("text_column_physical_name") String textColumnPhysicalName,
       @PathVariable("cd_column_physical_name") String cdColumnPhysicalName,
+      @RequestParam(required = false) Long selectedPatId,
       @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, ntssUser.getFacilityCd(), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.COMBO ;
@@ -95,7 +106,20 @@ public class ComboResource {
       @PathVariable("master_physical_name") String masterPhysicalName,
       @PathVariable("text_column_physical_name") String textColumnPhysicalName,
       @PathVariable("cd_column_physical_name") String cdColumnPhysicalName,
-      @PathVariable("facilityCd") String facilityCd) {
+      @PathVariable("facilityCd") String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+        !facilityCd.equals(ntssUser.getFacilityCd())) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }catch (Exception ignored) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.COMBO ;

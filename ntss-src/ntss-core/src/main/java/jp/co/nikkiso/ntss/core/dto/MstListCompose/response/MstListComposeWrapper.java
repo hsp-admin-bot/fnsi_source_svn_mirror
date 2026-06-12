@@ -21,6 +21,15 @@ public class MstListComposeWrapper {
   private String name;
 
   /**
+   * class
+   */
+  private String filterKey;
+
+  /**
+   * 機能分類
+   */
+  private String filterLabel;
+  /**
    * 实际数据行
    *
    * 每一行：
@@ -28,5 +37,11 @@ public class MstListComposeWrapper {
    *  - + key_xxx 索引字段
    */
   private List<Map<String, Object>> items;
+
+  /**
+   * mst-list-compose の master リストがページングで分割されているとき、次ページが存在するか。
+   * null の場合は従来どおり全件／メタなし。
+   */
+  private Boolean hasMore;
 
 }

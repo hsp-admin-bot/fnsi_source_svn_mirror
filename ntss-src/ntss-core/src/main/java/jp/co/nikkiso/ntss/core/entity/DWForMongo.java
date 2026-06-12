@@ -1,11 +1,14 @@
 package jp.co.nikkiso.ntss.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 //mongodbに情報を保存する
 @Document(collection="ind_history")
 public class DWForMongo {
+  @JsonProperty("_class")
   private String _class;
+  @JsonProperty("_id")
   private String _id;
   private String approver_1;
   private String approver_2;

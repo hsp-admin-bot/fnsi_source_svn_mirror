@@ -12,8 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
@@ -161,7 +161,7 @@ public class JsonDataManager {
   * DTOクラスのインスタンスをJSON文字列に変換する
   * @param dto
   * @return String
-  * @throws JsonProcessingException
+  * @throws JacksonException
   */
   public String convert(Object dto){
        ObjectMapper mapper = new ObjectMapper();
@@ -169,7 +169,7 @@ public class JsonDataManager {
 //         String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dto);
          String json = mapper.writeValueAsString(dto);
          return json;
-       }catch(JsonProcessingException e){
+       }catch(JacksonException e){
             return null;
        }
   }

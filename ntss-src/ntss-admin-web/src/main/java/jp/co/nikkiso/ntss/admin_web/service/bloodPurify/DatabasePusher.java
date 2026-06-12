@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import jp.co.nikkiso.ntss.admin_web.request.bloodPurify.EnumRcvDataKind;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.SelectHistoryUtils;
@@ -35,9 +35,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.FacilitySettingNo;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
@@ -82,6 +82,7 @@ import org.springframework.util.StringUtils;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
 @Service
@@ -146,6 +147,10 @@ public class DatabasePusher {
 
   @Autowired
   private TriggerUtil triggerUtil;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   // add FNSI-改修No.324,No,325 再循環率、IHDF引き残し、静的静脈圧、IAPRatioの有効値更新 夏 start
   private static class LogData {
@@ -382,7 +387,7 @@ public class DatabasePusher {
     // add #8122 特殊浄化通信アプリからのモニタデータアップロードにてサーバが高負荷となりダウンする。 夏 end
     wheres.append(" is_confirm = '1'\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -1180,7 +1185,7 @@ public class DatabasePusher {
       for (int lop = 0; lop < jsonNode_array.size(); lop++) {
         JsonNode jsonNode = jsonNode_array.get(lop);
         // jsonNodeは読み取り専用のため、ObjectNodeに変換
-        ObjectNode objectNode = jsonNode.deepCopy();
+        ObjectNode objectNode = jsonNode.deepCopy().asObject();
 
         // 同じ番号を持つ薬剤/調整薬剤マスタの投与実施フラグがありで投与実施フラグが未実施の情報を抽出
         LcdReq41 info = rstMediList.stream()
@@ -1205,7 +1210,7 @@ public class DatabasePusher {
         // objectNodeの文字列化
         sb.append(mapper.writeValueAsString(objectNode));
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       sb.setLength(0);
 
       EventLogMessage eventLogMessage = new EventLogMessage();
@@ -1264,7 +1269,7 @@ public class DatabasePusher {
         wheres.append(" WHERE\n");
         wheres.append(" ord_no = " + ordNo + "\n");
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -1464,7 +1469,7 @@ public class DatabasePusher {
     try {
       dto = weight == null || weight.isEmpty() ? new OrdMainRstWeightInfo()
         : mapper.readValue(weight, OrdMainRstWeightInfo.class);
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -1524,7 +1529,7 @@ public class DatabasePusher {
           //     }else{
           //       elem.bld_vl = 0;
           //     }
-          //   } catch (IOException e) {
+          //   } catch (tools.jackson.core.JacksonException e) {
           //     e.printStackTrace();
           //   }
           //   switch (elem_count) {
@@ -1585,7 +1590,7 @@ public class DatabasePusher {
           JsonNode root = null;
           try {
             root = mapper.readTree(monitorData);
-          } catch (IOException e) {
+          } catch (tools.jackson.core.JacksonException e) {
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -1724,7 +1729,7 @@ public class DatabasePusher {
     try {
       getHistory(ord_no);
       ordMainService.updateWeightInfo(ord_no, mapper.writeValueAsString(dto));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -1827,11 +1832,11 @@ public class DatabasePusher {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

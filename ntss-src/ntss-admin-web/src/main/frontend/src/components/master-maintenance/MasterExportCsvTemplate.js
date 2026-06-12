@@ -634,6 +634,7 @@ csvTemplate.set(
       title: [
             "一般撮影検査名",
             "省略一般撮影検査名",
+            "連携コード1",
             "連携コード2",
             "連携コード3",
             "属性コード1",
@@ -643,6 +644,7 @@ csvTemplate.set(
       fields: [
             "rad_set_name",
             "rad_set_abb_name",
+            "in_hospital_cd1",
             "in_hospital_cd2",
             "in_hospital_cd3",
             "sbt_cd1",

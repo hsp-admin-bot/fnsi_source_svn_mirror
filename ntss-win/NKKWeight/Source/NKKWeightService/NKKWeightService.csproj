@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>NKKWeightService</RootNamespace>
     <AssemblyName>FNWSiScale</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <PublishUrl>publish\</PublishUrl>
@@ -124,13 +124,6 @@
   <ItemGroup>
     <Content Include="InstallUtil.exe" />
     <Content Include="Properties\NKKWeight.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

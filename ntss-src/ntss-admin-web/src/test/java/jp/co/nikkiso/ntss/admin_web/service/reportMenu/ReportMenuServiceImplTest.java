@@ -10,7 +10,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.lang.reflect.InvocationTargetException;
@@ -43,13 +43,13 @@ public class ReportMenuServiceImplTest {
   /**
    * {@link ReportMenuDao}
    */
-  @MockBean
+  @MockitoBean
   private ReportMenuDao reportMenuDao;
 
   /**
    * {@link MstInfoService}
    */
-  @MockBean
+  @MockitoBean
   private MstInfoService mstInfoService;
 
   /**
@@ -64,9 +64,7 @@ public class ReportMenuServiceImplTest {
       method.setAccessible(true);
       return (Map<String, Object>) method.invoke(reportMenuService, condition);
     } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang start
-//      e.printStackTrace();
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang end
+      e.printStackTrace();
     }
     return null;
   }

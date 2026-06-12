@@ -33,7 +33,7 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target=false
@@ -62,7 +62,7 @@
             <label>表示設定</label>
           </v-ons-col>
           <v-ons-col width='60%' vertical-align='center'>
-            <v-ons-select input-id='dispFlg' type='text' float  v-model='condition.inProgress.dispFlg' @keydown.enter='onSearchEnter'>
+            <v-ons-select input-id='dispFlg'  v-model='condition.inProgress.dispFlg' @keydown.enter='onSearchEnter'>
               <option v-for="(item, index) in dispFlgList" :key="index" :value="item.value">
                 {{ item.text }}
               </option>
@@ -92,8 +92,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 
 export default {
@@ -216,9 +216,9 @@ export default {
     },
     copyConditionInUsedToInProgress() {
       this.condition.inProgress.recordCode = this.condition.inUsed.recordCode;
-      this.condition.inProgress.recordMessage = this.condition.inProgress.recordMessage;
-      this.condition.inProgress.dispFlg = this.condition.inProgress.dispFlg;
-      this.condition.inProgress.recordName = this.condition.inProgress.recordName;
+      this.condition.inProgress.recordMessage = this.condition.inUsed.recordMessage;
+      this.condition.inProgress.dispFlg = this.condition.inUsed.dispFlg;
+      this.condition.inProgress.recordName = this.condition.inUsed.recordName;
       this.condition.inProgress.includeDeleted = this.condition.inUsed.includeDeleted;
     }
   },
@@ -230,7 +230,7 @@ export default {
     EventBus.$emit("addLeftmostHeaderMargin");
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("setSortMode", this.setSortMode);
   }
   // add 性能改善メモリ不足 shan end

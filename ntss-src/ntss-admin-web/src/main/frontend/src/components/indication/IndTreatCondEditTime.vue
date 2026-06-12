@@ -63,7 +63,7 @@
       <custom-input-time-special
         :value="displayInputValue"
         font-color="#333333"
-        class="action-condition-input ntss-custom-input-cond"
+        class="time-height"
         :disabled="!getItemAuthorized('Indication', 'default_authority')"
       />
       <!-- mod #10359 編集権限の動作不正 dengshen end -->
@@ -77,7 +77,7 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapMutations } from "vuex";
+import { mapMutations } from "@/compat/vue/vuex";
 import IndTreatCondBase from "@/components/indication/IndTreatCondBase";
 // add FNSI-【1006】最新の改修対象一覧の667対応 韓 start
 import { dateFormat } from "@/functions/common/DateTimeUtils";
@@ -85,6 +85,7 @@ import { dateFormat } from "@/functions/common/DateTimeUtils";
 
 export default {
   mixins: [IndTreatCondBase],
+  emits: ["mstTreatmentSetDay"],
 
   watch: {
     displayInputValue: {
@@ -103,12 +104,10 @@ export default {
       deep: true
     },
     mstTreatmentSetDay: {
-      // eslint-disable-next-line no-unused-vars
       handler: newVal => {},
       deep: true
     },
     mstTreatmentSetDayDisplay: {
-      // eslint-disable-next-line no-unused-vars
       handler: newVal => {},
       deep: true
     },
@@ -208,8 +207,12 @@ export default {
     border: none !important;
   }
   .treat-time > .ntss-custom-input-cond > .time-span {
+    height: 2em !important;
     width: 50px;
     padding: 2px;
+  }
+  .time-height {
+    height: 2em !important;
   }
   /*FNSI-修正 #5658 横展開対応、xugj add end*/
 </style>

@@ -32,7 +32,7 @@ export default {
     async showLinkRegisterModal(event) {
       event.preventDefault();
       this.$emit("click");
-      openUrlLinkRegister(this.link);
+      openUrlLinkRegister(this.link, this.$el);
     },
   }
 };

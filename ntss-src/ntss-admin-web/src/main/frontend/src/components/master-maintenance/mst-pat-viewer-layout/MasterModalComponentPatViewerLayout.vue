@@ -40,10 +40,11 @@
           <div class="disp-item-content-area">
             <!--            <draggable>-->
             <draggable
-              v-model="dispItemInfo"
+              :list="dispItemInfo"
+              item-key="categoryNo"
               v-bind="{ ...dragOptions, handle: '.category-handle' }"
               @choose="isDraggingCategory = true"
-              @end="isDraggingCategory = false"
+              @end="onCategoryDragEnd"
             >
               <v-ons-row
                 v-for="category in dispItemInfo"
@@ -87,7 +88,8 @@
                   v-if="category.categoryNo === treatmentItemCategoryNo"
                 >
                   <draggable
-                    v-model="category.categoryItem"
+                    :list="category.categoryItem"
+                    item-key="subCategoryNo"
                     v-bind="{
                       ...dragOptions,
                       handle: '.sub-category-handle',
@@ -96,7 +98,7 @@
                     @end="finishTreatCondDragging()"
                   >
                     <v-ons-row
-                      v-for="subCategory in treatCondSubCategory"
+                      v-for="subCategory in category.categoryItem"
                       :key="subCategory.subCategoryNo"
                       :class="{
                         'layout-item-dragging': isDraggingSubCategory,
@@ -221,7 +223,7 @@
                       </v-ons-row>
                       <v-ons-col>
                         <draggable
-                          v-model="subCategory.subCategoryItem"
+                          :list="subCategory.subCategoryItem"
                           v-bind="{
                             ...dragOptions,
                             handle: '.sub-category-item-handle',
@@ -427,7 +429,7 @@
                         </v-ons-row>
                         <v-ons-col>
                           <draggable
-                            v-model="vitalChildItem.subCategoryItem"
+                            :list="vitalChildItem.subCategoryItem"
                             v-bind="{
                               ...dragOptions,
                               handle: '.sub-category-item-handle',
@@ -538,7 +540,8 @@
                 </v-ons-col>
                 <v-ons-col v-else>
                   <draggable
-                    v-model="category.categoryItem"
+                    :list="category.categoryItem"
+                    item-key="subCategoryNo"
                     v-bind="{
                       ...dragOptions,
                       handle: '.sub-category-handle',
@@ -714,7 +717,7 @@
                       </v-ons-row>
                       <v-ons-col>
                         <draggable
-                          v-model="subCategory.subCategoryItem"
+                          :list="subCategory.subCategoryItem"
                           v-bind="{
                             ...dragOptions,
                             handle: '.sub-category-item-handle',
@@ -1107,7 +1110,7 @@
 
     <v-ons-popover
       cancelable
-      :visible.sync="popoverInfo.popoverVisible"
+      v-model:visible="popoverInfo.popoverVisible"
       :target="popoverInfo.popoverTarget"
       :direction="popoverInfo.popoverDirection"
       :class="[fontSizeSet, 'popover-style']"
@@ -1207,8 +1210,7 @@
                 </div> -->
                   <div
                     v-for="(
-                      selectedInfo, index
-                    ) in popoverInfo.selectInfoOptions"
+                      selectedInfo, index) in popoverInfo.selectInfoOptions"
                     :key="index"
                     :class="setListClass(selectedInfo.itemNo)"
                     class="select-label-style"
@@ -1249,7 +1251,7 @@
                     :max="max"
                     @handlerInput="
                       (val) => {
-                        graphMax = val;
+                        setGraphLimitInput(val, 1);
                       }
                     "
                     @blur="graphValueChange($event, 1, 0)"
@@ -1277,7 +1279,7 @@
                     :max="max"
                     @handlerInput="
                       (val) => {
-                        graphMin = val;
+                        setGraphLimitInput(val, 2);
                       }
                     "
                     @blur="graphValueChange($event, 2, 1)"
@@ -1578,8 +1580,7 @@
                 </div> -->
                   <div
                     v-for="(
-                      selectedInfo, index
-                    ) in popoverInfo.selectInfoOptions"
+                      selectedInfo, index) in popoverInfo.selectInfoOptions"
                     :key="index"
                     :class="setListClass(selectedInfo.itemNo)"
                     class="select-label-style"
@@ -1634,7 +1635,7 @@
                     :max="max"
                     @handlerInput="
                       (val) => {
-                        graphMax = val;
+                        setGraphLimitInput(val, 1);
                       }
                     "
                     @blur="graphValueChange($event, 1, 0)"
@@ -1661,7 +1662,7 @@
                     :max="max"
                     @handlerInput="
                       (val) => {
-                        graphMin = val;
+                        setGraphLimitInput(val, 2);
                       }
                     "
                     @blur="graphValueChange($event, 2, 1)"
@@ -1734,6 +1735,7 @@
           </v-ons-button>
           <v-ons-button
             class="common-style-ok-button button-confirm btn1-execute"
+            :disabled="!isPopoverEdited"
             @click="saveChanges"
             >OK</v-ons-button
           >
@@ -1751,7 +1753,7 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import {
   mstPatViewerLayoutDefine,
   selectInfoOptions,
@@ -1762,7 +1764,7 @@ import {
   complaintTreatmentInformation,
 } from "@/constants/mstPatViewerLayoutDefine";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import vuedraggable from "vuedraggable";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 import MedicineSelector from "@/components/master-maintenance/mst-pat-viewer-layout/custom-selector/MedicineSelector";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
@@ -1774,9 +1776,11 @@ import {
   popoverPostShow,
   popoverPosthide,
 } from "@/functions/common/CommonPopoverFunctions";
-import { EventBus } from "@/eventBus";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add #10628 数値IF修正 linjunfeng start
 import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
+import _ from "@/compat/collections/lodash";
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 // add #10628 数値IF修正 linjunfeng end
 // 薬剤区分
 const medi_cate = {
@@ -1815,7 +1819,7 @@ const MAX_COLUMN = 5;
 export default {
   mixins: [PopoverMixin],
   components: {
-    draggable: vuedraggable,
+    draggable: VueDraggable,
     "pop-over": MedicineSelector,
     // add #10628 数値IF修正 linjunfeng start
     "custom-input-number-pro": CustomInputNumberPro,
@@ -1872,6 +1876,12 @@ export default {
           subCategoryNo: null,
         },
       },
+      // ポップオーバーを開いた時点の入力状態。OKボタン活性判定に利用する。
+      popoverEditSnapshot: "",
+      // 複合グラフは対象要素ごとに選択項目を保持する。上下限は中項目で共有する。
+      compoundGraphSettings: {},
+      currentCompoundGraphDivision: null,
+      isRestoringCompoundGraph: false,
       /**
        * 選択情報リスト
        */
@@ -2250,7 +2260,7 @@ export default {
           c.subCategoryNo !== 31 &&
           c.subCategoryNo !== 32
         // add 5920 項目の削除 中項目 31 32 34 鞠 end
-      );
+        );
       return treatCond;
     },
     // 拡張設定項目対象外／拡張設定項目対象で有効な状態のみ
@@ -2281,6 +2291,12 @@ export default {
       }
       return temp;
     },
+    isPopoverEdited() {
+      if (!this.popoverInfo.popoverVisible || !this.popoverEditSnapshot) {
+        return false;
+      }
+      return this.createPopoverEditSnapshot() !== this.popoverEditSnapshot;
+    },
   },
   async created() {
     this.setLoadingScreenVisible(true);
@@ -2304,9 +2320,7 @@ export default {
     if (advanced !== null) {
       if (
         advanced.func_advcds.findIndex(
-          (item) => item.func_advcd === ADVANCED_SETTINGS.MEDICATION_SUPPORT
-        ) < 0
-      ) {
+          (item) => item.func_advcd === ADVANCED_SETTINGS.MEDICATION_SUPPORT) < 0) {
         this.medicationSupport = false;
       } else {
         this.medicationSupport = true;
@@ -2902,7 +2916,13 @@ export default {
         //#10176:ポップアップのフリーワード検索の動作不正 Start
         this.categoryFlg = this.targetdrugchkrescategoryflg(this.dosOrPreCd);
         //#10176:ポップアップのフリーワード検索の動作不正 End
+        if (!this.isCompoundGraphPopover() || this.currentCompoundGraphDivision === null) {
+          this.changePopoverDownListData(data);
+          return;
+        }
+        this.saveCurrentCompoundGraphSetting();
         this.changePopoverDownListData(data);
+        this.restoreCompoundGraphSetting();
       },
     },
 
@@ -3018,6 +3038,37 @@ export default {
     popoverPostShow,
     popoverPosthide,
     /**
+     * @description ドラッグ操作の完了時の処理(大項目)
+     */
+    onCategoryDragEnd() {
+      this.isDraggingCategory = false;
+      this.switchButton();
+    },
+    /**
+     * 拡張設定で非表示の治療情報中項目を配列から除外する
+     */
+    pruneHiddenTreatCondSubCategories() {
+      const treatCategory = this.dispItemInfo.find(
+        item => item.categoryNo === this.treatmentItemCategoryNo
+      );
+      if (!treatCategory || !Array.isArray(treatCategory.categoryItem)) {
+        return;
+      }
+      treatCategory.categoryItem = treatCategory.categoryItem.filter(item => {
+        if (item.subCategoryNo === 15 && !this.isDispBvUfc) {
+          return false;
+        }
+        if (item.subCategoryNo === 16 && !this.isDispDialysisAmountProgram) {
+          return false;
+        }
+        return (
+          this.advancedSettingDispItemList.indexOf(item.component) < 0
+          || (this.isDispDialysisAmountProgram && item.component === "diaysis-program")
+          || (this.isDispBvUfc && item.component === "bv-ufc")
+        );
+      });
+    },
+    /**
     * @description ドラッグ操作の開始時の処理
     */
     choose(event,categoryNo) {
@@ -3027,7 +3078,7 @@ export default {
         //ドラッグイベント発生前の治療情報のデータの取得
         this.preDragDispItemInfoTreatCond = deepCopy(this.dispItemInfoTreatCond);
         //ドラッグ対象項目のドラッグイベント発生前のインデックスの取得
-        this.treatCondPreDragIndex = event.oldDraggableIndex;
+        this.treatCondPreDragIndex = event.oldIndex ?? event.oldDraggableIndex;
         let preBvUfcIndex = -1;
         let preDialysisAmountProgramIndex = -1;
         //ドラッグイベント発生前の各非表示項目のインデックスの取得
@@ -3061,6 +3112,7 @@ export default {
       this.isDraggingSubCategory = false;
       //治療情報の項目のドラッグ処理中フラグの設定解除
       this.isDraggingTreatCondSubCategory = false;
+      this.switchButton();
     },
     getPlotType() {
       return REPORT_GRAPH.SELECT_ITEM_PLOT_TYPE;
@@ -3112,9 +3164,7 @@ export default {
     retrieveMstData() {
       if (
         this.getAdvancedSettings.func_advcds.findIndex(
-          (item) => item.func_advcd === ADVANCED_SETTINGS.MEDICATION_SUPPORT
-        ) < 0
-      ) {
+          (item) => item.func_advcd === ADVANCED_SETTINGS.MEDICATION_SUPPORT) < 0) {
         for (let i = 0; i < mstPatViewerLayoutDefine.length; i++) {
           if (
             mstPatViewerLayoutDefine[i] !== undefined &&
@@ -3138,9 +3188,7 @@ export default {
       // 施設設定 - 拡張機能の加算情報が有効でない場合、加算項目を非表示にする
       if (
         this.getAdvancedSettings.func_advcds.findIndex(
-          (item) => item.func_advcd === ADVANCED_SETTINGS.ADDITION_INFO
-        ) < 0
-      ) {
+          (item) => item.func_advcd === ADVANCED_SETTINGS.ADDITION_INFO) < 0) {
         for (let i = 0; i < rtnTmp.length; i++) {
           if (
             rtnTmp[i] !== undefined &&
@@ -3170,10 +3218,8 @@ export default {
           for (let j = 0; j < treateCategoryItemList.length; j++) {
             if (
               !excludeSubCategoryNoList.includes(
-                treateCategoryItemList[j].subCategoryNo
-              )
-            ) {
-              let treateCategoryItem = null;
+                treateCategoryItemList[j].subCategoryNo)) {
+              let treateCategoryItem;
               let vitalChild = [];
               if (
                 treateCategoryItemList[j].subCategoryNo === 58 ||
@@ -3185,14 +3231,10 @@ export default {
                 );
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === 65
-                  )
-                );
+                    (item) => item.subCategoryNo === 65));
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === 66
-                  )
-                );
+                    (item) => item.subCategoryNo === 66));
                 excludeSubCategoryNoList.push(58);
                 excludeSubCategoryNoList.push(65);
                 excludeSubCategoryNoList.push(66);
@@ -3206,14 +3248,10 @@ export default {
                 );
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === 67
-                  )
-                );
+                    (item) => item.subCategoryNo === 67));
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === 68
-                  )
-                );
+                    (item) => item.subCategoryNo === 68));
                 excludeSubCategoryNoList.push(59);
                 excludeSubCategoryNoList.push(67);
                 excludeSubCategoryNoList.push(68);
@@ -3227,14 +3265,10 @@ export default {
                 );
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === 69
-                  )
-                );
+                    (item) => item.subCategoryNo === 69));
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === 70
-                  )
-                );
+                    (item) => item.subCategoryNo === 70));
                 excludeSubCategoryNoList.push(60);
                 excludeSubCategoryNoList.push(69);
                 excludeSubCategoryNoList.push(70);
@@ -3248,14 +3282,10 @@ export default {
                 );
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === 71
-                  )
-                );
+                    (item) => item.subCategoryNo === 71));
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === 72
-                  )
-                );
+                    (item) => item.subCategoryNo === 72));
                 excludeSubCategoryNoList.push(61);
                 excludeSubCategoryNoList.push(71);
                 excludeSubCategoryNoList.push(72);
@@ -3286,6 +3316,7 @@ export default {
         convertRtnTmp.push(rtnTmp[i]);
       }
       this.dispItemInfo = convertRtnTmp;
+      this.pruneHiddenTreatCondSubCategories();
     },
 
     // add 患者経過総合ビューアレイアウトマスタ 7・検査結果グラフのグラフ上下限 孔s start
@@ -3408,10 +3439,10 @@ export default {
               if (catItem.component === "drugAggregate") {
                 // ・薬剤集計分類・・・通常薬剤 / 調製薬剤
                 catItem.subCategoryItem.forEach((subItem) => {
-                  var itemName = subItem.itemNo + "";
+                  const itemName = subItem.itemNo + "";
                   if (itemName.includes("MEDICINE_MIX")) {
                     // 調製薬剤
-                    var itemNo = itemName.replace("MEDICINE_MIX", "");
+                    const itemNo = itemName.replace("MEDICINE_MIX", "");
                     if (this.mstMedicineMixListDisp.includes(itemNo)) {
                       subItem.isDispflag = true;
                     }
@@ -3425,16 +3456,16 @@ export default {
               } else {
                 // ・薬剤グラフ・・・通常薬剤 / 調製薬剤 / 薬剤グループ
                 catItem.subCategoryItem.forEach((subItem) => {
-                  var itemName = subItem.itemNo + "";
+                  const itemName = subItem.itemNo + "";
                   if (itemName.includes("MEDICINE_MIX")) {
                     // 調製薬剤
-                    var itemNo = itemName.replace("MEDICINE_MIX", "");
+                    const itemNo = itemName.replace("MEDICINE_MIX", "");
                     if (this.mstMedicineMixListDisp.includes(itemNo)) {
                       subItem.isDispflag = true;
                     }
                   } else if (itemName.includes("MEDICINE_GROUP")) {
                     // 薬剤グループ
-                    var itemNo = itemName.replace("MEDICINE_GROUP", "");
+                    const itemNo = itemName.replace("MEDICINE_GROUP", "");
                     if (this.mstMedicineGroupListDisp.includes(itemNo)) {
                       subItem.isDispflag = true;
                     }
@@ -3512,16 +3543,16 @@ export default {
                   }
                 } else if (subItem.itemDivision === 4) {
                   // ・投与薬剤(itemDivision："4")
-                  var itemName = subItem.itemNo + "";
+                  const itemName = subItem.itemNo + "";
                   if (itemName.includes("MEDICINE_MIX")) {
                     // 調製薬剤
-                    var itemNo = itemName.replace("MEDICINE_MIX", "");
+                    const itemNo = itemName.replace("MEDICINE_MIX", "");
                     if (this.mstMedicineMixListDisp.includes(itemNo)) {
                       subItem.isDispflag = true;
                     }
                   } else if (itemName.includes("MEDICINE_GROUP")) {
                     // 薬剤グループ
-                    var itemNo = itemName.replace("MEDICINE_GROUP", "");
+                    const itemNo = itemName.replace("MEDICINE_GROUP", "");
                     if (this.mstMedicineGroupListDisp.includes(itemNo)) {
                       subItem.isDispflag = true;
                     }
@@ -3572,10 +3603,8 @@ export default {
               (subCategoryOther) => {
                 return (
                   subCategoryOther.subCategoryNo ===
-                  srcSubCategory.subCategoryNo
-                );
-              }
-            );
+                  srcSubCategory.subCategoryNo);
+              });
 
             // 編集中マスタに項目が存在しないと非表示にする
             if (!destSubCategory) {
@@ -3648,10 +3677,8 @@ export default {
                       return (
                         itemOther.itemNo === srcItem.itemNo &&
                         itemOther.complaintClassify ===
-                          srcItem.complaintClassify
-                      );
-                    }
-                  );
+                          srcItem.complaintClassify);
+                    });
 
                   // 編集中マスタに項目が存在しないと非表示にする
                   if (!destItem) {
@@ -3671,10 +3698,8 @@ export default {
                     (itemOther) => {
                       return (
                         itemOther.itemNo === srcItem.itemNo &&
-                        itemOther.isPatEventSub === srcItem.isPatEventSub
-                      );
-                    }
-                  );
+                        itemOther.isPatEventSub === srcItem.isPatEventSub);
+                    });
 
                   // 編集中マスタに項目が存在しないと非表示にする
                   if (!destItem) {
@@ -3692,9 +3717,7 @@ export default {
                       if (
                         this.isVitalMonitor(
                           srcCategory.categoryNo,
-                          srcSubCategory.subCategoryNo
-                        )
-                      ) {
+                          srcSubCategory.subCategoryNo)) {
                         return (
                           itemOther.tableType === srcItem.tableType &&
                           itemOther.itemNo === srcItem.itemNo
@@ -3949,7 +3972,7 @@ export default {
             // mod #9524 患者経過総合ビューアレイアウトマスタのグラフ項目の保存について fang end
           });
           break;
-        case "subCategory":
+        case "subCategory": {
           if (
             subCategoryNo === 65 ||
             subCategoryNo === 67 ||
@@ -3990,6 +4013,7 @@ export default {
           treatment.isDisp = flg;
           // add 6852 項目のON／OFFに伴う制御の不正 周安寧 end
           break;
+        }
         case "subCategoryItem":
           if (
             subCategoryNo === 65 ||
@@ -4401,6 +4425,9 @@ export default {
      * @param subCategoryTitle 中項目名
      */
     showSelector(e, categoryNo, subCategoryNo, subCategoryTitle) {
+      this.popoverEditSnapshot = "";
+      this.compoundGraphSettings = {};
+      this.currentCompoundGraphDivision = null;
       // add #9574 患者経過総合ビューアレイアウトマスタの長期間表示で検査結果のグラフの選択肢が不正 2023/09/14 by liumx start
       // 検査結果グラフ ,複合グラフの状況
       // 検査結果グラフ,(8 <= categoryNo && categoryNo <= 11),(1008 <= categoryNo && categoryNo <= 1011)
@@ -4482,8 +4509,8 @@ export default {
         // mod 12031 患者経過総合ビューアのグラフオートレンジ zkm start
         // this.popMedicineInfo.graphMin = (temp.graphMin !== undefined && temp.graphMin !== null ) ? temp.graphMin : 0;
         // this.popMedicineInfo.graphMax = (temp.graphMax !== undefined && temp.graphMax !== null ) ? temp.graphMax : 0;
-        this.popMedicineInfo.graphMin = (temp.graphMin !== undefined && temp.graphMin !== null ) ? temp.graphMin : '';
-        this.popMedicineInfo.graphMax = (temp.graphMax !== undefined && temp.graphMax !== null ) ? temp.graphMax : '';
+        this.popMedicineInfo.graphMin = (temp.graphMin !== undefined && temp.graphMin !== null) ? temp.graphMin : '';
+        this.popMedicineInfo.graphMax = (temp.graphMax !== undefined && temp.graphMax !== null) ? temp.graphMax : '';
         // mod 12031 患者経過総合ビューアのグラフオートレンジ zkm end
         this.popMedicineInfo.targetInfo = {
           categoryNo,
@@ -4515,8 +4542,6 @@ export default {
         subCategoryNo === 72
       ) {
         temp = temp.vitalChild[1];
-      } else {
-        temp = temp;
       }
       if (temp.drugStatus !== undefined) {
         this.drugStatus = temp.drugStatus;
@@ -4833,7 +4858,7 @@ export default {
         this.categoryTitleName = "医療材料分類";
         this.categoryDataName = "医療材料名";
         // add #9574 患者経過総合ビューアレイアウトマスタの長期間表示で検査結果のグラフの選択肢が不正 吉 start
-        var selectedIds = [];
+        const selectedIds = [];
         temp.subCategoryItem.forEach((item) => {
           selectedIds.push(item.itemNo);
         });
@@ -4865,7 +4890,7 @@ export default {
       } else if (1019 === categoryNo) {
         // ダイアライザ集計
         // add #9574 患者経過総合ビューアレイアウトマスタの長期間表示で検査結果のグラフの選択肢が不正 吉 start
-        var selectedIds = [];
+        const selectedIds = [];
         temp.subCategoryItem.forEach((item) => {
           selectedIds.push(item.itemNo);
         });
@@ -4904,7 +4929,7 @@ export default {
         this.categoryTitleName = "薬剤分類";
         this.categoryDataName = "薬剤名";
         // add #9574 患者経過総合ビューアレイアウトマスタの長期間表示で検査結果のグラフの選択肢が不正 吉 start
-        var selectedIds = [];
+        const selectedIds = [];
         temp.subCategoryItem.forEach((item) => {
           selectedIds.push(item.itemNo);
         });
@@ -5063,8 +5088,8 @@ export default {
           (categoryNo >= 1002 && categoryNo <= 1005) ||
           (categoryNo >= 1012 && categoryNo <= 1015) ||
           (categoryNo === 1 && subCategoryNo >= 65 && subCategoryNo <= 72) ||
-          (categoryNo === 1 && subCategoryNo >= 58 && subCategoryNo <= 61) //グラフ色とグラフ型-保存の条件 add 鞠
-        ) {
+          (categoryNo === 1 && subCategoryNo >= 58 && subCategoryNo <= 61)
+        ) { // グラフ色とグラフ型-保存の条件 add 鞠
           this.popoverInfo.selectedList = tempSelectedList.map((m) => {
             return {
               // テーブル種別、バイタルモニタ区分、項目コードを"*"で結合した文字列をitemNoとする.
@@ -5114,10 +5139,6 @@ export default {
               complaintClassify: m.complaintClassify,
             };
           });
-          console.log(
-            "this.popoverInfo.selectedList",
-            this.popoverInfo.selectedList
-          );
         } else if (categoryNo === 15 || categoryNo === 16) {
           let tempSelectedList = deepCopy(this.selectedList);
           this.popoverInfo.selectedList = tempSelectedList.map((m) => {
@@ -5247,6 +5268,13 @@ export default {
       this.isComplaintShow =
         categoryNo === 1017 || (categoryNo === 1 && subCategoryNo === 56);
       // mod #9321 患者経過総合ビューアの長期間表示で、治療記録集計と愁訴処置がデータ表示しない。 zy end
+      if (categoryNo >= 1024 && categoryNo <= 1027) {
+        this.initializeCompoundGraphSettings(exam);
+        this.restoreCompoundGraphSetting();
+      }
+      this.$nextTick(() => {
+        this.popoverEditSnapshot = this.createPopoverEditSnapshot();
+      });
     },
 
     /**
@@ -5346,9 +5374,7 @@ export default {
         (8 <= this.popoverInfo.targetInfo.categoryNo &&
           this.popoverInfo.targetInfo.categoryNo <= 11) ||
         (1008 <= this.popoverInfo.targetInfo.categoryNo &&
-          this.popoverInfo.targetInfo.categoryNo <= 1011) ||
-        (this.popoverInfo.targetInfo.categoryNo >= 1024 &&
-          this.popoverInfo.targetInfo.categoryNo <= 1027)
+          this.popoverInfo.targetInfo.categoryNo <= 1011)
       ) {
         // mod 9570 患者経過総合ビューアレイアウトマスタの長期間表示で検査結果のグラフレンジ設定が不正 関 end
         const limit = this.getMstExamItemLimit(selectedList);
@@ -5469,9 +5495,7 @@ export default {
         (8 <= this.popoverInfo.targetInfo.categoryNo &&
           this.popoverInfo.targetInfo.categoryNo <= 11) ||
         (1008 <= this.popoverInfo.targetInfo.categoryNo &&
-          this.popoverInfo.targetInfo.categoryNo <= 1011) ||
-        (this.popoverInfo.targetInfo.categoryNo >= 1024 &&
-          this.popoverInfo.targetInfo.categoryNo <= 1027)
+          this.popoverInfo.targetInfo.categoryNo <= 1011)
       ) {
         // mod 9570 患者経過総合ビューアレイアウトマスタの長期間表示で検査結果のグラフレンジ設定が不正 関 end
         const limit = this.getMstExamItemLimit(selectedList);
@@ -5596,6 +5620,11 @@ export default {
       //   });
       // }
       //del 9564 ljx end
+      if (this.isCompoundGraphPopover()) {
+        this.saveCurrentCompoundGraphSetting();
+        this.popoverInfo.selectedList = this.createCompoundGraphSelectedList();
+        this.saveSharedCompoundGraphLimit();
+      }
       // 選択したバイタル情報を格納する
       this.selectedList = deepCopy(this.popoverInfo.selectedList);
       // 対象の中項目に選択した小項目を設定する
@@ -5608,13 +5637,10 @@ export default {
       if (
         this.isVitalMonitor(
           this.popoverInfo.targetInfo.categoryNo,
-          this.popoverInfo.targetInfo.subCategoryNo
-        )
-      ) {
+          this.popoverInfo.targetInfo.subCategoryNo)) {
         let selectedVitalMonitorItemList = [];
         this.selectedList.forEach((item) => {
           if (item.itemNo.toString().indexOf("*") > 0) {
-            let isAddMonitor = false;
             const splitItemCd = item.itemNo.split("*");
             item.tableType = Number(splitItemCd[0]);
             item.vitalMonitorClass = splitItemCd[1];
@@ -5622,8 +5648,7 @@ export default {
               ? splitItemCd[2]
               : Number(splitItemCd[2]);
             item.isDisp = true;
-            isAddMonitor =
-              !isNaN(item.itemNo) && item.itemNo > 10000 ? true : false;
+            const isAddMonitor = !isNaN(item.itemNo) && item.itemNo > 10000;
             if (
               isAddMonitor &&
               this.mstAddMonitorListDisp.includes(item.itemNo - 10000)
@@ -5690,6 +5715,7 @@ export default {
       // mod #9524 患者経過総合ビューアレイアウトマスタのグラフ項目の保存について fang end
 
       // ポップオーバーを閉じる
+      this.popoverEditSnapshot = "";
       this.popoverInfo.popoverVisible = false;
     },
 
@@ -5730,9 +5756,7 @@ export default {
       if (
         this.isVitalMonitor(
           this.popoverInfo.targetInfo.categoryNo,
-          this.popoverInfo.targetInfo.subCategoryNo
-        )
-      ) {
+          this.popoverInfo.targetInfo.subCategoryNo)) {
         let selectedVitalMonitorItemList = [];
         this.selectedList.forEach((item) => {
           if (item.itemNo.toString().indexOf("*") > 0) {
@@ -6441,7 +6465,7 @@ export default {
               eleSubCategoryInfo.subCategoryNo
             );
           });
-        var selectedIds = [];
+        const selectedIds = [];
         temp.subCategoryItem.forEach((item) => {
           selectedIds.push(item.itemNo);
         });
@@ -6508,7 +6532,7 @@ export default {
       } else if (this.popoverInfo.targetInfo.categoryNo === 1019) {
         // ダイアライザ集計
         // add #9574 患者経過総合ビューアレイアウトマスタの長期間表示で検査結果のグラフの選択肢が不正 吉 start
-        var temp = this.dispItemInfo
+        const selectedCategory = this.dispItemInfo
           .find((eleCategoryInfo) => {
             return (
               this.popoverInfo.targetInfo.categoryNo ===
@@ -6521,8 +6545,8 @@ export default {
               eleSubCategoryInfo.subCategoryNo
             );
           });
-        var selectedIds = [];
-        temp.subCategoryItem.forEach((item) => {
+        const selectedIds = [];
+        selectedCategory.subCategoryItem.forEach((item) => {
           selectedIds.push(item.itemNo);
         });
         // add #9574 患者経過総合ビューアレイアウトマスタの長期間表示で検査結果のグラフの選択肢が不正 吉 end
@@ -6556,7 +6580,7 @@ export default {
       } else if (this.popoverInfo.targetInfo.categoryNo === 1022) {
         // 薬剤集計
         // add #9574 患者経過総合ビューアレイアウトマスタの長期間表示で検査結果のグラフの選択肢が不正 吉 start
-        var temp = this.dispItemInfo
+        const selectedCategory = this.dispItemInfo
           .find((eleCategoryInfo) => {
             return (
               this.popoverInfo.targetInfo.categoryNo ===
@@ -6569,8 +6593,8 @@ export default {
               eleSubCategoryInfo.subCategoryNo
             );
           });
-        var selectedIds = [];
-        temp.subCategoryItem.forEach((item) => {
+        const selectedIds = [];
+        selectedCategory.subCategoryItem.forEach((item) => {
           selectedIds.push(item.itemNo);
         });
         // add #9574 患者経過総合ビューアレイアウトマスタの長期間表示で検査結果のグラフの選択肢が不正 吉 end
@@ -7347,6 +7371,7 @@ export default {
       this.graphMax = null;
       this.graphMin = null;
       // mod #9524 患者経過総合ビューアレイアウトマスタのグラフ項目の保存について fang end
+      this.popoverEditSnapshot = "";
       this.popoverInfo.popoverVisible = false;
     },
     inputNumber(e, flag) {
@@ -7384,7 +7409,6 @@ export default {
       let delta =
         (e.wheelDelta && (e.wheelDelta > 0 ? 1 : -1)) ||
         (e.detail && (e.wheelDelta > 0 ? -1 : 1));
-      console.log(e.wheelDelta);
       if (!e.target.value) {
         e.target.value = 0;
       }
@@ -7416,10 +7440,264 @@ export default {
         this.graphMin = value.toFixed(2);
       }
     },
+    setGraphLimitInput(value, flag) {
+      if (flag === 1) {
+        this.graphMax = value;
+      } else if (flag === 2) {
+        this.graphMin = value;
+      }
+    },
+    createPopoverEditSnapshot() {
+      if (this.isCompoundGraphPopover()) {
+        return JSON.stringify({
+          compoundGraphSettings: this.createCompoundGraphSnapshotSettings(),
+          graphMax: this.normalizeGraphLimitValue(this.graphMax),
+          graphMin: this.normalizeGraphLimitValue(this.graphMin),
+        });
+      }
+      return JSON.stringify({
+        selectedList: this.popoverInfo.selectedList,
+        graphMax: this.normalizeGraphLimitValue(this.graphMax),
+        graphMin: this.normalizeGraphLimitValue(this.graphMin),
+        targetElement: this.targetElement,
+        inspectionStatus: this.inspectionStatus,
+        treatmentStatus: this.treatmentStatus,
+        dosOrPre: this.dosOrPre,
+        drugStatus: this.drugStatus,
+        drugDistinguish: this.drugDistinguish,
+        drugClassification: this.drugClassification,
+        complaintTreatment: this.complaintTreatment,
+        popoverChooseData: this.popoverChooseData,
+      });
+    },
+    isCompoundGraphPopover() {
+      const categoryNo = this.popoverInfo.targetInfo.categoryNo;
+      return (
+        this.popoverInfo.popoverVisible &&
+        categoryNo >= 1024 &&
+        categoryNo <= 1027
+      );
+    },
+    initializeCompoundGraphSettings(subCategory) {
+      const settings = {};
+      (subCategory.subCategoryItem || []).forEach((item) => {
+        const division = item.itemDivision || 1;
+        if (!settings[division]) {
+          settings[division] = {
+            selectedList: [],
+          };
+        }
+        const copied = deepCopy(item);
+        delete copied.graphMax;
+        delete copied.graphMin;
+        settings[division].selectedList.push(copied);
+      });
+      const initialDivision = this.getTargetElementNumber();
+      if (!settings[initialDivision]) {
+        settings[initialDivision] = {
+          selectedList: [],
+        };
+      }
+      this.compoundGraphSettings = settings;
+      this.currentCompoundGraphDivision = initialDivision;
+    },
+    saveCurrentCompoundGraphSetting() {
+      if (!this.isCompoundGraphPopover() || this.isRestoringCompoundGraph) {
+        return;
+      }
+      const division =
+        this.currentCompoundGraphDivision || this.getTargetElementNumber();
+      const selectedList = (this.popoverInfo.selectedList || []).map((item) => {
+        const copied = deepCopy(item);
+        delete copied.graphMax;
+        delete copied.graphMin;
+        copied.itemDivision = division;
+        return copied;
+      });
+      this.compoundGraphSettings = {
+        ...this.compoundGraphSettings,
+        [division]: {
+          selectedList,
+        },
+      };
+    },
+    restoreCompoundGraphSetting() {
+      if (!this.isCompoundGraphPopover()) {
+        return;
+      }
+      const division = this.getTargetElementNumber();
+      const setting = this.compoundGraphSettings[division] || {
+        selectedList: [],
+      };
+      this.isRestoringCompoundGraph = true;
+      this.currentCompoundGraphDivision = division;
+      this.popoverInfo.selectedList = deepCopy(setting.selectedList || []);
+      this.selectedList = deepCopy(setting.selectedList || []);
+      this.$nextTick(() => {
+        this.isRestoringCompoundGraph = false;
+      });
+    },
+    createCompoundGraphSelectedList() {
+      const selectedList = [];
+      Object.keys(this.compoundGraphSettings).forEach((division) => {
+        const setting = this.compoundGraphSettings[division];
+        (setting.selectedList || []).forEach((item) => {
+          const copied = deepCopy(item);
+          delete copied.graphMax;
+          delete copied.graphMin;
+          copied.itemDivision = Number(division);
+          selectedList.push(copied);
+        });
+      });
+      return selectedList;
+    },
+    saveSharedCompoundGraphLimit() {
+      const categoryInfo = this.dispItemInfo.find((eleCategoryInfo) => {
+        return (
+          this.popoverInfo.targetInfo.categoryNo === eleCategoryInfo.categoryNo
+        );
+      });
+      if (!categoryInfo) {
+        return;
+      }
+      const parentSubCategoryNo = this.getParentSubCategoryNo(
+        this.popoverInfo.targetInfo.subCategoryNo
+      );
+      const subCategoryInfo = categoryInfo.categoryItem.find(
+        (eleSubCategoryInfo) => {
+          return parentSubCategoryNo === eleSubCategoryInfo.subCategoryNo;
+        }
+      );
+      if (!subCategoryInfo) {
+        return;
+      }
+      subCategoryInfo.graphMax = this.graphMax;
+      subCategoryInfo.graphMin = this.graphMin;
+    },
+    createCompoundGraphSnapshotSettings() {
+      const settings = deepCopy(this.compoundGraphSettings || {});
+      const division = this.currentCompoundGraphDivision;
+      if (division !== null && !this.isRestoringCompoundGraph) {
+        settings[division] = {
+          selectedList: deepCopy(this.popoverInfo.selectedList || []),
+        };
+      }
+      const snapshot = {};
+      Object.keys(settings).sort().forEach((key) => {
+        const setting = settings[key] || {};
+        if (this.isEmptyCompoundGraphSetting(setting)) {
+          return;
+        }
+        snapshot[key] = {
+          selectedList: (setting.selectedList || []).map((item) => {
+            return this.normalizeCompoundGraphSnapshotItem(item, key);
+          }),
+        };
+      });
+      return snapshot;
+    },
+    normalizeCompoundGraphSnapshotItem(item, division) {
+      const copied = deepCopy(item);
+      const normalized = {
+        itemDivision:
+          copied.itemDivision === undefined || copied.itemDivision === null
+            ? Number(division)
+            : Number(copied.itemDivision),
+        itemNo: this.getCompoundGraphSnapshotItemNo(copied),
+      };
+      [
+        "itemName",
+        "itemColor",
+        "itemPoint",
+        "graph",
+        "itemDate",
+        "plans",
+        "unit",
+        "complaintClassify",
+        "isPatEventSub",
+        "itemExamClass",
+      ].forEach((key) => {
+        this.setCompoundGraphSnapshotValue(normalized, key, copied[key]);
+      });
+      return normalized;
+    },
+    setCompoundGraphSnapshotValue(target, key, value) {
+      if (value === undefined || value === null || value === "") {
+        return;
+      }
+      if (typeof value === "number" || !isNaN(value)) {
+        target[key] = Number(value);
+      } else {
+        target[key] = value;
+      }
+    },
+    getCompoundGraphSnapshotItemNo(item) {
+      const itemNo = item.itemNo;
+      if (itemNo != null && itemNo.toString().indexOf("*") > 0) {
+        const splitItemNo = itemNo.toString().split("*");
+        return [
+          Number(splitItemNo[0]),
+          splitItemNo[1],
+          isNaN(splitItemNo[2]) ? splitItemNo[2] : Number(splitItemNo[2]),
+        ].join("*");
+      }
+      if (
+        item.tableType !== undefined &&
+        item.tableType !== null &&
+        item.vitalMonitorClass !== undefined &&
+        item.vitalMonitorClass !== null
+      ) {
+        const moniNo =
+          item.moniNo !== undefined && item.moniNo !== null
+            ? item.moniNo
+            : itemNo;
+        return [
+          Number(item.tableType),
+          item.vitalMonitorClass,
+          isNaN(moniNo) ? moniNo : Number(moniNo),
+        ].join("*");
+      }
+      return typeof itemNo === "number" || !isNaN(itemNo)
+        ? Number(itemNo)
+        : itemNo;
+    },
+    isEmptyCompoundGraphSetting(setting) {
+      return !setting.selectedList || setting.selectedList.length === 0;
+    },
+    normalizeGraphLimitValue(value) {
+      if (value === "" || value === null || value === undefined) {
+        return value;
+      }
+      const numberValue = Number(value);
+      if (Number.isNaN(numberValue)) {
+        return value;
+      }
+      if (numberValue > this.max) {
+        return this.formatGraphLimitBoundary(this.max);
+      }
+      if (numberValue < this.min) {
+        return this.formatGraphLimitBoundary(this.min);
+      }
+      return String(value);
+    },
+    formatGraphLimitBoundary(value) {
+      const valueText = String(value);
+      const decimalText = valueText.includes(".") ? valueText.split(".")[1] : "";
+      return decimalText.length > 0
+        ? Number(value).toFixed(decimalText.length)
+        : String(value);
+    },
     handleFocus(key) {
       this.focusFlg[key] = true;
     },
     graphValueChange(event, flag, key) {
+      const eventValue = event.target ? event.target.value : event;
+      const normalizedValue = this.normalizeGraphLimitValue(eventValue);
+      if (flag === 1) {
+        this.graphMax = normalizedValue;
+      } else if (flag === 2) {
+        this.graphMin = normalizedValue;
+      }
       // 限界値判定
       if (flag === 1) {
         // mod #9524 患者経過総合ビューアレイアウトマスタのグラフ項目の保存について fang start
@@ -7450,13 +7728,16 @@ export default {
       // add 12031 患者経過総合ビューアのグラフオートレンジ zkm start
       this.graphMax =
         this.graphMax != null && "" !== this.graphMax
-          ? Number(this.graphMax).toFixed(2)
+          ? this.normalizeGraphLimitValue(this.graphMax)
           : "";
       this.graphMin =
         this.graphMin != null && "" !== this.graphMin
-          ? Number(this.graphMin).toFixed(2)
+          ? this.normalizeGraphLimitValue(this.graphMin)
           : "";
       // add 12031 患者経過総合ビューアのグラフオートレンジ zkm end
+      if (this.isCompoundGraphPopover()) {
+        this.saveCurrentCompoundGraphSetting();
+      }
       let parentSubCategoryNo = this.getParentSubCategoryNo(
         this.popoverInfo.targetInfo.subCategoryNo
       );
@@ -7621,26 +7902,20 @@ export default {
       let ResKbn = this.targetdrugchkreskbn(this.dosOrPre);
       //薬剤区分選択値取得
       if (ResKbn === "0") {
-        const class_lists = document.getElementsByClassName("k-input");
+        const class_lists = getScopedElementsByClassName("k-input", this.$el || this);
         let Drug_classification_selsin = "";
         for (let i = 0; i < class_lists.length; i++) {
           if (
             String(class_lists[i].innerHTML).includes(
-              medi_cate.group.TEXT.trim()
-            )
-          )
+              medi_cate.group.TEXT.trim()))
             Drug_classification_selsin = medi_cate.group.VALUE;
           if (
             String(class_lists[i].innerHTML).includes(
-              medi_cate.normal.TEXT.trim()
-            )
-          )
+              medi_cate.normal.TEXT.trim()))
             Drug_classification_selsin = medi_cate.normal.VALUE;
           if (
             String(class_lists[i].innerHTML).includes(
-              medi_cate.adjustment.TEXT.trim()
-            )
-          )
+              medi_cate.adjustment.TEXT.trim()))
             Drug_classification_selsin = medi_cate.adjustment.VALUE;
         }
         if (Drug_classification_selsin === medi_cate.group.VALUE) {
@@ -7654,26 +7929,20 @@ export default {
           this.medicineShowData(medi_cate.adjustment.VALUE);
         }
       } else if (ResKbn === "2") {
-        const class_lists = document.getElementsByClassName("k-input");
+        const class_lists = getScopedElementsByClassName("k-input", this.$el || this);
         let Drug_classification_selsin = "";
         for (let i = 0; i < class_lists.length; i++) {
           if (
             String(class_lists[i].innerHTML).includes(
-              medi_cate.groupS.TEXT.trim()
-            )
-          )
+              medi_cate.groupS.TEXT.trim()))
             Drug_classification_selsin = medi_cate.groupS.VALUE;
           if (
             String(class_lists[i].innerHTML).includes(
-              medi_cate.normalS.TEXT.trim()
-            )
-          )
+              medi_cate.normalS.TEXT.trim()))
             Drug_classification_selsin = medi_cate.normalS.VALUE;
           if (
             String(class_lists[i].innerHTML).includes(
-              medi_cate.prescription.TEXT.trim()
-            )
-          )
+              medi_cate.prescription.TEXT.trim()))
             Drug_classification_selsin = medi_cate.prescription.VALUE;
         }
         if (Drug_classification_selsin === medi_cate.groupS.VALUE) {
@@ -7852,14 +8121,14 @@ ons-col.layout-item {
   margin: 0 4px;
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 500px;
   height: 100%;
   max-height: 90vh;
   padding: 25px;
 }
 
-.popover-style >>> .label-style {
+.popover-style :deep(.label-style) {
   white-space: nowrap;
 }
 
@@ -7919,7 +8188,7 @@ ons-col.layout-item {
   margin-left: 5px;
 }
 
-.graph-setting >>> label {
+.graph-setting :deep(label) {
   margin-right: 5px;
 }
 

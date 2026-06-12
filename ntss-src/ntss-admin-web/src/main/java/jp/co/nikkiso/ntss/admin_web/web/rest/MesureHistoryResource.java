@@ -3,10 +3,13 @@ package jp.co.nikkiso.ntss.admin_web.web.rest;
 import java.sql.Timestamp;
 import java.util.Arrays;
 
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
+import jp.co.nikkiso.ntss.core.entity.OrdWeightScale;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,6 +21,7 @@ import jp.co.nikkiso.ntss.admin_web.service.webSocketNotify.WebSocketNotifyServi
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 @RestController
 @RequestMapping(Uri.MESURE_HISTORY)
@@ -42,7 +46,21 @@ public class MesureHistoryResource {
   public ResponseEntity<?> getOrderWeight(
       @PathVariable(name = "facilityCd", required = true) String facilityCd,
       @PathVariable(name = "startDate", required = true) String startDate,
-      @PathVariable(name = "endDate", required = true) String endDate) {
+      @PathVariable(name = "endDate", required = true) String endDate,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "startDate=" + startDate + " " + "endDate=" + endDate + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.MESURE_HISTORY + "/order";
@@ -68,7 +86,23 @@ public class MesureHistoryResource {
    */
   @GetMapping("get/{serialNo}")
   public ResponseEntity<?> getOrderWeight(
-      @PathVariable Long serialNo) {
+      @PathVariable Long serialNo,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              OrdWeightScale single = measureHistoryService.getSingle(serialNo);
+              String facilityCd = single.getFacilityCd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "serialNo=" + serialNo + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.MESURE_HISTORY + "/get";

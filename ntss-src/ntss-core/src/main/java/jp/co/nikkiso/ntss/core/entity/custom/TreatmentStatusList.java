@@ -406,7 +406,7 @@ public class TreatmentStatusList extends BaseEntity {
 
   private BigDecimal rstDw;
   private BigDecimal indDw;
-  private Long WeightScaleNo;
+  private Long weightScaleNo;
 
   /**
    * 装置エントリー状態[-1：空きベッド/0：治療後～確定前/1：次患者/2：現患者]

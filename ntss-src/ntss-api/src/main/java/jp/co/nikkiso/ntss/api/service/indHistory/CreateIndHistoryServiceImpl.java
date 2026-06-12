@@ -1,7 +1,8 @@
 package jp.co.nikkiso.ntss.api.service.indHistory;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.mongodb.bulk.BulkWriteResult;
 import jp.co.nikkiso.ntss.api.model.indHistory.TreatMethodChangeHelper;
@@ -61,7 +62,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
@@ -5971,7 +5971,7 @@ public class CreateIndHistoryServiceImpl implements CreateIndHistoryService {
     };
     try {
       changedList = mapper.readValue(strJson, type);
-    } catch (IOException e) {
+    } catch (JacksonException e) {
       System.err.println(e.getMessage());
     }
     return changedList;

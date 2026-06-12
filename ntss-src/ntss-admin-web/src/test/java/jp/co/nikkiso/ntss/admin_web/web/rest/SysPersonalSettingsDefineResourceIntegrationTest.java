@@ -17,7 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.jdbc.Sql;
@@ -53,7 +53,7 @@ public class SysPersonalSettingsDefineResourceIntegrationTest extends AbstractRe
     // assert
     mockMvc
       .perform(get("/api/personal_setting_define/{tab_define_cd}", tabDefineCd)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
       .andExpect(jsonPath("$.tab_define_cd", is(tabDefineCd)))
@@ -151,7 +151,7 @@ public class SysPersonalSettingsDefineResourceIntegrationTest extends AbstractRe
     // assert
     mockMvc
       .perform(get("/api/personal_setting_define/{tab_define_cd}", tabDefineCd)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isInternalServerError())
       .andDo(
         document("personal_settings/define/get/not-found",

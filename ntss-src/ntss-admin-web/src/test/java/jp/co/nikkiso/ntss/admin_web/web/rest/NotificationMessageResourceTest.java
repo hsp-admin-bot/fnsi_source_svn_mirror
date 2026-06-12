@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.request.notificationMessage.ReadStatusRequest;
 import jp.co.nikkiso.ntss.admin_web.request.notificationMessage.RegisterRequest;
 import jp.co.nikkiso.ntss.admin_web.response.notificationMessage.NotificationListResponse;
@@ -11,9 +11,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -58,7 +58,7 @@ public class NotificationMessageResourceTest extends AbstractResourceTest {
   /**
    * 通知一覧Service.
    */
-  @MockBean
+  @MockitoBean
   private NotificationMessageService notificationMessageService;
 
   /**
@@ -97,7 +97,7 @@ public class NotificationMessageResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post("/api/notification-message")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(notificationMessageService, times(0)).registerNotificationMessage(anyString(), anyList(), anyString(), anyString());
@@ -132,7 +132,7 @@ public class NotificationMessageResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post("/api/notification-message")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(notificationMessageService, times(0)).registerNotificationMessage(anyString(), anyList(), anyString(), anyString());
@@ -166,7 +166,7 @@ public class NotificationMessageResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post("/api/notification-message")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(notificationMessageService, times(0)).registerNotificationMessage(anyString(), anyList(), anyString(), anyString());
@@ -213,7 +213,7 @@ public class NotificationMessageResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/notification-message")
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(notificationMessageService, times(1)).getNotificationMessage(anyLong(), facilityCd);
@@ -255,7 +255,7 @@ public class NotificationMessageResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/notification-message")
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(notificationMessageService, times(1)).getNotificationMessage(anyLong(), facilityCd);
@@ -306,7 +306,7 @@ public class NotificationMessageResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/notification-message/all")
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(notificationMessageService, times(1)).getNotificationMessageAll(anyLong());
@@ -347,7 +347,7 @@ public class NotificationMessageResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/notification-message/all")
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(notificationMessageService, times(1)).getNotificationMessageAll(anyLong());
@@ -390,7 +390,7 @@ public class NotificationMessageResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/notification-message/status")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(notificationMessageService, times(1)).updateReadStatus(any(), anyLong(), facilityCd);

@@ -25,13 +25,13 @@
             <!-- <label class="function-item function-item"> -->
             <label class="function-item function-item-style" style="display: flex; align-items: center; white-space: nowrap;">
             <!-- mod FNSI-改修内容4429修正 関　end -->
-              <v-ons-checkbox v-model="viewDetail" @click="changeViewDetail()" />
+              <v-ons-checkbox v-model="viewDetail" @change="changeViewDetail" />
               <span>詳細表示</span>
             </label>
           </v-ons-col>
           <list-selector
             :key="componentKey('表示項目設定')"
-            :visible.sync="isItemSelectorPopupVisible"
+            v-model:visible="isItemSelectorPopupVisible"
             v-bind="itemSelectorData"
             v-bind:sort="true"
             :target="selectorTarget"
@@ -42,7 +42,7 @@
     <!-- 検索条件：入力エリア -->
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -106,8 +106,10 @@
                     type="time"
                     @keyup="noticeStartTimeChange"
                   ></v-ons-input> -->
+                  <!--#9846 add :width="fontSizeSet === 'font-size-set-small' ? 9 : fontSizeSet === 'font-size-set-x-large' ? 7.5 : 7"-->
                   <time-input
                     id="startTime"
+                    :width="fontSizeSet === 'font-size-set-small' ? 9 : fontSizeSet === 'font-size-set-x-large' ? 7.5 : 7"
                     v-model="searchCondition.noticeStartTime"
                     @handleClearInput="searchCondition.noticeStartTime = null"
                     @keyup="noticeStartTimeChange"
@@ -118,7 +120,7 @@
               </v-ons-row>
               <!-- add 日付check 陳 start-->
               <span class="error-message" v-if="showErrorStartDate || showErrorStartTime">
-                {{ errors.first("searchCondition.noticeStartDate") || this.msgDiaLog }}</span>
+                {{ getValidationError("searchCondition.noticeStartDate") || this.msgDiaLog }}</span>
               <!-- add 日付check 陳 end-->
               <v-ons-row class="center-row" style="flex-wrap: nowrap;">
                 <div style="display: flex; min-width: 13em;">
@@ -167,8 +169,10 @@
                     type="time"
                     @keyup="noticeEndTimeChange"
                   ></v-ons-input> -->
+                   <!--#9846 add :width="fontSizeSet === 'font-size-set-small' ? 9 : fontSizeSet === 'font-size-set-x-large' ? 7.5 : 7"-->
                    <time-input
                     id="endTime"
+                    :width="fontSizeSet === 'font-size-set-small' ? 9 : fontSizeSet === 'font-size-set-x-large' ? 7.5 : 7"
                     v-model="searchCondition.noticeEndTime"
                     @handleClearInput="searchCondition.noticeEndTime = null"
                     @keyup="noticeEndTimeChange"
@@ -195,7 +199,7 @@
               </v-ons-row>
               <!-- add 日付check 陳 start-->
               <span class="error-message" v-if="showErrorEndDate || showErrorEndTime">
-                {{ errors.first("searchCondition.noticeStartDate") || this.msgDiaLog }}</span>
+                {{ getValidationError("searchCondition.noticeStartDate") || this.msgDiaLog }}</span>
               <!-- add 日付check 陳 end-->
             </v-ons-col>
           </v-ons-row>
@@ -265,7 +269,12 @@
               <label style="white-space: nowrap;">フリーワード</label>
             </v-ons-col>
             <v-ons-col vertical-align="center" class="center-row">
-              <v-ons-input v-model="searchCondition.keySearch" class="input-area" type="text" style="min-width: 14em;"></v-ons-input>
+              <v-ons-input
+                v-model="searchCondition.keySearch"
+                class="input-area filter-freeword-input"
+                type="text"
+                style="min-width: 14em;"
+              ></v-ons-input>
               <v-ons-select v-model="searchCondition.typeSearch" style="min-width: 5em;">
                 <option
                   v-for="(item, index) in typeSearchList"
@@ -316,7 +325,7 @@
     <!-- download popover -->
     <v-ons-popover
       cancelable
-      :visible.sync="popoverDownloadVisible"
+      v-model:visible="popoverDownloadVisible"
       :target="downloadTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -433,7 +442,7 @@
     <!-- download popover end -->
     <list-selector
       :key="componentKey('スタッフ')"
-      :visible.sync="isItemSelectorVisible"
+      v-model:visible="isItemSelectorVisible"
       v-bind="itemSelectorData"
       v-bind:sort="refName == 'itemSelector'"
       :target="selectorTarget"
@@ -443,10 +452,10 @@
 </template>
 
 <script>
-  import _ from "underscore";
+  import _ from "@/compat/collections/lodash";
   import {ApiHelper} from "@/apis/AxiosHelper.js";
-  import moment from "moment";
-  import {mapActions, mapGetters} from "vuex";
+  import dayjs from "@/compat/date/dayjs";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   import listSelector from "@/components/common/list-selector/ListSelector.vue";
   import CommonCalender from "@/components/common/custom-calendar/CustomCalendar";
   import commonSearchArea from "@/components/common/CommonSearchArea";
@@ -460,7 +469,7 @@
     sendRequestUpdateCondition,
   } from "@/apis/log-reference";
   import PopoverMixin from "@/components/PopoverMixin";
-  import {EventBus} from "@/eventBus.js";
+  import {EventBus} from "@/compat/vue/event-bus.js";
   // add 日付check 陳 start
   import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
   // add 日付check 陳 end
@@ -478,11 +487,12 @@
   //#5590 2023/04/18 ×を常に表示するように修正 張博 end
   // add 利用者表示不正について、修正する。 dengshen start
   import store from "@/stores";
+  import { getScopedDocument, getScopedElementById, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
   // add 利用者表示不正について、修正する。 dengshen end
 
 const uriUser = "/master_maintenance/mst_user";
 const uriPat = `/patInfo/getPatByFacilityCd`;
-const uriFunctionFacility = "/mstInfo/mstFacility/";
+const uriFunctionFacility = "/mstInfo/mstFacility";
 const appPropertiesLogging = "1";
 const eventPropertiesLogging = "0";
 const ITEM_PER_PAGE = 50;
@@ -501,7 +511,7 @@ export default {
     TimeInput
     // #5590 2023/04/18 ×を常に表示するように修正 張博 end
   },
-  props: {},
+
 
   data() {
     return {
@@ -713,6 +723,7 @@ export default {
     EventBus.$off('getDisplayColumns', this.getDisplayColumns);
     // add 性能改善メモリ不足 shan end
     EventBus.$on('getDisplayColumns', this.getDisplayColumns);
+    EventBus.$on('syncViewLogViewDetail', this.syncViewDetail);
     //add FNSI-7759 劉全航 start
      if(this.facilityCd !== 'nkknkk'){
         var responseUser = ApiHelper.get(`${uriUser}/${this.facilityCd}`);
@@ -743,16 +754,23 @@ export default {
       /* add by liuzhibo 2022-11-22[6872]ログの検索条件に前のユーザ時の条件が表示され、消えない -- end */
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     this.setLastUserId(this.userId);
     this.setCondition(this.searchCondition);
     this.clearCondition();
     EventBus.$off('getDisplayColumns', this.getDisplayColumns);
+    EventBus.$off('syncViewLogViewDetail', this.syncViewDetail);
     this.setQueryParameters({});
 
     Object.assign(this.$data, this.$options.data.call(this))
   },
   methods: {
+    getDropdownRef() {
+      return this.$refs.dropdown || null;
+    },
+    getDropdownWidget() {
+      return this.getDropdownRef()?.kendoWidget?.() || this.getDropdownRef()?.dropdownWidget?.() || null;
+    },
     ...mapActions("view-log", [
       "setSearchRequest",
       "setCondition",
@@ -795,9 +813,9 @@ export default {
     },
 // add 日付check 陳 start
     noticeStartDateChange() {
-      let startDateDom = document.getElementById("startDate");
+      const startDateDom = getScopedElementById("startDate", this.$el || null);
       if (this.searchCondition.noticeStartDate === "") {
-        this.showErrorStartDate = startDateDom.validationMessage !== "";
+        this.showErrorStartDate = (startDateDom?.validationMessage || "") !== "";
       } else {
         this.showErrorStartDate = false;
       }
@@ -817,19 +835,19 @@ export default {
     noticeStartTimeChange() {
       // #10044 TypeError: Cannot read properties of undefined (reading 'validationMessage') linjunfeng start
       // let startTimeDom = document.getElementById("startTime").children[0];
-      let startTimeDom = document.getElementById("startTime");
+      const startTimeDom = getScopedElementById("startTime", this.$el || null);
       // #10044 TypeError: Cannot read properties of undefined (reading 'validationMessage') linjunfeng end
       if (this.searchCondition.noticeStartTime === "") {
-        this.showErrorStartTime = startTimeDom.validationMessage !== "";
+        this.showErrorStartTime = (startTimeDom?.validationMessage || "") !== "";
       } else {
         this.showErrorStartTime = false;
       }
     },
 
     noticeEndDateChange() {
-      let endDateDom = document.getElementById("endDate");
+      const endDateDom = getScopedElementById("endDate", this.$el || null);
       if (this.searchCondition.noticeEndDate === "") {
-        this.showErrorEndDate = endDateDom.validationMessage !== "";
+        this.showErrorEndDate = (endDateDom?.validationMessage || "") !== "";
       } else {
         this.showErrorEndDate = false;
       }
@@ -843,10 +861,10 @@ export default {
     noticeEndTimeChange() {
       // #10044 TypeError: Cannot read properties of undefined (reading 'validationMessage') linjunfeng start
       // let endTimeDom = document.getElementById("endTime").children[0];
-      let endTimeDom = document.getElementById("endTime");
+      const endTimeDom = getScopedElementById("endTime", this.$el || null);
       // #10044 TypeError: Cannot read properties of undefined (reading 'validationMessage') linjunfeng end
       if (this.searchCondition.noticeEndTime === "") {
-        this.showErrorEndTime = endTimeDom.validationMessage !== "";
+        this.showErrorEndTime = (endTimeDom?.validationMessage || "") !== "";
       } else {
         this.showErrorEndTime = false;
       }
@@ -887,10 +905,10 @@ export default {
 
     defaultCondition() {
       let ret = {
-        noticeStartDate: moment().format("YYYY-MM-DD"),
-        noticeStartTime: moment().startOf('day').format("HH:mm"),
-        noticeEndDate: moment().format("YYYY-MM-DD"),
-        noticeEndTime: moment().format("HH:mm"),
+        noticeStartDate: dayjs().format("YYYY-MM-DD"),
+        noticeStartTime: dayjs().startOf('day').format("HH:mm"),
+        noticeEndDate: dayjs().format("YYYY-MM-DD"),
+        noticeEndTime: dayjs().format("HH:mm"),
         duration: 0,
         facilityCd: [],
         moduleName: [],
@@ -925,7 +943,7 @@ export default {
      * @description 作成、変更、削除の両方に使用
      */
     async saveSearchCondition() {
-      this.conditionName = (this.$refs.dropdown.kendoWidget().filterInput)[0].value.trim();
+      this.conditionName = (this.getDropdownWidget()?.filterInput?.[0]?.value || "").trim();
       if (this.dropdownOpenFlag && this.conditionName !== "") { // 挿入ケース
         if (this.savedConditionList.length < 10) { // 挿入を許可
           const largestId = this.savedConditionList.length > 0
@@ -1229,7 +1247,7 @@ export default {
     },
 
     componentKey(str) {
-      return `${moment().format("YYYYMMDDHHmmssSSS")}${str}`;
+      return `${dayjs().format("YYYYMMDDHHmmssSSS")}${str}`;
     },
 
     async listSelectItem(refName) {
@@ -1316,14 +1334,14 @@ export default {
     onChangeStartDate() {
       // mod 9118 【デグレ】ログ参照の期間指定の開始日と終了日が連動する 関 start
       // if (!this.searchCondition.noticeEndDate) {
-      //   this.searchCondition.noticeEndDate = moment().format("YYYY-MM-DD");
+      //   this.searchCondition.noticeEndDate = dayjs().format("YYYY-MM-DD");
       // }
-      // this.searchCondition.noticeStartDate = moment(this.searchCondition.noticeEndDate).subtract(this.searchCondition.duration, 'day').format("YYYY-MM-DD");
+      // this.searchCondition.noticeStartDate = dayjs(this.searchCondition.noticeEndDate).subtract(this.searchCondition.duration, 'day').format("YYYY-MM-DD");
       if (this.changeStartDateFlg) {
       if (!this.searchCondition.noticeEndDate) {
-        this.searchCondition.noticeEndDate = moment().format("YYYY-MM-DD");
+        this.searchCondition.noticeEndDate = dayjs().format("YYYY-MM-DD");
       }
-      this.searchCondition.noticeStartDate = moment(this.searchCondition.noticeEndDate).subtract(this.searchCondition.duration, 'day').format("YYYY-MM-DD");
+      this.searchCondition.noticeStartDate = dayjs(this.searchCondition.noticeEndDate).subtract(this.searchCondition.duration, 'day').format("YYYY-MM-DD");
         this.changeStartDateFlg = false;
       }
       // mod 9118 【デグレ】ログ参照の期間指定の開始日と終了日が連動する 関 end
@@ -1338,9 +1356,9 @@ export default {
     // onChangeEndDate() {
     //   this.startDataChangeFlg = false;
     //   if (!this.searchCondition.noticeStartDate) {
-    //     this.searchCondition.noticeStartDate = moment().format("YYYY-MM-DD");
+    //     this.searchCondition.noticeStartDate = dayjs().format("YYYY-MM-DD");
     //   }
-    //   this.searchCondition.noticeEndDate = moment(this.searchCondition.noticeStartDate).subtract(this.searchCondition.duration * -1, 'day').format("YYYY-MM-DD");
+    //   this.searchCondition.noticeEndDate = dayjs(this.searchCondition.noticeStartDate).subtract(this.searchCondition.duration * -1, 'day').format("YYYY-MM-DD");
     // },
     // add 表示期間の終了日変更の場合、開始日表示不正を修正する。 dengshen end
     // del 9826 ログ参照の期間指定の終了日が開始日と連動する 関 end
@@ -1381,7 +1399,7 @@ export default {
       // setTimeout(() => {
         this.dropdownOpenFlag = false;
         if (this.selectedSavedCondition) {
-          this.$refs.dropdown.kendoWidget().value(this.selectedSavedCondition);
+          this.getDropdownWidget()?.value?.(this.selectedSavedCondition);
         }
       // }, 500);
       });
@@ -1437,7 +1455,11 @@ export default {
       EventBus.$emit('download')
     },
     changeViewDetail() {
-      EventBus.$emit('changeViewDetail')
+      // v-ons-checkbox の change は v-model 更新前に発火するため、反転後の値を渡す
+      EventBus.$emit('changeViewDetail', !this.viewDetail);
+    },
+    syncViewDetail(viewDetail) {
+      this.viewDetail = !!viewDetail;
     },
     onClickMultiDownload(refName) {
       this.downloadTarget = this.$refs[`${refName}`];
@@ -1676,14 +1698,21 @@ export default {
       this.downloadLogFile(itemPath);
     },
     downloadBase64File(contentBase64, fileName) {
-      const linkSource = window.URL.createObjectURL(new Blob([contentBase64]));
-      const downloadLink = document.createElement('a');
-      document.body.appendChild(downloadLink);
+      const ownerDocument = getScopedDocument(this);
+      const ownerWindow = getScopedWindow(this);
+      const linkSource = ownerWindow?.URL?.createObjectURL?.(new Blob([contentBase64]));
+      const downloadLink = ownerDocument?.createElement?.('a');
+      if (!linkSource || !downloadLink) {
+        return;
+      }
+      ownerDocument.body?.appendChild?.(downloadLink);
 
       downloadLink.href = linkSource;
       downloadLink.target = '_self';
       downloadLink.download = fileName;
       downloadLink.click();
+      downloadLink.remove?.();
+      ownerWindow?.URL?.revokeObjectURL?.(linkSource);
     },
     sortDownloadLog() {
       const listItem = [...this.downloadLogPathTemp.lstFile];
@@ -1750,7 +1779,7 @@ export default {
       this.currentLogPage = 0;
     },
     getFacilityName(facility) {
-      const facilityCd = facility.hasOwnProperty('facilityCd') ? facility.facilityCd: facility;
+      const facilityCd = Object.prototype.hasOwnProperty.call(facility, 'facilityCd') ? facility.facilityCd : facility;
       const foundFacility = this.facilityInfo.find(facility => facility.facilityCd === facilityCd);
       return foundFacility ? foundFacility.facilityName : '';
     }
@@ -1769,7 +1798,7 @@ export default {
 }
 
 .function-item {
-  margin-left: 10px;
+  margin-left: 9px;
   font-size: 1.5em;
   /* add 内结 19 详细表示黑夜模式颜色不正确。張岩 start */
   color: var(--ntss-list-body-color);
@@ -1787,17 +1816,33 @@ export default {
   flex: 0 0 55%;
 }
 
-.popover-area >>> .popover-mask {
+.popover-area :deep(.popover-mask) {
   z-index: 100;
 }
 
-.popover-area >>> .popover {
+.popover-area :deep(.popover) {
   z-index: 200;
   width: 620px !important;
 }
 
 .pop-area {
   margin: 10px;
+}
+
+/* フリーワード：通常の灰枠を維持、focus 時の緑枠（#7229）のみ抑止 */
+.pop-area .filter-freeword-input {
+  border: none !important;
+  box-shadow: none !important;
+}
+.pop-area .filter-freeword-input :deep(.text-input) {
+  border: 1px solid #ccc !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: var(--search-input-background-color, #fff);
+}
+.pop-area .filter-freeword-input :deep(.text-input:focus) {
+  border: 1px solid #ccc !important;
+  outline: none !important;
 }
 
 .pop-title {
@@ -1845,6 +1890,10 @@ ons-input .text-input {
   font-size: unset;
 }
 
+ons-input :deep(.text-input) {
+  font-size: unset;
+}
+
 .custom-input-disabled {
   color: black;
   cursor: not-allowed;
@@ -1856,7 +1905,7 @@ ons-input .text-input {
   display: none;
 }
 
-.input-area>>>.text-input {
+.input-area :deep(.text-input) {
   padding: 1px 2px;
 }
 
@@ -1915,27 +1964,27 @@ ons-input .text-input {
   transform: scaleX(-1);
   margin: 0 10px;
 }
-.download-log-popover >>> .popover-mask--top {
+.download-log-popover :deep(.popover-mask--top) {
   z-index: 9999;
 }
-.download-log-popover >>> .popover--top {
+.download-log-popover :deep(.popover--top) {
   width: auto;
 }
-.download-log-popover >>> .popover__content {
+.download-log-popover :deep(.popover__content) {
   width: 30em;
 }
 
-.vons-popover >>> .popover--right {
+.vons-popover :deep(.popover--right) {
   z-index: 30000;
 }
-.vons-popover >>> .popover--right__content {
+.vons-popover :deep(.popover--right__content) {
   width: 400px;
 }
 
 .download-field {
   position: relative;
 }
-.download-field >>> ons-icon {
+.download-field :deep(ons-icon) {
   position: absolute;
   top: 0.3em;
   left: 0.4em;
@@ -1943,14 +1992,20 @@ ons-input .text-input {
 .log-page-show {
   visibility: hidden !important;
 }
-.pop-area >>> .k-multiselect-wrap {
+.pop-area :deep(.k-multiselect-wrap) {
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.pop-area :deep(.k-input-values.k-multiselect-wrap),
+.pop-area :deep(.k-input-values) {
   max-height: 100px;
   overflow-y: auto;
 }
 .download-sort {
   max-width: 30px;
 }
-.download-sort >>> ons-icon{
+.download-sort :deep(ons-icon){
   font-size: 25px !important;
   color: #eee !important;
 }
@@ -1962,14 +2017,14 @@ ons-input .text-input {
 .download-paging {
   display: flex;
 }
-.download-paging >>> ons-icon {
+.download-paging :deep(ons-icon) {
   border: 1px solid black;
   box-sizing: border-box;
   width: 30px;
   text-align: center;
   border-radius: 2px;
 }
-.download-paging >>> ons-icon:hover {
+.download-paging :deep(ons-icon:hover) {
   background-color: #eee;
   color: black;
 }
@@ -1977,7 +2032,7 @@ ons-input .text-input {
   width: fit-content;
   padding: 0 2px;
 }
-.navigation-bar >>> span {
+.navigation-bar :deep(span) {
   border: 1px solid black;
   box-sizing: border-box;
   width: 30px !important;
@@ -1986,7 +2041,7 @@ ons-input .text-input {
   margin: 0 2px;
   border-radius: 2px;
 }
-.navigation-bar >>> span:hover{
+.navigation-bar :deep(span:hover){
   background-color: #eee;
   color: black;
 }
@@ -2020,7 +2075,7 @@ ons-input .text-input {
   }
 
   /*add FNSI-改修内容5054 任 start*/
-  .popover-style >>> .popover{
+  .popover-style :deep(.popover){
     top: 0;
   }
   /*add FNSI-改修内容5054 任 end*/

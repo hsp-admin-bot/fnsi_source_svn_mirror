@@ -2,8 +2,8 @@ package jp.co.nikkiso.ntss.core.entity.xml;
 
 import java.util.List;
 
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlAttribute;
+import jakarta.xml.bind.annotation.XmlElement;
 
 /**
  * 変換レイアウトの繰り返し項目を表すクラス。（JAXBエンティティ）

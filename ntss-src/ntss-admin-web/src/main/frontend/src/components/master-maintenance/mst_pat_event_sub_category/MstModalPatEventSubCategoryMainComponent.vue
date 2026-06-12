@@ -78,16 +78,17 @@
                                 max="15"
                                 >
                               </v-ons-input> -->
-                              <v-ons-input
-                                type="number"
-                                @change="isIputNumber"
-                                style="float:right;width:15%"
-                                @mousewheel.prevent="stopScrollFun($event)"
-                                @blur="formatValue($event)"
-                                @focus="handleFocus"
+                              <custom-input-number-pro
+                                class="sub-category-times-input"
+                                :value="subCategoryItem.times"
+                                :step="1"
+                                :min="0"
+                                :max="15"
+                                :rollFlag="false"
+                                :valueModifiers="{ lazy: true }"
+                                @handlerInput="(val) => updateSubCategoryTimes(subCategoryItem, val)"
                                 v-if="subCategoryItem.itemNo == 1"
-                                v-model="subCategoryItem.times"                                >
-                              </v-ons-input>
+                              />
                               <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 end                           -->
                               <span  v-if="subCategoryItem.itemNo == 1" style="float:right;width:23%">治療方法ごとに指定した帳票　過去レポートの印刷回数</span>
                             </v-ons-col>
@@ -106,11 +107,12 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { mstPatEventSubCategoryDefine } from "@/constants/mstPatEventSubCategoryDefine";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import vuedraggable from "vuedraggable";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 import { ApiHelper } from "@/apis/AxiosHelper.js";
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
@@ -118,7 +120,8 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 export default {
 
   components: {
-    draggable: vuedraggable
+    draggable: VueDraggable,
+    "custom-input-number-pro": CustomInputNumberPro
   },
 
   data() {
@@ -139,12 +142,7 @@ export default {
       dispItemInfo: [],
       dispItemInfoTemp: [],
       reportlist: [],
-      // mod #5589 2023/04/01 数値IFのスタイル全不正 張博 start
-      minValue:0,
-      maxValue:15,
-      blurFlg:false,
-      focusFlg:false,
-      // mod #5589 2023/04/01 数値IFのスタイル全不正 張博 end
+      isInitializingDispItemInfo: false,
     };
   },
   computed: {
@@ -224,6 +222,9 @@ export default {
      */
     dispItemInfo: {
       handler(data) {
+        if (this.isInitializingDispItemInfo) {
+          return;
+        }
         this.setDispItemInfo(data);
       },
       deep: true
@@ -248,6 +249,7 @@ export default {
      * @description レイアウトデータ取得
      */
     retrieveMstData() {
+      this.isInitializingDispItemInfo = true;
       const temp = this.editRecord.dispItemInfo
         ? JSON.parse(this.editRecord.dispItemInfo)
         //mod デフォルトで非選択状態 孔s start
@@ -255,87 +257,16 @@ export default {
         : [];
         //mod デフォルトで非選択状態 孔s end
       this.dispItemInfo = this.insertIsDispOption(temp);
+      this.$nextTick(() => {
+        this.isInitializingDispItemInfo = false;
+      });
     },
-    stopScrollFun(e) {
-      // mod #5589 2023/04/11 数値IFのスタイル全不正 張博 start
-      if (!this.focusFlg) {
-        return;
-      }
-      // let value = e.target.value;
-      // e.target.value = value;
-      let delta = (e.wheelDelta && (e.wheelDelta > 0 ? 1 : -1)) ||
-                      (e.detail && (e.wheelDelta > 0 ? -1 : 1))
-      let value = parseFloat(e.target.value);
-      const parameterStep = 1;
-      if (delta > 0) {
-        // 滑ります
-        value += parameterStep
-      } else {
-        // 下がります
-        value -= parameterStep
-      }
-      if (value > this.maxValue) {
-        value = this.minValue;
-      }
-      if(value < this.minValue) {
-        value = this.maxValue;
-      }
-      e.target.value = value
-      // mod #5589 2023/04/11 数値IFのスタイル全不正 張博 end
+    updateSubCategoryTimes(subCategoryItem, value) {
+      // 初期値が数値の場合は、編集後も数値として保持する。
+      subCategoryItem.times = typeof subCategoryItem.times === "number" && value !== "" && value !== null
+        ? Number(value)
+        : value;
     },
-    isIputNumber(e) {
-      if (!(e.target.value === undefined || e.target.value === null) && e.target.value.length == 0) {
-        // 回数が空欄になった場合は「0」を設定
-        e.target.value=e.target.value = 0;
-      } else if (e.target.value.length==1) {
-        e.target.value=e.target.value.replace(/[^0-9]/g,'');
-      } else {
-        if (e.target.value.substring(0,1) ==0) {
-          e.target.value=e.target.value.replace(/0/g,'');
-        }
-        // mod #5589 2023/03/30 数値IFのスタイル全不正 張博 start
-        // let tmpValue = e.target.value.replace(/[^0-9]/g,'');
-        // // 最大値を超えていた場合
-        // if (tmpValue > this.maxValue) {
-        //   e.target.value = this.maxValue;
-        //   console.log('e.target.value',e.target.value);
-
-        // } else {
-        //   e.target.value = tmpValue;
-        //   console.log('e.target.value',e.target.value);
-
-        // }
-        //   console.log('e.target.value',e.target.value);
-      }
-        // 数値範囲内かどうかの確認
-        if (this.minValue !== undefined && this.maxValue !== undefined) {
-          if (e.target.value > this.maxValue) {
-            e.target.value = this.minValue;
-            this.blurFlg=true;
-          } else if (e.target.value < this.minValue) {
-            e.target.value= this.maxValue;
-            this.blurFlg=true;
-          }else{
-            this.blurFlg=false;
-          }
-        }
-    },
-    formatValue(event){
-      // 限界値判定
-      let value = event.target.value;
-      if (value == this.maxValue && this.blurFlg) {
-        event.target.value = this.minValue;
-        this.blurFlg = false;
-      }else if (value == this.minValue && this.blurFlg) {
-        event.target.value = this.maxValue;
-        this.blurFlg = false;
-      }
-      this.focusFlg=false;
-    },
-    handleFocus(){
-      this.focusFlg=true;
-    },
-    // mod #5589 2023/03/30 数値IFのスタイル全不正 張博 end
     /**
      * @description 表示項目変更
      * @param { Array } value 編集内容
@@ -425,6 +356,11 @@ export default {
 .layout-item-fallback,
 .layout-item.layout-item-dragging {
   max-height: 26px;
+}
+
+.sub-category-times-input {
+  float: right;
+  width: 15%;
 }
 
 ons-col.layout-item, .color-header {
@@ -519,7 +455,7 @@ ons-col.layout-item {
   margin: 0 4px;
 } */
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 500px;
   height: 100%;
   padding: 25px;
@@ -576,7 +512,7 @@ ons-col.layout-item {
   margin-left: 5px;
 }
 
-.graph-setting >>> label {
+.graph-setting :deep(label) {
   margin-right: 5px;
 }
 

@@ -36,9 +36,8 @@
 </template>
 
 <script>
-import Vue from "vue";
-import { mapActions, mapGetters } from "vuex";
-import TreeViewComponent from "@/components/indication-result/tree-view-pattern/TreeViewComponent";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+
 import { IndicationResult } from "@/models/indication-result/IndicationResult";
 import { PatientEventResult } from "@/models/indication-result/PatientEventResult";
 import { InspectionScheduleResult } from "@/models/indication-result/InspectionScheduleResult";
@@ -55,21 +54,20 @@ import {sendRequestPatExamMain } from "@/apis/exam-request";
 import {deepCopy} from "@/functions/common/CommonFunctions";
 import {getDeadlineDate} from "@/functions/common/DateTimeUtils";
 import {SAVED} from "@/constants/examRequestConstants";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // mod FNSI-7217 バッチ操作インターフェイスを追加します 查 start
 // import {sendRequestGetMstFacilitySettingValue} from "@/apis/facility-setting";
 import {sendRequestGetMstFacilitySettingValueMap} from "@/apis/facility-setting";
 // mod FNSI-7217 バッチ操作インターフェイスを追加します 查 end
 import {EXAM_DEADLINE, EXAM_DEADLINE_DATE_COUNT, EXAM_DEADLINE_TIME_COUNT} from "@/constants/facilitySetting";
-//add #12663 #12665 securify】SQLインジェクション(High) まとめ zrx start
-import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
-//add #12663 #12665 securify】SQLインジェクション(High) まとめ zrx end
+import nameDuplicationImg from "@/assets/name_duplication.png";
+import { getFooterMenuClientHeight, queryElementBySelectors } from "@/functions/common/LayoutMeasureHelper";
+
 // add FNSI-マスタ削除表示の対応課題--予実リスト 鄧シン end
 import {toSlashDate} from "@/functions/exam-request/ExamRequestFunctions";
-import {messageFormat} from "@/functions/common/MessageFormat";
+import { messageFormat } from "@/functions/common/MessageFormat";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
-
-Vue.component("tree-item", TreeViewComponent);
+import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 
 export default {
   components: {
@@ -101,8 +99,8 @@ export default {
       switchOrder: 1,
       isConditonVisible: true,
       //同姓同名アイコン
-      image_src_same: require('../../assets/name_duplication.png')
-      ,patId: ""
+      image_src_same: nameDuplicationImg,
+      patId: ""
     }
   },
 
@@ -241,31 +239,31 @@ export default {
       //mod #12663 #12665 securify】SQLインジェクション(High) まとめ zrx start
       try {
         const [
-          patViewResponsesData,
-          patEventResponsesData,
-          response,
-          facilitySettingValueResponseData,
-          inspectionResponsesData,
-          genPhotoResponsesData,
-          prescriptionResponsesData
-        ] = await Promise.all([
-          this.getIndicationResultList({patId: param.patId, condition: condition}),
-          this.getPatientEventResultList({condition: searchCondition}),
-          sendRequestPatExamMain({
-            //mod nkk-3760検査依頼の個別登録、削除をした際に画面に表示される患者が1人になる 張岩 end
-            "patIdList": [param.patId],
-            "startDate": "",
-            "endDate": toSlashDate(param.treatDateTo)
-          }),
-          sendRequestGetMstFacilitySettingValueMap(this.getFacilityCd, settingNos),
-          this.getInspectionResultList({condition: searchCondition}),
-          this.getGenPhotoInsResultList({condition: searchCondition}),
-          this.getPrescriptionResultList({condition: searchCondition})
-        ]);
-        /* modify by chamaojia 2022-10-26 [7217] 一括要求に変更  --end */
-        // 患者経過総合ビューアデータがあるの場合
-        if (patViewResponsesData && patViewResponsesData.data) {
-          const tmpList = [];
+        patViewResponsesData,
+        patEventResponsesData,
+        response,
+        facilitySettingValueResponseData,
+        inspectionResponsesData,
+        genPhotoResponsesData,
+        prescriptionResponsesData
+      ] = await Promise.all([
+        this.getIndicationResultList({patId: param.patId, condition: condition}),
+        this.getPatientEventResultList({condition: searchCondition}),
+        sendRequestPatExamMain({
+          //mod nkk-3760検査依頼の個別登録、削除をした際に画面に表示される患者が1人になる 張岩 end
+          "patIdList": [param.patId],
+          "startDate": "",
+          "endDate": toSlashDate(param.treatDateTo)
+        }),
+        sendRequestGetMstFacilitySettingValueMap(this.getFacilityCd, settingNos),
+        this.getInspectionResultList({condition: searchCondition}),
+        this.getGenPhotoInsResultList({condition: searchCondition}),
+        this.getPrescriptionResultList({condition: searchCondition})
+      ]);
+      /* modify by chamaojia 2022-10-26 [7217] 一括要求に変更  --end */
+      // 患者経過総合ビューアデータがあるの場合
+      if (patViewResponsesData && patViewResponsesData.data) {
+        const tmpList = [];
 
         // 血液浄化情報取得
         Array.prototype.push.apply(tmpList, patViewResponsesData.data.map(e => {
@@ -488,7 +486,7 @@ export default {
           targetObj["examItemSet"][data.regOrderClass][obj.set_cd]["status"][data.strExamDate] = data.examStatus;
           // 締切フラグ
           if (deadlineCondition.deadlineFlg) {
-            if (moment(deadlineDate).isAfter(moment(data.strExamDate))) {
+            if (dayjs(deadlineDate).isAfter(dayjs(data.strExamDate))) {
               // 締切を過ぎている
               targetObj["examItemSet"][data.regOrderClass][obj.set_cd]["isLock"][data.strExamDate] = "1";
             } else {
@@ -794,21 +792,25 @@ export default {
       this.filter = param;
     },
 
-    // add FNSI-No.342 患者イベント、検査結果、検査予定、一般撮影検査予定、処方の表示、機能遷移に対応 李 start
+    getTreeViewContentAreaElement() {
+      return queryElementBySelectors(['.tree-view-content-area'], this.$el || null);
+    },
+    applyTreeViewContentHeight(offset = 19) {
+      const treeViewContentArea = this.getTreeViewContentAreaElement();
+      if (!treeViewContentArea) {
+        return;
+      }
+      const wh = this.windowHeight;
+      const tableTop = treeViewContentArea.getBoundingClientRect().top;
+      const fmh = (this.isDispMenu === 1 ? getFooterMenuClientHeight(this.$el || null) : 0);
+      treeViewContentArea.style.height = (wh - tableTop - fmh - offset) + 'px';
+    },
+    // add FNSI-No.342 患者イベント、検査結果、検査予定、一般撮影検査予定、一般撮影検査予定、処方の表示、機能遷移に対応 李 start
     // 画面サイズ計算が変化する
     onScreenSizeChanges() {
       // mod FNSI-性能を最適化する 李 start
       this.$nextTick(() => {
-        const wh = this.windowHeight;
-        const tableTop = document.getElementsByClassName("tree-view-content-area")[0].getBoundingClientRect().top;
-        const fmh =
-          (this.isDispMenu === 1
-            ? document.getElementById("footer-menu").clientHeight
-            : 0);
-
-        // mod FNSI-FutreNetWeb+SI課題管理No.3823 李 start
-        // document.getElementsByClassName("tree-view-area")[0].style.height = (wh - tableTop - fmh - 25) + "px";
-        document.getElementsByClassName("tree-view-content-area")[0].style.height = (wh - tableTop - fmh - 19) + "px";
+        this.applyTreeViewContentHeight(19);
         // mod FNSI-FutreNetWeb+SI課題管理No.3823 李 end
       });
 
@@ -817,7 +819,7 @@ export default {
       //   const tableTop = document.getElementsByClassName("tree-view-area")[0].getBoundingClientRect().top;
       //   const fmh =
       //     (this.isDispMenu === 1
-      //       ? document.getElementById("footer-menu").clientHeight
+      //       ? getFooterMenuClientHeight(this.$el || null)
       //       : 0);
 
       //   document.getElementsByClassName("tree-view-area")[0].style.height = (wh - tableTop - fmh - 25) + "px";
@@ -932,13 +934,7 @@ export default {
     isConditonVisible() {
       // mod FNSI-性能を最適化する 李 start
       this.$nextTick(() => {
-        const wh = this.windowHeight;
-        const tableTop = document.getElementsByClassName("tree-view-content-area")[0].getBoundingClientRect().top;
-        const fmh =
-          (this.isDispMenu === 1
-            ? document.getElementById("footer-menu").clientHeight
-            : 0);
-        document.getElementsByClassName("tree-view-content-area")[0].style.height = (wh - tableTop - fmh - 25) + "px";
+        this.applyTreeViewContentHeight(25);
       });
 
       // setTimeout(() => {
@@ -946,7 +942,7 @@ export default {
       //   const tableTop = document.getElementsByClassName("tree-view-area")[0].getBoundingClientRect().top;
       //   const fmh =
       //     (this.isDispMenu === 1
-      //       ? document.getElementById("footer-menu").clientHeight
+      //       ? getFooterMenuClientHeight(this.$el || null)
       //       : 0);
       //   document.getElementsByClassName("tree-view-area")[0].style.height = (wh - tableTop - fmh - 25) + "px";
       // }, 100);
@@ -961,7 +957,6 @@ export default {
     }
   },
 
-  mounted() {}
 };
 </script>
 
@@ -982,6 +977,14 @@ export default {
   border: solid 1px rgb(138, 138, 138);
   border-radius: 5px;
 }
+/***#9846 start */
+.filter-content-area .condition{
+  max-width: 100%;
+}
+.filter-content-area :deep(.grid-container){
+  max-width: 100%;
+}
+/***#9846 end */
 
 .filter-content-area {
   margin-bottom: 0.5em;
@@ -1009,5 +1012,8 @@ export default {
   position: relative;
   top: 0.25em;
   height: 1.3em;
+}
+:deep(.k-legacy-multiselect input.k-input) {
+  width: 49px !important;
 }
 </style>

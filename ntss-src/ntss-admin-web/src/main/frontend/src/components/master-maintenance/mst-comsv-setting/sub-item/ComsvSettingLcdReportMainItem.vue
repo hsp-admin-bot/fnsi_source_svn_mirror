@@ -41,16 +41,16 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import vuedraggable from "vuedraggable"
+import { VueDraggable } from "@/compat/drag/VueDraggable"
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import {messageFormat} from "@/functions/common/MessageFormat";
 
 export default {
   name: "comsvSettingLcdReport",
   components: {
-    "draggable": vuedraggable
+    "draggable": VueDraggable
   },
   data() {
     return {
@@ -635,12 +635,8 @@ export default {
       });
     }
   },
-  watch: {
-  },
-  updated() {
-  },
-  created() {
-  },
+
+
   mounted() {
     // 描画系の処理がすべて完了した後に実行される処理
     for (const num in this.columnDefinition) {

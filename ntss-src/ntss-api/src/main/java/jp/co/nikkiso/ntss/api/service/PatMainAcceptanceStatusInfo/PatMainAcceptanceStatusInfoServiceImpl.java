@@ -22,6 +22,7 @@ import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
+import org.springframework.util.ObjectUtils;
 
 /**
  * pat_mainのacceptance_status_infoを更新するServiceインタフェース.
@@ -362,7 +363,10 @@ public class PatMainAcceptanceStatusInfoServiceImpl implements PatMainAcceptance
    * @param patId   患者ID
    * @return 再構築したJSONオブジェクト文字列
    */
-  public String rebuild(Long patId) {
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 start
+  @Override
+  public String rebuild(Long patId, String facilityCd) {
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 end
     String ret = "[]";
     EventLogMessage eventLogMessage = new EventLogMessage();
     try {
@@ -396,7 +400,15 @@ public class PatMainAcceptanceStatusInfoServiceImpl implements PatMainAcceptance
       eventLogMessage.setLogMessage("患者基本情報[pat_main]の治療進捗状態[acceptance_status_info]再構築 patId:" + patId + " / info:" + info);
       logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI, null);
 
-      if( 0 < patMainDao.updateAcceptanceStatusInfoById(patId, info) ) {
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 start
+      int updateCount = 0;
+      if (!ObjectUtils.isEmpty(facilityCd)) {
+        updateCount = patMainDao.updateAcceptanceStatusInfoByIdFacilityCd(patId, info, facilityCd);
+      } else {
+        updateCount = patMainDao.updateAcceptanceStatusInfoById(patId, info);
+      }
+      if( 0 < updateCount ) {
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 end
         ret = info;
       }
     } catch( Exception ex ) {

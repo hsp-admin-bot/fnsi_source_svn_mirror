@@ -13,7 +13,7 @@ import jp.co.nikkiso.ntss.core.entity.custom.MstEquipmentClassForChecklist;
 
 @ConfigAutowireable
 @Dao
-public interface MstEquipmentClassDao extends MasterDao<Map<String,Object>> {
+public interface MstEquipmentClassDao extends MasterDao<Map<String,Object>>, UnifiedByCodeListDao {
   @Select
   List<MstEquipmentClass> selectAll(SelectOptions options, MstEquipmentClass params);
 
@@ -32,4 +32,8 @@ public interface MstEquipmentClassDao extends MasterDao<Map<String,Object>> {
   @Override
   @Select
   List<Map<String,Object>> selectAllStatus(Map<String,String> params);
+
+  @Override
+  @Select
+  List<Map<String, Object>> selectAllStatusByCodeList(List<Integer> codeList);
 }

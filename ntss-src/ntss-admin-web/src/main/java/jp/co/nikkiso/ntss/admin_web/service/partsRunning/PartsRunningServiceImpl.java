@@ -12,7 +12,7 @@ import jp.co.nikkiso.ntss.admin_web.response.partsRunning.dto.V4PartsRunningDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.response.partsRunning.PartsRunningResponse;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.ComFormat;
@@ -47,7 +47,7 @@ public class PartsRunningServiceImpl implements PartsRunningService {
   private <D> D convertJsonStringToDto(String useTimeJson, Class<D> clazz) {
     try {
       return (useTimeJson == null) ? clazz.newInstance() : mapper.readValue(useTimeJson, clazz);
-    } catch(InstantiationException | IllegalAccessException | IOException e) {
+    } catch(InstantiationException | IllegalAccessException | tools.jackson.core.JacksonException e) {
       throw new RuntimeException(e);
     }
   }

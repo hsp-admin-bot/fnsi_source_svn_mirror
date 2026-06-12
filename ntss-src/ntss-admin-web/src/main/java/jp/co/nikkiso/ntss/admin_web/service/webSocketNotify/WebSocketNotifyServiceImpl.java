@@ -296,7 +296,7 @@ public class WebSocketNotifyServiceImpl implements WebSocketNotifyService {
       long start = System.currentTimeMillis();
       // リクエスト処理
       ResponseEntity<HttpStatus> response = rt.exchange(request, HttpStatus.class);
-      HttpStatus status = response.getStatusCode();
+      HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
       long cost = System.currentTimeMillis() - start;
       Map<String, Object> map = new HashMap<>();
       map.put("logType", "RESTTEMPLATE-LOG");

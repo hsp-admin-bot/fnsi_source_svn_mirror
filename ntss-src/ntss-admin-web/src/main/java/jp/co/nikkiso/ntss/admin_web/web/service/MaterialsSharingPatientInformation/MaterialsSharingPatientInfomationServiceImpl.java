@@ -16,7 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.NotificationDefinition;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
@@ -40,6 +40,7 @@ import jp.co.nikkiso.ntss.core.entity.custom.PublicPatientInfo;
 import jp.co.nikkiso.ntss.core.entity.custom.ReceivedPatientInfo;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -78,6 +79,10 @@ public class MaterialsSharingPatientInfomationServiceImpl implements MaterialsSh
 
   @Autowired
   private LogServiceCore logServiceCore;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // DB更新ログ出力ロジック wangzuo End
 
   @Override
@@ -326,7 +331,7 @@ public class MaterialsSharingPatientInfomationServiceImpl implements MaterialsSh
           wheres.append(" WHERE\n");
           wheres.append(" pat_id = " + patId + "\n");
           // logCommon設定
-          DataUpdateLogCommonNew logCommon = getLogCommon(patPersonalMainDao, tableName, wheres, getEventLogMessage());
+          DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
           // ログ出力カラム情報及び更新前データ情報取得
           boolean setResult = logCommon.setInfo();
           // DB更新ログ出力ロジック wangzuo End
@@ -508,11 +513,11 @@ public class MaterialsSharingPatientInfomationServiceImpl implements MaterialsSh
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

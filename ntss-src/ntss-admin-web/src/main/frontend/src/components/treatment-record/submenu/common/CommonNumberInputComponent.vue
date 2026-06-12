@@ -51,7 +51,8 @@
         @change="inputNumber($event)"
         @mousewheel.prevent="handleMouseWheel($event)"
          />   -->
-      <v-ons-input
+      <!-- #10628 数値IF修正 linjunfeng start -->
+      <!-- <v-ons-input
         ref="mySelect"
         :type="inputType"
         model-event="change"
@@ -67,7 +68,39 @@
         @focus="addFocusCss($event)"
         @change="inputNumber($event)"
         @mousewheel.prevent="handleMouseWheel($event)"
-         />
+         /> -->
+      <!-- mod #10628 コンソールエラーを修正 Ji start -->
+      <!-- <custom-input-number-pro
+        :key="componentsKey"
+        class="custom-input-number"
+        ref="mySelect"
+        :emptyVal="null"
+        :style="{ 'min-width': inputMinWidth, textAlign: inputTextAlign }"
+        :value="currentValuePro"
+        :max="currentMax"
+        :min="currentMin"
+        :step="step"
+        :disabled="disabled"
+        @handlerInput="handlerInput"
+        @blur="handlerInputBlur"
+        v-on="$listeners"
+      /> -->
+      <custom-input-number-pro
+        :key="componentsKey"
+        class="custom-input-number"
+        ref="mySelect"
+        :emptyVal="null"
+        :style="{ 'min-width': inputMinWidth, textAlign: inputTextAlign }"
+        :value="currentValuePro"
+        :max="currentMax"
+        :min="currentMin"
+        :step="step"
+        :disabled="disabled"
+        @handlerInput="handlerInput"
+        @blur="handlerInputBlur"
+      />
+      <!-- mod #10628 コンソールエラーを修正 Ji end -->
+      <!-- #10628 数値IF修正 linjunfeng end -->
       <!-- #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng end -->
       <!-- mod #5589 2023/03/29 数値IFのスタイル全不正 張博 end -->
       <!-- add FNSI-borderの追加 徐 end -->
@@ -91,10 +124,20 @@
 
 <script>
 import NumberInputMixin from "@/components/treatment-record/submenu/common/NumberInputMixin";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
+// add #10628 数値IF修正 linjunfeng start
+import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro'
+import BigNumber from "@/compat/number/bignumber";
+// add #10628 数値IF修正 linjunfeng end
 
 export default {
   mixins: [NumberInputMixin],
+  // add #10628 数値IF修正 linjunfeng start
+  components: {
+    "custom-input-number-pro": CustomInputNumberPro
+  },
+  // add #10628 数値IF修正 linjunfeng end
+  emits: ["update:modelValue", "input", "blur", "getChildData"],
   props: {
     name: {
       type: String
@@ -105,9 +148,7 @@ export default {
     subLabelName: {
       type: String
     },
-    value: {
-      type: [String, Number]
-    },
+    modelValue: {},
     disabled: {
       type: Boolean,
       default: false
@@ -183,6 +224,12 @@ export default {
         blurFlg: false,
         focusflg: false,
         // add #5589 2023/04/14 数値IFのスタイル全不正 林峻峰 end
+        // add #10628 数値IF修正 linjunfeng start
+        currentValuePro: this.modelValue,
+        componentsKey: 0,
+        currentMax: this.inputMax??99999999,
+        currentMin: this.inputMin??-99999999,
+        // add #10628 数値IF修正 linjunfeng end
     };
   },
   computed: {
@@ -190,34 +237,23 @@ export default {
       get() {
         // DB設定値がマスタの小数点桁数を超えている場合のみオーバー表示でセットする
         // 入力・フォーカスアウトした場合は小数点桁数によって値は書き換わっているため、桁数オーバーがvalueに入っていることは無い
-        if(this.initialValueLock && this.getDecimalPointLength(this.value) > this.decimalLength && !this.checkValueLock()){
+        if(this.initialValueLock && this.getDecimalPointLength(this.modelValue) > this.decimalLength && !this.checkValueLock()){
           this.setValueLock();
-          return this.value != null ? (this.value / this.base).toFixed(this.getDecimalPointLength(this.value)) : null;
+          return this.modelValue != null ? (this.modelValue / this.base).toFixed(this.getDecimalPointLength(this.modelValue)) : null;
         }else{
-          if(this.value){
+          if(this.modelValue){
             this.setValueLock();
           }
-          if (this.value === "" && this.isEmpty == true) {
+          if (this.modelValue === "" && this.isEmpty == true) {
             return "";
           }
-          return this.value != null ? (this.value / this.base).toFixed(this.decimalLength) : null;
+          return this.modelValue != null ? (this.modelValue / this.base).toFixed(this.decimalLength) : null;
         }
       },
       set(newVal) {
-        // del 6827 入力欄の編集済み表現不正（治療記録＞バイタル） 房 start
-        // add 7361 治療記録の再循環率、静的静脈圧、IAPRatioの入力範囲が制限されていない　房 start
-        // if (newVal < this.min) {
-        //   newVal = this.min;
-        // }
-        // if (newVal > this.max) {
-        //   newVal = this.max;
-        // }
-        // add 7361 治療記録の再循環率、静的静脈圧、IAPRatioの入力範囲が制限されていない　房 end
-        // del 6827 入力欄の編集済み表現不正（治療記録＞バイタル） 房 end
-        this.$emit(
-          "input",
-          typeof newVal === "number" ? newVal * this.base : null
-        );
+        const emitted = typeof newVal === "number" ? newVal * this.base : null;
+        this.$emit("update:modelValue", emitted);
+        this.$emit("input", emitted);
       }
     },
     // #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng start
@@ -231,10 +267,42 @@ export default {
     }
   },
   created() {
-    this.initNum = this.initValue === undefined ? this.currentValue : this.initValue
+    this.initNum = this.initValue === undefined ? this.currentValue : this.initValue;
+    // add #10628 数値IF修正 linjunfeng start
+    const decimalPlaces = BigNumber(this.step).decimalPlaces();
+    this.currentMin = Number(this.currentMin.toFixed(decimalPlaces))
+    this.currentMax = Number(BigNumber(this.currentMax).toFixed(
+      Math.max(decimalPlaces, this.getDecimalPointLength(this.currentMax)), 1
+    ))
+    this.currentValuePro = this.currentValuePro === "" ? null : this.currentValuePro;
+    EventBus.$off('refreshMonitorNumberInput', this.handleRefreshMonitorNumberInput);
+    EventBus.$on('refreshMonitorNumberInput', this.handleRefreshMonitorNumberInput);
+    // add #10628 数値IF修正 linjunfeng end
+  },
+  beforeUnmount() {
+    EventBus.$off('refreshMonitorNumberInput', this.handleRefreshMonitorNumberInput);
   },
   // #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng end
   methods: {
+    // add #10628 数値IF修正 linjunfeng start
+    handleRefreshMonitorNumberInput() {
+      const decimalPlaces = BigNumber(this.step).decimalPlaces();
+      this.currentValuePro = (this.initValue == null || this.initValue === "") ? null : BigNumber(this.initValue).toFormat(decimalPlaces);
+    },
+    handlerInput(val) {
+      this.currentValuePro = (val == null || val === "") ? null : val;
+      const num = val == null || val === "" ? null : Number(val);
+      const emitted = num != null && !Number.isNaN(num) ? num * this.base : null;
+      this.$emit("update:modelValue", emitted);
+      this.$emit("input", emitted);
+      this.$emit("getChildData", emitted ?? val);
+    },
+    handlerInputBlur() {
+      this.$nextTick(() => {
+        this.$emit('blur', this.currentValuePro);
+      })
+    },
+    // add #10628 数値IF修正 linjunfeng end
     // mod #5589 2023/04/11 数値IFのスタイル全不正 林峻峰 start
     inputNumber(event){
         // 数値範囲内かどうかの確認
@@ -293,6 +361,7 @@ export default {
       if(value < this.inputMin) {
         value = this.inputMax;
       }
+      this.$emit("update:modelValue", value);
       this.$emit("input", value);
     },
     // mod #5589 2023/04/11 数値IFのスタイル全不正 林峻峰 end
@@ -330,9 +399,6 @@ export default {
       if (this.initNum === undefined) {
         this.initNum = null
       }
-      if (this.value === undefined) {
-        this.value = null
-      }
       // #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng start
       // if (this.initNum !== this.value) {
         //   const inputElement = this.$refs.mySelect.$el.querySelector('input');
@@ -365,21 +431,39 @@ export default {
     },
   },
   watch: {
-    initValue: {
-      handler(){
-        this.initNum = this.initValue;
+    modelValue: {
+      handler(val) {
+        if (this.currentValuePro != null && this.currentValuePro !== "") {
+          return;
+        }
+        this.currentValuePro = (val == null || val === "") ? null : val;
       }
     },
-    // #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng start
-    currentValue: {
-      handler(value){
-        // mod #10196 ord_mainのデータ定義から外れているデータ登録・参照処理の修正 №41 dengshen start
-        // this.$emit('input', Number(value))
-        this.$emit('input', value)
-        // mod #10196 ord_mainのデータ定義から外れているデータ登録・参照処理の修正 №41 dengshen end
+    initValue: {
+      // #10628 数値IF修正 linjunfeng start
+      // handler(){
+      handler(val){
+      // #10628 数値IF修正 linjunfeng end
+        this.initNum = this.initValue;
+        // add #10628 数値IF修正 linjunfeng start
+        const decimalPlaces = BigNumber(this.step).decimalPlaces();
+        this.currentValuePro = (val == null || val === "") ? null : BigNumber(val).toFormat(decimalPlaces);
+        this.componentsKey++;
+        // add #10628 数値IF修正 linjunfeng end
       }
-    }
+    },
+    // del #10628 数値IF修正 linjunfeng start
+    // #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng start
+    // currentValue: {
+    //   handler(value){
+    //     // mod #10196 ord_mainのデータ定義から外れているデータ登録・参照処理の修正 №41 dengshen start
+    //     // this.$emit('input', Number(value))
+    //     this.$emit('input', value)
+    //     // mod #10196 ord_mainのデータ定義から外れているデータ登録・参照処理の修正 №41 dengshen end
+    //   }
+    // }
     // #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng end
+    // del #10628 数値IF修正 linjunfeng end
   }
 };
 </script>

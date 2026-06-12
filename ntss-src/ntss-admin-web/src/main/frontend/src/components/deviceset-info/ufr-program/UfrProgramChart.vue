@@ -5,8 +5,8 @@
 </template>
 
 <script>
-import { Chart } from "highcharts-vue";
-import { mapGetters } from "vuex";
+import { Chart } from "@/compat/charts/highcharts";
+import { mapGetters } from "@/compat/vue/vuex";
 
 export default {
   components: {
@@ -397,7 +397,6 @@ export default {
         default:
           break;
       }
-
       return {
         chart: {
           height: this.height,
@@ -411,6 +410,27 @@ export default {
               // setTimeout(() => {
                 this.reflow();
 //              }, 1000);
+            },
+            render: function () {
+              const chart = this;
+              // 重複作成を防止
+              if (chart.customBorder) {
+                  chart.customBorder.destroy();
+              }
+              const left = chart.plotLeft;
+              const top = chart.plotTop;
+              const width = chart.plotWidth;
+              const height = chart.plotHeight;
+              // インスタンスを保存
+              chart.customBorder = chart.renderer
+                  .rect(left,top,width,height,0)
+                  .attr({
+                      stroke: '#e1e1e1',
+                      'stroke-width': 2,
+                      fill: 'transparent',
+                      zIndex: 10
+                  })
+                  .add();
             }
           },
           // 数値が見切れる対策
@@ -468,7 +488,7 @@ export default {
       this.$refs.refUfrProgramChart.chart.reflow();
     },
   },
-  beforeDestroy() {
+  beforeUnmount() {
     const chartRef = this.$refs.refUfrProgramChart;
     if (chartRef?.chart) {
       if (typeof chartRef.chart.destroy === 'function') {

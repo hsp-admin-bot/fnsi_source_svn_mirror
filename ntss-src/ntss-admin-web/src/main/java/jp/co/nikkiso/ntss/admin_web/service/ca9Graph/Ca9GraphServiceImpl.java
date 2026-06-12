@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.service.ca9Graph;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.FlagType;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.GraphSetting;
 import jp.co.nikkiso.ntss.admin_web.service.MongoService;

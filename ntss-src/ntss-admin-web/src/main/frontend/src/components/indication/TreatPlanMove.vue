@@ -4,7 +4,8 @@
 <!--  <modal-base @onClose="hideModal">-->
   <modal-base @onClose="hideModal('hide-modal')">
 <!--  mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20240103 ztc end-->
-    <div slot="body" class="indInfo-style-modal-container">
+        <template #body>
+<div class="indInfo-style-modal-container">
       <v-ons-row class="row-style">
         <v-ons-col class="col-style-right-title">
           <label>移動元 治療日</label>
@@ -72,17 +73,19 @@
           <!--   @focus="addFocusCss($event)" -->
           <!--   :class="classObject" -->
           <!-- /> -->
-          <input
+          <date-input
             v-model="selectedDialysisDate"
             id="date-move"
-            type="date"
             class="date-input common-style-input ntss-input-date date-move-input"
+            classes="date-input-required date-input-unjust-size date-input-focus"
             :max="maxDate"
             :min="minDate"
-            @blur="delFocusCss($event)"
-            @focus="addFocusCss($event)"
             :class="classObject"
             :disabled="!getItemAuthorized('Indication', 'item_paln_move_date')"
+            @focus="beforeDialysisDate = selectedDialysisDate"
+            @blur="onBlurDialysisDate"
+            isRequired
+            defaultEmpty
           />
           <!-- mod #10359 編集権限の動作不正 dengshen end -->
           <!-- mod FNSI-横展開--inputの色 関 end -->
@@ -102,7 +105,7 @@
           <!--   :disabled="rstDialysisStateFlg" -->
           <!-- /> -->
           <custom-calendar
-            v-model="selectedDialysisDate"
+            v-model="calendarDialysisDate"
             :disable-dates-after="disableDatesAfter"
             :disabled="!getItemAuthorized('Indication', 'item_paln_move_date')"
           />
@@ -163,7 +166,7 @@
       <!--redmine 4672  姜 start-->
       <!-- <div v-if="messageDeviceModeDialogInfo.isDialogVisible">
         <message-dialog
-          :visible.sync="messageDeviceModeDialogInfo.isDialogVisible"
+          v-model:visible="messageDeviceModeDialogInfo.isDialogVisible"
           :message-cd="messageDeviceModeDialogInfo.messageCd"
           :type="messageDeviceModeDialogInfo.type"
           :string-params="messageDeviceModeDialogInfo.stringParams"
@@ -173,7 +176,7 @@
 
       <div v-if="messageVaDialogInfo.isDialogVisible">
         <message-dialog
-          :visible.sync="messageVaDialogInfo.isDialogVisible"
+          v-model:visible="messageVaDialogInfo.isDialogVisible"
           :message-cd="messageVaDialogInfo.messageCd"
           :type="messageVaDialogInfo.type"
           :string-params="messageVaDialogInfo.stringParams"
@@ -182,7 +185,7 @@
       </div>
       <div v-if="messageInfDialogInfo.isDialogVisible">
         <message-dialog
-          :visible.sync="messageInfDialogInfo.isDialogVisible"
+          v-model:visible="messageInfDialogInfo.isDialogVisible"
           :message-cd="messageInfDialogInfo.messageCd"
           :type="messageInfDialogInfo.type"
           :string-params="messageInfDialogInfo.stringParams"
@@ -192,7 +195,7 @@
       <!--redmine 4672  姜  end -->
       <div v-if="messageFuicchiDialogInfo.isDialogVisible">
         <message-dialog
-          :visible.sync="messageFuicchiDialogInfo.isDialogVisible"
+          v-model:visible="messageFuicchiDialogInfo.isDialogVisible"
           :message-cd="messageFuicchiDialogInfo.messageCd"
           :type="messageFuicchiDialogInfo.type"
           :string-params="messageFuicchiDialogInfo.stringParams"
@@ -203,7 +206,7 @@
       <!-- mod 7579 【デグレ】対応していない治療方法，シャント位置のベッドへ移動した時に注意喚起メッセージが出ない 周安寧　end -->
       <div v-if="messageDialogInfo.isDialogVisible">
         <message-dialog
-          :visible.sync="messageDialogInfo.isDialogVisible"
+          v-model:visible="messageDialogInfo.isDialogVisible"
           :message-cd="messageDialogInfo.messageCd"
           :type="messageDialogInfo.type"
           :string-params="messageDialogInfo.stringParams"
@@ -211,8 +214,10 @@
         />
       </div>
     </div>
+    </template>
 
-    <div slot="footer" class="in-ind-dropdown-area">
+        <template #footer>
+<div class="in-ind-dropdown-area">
       <v-ons-row class="row-style-footer">
         <v-ons-col style="text-align: end; padding-right: 10px; margin: auto;">
           <label>指示者</label>
@@ -233,9 +238,10 @@
             :data-text-field="'fullName'"
             :data-value-field="'user_id'"
             style="width: 100%;"
-            class="common-style-input select-style-list">
+            class="common-style-input select-style-list"
             :disabled="!getItemAuthorized('Indication', 'item_schedule')"
-          </kendo-dropdownlist>
+            @open="onIndUserDropdownOpen"
+          />
           <!-- mod #10359 編集権限の動作不正 dengshen end -->
         </v-ons-col>
       </v-ons-row>
@@ -304,6 +310,7 @@
       </v-ons-row>
 
     </div>
+    </template>
   </modal-base>
 </template>
 <script>
@@ -314,14 +321,14 @@ import { ApiHelper } from "@/apis/AxiosHelper";
 /**
  * Vue関連
  */
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 
 import CustomCalendar from "@/components/common/custom-calendar/CustomCalendar";
 
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { dateFormat, fitTermCheckForUpdate } from "@/functions/common/DateTimeUtils";
 
 /**
@@ -358,12 +365,16 @@ import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.j
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
+import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 // add #10748 患者経過総合ビューアで治療終了と実績確定をベッド，クールが未登録で移動可能 linjunfeng start
 import { CODES } from "@/constants/TreatmentRecord.js";
+import { getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+import { getOnsAlertDialogFooterItems, getOnsAlertDialogFromEvent } from "@/functions/common/OnsenFunctions";
 // add #10748 患者経過総合ビューアで治療終了と実績確定をベッド，クールが未登録で移動可能 linjunfeng end
+import DateInput from "@/components/common/DateInput";
 export default {
   //mod FNSI-No.IES145 権限対応  吉 start
   // mixins: [IndUserSelectMixin],
@@ -376,7 +387,8 @@ export default {
   components: {
     "custom-calendar": CustomCalendar,
     "message-dialog": messageDialog,
-    ModalBase
+    ModalBase,
+    "date-input": DateInput,
   },
 
   props: {
@@ -596,6 +608,10 @@ export default {
       examDeadlineSelectedVal: "",
       radDeadlineSelectedVal: "",
       // add #11038 患者経過総合ビューア－予定移動画面 メッセージダイアログのタイトルがない 関 end
+      // 変更前 移動先治療日
+      beforeDialysisDate: "",
+      // custom-calendar用 移動先治療日がカレンダーから選択されたかを判別可能とする
+      calendarDialysisDate: "",
     };
   },
   // 425 姜 start
@@ -603,16 +619,23 @@ export default {
     //add FNSI-No.IES145 権限対応  吉 start
     this.authorityCds = [ AUTHORITY_CODES.SCHE_MOVE];
     // add #11038 患者経過総合ビューア－予定移動画面 メッセージダイアログのタイトルがない 関 start
-    document.addEventListener('preshow', function(event) {
-        if (event.target.localName === 'ons-alert-dialog') {
-          const dialog = event.target;
-          const buttons = dialog.getElementsByClassName('alert-dialog-footer');
-          buttons[0].style.display = 'flex';
-          }
-    });
+    this.treatPlanMoveOwnerDocument = this.$el?.ownerDocument || document;
+    this.treatPlanMovePreshowHandler = function(event) {
+      const dialog = getOnsAlertDialogFromEvent(event);
+      const buttons = getOnsAlertDialogFooterItems(dialog);
+      if (buttons[0]) {
+        buttons[0].style.display = 'flex';
+      }
+    };
+    this.treatPlanMoveOwnerDocument.addEventListener('preshow', this.treatPlanMovePreshowHandler);
     // add #11038 患者経過総合ビューア－予定移動画面 メッセージダイアログのタイトルがない 関 end
   },
   // 425 姜 end
+    beforeUnmount() {
+    this.treatPlanMoveOwnerDocument?.removeEventListener?.('preshow', this.treatPlanMovePreshowHandler);
+    this.treatPlanMoveOwnerDocument = null;
+    this.treatPlanMovePreshowHandler = null;
+  },
   computed: {
     // mod FNSI-障害票一覧_患者経過総合ビューアNo.68,69 李 start
     // ...mapGetters("pat-viewer", ["getMstTreatmentData", "getMstKurData", "getMstBedData"]),
@@ -657,7 +680,7 @@ export default {
      * 表示治療日
      */
     dispTreatDate() {
-      const dispStr = moment(this.dispDialysisDate, "YYYY-MM-DD").format(
+      const dispStr = dayjs(this.dispDialysisDate, "YYYY-MM-DD").format(
         "YYYY/MM/DD(ddd)"
       );
       return dispStr;
@@ -667,27 +690,27 @@ export default {
      * 移動先治療日の最大日(本日から一年未満)
      */
     maxDate() {
-      const day = moment().format("YYYYMMDD");
+      const day = dayjs().format("YYYYMMDD");
       // 一年後に最大日を設定
       let endMaxDate = this.schExtEndDate
-        ? moment(this.schExtEndDate, "YYYYMMDD")
-        : moment(day).add(1, "year");
-      endMaxDate = moment(endMaxDate).endOf("month");
-      return moment(endMaxDate).format("YYYY-MM-DD");
+        ? dayjs(this.schExtEndDate, "YYYYMMDD")
+        : dayjs(day).add(1, "year");
+      endMaxDate = dayjs(endMaxDate).endOf("month");
+      return dayjs(endMaxDate).format("YYYY-MM-DD");
     },
 
     /**
      * 指定日以降編集不可
      */
     disableDatesAfter() {
-      return moment(this.maxDate).format("YYYYMMDD");
+      return dayjs(this.maxDate).format("YYYYMMDD");
     },
 
     /**
      * 移動日先治療日の最小日(本日)
      */
     minDate() {
-      return moment().format("YYYY-MM-DD");
+      return dayjs().format("YYYY-MM-DD");
     },
 
     /**
@@ -715,18 +738,21 @@ export default {
   },
 
   watch: {
-    selectedDialysisDate(value) {
+    calendarDialysisDate(value) {
+      this.selectedDialysisDate = value;
+
       // 選択治療日が空の場合もしくはコピー先治療日の変更の場合処理終了
       if (null === value || "" === value) {
         return;
       }else{
-        document.getElementById("date-move").style.background = "#ffff99";
+        this.setDateMoveBackground("#ffff99");
       }
       // 選択治療日が1年後よりも後に行かないよう制御
-      const maxDate = parseInt(moment(this.maxDate).format("YYYYMMDD"));
-      const date = parseInt(moment(value).format("YYYYMMDD"));
+      const maxDate = parseInt(dayjs(this.maxDate).format("YYYYMMDD"));
+      const date = parseInt(dayjs(value).format("YYYYMMDD"));
       if (date > maxDate) {
-        this.selectedDialysisDate = this.maxDate;
+        this.calendarDialysisDate = this.maxDate;
+        return;
       }
 
       // クールを未登録に変更する
@@ -770,7 +796,8 @@ export default {
         this.initIndUser = this.indUser;
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc end
         // 表示領域の調整
-        document.getElementsByClassName("in-ind-dropdown-area")[0].parentElement.parentElement.style.height = "calc(5rem + 1em)";
+        const dropdownArea = getScopedElementsByClassName("in-ind-dropdown-area", this.$el || null)[0];
+        dropdownArea?.parentElement?.parentElement && (dropdownArea.parentElement.parentElement.style.height = "calc(5rem + 1em)");
       });
     });
     // add #10748 患者経過総合ビューアで治療終了と実績確定をベッド，クールが未登録で移動可能 linjunfeng start
@@ -818,7 +845,7 @@ export default {
     const sendJson = {};
     sendJson.facilityCd = this.facilityCd;
     sendJson.patId = this.patId;
-    sendJson.eventStartDate = moment(this.dispDialysisDate).format("YYYYMMDD");
+    sendJson.eventStartDate = dayjs(this.dispDialysisDate).format("YYYYMMDD");
     ApiHelper.post(`/pat_event/mainData/selectDateByCd/${sendJson.facilityCd}/${sendJson.patId}/${sendJson.eventStartDate}`)
         //成功した場合の処理
         .then(response => {
@@ -893,6 +920,15 @@ export default {
       return getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
+    getDateMoveInput() {
+      return getScopedElementById("date-move", this.$el || null);
+    },
+    setDateMoveBackground(background) {
+      const dateMoveInput = this.getDateMoveInput();
+      if (dateMoveInput?.style) {
+        dateMoveInput.style.setProperty("background", background, "important");
+      }
+    },
     /**
      * モーダルを閉じる
      */
@@ -1031,7 +1067,7 @@ export default {
           throw(error);
         });
         const data = response?.data;
-        if (data.proc_RESULT === 'SUCCESS') {
+        if (isProcSuccess(data)) {
             if (data.hasDoCancel) {
               // メッセージ表示
               this.showMessage(22010006, "移動", "1");
@@ -1194,7 +1230,7 @@ export default {
             }
           }
           this.finishLoadingScreen();
-          if((this.msgCdList != null && this.msgCdList.length > 0) && !(this.examDeadlineCancelCheck.includes("cancel") || this.radDeadlineCancelCheck.includes("cancel")) && !this.msgCd != null) {
+          if((this.msgCdList != null && this.msgCdList.length > 0) && !(this.examDeadlineCancelCheck.includes("cancel") || this.radDeadlineCancelCheck.includes("cancel"))) {
           await this.updateDBInfo();
           }
         }
@@ -1223,7 +1259,7 @@ export default {
       }
       this.startLoadingScreen();
       //add 7579 【デグレ】対応していない治療方法，シャント位置のベッドへ移動した時に注意喚起メッセージが出ない 周安寧　end
-      await ApiHelper.post(`/mainData/checkFuicchi/`,sendJson)
+      await ApiHelper.post(`/mainData/checkFuicchi`,sendJson)
         //成功した場合の処理
         .then(response => {
           //ストアへデータをセット
@@ -1268,13 +1304,13 @@ export default {
       }
       //移動先 治療日の必須入力スタイル
       if("" === this.selectedDialysisDate){
-           document.getElementById('date-move').style.background = "rgba(255,0,0,0.5)";
+        this.setDateMoveBackground("rgba(255, 0, 0, 0.5)");
       // #10748 患者経過総合ビューアで治療終了と実績確定をベッド，クールが未登録で移動可能 linjunfeng start
       } else {
       // if("" !== this.selectedDialysisDate){
         //  document.getElementById('date-move').style.background = "#ffff99";
         if (!this.rstDialysisStateFlg) {
-          document.getElementById('date-move').style.background = "#ffff99";
+          this.setDateMoveBackground("#ffff99");
         }
         // #10748 患者経過総合ビューアで治療終了と実績確定をベッド，クールが未登録で移動可能 linjunfeng end
       }
@@ -1295,13 +1331,13 @@ export default {
 
       // コピー先治療日上限チェック
       if (null === dispStr) {
-        const maxDate = parseInt(moment(this.maxDate).format("YYYYMMDD"));
+        const maxDate = parseInt(dayjs(this.maxDate).format("YYYYMMDD"));
         const treatDate = parseInt(
-          moment(this.selectedDialysisDate).format("YYYYMMDD")
+          dayjs(this.selectedDialysisDate).format("YYYYMMDD")
         );
         if (treatDate > maxDate) {
           messageCd = 22010002;
-          dispStr = `移動先治療日は${moment(this.maxDate, "YYYY-MM-DD").format(
+          dispStr = `移動先治療日は${dayjs(this.maxDate, "YYYY-MM-DD").format(
             "YYYY年M月D日以下"
           )}`;
         }
@@ -1611,7 +1647,7 @@ export default {
       this.setLoadingScreenMessage("治療予定取得中...");
       this.setLoadingScreenVisible(true);
 
-      const formatDate = moment(date).format("YYYYMMDD");
+      const formatDate = dayjs(date).format("YYYYMMDD");
       const url = "/mainData/getReservedOrdScheduleList/" + this.facilityCd + "/" + formatDate + "/" + this.patId;
       const response = await ApiHelper.post(
         url
@@ -1717,20 +1753,17 @@ export default {
         // add FNSI-ScreenVisible閉じる 李 end
       }
     },
-    // mod FNSI-横展開-inputの色 関 start
-    addFocusCss(event){
-      let element = event.target;
-      element?.classList?.add("custom-input-edited");
-    },
-    delFocusCss(event){
-       let element = event.target;
-       element.classList.remove("custom-input-edited");
-    },
-    // mod FNSI-横展開-inputの色 関 end
     stringToDate(str){
       var strDatepart = str.split("-");
       var dtDate = new Date(strDatepart[0],strDatepart[1],strDatepart[2]);
       return dtDate;
+    },
+    /** 移動先治療日フォーカスアウト時の処理 */
+    onBlurDialysisDate() {
+      if (this.beforeDialysisDate === this.selectedDialysisDate) {
+        return;
+      }
+      this.calendarDialysisDate = this.selectedDialysisDate;
     },
   }
 };
@@ -1784,16 +1817,6 @@ input::-webkit-calendar-picker-indicator {
   }
 
 }
-/* mod FNSI-横展開-inputの色 関 start */
-.date-move-input{
-    background-color: #ffff99;
-}
-.custom-input-edited {
-  border: 2px green solid;
-  outline: 0;
-}
-/* mod FNSI-横展開-inputの色 関 end */
-
 /* add FNSI-患者経過総合ビューア 画面デザイン 李 start */
 .width-padding {
   width: 100px;

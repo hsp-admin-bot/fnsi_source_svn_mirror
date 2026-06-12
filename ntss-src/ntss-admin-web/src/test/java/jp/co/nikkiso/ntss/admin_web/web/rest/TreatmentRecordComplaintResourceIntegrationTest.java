@@ -24,7 +24,7 @@ import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.jdbc.Sql;
@@ -32,7 +32,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.dao.TreatmentRecordComplaintDao;
 import jp.co.nikkiso.ntss.core.entity.TreatmentRecordComplaint;
 
@@ -69,7 +69,7 @@ public class TreatmentRecordComplaintResourceIntegrationTest extends AbstractRes
     // action
     mockMvc
       .perform(get("/api/treatment-record/{ord_no}/complaint", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
@@ -119,7 +119,7 @@ public class TreatmentRecordComplaintResourceIntegrationTest extends AbstractRes
     // action
     mockMvc
       .perform(get("/api/treatment-record/{ord_no}/complaint", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isInternalServerError())
       .andDo(
@@ -146,7 +146,7 @@ public class TreatmentRecordComplaintResourceIntegrationTest extends AbstractRes
     // action
     mockMvc
       .perform(get("/api/treatment-record/{ord_no}/complaint", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isInternalServerError())
       .andDo(
@@ -189,7 +189,7 @@ public class TreatmentRecordComplaintResourceIntegrationTest extends AbstractRes
 
     // action
     ResultActions result = mockMvc.perform(put("/api/treatment-record/{ord_no}/complaint", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -256,7 +256,7 @@ public class TreatmentRecordComplaintResourceIntegrationTest extends AbstractRes
 
     // action
     ResultActions result = mockMvc.perform(put("/api/treatment-record/{ord_no}/complaint", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -302,7 +302,7 @@ public class TreatmentRecordComplaintResourceIntegrationTest extends AbstractRes
 
     // action
     ResultActions result = mockMvc.perform(put("/api/treatment-record/{ord_no}/complaint", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );

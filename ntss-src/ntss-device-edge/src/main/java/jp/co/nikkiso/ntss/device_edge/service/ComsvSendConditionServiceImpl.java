@@ -8,20 +8,25 @@ import java.text.SimpleDateFormat;
 import java.util.Objects;
 
 import jp.co.nikkiso.ntss.api.service.conditionSend.ConditionSendResultService;
-import jp.co.nikkiso.ntss.core.dao.*;
+import jp.co.nikkiso.ntss.core.dao.MntScaleBedStateDao;
 import jp.co.nikkiso.ntss.core.entity.MntScaleBedState;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.NotificationDefinition;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.SendCondition.WeightScaleClass;
+import jp.co.nikkiso.ntss.core.dao.ComsvOrdMainDao;
+import jp.co.nikkiso.ntss.core.dao.ComsvOrdWeightScaleDao;
+import jp.co.nikkiso.ntss.core.dao.MntMachineStateDao;
+import jp.co.nikkiso.ntss.core.dao.OrdWeightScaleDao;
+import jp.co.nikkiso.ntss.core.dao.PatPersonalMainDao;
 import jp.co.nikkiso.ntss.core.entity.MntMachineState;
 import jp.co.nikkiso.ntss.core.entity.OrdWeightScale;
 import jp.co.nikkiso.ntss.core.entity.custom.ComsvOrdMain;

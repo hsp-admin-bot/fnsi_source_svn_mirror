@@ -147,7 +147,7 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 // add #10359 編集権限の動作不正 start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 end
@@ -155,7 +155,6 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 export default {
   name: "PatEventRadio",
   props: ["propsIndex"],
-  components: {},
   data() {
     return {
       inputModel: {
@@ -177,10 +176,8 @@ export default {
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
-    // add #12462 患者情報共有 wangchao 20260323 start
     ...mapGetters("pat-event/list", ["getIsOtherFacility"]),
     ...mapGetters("observe-record/list", ["getIsOtherFacilitys"]),
-    // add #12462 患者情報共有 wangchao 20260323 end
     isShared() {
       if(this.getPatEventRecord.isComRec){
         return this.getFacilityCd === this.getSharedFacilityCd;
@@ -214,13 +211,11 @@ export default {
       }
     }
   },
-  watch: {},
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  destroyed() { },
-  created() {},
+
   mounted() {
     this.inputModel.radioName = this.getResultSelectRadio;
   },
@@ -327,7 +322,7 @@ export default {
   padding: 10px;
   float: left;
 }
-.radio-button >>> .radio-button__checkmark {
+.radio-button :deep(.radio-button__checkmark) {
   opacity: 1;
 }
   /*add FNSI-改修内容レイアウト表示と見た目調整。ラベルとデータ項目の区別がつかない。任 start*/

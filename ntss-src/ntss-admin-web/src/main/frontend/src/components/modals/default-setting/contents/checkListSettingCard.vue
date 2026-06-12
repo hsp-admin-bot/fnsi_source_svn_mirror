@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -118,19 +118,18 @@
 </template>
 
  <script>
-   import {mapActions, mapGetters} from "vuex";
+   import {mapActions, mapGetters} from "@/compat/vue/vuex";
    /*add FNSI-改修内容4214 任 start*/
-   import $ from "jquery";
+
    /*add FNSI-改修内容4214 任 end*/
    import {CHECK_LIST} from "@/constants/defaultSettingConstants";
    import {deepCopy} from "@/functions/common/CommonFunctions";
    //add FNSI-5687 劉全航 start
-   import { EventBus } from "@/eventBus.js";
+   import { EventBus } from "@/compat/vue/event-bus.js";
+import { getScopedElementById, isScopedElementDisplayInline } from "@/functions/common/LayoutMeasureHelper";
    //add FNSI-5687 劉全航 end
 
    export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -303,6 +302,9 @@
         }
         if (this.editRecord[CHECK_LIST.KEY_NAME_BED_GROUP_CD] == null) {
           this.editRecord[CHECK_LIST.KEY_NAME_BED_GROUP_CD] = this.initialValue[CHECK_LIST.KEY_NAME_BED_GROUP_CD];
+        } else if (!this.getMstBedGroupList.some(bg => +bg.roomBedGroupCd === +this.editRecord[CHECK_LIST.KEY_NAME_BED_GROUP_CD])) {
+          // NOTE: マスタ削除された場合、「-1 : すべて」を再設定
+          this.editRecord[CHECK_LIST.KEY_NAME_BED_GROUP_CD] = -1;
         }
         if (this.editRecord[CHECK_LIST.KEY_NAME_VIEW_TREAT_DATE] == null) {
           this.editRecord[CHECK_LIST.KEY_NAME_VIEW_TREAT_DATE] = this.initialValue[CHECK_LIST.KEY_NAME_VIEW_TREAT_DATE];
@@ -319,13 +321,22 @@
         }
         if (this.editRecord[CHECK_LIST.KEY_NAME_KUR_CD] == null) {
           this.editRecord[CHECK_LIST.KEY_NAME_KUR_CD] = this.initialValue[CHECK_LIST.KEY_NAME_KUR_CD];
+        } else if (!this.getMstKurSelector.some(kur => +kur.code === +this.editRecord[CHECK_LIST.KEY_NAME_KUR_CD])) {
+          // NOTE: マスタ削除された場合、「-1 : すべて」を再設定
+          this.editRecord[CHECK_LIST.KEY_NAME_KUR_CD] = -1;
         }
         // add 不具合 #6265 dou end
         this.initialValue = deepCopy(this.editRecord);
       }
       /*add FNSI-改修内容4214 任 start*/
-      if($("#phone-show-check-list").css("display") === "inline"){
-        document.getElementById("phone-show-check-list").innerText =  document.getElementById("phone-show-check-list").innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+      if(isScopedElementDisplayInline("phone-show-check-list", this.$el || this)){
+        const phoneShowElement = getScopedElementById("phone-show-check-list", this.$el || this);
+
+        if (phoneShowElement) {
+
+          phoneShowElement.innerText = phoneShowElement.innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+
+        }
       }
       /*add FNSI-改修内容4214 任 end*/
       // 共通ローダー表示終了

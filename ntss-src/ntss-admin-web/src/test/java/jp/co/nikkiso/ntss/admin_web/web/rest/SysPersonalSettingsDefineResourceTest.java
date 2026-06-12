@@ -19,9 +19,9 @@ import java.util.List;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -40,7 +40,7 @@ import jp.co.nikkiso.ntss.core.exception.NotExistException;
 @WithMockUser
 public class SysPersonalSettingsDefineResourceTest extends AbstractResourceTest {
 
-  @MockBean
+  @MockitoBean
   private SysPersonalSettingsDefineService sysPersonalSettingsDefineService;
 
   /**
@@ -62,7 +62,7 @@ public class SysPersonalSettingsDefineResourceTest extends AbstractResourceTest 
     // assert
     mockMvc
       .perform(get("/api/personal_setting_define/{tab_define_cd}", tabDefineCd)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
       .andExpect(jsonPath("$.tab_define_cd", is(tabDefineCd)))
@@ -126,7 +126,7 @@ public class SysPersonalSettingsDefineResourceTest extends AbstractResourceTest 
     // assert
     mockMvc
       .perform(get("/api/personal_setting_define/{tab_define_cd}", tabDefineCd)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isInternalServerError())
     ;
 

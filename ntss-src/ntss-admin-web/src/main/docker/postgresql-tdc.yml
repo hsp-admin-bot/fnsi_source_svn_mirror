@@ -1,7 +1,7 @@
 version: '2'
 services:
     ntss-postgresql:
-        image: postgres:15.2
+        image: postgres:17.9
         environment:
           HTTP_PROXY: http://192.168.102.66:8080
           HTTPS_PROXY: http://192.168.102.66:8080
@@ -13,7 +13,7 @@ services:
         environment:
            - POSTGRES_PASSWORD=password
     ntss-test-db:
-        image: postgres:15.2
+        image: postgres:17.9
         environment:
           HTTP_PROXY: http://192.168.102.66:8080
           HTTPS_PROXY: http://192.168.102.66:8080

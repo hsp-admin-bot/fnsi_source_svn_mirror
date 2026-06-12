@@ -2,7 +2,7 @@ package jp.co.nikkiso.ntss.core.config;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import org.springframework.context.annotation.Configuration;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 /**

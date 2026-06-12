@@ -13,14 +13,14 @@ public class MstUserOTP {
      */
     @Getter
     @Setter
-    private String MtsUserSecretKey;
+    private String mtsUserSecretKey;
 
     /**
      * ユーザーのQR画像
      */
     @Getter
     @Setter
-    private String MstUserQR64;
+    private String mstUserQR64;
 
     /**
      * 2要素認証
@@ -30,8 +30,8 @@ public class MstUserOTP {
      */
     public MstUserOTP(String MtsUserSecretKey, String MstUserQR64) {
 
-        this.MtsUserSecretKey = MtsUserSecretKey;
-        this.MstUserQR64 = MstUserQR64;
+        this.mtsUserSecretKey = MtsUserSecretKey;
+        this.mstUserQR64 = MstUserQR64;
     }
 
 }

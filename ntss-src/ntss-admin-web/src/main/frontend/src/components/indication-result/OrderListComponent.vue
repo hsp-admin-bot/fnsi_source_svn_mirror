@@ -12,6 +12,7 @@
 </template>
 
 <script>
+import TreeViewComponent from "@/components/indication-result/tree-view-pattern/TreeViewComponent";
 import {
   convertToTreeDataPattern1,
   convertToTreeDataPattern2,
@@ -22,6 +23,9 @@ import {
 } from "@/components/indication-result/convert-to-tree-data"
 
 export default {
+  components: {
+    "tree-item": TreeViewComponent
+  },
   props: {
     orderList: {
       type: Array,

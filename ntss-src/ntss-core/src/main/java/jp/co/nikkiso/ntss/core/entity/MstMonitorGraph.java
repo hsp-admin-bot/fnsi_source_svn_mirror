@@ -121,7 +121,7 @@ public class MstMonitorGraph extends BaseEntity  {
   /**
    * 左項目元
    */
-  private Integer LeftIsMstMonitor;
+  private Integer leftIsMstMonitor;
 
   /**
    * 右項目元

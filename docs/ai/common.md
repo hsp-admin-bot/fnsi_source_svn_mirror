@@ -5,7 +5,7 @@
 - このプロジェクトでは、AI はまずリポジトリ構造と参照先の違いを理解したうえで調査する。
 - 開発用 Git 管理ディレクトリと、比較元として参照する SVN 管理ディレクトリが存在することを前提にする。
 - 詳細なディレクトリ構造や比較先は `docs/ai/repo-structure.md` を参照する。
-- codebase-retrieval などの MCP ツールで得た周辺文脈の扱いは `docs/ai/context-reporting.md` に従う。
+- auggie_remote などの MCP ツールで得た周辺文脈の扱いは `docs/ai/context-reporting.md` に従う。
 
 ## 特殊指示
 
@@ -17,7 +17,8 @@
 
 ## 調査時の基本
 
-- codebase-retrieval など、sandbox shell を使わない検索手段を優先する。
+- auggie_remote など、sandbox shell を使わない検索手段を優先する。
+- コード内容をauggie_remoteで特定する前にrgなどのグレップ検索をすることは禁止します
 - shell_command が必要な場合は、このリポジトリでは 1 コマンドずつ実行する。
 - 複数ファイルを読む場合も、同時実行ではなく順次実行する。
 - `windows sandbox: spawn setup refresh` が出た場合は、同じコマンドを単発で再実行する。

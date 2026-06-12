@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot='body' class="maker-notice release-main" v-show="displayMode == 1">
+    <template #body>
+      <div class="maker-notice" v-show="displayMode == 1">
       <div class="release-base" v-show="dispFlg == 1">
         <div>
           <div class="maker-notice-input">
@@ -25,6 +26,7 @@
         </div>
         <div class="release-body" id="release-body">
         <table class="release-list">
+      <tbody>
           <tr v-for='master in filterItems'
             :key='master.ctlNo'
             :class="'release-list-body-tr'"
@@ -32,7 +34,8 @@
             <td class='release-list-date body-col' @click="detailOpen(master)">{{ displayDateValue(master.releaseDate) }}</td>
             <td class='release-list-title body-col' @click="detailOpen(master)">{{ master.title }}</td>
           </tr>
-        </table>
+        
+      </tbody></table>
         </div>
       </div>
         <div class="pagination">
@@ -42,26 +45,30 @@
           <a href="#" class="next" @click="onNext" v-if="page < totalPage">次へ &gt;</a>
           <a class="next"  v-if="page == totalPage" >&emsp;&emsp;&emsp;</a>
         </div>
-    </div>
+      </div>
 
-    <div slot='body' class="maker-notice release-sub" v-show="displayMode == 2">
+      <div class="maker-notice" v-show="displayMode == 2">
       <div class="release-base">
         <div class="scroll-area">
           <table class="release-list">
-            <tr>
+      <tbody>
+              <tr>
               <td width="2.0em"><ons-icon icon="fa-arrow-left" size="1.5em" class="title" @click="headerOpen"></ons-icon></td>
               <td class='release-detail-date body-col'>{{displayDateValue(detailData.releaseDate)}}</td>
               <td class='release-detail-title body-col'>{{detailData.title}}</td>
             </tr>
-          </table>
+            
+      </tbody></table>
         </div>
         <div class="release-detail" id="release-detail">
-          <span v-html="detailHtml"></span>
+          <span v-safe-html="detailHtml"></span>
         </div>
       </div>
-    </div>
+      </div>
+    </template>
 
-    <div slot="footer" class="flex-container">
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
       </div>
       <div class="denial-btn-area" style="background:none">
@@ -69,15 +76,18 @@
           class="button btn2-cancel denial-btn" @click="cancel"
         >閉じる</button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import { mapActions, mapGetters } from "vuex";
-import moment from "moment";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
 
 export default {
   name: "ReleaseInfo",
@@ -118,7 +128,7 @@ export default {
     },
     // 検索条件が変更されたら表示内容を更新
     filteredReleaseInfos() {
-      let res = null;
+      let res;
       if(this.fnSiFlg && !this.remsFlg){
         res = this.getReleaseInfosAll.filter( e => e.systemType === "2");
       }else if(!this.fnSiFlg && this.remsFlg){
@@ -147,7 +157,7 @@ export default {
     async onRefresh(){
       this.page = 1;
       this.totalPage = Math.ceil(this.filteredReleaseInfos.length / this.perPage);
-      var modal = document.getElementById("release-body");
+      var modal = getScopedElementById("release-body", this.$el || this);
       modal.scrollTop = 0;
     },
     
@@ -165,7 +175,7 @@ export default {
     },
 
     headerOpen(){
-      var modal = document.getElementById("release-detail");
+      var modal = getScopedElementById("release-detail", this.$el || this);
       modal.scrollTop = 0;
       this.displayMode = 1;
     },
@@ -173,7 +183,7 @@ export default {
     displayDateValue(value) {
       return value == null
         ? "近日リリース予定"
-        : moment(value).format("YYYY/MM/DD(ddd)");
+        : dayjs(value).format("YYYY/MM/DD(ddd)");
     },
   },
   async created() {
@@ -212,7 +222,7 @@ export default {
   /* 一覧のボーダーライン */
 
   /* 一覧の文字色 */
-  color: var(#333333);
+  color: #333333;
   background-color: #fafafa;
 }
 
@@ -315,11 +325,11 @@ a {
     height: auto !important;
     background-color: inherit;
   }
-  div >>> .modal-wrapper {
+  div :deep(.modal-wrapper){
     height: auto !important;
   }
-  div >>> .modal-header,
-  div >>> .modal-footer {
+  div :deep(.modal-header),
+  div :deep(.modal-footer){
     display: none !important;
   }
 }

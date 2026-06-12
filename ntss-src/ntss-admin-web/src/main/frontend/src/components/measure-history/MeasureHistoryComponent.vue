@@ -2,10 +2,16 @@
  * 体重計測定記録画面
  */
 <template>
-<div>
+<div class="measure-history-page">
   <!-- mod FNSI-redmine3971 徐 start -->
   <!--#10567:体重測定記録画面の表示不正 Start -->
-  <div id="scrollArea" class="main-content-area" style="overflow:scroll;" :class="{ 'weight-mode-measure-history-scroll-area': isWeightMode }" ref="ntssList">
+  <div
+    id="scrollArea"
+    class="main-content-area measure-history-scroll-area"
+    style="overflow:scroll;"
+    :class="{ 'weight-mode-measure-history-scroll-area': isWeightMode }"
+    ref="ntssList"
+  >
   <!--#10567:体重測定記録画面の表示不正 End -->
   <!-- mod FNSI-redmine3971 徐 end -->
     <!-- 体重計測定記録一覧のグリッド -->
@@ -28,10 +34,11 @@
             >{{ column.colName }}</th>
           </tr>
         </thead>
+      <tbody>
         <tr
           v-for="(measureHistory, idx) in measureHistoryList"
           :key="idx"
-          :class="'ntss-list-body-tr'"
+          :class="getMeasureHistoryRowClass(measureHistory, idx)"
           @click="onClickRow(measureHistory)"
           style="height: 1.1rem;"
         >
@@ -56,7 +63,8 @@
         <!-- mod FNSI-redmine3971 徐 start -->
         <tr></tr>
         <!-- mod FNSI-redmine3971 徐 end -->
-      </table>
+      
+      </tbody></table>
     </div>
   </div>
   <!-- mod FNSI-redmine5437 張岩 end -->
@@ -76,9 +84,11 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import $$ from "@/compat/jquery";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
+import PrintMixin from "@/components/PrintMixin";
 import {
   weightScaleStateMsg,
   weightScaleClassMsg,
@@ -87,20 +97,22 @@ import {
 import { weightScaleState } from "@/constants/weightDefine";
 import { dateFormat } from "@/functions/common/DateTimeUtils";
 // jQureyを宣言（'$'はvue.jsで使用されているため、'$$'で宣言）
-const $$ = require("jquery");
-import moment from "moment";
+
+import dayjs from "@/compat/date/dayjs";
 import { getCurrentFunctionCd } from "@/router/routing-helper";
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
 import { getHolidayStyle } from "@/functions/common/CommonFunctions";
-import PrintMixin from "@/components/PrintMixin";
+import { getScopedElementById,
+  getScopedJQuery as createScopedJQuery} from "@/functions/common/LayoutMeasureHelper";
+import { getScopedSessionStorage, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
+
 export default {
   props: {
     // NOTE: コンソールエラー対策
     historyKey: null,
   },
-  components: {},
   mixins: [NextTransitionMixin, PrintMixin],
   data() {
     return {
@@ -144,8 +156,8 @@ export default {
       ymdUpdateProc: null,
       // 体重計モード用 画面表示用の年月日時分更新インターバル開始までの待機時間
       _minuteAlignTimeout: null,
-      scrollQuerySelector: "#scrollArea", // スクロールコンテナ
-      addClassTargetQuerySelector: ["table.ntss-list"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
+      scrollQuerySelector: "#scrollArea",
+      addClassTargetQuerySelector: ["table.ntss-list"],
     };
   },
   computed: {
@@ -374,12 +386,12 @@ export default {
       const startDateTmp = this.firstCondition.startDate;
       let endDateTmp = this.firstCondition.endDate;
       if (startDateTmp !== "") {
-        const startDate = moment(startDateTmp);
-        let endDate = moment(endDateTmp);
+        const startDate = dayjs(startDateTmp);
+        let endDate = dayjs(endDateTmp);
         let days = (endDate - startDate)/(1*24*60*60*1000);
-        let date = moment(endDate);
+        let date = dayjs(endDate);
         for (let i = 0; i < days; i++) {
-          date.date(date.date() - 1);
+          date = date.date(date.date() - 1);
           const dateTmp = date.format("YYYY/MM/DD");
           const dateDisp = date.format("YYYY/MM/DD(dd)");
           if (dateList.findIndex(item => item === dateTmp) === -1) {
@@ -424,6 +436,9 @@ export default {
     },
   },
   methods: {
+    scopedJQuery() {
+      return createScopedJQuery(this.$el || this, $$) || $$;
+    },
     ...mapActions("measure-history/list", [
       "setFilterSignal",
       "getOrderMeasureHistoryList"
@@ -481,13 +496,13 @@ export default {
       });
       this.getOrderMeasureHistoryList(info)
         .then(() => {
-          $$("#scrollArea").scrollTop(1);
+          this.scopedJQuery()("#scrollArea").scrollTop(1);
         })
         .catch(error => {
           //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
           getErrorMessage('MeasureHistoryComponent.vue', 'OrderMeasureHistoryListFirst', error);
           //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
-          if (error.response.status === 400) {
+          if (error.response && error.response.status === 400) {
             // TODO 必要に応じて、適切な業務エラー処理を実装すること。
           }
         });
@@ -597,6 +612,15 @@ export default {
         })
         .slice();
     },
+    hasBlockingAlertDialogForBreadcrumbRefresh() {
+      const root = this.$el;
+      if (!root?.querySelectorAll) {
+        return false;
+      }
+      return Array.from(root.querySelectorAll("ons-alert-dialog")).some(
+        (el) => el.visible === true
+      );
+    },
     // パンくずリストをクリックされた場合に呼び出される関数
     refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
@@ -604,8 +628,8 @@ export default {
         // add FNSI-redmine3969 徐 start
         this.refreshCheck &&
         // add FNSI-redmine3969 徐 end
-        this.selfScreenName === this.$router.currentRoute.name &&
-        document.getElementsByTagName("ons-alert-dialog").length === 0
+        this.selfScreenName === this.$route.name &&
+        !this.hasBlockingAlertDialogForBreadcrumbRefresh()
       ) {
         // フィルタークリア
         if (this.getFilterSignal === true) {
@@ -636,8 +660,9 @@ export default {
         var patArr = this.measureHistoryList.filter(item => item.patId != null && item.ordNo != null);
         // add #9558 機能帳票でパラメータが正しく渡されていない limingzhe end
         // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
-        this.bedCdListString = JSON.parse(sessionStorage.getItem('roomBedGroupNameStatusList')) || '';
-        this.kurGroupName = JSON.parse(sessionStorage.getItem('kurGroupNameStatusList')) || '';
+        const scopedSessionStorage = getScopedSessionStorage(this.$el);
+        this.bedCdListString = JSON.parse(scopedSessionStorage.getItem('roomBedGroupNameStatusList')) || '';
+        this.kurGroupName = JSON.parse(scopedSessionStorage.getItem('kurGroupNameStatusList')) || '';
         let patGroups = null;
         if(this.getStorSimlpSearchQurey.selectedPatGroupNames) {
           patGroups = this.getStorSimlpSearchQurey.selectedPatGroupNames;
@@ -656,9 +681,9 @@ export default {
           // add 画面印刷プレビューと印刷の実現 黄 end
           // mod #5984 測定履歴 コンテンツを追加する 孟堅 start　
           facilityCd: this.getFacilityCd,
-          date:moment((this.firstCondition.endDate)).add(-1, 'd').format("YYYY/MM/DD"),     // 検索条件の測定日　空白ならば今日
-          fromDate:moment((this.firstCondition.endDate)).add(-1, 'd').format("YYYY/MM/DD"), // 検索条件の測定日から検索条件の測定日　空白ならば今日から今日
-          toDate: moment(this.firstCondition.endDate).add(-1, 'd').format("YYYYMMDD"),
+          date:dayjs((this.firstCondition.endDate)).add(-1, 'd').format("YYYY/MM/DD"),     // 検索条件の測定日　空白ならば今日
+          fromDate:dayjs((this.firstCondition.endDate)).add(-1, 'd').format("YYYY/MM/DD"), // 検索条件の測定日から検索条件の測定日　空白ならば今日から今日
+          toDate: dayjs(this.firstCondition.endDate).add(-1, 'd').format("YYYYMMDD"),
           functionCd:"01401",
           // mod #5984 測定履歴 コンテンツを追加する 孟堅 end　
           // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
@@ -679,6 +704,20 @@ export default {
     getStyle(date) {
       return getHolidayStyle(date, true);
     },
+    getMeasureHistoryRowClass(measureHistory, idx) {
+      if (measureHistory.isHeader) {
+        return ["ntss-list-body-tr", "measure-history-date-header-row"];
+      }
+      const dataRowIndex = this.measureHistoryList
+        .slice(0, idx)
+        .filter(row => !row.isHeader).length;
+      return [
+        "ntss-list-body-tr",
+        dataRowIndex % 2 === 0
+          ? "measure-history-stripe-primary"
+          : "measure-history-stripe-secondary",
+      ];
+    },
     /**
      * 一覧の全体の幅をpxで返却します.
      */
@@ -697,7 +736,7 @@ export default {
      */
     updateYmdTime() {
       const weekday = ['日', '月', '火', '水', '木', '金', '土'];
-      const now = moment();
+      const now = dayjs();
       this.ymdTime = `${now.format('YYYY/MM/DD')}(${weekday[now.day()]}) ${now.format('HH:mm')}`;
     },
     /**
@@ -725,6 +764,11 @@ export default {
     },
   },
   watch: {
+    "$route.name"(name) {
+      if (name) {
+        this.selfScreenName = name;
+      }
+    },
     getFilterSignal(value, oldValue) {
       if (value === true && oldValue === false) {
         this.filterFunction();
@@ -735,7 +779,7 @@ export default {
       if (newVal !== oldVal) {
         // テーブルの各列幅をフォントサイズに応じて更新
         this.$nextTick(() => {
-          const table = document.getElementById("table");
+          const table = getScopedElementById("table", this.$el || null);
           if (!table) return;
           const widthMultipliers = [5, 8, 8, 8, 5, 5, 12, 3, 9, 9, 5, 4, 7, 9, 6, 7, 10, 7, 10];
           for (let row of table.rows) {
@@ -751,7 +795,7 @@ export default {
     // 休日マスタの休日を取得
     this.fetchHolidays(this.getFacilityCd);
 
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // add 性能改善メモリ不足 shan start
     EventBus.$off("filterMeasureHistoryList", this.setFilterCondition);
     EventBus.$off("refresh", this.refresh);
@@ -770,7 +814,7 @@ export default {
     // add FNSI-バグ 体重測定記録459 徐 start
     setTimeout(() => {
       var tTD;
-      var table = document.getElementById("table");
+      var table = getScopedElementById("table", this.$el || null);
       if (table != null) {
         const fsPx = this.fontSizeInPx;
         for (var j = 0; j < table.rows.length; j++) {
@@ -838,7 +882,7 @@ export default {
                 tTD.style.width = `${newWidth}px`;
 
                 tTD.style.cursor = 'col-resize';
-                table = document.getElementById("table");
+                table = getScopedElementById("table", this.$el || null);
                 while (table.tagName != 'TABLE') {
                   table = table.parentElement;
                 }
@@ -864,7 +908,7 @@ export default {
       this.startMinuteClock();
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.clearHolidays(); // storeの休日マスタをクリア
     EventBus.$off("filterMeasureHistoryList", this.setFilterCondition);
     EventBus.$off("refresh", this.refresh);
@@ -874,12 +918,12 @@ export default {
 
     // setInterval停止 (体重計モード用インターバル)
     if (this.ymdUpdateProc) {
-      clearInterval(this.ymdUpdateProc);
+      (getScopedWindow(this.$el) || window).clearInterval(this.ymdUpdateProc);
       this.ymdUpdateProc = null;
     }
     // setTimeout停止 (体重計モード用タイムアウト)
     if (this._minuteAlignTimeout) {
-      clearTimeout(this._minuteAlignTimeout);
+      (getScopedWindow(this.$el) || window).clearTimeout(this._minuteAlignTimeout);
       this._minuteAlignTimeout = null;
     }
   }
@@ -899,7 +943,47 @@ table {
 td {
   word-wrap: break-word;
 }
+
+/* データ行のみ白/灰交互（日付ヘッダ行は nth-child 対象外） */
+#table.ntss-list tbody tr.measure-history-stripe-primary {
+  background-color: var(--ntss-list-item-background-color) !important;
+}
+#table.ntss-list tbody tr.measure-history-stripe-secondary {
+  background-color: var(--ntss-list-content-2nd-background-color) !important;
+}
+#table.ntss-list tbody tr.ntss-list-body-tr:not(.measure-history-date-header-row):hover {
+  background-color: var(--master-maintenance-kgrid-item-hover-background-color) !important;
+}
+#table.ntss-list tbody tr.ntss-list-body-tr:not(.measure-history-date-header-row):hover .ntss-list-body-td {
+  background-color: transparent;
+}
+</style>
+
+<style>
+/* Ctrl+P 印刷プレビュー用（グローバル ntss_print.css に加えて本画面のみ拡大） */
 @media print {
+  body:has(.measure-history-page) .content-box .header,
+  body:has(.measure-history-page) .measure-history-scroll-area {
+    zoom: 1.38;
+  }
+
+  .measure-history-scroll-area {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .measure-history-scroll-area table.ntss-list {
+    width: 100% !important;
+    font-size: 1.19em;
+  }
+
+  .measure-history-scroll-area .ntss-list-header-th-sticky,
+  .measure-history-scroll-area .ntss-list-body-td,
+  .measure-history-scroll-area .ntss-list-body-td-header {
+    padding: 5px 4px;
+  }
+
   /* スクロールコンテナ */
   #scrollArea {
     overflow: hidden !important;

@@ -58,6 +58,7 @@
             style="width: 100%;"
             class="common-style-input input-style-required"
             :disabled="updateDisable"
+            @open="onIndUserDropdownOpen"
           />
         </v-ons-col>
       </v-ons-row>
@@ -84,7 +85,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import CustomCalendar from "@/components/common/custom-calendar/CustomCalendar";
 import IndPlanCreate from "@/components/indication/IndPlanCreate";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
@@ -92,14 +93,16 @@ import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMainte
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import UserAuthorityMixin from "@/components/common/UserAuthorityMixin";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // add FNSI redmine 6706 劉祥霖 start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 // add FNSI redmine 6706 劉祥霖 end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { messageFormat } from "@/functions/common/MessageFormat";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   // add  FNSI-？？？？患者割り当て 陳 start
@@ -370,15 +373,9 @@ export default {
     };
   },
   created() {
-    // 別の modal-body 内に表示している為、フッター領域も含めて高さを確保する必要があります
-    const topObj = document.getElementsByClassName("modal-body");
-    if (topObj.length > 0) {
-      topObj[0].style.height = "100%";
-    }
     this.getIndUserList(
       AUTHORITY_CODES.IND_EDIT,
-      AUTHORITY_CODES.IND_PEDIT
-    ).then(response => {
+      AUTHORITY_CODES.IND_PEDIT).then(response => {
       this.structData.userOptions = response.doctorList;
       this.structData.indUser = null;
       this.$nextTick(() => {
@@ -390,11 +387,8 @@ export default {
     this.updateDisable = true;
     // add FNSI-？？？？患者割り当て 陳 end
   },
-  destroyed() {
-    const topObj = document.getElementsByClassName("modal-body");
-    if (topObj.length > 0) {
-      topObj[0].style.height = "";
-    }
+  unmounted() {
+    this.restoreParentModalBodyHeight();
   },
   computed: {
     //施設コード取得用
@@ -404,6 +398,7 @@ export default {
     ]),
   },
   mounted() {
+    this.ensureParentModalBodyHeight();
     this.structData = this.getStructData;
     this.indStartDate = this.structData.indStartDate;
 
@@ -419,6 +414,23 @@ export default {
     // add FNSI-？？？？患者割り当て 陳 end
   },
   methods: {
+    ensureParentModalBodyHeight() {
+      const topObj = getScopedElementsByClassName("modal-body", this.$el || null);
+      const target = topObj.find((element) => Number(element?.clientHeight || 0) > 0) || topObj[0] || null;
+      if (target) {
+        this._previousParentModalBodyHeight = target.style.height;
+        target.style.height = "100%";
+        this._parentModalBody = target;
+      }
+    },
+    restoreParentModalBodyHeight() {
+      const target = this._parentModalBody;
+      if (target) {
+        target.style.height = this._previousParentModalBodyHeight || "";
+      }
+      this._parentModalBody = null;
+      this._previousParentModalBodyHeight = "";
+    },
     ...mapActions("schedule-assignment/modal", [
       "setStructData",
       "setScheduleAssignment"
@@ -480,7 +492,7 @@ export default {
       this.baseData.updUser = this.structData.indUser;
       this.baseData.flag = 1;
 
-      this.baseData.indStartDate = moment(this.indStartDate).format('YYYY-MM-DD');
+      this.baseData.indStartDate = dayjs(this.indStartDate).format('YYYY-MM-DD');
       this.baseData.indEndDate = this.baseData.indStartDate;
 
 
@@ -572,9 +584,9 @@ export default {
                   }
                   // add #12465 同患者同日同治療方法同クールの使用制限をしてもメッセージがでない zkm end
                   if(res1.result === true && res1.message != undefined && res1.message !== ""){
-                    var messageStr = "";
+                    var messageStr;
                     //mod FNSI redmine 6588 劉祥霖 start
-                    var messageTitle="";
+                    var messageTitle;
                     if(res1.message == "Dummy治療予定重複エラー"){
                       // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
                       // messageTitle = "長時間予定との予定重複";
@@ -624,7 +636,7 @@ export default {
                       message: res.message
                     });
                     // 「登録」ボタン活性
-                    this.setDisabledButton( false );
+                    this.setDisabledButton( false);
 
                   // del FNSI-？？？？患者割り当て 陳 start
                   // add FNSI-？？？？患者割り当て 陳 start
@@ -646,7 +658,7 @@ export default {
                   //     message: messageStr
                   //   });
                   //   // 「登録」ボタン非活性
-                  //   this.setDisabledButton( true );
+                  //   this.setDisabledButton( true);
                  // add FNSI-？？？？患者割り当て 陳 end
                  // del FNSI-？？？？患者割り当て 陳 end
                   } else {
@@ -779,7 +791,7 @@ export default {
   flex: 1;
 }
 
-.cond-item-style >>> .highcharts-container {
+.cond-item-style :deep(.highcharts-container) {
   margin: 0 auto;
 }
 
@@ -828,6 +840,12 @@ export default {
 .hr-style {
   margin: 0px 10px;
 }
+
+#schedule-grid :deep(.k-grid-content) {
+  background-color: var(--ntss-base-background-color);
+  color: var(--ntss-base-color);
+}
+
 @media print {
   /** 文字折り返す */
   .indInfo-style-modal-container {

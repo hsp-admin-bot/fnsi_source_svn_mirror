@@ -9,7 +9,6 @@ SELECT
 	initial_string,
 	upper_threshold,
 	lower_threshold,
-	is_show_graph,
 	graph_upper_limit,
 	graph_lower_limit,
 	is_disp,

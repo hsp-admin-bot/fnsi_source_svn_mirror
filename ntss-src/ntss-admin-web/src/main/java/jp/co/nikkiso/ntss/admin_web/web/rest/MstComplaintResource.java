@@ -11,7 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.util.List;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
@@ -22,7 +22,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * マスタ編集（愁訴処置マスタ)のResourceクラス.
@@ -44,6 +46,7 @@ public class MstComplaintResource {
    */
   @GetMapping("/mst-complaint")
   public ResponseEntity<?> getAllMstComplaints(
+    @RequestParam(required = false) Long selectedPatId,
     @AuthenticationPrincipal NtssUser ntssUser) {
 
     // ログ出力
@@ -79,7 +82,7 @@ public class MstComplaintResource {
     // 対象施設の処置マスタを更新
     complaintService.updateMstComplaints(ntssUser.getFacilityCd(), request);
 
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   /**
@@ -89,6 +92,7 @@ public class MstComplaintResource {
    */
   @GetMapping("/mst-comp-treatment")
   public ResponseEntity<?> getAllMstCompTreatments(
+    @RequestParam(required = false) Long selectedPatId,
     @AuthenticationPrincipal NtssUser ntssUser) {
 
     // ログ出力
@@ -123,7 +127,7 @@ public class MstComplaintResource {
     // 対象施設の処置マスタを更新
     complaintService.updateMstCompTreatments(ntssUser.getFacilityCd(), request);
 
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   // add マスタ一覧 1･施設切替を可能とする 王 start
@@ -134,7 +138,33 @@ public class MstComplaintResource {
    */
   @GetMapping("/mst-complaint/data/{facilityCd}")
   public ResponseEntity<?> getMstComplaintsByFacilityCd(
-    @PathVariable(name = "facilityCd", required = true) String facilityCd) {
+    @PathVariable(name = "facilityCd", required = true) String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }catch (Exception ignored) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -156,7 +186,33 @@ public class MstComplaintResource {
    */
   @GetMapping("/mst-comp-treatment/data/{facilityCd}")
   public ResponseEntity<?> getMstCompTreatmentsByFacilityCd(
-    @PathVariable(name = "facilityCd", required = true) String facilityCd) {
+    @PathVariable(name = "facilityCd", required = true) String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }catch (Exception ignored) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -179,7 +235,30 @@ public class MstComplaintResource {
   @PutMapping("/mst-comp-treatment/update/{facilityCd}")
   public ResponseEntity<?> updateMstCompTreatmentsByFacilityCd(
     @Valid @RequestBody List<MstCompTreatment> request,
-    @PathVariable(name = "facilityCd", required = true) String facilityCd) {
+    @PathVariable(name = "facilityCd", required = true) String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "request.size()=" + request.size() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }catch (Exception ignored) {}
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -190,7 +269,7 @@ public class MstComplaintResource {
     // 対象施設の処置マスタを更新
     complaintService.updateMstCompTreatments(facilityCd, request);
 
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   /**
@@ -202,7 +281,30 @@ public class MstComplaintResource {
   @PutMapping("/mst-complaint/update/{facilityCd}")
   public ResponseEntity<?> updateMstComplaintsByFacilityCd(
     @Valid @RequestBody List<MstComplaint> request,
-    @PathVariable(name = "facilityCd", required = true) String facilityCd) {
+    @PathVariable(name = "facilityCd", required = true) String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "request.size()=" + request.size() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }catch (Exception ignored) {}
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -213,7 +315,7 @@ public class MstComplaintResource {
     // 対象施設の処置マスタを更新
     complaintService.updateMstComplaints(facilityCd, request);
 
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
   // add マスタ一覧 1･施設切替を可能とする 王 end
 }

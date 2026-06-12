@@ -16,7 +16,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -181,8 +181,8 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 import commonSearchArea from "@/components/common/CommonSearchArea";
@@ -424,7 +424,7 @@ export default {
       return condition;
     },
   },
-  beforeDestroy() {
+  beforeUnmount() {
     Object.assign(this.$data, this.$options.data());
   },
 
@@ -447,7 +447,7 @@ export default {
 };
 </script>
 <style scoped>
-ons-popover >>> .popover {
+ons-popover :deep(.popover) {
   min-width: 380px;
 }
 .search-group {

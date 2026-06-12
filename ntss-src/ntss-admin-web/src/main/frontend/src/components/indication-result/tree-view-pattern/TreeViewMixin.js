@@ -1,7 +1,7 @@
 /**
  * 予実リスト表示コンポーネント用のMixin
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { confirmAllowDiscardChangesInRequestDetail } from "@/functions/exam-request/ExamRequestFunctions";
 
 export default {

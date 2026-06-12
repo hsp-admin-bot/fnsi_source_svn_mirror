@@ -11,7 +11,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="main-content">
+        <template #body>
+<div class="main-content">
       <div class="filter-content">
         <v-ons-row>
           <v-ons-col width="9em">
@@ -111,7 +112,9 @@
         </div>
       </div>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+        <template #footer>
+<div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <!-- mod 画面デザイン 對應 王 start-->
         <!-- <button class="button denial-btn" @click="cancel">キャンセル</button>-->
@@ -125,21 +128,23 @@
         <!-- mod 画面デザイン 對應 王 end-->
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapActions } from "vuex";
+import { mapActions } from "@/compat/vue/vuex";
 import SubModalBase from "@/components/modals/SubModalBase";
 import MultiSubModalMixin from "@/components/modals/MultiSubModalMixin";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 /* add by zhaohan 2022-10-12 [7280] 標準医薬品マスタ検索を表示するのに時間がかかる。 --start */
 import {ApiHelper} from "@/apis/AxiosHelper";
 /* add by zhaohan 2022-10-12 [7280] 標準医薬品マスタ検索を表示するのに時間がかかる。 --end */
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
-import debounce from 'lodash/debounce';
+import debounce from '@/compat/collections/lodash/debounce';
+import { getScopedElementsByClassName, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   // mixinの読込
@@ -306,7 +311,7 @@ export default {
      */
     clearSelectRow() {
       // 選択済の行をクリアする.
-      Array.from(document.getElementsByClassName("selected-row")).forEach(element => {
+      getScopedElementsByClassName("selected-row", this.$el || this).forEach(element => {
         element.classList.remove("selected-row");
       });
       // 選択済フラグ
@@ -319,7 +324,7 @@ export default {
       // 選択行をクリア
       this.clearSelectRow();
       // クリック要素取得
-      const clickElement = document.getElementById("sys-medicine-row-" + index);
+      const clickElement = getScopedElementById("sys-medicine-row-" + index, this.$el || this);
       // 要素無し.
       if (!clickElement) {
         return;
@@ -424,7 +429,7 @@ export default {
     // add end 馬 #10226
   },
   // add start 馬 #10226
-  beforeDestroy() {
+  beforeUnmount() {
     this.$refs.scrollDiv.removeEventListener('scroll', this.debouncedScrollGet);
   },
   // add end 馬 #10226
@@ -452,7 +457,7 @@ export default {
 /**
  * 絞込条件エリア内のons-rowのスタイル
  */
-.filter-content >>> ons-row {
+.filter-content :deep(ons-row) {
   margin-top: 5px;
   overflow-x: auto;
   display: flex;
@@ -503,7 +508,7 @@ tr:nth-child(2n){
  * ・フッタの高さ：10px + 2em + 10px
  * （上下のマージン10px、ボタン高さ2em）
  */
-div >>> .sub-modal-body {
+div :deep(.sub-modal-body) {
   height: calc(100% - 45px - 10px - 2em - 10px);
 }
 </style>

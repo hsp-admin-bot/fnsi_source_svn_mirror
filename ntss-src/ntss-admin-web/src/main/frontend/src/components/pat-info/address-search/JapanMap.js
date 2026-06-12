@@ -11,8 +11,9 @@
  *
  * Date: 2014-05-15
  */
-/* eslint-disable */
 export default function (args) {
+  const mapDocument = args?.field?.ownerDocument || (typeof document !== "undefined" ? document : null);
+  const mapWindow = mapDocument?.defaultView || (typeof window !== "undefined" ? window : null);
   // ---------------------------------------------------------------------------------------------------------------
   // Just for polyfill.
   // ---------------------------------------------------------------------------------------------------------------
@@ -58,16 +59,16 @@ export default function (args) {
   // ---------------------------------------------------------------------------------------------------------------
   const _ua = (function() {
     return {
-      Touch: typeof document.ontouchstart !== "undefined",
-      Pointer: window.navigator.pointerEnabled,
-      MSPointer: window.navigator.msPointerEnabled
+      Touch: !!mapDocument && typeof mapDocument.ontouchstart !== "undefined",
+      Pointer: !!mapWindow?.navigator?.pointerEnabled,
+      MSPointer: !!mapWindow?.navigator?.msPointerEnabled
     };
   })();
 
   const isWinDesktop = (function() {
     let supported = null;
     try {
-      supported = !!new window.ActiveXObject("htmlfile");
+      supported = !!(mapWindow?.ActiveXObject) && !!new mapWindow.ActiveXObject("htmlfile");
     } catch (e) {
       supported = false;
     }
@@ -216,7 +217,8 @@ export default function (args) {
           }
         });
 
-        document.addEventListener(_end, function endFunc() {
+        const scopedDocument = _target.ownerDocument || mapDocument;
+        scopedDocument.addEventListener(_end, function endFunc() {
           if (
             self.data.code !== null &&
             self.data.name != null &&
@@ -229,7 +231,7 @@ export default function (args) {
           self.pointer = null;
 
           _target.removeEventListener(_move, endFunc);
-          document.removeEventListener(_end, endFunc);
+          scopedDocument.removeEventListener(_end, endFunc);
         });
       });
     } else {
@@ -354,11 +356,12 @@ export default function (args) {
   /* Canvas */
   // ---------------------------------------------------------------------------------------------------------------
   var MapCanvas = function() {
-    const available = !!document.createElement("canvas").getContext;
+    const canvasDocument = arguments[0]?.field?.ownerDocument || mapDocument;
+    const available = !!canvasDocument?.createElement?.("canvas").getContext;
     if (!available) {
       throw "Your browser may not support CANVAS.";
     }
-    this.element = document.createElement("canvas");
+    this.element = canvasDocument.createElement("canvas");
     Map.apply(this, arguments);
 
     this.element.width = this.size.width;
@@ -13532,7 +13535,7 @@ export default function (args) {
   };
 
   let options = {
-    field: document.body.parentElement, // If null, canvas will be appended to <html>
+    field: mapDocument?.body?.parentElement || null, // If null, canvas will be appended to <html>
     type: "canvas", // Only type of "canvas" exist now. Perhaps "svg" in future.
     selection: "prefecture", // "prefecture" or "area"
     width: null, // Canvas will be scaled to larger one of "width" and "height".

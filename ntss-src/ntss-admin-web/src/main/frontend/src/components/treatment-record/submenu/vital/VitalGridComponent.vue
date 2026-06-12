@@ -2,10 +2,10 @@
 * グリッドコンポーネント
 */
 <template>
-  <div>
+  <div class="vital-grid-container">
     <div class="scroll-table">
       <table class="treatment-record-list vital-grid">
-        <thead>
+        <thead class="header-sticky vital-grid-thead">
         <!-- add FNSI-改修内容 新規ボタン追加 房 start -->
         <!-- mod redmine4094修正 房 start -->
         <tr>
@@ -139,7 +139,7 @@
           </td>
           <td class="ntss-list-body-td staff-name-cell">{{ e.updStaffName }}</td>
           <td class="align-center ntss-list-body-td">
-            <button class="ntss-btn-outset button-delete" @click="delRow(index)" :disabled=!isShared>
+              <button class="ntss-btn-outset button-delete" :disabled="!isShared" @click="delRow(index)">
               <v-ons-icon icon="fa-trash"/>
             </button>
           </td>
@@ -158,7 +158,7 @@
   import { CODES } from "@/constants/TreatmentRecord";
   import CommonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
   import CustomTextareaB from "@/components/common/custom-form-tags/CustomSimpleTextareaTypeB";
-  import { mapActions, mapGetters } from "vuex";
+  import { mapActions, mapGetters } from "@/compat/vue/vuex";
   import {
     dateFormat,
     DATE_FORMAT,
@@ -265,6 +265,7 @@
           // if (model.isModified()) {
           // this.$emit("modifiedValue");
           this.$emit("modifiedValue", model.isModified());
+          this.$emit("changeValue",this.vitalData)
           // }
           // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end
         });
@@ -448,7 +449,7 @@
     created() {
       this.authorityCds = this.cds;
     },
-    beforeDestroy() {
+    beforeUnmount() {
       // dataの初期化
       Object.assign(this.$data, this.$options.data());
     }
@@ -456,19 +457,32 @@
 </script>
 
 <style scoped>
+  .vital-grid-container {
+    height: 100%;
+    min-height: 0;
+  }
   .scroll-table {
     width: 1px;
   }
-  .selectbox >>> select {
+  .vital-grid {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .selectbox :deep(select) {
     width: fit-content;
   }
-  .vital-grid >>> .num-value ons-input {
+  .vital-grid :deep(.num-value ons-input) {
     width: 4em;
   }
-  .ntss-list-header-th-sticky {
-    z-index: 1;
+  .vital-grid-thead {
+    z-index: 2;
+    transform: translateZ(0);
   }
-  .ntss-list-body-td >>> .select-input {
+  .ntss-list-header-th-sticky {
+    position: static;
+    top: auto;
+  }
+  .ntss-list-body-td :deep(.select-input) {
     border: solid 1px var(--treatment-record-select-border-color);
   }
   .flex-align-center {
@@ -477,7 +491,7 @@
   .align-center {
     text-align: center;
   }
-  .input-date >>> .custom-input-date {
+  .input-date :deep(.custom-input-date) {
     width: auto;
   }
   .input-date {
@@ -493,7 +507,7 @@
     width: auto;
     margin: 0.1em;
   }
-  .header-component {
+  /**.header-component {
     z-index: 1;
     top: 0;
     position: sticky;
@@ -501,14 +515,15 @@
   }
   .header-component-th {
     top: 2.35em;
-  }
-  .vital-grid-textarea >>> textarea {
+  } */
+  .vital-grid-textarea :deep(textarea) {
     border-color: unset;
     border-style: inset;
     min-width: 100%;
   }
+   
   /* add 6827 入力欄の編集済み表現不正（治療記録＞バイタル） 房 start */
-  .custom-select-edited-box >>> select {
+  .custom-select-edited-box :deep(select) {
     border: 2px green solid !important;
     outline: 0;
     border-radius: 5px;

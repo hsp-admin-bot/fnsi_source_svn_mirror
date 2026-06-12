@@ -19,8 +19,8 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.entity.custom.OrdMainForWeightInd;
 import jp.co.nikkiso.ntss.core.entity.custom.OrdMainRstWeightInfo;

@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.coop_api.utils;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
 import com.google.common.base.CaseFormat;
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
@@ -24,7 +24,7 @@ import jp.co.nikkiso.ntss.core.entity.SysMasterDefine;
 import jp.co.nikkiso.ntss.core.entity.custom.MstCoopIniInfo;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
 import org.apache.commons.beanutils.BeanUtils;
-import org.apache.commons.collections.map.HashedMap;
+import org.apache.commons.collections4.map.HashedMap;
 import org.json.JSONArray;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;

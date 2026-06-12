@@ -2,7 +2,7 @@
 
 <template>
   <v-ons-popover
-    :target="targetPositionElement"
+    :target="resolvedTargetPositionElement"
     :visible="popoverVisible"
     :direction="popoverDisplayDirection"
     :class="[fontSizeSet, 'popover-style']"
@@ -98,21 +98,21 @@
           <div style="width: 100%; min-width: 200px; display: flex; align-items: center;">
             <v-ons-radio
               modifier="round"
-              v-model="drugStatus"
+              v-model="drugStatusLocal"
               :value="'指示'"
               name="drugStatusSName"
             />
             <label class="label-style" style="margin-right: 1em;">指示</label>
             <v-ons-radio
               modifier="round"
-              v-model="drugStatus"
+              v-model="drugStatusLocal"
               :value="'実績'"
               name="drugStatusSName"
             />
             <label class="label-style" style="margin-right: 1em;">実績</label>
             <v-ons-radio v-if="medicatioSupport"
               modifier="round"
-              v-model="drugStatus"
+              v-model="drugStatusLocal"
               :value="'投薬支援'"
               name="drugStatusSName"
             />
@@ -254,13 +254,15 @@
 </template>
 
 <script>
-import _ from "underscore";
+import _ from "@/compat/collections/lodash";
 import PopoverMixin from "@/components/PopoverMixin";
-import {mapGetters} from "vuex";
+import {mapGetters} from "@/compat/vue/vuex";
 import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
 import {sendRequestGetMstFacilityByCd} from "@/apis/facility";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
+import { getViewportHeight, getViewportWidth } from "@/functions/common/LayoutMeasureHelper";
+import { resolveOnsPopoverTargetElement } from "@/functions/common/OnsenFunctions";
 //#10176:ポップアップのフリーワード検索の動作不正 Start
 const MEDICINE_MIX_TAG = 'MEDICINE_MIX';
 //#10176:ポップアップのフリーワード検索の動作不正 End
@@ -363,9 +365,7 @@ export default {
      */
     targetPositionElement: {
       type: [Object, HTMLElement],
-      default() {
-        return this.$parent;
-      }
+      default: null
     },
 
     /**
@@ -457,12 +457,12 @@ export default {
       /**
        * @description 画面の高さ(レスポンシブ対応)
        */
-      windowHeight: window.innerHeight,
+      windowHeight: getViewportHeight(),
 
       /**
        * @description 画面の幅(レスポンシブ対応)
        */
-      windowWidth: window.innerWidth,
+      windowWidth: getViewportWidth(),
 
        /**
        * モニタグラフ設定
@@ -482,6 +482,7 @@ export default {
        * 対象薬剤
        */
       dosOrPre: '0',
+      drugStatusLocal: this.drugStatus,
 
       /**
        * 薬剤状態
@@ -542,6 +543,12 @@ export default {
 
   },
   computed: {
+    resolvedTargetPositionElement() {
+      return resolveOnsPopoverTargetElement(this.targetPositionElement, this);
+    },
+    resolvedTargetRectElement() {
+      return this.resolvedTargetPositionElement;
+    },
     ...mapGetters("user", ["getFacilityCd", "getAdvancedSettings"]),
 
     medicatioSupport() {
@@ -553,9 +560,9 @@ export default {
     popoverDisplayDirection() {
       if (!this.popoverVisible) return null;
 
-      const elemPosition = this.targetPositionElement.$el
-        ? this.targetPositionElement.$el.getBoundingClientRect()
-        : this.targetPositionElement.getBoundingClientRect();
+      const targetElement = this.resolvedTargetRectElement;
+      if (!targetElement?.getBoundingClientRect) return null;
+      const elemPosition = targetElement.getBoundingClientRect();
       let direction = "right";
 
       if (this.windowHeight <= 420) {
@@ -602,11 +609,11 @@ export default {
           // 各フィルタに対して抽出結果を比較
           for (let i = 0; i <= this.popoverFilter.length; i++) {
 
-            if (this.drugStatus !== '投薬支援' && (item.value === "target_investment1" || item.value === "target_investment2")) {
+            if (this.drugStatusLocal !== '投薬支援' && (item.value === "target_investment1" || item.value === "target_investment2")) {
               return false;
             }
 
-            if (this.drugStatus === '投薬支援') {
+            if (this.drugStatusLocal === '投薬支援') {
               if (this.dosOrPre === "0") {
                 return item.value === "target_investment1" && item.category === '0';
               } else if (this.dosOrPre === "1") {
@@ -642,7 +649,7 @@ export default {
               continue;
             //#10176:ポップアップのフリーワード検索の動作不正 Start  
             } else if (filterVal == '11') {
-              if (searchVal != '1' ) {
+              if (searchVal != '1') {
                 return false;
               }
             //#10176:ポップアップのフリーワード検索の動作不正 End
@@ -693,7 +700,10 @@ export default {
         this.initializeFilterSelected();
       }
     },
-    drugStatus: {
+    drugStatus(newVal) {
+      this.drugStatusLocal = newVal;
+    },
+    drugStatusLocal: {
       handler(data) {
         if (data !== "投薬支援") {
           this.investmentSupport = true;
@@ -709,7 +719,7 @@ export default {
   },
 
   mounted() {
-    window.addEventListener("resize", this.resize);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.resize);
     //add 8574  患者経過総合ビューアにてグラフ項目が正しく表示されない 張 start
     this.$nextTick(() => {
       // 患者経過総合ビューアレイアウトmst,按追加→詳細按钮显示typeerror，一直显示处理中 linjunfeng start
@@ -726,8 +736,8 @@ export default {
   methods: {
     // add by shiyw for 6119
     resize(){
-      this.windowHeight = window.innerHeight;
-      this.windowWidth = window.innerWidth;
+      this.windowHeight = getViewportHeight();
+      this.windowWidth = getViewportWidth();
     },
     popoverPreShow,
     popoverPostShow,
@@ -829,7 +839,7 @@ export default {
           temp.min = this.tempMin;
           //mod 8065 患者経過総合ビューアの薬剤グラフおよび複合グラフの薬剤がグラフ化されない。 張 start
           // temp.drugStatusS = this.medicatioSupport ? this.drugStatus: null;
-          temp.drugStatusS = this.drugStatus;
+          temp.drugStatusS = this.drugStatusLocal;
           //mod 8065 患者経過総合ビューアの薬剤グラフおよび複合グラフの薬剤がグラフ化されない。 張 end
           retVal.push(temp);
         }
@@ -1051,17 +1061,17 @@ export default {
     },
     //#10176:ポップアップのフリーワード検索の動作不正 End 
   },
-  beforeDestroy() {
-         window.removeEventListener("resize", this.resize);
+  beforeUnmount() {
+         (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.resize);
      },
    }
 </script>
 
 <style scoped>
-.popover-style >>> .popover--top,
-.popover-style >>> .popover--right,
-.popover-style >>> .popover--left,
-.popover-style >>> .popover--bottom {
+.popover-style :deep(.popover--top),
+.popover-style :deep(.popover--right),
+.popover-style :deep(.popover--left),
+.popover-style :deep(.popover--bottom) {
   width: initial;
 }
 
@@ -1103,7 +1113,7 @@ export default {
 
 /* スマホ対応 */
 @media screen and (max-width: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: auto;
     padding: 10px;
   }
@@ -1118,7 +1128,7 @@ export default {
 }
 
 @media screen and (max-height: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: 350px;
     padding: 5px;
   }

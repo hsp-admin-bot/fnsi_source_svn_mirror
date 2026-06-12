@@ -1,8 +1,10 @@
 <template>
   <modal-base @onClose="closeCheckListModal" class="custom-modal">
-    <div slot="body">
+    <template #body>
+      <div>
       <div class="sub_title">
         <table class="ntss-list-detail">
+          <tbody>
           <tr>
             <th class="list-header-th-center">点検日</th>
             <th class="list-header-th-center">ベッド</th>
@@ -20,14 +22,17 @@
             <td class="ntss-list-body-td">{{ getMachine.machineSerial }}</td>
             <td class="ntss-list-body-td">{{ getMachine.machineName }}</td>
           </tr>
+        
+          </tbody>
         </table>
       </div>
       <div
-        v-for="layout in getResultMaster"
+        v-for="layout in visibleResultMaster"
         :key="getLayoutKey(layout)"
         class="layout-box"
       >
         <table class="layout-detail">
+          <tbody>
           <tr v-if="layout.layoutTitle != null">
             <th class="list-header-th">{{ layout.layoutTitle }}</th>
           </tr>
@@ -36,6 +41,8 @@
               class="list-header-th list-header-nogradient"
             >{{ layout.groupHeader }}</th>
           </tr>
+        
+          </tbody>
         </table>
         <table v-if="!!layout.items.length" class="layout-detail">
           <thead>
@@ -145,7 +152,9 @@
       </div>
       <modal-history v-if="showHistory" />
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background: none;">
         <v-ons-button
           class="btn2-cancel"
@@ -162,6 +171,7 @@
       <div class="denial-btn-area close-button" style="background: none;">
         <v-ons-button
           class="btn3-normal"
+          :disabled="isResultMasterVoid"
           @click="openHistoryModal"
         >点検履歴</v-ons-button>
       </div>
@@ -174,15 +184,16 @@
       </div>
       <div class="registration-btn-area" style="background: none;"></div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import store from "@/stores";
-import { EventBus } from "@/eventBus";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import ModalBase from "@/components/modals/ModalBase";
-import moment from "moment";
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import dayjs from "@/compat/date/dayjs";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import HistoryModal from "@/components/daily-check/DailyHistoryModal";
 import { deepCopy, getHolidayStyle } from "@/functions/common/CommonFunctions";
 import CommonCalender from "@/components/common/custom-calendar/CustomCalendar";
@@ -235,6 +246,7 @@ export default {
       hasDailyCheckAuthority: false,
       listResultMasterKeep: [],
       checkerUsersMap: {},
+      visibleLayoutCount: 0,
       evenOddClassNames: Object.freeze(["even-row", "odd-row"]),
       isCmtOn: Object.freeze({ "1": true }),
       personalUser,
@@ -249,6 +261,12 @@ export default {
       "getMachine",
       "getIsOpenBySubView",
     ]),
+    isResultMasterVoid() {
+      return !this.getResultMaster?.length;
+    },
+    visibleResultMaster() {
+      return (this.getResultMaster || []).slice(0, this.visibleLayoutCount);
+    },
     getDevMenteNo() {
       const listMenteNo = this.getResultMaster.map(
         obj => obj.devMenteNo
@@ -256,7 +274,7 @@ export default {
       return listMenteNo;
     },
     dateString() {
-      return moment(this.dateInspection).format("YYYY/MM/DD(dd)");
+      return dayjs(this.dateInspection).format("YYYY/MM/DD(dd)");
     },
     dateStringStyle() {
       // 休日のスタイル取得
@@ -343,9 +361,9 @@ export default {
       if (param.substring(0, 3) !== getCurrentFunctionCd().substring(0, 3)) return;
 
       // 印刷パラメータを応答
-      // mod #11968 iPadで治療記録画面の機能帳票表示に失敗する 高　start
-      const date = moment(this.dateString, "YYYY/MM/DD(EE)").format("YYYYMMDD");
-      // mod #11968 iPadで治療記録画面の機能帳票表示に失敗する 高　end
+      // mod #11968 iPadで治療記録画面の機能帳票表示に失敗する 高 start
+      const date = dayjs(this.dateString, "YYYY/MM/DD(EE)").format("YYYYMMDD");
+      // mod #11968 iPadで治療記録画面の機能帳票表示に失敗する 高 end
       const reportParams = {
         patId: this.selectedPatId,
         date,
@@ -373,8 +391,7 @@ export default {
       const items = layout.items;
       const devided = (items.length > 1) && items.some((item, index) => (
         ((index + 1) < items.length)
-        && (item.answer !== items[index + 1].answer)
-      ));
+        && (item.answer !== items[index + 1].answer)));
       if (devided) {
         // 対象項目に合否が異なるものがある場合、全て合格にする
         items.forEach(item => {
@@ -411,8 +428,7 @@ export default {
         const layouts = this.createChangedLayouts();
         // 更新対象のレイアウトについて更新APIを呼ぶ
         await Promise.all(layouts.map(
-          aLayout => sendRequestUpdateCheckResultList(aLayout)
-        ));
+          aLayout => sendRequestUpdateCheckResultList(aLayout)));
 
         EventBus.$emit("refreshData");
         await this.$nextTick();
@@ -430,7 +446,7 @@ export default {
           // 日常点検用では使用しない menteContent3 に文字列として入れている
           const cate_edi = Number(item.menteContent3);
           const date = item.dateUpdate
-            ? moment(item.dateUpdate).toISOString()
+            ? dayjs(item.dateUpdate).toISOString()
             : "";
           const newDetail = {
             cate_cd: item.menteCategoryCd,
@@ -457,10 +473,8 @@ export default {
           // それぞれ検索APIで取得した値が
           // 型式重複排除処理済みの状態になっている想定
           const mainteCategoryCd = aLayout.categoryList.map((
-            { mainteCategoryCd, editionNo }
-          ) => (
-            { mainteCategoryCd, editionNo }
-          ));
+            { mainteCategoryCd, editionNo }) => (
+            { mainteCategoryCd, editionNo }));
           aLayout.mainteCategoryCd = JSON.stringify(mainteCategoryCd);
         }
 
@@ -504,10 +518,7 @@ export default {
       layout.menteAns1 = foundNotGood ? Answer.NotGood : (
         foundRunning ? Answer.Running : (
           (foundNotDate && foundGood) ? Answer.Running : (
-            foundGood ? Answer.Good : Answer.NotDateForDb
-          )
-        )
-      );
+            foundGood ? Answer.Good : Answer.NotDateForDb)));
     },
     updateAnswer(item) {
       // 編集権限がない場合は処理しない
@@ -606,7 +617,7 @@ export default {
         item.date = "";
       } else if (!item.date) {
         // 日付が空欄で時刻が空欄以外に変更された場合は日付をシステム日付にする
-        item.date = moment().format("YYYY-MM-DD");
+        item.date = dayjs().format("YYYY-MM-DD");
       }
 
       // 実施日時変更時の共通処理を行う
@@ -618,7 +629,7 @@ export default {
         item.time = "";
       } else if (!item.time) {
         // 時刻が空欄で日付が空欄以外に変更された場合は時刻をシステム時刻にする
-        item.time = moment().format("HH:mm");
+        item.time = dayjs().format("HH:mm");
       }
 
       // 実施日時変更時の共通処理を行う
@@ -685,6 +696,7 @@ export default {
     },
     // 検索処理を行う
     async requestDetail() {
+      this.visibleLayoutCount = 0;
       // isEdited での誤判定を防ぐため前回の検索時の状態のコピーをクリアしておく
       this.listResultMasterKeep.splice(0);
 
@@ -697,6 +709,7 @@ export default {
       this.listResultMasterKeep = deepCopy(this.getResultMaster);
       // 点検者入力UI用の値を保持するオブジェクトを getResultMaster の内容で初期化する
       this.checkerUsersMap = this.createCheckerUsersMap();
+      this.scheduleVisibleLayoutRendering();
     },
     createCheckerUsersMap() {
       const usersMap = {};
@@ -709,6 +722,21 @@ export default {
         usersMap[getLayoutKey(layout)] = itemsMap;
       });
       return usersMap;
+    },
+    scheduleVisibleLayoutRendering() {
+      const total = this.getResultMaster?.length || 0;
+      const firstBatch = 20;
+      const batchSize = 2;
+      const batchDelayMs = 80;
+      this.visibleLayoutCount = Math.min(firstBatch, total);
+      const renderNext = () => {
+        if (this.visibleLayoutCount >= total) {
+          return;
+        }
+        this.visibleLayoutCount = Math.min(this.visibleLayoutCount + batchSize, total);
+        setTimeout(() => requestAnimationFrame(renderNext), batchDelayMs);
+      };
+      setTimeout(() => requestAnimationFrame(renderNext), batchDelayMs);
     },
     createMaster(cd, name) {
       // #9451対応時のメモ：
@@ -758,7 +786,7 @@ export default {
 
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     store.dispatch("report/getMstReport", { funcCd: "03401", printFlag: 0 });
     // add #12262 定期点検画面の機能帳票で装置毎の点検一覧と記録簿が出せない limingzhe start
     this.setIsOpenBySubView(false);
@@ -782,7 +810,7 @@ const getNextAnswer = answer => {
 };
 // 実施日時に現在日時を設定する関数
 const setDateTimeWithNow = item => {
-  const dateTmp = moment().format("YYYY-MM-DD HH:mm");
+  const dateTmp = dayjs().format("YYYY-MM-DD HH:mm");
   item.date = dateTmp.substring(0, 10);
   item.time = dateTmp.substring(11);
   item.dateUpdate = dateTmp;
@@ -802,10 +830,8 @@ const isEqualItemsValue = (layoutA, layoutB) => layoutA.items.every(
       && ((itemA.comment || "") === (itemB.comment || ""))
       && ((itemA.iniText || "") === (itemB.iniText || ""))
       && (itemA.checkerId === itemB.checkerId)
-      && ((itemA.dateUpdate || "") === (itemB.dateUpdate || ""))
-    );
-  }
-);
+      && ((itemA.dateUpdate || "") === (itemB.dateUpdate || "")));
+  });
 </script>
 
 <style scoped>
@@ -947,12 +973,12 @@ const isEqualItemsValue = (layoutA, layoutB) => layoutA.items.every(
   width: 1px;
 }
 
-.modal-mask>>>.modal-search {
+.modal-mask :deep(.modal-search) {
   top: 43px;
   height: 7.5em;
 }
 
-.modal-mask>>>.modal-body-search {
+.modal-mask :deep(.modal-body-search) {
   top: calc(43px + 6.3em);
   height: calc(100% - 42px - 6.3em - 5em);
 }
@@ -1017,10 +1043,21 @@ const isEqualItemsValue = (layoutA, layoutB) => layoutA.items.every(
   outline: 0;
   border-radius: 5px;
 }
-
+:deep(.time-input .k-icon.k-i-close) {
+  position: absolute !important;
+  top: calc(50% + 1px) !important;
+  transform: translateY(-50%) !important;
+}
+@supports (-webkit-touch-callout: none) {
+  :deep(.time-input .k-icon.k-i-close.close-btn::before) {
+    top: -3px !important;
+    -webkit-transform: translateY(-3px) !important;
+    transform: translateY(-3px) !important;
+  }
+}
 @media print {
   /* 印刷時、横幅を収める */
-  .modal-mask >>> .modal-container {
+  .modal-mask :deep(.modal-container) {
     width: 99%;
   }
   /* 点検対象,点検基準 */

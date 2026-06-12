@@ -1,9 +1,8 @@
 /**
  * 画面印刷共通Mixin.
  */
-import Highcharts from "highcharts";
-import Boost from "highcharts/modules/boost";
-import { EventBus } from "@/eventBus.js";
+import Highcharts, { Boost } from "@/compat/charts/highcharts";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 Boost(Highcharts);
 
@@ -20,7 +19,7 @@ export default {
       scrollQuerySelector: "", // スクロール範囲のクエリセレクタ 各画面から指定する場合の例：".main"、"#wrapper"
       addClassTargetQuerySelector: [], // scroll-rightmostクラスを付与する対象のクエリセレクタ 配列で複数指定可能 各画面から指定する場合の例：[".list-content","#table"]
       // ---------------------------------------------------
-      
+
       // 画面印刷中かのフラグ
       isPrint: false
     };
@@ -46,13 +45,13 @@ export default {
     window.addEventListener("beforeprint", this._handleBeforePrintScroll);
     window.addEventListener("afterprint", this._handleAfterPrintScroll);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     window.removeEventListener("beforeprint", this._handleBeforePrintInternal);
     window.removeEventListener("afterprint", this._handleAfterPrintInternal);
 
     window.removeEventListener("beforeprint", this._handleBeforePrintScroll);
     window.removeEventListener("afterprint", this._handleAfterPrintScroll);
-    
+
     EventBus.$off("printing", this._handlePrinting);
     EventBus.$off("print-end", this._handlePrintEnd);
   },
@@ -148,7 +147,7 @@ export default {
         el.classList.remove('scroll-rightmost');
       });
     },
-    
+
     _handlePrinting() {
       this.isPrint = true;
     },

@@ -3,16 +3,29 @@
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
 
+function withSelectedPatId(params = undefined, selectedPatId) {
+  if (selectedPatId === null || selectedPatId === undefined || selectedPatId === "") {
+    return params;
+  }
+  return {
+    ...(params || {}),
+    selectedPatId
+  };
+}
+
 /**
  * 種別取得.
  * @param {string} facilityCd 施設コード
  */
- // mod #12462 患者情報共有 Ji start
-export function sendRequestGetRoundTypeNameAndContent(facilityCd, patId) {
-  // return ApiHelper.get(`/round-type/${facilityCd}/name-and-content`);
+export function sendRequestGetRoundTypeNameAndContent(facilityCd, patId, selectedPatId) {
   if (patId) {
-    return ApiHelper.get(`/round-type/${facilityCd}/name-and-content/${patId}`);
+    return ApiHelper.get(
+      `/round-type/${facilityCd}/name-and-content/${patId}`,
+      withSelectedPatId(undefined, selectedPatId)
+    );
   }
-  // mod #12462 患者情報共有 Ji end
-  return ApiHelper.get(`/round-type/${facilityCd}/name-and-content`);
+  return ApiHelper.get(
+    `/round-type/${facilityCd}/name-and-content`,
+    withSelectedPatId(undefined, selectedPatId)
+  );
 }

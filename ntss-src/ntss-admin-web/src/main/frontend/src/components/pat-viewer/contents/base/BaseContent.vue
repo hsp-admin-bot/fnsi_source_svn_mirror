@@ -16,7 +16,7 @@
       >
         <v-ons-popover
           :class="[fontSizeSet, 'popover-style']"
-          :visible.sync="medAuxiliaryShowFlg"
+          v-model:visible="medAuxiliaryShowFlg"
           :target="popoverTarget"
           :direction="popoverDirection"
           :cover-target="popoverCoverTarget"
@@ -322,7 +322,7 @@
                 <img v-if="showComplaint(dispData)"
                 style="cursor: pointer"
                 :src="showImg(dispData.value2.complaintData)"
-                @click.stop="showMedicine(dispData.value2.complaintData,arguments[0])"
+                @click.stop="showMedicine(dispData.value2.complaintData, $event)"
                 width="24"
                 height="24"
               />
@@ -480,7 +480,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * 装置設定チャート
@@ -494,11 +494,16 @@ import RstChart from "@/components/pat-viewer/contents/treatment/RstChart";
 import ComprehensiveGraph from "@/components/pat-viewer/contents/treatment/ComprehensiveGraph";
 import DrugGraph from "@/components/pat-viewer/contents/treatment/DrugGraph";
 import { ApiHelper } from "@/apis/AxiosHelper";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import PopoverMixin from "@/components/PopoverMixin";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 import TreatmentMedicineComponent from "@/components/treatment-record/submenu/complaint/TreatmentMedicineComponent";
 import { PREFIX, ALERT_PREFIXES } from "@/constants/PatViewerConstants";
+import asset0Img from "../../../../assets/0.png";
+import asset1Img from "../../../../assets/1.png";
+import asset3Img from "../../../../assets/3.png";
+import asset4Img from "../../../../assets/4.png";
+import asset6Img from "../../../../assets/6.png";
 
 export default {
   mixins: [PopoverMixin],
@@ -774,22 +779,22 @@ export default {
      * @param {Treatment} treatment クリックされた行の処置データ
      * @param {MouseEvent} event クリックされたマウスイベント
      */
-    showMedicine(treatment,event) {
+    showMedicine(treatment, event) {
       this.popoverTreatment = {
         treatMedicine: treatment.treat_medicine_name,
         amount: treatment.amount,
         unit: treatment.unit,
         procedure: treatment.procedure_name
       };
+      this.mpopoverTarget = event?.target ?? event;
       this.popoverVisible = true;
-      this.mpopoverTarget = event.target;
     },
     /**
      * ポップオーバクローズ処理
      */
     closePopover() {
       this.popoverVisible = false;
-      this.popoverTarget = null;
+      this.mpopoverTarget = null;
       this.popoverTreatment = {};
     },
     //add 5807  愁訴処置の表示不正  張 end
@@ -809,10 +814,7 @@ export default {
       // コメント
       this.popDispDataItem.komento.value = this.sourceDataItem.comment;
 
-      /* upd by chamaojia 2026-03-24 [12462] 患者情報共有->患者経過総合ビューア --start */
-      // const url = `mainData/getIndMediInfoHistory/${this.selectedPatId}/${this.getFacilityCd}/${this.sourceDataItem.itemNo}`;
       const url = `mainData/getIndMediInfoHistory/${dispDataItem.patId}/${dispDataItem.facilityCd}/${this.sourceDataItem.itemNo}`;
-      /* upd by chamaojia 2026-03-24 [12462] 患者情報共有->患者経過総合ビューア --end */
       ApiHelper.get(url).then(response => {
         // 開始日
         this.popDispDataItem.shiji_kaishi_nichi.value = response.data.mindate;
@@ -824,10 +826,7 @@ export default {
         this.popDispDataItem.shokai_touyo_nichi.value = this.popDispDataItem.shiji_kaishi_nichi.value;
         //add FutreNetWeb+SI課題管理No5188対応 呉 start
         let youbi = this.popDispDataItem.youbi.value.split(",");
-        /* upd by chamaojia 2026-03-24 [12462] 患者情報共有->患者経過総合ビューア --start */
-        // const url2 = `mainData/getPatMediniceNoCount/${this.selectedPatId}/${this.getFacilityCd}/${this.sourceDataItem.itemNo}/${youbi}`;
         const url2 = `mainData/getPatMediniceNoCount/${dispDataItem.patId}/${dispDataItem.facilityCd}/${this.sourceDataItem.itemNo}/${youbi}`;
-        /* upd by chamaojia 2026-03-24 [12462] 患者情報共有->患者経過総合ビューア --end */
         ApiHelper.get(url2).then(response => {
           if(response.data > 0){
             this.isShowMaxDate = false;
@@ -845,7 +844,7 @@ export default {
     },
 
     dateFormat(txt) {
-      return moment(txt).format("YYYY/MM/DD");
+      return dayjs(txt).format("YYYY/MM/DD");
     },
 
     nameFormat(txt) {
@@ -1215,17 +1214,17 @@ export default {
       switch (value) {
         // 条件送信前
         case "PNG0":
-          return require("../../../../assets/0.png");
+          return asset0Img;
         case "PNG1":
         case "PNG2":
-          return require("../../../../assets/1.png");
+          return asset1Img;
         case "PNG3":
-          return require("../../../../assets/3.png");
+          return asset3Img;
         case "PNG4":
         case "PNG5":
-          return require("../../../../assets/4.png");
+          return asset4Img;
         case "PNG6":
-          return require("../../../../assets/6.png");
+          return asset6Img;
         default:
           break;
       }
@@ -1331,13 +1330,13 @@ export default {
       };
 
       // if (
-      //   parseInt(moment().format("YYYYMMDD")) ===
-      //   parseInt(moment(treatDate).format("YYYYMMDD"))
+      //   parseInt(dayjs().format("YYYYMMDD")) ===
+      //   parseInt(dayjs(treatDate).format("YYYYMMDD"))
       // ) {
       //   classObj["today-content-cell"] = true;
       // } else if (
-      //   parseInt(moment().format("YYYYMMDD")) >
-      //   parseInt(moment(treatDate).format("YYYYMMDD"))
+      //   parseInt(dayjs().format("YYYYMMDD")) >
+      //   parseInt(dayjs(treatDate).format("YYYYMMDD"))
       // ) {
       //   classObj["past-date-content-cell"] = true;
       // }
@@ -1603,7 +1602,7 @@ export default {
     // add FNSI-FutreNetWeb+SI課題管理No.4360 李 end
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -1624,7 +1623,7 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 
 /*
  * 指示・実績併記
@@ -1854,6 +1853,9 @@ img {
 .circle-fill-type {
   width: 16px;
   height: 16px;
+  //#9846 start
+  line-height: 16px;
+  //#9846 end
   border-radius: 50%;
   border: solid 1px;
   //mod FutreNetWeb+SI課題管理 no.5932 劉全航 start
@@ -1931,11 +1933,11 @@ img {
     display: inline-flex;
     line-height: normal;
   }
-  div /deep/ .highcharts-container  {
+  div :deep(.highcharts-container)  {
     width: auto !important;
     height: auto !important;
   }
-  div /deep/ .highcharts-root  {
+  div :deep(.highcharts-root)  {
     width: 100%;
     height: 100%;
   }

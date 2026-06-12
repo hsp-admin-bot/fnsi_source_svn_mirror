@@ -51,7 +51,7 @@ import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.utils.NtssUtils;
 import jp.co.nikkiso.ntss.core.utils.TriggerUtil;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -512,7 +512,7 @@ public class TreatmentServiceImpl implements TreatmentService {
 //    // if (defaultSelDoctorNumber == 0) return new JSONObject("{}");
 //    if (defaultSelDoctorNumber == 0) {
 //      JournalCreateRequestResponse response = new JournalCreateRequestResponse();
-//      response.setResponse(new ResponseEntity<>((new JSONObject("{}")).toString(), null, HttpStatus.OK));
+//      response.setResponse(new ResponseEntity<>((new JSONObject("{}")).toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK));
 //      response.setCtlNoList(ctlNoListAll);
 //      return response;
 //    }
@@ -821,7 +821,7 @@ public class TreatmentServiceImpl implements TreatmentService {
 //    data.put("patPatternError", patPatternError);
 //    // mod bug 8099 修正 chen start
 //    JournalCreateRequestResponse response = new JournalCreateRequestResponse();
-//    response.setResponse(new ResponseEntity<>(data.toString(), null, HttpStatus.OK));
+//    response.setResponse(new ResponseEntity<>(data.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK));
 //    response.setCtlNoList(ctlNoListAll);
 //    return response;
 //    // return data;

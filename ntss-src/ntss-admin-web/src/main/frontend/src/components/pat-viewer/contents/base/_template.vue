@@ -10,7 +10,7 @@
  * Vue関連
  */
 // TODO: 必要な場合、コメント解除
-//import { mapActions } from "vuex";
+//import { mapActions } from "@/compat/vue/vuex";
 
 /**
  * ベースコンポーネント
@@ -81,5 +81,5 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 </style>

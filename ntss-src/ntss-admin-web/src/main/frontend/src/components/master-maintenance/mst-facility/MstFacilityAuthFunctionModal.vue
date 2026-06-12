@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="custom-ons-list-header">
+        <template #body>
+<div class="custom-ons-list-header">
       <v-ons-list modifier="inset">
         <v-ons-list-header>メニューバー表示機能設定</v-ons-list-header>
         <v-ons-list-item class="ntss-theme-screen print-height-auto">
@@ -94,7 +95,9 @@
         </v-ons-list-item>
       </v-ons-list>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+        <template #footer>
+<div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button btn2-cancel denial-btn" @click="cancel">キャンセル</v-ons-button>
       </div>
@@ -102,15 +105,16 @@
         <v-ons-button class="button common-style-select-button registration-btn" @click="registration">確定</v-ons-button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { mapState, mapActions, mapGetters } from "vuex";
+import { mapState, mapActions, mapGetters } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { EventBus } from "@/eventBus.js";
-import vuedraggable from "vuedraggable";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 import { FUNC_SHARING_PATIENT_INFORMATION } from "@/constants/function-code";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -118,6 +122,7 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
+import { getModalContainerElement, getModalToolbarElement, getModalFooterElement, queryScopedSelector, getScopedElementById } from '@/functions/common/LayoutMeasureHelper';
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
 
 //URI
@@ -129,7 +134,7 @@ export default {
   name: "UserFunctionModal",
   components: {
     "modal-base": ModalBase,
-    "draggable": vuedraggable
+    "draggable": VueDraggable
   },
   data() {
     return {
@@ -191,7 +196,7 @@ export default {
   watch: {
     inputModel: {
       handler(newVal) {
-        var allFuncSwitch = document.getElementById("switch-all-check");
+        var allFuncSwitch = getScopedElementById('switch-all-check', this.getCurrentModalContainer() || this.$el);
         var useAutLeng = newVal.useAuthFuncs.length;
         var menulistLeng = this.menuList.length;
         var isnkknkk = this.getEditRecord.facilityCd == "nkknkk";
@@ -199,7 +204,7 @@ export default {
         // mod 施設マスタ 障害対応 孔 start
         // if (!isnkknkk && useAutLeng === menulistLeng - 1) {
         //     allFuncSwitch.checked = true;
-        if (!isnkknkk ) {
+        if (!isnkknkk) {
           if (this.menuList.find(i => i.code == "038") && useAutLeng === menulistLeng-1) {
             allFuncSwitch.checked = true;
           } else if (!this.menuList.find(i => i.code == "038") && useAutLeng === menulistLeng){
@@ -317,8 +322,20 @@ export default {
     let temp = this.menuList
     this.initialData = temp.filter(m => this.isChecked(m.code)).map(m => m.code)
   },
-  mounted() {},
+
   methods: {
+    getCurrentModalContainer() {
+      return getModalContainerElement(this.$el) || null;
+    },
+    getCurrentModalToolbar() {
+      return getModalToolbarElement(this.$el) || null;
+    },
+    getCurrentModalFooter() {
+      return getModalFooterElement(this.$el) || null;
+    },
+    getFacilityAuthElement(selector) {
+      return this.getCurrentModalContainer()?.querySelector?.(selector) || this.$el?.querySelector?.(selector) || queryScopedSelector(selector, this.$el);
+    },
     ...mapActions("multi-modal", ["hideModal"]),
     ...mapActions("master-maintenance", [
       "setEditRecord",
@@ -329,18 +346,23 @@ export default {
 
     calculateHeight(){
       // スタイルの設定
-      const dialogheigth = document.getElementsByClassName("modal-container")[0].offsetHeight;
-      const dialogHeaderheigth = document.getElementsByClassName("toolbar")[0].offsetHeight;
-      const dialogFooterheigth = document.getElementsByClassName("modal-footer")[0].offsetHeight;
+      const dialogheigth = this.getCurrentModalContainer()?.offsetHeight || 0;
+      const dialogHeaderheigth = this.getCurrentModalToolbar()?.offsetHeight || 0;
+      const dialogFooterheigth = this.getCurrentModalFooter()?.offsetHeight || 0;
       // ヘッダー、フッター以外のマージン等の調整
       let adjustHeigth = 0;
-      if (navigator.userAgent.match(/Android/)) {
+      if (((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").match(/Android/)) {
         adjustHeigth = 82;
       } else {
         adjustHeigth = 47;
       }
-      document.getElementsByClassName("list-item")[0].style.height = (dialogheigth - dialogHeaderheigth - dialogFooterheigth - adjustHeigth) + "px";
-      document.getElementsByClassName("list-item")[0].firstElementChild.style.display = "unset";
+      const listItem = this.getFacilityAuthElement('.list-item');
+      if (listItem) {
+        listItem.style.height = (dialogheigth - dialogHeaderheigth - dialogFooterheigth - adjustHeigth) + 'px';
+        if (listItem.firstElementChild) {
+          listItem.firstElementChild.style.display = 'unset';
+        }
+      }
     },
 
     /**
@@ -563,7 +585,7 @@ ons-switch {
 .table-drag {
   padding-left: 1.8em;
 }
-.custom-ons-list-header >>> .list-header {
+.custom-ons-list-header :deep(.list-header) {
   font-size: inherit;
   display: flex;
   align-items: center;

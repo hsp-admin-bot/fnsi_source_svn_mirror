@@ -3,7 +3,8 @@
  */
 <template>
   <submenu-base>
-    <div slot="main" id="round-component">
+    <template #main>
+      <div id="round-component">
       <div style="padding: 0 5px 0 5px;">
         <v-ons-list class="treatment-record-accordion list scroll-treatment-record">
         <div id="edit-area">
@@ -37,7 +38,7 @@
                     id="roundDate"
                     max="9999-12-31"
                     @keyup="showMsg"
-                    v-validate="'date_format:yyyy-MM-dd'"
+                    v-rules="'date_format:yyyy-MM-dd'"
                   /> -->
                   <!-- #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng start -->
                   <!-- <date-input
@@ -320,6 +321,7 @@
                 :data-text-field="'fullName'"
                 :data-value-field="'user_id'"
                 :disabled="!isNewRoundInfo || !isRstCommentPost || isDisabled || !isShared || !isIndCommentPost"
+                @open="onIndUserDropdownOpen"
                 @change="onChange($event),onIndUserSelect">
               </kendo-dropdownlist>
               <!-- mod FNSI 1006 -> 395 指示コメントに転記 制御 --- 孫灝 end 20201214-->
@@ -341,8 +343,10 @@
         </div>
         </v-ons-list>
       </div>
-    </div>
-    <div slot="footer" class="flex-container treatment-submenu">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container treatment-submenu">
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
       <div class="denial-btn-area" style="white-space: nowrap;">
         <v-ons-button class="button denial-btn cancel btn2-cancel" :disabled="!isShared" @click="onCancelClick">キャンセル</v-ons-button>
@@ -360,16 +364,18 @@
 <!--        mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end-->
       </div>
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
-    </div>
+      </div>
+    </template>
   </submenu-base>
 </template>
 
 <script>
+import { getScopedElementById, getScopedJQuery, nextLayoutFrame } from "@/functions/common/LayoutMeasureHelper";
 // add #10570 回診記録指示コメント転記不具合_#10416指摘事項 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10570 回診記録指示コメント転記不具合_#10416指摘事項 dengshen  end
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc start
-import {mapGetters, mapActions, mapMutations} from "vuex";
+import {mapGetters, mapActions, mapMutations} from "@/compat/vue/vuex";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end
 import SubmenuBase from "@/components/treatment-record/SubmenuBaseComponent";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
@@ -377,7 +383,8 @@ import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfi
 // import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
 // del #10570 回診記録指示コメント転記不具合_#10416指摘事項 dengshen end
 import { RstRoundInfo } from "@/models/treatment-record/round/RstRoundInfo";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
+import $ from "@/compat/jquery";
 import { CODES } from "@/constants/TreatmentRecord";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
 import {
@@ -388,7 +395,7 @@ import {
 } from "@/functions/common/DateTimeUtils"
 import RoundComponentMixin from "@/components/treatment-record/submenu/round/RoundComponentMixin";
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 import CommonTextArea from "@/components/common/CommonTextArea";
 // add FNSI-横展開 日付のチェックの追加 徐 start
@@ -401,7 +408,6 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 import DateInput from "@/components/common/DateInput.vue";
 import TimeInput from "@/components/common/TimeInput.vue";
 //#5590 2023/05/25 ×を常に表示するように修正 張博 end
-import $$ from "jquery";
 
 export default {
   // mod #10570 回診記録指示コメント転記不具合_#10416指摘事項 dengshen start
@@ -541,11 +547,11 @@ export default {
       // add FNSI-横展開 日付のチェックの追加 徐 start
       // return this.isChanged;
       //mod 9724-③ ljx start
-      //return this.isChanged && this.$validator.errors.items.length === 0;
+      //return this.isChanged && this.validationErrors.length === 0;
       if(this.isNewRoundInfo){
-        return this.$validator.errors.items.length === 0;
+        return this.validationErrors.length === 0;
       }else{
-        return this.isChanged && this.$validator.errors.items.length === 0;
+        return this.isChanged && this.validationErrors.length === 0;
       }
       //mod 9724-③ ljx end
       // add FNSI-横展開 日付のチェックの追加 徐 end
@@ -605,6 +611,9 @@ export default {
     }
   },
   methods: {
+    scopedJQuery() {
+      return getScopedJQuery(this.$el || this, $) || $;
+    },
     ...mapActions("treatment-record/roundsInfo", [
       "getDoctorsAtFacility"
       , "getFixedPhrase"
@@ -706,8 +715,7 @@ export default {
       this.getIndUserList(
         AUTHORITY_CODES.IND_EDIT, // 治療指示-編集
         AUTHORITY_CODES.IND_PEDIT // 治療指示-代行編集
-      )
-      .then(response => {
+      ).then(response => {
         let iniSelectId = response.iniSelectId;
         this.doctorList = response.doctorList;
         // 前回登録した指示者のチェック
@@ -900,9 +908,7 @@ export default {
         roundDateTime = dateFormat.utc2Jst(
           parseDate(
             this.roundDate,
-            this.roundTime
-          )
-        );
+            this.roundTime));
       }
       this.rstRoundsInfo.inProgress.reg_date_time = roundDateTime;
       this.setRstRoundsInfoInProgress(this.rstRoundsInfo.inProgress);
@@ -1070,7 +1076,7 @@ export default {
      */
     routePushToTreatmentRecord() {
       // 治療記録画面を表示
-      this.$router.push({ name: "treatment-record" });
+      return this.$router.push({ name: "treatment-record" });
     },
     /**
      * バリデーション
@@ -1259,9 +1265,10 @@ export default {
 
     },
     // mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
-    discardConfirmInner(execFunction) {
+    discardConfirmInner(execFunction, cancelFunction) {
       // ダイアログの2重表示防止のためダイアログが閉じている場合のみ表示
-      if (!this.isDialogOpen){
+      if (!this.isDialogOpen) {
+        this.isDialogOpen = true;
         this.$ons.notification.confirm({
          // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
           // title: "内容破棄",
@@ -1269,14 +1276,18 @@ export default {
           // message: "編集内容が破棄されます。</br>よろしいですか？",
           message: messageFormat(DIALOG_MESSAGES[13000004].message),
           // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
-          callback: answer => {
+          callback: (answer) => {
             if (answer === 1) {
               this.setIsPatInfoChaned(false);
               execFunction();
+            } else if (typeof cancelFunction === "function") {
+              cancelFunction();
             }
             this.isDialogOpen = false;
-          }
+          },
         });
+      } else if (typeof cancelFunction === "function") {
+        cancelFunction();
       }
     },
     // mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue end
@@ -1314,8 +1325,7 @@ export default {
       // 更新した内容をstoreに反映
       await this.getRstRoundsInfoAndSaveToStore();
       this.selectedRstIndCommentNo = this.rstRoundsInfo.inProgress.ind_comment_no;
-      this.routePushToTreatmentRecord();
-      // 子機能ボタンエリアの更新
+      await this.routePushToTreatmentRecord();
       this.$emit("update");
     },
     /**
@@ -1344,9 +1354,11 @@ export default {
             //del 10416治療記録＞回診記録の指示コメント展開バグ start end
 
             // add 9724 start
-	    // mod #12462 患者情報共有 Ji start
-            await this.fetchRoundTypes({facilityCd:this.getFacilityCd, patId:this.selectedPatId});
-	    // mod #12462 患者情報共有 Ji end
+            await this.fetchRoundTypes({
+              facilityCd: this.getFacilityCd,
+              patId: this.selectedPatId,
+              selectedPatId: this.selectedPatId
+            });
             // add 9724 end
 
             await this.getRstRoundsInfoAndSaveToStore();
@@ -1364,7 +1376,7 @@ export default {
      * 内容(テキストエリア)のサイズ変更(min-height)
      */
      resizeTAMinH() {
-      const tx = $$("#textarea");
+      const tx = this.scopedJQuery()("#textarea");
 
       const LINE_HEIGHT = 1.3;
       const ROW_COUNT = 6;
@@ -1385,15 +1397,39 @@ export default {
      * 内容(テキストエリア)のサイズ変更(height)
      */
      resizeTAH() {
-      const tx = $$("#textarea");
+      const scopedJQuery = this.scopedJQuery();
+      const tx = scopedJQuery("#textarea");
+      const rc = scopedJQuery("#round-component");
+      const ed = scopedJQuery("#edit-area");
+      if (!tx.length || !rc.length || !ed.length) {
+        return;
+      }
 
-      // 外側要素の高さと、内側要素の高さの差を計算
-      const rc = $$("#round-component");
-      const ed = $$("#edit-area");
+      // Vue3: router-view 配下の高さが未確定のため、計測前にコンテナ高さを揃える
+      const submenuMain = rc.closest(".submenu-main");
+      if (submenuMain.length) {
+        const submenuMainEl = submenuMain.get(0);
+        const submenuContainer = submenuMainEl.closest(".submenu-container");
+        const areaHeight = submenuMainEl.closest(".submenu-area")?.clientHeight || 0;
+        if (submenuContainer && areaHeight > 0) {
+          submenuContainer.style.height = `${areaHeight}px`;
+          submenuContainer.style.minHeight = `${areaHeight}px`;
+          void submenuContainer.offsetHeight;
+        }
+        const submenuHeight = submenuMainEl.clientHeight || 0;
+        if (submenuHeight > 0) {
+          rc.css("height", `${submenuHeight}px`);
+          void rc.get(0).offsetHeight;
+        }
+      }
+
+      const textareaEl = tx.get(0);
+      textareaEl.style.height = "auto";
+      void textareaEl.offsetHeight;
+
       const diff = rc.innerHeight() - ed.outerHeight(true);
-
       tx.css({
-        "height" : tx.outerHeight(true) + diff + "px",
+        "height" : `${tx.outerHeight(true) + diff}px`,
       });
     },
 
@@ -1430,9 +1466,6 @@ export default {
       //add 9724-⑤ ljx start
       this.beforeChangeRoundTypeCd = this.rstRoundsInfo?.inProgress.round_type_cd;
       //add 9724-⑤ ljx end
-      // add #12462 患者情報共有 Ji start
-      this.fetchRoundTypes({facilityCd:this.getFacilityCd, patId:this.selectedPatId}),
-      // add #12462 患者情報共有 Ji end
       // 起票者
       this.setRegUserName();
       // 回診日時
@@ -1507,7 +1540,10 @@ export default {
       this.rstRoundsInfo.toCompare = this.rstRoundsInfo.inProgress.copy();
       // add FNSI-改修内容textareaの高 徐 start
       this.$nextTick(() => {
-        this.resizeTAMain();
+        nextLayoutFrame(this.$el || this, () => {
+          this.resizeTAMain();
+        });
+        window.setTimeout(() => this.resizeTAMain(), 100);
       });
       // add FNSI-改修内容textareaの高 徐 end
       this.initialContent = this.content;
@@ -1525,12 +1561,11 @@ export default {
         this.commentInfo.treatDate :
         (() => {
           // 無期限の場合、`本日＋１年－1日`
-          const d = moment();
-          d.add("years", 1);
-          //mod 10416 治療記録＞回診記録の指示コメント展開バグ zhao start
-          //d.subtract('days', 1);
-          d.endOf("month")
-          //mod 10416 治療記録＞回診記録の指示コメント展開バグ zhao end
+          const d = dayjs().add(1, "years")
+            //mod 10416 治療記録＞回診記録の指示コメント展開バグ zhao start
+            //d.subtract('days', 1);
+            .endOf("month");
+            //mod 10416 治療記録＞回診記録の指示コメント展開バグ zhao end
           return d.format("YYYYMMDD");
         })();
       return {
@@ -1565,14 +1600,14 @@ export default {
     refresh() {
       // 子機能ボタンエリアの更新
       this.$emit("update");
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       this.init();
     },
     // add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
     eventBusRefresh() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       if (this.isChanged && this.alertFlag) {
@@ -1603,12 +1638,12 @@ export default {
             id: "roundDate",
             scope: "roundDate"
           };
-      if (this.roundDate && document.getElementById("roundDate").validationMessage) {
+      if (this.roundDate && getScopedElementById("roundDate", this.$el || null)?.validationMessage) {
         this.showErrorDate = true;
-        this.$validator.errors.items.push(saveButtonErrorFlg);
+        this.pushValidationError(saveButtonErrorFlg);
       } else {
         this.showErrorDate = false;
-        this.$validator.errors.removeById("roundDate");
+        this.removeValidationErrorById("roundDate");
       }
     }
     // add FNSI-横展開 日付のチェックの追加 徐 end
@@ -1616,7 +1651,7 @@ export default {
   async created() {
     await this.init();
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // イベント登録
     // mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
     // EventBus.$on("refresh", this.refresh);
@@ -1625,9 +1660,10 @@ export default {
   },
    mounted() {
     this.ro = new ResizeObserver(this.resizeTAH);
-    this.ro.observe(document.getElementById("round-component"));
+    const roundRoot = getScopedElementById("round-component", this.$el || null);
+    if (roundRoot) { this.ro.observe(roundRoot); }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.ro.disconnect();
     this.ro = null;
     // dataの初期化
@@ -1648,7 +1684,7 @@ export default {
     if (
       this.isNewRoundInfo && this.isPatInfoChaned && this.isTextareaChanged
     ) {
-      this.discardConfirmInner(next);
+      this.discardConfirmInner(() => next(), () => next(false));
     } else {
       next();
     }
@@ -1737,7 +1773,7 @@ label {
 .disabled-label-color {
   color: var(--treatment-record-text-color-disabled) !important;
 }
-ons-input >>> .text-input {
+ons-input :deep(.text-input) {
   color: var(--treatment-record-input-color);
   background-color: var(--treatment-record-input-background-color);
 }
@@ -1764,8 +1800,9 @@ label {
 .scroll-treatment-record {
   overflow-x: auto;
 }
+ 
 /* add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 zhangyue start */
-.custom-textarea-edited >>> textarea {
+.custom-textarea-edited :deep(textarea) {
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;
@@ -1773,13 +1810,14 @@ label {
 .selected-item {
   color:green;
 }
+ 
 /* add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 zhangyue end */
-.custom-input-edited >>> select {
+.custom-input-edited :deep(select) {
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;
 }
-.custom-input-edited >>> input {
+.custom-input-edited :deep(input) {
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;
@@ -1795,17 +1833,23 @@ label {
 .round-posting-chk span:not(:first-child) {
   margin-left: 1em;
 }
+:deep(.input-style-required:is(.k-dropdownlist.k-picker, .k-widget.k-dropdown.k-legacy-dropdownlist, .k-widget.k-multiselect, .k-legacy-multiselect):is(.k-state-disabled, .k-disabled)) {
+  background-color: #ffff99 !important;
+}
+:deep(.input-style-required:is(.k-dropdownlist.k-picker, .k-widget.k-dropdown.k-legacy-dropdownlist, .k-widget.k-multiselect, .k-legacy-multiselect):is(.k-state-disabled, .k-disabled)) :is(.k-dropdown-wrap, .k-input-inner, .k-input-value-text) {
+  background-color: #ffff99 !important;
+}
 @media print {
   /** テキストエリアのページ跨ぎを可能とする */
   .treatment-record-accordion {
     display: inline-block;
   }
   /** テキストエリアは印刷用div表示するので非表示 */
-  div >>> .custom-textarea {
+  div :deep(.custom-textarea){
     display: none !important;
   }
   /** 印刷用divの高さ調整 */
-  div >>> .print-textarea {
+  div :deep(.print-textarea){
     min-height: 40vh;
   }
 }

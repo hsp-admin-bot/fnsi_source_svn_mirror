@@ -12,7 +12,7 @@
       ProductCode は UpgradeCodeGuid + ProductVersion から自動生成される（UUID v5）
       UpgradeCodeGuid は絶対に変えない
     -->
-    <ProductVersion>2.0.5</ProductVersion>
+    <ProductVersion>2.0.6</ProductVersion>
     <UpgradeCodeGuid>D170051B-C9A0-420E-924B-B9D740101EF0</UpgradeCodeGuid>
     <!-- DefineConstants でソースディレクトリを定義 -->
     <DefineConstants>

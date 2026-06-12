@@ -15,6 +15,7 @@
           :key='master.masterCd'
           :class="'ntss-list-body-tr'"
           @click='goNext(master.masterPhysicalName, master.masterName, master.mode)'>
+          <!-- <td class='ntss-list-body-td'>{{ master.masterPhysicalName }}</td> -->
           <td class='ntss-list-body-td'>{{ master.dispOrder }}</td>
           <td class='ntss-list-body-td'>{{ master.masterName }}</td>
         </tr>
@@ -24,15 +25,12 @@
 </template>
 
 <script>
-import Vue from "vue";
-import VueTouch from "vue-touch";
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import { MODE } from "@/constants/masterMaintenanceConstants";
 import { SYS_USE_DISP } from "@/constants/sysUseConstants";
 import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
-Vue.use(VueTouch);
 import { FUNC_SPLIT_GRAPH } from "@/constants/function-code.js";
 // add マスタ一覧 1･施設切替を可能とする 孔s start
 import { sendRequestGetMstFacilityHashByFacilityCd } from "@/apis/mst-facility-hash";
@@ -279,6 +277,15 @@ export default {
         this.facilitySwitchSysUseSetting = this.systemUseSetting
       }
       this.findList()
+    },
+    refresh() {
+      const currentRouteName = this.$route?.name
+        || this.$router?.currentRoute?.value?.name
+        || this.$router?.currentRoute?.name;
+      if (currentRouteName === "master-maintenance") {
+        return this.setFacility();
+      }
+      return undefined;
     }
     // add マスタ一覧 1･施設切替を可能とする 孔s end
   },
@@ -286,19 +293,17 @@ export default {
     EventBus.$on("filterMasterList", this.setFilterCondition);
     this.condition.masterName = this.getSearchMasterName;
     // mod マスタ一覧 1･施設切替を可能とする 孔s start
-    // this.findList();
-    // del #10627 マスタ一覧画面への遷移でエラーが発生し拡張機能に関するマスタが表示されてしまう linjunfeng start
-    // this.setFacility()
-    // del #10627 マスタ一覧画面への遷移でエラーが発生し拡張機能に関するマスタが表示されてしまう linjunfeng end
     EventBus.$on("mstFacilitySwitch", this.setFacility);
+    EventBus.$on("refresh", this.refresh);
     // mod マスタ一覧 1･施設切替を可能とする 孔s end
   },
   updated() {
     this.$refs["main-content-area-block"].scrollTop = this.getScrollToTop;
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("filterMasterList", this.setFilterCondition);
     EventBus.$off("mstFacilitySwitch", this.setFacility);
+    EventBus.$off("refresh", this.refresh);
   }
 };
 </script>

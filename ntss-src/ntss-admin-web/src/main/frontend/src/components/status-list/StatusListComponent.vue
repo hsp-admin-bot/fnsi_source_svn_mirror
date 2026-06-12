@@ -8,7 +8,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import StatusListMainComponent from "@/components/status-list/StatusListMainComponent";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 
@@ -46,5 +46,12 @@ export default {
   height: 100%;
   width: 100%;
   overflow: hidden;
+}
+
+@media print {
+  .status-list-main-content {
+    height: auto !important;
+    overflow: visible !important;
+  }
 }
 </style>

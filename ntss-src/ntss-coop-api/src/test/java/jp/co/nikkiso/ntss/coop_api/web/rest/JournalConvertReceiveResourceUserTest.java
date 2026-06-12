@@ -18,9 +18,9 @@ import java.util.Map;
 import org.apache.commons.beanutils.BeanUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -51,13 +51,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class JournalConvertReceiveResourceUserTest extends AbstractResourceTest {
 
-  @SpyBean
+  @MockitoSpyBean
   private MstPersonalUserDao mstPersonalUserDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private MstUserAuthenticationDao mstUserAuthenticationDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private MstUserDao mstUserDao;
 
   @Sql(value = "classpath:resource.script/JournalConvertReceiveResourceUserTest/sQ00/clean_db4_Q00.sql", config = @SqlConfig(dataSource = DataSourceName.AUTH, transactionManager = TransactionManagerName.AUTH))

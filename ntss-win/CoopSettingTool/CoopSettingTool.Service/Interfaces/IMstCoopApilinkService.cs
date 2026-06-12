@@ -29,6 +29,15 @@ namespace CoopSettingTool.Service
         /// <param name="facilityCd">The facility cd.</param>
         /// <returns>Task&lt;GetMstCoopApilinkResponse&gt;.</returns>
         Task<GetMstCoopApilinkResponse> GetMstCoopApilink(string facilityCd);
+
+        /// <summary>
+        /// Gets the source MST coop apilink.
+        /// </summary>
+        /// <param name="coopVersion">The coop version.</param>
+        /// <param name="coopCd">The coop cd.</param>
+        /// <returns>Task&lt;GetMstCoopApilinkResponse&gt;.</returns>
+        Task<GetMstCoopApilinkResponse> GetSourceMstCoopApilink(string coopVersion, string coopCd);
+
         /// <summary>
         /// Creates the or update MST coop apilink.
         /// </summary>

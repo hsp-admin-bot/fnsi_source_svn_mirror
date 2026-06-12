@@ -6,18 +6,27 @@
     <v-ons-row :class="getIsUseFlagAntiCoaguLant ? 'cell-disabled' : ''">
   <!-- mod 9664補液及び透析液仕様修正します yangqingzhe end -->
     <v-ons-col class="action-condition-column">抗凝固剤</v-ons-col>
-    <!--<v-ons-col class="action-condition-data-column" style="display: flex;">-->
+    <v-ons-col class="action-condition-data-column" style="display: flex;">
     <!--// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start-->
     <common-master-selector
-      :masterType="MasterType.ANTICOAGULANT_INDICATION"
-      :initItem="{text:displayInputValue.initValue,value:displayInputValue.initCd}"
-      :editItem="{text:displayInputValue.editValue,value:displayInputValue.editCd}"
+      :masterType="MasterType.MEDICATION_TREATMENT_CLASSTYPE_RECORD"
+      :initItem="equipmentSelectorInitItem"
+      :editItem="{text:displayInputValue.editValue,value:displayInputValue.editCd, unit: rstUnitForCd}"
       :patientId="selectedPatId"
-      :extraParams="mstExtraParams"
+      :extraParams="{
+        treatDate: mstExtraParams.treatDate,
+        rstInfo: mstExtraParams.rstInfo,
+        classType: 1,
+        initValue: displayInputValue.initCd,
+        medicineType: medicineType,
+        includeMedicineTypeCategory: true,
+        actualName: rstNameForCd
+      }"
       :facilityCd="facilityCd"
       :isMedicament="'1'"
       :isSelectionRequired="true"
       :hasChangedOption="true"
+      :changeOptionMode="'nameAndUnit'"
       :dialysisState="dialysisStateSafe"
       :selectedItemClass="'com-basic-sub-input'"
       :backgroundColor="'#f7f7f7'"
@@ -93,13 +102,13 @@
 // add #10359 編集権限の動作不正 dengshen start
 // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
 // import { getAuthorized } from "@/functions/common/CommonFunctions.js";
-import { getAuthorized, getPrefix } from "@/functions/common/CommonFunctions.js";
+import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
 // add #10359 編集権限の動作不正 dengshen end
-import { mapMutations, mapGetters } from "vuex";
-import { medicineAllergy, medicineClass, medicineMixAllergy } from "@/functions/mst/MstGetters.js";
+import { mapMutations, mapGetters } from "@/compat/vue/vuex";
+import { medicineClass } from "@/functions/mst/MstGetters.js";
 import IndTreatCondBase from "@/components/indication/IndTreatCondBase";
-import { MASTER_MAINTENANCE_CURRENT_ROUTE_NAME } from "@/constants/masterMaintenanceConstants";
+
 import { PATVIEWER_CURRENT_ROUTE_NAME } from "@/constants/PatViewerConstants";
 import { fitTermCheck } from "@/functions/common/DateTimeUtils";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
@@ -109,23 +118,25 @@ import { ApiHelper } from "@/apis/AxiosHelper";
 //mod FutreNetWeb+SI課題管理 NO.4878 劉全航 start
 import { MASTER_DELETE_DISPLAY } from "@/constants/TreatmentRecord.js";
 //mod FutreNetWeb+SI課題管理 NO.4878 劉全航 end
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-import { CODES } from "@/constants/TreatmentRecord";
+
 // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
 // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
 import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
 import * as MasterType from "@/components/common/master-selector/MasterType";
-import { Master } from "@/models/common/master-selector-condition/Master";
+import { buildMasterPopover } from "@/components/common/master-selector/builder/builderFactory";
+
 import { getMstListCompose } from "@/apis/pat-prescription"
 
+import IndicationOwnerMixin from '@/components/indication/IndicationOwnerMixin';
 const CLASS_MISMATCH_LABEL = "【分類不一致】";
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
 export default {
-  mixins: [IndTreatCondBase],
+  mixins: [IndicationOwnerMixin, IndTreatCondBase],
   // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
   components: {
     "common-master-selector": commonMasterSelector,
@@ -151,6 +162,11 @@ export default {
         editCd:'',
         initCd:'',
       },
+      masterLabelForCd: null,
+      masterUnitForCd: null,
+      rstUnitForCd: null,
+      rstUnitBaselineForCd: null,
+      rstNameForCd: null,
       selectedMst:{},
       selectedEditMst:{},
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
@@ -158,10 +174,12 @@ export default {
       mstMedicineMix: [],
       isChangedMedicineType: false,
       isDefaultSetUnitFlg:false,
+      preferPopoverUnitOnce: false,
       deletedMedicine: {
         cd : null,
         isMedicineTypeMix : false
       },
+      localSelectedCd: null,
       // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
       initValue : this.value
       // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
@@ -206,14 +224,38 @@ export default {
       // mod/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
     },
     dialysisStateSafe() {
-      const val = this.getSettingIndData &&
-                  this.getSettingIndData.orderMainData &&
-                  this.getSettingIndData.orderMainData.rstDialysisState;
+      const val = this.settingIndData &&
+                  this.settingIndData.orderMainData &&
+                  this.settingIndData.orderMainData.rstDialysisState;
       return Number(val || 0);
+    },
+    isActualRst() {
+      return this.dialysisStateSafe !== 0;
+    },
+    equipmentSelectorInitItem() {
+      return {
+        text: this.isActualRst
+          ? this.rstNameForCd != null && this.rstNameForCd !== ""
+            ? this.rstNameForCd
+            : this.displayInputValue.editValue
+          : this.displayInputValue.initValue,
+        value: this.displayInputValue.initCd,
+        unit: this.isActualRst
+          ? this.rstUnitBaselineForCd != null && this.rstUnitBaselineForCd !== ""
+            ? this.rstUnitBaselineForCd
+            : this.masterUnitForCd
+          : this.masterUnitForCd
+      };
     }
   },
 
   watch: {
+    getIndStartDate: {
+      handler(val) {
+        this.mstExtraParams.treatDate = this.normalizeTreatDate(val);
+      },
+      immediate: true
+    },
     inputValue: {
       handler(data) {
         let mstMedi = this.mstMedicine;
@@ -237,7 +279,7 @@ export default {
           if (this.isMst) {
             this.setAntiCoagulantDecPoint(medicine.unitDecimalPoint);
           } else {
-            let componentDataList = this.$parent.$parent.componentData.filter(item => {
+            let componentDataList = this._indicationFlowOwner().componentData.filter(item => {
               return item.cd === 26;
             });
             // mod FNSI redmine 4703 劉祥霖 start
@@ -264,7 +306,7 @@ export default {
           }
           // mod FNSI-小数点の修正 楊 end
           
-          if(this.isDefaultSetUnitFlg || this.antiCoagulantUnit === null){
+          if(!this.preferPopoverUnitOnce && (this.isDefaultSetUnitFlg || this.antiCoagulantUnit === null)){
             this.setAntiCoagulantUnit(medicine["unit"]);
             //mod FNSI-5553 劉全航 start
             if(!medicine["unit"]){
@@ -284,6 +326,7 @@ export default {
           }
           // add FNSI-【8630】単位が表示されない対応 曲 end
           this.isDefaultSetUnitFlg = true;
+          if (this.preferPopoverUnitOnce) this.preferPopoverUnitOnce = false;
         }else{
           if(this.isDefaultSetUnitFlg){
             this.setAntiCoagulantDecPoint(0);
@@ -302,150 +345,124 @@ export default {
   },
 
   async mounted() {
+    this.localSelectedCd = this.value;
     this.treatItemCd = "25";
-    await this.createPopoverData();
-    
-    // mod/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
-    /*const selectedMst = this.popoverData.popoverContentDataset.find(
-      item =>{
-        // 薬剤マスタ・調製薬剤マスタを$で区別
-        // mod/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
-        //item.value == (this.isMedicineTypeMix ? `${this.value}$` : this.value) // mod #9973 value Number→文字列  shiyw
-        return item.value == this.value && item.type == (this.isMedicineTypeMix ? "2" : "1")
-  });
-    //8204 【デグレ】治療条件モーダルにて、使用しない項目を設定できてしまう mod zhou start
-    const selectedEditMst = this.popoverData.popoverContentDataset.find(item => {
-      //return item.value == (this.isMedicineTypeMix ? `${this.velue}$` : this.velue); // mod #9973 value Number→文字列  shiyw
-      return item.value == this.value && item.type == (this.isMedicineTypeMix ? "2" : "1")
-    });
-    //if (selectedMst) {
-      //this.displayInputValue.initValue = selectedMst.text;
-      //this.displayInputValue.editValue = selectedMst.text;
-      //this.popoverData.popoverContentSelected = selectedMst;
-    if (selectedMst || selectedEditMst) {
-      //this.displayInputValue.initValue = selectedMst ? selectedMst.text : '';
-      //this.displayInputValue.editValue = this.isIndication ? (selectedEditMst ? selectedEditMst.text : '') : this.displayInputValue.initValue;
-      this.selectedMst = selectedMst
-      this.selectedEditMst = selectedEditMst
-      this.popoverData.popoverContentSelected = selectedEditMst ? selectedEditMst :selectedMst ;
-    // mod/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
-    //8204 【デグレ】治療条件モーダルにて、使用しない項目を設定できてしまう mod zhou end
-    // mod FNSI-改修内容 透析液、補液、抗凝固剤の物品が選択されていない場合に別の指示項目を編集不可とする仕組みをなくす。 周 start
-    //}
-    } else {
-      
-      // FNSI-修正 マスタ削除の対応 wangchen add start
-        if(this.value){
-           // mod 8374 2023-02-20 15:20 薬剤分類が抗凝固剤の調製薬剤で指示を発行しても分類不一致と表示される 張 start
-            // ApiHelper.get("/mstInfo/mstMedicine/getByCd", {medicineCd:this.value}).then((res) => {
-            ApiHelper.get("/mstInfo/mstMedicine/getByCd", {medicineCd:this.value,medicineType:this.medicineType}).then((res) => {
-                // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
-                //let medicineName =this.medicineType ==="1" ? res.data.medicineName: res.data.medicineMixName;
-                let medicineName =this.medicineType == 1 ? res.data.medicineName: res.data.medicineMixName;
-                // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
-                //add 5323 患者経過総合ビューアで分類が問題ない場合でも「分類不一致」と表示されることがある。張 start
-                Mst.medicineClass(this.facilityCd).then(response=>{
-                  const mstClassValue = response.find(mstData => {
-                    return mstData.classCd === res.data.classCd;
-                  });
-                 if((mstClassValue && 1 != mstClassValue.classType)||res.data.classCd===-1){
-                    this.displayInputValue.initValue = "【分類不一致】" + medicineName;
-                    this.displayInputValue.editValue = "【分類不一致】" + medicineName;
-                  }else{
-                    this.displayInputValue.initValue = medicineName;
-                    this.displayInputValue.editValue = medicineName;
-                  }
-                  //add 5323 患者経過総合ビューアで分類が問題ない場合でも「分類不一致」と表示されることがある。張 end
-                  if (res && res.data && res.data.isDisp == '1' && res.data.isDel == '0') {
-                    this.displayInputValue.initValue = this.displayInputValue.initValue;
-                    this.displayInputValue.editValue = this.displayInputValue.initValue;
-                  } else {
-                    this.displayInputValue.initValue = MASTER_DELETE_DISPLAY.DELETED + this.displayInputValue.initValue;
-                    this.displayInputValue.editValue = MASTER_DELETE_DISPLAY.DELETED + this.displayInputValue.initValue;
-                  }
-                  // mod FNSI-FutreNetWeb+SI課題管理No.4878 李 end
-                  // this.displayInputValue.initValue = "削除済み "+medicineName;
-                  // this.displayInputValue.editValue = "削除済み "+medicineName;
-                  // del FNSI redmine 4877 4879 劉祥霖 start
-                  // this.popoverData.popoverContentSelected.value = null;
-                  // del FNSI redmine 4877 4879 劉祥霖 end
-                  // this.displayInputValue.initValue = MASTER_DELETE_DISPLAY.DELETED+medicineName;
-                  // this.displayInputValue.editValue = MASTER_DELETE_DISPLAY.DELETED+medicineName;
-                }).catch(err => {
-                    throw err;
-                  });
-                // mod 8374 2023-02-20 15:20 薬剤分類が抗凝固剤の調製薬剤で指示を発行しても分類不一致と表示される 張 end
-            })
-        }
-      // FNSI-修正 マスタ削除の対応 wangchen add end
-    }*/
-    // mod FNSI-改修内容 透析液、補液、抗凝固剤の物品が選択されていない場合に別の指示項目を編集不可とする仕組みをなくす。 周 end
-    // del #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-    // this.checkMstDispStatus("medicineCd");
-    // del #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
-    
-      const rst = this.mstMedicine.find(
-          item =>{
-            item.value = item.key_cd
-            item.type = item.key_type
-            return item.medicineCd == this.value
-      });
-      const rstMix = this.mstMedicineMix.find(
-          item =>{
-            item.value = item.key_cd
-            item.type = item.key_type
-            return item.medicineMixCd == this.value
-      });
-      if(rst){
-        this.popoverData.popoverContentSelected = rst
-      } else if (rstMix) {
-        this.popoverData.popoverContentSelected = rstMix
-      }
-    if(this.value){
-      let prefix = '';
-      let statusText = '';
-      var text = '';
-      let value = '';
-      if(this.medicineType == 2){
-        if (rstMix.key_type == 2 && rstMix.key_class == -1) {
-          prefix = CLASS_MISMATCH_LABEL;
-        }
-        if (this.getSettingIndData || 
-          this.getSettingIndData.orderMainData || 
-          this.getSettingIndData.orderMainData.rstDialysisState == 0) {
-          statusText = `${rstMix.expired}${rstMix.deleted}${rstMix.includeDeleted}`;
-        }
-        text = prefix + rstMix.tabooAllergy + statusText + rstMix.medicineMixName
-        value = rstMix.key_cd
-        this.mstExtraParams.rstInfo.rstUnit = rstMix.unit
-        this.unit = rstMix.unit
-      }else{
-        if (rst.key_type == 2 && rst.key_class == -1) {
-          prefix = CLASS_MISMATCH_LABEL;
-        }
-        if ( this.getSettingIndData || 
-          this.getSettingIndData.orderMainData || 
-          this.getSettingIndData.orderMainData.rstDialysisState == 0) {
-          statusText = `${rst.expired}${rst.deleted}${rst.includeDeleted}`;
-        }
-        text = prefix + rst.tabooAllergy + statusText + rst.medicineName
-        value = rst.key_cd
-        this.mstExtraParams.rstInfo.rstUnit=rst.unit
-        this.unit = rst.unit
-      }
-      this.displayInputValue.initValue = text
-      this.displayInputValue.editValue = text
-      this.displayInputValue.text = text
-      this.displayInputValue.editCd = value
-      this.displayInputValue.initCd = value
-      this.mstExtraParams.treatDate = this.getIndStartDate||'';
-      this.mstExtraParams.rstInfo.rstName = text||'';
+    if (!this.mstExtraParams.treatDate) {
+      this.mstExtraParams.treatDate = this.normalizeTreatDate(this.getIndStartDate);
     }
-    
-    // mod/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
+    await this.createPopoverData();
+
+    const selectedMst = (this.popoverData.popoverContentDataset || []).find(item => {
+      return item.value == this.value;
+    });
+    const initItem = (this.popoverData.popoverContentDataset || []).find(item => {
+      // mod #10937 20260428 Ji start
+      // return item.value == this.value;
+      return item.value == (this.velue ?? this.value);
+      // mod #10937 20260428 Ji end
+    });
+
+    if (selectedMst || initItem) {
+      const masterText =
+        this.masterLabelForCd != null && this.masterLabelForCd !== ""
+          ? this.masterLabelForCd
+          : (selectedMst ? selectedMst.text : "");
+      this.displayInputValue.initValue = masterText;
+      this.displayInputValue.editValue = this.isIndication
+        ? (initItem ? initItem.text : "")
+        : (selectedMst ? selectedMst.text : masterText);
+
+      const initCdVal = selectedMst && selectedMst.value != null ? selectedMst.value : this.value;
+      const editCdVal =
+        this.isIndication && initItem && initItem.value != null ? initItem.value : initCdVal;
+      this.displayInputValue.initCd = initCdVal;
+      this.displayInputValue.editCd = editCdVal;
+      this.displayInputValue.text = this.displayInputValue.editValue;
+      this.popoverData.popoverContentSelected = initItem ? initItem : selectedMst;
+    } else if (this.value) {
+      await this.applyFallbackMedicineDisplay();
+    }
+
+    this.mstExtraParams.treatDate = this.getIndStartDate || "";
+    this.mstExtraParams.rstInfo.rstName =
+      this.displayInputValue.editValue || this.displayInputValue.initValue || "";
   },
 
   methods: {
+    applySelectedMedicineDisplay(rst, rstMix) {
+      if (!this.value) {
+        return;
+      }
+
+      const currentItem = this.medicineType == 2 ? rstMix : rst;
+      if (!currentItem) {
+        return;
+      }
+
+      let prefix = "";
+      let statusText = "";
+      let text = "";
+      let value = "";
+
+      if (this.medicineType == 2) {
+        if (currentItem.key_type == 2 && currentItem.key_class == -1) {
+          prefix = CLASS_MISMATCH_LABEL;
+        }
+        if (this.dialysisStateSafe === 0) {
+          statusText = `${currentItem.expired}${currentItem.deleted}${currentItem.includeDeleted}`;
+        }
+        text = prefix + currentItem.tabooAllergy + statusText + currentItem.medicineMixName;
+        value = currentItem.key_cd;
+      } else {
+        if (currentItem.key_type == 2 && currentItem.key_class == -1) {
+          prefix = CLASS_MISMATCH_LABEL;
+        }
+        if (this.dialysisStateSafe === 0) {
+          statusText = `${currentItem.expired}${currentItem.deleted}${currentItem.includeDeleted}`;
+        }
+        text = prefix + currentItem.tabooAllergy + statusText + currentItem.medicineName;
+        value = currentItem.key_cd;
+      }
+
+      this.mstExtraParams.rstInfo.rstUnit = currentItem.unit;
+      this.unit = currentItem.unit;
+      this.displayInputValue.initValue = text;
+      this.displayInputValue.editValue = text;
+      this.displayInputValue.text = text;
+      this.displayInputValue.editCd = value;
+      this.displayInputValue.initCd = value;
+    },
+
+    async applyFallbackMedicineDisplay() {
+      const res = await ApiHelper.get("/mstInfo/mstMedicine/getByCd", {
+        medicineCd: this.value,
+        medicineType: this.medicineType
+      });
+      const medicineName =
+        this.medicineType == 1 ? res.data.medicineName : res.data.medicineMixName;
+      const classList = await medicineClass(this.facilityCd);
+      const mstClassValue = classList.find(
+        (mstData) => mstData.classCd === res.data.classCd
+      );
+
+      let text = medicineName;
+      if ((mstClassValue && 1 != mstClassValue.classType) || res.data.classCd === -1) {
+        text = CLASS_MISMATCH_LABEL + text;
+      }
+      if (!(res && res.data && res.data.isDisp == "1" && res.data.isDel == "0")) {
+        text = MASTER_DELETE_DISPLAY.DELETED + text;
+      }
+
+      this.displayInputValue.initValue = text;
+      this.displayInputValue.editValue = text;
+      this.displayInputValue.text = text;
+      this.displayInputValue.editCd = this.value;
+      this.displayInputValue.initCd = this.value;
+      if (Object.prototype.hasOwnProperty.call(res.data || {}, "unit")) {
+        this.mstExtraParams.rstInfo.rstUnit = res.data.unit;
+        this.unit = res.data.unit;
+      }
+    },
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
     mstClick(item) {
       const val = item.data.lists.list3.items.filter(item => item.key_type == 1) || []
@@ -457,22 +474,33 @@ export default {
       return val
     },
     masterUpdateInput(val){
+      const u = val?.unit;
+      this.preferPopoverUnitOnce = true;
+      this.setAntiCoagulantUnit(u);
+      this.setAntiCoagulantFlowRateUnit(!u ? "/h" : String(u) + "/h");
+      this.setAntiCoagulantAmountTotalUnit(u);
       this.displayInputValue.editValue = val.text
       this.displayInputValue.text = val.text
       this.displayInputValue.editCd = val.value
-      this.kbnValue = val.kbnValue
+      this.kbnValue = val.key_type ?? val.type ?? val.kbnValue
       this.unit = val.unit
+      this.mstExtraParams.rstInfo.rstUnit = val.unit ?? ""
+      this.rstUnitForCd = val.unit != null && val.unit !== "" ? String(val.unit) : this.rstUnitForCd;
       const data = {
         fnValue:{
-          '薬剤分類': val.classCd,
-          '薬剤区分': val.kbnValue
+          '薬剤分類': val.classCd ?? val.classValue ?? val.key_class,
+          '薬剤区分': val.key_type ?? val.type ?? val.kbnValue
         },
         isDisp: val.isDisp,
         text: val.text,
-        type: val.kbnValue,
-        value: val.value
+        type: val.key_type ?? val.type ?? val.kbnValue,
+        value: val.value,
+        unit: val.unit
       }
       this.updateInputNew(data,'25')
+    },
+    updateInput(data) {
+      this.updateInputNew(data, "25");
     },
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
       //[確認]ボタンの状態の変更をトリガーします
@@ -498,7 +526,130 @@ export default {
     },
     // add #10359 編集権限の動作不正 dengshen end
 
+    normalizeTreatDate(val) {
+      if (val == null) return "";
+      return String(val).replaceAll("-", "");
+    },
+
     async createPopoverData() {
+      const initValue =
+        this.displayInputValue.initCd != null && this.displayInputValue.initCd !== ""
+          ? this.displayInputValue.initCd
+          : this.value;
+      const treatDate =
+        this.normalizeTreatDate(this.getIndStartDate || this.mstExtraParams.treatDate || dayjs().format("YYYYMMDD"));
+      this.mstExtraParams.treatDate = treatDate;
+      const extraParams = {
+        treatDate,
+        rstInfo: this.mstExtraParams.rstInfo,
+        classType: 1,
+        initValue,
+        medicineType: this.medicineType,
+        includeMedicineTypeCategory: true
+      };
+      const context = {
+        facilityCd: this.facilityCd,
+        patientId: this.selectedPatId,
+        extraParams,
+        initItem: { value: initValue },
+        selectedItem: { value: this.value },
+        hasChangedOption: true,
+        isMedicament: "1",
+        dialysisState: this.dialysisStateSafe,
+        allowedFields: { showMedicineFieldOnly: false, data: [] }
+      };
+
+      const popover = await buildMasterPopover(
+        MasterType.MEDICATION_TREATMENT_CLASSTYPE_RECORD,
+        context
+      ).catch(error => {
+        getErrorMessage("IndTreatCondAntiCoagulant.vue", "createPopoverData", error);
+        throw error;
+      });
+
+      const categories = popover?.categories ?? [];
+      const options = popover?.master?.options ?? [];
+      const filteredOptions = options.filter(item => {
+        // mod #10937 20260428 Ji start
+        return item.isDisp === "1" || String(item.value) == String(this.localSelectedCd) || String(item.value) == String(this.velue);
+        // mod #10937 20260428 Ji end
+      });
+
+      const masterRow = filteredOptions.find(
+        o => String(o.value) === String(this.localSelectedCd)
+      );
+      this.masterLabelForCd = masterRow && masterRow.text != null ? String(masterRow.text) : null;
+      this.masterUnitForCd =
+        masterRow && masterRow.unit != null && masterRow.unit !== ""
+          ? String(masterRow.unit)
+          : null;
+
+      let rstName = "";
+      let rstUnit = "";
+      const om = this.settingIndData && this.settingIndData.orderMainData;
+      if (
+        om &&
+        om.rstDialysisState != null &&
+        String(om.rstDialysisState) !== "" &&
+        Number(om.rstDialysisState) !== 0
+      ) {
+        const raw = om.indCondInfo;
+        if (raw != null && raw !== "") {
+          try {
+            const obj = typeof raw === "string" ? JSON.parse(raw) : raw;
+            const row = obj[this.treatItemCd] ?? obj[Number(this.treatItemCd)];
+            rstName = row?.value_name_1 || "";
+            rstUnit = row?.unit || "";
+          } catch (e) {
+            rstName = "";
+            rstUnit = "";
+          }
+        }
+      }
+      this.rstUnitForCd =
+        rstUnit != null && rstUnit !== "" ? String(rstUnit) : this.masterUnitForCd;
+      this.rstUnitBaselineForCd =
+        rstUnit != null && rstUnit !== "" ? String(rstUnit) : null;
+      this.rstNameForCd = rstName != null && rstName !== "" ? String(rstName) : null;
+      if (
+        om &&
+        om.rstDialysisState != null &&
+        String(om.rstDialysisState) !== "" &&
+        Number(om.rstDialysisState) !== 0 &&
+        rstUnit != null &&
+        rstUnit !== ""
+      ) {
+        this.unit = String(rstUnit);
+      }
+
+      let contentArr = filteredOptions.map(item => ({
+        ...item,
+        fnValue: {
+          薬剤分類: item.classCd ?? item.classValue ?? item.key_class,
+          薬剤区分: item.kbnValue ?? item.key_type
+        },
+        type: item.kbnValue ?? item.key_type,
+        text:
+          rstName && String(item.value) == String(this.localSelectedCd)
+            ? String(rstName)
+            : item.text
+      }));
+      contentArr = contentArr.sort((a, b) => b.isDisp - a.isDisp);
+
+      this.mstMedicine = contentArr.filter(item => String(item.kbnValue ?? item.key_type) === "1");
+      this.mstMedicineMix = contentArr.filter(item => String(item.kbnValue ?? item.key_type) === "2");
+      this.contentDataset = [...this.mstMedicine, ...this.mstMedicineMix];
+      this.popoverData.popoverTitleHeader = "薬剤";
+      this.popoverData.popoverFilter = categories.map(category => ({
+        popoverFilterLabel: category.label,
+        popoverFilterDataset: category.options
+      }));
+      this.popoverData.popoverContentLabel = "薬剤名";
+      this.popoverData.popoverContentDataset = contentArr;
+      this.popoverData.type = this.treatItemCd;
+    },
+
+    async createPopoverDataLegacy() {
       // 選択中薬剤のIDを取得
       let selectedMediCd = null;
       let selectedMediMixCd = null;
@@ -572,13 +723,13 @@ export default {
       /*const [medicineData, medicineMixData, classData] = await Promise.all([
         // マスタ系画面以外では患者のタブー・アレルギー情報込みで取得する
         // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-        // this.$router.currentRoute.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? Mst.medicine(this.facilityCd) : Mst.medicineTabooAllergy(this.selectedPatId),
-        //this.$router.currentRoute.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? this.getMstMedicineIncludeDeletedData : Mst.medicineAllergy(this.selectedPatId, true),
-        //this.$router.currentRoute.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? this.getMstMedicineIncludeDeletedData : getMstListCompose(item),
+        // this.$route.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? Mst.medicine(this.facilityCd) : Mst.medicineTabooAllergy(this.selectedPatId),
+        //this.$route.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? this.getMstMedicineIncludeDeletedData : Mst.medicineAllergy(this.selectedPatId, true),
+        //this.$route.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? this.getMstMedicineIncludeDeletedData : getMstListCompose(item),
         getMstListCompose(item),
-        // this.$router.currentRoute.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? Mst.medicineMix(this.facilityCd) : Mst.medicineMixTabooAllergy(this.selectedPatId),
-        //this.$router.currentRoute.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? this.getMstMedicineMixIncludeDeletedData : Mst.medicineMixAllergy(this.selectedPatId, true),
-        //this.$router.currentRoute.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? this.getMstMedicineMixIncludeDeletedData : getMstListCompose(item),
+        // this.$route.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? Mst.medicineMix(this.facilityCd) : Mst.medicineMixTabooAllergy(this.selectedPatId),
+        //this.$route.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? this.getMstMedicineMixIncludeDeletedData : Mst.medicineMixAllergy(this.selectedPatId, true),
+        //this.$route.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? this.getMstMedicineMixIncludeDeletedData : getMstListCompose(item),
         getMstListCompose(item),
         // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
         medicineClass(this.facilityCd)
@@ -599,7 +750,7 @@ export default {
       const classData = res.data.lists.list2.items || [];
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
       // 患者経過総合ビューア(予定)表示時は、予定範囲と薬剤の使用期限を見て表示内容を補正する
-      if (this.$router.currentRoute.name === PATVIEWER_CURRENT_ROUTE_NAME) {
+      if (this.$route.name === PATVIEWER_CURRENT_ROUTE_NAME) {
         // 薬剤
         this.mstMedicine = medicineData.filter(medi => {
           // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
@@ -621,7 +772,7 @@ export default {
         // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
         // this.mstMedicine = medicineData;
         // this.mstMedicineMix = medicineMixData;
-        treatDate = moment().format("YYYYMMDD");
+        treatDate = dayjs().format("YYYYMMDD");
         // 薬剤
         this.mstMedicine = medicineData.filter(medi => {
           return fitTermCheck(medi.useStartDate, medi.useEndDate, treatDate) || (this.initValue != null && medi.medicineCd == this.initValue);
@@ -670,7 +821,7 @@ export default {
       // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
       let rstName = "";
       if (
-        this.$router.currentRoute.name === PATVIEWER_CURRENT_ROUTE_NAME &&
+        this.$route.name === PATVIEWER_CURRENT_ROUTE_NAME &&
         this.getSettingIndData && 
         this.getSettingIndData.orderMainData && 
         this.getSettingIndData.orderMainData.rstDialysisState != 0

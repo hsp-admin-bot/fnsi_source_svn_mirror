@@ -11,7 +11,7 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target=false
@@ -25,7 +25,7 @@
             <label id="search-label-font">部署符号</label>
           </v-ons-col>
           <v-ons-col width='60%' vertical-align='center'>
-            <v-ons-select float v-model='searchCondition.inProgress.departmentCd'>
+            <v-ons-select v-model='searchCondition.inProgress.departmentCd'>
               <option>-</option>
               <option v-for='(departmentCd, idxDepartmentCd) in departmentCds' :key='idxDepartmentCd'>{{ departmentCd }}</option>
             </v-ons-select>
@@ -36,7 +36,7 @@
             <label id="search-label-font">都道府県</label>
           </v-ons-col>
           <v-ons-col width='60%' vertical-align='center'>
-            <v-ons-select float v-model='searchCondition.inProgress.prefName' style="display:">
+            <v-ons-select v-model='searchCondition.inProgress.prefName' style="display:">
               <option>-</option>
               <option v-for='prefectureName in prefectureNames' :key='prefectureName'>{{ prefectureName }}</option>
             </v-ons-select>
@@ -65,7 +65,7 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import PopoverMixin from "@/components/PopoverMixin";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 

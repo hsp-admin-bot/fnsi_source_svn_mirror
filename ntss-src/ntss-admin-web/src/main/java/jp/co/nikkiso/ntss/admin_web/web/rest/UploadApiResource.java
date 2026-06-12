@@ -5,6 +5,7 @@ import java.util.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -14,10 +15,12 @@ import org.springframework.web.multipart.MultipartFile;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 import jp.co.nikkiso.ntss.admin_web.response.webApi.UploadResponse;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.file.FileControlService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 @RestController
 @RequestMapping(Uri.FILE_UPLOAD)
@@ -30,10 +33,11 @@ public class UploadApiResource {
   LogService logService;
 
   // MOD #10637 2024/09/05 Thach Start
-  
+
   @PostMapping("")
   public ResponseEntity<?> uploadToS3(@RequestParam("file") MultipartFile[] multipartFile,
-      @RequestParam("facilityCd") String facilityCd) {
+      @RequestParam("facilityCd") String facilityCd,
+      @AuthenticationPrincipal NtssUser ntssUser) {
 
     UploadResponse errResponse = new UploadResponse();
     try {
@@ -58,6 +62,17 @@ public class UploadApiResource {
         EventLogMessage eventLogMessage = new EventLogMessage();
         eventLogMessage.setLogMessage("[fileUpload2S3]ファイルアップロード: 受信データ facilityCd のBase64デコード結果[" + facilityCd + "]");
         logService.log(LogLevel.INFO, eventLogMessage,"",SERVICE_NAME.FNSI, null);
+        if (ntssUser == null || ntssUser.getFacilityCd() == null || !ntssUser.getFacilityCd().equals(facilityCd)) {
+          // #11205 mod 20260421 start
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "fileCount=" + multipartFile.length + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          errResponse.isSuccess = false;
+          errResponse.isException = false;
+          errResponse.webApiStatus = HttpStatus.FORBIDDEN;
+          errResponse.errorMessage = "security check error";
+          return new ResponseEntity<>(errResponse, HttpStatus.FORBIDDEN);
+          // #11205 mod 20260421 end
+        }
       } catch (Exception ex) {
         EventLogMessage eventLogMessage = new EventLogMessage();
         eventLogMessage.setLogMessage("File Upload 指定内容エラー " + ex.getMessage());
@@ -113,6 +128,6 @@ public class UploadApiResource {
       return new ResponseEntity<>(errResponse, HttpStatus.BAD_REQUEST);
     }
   }
-  
+
   // ADD #10637 2024/09/05 Thach End
 }

@@ -20,13 +20,15 @@
   </div>
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
-import moment from "moment";
-import {EventBus} from "@/eventBus";
+
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { messageFormat } from "@/functions/common/MessageFormat";
+import dayjs from "@/compat/date/dayjs";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 
 const uriBbsKind = `/mstInfo/mstBbsKind`;
@@ -77,7 +79,6 @@ export default {
       }
     }
   },
-  watch: {},
   async created() {
     // ADD 患者イベントテンプレートマスタ画面修正 孔s start
     this.initValue.kind_no = this.getInputParams[this.propsIndex].item_json.kind_no;
@@ -131,10 +132,10 @@ export default {
       const formatClass = this.getInputParams[this.propsIndex].format_class;
       // MOD 患者イベントテンプレートマスタ画面修正 孔s start
       // this.setFieldName(
-      //     `bbs${this.propsIndex}${moment().format("YYYYMMDDHHmmss")}`,
+      //     `bbs${this.propsIndex}${dayjs().format("YYYYMMDDHHmmss")}`,
       //     this.propsIndex
       // );
-      let fieldNametemp = `bbs${this.propsIndex}${moment().format("YYYYMMDDHHmmss")}`
+      let fieldNametemp = `bbs${this.propsIndex}${dayjs().format("YYYYMMDDHHmmss")}`
       if (
           this.initValue.kind_no === kindNo &&
           this.initValue.field_name !== "" &&

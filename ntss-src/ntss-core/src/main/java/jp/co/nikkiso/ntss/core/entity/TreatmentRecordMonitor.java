@@ -2,8 +2,8 @@ package jp.co.nikkiso.ntss.core.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.entity.entityListener.BaseEntityListener;
 import lombok.EqualsAndHashCode;
@@ -24,7 +24,7 @@ import java.time.LocalDateTime;
 @Entity(listener = BaseEntityListener.class, naming = NamingType.SNAKE_LOWER_CASE)
 @Getter
 @Setter
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @EqualsAndHashCode(callSuper = false)
 public class TreatmentRecordMonitor extends BaseEntity {
   /**

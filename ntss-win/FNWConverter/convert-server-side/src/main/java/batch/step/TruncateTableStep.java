@@ -7,12 +7,13 @@ import javax.sql.DataSource;
 
 import batch.config.ConvertKeyConfig;
 import batch.listener.JobStartEndLIstener;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.Step;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -41,7 +42,7 @@ public class TruncateTableStep extends StepStartEndListener implements Tasklet {
     private ApplicationContext appContext;
 
     @Autowired
-    private StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
 
     /**
      * ロギング ツール クラスの導入
@@ -72,19 +73,10 @@ public class TruncateTableStep extends StepStartEndListener implements Tasklet {
         // add #10143 djy end
         // 処理対象ファイル名からテーブル名の取得
         String nextProcessingFile = chunkContext.getStepContext().getJobExecutionContext().get(ApplicationConst.PromotionKeys.NEXT_PROCESSING_FILE).toString();
-        int indexFile = nextProcessingFile.indexOf("indicatorShoe");
-        //add  #6886 2022-05-10   判断条件の修正  鄭  start
-        int patmongo = nextProcessingFile.indexOf("pat(mongo)");
-        //add  #68862022-05-10   判断条件の修正  鄭  start
-        if(indexFile != -1){
-            return RepeatStatus.FINISHED;
+        RepeatStatus skipStatus = checkSkipProcessing(nextProcessingFile);
+        if (skipStatus != null) {
+            return skipStatus;
         }
-        //add  #6886 2022-05-10   判断条件の修正  鄭  start
-        else if(patmongo != -1){
-            return RepeatStatus.FINISHED;
-        }
-        //add  #68862022-05-10   判断条件の修正  鄭  start
-        else {
             String tableName = PsqlCopyUtils.getTableName(nextProcessingFile);
             // mod 10378-24-4 PatTreatmentPattern再構築対応 zkm start
             if(utils.DiffNotCopyDbToConvert.contains(tableName)){
@@ -110,6 +102,53 @@ public class TruncateTableStep extends StepStartEndListener implements Tasklet {
             // 差分コンバート場合、更新レコード削除しない。
             // 初回コンバートの場合
             if (!nextProcessingFile.contains("[diff]")) {
+                RepeatStatus initialStatus = executeInitialConvertTruncate(nextProcessingFile, names, jdbcTemplate, chunkContext);
+                if (initialStatus != null) {
+                    return initialStatus;
+                }
+            }
+            // 差分コンバート場合
+            else
+            {
+                String[] sqlHolder = new String[]{""};
+                RepeatStatus diffStatus = executeDiffConvertTruncate(globalContext, tableName, facilityCd, db_table_prefix, names, jdbcTemplate, sqlHolder);
+                if (diffStatus != null) {
+                    return diffStatus;
+                }
+                sql = sqlHolder[0];
+            }
+        // mod 7853-差分コンバートで更新/削除ができない 楊 end
+        //ログ
+        EventLogMessage eventLogMessage = eventLoggerUtil.getEventLogMessage("コンバートDB→本番DB登録後テーブルデータ削除実行：" + sql,
+                facilityCd, "TruncateTableStep.execute(StepContribution contribution, ChunkContext chunkContext)");
+        eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.INFO);
+        return RepeatStatus.FINISHED;
+    }
+
+    /**
+     * スキップ対象の処理ファイルかどうかを判定する
+     */
+    private RepeatStatus checkSkipProcessing(String nextProcessingFile) {
+        int indexFile = nextProcessingFile.indexOf("indicatorShoe");
+        //add  #6886 2022-05-10   判断条件の修正  鄭  start
+        int patmongo = nextProcessingFile.indexOf("pat(mongo)");
+        //add  #68862022-05-10   判断条件の修正  鄭  start
+        if(indexFile != -1){
+            return RepeatStatus.FINISHED;
+        }
+        //add  #6886 2022-05-10   判断条件の修正  鄭  start
+        else if(patmongo != -1){
+            return RepeatStatus.FINISHED;
+        }
+        //add  #68862022-05-10   判断条件の修正  鄭  start
+        return null;
+    }
+
+    /**
+     * 初回コンバート時のテーブル削除処理を実行する
+     */
+    private RepeatStatus executeInitialConvertTruncate(String nextProcessingFile, String[] names,
+                                                       JdbcTemplate jdbcTemplate, ChunkContext chunkContext) throws Exception {
                 String inputPath = chunkContext.getStepContext().getJobParameters().get(ApplicationConst.JobParameterKeys.INPUT_FILE_PATH)
                         .toString();
                 // sqlファイルから、コピーsqlを取得する
@@ -126,7 +165,7 @@ public class TruncateTableStep extends StepStartEndListener implements Tasklet {
                     }
                     // 一行目：sqlCommand
                     List<String> sqlTruncateTableStep = utils.readFile(fileTruncateTableStep);
-                    sql = sqlTruncateTableStep.get(0);
+                    String sql = sqlTruncateTableStep.get(0);
                     jdbcTemplate.execute(sql);
                     fileTruncateTableStep.delete();
                 }
@@ -134,10 +173,15 @@ public class TruncateTableStep extends StepStartEndListener implements Tasklet {
                 {
                     return RepeatStatus.FINISHED;
                 }
+        return null;
             }
-            // 差分コンバート場合
-            else
-            {
+    /**
+     * 差分コンバート時のテーブル削除処理を実行する
+     */
+    private RepeatStatus executeDiffConvertTruncate(GlobalContext globalContext, String tableName, String facilityCd,
+                                                    String db_table_prefix, String[] names, JdbcTemplate jdbcTemplate,
+                                                    String[] sqlHolder) {
+        String sql = "";
                 // del 10378-24-4 PatTreatmentPattern再構築対応 zkm start
                 //add 9688 start
                 //12229 start
@@ -205,19 +249,13 @@ public class TruncateTableStep extends StepStartEndListener implements Tasklet {
                 }
 
                 // add zl end
-            }
-            // mod 7853-差分コンバートで更新/削除ができない 楊 end
-            //ログ
-            EventLogMessage eventLogMessage = eventLoggerUtil.getEventLogMessage("コンバートDB→本番DB登録後テーブルデータ削除実行：" + sql,
-                    facilityCd, "TruncateTableStep.execute(StepContribution contribution, ChunkContext chunkContext)");
-            eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.INFO);
-            return RepeatStatus.FINISHED;
-        }
+        sqlHolder[0] = sql;
+        return null;
     }
 
     @Bean(name=STEP_NAME)
     public Step step() {
-        return stepBuilderFactory.get(STEP_NAME)
+        return new StepBuilder(STEP_NAME, jobRepository)
             .tasklet(this)
             .listener(new PromotionListener())
             .build();

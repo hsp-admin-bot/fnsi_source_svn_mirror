@@ -106,7 +106,7 @@ export default {
       // スライダーの倍率
       sliderVal: 0
     },
-    ordNoDataReady: false 
+    ordNoDataReady: false
   },
   mutations: {
     setOrdNoDataSources(state, ordNoDataSources) {
@@ -235,9 +235,7 @@ export default {
      * @param {*} commit COMMITオブジェクト
      * @param {*} patId 患者ID
      */
-    /* eslint-disable no-unused-vars */
     getLatestOrdNo({ commit }, patId) {
-      /* eslint-enable no-unused-vars */
       return sendRequestGetLatestOrdNo(patId);
     },
     /**
@@ -245,10 +243,10 @@ export default {
      * @param {*} commit COMMITオブジェクト
      * @param {*} ordNo オーダ番号
      */
-    /* eslint-disable no-unused-vars */
-    getSummary({ commit }, ordNo) {
-      /* eslint-enable no-unused-vars */
-      return sendRequestGetTreatmentRecordSummary(ordNo);
+    getSummary({ commit }, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetTreatmentRecordSummary(ordNo, selectedPatId);
     },
     /**
      * オーダ番号を設定する.
@@ -334,14 +332,12 @@ export default {
      * @param {*} commit COMMITオブジェクト
      * @param {*} ordNo オーダ番号
      */
-    /* eslint-disable no-unused-vars */
     //mod FNSI-7531 劉全航 start
     // dialysisConfirm({commit}, ordNo) {
     //   /* eslint-enable no-unused-vars */
     //   return sendRequestUpdateTreatmentRecordConfirm(ordNo);
     // },
     dialysisConfirm({commit}, param) {
-      /* eslint-enable no-unused-vars */
       return sendRequestUpdateTreatmentRecordConfirm(param.ordNo, param.userId);
     },
     //mod FNSI-7531 劉全航 end
@@ -351,9 +347,7 @@ export default {
      * @param {*} commit COMMITオブジェクト
      * @param {*} params パラメータ
      */
-    /* eslint-disable no-unused-vars */
     sendCancelCondition({ commit }, params) {
-      /* eslint-enable no-unused-vars */
       return sendRequestCancelCondition(params);
     },
     /**
@@ -361,10 +355,10 @@ export default {
      * @param {*} commit COMMITオブジェクト
      * @param {*} ordNo オーダ番号
      */
-    /* eslint-disable no-unused-vars */
-    getMstMachineByOrdNoRst({ commit }, ordNo) {
-      /* eslint-enable no-unused-vars */
-      return sendRequestGetMstMachineByOrdNoRst(ordNo);
+    getMstMachineByOrdNoRst({ commit }, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetMstMachineByOrdNoRst(ordNo, selectedPatId);
     },
     /**
      * 指定されたオーダ番号から装置状態を取得する.
@@ -372,10 +366,8 @@ export default {
      * @param {*} facilityCd 施設コード
      * @param {*} ordNo オーダ番号
      */
-    /* eslint-disable no-unused-vars */
     getMntMachineState({ commit },params) {
-      /* eslint-enable no-unused-vars */
-      return sendRequestGetMntMachineState(params.facilityCd, params.ordNo);
+      return sendRequestGetMntMachineState(params.facilityCd, params.ordNo, params.selectedPatId);
     },
     /**
      * オフライン運転開始
@@ -406,8 +398,10 @@ export default {
      * @param {object}} context
      * @param {Number} treatmentCd
      */
-    getIsPurification(context,treatmentCd) {
-      return sendRequestGetIsPurification(treatmentCd);
+    getIsPurification(context,payload) {
+      const treatmentCd = payload && typeof payload === "object" ? payload.treatmentCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetIsPurification(treatmentCd, selectedPatId);
     },
     /**
      * 透析情報をセット
@@ -422,7 +416,6 @@ export default {
      * @param {*} commit commitオブジェクト
      * @param {*} ordNo オーダ番号
      */
-    /* eslint-disable no-unused-vars */
     // async deleteDialysis({commit}, ordNo) {
     //   /* eslint-enable no-unused-vars */
     //   return sendRequestDeleteTreatmentRecordRst(ordNo);
@@ -433,9 +426,10 @@ export default {
      * @param {*} commit COMMITオブジェクト
      * @param {*} facilityCd 施設番号
      */
-    getFacilityName(facilityCd) {
-      const resultValue = sendRequestGetFacilityNameByCd(facilityCd);
-      return resultValue;
+    getFacilityName(context, payload) {
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetFacilityNameByCd(facilityCd, selectedPatId);
     },
     // add FNSI-修正 共有設定 房 end
 
@@ -469,16 +463,20 @@ export default {
     },
     //add 次患者情報更新の追加 房 end
     //add FNSI内容修正 外部Api調用 房 start
-    sendTreatingOrdNo(context, ordNo) {
-      return sendRequestTreatingOrdNo(ordNo);
+    sendTreatingOrdNo(context, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestTreatingOrdNo(ordNo, selectedPatId);
     },
 
     sendEndDateUpdateInfo(context, params) {
       return sendRequestSendEndDateUpdateInfoRst(params);
     },
 
-    sendGetNoticeMedi(context, ordNo){
-      return sendGetNoticeMedi(ordNo);
+    sendGetNoticeMedi(context, payload){
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendGetNoticeMedi(ordNo, selectedPatId);
     },
     //add FNSI内容修正 外部Api調用 房 end
     //add FNSI内容修正 外部Api調用(装置へ治療時間変更の通知) ljx start
@@ -492,8 +490,10 @@ export default {
     },
     //add FNSI内容修正 外部Api調用 ljx end
     // #9315 2024.02.14 add オフライン治療開始後画面リロード処理 TDC片口 start
-    sendRequestGetTreatmentRecordCurrentRstDialysisState(context, ordNo) {
-      return sendRequestGetTreatmentRecordCurrentRstDialysisState(ordNo);
+    sendRequestGetTreatmentRecordCurrentRstDialysisState(context, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetTreatmentRecordCurrentRstDialysisState(ordNo, selectedPatId);
     },
     // #9315 2024.02.14 add オフライン治療開始後画面リロード処理 TDC片口 end
 

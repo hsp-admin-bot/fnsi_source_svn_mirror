@@ -12,18 +12,21 @@
   },
   "license": "UNLICENSED",
   "overrides": {
-    "async": "2.6.4",
-    "ajv": "6.12.3",
-    "brace-expansion": "1.1.12",
-    "js-yaml": "4.1.1",
-    "minimatch": "3.1.4",
-    "minimist": "1.2.6",
-    "semver": "6.3.1"
+    "async": "^3.2.6",
+    "ajv": "^8.20.0",
+    "brace-expansion": "^5.0.6",
+    "js-yaml": "^4.1.1",
+    "minimatch": "^10.2.5",
+    "minimist": "^1.2.8",
+    "semver": "^7.8.0"
   },
   "devDependencies": {
-    "textlint": "11.2.5",
-    "textlint-rule-no-mix-dearu-desumasu": "4.0.0",
-    "textlint-rule-preset-jtf-style": "2.3.3",
-    "textlint-rule-spellcheck-tech-word": "5.0.0"
+    "textlint": "^15.7.0",
+    "textlint-rule-no-mix-dearu-desumasu": "^6.0.4",
+    "textlint-rule-preset-jtf-style": "^3.0.3",
+    "textlint-rule-spellcheck-tech-word": "^5.0.0"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }

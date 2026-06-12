@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.device_edge.response.comsvOrdMain;
 
-import java.io.IOException;
 import java.math.BigDecimal;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -9,9 +9,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import com.google.common.base.Strings;
 import jp.co.nikkiso.ntss.core.entity.MstDialyzer;
@@ -24,6 +23,7 @@ import jp.co.nikkiso.ntss.device_edge.util.CondInfo.CondInfo;
 import jp.co.nikkiso.ntss.device_edge.util.MedicalCareInfo.MedicalCareInfo;
 import jp.co.nikkiso.ntss.device_edge.util.PhysicalInfo.PhysicalInfo;
 import lombok.Getter;
+import tools.jackson.core.JacksonException;
 
 /**
  *  通信サーバ用次患者情報のDTO.
@@ -366,7 +366,7 @@ public class NextPatMemoDTO {
    */
   //mod #10412 次患者更新関連全体見直し対応 朴 start
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
-  public List<Integer> extractCodeList(String jsonString, Integer equipType) throws JsonProcessingException {
+  public List<Integer> extractCodeList(String jsonString, Integer equipType) throws JacksonException {
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
   //mod #10412 次患者更新関連全体見直し対応 朴 end
     List<Integer> codeList = new ArrayList<Integer>();
@@ -388,7 +388,7 @@ public class NextPatMemoDTO {
       }
         //mod #10412 次患者更新関連全体見直し対応 朴 end
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang start
 //        e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang end
@@ -406,7 +406,7 @@ public class NextPatMemoDTO {
    * @return コードのリスト
    */
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
-  public List<List<Integer>> extractMediCodeList(String jsonString) throws JsonProcessingException {
+  public List<List<Integer>> extractMediCodeList(String jsonString) throws JacksonException {
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
     List<Integer> codeList1 = new ArrayList<Integer>();
     List<Integer> codeList2 = new ArrayList<Integer>();
@@ -435,7 +435,7 @@ public class NextPatMemoDTO {
           codeList1.add(code);
         }
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang start
 //        e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang end
@@ -455,7 +455,7 @@ public class NextPatMemoDTO {
    */
   //mod #10412 次患者更新関連全体見直し対応 朴 start
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
-  public void setEquips(String indEquipInfo, List<MstEquipment> mstEquipmentList, List<MstDialyzer> mstDialyzerList) throws JsonProcessingException {
+  public void setEquips(String indEquipInfo, List<MstEquipment> mstEquipmentList, List<MstDialyzer> mstDialyzerList) throws JacksonException {
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
     //mod #10412 次患者更新関連全体見直し対応 朴 end
     // ord_mainのind_equip_infoのJSON配列を展開
@@ -569,7 +569,7 @@ public class NextPatMemoDTO {
           }
           readCnt++;
         }
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang start
 //        e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang end
@@ -608,7 +608,7 @@ public class NextPatMemoDTO {
    * @param indMediInfo 薬剤情報のJSON文字列
    */
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
-  public void setMedis(String indMediInfo, List<MstMedicine> mstMedicineList, List<MstMedicineMix> mstMedicineMixList) throws JsonProcessingException {
+  public void setMedis(String indMediInfo, List<MstMedicine> mstMedicineList, List<MstMedicineMix> mstMedicineMixList) throws JacksonException {
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
     // ord_mainのind_medi_infoのJSON配列を展開
     // 最大20件の薬剤情報を取り出し、medi01~20へ格納する。
@@ -731,7 +731,7 @@ public class NextPatMemoDTO {
           }
           readCnt++;
         }
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang start
 //        e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang end

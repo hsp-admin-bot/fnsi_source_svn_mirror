@@ -33,14 +33,11 @@
 </template>
 
 <script>
-/* eslint-disable */
-import { mapState, mapActions, mapGetters } from 'vuex';
+import { mapState, mapGetters } from "@/compat/vue/vuex";
+
 export default {
   name: 'patHeader',
-  data() {
-    return {
-    };
-  },
+
   computed: {
     ...mapState('patInfoHeader', ['PatientInformation']),
     ...mapGetters('patInfoHeader', [

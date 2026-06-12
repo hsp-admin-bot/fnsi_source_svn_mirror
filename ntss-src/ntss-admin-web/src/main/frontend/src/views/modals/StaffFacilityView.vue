@@ -3,8 +3,11 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <facility-search slot="search-area" />
-    <div slot="body" class="table-staff-facilities">
+    <template #search-area>
+      <facility-search />
+    </template>
+    <template #body>
+      <div class="table-staff-facilities">
       <table class="ntss-list">
         <thead>
           <tr>
@@ -44,8 +47,10 @@
           </tr>
         </tbody>
       </table>
-    </div>
-    <div slot="footer" class="flex-container margin-footer">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container margin-footer">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button btn2-cancel denial-btn" @click="cancel">キャンセル</v-ons-button>
       </div>
@@ -56,7 +61,8 @@
           :disabled="this.chargedFacilityCds.length == 0 || !isChanged"
         >確定</v-ons-button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
@@ -64,7 +70,7 @@
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import StaffFacilityHeaderComponent from "@/components/modals/StaffFacilityHeaderComponent";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
@@ -164,8 +170,7 @@ export default {
       return this.getStaffFacilities.some(
         f =>
           this.chargedFacilityCds.find(m => m === f.facilityCd) !=
-          (f.isCharge ? f.facilityCd : null)
-      );
+          (f.isCharge ? f.facilityCd : null));
     }
   },
   methods: {
@@ -218,8 +223,7 @@ export default {
       if (
         (!departmentCd || departmentCd === "-") &&
         (!prefName || prefName === "-") &&
-        !facilityName
-      ) {
+        !facilityName) {
         return staffFacilities;
       }
       // -----------------------------------------
@@ -231,8 +235,7 @@ export default {
         if (
           departmentCd != null &&
           departmentCd !== "" &&
-          departmentCd !== "-"
-        ) {
+          departmentCd !== "-") {
           if (staffFacilities[idx].departmentCd === departmentCd) {
             isFilter = true;
           } else {
@@ -243,8 +246,7 @@ export default {
           prefName != null &&
           prefName !== "" &&
           prefName !== "-" &&
-          isFilter
-        ) {
+          isFilter) {
           if (staffFacilities[idx].prefecturesName === prefName) {
             isFilter = true;
           } else {
@@ -359,7 +361,7 @@ export default {
     // 共通ローダー:表示終了
     this.setLoadingScreenVisible(false);
   },
-  beforeDestroy: function() {
+  beforeUnmount: function() {
     this.clearCondition();
   }
 };
@@ -401,24 +403,15 @@ export default {
 .ntss-list-body-td {
   border: solid 1px #cccccc;
 }
-.modal-mask >>> .modal-search {
+.modal-mask :deep(.modal-search) {
   top: 43px;
   height: 7.5em;
 }
-.modal-mask >>> .modal-body-search {
+.modal-mask :deep(.modal-body-search) {
   top: calc(43px + 3.2em);
   height: calc(100% - 70px - 5.2em);
 }
 .ntss-list-body-tr-custom {
   background-color: var(--ntss-base-background-color);
-}
-@media print {
-  .modal-mask >>> .ntss-list {
-    position: static !important;
-  }
-    /** 1枚に収める */
-  .modal-mask >>> div {
-    height: auto !important;
-  }
 }
 </style>

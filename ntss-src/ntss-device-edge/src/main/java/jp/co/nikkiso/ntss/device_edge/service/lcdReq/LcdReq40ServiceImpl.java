@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
@@ -14,8 +14,8 @@ import org.seasar.doma.jdbc.SelectOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.dao.MniMonitorDao;
 import jp.co.nikkiso.ntss.core.dao.MstComsvSettingDao;
@@ -186,7 +186,7 @@ public class LcdReq40ServiceImpl implements LcdReq40Service {
     VitalInfo vitalInfo = null;
     try {
       vitalInfo = new VitalInfo("{}");
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       EventLogMessage eventLogMessage = new EventLogMessage();
       eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
       logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);

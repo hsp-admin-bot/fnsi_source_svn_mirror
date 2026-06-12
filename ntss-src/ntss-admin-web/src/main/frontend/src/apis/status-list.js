@@ -2,10 +2,6 @@
  * 治療状況リスト系API
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
-
-/**
- * 一時的ストア
- */
 import store from "@/stores";
 
 /**
@@ -19,11 +15,15 @@ const URL_BASE_STATUS_LIST_LARGE = "/status_list_large";
  * クール情報を取得
  * /mstInfo/mstKur
  */
-export function sendRequestGetKur(facilityCd) {
-  return getWithLoader(`${URL_MST}/mstKur`, {
+export function sendRequestGetKur(facilityCd, selectedPatId) {
+  const params = {
     facility_cd: facilityCd,
     is_del: "0"
-  });
+  };
+  if (selectedPatId !== null && selectedPatId !== undefined && selectedPatId !== "") {
+    params.selectedPatId = selectedPatId;
+  }
+  return getWithLoader(`${URL_MST}/mstKur`, params);
 }
 
 /**
@@ -44,7 +44,7 @@ export function sendRequestGetBedMachine() {
 
 /**
  * 装置マスタ取得.
- * @param {*} ordNo オーダ番号
+ * @param {string|number} ordNo オーダ番号
  */
 export function sendRequestGetMstMachineByOrdNoRst(ordNo) {
   return ApiHelper.get(`/treatment-record/${ordNo}/mst-machine-rst`);
@@ -52,10 +52,10 @@ export function sendRequestGetMstMachineByOrdNoRst(ordNo) {
 
 /**
  * 治療状況レイアウトマスタの取得
- * @param {string} facilityCd 施設コード指定
+ * @param {string} [facilityCd] 施設コード指定
  */
 export function sendRequestGetStatusLayout(facilityCd = "") {
-  return getWithLoader(`${URL_BASE_STATUS_LIST}/layout`,{facilityCd:facilityCd});
+  return getWithLoader(`${URL_BASE_STATUS_LIST}/layout`, { facilityCd });
 }
 
 // mod 画面リロードの修正 付 start
@@ -73,13 +73,14 @@ export function sendRequestGetMntMachineState(facilityCd) {
 // mod FNSI-実績確定修正 徐 start
 /**
  * リスト表示用データリストの取得
- * @param {*} params 施設コード、治療日付、レイアウトマスタの番号
+ * @param {Record<string, unknown>} params 施設コード、治療日付、レイアウトマスタの番号
+ * @param {number} createColumnCount 列作成数
  */
 export function sendRequestGetTreatmentStatusList(params, createColumnCount) {
   /* mod #8872 by zhangruixue 2023-06-21 --start */
   /* modify by chamaojia 2024-03-27 [10303、10304] add interface input parameters 【isShowMain】、【nextPat】 --start */
   const baseUrl = `${URL_BASE_STATUS_LIST}/treatment_status_list/${params.facilityCd}/${params.treatDate}/${params.layoutNo}/${params.bedGroupCd}/${params.kurCdS}/${params.isShowMain}/${params.nextPat}`;
-  if (createColumnCount == 0) {
+  if (createColumnCount === 0) {
     // mod bug 8514 修正 chen start
     // return ApiHelper.get(
     //   `${URL_BASE_STATUS_LIST}/treatment_status_list/${params.facilityCd}/${params.treatDate}/${params.layoutNo}`
@@ -90,7 +91,7 @@ export function sendRequestGetTreatmentStatusList(params, createColumnCount) {
     return ApiHelper.get(`${baseUrl}${queryParams}`);
     // mod bug 8514 修正 chen end
   }
-  return getWithLoader(`${baseUrl}/`);
+  return getWithLoader(`${baseUrl}`);
   /* modify by chamaojia 2024-03-27 [10303、10304] add interface input parameters 【isShowMain】、【nextPat】 --end */
   /* mod #8872 by zhangruixue 2023-06-21 --end */
 }
@@ -98,43 +99,42 @@ export function sendRequestGetTreatmentStatusList(params, createColumnCount) {
 
 /**
  * 警報・注意一覧情報取得
- * @param {*} params 施設コード、治療日付、自動更新フラグ
+ * @param {Record<string, unknown>} params 施設コード、治療日付、自動更新フラグ
  */
 export async function sendRequestGetAlarmList(params) {
   const url = `${URL_BASE_STATUS_LIST}/alarm_record/${params.facilityCd}/${params.occurDate}`;
   if (params.autoRefreshFlag) {
     return ApiHelper.get(`${url}?__background_call__=true`);
-  } else {
-    return getWithLoader(`${url}/`);
   }
+  return getWithLoader(`${url}`);
 }
 
 /*
  * 投薬情報の取得
  * 後体重測定後の確認前の投薬未実施チェック
- * @param {*} params 確認対象のオーダー番号配列
+ * @param {unknown} params 確認対象のオーダー番号配列
  */
 export function sendRequestCheckMediDone(params) {
-  return getWithLoader(`${URL_BASE_STATUS_LIST}/check_medi_done/${params}/`);
+  return getWithLoader(`${URL_BASE_STATUS_LIST}/check_medi_done/${params}`);
 }
 
 // mod FNSI-実績確定修正 徐 start
 /**
  * 後体重測定後の確認時のデータ更新
- * @param {*} params 確認対象のオーダー番号配列
+ * @param {unknown} params 確認対象のオーダー番号配列
  */
 export function sendRequestUpdateCheckAfterWeight(params) {
-  return ApiHelper.put(`${URL_BASE_STATUS_LIST}/check_after_weight/`, params);
+  return ApiHelper.put(`${URL_BASE_STATUS_LIST}/check_after_weight`, params);
 }
 // mod FNSI-実績確定修正 徐 end
 
 // add FNSI-画面で外部連携APIを呼び出すさい-538 付 start
 /**
  * facilityCdより全患者の習得
- * @param {*} params facilityCd
+ * @param {string} params facilityCd
  */
 export function getPatPersonMainData(params) {
-  return ApiHelper.get(`/pat_group/pat_facility_cd/`, {
+  return ApiHelper.get(`/pat_group/pat_facility_cd`, {
     facility_cd: params
   });
 }
@@ -142,7 +142,7 @@ export function getPatPersonMainData(params) {
 
 /**
  * 大画面表示データリストの取得
- * @param {*} params 治療日付、自動更新フラグ
+ * @param {Record<string, unknown>} params 治療日付、自動更新フラグ
  */
 export function sendRequestGetEntryList(params) {
   const url = `${URL_BASE_STATUS_LIST_LARGE}/info/${params.treatDate}`;
@@ -151,17 +151,19 @@ export function sendRequestGetEntryList(params) {
     const forceSignOutFlag = store.getters["status-list/large-display/getForceSignOutFlag"];
     const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
     return ApiHelper.get(`${url}${queryParams}`);
-  } else {
-    return ApiHelper.get(url);
   }
+  return ApiHelper.get(url);
 }
-/** レイアウトマスタ装置設定の表示項目リストの取得
+
+/**
+ * レイアウトマスタ装置設定の表示項目リストの取得
  */
 export function sendRequestGetDispItemList() {
   return getWithLoader(`${URL_BASE_STATUS_LIST}/master/get/disp_items`);
 }
-/** 穿刺者・返血者・担当者の利用者情報リストの取得
- * @param {*} params 施設コード
+
+/**
+ * 穿刺者・返血者・担当者の利用者情報リストの取得
  */
 export function sendRequestGetMstPersonalUser() {
   return getWithLoader(`${URL_BASE_STATUS_LIST}/staff`);
@@ -169,7 +171,7 @@ export function sendRequestGetMstPersonalUser() {
 
 /**
  * データ一覧更新.
- * @param {*} request リクエストデータ
+ * @param {unknown} request リクエストデータ
  */
 export function sendRequestUpdateTreatmentStatus(request) {
   return putWithLoader(`${URL_BASE_STATUS_LIST}/treatment_status_record/data`, {
@@ -179,18 +181,18 @@ export function sendRequestUpdateTreatmentStatus(request) {
 
 /**
  * ？？？？患者削除
- * @param {*} request
+ * @param {string|number} ordNo オーダー番号
  */
 export function sendRequestDeleteUnknownPatRecord(ordNo) {
   return putWithLoader(`${URL_BASE_STATUS_LIST}/delete/unknown-record`, {
-    ordNo: ordNo
+    ordNo
   });
 }
 
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} [params] パラメータ
  */
 function getWithLoader(url, params = undefined) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -202,8 +204,8 @@ function getWithLoader(url, params = undefined) {
 
 /**
  * 共通ローダを実行するPUTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function putWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");

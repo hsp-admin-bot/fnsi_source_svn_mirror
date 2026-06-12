@@ -11,7 +11,7 @@
         :is="deviceType"
         v-if="sendcondDeviceInfo !== null"
         :data-source-type="dataSourceType"
-        :all-device-info.sync="sendcondDeviceInfo"
+        v-model:all-device-info="sendcondDeviceInfo"
         @close="closeModal()"
       />
     </v-ons-modal>
@@ -25,6 +25,7 @@ import {
   getDeviceSetInfoPat,
   getDeviceSetInfoOrd
 } from "@/components/deviceset-info/base-modules/DeviceSetInfoFunctions.js";
+import { mapGetters } from "@/compat/vue/vuex";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -59,11 +60,15 @@ export default {
     };
   },
 
+  computed: {
+    ...mapGetters("pat-info", ["selectedPatId"])
+  },
+
   async created() {
     // 患者情報と指示の装置設定値を取得
     const [devInfoPat, devInfoOrd] = await Promise.all([
       getDeviceSetInfoPat(this.patId),
-      getDeviceSetInfoOrd(this.ordNo)
+      getDeviceSetInfoOrd(this.ordNo, this.selectedPatId)
     ]).catch(error => {
       //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
       getErrorMessage('DeviceSetInfoListSendcond.vue', 'created', error);

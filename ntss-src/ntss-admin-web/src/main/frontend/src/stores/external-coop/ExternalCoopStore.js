@@ -19,7 +19,7 @@ import {
   //add 6085 施設がIFエッジある施設であるかの判断 ljx end
 } from "@/apis/external-coop";
 import { addPatNameSortToList } from "@/functions/SortFunctions";
-import Vue from "vue";
+
 //add #9523 患者連携情報の表示内容について zrx start
 /** pat_coop_detail.save1～save10 の生文字列を表示用オブジェクトへ */
 const CON_INTELLIGENCE_SAVE_KEYS = [
@@ -58,7 +58,7 @@ function parseConIntelligenceSave(raw) {
 
 export default {
   namespaced: true,
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   state: {
     toFacilityCd: null,
     dataSearch: [],
@@ -199,7 +199,7 @@ export default {
         let facilityConnArr = [];
         if (response.data) {
           for (var key in healthmonFacilityConn) {
-            if (healthmonFacilityConn.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(healthmonFacilityConn, key)) {
               healthmonFacilityConn[key].key = key;
               facilityConnArr.push(healthmonFacilityConn[key]);
             }
@@ -211,7 +211,7 @@ export default {
         commit("setMntIfEdgeConn", mntIfEdgeConn.data);
         // add 7348 IFエッジ→AWSへの死活監視電文が送信されなくなった 吉 end
       } catch (e) {
-        throw new Error();
+        throw new Error(e?.message ?? "", { cause: e });
       }
     },
     // add FNSI-連携情報を追加 李 start
@@ -258,7 +258,7 @@ export default {
         const response = updateSysCoopJournal(payload.updateList);
         return response;
       } catch (e) {
-        throw new Error();
+        throw new Error(e?.message ?? "", { cause: e });
       }
     },
     sendRequestIconStartStop(context, payload) {
@@ -266,7 +266,7 @@ export default {
         const response = sendRequestIconStartStop(payload);
         return response;
       } catch (e) {
-        throw new Error();
+        throw new Error(e?.message ?? "", { cause: e });
       }
     },
     // add 5615 IFエッジコマンド実行 関 start
@@ -275,7 +275,7 @@ export default {
         const response = sendRequestCommandKeyCoop(payload);
         return response;
       } catch (e) {
-        throw new Error();
+        throw new Error(e?.message ?? "", { cause: e });
       }
     },
     async sendRequestGetEdgeCommandState({ commit }, payload) {
@@ -284,7 +284,7 @@ export default {
           commit("setEdgeCommand", response.data);
         });
       } catch (e) {
-        throw new Error();
+        throw new Error(e?.message ?? "", { cause: e });
       }
     },
     // add 5615 IFエッジコマンド実行 関 end
@@ -293,7 +293,7 @@ export default {
         const response = sendRequestResetEdgeStatus(payload);
         return response;
       } catch (e) {
-        throw new Error();
+        throw new Error(e?.message ?? "", { cause: e });
       }
     },
     // add 5615 IFエッジコマンド実行 関 end
@@ -308,7 +308,7 @@ export default {
           }
         });
       } catch (e) {
-        throw new Error();
+        throw new Error(e?.message ?? "", { cause: e });
       }
     },
     //add 6085 施設がIFエッジある施設であるかの判断 ljx end
@@ -374,7 +374,7 @@ export default {
         if (isSortMode) {
           editRecord.sortInputTime = Date.now();
         }
-        Vue.set(state.dataSearch.data, index, editRecord);
+        state.dataSearch.data.splice(index, 1, editRecord);
       }
     },
     setEdgeState(state, payload) {

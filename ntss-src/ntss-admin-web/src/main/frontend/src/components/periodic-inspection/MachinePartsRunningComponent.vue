@@ -1,6 +1,7 @@
 <template>
   <modal-base @onClose="onClose" class="custom-modal">
-    <div slot="body">
+    <template #body>
+      <div>
         <table class="ntss-list-detail">
           <thead>
           <tr>
@@ -34,20 +35,24 @@
           </tbody>
 
         </table>
-    </div>
-    <div slot="footer" class="flex-container justify-content-flex-end">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container justify-content-flex-end">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button btn2-cancel denial-btn" @click="onClose">閉じる</v-ons-button>
       </div>
-    </div>
+          </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-  import { EventBus } from "@/eventBus";
+  import { EventBus } from "@/compat/vue/event-bus.js";
   import ModalBase from "@/components/modals/ModalBase";
-  import { mapGetters, mapActions } from "vuex";
+  import { mapGetters, mapActions } from "@/compat/vue/vuex";
   import {ApiHelper} from "../../apis/AxiosHelper";
+  import { queryElementBySelectors } from "@/functions/common/LayoutMeasureHelper";
 
   export default {
     name: "MachinePartsRunningComponent",
@@ -210,7 +215,7 @@
     },
     mounted() {
       if (this.getBeforeModel.name === "PeriodicInspectionModal") {
-        const spanElement = document.querySelector(".parentModalPeriodicInspection .toolbar__title span");
+        const spanElement = queryElementBySelectors([".parentModalPeriodicInspection .toolbar__title span", ".toolbar__title span"], this.$el || document);
         if (spanElement) {
           spanElement.textContent = "部品の運転／交換時間";
         }

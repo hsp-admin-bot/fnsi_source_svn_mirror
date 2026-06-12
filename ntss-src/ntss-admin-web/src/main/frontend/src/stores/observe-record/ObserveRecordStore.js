@@ -8,7 +8,7 @@ import {
   sendRequestGetPatEventObserveRecord,
   sendRequestGetPatEventObserveRecordsByCondition
 } from "@/apis/pat-event";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 export default {
   strict: true,
@@ -43,9 +43,7 @@ export default {
     //add FNSI redmine4055修正 房 start
     conditionList: null,
     //add FNSI redmine4055修正 房 end
-    // add #12462 患者情報共有 20260330 start 
     isOtherFacilitys: false,
-    // add #12462 患者情報共有 20260330 end 
   },
   mutations: {
     // mod FNSI-観察記録を追加 楊 start
@@ -156,14 +154,12 @@ export default {
       state.conditionList = conditionList;
     },
     //add FNSI redmine4055修正 房 end
-    // add #12462 患者情報共有 20260330 start
     setIsOtherFacilitys(state, isOtherFacilitys) {
       state.isOtherFacilitys = isOtherFacilitys;
     },
     resetIsOtherFacilitys(state) {
       state.isOtherFacilitys = false;
-    },
-    // add #12462 患者情報共有 20260330 end
+    }
   },
   actions: {
     /**
@@ -242,13 +238,9 @@ export default {
         regStaffCd: params.regStaffCd,
         upStaffCd: params.upStaffCd,
         offset: params.offset,
-        // add #12462 患者情報共有 Ji start
         facilityCd: params.facilityCd,
-        // add #12462 患者情報共有 Ji end
-        // add #12462 患者情報共有 20260330 start
         patShareMode: params.patShareMode,
         otherFacilityCd: params.otherFacilityCd,
-        // add #12462 患者情報共有 20260330 end
       };
       const response = await sendRequestGetPatEventObserveRecordsByCondition(argument);
       if (response.data[0] !== null) {
@@ -257,8 +249,8 @@ export default {
           // 日付でソートする用のカラムを追加
           ObserveRecords[i].sortKey = ObserveRecords[i].eventStartDate;
           // 起票に関する日時を設定()
-          ObserveRecords[i].viewRecDate = moment(ObserveRecords[i].eventStartDate).format("YYYY/MM/DD");
-          ObserveRecords[i].viewRecTime =  moment(ObserveRecords[i].eventStartDate).format("HH:mm:ss");
+          ObserveRecords[i].viewRecDate = dayjs(ObserveRecords[i].eventStartDate).format("YYYY/MM/DD");
+          ObserveRecords[i].viewRecTime =  dayjs(ObserveRecords[i].eventStartDate).format("HH:mm:ss");
         }
         if (ObserveRecords.length > 0) {
           commit(
@@ -274,22 +266,18 @@ export default {
      * @param {*} param0
      * @param {*} info
      */
-    // add #12462 患者情報共有 20260310 start
-    //async findPatEventByCd({ commit }, info) {
     async findPatEventByCd({ commit, rootGetters }, info) {
-    // add #12462 患者情報共有 20260310 end
       const params = info[0];
-      const response = await sendRequestGetPatEventRecord(params);
+      const selectedPatId =
+        params.selectedPatId ?? params.patId ?? rootGetters["pat-info/selectedPatId"];
+      const response = await sendRequestGetPatEventRecord(params, selectedPatId);
       if (response.data[0] !== null) {
         const patEventRecord = response.data;
         if (patEventRecord.length > 0) {
           commit("setObserverRecord", patEventRecord[0]);
-          // add #12462 患者情報共有 20260310 start
           const userFacilityCd = rootGetters["user/getFacilityCd"];
           const recordFacilityCd = patEventRecord[0].facilityCd;
-          const isOtherFacility = userFacilityCd !== recordFacilityCd;
-          commit("setIsOtherFacilitys", isOtherFacility);
-          // add #12462 患者情報共有 20260310 end
+          commit("setIsOtherFacilitys", userFacilityCd !== recordFacilityCd);
         }
       }
     },
@@ -313,14 +301,17 @@ export default {
     /**
      * オーダNoに該当する観察記録を取得初期表示時
      */
-    fetchObserveRecordsByOrdNo({ commit }, info) {
+    fetchObserveRecordsByOrdNo({ commit, rootGetters }, info) {
       const params = info[0];
       if (params.isClear) {
         // クリア
         commit("clearObserveRecords");
       }
+      const selectedPatId =
+        params.selectedPatId ?? params.patId ?? rootGetters["pat-info/selectedPatId"];
       return sendRequestGetPatEventRecordByOrdNo(
-        params
+        params,
+        selectedPatId
       ).then(response => {
         if (response.data[0] !== null) {
           const ObserveRecords = response.data;
@@ -328,8 +319,8 @@ export default {
             // 日付でソートする用のカラムを追加
             ObserveRecords[i].sortKey = ObserveRecords[i].eventStartDate;
             // 起票に関する日時を設定()
-            ObserveRecords[i].viewRecDate = moment(ObserveRecords[i].eventStartDate).format("YYYY/MM/DD");
-            ObserveRecords[i].viewRecTime =  moment(ObserveRecords[i].eventStartDate).format("HH:mm:ss");
+            ObserveRecords[i].viewRecDate = dayjs(ObserveRecords[i].eventStartDate).format("YYYY/MM/DD");
+            ObserveRecords[i].viewRecTime =  dayjs(ObserveRecords[i].eventStartDate).format("HH:mm:ss");
           }
           if (ObserveRecords.length > 0) {
             commit(
@@ -379,11 +370,9 @@ export default {
       commit("setConditionList", conditionList);
     },
     //add FNSI redmine4055修正 房 end
-    // add #12462 患者情報共有 20260310 start
     resetIsOtherFacilitys({ commit }) {
       commit("resetIsOtherFacilitys");
-    },
-    // add #12462 患者情報共有 20260310 end
+    }
   },
   getters: {
     // mod FNSI-観察記録を追加 楊 start
@@ -418,10 +407,8 @@ export default {
       return state.conditionList;
     },
     //add FNSI redmine4055修正 房 end
-    // add #12462 患者情報共有 20260310 start
     getIsOtherFacilitys(state) {
       return state.isOtherFacilitys;
     },
-    // add #12462 患者情報共有 20260310 end
   }
 };

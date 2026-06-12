@@ -4,7 +4,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import jp.co.nikkiso.ntss.api.service.utils.ConditionSendResultUtil;
 import jp.co.nikkiso.ntss.core.dao.MntMachineStateDao;

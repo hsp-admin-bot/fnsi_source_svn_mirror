@@ -3,7 +3,7 @@
  */
 // add FNSI-体重情報のJSONに四つカラムを追加 徐 start
 import { parseDate, dateFormat, DATE_FORMAT, SHORT_TIME_FORMAT, } from "@/functions/common/DateTimeUtils";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // add FNSI-体重情報のJSONに四つカラムを追加 徐 end
 
 export class Monitor {
@@ -52,7 +52,7 @@ export class Monitor {
           let timeStr = this.recrclRt[i].datetime;
           //透析装置で測定した再循環率の測定時間の場合、時間を転換処理
           if(this.recrclRt[i].datetime.length  == 14){
-            timeStr = moment(this.recrclRt[i].datetime, "YYYY-MM-DD HH:mm:ss");
+            timeStr = dayjs(this.recrclRt[i].datetime, "YYYY-MM-DD HH:mm:ss");
           }
           //#8984 add ljx end
           let list = {

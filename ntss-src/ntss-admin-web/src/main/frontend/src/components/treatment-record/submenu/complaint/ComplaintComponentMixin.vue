@@ -1,5 +1,5 @@
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 
 import {
   sendRequestGetMstMedicine,
@@ -17,6 +17,8 @@ import { DATE_FORMAT, SHORT_TIME_FORMAT, dateFormat, parseDate } from "@/functio
 import { CODES } from "@/constants/TreatmentRecord";
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
 import { getMstListCompose } from "@/apis/pat-prescription";
+import { getMasterConfig } from "@/components/common/master-selector/builder/masterPopoverConfig";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
 
 export default {
@@ -25,11 +27,13 @@ export default {
       perPage: 8 // 1ページ中に表示される愁訴処置の数
     }
   },
-  methods: {
+  computed: {
     ...mapGetters("pat-info", ["selectedPatId"]),
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
     ...mapGetters("master-maintenance", { facilityCd: "getFacilitySwitch" }),
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
+  },
+  methods: {
     /**
      * 薬剤マスタ及び調整薬剤マスタ、薬剤分類を取得する.
      */
@@ -37,14 +41,14 @@ export default {
       return Promise.all([
         sendRequestGetMstMedicine(),
         sendRequestGetMstMedicineMix(),
-        sendRequestGetMstMedicineClass()
+        sendRequestGetMstMedicineClass(this.selectedPatId)
       ]);
     },
     /**
      * 薬剤（薬剤マスタと調整薬剤マスタ）を取得する.
      */
     fetchMedicineAllTabooAllergy() {
-      const patId = this.selectedPatId();
+      const patId = this.selectedPatId;
       return getMedicineAllTabooAllergy(patId);
     },
     /**
@@ -52,73 +56,28 @@ export default {
      */
     fetchMedicineAll() {
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
-      const patId = this.selectedPatId();
-      const facCd = this.facilityCd();
-      const item = {
-          lists: [
-            {
-              id: "list1",
-              name: "固定分类",
-              sourceType: "FIXED",
-              fixedItems: [
-                { value: 0, text: "すべて" },
-                { value: "1", text: "通常薬剤" },
-                { value: "2", text: "調製薬剤" }
-              ],
-              keyMapping: [
-                { keyName: "key_type", valueFrom: "value" }
-              ]
-            },
-            {
-              id: "list2",
-              name: "药剂分类MST",
-              sourceType: "MST",
-              mstSource: {
-                mstCode: "mstMedicineClassDaoImpl",
-                sqlParams: { facilityCd: facCd }
-              },
-              keyMapping: [
-                { keyName: "key_class", valueFrom: "classCd" }
-              ]
-            },
-            {
-              id: "list3",
-              name: "通常药剂 + 调制药剂 合并",
-              sourceType: "MST_COMBINED",
-              mstSourceList: [
-                {
-                  mstCode: "mstMedicineDaoImpl",
-                  sourceTag: "1",
-                  sqlParams: { facilityCd: facCd,patId:patId ? String(patId) : null },
-                  keyMapping: [
-                    { keyName: "key_type", valueFrom: "sourceTag" },
-                    { keyName: "key_class", valueFrom: "classCd" },
-                    { keyName: "key_cd", valueFrom: "medicineCd" }
-                  ]
-                },
-                {
-                  mstCode: "mstMedicineMixDaoImpl",
-                  sourceTag: "2",
-                  sqlParams: { facilityCd: facCd,patId:patId ? String(patId) : null },
-                  keyMapping: [
-                    { keyName: "key_type", valueFrom: "sourceTag" },
-                    { keyName: "key_class", valueFrom: "classCd" },
-                    { keyName: "key_cd", valueFrom: "medicineMixCd" }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
+      const patId = this.selectedPatId;
+      const facCd = this.facilityCd;
+      const context = {
+        facilityCd: facCd,
+        patientId: patId ? String(patId) : null,
+        extraParams: {
+          treatDate: "",
+          rstInfo: { rstName: "", rstUnit: "" }
+        },
+        dialysisState: 0,
+        allowedFields: {}
+      };
+      const item = getMasterConfig(MasterType.MEDICATION_TREATMENT_RECORD, context);
       return Promise.all([
         this.fetchMedicineAllTabooAllergy(),
-        sendRequestGetMstMedicineClass(),
+        sendRequestGetMstMedicineClass(this.selectedPatId),
         getMstListCompose(item)
       ]);
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
     },
     fetchPersonalUserAll() {
-      return sendRequestGetMstPersonalUser();
+      return sendRequestGetMstPersonalUser(this.selectedPatId);
     },
     fetchProcedureAll() {
       return sendRequestGetMstProcedure();

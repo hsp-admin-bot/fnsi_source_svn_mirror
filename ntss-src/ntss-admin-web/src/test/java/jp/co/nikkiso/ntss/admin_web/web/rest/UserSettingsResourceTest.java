@@ -31,15 +31,15 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
 import jp.co.nikkiso.ntss.admin_web.request.userSettings.AlterFontSizeRequest;
@@ -61,7 +61,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
   /**
    * ユーザ設定Service.
    */
-  @MockBean
+  @MockitoBean
   private UserSettingsService userSettingsService;
 
   /**
@@ -95,7 +95,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/font_size")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateFontSize(900000000001L, 3);
@@ -129,7 +129,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/font_size")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateFontSize(900000000001L, 3);
@@ -163,7 +163,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/font_size")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateFontSize(900000000001L, 6);
@@ -197,7 +197,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/font_size")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateFontSize(900000000001L, 3);
@@ -230,7 +230,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/theme")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateTheme(900000000001L, 0);
@@ -263,7 +263,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/theme")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateTheme(900000000001L, 1);
@@ -296,7 +296,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/theme")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateTheme(900000000001L, 3);
@@ -329,7 +329,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/theme")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateTheme(900000000001L, 0);
@@ -368,7 +368,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/menu_bar")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateMenuBar(userId, isDispMenu, useFunctions, initialFunction);
@@ -407,7 +407,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/menu_bar")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateMenuBar(userId, isDispMenu, useFunctions, initialFunction);
@@ -446,7 +446,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/menu_bar")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateMenuBar(userId, isDispMenu, useFunctions, initialFunction);
@@ -485,7 +485,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/menu_bar")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateMenuBar(userId, isDispMenu, useFunctions, initialFunction);
@@ -524,7 +524,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/menu_bar")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateMenuBar(userId, isDispMenu, useFunctions, initialFunction);
@@ -563,7 +563,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/menu_bar")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateMenuBar(userId, isDispMenu, useFunctions, initialFunction);
@@ -606,7 +606,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/user_settings/personal_settings/{tab_define_cd}", tabDeifineCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(userSettingsService, times(1)).getPersonalSettings(userId, tabDeifineCd);
@@ -647,7 +647,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/user_settings/personal_settings/{tab_define_cd}", tabDeifineCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(userSettingsService, times(1)).getPersonalSettings(userId, tabDeifineCd);
@@ -685,7 +685,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/user_settings/personal_settings")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updatePersonalSettings(anyLong(), any());
@@ -723,7 +723,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/user_settings/personal_settings")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updatePersonalSettings(anyLong(), any());
@@ -755,7 +755,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/split_frame")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateSplitFrame(900000000001L, 0);
@@ -788,7 +788,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/split_frame")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateSplitFrame(900000000001L, 1);
@@ -821,7 +821,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/split_frame")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateSplitFrame(900000000001L, 3);
@@ -854,7 +854,7 @@ public class UserSettingsResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user_settings/split_frame")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userSettingsService, times(1)).updateSplitFrame(900000000001L, 0);

@@ -51,11 +51,13 @@
       </thead>
       <tbody align="top">
         <tr class="tr-info-list" valign="top" >
-          <ul class="ul-info-list">
-            <li v-for='(Item, Index) in eventData' :key="Index" @click="clickEvent(Item)">
-              {{Item.strEventDate + " " + (Item.categoryName ? Item.categoryName : "") + (Item.subCategoryName ? Item.subCategoryName : "")}}
-            </li>
-          </ul>
+          <td>
+            <ul class="ul-info-list">
+              <li v-for='(Item, Index) in eventData' :key="Index" @click="clickEvent(Item)">
+                {{Item.strEventDate + " " + (Item.categoryName ? Item.categoryName : "") + (Item.subCategoryName ? Item.subCategoryName : "")}}
+              </li>
+            </ul>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -66,7 +68,7 @@
 
 <script>
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import { CHANGE_IND_CATEGORY } from "@/constants/facilitySetting";
 import { sendRequestGetMstFacilitySettingValue } from "@/apis/facility-setting";
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
@@ -336,10 +338,7 @@ export default {
       this.setHeaderPatId(this.getStateUserAccountInfo.patId);
     }
   },
-  updated() {
-  },
-  destroyed() {
-  }
+
 };
 </script>
 
@@ -414,6 +413,9 @@ td {
   height: 180px;
   font-size: 2em;
   color: blue;
+}
+.tr-info-list > td {
+  padding: 0;
   background-color:#ffe6e9;
 }
 .ul-info-list {

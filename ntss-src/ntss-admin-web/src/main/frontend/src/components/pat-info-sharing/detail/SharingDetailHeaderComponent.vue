@@ -14,268 +14,270 @@
         @swiperight="selectPatNext()"
       >
         <table class="event-area">
-          <tr>
-            <td class="search-button-area">
-              <div
-                class="search-button"
-                @click="
-                  getStateUserAccountInfo.patId === null
-                    ? (isSideBarVisble = !isSideBarVisble)
-                    : (isSideBarVisble = false)
-                "
-              ></div>
-            </td>
-            <td class="pat-name-area" id="pat-name-area">
-              <label>
-                <span
-                  v-show="!isCreatePage || isNullShrPat"
-                  class="hosp-pat-id"
-                  ref="displayPos"
-                  @mousedown="checkPatInfoLongPress(1)"
-                  @mouseup="checkPatInfoLongPress(0)"
-                  @touchstart="checkPatInfoLongPress(1)"
-                  @touchend="checkPatInfoLongPress(0)"
-                >
-                  {{
-                    isNullShrPat ? "患者割り当てをしてください。" : hospPatId
-                  }}
-                  <img v-if="isSame" class="same-icon" :src="image_src_same" />
-                </span>
-                <br />
-                <span
-                  :class="patNameClass"
-                  id="pat-header-pat-name"
-                  @click="clickHeader()"
-                >
-                  {{ isNullShrPat ? "？？？？患者" : patName }}
-                </span>
-                <v-ons-popover
-                  :target="popoverTarget"
-                  :visible.sync="computedPopoverVisible"
-                  :class="[fontSizeSet, 'popover-style']"
-                  direction="down"
-                  cancelable
-                >
-                  <p style="text-align: center">保守ID: {{ patId }}</p>
-                </v-ons-popover>
-              </label>
-            </td>
-            <td
-              v-if="!isCreatePage && !getUnfinishedShareFlg"
-              class="pat-icon-area"
-            >
-              <span v-if="isPatSelected">
-                <div class="in-out-area">{{ inOutClassName }}</div>
+          <tbody>
+            <tr>
+              <td class="search-button-area">
                 <div
-                  class="icon-area"
-                  v-if="getStateUserAccountInfo.patId === null"
-                >
+                  class="search-button"
+                  @click="
+                    getStateUserAccountInfo.patId === null
+                      ? (isSideBarVisble = !isSideBarVisble)
+                      : (isSideBarVisble = false)
+                  "
+                ></div>
+              </td>
+              <td class="pat-name-area" id="pat-name-area">
+                <label>
                   <span
-                    class="icon-padding taboo-allergy-area"
-                    @click="showTabooAllergy"
+                    v-show="!isCreatePage || isNullShrPat"
+                    class="hosp-pat-id"
+                    ref="displayPos"
+                    @mousedown="checkPatInfoLongPress(1)"
+                    @mouseup="checkPatInfoLongPress(0)"
+                    @touchstart="checkPatInfoLongPress(1)"
+                    @touchend="checkPatInfoLongPress(0)"
                   >
-                    <img
-                      class="pat-icon"
-                      :src="iconTabooAllergy"
-                      alt="pat-icon-taboo"
-                    />
-                    <v-ons-popover
-                      :class="[fontSizeSet, 'vons-popover']"
-                      :visible.sync="isTabooAllergyVisible"
-                      :target="popoverTarget"
-                      direction="down"
-                      cancelable
-                      @preshow="popoverPreShow"
-                      @postshow="popoverPostShow"
-                      @posthide="popoverPosthide"
-                    >
-                      <div class="taboo-allergy-popover-div">
-                        <taboo-allergy-detail
-                          class-name="禁忌"
-                          class="fab-font-color"
-                          v-bind="allTabooDetailName"
-                          v-if="hasTabooAllergy"
-                        />
-                        <taboo-allergy-detail
-                          class-name="アレルギー"
-                          class="fab-font-color"
-                          v-bind="allAllergyDetailName"
-                          v-if="hasTabooAllergy"
-                        />
-                        <div class="fab-font-color" v-show="!hasTabooAllergy">
-                          禁忌・アレルギー無し
-                        </div>
-                      </div>
-                    </v-ons-popover>
+                    {{
+                      isNullShrPat ? "患者割り当てをしてください。" : hospPatId
+                    }}
+                    <img v-if="isSame" class="same-icon" :src="image_src_same" />
                   </span>
-                  <span class="icon-padding infect-area" @click="showInfection">
-                    <img
-                      class="pat-icon"
-                      :src="iconInfect"
-                      alt="pat-icon-infection"
-                    />
-                    <v-ons-popover
-                      :class="[fontSizeSet, 'infection-popover']"
-                      :visible.sync="isInfectionVisible"
-                      :target="popoverTarget"
-                      direction="down"
-                      cancelable
-                      @preshow="popoverPreShow"
-                      @postshow="popoverPostShow"
-                      @posthide="popoverPosthide"
-                    >
-                      <div class="infection-popover-div">
-                        <infection-items
-                          :mst-infection="mstInfection"
-                          :infection-data="infectionData"
-                        />
-                      </div>
-                    </v-ons-popover>
+                  <br />
+                  <span
+                    :class="patNameClass"
+                    id="pat-header-pat-name"
+                    @click="clickHeader()"
+                  >
+                    {{ isNullShrPat ? "？？？？患者" : patName }}
                   </span>
-                  <span class="icon-padding implant-area" @click="showImplant">
-                    <img
-                      class="pat-icon"
-                      :src="iconImplant"
-                      alt="pat-icon-implant"
-                    />
-                    <v-ons-popover
-                      :class="[fontSizeSet, 'implant-popover']"
-                      :visible.sync="isImplantVisible"
-                      :target="popoverTarget"
-                      direction="down"
-                      cancelable
-                      @preshow="popoverPreShow"
-                      @postshow="popoverPostShow"
-                      @posthide="popoverPosthide"
+                  <v-ons-popover
+                    :target="popoverTarget"
+                    v-model:visible="computedPopoverVisible"
+                    :class="[fontSizeSet, 'popover-style']"
+                    direction="down"
+                    cancelable
+                  >
+                    <p style="text-align: center">保守ID: {{ patId }}</p>
+                  </v-ons-popover>
+                </label>
+              </td>
+              <td
+                v-if="!isCreatePage && !getUnfinishedShareFlg"
+                class="pat-icon-area"
+              >
+                <span v-if="isPatSelected">
+                  <div class="in-out-area">{{ inOutClassName }}</div>
+                  <div
+                    class="icon-area"
+                    v-if="getStateUserAccountInfo.patId === null"
+                  >
+                    <span
+                      class="icon-padding taboo-allergy-area"
+                      @click="showTabooAllergy"
                     >
-                      <div class="implant-popover-div">
-                        <div
-                          class="fab-font-color"
-                          v-show="implantData.length == 0"
-                        >
-                          インプラント無し
+                      <img
+                        class="pat-icon"
+                        :src="iconTabooAllergy"
+                        alt="pat-icon-taboo"
+                      />
+                      <v-ons-popover
+                        :class="[fontSizeSet, 'vons-popover']"
+                        v-model:visible="isTabooAllergyVisible"
+                        :target="popoverTarget"
+                        direction="down"
+                        cancelable
+                        @preshow="popoverPreShow"
+                        @postshow="popoverPostShow"
+                        @posthide="popoverPosthide"
+                      >
+                        <div class="taboo-allergy-popover-div">
+                          <taboo-allergy-detail
+                            class-name="禁忌"
+                            class="fab-font-color"
+                            v-bind="allTabooDetailName"
+                            v-if="hasTabooAllergy"
+                          />
+                          <taboo-allergy-detail
+                            class-name="アレルギー"
+                            class="fab-font-color"
+                            v-bind="allAllergyDetailName"
+                            v-if="hasTabooAllergy"
+                          />
+                          <div class="fab-font-color" v-show="!hasTabooAllergy">
+                            禁忌・アレルギー無し
+                          </div>
                         </div>
-                        <div
-                          class="fab-font-color"
-                          v-show="implantData.length !== 0"
-                        >
-                          インプラント一覧
+                      </v-ons-popover>
+                    </span>
+                    <span class="icon-padding infect-area" @click="showInfection">
+                      <img
+                        class="pat-icon"
+                        :src="iconInfect"
+                        alt="pat-icon-infection"
+                      />
+                      <v-ons-popover
+                        :class="[fontSizeSet, 'infection-popover']"
+                        v-model:visible="isInfectionVisible"
+                        :target="popoverTarget"
+                        direction="down"
+                        cancelable
+                        @preshow="popoverPreShow"
+                        @postshow="popoverPostShow"
+                        @posthide="popoverPosthide"
+                      >
+                        <div class="infection-popover-div">
+                          <infection-items
+                            :mst-infection="mstInfection"
+                            :infection-data="infectionData"
+                          />
                         </div>
-                        <span>
-                          <span
-                            v-for="(pat, patIndex) in implantData"
-                            :key="patIndex"
+                      </v-ons-popover>
+                    </span>
+                    <span class="icon-padding implant-area" @click="showImplant">
+                      <img
+                        class="pat-icon"
+                        :src="iconImplant"
+                        alt="pat-icon-implant"
+                      />
+                      <v-ons-popover
+                        :class="[fontSizeSet, 'implant-popover']"
+                        v-model:visible="isImplantVisible"
+                        :target="popoverTarget"
+                        direction="down"
+                        cancelable
+                        @preshow="popoverPreShow"
+                        @postshow="popoverPostShow"
+                        @posthide="popoverPosthide"
+                      >
+                        <div class="implant-popover-div">
+                          <div
+                            class="fab-font-color"
+                            v-show="implantData.length == 0"
                           >
-                            <div class="fab-font-color">
-                              {{ patIndex + 1 }}:
-                              {{
-                                mstCdToNameOrNull(
-                                  mstImplant,
-                                  pat.implant_cd,
-                                  "implantCd",
-                                  "implantName"
-                                )
-                              }}
-                            </div>
-                            <div class="fab-font-color">
-                              {{
-                                showFromToDateString(
-                                  pat.reg_date,
-                                  pat.remove_date
-                                )
-                              }}
-                            </div>
+                            インプラント無し
+                          </div>
+                          <div
+                            class="fab-font-color"
+                            v-show="implantData.length !== 0"
+                          >
+                            インプラント一覧
+                          </div>
+                          <span>
+                            <span
+                              v-for="(pat, patIndex) in implantData"
+                              :key="patIndex"
+                            >
+                              <div class="fab-font-color">
+                                {{ patIndex + 1 }}:
+                                {{
+                                  mstCdToNameOrNull(
+                                    mstImplant,
+                                    pat.implant_cd,
+                                    "implantCd",
+                                    "implantName"
+                                  )
+                                }}
+                              </div>
+                              <div class="fab-font-color">
+                                {{
+                                  showFromToDateString(
+                                    pat.reg_date,
+                                    pat.remove_date
+                                  )
+                                }}
+                              </div>
+                            </span>
                           </span>
-                        </span>
-                      </div>
-                    </v-ons-popover>
-                  </span>
-                </div>
-              </span>
-            </td>
-            <td class="patinfo-treattime-area">
-              <div class="patinfo-treattime-area-scroll">
-                <div
-                  class="patinfo-treattime-area-scroll-child"
-                  style="width: max-content; padding-left: 20px"
-                >
-                  <div
-                    v-if="!isCreatePage && isPatSelected"
-                    class="pat-header-pat-info-area"
-                  >
-                    <div>
-                      {{ patSex }} {{ patBloodTypeAbo }}({{ patBloodTypeRh }})
-                    </div>
-                    <div>{{ patBirthday }}({{ age }})</div>
+                        </div>
+                      </v-ons-popover>
+                    </span>
                   </div>
+                </span>
+              </td>
+              <td class="patinfo-treattime-area">
+                <div class="patinfo-treattime-area-scroll">
                   <div
-                    v-if="
-                      !isCreatePage &&
-                      isPatSelected &&
-                      !isUpdatingAcceptanceStatusInfo &&
-                      treatmentCount !== 0
-                    "
-                    class="treatment-time-area"
-                    @click="showAcceptanceStatusInfo"
+                    class="patinfo-treattime-area-scroll-child"
+                    style="width: max-content; padding-left: 20px"
                   >
                     <div
-                      v-if="isTreatmentTime(0)"
-                      :style="treatmentTimeStyle(0)"
+                      v-if="!isCreatePage && isPatSelected"
+                      class="pat-header-pat-info-area"
                     >
-                      <span
-                        v-if="isTreatmentCount(2)"
-                        :style="treatmentcountStyle(0)"
-                        class="treatment-count-area"
-                      >
-                        {{ treatmentCount }}
-                      </span>
-                      <div :style="treatmentProgressStyle(0)"></div>
+                      <div>
+                        {{ patSex }} {{ patBloodTypeAbo }}({{ patBloodTypeRh }})
+                      </div>
+                      <div>{{ patBirthday }}({{ age }})</div>
                     </div>
-                    <div v-else>&emsp;</div>
-                    <v-ons-popover
-                      :class="[fontSizeSet, 'acceptance-status-info-popover']"
-                      :visible.sync="popoverAcceptanceStatusInfoVisible"
-                      :target="popoverAcceptanceStatusInfoTarget"
-                      direction="down"
-                      cancelable
+                    <div
+                      v-if="
+                        !isCreatePage &&
+                        isPatSelected &&
+                        !isUpdatingAcceptanceStatusInfo &&
+                        treatmentCount !== 0
+                      "
+                      class="treatment-time-area"
+                      @click="showAcceptanceStatusInfo"
                     >
                       <div
-                        v-if="isTreatmentCount(1)"
-                        class="acceptance-status-info-area"
+                        v-if="isTreatmentTime(0)"
+                        :style="treatmentTimeStyle(0)"
                       >
                         <span
-                          v-for="(
-                            itemData, itemIndex
-                          ) in this.acceptanceStatusInfo()"
-                          :key="itemIndex"
+                          v-if="isTreatmentCount(2)"
+                          :style="treatmentcountStyle(0)"
+                          class="treatment-count-area"
                         >
-                          <div
-                            v-if="isTreatmentTime(itemIndex)"
-                            class="acceptance-status-info-bar"
-                          >
-                            <div :style="treatmentTimeStyle(itemIndex)">
-                              <div
-                                :style="treatmentProgressStyle(itemIndex)"
-                              ></div>
-                            </div>
-                          </div>
+                          {{ treatmentCount }}
                         </span>
+                        <div :style="treatmentProgressStyle(0)"></div>
                       </div>
-                      <div class="acceptance-statusn-info-button-area">
-                        <ons-button
-                          class="common-style-ok-button btn3-normal"
-                          :disabled="!isPatEditAuthority"
-                          @click="updateAcceptanceStatusInfo"
+                      <div v-else>&emsp;</div>
+                      <v-ons-popover
+                        :class="[fontSizeSet, 'acceptance-status-info-popover']"
+                        v-model:visible="popoverAcceptanceStatusInfoVisible"
+                        :target="popoverAcceptanceStatusInfoTarget"
+                        direction="down"
+                        cancelable
+                      >
+                        <div
+                          v-if="isTreatmentCount(1)"
+                          class="acceptance-status-info-area"
                         >
-                          更新
-                        </ons-button>
-                      </div>
-                    </v-ons-popover>
+                          <span
+                            v-for="(
+                              itemData, itemIndex
+                            ) in this.acceptanceStatusInfo()"
+                            :key="itemIndex"
+                          >
+                            <div
+                              v-if="isTreatmentTime(itemIndex)"
+                              class="acceptance-status-info-bar"
+                            >
+                              <div :style="treatmentTimeStyle(itemIndex)">
+                                <div
+                                  :style="treatmentProgressStyle(itemIndex)"
+                                ></div>
+                              </div>
+                            </div>
+                          </span>
+                        </div>
+                        <div class="acceptance-statusn-info-button-area">
+                          <ons-button
+                            class="common-style-ok-button btn3-normal"
+                            :disabled="!isPatEditAuthority"
+                            @click="updateAcceptanceStatusInfo"
+                          >
+                            更新
+                          </ons-button>
+                        </div>
+                      </v-ons-popover>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </td>
-          </tr>
+              </td>
+            </tr>
+          </tbody>
         </table>
       </v-touch>
     </v-touch>
@@ -305,11 +307,10 @@
 </template>
 
 <script>
-import Vue from "vue";
-import _ from "underscore";
-import moment from "moment";
-import VueTouch from "vue-touch";
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import _ from "@/compat/collections/lodash";
+import moment from "@/compat/date/dayjs";
+import VTouch from "@/components/common/VTouch.vue";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import { calculateAge } from "@/functions/PatInfoFunctions";
 import {
   PAT_BLOOD_TYPE_ABO_OPTIONS,
@@ -341,12 +342,18 @@ import { PAT_HEADER } from "@/components/pat-info/PatInfoConfig.js";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from "@/functions/common/MessageFormat";
 import { getMstInfo } from "@/apis/mst-info";
-
-Vue.use(VueTouch);
+import nameDuplication3Img from "../../../assets/name_duplication3.png";
+import tabooOnImg from "../../../assets/taboo_on.png";
+import tabooOffImg from "../../../assets/taboo_off.png";
+import infectionOnImg from "../../../assets/infection_on.png";
+import infectionOffImg from "../../../assets/infection_off.png";
+import implantOnImg from "../../../assets/implant_on.png";
+import implantOffImg from "../../../assets/implant_off.png";
 
 export default {
   mixins: [PopoverMixin, UserAuthorityMixin],
   components: {
+    VTouch,
     "card-list": cardList,
     "side-bar": sideBar,
     "infection-items": infectionItems,
@@ -390,13 +397,13 @@ export default {
       sysGenericMedicine: null,
       mstInfection: null,
       mstImplant: null,
-      image_src_same: require("../../../assets/name_duplication3.png"),
-      image_src_taboo_on: require("../../../assets/taboo_on.png"),
-      image_src_taboo_off: require("../../../assets/taboo_off.png"),
-      image_src_infection_on: require("../../../assets/infection_on.png"),
-      image_src_infection_off: require("../../../assets/infection_off.png"),
-      image_src_implant_on: require("../../../assets/implant_on.png"),
-      image_src_implant_off: require("../../../assets/implant_off.png"),
+      image_src_same: nameDuplication3Img,
+      image_src_taboo_on: tabooOnImg,
+      image_src_taboo_off: tabooOffImg,
+      image_src_infection_on: infectionOnImg,
+      image_src_infection_off: infectionOffImg,
+      image_src_implant_on: implantOnImg,
+      image_src_implant_off: implantOffImg,
       blowTimer: 0,
       popoverVisible: false,
       isAndroid: false,
@@ -922,7 +929,7 @@ export default {
     }
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     this.setIsPatInfoVisible(false);
     this.timerManager.destroy();
     Object.assign(this.$data, this.$options.data());
@@ -1714,18 +1721,18 @@ export default {
   height: 0;
   visibility: hidden;
 }
-.card-list >>> .menu-bar {
+.card-list :deep(.menu-bar) {
   position: absolute;
   left: 161px !important;
   top: 20px;
 }
-.card-list >>> .card-infos {
+.card-list :deep(.card-infos) {
   height: 100% !important;
   margin-left: 143px;
   overflow-y: scroll;
 }
-.card-list >>> .pat-info-header-area .btn-cancel,
-.card-list >>> .pat-info-header-area .btn-save {
+.card-list :deep(.pat-info-header-area .btn-cancel),
+.card-list :deep(.pat-info-header-area .btn-save) {
   position: absolute;
 }
 
@@ -1762,7 +1769,7 @@ table td {
   position: relative;
   overflow: visible !important;
 }
-::v-deep .ntss-layout-split__header {
+:deep(.ntss-layout-split__header) {
   overflow: visible !important;
   position: relative !important;
   z-index: 1001;
@@ -1922,25 +1929,25 @@ table td {
   }
 }
 
-.vons-popover >>> .popover__content {
+.vons-popover :deep(.popover__content) {
   max-width: 500px;
   margin: 3px;
 }
 
-.infection-item >>> .calender {
+.infection-item :deep(.calender) {
   display: none;
 }
 
-.infection-popover >>> .popover__content {
+.infection-popover :deep(.popover__content) {
   max-width: 500px;
   margin: 3px;
 }
 
-.infection-popover >>> input[type="date"] {
+.infection-popover :deep(input[type="date"]) {
   width: 100%;
 }
 
-.implant-popover >>> .popover__content {
+.implant-popover :deep(.popover__content) {
   max-width: 500px;
   margin: 3px;
 }
@@ -1958,29 +1965,29 @@ table td {
   height: calc(100% - 30px);
 }
 
-.acceptance-status-info-popover >>> .popover--top {
+.acceptance-status-info-popover :deep(.popover--top) {
   max-width: 150px;
 }
-.acceptance-status-info-popover >>> .popover__content {
+.acceptance-status-info-popover :deep(.popover__content) {
   min-height: auto;
   margin: 3px 3px 3px 0;
 }
-.acceptance-status-info-popover >>> .acceptance-status-info-area {
+.acceptance-status-info-popover :deep(.acceptance-status-info-area) {
   max-height: 10em;
   margin: 5px 0 0 5px;
   overflow-y: auto;
 }
-.acceptance-status-info-popover >>> .acceptance-status-info-bar {
+.acceptance-status-info-popover :deep(.acceptance-status-info-bar) {
   padding: 1px 3px 3px 1px;
 }
-.acceptance-status-info-popover >>> .acceptance-statusn-info-button-area {
+.acceptance-status-info-popover :deep(.acceptance-statusn-info-button-area) {
   text-align: right;
   padding: 5px;
 }
-.acceptance-status-info-popover >>> .common-style-ok-button {
+.acceptance-status-info-popover :deep(.common-style-ok-button) {
   width: 100%;
 }
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 300px;
   height: 2em;
   font-size: 2em;
@@ -2001,26 +2008,26 @@ table td {
     width: 15em !important;
   }
 }
-::v-deep .ntss-layout-split__header {
+:deep(.ntss-layout-split__header) {
   position: relative !important;
   z-index: 2000 !important;
   overflow: visible !important;
 }
-::v-deep .pat-info-header-area {
+:deep(.pat-info-header-area) {
   min-width: 1350px;
   height: auto !important;
   overflow: visible !important;
   display: block !important;
   border: none;
 }
-::v-deep .pat-info-header-area > div {
+:deep(.pat-info-header-area > div) {
   height: auto !important;
   overflow: visible !important;
 }
-::v-deep .menu-btn {
+:deep(.menu-btn) {
   margin-left: 130px;
 }
-::v-deep .pat-info-header-area .btn-group {
+:deep(.pat-info-header-area .btn-group) {
   bottom: 45px !important;
   z-index: 2;
 }

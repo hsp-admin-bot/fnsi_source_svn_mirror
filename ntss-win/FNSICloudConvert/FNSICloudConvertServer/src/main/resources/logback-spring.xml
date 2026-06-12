@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <springProperty scope="context" name="LOG_LEVEL"
+                  source="logging.level.com.fnsi.cloudconverter" defaultValue="INFO"/>
+  <springProperty scope="context" name="SERVER_LOG_PATH_TEMPLATE"
+                  source="server-log.storage.path"
+                  defaultValue="/efs/system/{1}/オンプレクラウドコンバートサーバ/"/>
+
+  <define name="SERVER_LOG_TODAY_DIR"
+          class="com.fnsi.cloudconverter.logging.TemplateTokenReplacingPropertyDefiner">
+    <sourceProperty>SERVER_LOG_PATH_TEMPLATE</sourceProperty>
+    <token>{1}</token>
+    <replacement>today</replacement>
+    <defaultValue>/efs/system/today/オンプレクラウドコンバートサーバ/</defaultValue>
+  </define>
+
+  <define name="SERVER_LOG_ARCHIVE_DIR"
+          class="com.fnsi.cloudconverter.logging.TemplateTokenReplacingPropertyDefiner">
+    <sourceProperty>SERVER_LOG_PATH_TEMPLATE</sourceProperty>
+    <token>{1}</token>
+    <replacement>%d{yyyyMMdd}</replacement>
+    <defaultValue>/efs/system/%d{yyyyMMdd}/オンプレクラウドコンバートサーバ/</defaultValue>
+  </define>
+
+  <!-- ===== File Appender (日次ローリング) ===== -->
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${SERVER_LOG_TODAY_DIR}fnsi-cloud-convert-server.log</file>
+    <append>true</append>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>${SERVER_LOG_ARCHIVE_DIR}fnsi-cloud-convert-server_%d{yyyyMMdd}.log</fileNamePattern>
+      <maxHistory>14</maxHistory>
+      <totalSizeCap>1GB</totalSizeCap>
+    </rollingPolicy>
+    <encoder>
+      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+      <charset>UTF-8</charset>
+    </encoder>
+  </appender>
+
+  <!-- ===== アプリケーションロガー ===== -->
+  <logger name="com.fnsi.cloudconverter" level="${LOG_LEVEL}" additivity="false">
+    <appender-ref ref="FILE"/>
+  </logger>
+
+  <!-- ===== フレームワークロガー ===== -->
+  <logger name="org.springframework"          level="WARN"/>
+  <logger name="org.springframework.security" level="WARN"/>
+  <logger name="org.hibernate"                level="WARN"/>
+  <logger name="org.mongodb.driver"           level="ERROR"/>
+  <logger name="org.postgresql"               level="WARN"/>
+  <logger name="com.zaxxer.hikari"            level="WARN"/>
+
+  <!-- ===== Root ===== -->
+  <root level="WARN">
+    <appender-ref ref="FILE"/>
+  </root>
+
+</configuration>

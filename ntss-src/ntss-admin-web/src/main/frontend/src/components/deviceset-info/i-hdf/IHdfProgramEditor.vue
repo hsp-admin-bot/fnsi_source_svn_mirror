@@ -92,7 +92,7 @@
             <v-ons-row>
               <v-ons-col class="chart-area">
                 <div class="chart-main-area">
-                  <v-ons-row class="deviceSetInfo-chart-row">
+                  <v-ons-row class="deviceSetInfo-chart-row fixed-width">
                     <v-ons-col>
                       <div>
                         バランス
@@ -144,7 +144,6 @@
                           isTreatRecord ||
                           !(index < countScheduleSupplyLiquid.value.editValue)
                           || !getItemAuthorized('Indication', 'default_authority')
-                          || isOtherFacilityRow()
                         "
                         class="device-input-chart"
                         @change="changeButton(false)"
@@ -156,7 +155,7 @@
                       <!-- mod #10359 編集権限の動作不正 dengshen end -->
                     </v-ons-col>
                   </v-ons-row>
-                  <v-ons-row class="deviceSetInfo-chart-row fixed-width">
+                  <v-ons-row class="deviceSetInfo-chart-row">
                     <v-ons-col>
                       <div class="deviceSetInfo-chart-title">
                         回収量
@@ -188,7 +187,6 @@
                           isTreatRecord ||
                           !(index < countScheduleSupplyLiquid.value.editValue)
                           || !getItemAuthorized('Indication', 'default_authority')
-                          || isOtherFacilityRow()
                         "
                         class="device-input-chart"
                         @change="changeButton(false)"
@@ -292,19 +290,19 @@
     </v-ons-row>
 
     <message-dialog
-      :visible.sync="isDialogVisble"
+      v-model:visible="isDialogVisble"
       v-bind="dialogProps"
       type="1"
       @confirm="saveEdit"
     />
     <message-dialog
-      :visible.sync="isCancelDialogVisble"
+      v-model:visible="isCancelDialogVisble"
       v-bind="dialogProps"
       type="2"
       @confirm="cancelEdit"
     />
     <message-dialog
-      :visible.sync="isChangeDisplayDialogVisble"
+      v-model:visible="isChangeDisplayDialogVisble"
       v-bind="dialogProps"
       type="2"
       @confirm="changeDisplayEdit"
@@ -316,20 +314,21 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { Chart } from "highcharts-vue";
+import { Chart } from "@/compat/charts/highcharts";
 import {
   DEVICE_TYPE_IHDF,
   DATA_SOURCE_TYPE_ORD
 } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
 import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoEditor.vue";
-import IHdfImg from "@/../public/img/deviceset-info/BackGroundImage.png";
+const IHdfImg = "img/deviceset-info/BackGroundImage.png";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //add #10246  message change zrx start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import DeviceSetOwnerMixin from '@/components/deviceset-info/base-modules/DeviceSetOwnerMixin';
 //add #10246  message change zrx start
 
 /** * I-HDFプログラム */
@@ -339,7 +338,7 @@ export default {
     "message-dialog": messageDialog
   },
 
-  mixins: [baseEditor],
+  mixins: [DeviceSetOwnerMixin, baseEditor],
 
   props: {
     // add #10359 編集権限の動作不正 dengshen start
@@ -391,12 +390,11 @@ export default {
     }),
     // add #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng start
     ...mapGetters("pat-viewer-modal", {
+      getSettingIndChildData: "getSettingIndChildData",
       getIhdfAnswerThreeDevA: "getIhdfAnswerThreeDevA",
     }),
-    // add #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng end
-    // add #12462 患者情報共有 Ji start
     ...mapGetters("user", ["getFacilityCd"]),
-    // add #12462 患者情報共有 Ji end
+    // add #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng end
 
     /**
      * @description 補液速度
@@ -539,8 +537,7 @@ export default {
           // バランス = 現ステップの補液量の回収量合計 + 現ステップまでの補液量・回収量の合計※実装の関係でこちらを採用
           this.supplyLiquid[i].value.editValue -
             this.recoveredAmount[i].value.editValue +
-            sum
-        );
+            sum);
       }
       return balancedList;
     },
@@ -555,8 +552,7 @@ export default {
       const index = this.countScheduleSupplyLiquid.value.editValue - 1;
       return (
         Math.abs(this.balancedList[index])  >
-        this.supplyLiquidBalanceRestriction.value.editValue
-      );
+        this.supplyLiquidBalanceRestriction.value.editValue);
     },
 
     /**
@@ -575,8 +571,7 @@ export default {
 
       return (
         prospectSupplyLiquid > totalSupplyLiquidUpperLimit ||
-        prospectRecoveredAmount > totalSupplyLiquidUpperLimit
-      );
+        prospectRecoveredAmount > totalSupplyLiquidUpperLimit);
     },
 
     /**
@@ -653,6 +648,27 @@ export default {
               // setTimeout(() => {
                 this.reflow();
               // }, 1000);
+            },
+            render: function () {
+              const chart = this;
+              // 重複作成を防止
+              if (chart.customBorder) {
+                  chart.customBorder.destroy();
+              }
+              const left = chart.plotLeft;
+              const top = chart.plotTop;
+              const width = chart.plotWidth;
+              const height = chart.plotHeight;
+              // インスタンスを保存
+              chart.customBorder = chart.renderer
+                  .rect(left,top,width,height,0)
+                  .attr({
+                      stroke: '#e1e1e1',
+                      'stroke-width': 2,
+                      fill: 'transparent',
+                      zIndex: 10
+                  })
+                  .add();
             }
           },
           marginTop: 25
@@ -755,15 +771,14 @@ export default {
         // 使用選択:"0"使用しない
         this.$emit(
           "update:isIhdfMain",
-          this.programUse.value.editValue === "0"
-        );
+          this.programUse.value.editValue === "0");
         // 親画面の状態を初期化
         const isUseProgram = !(this.programUse.value.editValue === "0");
         this.$emit("init-radio", {
           initVal: isUseProgram,
           editVal: isUseProgram,
           isTreatRecord: this.isTreatRecord
-        } );
+        });
         // 初期動作フラグ
         this.$emit("update:isProgramUseChacked", true);
       }
@@ -802,7 +817,15 @@ export default {
     // add #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng end
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd));
+      return this.isMst || (this.isMst != true && !this.isOtherFacilityRow() && getAuthorized(pageCd, itemCd));
+    },
+    /**
+     * @description 該当行が他院情報かどうかを判定
+     * @returns {Boolean} true = 他施設のデータは参照のみ
+     */
+    isOtherFacilityRow() {
+      const facilityCd = this.getSettingIndChildData?.facilityCd;
+      return facilityCd ? facilityCd !== this.getFacilityCd : false;
     },
     // add #10359 編集権限の動作不正 dengshen end
     /**
@@ -896,14 +919,14 @@ export default {
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
     async resetComponentIndData(structData){
       if (this.isEdit()) {
-        this.$parent.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+        this._deviceSetRootOwner().messageDialogInfo.messageCd = 70000028;
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-        this.$parent.$parent.$parent.messageDialogInfo.type = "9";
+        this._deviceSetRootOwner().messageDialogInfo.type = "9";
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-        this.$parent.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._deviceSetRootOwner().messageDialogInfo.isDialogVisible = true;
         return;
       } else {
-        this.getComponentData(structData,2);
+        return this.getComponentData(structData,2);
       }
 
     },
@@ -976,8 +999,7 @@ export default {
       // 対象日時の治療情報取得(開始日付・治療方法・クールで絞り込み)
       let response = await ApiHelper.post(
         "/mainData/getOrdMainDataInfo",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         getErrorMessage('IHdfProgramEditor.vue', 'getComponentData', error);
         throw error;
       });
@@ -1021,7 +1043,7 @@ export default {
     changeButton(val) {
       // mod #10054 破棄確認・保存活性(複数変更含む)・削除対応_装置設定 20240220 ztc start
       EventBus.$emit( "mstTreatmentSetRegistered", !this.isEdit());
-      this.$parent.$parent.$parent.ihdfChangeFlag = this.isEdit();
+      this._deviceSetRootOwner().ihdfChangeFlag = this.isEdit();
       // if(false === val) {
       //   EventBus.$emit("deviceSetChanged");
       // }
@@ -1030,7 +1052,7 @@ export default {
     },
     changeIsIHdfCommonSetting(val) {
       this.isIHdfCommonSetting = val;
-      let mainAreaObj = document.getElementsByClassName("device-info-content-area");
+      const mainAreaObj = this._deviceSetElementsByClassName("device-info-content-area");
       if (mainAreaObj.length > 0) {
         // グラフ表示の時は、幅を変更する
         mainAreaObj[0].style.minWidth = this.isIHdfCommonSetting ? "58em" : "84em";
@@ -1042,30 +1064,18 @@ export default {
         }
       }
       this.changeButton();
-    },
-    // add #12462 患者情報共有 Ji start
-  /**
-   * @description 該当行が他院情報かどうかを判定
-   * @returns {Boolean} true = 他施設のデータは参照のみ
-   */
-    isOtherFacilityRow() {
-      if (!this.getSettingIndChildData) {
-        return false
-      }
-      return this.getSettingIndChildData.facilityCd ? this.getSettingIndChildData.facilityCd !== this.getFacilityCd : false
     }
-    // add #12462 患者情報共有 Ji end
   },
 
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
   async created() {
     this.setLoadingScreenVisible(true);
-    this.$parent.$parent.$parent.isDialogType9_ihdf = true;
+    this._deviceSetRootOwner().isDialogType9_ihdf = true;
   },
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add end
   mounted() {
     setTimeout(() => {
-      // let mainAreaObj = document.getElementsByClassName("device-info-content-area");
+      // const mainAreaObj = this._deviceSetElementsByClassName("device-info-content-area");
       // if (mainAreaObj.length > 0) {
       //   // 初期表示時の幅調整
       //   mainAreaObj[0].style.minWidth = "53em";
@@ -1073,12 +1083,7 @@ export default {
       this.setLoadingScreenVisible(false);
     },500)
   },
-  beforeDestroy() {
-    // let mainAreaObj = document.getElementsByClassName("device-info-content-area");
-    // if (mainAreaObj.length > 0) {
-    //   // 非表示時、幅を戻す
-    //   mainAreaObj[0].style.minWidth = "71em";
-    // }
+  beforeUnmount() {
     const chartRef = this.$refs.refIHdfProgramChart;
     if (chartRef?.chart) {
       if (typeof chartRef.chart.destroy === 'function') {
@@ -1086,7 +1091,7 @@ export default {
       }
       chartRef.chart = null;
     }
-  }
+  },
 };
 </script>
 
@@ -1134,7 +1139,7 @@ export default {
   font-size:0.9em;
 }
 
-.device-input-chart >>> .custom-input-number {
+.device-input-chart :deep(.custom-input-number) {
   width: 100%;
 }
 
@@ -1225,12 +1230,12 @@ export default {
 /** Device Width:360-480           */
 /** ボックス要素-スクロール制御 */
 @media only screen and (min-device-width:360px) and (max-device-width:480px) {
-  .device-info-img-content >>> .custom-input-number {
+  .device-info-img-content :deep(.custom-input-number) {
     height: 1.0em !important;
     font-size: 0.92em !important;
     width: 10vw !important;
   }
-  .calculation-area >>> * {
+  .calculation-area :deep(*) {
     font-size: 0.8em !important;
   }
 
@@ -1256,37 +1261,38 @@ export default {
   .device-info-img-content {
     width: 100% !important;
   }
-  
+
   /* グラフの数値IF 幅 */
-  .chart-content >>> .custom-input-number input[type="number"] {
+  .chart-content :deep(.custom-input-number input[type="number"]) {
     min-width: 50px;
   }
 }
+
 /* 縦向き印刷時のみ */
 @media print and (orientation: portrait) {
   /* 画像の数値IF 幅高さ */
-  .device-info-img-content >>> .custom-input-number {
+  .device-info-img-content :deep(.custom-input-number) {
     width: 3.5em !important;
   }
-  .device-info-img-content >>> .custom-input-number input[type="number"] {
+  .device-info-img-content :deep(.custom-input-number input[type="number"]) {
     height: 1.3em !important;
   }
-  
+
   /* グラフの数値IF 幅 */
-  .chart-content >>> .custom-input-number input[type="number"] {
+  .chart-content :deep(.custom-input-number input[type="number"]) {
     min-width: 45px;
   }
-  .chart-content >>> .deviceSetInfo-chart-row.fixed-width > ons-col {
+  .chart-content :deep(.deviceSetInfo-chart-row.fixed-width > ons-col) {
     flex: 0 0 45px;
     max-width: 45px;
   }
   /* タイトル列 */
-  .chart-content >>> .deviceSetInfo-chart-row.fixed-width > ons-col:first-child {
+  .chart-content :deep(.deviceSetInfo-chart-row.fixed-width > ons-col:first-child) {
     flex: 0 0 100% !important;
     max-width: 100% !important;
   }
   /* 入力列 */
-  .chart-content >>> .deviceSetInfo-chart-row.fixed-width > ons-col:not(:first-child) {
+  .chart-content :deep(.deviceSetInfo-chart-row.fixed-width > ons-col:not(:first-child)) {
     flex: 0 0 auto !important;
   }
 }

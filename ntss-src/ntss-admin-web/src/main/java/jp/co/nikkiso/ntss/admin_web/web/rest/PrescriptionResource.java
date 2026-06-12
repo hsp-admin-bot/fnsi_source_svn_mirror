@@ -6,14 +6,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import jp.co.nikkiso.ntss.admin_web.request.patientCapture.JournalCreateRequestPayload;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.JournalService;
 import jp.co.nikkiso.ntss.admin_web.service.journal.JournalCreatePayloadService;
 import jp.co.nikkiso.ntss.core.dao.OrdPrescriptionDao;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +42,7 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.patInsurance.PatInsuranceService;
 import jp.co.nikkiso.ntss.admin_web.service.prescription.PrescriptionService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.entity.OrdPersonalPrescription;
 import jp.co.nikkiso.ntss.core.entity.OrdPrescription;
@@ -51,6 +52,7 @@ import jp.co.nikkiso.ntss.core.entity.custom.PrescriptionCount;
 import jp.co.nikkiso.ntss.core.entity.custom.PrescriptionList;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
@@ -80,6 +82,9 @@ public class PrescriptionResource {
   // wp アプリケーションログの適正化 Add Start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // wp アプリケーションログの適正化 Add End
 
   // add #10553 処方連携 piao start
@@ -100,7 +105,10 @@ public class PrescriptionResource {
    * @return 処方薬剤選択条件
    */
   @PostMapping("/search_medicine_selection")
-  public ResponseEntity<?> searchMedicineSelection(@Valid @RequestBody MedicineSelectionRequest request) {
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
+  public ResponseEntity<?> searchMedicineSelection(@Valid @RequestBody MedicineSelectionRequest request,
+                                                   @AuthenticationPrincipal NtssUser ntssUser) {
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.PRESCRIPTION + "/search_medicine_selection";
@@ -112,7 +120,9 @@ public class PrescriptionResource {
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
       null);
     // wp アプリケーションログの適正化 Add End
-    return new ResponseEntity<>(service.searchMedicineSelection(request), HttpStatus.OK);
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
+    return new ResponseEntity<>(service.searchMedicineSelection(request, ntssUser.getFacilityCd()), HttpStatus.OK);
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
   }
 
   /**
@@ -152,7 +162,12 @@ public class PrescriptionResource {
    */
   @GetMapping("/take_medicine/{facilityCd}")
   public ResponseEntity<?> getTakeMedicine(@PathVariable(name = "facilityCd", required = true) String facilityCd,
-                                           @RequestParam(name = "listClass", required = false) String listClass) {
+                                           @RequestParam(name = "listClass", required = false) String listClass,
+                                           @RequestParam(required = false) Long selectedPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.PRESCRIPTION + "/take_medicine";
@@ -275,7 +290,16 @@ public class PrescriptionResource {
    * @return 処方の詳細
    */
   @GetMapping("/prescription_details")
-  public ResponseEntity<?> getPrescriptionDetails(@RequestParam Long ordPrescriptionNo) {
+  public ResponseEntity<?> getPrescriptionDetails(@RequestParam Long ordPrescriptionNo,
+                                                  @RequestParam(required = false) Long selectedPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (selectedPatId != null) {
+      if (!facilityAccessService.hasPatientShareAccess(ntssUser, selectedPatId)) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    } else if (!hasOrdPrescriptionAccess(ntssUser, ordPrescriptionNo)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.PRESCRIPTION + "/prescription_details";
@@ -330,9 +354,16 @@ public class PrescriptionResource {
    *
    * @param insuranceCd 保険コード
    * @return 患者の保険情報
-   */
+  */
   @GetMapping("/insu_info")
-  public ResponseEntity<InsuInfo> getInsuInfoByCd(@RequestParam(value = "insuranceCd") Long insuranceCd) {
+  public ResponseEntity<InsuInfo> getInsuInfoByCd(@RequestParam(value = "insuranceCd") Long insuranceCd,
+                                                  @RequestParam(required = false) Long selectedPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, ntssUser.getFacilityCd(), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.PRESCRIPTION + "/insu_info";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -385,9 +416,16 @@ public class PrescriptionResource {
    *
    * @param facilityCd 施設コード
    * @return 施設名
-   */
+  */
   @GetMapping("/facility_name")
-  public ResponseEntity<String> getFacilityNameByCd(@RequestParam(value = "facilityCd") String facilityCd) {
+  public ResponseEntity<String> getFacilityNameByCd(@RequestParam(value = "facilityCd") String facilityCd,
+                                                    @RequestParam(required = false) Long selectedPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.PRESCRIPTION + "/facility_name";
@@ -457,6 +495,10 @@ public class PrescriptionResource {
   // mod #10553 処方連携 piao start
   public ResponseEntity<Void> updateIssueState(@RequestBody PrescriptionListRequest bodyData, @AuthenticationPrincipal NtssUser user) {
   // mod #10553 処方連携 piao end
+    if (!hasFacilityAccess(user, bodyData.getFacilityCd())
+      || !hasOrdPrescriptionAccess(user, bodyData.getOrdPrescriptionNoList())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     String mappingUrl = Uri.PRESCRIPTION + "/update-issue-state";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null, null);
@@ -502,8 +544,11 @@ public class PrescriptionResource {
    * @return 処方一覧
    */
   @PostMapping("/prescription-list")
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
   public ResponseEntity<List<PrescriptionList>> getPrescriptionList(
-    @RequestBody PrescriptionListRequest bodyData,@AuthenticationPrincipal NtssUser user) {
+    @RequestBody PrescriptionListRequest bodyData,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
 
     String mappingUrl = Uri.PRESCRIPTION + "/prescription-list";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null, null);
@@ -517,8 +562,10 @@ public class PrescriptionResource {
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null, null);
     //mod #12462 患者共有情報 by zrx start
 //    return new ResponseEntity<List<PrescriptionList>>(service.getPrescriptionList(bodyData.getPatIdList(), bodyData.getIssueDate(), bodyData.getPrescriptionTypeList()), HttpStatus.OK);
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
     return new ResponseEntity<List<PrescriptionList>>(service.getPrescriptionList(bodyData.getPatIdList(), bodyData.getIssueDate(),
-      bodyData.getPrescriptionTypeList(), bodyData.getPatientShareMode(),user.getFacilityCd()), HttpStatus.OK);
+      bodyData.getPrescriptionTypeList(), bodyData.getPatientShareMode(), ntssUser.getFacilityCd()), HttpStatus.OK);
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
     //mod #12462 患者共有情報 by zrx end
   }
   // add FNSI-改修内容イベント一覧の日付直下に、施設名を表示する dou end
@@ -533,6 +580,10 @@ public class PrescriptionResource {
   ResponseEntity<Void> copyPrescription(@RequestBody PrescriptionListRequest bodyData, @AuthenticationPrincipal NtssUser user
     ) {
   // mod #10553 処方連携 piao end
+    if (!hasFacilityAccess(user, bodyData.getFacilityCd())
+      || !hasOrdPrescriptionAccess(user, bodyData.getOrdPrescriptionNoList())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     String mappingUrl = Uri.PRESCRIPTION + "/copy-prescription";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
       null);
@@ -586,5 +637,43 @@ public class PrescriptionResource {
    */
   private String getMethodName() {
     return Thread.currentThread().getStackTrace()[2].getMethodName();
+  }
+
+  private boolean hasFacilityAccess(NtssUser user, String facilityCd) {
+    boolean hasAccess = user == null
+      || user.isNkkAdminUser()
+      || facilityCd == null
+      || facilityCd.equals(user.getFacilityCd());
+    if (!hasAccess) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (user != null ? user.getFacilityCd() : "null") + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+    }
+    return hasAccess;
+  }
+
+  private boolean hasOrdPrescriptionAccess(NtssUser user, Long ordPrescriptionNo) {
+    if (user == null || user.isNkkAdminUser() || ordPrescriptionNo == null) {
+      return true;
+    }
+    OrdPrescription ordPrescription = ordPrescriptionDao.selectByOrdPrescriptionNo(ordPrescriptionNo);
+    boolean hasAccess = ordPrescription == null || ordPrescription.getFacilityCd() == null
+      || ordPrescription.getFacilityCd().equals(user.getFacilityCd());
+    if (!hasAccess) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + user.getFacilityCd() + " " + "facilityCd=" + (ordPrescription != null ? ordPrescription.getFacilityCd() : "null") + " " + "ordPrescriptionNo=" + ordPrescriptionNo + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+    }
+    return hasAccess;
+  }
+
+  private boolean hasOrdPrescriptionAccess(NtssUser user, List<Long> ordPrescriptionNoList) {
+    if (ordPrescriptionNoList == null || ordPrescriptionNoList.isEmpty()) {
+      return true;
+    }
+    for (Long ordPrescriptionNo : ordPrescriptionNoList) {
+      if (!hasOrdPrescriptionAccess(user, ordPrescriptionNo)) {
+        return false;
+      }
+    }
+    return true;
   }
 }

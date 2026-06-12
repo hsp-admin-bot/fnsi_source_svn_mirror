@@ -2,8 +2,8 @@ package jp.co.nikkiso.ntss.api.service.report;
 // mod #10857 帳票内に同項目が複数あると設定値を取り違える limingzhe start
 
 import com.aspose.cells.SaveFormat;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.api.constant.ReportConstant;
 import jp.co.nikkiso.ntss.api.domain.report.ReportXmlClassificationDataCode;
 import jp.co.nikkiso.ntss.api.domain.report.ReportXmlFilterTable;
@@ -7836,7 +7836,7 @@ public class ReportForIntroductionReportServiceImpl implements ReportForIntroduc
       Map<String, String> reportOutputInfo = new HashMap<String, String>();
       JsonNode letterDataNode = objectMapper.valueToTree(letterDataList.get(i));
       // JSON文字列から、キーと値を取得する
-      Iterator<Map.Entry<String, JsonNode>> fields = letterDataNode.fields();
+      Iterator<Map.Entry<String, JsonNode>> fields = letterDataNode.properties().iterator();
       while (fields.hasNext()) {
         Map.Entry<String, JsonNode> field = fields.next();
         // キーを取得する

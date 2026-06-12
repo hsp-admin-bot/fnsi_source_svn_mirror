@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -67,15 +67,14 @@
 </template>
 
  <script>
-   import {mapGetters, mapActions} from "vuex";
-   import $ from "jquery";
+   import {mapGetters, mapActions} from "@/compat/vue/vuex";
+
    import {DATE_CHOICES, PAT_PRESCRIPTION_LIST} from "@/constants/defaultSettingConstants";
    import {deepCopy} from "@/functions/common/CommonFunctions";
-   import { EventBus } from "@/eventBus.js";
+   import { EventBus } from "@/compat/vue/event-bus.js";
+import { getScopedElementById, isScopedElementDisplayInline } from "@/functions/common/LayoutMeasureHelper";
 
    export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -216,16 +215,20 @@
         }
         this.initialValue = deepCopy(this.editRecord);
       }
-      if($("#phone-show-pat-prescription-list").css("display") === "inline"){
-        document.getElementById("phone-show-pat-prescription-list").innerText =  document.getElementById("phone-show-pat-prescription-list").innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+      if(isScopedElementDisplayInline("phone-show-pat-prescription-list", this.$el || this)){
+        const phoneShowElement = getScopedElementById("phone-show-pat-prescription-list", this.$el || this);
+
+        if (phoneShowElement) {
+
+          phoneShowElement.innerText = phoneShowElement.innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+
+        }
       }
       // 共通ローダー表示終了
       this.finishLoadingScreen();
       this.isExpanded = this.defaultExpanded;
     });
   },
-  mounted() {
-  }
 };
 </script>
 

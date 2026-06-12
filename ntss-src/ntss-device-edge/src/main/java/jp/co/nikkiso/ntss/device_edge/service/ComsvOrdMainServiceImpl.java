@@ -82,10 +82,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.api.service.PatMainAcceptanceStatusInfo.PatMainAcceptanceStatusInfoService;
@@ -114,6 +114,7 @@ import org.seasar.doma.jdbc.Config;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -232,6 +233,10 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
   // #11339 2024.12.05 add 次患者情報の投与薬剤、医療材料の並び順を設定合わせてソート TDC片口 start
   @Autowired
   private MedicineAndEquipmentUtilService medicineAndEquipmentUtilService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // #11339 2024.12.05 add 次患者情報の投与薬剤、医療材料の並び順を設定合わせてソート TDC片口 end
 
   // #11827 2025.05.14 add 姓名結合用サービス構築 TDC米沢 start
@@ -708,7 +713,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
         List<Integer> equipCdList = null;
         try {
           equipCdList = dto.extractCodeList(indEquipInfo, 0);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
           EventLogMessage eventLogMessage = new EventLogMessage();
           eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
           eventLogMessage.setFacilityCd(facilityCd);
@@ -726,7 +731,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
         List<Integer> dialyzerCdList = null;
         try {
           dialyzerCdList = dto.extractCodeList(indEquipInfo, 1);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
           EventLogMessage eventLogMessage = new EventLogMessage();
           eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
           eventLogMessage.setFacilityCd(facilityCd);
@@ -745,7 +750,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
         try {
           dto.setEquips(sortedIndEquipInfo, mstEquipment, mstDialyzer);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
           EventLogMessage eventLogMessage = new EventLogMessage();
           eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
           eventLogMessage.setFacilityCd(facilityCd);
@@ -767,7 +772,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
         List<List<Integer>> mediCdList = null;
         try {
           mediCdList = dto.extractMediCodeList(indMediInfo);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
           EventLogMessage eventLogMessage = new EventLogMessage();
           eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
           eventLogMessage.setFacilityCd(facilityCd);
@@ -791,7 +796,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
         try {
           dto.setMedis(sortedIndMediInfo, mstMedicine, mstMedicineMix);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
           EventLogMessage eventLogMessage = new EventLogMessage();
           eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
           eventLogMessage.setFacilityCd(facilityCd);
@@ -1327,11 +1332,11 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
       for (int lop = 0; lop < jsonNode_array.size(); lop++) {
         JsonNode jsonNode = jsonNode_array.get(lop);
         // jsonNodeは読み取り専用のため、ObjectNodeに変換
-        ObjectNode objectNode = jsonNode.deepCopy();
+        ObjectNode objectNode = jsonNode.deepCopy().asObject();
 
         noList.add(objectNode.get("no").asInt());
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -1375,7 +1380,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
     wheres.append(" ord_no = " + ordNo + "\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -1438,7 +1443,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
       for (int lop = 0; lop < jsonNode_array.size(); lop++) {
         JsonNode jsonNode = jsonNode_array.get(lop);
         // jsonNodeは読み取り専用のため、ObjectNodeに変換
-        ObjectNode objectNode = jsonNode.deepCopy();
+        ObjectNode objectNode = jsonNode.deepCopy().asObject();
 
         for (int lop2 = 0; lop2 < noList.size(); lop2++) {
           if (Objects.equals(objectNode.get("no").asInt(), noList.get(lop2))) {
@@ -1492,7 +1497,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
           rtnBuilder.append(",");
         }
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -1534,7 +1539,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
     wheres.append(" WHERE\n");
     wheres.append(" ord_no = " + ordNo + "\n");
 
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     boolean setResult = logCommon.setInfo();
     // add #8642 「治療記録>変更履歴の内容が不正」について、対応する。 dengshen end
     /// オーダー番号のリストに対応する投薬の実施状況を取得
@@ -1583,7 +1588,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
       for (int lop = 0; lop < jsonNode_array.size(); lop++) {
         JsonNode jsonNode = jsonNode_array.get(lop);
         // jsonNodeは読み取り専用のため、ObjectNodeに変換
-        ObjectNode objectNode = jsonNode.deepCopy();
+        ObjectNode objectNode = jsonNode.deepCopy().asObject();
 
         EventLogMessage eventLogMessage = new EventLogMessage();
         eventLogMessage.setLogMessage("effect_flg = [" + objectNode.get("effect_flg").asInt() + "] effect_date = ["
@@ -1615,7 +1620,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
           rtnBuilder.append(",");
         }
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -1799,7 +1804,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
     OrdMainRstWeightInfo info = new OrdMainRstWeightInfo();
     try {
       param.setRstWeightInfo(mapper.writeValueAsString(info));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // 手打ち
       StringJoiner sjWeight = new StringJoiner(",", "{", "}");
       sjWeight.add("\"weight_measure_before\": null")
@@ -1836,7 +1841,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
       tare_info.append(mapper.writeValueAsString(tare));
       tare_info.append("}");
       param.setRstTareInfo(tare_info.toString());
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // 手打ち
       StringJoiner tare = new StringJoiner(",", "{", "}");
       tare.add("\"name_1\": null, \"weight_1\": null");
@@ -1859,7 +1864,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
     try {
       TareOrOffWaterJson water = new TareOrOffWaterJson();
       param.setRstOffWaterInfo(mapper.writeValueAsString(water));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // 手打ち
       StringJoiner water = new StringJoiner(",", "{", "}");
       water.add("\"name_1\": null, \"weight_1\": null");
@@ -2065,7 +2070,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
       for (lop = 0; lop < jsonNode_array.size(); lop++) {
         JsonNode jsonNode = jsonNode_array.get(lop);
         // jsonNodeは読み取り専用のため、ObjectNodeに変換
-        ObjectNode objectNode = jsonNode.deepCopy();
+        ObjectNode objectNode = jsonNode.deepCopy().asObject();
         if (objectNode != null) {
           if (jsonNode.get("comp_cd") != null) {
             compList.add(objectNode.get("comp_cd").asInt());
@@ -2291,7 +2296,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
         eventLogMessage.setFacilityCd(facilityCd);
         logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.REMS, null);
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -2359,11 +2364,11 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -2472,7 +2477,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
     OrdMainRstWeightInfo info = new OrdMainRstWeightInfo();
     try {
       param.setRstWeightInfo(mapper.writeValueAsString(info));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // 手打ち
       StringJoiner sjWeight = new StringJoiner(",", "{", "}");
       sjWeight.add("\"weight_measure_before\": null")
@@ -2507,7 +2512,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
       tare_info.append(mapper.writeValueAsString(tare));
       tare_info.append("}");
       param.setRstTareInfo(tare_info.toString());
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // 手打ち
       StringJoiner tare = new StringJoiner(",", "{", "}");
       tare.add("\"name_1\": null, \"weight_1\": null");
@@ -2530,7 +2535,7 @@ public class ComsvOrdMainServiceImpl implements ComsvOrdMainService {
     try {
       TareOrOffWaterJson water = new TareOrOffWaterJson();
       param.setRstOffWaterInfo(mapper.writeValueAsString(water));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // 手打ち
       StringJoiner water = new StringJoiner(",", "{", "}");
       water.add("\"name_1\": null, \"weight_1\": null");

@@ -1,5 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.request.userAccount;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,12 +11,14 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UserAuthenticationRequest {
 
   /**
    * ハッシュ値
    */
   private  String  facilityHash;
+  private  String  facilityName;
 
   /**
    * 施しの名前
@@ -29,5 +32,5 @@ public class UserAuthenticationRequest {
 
   private String optStatus;
 
-  private long switchId;
+  private Long switchId;
 }

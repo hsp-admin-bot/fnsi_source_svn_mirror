@@ -67,6 +67,14 @@ public interface PatInsuranceDao {
 
   @Update(sqlFile = true)
   int updateSelectByCd(Long insurancdCd , Integer isSelected);
+
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260427 start
+  @Update(sqlFile = true)
+  int clearSelectByPatIdFacilityCd(Long patId, String facilityCd);
+
+  @Update(sqlFile = true)
+  int updateSelectByCdFacilityCd(Long insurancdCd, Integer isSelected, String facilityCd);
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260427 end
   // add FNSI-保険選択の変更 関 end
   @Select
   List<Long> selectByDetailedSearchCondition(PatInsuranceConditions conditions, List<Long> patIdList, List<String> facilityCdList);

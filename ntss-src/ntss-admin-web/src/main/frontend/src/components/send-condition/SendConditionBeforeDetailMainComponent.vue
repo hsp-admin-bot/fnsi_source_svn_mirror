@@ -19,18 +19,20 @@
             <!-- 体重/体重+車いす -->
             <template v-else-if="!isWheelChairMode">
               <div>
-                <v-ons-input
+                <CustomInputNumberPro
                   id="bedeweightID"
+                  ref="bedeweightInputRef"
                   class="send-condition-before-input"
-                  type="number"
+                  :empty-val="null"
+                  :value-modifiers="{ lazy: true }"
+                  :value="editMeasuredValue"
+                  :min="numberMin"
+                  :max="numberMax"
                   :step="numberStep"
-                  v-model.number="editMeasuredValue"
-                  @blur="changeMeasureVal(editMeasuredValue, $event, false)"
-                  @keydown.enter="moveFocus($event)"
-                  @keydown="onKeyDown"
-                  @input="checkLoop"
-                  readonly="readonly"
-                ></v-ons-input>
+                  :roll-flag="true"
+                  @handler-input="onBedeweightHandlerInput"
+                  @blur="onBedeweightBlur"
+                />
                 <label class="send-condition-unit send-condition-before-unit"> kg
                   <img height="26px" :src="image_src" @click="show"/>
                 </label>
@@ -65,18 +67,20 @@
             </span></v-ons-button>
             <template v-if="isWheelChairMode">
               <div>
-                <v-ons-input
+                <CustomInputNumberPro
                   id="bedeCarID"
+                  ref="bedeCarInputRef"
                   class="send-condition-before-input"
-                  type="number"
+                  :empty-val="null"
+                  :value-modifiers="{ lazy: true }"
+                  :value="editMeasuredValue"
+                  :min="numberMin"
+                  :max="numberMax"
                   :step="numberStep"
-                  v-model.number="editMeasuredValue"
-                  @blur="changeMeasureVal(editMeasuredValue, $event, false)"
-                  @keydown.enter="moveFocus($event)"
-                  @keydown="onKeyDown"
-                  @input="checkLoop"
-                  readonly="readonly"
-                ></v-ons-input>
+                  :roll-flag="true"
+                  @handler-input="onBedeweightHandlerInput"
+                  @blur="onBedeweightBlur"
+                />
                 <label class="send-condition-unit send-condition-before-unit"> kg
                   <img height="26px" :src="image_src" @click="show"/>
                 </label>
@@ -103,7 +107,7 @@
           <v-ons-popover
             cancelable
             id="bedeweightPopOver"
-            :visible.sync="cavisible"
+            v-model:visible="cavisible"
             :target="popoverTarget"
             direction="down"
             class="popoverClass"
@@ -115,7 +119,7 @@
           <v-ons-popover
             cancelable
             id="bedeCarPopOver"
-            :visible.sync="cavisibleCar"
+            v-model:visible="cavisibleCar"
             :target="popoverTarget"
             direction="down"
             class="popoverClass"
@@ -279,28 +283,31 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapGetters, mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
-import BigNumber from "bignumber.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import BigNumber from "@/compat/number/bignumber";
 // add FNSI-特殊浄化の場合、除水量制限不要 徐 start
 // import { weightScaleMode, dialysisState } from "@/constants/weightDefine";
 import { weightScaleMode, dialysisState, deviceModeConstant } from "@/constants/weightDefine";
 // add FNSI-特殊浄化の場合、除水量制限不要 徐 end
 import MasterSelector from "@/components/common/master-selector/MasterSelector";
 // add FNSI-体重計モードテンキーの追加 徐 start
-import VueTouchKeyboard from "vue-touch-keyboard/dist/vue-touch-keyboard";
-import "./../../../public/css/vue-touch-keyboard.css";
 // add FNSI-体重計モードテンキーの追加 徐 end
 // add #6107 2023/03/24 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import TouchKeyboard from "@/compat/keyboard/TouchKeyboard.vue";
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro.vue";
+import { getScopedElementById, getScopedUserAgent } from "@/functions/common/LayoutMeasureHelper";
+import { publicAssetPath } from "@/compat/assets/public-path";
 // add #6107 2023/03/24 メッセージボックス全調整 林峻峰 end
 export default {
-  props: {},
+
   components: {
     "pop-over": MasterSelector,
     // add FNSI-体重計モードテンキーの追加 徐 start
-    "vue-touch-keyboard":VueTouchKeyboard.component
+    "vue-touch-keyboard": TouchKeyboard,
+    CustomInputNumberPro
     // add FNSI-体重計モードテンキーの追加 徐 end
   },
   data() {
@@ -324,7 +331,7 @@ export default {
         useKbEvents: false,
         preventClickEvent: false
       },
-      image_src: require("@/../public/img/keyboard/keyboard.png"),
+      image_src: publicAssetPath("img/keyboard/keyboard.png"),
       // add FNSI-体重計画面 徐 start
       breadMode: true,
       // add FNSI-体重計画面 徐 end
@@ -375,9 +382,7 @@ export default {
     isWheelChairMode: {
       get() {
         // add FNSI-体重計モードテンキーの追加 徐 start
-        // eslint-disable-next-line vue/no-side-effects-in-computed-properties
         this.cavisible = false;
-        // eslint-disable-next-line vue/no-side-effects-in-computed-properties
         this.cavisibleCar = false;
         // add FNSI-体重計モードテンキーの追加 徐 end
         setTimeout(() => {
@@ -404,15 +409,11 @@ export default {
         // ) {
           if (
           this.getIsCurrentDialysisStateEqualDialysisState(
-            dialysisState.dialysis
-          ) ||
+            dialysisState.dialysis) ||
           this.getIsCurrentDialysisStateEqualDialysisState(
-            dialysisState.checkedSendCondition
-          ) ||
+            dialysisState.checkedSendCondition) ||
           this.getIsCurrentDialysisStateEqualDialysisState(
-            deviceModeConstant.PURIFICATION
-          )
-        ) {
+            deviceModeConstant.PURIFICATION)) {
           // add FNSI-特殊浄化の場合、除水量制限不要 徐 end
           // 治療中または条件送信確認済みならば変更不可
           return false;
@@ -642,17 +643,46 @@ export default {
       if (calibrationCheck) {
         return [
           "send-condition-before-detail-btn",
-          "btn3-normal"
+          "btn3-normal",
+          "button"
         ];
       } else {
         return [
           "send-condition-before-detail-btn",
-          "btn4-alert"
+          "btn4-alert",
+          "button"
         ];
       }
     },
   },
   methods: {
+    getSendConditionElementById(id) {
+      return getScopedElementById(id, this.$el || null);
+    },
+    resolveMeasureInputElement(id) {
+      const refById = {
+        bedeweightID: "bedeweightInputRef",
+        bedeCarID: "bedeCarInputRef",
+      };
+      const refName = refById[id];
+      const fromRef = refName ? this.$refs[refName]?.$refs?.input : null;
+      const element = fromRef || this.getSendConditionElementById(id);
+      if (!element) {
+        return null;
+      }
+      const tagName = element.tagName?.toUpperCase?.() || "";
+      if (tagName === "INPUT" || tagName === "TEXTAREA") {
+        return element;
+      }
+      return element.querySelector?.("input, textarea") || element.firstElementChild || element;
+    },
+    onBedeweightHandlerInput(val) {
+      this.editMeasuredValue = val;
+    },
+    onBedeweightBlur(event) {
+      this.changeMeasureVal(this.editMeasuredValue, event, false);
+    },
+
     ...mapActions("multi-modal", ["showTareWaterEdit"]),
     ...mapActions("send-condition/scale", [
       "setMeasuredValue",
@@ -835,7 +865,7 @@ export default {
 
     // 入力欄のマウスホイールイベント設定
     addWheelEvent() {
-      let bedeweightIdElem = document.getElementById("bedeweightID");
+      let bedeweightIdElem = this.resolveMeasureInputElement("bedeweightID");
       if (bedeweightIdElem) {
         // 数値入力欄に'wheel'のイベントリスナーを設定することで
         // ホイールを使ったマウスホイールによる数値変更が可能。
@@ -845,7 +875,7 @@ export default {
           bedeweightIdElem?.classList?.add('input-mobile');
         }
       }
-      let bedeCarIdElem = document.getElementById("bedeCarID");
+      let bedeCarIdElem = this.resolveMeasureInputElement("bedeCarID");
       if (bedeCarIdElem) {
         bedeCarIdElem.addEventListener('wheel', () => {});
         if (this.isIOS || this.isAndroid) {
@@ -884,9 +914,12 @@ export default {
     // add FNSI-体重計モードテンキーの追加 徐 start
     show() {
       if (this.isWheelChairMode) {
-        let bedeCarIDElem = document.getElementById("bedeCarID");
+        let bedeCarIDElem = this.resolveMeasureInputElement("bedeCarID");
+        if (!bedeCarIDElem) {
+          return;
+        }
         bedeCarIDElem.setAttribute("type", "text");
-        this.input = bedeCarIDElem.firstElementChild;
+        this.input = bedeCarIDElem;
         this.input.setAttribute("readonly", "readonly");
 
         this.selectAllInput(this.input);
@@ -894,9 +927,12 @@ export default {
         this.popoverTarget = this.input;
         this.cavisibleCar = !this.cavisibleCar;
       } else {
-        let bedeweightIDElem = document.getElementById("bedeweightID");
+        let bedeweightIDElem = this.resolveMeasureInputElement("bedeweightID");
+        if (!bedeweightIDElem) {
+          return;
+        }
         bedeweightIDElem.setAttribute("type", "text");
-        this.input = bedeweightIDElem.firstElementChild;
+        this.input = bedeweightIDElem;
         this.input.setAttribute("readonly", "readonly");
 
         this.selectAllInput(this.input);
@@ -920,10 +956,10 @@ export default {
     accept() {
       if (this.isWheelChairMode) {
         // 入力前の値が"0.00"以外の場合、全文字クリア処理を2回行う
-        if (document.getElementById("bedeCarID").value !== "0.00") this.doClearTwice = true;
+        if (this.resolveMeasureInputElement("bedeCarID")?.value !== "0.00") this.doClearTwice = true;
       } else {
         // 入力前の値が"0.00"以外の場合、全文字クリア処理を2回行う
-        if (document.getElementById("bedeweightID").value !== "0.00") this.doClearTwice = true;
+        if (this.resolveMeasureInputElement("bedeweightID")?.value !== "0.00") this.doClearTwice = true;
       }
 
       this.clearValue();
@@ -933,10 +969,10 @@ export default {
     // テンキー用関数 cancel: 画面テンキーを閉じる
     cancel() {
       if (this.isWheelChairMode) {
-        document.getElementById("bedeCarPopOver").hide();
+        this.getSendConditionElementById("bedeCarPopOver")?.hide?.();
         this.cavisibleCar = false;
       } else {
-        document.getElementById("bedeweightPopOver").hide();
+        this.getSendConditionElementById("bedeweightPopOver")?.hide?.();
         this.cavisible = false;
       }
     },
@@ -946,11 +982,17 @@ export default {
       let reverseVal = 0;
 
       if (this.isWheelChairMode) {
-        reverseVal = Number(document.getElementById("bedeCarID").value) * (-1);
-        document.getElementById("bedeCarID").value = reverseVal.toFixed(2);
+        const bedeCarInput = this.resolveMeasureInputElement("bedeCarID");
+        reverseVal = Number(bedeCarInput?.value) * (-1);
+        if (bedeCarInput) {
+          bedeCarInput.value = reverseVal.toFixed(2);
+        }
       } else {
-        reverseVal = Number(document.getElementById("bedeweightID").value) * (-1);
-        document.getElementById("bedeweightID").value = reverseVal.toFixed(2);
+        const bedeweightInput = this.resolveMeasureInputElement("bedeweightID");
+        reverseVal = Number(bedeweightInput?.value) * (-1);
+        if (bedeweightInput) {
+          bedeweightInput.value = reverseVal.toFixed(2);
+        }
       }
 
       this.editMeasuredValue = reverseVal.toFixed(2);
@@ -963,14 +1005,16 @@ export default {
 
       if (this.isWheelChairMode) {
         // 入力を番号に戻す
-        document.getElementById("bedeCarID").setAttribute("type", "number");
+        const bedeCarInput = this.resolveMeasureInputElement("bedeCarID");
+        bedeCarInput?.setAttribute("type", "number");
         // 異常データの場合の初期化
-        this.changeMeasureVal(this.editMeasuredValue, {target: document.getElementById("bedeCarID")}, isPostHide);
+        this.changeMeasureVal(this.editMeasuredValue, {target: bedeCarInput}, isPostHide);
       } else {
         // 入力を番号に戻す
-        document.getElementById("bedeweightID").setAttribute("type", "number");
+        const bedeweightInput = this.resolveMeasureInputElement("bedeweightID");
+        bedeweightInput?.setAttribute("type", "number");
         // 異常データの場合の初期化
-        this.changeMeasureVal(this.editMeasuredValue, {target: document.getElementById("bedeweightID")}, isPostHide);
+        this.changeMeasureVal(this.editMeasuredValue, {target: bedeweightInput}, isPostHide);
       }
 
       this.input = null;
@@ -1022,7 +1066,6 @@ export default {
       }
     },
   },
-  watch: {},
   created() {
     // add FNSI-体重計画面 徐 start
     const queryParameters = this.getQueryParameters;
@@ -1033,7 +1076,7 @@ export default {
     }
     // add FNSI-体重計画面 徐 end
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = getScopedUserAgent(this.$el || null);
     if (ua.match(/Android/)) {
       this.isAndroid = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -1056,11 +1099,10 @@ export default {
       this.addWheelEvent();
     }, 1000);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  destroyed() { }
 };
 </script>
 <style scoped>
@@ -1089,21 +1131,22 @@ export default {
   flex-direction: column;
   align-content: flex-start;
 }
+ 
 /* add FNSI-体重計モードテンキーの追加 徐 start */
-ons-input >>> .text-input {
+ons-input :deep(.text-input) {
   text-align: right;
   color: var(--send-cond-font-color) !important;
   background-color: var(--ntss-base-background-color) !important;
   opacity: 1 !important;
   height: 1.6em !important;
 }
-ons-input >>> input[type="text"] {
+ons-input :deep(input[type="text"]) {
   padding-right: 15px;
 }
-.input-mobile >>> input[type="text"] {
+.input-mobile :deep(input[type="text"]) {
   padding-right: 0px !important;
 }
-.popoverClass >>> .popover--top {
+.popoverClass :deep(.popover--top) {
   width: auto;
 }
 /* add FNSI-体重計画面 徐 start */

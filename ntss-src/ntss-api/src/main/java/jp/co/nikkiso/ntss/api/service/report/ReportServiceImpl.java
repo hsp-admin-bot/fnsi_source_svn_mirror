@@ -51,13 +51,13 @@ import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.hssf.usermodel.HSSFCellStyle;
-import org.apache.poi.hssf.usermodel.HSSFDateUtil;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.BuiltinFormats;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.CellValue;
+import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -155,6 +155,7 @@ import java.util.stream.Stream;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 /**
  * 帳票のService実装クラス.
@@ -12574,7 +12575,7 @@ public class ReportServiceImpl implements ReportService {
     CellType srcCellType = srcCell.getCellType();
     if (copyValueFlag) {
       if (srcCellType == CellType.NUMERIC) {
-        if (HSSFDateUtil.isCellDateFormatted(srcCell)) {
+        if (DateUtil.isCellDateFormatted(srcCell)) {
           distCell.setCellValue(srcCell.getDateCellValue());
         } else {
           distCell.setCellValue(srcCell.getNumericCellValue());
@@ -18215,6 +18216,10 @@ public class ReportServiceImpl implements ReportService {
 
   @Autowired
   private BaseEntityDao baseEntityDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   /**
    * {@inheritDoc}
@@ -26019,7 +26024,7 @@ public class ReportServiceImpl implements ReportService {
       tmplKey, tmplSortKey, sortDb, tmplKey, tmplValueStr, facilityCdStr, tmplSortKey
     );
 
-    Config config = Config.get(baseEntityDao);
+    Config config = defaultDbConfig;
     SelectBuilder builder = SelectBuilder.newInstance(config);
     builder.sql(sql);
 

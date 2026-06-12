@@ -4,7 +4,7 @@
 <template>
   <div class="trend-main" id="trend-main">
     <div>
-      <div slot="main" id="graph-component">
+      <div id="graph-component">
         <div id="name-box">
           <label class="machine-name">装置名：{{ machineName }}</label>
         </div>
@@ -14,7 +14,7 @@
           </div>
           <v-ons-list-item
             expandable
-            :expanded.sync="isExpandedGraph"
+            v-model:expanded="isExpandedGraph"
             id="graph-sub"
             style="overflow-x: hidden;"
           >
@@ -23,7 +23,7 @@
               id="popGraphGrid"
               cancelable
               :class="fontSizeSet"
-              :visible.sync="popoverVisible"
+              v-model:visible="popoverVisible"
               :target="popoverTarget"
               :direction="popoverDirection"
               animation="none"
@@ -74,7 +74,7 @@
           </v-ons-list-item>
           <v-ons-list-item
             expandable
-            :expanded.sync="isExpandedMonitorSet"
+            v-model:expanded="isExpandedMonitorSet"
             style="overflow-x: hidden;"
           >
             <label>モニタ一覧</label>
@@ -85,6 +85,7 @@
           class="graph-item-grid"
           id="list-grid-box"
           v-show="isExpandedMonitorSet"
+          v-load-more="handleLoadMore"
         >
           <table class="trend-graph-list" id="monitor-list">
             <thead>
@@ -102,16 +103,16 @@
             </thead>
             <tbody>
               <tr
-                v-for="(monitorItem, idx) in monitorItemList"
+                v-for="(monitorItem, idx) in visibleMonitorDataList"
                 :key="idx"
                 :class="'ntss-list-body-tr'"
                 style="height: 1.1rem"
               >
                 <td
                   v-for="column in monitorColumns"
-                  class="ntss-list-body-td"
+                  class="ntss-list-body-td trend-graph-monitor-td"
                   :key="column.className"
-                  :style="{ 'text-align': column.style }"
+                  :style="getMonitorColumnCellStyle(column, column.style)"
                 >{{ column.text(monitorItem) }}</td>
               </tr>
             </tbody>
@@ -123,22 +124,22 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import PopoverMixin from "@/components/PopoverMixin";
 import TrendGraphComponent from "@/components/trend-graph/subComponent/TrendGraphComponent";
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
-// mod FNSI-改修内容5708、5759修正 xuty start
-import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
-import { STATUS_AUTO_SETTING } from "@/constants/facilitySetting";
-import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
-// mod FNSI-改修内容5708、5759修正 xuty end
+import { queryScopedSelector, getScopedElementById, getScopedUserAgent } from '@/functions/common/LayoutMeasureHelper';
+import { MONITOR_LIST_PAGE_SIZE } from "@/constants/PageableConstant";
+import infoIcon1Img from "../../assets/info_icon_1.png";
+
+import { getScopedAlertDialogs } from "@/functions/common/LayoutMeasureHelper";
 import PrintMixin from "@/components/PrintMixin";
 
 export default {
-  props: {},
+
   mixins: [NextTransitionMixin, PopoverMixin, PrintMixin],
   components: {
     "graph-sub": TrendGraphComponent
@@ -152,9 +153,6 @@ export default {
       "getSelectedMonitorSet",
       "getSysMonitorItems"
     ]),
-    // mod FNSI-改修内容5708、5759修正 xuty start
-    ...mapGetters("user", ["getFacilityCd"]),
-    // mod FNSI-改修内容5708、5759修正 xuty end
     ...mapGetters("account-edit", {
       isDispMenu: "isDispMenu",
       getFontSize: "getFontSize",
@@ -201,9 +199,6 @@ export default {
         return this.getSelectedMonitorSet.monitorSetName;
       }
       return null;
-    },
-    monitorItemList() {
-      return this.getMonitorDataList;
     },
     /**
      *  グラフ表示項目一覧表列定義
@@ -256,9 +251,9 @@ export default {
           key: "occurDate",
           colName: "日時",
           className: "occurDateBody",
-          width: 5,
+          width: 6,
           style: "left",
-          text: src => moment(src.occurDate).format("YYYY/MM/DD HH:mm:ss")
+          text: src => dayjs(src.occurDate).format("YYYY/MM/DD HH:mm:ss")
         }
       ];
       if (this.getSelectedMonitorSet) {
@@ -266,10 +261,6 @@ export default {
 
         for (let series of monitorItemWithUnit.seriesInfo) {
           for (const sysItem of this.getSysMonitorItems) {
-            let ab = sysItem.type;
-            if(ab != null) {
-              ab = "0";
-            }
             if (monitorItemWithUnit.model === sysItem.model && series.code === sysItem.code) {
               //mod FNSI redmine 5702 劉祥霖　表示項目不正再修正　start
               if (monitorItemWithUnit.model === sysItem.model && series.code === sysItem.code&&monitorItemWithUnit.comFormatCd===sysItem.type){
@@ -327,14 +318,14 @@ export default {
     },
     getCardHeaderWidthStyle() {
       if (this.pageViewWidth) {
-        return { "width": `${this.pageViewWidth}px` };
+        return { "width": `${this.pageViewWidth}px`, display: "block" };
       }
       return null;
     }
   },
   data() {
     return {
-      imageSrcInfoIcon: require("../../assets/info_icon_1.png"),
+      imageSrcInfoIcon: infoIcon1Img,
       popoverVisible: false,
       popoverTarget: null,
       popoverDirection: "right",
@@ -348,21 +339,88 @@ export default {
       isIOS: false,
       selfScreenName: "",
       pageViewWidth: 0,
-      // add FNSI-redmine#3963 付 start
-      // cWidth: 0,
-      // add FNSI-redmine#3963 付 end
-      // mod FNSI-改修内容5708、5759修正 xuty start
-      scrollPositionTop: 0,
-      scrollPositionLeft: 0,
-      timerId: [],
-      refreshInterval: 0,
-      // mod FNSI-改修内容5708、5759修正 xuty end
+      visibleMonitorDataList: [],
       printTargetClass: ["expandable-content"],
-      scrollQuerySelector: ".trend-main", // スクロールコンテナ
-      addClassTargetQuerySelector: ["table.trend-graph-list"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
+      scrollQuerySelector: ".trend-main",
+      addClassTargetQuerySelector: ["table.trend-graph-list"],
     };
   },
+  directives: {
+    loadMore: {
+      /**
+       * @description モニタ一覧の初期表示時のイベント
+       */
+      mounted(el, binding) {
+        const callback = binding.value;
+        const component = binding.instance;
+        component?.$nextTick(() => {
+          const scopeRoot = component?.$el || el;
+          const scrollElement =
+            getScopedElementById("trend-main", scopeRoot)
+            || scopeRoot?.querySelector?.("#trend-main")
+            || null;
+          if (scrollElement) {
+            const onScroll = () => {
+              const scrollTop = scrollElement.scrollTop;
+              const innerHeight = scrollElement.clientHeight;
+              const scrollHeight = scrollElement.scrollHeight;
+              // スクローバーの最下部の判定
+              if (scrollTop + innerHeight >= scrollHeight - 4) {
+                callback();
+              }
+            };
+            scrollElement.addEventListener("scroll", onScroll);
+            el._onScroll = onScroll;
+            el._scrollElement = scrollElement;
+          }
+        });
+      },
+      unmounted(el) {
+        el._scrollElement?.removeEventListener?.("scroll", el._onScroll);
+      }
+    },
+  },
   methods: {
+    getTrendGraphScopeRoot() {
+      return this.$el || null;
+    },
+    getMonitorColumnCellStyle(column, textAlign) {
+      const widthEm = `${column.width}em`;
+      return {
+        width: widthEm,
+        minWidth: widthEm,
+        maxWidth: widthEm,
+        textAlign
+      };
+    },
+    getTrendMainElement() {
+      return this.getTrendGraphScopeRoot()?.querySelector?.('.trend-main')
+        || queryScopedSelector('.trend-main', this.getTrendGraphScopeRoot())
+
+        || null;
+    },
+    getPopGraphGridRoot() {
+      return getScopedElementById('popGraphGrid', this.getTrendGraphScopeRoot())
+        || this.getTrendGraphScopeRoot()?.querySelector?.('#popGraphGrid')
+        || this.getTrendMainElement()
+        || null;
+    },
+    getTrendPopoverElement() {
+      return this.getPopGraphGridRoot()?.querySelector?.('.popover--left')
+        || queryScopedSelector('.popover--left', this.getPopGraphGridRoot())
+        || null;
+    },
+    getTrendPopoverContentElement() {
+      return this.getPopGraphGridRoot()?.querySelector?.('.popover--left__content')
+        || queryScopedSelector('.popover--left__content', this.getPopGraphGridRoot())
+        || null;
+    },
+    getTrendMainViewElement() {
+      return getScopedElementById('trend-main', this.getTrendGraphScopeRoot())
+        || this.getTrendMainElement()
+
+        || null;
+    },
     ...mapActions("trend-graph", [
       "setTrendGraphList",
       "fetchTrendGraphList",
@@ -382,49 +440,6 @@ export default {
       // モニタ項目
       this.fetchSysMonitorItem();
     },
-    // mod FNSI-改修内容5708、5759修正 xuty start
-    async refreshVal(parama) {
-      let data = await getMstFacilitySettingValue(this.getFacilityCd, STATUS_AUTO_SETTING);
-      if (data.status == 200) {
-        if (data.data) {
-          this.refreshInterval = data.data * 1000;
-        } else {
-          this.refreshInterval = 20000;
-        }
-      } else if (data.status == 400) {
-        getErrorMessage('StatusListMainComponent.vue','startPolling',error);
-        this.refreshInterval = 20000;
-      }
-      if (parama != undefined) {
-        parama();
-      }
-    },
-    startPolling() {
-      this.endPolling();
-      this.timerId.push(setInterval(this.statusUpdate, this.refreshInterval));
-    },
-    endPolling() {
-      if (this.timerId) {
-        for (let i = 0; i < this.timerId.length; i++) {
-            clearInterval(this.timerId[i]);
-        }
-      }
-    },
-    statusUpdate() {
-      const grid = document.querySelector(".trend-main");
-      this.scrollPositionTop = grid ? grid.scrollTop : 0;
-      this.scrollPositionLeft = grid ? grid.scrollLeft : 0;
-      this.refresh();
-      setTimeout(() => {
-        this.setScrollPosition();
-      }, 500);
-    },
-    setScrollPosition() {
-      const grid = document.querySelector(".trend-main");
-      grid.scrollTop = this.scrollPositionTop;
-      grid.scrollLeft = this.scrollPositionLeft;
-    },
-    // mod FNSI-改修内容5708、5759修正 xuty end
     newestValue(src) {
       const cd = String(src.moni_cd);
       const monitor = this.getMonitorDataList;
@@ -444,13 +459,39 @@ export default {
     },
     refresh() {
       if (
-        this.selfScreenName === this.$router.currentRoute.name &&
-        document.getElementsByTagName("ons-alert-dialog").length === 0
-      ) {
+        this.selfScreenName === this.$route.name &&
+        getScopedAlertDialogs(this.$el || this).length === 0) {
         // データリロード
         this.fetchTrendGraphList(this.getConditionInfo).then(res => {
           this.setTrendGraphList(res.data.monitorInfo);
+          // モニタ一覧の画面表示用データの配列の生成
+          this.createVisibleMonitorDataList();
         });
+      }
+    },
+    /**
+     * @description モニタ一覧の表示対象データの作成
+     */
+    createVisibleMonitorDataList() {
+      // テーブルから取得したデータの上位100件をモニタ一覧の画面表示用の配列に格納
+      this.visibleMonitorDataList = this.getMonitorDataList.slice(0, MONITOR_LIST_PAGE_SIZE);
+      this.$nextTick(() => {
+        const scrollElement = this.getTrendMainElement();
+        if (scrollElement) {
+          scrollElement.scrollTop = 0;
+          scrollElement.scrollLeft = 0;
+        }
+      });
+    },
+    /**
+     * @description モニタ一覧のデータの追加読込
+     */
+    handleLoadMore() {
+      const start = this.visibleMonitorDataList.length;
+      const end = start + MONITOR_LIST_PAGE_SIZE;
+      const nextMonitorDataList = this.getMonitorDataList.slice(start, end);
+      if (nextMonitorDataList.length > 0) {
+        this.visibleMonitorDataList.push(...nextMonitorDataList);
       }
     },
     showInfoPopover(event) {
@@ -466,15 +507,19 @@ export default {
       if (!this.popoverVisible) {
         return;
       }
-      const popover = document.querySelector("#popGraphGrid .popover--left");
+      const popoverRoot = this.getPopGraphGridRoot() || this.getTrendGraphScopeRoot();
+      const popover = this.getTrendPopoverElement();
       if (!popover) {
         return;
       }
       const popoverMaxWidth = this.splittedWidth - popover.offsetLeft;
-      document.querySelector("#popGraphGrid .popover--left__content").style.maxWidth = `${popoverMaxWidth}px`;
+      const popoverContent = this.getTrendPopoverContentElement();
+      if (popoverContent) {
+        popoverContent.style.maxWidth = `${popoverMaxWidth}px`;
+      }
     },
     setPageViewWidth() {
-      const viewEl = document.getElementById("trend-main");
+      const viewEl = this.getTrendMainViewElement();
       if (!viewEl) {
         this.pageViewWidth = 0;
       }
@@ -490,38 +535,29 @@ export default {
   created() {
     // v-bindや{{}}などView要素への変数の依存性注入などがされたあとに実行される処理
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = getScopedUserAgent(this.$el);
     if (ua.match(/Android/)) {
       this.isAndroid = true;
     } else if (ua.match(/iPhone|iPad/)) {
       this.isIOS = true;
     }
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // add 性能改善メモリ不足 shan start
     EventBus.$off("refresh", this.refresh);
     // add 性能改善メモリ不足 shan end
     EventBus.$on("refresh", this.refresh);
-    // add FNSI-redmine#3963 付 start
-    // this.cWidth = document.body.clientWidth;
-    // add FNSI-redmine#3963 付 end
+    EventBus.$on("createVisibleMonitorDataList", this.createVisibleMonitorDataList);
   },
   mounted() {
     this.init();
-    // mod FNSI-改修内容5708、5759修正 xuty start
-    this.refreshVal(this.startPolling);
-    // mod FNSI-改修内容5708、5759修正 xuty end
   },
   updated() {
     this.setPageViewWidth();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // イベントリスナーの削除など、画面終了時の後片付けが完了した際に実行される処理
     EventBus.$off("refresh", this.refresh);
-
-    // mod FNSI-改修内容5708、5759修正 xuty start
-    // polling用setIntervalのクリア
-    this.endPolling();
-    // mod FNSI-改修内容5708、5759修正 xuty end
+    EventBus.$off("createVisibleMonitorDataList", this.createVisibleMonitorDataList);
   }
 };
 </script>
@@ -534,6 +570,15 @@ export default {
 .trend-graph-accordion label {
   font-size: inherit !important;
 }
+.trend-graph-accordion :deep(div.list-item__center) {
+  padding: 0;
+  min-height: unset;
+  height: 2em;
+}
+.trend-graph-accordion :deep(div.list-item__right) {
+  min-height: unset;
+  height: 2em;
+}
 .trend-graph-list {
   margin: 0;
   width: 100%;
@@ -544,6 +589,12 @@ export default {
 #list-grid-box {
   z-index: 2;
   margin-top: 0px;
+}
+#list-grid-box #monitor-list .trend-graph-monitor-td {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: center;
 }
 table#monitor-list.trend-graph-list thead tr th.ntss-list-header-th-sticky {
   position: -webkit-sticky;
@@ -576,15 +627,15 @@ table#monitor-list.trend-graph-list thead tr th.ntss-list-header-th-sticky {
 img.img-icon {
   display: block;
   cursor: pointer;
-  width: 20px;
-  height: 20px;
+  width: 1em;
+  height: 1em;
   margin-left: 2em;
-  padding-top: 10px;
+  padding-top: 0.5em;
 }
-.popover__content ons-button.auto-event {
+:deep(.popover__content ons-button.auto-event) {
   margin-right: 10px;
 }
-#popGraphGrid >>> .popover--left__content {
+#popGraphGrid :deep(.popover--left__content) {
   width: 100%;
 }
 .display-info {
@@ -607,15 +658,16 @@ img.img-icon {
   padding: 5px;
 }
 #graph-component {
+  min-width: 100%;
   width: fit-content;
 }
 
 @media print {
   /** グラフ */
-  div >>> .trend-graph-accordion {
+  div :deep(.trend-graph-accordion) {
     width: 1024px !important;
   }
-  
+
   /** スクロールコンテナ */
   .trend-main {
     overflow: hidden !important;
@@ -623,6 +675,7 @@ img.img-icon {
     width: 1024px !important; /* グラフのレイアウト崩れ防止のため固定幅 */
   }
 }
+
 @media print and (orientation: landscape) {
   ons-list > ons-list-item:nth-of-type(2) {
     page-break-before: always !important;

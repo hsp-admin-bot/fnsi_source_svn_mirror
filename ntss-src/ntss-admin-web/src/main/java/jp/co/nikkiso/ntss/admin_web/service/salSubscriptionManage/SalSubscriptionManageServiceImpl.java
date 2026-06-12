@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.admin_web.service.salSubscriptionManage;
 
-import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,10 +31,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import org.springframework.security.access.AccessDeniedException;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.service.SelectOptionsUtils;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.SalSubscriptionManageStatus;
@@ -50,6 +48,7 @@ import jp.co.nikkiso.ntss.core.dao.SysFunctionAdvancedDao;
 import jp.co.nikkiso.ntss.core.dao.SysFunctionDao;
 import jp.co.nikkiso.ntss.core.entity.custom.SalSubscriptionManageCustom;
 import org.springframework.transaction.annotation.Transactional;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -95,6 +94,10 @@ public class SalSubscriptionManageServiceImpl implements SalSubscriptionManageSe
 
   @Autowired
   private LogServiceCore logServiceCore;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   //DB更新ログ出力ロジック wp end
 
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang start
@@ -277,7 +280,7 @@ public class SalSubscriptionManageServiceImpl implements SalSubscriptionManageSe
         wheres.append(" facility_cd = '" + facilityUpDate.getFacilityCd() + "'" +"\n");
         // logCommon設定
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(mstFacilityDao, mmsTbN, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         //FNSI-修正 ログ対応 wp add end
@@ -317,7 +320,7 @@ public class SalSubscriptionManageServiceImpl implements SalSubscriptionManageSe
           wheres.append(" facility_cd = '" + facilityUpDate.getFacilityCd() + "'" +"\n");
           // logCommon設定
           // logCommon設定
-          DataUpdateLogCommonNew logCommon = getLogCommon(mstFacilityDao, mmsTbN, wheres, getEventLogMessage());
+          DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage());
           // ログ出力カラム情報及び更新前データ情報取得
           boolean setResult = logCommon.setInfo();
           //FNSI-修正 ログ対応 wp add end
@@ -498,25 +501,7 @@ public class SalSubscriptionManageServiceImpl implements SalSubscriptionManageSe
 						}
 					}
 
-				} catch (JsonParseException e) {
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
-//      e.printStackTrace();
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang start
-          EventLogMessage eventLogMessage = new EventLogMessage();
-          eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
-          logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang end
-				} catch (JsonMappingException e) {
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
-//      e.printStackTrace();
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang start
-          EventLogMessage eventLogMessage = new EventLogMessage();
-          eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
-          logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang end
-				} catch (IOException e) {
+				} catch (JacksonException e) {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -587,11 +572,11 @@ public class SalSubscriptionManageServiceImpl implements SalSubscriptionManageSe
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

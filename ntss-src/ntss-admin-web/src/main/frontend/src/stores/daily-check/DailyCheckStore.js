@@ -4,10 +4,10 @@ import {
   sendRequestGetLayoutDetailOfMachineHistory,
   sendRequestGetMachineResult,
   sendRequestGetLayoutDetail,
-  sendRequestGetUerByListID,
+  sendRequestGetUserByListID,
 } from "@/apis/daily-check";
 import { sendRequestUserAccountInfoAll } from "@/apis/User";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { Answer } from "@/constants/mainteConstants";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 
@@ -22,7 +22,7 @@ export default {
     listResultMaster: [],
     listResultMasterHis: [],
     listLayoutByLayoutclass: [],
-    dailyDateSearch: moment().format("YYYY-MM-DD"),
+    dailyDateSearch: dayjs().format("YYYY-MM-DD"),
     machine: {},
     machineResult: [],
     userAccountInfo: [],
@@ -82,19 +82,18 @@ export default {
       commit("setMachine", params);
     },
     async sendRequestGetMachineResult({ commit }, machine) {
-      await sendRequestGetMachineResult(machine).then(response => {
-        commit("setMachineResult", response.data);
-      });
+      const response = await sendRequestGetMachineResult(machine);
+      commit("setMachineResult", response.data);
     },
     async setUserAccountInfo({ commit }, facilityCd) {
-      await sendRequestUserAccountInfoAll(facilityCd).then(response => {
-        commit("setUserAccountInfo", response.data);
-      });
+      const response = await sendRequestUserAccountInfoAll(facilityCd);
+      commit("setUserAccountInfo", response.data);
     },
     setLayoutParams({ commit }, layoutParams) {
       commit("setLayoutParams", layoutParams);
     },
     async sendRequestGetDetail({ commit }, params) {
+      commit("setResultMaster", []);
       const [layoutDetailRes, resultDetailRes] = await Promise.all([
         sendRequestGetLayoutDetailOfMachine(
           params.machineNo,
@@ -237,6 +236,70 @@ export default {
   },
 };
 
+// sendRequestGetLayoutDetailOfMachineHistory のレスポンスに
+// 要素が持つレイアウトによる次のソート処理を行う
+// 1.最新マスタに存在するレイアウト同士はマスタの表示順で
+//  レスポンスに入っているのでその前後関係を維持する
+// 2.最新マスタに同じコードが存在する版数が古いレイアウトは
+//  最新マスタの直後に版数の降順で差しこむ
+// 3.最新マスタに同じコードが存在ないレイアウトは
+//  最新マスタに存在するレイアウト群の末尾に コード降順＞版数降順 で並べる
+const sortByLayout = layoutDetailData => {
+  // 最新マスタに存在するレイアウトかどうかで振り分ける
+  const metaList = [];
+  const olderEditionsMap = {};
+  const restList = [];
+  layoutDetailData.forEach(layoutDetail => {
+    if (layoutDetail.isCurrent) {
+      // 最新マスタに存在するレイアウトの場合は作業用配列の要素に追加する
+      const cd = layoutDetail.layout.menteLayoutCd;
+      const olderEditions = [];
+      metaList.push({
+        cd,
+        layoutDetail,
+        olderEditions,
+      });
+      // コードをキーとして旧版用配列をマップに追加する
+      olderEditionsMap[cd] = olderEditions;
+    } else {
+      // 最新マスタに存在しないレイアウトの場合は未振り分け配列に追加する
+      restList.push(layoutDetail);
+    }
+  });
+
+  // 未振り分け配列を最新マスタに存在するコードかどうかで振り分ける
+  const olderCds = [];
+  restList.forEach(layoutDetail => {
+    const cd = layoutDetail.layout.menteLayoutCd;
+    if (olderEditionsMap[cd]) {
+      // 最新マスタに存在するコードの場合は旧版用配列に追加する
+      olderEditionsMap[cd].push(layoutDetail);
+    } else {
+      // 最新マスタに存在するコードの場合は旧コード用配列に追加する
+      olderCds.push(layoutDetail);
+    }
+  });
+
+  // 作業用配列の要素がもつデータを旧版をソートしつつマージした配列を生成する
+  const result = metaList.reduce((result_, { layoutDetail, olderEditions }) => {
+    // 旧版配列を版数の降順でソートする
+    olderEditions.sort((a, b) => (
+      b.layout.editionNo - a.layout.editionNo
+    ));
+    result_.push(layoutDetail, ...olderEditions);
+    return result_;
+  }, []);
+  // 旧コード用配列の要素を コード降順＞版数降順 でソートしてマージする
+  olderCds.sort((a, b) => (
+    (b.layout.menteLayoutCd - a.layout.menteLayoutCd)
+    || (b.layout.editionNo - a.layout.editionNo)
+  ));
+  result.push(...olderCds);
+
+  // 並び替えた順で元の配列に入れなおす
+  layoutDetailData.splice(0, Infinity, ...result);
+  return layoutDetailData;
+};
 // sendRequestGetDetailOfMachine のレスポンスから点検項目ごとの点検結果情報を生成する
 const createResultDetailInfo = async resultDetailData => {
   const resultDetailList = [];
@@ -264,7 +327,7 @@ const createResultDetailInfo = async resultDetailData => {
       cate_edi = Number(cate_edi);
       resultDetailList.push({
         ...resultData,
-        dateUpdate: date ? moment(date).format("YYYY-MM-DD HH:mm") : "",
+        dateUpdate: date ? dayjs(date).format("YYYY-MM-DD HH:mm") : "",
         answer: judge,
         itemCheckerId: user_id,
         comment,
@@ -283,7 +346,7 @@ const createResultDetailInfo = async resultDetailData => {
   // 点検結果の点検者の名前リストを生成する
   const userNameList = [];
   if (userIDList.length) {
-    await sendRequestGetUerByListID(userIDList).then(res => {
+    await sendRequestGetUserByListID(userIDList).then(res => {
       userNameList.push(...res.data.map(user => ({
         userId: user.userId,
         fullName: `${user.userLastName} ${user.userFirstName}`,
@@ -298,6 +361,57 @@ const createDateAndTime = dateTime => dateTime ? {
   date: dateTime.substring(0, 10),
   time: dateTime.substring(11),
 } : { date: "", time: "" };
+// リストの要素を指定したキーの値ごとの配列に振り分けたリストを作成する
+const createKeyBucketList = (list, key) => {
+  const result = [];
+  const bucketMap = {};
+  list.forEach(item => {
+    const keyValue = item[key];
+    if (!bucketMap[keyValue]) {
+      const items = bucketMap[keyValue] = [];
+      result.push({ keyValue, items });
+    }
+    bucketMap[keyValue].push(item);
+  });
+  return result;
+};
+// リストの要素をコードのキー名の値ごとに振り分けたリストを作成し、
+// 振り分けたリスト内はさらに版数のキー名の値のごとに振り分けたリストとし、
+// 版数の降順で並ぶようにソートしたリストを生成する
+const createSortedBucketList = (list, cdKey, editionKey) => {
+  const cdList = createKeyBucketList(list, cdKey);
+  cdList.forEach(cdBucket => {
+    const editionList = createKeyBucketList(cdBucket.items, editionKey);
+    editionList.sort((a, b) => (b.keyValue - a.keyValue));
+    cdBucket.editionList = editionList;
+  });
+  return cdList;
+};
+// 点検レイアウトが持つ点検項目について次のソート処理を行う
+// 1.グループコードが同じで版数が異なるグループは
+//  先頭から順にみて先に出現した版数の前後に版数の降順で並ぶように差しこむ
+// 2.コードと版数が同じグループが持つ点検項目の中で、
+//  点検項目コードが同じで版数が異なる点検項目は
+//  先頭から順にみて先に出現した版数の前後に版数の降順で並ぶように差しこむ
+const sortByGroupAndDetail = detailItems => {
+  const result = [];
+  const groupList = createSortedBucketList(detailItems, "cateCd", "cateEdi");
+  groupList.forEach(groupCdBucket => {
+    groupCdBucket.editionList.forEach(groupEditionBucket => {
+      const detailList = createSortedBucketList(
+        groupEditionBucket.items,
+        "menteDetailCd",
+        "detailEdi"
+      );
+      detailList.forEach(detailCdBucket => {
+        detailCdBucket.editionList.forEach(detailEditionBucket => {
+          result.push(...detailEditionBucket.items);
+        });
+      });
+    });
+  });
+  return result;
+};
 
 // 点検項目の点検者情報のダミー値
 const dummyUserName = {

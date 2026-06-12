@@ -2,9 +2,8 @@
   <span>
     <custom-select
       ref="el"
-      v-bind="deviceInfo"
+      v-bind="{ ...deviceInfo, ...$attrs }"
       :disabled="disabled"
-      v-on="$listeners"
     />
   </span>
 </template>
@@ -17,6 +16,7 @@ import baseForm from "@/components/deviceset-info/base-modules/BaseDeviceSetInfo
  * @description 装置設定値(数値)入力用コンポーネント
  */
 export default {
+  inheritAttrs: false,
   components: {
     "custom-select": customSelect
   },

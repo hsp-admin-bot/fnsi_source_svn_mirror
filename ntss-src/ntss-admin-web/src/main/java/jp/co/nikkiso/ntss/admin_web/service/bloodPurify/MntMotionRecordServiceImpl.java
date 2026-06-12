@@ -81,4 +81,10 @@ public class MntMotionRecordServiceImpl implements MntMotionRecordService {
   public int insertLogMotionMessageAndOrdNo(MntMotionRecord param) {
     return mntMotionRecordDao.insertLogMotionMessageAndOrdNo(param);
   }
+
+  @Override
+  public MntMotionRecord findByManageNo(Long motionRecordNo) {
+    return mntMotionRecordDao.selectByMotionRecordNo(motionRecordNo);
+  }
+
 }

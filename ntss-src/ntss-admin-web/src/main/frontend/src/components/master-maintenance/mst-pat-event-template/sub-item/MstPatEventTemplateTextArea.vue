@@ -84,20 +84,35 @@
   </div>
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import $$ from "@/compat/jquery";
 import {replaceLtGt} from "@/utils/util.js";
+import {
+  mountEditor,
+  getEditorWidget as getNativeEditorWidget,
+  getKendoEditorToolbarClearButtons,
+  getKendoEditorOwnerDocument,
+  getKendoEditorDocumentElement,
+  getKendoEditorBody,
+  createKendoEditorRange as createKendoCompatEditorRange,
+  createKendoEditorElement as createKendoCompatEditorElement
+} from "@/functions/common/KendoFunctions";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import CommonTextArea from "@/components/common/CommonTextArea";
-import $$ from "jquery";
-import {EventBus} from "@/eventBus";
+
+import { isInsideKendoEditorInteraction } from "@/functions/common/KendoFunctions";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 import CustomInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
-import _ from 'lodash';
+import { getScopedElementsByClassName, getScopedElementsByTagName, getScopedUserAgent, getScopedWindow, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
 import { customComparator } from "@/utils/util.js";
+
 import MasterSelectorFixedPhrase from "@/components/common/master-selector/MasterSelectorFixedPhrase";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import _ from "@/compat/collections/lodash";
 export default {
   name: "MstPatEventTemplateTextArea",
   props: ["propsIndex"],
@@ -210,14 +225,12 @@ export default {
           ]
         },
         // #5842 テキストエリアの不正 訾浩 end
-        {
-          max: 10
-        }
       ],
       textMaxValueRecord: { initValue: null, editValue: null },
       copyFontSize: null,
       commentTimer: 0,
       tapedTwice: false,
+      setLoopId: null,
       popoverData: {
         popoverVisible: false,
         popoverDisplayDirection: "right"
@@ -378,7 +391,7 @@ export default {
   },
   created() {
     //フィールド追加時にcreatedイベントが起動
-    if (this.ediText.default_value = this.getInputParams[this.propsIndex].item_json.default_value !== undefined) {
+    if (this.getInputParams[this.propsIndex].item_json.default_value !== undefined) {
       this.ediText.default_value = this.getInputParams[this.propsIndex].item_json.default_value
     } else {
       this.getInputParams[this.propsIndex].item_json.default_value = "";
@@ -408,7 +421,7 @@ export default {
       this.selectSourceNameValue = this.selectSourceName;
     });
     const tools = this.tools;
-    $$("#editor-input-" + this.propsIndex).kendoEditor({
+    mountEditor($$("#editor-input-" + this.propsIndex), {
       /**
        * @description テキストエリアのPasteイベント
        */
@@ -426,7 +439,7 @@ export default {
       },
       // add #9504 2023/12/06 拡張書式の動作不正 張玲 end
     });
-    let editor = $$("#editor-input-" + this.propsIndex).data("kendoEditor");
+    let editor = this.getRichTextEditor();
     let styleTabBeforeCaret = "";
     // 患者イベントテンプレートマスタに登録されたhtml_valueにタグが存在する場合
     if(this.getInputParams[this.propsIndex].item_json.html_value){
@@ -447,18 +460,21 @@ export default {
     /**
      * @description テキストエリアのフォーカスアウト発生時のイベント
      */
-    $$(editor.window).blur(function (ev) {
+    const editorEventNamespace = `.ntssMstPatEventTemplateEditor${this.propsIndex}`;
+    $$(editor.window).off(`blur${editorEventNamespace}`).on(`blur${editorEventNamespace}`, function (ev) {
       self.editContent(
-        ev.currentTarget.document.documentElement.lastElementChild
+        getKendoEditorDocumentElement(editor, ev, self.$el)?.lastElementChild
       );
       /**
        * @description テキストエリアのクリックイベント
        */
-      $$(document).click(function(event) {
-        if(!($$(event.target).closest(".k-editor").length || $$(event.target).closest(".k-state-selected").length || $$(event.target).closest(".popover__content").length)) {
+      $$(getKendoEditorOwnerDocument(editor, ev, self.$el))
+        .off(`click.ntssMstPatEventTemplateEditor${self.propsIndex}`)
+        .on(`click.ntssMstPatEventTemplateEditor${self.propsIndex}`, function(event) {
+        if(!isInsideKendoEditorInteraction(event.target)) {
           if(editor.window.getSelection()) {
-            let range = document.createRange();
-            range.selectNodeContents(self.findLastTextNode(ev.currentTarget.document.body));
+            let range = self.createEditorRange(editor, ev);
+            range.selectNodeContents(self.findLastTextNode(getKendoEditorBody(editor, ev, self.$el)));
             editor.window.getSelection().removeAllRanges();
             editor.window.getSelection().addRange(range);
             editor.window.getSelection().collapseToEnd();
@@ -468,10 +484,12 @@ export default {
       /**
        * @description カレンダーのフォーカス発生時のイベント
        */
-      $$(document).on("focus", ".calendar", function() {
+      $$(getKendoEditorOwnerDocument(editor, ev, self.$el))
+        .off(`focus.ntssMstPatEventTemplateEditor${self.propsIndex}`, ".calendar")
+        .on(`focus.ntssMstPatEventTemplateEditor${self.propsIndex}`, ".calendar", function() {
         if(editor.window.getSelection()) {
-          let range = document.createRange();
-          range.selectNodeContents(self.findLastTextNode(ev.currentTarget.document.body));
+          let range = self.createEditorRange(editor, ev);
+          range.selectNodeContents(self.findLastTextNode(getKendoEditorBody(editor, ev, self.$el)));
           editor.window.getSelection().removeAllRanges();
           editor.window.getSelection().addRange(range);
           editor.window.getSelection().collapseToEnd();
@@ -481,7 +499,7 @@ export default {
     /**
      * @description テキストエリアのkeydownイベント
     */
-    editor.window.addEventListener('keydown',  (ev) => {
+    this.addManagedEventListener(editor.window, 'keydown', (ev) => {
       if(ev.key === "Enter"){
         let beforeRange = editor.window.getSelection();
         let focusNode = beforeRange.focusNode;
@@ -489,9 +507,9 @@ export default {
         //Enterキー押下前にカーソルの位置にフォーカス可能な要素が存在しない場合
         if(focusNode.nodeName === "BODY") {
           ev.stopPropagation();
-          setTimeout(() => {
+          this.setManagedTimeout(() => {
             //Enterキー押下後にカーソルが置かれた行のHTMLデータが<p><br></p>の場合、<p>&#xFEFF</p>に置き換える
-            const newChild = document.createElement("p");
+            const newChild = this.createEditorElement("p", editor, ev);
             newChild.textContent = "\ufeff";
             const targetChild = focusNode.childNodes[focusOffset];
             focusNode.replaceChild(newChild,targetChild);
@@ -513,7 +531,7 @@ export default {
             }
             currentNode = currentNode.parentElement;
           }
-          setTimeout(() => {
+          this.setManagedTimeout(() => {
             let postChangedSelection = editor.window.getSelection();
             let postChangedAnchorNode = postChangedSelection.anchorNode;
             let offset = -1;
@@ -531,11 +549,11 @@ export default {
           }, 0);
         }
       }
-    },true);
+    }, true);
     /**
      * @description テキストエリアのkeydownイベント
     */
-    $$(editor.window).keydown(function(ev) {
+    $$(editor.window).off(`keydown${editorEventNamespace}`).on(`keydown${editorEventNamespace}`, function(ev) {
       if(ev.key === "Backspace" || ev.key === "Delete"){
         let beforeRange = editor.window.getSelection();
         let focusNode = beforeRange.focusNode;
@@ -550,7 +568,7 @@ export default {
     /**
      * @description テキストエリアのkeyupイベント
     */
-    $$(editor.window).keyup(function(ev) {
+    $$(editor.window).off(`keyup${editorEventNamespace}`).on(`keyup${editorEventNamespace}`, function(ev) {
       let selection = editor.window.getSelection();
       let anchorNode = selection.anchorNode;
       let anchorOffset = selection.anchorOffset;
@@ -605,18 +623,18 @@ export default {
     /**
      * @description テキストエリアのIMEの変換終了時のイベント
     */
-    editor.window.addEventListener('compositionend',  (ev) => {
+    this.addManagedEventListener(editor.window, 'compositionend', (ev) => {
       ev.currentTarget.dispatchEvent(new Event('input'));
     });
     /**
      * @description テキストエリアの入力イベント発生前のイベント
     */
-    editor.window.addEventListener('beforeinput',  (ev) => {
+    this.addManagedEventListener(editor.window, 'beforeinput', (ev) => {
       if(ev.inputType === "deleteByCut"){
         let selection = editor.window.getSelection();
         const range = selection.getRangeAt(0);
         const cloneContents = range.cloneContents();
-        const container = document.createElement('div');
+        const container = this.createEditorElement('div', editor, ev);
         container.appendChild(cloneContents);
         self.copyFontSize = null;
         if(container.querySelectorAll('span').length <= 1){
@@ -635,8 +653,8 @@ export default {
           currentNode = currentNode.parentElement;
         }
         if(container.innerHTML.match(/^<p>(.*?)<\/p>/i)){
-          setTimeout(() => {
-            const newChildNode = document.createElement("p");
+          this.setManagedTimeout(() => {
+            const newChildNode = this.createEditorElement("p", editor, ev);
             newChildNode.textContent = "\ufeff";
             currentNode.parentNode.replaceChild(newChildNode,currentNode);
           }, 0);
@@ -647,14 +665,14 @@ export default {
             && currentNode.textContent === container.innerHTML){
             currentNode.textContent = "\ufeff";
           } else if(currentNode.nodeName === "BODY" && currentNode.textContent === container.innerHTML){
-            setTimeout(() => {
+            this.setManagedTimeout(() => {
               if(currentNode.childNodes.length === 1 && currentNode.childNodes[0].nodeName === "BR"){
                 currentNode.childNodes[0].remove();
               }
             }, 0);
           }
           if(selection.anchorOffset === 0){
-            setTimeout(() => {
+            this.setManagedTimeout(() => {
               let postChangedSelection = editor.window.getSelection();
               let postChangedAnchorNode = postChangedSelection.anchorNode;
               let offset = previousNodeExistsFlg ? postChangedAnchorNode.length : 0;
@@ -667,7 +685,7 @@ export default {
     /**
      * @description テキストエリアの入力イベント
     */
-    editor.window.addEventListener('input',  (ev) => {
+    this.addManagedEventListener(editor.window, 'input', (ev) => {
       if(!ev.inputType || ev.inputType === "insertText"){
         let selection = editor.window.getSelection();
         let anchorNode = selection.anchorNode;
@@ -689,121 +707,199 @@ export default {
     /**
      * @description テキストエリアのcopyイベント
     */
-    editor.window.addEventListener('copy',  (ev) => {
+    this.addManagedEventListener(editor.window, 'copy', (ev) => {
       self.copyFontSize = null;
       let selection = editor.window.getSelection();
       const range = selection.getRangeAt(0);
       const cloneContents = range.cloneContents();
-      const container = document.createElement('div');
+      const container = this.createEditorElement('div', editor, ev);
       container.appendChild(cloneContents);
       if(container.querySelectorAll('span').length <= 1){
         self.copyFontSize = ev.target.style.fontSize;
       }
     });
-    //書式設定可能なテキストエリア上部のツールバーの要素を取得する
-    let editorToolbarElement = document.querySelector("ul[aria-controls='editor-input-" + this.propsIndex + "']");
-    if(editorToolbarElement){
-      //テキストエリア上部のツールバーのフォント名のクリアボタンの要素の取得
-      let editorToolbarClearFontFamily = editorToolbarElement.children[1].children[0].children[0].firstChild.nextElementSibling;
-      //テキストエリア上部のツールバーのフォントサイズのクリアボタンの要素の取得
-      let editorToolbarClearFontSize = editorToolbarElement.children[3].children[0].children[0].firstChild.nextElementSibling;
+    //書式設定可能なテキストエリア上部のツールバーのクリアボタンを取得する
+    const {
+      fontFamilyClearButton: editorToolbarClearFontFamily,
+      fontSizeClearButton: editorToolbarClearFontSize
+    } = getKendoEditorToolbarClearButtons(this.$el, "editor-input-" + this.propsIndex);
+    if(editorToolbarClearFontFamily){
       /**
        * @description テキストエリア上部のツールバーのフォント名のクリアボタンのクリックイベント
        */
-      editorToolbarClearFontFamily.addEventListener('click',  (ev) => {
+      this.addManagedEventListener(editorToolbarClearFontFamily, 'click', (ev) => {
         ev.currentTarget.previousElementSibling.value = "(デフォルト)";
         //フォント名のドロップダウンリストのクリックイベントを呼び出す
-        ev.currentTarget.previousElementSibling.parentElement.parentElement.dispatchEvent(new Event('click'));
+        ev.currentTarget.previousElementSibling.focus();
+        ev.currentTarget.previousElementSibling.dispatchEvent(new Event('click'));
+        editor.exec("fontName", { value: "inherit" });
+
         //子コンポーネントのクリアボタンのクリックイベントをキャンセルする
         ev.stopPropagation();
       }, true);
+    }
+    if(editorToolbarClearFontSize){
       /**
        * @description テキストエリア上部のツールバーのフォントサイズのクリアボタンのクリックイベント
        */
-      editorToolbarClearFontSize.addEventListener('click',  (ev) => {
+      this.addManagedEventListener(editorToolbarClearFontSize, 'click', (ev) => {
         ev.currentTarget.previousElementSibling.value = "(デフォルト)";
-        //フォントサイズのドロップダウンリストのクリックイベントを呼び出す
-        ev.currentTarget.previousElementSibling.parentElement.parentElement.dispatchEvent(new Event('click'));
+        ev.currentTarget.previousElementSibling.focus();
+        ev.currentTarget.previousElementSibling.dispatchEvent(new Event('click'));
+        editor.exec("fontSize", { value: "inherit" });
         //子コンポーネントのクリアボタンのクリックイベントをキャンセルする
         ev.stopPropagation();
       }, true);
     }
-    window.checkCommentLongPress = this.checkCommentLongPress;
-    window.onDblTap = this.onDblTap;
-    window.endLongTouch = this.endLongTouch;
-    window.showPopover1 = this.showPopover1;
-    //インラインフレームのタグの取得
-    let iframe =  document.getElementsByTagName("iframe");
-    let iframeDocument = null;
-    let textareaIndex = -1;
-    //処理対象のテキストエリアの要素に対応するインラインフレームの要素のインデックスを取得する
-    for(let index = 0;index <= iframe.length - 1;index++){
-      //インラインフレームの次に位置する要素のIDが処理対象のテキストエリアのIDの場合
-      if(iframe[index].contentDocument && iframe[index].nextElementSibling
-      && iframe[index].nextElementSibling.id === 'editor-input-' + this.propsIndex){
-        textareaIndex = index;
-        break;
+    const ownerWindow = this.getOwnerWindow();
+    ownerWindow.checkCommentLongPress = this.checkCommentLongPress.bind(this);
+    ownerWindow.onDblTap = this.onDblTap.bind(this);
+    ownerWindow.endLongTouch = this.endLongTouch.bind(this);
+    ownerWindow.showPopover1 = this.showPopover1.bind(this);
+    ownerWindow.clearInterval(this.setLoopId);
+    this.setLoopId = ownerWindow.setInterval(() => {
+      const iframe = this.getEditorIframes();
+      if (iframe.length > 0 && iframe[0]?.contentDocument) {
+        this.bindEditorPopoverInteractionEvents(iframe[0].contentDocument, ownerWindow);
+        ownerWindow.clearInterval(this.setLoopId);
       }
-    }
-    //処理対象のテキストエリアの要素に対応するインラインフレームの要素が存在する場合
-    if (textareaIndex >= 0){
-      iframeDocument = iframe[textareaIndex].contentDocument;
-      iframeDocument.id = this.propsIndex;
-      //マウスのボタンの長押しで発生する処理
-      iframeDocument.onmousedown = function(ev){
-        window.checkCommentLongPress(1);
-        //処理対象のテキストエリアフィールドのインデックスをセッションで保持する
-        sessionStorage.setItem("currentTargetIndex", ev.currentTarget.id);
+    });
+  },
+  unmounted() {
+    const ownerWindow = this.getOwnerWindow();
+    ownerWindow.clearInterval(this.setLoopId);
+    this.clearManagedRuntimeHandlers();
+    const editor = this.getRichTextEditor();
+    $$(editor?.window || []).off(`.ntssMstPatEventTemplateEditor${this.propsIndex}`);
+    const ownerDocument = this.getEditorOwnerDocument(this.getRichTextEditor());
+    $$(ownerDocument).off(`.ntssMstPatEventTemplateEditor${this.propsIndex}`);
+    ownerWindow.checkCommentLongPress = null;
+    ownerWindow.onDblTap = null;
+    ownerWindow.endLongTouch = null;
+    ownerWindow.showPopover1 = null;
+  },
+  methods: {
+    clearManagedRuntimeHandlers() {
+      if (Array.isArray(this._managedEventDisposers)) {
+        while (this._managedEventDisposers.length) {
+          try {
+            this._managedEventDisposers.pop()?.();
+          } catch (_error) {
+            // noop
+          }
+        }
       }
-      //マウスのボタンを離した際に発生する処理
-      iframeDocument.onmouseup = function(){
-        window.checkCommentLongPress(0);
+      if (Array.isArray(this._managedTimeouts)) {
+        const ownerWindow = this.getOwnerWindow();
+        this._managedTimeouts.forEach((timerId) => ownerWindow.clearTimeout?.(timerId));
+        this._managedTimeouts = [];
       }
-      //マウスのカーソルを動かした際に発生する処理
-      iframeDocument.onmousemove = function(){
-        // ドラッグ処理が長押し処理と競合する対策
-        window.checkCommentLongPress(0);
+    },
+    addManagedEventListener(target, eventName, handler, options) {
+      if (!target?.addEventListener || typeof handler !== "function") {
+        return handler;
       }
-      //マウスのカーソルが外れた際に発生する処理
-      iframeDocument.onmouseout = function(){
-        // ドラッグ処理が長押し処理と競合する対策
-        window.checkCommentLongPress(0);
+      this._managedEventDisposers = this._managedEventDisposers || [];
+      target.addEventListener(eventName, handler, options);
+      this._managedEventDisposers.push(() => target.removeEventListener?.(eventName, handler, options));
+      return handler;
+    },
+    setManagedTimeout(handler, delay = 0) {
+      const ownerWindow = this.getOwnerWindow();
+      this._managedTimeouts = this._managedTimeouts || [];
+      const timerId = ownerWindow.setTimeout?.(() => {
+        this._managedTimeouts = (this._managedTimeouts || []).filter((id) => id !== timerId);
+        handler?.();
+      }, delay);
+      if (timerId !== undefined && timerId !== null) {
+        this._managedTimeouts.push(timerId);
       }
-      //ダブルクリック処理
-      iframeDocument.ondblclick = function(ev){
-        // iOS/Androidでダブルタップのテキスト選択処理の度に発火してしまう為、該当端末の場合は処理をしない
-        const ua = navigator.userAgent;
+      return timerId;
+    },
+    getOwnerWindow() {
+      return getScopedWindow(this.$el || this) || window;
+    },
+    getOwnerSessionStorage() {
+      return this.getOwnerWindow()?.sessionStorage || globalThis?.sessionStorage || null;
+    },
+    getEditorOwnerDocument(editor = null, event = null) {
+      return getKendoEditorOwnerDocument(editor, event, this.$el);
+    },
+    createEditorRange(editor = null, event = null) {
+      return createKendoCompatEditorRange(editor, event, this.$el);
+    },
+    createEditorElement(tagName, editor = null, event = null) {
+      return createKendoCompatEditorElement(tagName, editor, event, this.$el);
+    },
+    createEditorTextNode(text, node = null) {
+      const ownerDocument = node?.ownerDocument || this.getEditorOwnerDocument(this.getRichTextEditor());
+      return ownerDocument.createTextNode(text);
+    },
+    getEditorIframes() {
+      return getScopedElementsByTagName("iframe", this.$el || null);
+    },
+    getTemplateElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || this);
+    },
+    queryTemplateSelector(selector) {
+      return queryScopedSelector(selector, this.$el || this);
+    },
+    queryTemplateSelectorAll(selector) {
+      return queryScopedSelectorAll(selector, this.$el || this);
+    },
+    requestViewForceUpdate() {
+      if (this.$?.isMounted) {
+        this.$forceUpdate();
+      }
+    },
+    getRichTextEditor(targetIndex = this.propsIndex) {
+      return getNativeEditorWidget($$("#editor-input-" + targetIndex));
+    },
+    bindEditorPopoverInteractionEvents(iframeDocument, ownerWindow) {
+      if (!iframeDocument || !ownerWindow) {
+        return;
+      }
+      const targetId = String(this.propsIndex);
+      const componentEl = this.$el;
+      iframeDocument.id = targetId;
+      const storeTargetIndex = () => {
+        ownerWindow.sessionStorage?.setItem("currentTargetIndex", targetId);
+      };
+      iframeDocument.onmousedown = function() {
+        ownerWindow.checkCommentLongPress(1);
+        storeTargetIndex();
+      };
+      iframeDocument.onmouseup = function() {
+        ownerWindow.checkCommentLongPress(0);
+      };
+      iframeDocument.onmousemove = function() {
+        ownerWindow.checkCommentLongPress(0);
+      };
+      iframeDocument.onmouseout = function() {
+        ownerWindow.checkCommentLongPress(0);
+      };
+      iframeDocument.ondblclick = function() {
+        const ua = getScopedUserAgent(iframeDocument?.documentElement || componentEl);
         if (ua.match(/Android/) || ua.match(/iPhone|iPad/)) {
           return;
         }
-        window.showPopover1();
-        //処理対象のテキストエリアフィールドのインデックスをセッションで保持する
-        sessionStorage.setItem("currentTargetIndex", ev.currentTarget.id);
-      }
-      //タップ長押し/ダブルタップ処理
-      iframeDocument.addEventListener('touchstart',(ev) => {
-        window.onDblTap;
-        //処理対象のテキストエリアフィールドのインデックスをセッションで保持する
-        sessionStorage.setItem("currentTargetIndex", ev.currentTarget.id);
-      },{passive: false});
-      //タップ終了時の処理
-      iframeDocument.addEventListener('touchend', window.endLongTouch);
-    }
-  },
-  destroyed() {
-    window.checkCommentLongPress = null;
-    window.onDblTap = null;
-    window.endLongTouch = null;
-    window.showPopover1 = null;
-  },
-  methods: {
+        storeTargetIndex();
+        ownerWindow.showPopover1();
+      };
+      this.addManagedEventListener(iframeDocument, 'touchstart', (ev) => {
+        storeTargetIndex();
+        ownerWindow.onDblTap(ev);
+      }, { passive: false });
+      this.addManagedEventListener(iframeDocument, 'touchend', ownerWindow.endLongTouch);
+    },
+
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("mst-pat-event-template", [
       "setInputParams",
       "setInputParamsUpdate"
     ]),
     limitText(){
-      let value = $$($$("#editor-input-" + this.propsIndex).data("kendoEditor"))[0].body;
+      let value = $$(this.getRichTextEditor())[0].body;
       let editorValue = value.innerHTML;
       let text = value.innerText.replace(/\n\n/g, '\n');
       // &#xFEFFを除く
@@ -912,23 +1008,24 @@ export default {
       
       //モーダルウィンドウ起動時の入力値を取得
       const initInputParam = this.getInitInputParams.filter(rec => rec._uniqueId == this.getInputParams[this.propsIndex]._uniqueId);
+      const initItemJson = initInputParam?.[0]?.item_json;
       let initDefaultValue = null;
       let initHtmlValue = null;
-      if(initInputParam){
+      if(initItemJson){
         //デフォルト値(プロパティ名:default_value)の取得
-        initDefaultValue = initInputParam[0].item_json.default_value;
+        initDefaultValue = initItemJson.default_value;
         //デフォルト値(プロパティ名:html_value)の取得
-        initHtmlValue = initInputParam[0].item_json.html_value.replace(/\ufeff/g, '');
+        initHtmlValue = initItemJson.html_value.replace(/\ufeff/g, '');
       }
       let currentHtmlValue = this.inputModel.html_value.replace(/\ufeff/g, '');
       //ゼロ幅スペースを除くHTMLデータが一致する場合
-      if(initInputParam && initDefaultValue === this.inputModel.default_value && initHtmlValue === currentHtmlValue){
+      if(initItemJson && initDefaultValue === this.inputModel.default_value && initHtmlValue === currentHtmlValue){
         //デフォルト値(プロパティ名:html_value)の値を初期値に更新する
-        this.inputModel.html_value = initInputParam[0].item_json.html_value;
+        this.inputModel.html_value = initItemJson.html_value;
         this.updateStore();
       }
       //デフォルト値(プロパティ名:default_value)に変化なし、かつ、デフォルト値(プロパティ名:html_value)に変化あり(桁数に変化なし、値に変化あり)の場合
-      if(initInputParam && initDefaultValue === this.inputModel.default_value && initHtmlValue.length === currentHtmlValue.length
+      if(initItemJson && initDefaultValue === this.inputModel.default_value && initHtmlValue.length === currentHtmlValue.length
       && initHtmlValue !== currentHtmlValue){
         let initHtmlTagList = [];
         let currentHtmlTagList = [];
@@ -1086,7 +1183,7 @@ export default {
           //ソートされたスタイル(初期値)とソートされたスタイル(現在の入力値)が一致する場合
           if(isEqual){
             //デフォルト値(プロパティ名:html_value)の値を初期値に更新する
-            this.inputModel.html_value = initInputParam[0].item_json.html_value;
+            this.inputModel.html_value = initItemJson.html_value;
             this.updateStore();
           }
         }
@@ -1118,11 +1215,11 @@ export default {
       this.textDefaultValue  = this.textDefaultValue ? this.textDefaultValue.toString().substring(0,value) : null;
       this.focusFlg=false;
       this.limitText();
-      this.$forceUpdate();
+      this.requestViewForceUpdate();
     },
     setTextMaxValueCss(e) {
-      if(e.target.value && document.getElementsByClassName(e.target.name)[0])
-      document.getElementsByClassName(e.target.name)[0].classList.remove("input-invalid");
+      if(e.target.value && this.getTemplateElementsByClassName(e.target.name)[0])
+      this.getTemplateElementsByClassName(e.target.name)[0].classList.remove("input-invalid");
       this.textMaxValue = e.target.value;
       this.textMaxValueRecord.editValue = this.textMaxValue;
     },
@@ -1209,7 +1306,7 @@ export default {
         return true;
       }
       if(!validationResult.fieldNameValid) {
-        document.getElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
+        this.getTemplateElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
       }
       // メッセージ組み立て
       // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
@@ -1258,16 +1355,18 @@ export default {
       }
 
       // 書式のテキストエリアに反映する
-      // let h = $$($$("#editor-input-" + this.propsIndex).data("kendoEditor"))[0].body;
+      // let h = $$(this.getRichTextEditor())[0].body;
       let editorValue;
       editorValue = "<p>" + newValue.replace(/\n/g, "</p><p>") + "</p>"; // 改行文字は<p>に変換する
       editorValue = editorValue.replace(/<p><\/p>/g, "<p>&#xFEFF;</p>"); // 文字がない行は&#xFEFFで埋める
-      $$("#editor-input-" + this.propsIndex).data("kendoEditor").value(editorValue);
+      this.getRichTextEditor().value(editorValue);
       // 通常のテキストエリアに反映する
-      this.ediText.default_value = "";
-      this.$nextTick(() => {
-        this.ediText.default_value = newValue;
-      });
+      if (this.ediText.default_value !== newValue) {
+        this.ediText.default_value = "";
+        this.$nextTick(() => {
+          this.ediText.default_value = newValue;
+        });
+      }
 
       // ストアーに保存する
       const contact = this.getInputParams[this.propsIndex].item_json;
@@ -1369,7 +1468,7 @@ export default {
     },
     removeBeforeOffset(node, offset) {
       let remeiningText = node.textContent.substring(offset);
-      let newTextNode = document.createTextNode(remeiningText);
+      let newTextNode = this.createEditorTextNode(remeiningText, node);
       let parentNode = node.parentNode;
       parentNode.replaceChild(newTextNode, node);
       return newTextNode;
@@ -1456,7 +1555,7 @@ export default {
      */
     closePopover() {
       //処理対象のテキストエリアフィールドのインデックスのセッションを除去する
-      sessionStorage.removeItem("currentTargetIndex");
+      this.getOwnerSessionStorage()?.removeItem("currentTargetIndex");
       this.popoverData.popoverVisible = false;
     },
     /**
@@ -1464,8 +1563,8 @@ export default {
      */
     selectPhrase(data) {
       //処理対象のテキストエリアフィールドのインデックスを取得する
-      let currentTargetIndex = sessionStorage.getItem("currentTargetIndex");
-      let editor = $$("#editor-input-" + currentTargetIndex).data("kendoEditor");
+      let currentTargetIndex = this.getOwnerSessionStorage()?.getItem("currentTargetIndex");
+      let editor = this.getRichTextEditor(currentTargetIndex);
       editor.exec("insertHTML", {
         value:
           "<span style='font-family: Meiryo; font-size: 12pt; white-space: break-spaces;'>" +
@@ -1478,7 +1577,7 @@ export default {
      */
     popoverTargetElement() {
       //処理対象のテキストエリアフィールドのインデックスを取得する
-      let currentTargetIndex = sessionStorage.getItem("currentTargetIndex");
+      let currentTargetIndex = this.getOwnerSessionStorage()?.getItem("currentTargetIndex");
       let editor = $$("#editor-input-" + currentTargetIndex);
       if (editor.length > 0) {
         return editor[0].previousSibling;
@@ -1488,9 +1587,10 @@ export default {
      * マウスボタンの長押しの判定処理
      */
     checkCommentLongPress(isMouseDown) {
+      const ownerWindow = this.getOwnerWindow();
       if (isMouseDown) {
-        this.commentTimer = setTimeout(() => {
-          window.showPopover1();
+        this.commentTimer = this.setManagedTimeout(() => {
+          ownerWindow.showPopover1();
         }, 500);
       } else {
         clearTimeout(this.commentTimer);
@@ -1500,19 +1600,20 @@ export default {
      * ダブルタップした際に発生するイベント
      */
     onDblTap(event) {
+      const ownerWindow = this.getOwnerWindow();
       if (event.touches.length > 1) {
         // 2本以上同時にタップされた場合の処理(長押し処理を発火)
-        window.setShowPopover = setTimeout(function() {
-          window.showPopover1();
+        ownerWindow.setShowPopover = this.setManagedTimeout(() => {
+          ownerWindow.showPopover1();
         }, 500);
       }
       if(!this.tapedTwice) {
         this.tapedTwice = true;
-        setTimeout( () => { this.tapedTwice = false; }, 300 );
+        this.setManagedTimeout(() => { this.tapedTwice = false; }, 300);
         return false;
       }
       event.preventDefault();
-      window.showPopover1();
+      ownerWindow.showPopover1();
     },
     /**
      * タップが終了した際に発生するイベント
@@ -1520,7 +1621,7 @@ export default {
     endLongTouch(event) {
       if (event.touches.length < 1) {
         // 全ての指が離れたら長押し処理を解除
-        clearTimeout(window.setShowPopover);
+        this.getOwnerWindow().clearTimeout(this.getOwnerWindow().setShowPopover);
       }
     }
   }
@@ -1549,11 +1650,11 @@ export default {
 .disp-item-area tr th:nth-child(2) {
   width: 30%;
 }
-.input-required >>> input{
+.input-required :deep(input){
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> input{
+.input-invalid :deep(input){
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }

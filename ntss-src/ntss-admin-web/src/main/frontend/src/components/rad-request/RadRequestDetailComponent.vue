@@ -2,7 +2,7 @@
  * 一般撮影患者個別検査依頼
  */
 <template>
-  <div class="main-content-area radrequest-detail-content-area">
+  <div class="main-content-area">
     <rad-header-component class="request-header-component" style="font-size: .667em;"/>
     <!-- 上部ボタン部 -->
     <div id="upper-buttons">
@@ -18,7 +18,7 @@
         v-model="condition.startDate"
         @blur="checkInputStartDate"
         @handleClearInput="clearInputStartDate"
-        data-vv-scope="condition"
+        data-validation-scope="condition"
         enabledBlank
       />
       <common-calendar
@@ -39,7 +39,7 @@
         v-model="condition.endDate"
         @blur="checkInputEndDate"
         @handleClearInput="clearInputEndDate"
-        data-vv-scope="condition"
+        data-validation-scope="condition"
         enabledBlank
       />
       <common-calendar
@@ -53,7 +53,8 @@
     <div class="scroll-table" :style="gridHeightStyle" ref="radrequestrecorddetailgrid">
       <!-- 表示テーブル -->
       <table id="grid-header" class="grid-record-list grid-transpose" style="width: max-content;">
-        <tr class="thead">
+        <tbody>
+          <tr class="thead">
           <td class="ntss-list-header-th-sticky manual-width col-sticky-first">
             <span>検査日</span>
           </td>
@@ -77,7 +78,7 @@
             :key="index"
             :style="fontColor(dateItem.date, true)"
           >
-            <img v-if="hasScheduleTreatment(dateItem, selectedPatId)" src="img/rad-request/32-32_2.png" class="symbol-request-saved" style="width: 1em; margin-top: 2px;"/>
+            <img v-if="hasScheduleTreatment(dateItem, selectedPatId)" :src="publicAssetPath('img/rad-request/32-32_2.png')" class="symbol-request-saved" style="width: 1em; margin-top: 2px;"/>
           </td>
         </tr>
         <tr
@@ -90,16 +91,11 @@
             v-if="!listDate.headerflg"
             class="ntss-list-header-th-sticky col-sticky-name manual-width"
             style="padding-left: 1em; padding-right: 1em; white-space: unset;"
-          ><span @click="rowClear(listDate)">
-            <!-- {{ showRadName(listDate.radSetCd) }} -->
-            {{
-              isOtherFacility(listDate)
-                ? buildOtherFacilityText(listDate)
-                : (
-                  showRadName(listDate.radSetCd)
-                )
-            }}
-          </span></td>
+          ><span @click="rowClear(listDate)">{{
+            isOtherFacility(listDate)
+              ? buildOtherFacilityText(listDate)
+              : showRadName(listDate.radSetCd)
+          }}</span></td>
           <!-- mod 10618検査セットマスタ、検査項目マスタ、一般撮影検査依頼マスタ編集時に関連データを補正する zhao start-->
           <!-- 日付列 -->
           <td
@@ -130,6 +126,8 @@
             <img v-if="!listDate.headerflg" v-bind="getImgAttributesForPattern(listDate, data)">
           </td>
         </tr>
+      
+        </tbody>
       </table>
     </div>
     <!-- 下部ボタン部 -->
@@ -162,7 +160,7 @@
     <!--    add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start-->
     <div v-if="messageDialogInfo.isDialogVisible">
       <message-dialog
-        :visible.sync="messageDialogInfo.isDialogVisible"
+        v-model:visible="messageDialogInfo.isDialogVisible"
         :message-cd="messageDialogInfo.messageCd"
         :type="messageDialogInfo.type"
         :string-params="messageDialogInfo.stringParams"
@@ -175,11 +173,13 @@
 </template>
 
 <script>
+import { publicAssetPath } from "@/compat/assets/public-path";
+import { getScopedElementsByClassName, queryScopedSelector, getScopedElementById, getScopedUserAgent, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
-import { mapGetters, mapActions } from "vuex";
-import moment from "moment";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
 import RadHeaderComponent from "@/components/rad-request/RadRequestHeaderComponent";
 import {
   CANCEL,
@@ -214,12 +214,13 @@ import {
 } from "@/functions/exam-request/ExamRequestFunctions";
 import { messageFormat } from "@/functions/common/MessageFormat";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
-import { EventBus } from "@/eventBus";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import DateInput from "@/components/common/DateInput";
 import { sendRequestGetMstRadSetList } from "@/apis/rad-request";
 import store from "@/stores";
 import { getHolidayStyle } from "@/functions/common/CommonFunctions";
 import messageDialog from "@/components/common/message-dialog/MessageDialog.vue";
+import { setKendoPopupSurfaceStyles } from "@/functions/common/KendoFunctions";
 import PrintMixin from "@/components/PrintMixin";
 
 export default {
@@ -269,12 +270,12 @@ export default {
       isRouteGamenFlg: false,
       radRequesttable: null,
       ignoreWatchSelectedPatId: false,
+      otherFacilityCache: {},
       // add 10618検査セットマスタ、検査項目マスタ、一般撮影検査依頼マスタ編集時に関連データを補正する zhao start
       getRadSetName: [],
       // add 10618検査セットマスタ、検査項目マスタ、一般撮影検査依頼マスタ編集時に関連データを補正する zhao end
-      scrollQuerySelector: ".scroll-table", // スクロールコンテナ
-      addClassTargetQuerySelector: ["table.grid-record-list"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
-      otherFacilityCache: {}
+      scrollQuerySelector: ".scroll-table",
+      addClassTargetQuerySelector: ["table.grid-record-list"],
     };
   },
   computed: {
@@ -304,9 +305,10 @@ export default {
       "searchedPatList",
       "selectedPat",
       "inSelectPatAtPatHeaderCreated",
-      "getIsOtherFacility", 
-      "getOtherFacilityCd"
+      "getIsOtherFacility",
+      "getOtherFacilityCd",
     ]),
+    ...mapGetters("pat-info", { patInfoSelectedPatId: "selectedPatId" }),
     ...mapGetters("window-size", {
       windowHeight: "getWindowHeight",
       windowWidth: "getSplittedWidth",
@@ -315,7 +317,7 @@ export default {
       "getFontSize",
       "isDispMenu",
       "getPatientShareMode",
-      "getPatientShareFacilityCdMode"
+      "getPatientShareFacilityCdMode",
     ]),
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("exam-request/list", ["patMainList"]),
@@ -335,7 +337,7 @@ export default {
           result["textAlign"] = "left";
         }
         if (date !== "") {
-          const dateMoment = moment(date);
+          const dateMoment = dayjs(date);
           const dateCurrent = formatToYyyymmdd();
           if (dateMoment.isBefore(dateCurrent)) {
             result["background-color"] = BACKGROUND_HEADER_PAST_DAY;
@@ -379,16 +381,14 @@ export default {
         if (radSetCd) radSetCd = String(radSetCd);
         const hasRadPattern = this.getPatRadPatternList.some(pattern => (
           patId && patId === String(pattern.patId)
-          && radSetCd && radSetCd === String(pattern.orderRadSetCd)
-        ));
+          && radSetCd && radSetCd === String(pattern.orderRadSetCd)));
         if (hasRadPattern) return true;
 
         // 期間内のradDataがあれば出力
         const radDataKeys = Object.keys(radRequest.radData);
         return radDataKeys.some(key => (
           (!dateStart || key >= dateStart)
-          && (!dateEnd || key <= dateEnd)
-        ));
+          && (!dateEnd || key <= dateEnd)));
       });
     },
     disableDatesAfter() {
@@ -399,6 +399,7 @@ export default {
     },
   },
   methods: {
+    publicAssetPath,
     // 共通ローダー設定
     ...mapActions("loading-screen", [
       "startLoadingScreen",
@@ -440,35 +441,34 @@ export default {
     // ウインドウ変更時の高さ補正
     calculateGridHeight() {
       // 表示期間などの表示領域
-      const upperButtons = document.getElementById("upper-buttons");
+      const upperButtons = getScopedElementById("upper-buttons", this.$el || null);
       const upBtnsHeight = upperButtons.offsetHeight;
 
-      const radHeader = document.getElementById("rad-header-item");
+      const radHeader = getScopedElementById("rad-header-item", this.$el || null);
       this.radHeaderHeight = radHeader.offsetHeight;
 
       // 下部ボタンの表示領域
-      const bottomButtons = document.getElementById("bottom-buttons");
+      const bottomButtons = getScopedElementById("bottom-buttons", this.$el || null);
       const btmBtnsHeight = bottomButtons.offsetHeight;
 
       // 表示期間、表、下部ボタン全体の表示領域
-      const mainId = document.getElementById("main-id");
+      const mainId = getScopedElementById("main-id", this.$el || null);
       const mainIdHeight = mainId.offsetHeight;
 
       // 表エリアの高さ (15px引く)
       const gridHeightC = mainIdHeight - upBtnsHeight - btmBtnsHeight - 15;
 
       // ヘッダ部分の表示設定 (初期状態では非表示、高さ算出時に初めて表示する)
-      const gridHeader = document.getElementById("grid-header");
+      const gridHeader = getScopedElementById("grid-header", this.$el || null);
       gridHeader.style.visibility = "visible";
       this.gridHeight = gridHeightC;
 
       // Android対策
       if (this.isAndroid && !this.addedTransitionEvent) {
         // CSSトランジションする要素(button--materialクラス)を取得
-        const transitionButtons = document.getElementsByClassName("button--material");
+        const transitionButtons = getScopedElementsByClassName("button--material", this.$el || null);
         const transitionButton = Array.from(transitionButtons).find(
-          el => el.innerText.trim() === "再表示"
-        );
+          el => el.innerText.trim() === "再表示");
         if (!transitionButton) return;
         // トランジション終了を検知する
         transitionButton.addEventListener("transitionend", event => {
@@ -487,7 +487,7 @@ export default {
     // 治療予定欄の表示内容を生成
     showScheduleTreatment(dateItem) {
       return hasScheduleTreatment(dateItem, this.selectedPatId)
-        ? "<img src='img/rad-request/32-32_2.png' class='symbol-request-saved' style='width: 1em; margin-top: 2px;'/>"
+        ? `<img src="${publicAssetPath("img/rad-request/32-32_2.png")}" class='symbol-request-saved' style='width: 1em; margin-top: 2px;'/>`
         : "";
     },
     // 日付部をクリックした際に一括中止
@@ -503,13 +503,10 @@ export default {
           // title: "更新確認",
           // message: "{dateFormat}の予定を一括中止します、よろしいですか？",
           if (await confirmIsOk(DIALOG_MESSAGES[13000029], dateFormat)) {
-	    // mod #12462 患者情報共有 Ji start
-            // this.dayAllClearDetail(this.getRadDateTimeListNoShap[index - 2]);
             this.dayAllClearDetail({
               targetDateTime: this.getRadDateTimeListNoShap[index - 2],
-              facilityCd: this.getFacilityCd
+              facilityCd: this.getFacilityCd,
             });
-	    // mod #12462 患者情報共有 Ji end
           }
           break;
         }
@@ -527,10 +524,8 @@ export default {
     // 検査セット行をクリックした際のクリア処理
     async rowClear(celObj) {
       // 編集可能な権限があるかどうかを判断する
-      // add #12462 患者情報共有 Ji start
-      if (this.isOtherFacility(celObj)) return;
-      // add #12462 患者情報共有 Ji end
       if (!checkRadAuthorized()) return;
+      if (this.isOtherFacility(celObj)) return;
 
       const { patId, regOrderClass, radSetCd, radDataDetail } = celObj;
       const targetName = this.showRadName(radSetCd);
@@ -543,7 +538,7 @@ export default {
 
       // 検査セットが登録されている日時を取得
       const editedDateTime = [];
-      const todayMoment = moment();
+      const todayMoment = dayjs();
       Object.keys(radDataDetail).forEach(dateTime => {
         // 過去日の依頼は中止対象にしない
         const date = dateTime.split("_")[0];
@@ -580,8 +575,7 @@ export default {
         if (
           target.status !== CANCEL
           && String(target.orderRadSetCd) === String(radSetCd)
-          && String(target.patId) === String(patId)
-        ) {
+          && String(target.patId) === String(patId)) {
           this.editPatternDetail(target, radPatternListCopy, savePatRadPatternCopy);
         }
       });
@@ -625,15 +619,13 @@ export default {
         // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
         this.messageDialogInfo
         // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm end
-      );
+        );
     },
     // カレンダークリック時の処理
     editSchedule(celObj, setDateTime) {
       // 編集可能な権限があるかどうかを判断する
-      // add #12462 患者情報共有 Ji start
-      if (this.isOtherFacility(celObj)) return;
-      // add #12462 患者情報共有 Ji end
       if (!checkRadAuthorized()) return;
+      if (this.isOtherFacility(celObj)) return;
 
       const setDate = setDateTime.split("_");
       if (!celObj.headerflg) {
@@ -650,7 +642,7 @@ export default {
         // 締切フラグの設定
         let deadlineFlg = "0";
         if (this.getDeadlineCondition.deadlineFlg) {
-          if (moment(getDeadlineDate(this.getDeadlineCondition)).isAfter(moment(setDateTime.split('_')[0]))) {
+          if (dayjs(getDeadlineDate(this.getDeadlineCondition)).isAfter(dayjs(setDateTime.split('_')[0]))) {
             deadlineFlg = "1";
           }
         }
@@ -724,12 +716,12 @@ export default {
           // 予定有無を判別して画像を変える
           if (hasScheduleOnTargetDate(patId, setDate)) {
             Object.assign(imgAttrs, {
-              src: "img/rad-request/32-32_0.png",
+              src: publicAssetPath("img/rad-request/32-32_0.png"),
               class: "symbol-request-cancel td-img",
             });
           } else {
             Object.assign(imgAttrs, {
-              src: "img/rad-request/32-32_4.png",
+              src: publicAssetPath("img/rad-request/32-32_4.png"),
               class: "symbol-request-cancel td-img",
             });
           }
@@ -738,13 +730,13 @@ export default {
           // 予定有無を判別して画像を変える
           if (hasScheduleOnTargetDate(patId, setDate)) {
             Object.assign(imgAttrs, {
-              src: "img/rad-request/32-32_2.png",
+              src: publicAssetPath("img/rad-request/32-32_2.png"),
               class: "symbol-request-saved td-img",
               style: `background-color: ${isLockFlg ? FILLCOLOR_HAS_SCHEDULE : "inherit"};`,
             });
           } else {
             Object.assign(imgAttrs, {
-              src: "img/rad-request/32-32_3.png",
+              src: publicAssetPath("img/rad-request/32-32_3.png"),
               class: "symbol-request-saved td-img",
               style: `background-color: ${isLockFlg ? FILLCOLOR_HAS_NOT_SCHEDULE : "inherit"};`,
             });
@@ -752,14 +744,14 @@ export default {
           break;
         case ADD:
           Object.assign(imgAttrs, {
-            src: "img/rad-request/32-32_2.png",
+            src: publicAssetPath("img/rad-request/32-32_2.png"),
             class: "symbol-request-unsaved td-img",
             style: `background-color: ${isLockFlg ? FILLCOLOR_HAS_SCHEDULE : "inherit"};`,
           });
           break;
         case ADD_WARNING:
           Object.assign(imgAttrs, {
-            src: "img/rad-request/32-32_3.png",
+            src: publicAssetPath("img/rad-request/32-32_3.png"),
             class: "symbol-request-noplan td-img",
             style: `background-color: ${isLockFlg ? FILLCOLOR_HAS_NOT_SCHEDULE : "inherit"};`,
           });
@@ -785,8 +777,7 @@ export default {
           radSetCd === String(item.orderRadSetCd)
           && radPattern === String(item.radPattern)
           && radWeek === String(item.radWeek)
-          && radTime === String(item.strRadTime)
-        )).pop();
+          && radTime === String(item.strRadTime))).pop();
       if (targetRadPattern) {
         // 様々な状況のアイコン変化を補足する
         switch (targetRadPattern.status) {
@@ -794,12 +785,12 @@ export default {
             // 予定有無を判別して画像を変える
             if (hasTreatmentPatternOnWeek(targetRadPattern)) {
               Object.assign(imgAttrs, {
-                src: "img/rad-request/32-32_0.png",
+                src: publicAssetPath("img/rad-request/32-32_0.png"),
                 class: "symbol-request-cancel td-img",
               });
             } else {
               Object.assign(imgAttrs, {
-                src: "img/rad-request/32-32_4.png",
+                src: publicAssetPath("img/rad-request/32-32_4.png"),
                 class: "symbol-request-cancel td-img",
               });
             }
@@ -808,12 +799,12 @@ export default {
             // 予定有無を判別して画像を変える
             if (hasTreatmentPatternOnWeek(targetRadPattern)) {
               Object.assign(imgAttrs, {
-                src: "img/rad-request/32-32_2.png",
+                src: publicAssetPath("img/rad-request/32-32_2.png"),
                 class: "symbol-request-saved td-img",
               });
             } else {
               Object.assign(imgAttrs, {
-                src: "img/rad-request/32-32_3.png",
+                src: publicAssetPath("img/rad-request/32-32_3.png"),
                 class: "symbol-request-saved td-img",
               });
             }
@@ -822,12 +813,12 @@ export default {
             // 予定有無を判別して画像を変える
             if (hasTreatmentPatternOnWeek(targetRadPattern)) {
               Object.assign(imgAttrs, {
-                src: "img/rad-request/32-32_2.png",
+                src: publicAssetPath("img/rad-request/32-32_2.png"),
                 class: "symbol-request-unsaved td-img",
               });
             } else {
               Object.assign(imgAttrs, {
-                src: "img/rad-request/32-32_3.png",
+                src: publicAssetPath("img/rad-request/32-32_3.png"),
                 class: "symbol-request-unsaved td-img",
               });
             }
@@ -842,33 +833,34 @@ export default {
       return radSet ? radSet.radSetName : "";
     },
     // add 10618検査セットマスタ、検査項目マスタ、一般撮影検査依頼マスタ編集時に関連データを補正する zhao end
-    // mod #12462 患者情報共有 Ji start
     fontColor(celObj, setDateTime, isGMT) {
+      if (typeof celObj !== "object" || celObj === null) {
+        isGMT = setDateTime;
+        setDateTime = celObj;
+        celObj = null;
+      }
       const rtn = {};
       if (isGMT) {
         setDateTime = formatToYyyymmdd(setDateTime);
       }
+      if (celObj?.facilityCd && this.isOtherFacility(celObj)) {
+        rtn["background-color"] = "#9c9c9c";
+        return rtn;
+      }
       const dateCurrent = formatToYyyymmdd();
-      if (setDateTime < dateCurrent) {
+      if (setDateTime && setDateTime < dateCurrent) {
         rtn["background-color"] = BACKGROUND_COLUMN_PAST_DAY;
       }
       if (this.getCalendarCheckedDate != null) {
         this.changeScroll();
       }
-      if (celObj.facilityCd && this.isOtherFacility(celObj)) {
-          rtn["background-color"] = "#9c9c9c";
-      return rtn;
-        }
       return rtn;
     },
-    // mod #12462 患者情報共有 Ji end
     // 編集されているセルを示す緑色をセルに付与する
     addEditedColor(celObj, setDateTime) {
-      // add #12462 患者情報共有 Ji start
       if (!celObj.headerflg && this.isOtherFacility(celObj)) {
         return ["other-facility-disabled"];
       }
-      // add #12462 患者情報共有 Ji end
       return this.chkCellEdit(celObj.radDataDetail[setDateTime]);
     },
     // 編集されているセルを示す緑色をセルに付与する（パターン列）
@@ -889,8 +881,7 @@ export default {
         && radSetCd && radSetCd === String(item.orderRadSetCd)
         && radPattern && radPattern === String(item.radPattern)
         && radWeek && radWeek === String(item.radWeek)
-        && radTime && radTime === item.strRadTime
-      )).pop();
+        && radTime && radTime === item.strRadTime)).pop();
       if (targetRadPattern) {
         classNames = this.chkCellEdit(targetRadPattern.status);
       }
@@ -911,7 +902,7 @@ export default {
     },
     checkInputDateCore(conditionName) {
       const condition = this.condition;
-      const inputDate = condition[conditionName] ? moment(condition[conditionName]) : "";
+      const inputDate = condition[conditionName] ? dayjs(condition[conditionName]) : "";
       if (inputDate && (!inputDate.isValid() || inputDate.isAfter(this.getSchExtEndDate))) {
         // 入力された日付が存在しないか、最大値より未来の場合、最大値を表示する
         condition[conditionName] = this.getSchExtEndDate;
@@ -961,8 +952,7 @@ export default {
         // 日付は前回と同じ範囲か
         if (
           startDate !== this.getStartToEndDate.showStartDate
-          || endDate !== this.getStartToEndDate.showEndDate
-        ) {
+          || endDate !== this.getStartToEndDate.showEndDate) {
           this.updateStartToEndDate({
             showStartDate: startDate,
             showEndDate: endDate,
@@ -991,18 +981,18 @@ export default {
       store.dispatch("report/getMstReport", {
         funcCd: "02202",
         printFlag: this.selectedPatId ? 1 : null,
+        selectedPatId: this.patInfoSelectedPatId
       });
       // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 end
-      // add #12462 患者情報共有 Ji start
-      const patientShareMode = (this.getIsOtherFacility === false || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd)) ? 1 : this.getPatientShareMode
-      // add #12462 患者情報共有 Ji end
+
       // 依頼データの取得
       this.searchRadRequest({
         patIdList: this.patIdList,
         startDate: "",
-	// add #12462 患者情報共有 Ji start
-        patientShareMode
-	// add #12462 患者情報共有 Ji end
+        patientShareMode: (
+          this.getIsOtherFacility === false
+          || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd)
+        ) ? 1 : this.getPatientShareMode,
       }).then(() => {
         // 共通ローダー:表示終了
         this.finishLoadingScreen();
@@ -1039,11 +1029,11 @@ export default {
       this.redisplay();
     },
     // dropDownを開いた時にデータに応じて表示枠を広げる
-    addMaxContentStyle() {
+    addMaxContentStyle(event) {
+      this.onIndUserDropdownOpen(event);
       this.$nextTick(() => {
-        const targetStyle = document.getElementsByClassName("k-animation-container")[0].firstElementChild.style;
-        targetStyle.width = "max-content";
-        targetStyle.bottom = "0px";
+        setKendoPopupSurfaceStyles(event, { width: "max-content", bottom: "0px" }, this.$el);
+        this.onIndUserDropdownOpen(event);
       });
     },
     // 検査パターンセルクリック時の処理
@@ -1053,12 +1043,11 @@ export default {
 
       // 患者別画面には患者名行は存在しないはずなので処理不要
       if (celObj.headerflg) return;
-      // add #12462 患者情報共有 Ji start
       const cellFacility = celObj.facilityCd;
       if (cellFacility && cellFacility !== this.getFacilityCd) {
         return;
       }
-      // add #12462 患者情報共有 Ji end
+
       const savePatRadPatternCopy = [...this.getSavePatRadPattern];
       let { radSetCd } = celObj;
       if (radSetCd) radSetCd = String(radSetCd);
@@ -1072,7 +1061,7 @@ export default {
         && radPattern && radPattern === String(item.radPattern)
         && radWeek && radWeek === String(item.radWeek)
         && radTime && radTime === String(item.strRadTime)
-      ));
+        && item.facilityCd === this.getFacilityCd));
       // フィルタリングされた検査パターンの中から中止されているものを取得
       const cancelLength = targetList.filter(item => item.status === CANCEL).length;
       const unified = (cancelLength === 0 || cancelLength === targetList.length);
@@ -1102,10 +1091,7 @@ export default {
           && radPattern && radPattern === String(target.radPattern)
           && radWeek && radWeek === String(target.radWeek)
           && radTime && radTime === String(target.strRadTime)
-	  // add #12462 患者情報共有 Ji start
-          && target.facilityCd === this.getFacilityCd
-	  // add #12462 患者情報共有 Ji end
-        ) {
+          && target.facilityCd === this.getFacilityCd) {
           this.editPatternDetail(target, radPatternListCopy, savePatRadPatternCopy);
         }
       });
@@ -1132,8 +1118,8 @@ export default {
                       item.radPatternCd.toString() === target.radPatternCd.toString()
               })
             // ステータスをSAVEDにして削除フラグを0にする
-            this.$set(target, 'status', SAVED);
-            this.$set(target, 'isDel', 0);
+            target.status = SAVED;
+            target.isDel = 0;
             // 保存用のパターンリストから対象を削除
             if (wasSavedIndex >= 0) savePatRadPatternCopy.splice(wasSavedIndex, 1);
             break;
@@ -1151,7 +1137,7 @@ export default {
             })
           if (wasAdd) {
             // ステータスをADDにする
-            this.$set(target, 'status', ADD);
+            target.status = ADD;
             // 保存用のパターンリストに対象を追加
             savePatRadPatternCopy.push(target);
             break;
@@ -1160,8 +1146,8 @@ export default {
         }
         case SAVED: {
           // ステータスをCANCELににて削除フラグをたてる
-          this.$set(target, 'status', CANCEL);
-          this.$set(target, 'isDel', 1);
+          target.status = CANCEL;
+          target.isDel = 1;
           // 保存用のパターンリストに追加する
           savePatRadPatternCopy.push(target);
           break;
@@ -1200,10 +1186,9 @@ export default {
     },
     changeScroll() {
       this.$nextTick(() => {
-        const elements = Array.from(document.querySelector(".grid-record-list").getElementsByTagName("th"));
+        const elements = Array.from((queryScopedSelector(".grid-record-list", this.$el || null) || { getElementsByTagName: () => [] }).getElementsByTagName("th"));
         const target = elements.find(element => (
-          moment(element.outerText).format("YYYY/MM/DD").indexOf(this.getCalendarCheckedDate) !== -1
-        ));
+          dayjs(element.outerText).format("YYYY/MM/DD").indexOf(this.getCalendarCheckedDate) !== -1));
         if (target) {
           this.radRequesttable.scrollTop = target.offsetTop - 50;
         }
@@ -1215,6 +1200,36 @@ export default {
      */
     getStyle(date) {
       return getHolidayStyle(date);
+    },
+
+    isOtherFacility(listDate) {
+      return !!listDate?.facilityCd && listDate.facilityCd != this.getFacilityCd;
+    },
+    loadOtherFacilityExamSet(facilityCd, patId) {
+      if (!facilityCd || Object.prototype.hasOwnProperty.call(this.otherFacilityCache, facilityCd)) return;
+      this.otherFacilityCache = {
+        ...this.otherFacilityCache,
+        [facilityCd]: null,
+      };
+      const selectedPatId = this.patInfoSelectedPatId ?? patId;
+      sendRequestGetMstRadSetList(facilityCd, selectedPatId).then(response => {
+        const radSetName = response.data.filter(item => item.isDisp === "1");
+        this.otherFacilityCache = {
+          ...this.otherFacilityCache,
+          [facilityCd]: { radSetName },
+        };
+      }).catch(() => {
+        const { [facilityCd]: _removed, ...rest } = this.otherFacilityCache;
+        this.otherFacilityCache = rest;
+      });
+    },
+    buildOtherFacilityText(row) {
+      const facilityCd = row.facilityCd;
+      this.loadOtherFacilityExamSet(facilityCd, row.patId);
+      const cache = this.otherFacilityCache[facilityCd];
+      if (!cache || !cache.radSetName) return "";
+      const rad = cache.radSetName.find(item => item.radSetCd == row.radSetCd);
+      return rad ? rad.radSetName : "";
     },
 
     async refresh() {
@@ -1238,45 +1253,6 @@ export default {
         }
       });
     },
-    // add #12462 患者情報共有 Ji start
-    isOtherFacility(listDate) {
-      return listDate.facilityCd != this.getFacilityCd
-  },
-    loadOtherFacilityExamSet(facilityCd) {
-      if (this.otherFacilityCache[facilityCd]) return;
-      this.$set(this.otherFacilityCache, facilityCd, null);
-      const radSetName = [];
-      if (this.otherFacilityCache[facilityCd]) return;
-      sendRequestGetMstRadSetList(facilityCd).then(response => {
-        response.data.forEach(item => {
-          if (item.isDisp === "1") {
-            radSetName.push(item);
-          }
-        });
-        this.$set(this.otherFacilityCache, facilityCd, {
-          radSetName
-        });
-      }).catch(() => {
-        this.$delete(this.otherFacilityCache, facilityCd);
-      });
-    },
-    /**
-     * 他施設データ用の表示文字列生成
-     * @param row 
-     */
-    buildOtherFacilityText(row) {
-      const facilityCd = row.facilityCd;
-      // 未取得の場合は取得処理を実行
-      this.loadOtherFacilityExamSet(facilityCd);
-      const cache = this.otherFacilityCache[facilityCd];
-      if (!cache || !cache.radSetName) return "";
-      const rad = cache.radSetName.find(
-          item => item.radSetCd == row.radSetCd
-        );
-      const name = rad ? rad.radSetName : "";
-      return name
-    },
-    // add #12462 患者情報共有 Ji end
   },
   watch: {
     async selectedPat() {
@@ -1311,8 +1287,8 @@ export default {
     },
     // 表示範囲日付(ヘッダ側の検査セット処理に連動させる)
     getStartToEndDate() {
-      const startDate = this.getStartToEndDate.showStartDate ? moment(this.getStartToEndDate.showStartDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
-      const endDate = this.getStartToEndDate.showEndDate ? moment(this.getStartToEndDate.showEndDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
+      const startDate = this.getStartToEndDate.showStartDate ? dayjs(this.getStartToEndDate.showStartDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
+      const endDate = this.getStartToEndDate.showEndDate ? dayjs(this.getStartToEndDate.showEndDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
       if (this.condition.startDate !== startDate) {
         this.condition.startDate = startDate;
       }
@@ -1339,20 +1315,18 @@ export default {
       this.isRouteGamenFlg = true;
       this.redisplay();
     },
+    getPatientShareMode() {
+      this.showCalendar();
+    },
     // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
     "messageDialogInfo.isDialogVisible"(isShow) {
       this.isUpdating = isShow ? false : this.isUpdating;
     },
     // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm end
-    // add #12462 患者情報共有 Ji start
-    getPatientShareMode() {
-      this.showCalendar();
-    },
-    // add #12462 患者情報共有 Ji end
   },
   created() {
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = getScopedUserAgent(this.$el);
     if (ua.match(/Android/)) {
       this.isAndroid = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -1363,7 +1337,7 @@ export default {
     this.fetchHolidays(this.getFacilityCd);
     
     // add 10618検査セットマスタ、検査項目マスタ、一般撮影検査依頼マスタ編集時に関連データを補正する zhao start
-    sendRequestGetMstRadSetList(this.getFacilityCd).then(response => {
+    sendRequestGetMstRadSetList(this.getFacilityCd, this.patInfoSelectedPatId).then(response => {
       response.data.forEach(item => {
         if (item.isDisp === "1") {
           this.getRadSetName.push(item);
@@ -1385,7 +1359,7 @@ export default {
         setShowDateToCondition(this.condition, this.getStartToEndDate);
       } else {
         // 本日の日付をセット
-        const setDate = moment();
+        const setDate = dayjs();
         this.condition.startDate = setDate.format("YYYY-MM-DD");
         this.condition.endDate = setDate.add(3, "months").format("YYYY-MM-DD");
       }
@@ -1421,8 +1395,7 @@ export default {
     // 指示者ドロップダウンの設定
     this.getIndUserList(
       AUTHORITY_CODES.IND_EXAM_EDIT,
-      AUTHORITY_CODES.IND_EXAM_PEDIT
-    ).then(response => {
+      AUTHORITY_CODES.IND_EXAM_PEDIT).then(response => {
       this.doctorList = response.doctorList;
       this.$nextTick(() => {
         this.selectDoctor = response.iniSelectId;
@@ -1430,13 +1403,16 @@ export default {
     });
 
     // 締切設定を取得
-    this.setRadDeadline(this.getFacilityCd);
+    this.setRadDeadline({
+      facilityCd: this.getFacilityCd,
+      selectedPatId: this.patInfoSelectedPatId
+    });
 
     this.updatePatMainList();
   },
   mounted() {
     this.$nextTick(() => {
-      setTimeout(() => {
+      (getScopedWindow(this.$el) || window).setTimeout(() => {
         this.calculateGridHeight();
       });
     });
@@ -1444,7 +1420,7 @@ export default {
 
     EventBus.$on("refresh", this.refresh);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.clearHolidays(); // storeの休日マスタをクリア
     EventBus.$off("refresh", this.refresh);
 
@@ -1453,15 +1429,6 @@ export default {
   },
 };
 </script>
-
-<style>
-@media print {
-  /** 一般撮影検査依頼 tableレイアウト崩れ回避 */
-  body:has(.radrequest-detail-content-area) #main-id {
-    display: inline-block;
-  }
-}
-</style>
 
 <style scoped>
 tr {
@@ -1591,7 +1558,7 @@ td {
   width: 11.5rem;
   padding: 0 5px;
 }
-.rad-control-cell >>> .td-img {
+.rad-control-cell :deep(.td-img) {
   width: 1em;
   margin-top: 2px;
   /* 背景塗りつぶし用 */
@@ -1635,24 +1602,20 @@ td {
   pointer-events: none;
 }
 @media print {
-  /** ヘッダ固定 */
   .ntss-list-header-th-sticky {
     position: sticky !important;
   }
-  /** スクロールコンテナ */
   .scroll-table {
     overflow: hidden !important;
     height: auto !important;
   }
   table.grid-record-list {
     display: table;
-  } 
-  /** 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
+  }
   table.scroll-rightmost {
     position: relative;
     float: right;
   }
-  /** 下部ボタン非表示 */
   #bottom-buttons {
     display: none;
   }

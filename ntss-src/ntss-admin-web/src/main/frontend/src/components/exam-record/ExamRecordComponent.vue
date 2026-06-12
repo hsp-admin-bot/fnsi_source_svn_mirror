@@ -9,109 +9,11 @@
       <!-- チェックリスト一覧のグリッド -->
       <div id='examrecordlistgrid'>
         <!-- mod FNSI-数値ソート、文字ソート、空後方で結合してソートする 江 start -->
-        <!-- <kendo-grid class = 'exam-record-list'
-          ref='examrecordlistgrid'
-          :data-source='examDataSource'
-          :editable='false'
-          :reorderable='false'
-          :resizable='true'
-          :sortable-allow-unsort='true'
-          :sortable-show-indexes='true'
-          :selectable='"cell"'
-          :height='kendoGridHeight'
-          :scrollable="true"
-          :change="onClick"
-          :data-bound="setFontColor"
-        >
-        <kendo-grid-column v-for='category in examRecordGridColumns' :key="category.length"
-          :headerTemplate='category.headerTemplate'
-          :title='category.title'
-          :width='category.width'
-          :field='category.field'
-          :columns='category.columns'
-          :hidden='category.hidden'
-          :locked='category.locked'
-          :lockable='category.lockable'
-          :values="category.values"
-          ></kendo-grid-column>
-        </kendo-grid> -->
         <!-- mod FNSI-列幅変更、列幅移動可能にする 江 start -->
-        <!-- <kendo-grid class = 'exam-record-list'
+        <div
+          class='exam-record-list ntss-kendo-grid-legacy'
           ref='examrecordlistgrid'
-          :data-source='examDataSource'
-          :editable='false'
-          :reorderable='false'
-          :resizable='true'
-          :sortable-allow-unsort='true'
-          :sortable-show-indexes='true'
-          :selectable='"cell"'
-          :height='kendoGridHeight'
-          :scrollable="true"
-          :change="onClick"
-          :data-bound="setFontColor"
-          :sort="orderBypatName"
-        > -->
-        <kendo-grid class = 'exam-record-list'
-          ref='examrecordlistgrid'
-          :data-source='examDataSource'
-          :editable='false'
-          :reorderable='true'
-          :resizable='true'
-          :sortable-allow-unsort='true'
-          :sortable-show-indexes='true'
-          :selectable='"cell"'
-          :height='kendoGridHeight'
-          :scrollable="true"
-          :change="onClick"
-          :data-bound="setFontColor"
-          :sortable="{ compare: compareByField }"
-          :sort="sortHandler"
-        >
-        <!-- mod FNSI-列幅変更、列幅移動可能にする 江 end -->
-        <!-- mod FNSI-NO423入院患者名の配布 関 start -->
-        <!-- <kendo-grid-column v-for='category in examRecordGridColumns' :key="category.length"
-          :headerTemplate='category.headerTemplate'
-          :title='category.title'
-          :width='category.width'
-          :field='category.field'
-          :columns='category.columns'
-          :hidden='category.hidden'
-          :locked='category.locked'
-          :lockable='category.lockable'
-          :values="category.values"
-          :template='`<i style="color: red">#: category.field #</i>`'
-          ></kendo-grid-column> -->
-          <template v-for='category in examRecordGridColumns'>
-            <kendo-grid-column v-if="category.field == 'pat_name'"
-              :key="category.length"
-              :headerTemplate='category.headerTemplate'
-              :title='category.title'
-              :width='category.width'
-              :field='category.field'
-              :columns='category.columns'
-              :hidden='category.hidden'
-              :locked='category.locked'
-              :lockable='category.lockable'
-              :values="category.values"
-              :template='`<i class="#: i_class #">#: pat_name # <img :src="image_src_same"  style="#: img_display #" class="pat-name-same-icon"></i>`'
-            ></kendo-grid-column>
-            <kendo-grid-column v-else
-              :key="category.length"
-              :headerTemplate='category.headerTemplate'
-              :title='category.title'
-              :width='category.width'
-              :field='category.field'
-              :columns='category.columns'
-              :hidden='category.hidden'
-              :locked='category.locked'
-              :lockable='category.lockable'
-              :values="category.values"
-              :attributes="category.field === 'hosp_pat_id' ? { class: 'hosp-pat-id-body' } : {}"
-            ></kendo-grid-column>
-          </template>
-          <!-- mod FNSI-NO423入院患者名の配布 関 start -->
-
-        </kendo-grid>
+        ></div>
         <!-- mod FNSI-数値ソート、文字ソート、空後方で結合してソートする 江 end -->
       </div>
       <div id="grid-footer" style="float:right;">
@@ -144,7 +46,7 @@
       <input id="upload_text" type="file" @change="fileChange" style="visibility:hidden" accept=".txt,.dat" />
     </div>
     <message-dialog
-      :visible.sync="isDialogVisible"
+      v-model:visible="isDialogVisible"
       :message-cd="messageCd"
       :type="dialogType"
     />
@@ -155,17 +57,19 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import Kendo from "@progress/kendo-ui";
 // add #10619 患者選択状態で検査結果に遷移した際にパンくずリストの配列が不正となる。linjunfeng start
-// import { mapGetters, mapActions } from "vuex";
-import { mapGetters, mapActions, mapMutations } from "vuex";
+// import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 // add #10619 患者選択状態で検査結果に遷移した際にパンくずリストの配列が不正となる。linjunfeng end
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
+import PrintMixin from "@/components/PrintMixin";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 //import moment from "moment";
-import $$ from "jquery";
+import kendo from "@progress/kendo-ui";
+import $$ from "@/compat/jquery";
+
 // del #10359 編集権限の動作不正 dengshen start
 // //mod 編集権限の適用 劉全航 start
 // import { AUTHORITY_CODES } from "@/constants/userAuthority.js";
@@ -173,7 +77,7 @@ import $$ from "jquery";
 // del #10359 編集権限の動作不正 dengshen end
 // add 画面印刷プレビューと印刷の実現 陳 start
 import { getCurrentFunctionCd } from "@/router/routing-helper";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // add 画面印刷プレビューと印刷の実現 陳 end
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -185,7 +89,79 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 import { sortableCompare } from "@/functions/SortFunctions";
-import PrintMixin from "@/components/PrintMixin";
+import nameDuplicationImg from "../../assets/name_duplication.png";
+import { getLatestHeaderElement, getHeaderHeight, getFooterMenuClientHeight, getGridFooterClientHeight, getScopedElementById, getScopedWindow, resolveRefElement } from "@/functions/common/LayoutMeasureHelper";
+import { findKendoGridHeaderWrap, findKendoGridLockedHeader } from "@/compat/kendo/dom.js";
+import {
+  EXAM_RECORD_LOCKED_HEADER_FIELDS,
+  isExamRecordLockedHeaderCell,
+  syncMultiPatGridLockedHeaderLayout,
+} from "@/components/multi-pat-list/kendoGridLockedHeaderLayout.js";
+import { syncKendoGridLockedRowHeights } from "@/utils/kendoGridLockedSync.js";
+
+function createDataSource(options) {
+  return new kendo.data.DataSource(options || {});
+}
+
+function resolveGridRoot(gridOrRoot) {
+  if (!gridOrRoot) {
+    return null;
+  }
+  if (gridOrRoot.wrapper?.[0]) {
+    return gridOrRoot.wrapper[0];
+  }
+  if (gridOrRoot.element?.[0]) {
+    return gridOrRoot.element[0];
+  }
+  return gridOrRoot instanceof Element ? gridOrRoot : null;
+}
+
+function findKendoGridContent(gridOrRoot) {
+  return resolveGridRoot(gridOrRoot)?.querySelector?.(".k-grid-content") || null;
+}
+
+function findKendoGridLockedContent(gridOrRoot) {
+  return resolveGridRoot(gridOrRoot)?.querySelector?.(".k-grid-content-locked") || null;
+}
+
+function findKendoGridHeader(gridOrRoot) {
+  return resolveGridRoot(gridOrRoot)?.querySelector?.(".k-grid-header") || null;
+}
+
+function findKendoGridBodyRows(gridOrRoot) {
+  return Array.from(resolveGridRoot(gridOrRoot)?.querySelectorAll?.(".k-grid-content tbody tr") || []);
+}
+
+function findKendoGridLockedRows(gridOrRoot) {
+  return Array.from(resolveGridRoot(gridOrRoot)?.querySelectorAll?.(".k-grid-content-locked tbody tr") || []);
+}
+
+function getKendoGridDataItem(grid, row) {
+  if (!grid || !row) {
+    return null;
+  }
+  return typeof grid.dataItem === "function" ? grid.dataItem($$(row)) : null;
+}
+
+function syncKendoGridLockedContentScroll(gridOrRoot) {
+  const content = findKendoGridContent(gridOrRoot);
+  const lockedContent = findKendoGridLockedContent(gridOrRoot);
+  if (!content || !lockedContent) {
+    return;
+  }
+  lockedContent.scrollTop = content.scrollTop;
+  try {
+    content.dispatchEvent(new Event("scroll", { bubbles: true }));
+  } catch (_error) {
+    $$(content).trigger("scroll");
+  }
+}
+
+function attachTooltip(element, options) {
+  const $element = $$(element);
+  $element.kendoTooltip(options || {});
+  return $element.data("kendoTooltip");
+}
 
 export default {
   props: {
@@ -215,7 +191,7 @@ export default {
       androidFlg: false,
       iosFlg: false
       //同姓同名アイコン
-      ,image_src_same: require('../../assets/name_duplication.png')
+      ,image_src_same: nameDuplicationImg
       // add FNSI-数値ソート、文字ソート、空後方で結合してソートする 江 start
       ,examDataSource: null
       ,examRecordGridColumns: null
@@ -235,10 +211,14 @@ export default {
       // 一括取込で取込み可能な最大ファイルサイズ(5MB = 1024x1024x5)
       ,maxFileSize: 5242880
       ,selfScreenName: ""
-      ,currentSort: null,
-      scrollQuerySelector: ".k-grid-content", // スクロールコンテナ
-      addClassTargetQuerySelector: [".k-grid-header-wrap table, .k-grid-content table"], // scroll-rightmostクラスを付与する対象のクエリセレクタ,
-      isLoadingTriggered: false
+      ,currentSort: null
+      ,examTooltipWidget: null
+      ,directGridWidget: null
+      ,directGridColumnSignature: ""
+      ,directGridLayoutRafId: null
+      // 検査項目が locked 側に入った後の表头修復が必要なとき true（右側のみの並べ替えでは修復しない）
+      ,examRecordHeaderLayoutDirty: false
+      ,isLoadingTriggered: false
     };
   },
   computed: {
@@ -257,19 +237,20 @@ export default {
       getDefaultSetting: "getDefaultSetting",
       //add FNSI-検査結果一覧画面に最新の検査結果が表示されない 江 end
       getTheme: "getTheme",
-      //20260316 liyanze-z add 自施設(1) or 他施設(0)
-      getPatientShareMode:"getPatientShareMode"
+      getPatientShareMode: "getPatientShareMode",
     }),
-    //liyanze-z 20260324 add start
-    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd"]),
-    //liyanze-z 20260324 add end
     heightStyles() {
       // main部の高さをCSS変数を利用して書き換え
       return { "--height": `${this.kendoGridToolbarHeight}px` };
     },
     ...mapGetters("user", ["getFacilityCd"]),
     // mod 機能帳票パラメータ確認 陳 start
-    ...mapGetters("pat-info", ["searchedPatList", "selectedPatId"]),
+    ...mapGetters("pat-info", [
+      "searchedPatList",
+      "selectedPatId",
+      "getIsOtherFacility",
+      "getOtherFacilityCd",
+    ]),
     // mod 機能帳票パラメータ確認 陳 end
     ...mapGetters("exam-record/list", [
       "getComponentInitialized",
@@ -286,7 +267,7 @@ export default {
     // del FNSI-数値ソート、文字ソート、空後方で結合してソートする 江 start
     // examDataSource() {
     //   // storeからデータを取得
-    //   return new Kendo.data.DataSource({
+    //   return createDataSource({
     //     data: this.getExamDataSource
     //   });
     // },
@@ -316,6 +297,294 @@ export default {
     },
   },
   methods: {
+    getExamRecordListGridRef() {
+      return this.$refs.examrecordlistgrid || null;
+    },
+    getExamRecordListGridWidget() {
+      return this.getExamRecordListGridRef()?.gridWidget?.() || this.getExamRecordListGridRef()?.kendoWidget?.() || this.directGridWidget || null;
+    },
+    getExamRecordGridRootEl() {
+      return resolveRefElement(this, "examrecordlistgrid") || null;
+    },
+    buildDirectExamRecordColumns(columns = this.examRecordGridColumns || []) {
+      return (columns || []).map(category => {
+        const column = {
+          ...category,
+          columns: Array.isArray(category.columns) ? this.buildDirectExamRecordColumns(category.columns) : category.columns,
+        };
+        if (category.field === "pat_name") {
+          column.template = '<i class="#: i_class #">#: pat_name # <img src="' + this.image_src_same + '" style="#: img_display #" class="pat-name-same-icon"></i>';
+        } else if (category.field === "hosp_pat_id") {
+          column.attributes = { ...(category.attributes || {}), class: [category.attributes?.class, "hosp-pat-id-body"].filter(Boolean).join(" ") };
+        }
+        return column;
+      });
+    },
+    getDirectExamRecordColumnSignature(columns = this.examRecordGridColumns || []) {
+      return (columns || []).map(category => [
+        category.field || "",
+        category.title || "",
+        category.width || "",
+        category.hidden ? 1 : 0,
+        category.locked ? 1 : 0,
+        category.lockable ? 1 : 0,
+        Array.isArray(category.columns) ? this.getDirectExamRecordColumnSignature(category.columns) : ""
+      ].join(":")) .join("|");
+    },
+    installDirectExamRecordGridFacade() {
+      const root = this.getExamRecordGridRootEl();
+      const grid = this.directGridWidget;
+      if (!root || !grid) {
+        return;
+      }
+      root.kendoWidget = () => grid;
+      root.gridWidget = () => grid;
+      root.gridRootEl = () => root;
+      root.gridContentEl = () => findKendoGridContent(grid);
+      root.gridLockedContentEl = () => findKendoGridLockedContent(grid);
+      root.gridHeaderEl = () => findKendoGridHeader(grid);
+      root.gridColumns = () => grid.columns || [];
+      this.bindDirectExamRecordColumnReorderHandler(grid);
+      this.disableExamRecordColumnReorderAutoScroll(grid);
+    },
+    bindDirectExamRecordColumnReorderHandler(grid) {
+      if (!grid || grid.__examRecordColumnReorderBound) {
+        return;
+      }
+      grid.bind("columnReorder", (event) => this.columnReorderHandler(event));
+      grid.__examRecordColumnReorderBound = true;
+    },
+    /**
+     * 列ドラッグ並べ替え時の自動スクロールを無効化する。
+     * Kendo は列並べ替え用 Draggable に autoScroll:true を設定するが、
+     * locked 列ありの場合 .k-grid-header-wrap が k-auto-scrollable 扱いとなり、
+     * ヘッダ高さ(<50px)が自動スクロール判定域(AUTO_SCROLL_AREA)より小さいため、
+     * ドラッグ中ずっと縦スクロール速度が加わり scrollable 側ヘッダだけが上下にずれる。
+     * ヘッダは再描画のたびに _draggable で Draggable を作り直すため、メソッドを差し替えて維持する。
+     */
+    disableExamRecordColumnReorderAutoScroll(grid = this.directGridWidget) {
+      if (!grid) {
+        return;
+      }
+      const disable = () => {
+        if (grid._draggableInstance?.options) {
+          grid._draggableInstance.options.autoScroll = false;
+        }
+      };
+      disable();
+      if (grid.__examRecordAutoScrollPatched || typeof grid._draggable !== "function") {
+        return;
+      }
+      const originalDraggable = grid._draggable;
+      grid._draggable = function patchedExamRecordDraggable() {
+        const result = originalDraggable.apply(this, arguments);
+        if (this._draggableInstance?.options) {
+          this._draggableInstance.options.autoScroll = false;
+        }
+        return result;
+      };
+      grid.__examRecordAutoScrollPatched = true;
+    },
+    hasGroupedExamColumnInLocked(grid = this.directGridWidget) {
+      return (grid?.columns || []).some(column => (
+        column?.locked === true
+        && column?.hidden !== true
+        && Array.isArray(column.columns)
+        && column.columns.length > 0
+        && String(column.field || "").startsWith("item_")
+      ));
+    },
+    hasPatientColumnUnlocked(grid = this.directGridWidget) {
+      return (grid?.columns || []).some(column => (
+        column?.hidden !== true
+        && column?.locked !== true
+        && EXAM_RECORD_LOCKED_HEADER_FIELDS.includes(column.field)
+      ));
+    },
+    shouldRepairExamRecordHeaderAfterReorder() {
+      const grid = this.directGridWidget;
+      if (!grid) {
+        return false;
+      }
+      if (this.hasGroupedExamColumnInLocked(grid)) {
+        this.examRecordHeaderLayoutDirty = true;
+        return true;
+      }
+      if (this.hasPatientColumnUnlocked(grid)) {
+        return true;
+      }
+      return this.examRecordHeaderLayoutDirty;
+    },
+    /**
+     * 検査項目列を locked 側へドラッグした後、表头 inline 高さの累積と
+     * locked/scrollable ヘッダのずれを修復する。
+     */
+    columnReorderHandler() {
+      if (!this.shouldRepairExamRecordHeaderAfterReorder()) {
+        return;
+      }
+      this.scheduleExamRecordPostColumnReorderLayout();
+    },
+    scheduleExamRecordPostColumnReorderLayout() {
+      this.$nextTick(() => {
+        requestAnimationFrame(() => {
+          this.repairExamRecordLockedHeaderLayout();
+        });
+      });
+    },
+    repairExamRecordLockedHeaderLayout() {
+      const root = this.getExamRecordGridRootEl();
+      const grid = this.directGridWidget;
+      if (!root || !grid) {
+        return;
+      }
+      const headerWrap = findKendoGridHeaderWrap(root);
+      const lockedHeader = findKendoGridLockedHeader(root);
+      if (headerWrap && lockedHeader) {
+        syncMultiPatGridLockedHeaderLayout(headerWrap, lockedHeader, {
+          lockedHeaderCellFilter: isExamRecordLockedHeaderCell,
+        });
+        syncKendoGridLockedRowHeights(root, { skipHeader: true });
+      }
+      // 列並べ替え後は locked 内容域の高さだけ更新（grid.resize 二重実行は省略して表头の抖動を抑える）
+      this.applyDirectExamRecordLockedHeightContract();
+      if (!this.hasGroupedExamColumnInLocked(grid) && !this.hasPatientColumnUnlocked(grid)) {
+        this.examRecordHeaderLayoutDirty = false;
+      }
+    },
+    initDirectExamRecordGridIfReady() {
+      const root = this.getExamRecordGridRootEl();
+      if (!root || !this.examDataSource || !Array.isArray(this.examRecordGridColumns) || this.examRecordGridColumns.length === 0) {
+        return;
+      }
+      const existingGrid = $$(root).data("kendoGrid");
+      if (existingGrid) {
+        this.directGridWidget = existingGrid;
+        this.applyDirectExamRecordColumnsContract();
+        this.applyDirectExamRecordDataSourceContract();
+        this.installDirectExamRecordGridFacade();
+        this.scheduleDirectExamRecordLayoutContract();
+        return;
+      }
+      $$(root).kendoGrid({
+        dataSource: this.examDataSource,
+        columns: this.buildDirectExamRecordColumns(),
+        editable: false,
+        reorderable: true,
+        resizable: true,
+        sortable: { allowUnsort: true, showIndexes: true, compare: this.compareByField },
+        selectable: "cell",
+        height: this.kendoGridHeight,
+        scrollable: true,
+        change: event => this.onClick(event),
+        dataBound: event => {
+          this.applyDirectExamRecordStyleContract();
+          this.setFontColor(event);
+        },
+        sort: event => this.sortHandler(event)
+      });
+      this.directGridWidget = $$(root).data("kendoGrid") || null;
+      this.directGridColumnSignature = this.getDirectExamRecordColumnSignature();
+      this.installDirectExamRecordGridFacade();
+      this.scheduleDirectExamRecordLayoutContract();
+    },
+    destroyDirectExamRecordGrid() {
+      this.examTooltipWidget?.destroy?.();
+      this.examTooltipWidget = null;
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+        this.directGridLayoutRafId = null;
+      }
+      try {
+        this.directGridWidget?.destroy?.();
+      } catch (_error) {
+        // noop
+      }
+      const root = this.getExamRecordGridRootEl();
+      if (root) {
+        $$(root).empty();
+        delete root.kendoWidget;
+        delete root.gridWidget;
+      }
+      this.directGridWidget = null;
+      this.directGridColumnSignature = "";
+      this.examRecordHeaderLayoutDirty = false;
+    },
+    refreshDirectExamGrid() {
+      this.initDirectExamRecordGridIfReady();
+    },
+    applyDirectExamRecordColumnsContract() {
+      const grid = this.directGridWidget;
+      if (!grid) {
+        return;
+      }
+      const nextSignature = this.getDirectExamRecordColumnSignature();
+      if (this.directGridColumnSignature !== nextSignature) {
+        grid.setOptions({ columns: this.buildDirectExamRecordColumns() });
+        this.directGridColumnSignature = nextSignature;
+      }
+    },
+    applyDirectExamRecordDataSourceContract() {
+      const grid = this.directGridWidget;
+      if (!grid || !this.examDataSource) {
+        return;
+      }
+      if (grid.dataSource !== this.examDataSource) {
+        grid.setDataSource(this.examDataSource);
+      } else {
+        grid.refresh?.();
+      }
+    },
+    applyDirectExamRecordStyleContract() {
+      const root = this.getExamRecordGridRootEl();
+      if (!root) {
+        return;
+      }
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-display-block", "exam-record-list");
+      root.querySelectorAll(".k-grid-header th, .k-grid-header .k-table-th").forEach(th => th.classList.add("k-header"));
+      [".k-grid-content tbody", ".k-grid-content-locked tbody"].forEach(selector => {
+        root.querySelectorAll(selector).forEach(tbody => {
+          Array.from(tbody.children || []).forEach((tr, index) => {
+            tr.classList.add("k-master-row");
+            tr.classList.toggle("k-alt", index % 2 === 1);
+          });
+        });
+      });
+      root.querySelectorAll(".k-grid-content tbody td, .k-grid-content-locked tbody td").forEach(td => td.classList.add("k-td", "k-table-td"));
+      this.applyDirectExamRecordLockedHeightContract();
+    },
+    applyDirectExamRecordLockedHeightContract() {
+      const root = this.getExamRecordGridRootEl();
+      const lockedPane = findKendoGridLockedContent(root);
+      const header = findKendoGridHeader(root);
+      const content = findKendoGridContent(root);
+      if (!lockedPane || !header || !content) {
+        return;
+      }
+      let height = this.kendoGridHeight - (header.offsetHeight + 2);
+      if (!this.androidFlg && !this.iosFlg && content.scrollWidth > content.clientWidth) {
+        height -= 17;
+      }
+      if (height > 0) {
+        lockedPane.style.height = `${height}px`;
+      }
+      syncKendoGridLockedContentScroll(root);
+    },
+    scheduleDirectExamRecordLayoutContract() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+      }
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.directGridWidget?.setOptions?.({ height: this.kendoGridHeight });
+        this.directGridWidget?.resize?.(true);
+        this.applyDirectExamRecordStyleContract();
+        this.directGridLayoutRafId = requestAnimationFrame(() => {
+          this.directGridLayoutRafId = null;
+          this.directGridWidget?.resize?.(true);
+          this.applyDirectExamRecordStyleContract();
+        });
+      });
+    },
     ...mapActions("exam-record/list", [
       "setListComponentInitialized",
       "resetExamRecordGridColumn",
@@ -384,27 +653,25 @@ export default {
         }
         return obj
       } else {
-        return obj = obj === val ? replace :obj;
+        return obj === val ? replace : obj;
       }
     },
 	  // add #7035-検査結果の値がない項目も画面に表示される（exam_rst連携で受信した検査結果（空値）の項目） 徐博 end
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       const wh = this.windowHeight;
-      const hh = Array.prototype.slice
-        .call(document.getElementsByClassName("header"))
-        .shift().clientHeight;
+      const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
       const fmh =
         (this.isDispMenu === 1
-          ? document.getElementById("footer-menu").clientHeight
+          ? getFooterMenuClientHeight(this.$el || null)
           : 0) + 5;
       this.kendoGridToolbarHeight = wh - hh - fmh - 3;
       this.kendoGridToolbarHeight =
         this.kendoGridToolbarHeight < 340 ? 340 : this.kendoGridToolbarHeight;
 
-      const gfh = document.getElementById("grid-footer");
-      let gfhPx = gfh ? gfh.clientHeight : 40;
+      let gfhPx = getGridFooterClientHeight(this.$el || null) || 40;
       this.kendoGridHeight = this.kendoGridToolbarHeight - gfhPx;
+      this.scheduleDirectExamRecordLayoutContract?.();
     },
     // add ##11152 検査結果(個別)で機能帳票のパラメータに「検査セット」を追加 limingzhe start
     getselectedExamSetName(examSetCd){
@@ -469,16 +736,16 @@ export default {
           //mod #9558 patIds が選択中患者しか渡されない 杜 end
           patIds: patFalg,
           facilityCd: this.getFacilityCd,
-          // date: moment(condition.examDateSt).format("YYYY/MM/DD"),
-          // fromDate: moment(condition.examDateSt).format("YYYY/MM/DD"),
-          // toDate: moment(condition.examDateEd).format("YYYY/MM/DD"),
-          date: condition.examDateSt != null ? moment(condition.examDateSt).format("YYYYMMDD") : (condition.examDateEd != null ? moment(condition.examDateEd).format("YYYYMMDD") : moment(new Date()).format("YYYYMMDD")),
-          fromDate: condition.examDateSt != null ? moment(condition.examDateSt).format("YYYYMMDD") : (condition.examDateEd != null ? moment(condition.examDateEd).format("YYYYMMDD") : moment(new Date()).format("YYYYMMDD")),
-          toDate: condition.examDateEd != null ? moment(condition.examDateEd).format("YYYYMMDD") : (condition.examDateSt != null ? moment(condition.examDateSt).format("YYYYMMDD") : moment(new Date()).format("YYYYMMDD")),
+          // date: dayjs(condition.examDateSt).format("YYYY/MM/DD"),
+          // fromDate: dayjs(condition.examDateSt).format("YYYY/MM/DD"),
+          // toDate: dayjs(condition.examDateEd).format("YYYY/MM/DD"),
+          date: condition.examDateSt != null ? dayjs(condition.examDateSt).format("YYYYMMDD") : (condition.examDateEd != null ? dayjs(condition.examDateEd).format("YYYYMMDD") : dayjs(new Date()).format("YYYYMMDD")),
+          fromDate: condition.examDateSt != null ? dayjs(condition.examDateSt).format("YYYYMMDD") : (condition.examDateEd != null ? dayjs(condition.examDateEd).format("YYYYMMDD") : dayjs(new Date()).format("YYYYMMDD")),
+          toDate: condition.examDateEd != null ? dayjs(condition.examDateEd).format("YYYYMMDD") : (condition.examDateSt != null ? dayjs(condition.examDateSt).format("YYYYMMDD") : dayjs(new Date()).format("YYYYMMDD")),
           // mod #11679 複数患者帳票で「透析条件.補液量」が出ない 20250527 limingzhe start
-          //dialysisDate: moment(new Date()).format("YYYYMMDD"),
+          //dialysisDate: dayjs(new Date()).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: condition.examDateSt != null ? moment(condition.examDateSt).format("YYYYMMDD") : (condition.examDateEd != null ? moment(condition.examDateEd).format("YYYYMMDD") : moment(new Date()).format("YYYYMMDD")),
+          //dialysisDate: condition.examDateSt != null ? dayjs(condition.examDateSt).format("YYYYMMDD") : (condition.examDateEd != null ? dayjs(condition.examDateEd).format("YYYYMMDD") : dayjs(new Date()).format("YYYYMMDD")),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           // mod #11679 複数患者帳票で「透析条件.補液量」が出ない 20250527 limingzhe end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
@@ -504,9 +771,8 @@ export default {
      // add 画面印刷プレビューと印刷の実現 陳 end
     setHeaderStyle() {
       // ヘッダーにスタイル適用
-      this.$refs.examrecordlistgrid.$el.firstElementChild?.classList?.add(
-        "master-grid-header"
-      );
+      resolveRefElement(this, "examrecordlistgrid")?.firstElementChild?.classList?.add(
+        "master-grid-header");
     },
     // 抽出条件変更イベント
     setFilterCondition(chgflg) {
@@ -523,23 +789,22 @@ export default {
       this.dataLoad();
     },
     async dataLoad() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       // 共通ローダー:表示開始
       this.setLoadingScreenVisible(true);
-
-      //20260316 liyanze-z change  add requestkey start
-      //await this.setExamSelectData({facilityCd:this.getFacilityCd, patIdList:deepCopy(this.searchedPatList)});
-      await this.setExamSelectData(
-        {
-          facilityCd:this.getFacilityCd, 
-          patIdList:deepCopy(this.searchedPatList),
-          patientShareMode: (this.getIsOtherFacility === false || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd)) ? 1 : this.getPatientShareMode
-        }
-      );
-      //20260316 liyanze-z change  add requestkey end
-
+      await this.setExamSelectData({
+        facilityCd: this.getFacilityCd,
+        patIdList: deepCopy(this.searchedPatList),
+        patientShareMode:
+          this.getIsOtherFacility === false ||
+          (this.getOtherFacilityCd !== null &&
+            this.getOtherFacilityCd !== this.getFacilityCd)
+            ? 1
+            : this.getPatientShareMode,
+        selectedPatId: this.selectedPatId,
+      });
       // 共通ローダー:表示終了
       this.setLoadingScreenVisible(false);
 
@@ -547,8 +812,8 @@ export default {
       this.filteredExamRecord();
       // add FNSI-数値ソート、文字ソート、空後方で結合してソートする 江 start
       //del 10389 患者リストのソートが遅い gjn start
-      // let ExamDataSourceForNoKana = this.getExamDataSource.filter(e => e.pat_last_name_kana === null && e.pat_first_name_kana === null );
-      // let ExamDataSourceForKana = this.getExamDataSource.filter(e => e.pat_last_name_kana != null || e.pat_first_name_kana != null );
+      // let ExamDataSourceForNoKana = this.getExamDataSource.filter(e => e.pat_last_name_kana === null && e.pat_first_name_kana === null);
+      // let ExamDataSourceForKana = this.getExamDataSource.filter(e => e.pat_last_name_kana != null || e.pat_first_name_kana != null);
       //
       // let ExamDataSourceForSortKana = orderBy(ExamDataSourceForKana, [{ field: "viewTreatDate", dir: "desc" }]);
       // this.initExamDataSource = orderBy(ExamDataSourceForSortKana,[{ field: "pat_full_name", dir: "asc" }]);
@@ -559,7 +824,7 @@ export default {
       // orderBy(ExamDataSourceForSortNoKana,[{ field: "pat_name", dir: "asc" }]).forEach(element => {
       //     this.initExamDataSource.push(element);
       // });
-      this.examDataSource = new Kendo.data.DataSource({
+      this.examDataSource = createDataSource({
         data:this.getExamDataSource,
         sort: this.currentSort ? this.currentSort : null // ソート条件保持
       });
@@ -567,8 +832,9 @@ export default {
       this.examRecordGridColumns = this.getExamRecordColumn;
       // add FNSI-数値ソート、文字ソート、空後方で結合してソートする 江 end
       //mod検査結果一覧ページで単位を追加する 劉全航 start
-      this.addUnit();
+      await this.addUnit();
       //mod検査結果一覧ページで単位を追加する 劉全航 end
+      this.$nextTick(() => this.refreshDirectExamGrid());
     },
     /**
      * 検査結果の正常範囲外の色指定
@@ -578,7 +844,9 @@ export default {
     setFontColor(e){
       //文字色制御
       
-      if (!e.sender.lockedContent || !e.sender.content) return;
+      const lockedRows = findKendoGridLockedRows(e.sender);
+      const scrollableRows = findKendoGridBodyRows(e.sender);
+      if (lockedRows.length === 0 && scrollableRows.length === 0) return;
       
       // 表示中の列の順に field を取得
       const lockedFields = ["hosp_pat_id", "pat_name", "viewTreatDate"]; // デフォルトは固定列だが列移動可能
@@ -587,25 +855,26 @@ export default {
       
       // theadから現在の画面並び順でfieldを取得する関数
       const processThead = (thead) => {
-        const ths1 = thead.find("tr").eq(0).find("th");  // ヘッダ1行目
-        const ths2 = thead.find("tr").eq(1).find("th").toArray(); // ヘッダ2行目 ※find()が0件の場合は空配列
+        const rows = Array.from(thead?.querySelectorAll?.("tr") || []);
+        const ths1 = Array.from(rows[0]?.querySelectorAll?.("th") || []);
+        const ths2 = Array.from(rows[1]?.querySelectorAll?.("th") || []);
         
         // 固定列はrowspan="2"でセル結合されている
         // - 1行目のfieldが固定列の場合 -> 無条件でresultに追加
         // - 1行目のfieldが可変列の場合 -> 2行目から対象のfield群（透析前/透析後/その他）を検索してresultに追加
         const result = [];
-        ths1.each(function () {
-          const field = $$(this).data("field");
+        ths1.forEach((th) => {
+          const field = th?.getAttribute?.("data-field");
           if (!field) return;
       
           if (lockedFields.includes(field)) {
             result.push(field);
           } else if (field.startsWith("item_")) {
-            const matches = ths2.filter(th => {
-              const f = $$(th).data("field");
+            const matches = ths2.filter(th2 => {
+              const f = th2?.getAttribute?.("data-field");
               return f?.startsWith(field + "_order");
             });
-            matches.forEach(th => result.push($$(th).data("field")));
+            matches.forEach(th2 => result.push(th2?.getAttribute?.("data-field")));
           }
         });
         
@@ -613,18 +882,19 @@ export default {
       };
             
       // thead[0] = 固定列, thead[1] = スクロール列
-      const theads = e.sender.wrapper.find("thead");
+      const gridRoot = this.$refs.examrecordlistgrid?.gridRootEl?.() || resolveRefElement(this, "examrecordlistgrid") || null;
+      const theads = Array.from(gridRoot?.querySelectorAll?.("thead") || []);
       if (theads.length > 0) {
-        fieldOrderLocked.push(...processThead($$(theads[0])));
+        fieldOrderLocked.push(...processThead(theads[0]));
       }
       if (theads.length > 1) {
-        fieldOrderScrollable.push(...processThead($$(theads[1])));
+        fieldOrderScrollable.push(...processThead(theads[1]));
       }
       
       // 行ごとのセルに正常範囲外のスタイルを適用する関数
       const applyCellStyles = (rows, fieldOrder, hiddenCount) => {
-        rows.each(function (index, row) {
-          const dataItem = e.sender.dataItem(row);
+        rows.forEach((row) => {
+          const dataItem = getKendoGridDataItem(e.sender, row);
           // 非表示列はfieldOrderに含まれていないためカウンタ値を調整
           for (let i = hiddenCount; i < row.cells.length; i++) {
             const field = fieldOrder[i - hiddenCount];
@@ -640,61 +910,27 @@ export default {
         });
       };
       // 固定列、可変列にスタイル適用
-      const lockedRows = e.sender.lockedContent.find("tr");
-      const scrollableRows = e.sender.content.find("tr");
       
       applyCellStyles(lockedRows, fieldOrderLocked, 0);
       applyCellStyles(scrollableRows, fieldOrderScrollable, 3); // 3は非表示(hidden = true)の列数、非表示列は処理スキップ
       
       // 高さの調整処理もdata-boundに連動して実施(kendo-gridのlockedオプション使用時に高さがずれる件の対応)
       this.$nextTick(() => {
-        //add検査結果一覧空でない判定を追加 高恩宇 start
-        var x = document.getElementsByClassName("k-grid-content-locked");
-        //add検査結果一覧空でない判定を追加 高恩宇 end
-        let headerHeight = "";
-        if (document.getElementsByClassName("k-grid-header")[0] != undefined) {
-          headerHeight = document.getElementsByClassName("k-grid-header")[0].offsetHeight + 2;
+        const gridRoot = resolveRefElement(this, "examrecordlistgrid");
+        const lockedPane = findKendoGridLockedContent(gridRoot);
+        const header = findKendoGridHeader(gridRoot);
+        const scrolObj = findKendoGridContent(gridRoot);
+        if (!lockedPane || !header || !scrolObj) {
+          return;
         }
-        const scrolObj = document.getElementsByClassName("k-grid-content k-auto-scrollable")[0];
+        let headerHeight = header.offsetHeight + 2;
         let lockRowHeight = this.kendoGridHeight - headerHeight;
-        // PCでの表示時のみ、スクロールバー分の不要な高さが発生する為、高さの調整を行う
         if (!this.androidFlg && !this.iosFlg && (scrolObj.scrollWidth > scrolObj.clientWidth)) {
           lockRowHeight -= 17;
         }
-        if(x.length > 0) {
-          document.getElementsByClassName("k-grid-content-locked")[0].style.height = lockRowHeight + "px";
-        }
-
+        lockedPane.style.height = lockRowHeight + "px";
       });
-      const lockedContent = document.querySelector('.k-grid-content-locked');
-      const scrollableContent = document.querySelector('.k-grid-content');
-      if (lockedContent) {
-        let startY = 0;
-        // タッチ開始位置を記録（iOS/Android対応）
-        lockedContent.addEventListener('touchstart', (e) => {
-          startY = e.touches[0].clientY;
-        }, { passive: false });
-
-        lockedContent.addEventListener('touchmove', (e) => {
-          // タッチ移動に応じてスクロール（iOS/Android対応）
-          const deltaY = startY - e.touches[0].clientY;
-          lockedContent.scrollTop += deltaY;
-          startY = e.touches[0].clientY;
-          e.preventDefault(); // 慣性スクロールを有効にするために必要
-        }, { passive: false });
-      }
-
-      if (lockedContent && scrollableContent) {
-        // 固定列のスクロールに応じて可動列を同期（縦スクロールの一体化）
-        lockedContent.addEventListener('scroll', () => {
-          scrollableContent.scrollTop = lockedContent.scrollTop;
-        });
-
-        // 可動列のスクロールに応じて固定列を同期（双方向同期）
-        scrollableContent.addEventListener('scroll', () => {
-          lockedContent.scrollTop = scrollableContent.scrollTop;
-        });
-      }
+      syncKendoGridLockedContentScroll(gridRoot, { touch: true });
       
       // ツールチップ初期化
       this.initializeGridTooltip();
@@ -702,61 +938,63 @@ export default {
     /** ツールチップ初期化 */
     initializeGridTooltip() {
       this.$nextTick(() => {
-        const gridElement = this.$refs.examrecordlistgrid?.$el;
+        const gridElement = resolveRefElement(this, "examrecordlistgrid");
         if (!gridElement) return;
-        // 既存ツールチップの破棄
-        const old = $$(gridElement).data("kendoTooltip");
-        if (old) {
-          old.destroy();
-          $$(gridElement).removeData("kendoTooltip");
+        this.examTooltipWidget?.destroy?.();
+        const grid = this.$refs.examrecordlistgrid?.kendoWidget?.();
+        if (!grid) {
+          return;
         }
-        const grid = this.$refs.examrecordlistgrid.kendoWidget();
 
-        // 共通ヘルパー: field取得
         const getFieldByIndex = (colIndex) => {
-          const adjustedIndex = colIndex + 3; // NOTE: 固定列分プラス
-          const flatColumns = grid.columns.flatMap(col => col.columns?.length ? col.columns : [col]);
+          const adjustedIndex = colIndex + 3;
+          const flatColumns = grid.columns.flatMap((col) => (col.columns?.length ? col.columns : [col]));
           return adjustedIndex >= 0 ? flatColumns[adjustedIndex]?.field : null;
         };
 
-        // 属性付与
-        $$(gridElement).find(".k-grid-content td").each((index, element) => {
-          const cell = $$(element);
-          const field = getFieldByIndex(cell.index());
+        const gridContent = findKendoGridContent(gridElement);
+        gridContent?.querySelectorAll('td').forEach((element) => {
+          element.removeAttribute('data-has-tooltip');
+          const field = getFieldByIndex(element.cellIndex);
           if (!field) return;
-          const dataItem = grid.dataItem(cell.closest("tr"));
+          const dataItem = getKendoGridDataItem(grid, element.closest('tr'));
           if (dataItem?.[field] && dataItem[`${field}_date`]) {
-            cell.attr("data-has-tooltip", "true");
+            element.setAttribute('data-has-tooltip', 'true');
           }
         });
 
-        // Tooltip初期化
-        $$(gridElement).kendoTooltip({
+        const tooltip = attachTooltip(gridElement, {
           filter: ".k-grid-content td[data-has-tooltip='true']",
-          position: "top",
           showAfter: 200,
-          content: (e) => {
-            const cell = $$(e.target);
-            const field = getFieldByIndex(cell.index());
-            const dataItem = grid.dataItem(cell.closest("tr"));
-            return `検査日: ${this.formatExamDate(dataItem[`${field}_date`])}`;
+          position: 'top',
+          content: ({ target }) => {
+            let getIndex = target.cellIndex ?target.cellIndex:target[0].cellIndex?target[0].cellIndex:null
+            const field = getFieldByIndex(getIndex);
+            const dataItem = getKendoGridDataItem(grid, target.closest('tr'));
+            return `検査日: ${this.formatExamDate(dataItem?.[`${field}_date`])}`;
           }
         });
-
-        // スタイル適用 & 自動非表示
-        const tooltip = $$(gridElement).data("kendoTooltip");
-        tooltip.bind("show", () => {
-          $$(".k-tooltip").css({
-            "text-align": "center",
-            "background-color": "var(--kendo-input-color)",  // NOTE: こちらの設定が視認性高めるため
-            "color": "var(--kendo-input-background-color)",  // NOTE: こちらの設定が視認性高めるため
-            "font-size": `${this.fontSize * 1.5}em`,
-            "width": "13em",
-            "border-radius": "8px",
-            "box-shadow": "0 4px 8px rgba(0,0,0,0.2)"
-          });
-          $$(".k-callout").css({ "color": "var(--kendo-input-color)" });
+        tooltip?.bind('show', (e) => {
+          const left = e.sender.popup.wrapper[0].style.left;
+          const result = parseFloat(left) - 32;
+          e.sender.popup.wrapper[0].style.left = result + 'px';
         });
+        tooltip?.bind('show', ({ tooltip: tooltipEl }) => {
+          if (!tooltipEl) {
+            return;
+          }
+          Object.assign(tooltipEl.style, {
+            textAlign: 'center',
+            backgroundColor: 'var(--kendo-input-color)',
+            color: 'var(--kendo-input-background-color)',
+            fontSize: `${this.fontSize * 1.5}em`,
+            width: '13em',
+            borderRadius: '8px',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+            padding: '6px 8px'
+          });
+        });
+        this.examTooltipWidget = tooltip;
       });
     },
     /** YYYYMMddhhmmss -> YYYY/MM/dd hh:mm に変換 */
@@ -773,6 +1011,9 @@ export default {
     filteredExamRecord() {
       // 治療日列の表示/非表示
       let colsetting = this.getExamRecordColumn;
+      if (!Array.isArray(colsetting) || colsetting.length < 6) {
+        return;
+      }
       colsetting[1].hidden = !this.getCondition.viewPatId;
       colsetting[5].hidden = !this.getCondition.viewExamDate;
 
@@ -795,18 +1036,18 @@ export default {
           }
         }
       this.setExamRecordColumn(colsetting);
+      // 列表示のみ変更時は store と local が同一参照のため hidden は既に反映済み。Grid 再描画のみ行う。
+      if (Array.isArray(this.examRecordGridColumns) && this.examRecordGridColumns.length > 0) {
+        this.$nextTick(() => this.refreshDirectExamGrid());
+      }
     },
     // グリッドクリック時
     onClick(event) {
       if (event.sender) {
         // 選択行取得
-        const selrow = this.$refs.examrecordlistgrid
-          .kendoWidget()
-          .select()
-          .closest("tr");
-        const patId = this.$refs.examrecordlistgrid
-          .kendoWidget()
-          .dataItem(selrow).pat_id;
+        const examRecordGrid = this.getExamRecordListGridWidget();
+        const selrow = examRecordGrid?.select?.().closest("tr");
+        const patId = examRecordGrid?.dataItem?.(selrow)?.pat_id;
         this.selectPat(patId).then(() => {
           // 検査結果画面へ遷移
           this.goSpecifiedView("exam-record-detail");
@@ -815,13 +1056,13 @@ export default {
     },
     // 検査結果ファイル取り込み処理
     fileCapture(){
-      var fileDialogBtn = document.getElementById("upload_text");
+      const fileDialogBtn = getScopedElementById("upload_text", this.$el || this);
       fileDialogBtn.value="";
       fileDialogBtn.click();
     },
     //mod検査結果一覧ページで単位を追加する 劉全航 start
     async addUnit(){
-    var response = await ApiHelper.get(`/exam/examRecord/examItem/${this.getFacilityCd}`);
+    var response = await ApiHelper.get(`/exam/examRecord/examItem/${this.getFacilityCd}`, { selectedPatId: this.selectedPatId });
     response.data.forEach(obj=>{
       let unit = obj.unit;
       let examItemName = obj.examItemName;
@@ -835,6 +1076,17 @@ export default {
         }
     });
 
+    },
+    triggerLoad() {
+      if (this.isLoadingTriggered) return;
+      this.isLoadingTriggered = true;
+
+      this.setLoadingScreenMessage("処理中・・・");
+      this.dataLoad();
+
+      this.$nextTick(() => {
+        this.isLoadingTriggered = false;
+      });
     },
     //mod検査結果一覧ページで単位を追加する 劉全航 end
     fileChange(e){
@@ -1073,26 +1325,14 @@ export default {
         this.dataLoad();
       }
     },
-    triggerLoad(){
-      if (this.isLoadingTriggered) return
-      this.isLoadingTriggered = true
-
-      // 共通ローダー:表示名設定
-      this.setLoadingScreenMessage("処理中・・・");
-      this.dataLoad()
-
-      this.$nextTick(() => {
-        this.isLoadingTriggered = false
-      })
-        
-    }
   },
   watch: {
     windowHeight() {
       // iosPWA時の画面幅変更時:
       // app.vueのhandleResizeWindow実行後にcalculateGridHeightを実行するため、200ミリ秒待つ
-      if(this.iosFlg && window.matchMedia('(display-mode: standalone)').matches){
-        setTimeout(() => {
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      if(this.iosFlg && ownerWindow.matchMedia('(display-mode: standalone)').matches){
+        ownerWindow.setTimeout(() => {
           this.calculateGridHeight();
         }, 200);
       }else{
@@ -1105,28 +1345,26 @@ export default {
     getFontSize() {
       // 印刷中はスキップ
       if (this.isPrint) return;
-      
+
       this.calculateGridHeight();
     },
     sidebarWidth(){
-      $$(window).trigger('resize');
+      $$(getScopedWindow(this.$el || this)).trigger('resize');
     },
     searchedPatList(){
       this.dataLoad();
     },
-    //liyanze-z 20260316 add start
-    getPatientShareMode(newVal, oldVal){
+    getPatientShareMode() {
       this.triggerLoad();
     },
-    getOtherFacilityCd(){
+    getOtherFacilityCd() {
       this.triggerLoad();
-    },
-    //liyanze-z 20260316 add end
+    }
   },
   created() {
     this.startInitialize();
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // add 画面印刷プレビューと印刷の実現 陳 start
     // 印刷パラメータ要求
     // add #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 start
@@ -1141,7 +1379,7 @@ export default {
     this.storeReset();
     //add FNSI-患者カレンダに表示する予定の不足情報を追加する 江 end
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = getScopedWindow(this.$el || this)?.navigator?.userAgent || "";
     if (ua.match(/Android/)) {
       this.androidFlg = true;
     } else if (ua.match(/iPhone/)) {
@@ -1183,15 +1421,22 @@ export default {
     
     this.setLoadingScreenVisible(true);
     if(this.getExamDefaultSex == null){
-      await this.examSelectDefaultSex(this.getFacilityCd);
+      await this.examSelectDefaultSex({
+        facilityCd: this.getFacilityCd,
+        selectedPatId: this.selectedPatId
+      });
     }
     if(this.getCheckResultForFacility == null){
-      await this.patIdJudgSetting(this.getFacilityCd);
+      await this.patIdJudgSetting({
+        facilityCd: this.getFacilityCd,
+        selectedPatId: this.selectedPatId
+      });
     }
     this.$nextTick(() => {
       this.calculateGridHeight();
       // ヘッダーにスタイル適用
       this.setHeaderStyle();
+      this.refreshDirectExamGrid();
     });
     this.setLoadingScreenVisible(false);
     this.finishInitialize();
@@ -1203,9 +1448,10 @@ export default {
     });
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
-    EventBus.$off("filterExamRecord");
-    EventBus.$off("dataUpdate");
+  beforeUnmount() {
+    this.destroyDirectExamRecordGrid();
+    EventBus.$off("filterExamRecord", this.setFilterCondition);
+    EventBus.$off("dataUpdate", this.setExamRecord);
     // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 start
     // EventBus.$off("requestReportParams");
     EventBus.$off("requestReportParams", this.requestrReportParams);
@@ -1216,32 +1462,66 @@ export default {
     // #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng end
     // add #10619 患者選択状態で検査結果に遷移した際にパンくずリストの配列が不正となる。linjunfeng start
     this.setExamRouteFlg(true)
+
     // add #10619 患者選択状態で検査結果に遷移した際にパンくずリストの配列が不正となる。linjunfeng end
   }
   // add 性能改善メモリ不足 shan end
 };
 </script>
-<style>
-@media print {
-  /** 検査結果一覧 tableレイアウト崩れ回避 */
-  body:has(#examrecordlistgrid) #main-id {
-    display: inline-block;
-  }
-}
-</style>
-
 <style scoped>
-::v-deep.k-grid th, .k-grid td {
+
+#examrecordlistgrid :deep(.k-cell-inner){
+margin-inline:auto!important;
+}
+
+:deep(.k-grid th),
+:deep(.k-grid td) {
+    padding: 0.25rem 0.75rem !important;
+    height: 2em!important;
+}
+
+/* :deep(.k-grid .k-table-th),
+:deep(.k-grid .k-table-td) {
     padding: 0.25rem 0.75rem !important;
     height: 2em;
+} */
+
+:deep(.kendo-grid-style-page .k-grid-header-wrap th) {
+    
+    height: 2em!important;
 }
 
-::v-deep.kendo-grid-style-page .k-grid-header-wrap th {
+:deep(.kendo-grid-style-page .k-grid tr) {
+    height: 2em!important;
+}
+
+#examrecordlistgrid :deep(.k-grid-header-wrap .k-grid-header-table tr){
+  padding: 1px 3px 3px 3px;
+  height: 2em!important;
+}
+#examrecordlistgrid :deep(.k-grid-header-wrap .k-grid-header-table .k-table-th){
+  border-color:#fff;
+}
+
+#examrecordlistgrid :deep(.k-grid .k-header .k-link) {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+}
+
+#examrecordlistgrid :deep(.k-grid .k-column-title) {
+  white-space: normal !important;
+  display: inline-block;
+}
+
+
+
+/* :deep(.kendo-grid-style-page .k-grid-header-wrap .k-table-th) {
     padding: 1px 3px 3px 3px;
     height: 2em;
-}
+} */
 
-::v-deep .k-link {
+:deep(.k-link) {
     margin: -.75rem -.75rem;
     padding: 0rem .75rem !important;
     line-height: inherit;
@@ -1250,26 +1530,30 @@ export default {
     text-overflow: ellipsis;
     outline: 0;
 }
-::v-deep.kendo-grid-style-page .k-grid-header {
+:deep(.kendo-grid-style-page .k-grid-header) {
     /* height: 86px; */
     min-height: 4em;
 }
 
-.exam-record-main-content >>> .master-grid-header {
+.exam-record-main-content :deep(.master-grid-header) {
   background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
 }
-.exam-record-main-content >>> th[data-field*="order"] {
+.exam-record-main-content :deep(th[data-field*="order"]) {
   background-color: #333333;
   background-image: none;
 }
 
-.exam-record-main-content >>> .k-i-sort-asc-sm::before {
+.exam-record-main-content :deep(.k-i-sort-asc-sm::before) {
   content: "▲" !important;
   color: #ffffff;
+  font-size:16px;
+  font-family: WebComponentsIcons;
 }
-.exam-record-main-content >>> .k-i-sort-desc-sm::before {
+.exam-record-main-content :deep(.k-i-sort-desc-sm::before) {
   content: "▼" !important;
   color: #ffffff;
+  font-size:16px;
+  font-family: WebComponentsIcons;
 }
 .exam-record-list-head-content {
   margin-bottom: 25px;
@@ -1296,72 +1580,76 @@ export default {
     white-space: normal;
   }
 }
-::v-deep td i{
+:deep(td i){
   font-style: normal;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked) {
   overflow-y: scroll !important;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked::-webkit-scrollbar {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked::-webkit-scrollbar) {
   display: none;
 }
-@media print {  
-  /** スクロールコンテナ */
-  .exam-record-main-content >>> .k-grid-header-wrap,
-  .exam-record-main-content >>> .k-grid-content {
-    overflow: hidden !important;
-    height: auto !important;
-  }
-  
-  /** 固定列調整 */
-  .exam-record-main-content >>> .k-grid-content-locked {
-    height: auto !important;
-  }
-  /** 固定列枠線 */
-  .exam-record-main-content >>> .k-grid-header-locked::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 1px;
-    height: 100%;
-    background: var(--master-maintenance-kgrid-header-background-color);
-    pointer-events: none;
-  }
-  .exam-record-main-content >>> .k-grid-content-locked::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 1px;
-    height: 100%;
-    background: var(--master-maintenance-kgrid-border-color);
-    pointer-events: none;
-  }
-  /** ヘッダのズレ原因を除去 */
-  .exam-record-main-content >>> .k-grid-header {
-    padding-right: 0 !important;
-  }
-  /** gridの幅 */
-  .exam-record-main-content >>> .k-grid {
-    width: 100vw;
-    height: auto !important;
-  }
-  /** 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
-  /* 右端時固定列最前面表示*/
-  .exam-record-main-content:has(table.scroll-rightmost) >>> .k-grid-content-locked,
-  .exam-record-main-content:has(table.scroll-rightmost) >>> .k-grid-header-locked {
-    z-index: 1;
-  }
-  .main-content-area:has(table.scroll-rightmost) {
-    margin-left: -1px !important;
-  }
-  .exam-record-main-content >>> .k-grid-header-wrap:has(table.scroll-rightmost),
-  .exam-record-main-content >>> .k-grid-content:has(table.scroll-rightmost) {
-    position: static;
-  }
+
+
+
+:deep(.k-grid-header-locked .k-cell-inner){
+  height:stretch;
+}
+:deep(.k-grid-header-locked .k-grid-header-table){
+  height:stretch;
+}
+
+:deep(.k-grid-header){
+  background-image: linear-gradient(hsla(0, 0%, 100%, .3), transparent 50%, transparent 0, rgba(0, 0, 0, .1));
+  background-color: var(--ntss-list-header-background-color);
+}
+:deep(.k-grid-header-wrap){
+  border-right:1px solid #fff;
+}
+:deep(.k-grid-header-wrap .k-grid-header-table){
+  height:stretch;
+}
+:deep(.k-grid-header-wrap .k-cell-inner){
+  height:stretch;
+}
+
+
+.exam-record-main-content :deep(.k-svg-i-sort-asc-small::before){
+    content: "▲" !important;
+    color: rgb(255, 255, 255);
+    font-size:16px;
+    font-family: WebComponentsIcons;
+}
+
+.exam-record-main-content :deep(.k-svg-i-sort-desc-small::before){
+    content: "▼" !important;
+    color: rgb(255, 255, 255);
+    font-size:16px;
+    font-family: WebComponentsIcons;
+}
+
+
+:deep(.k-grid .k-grid-content-locked ){
+  border-color: rgba(33, 37, 41, .125)!important;
+}
+.exam-record-main-content :deep(.k-grid-content ){
+  background-color: transparent!important;
+}
+
+
+
+
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 </style>

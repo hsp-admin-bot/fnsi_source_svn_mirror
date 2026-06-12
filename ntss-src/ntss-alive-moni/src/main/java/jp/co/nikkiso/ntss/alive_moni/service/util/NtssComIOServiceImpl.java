@@ -6,8 +6,8 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils;
 import org.springframework.aop.framework.AopProxyUtils;
@@ -112,7 +112,7 @@ public class NtssComIOServiceImpl implements NtssComIOService {
       restTemplateEventLogMessage.setFacilityCd(facilityCd);
       logService.log(LogLevel.INFO, restTemplateEventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI, null);
 	  // #9698 アプリケーションログの内容修正 20260328 mod yangxuewang end
-      HttpStatus status = response.getStatusCode();
+      HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
       if (HttpStatus.OK != status) {
         eventLogMessage.setLogMessage("DE通知API：RestAPI側で接続失敗 " + status);
         eventLogMessage.setFacilityCd(facilityCd);

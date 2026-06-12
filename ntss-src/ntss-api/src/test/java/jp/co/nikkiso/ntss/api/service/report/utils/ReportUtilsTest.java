@@ -60,7 +60,7 @@ public class ReportUtilsTest {
 //      , ReportXmlParam.of(null,"", "", "", "", "", "", "", "", "", "", "", "", "", Collections.EMPTY_LIST, null, Collections.EMPTY_LIST, null, null, null, "", Collections.EMPTY_MAP)
 //    );
     List<ReportXmlParam> expected = Arrays.asList(
-      ReportXmlParam.of(null,null,"1", "2", "3", "4", "5", "6", "7", "9", "10", "11", "12", "13", "14","15", null, null, Collections.EMPTY_LIST, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"1", "2", "3", "4", "5", "6", "7", "9", "10", "11", "12", "13", "14","15", null, null, null, Collections.EMPTY_LIST, null, null, null, null, null, null, null, null, null, null)
     );
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     // 実行

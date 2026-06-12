@@ -28,8 +28,8 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.node.ArrayNode;
 import jp.co.nikkiso.ntss.admin_web.response.patIndApprove.ItemInfo;
 import jp.co.nikkiso.ntss.admin_web.response.patIndApprove.PatIndApproveDto;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
@@ -96,10 +96,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.FlagType;
 import jp.co.nikkiso.ntss.admin_web.response.checkList.CheckListScheduleResponse;
@@ -121,6 +121,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -210,6 +211,10 @@ public class CheckListServiceImpl implements CheckListService {
 
   @Autowired
   private TreatmentStatusListService treatmentStatusListService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
 
   // #11589 2025.02.28 add 各アイテムについてマスタの並び順で表示を行う TDC米沢 start
@@ -1053,7 +1058,11 @@ public class CheckListServiceImpl implements CheckListService {
         if (!root.isNull() && root.isArray()) {
           for (JsonNode setting : root) {
             // リストコード（list_cd）「１～８」
-            Short listcd = Short.parseShort(setting.get("list_cd").asText());
+            Optional<Short> optListCd = parseJsonShortQuiet(setting.path("list_cd"));
+            if (optListCd.isEmpty()) {
+              continue;
+            }
+            Short listcd = optListCd.get();
             // 指定されたリストコードの場合
             if (listCd.equals(listcd)) {
               // 機能リスト（funclist）「１～１０」
@@ -1296,12 +1305,7 @@ public class CheckListServiceImpl implements CheckListService {
         if (condlist.has("5") && !condlist.get("5").isNull()) {
           // mod 10310 チェックリストの動作が不正 関 end
           JsonNode diazy = map.readTree(condlist.get("5").toString());
-          // mod 10310 チェックリストの動作が不正 関 start
-          // if (diazy.has("value") && !diazy.get("value").isEmpty() && !"null".equals(diazy.get("value").asText())) {
-          if (diazy.has("value") && !diazy.get("value").isNull() && !"null".equals(diazy.get("value").asText())) {
-            // mod 10310 チェックリストの動作が不正 関 end
-            condDializerSet.add(Integer.parseInt(diazy.get("value").asText()));
-          }
+          parseJsonIntQuiet(diazy.path("value")).ifPresent(condDializerSet::add);
         }
         // 薬剤の場合「15：透析液」「19：補液」「25：抗凝固剤」
         // mod 10310 チェックリストの動作が不正 関 start
@@ -1311,26 +1315,16 @@ public class CheckListServiceImpl implements CheckListService {
           // 「薬剤区分：medicine_type」
           // 「1：通常薬剤」「2：調製薬剤」
           JsonNode medi = map.readTree(condlist.get("15").toString());
-          // mod 10310 チェックリストの動作が不正 関 start
-          // if (medi.has("medicine_type") && !medi.get("medicine_type").isEmpty()
-          //   && medi.has("medicine_type") && !medi.get("value").isEmpty()
-          //   && !"null".equals(medi.get("value").asText()) && !"null".equals(medi.get("medicine_type").asText())) {
-          if (medi.has("medicine_type") && !medi.get("medicine_type").isNull()
-            && medi.has("value") && !medi.get("value").isNull()
-            && !"null".equals(medi.get("value").asText()) && !"null".equals(medi.get("medicine_type").asText())) {
-            // mod 10310 チェックリストの動作が不正 関 end
-            String meditype = medi.get("medicine_type").toString();
-            if (meditype.equals("2")) {
-              // 調製薬剤の場合
-              condMedicineMixSet.add(Integer.parseInt(medi.get("value").asText()));
-            } else if (meditype.equals("1")) {
-              // 通常薬剤の場合
-              condMedicineSet.add(Integer.parseInt(medi.get("value").asText()));
-            } else {
-              // 薬剤区分が異常値の場合はとりあえず薬剤とする
-              condMedicineSet.add(Integer.parseInt(medi.get("value").asText()));
-            }
-          }
+          parseJsonIntQuiet(medi.path("value")).ifPresent(val ->
+            optionalJsonText(medi.path("medicine_type")).ifPresent(meditype -> {
+              if ("2".equals(meditype)) {
+                condMedicineMixSet.add(val);
+              } else if ("1".equals(meditype)) {
+                condMedicineSet.add(val);
+              } else {
+                condMedicineSet.add(val);
+              }
+            }));
         }
         // mod 10310 チェックリストの動作が不正 関 start
         // if (!StringUtils.isEmpty(condlist.get("19"))) {
@@ -1339,26 +1333,16 @@ public class CheckListServiceImpl implements CheckListService {
           // 「薬剤区分：medicine_type」
           // 「1：通常薬剤」「2：調製薬剤」
           JsonNode medi = map.readTree(condlist.get("19").toString());
-          // mod 10310 チェックリストの動作が不正 関 start
-          // if (medi.has("medicine_type") && !medi.get("medicine_type").isEmpty()
-          //   && medi.has("medicine_type") && !medi.get("value").isEmpty()
-          //   && !"null".equals(medi.get("value").asText()) && !"null".equals(medi.get("medicine_type").asText())) {
-          if (medi.has("medicine_type") && !medi.get("medicine_type").isNull()
-            && medi.has("value") && !medi.get("value").isNull()
-            && !"null".equals(medi.get("value").asText()) && !"null".equals(medi.get("medicine_type").asText())) {
-            // mod 10310 チェックリストの動作が不正 関 end
-            String meditype = medi.get("medicine_type").toString();
-            if (meditype.equals("2")) {
-              // 調製薬剤の場合
-              condMedicineMixSet.add(Integer.parseInt(medi.get("value").asText()));
-            } else if (meditype.equals("1")) {
-              // 通常薬剤の場合
-              condMedicineSet.add(Integer.parseInt(medi.get("value").asText()));
-            } else {
-              // 薬剤区分が異常値の場合はとりあえず薬剤とする
-              condMedicineSet.add(Integer.parseInt(medi.get("value").asText()));
-            }
-          }
+          parseJsonIntQuiet(medi.path("value")).ifPresent(val ->
+            optionalJsonText(medi.path("medicine_type")).ifPresent(meditype -> {
+              if ("2".equals(meditype)) {
+                condMedicineMixSet.add(val);
+              } else if ("1".equals(meditype)) {
+                condMedicineSet.add(val);
+              } else {
+                condMedicineSet.add(val);
+              }
+            }));
         }
         // mod 10310 チェックリストの動作が不正 関 start
         // if (!StringUtils.isEmpty(condlist.get("25"))) {
@@ -1367,26 +1351,16 @@ public class CheckListServiceImpl implements CheckListService {
           // 「薬剤区分：medicine_type」
           // 「1：通常薬剤」「2：調製薬剤」
           JsonNode medi = map.readTree(condlist.get("25").toString());
-          // mod 10310 チェックリストの動作が不正 関 start
-          // if (medi.has("medicine_type") && !medi.get("medicine_type").isEmpty()
-          //   && medi.has("medicine_type") && !medi.get("value").isEmpty()
-          //   && !"null".equals(medi.get("value").asText()) && !"null".equals(medi.get("medicine_type").asText())) {
-          if (medi.has("medicine_type") && !medi.get("medicine_type").isNull()
-            && medi.has("value") && !medi.get("value").isNull()
-            && !"null".equals(medi.get("value").asText()) && !"null".equals(medi.get("medicine_type").asText())) {
-            // mod 10310 チェックリストの動作が不正 関 end
-            String meditype = medi.get("medicine_type").asText();
-            if (meditype.equals("2")) {
-              // 調製薬剤の場合
-              condMedicineMixSet.add(Integer.parseInt(medi.get("value").asText()));
-            } else if (meditype.equals("1")) {
-              // 通常薬剤の場合
-              condMedicineSet.add(Integer.parseInt(medi.get("value").asText()));
-            } else {
-              // 薬剤区分が異常値の場合はとりあえず薬剤とする
-              condMedicineSet.add(Integer.parseInt(medi.get("value").asText()));
-            }
-          }
+          parseJsonIntQuiet(medi.path("value")).ifPresent(val ->
+            optionalJsonText(medi.path("medicine_type")).ifPresent(meditype -> {
+              if ("2".equals(meditype)) {
+                condMedicineMixSet.add(val);
+              } else if ("1".equals(meditype)) {
+                condMedicineSet.add(val);
+              } else {
+                condMedicineSet.add(val);
+              }
+            }));
         }
         // 医療材料の場合
         // mod 10310 チェックリストの動作が不正 関 start
@@ -1394,84 +1368,49 @@ public class CheckListServiceImpl implements CheckListService {
         if (condlist.has("6") && !condlist.get("6").isNull()) { //6 吸着カラム
           // mod 10310 チェックリストの動作が不正 関 end
           JsonNode diazy = map.readTree(condlist.get("6").toString());
-          // mod 10310 チェックリストの動作が不正 関 start
-          // if (diazy.has("value") && !diazy.get("value").isEmpty() && !"null".equals(diazy.get("value").asText())) {
-          if (diazy.has("value") && !diazy.get("value").isNull() && !"null".equals(diazy.get("value").asText())) {
-            // mod 10310 チェックリストの動作が不正 関 end
-            condEquipmentSet.add(Integer.parseInt(diazy.get("value").asText()));
-          }
+          parseJsonIntQuiet(diazy.path("value")).ifPresent(condEquipmentSet::add);
         }
         // mod 10310 チェックリストの動作が不正 関 start
         // if (!StringUtils.isEmpty(condlist.get("7"))) {
         if (condlist.has("7") && !condlist.get("7").isNull()) { //7 1次膜
           // mod 10310 チェックリストの動作が不正 関 end
           JsonNode diazy = map.readTree(condlist.get("7").toString());
-          // mod 10310 チェックリストの動作が不正 関 start
-          // if (diazy.has("value") && !diazy.get("value").isEmpty() && !"null".equals(diazy.get("value").asText())) {
-          if (diazy.has("value") && !diazy.get("value").isNull() && !"null".equals(diazy.get("value").asText())) {
-            // mod 10310 チェックリストの動作が不正 関 end
-            condEquipmentSet.add(Integer.parseInt(diazy.get("value").asText()));
-          }
+          parseJsonIntQuiet(diazy.path("value")).ifPresent(condEquipmentSet::add);
         }
         // mod 10310 チェックリストの動作が不正 関 start
         // if (!StringUtils.isEmpty(condlist.get("8"))) {
         if (condlist.has("8") && !condlist.get("8").isNull()) { //8 2次膜
           // mod 10310 チェックリストの動作が不正 関 end
           JsonNode diazy = map.readTree(condlist.get("8").toString());
-          // mod 10310 チェックリストの動作が不正 関 start
-          // if (diazy.has("value") && !diazy.get("value").isEmpty() && !"null".equals(diazy.get("value").asText())) {
-          if (diazy.has("value") && !diazy.get("value").isNull() && !"null".equals(diazy.get("value").asText())) {
-            // mod 10310 チェックリストの動作が不正 関 end
-            condEquipmentSet.add(Integer.parseInt(diazy.get("value").asText()));
-          }
+          parseJsonIntQuiet(diazy.path("value")).ifPresent(condEquipmentSet::add);
         }
         // mod 10310 チェックリストの動作が不正 関 start
         // if (!StringUtils.isEmpty(condlist.get("9"))) {
         if (condlist.has("9") && !condlist.get("9").isNull()) { //9 穿刺針(A針)
           // mod 10310 チェックリストの動作が不正 関 end
           JsonNode diazy = map.readTree(condlist.get("9").toString());
-          // mod 10310 チェックリストの動作が不正 関 start
-          // if (diazy.has("value") && !diazy.get("value").isEmpty() && !"null".equals(diazy.get("value").asText())) {
-          if (diazy.has("value") && !diazy.get("value").isNull() && !"null".equals(diazy.get("value").asText())) {
-            // mod 10310 チェックリストの動作が不正 関 end
-            condEquipmentSet.add(Integer.parseInt(diazy.get("value").asText()));
-          }
+          parseJsonIntQuiet(diazy.path("value")).ifPresent(condEquipmentSet::add);
         }
         // mod 10310 チェックリストの動作が不正 関 start
         // if (!StringUtils.isEmpty(condlist.get("10"))) {
         if (condlist.has("10") && !condlist.get("10").isNull()) { //10 穿刺針(V針)
           // mod 10310 チェックリストの動作が不正 関 end
           JsonNode diazy = map.readTree(condlist.get("10").toString());
-          // mod 10310 チェックリストの動作が不正 関 start
-          // if (diazy.has("value") && !diazy.get("value").isEmpty() && !"null".equals(diazy.get("value").asText())) {
-          if (diazy.has("value") && !diazy.get("value").isNull() && !"null".equals(diazy.get("value").asText())) {
-            // mod 10310 チェックリストの動作が不正 関 end
-            condEquipmentSet.add(Integer.parseInt(diazy.get("value").asText()));
-          }
+          parseJsonIntQuiet(diazy.path("value")).ifPresent(condEquipmentSet::add);
         }
         // mod 10310 チェックリストの動作が不正 関 start
         // if (!StringUtils.isEmpty(condlist.get("11"))) {
         if (condlist.has("11") && !condlist.get("11").isNull()) { //11 穿刺針(SN)
           // mod 10310 チェックリストの動作が不正 関 end
           JsonNode diazy = map.readTree(condlist.get("11").toString());
-          // mod 10310 チェックリストの動作が不正 関 start
-          // if (diazy.has("value") && !diazy.get("value").isEmpty() && !"null".equals(diazy.get("value").asText())) {
-          if (diazy.has("value") && !diazy.get("value").isNull() && !"null".equals(diazy.get("value").asText())) {
-            // mod 10310 チェックリストの動作が不正 関 end
-            condEquipmentSet.add(Integer.parseInt(diazy.get("value").asText()));
-          }
+          parseJsonIntQuiet(diazy.path("value")).ifPresent(condEquipmentSet::add);
         }
         // mod 10310 チェックリストの動作が不正 関 start
         // if (!StringUtils.isEmpty(condlist.get("13"))) {
         if (condlist.has("13") && !condlist.get("13").isNull()) { //13 血液回路
           // mod 10310 チェックリストの動作が不正 関 end
           JsonNode diazy = map.readTree(condlist.get("13").toString());
-          // mod 10310 チェックリストの動作が不正 関 start
-          // if (diazy.has("value") && !diazy.get("value").isEmpty() && !"null".equals(diazy.get("value").asText())) {
-          if (diazy.has("value") && !diazy.get("value").isNull() && !"null".equals(diazy.get("value").asText())) {
-            // mod 10310 チェックリストの動作が不正 関 end
-            condEquipmentSet.add(Integer.parseInt(diazy.get("value").asText()));
-          }
+          parseJsonIntQuiet(diazy.path("value")).ifPresent(condEquipmentSet::add);
         }
         //TODO 投与药剂
 
@@ -1481,28 +1420,16 @@ public class CheckListServiceImpl implements CheckListService {
         /* modify by chamaojia 2024-04-03 [10196] add null judgment processing  --end */
 
         for (JsonNode medilistDel : medilist) {
-          // 「薬剤区分：medicine_type」
-          // 「1：通常薬剤」「2：調製薬剤」
-          // mod 10310 チェックリストの動作が不正 関 start
-          // if (medilistDel.has("medicine_type") && !medilistDel.get("medicine_type").isEmpty()
-          //   && medilistDel.has("cd") && !medilistDel.get("cd").isEmpty()
-          //   && !"null".equals(medilistDel.get("cd").asText()) && !"null".equals(medilistDel.get("medicine_type").asText())) {
-          if (medilistDel.has("medicine_type") && !medilistDel.get("medicine_type").isNull()
-            && medilistDel.has("cd") && !medilistDel.get("cd").isNull()
-            && !"null".equals(medilistDel.get("cd").asText()) && !"null".equals(medilistDel.get("medicine_type").asText())) {
-            // mod 10310 チェックリストの動作が不正 関 end
-            String meditype = medilistDel.get("medicine_type").asText();
-            if (meditype.equals("2")) {
-              // 調製薬剤の場合
-              condMedicineMixSet.add(Integer.parseInt(medilistDel.get("cd").asText()));
-            } else if (meditype.equals("1")) {
-              // 通常薬剤の場合
-              condMedicineSet.add(Integer.parseInt(medilistDel.get("cd").asText()));
-            } else {
-              // 薬剤区分が異常値の場合はとりあえず薬剤とする
-              condMedicineSet.add(Integer.parseInt(medilistDel.get("cd").asText()));
-            }
-          }
+          parseJsonIntQuiet(medilistDel.path("cd")).ifPresent(cdVal ->
+            optionalJsonText(medilistDel.path("medicine_type")).ifPresent(meditype -> {
+              if ("2".equals(meditype)) {
+                condMedicineMixSet.add(cdVal);
+              } else if ("1".equals(meditype)) {
+                condMedicineSet.add(cdVal);
+              } else {
+                condMedicineSet.add(cdVal);
+              }
+            }));
         }
 
         //TODO 医疗材料
@@ -1512,20 +1439,13 @@ public class CheckListServiceImpl implements CheckListService {
         JsonNode equiplist = map.readTree(ObjectUtils.isEmpty(ordMain.getIndEquipInfo()) ? "[]" : ordMain.getIndEquipInfo());
         /* modify by chamaojia 2024-04-03 [10196] add null judgment processing  --end */
         for (JsonNode equiplistDel : equiplist) {
-          // mod 10310 チェックリストの動作が不正 関 start
-          // if (equiplistDel.has("cd") && !equiplistDel.get("cd").isEmpty()
-          //   && !"null".equals(equiplistDel.get("cd").asText())) {
-          //   String equipCd = equiplistDel.get("cd").asText();
-          //   if (!equiplistDel.get("equip_type").isEmpty() && "1".equals(equiplistDel.get("equip_type").asText())) {
-          if (equiplistDel.has("cd") && !equiplistDel.get("cd").isNull()
-            && !"null".equals(equiplistDel.get("cd").asText())) {
-            String equipCd = equiplistDel.get("cd").asText();
-            if (equiplistDel.has("equip_type") && !equiplistDel.get("equip_type").isNull() && "1".equals(equiplistDel.get("equip_type").asText())) {
-              // mod 10310 チェックリストの動作が不正 関 end
-              condDializerSet.add(Integer.parseInt(equipCd));
+          parseJsonIntQuiet(equiplistDel.path("cd")).ifPresent(equipCdInt -> {
+            if (equiplistDel.has("equip_type") && !equiplistDel.path("equip_type").isNull()
+              && "1".equals(equiplistDel.path("equip_type").asText().trim())) {
+              condDializerSet.add(equipCdInt);
             }
-            condEquipmentSet.add(Integer.parseInt(equipCd));
-          }
+            condEquipmentSet.add(equipCdInt);
+          });
         }
       }
 
@@ -2177,43 +2097,34 @@ public class CheckListServiceImpl implements CheckListService {
       for (int i = 0; i < mstChecklist.size(); i++) {
 //        JsonNode setting = map.readTree(mstChecklist.get(i).toString());
         JsonNode setting = mstChecklist.get(i);
-        // リストコード（list_cd）「１～８」
-        Short listcd = Short.parseShort(setting.get("list_cd").asText());
+        Optional<Short> optListCd = parseJsonShortQuiet(setting.path("list_cd"));
+        if (optListCd.isEmpty()) {
+          continue;
+        }
+        Short listcd = optListCd.get();
 
-        // 機能リスト（funclist）「１～１０」
-//        JsonNode funclist = map.readTree(setting.get("funclist").toString());
-        JsonNode funclist = setting.get("funclist");
-        //  mod 9539 チェックリストマスタの設定を変更して保存しても保存できない 関  start
-        JsonNode dPCd = setting.get("dialysis_prog_cd");
-        String dialysisProgCd = dPCd.asText();
-        //  mod 9539 チェックリストマスタの設定を変更して保存しても保存できない 関  end
-        // 機能リスト分繰り返し
+        JsonNode funclist = setting.path("funclist");
+        JsonNode dPCd = setting.path("dialysis_prog_cd");
+        Optional<Short> optDialysisProg = parseJsonShortQuiet(dPCd);
+        if (optDialysisProg.isEmpty()) {
+          continue;
+        }
+        short dialysisProgShort = optDialysisProg.get();
+
         if (!funclist.isNull() && funclist.isArray()) {
           for (int j = 0; j < funclist.size(); j++) {
-//            JsonNode list = map.readTree(funclist.get(j).toString());
             JsonNode list = funclist.get(j);
 
-            // 機能種別（func_class）「0：通常リスト」「1：治療条件」「2：医療材料」「3：投与薬剤」
-//            String strfuncclass = list.get("func_class").toString();
-            String strfuncclass = list.get("func_class").asText();
-            Short funcClass = null;
-            if (!strfuncclass.equals("null")) {
-              funcClass = Short.parseShort(list.get("func_class").asText());
-            }
-
-            // 機能種別未登録の場合
-            if (funcClass == null) {
+            Optional<Short> optFuncClass = parseJsonShortQuiet(list.path("func_class"));
+            if (optFuncClass.isEmpty()) {
               continue;
             }
+            short funcClass = optFuncClass.get();
 
-            // 登録用
             OrdChecklist regdata = new OrdChecklist();
             regdata.setOrdNo(ordMain.getOrdNo());
             regdata.setIsCheck(FlagType.FLAG_OFF);
-            //  mod 9539 チェックリストマスタの設定を変更して保存しても保存できない 関  start
-            //  regdata.setRstClass(Short.parseShort("1"));
-            regdata.setRstClass(Short.parseShort(dialysisProgCd));
-            //  mod 9539 チェックリストマスタの設定を変更して保存しても保存できない 関  end
+            regdata.setRstClass(dialysisProgShort);
             regdata.setListCd(listcd);
             regdata.setFuncClass(funcClass);
             regdata.setIsDisp(FlagType.FLAG_ON);
@@ -2223,21 +2134,18 @@ public class CheckListServiceImpl implements CheckListService {
             OrdChecklistRegStaffInfo regStaffInfo = new OrdChecklistRegStaffInfo();
             regdata.setRegStaffInfo(regStaffInfo);
 
-            // チェックリスト項目情報作成用
             OrdChecklistRegCheckInfo checkinfo = new OrdChecklistRegCheckInfo();
-            // checklist_cd
             checkinfo.setChecklistCd(checklistCd);
-            // item_number
-            checkinfo.setItemNumber(Short.parseShort(list.get("item_number").asText()));
-            // class_cd
-            String classcode = list.get("class_cd").asText();
-            // 患者経過総合ビューアレイアウトマスタの項目定義⇒治療条件No
+            Optional<Short> optItemNo = parseJsonShortQuiet(list.path("item_number"));
+            if (optItemNo.isEmpty()) {
+              continue;
+            }
+            checkinfo.setItemNumber(optItemNo.get());
             Integer classcd = null;
-            if (!classcode.equals("null")) {
-              // add 9539 チェックリストマスタの設定を変更して保存しても保存できない。 関 start
-              classcd = Integer.parseInt(list.get("class_cd").toString());
-              // add 9539 チェックリストマスタの設定を変更して保存しても保存できない。 関 end
-              checkinfo.setClassCd(Integer.parseInt(classcode));
+            Optional<Integer> optClassCd = parseJsonIntQuiet(list.path("class_cd"));
+            if (optClassCd.isPresent()) {
+              classcd = optClassCd.get();
+              checkinfo.setClassCd(classcd);
             }
 
             List<OrdChecklist> registerChecklist = null;
@@ -2267,30 +2175,18 @@ public class CheckListServiceImpl implements CheckListService {
             if (registerChecklist != null && registerChecklist.size() > 0) {
               regList.addAll(registerChecklist);
             } else {
-              // ダミーデータを作成
               if (hasDummyData) {
                 OrdChecklist dummy = regdata.clone();
-                // チェックリスト実績「実施状態」（０：未実施）
                 dummy.setIsCheck(FlagType.FLAG_OFF);
-                //  add 9539 チェックリストマスタの設定を変更して保存しても保存できない 関  start
-                // チェックリスト実績「実績区分」（７８９：ダミーデータ）
-                // 透析開始前工程
-                if (dialysisProgCd == "0"){
+                if (dialysisProgShort == 0) {
                   dummy.setRstClass(Short.parseShort("7"));
-                  // 透析中工程
-                } else if(dialysisProgCd == "1"){
+                } else if (dialysisProgShort == 1) {
                   dummy.setRstClass(Short.parseShort("8"));
-                  // 透析終了後工程
-                } else if (dialysisProgCd == "2"){
+                } else if (dialysisProgShort == 2) {
                   dummy.setRstClass(Short.parseShort("9"));
                 }
-                //  add 9539 チェックリストマスタの設定を変更して保存しても保存できない 関  end
-                // チェックリスト実績「表示フラグ」（０：非表示）
                 dummy.setIsDisp(FlagType.FLAG_OFF);
-                // チェックリスト実績「チェックリスト項目情報」
-                //  add 9539 チェックリストマスタの設定を変更して保存しても保存できない 関  start
                 checkinfo = settingNormalCheckList(checkinfo, list);
-                //  add 9539 チェックリストマスタの設定を変更して保存しても保存できない 関  end
 
                 dummy.setRstChecklistInfo(checkinfo);
 
@@ -2320,35 +2216,34 @@ public class CheckListServiceImpl implements CheckListService {
     if (!mstChecklist.isNull() && mstChecklist.isArray()) {
       for (int i = 0; i < mstChecklist.size(); i++) {
         JsonNode setting = mstChecklist.get(i);
-        // リストコード（list_cd）「１～８」
-        Short listcd = Short.parseShort(setting.get("list_cd").asText());
+        Optional<Short> optListCdRst = parseJsonShortQuiet(setting.path("list_cd"));
+        if (optListCdRst.isEmpty()) {
+          continue;
+        }
+        Short listcd = optListCdRst.get();
 
-        // 機能リスト（funclist）「１～１０」
-        JsonNode funclist = setting.get("funclist");
-        JsonNode dPCd = setting.get("dialysis_prog_cd");
-        String dialysisProgCd = dPCd.asText();
-        // 機能リスト分繰り返し
-        if (!funclist.isNull() && funclist.isArray() && !"3".equals(dialysisProgCd)) {
+        JsonNode funclist = setting.path("funclist");
+        JsonNode dPCd = setting.path("dialysis_prog_cd");
+        Optional<Short> optDialysisProgRst = parseJsonShortQuiet(dPCd);
+        if (optDialysisProgRst.isEmpty()) {
+          continue;
+        }
+        short dialysisProgShort = optDialysisProgRst.get();
+
+        if (!funclist.isNull() && funclist.isArray() && dialysisProgShort != 3) {
           for (int j = 0; j < funclist.size(); j++) {
             JsonNode list = funclist.get(j);
 
-            // 機能種別（func_class）「0：通常リスト」「1：治療条件」「2：医療材料」「3：投与薬剤」
-            String strfuncclass = list.get("func_class").asText();
-            Short funcClass = null;
-            if (!strfuncclass.equals("null")) {
-              funcClass = Short.parseShort(list.get("func_class").asText());
-            }
-
-            // 機能種別未登録の場合
-            if (funcClass == null) {
+            Optional<Short> optFuncClassRst = parseJsonShortQuiet(list.path("func_class"));
+            if (optFuncClassRst.isEmpty()) {
               continue;
             }
+            short funcClass = optFuncClassRst.get();
 
-            // 登録用
             OrdChecklist regdata = new OrdChecklist();
             regdata.setOrdNo(ordMain.getOrdNo());
             regdata.setIsCheck(FlagType.FLAG_OFF);
-            regdata.setRstClass(Short.parseShort(dialysisProgCd));
+            regdata.setRstClass(dialysisProgShort);
             regdata.setListCd(listcd);
             regdata.setFuncClass(funcClass);
             regdata.setIsDisp(FlagType.FLAG_ON);
@@ -2358,19 +2253,18 @@ public class CheckListServiceImpl implements CheckListService {
             OrdChecklistRegStaffInfo regStaffInfo = new OrdChecklistRegStaffInfo();
             regdata.setRegStaffInfo(regStaffInfo);
 
-            // チェックリスト項目情報作成用
             OrdChecklistRegCheckInfo checkinfo = new OrdChecklistRegCheckInfo();
-            // checklist_cd
             checkinfo.setChecklistCd(checklistCd);
-            // item_number
-            checkinfo.setItemNumber(Short.parseShort(list.get("item_number").asText()));
-            // class_cd
-            String classcode = list.get("class_cd").asText();
-            // 患者経過総合ビューアレイアウトマスタの項目定義⇒治療条件No
+            Optional<Short> optItemNoRst = parseJsonShortQuiet(list.path("item_number"));
+            if (optItemNoRst.isEmpty()) {
+              continue;
+            }
+            checkinfo.setItemNumber(optItemNoRst.get());
             Integer classcd = null;
-            if (!classcode.equals("null")) {
-              classcd = Integer.parseInt(list.get("class_cd").toString());
-              checkinfo.setClassCd(Integer.parseInt(classcode));
+            Optional<Integer> optClassCdRst = parseJsonIntQuiet(list.path("class_cd"));
+            if (optClassCdRst.isPresent()) {
+              classcd = optClassCdRst.get();
+              checkinfo.setClassCd(classcd);
             }
 
             List<OrdChecklist> registerChecklist = null;
@@ -2403,17 +2297,12 @@ public class CheckListServiceImpl implements CheckListService {
               // ダミーデータを作成
               if (hasDummyData) {
                 OrdChecklist dummy = regdata.clone();
-                // チェックリスト実績「実施状態」（０：未実施）
                 dummy.setIsCheck(FlagType.FLAG_OFF);
-                // チェックリスト実績「実績区分」（７８９：ダミーデータ）
-                // 透析開始前工程
-                if ("0".equals(dialysisProgCd)){
+                if (dialysisProgShort == 0) {
                   dummy.setRstClass(Short.parseShort("7"));
-                  // 透析中工程
-                } else if("1".equals(dialysisProgCd)){
+                } else if (dialysisProgShort == 1) {
                   dummy.setRstClass(Short.parseShort("8"));
-                  // 透析終了後工程
-                } else if ("2".equals(dialysisProgCd)){
+                } else if (dialysisProgShort == 2) {
                   dummy.setRstClass(Short.parseShort("9"));
                 }
                 // チェックリスト実績「表示フラグ」
@@ -2942,7 +2831,7 @@ public class CheckListServiceImpl implements CheckListService {
           }
         }
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -3593,7 +3482,7 @@ public class CheckListServiceImpl implements CheckListService {
         wheres.append(" AND\n");
         wheres.append(" is_confirm = '1'\n");
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -3646,7 +3535,7 @@ public class CheckListServiceImpl implements CheckListService {
         wheres.append(" AND\n");
         wheres.append(" is_confirm = '1'\n");
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -3716,7 +3605,7 @@ public class CheckListServiceImpl implements CheckListService {
         wheres.append(" AND\n");
         wheres.append(" is_confirm = '1'\n");
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -3788,7 +3677,7 @@ public class CheckListServiceImpl implements CheckListService {
         wheres.append(" AND\n");
         wheres.append(" is_confirm = '1'\n");
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -3857,7 +3746,7 @@ public class CheckListServiceImpl implements CheckListService {
     String mediInfo = ordList.getRstMediInfo();
     /* modify by chamaojia 2024-01-31 [10196]  Add ignore JSON mismatch conversion--start */
     ObjectMapper mapper = new ObjectMapper();
-    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    mapper = mapper.rebuild().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build();
 
     List<RstMediInfoDto> rstMedilist = mediInfo == null || mediInfo.isEmpty() ? new ArrayList<>()
             : mapper.readValue(mediInfo, new TypeReference<List<RstMediInfoDto>>() {
@@ -3962,7 +3851,7 @@ public class CheckListServiceImpl implements CheckListService {
     wheresMedi.append(" WHERE\n");
     wheresMedi.append(" ord_no = " + param.getOrdNo() + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommonMedi = getLogCommon(ordMainDao, tableNameMedi, wheresMedi, getEventLogMessage());
+    DataUpdateLogCommonNew logCommonMedi = getLogCommon(tableNameMedi, wheresMedi, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResultMedi = logCommonMedi.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -4027,7 +3916,7 @@ public class CheckListServiceImpl implements CheckListService {
       wheresIs.append(" AND\n");
       wheresIs.append(" is_confirm = '1'\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommonIs = getLogCommon(ordMainDao, tableNameIs, wheresIs, getEventLogMessage());
+      DataUpdateLogCommonNew logCommonIs = getLogCommon(tableNameIs, wheresIs, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResultIs = logCommonIs.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -4109,28 +3998,23 @@ public class CheckListServiceImpl implements CheckListService {
     for (int i = 0; i < node.size(); i++) {
       JsonNode setting = map.readTree(node.get(i).toString());
 
-      // リストコード
-      Short listcd = Short.parseShort(setting.get("list_cd").toString());
+      Optional<Short> optListCdSend = parseJsonShortQuiet(setting.path("list_cd"));
+      if (optListCdSend.isEmpty()) {
+        continue;
+      }
+      Short listcd = optListCdSend.get();
 
       JsonNode funclist = map.readTree(setting.get("funclist").toString());
 
-      // funclist分繰り返し
       for (int j = 0; j < funclist.size(); j++) {
         JsonNode list = map.readTree(funclist.get(j).toString());
 
-        // 機能種別(func_class)
-        String strfuncclass = list.get("func_class").toString();
-        Short funcClass = null;
-        if (!strfuncclass.equals("null")) {
-          funcClass = Short.parseShort(list.get("func_class").toString());
-        }
-
-        // 未登録の場合
-        if (funcClass == null) {
+        Optional<Short> optFuncSend = parseJsonShortQuiet(list.path("func_class"));
+        if (optFuncSend.isEmpty()) {
           continue;
         }
+        Short funcClass = optFuncSend.get();
 
-        // 登録用
         OrdChecklist regdata = new OrdChecklist();
         regdata.setOrdNo(ordNo);
         regdata.setListCd(listcd);
@@ -4142,17 +4026,17 @@ public class CheckListServiceImpl implements CheckListService {
         regdata.setIsDel(FlagType.FLAG_OFF);
         OrdChecklistRegStaffInfo regStaffInfo = new OrdChecklistRegStaffInfo();
         regdata.setRegStaffInfo(regStaffInfo);
-        // チェックリスト項目情報作成用
         OrdChecklistRegCheckInfo checkinfo = new OrdChecklistRegCheckInfo();
-        // checklist_cd
         checkinfo.setChecklistCd(nowMstChecklist.getChecklistCd());
-        // item_number
-        checkinfo.setItemNumber(Short.parseShort(list.get("item_number").toString()));
-        // class_cd
-        String classcode = list.get("class_cd").toString();
+        Optional<Short> optItemSend = parseJsonShortQuiet(list.path("item_number"));
+        if (optItemSend.isEmpty()) {
+          continue;
+        }
+        checkinfo.setItemNumber(optItemSend.get());
         Integer classcd = null;
-        if (!classcode.equals("null")) {
-          classcd = Integer.parseInt(list.get("class_cd").toString());
+        Optional<Integer> optClassSend = parseJsonIntQuiet(list.path("class_cd"));
+        if (optClassSend.isPresent()) {
+          classcd = optClassSend.get();
           checkinfo.setClassCd(classcd);
         }
 
@@ -4404,7 +4288,7 @@ public class CheckListServiceImpl implements CheckListService {
     wheres.append(" AND\n");
     wheres.append(" is_disp = '1'\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordChecklistDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -4896,7 +4780,7 @@ public class CheckListServiceImpl implements CheckListService {
           String strval = Objects.isNull(value) ? "null" : value.asText();
           // #9973 Mod by Zhou.tao Fix the way for getting value End
           // 対象の治療条件がある場合
-          if (!Objects.isNull(condinfo) && !strval.equals("null")) {
+          if (!Objects.isNull(condinfo) && !strval.equals("null") && !strval.isEmpty()) {
 // del 10310 needle _ typeの使用を削除するには gjn start
             // 穿刺針種別
             //String ntype = "";
@@ -4918,7 +4802,7 @@ public class CheckListServiceImpl implements CheckListService {
               // #9973 Mod by Zhou.tao Fix the way for getting value End
               Integer mtype = null;
               // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
-              if (!strmtype.equals("null")) {
+              if (!strmtype.equals("null") && !strmtype.isEmpty()) {
                 // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
                 //mtype = Short.parseShort(strmtype);
                 mtype = Integer.parseInt(strmtype);
@@ -4947,7 +4831,7 @@ public class CheckListServiceImpl implements CheckListService {
         }
       }
 
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -5074,7 +4958,7 @@ public class CheckListServiceImpl implements CheckListService {
         }
       }
 
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -5160,7 +5044,7 @@ public class CheckListServiceImpl implements CheckListService {
           }
         }
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -5264,7 +5148,7 @@ public class CheckListServiceImpl implements CheckListService {
         }
       }
 
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -5343,7 +5227,7 @@ public class CheckListServiceImpl implements CheckListService {
           }
         }
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -5423,10 +5307,8 @@ public class CheckListServiceImpl implements CheckListService {
       try {
         OrdChecklistRegEquipInfo obj = objectMapper.readValue(value, OrdChecklistRegEquipInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
-//      e.printStackTrace();
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
+      } catch (tools.jackson.core.JacksonException e) {
+        e.printStackTrace();
       }
     }
 
@@ -5438,7 +5320,7 @@ public class CheckListServiceImpl implements CheckListService {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -5528,10 +5410,8 @@ public class CheckListServiceImpl implements CheckListService {
       try {
         OrdChecklistRegMediInfo obj = objectMapper.readValue(value, OrdChecklistRegMediInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
-//      e.printStackTrace();
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
+      } catch (tools.jackson.core.JacksonException e) {
+        e.printStackTrace();
       }
     }
 
@@ -5543,7 +5423,7 @@ public class CheckListServiceImpl implements CheckListService {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -5633,11 +5513,11 @@ public class CheckListServiceImpl implements CheckListService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -5863,7 +5743,7 @@ public class CheckListServiceImpl implements CheckListService {
       }
       IndScheduleUser user = new IndScheduleUser(instructorName, updaterName);
       return user;
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       return new IndScheduleUser("", "");
     }
   }
@@ -7754,6 +7634,53 @@ public class CheckListServiceImpl implements CheckListService {
   }
   // add #12235【因島】チェックリストの治療条件：抗凝固剤での小数点桁数の扱いが不正 関 end
 
+  /**
+   * JsonNode を Short に変換する（欠損・JSON null・空文字・"null"・非数値は empty）
+   */
+  private static Optional<Short> parseJsonShortQuiet(JsonNode n) {
+    if (n == null || n.isNull() || n.isMissingNode()) {
+      return Optional.empty();
+    }
+    String s = n.asText().trim();
+    if (s.isEmpty() || "null".equalsIgnoreCase(s)) {
+      return Optional.empty();
+    }
+    try {
+      return Optional.of(Short.parseShort(s));
+    } catch (NumberFormatException e) {
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * JsonNode を Integer に変換する（欠損・JSON null・空文字・"null"・非数値は empty）
+   */
+  private static Optional<Integer> parseJsonIntQuiet(JsonNode n) {
+    if (n == null || n.isNull() || n.isMissingNode()) {
+      return Optional.empty();
+    }
+    String s = n.asText().trim();
+    if (s.isEmpty() || "null".equalsIgnoreCase(s)) {
+      return Optional.empty();
+    }
+    try {
+      return Optional.of(Integer.parseInt(s));
+    } catch (NumberFormatException e) {
+      return Optional.empty();
+    }
+  }
+
+  /** 表示用テキスト（空・JSON null は empty） */
+  private static Optional<String> optionalJsonText(JsonNode n) {
+    if (n == null || n.isNull() || n.isMissingNode()) {
+      return Optional.empty();
+    }
+    String s = n.asText().trim();
+    if (s.isEmpty() || "null".equalsIgnoreCase(s)) {
+      return Optional.empty();
+    }
+    return Optional.of(s);
+  }
   // add #9507 一括指示受けに時間がかかる zrx start
   @Override
   public String getIndApprovedForContent(Long ordNo) {
@@ -7770,8 +7697,10 @@ public class CheckListServiceImpl implements CheckListService {
       logMsg = String.format("治療単位指示受け時指示内容、治療単位指示承認時指示内容 ord_no: %d", ordNo);
       eventLogMessage.setLogMessage(logMsg);
       logService.log(LogLevel.INFO, eventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI, null);
-    }catch(Exception e){
-      e.printStackTrace();
+    } catch (Exception e) {
+      EventLogMessage eventLogMessage = new EventLogMessage();
+      eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
+      logService.log(LogLevel.ERROR, eventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI, null);
     }
     return content;
   }

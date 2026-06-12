@@ -26,6 +26,9 @@ import jp.co.nikkiso.ntss.monitoring.service.MstMachineService;
 import jp.co.nikkiso.ntss.monitoring.service.logger.LogService;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.monitoring.service.logger.LogEventUtils;
+
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 /**
  * 装置系画面のResourceクラス.
  * <p>

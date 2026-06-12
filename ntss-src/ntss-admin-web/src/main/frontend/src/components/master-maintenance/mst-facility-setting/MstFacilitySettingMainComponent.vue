@@ -1,20 +1,11 @@
-/**
- * 施設管理マスタメンテナンスデータページ  MainContent
- */
 <template>
   <div class='main-content-area master-maintenance-page'>
-    <div class='ntss-list' v-if="this.columns.length" v-kendo-validator="kendoValidatorSetup">
-      <div v-if="isMobileDevice" id="grid-header" class="header-btn-area right" style="height: 30px;">
-        <v-ons-row style="width: 7em;">
-          <v-ons-col width="45%" vertical-align="center">
-            <label class="fab-font-color">編集</label>
-          </v-ons-col>
-          <v-ons-col width="55%" vertical-align="center">
-            <v-ons-switch modifier="outline" class="custom-switch" v-model="allowEdit" />
-          </v-ons-col>
-        </v-ons-row>
-      </div>
-      <kendo-grid-toolbar class="k-grid-toolbar kendo-grid-toolbar-style" :style="heightStyles">
+    <div class='ntss-list' v-if="this.columns.length">
+      <div :class="['k-grid-toolbar', 'k-header', 'kendo-grid-toolbar-style', { 'no-scroll': isMobileDevice }]" :style="heightStyles">
+        <div v-if="isMobileDevice" class="header-btn-area mobile-edit-toolbar">
+          <label class="fab-font-color">編集</label>
+          <v-ons-switch modifier="outline" v-model="allowEdit" />
+        </div>
         <!-- <div v-if="isMasterUser" class='header-btn-area right'> -->
           <!-- del マスタ一覧 1･施設切替を可能とする 孔 start-->
           <!--<kendo-dropdownlist
@@ -31,63 +22,17 @@
         <!-- </div>
         <div v-else class='header-btn-area left'>
         </div> -->
-        <kendo-grid
-          ref="grid"
-          :class="fontSizeSet"
-          :key="tableKey"
+        <div
+          v-show="columns.length > 1"
+          ref="gridRoot"
+          :class="[
+            fontSizeSet,
+            'ntss-kendo-grid-legacy',
+            'mst-facility-setting-direct-jq-grid'
+          ]"
           style="clear: both;"
-          :data-source="masterRecords"
-          :editable="true"
-          :selectable="true"
-          :reorderable="false"
-          :height=kendoGridHeight
-          :scrollable="true"
-          :beforeEdit=editStart
-          :cellClose=editEnd
-          @save="onSave"
-          @databound="onDataBoundKendoGrid">
-          <template v-for="(column, index) in columns" >
-            <kendo-grid-column v-if="column.title === '設定値'"
-              :key="index"
-              :title="column.title"
-              :field="column.field"
-              :hidden="column.hidden"
-              :editable="column.editable"
-              :width="column.width"
-              :format="column.format"
-              :values="column.values"
-              :encoded="column.encoded"
-              :editor="editorInput"
-              >
-            </kendo-grid-column>
-            <kendo-grid-column v-else-if="column.field === 'dispOrder'"
-              :key="index"
-              :title="column.title"
-              :field="column.field"
-              :hidden="column.hidden"
-              :editable="column.editable"
-              width="4em"
-              :format="column.format"
-              :values="column.values"
-              :encoded="column.encoded"
-              :editor="editorInput"
-              >
-            </kendo-grid-column>
-            <kendo-grid-column v-else
-              :key="index"
-              :title="column.title"
-              :field="column.field"
-              :hidden="column.hidden"
-              :editable="column.editable"
-              :width="column.width"
-              :format="column.format"
-              :values="column.values"
-              :encoded="column.encoded"
-              >
-            </kendo-grid-column>
-          </template>
-        </kendo-grid>
-      </kendo-grid-toolbar>
+        ></div>
+      </div>
       <!-- 高さ調整 -->
       <div id="grid-footer">
         <v-ons-row v-show="!isSortMode" width="100%">
@@ -114,7 +59,7 @@
       </div>
       <message-dialog
         v-if="isDialogVisible"
-        :visible.sync="isDialogVisible"
+        v-model:visible="isDialogVisible"
         :message-cd="messageCd"
         :string-params="stringParams"
         type="1"
@@ -124,15 +69,12 @@
 </template>
 
 <script>
-import $ from "jquery";
-import _ from "underscore";
-import moment from "moment";
-import { mapActions, mapGetters } from "vuex";
-import NextTransitionMixin from "@/components/NextTransitionMixin";
-import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
-import { Validator } from "@progress/kendo-validator-vue-wrapper";
+import { markRaw } from "@/compat/vue/runtime";
+import _ from "@/compat/collections/lodash";
+import dayjs from "@/compat/date/dayjs";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { sendRequestGetMstFacilityHashByFacilityCd } from "@/apis/mst-facility-hash";
 import {
@@ -149,17 +91,59 @@ import {
   STATUS_MAP_SCHEDULE_INDICATOR
 } from "@/constants/facilitySetting";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
-// add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
-import { cloneDeep, isEqual } from "lodash";
+import { cloneDeep, isEqual } from "@/compat/collections/lodash";
+
+import { getScopedAlertDialogs, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import kendo from "@progress/kendo-ui";
+import $ from "jquery";
+import {
+  bindGridEditorEnterToCloseCell,
+  ensureGridEditorMultiSelectHeaderSearchIcon,
+  scheduleClearGridEditorMultiSelectRowHeight,
+  scheduleGridEditorMultiSelectRowHeight
+} from "@/compat/kendo/grid-edit";
+import { withProgrammaticKendoUpdate } from "@/compat/kendo/legacy-sender.js";
+
+
+function installComponentJQuery() {
+  if (typeof window !== "undefined") {
+    window.$ = window.$ || $;
+    window.jQuery = window.jQuery || $;
+  }
+  if (typeof globalThis !== "undefined") {
+    globalThis.$ = globalThis.$ || $;
+    globalThis.jQuery = globalThis.jQuery || $;
+  }
+}
+
+function getKendoWidgetValue(widget) {
+  if (!widget) {
+    return null;
+  }
+  if (typeof widget.value === "function") {
+    return widget.value();
+  }
+  return widget._old ?? null;
+}
+
+function setKendoWidgetValue(widget, value) {
+  if (!widget) {
+    return;
+  }
+  if (typeof widget.value === "function") {
+    widget.value(value);
+  } else {
+    widget._old = value;
+  }
+}
+
 
 export default {
   components: {
     "message-dialog": messageDialog
   },
-  mixins: [NextTransitionMixin, MasterMaintenanceMixin],
-  Validator,
   data() {
     return {
       // 初期状態で1列がないとその後の表示が行われないため初期列を定義
@@ -177,6 +161,7 @@ export default {
       },
       kendoGridToolbarHeight: 500,
       kendoGridHeight: '100%',
+      kendoValidator: null,
       kendoValidatorSetup: {
         rules: {},
         messages: {}
@@ -220,6 +205,19 @@ export default {
       originalDataSource: null,
       scrollTop: 0,
       scrollLeft: 0,
+      directGridDataSource: null,
+      directGridWidget: null,
+      directGridMounted: false,
+      directGridReady: false,
+      directGridLayoutRafId: null,
+      directGridDataSourceRafId: null,
+      directGridScrollSyncRafId: null,
+      directGridResizeHandler: null,
+      directGridColumnSignature: "",
+      directGridBodyColumnFields: null,
+      facilitySettingDispValueBodyColumnIndex: null,
+      directGridLockedColumnFields: null,
+      directGridRowVisualRafIds: markRaw(new Map()),
     };
   },
   computed: {
@@ -256,13 +254,26 @@ export default {
       return this.getFilteredMasterRecordList;
     },
     isChanged() {
+      // 復元後に isChanged を再計算させるため tableKey を参照する
+      void this.tableKey;
       const data = this.getMasterRecordList.data;
+      if (!Array.isArray(data)) {
+        return false;
+      }
+      const originalData = Array.isArray(this.originalDataSource) ? this.originalDataSource : [];
+      const hasEffectiveChange = data.some((row) => {
+        const originalItem = originalData.find((item) =>
+          String(item?.facilitySettingNo ?? "") === String(row?.facilitySettingNo ?? "")
+        );
+        if (!originalItem) {
+          return false;
+        }
+        return !this.isFacilitySettingRowUnchangedByModel(row, originalItem);
+      });
       return (
         this.getStateUserAccountInfo !== null &&
-        data !== undefined &&
-        (data.filter(row => row.operation > 0).length ||
-          this.isSorted ||
-          this.kendoValidator && !this.kendoValidator.validate())
+        (hasEffectiveChange ||
+          this.isSorted)
       );
     },
     editRecord(){
@@ -270,17 +281,28 @@ export default {
     },
     isMobileDevice() {
       return this.iosFlg || this.androidFlg;
+    },
+    facilitySettingFilterSignature() {
+      const state = this.$store?.state?.["mst-facility-setting"] || {};
+      return JSON.stringify({
+        condition: state.condition || {},
+        userType: state.userType || "",
+        facilitySysUseSetting: state.facilitySysUseSetting || ""
+      });
     }
   },
   watch: {
     windowHeight() {
       this.calculateGridHeight();
+      this.scheduleDirectGridLayoutContract();
     },
     isDispMenu() {
       this.calculateGridHeight();
+      this.scheduleDirectGridLayoutContract();
     },
     getFontSize() {
       this.calculateGridHeight();
+      this.scheduleDirectGridLayoutContract();
     },
     async facilitylistValue() {
       if (this.facilitylistValue) {
@@ -291,11 +313,18 @@ export default {
         this.setFacilitySysUseSetting("");
       }
     },
-    columns:function(val){
-      this.$nextTick(function(){
-        if (val.length > 1)
-        this.setLoadingScreenVisible(false);
+    columns(val) {
+      this.$nextTick(() => {
+        if (Array.isArray(val) && val.length > 1) {
+          this.setLoadingScreenVisible(false);
+          this.initDirectGridIfReady();
+          this.applyDirectGridColumnsContract();
+          this.scheduleDirectGridLayoutContract();
+        }
       });
+    },
+    facilitySettingFilterSignature() {
+      this.applyDirectGridDataSourceContract({ resetScroll: true });
     }
   },
   methods: {
@@ -323,60 +352,144 @@ export default {
     }),
     ...mapActions("user", ["setSignInFailSetting"]),
     onSave(ev) {
-      if(ev.model.facilitySettingNo == '1012' || ev.model.facilitySettingNo == '1014')  return;
+      if (ev.model.facilitySettingNo == '1012' || ev.model.facilitySettingNo == '1014') return;
       // add redmine 4675 医療材料表示順、投与薬剤表示順の不正 孔 start
-      if(ev.model.inputType === 7)  return;
+      if (Number(ev.model.inputType) === 7) {
+        // redmine 4675: 編集中の都度 edit しない。表示文字列の同期のみ。
+        this.syncFacilitySettingMultiSelectDisplayModel(ev.model);
+        return;
+      }
       // add redmine 4675 医療材料表示順、投与薬剤表示順の不正 孔 end
-      // スクロールの位置を維持
-      this.scrollLeft = ev.sender._scrollLeft;
-      this.scrollTop = ev.sender.wrapper[0].children[1].scrollTop;
+      const position = this.getGridScrollPosition();
+      this.scrollLeft = position.left;
+      this.scrollTop = position.top;
       this.editFlg = true;
 
       this.editingFlg = false;
+      this.applyFacilitySettingSaveValuesToModel(ev);
+
+      if (this.finalizeFacilitySettingRowIfRevertedToOriginal(ev)) {
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+
       this.edit({ editRecord: ev.model, isSortMode: this.isSortMode });
 
-      // 初期値と現在値を比較し、差分が無い場合はdirty状態を解除
-      this.handleUnchangedState(ev);
-
-      ev.sender.refresh();
-      if (ev.model.operation === 1) {
+      if (Number(ev.model.operation) > 0) {
         ev.model.edited = true;
       }
 
-      // 状態に合わせて背景色を変更
-      this.editBackgroundColor();
+      const markEditedRowVisual = () => {
+        this.applyDirectGridRowVisualState(ev.model, ev.model?.uid);
+        this.findDirectGridRowsForRecord(ev.model, ev.model?.uid).forEach((row) => {
+          this.markFacilitySettingValueCellsEdited(row, ev.model);
+        });
+      };
+      this.scheduleDirectGridRowVisualState(ev.model, ev.model?.uid);
+      this.$nextTick(() => {
+        markEditedRowVisual();
+        requestAnimationFrame(markEditedRowVisual);
+      });
+      this.scheduleDirectGridLayoutContract();
     },
     onDataBoundKendoGrid(ev) {
+      this.directGridWidget = markRaw(ev?.sender || this.directGridWidget);
+      this.invalidateDirectGridColumnFieldCache();
+      this.applyDirectGridLegacyStyleContract();
+      this.refreshDirectGridVisualState();
       if (this.scrollTop > 0 || this.scrollLeft > 0) {
-        //スクロールバーの位置をイベント発生前の位置に戻す
         this.$nextTick(() => {
-          ev.sender.content[0].scrollTop = this.scrollTop;
-          ev.sender.content[0].scrollLeft = this.scrollLeft;
+          this.setGridScrollPosition({ top: this.scrollTop, left: this.scrollLeft });
         });
       }
+    },
+    measureMasterElementHeight(element, defaultValue = 0) {
+      if (!element) {
+        return defaultValue;
+      }
+      const clientHeight = element.clientHeight;
+      if (Number.isFinite(clientHeight) && clientHeight > 0) {
+        return clientHeight;
+      }
+      const rectHeight = element.getBoundingClientRect?.().height;
+      return Number.isFinite(rectHeight) && rectHeight > 0 ? rectHeight : defaultValue;
+    },
+    getMasterLayoutElements() {
+      const root = this.$el || null;
+      const ownerDocument = root?.ownerDocument || document;
+      return {
+        header: ownerDocument.querySelector?.(".header") || ownerDocument.getElementsByClassName?.("header")?.[0] || null,
+        footerMenu: ownerDocument.getElementById?.("footer-menu") || null,
+        gridFooter: root?.querySelector?.("#grid-footer") || null,
+        mainContentArea: root?.querySelector?.(".main-content-area") || root || null
+      };
+    },
+    isMasterLayoutReady(options = {}) {
+      const { requireGridFooter = false } = options;
+      const elements = this.getMasterLayoutElements();
+      if (!elements.header && !this.windowHeight) {
+        return false;
+      }
+      if (requireGridFooter && !elements.gridFooter) {
+        return false;
+      }
+      return true;
+    },
+    runWhenMasterLayoutReady(callback, options = {}) {
+      const retries = options.retries ?? 6;
+      const delay = options.delay ?? 16;
+      const run = (remaining) => {
+        this.$nextTick(() => {
+          if (this.isMasterLayoutReady(options)) {
+            callback();
+            return;
+          }
+          if (remaining > 0) {
+            setTimeout(() => run(remaining - 1), delay);
+          }
+        });
+      };
+      run(retries);
+      return Promise.resolve(true);
+    },
+    getMasterViewportBaseHeight(menuOffset = 0) {
+      const elements = this.getMasterLayoutElements();
+      const wh = this.windowHeight || window.innerHeight || 0;
+      const hh = this.measureMasterElementHeight(elements.header, 0);
+      const fmh = ((this.isDispMenu === 1 ? this.measureMasterElementHeight(elements.footerMenu, 0) : 0) || 0) + menuOffset;
+      return { wh, hh, fmh };
+    },
+    getMasterGridFooterHeight(defaultValue = 0) {
+      return this.measureMasterElementHeight(this.getMasterLayoutElements().gridFooter, defaultValue);
     },
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       if (!this.editingFlg) {
-        const wh = this.windowHeight;
-        const hh = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .pop().clientHeight;
-        const fmh =
-          this.isDispMenu === 1
-            ? document.getElementById("footer-menu").clientHeight
-            : 0;
+        if (!this.isMasterLayoutReady({ requireGridFooter: true })) {
+          this.runWhenMasterLayoutReady(() => {
+            this.calculateGridHeight();
+          }, {
+            name: 'mst-facility-setting:calculate-grid-height',
+            requireGridFooter: true,
+            retries: 8,
+            delay: 16
+          });
+          return false;
+        }
+        const { wh, hh, fmh } = this.getMasterViewportBaseHeight();
         this.kendoGridToolbarHeight = wh - hh - fmh;
         this.kendoGridToolbarHeight =
           this.kendoGridToolbarHeight < 340 ? 340 : this.kendoGridToolbarHeight;
 
-        // const gfh = document.getElementById("grid-footer").clientHeight;
-        // const hbh = document.querySelector(".header-btn-area").clientHeight;
-        const footerHeight = document.getElementById('grid-footer').clientHeight
-        this.footerHeight = footerHeight
-        this.tableKey += 1
+        const footerHeight = this.getMasterGridFooterHeight(0);
+        this.footerHeight = footerHeight;
         this.kendoGridHeight = '100%';
+        this.$nextTick(() => {
+          this.resizeDirectGrid();
+          this.scheduleDirectGridLayoutContract();
+        });
       }
+      return true;
     },
     editStart(e) {
       if (this.isMobileDevice && !this.allowEdit) {
@@ -391,69 +504,449 @@ export default {
       if (this.androidFlg) {
         this.editingFlg = true;
       }
+      this.syncFacilitySettingSelectorModelFromStore(e?.model);
+      bindGridEditorEnterToCloseCell(e?.sender || this.getDirectGridWidget(), e?.container);
+    },
+    closeFacilitySettingGridEditCell() {
+      requestAnimationFrame(() => {
+        try {
+          this.getDirectGridWidget()?.closeCell?.();
+        } catch (_error) {
+          // noop
+        }
+        this.editingFlg = false;
+      });
     },
     editEnd(ev) {
       this.editingFlg = false;
       // mod redmine 4675 医療材料表示順、投与薬剤表示順の不正 孔 start
       //if(ev.model.facilitySettingNo == '1012' || ev.model.facilitySettingNo == '1014') {
       if (ev.model.facilitySettingNo == '1012' || ev.model.facilitySettingNo == '1014' ||
-        (ev.model.inputType === 7 && ev.model.val)) {
+        Number(ev.model.inputType) === 7) {
       // mod redmine 4675 医療材料表示順、投与薬剤表示順の不正 孔 end
+        if (Number(ev.model.inputType) === 7) {
+          this.syncFacilitySettingMultiSelectDisplayModel(ev.model);
+          this.clearFacilitySettingMultiSelectEditorHeight(ev);
+        }
+        if (this.finalizeFacilitySettingRowIfRevertedToOriginal(ev)) {
+          this.scheduleDirectGridLayoutContract();
+          return;
+        }
+
         this.edit({ editRecord: ev.model, isSortMode: false });
 
-        // 初期値と現在値を比較し、差分が無い場合はdirty状態を解除
-        this.handleUnchangedState(ev);
-
-        ev.sender.refresh();
         if (ev.model.operation === 1) {
           ev.model.edited = true;
         }
 
-        // 状態に合わせて背景色を変更
-        this.editBackgroundColor();
+        // Vue2 の cellClose は現在行の状態だけを反映する。direct jq でも全表 refresh / 全表配色は行わない。
+        this.scheduleDirectGridRowVisualState(ev.model, ev.model?.uid);
+        this.$nextTick(() => {
+          this.applyDirectGridRowVisualState(ev.model, ev.model?.uid);
+        });
+        this.scheduleDirectGridLayoutContract();
       }
     },
 
-    /**
-     * 編集終了時（saveまたはcellClose）に、初期値とセルの値が同一か判定し、同一の場合はGrid行のdirty状態を解除する
-     * @param {Object} e - KendoGridのイベント引数
-     */
-    handleUnchangedState(e) {
-      const { facilitySettingNo } = e.model;
-      const originalItem = this.originalDataSource.find((item) => {
-        return item.facilitySettingNo === facilitySettingNo;
-      });
-
-      let editField;
-      let editedValue;
-      if (e.values && typeof e.values === "object") {
-        // save()からの呼出しの場合、e.valuesから編集フィールドを取得
-        editField = Object.keys(e.values)[0];
-        // 現在値取得
-        editedValue = e.values[editField];
-      } else {
-        // cellClose()からの呼出しの場合、e.valuesが無い為<td>から取得
-        const colIndex = e.container[0].cellIndex;
-        editField = e.sender.columns[colIndex]?.field || e.sender.thead[0].querySelectorAll('th')[colIndex]?.getAttribute('data-field');
-        // 現在値取得
-        editedValue = e.model[editField];
+    findOriginalFacilitySetting(model) {
+      if (!model || !Array.isArray(this.originalDataSource)) {
+        return null;
       }
-      // 初期値取得
+      return this.originalDataSource.find(
+        (item) => String(item?.facilitySettingNo) === String(model?.facilitySettingNo)
+      ) || null;
+    },
+    normalizeFacilitySettingCompareText(value) {
+      return String(value ?? "").replace(/\r\n|\r/g, "\n");
+    },
+    isFacilitySettingRowUnchanged(model, event = null) {
+      const originalItem = this.findOriginalFacilitySetting(model);
+      if (!originalItem) {
+        return false;
+      }
+      if (event?.values && typeof event.values === "object") {
+        const editField = Object.keys(event.values)[0];
+        if (editField) {
+          return this.isFacilitySettingFieldUnchanged(
+            model,
+            originalItem,
+            editField,
+            event.values[editField]
+          );
+        }
+      }
+      if (event?.container?.[0] || event?.container) {
+        const colIndex = this.getDirectGridCellIndex(event.container?.[0] || event.container);
+        const editField = this.getDirectGridColumnField(colIndex);
+        if (editField) {
+          return this.isFacilitySettingFieldUnchanged(
+            model,
+            originalItem,
+            editField,
+            model[editField]
+          );
+        }
+      }
+      return this.isFacilitySettingRowUnchangedByModel(model, originalItem);
+    },
+    getFacilitySettingOnOffOptions() {
+      return [{ id: "0", name: "OFF" }, { id: "1", name: "ON" }];
+    },
+    resolveFacilitySettingOnOffId(value, dispValue) {
+      const options = this.getFacilitySettingOnOffOptions();
+      const byId = options.find((item) => String(item.id) === String(value));
+      if (byId) {
+        return String(byId.id);
+      }
+      const byName = options.find(
+        (item) =>
+          String(item.name) === String(value) ||
+          String(item.name) === String(dispValue)
+      );
+      if (byName) {
+        return String(byName.id);
+      }
+      return String(value ?? "");
+    },
+    syncFacilitySettingOnOffModel(model) {
+      if (!model || Number(model.inputType) !== 3) {
+        return;
+      }
+      const id = this.resolveFacilitySettingOnOffId(model.value ?? model.val, model.dispValue);
+      const option = this.getFacilitySettingOnOffOptions().find((item) => String(item.id) === id);
+      if (!option) {
+        return;
+      }
+      model.value = option.id;
+      model.val = option.id;
+      model.dispValue = option.name;
+    },
+    resolveFacilitySettingOptionId(model, originalItem, editField, editedValue) {
+      const inputType = Number(model.inputType);
+      if (inputType === 3) {
+        if (editField === "dispValue" && editedValue != null && editedValue !== "") {
+          return this.resolveFacilitySettingOnOffId(null, editedValue);
+        }
+        return this.resolveFacilitySettingOnOffId(
+          model.value ?? model.val ?? editedValue,
+          model.dispValue
+        );
+      }
+      if (inputType === 4 || inputType === 5 || inputType === 8 || inputType === 9) {
+        if (editField === "value" || editField === "val") {
+          return String(editedValue ?? model.value ?? model.val ?? "");
+        }
+        const jsonData = this.parseJsonValue(model.optionValue, []);
+        const byName = jsonData.find((item) => String(item.name) === String(editedValue ?? model.dispValue));
+        if (byName) {
+          return String(byName.id);
+        }
+        return String(model.value ?? model.val ?? editedValue ?? "");
+      }
+      return String(model.value ?? model.val ?? editedValue ?? "");
+    },
+    isFacilitySettingFieldUnchanged(model, originalItem, editField, editedValue) {
+      const inputType = Number(model.inputType);
+      if (inputType === 6) {
+        const originalValue = originalItem?.[editField];
+        return isEqual(
+          this.normalizeFacilitySettingCompareText(originalValue),
+          this.normalizeFacilitySettingCompareText(editedValue)
+        );
+      }
+      if (inputType === 2) {
+        return isEqual(
+          String(originalItem.dispValue ?? ""),
+          String(model.dispValue ?? editedValue ?? "")
+        );
+      }
+      if (inputType === 3 || inputType === 4 || inputType === 5 || inputType === 8 || inputType === 9) {
+        const originalId = this.resolveFacilitySettingOptionId(
+          originalItem,
+          originalItem,
+          "value",
+          originalItem.value ?? originalItem.val
+        );
+        const currentId = this.resolveFacilitySettingOptionId(
+          model,
+          originalItem,
+          editField,
+          editedValue
+        );
+        return isEqual(originalId, currentId);
+      }
       const originalValue = originalItem?.[editField];
-
-      let isUnchanged;
-      if (e.model.inputType === 6) {
-        // 入力分類(inputType)が6:テキストエリア（複数行対応）の場合、改行コードを\nに統一し初期値と現在値を比較
-        isUnchanged = isEqual(String(originalValue ?? '').replace(/\r\n|\r/g, '\n'), String(editedValue ?? '').replace(/\r\n|\r/g, '\n'));
-      } else {
-      // 初期値と現在値を比較
-        isUnchanged = isEqual(originalValue, editedValue);
+      return isEqual(originalValue, editedValue);
+    },
+    isFacilitySettingRowUnchangedByModel(model, originalItem) {
+      const inputType = Number(model.inputType);
+      if (inputType === 6) {
+        return isEqual(
+          this.normalizeFacilitySettingCompareText(originalItem.dispValue),
+          this.normalizeFacilitySettingCompareText(model.dispValue)
+        );
       }
-      if (isUnchanged) {
-        // 初期値と現在値に差が無い場合、行のdirty状態を解除
-        e.sender.dataSource.cancelChanges(e.model);
-        delete e.model.operation;
+      if (inputType === 7) {
+        return isEqual(
+          this.normalizeMultiSelectValues(originalItem.value ?? originalItem.val),
+          this.normalizeMultiSelectValues(model.value ?? model.val)
+        );
       }
+      if (inputType === 4 || inputType === 5 || inputType === 8 || inputType === 9 || inputType === 3) {
+        const originalId = this.resolveFacilitySettingOptionId(
+          originalItem,
+          originalItem,
+          "value",
+          originalItem.value ?? originalItem.val
+        );
+        const currentId = this.resolveFacilitySettingOptionId(
+          model,
+          originalItem,
+          "value",
+          model.value ?? model.val
+        );
+        return isEqual(originalId, currentId);
+      }
+      if (inputType === 2) {
+        return isEqual(String(originalItem.dispValue ?? ""), String(model.dispValue ?? ""));
+      }
+      return isEqual(originalItem.dispValue, model.dispValue);
+    },
+    applyFacilitySettingSaveValuesToModel(ev) {
+      const model = ev?.model;
+      if (!model || !ev?.values || typeof ev.values !== "object") {
+        return;
+      }
+      Object.keys(ev.values).forEach((field) => {
+        model[field] = ev.values[field];
+      });
+      if (Number(model.inputType) === 3) {
+        this.syncFacilitySettingOnOffModel(model);
+      } else if ([4, 5, 8, 9].includes(Number(model.inputType)) && (
+        Object.prototype.hasOwnProperty.call(ev.values, "dispValue") ||
+        Object.prototype.hasOwnProperty.call(ev.values, "value") ||
+        Object.prototype.hasOwnProperty.call(ev.values, "val")
+      )) {
+        const optionList = this.parseJsonValue(model.optionValue, []);
+        const savedValue = ev.values.value ?? ev.values.val ?? ev.values.dispValue ?? model.value ?? model.val ?? model.dispValue;
+        const match = this.findOptionValueById(optionList, savedValue)
+          || this.findOptionValueByName(optionList, savedValue);
+        if (match) {
+          model.value = String(match.id);
+          model.val = String(match.id);
+          model.dispValue = match.name;
+        }
+      }
+    },
+    scheduleFacilitySettingDropdownEditorCommit(model) {
+      if (!model) {
+        return;
+      }
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      const runFallbackCommit = () => {
+        if (!model || Number(model.operation) > 0) {
+          return;
+        }
+        if (this.finalizeFacilitySettingRowIfRevertedToOriginal({ model })) {
+          this.scheduleDirectGridLayoutContract();
+          return;
+        }
+        this.editFlg = true;
+        this.editingFlg = false;
+        this.edit({ editRecord: model, isSortMode: false });
+        if (Number(model.operation) > 0) {
+          model.edited = true;
+        }
+        const markEditedRowVisual = () => {
+          this.applyDirectGridRowVisualState(model, model?.uid);
+          this.findDirectGridRowsForRecord(model, model?.uid).forEach((row) => {
+            this.markFacilitySettingValueCellsEdited(row, model);
+          });
+        };
+        this.scheduleDirectGridRowVisualState(model, model?.uid);
+        this.$nextTick(() => {
+          markEditedRowVisual();
+          ownerWindow.requestAnimationFrame?.(markEditedRowVisual);
+        });
+        this.scheduleDirectGridLayoutContract();
+      };
+      this.$nextTick(() => {
+        if (typeof ownerWindow.requestAnimationFrame === "function") {
+          ownerWindow.requestAnimationFrame(runFallbackCommit);
+        } else {
+          ownerWindow.setTimeout(runFallbackCommit, 0);
+        }
+      });
+    },
+    restoreFacilitySettingRowFromOriginal(model) {
+      const originalItem = this.findOriginalFacilitySetting(model);
+      if (!originalItem) {
+        return;
+      }
+      ["value", "val", "dispValue"].forEach((field) => {
+        if (Object.prototype.hasOwnProperty.call(originalItem, field)) {
+          model[field] = originalItem[field];
+        }
+      });
+      model.operation = 0;
+      model.edited = false;
+      if (model.dirtyFields && typeof model.dirtyFields === "object") {
+        Object.keys(model.dirtyFields).forEach((field) => {
+          delete model.dirtyFields[field];
+        });
+      }
+      model.dirty = false;
+      const storeRecord = this.getMasterRecordList?.data?.find((item) =>
+        String(item?.facilitySettingNo ?? "") === String(model?.facilitySettingNo ?? "")
+        || String(item?.dispOrder ?? "") === String(model?.dispOrder ?? "")
+      );
+      if (storeRecord && storeRecord !== model) {
+        ["value", "val", "dispValue"].forEach((field) => {
+          if (Object.prototype.hasOwnProperty.call(originalItem, field)) {
+            storeRecord[field] = originalItem[field];
+          }
+        });
+        storeRecord.operation = 0;
+        storeRecord.edited = false;
+      }
+    },
+    isFacilitySettingRowInGridDataSource(model) {
+      const grid = this.getDirectGridWidget();
+      if (!grid?.dataSource || !model) {
+        return false;
+      }
+      const items = grid.dataSource.data?.() || [];
+      return items.some(
+        (item) =>
+          item === model ||
+          item.uid === model.uid ||
+          item.facilitySettingNo === model.facilitySettingNo
+      );
+    },
+    refreshFacilitySettingGridRowAfterRevert(model) {
+      const grid = this.getDirectGridWidget();
+      if (!grid?.dataSource || !model) {
+        return;
+      }
+      if (this.isFacilitySettingRowInGridDataSource(model)) {
+        return;
+      }
+      const position = this.getGridScrollPosition();
+      grid.dataSource.data(this.getDirectGridDisplayData());
+      this.$nextTick(() => {
+        this.applyDirectGridLegacyStyleContract();
+        this.setGridScrollPosition(position);
+        this.applyDirectGridRowVisualState(model, model.uid);
+      });
+    },
+    findDirectGridRowsForRecord(record, preferredUid = null) {
+      const grid = this.getDirectGridWidget();
+      if (!grid || !record) {
+        return [];
+      }
+      const uid = preferredUid || record.uid;
+      if (uid) {
+        const rowsByUid = Array.from(
+          this.getDirectGridRootEl()?.querySelectorAll?.(`tbody tr[data-uid="${uid}"]`) || []
+        );
+        if (rowsByUid.length) {
+          return rowsByUid;
+        }
+      }
+      const data = grid.dataSource?.data?.() || [];
+      const index = Array.from(data).findIndex(
+        (item) =>
+          item === record ||
+          item.uid === record.uid ||
+          item.dispOrder === record.dispOrder ||
+          item.facilitySettingNo === record.facilitySettingNo
+      );
+      if (index < 0) {
+        return [];
+      }
+      return Array.from(this.getDirectGridRootEl()?.querySelectorAll?.("tbody") || [])
+        .map((tbody) => tbody.children?.[index])
+        .filter(Boolean);
+    },
+    clearFacilitySettingGridRowActiveState(event) {
+      const grid = this.getDirectGridWidget();
+      const uid = event?.model?.uid;
+      try {
+        grid?.clearSelection?.();
+      } catch (_error) {
+        // noop
+      }
+      const rowClasses = ["k-selected", "k-state-selected", "k-grid-edit-row"];
+      const cellClasses = [
+        "k-state-selected",
+        "k-selected",
+        "k-edit-cell",
+        "k-focus",
+        "k-focused"
+      ];
+      const clearRow = (row) => {
+        if (!row) {
+          return;
+        }
+        rowClasses.forEach((className) => row.classList.remove(className));
+        Array.from(row.children || []).forEach((cell) => {
+          cellClasses.forEach((className) => cell.classList.remove(className));
+        });
+      };
+      this.findDirectGridRowsForRecord(event?.model, uid).forEach(clearRow);
+      if (uid) {
+        const root = this.getDirectGridRootEl();
+        root
+          ?.querySelectorAll?.(`tbody tr[data-uid="${uid}"]`)
+          ?.forEach?.(clearRow);
+      }
+    },
+    clearFacilitySettingGridDirtyState(event) {
+      const rows = this.findDirectGridRowsForRecord(event?.model, event?.model?.uid);
+      rows.forEach((row) => {
+        Array.from(row.children || []).forEach((cell) => {
+          cell.classList.remove(
+            "k-dirty-cell",
+            "master-edited-cell",
+            "master-edited-row",
+            "master-sort-edited",
+            "master-deleted-row"
+          );
+          cell.querySelector?.(".k-dirty")?.remove();
+        });
+      });
+    },
+    isFacilitySettingRecordEdited(record) {
+      return Number(record?.operation || 0) > 0 || record?.edited === true;
+    },
+    /**
+     * 編集終了時に初期値へ戻っている場合、dirty 表示を解除し store の変更フラグを戻す。
+     * cancelChanges は direct jqGrid では行を dataSource から除去するため使用しない。
+     * @param {Object} e - KendoGridのイベント引数
+     * @returns {boolean} 初期値へ戻した場合 true
+     */
+    finalizeFacilitySettingRowIfRevertedToOriginal(e) {
+      const model = e?.model;
+      const originalItem = this.findOriginalFacilitySetting(model);
+      if (!model || !originalItem) {
+        return false;
+      }
+      if (!this.isFacilitySettingRowUnchanged(model, e)) {
+        return false;
+      }
+      this.restoreFacilitySettingRowFromOriginal(model);
+      this.clearFacilitySettingGridDirtyState(e);
+      this.refreshFacilitySettingGridRowAfterRevert(model);
+      this.$nextTick(() => {
+        this.clearFacilitySettingGridDirtyState(e);
+        this.clearFacilitySettingGridRowActiveState(e);
+        this.applyDirectGridRowVisualState(model, model?.uid);
+        this.tableKey += 1;
+      });
+      return true;
+    },
+    revertFacilitySettingRowIfUnchanged(e) {
+      return this.finalizeFacilitySettingRowIfRevertedToOriginal(e);
     },
 
     // マスタ一覧のデータを取得
@@ -461,9 +954,10 @@ export default {
       // スクロールの位置を維持
       let scrollTop = 0;
       let scrollLeft = 0;
-      if(this.$refs.grid != null){
-        scrollTop = this.$refs.grid.$el.children[1].scrollTop;
-        scrollLeft = this.$refs.grid.$el.children[1].scrollLeft;
+      if (this.$refs.gridRoot != null) {
+        const position = this.getGridScrollPosition();
+        scrollTop = position.top;
+        scrollLeft = position.left;
       }
       // 設定値リストのうちDB参照系をコールして再取得
       await this.setkendoGridDropList();
@@ -481,19 +975,11 @@ export default {
           });
           this.columns = toFunction;
 
-          // add redmine 4635 パンくずリストを用いて画面の再読み込みを行うとレイアウトが崩れる 孔 start
           // 横スクロールバーを表示するために列幅を指定
           this.columns.forEach(column => {
             // 設定説明列の幅を拡張するように指定
             column.width = column.field === "description" ? "24em" : "14em";
             column.encoded = column.field === "description" || column.field === "functionName" ? false : true;
-            // #9185 最小フォント、mst画面編集文字、テキストボックス幅を超えます linjunfeng start
-            // #8612 ウィンドウサイズの変更で、マスタレイアウトが崩れる。林峻峰 start
-            // if (column.locked && column.dataType === "string" && column.field === "name") {
-            //   column.width = typeof column.width == 'string' ? Number(column.width.slice(0,-2)) * 15 : column.width * 15
-            // }
-            // #8612 ウィンドウサイズの変更で、マスタレイアウトが崩れる。林峻峰 end
-            // #9185 最小フォント、mst画面編集文字、テキストボックス幅を超えます linjunfeng end
           });
           // 先頭列ダミー要素追加（並び順列の変更内容が"かぶって"表示されてしまう事象の対応のため）
           this.columns.unshift({
@@ -521,14 +1007,6 @@ export default {
               this.columns[dummyIndex].hidden = false;
             }
           }
-
-          this.$nextTick(() => {
-            this.calculateGridHeight();
-            // 元のスクロール位置に移動
-            this.$refs.grid.$el.children[1].scrollTop = scrollTop;
-            this.$refs.grid.$el.children[1].scrollLeft = scrollLeft;
-          });
-          // add redmine 4635 パンくずリストを用いて画面の再読み込みを行うとレイアウトが崩れる 孔 end
 
           // マスタから選択肢の一覧をとる行の情報リスト
           let masterPhysicalNameList = [];
@@ -568,11 +1046,11 @@ export default {
 
             // add redmine 4675 医療材料表示順、投与薬剤表示順の不正 孔 start
             }else if(columnData.inputType === 7){
-              let jsonData = $.parseJSON(columnData.optionValue);
+              const jsonData = this.parseJsonValue(columnData.optionValue, []);
               // mod #12462 患者情報共有 ligh start
               if (jsonData.length == 1) {
                 // 対象テーブルを取得
-                const optionValueOld = $.parseJSON(columnData.optionValue)
+                const optionValueOld = this.parseJsonValue(columnData.optionValue);
                 const masterPhysicalName = optionValueOld[0].master_physical_name;
 
                 // この行の情報をリストに格納
@@ -583,27 +1061,16 @@ export default {
                   index: index
                 });
               } else {
-                if (!columnData.value || columnData.value == "") columnData.value = "[]"
-                const values = $.parseJSON(columnData.value)
-
-                let matchData = []
-                values.forEach(item => {
-                  const matchItem = jsonData.find(json => json.id === item)
-                  if (matchItem) {
-                    matchData.push(matchItem)
-                  }
-                })
-
-                let dispText = ""
-                matchData.forEach(item => dispText = this.buildTextMultiSelect(dispText, item.name, columnData))
-
-                columnData.dispValue = dispText;
+                const values = this.normalizeMultiSelectValues(columnData.value);
+                columnData.value = JSON.stringify(values);
+                columnData.val = JSON.stringify(values);
+                columnData.dispValue = this.buildMultiSelectDisplayValue(jsonData, values, columnData);
               }
               // mod #12462 患者情報共有 ligh end
             // add redmine 4675 医療材料表示順、投与薬剤表示順の不正 孔 end
             }else if(columnData.inputType === 5){
               // 対象テーブルを取得
-              const optionValueOld = $.parseJSON(columnData.optionValue)
+              const optionValueOld = this.parseJsonValue(columnData.optionValue)
               const masterPhysicalName = optionValueOld[0].master_physical_name;
 
               // この行の情報をリストに格納
@@ -617,7 +1084,7 @@ export default {
               });
 
             }else if(columnData.inputType === 4){
-              let jsonData = $.parseJSON(columnData.optionValue);
+              let jsonData = this.parseJsonValue(columnData.optionValue);
 
               let matchData = jsonData.filter(function(item){
                 if(item.id == columnData.value) return true;
@@ -695,7 +1162,9 @@ export default {
           const shrFacilityList = shrRes.data.filterFacility
           // 共有設定を持つ施設リスト取得 Add ligh end
 
+          // mod #12462 患者情報共有 ligh end
           //add 施設設定マスタ バッグ修正 孔s end
+
           for (const ref of referenceMasterList) {
 
             // const mstSelector = selectorResponse.data.filter(item => {
@@ -728,25 +1197,14 @@ export default {
                 }
               }
               columnData.optionValue = JSON.stringify(jsonData);
-              if (!columnData.value || columnData.value == "") columnData.value = "[]"
-              const values = $.parseJSON(columnData.value)
-
-              let matchData = []
-              values.forEach(item => {
-                const matchItem = jsonData.find(json => json.id === item)
-                if (matchItem) {
-                  matchData.push(matchItem)
-                }
-              })
-
-              let dispText = ""
-              matchData.forEach(item => dispText = this.buildTextMultiSelect(dispText, item.name, columnData))
-
-              columnData.dispValue = dispText;
+              const values = this.normalizeMultiSelectValues(columnData.value);
+              columnData.value = JSON.stringify(values);
+              columnData.val = JSON.stringify(values);
+              columnData.dispValue = this.buildMultiSelectDisplayValue(jsonData, values, columnData);
             } else {
 
               // 並び順管理マスタから設定値リストを抽出
-              let jsonData = [{ id: "-1", name: " " }];
+              let jsonData = [{id: "-1", name: " "}];
               if (mstSelector[0]) {
                 for (let item of mstSelector[0].orderSettings.items) {
                   jsonData.push({
@@ -767,15 +1225,23 @@ export default {
               } else {
                 columnData.dispValue = " ";
               }
-
-              this.getMasterRecordList.data[ref.index] = columnData;
             }
+
+            this.getMasterRecordList.data[ref.index] = columnData;
           }
           this.setMasterRecordList(this.getMasterRecordList);
           // 初期値退避用オブジェクトに検索結果をディープコピー
           this.originalDataSource = cloneDeep(this.getMasterRecordList.data);
           this.tableKey += 1;
           // mod #12462 患者情報共有 ligh end
+          // inputType5: getSelectorDataList 完了後に Grid を初期化しないと optionValue が placeholder のまま編集候補が空になる
+          this.$nextTick(() => {
+            this.calculateGridHeight();
+            this.initDirectGridIfReady();
+            this.applyDirectGridDataSourceContract();
+            this.scheduleDirectGridLayoutContract();
+            this.setGridScrollPosition({ top: scrollTop, left: scrollLeft });
+          });
 
           // del redmine 4635 パンくずリストを用いて画面の再読み込みを行うとレイアウトが崩れる 孔 start
           // // 横スクロールバーを表示するために列幅を指定
@@ -820,7 +1286,8 @@ export default {
           // del redmine 4635 パンくずリストを用いて画面の再読み込みを行うとレイアウトが崩れる 孔 end
         })
         .catch(error => {
-          if (error.response.status === 400) {
+          const status = error?.response?.status;
+          if (status === 400) {
             this.$ons.notification.alert({
               // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
               // title: "取得失敗",
@@ -829,6 +1296,7 @@ export default {
               message: messageFormat(DIALOG_MESSAGES[12000003].message),
               // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
             });
+            return;
           }
         });
     },
@@ -852,7 +1320,8 @@ export default {
         })
         .catch(error => {
           alert(error);
-          if (error.response.status === 400) {
+          const status = error?.response?.status;
+          if (status === 400) {
             this.$ons.notification.alert({
               // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
               // title: "取得失敗",
@@ -861,12 +1330,16 @@ export default {
               message: messageFormat(DIALOG_MESSAGES[12000003].message),
               // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
             });
+            return;
           }
         });
     },
     setFilterCondition(condition) {
       this.condition.userType = this.getStateUserAccountInfo.userType;
       this.condition.recordName = condition.recordName;
+      this.$nextTick(() => {
+        this.applyDirectGridDataSourceContract({ resetScroll: true });
+      });
     },
     setFacilitylistValue() {
       this.facilitylistValue = this.getStateUserAccountInfo.facilityCd;
@@ -942,19 +1415,19 @@ export default {
 
     editBackgroundColor() {
       this.$nextTick(() => {
-        const gridHeader = this.$refs.grid.$el.firstChild;
-        if (gridHeader.textContent !== " ") {
+        const gridHeader = this.getGridHeaderEl();
+        if (gridHeader?.textContent != null && gridHeader.textContent !== " ") {
           // #8519 編集した項目のバッググラウンドが黄緑にならない 訾浩 start
           // return;
           gridHeader.classList?.add("master-grid-header")
           // #8519 編集した項目のバッググラウンドが黄緑にならない 訾浩 end
         }
         // グリッドにレコードがなければ処理終了
-        if (!this.$refs.grid.$el.lastChild.lastChild.tBodies) {
+        if (!this.getGridTableEl()?.tBodies || !this.getGridTbodyEl()) {
           return;
         }
 
-        const tbodyc = this.$refs.grid.$el.lastChild.lastChild.tBodies[0]
+        const tbodyc = this.getGridTbodyEl()
           .children;
         for (let rwCount = 0; rwCount < tbodyc.length; rwCount++) {
           const currentTrc = tbodyc[rwCount].children;
@@ -969,20 +1442,18 @@ export default {
     },
     changeEditColor(currentTrc) {
       let edited = false;
+      const row = currentTrc[0]?.parentElement;
       // 変更されたセルの文字色を変更
       for (let clCount = 0; clCount < currentTrc.length; clCount++) {
-        if (
-          this.isEditRow(currentTrc[clCount]) &&
-          clCount !== this.getColumnIndex("sortRank")
-        ) {
+        const field = row
+          ? this.getDirectGridColumnFieldForRow(row, clCount)
+          : this.getDirectGridColumnField(clCount);
+        if (this.isEditRow(currentTrc[clCount]) && field !== "sortRank") {
           currentTrc[clCount].classList?.add("master-edited-cell");
           edited = true;
-
-          if (clCount === this.getColumnIndex("value")) {
-            // プルダウンリスト項目(inputTypeが4,5,9)の場合、表示されるdispValueセルではなく、非表示のvalueセルに.k-dirty-cellクラスが設定される。
-            // .k-dirty-cellを目印に.master-edited-cell追加を行うと、プルダウンリスト項目だけは.master-edited-cellスタイルが視覚上確認できない。(非表示セルに設定されているから)
-            // 上記理由から、.k-dirty-cellを持つ項目のindexが"value"の場合は、indexが"dispValue"のセルにも.master-edited-cellクラス追加を行う。
-            currentTrc[this.getColumnIndex("dispValue")].classList?.add("master-edited-cell");
+          if ((field === "value" || field === "dispValue") && row) {
+            const record = this.getDirectGridWidget()?.dataItem?.(row);
+            this.markFacilitySettingValueCellsEdited(row, record);
           }
         }
       }
@@ -993,30 +1464,576 @@ export default {
       return currentTd.classList.contains("k-dirty-cell");
     },
     changeRowColor(currentTrc, edited, deleted) {
-      // 並び順より後の項目の背景色を変更
-      if (edited || deleted) {
-        const addClass = deleted ? "master-deleted-row" : "master-edited-row";
-
-        for (
-          let clCount = this.getColumnIndex("sortRank") + 1;
-          clCount < currentTrc.length;
-          clCount++
-        ) {
-          currentTrc[clCount].classList?.add(addClass);
-        }
+      if (!edited && !deleted) {
+        return;
+      }
+      const addClass = deleted ? "master-deleted-row" : "master-edited-row";
+      const row = currentTrc[0]?.parentElement;
+      if (!row) {
+        return;
+      }
+      const leafColumns = this.getDirectGridLeafColumnsForRow(row);
+      const sortRankIndex = leafColumns.findIndex((column) => column.field === "sortRank");
+      const startIndex = sortRankIndex >= 0 ? sortRankIndex + 1 : 0;
+      for (let clCount = startIndex; clCount < currentTrc.length; clCount++) {
+        currentTrc[clCount].classList?.add(addClass);
       }
     },
     getColumnIndex(fieldName) {
       // 指定された項目がない場合はマイナスが返る
       return this.columns.findIndex(e => e.field === fieldName);
     },
+    getDirectGridWidget() {
+      return this.directGridWidget || $(this.$refs.gridRoot).data("kendoGrid") || null;
+    },
+    getDirectGridRootEl() {
+      return this.$refs.gridRoot || null;
+    },
+    getDirectGridContentEl() {
+      const grid = this.getDirectGridWidget();
+      return grid?.content?.[0] || this.getDirectGridRootEl()?.querySelector?.(".k-grid-content") || null;
+    },
+    getDirectGridLockedContentEl() {
+      const grid = this.getDirectGridWidget();
+      return grid?.lockedContent?.[0] || this.getDirectGridRootEl()?.querySelector?.(".k-grid-content-locked") || null;
+    },
+    getGridHeaderEl() {
+      return this.getDirectGridRootEl()?.querySelector?.(".k-grid-header") || null;
+    },
+    getGridTableEl() {
+      return this.getDirectGridWidget()?.table?.[0] || this.getDirectGridRootEl()?.querySelector?.(".k-grid-content table") || null;
+    },
+    getGridTbodyEl() {
+      return this.getDirectGridWidget()?.tbody?.[0] || this.getDirectGridRootEl()?.querySelector?.(".k-grid-content tbody") || null;
+    },
+    getDirectGridVisibleColumns() {
+      const grid = this.getDirectGridWidget();
+      return (grid?.columns || this.columns || []).filter((column) => !column.hidden);
+    },
+    getDirectGridCellIndex(cellEl) {
+      if (cellEl && typeof cellEl.cellIndex === "number") {
+        return cellEl.cellIndex;
+      }
+      return -1;
+    },
+    getDirectGridColumnField(index) {
+      if (index < 0) {
+        return undefined;
+      }
+      const visibleColumns = this.getDirectGridVisibleColumns();
+      return visibleColumns[index]?.field;
+    },
+    flattenDirectGridLeafColumns(columns = []) {
+      const result = [];
+      (columns || []).forEach((column) => {
+        if (Array.isArray(column?.columns) && column.columns.length) {
+          result.push(...this.flattenDirectGridLeafColumns(column.columns));
+          return;
+        }
+        result.push(column);
+      });
+      return result;
+    },
+    invalidateDirectGridColumnFieldCache() {
+      this.directGridBodyColumnFields = null;
+      this.directGridLockedColumnFields = null;
+      this.facilitySettingDispValueBodyColumnIndex = null;
+    },
+    getFacilitySettingDispValueBodyColumnIndex() {
+      if (typeof this.facilitySettingDispValueBodyColumnIndex === "number") {
+        return this.facilitySettingDispValueBodyColumnIndex;
+      }
+      const root = this.getDirectGridRootEl();
+      const headerTable = root?.querySelector(".k-grid-header-wrap table")
+        || root?.querySelector(".k-grid-header table");
+      const headerCells = headerTable?.querySelectorAll("thead tr th");
+      if (headerCells?.length) {
+        const headers = Array.from(headerCells);
+        for (let i = 0; i < headers.length; i++) {
+          if (headers[i].getAttribute("data-field") === "dispValue") {
+            this.facilitySettingDispValueBodyColumnIndex = i;
+            return i;
+          }
+        }
+        for (let i = 0; i < headers.length; i++) {
+          if (String(headers[i].textContent ?? "").trim() === "設定値") {
+            this.facilitySettingDispValueBodyColumnIndex = i;
+            return i;
+          }
+        }
+      }
+      return this.getDirectGridBodyColumnFields().indexOf("dispValue");
+    },
+    getDirectGridBodyColumnFields() {
+      if (Array.isArray(this.directGridBodyColumnFields)) {
+        return this.directGridBodyColumnFields;
+      }
+      const sourceColumns = this.getDirectGridWidget()?.columns || this.columns || [];
+      this.directGridBodyColumnFields = this.flattenDirectGridLeafColumns(sourceColumns)
+        .filter((column) => !column.hidden && !column.locked)
+        .map((column) => column.field)
+        .filter(Boolean);
+      return this.directGridBodyColumnFields;
+    },
+    getDirectGridLockedColumnFields() {
+      if (Array.isArray(this.directGridLockedColumnFields)) {
+        return this.directGridLockedColumnFields;
+      }
+      const sourceColumns = this.getDirectGridWidget()?.columns || this.columns || [];
+      this.directGridLockedColumnFields = this.flattenDirectGridLeafColumns(sourceColumns)
+        .filter((column) => !column.hidden && !!column.locked)
+        .map((column) => column.field)
+        .filter(Boolean);
+      return this.directGridLockedColumnFields;
+    },
+    isDirectGridLockedRow(row) {
+      return !!row?.closest?.(".k-grid-content-locked");
+    },
+    getDirectGridLeafColumnsForRow(row) {
+      const grid = this.getDirectGridWidget();
+      const sourceColumns = grid?.columns || this.columns || [];
+      return this.flattenDirectGridLeafColumns(sourceColumns).filter(
+        (column) => !column.hidden && !!column.locked === this.isDirectGridLockedRow(row)
+      );
+    },
+    getDirectGridVisibleColumnsForRow(row) {
+      return this.getDirectGridLeafColumnsForRow(row);
+    },
+    getDirectGridColumnFieldForRow(row, cellIndex) {
+      if (cellIndex < 0) {
+        return undefined;
+      }
+      const cell = row?.children?.[cellIndex];
+      const dataField = cell?.getAttribute?.("data-field");
+      if (dataField) {
+        return dataField;
+      }
+      return this.getDirectGridLeafColumnsForRow(row)[cellIndex]?.field;
+    },
+    findFacilitySettingDispValueCell(row, record = null) {
+      if (!row || this.isDirectGridLockedRow(row)) {
+        return null;
+      }
+      const byDataField = row.querySelector?.('td[data-field="dispValue"]');
+      if (byDataField) {
+        return byDataField;
+      }
+      const columnIndex = this.getFacilitySettingDispValueBodyColumnIndex();
+      if (columnIndex >= 0) {
+        const cell = row.children?.[columnIndex];
+        if (cell) {
+          return cell;
+        }
+      }
+      const model = record || this.getDirectGridWidget()?.dataItem?.(row);
+      if (model?.dispValue == null) {
+        return null;
+      }
+      const dispText = String(model.dispValue);
+      return Array.from(row.children || []).find((td) => {
+        const text = td.textContent ?? "";
+        return text === dispText || text.trim() === dispText.trim();
+      }) || null;
+    },
+    markFacilitySettingValueCellsEdited(row, record = null) {
+      this.findFacilitySettingDispValueCell(row, record)?.classList.add("master-edited-cell");
+    },
+    syncFacilitySettingMultiSelectDisplayModel(model) {
+      if (!model || Number(model.inputType) !== 7) {
+        return;
+      }
+      const optionValue = this.parseJsonValue(model.optionValue, []);
+      const values = this.normalizeMultiSelectValues(model.val ?? model.value);
+      model.val = JSON.stringify(values);
+      model.value = JSON.stringify(values);
+      model.dispValue = this.buildMultiSelectDisplayValue(optionValue, values, model);
+    },
+    getGridScrollPosition() {
+      const content = this.getDirectGridContentEl();
+      return {
+        top: content?.scrollTop || 0,
+        left: content?.scrollLeft || 0
+      };
+    },
+    setGridScrollPosition(position = {}) {
+      const content = this.getDirectGridContentEl();
+      const lockedContent = this.getDirectGridLockedContentEl();
+      if (content) {
+        if (typeof position.top === "number") {
+          content.scrollTop = position.top;
+        }
+        if (typeof position.left === "number") {
+          content.scrollLeft = position.left;
+        }
+        $(content).trigger("scroll");
+      }
+      if (lockedContent && typeof position.top === "number") {
+        lockedContent.scrollTop = position.top;
+      }
+    },
+    buildDirectGridDataSourceConfig() {
+      const source = this.masterRecords || { data: [] };
+      if (Array.isArray(source)) {
+        return { data: source };
+      }
+      // Vue2 の <kendo-grid :data-source="masterRecords"> は data/schema/model を参照で渡す。
+      // JSON clone すると validation / model / row object が脱落するため、direct jq でも浅い option に留める。
+      return {
+        ...source,
+        data: Array.isArray(source.data) ? source.data : []
+      };
+    },
+    getDirectGridDisplayData() {
+      const source = this.masterRecords;
+      if (Array.isArray(source)) {
+        return source;
+      }
+      return Array.isArray(source?.data) ? source.data : [];
+    },
+    buildDirectGridColumns() {
+      return (this.columns || []).map((column) => {
+        const directColumn = { ...column };
+        if (column.field === "dispOrder") {
+          directColumn.width = "4em";
+          directColumn.editor = this.editorInput;
+        } else if (column.title === "設定値") {
+          directColumn.editor = this.editorInput;
+        }
+        return directColumn;
+      });
+    },
+    getDirectGridColumnSignature() {
+      return (this.columns || []).map(column => [
+        column.field,
+        column.title,
+        column.hidden ? 1 : 0,
+        column.locked ? 1 : 0,
+        column.width || "",
+        column.format || "",
+        Array.isArray(column.values) ? column.values.length : 0
+      ].join(":")).join("|");
+    },
+    applyDirectGridColumnsContract() {
+      const grid = this.getDirectGridWidget();
+      if (!grid) {
+        return;
+      }
+      const nextSignature = this.getDirectGridColumnSignature();
+      if (this.directGridColumnSignature !== nextSignature) {
+        grid.setOptions({ columns: this.buildDirectGridColumns() });
+        this.directGridColumnSignature = nextSignature;
+        this.invalidateDirectGridColumnFieldCache();
+      }
+    },
+    initDirectGridIfReady() {
+      if (!this.directGridMounted || this.columns.length <= 1 || !this.$refs.gridRoot) {
+        return;
+      }
+      installComponentJQuery();
+      const $gridRoot = $(this.$refs.gridRoot);
+      const existingGrid = $gridRoot.data("kendoGrid");
+      if (existingGrid) {
+        this.directGridWidget = markRaw(existingGrid);
+        this.applyDirectGridColumnsContract();
+        this.applyDirectGridDataSourceContract();
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+      const dataSourceConfig = this.buildDirectGridDataSourceConfig();
+      this.directGridDataSource = markRaw(new kendo.data.DataSource(dataSourceConfig));
+      this.applyDirectGridLegacyShellClasses();
+      $gridRoot.kendoGrid({
+        dataSource: this.directGridDataSource,
+        columns: this.buildDirectGridColumns(),
+        editable: true,
+        selectable: true,
+        reorderable: false,
+        height: this.kendoGridHeight,
+        scrollable: true,
+        beforeEdit: this.editStart,
+        cellClose: this.editEnd,
+        save: this.onSave,
+        dataBound: this.onDataBoundKendoGrid
+      });
+      this.directGridWidget = markRaw($gridRoot.data("kendoGrid"));
+      this.directGridReady = !!this.directGridWidget;
+      this.directGridColumnSignature = this.getDirectGridColumnSignature();
+      this.invalidateDirectGridColumnFieldCache();
+      this.applyDirectGridLegacyStyleContract();
+      this.scheduleDirectGridLayoutContract();
+    },
+    destroyDirectGrid() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+        this.directGridLayoutRafId = null;
+      }
+      if (this.directGridDataSourceRafId != null) {
+        cancelAnimationFrame(this.directGridDataSourceRafId);
+        this.directGridDataSourceRafId = null;
+      }
+      if (this.directGridScrollSyncRafId != null) {
+        cancelAnimationFrame(this.directGridScrollSyncRafId);
+        this.directGridScrollSyncRafId = null;
+      }
+      this.directGridRowVisualRafIds?.forEach?.((rafId) => cancelAnimationFrame(rafId));
+      this.directGridRowVisualRafIds?.clear?.();
+      const grid = this.getDirectGridWidget();
+      if (grid) {
+        grid.destroy();
+      }
+      if (this.$refs.gridRoot) {
+        $(this.$refs.gridRoot).empty();
+      }
+      this.directGridWidget = null;
+      this.directGridDataSource = null;
+      this.directGridReady = false;
+      this.directGridColumnSignature = "";
+    },
+    applyDirectGridDataSourceContract(options = {}) {
+      const { resetScroll = false } = options;
+      if (!this.directGridMounted || this.columns.length <= 1) {
+        return;
+      }
+      if (!this.getDirectGridWidget()) {
+        this.initDirectGridIfReady();
+        return;
+      }
+      if (this.directGridDataSourceRafId != null) {
+        cancelAnimationFrame(this.directGridDataSourceRafId);
+      }
+      this.directGridDataSourceRafId = requestAnimationFrame(() => {
+        this.directGridDataSourceRafId = null;
+        const grid = this.getDirectGridWidget();
+        if (!grid?.dataSource) {
+          return;
+        }
+        const position = resetScroll ? { top: 0, left: 0 } : this.getGridScrollPosition();
+        grid.dataSource.data(this.getDirectGridDisplayData());
+        this.$nextTick(() => {
+          this.applyDirectGridLegacyStyleContract();
+          this.refreshDirectGridVisualState();
+          this.setGridScrollPosition(position);
+        });
+      });
+    },
+    resizeDirectGrid() {
+      const grid = this.getDirectGridWidget();
+      if (!grid) {
+        return;
+      }
+      try {
+        grid.resize?.(true);
+      } catch (_error) {
+        grid.resize?.();
+      }
+    },
+    scheduleDirectGridLayoutContract() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+      }
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.resizeDirectGrid();
+        this.applyDirectGridLegacyStyleContract();
+        this.directGridLayoutRafId = requestAnimationFrame(() => {
+          this.directGridLayoutRafId = null;
+          this.resizeDirectGrid();
+          this.applyDirectGridLegacyStyleContract();
+          this.scheduleDirectGridLockedScrollContract();
+        });
+      });
+    },
+    scheduleDirectGridLockedScrollContract() {
+      if (this.directGridScrollSyncRafId != null) {
+        cancelAnimationFrame(this.directGridScrollSyncRafId);
+      }
+      this.directGridScrollSyncRafId = requestAnimationFrame(() => {
+        this.directGridScrollSyncRafId = requestAnimationFrame(() => {
+          this.directGridScrollSyncRafId = null;
+          const position = this.getGridScrollPosition();
+          this.setGridScrollPosition(position);
+        });
+      });
+    },
+    applyDirectGridLockedWidthContract() {
+      const root = this.getDirectGridRootEl();
+      if (!root) {
+        return;
+      }
+      const lockedHeader = root.querySelector(".k-grid-header-locked");
+      const lockedContent = root.querySelector(".k-grid-content-locked");
+      const lockedContainer = root.querySelector(".k-grid-header-locked, .k-grid-content-locked")?.parentElement;
+      if (!lockedHeader && !lockedContent) {
+        return;
+      }
+      const fontSize = parseFloat(getComputedStyle(root).fontSize || "16") || 16;
+      const lockedWidth = (this.columns || [])
+        .filter((column) => column.locked && !column.hidden)
+        .reduce((total, column) => total + this.resolveDirectGridColumnWidth(column.width, fontSize), 0);
+      if (lockedWidth <= 0) {
+        return;
+      }
+      [lockedHeader, lockedContent, lockedContainer].forEach((element) => {
+        if (element) {
+          element.style.width = `${lockedWidth}px`;
+          element.style.minWidth = `${lockedWidth}px`;
+        }
+      });
+      root.querySelectorAll(".k-grid-header-locked table,.k-grid-content-locked table").forEach((element) => {
+        element.style.width = `${lockedWidth}px`;
+        element.style.minWidth = `${lockedWidth}px`;
+      });
+    },
+    applyDirectGridLockedHeightContract() {
+      const content = this.getDirectGridContentEl();
+      const lockedContent = this.getDirectGridLockedContentEl();
+      if (!content || !lockedContent) {
+        return;
+      }
+      const contentHeight = content.clientHeight;
+      if (contentHeight > 0) {
+        lockedContent.style.height = `${contentHeight}px`;
+        lockedContent.style.maxHeight = `${contentHeight}px`;
+      }
+    },
+    resolveDirectGridColumnWidth(width, fontSize) {
+      if (typeof width === "number") {
+        return width;
+      }
+      if (typeof width !== "string") {
+        return 0;
+      }
+      const trimmed = width.trim();
+      if (trimmed.endsWith("em")) {
+        return parseFloat(trimmed) * fontSize;
+      }
+      if (trimmed.endsWith("px")) {
+        return parseFloat(trimmed);
+      }
+      const numeric = parseFloat(trimmed);
+      return Number.isFinite(numeric) ? numeric : 0;
+    },
+    applyDirectGridLegacyShellClasses() {
+      const root = this.getDirectGridRootEl();
+      if (!root) {
+        return;
+      }
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-editable", "k-display-block");
+    },
+    applyDirectGridLegacyContentClasses() {
+      const root = this.getDirectGridRootEl();
+      if (!root) {
+        return;
+      }
+      root.querySelectorAll("th").forEach((th) => th.classList.add("k-header"));
+      const grid = this.getDirectGridWidget();
+      root.querySelectorAll(".k-grid-content tbody tr, .k-grid-content-locked tbody tr").forEach((tr, index) => {
+        tr.classList.add("k-master-row");
+        tr.classList.toggle("k-alt", index % 2 === 1);
+        if (grid?.dataItem) {
+          try {
+            const dataItem = grid.dataItem(tr);
+            if (dataItem) {
+              tr.__ntssKendoDataItem = dataItem;
+            }
+          } catch (_error) {
+            // noop
+          }
+        }
+      });
+      root.querySelectorAll("td").forEach((td) => td.classList.add("k-td", "k-table-td"));
+    },
+    applyDirectGridLegacyStyleContract() {
+      this.applyDirectGridLegacyShellClasses();
+      this.applyDirectGridLegacyContentClasses();
+      this.applyDirectGridLockedWidthContract();
+      this.applyDirectGridLockedHeightContract();
+    },
+    applyDirectGridRowVisualState(record, preferredUid = null) {
+      const rows = this.findDirectGridRowsForRecord(record, preferredUid);
+      if (!rows.length || !record) {
+        return;
+      }
+      const editedByStore = this.isFacilitySettingRecordEdited(record);
+      const unchanged = !editedByStore && this.isFacilitySettingRowUnchanged(record);
+
+      rows.forEach((row) => {
+        const cells = Array.from(row.children || []);
+        const isLocked = !!row.closest?.(".k-grid-content-locked");
+        const hadDirty = cells.some((cell) => cell.classList.contains("k-dirty-cell"));
+
+        cells.forEach((cell) => {
+          cell.classList.remove(
+            "master-edited-cell",
+            "master-edited-row",
+            "master-deleted-row",
+            "master-sort-edited"
+          );
+          if (unchanged) {
+            cell.classList.remove("k-dirty-cell");
+            cell.querySelector?.(".k-dirty")?.remove();
+          }
+        });
+
+        if (unchanged) {
+          return;
+        }
+
+        const rowEdited = editedByStore || hadDirty;
+        if (!rowEdited) {
+          return;
+        }
+
+        if (!isLocked) {
+          cells.forEach((cell) => {
+            cell.classList.add("master-edited-row");
+          });
+          this.markFacilitySettingValueCellsEdited(row, record);
+        }
+
+        cells.forEach((cell, cellIndex) => {
+          const field = this.getDirectGridColumnFieldForRow(row, cellIndex);
+          if (cell.classList.contains("k-dirty-cell") && field !== "sortRank") {
+            cell.classList.add("master-edited-cell");
+          }
+          if (field === "value" || field === "dispValue") {
+            this.markFacilitySettingValueCellsEdited(row, record);
+          }
+        });
+      });
+
+      if (unchanged) {
+        this.clearFacilitySettingGridRowActiveState({ model: record });
+      }
+    },
+    scheduleDirectGridRowVisualState(record, preferredUid = null) {
+      const key = String(record?.facilitySettingNo || record?.dispOrder || preferredUid || "__row__");
+      if (!this.directGridRowVisualRafIds) {
+        this.directGridRowVisualRafIds = markRaw(new Map());
+      }
+      const oldRaf = this.directGridRowVisualRafIds.get(key);
+      if (oldRaf != null) {
+        cancelAnimationFrame(oldRaf);
+      }
+      const rafId = requestAnimationFrame(() => {
+        this.directGridRowVisualRafIds.delete(key);
+        this.applyDirectGridRowVisualState(record, preferredUid);
+      });
+      this.directGridRowVisualRafIds.set(key, rafId);
+    },
+    refreshDirectGridVisualState() {
+      const grid = this.getDirectGridWidget();
+      if (!grid?.dataSource) {
+        return;
+      }
+      const data = grid.dataSource.data();
+      Array.from(data || []).forEach((record) => this.applyDirectGridRowVisualState(record, record.uid));
+    },
 
     async saveRecord() {
       // 共通ローダー:表示開始
       this.setLoadingScreenVisible(true);
       //イベント発生前のスクロールバーの位置を保持
-      const scrollTop = document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].scrollTop;
-      const scrollLeft = document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].scrollLeft;
+      const { top: scrollTop, left: scrollLeft } = this.getGridScrollPosition();
       this.scrollTop = scrollTop;
       this.scrollLeft = scrollLeft;
       // masterListの表示値から登録値を再設定(ドロップダウンリストの表示と値を再設定)
@@ -1027,7 +2044,7 @@ export default {
         if(columnData.inputType === 4 || columnData.inputType === 5 || columnData.inputType === 9 || columnData.inputType === 8){
         // mod 施設設定マスタ 帳票未指定時のデフォルト帳票を指定可能 孔s end
           //4:ドロップダウンリスト時
-          let jsonData = $.parseJSON(columnData.optionValue);
+          let jsonData = this.parseJsonValue(columnData.optionValue);
 
           let matchData = jsonData.filter(function(item){
             if(item.name == columnData.dispValue && columnData.val == item.id) return true;
@@ -1038,19 +2055,11 @@ export default {
 
         // add redmine 4675 医療材料表示順、投与薬剤表示順の不正 孔 start
         }else if(columnData.inputType === 7){
-          //4:ドロップダウンリスト時
-          let jsonData = $.parseJSON(columnData.optionValue);
-          if (!columnData.val || columnData.val == "") columnData.val = "[]"
-          let valueData = $.parseJSON(columnData.val);
-
-          let matchData = []
-          valueData.forEach(value => {
-            const jsonItem = jsonData.find(json => json.id === value)
-            if (jsonItem) matchData.push(jsonItem)
-          })
-          if(matchData.length > 0){
-            columnData.value = JSON.stringify(matchData.map(item => item.id));
-          }
+          const jsonData = this.parseJsonValue(columnData.optionValue, []);
+          const valueData = this.normalizeMultiSelectValues(columnData.val || columnData.value);
+          const normalizedValues = valueData.filter((value) => this.findOptionValueById(jsonData, value));
+          columnData.val = JSON.stringify(normalizedValues);
+          columnData.value = JSON.stringify(normalizedValues);
         // add redmine 4675 医療材料表示順、投与薬剤表示順の不正 孔 end
         }else if (columnData.inputType === 3){
           //3:ON/OFF設定時(トグル不可のためドロップダウンリストで代替)
@@ -1090,7 +2099,7 @@ export default {
       }
 
       // 登録日時・更新日時用の現在日時
-      const now = moment().format("YYYY-MM-DDTHH:mm:ss.SSSZ");
+      const now = dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZ");
 
       const serializedInsertRecords = insertRecords.map(record =>
         JSON.stringify({
@@ -1160,9 +2169,7 @@ export default {
             // add #12462 患者情報共有 ligh end
             item.facilitySettingNo != STATUS_MAP_TREATMENT_INDICATOR &&
             item.facilitySettingNo != STATUS_MAP_SCHEDULE_INDICATOR &&
-            (item.dispValue === null || item.dispValue === "")
-        ) || req
-      ) {
+            (item.dispValue === null || item.dispValue === "")) || req) {
         this.isDialogVisible = true;
         this.messageCd = 20010002;
         this.stringParams = ["設定値"];
@@ -1181,8 +2188,8 @@ export default {
     // パンくずリストをクリックされた場合に呼び出される関数
     refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
-      if (this.selfScreenName === this.$router.currentRoute.name
-          && document.getElementsByTagName("ons-alert-dialog").length === 0) {
+      if (this.selfScreenName === this.$route.name
+          && getScopedAlertDialogs(this.$el || this).length === 0) {
         if (this.isChanged) {
           this.$ons.notification.confirm({
            // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
@@ -1211,6 +2218,169 @@ export default {
       this.scrollTop = 0;
       this.scrollLeft = 0;
     },
+    parseJsonValue(value, fallback = null) {
+      if (value == null || value === "") {
+        return fallback;
+      }
+      if (typeof value !== "string") {
+        return value;
+      }
+      try {
+        return JSON.parse(value);
+      } catch (_error) {
+        return fallback;
+      }
+    },
+    isFacilitySettingSelectorPlaceholder(list) {
+      return Array.isArray(list)
+        && list.length === 1
+        && list[0]?.master_physical_name
+        && list[0]?.id == null
+        && list[0]?.name == null;
+    },
+    syncFacilitySettingSelectorModelFromStore(model) {
+      if (!model || ![4, 5, 8, 9].includes(Number(model.inputType))) {
+        return;
+      }
+      const storeRow = (this.getMasterRecordList?.data || []).find((row) => {
+        if (model.facilitySettingNo != null && row?.facilitySettingNo != null) {
+          return String(row.facilitySettingNo) === String(model.facilitySettingNo);
+        }
+        return model.dispOrder != null && String(row.dispOrder) === String(model.dispOrder);
+      });
+      if (!storeRow) {
+        return;
+      }
+      const storeList = this.parseJsonValue(storeRow.optionValue, []);
+      if (Array.isArray(storeList) && !this.isFacilitySettingSelectorPlaceholder(storeList)) {
+        model.optionValue = storeRow.optionValue;
+      }
+      if ((model.dispValue == null || String(model.dispValue).trim() === "") && storeRow.dispValue != null) {
+        model.dispValue = storeRow.dispValue;
+      }
+      if ((model.value == null || model.value === "") && storeRow.value != null && storeRow.value !== "") {
+        model.value = storeRow.value;
+        model.val = storeRow.val ?? storeRow.value;
+      }
+    },
+    resolveFacilitySettingEditorOptionList(model) {
+      if (!model) {
+        return [];
+      }
+      const inputType = Number(model.inputType);
+      if (inputType === 9 && Array.isArray(this.kendoGridDrop?.doctorList)) {
+        return this.kendoGridDrop.doctorList;
+      }
+      if (inputType === 8 && Array.isArray(this.kendoGridDrop?.reportList)) {
+        return this.kendoGridDrop.reportList;
+      }
+      let rawOptionValue = model.optionValue;
+      if (typeof model.get === "function") {
+        const fromModel = model.get("optionValue");
+        if (fromModel !== undefined && fromModel !== null) {
+          rawOptionValue = fromModel;
+        }
+      }
+      let list = this.parseJsonValue(rawOptionValue, []);
+      if (!Array.isArray(list)) {
+        list = [];
+      }
+      if (this.isFacilitySettingSelectorPlaceholder(list)) {
+        const storeRow = (this.getMasterRecordList?.data || []).find((row) => {
+          if (model.facilitySettingNo != null && row?.facilitySettingNo != null) {
+            return String(row.facilitySettingNo) === String(model.facilitySettingNo);
+          }
+          return model.dispOrder != null && String(row.dispOrder) === String(model.dispOrder);
+        });
+        list = storeRow ? this.parseJsonValue(storeRow.optionValue, []) : [];
+        if (!Array.isArray(list)) {
+          list = [];
+        }
+      }
+      return list;
+    },
+    normalizeMultiSelectValues(value) {
+      const parsed = Array.isArray(value) ? value : this.parseJsonValue(value, []);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+      return parsed
+        .filter((item) => item !== undefined && item !== null && item !== "")
+        .map((item) => String(item));
+    },
+    findOptionValueById(optionValue = [], candidate) {
+      return (optionValue || []).find((item) => String(item?.id) === String(candidate));
+    },
+    findOptionValueByName(optionValue = [], candidate) {
+      if (candidate === undefined || candidate === null) {
+        return undefined;
+      }
+      // inputType5 の未選択表示は name:" " のため trim しない（trim すると空白行に一致できずドロップダウンが未選択見た目になる）
+      return (optionValue || []).find((item) => String(item?.name) === String(candidate));
+    },
+    buildMultiSelectDisplayValue(optionValue = [], values = [], columnData) {
+      const selectedItems = [];
+      const normalizedValues = this.normalizeMultiSelectValues(values);
+      normalizedValues.forEach((value) => {
+        const optionItem = this.findOptionValueById(optionValue, value);
+        if (optionItem) {
+          selectedItems.push(optionItem);
+        }
+      });
+      let dispText = "";
+      selectedItems.forEach((item) => {
+        dispText = this.buildTextMultiSelect(dispText, item.name, columnData);
+      });
+      return dispText;
+    },
+    getFacilitySettingMultiSelectRowHeightOptions() {
+      return {
+        gridRoot: this.getDirectGridRootEl?.(),
+        wrapperClassName: "mst-facility-setting-edit-multiselect",
+        minHeight: "2em",
+        afterSync: () => this.scheduleDirectGridLockedScrollContract?.()
+      };
+    },
+    scheduleFacilitySettingMultiSelectEditorHeight(widget) {
+      scheduleGridEditorMultiSelectRowHeight(
+        widget,
+        this.getFacilitySettingMultiSelectRowHeightOptions()
+      );
+    },
+    clearFacilitySettingMultiSelectEditorHeight(event = null) {
+      scheduleClearGridEditorMultiSelectRowHeight(
+        event?.container?.get?.(0) || event?.container?.[0] || event?.container || this.getDirectGridRootEl?.(),
+        {
+          gridRoot: this.getDirectGridRootEl?.(),
+          uid: event?.model?.uid,
+          afterClear: () => this.scheduleDirectGridLockedScrollContract?.()
+        }
+      );
+    },
+    applyFacilitySettingMultiSelectValue(widget, values) {
+      if (!widget) {
+        return;
+      }
+      setKendoWidgetValue(widget, values);
+      widget.refresh?.();
+      this.scheduleFacilitySettingMultiSelectEditorHeight(widget);
+    },
+    /**
+     * NumericTextBox 上でのホイール: 既定の数値変更を止め、縦スクロールだけ Grid に反映する
+     */
+    applyFacilitySettingGridScrollFromWheel(wheelEvent, fromElement = null) {
+      if (!wheelEvent || typeof wheelEvent.deltaY !== "number") return;
+      let dy = wheelEvent.deltaY;
+      if (wheelEvent.deltaMode === 1) dy *= 16;
+      else if (wheelEvent.deltaMode === 2) {
+        dy *= wheelEvent.target?.ownerDocument?.defaultView?.innerHeight ?? 640;
+      }
+      const content = fromElement?.closest?.(".k-grid")?.querySelector?.(".k-grid-content") || this.getDirectGridContentEl();
+      if (!(content instanceof HTMLElement)) return;
+      const maxTop = Math.max(0, (content.scrollHeight || 0) - (content.clientHeight || 0));
+      const nextTop = Math.min(maxTop, Math.max(0, (content.scrollTop || 0) + dy));
+      this.setGridScrollPosition({ top: nextTop, left: content.scrollLeft || 0 });
+    },
     /**
      * @description 編集時、テキストボックスをDB指定の入力フィールドへ変換
      * @summary inputType 1.テキストボックス 2.数値用テキストボックス 3.ドロップダウンリスト(ON/OFF選択用) 4.ドロップダウンリスト(DB設定項目の選択)
@@ -1219,80 +2389,64 @@ export default {
      */
     editorInput(container, data) {
       // add redmine 4675 医療材料表示順、投与薬剤表示順の不正 孔 start
-      if(data.model.inputType == 7){
-        const valuesInitial = data.model.val ? data.model.val : data.model.value;
-        data.model.dispValue = JSON.parse(valuesInitial);
+      if (data.model.inputType == 7) {
+        const rawValues = data.model.val ? data.model.val : data.model.value;
         const vm = this;
-        const syncAndSave = (widget) => {
-          let values = widget.value();
-          const optionValue = JSON.parse(data.model.optionValue);
-          const limitedNo = [
-            TREATMENT_PROGRESS_CHART,
-            TREATMENT_PROGRESS_CHART_HANDWRITING,
-            DAILY_INSPECTION_RECORD_BOOK,
-            PERIODIC_INSPECTION_RECORD_BOOK
-          ];
-          if (limitedNo.includes(data.model.facilitySettingNo)) {
-            if (values.length > 3) {
-              values = values.slice(0, 3);
-              widget.value(values);
-            }
-          }
-          data.model["val"] = JSON.stringify(values);
-          data.model["value"] = JSON.stringify(values);
-          if (optionValue) {
-            const selectedItems = [];
-            values.forEach(v => {
-              const item = optionValue.find(opt => opt.id === v);
-              if (item) selectedItems.push(item);
-            });
-            let dispText = "";
-            selectedItems.forEach(item => {
-              dispText = vm.buildTextMultiSelect(dispText, item.name, data.model);
-            });
-            data.model.dispValue = dispText;
-          }
-        };
-        $(`<select name="${data.field}" multiple="multiple"></select>`)
+        const optionValue = this.resolveFacilitySettingEditorOptionList(data.model);
+        const values = this.normalizeMultiSelectValues(rawValues);
+        data.model.val = JSON.stringify(values);
+        data.model.value = JSON.stringify(values);
+        // Vue2 互換: 編集開始中の dispValue は表示文字列ではなく選択配列を保持
+        data.model.dispValue = [...values];
+        const $multiSelect = $(`<select name="${data.field || "dispValue"}" multiple="multiple"></select>`)
           .appendTo(container)
           .kendoMultiSelect({
             autoClose: false,
-            filter: "contains",
-            dataSource: $.parseJSON(data.model.optionValue),
+            dataSource: optionValue,
             dataTextField: "name",
             dataValueField: "id",
+            filter: "contains",
+            value: values,
             headerTemplate: `
-              <div style="padding: 8px 10px; border-bottom: 1px solid \\#ccc;">
-                <span id="custom-search-container" class="k-textbox k-space-right" 
-                      style="width: 100%; display: flex; align-items: center; transition: all 0.2s ease; border-color: \\#ccc;">
-                  <input 
-                    class="custom-header-search" 
-                    style="width: 100%; border: none; outline: none; background: transparent; padding: 4px 0;" 
+              <div style="padding: 8px 10px; border-bottom: 1px solid rgb(204, 204, 204);">
+                <span id="custom-search-container" class="custom-search-container k-textbox k-space-right"
+                      style="width: 100%; display: flex; align-items: center; transition: all 0.2s ease; border: 1px solid rgb(204, 204, 204); border-radius: 2px; box-sizing: border-box; background: white;">
+                  <input
+                    class="custom-header-search"
+                    style="width: 100%; border: none; outline: none; background: transparent; padding: 4px 0;"
                     onmousedown="window.preventKendoClose = true;"
                     onblur="window.preventKendoClose = false;"
                   />
-                  <span class="k-icon k-i-zoom" style="margin-right: 8px; color: \\#666;"></span>
+                  <span class="k-icon k-i-zoom ntss-grid-editor-multiselect-header-search-icon" style="margin-left: 4px; margin-right: 8px; color: rgb(102, 102, 102); width: 16px; height: 16px; flex: 0 0 16px; display: inline-flex; align-items: center; justify-content: center;"></span>
                 </span>
               </div>
             `,
-            open: function (e) {
+            open: function(e) {
               const widget = e.sender;
               const popup = widget.popup.element;
+              ensureGridEditorMultiSelectHeaderSearchIcon(widget);
               const headerInput = popup.find(".custom-header-search");
-              const searchContainer = popup.find("#custom-search-container");
-              
-              headerInput.on("mousedown click", function (ev) {
-                ev.stopPropagation(); 
-                $(this).focus(); 
+              const searchContainer = popup.find(".custom-search-container, #custom-search-container");
+
+              searchContainer.css({
+                border: "1px solid #ccc",
+                borderRadius: "2px",
+                boxSizing: "border-box",
+                background: "#fff"
+              });
+              headerInput.off(".ntssFacilitySettingMultiSelect");
+              headerInput.on("mousedown.ntssFacilitySettingMultiSelect click.ntssFacilitySettingMultiSelect", function(ev) {
+                ev.stopPropagation();
+                $(this).focus();
               });
 
-              headerInput.on("focus", function() {
-                  searchContainer.attr("style", searchContainer.attr("style") + "border: 2px solid green !important;");
-              }).on("blur", function() {
-                  searchContainer.attr("style", searchContainer.attr("style").replace("border: 2px solid green !important;", "border: 1.5px solid \\#ced4da !important;"));
+              headerInput.on("focus.ntssFacilitySettingMultiSelect", function() {
+                searchContainer.css("border", "2px solid green");
+              }).on("blur.ntssFacilitySettingMultiSelect", function() {
+                searchContainer.css("border", "1px solid #ccc");
               });
 
-              headerInput.on("input", function () {
+              headerInput.on("input.ntssFacilitySettingMultiSelect", function() {
                 const value = $(this).val();
                 widget.dataSource.filter({
                   field: "name",
@@ -1300,148 +2454,269 @@ export default {
                   value: value
                 });
               });
+              vm.scheduleFacilitySettingMultiSelectEditorHeight(widget);
             },
-            change: function (e) {
+
+            change: function(e) {
               const widget = e.sender;
-              syncAndSave(e.sender);
+              let currentValues = vm.normalizeMultiSelectValues(getKendoWidgetValue(e.sender));
+              if (data.model.facilitySettingNo == TREATMENT_PROGRESS_CHART
+                || data.model.facilitySettingNo == TREATMENT_PROGRESS_CHART_HANDWRITING
+                || data.model.facilitySettingNo == DAILY_INSPECTION_RECORD_BOOK
+                || data.model.facilitySettingNo == PERIODIC_INSPECTION_RECORD_BOOK) {
+                if (currentValues.length > 3) {
+                  currentValues = currentValues.slice(0, 3);
+                  setKendoWidgetValue(e.sender, currentValues);
+                }
+              }
+              data.model["val"] = JSON.stringify(currentValues);
+              data.model["value"] = JSON.stringify(currentValues);
+              vm.syncFacilitySettingMultiSelectDisplayModel(data.model);
               const headerInput = widget.popup.element.find(".custom-header-search");
               headerInput.val("");
               widget.dataSource.filter({});
               e.sender.input.val("");
               e.sender.search("");
+              vm.scheduleFacilitySettingMultiSelectEditorHeight(e.sender);
             },
-            close: function (e) {
-              if (window.preventKendoClose || $(document.activeElement).hasClass("custom-header-search")) {
+            close: function(e) {
+              const ownerDocument = e.sender?.element?.[0]?.ownerDocument || document;
+              const ownerWindow = ownerDocument.defaultView || window;
+              if (ownerWindow.preventKendoClose || $(ownerDocument.activeElement).hasClass("custom-header-search")) {
                 e.preventDefault();
                 return false;
               }
             }
-          })
-          .blur(() => {
-            const valuesJson = data.model["val"] || data.model["value"]
-            const optionValue = JSON.parse(data.model.optionValue);
-            if (optionValue && valuesJson) {
-              // 選択項目を取り出す
-              const values = JSON.parse(valuesJson)
-              const optionValueItem = []
-              values.forEach(value => {
-                const optItem = optionValue.find(item => item.id === value)
-                if (optItem) optionValueItem.push(optItem)
-              })
-              // dispValue設定
-              let dispText = ""
-              optionValueItem.forEach(item => dispText = vm.buildTextMultiSelect(dispText, item.name, data.model));
-              data.model.dispValue = dispText
-            }
-
           });
+        const multiSelectWidget = $multiSelect.data("kendoMultiSelect");
+        this.applyFacilitySettingMultiSelectValue(
+          multiSelectWidget,
+          values
+        );
+        $multiSelect.blur(() => {
+          const currentValues = vm.normalizeMultiSelectValues(data.model["val"] || data.model["value"]);
+          data.model["val"] = JSON.stringify(currentValues);
+          data.model["value"] = JSON.stringify(currentValues);
+          vm.syncFacilitySettingMultiSelectDisplayModel(data.model);
+          vm.applyFacilitySettingMultiSelectValue(
+            multiSelectWidget,
+            currentValues
+          );
+        });
       // add redmine 4675 医療材料表示順、投与薬剤表示順の不正 孔 end
-      } else if(data.model.facilitySettingNo == '1012' || data.model.facilitySettingNo == '1014'){
-     //#10715：日付IF修正20240910検証NG対応：村上Start
-     //   $(`<input type='time' name="${data.field}" class="k-input k-textbox k-valid" data-bind="value:dispValue"/>`)
-     //   .appendTo(container);
-        if(data.model.facilitySettingNo == '1012') {
-          $(`<span style="position:relative"><input type="time"  id="${data.field}" name="${data.field}" class="time-wrapper" style="width: 7em;" data-bind="value:dispValue" ></span>`
-          ).appendTo(container);
-        } else {
-          $(`<span style="position:relative"><input type="time"  id="${data.field}" name="${data.field}" class="time-wrapper" style="width: 7em;" data-bind="value:dispValue" ></span>`
-          ).appendTo(container);
-        }
-
-        const idtag = document.getElementById("dispValue");
+      } else if (data.model.facilitySettingNo == "1012" || data.model.facilitySettingNo == "1014") {
+        const inputId = String(data.field || "dispValue");
+        $(`<span style="position:relative"><input type="time" id="${inputId}" name="${data.field}" class="time-wrapper" style="width: 7em;" data-bind="value:dispValue" ></span>`)
+          .appendTo(container);
+        const idtag = getScopedElementById(inputId, container?.[0] || container || this.$el || this);
         this.listener = (event) => {
-                    if (event.key === "Delete" || event.key === "Backspace") {
-                      // イベントのデフォルト動作をキャンセルする
-                      event.preventDefault();
-                    }
-                };
-        idtag.addEventListener('keydown', this.listener);
-
-        //#10715：日付IF修正20240910検証NG対応：村上End
+          if (event.key === "Delete" || event.key === "Backspace") {
+            event.preventDefault();
+          }
+        };
+        idtag?.addEventListener?.("keydown", this.listener);
       // mod 施設設定マスタ 帳票未指定時のデフォルト帳票を指定可能 孔s start
-      // if (data.model.inputType == 4 || data.model.inputType == 5 || data.model.inputType == 9 ) {
       } else if (data.model.inputType == 4 || data.model.inputType == 5 || data.model.inputType == 9 || data.model.inputType == 8) {
-        // data.model.dispValue = data.model.val ? data.model.val : data.model.value;
       // mod 施設設定マスタ 帳票未指定時のデフォルト帳票を指定可能 孔s end
-      // $(`<input class="k-textbox" name="${data.field}"/>`)
-      $(`<input class="k-textbox" name="${data.field}" data-bind="value:value"/>`)
-        .appendTo(container)
-        .kendoDropDownList({
-          dataSource: $.parseJSON(data.model.optionValue),
-          dataTextField: "name",
-          dataValueField: "id",
-          change:function(e){
-            // #8676 文字列検索＋プルダウン選択にて、検索結果から選択できない。修正 林峻峰 start
-            // data.model["val"] = JSON.parse(data.model.optionValue)[e.sender.selectedIndex].id
-            // data.model.dispValue = JSON.parse(data.model.optionValue)[e.sender.selectedIndex].name
-            const optionValue = JSON.parse(data.model.optionValue);
-            let name = ''
-            optionValue.forEach((item)=>{
-              if (item.id === e.sender._old) {
-                name = item.name;
-              }
-            })
-            data.model["val"] = e.sender._old;
-            data.model.dispValue = name;
-            // #8676 文字列検索＋プルダウン選択にて、検索結果から選択できない。修正 林峻峰 end
-
-          },
-          filter: "contains",
-        })
-        // add 施設設定マスタ テキストが正しく表示されない  孔s start
-        .blur(() => {
-          const value = data.model["val"] || data.model["value"]
-          const optionValue = JSON.parse(data.model.optionValue)
-          if (optionValue && value) {
-            const optionValueItem = optionValue.find(e => e.id === value)
-            if (optionValueItem && optionValueItem.name) {
-              data.model.dispValue = optionValueItem.name
+        const optionValue = this.resolveFacilitySettingEditorOptionList(data.model);
+        if (!optionValue.length) {
+          $(`<label>${data.model.dispValue ?? ""}</label>`).appendTo(container);
+          return;
+        }
+        const vm = this;
+        const model = data.model;
+        const findById = (candidate) => vm.findOptionValueById(optionValue, candidate);
+        const findByName = (candidate) => vm.findOptionValueByName(optionValue, candidate);
+        const applySelection = (widget, selectedId, suppressChange = false) => {
+          const selectedItem = findById(selectedId);
+          if (!selectedItem) {
+            return false;
+          }
+          if (widget) {
+            const applyValue = () => setKendoWidgetValue(widget, String(selectedItem.id));
+            if (suppressChange) {
+              withProgrammaticKendoUpdate(widget, applyValue);
+            } else {
+              applyValue();
             }
           }
-        });
-        // add 施設設定マスタ テキストが正しく表示されない  孔s end
-
-      }else if(data.model.inputType == 3){
-        $(`<input class="k-textbox" name="${data.field}"/>`)
+          model.val = String(selectedItem.id);
+          model.value = String(selectedItem.id);
+          model.dispValue = selectedItem.name || "";
+          return true;
+        };
+        let initialId = "";
+        const matchedByValue = findById(model.value);
+        if (matchedByValue) {
+          initialId = matchedByValue.id;
+        }
+        const matchedByVal = findById(model.val);
+        if (matchedByVal) {
+          initialId = matchedByVal.id;
+        }
+        if (!initialId && model.dispValue != null) {
+          const matchedByDisp = findByName(model.dispValue);
+          if (matchedByDisp) {
+            initialId = matchedByDisp.id;
+          }
+        }
+        if (!initialId && Number(model.inputType) === 5) {
+          const blankOption = findById("-1");
+          if (blankOption) {
+            initialId = blankOption.id;
+          }
+        }
+        const $dbDropdown = $(`<input class="k-textbox" name="${data.field}" data-bind="value:value"/>`)
           .appendTo(container)
           .kendoDropDownList({
-            dataSource: [{"id":"0", "name":"OFF"},{"id":"1", "name":"ON"}],
+            dataSource: optionValue,
             dataTextField: "name",
-            dataValueField: "name"
+            dataValueField: "id",
+            autoSelectFirstOnEmpty: false,
+            value: initialId === "" || initialId == null ? null : String(initialId),
+            change(e) {
+              if (applySelection(e.sender, getKendoWidgetValue(e.sender))) {
+                vm.closeFacilitySettingGridEditCell();
+                vm.scheduleFacilitySettingDropdownEditorCommit(model);
+              }
+            },
+            filter: "contains"
           });
-
-      }else if(data.model.inputType == 2){
-        var numberScope = $.parseJSON(data.model.optionValue ? data.model.optionValue : null);
-        // mode 9200 by kangjie 20230908 start
+        const dbDropdownWidget = $dbDropdown.data("kendoDropDownList");
+        if (initialId !== "" && initialId != null) {
+          applySelection(dbDropdownWidget, initialId, true);
+          vm.$nextTick(() => applySelection(dbDropdownWidget, initialId, true));
+        }
+        $dbDropdown.blur(() => {
+          const value = model.val || model.value;
+          const byId = findById(value);
+          if (byId?.name != null) {
+            model.dispValue = byId.name;
+            return;
+          }
+          const byName = findByName(model.dispValue);
+          if (byName) {
+            model.val = String(byName.id);
+            model.value = String(byName.id);
+            model.dispValue = byName.name;
+          }
+        });
+      } else if (data.model.inputType == 3) {
+        const onOffDataSource = [{ id: "0", name: "OFF" }, { id: "1", name: "ON" }];
+        const findOnOffById = (candidate) => onOffDataSource.find((item) => String(item.id) === String(candidate));
+        const findOnOffByName = (candidate) => onOffDataSource.find((item) => String(item.name) === String(candidate));
+        let onOffDisplayValue = "";
+        const onOffFromDispValue = findOnOffByName(data.model.dispValue);
+        if (onOffFromDispValue) {
+          onOffDisplayValue = onOffFromDispValue.name;
+        }
+        if (!onOffDisplayValue) {
+          const onOffFromValue = findOnOffById(data.model.value);
+          if (onOffFromValue) {
+            onOffDisplayValue = onOffFromValue.name;
+          }
+        }
+        if (!onOffDisplayValue) {
+          const onOffFromVal = findOnOffById(data.model.val);
+          if (onOffFromVal) {
+            onOffDisplayValue = onOffFromVal.name;
+          }
+        }
+        const vm = this;
+        const applyOnOffSelection = (sender) => {
+          const selectedName = getKendoWidgetValue(sender);
+          const selectedItem = findOnOffByName(selectedName);
+          if (!selectedItem) {
+            return false;
+          }
+          data.model.dispValue = selectedItem.name;
+          data.model.value = selectedItem.id;
+          data.model.val = selectedItem.id;
+          return true;
+        };
+        $(`<input class="k-textbox" name="${data.field}" data-bind="value:dispValue"/>`)
+          .appendTo(container)
+          .kendoDropDownList({
+            dataSource: onOffDataSource,
+            dataTextField: "name",
+            dataValueField: "name",
+            value: onOffDisplayValue,
+            change(e) {
+              if (applyOnOffSelection(e.sender)) {
+                vm.closeFacilitySettingGridEditCell();
+                vm.scheduleFacilitySettingDropdownEditorCommit(data.model);
+              }
+            }
+          })
+          .blur(() => {
+            if (data.model.dispValue) {
+              const selectedItem = findOnOffByName(data.model.dispValue);
+              if (selectedItem) {
+                data.model.dispValue = selectedItem.name;
+                data.model.value = selectedItem.id;
+                data.model.val = selectedItem.id;
+              }
+            } else if (data.model.value != null && data.model.value !== "") {
+              const selectedItem = findOnOffById(data.model.value);
+              if (selectedItem) {
+                data.model.dispValue = selectedItem.name;
+                data.model.value = selectedItem.id;
+                data.model.val = selectedItem.id;
+              }
+            }
+          });
+      } else if (data.model.inputType == 2) {
+        const numberScope = this.parseJsonValue(data.model.optionValue, null);
+        const rawMin = numberScope && numberScope[0] ? numberScope[0].min : null;
+        const rawMax = numberScope && numberScope[0] ? numberScope[0].max : null;
+        const rawInitialValue = data.model.dispValue ?? data.model.value;
+        const normalizedInitialValue = rawInitialValue == null
+          ? null
+          : Number(String(rawInitialValue).replace(/日$/, ""));
+        const initialValue = Number.isFinite(normalizedInitialValue) ? normalizedInitialValue : null;
         const numericTextBoxOptions = {
-            min:numberScope ? numberScope[0].min : null,
-            max:numberScope ? numberScope[0].max : null,
-            decimals: 0,
-            format: "n0",
-                restrictDecimals: true,
-                change:function(e){
+          name: data.field,
+          min: rawMin === null || rawMin === undefined || rawMin === "" ? null : Number(rawMin),
+          max: rawMax === null || rawMax === undefined || rawMax === "" ? null : Number(rawMax),
+          decimals: 0,
+          format: "n0",
+          value: initialValue,
+          restrictDecimals: true,
+          change: function(e) {
+            const currentValue = getKendoWidgetValue(e.sender);
+            data.model.dispValue = currentValue == null ? "" : String(currentValue);
             if (data.model.facilitySettingNo == "3008") {
-              // 有効投薬指示取得期間設定値 -1: 上限なし
-              data.model.dispValue = data.model.dispValue === "-1" || data.model.dispValue == null ? "-1":data.model.dispValue +"日";
+              data.model.dispValue = data.model.dispValue === "-1" || data.model.dispValue == null ? "-1" : data.model.dispValue + "日";
             }
           }
         };
         $(`<input class="k-numerictextbox" name="${data.field}"/>`)
           .appendTo(container)
-            .kendoNumericTextBox(numericTextBoxOptions);
-        // mode 9200 by kangjie 20230908 end
-      }else if(data.model.inputType == 1){
-        /** mod テキストボックスの桁数制御を対応 劉 start*/
-        var textScope;
-        data.model.optionValue !== "" ? textScope = $.parseJSON(data.model.optionValue)[0].maxlength : textScope = "128";
-        /* $(`<input type="text" class="k-input k-textbox k-valid" name="${data.field}" maxlength="128" data-bind="value:dispValue"/>`).appendTo(container)*/
+          .kendoNumericTextBox(numericTextBoxOptions);
+        const numericTextBox = $(container).find(".k-numerictextbox").data("kendoNumericTextBox");
+        const numericWrapEl = numericTextBox?.wrapper?.get?.(0) || numericTextBox?.wrapper?.[0];
+        // ホイールで数値が変わらないよう既定動作を抑止し、縦スクロールは Grid 本体へ移す
+        const suppressNumericWheelSpin = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.applyFacilitySettingGridScrollFromWheel(e, numericWrapEl);
+        };
+        if (numericWrapEl instanceof HTMLElement) {
+          numericWrapEl.addEventListener("wheel", suppressNumericWheelSpin, { passive: false, capture: true });
+        }
+        numericTextBox.element.on("blur", () => {
+          if(numericTextBox){
+            numericTextBox.trigger('change')
+          }
+        })
+      } else if (data.model.inputType == 1) {
+        let textScope;
+        textScope = data.model.optionValue !== "" ? this.parseJsonValue(data.model.optionValue, [{ maxlength: "128" }])[0].maxlength : "128";
         $(`<input type="text" class="k-input k-textbox k-valid" name="${data.field}" maxlength="${textScope}" data-bind="value:dispValue"/>`)
-          .appendTo(container)
-        /** mod テキストボックスの桁数制御を対応 劉 end*/
-      }else if(data.model.inputType == 6){
+          .appendTo(container);
+      } else if (data.model.inputType == 6) {
         $('<textarea data-text-field="Label" class="k-textbox k-valid" data-value-field="Value" data-bind="value:dispValue" style="width: ' + (container.width() - 10) + 'px;height:' + (container.height() - 12) + 'px;margin-top:10px;margin-bottom:10px;resize:vertical;max-height:65vh;" />').appendTo(container);
-
-      }else{
+      } else {
         this.editingFlg = false;
         $(`<label>${data.model.value}</label>`).appendTo(container);
       }
@@ -1472,32 +2747,46 @@ export default {
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("処理中・・・");
     // 端末判別
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toLowerCase();
     if (/android/.test(ua)) {
       this.androidFlg = true;
     } else if (/iphone|ipad|mac|os/.test(ua)) {
       this.iosFlg = true;
     }
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     EventBus.$on("refresh", this.refresh);
-    this.$nextTick(() => {
-      const footerHeight = document.getElementById('grid-footer').clientHeight
-      this.footerHeight = footerHeight
-    })
-  },
-  updated() {
-    // Storeの更新等で画面が再描画された場合に背景色を変更
-    this.editBackgroundColor();
+    this.runWhenMasterLayoutReady(() => {
+      this.footerHeight = this.getMasterGridFooterHeight(0);
+    }, {
+      name: 'mst-facility-setting:created-footer-height',
+      requireGridFooter: true,
+      retries: 8,
+      delay: 16
+    });
   },
   mounted() {
+    installComponentJQuery();
+    EventBus.$emit("calculateMainHeight");
+    this.directGridMounted = true;
     this.$nextTick(() => {
       this.calculateGridHeight();
+      this.initDirectGridIfReady();
     });
+    this.directGridResizeHandler = () => {
+      this.calculateGridHeight();
+      this.scheduleDirectGridLayoutContract();
+    };
+    window.addEventListener("resize", this.directGridResizeHandler);
     EventBus.$on("clearScrollPosition", this.clearScrollPosition);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
     EventBus.$off("clearScrollPosition", this.clearScrollPosition);
+    if (this.directGridResizeHandler) {
+      window.removeEventListener("resize", this.directGridResizeHandler);
+      this.directGridResizeHandler = null;
+    }
+    this.destroyDirectGrid();
   }
 };
 </script>
@@ -1516,6 +2805,59 @@ export default {
   height: auto;
   padding: 0.1em 0.1em 0.1em 0.1em;
 }
+.mobile-edit-toolbar {
+  display: inline-flex;
+  align-items: center;
+  float: left;
+  gap: 0.5em;
+  height: 2em;
+  padding: 0 0.3em;
+  line-height: 1;
+}
+.mobile-edit-toolbar .fab-font-color {
+  margin: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.mobile-edit-toolbar :deep(ons-switch) {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.mobile-edit-toolbar :deep(.switch) {
+  --switch-width: 44px;
+  --switch-height: 26px;
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  padding: 0 !important;
+  margin: 0;
+  vertical-align: middle;
+}
+.mobile-edit-toolbar :deep(.switch__toggle) {
+  border-radius: 13px;
+  box-shadow: inset 0 0 0 1.5px var(--switch-border-color);
+}
+.mobile-edit-toolbar :deep(:checked + .switch__toggle) {
+  box-shadow: inset 0 0 0 1.5px var(--switch-checked-background-color);
+}
+.mobile-edit-toolbar :deep(.switch__handle) {
+  width: 22px !important;
+  height: 22px !important;
+  top: 2px !important;
+  left: 2px !important;
+  right: auto !important;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+}
+.mobile-edit-toolbar :deep(:checked + .switch__toggle > .switch__handle) {
+  left: auto !important;
+  right: 2px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+}
 #grid-footer {
   margin: 0;
   padding: 5px 5px 5px 5px;
@@ -1527,22 +2869,108 @@ export default {
   height: calc(100% - 40px);
   border-bottom: none;
 }
-.toolbar-btn {
-  font-size: 1.0em;
-  padding: 0.2em 1em 0em 1em;
-  line-height: 2em;
-  width: auto;
-}
 .k-grid-toolbar {
   padding: 0 0.3em;
 }
-::v-deep .k-selectable tbody tr td{
-  overflow:  visible;
-  white-space: normal;
+:deep(.k-selectable tbody tr td),
+:deep(.k-grid .k-table-td),
+:deep(.k-grid .k-grid-content td),
+:deep(.k-grid .k-grid-content-locked td) {
+  overflow: visible !important;
+  white-space: normal !important;
+  vertical-align: top;
 }
-.custom-switch {
-  transform: scale(0.85);
-  transform-origin: center;
+/* 設定値列: k-dirty が hidden の value 列につくため master-edited-cell を JS で付与。念のため表示セルも明示 */
+:deep(.mst-facility-setting-direct-jq-grid .k-grid-content tbody td.master-edited-cell) {
+  color: #003300 !important;
+  font-weight: bold !important;
+}
+
+:deep(.k-grid .k-grid-edit-row td),
+:deep(.k-grid .k-grid-edit-row .k-edit-cell) {
+  overflow: visible !important;
+  white-space: normal !important;
+  vertical-align: top;
+}
+/* 設定値セル編集時: DropDownList の選択文言が長い場合に折り返す（Kendo は既定で nowrap のため） */
+:deep(.k-grid .k-grid-edit-row .k-edit-cell .k-dropdownlist.k-picker),
+:deep(.k-grid .k-grid-edit-row .k-edit-cell .k-legacy-dropdownlist.k-dropdownlist.k-picker) {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 0.55em;
+  row-gap: 0;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  min-height: 2em;
+  white-space: normal;
+  box-sizing: border-box;
+}
+:deep(.k-grid .k-grid-edit-row .k-edit-cell .k-dropdownlist.k-picker .k-input-inner.k-dropdown-wrap),
+:deep(.k-grid .k-grid-edit-row .k-edit-cell .k-legacy-dropdownlist.k-dropdownlist.k-picker .k-input-inner.k-dropdown-wrap),
+:deep(.k-grid .k-grid-edit-row .k-edit-cell .k-legacy-dropdownlist.k-dropdownlist.k-picker .k-dropdown-wrap) {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  height: auto;
+  min-height: inherit;
+  white-space: normal;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  padding-inline-end: 0;
+  margin-right: 0;
+  box-sizing: border-box;
+}
+/* 折り返しでも三角ボタンと重ならないよう領域を確保（テーマ側の absolute レイアウトも打ち消し） */
+:deep(.k-grid .k-grid-edit-row .k-edit-cell .k-dropdownlist.k-picker .k-select.k-input-button),
+:deep(.k-grid .k-grid-edit-row .k-edit-cell .k-dropdownlist.k-picker button.k-select),
+:deep(.k-grid .k-grid-edit-row .k-edit-cell .k-legacy-dropdownlist.k-dropdownlist.k-picker .k-select.k-input-button),
+:deep(.k-grid .k-grid-edit-row .k-edit-cell .k-legacy-dropdownlist.k-dropdownlist.k-picker button.k-select) {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  align-self: start;
+  margin-top: 2px;
+  margin-left: 0;
+  margin-inline-start: 0;
+  position: relative !important;
+  inset: unset !important;
+  width: auto;
+  min-width: 2.25rem;
+  z-index: 1;
+}
+:deep(.k-grid .k-grid-edit-row .k-edit-cell .k-dropdownlist.k-picker .k-input-value-text),
+:deep(.k-grid .k-grid-edit-row .k-edit-cell .k-legacy-dropdownlist.k-dropdownlist.k-picker .k-input-value-text) {
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  text-overflow: clip;
+  overflow: hidden;
+  max-width: 100%;
+  padding-right: 0.125em;
+  box-sizing: border-box;
+}
+.mobile-edit-toolbar .custom-switch {
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.no-scroll {
+  overflow-x: hidden;
+}
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 </style>

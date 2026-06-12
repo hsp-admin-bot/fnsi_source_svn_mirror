@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import jp.co.nikkiso.ntss.admin_web.service.MstInfoService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
@@ -49,6 +49,7 @@ import jp.co.nikkiso.ntss.admin_web.response.bvms.dto.rr.RRGraphDTO;
 import jp.co.nikkiso.ntss.admin_web.response.bvms.dto.rr.RRGraphFilterDTO;
 import jp.co.nikkiso.ntss.admin_web.response.creatingReport.ReportHtmlResponse;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.admin_web.service.bvms.BVGraphService;
 import jp.co.nikkiso.ntss.admin_web.service.bvms.BVMSReportChartService;
 import jp.co.nikkiso.ntss.admin_web.service.bvms.DDMGraphService;
@@ -64,6 +65,7 @@ import lombok.NonNull;
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 @RestController
 @RequestMapping(Uri.BVMS)
@@ -106,8 +108,28 @@ public class BVMSGraphResource {
   @Autowired
   private OrdPrescriptionDao ordPrescriptionDao;
 
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
     @PostMapping("bvGraph/{ordNo}")
-    public ResponseEntity<?> getBVGraph(@PathVariable Long ordNo, @Valid @RequestBody BVMSFilterDTO filter) {
+    public ResponseEntity<?> getBVGraph(@PathVariable Long ordNo, @Valid @RequestBody BVMSFilterDTO filter,
+                                        @RequestParam(required = false) Long selectedPatId,
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                        @AuthenticationPrincipal NtssUser ntssUser
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, ordMain.getFacilityCd(), selectedPatId)) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/bvGraph";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -123,7 +145,24 @@ public class BVMSGraphResource {
     }
 
     @PostMapping("ddmGraph/{ordNo}")
-    public ResponseEntity<?> getDDMGraph(@PathVariable Long ordNo, @Valid @RequestBody BVMSFilterDTO filter) {
+    public ResponseEntity<?> getDDMGraph(@PathVariable Long ordNo, @Valid @RequestBody BVMSFilterDTO filter,
+                                         @RequestParam(required = false) Long selectedPatId,
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                         @AuthenticationPrincipal NtssUser ntssUser
+                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, ordMain.getFacilityCd(), selectedPatId)) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/ddmGraph";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -140,7 +179,24 @@ public class BVMSGraphResource {
     }
 
     @PostMapping("htGraph/{ordNo}")
-    public ResponseEntity<?> getHtGraph(@PathVariable Long ordNo, @Valid @RequestBody BVMSFilterDTO filter) {
+    public ResponseEntity<?> getHtGraph(@PathVariable Long ordNo, @Valid @RequestBody BVMSFilterDTO filter,
+                                        @RequestParam(required = false) Long selectedPatId,
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                        @AuthenticationPrincipal NtssUser ntssUser
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, ordMain.getFacilityCd(), selectedPatId)) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/htGraph";
@@ -186,6 +242,18 @@ public class BVMSGraphResource {
     @PostMapping("bvGraph/creating-report/{ordNo}")
     public ResponseEntity<?> printBVGraphReportHtml(@PathVariable("ordNo") Long ordNo,
             @RequestBody BVMSFilterDTO filter, @AuthenticationPrincipal NtssUser ntssUser) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/bvGraph/creating-report";
@@ -233,6 +301,16 @@ public class BVMSGraphResource {
     @PostMapping("ddmGraph/creating-report/{ordNo}")
     public ResponseEntity<?> printDDMGraphReportHtml(@PathVariable("ordNo") Long ordNo,
             @RequestBody BVMSFilterDTO filter, @AuthenticationPrincipal NtssUser ntssUser) {
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/ddmGraph/creating-report";
@@ -279,6 +357,16 @@ public class BVMSGraphResource {
     @PostMapping("htGraph/creating-report/{ordNo}")
     public ResponseEntity<?> printHtGraphReportHtml(@PathVariable("ordNo") Long ordNo,
             @RequestBody BVMSFilterDTO filter, @AuthenticationPrincipal NtssUser ntssUser) {
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/htGraph/creating-report";
@@ -323,6 +411,16 @@ public class BVMSGraphResource {
     @PostMapping("rrGraph/creating-report/{ordNo}")
     public ResponseEntity<?> printRRGraphReportHtml(@PathVariable("ordNo") Long ordNo,
             @RequestBody RRGraphFilterDTO filter, @AuthenticationPrincipal NtssUser ntssUser) {
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/rrGraph/creating-report";
@@ -367,6 +465,16 @@ public class BVMSGraphResource {
     @PostMapping("bvGraph/preview-report/{ordNo}")
     public ResponseEntity<?> previewBVGraphReportHtml(@PathVariable("ordNo") Long ordNo,
             @RequestBody BVMSFilterDTO filter, @AuthenticationPrincipal NtssUser ntssUser) {
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/bvGraph/preview-report";
@@ -405,6 +513,18 @@ public class BVMSGraphResource {
     @PostMapping("ddmGraph/preview-report/{ordNo}")
     public ResponseEntity<?> previewDDMGraphReportHtml(@PathVariable("ordNo") Long ordNo,
             @RequestBody BVMSFilterDTO filter, @AuthenticationPrincipal NtssUser ntssUser) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/ddmGraph/preview-report";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -444,6 +564,18 @@ public class BVMSGraphResource {
     @PostMapping("htGraph/preview-report/{ordNo}")
     public ResponseEntity<?> previewHtGraphReportHtml(@PathVariable("ordNo") Long ordNo,
             @RequestBody BVMSFilterDTO filter, @AuthenticationPrincipal NtssUser ntssUser) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/htGraph/preview-report";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -483,6 +615,18 @@ public class BVMSGraphResource {
     @PostMapping("rrGraph/preview-report/{ordNo}")
     public ResponseEntity<?> previewRRGraphReportHtml(@PathVariable("ordNo") Long ordNo,
             @RequestBody RRGraphFilterDTO filter, @AuthenticationPrincipal NtssUser ntssUser) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/rrGraph/preview-report";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -526,7 +670,23 @@ public class BVMSGraphResource {
             @RequestParam("graph1Y1From") BigDecimal graph1Y1From, @RequestParam("graph1Y1To") BigDecimal graph1Y1To,
             @RequestParam("graph1Y2From") BigDecimal graph1Y2From, @RequestParam("graph1Y2To") BigDecimal graph1Y2To,
             @RequestParam("graph2Y1From") BigDecimal graph2Y1From, @RequestParam("graph2Y1To") BigDecimal graph2Y1To,
-            @RequestParam("graph2Y2From") BigDecimal graph2Y2From, @RequestParam("graph2Y2To") BigDecimal graph2Y2To) {
+            @RequestParam("graph2Y2From") BigDecimal graph2Y2From, @RequestParam("graph2Y2To") BigDecimal graph2Y2To,
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                        @AuthenticationPrincipal NtssUser ntssUser
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/bvGraph/byUploadFile";
@@ -550,7 +710,23 @@ public class BVMSGraphResource {
             @RequestParam("graph1Y1From") BigDecimal graph1Y1From, @RequestParam("graph1Y1To") BigDecimal graph1Y1To,
             @RequestParam("graph1Y2From") BigDecimal graph1Y2From, @RequestParam("graph1Y2To") BigDecimal graph1Y2To,
             @RequestParam("graph2Y1From") BigDecimal graph2Y1From, @RequestParam("graph2Y1To") BigDecimal graph2Y1To,
-            @RequestParam("graph2Y2From") BigDecimal graph2Y2From, @RequestParam("graph2Y2To") BigDecimal graph2Y2To) {
+            @RequestParam("graph2Y2From") BigDecimal graph2Y2From, @RequestParam("graph2Y2To") BigDecimal graph2Y2To,
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                         @AuthenticationPrincipal NtssUser ntssUser
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/ddmGraph/byUploadFile";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -573,7 +749,23 @@ public class BVMSGraphResource {
             @RequestParam("graph1Y1From") BigDecimal graph1Y1From, @RequestParam("graph1Y1To") BigDecimal graph1Y1To,
             @RequestParam("graph1Y2From") BigDecimal graph1Y2From, @RequestParam("graph1Y2To") BigDecimal graph1Y2To,
             @RequestParam("graph2Y1From") BigDecimal graph2Y1From, @RequestParam("graph2Y1To") BigDecimal graph2Y1To,
-            @RequestParam("graph2Y2From") BigDecimal graph2Y2From, @RequestParam("graph2Y2To") BigDecimal graph2Y2To) {
+            @RequestParam("graph2Y2From") BigDecimal graph2Y2From, @RequestParam("graph2Y2To") BigDecimal graph2Y2To,
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                        @AuthenticationPrincipal NtssUser ntssUser
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/htGraph/byUploadFile";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -593,7 +785,23 @@ public class BVMSGraphResource {
     }
     @PostMapping("rrGraph/byUploadFile/{ordNo}")
     public ResponseEntity<?> getRRGraph(@PathVariable Long ordNo, @RequestParam("files") MultipartFile file,
-            @RequestParam("graphY1From") BigDecimal graphY1From, @RequestParam("graphY1To") BigDecimal graphY1To) {
+            @RequestParam("graphY1From") BigDecimal graphY1From, @RequestParam("graphY1To") BigDecimal graphY1To,
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                        @AuthenticationPrincipal NtssUser ntssUser
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/rrGraph/byUploadFile";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -618,6 +826,18 @@ public class BVMSGraphResource {
             @RequestParam("graph2Y1To") BigDecimal graph2Y1To, @RequestParam("graph2Y2From") BigDecimal graph2Y2From,
             @RequestParam("graph2Y2To") BigDecimal graph2Y2To, @RequestParam("targetPrinter") Long targetPrinter,
             @RequestParam("pdfPath") String pdfPath, @AuthenticationPrincipal NtssUser ntssUser) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/bvGraph/creating-report/byUploadFile";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -670,6 +890,16 @@ public class BVMSGraphResource {
             @RequestParam("graph2Y1To") BigDecimal graph2Y1To, @RequestParam("graph2Y2From") BigDecimal graph2Y2From,
             @RequestParam("graph2Y2To") BigDecimal graph2Y2To, @RequestParam("targetPrinter") Long targetPrinter,
             @RequestParam("pdfPath") String pdfPath, @AuthenticationPrincipal NtssUser ntssUser) {
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/ddmGraph/creating-report/byUploadFile";
@@ -722,6 +952,18 @@ public class BVMSGraphResource {
             @RequestParam("graph2Y1To") BigDecimal graph2Y1To, @RequestParam("graph2Y2From") BigDecimal graph2Y2From,
             @RequestParam("graph2Y2To") BigDecimal graph2Y2To, @RequestParam("targetPrinter") Long targetPrinter,
             @RequestParam("pdfPath") String pdfPath, @AuthenticationPrincipal NtssUser ntssUser) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/htGraph/creating-report/byUploadFile";
@@ -771,6 +1013,18 @@ public class BVMSGraphResource {
             @RequestParam("files") MultipartFile file, @RequestParam("graphY1From") BigDecimal graphY1From,
             @RequestParam("graphY1To") BigDecimal graphY1To, @RequestParam("targetPrinter") Long targetPrinter,
             @RequestParam("pdfPath") String pdfPath, @AuthenticationPrincipal NtssUser ntssUser) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/rrGraph/creating-report/byUploadFile";
@@ -821,6 +1075,18 @@ public class BVMSGraphResource {
             @RequestParam("graph1Y2To") BigDecimal graph1Y2To, @RequestParam("graph2Y1From") BigDecimal graph2Y1From,
             @RequestParam("graph2Y1To") BigDecimal graph2Y1To, @RequestParam("graph2Y2From") BigDecimal graph2Y2From,
             @RequestParam("graph2Y2To") BigDecimal graph2Y2To, @AuthenticationPrincipal NtssUser ntssUser) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/bvGraph/preview-report/byUploadFile";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -866,6 +1132,16 @@ public class BVMSGraphResource {
             @RequestParam("graph1Y2To") BigDecimal graph1Y2To, @RequestParam("graph2Y1From") BigDecimal graph2Y1From,
             @RequestParam("graph2Y1To") BigDecimal graph2Y1To, @RequestParam("graph2Y2From") BigDecimal graph2Y2From,
             @RequestParam("graph2Y2To") BigDecimal graph2Y2To, @AuthenticationPrincipal NtssUser ntssUser) {
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/ddmGraph/preview-report/byUploadFile";
@@ -918,6 +1194,16 @@ public class BVMSGraphResource {
             @RequestParam("graph1Y2To") BigDecimal graph1Y2To, @RequestParam("graph2Y1From") BigDecimal graph2Y1From,
             @RequestParam("graph2Y1To") BigDecimal graph2Y1To, @RequestParam("graph2Y2From") BigDecimal graph2Y2From,
             @RequestParam("graph2Y2To") BigDecimal graph2Y2To, @AuthenticationPrincipal NtssUser ntssUser) {
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/htGraph/preview-report/byUploadFile";
@@ -966,6 +1252,18 @@ public class BVMSGraphResource {
     public ResponseEntity<?> previewRRGraphReportHtml(@PathVariable("ordNo") Long ordNo,
             @RequestParam("files") MultipartFile file, @RequestParam("graphY1From") BigDecimal graphY1From,
             @RequestParam("graphY1To") BigDecimal graphY1To, @AuthenticationPrincipal NtssUser ntssUser) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.BVMS + "/rrGraph/preview-report/byUploadFile";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,

@@ -325,13 +325,13 @@
       </div>
 
       <message-dialog
-        :visible.sync="isDialogVisble"
+        v-model:visible="isDialogVisble"
         v-bind="dialogProps"
         type="1"
         @confirm="saveEdit"
       />
       <message-dialog
-        :visible.sync="isCancelDialogVisble"
+        v-model:visible="isCancelDialogVisble"
         v-bind="dialogProps"
         type="2"
         @confirm="cancelEdit"
@@ -344,8 +344,8 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { deepCopy, getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapActions, mapGetters } from "vuex";
-import { Chart } from "highcharts-vue";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { Chart } from "@/compat/charts/highcharts";
 import {
   DEVICE_TYPE_NA,
   DATA_SOURCE_TYPE_ORD
@@ -354,8 +354,10 @@ import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetIn
 //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fan add start
 import { ApiHelper } from "@/apis/AxiosHelper";
 //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fan add end
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 
+import DeviceSetOwnerMixin from '@/components/deviceset-info/base-modules/DeviceSetOwnerMixin';
+import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 /**
  * @description Na注入プログラム設定値編集画面
  */
@@ -364,7 +366,7 @@ export default {
     highcharts: Chart
   },
 
-  mixins: [baseEditor],
+  mixins: [DeviceSetOwnerMixin, baseEditor],
 
   props: {
     // add #10359 編集権限の動作不正 dengshen start
@@ -488,6 +490,27 @@ export default {
               // setTimeout(() => {
                 this.reflow();
 //              }, 1000);
+            },
+            render: function () {
+              const chart = this;
+              // 重複作成を防止
+              if (chart.customBorder) {
+                  chart.customBorder.destroy();
+              }
+              const left = chart.plotLeft;
+              const top = chart.plotTop;
+              const width = chart.plotWidth;
+              const height = chart.plotHeight;
+              // インスタンスを保存
+              chart.customBorder = chart.renderer
+                  .rect(left,top,width,height,0)
+                  .attr({
+                      stroke: '#e1e1e1',
+                      'stroke-width': 2,
+                      fill: 'transparent',
+                      zIndex: 10
+                  })
+                  .add();
             }
           },
           marginTop: 25,
@@ -584,8 +607,8 @@ export default {
      * @returns {String} class
      */
     isUnderIndModal() {
-      let indObj = document.getElementsByClassName("indInfo-style-modal-container");
-      if (indObj.length > 0) {
+      const indObj = this._deviceSetClosestOrScopedElement(".indInfo-style-modal-container");
+      if (indObj) {
         return "ind-style-media-query";
       }
       return "";
@@ -596,8 +619,8 @@ export default {
      * @returns {String} class
      */
     isUnderSubModal() {
-      let subModalObj = document.getElementsByClassName("sub-modal-body");
-      if (subModalObj.length > 0) {
+      const subModalObj = this._deviceSetClosestOrScopedElement(".sub-modal-body");
+      if (subModalObj) {
         return "is-under-sub-modal";
       }
       return "";
@@ -608,7 +631,7 @@ export default {
     deviceSetInfo() {
       if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
         // 親のスタイル修正
-        this.$parent.styleObj = { "max-width": "640px", width: "100%" };
+        this._deviceSetDialogOwner().styleObj = { "max-width": "640px", width: "100%" };
       }
 
       //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
@@ -647,7 +670,15 @@ export default {
     ]),
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd));
+      return this.isMst || (this.isMst != true && !this.isOtherFacilityRow() && getAuthorized(pageCd, itemCd));
+    },
+    /**
+     * @description 該当行が他院情報かどうかを判定
+     * @returns {Boolean} true = 他施設のデータは参照のみ
+     */
+    isOtherFacilityRow() {
+      const facilityCd = this.getSettingIndChildData?.facilityCd;
+      return facilityCd ? facilityCd !== this.getFacilityCd : false;
     },
     // add #10359 編集権限の動作不正 dengshen end
     /**
@@ -708,7 +739,7 @@ export default {
      */
     saveEdit() {
       if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
-        this.$parent.$parent.updateDisable = false;
+        this._deviceSetDialogOwner().updateDisable = false;
       }
     },
     isEdit() {
@@ -730,14 +761,14 @@ export default {
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fan add start
     async resetComponentIndData(structData){
       if (this.isEdit()) {
-        this.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+        this._deviceSetDialogOwner().messageDialogInfo.messageCd = 70000028;
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-        this.$parent.$parent.messageDialogInfo.type = "9";
+        this._deviceSetDialogOwner().messageDialogInfo.type = "9";
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._deviceSetDialogOwner().messageDialogInfo.isDialogVisible = true;
         return;
       } else {
-        this.getComponentData(structData,2);
+        return this.getComponentData(structData,2);
       }
 
     },
@@ -810,8 +841,7 @@ export default {
       // 対象日時の治療情報取得(開始日付・治療方法・クールで絞り込み)
       let response = await ApiHelper.post(
         "/mainData/getOrdMainDataInfo",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         getErrorMessage('IndActionChart.vue', 'resetComponentData', error);
         throw error;
       });
@@ -903,7 +933,7 @@ export default {
     // add #9857、Na注入プログラム最大値の制限が適用されずに編集可能の修正 limf end
     // add redmine 6052 Na注入プログラムの設定濃度がNa注入濃度最大値を超えて設定できてしまう 宋qy end
     decimalModi() {
-      let textInputs = document.getElementsByClassName("text-input");
+      const textInputs = this._deviceSetElementsByClassName("text-input");
       for (let i = 0; i < textInputs.length; i++) {
         if (textInputs[i].value !== "" && textInputs[i].value !== null && textInputs[i].type === "number") {
           let temp = textInputs[i].value + "";
@@ -928,25 +958,13 @@ export default {
       // }
       EventBus.$emit("deviceSetChanged", !val);
       // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng end
-    },
-   // add #12462 患者情報共有 Ji start
-  /**
-   * @description 該当行が他院情報かどうかを判定
-   * @returns {Boolean} true = 他施設のデータは参照のみ
-   */
-    isOtherFacilityRow() {
-      if (!this.getSettingIndChildData) {
-        return false
-      }
-      return this.getSettingIndChildData.facilityCd ? this.getSettingIndChildData.facilityCd !== this.getFacilityCd : false
-    },
-    // add #12462 患者情報共有 Ji end
+    }
   },
 
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fan add start
   async created() {
     this.setLoadingScreenVisible(true);
-    this.$parent.$parent.isDialogType9 = true;
+    this._deviceSetDialogOwner().isDialogType9 = true;
   },
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fan add end
   mounted() {
@@ -956,7 +974,7 @@ export default {
       this.setLoadingScreenVisible(false);
     },500);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     const chartRef = this.$refs.refNaProgramChart;
     if (chartRef?.chart) {
       if (typeof chartRef.chart.destroy === 'function') {
@@ -1014,7 +1032,7 @@ export default {
   margin: 4px;
 }
 
-.device-input-charts >>> .custom-input-number {
+.device-input-charts :deep(.custom-input-number) {
   width: 100%;
   padding: 0;
   margin: 0;
@@ -1033,7 +1051,7 @@ export default {
   font-size: 1em;
 }
 
-.is-under-sub-modal >>> * {
+.is-under-sub-modal :deep(*) {
   font-size: inherit !important;
 }
 

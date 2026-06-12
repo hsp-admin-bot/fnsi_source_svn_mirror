@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
 import jp.co.nikkiso.ntss.admin_web.constant.MstToMongoEnum;
@@ -16,6 +16,7 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.master.MasterEditService;
 import jp.co.nikkiso.ntss.admin_web.service.master.MasterListService;
 import jp.co.nikkiso.ntss.admin_web.service.nextpat.NextPatService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.admin_web.web.rest.util.WebApiCallCommonUtil;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
@@ -37,6 +38,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 //mod 6742 ダイアライザマスタにてKoAを編集して保存したところシステムエラー発生 関俊楠 start
 import java.io.IOException;
@@ -54,6 +56,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static jp.co.nikkiso.ntss.core.dao.MasterMaintenanceGenericDao.OPERATION;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 
 /**
@@ -63,6 +66,9 @@ import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString
 @Slf4j
 @RequestMapping(Uri.MASTER_MAINTENANCE)
 public class MasterMaintenanceResource {
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
 
   /**
    * マスタ一覧Service.
@@ -131,9 +137,16 @@ public class MasterMaintenanceResource {
    * @param masterName マスタ名称(物理名)
    * @param ntssUser   NTSS認証ユーザー
    * @return マスタデータのResponse
-   */
+  */
   @GetMapping("/{masterName}/data")
-  public ResponseEntity<?> getMasterData(@PathVariable String masterName, @AuthenticationPrincipal NtssUser ntssUser) {
+  public ResponseEntity<?> getMasterData(@PathVariable String masterName,
+                                         @RequestParam(required = false) Long selectedPatId,
+                                         @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, ntssUser.getFacilityCd(), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -163,15 +176,61 @@ public class MasterMaintenanceResource {
     }
   }
 
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+  // クライアントから /{masterName}/data/nkknkk を叩かせず本URLのみで標準休日マスタを返す（セッション施設≠nkknkk時のIDB/誤検知対策）。
+  /**
+   * 休日マスタ（日機装標準施設）取得。施設コードはサーバ側で固定し、クロスファシリティ用のパスパラメータを挟まない.
+   * (#11205: getMasterDataByFacilityCd でのパスfacilityCd とセッション施設の突合とは別経路.)
+   *
+   * @param ntssUser NTSS認証ユーザー
+   * @return マスタデータのResponse
+   */
+  @GetMapping("/mst_holiday/data/nikkiso-corporate")
+  public ResponseEntity<?> getMstHolidayNikkisoCorporateData(@AuthenticationPrincipal NtssUser ntssUser) {
+
+    final String corporateFacilityCd = "nkknkk"; // #11205 日機装標準施設コード（サーバ固定・リクエスト不可）
+
+    EventLogMessage eventLogMessage = new EventLogMessage();
+    eventLogMessage.setLogMessage("REST request to get mst_holiday (nikkiso corporate fixed facilityCd)");
+    logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,
+      null);
+
+    try {
+      MasterDataResponse response =
+        masterEditService.getMasterData("mst_holiday", corporateFacilityCd);
+      return new ResponseEntity<>(response, HttpStatus.OK);
+
+    } catch (Exception e) {
+      eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
+      if (ntssUser != null && ntssUser.getFacilityCd() != null) {
+        eventLogMessage.setFacilityCd(ntssUser.getFacilityCd());
+      }
+      logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,
+        null);
+      return new ResponseEntity<>(new MasterUpdateResponse(AdminWebMessage.Error.MASTER_RECORD_ERROR.getMessage()),
+        HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
+
   /**
    * マスタデータ取得.
    *
    * @param masterName マスタ名称(物理名)
    * @param facilityCd NTSS認証ユーザー
    * @return マスタデータのResponse
-   */
+  */
   @GetMapping("/{masterName}/data/{facilityCd}")
-  public ResponseEntity<?> getMasterDataByFacilityCd(@PathVariable String masterName, @PathVariable String facilityCd) {
+  public ResponseEntity<?> getMasterDataByFacilityCd(@PathVariable String masterName,
+                                                     @PathVariable String facilityCd,
+                                                     @RequestParam(required = false) Long selectedPatId,
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                     @AuthenticationPrincipal NtssUser ntssUser
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -204,7 +263,22 @@ public class MasterMaintenanceResource {
    * @return マスタデータのResponse
    */
   @GetMapping("/{masterName}/data/sql/{facilityCd}")
-  public ResponseEntity<?> getMasterDataByFacilityCdWithSql(@PathVariable String masterName, @PathVariable String facilityCd) {
+  public ResponseEntity<?> getMasterDataByFacilityCdWithSql(@PathVariable String masterName, @PathVariable String facilityCd,
+                                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                            @AuthenticationPrincipal NtssUser ntssUser
+                                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "masterName=" + masterName + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -403,7 +477,20 @@ public class MasterMaintenanceResource {
    */
   @PutMapping("/{masterName}/data/{facilityCd}")
   public ResponseEntity<?> updateMasterData(@PathVariable("masterName") String masterPhysicalName, @PathVariable String facilityCd,
-                                            @RequestBody MasterUpdateRequest request) {
+                                            @RequestBody MasterUpdateRequest request,
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                     @AuthenticationPrincipal NtssUser ntssUser
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.isEmpty() && !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " facilityCd=" + facilityCd + " masterPhysicalName=" + masterPhysicalName + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -585,7 +672,22 @@ public class MasterMaintenanceResource {
    * @return 装置状態管理情報のResponse
    */
   @GetMapping("/mnt_machine_state/{facilityCd}")
-  public ResponseEntity<List<MntMachineState>> getMntMachineStateByFacilityCd(@PathVariable String facilityCd) {
+  public ResponseEntity<List<MntMachineState>> getMntMachineStateByFacilityCd(@PathVariable String facilityCd,
+                                                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                              @AuthenticationPrincipal NtssUser ntssUser
+                                                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -597,7 +699,7 @@ public class MasterMaintenanceResource {
       List<MntMachineState> response = mntMachineStateService.selectAll();
       if (response.size() < 0) {
         // 異常扱い
-        return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
       return new ResponseEntity<>(response, HttpStatus.OK);
     } catch (Exception e) {
@@ -611,7 +713,7 @@ public class MasterMaintenanceResource {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
       logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,
         null);
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

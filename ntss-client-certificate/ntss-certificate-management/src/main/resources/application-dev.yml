@@ -13,8 +13,9 @@ spring:
       username: nkkcl
       password: kuRpQeefaKKi
   jackson:
-    serialization:
-      WRITE_DATES_AS_TIMESTAMPS: false
+    datatype:
+      datetime:
+        WRITE_DATES_AS_TIMESTAMPS: false
   application:
     name: ntss-certificate-management
   jmx:

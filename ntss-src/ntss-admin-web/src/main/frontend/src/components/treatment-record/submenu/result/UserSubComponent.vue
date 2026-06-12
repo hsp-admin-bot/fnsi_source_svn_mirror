@@ -10,21 +10,17 @@
         </v-ons-col>
 
         <v-ons-col class="value d-flex align-items-center">
-         <custom-input
-            class="user-sub-component-input"
-            :value="userName1Value"
-            :disabled="true"
-          />
-          <com-master-selector
-            name="personal-user-all"
-            :value="createValue1"
-            :showLabelName="false"
-            :showClassFilter="true"
-            :readMasterData="fetchPersonalUserAll"
-            :masterDefine="personalUserDefine"
-            @changePersonalUser="setUser1"
-            :isDisabled="!isShared || !getItemAuthorized('TreatmentRecord', 'default_authority')"
-            :class="['isClass']"
+          <common-master-selector
+            :masterType="MasterType.PERSONAL_USER_TREATMENT_RECORD"
+            :facilityCd="facilityCd"
+            :initItem="pickerInitItem1"
+            :editItem="pickerEditItem1"
+            :selectedItemClass="'selector-input'"
+            :backgroundColor="'#f7f7f7'"
+            :btnClass="'com-basic-sub-btn'"
+            :hasUnregisteredOption="true"
+            :btnDisabled="!isShared || !getItemAuthorized('TreatmentRecord', 'default_authority')"
+            @popover-return="onPopoverUser1"
           />
         </v-ons-col>
       </v-ons-row>
@@ -35,21 +31,17 @@
         </v-ons-col>
 
         <v-ons-col class="value d-flex align-items-center">
-          <custom-input
-            class="user-sub-component-input"
-            :value="userName2Value"
-            :disabled="true"
-          />
-          <com-master-selector
-            name="personal-user-all"
-            :value="createValue2"
-            :showLabelName="false"
-            :showClassFilter="true"
-            :readMasterData="fetchPersonalUserAll"
-            :masterDefine="personalUserDefine"
-            @changePersonalUser="setUser2"
-            :class="['isClass']"
-            :isDisabled="!isShared || !getItemAuthorized('TreatmentRecord', 'default_authority')"
+          <common-master-selector
+            :masterType="MasterType.PERSONAL_USER_TREATMENT_RECORD"
+            :facilityCd="facilityCd"
+            :initItem="pickerInitItem2"
+            :editItem="pickerEditItem2"
+            :selectedItemClass="'selector-input'"
+            :backgroundColor="'#f7f7f7'"
+            :btnClass="'com-basic-sub-btn'"
+            :hasUnregisteredOption="true"
+            :btnDisabled="!isShared || !getItemAuthorized('TreatmentRecord', 'default_authority')"
+            @popover-return="onPopoverUser2"
           />
         </v-ons-col>
       </v-ons-row>
@@ -66,20 +58,26 @@
                 :classes="'ntss-input-date ntss-control-size ' + timeClass('date')"
                 model-event="change"
                 :id="'input-date-' + id"
-                v-model="dateObj.date"
-                @handleClearInput="dateObj.date = null"
+                :model-value="dateObj.date"
+                @update:model-value="setDateObjValue('date', $event)"
+                @input="setDateObjValue('date', $event)"
+                @handleClearInput="setDateObjValue('date', null)"
                 name="input-date"
                 :disabled="!isShared || !getItemAuthorized('TreatmentRecord', 'default_authority')"
               />
               <common-calendar
                 :disabled="!isShared || !getItemAuthorized('TreatmentRecord', 'default_authority')"
-                v-model="dateObj.date" />
+                :model-value="dateObj.date"
+                @update:model-value="setDateObjValue('date', $event)"
+                @input="setDateObjValue('date', $event)" />
               <time-input
                 :classes="inputClass('time')"
                 model-event="change"
                 input-id="input-time"
-                v-model="dateObj.time"
-                @handleClearInput="dateObj.time = null"
+                :model-value="dateObj.time"
+                @update:model-value="setDateObjValue('time', $event)"
+                @input="setDateObjValue('time', $event)"
+                @handleClearInput="setDateObjValue('time', null)"
                 name="input-time"
                 :disabled="!isShared || !getItemAuthorized('TreatmentRecord', 'default_authority')"
               />
@@ -88,9 +86,9 @@
               <!-- #5590 2023/04/23 ×を常に表示するように修正 張博 end -->
               <!--- add FNSI-共有設定の追加 周雨晴 2020/09/21 end -->
               <p
-                v-show="errors.has('input-time')"
+                v-show="hasValidationError('input-time')"
                 class="error-message"
-              >{{ errors.first('input-time') }}</p>
+              >{{ getValidationError('input-time') }}</p>
             </div>
             <span class="error-message">{{ this.msgDiaLog }}</span>
           </div>
@@ -102,28 +100,24 @@
 
 <script>
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
-import {
-  DATE_FORMAT,
-  dateFormat,
-} from "@/functions/common/DateTimeUtils.js";
-import CommonMasterSelectorComponent from "@/components/common/master-selector/TreatmentRecordSelectorComponent";
-import { sendRequestGetMstPersonalUser, sendRequestMstGetJobs } from "@/apis/user-selector-popover";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
-import moment from "moment";
-import { personalUser } from "@/components/common/master-selector/MasterSelectorDefinitions";
-import { mapGetters } from "vuex";
-import customInput from "@/components/common/custom-form-tags/CustomInput";
+import dayjs from "@/compat/date/dayjs";
+import { mapGetters } from "@/compat/vue/vuex";
 import DateInput from "@/components/common/DateInput.vue";
 import TimeInput from "@/components/common/TimeInput.vue";
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 
 export default {
   components: {
     "common-calendar": commonCalender,
-    "com-master-selector": CommonMasterSelectorComponent,
-    "custom-input": customInput,
     "date-input":DateInput,
-    "time-input":TimeInput
+    "time-input":TimeInput,
+    "common-master-selector": commonMasterSelector
   },
+  // 親 ResultComponent が `:value` / `@input` の明示バインディングで使用しているため
+  // Vue2 と同じ props/event 形式を維持する。
+  emits: ["input"],
   props: {
     typeName: {
       type: String
@@ -170,7 +164,6 @@ export default {
         date_1: null,
         date_2: null
       },
-      personalUserDefine: personalUser,
       msgDiaLog: null,
       userName1Value: {
         initValue: null,
@@ -184,21 +177,33 @@ export default {
       dateObj: {
         date: null,
         time: null
-      }
+      },
+      isSyncingValueFromParent: false
     };
   },
   watch: {
     value(val) {
-      Object.assign(this.inputModel, val);
-      if (this.showDate && val !== null) {
-        this.dateObj = this.validateDateTime(val.date)
+      this.isSyncingValueFromParent = true;
+      try {
+        if (val !== null && val !== undefined) {
+          Object.keys(val).forEach((key) => {
+            this.setInputModelValue(key, val[key]);
+          });
+        }
+        if (this.showDate && val !== null) {
+          this.setDateObjIfChanged(this.validateDateTime(val?.date));
+        }
+        this.setInputModelValue("user_last_name_1", this.inputModel.user_last_name_1 || null);
+        this.setInputModelValue("user_first_name_1", this.inputModel.user_first_name_1 || null);
+        this.setInputModelValue("date_1", this.inputModel.date_1 || null);
+        this.setInputModelValue("user_last_name_2", this.inputModel.user_last_name_2 || null);
+        this.setInputModelValue("user_first_name_2", this.inputModel.user_first_name_2 || null);
+        this.setInputModelValue("date_2", this.inputModel.date_2 || null);
+      } finally {
+        this.$nextTick(() => {
+          this.isSyncingValueFromParent = false;
+        });
       }
-      this.inputModel.user_last_name_1 = this.inputModel.user_last_name_1 || null;
-      this.inputModel.user_first_name_1 = this.inputModel.user_first_name_1 || null;
-      this.inputModel.date_1 = this.inputModel.date_1 || null;
-      this.inputModel.user_last_name_2 = this.inputModel.user_last_name_2 || null;
-      this.inputModel.user_first_name_2 = this.inputModel.user_first_name_2 || null;
-      this.inputModel.date_2 = this.inputModel.date_2 || null;
     },
     initValue: {
       handler(val) {
@@ -229,6 +234,9 @@ export default {
     },
     inputModel: {
       handler(newVal) {
+        if (this.isSyncingValueFromParent) {
+          return;
+        }
         const value = {
           user_id_1: newVal.user_id_1,
           user_last_name_1: newVal.user_last_name_1,
@@ -242,24 +250,24 @@ export default {
         if (this.showDate) {
           value.date = newVal.date;
         }
+        if (this.isSameUserSubValue(value, this.value)) {
+          return;
+        }
         this.$emit("input", value);
       },
       deep: true
     },
     dateObj: {
       handler(obj) {
-        if (obj.date && obj.time) {
-          this.inputModel.date = dateFormat.utc2Jst(`${obj.date} ${obj.time}`);
-        } else if (!obj.date && !obj.time) {
-          this.inputModel.date = null;
-        } else {
-          this.inputModel.date = (obj.date || obj.time)?.replaceAll('-', '/');
-        }
+        this.setInputModelValue("date", this.composeDateTimeValue(obj));
       },
       deep: true
     }
   },
   computed: {
+    MasterType() {
+      return MasterType;
+    },
     ...mapGetters("user", { facilityCd: "getFacilityCd" }),
     // add FNSI-共有設定の追加 周雨晴 start
     ...mapGetters("treatment-record/common", [
@@ -294,20 +302,54 @@ export default {
       }
       return userName;
     },
-    createValue1() {
+    effectiveUserId1() {
+      return this.nullOrEmpty(this.inputModel.user_id_1)
+        ? this.userInfo.userId
+        : this.inputModel.user_id_1;
+    },
+    effectiveUserId2() {
+      return this.nullOrEmpty(this.inputModel.user_id_2)
+        ? this.userInfo.userId
+        : this.inputModel.user_id_2;
+    },
+    pickerInitItem1() {
+      const text =
+        this.userName1Value.initValue != null
+          ? this.userName1Value.initValue
+          : (this.userName1 || "");
       return {
-        // mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm start
-        // cd: this.inputModel.user_id_1
-        cd: null == this.inputModel.user_id_1 || "" === this.inputModel.user_id_1 ? this.userInfo.userId : this.inputModel.user_id_1
-        // mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm end
+        value: this.effectiveUserId1,
+        text: text || ""
       };
     },
-    createValue2() {
+    pickerEditItem1() {
+      const text =
+        this.userName1Value.editValue != null
+          ? this.userName1Value.editValue
+          : (this.userName1 || "");
       return {
-        // mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm start
-        // cd: this.inputModel.user_id_2
-        cd: null == this.inputModel.user_id_2 || "" === this.inputModel.user_id_2 ? this.userInfo.userId : this.inputModel.user_id_2
-        // mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm end
+        value: this.effectiveUserId1,
+        text: text || ""
+      };
+    },
+    pickerInitItem2() {
+      const text =
+        this.userName2Value.initValue != null
+          ? this.userName2Value.initValue
+          : (this.userName2 || "");
+      return {
+        value: this.effectiveUserId2,
+        text: text || ""
+      };
+    },
+    pickerEditItem2() {
+      const text =
+        this.userName2Value.editValue != null
+          ? this.userName2Value.editValue
+          : (this.userName2 || "");
+      return {
+        value: this.effectiveUserId2,
+        text: text || ""
       };
     },
     // add FNSI-共有設定の追加 周雨晴 start
@@ -323,29 +365,154 @@ export default {
     // add FNSI-共有設定の追加 周雨晴 end
   },
   methods: {
+    nullOrEmpty(v) {
+      return v == null || v === "";
+    },
+    setDateObjValue(key, value) {
+      const normalizedValue = key === "date" ? this.normalizeDatePart(value) : this.normalizeTimePart(value);
+      if (this.isSameValue(this.dateObj[key], normalizedValue)) {
+        return;
+      }
+      this.dateObj[key] = normalizedValue;
+    },
+    composeDateTimeValue(obj) {
+      const datePart = this.normalizeDatePart(obj?.date);
+      const timePart = this.normalizeTimePart(obj?.time);
+      if (datePart && timePart) {
+        const composed = dayjs(`${datePart} ${timePart}`, "YYYY-MM-DD HH:mm", true);
+        return composed.isValid() ? composed.format("YYYY-MM-DDTHH:mm:ss.SSS+09:00") : null;
+      }
+      if (!datePart && !timePart) {
+        return null;
+      }
+      return datePart ? datePart.replaceAll("-", "/") : timePart;
+    },
+    normalizeDatePart(value) {
+      if (value === null || value === undefined || value === "") {
+        return null;
+      }
+      if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : dayjs(value).format("YYYY-MM-DD");
+      }
+      const text = `${value}`.trim();
+      if (!text) {
+        return null;
+      }
+      const parsed = dayjs(text, ["YYYY-MM-DD", "YYYY/MM/DD", "YYYYMMDD"], true);
+      if (parsed.isValid()) {
+        return parsed.format("YYYY-MM-DD");
+      }
+      const looseParsed = dayjs(text);
+      return looseParsed.isValid() ? looseParsed.format("YYYY-MM-DD") : null;
+    },
+    normalizeTimePart(value) {
+      if (value === null || value === undefined || value === "") {
+        return null;
+      }
+      const text = `${value}`.trim();
+      if (!text) {
+        return null;
+      }
+      const parsed = dayjs(text, ["HH:mm", "HH:mm:ss"], true);
+      return parsed.isValid() ? parsed.format("HH:mm") : null;
+    },
+    setInputModelValue(key, value) {
+      if (this.isSameValue(this.inputModel[key], value)) {
+        return;
+      }
+      this.inputModel[key] = value;
+    },
+    setDateObjIfChanged(nextDateObj) {
+      const normalizedDateObj = {
+        date: this.normalizeDatePart(nextDateObj?.date),
+        time: this.normalizeTimePart(nextDateObj?.time)
+      };
+      if (this.isSameValue(this.dateObj.date, normalizedDateObj.date) && this.isSameValue(this.dateObj.time, normalizedDateObj.time)) {
+        return;
+      }
+      this.dateObj = normalizedDateObj;
+    },
+    isSameUserSubValue(left, right) {
+      if (left === right) {
+        return true;
+      }
+      if (!left || !right) {
+        return false;
+      }
+      const keys = [
+        "user_id_1",
+        "user_last_name_1",
+        "user_first_name_1",
+        "user_id_2",
+        "user_last_name_2",
+        "user_first_name_2",
+        "date_1",
+        "date_2",
+        "date"
+      ];
+      return keys.every((key) => this.isSameValue(left[key], right[key]));
+    },
+    isSameValue(left, right) {
+      if (left === right) {
+        return true;
+      }
+      if (left == null && right == null) {
+        return true;
+      }
+      if (left instanceof Date && right instanceof Date) {
+        return left.getTime() === right.getTime();
+      }
+      const leftDate = this.normalizeComparableDate(left);
+      const rightDate = this.normalizeComparableDate(right);
+      if (leftDate !== null || rightDate !== null) {
+        return leftDate === rightDate;
+      }
+      return false;
+    },
+    normalizeComparableDate(value) {
+      if (value === null || value === undefined || value === "") {
+        return null;
+      }
+      if (value instanceof Date) {
+        const time = value.getTime();
+        return Number.isNaN(time) ? null : time;
+      }
+      if (typeof value === "string") {
+        const parsed = dayjs(value);
+        return parsed.isValid() ? parsed.valueOf() : null;
+      }
+      return null;
+    },
     validateDateTime(input) {
+      if (input === null || input === undefined || input === "") {
+        return { date: null, time: null };
+      }
+
       const isoFormat = 'YYYY-MM-DDTHH:mm:ss.SSSZ';
-      if (moment(input, isoFormat, true).isValid()) {
+      const isoDateTime = dayjs(input, isoFormat, true);
+      if (isoDateTime.isValid()) {
           return {
             // type: 'ISO 8601',
-            date: dateFormat.format(new Date(input), DATE_FORMAT),
-            time: moment(input).format("HH:mm")
+            date: isoDateTime.format("YYYY-MM-DD"),
+            time: isoDateTime.format("HH:mm")
           };
       }
 
-      if (moment(input, "YYYY-MM-DD", true).isValid() || moment(input, "YYYY/MM/DD", true).isValid()) {
+      const date = this.normalizeDatePart(input);
+      if (date && !this.normalizeTimePart(input)) {
           return {
             // type: 'Date',
-            date: dateFormat.format(new Date(input), DATE_FORMAT),
+            date,
             time: null
           };
       }
 
-      if (moment(input, "HH:mm", true).isValid()) {
+      const time = this.normalizeTimePart(input);
+      if (time) {
           return {
             // type: 'Time',
             date: null,
-            time: moment(input, "HH:mm").format("HH:mm")
+            time
           };
       }
       return {
@@ -362,26 +529,48 @@ export default {
     },
     // add #10359 編集権限の動作不正 dengshen end
 
-    fetchPersonalUserAll() {
-      return Promise.all([sendRequestGetMstPersonalUser(this.facilityCd), sendRequestMstGetJobs(this.facilityCd)]);
+    onPopoverUser1(item) {
+      this.applyPopoverUser(item, "1");
     },
-    setUser1(userInfo) {
-      this.inputModel.user_id_1 = userInfo ? userInfo.id : null;
-      this.inputModel.user_last_name_1 = userInfo ? userInfo.lastName : null;
-      this.inputModel.user_first_name_1 = userInfo ? userInfo.firstName : null;
-      this.inputModel.date_1 = userInfo ? moment().toDate() : null;
-      // FNSI-add redmine4824 徐 start
-      this.userName1Value.editValue = this.userName1 ? this.userName1 : null;
-      // FNSI-add redmine4824 徐 end
+    onPopoverUser2(item) {
+      this.applyPopoverUser(item, "2");
     },
-    setUser2(userInfo) {
-      this.inputModel.user_id_2 = userInfo ? userInfo.id : null;
-      this.inputModel.user_last_name_2 = userInfo ? userInfo.lastName : null;
-      this.inputModel.user_first_name_2 = userInfo ? userInfo.firstName : null;
-      this.inputModel.date_2 = userInfo ? moment().toDate() : null;
-      // FNSI-add redmine4824 徐 start
-      this.userName2Value.editValue = this.userName2 ? this.userName2 : null;
-      // FNSI-add redmine4824 徐 end
+    applyPopoverUser(item, slot) {
+      if (!item) {
+        return;
+      }
+      const uid = item.value != null ? item.value : item.key_cd ?? item.userId;
+      if (uid == null || uid === "") {
+        if (slot === "1") {
+          this.inputModel.user_id_1 = null;
+          this.inputModel.user_last_name_1 = null;
+          this.inputModel.user_first_name_1 = null;
+          this.inputModel.date_1 = null;
+          this.userName1Value.editValue = null;
+        } else {
+          this.inputModel.user_id_2 = null;
+          this.inputModel.user_last_name_2 = null;
+          this.inputModel.user_first_name_2 = null;
+          this.inputModel.date_2 = null;
+          this.userName2Value.editValue = null;
+        }
+        return;
+      }
+      const lastName = item.userLastName != null ? item.userLastName : null;
+      const firstName = item.userFirstName != null ? item.userFirstName : null;
+      if (slot === "1") {
+        this.inputModel.user_id_1 = uid;
+        this.inputModel.user_last_name_1 = lastName;
+        this.inputModel.user_first_name_1 = firstName;
+        this.inputModel.date_1 = dayjs().toDate();
+        this.userName1Value.editValue = this.userName1 ? this.userName1 : null;
+      } else {
+        this.inputModel.user_id_2 = uid;
+        this.inputModel.user_last_name_2 = lastName;
+        this.inputModel.user_first_name_2 = firstName;
+        this.inputModel.date_2 = dayjs().toDate();
+        this.userName2Value.editValue = this.userName2 ? this.userName2 : null;
+      }
     },
     inputClass(element){
       if (this.initData[element] == null && this.dateObj[element] == "") {
@@ -415,7 +604,7 @@ label {
 .error-message {
   white-space: nowrap;
 }
-.custom-input-edited >>> input {
+.custom-input-edited :deep(input) {
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;

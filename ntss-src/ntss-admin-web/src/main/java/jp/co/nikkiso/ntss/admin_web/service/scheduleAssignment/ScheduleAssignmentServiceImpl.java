@@ -2,13 +2,11 @@ package jp.co.nikkiso.ntss.admin_web.service.scheduleAssignment;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import com.google.common.base.Objects;
 import jp.co.nikkiso.ntss.admin_web.request.deviceEdgeOrder.DeviceEdgeOrderRequest;
 import jp.co.nikkiso.ntss.admin_web.request.patientCapture.JournalCreateRequestPayload;
@@ -109,7 +107,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URI;
@@ -130,6 +128,7 @@ import java.util.concurrent.ExecutorService;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 
 @Slf4j
@@ -252,6 +251,10 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
   ScheduleAssignmentService scheduleAssignmentService;
   @Autowired
   private SendConditionCancelService sendConditionCancelService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   @Autowired
   ConditionSendResultService conditionSendResultService;
   @Autowired
@@ -471,7 +474,7 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
       wheresPat.append(" WHERE\n");
       wheresPat.append(" ord_no = " + ordNo + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommonPat = getLogCommon(ordMainDao, tableNamePat, wheresPat, getEventLogMessage());
+      DataUpdateLogCommonNew logCommonPat = getLogCommon(tableNamePat, wheresPat, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResultPat = logCommonPat.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -536,7 +539,7 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
               wheresRst.append(" WHERE\n");
               wheresRst.append(" ord_no = " + ordNo + "\n");
               // logCommon設定
-              DataUpdateLogCommonNew logCommonRst = getLogCommon(ordMainDao, tableNameRst, wheresRst, getEventLogMessage());
+              DataUpdateLogCommonNew logCommonRst = getLogCommon(tableNameRst, wheresRst, getEventLogMessage());
               // ログ出力カラム情報及び更新前データ情報取得
               boolean setResultRst = logCommonRst.setInfo();
               // DB更新ログ出力ロジック wangzuo End
@@ -594,7 +597,7 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
       wheres.append(" machine_type_cd = '" + machine.getMachineTypeCd() + "'" + "\n");
       wheres.append(" AND\n");
       wheres.append(" trim(machine_serial) = trim('" + machine.getMachineSerial() + "')" + "\n");
-      DataUpdateLogCommonNew logCommon = getLogCommon(mntMachineStateDao, mmsTbN, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       //DB更新ログ出力ロジック wp end
@@ -1072,7 +1075,7 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
             JsonNode tokuNode = map.readTree(baseInfoCOnfInfo);
 
             // 実績：治療条件情報の処理
-            Iterator<String> keys = hateNode.fieldNames();
+            Iterator<String> keys = hateNode.propertyNames().iterator();
             while (keys.hasNext()) {
               // Json キーを取得する
               String key = keys.next();
@@ -1109,7 +1112,7 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
             }
 
             // 特定患者のjsonのjsonキーは？？？？患者のjsonのjsonキーの中に存在しない場合
-            Iterator<String> tokuKeys = tokuNode.fieldNames();
+            Iterator<String> tokuKeys = tokuNode.propertyNames().iterator();
             while (tokuKeys.hasNext()) {
               // Json キーを取得する
               String key = tokuKeys.next();
@@ -1130,7 +1133,7 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
             baseordMain.setRstCondInfo(tokuNode.toString());
             }
           }
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
 
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -1332,13 +1335,13 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
 //      if (ordMain.getRstTareInfo() != null){
       if (StringUtils.hasText(ordMain.getRstTareInfo())){
         JsonNode beforeAf = map.readTree(ordMain.getRstTareInfo());
-        Iterator<String>  keyInfo = beforeAf.fieldNames();
+        Iterator<String>  keyInfo = beforeAf.propertyNames().iterator();
         while(keyInfo.hasNext()) {
 
           String topKey = keyInfo.next();
           JsonNode item = beforeAf.get(topKey);
 
-          Iterator<String> afterKey = item.fieldNames();
+          Iterator<String> afterKey = item.propertyNames().iterator();
 
           while(afterKey.hasNext()) {
 
@@ -1408,7 +1411,7 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
         ObjectNode infoNodeBase = (ObjectNode) weightInfoNodeBase;
         ObjectNode infoNode = (ObjectNode) weightInfoNode;
 
-        Iterator<String> infoKeys = weightInfoNode.fieldNames();
+        Iterator<String> infoKeys = weightInfoNode.propertyNames().iterator();
         while (infoKeys.hasNext()) {
           // Json キーを取得する
           String key = infoKeys.next();
@@ -1834,7 +1837,7 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
             wheres.append(" trim(machine_serial) = trim('" + machine.getMachineSerial() + "')" + "\n");
 
 
-            DataUpdateLogCommonNew logCommon = getLogCommon(mntMachineStateDao, mmsTbN, wheres, getEventLogMessage());
+            DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage());
             // ログ出力カラム情報及び更新前データ情報取得
             boolean setResult = logCommon.setInfo();
 
@@ -1972,7 +1975,7 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
         JsonNode baseNode = map.readTree(baseordMain.getRstCondInfo());
 
         // 実績：治療条件情報の処理
-        Iterator<String> keys = baseNode.fieldNames();
+        Iterator<String> keys = baseNode.propertyNames().iterator();
         while (keys.hasNext()) {
           // Json キーを取得する
           String key = keys.next();
@@ -2326,14 +2329,14 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
       JsonNode tokuNode = omMap.readTree(jsonValue);
       JsonNode hateNode = omMap.readTree(jsonValue2);
 
-      Iterator<String> keys = tokuNode.fieldNames();
+      Iterator<String> keys = tokuNode.propertyNames().iterator();
       while (keys.hasNext()) {
         // Json キーを取得する
         String key = keys.next();
         keyMap.put(key, false);
       }
 
-      Iterator<String> hateKeys = hateNode.fieldNames();
+      Iterator<String> hateKeys = hateNode.propertyNames().iterator();
       while (hateKeys.hasNext()) {
         // Json キーを取得する
         String key = hateKeys.next();
@@ -2407,10 +2410,10 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
    * @return 登録内容
    * @throws IOException
    * @throws JsonMappingException
-   * @throws JsonParseException
+   * @throws JacksonException
    */
   public String getStrRstOffWaterInfo(String strBaseRstOffWaterInfo, String strRstOffWaterInfo)
-    throws JsonParseException, JsonMappingException, IOException {
+    throws JacksonException, IOException {
 
     // 割り当て対象の実績：除水補正
     RstOffWaterInfo baseRstOffWaterInfo = strBaseRstOffWaterInfo == null || strBaseRstOffWaterInfo.isEmpty()
@@ -2462,12 +2465,12 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
    * @param baseWeight 対象のスケジュールの体重情報の実績
    * @param weight     ？？？？患者のスケジュールの体重情報の実績
    * @return 体重情報の実績の登録内容
-   * @throws JsonParseException
+   * @throws JacksonException
    * @throws JsonMappingException
    * @throws IOException
    */
   private String getStrRstWeightInfo(String baseWeight, String weight)
-    throws JsonParseException, JsonMappingException, IOException {
+    throws JacksonException, IOException {
 
     // 対象のスケジュールの体重情報の実績
     OrdMainRstWeightInfo basedto = baseWeight == null || baseWeight.isEmpty() ? new OrdMainRstWeightInfo()
@@ -2585,7 +2588,7 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
       try {
         RstChargeUserInfo obj = objectMapper.readValue(value, RstChargeUserInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -2601,7 +2604,7 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -2692,7 +2695,7 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
       try {
         RstOffWaterInfo obj = objectMapper.readValue(value, RstOffWaterInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -2708,7 +2711,7 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -2746,11 +2749,11 @@ public class ScheduleAssignmentServiceImpl implements ScheduleAssignmentService 
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

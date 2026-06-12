@@ -110,6 +110,25 @@ public class PsqlCopyUtils {
     ) {
         DbConnectionInfo productionDB = extractDbConnectionInfoByDbType(registDbType);
         DbConnectionInfo convertDB = extractDbConnectionInfoByDbType(ApplicationConst.DbType.CONVERT);
+        String[] fromDbParams = resolveFromDbConnectionForCreateCopyCommand(status, productionDB, convertDB);
+        String[] toDbParams = resolveToDbConnectionForCreateCopyCommand(status, productionDB, convertDB);
+        String registColumnNames = String.join(",", registColumnNameList);
+        String sql = buildSelectSqlForCreateCopyCommand(tableName, registColumnNameList, facilityCd, fromDbParams[3]);
+        GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
+        String tmpCopyCsvFile = inputFilePath + globalContext.tmpCopyCsvDir + tableName + ".csv";
+        eventLoggerUtil.recordLog(facilityCd,
+                eventLoggerUtil.getEventLogMessage("[CommonFunction.createCopyCommand] "
+                        + ",tmpCopyCsvFile=" + tmpCopyCsvFile, null, null), LogLevel.INFO);
+        String copyCommand = buildPsqlCopyCommandStringForCreateCopyCommand(
+                fromDbParams, toDbParams, sql, tmpCopyCsvFile, tableName, registColumnNames);
+        return buildOsShellCommandForCreateCopyCommand(copyCommand);
+    }
+
+    /**
+     * createCopyCommand用の登録元DB接続パラメータを解決する
+     */
+    private String[] resolveFromDbConnectionForCreateCopyCommand(
+            int status, DbConnectionInfo productionDB, DbConnectionInfo convertDB) {
         String fromHostIp = "";
         String fromDbUser = "";
         String fromDbName = "";
@@ -127,8 +146,14 @@ public class PsqlCopyUtils {
             fromDb_table_prefix = productionDB.tablePrefix;
         }
         fromDb_table_prefix = fromDb_table_prefix == null ? "" : fromDb_table_prefix;
+        return new String[]{fromHostIp, fromDbUser, fromDbName, fromDb_table_prefix};
+    }
 
-        // 登録先DB接続情報を取得
+    /**
+     * createCopyCommand用の登録先DB接続パラメータを解決する
+     */
+    private String[] resolveToDbConnectionForCreateCopyCommand(
+            int status, DbConnectionInfo productionDB, DbConnectionInfo convertDB) {
         String toHostIp = "";
         String toDbUser = "";
         String toDbName = "";
@@ -145,8 +170,14 @@ public class PsqlCopyUtils {
             toDb_table_prefix = productionDB.tablePrefix;
         }
         toDb_table_prefix = toDb_table_prefix == null ? "" : toDb_table_prefix;
+        return new String[]{toHostIp, toDbUser, toDbName, toDb_table_prefix};
+    }
 
-        // 登録先テーブルの列にfacility_cdが存在するかチェック
+    /**
+     * createCopyCommand用のデータ取得SELECT文を組み立てる
+     */
+    private String buildSelectSqlForCreateCopyCommand(
+            String tableName, List<String> registColumnNameList, String facilityCd, String fromDb_table_prefix) {
         boolean hasFacilityCd = registColumnNameList.stream().anyMatch(x -> x.equals("facility_cd"));
         // 登録列名リストをカンマ区切りに変換
         String registColumnNames = String.join(",", registColumnNameList);
@@ -158,21 +189,26 @@ public class PsqlCopyUtils {
         }
         String orderSql = convertKeyConfig.getOrderby(tableName);
         sql += orderSql;
+        return sql;
+    }
 
-
-        GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
-        String tmpCopyCsvFile = inputFilePath + globalContext.tmpCopyCsvDir + tableName + ".csv";
-        eventLoggerUtil.recordLog(facilityCd,
-                eventLoggerUtil.getEventLogMessage( "[CommonFunction.createCopyCommand] "
-                        + ",tmpCopyCsvFile=" + tmpCopyCsvFile,null,null), LogLevel.INFO);
-        // 実行するコピーコマンドの組み立て
-        String copyCommand = "psql"
+    /**
+     * createCopyCommand用のpsql COPYコマンド文字列を組み立てる
+     */
+    private String buildPsqlCopyCommandStringForCreateCopyCommand(
+            String[] fromDbParams,
+            String[] toDbParams,
+            String sql,
+            String tmpCopyCsvFile,
+            String tableName,
+            String registColumnNames) {
+        return "psql"
                 + " -h "
-                + fromHostIp
+                + fromDbParams[0]
                 + " -U "
-                + fromDbUser
+                + fromDbParams[1]
                 + " -d "
-                + fromDbName
+                + fromDbParams[2]
                 + " -c \"\\copy "
                 + "("
                 + sql
@@ -180,20 +216,22 @@ public class PsqlCopyUtils {
                 + " && "
                 + "psql"
                 + " -h "
-                + toHostIp // 登録先DBホストIPアドレス
+                + toDbParams[0]
                 + " -U "
-                + toDbUser // 登録先DBユーザー名
+                + toDbParams[1]
                 + " -d "
-                + toDbName // 登録先DB名
-                // mod 2020-11-20 データテーブル名追加ntss. う start
-                + " -c \"\\copy " + toDb_table_prefix
-                // mod 2020-11-20 データテーブル名追加ntss. う end
-                + tableName //テーブル名
+                + toDbParams[2]
+                + " -c \"\\copy " + toDbParams[3]
+                + tableName
                 + "("
-                + registColumnNames //カラム名（カンマ区きり）
+                + registColumnNames
                 + ") FROM " + tmpCopyCsvFile + " WITH CSV HEADER\"";
+    }
 
-        // Windows、その他で実行方法を変更する
+    /**
+     * createCopyCommand用のOSシェルコマンド配列を組み立てる
+     */
+    private String[] buildOsShellCommandForCreateCopyCommand(String copyCommand) {
         String[] command = new String[3];
         if ( "\\".equals(System.getProperty("file.separator")) ) {
             // mod 2020-11-24 cmdをcmd.exeに変更  う start
@@ -223,7 +261,24 @@ public class PsqlCopyUtils {
             String sqlCnd, String registDbType, int status, boolean hasConvertId) {
         DbConnectionInfo productionDB = extractDbConnectionInfoByDbType(registDbType);
         DbConnectionInfo convertDB = extractDbConnectionInfoByDbType(ApplicationConst.DbType.CONVERT);
-        // 登録元DB接続情報を取得
+        String[] fromDbParams = resolveFromDbConnectionForCreateCopyCommandUpd(status, productionDB, convertDB);
+        String[] toDbParams = resolveToDbConnectionForCreateCopyCommandUpd(status, productionDB, convertDB);
+        adjustRegistColumnsForCreateCopyCommandUpd(tableName, registColumnNameList);
+        String registColumnNames = String.join(",", registColumnNameList);
+        String sql = buildSelectSqlForCreateCopyCommandUpd(
+                tableName, registColumnNameList, facilityCd, sqlCnd, fromDbParams[3], hasConvertId);
+        GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
+        String tmpCopyCsvFile = inputFilePath + globalContext.tmpCopyCsvDir + tableName + ".csv";
+        String copyCommand = buildPsqlCopyCommandStringForCreateCopyCommandUpd(
+                fromDbParams, toDbParams, sql, tmpCopyCsvFile, tableName, registColumnNames);
+        return buildOsShellCommandForCreateCopyCommandUpd(copyCommand);
+    }
+
+    /**
+     * createCopyCommandUpd用の登録元DB接続パラメータを解決する
+     */
+    private String[] resolveFromDbConnectionForCreateCopyCommandUpd(
+            int status, DbConnectionInfo productionDB, DbConnectionInfo convertDB) {
         String fromHostIp = "";
         String fromDbUser = "";
         String fromDbName = "";
@@ -240,8 +295,14 @@ public class PsqlCopyUtils {
             fromDb_table_prefix = productionDB.tablePrefix;
         }
         fromDb_table_prefix = fromDb_table_prefix == null ? "" : fromDb_table_prefix;
+        return new String[]{fromHostIp, fromDbUser, fromDbName, fromDb_table_prefix};
+    }
 
-        // 登録先DB接続情報を取得
+    /**
+     * createCopyCommandUpd用の登録先DB接続パラメータを解決する
+     */
+    private String[] resolveToDbConnectionForCreateCopyCommandUpd(
+            int status, DbConnectionInfo productionDB, DbConnectionInfo convertDB) {
         String toHostIp = "";
         String toDbUser = "";
         String toDbName = "";
@@ -258,15 +319,29 @@ public class PsqlCopyUtils {
             toDb_table_prefix = productionDB.tablePrefix;
         }
         toDb_table_prefix = toDb_table_prefix == null ? "" : toDb_table_prefix;
+        return new String[]{toHostIp, toDbUser, toDbName, toDb_table_prefix};
+    }
 
-        // 登録先テーブルの列にfacility_cdが存在するかチェック
-        boolean hasFacilityCd = registColumnNameList.stream().anyMatch(x -> x.equals("facility_cd"));
-        // add #12230 差分コンバートにより元に戻ってしまう項目がある limingzhe start
+    /**
+     * createCopyCommandUpd用の登録列リストをテーブル別に調整する
+     */
+    private void adjustRegistColumnsForCreateCopyCommandUpd(String tableName, List<String> registColumnNameList) {
         if(tableName.equals("mst_comsv_setting")){
             registColumnNameList.remove("fn_comsv_no");
         }
-        // add #12230 差分コンバートにより元に戻ってしまう項目がある limingzhe end
-        // 登録列名リストをカンマ区切りに変換
+    }
+
+    /**
+     * createCopyCommandUpd用のデータ取得SELECT文を組み立てる
+     */
+    private String buildSelectSqlForCreateCopyCommandUpd(
+            String tableName,
+            List<String> registColumnNameList,
+            String facilityCd,
+            String sqlCnd,
+            String fromDb_table_prefix,
+            boolean hasConvertId) {
+        boolean hasFacilityCd = registColumnNameList.stream().anyMatch(x -> x.equals("facility_cd"));
         String registColumnNames = String.join(",", registColumnNameList);
         // データ取得SQL生成
         // mod 2020-11-20 データテーブル名追加ntss. う start
@@ -281,16 +356,25 @@ public class PsqlCopyUtils {
         String orderSql = hasConvertId ? convertKeyConfig.getOrderByForConvert(tableName) : convertKeyConfig.getOrderby(tableName);
         sql += orderSql;
 
-        GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
-        String tmpCopyCsvFile = inputFilePath + globalContext.tmpCopyCsvDir + tableName + ".csv";
-        // 実行するコピーコマンドの組み立て
-        String copyCommand = "psql"
+        return sql;
+    }
+    /**
+     * createCopyCommandUpd用のpsql COPYコマンド文字列を組み立てる
+     */
+    private String buildPsqlCopyCommandStringForCreateCopyCommandUpd(
+            String[] fromDbParams,
+            String[] toDbParams,
+            String sql,
+            String tmpCopyCsvFile,
+            String tableName,
+            String registColumnNames) {
+        return "psql"
                 + " -h "
-                + fromHostIp
+                + fromDbParams[0]
                 + " -U "
-                + fromDbUser
+                + fromDbParams[1]
                 + " -d "
-                + fromDbName
+                + fromDbParams[2]
                 + " -c \"\\copy "
                 + "("
                 + sql
@@ -298,20 +382,22 @@ public class PsqlCopyUtils {
                 + " && "
                 + "psql"
                 + " -h "
-                + toHostIp // 登録先DBホストIPアドレス
+                + toDbParams[0]
                 + " -U "
-                + toDbUser // 登録先DBユーザー名
+                + toDbParams[1]
                 + " -d "
-                + toDbName // 登録先DB名
-                // mod 2020-11-20 データテーブル名追加ntss. う start
-                + " -c \"\\copy " + toDb_table_prefix
-                // mod 2020-11-20 データテーブル名追加ntss. う end
-                + tableName //テーブル名
+                + toDbParams[2]
+                + " -c \"\\copy " + toDbParams[3]
+                + tableName
                 + "("
-                + registColumnNames //カラム名（カンマ区きり）
+                + registColumnNames
                 + ") FROM " + tmpCopyCsvFile + " WITH CSV HEADER\"";
+    }
 
-        // Windows、その他で実行方法を変更する
+    /**
+     * createCopyCommandUpd用のOSシェルコマンド配列を組み立てる
+     */
+    private String[] buildOsShellCommandForCreateCopyCommandUpd(String copyCommand) {
         String[] command = new String[3];
         if( "\\".equals(System.getProperty("file.separator")) ) {
             command[0] = "cmd.exe";
@@ -366,8 +452,23 @@ public class PsqlCopyUtils {
         String toDb_table_prefix = toDB.tablePrefix;
         toDb_table_prefix = toDb_table_prefix == null ? "" : toDb_table_prefix;
 
-        // 登録先テーブルの列にfacility_cdが存在するかチェック
-        boolean hasFacilityCd = registColumnNameList.stream().anyMatch(x -> x.equals("facility_cd"));
+        removeRegistColumnsForCreateCopyCommandUpdDiff(tableName, registColumnNameList);
+        String registColumnNames = String.join(",", registColumnNameList);
+        String sql = buildSelectSqlForCreateCopyCommandUpdDiff(
+                tableName, registColumnNameList, facilityCd, sqlCnd, fromDb_table_prefix, hasConvertId);
+        String sqlDelete = buildSqlDeleteOptionForCreateCopyCommandUpdDiff(sqlDel);
+        GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
+        String tmpCopyCsvFile = inputFilePath + globalContext.tmpCopyCsvDir + tableName + ".csv";
+        String copyCommand = buildPsqlCopyCommandStringForCreateCopyCommandUpdDiff(
+                fromHostIp, fromDbUser, fromDbName, toHostIp, toDbUser, toDbName,
+                toDb_table_prefix, sql, sqlDelete, tmpCopyCsvFile, tableName, registColumnNames);
+        return buildOsShellCommandForCreateCopyCommandUpdDiff(copyCommand);
+    }
+
+    /**
+     * createCopyCommandUpdDiff用の登録列リストをテーブル別に除外する
+     */
+    private void removeRegistColumnsForCreateCopyCommandUpdDiff(String tableName, List<String> registColumnNameList) {
         if (registColumnNameList.size() > 0){
             if (tableName.equals("pat_event")) {
                 registColumnNameList.remove("pat_event_cd");
@@ -375,9 +476,7 @@ public class PsqlCopyUtils {
                 registColumnNameList.remove("checklist_ctl_no");
             } else if(tableName.equals("mni_monitor")){
                 registColumnNameList.remove("bio_moni_ctl_no");
-            }
-            //add #1229 copy->本番 フィールドなし start
-            else if(tableName.equals("ord_weight_scale")){
+            }else if (tableName.equals("ord_weight_scale")) {
                 registColumnNameList.remove("weight_scale_no");
             }else if(tableName.equals("mst_favorite_facility")){
                 registColumnNameList.remove("master_cd");
@@ -385,16 +484,24 @@ public class PsqlCopyUtils {
                 registColumnNameList.remove("ctl_no");
             }else if(tableName.equals("ord_treat_condition")){
                 registColumnNameList.remove("condition_cd");
-            }
-            //add #1229 copy->本番 フィールドなし　end
-            // add #12230 差分コンバートにより元に戻ってしまう項目がある limingzhe start
-            else if(tableName.equals("mst_comsv_setting")){
+            } else if (tableName.equals("mst_comsv_setting")) {
                 registColumnNameList.remove("fn_comsv_no");
                 registColumnNameList.remove("comsv_cd");
             }
-            // add #12230 差分コンバートにより元に戻ってしまう項目がある limingzhe end
         }
-        // 登録列名リストをカンマ区切りに変換
+    }
+
+    /**
+     * createCopyCommandUpdDiff用のデータ取得SELECT文を組み立てる
+     */
+    private String buildSelectSqlForCreateCopyCommandUpdDiff(
+            String tableName,
+            List<String> registColumnNameList,
+            String facilityCd,
+            String sqlCnd,
+            String fromDb_table_prefix,
+            boolean hasConvertId) {
+        boolean hasFacilityCd = registColumnNameList.stream().anyMatch(x -> x.equals("facility_cd"));
         String registColumnNames = String.join(",", registColumnNameList);
         // データ取得SQL生成
         String sql = "select " + registColumnNames + " from " + fromDb_table_prefix + tableName;
@@ -405,22 +512,39 @@ public class PsqlCopyUtils {
                 sql += sqlCnd;
             }
         }
-        // add zl start
+        String orderSql = hasConvertId ? convertKeyConfig.getOrderByForConvert(tableName) : convertKeyConfig.getOrderby(tableName);
+        sql += orderSql;
+        return sql;
+    }
+
+    /**
+     * createCopyCommandUpdDiff用の本番削除SQLオプション文字列を組み立てる
+     */
+    private String buildSqlDeleteOptionForCreateCopyCommandUpdDiff(String sqlDel) {
         String sqlDelete = "";
         if(!sqlDel.isEmpty()){
             sqlDelete = " -c \"" + sqlDel + "\"";
         }
-        // add zl end
-        // add #9215 djy start
-        //mod 11546 差分コンバートで医材マスタの表示順の変更が反映されない hyl start
-        String orderSql = hasConvertId ? convertKeyConfig.getOrderByForConvert(tableName) : convertKeyConfig.getOrderby(tableName);
-        sql += orderSql;
-        // add #9215 djy end
-        //mod 11546 差分コンバートで医材マスタの表示順の変更が反映されない hyl end
-        // 実行するコピーコマンドの組み立て
-        GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
-        String tmpCopyCsvFile = inputFilePath + globalContext.tmpCopyCsvDir + tableName + ".csv";
-        String copyCommand = "psql"
+        return sqlDelete;
+    }
+
+    /**
+     * createCopyCommandUpdDiff用のpsql COPYコマンド文字列を組み立てる
+     */
+    private String buildPsqlCopyCommandStringForCreateCopyCommandUpdDiff(
+            String fromHostIp,
+            String fromDbUser,
+            String fromDbName,
+            String toHostIp,
+            String toDbUser,
+            String toDbName,
+            String toDb_table_prefix,
+            String sql,
+            String sqlDelete,
+            String tmpCopyCsvFile,
+            String tableName,
+            String registColumnNames) {
+        return "psql"
                 + " -h "
                 + fromHostIp
                 + " -U "
@@ -446,7 +570,12 @@ public class PsqlCopyUtils {
                 + "("
                 + registColumnNames //カラム名（カンマ区きり）
                 + ") FROM " + tmpCopyCsvFile + " WITH CSV HEADER;\" ";
-        // Windows、その他で実行方法を変更する
+    }
+
+    /**
+     * createCopyCommandUpdDiff用のOSシェルコマンド配列を組み立てる
+     */
+    private String[] buildOsShellCommandForCreateCopyCommandUpdDiff(String copyCommand) {
         String[] command = new String[3];
         if( "\\".equals(System.getProperty("file.separator")) ) {
             command[0] = "cmd.exe";
@@ -500,9 +629,23 @@ public class PsqlCopyUtils {
         String toDb_table_prefix = convertDB.tablePrefix;
         toDb_table_prefix = toDb_table_prefix == null ? "" : toDb_table_prefix;
 
-        // 登録先テーブルの列にfacility_cdが存在するかチェック
-        boolean hasFacilityCd = registColumnNameList.stream().anyMatch(x -> x.equals("facility_cd"));
-        // 登録列名リストをカンマ区切りに変換
+        adjustRegistColumnsForCreateCopyCommandByCond(tableName, registColumnNameList);
+        String registColumnNames = String.join(",", registColumnNameList);
+        String sql = buildBaseSelectSqlForCreateCopyCommandByCond(
+                tableName, registColumnNames, fromDb_table_prefix, sqlCnd, facilityCd, registColumnNameList);
+        sql = appendOrderClauseForCreateCopyCommandByCond(tableName, sql, fromDbType, hasConvertId);
+        GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
+        String tmpCopyCsvFile = inputFilePath + globalContext.tmpCopyCsvDir + tableName + ".csv";
+        String copyCommand = buildPsqlCopyCommandStringForCreateCopyCommandByCond(
+                fromHostIp, fromDbUser, fromDbName, toHostIp, toDbUser, toDbName,
+                toDb_table_prefix, sql, sqlDel, tmpCopyCsvFile, tableName, registColumnNames);
+        return buildOsShellCommandForCreateCopyCommandByCond(copyCommand);
+    }
+
+    /**
+     * createCopyCommandByCond用の登録列リストをテーブル別に調整する
+     */
+    private void adjustRegistColumnsForCreateCopyCommandByCond(String tableName, List<String> registColumnNameList) {
         if(tableName.equals("mst_mainte_detail_hst")){
             registColumnNameList.remove("fn_mainte_detail_cd");
             // add #9448 mst_mainte_category.detail再設定 zkm start
@@ -519,9 +662,19 @@ public class PsqlCopyUtils {
         if(tableName.equals("mst_comsv_setting")){
             registColumnNameList.remove("fn_comsv_no");
         }
-        // add #12230 差分コンバートにより元に戻ってしまう項目がある limingzhe end
-        String registColumnNames = String.join(",", registColumnNameList);
-        // データ取得SQL生成
+    }
+
+    /**
+     * createCopyCommandByCond用のデータ取得SELECT文本体を組み立てる
+     */
+    private String buildBaseSelectSqlForCreateCopyCommandByCond(
+            String tableName,
+            String registColumnNames,
+            String fromDb_table_prefix,
+            String sqlCnd,
+            String facilityCd,
+            List<String> registColumnNameList) {
+        boolean hasFacilityCd = registColumnNameList.stream().anyMatch(x -> x.equals("facility_cd"));
         String sql = "select " + registColumnNames + " from " + fromDb_table_prefix + tableName;
         //mst_mainte_layout copy mst_mainte_layout_hst
         if(tableName.equals("mst_mainte_layout_hst")){
@@ -540,30 +693,46 @@ public class PsqlCopyUtils {
             // facility_cdが存在する場合、条件に追加
             sql += " and facility_cd='" + facilityCd + "'";
         }
+        return sql;
+    }
 
-
+    /**
+     * createCopyCommandByCond用のORDER BY句をSELECT文に付与する
+     */
+    private String appendOrderClauseForCreateCopyCommandByCond(
+            String tableName, String sql, String fromDbType, boolean hasConvertId) {
         String orderSql = hasConvertId ? convertKeyConfig.getOrderByForConvert(tableName) : convertKeyConfig.getOrderby(tableName);
         // add #11998  start
         if (tableName.equals("mst_facility")) {
             sql += " order by facility_cd";
         } else if (tableName.equals("mst_graph_setting")) {
             sql += " order by graph_setting_no";
-        }
-        //add  #11667 日常点検コンバート修正 start
-        else if (tableName.equals("mst_mainte_category_hst")|| tableName.equals("mst_mainte_layout_hst")) {
+        } else if (tableName.equals("mst_mainte_category_hst") || tableName.equals("mst_mainte_layout_hst")) {
             sql += orderSql;
-        }//add  #11667 日常点検コンバート修正 end
-        else if (ApplicationConst.DbType.CONVERT.equals(fromDbType) && !convertKeyConfig.getNoseq(tableName)){
+        } else if (ApplicationConst.DbType.CONVERT.equals(fromDbType) && !convertKeyConfig.getNoseq(tableName)) {
             sql += " order by convert_id";
         } else {
             sql += orderSql;
         }
-        // add #11998  end
-        // add #9215 djy end
-        //mod 11546 差分コンバートで医材マスタの表示順の変更が反映されない hyl end
-        // 実行するコピーコマンドの組み立て
-        GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
-        String tmpCopyCsvFile = inputFilePath + globalContext.tmpCopyCsvDir + tableName + ".csv";
+        return sql;
+    }
+
+    /**
+     * createCopyCommandByCond用のpsql COPYコマンド文字列を組み立てる
+     */
+    private String buildPsqlCopyCommandStringForCreateCopyCommandByCond(
+            String fromHostIp,
+            String fromDbUser,
+            String fromDbName,
+            String toHostIp,
+            String toDbUser,
+            String toDbName,
+            String toDb_table_prefix,
+            String sql,
+            String sqlDel,
+            String tmpCopyCsvFile,
+            String tableName,
+            String registColumnNames) {
         String copyCommand = "psql"
                 + " -h "
                 + fromHostIp
@@ -593,9 +762,14 @@ public class PsqlCopyUtils {
                 + "("
                 + registColumnNames //カラム名（カンマ区きり）
                 + ") FROM " + tmpCopyCsvFile + " WITH CSV HEADER\"";
+        return copyCommand;
+    }
 
 
-        // Windows、その他で実行方法を変更する
+    /**
+     * createCopyCommandByCond用のOSシェルコマンド配列を組み立てる
+     */
+    private String[] buildOsShellCommandForCreateCopyCommandByCond(String copyCommand) {
         String[] command = new String[3];
         if ( "\\".equals(System.getProperty("file.separator")) ) {
             command[0] = "cmd.exe";
@@ -638,35 +812,72 @@ public class PsqlCopyUtils {
         String toDb_table_prefix = convertDB.tablePrefix;
         toDb_table_prefix = toDb_table_prefix == null ? "" : toDb_table_prefix;
 
-        // 登録先テーブルの列にfacility_cdが存在するかチェック
-        boolean hasFacilityCd = registColumnNameList.stream().anyMatch(x -> x.equals("facility_cd"));
-        // add #9448 mst_mainte_category.detail再設定 zkm end
         String registColumnNames = String.join(",", registColumnNameList);
-        // データ取得SQL生成
-        String sql = "select " + registColumnNames + " from " + fromDb_table_prefix + tableName;
-        // add #9448 mst_mainte_category.detail再設定 zkm end
-        sql += !sqlCnd.isEmpty() ? sqlCnd.contains("JOIN") ? sqlCnd + " where 1 = 1 ":" where " + sqlCnd : " where 1 = 1 ";
-        if(hasFacilityCd){
-            // facility_cdが存在する場合、条件に追加
-            sql += " and facility_cd='" + facilityCd + "'";
-        }
-        String copyCommand = "";
-        // 実行するコピーコマンドの組み立て
-
-        if(!sqlDel.isEmpty()){
-            copyCommand +="psql"
-                    + " -h "
-                    + toHostIp // 登録先DBホストIPアドレス
-                    + " -U "
-                    + toDbUser // 登録先DBユーザー名
-                    + " -d "
-                    + toDbName// 登録先DB名
-                    + " -c \" " + sqlDel + "\" && ";
-        }
-
+        String sql = buildSelectSqlForCreateDelCopyCommandByCond(
+                registColumnNames, fromDb_table_prefix, tableName, sqlCnd, facilityCd, registColumnNameList);
+        String copyCommand = buildInitialDelCopyCommandForCreateDelCopyCommandByCond(sqlDel, toHostIp, toDbUser, toDbName);
         GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
         String tmpCopyCsvFile = inputFilePath + globalContext.tmpCopyCsvDir + tableName + ".csv";
-        copyCommand += "psql"
+        copyCommand += buildExportImportDelCopyCommandForCreateDelCopyCommandByCond(
+                fromHostIp, fromDbUser, fromDbName, toHostIp, toDbUser, toDbName,
+                toDb_table_prefix, sql, tmpCopyCsvFile, tableName, registColumnNames);
+        return buildOsShellCommandForCreateDelCopyCommandByCond(copyCommand);
+    }
+
+    /**
+     * createDelCopyCommandByCond用のデータ取得SELECT文を組み立てる
+     */
+    private String buildSelectSqlForCreateDelCopyCommandByCond(
+            String registColumnNames,
+            String fromDb_table_prefix,
+            String tableName,
+            String sqlCnd,
+            String facilityCd,
+            List<String> registColumnNameList) {
+        boolean hasFacilityCd = registColumnNameList.stream().anyMatch(x -> x.equals("facility_cd"));
+        String sql = "select " + registColumnNames + " from " + fromDb_table_prefix + tableName;
+        sql += !sqlCnd.isEmpty() ? sqlCnd.contains("JOIN") ? sqlCnd + " where 1 = 1 ":" where " + sqlCnd : " where 1 = 1 ";
+        if(hasFacilityCd){
+            sql += " and facility_cd='" + facilityCd + "'";
+        }
+        return sql;
+    }
+
+    /**
+     * createDelCopyCommandByCond用の本番削除psqlコマンド前置部を組み立てる
+     */
+    private String buildInitialDelCopyCommandForCreateDelCopyCommandByCond(
+            String sqlDel, String toHostIp, String toDbUser, String toDbName) {
+        String copyCommand = "";
+        if (!sqlDel.isEmpty()) {
+            copyCommand += "psql"
+                    + " -h "
+                    + toHostIp
+                    + " -U "
+                    + toDbUser
+                    + " -d "
+                    + toDbName
+                    + " -c \" " + sqlDel + "\" && ";
+        }
+        return copyCommand;
+    }
+
+    /**
+     * createDelCopyCommandByCond用のエクスポート・インポートpsqlコマンド部を組み立てる
+     */
+    private String buildExportImportDelCopyCommandForCreateDelCopyCommandByCond(
+            String fromHostIp,
+            String fromDbUser,
+            String fromDbName,
+            String toHostIp,
+            String toDbUser,
+            String toDbName,
+            String toDb_table_prefix,
+            String sql,
+            String tmpCopyCsvFile,
+            String tableName,
+            String registColumnNames) {
+        return "psql"
                 + " -h "
                 + fromHostIp
                 + " -U "
@@ -691,7 +902,12 @@ public class PsqlCopyUtils {
                 + "("
                 + registColumnNames //カラム名（カンマ区きり）
                 + ") FROM " + tmpCopyCsvFile + " WITH CSV HEADER\"";
-        // Windows、その他で実行方法を変更する
+    }
+
+    /**
+     * createDelCopyCommandByCond用のOSシェルコマンド配列を組み立てる
+     */
+    private String[] buildOsShellCommandForCreateDelCopyCommandByCond(String copyCommand) {
         String[] command = new String[3];
         if ( "\\".equals(System.getProperty("file.separator")) ) {
             command[0] = "cmd.exe";

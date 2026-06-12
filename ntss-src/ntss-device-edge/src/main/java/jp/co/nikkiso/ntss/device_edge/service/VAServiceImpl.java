@@ -12,7 +12,7 @@ import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
-import javax.xml.bind.DatatypeConverter;
+import java.util.HexFormat;
 
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,7 +76,7 @@ public class VAServiceImpl implements VAService {
       if ( hexImage != null && ! hexImage.isEmpty()) {
 
         // 16進文字列→バイト型配列
-        byte[] bytes = DatatypeConverter.parseHexBinary(hexImage);
+        byte[] bytes = HexFormat.of().parseHex(hexImage);
 
         // 画像読み込み
         BufferedImage img1 = ImageIO.read(new ByteArrayInputStream( bytes ));
@@ -142,7 +142,7 @@ public class VAServiceImpl implements VAService {
 
         // レスポンス用データ生成(16進数文字列に変換)
         byte[] data = zbaos.toByteArray();
-        ret = DatatypeConverter.printHexBinary(data);
+        ret = HexFormat.of().withUpperCase().formatHex(data);
 
         // add ログ改善対応 高 start
         EventLogMessage eventLogMessage = new EventLogMessage();

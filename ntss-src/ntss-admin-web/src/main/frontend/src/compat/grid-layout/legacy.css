@@ -1,0 +1,66 @@
+/*
+ * Vue2 vue-grid-layout 2.x DOM/class compatibility.
+ * Keep page code using <grid-layout>/<grid-item> and let the compat layer
+ * restore legacy root classes, placeholder, transition and resize-handle styles.
+ */
+.vue-grid-layout {
+  position: relative;
+  transition: height 200ms ease;
+}
+
+.vue-grid-item {
+  box-sizing: border-box;
+  transition: all 200ms ease;
+  transition-property: left, top, right;
+}
+
+.vue-grid-item.cssTransforms {
+  transition-property: transform;
+}
+
+.vue-grid-item.no-touch {
+  touch-action: none;
+}
+
+.vue-grid-item.resizing {
+  opacity: 0.6;
+  z-index: 3;
+}
+
+.vue-grid-item.vue-draggable-dragging {
+  transition: none;
+  z-index: 3;
+}
+
+.vue-grid-item.vue-grid-placeholder {
+  background: red;
+  opacity: 0.2;
+  transition-duration: 100ms;
+  z-index: 2;
+  user-select: none;
+}
+
+.vue-grid-item > .vue-resizable-handle,
+.vue-grid-item .vue-resizable-handle,
+.vue-grid-item > [class*="resizable-handle"],
+.vue-grid-item [class*="resizable-handle"] {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  z-index: 10;
+  cursor: se-resize;
+  padding: 0 3px 3px 0;
+  background-origin: content-box;
+  box-sizing: border-box;
+  background-image: linear-gradient(
+    135deg,
+    transparent 0%,
+    transparent 50%,
+    rgba(0, 0, 0, 0.35) 50%,
+    rgba(0, 0, 0, 0.35) 60%,
+    transparent 60%,
+    transparent 100%
+  );
+}

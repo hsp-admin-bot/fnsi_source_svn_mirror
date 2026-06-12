@@ -7,9 +7,9 @@
     <div class="device-info-content" :class="isUnderIndModal">
     <!--      <div class="device-info-content" >-->
     <!--    mod FNSI redmine 4174 end-->
-      <!--    mod FNSI redmine 4173　劉祥霖 start-->
+      <!--    mod FNSI redmine 4173 劉祥霖 start-->
       <div class="device-info-content-area" style="min-width: 71em;">
-      <!--    mod FNSI redmine 4173　劉祥霖 end-->
+      <!--    mod FNSI redmine 4173 劉祥霖 end-->
         <!-- ヘッダ -->
         <v-ons-row
           v-if="showButton"
@@ -35,14 +35,12 @@
             <!--   :disabled="isThisTreatRecord" -->
             <!--   @change="onRadioClick" -->
             <!-- /> -->
-             <!-- upd by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --start -->
             <device-radio
               ref="radio1"
               :device-info="radioItems"
               :disabled="isThisTreatRecord || !getItemAuthorized('Indication', 'default_authority') || isOtherFacilityRow()"
               @change="onRadioClick"
             />
-            <!-- upd by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --end -->
             <!-- mod #10359 編集権限の動作不正 dengshen end -->
           </v-ons-col>
         </v-ons-row>
@@ -55,8 +53,8 @@
           <!--   :ord-no="ordNo" -->
           <!--   :facility-cd="facilityCd" -->
           <!--   :data-source-type="dataSourceType" -->
-          <!--   :is-ihdf-main.sync="isIhdfMain" -->
-          <!--   :is-program-use-chacked.sync="isProgramUseChacked" -->
+          <!--   v-model:is-ihdf-main="isIhdfMain" -->
+          <!--   v-model:is-program-use-chacked="isProgramUseChacked" -->
           <!--   :show-button="showButton" -->
           <!--   @save-edit="saveEdit" -->
           <!--   @close="closeModal()" -->
@@ -70,8 +68,8 @@
             :ord-no="ordNo"
             :facility-cd="facilityCd"
             :data-source-type="dataSourceType"
-            :is-ihdf-main.sync="isIhdfMain"
-            :is-program-use-chacked.sync="isProgramUseChacked"
+            v-model:is-ihdf-main="isIhdfMain"
+            v-model:is-program-use-chacked="isProgramUseChacked"
             :show-button="showButton"
             @save-edit="saveEdit"
             @close="closeModal()"
@@ -86,8 +84,8 @@
             :ord-no="ordNo"
             :facility-cd="facilityCd"
             :data-source-type="dataSourceType"
-            :is-ihdf-main.sync="isIhdfMain"
-            :is-program-use-chacked.sync="isProgramUseChacked"
+            v-model:is-ihdf-main="isIhdfMain"
+            v-model:is-program-use-chacked="isProgramUseChacked"
             :show-button="showButton"
             @save-edit="saveEdit"
             @close="closeModal()"
@@ -106,8 +104,8 @@
           <!--   :ord-no="ordNo" -->
           <!--   :facility-cd="facilityCd" -->
           <!--   :data-source-type="dataSourceType" -->
-          <!--   :is-ihdf-main.sync="isIhdfMain" -->
-          <!--   :is-program-use-chacked.sync="isProgramUseChacked" -->
+          <!--   v-model:is-ihdf-main="isIhdfMain" -->
+          <!--   v-model:is-program-use-chacked="isProgramUseChacked" -->
           <!--   :show-button="showButton" -->
           <!--   @save-edit="saveEdit" -->
           <!--   @close="closeModal()" -->
@@ -121,8 +119,8 @@
             :ord-no="ordNo"
             :facility-cd="facilityCd"
             :data-source-type="dataSourceType"
-            :is-ihdf-main.sync="isIhdfMain"
-            :is-program-use-chacked.sync="isProgramUseChacked"
+            v-model:is-ihdf-main="isIhdfMain"
+            v-model:is-program-use-chacked="isProgramUseChacked"
             :show-button="showButton"
             @save-edit="saveEdit"
             @close="closeModal()"
@@ -137,8 +135,8 @@
             :ord-no="ordNo"
             :facility-cd="facilityCd"
             :data-source-type="dataSourceType"
-            :is-ihdf-main.sync="isIhdfMain"
-            :is-program-use-chacked.sync="isProgramUseChacked"
+            v-model:is-ihdf-main="isIhdfMain"
+            v-model:is-program-use-chacked="isProgramUseChacked"
             :show-button="showButton"
             @save-edit="saveEdit"
             @close="closeModal()"
@@ -159,17 +157,20 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import {mapActions, mapGetters} from "vuex";
+import {mapActions, mapGetters} from "@/compat/vue/vuex";
 import iHdf from "@/components/deviceset-info/i-hdf/IHdfEditor.vue";
 import iHdfProgram from "@/components/deviceset-info/i-hdf/IHdfProgramEditor.vue";
 import { DATA_SOURCE_TYPE_ORD } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
 import deviceRadio from "@/components/deviceset-info/base-modules/DeviceSetInfoRadio.vue";
-import { EventBus } from "@/eventBus";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
+import DeviceSetOwnerMixin from '@/components/deviceset-info/base-modules/DeviceSetOwnerMixin';
+import { getModalBodyElement, getScopedElementById, getFirstElementByClassName } from '@/functions/common/LayoutMeasureHelper';
 /**
  * @description I-HDF設定値編集画面
  */
 export default {
+  mixins: [DeviceSetOwnerMixin],
   components: {
     "device-radio": deviceRadio,
     "i-hdf": iHdf,
@@ -238,9 +239,7 @@ export default {
     ...mapGetters("pat-viewer-modal", ["getSettingIndChildData"]),
     ...mapGetters("master-maintenance", ["getMasterName"]),
     ...mapGetters("account-edit", ["getFontSize"]),
-    /* add by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --start */
     ...mapGetters("user", ["getFacilityCd"]),
-    /* add by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --end */
 
     /**
      * コンポーネント切り替えラジオボタン用
@@ -268,8 +267,8 @@ export default {
     this.$nextTick(() => {
       this.calculateGridSize();
       // 患者経過総合ビューアで表示している時は、画面が小さい時のスタイル用classを付与する
-      let indObj = document.getElementsByClassName("indInfo-style-modal-container");
-      if (indObj.length > 0) {
+      const indObj = getFirstElementByClassName("indInfo-style-modal-container", this.$el || this);
+      if (indObj) {
         this.isUnderIndModal = "ind-style-media-query";
       }
     });
@@ -278,7 +277,7 @@ export default {
   created() {
     if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
       // 親のスタイル修正
-      this.$parent.styleObj = { "max-width": "1050px", width: "100%" };
+      this._deviceSetDialogOwner().styleObj = { "max-width": "1050px", width: "100%" };
     }
     // add #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng start
     this.setIhdfAnswerThreeDevA(null);
@@ -294,14 +293,14 @@ export default {
     // add #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng start
     ...mapActions('pat-viewer-modal', ["setIhdfAnswerThreeDevA","setDialysisTimeData"]),
     // add #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng end
-    /* add by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --start */
     isOtherFacilityRow() {
       if (!this.getSettingIndChildData) {
-        return false
+        return false;
       }
-      return this.getSettingIndChildData.facilityCd ? this.getSettingIndChildData.facilityCd !== this.getFacilityCd : false
+      return this.getSettingIndChildData.facilityCd
+        ? this.getSettingIndChildData.facilityCd !== this.getFacilityCd
+        : false;
     },
-    /* add by chamaojia 2026-03-18 [12462] 患者情報共有->患者経過総合ビューア --end */
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
       return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd));
@@ -330,12 +329,12 @@ export default {
     //add FNSI redmine 4174 劉祥霖 start
     // ウインドウ変更時、幅を調整
     calculateGridSize(){
-      const mb = document.getElementsByClassName("modal-body")[0].offsetHeight;
-      const IBH = document.getElementsByClassName("IndBaseHeader")[0] == undefined ?0:document.getElementsByClassName("IndBaseHeader")[0].offsetHeight;
+      const mb = getModalBodyElement(this.$el || this)?.offsetHeight || 0;
+      const IBH = getFirstElementByClassName("IndBaseHeader", this.$el || this)?.offsetHeight || 0;
       const ch=mb-IBH-10;
       this.contentHeight =ch+"px" ;
 
-      if(this.getMasterName == "mst_treatment_set" && document.getElementById("grid-header") != null){
+      if(this.getMasterName == "mst_treatment_set" && getScopedElementById("grid-header", this.$el || this) != null){
         this.contentHeight =""
       }
     },
@@ -385,7 +384,7 @@ export default {
      */
     saveEdit() {
       // 保存ボタン活性へ
-      this.$parent.$parent.updateDisable = false;
+      this._deviceSetDialogOwner().updateDisable = false;
 
       EventBus.$emit("deviceSetChanged");
     },
@@ -444,7 +443,7 @@ export default {
       // add #10054 破棄確認・保存活性(複数変更含む)・削除対応_装置設定 20240220 ztc start
       EventBus.$emit("deviceSetChanged", this.isRadioProgramUseChecked.initValue !== this.isRadioProgramUseChecked.editValue);
       EventBus.$emit("mstTreatmentSetRegistered", this.isRadioProgramUseChecked.initValue === this.isRadioProgramUseChecked.editValue);
-      this.$parent.$parent.ihdfChangeFlag = this.isRadioProgramUseChecked.initValue !== this.isRadioProgramUseChecked.editValue;
+      this._deviceSetRootOwner().ihdfChangeFlag = this.isRadioProgramUseChecked.initValue !== this.isRadioProgramUseChecked.editValue;
       // add #10054 破棄確認・保存活性(複数変更含む)・削除対応_装置設定 20240220 ztc end
       if (this.isRadioProgramUseChecked.editValue.toString() == 'true') {
         this.changeDisplayConfirm('ihdfEditor', false);
@@ -468,7 +467,7 @@ export default {
       // add #10054 破棄確認・保存活性(複数変更含む)・削除対応_装置設定 20240220 ztc start
       EventBus.$emit("deviceSetChanged",this.isRadioProgramUseChecked.initValue !== this.isRadioProgramUseChecked.editValue);
       EventBus.$emit("mstTreatmentSetRegistered", this.isRadioProgramUseChecked.initValue === this.isRadioProgramUseChecked.editValue);
-      this.$parent.$parent.ihdfChangeFlag = this.isRadioProgramUseChecked.initValue !== this.isRadioProgramUseChecked.editValue;
+      this._deviceSetRootOwner().ihdfChangeFlag = this.isRadioProgramUseChecked.initValue !== this.isRadioProgramUseChecked.editValue;
       // add #10054 破棄確認・保存活性(複数変更含む)・削除対応_装置設定 20240220 ztc end
     },
     // add #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng start

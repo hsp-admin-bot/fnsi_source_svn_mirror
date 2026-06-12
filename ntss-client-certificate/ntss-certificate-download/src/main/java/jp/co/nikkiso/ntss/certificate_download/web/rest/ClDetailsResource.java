@@ -7,11 +7,11 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import jp.co.nikkiso.ntss.certificate_download.constant.ClientCertificateConstant.ScreenName;
 import jp.co.nikkiso.ntss.certificate_download.constant.ClientCertificateConstant.Uri;
@@ -23,7 +23,7 @@ import jp.co.nikkiso.ntss.core.entity.ClDetail;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 
-@Service
+@RestController
 @RequestMapping(Uri.CLDETAILS)
 public class ClDetailsResource {
 

@@ -54,7 +54,7 @@
     </div>
 
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target=false
@@ -78,10 +78,10 @@
           </v-ons-col>
         </v-ons-row>
         <v-ons-row class='condition-row'>
-          <v-ons-col width='40%' vertical-align='center'>
+          <v-ons-col width='30%' vertical-align='center'>
             <label>指定日</label>
           </v-ons-col>
-          <v-ons-col width='60%' vertical-align='center'>
+          <v-ons-col width='70%' vertical-align='center'>
             <date-input
               v-model="condition.inProgress.searchDate"
               :classes="'input-area ntss-input-date ntss-custom-input start-date'"
@@ -138,9 +138,9 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapActions, mapGetters, mapMutations } from "vuex";
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import PopoverMixin from "@/components/PopoverMixin";
 
@@ -219,7 +219,7 @@ export default {
     ...mapGetters("app", ["getQueryParameters"]),
     ...mapActions("app", ["setQueryParameters"]),
     getDispSearchDate(){
-      const dispDate = moment(this.condition.inUsed.searchDate);
+      const dispDate = dayjs(this.condition.inUsed.searchDate);
       this.setAppointedDate(dispDate.format("YYYY/MM/DD"));
       return dispDate.format("YYYY/MM/DD");
     },
@@ -284,17 +284,15 @@ export default {
       this.condition.inUsed.viewPreIn= this.condition.inProgress.viewPreIn;
     },
   },
-  watch: {
-  },
   async created() {
     if (this.getCondition){
       this.condition.inUsed = this.getCondition;
       // 画面遷移パラメータ取得
       const queryParameters = this.getQueryParameters();
       if (queryParameters.DATE) {
-        const date = moment(queryParameters.DATE);
+        const date = dayjs(queryParameters.DATE);
         if (date.isValid()) {
-          this.condition.inUsed.searchDate = moment(queryParameters.DATE).format("YYYY-MM-DD");
+          this.condition.inUsed.searchDate = dayjs(queryParameters.DATE).format("YYYY-MM-DD");
         }
       }
       this.setQueryParameters({});
@@ -327,7 +325,7 @@ export default {
       
       if (this.condition.inUsed.searchDate === "") {
         // 本日の日付をセット
-        const nowDate = moment(new Date());
+        const nowDate = dayjs(new Date());
         this.condition.inUsed.searchDate = nowDate.format("YYYY-MM-DD");
       }
       
@@ -350,6 +348,8 @@ export default {
 </script>
 
 <style scoped>
+@import "../../assets/styles/modal.css";
+
 .condition-search-icon-area-icon {
   color:gray;
   display: table-cell;
@@ -383,8 +383,6 @@ export default {
   line-height: 20px;
   font-size: 15px
 }
-
-@import "../../assets/styles/modal.css";
 
 @media print {
   .print_condition-search-area {

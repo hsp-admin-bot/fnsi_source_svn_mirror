@@ -44,13 +44,15 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 //定義
 import {
   DEF_KUR_WIDTH,
   BACKGROUND_COLUMN_PAST_DAY, } from "@/components/schedule-list/Definitions.js";
 //日付扱い用
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 //クールコードおよびベッドコードのみ登録時の値(数値)
 const DEF_NOTASSIGNED = 0;
@@ -109,7 +111,7 @@ const DEF_UNMATCH_STR = "！";
 const DEF_SETTING_STYLE_THEME = "var(--ntss-list-background-color)";
 
 const DEF_AGENT_EDGE =
-    window.navigator.userAgent.toLowerCase()?.indexOf("edge") > -1;
+    (globalThis?.navigator?.userAgent || "").toLowerCase()?.indexOf("edge") > -1;
 
 export default {
   props: {
@@ -192,7 +194,7 @@ export default {
     // },
     // divBackgroundColor() {
     //   let backgroundColor = DEF_SETTING_STYLE_THEME;
-    //   const currentDate = moment(new Date()).format("YYYYMMDD");
+    //   const currentDate = dayjs(new Date()).format("YYYYMMDD");
     //   if (this.propsJson != null && ("title" in this.propsJson)) {
     //     // 日付取得
     //     const selectedDate = this.propsJson.treatDate;
@@ -319,15 +321,15 @@ export default {
       "getOtherSchedule" //その他の予定データリスト
     ])
   },
-  watch: {},
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
     this.unPropsJsonWatch && this.unPropsJsonWatch();
   },
   mounted() {
     //自分自身のIDの取得
-    this.thisElem = document.getElementById('id_bed' + this.propsId);
+    const rootId = 'id_bed' + this.propsId;
+    this.thisElem = this.$el?.id === rootId ? this.$el : getScopedElementById(rootId, this.$el || this);
 
     this.unPropsJsonWatch = this.$watch('propsJson', (newVal, oldVal) => {
       this.resetDisp();
@@ -356,7 +358,7 @@ export default {
       // mod #8844 Uncaught TypeError: Cannot read properties of null (reading 'style') 修正 林峻峰 end
 
       // 現在日付を取得する
-      const currentDate = moment(new Date()).format("YYYYMMDD");
+      const currentDate = dayjs(new Date()).format("YYYYMMDD");
 
       if (this.propsJson === null || !("title" in this.propsJson)) {
         //propsJsonの値設定がない、または、titleプロパティが無い時

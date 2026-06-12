@@ -62,6 +62,12 @@ public interface MstCoopDistributeDao {
 	@Select
 	List<MstCoopDistribute> selectByFacilityCdAndCoopCd(String facilityCd, String coopCd);
 
+	@Select
+	List<MstCoopDistribute> selectSource(String coopVersion, String coopCd, String direction);
+
+	@Select
+	List<MstCoopDistribute> selectCurrentByFacilityCd(String facilityCd);
+
 	/**
 	 * 施設コードによる最新の連携電文配信の管理番号の取得
 	 * @param facilityCd 施設コード

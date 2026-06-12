@@ -5,7 +5,7 @@ import {
   ResultMergeItem
 } from "@/models/treatment-record/result-merge/ResultMergeItem";
 import {DATE_TIME_FORMAT, dateFormat} from "@/functions/common/DateTimeUtils";
-import moment from 'moment';
+import dayjs from '@/compat/date/dayjs';
 /**
  * 実績マージ画面の実績マージ情報を表現するクラス.
  */
@@ -166,7 +166,7 @@ export class ResultMerge {
       let outText = "";
       let condAvailable = false;
       const condNo = i + 1;
-      if (this.condInfo != null && this.condInfo.hasOwnProperty((condNo) + "")) {
+      if (this.condInfo != null && Object.prototype.hasOwnProperty.call(this.condInfo, (condNo) + "")) {
         /* modify by chamaojia 2024-02-18 [10196] displayed name and unit processing  --start */
         switch (condNo) {
           case 2:   // VA
@@ -765,7 +765,7 @@ export class ResultMerge {
    */
   getDateTimeString(utcDate) {
     if (!utcDate) return null;
-    const isValidDate = moment(utcDate, "YYYY-MM-DDTHH:mm:ss.SSSZ", true).isValid();
+    const isValidDate = dayjs(utcDate, "YYYY-MM-DDTHH:mm:ss.SSSZ", true).isValid();
     return isValidDate
       ? dateFormat.format(new Date(utcDate), DATE_TIME_FORMAT)
       : utcDate;

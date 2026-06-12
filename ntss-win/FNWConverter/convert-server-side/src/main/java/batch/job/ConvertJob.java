@@ -15,10 +15,11 @@ import batch.step.ReadSqlFileWriteDbStep;
 import batch.step.RestartStep;
 import batch.step.TruncateTableStep;
 import batch.validator.ConvertJobValidator;
-import org.springframework.batch.core.Job;
+import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
-import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.job.parameters.RunIdIncrementer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,7 +31,7 @@ public class ConvertJob {
     private final String JOB_NAME = "ConvertJob";
 
     @Autowired
-    public JobBuilderFactory jobBuilderFactory;
+    private JobRepository jobRepository;
 
     @Autowired
     private ReadSqlFileWriteDbStep readSqlFileWriteDbStep;
@@ -83,7 +84,7 @@ public class ConvertJob {
      */
     @Bean(name = JOB_NAME)
     public Job job() throws Exception {
-        return jobBuilderFactory.get(JOB_NAME).incrementer(new RunIdIncrementer()).validator(new ConvertJobValidator())
+        return new JobBuilder(JOB_NAME, jobRepository).incrementer(new RunIdIncrementer()).validator(new ConvertJobValidator())
                 .listener(jobStartEndLIstener)
                 .start(restartStep.step())
                 .next(deleteTableInConvertDbStep.step())

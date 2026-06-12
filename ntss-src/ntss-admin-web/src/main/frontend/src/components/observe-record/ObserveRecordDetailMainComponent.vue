@@ -20,7 +20,7 @@
                     input-id="rec-date-date"
                     v-model="inputData.recDateDate"
                     name="dialysis-start-date"
-                    v-validate="'required|date_format:yyyy-MM-dd'"
+                    v-rules="'required|date_format:yyyy-MM-dd'"
                     @blur="resetCombo()"
                     @change="onChangeInputData"
                   />
@@ -30,7 +30,7 @@
                     input-id="rec-date-time"
                     v-model="inputData.recDateTime"
                     name="dialysis-start-time"
-                    v-validate="'required|date_format:HH:mm'"
+                    v-rules="'required|date_format:HH:mm'"
                     @change="onChangeInputData"
                   />
                 </div>
@@ -163,7 +163,6 @@
               <div class="data-col1 data-col3">
                 <div class="data-right">
                   <v-ons-select
-                    float
                     id="kind"
                     class="result_ord select-data"
                     v-model="inputData.selectedOrdNo"
@@ -202,9 +201,9 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 //import { dateFormat } from "@/functions/common/DateTimeUtils.js";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import {
   DATE_FORMAT,
   SHORT_TIME_FORMAT,
@@ -840,7 +839,7 @@ export default {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
 
       if (
-        this.selfScreenName === this.$router.currentRoute.name &&
+        this.selfScreenName === this.$route.name &&
         !this.isMovePageDialogShow
       ) {
         if (this.isChanged) {
@@ -867,7 +866,7 @@ export default {
     this.dataLoad();
 
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     EventBus.$on("refresh", this.refresh);
   },
   mounted() {
@@ -876,8 +875,8 @@ export default {
     // サイドメニュー、サイドメニュー開閉ボタンを非表示化
     this.setIsDispSidebarBtn(false);
   },
-  beforeDestroy() {
-    EventBus.$off("refresh");
+  beforeUnmount() {
+    EventBus.$off("refresh", this.refresh);
 
     // サイドメニュー展開ボタン表示
     this.setIsDispSidebarBtn(true);

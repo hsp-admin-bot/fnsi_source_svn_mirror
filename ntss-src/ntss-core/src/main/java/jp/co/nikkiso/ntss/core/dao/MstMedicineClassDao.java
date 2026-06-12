@@ -12,7 +12,7 @@ import jp.co.nikkiso.ntss.core.entity.MstMedicineClass;
 
 @ConfigAutowireable
 @Dao
-public interface MstMedicineClassDao extends MasterDao<Map<String,Object>> {
+public interface MstMedicineClassDao extends MasterDao<Map<String,Object>>, UnifiedByCodeListDao {
   @Select
   List<MstMedicineClass> selectAll(SelectOptions options, MstMedicineClass params);
 
@@ -31,4 +31,8 @@ public interface MstMedicineClassDao extends MasterDao<Map<String,Object>> {
   @Override
   @Select
   List<Map<String,Object>> selectAllStatus(Map<String,String> params);
+
+  @Override
+  @Select
+  List<Map<String, Object>> selectAllStatusByCodeList(List<Integer> codeList);
 }

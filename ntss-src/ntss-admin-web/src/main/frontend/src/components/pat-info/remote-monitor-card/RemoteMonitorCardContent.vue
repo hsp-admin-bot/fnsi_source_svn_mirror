@@ -1,5 +1,6 @@
 <template>
   <table class="card-table">
+      <tbody>
     <tr>
       <td class="item-title">サービス業者</td>
       <td class="item-data">
@@ -25,7 +26,8 @@
       <td class="item-data">
       </td>
     </tr>
-  </table>
+  
+      </tbody></table>
 </template>
 
 <script>
@@ -33,7 +35,7 @@ import baseCardContent from "@/components/pat-info/base-components/BaseCardConte
 // add 編集権限の適用 じょはく start
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
 import { FUNC_PAT_INFO } from "@/constants/function-code";
-import {mapGetters} from "vuex";
+import {mapGetters} from "@/compat/vue/vuex";
 // add 編集権限の適用 じょはく end
 
 export default {
@@ -72,7 +74,6 @@ export default {
     // mod #10359、#10331 編集権限について、対応する。 dengshen end
     // add 編集権限の適用 じょはく end
   },
-  watch: {},
   created() {
     // add 編集権限の適用 じょはく start
     // mod #10359、#10331 編集権限について、対応する。 dengshen start

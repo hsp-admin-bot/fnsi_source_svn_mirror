@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import jp.co.nikkiso.ntss.core.dao.MstBioMoniFramePatternDao;
 import jp.co.nikkiso.ntss.core.entity.MstBioMoniFramePattern;
 import jp.co.nikkiso.ntss.core.entity.custom.MstBioMoniFramePatternWithDefine;
-import jp.co.nikkiso.ntss.monitoring.util.Utilities;
 
 @Service
 public class MstBioMoniFramePatternServiceImpl implements MstBioMoniFramePatternService {
@@ -21,7 +20,7 @@ public class MstBioMoniFramePatternServiceImpl implements MstBioMoniFramePattern
   //public String selectDefineInfo(String facility_cd, int ctl_no) {
   public String selectDefineInfo(String facility_cd, Long ctl_no) {
   // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
-    return mstBioMoniFramePatternDao.selectDefineInfo(facility_cd, ctl_no);
+    return mstBioMoniFramePatternDao.selectDefineInfo(facility_cd, Math.toIntExact(ctl_no));
   }
 
   @Override
@@ -34,7 +33,7 @@ public class MstBioMoniFramePatternServiceImpl implements MstBioMoniFramePattern
   //public MstBioMoniFramePattern selectByCtlCd(String facility_cd, int ctl_no) {
   public MstBioMoniFramePattern selectByCtlCd(String facility_cd, Long ctl_no) {
   // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
-    return mstBioMoniFramePatternDao.selectByCtlNo(facility_cd, ctl_no);
+    return mstBioMoniFramePatternDao.selectByCtlNo(facility_cd, Math.toIntExact(ctl_no));
   }
 
   @Override
@@ -42,7 +41,7 @@ public class MstBioMoniFramePatternServiceImpl implements MstBioMoniFramePattern
   //public int delete(String facility_cd, int ctl_no) {
   public int delete(String facility_cd, Long ctl_no) {
   // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
-    MstBioMoniFramePattern ptn = mstBioMoniFramePatternDao.selectByCtlNo(facility_cd, ctl_no);
+    MstBioMoniFramePattern ptn = mstBioMoniFramePatternDao.selectByCtlNo(facility_cd, Math.toIntExact(ctl_no));
     if(ptn != null) {
       return mstBioMoniFramePatternDao.delete(ptn);
     }
@@ -71,7 +70,7 @@ public class MstBioMoniFramePatternServiceImpl implements MstBioMoniFramePattern
   //public List<MstBioMoniFramePatternWithDefine> selectWithDefine(String facility_cd, int ctl_no) {
   public List<MstBioMoniFramePatternWithDefine> selectWithDefine(String facility_cd, Long ctl_no) {
   // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
-    return mstBioMoniFramePatternDao.selectWithFrameDefine(facility_cd, ctl_no);
+    return mstBioMoniFramePatternDao.selectWithFrameDefine(facility_cd, Math.toIntExact(ctl_no));
   }
 
 }

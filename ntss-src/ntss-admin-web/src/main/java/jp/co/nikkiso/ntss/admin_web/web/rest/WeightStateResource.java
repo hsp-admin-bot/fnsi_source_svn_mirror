@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.amazonaws.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 // #11987 2026.02.03 add スケールベッド対応 スケールベッドサービスの登録 TDC渡辺 start
 import jp.co.nikkiso.ntss.admin_web.service.mente.MstWeightScaleBedService;
 // #11987 2026.02.03 add スケールベッド対応 スケールベッドサービスの登録 TDC渡辺 end
@@ -35,13 +35,18 @@ import jp.co.nikkiso.ntss.admin_web.service.webSocketNotify.PayloadBuilder;
 import jp.co.nikkiso.ntss.admin_web.service.webSocketNotify.WebSocketNotifyService;
 import jp.co.nikkiso.ntss.admin_web.service.webSocketNotify.WebSocketNotifyService.SendTarget;
 import jp.co.nikkiso.ntss.admin_web.service.weight.state.MntWeightStateService;
+import jp.co.nikkiso.ntss.core.dao.MntWeightStateDao;
+import jp.co.nikkiso.ntss.core.dao.OrdWeightScaleDao;
 import jp.co.nikkiso.ntss.core.entity.MntWeightState;
+import jp.co.nikkiso.ntss.core.entity.OrdWeightScale;
 import lombok.extern.slf4j.Slf4j;
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 
+import org.springframework.util.ObjectUtils;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 @RestController
 @Slf4j
 @RequestMapping(Uri.WEIGHT_STATE)
@@ -59,6 +64,12 @@ public class WeightStateResource {
   @Autowired
   LogEventUtils logEventUtils;
   // wp アプリケーションログの適正化 Add End
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Autowired
+  OrdWeightScaleDao ordWeightScaleDao;
+  @Autowired
+  MntWeightStateDao mntWeightStateDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
   // #10833 2024.08.23 add 体重計アプリへの印刷指示をスレッドにて実施する TDC米沢 start
   @Autowired
@@ -114,7 +125,21 @@ public class WeightStateResource {
   }
   // add マスタ一覧 1･施設切替を可能とする 孔s start
   @PostMapping("/sync-master/{facilityCd}")
-  public ResponseEntity<?> postWeightSyncMntByFacilityCd(@PathVariable String facilityCd) {
+  public ResponseEntity<?> postWeightSyncMntByFacilityCd(@PathVariable String facilityCd,
+                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                         @AuthenticationPrincipal NtssUser ntssUser
+                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT_STATE + "/sync-master";
@@ -153,7 +178,8 @@ public class WeightStateResource {
    * @return
    */
   @GetMapping("/state/{scaleCd}")
-  public ResponseEntity<?> getWeightState(@PathVariable Long scaleCd) {
+  public ResponseEntity<?> getWeightState(@PathVariable Long scaleCd,
+      @AuthenticationPrincipal NtssUser ntssUser) {
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT_STATE + "/state";
@@ -161,6 +187,13 @@ public class WeightStateResource {
       scaleCd);
     // wp アプリケーションログの適正化 Add End
     MntWeightState state = mntWeightStateService.selectByScaleCd(scaleCd);
+    // #11205 mod 20260421 start
+    if (!hasWeightStateAccess(ntssUser, state == null ? null : state.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null") + " " + "facilityCd=" + (state == null ? "null" : state.getFacilityCd()) + " " + "scaleCd=" + scaleCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
 
     // wp アプリケーションログの適正化 Add Start
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
@@ -178,7 +211,7 @@ public class WeightStateResource {
    */
   @PutMapping("/card")
   public ResponseEntity<?> postCardRead(
-      @RequestBody WeightStateRequest request) {
+    @RequestBody WeightStateRequest request, @AuthenticationPrincipal NtssUser ntssUser) {
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT_STATE + "/card";
@@ -187,10 +220,24 @@ public class WeightStateResource {
     // wp アプリケーションログの適正化 Add End
 
     try {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = ntssUser.getFacilityCd();
+        MntWeightState mntWeightState = mntWeightStateDao.selectByWeightCd(request.getWeightCd());
+        // #11205 mod 20260421 start
+        if (mntWeightState != null && !mntWeightState.getFacilityCd().equals(facilityCd)) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + facilityCd + " " + "weightCd=" + request.getWeightCd() + " " + "mntWeightState.getFacilityCd()=" + mntWeightState.getFacilityCd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_ERROR, mappingUrl, null, "セキュリティチェックの例外!");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        // #11205 mod 20260421 end
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
       mntWeightStateService.updateCardReadValue(request.getWeightCd(), request.getCardReadValue().getValue());
 
       String topic = PayloadBuilder.BuildWeightTopic(WebSocketTopic.WeightState.CARD_READ, request.getFacilityCd(),
-          request.getWeightNo());
+        request.getWeightNo());
 
       String payload = request.getWeightCd().toString();
 
@@ -226,7 +273,7 @@ public class WeightStateResource {
    */
   @PutMapping("/scale_value")
   public ResponseEntity<?> postScaleValue(
-      @RequestBody WeightStateRequest request) {
+    @RequestBody WeightStateRequest request, @AuthenticationPrincipal NtssUser ntssUser) {
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT_STATE + "/scale_value";
@@ -235,8 +282,22 @@ public class WeightStateResource {
     // wp アプリケーションログの適正化 Add End
 
     try {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = ntssUser.getFacilityCd();
+        MntWeightState mntWeightState = mntWeightStateDao.selectByWeightCd(request.getWeightCd());
+        // #11205 mod 20260421 start
+        if (mntWeightState != null && !mntWeightState.getFacilityCd().equals(facilityCd)) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + facilityCd + " " + "weightCd=" + request.getWeightCd() + " " + "mntWeightState.getFacilityCd()=" + mntWeightState.getFacilityCd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_ERROR, mappingUrl, null, "セキュリティチェックの例外!");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        // #11205 mod 20260421 end
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
       // add FNSI-田中衡機の追加 徐 start
-      if (!StringUtils.isNullOrEmpty(request.getScaleValueList())) {
+      if (StringUtils.isNotEmpty(request.getScaleValueList())) {
         // 田中衡機測定値の更新
         mntWeightStateService.updateScaleValueList(request.getWeightCd(), request.getScaleValueList());
       } else {
@@ -245,7 +306,7 @@ public class WeightStateResource {
       // add FNSI-田中衡機の追加 徐 end
 
       String topic = PayloadBuilder.BuildWeightTopic(WebSocketTopic.WeightState.SCALE, request.getFacilityCd(),
-          request.getWeightNo());
+        request.getWeightNo());
 
       String payload = request.getWeightCd().toString();
 
@@ -282,7 +343,7 @@ public class WeightStateResource {
    */
   @PutMapping("/write_card")
   public ResponseEntity<?> postWriteCard(
-      @RequestBody WeightStateRequest request) {
+    @RequestBody WeightStateRequest request, @AuthenticationPrincipal NtssUser ntssUser) {
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT_STATE + "/write_card";
@@ -291,10 +352,25 @@ public class WeightStateResource {
     // wp アプリケーションログの適正化 Add End
 
     try {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = ntssUser.getFacilityCd();
+        MntWeightState mntWeightState = mntWeightStateDao.selectByWeightCd(request.getWeightCd());
+        // #11205 mod 20260421 start
+        if (mntWeightState != null && !mntWeightState.getFacilityCd().equals(facilityCd)) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + facilityCd + " " + "weightCd=" + request.getWeightCd() + " " + "mntWeightState.getFacilityCd()=" + mntWeightState.getFacilityCd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_ERROR, mappingUrl, null, "セキュリティチェックの例外!");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        // #11205 mod 20260421 end
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
       mntWeightStateService.updateCardWriteValue(request.getWeightCd(), request.getCardWriteValue());
 
       String topic = PayloadBuilder.BuildWeightTopic(WebSocketTopic.WeightState.CARD_WRITE, request.getFacilityCd(),
-          request.getWeightNo());
+        request.getWeightNo());
 
       String payload = request.getWeightCd().toString();
 
@@ -331,7 +407,7 @@ public class WeightStateResource {
    */
   @PutMapping("/write_card_result")
   public ResponseEntity<?> postWriteCardResult(
-      @RequestBody WeightStateRequest request) {
+    @RequestBody WeightStateRequest request, @AuthenticationPrincipal NtssUser ntssUser) {
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT_STATE + "/write_card";
@@ -340,10 +416,24 @@ public class WeightStateResource {
     // wp アプリケーションログの適正化 Add End
 
     try {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = ntssUser.getFacilityCd();
+        MntWeightState mntWeightState = mntWeightStateDao.selectByWeightCd(request.getWeightCd());
+        // #11205 mod 20260421 start
+        if (mntWeightState != null && !mntWeightState.getFacilityCd().equals(facilityCd)) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + facilityCd + " " + "weightCd=" + request.getWeightCd() + " " + "mntWeightState.getFacilityCd()=" + mntWeightState.getFacilityCd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_ERROR, mappingUrl, null, "セキュリティチェックの例外!");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        // #11205 mod 20260421 end
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
       mntWeightStateService.updateWriteResult(request.getWeightCd(), request.getWriteResult());
 
       String topic = PayloadBuilder.BuildWeightTopic(WebSocketTopic.WeightState.CARD_WRITE_RESULT,
-          request.getFacilityCd(), request.getWeightNo());
+        request.getFacilityCd(), request.getWeightNo());
 
       String payload = request.getWeightCd().toString();
 
@@ -380,7 +470,7 @@ public class WeightStateResource {
    */
   @PutMapping("/weight_connect")
   public ResponseEntity<?> postWriteIsConnect(
-      @RequestBody WeightStateRequest request) {
+    @RequestBody WeightStateRequest request, @AuthenticationPrincipal NtssUser ntssUser) {
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT_STATE + "/weight_connect";
@@ -389,10 +479,24 @@ public class WeightStateResource {
     // wp アプリケーションログの適正化 Add End
 
     try {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = ntssUser.getFacilityCd();
+        MntWeightState mntWeightState = mntWeightStateDao.selectByWeightCd(request.getWeightCd());
+        // #11205 mod 20260421 start
+        if (mntWeightState != null && !mntWeightState.getFacilityCd().equals(facilityCd)) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + facilityCd + " " + "weightCd=" + request.getWeightCd() + " " + "mntWeightState.getFacilityCd()=" + mntWeightState.getFacilityCd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_ERROR, mappingUrl, null, "セキュリティチェックの例外!");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        // #11205 mod 20260421 end
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
       mntWeightStateService.updateIsConnect(request.getWeightCd(), request.getIsConnect());
 
       String topic = PayloadBuilder.BuildWeightTopic(WebSocketTopic.WeightState.WEIGHT_CONNECT, request.getFacilityCd(),
-          request.getWeightNo());
+        request.getWeightNo());
 
       String payload = request.getWeightCd().toString();
 
@@ -436,7 +540,20 @@ public class WeightStateResource {
    */
   @PostMapping("/print")
   public ResponseEntity<?> postPrintSheet(
-    @RequestBody WeightPrintRequest request) {
+    @RequestBody WeightPrintRequest request,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    // #11205 mod 20260421 start
+    if (!hasWeightPrintAccess(ntssUser, request)) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null") + " " + "facilityCd=" + (request != null ? request.getFacilityCd() : "null") + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // #10833 2024.08.26 mod アプリケーションログのファンクションコードを指定する TDC米沢 start
     // // wp アプリケーションログの適正化 Add Start
@@ -514,7 +631,7 @@ public class WeightStateResource {
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_SEND_CONDITION, AFTER_LOG_FLG_INFO, mappingUrl, null,
         null);
       // #10833 2024.08.26 mod アプリケーションログのファンクションコードを指定する TDC米沢 end
-      return new ResponseEntity<>(null, HttpStatus.OK);
+      return ResponseEntity.status(HttpStatus.OK).build();
       // #10833 2024.08.23 add 体重計アプリへの印刷指示をスレッドにて実施する TDC米沢 end
     } catch (Exception e) {
 //      EventLogMessage eventLogMessage = new EventLogMessage();
@@ -537,7 +654,8 @@ public class WeightStateResource {
    * @return
    */
   @GetMapping("/print_content/{weightScaleNo}")
-  public ResponseEntity<?> getPrintContent(@PathVariable Long weightScaleNo) {
+  public ResponseEntity<?> getPrintContent(@PathVariable Long weightScaleNo,
+      @AuthenticationPrincipal NtssUser ntssUser) {
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT_STATE + "/print_content";
@@ -546,6 +664,14 @@ public class WeightStateResource {
     // wp アプリケーションログの適正化 Add End
     WeightPrintResponse res = new WeightPrintResponse();
     try {
+      OrdWeightScale ordWeightScale = ordWeightScaleDao.selectByCd(weightScaleNo);
+      // #11205 mod 20260421 start
+      if (!hasWeightStateAccess(ntssUser, ordWeightScale == null ? null : ordWeightScale.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null") + " " + "facilityCd=" + (ordWeightScale == null ? "null" : ordWeightScale.getFacilityCd()) + " " + "weightScaleNo=" + weightScaleNo + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+      // #11205 mod 20260421 end
       String content = mntWeightStateService.selectPrintContent(weightScaleNo);
       res.isSuccess = true;
       res.printContent = content;
@@ -577,7 +703,7 @@ public class WeightStateResource {
    */
   @PutMapping("/print_status")
   public ResponseEntity<?> putPrintStatus(
-      @RequestBody WeightPrintRequest request) {
+    @RequestBody WeightPrintRequest request, @AuthenticationPrincipal NtssUser ntssUser) {
 
 
     // wp アプリケーションログの適正化 Add Start
@@ -589,9 +715,28 @@ public class WeightStateResource {
     WeightPrintResponse res = new WeightPrintResponse();
     try {
       res.weightScaleNo = request.getWeightScaleNo();
-
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if (ntssUser != null) {
+        if(!ntssUser.isNkkAdminUser()) {
+          String facilityCd = ntssUser.getFacilityCd();
+          OrdWeightScale ordWeightScale = ordWeightScaleDao.selectByCd(request.getWeightScaleNo());
+          if (ordWeightScale != null && ordWeightScale.getFacilityCd() != null) {
+            // #11205 mod 20260421 start
+            if (!ordWeightScale.getFacilityCd().equals(facilityCd)) {
+              String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + facilityCd + " " + "ordWeightScale.getFacilityCd()=" + ordWeightScale.getFacilityCd() + " " + "weightScaleNo=" + request.getWeightScaleNo() + " ";
+              InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+              res.isSuccess = false;
+              res.errorMessage = "セキュリティチェックの例外!";
+              logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_ERROR, mappingUrl, null, res.errorMessage);
+              return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+            }
+            // #11205 mod 20260421 end
+          }
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
       int i = mntWeightStateService.updatePrintStatus(request.getWeightScaleNo(), request.getPrintStatus(),
-          request.getPrintErrorMessage());
+        request.getPrintErrorMessage());
 
       if (i < 1) {
         res.isSuccess = false;
@@ -629,7 +774,20 @@ public class WeightStateResource {
    */
   @PostMapping("/weightAppOk")
   public ResponseEntity<?> postWeightAppOk(
-    @RequestBody WeightPrintRequest request) {
+    @RequestBody WeightPrintRequest request,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    // #11205 mod 20260421 start
+    if (!hasWeightPrintAccess(ntssUser, request)) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null") + " " + "facilityCd=" + (request != null ? request.getFacilityCd() : "null") + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT_STATE + "/weightAppOk";
@@ -718,5 +876,38 @@ public class WeightStateResource {
    */
   private String getMethodName() {
     return Thread.currentThread().getStackTrace()[2].getMethodName();
+  }
+
+  private boolean hasWeightStateAccess(NtssUser ntssUser, String facilityCd) {
+    return ntssUser == null
+      || ntssUser.isNkkAdminUser()
+      || facilityCd == null
+      || facilityCd.equals(ntssUser.getFacilityCd());
+  }
+
+  private boolean hasWeightPrintAccess(NtssUser ntssUser, WeightPrintRequest request) {
+    if (ntssUser == null || ntssUser.isNkkAdminUser() || request == null) {
+      return true;
+    }
+
+    if (!hasWeightStateAccess(ntssUser, request.getFacilityCd())) {
+      return false;
+    }
+
+    if (request.getWeightScaleNo() != null) {
+      OrdWeightScale ordWeightScale = ordWeightScaleDao.selectByCd(request.getWeightScaleNo());
+      if (!hasWeightStateAccess(ntssUser, ordWeightScale == null ? null : ordWeightScale.getFacilityCd())) {
+        return false;
+      }
+    }
+
+    if (request.getWeightCd() != null) {
+      MntWeightState mntWeightState = mntWeightStateDao.selectByWeightCd(request.getWeightCd());
+      if (!hasWeightStateAccess(ntssUser, mntWeightState == null ? null : mntWeightState.getFacilityCd())) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }

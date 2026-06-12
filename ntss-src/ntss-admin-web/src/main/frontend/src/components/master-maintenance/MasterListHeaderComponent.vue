@@ -10,7 +10,7 @@
         </v-ons-col>
         <!-- add マスタ一覧 1･施設切替を可能とする 孔s start -->
         <v-ons-col class='condition-search-col' style="height: auto; margin: auto;">
-          <kendo-dropdownlist ref="dropDownList" v-if="getStateUserAccountInfo.userType === 1"
+          <kendo-dropdownlist ref="dropDownList" v-if="getStateUserAccountInfo?.userType === 1"
               v-model="facilitySwitchValue"
               :data-source="getFacilityList"
               :data-text-field="'facilityName'"
@@ -27,7 +27,7 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target=false
@@ -58,8 +58,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 import {ApiHelper} from "@/apis/AxiosHelper";
@@ -263,7 +263,7 @@ export default {
     // add マスタ一覧 1･施設切替を可能とする 孔s start
     // 施設一覧のデータを取得
     findFacilityList() {
-      if (this.getStateUserAccountInfo.userType !== 1 || this.getFacilitySwitch === "") {
+      if (this.getStateUserAccountInfo?.userType !== 1 || this.getFacilitySwitch === "") {
         this.setFacilitySwitch(this.getStateUserAccountInfo.facilityCd);
       }
       // apiをコールして施設一覧を取得
@@ -298,7 +298,7 @@ export default {
           // マスタ一覧 施設切替 施設解約後は表示されません end
 
           // add redmine4484 並び順は施設マスタの並び順に合わせる 孔 start
-          const sort = await ApiHelper.get("/mstInfo/mst_facility/mstSelector/", {
+          const sort = await ApiHelper.get("/mstInfo/mst_facility/mstSelector", {
             facilityCd: "nkknkk"
           }).catch(error => {
             //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start

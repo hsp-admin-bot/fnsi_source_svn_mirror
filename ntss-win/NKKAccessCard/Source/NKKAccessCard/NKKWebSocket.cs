@@ -55,7 +55,7 @@ namespace NKKWebSocketLib
         /// WebSocketURI
         /// </summary>
         //----------------------------------------------------------------------------------------------------
-        private readonly String POST_WEB_SOCKET_KEY_URI = "/ntss-admin-web/api/websocketcertification/";
+        private readonly String POST_WEB_SOCKET_KEY_URI = "/ntss-admin-web/api/websocketcertification";
         //----------------------------------------------------------------------------------------------------
 
         //----------------------------------------------------------------------------------------------------

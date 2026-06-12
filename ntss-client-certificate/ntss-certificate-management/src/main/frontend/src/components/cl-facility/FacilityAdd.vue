@@ -3,6 +3,7 @@
     <!-- 題名 -->
     <p id="facility-add-title">施設編集</p>
     <div class="panel">
+      <form @submit.prevent>
       <!-- 施設名 -->
       <v-ons-row>
         <v-ons-col>
@@ -38,6 +39,7 @@
               input-id="facility-pwd"
               name="facilityPassword"
               type="password"
+              autocomplete="new-password"
               maxlength="40"
               v-model="facilityPassword"
               ref="facilityPwd"
@@ -68,6 +70,7 @@
               input-id="facility-pwd-confirm"
               name="パスワード確認"
               type="password"
+              autocomplete="new-password"
               maxlength="40"
               v-model="facilityPwdConfirm"
               ref="facility-pwd-confirm"
@@ -117,6 +120,7 @@
         </div>
         <!--add FNSI-【1006】最新の改修対象一覧.NO43を追加 周安寧 end-->
       </v-ons-row>
+      </form>
     </div>
     <!-- ローディングコンポーネント -->
     <loading-screen />

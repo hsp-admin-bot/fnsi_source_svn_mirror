@@ -11,7 +11,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.commons.collections.MapUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.springframework.util.StringUtils;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
 import lombok.AllArgsConstructor;

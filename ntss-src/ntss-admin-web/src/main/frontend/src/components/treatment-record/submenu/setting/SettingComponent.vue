@@ -3,122 +3,17 @@
  */
 <template>
   <submenu-base>
-    <div slot="header">
-      <div v-if="isDispBtnMachineSetting()" class="fetch-souchi-settei-button-area">
+    <template #header>
+      <div>
+        <div v-if="isDispBtnMachineSetting()" class="fetch-souchi-settei-button-area">
         <v-ons-button class="button registration-btn btn3-normal" :disabled="isReadOnly || !isShared" @click="fetchSouchiSettei()">装置設定取得</v-ons-button>
       </div>
-    </div>
-    <div slot="main" id="setting-component">
-      <v-ons-list class="treatment-record-accordion">
-        <!-- FNSI-add 装置設定画面表示の修正 徐 start -->
-        <!-- <v-ons-list-item expandable :expanded.sync="isExpandedSousaHani">
-          <label>操作範囲</label>
-          <setting-sub
-            :titles="sousaHani.titles"
-            :values="sousaHani.values"
-            :category="sousaHani.category"
-            @onCellClick="onCellClickNotOffWater"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedKeihouTen">
-          <label>警報点</label>
-          <setting-sub
-            :titles="keihouTen.titles"
-            :values="keihouTen.values"
-            :category="keihouTen.category"
-            @onCellClick="onCellClickNotOffWater"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedKetsuatsuKei">
-          <label>血圧計</label>
-          <setting-sub
-            :titles="ketsuatsuKei.titles"
-            :values="ketsuatsuKei.values"
-            :category="ketsuatsuKei.category"
-            @onCellClick="onCellClickNotOffWater"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedBv">
-          <label>BV</label>
-          <setting-sub
-            :titles="bv.titles"
-            :values="bv.values"
-            :category="bv.category"
-            @onCellClick="onCellClickNotOffWater"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedPrimingAndHenketsu">
-          <label>プライミング・返血</label>
-          <setting-sub
-            :titles="primingAndHenketsu.titles"
-            :values="primingAndHenketsu.values"
-            :category="primingAndHenketsu.category"
-            @onCellClick="onCellClickNotOffWater"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedDFas">
-          <label>D-FAS</label>
-          <setting-sub
-            :titles="dFas.titles"
-            :values="dFas.values"
-            :category="dFas.category"
-            @onCellClick="onCellClickNotOffWater"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedSouchiProgram">
-          <label>装置プログラム</label>
-          <setting-sub
-            :titles="souchiProgram.titles"
-            :values="souchiProgram.values"
-            :category="souchiProgram.category"
-            @onCellClick="onCellClickNotOffWater"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedKetsuryuuRyouProgram">
-          <label>血流量・透析液流量プログラム</label>
-          <setting-sub
-            :titles="ketsuryuuRyouAndTousekiEkiRyuuRyouProgram.titles"
-            :values="ketsuryuuRyouAndTousekiEkiRyuuRyouProgram.values"
-            :category="ketsuryuuRyouAndTousekiEkiRyuuRyouProgram.category"
-            @onCellClick="onCellClickNotOffWater"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item  v-if="isDialysisAmountProgram" expandable :expanded.sync="isExpandedTousekiEkiProgram">
-          <label>透析量プログラム</label>
-          <setting-sub
-            :titles="tousekiRyouProgram.titles"
-            :values="tousekiRyouProgram.values"
-            :category="tousekiRyouProgram.category"
-            @onCellClick="onCellClickNotOffWater"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item v-if="isBvUfc" expandable :expanded.sync="isExpandedBVUfc">
-          <label>BV-UFC</label>
-          <setting-sub
-            :titles="bvUfc.titles"
-            :values="bvUfc.values"
-            :category="bvUfc.category"
-            @onCellClick="onCellClickNotOffWater"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedIHDF">
-          <label>I-HDF</label>
-          <setting-sub
-            :titles="iHdf.titles"
-            :values="iHdf.values"
-            :category="iHdf.category"
-            @onCellClick="onCellClickNotOffWater"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedJoumyakuAtsu">
-          <label>静的静脈圧</label>
-          <setting-sub
-            :titles="seitekiJoumyakuAtsu.titles"
-            :values="seitekiJoumyakuAtsu.values"
-            :category="seitekiJoumyakuAtsu.category"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedShijiJouhou">
+      </div>
+    </template>
+    <template #main>
+      <div id="setting-component">
+        <v-ons-list class="treatment-record-accordion">
+        <v-ons-list-item expandable v-model:expanded="isExpandedShijiJouhou">
           <label>指示情報</label>
           <setting-sub
             :titles="shijiJouhou.titles"
@@ -126,16 +21,7 @@
             :category="shijiJouhou.category"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedJosuiHoseiJouhou">
-          <label>除水補正情報</label>
-          <setting-sub
-            :titles="josuiHoseiJouhou.titles"
-            :values="josuiHoseiJouhou.values"
-            :category="josuiHoseiJouhou.category"
-            @onCellClick="onCellClickOffWater"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedTaijuuJouhou">
+        <v-ons-list-item expandable v-model:expanded="isExpandedTaijuuJouhou">
           <label>体重情報</label>
           <setting-sub
             :titles="taijuuJouhou.titles"
@@ -143,31 +29,7 @@
             :category="taijuuJouhou.category"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedMasterJouhou">
-          <label>マスタ情報</label>
-          <setting-sub
-            :titles="masterJouhou.titles"
-            :values="masterJouhou.values"
-            :category="masterJouhou.category"
-          ></setting-sub>
-        </v-ons-list-item> -->
-        <v-ons-list-item expandable :expanded.sync="isExpandedShijiJouhou">
-          <label>指示情報</label>
-          <setting-sub
-            :titles="shijiJouhou.titles"
-            :values="shijiJouhou.values"
-            :category="shijiJouhou.category"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedTaijuuJouhou">
-          <label>体重情報</label>
-          <setting-sub
-            :titles="taijuuJouhou.titles"
-            :values="taijuuJouhou.values"
-            :category="taijuuJouhou.category"
-          ></setting-sub>
-        </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedJosuiHoseiJouhou">
+        <v-ons-list-item expandable v-model:expanded="isExpandedJosuiHoseiJouhou">
           <label>除水補正</label>
           <setting-sub
             :titles="josuiHoseiJouhou.titles"
@@ -176,7 +38,7 @@
             @onCellClick="onCellClickOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedSousaHani">
+        <v-ons-list-item expandable v-model:expanded="isExpandedSousaHani">
           <label>操作範囲</label>
           <setting-sub
             :titles="sousaHani.titles"
@@ -185,7 +47,7 @@
             @onCellClick="onCellClickNotOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedEcumSetting">
+        <v-ons-list-item expandable v-model:expanded="isExpandedEcumSetting">
           <label>ECUM設定</label>
           <setting-sub
             :titles="ecumSetting.titles"
@@ -194,7 +56,7 @@
             @onCellClick="onCellClickNotOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedKeihouTen">
+        <v-ons-list-item expandable v-model:expanded="isExpandedKeihouTen">
           <label>警報点</label>
           <setting-sub
             :titles="keihouTen.titles"
@@ -203,7 +65,7 @@
             @onCellClick="onCellClickNotOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedConcentration">
+        <v-ons-list-item expandable v-model:expanded="isExpandedConcentration">
           <label>濃度プログラム自動設定警報</label>
           <setting-sub
             :titles="concentration.titles"
@@ -212,7 +74,7 @@
             @onCellClick="onCellClickNotOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedKetsuatsuKei">
+        <v-ons-list-item expandable v-model:expanded="isExpandedKetsuatsuKei">
           <label>血圧計</label>
           <setting-sub
             :titles="ketsuatsuKei.titles"
@@ -221,7 +83,7 @@
             @onCellClick="onCellClickNotOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedBv">
+        <v-ons-list-item expandable v-model:expanded="isExpandedBv">
           <label>BV計</label>
           <!-- #11124 2025.08.26 mod 酸素飽和度対応 TDC高村 start -->
           <!--
@@ -241,7 +103,7 @@
           ></setting-sub>
           <!-- #11124 2025.08.26 mod 酸素飽和度対応 TDC高村 end -->
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedPrimingAndHenketsu">
+        <v-ons-list-item expandable v-model:expanded="isExpandedPrimingAndHenketsu">
           <label>プライミング</label>
           <setting-sub
             :titles="primingAndHenketsu.titles"
@@ -250,7 +112,7 @@
             @onCellClick="onCellClickNotOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedDFas">
+        <v-ons-list-item expandable v-model:expanded="isExpandedDFas">
           <label>D-FAS</label>
           <setting-sub
             :titles="dFas.titles"
@@ -259,7 +121,7 @@
             @onCellClick="onCellClickNotOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedJoumyakuAtsu">
+        <v-ons-list-item expandable v-model:expanded="isExpandedJoumyakuAtsu">
           <label>静的静脈圧</label>
           <setting-sub
             :titles="seitekiJoumyakuAtsu.titles"
@@ -268,7 +130,7 @@
             @onCellClick="onCellClickNotOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedDiversionProgram">
+        <v-ons-list-item expandable v-model:expanded="isExpandedDiversionProgram">
           <label>除水プログラム</label>
           <setting-sub
             :titles="diversionProgram.titles"
@@ -277,7 +139,7 @@
             @onCellClick="onCellClickNotOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedNaInjectionProgram">
+        <v-ons-list-item expandable v-model:expanded="isExpandedNaInjectionProgram">
           <label>Na注入プログラム</label>
           <setting-sub
             :titles="naInjectionProgram.titles"
@@ -286,7 +148,7 @@
             @onCellClick="onCellClickNotOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedDialysisSolConcentrationProgram">
+        <v-ons-list-item expandable v-model:expanded="isExpandedDialysisSolConcentrationProgram">
           <label>透析液濃度プログラム</label>
           <setting-sub
             :titles="dialysisSolConcentrationProgram.titles"
@@ -295,7 +157,7 @@
             @onCellClick="onCellClickNotOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedKetsuryuuRyouProgram">
+        <v-ons-list-item expandable v-model:expanded="isExpandedKetsuryuuRyouProgram">
           <label>血流量・透析液流量プログラム</label>
           <setting-sub
             :titles="ketsuryuuRyouAndTousekiEkiRyuuRyouProgram.titles"
@@ -304,7 +166,7 @@
             @onCellClick="onCellClickNotOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedIHDF">
+        <v-ons-list-item expandable v-model:expanded="isExpandedIHDF">
           <label>I-HDF</label>
           <setting-sub
             :titles="iHdf.titles"
@@ -313,7 +175,7 @@
             @onCellClick="onCellClickNotOffWater"
           ></setting-sub>
         </v-ons-list-item>
-        <v-ons-list-item v-if="isBvUfc" expandable :expanded.sync="isExpandedBVUfc">
+        <v-ons-list-item v-if="isBvUfc" expandable v-model:expanded="isExpandedBVUfc">
           <label>BV-UFC</label>
           <setting-sub
             :titles="bvUfc.titles"
@@ -323,7 +185,7 @@
           ></setting-sub>
         </v-ons-list-item>
         <!-- /* modify by yangzhaokai 2022-12-12 #5502 治療記録＞装置設定のタブの不正 --start */-->
-        <v-ons-list-item  v-if="isDialysisAmountProgram" expandable :expanded.sync="isExpandedTousekiEkiProgram"
+        <v-ons-list-item  v-if="isDialysisAmountProgram" expandable v-model:expanded="isExpandedTousekiEkiProgram"
                           id="tousekiRyouProgramId" @click="changeScroll('tousekiRyouProgramId')">
           <!-- /* modify by yangzhaokai 2022-12-12 #5502 治療記録＞装置設定のタブの不正 --end */-->
           <label>透析量プログラム</label>
@@ -335,7 +197,7 @@
           ></setting-sub>
         </v-ons-list-item>
         <!-- /* modify by yangzhaokai 2022-12-12 #5502 治療記録＞装置設定のタブの不正 --start */-->
-        <v-ons-list-item expandable :expanded.sync="isExpandedMasterJouhou"
+        <v-ons-list-item expandable v-model:expanded="isExpandedMasterJouhou"
                          id="masterJouhouId" @click="changeScroll('masterJouhouId')">
           <!-- /* modify by yangzhaokai 2022-12-12 #5502 治療記録＞装置設定のタブの不正 --end */-->
           <label>マスタ情報</label>
@@ -367,15 +229,17 @@
           />
         </tare-and-off-water-base>
       </v-ons-modal>
-    </div>
+      </div>
+    </template>
   </submenu-base>
 </template>
 
 <script>
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 // #11124 2025.08.26 add 酸素飽和度対応 TDC高村 start
 import { getMachineSo2OptCount } from "@/apis/mst-machine-maintenance";
 // #11124 2025.08.26 add 酸素飽和度対応 TDC高村 end
-import {mapGetters, mapActions, mapMutations} from "vuex";
+import {mapGetters, mapActions, mapMutations} from "@/compat/vue/vuex";
 import SubmenuBase from "@/components/treatment-record/SubmenuBaseComponent";
 import SettingSubComponent from "@/components/treatment-record/submenu/setting/SettingSubComponent";
 import { Setting, CATEGORY } from "@/models/treatment-record/setting/Setting";
@@ -386,7 +250,7 @@ import baseDeviceSetInfoList from "@/components/deviceset-info/base-modules/Base
 // del #10359 編集権限の動作不正 dengshen start
 // import { AUTHORITY_CODES } from "@/constants/userAuthority";
 // del #10359 編集権限の動作不正 dengshen end
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { CODES } from "@/constants/TreatmentRecord.js";
 import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
 
@@ -565,6 +429,7 @@ export default {
   computed: {
     // #11124 2025.08.26 add 酸素飽和度対応 TDC高村 start
     ...mapGetters("user", { facilityCd: "getFacilityCd" }),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     // #11124 2025.08.26 add 酸素飽和度対応 TDC高村 end
     ...mapGetters("treatment-record/common", [
       "getOrdNo",
@@ -625,7 +490,10 @@ export default {
       if (!this.getOrdNo) {
         return;
       }
-      const settingResponse = await this.getTreatmentRecordSetting(this.getOrdNo);
+      const settingResponse = await this.getTreatmentRecordSetting({
+        ordNo: this.getOrdNo,
+        selectedPatId: this.selectedPatId
+      });
 
       const ordTreatCondition = settingResponse.data.map(t => {
         return {
@@ -737,7 +605,7 @@ export default {
      */
     changeScroll(id) {
       setTimeout(function(){
-        document.getElementById(id).scrollIntoView();
+        getScopedElementById(id, this.$el || null)?.scrollIntoView?.();
       },100)
     },
     /* add by yangzhaokai 2022-12-12 #5502 治療記録＞装置設定のタブの不正 --end */
@@ -778,7 +646,10 @@ export default {
      * 実績：装置設定情報取得
      */
     async fetchRstDeviceSetInfo() {
-      const response = await this.getTreatmentRecordRstDeviceSetInfo(this.getOrdNo);
+      const response = await this.getTreatmentRecordRstDeviceSetInfo({
+        ordNo: this.getOrdNo,
+        selectedPatId: this.selectedPatId
+      });
       const data = response.data;
 
       if(data.rst_device_set_info != null){
@@ -817,7 +688,7 @@ export default {
        * see: src/components/deviceset-info/base-modules/BaseDeviceSetInfoList.vue
        */
       this.$nextTick(() => {
-        this.$set(this.offWaterComponentActive, selectedIndex, true);
+        ((this.offWaterComponentActive)[selectedIndex] = true);
         this.setTitle("除水補正");
       });
     },
@@ -833,7 +704,7 @@ export default {
      * 除水補正情報コンポーネントを非表示にする
      */
     hideOffWaterComponent(selectedIndex) {
-      this.$set(this.offWaterComponentActive, selectedIndex, false);
+      ((this.offWaterComponentActive)[selectedIndex] = false);
     },
     /**
      * カテゴリーとjsonKeyから、表示するコンポーネント名を取得する
@@ -976,7 +847,7 @@ export default {
     refresh() {
       // 子機能ボタンエリアの更新
       this.$emit("update");
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       this.init();
@@ -1567,7 +1438,7 @@ export default {
   async created() {
     // #11124 2025.08.26 add 酸素飽和度対応 TDC高村 start
     // apiをコールしてΔSO2を使用する装置件数を取得
-    await getMachineSo2OptCount(this.facilityCd).then(
+    await getMachineSo2OptCount(this.facilityCd, this.selectedPatId).then(
       (response) => {
         this.so2Count = response.data;
       }
@@ -1575,16 +1446,15 @@ export default {
     // #11124 2025.08.26 add 酸素飽和度対応 TDC高村 end
     await this.init();
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // イベント登録
     EventBus.$on("refresh", this.refresh);
   },
-  mounted() {
-  },
+
   /**
    * コンポーネント破棄
    */
-  beforeDestroy() {
+  beforeUnmount() {
     // イベント解除
     EventBus.$off("refresh", this.refresh);
 

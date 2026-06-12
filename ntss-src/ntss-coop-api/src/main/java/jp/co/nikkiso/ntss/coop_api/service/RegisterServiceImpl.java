@@ -22,11 +22,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -51,7 +51,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
 
 import jp.co.nikkiso.ntss.api.model.JournalCreateRequestPayload;
 import jp.co.nikkiso.ntss.api.service.SysDataSetService;
@@ -140,6 +140,7 @@ import static jp.co.nikkiso.ntss.coop_api.utils.JournalConvertConstants.TABLE_MS
 import static jp.co.nikkiso.ntss.coop_api.utils.JournalConvertConstants.TABLE_ORD_MAIN;
 import static jp.co.nikkiso.ntss.coop_api.utils.JournalConvertConstants.TABLE_PAT_PERSONAL_MAIN;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 /**
  * JSON形式データをトランザクションテーブルに反映するサービスクラス。
@@ -459,7 +460,7 @@ public class RegisterServiceImpl implements RegisterService {
   public RegisterServiceImpl() {
     HttpComponentsClientHttpRequestFactory clientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory();
     clientHttpRequestFactory.setReadTimeout(0);
-    clientHttpRequestFactory.setConnectTimeout(0);
+    clientHttpRequestFactory.setConnectionRequestTimeout(0);
     restTemplate = new RestTemplate(clientHttpRequestFactory);
   }
 
@@ -468,6 +469,10 @@ public class RegisterServiceImpl implements RegisterService {
 
   @Autowired
   private MstCoopFacilityDao mstCoopFacilityDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   //add #10901 #10902 mst_coop_apilinkの動作について 20241004 zhaoqi end
 
   /**
@@ -612,7 +617,7 @@ public class RegisterServiceImpl implements RegisterService {
     }
     // ヘッダ作成
     HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+    headers.setContentType(MediaType.APPLICATION_JSON);
     headers.set(headerKey, headerValue);
     EventLogMessage eventLogMessage = new EventLogMessage();
 
@@ -694,7 +699,7 @@ public class RegisterServiceImpl implements RegisterService {
 //    }
 //    // ヘッダ作成
 //    HttpHeaders headers = new HttpHeaders();
-//    headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+//    headers.setContentType(MediaType.APPLICATION_JSON);
 //    headers.set(headerKey, headerValue);
 //    EventLogMessage eventLogMessage = new EventLogMessage();
 //    List<MstCoopFacility.CoopOrdCd> coopOrdCds = new ArrayList<>();
@@ -3052,7 +3057,7 @@ public class RegisterServiceImpl implements RegisterService {
     wheres.append(inStr + "\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(sysCoopJournalDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -3207,11 +3212,11 @@ public class RegisterServiceImpl implements RegisterService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -4714,7 +4719,7 @@ public class RegisterServiceImpl implements RegisterService {
         wheresOrd.append(" coop_ord_no = '" + coopOrdNo + "'\n");
 
         // logCommon設定
-        DataUpdateLogCommonNew logCommonOrd = getLogCommon(ordCoopNoDao, tableNameOrd, wheresOrd, getEventLogMessage());
+        DataUpdateLogCommonNew logCommonOrd = getLogCommon(tableNameOrd, wheresOrd, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResultOrd = logCommonOrd.setInfo();
 
@@ -4829,7 +4834,7 @@ public class RegisterServiceImpl implements RegisterService {
         wheresSys.append(" ctl_no = " + curSysCoopNoCtlNo + "\n");
 
         // logCommon設定
-        DataUpdateLogCommonNew logCommonSys = getLogCommon(sysCoopNoDao, tableNameSys, wheresSys, getEventLogMessage());
+        DataUpdateLogCommonNew logCommonSys = getLogCommon(tableNameSys, wheresSys, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResultSys = logCommonSys.setInfo();
         // DB更新ログ出力ロジック wangzuo End

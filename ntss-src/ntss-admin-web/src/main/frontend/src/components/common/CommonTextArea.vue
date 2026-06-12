@@ -1,5 +1,5 @@
 <template>
-  <div :style="getDefaultHeight()">
+  <div :class="[$attrs.class]" :style="[getDefaultHeight(), $attrs.style]">
     <!-- #9287 テキストエリアの入力で予測変換が保存不可 keyupをblurに変更しました linjunfeng start-->
     <custom-textarea
       :id="idTextarea"
@@ -13,6 +13,7 @@
       :cols="cols"
       :defaultHeight="defaultHeight"
       :isRisize="isRisize"
+      :resizeHeightMargin="resizeHeightMargin"
       @dragstart="whenDragStart"
       @touchstart="onDblTap"
       @touchend="endLongTouch"
@@ -22,7 +23,8 @@
       @input="setContent"
       @mousemove="whenMouseMouve"
       @mouseout="whenMouseOut"
-      v-on="$listeners"
+      @blur="onChildBlur"
+      v-on="childListeners"
     />
     <!-- #9287 テキストエリアの入力で予測変換が保存不可 keyupをblurに変更しました linjunfeng end-->
     <pop-over-fixed-phrase
@@ -36,14 +38,15 @@
 </template>
 
 <script>
-// import MasterSelectorFixedPhrase from "@/components/common/master-selector/MasterSelectorFixedPhrase";
+import MasterSelectorFixedPhrase from "@/components/common/master-selector/MasterSelectorFixedPhrase";
+import $$ from "@/compat/jquery";
 import customTextarea from "@/components/common/custom-form-tags/CustomTextarea";
-import $$ from "jquery";
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 
 export default {
+  inheritAttrs: false,
   components: {
-    "pop-over-fixed-phrase": () => import("@/components/common/master-selector/MasterSelectorFixedPhrase"),
+    "pop-over-fixed-phrase": MasterSelectorFixedPhrase,
     "custom-textarea": customTextarea
   },
 
@@ -94,6 +97,10 @@ export default {
     isRisize: {
       type: Boolean,
       default: true
+    },
+    resizeHeightMargin: {
+      type: Number,
+      default: 5
     }
   },
 
@@ -122,16 +129,59 @@ export default {
   computed: {
     ...mapGetters("account-edit", ["getFontSize"]),
     commentContent() {
-      this.setValueTextArea();
       return this.commentContentCustomTextArea;
-    }
+    },
+    // mergedAttrs() {
+    //   return this.$attrs || {};
+    // },
     //mod FNSI-5639 劉全航 start
-    ,isEdited(){
+    isEdited(){
       return this.content.editValue != this.content.initValue;
-    }
+    },
     //mod FNSI-5639 劉全航 end
+    childListeners() {
+      const listeners = { ...(this.$listeners || {}) };
+      delete listeners.blur;
+      return listeners;
+    }
+  },
+  created() {
+    this.setValueTextArea();
   },
   methods: {
+    resizeTextarea() {
+      if (!this.isRisize) return;
+
+      this.$nextTick(() => {
+        const textareaComponent = this.$refs?.[this.refProp];
+        if (typeof textareaComponent?.resizeTextarea === "function") {
+          textareaComponent.resizeTextarea(true);
+          return;
+        }
+
+        requestAnimationFrame(() => {
+          const element = this.getTextareaElement();
+
+          if (!element) return;
+
+          element.style.height = "0px";
+          element.style.height = `${element.scrollHeight + this.resizeHeightMargin}px`;
+        });
+      });
+    },
+    getTextareaElement() {
+      const textareaRef = this.$refs?.[this.refProp];
+      if (textareaRef?.$el instanceof HTMLTextAreaElement) {
+        return textareaRef.$el;
+      }
+      if (textareaRef instanceof HTMLTextAreaElement) {
+        return textareaRef;
+      }
+      if (this.$el?.querySelector) {
+        return this.$el.querySelector('textarea');
+      }
+      return null;
+    },
     /**
      * 定型文ポップオーバー表示
      */
@@ -155,7 +205,10 @@ export default {
      */
     selectPhrase(data) {
 
-      let element = document.getElementById(this.idTextarea);
+      const element = this.getTextareaElement();
+      if (!element) {
+        return;
+      }
       const currentPos = element.selectionStart;
       //挿入する文字列
       const strInsert = data.text;
@@ -169,6 +222,7 @@ export default {
 
       element.value = newValue;
       this.commentContentCustomTextArea.editValue = newValue;
+      this.resizeTextarea();
       this.$emit("set-content-data", newValue);
     },
 
@@ -186,8 +240,31 @@ export default {
     },
 
     setContent() {
-      const element = document.getElementById(this.idTextarea);
+      const element = this.getTextareaElement();
+      if (!element) {
+        return;
+      }
       this.$emit("set-content-data", element.value);
+    },
+
+    invokeParentListener(eventName, event) {
+      const handler = this.$listeners?.[eventName];
+      if (typeof handler === "function") {
+        handler(event);
+        return;
+      }
+      if (Array.isArray(handler)) {
+        handler.forEach((fn) => {
+          if (typeof fn === "function") {
+            fn(event);
+          }
+        });
+      }
+    },
+
+    onChildBlur(event) {
+      this.setContent();
+      this.invokeParentListener("blur", event);
     },
 
     whenMouseMouve() {
@@ -249,16 +326,29 @@ export default {
     },
 
     getDefaultHeight() {
-      this.$nextTick(() => {
-        if (this.defaultHeight !== null && (this.commentContentCustomTextArea.initValue === null || this.commentContentCustomTextArea.initValue === "" ||
-          this.commentContentCustomTextArea.editValue === null || this.commentContentCustomTextArea.editValue === "") ||
-          this.isSetStyleHeight) {
-          this.isSetStyleHeight = true;
-          return 'height: 100% !important';
-        } else {
-          return '';
-        }
-      });
+      // Vue2 では render 中の $nextTick 内で高さフラグを更新していたが、
+      // Vue3 では render 中の状態更新が再描画ループになるため、表示判定のみ行う。
+      if (this.defaultHeight !== null && (
+        this.commentContentCustomTextArea.initValue === null ||
+        this.commentContentCustomTextArea.initValue === "" ||
+        this.commentContentCustomTextArea.editValue === null ||
+        this.commentContentCustomTextArea.editValue === "" ||
+        this.isSetStyleHeight
+      )) {
+        return "height: 100% !important";
+      }
+      return "";
+    },
+    updateStyleHeightState() {
+      // Vue2 の「一度高さを 100% にしたら維持する」意味だけを render 外で維持する。
+      if (this.defaultHeight !== null && (
+        this.commentContentCustomTextArea.initValue === null ||
+        this.commentContentCustomTextArea.initValue === "" ||
+        this.commentContentCustomTextArea.editValue === null ||
+        this.commentContentCustomTextArea.editValue === ""
+      )) {
+        this.isSetStyleHeight = true;
+      }
     },
     setValueTextArea() {
       if (this.content !== null) {
@@ -278,20 +368,21 @@ export default {
         this.commentContentCustomTextArea.initValue = null;
         this.commentContentCustomTextArea.editValue = null;
       }
+      this.updateStyleHeightState();
+      this.resizeTextarea();
     }
   },
 
   watch: {
-    content() {
-      this.setValueTextArea();
+    content: {
+      handler() {
+        this.setValueTextArea();
+      },
+      deep: true
     },
 
     getFontSize() {
-      if (this.isRisize) {
-        const element = document.getElementById(this.idTextarea);
-        element.style.height = "0px";
-        element.style.height = `${element.scrollHeight + 5}px`;
-      }
+      this.resizeTextarea();
     }
   }
 };

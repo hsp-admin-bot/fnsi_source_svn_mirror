@@ -3,16 +3,18 @@ package jp.co.nikkiso.ntss.admin_web.security;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -33,24 +35,26 @@ import java.util.List;
  */
 @Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = false)
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
+@EnableMethodSecurity(prePostEnabled = false)
+public class SecurityConfig {
 
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  protected void configure(HttpSecurity http) throws Exception {
-
-    // 認可の設定
+  @Bean
+  SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
     http
-      .authorizeRequests()
-      .antMatchers(Uri.LOGIN).permitAll()
-      .anyRequest().authenticated()
-      .and()
-      .exceptionHandling()
-      .authenticationEntryPoint(authenticationEntryPoint());
+        .authenticationManager(authenticationManager)
+        .authenticationProvider(authenticationProvider())
+        .authorizeHttpRequests(authorize -> authorize
+            .requestMatchers(Uri.LOGIN).permitAll()
+            .anyRequest().authenticated())
+        .exceptionHandling(exceptionHandling -> exceptionHandling
+            .authenticationEntryPoint(authenticationEntryPoint()));
 
+    return http.build();
+  }
+
+  @Bean
+  AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+    return authenticationConfiguration.getAuthenticationManager();
   }
 
   /**
@@ -95,12 +99,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
   /**
    * 認証フィルターを返す.
-   * @throws Exception
    */
   @Bean
-  UsernamePasswordAuthenticationFilter authenticationFilter() throws Exception {
+  UsernamePasswordAuthenticationFilter authenticationFilter(AuthenticationManager authenticationManager) {
     NtssAuthenticationFilter filter = new NtssAuthenticationFilter();
-    filter.setAuthenticationManager(authenticationManager());
+    filter.setAuthenticationManager(authenticationManager);
     filter.setFilterProcessesUrl(Uri.LOGIN);
     filter.setAuthenticationSuccessHandler(authenticationSuccessHandler());
     filter.setAuthenticationFailureHandler(authenticationFailureHandler());

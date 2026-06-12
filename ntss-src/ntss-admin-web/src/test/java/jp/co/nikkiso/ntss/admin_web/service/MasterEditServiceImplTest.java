@@ -22,7 +22,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
@@ -66,25 +66,25 @@ public class MasterEditServiceImplTest {
   /**
    * マスタ定義のMockBean.
    */
-  @MockBean
+  @MockitoBean
   private SysMasterDefineDao sysMasterDefineDao;
 
   /**
    * 汎用マスタメンテナンスDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MasterMaintenanceGenericDao mstMaintenaceGenericDao;
 
   /**
    * 選択肢マスタのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstSelectorDao mstSelectorDao;
 
   /**
    * 参照型コンボのサービスクラスのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private ReferenceComboService referenceComboService;
 
   /**

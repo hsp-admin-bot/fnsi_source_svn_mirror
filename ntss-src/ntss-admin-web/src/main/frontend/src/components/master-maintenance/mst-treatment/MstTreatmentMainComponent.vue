@@ -340,8 +340,8 @@
     </div>
     <!-- モニタ表示設定 -->
     <list-selector
-      :key="componentKey('モニタ表示設定')"
-      :visible.sync="isDispMonitorItemVisible"
+      :key="dispMonitorItemSelectorKey"
+      v-model:visible="isDispMonitorItemVisible"
       v-bind="dispMonitorItemSelectorData"
       :target="selectorTarget('monitorItemSelector')"
       :sort="true"
@@ -349,8 +349,8 @@
     />
     <!-- トレンドグラフモニタ設定 -->
     <list-selector
-      :key="componentKey('トレンドグラフモニタ設定')"
-      :visible.sync="isTrendGraphMonitorItemVisible"
+      :key="trendGraphMonitorItemSelectorKey"
+      v-model:visible="isTrendGraphMonitorItemVisible"
       v-bind="treandGraphMonitorItemSelectorData"
       :target="selectorTarget('treandGraphMonitorItemSelector')"
       :sort="true"
@@ -361,9 +361,10 @@
 
 <!-- スクリプト処理 -->
 <script>
-import $$ from "jquery";
-import {EventBus} from "@/eventBus";
-import { mapGetters, mapActions } from "vuex";
+import $$ from "@/compat/jquery";
+
+import {EventBus} from "@/compat/vue/event-bus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import {
   // 定数
   DIAL_COND_ID,
@@ -376,15 +377,18 @@ import {
   mstTreatmentCondSettingDefine
 } from "@/constants/mstTreatmentDefine.js";
 import { ApiHelper } from "@/apis/AxiosHelper.js";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { createItemListData } from "@/functions/for-componet/ListSelector.js";
+import { getKendoWidgetElementId, getKendoWidgetValue } from "@/functions/common/KendoFunctions";
 // 共通コンポーネント
 import listSelector from "@/components/common/list-selector/ListSelector.vue";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 //#5590 2023/04/18 ×を常に表示するように修正 張博 start
 import DateInput from "@/components/common/DateInput.vue";
 //#5590 2023/04/18 ×を常に表示するように修正 張博 end
-import isEqual from "lodash/isEqual";
+import isEqual from "@/compat/collections/lodash/isEqual";
+import { getModalBodyElement, getScopedElement, getScopedElementById,
+  getScopedJQuery as createScopedJQuery} from "@/functions/common/LayoutMeasureHelper";
 export default {
   components: {
     "list-selector": listSelector,
@@ -451,6 +455,13 @@ export default {
       // 選択肢に表示するモニタ項目一覧
       dispDLGraphItemList: [],
 
+      // モニタ表示設定リスト選択コンポーネントの再生成キー
+      // Vue2 の「選択ダイアログを開くたびに状態を初期化する」意図だけを残し、
+      // 詳細画面の checkbox 操作など通常の再描画では再生成しない。
+      dispMonitorItemSelectorKey: "モニタ表示設定",
+      // トレンドグラフモニタ設定リスト選択コンポーネントの再生成キー
+      trendGraphMonitorItemSelectorKey: "トレンドグラフモニタ設定",
+
       inHospAStartdate: "",
       initHospAStartdate: "",
       inHospBStartdate: "",
@@ -483,8 +494,7 @@ export default {
       // mod 障害No.175 治療方法マスタ 王 start
       //装置モード選択リスト 取得
       let mstDeviceMode = this.getColumns.find(
-        col => col.field === "deviceMode"
-      ).values;
+        col => col.field === "deviceMode").values;
 
       mstDeviceMode = mstDeviceMode.filter((item)=>
        item.value !== 4 && item.value !== 5
@@ -498,8 +508,7 @@ export default {
     graphTimeScaleList() {
       //グラフ時間幅選択リスト 取得
       const graphTimeScaleList = this.getColumns.find(
-        col => col.field === "graphTimeScale"
-      ).values;
+        col => col.field === "graphTimeScale").values;
 
       return graphTimeScaleList;
     },
@@ -543,8 +552,8 @@ export default {
     },
   },
   created() {
-    this.inHospAStartdate = this.getEditRecord.inHospAStartdate ? moment(this.getEditRecord.inHospAStartdate).format("YYYY-MM-DD") : "";
-    this.inHospBStartdate = this.getEditRecord.inHospBStartdate ? moment(this.getEditRecord.inHospBStartdate).format("YYYY-MM-DD") : "";
+    this.inHospAStartdate = this.getEditRecord.inHospAStartdate ? dayjs(this.getEditRecord.inHospAStartdate).format("YYYY-MM-DD") : "";
+    this.inHospBStartdate = this.getEditRecord.inHospBStartdate ? dayjs(this.getEditRecord.inHospBStartdate).format("YYYY-MM-DD") : "";
     this.initHospAStartdate = this.inHospAStartdate;
     this.initHospBStartdate = this.inHospBStartdate;
     // 透析条件データを取得
@@ -628,16 +637,13 @@ export default {
       this.setDeviceMode(shownDeviceMode);
     }
 
-    $$(".device-mode").kendoDropDownList({
-      //使用する値をそれぞれ設定
+    this.scopedJQuery()(".device-mode").kendoDropDownList({
       dataSource: this.deviceModeList,
       dataTextField: "text",
       dataValueField: "value",
-      //画面に表示する値を設定
       value: shownDeviceMode,
-      //選択した装置モードをマスタに登録
-      change() {
-        vue.changeDeviceMode(this.value());
+      change(e) {
+        vue.changeDeviceMode(getKendoWidgetValue(e?.sender || this));
       }
     });
 
@@ -654,16 +660,13 @@ export default {
       this.setGraphTimeScale(shownGraphTimeScale);
     }
 
-    $$(".graph-time-scale").kendoDropDownList({
-      //使用する値をそれぞれ設定
+    this.scopedJQuery()(".graph-time-scale").kendoDropDownList({
       dataSource: this.graphTimeScaleList,
       dataTextField: "text",
       dataValueField: "value",
-      //画面に表示する値を設定
       value: shownGraphTimeScale,
-      //選択したグラフ時間幅をマスタに登録
-      change() {
-        vue.changeGraphTimeScale(this.value());
+      change(e) {
+        vue.changeGraphTimeScale(getKendoWidgetValue(e?.sender || this));
       }
     });
 
@@ -736,7 +739,7 @@ export default {
             dataValueField: "reportCd",
             value: selectedValue,
             change: function(e) {
-              const changeElementId = e.sender.element[0].id;
+              const changeElementId = getKendoWidgetElementId(e?.sender || this);
               //add 治療方法マスタ 2・実績確定時自動印刷用帳票の指定("reportAct") 孔s
               switch (changeElementId) {
                 case "report" :
@@ -745,7 +748,7 @@ export default {
                 case "reportAw" :
                 case "reportDev" :
                 case "reportAct" :
-                  vue.changeReportId(changeElementId, this.value());
+                  vue.changeReportId(changeElementId, getKendoWidgetValue(e?.sender || this));
                   break;
                 default:
                   // console.log("期待したい要素の変更を受け付けました.", changeElementId);
@@ -840,7 +843,7 @@ export default {
 
       // モニタ表示項目
       const expItemNos = ["52","53","82","83","84","87","89","90","91","92","93","94"];
-      let sysMonitorList = sysMonitorMonitorItem.filter( s => s.is_disp === '1' && !expItemNos.includes(s.moni_data_no) )
+      let sysMonitorList = sysMonitorMonitorItem.filter( s => s.is_disp === '1' && !expItemNos.includes(s.moni_data_no))
         .map( item => {
             return {
                 moni_data_no: item.moni_data_no,
@@ -859,9 +862,8 @@ export default {
               moni_data_name: mst.vital_monitor_item_name
             })
           }
-        }
-      );
-      let sysMonitorListZ = sysMonitorItem2.filter( s => s.is_disp === '1' )
+        });
+      let sysMonitorListZ = sysMonitorItem2.filter( s => s.is_disp === '1')
         .map(
           item => {
             return {
@@ -907,6 +909,9 @@ export default {
     // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法マスタ 20240105 linjunfeng end
   },
   methods: {
+    scopedJQuery() {
+      return createScopedJQuery(this.$el || this, $$) || $$;
+    },
     ...mapActions("master-maintenance", ["setEditRecord", "findRecordList"]),
     /**
      * SubModalのアクション
@@ -924,7 +929,7 @@ export default {
           obj2[key] = obj2[key].replaceAll(/\s/g, "")
         }
         if (key === "inHospAStartdate" || key === "inHospBStartdate") {
-          if (moment(obj1[key]).format('YYYYMMDD') !== moment(obj2[key]).format('YYYYMMDD')) {
+          if (dayjs(obj1[key]).format('YYYYMMDD') !== dayjs(obj2[key]).format('YYYYMMDD')) {
             return false;
           }
         } else if (key === "monitorDataItemScreen" || key === "monitorDataItemPrint") {
@@ -1544,13 +1549,14 @@ export default {
       return val;
     },
     /**
-     * @description コンポーネントを再利用させないためのkey属性値(現在日時+文字列)
-     * @summary コンポーネントの再利用によって選択項目やフィルタに設定した値が残ったままになるのを防ぐ
+     * @description リスト選択コンポーネントを再生成するための key 属性値
+     * @summary Vue2 では「選択ダイアログを開く時に状態を初期化する」目的だったため、
+     *          Vue3 では通常の再描画ごとに key を変えず、開く直前だけ更新する。
      * @param {String} str 任意の文字列 ※コンポーネントごとに変えること
-     * @returns {String} YYYYMMDDHHmmssSSS
+     * @returns {String} YYYYMMDDHHmmssSSS + str
      */
-    componentKey(str) {
-      return `${moment().format("YYYYMMDDHHmmssSSS")}${str}`;
+    createComponentKey(str) {
+      return `${dayjs().format("YYYYMMDDHHmmssSSS")}${str}`;
     },
     /**
      * @description 選択されたモニタ表示項目を確定する.
@@ -1604,15 +1610,17 @@ export default {
      * @description モニタ表示項目選択処理
      */
     listSelectMonitor() {
-      this.isDispMonitorItemVisible = true;
       this.dispMonitorItemSelectorData = this.createDispMonitorSelectorData();
+      this.dispMonitorItemSelectorKey = this.createComponentKey("モニタ表示設定");
+      this.isDispMonitorItemVisible = true;
     },
     /**
      * @description トレンドグラフモニタ表示項目選択処理
      */
     listSelectTrendGraphMonitor() {
-      this.isTrendGraphMonitorItemVisible = true;
       this.treandGraphMonitorItemSelectorData = this.createTrendGraphMonitorSelectorData();
+      this.trendGraphMonitorItemSelectorKey = this.createComponentKey("トレンドグラフモニタ設定");
+      this.isTrendGraphMonitorItemVisible = true;
     },
     /**
      * @description 帳票グラフ設定
@@ -1621,10 +1629,10 @@ export default {
       this.showReportGraphSettingSubModal();
       // add redmine 5077 スマホ、帳票グラフ設定モーダルの下部に余白が生じる 孔 start
       this.$nextTick(() => {
-        const body = $$(".sub-modal-body")[0]
-        const container = $$(".sub-modal-container")[0]
-        const header = $$(".sub-modal-header")[0]
-        const footer = $$(".sub-modal-footer")[0]
+        const body = this.scopedJQuery()(".sub-modal-body")[0]
+        const container = this.scopedJQuery()(".sub-modal-container")[0]
+        const header = this.scopedJQuery()(".sub-modal-header")[0]
+        const footer = this.scopedJQuery()(".sub-modal-footer")[0]
         body.style.height = (container.offsetHeight - header.offsetHeight - footer.offsetHeight) + "px"
       });
       // add redmine 5077 スマホ、帳票グラフ設定モーダルの下部に余白が生じる 孔 end
@@ -1680,11 +1688,14 @@ export default {
      */
     calculateWindowsSize() {
       // モーダルのメインエリアの要素取得.
-      const elmModalBody = document.getElementsByClassName("modal-body")[0];
+      const elmModalBody = getModalBodyElement(this.$el || this);
       // モニタ表示設定、トレンドグラフ表示設定ボタンを表示しているエリアの要素取得.
-      const elmTreatmentButtonArea = document.getElementsByClassName("treatment-button-area")[0];
+      const elmTreatmentButtonArea = getScopedElement(this.$el || this, ".treatment-button-area");
       // テーブルエリアの要素取得
-      const elmTreatmentArea = document.getElementById("treatment-area-div");
+      const elmTreatmentArea = getScopedElementById("treatment-area-div", this.$el || this);
+      if (!elmModalBody || !elmTreatmentButtonArea || !elmTreatmentArea) {
+        return;
+      }
       // テーブルエリアの高さを調整
       elmTreatmentArea.style.height = (elmModalBody.offsetHeight - elmTreatmentButtonArea.offsetHeight - 10) + "px";
     },
@@ -1774,9 +1785,9 @@ ons-col .item-wrapper {
 }
 
 .custom-treatment-area .k-textbox,
-.custom-treatment-area >>> .k-input,
-.custom-treatment-area >>> .k-widget,
-.custom-treatment-button-area >>> ons-button{
+.custom-treatment-area :deep(.k-input),
+.custom-treatment-area :deep(.k-widget),
+.custom-treatment-button-area :deep(ons-button){
   font-size: unset;
 }
 .treatment-button-area-button {
@@ -1785,7 +1796,7 @@ ons-col .item-wrapper {
   margin-right:10px;
 }
 @media screen and (max-width: 869px) {
-  .custom-treatment-button-area >>> ons-button{
+  .custom-treatment-button-area :deep(ons-button){
     width: 30%;
     min-width: 12em;
   }

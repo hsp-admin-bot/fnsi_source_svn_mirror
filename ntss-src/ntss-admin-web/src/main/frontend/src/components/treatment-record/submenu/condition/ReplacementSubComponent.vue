@@ -11,14 +11,22 @@
           </label>
         </v-ons-col>
         <v-ons-col class="value d-flex align-items-center">
-          <show-selected-item
-            :propInitValue="initModel.replacement.name"
-            :propEditValue="inputModel.replacement.name"
-            propBackgroundColor="#f7f7f7"
-            style="min-width: 11em; width: 100%; max-width: 13em;"
+          <common-master-selector
+            :masterType="MasterType.MEDICATION_TREATMENT_CLASSTYPE_RECORD"
+            :initItem="replacementSelectorInitItem"
+            :editItem="replacementSelectorEditItem"
+            :patientId="selectedPatId"
+            :facilityCd="getFacilityCd"
+            :hasChangedOption="true"
+            :extraParams="replacementSelectorExtraParams"
+            :dialysisState="getDialysisState"
+            :changeOptionMode="'nameAndUnit'"
+            :selectedItemClass="'com-basic-sub-input'"
+            :backgroundColor="'#f7f7f7'"
+            :btnClass="'com-basic-sub-btn'"
+            :btnDisabled="treatCondition || !isShared"
+            @popover-return="updateInput('replacement', $event)"
           />
-          <com-master-selector name="fluid-replacement" labelName="補液" :isDisabled="treatCondition ||!isShared" :readMasterData="getMaster" :masterDefine="masterDef" v-model="inputModel.replacement" @changeUnit="onChangeUnit"  @changeDecPoint="onChangeDecPoint" v-show="!isMobileBrowser" />
-          <com-master-selector name="fluid-replacement" labelName="補液" :isDisabled="treatCondition ||!isShared" :readMasterData="getMaster" :masterDefine="masterDef" v-model="inputModel.replacement" @changeUnit="onChangeUnit"  @changeDecPoint="onChangeDecPoint" v-show="isMobileBrowser" />
         </v-ons-col>
       </v-ons-row>
       <com-number-input name="fluid-replacement-amount" labelName="補液量" unitName="L" input-min-width="10em" :step=0.1 :inputMin=0.0 :inputMax=999.0 :inputType='"number"' v-model="inputModel.amount" :initValue="initModel.amount" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared" :class="isUseObj[20]?'column-ground-color':null"/>
@@ -31,7 +39,7 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import CommonNumberInputComponent from "@/components/treatment-record/submenu/common/CommonNumberInputComponent";
 import CommonRadioOff from "@/components/treatment-record/submenu/common/CommonRadioOffComponent";
 import CommonMasterSelectorComponent from "@/components/common/master-selector/TreatmentRecordSelectorComponent";
@@ -44,18 +52,24 @@ import {
 import { medicineDialysateReplacement } from "@/components/common/master-selector/MasterSelectorDefinitions";
 import { CODES } from "@/constants/TreatmentRecord";
 import { Replacement } from "@/models/treatment-record/condition/Replacement";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 import { getAuthorized, getPrefix } from "@/functions/common/CommonFunctions.js";
 import { medicineAllergy } from "@/functions/mst/MstGetters.js";
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
+import { Master } from "@/models/common/master-selector-condition/Master";
 export default {
   components: {
     "com-number-input": CommonNumberInputComponent,
     "com-radio": CommonRadioOff,
     "com-master-selector": CommonMasterSelectorComponent,
-    "show-selected-item": CustomDivShowSelectedItem
+    "show-selected-item": CustomDivShowSelectedItem,
+    "common-master-selector": commonMasterSelector
   },
+  emits: ["update:modelValue"],
   props: {
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: Replacement
     },
     columnList: {
@@ -74,13 +88,16 @@ export default {
       },
       initModel: new Replacement(),
       initFlag: 1,
-      isUseObj: {}
+      isUseObj: {},
+      MasterType,
+      extraParamsList:{},
+      receiptUnitForCd: null
     };
   },
   computed: {
     ...mapGetters("pat-info", ["selectedPatId"]),
     ...mapGetters("user", ["getFacilityCd"]),
-    ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
+    ...mapGetters("treatment-record/common", ["getSharedFacilityCd", "getTreatDate", "getDialysisState"]),
     isShared() {
       return this.getFacilityCd === this.getSharedFacilityCd;
     },
@@ -92,9 +109,53 @@ export default {
       var data = Number(BigNumber(10).exponentiatedBy(BigNumber(num).negated()).valueOf());
       return data;
     },
+    replacementSelectorInitItem() {
+      return {
+        text:
+          this.initModel && this.initModel.replacement && this.initModel.replacement.name
+            ? this.initModel.replacement.name
+            : "",
+        value:
+          this.initModel && this.initModel.replacement && this.initModel.replacement.cd != null
+            ? this.initModel.replacement.cd
+            : null,
+        unit:
+          this.initModel && this.initModel.unit != null && this.initModel.unit !== ""
+            ? String(this.initModel.unit)
+            : null,
+        unitSecond:
+          this.initModel && this.initModel.useCountUnit != null && this.initModel.useCountUnit !== ""
+            ? String(this.initModel.useCountUnit)
+            : null
+      };
+    },
+    replacementSelectorEditItem() {
+      return {
+        text:
+          this.inputModel && this.inputModel.replacement && this.inputModel.replacement.name
+            ? this.inputModel.replacement.name
+            : "",
+        value:
+          this.inputModel && this.inputModel.replacement && this.inputModel.replacement.cd != null
+            ? this.inputModel.replacement.cd
+            : null,
+        unit:
+          this.inputModel && this.inputModel.unit != null && this.inputModel.unit !== ""
+            ? String(this.inputModel.unit)
+            : null,
+        unitSecond:
+          this.receiptUnitForCd != null && this.receiptUnitForCd !== "" ? this.receiptUnitForCd : null
+      };
+    },
+    replacementSelectorExtraParams() {
+      const extra = Object.assign({}, this.extraParamsList || {});
+      extra.receiptUnit = this.initModel.useCountUnit;
+      extra.compareReceiptUnit = true;
+      return extra;
+    },
     // add FNSI-redmine3855 徐 start
     isMobileBrowser() {
-      return /android|iphone|ipad/i.test(navigator.userAgent);
+      return /android|iphone|ipad/i.test(((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || ""));
     },
     // add FNSI-redmine3855 徐 end
     //add FNSI修正 結合バッグ20 房 start
@@ -113,13 +174,35 @@ export default {
     //add FNSI修正 結合バッグ20 房 end
   },
   watch: {
-    value() {
-      this.inputModel = this.value;
-      Object.assign(this.initModel, this.value);
+    modelValue() {
+      this.inputModel = this.modelValue;
+      Object.assign(this.initModel, this.modelValue);
+      this.receiptUnitForCd =
+        this.inputModel && this.inputModel.useCountUnit != null && this.inputModel.useCountUnit !== ""
+          ? String(this.inputModel.useCountUnit)
+          : null;
+      this.extraParamsList = {
+        treatDate: this.getTreatDate,
+        rstInfo: {
+          rstName: this.inputModel.replacement.name,
+          rstUnit: this.inputModel.useCountUnit
+        },
+        actualName:
+          (this.initModel && this.initModel.replacement && this.initModel.replacement.name
+            ? this.initModel.replacement.name
+            : (this.inputModel && this.inputModel.replacement && this.inputModel.replacement.name
+              ? this.inputModel.replacement.name
+              : "")),
+        classType: 3,
+        // 初期値が削除・非表示でも SQL INIT で拾えるように渡す
+        initValue: this.initModel.replacement.cd,
+        // 補液は通常薬剤として扱う
+        medicineType: 1
+      };
     },
     inputModel: {
       handler: function(val) {
-        this.$emit("input", val);
+        this.$emit("update:modelValue", val);
       },
       deep: true
     },
@@ -128,9 +211,11 @@ export default {
         return;
       }
       const items = this.columnList.filter(e => e.category_no === 4);
-      items?.[0]?.items?.forEach((item) => {
-        this.isUseObj[item.ctl_no] = item.is_use === '0';
-      });
+      if (items && items[0] && items[0].items) {
+        items[0].items.forEach((item) => {
+          this.isUseObj[item.ctl_no] = item.is_use === "0";
+        });
+      }
     }
   },
   methods: {
@@ -144,7 +229,7 @@ export default {
       // ]);
       let medicineList = Promise.all([
         getMedicineAllTabooAllergyFilterByType(this.selectedPatId, CODES.MEDICINE_CLASS.REPLACEMENT.classType),
-        sendRequestGetMstMedicineClass(),
+        sendRequestGetMstMedicineClass(this.selectedPatId),
         getMedicineAllTabooAllergyFilterByType(this.selectedPatId, CODES.MEDICINE_CLASS.DIALYSATE.classType)
       ])
       await medicineList.then(async (response)=>{
@@ -198,18 +283,34 @@ export default {
       return getAuthorized(pageCd, itemCd);
     },
    //#10359 mod 編集権限の動作不正 2024-06-05 卓 end
+    updateInput(fieldKey, data = {}){
+      const master = new Master(data.value, data.text);
+      this.inputModel[fieldKey] = master;
+      this.inputModel.unit = data.unit != null && data.unit !== "" ? String(data.unit) : null;
+      this.receiptUnitForCd =
+        data.unitSecond != null && data.unitSecond !== "" ? String(data.unitSecond) : null;
+      this.inputModel.useCountUnit = this.receiptUnitForCd;
+      this.inputModel.decPoint =
+        data.unitDecimalPointSecond != null && data.unitDecimalPointSecond !== ""
+          ? data.unitDecimalPointSecond
+          : data.unitDecimalPoint;
+    },
   }
 };
 </script>
 
 <style scoped>
+:deep(ons-checkbox.checkbox) {
+  margin-top: 0;
+}
+
 .column-ground-color {
   background-color: #D3D3D3;
   min-width: fit-content;
 }
 
 /* column-ground-color をあてた場合、黒背景だと文字が見えなくなる為、文字色(白)を解除する */
-.column-ground-color >>> label {
+.column-ground-color :deep(label) {
   color: unset !important;
 }
 .text-color {
@@ -219,5 +320,14 @@ export default {
   overflow: auto;
   padding: 0.2em 0px 0.2em 0;
   width: 100%;
+}
+:deep(.com-basic-sub-btn) {
+  margin-left: 5px
+}
+:deep(.com-basic-sub-input) {
+  min-width: 11em;
+  width: 100%;
+  max-width: 13em;
+  background-color: #f7f7f7;
 }
 </style>

@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.service.treatmentRecord.TreatmentRecordResultMergeService;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
@@ -10,9 +10,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -65,7 +65,7 @@ public class TreatmentRecordResultMergeResourceTest extends AbstractResourceTest
   /**
    * 治療記録（実績マージ）Service.
    */
-  @MockBean
+  @MockitoBean
   private TreatmentRecordResultMergeService treatmentRecordResultMergeService;
 
   private TreatmentRecordResultMerge getTreatmentRecordResultMerge(Long ordNo, Long patId, String hospPatId, String patName) {
@@ -147,7 +147,7 @@ public class TreatmentRecordResultMergeResourceTest extends AbstractResourceTest
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/result-merge", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordResultMergeService, times(1)).getResultMergeList(ordNo, facilityCd);
@@ -280,7 +280,7 @@ public class TreatmentRecordResultMergeResourceTest extends AbstractResourceTest
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/result-merge", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordResultMergeService, times(1)).getResultMergeList(ordNo, facilityCd);
@@ -315,7 +315,7 @@ public class TreatmentRecordResultMergeResourceTest extends AbstractResourceTest
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/result-merge", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordResultMergeService, times(1)).getResultMergeList(ordNo, facilityCd);
@@ -344,7 +344,7 @@ public class TreatmentRecordResultMergeResourceTest extends AbstractResourceTest
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/treatment-record/{ord_no}/result-merge", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordResultMergeService, times(1)).getResultMergeList(ordNo, facilityCd);
@@ -375,7 +375,7 @@ public class TreatmentRecordResultMergeResourceTest extends AbstractResourceTest
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/result-merge", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordResultMergeService, times(1)).updateResultMerge(anyLong(), any());
@@ -403,7 +403,7 @@ public class TreatmentRecordResultMergeResourceTest extends AbstractResourceTest
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.put("/api/treatment-record/{ord_no}/result-merge", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(treatmentRecordResultMergeService, times(1)).updateResultMerge(anyLong(), any());

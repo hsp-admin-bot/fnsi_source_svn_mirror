@@ -46,13 +46,13 @@
         </div>
         <div v-if="getPatEventRecord && getPatEventRecord.useType !== 3">
           <div class="tab-area" v-if="getPatEventRecord && getPatEventRecord.subCategoryCd > 0">
-            <component :is="'pat-event-tab-item'" :input-start-date="computedCreatedDate" keep-alive ref="tab" />
+            <component :is="'pat-event-tab-item'" :input-start-date="computedCreatedDate" :key="itemKey" keep-alive ref="tab" />
           </div>
         </div>
         <div v-if="getPatEventRecord && getPatEventRecord.useType !== 3">
           <div v-for="(item, index) in getPatEventInputParams" :key="index">
-            <table class="card-table" :style="viewStyles(item.format_class)">
-              <label style="display:none">{{index}}</label>
+            <table class="card-table" :style="viewStyles(item.format_class)" :data-index="index">
+              <tbody>
               <tr>
                 <td>
                   <div v-if="item.format_class === 0">
@@ -153,6 +153,8 @@
                   </div>
                 </td>
               </tr>
+            
+              </tbody>
             </table>
           </div>
           <!--add FNSI-改修内容患者イベントテンプレートマスタで内容が空白のテンプレートを作成するときの患者イベント画面の表示修正 任 start-->
@@ -199,7 +201,7 @@
           "
           class="button registration-btn red-btn btn4-alert"
           style="width: 6em; margin-left: 0.5em"
-          :style="!getIsOtherFacilitys ? { 'opacity': getItemAuthorized('PatEvent', 'item_patevent_del') ? 1 : 0.6 } : {}"
+          :style="!getIsOtherFacilitys ? { opacity: getItemAuthorized('PatEvent', 'item_patevent_del') ? 1 : 0.6 } : {}"
           @click="remove()"
           :disabled="
             isReadOnly ||
@@ -225,7 +227,7 @@
             getIsOtherFacilitys
           "
           style="margin-left: 0.5em"
-          :style="!getIsOtherFacility ? { 'opacity': hasTreatmentRecordAuthorityDel ? 1 : 0.6 } : {}"
+          :style="!getIsOtherFacility ? { opacity: hasTreatmentRecordAuthorityDel ? 1 : 0.6 } : {}"
           >削除</v-ons-button
         >
       </div>
@@ -252,7 +254,9 @@
           id="uploadFile"
           accept=".pdf"
           :disabled="
-            !getItemAuthorized('PatEvent', 'default_authority')
+            !getItemAuthorized('PatEvent', 'default_authority') ||
+            isOtherFacilityDisabled ||
+            getIsOtherFacilitys
           "
           @change="getFile($event)"
           hidden="hidden"
@@ -267,9 +271,7 @@
           @click="getNewTemplate"
           style="margin-left: 0.5em"
           :disabled="
-            !getItemAuthorized('PatEvent', 'default_authority') ||
-            isOtherFacilityDisabled ||
-            getIsOtherFacilitys
+            !getItemAuthorized('PatEvent', 'default_authority')
           "
           >テンプレート取得</v-ons-button
         >
@@ -317,7 +319,8 @@
             getIsShowSomeThing ||
             !getItemAuthorized('PatEvent', 'default_authority') ||
             isOtherFacilityDisabled ||
-            getIsOtherFacilitys || getReportIsDel === '1'
+            getIsOtherFacilitys ||
+            getReportIsDel === '1'
           "
           style="margin-left: 0.5em"
           >
@@ -343,7 +346,6 @@
           "
           >編集</v-ons-button
         >
-        <!-- mod #12462 患者情報共有 20260326 start -->
         <v-ons-checkbox
           v-if="getViewMode === false && !isOtherFacilityDisabled && !getIsOtherFacilitys"
           v-model="isNotification"
@@ -357,18 +359,17 @@
           通知する
         </span>
         <v-ons-button
-          v-if="getViewMode === false" && !isOtherFacilityDisabled && !getIsOtherFacilitys
+          v-if="getViewMode === false && !isOtherFacilityDisabled && !getIsOtherFacilitys"
           class="button registration-btn btn1-execute"
           @click="registration()"
           style="margin-left: 0.5em"
           :disabled="!hasBasicAuthority || isOtherFacilityDisabled || getIsOtherFacilitys"
           >保存</v-ons-button
         >
-        <!-- mod #12462 患者情報共有 20260326 end -->
         <v-ons-popover
           cancelable
           :class="[fontSizeSet, 'user-menu-item-popover report-list-popover']"
-          :visible.sync="popoverPrintVisible"
+          v-model:visible="popoverPrintVisible"
           :target="popoverPrintTarget"
           :direction="popoverPrintDirection"
         >
@@ -386,8 +387,8 @@
             class="printer-selection"
           >
           <!-- mod #12107 帳票印刷失敗通知が行われない limingzhe 20251114 end -->
-            <template v-for="item in getMstPrinters">
-              <option :key="item.printerCd" :value="item.printerCd">{{ item.dispPrinterName }}</option>
+            <template v-for="item in getMstPrinters" :key="item.printerCd">
+              <option :value="item.printerCd">{{ item.dispPrinterName }}</option>
             </template>
           </v-ons-select>
           <div class="button-area flex-container" style="flex-direction: row-reverse;">
@@ -403,7 +404,7 @@
     </div>
     <message-dialog
       v-if="messageDialogInfo.isDialogVisible"
-      :visible.sync="messageDialogInfo.isDialogVisible"
+      v-model:visible="messageDialogInfo.isDialogVisible"
       :message-cd="messageDialogInfo.messageCd"
       :type="messageDialogInfo.type"
       :string-params="messageDialogInfo.stringParams"
@@ -411,7 +412,7 @@
     />
     <message-dialog
       v-if="messageDateInfo.isCheckDialogVisible"
-      :visible.sync="messageDateInfo.isCheckDialogVisible"
+      v-model:visible="messageDateInfo.isCheckDialogVisible"
       :message-cd="messageDateInfo.messageCd"
       :title="messageDateInfo.title"
       :string-params="messageDateInfo.stringParams"
@@ -420,13 +421,14 @@
   </div>
 </template>
 <script>
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
 import store from "@/stores";
-import axios from 'axios'
-import {sendRequestGetPatEventRecord} from "@/apis/pat-event";
-import {mapActions, mapGetters, mapMutations} from "vuex";
-import {EventBus} from "@/eventBus.js";
+import { sendRequestGetPatEventRecord } from "@/apis/pat-event";
+
+import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import {deepCopy, hasEqualValues} from "@/functions/common/CommonFunctions";
 import PatEventTabItem from "@/components/pat-event/sub-item/PatEventTab";
 import PatEventTextItem from "@/components/pat-event/sub-item/PatEventText";
@@ -442,24 +444,27 @@ import PatIntroductionLetter from "@/components/introduction-letter/Introduction
 import PatEventDialysisDateLink from "@/components/pat-event/sub-item/PatEventDialysisDateLink";
 import PatEventBbsItem from "@/components/pat-event/sub-item/PatEventBbs";
 import {ApiHelper} from "@/apis/AxiosHelper.js";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import {ADVANCED_SETTINGS} from "@/constants/advancedSettings";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import PopoverMixin from "@/components/PopoverMixin";
 import PatHeaderControlMixin from "@/components/common/PatHeadControlMixin";
 import {AUTHORITY_CODES} from "@/constants/userAuthority";
 import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
+import PatEventOwnerMixin from "@/components/pat-event/PatEventOwnerMixin";
 import {createJournal} from "@/apis/journal";
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 import {sendRequestPostImageDelete} from "@/apis/pat-event";
 import { messageFormat } from '@/functions/common/MessageFormat';
 import {DATE_FORMAT, dateFormat} from "@/functions/common/DateTimeUtils";
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
-import isEqualWith from "lodash/isEqualWith";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
 import { customComparatorForType } from "@/utils/util.js"
 
+
+import axios from "@/compat/http/axios";
 export default {
-  mixins: [NextTransitionMixin, PatHeaderControlMixin, PopoverMixin, ComponentGuardMixin],
+  mixins: [NextTransitionMixin, PatHeaderControlMixin, PopoverMixin, ComponentGuardMixin, PatEventOwnerMixin],
   name: "PatEventDetailCompnent",
   props: ["propsIsMainList", "historyKey"],
   components: {
@@ -599,10 +604,10 @@ export default {
   },
   async created() {
     // add 9868 特定の操作で紹介状で紹介状以外の患者イベントを新規作成できてしまう 関 start
-    await this.fetchPatEventMaster();
+    await this.fetchPatEventMaster({ selectedPatId: this.selectedPatId });
     // add 9868 特定の操作で紹介状で紹介状以外の患者イベントを新規作成できてしまう 関 end
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     await this.getMstReport();
     if (this.getSharedFacilityCd == null) {
       this.setSharedFacilityCd(this.getFacilityCd);
@@ -647,15 +652,21 @@ export default {
       }
     }
     await Promise.allSettled([
-      this.getMst(this.getFacilityCd),
+      this.getMst({
+        facilityCd: this.getFacilityCd,
+        selectedPatId: this.selectedPatId
+      }),
     ]);
     //upd #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc start
     // mod 6757 観察記録の新規登録時、カテゴリ選択を切り替えると入力欄の初期値が正しく表示されない 関 start
     // this.changeCondition(1);
-    // if (this.$router.currentRoute.name != "treatment-observe-detail")
+    // if (this.$route.name != "treatment-observe-detail")
 
     // add #12107 帳票印刷失敗通知が行われない limingzhe 20251114 start
-    const defaultPrinterResponse = await ApiHelper.get(`/facilitySetting/getFacilitySettingValue/${this.facilityCd}/1018`);
+    const defaultPrinterResponse = await ApiHelper.get(
+      `/facilitySetting/getFacilitySettingValue/${this.facilityCd}/1018`,
+      { selectedPatId: this.selectedPatId }
+    );
     const defaultPrinterInfo = defaultPrinterResponse.data;
     if (defaultPrinterInfo && defaultPrinterInfo != "-1") {
       this.defaultPrinter = defaultPrinterInfo;
@@ -668,9 +679,7 @@ export default {
     this.$emit("detail-created");
   },
 
-  beforeDestroy() {
-    window.removeEventListener("beforeprint", this.handleBeforePrint);
-    window.removeEventListener("afterprint", this.handleAfterPrint);
+  beforeUnmount() {
 
     this.setPatEventRecord(null);
     EventBus.$off("changLetterCategory",this.changeTemplate);
@@ -679,7 +688,7 @@ export default {
     this.hideItemPopover();
 
     // 画面遷移先が、治療記録、治療記録内の機能で、且つ、ord_noを保持している場合はリフレッシュ処理を実施しない
-    if (!(this.$router.currentRoute.fullPath.startsWith("/treatment-record/list") && this.getOrdNo)) {
+    if (!(this.$route.fullPath.startsWith("/treatment-record/list") && this.getOrdNo)) {
       this.setOrdNo(null);
       this.setDialysisState(null);
       this.setTreatDate(null);
@@ -696,13 +705,13 @@ export default {
       this.$refs.tbl.scrollLeft = this.scrollLeft;
     });
     // 画像シェーマ用の初期化設定を取得
-    this.initStampTextInfo();
+    this.initStampTextInfo(this.selectedPatId);
     
     // 画面印刷時のイベント追加
     window.addEventListener("beforeprint", this.handleBeforePrint);
     window.addEventListener("afterprint", this.handleAfterPrint);
   },
-  destroyed() {
+  unmounted() {
     this.setUpdateMode(true);
     this.setViewMode(true);
     this.setIsEdit(false);
@@ -760,14 +769,9 @@ export default {
       "getSubCategoryCd",
       "getDisplayTwo",
       "getIsOtherFacility",
-      "getEventStartDate",
-      // add #12462 患者情報共有 start
-      "resetIsOtherFacility",
-      // add #12462 患者情報共有 end
+      "getEventStartDate"
     ]),
-    // add #12462 患者情報共有 start
-    ...mapGetters("observe-record/list", ["getIsOtherFacilitys", "resetIsOtherFacilitys"]),
-    // add #12462 患者情報共有 end
+    ...mapGetters("observe-record/list", ["getIsOtherFacilitys"]),
     ...mapGetters("user", {
       facilityCd: "getFacilityCd"
     }),
@@ -997,20 +1001,20 @@ export default {
       return true;
     },
     getFlag(){
-      return this.$parent.$data.flag;
+      return this._patEventMainOwner()?.$data?.flag;
     },
     /** イベント開始日を設定 */
     computedCreatedDate() {
       // 治療記録＞観察記録
       if (this.getTreatDate) {
-        return moment(this.getTreatDate).format("YYYY-MM-DD");
+        return dayjs(this.getTreatDate).format("YYYY-MM-DD");
       }
       // 患者カレンダーから新規作成で遷移してきた場合、カレンダーでクリックした日付をイベント開始日にする
       if (this.getEventStartDate) {
         return this.getEventStartDate;
       }
       // 上記以外はシステム日付
-      return moment().format("YYYY-MM-DD");
+      return dayjs().format("YYYY-MM-DD");
     },
     /**
      * プリンターが登録されているか.
@@ -1021,13 +1025,24 @@ export default {
     hasPrinter() {
       return this.getMstPrinters.length > 0;
     },
-    // add #12462 患者情報共有 20260310 start
     isOtherFacilityDisabled() {
       return this.getIsOtherFacility;
-    },
-    // add #12462 患者情報共有 20260310 end
+    }
   },
   methods: {
+    getScopedElementById(id) {
+      return getScopedElementById(id, this);
+    },
+    getScopedElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this);
+    },
+    getScopedQuery(selector) {
+      return queryScopedSelector(selector, this);
+    },
+    getScopedQueryAll(selector) {
+      return queryScopedSelectorAll(selector, this);
+    },
+
     ...mapActions("mst-pat-event-template", ["sendRequestGetSysDataSetResult"]),
     ...mapActions("pat-event/detail", [
       "setPatEventCreate",
@@ -1169,6 +1184,7 @@ export default {
       if (this.getPatEventRecord.subCategoryCd !== 0) {
         // 内容破棄確認処理
         if (await this.confirmAllowDiscardChanges()) {
+          this.itemKey++;
           // テンプレートの切替
           await this.changeTemplate();
         } else {
@@ -1262,7 +1278,7 @@ export default {
       this.setIsGoNext(false);
       this.backupPatEventRecord = deepCopy(this.getPatEventRecord);
       this.setInitPatEventRecord(deepCopy(this.getPatEventRecord));
-      if(this.$refs.patIntroductionLetter!==undefined){
+      if(this.$refs.patIntroductionLetter){
         this.$refs.patIntroductionLetter.handleEnableControl();
       }
       if ((this.getPatEventInputParams === null || this.getPatEventInputParams === 0) && this.getPatEventRecord.useType != 3) {
@@ -1388,13 +1404,11 @@ export default {
       //カテゴリをセット
       rec.categoryCd = subCategory.categoryCd;
       rec.categoryName = this.getMstCategoryRecords.find(
-          record => record.categoryCd === subCategory.categoryCd
-      ).categoryName;
+          record => record.categoryCd === subCategory.categoryCd).categoryName;
       //サブカテゴリをセット
       rec.subCategoryCd = subCategory.subCategoryCd;
       rec.subCategoryName = this.getMstSubCategoryRecords.find(
-          record => record.subCategoryCd === subCategory.subCategoryCd
-      ).subCategoryName;
+          record => record.subCategoryCd === subCategory.subCategoryCd).subCategoryName;
       rec.useType = subCategory.useType;
       rec.regStaffInfo = JSON.stringify(this.getPatEventRegStaffInfo);
       rec.upStaffInfo = JSON.stringify(this.getPatEventUpStaffInfo);
@@ -1472,7 +1486,7 @@ export default {
      */
     async validateData() {
       // タブチェック
-      if (this.$refs.tab !== undefined) {
+      if (this.$refs.tab) {
         const onRegistration = this.$refs.tab.validateOnRegistration;
         if (onRegistration) {
           const validationResult = onRegistration();
@@ -1553,12 +1567,12 @@ export default {
       let endDate = this.getPatEventRecord.eventEndDate;
       if (startDate) {
         // 登録済みデータあり時
-        startDate = moment(startDate).format("YYYYMMDD");
-        endDate = moment(endDate).format("YYYYMMDD");
+        startDate = dayjs(startDate).format("YYYYMMDD");
+        endDate = dayjs(endDate).format("YYYYMMDD");
       } else {
         // 作成済みデータなし時
-        startDate = moment(this.getPatPlansParams.startDate).format("YYYYMMDD");
-        endDate = moment(this.getPatPlansParams.startDate)
+        startDate = dayjs(this.getPatPlansParams.startDate).format("YYYYMMDD");
+        endDate = dayjs(this.getPatPlansParams.startDate)
           .add(this.getPatPlansParams.dateClass, "days")
           .format("YYYYMMDD");
       }
@@ -1575,7 +1589,6 @@ export default {
             for (const txt of this.$refs.text) {
               if (txt.propsIndex === index) {
                 txt.dataImportResult(r.data);
-                isExist = true;
                 break;
               }
             }
@@ -1584,7 +1597,6 @@ export default {
             for (const txt of this.$refs.textArea) {
               if (txt.propsIndex === index) {
                 txt.dataImportResult(r.data);
-                isExist = true;
                 break;
               }
             }
@@ -1607,37 +1619,37 @@ export default {
       const dateArray = [
         {
           //#10715:日付IF修正Start
-          dateItem: document.getElementsByClassName("DateInput").length > 0 ? document.getElementsByClassName("DateInput")[0].validationMessage : "",
+          dateItem: this.getScopedElementsByClassName("DateInput").length > 0 ? this.getScopedElementsByClassName("DateInput")[0].validationMessage : "",
           //#10715:日付IF修正End
           dateName: ["イベント開始日時"]
         },
         {
-          dateItem: document.getElementsByClassName("every-start-date").length > 0 ? document.getElementsByClassName("every-start-date")[0].validationMessage : "",
+          dateItem: this.getScopedElementsByClassName("every-start-date").length > 0 ? this.getScopedElementsByClassName("every-start-date")[0].validationMessage : "",
           dateName: ["作成開始日付"]
         },
         {
-          dateItem: document.getElementsByClassName("every-end-date").length > 0 ? document.getElementsByClassName("every-end-date")[0].validationMessage : "",
+          dateItem: this.getScopedElementsByClassName("every-end-date").length > 0 ? this.getScopedElementsByClassName("every-end-date")[0].validationMessage : "",
           dateName: ["作成終了日付"]
         },
         {
-          dateItem: document.getElementsByClassName("week-start-date").length > 0 ? document.getElementsByClassName("week-start-date")[0].validationMessage : "",
+          dateItem: this.getScopedElementsByClassName("week-start-date").length > 0 ? this.getScopedElementsByClassName("week-start-date")[0].validationMessage : "",
           dateName: ["作成開始日付"]
         },
         {
-          dateItem: document.getElementsByClassName("week-end-date").length > 0 ? document.getElementsByClassName("week-end-date")[0].validationMessage : "",
+          dateItem: this.getScopedElementsByClassName("week-end-date").length > 0 ? this.getScopedElementsByClassName("week-end-date")[0].validationMessage : "",
           dateName: ["作成終了日付"]
         },
         {
-          dateItem: document.getElementsByClassName("month-start-date").length > 0 ? document.getElementsByClassName("month-start-date")[0].validationMessage : "",
+          dateItem: this.getScopedElementsByClassName("month-start-date").length > 0 ? this.getScopedElementsByClassName("month-start-date")[0].validationMessage : "",
           dateName: ["作成開始日付"]
         },
         {
-          dateItem: document.getElementsByClassName("month-end-date").length > 0 ? document.getElementsByClassName("month-end-date")[0].validationMessage : "",
+          dateItem: this.getScopedElementsByClassName("month-end-date").length > 0 ? this.getScopedElementsByClassName("month-end-date")[0].validationMessage : "",
           dateName: ["作成終了日付"]
         },
         {
           //#10715:日付IF修正Start
-          dateItem: document.getElementsByClassName("DateInput").length > 0 ? document.getElementsByClassName("DateInput")[0].validationMessage : "",
+          dateItem: this.getScopedElementsByClassName("DateInput").length > 0 ? this.getScopedElementsByClassName("DateInput")[0].validationMessage : "",
           //#10715:日付IF修正End
           dateName: ["イベント開始日時"]
         },
@@ -1646,17 +1658,17 @@ export default {
           dateName: ["転入転出日"]
         },
         {
-          dateItem: document.getElementsByClassName("notice-start-date").length > 0 ? document.getElementsByClassName("notice-start-date")[0].validationMessage : "",
+          dateItem: this.getScopedElementsByClassName("notice-start-date").length > 0 ? this.getScopedElementsByClassName("notice-start-date")[0].validationMessage : "",
           dateName: ["掲載期間開始日時"]
         },
         {
-          dateItem: document.getElementsByClassName("notice-end-date").length > 0 ? document.getElementsByClassName("notice-end-date")[0].validationMessage : "",
+          dateItem: this.getScopedElementsByClassName("notice-end-date").length > 0 ? this.getScopedElementsByClassName("notice-end-date")[0].validationMessage : "",
           dateName: ["掲載期間終了日時"]
         },
         // del 10228 【因島データ】差分コンバートでVA管理の造設日が正しく反映されていない 関 start
         // {
-        //   dateItem: document.getElementsByClassName("input-model-date").length > 0 ? document.getElementsByClassName("input-model-date")[0].validationMessage : "",
-        //   dateName: [document.getElementById("input-model-file-name") !== null ? document.getElementById("input-model-file-name").innerText : ""]
+        //   dateItem: this.getScopedElementsByClassName("input-model-date").length > 0 ? this.getScopedElementsByClassName("input-model-date")[0].validationMessage : "",
+        //   dateName: [this.getScopedElementById("input-model-file-name") !== null ? this.getScopedElementById("input-model-file-name").innerText : ""]
         // }
         // del 10228 【因島データ】差分コンバートでVA管理の造設日が正しく反映されていない 関 end
       ];
@@ -1673,7 +1685,7 @@ export default {
       let patEventCd = 0;
       /*add FNSI-改修内容538 連携イベントの登録適正化 任 end*/
       /*add FNSI-改修内容日付のチェックの追加対応。 任 end*/
-      if (this.$refs.tab !== undefined) {
+      if (this.$refs.tab) {
         await this.$refs.tab.changeCondition(this.$refs.tab.tabSelectedId);
       }
 
@@ -1741,7 +1753,7 @@ export default {
         // reportDate が null や "" の場合はデフォルト値としてシステム日付を設定する
         // 紹介状では必須入力項目のため本来は発生しない条件だがリストの検索条件に使用されるカラムのため
         // 万一にもnullのままにならないようにしておく
-        reportDate = moment().format("YYYY-MM-DD");
+        reportDate = dayjs().format("YYYY-MM-DD");
       }
       if (Object.values(validationResult).every(v => v === true)) {
         this.backupPatEventRecord = null;
@@ -2079,7 +2091,7 @@ export default {
                 upDate: template.upDate
               }
               const resultParams = JSON.parse(updRec.resultParams)
-              if (Object(resultParams[resultParams.length - 1]).hasOwnProperty('upDate')) {
+              if (Object.prototype.hasOwnProperty.call(Object(resultParams[resultParams.length - 1]), 'upDate')) {
                 resultParams[resultParams.length - 1].upDate = upDate.upDate
               } else {
                 resultParams.push(upDate);
@@ -2217,16 +2229,18 @@ export default {
 
         // add FNSi6503治療記録の観察記録の期間抽出が正しく抽出されない 周 start
         if(this.keepHistories[0].routerName !== "pat-event") {
-          this.$parent.$data.oldOrdNo = this.getPatEventRecord.ordNo;
+          this._patEventMainOwner().oldOrdNo = this.getPatEventRecord.ordNo;
         }
         // add FNSi6503治療記録の観察記録の期間抽出が正しく抽出されない 周 end
-        const ordNo = this.$parent.$data.oldOrdNo;
-        let treatDate = moment().format("YYYYMMDD");
+        const ordNo = this._patEventMainOwner().oldOrdNo;
+        let treatDate = dayjs().format("YYYYMMDD");
         // mod 9954 観察記録における実績リンクが編集済み表示となる 関 start
         // if(ordNo!==0){
           if(ordNo!==0 && ordNo != undefined){
             // mod 9954 観察記録における実績リンクが編集済み表示となる 関 end
-          await ApiHelper.get("/pat_event/getPatEventTreatDate/" + ordNo)
+          await ApiHelper.get("/pat_event/getPatEventTreatDate/" + ordNo, {
+            selectedPatId: this.selectedPatId
+          })
             .then(response => {
               treatDate = response.data.msg
             })
@@ -2256,7 +2270,7 @@ export default {
     editCompareViewImgs(){
       this.getCompareViewImgs.forEach((item,index) => {
         if(item.isDel === true){
-          let preview = document.getElementById("previewImage-" + item.targetId);
+          let preview = this.getScopedElementById("previewImage-" + item.targetId);
           if(preview.src !== ""){
             const compareViewImg = item;
             compareViewImg.data = preview.src;
@@ -2266,7 +2280,7 @@ export default {
           }
         }
         if(item.isEdit === true){
-          let preview = document.getElementById("previewImage-" + item.targetId);
+          let preview = this.getScopedElementById("previewImage-" + item.targetId);
           const compareViewImg = item;
           compareViewImg.data = preview.src;
           this.setCompareViewImgsReplaceSrc(compareViewImg);
@@ -2629,7 +2643,7 @@ export default {
       //del #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc end
     },
     async refresh() {
-      if (this.isObserveDetail && this.selfScreenName === this.$router.currentRoute.name) {
+      if (this.isObserveDetail && this.selfScreenName === this.$route.name) {
         if (await this.confirmAllowDiscardChanges()) {
           // #6765 観察記録：修正時、修正していないが保存ボタンが有効になってしまっている 訾浩 start
           //del #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc start
@@ -2643,7 +2657,7 @@ export default {
             patEventCd: this.getPatEventRecord.patEventCd
           });
           const params = info[0];
-          const response = await sendRequestGetPatEventRecord(params);
+          const response = await sendRequestGetPatEventRecord(params, this.selectedPatId);
           // add 8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する 鄭爽 end
           // await this.setPatEventRecord(null);
           // mod 8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する 鄭爽 start
@@ -2673,7 +2687,7 @@ export default {
           rec.resultParams = rec.resultParams ? (apiFlg ? JSON.stringify(JSON.parse(rec.resultParams)) : JSON.stringify(rec.resultParams)) : null;
           rec.regStaffInfo = rec.regStaffInfo ? (apiFlg ? JSON.stringify(JSON.parse(rec.regStaffInfo)) : JSON.stringify(rec.regStaffInfo)) : null;
           rec.upStaffInfo = rec.upStaffInfo ? (apiFlg ? JSON.stringify(JSON.parse(rec.upStaffInfo)) : JSON.stringify(rec.upStaffInfo)) : null;
-          await new Promise(async (resolve) => {
+          await new Promise((resolve) => {
             this.$nextTick(async () => {
               await this.setPatEventRecord(rec);
               // #6765 観察記録：修正時、修正していないが保存ボタンが有効になってしまっている 訾浩 start
@@ -2756,6 +2770,67 @@ export default {
         return;
       }
       // add #10359_NG対応 編集権限の動作不正 dengshen end
+      let keyHandler = null;
+      setTimeout(() => {
+        const buttons = document.querySelectorAll(
+          ".alert-dialog-button"
+        );
+        if (!buttons.length) {
+          return;
+        }
+        let currentIndex = buttons.length - 1;
+        updateSelected();
+        function updateSelected() {
+          buttons.forEach(btn => {
+            btn.classList.remove(
+              "keyboard-selected",
+              "keyboard-left",
+              "keyboard-right"
+            );
+          });
+          buttons[currentIndex].classList.add(
+            "keyboard-selected"
+          );
+          if (currentIndex === 0) {
+            buttons[currentIndex].classList.add("keyboard-left");
+          }
+          if (currentIndex === buttons.length - 1) {
+            buttons[currentIndex].classList.add("keyboard-right");
+          }
+        }
+        keyHandler = (e) => {
+          if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            currentIndex =
+              (currentIndex - 1 + buttons.length)
+              % buttons.length;
+            updateSelected();
+          }
+          if (e.key === "ArrowRight") {
+            e.preventDefault();
+            currentIndex =
+              (currentIndex + 1)
+              % buttons.length;
+            updateSelected();
+          }
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const realButton =
+              buttons[currentIndex].querySelector(
+                "button"
+              );
+            if (realButton) {
+              realButton.click();
+            } else {
+              buttons[currentIndex].click();
+            }
+          }
+        };
+        document.addEventListener(
+          "keydown",
+          keyHandler
+        );
+      }, 0);
       // add 8440 登録済み観察記録の削除を行うと削除の確認に加え内容破棄の確認ダイアログが表示される 関 start
       //del #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc start
       // this.deleteFlg = false;
@@ -2771,6 +2846,10 @@ export default {
           // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
         })
         .then((ok) => {
+          document.removeEventListener(
+            "keydown",
+            keyHandler
+          );
           if (ok) {
             //add #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc start
             // mod #10774 治療記録＞観察記録 患者・実績を切替た場合 ztc 20240726 start
@@ -3146,12 +3225,14 @@ export default {
       //const ordNo = this.$parent.$data.oldOrdNo;
       const ordNo = this.getPatEventRecord.ordNo;
       //mod FNSI-8441 ljx end
-      let treatDate = moment().format("YYYYMMDD");
+      let treatDate = dayjs().format("YYYYMMDD");
       //mod FNSI-8441 ljx start
       //if(ordNo!==0 && ordNo != undefined){
       if(ordNo!==0 && ordNo != undefined){
         //mod FNSI-8441 ljx end
-        await ApiHelper.get("/pat_event/getPatEventTreatDate/" + ordNo)
+        await ApiHelper.get("/pat_event/getPatEventTreatDate/" + ordNo, {
+          selectedPatId: this.selectedPatId
+        })
           .then(response => {
             treatDate = response.data.msg
           })
@@ -3249,8 +3330,8 @@ export default {
       /*add FNSI-改修内容マスタ画面の修正に伴い、紐付ける帳票を一括印刷するように修正 任 end*/
       const params = {
         // mod 10726 紹介状で印刷押下でエラー発生/印刷されない 吉 start
-        // htmlTemplate: document.getElementById("content-html").innerHTML,
-        htmlTemplate: document.getElementById("content-html-id").innerHTML,
+        // htmlTemplate: this.getScopedElementById("content-html").innerHTML,
+        htmlTemplate: this.getScopedElementById("content-html-id").innerHTML,
         // mod 10726 紹介状で印刷押下でエラー発生/印刷されない 吉 end
         patId: this.getPatEventRecord.patId,
         /*add FNSI-改修内容マスタ画面の修正に伴い、紐付ける帳票を一括印刷するように修正 任 start*/
@@ -3515,10 +3596,60 @@ export default {
           }
         });
         this.confirmAllowDiscardChangesProgress = 2; // notification.confirmの処理中
+        let keyHandler = null;
+        setTimeout(() => {
+          const buttons = document.querySelectorAll(".alert-dialog-button");
+          if (!buttons.length) {
+            return;
+          }
+          let currentIndex = buttons.length - 1;
+          updateSelected();
+          function updateSelected() {
+            buttons.forEach(btn => {
+              btn.classList.remove(
+                "keyboard-selected",
+                "keyboard-left",
+                "keyboard-right"
+              );
+            });
+            buttons[currentIndex].classList.add(
+              "keyboard-selected"
+            );
+            if (currentIndex === 0) {
+              buttons[currentIndex].classList.add("keyboard-left");
+            }
+            if (currentIndex === buttons.length - 1) {
+              buttons[currentIndex].classList.add("keyboard-right");
+            }
+          }
+          keyHandler = (e) => {
+            if (e.key === "ArrowLeft") {
+              e.preventDefault();
+              currentIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+              updateSelected();
+            }
+            if (e.key === "ArrowRight") {
+              e.preventDefault();
+              currentIndex = (currentIndex + 1) % buttons.length;
+              updateSelected();
+            }
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const realButton = buttons[currentIndex].querySelector("button");
+              if (realButton) {
+                realButton.click();
+              } else {
+                buttons[currentIndex].click();
+              }
+            }
+          };
+          document.addEventListener("keydown", keyHandler);
+        }, 0);
         await this.$ons.notification.confirm({
           title: DIALOG_MESSAGES[12000014].title,
           message: DIALOG_MESSAGES[12000014].message,
           callback: answer => {
+            document.removeEventListener("keydown", keyHandler);
             if (answer === 0) {
               cancelled = true;
             }
@@ -3548,23 +3679,23 @@ export default {
       }
 
       if (!this.getPatEventRecord) return;
-      const task = new Promise(async (resolve) => {
+      const task = (async () => {
         if (await this.confirmAllowDiscardChanges()) {
           // 内容破棄をキャンセルしない場合は編集内容のクリアのみを行って
           // 画面遷移などは治療記録側で行う
           this.setRelease();
           await this.setPatEventRecord(null);
-          resolve(true);
-        } else {
-          // 内容破棄をキャンセルした場合は患者を戻す
-          if (this.getPatEventRecord.patId !== this.selectedPatId) {
-            this.ignoreWatchSelectedPatId = true;
-            await this.setSelectedPatHeader(this.getPatEventRecord.patId);
-            this.ignoreWatchSelectedPatId = false;
-            resolve(false);
-          }
+          return true;
         }
-      });
+
+        // 内容破棄をキャンセルした場合は患者を戻す
+        if (this.getPatEventRecord.patId !== this.selectedPatId) {
+          this.ignoreWatchSelectedPatId = true;
+          await this.setSelectedPatHeader(this.getPatEventRecord.patId);
+          this.ignoreWatchSelectedPatId = false;
+        }
+        return false;
+      })();
       EventBus.$emit("addConfirmTreatmentRecordSelectedPatIdChangeTasks", task);
     },
     async setSubCategoryClear() {
@@ -3604,7 +3735,9 @@ export default {
       // await ApiHelper.get("/report/getMstReportByFacilityCd/" + this.facilityCd)
       // mod #12650 登録済み紹介状が帳票マスタ削除の影響を受けるのは不適切 zhao start
       //await ApiHelper.get("/report/getMstReportByFacilityCdNoIsDisp/" + this.facilityCd)
-      await ApiHelper.get("/report/getMstReportByFacilityCdNoIsDel/" + this.facilityCd)
+      await ApiHelper.get("/report/getMstReportByFacilityCdNoIsDel/" + this.facilityCd, {
+        selectedPatId: this.selectedPatId
+      })
       // mod #12650 登録済み紹介状が帳票マスタ削除の影響を受けるのは不適切 zhao end
       // mod #12326 【因島】帳票マスタの「非表示」設定が意図せぬ動作をしている sunsy end
         .then(response => {
@@ -3670,7 +3803,7 @@ export default {
           this.setDisplayTwo(true);
           this.setIsShowSomeThing(false);
           store.dispatch("loading-screen/setLoadingScreenVisible", false);
-          document.getElementById("uploadFile").value = null;
+          this.getScopedElementById("uploadFile").value = null;
         };
         store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
         store.dispatch("loading-screen/setLoadingScreenVisible", true);
@@ -3725,7 +3858,7 @@ export default {
         ana_result: "0",
         coop_result: "0",
         pat_id: this.selectedPatId,
-        ord_no: this.$parent.$data.oldOrdNo,
+        ord_no: this._patEventMainOwner().oldOrdNo,
         base_date: baseDate,
         ope_cd: opeCd,
         user_id: this.getUserId,
@@ -3758,23 +3891,24 @@ export default {
       });
     },
     getObjectURL(file) {
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
       let url = null
-      if (window.createObjectURL !== undefined) {
-        url = window.createObjectURL(file)
-      } else if (window.webkitURL !== undefined) {
+      if (ownerWindow.createObjectURL !== undefined) {
+        url = ownerWindow.createObjectURL(file)
+      } else if (ownerWindow.webkitURL !== undefined) {
         try {
           var blob = new Blob([file], {
             type: 'application/png;charset=utf-8',
           });
-          url = window.webkitURL.createObjectURL(blob)
+          url = ownerWindow.webkitURL.createObjectURL(blob)
         } catch (error) {
           //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
           getErrorMessage('PatEventDetailComponent.vue', 'getObjectURL', error);
           //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
         }
-      } else if (window.URL !== undefined) {
+      } else if (ownerWindow.URL !== undefined) {
         try {
-          url = window.URL.createObjectURL(file)
+          url = ownerWindow.URL.createObjectURL(file)
         } catch (error) {
           //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
           getErrorMessage('PatEventDetailComponent.vue', 'getObjectURL', error);
@@ -4067,10 +4201,10 @@ export default {
       let initEventStartDateTime = "";
       let editedEventStartDateTime = "";
       if (!this.getUpdateMode) {
-        editedEventStartDateTime = this.$refs.tab.inputModel.dayStartTime != null && this.$refs.tab.inputModel.dayStartTime != ":" ? moment(this.$refs.tab.inputModel.dayStartDate + " " + this.$refs.tab.inputModel.dayStartTime).format("YYYY/MM/DD HH:mm") : moment(this.$refs.tab.inputModel.dayStartDate).format("YYYY/MM/DD");
+        editedEventStartDateTime = this.$refs.tab.inputModel.dayStartTime != null && this.$refs.tab.inputModel.dayStartTime != ":" ? dayjs(this.$refs.tab.inputModel.dayStartDate + " " + this.$refs.tab.inputModel.dayStartTime).format("YYYY/MM/DD HH:mm") : dayjs(this.$refs.tab.inputModel.dayStartDate).format("YYYY/MM/DD");
       } else {
-        initEventStartDateTime = initPatEventRecords.eventStartTime != null && initPatEventRecords.eventStartTime != ":" ? moment(initPatEventRecords.eventStartDate + " " + initPatEventRecords.eventStartTime).format("YYYY/MM/DD HH:mm") : moment(initPatEventRecords.eventStartDate).format("YYYY/MM/DD");
-        editedEventStartDateTime = editedPatEventRecords.eventStartTime != null && editedPatEventRecords.eventStartTime != ":" ? moment(editedPatEventRecords.eventStartDate + " " + editedPatEventRecords.eventStartTime).format("YYYY/MM/DD HH:mm") : moment(editedPatEventRecords.eventStartDate).format("YYYY/MM/DD");
+        initEventStartDateTime = initPatEventRecords.eventStartTime != null && initPatEventRecords.eventStartTime != ":" ? dayjs(initPatEventRecords.eventStartDate + " " + initPatEventRecords.eventStartTime).format("YYYY/MM/DD HH:mm") : dayjs(initPatEventRecords.eventStartDate).format("YYYY/MM/DD");
+        editedEventStartDateTime = editedPatEventRecords.eventStartTime != null && editedPatEventRecords.eventStartTime != ":" ? dayjs(editedPatEventRecords.eventStartDate + " " + editedPatEventRecords.eventStartTime).format("YYYY/MM/DD HH:mm") : dayjs(editedPatEventRecords.eventStartDate).format("YYYY/MM/DD");
       }
       diff.push({ format_class: -1, column_name: "開始日時", old_value: initEventStartDateTime, new_value: editedEventStartDateTime, is_diff_check: "1" });
       // ・実績リンク
@@ -4136,8 +4270,8 @@ export default {
           diff.push({ format_class: formatClass, column_name: columnName, old_value: oldValue, new_value: newValue, is_diff_check: "1" });
         } else if (formatClass === 5) {
           // ・日付
-          oldValue = initResultParam != null ? initResultParam.result_value != null ? moment(initResultParam.result_value).format("YYYY/MM/DD") : "" : "";
-          newValue = editedResultParam != null ? editedResultParam.result_value != null ? moment(editedResultParam.result_value).format("YYYY/MM/DD") : "" : "";
+          oldValue = initResultParam != null ? initResultParam.result_value != null ? dayjs(initResultParam.result_value).format("YYYY/MM/DD") : "" : "";
+          newValue = editedResultParam != null ? editedResultParam.result_value != null ? dayjs(editedResultParam.result_value).format("YYYY/MM/DD") : "" : "";
           diff.push({ format_class: formatClass, column_name: columnName, old_value: oldValue, new_value: newValue, is_diff_check: "1" });
         } else if (formatClass === 6) {
           // ・チェックボックス
@@ -4183,19 +4317,19 @@ export default {
           // ・掲示板リンク
           const initBbsInfo = initResultParam != null ? initResultParam.result_value : "";
           const editedBbsInfo = editedResultParam != null ? editedResultParam.result_value : "";
-          // >>> 掲載有無
+          // :deep(掲載有無
           const oldValue_1 = this.getBbsExist(initBbsInfo, initPatEventRecords.bbsCtlNo);
           const newValue_1 = this.getBbsExist(editedBbsInfo, editedPatEventRecord.bbsCtlNo);
           diff.push({ format_class: formatClass, column_name: "掲示板リンク 掲載有無", old_value: oldValue_1, new_value: newValue_1, is_diff_check: "1" });
-          // >>> 掲載期間
+          // :deep(掲載期間
           const oldValue_2 = this.getBbsTerm(initBbsInfo);
           const newValue_2 = this.getBbsTerm(editedBbsInfo);
           diff.push({ format_class: formatClass, column_name: "掲示板リンク 掲載期間", old_value: oldValue_2, new_value: newValue_2, is_diff_check: "1" });
-          // >>> スタッフ
+          // :deep(スタッフ
           const oldValue_3 = this.getBbsStaff(initBbsInfo, initPatEventRecords.bbsCtlNo);
           const newValue_3 = this.getBbsStaff(editedBbsInfo, editedPatEventRecord.bbsCtlNo);
           diff.push({ format_class: formatClass, column_name: "掲示板リンク スタッフ", old_value: oldValue_3, new_value: newValue_3, is_diff_check: "1" });
-          // >>> 個別スタッフ(人数)
+          // :deep(個別スタッフ(人数)
           const initBbsStaff = oldValue_3;
           const editedBbsStaff = newValue_3;
           // 個別スタッフ選択時の場合
@@ -4269,11 +4403,11 @@ export default {
         } else {
           // rstDialysisState = "0"(予定)の場合
           if (ordMain.rstDialysisState === "0") {
-            selectedOrdMainText = `${ordMain.viewTreatDate === null ? moment(ordMain.treatDate).format("YYYY/MM/DD") : ordMain.viewTreatDate}` +
+            selectedOrdMainText = `${ordMain.viewTreatDate === null ? dayjs(ordMain.treatDate).format("YYYY/MM/DD") : ordMain.viewTreatDate}` +
                                   " 予定 " +
                                   `${ordMain.indKurName === null ? "-" : ordMain.indKurName} ${ordMain.indBedName === null ? "-" : ordMain.indBedName} ${ordMain.indTreatmentName === null ? "-" : ordMain.indTreatmentName}`;
           } else {
-            selectedOrdMainText = `${moment(ordMain.treatDate).format("YYYY/MM/DD")}` +
+            selectedOrdMainText = `${dayjs(ordMain.treatDate).format("YYYY/MM/DD")}` +
                                   " 実績 " +
                                   `${ordMain.rstKurName === null ? "-" : ordMain.rstKurName} ${ordMain.rstBedName === null ? "-" : ordMain.rstBedName} ${ordMain.rstTreatmentName === null ? "-" : ordMain.rstTreatmentName}`;
           }
@@ -4322,7 +4456,7 @@ export default {
       // 初期化処理
       let htmlContentsList = new Array();
       // テンプレートの作成
-      const template = document.createElement("template");
+      const template = (this.$el?.ownerDocument || document).createElement("template");
       // innerHTMLの格納
       template.innerHTML = resultParam != null ? resultParam.result_value : "";
       // HTMLコンテンツの配列化
@@ -4536,7 +4670,7 @@ export default {
       if (bbsInfo === "") {
         return "";
       } else {
-        return bbsInfo.notice_end_date != null ? moment(bbsInfo.notice_start_date).format("YYYY/MM/DD") + "～" + moment(bbsInfo.notice_end_date).format("YYYY/MM/DD") : "";
+        return bbsInfo.notice_end_date != null ? dayjs(bbsInfo.notice_start_date).format("YYYY/MM/DD") + "～" + dayjs(bbsInfo.notice_end_date).format("YYYY/MM/DD") : "";
       }
     },
     /**
@@ -4708,6 +4842,9 @@ export default {
 .select {
   vertical-align: middle;
 }
+.select :deep(.select-input) {
+  font-family: -apple-system, 'Helvetica Neue', 'Helvetica', 'Arial', 'Lucida Grande', sans-serif !important;
+}
 .wrap-block {
   display: flex;
   flex-direction: row;
@@ -4727,7 +4864,7 @@ export default {
   bottom: 3px;
 }
 /* del #12107 帳票印刷失敗通知が行われない limingzhe 20251125 start */
-/*.select >>> .select-input {*/
+/*.select :deep(.select-input){*/
 /*  opacity: 1;*/
 /*  !* font-size: 1.5em; *!*/
 /*  !* color: var(--ntss-base-color); *!*/
@@ -4769,26 +4906,27 @@ export default {
     margin-left: unset;
   }
 }
+ 
 /* 印刷ボタン吹き出しに関するスタイル */
-.report-list-popover >>> .popover--bottom {
+.report-list-popover :deep(.popover--bottom) {
   width: 300px;
 }
-.report-list-popover >>> .popover--bottom__content {
+.report-list-popover :deep(.popover--bottom__content) {
   width: 100%;
 }
-.report-list-popover >>> .popover__content {
+.report-list-popover :deep(.popover__content) {
   min-height: 90px;
 }
-.report-list-popover >>> .registration-btn-area {
+.report-list-popover :deep(.registration-btn-area) {
     background: none;
     margin-right: initial;
   }
-.report-list-popover >>> .printer-selection {
+.report-list-popover :deep(.printer-selection) {
   width: 280px;
   margin-left: 10px;
   margin-top: 10px;
 }
-.report-list-popover >>> .button-area {
+.report-list-popover :deep(.button-area) {
   margin: 10px;
   height: auto;
 }
@@ -4802,13 +4940,26 @@ export default {
     display: inline-block;
   }
   /** テキストエリアは印刷用div表示するので非表示 */
-  div >>> .k-editor iframe,
-  div >>> .custom-textarea {
+  div :deep(.k-editor iframe),
+  div :deep(.custom-textarea){
     display: none !important;
   }
   /** ボタンエリア非表示（他画面と合わせる） */
   .btn-area {
     display: none !important;
   }
+}
+</style>
+
+<style>
+.keyboard-selected {
+  border: 1px solid rgb(0, 30, 255) !important;
+  box-sizing: border-box;
+}
+.keyboard-left {
+  border-bottom-left-radius: 8px;
+}
+.keyboard-right {
+  border-bottom-right-radius: 8px;
 }
 </style>

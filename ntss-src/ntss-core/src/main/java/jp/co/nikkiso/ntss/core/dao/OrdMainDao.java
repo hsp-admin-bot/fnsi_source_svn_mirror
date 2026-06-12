@@ -35,6 +35,7 @@ import jp.co.nikkiso.ntss.core.entity.custom.OrdMainPatObsRecCombo;
 import jp.co.nikkiso.ntss.core.entity.custom.OrdMainTreatDate;
 import jp.co.nikkiso.ntss.core.entity.custom.OrdMainUpdateForScheduleAssignment;
 import jp.co.nikkiso.ntss.core.entity.custom.OrdWeightScaleBuildInfo;
+import jp.co.nikkiso.ntss.core.entity.custom.PatIdRstAnchor;
 import jp.co.nikkiso.ntss.core.entity.custom.TemplateHospitalCd;
 import jp.co.nikkiso.ntss.core.entity.custom.TemplateMachine;
 import jp.co.nikkiso.ntss.core.entity.custom.TemplateMedicine;
@@ -1109,6 +1110,11 @@ public interface OrdMainDao {
 
   @Update(sqlFile = true)
   int updateIndStartTareAndOffWater(Long ordNo, String offWaterInfo, String tareInfo);
+
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260416 start
+  @Select
+  long countByOrdNoAndFacilityCd(String facilityCd, List<Long> ordNoList);
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260416 end
 
   @Update(sqlFile = true)
   int updateRstTareOffWaterInfo(Long ordNo, String tareInfo, String offWaterInfo, Timestamp upDate);
@@ -2632,4 +2638,12 @@ public interface OrdMainDao {
   @Select
   Long selectOrdMainNearestPastByKeyDate(Long patId,String fromDate,String facilityCd);
   // add #11276 キー日付に対するデータ引き当て仕様対応 高　end
+
+  // add #11895 データリスト「治療予定・実績」テンプレート恒久対応 fang start
+  /**
+   * {@link #selectByPatIdFacilityCd} と同一条件・同一ソートで、複数患者を一括取得する（PostgreSQL VALUES 利用）。
+   */
+  @Select
+  List<OrdMain> selectByPatIdFacilityCdBatch(List<PatIdRstAnchor> pairs, String facilityCd);
+  // add #11895 データリスト「治療予定・実績」テンプレート恒久対応 fang end
 }

@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="custom-ons-list-header">
+        <template #body>
+<div class="custom-ons-list-header">
       <v-ons-list modifier="inset">
         <v-ons-list-header>編集権限</v-ons-list-header>
         <v-ons-list-item class="ntss-theme-screen" modifier="nodivider">
@@ -105,7 +106,7 @@
         <!-- add #12462 患者共有権限 関 end -->
       </v-ons-list>
       <v-ons-popover cancelable
-        :visible.sync="userMenuPopoverVisible"
+        v-model:visible="userMenuPopoverVisible"
         :target="userMenuPopoverTarget"
         :cover-target="false"
         :direction="userMenuPopoverDirection"
@@ -117,7 +118,9 @@
          <p class="popover-message" id="popOverMessage">テスト</p>
        </v-ons-popover>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+        <template #footer>
+<div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="btn2-cancel button denial-btn" @click="cancel">キャンセル</v-ons-button>
       </div>
@@ -125,31 +128,29 @@
         <v-ons-button class="common-style-select-button button registration-btn" :disabled="registeredFlag" @click="registration">確定</v-ons-button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-// mod #12462 患者情報共有 関 start
 import { editAuthorityList, deleteAuthorityList, patientSharedAuthorityList } from "@/constants/authorityList";
 import { FUNC_SHARING_PATIENT_INFORMATION } from "@/constants/function-code.js";
-// mod #12462 患者情報共有 関 end
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
-import cloneDeep from "lodash/cloneDeep";
-import isEqualWith from "lodash/isEqualWith";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
 import { sortCompare } from "@/utils/util.js"
-// mod #12462 患者情報共有 関 start
-import { facilityByCd } from "@/functions/mst/MstGetters.js";
-// mod #12462 患者情報共有 関 end
 
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { facilityByCd } from "@/functions/mst/MstGetters.js";
 export default {
   name: "MstJobEditAuthorityModal",
   mixins: [MultiModalMixin, PopoverMixin],
@@ -161,11 +162,9 @@ export default {
       // 入力項目
       editAuthList: editAuthorityList,
       deleteAuthList: deleteAuthorityList,
-      // add #12462 患者共有権限 関 start
       patientSharedAuthorityList: patientSharedAuthorityList,
       // store を更新せず、当画面表示用に最新機能権限を保持
       latestUseFunctions: null,
-      // add #12462 患者共有権限 関 end
       checkedAuthority: [],
       // 編集ユーザー情報
       defaultAuthority: [],
@@ -181,24 +180,18 @@ export default {
       "getEditRecord",
       "getMasterRecordList"
     ]),
-    // mod #12462 患者情報共有 関 start
     ...mapGetters("facility", ["isUseFunction"]),
-    // mod #12462 患者情報共有 関 end
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_職種マスタ 20240105 mrx start
     registeredFlag() {
       return isEqualWith(this.checkedAuthority, this.defaultAuthority, sortCompare);
     },
-    // mod #12462 患者情報共有 関 start
     isPatientSharedAuthorized() {
       if (Array.isArray(this.latestUseFunctions)) {
         return this.latestUseFunctions.indexOf(FUNC_SHARING_PATIENT_INFORMATION) >= 0;
       }
       return this.isUseFunction(FUNC_SHARING_PATIENT_INFORMATION);
     }
-    // mod #12462 患者情報共有 関 end
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_職種マスタ 20240105 mrx end
-  },
-  watch: {
   },
   async created() {
     // mod #12462 患者共有権限 関 start
@@ -227,7 +220,12 @@ export default {
       // if (this.getFacilitySwitch !== "nkknkk") this.editAuthList = editAuthorityList.filter(item => item.code!=="123");
       // mod マスタ一覧 1･施設切替を可能とする 孔s end
       // add 職種マスタ 職種マスタの権限設定に祝日設定があるべきではない 障害対応 end
-        this.checkedAuthority = this.getEditRecord.defaultAuthorizedAuthorities.split(',');
+        const codes = this.getEditRecord.defaultAuthorizedAuthorities
+          .split(',')
+          .map((code) => String(code).trim())
+          .filter(Boolean);
+        this.checkedAuthority = [...new Set(codes)];
+        
     } else {
       this.checkedAuthority = [];
     }
@@ -238,7 +236,7 @@ export default {
     this.defaultAuthority = cloneDeep(this.checkedAuthority);
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_職種マスタ 20240105 mrx end
   },
-  mounted() {},
+
   methods: {
     ...mapActions("multi-modal", ["hideModal"]),
     ...mapActions("master-maintenance", [
@@ -256,16 +254,16 @@ export default {
      * 処理：選択・入力された情報で権限情報登録(更新)
      */
     onChangeEditAuth(e) {
-      if (e.target.checked){
-        // 代行編集可と編集可はどちらか一方のみチェックとするので、チェックON時はもう一方をチェックOFFにする
-        let chkValHead = e.target.value.substring(0,2);
-        for(let i=0; i < this.checkedAuthority.length; i++){
-          if (this.checkedAuthority[i] !== e.target.value && this.checkedAuthority[i].indexOf(chkValHead) === 0){
-            this.checkedAuthority.splice(i, 1);
-            // なぜかチェックした要素が未チェック状態になったのでチェックされるように修正
-            this.checkedAuthority.push(e.target.value);
-            break;
-          }
+      if (!e.target.checked) {
+        return;
+      }
+      // 代行編集可と編集可はどちらか一方のみチェックとするので、チェックON時は同プレフィックスの他コードを削除する。
+      // v-model が既に e.target.value を配列に追加しているため push しない（Vue3 で重複し、OFF が効かなくなる）。
+      const chkValHead = e.target.value.substring(0, 2);
+      for (let i = this.checkedAuthority.length - 1; i >= 0; i--) {
+        const v = this.checkedAuthority[i];
+        if (v !== e.target.value && v.indexOf(chkValHead) === 0) {
+          this.checkedAuthority.splice(i, 1);
         }
       }
     },
@@ -319,7 +317,7 @@ export default {
      * 吹き出し表示処理
      */
     showPopOver(event, message) {
-      var pop = document.getElementById("popOverMessage");
+      var pop = getScopedElementById("popOverMessage", this.$el || this);
       pop.innerText = message;
       this.userMenuPopoverTarget = event;
       this.userMenuPopoverVisible = true;
@@ -335,7 +333,7 @@ export default {
 .button-label {
   width: 5em;
 }
-.custom-ons-list-header >>> ons-list-header {
+.custom-ons-list-header :deep(ons-list-header) {
   font-size: inherit;
   display: flex;
   align-items: center;
@@ -344,8 +342,8 @@ export default {
   position: absolute;
   right: 8px;
 }
-.tips-popover >>> .popover,
-.tips-popover >>> .popover__content {
+.tips-popover :deep(.popover),
+.tips-popover :deep(.popover__content) {
   min-width: fit-content;
   min-height: fit-content;
 }

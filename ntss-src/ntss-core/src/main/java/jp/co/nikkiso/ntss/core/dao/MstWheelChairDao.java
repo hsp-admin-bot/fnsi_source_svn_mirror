@@ -1,6 +1,7 @@
 package jp.co.nikkiso.ntss.core.dao;
 
 import java.util.List;
+import java.util.Map;
 
 import org.seasar.doma.Dao;
 import org.seasar.doma.Insert;
@@ -15,7 +16,7 @@ import jp.co.nikkiso.ntss.core.entity.MstWheelChair;
  */
 @ConfigAutowireable
 @Dao
-public interface MstWheelChairDao {
+public interface MstWheelChairDao extends MasterDao<Map<String, Object>> {
 
   @Select
   List<MstWheelChair> selectByFacility(String facilityCd, String isDisp, String isDel);
@@ -34,5 +35,9 @@ public interface MstWheelChairDao {
 
   @Update
   int update(MstWheelChair param);
+
+  @Override
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
 
 }

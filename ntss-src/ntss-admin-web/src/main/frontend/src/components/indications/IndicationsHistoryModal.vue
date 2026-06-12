@@ -2,29 +2,23 @@
 
 <template>
   <modal-base @onClose="hideModal" class="custom-modal">
-    <div
-      slot="body"
-      class="modal-container-custom box_dis master-maintenance-page"
-      id="indications-history-modal"
-    >
+    <template #body>
+      <div
+        class="modal-container-custom box_dis master-maintenance-page"
+        id="indications-history-modal"
+      >
       <div class="modal-contents">
         <v-ons-row>
-          <kendo-grid
+          <div
             ref="grid"
-            :data-source="gridData"
-            :columns="gridColumns"
-            :sortable="true"
-            :resizable="true"
-            :scrollable-endless="true"
-            :pageable-numeric="false"
-            :pageable-previous-next="false"
-            :pageable-messages-empty="pageableMessageEmpty"
-            :height="gridHeightValue"
-          />
+            class="indications-history-grid"
+          ></div>
         </v-ons-row>
       </div>
-    </div>
-    <div slot="footer" class="modal-footer-custom">
+      </div>
+    </template>
+    <template #footer>
+      <div class="modal-footer-custom">
       <v-ons-row>
         <v-ons-col>
           <!-- mod 画面部品デザイン定義 修正 chen start -->
@@ -35,16 +29,21 @@
           </v-ons-button>
         </v-ons-col>
       </v-ons-row>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapGetters } from "vuex";
-import moment from "moment";
+import { getScopedElementById, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
+
+import { mapGetters } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
 import kendo from "@progress/kendo-ui";
+import $ from "jquery";
+import { markRaw } from "@/compat/vue/runtime";
 import ModalBase from "@/components/modals/ModalBase";
-import elementResizeDetectorMaker from "element-resize-detector";
+import elementResizeDetectorMaker from "@/compat/resize/element-resize-detector";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 
 const erd = elementResizeDetectorMaker({
@@ -81,7 +80,9 @@ export default {
         { value: 2, text: "指示受け2" },
         { value: 3, text: "指示承認1" },
         { value: 4, text: "指示承認2" }
-      ]
+      ],
+      directGridWidget: null,
+      directGridColumnSignature: ""
     };
   },
 
@@ -98,14 +99,152 @@ export default {
 
   mounted() {
     erd.listenTo(this.$el, () => {
-      this.$refs.grid.kendoWidget().refresh();
+      this.relayoutGrid();
     });
     this.$nextTick(async () => {
-      window.addEventListener("resize", this.onResize);
+      this.initDirectGridIfReady();
+      (getScopedWindow(this.$el) || window).addEventListener("resize", this.onResize);
     });
   },
 
   methods: {
+    getGridRef() {
+      return this.$refs.grid || null;
+    },
+    getGridWidget() {
+      return this.directGridWidget || this.getGridRef()?.gridWidget?.() || this.getGridRef()?.kendoWidget?.() || null;
+    },
+    getGridElement() {
+      return this.getGridWidget()?.element || (this.getGridRef() ? $(this.getGridRef()) : null);
+    },
+    relayoutGrid() {
+      return this.getGridRef()?.requestGridResize?.()
+        || this.getGridWidget()?.resize?.()
+        || this.getGridRef()?.refreshGrid?.()
+        || this.getGridWidget()?.refresh?.()
+        || null;
+    },
+    getDirectGridColumnSignature() {
+      return JSON.stringify((this.gridColumns || []).map(column => ({
+        field: column.field,
+        title: column.title,
+        width: column.width,
+        hidden: !!column.hidden
+      })));
+    },
+    installDirectGridFacade() {
+      const root = this.getGridRef();
+      if (!root || root.nodeType !== 1) {
+        return;
+      }
+      root.kendoWidget = () => this.directGridWidget;
+      root.gridWidget = () => this.directGridWidget;
+      root.gridElement = () => this.directGridWidget?.element || $(root);
+      root.refreshGrid = () => this.directGridWidget?.refresh?.();
+      root.requestGridResize = () => this.directGridWidget?.resize?.(true);
+    },
+    applyDirectGridStyleContract() {
+      const root = this.getGridRef();
+      if (!root || root.nodeType !== 1) {
+        return;
+      }
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-display-block");
+      root.querySelectorAll(".k-grid-header th, .k-grid-header .k-table-th").forEach(th => th.classList.add("k-header"));
+      root.querySelectorAll(".k-grid-content tbody tr").forEach((tr, index) => {
+        tr.classList.add("k-master-row");
+        tr.classList.toggle("k-alt", index % 2 === 1);
+      });
+      root.querySelectorAll(".k-grid-content tbody td").forEach(td => td.classList.add("k-td", "k-table-td"));
+    },
+    applyDirectGridHeightContract() {
+      const grid = this.getGridWidget();
+      if (!grid) {
+        return;
+      }
+      grid.setOptions({ height: this.gridHeightValue });
+      grid.resize?.(true);
+    },
+    initDirectGridIfReady() {
+      const root = this.getGridRef();
+      if (!root || root.nodeType !== 1 || !this.gridData || !Array.isArray(this.gridColumns)) {
+        return;
+      }
+      const nextSignature = this.getDirectGridColumnSignature();
+      if (this.directGridWidget) {
+        if (this.directGridColumnSignature !== nextSignature) {
+          this.directGridWidget.setOptions({ columns: this.gridColumns });
+          this.directGridColumnSignature = nextSignature;
+        }
+        if (this.directGridWidget.dataSource !== this.gridData) {
+          this.directGridWidget.setDataSource(this.gridData);
+        }
+        this.applyDirectGridHeightContract();
+        this.applyDirectGridStyleContract();
+        this.installDirectGridFacade();
+        return;
+      }
+      $(root).kendoGrid({
+        dataSource: this.gridData,
+        columns: this.gridColumns,
+        sortable: true,
+        resizable: true,
+        scrollable: { endless: true },
+        pageable: {
+          numeric: false,
+          previousNext: false,
+          messages: {
+            empty: this.pageableMessageEmpty
+          }
+        },
+        height: this.gridHeightValue,
+        sort: () => {
+          this.$nextTick(() => this.applyDirectGridStyleContract());
+        },
+        dataBound: () => {
+          this.applyDirectGridStyleContract();
+        }
+      });
+      this.directGridWidget = markRaw($(root).data("kendoGrid"));
+      this.directGridColumnSignature = nextSignature;
+      this.installDirectGridFacade();
+      this.applyDirectGridStyleContract();
+    },
+    destroyDirectGrid() {
+      try {
+        this.directGridWidget?.destroy?.();
+      } catch (_error) {
+        // noop
+      }
+      this.directGridWidget = null;
+      this.directGridColumnSignature = "";
+      const root = this.getGridRef();
+      if (root?.nodeType === 1) {
+        root.innerHTML = "";
+      }
+    },
+    getDirectGridSortField(fieldName) {
+      const fieldMap = {
+        upDate: "upDate",
+        approveKind: "approveKind",
+        signType: "signType",
+        approveBefId: "approveBefId",
+        approveAftId: "approveAftId",
+        userId: "userId"
+      };
+      return fieldMap[fieldName] || null;
+    },
+    getDirectGridSortParameter(sortDescriptors = []) {
+      const descriptor = Array.isArray(sortDescriptors) ? sortDescriptors[0] : null;
+      if (!descriptor?.field || !descriptor?.dir) {
+        return null;
+      }
+      const field = this.getDirectGridSortField(descriptor.field);
+      if (!field) {
+        return null;
+      }
+      const direction = descriptor.dir === "desc" ? "desc" : "asc";
+      return `${field},${direction}`;
+    },
     /**
      * @description テーブル内容を取得関数
      *              ★ kendoの既定リクエストAPIはjQueryである
@@ -131,11 +270,14 @@ export default {
               // sort: "ind_approve_history_no,desc"
               //del #12663 #12665 securify】SQLインジェクション(High) まとめ zrx end
             };
+            const sortParam = that.getDirectGridSortParameter(data.sort);
+            if (sortParam) {
+              params.sort = sortParam;
+            }
 
             // 値がないフィールドを抜く
             Object.keys(params).forEach(
-              key => !params[key] && delete params[key]
-            );
+              key => !params[key] && delete params[key]);
 
             return params;
           }
@@ -152,9 +294,8 @@ export default {
           data(response) {
             const responseData = response.result;
             responseData.forEach(item => {
-              item.upDate = moment(item.upDate).format(
-                "YYYY/MM/DD(ddd) HH:mm:ss"
-              );
+              item.upDate = dayjs(item.upDate).format(
+                "YYYY/MM/DD(ddd) HH:mm:ss");
               item.userId = that.getUserName(item.userId);
               item.approveBefId = that.getUserName(item.approveBefId);
               item.approveAftId = that.getUserName(item.approveAftId);
@@ -177,13 +318,14 @@ export default {
           }
 
           // ロードアイコンを表示
-          kendo.ui.progress(that.$refs.grid.kendoWidget().element, true);
+          kendo.ui.progress(that.getGridElement(), true);
         },
         requestEnd() {
           // ロードアイコンを非表示
-          kendo.ui.progress(that.$refs.grid.kendoWidget().element, false);
+          kendo.ui.progress(that.getGridElement(), false);
         }
       });
+      this.$nextTick(() => this.initDirectGridIfReady());
     },
     getUserName(userId) {
       const user = this.mstPersonalUser.find(user => +user.userId === +userId);
@@ -191,19 +333,18 @@ export default {
     },
     getSignTypeName(value) {
       const signType = this.signTypeDataSources.find(
-        item => +item.value === +value
-      );
+        item => +item.value === +value);
       return signType ? signType.text : "";
     },
     getApproveKindName(value) {
       const approveKind = this.approveKindDataSources.find(
-        item => +item.value === +value
-      );
+        item => +item.value === +value);
       return approveKind ? approveKind.text : "";
     },
     onResize() {
-      const ele = document.getElementById("indications-history-modal");
+      const ele = getScopedElementById("indications-history-modal", this.$el || this);
       this.gridHeight = ele ? ele.offsetHeight - 20 : 0;
+      this.$nextTick(() => this.applyDirectGridHeightContract());
     }
   },
 
@@ -214,8 +355,9 @@ export default {
     });
   },
 
-  beforeDestroy() {
-    window.removeEventListener("resize", this.onResize);
+  beforeUnmount() {
+    (getScopedWindow(this.$el) || window).removeEventListener("resize", this.onResize);
+    this.destroyDirectGrid();
     // add 画面パフォーマンス対応 chen start
     this.gridColumns = null;
     this.pageableMessageEmpty = null;
@@ -224,6 +366,8 @@ export default {
     this.gridHeight = null;
     this.signTypeDataSources = null;
     this.approveKindDataSources = null;
+    this.directGridWidget = null;
+    this.directGridColumnSignature = null;
     // add 画面パフォーマンス対応 chen end
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
@@ -233,11 +377,11 @@ export default {
 
 <style scoped>
 /* モーダル内がくずれるのでdisplay:hiddenではなくnoneにする */
-div >>> .erd_scroll_detection_container {
+div :deep(.erd_scroll_detection_container) {
   display: none !important;
 }
 
-.modal-container-custom >>> .k-grid {
+.modal-container-custom :deep(.k-grid) {
   width: 100%;
   font-size: 1em;
 /* add 障害票一覧_指示受け・指示承認 修正 chen start */
@@ -245,14 +389,14 @@ div >>> .erd_scroll_detection_container {
 /* add 障害票一覧_指示受け・指示承認 修正 chen end */
 }
 
-.modal-container-custom >>> .k-grid-content {
+.modal-container-custom :deep(.k-grid-content) {
   height: 50vh;
 /* add 障害票一覧_指示受け・指示承認 修正 chen start */
   border: 1px solid #dee2e6;
 /* add 障害票一覧_指示受け・指示承認 修正 chen end */
 }
 /* add 障害票一覧_指示受け・指示承認 修正 chen start */
-.modal-container-custom >>> .k-grid-pager {
+.modal-container-custom :deep(.k-grid-pager) {
   border: 1px solid #dee2e6;
 }
 /* add 障害票一覧_指示受け・指示承認 修正 chen end */
@@ -287,18 +431,18 @@ div >>> .erd_scroll_detection_container {
   cursor: pointer;
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 450px;
   height: 100%;
   padding: 15px;
   font-size: 14px;
 }
 
-.popover-style >>> .popover-mask {
+.popover-style :deep(.popover-mask) {
   z-index: 10005;
 }
 
-.popover-style >>> .popover {
+.popover-style :deep(.popover) {
   z-index: 10010;
   margin-top: 50px;
 }
@@ -324,25 +468,26 @@ input::-webkit-calendar-picker-indicator {
   width: 100%;
 }
 
+ 
 /* TODO: 共通スタイル(modal.css)に定義 */
-div >>> .modal-header .toolbar {
+div :deep(.modal-header .toolbar) {
   background-color: var(--ntss-header-background-color);
 }
 
-div >>> .modal-header .toolbar__title.toolbar__left {
+div :deep(.modal-header .toolbar__title.toolbar__left) {
   color: var(--ntss-header-color) !important;
 }
 
-div >>> .modal-search,
-div >>> .modal-body,
-div >>> .modal-footer,
-div >>> .modal-footer .bottom-bar,
-div >>> .k-grid .k-grid-pager {
+div :deep(.modal-search),
+div :deep(.modal-body),
+div :deep(.modal-footer),
+div :deep(.modal-footer .bottom-bar),
+div :deep(.k-grid .k-grid-pager) {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }
 
-div >>> .modal-body {
+div :deep(.modal-body) {
   overflow: hidden;
 }
 
@@ -392,39 +537,39 @@ div >>> .modal-body {
 
 @media print {
   /** 日時 */
-  .modal-contents >>> .k-grid colgroup col:nth-child(1) {
+  .modal-contents :deep(.k-grid colgroup col:nth-child(1)) {
     min-width: 6.7em;
     width: 25% !important;
   }
   /** 日時以外 */
-  .modal-contents >>> .k-grid colgroup col:nth-child(n+2) {
+  .modal-contents :deep(.k-grid colgroup col:nth-child(n+2)) {
     width: 15% !important;
   }
   /* ヘッダ、ボディ */
-  .modal-contents >>> .k-grid-header {
+  .modal-contents :deep(.k-grid-header) {
     padding-right: 0 !important;
   }
   /* Grid本体を紙幅に収める */
-  .modal-contents >>> div {
+  .modal-contents :deep(div) {
     height: auto !important;
   }
-  .modal-contents >>> .k-grid,
-  .modal-contents >>> .k-grid table {
+  .modal-contents :deep(.k-grid),
+  .modal-contents :deep(.k-grid table) {
     width: 100% !important;
     table-layout: fixed !important;
   }
   /* KendoがJSで設定した幅を無効化 */
-  .modal-contents >>> .k-grid th,
-  .modal-contents >>> .k-grid td {
+  .modal-contents :deep(.k-grid th),
+  .modal-contents :deep(.k-grid td) {
     width: auto !important;
     max-width: none !important;
   }
-  .modal-contents >>> .k-grid colgroup col {
+  .modal-contents :deep(.k-grid colgroup col) {
     width: auto !important;
     max-width: none !important;
   }
-  .modal-contents >>> .k-grid th,
-  .modal-contents >>> .k-grid td {
+  .modal-contents :deep(.k-grid th),
+  .modal-contents :deep(.k-grid td) {
     white-space: normal !important;
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -432,9 +577,9 @@ div >>> .modal-body {
     padding: 2px 1px !important;
   }
   /* Kendoのellipsis解除 */
-  .modal-contents >>> .k-grid .k-link,
-  .modal-contents >>> .k-grid .k-column-title,
-  .modal-contents >>> .k-grid .k-cell-inner {
+  .modal-contents :deep(.k-grid .k-link),
+  .modal-contents :deep(.k-grid .k-column-title),
+  .modal-contents :deep(.k-grid .k-cell-inner) {
     white-space: normal !important;
     text-overflow: unset !important;
     overflow: visible !important;

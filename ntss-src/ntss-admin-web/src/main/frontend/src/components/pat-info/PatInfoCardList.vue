@@ -205,13 +205,13 @@
     </span>
     <!-- 患者ID重複ダイアログ -->
     <message-dialog
-      :visible.sync="isDuplicateHospPatIdDialogVisible"
+      v-model:visible="isDuplicateHospPatIdDialogVisible"
       :message-cd="30000002"
       type="1"
     />
     <!-- キャンセル確認ダイアログ -->
     <message-dialog
-      :visible.sync="isCancelDialogVisible"
+      v-model:visible="isCancelDialogVisible"
       :message-cd="20010001"
       title="内容破棄"
       type="2"
@@ -219,19 +219,19 @@
     />
     <!-- データ不正ダイアログ -->
     <message-dialog
-      :visible.sync="isInvalidFormDialogVisble"
+      v-model:visible="isInvalidFormDialogVisble"
       v-bind="invalidFormDialogProps"
       type="1"
     />
     <!-- データを編集しています -->
     <message-dialog
-      :visible.sync="isDataNotEditDialogVisible"
+      v-model:visible="isDataNotEditDialogVisible"
       :message-cd="20010003"
       type="1"
     />
     <!-- 治療予定削除確認ダイアログ -->
     <message-dialog
-      :visible.sync="isDeleteOrdPlanDialogVisible"
+      v-model:visible="isDeleteOrdPlanDialogVisible"
       :message-cd="20010004"
       title="治療予定中止確認"
       type="3"
@@ -240,23 +240,17 @@
     />
     <!-- 禁忌・アレルギー重複確認ダイアログ -->
     <message-dialog
-      :visible.sync="isTabooAllergySameDialogVisible"
+      v-model:visible="isTabooAllergySameDialogVisible"
       :message-cd="20010006"
       type="2"
       @confirm="confirmRegTabooAllergy"
     />
     <!-- 透析困難リセット確認ダイアログ -->
     <message-dialog
-      :visible.sync="isResetDifficultyDialogVisible"
+      v-model:visible="isResetDifficultyDialogVisible"
       :message-cd="20010007"
       type="3"
       @confirm="confirmResetDifficulty"
-    />
-    <!-- 排他エラー -->
-    <message-dialog
-      :visible.sync="isHaitaErrDialogVisible"
-      :message-cd="22020006"
-      type="1"
     />
     <!-- 指示者設定モーダル -->
     <v-ons-modal v-if="isModalVisible" :visible="isModalVisible" :class="modalFontSize">
@@ -278,12 +272,12 @@
   import { getAuthorized } from "@/functions/common/CommonFunctions.js";
   // add #10359 編集権限の動作不正 dengshen end
   // ライブラリ
-  import _ from "underscore";
-  import { cloneDeep } from 'lodash'
-  import axios from "axios";
+  import _ from "@/compat/collections/lodash";
+  import { cloneDeep } from '@/compat/collections/lodash'
+  import axios from "@/compat/http/axios";
   import { ApiHelper } from "@/apis/AxiosHelper";
-  import moment from "moment";
-  import { mapActions, mapGetters, mapMutations, mapState } from "vuex";
+  import dayjs from "@/compat/date/dayjs";
+  import { mapActions, mapGetters, mapMutations, mapState } from "@/compat/vue/vuex";
   // 共通関数
   import { deserializeJsonColumn, serializeJsonColumn } from "@/functions/common/CommonFunctions";
   import { decodeEditableRecord, encodeEditableRecord, extractChangesRecord, getPatById } from "@/functions/PatInfoFunctions";
@@ -309,10 +303,10 @@
   import insuranceInfoCard from "@/components/pat-info/insurance-info-card/InsuranceInfoCard";
   import remoteMonitorCard from "@/components/pat-info/remote-monitor-card/RemoteMonitorCard";
   import additionSettingCard from "@/components/pat-info/addition-setting-card/AdditionSettingCard";
-  import Masonry from "masonry-layout";
-  import { DIALYSIS_DIFFICULTY_RESET } from "@/constants/facilitySetting";
+  import Masonry from "@/compat/layout/masonry";
+
   import indUserSetting from "@/components/pat-info/ind-user-setting/IndUserSettingModal.vue";
-  import { EventBus } from "@/eventBus.js";
+  import { EventBus } from "@/compat/vue/event-bus.js";
   import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
   import { KEY_NAME_PAT_INFO } from "@/constants/defaultSettingConstants";
   import { AUTHORITY_CODES } from "@/constants/userAuthority.js";
@@ -320,8 +314,12 @@
   import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
   import { PAT_CARD_LIST } from "@/components/pat-info/PatInfoConfig.js"
   // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-  import { messageFormat } from '@/functions/common/MessageFormat';
-  import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getHeaderHeight, getFooterMenuClientHeight, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { getLatestHeaderElement } from "@/functions/common/LayoutMeasureHelper";
+import { DIALYSIS_DIFFICULTY_RESET } from "@/constants/facilitySetting";
+
   // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 
 /**
@@ -368,6 +366,8 @@ export default {
       title:"治療予定を削除します。",
       isCheckEditedCard: false,
       masonry: {},
+      pendingMasonryLayoutFrame: null,
+      pendingMasonryLayoutNeedReload: false,
       patPersonalMainColumns: null,
       patMainColumns: null,
       patUniqueColumns: null,
@@ -489,9 +489,9 @@ export default {
       "getDefaultSetting",
       "getAuthorizedFunctions",
       "isDispMenu",
-      "getPatientShareMode",//自施設(1) or 他施設(0)
-      "getPatientShareFacilityCdMode"//施設cd
-      ]),
+      "getPatientShareMode",
+      "getPatientShareFacilityCdMode"
+    ]),
     ...mapGetters("user", {
       facilityCd: "getFacilityCd",
       advancedSettings: "getAdvancedSettings"
@@ -740,7 +740,7 @@ export default {
     additionSettingData() {
       let additon = _.pick(this.patInfoEditable, "addition_info");
       additon["addition_info"] = additon["addition_info"]?.map((item) => {
-        if (!item.hasOwnProperty("start_date")) {
+        if (!Object.prototype.hasOwnProperty.call(item, "start_date")) {
           return {
             ...item,
             start_date: {
@@ -765,7 +765,7 @@ export default {
         .$refs.cardContent.dialDiffInfo;
       const mapFunc = obj => obj.initValue;
       const dialDiffInfo = encodeDialDiffInfo.map(record =>
-        _.mapObject(record, mapFunc)
+        _.mapValues(record, mapFunc)
       );
       return JSON.stringify(dialDiffInfo);
     },
@@ -778,7 +778,7 @@ export default {
         .infectInfo;
       const mapFunc = obj => obj.initValue;
       const infectInfo = encodeInfectInfo.map(record =>
-        _.mapObject(record, mapFunc)
+        _.mapValues(record, mapFunc)
       );
       return JSON.stringify(infectInfo);
     },
@@ -806,7 +806,7 @@ export default {
     isChangedNextPatInfo() {
       let allCardData = {};
       let changedFlag = false;
-      for (const card of _.values(this.cardComponents)) {
+      for (const card of Object.values(this.cardComponents)) {
         allCardData = { ...allCardData, ...card.getEditedData() };
       }
       const changeNextPatColumnInfo = [
@@ -847,14 +847,14 @@ export default {
         const columnName = info.columnName;
         const keyName = info.keyName;
         let vaFlag = false;
-        if (_.isArray(keyName)) {
+        if (Array.isArray(keyName)) {
           return keyName.find(keyName =>
             this.isEditedColumn(changeNextPatInfo[columnName], keyName)
           );
         } else {
           let targetKeyName = null;
           let targetValue = null;
-          if (_.has(info, "targetKeyName") && _.has(info, "targetValue")) {
+          if (Object.prototype.hasOwnProperty.call(info, "targetKeyName") && Object.prototype.hasOwnProperty.call(info, "targetValue")) {
             targetKeyName = info.targetKeyName;
             targetValue = info.targetValue;
           }
@@ -924,6 +924,11 @@ export default {
   },
 
   watch: {
+    getFontSize() {
+      this.scheduleAllCardTextareaHeightsAfterLayout();
+      this.$nextTick(() => this.updateMasonry(true));
+      setTimeout(() => this.updateMasonry(true), 300);
+    },
     isIndUserSetting() {
       if (this.isIndUserSetting) {
         // 指示者が設定された場合登録処理を実行
@@ -952,7 +957,7 @@ export default {
   },
   created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     if (this.isCreationPat) {
       // mod #10359、#10331 編集権限について、対応する。 dengshen start
       // this.isCreatePatViewAuthorized = this.getUseFunctions.includes(FUNC_PAT_INFO_CREATE);
@@ -1075,13 +1080,14 @@ export default {
     // }
 
     this.layoutCardShowing();
+    this.updateMasonry(true);
     this.updateCardShowingDefaultSettingLoaded(true);
     // 患者情報カード一覧の表示完了通知
     // masonry-layout が患者情報カード一覧を再描画するまで患者情報カード一覧の要素の高さが確定しないため表示完了通知を遅延させる
     setTimeout(() => {
       this.$emit('card-list-mounted');
     }, 1000);
-    // 11729 患者情報・新規患者登録画面のカード展開/折畳状態の保持不正 end  
+    // 11729 患者情報・新規患者登録画面のカード展開/折畳状態の保持不正 end
     // 患者共通ヘッダー印刷時は不要な親要素を消し、印刷後に元に戻す
     if (this.headerClick) {
       // ハンドラをインスタンスに保持（remove用）
@@ -1103,8 +1109,12 @@ export default {
     }
   },
   //
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("searchAlert", this.searchAlert)
+    if (this.pendingMasonryLayoutFrame) {
+      cancelAnimationFrame(this.pendingMasonryLayoutFrame);
+      this.pendingMasonryLayoutFrame = null;
+    }
     this.masonry.destroy()
     this.masonry = null
     this.cardComponents = null
@@ -1114,11 +1124,14 @@ export default {
       selectedFacility: this.facilityCd
     });
     this.resetEditedComponent();
-    
+
     window.removeEventListener("beforeprint", this.handleBeforePrint);
     window.removeEventListener("afterprint", this.handleAfterPrint);
   },
   methods: {
+    getCardListElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || this);
+    },
     ...mapActions("loading-screen", ["setLoadingScreenMessage", "setLoadingScreenVisible"]),
     ...mapActions("pat-info", ["setSearchedPatList", "clearSelectedPat", "createPat", "updatePat", "checkHomeDialysisPat",
       "setAdvancedSettings", "setMstFacility", "setIsNewPatPage", "setDefaultSelectedPatId", "selectPat","sortPatList"]),
@@ -1126,11 +1139,19 @@ export default {
     ...mapActions("treatment-record/common", ["setOrdNo"]),
     ...mapActions("pat-insurance", ["updatePatInsurance"]),
     ...mapMutations("pat-info", ["setSelectedPat", "setIsPatInfoVisible", "setIndUserList", "setIsIndUserSetting",
-      "setIndUserId",  "resetEditedComponent", "setCardShowingDefaultSettingLoaded", "setCardShowingCondition","setOtherFacilityInfo"]),
+      "setIndUserId",  "resetEditedComponent", "setCardShowingDefaultSettingLoaded", "setCardShowingCondition", "setOtherFacilityInfo"]),
     ...mapGetters("account-edit", ["getUserId"]),
     ...mapActions("bread-crumb", ["resetKeepHistory"]),
     getItemAuthorized(pageCd, itemCd) {
       return getAuthorized(pageCd, itemCd);
+    },
+    resetOtherFacilityInfoIfOwnShare() {
+      if (this.getPatientShareFacilityCdMode == null || this.getPatientShareMode == 1) {
+        this.setOtherFacilityInfo({
+          isOtherFacility: false,
+          otherFacilityCd: null
+        });
+      }
     },
     calculateGridSize() {
       const ww = this.windowWidth;
@@ -1138,19 +1159,19 @@ export default {
       const sbWidth = this.sidebarWidth;
       if (sbWidth) {
         const contWidth = contentWidth - sbWidth;
-        document.getElementsByClassName("card-infos")[0].style.width = contWidth + 'px';
+        this.$refs.masonryContainer && (this.$refs.masonryContainer.style.width = contWidth + 'px');
       } else {
-        document.getElementsByClassName("card-infos")[0].style.width = contentWidth + 'px';
+        this.$refs.masonryContainer && (this.$refs.masonryContainer.style.width = contentWidth + 'px');
       }
       const wh = this.windowHeight;
-      const hh = document.getElementsByClassName("header")[0].offsetHeight;
-      const fh = document.getElementById("footer-menu").clientHeight;
+      const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
+      const fh = getFooterMenuClientHeight(this.$el || null);
       const contHeight = wh - hh - fh - 5;
       this.contentHeight = contHeight;
     },
     async searchAlert(selectedPatId) {
       const nowSelectPatId = this.selectedPatId;
-      let patInfoViewFlg = this.$router.currentRoute.name === "pat-info" || this.$router.currentRoute.name === "pat-prescription" ? true : false;
+      let patInfoViewFlg = this.$route.name === "pat-info" || this.$route.name === "pat-prescription" ? true : false;
       if (this.beforeSelectPatId === null) {
         this.beforeSelectPatId = nowSelectPatId;
         this.tempPatId = nowSelectPatId;
@@ -1164,12 +1185,7 @@ export default {
             getErrorMessage('PatList.vue', 'setSelectedPat', "[PatList.vue]setSelectedPat(): 患者選択失敗");
             throw new Error("[PatList.vue]setSelectedPat(): 患者選択失敗");
           }).finally(() => {
-            if (this.getPatientShareFacilityCdMode == null || this.getPatientShareMode == 1) {
-                this.setOtherFacilityInfo({
-                  isOtherFacility: false,
-                  otherFacilityCd: null
-                });
-            }
+            this.resetOtherFacilityInfoIfOwnShare();
             if (patInfoViewFlg) {
               this.setLoadingScreenVisible(false);
             }
@@ -1188,12 +1204,7 @@ export default {
                     getErrorMessage('PatList.vue', 'setSelectedPat', "[PatList.vue]setSelectedPat(): 患者選択失敗");
                     throw new Error("[PatList.vue]setSelectedPat(): 患者選択失敗");
                   }).finally(() => {
-                    if (this.getPatientShareFacilityCdMode == null || this.getPatientShareMode == 1) {
-                        this.setOtherFacilityInfo({
-                          isOtherFacility: false,
-                          otherFacilityCd: null
-                        });
-                    }
+                    this.resetOtherFacilityInfoIfOwnShare();
                     if (patInfoViewFlg) {
                       this.setLoadingScreenVisible(false);
                     }
@@ -1209,12 +1220,7 @@ export default {
               getErrorMessage('PatList.vue', 'setSelectedPat', "[PatList.vue]setSelectedPat(): 患者選択失敗");
               throw new Error("[PatList.vue]setSelectedPat(): 患者選択失敗");
             }).finally(() => {
-              if (this.getPatientShareFacilityCdMode == null || this.getPatientShareMode == 1) {
-                  this.setOtherFacilityInfo({
-                    isOtherFacility: false,
-                    otherFacilityCd: null
-                  });
-              }
+              this.resetOtherFacilityInfoIfOwnShare();
               if (patInfoViewFlg) {
                 this.setLoadingScreenVisible(false);
               }
@@ -1229,7 +1235,7 @@ export default {
       });
     },
     async refreshData() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       if (this.hasEditedComponent) {
@@ -1277,10 +1283,9 @@ export default {
         this.clearSelectedPat();
         // ★ selectPat の完了を待つ
         try {
-          // await this.selectPat(this.patInfoRaw.pat_id);
           const selectedPatId = this.patInfoRaw.pat_id;
           const selectedFacility = this.getPatientShareMode === 1 ? this.facilityCd : this.getOtherFacilityCd;
-          await this.selectPat({selectedPatId, selectedFacility});
+          await this.selectPat({ selectedPatId, selectedFacility });
         } finally {
           this.setLoadingScreenVisible(false);
         }
@@ -1297,7 +1302,7 @@ export default {
     },
     // 新患施設一覧のデータを取得
     getNewPatFacility() {
-      ApiHelper.get(`${PAT_CARD_LIST.urigetNewPatFacility}/${this.facilityCd}`).then((response) => {
+      ApiHelper.get(`${PAT_CARD_LIST.urigetNewPatFacility}/${this.facilityCd}`, { selectedPatId: this.selectedPatId }).then((response) => {
         this.setMstFacility(response.data);
       }).catch(()=> {
         getErrorMessage('PatInfoCardList.vue', 'getNewPatFacility', '施設一覧のデータを取得失敗');
@@ -1438,16 +1443,30 @@ export default {
         await this.saveProc();
       } catch (error) {
         getErrorMessage('PatInfoCardList.vue', 'saveMain', error);
+        // 排他制御エラー
+        if (this.isHaitaErrDialogVisible) {
+          this.$ons.notification.alert({
+            title: DIALOG_MESSAGES["22020006"].title,
+            message: messageFormat(DIALOG_MESSAGES["22020006"].message)
+          });
+          this.isHaitaErrDialogVisible = false;
+        } else {
+          // 排他制御エラー以外はエラーアラート表示
+          this.$ons.notification.alert({
+            title: DIALOG_MESSAGES["00200167"].title,
+            message: messageFormat(DIALOG_MESSAGES["00200167"].message)
+          });
+        }
         throw error;
       } finally {
         this.isSaving = false;
         this.setIsPatInfoVisible(false);
         this.resetEditedComponent();
-    
+
         // refreshData の完了を待つ
         // 選択済患者IDをクリア→再設定しているので再設定完了まで待ってからイベント発火する
         await this.refreshData();
-    
+
         EventBus.$emit("isRefresh");
         EventBus.$emit("savePatInfoSuccess");
         // 11729 患者情報・新規患者登録画面のカード展開/折畳状態の保持不正 start
@@ -1458,7 +1477,7 @@ export default {
     // 全カードのバリデーション
     // true: 成功, false: 失敗
     validateAllCard() {
-      for (const cardElement of _.values(this.cardComponents)) {
+      for (const cardElement of Object.values(this.cardComponents)) {
         // 必須項目チェック
         const emptyFormName = cardElement.checkAllRequiredForm();
         if (emptyFormName !== "") {
@@ -1491,17 +1510,14 @@ export default {
       };
       return result;
     },
-    /**
-     * 他院データをフィルタリング
-     */
     filterOtherHospitalData(allCardData) {
-      const TARGET_KEYS = [
-        'in_out_visit_history_info',
-        'medical_hst_info',
-        'physical_info'
+      const targetKeys = [
+        "in_out_visit_history_info",
+        "medical_hst_info",
+        "physical_info"
       ];
 
-      TARGET_KEYS.forEach(key => {
+      targetKeys.forEach(key => {
         if (!Array.isArray(allCardData[key])) return;
 
         allCardData[key] = allCardData[key].filter(row => {
@@ -1533,10 +1549,10 @@ export default {
       await this.setCardDataBeforeSaving();
       // 各カードが編集したデータを集める
       let allCardData = {};
-      for (const card of _.values(this.cardComponents)) {
+      for (const card of Object.values(this.cardComponents)) {
         allCardData = { ...allCardData, ...card.getEditedData() };
       }
-      this.filterOtherHospitalData(allCardData)
+      this.filterOtherHospitalData(allCardData);
       // 更新用に加工
       const decodedRecord = decodeEditableRecord(allCardData);
       try {
@@ -1557,7 +1573,7 @@ export default {
       const colName = ["dial_diff_com_info", "other_contact_info", "charge_staff_info", "implant_info", "medical_hst_info", "in_out_visit_history_info", "physical_info", "taboo_allergy_info"];
       colName.forEach(sub => {
         if (numberedRecord[sub].length > 0) {
-          if (numberedRecord[sub][0].hasOwnProperty("readonly")) {
+          if (Object.prototype.hasOwnProperty.call(numberedRecord[sub][0], "readonly")) {
             numberedRecord[sub] = numberedRecord[sub].filter(info => info.readonly === null);
             numberedRecord[sub].forEach(info => {
               delete info.readonly;
@@ -1573,10 +1589,10 @@ export default {
       );
       const updatableRecord = { ...this.patInfoRaw, ...serializedRecord };
       // 各テーブルのカラムに対応するデータを取り出す
-      const pat_personal_main = _.pick(updatableRecord, _.keys(this.patRecord.pat_personal_main));
-      const pat_main = _.pick(updatableRecord, _.keys(this.patRecord.pat_main));
+      const pat_personal_main = _.pick(updatableRecord, Object.keys(this.patRecord.pat_personal_main));
+      const pat_main = _.pick(updatableRecord, Object.keys(this.patRecord.pat_main));
       // 6886 帳票の患者情報が過去日付時点の内容で表示できない 王永吉
-      const pat_insurance_info = _.pick(updatableRecord, _.keys(this.patRecord.pat_insurance_info));
+      const pat_insurance_info = _.pick(updatableRecord, Object.keys(this.patRecord.pat_insurance_info));
       let taboo = pat_main.taboo_allergy_info;
       let tabooJson = JSON.parse(taboo);
       for (let i = 0; i < tabooJson.length; i++) {
@@ -1589,9 +1605,9 @@ export default {
       }
       taboo = JSON.stringify(tabooJson);
       pat_main.taboo_allergy_info = taboo;
-      const pat_unique = _.pick(updatableRecord, _.keys(this.patRecord.pat_unique));
+      const pat_unique = _.pick(updatableRecord, Object.keys(this.patRecord.pat_unique));
       // 更新日時を追加
-      const nowDate = moment().format("YYYY-MM-DD HH:mm:ss");
+      const nowDate = dayjs().format("YYYY-MM-DD HH:mm:ss");
       pat_personal_main.up_date = nowDate;
       pat_main.up_date = nowDate;
       // 加算・管理料
@@ -1624,7 +1640,7 @@ export default {
       // }
       // add 患者情報：検査結果一括登録感染症後、ページ上部患者名横の感染症アイコンに色がない 関  end
       // del 9538 患者情報の感染症の感染症患者として扱うの保存を行っても感染症結果に(+)がないとONの表示がされない zhou end
-      const pre_pat_group_info = _.pick(updatableRecord, _.keys(this.patRecord.pat_group_info));
+      const pre_pat_group_info = _.pick(updatableRecord, Object.keys(this.patRecord.pat_group_info));
       const pat_group_info = this.validatePatGroupInfo(pre_pat_group_info);
       const patInfo = {
         pat_personal_main,
@@ -1642,7 +1658,9 @@ export default {
         EventBus.$emit("scrollBottom", false);
         // add 9266 患者情報を編集して保存すると患者検索の並び順が変化する 関 end
       } else {
-        const mstComsvSetting = await ApiHelper.get(`/master_maintenance/mst_comsv_setting/data/${this.facilityCd}`);
+        const mstComsvSetting = await ApiHelper.get(`/master_maintenance/mst_comsv_setting/data/${this.facilityCd}`, {
+          selectedPatId: this.selectedPatId
+        });
         // 6590 次患者情報（コメントデータ）が更新されない 周
         let diviceEgeList = mstComsvSetting.data.localDataSource.data;
         diviceEgeList.forEach(de => {
@@ -1667,7 +1685,10 @@ export default {
         // add 9266 患者情報を編集して保存すると患者検索の並び順が変化する 関 start
         if (null !== this.getSortPatInfo && this.getSortPatInfo.length >0) {
           if (null !== this.getSortPatInfo[0].key) {
-            await this.sortPatList(this.getSortPatInfo);
+            await this.sortPatList({
+              sortConditions: this.getSortPatInfo,
+              selectedPatId: this.selectedPatId
+            });
           }
         }
         EventBus.$emit("scrollBottom", true);
@@ -1752,7 +1773,8 @@ export default {
       });
       // add 8669 【デグレ】患者情報画面内の感染症リストがマスタと一致していない 関 start
       const requestParam = {
-        facilityCd: getPatInfo.pat_main.facility_cd
+        facilityCd: getPatInfo.pat_main.facility_cd,
+        selectedPatId: this.selectedPatId
       };
       const response = await ApiHelper.get(
         "/mstInfo/mstInfection",
@@ -1823,7 +1845,7 @@ export default {
           facility_cd: this.facilityCd,
           hosp_pat_id: this.selectedPat.pat_personal_main.hosp_pat_id,
           ord_no: "",
-          base_date:moment().format("YYYYMMDD"),
+          base_date:dayjs().format("YYYYMMDD"),
           user_id: this.getUserId()
         };
         createJournal(params);
@@ -1835,17 +1857,20 @@ export default {
           pat_id:this.selectedPat.pat_personal_main.pat_id,
           hosp_pat_id: this.selectedPat.pat_personal_main.hosp_pat_id,
           ord_no: "",
-          base_date:moment().format("YYYYMMDD"),
+          base_date:dayjs().format("YYYYMMDD"),
           user_id: this.getUserId()
         };
         createJournal(params);
       }
-      let patList = this.searchedPatList;
-      for (var i = 0; i < patList.length; i++) {
-        if(patList[i].pat_id == this.patInfoRaw.pat_id){
-          patList[i].in_out_class = patInfo.pat_personal_main.in_out_class;
-          break;
-        }
+      const savedPatId = this.patInfoRaw.pat_id;
+      const patIndex = this.searchedPatList.findIndex(pat => pat.pat_id == savedPatId);
+      if (patIndex !== -1) {
+        const updatedPatList = [...this.searchedPatList];
+        updatedPatList[patIndex] = {
+          ...updatedPatList[patIndex],
+          in_out_class: getPatInfo.pat_personal_main.in_out_class
+        };
+        this.setSearchedPatList(updatedPatList);
       }
     },
     // 院内ID重複チェック
@@ -2018,7 +2043,8 @@ export default {
       const response = await ApiHelper.get(
         // mod 徐博 start
         // `${urigetFacilitySettingValue}/${this.facilityCd}/${DIALYSIS_DIFFICULTY_RESET}`
-        `${PAT_CARD_LIST.urigetFacilitySettingValue}/${this.facilityCd}/${DIALYSIS_DIFFICULTY_RESET}`
+        `${PAT_CARD_LIST.urigetFacilitySettingValue}/${this.facilityCd}/${DIALYSIS_DIFFICULTY_RESET}`,
+        { selectedPatId: this.selectedPatId }
         // add 徐博 end
       ).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
@@ -2110,7 +2136,7 @@ export default {
       const workObj = cloneDeep(record);
       // ctl_no採番対象のJSON配列カラムをループ
       for (const columnName of columnNames) {
-        if (!_.has(workObj, columnName)) {
+        if (!Object.prototype.hasOwnProperty.call(workObj, columnName)) {
           throw new Error(
             `ctl_no採番対象カラム[${columnName}]が患者情報レコードに存在しません。`
           );
@@ -2118,7 +2144,7 @@ export default {
 
         const targetJsonAry = workObj[columnName];
         // 配列要素全てにctl_noキーがあるかチェック
-        if (!targetJsonAry.every(json => _.has(json, "ctl_no"))) {
+        if (!targetJsonAry.every(json => Object.prototype.hasOwnProperty.call(json, "ctl_no"))) {
           throw new Error(
             `ctl_no採番対象カラム[${columnName}]の要素にctl_noが存在しません。`
           );
@@ -2132,7 +2158,7 @@ export default {
         }
         // 最大のctl_noを取得
         // TODO: 排他チェックが必要になるならこれだとctl_noが被る可能性があるので要修正
-        let maxCtlNo = _.max(deletedAry, el => el.ctl_no).ctl_no;
+        let maxCtlNo = _.maxBy(deletedAry, el => el.ctl_no)?.ctl_no || 0;
         // ctl_no:0 に対して採番
         const numberedAry = deletedAry.map(el => {
           if (el.ctl_no === 0) {
@@ -2148,8 +2174,28 @@ export default {
     /**
      * @description カードサイズが変わる場合のコールバック関数
      */
-    updateMasonry() {
-      this.masonry.layout();
+    updateMasonry(needReload = false) {
+      this.pendingMasonryLayoutNeedReload = this.pendingMasonryLayoutNeedReload || needReload;
+      this.$nextTick(() => {
+        if (this.pendingMasonryLayoutFrame) {
+          cancelAnimationFrame(this.pendingMasonryLayoutFrame);
+          this.pendingMasonryLayoutFrame = null;
+        }
+        this.pendingMasonryLayoutFrame = requestAnimationFrame(() => {
+          this.pendingMasonryLayoutFrame = requestAnimationFrame(() => {
+            this.pendingMasonryLayoutFrame = null;
+            if (!this.masonry) {
+              this.pendingMasonryLayoutNeedReload = false;
+              return;
+            }
+            if (this.pendingMasonryLayoutNeedReload) {
+              this.masonry.reloadItems();
+            }
+            this.masonry.layout();
+            this.pendingMasonryLayoutNeedReload = false;
+          });
+        });
+      });
     },
 
     // 11729 患者情報・新規患者登録画面のカード展開/折畳状態の保持不正 start
@@ -2181,8 +2227,8 @@ export default {
     },
     /**
      * カード開閉イベントハンドラ
-     * @param cardName 
-     * @param isCardShowing 
+     * @param cardName
+     * @param isCardShowing
      */
     onChangeCardShowing(cardName, isCardShowing) {
       const data = this.cardShowingKeyNameData.find(data => data.cardName === cardName);
@@ -2191,10 +2237,26 @@ export default {
         this.cardShowing.condition[data.keyName] = isCardShowing;
         this.updateCardShowingCondition();
       }
+      this.updateMasonry();
+      if (isCardShowing) {
+        this.scheduleAllCardTextareaHeightsAfterLayout();
+      }
+    },
+    scheduleAllCardTextareaHeightsAfterLayout() {
+      [0, 100, 300, 800].forEach(ms => {
+        setTimeout(() => {
+          this.$nextTick(() => this.adjustAllCardTextareaHeights());
+        }, ms);
+      });
+    },
+    adjustAllCardTextareaHeights() {
+      Object.values(this.cardComponents || {}).forEach(card => {
+        card?.adjustCardTextareaHeights?.();
+      });
     },
     /**
      * 全カード開閉イベントハンドラ
-     * @param isCardShowing 
+     * @param isCardShowing
      */
     onChangeAllCardShowing(isCardShowing) {
       // 患者情報・新規患者登録の全てのカード開閉状態を変更してストアに保存する
@@ -2202,6 +2264,7 @@ export default {
         this.cardShowing.condition[keyName] = isCardShowing;
       });
       this.updateCardShowingCondition();
+      this.updateMasonry(true);
     },
     /**
      * 患者情報・新規患者登録毎のカード開閉状態の設定
@@ -2322,12 +2385,12 @@ export default {
         }
         // mod #10597 既往歴，入外・転入出による治療予定中止の動作が不正 20240514 ztc end
         // del #10597 既往歴，入外・転入出による治療予定中止の動作が不正 20240514 ztc start
-        // date = moment(dieDate, "YYYY-MM-DD HH:mm:ss");
+        // date = dayjs(dieDate, "YYYY-MM-DD HH:mm:ss");
         // del #10597 既往歴，入外・転入出による治療予定中止の動作が不正 20240514 ztc end
         type = "death";
         // mod #10597 既往歴，入外・転入出による治療予定中止の動作が不正 20240514 ztc start
         // moveOutDateAnt.push({'ind_start_date': date, 'ind_end_date': '99991231'});
-        moveOutDateAnt.push({'ind_start_date': moment(dieDate).format("YYYYMMDD"), 'ind_end_date': '99991231'});
+        moveOutDateAnt.push({'ind_start_date': dayjs(dieDate).format("YYYYMMDD"), 'ind_end_date': '99991231'});
         // mod #10597 既往歴，入外・転入出による治療予定中止の動作が不正 20240514 ztc end
 
       }
@@ -2355,7 +2418,7 @@ export default {
               }
               if (item.period_start_date.editValue) {
                 moveOutDateAnt.push({
-                  'ind_start_date': moment(item.period_start_date.editValue).format("YYYYMMDD"),
+                  'ind_start_date': dayjs(item.period_start_date.editValue).format("YYYYMMDD"),
                   'ind_end_date': '99991231'
                 });
               }
@@ -2366,9 +2429,9 @@ export default {
               }
               moveOutDateAnt.push({
                 'ind_start_date': item.period_start_date.editValue ?
-                    moment(item.period_start_date.editValue).format("YYYYMMDD") : moment(new Date()).format("YYYYMMDD"),
+                    dayjs(item.period_start_date.editValue).format("YYYYMMDD") : dayjs(new Date()).format("YYYYMMDD"),
                 'ind_end_date': item.period_end_date.editValue ?
-                    moment(item.period_end_date.editValue).format("YYYYMMDD") : '99991231'
+                    dayjs(item.period_end_date.editValue).format("YYYYMMDD") : '99991231'
               });
             }
           }
@@ -2385,7 +2448,7 @@ export default {
         // 転出が選択されていなければ処理終了
         // return false;
       // }
-      // this.moveOutDate = moment(date).format("YYYY-MM-DD");
+      // this.moveOutDate = dayjs(date).format("YYYY-MM-DD");
       // del #10597 既往歴，入外・転入出による治療予定中止の動作が不正 20240514 ztc end
 
       const selectParamJson = {};
@@ -2497,7 +2560,7 @@ export default {
       deleteParamJson.is_die_flg = this.cardComponents.medicalHstCard.isDie;
 
       //データの送信
-      await ApiHelper.post("/mainData/deleteIndPlanPatInfo/", deleteParamJson).catch(
+      await ApiHelper.post("/mainData/deleteIndPlanPatInfo", deleteParamJson).catch(
         error => {
           //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
           getErrorMessage('PatInfoCardList.vue', 'deleteOrdPlan', error);
@@ -2514,7 +2577,8 @@ export default {
       this.setIndUserId(null);
       // 指示者情報を取得
       const response = await ApiHelper.get(
-        `/facilities/${this.getStateUserAccountInfo.facilityCd}/personal-user/job/doctor`
+        `/facilities/${this.getStateUserAccountInfo.facilityCd}/personal-user/job/doctor`,
+        { selectedPatId: this.selectedPatId }
       ).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
         getErrorMessage('PatInfoCardList.vue', 'checkIndUserSetting', error);
@@ -2592,14 +2656,18 @@ export default {
     },
     // menu-barボタンの位置補正
     correctBtnPosition() {
-      const sidebarSwitchObj = document.getElementsByClassName("card-list");
+      const sidebarSwitchObj = this.getCardListElementsByClassName("card-list");
       if (sidebarSwitchObj.length !== 0) {
         this.$nextTick(() => {
           const leftPos = sidebarSwitchObj[0].getBoundingClientRect().left;
+          const menuBar = this.getCardListElementsByClassName("menu-bar")[0];
+          if (!menuBar) {
+            return;
+          }
           if (leftPos !== 0) {
-            document.getElementsByClassName("menu-bar")[0].style.left = `${leftPos}px`;
+            menuBar.style.left = `${leftPos}px`;
           } else {
-            document.getElementsByClassName("menu-bar")[0].style.left = "";
+            menuBar.style.left = "";
           }
         });
       }
@@ -2615,12 +2683,12 @@ export default {
       targetKeyName = null,
       targetValue = null
     ) {
-      if (_.has(columnInfo, "initValue")) {
+      if (Object.prototype.hasOwnProperty.call(columnInfo, "initValue")) {
         // 単一カラム
         if (columnInfo.initValue !== columnInfo.editValue) {
           return true;
         }
-      } else if (_.isArray(columnInfo)) {
+      } else if (Array.isArray(columnInfo)) {
         // JSON配列カラム
         for (const column of columnInfo) {
           if (keyName === null) {
@@ -2759,6 +2827,11 @@ export default {
 </script>
 
 <style scoped>
+@import "../../assets/styles/modal.css";
+.modal-container {
+  width: 300px !important;
+  height: auto !important;
+}
 .pat-info-area {
   color: var(--ntss-list-body-color);
 }
@@ -2812,7 +2885,7 @@ export default {
     transform: none !important;
 
     width: 100%;
-    
+
     /* 改ページ時のcolumn分割制御 */
     break-inside: avoid;
     page-break-inside: avoid;
@@ -2875,4 +2948,21 @@ export default {
 .pat-info-header-area .right-exe-btn {
   right: 20px;
 }
+
+.info-size-set-x-large :deep(#infection-card-contents .card-contents .item-cell){
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+
+@media (min-width: 768px) and (max-width: 1280px) {
+  .info-size-set-x-large :deep(#physical-info-card-contents .card-contents .edit-area .ntss-custom-button-table) {
+    padding: 0.2em 0.2em 0em 0.2em !important;
+  }
+}
+
+
+
+
 </style>

@@ -1,7 +1,7 @@
 /**
  * ポップオーバー用Mixin.
  */
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 
 export default {
   computed: {

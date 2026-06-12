@@ -3,18 +3,20 @@
     <div class="panel">
     <div class="container" >
       <table>
-        <tr>
-          <td><div class="label-user-name width: 200px;">ダウンロードサイトURL：</div></td>
-          <td><div class="user-name-text width: 300px;">{{ getDownloadServerPath }}</div></td>
-        </tr>
-        <tr>
-          <td><div class="label-user-name width: 50px">発行者：</div></td>
-          <td><div class="user-name-text width: 100px">{{ getUserName }}</div></td>
-        </tr>
-        <tr>
-          <td><div class="label-user-name width: 50px">発行日時：</div></td>
-          <td><div class="user-name-text width: 100px">{{ Clfalicitylist.issueDate }}</div></td>
-        </tr>
+        <tbody>
+          <tr>
+            <td><div class="label-user-name width: 200px;">ダウンロードサイトURL：</div></td>
+            <td><div class="user-name-text width: 300px;">{{ getDownloadServerPath }}</div></td>
+          </tr>
+          <tr>
+            <td><div class="label-user-name width: 50px">発行者：</div></td>
+            <td><div class="user-name-text width: 100px">{{ getUserName }}</div></td>
+          </tr>
+          <tr>
+            <td><div class="label-user-name width: 50px">発行日時：</div></td>
+            <td><div class="user-name-text width: 100px">{{ Clfalicitylist.issueDate }}</div></td>
+          </tr>
+        </tbody>
       </table>
     </div>
     <br><br><br>
@@ -87,8 +89,12 @@
 </template>
 <script>
 import { mapGetters ,mapActions } from "vuex";
+import loadingScreen from "@/components/common/LoadingScreen";
 
 export default {
+  components: {
+    "loading-screen": loadingScreen
+  },
   computed: {
    ...mapGetters("user", [
       "getUserName",

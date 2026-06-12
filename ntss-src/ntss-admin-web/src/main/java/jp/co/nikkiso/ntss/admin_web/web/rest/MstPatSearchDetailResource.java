@@ -20,6 +20,10 @@ import jp.co.nikkiso.ntss.core.entity.MstPatSearchDetail;
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+// #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+import jp.co.nikkiso.ntss.core.dao.MstPatSearchDetailDao;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
+// #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
 
 @RestController
 @RequestMapping(Uri.PAT_SEARCH_DETAIL)
@@ -27,6 +31,11 @@ public class MstPatSearchDetailResource {
 
   @Autowired
   MstPatSearchDetailService mstPatSearchDetailService;
+
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+  @Autowired
+  MstPatSearchDetailDao mstPatSearchDetailDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
 
   // wp アプリケーションログの適正化 Add Start
   @Autowired
@@ -113,8 +122,22 @@ public class MstPatSearchDetailResource {
    * @return 作成されるレコードの数
    */
   @PutMapping("/{searchCd}")
-  public ResponseEntity<?> delete(@PathVariable Long searchCd) {
-
+  public ResponseEntity<?> delete(@PathVariable Long searchCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+    if (!ntssUser.isNkkAdminUser()) {
+      MstPatSearchDetail target = mstPatSearchDetailDao.selectBySearchCd(searchCd);
+      if (target != null && target.getFacilityCd() != null &&
+          !target.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " searchCd=" + searchCd + " facilityCd=" + target.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.PAT_SEARCH_DETAIL ;
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,

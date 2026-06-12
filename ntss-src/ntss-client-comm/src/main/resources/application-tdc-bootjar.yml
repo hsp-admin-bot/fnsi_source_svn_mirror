@@ -1,6 +1,6 @@
 spring:
   datasource:
-    # NKK aws 
+    # NKK aws
     # url: jdbc:postgresql://ntss-platform-service-rds.c39h9ck7e4ad.ap-northeast-1.rds.amazonaws.com:5432/ntss_dbx?currentSchema=ntss&stringtype=unspecified
     # NKK aws provisional
     # url: jdbc:postgresql://ntss-platform-rds.clizq2mnnwjp.ap-northeast-1.rds.amazonaws.com:5432/ntss_dbx?currentSchema=ntss&stringtype=unspecified
@@ -27,7 +27,7 @@ spring:
       driver-class-name: org.postgresql.Driver
       username: nkk4
       password: nkk4
-      
+
 cloud:
     aws:
         region:
@@ -52,4 +52,3 @@ ntss:
       # TDC local
       postMsgAPI_WebAppSrv: :8080/ntss-client-comm/api/sendclient
       postMsgAPI_DeviceSrv: :8080/ntss-client-comm/api/sendclient
-     

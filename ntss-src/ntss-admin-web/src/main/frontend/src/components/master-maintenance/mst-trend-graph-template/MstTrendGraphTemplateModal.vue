@@ -140,8 +140,8 @@
             </tr>
           </thead>
           <tbody>
-          <template v-for="(item,index) in inputModel.seriesInfo">
-            <tr v-if="!item.model_type || item.model_type == inputModel.model" :key="item.id">
+          <template v-for="(item,index) in inputModel.seriesInfo" :key="item.id">
+            <tr v-if="!item.model_type || item.model_type == inputModel.model">
               <td class="ntss-list-body-td graph-list-name">
                 <v-ons-select
                   class="selectbox"
@@ -317,18 +317,19 @@
   </div>
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { MACHINE_MODEL, NX_MACHINE_ID } from "@/constants/machineModel";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 import { ApiHelper } from "@/apis/AxiosHelper.js";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
-// add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
-// add #11047 No5 治療状況透析液調製装置グラフレイアウトマスタ＞詳細 custom-input-number-pro 置き換えます linjunfeng start
-import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro';
+
+import { getScopedElementsByClassName, resolveRefElement } from "@/functions/common/LayoutMeasureHelper";
+import { nextId } from "@/functions/common/id";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 // add #11047 No5 治療状況透析液調製装置グラフレイアウトマスタ＞詳細 custom-input-number-pro 置き換えます linjunfeng end
 
 export default {
@@ -410,8 +411,8 @@ export default {
       dataErrList:[],
       // add #11047 No5 治療状況透析液調製装置グラフレイアウトマスタ＞詳細 custom-input-number-pro 置き換えます linjunfeng start
       isShowCustomInputNumberPro: false,
-      defaultMinValue: -999999999999999999,
-      defaultMaxValue: 999999999999999999,
+      defaultMinValue: Number("-999999999999999999"),
+      defaultMaxValue: Number("999999999999999999"),
       // add #11047 No5 治療状況透析液調製装置グラフレイアウトマスタ＞詳細 custom-input-number-pro 置き換えます linjunfeng end
       elementHeight: 0,
     };
@@ -665,7 +666,7 @@ export default {
         } else {
           let contactList = []
           JSON.parse(contact).forEach(e =>{
-            e["id"] = _.uniqueId("seriesInfo");
+            e["id"] = nextId("seriesInfo");
             e["model_type"] = this.inputModel.model;
             contactList.push(e);
           });
@@ -717,6 +718,12 @@ export default {
   methods: {
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("loading-screen", ["setLoadingScreenVisible"]),
+    getScopedClassElement(className) {
+      return getScopedElementsByClassName(className, this.$el || null)[0] || null;
+    },
+    getScopedModalContainer() {
+      return this.$el?.closest?.(".modal-container") || this.getScopedClassElement("modal-container");
+    },
     getValueByField(field) {
       return this.editRecord[field];
     },
@@ -736,7 +743,7 @@ export default {
         return;
       }
       const item = {
-        id: _.uniqueId("seriesInfo"),
+        id: nextId("seriesInfo"),
         moni_cd: null,
         moni_name: "",
         model_type: this.inputModel.model,
@@ -758,13 +765,14 @@ export default {
      * Gridの高さを調整する
      */
     calculateGridHeight() {
-      const modal = document.getElementsByClassName("modal-container")[0];
+      const modal = this.getScopedModalContainer();
+      if (!modal) {
+        return;
+      }
       const modalHeight = modal.clientHeight;
-      const modalHeaderHeight = modal.firstElementChild.firstElementChild.clientHeight;
-      const modalFooterHeight = modal.lastElementChild.clientHeight;
-      const contentsHeight1 = document.getElementsByClassName(
-        "disp-item-area"
-      )[0].clientHeight;
+      const modalHeaderHeight = modal.firstElementChild?.firstElementChild?.clientHeight || 0;
+      const modalFooterHeight = modal.lastElementChild?.clientHeight || 0;
+      const contentsHeight1 = this.getScopedClassElement("disp-item-area")?.clientHeight || 0;
       // NONE: 画面上部のpadding: 5px * 2
       this.contentsAreaHeight =
         modalHeight -
@@ -778,7 +786,7 @@ export default {
      * 画面上部の高さ
      */
     observeHeightChange() {
-      const elements = document.getElementsByClassName("disp-item-area");
+      const elements = getScopedElementsByClassName("disp-item-area", this.$el || null);
       if (elements.length > 0) {
         const element = elements[0];
         const resizeObserver = new ResizeObserver(() => {
@@ -805,17 +813,17 @@ export default {
       this.isRow = true;
     },
     setCss(value) {
-      if(value && document.getElementsByClassName("custom-input-invalid")[0])
-      document.getElementsByClassName("custom-input-invalid")[0].classList.remove("custom-input-invalid");
+      const invalidElement = this.getScopedClassElement("custom-input-invalid");
+      if (value && invalidElement) invalidElement.classList.remove("custom-input-invalid");
     },
     setNumberCss(value,className) {
-      if(value && document.getElementsByClassName(className)[0] && (className =="required1" || className =="required2")) {
-        document.getElementsByClassName("required1")[0].classList.remove("input-invalid");
-        document.getElementsByClassName("required2")[0].classList.remove("input-invalid");
+      if(value && this.getScopedClassElement(className) && (className =="required1" || className =="required2")) {
+        this.getScopedClassElement("required1")?.classList.remove("input-invalid");
+        this.getScopedClassElement("required2")?.classList.remove("input-invalid");
       }
-      if(value && document.getElementsByClassName(className)[0] && (className =="required3" || className =="required4")) {
-        document.getElementsByClassName("required3")[0].classList.remove("input-invalid");
-        document.getElementsByClassName("required4")[0].classList.remove("input-invalid");
+      if(value && this.getScopedClassElement(className) && (className =="required3" || className =="required4")) {
+        this.getScopedClassElement("required3")?.classList.remove("input-invalid");
+        this.getScopedClassElement("required4")?.classList.remove("input-invalid");
       }
     },
     setListRequiredCss(e) {
@@ -1417,11 +1425,11 @@ export default {
         return true;
       }
       if (!validationResult.nameValid) {
-        document.getElementsByClassName("custom-input-required")[0]?.classList?.add("custom-input-invalid");
+        this.getScopedClassElement("custom-input-required")?.classList?.add("custom-input-invalid");
       }
       //add 装置力が入りません，selectボックスが赤になります
       if (!validationResult.modelValid) {
-        const selectElement = this.$refs.mySelect.$el.querySelector('select')
+        const selectElement = resolveRefElement(this, "mySelect")?.querySelector('select')
         const selectStyle = {
           backgroundColor: 'rgba(255, 0, 0, 1)',
           color: "black"
@@ -1429,49 +1437,49 @@ export default {
         Object.assign(selectElement.style, selectStyle);
       }
       if (!validationResult.verticalRangeRightMinValid || !validationResult.verticalRangeRightMinValueValid) {
-        document.getElementsByClassName("required3")[0]?.classList?.add("input-invalid");
+        this.getScopedClassElement("required3")?.classList?.add("input-invalid");
       }
       if (!validationResult.verticalRangeRightMaxValid || !validationResult.verticalRangeRightMaxValueValid) {
-        document.getElementsByClassName("required4")[0]?.classList?.add("input-invalid");
+        this.getScopedClassElement("required4")?.classList?.add("input-invalid");
       }
       if (!validationResult.verticalRangeRightValid) {
-        document.getElementsByClassName("required3")[0]?.classList?.add("input-invalid");
-        document.getElementsByClassName("required4")[0]?.classList?.add("input-invalid");
+        this.getScopedClassElement("required3")?.classList?.add("input-invalid");
+        this.getScopedClassElement("required4")?.classList?.add("input-invalid");
       }
       if (!validationResult.verticalRangeLeftValid) {
-        document.getElementsByClassName("required1")[0]?.classList?.add("input-invalid");
-        document.getElementsByClassName("required2")[0]?.classList?.add("input-invalid");
+        this.getScopedClassElement("required1")?.classList?.add("input-invalid");
+        this.getScopedClassElement("required2")?.classList?.add("input-invalid");
       }
       if (!validationResult.verticalRangeLeftMinValid || !validationResult.verticalRangeLeftMinValueValid) {
-        document.getElementsByClassName("required1")[0]?.classList?.add("input-invalid");
+        this.getScopedClassElement("required1")?.classList?.add("input-invalid");
       }
       if (!validationResult.verticalRangeLeftMaxValid || !validationResult.verticalRangeLeftMaxValueValid) {
-        document.getElementsByClassName("required2")[0]?.classList?.add("input-invalid");
+        this.getScopedClassElement("required2")?.classList?.add("input-invalid");
       }
       if ( !validationResult.verticalRangeLeftMaxValueValid) {
-        document.getElementsByClassName("required2")[0]?.classList?.add("input-invalid");
+        this.getScopedClassElement("required2")?.classList?.add("input-invalid");
       }
 
       //明細
       if ( !validationResult.targetValueValid || !validationResult.targetValueOverValid || !validationResult.targetValueNumValid) {
         this.dataErrList.forEach(e=>{
-          document.getElementsByClassName("listRequired1"+e)[0]?.classList?.add("input-invalid");
+          this.getScopedClassElement("listRequired1"+e)?.classList?.add("input-invalid");
         })
       }
       if ( !validationResult.upperValueValid || !validationResult.upperValueOverValid || !validationResult.upperValueNumValid) {
         this.dataErrList.forEach(e=>{
-          document.getElementsByClassName("listRequired2"+e)[0]?.classList?.add("input-invalid");
+          this.getScopedClassElement("listRequired2"+e)?.classList?.add("input-invalid");
         })
       }
       if ( !validationResult.lowerValueValid || !validationResult.lowerValueOverValid || !validationResult.lowerValueNumValid) {
         this.dataErrList.forEach(e=>{
-          document.getElementsByClassName("listRequired3"+e)[0]?.classList?.add("input-invalid");
+          this.getScopedClassElement("listRequired3"+e)?.classList?.add("input-invalid");
         })
       }
       if (!validationResult.valueOverValid) {
         this.dataErrList.forEach(e=>{
-          document.getElementsByClassName("listRequired2"+e)[0]?.classList?.add("input-invalid");
-          document.getElementsByClassName("listRequired3"+e)[0]?.classList?.add("input-invalid");
+          this.getScopedClassElement("listRequired2"+e)?.classList?.add("input-invalid");
+          this.getScopedClassElement("listRequired3"+e)?.classList?.add("input-invalid");
         })
       }
       // メッセージ組み立て

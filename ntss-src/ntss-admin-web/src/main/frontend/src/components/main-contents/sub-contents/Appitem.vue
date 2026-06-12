@@ -32,26 +32,19 @@
 
 <script>
 /* eslint-disable */
-import { mapState, mapActions, mapGetters } from 'vuex';
-import Vue from 'vue';
-import VueHighcharts from 'vue-highcharts';
-import Highcharts from 'highcharts';
-import loadBoost from 'highcharts/modules/boost';
-import BioMonitoringDetailPage from '@/pages/BioMonitoringDetailPage';
+import { mapState, mapActions, mapGetters } from "@/compat/vue/vuex";
+import { getViewportWidth } from "@/functions/common/LayoutMeasureHelper";
+import Highcharts from "@/compat/charts/highcharts";
+import { Boost as loadBoost } from "@/compat/charts/highcharts";
+import BioMonitoringDetailPage from "@/pages/BioMonitoringDetailPage";
 
 loadBoost(Highcharts);
-
-Vue.use(VueHighcharts, { Highcharts });
-
 export default {
   props: {
     // 親から渡されるプロパティ
     indexNumber: Number
   },
-  components: {
-    VueHighcharts
-  },
-  name: 'c',
+    name: 'c',
   data: {
     grptime: 4  // デフォルト4時間
   },
@@ -78,15 +71,21 @@ export default {
     setDetailIndex() {
       this.setDefaultGraphIndex(this.indexNumber);
     },
+    getScopedElementById(id) {
+      return this.$el?.querySelector?.(`#${id}`) || this.$el?.ownerDocument?.getElementById?.(id) || null;
+    },
+    getMonitoringPageRoot() {
+      return this.$el?.closest?.(".ntss-monitoring-listMainItem") || this.$el?.ownerDocument?.getElementsByClassName?.("ntss-monitoring-listMainItem")?.[0] || null;
+    },
     // シンボルマークを削除する
     clearGraphsymbol(){
       // 左のシンボルマークを削除
-      let divPositionL = document.getElementById('Listleft' + this.indexNumber);
+      let divPositionL = this.getScopedElementById('Listleft' + this.indexNumber);
       while (divPositionL.firstChild) {
         divPositionL.removeChild(divPositionL.firstChild);
       }
       // 右のシンボルマークを削除
-      let divPositionR = document.getElementById('Listright' + this.indexNumber);
+      let divPositionR = this.getScopedElementById('Listright' + this.indexNumber);
       while (divPositionR.firstChild) {
         divPositionR.removeChild(divPositionR.firstChild);
       }
@@ -100,13 +99,16 @@ export default {
           let divPosition;
           if (moniInfo[i].y_axis == 0) {
             //要素を取得
-            divPosition = document.getElementById('Listleft' + this.indexNumber);
+            divPosition = this.getScopedElementById('Listleft' + this.indexNumber);
           }
           else {
-            divPosition = document.getElementById('Listright' + this.indexNumber);
+            divPosition = this.getScopedElementById('Listright' + this.indexNumber);
           }
           //divの生成
-          var symbolPosition = document.createElement('div');
+          const ownerDocument = divPosition?.ownerDocument || this.$el?.ownerDocument || document;
+
+          //divの生成
+          var symbolPosition = ownerDocument.createElement('div');
           //挿入する文字の生成
           symbolPosition.innerHTML = '●';
           //styleを設定
@@ -128,10 +130,10 @@ export default {
       // データ取得中でない場合
       if (this.$store.state.listGraph.loadstate == false) {
         // 画面サイズを取得
-        let innerwidth = window.innerWidth;
+        let innerwidth = getViewportWidth();
 
         // 一覧画面要素取得
-        let elm_page   = document.getElementsByClassName("ntss-monitoring-listMainItem")[0];
+        let elm_page   = this.getMonitoringPageRoot();
         let elm_header = elm_page.lastChild.firstChild;
         let elm_main   = elm_page.lastChild.lastChild;
         let elm = null;
@@ -145,7 +147,7 @@ export default {
           //alert("フレーム分割あり");
 
           // 選択状態を解除
-          elm = document.getElementsByClassName("ntss-monitoring-select-machine-list")[0];
+          elm = this.$el?.ownerDocument?.getElementsByClassName?.("ntss-monitoring-select-machine-list")?.[0] || null;
           if( elm != undefined && elm.classList.contains("ntss-monitoring-select-machine-list") == true ) {
             //elm.style.border = "";
             elm.classList.remove("ntss-monitoring-select-machine-list");
@@ -155,7 +157,7 @@ export default {
           // console.log( "id: " + id );
 
           // 選択状態を設定
-          elm = document.getElementById(id);
+          elm = this.getScopedElementById(id);
           elm?.classList?.add("ntss-monitoring-select-machine-list");
 
           // 一覧画面の幅を固定する
@@ -217,7 +219,7 @@ export default {
       }
     }
   },
-  created() {},
+
   mounted() {
     // 読み込み完了時にオプションを差し替え
     this.updateOption();

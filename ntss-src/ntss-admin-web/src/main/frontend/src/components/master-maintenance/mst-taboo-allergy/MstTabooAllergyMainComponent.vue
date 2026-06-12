@@ -188,8 +188,8 @@
 </template>
 
 <script>
-import { mapGetters, mapState } from "vuex";
-import {EventBus} from "@/eventBus";
+import { mapGetters, mapState } from "@/compat/vue/vuex";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -211,12 +211,13 @@ import { MASTER_DELETE_DISPLAY } from "@/constants/TreatmentRecord";
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
-import cloneDeep from "lodash/cloneDeep";
-import isEqualWith from "lodash/isEqualWith";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
 import { customComparator } from "@/utils/util.js";
 //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
 import { fitTermCheck } from "@/functions/common/DateTimeUtils";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
+import { getModalBodyElement, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
 // 禁忌対象区分
 // 薬剤
@@ -585,7 +586,7 @@ export default {
       if (hasEmptyTbooAllergy) {
         this.tabooAllergyDetailList.forEach((t, index) => {
           if (t.classCd === FREEWORD && !t.name.trim()) {
-            document.getElementById("com-textarea-free-word" + index).parentNode?.classList?.add("input-invalid")
+            getScopedElementById("com-textarea-free-word" + index, this.$el || this)?.parentNode?.classList?.add("input-invalid")
           }
         })
 
@@ -785,7 +786,7 @@ export default {
           this.popoverEquipment.popoverContentSelected.value = popoverContentSelectedValue;
           this.popoverEquipment.popoverContentDataset = contentArr;
           //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
-          const nowdate = moment().format("YYYYMMDD");
+          const nowdate = dayjs().format("YYYYMMDD");
           contentArr = this.popoverEquipment.popoverContentDataset.filter(item => {
             return fitTermCheck(item.useStartDate, item.useEndDate, nowdate)
             || popoverContentSelectedValue.includes(item.value);
@@ -832,7 +833,7 @@ export default {
 
       //メーカー名がnullの項目を変換して保持
       displaymakerList = makerList.map(item => {
-        return (item = item === null ? "メーカー名なし" : item);
+        return item === null ? "メーカー名なし" : item;
       });
 
       // メーカー一覧に分類コードを付与(ダイアライザは薬剤や医療材料と違い、分類コードのテーブルが無いため)
@@ -850,7 +851,7 @@ export default {
         //メーカー名毎に分類コードを付与
         for (const index in filterArr) {
           if (item.maker === makerList[index]) {
-            return (ownClass = parseInt(index) + 1);
+            return parseInt(index) + 1;
           }
         }
         return ownClass;
@@ -937,7 +938,7 @@ export default {
       });
       this.popoverDialyzer.popoverContentSelected.value = popoverContentSelectedValue;
       //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
-      const nowdate = moment().format("YYYYMMDD");
+      const nowdate = dayjs().format("YYYYMMDD");
       contentArr = this.popoverDialyzer.popoverContentDataset.filter(item => {
         return fitTermCheck(item.useStartDate, item.useEndDate, nowdate)
             || popoverContentSelectedValue.includes(item.value);
@@ -1020,9 +1021,7 @@ export default {
         eventList.forEach(event=>{
           sameCdDetailList.push(
             this.tabooAllergyDetailList.filter(
-              item => item.cd === event.value && item.classCd === mstClass
-            )
-          )
+              item => item.cd === event.value && item.classCd === mstClass))
         });
         // mod 禁忌・アレルギーマスタ モーダルの見た目修正 孔s end
       } else {
@@ -1033,9 +1032,7 @@ export default {
         eventList.forEach(event=>{
           sameCdDetailList.push(
             this.tabooAllergyDetailList.filter(
-              item => item.cd === event.value.genericCd && item.type === event.value.medicineType && item.classCd === mstClass
-            )
-          )
+              item => item.cd === event.value.genericCd && item.type === event.value.medicineType && item.classCd === mstClass))
         });
         // mod 禁忌・アレルギーマスタ モーダルの見た目修正 孔s end
       }
@@ -1497,13 +1494,12 @@ export default {
 
     calculateListHeight() {
       // 画面の高さ
-      const fullHeight = document.getElementsByClassName("modal-body")[0]
-        .clientHeight;
+      const fullHeight = getModalBodyElement(this.$el || this)?.clientHeight || 0;
       // ヘッダーの高さ
       const headHeight =
-        document.getElementById("group-name-wrapper1").clientHeight +
-        document.getElementById("group-name-wrapper2").clientHeight +
-        document.getElementById("item-select-wrapper").clientHeight;
+        (getScopedElementById("group-name-wrapper1", this.$el || this)?.clientHeight || 0) +
+        (getScopedElementById("group-name-wrapper2", this.$el || this)?.clientHeight || 0) +
+        (getScopedElementById("item-select-wrapper", this.$el || this)?.clientHeight || 0);
       // リストの高さを設定 (NOTE: 「margin-top: 5px」が3箇所設定されているのでその分を引く)
       this.listHeight = fullHeight - headHeight - 5 * 3;
     },
@@ -1520,7 +1516,7 @@ export default {
     setContentData(newValue, index) {
       this.tabooAllergyDetailList[index].name = newValue;
       this.setName(index);
-      document.getElementById("com-textarea-free-word"+index).parentNode.classList.remove("input-invalid");
+      getScopedElementById("com-textarea-free-word" + index, this.$el || this)?.parentNode?.classList?.remove("input-invalid");
     }
   }
 };
@@ -1532,11 +1528,11 @@ export default {
     height: auto !important;
   }
 }
-.input-required >>> textarea{
+.input-required :deep(textarea){
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> textarea{
+.input-invalid :deep(textarea){
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }
@@ -1607,7 +1603,7 @@ export default {
   border: solid 1px var(--ntss-list-border-color);
 }
 
-.allergy >>> .text-input {
+.allergy :deep(.text-input) {
   font-size: unset;
   display: flex;
   align-items: center;
@@ -1619,29 +1615,29 @@ textarea {
   box-sizing: border-box;
 }
 
-div >>> .text-input {
+div :deep(.text-input) {
   width: 100%;
   height: 100%;
 }
 
-div >>> .text-input:focus {
+div :deep(.text-input:focus) {
   border-top: 2px solid #9A9A9A;
   border-left: 2px solid #9A9A9A;
   border-bottom: 2px solid #EEEEEE;
   border-right: 2px solid #EEEEEE;
 }
 
-.custom-select-button >>> ons-button {
+.custom-select-button :deep(ons-button) {
   font-size: unset;
   width: auto;
 }
 
-.custom-list-area >>> ons-col {
+.custom-list-area :deep(ons-col) {
   display: flex;
   align-items: center;
 }
 
-.custom-list-area .allergy >>> div {
+.custom-list-area .allergy :deep(div) {
   width: 100%;
 }
 
@@ -1665,5 +1661,8 @@ th.ntss-list-header-th-sticky {
 .button-delete {
   display: block;
   margin: auto;
+}
+:deep(.custom-textarea){
+  background-color: #ffff99;
 }
 </style>

@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import jp.co.nikkiso.ntss.device_edge.service.DatabasePusherCommFail;
 import org.springframework.beans.factory.annotation.Autowired;

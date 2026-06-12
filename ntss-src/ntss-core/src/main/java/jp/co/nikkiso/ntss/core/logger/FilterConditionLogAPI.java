@@ -3,6 +3,8 @@ package jp.co.nikkiso.ntss.core.logger;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import lombok.Data;
 
 @Data
@@ -34,9 +36,11 @@ public class FilterConditionLogAPI {
 	private int limitTo;
 	private String sortKey;
 	private Boolean sortOrder;
+  @JsonSetter(nulls = Nulls.SKIP)
   private int pageSize;
 	//add FNSI-mongoDBに挿入、検索できることの対応　end
   //add FNSI-#6547ログ表示不正の修正。　start
+  @JsonSetter(nulls = Nulls.SKIP)
   private int filterTimes;
   //add FNSI-#6547ログ表示不正の修正。　end
   // add #6775 ログの抽出が正しく行われない 鄭爽 start

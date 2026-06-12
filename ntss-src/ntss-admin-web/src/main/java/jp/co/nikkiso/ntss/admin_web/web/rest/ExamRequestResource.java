@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.mstSynchro.MstSynchroService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
+import jp.co.nikkiso.ntss.core.dao.MntRecalcQueDao;
 import jp.co.nikkiso.ntss.core.dao.MstFacilitySettingDao;
 import jp.co.nikkiso.ntss.core.dao.PatExamMainDao;
 import jp.co.nikkiso.ntss.core.dao.PatExamPatternDao;
@@ -48,6 +49,7 @@ import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import lombok.extern.slf4j.Slf4j;
 
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
@@ -57,14 +59,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 
 /**
@@ -96,6 +100,9 @@ public class ExamRequestResource {
   // wp アプリケーションログの適正化 Add Start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // wp アプリケーションログの適正化 Add End
 
   //add FNSI-患者が死亡した後、検査依頼を削除します 劉全航 start
@@ -125,6 +132,10 @@ public class ExamRequestResource {
   @Autowired
   private PatMainDao patMainDao;
   // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm end
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Autowired
+  private MntRecalcQueDao mntRecalcQueDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
   /**
    * 患者経過総合ビューア取得用
@@ -203,8 +214,23 @@ public class ExamRequestResource {
   @GetMapping("/TreatDateList/{facility_cd}")
   public ResponseEntity<List<PatExamMain>> getPatExamMainDateListByFacilityCd(
           @PathVariable String facility_cd
-  ) throws Exception
+  ,
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+          @AuthenticationPrincipal NtssUser ntssUser
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws Exception
   {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facility_cd != null && !facility_cd.isEmpty() &&
+          !facility_cd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facility_cd=" + facility_cd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.EXAM + "/TreatDateList";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXAM_REQUEST, BEFORE_LOG_FLG_INFO, mappingUrl, facility_cd,
@@ -244,8 +270,23 @@ public class ExamRequestResource {
   @GetMapping("/MntRecalcQue/{facility_cd}")
   public ResponseEntity<List<MntRecalcQue>> getMntRecalcQueByFacilityCd(
           @PathVariable String facility_cd
-  ) throws Exception
+  ,
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+          @AuthenticationPrincipal NtssUser ntssUser
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws Exception
   {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facility_cd != null && !facility_cd.isEmpty() &&
+          !facility_cd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facility_cd=" + facility_cd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.EXAM + "/MntRecalcQue";
@@ -267,7 +308,23 @@ public class ExamRequestResource {
    * param params
    */
   @PostMapping("/createMntRecalcQue")
-  public ResponseEntity<Void> createMntRecalcQue(@RequestBody Map<String,String> params) {
+  public ResponseEntity<Void> createMntRecalcQue(@RequestBody Map<String,String> params,
+                                                 // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                 @AuthenticationPrincipal NtssUser ntssUser
+                                                 // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = params.get("facilityCd");
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.EXAM + "/createMntRecalcQue";
@@ -311,7 +368,24 @@ public class ExamRequestResource {
    * @param params SEQ,ステータス,施設コード,依頼日時,完了日時,内容,進捗,依頼者id,更新者ID
    */
   @PostMapping("/updateMntRecalcQue")
-  public ResponseEntity<Void> updateMntRecalcQue(@RequestBody Map<String,String> params) {
+  public ResponseEntity<Void> updateMntRecalcQue(@RequestBody Map<String,String> params,
+                                                 // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                 @AuthenticationPrincipal NtssUser ntssUser
+                                                 // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+      if(!ntssUser.isNkkAdminUser()) {
+        long recalcQueCd = Long.parseLong(params.get("recalcQueCd"));
+        MntRecalcQue mntRecalcQue = mntRecalcQueDao.selectById(recalcQueCd);
+        if (mntRecalcQue != null && mntRecalcQue.getFacilityCd() != null &&
+          !mntRecalcQue.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mntRecalcQue.getFacilityCd() + " " + "recalcQueCd=" + recalcQueCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.EXAM + "/updateMntRecalcQue";
@@ -351,7 +425,11 @@ public class ExamRequestResource {
           @PathVariable int pat_id,
           @PathVariable String date_from,
           @RequestBody Map<String, Object> requestBody
-  ) throws Exception
+  ,
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+          @AuthenticationPrincipal NtssUser ntssUser
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws Exception
   {
 
     // wp アプリケーションログの適正化 Add Start
@@ -384,6 +462,22 @@ public class ExamRequestResource {
           //mod #12663 #12665 securify】SQLインジェクション(High) まとめ zrx end
           @AuthenticationPrincipal NtssUser ntssUser
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if(!ntssUser.isNkkAdminUser() && !CollectionUtils.isEmpty(reqData.getPatIdList())) {
+      for (Long patId : reqData.getPatIdList()) {
+        if (patId == null) {
+          continue;
+        }
+        long count = patMainDao.countByPatIdAndFacilityCd(patId, ntssUser.getFacilityCd());
+        if (count == 0) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "pat_id=" + patId + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!患者は存在しない", HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
     String mappingUrl = Uri.EXAM + "/examRequest";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXAM_REQUEST, BEFORE_LOG_FLG_INFO, mappingUrl, null, null);
     try{
@@ -433,6 +527,18 @@ public class ExamRequestResource {
       patIds = request.getPatExamPatternList().stream().map(PatExamPattern::getPatId).toList();
     }
     List<PatMain> patMains = patMainDao.selectByIdList(patIds);
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      for (PatMain patMain : patMains) {
+        if (patMain != null && patMain.getFacility_cd() != null && !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facility_cd=" + patMain.getFacility_cd() + " " + "pat_id=" + patMain.getPat_id() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // スケジュール延長処理中の場合、予定作成を中止する
     List<Long> schExtPatIds = patMains.stream().filter(p -> ("1").equals(p.getSch_ext_status())).map(PatMain::getPat_id).toList();
     if (!CollectionUtils.isEmpty(schExtPatIds)) {
@@ -1010,9 +1116,17 @@ public class ExamRequestResource {
    * @param facilityCd 取得対象の施設コード
    * @return 検査セットマスタデータのResponse
    *
-   */
+  */
   @GetMapping("/examRequest/examSet/{facilityCd}")
-  public ResponseEntity<?> getExamSetList(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getExamSetList(@PathVariable String facilityCd,
+                                          @RequestParam(required = false) Long selectedPatId,
+                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                          @AuthenticationPrincipal NtssUser ntssUser
+                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.EXAM + "/examRequest/examSet";
@@ -1055,9 +1169,17 @@ public class ExamRequestResource {
    * @param facilityCd 取得対象の施設コード
    * @return 検査セットマスタデータのResponse
    *
-   */
+  */
   @GetMapping("/examRequest/examSet/all/{facilityCd}")
-  public ResponseEntity<?> getAllExamSetsByFacility(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getAllExamSetsByFacility(@PathVariable String facilityCd,
+                                                    @RequestParam(required = false) Long selectedPatId,
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                    @AuthenticationPrincipal NtssUser ntssUser
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     String mappingUrl = Uri.EXAM + "/examRequest/examSet/all/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXAM_REQUEST, BEFORE_LOG_FLG_INFO, mappingUrl, null, null);
@@ -1078,7 +1200,23 @@ public class ExamRequestResource {
    * 透析予定日変更時、検査依頼日追従
    * @param params 患者ID,変更前日付,変更後日付
    */
-  public ResponseEntity<Void> updateRegExamDate(@RequestBody Map<String,String> params) {
+  public ResponseEntity<Void> updateRegExamDate(@RequestBody Map<String,String> params,
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                @AuthenticationPrincipal NtssUser ntssUser
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        PatMain patMain = patMainDao.selectById(Long.valueOf(params.get("patId")));
+        if (patMain != null && patMain.getFacility_cd() != null &&
+          !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facility_cd=" + patMain.getFacility_cd() + " " + "pat_id=" + params.get("patId") + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.EXAM + "/updateRegExamDate";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXAM_REQUEST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -1109,7 +1247,24 @@ public class ExamRequestResource {
    * 透析予定日変更時、検査依頼削除
    * @param params 患者ID,日付
    */
-  public ResponseEntity<Void> updateIsDel(@RequestBody Map<String,String> params) {
+  public ResponseEntity<Void> updateIsDel(@RequestBody Map<String,String> params,
+                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                          @AuthenticationPrincipal NtssUser ntssUser
+                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = params.get("facilityCd");
+        if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String mappingUrl = Uri.EXAM + "/updateIsDel";
+          logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXAM_REQUEST, AFTER_LOG_FLG_ERROR, mappingUrl, null, "セキュリティチェックの例外!");
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.EXAM + "/updateIsDel";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXAM_REQUEST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -1145,7 +1300,23 @@ public class ExamRequestResource {
    *   fromDate 期間開始日 ('YYYY/MM/DD')
    *   toDate 期間終了日 ('YYYY/MM/DD')
    */
-  public ResponseEntity<Void> createPatExamMain(@RequestBody Map<String,String> params) {
+  public ResponseEntity<Void> createPatExamMain(@RequestBody Map<String,String> params,
+                                                @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if (!ntssUser.isNkkAdminUser()) {
+      String patIdValue = params.get("patId");
+      if (patIdValue != null && !patIdValue.isEmpty()) {
+        PatMain patMain = patMainDao.selectById(Long.valueOf(patIdValue));
+        if (patMain != null && patMain.getFacility_cd() != null
+          && !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facility_cd=" + patMain.getFacility_cd() + " " + "patId=" + patIdValue + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.EXAM + "/createPatExamMain";
@@ -1181,9 +1352,17 @@ public class ExamRequestResource {
    */
   @PostMapping("/examRequest/getPatInfoList")
   public ResponseEntity<?> getPatInfoList(
-          @RequestBody Map<String, String> payload
-  ) throws Exception
-  {
+          @RequestBody Map<String, String> payload,
+          @RequestParam(required = false) Long selectedPatId
+  ,
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+          @AuthenticationPrincipal NtssUser ntssUser
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws Exception {
+    List<Long> patIdList = this.getLongValueList(payload.get("patIdList"));
+    if (!facilityAccessService.hasPatIdsOrSelectedPatShareAccess(ntssUser, patIdList, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.EXAM + "/examRequest/getPatInfoList";
@@ -1191,9 +1370,7 @@ public class ExamRequestResource {
             payload);
     // wp アプリケーションログの適正化 Add End
     try {
-      List<Long> patIdList = this.getLongValueList(payload.get("patIdList"));
       List<PatMain> response = patInfoService.getPatSchExtEndDateList(patIdList);
-
       // wp アプリケーションログの適正化 Add Start
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXAM_REQUEST, AFTER_LOG_FLG_INFO, mappingUrl, null,
               payload);
@@ -1246,7 +1423,23 @@ public class ExamRequestResource {
 
   /* add #6358 by zhangruixue 2023-06-13 --start */
   @PostMapping("/examRequest/sch_ext_end_date_post")
-  public ResponseEntity<?> getMinSchExtEndDatePost(@RequestBody Map<String, String> payload) {
+  public ResponseEntity<?> getMinSchExtEndDatePost(@RequestBody Map<String, String> payload,
+                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                   @AuthenticationPrincipal NtssUser ntssUser
+                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = payload.get("facilityCd");
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
     String mappingUrl = Uri.EXAM + "/examRequest/sch_ext_end_date_post";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXAM_REQUEST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -1289,6 +1482,30 @@ public class ExamRequestResource {
    */
   @PostMapping("/deletePatExamRequest")
   public ResponseEntity<?> deleteDeadPatRequest(@RequestBody Map<String, Object> payload, @AuthenticationPrincipal NtssUser ntssUser){
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if (!ntssUser.isNkkAdminUser()) {
+      Object facilityCdValue = payload.get("facilityCd");
+      if (facilityCdValue != null) {
+        String facilityCd = facilityCdValue.toString();
+        if (!facilityCd.isEmpty() && !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      Object patIdValue = payload.get("patId");
+      if (patIdValue != null) {
+        PatMain patMain = patMainDao.selectById(Long.valueOf(patIdValue.toString()));
+        if (patMain != null && patMain.getFacility_cd() != null
+          && !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facility_cd=" + patMain.getFacility_cd() + " " + "patId=" + patIdValue + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.EXAM + "/deletePatExamRequest";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXAM_REQUEST,
@@ -1417,11 +1634,25 @@ public class ExamRequestResource {
    * @return
    */
   @PostMapping("/getPatListByFacilityCd")
-  public ResponseEntity<?> getPatListByFacilityCd(@RequestBody Map<String, String> params) {
+  public ResponseEntity<?> getPatListByFacilityCd(@RequestBody Map<String, String> params,
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
     String mappingUrl = Uri.EXAM + "/getPatListByFacilityCd";
     String facilityCd = params.get("facilityCd");
     String startDate = params.get("startDate");
     String endDate = params.get("endDate");
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
 
     try {
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXAM_REQUEST,

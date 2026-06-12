@@ -1,7 +1,7 @@
 // For authoring Nightwatch tests, see
 // http://nightwatchjs.org/guide#usage
 
-module.exports = {
+export default {
   "treatment-record/result initial e2e tests": browser => {
     browser
       // サインイン

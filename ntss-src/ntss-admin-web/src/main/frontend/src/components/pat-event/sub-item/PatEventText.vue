@@ -12,10 +12,7 @@
     <div class="disp-item-area text-area" v-if="getViewMode || getIsOtherFacility || getIsOtherFacilitys">
       <label class="text-area-view ntss-pat-event-label">{{ inputText }}&nbsp;</label>
     </div>
-    <div 
-      class="disp-item-area text-area"
-      v-else
-    >
+    <div class="disp-item-area text-area" v-else>
       <!-- mod FNSI-共有を追加 王 20200921 start -->
       <!-- mod #10359 編集権限の動作不正 start -->
       <!-- <v-ons-button class="button-import" @click="dataImport()" v-if="isSelectSourceField" :disabled="!isShared">取得</v-ons-button> -->
@@ -37,7 +34,7 @@
         :disabled="!isShared"
 		:class="classObject"
         @blur="editContent($event.target.value)"
-		v-on="$listeners"
+		v-bind="$attrs"
 		@focus="addFocusCss($event)"
       ></v-ons-input> -->
       <!-- mod #10359 編集権限の動作不正 start -->
@@ -47,7 +44,7 @@
         :disabled="!isShared||disabled"
         :class="classObject"
         @blur="editContent($event.target.value)"
-        v-on="$listeners"
+        v-bind="$attrs"
         @focus="addFocusCss($event)"
       ></v-ons-input> -->
       <v-ons-input
@@ -59,30 +56,29 @@
         "
         :class="classObject"
         @blur="editContent($event.target.value)"
-        v-on="$listeners"
+        v-bind="$attrs"
         @focus="addFocusCss($event)"
       ></v-ons-input>
       <!-- mod #10359 編集権限の動作不正 end -->
     <!-- mod FNSI-改修内容5682修正 関　end -->
       <!-- mod FNSI-共有を追加 王 20200921 end -->
     </div>
-    <div class="disp-item-area text-area" v-if="getViewMode">
-      <label class="text-area-view ntss-pat-event-label">{{inputText}}&nbsp;</label>
-    </div>
   </div>
 </template>
 
 <script>
-  import {mapActions, mapGetters} from "vuex";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   import BaseCustomInputTextStatus from '@/components/common/custom-form-tags/BaseCustomInputTextStatus';
   // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-  import { messageFormat } from '@/functions/common/MessageFormat';
+
   import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
   // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 // add #10359 編集権限の動作不正 start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
+import { messageFormat } from "@/functions/common/MessageFormat";
 // add #10359 編集権限の動作不正 end
   export default {
+  inheritAttrs: false,
   name: "PatEventText",
   mixins:[BaseCustomInputTextStatus],
   props: ["propsIndex"],
@@ -163,16 +159,11 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
     }
   },
 
-  watch: {},
   
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-
-  destroyed() { },
-
-  created() {},
 
   mounted() {
     this.inputText = this.getResultContentText;
@@ -353,9 +344,10 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
   }
   /*add FNSI-改修内容レイアウト表示と見た目調整。ラベルとデータ項目の区別がつかない。任 end*/
   /* add FNSI-改修内容5682修正 関 start */
-  .v-ons-input-patevent >>> .text-input {
+  .v-ons-input-patevent :deep(.text-input) {
      background-color: #F7F7F7 !important;
      color: black  !important;
+     font-family: -apple-system, 'Helvetica Neue', 'Helvetica', 'Arial', 'Lucida Grande', sans-serif !important;
   }
    /* add FNSI-改修内容5682修正 関　end */
 </style>

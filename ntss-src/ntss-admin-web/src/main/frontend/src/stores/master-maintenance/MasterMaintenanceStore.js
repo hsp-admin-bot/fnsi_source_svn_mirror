@@ -8,8 +8,8 @@ import {
   sendRequestFindRecordListByFacilityCdWithSql,
   sendRequestFindColumnInfo,
   sendRequestUpdateRecordList,
-  sendRequestUpdateRecordListByFacilityCd
-  ,sendequestUpdateIndCondInfoByTreatmentCd
+  sendRequestUpdateRecordListByFacilityCd,
+  sendRequestUpdateIndCondInfoByTreatmentCd
 } from "@/apis/master-maintenance";
 import {
   sendRequestGetMstFacilitySettingValue
@@ -19,13 +19,12 @@ import {
   sendRequestMstExamItemSync,
   sendRequestMstDeviceEdgeNoByFacilityCd
 } from "@/apis/device-edge-order";
-import Vue from "vue";
 import {
   sendRequestGetMstFacility
 } from "@/apis/mst-user-maintenance";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import {EventBus} from "@/eventBus";
-import moment from "moment";
+import {EventBus} from "@/compat/vue/event-bus.js";
+import dayjs from "@/compat/date/dayjs";
 /**
  * 該当レコードを検索し、追加かつ編集済(operation=1&&edited=true)、
  * または、編集済み(operation=2)であればtrueを返す.
@@ -34,6 +33,81 @@ import moment from "moment";
  * @param {Integer} code チェック対象のコード
  * @return {Boolean} 編集中の場合にはtrueを返す.
  */
+
+function hasSchemaModelFields(schema) {
+  return !!(
+    schema
+    && typeof schema === "object"
+    && schema.model
+    && typeof schema.model === "object"
+    && schema.model.fields
+    && typeof schema.model.fields === "object"
+  );
+}
+
+function inferFieldType(value) {
+  if (typeof value === "number") return "number";
+  if (typeof value === "boolean") return "boolean";
+  if (value instanceof Date) return "date";
+  return "string";
+}
+
+function appendSchemaField(fields, fieldName, sampleValue) {
+  if (!fieldName || fields[fieldName]) return;
+  fields[fieldName] = {
+    type: inferFieldType(sampleValue),
+    validation: {}
+  };
+}
+
+function createSchemaFromColumnsAndData(columns, data) {
+  const fields = {};
+
+  if (Array.isArray(columns)) {
+    columns.forEach(column => {
+      if (!column || !column.field || column.field === "dummy") return;
+      appendSchemaField(fields, column.field);
+      if (column.validation && typeof column.validation === "object") {
+        fields[column.field].validation = column.validation;
+      }
+    });
+  }
+
+  const sampleRecord = Array.isArray(data) ? data.find(item => item && typeof item === "object") : null;
+  if (sampleRecord) {
+    Object.keys(sampleRecord).forEach(key => appendSchemaField(fields, key, sampleRecord[key]));
+  }
+
+  if (fields.medicalInstitutionCd && !fields.code) {
+    appendSchemaField(fields, "code", sampleRecord?.medicalInstitutionCd);
+  }
+  if (fields.facilityName && !fields.name) {
+    appendSchemaField(fields, "name", sampleRecord?.facilityName);
+  }
+
+  return Object.keys(fields).length > 0 ? { model: { fields } } : null;
+}
+
+function resolveMasterRecordSchema(state) {
+  if (hasSchemaModelFields(state.masterRecordList?.schema)) {
+    return state.masterRecordList.schema;
+  }
+  if (hasSchemaModelFields(state.schema)) {
+    return state.schema;
+  }
+  return createSchemaFromColumnsAndData(state.columns, state.masterRecordList?.data);
+}
+
+function ensureMasterRecordSchema(state) {
+  if (!state.masterRecordList || typeof state.masterRecordList !== "object" || Array.isArray(state.masterRecordList)) return;
+  if (hasSchemaModelFields(state.masterRecordList.schema)) return;
+
+  const schema = resolveMasterRecordSchema(state);
+  if (schema) {
+    state.masterRecordList.schema = schema;
+  }
+}
+
 function isEdited(list, code) {
 
   let index = list && list.findIndex(e => {
@@ -106,6 +180,8 @@ export default {
     // 横クロール位置
     scrollLeftPosition: 0,
     // #9976 マスタ画面で保存を行うとスクロール位置が先頭になる end
+    /** セル編集等 in-place 更新時に Vue getter を再評価させるカウンタ */
+    masterRecordListRevision: 0,
   },
   mutations: {
     // add #9595 #9542、#9304、#10151仮想スクロールテーブルの再構築 start
@@ -172,6 +248,10 @@ export default {
     },
     setMasterRecordList(state, masterRecordList) {
       state.masterRecordList = masterRecordList;
+      ensureMasterRecordSchema(state);
+    },
+    bumpMasterRecordListRevision(state) {
+      state.masterRecordListRevision += 1;
     },
     // -----------------------------------------
     // 画面編集内容をstoreに反映
@@ -241,8 +321,9 @@ export default {
         if (isSortMode) {
           editRecord.sortInputTime = Date.now();
         }
-        Vue.set(state.masterRecordList.data, index, editRecord);
+        state.masterRecordList.data.splice(index, 1, editRecord);
       }
+      state.masterRecordListRevision += 1;
     },
     setCondition(state, condition) {
       state.condition = condition;
@@ -262,9 +343,11 @@ export default {
     },
     setSchema(state, schema) {
       state.schema = schema;
+      ensureMasterRecordSchema(state);
     },
     setColumns(state, columns) {
       state.columns = columns;
+      ensureMasterRecordSchema(state);
     },
     setColumnInfo(state, columnInfo) {
       state.columnInfo = columnInfo;
@@ -298,7 +381,7 @@ export default {
         if (fieldsKey === "isDel") continue
         if (fieldsKey === "sortRank") continue
         if (fieldsKey === "sortInputTime") continue
-        if (fields.hasOwnProperty(fieldsKey)) {
+        if (Object.prototype.hasOwnProperty.call(fields, fieldsKey)) {
           if (fields[fieldsKey].type && fields[fieldsKey].type === "string") stringKey.push(fieldsKey)
           if (fields[fieldsKey].type && fields[fieldsKey].type === "number") numberKey.push(fieldsKey)
         }
@@ -361,14 +444,17 @@ export default {
     // -----------------------------------------
     // データ一覧を取得
     // -----------------------------------------
-    findRecordList({ commit, state }) {
+    findRecordList({ commit, state }, options = {}) {
       // データのカラム数により前のデータ内容が残る場合があるため領域を初期化
       // APIからの読込だけではデータが残る場合があるため事前に初期化
       // 対応方法については検討の余地あり (#2482)
-      commit("clearComparisonRecordModel");
-      commit("setMasterRecordList", []);
-      commit("setSchema", []);
-      commit("setColumns", []);
+      const preserveCurrent = options && options.preserveCurrent === true;
+      if (!preserveCurrent) {
+        commit("clearComparisonRecordModel");
+        commit("setMasterRecordList", []);
+        commit("setSchema", []);
+        commit("setColumns", []);
+      }
       return sendRequestFindRecordList(state.selectedMasterName).then(
         response => {
           // 警報通知マスタ(mst_alarm_notification)は保持データが大きくなりすぎる為、制限する
@@ -477,15 +563,12 @@ export default {
     // -----------------------------------------
     // 施設設定マスタ情報を取得
     // -----------------------------------------
-    /* eslint-disable no-unused-vars */
     async findFacilitySettingInfo({commit},requestInfo) {
-      /* eslint-enable no-unused-vars */
       return sendRequestGetMstFacilitySettingValue(requestInfo.facilityCd,requestInfo.settingNo);
     },
     // -----------------------------------------
     // データ一覧を更新
     // -----------------------------------------
-    /* eslint-disable no-unused-vars */
     async updateRecordList({ commit, state }, request) {
       return sendRequestUpdateRecordList(state.selectedMasterName, request);
     },
@@ -567,7 +650,7 @@ export default {
     }
     // add 治療方法マスタ 4・条件項目の対象を変更した場合の条件送信未実施治療予定および自動延長用パターンデータへの不足jsonキーの配布 孔s start
     ,async updateIndCondInfo({ commit , state }, facilityCd) {
-      return sendequestUpdateIndCondInfoByTreatmentCd(facilityCd, state.masterRecordList.data);
+      return sendRequestUpdateIndCondInfoByTreatmentCd(facilityCd, state.masterRecordList.data);
     },
     // add 治療方法マスタ 4・条件項目の対象を変更した場合の条件送信未実施治療予定および自動延長用パターンデータへの不足jsonキーの配布 孔s start
     // #9863 unknown local action type: setColumns, global type: master-maintenance/setColumns 横展開2 linjunfeng start
@@ -843,24 +926,31 @@ export default {
       }
 
       // 必須入力項目のvalidationMessageを登録する
-      Object.keys(state.masterRecordList.schema.model.fields).forEach(field => {
-        let targetField = state.masterRecordList.schema.model.fields[field];
+      const schema = resolveMasterRecordSchema(state) || state.masterRecordList.schema;
+      const fields = schema?.model?.fields;
+      if (fields) {
+        Object.keys(fields).forEach(field => {
+          let targetField = fields[field];
 
-        if (targetField.validation && targetField.validation.required) {
-          const targetColumn = state.columns?.find(e => e.field && e.field === field);
-          if (targetColumn && targetColumn.title) {
-            targetField.validation.validationMessage = targetColumn.title + "は必須入力です。";
+          if (targetField.validation && targetField.validation.required) {
+            const targetColumn = state.columns?.find(e => e.field && e.field === field);
+            if (targetColumn && targetColumn.title) {
+              targetField.validation.validationMessage = targetColumn.title + "は必須入力です。";
+            }
           }
-        }
-      });
+        });
+      }
 
       return {
-        schema: state.masterRecordList.schema,
+        schema: schema,
         data: returnData
       };
     },
     getMasterRecordList(state) {
       return state.masterRecordList;
+    },
+    getMasterRecordListRevision(state) {
+      return state.masterRecordListRevision;
     },
     getComparisonRecordModel(state) {
       return state.comparisonRecordModel;
@@ -905,6 +995,7 @@ export default {
       return state.isPreservation;
     },
     isRecordModified(state) {
+      void state.masterRecordListRevision;
       // 内部 背景色と保存ボタンの状態が異常です start
       // add error発生を対応する。 dengshen start
       if (!state.comparisonRecordModel){
@@ -927,6 +1018,12 @@ export default {
         //add #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（データリストレイアウトマスタ画面）20231106 ztc end
         // add #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（装置通信・仮想端末マスタ画面）20231108 ztc start
         delete item.sortInputTime;
+        delete item.edited;
+        Object.keys(item).forEach(key => {
+          if (item[key] === "") {
+            item[key] = null;
+          }
+        });
         // add #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（装置通信・仮想端末マスタ画面）20231108 ztc end
         // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_ベッドグループ・透析室マスタ 20240110 linjunfeng start
         if (state.selectedMasterName == "mst_room_bed_group") {
@@ -934,11 +1031,24 @@ export default {
           item.inHospitalCd2 = item.inHospitalCd2 ? item.inHospitalCd2 : null;
           item.inHospitalCd3 = item.inHospitalCd3 ? item.inHospitalCd3 : null;
         }
+        if (state.selectedMasterName == "mst_wheel_chair") {
+          item.inHospitalCd1 = item.inHospitalCd1 ? item.inHospitalCd1 : null;
+          item.inHospitalCd2 = item.inHospitalCd2 ? item.inHospitalCd2 : null;
+        }
+        if (state.selectedMasterName == "mst_infection") {
+          item.inHospitalCd1 = item.inHospitalCd1 ? item.inHospitalCd1 : null;
+        }
+        if (state.selectedMasterName == "mst_dialyzer") {
+          item.inHospitalCd1 = item.inHospitalCd1 ? item.inHospitalCd1 : null;
+          item.inHospitalCd2 = item.inHospitalCd2 ? item.inHospitalCd2 : null;
+          item.inHospitalCd3 = item.inHospitalCd3 ? item.inHospitalCd3 : null;
+          item.inHospitalCd4 = item.inHospitalCd4 ? item.inHospitalCd4 : null;
+        }
         // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_ベッドグループ・透析室マスタ 20240110 linjunfeng end
         // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法マスタ 20240110 linjunfeng start
         if (state.selectedMasterName == "mst_treatment") {
-          item.inHospAStartdate = moment(item.inHospAStartdate).format("YYYYMMDD");
-          item.inHospBStartdate = moment(item.inHospBStartdate).format("YYYYMMDD");
+          item.inHospAStartdate = dayjs(item.inHospAStartdate).format("YYYYMMDD");
+          item.inHospBStartdate = dayjs(item.inHospBStartdate).format("YYYYMMDD");
           item.inHospitalCdA1 = item.inHospitalCdA1 ? item.inHospitalCdA1 : null;
           item.inHospitalCdA2 = item.inHospitalCdA2 ? item.inHospitalCdA2 : null;
           item.inHospitalCdA3 = item.inHospitalCdA3 ? item.inHospitalCdA3 : null;
@@ -947,6 +1057,10 @@ export default {
           item.inHospitalCdB2 = item.inHospitalCdB2 ? item.inHospitalCdB2 : null;
           item.inHospitalCdB3 = item.inHospitalCdB3 ? item.inHospitalCdB3 : null;
           item.inHospitalCdB4 = item.inHospitalCdB4 ? item.inHospitalCdB4 : null;
+        }
+        if (state.selectedMasterName == "mst_procedure") {
+          item.inHospAStartdate = dayjs(item.inHospAStartdate).format("YYYYMMDD");
+          item.inHospBStartdate = dayjs(item.inHospBStartdate).format("YYYYMMDD");
         }
         // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法マスタ 20240110 linjunfeng end
         // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_薬剤セットマスタ 20240119 linjunfeng start
@@ -958,7 +1072,7 @@ export default {
         // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_薬剤セットマスタ 20240119 linjunfeng end
         // del #10438 施設マスタのシステム利用設定がすべてReMSへ勝手に変わる linjunfeng start
         if (state.selectedMasterName == "mst_facility") {
-          item.cancelDate = moment(item.cancelDate).format("YYYYMMDD");
+          item.cancelDate = dayjs(item.cancelDate).format("YYYYMMDD");
         }
         // del #10438 施設マスタのシステム利用設定がすべてReMSへ勝手に変わる linjunfeng end
 
@@ -967,6 +1081,12 @@ export default {
           if (item.useType == '3' && typeof item.templateCd === 'string' && item.templateCd.startsWith('a')) {
             // 利用種別(useType)が3:紹介状の場合、画面制御用に付与されている文字列"a"を比較前に取り除く
             item.templateCd = item.templateCd.slice(1);
+          }
+          if (item.inHospAStartdate != null && item.inHospAStartdate !== "") {
+            item.inHospAStartdate = dayjs(item.inHospAStartdate).format("YYYYMMDD");
+          }
+          if (item.inHospBStartdate != null && item.inHospBStartdate !== "") {
+            item.inHospBStartdate = dayjs(item.inHospBStartdate).format("YYYYMMDD");
           }
         }
       })
@@ -999,6 +1119,12 @@ export default {
         //add #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（データリストレイアウトマスタ画面）20231106 ztc end
         // add #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（装置通信・仮想端末マスタ画面）20231108 ztc start
         delete item.sortInputTime;
+        delete item.edited;
+        Object.keys(item).forEach(key => {
+          if (item[key] === "") {
+            item[key] = null;
+          }
+        });
         // add #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（装置通信・仮想端末マスタ画面）20231108 ztc end
         // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_ベッドグループ・透析室マスタ 20240110 linjunfeng start
         if (state.selectedMasterName == "mst_room_bed_group") {
@@ -1006,11 +1132,24 @@ export default {
           item.inHospitalCd2 = item.inHospitalCd2 ? item.inHospitalCd2 : null;
           item.inHospitalCd3 = item.inHospitalCd3 ? item.inHospitalCd3 : null;
         }
+        if (state.selectedMasterName == "mst_wheel_chair") {
+          item.inHospitalCd1 = item.inHospitalCd1 ? item.inHospitalCd1 : null;
+          item.inHospitalCd2 = item.inHospitalCd2 ? item.inHospitalCd2 : null;
+        }
+        if (state.selectedMasterName == "mst_infection") {
+          item.inHospitalCd1 = item.inHospitalCd1 ? item.inHospitalCd1 : null;
+        }
+        if (state.selectedMasterName == "mst_dialyzer") {
+          item.inHospitalCd1 = item.inHospitalCd1 ? item.inHospitalCd1 : null;
+          item.inHospitalCd2 = item.inHospitalCd2 ? item.inHospitalCd2 : null;
+          item.inHospitalCd3 = item.inHospitalCd3 ? item.inHospitalCd3 : null;
+          item.inHospitalCd4 = item.inHospitalCd4 ? item.inHospitalCd4 : null;
+        }
         // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_ベッドグループ・透析室マスタ 20240110 linjunfeng end
         // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法マスタ 20240110 linjunfeng start
         if (state.selectedMasterName == "mst_treatment") {
-          item.inHospAStartdate = moment(item.inHospAStartdate).format("YYYYMMDD");
-          item.inHospBStartdate = moment(item.inHospBStartdate).format("YYYYMMDD");
+          item.inHospAStartdate = dayjs(item.inHospAStartdate).format("YYYYMMDD");
+          item.inHospBStartdate = dayjs(item.inHospBStartdate).format("YYYYMMDD");
           item.inHospitalCdA1 = item.inHospitalCdA1 ? item.inHospitalCdA1 : null;
           item.inHospitalCdA2 = item.inHospitalCdA2 ? item.inHospitalCdA2 : null;
           item.inHospitalCdA3 = item.inHospitalCdA3 ? item.inHospitalCdA3 : null;
@@ -1019,6 +1158,10 @@ export default {
           item.inHospitalCdB2 = item.inHospitalCdB2 ? item.inHospitalCdB2 : null;
           item.inHospitalCdB3 = item.inHospitalCdB3 ? item.inHospitalCdB3 : null;
           item.inHospitalCdB4 = item.inHospitalCdB4 ? item.inHospitalCdB4 : null;
+        }
+        if (state.selectedMasterName == "mst_procedure") {
+          item.inHospAStartdate = dayjs(item.inHospAStartdate).format("YYYYMMDD");
+          item.inHospBStartdate = dayjs(item.inHospBStartdate).format("YYYYMMDD");
         }
         // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法マスタ 20240110 linjunfeng end
         // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_薬剤セットマスタ 20240119 linjunfeng start
@@ -1030,7 +1173,7 @@ export default {
         // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_薬剤セットマスタ 20240119 linjunfeng end
         // del #10438 施設マスタのシステム利用設定がすべてReMSへ勝手に変わる linjunfeng start
         if (state.selectedMasterName == "mst_facility") {
-          item.cancelDate = moment(item.cancelDate).format("YYYYMMDD");
+          item.cancelDate = dayjs(item.cancelDate).format("YYYYMMDD");
         }
         // del #10438 施設マスタのシステム利用設定がすべてReMSへ勝手に変わる linjunfeng end
 
@@ -1039,6 +1182,12 @@ export default {
           if (item.useType == '3' && typeof item.templateCd === 'string' && item.templateCd.startsWith('a')) {
             // 利用種別(useType)が3:紹介状の場合、画面制御用に付与されている文字列"a"を比較前に取り除く
             item.templateCd = item.templateCd.slice(1);
+          }
+          if (item.inHospAStartdate != null && item.inHospAStartdate !== "") {
+            item.inHospAStartdate = dayjs(item.inHospAStartdate).format("YYYYMMDD");
+          }
+          if (item.inHospBStartdate != null && item.inHospBStartdate !== "") {
+            item.inHospBStartdate = dayjs(item.inHospBStartdate).format("YYYYMMDD");
           }
         }
       })

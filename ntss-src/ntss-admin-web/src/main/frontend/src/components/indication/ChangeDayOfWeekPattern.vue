@@ -3,8 +3,9 @@
 <!-- mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20240103 ztc start-->
 <!--  <modal-base @onClose="hideModal" class="custom-modal">-->
   <modal-base @onClose="hideModal('hide-modal')" class="custom-modal change-day-of-Week-pattern">
+    <template #body>
 <!-- mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20240103 ztc end-->
-    <div id="div-parent" slot="body" class="indInfo-style-modal-container">
+    <div id="div-parent" ref="modalBodyRoot" class="indInfo-style-modal-container">
       <canvas id="arrowCanvasDummy" class="canvas-style"></canvas>
       <div class="IndBaseHeader">
         <div>
@@ -115,15 +116,16 @@
                 @focus="focusStartEditing(indTreatStartDate,1)"
                 @blur="AdjustTreatStartDate(indTreatStartDate,true);blurUpdate(indTreatStartDate,1)"
               /> -->
-              <input
+              <date-input
                 v-model="indTreatInputStartDate"
-                type="date"
                 id="date-start"
                 :class="[isIOS ? 'date-input-ios' : 'date-input-other', 'common-style-input', 'ntss-input-date', 'ntss-custom-input']"
+                classes="date-input-required"
                 data-target="indTreatStartDate"
                 max="9999-12-31"
                 @focus="focusStartEditing(indTreatInputStartDate,1)"
                 @blur="AdjustTreatStartDate(indTreatInputStartDate,true);blurUpdate(indTreatInputStartDate,1)"
+                isRequired
               />
               <!-- #10196 曜日変更過去日は手入力できません linjunfeng end -->
               <!-- mod 7397 デフォルト医師が未登録の状態で曜日パターン変更をすると指示者のリストが表示されない zhao end -->
@@ -398,7 +400,7 @@
       <div v-if="messageDialogInfo.isDialogVisible">
         <message-dialog
           :overflowY="messageDialogInfo.overflowY"
-          :visible.sync="messageDialogInfo.isDialogVisible"
+          v-model:visible="messageDialogInfo.isDialogVisible"
           :message-cd="messageDialogInfo.messageCd"
           :type="messageDialogInfo.type"
           :string-params="messageDialogInfo.stringParams"
@@ -418,14 +420,14 @@
         <v-ons-alert-dialog modifier="rowfooter"
           :visible="diaViewExam">
 <!--          add #10408 施設設定マスタNo7,8,105を4に設定した際のメッセージのタイトルと内容の不正 zy start-->
-        <span slot="title">{{ messageExamTitle }}</span>
+        <template #title><span>{{ messageExamTitle }}</span></template>
 <!--          add #10408 施設設定マスタNo7,8,105を4に設定した際のメッセージのタイトルと内容の不正 zy end-->
           <p>
-            <template v-for="(item, index) in messageExam">
-              <span :key="index">{{ item }}<br></span>
+            <template v-for="(item, index) in messageExam" :key="index">
+              <span>{{ item }}<br></span>
             </template>
           </p>
-          <template slot="footer">
+          <template #footer>
             <v-ons-alert-dialog-button @click="numberExam1()">1</v-ons-alert-dialog-button>
             <v-ons-alert-dialog-button @click="numberExam2()">2</v-ons-alert-dialog-button>
             <v-ons-alert-dialog-button @click="numberExam3()">3</v-ons-alert-dialog-button>
@@ -446,14 +448,14 @@
         <v-ons-alert-dialog modifier="rowfooter"
           :visible="diaViewRad">
 <!--          add #10408 施設設定マスタNo7,8,105を4に設定した際のメッセージのタイトルと内容の不正 zy start-->
-          <span slot="title">{{ messageRadTitle }}</span>
+          <template #title><span>{{ messageRadTitle }}</span></template>
 <!--          add #10408 施設設定マスタNo7,8,105を4に設定した際のメッセージのタイトルと内容の不正 zy end-->
           <p>
-            <template v-for="(item, index) in messageRad">
-              <span :key="index">{{ item }}<br></span>
+            <template v-for="(item, index) in messageRad" :key="index">
+              <span>{{ item }}<br></span>
             </template>
           </p>
-          <template slot="footer">
+          <template #footer>
             <v-ons-alert-dialog-button @click="numberRad1()">1</v-ons-alert-dialog-button>
             <v-ons-alert-dialog-button @click="numberRad2()">2</v-ons-alert-dialog-button>
             <v-ons-alert-dialog-button @click="numberRad3()">3</v-ons-alert-dialog-button>
@@ -476,14 +478,14 @@
         <v-ons-alert-dialog modifier="rowfooter"
           :visible="diaViewEven">
 <!--          add #10408 施設設定マスタNo7,8,105を4に設定した際のメッセージのタイトルと内容の不正 zy start-->
-          <span slot="title">{{ messageEvendTitle }}</span>
+          <template #title><span>{{ messageEvendTitle }}</span></template>
 <!--          add #10408 施設設定マスタNo7,8,105を4に設定した際のメッセージのタイトルと内容の不正 zy end-->
           <p>
-            <template v-for="(item, index) in messageEvend">
-              <span :key="index">{{ item }}<br></span>
+            <template v-for="(item, index) in messageEvend" :key="index">
+              <span>{{ item }}<br></span>
             </template>
           </p>
-          <template slot="footer">
+          <template #footer>
             <v-ons-alert-dialog-button @click="numberEvent1()">1</v-ons-alert-dialog-button>
             <v-ons-alert-dialog-button @click="numberEvent2()">2</v-ons-alert-dialog-button>
             <v-ons-alert-dialog-button @click="numberEvent3()">3</v-ons-alert-dialog-button>
@@ -493,8 +495,9 @@
       </div>
       <!--426 姜 end-->
     </div>
+    </template>
 
-    <div slot="footer" class="in-ind-dropdown-area">
+    <template #footer><div class="in-ind-dropdown-area">
       <v-ons-row class="div-style">
         <v-ons-col style="text-align: end; padding-right: 10px; margin: auto;">
           <label>指示者</label>
@@ -529,6 +532,7 @@
             :data-value-field="'user_id'"
             style="width: 100%;"
             class="common-style-input select-style-list"
+            @open="onIndUserDropdownOpen"
           />
           <!-- mod 画面デザイン改善対応 李 end -->
           <!-- mod 7397デフォルト医師が未登録の状態で曜日パターン変更をすると指示者のリストが表示されない zhao end -->
@@ -609,13 +613,16 @@
         </v-ons-col>
       </v-ons-row>
     </div>
-  </modal-base>
+      </template>
+</modal-base>
 </template>
 
 <script>
-import _ from "underscore";
+import { setKendoDropDownListEditedState } from "@/functions/common/KendoFunctions";
+import $ from "@/compat/jquery";
+import _ from "@/compat/collections/lodash";
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
 import CustomCalendar from "@/components/common/custom-calendar/CustomCalendar";
@@ -624,12 +631,12 @@ import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import ModalBase from "@/components/modals/ModalBase";
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 //内部remine 5840  add ljx start
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 //内部remine 5840  add ljx end
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // 426 姜 start
 /**
  * 施設設定番号
@@ -660,11 +667,12 @@ import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.j
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
+import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
 
 /**
  * jQuery
  */
-import $ from "jquery";
+
 // add FNSI-FutreNetWeb+SI課題管理No.4362 李 start
 import ChangeDayOfWeekList from "@/components/indication/ChangeDayOfWeekList";
 // add FNSI-FutreNetWeb+SI課題管理No.4362 李 end
@@ -686,6 +694,8 @@ import DateInput from "@/components/common/DateInput.vue";
 //add #9864 患者経過総合ビューアの指示編集画面で翌年を指示開始日に設定すると、終了日が自動でセットされ無期限指示変更ができない。 zy end
 // add 10409 曜日パターン変更の患者イベント修正 関  start
 import {sendRequestGetLinkageMessageConfirm} from "@/apis/pat-event";
+import { getScopedDocument, getScopedElementById, getScopedElementsByClassName, getScopedJQuery, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
+import { getOnsAlertDialogFooterItems, getOnsAlertDialogFromEvent } from "@/functions/common/OnsenFunctions";
 // add 10409 曜日パターン変更の患者イベント修正 関  end
 export default {
   components: {
@@ -1047,21 +1057,21 @@ export default {
     this.messageEvend = this.messageInfo(DEF_DIALOG_MSG_32);
     //9273 end
     // add 10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 関  start
-    document.addEventListener('preshow', function(event) {
-        if (event.target.localName === 'ons-alert-dialog') {
-          const dialog = event.target;
-          const buttons = dialog.getElementsByClassName('alert-dialog-footer');
-          buttons[0].style.display = 'flex';
-          }
+    const ownerDocument = this.getScopedOwnerDocument();
+    ownerDocument.addEventListener('preshow', function(event) {
+      const dialog = getOnsAlertDialogFromEvent(event);
+      const buttons = getOnsAlertDialogFooterItems(dialog);
+      if (buttons[0]) {
+        buttons[0].style.display = 'flex';
+      }
     });
     // add 10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 関  end
     // drag中の矢印描画用canvasの縦、横サイズをdiv-parentに合わせる
     this.setCanvasSize();
-    window.addEventListener("resize", this.setCanvasSize);
-    window.addEventListener("afterprint", this.setCanvasSize);
+    this.getScopedOwnerWindow()?.addEventListener("resize", this.setCanvasSize);
     // iPadでドラッグ中にスクロールが起きないようにする
-    const parent = document.getElementById('div-parent');
-    parent.addEventListener('touchmove', (e) => {
+    const parent = this.getScopedElementByIdSafe('div-parent');
+    parent?.addEventListener?.('touchmove', (e) => {
       if (this.isDragging) {
         e.preventDefault();
       }
@@ -1105,31 +1115,31 @@ export default {
     maxDate() {
       // スケジュール延長最終日
       const schExtEndDate = this.selectedPat.pat_main.sch_ext_end_date;
-      const day = moment().format("YYYYMMDD");
+      const day = dayjs().format("YYYYMMDD");
       // データが無ければ、一年後に最大日を設定
       let endMaxDate = schExtEndDate
-        ? moment(schExtEndDate, "YYYYMMDD")
-        : moment(day).add(1, "year");
+        ? dayjs(schExtEndDate, "YYYYMMDD")
+        : dayjs(day).add(1, "year");
       // 一年後から1日戻す
-      endMaxDate = moment(endMaxDate).endOf("month");
-      return moment(endMaxDate).format("YYYY-MM-DD");
+      endMaxDate = dayjs(endMaxDate).endOf("month");
+      return dayjs(endMaxDate).format("YYYY-MM-DD");
     },
 
     /**
      * 指定日以降編集不可
      */
     disableDatesAfter() {
-      return moment(this.maxDate).format("YYYYMMDD");
+      return dayjs(this.maxDate).format("YYYYMMDD");
     }
     //add 9864 患者経過総合ビューアの指示編集画面で翌年を指示開始日に設定すると、終了日が自動でセットされ無期限指示変更ができない。zy start
     /**
      * 指定日前編集不可
      */
     ,disableDatesBefore() {
-      return moment(this.indTreatStartDate).format("YYYYMMDD");
+      return dayjs(this.indTreatStartDate).format("YYYYMMDD");
     },
     toMonth() {
-      return moment(this.indTreatStartDate).format("YYYY-MM-DD");
+      return dayjs(this.indTreatStartDate).format("YYYY-MM-DD");
     },
     //add 9864 患者経過総合ビューアの指示編集画面で翌年を指示開始日に設定すると、終了日が自動でセットされ無期限指示変更ができない。zy end
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc start
@@ -1187,12 +1197,12 @@ export default {
     procDisable (value) {
       if (value) {
         // 操作不可
-        document.getElementById('currentWeekList')?.classList?.add("custom-week-disabled");
-        document.getElementById('currentWeekListTo')?.classList?.add("custom-week-disabled");
+        this.getScopedElementByIdSafe('currentWeekList')?.classList?.add("custom-week-disabled");
+        this.getScopedElementByIdSafe('currentWeekListTo')?.classList?.add("custom-week-disabled");
       } else {
         // 操作可
-        document.getElementById('currentWeekList').classList.remove("custom-week-disabled");
-        document.getElementById('currentWeekListTo').classList.remove("custom-week-disabled");
+        this.getScopedElementByIdSafe('currentWeekList').classList.remove("custom-week-disabled");
+        this.getScopedElementByIdSafe('currentWeekListTo').classList.remove("custom-week-disabled");
       }
     },
     // add FNSI-画面デザイン修正_患者経過総合ビューア「曜日グループボタン」 周 end
@@ -1200,32 +1210,32 @@ export default {
     // 開始日変更の監視(カレンダーからの変更を取得する為の処理)
     indTreatStartDate(inputDate) {
       // // 入力日付の制限
-      // const date = parseInt(moment(inputDate).format("YYYYMMDD"));
+      // const date = parseInt(dayjs(inputDate).format("YYYYMMDD"));
       // // 過去日制御
-      // const today = parseInt(moment().format("YYYYMMDD"));
+      // const today = parseInt(dayjs().format("YYYYMMDD"));
       // if(!date){
       //   return;
       // }
       // if (today > date) {
-      //   this.indTreatStartDate = moment().format("YYYY-MM-DD");
+      //   this.indTreatStartDate = dayjs().format("YYYY-MM-DD");
       // }
       // // 最大値の制御
-      // const maxDate = parseInt(moment(this.maxDate).format("YYYYMMDD"));
+      // const maxDate = parseInt(dayjs(this.maxDate).format("YYYYMMDD"));
       // if (date > maxDate) {
-      //   this.indTreatStartDate = moment(this.maxDate).format("YYYY-MM-DD");
+      //   this.indTreatStartDate = dayjs(this.maxDate).format("YYYY-MM-DD");
       // }
       // #10196 曜日変更過去日は手入力できません linjunfeng start
       const endDate = this.indTreatEndDate ? this.indTreatEndDate : "";
       if (endDate === "") {
-        let threeYearAgo = moment().subtract(3, 'years').format("YYYY-MM-DD");
+        let threeYearAgo = dayjs().subtract(3, 'years').format("YYYY-MM-DD");
         if (inputDate < threeYearAgo) {
           this.indTreatStartDate = threeYearAgo;
         } else {
           this.indTreatStartDate = inputDate;
         }
       } else {
-        if (moment(inputDate).add(3, 'years').format("YYYYMMDD") < endDate) {
-          this.indTreatStartDate = moment(endDate).subtract(3, 'years').format("YYYY-MM-DD");
+        if (dayjs(inputDate).add(3, 'years').format("YYYYMMDD") < endDate) {
+          this.indTreatStartDate = dayjs(endDate).subtract(3, 'years').format("YYYY-MM-DD");
         } else {
           this.indTreatStartDate = inputDate;
         }
@@ -1249,16 +1259,16 @@ export default {
     // 終了日変更の監視(カレンダーからの変更を取得する為の処理)
     indTreatEndDate(inputDate) {
       // // 入力日付の制限
-      // const date = parseInt(moment(inputDate).format("YYYYMMDD"));
+      // const date = parseInt(dayjs(inputDate).format("YYYYMMDD"));
       // // 過去日制御
-      // const startday = parseInt(moment(this.indTreatStartDate).format("YYYYMMDD"));
+      // const startday = parseInt(dayjs(this.indTreatStartDate).format("YYYYMMDD"));
       // if (startday > date) {
-      //   this.indTreatEndDate = moment(this.indTreatStartDate).format("YYYY-MM-DD");
+      //   this.indTreatEndDate = dayjs(this.indTreatStartDate).format("YYYY-MM-DD");
       // }
       // // 最大値の制御
-      // const maxDate = parseInt(moment(this.maxDate).format("YYYYMMDD"));
+      // const maxDate = parseInt(dayjs(this.maxDate).format("YYYYMMDD"));
       // if (date > maxDate) {
-      //   this.indTreatEndDate = moment(this.maxDate).format("YYYY-MM-DD");
+      //   this.indTreatEndDate = dayjs(this.maxDate).format("YYYY-MM-DD");
       // }
       // 治療方法、曜日の更新
       this.updateWeekPerTreatCdList();
@@ -1283,9 +1293,9 @@ export default {
 
     //   // 選択した値と初期値が異なる場合
     //   if (val != this.firIntervalValue) {
-    //     $('#v-ons-select-id').addClass('custom-select-edited');
+    //     this.scopedJQuery('#v-ons-select-id').addClass('custom-select-edited');
     //   } else {
-    //     $('#v-ons-select-id').removeClass('custom-select-edited');
+    //     this.scopedJQuery('#v-ons-select-id').removeClass('custom-select-edited');
     //   }
     // },
     // del FNSI-障害票一覧_患者経過総合ビューアNo.62 李 end
@@ -1293,18 +1303,16 @@ export default {
     selectedIndUser(val) {
       // 選択した値と初期値が異なる場合
       if ((val ?? "") != (this.initSelectedIndUser ?? "")) {
-        $('#kendo-dropdownlist-select-id').addClass('kendo-dropdownlist-select-edited');
-        $('#kendo-dropdownlist-select-id_listbox').addClass('kendo-dropdownlist-listbox');
+        setKendoDropDownListEditedState(this.getScopedRoot(), { enabled: true });
       } else {
-        $('#kendo-dropdownlist-select-id').removeClass('kendo-dropdownlist-select-edited');
-        $('#kendo-dropdownlist-select-id_listbox').removeClass('kendo-dropdownlist-listbox');
+        setKendoDropDownListEditedState(this.getScopedRoot(), { enabled: false });
       }
     }
     // add 画面デザイン改善対応 李 end
   },
 
   async created() {
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = ((this.getScopedOwnerWindow()?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toLowerCase();
     const mac = ua.indexOf('mac');
     const os = ua.indexOf('os');
     if(mac > 0 && os > 0){
@@ -1321,7 +1329,7 @@ export default {
     if (this.startDate) {
       this.indTreatStartDate = this.startDate;
     } else {
-      this.indTreatStartDate = moment().format("YYYY-MM-DD");
+      this.indTreatStartDate = dayjs().format("YYYY-MM-DD");
     }
     // mod FNSI-曜日パターン変更の開始日に基準日を変更する 李 end
 
@@ -1336,8 +1344,7 @@ export default {
     // 指示者情報作成
     this.getIndUserList(
       AUTHORITY_CODES.IND_EDIT,
-      AUTHORITY_CODES.IND_PEDIT
-    ).then(response => {
+      AUTHORITY_CODES.IND_PEDIT).then(response => {
       this.indUserOptions = response.doctorList;
       this.$nextTick(() => {
         this.selectedIndUser = response.iniSelectId;
@@ -1345,9 +1352,8 @@ export default {
         this.initSelectedIndUser = this.selectedIndUser;
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc end
         // 表示領域の調整
-        document.getElementsByClassName(
-          "in-ind-dropdown-area"
-        )[0].parentElement.parentElement.style.height = "calc(5rem + 1em)";
+        this.getScopedElementsByClassNameSafe(
+          "in-ind-dropdown-area")[0].parentElement.parentElement.style.height = "calc(5rem + 1em)";
       });
     });
     // マスタ情報取得
@@ -1372,41 +1378,12 @@ export default {
       const facilityCd = this.facilityCd;
       ApiHelper.get("mainData/changeDay/maxTreatmentDate", {patId, facilityCd}).then(response => {
         if (response && response.data) {
-          let startDateYMD = moment(this.indTreatStartDate).format('YYYYMMDD');
-          let endDateYMD = response.data;
-          this.maxTreatDate= endDateYMD;
-
-          let priorToChangeList = [];
-          if (startDateYMD && endDateYMD) {
-            if(moment(this.indTreatStartDate).day() === 0){
-              startDateYMD = moment(this.indTreatStartDate, 'YYYYMMDD').subtract(1, 'days').format('YYYYMMDD');
-            }
-            // 初期日時取得
-            //const startDate = parseInt(startDateYMD);
-            const startDate = parseInt(moment(startDateYMD).startOf("week").add(1, 'days').format("YYYYMMDD"));
-            // 最大日付の日曜日に取得します
-            const weekOfDay = moment(endDateYMD, 'YYYYMMDD').format("E");
-            //const endDate = parseInt(moment(endDateYMD, 'YYYYMMDD').add(7 - weekOfDay, 'days').format('YYYYMMDD'));
-            const endDate = parseInt(moment(endDateYMD, 'YYYYMMDD').add(14 - weekOfDay, 'days').format('YYYYMMDD'));
-            let currentWeekFirstDay = moment(startDateYMD).startOf("week").add(1, 'days').format("YYYYMMDD");
-            let lastDayOfNextWeek = moment(endDateYMD, 'YYYYMMDD').add(14 - weekOfDay, 'days').format('YYYYMMDD');
-            // for (let i = startDate; i < endDate + 1; i++) {
-            //   if (!moment(i.toString()).isValid()) continue;
-            //   priorToChangeList.push(i.toString());
-            // }
-            this.firstDayOfCurrentWeek = currentWeekFirstDay;
-            this.lastDayOfNextWeek = lastDayOfNextWeek;
-            for (let i = startDate; i < endDate + 1; i++) {
-              if (!moment(i.toString()).isValid()) continue;
-              priorToChangeList.push(i.toString());
-            }
-          }
-
-          // 変更前の日付を設定する
+          this.maxTreatDate = String(response.data);
+          // 変更前の日付を設定する（#10196 と同様 dayjs で日付を1日ずつ加算）
+          this.updatePriorToChangeList();
           // add #9273 施設設定マスタのNo105の設定どおり動かない。 張玲 start
           this.setTreatmentDataOfPeroid('init');
           // add #9273 施設設定マスタのNo105の設定どおり動かない。 張玲 end
-          this.setPriorToChangeList(priorToChangeList);
           //内部remine 5840  mod ljx end
         }
       })
@@ -1418,14 +1395,40 @@ export default {
     this.initIndTreatEndDate = JSON.stringify(this.indTreatEndDate);
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc end
   },
-  beforeDestroy() {
+  beforeUnmount() {
       //内部remine 5840  add ljx start
-      EventBus.$off("showBeforeTreatmentDetail");
-      EventBus.$off("showAfterTreatmentDetail");
+      EventBus.$off("showBeforeTreatmentDetail", this.showBeforeTreatmentDetail);
+      EventBus.$off("showAfterTreatmentDetail", this.showAfterTreatmentDetail);
       //内部remine 5840  add ljx start
   },
 
   methods: {
+    getScopedRoot() {
+      return this.$refs?.modalBodyRoot || this.$el || this;
+    },
+    getScopedOwnerDocument() {
+      return getScopedDocument(this.getScopedRoot());
+    },
+    getScopedOwnerWindow() {
+      return this.getScopedOwnerDocument()?.defaultView || globalThis?.window || null;
+    },
+    getScopedOwnerBody() {
+      return this.getScopedOwnerDocument()?.body || globalThis?.document?.body || null;
+    },
+    getScopedElementByIdSafe(id) {
+      return getScopedElementById(id, this.getScopedRoot()) || this.getScopedOwnerDocument()?.getElementById?.(id) || null;
+    },
+    getScopedElementsByClassNameSafe(className) {
+      const scoped = getScopedElementsByClassName(className, this.getScopedRoot());
+      return scoped.length ? scoped : Array.from(this.getScopedOwnerDocument()?.getElementsByClassName?.(className) || []);
+    },
+    queryScopedSelectorSafe(selector) {
+      return queryScopedSelector(selector, this.getScopedRoot()) || this.getScopedOwnerDocument()?.querySelector?.(selector) || null;
+    },
+    scopedJQuery(selector, context) {
+      const jq = getScopedJQuery(this.getScopedRoot(), $);
+      return (jq || $)(selector, context);
+    },
     //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zy start
     ...mapActions("loading-screen", [
       "setLoadingScreenVisible",
@@ -1472,34 +1475,34 @@ export default {
         return;
       }
       // 期間指定での操作の場合以下の処理を実行
-        const date = parseInt(moment(treatDate).format("YYYYMMDD"));
+        const date = parseInt(dayjs(treatDate).format("YYYYMMDD"));
         // 過去日制御
         let today;
         if (startDate) {
-          today = parseInt(moment().format("YYYYMMDD"));
+          today = parseInt(dayjs().format("YYYYMMDD"));
         }else{
-          today = parseInt(moment(this.indTreatStartDate).format("YYYYMMDD"));
+          today = parseInt(dayjs(this.indTreatStartDate).format("YYYYMMDD"));
         }
         if (today > date) {
           if (startDate) {
-            this.indTreatStartDate = moment().format("YYYY-MM-DD");
+            this.indTreatStartDate = dayjs().format("YYYY-MM-DD");
           }else{
-            this.indTreatEndDate = moment(this.indTreatStartDate).format("YYYY-MM-DD");
+            this.indTreatEndDate = dayjs(this.indTreatStartDate).format("YYYY-MM-DD");
           }
         }else{
           if (startDate) {
-            this.indTreatStartDate = moment(treatDate).format("YYYY-MM-DD");
+            this.indTreatStartDate = dayjs(treatDate).format("YYYY-MM-DD");
           }else{
-            this.indTreatEndDate = moment(treatDate).format("YYYY-MM-DD");
+            this.indTreatEndDate = dayjs(treatDate).format("YYYY-MM-DD");
           }
         }
         // 最大値の制御
-        const maxDate = parseInt(moment(this.maxDate).format("YYYYMMDD"));
+        const maxDate = parseInt(dayjs(this.maxDate).format("YYYYMMDD"));
         if (date > maxDate) {
           if (startDate) {
-            this.indTreatStartDate = moment(this.maxDate).format("YYYY-MM-DD");
+            this.indTreatStartDate = dayjs(this.maxDate).format("YYYY-MM-DD");
           }else{
-            this.indTreatEndDate = moment(this.maxDate).format("YYYY-MM-DD");
+            this.indTreatEndDate = dayjs(this.maxDate).format("YYYY-MM-DD");
           }
         }
     },
@@ -1513,6 +1516,8 @@ export default {
         // 編集中は処理を行わない
         return;
       }
+      this.startLoadingScreen();
+
       // 治療予定から、治療方法、曜日のリストを取得
       this.getWeekPerTreatCdList().then(() => {
         const value = this.weekPerTreatList.length > 0 ? this.selectedTreatmentCd : null;
@@ -1543,51 +1548,54 @@ export default {
         this.clearSelectedDate();
         this.clearClickClass();
         //内部remine 5840  add ljx end
+      }).finally(() => {
+        this.finishLoadingScreen();
       });
     },
     //内部remine 5840  add ljx start
     updatePriorToChangeList(){
-      let startDateYMD = moment(this.indTreatStartDate).format('YYYYMMDD');
-      let endDateYMD = this.indTreatEndDate?moment(this.indTreatEndDate).format('YYYYMMDD'):this.maxTreatDate;
+      let startDateYMD = dayjs(this.indTreatStartDate).format('YYYYMMDD');
+      let endDateYMD = this.indTreatEndDate
+        ? dayjs(this.indTreatEndDate).format('YYYYMMDD')
+        : String(this.maxTreatDate);
       let priorToChangeList = [];
-      if (startDateYMD && endDateYMD) {
-        const weekOfDay = moment(endDateYMD, 'YYYYMMDD').format("E");
+      if (startDateYMD && endDateYMD && startDateYMD !== 'Invalid Date') {
+        const endDateParsed = dayjs(endDateYMD, 'YYYYMMDD');
+        if (!endDateParsed.isValid()) {
+          this.setPriorToChangeList(priorToChangeList);
+          return;
+        }
+        const weekOfDay = endDateParsed.day();
         // #10196 曜日変更過去日は手入力できません linjunfeng start
-        // const endDate = parseInt(moment(endDateYMD, 'YYYYMMDD').add(14 - weekOfDay, 'days').format('YYYYMMDD'));
-        const endDate = moment(endDateYMD, 'YYYYMMDD').add(14 - weekOfDay, 'days').format('YYYYMMDD');
+        const endDate = endDateParsed.add(14 - weekOfDay, 'days').format('YYYYMMDD');
         // #10196 曜日変更過去日は手入力できません linjunfeng end
-        if(moment(this.indTreatStartDate).day() === 0){
-          startDateYMD = moment(this.indTreatStartDate, 'YYYYMMDD').subtract(1, 'days').format('YYYYMMDD');
+        if(dayjs(this.indTreatStartDate).day() === 0){
+          startDateYMD = dayjs(this.indTreatStartDate).subtract(1, 'days').format('YYYYMMDD');
         }
         // #10196 曜日変更過去日は手入力できません linjunfeng start
-        // const startDate = parseInt(moment(startDateYMD).startOf("week").add(1, 'days').format("YYYYMMDD"));
-        const startDate = moment(startDateYMD).startOf("week").add(1, 'days').format("YYYYMMDD");
+        const startDate = dayjs(startDateYMD, 'YYYYMMDD').startOf("week").add(1, 'days').format("YYYYMMDD");
         // #10196 曜日変更過去日は手入力できません linjunfeng end
-        this.firstDayOfCurrentWeek = moment(startDateYMD).startOf("week").add(1, 'days').format("YYYYMMDD");
-        this.lastDayOfNextWeek = moment(endDateYMD, 'YYYYMMDD').add(14 - weekOfDay, 'days').format('YYYYMMDD');
-        // #10196 曜日変更過去日は手入力できません linjunfeng start
-        // for (let i = startDate; i < endDate + 1; i++) {
-        //   if (!moment(i.toString()).isValid()) continue;
-        //   priorToChangeList.push(i.toString());
-        // }
-        let currentDate = startDate;
-        while (currentDate <= endDate) {
-          priorToChangeList.push(currentDate.toString());
-          currentDate = moment(currentDate).add(1, 'days').format("YYYYMMDD")
+        this.firstDayOfCurrentWeek = dayjs(startDateYMD, 'YYYYMMDD').startOf("week").add(1, 'days').format("YYYYMMDD");
+        this.lastDayOfNextWeek = endDate;
+        if (dayjs(startDate, 'YYYYMMDD').isValid() && dayjs(endDate, 'YYYYMMDD').isValid() && startDate <= endDate) {
+          let currentDate = startDate;
+          while (currentDate <= endDate) {
+            priorToChangeList.push(currentDate.toString());
+            currentDate = dayjs(currentDate, 'YYYYMMDD').add(1, 'days').format("YYYYMMDD");
+          }
         }
-        // #10196 曜日変更過去日は手入力できません linjunfeng end
       }
       this.setPriorToChangeList(priorToChangeList);
     },
     //mod #9273 施設設定マスタのNo105の設定どおり動かない。 張玲 start
     async setTreatmentDataOfPeroid(string){
-       let newStartDate = moment(this.indTreatStartDate).format('YYYYMMDD');
-       if(moment(this.indTreatStartDate).day() === 0){
-         newStartDate = moment(this.indTreatStartDate, 'YYYYMMDD').subtract(1, 'days').format('YYYYMMDD');
+       let newStartDate = dayjs(this.indTreatStartDate).format('YYYYMMDD');
+       if(dayjs(this.indTreatStartDate).day() === 0){
+         newStartDate = dayjs(this.indTreatStartDate, 'YYYYMMDD').subtract(1, 'days').format('YYYYMMDD');
        }
-       let newFirstDayOfCurrentWeek = moment(newStartDate).startOf("week").add(1, 'days').format("YYYYMMDD");
-       let oldStartDate = moment(this.firstDayOfCurrentWeek).format('YYYYMMDD');
-       if (string || moment(newFirstDayOfCurrentWeek).isBefore(moment(oldStartDate))) {
+       let newFirstDayOfCurrentWeek = dayjs(newStartDate).startOf("week").add(1, 'days').format("YYYYMMDD");
+       let oldStartDate = dayjs(this.firstDayOfCurrentWeek).format('YYYYMMDD');
+       if (string || dayjs(newFirstDayOfCurrentWeek).isBefore(dayjs(oldStartDate))) {
         await this.getOrdMainOfPeriod({
           facilityCd: this.facilityCd,
           patId: this.patId,
@@ -1603,14 +1611,14 @@ export default {
           alert(err);
         });
        }else{
-         let newEndDate =this.indTreatEndDate ==""? moment(this.maxTreatDate,'YYYY-MM-DD'):moment(this.indTreatEndDate).format('YYYY-MM-DD');
+         let newEndDate =this.indTreatEndDate ==""? dayjs(this.maxTreatDate,'YYYY-MM-DD'):dayjs(this.indTreatEndDate).format('YYYY-MM-DD');
          let treatmentDataTmp = {};
          let treatmentData;
          for(var i = 0;i<this.getTreatmentDataOfPeriod.length;i++){
            treatmentData = this.getTreatmentDataOfPeriod[i];
            for(const treatment in treatmentData){
              if(treatmentData[treatment]){
-               if(!moment(treatment).isAfter(moment(newEndDate))&&treatmentData[treatment].indTreatmentCd === this.selectedTreatmentCd){
+               if(!dayjs(treatment).isAfter(dayjs(newEndDate))&&treatmentData[treatment].indTreatmentCd === this.selectedTreatmentCd){
                  treatmentDataTmp[treatment]=treatmentData[treatment];
                }
              }
@@ -1621,18 +1629,21 @@ export default {
 
     },
     // mod #9273 施設設定マスタのNo105の設定どおり動かない。 張玲 end
-    filterTreatmentDataOfPeroid(){
+    filterTreatmentDataOfPeroid() {
       let treatmentData;
       let treatmentDataTmp = {};
-      for(var i = 0;i<this.getTreatmentDataOfPeriod.length;i++){
-        treatmentData = this.getTreatmentDataOfPeriod[i];
-        for(const treatment in treatmentData){
-          if(treatmentData[treatment]){
-            if(treatmentData[treatment].indTreatmentCd === this.selectedTreatmentCd){
-              treatmentDataTmp[treatment]=treatmentData[treatment];
-            }
+      for (let i = 0; i < this.getTreatmentDataOfPeriod.length; i++) {
+        const rowData = this.getTreatmentDataOfPeriod[i];
+        for (const date in rowData) {
+          const treatment = rowData[date];
+          if (treatment && treatment.indTreatmentCd === this.selectedTreatmentCd) {
+            treatmentDataTmp[date] = treatment;
           }
         }
+      }
+      const currentData = this.getTreatmentDataOfPeriodTmp;
+      if (Object.keys(treatmentDataTmp).length === 0 && currentData && Object.keys(currentData).length > 0) {
+        return;
       }
       this.setTreatmentDataOfPeriodTmp(treatmentDataTmp);
     },
@@ -1684,7 +1695,7 @@ export default {
         this.indTreatStartDate = value;
       }
       if (isStartTime == 2) {
-        this.indTreatEndDate = moment(value, "YYYY-MM-DD", true).isValid() ? value : "";
+        this.indTreatEndDate = dayjs(value, "YYYY-MM-DD", true).isValid() ? value : "";
       }
       // #10196 曜日変更過去日は手入力できません linjunfeng end
     },
@@ -1722,8 +1733,7 @@ export default {
       this.mstVaInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstVa",
-        requestParam
-      ).catch(error => {
+        requestParam).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'getMstVa', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1743,8 +1753,7 @@ export default {
       this.mstDialyzerInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstDialyzer",
-        requestParam
-      ).catch(error => {
+        requestParam).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'getMstDialyzer', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1759,8 +1768,7 @@ export default {
     async getMstDialyzerTabooAllergy() {
       this.mstDialyzerTabooAllergyInfo = null;
       const response = await ApiHelper.get(
-        `/mstInfo/mstDialyzer/${this.selectedPatId}`
-      ).catch(error => {
+        `/mstInfo/mstDialyzer/${this.selectedPatId}`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'getMstDialyzerTabooAllergy', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1780,8 +1788,7 @@ export default {
       this.mstMedicineInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstMedicine",
-        requestParam
-      ).catch(error => {
+        requestParam).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'getMstMedicine', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1796,8 +1803,7 @@ export default {
     async getMstMedicineTabooAllergy() {
       this.mstMedicineTabooAllergyInfo = null;
       const response = await ApiHelper.get(
-        `/mstInfo/mstMedicine/${this.selectedPatId}`
-      ).catch(error => {
+        `/mstInfo/mstMedicine/${this.selectedPatId}`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'getMstMedicineTabooAllergy', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1817,8 +1823,7 @@ export default {
       this.mstMedicineMixInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstMedicineMix",
-        requestParam
-      ).catch(error => {
+        requestParam).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'getMstMedicineMix', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1833,8 +1838,7 @@ export default {
     async getMstMedicineMixTabooAllergy() {
       this.mstMedicineMixTabooAllergyInfo = null;
       const response = await ApiHelper.get(
-        `/mstInfo/mstMedicineMix/${this.selectedPatId}`
-      ).catch(error => {
+        `/mstInfo/mstMedicineMix/${this.selectedPatId}`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'getMstMedicineMixTabooAllergy', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1854,8 +1858,7 @@ export default {
       this.mstProcedureInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstProcedure",
-        requestParam
-      ).catch(error => {
+        requestParam).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'getMstProcedure', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1875,8 +1878,7 @@ export default {
       this.mstMedicateTimingInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstMedicateTiming",
-        requestParam
-      ).catch(error => {
+        requestParam).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'getMstMedicateTiming', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1896,8 +1898,7 @@ export default {
       this.mstEquipmentInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstEquipment",
-        requestParam
-      ).catch(error => {
+        requestParam).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'getMstEquipment', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1912,8 +1913,7 @@ export default {
     async getMstEquipmentTabooAllergy() {
       this.mstEquipmentTabooAllergyInfo = null;
       const response = await ApiHelper.get(
-        `/mstInfo/mstEquipment/${this.selectedPatId}`
-      ).catch(error => {
+        `/mstInfo/mstEquipment/${this.selectedPatId}`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'getMstEquipmentTabooAllergy', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1952,8 +1952,7 @@ export default {
             treatmentName: this.translateCd(
               this.mstTreatmentList,
               jsonObj.ind_treatment_cd,
-              "treatment"
-            ),
+              "treatment"),
             week: jsonObj.treat_week
           });
         });
@@ -1988,15 +1987,13 @@ export default {
           getErrorMessage('ChangeDayOfWeekPattern.vue', 'getMstTreatment', error);
           //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
           throw error;
-        }
-      );
+        });
       // データが存在する場合以下の処理を実行
       if (0 !== response.data.length) {
         this.mstTreatmentList = response.data.filter(item => {
           return (
             // 施設コードが一致しかつ、表示フラグが1のもののみ取得
-            item.facilityCd === this.facilityCd && "1" === item.isDisp
-          );
+            item.facilityCd === this.facilityCd && "1" === item.isDisp);
         });
       }
     },
@@ -2104,7 +2101,7 @@ export default {
       // 治療パターン曜日情報を格納
       this.treatPatternWeekInfo = arr;
       // 曜日データが存在しない場合は非表示にする
-      const obj = document.getElementById("currentWeekList");
+      const obj = this.getScopedElementByIdSafe("currentWeekList");
       if (obj) {
         obj.style.visibility = rowStyle;
       }
@@ -2131,7 +2128,8 @@ export default {
      * 曜日選択情報の設定
      */
     setSelection(e, toWeekInfo, index) {
-      if (e.type === 'click' && 'ontouchstart' in window) {
+      const ownerWindow = this.getScopedOwnerWindow() || window;
+      if (e.type === 'click' && 'ontouchstart' in ownerWindow) {
         // iOSではtouchend後にclickが来るので、無視する
         return;
       }
@@ -2199,8 +2197,8 @@ export default {
       // add FNSI-改修内容 変更後の曜日をクリックで変更の解除を可能 穆 end
       // del FNSI-改修内容 変更後の曜日をクリックで変更の解除を可能 穆 start
       // // 選択肢要素の取得
-      // const elem = document.getElementById("popChip");
-      // const elemHeader = document.getElementsByClassName("modal-header")[0];
+      // const elem = this.getScopedElementByIdSafe("popChip");
+      // const elemHeader = this.getScopedElementsByClassNameSafe("modal-header")[0];
       // // 表示位置の格納
       // elem.style.top = `${e.target.getBoundingClientRect().top - elemHeader.getBoundingClientRect().top -50}px`;
       // elem.style.left = `${e.target.getBoundingClientRect().left - elemHeader.getBoundingClientRect().left}px`;
@@ -2220,7 +2218,7 @@ export default {
     //  * 曜日選択情報以外をクリックした時の処理
     //  */
     // offClick(e) {
-    //   const elem = document.getElementById("popChip");
+    //   const elem = this.getScopedElementByIdSafe("popChip");
     //   // 選択肢以外の場所をクリックした際に選択肢を消す
     //   if (!$(e.target).closest("#popChip").length) {
     //     elem.style.display = "none";
@@ -2233,11 +2231,11 @@ export default {
     // offSelect() {
     //   this.timer = setTimeout(function() {
     //     // 表示OFF
-    //     document.getElementById("popChip").style.display = "none";
+    //     this.getScopedElementByIdSafe("popChip").style.display = "none";
     //     // 現在選択中の曜日を空に設定
     //     this.currentSelectWeek = null;
     //   }, 500);
-    //   // document.getElementById("popChip").style.display = "none";
+    //   // this.getScopedElementByIdSafe("popChip").style.display = "none";
     // },
 
     // /**
@@ -2270,9 +2268,9 @@ export default {
     //     if (this.currentWeekNum > 0) {
     //       w = (w * 7) / this.currentWeekNum + (7 - this.currentWeekNum);
     //     }
-    //     const canvas = $("#arrowCanvas")[0];
+    //     const canvas = this.scopedJQuery("#arrowCanvas")[0];
     //     const endArrow =
-    //       $(canvas).width() - (w + 1) * this.treatPatternWeekInfo.length;
+    //       this.scopedJQuery(canvas).width() - (w + 1) * this.treatPatternWeekInfo.length;
     //     const width =
     //       weekWidth * 0.5 + (weekWidth + 1) * this.currentSelectWeek;
     //     const o = {
@@ -2285,7 +2283,7 @@ export default {
     //     this.arrowInfo.push(o);
     //   }
 
-    //   this.$set(this.selectionInfo.toWeekInfo, "fromWeek", selectValue.value);
+    //   this._compatSet(this.selectionInfo.toWeekInfo, "fromWeek", selectValue.value);
     //   // 矢印情報が格納されている場合
     //   if (0 !== this.arrowInfo.length) {
     //     // 矢印を描画
@@ -2294,7 +2292,7 @@ export default {
     //     // 矢印をすべてクリア
     //     this.clearArrows();
     //   }
-    //   const elem = document.getElementById("popChip");
+    //   const elem = this.getScopedElementByIdSafe("popChip");
     //   // 選択メニューの非表示
     //   elem.style.display = "none";
     //   // 現在の展開情報を表示中の場合
@@ -2312,12 +2310,12 @@ export default {
     canvasProc() {
       // 現在の曜日パターン要素の取得
       // #10266 曜日変更、同じ曜日選択、開始終了期間変更、再度同じ曜日選択、操作卓エラー linjunfeng start
-      // const element = $(".week-box");
-      const element = $(".week-box").not('.drag');
+      // const element = this.scopedJQuery(".week-box");
+      const element = this.scopedJQuery(".week-box").not('.drag');
       // #10266 曜日変更、同じ曜日選択、開始終了期間変更、再度同じ曜日選択、操作卓エラー linjunfeng end
       this.weekElements = element;
       // 新規の曜日パターン要素の取得
-      const toElement = $(".to-week-box");
+      const toElement = this.scopedJQuery(".to-week-box");
       this.toWeekElements = toElement;
       // 現在の曜日boxにイベントを追加
       for (let i = 0; i < element.length; i++) {
@@ -2326,7 +2324,7 @@ export default {
       }
 
       // キャンバスの配置位置
-      const canvasElement = $("#arrowCanvas")[0];
+      const canvasElement = this.scopedJQuery("#arrowCanvas")[0];
       const elementRect = canvasElement.getBoundingClientRect();
       this.canvasPosTop = parseInt(elementRect.top);
       this.canvasPosLeft = parseInt(elementRect.left);
@@ -2348,10 +2346,84 @@ export default {
         afterToChangeList = this.getAfterToChangeList;
         let toWeekInfoValue = toWeekInfo.value === 7?0:toWeekInfo.value;
         afterToChangeList= afterToChangeList.filter(t => {
-          return moment(t).day() !== toWeekInfoValue;
+          return dayjs(t).day() !== toWeekInfoValue;
         });
       }
       this.setAfterToChangeList(afterToChangeList);
+    },
+    /**
+     * 矢印情報から変更後日付リスト（change-list 変更後行の〇）を生成
+     * @description 月水金など間欠曜日でも、期間内の全ての移動対象日を列挙する
+     */
+    buildAfterToChangeListFromArrows() {
+      const afterToChangeList = [];
+      if (!this.getPriorToChangeList || this.arrowInfo.length === 0) {
+        return afterToChangeList;
+      }
+      const treatmentData = this.getTreatmentDataOfPeriodTmp || {};
+      const dateCurrent = dayjs(this.indTreatStartDate).format("YYYYMMDD");
+      let compareEnd = "";
+      if (this.indTreatEndDate) {
+        compareEnd = dayjs(this.indTreatEndDate).format("YYYYMMDD");
+      }
+      for (let i = this.arrowInfo.length - 1; i >= 0; i--) {
+        const indexFrom = Number(this.arrowInfo[i].index_from);
+        const weekDay = this.arrowInfo[i].index_to + 1 - indexFrom;
+        for (let j = 0; j < this.getPriorToChangeList.length; j++) {
+          const itemTestList = this.getPriorToChangeList[j];
+          const beforeWeekCd =
+            dayjs(itemTestList).day() === 0 ? 7 : dayjs(itemTestList).day();
+          if (indexFrom !== beforeWeekCd) {
+            continue;
+          }
+          const treatment = treatmentData[itemTestList];
+          if (
+            !treatment ||
+            treatment.indTreatmentCd !== this.selectedTreatmentCd
+          ) {
+            continue;
+          }
+          if (dayjs(itemTestList).isBefore(dayjs(this.indTreatStartDate))) {
+            continue;
+          }
+          const afterToDate =
+            weekDay === 0
+              ? itemTestList
+              : dayjs(itemTestList).add(weekDay, "days").format("YYYYMMDD");
+          if (afterToDate >= dateCurrent) {
+            if (!compareEnd || afterToDate <= compareEnd) {
+              if (!afterToChangeList.includes(afterToDate)) {
+                afterToChangeList.push(afterToDate);
+              }
+            }
+          }
+        }
+      }
+      // add #10307 曜日パターン変更を行うと1年以降の治療予定が作成される 20240307 ztc start
+      // mod #11966 【因島】実績を含む週の曜日パターン変更が不正 fang start
+      const lEndDate =
+        this.indTreatEndDate == "" ? dayjs(this.maxDate, "YYYY-MM-DD") : "";
+      if (this.indTreatEndDate == "" && this.arrowInfo.length > 0) {
+        const toWeeks = this.arrowInfo.map(aio =>
+          aio.index_to + 1 > 6 ? 0 : aio.index_to + 1
+        );
+        for (let k = 0; k < 7; k++) {
+          const subtractDate = lEndDate.clone().subtract(k, "days");
+          const subtractDateStr = subtractDate.format("YYYYMMDD");
+          if (
+            toWeeks.includes(subtractDate.day()) &&
+            !afterToChangeList.includes(subtractDateStr)
+          ) {
+            afterToChangeList.push(subtractDateStr);
+            if (!this.missingDateList.includes(subtractDateStr)) {
+              this.missingDateList.push(subtractDateStr);
+            }
+          }
+        }
+      }
+      // mod #11966 【因島】実績を含む週の曜日パターン変更が不正 fang end
+      // add #10307 曜日パターン変更を行うと1年以降の治療予定が作成される 20240307 ztc end
+      return afterToChangeList;
     },
     //内部remine 5840  add ljx end
 
@@ -2359,13 +2431,13 @@ export default {
      * 変更元曜日でマウスがおされた際のイベント
      */
     mouseDown(e) {
-      if (document.querySelector('.drag')) {
+      if (this.queryScopedSelectorSafe('.drag')) {
         // NOTE: すでに選択中曜日要素が存在したら何もしない
         return;
       }
       this.isDragging = true;
       // キャンバスの位置を取得
-      const canvasElement = $("#arrowCanvas")[0];
+      const canvasElement = this.scopedJQuery("#arrowCanvas")[0];
       const elementRect = canvasElement.getBoundingClientRect();
       this.canvasPosTop = parseInt(elementRect.top);
       this.canvasPosLeft = parseInt(elementRect.left);
@@ -2396,7 +2468,7 @@ export default {
       weekClone?.classList?.add("drag");
 
       // 曜日パターンモーダル内にクローンを生成
-      document.getElementById("div-parent").appendChild(weekClone);
+      this.getScopedElementByIdSafe("div-parent").appendChild(weekClone);
       // タッチイベントとマウスイベントの差異を吸収
       let event;
       if ("mousedown" === e.type) {
@@ -2414,8 +2486,8 @@ export default {
       this.arrowStartX = target.offsetLeft;
 
       // ムーブイベントにコールバック
-      document.body.addEventListener("mousemove", this.mouseMove, false);
-      document.body.addEventListener("touchmove", this.mouseMove, false);
+      this.getScopedOwnerBody().addEventListener("mousemove", this.mouseMove, false);
+      this.getScopedOwnerBody().addEventListener("touchmove", this.mouseMove, false);
       weekClone.addEventListener("mouseup", this.mouseUp, false);
       weekClone.addEventListener("touchend", this.mouseUp, false);
     },
@@ -2425,7 +2497,7 @@ export default {
      */
     mouseMove(e) {
       // ドラッグしている要素を取得
-      const drag = $(".drag")[0];
+      const drag = this.scopedJQuery(".drag")[0];
 
       // 同様にマウスとタッチの差異を吸収
       let event;
@@ -2436,12 +2508,11 @@ export default {
       }
 
       // モーダル内のスクロール量を取得
-      const divParent = document.getElementById("div-parent");
+      const divParent = this.getScopedElementByIdSafe("div-parent");
       const scrollPos = divParent.scrollTop;
 
       // マウスが動いた位置に要素を動かす(共通のモーダルのtransform: scale(1.0)を戻す)
-      const parentRect = document
-        .querySelector("#div-parent")
+      const parentRect = this.getScopedElementByIdSafe("div-parent")
         .getBoundingClientRect();
       const dragRect = drag.getBoundingClientRect();
       drag.style.top = `${(event.pageY - parentRect.y - dragRect.height / 2) /
@@ -2480,8 +2551,7 @@ export default {
           event.pageX >= xStart &&
           event.pageX <= xEnd &&
           event.pageY >= yStart &&
-          event.pageY <= yEnd
-        ) {
+          event.pageY <= yEnd) {
           break;
         }
       }
@@ -2492,8 +2562,8 @@ export default {
       // マウスボタンが上げられたとき、またはカーソルが外れた時発火
       drag.addEventListener("mouseup", this.mouseUp, false);
       drag.addEventListener("touchend", this.mouseUp, false);
-      document.body.addEventListener("mouseleave", this.mouseUp, false);
-      document.body.addEventListener("touchend", this.mouseUp, false);
+      this.getScopedOwnerBody().addEventListener("mouseleave", this.mouseUp, false);
+      this.getScopedOwnerBody().addEventListener("touchend", this.mouseUp, false);
     },
 
     /**
@@ -2505,18 +2575,18 @@ export default {
       let noDragFlag = true;
 
       // 現在動かしている要素の取得
-      const drag = $(".drag")[0];
+      const drag = this.scopedJQuery(".drag")[0];
 
       //ムーブベントハンドラの消去
-      document.body.removeEventListener("mousemove", this.mouseMove, false);
-      document.body.removeEventListener("touchmove", this.mouseMove, false);
+      this.getScopedOwnerBody().removeEventListener("mousemove", this.mouseMove, false);
+      this.getScopedOwnerBody().removeEventListener("touchmove", this.mouseMove, false);
       // 現在動かしている要素が存在すれば、処理を行う
       if (undefined !== drag) {
         drag.removeEventListener("mouseup", this.mouseUp, false);
         drag.removeEventListener("touchend", this.mouseUp, false);
       }
-      document.body.removeEventListener("mouseleave", this.mouseUp, false);
-      document.body.removeEventListener("touchend", this.mouseUp, false);
+      this.getScopedOwnerBody().removeEventListener("mouseleave", this.mouseUp, false);
+      this.getScopedOwnerBody().removeEventListener("touchend", this.mouseUp, false);
 
       // マウスタッチの差を吸収
       let event;
@@ -2539,8 +2609,7 @@ export default {
           event?.pageX >= xStart &&
           event?.pageX <= xEnd &&
           event?.pageY >= yStart &&
-          event?.pageY <= yEnd
-        ) {
+          event?.pageY <= yEnd) {
           // 矢印の根元ののキャンバス上のX座標
           const st_x_add =
             this.arrowStartX - this.canvasPosLeft + this.fromWidth;
@@ -2679,120 +2748,8 @@ export default {
       });
       if (this.getPriorToChangeList && newDetailInfo) {
         //内部remine 5840  mod ljx start
-        let afterToChangeList = [];
-        //9273 mod ljx start
-        let treatmentData = this.getTreatmentDataOfPeriodTmp;
-        const treatmentDataArr = [];
-        for(const itemTestList in treatmentData){
-          // mod #11888【因島】曜日パターン変更の画面操作が重い fang start
-          // treatmentDataArr.push(itemTestList);
-          const isoStr = `${itemTestList.substring(0, 4)}-${itemTestList.substring(4, 6)}-${itemTestList.substring(6, 8)}`;
-          const date = new Date(isoStr);
-          treatmentDataArr.push({
-            date: itemTestList,
-            week: date.getDay()
-          });
-          // mod #11888【因島】曜日パターン変更の画面操作が重い fang end
-        }
-        // mod #9273(10277) 仕様変更:開始日より前の日付に○が付く事がある、以下の処理は開始日を比較する 張玲 start
-        // const dateCurrent = moment(new Date()).format("YYYYMMDD");
-        let dateCurrent = moment(this.indTreatStartDate).format("YYYYMMDD")
-        // add #11966 【因島】実績を含む週の曜日パターン変更が不正 fang start
-        let compareEnd = ""
-        if(this.indTreatEndDate) {
-          compareEnd = moment(this.indTreatEndDate).format("YYYYMMDD")
-        }
-        // add #11966 【因島】実績を含む週の曜日パターン変更が不正 fang end
-        // mod #9273(10277) 仕様変更:開始日より前の日付に○が付く事がある、以下の処理は開始日を比較する 張玲 end
-        for (let i = this.arrowInfo.length - 1; i >= 0; i--) {
-          // mod #11966 【因島】実績を含む週の曜日パターン変更が不正 fang start
-          // let moveDirection = "past"
-
-          // let weekDay =(this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from) < 0?8+this.arrowInfo[i].index_to -this.arrowInfo[i].index_from:(this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from);
-          let weekDay =this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from;
-          for(const itemTestList in treatmentData){
-            let beforeWeekCd = moment(itemTestList).day() === 0 ? 7 : moment(itemTestList).day();
-            let indexFrom = this.arrowInfo[i].index_from === 7?0:this.arrowInfo[i].index_from;
-            const fileterItemList = treatmentDataArr.filter(item => {
-              // mod #11888【因島】曜日パターン変更の画面操作が重い fang start
-              // return !moment(item).isBefore(moment(this.indTreatStartDate))&&moment(item).day() == indexFrom;
-              return !(parseInt(item.date)<parseInt(this.indTreatStartDate.replaceAll("-",""))) && item.week == indexFrom;
-              // mod #11888【因島】曜日パターン変更の画面操作が重い fang end
-            });
-            if (this.arrowInfo[i].index_from === beforeWeekCd) {
-              // if(itemTestList == fileterItemList[0]){
-              //   let afterToDateSubtract = moment(itemTestList).subtract(7-weekDay, 'days').format('YYYYMMDD')
-              //   if(moment(afterToDateSubtract).isBefore(dateCurrent)){
-              //     moveDirection = "future";
-              //   }
-              // }
-              let afterToDate;
-              if (!moment(itemTestList).isBefore(moment(this.indTreatStartDate))) {
-                // if(moveDirection == "future"){
-                //   afterToDate = moment(itemTestList).add(weekDay, 'days').format('YYYYMMDD')
-                // }else{
-                //   // #10266 曜日パターンの変更後,同じ曜日を指し、○は不正を表します。 linjunfeng start
-                //   // afterToDate = moment(itemTestList).subtract(7-weekDay, 'days').format('YYYYMMDD')
-                //   afterToDate = weekDay === 0 ? itemTestList : moment(itemTestList).subtract(7-weekDay, 'days').format('YYYYMMDD')
-                //   // #10266 曜日パターンの変更後,同じ曜日を指し、○は不正を表します。 linjunfeng end
-                // }
-                afterToDate = weekDay === 0 ? itemTestList : moment(itemTestList).add(weekDay, 'days').format('YYYYMMDD')
-                if(afterToDate >= dateCurrent) {
-                  if(compareEnd) {
-                    if(afterToDate <= compareEnd) {
-                      afterToChangeList.push(afterToDate);
-                    }
-                  } else {
-                    afterToChangeList.push(afterToDate);
-                  }
-                }
-              }
-            }
-          }
-          // mod #11966 【因島】実績を含む週の曜日パターン変更が不正 fang end
-        }
-        // add #10307 曜日パターン変更を行うと1年以降の治療予定が作成される 20240307 ztc start
-        // mod #11966 【因島】実績を含む週の曜日パターン変更が不正 fang start
-        let lEndDate = this.indTreatEndDate == "" ? moment(this.maxDate, 'YYYY-MM-DD') : ""
-        if (this.indTreatEndDate == "" && this.arrowInfo.length > 0) {
-          let toWeeks = this.arrowInfo.map(aio => aio.index_to + 1 > 6 ? 0 : aio.index_to + 1);
-          for (let i = 0; i < 7; i++) {
-            let subtractDate = lEndDate.clone().subtract(i, 'days');
-            if (toWeeks.includes(subtractDate.day()) && !afterToChangeList.includes(subtractDate.format('YYYYMMDD'))) {
-              afterToChangeList.push(subtractDate.format('YYYYMMDD'));
-              if(!this.missingDateList.includes(subtractDate.format('YYYYMMDD'))){
-                this.missingDateList.push(subtractDate.format('YYYYMMDD'))
-              }
-            }
-          }
-        }
-        // mod #11966 【因島】実績を含む週の曜日パターン変更が不正 fang end
-        // add #10307 曜日パターン変更を行うと1年以降の治療予定が作成される 20240307 ztc end
-        // this.getPriorToChangeList.forEach(itemTestList => {
-        //   newDetailInfo.forEach(itemNewDetailInfo => {
-        //     let beforeWeekCd = moment(itemTestList).day() === 0 ? 7 : moment(itemTestList).day();
-        //     for (let i = this.arrowInfo.length - 1; i >= 0; i--) {
-        //       if (this.arrowInfo[i].index_from === beforeWeekCd) {
-        //         let afterToDate;
-        //         if (!moment(itemTestList).isBefore(moment(this.indTreatStartDate))) {
-        //           const weekDay =(this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from) < 0?8+this.arrowInfo[i].index_to -this.arrowInfo[i].index_from:(this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from);
-        //           if((this.arrowInfo[i].index_to+1-moment().day()) >= 0){
-        //             if((this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from) < 0){
-        //               afterToDate = moment(itemTestList).subtract(this.arrowInfo[i].index_from-this.arrowInfo[i].index_to-1, 'days').format('YYYYMMDD')
-        //             }else{
-        //               afterToDate = moment(itemTestList).add(this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from, 'days').format('YYYYMMDD')
-        //             }
-        //           }else{
-        //             afterToDate = moment(itemTestList).add(weekDay, 'days').format('YYYYMMDD');
-        //           }
-        //           afterToChangeList.push(afterToDate);
-        //         }
-        //       }
-        //     }
-        //   });
-        // });
+        const afterToChangeList = this.buildAfterToChangeListFromArrows();
         //内部remine 5840  mod ljx end
-        //9273 mod ljx end
         this.setAfterToChangeList(afterToChangeList);
         this.createMoveInfo(this.selectedDate,this.beforeAfterFlag);
       }
@@ -2805,17 +2762,17 @@ export default {
     drowArrowLines(jsonDim, clearFlag, dropFlag) {
       if (clearFlag === true) {
         // キャンバスのクリア
-        const canvas = $("#arrowCanvas")[0];
+        const canvas = this.scopedJQuery("#arrowCanvas")[0];
         const context = canvas.getContext("2d");
         context.clearRect(0, 0, canvas.width, canvas.height);
         // 移動中矢印のクリア
-        const canvasDummy = $("#arrowCanvasDummy")[0];
+        const canvasDummy = this.scopedJQuery("#arrowCanvasDummy")[0];
         const contextDummy = canvasDummy.getContext("2d");
         contextDummy.clearRect(0, 0, canvasDummy.width, canvasDummy.height);
       }
 
-      const canvas = this.$el.querySelector('#arrowCanvas');
-      const currentDetail = this.$el.querySelector('#currentDetail');
+      const canvas = this.queryScopedSelectorSafe('#arrowCanvas');
+      const currentDetail = this.queryScopedSelectorSafe('#currentDetail');
       const labelWidth = currentDetail.offsetWidth; // 変更前ラベルの横幅
       const fix = this.getFontSize > 1 ? 1 : 0; // フォントサイズ大、特大は微調整
 
@@ -2859,7 +2816,7 @@ export default {
       end_x = parseInt(end_x);
       end_y = parseInt(end_y);
 
-      const canvas = dropFlag ? $("#arrowCanvas")[0] : $("#arrowCanvasDummy")[0];
+      const canvas = dropFlag ? this.scopedJQuery("#arrowCanvas")[0] : this.scopedJQuery("#arrowCanvasDummy")[0];
       const context = canvas.getContext("2d");
 
       //矢の棒の描画
@@ -2925,9 +2882,9 @@ export default {
         w = (w * 7) / this.currentWeekNum + (7 - this.currentWeekNum);
       }
       // 描画開始位置の設定
-      const canvas = $("#arrowCanvas")[0];
+      const canvas = this.scopedJQuery("#arrowCanvas")[0];
       const startArrow =
-        $(canvas).width() - (w + 1) * this.treatPatternWeekInfo.length;
+        this.scopedJQuery(canvas).width() - (w + 1) * this.treatPatternWeekInfo.length;
       const width = w * 0.5 + (w + 1) * index;
 
       return startArrow + width;
@@ -3067,7 +3024,7 @@ export default {
     showAfterTreatmentDetail(date){
       this.selectedDate = date;
       this.beforeAfterFlag = "after";
-      let toWeek = moment(date).day() === 0?7:moment(date).day();
+      let toWeek = dayjs(date).day() === 0?7:dayjs(date).day();
       let fromWeek;
       let arrowInfo = this.arrowInfo;
       for (let i = this.arrowInfo.length - 1; i >= 0; i--) {
@@ -3081,7 +3038,7 @@ export default {
         for(const treatment in treatmentData){
           if(treatmentData[treatment]){
             fromWeek = fromWeek === 7?0:fromWeek;
-            if(moment(treatment).day() ===fromWeek && treatmentData[treatment].indTreatmentCd === this.selectedTreatmentCd){
+            if(dayjs(treatment).day() ===fromWeek && treatmentData[treatment].indTreatmentCd === this.selectedTreatmentCd){
               arr.push(treatmentData[treatment]);
               break;
             }
@@ -3118,10 +3075,10 @@ export default {
           // add #10307 曜日パターン変更を行うと1年以降の治療予定が作成される 20240307 ztc end
           if(flag === 'before'){
             let toWeekName = "";
-            let fromWeekName = this.convertWeekName(moment(date).day() === 0?7:moment(date).day());
+            let fromWeekName = this.convertWeekName(dayjs(date).day() === 0?7:dayjs(date).day());
             if(this.arrowInfo.length > 0){
               for(let i = 0;i<dateInfo.length;i++){
-                if(dateInfo[i].fromDate ===date ){
+                if(dateInfo[i].fromDate ===date){
                   toWeekName += convDtFmt(dateInfo[i].toDate) + " (" + this.convertWeekName(dateInfo[i].toWeekCd)+')、';
                   fromWeekName = this.convertWeekName(dateInfo[i].fromWeekCd);
                 }
@@ -3142,7 +3099,7 @@ export default {
             let fromWeekName = "";
             let fromDate = "";
             for(let i = 0;i<dateInfo.length;i++){
-              if(dateInfo[i].toDate ===date ){
+              if(dateInfo[i].toDate ===date){
                 toWeekName = this.convertWeekName(dateInfo[i].toWeekCd);
                 fromWeekName = this.convertWeekName(dateInfo[i].fromWeekCd);
                 fromDate = dateInfo[i].fromDate;
@@ -3155,15 +3112,15 @@ export default {
               this.clearTreatmentDetail();
             }
           }
-          if(moment(date).isBefore(moment(this.indTreatStartDate))){
+          if(dayjs(date).isBefore(dayjs(this.indTreatStartDate))){
             moveDateInfo = convDtFmt(date);
           }
           // add #10307 曜日パターン変更を行うと1年以降の治療予定が作成される 20240307 ztc start
         }else{
           if (flag === 'before') {
-            moveDateInfo = convDtFmt(date)+" ("+this.convertWeekName(moment(date).day() === 0?7:moment(date).day())+") → "+toWeekNameDel;
+            moveDateInfo = convDtFmt(date)+" ("+this.convertWeekName(dayjs(date).day() === 0?7:dayjs(date).day())+") → "+toWeekNameDel;
           } else {
-            moveDateInfo = convDtFmt(date) + " (" + this.convertWeekName(moment(date).day() == 0 ? 7 : moment(date).day()) + ")";
+            moveDateInfo = convDtFmt(date) + " (" + this.convertWeekName(dayjs(date).day() == 0 ? 7 : dayjs(date).day()) + ")";
           }
         }
         // add #10307 曜日パターン変更を行うと1年以降の治療予定が作成される 20240307 ztc end
@@ -3182,11 +3139,11 @@ export default {
       const dateInfo = this.createDateInfo();
       let afterIndexArray = [];
       let beforeIndexArray = [];
-      const dateCurrent = moment(new Date()).format("YYYYMMDD");
+      const dateCurrent = dayjs(new Date()).format("YYYYMMDD");
       if (date !== "") {
         if (flag === 'before') {
           for(let i = 0;i<dateInfo.length;i++){
-            if(dateInfo[i].fromDate ===date ){
+            if(dateInfo[i].fromDate ===date){
               let beforeIndex = this.getPriorToChangeList.findIndex(item => {
                 return item === date;
               });
@@ -3205,7 +3162,7 @@ export default {
           }
         } else {
           for(let i = 0;i<dateInfo.length;i++){
-            if(dateInfo[i].toDate ===date ){
+            if(dateInfo[i].toDate ===date){
               let beforeIndex = this.getPriorToChangeList.findIndex(item => {
                 return item === dateInfo[i].fromDate;
               });
@@ -3229,20 +3186,20 @@ export default {
     //   let afterList = this.getAfterToChangeList;
     //   for(const beforeDate in beforeList){
     //     if(beforeList[beforeDate]){
-    //       let beforeWeekCd = moment(beforeDate).day() === 0 ? 7 : moment(beforeDate).day();
+    //       let beforeWeekCd = dayjs(beforeDate).day() === 0 ? 7 : dayjs(beforeDate).day();
     //       for (let i = this.arrowInfo.length - 1; i >= 0; i--) {
     //         if (this.arrowInfo[i].index_from === beforeWeekCd) {
     //           let afterToDate;
-    //           if (!moment(beforeDate).isBefore(moment(this.indTreatStartDate))) {
+    //           if (!dayjs(beforeDate).isBefore(dayjs(this.indTreatStartDate))) {
     //               const weekDay =(this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from) < 0?8+this.arrowInfo[i].index_to -this.arrowInfo[i].index_from:(this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from);
-    //               if((this.arrowInfo[i].index_to+1-moment().day()) >= 0){
+    //               if((this.arrowInfo[i].index_to+1-dayjs().day()) >= 0){
     //                 if((this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from) < 0){
-    //                   afterToDate = moment(beforeDate).subtract(this.arrowInfo[i].index_from-this.arrowInfo[i].index_to-1, 'days').format('YYYYMMDD')
+    //                   afterToDate = dayjs(beforeDate).subtract(this.arrowInfo[i].index_from-this.arrowInfo[i].index_to-1, 'days').format('YYYYMMDD')
     //                 }else{
-    //                   afterToDate = moment(beforeDate).add(this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from, 'days').format('YYYYMMDD')
+    //                   afterToDate = dayjs(beforeDate).add(this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from, 'days').format('YYYYMMDD')
     //                 }
     //               }else{
-    //                 afterToDate = moment(beforeDate).add(weekDay, 'days').format('YYYYMMDD');
+    //                 afterToDate = dayjs(beforeDate).add(weekDay, 'days').format('YYYYMMDD');
     //               }
     //             const toDate = afterList.find(item => {
     //               return  item === afterToDate;
@@ -3292,12 +3249,12 @@ export default {
       let afterList = this.getAfterToChangeList;
       // mod #9273(10277) 仕様変更:開始日より前の日付に○が付く事がある、以下の処理は開始日を比較する 張玲 start
       //システム日時
-      // const dateCurrent = moment(new Date()).format("YYYYMMDD");
-      let dateCurrent = moment(this.indTreatStartDate).format("YYYYMMDD");
+      // const dateCurrent = dayjs(new Date()).format("YYYYMMDD");
+      let dateCurrent = dayjs(this.indTreatStartDate).format("YYYYMMDD");
       // add #11966 【因島】実績を含む週の曜日パターン変更が不正 fang start
       let compareEnd = ""
       if(this.indTreatEndDate) {
-        compareEnd = moment(this.indTreatEndDate).format("YYYYMMDD")
+        compareEnd = dayjs(this.indTreatEndDate).format("YYYYMMDD")
       }
       // add #11966 【因島】実績を含む週の曜日パターン変更が不正 fang end
       // mod #9273(10277) 仕様変更:開始日より前の日付に○が付く事がある、以下の処理は開始日を比較する 張玲 end
@@ -3308,37 +3265,35 @@ export default {
         // let moveDirection = "past"
         //変更前後日付の間隔天数
         // const weekDay =(this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from) < 0?8+this.arrowInfo[i].index_to -this.arrowInfo[i].index_from:(this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from);
-        const weekDay =this.arrowInfo[i].index_to+1 -this.arrowInfo[i].index_from;
-        for(const moveDateBefore in treatmentData) {
-          if(treatmentData[moveDateBefore]){
-            let beforeWeekCd = moment(moveDateBefore).day() === 0 ? 7 : moment(moveDateBefore).day();
-            let indexFrom = this.arrowInfo[i].index_from === 7 ? 0 : this.arrowInfo[i].index_from;
-            //変更前の日付から選択された曜日に合う日付を洗い出す。
-            const fileterItemList = treatmentDataArr.filter(item => {
-              // mod #11888【因島】曜日パターン変更の画面操作が重い fang start
-              // return !moment(item).isBefore(moment(this.indTreatStartDate)) && moment(item).day() == indexFrom;
-              return !(parseInt(item.date)<parseInt(this.indTreatStartDate.replaceAll("-",""))) && item.week == indexFrom;
-              // mod #11888【因島】曜日パターン変更の画面操作が重い fang end
-            });
-            if (this.arrowInfo[i].index_from === beforeWeekCd) {
+        const indexFrom = Number(this.arrowInfo[i].index_from);
+        const weekDay = this.arrowInfo[i].index_to + 1 - indexFrom;
+        const priorList = this.getPriorToChangeList || [];
+        for (let j = 0; j < priorList.length; j++) {
+          const moveDateBefore = priorList[j];
+          if (!treatmentData[moveDateBefore]) {
+            continue;
+          }
+          let beforeWeekCd =
+            dayjs(moveDateBefore).day() === 0 ? 7 : dayjs(moveDateBefore).day();
+          if (indexFrom === beforeWeekCd) {
               //選択された曜日に合う日付リストから、一番の日付で変更の方向を決める
               // if (moveDateBefore == fileterItemList[0]) {
-              //   let afterToDateSubtract = moment(moveDateBefore).subtract(7 - weekDay, 'days').format('YYYYMMDD')
-              //   if (moment(afterToDateSubtract).isBefore(dateCurrent)) {//変更後の日付がシステム日時の前である場合、後ろに移動する
+              //   let afterToDateSubtract = dayjs(moveDateBefore).subtract(7 - weekDay, 'days').format('YYYYMMDD')
+              //   if (dayjs(afterToDateSubtract).isBefore(dateCurrent)) {//変更後の日付がシステム日時の前である場合、後ろに移動する
               //     moveDirection = "future";
               //   }
               // }
               let afterToDate;
-              if (!moment(moveDateBefore).isBefore(moment(this.indTreatStartDate))) {
+              if (!dayjs(moveDateBefore).isBefore(dayjs(this.indTreatStartDate))) {
                 // if (moveDirection == "future") {//後ろに移動する場合、変更後の日付＝変更前の日付+間隔天数
-                //   afterToDate = moment(moveDateBefore).add(weekDay, 'days').format('YYYYMMDD')
+                //   afterToDate = dayjs(moveDateBefore).add(weekDay, 'days').format('YYYYMMDD')
                 // } else {//前に移動する場合、変更後の日付＝変更前の日付-（７－間隔天数）
                 //   // #10266 曜日パターンの変更後,同じ曜日を指し、○は不正を表します。 linjunfeng start
-                //   // afterToDate = moment(moveDateBefore).subtract(7 - weekDay, 'days').format('YYYYMMDD')
-                //   afterToDate = weekDay === 0 ? moveDateBefore : moment(moveDateBefore).subtract(7 - weekDay, 'days').format('YYYYMMDD');
+                //   // afterToDate = dayjs(moveDateBefore).subtract(7 - weekDay, 'days').format('YYYYMMDD')
+                //   afterToDate = weekDay === 0 ? moveDateBefore : dayjs(moveDateBefore).subtract(7 - weekDay, 'days').format('YYYYMMDD');
                 //   // #10266 曜日パターンの変更後,同じ曜日を指し、○は不正を表します。 linjunfeng end
                 // }
-                afterToDate = moment(moveDateBefore).add(weekDay, 'days').format('YYYYMMDD');
+                afterToDate = dayjs(moveDateBefore).add(weekDay, 'days').format('YYYYMMDD');
                 let addFlag = false;
                 if(afterToDate >= dateCurrent) {
                   if(compareEnd) {
@@ -3369,7 +3324,6 @@ export default {
               }
             }
             // mod #11966 【因島】実績を含む週の曜日パターン変更が不正 fang end
-          }
         }
       }
       // add #10307 曜日パターン変更を行うと1年以降の治療予定が作成される 20240307 ztc start
@@ -3377,7 +3331,7 @@ export default {
         for(let m = 0; m < this.missingDateList.length; m++){
           let missDateInfo = {};
           missDateInfo.toDate = this.missingDateList[m];
-          missDateInfo.toWeekCd = moment(this.missingDateList[m]).day() == 0 ? 7 : moment(this.missingDateList[m]).day();
+          missDateInfo.toWeekCd = dayjs(this.missingDateList[m]).day() == 0 ? 7 : dayjs(this.missingDateList[m]).day();
           missDateInfo.isMissingDate = true;
           dateInfoArray.push(missDateInfo);
         }
@@ -3405,7 +3359,7 @@ export default {
     newPatternWeek(isSelected) {
       const o = new Object();
       if (null !== isSelected) {
-        this.$set(o, "background-color", "yellowgreen");
+        ((o)["background-color"] = "yellowgreen");
       }
       return o;
     },
@@ -3505,8 +3459,7 @@ export default {
         const formattedMessage = `<div style="max-height: 60vh; overflow-y: auto;">
                 ${messageFormat(
                   DIALOG_MESSAGES["00400017"].message,
-                  conflictMessage
-                )}
+                  conflictMessage)}
               </div>`;
           await this.$ons.notification.confirm({
           title: DIALOG_MESSAGES["00400017"].title,
@@ -3550,7 +3503,7 @@ export default {
             }}
         });
       }
-      if (data?.proc_RESULT === "SUCCESS") {
+      if (isProcSuccess(data)) {
         this.isRefresh = true;
         this.hideModal();
         this.finishLoadingScreen();
@@ -3578,8 +3531,7 @@ export default {
 
           const formattedMessage = `<div style="max-height: 60vh; overflow-y: auto;">
                   ${messageFormat(
-                    DIALOG_MESSAGES["00400015"].message
-                  )}
+                    DIALOG_MESSAGES["00400015"].message)}
                 </div>`;
             await this.$ons.notification.confirm({
             title: DIALOG_MESSAGES["00400015"].title,
@@ -3625,8 +3577,7 @@ export default {
         if (hasMsgCdList && this.msgCdList.includes("70000033")
             && this.getFacilitySetting1007_4SelectedVal != 3
             && this.facilitySettingExamValue != "3"
-            && !cancelFlg
-        ) {
+            && !cancelFlg) {
           await this.$ons.notification.confirm({
             title: DIALOG_MESSAGES[70000033].title,
             message: messageFormat(DIALOG_MESSAGES[70000033].message),
@@ -3660,8 +3611,7 @@ export default {
         if (hasMsgCdList && this.msgCdList.includes("70000034")
             && this.getFacilitySetting1008_4SelectedVal != 3
             && this.facilitySettingRadValue != "3"
-            && !cancelFlg
-        ) {
+            && !cancelFlg) {
           await this.$ons.notification.confirm({
             title: DIALOG_MESSAGES[70000033].title,
             message: messageFormat(DIALOG_MESSAGES[70000033].message),
@@ -3777,7 +3727,7 @@ export default {
         // mod #11966 【因島】実績を含む週の曜日パターン変更が不正 fang end
         const responseScheduleInfo = await ApiHelper.post(
         `/mainData/getProcessOrdSchedule/${this.facilityCd}/3`,
-        response.data.nobedlist ).catch(error => {
+        response.data.nobedlist).catch(error => {
           getErrorMessage('IndSchEdit.vue', 'updateIndInfo', error);
           console.log("ChangeDayOfWeekPattern.vue updateInfo throw error; this.finishLoadingScreen();");
           this.finishLoadingScreen();
@@ -3944,8 +3894,8 @@ export default {
     //9273 end
      console.log("ChangeDayOfWeekPattern.vue beforeupdateInfo this.startLoadingScreen();");
      this.startLoadingScreen();
-      const startDateValid = this.$el.querySelector('input[data-target^="indTreatStartDate"]').validity;
-      const endDateValid = this.$el.querySelector('input[data-target^="indTreatEndDate"]').validity;
+      const startDateValid = this.queryScopedSelectorSafe('input[data-target^="indTreatStartDate"]').validity;
+      const endDateValid = this.queryScopedSelectorSafe('input[data-target^="indTreatEndDate"]').validity;
       let targetOrdMain = await this.getTargetOrdMain();
       // 開始日の不完全入力チェック
       if ("" === this.indTreatStartDate && startDateValid.badInput) {
@@ -4021,13 +3971,11 @@ export default {
      paramJson.end_date = this.indTreatEndDate;
      paramJson.ind_kur_cd = JSON.stringify([]);
      paramJson.weeks = JSON.stringify(
-       [{'text': '全', 'done': true, 'value': 0}]
-     );
+       [{'text': '全', 'done': true, 'value': 0}]);
      paramJson.ind_treatment_cd = JSON.stringify(Array.of(this.selectedTreatmentCd));
      const treatDateResponse = await ApiHelper.post(
        "/mainData/treatDateList",
-       paramJson
-     ).catch(error => {
+       paramJson).catch(error => {
        getErrorMessage('IndEditBase.vue', 'getTreatDateList', error);
        console.log("ChangeDayOfWeekPattern.vue beforeupdateInfo throw error; this.finishLoadingScreen();");
        this.finishLoadingScreen();
@@ -4043,7 +3991,7 @@ export default {
         // `/exam/TreatDateList/${this.patId}/${firstTreatDate}/${lastTreatDate}`
         `/exam/TreatDateListByIsOrder/${this.patId}/${firstTreatDate}/${lastTreatDate}`
         //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zy end
-     ).catch(err => {
+        ).catch(err => {
        console.log("ChangeDayOfWeekPattern.vue beforeupdateInfo throw err; this.finishLoadingScreen();");
        this.finishLoadingScreen();
        throw err;
@@ -4054,7 +4002,7 @@ export default {
         // `/rad/TreatDateList/${this.patId}/${firstTreatDate}/${lastTreatDate}`
         `/rad/TreatDateListByIsOrder/${this.patId}/${firstTreatDate}/${lastTreatDate}`
         //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zy end
-     ).catch(err => {
+        ).catch(err => {
        console.log("ChangeDayOfWeekPattern.vue beforeupdateInfo throw err; this.finishLoadingScreen();");
        this.finishLoadingScreen();
        throw err;
@@ -4087,8 +4035,8 @@ export default {
          // 一致する治療日のデータを抽出
          const date = new Date(item.regExamDate);
           //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zy start
-          // const dateStr = moment(date, "YYYYMMDD").format("YYYYMMDD");
-          const dateStr = moment(date, "YYYYMMDD").local().format("YYYYMMDD");
+          // const dateStr = dayjs(date, "YYYYMMDD").format("YYYYMMDD");
+          const dateStr = dayjs(date, "YYYYMMDD").local().format("YYYYMMDD");
           //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zy end
          if (dateStr === element) {
            if (item.examStatus == "0") {
@@ -4106,8 +4054,8 @@ export default {
          // 一致する治療日のデータを抽出
          const date = new Date(item.regRadDate);
           //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zy start
-          // const dateStr = moment(date, "YYYYMMDD").format("YYYYMMDD");
-          const dateStr = moment(date, "YYYYMMDD").local().format("YYYYMMDD");
+          // const dateStr = dayjs(date, "YYYYMMDD").format("YYYYMMDD");
+          const dateStr = dayjs(date, "YYYYMMDD").local().format("YYYYMMDD");
           //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zy end
          if (dateStr === element) {
            if (item.radStatus == "0") {
@@ -4145,10 +4093,10 @@ export default {
      })
      targetDateList = [...targetDateList, ...delDate];
      let examDeadlineOverFlg = false;
-     const examDeadlineDate = this.getDeadlineCondition.deadlineFlg ? moment(getDeadlineDate(this.getDeadlineCondition)) : null;
+     const examDeadlineDate = this.getDeadlineCondition.deadlineFlg ? dayjs(getDeadlineDate(this.getDeadlineCondition)) : null;
      let radDeadlineOverFlg = false;
      // mod 11244 一般撮影検査依頼＋治療予定連動が正常動作しない 関 start
-     const radDeadlineDate = this.getRadDeadlineCondition.deadlineFlg ? moment(getDeadlineDate(this.getRadDeadlineCondition)) : null;
+     const radDeadlineDate = this.getRadDeadlineCondition.deadlineFlg ? dayjs(getDeadlineDate(this.getRadDeadlineCondition)) : null;
      // mod 11244 一般撮影検査依頼＋治療予定連動が正常動作しない 関 end
      for (let targetDateInfo of targetDateList) {
         // add #10307 曜日パターン変更を行うと1年以降の治療予定が作成される 20240311 ztc start
@@ -4173,8 +4121,8 @@ export default {
           this.radStatus = true;
         }
        //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zy end
-       const targetExamFromDate = moment(new Date(fromDate.slice(0, 4) + '/' + fromDate.slice(4, 6) + '/' + fromDate.slice(6, 8)));
-       const targetExamToDate = moment(new Date(toDate.slice(0, 4) + '/' + toDate.slice(4, 6) + '/' + toDate.slice(6, 8)));
+       const targetExamFromDate = dayjs(new Date(fromDate.slice(0, 4) + '/' + fromDate.slice(4, 6) + '/' + fromDate.slice(6, 8)));
+       const targetExamToDate = dayjs(new Date(toDate.slice(0, 4) + '/' + toDate.slice(4, 6) + '/' + toDate.slice(6, 8)));
        if (examDeadlineDate && this.patExamFlg
          && (examDeadlineDate.isAfter(targetExamFromDate) || examDeadlineDate.isAfter(targetExamToDate))) {
          examDeadlineOverFlg = true;
@@ -4268,7 +4216,7 @@ export default {
             // add 11244 一般撮影検査依頼＋治療予定連動が正常動作しない 関 start
             this.facilitySettingExamValue != "3"
             // add 11244 一般撮影検査依頼＋治療予定連動が正常動作しない 関 end
-          ) {
+            ) {
             await this.$ons.notification.confirm({
               title: DIALOG_MESSAGES[70000033].title,
               message: messageFormat(DIALOG_MESSAGES[70000033].message),
@@ -4283,8 +4231,7 @@ export default {
           }
           if (this.msgCdList != null &&
             this.msgCdList.includes("70000031") &&
-            !this.examDeadlineCancelCheck.includes("cancel")
-          ) {
+            !this.examDeadlineCancelCheck.includes("cancel")) {
             await this.$ons.notification.confirm({
               title: DIALOG_MESSAGES[70000031].title,
               message: messageFormat(DIALOG_MESSAGES[70000031].message),
@@ -4307,7 +4254,7 @@ export default {
             // add 11244 一般撮影検査依頼＋治療予定連動が正常動作しない 関 start
             this.facilitySettingRadValue != "3"
             // add 11244 一般撮影検査依頼＋治療予定連動が正常動作しない 関 end
-          ) {
+            ) {
             await this.$ons.notification.confirm({
               title: DIALOG_MESSAGES[70000033].title,
               message: messageFormat(DIALOG_MESSAGES[70000033].message),
@@ -4323,8 +4270,7 @@ export default {
           if (this.msgCdList != null &&
             this.msgCdList.includes("70000032") &&
             !this.examDeadlineCancelCheck.includes("cancel") &&
-            !this.radDeadlineCancelCheck.includes("cancel")
-          ) {
+            !this.radDeadlineCancelCheck.includes("cancel")) {
             await this.$ons.notification.confirm({
               title: DIALOG_MESSAGES[70000032].title,
               message: messageFormat(DIALOG_MESSAGES[70000032].message),
@@ -4520,8 +4466,8 @@ export default {
     async beforeupdateInfo2() {
      console.log("ChangeDayOfWeekPattern.vue beforeupdateInfo this.startLoadingScreen();");
      this.startLoadingScreen();
-      const startDateValid = this.$el.querySelector('input[data-target^="indTreatStartDate"]').validity;
-      const endDateValid = this.$el.querySelector('input[data-target^="indTreatEndDate"]').validity;
+      const startDateValid = this.queryScopedSelectorSafe('input[data-target^="indTreatStartDate"]').validity;
+      const endDateValid = this.queryScopedSelectorSafe('input[data-target^="indTreatEndDate"]').validity;
       // 開始日の不完全入力チェック
       if ("" === this.indTreatStartDate && startDateValid.badInput) {
         this.showMessage(22010008, "開始日");
@@ -4598,8 +4544,7 @@ export default {
         return [];
       }
       const ordMain = new Set(ordMainList.filter(
-        ord => ord.treatType === 1 || ord.treatType === 2 || ord.treatType === 3
-      ).map(item=>item.treatType));
+        ord => ord.treatType === 1 || ord.treatType === 2 || ord.treatType === 3).map(item=>item.treatType));
       return ordMain;
     },
     // add 5785 追加で隔日，隔週のスケジュールが作成出来ない 張 end
@@ -4630,8 +4575,7 @@ export default {
       // データの取得
       const response = await ApiHelper.post(
         "/mainData/changeDay/TreatDateList",
-        paramJson
-      ).catch(err => {
+        paramJson).catch(err => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'getTargetOrdMain', err);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -4727,43 +4671,43 @@ export default {
           })
         }
       });
-      this.$set(params, "updateList", updList);
-      this.$set(params, "copyList", copyList);
-      this.$set(params, "delList", delList);
+      ((params)["updateList"] = updList);
+      ((params)["copyList"] = copyList);
+      ((params)["delList"] = delList);
       // 施設コード
-      this.$set(params, "facility_cd", this.facilityCd);
+      ((params)["facility_cd"] = this.facilityCd);
       // 患者ID
-      this.$set(params, "pat_id", this.patId);
+      ((params)["pat_id"] = this.patId);
       // 治療方法コード
-      this.$set(params, "ind_treatment_cd", this.selectedTreatmentCd);
+      ((params)["ind_treatment_cd"] = this.selectedTreatmentCd);
       // 指示者ID
-      this.$set(params, "ind_user", this.selectedIndUser);
+      ((params)["ind_user"] = this.selectedIndUser);
       // 更新者ID
-      this.$set(params, "upd_user", this.getStateUserAccountInfo.userId);
+      ((params)["upd_user"] = this.getStateUserAccountInfo.userId);
       // 適用開始日
-      this.$set(params, "ind_treat_start_date", this.indTreatStartDate);
+      ((params)["ind_treat_start_date"] = this.indTreatStartDate);
       // 曜日パターン情報
-      this.$set(params, "week_pattern_info", JSON.stringify(updateInfo));
+      ((params)["week_pattern_info"] = JSON.stringify(updateInfo));
       // 移動対象曜日リスト
-      this.$set(params, "move_target_week_list", JSON.stringify(weekPerTreatObj.week));
+      ((params)["move_target_week_list"] = JSON.stringify(weekPerTreatObj.week));
       // 更新日時
-      this.$set(params, "up_date", moment().format("YYYY-MM-DD HH:mm:ss.SSS"));
+      ((params)["up_date"] = dayjs().format("YYYY-MM-DD HH:mm:ss.SSS"));
       // 終了日
-      this.$set(params, "end_date", this.indTreatEndDate===""? moment(this.maxDate).format("YYYY-MM-DD"):this.indTreatEndDate);
-      this.$set(params, "max_date", moment(this.maxDate).format("YYYY-MM-DD"));
+      ((params)["end_date"] = this.indTreatEndDate===""? dayjs(this.maxDate).format("YYYY-MM-DD"):this.indTreatEndDate);
+      ((params)["max_date"] = dayjs(this.maxDate).format("YYYY-MM-DD"));
       // 更新フラグ
-      this.$set(params, "update_flg", false);
-      this.$set(params, "cover", this.cover);
-      this.$set(params, "skip", this.skip);
+      ((params)["update_flg"] = false);
+      ((params)["cover"] = this.cover);
+      ((params)["skip"] = this.skip);
       // footer
-      this.$set(params, "footer_flg", updateCd);
-      this.$set(params, "hosp_pat_id", this.selectedPat.pat_personal_main.hosp_pat_id);
-      this.$set(params, "facilitySettingExamValue", this.facilitySettingExamValue);
-      this.$set(params, "facilitySettingRadValue", this.facilitySettingRadValue);
-      this.$set(params, "facilitySettingEventValue", this.facilitySettingEventValue);
-      this.$set(params, "examDeadlineSelectedVal", this.examDeadlineSelectedVal);
-      this.$set(params, "radDeadlineSelectedVal", this.radDeadlineSelectedVal);
-      this.$set(params,"is_deadline",this.indTreatEndDate===""? false:true);
+      ((params)["footer_flg"] = updateCd);
+      ((params)["hosp_pat_id"] = this.selectedPat.pat_personal_main.hosp_pat_id);
+      ((params)["facilitySettingExamValue"] = this.facilitySettingExamValue);
+      ((params)["facilitySettingRadValue"] = this.facilitySettingRadValue);
+      ((params)["facilitySettingEventValue"] = this.facilitySettingEventValue);
+      ((params)["examDeadlineSelectedVal"] = this.examDeadlineSelectedVal);
+      ((params)["radDeadlineSelectedVal"] = this.radDeadlineSelectedVal);
+      ((params)["is_deadline"] = this.indTreatEndDate===""? false:true);
       this.startLoadingScreen();
 
       const response = await ApiHelper.post("/mainData/updateWeekPatternInfo2", params)
@@ -4771,8 +4715,7 @@ export default {
           getErrorMessage(
             "TreatPlanMove.vue",
             "updateDBInfo",
-            error
-          );
+            error);
           throw(error);
         });
       this.finishLoadingScreen();
@@ -4813,64 +4756,63 @@ export default {
           })
         }
       });
-      this.$set(params, "updateList", updList);
-      this.$set(params, "copyList", copyList);
-      this.$set(params, "delList", delList);
+      ((params)["updateList"] = updList);
+      ((params)["copyList"] = copyList);
+      ((params)["delList"] = delList);
       // add #11717【因島】曜日パターン変更の動作が遅い fang end
       // 施設コード
-      this.$set(params, "facility_cd", this.facilityCd);
+      ((params)["facility_cd"] = this.facilityCd);
       // 患者ID
-      this.$set(params, "pat_id", this.patId);
+      ((params)["pat_id"] = this.patId);
       // 治療方法コード
-      this.$set(params, "ind_treatment_cd", this.selectedTreatmentCd);
+      ((params)["ind_treatment_cd"] = this.selectedTreatmentCd);
       // 指示者ID
-      this.$set(params, "ind_user", this.selectedIndUser);
+      ((params)["ind_user"] = this.selectedIndUser);
       // 更新者ID
-      this.$set(params, "upd_user", this.getStateUserAccountInfo.userId);
+      ((params)["upd_user"] = this.getStateUserAccountInfo.userId);
       // 適用開始日
-      this.$set(params, "ind_treat_start_date", this.indTreatStartDate);
+      ((params)["ind_treat_start_date"] = this.indTreatStartDate);
       // 曜日パターン情報
-      this.$set(params, "week_pattern_info", JSON.stringify(updateInfo));
+      ((params)["week_pattern_info"] = JSON.stringify(updateInfo));
       // 移動対象曜日リスト
-      this.$set(params, "move_target_week_list", JSON.stringify(weekPerTreatObj.week));
+      ((params)["move_target_week_list"] = JSON.stringify(weekPerTreatObj.week));
       // 更新日時
-      this.$set(params, "up_date", moment().format("YYYY-MM-DD HH:mm:ss.SSS"));
+      ((params)["up_date"] = dayjs().format("YYYY-MM-DD HH:mm:ss.SSS"));
       // 終了日
       //add 7240 曜日パターン変更の変更前に表示される曜日が正しく表示されない 張 start
-      // this.$set(params, "end_date", this.indTreatEndDate);
-      this.$set(params, "end_date", this.indTreatEndDate===""? moment(this.maxDate).format("YYYY-MM-DD"):this.indTreatEndDate);
+      // this._compatSet(params, "end_date", this.indTreatEndDate);
+      ((params)["end_date"] = this.indTreatEndDate===""? dayjs(this.maxDate).format("YYYY-MM-DD"):this.indTreatEndDate);
       //add 7240 曜日パターン変更の変更前に表示される曜日が正しく表示されない 張 end
       // add #11966 【因島】実績を含む週の曜日パターン変更が不正 fang start
-      this.$set(params, "max_date", moment(this.maxDate).format("YYYY-MM-DD"));
+      ((params)["max_date"] = dayjs(this.maxDate).format("YYYY-MM-DD"));
       // add #11966 【因島】実績を含む週の曜日パターン変更が不正 fang end
       // 更新フラグ
-      this.$set(params, "update_flg", false);
+      ((params)["update_flg"] = false);
       //add 7307 曜日変更bug 張 start
-      this.$set(params, "cover", this.cover);
+      ((params)["cover"] = this.cover);
       //add 7307 曜日変更bug 張 end
       //add 7211 曜日パターン変更のメッセージ表示や治療予定の移動動作がおかしい 張 start
-      this.$set(params, "skip", this.skip);
+      ((params)["skip"] = this.skip);
        //add 7211 曜日パターン変更のメッセージ表示や治療予定の移動動作がおかしい 張 end
       // footer
-      this.$set(params, "footer_flg", updateCd);
+      ((params)["footer_flg"] = updateCd);
       //add 7068 患者経過総合ビューアで曜日パターン変更すると変更前の削除イベント・変更後の新規イベントが正しく作成されない start
-      this.$set(params, "hosp_pat_id", this.selectedPat.pat_personal_main.hosp_pat_id);
+      ((params)["hosp_pat_id"] = this.selectedPat.pat_personal_main.hosp_pat_id);
       //add 7068 患者経過総合ビューアで曜日パターン変更すると変更前の削除イベント・変更後の新規イベントが正しく作成されない end
       //9273 start
-      this.$set(params, "facilitySettingExamValue", this.facilitySettingExamValue);
-      this.$set(params, "facilitySettingRadValue", this.facilitySettingRadValue);
-      this.$set(params, "facilitySettingEventValue", this.facilitySettingEventValue);
+      ((params)["facilitySettingExamValue"] = this.facilitySettingExamValue);
+      ((params)["facilitySettingRadValue"] = this.facilitySettingRadValue);
+      ((params)["facilitySettingEventValue"] = this.facilitySettingEventValue);
       //9273 end
       // add 10284 by kangjie 20240301 start 終了日存在フラグ
-      this.$set(params,"is_deadline",this.indTreatEndDate===""? false:true);
+      ((params)["is_deadline"] = this.indTreatEndDate===""? false:true);
       // add 10284 by kangjie 20240301 end
       this.startLoadingScreen();
 
       // 更新API呼び出し
       const response = await ApiHelper.post(
         "/mainData/updateWeekPatternInfo",
-        params
-      ).catch(error => {
+        params).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'updateWeekPatternInfo', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -4901,8 +4843,7 @@ export default {
       // データの取得
       const responseOrdMain = await ApiHelper.post(
         `/mainData/getOrdMainDataInfo`,
-        paramJsonOrd
-      ).catch(error => {
+        paramJsonOrd).catch(error => {
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'updateIndInfo', error);
         throw error;
       });
@@ -4947,7 +4888,7 @@ export default {
       // 投与間隔月１のものが月を跨いだ場合
       if (messageInfo === response.data) {
         // add #11966 【因島】実績を含む週の曜日パターン変更が不正 fang start
- 　     this.finishLoadingScreen();
+       this.finishLoadingScreen();
         // add #11966 【因島】実績を含む週の曜日パターン変更が不正 fang end
         // メッセージ表示
         this.$ons.notification.confirm({
@@ -4960,18 +4901,16 @@ export default {
             // ok押下の場合、更新処理を呼び出す
             if (ok === 1) {
               // 更新フラグ
-              this.$set(params, "update_flg", true);
+              ((params)["update_flg"] = true);
               // 更新API呼び出し
               const updateResponse = await ApiHelper.post(
                 "/mainData/updateWeekPatternInfo",
-                params
-              ).catch(error => {
+                params).catch(error => {
                 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
                 getErrorMessage('ChangeDayOfWeekPattern.vue', 'updateWeekPatternInfo', error);
                 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
                 throw error;
               });
-
 
               if (200 === updateResponse.status
                 && undefined !== updateResponse.data.msgCd) {
@@ -5076,8 +5015,7 @@ export default {
       sendJson.patEventCd.forEach(item => {
         patEventCdList.push(item.patEventCd);
       });
-      await ApiHelper.post(`/pat_event/mainData/updateDateByCd/${patEventCdList}/${sendJson.dataNumber}`
-      ).catch(error => {
+      await ApiHelper.post(`/pat_event/mainData/updateDateByCd/${patEventCdList}/${sendJson.dataNumber}`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ChangeDayOfWeekPattern.vue', 'idoEventNumber_1', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -5093,8 +5031,7 @@ export default {
       //9273 mod ljx end
     },
     async idoEventNumber_3(sendJson){
-      await ApiHelper.post(`/pat_event/mainData/deletePaEventRec/${sendJson.patEventCd}`
-            ).catch(error => {
+      await ApiHelper.post(`/pat_event/mainData/deletePaEventRec/${sendJson.patEventCd}`).catch(error => {
               //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
               getErrorMessage('ChangeDayOfWeekPattern.vue', 'idoEventNumber_3', error);
               //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -5106,8 +5043,7 @@ export default {
       console.log("ChangeDayOfWeekPattern.vue idoEventNumber_2 this.startLoadingScreen();");
       this.startLoadingScreen();
       sendJson.patEventCd.forEach(item => {
-        ApiHelper.post(`/pat_event/mainData/deletePaEventRec/${item.patEventCd}`
-        ).catch(error => {
+        ApiHelper.post(`/pat_event/mainData/deletePaEventRec/${item.patEventCd}`).catch(error => {
           getErrorMessage('ChangeDayOfWeekPattern.vue', 'idoEventNumber_2', error);
           console.log("ChangeDayOfWeekPattern.vue idoEventNumber_2 throw error; this.finishLoadingScreen();");
           this.finishLoadingScreen();
@@ -5225,9 +5161,9 @@ export default {
       })
       targetDateList = [...targetDateList, ...delDate];
       let examDeadlineOverFlg = false;
-      const examDeadlineDate = this.getDeadlineCondition.deadlineFlg ? moment(getDeadlineDate(this.getDeadlineCondition)) : null;
+      const examDeadlineDate = this.getDeadlineCondition.deadlineFlg ? dayjs(getDeadlineDate(this.getDeadlineCondition)) : null;
       let radDeadlineOverFlg = false;
-      const radDeadlineDate = this.getRadDeadlineCondition.deadlineFlg ? moment(getDeadlineDate(this.getDeadlineCondition)) : null;
+      const radDeadlineDate = this.getRadDeadlineCondition.deadlineFlg ? dayjs(getDeadlineDate(this.getDeadlineCondition)) : null;
       for (let targetDateInfo of targetDateList) {
         // add #10307 曜日パターン変更を行うと1年以降の治療予定が作成される 20240311 ztc start
         if(targetDateInfo?.isMissingDate){
@@ -5236,8 +5172,8 @@ export default {
         // add #10307 曜日パターン変更を行うと1年以降の治療予定が作成される 20240311 ztc end
         let fromDate = targetDateInfo.fromDate;
         let toDate = targetDateInfo.toDate;
-        const targetExamFromDate = moment(new Date(fromDate.slice(0,4) + '/' + fromDate.slice(4,6) + '/' + fromDate.slice(6,8)));
-        const targetExamToDate = moment(new Date(toDate.slice(0,4) + '/' + toDate.slice(4,6) + '/' + toDate.slice(6,8)));
+        const targetExamFromDate = dayjs(new Date(fromDate.slice(0,4) + '/' + fromDate.slice(4,6) + '/' + fromDate.slice(6,8)));
+        const targetExamToDate = dayjs(new Date(toDate.slice(0,4) + '/' + toDate.slice(4,6) + '/' + toDate.slice(6,8)));
         if (examDeadlineDate&&examDeadlineDate.isAfter(targetExamFromDate) || examDeadlineDate&&examDeadlineDate.isAfter(targetExamToDate)) {
           examDeadlineOverFlg = true;
         }
@@ -5247,8 +5183,7 @@ export default {
       }
       if (
         (examDeadlineOverFlg&&(this.facilitySettingExamValue == "1"||this.facilitySettingExamValue == "2"))||
-        (radDeadlineOverFlg&&(this.facilitySettingRadValue == "1"||this.facilitySettingRadValue == "2"))
-      ) {
+        (radDeadlineOverFlg&&(this.facilitySettingRadValue == "1"||this.facilitySettingRadValue == "2"))) {
         this.$ons.notification.confirm({
           title: DIALOG_MESSAGES[70000033].title,
           message: messageFormat(DIALOG_MESSAGES[70000033].message),
@@ -5295,9 +5230,9 @@ export default {
       })
       targetDateList = [...targetDateList, ...delDate];
       let examDeadlineOverFlg = false;
-      const examDeadlineDate = this.getDeadlineCondition.deadlineFlg ? moment(getDeadlineDate(this.getDeadlineCondition)) : null;
+      const examDeadlineDate = this.getDeadlineCondition.deadlineFlg ? dayjs(getDeadlineDate(this.getDeadlineCondition)) : null;
       let radDeadlineOverFlg = false;
-      const radDeadlineDate = this.getRadDeadlineCondition.deadlineFlg ? moment(getDeadlineDate(this.getDeadlineCondition)) : null;
+      const radDeadlineDate = this.getRadDeadlineCondition.deadlineFlg ? dayjs(getDeadlineDate(this.getDeadlineCondition)) : null;
       for (let targetDateInfo of targetDateList) {
         // add #10307 曜日パターン変更を行うと1年以降の治療予定が作成される 20240311 ztc start
         if(targetDateInfo?.isMissingDate){
@@ -5306,8 +5241,8 @@ export default {
         // add #10307 曜日パターン変更を行うと1年以降の治療予定が作成される 20240311 ztc end
         let fromDate = targetDateInfo.fromDate;
         let toDate = targetDateInfo.toDate;
-        const targetExamFromDate = moment(new Date(fromDate.slice(0,4) + '/' + fromDate.slice(4,6) + '/' + fromDate.slice(6,8)));
-        const targetExamToDate = moment(new Date(toDate.slice(0,4) + '/' + toDate.slice(4,6) + '/' + toDate.slice(6,8)));
+        const targetExamFromDate = dayjs(new Date(fromDate.slice(0,4) + '/' + fromDate.slice(4,6) + '/' + fromDate.slice(6,8)));
+        const targetExamToDate = dayjs(new Date(toDate.slice(0,4) + '/' + toDate.slice(4,6) + '/' + toDate.slice(6,8)));
         if (examDeadlineDate&&examDeadlineDate.isAfter(targetExamFromDate) || examDeadlineDate&&examDeadlineDate.isAfter(targetExamToDate)) {
           examDeadlineOverFlg = true;
         }
@@ -5317,8 +5252,7 @@ export default {
       }
       if (
         (examDeadlineOverFlg&&(this.facilitySettingExamValue == "1"||this.facilitySettingExamValue == "2"))||
-        (radDeadlineOverFlg&&(this.facilitySettingRadValue == "1"||this.facilitySettingRadValue == "2"))
-      ) {
+        (radDeadlineOverFlg&&(this.facilitySettingRadValue == "1"||this.facilitySettingRadValue == "2"))) {
         this.$ons.notification.confirm({
           title: DIALOG_MESSAGES[70000033].title,
           message: messageFormat(DIALOG_MESSAGES[70000033].message),
@@ -5397,19 +5331,18 @@ export default {
           }
         }
         if (this.allExam) {
-          if (el.facility_setting_exam_value == 4 ) {
+          if (el.facility_setting_exam_value == 4) {
             el.facility_setting_exam_value = this.allExam;
           }
         }
         if (this.allRad) {
-          if (el.facility_setting_rad_value == 4 ) {
+          if (el.facility_setting_rad_value == 4) {
             el.facility_setting_rad_value = this.allRad;
           }
         }
       })
 
-      await ApiHelper.post(`/mainData/updateRadExam`, this.idos
-            ).catch(error => {
+      await ApiHelper.post(`/mainData/updateRadExam`, this.idos).catch(error => {
               //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
               getErrorMessage('ChangeDayOfWeekPattern.vue', 'updateInfoRad', error);
               //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -5427,9 +5360,9 @@ export default {
       const minutes = newDate.getMinutes();
       const formatTime = String(hour) + String(minutes);
       if (this.facilitySettingRadChangeOnOffWithOrder == 1) {
-        if  (Number(moment(startDelDate).format("YYYYMMDD")) > Number(moment().add(this.facilitySettingRadScheduleChangeLimitDay, 'days').format("YYYYMMDD")))  {
+        if  (Number(dayjs(startDelDate).format("YYYYMMDD")) > Number(dayjs().add(this.facilitySettingRadScheduleChangeLimitDay, 'days').format("YYYYMMDD")))  {
           this.facilitySettingRadFlg = true;
-        } else if (Number(moment(startDelDate).format("YYYYMMDD")) == Number(moment().add(this.facilitySettingRadScheduleChangeLimitDay, 'days').format("YYYYMMDD"))) {
+        } else if (Number(dayjs(startDelDate).format("YYYYMMDD")) == Number(dayjs().add(this.facilitySettingRadScheduleChangeLimitDay, 'days').format("YYYYMMDD"))) {
           if (Number(formatTime) < Number(String(this.facilitySettingRadScheduleChangeLimitTime).replace(":", ""))) {
             this.facilitySettingRadFlg = true;
           }
@@ -5438,9 +5371,9 @@ export default {
         this.facilitySettingRadFlg = true;
       }
       if (this.facilitySettingExamChangeOnOffWithOrder == 1) {
-        if  (Number(moment(startDelDate).format("YYYYMMDD")) > Number(moment().add(this.facilitySettingExamScheduleChangeLimitDay, 'days').format("YYYYMMDD")))  {
+        if  (Number(dayjs(startDelDate).format("YYYYMMDD")) > Number(dayjs().add(this.facilitySettingExamScheduleChangeLimitDay, 'days').format("YYYYMMDD")))  {
           this.facilitySettingExamFlg = true;
-        } else if (Number(moment(startDelDate).format("YYYYMMDD")) == Number(moment().add(this.facilitySettingExamScheduleChangeLimitDay, 'days').format("YYYYMMDD"))) {
+        } else if (Number(dayjs(startDelDate).format("YYYYMMDD")) == Number(dayjs().add(this.facilitySettingExamScheduleChangeLimitDay, 'days').format("YYYYMMDD"))) {
           if (Number(formatTime) < Number(String(this.facilitySettingExamScheduleChangeLimitTime).replace(":", ""))) {
             this.facilitySettingExamFlg = true;
           }
@@ -5496,8 +5429,8 @@ export default {
     },
     // 矢印描画用のcanvasの縦、横サイズをdiv-parentに合わせる
     setCanvasSize() {
-      const parent = this.$el.querySelector('#div-parent');
-      const canvas = this.$el.querySelector('#arrowCanvasDummy');
+      const parent = this.queryScopedSelectorSafe('#div-parent');
+      const canvas = this.queryScopedSelectorSafe('#arrowCanvasDummy');
       if (parent && canvas) {
         canvas.width = parent.offsetWidth;
         canvas.height = parent.offsetHeight;
@@ -5505,22 +5438,21 @@ export default {
     }
   },
   // add FNSI-性能を最適化する 李 start
-  destroyed() {
-    const element = $(".week-box");
+  unmounted() {
+    const element = this.scopedJQuery(".week-box");
     for (let i = 0; i < element.length; i++) {
       element[i].removeEventListener("mousedown", this.mouseDown, false);
       element[i].removeEventListener("touchstart", this.mouseDown, false);
     }
-    const drag = $(".drag")[0];
+    const drag = this.scopedJQuery(".drag")[0];
     if (drag) {
       drag.removeEventListener("mouseup", this.mouseUp, false);
       drag.removeEventListener("touchend", this.mouseUp, false);
-      document.body.removeEventListener("mouseleave", this.mouseUp, false);
-      document.body.removeEventListener("touchend", this.mouseUp, false);
+      this.getScopedOwnerBody().removeEventListener("mouseleave", this.mouseUp, false);
+      this.getScopedOwnerBody().removeEventListener("touchend", this.mouseUp, false);
     }
 
-    window.removeEventListener("resize", this.setCanvasSize);
-    window.removeEventListener("afterprint", this.setCanvasSize);
+    this.getScopedOwnerWindow()?.removeEventListener("resize", this.setCanvasSize);
   }
   // add FNSI-性能を最適化する 李 end
 };
@@ -5610,7 +5542,7 @@ input::-webkit-calendar-picker-indicator {
   height: 100%;
 }
 
-#div-parent >>> ons-row {
+#div-parent :deep(ons-row) {
   height: auto;
 }
 
@@ -5679,9 +5611,6 @@ input::-webkit-calendar-picker-indicator {
   background-color: #ffff99 !important;
 }
   /* add 7952 必須項目にも関わらず背景色が黄色になっていない 張 end */
-.date-start-input {
-  background-color: #ffff99 !important;
-}
 /* mod 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy end */
 .canvas-style {
   position: absolute;

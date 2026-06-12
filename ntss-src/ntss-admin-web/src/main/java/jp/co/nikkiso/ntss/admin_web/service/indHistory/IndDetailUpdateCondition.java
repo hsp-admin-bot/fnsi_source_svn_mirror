@@ -1,5 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.service.indHistory;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,5 +20,6 @@ public class IndDetailUpdateCondition {
 	 */
 	private String userId;
 
+  @JsonProperty("_id")
 	private String _id;
 }

@@ -106,7 +106,7 @@ const setSortFieldSysMonitorItem = (treatSetCol, dataSource, sysMonitorItems) =>
   // データソースにソート用field_N_sortを追加
   dataSource.forEach(row => {
     Object.keys(row).forEach(key => {
-      if (convMap.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(convMap, key)) {
         const convItem = convMap[key]; // 例: { "1": "プリセット", "2": "洗浄" }
         const value = row[key];        // 既に設定されている value
         const sortKeyStr = Object.keys(convItem).find(k => convItem[k] === value);

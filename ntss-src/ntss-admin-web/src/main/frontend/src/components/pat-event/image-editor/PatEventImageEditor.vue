@@ -30,21 +30,21 @@
       <!-- 編集アイコンエリア -->
       <div id="edit-menu-area" class="vertical-div">
         <!-- 戻る -->
-        <img src="img/pat-event/img-edit/modoru.png" id="edit-close-icon" @click="onClickClose" />
+        <img :src="imgEditAsset('modoru.png')" id="edit-close-icon" @click="onClickClose" />
         <!-- 登録 -->
-        <img src="img/pat-event/img-edit/drawreg.png" id="edit-enter" @click="onClickEnter" />
+        <img :src="imgEditAsset('drawreg.png')" id="edit-enter" @click="onClickEnter" />
         <!-- クリア -->
-        <img src="img/pat-event/img-edit/clear.png" id="edit-clear" @click="onClickClear($event)" />
+        <img :src="imgEditAsset('clear.png')" id="edit-clear" @click="onClickClear($event)" />
         <!-- 戻る -->
         <img
-          src="img/pat-event/img-edit/back.png"
+          :src="imgEditAsset('back.png')"
           id="edit-back"
           :disabled="isDisabledBack"
           @click="backPaint"
         />
         <!-- 進む -->
         <img
-          src="img/pat-event/img-edit/forward.png"
+          :src="imgEditAsset('forward.png')"
           id="edit-move"
           :disabled="isDisabledForward"
           @click="movePaint"
@@ -61,7 +61,7 @@
         <img :src="getToolIconSource.text " id="edit-text" @click="onClickText($event)" />
         <!-- 描画色選択 -->
         <img
-          src="img/pat-event/img-edit/color_black.png"
+          :src="imgEditAsset('color_black.png')"
           id="edit-color"
           ref="editColor"
           @click="onClickEditColor($event)"
@@ -76,7 +76,7 @@
     <!-- クリア確認エリア -->
     <transition name="toolbox">
       <div id="sel-clean-area" ref="selClearArea" v-if="isShowToolBox.selClearArea">
-        <img src="img/pat-event/img-edit/clear_1.png" id="selClear" @click="onClickSelClear" />
+        <img :src="imgEditAsset('clear_1.png')" id="selClear" @click="onClickSelClear" />
       </div>
     </transition>
     <!-- クリア確認エリア -->
@@ -158,13 +158,13 @@
       <div id="sel-set-text-area" ref="selSetTextArea" v-if="isShowToolBox.selSetTextArea">
         <div class="horizontal-div text-area-row">
           <img
-            src="img/pat-event/img-edit/roundcheck2.png"
+            :src="imgEditAsset('roundcheck2.png')"
             id="cv-input-text"
             v-show="isCvInputTextMode"
             @click="setActiveText(1)"
           />
           <img
-            src="img/pat-event/img-edit/round-nocheck2.png"
+            :src="imgEditAsset('round-nocheck2.png')"
             id="cv-input-text"
             v-show="!isCvInputTextMode"
             @click="setActiveText(0)"
@@ -181,17 +181,17 @@
             @set-content-data="setContentData"
             @click="setActiveText(0)"
           />
-          <img src="img/pat-event/img-edit/del_icon.png" id="clear-edit-text" @click="clearText" />
+          <img :src="imgEditAsset('del_icon.png')" id="clear-edit-text" @click="clearText" />
         </div>
         <div class="horizontal-div text-area-row">
           <img
-            src="img/pat-event/img-edit/roundcheck2.png"
+            :src="imgEditAsset('roundcheck2.png')"
             id="cv-sel-text"
             v-show="!isCvInputTextMode"
             @click="setActiveText(0)"
           />
           <img
-            src="img/pat-event/img-edit/round-nocheck2.png"
+            :src="imgEditAsset('round-nocheck2.png')"
             id="cv-sel-text"
             v-show="isCvInputTextMode"
             @click="setActiveText(1)"
@@ -245,49 +245,49 @@
     <transition name="toolbox">
       <div id="sel-color-area" ref="selColorArea" v-if="isShowToolBox.selColorArea">
         <img
-          src="img/pat-event/img-edit/color_yellow.png"
+          :src="imgEditAsset('color_yellow.png')"
           id="sel-col-yellow"
           ref="selCol_yellow"
           @click="setColor('yellow')"
         />
         <img
-          src="img/pat-event/img-edit/color_orange.png"
+          :src="imgEditAsset('color_orange.png')"
           id="sel-col-orange"
           ref="selCol_orange"
           @click="setColor('orange')"
         />
         <img
-          src="img/pat-event/img-edit/color_red.png"
+          :src="imgEditAsset('color_red.png')"
           id="sel-col-red"
           ref="selCol_red"
           @click="setColor('red')"
         />
         <img
-          src="img/pat-event/img-edit/color_black.png"
+          :src="imgEditAsset('color_black.png')"
           id="sel-col-black"
           ref="selCol_black"
           @click="setColor('black')"
         />
         <img
-          src="img/pat-event/img-edit/color_green.png"
+          :src="imgEditAsset('color_green.png')"
           id="sel-col-green"
           ref="selCol_green"
           @click="setColor('green')"
         />
         <img
-          src="img/pat-event/img-edit/color_purple.png"
+          :src="imgEditAsset('color_purple.png')"
           id="sel-col-purple"
           ref="selCol_purple"
           @click="setColor('purple')"
         />
         <img
-          src="img/pat-event/img-edit/color_blue.png"
+          :src="imgEditAsset('color_blue.png')"
           id="sel-col-blue"
           ref="selCol_blue"
           @click="setColor('blue')"
         />
         <img
-          src="img/pat-event/img-edit/color_white.png"
+          :src="imgEditAsset('color_white.png')"
           id="sel-col-white"
           ref="selCol_white"
           @click="setColor('white')"
@@ -351,45 +351,46 @@
       id="save-va-img01"
       ref="saveVaImg01"
       style="display:none;"
-      onerror="this.src='img/pat-event/img-edit/noimage.png';"
+      @error="onNoImageError"
     />
     <img
       id="save-va-img02"
       ref="saveVaImg02"
       style="display:none;"
-      onerror="this.src='img/pat-event/img-edit/noimage.png';"
+      @error="onNoImageError"
     />
     <img
       id="save-va-img03"
       ref="saveVaImg03"
       style="display:none;"
-      onerror="this.src='img/pat-event/img-edit/noimage.png';"
+      @error="onNoImageError"
     />
     <img
       id="save-va-img04"
       ref="saveVaImg04"
       style="display:none;"
-      onerror="this.src='img/pat-event/img-edit/noimage.png';"
+      @error="onNoImageError"
     />
     <img
       id="save-va-img05"
       ref="saveVaImg05"
       style="display:none;"
-      onerror="this.src='img/pat-event/img-edit/noimage.png';"
+      @error="onNoImageError"
     />
     <img
       id="save-va-img06"
       ref="saveVaImg06"
       style="display:none;"
-      onerror="this.src='img/pat-event/img-edit/noimage.png';"
+      @error="onNoImageError"
     />
     <!-- 保存用 -->
     <!-- 編集用 -->
   </div>
 </template>
 <script>
-  import {mapActions, mapGetters} from "vuex";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   import CommonTextArea from "@/components/common/CommonTextArea";
+  import { publicAssetPath } from "@/compat/assets/public-path";
 
   export default {
   components: {
@@ -664,28 +665,28 @@
       return {
         free:
           this.active === this.constant.paintMode.free
-            ? "img/pat-event/img-edit/pencil_act.png"
-            : "img/pat-event/img-edit/pencil.png",
+            ? this.imgEditAsset("pencil_act.png")
+            : this.imgEditAsset("pencil.png"),
         arrow:
           this.active === this.constant.paintMode.arrow
-            ? "img/pat-event/img-edit/arrow_act.png"
-            : "img/pat-event/img-edit/arrow.png",
+            ? this.imgEditAsset("arrow_act.png")
+            : this.imgEditAsset("arrow.png"),
         square:
           this.active === this.constant.paintMode.square
-            ? "img/pat-event/img-edit/square_act.png"
-            : "img/pat-event/img-edit/square.png",
+            ? this.imgEditAsset("square_act.png")
+            : this.imgEditAsset("square.png"),
         text:
           this.active === this.constant.paintMode.text
-            ? "img/pat-event/img-edit/text_act.png"
-            : "img/pat-event/img-edit/text.png",
+            ? this.imgEditAsset("text_act.png")
+            : this.imgEditAsset("text.png"),
         eraser:
           this.active === this.constant.paintMode.eraser
-            ? "img/pat-event/img-edit/eraser_act.png"
-            : "img/pat-event/img-edit/eraser.png",
+            ? this.imgEditAsset("eraser_act.png")
+            : this.imgEditAsset("eraser.png"),
         grid:
           this.active === this.constant.paintMode.grid
-            ? "img/pat-event/img-edit/grid_act.png"
-            : "img/pat-event/img-edit/grid.png"
+            ? this.imgEditAsset("grid_act.png")
+            : this.imgEditAsset("grid.png")
       };
     },
     /** 消しゴムアイコン */
@@ -693,20 +694,20 @@
       return {
         thick1:
           this.eraserSize === this.constant.eraserSize.thick1
-            ? "img/pat-event/img-edit/eraser_1_act.png"
-            : "img/pat-event/img-edit/eraser_1.png",
+            ? this.imgEditAsset("eraser_1_act.png")
+            : this.imgEditAsset("eraser_1.png"),
         thick2:
           this.eraserSize === this.constant.eraserSize.thick2
-            ? "img/pat-event/img-edit/eraser_2_act.png"
-            : "img/pat-event/img-edit/eraser_2.png",
+            ? this.imgEditAsset("eraser_2_act.png")
+            : this.imgEditAsset("eraser_2.png"),
         thick3:
           this.eraserSize === this.constant.eraserSize.thick3
-            ? "img/pat-event/img-edit/eraser_3_act.png"
-            : "img/pat-event/img-edit/eraser_3.png",
+            ? this.imgEditAsset("eraser_3_act.png")
+            : this.imgEditAsset("eraser_3.png"),
         thick4:
           this.eraserSize === this.constant.eraserSize.thick4
-            ? "img/pat-event/img-edit/eraser_4_act.png"
-            : "img/pat-event/img-edit/eraser_4.png"
+            ? this.imgEditAsset("eraser_4_act.png")
+            : this.imgEditAsset("eraser_4.png")
       };
     },
     /** 線の太さアイコン */
@@ -714,20 +715,20 @@
       return {
         thick1:
           this.lineSize === this.constant.lineSize.thick1
-            ? "img/pat-event/img-edit/bold_1_act.png"
-            : "img/pat-event/img-edit/bold_1.png",
+            ? this.imgEditAsset("bold_1_act.png")
+            : this.imgEditAsset("bold_1.png"),
         thick2:
           this.lineSize === this.constant.lineSize.thick2
-            ? "img/pat-event/img-edit/bold_2_act.png"
-            : "img/pat-event/img-edit/bold_2.png",
+            ? this.imgEditAsset("bold_2_act.png")
+            : this.imgEditAsset("bold_2.png"),
         thick3:
           this.lineSize === this.constant.lineSize.thick3
-            ? "img/pat-event/img-edit/bold_3_act.png"
-            : "img/pat-event/img-edit/bold_3.png",
+            ? this.imgEditAsset("bold_3_act.png")
+            : this.imgEditAsset("bold_3.png"),
         thick4:
           this.lineSize === this.constant.lineSize.thick4
-            ? "img/pat-event/img-edit/bold_4_act.png"
-            : "img/pat-event/img-edit/bold_4.png"
+            ? this.imgEditAsset("bold_4_act.png")
+            : this.imgEditAsset("bold_4.png")
       };
     },
     /** 線の書式アイコン */
@@ -735,16 +736,16 @@
       return {
         solid:
           this.lineDot === this.constant.lineDot.solid
-            ? "img/pat-event/img-edit/solid_line_act.png"
-            : "img/pat-event/img-edit/solid_line.png",
+            ? this.imgEditAsset("solid_line_act.png")
+            : this.imgEditAsset("solid_line.png"),
         dash:
           this.lineDot === this.constant.lineDot.dash
-            ? "img/pat-event/img-edit/dashed_line_act.png"
-            : "img/pat-event/img-edit/dashed_line.png",
+            ? this.imgEditAsset("dashed_line_act.png")
+            : this.imgEditAsset("dashed_line.png"),
         dot:
           this.lineDot === this.constant.lineDot.dot
-            ? "img/pat-event/img-edit/dotted_line_act.png"
-            : "img/pat-event/img-edit/dotted_line.png"
+            ? this.imgEditAsset("dotted_line_act.png")
+            : this.imgEditAsset("dotted_line.png")
       };
     },
     /** 文字の大きさアイコン */
@@ -752,28 +753,47 @@
       return {
         size1:
           this.txtLineSize === this.constant.txtLineSize.size1
-            ? "img/pat-event/img-edit/font_1_act.png"
-            : "img/pat-event/img-edit/font_1.png",
+            ? this.imgEditAsset("font_1_act.png")
+            : this.imgEditAsset("font_1.png"),
         size2:
           this.txtLineSize === this.constant.txtLineSize.size2
-            ? "img/pat-event/img-edit/font_2_act.png"
-            : "img/pat-event/img-edit/font_2.png",
+            ? this.imgEditAsset("font_2_act.png")
+            : this.imgEditAsset("font_2.png"),
         size3:
           this.txtLineSize === this.constant.txtLineSize.size3
-            ? "img/pat-event/img-edit/font_3_act.png"
-            : "img/pat-event/img-edit/font_3.png",
+            ? this.imgEditAsset("font_3_act.png")
+            : this.imgEditAsset("font_3.png"),
         size4:
           this.txtLineSize === this.constant.txtLineSize.size4
-            ? "img/pat-event/img-edit/font_4_act.png"
-            : "img/pat-event/img-edit/font_4.png",
+            ? this.imgEditAsset("font_4_act.png")
+            : this.imgEditAsset("font_4.png"),
         size5:
           this.txtLineSize === this.constant.txtLineSize.size5
-            ? "img/pat-event/img-edit/font_5_act.png"
-            : "img/pat-event/img-edit/font_5.png"
+            ? this.imgEditAsset("font_5_act.png")
+            : this.imgEditAsset("font_5.png")
       };
     }
   },
   methods: {
+    imgEditAsset(fileName) {
+      return publicAssetPath(`img/pat-event/img-edit/${fileName}`);
+    },
+    onImageFallbackError(event) {
+      const target = event?.target;
+      if (!target || target.dataset?.ntssFallbackApplied === "1") {
+        return;
+      }
+      target.dataset.ntssFallbackApplied = "1";
+      target.src = this.imgEditAsset("noimage.png");
+    },
+    onNoImageError(event) {
+      const img = event?.target;
+      if (!img || img.dataset.ntssFallbackApplied === "true") {
+        return;
+      }
+      img.dataset.ntssFallbackApplied = "true";
+      img.src = publicAssetPath("img/pat-event/img-edit/noimage.png");
+    },
     // 共通ローダー設定
     ...mapActions("loading-screen", {
       setLoadingScreenVisible: "setLoadingScreenVisible",
@@ -1720,7 +1740,9 @@
       // var editImg = this.$refs.baseImg;
 
       // 保存用のキャンバス作成
-      let saveCanvas = document.createElement("canvas");
+      const ownerDocument = baseImg?.ownerDocument || this.$el?.ownerDocument || document;
+      const ownerWindow = ownerDocument.defaultView || window;
+      let saveCanvas = ownerDocument.createElement("canvas");
       let saveContext = saveCanvas.getContext("2d");
       saveContext.globalCompositeOperation = "source-over";
 
@@ -1742,7 +1764,7 @@
 
       // 編集前画像取得
       /* Imageオブジェクトを生成 */
-      let setImg = new Image();
+      let setImg = new (ownerWindow.Image || Image)();
       setImg.crossOrigin = "Anonymous";
 
       const mimeType = "image/png";
@@ -1761,7 +1783,7 @@
         // Canvasの内容を取得
         // Canvasからbase64エンコーディングされた画像データを取得する
         this.editPaint[this.selImageNo - 1] = this.canvas.toDataURL(mimeType);
-        let saveImg = document.createElement("img");
+        let saveImg = ownerDocument.createElement("img");
 
         /* Canvasの内容が読み込まれてから保存用のキャンバスへ書き出す */
         saveImg.onload = () => {
@@ -1939,17 +1961,16 @@
     await this.fetchGridSizeInfo();
     this.$ons.orientation.on("change", this.setCenter);
   },
-  mounted() {},
-  destroyed() {
+
+  unmounted() {
     this.$ons.orientation.off("change", this.setCenter);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
 };
 </script>
-
 <style>
 @media print {
   /** 印刷時、親要素消す */
@@ -1958,7 +1979,6 @@
   }
 }
 </style>
-
 <style scoped>
 .vertical-div {
   display: flex;
@@ -2308,7 +2328,7 @@
   margin-top: 10px;
   margin-left: 17px;
 }
-div >>> #edit-text-area {
+div :deep(#edit-text-area) {
   margin-top: 10px;
   margin-left: 5px;
   font-size: 18px;

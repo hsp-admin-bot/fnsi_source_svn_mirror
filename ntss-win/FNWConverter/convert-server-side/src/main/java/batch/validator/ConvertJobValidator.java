@@ -1,8 +1,8 @@
 package batch.validator;
 
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersInvalidException;
-import org.springframework.batch.core.JobParametersValidator;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.job.parameters.InvalidJobParametersException;
+import org.springframework.batch.core.job.parameters.JobParametersValidator;
 
 import batch.ApplicationConst;
 
@@ -28,18 +28,17 @@ public class ConvertJobValidator implements JobParametersValidator {
         ));
 	}
     @Override
-    public void validate(JobParameters params) throws JobParametersInvalidException {
-        Set<String> keys = params.getParameters().keySet();
+    public void validate(JobParameters params) throws InvalidJobParametersException {
         Collection<String> missingKeys = new HashSet<String>();
 
         // 必須チェック
 		for (String key : requiredKeys) {
-			if (!keys.contains(key)) {
+			if (params.getParameter(key) == null) {
 				missingKeys.add(key);
 			}
 		}
 		if (!missingKeys.isEmpty()) {
-			throw new JobParametersInvalidException("JobParametersに必要なキーが含まれていません: " + missingKeys);
+			throw new InvalidJobParametersException("JobParametersに必要なキーが含まれていません: " + missingKeys);
         }
         
         // 入力ファイル存在チェック
@@ -48,7 +47,7 @@ public class ConvertJobValidator implements JobParametersValidator {
 
         // ファイルの存在を確認する
         if (!file.exists()) {
-            throw new JobParametersInvalidException("ファイルが存在しません: " + filePath);
+            throw new InvalidJobParametersException("ファイルが存在しません: " + filePath);
         }
     }
 

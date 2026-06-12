@@ -1,4 +1,4 @@
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import {DIALISYS_STATE, MACHINE_ENTRY_STATE} from "@/constants/statusMapConstants";
 
 /**
@@ -134,7 +134,7 @@ function getNextKurStartDateTime(kurList) {
   let ret = "";
   // 現在日付取得
   const now = new Date();
-  let checkDate = moment(now).format("YYYYMMDD");
+  let checkDate = dayjs(now).format("YYYYMMDD");
 
   // 現クール開始時刻を取得
   const currentKurStartDateTime = getCurrentKurStartDateTime(kurList);
@@ -159,7 +159,7 @@ function getNextKurStartDateTime(kurList) {
     // 翌日判定
     now.setDate(now.getDate() + 1);
     ret =
-      moment(now).format("YYYYMMDD") +
+      dayjs(now).format("YYYYMMDD") +
       getKurStartTime(kurList, kurList[0].kurCd);
   }
 
@@ -191,9 +191,9 @@ function getCurrentKur(kurList) {
 }
 
 function getCurrentDate() {
-  return moment(new Date()).format("YYYYMMDD");
+  return dayjs(new Date()).format("YYYYMMDD");
 }
 
 function getCurrentTime() {
-  return moment(new Date()).format("HHmmss");
+  return dayjs(new Date()).format("HHmmss");
 }

@@ -18,8 +18,9 @@
 </template>
 
 <script>
+import { h } from "vue";
 // mod FNSI-警報・報知追加 徐 start
-import { mapGetters, mapActions, mapMutations } from "vuex";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 // mod FNSI-警報・報知追加 徐 end
 import commonFunctions from "@/components/status-list/StatusCommonFunction";
 export default {
@@ -70,6 +71,28 @@ export default {
     getWarnInfoBlank(dataItem) {
       return commonFunctions.judgeWarnInfoBlank(this.getIsShowMain, dataItem);
     }
+  },
+  render() {
+    const attrs = {
+      colspan: this.colSpan,
+      role: "gridcell",
+      "data-grid-col-index": this.columnIndex,
+      onClick: this.onBlankClick
+    };
+    const warnInfo = this.getWarnInfoBlank(this.dataItem);
+    if (warnInfo === "warn") {
+      return h("td", attrs, [
+        h("img", { src: "img/status-list/keihou.gif", class: "ntss-fab-icon gif-icon", onClick: this.onWarnClick }),
+        h("img", { src: "img/status-list/keihou_static.png", class: "ntss-fab-icon static-icon" })
+      ]);
+    }
+    if (warnInfo === "info") {
+      return h("td", attrs, [
+        h("img", { src: "img/status-list/houchi.gif", class: "ntss-fab-icon gif-icon", onClick: this.onInfoClick }),
+        h("img", { src: "img/status-list/houchi_static.png", class: "ntss-fab-icon static-icon" })
+      ]);
+    }
+    return h("td", attrs);
   }
 };
 </script>

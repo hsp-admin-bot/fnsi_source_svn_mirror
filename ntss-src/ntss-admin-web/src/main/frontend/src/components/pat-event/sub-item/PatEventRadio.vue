@@ -23,9 +23,8 @@
               :input-id="'check-' + index"
               :checked="item.checked"
               :disabled="getViewMode || !isShared ||
-              !getItemAuthorized('PatEvent', 'default_authority') || 
-              getIsOtherFacilitys
-              "
+              !getItemAuthorized('PatEvent', 'default_authority') ||
+              getIsOtherFacilitys"
               @click="changeUse(item, $event)"
             />
         <!-- mod #10359 編集権限の動作不正 end -->
@@ -46,10 +45,9 @@
             <ons-checkbox
               :input-id="'check-' + index"
               :checked="item.checked"
-              :disabled="getViewMode || !isShared || 
+              :disabled="getViewMode || !isShared ||
               !getItemAuthorized('PatEvent', 'default_authority') ||
-              getIsOtherFacilitys
-              "
+              getIsOtherFacilitys"
               @click="changeUse(item, $event)"
             />
         <!-- mod #10359 編集権限の動作不正 end -->
@@ -66,7 +64,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 // add #10359 編集権限の動作不正 start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 end
@@ -74,10 +72,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
   export default {
   name: "PatEventCheck",
   props: ["propsIndex"],
-  components: {},
-  data() {
-    return {};
-  },
+
   computed: {
     ...mapGetters("user", { facilityCd: "getFacilityCd" }),
     ...mapGetters("account-edit", ["getStateUserAccountInfo"]),
@@ -92,10 +87,8 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
-    // add #12462 患者情報共有 wangchao 20260323 start
     ...mapGetters("pat-event/list", ["getIsOtherFacility"]),
     ...mapGetters("observe-record/list", ["getIsOtherFacilitys"]),
-    // add #12462 患者情報共有 wangchao 20260323 end
     isShared() {
       if(this.getPatEventRecord.isComRec){
         return this.getFacilityCd === this.getSharedFacilityCd;
@@ -140,9 +133,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
       }
     }
   },
-  watch: {},
-  destroyed() { },
-  created() {},
+
   methods: {
     ...mapActions("pat-event/detail", ["setPatEventResultParamsUpdate"]),
     getIndex(value, arr, prop) {
@@ -244,7 +235,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
   padding-right: 10px;
   float: left;
 }
-.checkbox >>> .checkbox__checkmark {
+.checkbox :deep(.checkbox__checkmark) {
   opacity: 1;
 }
 /*add FNSI-改修内容レイアウト表示と見た目調整。ラベルとデータ項目の区別がつかない。任 start*/

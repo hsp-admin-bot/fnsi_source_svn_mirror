@@ -5,8 +5,9 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
 import jp.co.nikkiso.ntss.web_api.service.LogEventUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +56,10 @@ public class FacilityCancelResource {
   LogEventUtils logEventUtils;
   // wp アプリケーションログの適正化 Add End
 
+  // add #12740 SQLインジェクション(High) tomcat ntss-web-api zrx start
+  private static final Pattern FACILITY_CD_PATTERN = Pattern.compile("^[A-Za-z0-9]{6}$");
+  // add #12740 SQLインジェクション(High) tomcat ntss-web-api zrx end
+
   /**
    * 施設解約を登録する。
    *
@@ -99,6 +104,20 @@ public class FacilityCancelResource {
       // wp アプリケーションログの適正化 Add End
       return new ResponseEntity<>("処理区分が指定されていません。", HttpStatus.BAD_REQUEST);
     }
+
+    // add #12740 SQLインジェクション(High) tomcat ntss-web-api zrx start
+    if (facilityCd == null || !FACILITY_CD_PATTERN.matcher(facilityCd).matches()) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
+        null);
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("facilityCdは英数字6桁のみ指定可能です。");
+    }
+
+    if (io.micrometer.core.instrument.util.StringUtils.isNotEmpty(procClass) && procClass.length() > 1) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
+        null);
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("procClassは1文字で指定してください。");
+    }
+    // add #12740 SQLインジェクション(High) tomcat ntss-web-api zrx end
 
     try {
       facilityCancelService.register(facilityCd, baseDate, procClass);
@@ -434,7 +453,7 @@ public class FacilityCancelResource {
         logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
           null);
         // wp アプリケーションログの適正化 Add End
-        return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
 
       String baseDate = DateUtil.convertDateToStringFormat(req.getBaseDate());
@@ -446,7 +465,7 @@ public class FacilityCancelResource {
         logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
           null);
         // wp アプリケーションログの適正化 Add End
-        return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
 
       // wp アプリケーションログの適正化 Add Start
@@ -464,7 +483,7 @@ public class FacilityCancelResource {
       // wp アプリケーションログの適正化 Add Start
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_ERROR, mappingUrl, null, e.getMessage());
       // wp アプリケーションログの適正化 Add End
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
   }

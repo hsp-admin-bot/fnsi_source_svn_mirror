@@ -1,13 +1,14 @@
 package batch.job;
 
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
-import org.springframework.batch.core.launch.support.RunIdIncrementer;
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.core.job.parameters.RunIdIncrementer;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,10 +25,7 @@ public class DeleteConvertTableJob {
     private final String JOB_NAME = "DeleteConvertTableJob";
 
     @Autowired
-    JobBuilderFactory jobBuilderFactory;
-
-    @Autowired
-    StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
 
     @Autowired
     ProgressManagement progressManagement;
@@ -37,7 +35,7 @@ public class DeleteConvertTableJob {
 
     @Bean
     Step initialConvertStep(){
-        return stepBuilderFactory.get("initialConvertStep")
+        return new StepBuilder("initialConvertStep", jobRepository)
         .tasklet((contribution, chunkContext) -> {
             // 削除対象の施設コードの取得
             String facilityCd = chunkContext.getStepContext().getJobParameters()
@@ -57,7 +55,7 @@ public class DeleteConvertTableJob {
 
     @Bean
     public Step getTargetConvertTableNamesStep() {
-        return stepBuilderFactory.get("getTargetConvertTableNamesStep")
+        return new StepBuilder("getTargetConvertTableNamesStep", jobRepository)
         .tasklet((contribution, chunkContext) -> {
             // 削除対象の施設コードの取得
             String facilityCd = chunkContext.getStepContext().getJobParameters()
@@ -72,7 +70,7 @@ public class DeleteConvertTableJob {
 
     @Bean
     public Step updateBatchStatusStep() {
-        return stepBuilderFactory.get("updateBatchStatusStep")
+        return new StepBuilder("updateBatchStatusStep", jobRepository)
             .tasklet((contribution, chunkContext) -> {
                 // 削除対象の施設コードの取得
                 String facilityCd = chunkContext.getStepContext().getJobParameters()
@@ -92,7 +90,7 @@ public class DeleteConvertTableJob {
      */
     @Bean(name = JOB_NAME)
     public Job job() throws Exception {
-        return jobBuilderFactory.get(JOB_NAME).incrementer(new RunIdIncrementer())
+        return new JobBuilder(JOB_NAME, jobRepository).incrementer(new RunIdIncrementer())
                 .start(initialConvertStep())
                 .next(getTargetConvertTableNamesStep())
                 .next(deleteTableInConvertDbStep.step())

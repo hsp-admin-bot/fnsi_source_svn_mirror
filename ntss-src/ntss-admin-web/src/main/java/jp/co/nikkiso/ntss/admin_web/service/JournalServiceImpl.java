@@ -12,7 +12,7 @@ import java.net.URI;
 import java.util.Map;
 import java.util.stream.Collectors;
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.journal.JournalCreatePayloadService;
@@ -32,7 +32,7 @@ import jp.co.nikkiso.ntss.core.utils.BeanBuilderUtils;
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
 import jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils;
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
 import org.springframework.aop.framework.AopProxyUtils;
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
@@ -359,7 +359,7 @@ public class JournalServiceImpl implements JournalService{
       String actionMode = "MST_KUR";
       ctlNoList.addAll(journalCreatePayloadService.createJournalPayloadForToBeEventTreatDate(journalEventLinkByPatListMap, userId, actionMode));
       ctlNoList = ctlNoList.stream().filter(o -> o.getOpeCd() != null).collect(Collectors.toList());
-      if (! org.apache.commons.collections.CollectionUtils.isEmpty(ctlNoList)) {
+      if (! org.apache.commons.collections4.CollectionUtils.isEmpty(ctlNoList)) {
         this.callCreateJournalForCtrNo(ctlNoList);
       }
       // if (!ctlNoList.isEmpty()) {

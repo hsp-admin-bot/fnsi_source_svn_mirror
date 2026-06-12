@@ -2,7 +2,8 @@
 /** ホスト報知ダイアログも同様の処理の為利用 */
 <template>
   <modal-base @onClose="hideModal">
-    <div slot="body" class="table-content">
+    <template #body>
+      <div class="table-content">
       <div v-if="showButton" class="header-style color-header">
         <label>{{ headerTitle }}</label>
       </div>
@@ -11,16 +12,18 @@
 
       <div v-if="messageDialogInfo.isDialogVisible">
         <message-dialog
-          :visible.sync="messageDialogInfo.isDialogVisible"
+          v-model:visible="messageDialogInfo.isDialogVisible"
           :message-cd="messageDialogInfo.messageCd"
           :type="messageDialogInfo.type"
           :string-params="messageDialogInfo.stringParams"
           @confirm="confirmResult"
         />
       </div>
-    </div>
+      </div>
+    </template>
 
-    <v-ons-row slot="footer" class="button-area">
+    <template #footer>
+      <v-ons-row class="button-area">
       <v-ons-col>
         <v-ons-button
           class="btn2-cancel common-style-cancel-button"
@@ -66,25 +69,27 @@
         </v-ons-button>
         <!-- mod FNSI-改修内容 権限関連 趙慧敏 end -->
       </v-ons-col>
-    </v-ons-row>
+      </v-ons-row>
+    </template>
   </modal-base>
 </template>
 
 <script>
+import { resolveDefaultSlotComponent } from "@/compat/vue/slots";
   // add #10359 編集権限の動作不正 dengshen start
   import { getAuthorized } from "@/functions/common/CommonFunctions.js";
   // add #10359 編集権限の動作不正 dengshen end
   import messageDialog from "@/components/common/message-dialog/MessageDialog";
   import ModalBase from "@/components/modals/ModalBase";
   // add FNSI-改修内容 権限関連 趙慧敏 start
-  import {mapActions, mapGetters} from "vuex";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   // del #10359 編集権限の動作不正 dengshen start
   // import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
   // del #10359 編集権限の動作不正 dengshen end
   import {DATA_SOURCE_TYPE_PAT} from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
   // add FNSI-改修内容 権限関連 趙慧敏 end
   // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
-  import { EventBus } from "@/eventBus.js";
+  import { EventBus } from "@/compat/vue/event-bus.js";
   // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
 
 export default {
@@ -108,6 +113,11 @@ export default {
     showButton: {
       type: Boolean,
       default: true
+    },
+
+    resolveEditorComponent: {
+      type: Function,
+      default: null
     }
   },
   // del #10359 編集権限の動作不正 dengshen start
@@ -166,6 +176,12 @@ export default {
   // add FNSI-改修内容 権限関連 趙慧敏 end
 
   methods: {
+    getDefaultSlotComponent() {
+      const resolvedEditor = typeof this.resolveEditorComponent === "function"
+        ? this.resolveEditorComponent()
+        : null;
+      return resolvedEditor || resolveDefaultSlotComponent(this);
+    },
     /*add FNSI-改修内容6025 任 start*/
     ...mapActions("loading-screen", {
       setLoadingScreenVisible: "setLoadingScreenVisible",
@@ -194,7 +210,8 @@ export default {
      */
     hideModal() {
       // 変更箇所があればメッセージ表示
-      if (this.$slots.default[0].componentInstance.checkEdit(1)) {
+      const editorComponent = this.getDefaultSlotComponent();
+      if (editorComponent?.checkEdit?.(1)) {
         return;
       }
       this.$emit("hide-modal");
@@ -204,7 +221,8 @@ export default {
      * 更新処理
      */
     updateInfo() {
-      this.$slots.default[0].componentInstance.updateInfo();
+      const editorComponent = this.getDefaultSlotComponent();
+      editorComponent?.updateInfo?.();
     },
 
     /**
@@ -225,7 +243,7 @@ export default {
         case 13010004:
           if ("No" === answer) {
             // 患者情報に反映
-            this.$slots.default[0].componentInstance.reflectPatInfo();
+            this.getDefaultSlotComponent()?.reflectPatInfo?.();
           }
           // モーダルを閉じる
           this.$emit("hide-modal");
@@ -235,7 +253,7 @@ export default {
         case 13010005:
           if ("No" === answer) {
             // 患者情報に反映
-            this.$slots.default[0].componentInstance.reflectPatInfo();
+            this.getDefaultSlotComponent()?.reflectPatInfo?.();
           }
           // モーダルを閉じる
           this.$emit("hide-modal");
@@ -252,10 +270,10 @@ export default {
                 /*add FNSI-改修内容6025 任 end*/
                 // 未来指示への反映処理
                 // mod #10553 ④装置設定＞風袋・除水補正にて指示への展開保存をした場合には、変更された治療予定毎の連携イベントが必要 piao start
-                await this.$slots.default[0].componentInstance.reflectFutureOrdMain();
+                await this.getDefaultSlotComponent()?.reflectFutureOrdMain?.();
                 // mod #10553 ④装置設定＞風袋・除水補正にて指示への展開保存をした場合には、変更された治療予定毎の連携イベントが必要 piao end
                 // 反映対象治療情報への反映確認メッセージ表示
-                this.$slots.default[0].componentInstance.showReflectIndInfoMessage();
+                this.getDefaultSlotComponent()?.showReflectIndInfoMessage?.();
                 // mod #10553 ④装置設定＞風袋・除水補正にて指示への展開保存をした場合には、変更された治療予定毎の連携イベントが必要 piao start
                 // /*add FNSI-改修内容6025 任 start*/
                 // setTimeout(() => {
@@ -266,10 +284,10 @@ export default {
                 // mod #10553 ④装置設定＞風袋・除水補正にて指示への展開保存をした場合には、変更された治療予定毎の連携イベントが必要 piao end
               } else {
                 // 反映対象治療情報への更新処理
-                this.$slots.default[0].componentInstance.showReflectIndInfoMessage();
+                this.getDefaultSlotComponent()?.showReflectIndInfoMessage?.();
                 // del #10553 ④装置設定＞風袋・除水補正にて指示への展開保存をした場合には、変更された治療予定毎の連携イベントが必要 piao start
                 // // add FNSI 1006 No.538 外部連携APIを呼び出 陳 start
-                // this.$slots.default[0].componentInstance.doCreateJournal();
+                // this.getDefaultSlotComponent().doCreateJournal();
                 // // add FNSI 1006 No.538 外部連携APIを呼び出 陳 end
                 // del #10553 ④装置設定＞風袋・除水補正にて指示への展開保存をした場合には、変更された治療予定毎の連携イベントが必要 piao end
               }
@@ -279,12 +297,12 @@ export default {
             case "TARGET_ORD_MAIN":
               if ("OK" === answer) {
                 // 更新対象への反映処理
-                this.$slots.default[0].componentInstance.reflectIndInfo();
+                this.getDefaultSlotComponent()?.reflectIndInfo?.();
                 // 警告メッセージ表示
-                this.$slots.default[0].componentInstance.showAlertIndInfoMessage();
+                this.getDefaultSlotComponent()?.showAlertIndInfoMessage?.();
               } else {
                 // 警告メッセージ表示
-                this.$slots.default[0].componentInstance.showAlertIndInfoMessage();
+                this.getDefaultSlotComponent()?.showAlertIndInfoMessage?.();
               }
               break;
 

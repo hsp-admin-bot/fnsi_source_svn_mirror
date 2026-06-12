@@ -1,10 +1,11 @@
 /** * マスタメンテナンス 装置自動登録（モーダルコンポーネント） */
 <template>
   <modal-base @onClose="closeModal(false)">
-    <div slot="header">
+    <template #header>
       <component :is="header" />
-    </div>
-    <div slot="body">
+    </template>
+    <template #body>
+      <div>
       <div modal-body>
         <div
           class="machine-record-list-wrapper"
@@ -48,8 +49,10 @@
           <p>【現在の検出台数：{{ countDetection }} 台】</p>
         </div>
       </div>
-    </div>
-    <div slot="footer" class="flex-container" id="footer">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container" id="footer">
       <div class="denial-btn-area" style="background: none">
         <v-ons-button class="btn2-cancel denial-btn" @click="closeModal(false)"
           >キャンセル</v-ons-button
@@ -75,15 +78,16 @@
           >検索終了</v-ons-button
         >
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { dateFormat, DATE_FORMAT } from "@/functions/common/DateTimeUtils.js";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -91,6 +95,7 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from "@/functions/common/MessageFormat";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { getScopedElementById, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 export default {
   name: "MntFindMachine",
@@ -250,10 +255,10 @@ export default {
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       // モーダルのbodyの高さ
-      const mb = document.getElementsByClassName("modal-body")[0];
+      const mb = this.$el?.closest?.('.modal-body') || queryScopedSelector('.modal-body', this.$el);
       const mh = mb ? mb.clientHeight : 0;
       // モーダルのヘッダの高さ
-      const hElm = document.getElementById("infomation-box");
+      const hElm = getScopedElementById("infomation-box", this.$el);
       const hh = hElm ? hElm.clientHeight : 0;
       this.gridHeight = mh - hh;
       -35;
@@ -402,17 +407,15 @@ export default {
                       // 製造番号
                       x.machineSerial === findMntMachine.machineSerial
                       // #10114 2024.01.23 mod 既存装置を「施設CD、製造番号、型式」にて検索を行う TDC米沢 end
-                    );
-                  }
-                );
+                      );
+                  });
                 // mod #7663 C重複情報のメッセージ画面を表示する。 xiaosonglei end
                 if (findMachineIndex === -1) {
                   // 新規追加
                   maxSortRank = maxSortRank + 1;
                   maxCode = maxCode + 1;
                   const treatMode = this.getMachineTypeList.find(
-                    (x) => (x.value = findMachine.machineType)
-                  ).treat_mode;
+                    (x) => (x.value = findMachine.machineType)).treat_mode;
                   let treatModeList = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
                   if (treatMode !== null && treatMode.length >= 10) {
                     treatModeList = treatMode.split("");
@@ -498,15 +501,13 @@ export default {
                       findMntMachine.comFormatCd &&
                     // 通信種別
                     Number(
-                      this.masterRecords.data[findMachineIndex].comType
-                    ) === findMntMachine.comType &&
+                      this.masterRecords.data[findMachineIndex].comType) === findMntMachine.comType &&
                     // IPアドレス
                     this.masterRecords.data[findMachineIndex].ipAddress ===
                       findMntMachine.ipAddress &&
                     // デバイスエッジNo
                     Number(
-                      this.masterRecords.data[findMachineIndex].deviceEdgeNo
-                    ) === findMntMachine.deviceEdgeNo &&
+                      this.masterRecords.data[findMachineIndex].deviceEdgeNo) === findMntMachine.deviceEdgeNo &&
                     // 表示フラグ
                     this.masterRecords.data[findMachineIndex].isDisp === "1" &&
                     // 削除フラグ
@@ -517,8 +518,7 @@ export default {
                     // メッセージに追加
                     this.messageList.push({
                       machineTypeName: this.getMachineTypeList.find(
-                        (x) => (x.value = findMachine.machineType)
-                      ).text,
+                        (x) => (x.value = findMachine.machineType)).text,
                       machineSerial: findMntMachine.machineSerial,
                       comFormatName: findMachine.comFormatName,
                       comType: findMachine.comTypeName,
@@ -619,25 +619,21 @@ export default {
       );
     },
     calculateModalWidthHeight() {
-      document.getElementsByClassName("modal-container")[0].style.maxWidth =
-        "600px";
-      document.getElementsByClassName("modal-container")[0].style.maxHeight =
-        "580px";
+      const modalContainer = this.$el?.closest?.('.modal-container') || queryScopedSelector('.modal-container', this.$el);
+      const modalBody = this.$el?.closest?.('.modal-body') || queryScopedSelector('.modal-body', this.$el);
+      if (!modalContainer || !modalBody) {
+        return;
+      }
+      modalContainer.style.maxWidth = "600px";
+      modalContainer.style.maxHeight = "580px";
       ("70%");
 
-      document.getElementsByClassName("modal-container")[0].style.width = "58%";
-      document.getElementsByClassName("modal-container")[0].style.height =
-        "70%";
-      document.getElementsByClassName("modal-body")[0].style.overflow =
-        "hidden";
+      modalContainer.style.width = "58%";
+      modalContainer.style.height = "70%";
+      modalBody.style.overflow = "hidden";
       // mod redmine 5069 スマホ、装置検索登録モーダル内の表示不正 孔 start
-      // document.getElementsByClassName("modal-body")[0].style.height =
-      //   "calc(100% - 40px - 2em)";
-      const modalBodyHeight =
-        document.getElementsByClassName("modal-body")[0].offsetHeight;
-      document.getElementsByClassName("modal-body")[0].style.height = `calc( ${
-        modalBodyHeight + 5
-      }px + 1em)`;
+      const modalBodyHeight = modalBody.offsetHeight;
+      modalBody.style.height = `calc( ${modalBodyHeight + 5}px + 1em)`;
       // mod redmine 5069 スマホ、装置検索登録モーダル内の表示不正 孔 end
     },
   },
@@ -661,7 +657,7 @@ export default {
       this.calculateGridHeight();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // ポーリング終了
     this.endPolling();
   },
@@ -747,7 +743,7 @@ tr {
   align-items: center;
 }
 
-.select >>> .select-input {
+.select :deep(.select-input) {
   font-size: 1em;
   line-height: unset;
 }

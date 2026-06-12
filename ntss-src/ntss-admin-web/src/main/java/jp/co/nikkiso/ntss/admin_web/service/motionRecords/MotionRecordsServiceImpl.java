@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.service.motionRecords;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.MotionRecordsConstants;
 import jp.co.nikkiso.ntss.admin_web.response.GatheringStatusResponse;
 import jp.co.nikkiso.ntss.admin_web.response.MotionRecordsResponse;
@@ -89,6 +89,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 /**
  * 装置動作記録のService実装クラス.
@@ -143,6 +144,10 @@ public class MotionRecordsServiceImpl implements MotionRecordsService {
 
   @Autowired
   private LogServiceCore logServiceCore;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   //DB更新ログ出力ロジック wp end 20210129
 
   // add 11042 nkknkk施設の遠隔監視の警報対処不正動作 関 start
@@ -768,7 +773,7 @@ public class MotionRecordsServiceImpl implements MotionRecordsService {
     wheres.append(" motion_record_no = '" + motionRecordNo + "'" +"\n");
     // logCommon設定
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(mntMotionRecordDao, mmsTbN, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     //DB更新ログ出力ロジック wp end
@@ -844,7 +849,7 @@ public class MotionRecordsServiceImpl implements MotionRecordsService {
     wheres.append(" is_correction in ('0','2') \n");
     wheres.append(" AND\n");
     wheres.append(" data_type = " + dataType  + "\n");
-    DataUpdateLogCommonNew logCommon = getLogCommon(mntMotionRecordDao, mmsTbN, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     //FNSI-修正 ログ対応 wp add end
@@ -894,11 +899,11 @@ public class MotionRecordsServiceImpl implements MotionRecordsService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -1153,7 +1158,7 @@ public class MotionRecordsServiceImpl implements MotionRecordsService {
     wheres.append(" motion_record_no = '" + motionRecordNo + "'" +"\n");
     // logCommon設定
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(mntMotionRecordDao, mmsTbN, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     //FNSI-修正 ログ対応 wp add end
@@ -1210,7 +1215,7 @@ public class MotionRecordsServiceImpl implements MotionRecordsService {
     wheres.append(" is_correction in ('0','2') \n");
     wheres.append(" AND\n");
     wheres.append(" data_type in ('2') \n");
-    DataUpdateLogCommonNew logCommon = getLogCommon(mntMotionRecordDao, mmsTbN, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     //FNSI-修正 ログ対応 wp add end

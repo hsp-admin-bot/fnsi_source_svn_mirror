@@ -13,10 +13,16 @@
 <template>
   <ntss-layout-content>
     <!-- del FNSI-顯示調整 房 start
-    <header-component slot="header-content" :isCannotSwipe="true" />
-    <bread-crumbs-component :no-split="true" slot="bread-crumbs-content" :history-key="historyKey" />
+    <template #header-content>
+      <header-component :isCannotSwipe="true" />
+    </template>
+    <template #bread-crumbs-content>
+      <bread-crumbs-component :no-split="true" :history-key="historyKey" />
+    </template>
     del FNSI-顯示調整 房 end-->
-    <main-component slot="main-content" ref="mainComponent" :history-key="historyKey" />
+    <template #main-content>
+      <main-component ref="mainComponent" :history-key="historyKey" />
+    </template>
   </ntss-layout-content>
 </template>
 <script>
@@ -24,7 +30,7 @@ import MainComponent from "@/components/pat-event/PatEventDetailComponent";
 import ViewHelper from "@/views/ViewHelperMixin";
 import { HISTORY_KEY_OBSERVE_RECORD_DETAIL } from "@/router/observe-record/HistoryKeyConstants";
 // add #10774 治療記録＞観察記録 患者・実績を切替た場合 ztc 20240726 start
-import {mapActions, mapGetters} from "vuex";
+import {mapActions, mapGetters} from "@/compat/vue/vuex";
 // add #10774 治療記録＞観察記録 患者・実績を切替た場合 ztc 20240726 end
 
 export default {

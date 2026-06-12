@@ -100,7 +100,7 @@
     </div>
 
     <v-ons-popover id="pop-over-show" cancelable
-                   :visible.sync='popoverTextVisible'
+                   v-model:visible='popoverTextVisible'
                    :target='popoverTextTarget'
                    :direction='popoverTextDirection'
                    :cover-target=false
@@ -119,8 +119,8 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // 共通JavaScriptファイル
 import commonjs from "@/constants/operationViewerCommon";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -129,6 +129,7 @@ import { AUTHORITY_CODES } from "@/constants/userAuthority.js";
 //add FNSI-編集権限の適用 江 end
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
 
 /**
@@ -320,8 +321,19 @@ export default {
       return this.popoverVisible ? "" : "display:none;";
     },
     footerHeight() {
-      const footer = document.getElementById("footer-menu");
-      return footer !== null && this.isDispMenu === 1 ? footer.clientHeight : 0;
+      if (this.isDispMenu !== 1) {
+        return 0;
+      }
+      const footer = (this.$el?.ownerDocument || document).getElementById("footer-menu");
+      return Number(
+        footer?.clientHeight || footer?.getBoundingClientRect?.().height || 50
+      );
+    },
+    breadcrumbHeight() {
+      const breadcrumb = (this.$el?.ownerDocument || document).querySelector(".bread-crumbs");
+      return Number(
+        breadcrumb?.clientHeight || breadcrumb?.getBoundingClientRect?.().height || 35
+      );
     },
     conditionStyle() {
       // add FNSI redmine #4366修正 鄧シン start
@@ -341,11 +353,11 @@ export default {
           break;
       }
       // add FNSI redmine #4366修正 鄧シン end
+      const height =
+        this.getWindowHeight -
+        (this.headerHeight + this.footerHeight + this.breadcrumbHeight + 12);
       return {
-        height:
-          this.getWindowHeight -
-          (this.headerHeight + this.footerHeight + 12) +
-          "px",
+        height: Math.max(height, 0) + "px",
         "overflow-y": "auto"
       };
     },
@@ -548,41 +560,9 @@ export default {
   },
   mounted() {
     EventBus.$emit("addLeftmostHeaderMargin");
-    
-    this.mainEls = document.getElementsByClassName("main");
-    this.breadCrumbsEls = document.getElementsByClassName("bread-crumbs");
-    this.handleBeforePrint = () => {
-      // 部品の運転/交換時間の場合
-      if (this.popoverVisible) {
-        // 親画面全要素非表示
-        Array.from(this.mainEls).forEach(el => {
-          el.style.display = "none";
-        });
-        // パンくず全要素非表示
-        Array.from(this.breadCrumbsEls).forEach(el => {
-          el.style.display = "none";
-        });
-      }
-    };
-    this.handleAfterPrint = () => {
-      if (this.popoverVisible) {
-        // 印刷後に元に戻す
-        Array.from(this.mainEls).forEach(el => {
-          el.style.display = "";
-        });
-        Array.from(this.breadCrumbsEls).forEach(el => {
-          el.style.display = "";
-        });
-      }
-    };
-    window.addEventListener("beforeprint", this.handleBeforePrint);
-    window.addEventListener("afterprint", this.handleAfterPrint);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("partsRunningLoad", this.loadData);
-    
-    window.removeEventListener("beforeprint", this.handleBeforePrint);
-    window.removeEventListener("afterprint", this.handleAfterPrint);
   }
 };
 </script>
@@ -625,10 +605,11 @@ export default {
   white-space: nowrap;
   width:80px;
 }
-@media print {
-  .ntss-list {
-    position: absolute !important;
-    top: unset;
-  }
+
+:deep(.popover--top) {
+  width: auto !important;
+}
+:deep(.popover__content) {
+  min-height: auto !important;
 }
 </style>

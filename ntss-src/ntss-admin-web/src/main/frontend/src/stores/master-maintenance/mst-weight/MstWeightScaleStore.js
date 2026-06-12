@@ -48,6 +48,7 @@ export default {
     edit(state, editInfo) {
       const editRecord = editInfo.editRecord;
       const isSortMode = editInfo.isSortMode;
+      const skipOperationMark = editInfo.skipOperationMark === true;
 
       // 該当レコードがあれば内容を更新、なければ追加
       const foundData = state.masterRecordList.data.find(e => {
@@ -76,7 +77,10 @@ export default {
         state.masterRecordList.data.splice(0, 0, editRecord);
       } else {
         // 該当レコードがあれば編集内容を反映
-        if (editRecord.operation != 1 && !isSortMode) {
+        if (skipOperationMark) {
+          delete editRecord.operation;
+          delete editRecord.edited;
+        } else if (editRecord.operation != 1 && !isSortMode) {
           editRecord.operation = 2;
         }
         if (isSortMode) {
@@ -256,18 +260,12 @@ export default {
     },
     isRecordModified(state) {
       // ストアのデータが読み込み時から編集されてないかをチェック
-      // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240119 linjunfeng start
       const newValue = state.masterRecordList.data ? JSON.parse(JSON.stringify(state.masterRecordList.data)) : [];
       newValue.forEach(element => {
-        if(element.operation) delete element.operation;
+        if (element.operation) delete element.operation;
       });
-      // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240119 linjunfeng end
       return (
-        state.comparisonRecordModel !==
-        // #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240119 linjunfeng start
-        // JSON.stringify(state.masterRecordList.data)
-        JSON.stringify(newValue)
-        // #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240119 linjunfeng end
+        state.comparisonRecordModel !== JSON.stringify(newValue)
       );
     }
   }

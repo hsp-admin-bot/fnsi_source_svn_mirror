@@ -87,8 +87,8 @@
               </tr>
               </thead>
               <tbody>
-              <template v-for="(data, index) in inputModel.recrclRtList" >
-                <tr :key="index" >
+              <template v-for="(data, index) in inputModel.recrclRtList" :key="index">
+                <tr>
                   <!-- mod FNSI-共有を追加 王 20200921 start -->
                   <!-- add FNSI-修正 権限関連 周雨晴 2020/09/28 start -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
@@ -112,7 +112,7 @@
                       input-id="rate"
                       v-model="data.rate"
                       name="rate"
-                      unitName="％　　"
+                      unitName="％\u3000\u3000"
                       :titile-visible="false"
                       :min=0
                       :max=100
@@ -318,11 +318,11 @@
 
 <script>
 // add FNSI-共有を追加 王 20200921 start
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 // add FNSI-共有を追加 王 20200921 end
 import CommonNumberInputComponent from "@/components/treatment-record/submenu/common/CommonNumberInputComponent";
 import { Monitor } from "@/models/treatment-record/weight/Monitor";
-import { mapActions } from "vuex";
+import { mapActions } from "@/compat/vue/vuex";
 //  add FNSI-修正 権限関連 周雨晴 2020/09/28 start
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 start
 // import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
@@ -362,8 +362,10 @@ export default {
     "time-input": TimeInput,
     // #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end
   },
+  emits: ["update:modelValue"],
   props: {
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: Monitor
     },
     ordNo: {
@@ -525,18 +527,18 @@ export default {
   },
   // add FNSI-共有を追加 王 20200921 end
   watch: {
-    value() {
-      this.inputModel = this.value;
+    modelValue() {
+      this.inputModel = this.modelValue;
       // del 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 start
       // if (this.initFlag == 1) {
       // del 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 end
       // 測定日時が未登録の場合、カレンダー表示した際のデフォルト日付を変更するためデフォルト値を日付（非表示）に設定する
-      this.value.recrclRtList.forEach((rec, index) => {
+      this.modelValue.recrclRtList.forEach((rec, index) => {
         this.setDefaultDate(rec, false);
       });
-      Object.assign(this.initModel, this.value)
+      Object.assign(this.initModel, this.modelValue)
       // 5521 治療記録の体重で入力制限のない項目がある 房 start
-      this.initModel.recrclRtList = JSON.parse(JSON.stringify(this.value.recrclRtList))
+      this.initModel.recrclRtList = JSON.parse(JSON.stringify(this.modelValue.recrclRtList))
       // 5521 治療記録の体重で入力制限のない項目がある 房 end
       // del 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 start
       // this.initFlag = 2;
@@ -545,7 +547,7 @@ export default {
     },
     inputModel: {
       handler: function(val) {
-        this.$emit("input", val);
+        this.$emit("update:modelValue", val);
       },
       deep: true
     },

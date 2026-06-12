@@ -2,7 +2,7 @@
   <div id="multiselectDivId" class="pat-group-wrapper" :class="isPatGroupCardEdited ? 'pat-group-wrapper-edited' : ''">
     <!--mod 編集権限の適用 じょはく start-->
     <!-- mod #10359 編集権限の動作不正 dengshen start -->
-    <!-- <kendo-multiselect -->
+    <!-- <ntss-multi-select -->
     <!--   v-model="sortedPatGroupsSelectedItems" -->
     <!--   :data-source="patGroupsDataSources" -->
     <!--   data-text-field="patGroupName" -->
@@ -33,7 +33,7 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import PatGroup from "@/apis/pat-group";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
 
@@ -65,13 +65,13 @@ export default {
   // add 編集権限の適用 じょはく end
   computed: {
     ...mapGetters("user", { facilityCd: "getFacilityCd" }),
+    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd", "selectedPatId"]),
     // add 編集権限の適用 じょはく start
     // mod #10359、#10331 編集権限について、対応する。 dengshen start
     // ...mapGetters("account-edit", ["getStateUserAccountInfo", "getUseFunctions"]),
     ...mapGetters("account-edit", ["getStateUserAccountInfo", "getAuthorizedFunctions"]),
     // mod #10359、#10331 編集権限について、対応する。 dengshen end
     // add 編集権限の適用 じょはく end
-    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd"]),
     jsonArray: {
       get() {
         return this.editRecord && this.editRecord[this.arrayColName] && this.editRecord[this.arrayColName].filter(record => {
@@ -91,7 +91,7 @@ export default {
               // cd => patGroup.patGroupCd === cd
               cd => patGroup.patGroupCd == cd
               // mod #11309 患者グループ編集時、特定条件で保存ボタンが活性化しない ztc 20241212 end
-          );
+              );
           if (find) {
             acc.push(find);
           }
@@ -136,11 +136,8 @@ export default {
 
     //#9819 mod 利用者マスタの患者情報編集権限をOFFにした際に患者情報画面で入外区分の編集/保存ができる 2023-11-06 卓 start
     async getPatGroups() {
-      // mod #12462 患者情報共有 Ji start
-      const facilityCd = this.getIsOtherFacility ? this.getOtherFacilityCd : this.facilityCd 
-      // await PatGroup.list(this.facilityCd).then(({data}) =>{
-        await PatGroup.list(facilityCd).then(({data}) =>{
-      // mod #12462 患者情報共有 Ji end
+      const facilityCd = this.getIsOtherFacility ? this.getOtherFacilityCd : this.facilityCd;
+      await PatGroup.list(facilityCd, this.selectedPatId).then(({data}) =>{
         if (data.patGroupInfo){
           this.patGroupsDataSources = data.patGroupInfo;
         }
@@ -153,7 +150,7 @@ export default {
           // item => item.patGroupCd.initValue === patGroupCd
           item => item.patGroupCd.initValue == patGroupCd
           // mod #11309 患者グループ編集時、特定条件で保存ボタンが活性化しない ztc 20241212 end
-      );
+          );
       this.editRecord[this.arrayColName].splice(index, 1);
     },
     onSelect(dataItem) {
@@ -169,7 +166,7 @@ export default {
               // p => p.patGroupCd.initValue === patGroup.patGroupCd
               p => p.patGroupCd.initValue == patGroup.patGroupCd
               // mod #11309 患者グループ編集時、特定条件で保存ボタンが活性化しない ztc 20241212 end
-          );
+              );
           if (find) {
             acc.push(find);
           }
@@ -183,15 +180,11 @@ export default {
     jsonArray() {
       this.initPatGroups();
     },
-    // add #12462 患者情報共有 Ji start
     getOtherFacilityCd() {
       this.getPatGroups();
-    },
-    // add #12462 患者情報共有 Ji end
+    }
   },
-  beforeDestroy() {
-    // dataの初期化
-    Object.assign(this.$data, this.$options.data());
+  beforeUnmount() {
   },
   async created() {
     // del #10359 編集権限の動作不正 dengshen start
@@ -226,11 +219,28 @@ export default {
 .pat-group-wrapper {
   padding: 0.2em;
 }
-.pat-group-wrapper >>> .k-multiselect {
+.pat-group-wrapper :deep(.k-multiselect) {
   font-size: 1em;
 }
-.pat-group-wrapper-edited >>> .k-multiselect {
+.pat-group-wrapper :deep(.k-legacy-multiselect .k-input-inner.k-input),
+.pat-group-wrapper :deep(.k-legacy-multiselect input.k-input) {
+  padding: 0.375rem 0.75rem !important;
+}
+.pat-group-wrapper-edited :deep(.k-multiselect) {
   border: 2px green solid;
   outline: 0;
+}
+.pat-group-wrapper :deep(.k-input-inner::placeholder) {
+  color: #212529;
+  opacity: 1;
+}
+.pat-group-wrapper :deep(.k-input-values){
+  background-color: #fff !important;
+}
+:deep(.k-legacy-multiselect .k-chip-remove-action .k-icon::before),
+:deep(.k-legacy-multiselect .k-chip-remove-action .k-svg-icon::before){
+  font-size: 24px !important;
+  font-weight: 300 !important;
+  margin-top: 5.5px;
 }
 </style>

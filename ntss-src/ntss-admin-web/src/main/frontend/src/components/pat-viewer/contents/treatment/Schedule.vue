@@ -9,7 +9,7 @@
     @onCellClick="onCellClick"
   />
     <message-dialog
-      :visible.sync="isDialogVisble"
+      v-model:visible="isDialogVisble"
       :message-cd="22020005"
       type="1"
     />
@@ -24,12 +24,12 @@ import { MASTER_DELETE_DISPLAY } from "@/constants/TreatmentRecord.js";
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 共通操作
@@ -54,8 +54,7 @@ import messageDialog from "@/components/common/message-dialog/MessageDialog.vue"
 import MakeStructionColorMixin from "./MakeStructionColorMixin";
 // add FNSI-障害票一覧_患者経過総合ビューアNo.16-19(指示の切り替わりポイントを赤くする) 李 end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 
 export default {
@@ -168,7 +167,7 @@ export default {
     this.convertScheduleData({
       listIndex: this.rowIndex,
       selectLayoutCd: this.selectedLayoutCd
-    }).then(scheduleDataListLet => {
+    }).then(async scheduleDataListLet => {
       // add FNSI-マスタ削除表示の対応課題--クール 鄧シン start
       scheduleDataListLet[0].data.forEach(item =>{
         if (item.value1 === "削除済み") {
@@ -193,7 +192,7 @@ export default {
         }
       });
       // 指示の切り替わりポイント処理を呼び出す
-      this.makeStructionColor(scheduleDataListLet, 2);
+      await this.makeStructionColor(scheduleDataListLet, 2);
 
       this.scheduleDataList = scheduleDataListLet;
       // FNSI-修正 マスタ削除の対応 wangchen add start
@@ -250,7 +249,7 @@ export default {
     // mod FNSI-性能を最適化する 李 end
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -389,12 +388,9 @@ export default {
         return;
       }
       // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --start */
-      // if(cellInfo.isNotClickable) {
       if(isIndClick && cellInfo.isNotClickable) {
         return;
       }
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --end */
       // 指示項目クリック時以下の処理を実行する
       if (isIndClick) {
         const treatmentData = this.getTreatmentData[this.rowIndex];
@@ -465,7 +461,7 @@ export default {
       // 施設コード
       settingData.facilityCd = this.facilityCd;
       // 治療日のフォーマット調整
-      treatDate = moment(treatDate).format("YYYY-MM-DD");
+      treatDate = dayjs(treatDate).format("YYYY-MM-DD");
       // 開始日
       settingData.startDate = treatDate;
       // 終了日
@@ -487,7 +483,7 @@ export default {
         // 選択された曜日以外をfalseへ変更
         for (let i = 0; i < 7; i++) {
           settingData[this.changeWeekStr(i)] =
-            i !== moment(treatDate, "YYYYMMDD").day() ? false : true;
+            i !== dayjs(treatDate, "YYYYMMDD").day() ? false : true;
         }
       }
       // 子コンポーネント(IndSchEdit)にわたす情報
@@ -671,5 +667,5 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 </style>

@@ -3,8 +3,9 @@
  */
 <template>
   <modal-base @onClose="closeUserIdResetModal">
-    <div slot="header"></div>
-    <div slot="body" class="custom-style-header">
+    <template #header></template>
+    <template #body>
+      <div class="custom-style-header">
       <h3 class="print-title">{{ txtSystemUseSetting }} 初回登録シート<br></h3>
       <h3 class="title">{{ txtFacilityNm }}</h3>
 
@@ -54,24 +55,28 @@
       アカウントロックはシステム管理者にて解除可能です。
         </p>
       </div>
-    </div>
+      </div>
+    </template>
 
-    <div slot="footer" class="flex-container print-none">
+    <template #footer>
+      <div class="flex-container print-none">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="btn3-normal registration-btn" @click="printUserIdResetModal">印刷</v-ons-button>
       </div>
       <div class="registration-btn-area" style="background:none">
         <v-ons-button class="btn2-cancel registration-btn" @click="closeUserIdResetModal">閉じる</v-ons-button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import {mapState, mapActions, mapGetters} from "vuex";
-import moment from "moment";
+import {mapState, mapActions, mapGetters} from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
 import { ApiHelper } from "@/apis/AxiosHelper";
+import { getScopedDocument, getScopedWindow, queryElementBySelectors, appendScopedChild, removeScopedChild } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   name: "UserIdResetModal",
@@ -82,7 +87,9 @@ export default {
     return {
       txtUrl2: "",
       // 施設マスタのVPN設定が「CL証明書URLおよびVPN用URL」であるか
-      clCertificateAndVpn: false
+      clCertificateAndVpn: false,
+      printGuardElement: null,
+      printGuardParent: null
     };
   },
   computed: {
@@ -94,7 +101,7 @@ export default {
     // add redmine4504 実行アカウントフルネームと現在時刻を表示する 孔 start
     txtCreateDate() {
       // 施設名を返却
-      return "実行時刻　：　" + moment().format("YYYY-MM-DD HH:mm");
+      return "実行時刻　：　" + dayjs().format("YYYY-MM-DD HH:mm");
     },
     txtExecutionUserName() {
       // 施設名を返却
@@ -145,8 +152,7 @@ export default {
   async created() {
     // 施設マスタのVPNセット、対応するURLを取得
     ApiHelper.get(
-      `/master_maintenance/mst_user/get_vpn_set/${this.getFacilitySwitch}`
-    ).then(response => {
+      `/master_maintenance/mst_user/get_vpn_set/${this.getFacilitySwitch}`).then(response => {
       const resData = response.data;
       if (resData.vpnSet == 2) {
         // 施設マスタのVPNセットが 2：CL証明書URLおよびVPN用URLを表示
@@ -156,18 +162,21 @@ export default {
     });
 
   },
-  beforeDestroy(){
+  beforeUnmount(){
     // menu頂部に置く
-    document.getElementById("user-menu").style.zIndex = "9999"
-    document.getElementsByClassName("notification unread-count")[0].style.zIndex = "10000"
+    this.getUserMenuElement()?.style && (this.getUserMenuElement().style.zIndex = "9999");
+    this.getUnreadNotificationElement()?.style && (this.getUnreadNotificationElement().style.zIndex = "10000");
   },
   mounted() {
     // 印刷時用制御classとdivのセット
-    const set = document.createElement('div');
-    const div = document.getElementById('main-id');
-    const main = document.getElementsByClassName('content-container');
+    const scopedDocument = this.getScopedDoc();
+    const set = scopedDocument.createElement('div');
+    const div = this.getMainRootElement();
+    const main = this.getContentContainerElement();
     div?.classList?.add('none-print');
-    main[0].appendChild(set);
+    appendScopedChild(main, set);
+    this.printGuardElement = set;
+    this.printGuardParent = main || null;
   },
   methods: {
     ...mapActions("multi-modal", ["hideModal"]),
@@ -177,66 +186,73 @@ export default {
       "regEditData",
       "sortData"
     ]),
+
+    getScopedDoc() {
+      return getScopedDocument(this.$el || null);
+    },
+    getUserMenuElement() {
+      return queryElementBySelectors(['#user-menu'], this.$el || null);
+    },
+    getUnreadNotificationElement() {
+      return queryElementBySelectors(['.notification.unread-count', '.notification.unread-count'], this.$el || null);
+    },
+    getContentContainerElement() {
+      return queryElementBySelectors(['.content-container'], this.$el || null);
+    },
+    getMainRootElement() {
+      return queryElementBySelectors(['#main-id'], this.$el || null);
+    },
+    createCopySelectionNode(value) {
+      const scopedDocument = this.getScopedDoc();
+      var tmp = scopedDocument.createElement("div");
+      var pre = scopedDocument.createElement("pre");
+      pre.style.webkitUserSelect = "auto";
+      pre.style.userSelect = "auto";
+      tmp.appendChild(pre).textContent = value;
+      var s = tmp.style;
+      s.position = "fixed";
+      s.right = "200%";
+      return tmp;
+    },
     // コピーボタン
     copyUrl() {
       // ログインURLをクリップボードにコピー
       // 空div 生成
-      var tmp = document.createElement("div");
-      // 選択用のタグ生成
-      var pre = document.createElement("pre");
-      // 親要素のCSSで user-select: none だとコピーできないので書き換える
-      pre.style.webkitUserSelect = "auto";
-      pre.style.userSelect = "auto";
-      tmp.appendChild(pre).textContent = this.txtUrl;
-      // 要素を画面外へ
-      var s = tmp.style;
-      s.position = "fixed";
-      s.right = "200%";
-      // body に追加
-      document.body.appendChild(tmp);
-      // 要素を選択
-      document.getSelection().selectAllChildren(tmp);
-      // クリップボードにコピー
-      document.execCommand("copy");
-      // 要素削除
-      document.body.removeChild(tmp);
+      const scopedDocument = this.getScopedDoc();
+      var tmp = this.createCopySelectionNode(this.txtUrl);
+      const body = scopedDocument.body || scopedDocument.documentElement;
+      appendScopedChild(body, tmp);
+      scopedDocument.getSelection()?.selectAllChildren(tmp);
+      scopedDocument.execCommand("copy");
+      removeScopedChild(tmp, body);
     },
     // コピーボタン
     copyUrl2() {
       // ログインURLをクリップボードにコピー
       // 空div 生成
-      var tmp = document.createElement("div");
-      // 選択用のタグ生成
-      var pre = document.createElement("pre");
-      // 親要素のCSSで user-select: none だとコピーできないので書き換える
-      pre.style.webkitUserSelect = "auto";
-      pre.style.userSelect = "auto";
-      tmp.appendChild(pre).textContent = this.txtUrl2;
-      // 要素を画面外へ
-      var s = tmp.style;
-      s.position = "fixed";
-      s.right = "200%";
-      // body に追加
-      document.body.appendChild(tmp);
-      // 要素を選択
-      document.getSelection().selectAllChildren(tmp);
-      // クリップボードにコピー
-      document.execCommand("copy");
-      // 要素削除
-      document.body.removeChild(tmp);
+      const scopedDocument = this.getScopedDoc();
+      var tmp = this.createCopySelectionNode(this.txtUrl2);
+      const body = scopedDocument.body || scopedDocument.documentElement;
+      appendScopedChild(body, tmp);
+      scopedDocument.getSelection()?.selectAllChildren(tmp);
+      scopedDocument.execCommand("copy");
+      removeScopedChild(tmp, body);
     },
     // 印刷ボタン
     printUserIdResetModal() {
       // 画面を印刷
-      window.print();
+      (getScopedWindow(this.$el || this) || window).print();
     },
     // 閉じるボタン
     closeUserIdResetModal() {
       // 印刷時用制御classとdivの削除
-      const div = document.getElementById('main-id');
-      div.classList.remove('none-print');
-      const main = document.getElementsByClassName('content-container');
-      main[0].removeChild(main[0].lastChild);
+      const div = this.getMainRootElement();
+      div?.classList?.remove('none-print');
+      if (this.printGuardParent && this.printGuardElement && this.printGuardParent.contains(this.printGuardElement)) {
+        removeScopedChild(this.printGuardElement, this.printGuardParent);
+      }
+      this.printGuardElement = null;
+      this.printGuardParent = null;
       // モーダルを非表示にする
       this.hideModal();
     }
@@ -287,16 +303,16 @@ export default {
     background-image: -webkit-linear-gradient(rgba(255,255,255,1) 100%,rgba(255,255,255,1) 100%);
     background-image:         linear-gradient(rgba(255,255,255,1) 100%,rgba(255,255,255,1) 100%);
   }
-  .modal-mask >>>.modal-container{
+  .modal-mask :deep(.modal-container){
     background: #fff !important;
     height: 100%;
   }
-  .modal-mask >>>.modal-body{
+  .modal-mask :deep(.modal-body){
     color: #050505 !important;
     top: unset;
   }
-  .modal-mask >>>.modal-header,
-  .modal-mask >>>.modal-footer{
+  .modal-mask :deep(.modal-header),
+  .modal-mask :deep(.modal-footer){
     display: none !important;
   }
   .print-none {

@@ -14,9 +14,9 @@ import java.time.format.DateTimeFormatter;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -37,7 +37,7 @@ import jp.co.nikkiso.ntss.web_api.request.FacilityCancelRequest;
 @Transactional
 public class FacilityCancelExpireMixTest extends AbstractResourceTest {
 
-  @SpyBean
+  @MockitoSpyBean
   private MntFacilityCancelManageDao mntFacilityCancelManageDao;
 
   @Sql("classpath:resource.script/FacilityCancelExpireMixTest/s312200/db5.sql")

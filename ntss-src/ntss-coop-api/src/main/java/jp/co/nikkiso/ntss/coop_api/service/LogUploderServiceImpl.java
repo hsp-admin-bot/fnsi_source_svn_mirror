@@ -1,14 +1,12 @@
 package jp.co.nikkiso.ntss.coop_api.service;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.dao.SysSystemDefineDao;
 import jp.co.nikkiso.ntss.core.entity.SysSystemDefine;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -44,20 +42,6 @@ public class LogUploderServiceImpl implements LogUploaderService {
       this.value = value;
     }
   };
-
-  // TODO: S3へのアップロードを行う場合には以下の処理を使用する(現時点では未使用)
-  /**
-   * S3バケット名
-   */
-  @Value("${ntss.log.s3-bucket:}")
-  private String s3Bucket;
-
-  /**
-   * S3オブジェクト取得
-   * @return s3 S3オブジェクト
-   */
-  @Autowired
-  private AmazonS3 s3;
 
   @Autowired
   private SysSystemDefineDao sysSystemDefineDao;

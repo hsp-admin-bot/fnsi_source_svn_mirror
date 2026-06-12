@@ -2,12 +2,33 @@
  * WebPush処理
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
+import { getScopedLocation, getScopedNavigator, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
 
 let publicKey = null;
 
+function getWebPushWindow(root = null) {
+  return getScopedWindow(root) || (typeof globalThis !== "undefined" ? globalThis : null);
+}
+
+function getWebPushNavigator(root = null) {
+  return getScopedNavigator(root) || getWebPushWindow(root)?.navigator || null;
+}
+
+function encodeBase64(value, root = null) {
+  const scopedWindow = getWebPushWindow(root);
+  const encoder = scopedWindow?.btoa || (typeof btoa !== "undefined" ? btoa : null);
+  return encoder ? encoder(value) : "";
+}
+
+function decodeBase64(value, root = null) {
+  const scopedWindow = getWebPushWindow(root);
+  const decoder = scopedWindow?.atob || (typeof atob !== "undefined" ? atob : null);
+  return decoder ? decoder(value) : "";
+}
+
 // サーバから受け取った公開鍵をデコード
-function urlB64ToUint8Array(keyStr) {
-  const dec = atob(keyStr.replace(/-/g, '+').replace(/_/g, '/'));
+function urlB64ToUint8Array(keyStr, root = null) {
+  const dec = decodeBase64(keyStr.replace(/-/g, '+').replace(/_/g, '/'), root);
   let outputArray = new Uint8Array(dec.length);
   for(let i = 0 ; i < dec.length ; i++) {
     outputArray[i] = dec.charCodeAt(i);
@@ -44,11 +65,12 @@ function requestSubscription(registration) {
  * WebPush通知のSubscriptionを行う.
  * @param {*} date
  */
-export function webPushSubscribe(key) {
+export function webPushSubscribe(key, root = null) {
   // TODO★：key が null の場合は処理をしない
   // 引数からkeyを受け取り、デコードして格納
-  publicKey =urlB64ToUint8Array(key);
-  return navigator.serviceWorker.ready.then(requestSubscription);
+  publicKey = urlB64ToUint8Array(key, root);
+  const scopedNavigator = getWebPushNavigator(root);
+  return scopedNavigator?.serviceWorker?.ready?.then(requestSubscription) || Promise.resolve(null);
 }
 
 /**
@@ -58,7 +80,7 @@ export function webPushSubscribe(key) {
  * @param terminalUniqueString 端末固有ID
  * @param subscriptionObj サブスクリプション結果
  */
-export async function saveNotificationList(facilityCd, userId, terminalUniqueString, subscriptionObj) {
+export async function saveNotificationList(facilityCd, userId, terminalUniqueString, subscriptionObj, root = null) {
   // 送信パラメータ
   let param = {
     // 端末固有ID
@@ -75,23 +97,23 @@ export async function saveNotificationList(facilityCd, userId, terminalUniqueStr
   };
 
   if("getKey" in subscriptionObj) {
-    param.key = btoa(String.fromCharCode.apply(null, new Uint8Array(subscriptionObj.getKey('p256dh')))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    try {
-      param.auth = btoa(String.fromCharCode.apply(null, new Uint8Array(subscriptionObj.getKey('auth')))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      const useAesgcm = navigator.userAgent.match(/Firefox\/(\d+)/) ? ((parseInt(RegExp.$1) >= 46) ? 1 : 0) :
-        ((navigator.userAgent.match(/Chrome\/(\d+)/) ? ((parseInt(RegExp.$1) >= 50) ? 1 : 0) : 0));
-      const encodings = PushManager.supportedContentEncodings;
-      const idx = encodings instanceof Array ? encodings.indexOf('aes128gcm') : -1;
-      param.contentEncoding = idx >= 0 ? 'aes128gcm' : (useAesgcm ? 'aesgcm' : 'aesgcm128');
-    } catch (e) {
-      throw e;
-    }
+    const scopedWindow = getWebPushWindow(root);
+    const scopedNavigator = getWebPushNavigator(root);
+    const userAgent = scopedNavigator?.userAgent || "";
+    param.key = encodeBase64(String.fromCharCode.apply(null, new Uint8Array(subscriptionObj.getKey('p256dh'))), root).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    param.auth = encodeBase64(String.fromCharCode.apply(null, new Uint8Array(subscriptionObj.getKey('auth'))), root).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const useAesgcm = userAgent.match(/Firefox\/(\d+)/) ? ((parseInt(RegExp.$1) >= 46) ? 1 : 0) :
+      ((userAgent.match(/Chrome\/(\d+)/) ? ((parseInt(RegExp.$1) >= 50) ? 1 : 0) : 0));
+    const encodings = (scopedWindow?.PushManager || (typeof PushManager !== "undefined" ? PushManager : null))?.supportedContentEncodings || [];
+    const idx = encodings instanceof Array ? encodings.indexOf('aes128gcm') : -1;
+    param.contentEncoding = idx >= 0 ? 'aes128gcm' : (useAesgcm ? 'aesgcm' : 'aesgcm128');
   }
 
   // VAPID (Voluntary Application Server Identification) という仕組みの為の処理
+  const UrlConstructor = getWebPushWindow(root)?.URL || (typeof URL !== "undefined" ? URL : null);
   param.jwt = {
-    aud: new URL(subscriptionObj.endpoint).origin,
-    sub: location.href
+    aud: UrlConstructor ? new UrlConstructor(subscriptionObj.endpoint).origin : "",
+    sub: getScopedLocation(root)?.href || ""
   };
   // 文字列で受け取るので、文字列に変換
   param.jwt = JSON.stringify(param.jwt);

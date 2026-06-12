@@ -1,6 +1,7 @@
+import { getScopedDocument } from "@/functions/common/LayoutMeasureHelper";
 export default {
   namespaced: true,
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   state: {
     isLockDevTool: true,
     pressedKeys: {}
@@ -11,13 +12,15 @@ export default {
   },
   actions: {
     lockDevTool({ commit }) {
-      document.addEventListener("keydown", preventOpenDevTool);
-      document.addEventListener("contextmenu", preventOpenDevTool);
+      const scopedDocument = getScopedDocument();
+      scopedDocument?.addEventListener("keydown", preventOpenDevTool);
+      scopedDocument?.addEventListener("contextmenu", preventOpenDevTool);
       commit("setIsLockDevTool", true);
     },
     unlockDevTool({ commit }) {
-      document.removeEventListener("keydown", preventOpenDevTool);
-      document.removeEventListener("contextmenu", preventOpenDevTool);
+      const scopedDocument = getScopedDocument();
+      scopedDocument?.removeEventListener("keydown", preventOpenDevTool);
+      scopedDocument?.removeEventListener("contextmenu", preventOpenDevTool);
       commit("setIsLockDevTool", false);
     },
     setPressedKey({ commit, state }, key) {
@@ -42,7 +45,7 @@ export default {
 
 function preventOpenDevTool(ev) {
   //if ([123, 3].includes(ev.keyCode || ev.which)) ev.preventDefault();
-  //#6694 ctrl ＋shift＋iによるデベロッパーツール起動をしないのことを追加。ljx　start
+  //#6694 ctrl ＋shift＋iによるデベロッパーツール起動をしないのことを追加。ljx start
   if ([123, 3].includes(ev.keyCode || ev.which)||(ev.ctrlKey && ev.shiftKey && ev.keyCode === 73)) ev.preventDefault();
-  //#6694 ctrl ＋shift＋iによるデベロッパーツール起動をしないのことを追加。ljx　end
+  //#6694 ctrl ＋shift＋iによるデベロッパーツール起動をしないのことを追加。ljx end
 }

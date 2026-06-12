@@ -1,4 +1,4 @@
-import { mapActions } from "vuex";
+import { mapActions } from "@/compat/vue/vuex";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
 import { messageFormat } from "@/functions/common/MessageFormat";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";

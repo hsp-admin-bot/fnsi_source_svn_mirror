@@ -1,17 +1,13 @@
 package jp.co.nikkiso.ntss.core.entity;
 
-import java.io.IOException;
 import java.sql.Timestamp;
-import java.time.ZoneId;
-import java.util.TimeZone;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import lombok.EqualsAndHashCode;
 import org.modelmapper.ModelMapper;
@@ -23,10 +19,10 @@ import org.seasar.doma.jdbc.entity.NamingType;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 
 import jp.co.nikkiso.ntss.core.entity.entityListener.BaseEntityListener;
 import lombok.Getter;
@@ -40,7 +36,7 @@ import lombok.Setter;
 @Table(name = "ord_main")
 @Getter
 @Setter
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @EqualsAndHashCode(callSuper = false)
 public class TreatmentRecordResult extends BaseEntity {
 
@@ -130,11 +126,9 @@ public class TreatmentRecordResult extends BaseEntity {
      */
     public RstUserInfo(String value) {
       try {
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.setTimeZone(TimeZone.getTimeZone(ZoneId.systemDefault()));
         TreatmentRecordResult.RstUserInfo obj = objectMapper.readValue(value, TreatmentRecordResult.RstUserInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
       }
     }
 
@@ -146,7 +140,7 @@ public class TreatmentRecordResult extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }

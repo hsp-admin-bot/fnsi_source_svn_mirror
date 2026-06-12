@@ -2,9 +2,9 @@ package batch.listener;
 
 import batch.ApplicationConst;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.StepExecutionListener;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.core.listener.StepExecutionListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;

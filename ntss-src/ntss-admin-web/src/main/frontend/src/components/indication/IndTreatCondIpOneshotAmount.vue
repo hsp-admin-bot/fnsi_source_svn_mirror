@@ -121,9 +121,9 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import IndTreatCondBase from "@/components/indication/IndTreatCondBase";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import {messageFormat} from "@/functions/common/MessageFormat";
 export default {

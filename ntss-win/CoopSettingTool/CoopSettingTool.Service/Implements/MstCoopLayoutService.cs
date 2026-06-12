@@ -41,6 +41,18 @@ namespace CoopSettingTool.Service
         }
 
         /// <summary>
+        /// Gets the current MST coop layout list.
+        /// </summary>
+        /// <param name="facilityCd">The facility cd.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopLayoutEntity&gt;&gt;&gt;.</returns>
+        public async Task<BaseResponse<List<MstCoopLayoutEntity>>> GetCurrentMstCoopLayoutList(string facilityCd)
+        {
+            var res = (await ServerAccess.GetInstance().GetAsync<List<MstCoopLayoutEntity>>(Constant.GET_CURRENT_MST_COOP_LAYOUT_BY_FACILITY + "/" + facilityCd, null, true, false));
+
+            return res;
+        }
+
+        /// <summary>
         /// Gets the MST coop layou by control no.
         /// </summary>
         /// <param name="ctlNo">The control no.</param>
@@ -48,6 +60,18 @@ namespace CoopSettingTool.Service
         public async Task<BaseResponse<MstCoopLayoutEntity>> GetMstCoopLayoutByCtlNo(string ctlNo)
         {
             var res = (await ServerAccess.GetInstance().PostAsync<MstCoopLayoutEntity>(Constant.GET_MST_COOP_LAYOUT_BY_CTL_NO + "/" + ctlNo, null, true, false));
+
+            return res;
+        }
+
+        /// <summary>
+        /// Gets the source MST coop layout.
+        /// </summary>
+        /// <param name="condition">The condition.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopLayoutEntity&gt;&gt;&gt;.</returns>
+        public async Task<BaseResponse<List<MstCoopLayoutEntity>>> GetSourceMstCoopLayout(MstCoopLayoutEntity condition)
+        {
+            var res = (await ServerAccess.GetInstance().PostAsync<List<MstCoopLayoutEntity>>(Constant.GET_SOURCE_MST_COOP_LAYOUT, condition, true, true));
 
             return res;
         }
@@ -77,6 +101,18 @@ namespace CoopSettingTool.Service
         }
 
         /// <summary>
+        /// Gets the current MST coop layout detail list.
+        /// </summary>
+        /// <param name="facilityCd">The facility cd.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopLayoutDetailEntity&gt;&gt;&gt;.</returns>
+        public async Task<BaseResponse<List<MstCoopLayoutDetailEntity>>> GetCurrentMstCoopLayoutDetailList(string facilityCd)
+        {
+            var res = (await ServerAccess.GetInstance().GetAsync<List<MstCoopLayoutDetailEntity>>(Constant.GET_CURRENT_MST_COOP_LAYOUT_DETAIL_BY_FACILITY + "/" + facilityCd, null, true, false));
+
+            return res;
+        }
+
+        /// <summary>
         /// Gets the MST coop layou detail by control no.
         /// </summary>
         /// <param name="ctlNo">The control no.</param>
@@ -84,6 +120,18 @@ namespace CoopSettingTool.Service
         public async Task<BaseResponse<MstCoopLayoutDetailEntity>> GetMstCoopLayoutDetailByCtlNo(string ctlNo)
         {
             var res = (await ServerAccess.GetInstance().GetAsync<MstCoopLayoutDetailEntity>(Constant.GET_MST_COOP_LAYOUT_DETAIL_BY_CTL_NO + "/" + ctlNo, null, true, false));
+
+            return res;
+        }
+
+        /// <summary>
+        /// Gets the source MST coop layout detail.
+        /// </summary>
+        /// <param name="condition">The condition.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopLayoutDetailEntity&gt;&gt;&gt;.</returns>
+        public async Task<BaseResponse<List<MstCoopLayoutDetailEntity>>> GetSourceMstCoopLayoutDetail(MstCoopLayoutDetailEntity condition)
+        {
+            var res = (await ServerAccess.GetInstance().PostAsync<List<MstCoopLayoutDetailEntity>>(Constant.GET_SOURCE_MST_COOP_LAYOUT_DETAIL, condition, true, true));
 
             return res;
         }

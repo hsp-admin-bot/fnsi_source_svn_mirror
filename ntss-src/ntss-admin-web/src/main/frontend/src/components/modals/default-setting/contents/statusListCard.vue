@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -144,21 +144,20 @@
 </template>
 
  <script>
-   import {mapActions, mapGetters} from "vuex";
+   import {mapActions, mapGetters} from "@/compat/vue/vuex";
    /*add FNSI-改修内容4214 任 start*/
-   import $ from "jquery";
+
    /*add FNSI-改修内容4214 任 end*/
    import {sendRequestGetKurSelector} from "@/apis/send-condition";
    import commonFunctions from "@/components/status-list/StatusCommonFunction";
    import {KEY_NAME_STATUS_LIST} from "@/constants/defaultSettingConstants";
    import {deepCopy} from "@/functions/common/CommonFunctions";
    //add FNSI-5687 劉全航 start
-   import { EventBus } from "@/eventBus.js";
+   import { EventBus } from "@/compat/vue/event-bus.js";
    //add FNSI-5687 劉全航 end
    import {sendRequestGetStatusLayout} from "@/apis/status-list";
+import { getScopedElementById, isScopedElementDisplayInline } from "@/functions/common/LayoutMeasureHelper";
    export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -373,12 +372,18 @@
         }
         if (this.editRecord[KEY_NAME_STATUS_LIST.KEY_NAME_COL_ITEM_GROUP] == null) {
           this.editRecord[KEY_NAME_STATUS_LIST.KEY_NAME_COL_ITEM_GROUP] = this.initialValue[KEY_NAME_STATUS_LIST.KEY_NAME_COL_ITEM_GROUP];
+        } else if (!this.comboLayoutItemList.some(item => +item.colItemLayoutNo === +this.editRecord[KEY_NAME_STATUS_LIST.KEY_NAME_COL_ITEM_GROUP])) {
+          // NOTE: マスタ削除された場合、リストの先頭を再設定（マスタ未登録時はブランク）
+          this.editRecord[KEY_NAME_STATUS_LIST.KEY_NAME_COL_ITEM_GROUP] = this.comboLayoutItemList[0] ? this.comboLayoutItemList[0].colItemLayoutNo : "";
         }
         if (this.editRecord[KEY_NAME_STATUS_LIST.KEY_NAME_KUR_GROUP_LIST] == null) {
           this.editRecord[KEY_NAME_STATUS_LIST.KEY_NAME_KUR_GROUP_LIST] = this.initialValue[KEY_NAME_STATUS_LIST.KEY_NAME_KUR_GROUP_LIST];
         }
         if (this.editRecord[KEY_NAME_STATUS_LIST.KEY_NAME_BED_GROUP_CD] == null) {
           this.editRecord[KEY_NAME_STATUS_LIST.KEY_NAME_BED_GROUP_CD] = this.initialValue[KEY_NAME_STATUS_LIST.KEY_NAME_BED_GROUP_CD];
+        } else if (!this.selectBedGroup.some(bg => +bg.roomBedGroupCd === +this.editRecord[KEY_NAME_STATUS_LIST.KEY_NAME_BED_GROUP_CD])) {
+          // NOTE: マスタ削除された場合、「0 : すべて」を再設定
+          this.editRecord[KEY_NAME_STATUS_LIST.KEY_NAME_BED_GROUP_CD] = 0;
         }
         if (this.editRecord[KEY_NAME_STATUS_LIST.KEY_NAME_NOT_USAGE_GUIDE] == null) {
           this.editRecord[KEY_NAME_STATUS_LIST.KEY_NAME_NOT_USAGE_GUIDE] = this.initialValue[KEY_NAME_STATUS_LIST.KEY_NAME_NOT_USAGE_GUIDE];
@@ -395,8 +400,14 @@
         this.initialValue = deepCopy(this.editRecord);
       }
       /*add FNSI-改修内容4214 任 start*/
-      if($("#phone-show-status-list").css("display") === "inline"){
-        document.getElementById("phone-show-status-list").innerText =  document.getElementById("phone-show-status-list").innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+      if(isScopedElementDisplayInline("phone-show-status-list", this.$el || this)){
+        const phoneShowElement = getScopedElementById("phone-show-status-list", this.$el || this);
+
+        if (phoneShowElement) {
+
+          phoneShowElement.innerText = phoneShowElement.innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+
+        }
       }
       /*add FNSI-改修内容4214 任 end*/
       // 共通ローダー表示終了
@@ -404,7 +415,6 @@
       this.isExpanded = this.defaultExpanded;
     });
   },
-  mounted() {}
 };
 </script>
 

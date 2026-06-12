@@ -18,11 +18,11 @@ public interface MstAlarmNotificationService {
     /**
      * 送信先アドレス
      */
-    private String EmailAddress;
+    private String emailAddress;
     /**
      * 送信先名
      */
-    private String EmailName;
+    private String emailName;
   }
 
   /**

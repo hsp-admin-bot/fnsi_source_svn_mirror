@@ -1,0 +1,2 @@
+rootProject.name = 'fnsi-cloud-convert-server'
+include 'docdb4-helper'

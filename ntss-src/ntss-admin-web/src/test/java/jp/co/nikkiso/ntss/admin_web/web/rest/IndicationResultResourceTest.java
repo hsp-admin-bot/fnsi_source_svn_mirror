@@ -22,16 +22,16 @@ import java.util.TimeZone;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.service.indicationResult.IndicationResultService;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
@@ -55,7 +55,7 @@ public class IndicationResultResourceTest extends AbstractResourceTest {
   /**
    * 予実リストService.
    */
-  @MockBean
+  @MockitoBean
   private IndicationResultService indicationResultService;
 
   private IndicationResult getIndicationResult(Integer indRstType, String treatmentDate) {
@@ -98,7 +98,7 @@ public class IndicationResultResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/indication-result/{pat_id}/list", patId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .param("treat_date_from", treatDateFrom)
       .param("treat_date_to", treatDateTo)
       .with(csrf()));
@@ -149,7 +149,7 @@ public class IndicationResultResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/indication-result/{pat_id}/list", patId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .param("treat_date_from", treatDateFrom)
       .param("treat_date_to", treatDateTo)
       .with(csrf()));

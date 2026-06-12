@@ -1,5 +1,4 @@
-import { deepCopy } from "@/functions/common/CommonFunctions";
-import { propertyOf } from "underscore";
+import { deepCopy, propertyOf } from "@/functions/common/CommonFunctions";
 
 const initState = {
   /**
@@ -320,8 +319,16 @@ const initState = {
   //add 8204 安寧 end
   //add FNSI-指示値・装置設定・装置プログラムの相関チェック 安寧 start
   antiCoagulantAmountDisable: false,
-  antiCoagulantFlowRateDisable: false
+  antiCoagulantFlowRateDisable: false,
   //add FNSI-指示値・装置設定・装置プログラムの相関チェック 安寧 end
+  // add #10937 20260428 Ji start
+  needleInitMap: {
+    A: null,
+    V: null,
+    SN:null,
+  },
+  pressDwSwitchButton: false,
+  // add #10937 20260428 Ji end
 };
 
 export default {
@@ -935,8 +942,16 @@ export default {
      */
     getIhdfLiquidSpeed(state) {
       return state.ihdfLiquidSpeed;
-    }
+    },
     // add FNSI-【1006】最新の改修対象一覧の412対応 韓 end
+    // add #10937 20260428 Ji start
+    getNeedleInit(state) {
+      return state.needleInitMap;
+    },
+    getPressDwSwitchButton(state) {
+      return state.pressDwSwitchButton;
+    },
+    // add #10937 20260428 Ji end
   },
 
   mutations: {
@@ -1536,7 +1551,18 @@ export default {
         // add #8816「OHDF・OHFの補液計算優先項目による補液量設定と補液速度が不正」について、対応する。 dengshen end
         state[key] = init[key];
       }
-    }
+    },
+    // add #10937 20260428 Ji start
+    setNeedleInit(state, { type, value }) {
+      state.needleInitMap = {
+        ...state.needleInitMap,
+        [type]: value
+      };
+    },
+    setPressDwSwitchButton(state, data) {
+      state.pressDwSwitchButton = data;
+    },
+    // add #10937 20260428 Ji end
   },
 
   actions: {

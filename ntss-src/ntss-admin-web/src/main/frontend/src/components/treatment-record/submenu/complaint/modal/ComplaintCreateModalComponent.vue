@@ -1,6 +1,7 @@
 <template>
   <modal-base @onClose="onClickClose">
-    <div slot="body" class="main-content">
+    <template #body>
+      <div class="main-content">
       <div class="treatment-record-accordion treatment-record-modal height-def">
         <div id="comp-and-treat-tbl-wrapper">
           <div
@@ -14,6 +15,7 @@
                 labelName="日時"
                 :required="true"
                 v-model="occurDateTime"
+                :initValue="occurDateTimeInit"
                 :disabled="isDisabled"
                 @handleCurrentDateChange="handleCurrentDateChange"
                 @handleCurrentTimeChange="handleCurrentTimeChange"
@@ -39,8 +41,8 @@
                   </tr>
                 </thead>
                 <tbody :class="themeBlack">
-                  <template v-for="(data, index) in compAndTreat">
-                    <tr class="ntss-list-body-tr" :key="index + '-1'">
+                  <template v-for="(data, index) in compAndTreat" :key="index + '-1'">
+                    <tr class="ntss-list-body-tr">
                       <td
                         style="width: 1em"
                         class="ntss-list-body-td border-per-page-bottom"
@@ -103,7 +105,7 @@
                           style="cursor: pointer"
                           width="24"
                           height="24"
-                          @click="showMedicine(data.compTreatment, arguments[0])"
+                          @click="showMedicine(data.compTreatment, $event)"
                         />
                         <img
                           v-if="data.compTreatment !== null && data.compTreatment.treatMedicine.cd !== null && checkExistContraindications(data.compTreatment.treatMedicine.name)"
@@ -111,7 +113,7 @@
                           style="cursor: pointer"
                           width="24"
                           height="24"
-                          @click="showMedicine(data.compTreatment, arguments[0])"
+                          @click="showMedicine(data.compTreatment, $event)"
                         />
                       </td>
                     </tr>
@@ -151,8 +153,8 @@
                   </tr>
                 </thead>
                 <tbody :class="themeBlack">
-                  <template v-for="(item, index) in mstUsers">
-                    <tr :key="index + '-1'" class="ntss-list-body-tr" :id="'comp-treat-staff-' + item.userId" v-if="hasMatchedStaffName(item)">
+                  <template v-for="(item, index) in mstUsers" :key="index + '-1'">
+                    <tr class="ntss-list-body-tr" :id="'comp-treat-staff-' + item.userId" v-if="hasMatchedStaffName(item)">
                       <td td class="ntss-list-body-td">
                         <div style="display: flex; align-items: center;">
                           <div>
@@ -226,6 +228,7 @@
                     :step="selectedTreatMedicine.step"
                     :inputMin="0"
                     :inputMax="99999"
+                    :medicine-type="selectedTreatMedicine.medicineType"
                     :readMasterData="fetchMedicineAll"
                     :masterDefine="treatMedicineMasterDef"
                     :type-no="1"
@@ -245,13 +248,16 @@
               </tr>
               <tr class="ntss-list-body-tr">
                 <td class="ntss-list-body-td selector-td">
-                  <com-master-selector
+                  <common-master-selector
                     class="procedure-selector"
-                    :showClassFilter="false"
-                    :readMasterData="fetchProcedureAll"
-                    :masterDefine="procedureMasterDef"
-                    v-model="selectedTreatProcedureModel"
-                    :isDisabled="(compTreatmentSelector.model.cd || compTreatmentSelector.model.name) ? false : true"
+                    :masterType="MasterType.PROCEDURE_TREATMENT_RECORD"
+                    :facilityCd="facilityCd"
+                    :initItem="procedurePickerItem()"
+                    :editItem="procedurePickerItem()"
+                    :selectedItemClass="'selector-input'"
+                    :btnClass="'btn3-normal'"
+                    :btnDisabled="(compTreatmentSelector.model.cd || compTreatmentSelector.model.name) ? false : true"
+                    @popover-return="onProcedureReturn"
                   />
                 </td>
               </tr>
@@ -277,8 +283,10 @@
         :popoverTreatment="compTreatmentMedicine.treatMedicine"
         @popover-close="onCloseMedicinePopover"
       />
-    </div>
-    <div slot="footer" class="flex-container">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button denial-btn btn2-cancel" @click="onClickClose">キャンセル</v-ons-button>
@@ -289,16 +297,18 @@
         </v-ons-button>
       </div>
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import SubModalBase from "@/components/modals/SubModalBase";
 import MultiSubModalMixin from "@/components/modals/MultiSubModalMixin";
 import CommonDateTimeComponent from "@/components/treatment-record/submenu/common/CommonDateTimeComponent";
-import CommonMasterSelectorComponent from "@/components/common/master-selector/CommonMasterSelectorComponent";
+import CommonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 import CommonMasterAndNumberInputComponent from "@/components/treatment-record/submenu/common/CommonMasterAndNumberInputComponent";
 import {
   treatMedicine,
@@ -316,11 +326,11 @@ import ComplaintComponentMixin from "@/components/treatment-record/submenu/compl
 import ComplaintSelectorComponent from "@/components/treatment-record/submenu/complaint/ComplaintSelectorComponent";
 import TreatmentSelectorComponent from "@/components/treatment-record/submenu/complaint/TreatmentSelectorComponent";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
-import moment from "moment";
-import BigNumber from "bignumber.js";
+import dayjs from "@/compat/date/dayjs";
+import BigNumber from "@/compat/number/bignumber";
 import { CODES } from "@/constants/TreatmentRecord";
 import TreatmentMedicineComponent from "@/components/treatment-record/submenu/complaint/TreatmentMedicineComponent";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import CommonTextArea from "@/components/common/CommonTextArea";
 // add FNSI-日付書式の修正 徐 start
 import { dateFormat, DATE_TIME_FORMAT } from "@/functions/common/DateTimeUtils";
@@ -328,13 +338,14 @@ import { dateFormat, DATE_TIME_FORMAT } from "@/functions/common/DateTimeUtils";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getScopedElementById, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 export default {
   mixins: [DiscardConfirmationMixin, MultiSubModalMixin, ComplaintComponentMixin],
   components: {
     "modal-base": SubModalBase,
     "com-date-time-input": CommonDateTimeComponent,
-    "com-master-selector": CommonMasterSelectorComponent,
+    "common-master-selector": CommonMasterSelector,
     "com-master-number-input": CommonMasterAndNumberInputComponent,
     "complaint-selector": ComplaintSelectorComponent,
     "treatment-selector": TreatmentSelectorComponent,
@@ -343,6 +354,7 @@ export default {
   },
   data() {
     return {
+      MasterType,
       occurDateTime: undefined,
       occurDateTimeInit: undefined,
       compAndTreat: [],
@@ -441,6 +453,7 @@ export default {
     // 呼出元からのパラメータ取得
     ...mapGetters("multi-sub-modal", ["getInitValues"]),
     ...mapGetters("user", ["getFacilityCd"]),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     ...mapGetters("mst-user", ["getMstJobList"]),
     ...mapGetters("account-edit", ["getTheme"]),
     //add FNSI修正内容 愁訴処置の登録および表示修正 房 start
@@ -458,9 +471,7 @@ export default {
           this.comparisonModel.compTreatment !== JSON.stringify(this.compTreatmentSelector.model) ||
           this.comparisonModel.procedure !== JSON.stringify(this.selectedTreatProcedureModel) ||
           this.compAndTreat.some(
-            cat => cat.complaintSelected || cat.compTreatmentSelected
-          )
-        );
+            cat => cat.complaintSelected || cat.compTreatmentSelected));
       }
       return (
         // add FNSI-日付書式の修正 徐 start
@@ -471,8 +482,7 @@ export default {
         !this.selectedTreatProcedureModel.isEmpty() ||
         !this.selectedTreatMedicine.model.isEmpty() ||
         this.compAndTreat.some(
-          cat => cat.complaintSelected || cat.compTreatmentSelected
-        ) ||
+          cat => cat.complaintSelected || cat.compTreatmentSelected) ||
         !this.complaintSelector.model.isEmpty() ||
         !this.compTreatmentSelector.model.isEmpty()
       );
@@ -489,14 +499,10 @@ export default {
             // 処置欄が入力されている場合でかつ、処置薬剤、手技が表示した時の内容と異なる場合のみtrueとする.
             (!this.compTreatmentSelector.model.isEmpty() &&
               (this.comparisonModel.procedure !== JSON.stringify(this.selectedTreatProcedureModel) ||
-              this.comparisonModel.treatmentMedicine !== JSON.stringify(this.selectedTreatMedicine))
-            ) ||
+              this.comparisonModel.treatmentMedicine !== JSON.stringify(this.selectedTreatMedicine))) ||
             // 愁訴、処置の選択
             this.compAndTreat.some(
-              cat => cat.complaintSelected || cat.compTreatmentSelected
-            )
-          )
-        );
+              cat => cat.complaintSelected || cat.compTreatmentSelected)));
       }
       // add FNSI-日付書式の修正 徐 start
       // return (
@@ -512,8 +518,7 @@ export default {
         !this.selectedTreatProcedureModel.isEmpty() ||
         !this.selectedTreatMedicine.model.isEmpty() ||
         this.compAndTreat.some(
-          cat => cat.complaintSelected || cat.compTreatmentSelected
-        ) ||
+          cat => cat.complaintSelected || cat.compTreatmentSelected) ||
         !this.complaintSelector.model.isEmpty() ||
         !this.compTreatmentSelector.model.isEmpty()
       );
@@ -530,6 +535,16 @@ export default {
     }
   },
   methods: {
+    procedurePickerItem() {
+      return {
+        value: this.selectedTreatProcedureModel?.cd ?? null,
+        text: this.selectedTreatProcedureModel?.name ?? ""
+      };
+    },
+    onProcedureReturn(data) {
+      this.selectedTreatProcedureModel.cd = data?.value ?? null;
+      this.selectedTreatProcedureModel.name = data?.text ?? "";
+    },
     handleInputTreatMedicine (master) {
       if (!master.cd) {
         this.selectedTreatMedicine.model = new MasterAndNumber();
@@ -564,38 +579,33 @@ export default {
         return;
       }
 
-      try {
-        // 基になるデータ オブジェクトを構築する
-        const baseData = {
-          occurDate: this.occurDateTime,
-          checkFlag: "1",
-          isEditable: true,
-          isSpecial: false,
-          isDummy: false,
-          ctlNo: null
-        };
+      // 基になるデータ オブジェクトを構築する
+      const baseData = {
+        occurDate: this.occurDateTime,
+        checkFlag: "1",
+        isEditable: true,
+        isSpecial: false,
+        isDummy: false,
+        ctlNo: null
+      };
 
-        // 選択したディスポーザーのリストを取得します
-        const selectedStaffList = this.getSelectedStaffList(baseData);
-        // 選択した対話結果の一覧を取得します
-        let selectedTreatments = this.getSelectedTreatments(baseData, selectedStaffList);
-        // 選択した愁訴のリストを取得する
-        let selectedComplaints = this.getSelectedComplaints(baseData);
-        // データアライメントの処理
-        const { complaints } = this.alignData(selectedComplaints, selectedTreatments, selectedStaffList, baseData);
-        // ハンドル編集モード
-        if (!this.isNew) {
-          EventBus.$emit("applayCompTreatCreateModal", complaints);
-          this.hideModal();
-          return;
-        }
-
-        // データを更新して保存する
-        await this.updateAndSave(complaints);
-
-      } catch (error) {
-        throw error;
+      // 選択したディスポーザーのリストを取得します
+      const selectedStaffList = this.getSelectedStaffList(baseData);
+      // 選択した対話結果の一覧を取得します
+      let selectedTreatments = this.getSelectedTreatments(baseData, selectedStaffList);
+      // 選択した愁訴のリストを取得する
+      let selectedComplaints = this.getSelectedComplaints(baseData);
+      // データアライメントの処理
+      const { complaints } = this.alignData(selectedComplaints, selectedTreatments, selectedStaffList, baseData);
+      // ハンドル編集モード
+      if (!this.isNew) {
+        EventBus.$emit("applayCompTreatCreateModal", complaints);
+        this.hideModal();
+        return;
       }
+
+      // データを更新して保存する
+      await this.updateAndSave(complaints);
     },
     addCompTreatmentSelector(baseData) {
       let customTreatment = null;
@@ -736,6 +746,7 @@ export default {
     createCustomTreatment(baseData) {
       const model = this.compTreatmentSelector.model;
       const medicine = this.selectedTreatMedicine;
+      const step = medicine.step === undefined ? 1 : medicine.step;
       return Treatment.of({
         ctlNo: null,
         occurDate: baseData.occurDate,
@@ -743,7 +754,7 @@ export default {
         treatCd: model.cd,
         treatName: model.name,
         amount: medicine.model.value,
-        decPoint: new BigNumber(medicine.step).dp(),
+        decPoint: new BigNumber(step).dp(),
         unit: medicine.unit,
         procedureCd: this.selectedTreatProcedureModel.cd,
         procedureName: this.selectedTreatProcedureModel.name,
@@ -871,7 +882,7 @@ export default {
           item.amount,
           item.procedure.cd
           // FNSI-修正 #5343 xugj add end
-        );
+          );
         if(item.treatMedicine) {
           this.selectedTreatMedicine.medicineType = item.treatMedicine.medicineType;
           this.selectedTreatMedicine.treatClass = item.treatClass;
@@ -1029,8 +1040,12 @@ export default {
       // 新規登録フラグを取得.
       const isNewFlg = this.getInitValues.isNew;
       // 愁訴と処置を取得
-      const getComplaintResponse = await this.getMstComplaint();
-      const getCompTreatmentResponse = await this.getMstCompTreatment();
+      const getComplaintResponse = await this.getMstComplaint({
+        selectedPatId: this.selectedPatId
+      });
+      const getCompTreatmentResponse = await this.getMstCompTreatment({
+        selectedPatId: this.selectedPatId
+      });
 
       this.tempCtlNo = this.getTempCtlNo;
 
@@ -1048,9 +1063,7 @@ export default {
               d.treat_class,
               d.treat_medicine_cd,
               d.amount,
-              d.procedure_cd
-            )
-        );
+              d.procedure_cd));
 
       // 愁訴と処置のリストを生成
       this.compAndTreat = [
@@ -1074,11 +1087,11 @@ export default {
         .map(e => e.occurDate);
       // 透析開始日時が存在したら、透析日＋現在時刻を画面の日時の初期値とする
       if (isNewFlg && occurDates.length >= 1) {
-        const now = moment();
-        const startDateTime = moment(occurDates[0]);
+        const now = dayjs();
+        const startDateTime = dayjs(occurDates[0]);
         // mod FNSI-6492 ljx start
         //透析終了日時(存在しない場合、undefinedとする)
-        const endDateTime = occurDates[1]?moment(occurDates[1]):undefined;
+        const endDateTime = occurDates[1]?dayjs(occurDates[1]):undefined;
         //初期化表示日時
         //rst_dialysis_stateの値が1～5の場合、システム日時
         let occurDateTime= now;
@@ -1100,8 +1113,7 @@ export default {
           startDateTime.month(),
           startDateTime.date(),
           now.hour(),
-          now.minute()
-        );*/
+          now.minute());*/
         // mod FNSI-6492 ljx end
         // add FNSI-日付書式の修正 徐 start
         // this.occurDateTimeInit = this.occurDateTime;
@@ -1128,7 +1140,7 @@ export default {
     async setEditCompTreatment() {
       // 愁訴処置日時
       if (this.getEditOccurDate()) {
-        this.occurDateTime = moment(this.getEditOccurDate()).toDate();
+        this.occurDateTime = dayjs(this.getEditOccurDate()).toDate();
       }
       // 編集対象の愁訴処置
       if (this.getEditCompAndTreat()) {
@@ -1208,9 +1220,9 @@ export default {
         unit: compTreatment.treatMedicine.unit,
         procedure: compTreatment.procedure.name
       };
-      this.compTreatmentMedicine.visible = true;
-      this.compTreatmentMedicine.target = event.target;
+      this.compTreatmentMedicine.target = event?.target ?? event;
       this.compTreatmentMedicine.treatMedicine = treatMedicine;
+      this.compTreatmentMedicine.visible = true;
     },
     /**
      * ポップオーバクローズ処理
@@ -1282,7 +1294,7 @@ export default {
     }
     // add 5519 愁訴処置で処置がないのに処置薬剤の保存操作が出来てしまう 房 end
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     // #9401 治療記録で愁訴処置を追加するとTYPEエラー発生 linjunfeng start
     // Object.assign(this.$data, this.$options.data());
@@ -1294,18 +1306,18 @@ export default {
 
     setTimeout(() => {
       // 処置者のスクロール位置を変更
-      const target = document.querySelector('#new-comp-treat-staff-area-list input[type="checkbox"]:checked');
+      const target = queryScopedSelector('#new-comp-treat-staff-area-list input[type="checkbox"]:checked', this.$el || this);
       // 指定した要素が取得出来ない場合
       if (!target) {
         return;
       }
       // 処置者テーブルの要素を取得
-      let scrollArea = document.getElementById("new-comp-treat-staff-area-list");
+      let scrollArea = getScopedElementById("new-comp-treat-staff-area-list", this.$el || this);
       if (!scrollArea) {
         return;
       }
       // 処置者テーブルのヘッダ要素を取得
-      const headerElement = document.getElementById("new-comp-treat-staff-header");
+      const headerElement = getScopedElementById("new-comp-treat-staff-header", this.$el || this);
       if (!headerElement) {
         // スクロール位置を変更
         scrollArea.scrollTop = target.offsetTop;
@@ -1340,16 +1352,19 @@ export default {
 </script>
 
 <style scoped>
+ons-checkbox.checkbox {
+  margin-top: 0;
+}
 .treatment-record-modal {
   margin: 0 4px;
   min-width: 46em;
   display: flex;
   flex-flow: column;
 }
-.treatment-record-modal >>> ons-col.title {
+.treatment-record-modal :deep(ons-col.title) {
   flex: 0 0 6em;
 }
-.treatment-record-modal >>> ons-col.unit {
+.treatment-record-modal :deep(ons-col.unit) {
   flex: 0 0 3em;
 }
 label {
@@ -1358,7 +1373,7 @@ label {
 th {
   z-index: 1;
 }
-div >>> textarea {
+div :deep(textarea) {
   width: 96%;
   height: 4em;
   font-size: 1em;
@@ -1381,7 +1396,7 @@ div >>> textarea {
   width: 100%;
   display: flex;
 }
-.ntss-style-date-time >>> .title {
+.ntss-style-date-time :deep(.title) {
   min-width: unset;
 }
 .scroll-table {
@@ -1405,41 +1420,44 @@ div >>> textarea {
   padding: 2px 4px;
   vertical-align: middle;
 }
-.selector-td >>> ons-row {
+.selector-td :deep(ons-row) {
   height: inherit;
   /* width: 90%; */
 }
-.selector-td >>> .text-input,
-.selector-td >>> label {
+.selector-td :deep(label) {
   font-size: 1em;
 }
-.selector-td >>> ons-input {
+
+.selector-td :deep(.text-input) {
+  font-size: 1em;
+}
+.selector-td :deep(ons-input) {
   width: 100%;
 }
-.selector-td >>> ons-col.num-value {
+.selector-td :deep(ons-col.num-value) {
   flex: 0 0 3em;
 }
-.selector-td >>> ons-col.unit {
+.selector-td :deep(ons-col.unit) {
   padding-left: 4px;
 }
-#personal-user-selector-wrapper >>> ons-col.select-button,
-.selector-td >>> ons-col.select-button {
+#personal-user-selector-wrapper :deep(ons-col.select-button),
+.selector-td :deep(ons-col.select-button) {
   flex: 0 0 3em;
   align-items: center;
 }
-.selector-td >>> .select-btn {
+.selector-td :deep(.select-btn) {
   font-size: 1em;
 }
-.treat-medicine-selector >>> ons-col.title {
+.treat-medicine-selector :deep(ons-col.title) {
   flex: 1;
 }
-.procedure-selector >>> ons-col.title {
+.procedure-selector :deep(ons-col.title) {
   display: none;
 }
 .treat-staff-selector {
   width: 28em;
 }
-.treat-staff-selector >>> ons-col.select-button {
+.treat-staff-selector :deep(ons-col.select-button) {
   font-size: 1.5em;
 }
 .border-per-page-bottom {
@@ -1487,25 +1505,52 @@ td.medicine-bottle {
 td.treat-name {
   border-right: none;
 }
-div >>> .sub-modal-container,
-div >>> .sub-modal-search,
-div >>> .sub-modal-body,
-div >>> .sub-modal-footer,
-div >>> .sub-modal-footer .bottom-bar {
+div :deep(.sub-modal-container),
+div :deep(.sub-modal-search),
+div :deep(.sub-modal-body),
+div :deep(.sub-modal-footer),
+div :deep(.sub-modal-footer .bottom-bar) {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }
 
-.procedure-selector >>> ons-col.text-value {
+.procedure-selector :deep(ons-col.text-value) {
   color: var(--ntss-base-color);
 }
 
-div >>> .com-textarea{
+.procedure-selector :deep(.custom-div-show-selected-item) {
+  border: none !important;
+  border-radius: 0 !important;
+  border-style: none !important;
+  background-color: transparent !important;
+  padding: 0 !important;
+  min-height: auto !important;
+  color: inherit;
+  flex: 1 1 auto;
+}
+
+.procedure-selector :deep(.custom-div-show-selected-item-edited) {
+  border: none !important;
+  outline: 0 !important;
+}
+
+.procedure-selector :deep(ons-col) {
+  align-items: center;
+}
+
+.procedure-selector :deep(.common-style-select-button) {
+  margin-left: auto;
+  width: 5em;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+div :deep(.com-textarea){
   width: 98%;
   box-sizing: border-box;
 }
 @media print {
-  .main-content >>> div {
+  .main-content :deep(div){
     height: auto !important;
   }
 }

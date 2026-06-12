@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.strategy.ordMainTreatment;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
@@ -45,20 +45,20 @@ public class HFordMainTreatment implements OrdMainTreatmentStrategy, Initializin
       ObjectMapper mapper = new ObjectMapper();
       ObjectNode jsonNodes = mapper.readValue(ord.getIndCondInfoForMerge()==null?"{}":ord.getIndCondInfoForMerge(), ObjectNode.class);
       ObjectNode root = mapper.createObjectNode();
-//      jsonNodes.put(IND_COND_INFO_15, root);
-//      jsonNodes.put(IND_COND_INFO_19, root);
+//      jsonNodes.set(IND_COND_INFO_15, root);
+//      jsonNodes.set(IND_COND_INFO_19, root);
       // HD/ECUM
       if ("0".equals(ord.getOldDeviceMode()) || "1".equals(ord.getOldDeviceMode())) {
-        jsonNodes.put(IND_COND_INFO_19,mapper.readValue("{\"value\":null}", JsonNode.class));
-        jsonNodes.put(IND_COND_INFO_20,mapper.readValue("{\"value\":\"0.0\"}", JsonNode.class));
-        jsonNodes.put(IND_COND_INFO_21,mapper.readValue("{\"value\":\"1\"}",JsonNode.class));
-        jsonNodes.put(IND_COND_INFO_22,mapper.readValue("{\"value\":\"0\"}",JsonNode.class));
-        jsonNodes.put(IND_COND_INFO_23,mapper.readValue("{\"value\":\"36.0\"}",JsonNode.class));
-        jsonNodes.put(IND_COND_INFO_24,mapper.readValue("{\"value\":\"0.00\"}",JsonNode.class));
+        jsonNodes.set(IND_COND_INFO_19,mapper.readValue("{\"value\":null}", JsonNode.class));
+        jsonNodes.set(IND_COND_INFO_20,mapper.readValue("{\"value\":\"0.0\"}", JsonNode.class));
+        jsonNodes.set(IND_COND_INFO_21,mapper.readValue("{\"value\":\"1\"}",JsonNode.class));
+        jsonNodes.set(IND_COND_INFO_22,mapper.readValue("{\"value\":\"0\"}",JsonNode.class));
+        jsonNodes.set(IND_COND_INFO_23,mapper.readValue("{\"value\":\"36.0\"}",JsonNode.class));
+        jsonNodes.set(IND_COND_INFO_24,mapper.readValue("{\"value\":\"0.00\"}",JsonNode.class));
       }
       // OHDF/OHF/I_HDF
       if ("7".equals(ord.getOldDeviceMode()) || "8".equals(ord.getOldDeviceMode()) || "10".equals(ord.getOldDeviceMode())) {
-        jsonNodes.put(IND_COND_INFO_19,root.putNull("value"));
+        jsonNodes.set(IND_COND_INFO_19,root.putNull("value"));
       }
       ord.setIndCondInfoForMerge(mapper.writeValueAsString(jsonNodes));
       ordMainDao.updateByTreatmentCdOnlyForHF(treatmentCd,ord,ordNoList,indUserId,userId);

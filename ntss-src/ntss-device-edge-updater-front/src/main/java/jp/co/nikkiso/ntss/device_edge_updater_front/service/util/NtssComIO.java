@@ -92,7 +92,7 @@ public class NtssComIO {
       
       // リクエスト処理
       ResponseEntity<HttpStatus> response = rt.exchange(request, HttpStatus.class);
-      HttpStatus status = response.getStatusCode();
+      HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
       if (HttpStatus.OK != status)
       {
         eventLogMessage.setLogMessage("DE通知API：RestAPI側で接続失敗 " + status);

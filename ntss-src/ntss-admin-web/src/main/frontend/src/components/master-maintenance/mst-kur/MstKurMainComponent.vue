@@ -14,14 +14,13 @@
             class="kur-record-row-width"
           >
             <div class="start-time">
-              <span v-if="index === 0" class="k-textbox kur-font-size kur-time-input-width">
+              <span v-if="index === 0" class="kur-time-fixed-display kur-font-size">
                 {{ formatedKurTime(editKur.kurStartTime.editValue) }}
               </span>
               <custom-input-time
                 v-else
                 :ref="`kurStartTime${index}`"
-                class="k-textbox kur-font-size kur-time-input-width"
-                style="border-style: none;"
+                class="k-textbox kur-font-size kur-time-input-width kur-time-border"
                 :value="editKur.kurStartTime"
                 :is-required="true"
                 :default-time="formatedKurTime(editKur.kurStartTime.initValue)"
@@ -43,7 +42,7 @@
               </label>
             </div>
             <div class="standard-start-time">
-              <div style="white-space: nowrap;">
+              <div style="display: inline-flex; align-items: center; white-space: nowrap;">
                 <!-- mod redmine 6359 指示編集権限を持たない利用者でクールの追加削除ができる。宋qy start -->
                 <custom-input
                   :ref="`kurName${index}`"
@@ -55,8 +54,7 @@
                 />
                 <custom-input-time
                   :ref="`kurStandardStartTime${index}`"
-                  class="k-textbox kur-font-size kur-time-input-width"
-                  style="border-style: none;"
+                  class="k-textbox kur-font-size kur-time-input-width kur-time-border"
                   :value="editKur.kurStandardStartTime"
                   :is-required="true"
                   :default-time="formatedKurTime(editKur.kurStartTime.editValue)"
@@ -94,7 +92,7 @@
           </div>
 
           <div v-if="editKurList.length !== 0" class="end-time" style="min-width: 348px;">
-            <span class="k-textbox kur-font-size kur-time-input-width">
+            <span class="kur-time-fixed-display kur-font-size">
               24:00
             </span>
             <!-- mod redmine 6359 指示編集権限を持たない利用者でクールの追加削除ができる。宋qy start -->
@@ -139,53 +137,34 @@
     </div>
 
     <message-dialog
-      :visible.sync="isNotValueMessage"
+      v-model:visible="isNotValueMessage"
       :message-cd="20010002"
       :string-params="['クール名・時刻']"
       :title="'必須入力項目チェック'"
       type="1"
     />
-<!-- del #9799 クールマスタ変更に伴うスケジュール処理が不正 zhaoqi 20231122 start -->
-<!--    <message-dialog-->
-<!--      :visible.sync="isDeleteKurMessage"-->
-<!--      :message-cd="10010002"-->
-<!--      type="2"-->
-<!--      @confirm="confirmDeleteKur"-->
-<!--    />-->
-<!--    <message-dialog-->
-<!--        :visible.sync="isDeleteKurMessage"-->
-<!--        :message-cd="10010002"-->
-<!--        type="2"-->
-<!--    />-->
-<!--    <message-dialog-->
-<!--      :visible.sync="isChangeKurNameMessage"-->
-<!--      :message-cd="10010003"-->
-<!--      type="2"-->
-<!--      @confirm="confirmChangeKurName"-->
-<!--    />-->
-<!-- del #9799 クールマスタ変更に伴うスケジュール処理が不正 zhaoqi 20231122 end -->
     <message-dialog
-      :visible.sync="rstDialysisState"
+      v-model:visible="rstDialysisState"
       :message-cd="23030002"
       :title="'クールの変更は行えません。'"
       type="1"
     />
     <!-- mod 7311 新規に作った治療予定の存在しない施設でクールマスタを保存するとフリーズ 関俊楠 start -->
     <!-- <message-dialog
-      :visible.sync="ordMainDataChangeFlag"
+      v-model:visible="ordMainDataChangeFlag"
       :message-cd="23030003"
       type="1"
       @confirm="exportCsv"
     /> -->
     <message-dialog
-      :visible.sync="ordMainDataChangeFlag"
+      v-model:visible="ordMainDataChangeFlag"
       :message-cd="23030003"
       :title="'クールマスタ変更完了'"
       type="1"
     />
     <!-- mod 7311 新規に作った治療予定の存在しない施設でクールマスタを保存するとフリーズ 関俊楠 end -->
     <message-dialog
-      :visible.sync="executionConfirmation"
+      v-model:visible="executionConfirmation"
       :message-cd="23030004"
       :title="'実行確認'"
       type="2"
@@ -200,9 +179,9 @@
 </template>
 
 <script>
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 //mod #9799 クールマスタ変更に伴うスケジュール処理が不正 zhaoqi 20231122 start
-import {mapActions, mapGetters, mapMutations} from "vuex";
+import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
 //mod #9799 クールマスタ変更に伴うスケジュール処理が不正 zhaoqi 20231122 end
 import { ApiHelper } from "@/apis/AxiosHelper";
 import {
@@ -212,9 +191,9 @@ import {
 import customInput from "@/components/common/custom-form-tags/MstKurCustomInput";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import customInputTime from "@/components/common/custom-form-tags/CustomInputTime";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import {sendRequestGetMstFacilitySettingData as getMstFacitilySettingData} from "@/apis/mst-facility-setting-maintenance";
-import encoding from "encoding-japanese";
+import encoding from "@/compat/encoding/encoding-japanese";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
@@ -226,6 +205,8 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 
 //add #9799 クールマスタ変更に伴うスケジュール処理が不正 zhaoqi 20231122 start
 import indUserSetting from "@/components/pat-info/ind-user-setting/IndUserSettingModal.vue";
+import { getFooterMenuElement, getGridFooterElement, getHeaderElements, getScopedAlertDialogs, triggerScopedDownload } from "@/functions/common/LayoutMeasureHelper";
+
 //add #9799 クールマスタ変更に伴うスケジュール処理が不正 zhaoqi 20231122 end
 
 const uriKur = "/mstInfo/mstKur";
@@ -482,7 +463,7 @@ export default {
 
   async created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     this.setLoadingScreenVisible(true);
 
     let doctorId = await sendRequestGetMstPersonalUserData(this.getFacilitySwitch);
@@ -490,15 +471,13 @@ export default {
 
     // ベッド情報
     await ApiHelper.get(
-      `/master_maintenance/${'mst_bed'}/data/${this.getFacilitySwitch}`
-    ).then(response => {
+      `/master_maintenance/${'mst_bed'}/data/${this.getFacilitySwitch}`).then(response => {
       this.bedList = response.data.localDataSource.data
     });
 
     // 患者情報
     await ApiHelper.get(
-      `/mainData/getPatName/${this.getFacilitySwitch}`
-    ).then(response => {
+      `/mainData/getPatName/${this.getFacilitySwitch}`).then(response => {
       this.patDataList = response.data;
     });
 
@@ -552,9 +531,8 @@ export default {
     }
     //add #9799 クールマスタ変更に伴うスケジュール処理が不正 zhaoqi 20231122 end
 
-    EventBus.$on("doctorData", (data) => {
-      this.kurList = data;
-    });
+    EventBus.$off("doctorData", this.onDoctorData);
+    EventBus.$on("doctorData", this.onDoctorData);
 
     this.setEditKurList(this.kurList)
 
@@ -569,8 +547,8 @@ export default {
       this.calculateGridHeight();
     });
   },
-  beforeDestroy() {
-    EventBus.$off("doctorData");
+  beforeUnmount() {
+    EventBus.$off("doctorData", this.onDoctorData);
     EventBus.$off("refresh", this.refresh);
   },
 
@@ -581,6 +559,9 @@ export default {
     //add #9799 クールマスタ変更に伴うスケジュール処理が不正 zhaoqi 20231122 start
     ...mapMutations("pat-info", ["setSelectedPat", "setIsPatInfoVisible", "setIndUserList", "setIsIndUserSetting", "setIndUserId", "setIsPatInfoChaned"]),
     //add #9799 クールマスタ変更に伴うスケジュール処理が不正 zhaoqi 20231122 end
+    onDoctorData(data) {
+      this.kurList = data;
+    },
     async loadGridData() {
       // DBからマスタクール取得
       const response = await ApiHelper.get(uriKur, {
@@ -611,8 +592,8 @@ export default {
 
     // パンくずリストをクリックされた場合に呼び出される関数
     refresh() {
-      if (this.selfScreenName === this.$router.currentRoute.name
-          && document.getElementsByTagName("ons-alert-dialog").length === 6) {
+      if (this.selfScreenName === this.$route.name
+          && getScopedAlertDialogs(this.$el || this).length === 6) {
         // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
         if (this.isChanged) {
           this.$ons.notification.confirm({
@@ -830,9 +811,8 @@ export default {
       }
 
       await ApiHelper.post(
-        "/mainData/updateIndSchedule/",
-        sendObj
-      ).catch(error => {
+        "/mainData/updateIndSchedule",
+        sendObj).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
         getErrorMessage('MstKurMainComponent.vue', 'submitOrdData', error);
         //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
@@ -864,10 +844,7 @@ export default {
       const uint8s = new Uint8Array(sjisCodes);
 
       const blob = new Blob([uint8s], { type: 'text/csv' });
-      let link = document.createElement("a");
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `クールマスタ変更.csv`;
-      link.click();
+      triggerScopedDownload({ blob, filename: `クールマスタ変更.csv`, root: this.$el });
 
       this.exportCsvData = [];
     },
@@ -990,7 +967,8 @@ export default {
     //         // 指示：治療開始時刻
     //         let reatTime = parseInt(ordItem.indTreatStartTime);
     //
-    //         if (reatTime < start || reatTime >= end){
+    //         if (reatTime < start || reatTime >= end
+    //         ) {
     //           let fill = "";
     //           if (standard < 1000) {
     //             fill = "0";
@@ -1150,16 +1128,14 @@ export default {
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       const wh = this.windowHeight;
-      const hh = Array.prototype.slice
-        .call(document.getElementsByClassName("header"))
-        .pop().clientHeight;
-      const fmh =
-        (this.isDispMenu === 1
-          ? document.getElementById("footer-menu").clientHeight
-          : 0) + 5;
+      const headers = getHeaderElements(this.$el || this);
+      const hh = headers.length > 0 ? headers[headers.length - 1].clientHeight + 5 : 5;
+      const footerMenu = getFooterMenuElement(this.$el || this);
+      const fmh = this.isDispMenu === 1 && footerMenu ? footerMenu.clientHeight : 0;
       this.kendoGridToolbarHeight = wh - hh - fmh - 3;
 
-      const gfh = document.getElementById("grid-footer").clientHeight;
+      const gridFooter = getGridFooterElement(this.$el || this);
+      const gfh = gridFooter ? gridFooter.clientHeight : 0;
       const height = this.kendoGridToolbarHeight - gfh;
       this.mstKurHeight = { height: `${height}px` };
     },
@@ -1179,7 +1155,7 @@ export default {
       const previousKurTime = kurList[previousIndex].kurStartTime.editValue;
       return previousKurTime === null
         ? null
-        : moment(previousKurTime, "HHmm").format("HH:mm");
+        : dayjs(previousKurTime, "HHmm").format("HH:mm");
     },
     /**
      * @description 1つ前のクール内標準治療開始時刻
@@ -1209,7 +1185,7 @@ export default {
       const nextKurTime = kurList[nextIndex].kurStartTime.editValue;
       return nextKurTime === null
         ? null
-        : moment(nextKurTime, "HHmm").format("HH:mm");
+        : dayjs(nextKurTime, "HHmm").format("HH:mm");
     },
 
     /**
@@ -1245,9 +1221,8 @@ export default {
           );
 
           let kurStandardStartTime = editKur.kurStandardStartTime.editValue;
-          kurStandardStartTime = moment(kurStandardStartTime, "HHmmss").format(
-            "HH:mm"
-          );
+          kurStandardStartTime = dayjs(kurStandardStartTime, "HHmmss").format(
+            "HH:mm");
           // 標準開始時刻が前後の時間内に設定されていない場合、前後の時刻を設定
           this.changeKurStandard(
             editKur,
@@ -1268,14 +1243,14 @@ export default {
      */
     setMaxMinTime(editKur, value, previousKurTime, nextKurTime) {
       if (value <= previousKurTime) {
-        const addTime = moment(previousKurTime, "HH:mm")
+        const addTime = dayjs(previousKurTime, "HH:mm")
           .add(1, "minutes")
           .format("HHmmss");
 
         // 1つ前のクールが"23:59"の場合null設定
         editKur.kurStartTime.editValue = addTime === "000000" ? null : addTime;
       } else if (value >= nextKurTime) {
-        editKur.kurStartTime.editValue = moment(nextKurTime, "HH:mm")
+        editKur.kurStartTime.editValue = dayjs(nextKurTime, "HH:mm")
           .subtract(1, "minutes")
           .format("HHmmss");
       }
@@ -1312,7 +1287,7 @@ export default {
         if (value < kurStartTime) {
           editKur.kurStandardStartTime.editValue = kurStartTime;
         } else if (value >= nextKurTime && nextKurTime !== null) {
-          editKur.kurStandardStartTime.editValue = moment(nextKurTime, "HH:mm")
+          editKur.kurStandardStartTime.editValue = dayjs(nextKurTime, "HH:mm")
             .subtract(1, "minutes")
             .format("HHmmss");
         }
@@ -1329,9 +1304,8 @@ export default {
       // DB登録用データへ変換
       if (value !== "") {
         // HH:mmフォーマットするとssに00を追加する
-        editKur.kurStartTime.editValue = moment(value, "HH:mm").format(
-          "HHmmss"
-        );
+        editKur.kurStartTime.editValue = dayjs(value, "HH:mm").format(
+          "HHmmss");
       }
     },
 
@@ -1343,7 +1317,7 @@ export default {
      * @param {Number} index 設定コード
      */
     changeKurStandardStartTime(editKur, value, editKurList, index) {
-      const kurStartTime = moment(value, "HH:mm").format("HHmmss");
+      const kurStartTime = dayjs(value, "HH:mm").format("HHmmss");
       const previousKurStandardStartTime = this.getPreviousKurStandardStartTime(
         editKurList,
         index
@@ -1375,9 +1349,8 @@ export default {
       // DB登録用データへ変換
       if (value !== "") {
         // HH:mmフォーマットするとssに00を追加する
-        editKur.kurStandardStartTime.editValue = moment(value, "HH:mm").format(
-          "HHmmss"
-        );
+        editKur.kurStandardStartTime.editValue = dayjs(value, "HH:mm").format(
+          "HHmmss");
       }
     },
 
@@ -1388,12 +1361,12 @@ export default {
      * @param {Number} index 配列要素番号
      */
     setKurEndTime(kurList, editKur, index) {
-      const nextKurTime = moment(
+      const nextKurTime = dayjs(
         this.getNextKurTime(kurList, index),
         "HH:mm"
       ).format("HHmmss");
       // 後のクール時間に１秒減算した時間を設定する
-      const editedKurEndTime = moment(nextKurTime, "HHmmss")
+      const editedKurEndTime = dayjs(nextKurTime, "HHmmss")
         .subtract(1, "seconds")
         .format("HHmmss");
       if (editKur.kurEndTime.editValue !== editedKurEndTime) {
@@ -1410,7 +1383,7 @@ export default {
       if (time === null) {
         return null;
       }
-      return moment(time, "HHmm").format("HH:mm");
+      return dayjs(time, "HHmm").format("HH:mm");
     },
 
     /**
@@ -1521,7 +1494,7 @@ export default {
         this.kurList[index].kurStartTime.editValue !== null
       ) {
         const strTime = this.kurList[index].kurStartTime.editValue;
-        const mmTime = moment(strTime, "HHmmss");
+        const mmTime = dayjs(strTime, "HHmmss");
 
         this.kurList[index].kurStartTime.editValue = mmTime
           .add(0, "minutes")
@@ -1542,7 +1515,7 @@ export default {
       }
 
       newItem.kurStandardStartTime = newItem.kurStartTime; // kurStartTimeと同じ値を設定
-      
+
       const addItem = encodeEditableRecord(newItem);
 
       this.kurList.splice(index, 0, addItem);
@@ -1638,7 +1611,7 @@ export default {
     async save() {
       // this.setLoadingScreenVisible(true);
       // 登録・更新日時を設定
-      const nowDate = moment().format();
+      const nowDate = dayjs().format();
       const saveKurList = this.setNowDate(this.saveKurList, nowDate);
 
       // クール終了時刻を設定
@@ -1678,8 +1651,7 @@ export default {
       // クールマスタ登録・更新
       const responseInsertedRecode = await ApiHelper.put(
         `${uri}/${this.getFacilitySwitch}`,
-        editRecord
-      ).catch(error => {
+        editRecord).catch(error => {
 		//add #9799 クールマスタ変更に伴うスケジュール処理が不正 zhaoqi 20231122 start
         this.setLoadingScreenVisible(false);
 		//add #9799 クールマスタ変更に伴うスケジュール処理が不正 zhaoqi 20231122 end
@@ -1719,8 +1691,7 @@ export default {
       // mst_selector登録・更新処理
       await ApiHelper.put(
         `${uriSelector}/${this.getFacilitySwitch}`,
-        serializeSelectorList
-      ).catch(error => {
+        serializeSelectorList).catch(error => {
 		//add #9799 クールマスタ変更に伴うスケジュール処理が不正 zhaoqi 20231122 start
         this.setLoadingScreenVisible(false);
 		//add #9799 クールマスタ変更に伴うスケジュール処理が不正 zhaoqi 20231122 end
@@ -1829,8 +1800,7 @@ export default {
             recCnt = 0;
             // synchronize the processing progress
             ApiHelper.get(
-              `/mainData/getUpdKurProcess/${that.getFacilitySwitch}`
-            ).then(
+              `/mainData/getUpdKurProcess/${that.getFacilitySwitch}`).then(
               response => {
 
                 if (!response) {
@@ -1863,7 +1833,7 @@ export default {
                   that.stopHeartbeatCheck();
                   that.setLoadingScreenVisible(false);
                 }
-                
+
                 // try to catch last beat.
                 if (hasProcessedSize < 16) {
 
@@ -2000,7 +1970,7 @@ export default {
           // del redmine 7774 常勤医を変更すると、クールマスタが編集状態となる start
           //item.mstUserAuthentication.editValue !== item.mstUserAuthentication.initValue
           // del redmine 7774 常勤医を変更すると、クールマスタが編集状態となる end
-        );
+          );
       });
     },
 
@@ -2175,13 +2145,26 @@ export default {
 };
 </script>
 <style scoped>
-.kur-time-input-width {
+/* 00:00 / 24:00 固定表示：custom-input-time と同じ枠サイズ、文字は左寄せ（Vue2 同等） */
+.kur-time-fixed-display {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
   width: calc(60px + 3em);
+  height: calc(2px + 0.75rem + 1.5em);
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #dededf;
+  border-radius: 0.25rem;
+  vertical-align: middle;
+  text-align: left;
+  background-color: var(--time-input-background-color, #fafafa);
+  color: var(--time-input-color, #050505);
 }
 .kur-font-size {
   font-size: 1.5em;
 }
-.edit-custom-input-mstkur >>> input{
+.edit-custom-input-mstkur :deep(input){
   height: 1.88em;
   padding: .375rem .75rem;
 }
@@ -2216,6 +2199,9 @@ export default {
   /* 一覧の文字色 */
   color: var(--ntss-list-body-color);
   font-size: 0.7em;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 
 .standard-start-time {
@@ -2229,9 +2215,9 @@ export default {
   padding-bottom: 1em;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
 }
-
-.k-grid-toolbar {
+.kendo-grid-toolbar-style {
   padding: 0.1em 0.3em;
 }
 
@@ -2285,4 +2271,31 @@ export default {
   opacity: 0.6;
 }
 /* add redmine 6359 指示編集権限を持たない利用者でクールの追加削除ができる。宋qy end */
+/* custom-input-time：class は内部 input[type="time"] に付与される（.time-input ラッパーではない） */
+.start-time :deep(.time-input),
+.standard-start-time :deep(.time-input) {
+  display: inline-flex;
+  align-items: center;
+}
+.start-time :deep(input.kur-time-input-width),
+.standard-start-time :deep(input.kur-time-input-width) {
+  font-size: 1.05rem !important;
+  font-weight: 400 !important;
+  width: 6rem !important;
+  min-width: 6rem !important;
+  height: 1.75rem !important;
+  box-sizing: border-box !important;
+  padding: 0.1rem 0.35rem !important;
+  margin-left: 0.7rem !important;
+  border-radius: 0.25rem !important;
+}
+.start-time :deep(input.kur-time-border),
+.standard-start-time :deep(input.kur-time-border) {
+  border: unset !important;
+  border-width: 2px !important;
+  border-style: inset !important;
+  border-image-repeat: stretch !important;
+  border-color: unset !important;
+  border-radius: 5px !important;
+}
 </style>

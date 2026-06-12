@@ -54,14 +54,16 @@
   </div>
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
-import {EventBus} from "@/eventBus";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 import CustomInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
+import { getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
 export default {
   name: "MstPatEventTemplateText",
   props: ["propsIndex"],
@@ -220,6 +222,15 @@ export default {
     });
   },
   methods: {
+    getTemplateElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || this);
+    },
+    queryTemplateSelector(selector) {
+      return queryScopedSelector(selector, this.$el || this);
+    },
+    queryTemplateSelectorAll(selector) {
+      return queryScopedSelectorAll(selector, this.$el || this);
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("mst-pat-event-template", [
       "setInputParams",
@@ -259,8 +270,8 @@ export default {
       this.focusFlg=true;
     },
     setTextMaxValueCss(e) {
-      if(e.target.value && document.getElementsByClassName(e.target.name)[0])
-      document.getElementsByClassName(e.target.name)[0].classList.remove("input-invalid");
+      if(e.target.value && this.getTemplateElementsByClassName(e.target.name)[0])
+      this.getTemplateElementsByClassName(e.target.name)[0].classList.remove("input-invalid");
       this.textMaxValue = e.target.value;
       this.textMaxValueRecord.editValue = this.textMaxValue;
     },
@@ -343,7 +354,7 @@ export default {
         return true;
       }
       if(!validationResult.fieldNameValid) {
-        document.getElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
+        this.getTemplateElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
       }
       // メッセージ組み立て
       // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
@@ -396,11 +407,11 @@ export default {
 .disp-item-area tr th {
   text-align: left;
 }
-.input-required >>> input{
+.input-required :deep(input){
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> input{
+.input-invalid :deep(input){
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }

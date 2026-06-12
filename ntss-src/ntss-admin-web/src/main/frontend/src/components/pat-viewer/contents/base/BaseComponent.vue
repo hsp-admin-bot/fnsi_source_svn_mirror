@@ -7,7 +7,7 @@
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * 外部ライブラリ関連
@@ -16,12 +16,10 @@ import { mapActions, mapGetters } from "vuex";
 /**
  * 日時操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 export default {
-  data() {
-    return {};
-  },
+
 
   computed: {
     ...mapGetters("pat-info", ["selectedPatId"]),
@@ -50,7 +48,7 @@ export default {
      * 基準日
      */
     baseDate() {
-      return moment(this.getBaseDate, "YYYY-MM-DD").format("YYYYMMDD");
+      return dayjs(this.getBaseDate, "YYYY-MM-DD").format("YYYYMMDD");
     },
 
     /**
@@ -75,17 +73,14 @@ export default {
      */
     getIsPastDate() {
       // 治療日リストを取得
-      /* upd by chamaojia 2026-03-25 [12462] 患者情報共有->患者経過総合ビューア --start */
-      // const treatDateList = Object.keys(this.ordMainData);
       const ordMainDataNotIncludeShr = Object.fromEntries(
-        Object.entries(this.ordMainData).filter(([key, value]) => value && !value.readOnly)
+        Object.entries(this.ordMainData).filter(([, value]) => value && !value.readOnly)
       );
       const treatDateList = Object.keys(ordMainDataNotIncludeShr);
-      /* upd by chamaojia 2026-03-25 [12462] 患者情報共有->患者経過総合ビューア --end */
       // 表示されている最終治療日を取得
       const lastTreatDate = treatDateList[treatDateList.length - 1];
       // 本日の日付を取得
-      const day = moment().format("YYYYMMDD");
+      const day = dayjs().format("YYYYMMDD");
       // 最終日が過去日かどうかを返す
       return day > lastTreatDate;
     }
@@ -202,14 +197,10 @@ export default {
       //     }
       //   }
       // }
-       
-      /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-      // let dateArr = Object.keys(this.ordMainData);
       const ordMainDataNotIncludeShr = Object.fromEntries(
-        Object.entries(this.ordMainData).filter(([key, value]) => value && !value.readOnly)
+        Object.entries(this.ordMainData).filter(([, value]) => value && !value.readOnly)
       );
       const dateArr = Object.keys(ordMainDataNotIncludeShr);
-      /* upd by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
       for (let date of dateArr) {
         let status = false;
         for (let item of this.getRecentTreatmentDate) {

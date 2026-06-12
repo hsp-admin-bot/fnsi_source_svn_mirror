@@ -80,13 +80,15 @@
 </template>
 
 <script>
+import { getAppElement } from "@/functions/common/LayoutMeasureHelper";
+
 import StatusMapMarker from "@/components/status-map/StatusMapMarkerComponent";
 import {MACHINE_MODEL} from "@/constants/machineModel";
 // add FNSI-警報・報知追加 付 start
-import { mapActions, mapMutations } from "vuex";
+import { mapActions, mapMutations } from "@/compat/vue/vuex";
 import { NOTIFY_TOPIC_MACHINE_RESULT } from "@/constants/websocketNotifyTopic";
 // add FNSI-警報・報知追加 付 end
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 export default {
   // add FNSI-警報・報知追加 付 start
@@ -171,7 +173,7 @@ export default {
     machineDivClass(){
       let ret = "machine-room-inner";
       if (this.isPopoverScroll) {
-        ret = ret+ " " + document.getElementById("app").getAttribute("class");
+        ret = ret+ " " + (getAppElement(this.$el || this)?.getAttribute("class") || "");
       }
       // mod FNSI-警報・報知追加 付 start
       //  else {
@@ -417,7 +419,7 @@ export default {
     },
     // add FNSI-画面リロードの修正 付 start
   },
-  beforeCreate() {},
+
   created() {
     // add FNSI-画面リロードの修正 付 start
     this.$nextTick(() => {
@@ -429,11 +431,10 @@ export default {
     });
     // add FNSI-画面リロードの修正 付 end
   },
-  beforeMount() {},
-  mounted() {},
-  beforeUpdate() {},
-  updated() {},
-  beforeDestroy() {
+
+
+
+  beforeUnmount() {
     // add FNSI-画面リロードの修正 付 start
     this.removeWatchTopics(this.notifyTopic);
     // add FNSI-画面リロードの修正 付 end
@@ -441,7 +442,6 @@ export default {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  destroyed() { }
 };
 </script>
 <style scoped>

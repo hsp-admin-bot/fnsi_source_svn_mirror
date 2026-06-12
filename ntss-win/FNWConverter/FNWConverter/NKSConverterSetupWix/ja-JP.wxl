@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  FNWSi Convert Tool インストーラー 日本語ローカライゼーション
-  Package Name とショートカット名は変更せず、WiX UI 表示のみ英字名へ統一
+  FNWSiConvertTool(FNWSi コンバートツール) インストーラー 日本語ローカライゼーション
+  WiX v4 WXL ファイル
+
+  Package Name="FNWSi コンバートツール" およびデスクトップショートカット名は
+  変更せず、インストールウィザード画面の表示名のみ "FNWSi Convert Tool" に統一する。
 -->
 <WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl"
                  Culture="ja-JP"
                  Codepage="932">
 
+  <!-- .NET Framework 要件エラーメッセージ（将来 Product.wxs で !(loc.xxx) 参照用） -->
   <String Id="LaunchConditionNetFx45"
           Value=".NET Framework 4.5 以上が必要です。&#xA;&#xA;下記 URL からインストール後、再度セットアップを実行してください。&#xA;https://go.microsoft.com/fwlink/?LinkId=225704" />
 
+  <!-- ウィザード画面名 -->
   <String Id="AdvancedWelcomeEulaDlg_Title" Value="FNWSi Convert Tool" />
   <String Id="BrowseDlg_Title" Value="FNWSi Convert Tool" />
   <String Id="CancelDlg_Title" Value="FNWSi Convert Tool" />
@@ -41,7 +46,6 @@
 
   <String Id="WelcomeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Convert Tool セットアップ ウィザードへようこそ。" />
   <String Id="WelcomeDlgDescription" Value="セットアップでは、FNWSi Convert Tool をコンピュータにインストールします。続行する場合は［次へ］を、セットアップを終了する場合は［キャンセル］をクリックしてください。" />
-  <!-- PrepareDlg は本文とは別に PrepareDlgTitle が [ProductName] を参照する（WelcomeDlgTitle だけでは準備画面が直らない） -->
   <String Id="PrepareDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Convert Tool セットアップ ウィザードへようこそ。" />
   <String Id="ResumeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Convert Tool セットアップ ウィザードの再開" />
   <String Id="InstallDirDlgFolderLabel" Value="FNWSi Convert Tool のインストール先:" />
@@ -66,7 +70,6 @@
   <String Id="UserExitDescription2" Value="システムは変更されていません。このプログラムを後でインストールするには、インストーラーを再実行してください。セットアップ ウィザードを終了するには、［完了］ボタンをクリックします。" />
   <String Id="UserExitDescription" Value="FNWSi Convert Tool のセットアップが中断されました。システムは変更されていません。このプログラムを後でインストールするには、インストーラーを再実行してください。セットアップ ウィザードを終了するには、［完了］ボタンをクリックします。" />
   <String Id="UserExitText" Value="FNWSi Convert Tool のセットアップが中断されました。システムは変更されていません。このプログラムを後でインストールするには、インストーラーを再実行してください。セットアップ ウィザードを終了するには、［完了］ボタンをクリックします。" />
-
   <String Id="MaintenanceWelcomeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Convert Tool セットアップ ウィザードへようこそ。" />
   <String Id="MaintenanceWelcomeDlgDescription" Value="セットアップ ウィザードでは、FNWSi Convert Tool の機能を変更したり、修復したり、削除したりできます。続行するには［次へ］をクリックしてください。" />
   <String Id="MaintenanceTypeDlgRepairText" Value="FNWSi Convert Tool を修復します。" />

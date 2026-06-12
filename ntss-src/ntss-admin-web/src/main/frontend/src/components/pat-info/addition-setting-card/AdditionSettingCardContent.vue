@@ -26,7 +26,7 @@
                   type="checkbox"
                   class="checkbox__input"
                   :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-                  :checked="item.is_enable === '1' ? 'checked' : ''"
+                  :checked="isAdditionEnabled(item.is_enable)"
                   @click="callManualEvent(item)"
                 />
                 <!-- mod #10359 編集権限の動作不正 dengshen end -->
@@ -35,7 +35,7 @@
               <td class="align-center ntss-list-body-td" style="text-align: center;">
                 <span v-if="getIsAutoFromMst(item.cd)">自動</span>
               </td>
-              <td class="align-center ntss-list-body-td" :class="is_this_edit(item)">
+              <td class="align-center ntss-list-body-td specialTD" :class="is_this_edit(item)">
                 {{ getAdditionNamefromMst(item.cd) }}
                 <div v-if="addSpanIsDeadline(item.cd)">
                   <!-- #9819 mod 利用者マスタの患者情報編集権限をOFFにした際に患者情報画面で入外区分の編集/保存ができる 2023-10-6 卓 start-->
@@ -75,7 +75,7 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import { formatDatetime } from "@/functions/common/CommonFunctions";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
@@ -85,7 +85,7 @@ import { decodeEditableRecord } from "@/functions/PatInfoFunctions";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 export default {
   mixins: [baseCardContent],
@@ -118,7 +118,6 @@ export default {
     ...mapGetters("pat-info", ["selectedPatId", "selectedPat", "patAdditionInfo", "mstAddition", "getIsOtherFacility", "getOtherFacilityCd"]),
     jsonArray: {
       get() {
-        // return this.patAdditions?.filter(el => !!+el.is_enable);
         return Array.isArray(this.patAdditions)
           ? this.patAdditions.filter(el => !!+el.is_enable)
           : [];
@@ -163,39 +162,49 @@ export default {
               title: DIALOG_MESSAGES[13000004].title,
               // message: "編集内容が破棄されます。</br>よろしいですか？",
               message: messageFormat(DIALOG_MESSAGES[13000004].message),
-              // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
+          // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
         callback: answer => {
           if (answer === 1) {
-            this.sendRequestGetMstAddition('');
+            this.sendRequestGetMstAddition(this.buildMstAdditionRequest(""));
           }
         }
       });
     },
+    normalizeAdditionCd(cd) {
+      return cd == null ? "" : String(cd);
+    },
+    isAdditionEnabled(isEnable) {
+      return isEnable === 1 || isEnable === "1" || isEnable === true;
+    },
+    normalizeIsEnable(isEnable) {
+      return this.isAdditionEnabled(isEnable) ? "1" : "0";
+    },
     callManualEvent(item) {
-      item.is_enable = item.is_enable === "1" ? "0" : "1";
-      const isInitAddition = this.initAditions.includes(item.cd);
+      item.is_enable = this.isAdditionEnabled(item.is_enable) ? "0" : "1";
+      const itemCd = this.normalizeAdditionCd(item.cd);
+      const isInitAddition = this.initAditions.includes(itemCd);
       if (isInitAddition && item.is_enable === "1") {
         this.editRecord.addition_info.forEach(additionCd => {
-          if (additionCd.cd.initValue === item.cd) {
+          if (this.normalizeAdditionCd(additionCd.cd.initValue) === itemCd) {
             additionCd.is_enable.editValue = "1";
           }
         });
       } else if (isInitAddition && item.is_enable === "0") {
         this.editRecord.addition_info.forEach(additionCd => {
-          if (additionCd.cd.initValue === item.cd) {
+          if (this.normalizeAdditionCd(additionCd.cd.initValue) === itemCd) {
             additionCd.is_enable.editValue = "0";
           }
         });
       // mod FutreNetWeb+SI課題管理 no.5816 劉全航 start
       } else if (!isInitAddition && item.is_enable === "1") {
         this.editRecord.addition_info.forEach(additionCd => {
-          if (additionCd.cd.initValue === item.cd) {
+          if (this.normalizeAdditionCd(additionCd.cd.initValue) === itemCd) {
             additionCd.is_enable.editValue = "1";
           }
         });
       } else if (!isInitAddition && item.is_enable === "0") {
         this.editRecord.addition_info.forEach(additionCd => {
-          if (additionCd.cd.initValue === item.cd) {
+          if (this.normalizeAdditionCd(additionCd.cd.initValue) === itemCd) {
             additionCd.is_enable.editValue = "0";
           }
         });
@@ -206,9 +215,12 @@ export default {
     // mod FutreNetWeb+SI課題管理 no.5534 劉全航 start
     is_this_edit(item) {
       let additionList = this.patRecord.addition_info;
-      let checkedRecord = additionList.filter(o => o.cd.initValue === item.cd);
+      const itemCd = this.normalizeAdditionCd(item.cd);
+      let checkedRecord = additionList.filter(
+        o => this.normalizeAdditionCd(o.cd.initValue) === itemCd
+      );
       if (additionList.length > 0 && checkedRecord.length > 0) {
-        if (checkedRecord[0].is_enable.initValue !== item.is_enable) {
+        if (this.normalizeIsEnable(checkedRecord[0].is_enable.initValue) !== item.is_enable) {
           return "edit-green";
         }
       }
@@ -233,40 +245,45 @@ export default {
       }
       return rtn;
     },
+    buildMstAdditionRequest(routeName = this.$route.name) {
+      return {
+        routeName,
+        loginFacilityCd: this.facilityCd,
+        ownFacility: this.getIsOtherFacility ? "1" : "0"
+      };
+    },
     // add FutreNetWeb+SI課題管理No6550 趙 start
     async patAdditionsAdd() {
-      // await this.sendRequestGetMstAddition(this.$route.name);
-      await this.sendRequestGetMstAddition({
-        routeName: this.$route.name,
-        loginFacilityCd: this.facilityCd,
-        ownFacility: this.getIsOtherFacility ? '1' :'0'
-      });
+      await this.sendRequestGetMstAddition(this.buildMstAdditionRequest());
       if (this.$route.name !== "pat-info-create") {
         // mod #10305 患者共通ヘッダーで編集＞保存をするとコンソールエラーが出力される yangqingzhe start
         // this.initAditions = this.editRecord.addition_info && this.editRecord.addition_info.map(
         //   additionCd => additionCd.cd.initValue
         // );
         this.initAditions = this.editRecord?.addition_info?.map(
-          additionCd => additionCd.cd.initValue
+          additionCd => this.normalizeAdditionCd(additionCd.cd.initValue)
         ) || [];
         // mod #10305 患者共通ヘッダーで編集＞保存をするとコンソールエラーが出力される yangqingzhe end
-        const decodeAditionEdit = Object.values(
-          // 新規患者登録から患者情報表示時、mixinsのBaseCardContent.vueのdata()でthis.editRecordがnullで初期化されるので、this.editRecordがnullの場合は[]を渡す
-          decodeEditableRecord(this.editRecord?.addition_info ?? [])
+        const decodeAditionEdit = decodeEditableRecord(
+          this.editRecord?.addition_info ?? []
         );
+        const decodeAdditionList = Array.isArray(decodeAditionEdit)
+          ? decodeAditionEdit
+          : [];
         this.patAdditions = [];
         this.patAdditionInfo.forEach(addPat => {
           const startDateInit = { initValue: null, editValue: null };
+          const addPatCd = this.normalizeAdditionCd(addPat.cd);
           let isPushed = false;
-          if (this.initAditions.includes(addPat.cd)) {
-            const filteredAditionEdit = decodeAditionEdit.filter(edit => {
-              return edit.cd === addPat.cd;
+          if (this.initAditions.includes(addPatCd)) {
+            const filteredAditionEdit = decodeAdditionList.filter(edit => {
+              return this.normalizeAdditionCd(edit.cd) === addPatCd;
             })
             if (filteredAditionEdit.length > 0) {
               this.patAdditions.push({
                 sort_order: addPat.sort_order,
                 cd: filteredAditionEdit[0].cd,
-                is_enable: filteredAditionEdit[0].is_enable,
+                is_enable: this.normalizeIsEnable(filteredAditionEdit[0].is_enable),
                 last_date: addPat.last_date,
                 reg_date: filteredAditionEdit[0].reg_date,
                 start_date: filteredAditionEdit[0].start_date ? { initValue:filteredAditionEdit[0].start_date, editValue:filteredAditionEdit[0].start_date } : startDateInit
@@ -278,7 +295,9 @@ export default {
             this.patAdditions.push({
               sort_order: addPat.sort_order,
               cd: addPat.cd,
-              is_enable: this.getIsAutoFromMst(addPat.cd) ? "1" : "0",
+              is_enable: this.normalizeIsEnable(
+                this.getIsAutoFromMst(addPat.cd) ? "1" : "0"
+              ),
               last_date: addPat.last_date,
               reg_date: addPat.reg_date,
               start_date: startDateInit
@@ -294,16 +313,6 @@ export default {
             if (a.sort_order < b.sort_order) return -1;
             if (a.sort_order > b.sort_order) return 1;
           });
-        // this.patAdditions.forEach(additions => {
-        //   if (!this.initAditions.includes(additions.cd)) {
-        //     this.pushJsonArray("addition_info", {
-        //       cd: additions.cd,
-        //       is_enable: additions.is_enable,
-        //       reg_date: additions.reg_date
-        //     });
-        //     this.initAditions.push(additions.cd);
-        //   }
-        // });
       } else {
         this.patAdditions = this.patAdditionInfo
           .map(addPat => {
@@ -328,9 +337,9 @@ export default {
     changeStartDateCallBack(dataObj, item) {
       // データを編集済みに反映
       this.editRecord.addition_info.forEach(additionCd => {
-        if (additionCd.cd.initValue === item.cd) {
+        if (this.normalizeAdditionCd(additionCd.cd.initValue) === this.normalizeAdditionCd(item.cd)) {
           additionCd.start_date = additionCd.start_date || {};
-          additionCd.start_date.editValue = dataObj ? moment(dataObj).format("YYYYMMDD") : null;
+          additionCd.start_date.editValue = dataObj ? dayjs(dataObj).format("YYYYMMDD") : null;
           if (this.isCreationPat) {
             additionCd.start_date.initValue = null;
           }
@@ -349,7 +358,7 @@ export default {
           cd: additions.cd,
           is_enable: additions.is_enable,
           reg_date: additions.reg_date,
-          start_date: additions.hasOwnProperty("start_date") ? additions.start_date : null, // 新規患者登録で期限編集した際も保存ボタン活性or非活性を制御
+          start_date: Object.prototype.hasOwnProperty.call(additions, "start_date") ? additions.start_date : null, // 新規患者登録で期限編集した際も保存ボタン活性or非活性を制御
         });
       });
     }
@@ -373,67 +382,15 @@ export default {
     },
     patRecord: {
       deep: true,
-      handler() {
-      // this.patAdditions = Array.isArray(this.initRecord?.addition_info)
-      //   ? JSON.parse(JSON.stringify(this.initRecord.addition_info))
-      //   : [];
-      this.patAdditions = [];
-      if (Array.isArray(this.patAdditionInfo)) {
-        const startDateInit = { initValue: null, editValue: null };
-        const additionEditList = Array.isArray(this.initRecord?.addition_info)
-          ? this.initRecord.addition_info.map(item => ({
-              cd: item.cd?.initValue,
-              is_enable: item.is_enable?.initValue,
-              reg_date: item.reg_date?.initValue,
-              start_date: item.start_date?.initValue,
-              sort_order: item.sort_order?.initValue
-            }))
-          : [];
-        this.patAdditionInfo.forEach(addPat => {
-          const found = additionEditList.find(edit => edit.cd === addPat.cd);
-          if (found) {
-            this.patAdditions.push({
-              sort_order: addPat.sort_order,
-              cd: found.cd,
-              is_enable: found.is_enable,
-              last_date: addPat.last_date,
-              reg_date: found.reg_date,
-              start_date: found.start_date
-                ? {
-                    initValue: found.start_date,
-                    editValue: found.start_date
-                  }
-                : startDateInit
-            });
-          } else {
-            this.patAdditions.push({
-              sort_order: addPat.sort_order,
-              cd: addPat.cd,
-              is_enable: this.getIsAutoFromMst(addPat.cd) ? "1" : "0",
-              last_date: addPat.last_date,
-              reg_date: addPat.reg_date,
-              start_date: {...startDateInit}
-            });
-          }
+      async handler() {
+        // patRecord 更新時（保存後・キャンセル・患者切替）は editRecord 反映後に一覧を再構築する
+        // （initRecord 復元だと保存後も旧 is_enable が画面に残る）
+        this.switchingSelectedPatFlg = true;
+        await this.$nextTick();
+        await this.patAdditionsAdd();
+        this.$nextTick(() => {
+          this.switchingSelectedPatFlg = false;
         });
-        if (!this.isCreationPat) {
-          this.patAdditions.sort((a, b) => {
-            // 1. ON > OFF
-            if (a.is_enable < b.is_enable) return 1;
-            if (a.is_enable > b.is_enable) return -1;
-            // 2. 加算マスタ表示順
-            if (a.sort_order < b.sort_order) return -1;
-            if (a.sort_order > b.sort_order) return 1;
-            return 0;
-          });
-        }
-      }
-        // this.patAdditions = JSON.parse(JSON.stringify(this.initRecord));
-        // キャンセル押下で編集内容を破棄した際、親側でpatRecordに初期値が設定されるため、そのタイミングで画面表示データに初期値を設定
-        // 新規患者登録の場合、編集内容を破棄するとeditRecordが空になるので設定
-        if (this.isCreationPat) {
-          this.addEditRecord();
-        }
       }
     }
   },
@@ -465,9 +422,7 @@ export default {
     });
     // add FNSI-Change style and use common component 関 end
   },
-  beforeDestroy() {
-    // dataの初期化
-    Object.assign(this.$data, this.$options.data());
+  beforeUnmount() {
   }
 };
 </script>
@@ -503,4 +458,11 @@ export default {
     color: green;
     font-weight: bold;
   }
+
+  /***#9846 start */
+  .specialTD :deep(.flex-span){
+   
+    flex-wrap: wrap;
+  }
+  /***#9846 end */
 </style>

@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.request.prescription;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 import lombok.Data;
 

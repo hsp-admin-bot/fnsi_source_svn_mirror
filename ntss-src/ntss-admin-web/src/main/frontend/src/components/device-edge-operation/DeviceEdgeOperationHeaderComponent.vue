@@ -55,7 +55,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -67,7 +67,7 @@
             <label>部署符号</label>
           </v-ons-col>
           <v-ons-col width="60%" vertical-align="center">
-            <v-ons-select float v-model="inProgressCondition.departmentCd">
+            <v-ons-select v-model="inProgressCondition.departmentCd">
               <option>-</option>
               <option
                 v-for="(departmentCd, idxDepartmentCd) in departmentCds"
@@ -83,7 +83,7 @@
             <label>都道府県</label>
           </v-ons-col>
           <v-ons-col width="60%" vertical-align="center">
-            <v-ons-select float v-model="inProgressCondition.prefName" style="display:">
+            <v-ons-select v-model="inProgressCondition.prefName" style="display:">
               <option>-</option>
               <option v-for="prefecture in prefectures" :key="prefecture[0]">{{ prefecture[1] }}</option>
             </v-ons-select>
@@ -127,8 +127,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapGetters, mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 import { IS_ALARM_TEXT } from "@/constants/deviceEdgeOperationDefine";
 import commonSearchArea from "@/components/common/CommonSearchArea";
@@ -396,7 +396,7 @@ export default {
      */
     calcModalButtonAreaFrontHeader() {
       this.$nextTick(() => {
-        if (this.selfScreenName === this.$router.currentRoute.name) {
+        if (this.selfScreenName === this.$route.name) {
           this.isModalButtonAreaFrontHeader = true;
         } else {
           this.isModalButtonAreaFrontHeader = this.splittableFrames > 1;
@@ -417,11 +417,11 @@ export default {
     EventBus.$off("calcModalButtonAreaFrontHeader", this.calcModalButtonAreaFrontHeader);
     // add 性能改善メモリ不足 shan end
     EventBus.$on("calcModalButtonAreaFrontHeader", this.calcModalButtonAreaFrontHeader);
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     this.setStateCondition();
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("calcModalButtonAreaFrontHeader", this.calcModalButtonAreaFrontHeader);
   },
   // add 性能改善メモリ不足 shan end
@@ -442,7 +442,7 @@ input[type="checkbox"] {
   width: 4.6em;
 }
 
-.custom-condition-row >>> ons-button.button {
+.custom-condition-row :deep(ons-button.button) {
   margin: unset;
 }
 .horizontal-div {

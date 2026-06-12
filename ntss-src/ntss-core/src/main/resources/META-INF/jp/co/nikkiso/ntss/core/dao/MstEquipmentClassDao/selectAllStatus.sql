@@ -34,6 +34,11 @@ FROM
        AND A.class_cd = ms.code
 WHERE
     A.facility_cd = /* params.get("facilityCd") */'0'
+    AND A.is_disp = '1'
+    AND A.is_del = '0'
+    /*%if params.get("classType") != null */
+    AND A.class_type = ANY(string_to_array(/* params.get("classType") */'0', ',')::int[])
+    /*%end*/
 ORDER BY
     "sortGroup" ASC,
     ms.selector_index NULLS LAST,

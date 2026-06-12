@@ -7,6 +7,7 @@
 </template>
 
 <script>
+import { h } from "vue";
 export default {
   props: {
     field: String,
@@ -30,6 +31,22 @@ export default {
         return "";
       }
     },
+  },
+  render() {
+    const attrs = {
+      colspan: this.colSpan,
+      role: "gridcell",
+      "data-grid-col-index": this.columnIndex,
+      class: this.className
+    };
+    const value = this.dataItem?.[this.field];
+    if (value === null || value === "") {
+      return h("td", attrs);
+    }
+    return h("td", {
+      ...attrs,
+      class: [this.className, this.processStateClassName]
+    }, value);
   }
 };
 </script>

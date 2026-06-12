@@ -3,9 +3,10 @@
  */
 <template>
   <submenu-base v-if="hasOrdNo">
-    <div slot="main" id="condition-component">
+    <template #main>
+      <div id="condition-component">
       <v-ons-list class="treatment-record-accordion">
-        <v-ons-list-item expandable :expanded.sync="isExpandedBasic" id="basic-sub">
+        <v-ons-list-item expandable v-model:expanded="isExpandedBasic" id="basic-sub">
           <label>治療条件</label>
           <!-- mod FNSI-改修内容背景色 房 start -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
@@ -14,7 +15,7 @@
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
           <!-- mod FNSI-改修内容背景色 房 end -->
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedDialysate" id="dialysate-sub">
+        <v-ons-list-item expandable v-model:expanded="isExpandedDialysate" id="dialysate-sub">
           <label>透析液</label>
           <!-- mod FNSI-改修内容背景色 房 start -->
           <!-- mod FNSI修正 結合バッグ20 房 start -->
@@ -25,7 +26,7 @@
           <!-- mod FNSI修正 結合バッグ20 房 end -->
           <!-- mod FNSI-改修内容背景色 房 end -->
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedReplacement" id="replacement-sub">
+        <v-ons-list-item expandable v-model:expanded="isExpandedReplacement" id="replacement-sub">
           <label>補液</label>
           <!-- mod FNSI-改修内容背景色 房 start -->
           <!-- mod FNSI修正 結合バッグ20 房 start -->
@@ -38,7 +39,7 @@
         </v-ons-list-item>
         <v-ons-list-item
           expandable
-          :expanded.sync="isExpandedAntiCoagulant"
+          v-model:expanded="isExpandedAntiCoagulant"
           id="anti-coagulant-sub"
         >
           <label>抗凝固剤</label>
@@ -50,8 +51,10 @@
           <!-- mod FNSI-改修内容背景色 房 end -->
         </v-ons-list-item>
       </v-ons-list>
-    </div>
-    <div slot="footer" class="flex-container treatment-submenu">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container treatment-submenu">
       <div class="denial-btn-area">
         <!-- mod FNSI-権限関連 王 20200927 start -->
         <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
@@ -71,13 +74,14 @@
         <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
         <!-- mod FNSI-共有を追加 王 20200921 end -->
       </div>
-    </div>
+      </div>
+    </template>
   </submenu-base>
 </template>
 
 <script>
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc start
-import {mapActions, mapGetters, mapMutations} from "vuex";
+import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end
 import SubmenuBase from "@/components/treatment-record/SubmenuBaseComponent";
 import BasicSubComponent from "@/components/treatment-record/submenu/condition/BasicSubComponent";
@@ -92,7 +96,7 @@ import { Dialysate } from "@/models/treatment-record/condition/Dialysate";
 import { Replacement } from "@/models/treatment-record/condition/Replacement";
 import { AntiCoagulant } from "@/models/treatment-record/condition/AntiCoagulant";
 // import { AUTHORITY_CODES } from "@/constants/userAuthority";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { CODES } from "@/constants/TreatmentRecord";
 // mod #11471 ord_mian操作時の治療モードデータの登録 関 start
 // add FNSI-改修内容背景色修正 房 start
@@ -116,6 +120,7 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20240111 ztc start
 import {getAuthorized} from "@/functions/common/CommonFunctions";
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20240111 ztc end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 end
@@ -244,15 +249,18 @@ export default {
         return;
       }
       Promise.all([
-        this.getTreatmentRecordCondition(this.getOrdNo),
-        this.getTreatmentMethodComboList(),
+        this.getTreatmentRecordCondition({
+          ordNo: this.getOrdNo,
+          selectedPatId: this.selectedPatId()
+        }),
+        this.getTreatmentMethodComboList({ selectedPatId: this.selectedPatId() }),
         sendRequestGetMstEquipmentTabooAllergy(this.selectedPatId()),
         sendRequestGetMstDialyzerTabooAllergy(this.selectedPatId()),
         //add 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 start
-        sendRequestGetReportInfoByOrdNoWithLoader(this.getOrdNo),
+        sendRequestGetReportInfoByOrdNoWithLoader(this.getOrdNo, this.selectedPatId()),
         //add 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 end
         // add #11471 ord_mian操作時の治療モードデータの登録 関 start
-        sendRequestGetGetRstCondInfoSettingByOrdNo(this.getOrdNo)
+        sendRequestGetGetRstCondInfoSettingByOrdNo(this.getOrdNo, this.selectedPatId())
         // add #11471 ord_mian操作時の治療モードデータの登録 関 end
       ]).then(async(response) => {
         this.originalCondition = response[0].data;
@@ -434,7 +442,7 @@ export default {
     refresh() {
       // 子機能ボタンエリアの更新
       this.$emit("update");
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       //mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 start
@@ -451,7 +459,7 @@ export default {
     },
     // add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
     eventBusRefresh() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       if (this.isChanged && this.alertFlag) {
@@ -572,7 +580,7 @@ export default {
             });
           }
         });
-      let elements = document.getElementsByClassName("custom-input-edited");
+      let elements = getScopedElementsByClassName("custom-input-edited", this.$el || this);
       for (let i = elements.length-1; i >= 0; i--) {
         elements[i].classList.remove("custom-input-edited");
       }
@@ -591,7 +599,10 @@ export default {
 
       if(oldTreatTime !== newTreatTime){
         //治療時間が変更される場合、デバイスエッジへ通知。
-      this.getMstMachineByOrdNoRst(this.getOrdNo).then(machineRes => {
+      this.getMstMachineByOrdNoRst({
+        ordNo: this.getOrdNo,
+        selectedPatId: this.selectedPatId()
+      }).then(machineRes => {
         const params = {
           ordNo: this.getOrdNo, //オーダー番号
           machineNo: machineRes.data[0].machineNo, //装置マスタ.装置番号
@@ -651,7 +662,7 @@ export default {
       const patId = this.selectedPatId();
       return Promise.all([
         getMedicineAllTabooAllergy(patId),
-        sendRequestGetMstMedicineClass()
+        sendRequestGetMstMedicineClass(this.selectedPatId())
       ]);
     },
     //add メッセージ順番修正 房 start
@@ -680,9 +691,6 @@ export default {
       if (!this.isObject(obj1)) {
         if (this.isNumber(obj1) && this.isNumber(obj2)) {
           return Number(obj1) == Number(obj2);
-        }
-        if (obj1 == '' && obj2 == null) {
-          return true;
         }
         return obj1 == obj2;
       }
@@ -718,7 +726,7 @@ export default {
   },
   async created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     EventBus.$on("refresh", this.eventBusRefresh);
 
     // OrdMainレコードをチェックする
@@ -750,7 +758,7 @@ export default {
   },
   // add FNSI-共有を追加 王 20200921 start
   mounted() {
-    const selectBtn = document.getElementsByClassName("button select-btn");
+    const selectBtn = getScopedElementsByClassName("button select-btn", this.$el || this);
     if (this.getSharedFacilityCd !== undefined && this.getSharedFacilityCd != null) {
       if (this.getSharedFlag === 1 && this.facilityCd !== this.getSharedFacilityCd) {
         for (let i = 0; i < selectBtn.length; i++) {
@@ -771,7 +779,7 @@ export default {
   /**
    * コンポーネント破棄
    */
-  beforeDestroy() {
+  beforeUnmount() {
     // イベント解除
     // del refresh方法処理不正について、対応する。 dengshen start
     // EventBus.$off("refresh");
@@ -788,6 +796,9 @@ export default {
 };
 </script>
 <style scoped>
+  :deep(ons-checkbox.checkbox) {
+    margin-top: 0;
+  }
   .treatment-record-accordion {
     overflow: hidden;
   }

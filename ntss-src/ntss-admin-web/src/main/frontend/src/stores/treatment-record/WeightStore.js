@@ -94,20 +94,20 @@ export default {
      * @param {*} commit COMMITオブジェクト
      * @param {*} ordNo オーダ番号
      */
-    /* eslint-disable no-unused-vars */
-    getRecirculationRate({ commit }, ordNo) {
-      /* eslint-enable no-unused-vars */
-      return sendRequestGetRecirculationRate(ordNo);
+    getRecirculationRate({ commit }, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetRecirculationRate(ordNo, selectedPatId);
     },
     /**
      * 体重情報取得.
      * @param {*} commit COMMITオブジェクト
      * @param {*} ordNo オーダ番号
      */
-    /* eslint-disable no-unused-vars */
-    getTreatmentRecordWeight({ commit }, ordNo) {
-      /* eslint-enable no-unused-vars */
-      return sendRequestGetTreatmentRecordWeight(ordNo).then(response => {
+    getTreatmentRecordWeight({ commit }, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetTreatmentRecordWeight(ordNo, selectedPatId).then(response => {
         commit("setUpDate", response.data.up_date);
         commit("setRstDialysisState", response.data.rst_dialysis_state);
         commit("setRstEndDate", response.data.rst_end_date);
@@ -119,9 +119,7 @@ export default {
      * @param {*} commit COMMITオブジェクト
      * @param {*} payload オーダ番号、体重情報を含むオブジェクト
      */
-    /* eslint-disable no-unused-vars */
     updateTreatmentRecordWeight({ commit, state }, payload) {
-      /* eslint-enable no-unused-vars */
       const ordNo = payload.ordNo;
       const treatmentRecordWeight = payload.treatmentRecordWeight;
       return sendRequestUpdateTreatmentRecordWeight(

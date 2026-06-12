@@ -5,7 +5,6 @@
 <script>
 export default {
   name: "rowTemplateCheckbox",
-  methods: {},
   data() {
     return {
       templateArgs: {}

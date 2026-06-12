@@ -1,8 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.request.creatingReport.ReportByCdRequest;
 import jp.co.nikkiso.ntss.admin_web.request.creatingReport.ReportRequest;
@@ -15,6 +14,7 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.print.PrinterService;
 import jp.co.nikkiso.ntss.admin_web.service.reportMenu.ReportMenuDataKeyService;
 import jp.co.nikkiso.ntss.admin_web.service.reportMenu.ReportMenuService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.api.constant.ReportConstant;
 import jp.co.nikkiso.ntss.api.service.report.ReportForOnePatientService;
 import jp.co.nikkiso.ntss.api.service.report.ReportForIntroductionReportService;
@@ -67,8 +67,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
@@ -95,6 +95,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 帳票作成のResourceクラス.
@@ -170,9 +171,8 @@ public class ReportResource {
 
   @Autowired
   LogEventUtils logEventUtils;
-
-  @Autowired(required = false)
-  private AmazonS3 s3;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
 
   /**
    * S3バケット名(紹介状ファイル取得先)
@@ -215,7 +215,13 @@ public class ReportResource {
   public ResponseEntity<?> getMstReport(
     @PathVariable("funcCd") String funcCd,
     @PathVariable("printFlag") String printFlag,
+    @RequestParam(required = false) Long selectedPatId,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, ntssUser.getFacilityCd(), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
 
     // #10959 システム内でstatic変数を使っている箇所の洗い出し 20260428 mod yangxuewang start
     Long userId = ntssUser.getUserId();
@@ -359,7 +365,21 @@ public class ReportResource {
   public ResponseEntity<?> getReportHtmlByCd(
     @PathVariable("reportCd") Long reportCd,
     @RequestBody ReportByCdRequest request,
+    @RequestParam(required = false) Long selectedPatId,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if (!ntssUser.isNkkAdminUser()) {
+      MstReport mstReport = mstReportDao.selectByCd(reportCd);
+      if (mstReport != null && mstReport.getFacilityCd() != null
+        && !facilityAccessService.hasFacilityOrSelectedPatShareAccess(
+          ntssUser, mstReport.getFacilityCd(), selectedPatId)) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstReport.getFacilityCd() + " " + "reportCd=" + reportCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
 
     String mappingUrl = Uri.CREATING_REPORT + "/creating-report";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -1544,7 +1564,7 @@ public class ReportResource {
    */
   @ExceptionHandler(NotExistException.class)
   public ResponseEntity<?> handleNotExistException(final NotExistException e) {
-    return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
   }
 
   /**
@@ -1553,7 +1573,17 @@ public class ReportResource {
    * @return List<MstReport>
    */
   @GetMapping("/getMstReportByFacilityCd/{facilityCd}")
-  public ResponseEntity<List<MstReport>> getMstReportByFacilityCd(@PathVariable String facilityCd) {
+  public ResponseEntity<List<MstReport>> getMstReportByFacilityCd(@PathVariable String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260512 start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260512 end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260512 start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260512 end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CREATING_REPORT + "/getMstReportByFacilityCd";
@@ -1584,7 +1614,17 @@ public class ReportResource {
    * @return List<MstReport>
    */
   @GetMapping("/getMstReportByFacilityCdNoIsDisp/{facilityCd}")
-  public ResponseEntity<List<MstReport>> getMstReportByFacilityCdNoIsDisp(@PathVariable String facilityCd) {
+  public ResponseEntity<List<MstReport>> getMstReportByFacilityCdNoIsDisp(@PathVariable String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CREATING_REPORT + "/getMstReportByFacilityCdNoIsDisp";
@@ -1613,7 +1653,26 @@ public class ReportResource {
   @PostMapping("/upload/{patEvent}")
   public ResponseEntity<?> uploadHtml(
     @RequestParam("file") MultipartFile file,
-    @PathVariable("patEvent") String patEvent) throws Exception {
+    @PathVariable("patEvent") String patEvent,
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+// #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    try{
+      if (!ntssUser.isNkkAdminUser()) {
+        String[] split = patEvent.split("&");
+        String facilityCo = split[0];
+        if (facilityCo != null && !facilityCo.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    } catch (Exception e) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CREATING_REPORT + "/upload";
@@ -1732,9 +1791,16 @@ public class ReportResource {
    * is_dispの表示/非表示と関係なく、施設CDにより帳票を取得
    * @param facilityCd
    * @return List<MstReport>
-   */
+  */
   @GetMapping("/getMstReportByFacilityCdNoIsDel/{facilityCd}")
-  public ResponseEntity<List<MstReport>> getMstReportByFacilityCdNoIsDel(@PathVariable String facilityCd) {
+  public ResponseEntity<List<MstReport>> getMstReportByFacilityCdNoIsDel(@PathVariable String facilityCd,
+                                                                         @RequestParam(required = false) Long selectedPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
 
     String mappingUrl = Uri.CREATING_REPORT + "/getMstReportByFacilityCdNoIsDel";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO,

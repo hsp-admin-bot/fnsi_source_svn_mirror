@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -122,6 +122,7 @@
                   v-model="treatmentScheduledDate"
                   data-text-field="title"
                   data-value-field="value"
+                  @select="onTreatmentScheduledDateSelect"
                 />
               </td>
             </tr>
@@ -324,15 +325,16 @@
 </template>
 
  <script>
-   import {mapActions, mapGetters} from "vuex";
+   import {mapActions, mapGetters} from "@/compat/vue/vuex";
    /*add FNSI-改修内容4214 任 start*/
-   import $ from "jquery";
+
    /*add FNSI-改修内容4214 任 end*/
    import {DATE_CHOICES, INDICATION} from "@/constants/defaultSettingConstants";
    import {deepCopy} from "@/functions/common/CommonFunctions";
    import {AUTHORITY_CODES} from "@/constants/userAuthority";
    //add FNSI-5687 劉全航 start
-   import { EventBus } from "@/eventBus.js";
+   import { EventBus } from "@/compat/vue/event-bus.js";
+import { getScopedElementById, isScopedElementDisplayInline } from "@/functions/common/LayoutMeasureHelper";
    //add FNSI-5687 劉全航 end
 
    const ALL = "1";
@@ -340,8 +342,6 @@ const UNCHECKED = "2";
 const ALREADY = "3";
 
 export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -470,6 +470,13 @@ export default {
     },
     clickRadioLabelapprover2(mode) {
       this.approver2 = mode;
+    },
+    onTreatmentScheduledDateSelect(e) {
+      const selectedDataItem = e?.dataItem;
+      const selectedValue = selectedDataItem && typeof selectedDataItem === "object"
+        ? selectedDataItem.value
+        : (e?.value ?? this.treatmentScheduledDate);
+      this.treatmentScheduledDate = selectedValue;
     }
   },
   computed: {
@@ -507,7 +514,7 @@ export default {
     indKurCds: {
       get() {
         return this.editRecord[INDICATION.KEY_NAME_IND_KUR_CDS];
-      },
+        },
       set(value) {
         this.editRecord[INDICATION.KEY_NAME_IND_KUR_CDS] = value;
       }
@@ -724,6 +731,9 @@ export default {
       } else {
         if (this.editRecord[INDICATION.KEY_NAME_TREATMENT_CD] == null) {
           this.editRecord[INDICATION.KEY_NAME_TREATMENT_CD] = this.initialValue[INDICATION.KEY_NAME_TREATMENT_CD];
+        } else if (!this.mstTreatment.some(t => +t.treatmentCd === +this.editRecord[INDICATION.KEY_NAME_TREATMENT_CD])) {
+          // NOTE: マスタ削除された場合、「0 : 全て」を再設定
+          this.editRecord[INDICATION.KEY_NAME_TREATMENT_CD] = "0";
         }
         if (this.editRecord[INDICATION.KEY_NAME_KUR_CDS] == null) {
           this.editRecord[INDICATION.KEY_NAME_KUR_CDS] = this.initialValue[INDICATION.KEY_NAME_KUR_CDS];
@@ -733,9 +743,15 @@ export default {
         }
         if (this.editRecord[INDICATION.KEY_NAME_BED_GROUP_CD] == null) {
           this.editRecord[INDICATION.KEY_NAME_BED_GROUP_CD] = this.initialValue[INDICATION.KEY_NAME_BED_GROUP_CD];
+        } else if (!this.mstRoomBedGroup.some(rbg => +rbg.roomBedGroupCd === +this.editRecord[INDICATION.KEY_NAME_BED_GROUP_CD])) {
+          // NOTE: マスタ削除された場合、「0 : すべて」を再設定
+          this.editRecord[INDICATION.KEY_NAME_BED_GROUP_CD] = "0";
         }
         if (this.editRecord[INDICATION.KEY_NAME_IND_BED_GROUP_CD] == null) {
           this.editRecord[INDICATION.KEY_NAME_IND_BED_GROUP_CD] = this.initialValue[INDICATION.KEY_NAME_IND_BED_GROUP_CD];
+        } else if (!this.mstRoomBedGroup.some(rbg => +rbg.roomBedGroupCd === +this.editRecord[INDICATION.KEY_NAME_IND_BED_GROUP_CD])) {
+          // NOTE: マスタ削除された場合、「0 : すべて」を再設定
+          this.editRecord[INDICATION.KEY_NAME_IND_BED_GROUP_CD] = "0";
         }
         if (this.editRecord[INDICATION.KEY_NAME_CHECKER1_HAS_NOT_RECEIVED] == null) {
           this.editRecord[INDICATION.KEY_NAME_CHECKER1_HAS_NOT_RECEIVED] = this.initialValue[INDICATION.KEY_NAME_CHECKER1_HAS_NOT_RECEIVED];
@@ -751,6 +767,9 @@ export default {
         }
         if (this.editRecord[INDICATION.KEY_NAME_INSTRUCTOR_ID] == null) {
           this.editRecord[INDICATION.KEY_NAME_INSTRUCTOR_ID] = this.initialValue[INDICATION.KEY_NAME_INSTRUCTOR_ID];
+        } else if (!this.mstPersonalUser.some(pu => +pu.userId === +this.editRecord[INDICATION.KEY_NAME_INSTRUCTOR_ID])) {
+          // NOTE: マスタ削除された場合、「0 : 未登録」を再設定
+          this.editRecord[INDICATION.KEY_NAME_INSTRUCTOR_ID] = "0";
         }
         if (this.editRecord[INDICATION.KEY_NAME_TREATMENT_SCHEDULE_DATE] == null) {
           this.editRecord[INDICATION.KEY_NAME_TREATMENT_SCHEDULE_DATE] = this.initialValue[INDICATION.KEY_NAME_TREATMENT_SCHEDULE_DATE];
@@ -769,6 +788,9 @@ export default {
         }
         if (this.editRecord[INDICATION.KEY_NAME_USER_ID] == null) {
           this.editRecord[INDICATION.KEY_NAME_USER_ID] = this.initialValue[INDICATION.KEY_NAME_USER_ID];
+        } else if (!this.mstPersonalUser.some(pu => +pu.userId === +this.editRecord[INDICATION.KEY_NAME_USER_ID])) {
+          // NOTE: マスタ削除された場合、「0 : 未登録」を再設定
+          this.editRecord[INDICATION.KEY_NAME_USER_ID] = 0;
         }
         if (this.editRecord[INDICATION.KEY_NAME_INDICATION_LIST] == null) {
           this.editRecord[INDICATION.KEY_NAME_INDICATION_LIST] = this.initialValue[INDICATION.KEY_NAME_INDICATION_LIST];
@@ -776,8 +798,14 @@ export default {
         this.initialValue = deepCopy(this.editRecord);
       }
       /*add FNSI-改修内容4214 任 start*/
-      if($("#phone-show-indication").css("display") === "inline"){
-        document.getElementById("phone-show-indication").innerText =  document.getElementById("phone-show-indication").innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+      if(isScopedElementDisplayInline("phone-show-indication", this.$el || this)){
+        const phoneShowElement = getScopedElementById("phone-show-indication", this.$el || this);
+
+        if (phoneShowElement) {
+
+          phoneShowElement.innerText = phoneShowElement.innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+
+        }
       }
       /*add FNSI-改修内容4214 任 end*/
       // 共通ローダー表示終了
@@ -785,8 +813,6 @@ export default {
       this.isExpanded = this.defaultExpanded;
     });
   },
-  mounted() {
-  }
 };
 </script>
 

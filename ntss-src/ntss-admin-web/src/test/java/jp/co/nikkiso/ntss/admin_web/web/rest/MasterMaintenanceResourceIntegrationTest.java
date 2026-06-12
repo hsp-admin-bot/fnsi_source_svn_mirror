@@ -25,7 +25,7 @@ import java.util.Map;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
@@ -34,7 +34,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.request.masterMaintenance.MasterUpdateRequest;
 import jp.co.nikkiso.ntss.admin_web.response.masterMaintenance.MasterColumn;
@@ -136,7 +136,7 @@ public class MasterMaintenanceResourceIntegrationTest extends AbstractResourceIn
 
     // API実行
     ResultActions result = mockMvc
-        .perform(get("/api/master_maintenance/master_list").contentType(MediaType.APPLICATION_JSON_UTF8));
+        .perform(get("/api/master_maintenance/master_list").contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     result.andExpect(status().isOk()).andExpect(jsonPath("$.masterList", hasSize(3)))
@@ -182,7 +182,7 @@ public class MasterMaintenanceResourceIntegrationTest extends AbstractResourceIn
 
     // API実行
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders
-        .get("/api/master_maintenance/{masterName}/data", masterName).contentType(MediaType.APPLICATION_JSON_UTF8));
+        .get("/api/master_maintenance/{masterName}/data", masterName).contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     result.andExpect(status().isOk()).andExpect(jsonPath("$.columns", hasSize(12)))
@@ -484,7 +484,7 @@ public class MasterMaintenanceResourceIntegrationTest extends AbstractResourceIn
     // API実行
     ResultActions result = mockMvc
         .perform(RestDocumentationRequestBuilders.put("/api/master_maintenance/{masterName}/data", masterPhysicalName)
-            .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+            .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isOk()).andExpect(jsonPath("$.isSuccess", is(true)))
@@ -558,7 +558,7 @@ public class MasterMaintenanceResourceIntegrationTest extends AbstractResourceIn
 
     // API実行
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders
-      .get("/api/master_maintenance/{masterName}/column_info", masterName).contentType(MediaType.APPLICATION_JSON_UTF8));
+      .get("/api/master_maintenance/{masterName}/column_info", masterName).contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     result.andExpect(status().isOk())

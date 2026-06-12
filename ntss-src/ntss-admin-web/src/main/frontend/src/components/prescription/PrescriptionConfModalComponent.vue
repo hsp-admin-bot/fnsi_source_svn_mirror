@@ -145,7 +145,7 @@
 </template>
 
 <script>
-import { mapGetters, mapActions, mapMutations } from "vuex";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import UserAuthorityMixin from "@/components/common/UserAuthorityMixin";
@@ -282,6 +282,8 @@ export default {
 </script>
 
 <style scoped>
+@import "../../assets/styles/modal.css";
+
 /* 印刷時スタイル */
 @media print {
   .print-none {
@@ -295,7 +297,6 @@ export default {
  * webpackでエイリアスを設定すればできそう。
  * https://vue-loader-v14.vuejs.org/ja/configurations/asset-url.html
  */
- @import "../../assets/styles/modal.css";
 
 .modal-container {
   width: 68%;
@@ -361,5 +362,8 @@ export default {
     width: 88%;
     height: 88%;
   }
+}
+:deep(.k-legacy-dropdownlist.k-dropdownlist.k-picker > .k-input-button.k-select, .k-dropdownlist.k-picker.k-legacy-dropdownlist > .k-input-button.k-select){
+  position: relative !important;
 }
 </style>

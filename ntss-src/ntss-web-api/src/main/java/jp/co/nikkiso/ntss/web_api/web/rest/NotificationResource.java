@@ -39,7 +39,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -123,7 +123,7 @@ public class NotificationResource {
       // JSONの値取得に失敗した場合はBad Requestを返す
       eventLogMessage.setLogMessage("JSONの値取得に失敗しました。");
       logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     //add FNSi6531通知が重複して行われる 周 start
@@ -132,13 +132,13 @@ public class NotificationResource {
 //      if(notificationNo > 0) {
 //        int notificationCnt = notificationService.getNotificationMessage(facilityCd, notificationNo);
 //        if(notificationCnt > 0) {
-//          return new ResponseEntity<>(null, HttpStatus.OK);
+//          return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //        }
 //      }
 //    } catch (Exception e) {
 //      eventLogMessage.setLogMessage("通知情報の取得に失敗しました。facilityCd: " + facilityCd + ". notificationNo: " + notificationNo);
 //      logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-//      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+//      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
 //    }
     //add FNSi6531通知が重複して行われる 周 end
 
@@ -170,7 +170,7 @@ public class NotificationResource {
         // 置換処理に失敗した場合はBad Requestを返す
         eventLogMessage.setLogMessage("メッセージ定義の置換処理に失敗しました。");
         logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
       }
     }
 
@@ -190,7 +190,7 @@ public class NotificationResource {
         // 置換処理に失敗した場合はBad Requestを返す
         eventLogMessage.setLogMessage("付加情報定義の置換処理に失敗しました。");
         logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
       }
     }
 
@@ -280,7 +280,7 @@ public class NotificationResource {
 
     // add bug 6522 修正 chen start
     // if (isOnlySpecificUser && recipientsReqList.size() == 0) {
-    //   return new ResponseEntity<>(null, HttpStatus.OK);
+    //   return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     // }
     // add bug 6522 修正 chen end
 
@@ -300,7 +300,7 @@ public class NotificationResource {
     // クライアントに通知する
     // add bug 6531 修正 chen start
     // if (isOnlySpecificUser) {
-    //   return new ResponseEntity<>(null, HttpStatus.OK);
+    //   return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     // }
     // add bug 6531 修正 chen end
     //del FNSi6531通知が重複して行われる 周 start
@@ -351,7 +351,7 @@ public class NotificationResource {
     //mod FNSi6531通知が重複して行われる 周 end
 
     // レスポンス生成
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   /**
@@ -399,7 +399,7 @@ public class NotificationResource {
       EventLogMessage eventLogMessage = new EventLogMessage();
       eventLogMessage.setLogMessage("JSONの値取得に失敗しました。");
       logService.log(LogLevel.DEBUG, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     // ユーザーと施設コードの組み合わせ
@@ -438,6 +438,6 @@ public class NotificationResource {
     );
 
     // レスポンス生成
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 }

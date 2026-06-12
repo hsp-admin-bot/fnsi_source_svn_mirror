@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils;
 import org.springframework.aop.framework.AopProxyUtils;
@@ -23,7 +23,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
@@ -235,7 +235,7 @@ public class DataGatheringAutoService {
       long start = System.currentTimeMillis();
       // リクエスト処理
       ResponseEntity<HttpStatus> response = rt.exchange(request, HttpStatus.class);
-      HttpStatus status = response.getStatusCode();
+      HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
       long cost = System.currentTimeMillis() - start;
       Map<String, Object> map = new HashMap<>();
       map.put("logType", "RESTTEMPLATE-LOG");

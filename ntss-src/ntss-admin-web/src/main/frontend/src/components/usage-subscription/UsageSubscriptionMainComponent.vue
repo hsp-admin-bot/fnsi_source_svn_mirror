@@ -1,6 +1,7 @@
 <template>
   <div id="main-id" class='main-content-area'>
     <table class="status-area">
+      <tbody>
       <tr>
         <td>
           <label class="status">申込状況：{{ dataSource.length > 0 ? subscriptionStatus : '' }}</label>
@@ -13,13 +14,13 @@
           <!--  -->
           <label v-if="lastOrder.applicant" class="status">申込者：{{ applicantName() }}</label>
         </td>
-      </tr>
+        </tr>
+    
+      </tbody>
     </table>
     <div class="grid">
       <table id="master-list" class="ntss-list">
-        <!--mod 印刷不正 修正 xie start-->
-        <!--<thead>-->
-        <!--mod 印刷不正 修正 xie end -->
+        <thead>
           <tr>
             <th
               v-for="column in columnsHeader"
@@ -30,9 +31,7 @@
               ]"
             >{{ column.title }}</th>
           </tr>
-        <!--mod 印刷不正 修正 xie start-->
-        <!--</thead>-->
-        <!--mod 印刷不正 修正 xie end -->
+        </thead>
         <tbody>
           <tr v-for="(func, index) in sortedItems" :key="`func_${index}`" class="ntss-list-body-tr">
             <td class="ntss-list-body-td text-center">{{ func.functionCd }}</td>
@@ -91,7 +90,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :cover-target="false"
       :direction="popoverDirection"
@@ -109,14 +108,14 @@
 
 <script>
 import NextTransitionMixin from "@/components/NextTransitionMixin";
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import {
   getSysAllFunction,
   getSalSubscriptionManage,
   createSalSubscriptionManage,
   sendRequestUpdateCancel
 } from "@/apis/usage-subscription";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import {
   stringToArray,
   processStatus,
@@ -124,7 +123,7 @@ import {
 } from "@/components/usage-subscription/UsageSubscriptionFunction";
 import { dateFormat } from "@/functions/common/DateTimeUtils.js";
 import PopoverMixin from "@/components/PopoverMixin";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
@@ -135,7 +134,7 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 
 export default {
-  props: {},
+
   mixins: [NextTransitionMixin, PopoverMixin],
   name: "UsageSubscriptionMainComponent",
   data() {
@@ -263,7 +262,7 @@ export default {
 
   async created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     await this.getData();
   },
   methods: {
@@ -450,7 +449,7 @@ export default {
       this.lastOrder = null;
       order.forEach(ord => {
         if (this.lastOrder) {
-          if (moment(this.lastOrder.regDate) < moment(ord.regDate)) {
+          if (dayjs(this.lastOrder.regDate) < dayjs(ord.regDate)) {
             this.lastOrder = ord;
           }
         } else {
@@ -582,7 +581,7 @@ export default {
       );
     },
     async refresh() {
-      if (this.selfScreenName === this.$router.currentRoute.name) {
+      if (this.selfScreenName === this.$route.name) {
         // #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start
         // this.dataSource = [];
         await this.getData();
@@ -596,7 +595,7 @@ export default {
     // add 性能改善メモリ不足 shan end
     EventBus.$on("refresh", this.refresh);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
   }
 };
@@ -676,8 +675,8 @@ export default {
   line-height: 2em;
   margin-top: 16px;
 }
-.tips-popover >>> .popover,
-.tips-popover >>> .popover__content {
+.tips-popover :deep(.popover),
+.tips-popover :deep(.popover__content) {
   min-width: fit-content;
   min-height: fit-content;
 }

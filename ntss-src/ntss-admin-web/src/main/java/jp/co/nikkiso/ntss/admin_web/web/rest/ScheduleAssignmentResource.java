@@ -14,7 +14,9 @@ import jp.co.nikkiso.ntss.core.dto.OrdMain.JournalEventLinkByPat;
 
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.core.entity.OrdMain;
+import jp.co.nikkiso.ntss.core.entity.PatMain;
 import jp.co.nikkiso.ntss.core.entity.PatPersonalMain;
+import jp.co.nikkiso.ntss.core.entity.custom.OrdMainForScheduleAssignment;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,6 +49,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 @RestController
 @Slf4j
@@ -125,7 +128,16 @@ public class ScheduleAssignmentResource {
    */
   @GetMapping("getorder/{orderNo}")
   public ResponseEntity<?> getOrderByOrderNo(
-      @PathVariable Long orderNo) {
+      @PathVariable Long orderNo,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMainForScheduleAssignment ordMain = ordMainDao.selectByOrdNoScheduleAssignment(orderNo);
+      if (ordMain != null && ordMain.getFacilityCd() != null && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "orderNo=" + orderNo + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.SCHEDULE_ASSIGNMENT + "/getorder";
@@ -214,7 +226,21 @@ public class ScheduleAssignmentResource {
   @PostMapping("/patassignment/{patId}/{ordNo}")
   public ResponseEntity<?> patAssignment(
       @PathVariable Long patId,
-      @PathVariable Long ordNo) {
+      @PathVariable Long ordNo,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMainForScheduleAssignment ordMain = ordMainDao.selectByOrdNoScheduleAssignment(ordNo);
+      if (ordMain != null && ordMain.getFacilityCd() != null && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "patId=" + patId + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.SCHEDULE_ASSIGNMENT + "/getschedulelist";
@@ -259,7 +285,11 @@ public class ScheduleAssignmentResource {
       @PathVariable Long baseOrdNo,
       @PathVariable Long ordNo,
       @PathVariable int rstInputClass,
-      @PathVariable String flg) {
+      @PathVariable String flg,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
 
     // 毛 ログ改善対応 Add
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -272,6 +302,22 @@ public class ScheduleAssignmentResource {
     // add #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao end
 
     try {
+      if(!ntssUser.isNkkAdminUser()) {
+        ordMainChangedDataInfo = ordMainDao.selectByOrdNo(baseOrdNo);
+        OrdMainForScheduleAssignment targetOrdMain = ordMainDao.selectByOrdNoScheduleAssignment(ordNo);
+        if (ordMainChangedDataInfo != null && ordMainChangedDataInfo.getFacilityCd() != null
+          && !ordMainChangedDataInfo.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMainChangedDataInfo.getFacilityCd() + " " + "baseOrdNo=" + baseOrdNo + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+        if (targetOrdMain != null && targetOrdMain.getFacilityCd() != null
+          && !targetOrdMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + targetOrdMain.getFacilityCd() + " " + "baseOrdNo=" + baseOrdNo + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
 
 // mod 11454 時間外加算自動処理が機能していない(実装ロジックが同一トランザクションにするために、ScheduleAssignmentServiceImpl.javaのscheduleAssignmentメソッドに移動する) zkm start
 //// 割当先治療記録の実績展開を実施
@@ -567,6 +613,20 @@ public class ScheduleAssignmentResource {
       ordMainChangedDataInfo = ordMainDao.selectByOrdNo(baseOrdNo);
       r = scheduleAssignmentService.scheduleAssignment(baseOrdNo, ordNo, rstInputClass, flg);
       ordMainChangeBeforeDataInfo = ordMainDao.selectByOrdNo(baseOrdNo);
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (ordMainChangedDataInfo.getFacilityCd() != null && !ordMainChangedDataInfo.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMainChangedDataInfo.getFacilityCd() + " " + "baseOrdNo=" + baseOrdNo + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+        if (ordMainChangeBeforeDataInfo.getFacilityCd() != null && !ordMainChangeBeforeDataInfo.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMainChangeBeforeDataInfo.getFacilityCd() + " " + "baseOrdNo=" + baseOrdNo + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 // mod 11454 時間外加算自動処理が機能していない(実装ロジックが同一トランザクションにするために、ScheduleAssignmentServiceImpl.javaのscheduleAssignmentメソッドに移動する) zkm end
 
     } catch (Exception e) {
@@ -607,7 +667,7 @@ public class ScheduleAssignmentResource {
         }
         List<JournalCreateRequestPayload> journalList = journalCreatePayloadService.createJournalPayloadForToBeEventTreatDate(journalEventLinkByPatListMap, updUserId, actionMode);
         journalList = journalList.stream().filter(o -> o.getOpeCd() != null).collect(Collectors.toList());
-        if (!org.apache.commons.collections.CollectionUtils.isEmpty(journalList)) {
+        if (!org.apache.commons.collections4.CollectionUtils.isEmpty(journalList)) {
           journalService.callCreateJournalForCtrNo(journalList);
         }
       } catch (Exception e) {

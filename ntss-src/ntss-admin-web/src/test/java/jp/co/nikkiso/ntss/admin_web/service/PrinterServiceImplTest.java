@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import jp.co.nikkiso.ntss.admin_web.response.creatingReport.PrinterInfo;
 import jp.co.nikkiso.ntss.admin_web.service.print.PrinterService;
 import jp.co.nikkiso.ntss.admin_web.service.reportMenu.ReportMenuService;
@@ -15,7 +15,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,13 +44,13 @@ public class PrinterServiceImplTest {
   /**
    * 処置マスタDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstPrinterDao mstPrinterDao;
 
   /**
    * MstSelectorのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstSelectorDao mstSelectorDao;
 
   /**
@@ -97,9 +97,9 @@ public class PrinterServiceImplTest {
    * MstSelectorの初期化.
    *
    * @return MstSelecorのitemリスト
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
-  private MstSelector createMstSelector() throws JsonProcessingException {
+  private MstSelector createMstSelector() throws JacksonException {
     List<MstSelector.Item> items = Arrays.asList(
       new MstSelector.Item() {{
         setCode(1L);
@@ -129,9 +129,9 @@ public class PrinterServiceImplTest {
   /**
    * MstSelectorの初期化（データなし）.
    * @return MstSelecorのitemリスト
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
-  private MstSelector createMstSelectorNotData() throws JsonProcessingException {
+  private MstSelector createMstSelectorNotData() throws JacksonException {
     List<MstSelector.Item> items = emptyList();
 
     MstSelector.OrderSettings orderSettings = new MstSelector.OrderSettings();
@@ -150,10 +150,10 @@ public class PrinterServiceImplTest {
    *
    * 条件：施設コードに該当するプリンターマスタが存在する
    * 結果：プリンタ情報が返却されること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_getPrinterInfos_成功_プリンターマスタが存在する() throws JsonProcessingException {
+  public void test_getPrinterInfos_成功_プリンターマスタが存在する() throws JacksonException {
     // 事前準備
     final String facilityCd = "1001";
     final String tableName = "mst_printer";
@@ -193,10 +193,10 @@ public class PrinterServiceImplTest {
    *
    * 条件：施設コードに該当するプリンターマスタが存在しない
    * 結果：空のリストが返却されること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_getPrinterInfos_成功_プリンターマスタが存在しない() throws JsonProcessingException {
+  public void test_getPrinterInfos_成功_プリンターマスタが存在しない() throws JacksonException {
     // 事前準備
     final String facilityCd = "9999";
     final String tableName = "mst_printer";
@@ -247,6 +247,7 @@ public class PrinterServiceImplTest {
     reportMenuSortContainer.setIsDialysisDate(true);
     // 実行
     String result = reportMenuService.getHtmlReportSorted(reportMenuSortContainer, 1L, "");
+    System.out.println(result);
   }
 
   /**
@@ -275,5 +276,6 @@ public class PrinterServiceImplTest {
     reportMenuSortContainer.setIsDialysisDate(true);
     // 実行
     String result = reportMenuService.getHtmlReportSorted(reportMenuSortContainer, 1L, "");
+    System.out.println(result);
   }
 }

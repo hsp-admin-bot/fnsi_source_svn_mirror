@@ -3,36 +3,41 @@
     v-if="selectedDeviceSetType === 'tare'"
     header-title="風袋"
     :show-button="false"
+    :resolve-editor-component="resolveActiveTareOffwaterEditor"
     @hide-modal="hideModal()"
   >
-    <tare v-bind="tareOffwaterProps" />
+    <tare ref="tareEditor" v-bind="tareOffwaterProps" />
   </base-tare-offwater>
   <base-tare-offwater
     v-else-if="selectedDeviceSetType === 'offwater'"
     header-title="除水補正"
     :show-button="false"
+    :resolve-editor-component="resolveActiveTareOffwaterEditor"
     @hide-modal="hideModal()"
   >
-    <offwater v-bind="tareOffwaterProps" />
+    <offwater ref="offwaterEditor" v-bind="tareOffwaterProps" />
   </base-tare-offwater>
   <base-tare-offwater
     v-else-if="selectedDeviceSetType === 'hostNotice'"
     header-title="ホスト報知"
     :show-button="false"
+    :resolve-editor-component="resolveActiveTareOffwaterEditor"
     @hide-modal="hideModal()"
   >
-    <host-notice v-bind="hostNoticeProps" />
+    <host-notice ref="hostNoticeEditor" v-bind="hostNoticeProps" />
   </base-tare-offwater>
   <modal-base v-else @onClose="cancelConfirm" class="custom-modal">
-    <component
-      :is="selectedDeviceSetType"
-      slot="body"
-      ref="deviceSetInfo"
-      v-bind="deviceProps"
-      @close="hideModal()"
-    />
+    <template #body>
+      <component
+        :is="selectedDeviceSetType"
+        ref="deviceSetInfo"
+        v-bind="deviceProps"
+        @close="hideModal()"
+      />
+    </template>
 
-    <v-ons-row slot="footer" class="button-area">
+    <template #footer>
+      <v-ons-row class="button-area">
       <v-ons-col class="button-cancel">
         <v-ons-button
           class="btn2-cancel common-style-cancel-button"
@@ -56,7 +61,8 @@
         </v-ons-button>
         <!-- mod FNSI-改修内容 権限関連 趙慧敏 end -->
       </v-ons-col>
-    </v-ons-row>
+      </v-ons-row>
+    </template>
   </modal-base>
 </template>
 
@@ -64,7 +70,7 @@
   // add #10359 編集権限の動作不正 dengshen start
   import { getAuthorized } from "@/functions/common/CommonFunctions.js";
   // add #10359 編集権限の動作不正 dengshen end
-  import {mapGetters} from "vuex";
+  import {mapGetters} from "@/compat/vue/vuex";
   import {
     DATA_SOURCE_TYPE_MST,
     DATA_SOURCE_TYPE_PAT,
@@ -80,7 +86,7 @@
   // del #10359 編集権限の動作不正 dengshen end
   // add FNSI-改修内容 権限関連 趙慧敏 end
   // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
-  import { EventBus } from "@/eventBus.js";
+  import { EventBus } from "@/compat/vue/event-bus.js";
   // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
 export default {
   components: {
@@ -188,7 +194,6 @@ export default {
   },
 
   // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
-  watch: {},
   // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
 
   methods: {
@@ -202,6 +207,19 @@ export default {
      */
     cancelConfirm() {
       this.$refs.deviceSetInfo.cancelConfirm();
+    },
+
+    resolveActiveTareOffwaterEditor() {
+      switch (this.selectedDeviceSetType) {
+        case "tare":
+          return this.$refs.tareEditor || null;
+        case "offwater":
+          return this.$refs.offwaterEditor || null;
+        case "hostNotice":
+          return this.$refs.hostNoticeEditor || null;
+        default:
+          return null;
+      }
     },
 
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
@@ -243,6 +261,7 @@ export default {
   created() {
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
     EventBus.$off("deviceSetChanged", this.setSaveBtnEnable);
+    EventBus.$off("checkDeviceSetInfoChange", this.checkDeviceSetInfoChange);
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
     if (this.selectedDeviceSetSrcType === DATA_SOURCE_TYPE_TREAT)
       this.isTreat = true;
@@ -258,6 +277,10 @@ export default {
     EventBus.$on("deviceSetChanged", this.setSaveBtnEnable);
     EventBus.$on("checkDeviceSetInfoChange", this.checkDeviceSetInfoChange);
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
+  },
+  beforeUnmount() {
+    EventBus.$off("deviceSetChanged", this.setSaveBtnEnable);
+    EventBus.$off("checkDeviceSetInfoChange", this.checkDeviceSetInfoChange);
   }
 };
 </script>
@@ -269,22 +292,22 @@ export default {
 
 <style scoped>
 /* TODO: 共通スタイル(modal.css)に定義 */
-div >>> .modal-header .toolbar {
+div :deep(.modal-header .toolbar) {
   background-color: var(--ntss-header-background-color);
 }
 
-div >>> .modal-header .toolbar__title.toolbar__left {
+div :deep(.modal-header .toolbar__title.toolbar__left) {
   color: var(--ntss-header-color) !important;
 }
 
-div >>> .modal-search,
-div >>> .modal-body,
-div >>> .modal-footer,
-div >>> .modal-footer .bottom-bar {
+div :deep(.modal-search),
+div :deep(.modal-body),
+div :deep(.modal-footer),
+div :deep(.modal-footer .bottom-bar) {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }
-div >>> .modal-footer ons-bottom-toolbar {
+div :deep(.modal-footer ons-bottom-toolbar) {
   height: auto;
 }
 </style>

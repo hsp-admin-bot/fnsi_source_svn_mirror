@@ -14,9 +14,7 @@ export default {
      * @param {*} commit COMMITオブジェクト
      * @param {string} facilityCd 施設コード
      */
-    /* eslint-disable no-unused-vars */
     getUseFunctions({ commit }, facilityCd) {
-      /* eslint-enable no-unused-vars */
       return sendRequestGetUseFunctions(facilityCd);
     }
   }

@@ -57,7 +57,7 @@
 
 <script>
 import PopoverMixin from "@/components/PopoverMixin";
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 
 export default {
@@ -74,11 +74,6 @@ export default {
     popoverTreatment: {
       type: Object,
       default: null
-    },
-    data() {
-      return {
-        popoverVisible: false
-      }
     }
   },
   computed: {
@@ -94,7 +89,7 @@ export default {
      * @returns {String} 表示方向
      */
     popoverDisplayDirection() {
-      if (!this.popoverVisible) return null;
+      if (!this.popoverVisible || !this.popoverTarget?.getBoundingClientRect) return null;
       const elemPosition = this.popoverTarget.getBoundingClientRect();
       let direction = "down"
       if ((this.windowHeight - elemPosition.top) < 200) {
@@ -128,11 +123,11 @@ export default {
 </script>
 
 <style scoped>
-.medicine-popover >>> .popover__content {
+.medicine-popover :deep(.popover__content) {
   padding: 5px;
 }
-.medicine-popover >>> .popover__content,
-.medicine-popover >>> .popover--top {
+.medicine-popover :deep(.popover__content),
+.medicine-popover :deep(.popover--top) {
   width: 500px;
   max-width: 95vw;
 }

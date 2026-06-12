@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body">
+    <template #body>
+      <div>
       <table class="electro-table treatment-record-accordion treatment-record-modal">
         <tr v-for="(item, index) in actualModel" :key="index">
           <td class="electrocardiogram-tb-content" :class="{ 'edited-row': item.isNew }">
@@ -29,7 +30,15 @@
                   <label>処置者</label>
                 </v-ons-col>
                 <v-ons-col width="13em" class="value d-flex align-items-center">
-                  <custom-input :value="userNameValue[index]" :disabled="true" />
+                  <common-master-selector
+                    :masterType="MasterType.PERSONAL_USER_TREATMENT_RECORD"
+                    :facilityCd="userFacilityCd"
+                    :initItem="createStaffPickerItem(index)"
+                    :editItem="createStaffPickerItem(index)"
+                    :selectedItemClass="'selector-input'"
+                    :btnVisible="false"
+                    :btnDisabled="true"
+                  />
                 </v-ons-col>
                 <v-ons-col width="5em" class="select d-flex align-items-center">
                   <!-- mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm start-->
@@ -45,17 +54,15 @@
 <!--                    :class="['isClass']"-->
 <!--                    :isDisabled="!item.isEditable"-->
 <!--                  />-->
-                  <com-master-selector
-                    name="personal-user-all"
-                    :value="createStaffValue(index)"
-                    :showLabelName="false"
-                    :showClassFilter="true"
-                    :readMasterData="fetchPersonalUserAll"
-                    :masterDefine="personalUser"
-                    :index="index"
-                    @changePersonalUser="setUser"
-                    :class="['isClass']"
-                    :isDisabled="!item.isEditable"
+                  <common-master-selector
+                    :masterType="MasterType.PERSONAL_USER_TREATMENT_RECORD"
+                    :facilityCd="userFacilityCd"
+                    :initItem="createStaffPickerItem(index)"
+                    :editItem="createStaffPickerItem(index)"
+                    :isVisible="false"
+                    :btnClass="'btn3-normal'"
+                    :btnDisabled="!item.isEditable"
+                    @popover-return="d => onPopoverStaff(d, index)"
                   />
                   <!-- mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm end-->
                 </v-ons-col>
@@ -78,7 +85,15 @@
                   <label>処置者</label>
                 </v-ons-col>
                 <v-ons-col width="13em" class="value d-flex align-items-center">
-                  <custom-input :value="userNameValue[index]" :disabled="true" />
+                  <common-master-selector
+                    :masterType="MasterType.PERSONAL_USER_TREATMENT_RECORD"
+                    :facilityCd="userFacilityCd"
+                    :initItem="createStaffPickerItem(index)"
+                    :editItem="createStaffPickerItem(index)"
+                    :selectedItemClass="'selector-input'"
+                    :btnVisible="false"
+                    :btnDisabled="true"
+                  />
                 </v-ons-col>
                 <v-ons-col width="5em" class="select d-flex align-items-center">
                   <!-- mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm start-->
@@ -94,17 +109,15 @@
 <!--                    :class="['isClass']"-->
 <!--                    :isDisabled="!item.isEditable"-->
 <!--                  />-->
-                  <com-master-selector
-                    name="personal-user-all"
-                    :value="createStaffValue(index)"
-                    :showLabelName="false"
-                    :showClassFilter="true"
-                    :readMasterData="fetchPersonalUserAll"
-                    :masterDefine="personalUser"
-                    :index="index"
-                    @changePersonalUser="setUser"
-                    :class="['isClass']"
-                    :isDisabled="!item.isEditable"
+                  <common-master-selector
+                    :masterType="MasterType.PERSONAL_USER_TREATMENT_RECORD"
+                    :facilityCd="userFacilityCd"
+                    :initItem="createStaffPickerItem(index)"
+                    :editItem="createStaffPickerItem(index)"
+                    :isVisible="false"
+                    :btnClass="'btn3-normal'"
+                    :btnDisabled="!item.isEditable"
+                    @popover-return="d => onPopoverStaff(d, index)"
                   />
                   <!-- mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm end-->
                 </v-ons-col>
@@ -119,8 +132,10 @@
         </label>
       </div>
       <br>
-    </div>
-    <div slot="footer" class="flex-container" style="overflow-x: auto;">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container" style="overflow-x: auto;">
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button denial-btn btn2-cancel" @click="cancel">キャンセル</v-ons-button>
@@ -131,19 +146,22 @@
       </div>
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
       <!-- add 確定有効の修正 周雨晴 end 2020/10/20 -->
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import moment from "moment";
-import { mapGetters, mapActions } from "vuex";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
+import dayjs from "@/compat/date/dayjs";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
 import CommonDateTimeComponent from "@/components/treatment-record/submenu/common/CommonDateTimeComponent";
-import CommonMasterSelectorComponent from "@/components/common/master-selector/TreatmentRecordSelectorComponent";
-import { personalUser } from "@/components/common/master-selector/MasterSelectorDefinitions";
+import CommonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 import ComplaintComponentMixin from "@/components/treatment-record/submenu/complaint/ComplaintComponentMixin";
 import { Complaint } from "@/models/treatment-record/complaint/Complaint";
 import { ElectrocardiogramModal } from "@/models/treatment-record/complaint/ElectrocardiogramModal";
@@ -151,10 +169,8 @@ import { Treatment } from "@/models/treatment-record/complaint/Treatment";
 import { Master } from "@/models/common/master-selector-condition/Master";
 import { CODES } from "@/constants/TreatmentRecord";
 import { dateFormat } from "@/functions/common/DateTimeUtils";
-import { EventBus } from "@/eventBus.js";
-import { sendRequestGetMstPersonalUser, sendRequestMstGetJobs } from "@/apis/user-selector-popover";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // FNSI-add redmine4848 徐 start
-import customInput from "@/components/common/custom-form-tags/CustomInput";
 // FNSI-add redmine4848 徐 end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
@@ -166,14 +182,11 @@ export default {
   components: {
     "modal-base": ModalBase,
     "com-date-time-input": CommonDateTimeComponent,
-    "com-master-selector": CommonMasterSelectorComponent,
-    // FNSI-add redmine4848 徐 start
-    "custom-input": customInput,
-    // FNSI-add redmine4848 徐 end
+    "common-master-selector": CommonMasterSelector,
   },
   data() {
     return {
-      personalUser: personalUser,
+      MasterType,
       actualModel: [],
       overTime: null,
       treatmentArgBase: {
@@ -184,12 +197,11 @@ export default {
         treatMedicineCd: null,
         treatMedicineName: null
       },
-      userNameValue: [],
       initModel: [],
     };
   },
   computed: {
-    ...mapGetters("user", { facilityCd: "getFacilityCd" }),
+    ...mapGetters("user", { userFacilityCd: "getFacilityCd" }),
     ...mapGetters("treatment-record/common", ["getDialysisState", "getRstEndDate"]),
     //add FNSI修正内容 愁訴処置の登録および表示修正 房 start
     ...mapGetters("treatment-record/complaint", ["getTempCtlNo"]),
@@ -359,7 +371,7 @@ export default {
           const index = i + 1;
           if (model.isStart) {
             // 開始ブロックの処理
-            const startDate = moment(model.startDate);
+            const startDate = dayjs(model.startDate);
             const startComplaint = Complaint.of({
               ctlNo: ctlNo,
               rowNo,
@@ -487,35 +499,16 @@ export default {
         this.hideModal();
       }
     },
-    fetchPersonalUserAll() {
-      return Promise.all([sendRequestGetMstPersonalUser(this.facilityCd), sendRequestMstGetJobs(this.facilityCd)]);
+    onPopoverStaff(data, index) {
+      this.actualModel[index].staff.name = data?.text ?? "";
+      this.actualModel[index].staff.cd = data?.value ?? null;
     },
-    // FNSI-add redmine4848 徐 start
-    setUser(userInfo, index) {
-      let userName = "";
-      if (userInfo && userInfo.lastName) {
-        userName = userInfo.lastName + " ";
-      }
-      if (userInfo && userInfo.firstName) {
-        userName = userName + userInfo.firstName;
-      }
-      this.actualModel[index].staff.name = userName;
-      this.actualModel[index].staff.cd = userInfo ? userInfo.id : null;
-
-      // リアクティブに通知してUIが更新されるようにspliceで配列を更新する
-      const newValue = {
-        ...this.userNameValue[index],
-        editValue: this.actualModel[index].staff.name
-      };
-      this.userNameValue.splice(index, 1, newValue);
-    },
-    // FNSI-add redmine4848 徐 end
-    createStaffValue(index) {
-      // mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm start
-      // return new Master(this.actualModel[index].staff.cd, this.actualModel[index].staff.name);
-      return new Master(null == this.actualModel[index].staff.cd || "" === this.actualModel[index].staff.cd
-        ? this.userInfo.userId : this.actualModel[index].staff.cd, this.actualModel[index].staff.name);
-      // mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm end
+    createStaffPickerItem(index) {
+      const staffCd = this.actualModel[index]?.staff?.cd;
+      const value =
+        staffCd == null || String(staffCd) === "" ? this.userInfo.userId : staffCd;
+      const text = this.actualModel[index]?.staff?.name ?? "";
+      return { value, text };
     },
     /**
      * 経過時間 設定
@@ -558,8 +551,8 @@ export default {
       if (endDate === null || preElectrocardiogramModal.startDate === null) {
         return null;
       }
-      const _startDate = moment(preElectrocardiogramModal.startDate);
-      const _endDate = moment(endDate);
+      const _startDate = dayjs(preElectrocardiogramModal.startDate);
+      const _endDate = dayjs(endDate);
       // 開始日時と終了日時の差分を求める
       const diff = _endDate.diff(_startDate, "minutes");
       if (diff <= 0) {
@@ -605,14 +598,13 @@ export default {
       }
       // 処置者：サインインユーザー
       electrocardiogramModal.staff = new Master(this.getUserId(), this.getUserName());
-      this.userNameValue.push({ initValue: "", editValue: electrocardiogramModal.staff.name });
 
       // 編集後データ
       this.actualModel.push(electrocardiogramModal);
 
       // 一番下にスクロールする
       this.$nextTick(() => {
-        const scrollBody = document.getElementById("scrollbody");
+        const scrollBody = getScopedElementById("scrollbody", this.$el || this);
         scrollBody.scrollTop = scrollBody.scrollHeight;
       });
     },
@@ -641,10 +633,9 @@ export default {
       EventBus.$off('deleteOxygenOrElectrocardiogram', this.removeLastElement);
       this.actualModel.pop();
       this.initModel.pop();
-      this.userNameValue.pop();
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
     EventBus.$off('deleteOxygenOrElectrocardiogram', this.removeLastElement);
@@ -696,13 +687,9 @@ export default {
         if (!item.isStart && item.endDate === null) {
           item.endDate = item.defaultDate;
         }
-        // 処置者：サインインユーザー
-        this.userNameValue[index] = { initValue: null, editValue: null }; // 初期化
-        this.userNameValue[index].initValue = item.staff != null ? item.staff.name : "";
         if (item.staff === null) {
           item.staff = new Master(this.getUserId(), this.getUserName());
         }
-        this.userNameValue[index].editValue = item.staff.name;
       });
     });
   }
@@ -721,10 +708,10 @@ export default {
   border-bottom: 1px solid #cccccc;
   padding: 10px;
 }
-.electrocardiogram-tb-content >>> ons-row {
+.electrocardiogram-tb-content :deep(ons-row) {
   flex-wrap: nowrap;
 }
-.electrocardiogram-tb-content >>> ons-col.title {
+.electrocardiogram-tb-content :deep(ons-col.title) {
   /* treatment-record-accordion 関連設定の幅だけ上書きする */
   flex: 0 0 20%;
   min-width: 5em;
@@ -733,28 +720,28 @@ export default {
   min-width: 7em;
   max-width: 35.4em;
 }
-.total-container >>> ons-row {
+.total-container :deep(ons-row) {
   flex-wrap: nowrap;
   width: 90%;
   margin-top: 10px;
 }
 
-div >>> .modal-container,
-div >>> .modal-search,
-div >>> .modal-body,
-div >>> .modal-footer,
-div >>> .modal-footer .bottom-bar {
+div :deep(.modal-container),
+div :deep(.modal-search),
+div :deep(.modal-body),
+div :deep(.modal-footer),
+div :deep(.modal-footer .bottom-bar) {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }
-div >>> .modal-body {
+div :deep(.modal-body) {
   overflow-x: hidden;
 }
 /* add FNSI-redmine3855 徐 start */
 .isClass {
   padding: unset;
 }
-.isClass >>> ons-button {
+.isClass :deep(ons-button) {
   margin-right:35em;
 }
 /* add FNSI-redmine3855 徐 end */

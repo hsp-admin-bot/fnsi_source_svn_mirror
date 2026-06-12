@@ -45,7 +45,7 @@ import {
   // @ts-ignore
 } from "@/constants/weightDefine";
 // @ts-ignore
-import { deepCopy } from "@/functions/common/CommonFunctions";
+import { deepCopy, hasOwn } from "@/functions/common/CommonFunctions";
 // @ts-ignore
 import { dateFormat } from "@/functions/common/DateTimeUtils";
 import {
@@ -56,9 +56,8 @@ import {
 } from "@/functions/common/WeightFunctions";
 // @ts-ignore
 import { deviceModeConstant } from "@/constants/weightDefine";
-import _ from "underscore";
-import BigNumber from "bignumber.js";
-import moment from "moment";
+import BigNumber from "@/compat/number/bignumber";
+import dayjs from "@/compat/date/dayjs";
 
 // 子モジュール
 // @ts-ignore
@@ -76,6 +75,27 @@ function undef2DefVal(obj, defaultValue = null) {
     return obj;
   }
   return defaultValue;
+}
+
+function isInvalidPurificationMeasuredValue(state, getters) {
+  const treatmentMode = getters.getTreatmentMode;
+  const deviceMode = treatmentMode?.[0]?.deviceMode;
+  if (deviceMode !== deviceModeConstant.PURIFICATION) {
+    return false;
+  }
+  return (
+    state.measuredValue == null ||
+    state.measuredValue === "" ||
+    Number(state.measuredValue) === 0
+  );
+}
+
+function resetPurificationWeightState(commit) {
+  commit("setWeightValue", { bodyWeightValue: 0 });
+  commit("message/setParamBeforeWeight", 0);
+  commit("message/setParamAfterWeight", 0);
+  commit("setViewMessage", { isMessage: false });
+  commit("setMeasuring", false);
 }
 
 /**
@@ -127,7 +147,7 @@ const defaultTareAndOffWater = {
 const unknownWheelChairName = "未登録車いす";
 
 export default {
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   namespaced: true,
   modules: {
     audio: SendConditionAudioStore,
@@ -770,36 +790,20 @@ export default {
         isWheelchairView = true;
       }
       commit("setViewWheelchair", { isWheelchair: isWheelchairView });
-      //liyanze-z #9695 add start
-      if(getters.getTreatmentMode&&getters.getTreatmentMode.length!=0&&getters.getTreatmentMode[0].deviceMode){
-        //治療種別コード
-        let tDeviceMode = getters.getTreatmentMode[0].deviceMode;
-        const isInvalidMeasuredValue =
-            state.measuredValue == null ||
-            state.measuredValue === '' ||
-            Number(state.measuredValue) === 0;
-        //装置モード:特殊浄化("9") retWeight ≠ 0  
-        if(tDeviceMode == deviceModeConstant.PURIFICATION&&isInvalidMeasuredValue){
-          // 重置计算结果
-          commit("setWeightValue", { bodyWeightValue: 0 });
-          // 前後体重
-          commit("message/setParamBeforeWeight", 0);
-          commit("message/setParamAfterWeight", 0);
-          commit("setViewMessage", { isMessage: false });
-          commit("setMeasuring", false);
-          return
-        }
+
+      if (isInvalidPurificationMeasuredValue(state, getters)) {
+        resetPurificationWeightState(commit);
+        return;
       }
-      //liyanze-z #9695 add end
 
       // 体重値再計算[測定値-風袋(-車いす)]
-      let weightVal = new BigNumber(state.measuredValue)
-        .minus(getters.getTareWeight)
+      let weightVal = new BigNumber(state.measuredValue ? state.measuredValue : 0)
+        .minus(getters.getTareWeight ? getters.getTareWeight : 0)
         .toNumber();
       // 車いす表示時
-      if (segIndex > 0) {
-        weightVal = new BigNumber(weightVal)
-          .minus(state.selectWheelchair.weight)
+      if (segIndex > 0 && state.selectWheelchair.weight) {
+        weightVal = new BigNumber(weightVal ? weightVal : 0)
+          .minus(state.selectWheelchair.weight ? state.selectWheelchair.weight : 0)
           .toNumber();
       }
       if (isNaN(weightVal)) {
@@ -862,7 +866,7 @@ export default {
         selectWheelchair: {
           code: state.selectWheelchair.code,
           name: state.selectWheelchair.name,
-          gramWeight: new BigNumber(value).times(1000),
+          gramWeight: new BigNumber(value ? value : 0).times(1000),
           weight: value,
           calibrationCheck: state.selectWheelchair.calibrationCheck,
         },
@@ -890,28 +894,10 @@ export default {
      * @param {number} value 体重値
      */
     setWeightValue({ state, commit, getters }, value) {
-      //liyanze-z #9695 add start
-      if(getters.getTreatmentMode&&getters.getTreatmentMode.length!=0&&getters.getTreatmentMode[0].deviceMode){
-        //治療種別コード
-        let tDeviceMode = getters.getTreatmentMode[0].deviceMode;
-        const isInvalidMeasuredValue =
-            state.measuredValue == null ||
-            state.measuredValue === '' ||
-            Number(state.measuredValue) === 0;
-        //装置モード:特殊浄化("9") retWeight ≠ 0  
-        if(tDeviceMode == deviceModeConstant.PURIFICATION&&isInvalidMeasuredValue){
-          // 重置计算结果
-          commit("setWeightValue", { bodyWeightValue: 0 });
-          // 前後体重
-          commit("message/setParamBeforeWeight", 0);
-          commit("message/setParamAfterWeight", 0);
-          commit("setViewMessage", { isMessage: false });
-          commit("setMeasuring", false);
-          return
-        }
+      if (isInvalidPurificationMeasuredValue(state, getters)) {
+        resetPurificationWeightState(commit);
+        return;
       }
-      //liyanze-z #9695 add end
-
       commit("setWeightValue", { bodyWeightValue: value });
       if (
         state.scaleClass === weightScaleClass.before ||
@@ -929,33 +915,19 @@ export default {
      * 体重値計算
      */
     calcWeightValue({ commit, state, getters, dispatch }) {
-       //liyanze-z #9695 add start
-      if(getters.getTreatmentMode&&getters.getTreatmentMode.length!=0&&getters.getTreatmentMode[0].deviceMode){
-        //治療種別コード
-        let tDeviceMode = getters.getTreatmentMode[0].deviceMode;
-        const isInvalidMeasuredValue =
-            state.measuredValue == null ||
-            state.measuredValue === '' ||
-            Number(state.measuredValue) === 0;
-        //装置モード:特殊浄化("9") retWeight ≠ 0  
-        if(tDeviceMode == deviceModeConstant.PURIFICATION&&isInvalidMeasuredValue){
-          // 重置计算结果
-          commit("setWeightValue", { bodyWeightValue: 0 });
-          // 前後体重
-          commit("message/setParamBeforeWeight", 0);
-          commit("message/setParamAfterWeight", 0);
-          commit("setViewMessage", { isMessage: false });
-          commit("setMeasuring", false);
-          return
-        }
+      if (isInvalidPurificationMeasuredValue(state, getters)) {
+        resetPurificationWeightState(commit);
+        return;
       }
-      //liyanze-z #9695 add end
-      let retWeight = new BigNumber(state.measuredValue)
+      let retWeight = null;
+      if(state.measuredValue !== null && getters.getTareWeight !== null) {
+        retWeight = new BigNumber(state.measuredValue)
         .minus(getters.getTareWeight)
         .toNumber();
+      } 
       // 車いすありの場合
-      if (getters.getIsWheelchair) {
-        retWeight = new BigNumber(retWeight)
+      if (getters.getIsWheelchair && getters.getSelectWheelchair.weight) {
+        retWeight = new BigNumber(retWeight ? retWeight : 0)
           .minus(getters.getSelectWheelchair.weight)
           .toNumber();
       }
@@ -1004,11 +976,11 @@ export default {
         getters.getIndWaterRemovalLimit.value !== null
       ) {
         let val = getters.getOffWaterWeight;
-        val = new BigNumber(val)
-          .plus(getters.getBodyWeightInfo.value)
+        val = new BigNumber(val ? val : 0)
+          .plus(getters.getBodyWeightInfo.value ? getters.getBodyWeightInfo.value : 0)
           .toNumber();
-        val = new BigNumber(val)
-          .minus(getters.getIndTargetWeight.value)
+        val = new BigNumber(val ? val : 0)
+          .minus(getters.getIndTargetWeight.value ? getters.getIndTargetWeight.value : 0)
           .toNumber();
         // 除水制限を超えている場合
         if (val > getters.getIndWaterRemovalLimit.value) {
@@ -1034,16 +1006,16 @@ export default {
      * 実績から体重測定値計算
      */
     calcMeasuredValue({ commit, state, getters, dispatch }) {
-      let retWeight = new BigNumber(getters.getBodyWeightValue)
-        .plus(getters.getTareWeight)
+      let retWeight = new BigNumber(getters.getBodyWeightValue ? getters.getBodyWeightValue : 0)
+        .plus(getters.getTareWeight ? getters.getTareWeight : 0)
         .toNumber();
       // 車いすありの場合
       if (
         getters.getIsWheelchair &&
         getters.getSelectWheelchair.weight !== null
       ) {
-        retWeight = new BigNumber(retWeight)
-          .plus(getters.getSelectWheelchair.weight)
+        retWeight = new BigNumber(retWeight ? retWeight : 0)
+          .plus(getters.getSelectWheelchair.weight ? getters.getSelectWheelchair.weight : 0)
           .toNumber();
       }
       if (isNaN(retWeight)) {
@@ -1235,22 +1207,22 @@ export default {
      * 患者情報一覧から、新しいものからデータを取得する
      * データがnullの場合はデータが存在するまでさかのぼって使用する
      * @param {Object} context
-     * @param {*} payload
+     * @param {object} payload
      * @param {Array<Object>} payload.physicalInfoList
      * @param {String} payload.treatDate YYYYMMDD
      */
     loadPhysicalInfo({ commit, state }, payload) {
-      const tDate = moment(payload.treatDate, "YYYYMMDD").add(1, "day");
+      const tDate = dayjs(payload.treatDate, "YYYYMMDD").add(1, "day");
 
       const physicalInfoList = payload.physicalInfoList
         .filter(
           // 治療日より未来の登録日を除外する
-          (elm) => moment(elm.exam_date) < tDate
+          (elm) => dayjs(elm.exam_date) < tDate
         )
         .sort(
           // 登録日が新しいもの順にソートする
           // @ts-ignore
-          (a, b) => moment(b.exam_date) - moment(a.exam_date)
+          (a, b) => dayjs(b.exam_date) - dayjs(a.exam_date)
         );
 
       for (const physicalInfo of physicalInfoList) {
@@ -1687,7 +1659,7 @@ export default {
           commit("setLastWheelChairValue", weightScale.wheelChairWeight);
           commit("setLastScaleMode", weightScale.scaleMode);
 
-            // 体重値その他算出
+          // 体重値その他算出
           dispatch("calcWeightValue");
         }
       } else {
@@ -1702,19 +1674,12 @@ export default {
         ) {
           // 前回測定あり
           commit("setIsHasOrdWeightScale", true);
-
-          // #11987 2025.11.28 mod スケールベッドから呼び出した場合は、測定モードを独歩にする。 TDC渡辺 start
-          // 前回測定が体重モードなら送信成否にかかわらず体重モードで起動
-          //if (weightScale.scaleMode === weightScaleMode.weight) {
           if (weightScale.scaleMode === weightScaleMode.weight || param.isScaleBed) {
-            if( param.isScaleBed){
-              // 測定値を0セット
+            if (param.isScaleBed) {
               weightScale.scaleValue = 0;
-              // 車いす重量を0セット
-              weightScale.wheelChairWeight =0;
+              weightScale.wheelChairWeight = 0;
             }
-
-            // #11987 2025.11.28 mod スケールベッドから呼び出した場合は、測定モードを独歩にする。 TDC渡辺 end　
+            // 前回測定が体重モードなら送信成否にかかわらず体重モードで起動
 
             // 測定値を取得
             commit("setMeasuredValue", {
@@ -1727,6 +1692,7 @@ export default {
 
             // 前回の測定モードをセット
             commit("setLastScaleMode", weightScale.scaleMode);
+
             // 体重値その他算出
             dispatch("calcWeightValue");
           } else if (weightScale.weightScaleStatus === weightScaleState.wait) {
@@ -1929,7 +1895,6 @@ export default {
           (weightScale.scaleMode === weightScaleMode.weightAndChair ||
             weightScale.scaleMode === weightScaleMode.wheelChair)
         ) {
-
           // 前回測定が体重＋車いすor車いすモードでスケジュールなしの場合、車いす重量の登録状態により移行モードが変動する
           commit("setIsHasOrdWeightScale", true);
           if (weightScale.wheelChairWeight !== null) {
@@ -1966,7 +1931,6 @@ export default {
 
             // 体重値その他算出
             dispatch("calcWeightValue");
-
           } else {
             // 車いす重量未登録: 車いすモードで起動
 
@@ -1994,6 +1958,7 @@ export default {
           }
         } else {
           // 前回測定がない場合
+
           // 普通に体重測定（1回目）
           if (patChair.length > 0 || wheelChairMode.isWheelChair === "1") {
             // 患者に車いす(個人所有・共用所有)がある
@@ -2116,10 +2081,9 @@ export default {
             }
           }
           // add #12236 透析中車いす測定データが、後体重測定時の車いすデータとして認識させること。 linjunfeng end
-          }
-
           // 体重値その他算出
           dispatch("calcWeightValue");
+        }
       }
 
       // ***********************************
@@ -2353,7 +2317,7 @@ export default {
 
       dispatch("loadPhysicalInfo", {
         physicalInfoList: physicalInfo,
-        treatDate: moment().format("YYYYMMDD"),
+        treatDate: dayjs().format("YYYYMMDD"),
       });
 
       // *******************
@@ -2640,7 +2604,7 @@ export default {
         printJson = await dispatch("message/buildPrintData", {
           category: getters.getScaleClass,
           patId: state.patId,
-          baseDate: moment().format("YYYYMMDD"),
+          baseDate: dayjs().format("YYYYMMDD"),
         });
       }
 
@@ -2685,9 +2649,7 @@ export default {
         mstDelFlg: state.mstDelFlg,
         mstOverdueFlg: state.mstOverdueFlg,
         // add FNSI-分類不一致判断の追加 徐 end
-        // #11987 2026.02.11 add スケールベッド状態書込み用のベッド番号を追加 TDC片口 start
         scaleBedBedCd: params.isScaleBed ? bedInfo.code : null,
-        // #11987 2026.02.11 add スケールベッド状態書込み用のベッド番号を追加 TDC片口 end
       };
 
       if (params.category === weightScaleMode.weight) {
@@ -2743,7 +2705,7 @@ export default {
         printJson = await dispatch("message/buildPrintData", {
           category: getters.getScaleClass,
           patId: null,
-          baseDate: moment().format("YYYYMMDD"),
+          baseDate: dayjs().format("YYYYMMDD"),
         });
       }
 
@@ -2897,7 +2859,7 @@ export default {
         printJson = await dispatch("message/buildPrintData", {
           category: getters.getScaleClass,
           patId: state.patId,
-          baseDate: moment().format("YYYYMMDD"),
+          baseDate: dayjs().format("YYYYMMDD"),
         });
       }
 
@@ -2939,9 +2901,7 @@ export default {
         isPrint: params.isPrint,
         printContent: JSON.stringify(printJson),
         dw: state.patStatus.indDryWeight,
-        // #11987 2026.02.11 add スケールベッド状態書込み用のベッド番号を追加 TDC片口 start
         scaleBedBedCd: params.isScaleBed ? bedInfo.code : null,
-        // #11987 2026.02.11 add スケールベッド状態書込み用のベッド番号を追加 TDC片口 end
       };
 
       if (params.category === weightScaleMode.weight) {
@@ -3007,7 +2967,7 @@ export default {
       }
 
       // 指定オーダ番号の指示・実績取得
-      let response = null;
+      let response;
       if (ordNo === null) {
         response = await sendRequestGetNoOrderMain(state.patId);
       } else {
@@ -3143,14 +3103,14 @@ export default {
 
         // 目標体重[透析条件:3] fnw:6文字以内[整数3桁小数2桁（000.00～300.00）]
         if (
-          _.has(baseIndRstData.condInfo, "3") &&
+          hasOwn(baseIndRstData.condInfo, "3") &&
           baseIndRstData.condInfo["3"].value != resData.condInfo["3"].value // mod #9973 value Number→文字列  shiyw
         ) {
           return false;
         }
         // 除水量制限[透析条件:4] fnw:4文字以内[整数1桁小数2桁（0.00～9.99）]
         if (
-          _.has(baseIndRstData.condInfo, "4") &&
+          hasOwn(baseIndRstData.condInfo, "4") &&
           baseIndRstData.condInfo["4"].value != resData.condInfo["4"].value // mod #9973 value Number→文字列  shiyw
         ) {
           return false;
@@ -3161,7 +3121,7 @@ export default {
         }
       }
 
-      /* modify by chamaojia 2024-12-20 [11387] 【たくしん会】前/後体重測定時に重量測定モードとなる　V1.0B --start */
+      /* modify by chamaojia 2024-12-20 [11387] 【たくしん会】前/後体重測定時に重量測定モードとなる V1.0B --start */
       /**
        * modify content:
        *    comparison of conditions for adding 【indDw】 and 【rstDw】
@@ -3178,25 +3138,25 @@ export default {
           )
           && rstDW !== null && rstDW >= 0
       ) {
-        if (BigNumber(indDryWeight).isNaN()
-            || BigNumber(rstDW).toFixed(2) !==
-            BigNumber(indDryWeight).toFixed(2)) {
+        if (BigNumber(indDryWeight ? indDryWeight : 0).isNaN()
+            || BigNumber(rstDW ? rstDW : 0).toFixed(2) !==
+            BigNumber(indDryWeight ? indDryWeight : 0).toFixed(2)) {
           return false;
         }
       } else if (indDW !== null && indDW >= 0) {
-        if (BigNumber(indDryWeight).isNaN()
-            || BigNumber(indDW).toFixed(2) !==
-            BigNumber(indDryWeight).toFixed(2)) {
+        if (BigNumber(indDryWeight ? indDryWeight : 0).isNaN()
+            || BigNumber(indDW ? indDW : 0).toFixed(2) !==
+            BigNumber(indDryWeight ? indDryWeight : 0).toFixed(2)) {
           return false;
         }
       } else {
         // 登録日が新しいもの順にソートする
-        const tDate = moment(resData.treatDate, "YYYYMMDD").add(1, "day");
+        const tDate = dayjs(resData.treatDate, "YYYYMMDD").add(1, "day");
         const physicalInfoList = physicalInfo
-            .filter((elm) => moment(elm.exam_date) < tDate)
+            .filter((elm) => dayjs(elm.exam_date) < tDate)
             .sort(
                 // @ts-ignore
-                (a, b) => moment(b.exam_date) - moment(a.exam_date)
+                (a, b) => dayjs(b.exam_date) - dayjs(a.exam_date)
             );
 
         for (const physical of physicalInfoList) {
@@ -3207,10 +3167,10 @@ export default {
               physical.dw !== null
           ) {
             if (
-                BigNumber(physical.dw).isNaN() ||
-                BigNumber(indDryWeight).isNaN() ||
-                BigNumber(physical.dw).toFixed(2) !==
-                BigNumber(indDryWeight).toFixed(2)
+                BigNumber(physical.dw ? physical.dw : 0).isNaN() ||
+                BigNumber(indDryWeight ? indDryWeight : 0).isNaN() ||
+                BigNumber(physical.dw ? physical.dw : 0).toFixed(2) !==
+                BigNumber(indDryWeight ? indDryWeight : 0).toFixed(2)
             ) {
               return false;
             }
@@ -3218,7 +3178,7 @@ export default {
           }
         }
       }
-      /* modify by chamaojia 2024-12-20 [11387] 【たくしん会】前/後体重測定時に重量測定モードとなる　V1.0B --end */
+      /* modify by chamaojia 2024-12-20 [11387] 【たくしん会】前/後体重測定時に重量測定モードとなる V1.0B --end */
 
       // *******************
       // 体重実績比較
@@ -3546,7 +3506,7 @@ export default {
             6,
             2
           )}`.split("/");
-          const dateFormatMoment = moment(
+          const dateFormatMoment = dayjs(
             new Date(Number(arr[0]), Number(arr[1]) - 1, Number(arr[2]))
           );
           array[index].treatDate = dateFormatMoment.format("YYYY/MM/DD");
@@ -3590,13 +3550,13 @@ export default {
             array[index].weightBefore !== null &&
             array[index].rstDw !== null
           ) {
-            const difDw = new BigNumber(array[index].weightBefore)
-              .minus(array[index].rstDw)
+            const difDw = new BigNumber(array[index].weightBefore ? array[index].weightBefore : 0)
+              .minus(array[index].rstDw ? array[index].rstDw : 0)
               .toNumber();
             array[index].difDw = difDw;
             if (array[index].rstDw !== 0) {
-              const rateDw = new BigNumber(difDw)
-                .div(array[index].rstDw)
+              const rateDw = new BigNumber(difDw ? difDw : 0)
+                .div(array[index].rstDw ? array[index].rstDw : 0)
                 .times(100)
                 .toNumber();
               array[index].rateDw = isNaN(rateDw) ? "" : Math.floor(rateDw * 100) / 100;
@@ -3622,7 +3582,7 @@ export default {
      */
     // add FNSI-分類不一致判断の追加 徐 start
     chkIndCondInfoData(context, param) {
-      let params = null;
+      let params;
       if (param.ordNo2 == null) {
         params = {
           ordNo: param.ordNo,

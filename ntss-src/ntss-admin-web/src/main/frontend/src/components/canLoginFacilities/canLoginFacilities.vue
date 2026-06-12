@@ -30,7 +30,7 @@
 </template>
 <script>
 
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import { getRouterName, getInitialRouterName,getNameA } from "@/router/routing-helper";
 import { LOCAL_STORAGE_KEY } from "@/constants/localStorageConstants";
 import {
@@ -62,7 +62,7 @@ const uriGetCardAppPort = `/card_state/get_card_app_ports`;
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { webPushSubscribe, saveNotificationList } from "@/functions/WebPushFunctions";
 import PatGroup from "@/apis/pat-group";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 
 import { createTerminalUniqueString } from "@/functions/SigninFunction";
@@ -1066,7 +1066,7 @@ export default{
             await this.setCondition({
                 bedGroupCd: -1,
                 nextPat: 0,
-                treatDate: moment(new Date()).format("YYYY-MM-DD"),
+                treatDate: dayjs().format("YYYY-MM-DD"),
                 kurCd: -1,
                 viewTreatDate: false,
                 isAutoReload: false,
@@ -1083,7 +1083,7 @@ export default{
                 newObj.isShowUsageGuide = item.isShowUsageGuide;
                 newObj.kurCd = item.kurCd;
                 newObj.nextPat = item.nextPatGroupIndex;
-                newObj.treatDate = moment(new Date()).format("YYYY-MM-DD");
+                newObj.treatDate = dayjs().format("YYYY-MM-DD");
                 await this.changeIsDisplayTreatingMode(item.dispMode==1?true:false)
                 this.setCondition(newObj)
             }
@@ -1167,7 +1167,7 @@ export default{
             }
 
             // 初回検索用条件-検索サイドバーと同じ手順
-            const treatDate = moment().format("YYYYMMDD");
+            const treatDate = dayjs().format("YYYYMMDD");
             this.setSelectedTreatDate(treatDate);
             const conditions = this.createDefaultConditions(treatDate, facilityCd);
 

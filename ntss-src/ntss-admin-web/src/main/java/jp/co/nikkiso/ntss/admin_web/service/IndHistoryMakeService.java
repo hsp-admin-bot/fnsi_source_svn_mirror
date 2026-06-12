@@ -7,7 +7,19 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import java.math.BigDecimal;
@@ -16,27 +28,36 @@ import java.text.DecimalFormat;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+// #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
+import tools.jackson.core.JacksonException;
+// #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」の改修 江 start
-import com.google.gson.Gson;
 import jp.co.nikkiso.ntss.admin_web.request.patientCapture.JournalCreateRequestPayload;
 import jp.co.nikkiso.ntss.admin_web.service.indHistory.IndHistory;
 import jp.co.nikkiso.ntss.admin_web.service.indHistory.IndHistoryServiceImpl;
+import jp.co.nikkiso.ntss.core.dao.MstTreatmentDao;
+import jp.co.nikkiso.ntss.core.dao.PatMainDao;
 import jp.co.nikkiso.ntss.core.dao.PatPersonalMainDao;
 import jp.co.nikkiso.ntss.core.entity.PatPersonalMain;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.mstTreatment.utils.TreatMethodChangeHelper;
 import jp.co.nikkiso.ntss.admin_web.service.utils.MasterCacheHandler;
-import jp.co.nikkiso.ntss.admin_web.web.rest.validation.ApiEntityDeviceSetInfo;
 import jp.co.nikkiso.ntss.admin_web.web.rest.validation.ApiEntityOrdMain;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
-import jp.co.nikkiso.ntss.core.entity.custom.TareOrOffWaterJson;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」の改修 江 end
+
+// #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
+import jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils;
+// #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
 import org.apache.commons.collections4.CollectionUtils;
+// #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
+import org.springframework.aop.framework.AopProxyUtils;
+// #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -73,6 +94,16 @@ import jp.co.nikkiso.ntss.core.dao.MstProcedureDao;
 import jp.co.nikkiso.ntss.core.dao.MstMedicateTimingDao;
 import jp.co.nikkiso.ntss.core.dao.MstVaDao;
 import jp.co.nikkiso.ntss.core.dao.MstDialyzerDao;
+
+import static jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Treatment.DeviceMode.I_HDF;
+import static jp.co.nikkiso.ntss.core.constant.TreatmentItemsDef.T_I_IV_AMOUNT;
+import static jp.co.nikkiso.ntss.core.constant.TreatmentItemsDef.T_I_IV_FLOW_RATE;
+import static jp.co.nikkiso.ntss.core.utils.IvCalAmountAndSpeedUtil.EDIT_KEY_CAL_REPEAT;
+import static jp.co.nikkiso.ntss.core.utils.IvCalAmountAndSpeedUtil.OFF_LINE_EDIT_KEY;
+import static jp.co.nikkiso.ntss.core.utils.IvCalAmountAndSpeedUtil.ON_LINE_DEVICE;
+// #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
+import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
+// #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
 /**
@@ -102,7 +133,7 @@ public class IndHistoryMakeService {
   //指示履歴を登録するサービスクラス
   @Autowired
   IndHistoryServiceImpl indHistoryService;
-  
+
   @Autowired
   private PatPersonalMainDao patPersonalMainDao;
 
@@ -136,6 +167,13 @@ public class IndHistoryMakeService {
 
   @Autowired
   private MstDialyzerDao mstDialyzerDao;
+
+  // add 12348 補液の指示履歴が正しく記録されない時がある zkm start
+  @Autowired
+  PatMainDao patMainDao;
+  @Autowired
+  private MstTreatmentDao mstTreatmentDao;
+  // add 12348 補液の指示履歴が正しく記録されない時がある zkm end
 
   //システム起動時のprofiles(MongoDBに接続しているなら"mongo",そうでないなら空)
 //  @Value("${spring.config.activate:on-profile}")
@@ -1698,13 +1736,17 @@ public class IndHistoryMakeService {
 
     /**内容 */
     //設定する内容
+    //mod #11963 mongoDBへの指示履歴書き込み内容改善 zrx start
     // mod #11933 スケジュールのコピーでエラーコード500発生 関 start
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm start
 //    String paramContent = this.createplanContent(key, ordMainValue, facilityCd, "1");
-    String paramContent = this.createplanContent(key, Stream.ofNullable(ordMainValue)
-      .collect(Collectors.toUnmodifiableList()), facilityCd, "1", indHistory.getTreatmentWeekday());
+//    String paramContent = this.createplanContent(key, Stream.ofNullable(ordMainValue)
+//      .collect(Collectors.toUnmodifiableList()), facilityCd, "1", indHistory.getTreatmentWeekday());
+    String paramContent = this.createplanContent(key, Stream.ofNullable(ordMainValue).collect(Collectors.toUnmodifiableList()),
+      facilityCd, "1", indHistory.getTreatmentWeekday(), bodyData.getTreat_type());
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm end
     // mod #11933 スケジュールのコピーでエラーコード500発生 関 end
+    //mod #11963 mongoDBへの指示履歴書き込み内容改善 zrx end
     //内容を設定
     indHistory.setLogContent(paramContent);
 
@@ -1856,13 +1898,17 @@ public class IndHistoryMakeService {
 
     /**内容 */
     //設定する内容
+    //mod #11963 mongoDBへの指示履歴書き込み内容改善 zrx start
     // mod #11933 スケジュールのコピーでエラーコード500発生 関 start
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm start
 //    String paramContent = this.createplanContent(key, ordMainValue, facilityCd, "1");
-    String paramContent = this.createplanContent(key, Stream.ofNullable(ordMainValue)
-      .collect(Collectors.toUnmodifiableList()), facilityCd, "1", indHistory.getTreatmentWeekday());
+//    String paramContent = this.createplanContent(key, Stream.ofNullable(ordMainValue)
+//      .collect(Collectors.toUnmodifiableList()), facilityCd, "1", indHistory.getTreatmentWeekday());
+    String paramContent = this.createplanContent(key, Stream.ofNullable(ordMainValue).collect(Collectors.toUnmodifiableList()),
+      facilityCd, "1", indHistory.getTreatmentWeekday(), null);
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm end
     // mod #11933 スケジュールのコピーでエラーコード500発生 関 end
+    //mod #11963 mongoDBへの指示履歴書き込み内容改善 zrx end
     //内容を設定
     indHistory.setLogContent(paramContent);
 
@@ -1939,13 +1985,17 @@ public class IndHistoryMakeService {
 
     /**内容 */
     //設定する内容
+    //mod #11963 mongoDBへの指示履歴書き込み内容改善 zrx start
     // mod #11933 スケジュールのコピーでエラーコード500発生 関 start
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm start
 //    String paramContent = this.createplanContent(key, ordMainValue, facilityCd, "3");
-    String paramContent = this.createplanContent(key, Stream.ofNullable(ordMainValue)
-      .collect(Collectors.toUnmodifiableList()), facilityCd, "3", indHistory.getTreatmentWeekday());
+//    String paramContent = this.createplanContent(key, Stream.ofNullable(ordMainValue)
+//      .collect(Collectors.toUnmodifiableList()), facilityCd, "3", indHistory.getTreatmentWeekday());
+    String paramContent = this.createplanContent(key, Stream.ofNullable(ordMainValue).collect(Collectors.toUnmodifiableList()),
+      facilityCd, "3", indHistory.getTreatmentWeekday(), null);
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm end
     // mod #11933 スケジュールのコピーでエラーコード500発生 関 end
+    //mod #11963 mongoDBへの指示履歴書き込み内容改善 zrx end
     //内容を設定
     indHistory.setLogContent(paramContent);
 
@@ -2020,11 +2070,14 @@ public class IndHistoryMakeService {
     indHistory.setLogTarget(paramTarget);
 
     /**内容 */
+    //mod #11963 mongoDBへの指示履歴書き込み内容改善 zrx start
     //設定する内容
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm start
 //    String paramContent = this.createplanContent(key, ordMainValue, facilityCd, "3");
-    String paramContent = this.createplanContent(key, ordMainValues, facilityCd, "3", indHistory.getTreatmentWeekday());
+//    String paramContent = this.createplanContent(key, ordMainValues, facilityCd, "3", indHistory.getTreatmentWeekday());
+    String paramContent = this.createplanContent(key, ordMainValues, facilityCd, "3", indHistory.getTreatmentWeekday(), null);
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm end
+    //mod #11963 mongoDBへの指示履歴書き込み内容改善 zrx end
     //内容を設定
     indHistory.setLogContent(paramContent);
 
@@ -2102,13 +2155,17 @@ public class IndHistoryMakeService {
 
     /**内容 */
     //設定する内容
+    //mod #11963 mongoDBへの指示履歴書き込み内容改善 zrx start
     // mod #11933 スケジュールのコピーでエラーコード500発生 関 start
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm start
 //    String paramContent = this.createplanContent(key, ordMainValue, facilityCd, type);
+//    String paramContent = this.createplanContent(key, Stream.ofNullable(ordMainValue)
+//      .collect(Collectors.toUnmodifiableList()), facilityCd, type, indHistory.getTreatmentWeekday());
     String paramContent = this.createplanContent(key, Stream.ofNullable(ordMainValue)
-      .collect(Collectors.toUnmodifiableList()), facilityCd, type, indHistory.getTreatmentWeekday());
+      .collect(Collectors.toUnmodifiableList()), facilityCd, type, indHistory.getTreatmentWeekday(), null);
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm end
     // mod #11933 スケジュールのコピーでエラーコード500発生 関 end
+    //mod #11963 mongoDBへの指示履歴書き込み内容改善 zrx end
     //内容を設定
     indHistory.setLogContent(paramContent);
 
@@ -2555,6 +2612,11 @@ public class IndHistoryMakeService {
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm start
 //    String paramContent = this.createTreatCondContent(
 //      indInfo, facilityCd, ordMain, targetNumList);
+
+    // add 12348 補液の指示履歴が正しく記録されない時がある zkm start
+    resetIvAmountRate(indInfo, patId, indTreatmentCd, ordMains.stream().map(o -> o.getIndTreatmentCd()).distinct().toList());
+    // add 12348 補液の指示履歴が正しく記録されない時がある zkm end
+
     String paramContent = this.createTreatCondContent(indInfo, facilityCd, ordMains, targetNumList);
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm end
     //内容を設定
@@ -3119,9 +3181,12 @@ public class IndHistoryMakeService {
    * @param changeFlag   操作区分(1,新規 2,変更 3,削除)
    * @return 治療予定の対象
    */
+  //mod #11963 mongoDBへの指示履歴書き込み内容改善 zrx start
   // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm start
 //  public String createplanContent(String key, String ordMainValue, String facilityCd, String changeFlag) {
-  public String createplanContent(String key, List<String> ordMainValues, String facilityCd, String changeFlag, String weekDay) {
+//  public String createplanContent(String key, List<String> ordMainValues, String facilityCd, String changeFlag, String weekDay) {
+  public String createplanContent(String key, List<String> ordMainValues, String facilityCd,
+                                  String changeFlag, String weekDay, String treatType) {
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm end
     //設定する内容
     String paramContent = null;
@@ -3132,7 +3197,17 @@ public class IndHistoryMakeService {
       //治療予定の場合
       case "治療予定":
         //内容を作成してリストに追加
-        String planContent = changeFlag.equals("1") ? "予定新規作成" : "予定中止";
+        //mod #11963 mongoDBへの指示履歴書き込み内容改善 zrx start
+//        String planContent = changeFlag.equals("1") ? "予定新規作成" : "予定中止";
+        String planContent;
+        if (changeFlag.equals("1") && "1".equals(treatType)) {
+          planContent = "新規予定作成(隔日)";
+        } else if (changeFlag.equals("1") && "2".equals(treatType)) {
+          planContent = "新規予定作成(隔週)";
+        } else {
+          planContent = changeFlag.equals("1") ? "予定新規作成" : "予定中止";
+        }
+        //mod #11963 mongoDBへの指示履歴書き込み内容改善 zrx end
         paramContentList.add(planContent);
         break;
 
@@ -4032,7 +4107,11 @@ public class IndHistoryMakeService {
     String condValue = this.gettingValue(String.valueOf(i), indCond, facilityCd, medicineCd, medicineType);
     //変更後の値の単位
     String condUnit =
-      condValue.equals("未登録") || condValue.equals("DWと同じ")
+
+      // upd 12348 補液の指示履歴が正しく記録されない時がある zkm start
+//      condValue.equals("未登録") || condValue.equals("DWと同じ")
+      condValue.equals("未登録") || condValue.equals("DWと同じ") || condValue.equals("濾過率から算出")
+        // upd 12348 補液の指示履歴が正しく記録されない時がある zkm end
         ? ""
         : this.gettingCondUnit(String.valueOf(i), facilityCd, medicineCd, medicineType, medicineUnit);
     return String.join("", condValue, condUnit);
@@ -4695,6 +4774,70 @@ public class IndHistoryMakeService {
     return paramContent;
   }
 
+  // add 12348 補液の指示履歴が正しく記録されない時がある zkm start
+  private void resetIvAmountRate(JSONObject indCondJson, String patId, String indTreatmentCd, List<Integer> updIndTreatmentCds) {
+    boolean CAL_FLAG = false;
+    Iterator<String> indCondKeys = indCondJson.keys();
+    while (indCondKeys.hasNext()) {
+      String key = indCondKeys.next();
+      if (EDIT_KEY_CAL_REPEAT.contains(key)) {
+        CAL_FLAG = true;
+        break;
+      }
+    }
+
+    Boolean changeFlg = true;
+    List<Integer> indTreatmentCdlist = new ArrayList<>();
+    try {
+      indTreatmentCdlist = this.getValueList(indTreatmentCd);
+    } catch (JSONException e) {
+      indTreatmentCdlist.add(Integer.parseInt(indTreatmentCd));
+    }
+    if (indTreatmentCdlist.isEmpty()) {
+      indTreatmentCdlist.addAll(updIndTreatmentCds);
+    }
+    boolean hasOnLineDevice = false;
+    if (!indTreatmentCdlist.isEmpty()) {
+      List<String> indTreatmentCdStrlist = indTreatmentCdlist.stream().map(String::valueOf).toList();
+      List<MstTreatment> mstTreatments = mstTreatmentDao.selectByCdListByTreatCd(indTreatmentCdStrlist);
+      hasOnLineDevice = mstTreatments.stream().anyMatch(m -> ON_LINE_DEVICE.contains(m.getDeviceMode()) && !I_HDF.equals(m.getDeviceMode()));
+    }
+    if (hasOnLineDevice){
+      boolean offLineFlag = false;
+      Iterator<String>  iterator = indCondJson.keys();
+      while (iterator.hasNext()) {
+        String key = iterator.next();
+        if (OFF_LINE_EDIT_KEY.contains(key)) {
+          offLineFlag = true;
+          break;
+        }
+      }
+      if (!offLineFlag) changeFlg = false;
+    }
+
+    if (hasOnLineDevice && CAL_FLAG && changeFlg) {
+      try {
+        String deviceSetInfoPat = patMainDao.selectDeviceSetInfo(Long.parseLong(patId));
+        JSONObject patDeviceSetInfoJSON = new JSONObject(deviceSetInfoPat);
+        String liquidCalPriority = patDeviceSetInfoJSON.getJSONObject("ope").getJSONObject("dev")
+          .getJSONObject("A").get("389").toString();
+        if ("3".equals(liquidCalPriority)) {
+          if (indCondJson.has(T_I_IV_AMOUNT.getItemCode())) {
+            JSONObject amountObj = indCondJson.getJSONObject(T_I_IV_AMOUNT.getItemCode());
+            amountObj.put("value", "-1");
+          }
+          if (indCondJson.has(T_I_IV_FLOW_RATE.getItemCode())) {
+            JSONObject rateObj = indCondJson.getJSONObject(T_I_IV_FLOW_RATE.getItemCode());
+            rateObj.put("value", "-1");
+          }
+        }
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+  // add 12348 補液の指示履歴が正しく記録されない時がある zkm end
+
   /**
    * 指示履歴に登録する、治療条件内容を作成する処理（画面編集）
    *
@@ -4727,12 +4870,12 @@ public class IndHistoryMakeService {
     List<JSONObject> ordMainConds = ordMains.stream().map(o -> null == o.getIndCondInfo() ? new JSONObject() : new JSONObject(o.getIndCondInfo())).distinct().toList();
     // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm end
 
-    String useSingleNeedle = ""; 
-    if(indInfo.optJSONObject("12") != null) {
-    	useSingleNeedle = Objects.isNull(indInfo.getJSONObject("12").get("value")) ? "" : indInfo.getJSONObject("12").get("value").toString();
+    String useSingleNeedle = "";
+    if (indInfo.optJSONObject("12") != null) {
+      useSingleNeedle = Objects.isNull(indInfo.getJSONObject("12").get("value")) ? "" : indInfo.getJSONObject("12").get("value").toString();
     }
-    
-    
+
+
     //治療条件の項目番号分、番号の比較を行う
     for (int num : targetNumList) {
       // ordMainCond(num)が無効項目(項目データが存在しない)場合は、nullを格納しスキップする
@@ -4747,13 +4890,13 @@ public class IndHistoryMakeService {
         continue;
       }
       if ((num == 9 || num == 10) && (useSingleNeedle.equals("1"))) {
-		paramContentList.add(null);
-	    continue;
-	  }
+        paramContentList.add(null);
+        continue;
+      }
       if ((num == 11) && (useSingleNeedle.equals("0"))) {
-	    paramContentList.add(null);
-	    continue;
-	  }     
+        paramContentList.add(null);
+        continue;
+      }
 
       //画面から取得した項目をJsonObjectで保持
       // mod 11555 指示履歴への記録の残り方が仕様と異なる zkm start
@@ -4909,15 +5052,18 @@ public class IndHistoryMakeService {
         String indDw = o.getIndDw() != null ? o.getIndDw().toString() : null;
 
         String previousValue = null;
-        if(num == 39) {
-        	previousValue = indDw;
-        }else if(num == 9 || num == 10 || num == 11) {
-        	previousValue = ordMainCond.optJSONObject(String.valueOf(num)) != null ? this.gettingValue(String.valueOf(num), ordMainCond.getJSONObject(String.valueOf(num)), facilityCd, preMedicineCd, preMedicineType) : "未登録";
-        }else {
-        	previousValue = this.gettingValue(String.valueOf(num), ordMainCond.getJSONObject(String.valueOf(num)), facilityCd, preMedicineCd, preMedicineType);
+        if (num == 39) {
+          previousValue = indDw;
+        } else if (num == 9 || num == 10 || num == 11) {
+          previousValue = ordMainCond.optJSONObject(String.valueOf(num)) != null ? this.gettingValue(String.valueOf(num), ordMainCond.getJSONObject(String.valueOf(num)), facilityCd, preMedicineCd, preMedicineType) : "未登録";
+        } else {
+          previousValue = this.gettingValue(String.valueOf(num), ordMainCond.getJSONObject(String.valueOf(num)), facilityCd, preMedicineCd, preMedicineType);
         }
         String preCondUnit =
-          previousValue.equals("未登録") || previousValue.equals("DWと同じ")
+          // upd 12348 補液の指示履歴が正しく記録されない時がある zkm start
+//          previousValue.equals("未登録") || previousValue.equals("DWと同じ")
+          previousValue.equals("未登録") || previousValue.equals("DWと同じ") || previousValue.equals("濾過率から算出")
+            // upd 12348 補液の指示履歴が正しく記録されない時がある zkm end
             ? ""
             : this.gettingCondUnit(String.valueOf(num), facilityCd, preMedicineCd, preMedicineType, preMedicineUnit);
         return previousValue + preCondUnit;
@@ -4977,7 +5123,7 @@ public class IndHistoryMakeService {
 
     //リスト→文字列に変換
 //    paramContent = paramContentList.size() > 0 ? String.join(",", paramContentList) : null;
-    paramContent = paramContentList.size() > 0 ?JSONObject.valueToString(paramContentList): null;
+    paramContent = paramContentList.size() > 0 ? JSONObject.valueToString(paramContentList) : null;
     // mod #2856：DWの指示履歴登録対応 韓 end
     return paramContent;
   }
@@ -5141,7 +5287,7 @@ logService.log(LogLevel.INFO, eventLogMessage, null, LoggingConstant.SERVICE_NAM
 
     //投与間隔を取得
     String dayInterval = this.changeInterval(indDayInterval);
-    
+
     boolean hasWeekDay = StringUtils.hasText(weekDay) && !"NULL".equalsIgnoreCase(weekDay);
     String dayIntervalWithWeek = hasWeekDay ? dayInterval + "（" + weekDay + "）" : dayInterval;
 
@@ -5200,7 +5346,7 @@ logService.log(LogLevel.INFO, eventLogMessage, null, LoggingConstant.SERVICE_NAM
           preTimingCd = indInfoMedicine.get("timing_cd");
           preTiming = this.changeTiming(preTimingCd, facilityCd);
         }
-        
+
         if (!Objects.isNull(indInfoMedicine.get("date_interval"))) {
             preDayInterval = this.changeInterval(indInfoMedicine.get("date_interval"));
         }
@@ -5276,7 +5422,7 @@ logService.log(LogLevel.INFO, eventLogMessage, null, LoggingConstant.SERVICE_NAM
         String intervalContent = preDayInterval.equals(dayInterval)
                 ? dayInterval
                 : preDayInterval + "→" + intervalRight;
-        
+
         paramContent =
           medicineNameContent
             + br + "数量:" + amountContent
@@ -5829,7 +5975,7 @@ logService.log(LogLevel.INFO, eventLogMessage, null, LoggingConstant.SERVICE_NAM
     };
     try {
       changedList = mapper.readValue(strJson, type);
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       System.err.println(e.getMessage());
     }
     return changedList;
@@ -5946,7 +6092,7 @@ logService.log(LogLevel.INFO, eventLogMessage, null, LoggingConstant.SERVICE_NAM
         targetName = "IP速度最大値";
         break;
       case "34":
-        targetName = "自動ワンショット";
+        targetName = "IPワンショットスタート";
         break;
       case "35":
         targetName = "IP電源自動切り";
@@ -6101,10 +6247,9 @@ logService.log(LogLevel.INFO, eventLogMessage, null, LoggingConstant.SERVICE_NAM
         editValue = this.changeMedicineValue(targetValue, medicineCd, medicineType, facilityCd, "1");
         break;
 
-      //ラジオボタンで選択する項目の場合(シングルニードル使用、IP使用選択、自動ワンショット)
+      //ラジオボタンで選択する項目の場合(シングルニードル使用、IP使用選択)
       case "12":
       case "29":
-      case "34":
         if (! Objects.isNull(targetValue))
           editValue =
             targetValue.equals("1") ? "使用する" : "使用しない";
@@ -6115,8 +6260,9 @@ logService.log(LogLevel.INFO, eventLogMessage, null, LoggingConstant.SERVICE_NAM
           editValue =
             targetValue.equals("1") ? "前補液" : "後補液";
         break;
-      //ラジオボタンで選択する項目の場合(IPスタート)
+      //ラジオボタンで選択する項目の場合(IPスタート、IPワンショットスタート)
       case "30":
+      case "34":
         if (! Objects.isNull(targetValue))
           editValue =
             targetValue.equals("0") ? "手動" : "自動";
@@ -6974,7 +7120,7 @@ logService.log(LogLevel.INFO, eventLogMessage, null, LoggingConstant.SERVICE_NAM
     hashMap.put("IPワンショット量", 380);
     hashMap.put("IP速度", 390);
     hashMap.put("IP速度最大値", 400);
-    hashMap.put("自動ワンショット", 410);
+    hashMap.put("IPワンショットスタート", 410);
     hashMap.put("IP電源自動切り", 420);
     hashMap.put("IP電源自動切り時間", 430);
     hashMap.put("IP電源OKモニタ切り", 440);
@@ -8080,9 +8226,31 @@ logService.log(LogLevel.INFO, eventLogMessage, null, LoggingConstant.SERVICE_NAM
             .contentType(MediaType.APPLICATION_JSON)
             .header(headerKey, headerValue)
             .body(payload);
-    rt.exchange(request, Object.class);
+// #9698 アプリケーションログの内容修正 20260327 mod yangxuewang start
+    long start = System.currentTimeMillis();
+    ResponseEntity<Object> response = rt.exchange(request, Object.class);
+    // log start
+    long cost = System.currentTimeMillis() - start;
+    Map<String, Object> map = new HashMap<>();
+    map.put("logType", "RESTTEMPLATE-LOG");
+    map.put("className", "jp.co.nikkiso.ntss.admin_web.service.IndHistoryMakeService");
+    map.put("methodName", "callCreateJournal");
+    map.put("method", request.getMethod());
+    map.put("url", uri.getPath());
+    map.put("headers", request.getHeaders());
+    map.put("requestParameter", request.getBody());
+    map.put("status",response.getStatusCode());
+    map.put("cost", cost);
+    map.put("result",response.getBody());
+    EventLogMessage restTemplateEventLogMessage = new EventLogMessage();
+    restTemplateEventLogMessage.setLogMessage(toJson(map));
+    if (params != null && org.apache.commons.lang3.StringUtils.isNotEmpty(params.getFacilityCd())) {
+      restTemplateEventLogMessage.setFacilityCd(params.getFacilityCd());
+    }
+    logService.log(LogLevel.INFO, restTemplateEventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI, null);
+// #9698 アプリケーションログの内容修正 20260327 mod yangxuewang end
     // レスポンス生成
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   /**

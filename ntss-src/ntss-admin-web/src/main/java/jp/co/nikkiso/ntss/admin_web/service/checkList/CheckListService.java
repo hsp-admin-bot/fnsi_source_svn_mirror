@@ -18,7 +18,7 @@ import jp.co.nikkiso.ntss.core.entity.OrdCheckListParams;
 import jp.co.nikkiso.ntss.core.entity.OrdChecklist;
 import jp.co.nikkiso.ntss.core.entity.OrdMain;
 // add FNSI-チェックリスト仕様変更対応#401、#439_患者経過総合ビューア機能分。 周 start
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import jp.co.nikkiso.ntss.core.entity.custom.OrdMainForCheckListSchedule;
 // add FNSI-チェックリスト仕様変更対応#401、#439_患者経過総合ビューア機能分。 周 end
 

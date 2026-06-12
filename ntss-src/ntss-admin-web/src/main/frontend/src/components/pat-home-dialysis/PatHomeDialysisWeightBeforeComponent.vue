@@ -62,7 +62,7 @@
     </v-ons-modal>
     <message-dialog
     v-if="isCheckDialogVisible"
-    :visible.sync="isCheckDialogVisible"
+    v-model:visible="isCheckDialogVisible"
     :message-cd="messageCd"
     :string-params="stringParams"
     type="1"
@@ -71,12 +71,14 @@
 </template>
 
 <script>
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import { getLatestHeaderElement, getHeaderHeight, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
 
 export default {
@@ -174,14 +176,10 @@ export default {
     // ウインドウ変更時の高さ、幅を調整
     calculateSize() {
       // ヘッダーの高さ
-      const header = document.getElementsByClassName("header");
-      let headerHeight = 0;
-      if (header.length !== 0) {
-        // フッター分 35px
-        headerHeight = header[0].offsetHeight + 35;
-      }
+      const latestHeader = getLatestHeaderElement(this.$el || document);
+      const headerHeight = latestHeader ? getHeaderHeight(latestHeader, 0) + 35 : 0;
       // 下部ボタン部の高さ
-      const bottomButtons = document.getElementsByClassName("bottom-buttons");
+      const bottomButtons = getScopedElementsByClassName("bottom-buttons", this.$el || document);
       // 下部ボタン部のmargin：35px
       let bottomButtonsHeight = 35;
       if (bottomButtons.length !== 0) {
@@ -330,7 +328,6 @@ export default {
       return pattern.test(numVal);
     },
 
-
     // 患者在宅治療パターン取得
     async getPatHhdPattern() {
       let resFlg = false;
@@ -438,7 +435,6 @@ export default {
         return resFlg;
     },
 
-
     // 治療情報取得ループ
     async dialysisStateInterval() {
       await ApiHelper.get(`/pat_home_dialysis/getOrdMainWeight/${this.ordNo}`)
@@ -479,7 +475,6 @@ export default {
       this.beforeWeightUpd();
     },
 
-
     // 更新後ポーリングを開始
     startAfterPolling() {
       this.modalButtonFlg = false;
@@ -498,8 +493,6 @@ export default {
     },
 
   },
-  watch: {
-  },
   created() {
     history.pushState(null, null, null);
     // 共通ローダー:表示名設定
@@ -507,7 +500,7 @@ export default {
   },
   mounted() {
     // 画面リサイズ時のイベントを設定
-    window.addEventListener("resize", this.calculateSize);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.calculateSize);
     this.calculateSize();
 
     // 患者情報ヘッダーの設定
@@ -531,16 +524,17 @@ export default {
       });
 
   },
-  updated() {
-  },
-  beforeDestroy() {
+
+  beforeUnmount() {
     // 画面を閉じたときにイベントを除去
-    window.removeEventListener("resize", this.calculateSize);
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.calculateSize);
   }
 };
 </script>
 
 <style scoped>
+@import "../../assets/styles/modal.css";
+
 .main-content-area {
   min-width: 200px;
 }
@@ -559,7 +553,6 @@ export default {
   font-weight: bolder;
 }
 
-
 /* 体重入力構成クラス */
 .weight-input {
   display: flex;
@@ -567,7 +560,6 @@ export default {
   position: relative;
 
 }
-
 
 /* 前体重ラベル */
 .weight-input-label {
@@ -586,7 +578,7 @@ export default {
   width: 10.5rem;
 }
 
-ons-input >>> .text-input {
+ons-input :deep(.text-input) {
   font-size: 5em;
   height: 5rem;
 }
@@ -648,8 +640,6 @@ ons-input >>> .text-input {
   color:#000000;
 }
 
-@import "../../assets/styles/modal.css";
-
 /* 横幅550px以下 または縦幅が341px以上、470px以下 ならスタイル変更 */
 @media screen and (max-width: 550px), screen and (min-height:341px) and (max-height: 470px) {
   .main-content-area {
@@ -675,7 +665,7 @@ ons-input >>> .text-input {
     width: 7.5rem;
   }
 
-  ons-input >>> .text-input {
+  ons-input :deep(.text-input) {
     font-size: 3.5em;
     height: 3.5rem;
   }
@@ -727,7 +717,7 @@ ons-input >>> .text-input {
     width: 7rem;
   }
 
-  ons-input >>> .text-input {
+  ons-input :deep(.text-input) {
     font-size: 2em;
     height: 2.25rem;
   }

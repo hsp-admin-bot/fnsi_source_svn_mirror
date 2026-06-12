@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.service.scaleBed;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import info.sunjune.solve.calculation.calculator.NumberCalculator;
 import jp.co.nikkiso.ntss.admin_web.response.weight.WeightOrderResponse;
 import jp.co.nikkiso.ntss.admin_web.service.FacilitySettingService;
@@ -22,14 +22,19 @@ import jp.co.nikkiso.ntss.core.entity.custom.PatUniquePhysicalInfo;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.springframework.lang.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+
 
 @Service
 public class CheckScaleServiceImpl implements CheckScaleService {

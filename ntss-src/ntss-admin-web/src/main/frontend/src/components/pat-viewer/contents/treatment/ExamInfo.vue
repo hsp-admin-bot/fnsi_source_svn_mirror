@@ -14,17 +14,16 @@
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 共通操作
  */
-import { deepCopy } from "@/functions/common/CommonFunctions";
 
 /**
  * ベースコンポーネント
@@ -125,7 +124,7 @@ export default {
     });
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -170,7 +169,7 @@ export default {
       }
 
       // 基準日
-      let setDate = moment(this.baseDate);
+      let setDate = dayjs(this.baseDate);
       this.sendTreatDate.showStartDate = setDate.format("YYYY-MM-DD");
       this.sendTreatDate.showEndDate = setDate.add(3, 'months').format("YYYY-MM-DD");
 
@@ -212,7 +211,7 @@ export default {
         // add FNSI-検体検査の表示の修正 楊 start
         // クリックした日
         // mod #10036 患者経過総合ビューアの検査予定の表示不正 zhangbo start
-          let setDate = moment(cellInfo.treatDate);
+          let setDate = dayjs(cellInfo.treatDate);
           if (!this.getDefaultSetting[EXAM_REQUEST.KEY_NAME]) {
             this.sendTreatDate.showStartDate = setDate.format("YYYY-MM-DD");
             this.sendTreatDate.showEndDate = setDate.add(3, 'months').format("YYYY-MM-DD");
@@ -251,7 +250,7 @@ export default {
         // }
         // 個別結果画面に遷移する
         // 検査日を指定する("YYYY-MM-DD")
-        // let sendTreatDate = moment(cellInfo.treatDate);
+        // let sendTreatDate = dayjs(cellInfo.treatDate);
 
         // 2段階移動
         // this.$router.push({ name: "exam-record" });
@@ -266,7 +265,7 @@ export default {
         }
         // クリックした日
         // mod #10036 患者経過総合ビューアの検査予定の表示不正 zhangbo start
-          const setDateStart = moment(cellInfo.treatDate);
+          const setDateStart = dayjs(cellInfo.treatDate);
           // this.sendTreatDate.showStartDate = setDate.format("YYYY-MM-DD");
           // this.sendTreatDate.showEndDate = setDate.add(3, 'months').format("YYYY-MM-DD");
           if (!this.getDefaultSetting[EXAM_RECORD.KEY_NAME] && !this.getDefaultSetting[EXAM_RECORD.KEY_NAME]) {
@@ -284,7 +283,7 @@ export default {
           const year = today.getFullYear();
           const month = today.getMonth() + 1;
           const date = today.getDate();
-          let setDateEnd = moment(cellInfo.treatDate);
+          let setDateEnd = dayjs(cellInfo.treatDate);
           let examDateStart = setDateStart.format("YYYY-MM-DD");
           let examDateEnd = "";
           switch (end) {
@@ -332,7 +331,7 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 
 /* ○と●が英文フォントだと小さく表示されるため、日本語フォント限定にする */
 .exam-info-font {

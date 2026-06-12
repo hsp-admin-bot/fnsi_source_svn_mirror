@@ -14,7 +14,7 @@ export default {
       {
         field: "dummy_disp_no",
         title: " ",
-        width: "10px",
+        width: "0.5px",
         locked: true,
         editable: () => false
       },
@@ -81,7 +81,7 @@ export default {
       appInfo = appInfo.filter(item => item.isDisp == "1" && item.isDel == "0");
       // #11987 2025.12.25 mod isDispとisDelは文字列型なので文字列で判定するように改善 TDC伊東 end
       // #11987 2025.12.25 add スケールベッドアプリの行を非表示にする TDC伊東 start
-      const useFunction = rootState.facility.useFunction || [];
+      const useFunction = rootState?.facility?.useFunction || [];
       // 取得したuseFunctionを使って、スケールベッド機能の有効/無効設定を取得する
       // useFunctionにスケールベッドの設定が含まれていない場合、スケールベッドアプリ行を非表示にする
       if (!useFunction.includes(FUNC_SCALE_BED)) {
@@ -95,17 +95,20 @@ export default {
         const recordName = state.condition.recordName.toLowerCase();
         appInfo = appInfo.filter(item => item.applicationName.toLowerCase().includes(recordName));
       }
-      /* システム設定からバージョン情報の取得 */
-      const versionRequests = appInfo.map(async item => {
-        if (/^\d+$/.test(item.version)) {
-          const verInfo = await ApiHelper.get(`/sys_system_define/getSysSystemDefine/${item.version}`);
-          const parsedValue = verInfo.data[0] ? JSON.parse(verInfo.data[0].value) : null;
-          if (parsedValue && parsedValue.version) {
-            item.version = parsedValue.version;
-          }
-        }
-        return item;
-      });
+      // mod #11660 単体アプリの自己アップデート修正 limingzhe start
+      // /* システム設定からバージョン情報の取得 */
+      // const versionRequests = appInfo.map(async item => {
+      //   if (/^\d+$/.test(item.version)) {
+      //     const verInfo = await ApiHelper.get(`/sys_system_define/getSysSystemDefine/${item.version}`);
+      //     const parsedValue = verInfo.data[0] ? JSON.parse(verInfo.data[0].value) : null;
+      //     if (parsedValue && parsedValue.version) {
+      //       item.version = parsedValue.version;
+      //     }
+      //   }
+      //   return item;
+      // });
+      const versionRequests = appInfo;
+      // mod #11660 単体アプリの自己アップデート修正 limingzhe end
       appInfo = await Promise.all(versionRequests);
       commit("setApplicationInfo", appInfo);
     },

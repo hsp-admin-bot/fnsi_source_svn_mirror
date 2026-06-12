@@ -24,12 +24,12 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import patHeader from "@/components/header-contents/PatHeader";
 import wheelChairHeader from "@/components/master-maintenance/mst-wheel-chair/MstWheelChairHeaderComponent";
 import measureHistoryHeader from "@/components/measure-history/MeasureHistoryHeaderComponent";
-import { EventBus } from "@/eventBus.js";
-import moment from "moment";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import dayjs from "@/compat/date/dayjs";
 
 export default {
   components: {
@@ -76,7 +76,7 @@ export default {
      */
     searchHospPatIdSchedule(payload) {
       // 条件セット
-      const today = moment(new Date(), "YYYYMMDD").format("YYYYMMDD");
+      const today = dayjs(new Date()).format("YYYYMMDD");
       let param = {
         hospPatId: payload.hospPatId,
         treatDate: today,
@@ -150,8 +150,8 @@ export default {
   created() {
     EventBus.$on("searchHospPatIdSchedule", this.searchHospPatIdSchedule);
   },
-  beforeDestroy() {
-    EventBus.$off("searchHospPatIdSchedule");
+  beforeUnmount() {
+    EventBus.$off("searchHospPatIdSchedule", this.searchHospPatIdSchedule);
 
     // 体重計画面から抜ける際、体重計モードだったらモードを解除する（）
     if (this.getWeightMode.isWeightMode) {
@@ -169,6 +169,5 @@ export default {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  watch: {}
 };
 </script>

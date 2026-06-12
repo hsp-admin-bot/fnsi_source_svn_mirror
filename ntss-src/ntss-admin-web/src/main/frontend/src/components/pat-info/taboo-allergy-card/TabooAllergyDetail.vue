@@ -57,7 +57,7 @@
 </template>
 
 <script>
-import _ from "underscore";
+import _ from "@/compat/collections/lodash";
 
 export default {
   props: {

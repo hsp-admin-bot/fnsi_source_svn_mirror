@@ -1,6 +1,7 @@
 package jp.co.nikkiso.ntss.core.dao;
 
 import java.util.List;
+import java.util.Map;
 
 import org.seasar.doma.Dao;
 import org.seasar.doma.Insert;
@@ -15,7 +16,7 @@ import jp.co.nikkiso.ntss.core.entity.MstComplaint;
  */
 @ConfigAutowireable
 @Dao
-public interface MstComplaintDao {
+public interface MstComplaintDao extends MasterDao<Map<String, Object>> {
 
   /**
    * 指定された施設コードに一致する愁訴マスタを取得します.
@@ -48,4 +49,8 @@ public interface MstComplaintDao {
    */
   @Select
   Integer selectCurrentSeq();
+
+  @Override
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
 }

@@ -37,7 +37,7 @@
 </template>
 
 <script>
-import { mapState, mapGetters, mapActions } from "vuex";
+import { mapState, mapGetters, mapActions } from "@/compat/vue/vuex";
 import UserAuthorityMixin from "@/components/common/UserAuthorityMixin";
 
 export default {
@@ -99,6 +99,8 @@ export default {
 </script>
 
 <style scoped>
+@import "../../assets/styles/subModal.css";
+
 /* 印刷時スタイル */
 @media print {
   .print-none {
@@ -112,6 +114,4 @@ export default {
  * webpackでエイリアスを設定すればできそう。
  * https://vue-loader-v14.vuejs.org/ja/configurations/asset-url.html
  */
-
-@import "../../assets/styles/subModal.css";
 </style>

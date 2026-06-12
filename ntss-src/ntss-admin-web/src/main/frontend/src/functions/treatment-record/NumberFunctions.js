@@ -1,4 +1,4 @@
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 
 /**
  * @description 符号付き小数判定

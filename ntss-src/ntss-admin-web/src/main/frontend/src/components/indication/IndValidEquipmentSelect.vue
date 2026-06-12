@@ -1,187 +1,120 @@
 /** 指示有効な医療材料 編集画面 */
 <template>
-  <v-ons-row>
-    <v-ons-row class="row-style">
-      <v-ons-col class="equipment-column">{{ equipmentSelectLabel }}</v-ons-col>
-      <v-ons-col class="equipment-data-column" style="display: flex;">
-        <show-selected-item
-          :propInitValue="equipmentInputValue.initValue"
-          :propEditValue="equipmentInputValue.editValue"
-          propBackgroundColor="#ebebe4"
-          class="equipment-input-style"
-        />
-        <!-- mod #10359 編集権限の動作不正 dengshen start -->
-        <!-- <v-ons-button -->
-        <!--   ref="popoverButton" -->
-        <!--   class="common-style-select-button" -->
-        <!--   @click=" -->
-        <!--     showPopover(),changeButton(); -->
-        <!--   " -->
-        <!-- >選択</v-ons-button> -->
-        <v-ons-button
-          ref="popoverButton"
-          class="common-style-select-button"
-          @click="
-            showPopover(),changeButton();
-          "
-          :disabled="!getItemAuthorized('Indication', 'default_authority')"
-        >選択</v-ons-button>
-        <!-- mod #10359 編集権限の動作不正 dengshen end -->
-        <!-- 医療材料選択ボタンポップオーバー 共通部品 医療材料選択(指示有効なマスタからの選択)用) -->
-        <!--#10171:医療材料ポップアップ表示位置不正(postion Add) Start -->
-        <pop-over v-bind="this.popoverDataValidIndEquipment"
-          :target-position-element="$refs.popoverButton"
-          @popover-return="updateInput"
-          @popover-close="closePopover()"
-          @change="changeButton()"
-        />
-        <!--#10171:医療材料ポップアップ表示位置不正(postion Add) End -->
-      </v-ons-col>
-    </v-ons-row>
-
+  <v-ons-row class="row-style">
+    <v-ons-col class="equipment-column">{{ equipmentSelectLabel }}</v-ons-col>
+    <v-ons-col class="equipment-data-column equipment-selector-column">
+      <common-master-selector
+        ref="masterSelector"
+        class="equipment-master-selector-stretch"
+        :masterType="MasterType.VALID_IND_EQUIPMENT"
+        :initItem="masterSelectorInitItem"
+        :editItem="masterSelectorEditItem"
+        :extraParams="masterSelectorExtraParams"
+        :patientId="selectedPatId"
+        :facilityCd="facilityCd"
+        :dialysisState="Number(rstDialysisState || 0)"
+        :hasChangedOption="true"
+        :changeOptionMode="'nameAndUnit'"
+        :hasUnregisteredOption="false"
+        popoverExtraClass="valid-ind-equip-master-popover"
+        :selectedItemClass="'equipment-input-style'"
+        :backgroundColor="'#ebebe4'"
+        :btnClass="'common-style-select-button'"
+        :btnDisabled="!getItemAuthorized('Indication', 'default_authority')"
+        :beforeCreatePopover="beforeMasterCreatePopover"
+        @popover-return="masterUpdateInput"
+      />
+    </v-ons-col>
   </v-ons-row>
 </template>
 
 <script>
-// add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
-// add #10359 編集権限の動作不正 dengshen end
-import { mapGetters } from "vuex";
-import PopoverMixin from "@/components/PopoverMixin";
-import MasterSelector from "@/components/common/master-selector/MasterSelector";
-import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
-import CustomDivShowSelectedItem from "@/components/common/custom-form-tags/CustomDivShowSelectedItem";
-import { EventBus } from "@/eventBus.js";
+import { mapGetters } from "@/compat/vue/vuex";
+import IndicationOwnerMixin from "@/components/indication/IndicationOwnerMixin";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
-import { messageFormat } from '@/functions/common/MessageFormat';
-
-// 共通部品 医療材料選択(指示有効なマスタからの選択)
-import ValidIndEquipmentSelectMixin from "@/components/indication/ValidIndEquipmentSelectMixin"
-// 部材(医療材料・ダイアライザ)の医療材料区分 equipType に関する共通関数
-import { 
-  decryptDialyzerCdToPersistentCode, 
-  detectEquipTypeFromCode 
+import { messageFormat } from "@/functions/common/MessageFormat";
+import ValidIndEquipmentSelectMixin from "@/components/indication/ValidIndEquipmentSelectMixin";
+import CommonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
+import {
+  decryptDialyzerCdToPersistentCode,
+  detectEquipTypeFromCode,
+  encryptPersistentCodeToInternalCd,
 } from "@/functions/EquipTypeFunctions";
 
 export default {
-  mixins: [PopoverMixin, ValidIndEquipmentSelectMixin],
+  mixins: [IndicationOwnerMixin, ValidIndEquipmentSelectMixin],
   components: {
-    "pop-over": MasterSelector,
-    "show-selected-item": CustomDivShowSelectedItem
+    "common-master-selector": CommonMasterSelector,
   },
 
+  emits: ["input"],
+
   props: {
-    /**
-     * @description 全入力有効無効
-     */
     fieldsDisabled: {
       type: Boolean,
-      default: false
+      default: false,
     },
-
-    /**
-     * @description 全入力の初期値
-     */
     fieldsData: {
       type: Object,
       default: () => ({
         cd: null,
         amount: 0,
         unit: null,
-        equipType: 0
-      })
+        equipType: 0,
+      }),
     },
-
-    /**
-     * @description 医療材料の選択のみ表示
-     */
     showEquipmentFieldOnly: {
       type: Boolean,
-      default: false
+      default: false,
     },
-
-    /**
-     * @description 医療材料選択のラベル
-     */
     equipmentSelectLabel: {
       type: String,
-      default: "医療材料"
+      default: "医療材料",
     },
-
-    /**
-     * @description 穴埋め選択を非表示
-     */
     hideAutoInsertField: {
       type: Boolean,
-      default: false
+      default: false,
     },
-
-    /**
-     * @description 「すべて」選択を表示
-     */
     showAllSelectTag: {
       type: Boolean,
-      default: false
+      default: false,
     },
-
-    /**
-     * @description ダイアライザ選択可能・不可能
-     */
     hasDialyzerOption: {
       type: Boolean,
-      default: false
+      default: false,
     },
-    /**
-     * @description 新規モードフラグ
-     */
     isCreate: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
 
   data() {
-    let cdTest;
     return {
-      /**
-       * @description 「ダイアライザ」マスターデータ
-       */
+      MasterType,
       dialyzerDataset: [],
-      equipmentDatatest1 :[],
-
-      /**
-       * @description 「医療材料」マスターデータ
-       */
+      equipmentDatatest1: [],
       equipmentDataset: [],
-
-      /**
-       * @description 「穴埋」入力値
-       */
       autoInsertValue: {
         initValue: 0,
-        editValue: 0
+        editValue: 0,
       },
-
-      /**
-       * @description 「医療材料」表示値
-       */
       equipmentInputValue: {
         initValue: null,
-        editValue: null
+        editValue: null,
       },
-
-      /**
-       * @description 「数量」の「単位」表示値
-       */
       unitLabelValue: null,
-
       oldOrdMainList: [],
       selectedEquipment: {
         cd: null,
         equipType: 0,
-      }      
+      },
+      cdTest: null,
     };
   },
 
@@ -190,21 +123,96 @@ export default {
     ...mapGetters("pat-info", ["selectedPatId"]),
     ...mapGetters("pat-viewer-modal", { settingIndData: "getSettingIndData" }),
     ...mapGetters("account-edit", ["getStateUserAccountInfo"]),
-    ...mapGetters("pat-viewer", { ordNoList : "getOrdNoList",
-    getIndEndDate: "getIndEndDate"
+    ...mapGetters("pat-viewer", {
+      ordNoList: "getOrdNoList",
+      getIndEndDate: "getIndEndDate",
     }),
     ...mapGetters("pat-viewer-popover", ["getIndStartDate"]),
     ...mapGetters("pat-info", ["selectedPat"]),
 
+    rstDialysisState() {
+      const cur =
+        this.currentOrdMainData &&
+        this.currentOrdMainData.data &&
+        this.currentOrdMainData.data.rstDialysisState;
+      if (cur != null && String(cur) !== "") return cur;
+      const om = this.settingIndData && this.settingIndData.orderMainData;
+      return om && om.rstDialysisState != null ? om.rstDialysisState : 0;
+    },
+    isActualRst() {
+      return Number(this.rstDialysisState || 0) !== 0;
+    },
 
-    uniqueRadioName() {
-      return _.uniqueId("equipmentAutoInsertRadio");
+    masterSelectorValue() {
+      const selected =
+        this.popoverDataValidIndEquipment &&
+        this.popoverDataValidIndEquipment.popoverContentSelected;
+      if (selected && selected.value != null) {
+        return selected.value;
+      }
+      const cd = this.fieldsData && this.fieldsData.cd;
+      const equipType = this.fieldsData && this.fieldsData.equipType;
+      if (cd == null) return null;
+      return encryptPersistentCodeToInternalCd(cd, equipType);
+    },
+
+    masterSelectorInitItem() {
+      return {
+        text: this.isActualRst
+          ? this.rstNameForCd != null && this.rstNameForCd !== ""
+            ? this.rstNameForCd
+            : this.equipmentInputValue
+              ? this.equipmentInputValue.initValue
+              : null
+          : this.equipmentInputValue
+            ? this.equipmentInputValue.initValue
+            : null,
+        value: this.masterSelectorValue,
+        unit:
+          this.popoverDataValidIndEquipment.popoverContentSelected?.unit ?? null,
+      };
+    },
+
+    masterSelectorEditItem() {
+      const selectedVal =
+        this.popoverDataValidIndEquipment &&
+        this.popoverDataValidIndEquipment.popoverContentSelected &&
+        this.popoverDataValidIndEquipment.popoverContentSelected.value;
+      return {
+        text: this.equipmentInputValue ? this.equipmentInputValue.editValue : null,
+        value: selectedVal != null ? selectedVal : this.masterSelectorValue,
+        unit:
+          this.popoverDataValidIndEquipment.popoverContentSelected?.unit ?? null,
+      };
+    },
+
+    masterSelectorExtraParams() {
+      return {
+        structData: this.structData,
+        fieldsData: this.fieldsData,
+        showAllSelectTag: this.effectiveShowAllSelectTag,
+        selectedEquipment: this.selectedEquipment,
+        popoverContentSelected:
+          this.popoverDataValidIndEquipment.popoverContentSelected,
+        mstEquipmentClass: this.mstEquipmentClass,
+        mstEquipment: this.mstEquipment,
+        mstDialyzer: this.mstDialyzer,
+        mstEquipmentDialyzerIncludedDeleted:
+          this.mstEquipmentDialyzerIncludedDeleted,
+        currentOrdMainData: this.currentOrdMainData,
+        validIndEquipments: this.validIndEquipments,
+        refreshValidList: false,
+      };
     },
 
     fieldsComputed() {
+      const selected = this.popoverDataValidIndEquipment.popoverContentSelected || {};
+      if (selected.value == null) {
+        return { cd: null, equipType: 0 };
+      }
       return {
-        cd: decryptDialyzerCdToPersistentCode(this.popoverDataValidIndEquipment.popoverContentSelected.value),
-        equipType: detectEquipTypeFromCode(this.popoverDataValidIndEquipment.popoverContentSelected.value)
+        cd: decryptDialyzerCdToPersistentCode(selected.value),
+        equipType: detectEquipTypeFromCode(selected.value),
       };
     },
   },
@@ -214,71 +222,56 @@ export default {
       this.$emit("input", data);
     },
   },
-  async created() {},
-  async mounted() {},
-  beforeDestroy() {
-    // dataの初期化(メモリリークに対する基本的な対応)
+
+  beforeUnmount() {
     Object.assign(this.$data, this.$options.data());
-    // TODO: Object.assign～を実装した際に発生する下記エラーの根本的な解消
-    // TypeError: Cannot read properties of undefined (reading 'cd')
   },
 
   methods: {
-    // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
       return getAuthorized(pageCd, itemCd);
     },
-    // add #10359 編集権限の動作不正 dengshen end
-    //[確認]ボタンの状態の変更をトリガーします
-   changeButton() {
+    changeButton() {
       EventBus.$emit("mstHolidayRegistered", false);
     },
-    popoverPreShow,
-    popoverPostShow,
-    popoverPosthide,
-
     checkMstDispStatus() {
       if (this.fieldsData.cd === null) {
         return;
       }
     },
-
-    /**
-     * @description マスター選択を表示
-     */
-    showPopover() {
-      this.popoverDataValidIndEquipment.popoverVisible = true;
-    },
-
-    /**
-     * @description マスター選択を非表示
-     */
-    closePopover() {
-      this.popoverDataValidIndEquipment.popoverVisible = false;
-    },
-
-    /**
-     * @description マスター選択から選択後コールバック
-     * @param {Object} 選択された部材(プルダウン用に加工されている値)
-     */
-    updateInput(data) {
-      // #10266 医療材料編集モーダル選択ボタンを押下しOK押下　NGエラー発生 linjunfeng start
-      if (!data) {
+    masterUpdateInput(val) {
+      if (!val) {
         return;
       }
-      // #10266 医療材料編集モーダル選択ボタンを押下しOK押下　NGエラー発生 linjunfeng end
-      this.popoverDataValidIndEquipment.popoverContentSelected = data;
-      this.equipmentInputValue.editValue = data.text || null;
-      this.cdTest=data.value;
-    },
+      const isDialyzer =
+        val?.fnValue?.["医療材料分類"] === "dialyzer" ||
+        detectEquipTypeFromCode(val?.value) === 1;
 
-    /**
-     * @description APIにリクエストする
-     */
+      const mapped = {
+        text: val?.text,
+        value: val?.value ?? null,
+        fnValue: isDialyzer
+          ? { 医療材料分類: "dialyzer" }
+          : {
+              医療材料分類:
+                val?.classCd ?? val?.fnValue?.["医療材料分類"] ?? null,
+            },
+        unit: val?.unit ?? null,
+        isDisp: val?.isDisp,
+        useStartDate: val?.useStartDate,
+        useEndDate: val?.useEndDate,
+      };
+
+      this.popoverDataValidIndEquipment.popoverContentSelected = mapped;
+      this.equipmentInputValue.editValue = mapped.text || null;
+      this.cdTest = mapped.value;
+      this.changeButton();
+    },
     async updateIndInfo(structData, targetEdit = null, targetEditType = null) {
-      // 指示者ドロップダウンの設定
-      let doctorList = structData.userOptions;
-      const doctor = doctorList.find(doctor => doctor.user_id === Number(structData.indUser));
+      const doctorList = structData.userOptions;
+      const doctor = doctorList.find(
+        doctor => doctor.user_id === Number(structData.indUser)
+      );
       const indInfo = {
         class_cd: null,
         class_name: null,
@@ -298,7 +291,7 @@ export default {
         input_class: 1,
         is_editable: 1,
         cop_order_no: 1,
-        equip_type: this.fieldsComputed.equipType
+        equip_type: this.fieldsComputed.equipType,
       };
 
       const sendJson = {
@@ -316,57 +309,72 @@ export default {
         is_deadline: structData.isDeadline,
         target_equip_edit_type: targetEditType,
         is_rst_update: false,
-        //add #10266 start
-        update_flag: this.settingIndData.update_flag
-        //add #10266 end
+        update_flag: this.settingIndData.update_flag,
       };
 
-      // 古いリスト
-      const startDate = structData.indStartDate.replace(/-/g, '');
-      const endDate = structData.indEndDate == null ? null : structData.indEndDate.replace(/-/g, '');
+      const startDate = structData.indStartDate.replace(/-/g, "");
+      const endDate =
+        structData.indEndDate == null
+          ? null
+          : structData.indEndDate.replace(/-/g, "");
       const searchData = await ApiHelper.get(
         `/mainData/getByPatIdAndTreatDate/${structData.facilityCd}/${structData.patId}/${startDate}/${endDate}`
       ).catch(error => {
-        getErrorMessage('IndEquipmentEdit.vue', 'updateIndInfo', error);
+        getErrorMessage("IndEquipmentEdit.vue", "updateIndInfo", error);
         throw error;
       });
       this.oldOrdMainList = searchData.data;
 
-      let weekList = [];
+      const weekList = [];
       structData.indWeeks.forEach(eleItem => {
         if (eleItem.done === true) {
           weekList.push(parseInt(eleItem.value));
         }
       });
+      const resultOwner = this._indicationResultOwner();
       if (this.oldOrdMainList) {
-        // 実績があるフラグ
         let isRstHave = false;
 
-        if (structData.flag === 1 && this.$parent.$parent.$parent.$parent.isRstUpdateFlg === true) {
-          // 複数が追加された場合、且つ 実績の変更をする確認した場合
+        if (structData.flag === 1 && resultOwner.isRstUpdateFlg === true) {
           sendJson.is_rst_update = true;
-        }else {
+        } else {
           this.oldOrdMainList.forEach(item => {
-            const isSelectedTreat = structData.selectedTreat.length > 0 ? structData.selectedTreat.includes(parseInt(item.indTreatmentCd)) : true;
-            const isSelectedKur = structData.selectedKur.length > 0 ? structData.selectedKur.includes(parseInt(item.indKurCd)) : true;
-            const isTreatWeek = weekList.length > 0 ? weekList.includes(parseInt(item.treatWeek)) : true;
-            if (item.rstDialysisState !=="0" && isSelectedTreat && isSelectedKur && isTreatWeek) {
+            const isSelectedTreat =
+              structData.selectedTreat.length > 0
+                ? structData.selectedTreat.includes(parseInt(item.indTreatmentCd))
+                : true;
+            const isSelectedKur =
+              structData.selectedKur.length > 0
+                ? structData.selectedKur.includes(parseInt(item.indKurCd))
+                : true;
+            const isTreatWeek =
+              weekList.length > 0
+                ? weekList.includes(parseInt(item.treatWeek))
+                : true;
+            if (
+              item.rstDialysisState !== "0" &&
+              isSelectedTreat &&
+              isSelectedKur &&
+              isTreatWeek
+            ) {
               isRstHave = true;
             }
           });
-            if (isRstHave && (structData.flag === 1 || structData.flag === 2|| structData.flag === 3) && !this.$parent.$parent.$parent.$parent.isShowedMessage) {
-
-              //mod #10266  start
-              // if (await this.showUpdateCheckDialog(structData.flag)) {
-              if (this.settingIndData.update_flag != "2" && await this.showUpdateCheckDialog(structData.flag)) {
-              //mod #10266  end
-
+          if (
+            isRstHave &&
+            (structData.flag === 1 || structData.flag === 2 || structData.flag === 3) &&
+            !resultOwner.isShowedMessage
+          ) {
+            if (
+              this.settingIndData.update_flag != "2" &&
+              (await this.showUpdateCheckDialog(structData.flag))
+            ) {
               sendJson.is_rst_update = true;
               if (structData.flag === 1) {
-                this.$parent.$parent.$parent.$parent.isRstUpdateFlg = true;
+                resultOwner.isRstUpdateFlg = true;
               }
-            }else{
-             sendJson.is_rst_update =  false;
+            } else {
+              sendJson.is_rst_update = false;
             }
           }
         }
@@ -384,90 +392,73 @@ export default {
             "/mainData/updateOrdMainEquipInfo/",
             sendJson
           ).catch(error => {
-            getErrorMessage('IndEquipmentEdit.vue', 'updateIndInfo', error);
+            getErrorMessage("IndEquipmentEdit.vue", "updateIndInfo", error);
             throw error;
           });
           break;
         case 3:
-          // add #12455 条件送信後に医材変更＆実績反映すると数量が0になる zkm start
-          if (structData.type && 'equip-del' === structData.type) {
-            response = await ApiHelper.post(
-              "/patients/equip/delete",
-              sendJson
-            ).catch(error => {
-              //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
-              getErrorMessage('IndEquipmentSet.vue', 'updateIndInfo', error);
-              console.log("IndTreatMethod.vue updateIndInfo throw error; this.finishLoadingScreen();");
-              this.finishLoadingScreen();
-              //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
-              throw error;
-            });
+          if (structData.type && "equip-del" === structData.type) {
+            response = await ApiHelper.post("/patients/equip/delete", sendJson).catch(
+              error => {
+                getErrorMessage("IndEquipmentSet.vue", "updateIndInfo", error);
+                throw error;
+              }
+            );
           } else {
             response = await ApiHelper.post(
               "/mainData/deleteOrdMainEquipInfo/",
               sendJson
             ).catch(error => {
-              getErrorMessage('IndEquipmentEdit.vue', 'updateIndInfo', error);
+              getErrorMessage("IndEquipmentEdit.vue", "updateIndInfo", error);
               throw error;
             });
           }
           break;
         default:
-          // 該当なし
           break;
       }
 
       return response;
     },
-    // 条件送信以降の場合、実績の変更をするか確認する。
     async showUpdateCheckDialog(flag) {
-        let rtn = false;
-        await this.$ons.notification.confirm({
-          // title: "",
-          title: DIALOG_MESSAGES[13000050].title,
-          // message: "条件送信済みまたは治療中、治療終了後の指示を変更しました。<br>" +
-          //          "実績データへの反映をしますか？",
-          message: messageFormat(DIALOG_MESSAGES[13000050].message),
-          callback: answer => {
-            if (answer === 1) {
-              rtn = true;
-            }else{
-              rtn = false;
-            }
+      let rtn = false;
+      await this.$ons.notification.confirm({
+        title: DIALOG_MESSAGES[13000050].title,
+        message: messageFormat(DIALOG_MESSAGES[13000050].message),
+        callback: answer => {
+          if (answer === 1) {
+            rtn = true;
+          } else {
+            rtn = false;
           }
-        });
-        if (flag ===1) {
-          // 薬剤を追加した場合
-          this.$parent.$parent.$parent.$parent.isShowedMessage = true;
-        }
-
-        return rtn;
-    },
-
-    /**
-     * 変更箇所
-     */
-    checkEdit() {
-      let changeCount = 0;
-      if (
-        this.equipmentInputValue.initValue !==
-        this.equipmentInputValue.editValue
-      ) {
-        changeCount++;
+        },
+      });
+      if (flag === 1) {
+        this._indicationResultOwner().isShowedMessage = true;
       }
-      return 0 !== changeCount ? true : false;
+
+      return rtn;
     },
-  }
+    checkEdit() {
+      return this.equipmentInputValue.initValue !== this.equipmentInputValue.editValue;
+    },
+  },
 };
 </script>
 
 <style scoped>
 .row-style {
   margin: 2.5px 0px;
+  width: 100%;
 }
 
-.equipment-input-style {
+/* common-master-selector 内の show-selected-item へ deep で当てる（IndEquipmentEdit と同様） */
+:deep(.equipment-input-style) {
   width: 70%;
+  flex: 0 0 70%;
+  max-width: 70%;
+  min-width: 0;
+  box-sizing: border-box;
   margin: 0px 5px 0px 0px;
 }
 
@@ -477,12 +468,62 @@ export default {
   white-space: normal;
   margin: auto;
 }
+
 .equipment-data-column {
   margin: auto;
   padding-left: 10px;
   margin-right: 5px;
 }
-#icon-1 {
-  margin-right: 0.5em;
+
+.equipment-selector-column {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.equipment-master-selector-stretch {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* 子 MasterPicker の flex 行が親幅いっぱいに広がる */
+:deep(.equipment-master-selector-stretch > ons-col) {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+</style>
+
+<!-- POP は body 直下に出るため scoped 外で旧 MasterSelector 相当サイズを指定 -->
+<style lang="css">
+.valid-ind-equip-master-popover.popover-style .popover__content {
+  width: 500px !important;
+  min-width: 500px;
+  box-sizing: border-box;
+}
+
+.valid-ind-equip-master-popover.popover-style .popover--top,
+.valid-ind-equip-master-popover.popover-style .popover--right,
+.valid-ind-equip-master-popover.popover-style .popover--left,
+.valid-ind-equip-master-popover.popover-style .popover--bottom {
+  max-width: none;
+}
+
+/* 旧 select size="10" 相当：件数が少なくても一覧高さを維持 */
+.valid-ind-equip-master-popover .master-list-scroll {
+  min-height: 13.5em;
+  max-height: 13.5em;
+}
+
+@media screen and (max-height: 420px) {
+  .valid-ind-equip-master-popover.popover-style .popover__content {
+    width: 500px !important;
+    min-width: 500px;
+  }
 }
 </style>

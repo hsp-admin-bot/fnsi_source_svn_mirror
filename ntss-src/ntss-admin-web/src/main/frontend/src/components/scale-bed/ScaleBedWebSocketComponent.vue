@@ -2,7 +2,7 @@
   <div></div>
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { sendRequestGetScaleBedKeyList } from "@/apis/scale-bed";
 /**
  * 取得するメッセージのトピックを登録
@@ -177,7 +177,7 @@ export default {
       this.changeWebSocketWatchTopics();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.removeWebSocketWatchTopics();
   },
   watch: {

@@ -24,7 +24,7 @@
         @focus="isFocusMinutesInput = true"
         @blur="isFocusMinutesInput = false"
       /> -->
-      <!-- mod FNSI-6669 治療時間入力IFのコントロール不正　周安寧 start -->
+      <!-- mod FNSI-6669 治療時間入力IFのコントロール不正 周安寧 start -->
       <!-- <input
         id="hourInput"
         type="number"
@@ -81,16 +81,16 @@
         :disabled="disabled"
         @input="handleInputHour"
         @change="changeHoursValue($event)"
-        @mousewheel="setDoLoop($event, true); changeHoursValue($event)"
+        @wheel.prevent="onWheelHour"
         @keyup="switchFocus($event,'hour')"
         @keydown="setDoLoop($event)"
         @focus="isFocusHourInput = true; focus()"
-        @blur="isFocusHourInput = false;hoursValue=formatTimeValue(hoursValue ? hoursValue :'00')"
+        @blur="onBlurHour"
         placeholder="--"
       />
       <!-- #12393 iPadでの患者経過総合ビューアの透析時間の入力改善 linjunfeng end -->
       <p :style="colorStyle">:</p>
-      <!-- mod FNSI-6669 治療時間入力IFのコントロール不正　周安寧 start -->
+      <!-- mod FNSI-6669 治療時間入力IFのコントロール不正 周安寧 start -->
       <!-- <input
         id="minuteInput"
         class="time"
@@ -135,14 +135,14 @@
         @input="handleInputMinutes"
         @change="changeMinutesValue($event)"
         @focus="isFocusMinutesInput = true; focusMinute()"
-        @blur="isFocusMinutesInput = false;minutesValue=formatTimeValue(minutesValue ? minutesValue : '00')"
-        @mousewheel="changeMinutesValue($event)"
+        @blur="onBlurMinute"
+        @wheel.prevent="onWheelMinute"
         @keydown="switchFocus($event,'minute')"
         placeholder="--"
       />
       <!-- #12393 iPadでの患者経過総合ビューアの透析時間の入力改善 linjunfeng end -->
-      <!-- mod FNSI-6669 治療時間入力IFのコントロール不正　周安寧 end -->
-      <!-- mod FNSI-6669 治療時間入力IFのコントロール不正　周安寧 end -->
+      <!-- mod FNSI-6669 治療時間入力IFのコントロール不正 周安寧 end -->
+      <!-- mod FNSI-6669 治療時間入力IFのコントロール不正 周安寧 end -->
       <!-- mod FNSI-6669 劉全航 end -->
       <div class="treatment-time" v-show="isHoverTimeInput">
         <div
@@ -175,7 +175,7 @@
 <script>
 // 共通タグ用ベースコンポーネント
 import baseCustomForm from "@/components/common/custom-form-tags/BaseCustomForm.vue";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 /**
  * @description 共通日時入力タグ
  * @summary
@@ -252,14 +252,18 @@ export default {
       decreaseTimeout: null,
       //値減らし用の遅延量
       decreaseInterval: null,
-      //add FNSI-6669 治療時間入力IFのコントロール不正　周安寧 start
+      //add FNSI-6669 治療時間入力IFのコントロール不正 周安寧 start
       maxminutes:"59",
-      //add FNSI-6669 治療時間入力IFのコントロール不正　周安寧 end
+      //add FNSI-6669 治療時間入力IFのコントロール不正 周安寧 end
       // ピッカーループ、マウスホイールピッキング実施フラグ
       doLoop: false
     };
   },
   computed: {
+    // 編集フラグ（数値として同一なら未編集とみなす）
+    isEdited() {
+      return !this.isSameAsInitValue(this.editValue);
+    },
     classObject() {
       return {
         // 常に適用されるclass
@@ -283,15 +287,26 @@ export default {
       }
       return rtn;
     },
-    //add FNSI-6669 治療時間入力IFのコントロール不正　周安寧 start
+    //add FNSI-6669 治療時間入力IFのコントロール不正 周安寧 start
     maxMinutes() {
       if (this.hoursValue === "72"){
         return "00"
       } else{return "59"}
-    //add FNSI-6669 治療時間入力IFのコントロール不正　周安寧 end
+    //add FNSI-6669 治療時間入力IFのコントロール不正 周安寧 end
     }
   },
   methods: {
+    requestViewForceUpdate() {
+      if (this.$?.isMounted) {
+        this.$forceUpdate();
+      }
+    },
+    getHourInputElement() {
+      return document.getElementById("hourInput" + this.uniqueId);
+    },
+    getMinuteInputElement() {
+      return document.getElementById("minuteInput" + this.uniqueId);
+    },
     /**
      * @description 編集値の格納
      */
@@ -306,20 +321,63 @@ export default {
     },
     //mod FNSI-6669 劉全航 start
     focus(){
-      document.getElementById(`hourInput${this.uniqueId}`).select();
+      this.getHourInputElement()?.select();
     },
     focusMinute(){
-      document.getElementById(`minuteInput${this.uniqueId}`).select();
+      this.getMinuteInputElement()?.select();
+    },
+    isSameAsInitValue(value) {
+      const initValue = this.initValue;
+      if (value === initValue) {
+        return true;
+      }
+      if (value == null && (initValue == null || initValue === "")) {
+        return true;
+      }
+      const numValue = Number(value);
+      const numInit = Number(initValue);
+      if (!Number.isNaN(numValue) && !Number.isNaN(numInit)) {
+        return numValue === numInit;
+      }
+      return false;
+    },
+    syncEditValueWithInitIfSame() {
+      if (this.isFocusHourInput || this.isFocusMinutesInput) {
+        return;
+      }
+      if (this.isSameAsInitValue(this.editValue)) {
+        this.editValue = this.initValue;
+      }
+    },
+    onBlurHour() {
+      this.isFocusHourInput = false;
+      this.hoursValue = this.formatTimeValue(this.hoursValue ? this.hoursValue : "00");
+      this.setEditValue();
+      this.$emit("input", this.editValue);
+      this.$nextTick(() => {
+        this.syncEditValueWithInitIfSame();
+      });
+    },
+    onBlurMinute() {
+      this.isFocusMinutesInput = false;
+      this.minutesValue = this.formatTimeValue(this.minutesValue ? this.minutesValue : "00");
+      this.setEditValue();
+      this.$emit("input", this.editValue);
+      this.$nextTick(() => {
+        this.syncEditValueWithInitIfSame();
+      });
     },
 
     switchFocus(event, location){
       let direction = event.key;
+      const hourInput = this.getHourInputElement();
+      const minuteInput = this.getMinuteInputElement();
       if(direction === "ArrowRight" && location === "hour"){
-        document.getElementById(`minuteInput${this.uniqueId}`).focus();
-        document.getElementById(`minuteInput${this.uniqueId}`).select();
+        minuteInput?.focus();
+        minuteInput?.select();
       }else if(direction === "ArrowLeft" && location === "minute"){
-        document.getElementById(`hourInput${this.uniqueId}`).focus();
-         document.getElementById(`hourInput${this.uniqueId}`).select();
+        hourInput?.focus();
+        hourInput?.select();
       }else if(direction !== "ArrowRight"
         &&direction !== "ArrowLeft"
         &&direction !== "ArrowUp"
@@ -328,11 +386,11 @@ export default {
         &&direction !== "Delete"
         &&(!event.shiftKey && event.key !== "Tab") && direction !== "Shift"
         && this.hoursValueInput.length > 1
-        && document.activeElement.id === `hourInput${this.uniqueId}`) {
+        && ((hourInput?.ownerDocument || minuteInput?.ownerDocument || this.$el?.ownerDocument)?.activeElement) === hourInput) {
         // add #12393 iPadでの患者経過総合ビューアの透析時間の入力改善 linjunfeng start
-        document.getElementById(`minuteInput${this.uniqueId}`).focus();
+        minuteInput?.focus();
         // add #12393 iPadでの患者経過総合ビューアの透析時間の入力改善 linjunfeng end
-        document.getElementById(`minuteInput${this.uniqueId}`).select();
+        minuteInput?.select();
       }
     },
     //mod FNSI-6669 劉全航 end
@@ -341,7 +399,28 @@ export default {
      * @description 時刻を表示用形式に変換
      */
     formatTimeValue(value = 0) {
-      return value !== "" ? value.toString().padStart(2, "0") : "";
+      if (value === "") return "";
+      const num = Number(value) % 100;
+      return num.toString().padStart(2, "0");
+    },
+
+    onWheelHour(event) {
+      const step = event.deltaY < 0 ? 1 : event.deltaY > 0 ? -1 : 0;
+      if (!step) return;
+      let v = (parseInt(this.hoursValue, 10) || this.minHoursValue) + step;
+      if (v < this.minHoursValue) v = this.maxHoursValue;
+      else if (v > this.maxHoursValue) v = this.minHoursValue;
+      this.changeHoursValue(null, v);
+    },
+
+    onWheelMinute(event) {
+      const step = event.deltaY < 0 ? 1 : event.deltaY > 0 ? -1 : 0;
+      if (!step) return;
+      const maxM = +this.hoursValue === this.maxHoursValue ? this.minMinutesValue : this.maxMinutesValue;
+      let v = (parseInt(this.minutesValue, 10) || this.minMinutesValue) + step;
+      if (v < this.minMinutesValue) v = maxM;
+      else if (v > maxM) v = this.minMinutesValue;
+      this.changeMinutesValue(null, v);
     },
 
     /**
@@ -378,10 +457,11 @@ export default {
       }
       
       if (this.hoursValue === oldValue) {
-        this.$forceUpdate();
+        this.requestViewForceUpdate();
       }
 
       this.setEditValue();
+      this.$emit("input", this.editValue);
     },
 
     /**
@@ -417,10 +497,11 @@ export default {
       }
       
       if (this.minutesValue === oldValue) {
-        this.$forceUpdate();
+        this.requestViewForceUpdate();
       }
 
       this.setEditValue();
+      this.$emit("input", this.editValue);
     },
 
     /**
@@ -501,8 +582,9 @@ export default {
         // this.minutesValue = this.defaultValue;
         // del #12393 iPadでの患者経過総合ビューアの透析時間の入力改善 linjunfeng end
       }
-      this.hoursValue = value;
-      this.hoursValueInput = value; // 頭0埋め前の入力値をフォーカス移動判定用に退避
+      this.hoursValue =
+        value !== "" && this.doLoop ? this.formatTimeValue(Number(value)) : value;
+      this.hoursValueInput = this.hoursValue; // 頭0埋め前の入力値をフォーカス移動判定用に退避
       
       this.doLoop = false;
       
@@ -516,6 +598,10 @@ export default {
     handleInputMinutes(event) {
       let value = event.target.value;
       if (value !== "") {
+        const strValue = value.toString();
+        if (strValue.length > 2) {
+          value = strValue.slice(-2);
+        }
         // #12393 iPadでの患者経過総合ビューアの透析時間の入力改善 linjunfeng start
         // if (value < this.minMinutesValue) {
         if (value <= this.minMinutesValue) {
@@ -562,7 +648,11 @@ export default {
   // add 6668 治療時間が72時間まで入力できない 房 start
   watch: {
     editValue(){
-      if (this.editValue !== null) {
+      // 入力中は watch で表示値を上書きしない（入力が反映されない不具合を防止）
+      if (this.isFocusHourInput || this.isFocusMinutesInput) {
+        return;
+      }
+      if (this.editValue !== null && this.editValue !== "") {
         this.hoursValue = this.formatTimeValue((this.editValue / 60) | 0);
         this.minutesValue = this.formatTimeValue(this.editValue % 60 | 0);
       } else {
@@ -572,7 +662,7 @@ export default {
     }
   },
   // add 6668 治療時間が72時間まで入力できない 房 end
-  beforeDestroy() {
+  beforeUnmount() {
     this.stopIncreaseValue();
     this.stopDecreaseValue();
   }

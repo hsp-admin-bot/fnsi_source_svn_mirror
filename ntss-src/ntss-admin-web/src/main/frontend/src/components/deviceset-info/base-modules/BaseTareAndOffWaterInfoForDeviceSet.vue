@@ -3,7 +3,7 @@
   <div class="tare-off-water-grid">
     <v-ons-row id="selectUnitArea">
       <v-ons-col style="text-align: start;">
-        <v-ons-segment style="width: 120px;" :index.sync="segmentIndex">
+        <v-ons-segment style="width: 120px;" v-model:index="segmentIndex">
           <!-- 9820-利用者マスタの患者情報編集権限がOFFなのに患者経過総合ビューアで編集/保存ができてしまう zhoubin mod start -->
           <!-- mod FNSI-改修内容 権限関連 趙慧敏 start -->
           <!-- <button value="0" class="segment-button" :disabled="!hasDevicesetInfoAuthority" @click="selectUnit">g -->
@@ -20,71 +20,18 @@
       </v-ons-col>
     </v-ons-row>
 
-    <!-- <kendo-grid
+    <div
       ref="tareAndOffWaterInfoGrid"
-      class="tare-offwater"
-      :data-source="localDataSource"
-      :data-bound="gridSetting"
-      :editable="!disEdit"
-      :scrollable="true"
-      :height="kendoGridHeight"
-      :edit="addInputAssist"
-      :beforeEdit="editStart"
-      :cellClose="editEnd"
-      @save="onSave"
-      @cellclose="
-        () => {
-          swipeFlag = true;
-        }"
-    > -->
-    <kendo-grid
-      ref="tareAndOffWaterInfoGrid"
-      class="tare-offwater"
-      :data-source="localDataSource"
-      :data-bound="gridSetting"
-      :editable="!disEdit && !getIsOtherFacility"
-      :scrollable="true"
-      :height="kendoGridHeight"
-      :edit="addInputAssist"
-      :beforeEdit="editStart"
-      :cellClose="editEnd"
-      @save="onSave"
-      @cellclose="
-        () => {
-          swipeFlag = true;
-        }"
-    >
-      <!-- 項目名 -->
-      <kendo-grid-column
-        :field="'rowTitle'"
-        :title="'項目'"
-        :width="90"
-        :attributes="{ class: 'deviceSetInfo-row-name' }"
-        :header-attributes="{ class: 'deviceSetInfo-header-row-name' }"
-        @editable="() => false"
-        :locked="true"
-      />
-      <!-- 全体 -->
-      <kendo-grid-column
-        :columns="multColumnListAll"
-        :title="columnHeaderTitle()"
-        :header-attributes="columnHeaderClass"
-        :header-template="headerTemplateAll"
-      />
-      <!-- 月曜～日曜 -->
-      <kendo-grid-column v-for="n of 7" :key="n"
-        :columns="multColumnListWeek[n - 1]"
-        :title="columnHeaderTitle(n)"
-        :header-attributes="columnHeaderClass"
-        :header-template="headerTemplateWeek(n)"
-      />
-    </kendo-grid>
+      class="tare-offwater tare-off-water-direct-grid ntss-kendo-grid-legacy"
+    ></div>
   </div>
 </template>
 <script>
+import { getModalBodyElement, getScopedElementById, getScopedNumericTextBox, getScopedWindow, getScopedJQuery, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
   // add #10359 編集権限の動作不正 dengshen start
-  import { getAuthorized } from "@/functions/common/CommonFunctions.js";
+import { getAuthorized } from "@/functions/common/CommonFunctions.js";
   // add #10359 編集権限の動作不正 dengshen end
+
   /**
    * 共通処理用
    */
@@ -93,26 +40,26 @@
   /**
    * jQuery
    */
-  import $ from "jquery";
+
   /**
    * 日時操作
    */
-  import moment from "moment";
+  import dayjs from "@/compat/date/dayjs";
   /**
    * オブジェクト、配列操作
    */
-  import _ from "underscore";
+
   /**
    * Vue関連
    */
   /*mod FNSI-改修内容6025 任 start*/
-  /*import {mapGetters} from "vuex";*/
-  import {mapActions, mapGetters} from "vuex";
+  /*import {mapGetters} from "@/compat/vue/vuex";*/
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   /*mod FNSI-改修内容6025 任 end*/
   /**
    * 小数点計算
    */
-  import BigNumber from "bignumber.js";
+  import BigNumber from "@/compat/number/bignumber";
   // add FNSI-改修内容 権限関連 趙慧敏 start
   // del #10359 編集権限の動作不正 dengshen start
   // import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
@@ -124,7 +71,26 @@
   import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
   //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
   // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
-  import { EventBus } from "@/eventBus.js";
+  import { EventBus } from "@/compat/vue/event-bus.js";
+import $ from "@/compat/jquery";
+import kendo from "@progress/kendo-ui";
+import { bindGridEditorEnterToCloseCell } from "@/compat/kendo/grid-edit";
+import { createApp, h } from "@/compat/vue/runtime";
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
+import store from "@/stores";
+
+function installComponentJQuery() {
+  if (typeof window !== "undefined") {
+    window.$ = window.$ || $;
+    window.jQuery = window.jQuery || $;
+  }
+  if (typeof globalThis !== "undefined") {
+    globalThis.$ = globalThis.$ || $;
+    globalThis.jQuery = globalThis.jQuery || $;
+  }
+  return kendo;
+}
+
   // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
 
 export default {
@@ -166,6 +132,8 @@ export default {
        * テーブルの高さ
        */
       kendoGridHeight: 300,
+      appliedKendoGridHeight: 0,
+      isApplyingGridLayout: false,
       /**
        * Kendo UI内部データ
        */
@@ -272,7 +240,12 @@ export default {
       /**
        * IOS端末使用フラグ
        */
-      iosFlg: false
+      iosFlg: false,
+      directGridWidget: null,
+      directGridColumnSignature: "",
+      directGridLayoutRafId: null,
+      directGridReady: false,
+      weightEditorApp: null
     };
   },
 
@@ -376,20 +349,20 @@ export default {
   watch: {
     /*add FNSI-改修内容4367 任 start*/
     getFontSize() {
-      this.gridSetting();
+      this.scheduleDirectGridLayoutContract();
     },
     /*add FNSI-改修内容4367 任 end*/
     /**
      * 画面の高さ変更時の幅調整
      */
     windowHeight() {
-      this.calculateGridHeight();
+      this.scheduleDirectGridLayoutContract();
     }
   },
 
   async created() {
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = getScopedWindow(this.$el || this)?.navigator?.userAgent || "";
     if (ua.match(/Android/)) {
       this.androidFlg = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -421,43 +394,380 @@ export default {
     // 患者情報編集時処理 警告対象の治療情報を取得
     this.getAlertOrdMain();
   },
-  
-  mounted() {    
+
+  mounted() {
     // 画面印刷時のイベント追加
     // gridの固定列設定されたままだと、table構造が複雑で、cssで幅をレスポンシブに設定不可
     this.handleBeforePrint = () => {
       // 1列目の固定解除
-      const grid = this.$refs.tareAndOffWaterInfoGrid.kendoWidget();
+      const grid = this.getTareAndOffWaterInfoGridWidget();
+      if (!grid) {
+        return;
+      }
       const columns = grid.getOptions().columns;
       columns[0].locked = false;
-    
+
       grid.setOptions({ columns }); // マルチヘッダなのでsetOptionsでないと固定列解除不可
-      
+
       // grid.setOptionsで固定列解除すると背景色、ヘッダテンプレートのチェックボックス等が消える為、再設定
       this.setEditColor();
       this.addClickEvent();
     };
-  
+
     this.handleAfterPrint = () => {
       // 1列目を固定に戻す
-      const grid = this.$refs.tareAndOffWaterInfoGrid.kendoWidget();
+      const grid = this.getTareAndOffWaterInfoGridWidget();
+      if (!grid) {
+        return;
+      }
       const columns = grid.getOptions().columns;
       columns[0].locked = true;
-    
+
       grid.setOptions({ columns });
     };
     window.addEventListener("beforeprint", this.handleBeforePrint);
-    window.addEventListener("afterprint", this.handleAfterPrint);    
+    window.addEventListener("afterprint", this.handleAfterPrint);
+    this.$nextTick(() => {
+      this.initDirectGridIfReady();
+      this.scheduleDirectGridLayoutContract();
+    });
   },
 
-  beforeDestroy() {
-    window.removeEventListener("beforeprint", this.handleBeforePrint);
-    window.removeEventListener("afterprint", this.handleAfterPrint);
+  beforeUnmount() {
+    if (this.handleBeforePrint) {
+      window.removeEventListener("beforeprint", this.handleBeforePrint);
+    }
+    if (this.handleAfterPrint) {
+      window.removeEventListener("afterprint", this.handleAfterPrint);
+    }
+    this.unmountWeightEditor();
+    this.destroyDirectGrid();
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
 
   methods: {
+    unmountWeightEditor() {
+      if (this.weightEditorApp) {
+        this.weightEditorApp.unmount();
+        this.weightEditorApp = null;
+      }
+    },
+    getDeviceSetScopeRoot() {
+      return this.$el || null;
+    },
+    getCurrentModalBody() {
+      return getModalBodyElement(this.$el) || null;
+    },
+    getTareAndOffWaterInfoGridRef() {
+      return this.$refs.tareAndOffWaterInfoGrid || null;
+    },
+    getTareAndOffWaterInfoGridWidget() {
+      return this.directGridWidget || this.getTareAndOffWaterInfoGridRef()?.gridWidget?.() || this.getTareAndOffWaterInfoGridRef()?.kendoWidget?.() || null;
+    },
+    isDirectGridEditable() {
+      return !this.disEdit && !this.getIsOtherFacility;
+    },
+    getDirectGridDataSourceOption() {
+      return {
+        schema: this.localDataSource.schema,
+        data: Array.isArray(this.localDataSource.data) ? this.localDataSource.data : []
+      };
+    },
+    createDirectGridDataSource() {
+      installComponentJQuery();
+      return new kendo.data.DataSource(this.getDirectGridDataSourceOption());
+    },
+    cloneDirectChildColumn(column) {
+      return {
+        ...column,
+        editor: (container, options) => this.setEditor(container, options),
+        editable: typeof column.editable === "function" ? column.editable : () => this.isDirectGridEditable()
+      };
+    },
+    buildDirectGridColumns() {
+      return [
+        {
+          field: "rowTitle",
+          title: "項目",
+          width: 90,
+          attributes: { class: "deviceSetInfo-row-name" },
+          headerAttributes: { class: "deviceSetInfo-header-row-name" },
+          editable: () => false,
+          locked: true
+        },
+        {
+          columns: (this.multColumnListAll || []).map(column => this.cloneDirectChildColumn(column)),
+          title: this.columnHeaderTitle(),
+          headerAttributes: this.columnHeaderClass,
+          headerTemplate: () => this.headerTemplateAll()
+        },
+        ...(this.multColumnListWeek || []).map((columns, index) => ({
+          columns: (columns || []).map(column => this.cloneDirectChildColumn(column)),
+          title: this.columnHeaderTitle(index + 1),
+          headerAttributes: this.columnHeaderClass,
+          headerTemplate: () => this.headerTemplateWeek(index + 1)
+        }))
+      ];
+    },
+    getDirectGridColumnSignature() {
+      return JSON.stringify({
+        editable: this.isDirectGridEditable(),
+        all: (this.multColumnListAll || []).map(column => ({
+          field: column.field,
+          title: column.title,
+          width: column.width,
+          format: column.format,
+          attributes: column.attributes,
+          headerAttributes: column.headerAttributes
+        })),
+        weeks: (this.multColumnListWeek || []).map(columns => (columns || []).map(column => ({
+          field: column.field,
+          title: column.title,
+          width: column.width,
+          format: column.format,
+          attributes: column.attributes,
+          headerAttributes: column.headerAttributes
+        }))),
+        chkAllEditFlg: this.chkAllEditFlg,
+        hasDevicesetInfoAuthority: this.hasDevicesetInfoAuthority
+      });
+    },
+    installDirectGridFacade() {
+      const root = this.getTareAndOffWaterInfoGridRef();
+      if (!root) {
+        return;
+      }
+      root.kendoWidget = () => this.directGridWidget;
+      root.gridWidget = () => this.directGridWidget;
+      root.resizeGrid = () => this.directGridWidget?.resize?.(true);
+      root.gridRootEl = () => root;
+      root.gridHeaderEl = () => root.querySelector?.(".k-grid-header");
+      root.gridLockedHeaderEl = () => root.querySelector?.(".k-grid-header-locked");
+      root.gridHeaderWrapEl = () => root.querySelector?.(".k-grid-header-wrap");
+      root.gridLockedContentEl = () => root.querySelector?.(".k-grid-content-locked");
+      root.gridAutoScrollableEl = () => root.querySelector?.(".k-grid-content");
+      root.gridScrollHostEl = () => root.querySelector?.(".k-grid-content");
+      root.gridContentEl = () => root.querySelector?.(".k-grid-content");
+      root.gridTableEl = () => root.querySelector?.(".k-grid-content table, table");
+    },
+    initDirectGridIfReady() {
+      const root = this.getTareAndOffWaterInfoGridRef();
+      if (!root || !Array.isArray(this.multColumnListWeek) || this.multColumnListWeek.length === 0) {
+        return;
+      }
+      installComponentJQuery();
+      const $root = $(root);
+      const existingGrid = $root.data("kendoGrid");
+      if (existingGrid) {
+        this.directGridWidget = existingGrid;
+        this.installDirectGridFacade();
+        this.applyDirectGridColumnsContract();
+        this.applyDirectGridDataSourceContract();
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+      $root.kendoGrid({
+        dataSource: this.createDirectGridDataSource(),
+        columns: this.buildDirectGridColumns(),
+        editable: this.isDirectGridEditable(),
+        scrollable: true,
+        height: this.kendoGridHeight,
+        dataBound: () => {
+          this.applyDirectGridStyleContract();
+          this.gridSetting();
+        },
+        edit: event => this.addInputAssist(event),
+        beforeEdit: event => this.editStart(event),
+        cellClose: () => {
+          this.editEnd();
+          this.swipeFlag = true;
+        },
+        save: event => this.onSave(event)
+      });
+      this.directGridWidget = $root.data("kendoGrid") || null;
+      this.directGridColumnSignature = this.getDirectGridColumnSignature();
+      this.directGridReady = !!this.directGridWidget;
+      this.installDirectGridFacade();
+      this.scheduleDirectGridLayoutContract();
+    },
+    applyDirectGridColumnsContract() {
+      const grid = this.getTareAndOffWaterInfoGridWidget();
+      if (!grid) {
+        return;
+      }
+      const nextSignature = this.getDirectGridColumnSignature();
+      if (this.directGridColumnSignature !== nextSignature) {
+        grid.setOptions({
+          columns: this.buildDirectGridColumns(),
+          editable: this.isDirectGridEditable()
+        });
+        this.directGridColumnSignature = nextSignature;
+      }
+    },
+    applyDirectGridDataSourceContract() {
+      const grid = this.getTareAndOffWaterInfoGridWidget();
+      if (!grid) {
+        return;
+      }
+      grid.setDataSource(this.createDirectGridDataSource());
+      this.applyDirectGridStyleContract();
+    },
+    applyDirectGridStyleContract() {
+      const root = this.getTareAndOffWaterInfoGridRef();
+      if (!root) {
+        return;
+      }
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-editable", "k-display-block");
+      root.querySelectorAll(".k-grid-header th, .k-grid-header .k-table-th").forEach(th => th.classList.add("k-header"));
+      [".k-grid-content tbody", ".k-grid-content-locked tbody"].forEach(selector => {
+        root.querySelectorAll(selector).forEach(tbody => {
+          Array.from(tbody.children || []).forEach((tr, index) => {
+            tr.classList.add("k-master-row");
+            tr.classList.toggle("k-alt", index % 2 === 1);
+          });
+        });
+      });
+      root.querySelectorAll(".k-grid-content tbody td, .k-grid-content-locked tbody td").forEach(td => td.classList.add("k-td", "k-table-td"));
+      // ヘッダー行名
+      root.querySelectorAll(".k-grid-header tbody td").forEach(td => td.classList.add("deviceSetInfo-header-row-name"));
+      root.querySelectorAll(".k-grid-content-locked tbody td").forEach(td => td.classList.add("deviceSetInfo-row-name"));
+      this.applyDirectGridCellClassContract(root);
+    },
+    applyDirectGridCellClassContract(root) {
+      const columns = [
+        ...(this.multColumnListAll || []),
+        ...(this.multColumnListWeek || []).flat()
+      ];
+      root.querySelectorAll(".k-grid-content tbody tr").forEach(tr => {
+        Array.from(tr.children || []).forEach((td, index) => {
+          const field = columns[index]?.field || "";
+          Array.from(td.classList || []).forEach(className => {
+            if (/^(name|weight)(All|_\d+)-item$/.test(className)) {
+              td.classList.remove(className);
+            }
+          });
+          const attributeClass = columns[index]?.attributes?.class;
+          if (typeof attributeClass === "string") {
+            attributeClass.split(/\s+/).filter(Boolean).forEach(className => td.classList.add(className));
+          }
+          const isAllColumn = field.endsWith("All");
+          const isWeekColumn = /_\d+$/.test(field);
+          td.classList.toggle("deviceSetInfo-name-content", field.startsWith("name"));
+          td.classList.toggle("deviceSetInfo-weight-content", field.startsWith("weight"));
+          td.classList.toggle(
+            "grid-column-disabled-color",
+            (this.chkAllEditFlg && isWeekColumn) || (!this.chkAllEditFlg && isAllColumn)
+          );
+        });
+      });
+    },
+    scheduleDirectGridLayoutContract() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+      }
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.directGridLayoutRafId = null;
+        this.calculateGridHeight();
+        this.applyDirectGridHeight();
+        this.applyDirectGridStyleContract();
+        this.applyDirectGridContentHeights();
+        this.syncLockedHeaderLayout();
+      });
+    },
+    destroyDirectGrid() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+        this.directGridLayoutRafId = null;
+      }
+      const root = this.getTareAndOffWaterInfoGridRef();
+      const grid = root ? $(root).data("kendoGrid") : null;
+      try {
+        grid?.destroy?.();
+      } catch (_error) {
+        // noop
+      }
+      if (root) {
+        $(root).empty();
+      }
+      this.directGridWidget = null;
+      this.directGridColumnSignature = "";
+      this.directGridReady = false;
+    },
+    getGridHeaderElement() {
+      return this.$refs.tareAndOffWaterInfoGrid?.gridHeaderEl?.() || queryScopedSelector('.k-grid-header', this.$el || this);
+    },
+    getGridLockedHeaderElement() {
+      return this.$refs.tareAndOffWaterInfoGrid?.gridLockedHeaderEl?.() || queryScopedSelector('.k-grid-header-locked', this.$el || this);
+    },
+    getGridHeaderWrapElement() {
+      return this.$refs.tareAndOffWaterInfoGrid?.gridHeaderWrapEl?.() || queryScopedSelector('.k-grid-header-wrap', this.$el || this);
+    },
+    getGridLockedContentElement() {
+      return this.$refs.tareAndOffWaterInfoGrid?.gridLockedContentEl?.() || queryScopedSelector('.k-grid-content-locked', this.$el || this);
+    },
+    getGridAutoScrollableElement() {
+      return this.$refs.tareAndOffWaterInfoGrid?.gridAutoScrollableEl?.() || this.$refs.tareAndOffWaterInfoGrid?.gridScrollHostEl?.() || this.$refs.tareAndOffWaterInfoGrid?.gridContentEl?.() || queryScopedSelector('.k-grid-content', this.$el || this);
+    },
+    traverseGridColumns(columns, onColumn) {
+      if (!Array.isArray(columns) || typeof onColumn !== "function") {
+        return;
+      }
+      columns.forEach((column) => {
+        if (!column) {
+          return;
+        }
+        onColumn(column);
+        if (Array.isArray(column.columns) && column.columns.length) {
+          this.traverseGridColumns(column.columns, onColumn);
+        }
+      });
+    },
+    syncGridColumnsToWidget() {
+      this.initDirectGridIfReady();
+      const widget = this.getTareAndOffWaterInfoGridWidget();
+      if (!widget || !Array.isArray(widget.columns)) {
+        return;
+      }
+      const widgetColumnMap = new Map();
+      this.traverseGridColumns(widget.columns, (column) => {
+        if (column.field) {
+          widgetColumnMap.set(column.field, column);
+        }
+      });
+      const sourceColumns = [
+        ...this.multColumnListAll,
+        ...this.multColumnListWeek.flat()
+      ];
+      sourceColumns.forEach((sourceColumn) => {
+        const widgetColumn = widgetColumnMap.get(sourceColumn?.field);
+        if (!widgetColumn) {
+          return;
+        }
+        widgetColumn.format = sourceColumn.format;
+        widgetColumn.attributes = sourceColumn.attributes;
+        widgetColumn.headerAttributes = sourceColumn.headerAttributes;
+      });
+    },
+    alignGridLayout() {
+      this.getTareAndOffWaterInfoGridRef()?.resizeGrid?.();
+      this.getTareAndOffWaterInfoGridWidget()?.resize?.();
+      this.syncLockedHeaderLayout();
+    },
+    syncLockedHeaderLayout() {
+      // Kendo 2026 manages locked header/content widths and horizontal scroll sync.
+      // Leave these widths untouched while verifying the header/body drift issue.
+    },
+    getSelectUnitAreaElement() {
+      return getScopedElementById('selectUnitArea', this.getDeviceSetScopeRoot()) || null;
+    },
+    getResizeObsTargetElement(container = null) {
+      return queryScopedSelector('.resize-obs-target', container?.[0] || this.getDeviceSetScopeRoot() || this.$el || this)
+        || null;
+    },
+    getNumericTextBoxElement() {
+      return getScopedNumericTextBox(this.getDeviceSetScopeRoot()) || null;
+    },
     /*add FNSI-改修内容6025 任 start*/
     ...mapActions("loading-screen", {
       setLoadingScreenVisible: "setLoadingScreenVisible",
@@ -501,15 +811,72 @@ export default {
      * Windowの高さからGirdコンポーネント領域の高さを算出
      */
     calculateGridHeight() {
-      if (!this.editingFlg) {
-        const marginHeigh = 15;
-        const selectUnitAreaHeight = document.getElementById("selectUnitArea").clientHeight;
-        this.kendoGridHeight = document.getElementsByClassName("modal-body")[0].clientHeight - selectUnitAreaHeight - marginHeigh;
-        // リフレッシュで背景色、チェックボックスのイベントが初期化される為、再設定
-        this.$nextTick(() => {
-          this.setEditColor();
-          this.addClickEvent();
-        });
+      if (this.editingFlg) {
+        return;
+      }
+      const marginHeight = 15;
+      const selectUnitAreaHeight = this.getSelectUnitAreaElement()?.clientHeight || 0;
+      const modalBody = this.getCurrentModalBody();
+      const gridRoot = this.getTareAndOffWaterInfoGridRef();
+      let availableHeight = 0;
+
+      if (modalBody && gridRoot) {
+        const modalRect = modalBody.getBoundingClientRect();
+        const gridTop = gridRoot.getBoundingClientRect().top;
+        availableHeight = modalRect.bottom - gridTop - marginHeight;
+      } else if (modalBody) {
+        availableHeight = modalBody.clientHeight - selectUnitAreaHeight - marginHeight;
+      } else if (this.$el?.clientHeight) {
+        availableHeight = this.$el.clientHeight - selectUnitAreaHeight - marginHeight;
+      }
+
+      this.kendoGridHeight = Math.max(160, Math.floor(availableHeight));
+    },
+
+    /**
+     * 算出した高さをKendo Grid本体へ反映する
+     */
+    applyDirectGridHeight() {
+      const height = Math.max(0, Number(this.kendoGridHeight) || 0);
+      if (!height || height === this.appliedKendoGridHeight) {
+        return;
+      }
+      const root = this.getTareAndOffWaterInfoGridRef();
+      const grid = this.getTareAndOffWaterInfoGridWidget();
+      this.isApplyingGridLayout = true;
+      try {
+        if (root) {
+          root.style.height = `${height}px`;
+          root.style.maxHeight = `${height}px`;
+        }
+        if (grid) {
+          grid.setOptions({ height: this.kendoGridHeight });
+          grid.wrapper?.height?.(this.kendoGridHeight);
+          grid.resize?.(true);
+        }
+        this.appliedKendoGridHeight = height;
+      } finally {
+        this.isApplyingGridLayout = false;
+      }
+    },
+
+    /**
+     * locked列・本文スクロール領域の高さを調整する
+     */
+    applyDirectGridContentHeights() {
+      const headerHeight = (this.getGridHeaderElement()?.offsetHeight || 0) + 2;
+      let lockRowHeight = this.kendoGridHeight - headerHeight;
+      const autoScrollable = this.getGridAutoScrollableElement();
+      if (!this.androidFlg && !this.iosFlg && autoScrollable && autoScrollable.scrollWidth > autoScrollable.clientWidth) {
+        lockRowHeight -= 17;
+      }
+      const lockedContent = this.getGridLockedContentElement();
+      if (lockedContent) {
+        lockedContent.style.height = lockRowHeight + "px";
+      }
+      if (autoScrollable) {
+        autoScrollable.style.height = lockRowHeight + "px";
+        autoScrollable.style.WebkitOverflowScrolling = "touch";
       }
     },
 
@@ -517,9 +884,7 @@ export default {
      * Gird編集開始時に、Android端末の場合は高さ変更処理が発生しないようにフラグを立てる
      */
     editStart() {
-      if (this.androidFlg) {
-        this.editingFlg = true;
-      }
+      this.editingFlg = true;
     },
 
     /**
@@ -527,28 +892,31 @@ export default {
      */
     editEnd() {
       this.editingFlg = false;
+      this.unmountWeightEditor();
     },
 
     /**
      * Databaund (Gridにデータが割り当てられた) 時の処理
      */
     gridSetting(){
-      // Grid高さの調整
+      this.applyDirectGridStyleContract();
       this.$nextTick(() => {
-        this.calculateGridHeight();
-        const headerHeight = document.getElementsByClassName("k-grid-header")[0].offsetHeight + 2;
-        let lockRowHeight = this.kendoGridHeight - headerHeight;
-        // PCでの表示時のみ、スクロールバー分の不要な高さが発生する為、高さの調整を行う
-        if (!this.androidFlg && !this.iosFlg) {
-          lockRowHeight -= 17;
+        if (this.isApplyingGridLayout) {
+          return;
         }
-        document.getElementsByClassName("k-grid-content-locked")[0].style.height = lockRowHeight + "px";
+        this.applyDirectGridContentHeights();
+        const headerElement = this.getGridHeaderElement();
+        if (headerElement) {
+          headerElement.style.backgroundColor = "var(--ntss-list-header-background-color)";
+          const headerTable = headerElement.querySelector("table");
+          if (headerTable) {
+            headerTable.style.borderColor = "var(--ntss-base-background-color)";
+          }
+        }
+        this.syncLockedHeaderLayout();
+        this.setEditColor();
+        this.addClickEvent();
       });
-      // ヘッダーにスタイル適用
-      this.$refs.tareAndOffWaterInfoGrid.$el.firstElementChild.style.backgroundColor = "var(--ntss-list-header-background-color)";
-      this.$refs.tareAndOffWaterInfoGrid.$el.firstElementChild.firstElementChild.style.borderColor = "var(--ntss-base-background-color)";
-      // 慣性スクロール用のクラスを追加
-      document.getElementsByClassName("k-auto-scrollable")[1].style.WebkitOverflowScrolling = "touch";
     },
 
     /**
@@ -734,8 +1102,7 @@ export default {
       for (let weekNo = 1; weekNo <= 7; weekNo++) {
         if (
           null !== data[weekNo] &&
-          undefined !== data[weekNo]
-        ) {
+          undefined !== data[weekNo]) {
           for (let itemNo = 0; itemNo <= 4; itemNo++) {
             // 名称項目
             loacalData[itemNo][`name_${weekNo}`] = data[weekNo][`name_${itemNo + 1}`];
@@ -747,8 +1114,7 @@ export default {
             if (
               1 === this.selectedUnit &&
               null !== weightValue &&
-              "" !== weightValue
-            ) {
+              "" !== weightValue) {
               rtn = this.procDecimal(weightValue / 1000);
             } else {
               rtn = weightValue;
@@ -831,14 +1197,11 @@ export default {
       if (!this.patId) {
         return {};
       }
-      // mod #12462 患者情報共有 Ji start
-      // const url = `deviceSetInfo/getPatTareAndOffWaterById/${this.patId}`;
-      let otherFacilityCd = this.getIsOtherFacility ? `/${this.getOtherFacilityCd}` : '';
+      let otherFacilityCd = this.getIsOtherFacility ? `/${this.getOtherFacilityCd}` : "";
       if (this.getPatientShareMode == 0 && this.getPatientShareFacilityCdMode == null) {
-        otherFacilityCd = '';
+        otherFacilityCd = "";
       }
       const url = `deviceSetInfo/getPatTareAndOffWaterById/${this.patId}${otherFacilityCd}`;
-      // mod #12462 患者情報共有 Ji end
       // データ取得
       const response = await ApiHelper.get(url).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
@@ -866,6 +1229,8 @@ export default {
       await this.calculateSum();
       // フォーマット変更
       await this.changeFormat();
+      // Vue2 では列定義オブジェクトが widget 側へ同参照で反映されていたため、Vue3 でも同等に同期する
+      this.syncGridColumnsToWidget();
       // Gridのリフレッシュ
       await this.refresh();
       // スクロール量の設定()
@@ -880,14 +1245,16 @@ export default {
      * スクロール量取得
      */
     getScrollPos() {
-      this.scrollPos = $(".indInfo-style-modal-container").scrollTop();
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
+      this.scrollPos = scoped$(".indInfo-style-modal-container").scrollTop();
     },
 
     /**
      * スクロール量の設定
      */
     setScrollPos() {
-      $(".indInfo-style-modal-container").scrollTop(this.scrollPos);
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
+      scoped$(".indInfo-style-modal-container").scrollTop(this.scrollPos);
     },
 
     /**
@@ -1009,11 +1376,10 @@ export default {
      * 画面再描画処理
      */
     refresh() {
-      // Kendo UIの画面が立ち上がる前に呼び出されている場合は処理終了
-      if (!this.$refs.tareAndOffWaterInfoGrid.kendoWidget()) {
-        return;
-      }
-      this.$refs.tareAndOffWaterInfoGrid.kendoWidget().dataSource.read();
+      this.initDirectGridIfReady();
+      this.applyDirectGridColumnsContract();
+      this.applyDirectGridDataSourceContract();
+      this.scheduleDirectGridLayoutContract();
     },
 
     /**
@@ -1029,12 +1395,11 @@ export default {
       this.setLoadingScreenVisible(true);
       /*add FNSI-改修内容6025 任 end*/
       // 更新日時(現在日時)
-      this.upDate = moment().format("YYYY-MM-DD HH:mm:ss.SSS");
+      this.upDate = dayjs().format("YYYY-MM-DD HH:mm:ss.SSS");
       // 更新情報(初期値と編集値の差分)
       const updateData = this.createDifferenceValue(
         this.initValue,
-        this.editValue
-      );
+        this.editValue);
       // 患者情報更新
       await this.updatePatMain(updateData);
       // 反映先データの取得
@@ -1044,8 +1409,7 @@ export default {
         13010001,
         "2",
         ["今日含む未来の指示情報", ""],
-        "FUTURE_ORD_MAIN"
-      );
+        "FUTURE_ORD_MAIN");
       /*add FNSI-改修内容6025 任 start*/
       this.setLoadingScreenVisible(false);
       /*add FNSI-改修内容6025 任 end*/
@@ -1065,9 +1429,8 @@ export default {
       sendJson.up_date = this.upDate;
       // データ更新
       await ApiHelper.post(
-        "/deviceSetInfo/updatePatTareOffWaterInfo/",
-        sendJson
-      ).catch(error => {
+        "/deviceSetInfo/updatePatTareOffWaterInfo",
+        sendJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('BaseTareAndOffWaterInfoForDeviceSet.vue', 'updatePatMain', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1084,10 +1447,7 @@ export default {
       // データ取得条件の格納
       const paramJson = {};
       // 施設コード
-      // mod #12462 患者情報共有 Ji start
-      // paramJson.facility_cd = this.facilityCd;
       paramJson.facility_cd = this.getIsOtherFacility ? this.getOtherFacilityCd : this.facilityCd;
-      // mod #12462 患者情報共有 Ji end
       // 患者ID
       paramJson.pat_id = this.patId;
       // 治療開始日
@@ -1099,8 +1459,7 @@ export default {
       // データの取得
       const response = await ApiHelper.post(
         `/mainData/TreatDateList`,
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('BaseTareAndOffWaterInfoForDeviceSet.vue', 'getTargetOrdMain', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1124,9 +1483,9 @@ export default {
      */
     getReflectOrdMain() {
       // 本日の日付け
-      const day = moment().format("YYYYMMDD");
+      const day = dayjs().format("YYYYMMDD");
       // 前日の日付け
-      const yesterday = moment()
+      const yesterday = dayjs()
         .subtract(1, "days")
         .format("YYYYMMDD");
       // 更新対象を格納(本日または前日の治療状況が条件送信後～後体重確認前)
@@ -1135,8 +1494,7 @@ export default {
           Number(day) >= Number(eleObj.treatDate) &&
           Number(eleObj.treatDate) >= Number(yesterday) &&
           Number(eleObj.rstDialysisState) >= 1 &&
-          6 > Number(eleObj.rstDialysisState)
-        );
+          6 > Number(eleObj.rstDialysisState));
       });
       // 編集対象曜日取得
       const editWeekArr = this.getEditWeekArr();
@@ -1177,11 +1535,10 @@ export default {
         // 更新対象オーダー番号リストの格納
         this.ordNoList.push(eleItem.ordNo);
         // 更新対象を曜日ごとに格納
-        if (_.has(this.targetUpdateInfo, eleItem.treatWeek.toString())) {
+        if (Object.prototype.hasOwnProperty.call(this.targetUpdateInfo, eleItem.treatWeek.toString())) {
           // キーが存在している場合、オーダー番号をpush
           this.targetUpdateInfo[eleItem.treatWeek.toString()].push(
-            eleItem.ordNo
-          );
+            eleItem.ordNo);
         } else {
           // キーが存在していない場合は直接代入
           this.targetUpdateInfo[eleItem.treatWeek.toString()] = [eleItem.ordNo];
@@ -1198,7 +1555,7 @@ export default {
       //   "2",
       //   [`以下の透析中実績の${dispStr1}情報`, dispStr2],
       //   "TARGET_ORD_MAIN"
-      // );
+      //);
       // del FNSI-予定の場合はord_mainを更新する 趙 end
     },
 
@@ -1211,15 +1568,14 @@ export default {
      */
     getAlertOrdMain() {
       // 2日前の日付け
-      const dayBeforeYesterday = moment()
+      const dayBeforeYesterday = dayjs()
         .subtract(2, "days")
         .format("YYYYMMDD");
       this.alertOrdMainList = this.ordMainList.filter(eleObj => {
         return (
           Number(dayBeforeYesterday) >= Number(eleObj.treatDate) &&
           Number(eleObj.rstDialysisState) >= 3 &&
-          6 > Number(eleObj.rstDialysisState)
-        );
+          6 > Number(eleObj.rstDialysisState));
       });
     },
 
@@ -1253,8 +1609,7 @@ export default {
       // 変更情報を取得
       const differenceValue = this.createDifferenceValue(
         this.initValue,
-        this.editValue
-      );
+        this.editValue);
       // 変更のあった曜日を格納
       for (const treatWeek in differenceValue) {
         arr.push(treatWeek);
@@ -1269,7 +1624,7 @@ export default {
      */
     createMessageStr(obj, preDispStr) {
       // 治療日
-      const treatDate = moment(obj.treatDate, "YYYYMMDD").format("YYYY/MM/DD");
+      const treatDate = dayjs(obj.treatDate, "YYYYMMDD").format("YYYY/MM/DD");
       // 治療曜日
       const treatWeek = this.convertStrWeek(Number(obj.treatWeek));
       // ベッド名
@@ -1278,8 +1633,7 @@ export default {
       const indKurName = obj.indKurName;
       // 治療状況
       const rstDialysisState = this.convertDialysisState(
-        Number(obj.rstDialysisState)
-      );
+        Number(obj.rstDialysisState));
       // 表示文字列
       const dispStr = `\n治療日:${treatDate}(${treatWeek})\nベッド:${indBedName}\nクール:${indKurName}\n治療状況:${rstDialysisState}\n`;
       // 前回の表示文字列と結合する
@@ -1297,14 +1651,12 @@ export default {
         sendJson.ord_no = JSON.stringify(this.ordNoList);
         // 風袋・除水補正情報
         sendJson[this.columnName] = JSON.stringify(
-          this.editValue[treatWeek.toString()]
-        );
+          this.editValue[treatWeek.toString()]);
         // 更新日時
         sendJson.up_date = this.upDate;
         await ApiHelper.post(
           `/deviceSetInfo/updateRstTareOffWaterInfo`,
-          sendJson
-        ).catch(error => {
+          sendJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('BaseTareAndOffWaterInfoForDeviceSet.vue', 'reflectOrdMainInfo', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1327,8 +1679,7 @@ export default {
       // 反映情報
       const updateData = this.createDifferenceValue(
         this.initValue,
-        this.editValue
-      );
+        this.editValue);
       // 変更のあった曜日リスト
       const editWeek = [];
       for (const week in updateData) {
@@ -1349,7 +1700,7 @@ export default {
       // }
       // sendJson.ope_cd = opeCd;
       // sendJson.crud = "U";
-      // let treatDate = moment(new Date()).format("YYYYMMDD");
+      // let treatDate = dayjs(new Date()).format("YYYYMMDD");
       // sendJson.treatDate = treatDate;
       // sendJson.facility_cd = this.getStateUserAccountInfo.facilityCd;
       // sendJson.hosp_pat_id = this.selectedPat.pat_personal_main.hosp_pat_id;
@@ -1357,9 +1708,8 @@ export default {
       // // add by zs 2023-03-06 [#6118無期限予定の中止：js foreach call journalをjava batch call journalに変更] --end
       // DEL  8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。zhou end
       await ApiHelper.post(
-        "/deviceSetInfo/updateFutureIndTareOffWaterInfo/",
-        sendJson
-      ).catch(error => {
+        "/deviceSetInfo/updateFutureIndTareOffWaterInfo",
+        sendJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('BaseTareAndOffWaterInfoForDeviceSet.vue', 'updateFutureIndTareAndOffWaterInfo', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1385,7 +1735,7 @@ export default {
     // // add FNSI 1006 No.538 外部連携APIを呼び出 陳 start
     // doCreateJournal() {
     //   let opeCd = "";
-    //   let treatDate = moment(new Date()).format("YYYYMMDD");
+    //   let treatDate = dayjs(new Date()).format("YYYYMMDD");
     //   if (0 === this.propsTareOffWaterInfoFlag) {
     //     opeCd = "010001";
     //   } else {
@@ -1409,7 +1759,7 @@ export default {
     // callCreateJournal(editWeek) {
     //   const oldOrdMainList = this.ordMainList;
     //   let opeCd = "";
-    //   let treatDate = moment(new Date()).format("YYYYMMDD");
+    //   let treatDate = dayjs(new Date()).format("YYYYMMDD");
     //   if (oldOrdMainList) {
     //     if (0 === this.propsTareOffWaterInfoFlag) {
     //       opeCd = "010001";
@@ -1530,8 +1880,7 @@ export default {
       for (const key in initData) {
         // 初期値と差異のあるものを取り出す
         const difference = Object.keys(editData[key]).filter(
-          item => editData[key][item] !== initData[key][item]
-        );
+          item => editData[key][item] !== initData[key][item]);
         // 初期データと編集データで際のあったものを格納する
         if (0 !== difference.length) {
           differenceData[key] = {};
@@ -1551,8 +1900,7 @@ export default {
       // 変更箇所数
       const editCount = this.getEditCount(
           this.initValue,
-          this.editValue
-      );
+          this.editValue);
       return 0 !== editCount;
     },
     /**
@@ -1578,8 +1926,7 @@ export default {
         }
         // 初期値と差異のあるデータを取り出す
         const difference = Object.keys(editData[key]).filter(
-          item => editData[key][item] !== initData[key][item]
-        );
+          item => editData[key][item] !== initData[key][item]);
         // 初期データと編集データで差異があった件数カウント
         if (0 !== difference.length) {
           editCount++;
@@ -1591,6 +1938,7 @@ export default {
      * 編集色の設定 (データリフレッシュ時に初期化される為、毎回全項目確認する)
      */
     setEditColor() {
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
       if (this.chkAllEditFlg) {
         // 全体項目チェックオン
 
@@ -1602,7 +1950,7 @@ export default {
         for (let i = 0; i < 2; i++) {
           const itemName = 0 === i ? "name" : "weight";
           // 名称項目編集チェック
-          $(`.${itemName}All-item`).each((index, elment) => {
+          scoped$(`.${itemName}All-item`).each((index, elment) => {
             // 合計量行は処理を行わない
             if (5 === index) {
               return;
@@ -1610,13 +1958,12 @@ export default {
             // 初期値と編集値が異なれば、編集職のクラスを追加
             if (
               initDataAll[`${itemName}_${index + 1}`] !==
-              editDataAll[`${itemName}_${index + 1}`]
-            ) {
+              editDataAll[`${itemName}_${index + 1}`]) {
               // 文字色、背景色を変更するクラスを追加(変更箇所あり)
-              $(elment).addClass("grid-edited-cell");
+              scoped$(elment).addClass("grid-edited-cell");
             } else {
               // クラスを削除(変更箇所なし)
-              $(elment).removeClass("grid-edited-cell");
+              scoped$(elment).removeClass("grid-edited-cell");
             }
           });
         }
@@ -1625,8 +1972,8 @@ export default {
           for (let i = 0; i < 2; i++) {
             const itemName = 0 === i ? "name" : "weight";
             // 名称項目編集チェック
-            $(`.${itemName}_${weekNo}-item`).each((index, elment) => {
-              $(elment).addClass("grid-column-disabled-color");
+            scoped$(`.${itemName}_${weekNo}-item`).each((index, elment) => {
+              scoped$(elment).addClass("grid-column-disabled-color");
             });
           }
         }
@@ -1638,8 +1985,8 @@ export default {
         for (let i = 0; i < 2; i++) {
           const itemName = 0 === i ? "name" : "weight";
           // 名称項目編集チェック
-          $(`.${itemName}All-item`).each((index, elment) => {
-            $(elment).addClass("grid-column-disabled-color");
+          scoped$(`.${itemName}All-item`).each((index, elment) => {
+            scoped$(elment).addClass("grid-column-disabled-color");
           });
         }
 
@@ -1653,7 +2000,7 @@ export default {
           for (let i = 0; i < 2; i++) {
             const itemName = 0 === i ? "name" : "weight";
             // 名称項目編集チェック
-            $(`.${itemName}_${weekNo}-item`).each((index, elment) => {
+            scoped$(`.${itemName}_${weekNo}-item`).each((index, elment) => {
               // 合計量行は処理を行わない
               if (5 === index) {
                 return;
@@ -1661,13 +2008,12 @@ export default {
               // 初期値と編集値が異なれば、編集職のクラスを追加
               if (
                 initData[`${itemName}_${index + 1}`] !==
-                editData[`${itemName}_${index + 1}`]
-              ) {
+                editData[`${itemName}_${index + 1}`]) {
                 // 文字色、背景色を変更するクラスを追加(変更箇所あり)
-                $(elment).addClass("grid-edited-cell");
+                scoped$(elment).addClass("grid-edited-cell");
               } else {
                 // クラスを削除(変更箇所なし)
-                $(elment).removeClass("grid-edited-cell");
+                scoped$(elment).removeClass("grid-edited-cell");
               }
             });
           }
@@ -1708,44 +2054,87 @@ export default {
         // 重さ項目列クリック時
         if (data.field.indexOf("weight") > -1) {
           this.swipeFlag = false;
-          // kendoNumericTextBoxの最大値
+          this.unmountWeightEditor();
           const max = this.numericMaxValue;
-          // kendoNumericTextBoxの最小値
           const min = this.numericMinValue;
-          // kendoNumericTextBoxのステップ
           const step = this.numericStepValue;
-          // kendoNumericTextBoxの有効小数点桁数
-          const decimals = this.numericDecimalsValue;
-          // 数値型テキストボックス(kendo UI)
-          $(
-            `<input class="deviceSetInfo-numbersTextbox" id="Calories" name="${data.field}" />`
-          )
-            .appendTo(container)
-            .kendoNumericTextBox({
-              min,
-              max,
-              step,
-              decimals
-            })
-            // マウスホイールイベントイベント
-            .on("mousewheel", function(e) {
-              if (e.originalEvent.wheelDelta / 120 > 0) {
-                this.value =
-                  max > Number(this.value)
-                    ? Number(this.value) + step
-                    : Number(this.value);
-                // 小数点第2位で切り上げ
-                this.value = Math.round(this.value * 100) / 100;
-              } else {
-                // 最小値より値が大きければ処理
-                this.value =
-                  Number(this.value) > min
-                    ? Number(this.value) - step
-                    : Number(this.value);
-                // 小数点第2位で切り上げ
-                this.value = Math.round(Number(this.value) * 100) / 100;
+          const rawEditorValue = data.model[data.field];
+          const normalizedEditorValue = rawEditorValue === null || rawEditorValue === undefined || rawEditorValue === ""
+            ? null
+            : Number(String(rawEditorValue).replace(/,/g, ""));
+          const initialValue = Number.isFinite(normalizedEditorValue) ? normalizedEditorValue : null;
+          // Kendo標準の数値エディタではなく、Vue2版と同じ共通数値入力をセル内に一時マウントする。
+          const editorRoot = document.createElement("span");
+          editorRoot.className = "deviceSetInfo-weight-editor";
+          // Gridの保存処理用にname付きinputを残すが、値変更時にchangeを発火させるとセル編集が終了するため手動同期のみ行う。
+          const valueInput = document.createElement("input");
+          valueInput.name = data.field;
+          valueInput.value = initialValue === null ? "" : initialValue;
+          valueInput.className = "deviceSetInfo-weight-editor-value";
+          valueInput.tabIndex = -1;
+          container.empty();
+          container.append(editorRoot);
+          container.append(valueInput);
+          const syncEditorValue = val => {
+            const nextValue = val === null || val === undefined || val === "" ? null : Number(val);
+            const modelValue = nextValue === null || Number.isNaN(nextValue) ? null : nextValue;
+            valueInput.value = modelValue === null ? "" : modelValue;
+            data.model[data.field] = modelValue;
+            this.localDataSource.data[data.model.id - 1][data.field] = modelValue;
+            let editModelValue = modelValue;
+            if (data.field.indexOf("weight") > -1 && 1 === this.selectedUnit && null !== editModelValue) {
+              editModelValue = editModelValue * 1000;
+            }
+            if (data.field.indexOf("All") > -1) {
+              this.setEditValue("All", `${data.field.slice(0, data.field.indexOf("All"))}_${data.model.id}`, editModelValue);
+            } else {
+              this.setEditValue(data.field.slice(-1), `${data.field.slice(0, data.field.indexOf("_"))}_${data.model.id}`, editModelValue);
+            }
+            // Gridを再描画せず、編集中のまま差分色と保存ボタン状態だけ更新する。
+            this.$nextTick(() => this.setEditColor());
+            EventBus.$emit("deviceSetChanged", this.isEdit());
+          };
+          const editorApp = createApp({
+            data() {
+              return {
+                editorValue: initialValue
+              };
+            },
+            methods: {
+              handleEditorValue(val) {
+                const nextValue = val === null || val === undefined || val === "" ? null : Number(val);
+                this.editorValue = nextValue === null || Number.isNaN(nextValue) ? null : nextValue;
+                syncEditorValue(this.editorValue);
               }
-            });
+            },
+            render() {
+              return h(CustomInputNumberPro, {
+                class: "custom-common-number-input-pro deviceSetInfo-weight-number",
+                value: this.editorValue,
+                initVal: initialValue,
+                max,
+                min,
+                step,
+                // 最大値/最小値でループさせると重量入力の操作感が不自然になるため、上下限で止める。
+                rollFlag: false,
+                required: false,
+                style: {
+                  minWidth: "72.6px",
+                  width: "100%"
+                },
+                "onUpdate:value": this.handleEditorValue,
+                onWheel: (event) => event.stopPropagation()
+              });
+            }
+          });
+          editorApp.use(store);
+          editorApp.mount(editorRoot);
+          this.weightEditorApp = editorApp;
+          setTimeout(() => {
+            editorRoot.querySelector("input")?.focus?.();
+            editorRoot.querySelector("input")?.select?.();
+          }, 0);
+          bindGridEditorEnterToCloseCell(this.getTareAndOffWaterInfoGridWidget(), container);
         } else {
           // 名称項目列クリック時
           this.swipeFlag = false;
@@ -1753,11 +2142,11 @@ export default {
             //#10500:装置設定デフォルトマスタにて風袋と除水補正の編集ができない Start
             `<textarea name="${data.field}" rows="1" class="k-valid k-textarea resize-obs-target" style="font-size: 1.0em; width:100%; resize: none; max-height: 30vh; min-height: unset;"/>`
             //#10500:装置設定デフォルトマスタにて風袋と除水補正の編集ができない End
-          ).on({
+            ).on({
             "input": (e)=>{
               setTimeout(() => {
                 e.currentTarget.style.height = "auto";
-                e.currentTarget.style.height = ( e.currentTarget.scrollHeight + 5 ) + "px";
+                e.currentTarget.style.height = ( e.currentTarget.scrollHeight + 5) + "px";
               }, 0);
             },
             "keydown": (e)=>{
@@ -1768,9 +2157,9 @@ export default {
           }).appendTo(container).trigger("input");
           // 入力中の高さ追従処理
           const resizeObserver = new ResizeObserver(entries => {
-            this.$refs.tareAndOffWaterInfoGrid.kendoWidget().resize(document.getElementsByClassName("k-grid-content-locked"));
+            this.$refs.tareAndOffWaterInfoGrid?.resizeGrid?.();
           });
-          resizeObserver.observe(document.querySelector('.resize-obs-target'));
+          resizeObserver.observe(this.getResizeObsTargetElement(container));
         }
       }
     },
@@ -1785,11 +2174,11 @@ export default {
                        `<span class="checkbox__checkmark"></span><label style="margin-left: 1em;">全</label>`; */
       let template = "";
       if(this.hasDevicesetInfoAuthority){
-        template = `<input type="checkbox" id="chkAllEdit" class="checkbox__input header-checkbox">` +
-                   `<span class="checkbox__checkmark"></span><label style="margin-left: 1em;">全</label>`;
+        template = `<span class="deviceSetInfo-header-title-content"><input type="checkbox" id="chkAllEdit" class="checkbox__input header-checkbox">` +
+                   `<span class="checkbox__checkmark"></span><label>全</label></span>`;
       } else {
-        template = `<input type="checkbox" id="chkAllEdit" class="checkbox__input header-checkbox" disabled>` +
-                   `<span class="checkbox__checkmark"></span><label style="margin-left: 1em;">全</label>`;
+        template = `<span class="deviceSetInfo-header-title-content"><input type="checkbox" id="chkAllEdit" class="checkbox__input header-checkbox" disabled>` +
+                   `<span class="checkbox__checkmark"></span><label>全</label></span>`;
       }
       // mod FNSI-改修内容 権限関連 趙慧敏 end
       return template;
@@ -1811,7 +2200,7 @@ export default {
         weekNameStyle = "color: var(--ntss-sunday-color);";
       }
       // ヘッダー一段目に設定するHTML要素
-      const template = `<label style="margin: 20%; ${weekNameStyle}">${weekName}</label>`;
+      const template = `<label class="deviceSetInfo-header-title-content" style="${weekNameStyle}">${weekName}</label>`;
       return template;
     },
 
@@ -1819,31 +2208,32 @@ export default {
      * チェックボックスにイベントの追加
      */
     addClickEvent() {
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
       // 初期チェック状態を設定
       if (this.chkAllEditFlg) {
-        $("#chkAllEdit").prop('checked', true);
+        scoped$("#chkAllEdit").prop('checked', true);
       } else {
-        $("#chkAllEdit").prop('checked', false);
+        scoped$("#chkAllEdit").prop('checked', false);
       }
 
       // CheckBox チェック時のイベントを一旦削除してから付与する(再描画の度にイベントが外れる為、都度設定する)
-      $("#chkAllEdit").off('click');
-      $("#chkAllEdit").on("click", (e) => {
+      scoped$("#chkAllEdit").off('click');
+      scoped$("#chkAllEdit").on("click", (e) => {
         if (e.target.checked) {
           this.chkAllEditFlg = true;
           // 全体項目の無効色を解除する
           for (let i = 0; i < 2; i++) {
             const itemName = 0 === i ? "name" : "weight";
-            $(`.${itemName}All-item`).each((index, elment) => {
-              $(elment).removeClass("grid-column-disabled-color");
+            scoped$(`.${itemName}All-item`).each((index, elment) => {
+              scoped$(elment).removeClass("grid-column-disabled-color");
             });
           }
           // 曜日項目の編集済み色を解除する
           for (let weekNo = 1; weekNo <= 7; weekNo++) {
             for (let i = 0; i < 2; i++) {
               const itemName = 0 === i ? "name" : "weight";
-              $(`.${itemName}_${weekNo}-item`).each((index, elment) => {
-                $(elment).removeClass("grid-edited-cell");
+              scoped$(`.${itemName}_${weekNo}-item`).each((index, elment) => {
+                scoped$(elment).removeClass("grid-edited-cell");
               });
             }
           }
@@ -1853,16 +2243,16 @@ export default {
           // 全体項目の編集済み色を解除する
           for (let i = 0; i < 2; i++) {
             const itemName = 0 === i ? "name" : "weight";
-            $(`.${itemName}All-item`).each((index, elment) => {
-              $(elment).removeClass("grid-edited-cell");
+            scoped$(`.${itemName}All-item`).each((index, elment) => {
+              scoped$(elment).removeClass("grid-edited-cell");
             });
           }
           // 曜日枠の無効色を解除する
           for (let weekNo = 1; weekNo <= 7; weekNo++) {
             for (let i = 0; i < 2; i++) {
               const itemName = 0 === i ? "name" : "weight";
-              $(`.${itemName}_${weekNo}-item`).each((index, elment) => {
-                $(elment).removeClass("grid-column-disabled-color");
+              scoped$(`.${itemName}_${weekNo}-item`).each((index, elment) => {
+                scoped$(elment).removeClass("grid-column-disabled-color");
               });
             }
           }
@@ -1903,8 +2293,9 @@ export default {
      */
     addInputAssist() {
       if (this.iosFlg) {
-        if (document.getElementsByClassName("k-numerictextbox").length !== 0) {
-          let spinnerObj = document.getElementsByClassName('k-numerictextbox')[0].getElementsByClassName('k-select')[0];
+        const numericTextBox = this.getNumericTextBoxElement();
+        if (numericTextBox) {
+          let spinnerObj = numericTextBox.getElementsByClassName('k-select')[0];
           // 編集が終了するとオブジェクトが削除される為、removeEvent処理は不要
           spinnerObj.ontouchend = function(event) {
             event.stopPropagation();
@@ -1925,31 +2316,79 @@ export default {
 </script>
 
 <style scoped>
+.tare-off-water-grid {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.tare-off-water-direct-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .tare-offwater,
-.tare-off-water-grid >>> .k-grid th {
+.tare-off-water-grid :deep(.k-grid th) {
   font-size: inherit;
 }
-.tare-off-water-grid >>> .k-grid td {
+
+.tare-off-water-grid :deep(.k-grid .k-table-th) {
+  font-size: inherit;
+}
+.tare-off-water-grid :deep(.k-grid td) {
   word-break: break-all;
   white-space: normal;
   padding-left: 5px !important;
   padding-right: 5px !important;
   font-size: inherit;
 }
-.tare-off-water-grid >>> .k-grid td input{
+
+.tare-off-water-grid :deep(.k-grid .k-table-td) {
+  word-break: break-all;
+  white-space: normal;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
+  font-size: inherit;
+}
+.tare-off-water-grid :deep(.k-grid td input){
   padding-left: 3px ;
   padding-right: 3px ;
 }
 
+.tare-off-water-grid :deep(.deviceSetInfo-weight-editor) {
+  display: block;
+  width: 100%;
+}
+
+.tare-off-water-grid :deep(.deviceSetInfo-weight-number) {
+  width: 100%;
+}
+
+.tare-off-water-grid :deep(.deviceSetInfo-weight-number input[type="number"]) {
+  height: 29px;
+  text-align: right;
+  width: 100%;
+}
+
+.tare-off-water-grid :deep(.deviceSetInfo-weight-editor-value) {
+  border: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  width: 0;
+}
+
 @media print {
-  .tare-off-water-grid >>> div {
+  .tare-off-water-grid :deep(div){
     height: auto !important;
   }
-  .tare-off-water-grid >>> .k-grid .k-grid-header {
+  .tare-off-water-grid :deep(.k-grid .k-grid-header){
     padding-right: 0 !important;
   }
   /* 項目列（1列目）幅指定 */
-  .tare-off-water-grid >>> .k-grid thead th:first-child {
+  .tare-off-water-grid :deep(.k-grid thead th:first-child){
     width: 0.5% !important;
     min-width: 0.5% !important;
     max-width: 100% !important;
@@ -1957,7 +2396,7 @@ export default {
   /* =========================
    * Grid全体
    * ========================= */
-  .tare-off-water-grid >>> .k-grid {
+  .tare-off-water-grid :deep(.k-grid){
     width: 100% !important;
     max-width: 100% !important;
     overflow: hidden !important;
@@ -1965,20 +2404,20 @@ export default {
   /* =========================
    * テーブル
    * ========================= */
-  .tare-off-water-grid >>> .k-grid table {
+  .tare-off-water-grid :deep(.k-grid table){
     width: 100% !important;
     table-layout: fixed !important;
     border-collapse: collapse;
   }
   /* colgroup辞める */
-  .tare-off-water-grid >>> .k-grid col {
+  .tare-off-water-grid :deep(.k-grid col){
     width: auto !important;
   }
   /* =========================
    * セル
    * ========================= */
-  .tare-off-water-grid >>> .k-grid th,
-  .tare-off-water-grid >>> .k-grid td {
+  .tare-off-water-grid :deep(.k-grid th),
+  .tare-off-water-grid :deep(.k-grid td){
     /* 幅制御 */
     width: 1% !important;
     min-width: 0 !important;
@@ -1992,38 +2431,161 @@ export default {
     box-sizing: border-box;
   }
   /* ヘッダ */
-  .tare-off-water-grid >>> .k-grid th {
+  .tare-off-water-grid :deep(.k-grid th){
     text-align: center;
   }
 }
 .tare-off-water-grid .segment-button,
-.tare-off-water-grid >>> .segment__button,
-.tare-off-water-grid >>> .segment__input,
-.tare-off-water-grid >>> .deviceSetInfo-header-secound-name,
-.tare-off-water-grid >>> .k-widget,
-.tare-off-water-grid >>> .deviceSetInfo-header-row-name,
-.tare-off-water-grid >>> .deviceSetInfo-row-name,
-.tare-off-water-grid >>> .deviceSetInfo-name-content,
-.tare-off-water-grid >>> .deviceSetInfo-weight-content {
+.tare-off-water-grid :deep(.segment__button),
+.tare-off-water-grid :deep(.segment__input),
+.tare-off-water-grid :deep(.deviceSetInfo-header-secound-name),
+.tare-off-water-grid :deep(.k-widget),
+.tare-off-water-grid :deep(.deviceSetInfo-header-row-name),
+.tare-off-water-grid :deep(.deviceSetInfo-row-name),
+.tare-off-water-grid :deep(.deviceSetInfo-name-content),
+.tare-off-water-grid :deep(.deviceSetInfo-weight-content) {
   font-size: unset;
   border-radius: 0px;
   box-shadow: unset;
 }
-.tare-off-water-grid >>> .segment__button {
+.tare-off-water-grid :deep(.segment__button) {
   background-color: #72a8de;
   color: #ffffff;
   border: none;
 }
-.tare-off-water-grid >>> :checked + .segment__button {
+.tare-off-water-grid :deep(:checked + .segment__button) {
   background-color: var(--btn1-execute-color);
 }
-.tare-off-water-grid >>> .resize-obs-target::-webkit-scrollbar {
+.tare-off-water-grid :deep(.resize-obs-target::-webkit-scrollbar) {
   display: none;
 }
 
-.tare-off-water-grid >>> .k-grid-header {
+.tare-off-water-grid :deep(.k-grid),
+.tare-off-water-grid :deep(.k-grid-container),
+.tare-off-water-grid :deep(.k-grid-content),
+.tare-off-water-grid :deep(.k-grid-content-locked),
+.tare-off-water-grid :deep(.k-grid-footer),
+.tare-off-water-grid :deep(.k-grid-footer-locked),
+.tare-off-water-grid :deep(.k-grid-footer-wrap) {
+  background-color: var(--main-background-color) !important;
+}
+
+.tare-off-water-grid :deep(.k-grid-header) {
   background: var(--ntss-list-header-background-color);
   background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,0.1) 100%);
 }
 
+.tare-off-water-grid :deep(.k-grid-header th),
+.tare-off-water-grid :deep(.k-grid-header .k-table-th),
+.tare-off-water-grid :deep(.deviceSetInfo-header-row-name),
+.tare-off-water-grid :deep(.deviceSetInfo-header-first-name),
+.tare-off-water-grid :deep(.deviceSetInfo-header-secound-name) {
+  color: #ffffff;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  cursor: default !important;
+}
+.tare-off-water-grid :deep(.deviceSetInfo-header-row-name .k-cell-inner),
+.tare-off-water-grid :deep(.deviceSetInfo-header-first-name .k-cell-inner),
+.tare-off-water-grid :deep(.deviceSetInfo-header-secound-name .k-cell-inner),
+.tare-off-water-grid :deep(.deviceSetInfo-header-row-name .k-link),
+.tare-off-water-grid :deep(.deviceSetInfo-header-first-name .k-link),
+.tare-off-water-grid :deep(.deviceSetInfo-header-secound-name .k-link) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  cursor: default !important;
+}
+
+.tare-off-water-grid :deep(.deviceSetInfo-header-row-name .k-column-title),
+.tare-off-water-grid :deep(.deviceSetInfo-header-first-name .k-column-title),
+.tare-off-water-grid :deep(.deviceSetInfo-header-secound-name .k-column-title) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  line-height: normal;
+  text-align: center;
+  cursor: default !important;
+}
+
+.tare-off-water-grid :deep(.deviceSetInfo-header-title-content) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  width: 100%;
+  height: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.tare-off-water-grid :deep(.deviceSetInfo-header-title-content .checkbox__checkmark) {
+  flex: 0 0 auto;
+}
+
+.tare-off-water-grid :deep(.deviceSetInfo-header-title-content label) {
+  margin: 0;
+  line-height: normal;
+}
+
+.tare-off-water-grid :deep(.deviceSetInfo-row-name) {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.tare-off-water-grid :deep(.deviceSetInfo-name-content),
+.tare-off-water-grid :deep(.deviceSetInfo-weight-content) {
+  border-left: 1px solid var(--ntss-list-border-color) !important;
+  border-bottom: 1px solid var(--ntss-list-border-color) !important;
+}
+
+.tare-off-water-grid :deep(.deviceSetInfo-header-first-name),
+.tare-off-water-grid :deep(.deviceSetInfo-header-secound-name) {
+  border-left: 1px solid var(--ntss-list-border-color) !important;
+}
+
+.tare-off-water-grid :deep(td.deviceSetInfo-weight-content),
+.tare-off-water-grid :deep(.k-table-td.deviceSetInfo-weight-content) {
+  text-align: right !important;
+  padding-right: 5px !important;
+}
+
+.tare-off-water-grid :deep(.grid-column-disabled-color) {
+  background-color: var(--ntss-list-body-background-disable-color, #cccccc) !important;
+}
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+}
+:deep(.k-grid-lockedcolumns .k-grid-header-locked){
+  border-right: 1px solid #fff !important;
+}
+:deep(.checkbox__checkmark){
+  margin-right: 8px !important;
+}
+:deep(.k-grid .k-grid-content-locked){
+  border-color: rgba(33, 37, 41, .125) !important;
+}
+:deep(.k-numerictextbox .k-input-inner){
+  padding-left: 3px !important;
+  padding-right: 3px !important;
+}
 </style>

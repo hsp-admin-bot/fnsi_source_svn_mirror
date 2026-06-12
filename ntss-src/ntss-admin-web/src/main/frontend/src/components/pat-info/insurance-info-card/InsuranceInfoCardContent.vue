@@ -100,10 +100,10 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 import { ApiHelper } from "@/apis/AxiosHelper";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
-import moment from "moment";
-import { mapGetters, mapActions, mapMutations } from "vuex";
+import dayjs from "@/compat/date/dayjs";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 import { encodeEditableRecord, decodeEditableRecord } from '@/functions/PatInfoFunctions';
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
@@ -218,11 +218,8 @@ export default {
       this.setLoadingScreenVisible(true);
       try {
         if (this.selectedPatId) {
-	  // mod #12462 患者情報共有 Ji start
-          // const resPatInsurance = await ApiHelper.get(`/patInfo/getPatInsuById/${this.selectedPatId}`);
-          const facilityCd = this.getIsOtherFacility ? this.getOtherFacilityCd : this.facilityCd
+          const facilityCd = this.getIsOtherFacility ? this.getOtherFacilityCd : this.facilityCd;
           const resPatInsurance = await ApiHelper.get(`/patInfo/getPatInsuById/${this.selectedPatId}/${facilityCd}`);
-	  // mod #12462 患者情報共有 Ji end
           if (resPatInsurance) {
             resPatInsurance.data = this.mappingTempalte(resPatInsurance.data);
             const encodeInsuranceInfo = resPatInsurance.data.map(item => {
@@ -264,15 +261,18 @@ export default {
     //mod 患者は保険データを更新していません。 張start
     async init(){
       this.setLoadingScreenVisible(true);
-      
+
       // 保険マスタ取得
-      const resMstInsurance = await ApiHelper.get("/master_maintenance/mst_insurance/data/", { facility_cd: this.facilityCd });
+      const resMstInsurance = await ApiHelper.get("/master_maintenance/mst_insurance/data", {
+        facility_cd: this.facilityCd,
+        selectedPatId: this.selectedPatId
+      });
       this.mstInsurance = resMstInsurance.data.localDataSource.data.filter(item => +item.isDisp === 1);
-      
+
       // InsuranceInfoAddEditModal が参照できるよう store にも反映
       this.setMstInsurance(this.mstInsurance);
       this.isChanged = false;
-      
+
       this.setLoadingScreenVisible(false);
     },
     async restore() {
@@ -369,8 +369,8 @@ export default {
       }
       const endDate = `${f.year}/${f.month}/${f.day}`;
       const convertISOEndDate = `${f.year}-${f.month}-${f.day}`;
-      const parseEndDate = moment(convertISOEndDate);
-      if (moment().isAfter(parseEndDate, "day")) {
+      const parseEndDate = dayjs(convertISOEndDate);
+      if (dayjs().isAfter(parseEndDate, "day")) {
         return {
           value: endDate,
           color: "#d20404"
@@ -426,7 +426,7 @@ export default {
       if (length > 0) {
         ctl_no = this.jsonArray[length-1].ctl_no.editValue + 1;
       }
-      // #11601 保険情報を最初に登録した時に「主」にチェックを入れる start 
+      // #11601 保険情報を最初に登録した時に「主」にチェックを入れる start
       else {
         is_selected = "1";
       }
@@ -485,14 +485,14 @@ export default {
         },
         is_disp: "1",
         is_del: "0",
-        reg_date: moment().format("YYYY-MM-DD HH:mm:ss"),
-        up_date: moment().format("YYYY-MM-DD HH:mm:ss"),
+        reg_date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        up_date: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         is_new: true,
         memo1: null,
         memo2: null
       };
       this.jsonArray.push(encodeEditableRecord(newItem));
-      
+
       this.setIsCreate(true);
       const lastIndex = this.jsonArray.length - 1;
       this.openModal(this.jsonArray[lastIndex], lastIndex);
@@ -526,7 +526,7 @@ export default {
       if (answer === 1) {
         if (!json["is_new"]) {
           json.is_disp.editValue = "0";
-          json.up_date.editValue = moment().format("YYYY-MM-DD HH:mm:ss");
+          json.up_date.editValue = dayjs().format("YYYY-MM-DD HH:mm:ss");
           const decodeJsonArray = decodeEditableRecord(json);
           await ApiHelper.put(`/patInfo/bulkUpdatePatInsu`, [decodeJsonArray])
             .then(() => { this.load(); })
@@ -681,17 +681,15 @@ export default {
       }
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off('reloadListInsurance', this.reloadData);
 
-    // dataの初期化
-    Object.assign(this.$data, this.$options.data());
   }
 };
 </script>
 
 <style scoped>
-.card-table >>> textarea.custom-textarea {
+.card-table :deep(textarea.custom-textarea) {
   color: black !important;
 }
 </style>

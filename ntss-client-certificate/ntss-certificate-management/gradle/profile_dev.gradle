@@ -26,7 +26,7 @@ task npmTest(type: NpmTask, dependsOn: 'npm_install') {
   args = ["test"]
 }
 
-war { webAppDirName = 'build/www/' }
+war { webAppDirectory = file('build/www/') }
 
 processResources {
   filesMatching('**/logback-spring.xml') {

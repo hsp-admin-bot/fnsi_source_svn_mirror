@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -95,20 +95,19 @@
 </template>
 
  <script>
-   import {mapGetters, mapActions} from "vuex";
+   import {mapGetters, mapActions} from "@/compat/vue/vuex";
    /*add FNSI-改修内容4214 任 start*/
-   import $ from "jquery";
+
    /*add FNSI-改修内容4214 任 end*/
    import {DATE_CHOICES, WATER_QUALITY_SURVEY} from "@/constants/defaultSettingConstants";
    import {deepCopy} from "@/functions/common/CommonFunctions";
    import {ApiHelper} from "@/apis/AxiosHelper";
    //add FNSI-5687 劉全航 start
-   import { EventBus } from "@/eventBus.js";
+   import { EventBus } from "@/compat/vue/event-bus.js";
+import { getScopedElementById, isScopedElementDisplayInline } from "@/functions/common/LayoutMeasureHelper";
    //add FNSI-5687 劉全航 end
 
    export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -253,13 +252,7 @@
     this.initialValue[WATER_QUALITY_SURVEY.KEY_NAME_FROM_DATE] = DATE_CHOICES.BEFORE_ONE_YEAR.value; // 1年前
     this.initialValue[WATER_QUALITY_SURVEY.KEY_NAME_TO_DATE] = DATE_CHOICES.AFTER_ONE_YEAR.value; // 1年後
     this.initialValue[WATER_QUALITY_SURVEY.KEY_NAME_SURVEY_TYPE_CD] = [];
-    /* modify by shiyinwang 2022-10-20 Fix vue warning problem--start */
-    // this.initialValue[WATER_QUALITY_SURVEY.KEY_NAME_BED_GROUP_CD] = [];
-    // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_個別設定 20231117 ztc start
-    //this.initialValue[WATER_QUALITY_SURVEY.KEY_NAME_BED_GROUP_CD] = ""; //this is a single select ,not a multi select
     this.initialValue[WATER_QUALITY_SURVEY.KEY_NAME_BED_GROUP_CD] = null;
-    // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_個別設定 20231117 ztc end
-    /* modify by shiyinwang 2022-10-20 Fix vue warning problem--end */
     this.initialValue[WATER_QUALITY_SURVEY.KEY_NAME_IS_DISP_MACHINE_NAME] = true;
     this.initialValue[WATER_QUALITY_SURVEY.KEY_NAME_IS_DISP_SURVEY_TYPE] = true;
 
@@ -303,6 +296,9 @@
         }
         if (this.editRecord[WATER_QUALITY_SURVEY.KEY_NAME_BED_GROUP_CD] == null) {
           this.editRecord[WATER_QUALITY_SURVEY.KEY_NAME_BED_GROUP_CD] = this.initialValue[WATER_QUALITY_SURVEY.KEY_NAME_BED_GROUP_CD];
+        } else if (!this.mstBedGroup.some(bg => +bg.roomBedGroupCd === +this.editRecord[WATER_QUALITY_SURVEY.KEY_NAME_BED_GROUP_CD])) {
+          // NOTE: マスタ削除された場合、「null : すべて」を再設定
+          this.editRecord[WATER_QUALITY_SURVEY.KEY_NAME_BED_GROUP_CD] = null;
         }
         if (this.editRecord[WATER_QUALITY_SURVEY.KEY_NAME_IS_DISP_MACHINE_NAME] == null) {
           this.editRecord[WATER_QUALITY_SURVEY.KEY_NAME_IS_DISP_MACHINE_NAME] = this.initialValue[WATER_QUALITY_SURVEY.KEY_NAME_IS_DISP_MACHINE_NAME];
@@ -313,8 +309,14 @@
         this.initialValue = deepCopy(this.editRecord);
       }
       /*add FNSI-改修内容4214 任 start*/
-      if($("#phone-show-water-quality").css("display") === "inline"){
-        document.getElementById("phone-show-water-quality").innerText =  document.getElementById("phone-show-water-quality").innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+      if(isScopedElementDisplayInline("phone-show-water-quality", this.$el || this)){
+        const phoneShowElement = getScopedElementById("phone-show-water-quality", this.$el || this);
+
+        if (phoneShowElement) {
+
+          phoneShowElement.innerText = phoneShowElement.innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+
+        }
       }
       /*add FNSI-改修内容4214 任 end*/
       // 共通ローダー表示終了
@@ -322,8 +324,6 @@
       this.isExpanded = this.defaultExpanded;
     });
   },
-  mounted() {
-  }
 };
 </script>
 

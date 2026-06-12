@@ -2,10 +2,6 @@
  * 利用申込系API
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
-
-/**
- * 一時的ストア
- */
 import store from "@/stores";
 
 /**
@@ -16,14 +12,15 @@ const URL_SAL_SUBSCRIPTION_MANAGE = "/salSubscriptionManage";
 
 /**
  * すべての機能を取得する
- * @param {String} facilityCd 
+ * @param {string} facilityCd 施設コード
  */
 export function getSysAllFunction(facilityCd) {
   return getWithLoader(`${URL_MST_INFO}/sysAllFunction/${facilityCd}`);
 }
+
 /**
  * すべてのサブスクリプション注文を取得する
- * @param {String} facilityCd 
+ * @param {string} facilityCd 施設コード
  */
 export function getSalSubscriptionManage(facilityCd) {
   return getWithLoader(`${URL_SAL_SUBSCRIPTION_MANAGE}/getSalSubscriptionManage/${facilityCd}`);
@@ -36,43 +33,42 @@ export function sendRequestGetPlan() {
   return getWithLoader(`${URL_MST_INFO}/sysSubscriptionPlan`);
 }
 
-
 /**
  * 申請受付
- * @param {*} subscriptionNo 
+ * @param {string|number} subscriptionNo サブスクリプション番号
  */
 export function sendRequestUpdateReception(subscriptionNo) {
-  let param = {
-    "subscriptionStatus": "1"
-  }
+  const param = {
+    subscriptionStatus: "1"
+  };
   return putWithLoader(`${URL_SAL_SUBSCRIPTION_MANAGE}/updateReception/${subscriptionNo}`, param);
 }
 
 /**
  * 申し込み完了
- * @param {*} subscriptionNo 
+ * @param {string|number} subscriptionNo サブスクリプション番号
  */
 export function sendRequestUpdateCompletion(subscriptionNo) {
-  let param = {
-    "subscriptionStatus": "2"
-  }
+  const param = {
+    subscriptionStatus: "2"
+  };
   return putWithLoader(`${URL_SAL_SUBSCRIPTION_MANAGE}/updateCompletion/${subscriptionNo}`, param);
 }
 
 /**
  * アプリケーションのキャンセル
- * @param {*} subscriptionNo 
+ * @param {string|number} subscriptionNo サブスクリプション番号
  */
 export function sendRequestUpdateCancel(subscriptionNo) {
-  let param = {
-    "subscriptionStatus": "9"
+  const param = {
+    subscriptionStatus: "9"
   };
   return putWithLoader(`${URL_SAL_SUBSCRIPTION_MANAGE}/updateCancel/${subscriptionNo}`, param);
 }
 
 /**
  * クライアントで作成したアプリケーション
- * @param {*} param 
+ * @param {Record<string, unknown>} param 登録内容
  */
 export function createSalSubscriptionManage(param) {
   return postWithLoader(`${URL_SAL_SUBSCRIPTION_MANAGE}`, param);
@@ -80,7 +76,7 @@ export function createSalSubscriptionManage(param) {
 
 /**
  * nkkによるアプリケーションの作成
- * @param {*} param 
+ * @param {Record<string, unknown>} param 登録内容
  */
 export function createByAdmin(param) {
   return postWithLoader(`${URL_SAL_SUBSCRIPTION_MANAGE}/createByAdmin`, param);
@@ -88,8 +84,8 @@ export function createByAdmin(param) {
 
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} [params] パラメータ
  */
 function getWithLoader(url, params = undefined) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -101,8 +97,8 @@ function getWithLoader(url, params = undefined) {
 
 /**
  * 共通ローダを実行するPOSTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function postWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -114,8 +110,8 @@ function postWithLoader(url, params) {
 
 /**
  * 共通ローダを実行するPUTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function putWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");

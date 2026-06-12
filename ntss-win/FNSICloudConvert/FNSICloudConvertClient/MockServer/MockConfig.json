@@ -1,0 +1,26 @@
+{
+  "Users": [
+    {
+      "UserId": "user1",
+      "Password": "pass1",
+      "RequireOtp": false,
+      "FacilityCd": "F001",
+      "DisplayName": "テストユーザー1（OTP不要）"
+    },
+    {
+      "UserId": "user2",
+      "Password": "pass2",
+      "RequireOtp": true,
+      "OtpCode": "111111",
+      "FacilityCd": "F002",
+      "DisplayName": "テストユーザー2（OTP必要）"
+    },
+    {
+      "UserId": "user3",
+      "Password": "pass3",
+      "RequireOtp": false,
+      "FacilityCd": "F003",
+      "DisplayName": "テストユーザー3（コンバーター認証失敗）"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { dateFormat } from "@/functions/common/DateTimeUtils"
 
 /**
@@ -134,7 +134,7 @@ export class RstRoundInfo {
    * @returns {boolean} true: 未来日である、false: 未来日でない
    */
   isRegDateTimeFuture() {
-    return moment(this.reg_date_time).isAfter(new Date());
+    return dayjs(this.reg_date_time).isAfter(new Date());
   }
 
   /**

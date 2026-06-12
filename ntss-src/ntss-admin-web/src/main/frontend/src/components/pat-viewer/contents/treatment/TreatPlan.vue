@@ -13,10 +13,12 @@
 </template>
 
 <script>
+import { getFirstElementByClassName } from "@/functions/common/LayoutMeasureHelper";
+
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * ベースコンポーネント
@@ -27,7 +29,7 @@ import baseContent from "@/components/pat-viewer/contents/base/BaseContent";
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 共通操作
@@ -48,6 +50,9 @@ import { LONG_CLICK_THRESHOLD } from "@/constants/PatViewerConstants";
  * ダイアログメッセージ
  */
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { EventBus } from "@/compat/vue/event-bus.js";
+
+const TREAT_PLAN_LOADED_EVENT = "pat-viewer-treat-plan-loaded";
 
 // 治療予定メニュー情報
 const defaultMenuInfo = {
@@ -136,8 +141,9 @@ export default {
       },
 
       // add 更新中の予定を表示する様にする。 李 start
-      scrollBarPositioningOrdNo: []
+      scrollBarPositioningOrdNo: [],
       // add 更新中の予定を表示する様にする。 李 end
+      loadRequestId: 0,
     };
   },
 
@@ -169,33 +175,50 @@ export default {
      * 終了日の最大日(本日から一年未満)
      */
     maxDate() {
-      const day = moment().format("YYYYMMDD");
+      const day = dayjs().format("YYYYMMDD");
       // 一年後に最大日を設定
       let endMaxDate = this.schExtEndDate
-        ? moment(this.schExtEndDate, "YYYYMMDD")
-        : moment(day).add(1, "year");
-      endMaxDate = moment(endMaxDate).endOf("month");
-      return moment(endMaxDate).format("YYYY-MM-DD");
+        ? dayjs(this.schExtEndDate, "YYYYMMDD")
+        : dayjs(day).add(1, "year");
+      endMaxDate = dayjs(endMaxDate).endOf("month");
+      return dayjs(endMaxDate).format("YYYY-MM-DD");
     },
   },
 
-  beforeDestroy() {
-    // dataの初期化
+  beforeUnmount() {
+    this.loadRequestId += 1;
     Object.assign(this.$data, this.$options.data());
   },
 
-  async created() {
-    // 表示用に治療状況情報を加工
-    this.startLoadingScreen();
-    this.convertTreatPlanData({
-      listIndex: this.rowIndex,
-      selectLayoutCd: this.selectedLayoutCd
-    }).then(treatPlanDataList => {
-      this.treatPlanDataList = treatPlanDataList;
-      // add 更新中の予定を表示する様にする。 李 start
-      // OrdNoより、画面操作のデータ取得
+  watch: {
+    selectedLayoutCd() {
+      this.loadTreatPlanData();
+    },
+  },
+
+  created() {
+    this.loadTreatPlanData();
+  },
+
+  methods: {
+    ...mapActions("pat-viewer", ["convertTreatPlanData", "setIsDieMessage"]),
+    ...mapActions("pat-viewer-popover", [
+      "setShowTreatPlanMenuPopover",
+      "setCopyFlag"
+    ]),
+    ...mapActions("pat-viewer-modal", ["showIndModal", "showPlanCopyModal"]),
+    // add 更新中の予定を表示する様にする。 李 start
+    ...mapActions("pat-viewer", ["setScrollBarPositioningOrdNo"]),
+    // add 更新中の予定を表示する様にする。 李 end
+    normalizeLayoutCd(layoutCd) {
+      if (layoutCd === null || layoutCd === undefined || layoutCd === "") {
+        return null;
+      }
+      const normalized = Number(layoutCd);
+      return Number.isNaN(normalized) ? layoutCd : normalized;
+    },
+    applyScrollBarPositioning() {
       this.scrollBarPositioningOrdNo = this.getScrollBarPositioningOrdNo;
-      // クール修正した場合
       if (this.scrollBarPositioningOrdNo.length === 1) {
         A:for (
           let i = 0;
@@ -216,7 +239,6 @@ export default {
           }
         }
       } else if (this.scrollBarPositioningOrdNo.length > 1) {
-        // 予定して作成した場合
         let sbpFlg = false;
         for (
           let i = 0;
@@ -246,25 +268,28 @@ export default {
           }
         }
       }
-    }).finally(() => {
-      this.finishLoadingScreen();
-    });
-  },
-
-  methods: {
-    ...mapActions("pat-viewer", ["convertTreatPlanData", "setIsDieMessage"]),
-    ...mapActions("pat-viewer-popover", [
-      "setShowTreatPlanMenuPopover",
-      "setCopyFlag"
-    ]),
-    ...mapActions("pat-viewer-modal", ["showIndModal", "showPlanCopyModal"]),
-    // add 更新中の予定を表示する様にする。 李 start
-    ...mapActions("pat-viewer", ["setScrollBarPositioningOrdNo"]),
-    // add 更新中の予定を表示する様にする。 李 end
-    ...mapActions("loading-screen", [
-      "startLoadingScreen",
-      "finishLoadingScreen",
-    ]),
+    },
+    /**
+     * 計画データ読込（loading は PatViewer.refresh が一括管理）
+     */
+    async loadTreatPlanData() {
+      const requestId = ++this.loadRequestId;
+      try {
+        const treatPlanDataList = await this.convertTreatPlanData({
+          listIndex: this.rowIndex,
+          selectLayoutCd: this.normalizeLayoutCd(this.selectedLayoutCd),
+        });
+        if (requestId !== this.loadRequestId) {
+          return;
+        }
+        this.treatPlanDataList = treatPlanDataList;
+        this.applyScrollBarPositioning();
+      } finally {
+        if (requestId === this.loadRequestId) {
+          EventBus.$emit(TREAT_PLAN_LOADED_EVENT);
+        }
+      }
+    },
     /**
      * 治療予定メニューポップオーバー表示
      */
@@ -300,7 +325,7 @@ export default {
      */
     onSubTitleClick(event) {
       // 本日日付を格納
-      const day = moment().format("YYYYMMDD");
+      const day = dayjs().format("YYYYMMDD");
       // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng start
       // 一覧上に表示されている治療予定がすべて過去日のものである場合、以下の処理を実行
       // if (this.getIsPastDate) {
@@ -340,7 +365,7 @@ export default {
         this.setShowTreatPlanMenuPopover({ menuInfo });
       } else {
         // 日付がMAX値を超えている場合処理を中断
-        if(this.isOverMaxDate(moment(this.baseDate).format("YYYY-MM-DD"))) {
+        if(this.isOverMaxDate(dayjs(this.baseDate).format("YYYY-MM-DD"))) {
           return;
         }
         // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng start
@@ -355,7 +380,7 @@ export default {
         // 施設コード
         settingData.facilityCd = this.facilityCd;
         // 開始日
-        settingData.startDate = moment(treatDate).format("YYYY-MM-DD");
+        settingData.startDate = dayjs(treatDate).format("YYYY-MM-DD");
         // 終了日
         settingData.endDate = "";
         // 全曜日選択をfalse
@@ -395,9 +420,9 @@ export default {
       // 治療状況を取得
       const dialysisState = this.getRstDialysisState(cellInfo.ordNo);
       // クリック対象の日付
-      const checkTreatDate = moment(cellInfo.treatDate).format("YYYYMMDD");
+      const checkTreatDate = dayjs(cellInfo.treatDate).format("YYYYMMDD");
       // 本日の日付取得
-      const day = moment().format("YYYYMMDD");
+      const day = dayjs().format("YYYYMMDD");
       // 治療予定メニューボタン表示情報
       const menuInfo = deepCopy(defaultMenuInfo);
       // 表示ターゲット
@@ -428,11 +453,11 @@ export default {
         //   // 施設コード
         //   settingData.facilityCd = this.facilityCd;
         //   // 開始日
-        //   settingData.startDate = moment(cellInfo.treatDate).format(
+        //   settingData.startDate = dayjs(cellInfo.treatDate).format(
         //     "YYYY-MM-DD"
         //   );
         //   // 終了日
-        //   settingData.endDate = moment(cellInfo.treatDate).format("YYYY-MM-DD");
+        //   settingData.endDate = dayjs(cellInfo.treatDate).format("YYYY-MM-DD");
         //   // 開始日操作不可
         //   settingData.startDateEdit = true;
         //   // 終了日操作不可
@@ -442,7 +467,7 @@ export default {
         //   // 選択された曜日以外をfalseへ変更
         //   for (let i = 0; i < 7; i++) {
         //     settingData[this.changeWeekStr(i)] =
-        //       i !== moment(cellInfo.treatDate, "YYYYMMDD").day() ? false : true;
+        //       i !== dayjs(cellInfo.treatDate, "YYYYMMDD").day() ? false : true;
         //   }
         //   if (this.getIsDie) {
         //     // 死亡している場合はメッセージ表示
@@ -514,7 +539,7 @@ export default {
         // }
         else {
           // 日付がMAX値を超えている場合処理を中断
-          if(this.isOverMaxDate(moment(cellInfo.treatDate).format("YYYY-MM-DD"))) {
+          if(this.isOverMaxDate(dayjs(cellInfo.treatDate).format("YYYY-MM-DD"))) {
             return;
           }
           // 2 == Number(dialysisState)
@@ -537,7 +562,7 @@ export default {
           // 施設コード
           settingData.propFacilityCd = this.facilityCd;
           // コピー元治療日
-          settingData.propDialysisDate = moment(cellInfo.treatDate).format(
+          settingData.propDialysisDate = dayjs(cellInfo.treatDate).format(
               "YYYY-MM-DD"
           );
           // コピーフラグ
@@ -618,7 +643,7 @@ export default {
       // 指を置いたセルと離したセルが同じか判断する
       // スマホだと指を離した先のセルの要素が取得できないため、座標ベースで判断する
       // mod FNSI-redmine 4958 劉祥霖 start
-      let MovedLength= document.getElementsByClassName("list-content")[0].scrollLeft;
+      let MovedLength = getFirstElementByClassName("list-content", this.$el || this)?.scrollLeft || 0;
       const isTouchInCell = this.checkTouchInCell(
         event.changedTouches[0].clientX+MovedLength, event.changedTouches[0].clientY, this.onTouchStartCellData);
       //mod FNSI-redmine 4958 劉祥霖 end
@@ -657,5 +682,5 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 </style>

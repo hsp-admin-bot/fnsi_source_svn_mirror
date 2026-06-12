@@ -11,6 +11,10 @@ import java.util.Map;
 public class MstListComposeSpec {
   private String id;   // リストの一意ID（返却時のキーとして使用）
   private String name; // 任意の表示名称
+  private String displayType; // ポップアップ表示形式（分類表示 or リスト表示）
+  private String filterKey;  // class
+  private String filterLabel;  // 機能分類
+
   private MstListComposeSourceType sourceType; // FIXED, MST, MST_COMBINED, MAIN_DISTINCT
 
   // FIXED：固定リスト

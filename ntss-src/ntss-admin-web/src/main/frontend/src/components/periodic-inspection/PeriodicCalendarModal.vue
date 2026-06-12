@@ -1,6 +1,7 @@
 <template>
   <modal-base @onClose="cancel" class="custom-modal">
-    <div slot="body" class="body-content">
+    <template #body>
+      <div class="body-content">
       <div class="search-item">
         <div class="display_box0">
           <label style="font-size: 1.5em;" class="header_padding">基準日</label>
@@ -34,29 +35,37 @@
           </v-ons-select>
         </div>
       </div>
+      <div class="periodic-calendar-picker-wrap">
       <vc-date-picker
-        class="ntss-theme-screen"
+        :key="calendarRenderKey"
+        class="ntss-theme-screen periodic-calendar-picker"
         :columns="$screens({ default: 1, md: 2, lg: 3, xl: 4 })"
         :rows="$screens({ default: 12, md: 6, lg: 4, xl: 3 })"
         :is-expanded="true"
-        :from-page="fromPage"
+        transition="none"
+        :initial-page="initialPage"
         :max-date="canSelectMaxDate"
+        :attributes="calendarDisplayAttributes"
         color="orange"
-        mode="multiple"
-        v-model="selectedDateList"
+        mode="date"
+        :model-value="null"
         is-inline
-        @update:from-page="fromPageChanged"
-        @transition-start="transitionStarted"
+        @update:model-value="onPickerModelValueUpdate"
+        @dayclick="onCalendarDayClick"
+        @did-move="onCalendarDidMove"
         @transition-end="transitionEnded"
       >
-        <div
-          slot="header-title"
-          slot-scope="page"
-          style="color: white;"
-        >{{ page.yearLabel }}年{{ page.monthLabel }}</div>
+        <template #header-prev-button><span class="periodic-calendar-nav-icon">‹</span></template>
+        <template #header-next-button><span class="periodic-calendar-nav-icon">›</span></template>
+        <template #header-title="page">
+          <div class="periodic-calendar-header-title" style="color: white;">{{ getLegacyCalendarHeaderTitle(page) || page.title }}</div>
+        </template>
       </vc-date-picker>
+      </div>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background: none;">
         <button
           class="btn2-cancel button denial-btn"
@@ -71,15 +80,17 @@
         >保存</button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import { mapActions, mapGetters } from "vuex";
-import moment from "moment";
-import { EventBus } from "@/eventBus";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import moment from "@/compat/date/dayjs";
+import { normalizeMenteDate } from "@/functions/periodic-inspection/PeriodicInspectionDateUtil";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { sendRequestGetResultByDateSpan } from "@/apis/periodic-inspection";
 import { InvalidLayoutGroupCd } from "@/constants/mainteConstants";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
@@ -89,11 +100,6 @@ import {
   alertByKey,
 } from "@/functions/common/OnsenFunctions";
 import DateInput from "@/components/common/DateInput";
-
-const TodayStyle = "background-color: #FFB6C1; color: #fff;";
-const PlannedStyle = "background-color: #00BFFF; color: #fff;";
-const SelectedStyle = "background-color: #dd6b20; color: #fff;";
-const LabelFormat = "Y年M月D日";
 
 export default {
   name: "multi-calender",
@@ -108,11 +114,11 @@ export default {
       selectedDateList: [],
       // システム日付の10年後までを選択可能範囲とする（過去日は制限なし）
       canSelectMaxDate: moment().add(10, "years").toDate(),
-      fromPage: null,
+      initialPage: null,
+      calendarRenderKey: 0,
       lastShowPage: null,
       oldDate: "",
       resultData: [],
-      getResultDataPromise: null,
       lastChangedPage: null,
     };
   },
@@ -152,21 +158,125 @@ export default {
       // 日付が1件以上選択されている場合はtrueを返す
       return !!this.selectedDateList.length;
     },
-    plannedStrings() {
-      const plannedStrings = [];
+    plannedDateKeys() {
+      const keys = new Set();
       this.resultData.forEach(item => {
-        const dateString = moment(item.menteDate, "YYYY-MM-DD")
-          .format(LabelFormat);
-        if (plannedStrings.includes(dateString)) return;
-        plannedStrings.push(dateString);
+        const dateKey = normalizeMenteDate(item.menteDate);
+        if (dateKey) {
+          keys.add(dateKey);
+        }
       });
-      return plannedStrings;
+      return keys;
+    },
+    selectedDateKeys() {
+      return new Set(
+        this.selectedDateList.map(date => this.toSelectedDateKey(date)).filter(Boolean)
+      );
+    },
+    calendarDisplayAttributes() {
+      const dates = this.selectedDateList
+        .map(date => this.toSelectedDate(date))
+        .filter(Boolean);
+      if (!dates.length) {
+        return [];
+      }
+      return [{
+        key: "periodic-selected-dates",
+        highlight: {
+          color: "orange",
+          fillMode: "solid",
+        },
+        dates,
+        pinPage: true,
+      }];
     },
   },
   methods: {
+    getLegacyCalendarHeaderTitle(page = {}) {
+      const monthLabels = [
+        "一月", "二月", "三月", "四月", "五月", "六月",
+        "七月", "八月", "九月", "十月", "十一月", "十二月",
+      ];
+      const englishMonthIndex = {
+        jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+        apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+        aug: 8, august: 8, sep: 9, sept: 9, september: 9, oct: 10,
+        october: 10, nov: 11, november: 11, dec: 12, december: 12,
+      };
+      const toMonthLabel = value => {
+        const month = Number(value);
+        if (!Number.isFinite(month) || month < 1 || month > 12) return "";
+        return monthLabels[month - 1];
+      };
+      const title = String(page.title || "").trim();
+      const yearLabel = page.yearLabel
+        || page.year
+        || page?.month?.year
+        || title.match(/(\d{4})/)?.[1]
+        || "";
+      let monthLabel = page.monthLabel
+        || toMonthLabel(page.month)
+        || toMonthLabel(page.monthNumber)
+        || toMonthLabel(page?.month?.month);
+      if (!monthLabel) {
+        monthLabel = title.match(/年\s*([一二三四五六七八九十]+月)/)?.[1]
+          || title.match(/([一二三四五六七八九十]+月)/)?.[1]
+          || "";
+      }
+      if (!monthLabel) {
+        monthLabel = toMonthLabel(title.match(/年\s*(\d{1,2})\s*月/)?.[1]
+          || title.match(/(?:^|\D)(\d{1,2})\s*月/)?.[1]);
+      }
+      if (!monthLabel) {
+        const englishMonthKey = title.match(/([A-Za-z]+)/)?.[1]?.toLowerCase();
+        monthLabel = toMonthLabel(englishMonthIndex[englishMonthKey]);
+      }
+      if (!yearLabel && !monthLabel) return title;
+      return `${yearLabel}年${monthLabel}`;
+    },
     ...mapActions("periodic-inspection", ["sendRequestCreateMenteTemp"]),
     ...mapActions("loading-screen", ["executeWithLoadingScreen"]),
 
+    toSelectedDate(value) {
+      const normalized = normalizeMenteDate(value);
+      if (normalized) {
+        return moment(normalized, "YYYY-MM-DD").toDate();
+      }
+      if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        return value;
+      }
+      const parsed = moment(value);
+      return parsed.isValid() ? parsed.toDate() : null;
+    },
+    toSelectedDateKey(value) {
+      const date = this.toSelectedDate(value);
+      return date ? moment(date).format("YYYY-MM-DD") : "";
+    },
+    toggleSelectedDate(rawDate) {
+      const nextDate = this.toSelectedDate(rawDate);
+      if (!nextDate) {
+        return;
+      }
+      const dateKey = this.toSelectedDateKey(nextDate);
+      const exists = this.selectedDateList.some(
+        date => this.toSelectedDateKey(date) === dateKey
+      );
+      this.selectedDateList = exists
+        ? this.selectedDateList.filter(date => this.toSelectedDateKey(date) !== dateKey)
+        : [...this.selectedDateList, nextDate].sort(
+          (left, right) => left.getTime() - right.getTime()
+        );
+    },
+    onPickerModelValueUpdate() {
+      // v-calendar v3 は単日選択の model 更新を出す。多選は dayclick のみで制御する。
+    },
+    onCalendarDayClick(day) {
+      const rawDate = day?.date || day?.startDate;
+      if (!rawDate) {
+        return;
+      }
+      this.toggleSelectedDate(rawDate);
+    },
     async cancel() {
       if (this.isChanged) {
         // title: "内容破棄",
@@ -201,9 +311,9 @@ export default {
           machineNo: String(item.machineNo),
           machineTypeCd: item.machineTypeCd,
         }));
-        const menteDateList = this.selectedDateList.map(
-          dt => moment(dt).format("YYYY-MM-DD")
-        );
+        const menteDateList = this.selectedDateList
+          .map(dt => normalizeMenteDate(dt) || this.toSelectedDateKey(dt))
+          .filter(Boolean);
         // 予定移動の場合は移動元の日付の情報を設定する
         const oldDate = [isModify ? this.oldDate : null];
         await this.sendRequestCreateMenteTemp({
@@ -235,54 +345,63 @@ export default {
       EventBus.$emit("postUpdate");
       this.hideModal();
     },
-    fromPageChanged(page) {
-      // ページ切り替え操作時などの transitionStarted を起点とした
-      // 点検結果再読み込み処理で使用するために切り替え後のpage情報を保持する
-      this.lastChangedPage = page;
-    },
-    transitionStarted() {
-      // ページ切り替え操作時などに発生する直前の fromPageChanged で保持した
-      // pageに従って点検結果データの再取得を開始する
-      this.getResultDataPromise = this.executeWithLoadingScreen(
-        this.getResultData(this.lastChangedPage)
-      );
-    },
-    transitionEnded() {
-      // カレンダーの切り替え前ページのDOM要素が消えるのを待つためのsetTimeoutと
-      // transitionStarted で開始した点検結果データの再取得の完了を待って
-      // 日付のDOM要素のスタイル設定を行う
-      const tasks = [new Promise(resolve => { setTimeout(resolve); })];
-      if (this.getResultDataPromise) {
-        tasks.push(this.getResultDataPromise);
-        this.getResultDataPromise = null;
+    onCalendarDidMove(pages) {
+      const page = pages?.[0];
+      if (!page) {
+        return;
       }
-      this.executeWithLoadingScreen(
-        Promise.all(tasks).then(this.setDayContentStyle)
-      );
+      // v-calendar v3: 表示開始月（ページ切替後の先頭月）
+      this.lastChangedPage = {
+        year: page.year,
+        month: page.month,
+      };
+      // 翻页数据在 did-move 后拉取，不使用全屏 loading，避免闪屏
+      this.getResultData(this.lastChangedPage).then(() => {
+        this.$nextTick(() => this.setDayContentStyle());
+      });
     },
-    applyParamsDate() {
-      // カレンダーの表示期間開始月を基準日に合わせて変更する
-      const newFromDate = moment(this.getParamsCalendar.date);
-      // 通常は this.fromPage からの12か月がカレンダー表示されるが
-      // カレンダーには this.canSelectMaxDate の日付の月までしか表示されないので
-      // その場合は this.fromPage の月とカレンダーの表示期間の開始月がずれ、
-      // カレンダー表示期間が変化するかどうかの判定などに影響するため
-      // this.canSelectMaxDate を考慮して補正した値にしておく
-      const fromDateMax = moment(this.canSelectMaxDate).startOf("month")
-        .subtract(11, "months");
-      const fromDate = (newFromDate.isBefore(fromDateMax, "month"))
-        ? newFromDate : fromDateMax;
-      const newFromPage = {
+    buildInitialPageFromBaseDate() {
+      const normalized = normalizeMenteDate(this.getParamsCalendar.date);
+      const baseDate = normalized
+        ? moment(normalized, "YYYY-MM-DD")
+        : moment();
+      const validBase = baseDate.isValid() ? baseDate : moment();
+      const startMonth = validBase.clone().startOf("month");
+      const maxMonth = moment(this.canSelectMaxDate).startOf("month");
+      const visibleMonthCount = 12;
+      const windowEnd = startMonth.clone().add(visibleMonthCount - 1, "months");
+      // 基準月から12か月が選択上限を超える場合のみ、表示開始月を繰り下げる
+      const fromDate = windowEnd.isAfter(maxMonth, "month")
+        ? maxMonth.clone().subtract(visibleMonthCount - 1, "months")
+        : startMonth;
+      return {
         year: fromDate.year(),
         month: fromDate.month() + 1,
       };
-      // 表示中の期間から変化がない場合は以降の処理は行わない
-      if (hasEqualValues(this.fromPage, newFromPage)) return;
-      this.fromPage = newFromPage;
-      // #11961対応時のメモ：
-      // this.fromPage を更新してカレンダー表示期間が変化する場合は
-      // fromPageChanged transitionStarted transitionEnded の処理で
-      // 点検結果を再取得して日付のスタイルの再設定が行われる
+    },
+    transitionEnded() {
+      this.$nextTick(() => this.setDayContentStyle());
+    },
+    applyParamsDate() {
+      const normalized = normalizeMenteDate(this.getParamsCalendar.date);
+      if (normalized && this.getParamsCalendar.date !== normalized) {
+        this.getParamsCalendar.date = normalized;
+        return;
+      }
+      const newInitialPage = this.buildInitialPageFromBaseDate();
+      if (hasEqualValues(this.initialPage, newInitialPage)) {
+        return;
+      }
+      this.initialPage = newInitialPage;
+      this.lastChangedPage = newInitialPage;
+      this.lastShowPage = null;
+      // v-calendar v3 は initialPage の変更を監視しないため再描画する
+      this.calendarRenderKey += 1;
+      this.$nextTick(() => {
+        this.executeWithLoadingScreen(
+          this.getResultData(newInitialPage).then(this.setDayContentStyle)
+        );
+      });
     },
     async getResultData(page) {
       // 点検結果を取得済みの期間から変化がない場合はAPIの呼び出しは行わない
@@ -290,11 +409,7 @@ export default {
       this.lastShowPage = null;
 
       // pageの月から12か月分の点検結果データを取得する
-      const aMoment = moment({
-        year: page.year,
-        month: page.month - 1,
-        day: 1,
-      });
+      const aMoment = moment(new Date(page.year, page.month - 1, 1));
       const startDate = aMoment.format("YYYY-MM-DD");
       aMoment.add(11, "months").endOf("month");
       const endDate = aMoment.format("YYYY-MM-DD");
@@ -307,37 +422,50 @@ export default {
       this.lastShowPage = deepCopy(page);
     },
     setDayContentStyle() {
-      const selectedStrings = this.selectedDateList.map(date => (
-        moment(date).format(LabelFormat)
-      ));
-      const todayString = moment().format(LabelFormat);
+      const root = this.$el;
+      if (!root) {
+        return;
+      }
+      const todayKey = moment().format("YYYY-MM-DD");
+      const dayElements = root.querySelectorAll(".periodic-calendar-picker .vc-day");
 
-      const elements = document.getElementsByClassName("vc-day-content");
-      Array.from(elements).forEach(element => {
-        const dayLabel = element.getAttribute("aria-label");
-        const dayString = dayLabel.substring(0, dayLabel.indexOf("日") + 1);
+      dayElements.forEach(dayEl => {
+        const content = dayEl.querySelector(".vc-day-content");
+        if (!content) {
+          return;
+        }
+        const idClass = Array.from(dayEl.classList).find(className => (
+          className.startsWith("id-")
+        ));
+        if (!idClass) {
+          return;
+        }
+        const dateKey = idClass.slice(3);
+        content.classList.remove("periodic-day-today", "periodic-day-planned");
+        content.removeAttribute("style");
 
-        const style = selectedStrings.includes(dayString)
-          ? SelectedStyle // 選択中の日付のスタイル設定
-          : this.plannedStrings.includes(dayString)
-            ? PlannedStyle // 点検予約がある日付のスタイル設定
-            : (todayString === dayString)
-              ? TodayStyle // システム日付のスタイル設定
-              : ""; // スタイル設定の解除
-        element.setAttribute("style", style);
+        // 選択中（オレンジ）は attributes で表示。ここでは既存予定色のみ付与する。
+        if (this.selectedDateKeys.has(dateKey)) {
+          return;
+        }
+        if (this.plannedDateKeys.has(dateKey)) {
+          content.classList.add("periodic-day-planned");
+          return;
+        }
+        if (dateKey === todayKey) {
+          content.classList.add("periodic-day-today");
+        }
       });
     },
   },
   created() {
     // 予定移動時の移動元日付の保持
     this.oldDate = this.getParamsCalendar.date;
-    // this.getParamsCalendar.date を this.fromPage に反映する
+    const normalized = normalizeMenteDate(this.getParamsCalendar.date);
+    if (normalized) {
+      this.getParamsCalendar.date = normalized;
+    }
     this.applyParamsDate();
-    // #11961対応時のメモ：
-    // created の時点で this.fromPage を設定しておくことで
-    // （ this.getParamsCalendar.date がシステム日付以外の月の場合でも）
-    // 画面開始時に transitionStarted transitionEnded が
-    // 発生しないようにしている
   },
   mounted() {
     // 選択された装置に対する有効な点検レイアウトグループの選択肢が
@@ -352,13 +480,21 @@ export default {
 
     // 点検結果データの取得の完了を待って日付のDOM要素のスタイル設定を行う
     this.executeWithLoadingScreen(
-      this.getResultData(this.fromPage).then(this.setDayContentStyle)
+      this.getResultData(this.initialPage).then(this.setDayContentStyle)
     );
   },
   watch: {
+    "getParamsCalendar.date"(value, oldValue) {
+      if (normalizeMenteDate(value) === normalizeMenteDate(oldValue)) {
+        return;
+      }
+      this.applyParamsDate();
+    },
     selectedDateList() {
-      // 日付のDOM要素のスタイル設定を再実行する
-      this.setDayContentStyle();
+      this.$nextTick(this.setDayContentStyle);
+    },
+    resultData() {
+      this.$nextTick(this.setDayContentStyle);
     },
   },
 };
@@ -368,16 +504,16 @@ export default {
 .body-content {
   padding: 10px;
 }
-.body-content >>> .vc-reset {
+.body-content :deep(.vc-reset) {
   border: none;
 }
-.body-content >>> .vc-weeks {
+.body-content :deep(.vc-weeks) {
   padding: 0px;
 }
-.body-content >>> .weekday-1 {
+.body-content :deep(.weekday-1) {
   color: red;
 }
-.body-content >>> .weekday-7 {
+.body-content :deep(.weekday-7) {
   color: blue;
 }
 .search-item {
@@ -448,19 +584,19 @@ export default {
 
 @media print {
   /* モーダル全般 */
-  .modal-mask >>> .modal-container {
+  .modal-mask :deep(.modal-container) {
     width: 99%;
   }
-  
+
   /* ページわかれるのを防止 */
-  .modal-mask >>> .modal-wrapper {
+  .modal-mask :deep(.modal-wrapper) {
     width: 100%;
   }
-  .body-content >>> .vc-reset {
+  .body-content :deep(.vc-reset) {
     margin-left: -10px;
   }
   /* 各月のpaneの余白調整 */
-  .body-content >>> .vc-pane {
+  .body-content :deep(.vc-pane) {
     margin-left: 5px !important;
     margin-right: 5px !important;
     break-inside: avoid;
@@ -488,5 +624,168 @@ export default {
   }
   .header_padding {
     padding-left: 15px;
+  }
+  .periodic-calendar-picker-wrap {
+    position: relative;
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+  .periodic-calendar-picker .vc-day-content.periodic-day-today {
+    background-color: #ffb6c1 !important;
+    color: #fff !important;
+    border-radius: 999px !important;
+  }
+  .periodic-calendar-picker .vc-day-content.periodic-day-planned {
+    background-color: #00bfff !important;
+    color: #fff !important;
+    border-radius: 999px !important;
+  }
+  .periodic-calendar-picker .vc-highlight-content-solid {
+    color: #fff !important;
+    border-radius: 999px !important;
+  }
+  .periodic-calendar-picker .vc-pane-header-wrapper {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    pointer-events: none !important;
+    z-index: 5;
+    background: transparent !important;
+  }
+  .periodic-calendar-picker .vc-pane-header-wrapper > .vc-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 6px 8px 0 !important;
+    background: transparent !important;
+  }
+  /* 箭头常显；仅按钮背景在悬停时显示 */
+  .periodic-calendar-picker {
+    --vc-header-arrow-color: #808080;
+    --vc-header-arrow-hover-bg: rgba(250, 249, 246, 0.65);
+  }
+  .periodic-calendar-picker .vc-pane-header-wrapper .vc-arrow svg,
+  .periodic-calendar-picker .vc-pane-header-wrapper .vc-arrow .k-svg-icon {
+    display: none !important;
+  }
+  .periodic-calendar-picker .periodic-calendar-nav-icon {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: #808080 !important;
+    font-size: 40px !important;
+    font-weight: 700;
+    line-height: 0.85;
+  }
+  .periodic-calendar-picker .vc-pane-header-wrapper .vc-arrow {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    pointer-events: auto !important;
+    width: 32px !important;
+    height: 32px !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    color: #808080 !important;
+    opacity: 1 !important;
+    transition: background-color 0.15s ease;
+  }
+  .periodic-calendar-picker .vc-pane-header-wrapper .vc-arrow:hover:not(:disabled) {
+    background: rgba(250, 249, 246, 0.65) !important;
+    background-color: rgba(250, 249, 246, 0.65) !important;
+    box-shadow: none !important;
+  }
+  .periodic-calendar-picker .vc-pane-header-wrapper .vc-arrow:disabled {
+    cursor: default !important;
+  }
+  .periodic-calendar-picker .vc-pane-header-wrapper .vc-arrow:disabled .periodic-calendar-nav-icon {
+    opacity: 0.35;
+  }
+  .periodic-calendar-picker .vc-pane > .vc-header {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    grid-template-columns: 1fr !important;
+    min-height: 26px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-top-left-radius: 9px !important;
+    border-top-right-radius: 9px !important;
+    background-color: #4781ed !important;
+    color: #fff !important;
+  }
+  .periodic-calendar-picker .vc-pane {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    border: solid 1px rgb(190, 190, 190) !important;
+    border-radius: 10px !important;
+    margin: 0 8px 16px !important;
+    background: #fff !important;
+    box-sizing: border-box !important;
+  }
+  .periodic-calendar-picker .vc-weekday,
+  .periodic-calendar-picker .vc-weekdays .weekday-1,
+  .periodic-calendar-picker .vc-weekdays .weekday-7,
+  .periodic-calendar-picker .vc-weekdays .vc-weekday-1,
+  .periodic-calendar-picker .vc-weekdays .vc-weekday-7 {
+    box-sizing: border-box !important;
+    min-height: 28px !important;
+    line-height: 28px !important;
+    padding: 2px 0 !important;
+    background-color: #77a0ed !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+  }
+  .periodic-calendar-picker .vc-pane > .vc-header .vc-title,
+  .periodic-calendar-picker .vc-pane > .vc-header button.vc-title,
+  .periodic-calendar-picker .vc-title,
+  .periodic-calendar-picker .periodic-calendar-header-title {
+    pointer-events: none !important;
+    cursor: default !important;
+    background: transparent !important;
+    border: none !important;
+    color: white !important;
+    font-size: 15px !important;
+    line-height: 26px !important;
+    width: 100% !important;
+    text-align: center !important;
+  }
+  .periodic-calendar-picker .vc-nav-popover-container,
+  .periodic-calendar-picker .vc-popover-content-wrapper {
+    display: none !important;
+  }
+  .periodic-calendar-picker .vc-day:not(.weekday-1):not(.weekday-7) .vc-day-content:not(.vc-disabled):not([disabled]):not(.vc-highlight-content-solid):not(.vc-highlight-content-light):not(.vc-highlight-content-outline):not(.periodic-day-today):not(.periodic-day-planned),
+  .periodic-calendar-picker .vc-day.weekday-2 .vc-day-content:not(.vc-disabled):not([disabled]):not(.vc-highlight-content-solid):not(.vc-highlight-content-light):not(.vc-highlight-content-outline):not(.periodic-day-today):not(.periodic-day-planned),
+  .periodic-calendar-picker .vc-day.weekday-3 .vc-day-content:not(.vc-disabled):not([disabled]):not(.vc-highlight-content-solid):not(.vc-highlight-content-light):not(.vc-highlight-content-outline):not(.periodic-day-today):not(.periodic-day-planned),
+  .periodic-calendar-picker .vc-day.weekday-4 .vc-day-content:not(.vc-disabled):not([disabled]):not(.vc-highlight-content-solid):not(.vc-highlight-content-light):not(.vc-highlight-content-outline):not(.periodic-day-today):not(.periodic-day-planned),
+  .periodic-calendar-picker .vc-day.weekday-5 .vc-day-content:not(.vc-disabled):not([disabled]):not(.vc-highlight-content-solid):not(.vc-highlight-content-light):not(.vc-highlight-content-outline):not(.periodic-day-today):not(.periodic-day-planned),
+  .periodic-calendar-picker .vc-day.weekday-6 .vc-day-content:not(.vc-disabled):not([disabled]):not(.vc-highlight-content-solid):not(.vc-highlight-content-light):not(.vc-highlight-content-outline):not(.periodic-day-today):not(.periodic-day-planned) {
+    color: #000 !important;
+  }
+  .periodic-calendar-picker .vc-day.weekday-1 .vc-day-content.periodic-day-today,
+  .periodic-calendar-picker .vc-day.weekday-7 .vc-day-content.periodic-day-today,
+  .periodic-calendar-picker .vc-day.weekday-1 .vc-day-content.periodic-day-planned,
+  .periodic-calendar-picker .vc-day.weekday-7 .vc-day-content.periodic-day-planned {
+    color: #fff !important;
+  }
+  .periodic-calendar-picker .vc-day.is-disabled .vc-day-content,
+  .periodic-calendar-picker .vc-day-content.vc-disabled,
+  .periodic-calendar-picker .vc-day-content[disabled] {
+    color: #999;
   }
 </style>

@@ -10,12 +10,7 @@
 <!-- スクリプト処理 -->
 <script>
 export default {
-  data() {
-    return {};
-  },
-  computed: {},
-  methods: {},
-  created() {},
-  destroyed() { }
+
+
 };
 </script>

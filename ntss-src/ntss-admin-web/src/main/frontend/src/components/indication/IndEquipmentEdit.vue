@@ -62,37 +62,24 @@
     </v-ons-row>
     <v-ons-row class="row-style">
       <v-ons-col class="equipment-column">{{ equipmentSelectLabel }}</v-ons-col>
-      <v-ons-col class="equipment-data-column" style="display: flex;">
-        <show-selected-item
-          ref="selectedItem"
-          :propInitValue="equipmentInputValue.initValue"
-          :propEditValue="equipmentInputValue.editValue"
-          propBackgroundColor="#ebebe4"
-          class="equipment-input-style"
-        />
-        <!-- mod #10359 編集権限の動作不正 dengshen start -->
-        <!-- <v-ons-button -->
-        <!--   ref="popoverButton" -->
-        <!--   class="common-style-select-button" -->
-        <!--   @click=" -->
-        <!--     showPopover(),changeButton(); -->
-        <!--   " -->
-        <!-- >選択</v-ons-button> -->
-        <v-ons-button
-          ref="popoverButton"
-          class="common-style-select-button"
-          @click="
-            showPopover(),changeButton();
-          "
-          :disabled="!getItemAuthorized('Indication', 'default_authority')"
-        >選択</v-ons-button>
-        <!-- mod #10359 編集権限の動作不正 dengshen end -->
-        <pop-over
-          v-bind="popoverData"
-          :target-position-element="$refs.popoverButton"
-          @popover-close="closePopover"
-          @popover-return="updateInput"
-          @change="changeButton()"
+      <v-ons-col class="equipment-data-column equipment-selector-column">
+        <common-master-selector
+          class="equipment-master-selector-stretch"
+          :masterType="MasterType.EQUIPMENT_TREATMENT_RECORD"
+          :initItem="masterSelectorInitItem"
+          :editItem="masterSelectorEditItem"
+          :extraParams="masterSelectorExtraParams"
+          :patientId="selectedPatId"
+          :facilityCd="facilityCd"
+          :dialysisState="Number(rstDialysisState || 0)"
+          :hasChangedOption="true"
+          :changeOptionMode="'nameAndUnit'"
+          :hasUnregisteredOption="false"
+          :selectedItemClass="'equipment-input-style'"
+          :backgroundColor="'#ebebe4'"
+          :btnClass="'common-style-select-button'"
+          :btnDisabled="!getItemAuthorized('Indication', 'default_authority')"
+          @popover-return="masterUpdateInput($event);"
         />
       </v-ons-col>
     </v-ons-row>
@@ -148,7 +135,7 @@
     </v-ons-row>
     <v-ons-popover
       cancelable
-      :visible.sync="userMenuPopoverVisible"
+      v-model:visible="userMenuPopoverVisible"
       :target="userMenuPopoverTarget"
       :cover-target="false"
       :direction="userMenuPopoverDirection"
@@ -171,48 +158,48 @@
 // add #10359 編集権限の動作不正 dengshen start
 // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
 // import { getAuthorized } from "@/functions/common/CommonFunctions.js";
-import { getAuthorized, getPrefix } from "@/functions/common/CommonFunctions.js";
+import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
 // add #10359 編集権限の動作不正 dengshen end
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { mapGetters,mapActions } from "vuex";
-import { MASTER_MAINTENANCE_CURRENT_ROUTE_NAME } from "@/constants/masterMaintenanceConstants";
-import { PATVIEWER_CURRENT_ROUTE_NAME } from "@/constants/PatViewerConstants";
+import { mapGetters,mapActions } from "@/compat/vue/vuex";
 import { fitTermCheck } from "@/functions/common/DateTimeUtils";
-import { dialyzer, dialyzerTabooAllergyDeleted, equipment, equipmentAllergy, equipmentClass, equipmentIncludeDeleted } from "@/functions/mst/MstGetters.js";
-import _ from "underscore";
-import MasterSelector from "@/components/common/master-selector/MasterSelector";
+import _ from "@/compat/collections/lodash";
 import customInput from "@/components/common/custom-form-tags/CustomInput";
-import CustomDivShowSelectedItem from "@/components/common/custom-form-tags/CustomDivShowSelectedItem";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
 import customRadio from "@/components/common/custom-form-tags/CustomRadio";
 import PopoverMixin from "@/components/PopoverMixin";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
-import { messageFormat } from '@/functions/common/MessageFormat';
-// mod #6107 2023/03/22 メッセージボックス全調整 張博 end
-// add #9848+9849 数値IFのスタイル全不正 linjunfeng start
-import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro'
+
+import IndicationOwnerMixin from '@/components/indication/IndicationOwnerMixin';
+import { messageFormat } from "@/functions/common/MessageFormat";
 // add #9848+9849 数値IFのスタイル全不正 linjunfeng end
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
+import { buildMasterPopover } from "@/components/common/master-selector/builder/builderFactory";
 
 export default {
-  mixins: [PopoverMixin],
+  mixins: [IndicationOwnerMixin, PopoverMixin],
 
   components: {
-    "pop-over": MasterSelector,
     "custom-input": customInput,
     "custom-input-number": customInputNumber,
     "custom-radio": customRadio,
-    "show-selected-item": CustomDivShowSelectedItem,
     // add #9848+9849 数値IFのスタイル全不正 linjunfeng start
     "custom-input-number-pro": CustomInputNumberPro,
     // add #9848+9849 数値IFのスタイル全不正 linjunfeng end
+    "common-master-selector": commonMasterSelector,
   },
+
+  // 親が @input リスナで使用するため input を明示宣言する。
+  emits: ["input"],
 
   props: {
     /**
@@ -297,11 +284,21 @@ export default {
   data() {
     let cdTest;
     return {
+      MasterType,
+      /** マスタ一覧の表示名（【名前変更】比較用・実績名と分離） */
+      masterLabelForCd: null,
+      /** マスタ側の単位（【単位変更】比較用・実績単位と分離） */
+      masterUnitForCd: null,
+      /** 実績側に保存された単位（editItem.unit・選択で更新） */
+      rstUnitForCd: null,
+      /** indEquipInfo から解凍した実績単位（initItem.unit のみ。選択では更新しない） */
+      rstUnitBaselineForCd: null,
+      /** common-master-selector の initItem 用（実績名） */
+      rstNameForCd: null,
       /**
        * @description 「ダイアライザ」マスターデータ
        */
       dialyzerDataset: [],
-      equipmentDatatest1 :[],
 
       /**
        * @description 「医療材料」マスターデータ
@@ -384,9 +381,65 @@ export default {
     ...mapGetters("pat-info", ["selectedPat"]),
     // mod FNSI-連携イベントの登録適正化 楊 end
 
+    rstDialysisState() {
+      // 実績判定は viewer では currentOrdMainData を優先する。
+      const cur =
+        this.currentOrdMainData &&
+        this.currentOrdMainData.data &&
+        this.currentOrdMainData.data.rstDialysisState;
+      if (cur != null && String(cur) !== "") return cur;
+      const om = this.settingIndData && this.settingIndData.orderMainData;
+      return om && om.rstDialysisState != null ? om.rstDialysisState : 0;
+    },
+    isActualRst() {
+      return Number(this.rstDialysisState || 0) !== 0;
+    },
 
     uniqueRadioName() {
       return _.uniqueId("equipmentAutoInsertRadio");
+    },
+
+    masterSelectorValue() {
+      return this.fieldsData && this.fieldsData.cd;
+    },
+
+    masterSelectorInitItem() {
+      return {
+        text: this.isActualRst
+          ? (this.rstNameForCd != null && this.rstNameForCd !== ""
+              ? this.rstNameForCd
+              : (this.equipmentInputValue ? this.equipmentInputValue.editValue : null))
+          : (this.equipmentInputValue ? this.equipmentInputValue.initValue : null),
+        value: this.masterSelectorValue,
+        unit: this.isActualRst
+          ? this.rstUnitBaselineForCd != null && this.rstUnitBaselineForCd !== ""
+            ? this.rstUnitBaselineForCd
+            : this.masterUnitForCd
+          : this.masterUnitForCd,
+      };
+    },
+
+    masterSelectorEditItem() {
+      const selectedVal =
+        this.popoverData &&
+        this.popoverData.popoverContentSelected &&
+        this.popoverData.popoverContentSelected.value;
+      return {
+        text: this.equipmentInputValue ? this.equipmentInputValue.editValue : null,
+        value: selectedVal != null ? selectedVal : this.masterSelectorValue,
+        unit: this.rstUnitForCd != null && this.rstUnitForCd !== ""
+          ? this.rstUnitForCd
+          : this.unitLabelValue,
+      };
+    },
+
+    masterSelectorExtraParams() {
+      const equipType = this.fieldsData && this.fieldsData.equipType;
+      return {
+        treatDate: this.getIndStartDate,
+        equipType,
+        actualName: this.rstNameForCd,
+      };
     },
 
     fieldsComputed() {
@@ -429,7 +482,7 @@ export default {
           autoInsertValue: this.autoInsertValue,
           needleType:
             parseFloat(this.popoverData.popoverContentSelected.needle) || null,
-          equipType: 0
+          equipType: this.fieldsData.equipType ?? 0
         };
       }
     },
@@ -491,59 +544,26 @@ export default {
     //add FutreNetWeb+SI課題管理 no.5485 劉全航 end
   },
   //7155-------------------------ljg    start
-  async created(){
-    // mod 画面のエーラを処理する　徐博 start
-    // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-    // this.equipmentDatatest1 = await equipment(this.facilityCd).catch(error => {
-    //   throw error;
-    // });
-    this.equipmentDatatest1 = await equipmentIncludeDeleted(this.facilityCd).catch(error => {
-      throw error;
-    });
-    // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
-    const equip66 = this.equipmentDatatest1.find(item => {
-      return item.equipmentCd === this.fieldsData.cd;
-    });
-    if (equip66 != undefined) {
-      this.equipmentInputValue.editValue =equip66.equipmentName;
-      this.equipmentInputValue.initValue =equip66.equipmentName;
-      this.unitLabelValue=equip66.unit;
-      this.cdTest=this.fieldsData.cd;
-      this.popoverData.popoverContentSelected.text=equip66.equipmentName;
-      this.popoverData.popoverContentSelected.unit=equip66.unit;
-      this.popoverData.popoverContentSelected.value=this.fieldsData.cd;
+  created(){
+    if (this.isCreate && this.applyFieldsDataDisplay()) {
+      return;
     }
-    // mod 画面のエーラを処理する　徐博 end
+    // 初期表示は mounted()->createPopoverData() に統一する。
+    // created() で raw 名称を入れると、共通マスタセレクタの接頭辞付き候補と差分判定がずれる。
   },
   //7155-------------------------ljg    end
   async mounted() {
+    if (this.isCreate && this.applyFieldsDataDisplay()) {
+      this.checkMstDispStatus();
+      return;
+    }
     // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
     if (this.settingIndData.ordNo) {
         this.currentOrdMainData = await ApiHelper.get(`/mainData/getOrdMainByOrdNo/${this.settingIndData.ordNo}`)
-      }
+    }
       // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
     await this.createPopoverData();
-    const selectedMst = this.popoverData.popoverContentDataset.find(item => {
-      // ダイアライザの場合
-      if (this.fieldsData.equipType === 1) {
-        return (
-          //mod FNSI-6829 劉全航 start
-          // item.cd === this.fieldsData.cd && item.fnValue["医療材料分類"] === -1
-          item.cd === this.fieldsData.cd && item.fnValue["医療材料分類"] === "dialyzer"
-          //mod FNSI-6829 劉全航 end
-        );
-      }
-      // 医療材料の場合
-      else {
-        return item.value === this.fieldsData.cd;
-      }
-    });
-    if (selectedMst) {
-      this.equipmentInputValue.initValue = selectedMst.text;
-      this.equipmentInputValue.editValue = selectedMst.text;
-      this.popoverData.popoverContentSelected = selectedMst;
-      this.unitLabelValue = selectedMst.unit;
-    }
+    // 初期表示の表示名/単位/選択行は createPopoverData() で確定させる。
     this.checkMstDispStatus();
   },
 
@@ -564,260 +584,182 @@ export default {
       return getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
+    masterUpdateInput(val) {
+      const isDialyzer =
+        val?.key_class === "-2" ||
+        val?.key_class === -2 ||
+        val?.dialyzerCd != null ||
+        val?.dialyzerType != null;
+
+      const mapped = isDialyzer
+        ? {
+            text: val?.text,
+            value: val?.value ?? null,
+            cd: val?.value ?? val?.dialyzerCd ?? null,
+            fnValue: { 医療材料分類: "dialyzer" },
+            unit: val?.unit ?? null,
+          }
+        : {
+            text: val?.text,
+            value: val?.value ?? null,
+            fnValue: { 医療材料分類: val?.classCd ?? val?.classValue ?? null },
+            unit: val?.unit ?? null,
+          };
+
+      this.popoverData.popoverContentSelected = mapped;
+      this.equipmentInputValue.editValue = mapped.text || null;
+      this.unitLabelValue =
+        mapped.unit != null && mapped.unit !== "" ? mapped.unit : this.unitLabelValue;
+      this.rstUnitForCd =
+        mapped.unit != null && mapped.unit !== "" ? String(mapped.unit) : this.rstUnitForCd;
+      //7155-------------------------ljg    start
+      if (!isDialyzer) {
+        this.cdTest = mapped.value;
+      }
+      //7155-------------------------ljg    end
+    },
     /**
      * @description  ポップオーバーを表示する前に、必要なデータを取得して、
      *               ポップオーバー用フォーマットをコンバートする
      */
     async createPopoverData() {
-      // 選択中のダイアライザ/医療材料のIDを取得
-      let selectedDialyzerCd = null;
-      let selectedEquipmentCd = null;
-      if (this.fieldsData.equipType === 0) {
-        selectedEquipmentCd = this.fieldsData.cd;
-      } else if (this.fieldsData.equipType === 1) {
-        selectedDialyzerCd = this.fieldsData.cd;
-      } else {
-        // this.fieldsData.equipType が存在しない(追加時)
-        if (!isNaN(this.fieldsData.cd)) {
-          selectedEquipmentCd = this.fieldsData.cd;
-        } else if (this.fieldsData.cd.indexOf("dialyzer") > -1) {
-          // this.fieldsData.cd に "dialyzer" の文字が入っていたらダイアライザ
-          selectedDialyzerCd = this.fieldsData.cd.split("dialyzer")[1];
+      try {
+        const initValue = this.fieldsData ? this.fieldsData.cd : null;
+        const rawEquipType = this.fieldsData ? this.fieldsData.equipType : null;
+        let normalizedEquipType = null;
+        if (rawEquipType === 0 || rawEquipType === "0") {
+          normalizedEquipType = 0;
+        } else if (rawEquipType === 1 || rawEquipType === "1") {
+          normalizedEquipType = 1;
+        } else if (typeof initValue === "string" && /^dialyzer/i.test(initValue)) {
+          normalizedEquipType = 1;
         }
-      }
-      const tmpEquipmentData = this.$router.currentRoute.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? await equipment(this.facilityCd) : await equipmentAllergy(this.selectedPatId, true);
-      let equipmentData = tmpEquipmentData;
-      // 患者経過総合ビューア(予定)表示時は、予定範囲と薬剤の使用期限を見て表示内容を補正する
-      //mod FNSI-5485 劉全航 start
-      // if (this.$router.currentRoute.name === PATVIEWER_CURRENT_ROUTE_NAME) {
-      //   equipmentData = tmpEquipmentData.filter(equipment => {
-      //     return fitTermCheck(equipment.useStartDate, equipment.useEndDate, this.getIndStartDate) || equipment.equipmentCd === selectedEquipmentCd;
-      //   });
-      // }
-      //mod FNSI-5485 劉全航 end
-      const classData = await equipmentClass(this.facilityCd);
+        const dialysisState = Number(this.rstDialysisState || 0);
+        const isActualRst = dialysisState !== 0;
 
-      this.equipmentDataset = equipmentData;
+        let rstName = "";
+        let rstUnit = "";
+        if (
+          isActualRst &&
+          this.currentOrdMainData &&
+          this.currentOrdMainData.data
+        ) {
+          const rstEquipInfo = this.currentOrdMainData.data.indEquipInfo;
+          const rstEquipInfoArr = rstEquipInfo ? JSON.parse(rstEquipInfo) : [];
+          const rstRow = rstEquipInfoArr.find(item => String(item.cd) === String(this.fieldsData.cd));
+          rstName = rstRow && rstRow.name ? String(rstRow.name) : "";
+          rstUnit = rstRow && rstRow.unit ? String(rstRow.unit) : "";
+        }
 
-      // ポップオーバのフィルタデータを取りまとめる
-      const filterMapping = item => {
-        return {
-          text: item.className,
-          value: item.classCd
-        };
-      };
-
-      const filterArr = classData.map(filterMapping);
-      if (this.showAllSelectTag) {
-        //mod FNSI-6937 劉全航 start
-        // filterArr.unshift({ text: "すべて", value: 0 });
-        filterArr.unshift(
-          { text: "すべて", value: 0 },
-          { text: "未登録", value: -1}
-        );
-        //nod FNSI-6937 劉全航 end
-      }
-
-      // ポップオーバのコンテンツデータ(フィルターしたデータ)を取りまとめる
-      //mod FNSI-5485 劉全航 start
-      // const contentParamIsDisp = item => {
-      //   return item.isDisp === "1";
-      // };
-      //mod FNSI-5485 劉全航 end
-      // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-      let rstName = "";
-      if (
-        this.$router.currentRoute.name === PATVIEWER_CURRENT_ROUTE_NAME &&
-        this.currentOrdMainData && 
-        this.currentOrdMainData.data && 
-        this.currentOrdMainData.data.rstDialysisState != 0
-      ) {
-        const rstEquipInfo = this.currentOrdMainData.data.indEquipInfo;
-        const rstEquipInfoArr = rstEquipInfo ? JSON.parse(rstEquipInfo) : [];
-        const rstEquipInfoArrInfo = rstEquipInfoArr.find(item => item.cd == this.fieldsData.cd);
-        rstName = rstEquipInfoArrInfo && rstEquipInfoArrInfo.name ? rstEquipInfoArrInfo.name : "";
-      }
-      
-      // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
-      const contentMapping = item => {
-        return {
-          value: item.equipmentCd,
-          fnValue: {
-            医療材料分類: item.classCd
+        const context = {
+          facilityCd: this.facilityCd,
+          patientId: this.selectedPatId,
+          extraParams: {
+            treatDate: this.getIndStartDate,
+            equipType: normalizedEquipType,
+            fieldsDataCd: this.fieldsData ? this.fieldsData.cd : null,
+            rstNameForCurrentCd: rstName || "",
+            actualName: rstName || "",
           },
-          // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-          // text: item.equipmentName,
-          text: rstName && item.equipmentCd == this.fieldsData.cd ? rstName : getPrefix({treatDate: this.getIndStartDate, ...item}) + item.equipmentName,
-          isDisp: item.isDisp,
-          // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
-          unit: item.unit
+          initItem: { value: initValue },
+          selectedItem: { value: initValue },
+          dialysisState,
         };
-      };
-      var contentArr = equipmentData
-        //mod FNSI-5485 劉全航 start
-        // .filter(contentParamIsDisp)
-        //mod FNSI-5485 劉全航 end
-        .map(contentMapping);
 
-      if (this.hasDialyzerOption) {
-        // ダイアライザをフィルタデータに追加
-        filterArr.push({
-          text: "ダイアライザ",
-          //mod FNSI-6829 劉全航 start
-          // value: -1
-          value: "dialyzer"
-          //mod FNSI-6829 劉全航 end
-        });
-        //#8484　医療材料選択IFのリスト不正　Start
-        const tmpDialyzer = this.$router.currentRoute.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ?
-        // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-        // await dialyzer(this.facilityCd) : await dialyzerTabooAllergyIncludeDeleted(this.selectedPatId);
-        await dialyzer(this.facilityCd) : await dialyzerTabooAllergyDeleted(this.selectedPatId);
-        // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
-        this.dialyzerDataset = tmpDialyzer;
-        // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-        // const tmpmstEquipment = await equipmentTabooAllergyIncludeDeleted(this.selectedPatId);
-        const tmpmstEquipment = await equipmentAllergy(this.selectedPatId, true);
-        // tmpmstEquipment.forEach(o => {
-        //   if (o.isDisp === "0") {
-        //     o.equipmentName = `【削除済み】${o.equipmentName}`;
-        //   }
-        //   if (!fitTermCheck(o.useStartDate, o.useEndDate, this.getIndStartDate)) {
-        //     o.equipmentName = `【期限切れ】${o.equipmentName}`;
-        //   }
-        // });
-        // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
-        this.equipment = tmpmstEquipment;
-        // 削除済み・期限切れの医療材料を除外:但し選択中除く
-        if (this.$router.currentRoute.name === PATVIEWER_CURRENT_ROUTE_NAME) {
-          this.equipment = tmpmstEquipment.filter(item => {
-            if (selectedEquipmentCd === item.equipmentCd || (item.isDisp === "1" && fitTermCheck(item.useStartDate, item.useEndDate, this.getIndStartDate))) {
-              return item;
-            }
-          });
-          contentArr = this.equipment.map(contentMapping);
+        const pop = await buildMasterPopover(MasterType.EQUIPMENT_TREATMENT_RECORD, context);
+        const baseOptions = pop && pop.master && pop.master.options ? pop.master.options : [];
+        const options = (baseOptions || []).map(o => ({
+          ...o,
+          text:
+            rstName &&
+            initValue != null &&
+            String(o.value) === String(initValue)
+              ? String(rstName)
+              : o.text,
+        }));
+
+        this.popoverData.popoverTitleHeader = pop?.headerTitle ?? "医療材料";
+        this.popoverData.popoverContentLabel = pop?.master?.label ?? "医療材料名";
+        this.popoverData.popoverContentDataset = options;
+        this.EquipmentList = options;
+        if (Array.isArray(pop?.categories) && pop.categories.length > 0) {
+          this.popoverData.popoverFilter = pop.categories.map(c => ({
+            popoverFilterLabel: c.label,
+            popoverFilterDataset: c.options
+          }));
         }
-        //#8484　医療材料選択IFのリスト不正　End
-        // 患者経過総合ビューア(予定)表示時は、予定範囲と薬剤の使用期限を見て表示内容を補正する
-        if (this.$router.currentRoute.name === PATVIEWER_CURRENT_ROUTE_NAME) {
-          this.dialyzerDataset = tmpDialyzer.filter(dialyzer => {
-            return fitTermCheck(dialyzer.useStartDate, dialyzer.useEndDate, this.getIndStartDate) || dialyzer.dialyzerCd === selectedDialyzerCd;
-          });
-        }
-        //#8484　医療材料選択IFのリスト不正　Start
-        // ダイアライザの期限済み、削除済みを判定 接頭辞に付加する。
-        // del #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-        // if (this.$router.currentRoute.name === PATVIEWER_CURRENT_ROUTE_NAME) {
-        //   this.dialyzerDataset.forEach(item => {
-        //     if (item.isDisp === "0") {
-        //       item.modelNumber = `【削除済み】${item.modelNumber}`;
-        //     }
-        //     if (!fitTermCheck(item.useStartDate, item.useEndDate, this.getIndStartDate)) {
-        //       item.modelNumber = `【期限切れ】${item.modelNumber}`;
-        //     }
-        //   });
-        // }
-        // del #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
-        //#8484　医療材料選択IFのリスト不正　End
-        // ダイアライザをコンテンツデータに追加
-        const contentDialyzer = this.dialyzerDataset
-          .filter(item => {
-            //#8484　医療材料選択IFのリスト不正　Start
-            // 削除済みは選択中のみ対象
-            return item.isDisp === "1"
-              || (item.isDisp === "0" && selectedDialyzerCd === item.dialyzerCd);
-            //#8484　医療材料選択IFのリスト不正　End
-          })
-          .map(item => {
-            return {
-              // 医療材料と競合するため、マスター選択用値を作って使用
-              value: `dialyzer${item.dialyzerCd}`,
-              cd: item.dialyzerCd,
-              fnValue: {
-                //mod FNSI-6829 劉全航 start
-                // 医療材料分類: -1
-                医療材料分類: "dialyzer"
-                //mod FNSI-6829 劉全航 end
-              },
-              // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-              // text: item.modelNumber
-              text: rstName && item.equipmentCd == this.fieldsData.cd ? rstName : getPrefix({treatDate: this.getIndStartDate, ...item}) + item.modelNumber,
-              isDisp: item.isDisp,
-              // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
-            };
-          });
 
-        contentArr.push(...contentDialyzer);
-      }
+        const matchByTypeAndValue = (o) => {
+          if (String(o?.value) !== String(initValue)) return false;
+          if (normalizedEquipType == null) return true;
+          const isDialyzer = o?.key_class === "-2" || o?.key_class === -2;
+          return normalizedEquipType === 1 ? isDialyzer : !isDialyzer;
+        };
+        const fallbackSelected = pop?.master?.selectedItem || null;
+        const selected =
+          options.find(matchByTypeAndValue) ||
+          options.find(o => String(o?.value) === String(initValue)) ||
+          (fallbackSelected &&
+          (normalizedEquipType == null ||
+            (normalizedEquipType === 1
+              ? (fallbackSelected?.key_class === "-2" || fallbackSelected?.key_class === -2)
+              : !(fallbackSelected?.key_class === "-2" || fallbackSelected?.key_class === -2)))
+            ? fallbackSelected
+            : null) ||
+          null;
 
-      // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-      contentArr = contentArr.sort(function (a, b) {
-        return b.isDisp - a.isDisp;
-      });
-      // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
+        if (selected) {
+          const isDialyzer = selected.key_class === "-2" || selected.key_class === -2;
+          const mapped = isDialyzer
+            ? { ...selected, cd: selected.value, fnValue: { 医療材料分類: "dialyzer" } }
+            : {
+                ...selected,
+                fnValue: {
+                  医療材料分類:
+                    selected.classCd != null ? selected.classCd : selected.classValue
+                }
+              };
 
-      this.popoverData.popoverTitleHeader = "医療材料";
-      this.popoverData.popoverFilter = [
-        {
-          popoverFilterLabel: "医療材料分類",
-          popoverFilterDataset: filterArr
-        }
-      ];
-      this.popoverData.popoverContentLabel = "医療材料名";
-      this.popoverData.popoverContentDataset = contentArr;
-      this.EquipmentList = contentArr;
-      //#10126:医療材料選択IF追加修正 Start
-      this.popoverData.hasUnregisteredOption = false
-      //#10126:医療材料選択IF追加修正 End
+          this.popoverData.popoverContentSelected = mapped;
 
-      //mod FNSI-5485 劉全航 start
-      //add 患者経済総合ビューア（計画）_医療材料：予定日医療材料を選択する場合、編集対象はマスターのデータを取る ztc 20230606 start
-      if (this.isCreate === false && this.showEquipmentFieldOnly) {
-      //add 患者経済総合ビューア（計画）_医療材料：予定日医療材料を選択する場合、編集対象はマスターのデータを取る ztc 20230606 end
-        // this.searchPatEquipment();
-        let startDate = Number(this.getIndStartDate.replaceAll("-", ""));
-        //mod FNSI-8681 ljx start
-        let patId = this.selectedPatId == null ? 0 : this.selectedPatId;
-        const response = await ApiHelper.get(
-          "/mainData/getEquipmentListByPatId",
-          // { patId: this.selectedPatId, facilityCd: this.facilityCd, treatDate: startDate }
-          { patId: patId, facilityCd: this.facilityCd, treatDate: startDate }
-        );
-        //mod FNSI-8681 ljx end
-        let endDate = "";
-        if (this.getIndEndDate === "") {
-          let treatDateList = this.$parent.$parent.$parent.$parent.treatDateListAll;
-          endDate = treatDateList[treatDateList.length - 1];
-        } else {
-          endDate = Number(this.getIndEndDate.replaceAll("-", ""));
-        }
-        let cdList = [];
-        let map = new Map(Object.entries(response.data));
-        for (let key of Object.keys(response.data)) {
-          let dayList = [];
-          dayList = map.get(key);
-          if (dayList.find(d => d <= endDate && d >= startDate)) {
-            cdList.push(Number(key));
+          const buildMasterBaseText = (row, ds) => {
+            if (!row) return null;
+            const ext =
+              (ds === 0 || ds == null)
+                ? [row.tabooAllergy, row.classInconsistent, row.expired, row.deleted, row.includeDeleted]
+                : [row.tabooAllergy];
+            const prefix = (ext || []).filter(Boolean).join("");
+            const rawName =
+              row.equipmentName != null && row.equipmentName !== ""
+                ? String(row.equipmentName)
+                : row.modelNumber != null && row.modelNumber !== ""
+                  ? String(row.modelNumber)
+                  : "";
+            return (prefix + rawName) || null;
+          };
+
+          this.masterLabelForCd = buildMasterBaseText(mapped, dialysisState);
+          this.masterUnitForCd =
+            mapped.unit != null && mapped.unit !== "" ? String(mapped.unit) : null;
+          this.rstNameForCd = rstName != null && rstName !== "" ? String(rstName) : null;
+          this.rstUnitForCd =
+            rstUnit != null && rstUnit !== "" ? String(rstUnit) : this.masterUnitForCd;
+          this.rstUnitBaselineForCd =
+            rstUnit != null && rstUnit !== "" ? String(rstUnit) : null;
+
+          this.equipmentInputValue.initValue = this.masterLabelForCd;
+          this.equipmentInputValue.editValue =
+            mapped.text != null ? String(mapped.text) : this.masterLabelForCd;
+          this.unitLabelValue = this.rstUnitForCd;
+          if (!isDialyzer) {
+            this.cdTest = mapped.value;
           }
         }
-        if (!cdList.includes(this.fieldsData.cd)) {
-          this.equipmentInputValue.initValue = "";
-          this.equipmentInputValue.editValue = "";
-        } else {
-          this.equipmentInputValue.initValue = this.popoverData.popoverContentSelected.text;
-          this.equipmentInputValue.editValue = this.popoverData.popoverContentSelected.text;
-        }
-        this.popoverData.popoverContentDataset = this.EquipmentList.filter(function (item) {
-          //add FutreNetWeb+SI課題管理 no.6099 劉全航 start
-          if (item.fnValue["医療材料分類"] === "dialyzer") {
-            let dialyzerCd = Number((item.value + "").replace("dialyzer", ""));
-            return cdList.includes(dialyzerCd);
-          }
-          //add FutreNetWeb+SI課題管理 no.6099 劉全航 end
-          return cdList.includes(item.value);
-        });
+      } catch (e) {
+        throw e;
       }
-      //mod FNSI-5485 劉全航 end
+
+      return;
     },
     checkMstDispStatus() {
       if (this.fieldsData.cd === null) {
@@ -840,10 +782,44 @@ export default {
       //mod FNSI-5485 劉全航 end
     },
 
+    applyFieldsDataDisplay() {
+      if (!this.fieldsData?.displayName) {
+        return false;
+      }
+      this.equipmentInputValue.initValue = this.fieldsData.displayName;
+      this.equipmentInputValue.editValue = this.fieldsData.displayName;
+      this.unitLabelValue = this.fieldsData.unit ?? null;
+      this.cdTest = this.fieldsData.cd;
+      if (this.fieldsData.equipType === 1) {
+        this.popoverData.popoverContentSelected = {
+          text: this.fieldsData.displayName,
+          value: this.fieldsData.cd,
+          cd: this.fieldsData.cd,
+          unit: this.fieldsData.unit ?? null,
+          fnValue: {
+            医療材料分類: "dialyzer"
+          }
+        };
+      } else {
+        this.popoverData.popoverContentSelected = {
+          text: this.fieldsData.displayName,
+          value: this.fieldsData.cd,
+          unit: this.fieldsData.unit ?? null,
+          fnValue: {
+            医療材料分類: 0
+          }
+        };
+      }
+      return true;
+    },
+
     /**
      * @description マスター選択を表示
      */
-    showPopover() {
+    async showPopover() {
+      if (!this.popoverData.popoverContentDataset?.length) {
+        await this.createPopoverData();
+      }
       this.popoverData.popoverVisible = true;
     },
 
@@ -858,24 +834,31 @@ export default {
      * @description マスター選択から選択後コールバック
      */
     updateInput(data) {
-      const equip = this.equipmentDataset.find(item => {
-        return item.equipmentCd === data.value;
-      });
+      if (!data) return;
+
+      const isDialyzer =
+        data?.fnValue?.["医療材料分類"] === "dialyzer" ||
+        (typeof data?.value === "string" && data.value.indexOf("dialyzer") === 0);
 
       this.popoverData.popoverContentSelected = data;
       this.equipmentInputValue.editValue = data.text || null;
-      this.unitLabelValue = equip && equip.unit;
+      this.unitLabelValue = data.unit ?? this.unitLabelValue;
       //7155-------------------------ljg    start
-      this.cdTest=data.value;
+      if (!isDialyzer) {
+        this.cdTest = data.value;
+      }
       //7155-------------------------ljg    end
     },
 
     /**
      * @description APIにリクエストする
      */
-    async updateIndInfo(structData, targetEdit = null, targetEditType = null) {
-      console.log("IndEquipmentEdit.vue updateIndInfo this.startLoadingScreen();");
-      this.startLoadingScreen();
+    async updateIndInfo(structData, targetEdit = null, targetEditType = null, sharedOrdMainList = null) {
+      const isBatchCollect = structData.flag === 1;
+      if (!isBatchCollect) {
+        this.startLoadingScreen();
+      }
+      try {
       // mod FNSI-指示編集でDB登録データの更新 楊 start
       // 指示者ドロップダウンの設定
       let doctorList = structData.userOptions;
@@ -903,13 +886,15 @@ export default {
         // amount: this.fieldsComputed.amount,
         ...(1 !== structData.flag && structData.editOnly && this.fieldsComputed.amount == this.amountInputValue.initValue ? {} : { amount: this.fieldsComputed.amount }),
         // mod #11311 編集箇所のみ保存の再精査 zkm end
-        // unit: this.unitLabelValue,
+        unit: this.rstUnitForCd != null && this.rstUnitForCd !== ""
+          ? String(this.rstUnitForCd)
+          : (this.unitLabelValue != null ? String(this.unitLabelValue) : null),
         ind_user_id: structData.indUser,
         // mod FNSI-指示編集でDB登録データの更新 楊 start
         // ind_user_last_name: null,
         // ind_user_first_name: null,
-        ind_user_last_name: doctor.user_last_name,
-        ind_user_first_name: doctor.user_first_name,
+        ind_user_last_name: doctor?.user_last_name ?? null,
+        ind_user_first_name: doctor?.user_first_name ?? null,
         // mod FNSI-指示編集でDB登録データの更新 楊 end
         upd_user_id: structData.updUser,
 
@@ -953,19 +938,19 @@ export default {
       };
 
       // 古いリスト
-      const startDate = structData.indStartDate.replace(/-/g, '');
-      const endDate = structData.indEndDate == null ? null : structData.indEndDate.replace(/-/g, '');
-      const searchData = await ApiHelper.get(
-        `/mainData/getByPatIdAndTreatDate/${structData.facilityCd}/${structData.patId}/${startDate}/${endDate}`
-      ).catch(error => {
-        //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
-        getErrorMessage('IndEquipmentEdit.vue', 'updateIndInfo', error);
-        //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
-        console.log("IndEquipmentEdit.vue updateIndInfo throw error; this.finishLoadingScreen();");
-        this.finishLoadingScreen();
-        throw error;
-      });
-      this.oldOrdMainList = searchData.data;
+      if (sharedOrdMainList) {
+        this.oldOrdMainList = sharedOrdMainList;
+      } else {
+        const startDate = structData.indStartDate.replace(/-/g, '');
+        const endDate = structData.indEndDate == null ? null : structData.indEndDate.replace(/-/g, '');
+        const searchData = await ApiHelper.get(
+          `/mainData/getByPatIdAndTreatDate/${structData.facilityCd}/${structData.patId}/${startDate}/${endDate}`
+        ).catch(error => {
+          getErrorMessage("IndEquipmentEdit.vue", "updateIndInfo", error);
+          throw error;
+        });
+        this.oldOrdMainList = searchData.data;
+      }
 
       // add FNSI-【1006】最新の改修対象一覧のIES475対応 韓 start
       let weekList = [];
@@ -978,7 +963,7 @@ export default {
         // 実績があるフラグ
         let isRstHave = false;
 
-        if (structData.flag === 1 && this.$parent.$parent.$parent.$parent.isRstUpdateFlg === true) {
+        if (structData.flag === 1 && this._indicationResultOwner().isRstUpdateFlg === true) {
           // 複数が追加された場合、且つ 実績の変更をする確認した場合
           sendJson.is_rst_update = true;
         }else {
@@ -992,7 +977,7 @@ export default {
           });
           //mod 7114 治療中の透析指示の投与薬剤、医療材料、指示コメント削除を実施した場合の注意メッセージがない 張 start
           // if (isRstHave && (structData.flag === 1 || structData.flag === 2) && !this.$parent.$parent.$parent.$parent.isShowedMessage) {
-            if (isRstHave && (structData.flag === 1 || structData.flag === 2|| structData.flag === 3) && !this.$parent.$parent.$parent.$parent.isShowedMessage) {
+            if (isRstHave && (structData.flag === 1 || structData.flag === 2|| structData.flag === 3) && !this._indicationResultOwner().isShowedMessage) {
             //mod 7114 治療中の透析指示の投与薬剤、医療材料、指示コメント削除を実施した場合の注意メッセージがない 張 end
 
               //mod #10266  start
@@ -1002,7 +987,7 @@ export default {
 
                 sendJson.is_rst_update = true;
                 if (structData.flag === 1) {
-                  this.$parent.$parent.$parent.$parent.isRstUpdateFlg = true;
+                  this._indicationResultOwner().isRstUpdateFlg = true;
                 }
               // mod #10266  end
               // add キャンセル（実績に反映しない）を選択　⇒　実績に反映される修正  xmj 2022-08-11 start
@@ -1037,8 +1022,6 @@ export default {
           //   //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
           //   throw error;
           // });
-          console.log("IndEquipmentEdit.vue updateIndInfo return sendJson; this.finishLoadingScreen();");
-          this.finishLoadingScreen();
           return sendJson;
         /* add by shiyw 2022-08-26 [FNSI-6961] --> Performance Optimization: change "One medicine one Ajax call" to "All medicine in one Ajax call"  ---end */
         case 2:
@@ -1049,7 +1032,6 @@ export default {
           // ).catch(error => {
           //   throw error;
           // });
-
           //#11397 Add
           let getSettingData = this.settingIndData;
           let allList = this.getAllData;
@@ -1103,7 +1085,7 @@ export default {
           } else {
             // add #12455 条件送信後に医材変更＆実績反映すると数量が0になる zkm end
             response = await ApiHelper.post(
-              "/mainData/updateOrdMainEquipInfo/",
+              "/mainData/updateOrdMainEquipInfo",
               sendJson
             ).catch(error => {
               //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
@@ -1126,7 +1108,7 @@ export default {
           //   throw error;
           // });
           response = await ApiHelper.post(
-            "/mainData/deleteOrdMainEquipInfo/",
+            "/mainData/deleteOrdMainEquipInfo",
             sendJson
           ).catch(error => {
             //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
@@ -1227,9 +1209,12 @@ export default {
       //     }
       //   }
       // }
-      console.log("IndEquipmentEdit.vue updateIndInfo this.finishLoadingScreen();");
-      this.finishLoadingScreen();
       return response;
+      } finally {
+        if (!isBatchCollect) {
+          this.finishLoadingScreen();
+        }
+      }
     },
     // mod FNSI-連携イベントの登録適正化 楊 end
 
@@ -1257,7 +1242,7 @@ export default {
         });
         if (flag ===1) {
           // 薬剤を追加した場合
-          this.$parent.$parent.$parent.$parent.isShowedMessage = true;
+          this._indicationResultOwner().isShowedMessage = true;
         }
 
         return rtn;
@@ -1301,7 +1286,7 @@ export default {
         //mod FNSI-8681 ljx end
         let endDate = "";
         if (this.getIndEndDate === "") {
-          let treatDateList = this.$parent.$parent.$parent.$parent.treatDateListAll;
+          let treatDateList = this._indicationResultOwner().treatDateListAll;
           endDate = treatDateList[treatDateList.length - 1];
         } else {
           endDate = Number(this.getIndEndDate.replaceAll("-", ""));
@@ -1343,8 +1328,12 @@ export default {
   margin: 2.5px 0px;
 }
 
-.equipment-input-style {
+:deep(.equipment-input-style) {
   width: 70%;
+  flex: 0 0 70%;
+  max-width: 70%;
+  min-width: 0;
+  box-sizing: border-box;
   margin: 0px 5px 0px 0px;
 }
 
@@ -1367,6 +1356,19 @@ export default {
   padding-left: 10px;
   margin-right: 5px;
 }
+.equipment-selector-column {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+.equipment-master-selector-stretch {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
 .help-area {
   margin: 10px;
 }
@@ -1377,11 +1379,13 @@ export default {
   margin-right: 0.5em;
 }
 /* add FNSI-薬剤指示画面等の画面崩れの修正 楊 start */
-.ntss-custom-input-cond {
+:deep(.ntss-custom-input-cond) {
   height: 2em;
   font-size: inherit;
   -webkit-box-sizing: border-box;
   box-sizing: border-box;
+  display: -webkit-inline-box;
+  display: -ms-inline-flexbox;
   display: inline-flex;
 }
 /* add FNSI-薬剤指示画面等の画面崩れの修正 楊 end */

@@ -1,0 +1,98 @@
+/* Vue2 v-calendar beta visual compatibility for Vue3 v-calendar 3.
+   The page keeps the old <vc-date-picker> usage.  This layer restores the
+   common .vc-* style target that Vue2 public/css/ntss.css expected. */
+.ntss-vcalendar-legacy.vc-container,
+.ntss-vcalendar-legacy .vc-container {
+  box-sizing: border-box;
+  border: 0 !important;
+  background: transparent !important;
+  font-family: inherit !important;
+}
+
+.ntss-vcalendar-legacy .vc-pane-layout {
+  align-items: start !important;
+}
+
+.ntss-vcalendar-legacy .vc-pane {
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  border: solid 1px rgb(190, 190, 190) !important;
+  border-radius: 10px !important;
+  margin-left: 15px !important;
+  margin-right: 15px !important;
+  margin-bottom: 20px !important;
+  background: #fff !important;
+}
+
+.ntss-vcalendar-legacy .vc-header {
+  box-sizing: border-box !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-top-left-radius: 9px !important;
+  border-top-right-radius: 9px !important;
+  background-color: #4781ed !important;
+  color: #fff !important;
+}
+
+.ntss-vcalendar-legacy .vc-title,
+.ntss-vcalendar-legacy .vc-header .vc-title,
+.ntss-vcalendar-legacy .vc-header .vc-title-wrapper,
+.ntss-vcalendar-legacy .vc-header button.vc-title {
+  color: #fff !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  line-height: 30px !important;
+}
+
+.ntss-vcalendar-legacy .vc-arrow,
+.ntss-vcalendar-legacy .vc-header button[aria-label*="Previous"],
+.ntss-vcalendar-legacy .vc-header button[aria-label*="Next"],
+.ntss-vcalendar-legacy .vc-header button[aria-label*="前"],
+.ntss-vcalendar-legacy .vc-header button[aria-label*="次"] {
+  color: #fff !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.ntss-vcalendar-legacy .vc-weekdays {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.ntss-vcalendar-legacy .vc-weekday {
+  box-sizing: border-box !important;
+  min-height: 24px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background-color: #77a0ed !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  line-height: 24px !important;
+  text-align: center !important;
+}
+
+.ntss-vcalendar-legacy .vc-weeks {
+  padding: 0 !important;
+}
+
+.ntss-vcalendar-legacy .vc-day-content:not(.vc-highlight-content-solid):not(.vc-highlight-content-light):not(.vc-highlight-content-outline):not(.vc-disabled):not([disabled]) {
+  color: inherit !important;
+}
+
+.ntss-vcalendar-legacy .weekday-1 .vc-day-content:not(.vc-highlight-content-solid):not(.vc-highlight-content-light):not(.vc-highlight-content-outline):not(.vc-disabled):not([disabled]) {
+  color: red !important;
+}
+
+.ntss-vcalendar-legacy .weekday-7 .vc-day-content:not(.vc-highlight-content-solid):not(.vc-highlight-content-light):not(.vc-highlight-content-outline):not(.vc-disabled):not([disabled]) {
+  color: blue !important;
+}
+
+.ntss-vcalendar-legacy .vc-nav-popover-container,
+.ntss-vcalendar-legacy .vc-popover-content-wrapper {
+  z-index: 2147483647 !important;
+}

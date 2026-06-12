@@ -532,16 +532,17 @@
 <script>
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
+import $ from "@/compat/jquery";
+import { getScopedJQuery } from "@/functions/common/LayoutMeasureHelper";
 // add #10359 編集権限の動作不正 dengshen end
-import _ from "underscore";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { treatmentDel, treatmentSet } from "@/functions/mst/MstGetters.js";
 import { dateFormat, fitTermCheckForUpdate } from "@/functions/common/DateTimeUtils";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import CustomCalendar from "@/components/common/custom-calendar/CustomCalendar";
-import { mapGetters, mapActions } from "vuex";
-import $ from "jquery";
-import BigNumber from "bignumber.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+
+import BigNumber from "@/compat/number/bignumber";
 import DeviceProgramChart from "@/components/pat-info/device-set-info/DeviceProgramChart";
 import {
   getDeviceSetInfoMst,
@@ -549,7 +550,7 @@ import {
   createChartData
 } from "@/components/deviceset-info/base-modules/DeviceSetInfoFunctions.js";
 import * as DeviceSetInfoDef from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
 // add FNSI-指示値・装置設定・装置プログラムの相関チェック 安寧 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
@@ -567,31 +568,29 @@ import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } f
 import {deepCopy} from "@/functions/common/CommonFunctions";
 // add FNSI-FutreNetWeb+SI課題管理No.4705 李 end
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import router from "@/router";
+
+import IndicationOwnerMixin from '@/components/indication/IndicationOwnerMixin';
+import { messageFormat } from "@/functions/common/MessageFormat";
+import { getCurrentRoutePath } from "@/compat/vue/router-facade.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 
-$(window).resize(function() {
-  // 項目名列の横幅を設定
-  columnWidthSet();
-});
-
-const columnWidthSet = () => {
-  if ($(".cond-table-style").length === 0) {
+const columnWidthSet = (root = null) => {
+  const scopedJQuery = getScopedJQuery(root, $) || $;
+  if (scopedJQuery(".cond-table-style").length === 0) {
     return;
   }
-  const horizontalTitleW = $(".cond-header-style").width();
-  const setWidth = $($("#treatment-width")[0]).width();
-  $(".cond-title-style").each((index, elment) => {
+  const horizontalTitleW = scopedJQuery(".cond-header-style").width();
+  const setWidth = scopedJQuery(scopedJQuery("#treatment-width")[0]).width();
+  scopedJQuery(".cond-title-style").each((index, elment) => {
     const width = `${setWidth - horizontalTitleW + 1}px`;
-    switch ($(elment)[0].innerHTML) {
+    switch (scopedJQuery(elment)[0].innerHTML) {
       case "治療方法":
         break;
 
       case "投与薬剤":
       case "指示コメント":
-        $(elment)[0].style.minWidth = `${setWidth + 5.5}px`;
-        $(elment)[0].style.maxWidth = `${setWidth + 5.5}px`;
+        scopedJQuery(elment)[0].style.minWidth = `${setWidth + 5.5}px`;
+        scopedJQuery(elment)[0].style.maxWidth = `${setWidth + 5.5}px`;
         break;
 
       case "薬剤":
@@ -601,26 +600,26 @@ const columnWidthSet = () => {
       case "投与タイミング":
       case "穿刺針区分":
       case "コメント":
-          $(elment)[0].style.minWidth = `${setWidth - horizontalTitleW }px`;
-          $(elment)[0].style.maxWidth = `${setWidth - horizontalTitleW }px`;
+          scopedJQuery(elment)[0].style.minWidth = `${setWidth - horizontalTitleW }px`;
+          scopedJQuery(elment)[0].style.maxWidth = `${setWidth - horizontalTitleW }px`;
           break;
 
       default:
-        if ($("#equip-title").length === 0) {
-          $(elment)[0].style.minWidth = width;
-          $(elment)[0].style.maxWidth = width;
+        if (scopedJQuery("#equip-title").length === 0) {
+          scopedJQuery(elment)[0].style.minWidth = width;
+          scopedJQuery(elment)[0].style.maxWidth = width;
         } else {
-          if ($(elment)[0].innerHTML === "医療材料") {
-            if ($(elment)[0].id !== "sub-equip") {
-              $(elment)[0].style.minWidth = `${setWidth + 5.5}px`;
-              $(elment)[0].style.maxWidth = `${setWidth + 5.5}px`;
+          if (scopedJQuery(elment)[0].innerHTML === "医療材料") {
+            if (scopedJQuery(elment)[0].id !== "sub-equip") {
+              scopedJQuery(elment)[0].style.minWidth = `${setWidth + 5.5}px`;
+              scopedJQuery(elment)[0].style.maxWidth = `${setWidth + 5.5}px`;
             } else {
-              $(elment)[0].style.minWidth = `${setWidth - horizontalTitleW }px`;
-              $(elment)[0].style.maxWidth = `${setWidth - horizontalTitleW }px`;
+              scopedJQuery(elment)[0].style.minWidth = `${setWidth - horizontalTitleW }px`;
+              scopedJQuery(elment)[0].style.maxWidth = `${setWidth - horizontalTitleW }px`;
             }
           } else {
-            $(elment)[0].style.minWidth = width;
-            $(elment)[0].style.maxWidth = width;
+            scopedJQuery(elment)[0].style.minWidth = width;
+            scopedJQuery(elment)[0].style.maxWidth = width;
           }
         }
         break;
@@ -629,6 +628,7 @@ const columnWidthSet = () => {
 };
 
 export default {
+  mixins: [IndicationOwnerMixin],
   components: {
     "custom-calendar": CustomCalendar,
     DeviceProgramChart
@@ -950,20 +950,17 @@ export default {
         return null;
       } else if (this.selectedSet.isTreatSet) {
         return this.mstTreatSetInfo.find(
-          ({ treatmentSetCd }) => treatmentSetCd === this.selectedSet.cd
-        );
+          ({ treatmentSetCd }) => treatmentSetCd === this.selectedSet.cd);
       } else {
         const ordMain = this.ordMainInfo.find(
-          ({ ordNo }) => ordNo === this.selectedOrdMain.ordNo
-        );
+          ({ ordNo }) => ordNo === this.selectedOrdMain.ordNo);
 
         return (
           ordMain && {
             treatmentCd: ordMain.indTreatmentCd,
             indCondInfo: ordMain.indCondInfo,
             indDeviceSetInfo: ordMain.indDeviceSetInfo
-          }
-        );
+          });
       }
     },
 
@@ -973,8 +970,7 @@ export default {
       }
 
       const treat = this.mstTreatmentInfo.find(
-        ({ treatmentCd }) => treatmentCd === this.selectedTreatSet.treatmentCd
-      );
+        ({ treatmentCd }) => treatmentCd === this.selectedTreatSet.treatmentCd);
       return treat && treat.deviceMode;
     },
 
@@ -982,8 +978,7 @@ export default {
       return (
         this.selectedTreatSet &&
         this.selectedTreatSet.indDeviceSetInfo &&
-        JSON.parse(this.selectedTreatSet.indDeviceSetInfo)
-      );
+        JSON.parse(this.selectedTreatSet.indDeviceSetInfo));
     },
 
     medishow() {
@@ -1014,8 +1009,7 @@ export default {
       if (
         null === this.mstTreatSetInfo ||
         "" === this.selectedSet.cd ||
-        null === this.mstTreatmentInfo
-      ) {
+        null === this.mstTreatmentInfo) {
         return this.treatInfo.name;
       }
       this.setTreatName();
@@ -1038,8 +1032,7 @@ export default {
         null === this.mstMedicineInfo ||
         null === this.mstMedicineMixInfo ||
         null === this.mstProcedureInfo ||
-        null === this.mstMedicateTimingInfo
-      ) {
+        null === this.mstMedicateTimingInfo) {
         return [];
       }
       // 投与薬剤情報の更新
@@ -1080,11 +1073,13 @@ export default {
   },
 
   watch: {
+    isMediInfo() {
+      this.refreshColumnWidth();
+    },
     //add #9289 直近の過去指示(投与薬剤を含まない)を使った治療予定作成時にエラー発生 zy start
     "selectedOrdMain.ordNo"() {
         var ordMainInfo = this.ordMainList.find(
-          obj => obj.ordNo === this.selectedOrdMain.ordNo
-        );
+          obj => obj.ordNo === this.selectedOrdMain.ordNo);
         this.selectedOrdMain = deepCopy(ordMainInfo);
     },
     //add #9289 直近の過去指示(投与薬剤を含まない)を使った治療予定作成時にエラー発生 zy end
@@ -1108,7 +1103,7 @@ export default {
     kurInfo() {
       this.mstKurInfo.forEach(e => {
         if (e.kurName == this.kurInfo.kurName) {
-          this.standardStartTime = moment(e.kurStandardStartTime, "HHmm").format("HH:mm");
+          this.standardStartTime = dayjs(e.kurStandardStartTime, "HHmm").format("HH:mm");
         }
       });
       this.dataBedName = this.structDataBedName;
@@ -1124,7 +1119,7 @@ export default {
 
       this.setOrdMainList();
       setTimeout(() => {
-        columnWidthSet();
+        columnWidthSet(this.$el || this);
       }, 500);
       // add FNSI-FutreNetWeb+SI課題管理の3822対応 韓 end
       // 初回ロード時、初期状態が記録され、初期値が保存される
@@ -1135,9 +1130,9 @@ export default {
 
       // 選択した値と初期値が異なる場合
       if (val.cd != this.firValue.cd) {
-        $('#v-ons-select-id').addClass('custom-select-edited');
+        (getScopedJQuery(this.$el || this, $) || $)('#v-ons-select-id').addClass('custom-select-edited');
       } else {
-        $('#v-ons-select-id').removeClass('custom-select-edited');
+        (getScopedJQuery(this.$el || this, $) || $)('#v-ons-select-id').removeClass('custom-select-edited');
       }
     },
     // add 画面デザイン改善対応 李 end
@@ -1166,22 +1161,40 @@ export default {
     // mod 10443 身体情報・DW・目標体重バグ 関  end
   },
 
+  mounted() {
+    const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+    this._columnWidthResizeWindow = ownerWindow;
+    this._columnWidthResizeHandler = () => columnWidthSet(this.$el || this);
+    ownerWindow?.addEventListener?.("resize", this._columnWidthResizeHandler);
+    this.$nextTick(this._columnWidthResizeHandler);
+  },
+
+  activated() {
+    this.refreshColumnWidth();
+  },
+
+  beforeUnmount() {
+    this._columnWidthResizeWindow?.removeEventListener?.("resize", this._columnWidthResizeHandler);
+    this._columnWidthResizeWindow = null;
+    this._columnWidthResizeHandler = null;
+  },
+
   async created() {
     // IndEditBaseの変更イベント発火フラグをtrueに設定
     // add bug 8162 修正 chen start
     this.setLoadingScreenVisible(true);
     // add #8347 【デグレ】????患者治療割り当てができない dou start
     this.setLoadingScreenVisible(true);
-    this.selOrdNo = this.$parent.selOrdNo;
+    this.selOrdNo = this._indicationSourceOwner().selOrdNo;
     // add #8347 【デグレ】????患者治療割り当てができない dou end
     // add bug 8162 修正 chen end
-    this.$parent.$parent.isWatchParentIndStartDate = true;
+    this._indicationDialogOwner().isWatchParentIndStartDate = true;
     this.planStartDate = this.indStartDate;
 
     if(!this.getAdvancedSettings.func_advcds) {
       this.getAdvancedSettings.func_advcds = [];
     }
-    columnWidthSet();
+    columnWidthSet(this.$el || this);
     // 治療方法セットマスタの取得
     this.mstTreatSetInfo = await treatmentSet(this.getFacilityCd);
     // 治療情報の取得
@@ -1246,7 +1259,7 @@ export default {
     this.mediInfo = [];
     this.equipInfo = [];
     this.commentInfo = [];
-    columnWidthSet();
+    columnWidthSet(this.$el || this);
     // add FNSI 373,374修正対応 陳 start
     this.structDataBedName = this.schInfo[2].value;
     // del #8347 【デグレ】????患者治療割り当てができない dou start
@@ -1270,58 +1283,51 @@ export default {
 
     // add 10443 身体情報・DW・目標体重バグ 関  start
     // 予定作成
-    if (this.$parent.indStartDate != undefined) {
-      this.changeDw(this.$parent.indStartDate, null);
+    if (this._indicationSourceOwner().indStartDate != undefined) {
+      this.changeDw(this._indicationSourceOwner().indStartDate, null);
       this.$watch(
-        () => this.$parent.indStartDate,
+        () => this._indicationSourceOwner().indStartDate,
         () => {
-          this.changeDw(this.$parent.indStartDate, null);
-        }
-      );
+          this.changeDw(this._indicationSourceOwner().indStartDate, null);
+        });
     } else {
 
     // 予定作成
-    if (this.$parent.$parent.structData != undefined) {
-      this.changeDw(this.$parent.$parent.structData.indStartDate, this.$parent.$parent.structData.indWeeks);
+    if (this._indicationFlowOwner().structData != undefined) {
+      this.changeDw(this._indicationFlowOwner().structData.indStartDate, this._indicationFlowOwner().structData.indWeeks);
       this.$watch(
-        () => this.$parent.$parent.structData.indStartDate,
+        () => this._indicationFlowOwner().structData.indStartDate,
         () => {
-          this.changeDw(this.$parent.$parent.structData.indStartDate, this.$parent.$parent.structData.indWeeks);
-        }
-      );
+          this.changeDw(this._indicationFlowOwner().structData.indStartDate, this._indicationFlowOwner().structData.indWeeks);
+        });
       this.$watch(
-        () => this.$parent.$parent.structData.indWeeks,
+        () => this._indicationFlowOwner().structData.indWeeks,
         () => {
-          this.changeDw(this.$parent.$parent.structData.indStartDate, this.$parent.$parent.structData.indWeeks);
-        }, { deep: true }
-      );
+          this.changeDw(this._indicationFlowOwner().structData.indStartDate, this._indicationFlowOwner().structData.indWeeks);
+        }, { deep: true });
     }
 
     // 治療方法変更
-    if (this.$parent.structData != undefined) {
+    if (this._indicationSourceOwner().structData != undefined) {
       this.searchTreatDateDw();
       this.$watch(
-        () => this.$parent.structData.indStartDate,
+        () => this._indicationSourceOwner().structData.indStartDate,
         (newValue) => {
-        }
-      );
+        });
       this.$watch(
-        () => this.$parent.structData.indWeeks,
+        () => this._indicationSourceOwner().structData.indWeeks,
         (newValue) => {
-        }, { deep: true }
-      );
+        }, { deep: true });
       this.$watch(
-        () => this.$parent.structData.selectedTreat,
+        () => this._indicationSourceOwner().structData.selectedTreat,
         (newValue) => {
           this.searchTreatDateDw();
-        }
-      );
+        });
       this.$watch(
-        () => this.$parent.structData.selectedKur,
+        () => this._indicationSourceOwner().structData.selectedKur,
         (newValue) => {
           this.searchTreatDateDw();
-        }
-      );
+        });
     }
 
     }
@@ -1353,7 +1359,13 @@ export default {
     // add #10359 編集権限の動作不正 dengshen end
     hideModal() {
       /* モーダル閉じる */
-      this.$parent.$parent.$emit("hide-modal");
+      this._hideIndicationModal();
+    },
+
+    refreshColumnWidth() {
+      this.$nextTick(() => {
+        setTimeout(() => columnWidthSet(this.$el || this), 500);
+      });
     },
 
     // add bug 8003 修正 chen start
@@ -1368,7 +1380,7 @@ export default {
 
       this.setOrdMainList();
       setTimeout(() => {
-        columnWidthSet();
+        columnWidthSet(this.$el || this);
       }, 500);
       if (!this.callsNumberFlg) {
         this.callsNumberFlg = true;
@@ -1376,14 +1388,14 @@ export default {
 
       // 選択した値と初期値が異なる場合
       if (this.selectedSet.cd !== this.firValue.cd) {
-        $('#v-ons-select-id').addClass('custom-select-edited');
+        (getScopedJQuery(this.$el || this, $) || $)('#v-ons-select-id').addClass('custom-select-edited');
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc start
-        this.$parent.$parent.editSelectIdFlg = true;
+        this._indicationDialogOwner().editSelectIdFlg = true;
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc end
       } else {
-        $('#v-ons-select-id').removeClass('custom-select-edited');
+        (getScopedJQuery(this.$el || this, $) || $)('#v-ons-select-id').removeClass('custom-select-edited');
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc start
-        this.$parent.$parent.editSelectIdFlg = false;
+        this._indicationDialogOwner().editSelectIdFlg = false;
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc end
       }
     },
@@ -1395,22 +1407,21 @@ export default {
       // 治療方法セットコード
       sendJson.treatment_set_cd = this.selectedSet.cd;
       // 治療日
-      sendJson.treatDays = moment(this.$parent.indStartDate).format('YYYY-MM-DD');
+      sendJson.treatDays = dayjs(this._indicationSourceOwner().indStartDate).format('YYYY-MM-DD');
 //    add FNSI redmine 劉祥霖 5923 start
       sendJson.ind_bed_cd=this.bedCd;
 //    add FNSI redmine 劉祥霖 5923 end
       //データの送信
       const response = await ApiHelper.post(
-        "/mainData/getKurInfo/",
-        sendJson
-      ).catch(error => {
+        "/mainData/getKurInfo",
+        sendJson).catch(error => {
 
         getErrorMessage('IndPlanCreate.vue', 'createIndPlan', error);
 
         throw error;
       });
 
-      if(response.status == 200 ){
+      if(response.status == 200){
 
         this.mstKurInfoBack = new Array();
         this.mstKurInfoBack = JSON.parse(JSON.stringify(this.mstKurInfo));
@@ -1464,15 +1475,13 @@ export default {
       if (this.selectedSet.isTreatSet) {
         // 治療方法セットから取得
         const mstTreatSet = this.mstTreatSetInfo.filter(
-          obj => obj.treatmentSetCd === this.selectedSet.cd
-        );
+          obj => obj.treatmentSetCd === this.selectedSet.cd);
         if (null === mstTreatSet || 1 > mstTreatSet.length) {
           return this.treatInfo.name;
         }
         this.treatInfo.cd = mstTreatSet[0].treatmentCd;
         const mstTreatment = this.mstTreatmentInfo.filter(
-          obj => obj.treatmentCd === mstTreatSet[0].treatmentCd
-        );
+          obj => obj.treatmentCd === mstTreatSet[0].treatmentCd);
         if (0 < mstTreatment.length) {
           // 治療方法名
           this.treatInfo.name = mstTreatment[0].treatmentName;
@@ -1483,8 +1492,7 @@ export default {
             this.setMstTreatmentDataIsDel(this.mstTreatDel);
           }
           const mstTreatmentDel = this.getMstTreatmentDataIsDel.filter(
-          obj => obj.treatmentCd === mstTreatSet[0].treatmentCd
-          );
+          obj => obj.treatmentCd === mstTreatSet[0].treatmentCd);
           if (0 < mstTreatmentDel.length) {
             // 治療方法名
             this.treatInfo.name = `【削除済み】${mstTreatmentDel[0].treatmentName}`;
@@ -1494,13 +1502,11 @@ export default {
       } else {
         // 治療情報から取得
         const ordmain = this.ordMainInfo.filter(
-          obj => obj.ordNo === this.selectedOrdMain.ordNo
-        );
+          obj => obj.ordNo === this.selectedOrdMain.ordNo);
         if (0 < ordmain.length) {
           this.treatInfo.cd = ordmain[0].indTreatmentCd;
           const mstTreatment = this.mstTreatmentInfo.filter(
-            obj => obj.treatmentCd === ordmain[0].indTreatmentCd
-          );
+            obj => obj.treatmentCd === ordmain[0].indTreatmentCd);
           if (0 < mstTreatment.length) {
             // 治療方法名
             this.treatInfo.name = mstTreatment[0].treatmentName;
@@ -1513,27 +1519,20 @@ export default {
      * 治療情報の治療条件情報を更新する
      */
     setCondInfo() {
-      let mstTreatSet = null;
-      if (this.selectedSet.isTreatSet) {
-        // 治療方法セットから取得
-        mstTreatSet = this.mstTreatSetInfo.filter(
-          obj => obj.treatmentSetCd === this.selectedSet.cd
-        );
-      } else {
-        // 治療情報から取得
-        mstTreatSet = this.ordMainInfo.filter(
-          obj => obj.ordNo === this.selectedOrdMain.ordNo
-        );
-      }
+      const mstTreatSet = this.selectedSet.isTreatSet
+        ? this.mstTreatSetInfo.filter(
+          obj => obj.treatmentSetCd === this.selectedSet.cd)
+        : this.ordMainInfo.filter(
+          obj => obj.ordNo === this.selectedOrdMain.ordNo);
       if (null === mstTreatSet || 1 > mstTreatSet.length) {
         return this.condInfo;
       }
 
       const mstCondInfo = JSON.parse(mstTreatSet[0].indCondInfo);
       this.isWarnTabooAllergyFlag = false;
-      var numbers = null;
-      var decPoint = null;
-
+      // Vue2 と同様に関数スコープ内で使い回す一時変数を宣言する。
+      let numbers = null;
+      let decPoint = null;
       for (const key in mstCondInfo) {
         const cond = this.condInfo.filter(obj => obj.cond === key);
 
@@ -1559,8 +1558,7 @@ export default {
         if ("1" === key) {
           // 治療時間
           cond[0].value = `${Math.floor(
-            mstCondInfo[key].value / 60
-          )}:${`00${mstCondInfo[key].value % 60}`.slice(-2)}`;
+            mstCondInfo[key].value / 60)}:${`00${mstCondInfo[key].value % 60}`.slice(-2)}`;
         } else if ("2" === key) {
           // VA
           const vaCd = mstCondInfo[key].value;
@@ -1590,8 +1588,7 @@ export default {
           if (this.targetWeightOfDate === null) {
             if (
             mstCondInfo[key].value == '-1' || // mod #9973 value Number→文字列  shiyw
-            mstCondInfo[key].value === null
-          ) {
+            mstCondInfo[key].value === null) {
             cond[0].value = "DWと同じ";
             cond[0].unit = null;
           } else {
@@ -1636,11 +1633,11 @@ export default {
             cond[0].value = "";
           } else if (null !== this.mstEquipmentTabooAllergyInfo) {
             const mstEquipment = this.mstEquipmentTabooAllergyInfo.filter(
-              obj => obj.equipmentCd == equipmentCd // mod #9973 value Number→文字列  shiyw
-            );
+              obj => obj.equipmentCd == equipmentCd
+            ); // mod #9973 value Number→文字列  shiyw
             const mstEquipmentSub = this.mstEquipmentInfo.filter(
-              obj => obj.equipmentCd == equipmentCd // mod #9973 value Number→文字列  shiyw
-            );
+              obj => obj.equipmentCd == equipmentCd
+            ); // mod #9973 value Number→文字列  shiyw
             if (0 < mstEquipment.length) {
               if (mstEquipment[0].equipmentName !== mstEquipmentSub[0].equipmentName) {
                 cond[0].isTabooAllergy = true;
@@ -1660,11 +1657,11 @@ export default {
             cond[0].value = "";
           } else if (null !== this.mstEquipmentTabooAllergyInfo) {
             const mstEquipment = this.mstEquipmentTabooAllergyInfo.filter(
-              obj => obj.equipmentCd == equipmentCd // mod #9973 value Number→文字列  shiyw
-            );
+              obj => obj.equipmentCd == equipmentCd
+            ); // mod #9973 value Number→文字列  shiyw
             const mstEquipmentSub = this.mstEquipmentInfo.filter(
-              obj => obj.equipmentCd == equipmentCd // mod #9973 value Number→文字列  shiyw
-            );
+              obj => obj.equipmentCd == equipmentCd
+            ); // mod #9973 value Number→文字列  shiyw
             if (0 < mstEquipment.length) {
               if (mstEquipment[0].equipmentName !== mstEquipmentSub[0].equipmentName) {
                 cond[0].isTabooAllergy = true;
@@ -1700,8 +1697,7 @@ export default {
             this.condInfo.filter(obj => obj.cond === "17")[0].unit = "";
           } else if (
             null !== this.mstMedicineTabooAllergyInfo &&
-            null !== this.mstMedicineMixTabooAllergyInfo
-          ) {
+            null !== this.mstMedicineMixTabooAllergyInfo) {
             let mstDataInfo = this.mstMedicineTabooAllergyInfo;
             let mstDataInfoSub = this.mstMedicineInfo;
             let mstCd = "medicineCd";
@@ -1772,8 +1768,7 @@ export default {
             this.condInfo.filter(obj => obj.cond === "22")[0].unit = "";
           } else if (
             null !== this.mstMedicineTabooAllergyInfo &&
-            null !== this.mstMedicineMixTabooAllergyInfo
-          ) {
+            null !== this.mstMedicineMixTabooAllergyInfo) {
             let mstDataInfo = this.mstMedicineTabooAllergyInfo;
             let mstDataInfoSub = this.mstMedicineInfo;
             let mstCd = "medicineCd";
@@ -1860,8 +1855,7 @@ export default {
             this.condInfo.filter(obj => obj.cond === "28")[0].unit = "";
           } else if (
             null !== this.mstMedicineTabooAllergyInfo &&
-            null !== this.mstMedicineMixTabooAllergyInfo
-          ) {
+            null !== this.mstMedicineMixTabooAllergyInfo) {
             let mstDataInfo = this.mstMedicineTabooAllergyInfo;
             let mstDataInfoSub = this.mstMedicineInfo;
             let mstCd = "medicineCd";
@@ -1894,16 +1888,13 @@ export default {
               if (null !== mstMedicine[0].unit && "" !== mstMedicine[0].unit) {
                 // 抗凝固剤ワンショット量(26)の単位
                 this.condInfo.filter(
-                  obj => obj.cond === "26"
-                )[0].unit = ` ${mstMedicine[0].unit}`;
+                  obj => obj.cond === "26")[0].unit = ` ${mstMedicine[0].unit}`;
                 // 抗凝固剤持続速度(27)の単位
                 this.condInfo.filter(
-                  obj => obj.cond === "27"
-                )[0].unit = ` ${mstMedicine[0].unit}/h`;
+                  obj => obj.cond === "27")[0].unit = ` ${mstMedicine[0].unit}/h`;
                 // 抗凝固剤持続総量(28)の単位
                 this.condInfo.filter(
-                  obj => obj.cond === "28"
-                )[0].unit = ` ${mstMedicine[0].unit}`;
+                  obj => obj.cond === "28")[0].unit = ` ${mstMedicine[0].unit}`;
               } else {
                 // 抗凝固剤ワンショット量(26)の単位
                 this.condInfo.filter(obj => obj.cond === "26")[0].unit = "";
@@ -2042,8 +2033,7 @@ export default {
         return;
       }
       const mstTreatSet = this.mstTreatSetInfo.filter(
-        obj => obj.treatmentSetCd === this.selectedSet.cd
-      );
+        obj => obj.treatmentSetCd === this.selectedSet.cd);
       if (null === mstTreatSet || 1 > mstTreatSet.length) {
         return;
       }
@@ -2063,11 +2053,9 @@ export default {
           mstMediName = "medicineMixName";
         }
         const mstMedicine = mstMedi.filter(
-          obj => obj[mstMediCd] === mediInfo[key].cd
-        );
+          obj => obj[mstMediCd] === mediInfo[key].cd);
         const mstMedicineSub = mstMediSub.filter(
-          obj => obj[mstMediCd] === mediInfo[key].cd
-        );
+          obj => obj[mstMediCd] === mediInfo[key].cd);
         let medicineName = "";
         let unit = "";
         let isTabooAllergy = false;
@@ -2095,15 +2083,13 @@ export default {
         }
         let procedureName = "";
         const mstProcedure = this.mstProcedureInfo.filter(
-          obj => obj.procedureCd === mediInfo[key].procedure_cd
-        );
+          obj => obj.procedureCd === mediInfo[key].procedure_cd);
         if (0 < mstProcedure.length) {
           procedureName = mstProcedure[0].pricedureName;
         }
         let timingName = "";
         const mstTiming = this.mstMedicateTimingInfo.filter(
-          obj => obj.medicateTimingCd === mediInfo[key].timing_cd
-        );
+          obj => obj.medicateTimingCd === mediInfo[key].timing_cd);
         if (0 < mstTiming.length) {
           timingName = mstTiming[0].medicateTimingName;
         }
@@ -2125,18 +2111,11 @@ export default {
      */
     setEuquipInfo() {
       this.equipInfo = [];
-      let mstTreatSet = null;
-      if (this.selectedSet.isTreatSet) {
-        // 治療方法セットから取得
-        mstTreatSet = this.mstTreatSetInfo.filter(
-          obj => obj.treatmentSetCd === this.selectedSet.cd
-        );
-      } else {
-        // 治療情報から取得
-        mstTreatSet = this.ordMainInfo.filter(
-          obj => obj.ordNo === this.selectedOrdMain.ordNo
-        );
-      }
+      const mstTreatSet = this.selectedSet.isTreatSet
+        ? this.mstTreatSetInfo.filter(
+          obj => obj.treatmentSetCd === this.selectedSet.cd)
+        : this.ordMainInfo.filter(
+          obj => obj.ordNo === this.selectedOrdMain.ordNo);
       if (null === mstTreatSet || 1 > mstTreatSet.length) {
         return;
       }
@@ -2149,8 +2128,7 @@ export default {
         let equipType = equipInfo[key].equip_type;
 
         const mstEquipment = this.mstEquipmentTabooAllergyInfo.filter(
-          obj => obj.equipmentCd === equipInfo[key].cd
-        );
+          obj => obj.equipmentCd === equipInfo[key].cd);
 
         let mstEquipmentSub;
         let equipmentName = "";
@@ -2158,8 +2136,7 @@ export default {
         let isTabooAllergy = false;
         if (equipType == 0) {
           mstEquipmentSub = this.mstEquipmentInfo.filter(
-            obj => obj.equipmentCd === equipInfo[key].cd
-          );
+            obj => obj.equipmentCd === equipInfo[key].cd);
           if (0 < mstEquipment.length) {
             if (mstEquipment[0].equipmentName !== mstEquipmentSub[0].equipmentName) {
               isTabooAllergy = true;
@@ -2215,18 +2192,11 @@ export default {
      */
     setCommentInfo() {
       this.commentInfo = [];
-      let mstTreatSet = null;
-      if (this.selectedSet.isTreatSet) {
-        // 治療方法セットから取得
-        mstTreatSet = this.mstTreatSetInfo.filter(
-          obj => obj.treatmentSetCd === this.selectedSet.cd
-        );
-      } else {
-        // 治療情報から取得
-        mstTreatSet = this.ordMainInfo.filter(
-          obj => obj.ordNo === this.selectedOrdMain.ordNo
-        );
-      }
+      const mstTreatSet = this.selectedSet.isTreatSet
+        ? this.mstTreatSetInfo.filter(
+          obj => obj.treatmentSetCd === this.selectedSet.cd)
+        : this.ordMainInfo.filter(
+          obj => obj.ordNo === this.selectedOrdMain.ordNo);
       if (null === mstTreatSet || 1 > mstTreatSet.length) {
         return;
       }
@@ -2261,8 +2231,7 @@ export default {
       error => {
         getErrorMessage('IndPlanCreate.vue', 'itemCheck', error);
           throw new Error(error);
-      }
-    );
+      });
     if (!deviceSetInfo) {
       return false;
     }
@@ -2367,7 +2336,7 @@ export default {
           if ((deviceMode === DEVICEMODE.OHDF && itemValue_24 > itemOHDF_24_Max && itemValue_21 === '後補液') ||
           (deviceMode === DEVICEMODE.OHF && itemValue_24 > itemOHF_24_Max && itemValue_21 === '後補液') ||
           (deviceMode === DEVICEMODE.OHDF && itemValue_24 > itemOHDF_24_Max_A && itemValue_21 === '前補液') ||
-          (deviceMode === DEVICEMODE.OHF && itemValue_24 > itemOHF_24_Max_A && itemValue_21 === '前補液') ) {
+          (deviceMode === DEVICEMODE.OHF && itemValue_24 > itemOHF_24_Max_A && itemValue_21 === '前補液')) {
             if (itemValue_24 > itemOHDF_24_Max){
               // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
               // if (!await this.showConfirmDialog('10400010','補液速度上限チェック')) {
@@ -2401,19 +2370,19 @@ export default {
 
       if ("" !== stringParams) {
         // add FNSI 373,374修正対応 陳 start
-        if(this.$parent.$parent.messageDialogInfo !== undefined){
+        if(this._indicationDialogOwner().messageDialogInfo !== undefined){
         // add FNSI 373,374修正対応 陳 end
 
-          this.$parent.$parent.messageDialogInfo.messageCd = 22010001;
-          this.$parent.$parent.messageDialogInfo.type = "1";
-          this.$parent.$parent.messageDialogInfo.stringParams = [stringParams];
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.messageCd = 22010001;
+          this._indicationDialogOwner().messageDialogInfo.type = "1";
+          this._indicationDialogOwner().messageDialogInfo.stringParams = [stringParams];
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         }
       } else {
       //add FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.99(外結)対応 韓 start
       if (await this.itemCheck(structData)) {
-          this.$parent.$parent.isUpdating = false;
-          this.$parent.$parent.updateDisable = false;
+          this._indicationDialogOwner().isUpdating = false;
+          this._indicationDialogOwner().updateDisable = false;
         console.log("IndPlanCreate.vue return; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         return;
@@ -2437,22 +2406,20 @@ export default {
           return;
         } else if (true === datelist && !structData.isSkipFlag) {
           // add FNSI 373,374修正対応 陳 start
-          if(this.$parent.$parent.messageDialogInfo !== undefined){
+          if(this._indicationDialogOwner().messageDialogInfo !== undefined){
           // add FNSI 373,374修正対応 陳 end
 
             // 治療日リストに重複があり、かつスキップフラグがtureでない場合
-            this.$parent.$parent.messageDialogInfo.messageCd = this.$parent
-              .$parent.weekEdit
+            this._indicationDialogOwner().messageDialogInfo.messageCd = this._indicationFlowOwner().weekEdit
               ? 22010004
               : 12010001;
-            this.$parent.$parent.messageDialogInfo.type = this.$parent.$parent
-              .weekEdit
+            this._indicationDialogOwner().messageDialogInfo.type = this._indicationFlowOwner().weekEdit
               ? "1"
               : "2";
-            this.$parent.$parent.messageDialogInfo.stringParams = [
+            this._indicationDialogOwner().messageDialogInfo.stringParams = [
               "<br>予定が重ならない日のみ登録しますか？"
             ];
-            this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+            this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
             // mod 8347 【デグレ】????患者治療割り当てができない dou start
             // return;
           } else {
@@ -2471,16 +2438,16 @@ export default {
           // mod 8347 【デグレ】????患者治療割り当てができない dou end
         } else if (this.isWarnTabooAllergyFlag && !structData.acceptWarnFlag) {
           // add FNSI 373,374修正対応 陳 start
-          if(this.$parent.$parent.messageDialogInfo !== undefined) {
+          if(this._indicationDialogOwner().messageDialogInfo !== undefined) {
           // add FNSI 373,374修正対応 陳 end
 
             // 禁忌・アレルギー警告フラグがtrueの場合、かつ警告受け入れフラグがfalseの場合
-            this.$parent.$parent.messageDialogInfo.messageCd = 12010004;
-            this.$parent.$parent.messageDialogInfo.type = "2";
-            this.$parent.$parent.messageDialogInfo.stringParams = [
+            this._indicationDialogOwner().messageDialogInfo.messageCd = 12010004;
+            this._indicationDialogOwner().messageDialogInfo.type = "2";
+            this._indicationDialogOwner().messageDialogInfo.stringParams = [
               "<br>登録を行いますか？"
             ];
-            this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+            this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
             // mod 8347 【デグレ】????患者治療割り当てができない dou start
             // return;
           }
@@ -2511,16 +2478,16 @@ export default {
         // 使用期限のチェック
         if (!structData.chkExpiredFlag  && !await this.chkInExpiryDate(treatSetObj, structData.treatDateList[0], structData.treatDateList[structData.treatDateList.length - 1])) {
           // add FNSI 373,374修正対応 陳 start
-          if(this.$parent.$parent.messageDialogInfo !== undefined){
+          if(this._indicationDialogOwner().messageDialogInfo !== undefined){
           // add FNSI 373,374修正対応 陳 end
 
             // 期限切れがあったらダイアログを表示
-            this.$parent.$parent.messageDialogInfo.messageCd = 12010008;
-            this.$parent.$parent.messageDialogInfo.type = "2";
-            this.$parent.$parent.messageDialogInfo.stringParams = [
+            this._indicationDialogOwner().messageDialogInfo.messageCd = 12010008;
+            this._indicationDialogOwner().messageDialogInfo.type = "2";
+            this._indicationDialogOwner().messageDialogInfo.stringParams = [
               this.expiredMsg + "<br>登録してよろしいですか？"
             ];
-            this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+            this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
             console.log("IndPlanCreate.vue updateIndInfo return; this.finishLoadingScreen();");
             this.finishLoadingScreen();
             return;
@@ -2536,7 +2503,6 @@ export default {
 
           // 治療種別を設定
           structData.cycleWeek = this.getTreatType(structData);
-
 
           // mod FNSI 373,374修正対応 陳 start
           // await this.createIndPlan(structData);
@@ -2710,8 +2676,7 @@ export default {
       paramJson.week_pattern = JSON.stringify(structData.indWeeks);
       const response = await ApiHelper.post(
         "/mainData/TreatDateList",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getTreatDateList', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -2724,8 +2689,8 @@ export default {
 
       const treatDateList = [];
 
-      const startDate = moment(structData.indStartDate);
-      const endDate = moment(structData.indEndDate);
+      let startDate = dayjs(structData.indStartDate);
+      const endDate = dayjs(structData.indEndDate);
       while (startDate <= endDate) {
         let buf = startDate.day();
         if (0 === buf) buf = 7;
@@ -2743,8 +2708,7 @@ export default {
                   obj =>
                     obj.indTreatmentCd === treatSetObj.indTreatmentCd &&
                     obj.indKurCd === 0 &&
-                    obj.treatDate === startDate.format("YYYYMMDD").toString()
-                );
+                    obj.treatDate === startDate.format("YYYYMMDD").toString());
               }
 
             // 直近の過去指示以外の場合
@@ -2756,8 +2720,7 @@ export default {
                   // obj.indKurCd === 0 &&
                   (this.selOrdNo == 'selOrdNo' ? this.kurInfo.kurCd === obj.indKurCd : obj.indKurCd === 0) &&
                   // mod #12465 同患者同日同治療方法同クールの使用制限をしてもメッセージがでない zkm end
-                  obj.treatDate === startDate.format("YYYYMMDD").toString()
-              );
+                  obj.treatDate === startDate.format("YYYYMMDD").toString());
             }
 
             // const ordMian = response.data.filter(
@@ -2777,7 +2740,7 @@ export default {
             }
           }
         }
-        startDate.add(1, "days");
+        startDate = startDate.add(1, "days");
       }
       return treatDateList;
     },
@@ -2795,8 +2758,7 @@ export default {
       paramJson.week_pattern = JSON.stringify(structData.indWeeks);
       const response = await ApiHelper.post(
         "/mainData/TreatDateList",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getKakujituTreatDateList', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -2809,8 +2771,8 @@ export default {
 
       const treatDateList = [];
 
-      const startDate = moment(structData.indStartDate);
-      const endDate = moment(structData.indEndDate);
+      let startDate = dayjs(structData.indStartDate);
+      const endDate = dayjs(structData.indEndDate);
       while (startDate <= endDate) {
         let buf = startDate.day();
         switch (buf) {
@@ -2839,8 +2801,7 @@ export default {
               obj =>
                 obj.indTreatmentCd === this.selectedSet.treatmentCd &&
                 obj.indKurCd === 0 &&
-                obj.treatDate === startDate.format("YYYYMMDD").toString()
-            );
+                obj.treatDate === startDate.format("YYYYMMDD").toString());
             if (0 === ordMian.length) {
               treatDateList.push(startDate.format("YYYYMMDD").toString());
             } else if (!structData.isSkipFlag) {
@@ -2848,7 +2809,7 @@ export default {
             }
           }
         }
-        startDate.add(2, "days");
+        startDate = startDate.add(2, "days");
       }
       return treatDateList;
     },
@@ -2866,8 +2827,7 @@ export default {
       paramJson.week_pattern = JSON.stringify(structData.indWeeks);
       const response = await ApiHelper.post(
         "/mainData/TreatDateList",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getKakusyuTreatDateList', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -2880,8 +2840,8 @@ export default {
 
       const treatDateList = [];
 
-      const startDate = moment(structData.indStartDate);
-      const endDate = moment(structData.indEndDate);
+      let startDate = dayjs(structData.indStartDate);
+      const endDate = dayjs(structData.indEndDate);
       while (startDate <= endDate) {
         let buf = startDate.day();
         if (0 === buf) buf = 7;
@@ -2892,8 +2852,7 @@ export default {
               obj =>
                 obj.indTreatmentCd === this.selectedSet.treatmentCd &&
                 obj.indKurCd === 0 &&
-                obj.treatDate === startDate.format("YYYYMMDD").toString()
-            );
+                obj.treatDate === startDate.format("YYYYMMDD").toString());
             if (0 === ordMian.length) {
               treatDateList.push(startDate.format("YYYYMMDD").toString());
             } else if (!structData.isSkipFlag) {
@@ -2903,9 +2862,9 @@ export default {
         }
         if (7 === buf) {
           // 日曜の場合は次週の月曜まで日付を進める
-          startDate.add(8, "days");
+          startDate = startDate.add(8, "days");
         } else {
-          startDate.add(1, "days");
+          startDate = startDate.add(1, "days");
         }
       }
       return treatDateList;
@@ -2961,7 +2920,7 @@ export default {
       // FNSI 373,374修正対応 陳 end
 
       // add #10553 #10125 ????患者予定作成元識別parm追加 piao start
-      let path = router.currentRoute.path;
+      let path = getCurrentRoutePath();
       sendJson.screan_string = "PAT_VIEWER";
       if (path && /status-list/.test(path)){
         sendJson.screan_string = "STATUS_LIST";
@@ -2976,9 +2935,8 @@ export default {
       if (structData.type && '' === structData.type) {
         // add #12465 同患者同日同治療方法同クールの使用制限をしてもメッセージがでない zkm end
         response = await ApiHelper.post(
-          "/mainData/insertByTreatSetCd/",
-          sendJson
-        ).catch(error => {
+          "/mainData/insertByTreatSetCd",
+          sendJson).catch(error => {
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
           getErrorMessage('IndPlanCreate.vue', 'createIndPlan', error);
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -2989,9 +2947,8 @@ export default {
         // add #12465 同患者同日同治療方法同クールの使用制限をしてもメッセージがでない zkm start
       } else {
         response = await ApiHelper.post(
-          "/patients/ord/createByTreatSetCd/",
-          sendJson
-        ).catch(error => {
+          "/patients/ord/createByTreatSetCd",
+          sendJson).catch(error => {
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
           getErrorMessage('IndPlanCreate.vue', 'createIndPlan', error);
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3024,27 +2981,27 @@ export default {
       }
       //add FNSI-指示値・装置設定・装置プログラムの相関チェック 安寧 end
       if (200 === response.status && undefined !== response.data.msgCd) {
-        this.$parent.$parent.messageDialogInfo.messageCd = response.data.msgCd;
-        this.$parent.$parent.messageDialogInfo.type = "1";
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.messageCd = response.data.msgCd;
+        this._indicationDialogOwner().messageDialogInfo.type = "1";
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         console.log("IndPlanCreate.vue createIndPlan return; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         return;
       }
 
       // add FNSI 373,374修正対応 陳 start
-      if(response.status == 200 && response.data.errorMessage !== undefined　&& response.data.errorMessage !== ""){
+      if (response.status == 200 && response.data.errorMessage !== undefined && response.data.errorMessage !== "") {
         console.log("IndPlanCreate.vue createIndPlan return { result: true , message: response.data.errorMessage }; this.finishLoadingScreen();");
         this.finishLoadingScreen();
 
         return { result: true , message: response.data.errorMessage };
       }
 
-      if(this.$parent.selOrdNo=="selOrdNo"){
+      if(this._indicationSourceOwner().selOrdNo=="selOrdNo"){
 
         // mod FNSI-指示値・装置設定・装置プログラムの相関チェック 陳 start
         // this.$parent.selOrdNo = response.data[0];
-        this.$parent.selOrdNo = JSON.parse(response.data.ordNoList)[0];
+        this._indicationSourceOwner().selOrdNo = JSON.parse(response.data.ordNoList)[0];
         console.log("IndPlanCreate.vue createIndPlan return { result: true , message:  }; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         return { result: true , message: "" };
@@ -3109,9 +3066,8 @@ export default {
 
       //データの送信
       const response = await ApiHelper.post(
-        "/mainData/insertByOrdNo/",
-        sendJson
-      ).catch(error => {
+        "/mainData/insertByOrdNo",
+        sendJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'createIndPlanByOrdNo', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3121,18 +3077,18 @@ export default {
       });
 
       if (200 === response.status && undefined !== response.data.msgCd) {
-        this.$parent.$parent.messageDialogInfo.messageCd = response.data.msgCd;
-        this.$parent.$parent.messageDialogInfo.type = "1";
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.messageCd = response.data.msgCd;
+        this._indicationDialogOwner().messageDialogInfo.type = "1";
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         console.log("IndPlanCreate.vue createIndPlanByOrdNo return; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         return;
       }
 
       // add FNSI 373,374修正対応 陳 start
-      if(this.$parent.selOrdNo=="selOrdNo"){
+      if(this._indicationSourceOwner().selOrdNo=="selOrdNo"){
 
-        this.$parent.selOrdNo = response.data[0];
+        this._indicationSourceOwner().selOrdNo = response.data[0];
       }
       // end FNSI 373,374修正対応 陳 end
 
@@ -3153,8 +3109,8 @@ export default {
       paramJson.pat_id = this.selectedPatId;
       // mod FNSI-予定内容遅延問題対応 李 start
       if (this.getIndPlanCreateDate && this.getIndPlanCreateDate[0] && this.getIndPlanCreateDate[1]) {
-        paramJson.ind_start_date = moment(this.getIndPlanCreateDate[0]).add(-7, "days").format("YYYY-MM-DD");
-        paramJson.ind_end_date = moment(this.getIndPlanCreateDate[1]).add(7, "days").format("YYYY-MM-DD");
+        paramJson.ind_start_date = dayjs(this.getIndPlanCreateDate[0]).add(-7, "days").format("YYYY-MM-DD");
+        paramJson.ind_end_date = dayjs(this.getIndPlanCreateDate[1]).add(7, "days").format("YYYY-MM-DD");
       } else {
         paramJson.ind_start_date = "0001-01-01";
         paramJson.ind_end_date = "9999-12-31";
@@ -3164,8 +3120,7 @@ export default {
 
       const response = await ApiHelper.post(
         `/mainData/TreatDateList`,
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getOrdmain', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3222,15 +3177,14 @@ export default {
 
       // 直近過去指示のリストを追加
       // 直近日の取得
-      const planDate = moment(this.planStartDate).format("YYYYMMDD");
+      const planDate = dayjs(this.planStartDate).format("YYYYMMDD");
       const treatDate = this.getMostRecentDay(planDate);
       if (treatDate) {
-        this.selectedDialDate = moment(treatDate).format("YYYY-MM-DD");
+        this.selectedDialDate = dayjs(treatDate).format("YYYY-MM-DD");
       }
       // 治療情報の取得
       const ordmain = this.ordMainInfo.filter(
-        obj => obj.treatDate === treatDate
-      );
+        obj => obj.treatDate === treatDate);
       if (0 < ordmain.length) {
         // del FNSI-予定内容遅延問題対応 李 start
         // const ordNoInfo = [];
@@ -3259,23 +3213,20 @@ export default {
       } else {
         this.ordMainList = [];
         this.showPastInd = true;
-        const findDate = moment(this.selectedDialDate).format("YYYYMMDD");
+        const findDate = dayjs(this.selectedDialDate).format("YYYYMMDD");
         const treatDate = this.getMostRecentDay(findDate);
         const ordmain = this.ordMainInfo.filter(
-          obj => obj.treatDate === treatDate
-        );
+          obj => obj.treatDate === treatDate);
         if (0 < ordmain.length) {
           for (const key in ordmain) {
             const mstTreatment = this.mstTreatmentInfo.find(
-              obj => obj.treatmentCd === ordmain[key].indTreatmentCd
-            );
+              obj => obj.treatmentCd === ordmain[key].indTreatmentCd);
             const treatmentName = mstTreatment ? mstTreatment.treatmentName : "削除済み";
             let kurName = "未登録";
             let kurStartTime = "";
             if (ordmain[key].indKurCd) {
               const mstKur = this.mstKurInfo.find(
-                obj => obj.kurCd === ordmain[key].indKurCd
-              );
+                obj => obj.kurCd === ordmain[key].indKurCd);
               kurName = "削除済み";
               if (mstKur) {
                 kurName = mstKur.kurName;
@@ -3305,13 +3256,13 @@ export default {
      * 指定日の直近治療予定日を取得する
      * @param {String} 検索基準日
      */
-    getMostRecentDay(findDay = moment(this.planStartDate).format("YYYYMMDD")) {
+    getMostRecentDay(findDay = dayjs(this.planStartDate).format("YYYYMMDD")) {
       const upper = this.selectedDates.find(date => date >= findDay);
       const lower = [...this.selectedDates].reverse().find(date => date <= findDay);
       const treatDate = lower || upper;
 
       if (treatDate) {
-        this.selectedTreatDate = moment(treatDate).format("YYYY/MM/DD");
+        this.selectedTreatDate = dayjs(treatDate).format("YYYY/MM/DD");
       }
 
       return treatDate;
@@ -3335,8 +3286,7 @@ export default {
           getErrorMessage('IndPlanCreate.vue', 'getMstKur', error);
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
           throw error;
-        }
-      );
+        });
 
       if (200 !== response.status) {
         return null;
@@ -3353,8 +3303,7 @@ export default {
       this.mstTreatmentInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstTreatment",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getMstTreatment', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3380,8 +3329,7 @@ export default {
           getErrorMessage('IndPlanCreate.vue', 'getMstVa', error);
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
           throw error;
-        }
-      );
+        });
 
       if (200 !== response.status) {
         return null;
@@ -3398,8 +3346,7 @@ export default {
       this.mstDialyzerInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstDialyzer",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getMstDialyzer', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3418,8 +3365,7 @@ export default {
     async getMstDialyzerTabooAllergy() {
       this.mstDialyzerTabooAllergyInfo = null;
       const response = await ApiHelper.get(
-        `/mstInfo/mstDialyzer/${this.selectedPatId}`
-      ).catch(error => {
+        `/mstInfo/mstDialyzer/${this.selectedPatId}`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getMstDialyzerTabooAllergy', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3441,8 +3387,7 @@ export default {
       this.mstMedicineInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstMedicine",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getMstMedicine', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3461,8 +3406,7 @@ export default {
     async getMstMedicineTabooAllergy() {
       this.mstMedicineTabooAllergyInfo = null;
       const response = await ApiHelper.get(
-        `/mstInfo/mstMedicine/${this.selectedPatId}`
-      ).catch(error => {
+        `/mstInfo/mstMedicine/${this.selectedPatId}`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getMstMedicineTabooAllergy', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3484,8 +3428,7 @@ export default {
       this.mstMedicineMixInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstMedicineMix",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getMstMedicineMix', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3504,8 +3447,7 @@ export default {
     async getMstMedicineMixTabooAllergy() {
       this.mstMedicineMixTabooAllergyInfo = null;
       const response = await ApiHelper.get(
-        `/mstInfo/mstMedicineMix/${this.selectedPatId}`
-      ).catch(error => {
+        `/mstInfo/mstMedicineMix/${this.selectedPatId}`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getMstMedicineMixTabooAllergy', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3527,8 +3469,7 @@ export default {
       this.mstProcedureInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstProcedure",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getMstProcedure', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3550,8 +3491,7 @@ export default {
       this.mstMedicateTimingInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstMedicateTiming",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getMstMedicateTiming', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3573,8 +3513,7 @@ export default {
       this.mstEquipmentInfo = null;
       const response = await ApiHelper.get(
         "/mstInfo/mstEquipment",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getMstEquipment', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3592,8 +3531,7 @@ export default {
     async getMstEquipmentTabooAllergy() {
       this.mstEquipmentTabooAllergyInfo = null;
       const response = await ApiHelper.get(
-        `/mstInfo/mstEquipment/${this.selectedPatId}`
-      ).catch(error => {
+        `/mstInfo/mstEquipment/${this.selectedPatId}`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getMstEquipmentTabooAllergy', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3610,8 +3548,7 @@ export default {
      */
     async getmstDeviceSetInfo() {
       this.mstDeviceSetInfo = await getDeviceSetInfoMst(
-        this.getFacilityCd
-      ).catch(error => {
+        this.getFacilityCd).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'getmstDeviceSetInfo', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3685,12 +3622,12 @@ export default {
         : null;
       if (this.isWarnTabooAllergyFlag && !structData.acceptWarnFlag) {
         // 禁忌・アレルギー警告フラグがtrueの場合、かつ警告受け入れフラグがfalseの場合
-        this.$parent.$parent.$parent.messageDialogInfo.messageCd = 12010004;
-        this.$parent.$parent.$parent.messageDialogInfo.type = "2";
-        this.$parent.$parent.$parent.messageDialogInfo.stringParams = [
+        this._indicationDialogOwner().messageDialogInfo.messageCd = 12010004;
+        this._indicationDialogOwner().messageDialogInfo.type = "2";
+        this._indicationDialogOwner().messageDialogInfo.stringParams = [
           "<br>登録を行いますか？"
         ];
-        this.$parent.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         console.log("IndPlanCreate.vue updateTreatMethod return; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         return;
@@ -3703,9 +3640,8 @@ export default {
       sendJson.creat = true;
       // add FNSI-7325 劉全航 end
       const response = await ApiHelper.post(
-        "/mainData/updatetByTreatSetCd2/",
-        sendJson
-      ).catch(error => {
+        "/mainData/updatetByTreatSetCd2",
+        sendJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndPlanCreate.vue', 'updateTreatMethod', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3720,8 +3656,7 @@ export default {
         // 同日予定でベッド未登録となったオーダー情報を取得
         const responseDuplicatedOrdInfo = await ApiHelper.post(
           `/mainData/getDuplicatedOrdList/${structData.facilityCd}`,
-          response.data.duplicatedOrdNoList
-        ).catch(error => {
+          response.data.duplicatedOrdNoList).catch(error => {
           getErrorMessage('IndPlanCreate.vue', 'updateTreatMethod', error);
           console.log("IndPlanCreate.vue updateTreatMethod throw error; this.finishLoadingScreen();");
           this.finishLoadingScreen();
@@ -3740,8 +3675,7 @@ export default {
           // ベッド未登録となったオーダー情報を取得
           const responseScheduleInfo = await ApiHelper.post(
             `/mainData/getProcessOrdSchedule/${structData.facilityCd}/1`,
-            response.data.updateIndSchedule
-          ).catch(error => {
+            response.data.updateIndSchedule).catch(error => {
             //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
             getErrorMessage('IndSchEdit.vue', 'updateIndInfo', error);
             //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3777,10 +3711,10 @@ export default {
       //add 8117 治療方法編集画面から治療方法セットを適用すると既に設定しているクール・ベッド・治療開始時刻がすべて未登録となる 張 end
       let isHideModal = true;
       if (200 === response.status && undefined !== response.data.msgCd) {
-        if (_.has(this.$parent.$parent, "showMessage")) {
-          this.$parent.$parent.showMessage(response.data.msgCd);
+        if (Object.prototype.hasOwnProperty.call(this._indicationDialogOwner(), "showMessage")) {
+          this._indicationDialogOwner().showMessage(response.data.msgCd);
         } else {
-          this.$parent.showMessage(response.data.msgCd);
+          this._indicationSourceOwner().showMessage(response.data.msgCd);
         }
         isHideModal = false;
       }
@@ -3953,9 +3887,9 @@ export default {
 
           // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
           if (msgList.includes("22020004")) {
-            this.$parent.$parent.$parent.messageDialogInfo.messageCd = 22020004;
-            this.$parent.$parent.$parent.messageDialogInfo.type = "1";
-            this.$parent.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+            this._indicationDialogOwner().messageDialogInfo.messageCd = 22020004;
+            this._indicationDialogOwner().messageDialogInfo.type = "1";
+            this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
             console.log("IndTreatMethod.vue updateIndInfo return; this.finishLoadingScreen();");
             this.finishLoadingScreen();
             // 処理終了
@@ -3983,10 +3917,10 @@ export default {
         if (this.isUpdateMethod) {
           return true;
         } else {
-          this.$parent.$parent.messageDialogInfo.messageCd = 22010001;
-          this.$parent.$parent.messageDialogInfo.stringParams = ["予定内容"];
-          this.$parent.$parent.messageDialogInfo.type = "1";
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.messageCd = 22010001;
+          this._indicationDialogOwner().messageDialogInfo.stringParams = ["予定内容"];
+          this._indicationDialogOwner().messageDialogInfo.type = "1";
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         }
       }
     },
@@ -4024,8 +3958,7 @@ export default {
       } else {
         const devMode = getChartMode(
           devType,
-          this.selectedDeviceSetInfo[devType]
-        );
+          this.selectedDeviceSetInfo[devType]);
         const devData =
           devMode === null
             ? this.mstDeviceSetInfo.ord[devType]
@@ -4069,8 +4002,7 @@ export default {
       const retVal = createChartData(
         devType,
         this.getDeviceSetSrc(devType),
-        condInfo
-      );
+        condInfo);
 
       return subType === undefined ? retVal : retVal[subType];
     },
@@ -4080,12 +4012,10 @@ export default {
       // 透析量プログラム項目の表示フラグ更新
       this.isDispDialysisAmountProgram = this.getAdvancedSettings.func_advcds.some(
         setting =>
-          setting.func_advcd === ADVANCED_SETTINGS.DIALYSIS_AMOUNT_PROGRAM
-      );
+          setting.func_advcd === ADVANCED_SETTINGS.DIALYSIS_AMOUNT_PROGRAM);
       // BV-UFC項目の表示フラグ更新
       this.isDispBvUfc = this.getAdvancedSettings.func_advcds.some(
-        setting => setting.func_advcd === ADVANCED_SETTINGS.BV_UFC
-      );
+        setting => setting.func_advcd === ADVANCED_SETTINGS.BV_UFC);
     },
 
     /**
@@ -4114,8 +4044,8 @@ export default {
             }else {
               calculationDate.setDate(startDay.getDate() + offset);
             }
-            if (moment(calculationDate).isSameOrAfter(startDay)
-              && (targetDate === "" || moment(calculationDate).isBefore(targetDate))) {
+            if (dayjs(calculationDate).isSameOrAfter(startDay)
+              && (targetDate === "" || dayjs(calculationDate).isBefore(targetDate))) {
               targetDate = calculationDate;
             }
             weekFlg = true;
@@ -4126,18 +4056,18 @@ export default {
           targetDate = startDay;
         }
         // 目標日最近の日付DW取得
-        const tDate = moment(targetDate, "YYYYMMDD").add(1,"day");
+        const tDate = dayjs(targetDate, "YYYYMMDD").add(1,"day");
         let examDate = "";
         let ctlNo = "";
         let indValue = "";
         this.getPhysicalInfo.forEach(pInfo => {
-          if (pInfo.exam_date && moment(pInfo.exam_date).isBefore(moment(tDate).format("YYYY-MM-DD"))
+          if (pInfo.exam_date && dayjs(pInfo.exam_date).isBefore(dayjs(tDate).format("YYYY-MM-DD"))
             &&pInfo.dw !== undefined && pInfo.dw !== null) {
-            if (examDate === "" || moment(pInfo.exam_date).isAfter(examDate)) {
+            if (examDate === "" || dayjs(pInfo.exam_date).isAfter(examDate)) {
               examDate = pInfo.exam_date;
               indValue = pInfo.dw;
               ctlNo = pInfo.ctl_no;
-            }else if(moment(pInfo.exam_date).isSame(examDate)){
+            }else if(dayjs(pInfo.exam_date).isSame(examDate)){
               if (ctlNo && pInfo.ctl_no > ctlNo) {
                 examDate = pInfo.exam_date;
                 indValue = pInfo.dw;
@@ -4164,21 +4094,25 @@ export default {
       }
     },
     async searchTreatDateDw(){
+      this.startLoadingScreen();
+
       const paramJson = {
-            ind_start_date: this.$parent.structData.indStartDate,
-            facility_cd: this.$parent.structData.facilityCd,
-            week_pattern: JSON.stringify(this.$parent.structData.indWeeks),
-            ind_kur_cd: JSON.stringify(this.$parent.structData.selectedKur),
-            ind_treatment_cd: JSON.stringify(this.$parent.structData.selectedTreat),
-            pat_id: this.$parent.structData.patId,
-            ord_no: this.$parent.structData.ordNo
+            ind_start_date: this._indicationSourceOwner().structData.indStartDate,
+            facility_cd: this._indicationSourceOwner().structData.facilityCd,
+            week_pattern: JSON.stringify(this._indicationSourceOwner().structData.indWeeks),
+            ind_kur_cd: JSON.stringify(this._indicationSourceOwner().structData.selectedKur),
+            ind_treatment_cd: JSON.stringify(this._indicationSourceOwner().structData.selectedTreat),
+            pat_id: this._indicationSourceOwner().structData.patId,
+            ord_no: this._indicationSourceOwner().structData.ordNo
       }
       const response = await ApiHelper.post(
             "/mainData/getTreatDateDw",
-            paramJson
-          ).catch(error => {
+            paramJson).catch(error => {
             getErrorMessage('IndPlanCreate.vue', 'searchTreatDateDw', error);
             throw error;
+        })
+        .finally(() => {
+          this.finishLoadingScreen();
         });
         // DW
         if (response.data.dw != "") {
@@ -4246,7 +4180,7 @@ export default {
   flex: 1;
 }
 
-.cond-item-style >>> .highcharts-container {
+.cond-item-style :deep(.highcharts-container) {
   margin: 0 auto;
 }
 
@@ -4291,7 +4225,7 @@ export default {
   background-color: var(--pat-viewer-ind-cond-info-disabled);
 }
   @media print {
-  .cond-item-main-style >>> .cond-title-style {
+  .cond-item-main-style :deep(.cond-title-style){
     min-width:0 !important;
     max-width: none !important;
     flex-basis: calc(40% - 18px) !important;

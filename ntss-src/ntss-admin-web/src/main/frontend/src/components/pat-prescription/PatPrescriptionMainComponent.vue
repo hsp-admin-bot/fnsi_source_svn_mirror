@@ -66,7 +66,7 @@
 
         <v-ons-popover
           cancelable
-          :visible.sync="popoverVisible"
+          v-model:visible="popoverVisible"
           :target="popoverTarget"
           :direction="popoverDirection"
           :cover-target="false"
@@ -202,13 +202,15 @@
                 <th class="ntss-list-header-th-sticky list-event color-shadow" scope="col">内外</th>
                 <th class="ntss-list-header-th-sticky list-event color-shadow" scope="col">交付</th>
               </thead> -->
-            <tr>
-              <th class="color-header">交付日</th>
-              <!-- mod #10184 処方画面文言修正 宮崎 start -->
-              <th class="color-header">処方区分</th>
-              <!-- mod #10184 処方画面文言修正 宮崎 end -->
-              <th class="color-header">交付</th>
-            </tr>
+            <thead>
+              <tr>
+                <th class="color-header">交付日</th>
+                <!-- mod #10184 処方画面文言修正 宮崎 start -->
+                <th class="color-header">処方区分</th>
+                <!-- mod #10184 処方画面文言修正 宮崎 end -->
+                <th class="color-header">交付</th>
+              </tr>
+            </thead>
             <tbody>
               <tr
                 class="hover"
@@ -233,14 +235,14 @@
                   <!-- mod FNSI-改修内容 イベント一覧の日付直下に、施設名を表示する dou start -->
                   <!-- <label>{{item.issueDate}}</label> -->
                   <!-- mod no 3889 画面のデザイン不正 張 end -->
-                  <tr>
+                  <div class="row-block">
                     <label>{{ item.issueDate }}</label>
-                  </tr>
-                  <tr v-if="sharedFlag">
+                  </div>
+                  <div class="row-block" v-if="sharedFlag">
                     <label style="word-wrap: break-word">{{
                       item.facilityName
                     }}</label>
-                  </tr>
+                  </div>
                   <!-- mod FNSI-改修内容 イベント一覧の日付直下に、施設名を表示する dou end -->
                 </td>
                 <!-- mod FNSI-改修内容 他施設の場合、浅黄色背景にする dou start -->
@@ -306,18 +308,18 @@
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 // mod FNSI-改修内容 基本は他施設の場合には、画面項目編集不可 dou start
-// import { mapGetters, mapActions } from "vuex";
-import { mapGetters, mapActions, mapMutations } from "vuex";
+// import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 import { ApiHelper } from "../../apis/AxiosHelper";
 // mod FNSI-改修内容 基本は他施設の場合には、画面項目編集不可 dou end
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import PatHeaderControlMixin from "@/components/common/PatHeadControlMixin";
 import PatPrescriptionDetail from "@/components/pat-prescription/PatPrescriptionDetailComponent";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 import { filterListHospital, filterListIssued } from "@/constants/filterList";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 import { PAT_PRESCRIPTION } from "@/constants/defaultSettingConstants";
 import { calcTargetDate } from "@/functions/modals/default-setting/defaultSettingUtils";
@@ -343,11 +345,13 @@ import {
 // add #6570-処方の編集権限がない時の制限が、他の画面と異なる 徐博 end
 //#5590 2023/04/19 ×を常に表示するように修正 張博 start
 import DateInput from "@/components/common/DateInput.vue";
-import {messageFormat} from "@/functions/common/MessageFormat";
+import { getLatestHeaderElement, getHeaderHeight, getFooterMenuClientHeight, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
+
 //#5590 2023/04/19 ×を常に表示するように修正 張博 end
 
 export default {
-  props: {},
+
   components: {
     "pat-prescription-detail": PatPrescriptionDetail,
     "common-calendar": commonCalender,
@@ -426,8 +430,8 @@ export default {
       getFontSize: "getFontSize",
       getStateUserAccountInfo: "getStateUserAccountInfo",
       defaultSetting: "getDefaultSetting",
-      getPatientShareMode: "getPatientShareMode",//自施設(1) or 他施設(0)
-      getPatientShareFacilityCdMode:"getPatientShareFacilityCdMode"//施設cd
+      getPatientShareMode: "getPatientShareMode",
+      getPatientShareFacilityCdMode: "getPatientShareFacilityCdMode",
     }),
     ...mapGetters("window-size", {
       windowHeight: "getWindowHeight",
@@ -453,7 +457,12 @@ export default {
       "getSearchCondition",
       //add FutreNetWeb+SI課題管理-NO.4295 劉全航 end
     ]),
-    ...mapGetters("pat-info", ["selectedPatId", "selectedPatName", "getIsOtherFacility", "getOtherFacilityCd"]),
+    ...mapGetters("pat-info", [
+      "selectedPatId",
+      "selectedPatName",
+      "getIsOtherFacility",
+      "getOtherFacilityCd",
+    ]),
     ...mapGetters("user", ["getFacilityCd"]),
     //mod FNSI-5788 劉全航 start
     ...mapGetters("bread-crumb", ["getKeepHistory"]),
@@ -479,8 +488,8 @@ export default {
     contentHeight() {
       const windowHeight = this.windowHeight;
       const headerHeight =
-        document.getElementsByClassName("header")[0].clientHeight;
-      const footerHeight = document.getElementById("footer-menu").clientHeight;
+        getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
+      const footerHeight = getFooterMenuClientHeight(this.$el || null);
       return { height: `${windowHeight - headerHeight - footerHeight - 10}px` };
     },
     //mod 日機装FNSI 劉全航 end
@@ -541,15 +550,18 @@ export default {
 
     getFacilityName() {
       this.inputModel.history.map(async (x) => {
-        x.facilityName = await this.sendRequestGetFacilityNameByCd(
-          this.getFacilityCd
-        ).then((result) => result.data);
+        x.facilityName = await this.sendRequestGetFacilityNameByCd({
+          facilityCd: this.getFacilityCd,
+          selectedPatId: this.selectedPatId
+        }).then((result) => result.data);
         return x;
       });
     },
 
     async getShared() {
-      await ApiHelper.get(`/pat_event/getPublicFlag/` + this.getUserId)
+      await ApiHelper.get(`/pat_event/getPublicFlag/` + this.getUserId, {
+        selectedPatId: this.selectedPatId
+      })
         .then((res) => {
           if (res.data.msg == 1) {
             this.sharedFlag = true;
@@ -583,23 +595,23 @@ export default {
         // var selectHistory = this.inputModel.history.find(historyItem => historyItem.ordPrescriptionNo === this.getOrdPrescriptionNo);
         // const issueDateFrom = selectHistory != null ? selectHistory.issueDate.substring(0, 10) : "";
         const index = this.inputModel.history && this.inputModel.history.findIndex(history => history.ordPrescriptionNo === this.getOrdPrescriptionNo);
-        var issueDateFrom = moment(Date.now()).format("YYYYMMDD");
+        var issueDateFrom = dayjs(Date.now()).format("YYYYMMDD");
         if(index > -1){
-          issueDateFrom = moment(this.inputModel.history[index].issueDate).format("YYYYMMDD");
+          issueDateFrom = dayjs(this.inputModel.history[index].issueDate).format("YYYYMMDD");
         }
         // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
         // del 11155 機能帳票では正常だが帳票画面で出力されない項目がある sunsy start
         // var issueDateTo = "";
         // if(selectHistory != null){
         //   var dataFrom = new Date(issueDateFrom);
-        //   issueDateTo = moment(new Date(dataFrom.setMonth(dataFrom.getMonth() + 1))).format("YYYYMMDD");
+        //   issueDateTo = dayjs(new Date(dataFrom.setMonth(dataFrom.getMonth() + 1))).format("YYYYMMDD");
         // }
         // del 11155 機能帳票では正常だが帳票画面で出力されない項目がある sunsy start
         // add #9558 機能帳票で正しく変数が引き渡されていない limingzhe end
         const param1 = {
           patId: this.selectedPatId,
           // mod #9558 機能帳票で正しく変数が引き渡されていない limingzhe start
-          //date: moment(this.inputModel.startDate).format("YYYYMMDD"),
+          //date: dayjs(this.inputModel.startDate).format("YYYYMMDD"),
           date: issueDateFrom.replaceAll("/", ""),
           fromDate: issueDateFrom.replaceAll("/", ""),
           // mod 11155 機能帳票では正常だが帳票画面で出力されない項目がある sunsy start
@@ -607,13 +619,13 @@ export default {
           toDate: issueDateFrom.replaceAll("/", ""),
           // mod 11155 機能帳票では正常だが帳票画面で出力されない項目がある sunsy end
           // mod FutreNetWeb+SI課題管理No5520 趙 start
-          // fromDate: moment(this.inputModel.startDate).format("YYYYMMDD"),
-          // toDate: moment(this.inputModel.endDate).format("YYYYMMDD"),
+          // fromDate: dayjs(this.inputModel.startDate).format("YYYYMMDD"),
+          // toDate: dayjs(this.inputModel.endDate).format("YYYYMMDD"),
           // mod #7233 デフォルト帳票について 日本指摘対応 商 start
-          // fromDate: moment(this.getStartDate).format("YYYYMMDD"),
-          // toDate: moment(this.getEndDate).format("YYYYMMDD"),
-          // fromDate: moment(this.inputModel.startDate).format("YYYYMMDD"),
-          // toDate: moment(this.inputModel.endDate).format("YYYYMMDD"),
+          // fromDate: dayjs(this.getStartDate).format("YYYYMMDD"),
+          // toDate: dayjs(this.getEndDate).format("YYYYMMDD"),
+          // fromDate: dayjs(this.inputModel.startDate).format("YYYYMMDD"),
+          // toDate: dayjs(this.inputModel.endDate).format("YYYYMMDD"),
           // mod #7233 デフォルト帳票について 日本指摘対応 商 end
           // mod FutreNetWeb+SI課題管理No5520 趙 end
           // mod #9558 機能帳票で正しく変数が引き渡されていない limingzhe end
@@ -637,18 +649,16 @@ export default {
     calculateGridHeight() {
       if (this.isSelectedPatId) {
         const wh = this.windowHeight;
-        const hc = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .shift();
-        const hh = hc ? hc.clientHeight : 0;
+        const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
         const fmh =
           (this.isDispMenu === 1
-            ? document.getElementById("footer-menu").clientHeight
+            ? getFooterMenuClientHeight(this.$el || null)
             : 0) + 5;
+        const headerAreas = getScopedElementsByClassName("header-area", this.$el || null);
         const ch1 =
-          document.getElementsByClassName("header-area")[0].clientHeight;
+          headerAreas[0]?.clientHeight || 0;
         const ch2 =
-          document.getElementsByClassName("header-area")[1].clientHeight;
+          headerAreas[1]?.clientHeight || 0;
         this.contentsAreaHeight = wh - hh - fmh - ch1 - ch2 - 16;
       }
     },
@@ -686,10 +696,10 @@ export default {
       this.setSearchCondition(condition);
       //add FutreNetWeb+SI課題管理-NO.4295 劉全航 end
       this.valueDefault.starDateDefault = this.inputModel.startDate
-        ? moment(this.inputModel.startDate).format("YYYY/MM/DD")
+        ? dayjs(this.inputModel.startDate).format("YYYY/MM/DD")
         : "";
       this.valueDefault.endDateDefault = this.inputModel.endDate
-        ? moment(this.inputModel.endDate).format("YYYY/MM/DD")
+        ? dayjs(this.inputModel.endDate).format("YYYY/MM/DD")
         : "";
       switch (this.inputModel.checkHos) {
         case null:
@@ -719,10 +729,10 @@ export default {
     //add FutreNetWeb+SI課題管理-NO.4295 劉全航 start
     initValueDefault() {
       this.valueDefault.starDateDefault = this.inputModel.startDate
-        ? moment(this.inputModel.startDate).format("YYYY/MM/DD")
+        ? dayjs(this.inputModel.startDate).format("YYYY/MM/DD")
         : "";
       this.valueDefault.endDateDefault = this.inputModel.endDate
-        ? moment(this.inputModel.endDate).format("YYYY/MM/DD")
+        ? dayjs(this.inputModel.endDate).format("YYYY/MM/DD")
         : "";
       switch (this.inputModel.checkHos) {
         case null:
@@ -790,16 +800,19 @@ export default {
         prescriptionType:
           this.inputModel.checkHos == "on" ? null : this.inputModel.checkHos,
         issueDateFrom: this.inputModel.startDate
-          ? moment(this.inputModel.startDate, "YYYY-MM-DD").format("YYYY/MM/DD")
+          ? dayjs(this.inputModel.startDate, "YYYY-MM-DD").format("YYYY/MM/DD")
           : null,
         issueDateTo: this.inputModel.endDate
-          ? moment(this.inputModel.endDate, "YYYY-MM-DD").format("YYYY/MM/DD")
+          ? dayjs(this.inputModel.endDate, "YYYY-MM-DD").format("YYYY/MM/DD")
           : null,
         issueState:
           this.inputModel.checkIss == "on" ? null : this.inputModel.checkIss,
-	// add #12462 患者情報共有 Ji start
-        patientShareMode: (this.getIsOtherFacility === false || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd)) ? 1 : this.getPatientShareMode
-	// add #12462 患者情報共有 Ji end
+        patientShareMode:
+          this.getIsOtherFacility === false ||
+          (this.getOtherFacilityCd !== null &&
+            this.getOtherFacilityCd !== this.getFacilityCd)
+            ? 1
+            : this.getPatientShareMode,
       };
       if (hasOrdPrescriptionNo) {
         data.ordPrescriptionNo = ordPrescriptionNo;
@@ -833,7 +846,7 @@ export default {
         return dataA.ordPrescriptionNo > dataB.ordPrescriptionNo ? -1 : 1;
       });
       this.inputModel.history = this.inputModel.history.map((data) => {
-        const date = moment(data.issueDate);
+        const date = dayjs(data.issueDate);
         const dow = date.day();
         const dayName = this.convertDayOfWeek(dow);
         data.issueDate = `${data.issueDate} (${dayName})`;
@@ -1001,6 +1014,7 @@ export default {
         await this.$ons.notification.confirm({
           title: DIALOG_MESSAGES[12000014].title,
           message: DIALOG_MESSAGES[12000014].message,
+          buttonLabels: ["Cancel", "OK"],
           callback: (answer) => {
             // #6876 患者を切り替えると内容破棄確認モーダルが表示される 訾浩 start
             this.answer = answer
@@ -1053,7 +1067,10 @@ export default {
       if (historyItem) {
         this.setOtherFacilityFlag(historyItem.isOtherFacility);
         this.setFacilityName(historyItem.facilityName);
-        await this.sendRequestGetOrderPrescriptionDetail(historyItem.ordPrescriptionNo);
+        await this.sendRequestGetOrderPrescriptionDetail({
+          ordPrescriptionNo: historyItem.ordPrescriptionNo,
+          selectedPatId: this.selectedPatId
+        });
         for (let i = 0; i < this.inputModel.history.length; i++) {
           this.inputModel.history[i].active = (i === index);
         }
@@ -1071,7 +1088,7 @@ export default {
     // 患者を選択したとたんに検索する
     // 患者切り替え、更新の動作不正  6553   shan  start
     async search(ordPrescriptionNo) {
-      if (this.$router.currentRoute.name.indexOf("pat-prescription") === 0) {
+      if (this.$route.name.indexOf("pat-prescription") === 0) {
         // 共通ローダー:表示開始
         this.setLoadingScreenVisible(true);
         this.clearStateEdit();
@@ -1179,9 +1196,9 @@ export default {
         // サインイン後、デフォルト設定登録なし、初回表示の場合
         if (this.getSearchCondition.checkHos === "") {
           // 開始：3ヶ月前
-          this.inputModel.startDate = moment().subtract(3, "months").format("YYYY-MM-DD");
+          this.inputModel.startDate = dayjs().subtract(3, "months").format("YYYY-MM-DD");
           // 終了：2週間後
-          this.inputModel.endDate = moment().add(14, "days").format("YYYY-MM-DD");
+          this.inputModel.endDate = dayjs().add(14, "days").format("YYYY-MM-DD");
         } else {
           // サインイン後、初回表示以外はストアから検索条件を復元
           this.inputModel.startDate = this.getSearchCondition.startDate;
@@ -1327,14 +1344,12 @@ export default {
           this.$route.params.condition.treatDate != null
         ) {
           this.inputModel.startDate = this.$route.params.condition.treatDate
-            ? moment(this.$route.params.condition.treatDate).format(
-                "YYYY-MM-DD"
-              )
+            ? dayjs(this.$route.params.condition.treatDate).format(
+                "YYYY-MM-DD")
             : "";
           this.inputModel.endDate = this.$route.params.condition.treatDate
-            ? moment(this.$route.params.condition.treatDate).format(
-                "YYYY-MM-DD"
-              )
+            ? dayjs(this.$route.params.condition.treatDate).format(
+                "YYYY-MM-DD")
             : "";
           if (this.$route.params.condition.ordPrescriptionNo != null) {
             // 処方オーダー番号が指定されている場合
@@ -1347,14 +1362,13 @@ export default {
         } else {
           this.inputModel.startDate = this.$route.params.condition.data[0]
             .treatDate
-            ? moment(this.$route.params.condition.data[0].treatDate).format(
-                "YYYY-MM-DD"
-              )
+            ? dayjs(this.$route.params.condition.data[0].treatDate).format(
+                "YYYY-MM-DD")
             : "";
           this.inputModel.endDate = this.$route.params.condition.data[
             this.$route.params.condition.data.length - 1
           ].treatDate
-            ? moment(
+            ? dayjs(
                 this.$route.params.condition.data[
                   this.$route.params.condition.data.length - 1
                 ].treatDate
@@ -1418,17 +1432,15 @@ export default {
     /*add FNSI-No.342 患者イベント、検査結果、検査予定、一般撮影検査予定、処方の表示、機能遷移に対応 李 end*/
     // add #6570-処方の編集権限がない時の制限が、他の画面と異なる 徐博 start
     isSelectedPatId() {
-      this.getAuthority();
+      this.getAuthority()
     },
     // add #6570-処方の編集権限がない時の制限が、他の画面と異なる 徐博 end
-    // add #12462 患者情報共有 Ji start
     getPatientShareMode() {
       this.init();
     },
     getPatientShareFacilityCdMode() {
       this.init();
-    },
-    // add #12462 患者情報共有 Ji end
+    }
   },
   mounted() {
     this.$nextTick(() => {
@@ -1452,7 +1464,7 @@ export default {
     await this.init();
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("searchAlertPatPre", this.searchAlert);
     EventBus.$off("requestReportParams", this.requestrReportParams);
     EventBus.$off("search", this.search);
@@ -1573,21 +1585,21 @@ table.list {
   margin: 0 auto;
 }
 .input {
-  /* max-width: 15em; */
   vertical-align: middle;
   background-color: white;
 }
-.input >>> .text-input {
+/* max-width: 15em; */
+.input :deep(.text-input) {
   height: 2em;
   line-height: 2em;
 }
 .select {
   vertical-align: middle;
 }
-.popover-area >>> .popover {
+.popover-area :deep(.popover) {
   width: auto;
 }
-.popover-area >>> .popover__content {
+.popover-area :deep(.popover__content) {
   width: 19em;
   min-width: 300px;
 }
@@ -1597,15 +1609,15 @@ table.list {
 .unstyled-date {
   -webkit-appearance: none;
 }
-.unstyled-date >>> .text-input::-webkit-calendar-picker-indicator {
+.unstyled-date :deep(.text-input::-webkit-calendar-picker-indicator) {
   -webkit-appearance: none;
   display: none;
 }
-.calendar {
-  display: flex;
-}
-.calendar >>> button {
-  height: 100%;
+.calendar :deep(.ntss-btn-outset.calendar) {
+  height: 2em;
+  min-height: 2em;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 .main-area {
   overflow: hidden;
@@ -1637,5 +1649,13 @@ table.list {
   table.list{
     overflow: visible !important;
   }
+}
+.row-block {
+  display: flex;
+}
+
+.cell {
+  text-align: left;
+  width: 100%;
 }
 </style>

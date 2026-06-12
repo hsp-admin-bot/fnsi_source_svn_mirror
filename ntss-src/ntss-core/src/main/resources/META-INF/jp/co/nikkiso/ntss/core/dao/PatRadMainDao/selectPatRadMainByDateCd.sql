@@ -41,7 +41,7 @@ where
 and
 /*%end*/
   to_char(A.reg_rad_date, 'YYYYMMDD') >= /*dialysis_date_from*/'20180220'
-and 
+and
   to_char(A.reg_rad_date, 'YYYYMMDD') <= /*dialysis_date_to*/'20180226'
 and
   is_del = '0'

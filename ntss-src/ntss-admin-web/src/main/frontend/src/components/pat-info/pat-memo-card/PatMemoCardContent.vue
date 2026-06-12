@@ -4,6 +4,7 @@
     <v-ons-button class="close-button btn3-normal" @click="closeAllContents()">CLOSE</v-ons-button>
     <div v-for="(json, index) in editRecord.pat_memo_info" :key="index">
       <table :class="{ 'card-table': memoDisplayList[index + 1] }">
+        <tbody>
         <!-- タイトル部分 -->
         <tr v-show="memoDisplayList[index + 1]">
           <td class="number-area">{{ index + 1 }}</td>
@@ -42,6 +43,8 @@
             />
           </td>
         </tr>
+      
+        </tbody>
       </table>
     </div>
   </div>
@@ -53,7 +56,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 import { ApiHelper } from "@/apis/AxiosHelper";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 // del #10359 編集権限の動作不正 dengshen start
 // import { FUNC_PAT_INFO, FUNC_PAT_INFO_CREATE } from "@/constants/function-code";
 // import {AUTHORITY_CODES} from "@/constants/userAuthority"; //施設コード取得のために追加
@@ -61,7 +64,7 @@ import { mapGetters, mapActions } from "vuex";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
-
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 export default {
   name: "PatMemoCard",
   mixins: [baseCardContent],
@@ -173,22 +176,22 @@ export default {
   },
   watch: {
     selectedPatId() {
-      this.openContentsWithData();
-      // del FNSI7519-profile連携（XML）で受信した詳細情報（患者フリーコメント） 周 start
-      // add 7519 profile連携（XML）で受信した詳細情報（患者フリーコメント） 関春麗 start
-      //this.patMemoInfo();
-      // add 7519 profile連携（XML）で受信した詳細情報（患者フリーコメント） 関春麗 end
-      // del FNSI7519-profile連携（XML）で受信した詳細情報（患者フリーコメント） 周 end
-      this.contentChk();
+      this.$nextTick(() => {
+        this.openContentsWithData();
+        // del FNSI7519-profile連携（XML）で受信した詳細情報（患者フリーコメント） 周 start
+        // add 7519 profile連携（XML）で受信した詳細情報（患者フリーコメント） 関春麗 start
+        //this.patMemoInfo();
+        // add 7519 profile連携（XML）で受信した詳細情報（患者フリーコメント） 関春麗 end
+        // del FNSI7519-profile連携（XML）で受信した詳細情報（患者フリーコメント） 周 end
+        this.contentChk();
+      });
     },
-    // add #12462 患者情報共有 Ji start
     editRecord: {
       handler() {
         this.contentChk();
       },
       deep: true
     }
-    // add #12462 患者情報共有 Ji end
   },
   created() {
     this.refreshData();
@@ -235,7 +238,8 @@ export default {
       this.setLoadingScreenVisible(true);
       try {
         const requestParam = {
-          facilityCd: this.getFacilityCd
+          facilityCd: this.getFacilityCd,
+          selectedPatId: this.selectedPatId
         };
         // 患者メモマスタの取得
         const mstPatMemo = await ApiHelper.get(
@@ -266,6 +270,15 @@ export default {
       // console.log("toggleContent.index is : ",index);
       const visibleFlag = this.memoDisplayList[index] && visible;
       this.memoVisibleList[index] = visibleFlag;
+      if (visibleFlag) {
+        this.$nextTick(() => {
+          const textarea = this.$el.querySelector(`#patMemo${index - 1}`);
+
+          if (textarea) {
+            this.resizePatInfoComTextarea(textarea);
+          }
+        });
+      }
     },
 
     /**
@@ -285,7 +298,7 @@ export default {
       if ( !this.isCreationPat && Array.isArray(this.editRecord.pat_memo_info)) {
         this.closeAllContents();
         let filterArray = this.editRecord.pat_memo_info.filter(item =>{
-          return item.content.initValue != null;
+          return item.content.initValue != null && item.content.initValue !== "";
         });
         filterArray.forEach(element => {
           this.toggleContent(element.ctl_no.initValue.toString(), true);
@@ -337,7 +350,7 @@ export default {
      */
     contentChkOnBlur(index) {
       this.selectedIndex = index;
-      const strMemo = document.getElementById(`patMemo${this.selectedIndex}`)
+      const strMemo = getScopedElementById(`patMemo${this.selectedIndex}`, this.$el || this)
         .value;
       if (strMemo === null || strMemo === "") {
         this.memoContentList[index + 1] = false;
@@ -400,7 +413,7 @@ export default {
   background-image: linear-gradient(#B1CBD8 0%,#3D82A5 50%,#3D82A5 50%,#377B9E 100%);
   color: #fff;
 }
-.card-table >>> textarea.custom-textarea {
+.card-table :deep(textarea.custom-textarea) {
   color: black !important;
 }
 </style>

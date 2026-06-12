@@ -2,111 +2,99 @@
  * FabPageレイアウト
  */
 <template id='fab-page-template'>
-  <div v-if="isLogined && isDispFloatMenu" @mousedown="toggleDevTool" @mouseup="cancelToggleDevTool" 
-    :class="{ 'dev-tool-unlocked': !isLockDevTool }">
+  <div v-if="isLogined && isDispFloatMenu" @mousedown="toggleDevTool" @mouseup="cancelToggleDevTool" :class="{ 'dev-tool-unlocked': !isLockDevTool }">
     <span class="notification unread-count" @click="showNotificationMessage(), closeUserMenu()">{{ unreadCount }}</span>
-    <v-ons-speed-dial id="user-menu" ref="user_menu" position="top right" direction="down" ripple="true" 
-      :open.sync="userMenuOpen" @click='showUserMenuPopover($event)'>
+    <v-ons-speed-dial id="user-menu" ref="user_menu" position="top right" direction="down" ripple="true" v-model:open="userMenuOpen" @click='showUserMenuPopover($event)'>
       <v-ons-fab>
         <v-ons-icon>{{ userName }}</v-ons-icon>
       </v-ons-fab>
       <div v-if="!isLockDevTool" class="memory-display" v-text="memoryDisplayText" />
-      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isPasswordExpired" 
-        @click='showNotificationMessage(), closeUserMenu()'>
-          <img src="img/fab/information.png" title="通知" class="ntss-fab-icon"/>
+      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isPasswordExpired" @click='showNotificationMessage(), closeUserMenu()'>
+          <img :src="publicAssetPath('img/fab/information.png')" title="通知" class="ntss-fab-icon"/>
       </v-ons-speed-dial-item>
       <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isPasswordExpired">
         <v-ons-icon @click='showAccountEdit(), closeUserMenu()'>
-          <img src="img/fab/account2.png" title="アカウント情報" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/account2.png')" title="アカウント情報" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
       <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isOnlyReMS && !isPasswordExpired">
         <v-ons-icon @click='showPersonalSettings(), closeUserMenu()'>
-          <img src="img/fab/Personal_Settings2.png" title="個人設定" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/Personal_Settings2.png')" title="個人設定" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
       <v-ons-speed-dial-item v-if="isNkkStaff && !isProvisional && !isWeightMode && !isPasswordExpired">
         <v-ons-icon @click='showStaffFacility(), closeUserMenu()'>
-          <img src="img/fab/my_client.png" title="担当施設設定" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/my_client.png')" title="担当施設設定" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
       <!-- TODO: メニューを復活させる場合、"&& false"を削除する -->
-      <v-ons-speed-dial-item v-if="!isProvisional && !isPasswordExpired" 
-        @click='hideItemPopover(), showFabPopover($event)'>
+      <v-ons-speed-dial-item v-if="!isProvisional && !isPasswordExpired" @click='hideItemPopover(), showFabPopover($event)'>
         <v-ons-icon>
-          <img src="img/fab/fontsizes.png" title="文字サイズ" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/fontsizes.png')" title="文字サイズ" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
-      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isPasswordExpired" 
-        @click='hideItemPopover(), showThemePopover($event)'>
+      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isPasswordExpired" @click='hideItemPopover(), showThemePopover($event)'>
         <v-ons-icon>
-          <img src="img/fab/theme.png" title="テーマ切替" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/theme.png')" title="テーマ切替" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
-
-      <!--20260105 liyanze-z add 施設切替 botton  start-->
-      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isPasswordExpired"
-        @click='hideItemPopover(), showFacilitiesBtn($event)'>
+      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isPasswordExpired" @click='hideItemPopover(), showFacilitiesBtn($event)'>
         <v-ons-icon>
-          <img src="img/fab/switch_login.png" title="施設切替" class="ntss-fab-icon" />
-          <!-- <img src="" title="施設切替" class="ntss-fab-icon"/> -->
+          <img :src="publicAssetPath('img/fab/switch_login.png')" title="施設切替" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
-      <!--20260105 liyanze-z add 施設切替 botton  end-->
       <!-- mod #12462 患者情報共有 関 start -->
       <v-ons-speed-dial-item
         v-if="!isProvisional && !isWeightMode && !isPasswordExpired && isPatientSharedAuthorized && getItemAuthorized('PatientShare', 'default_authority')"
         @click='hideItemPopover(), showPatientSharedBtn($event)'>
         <v-ons-icon>
-          <img src="img/patdata-share/patdata-share.png" title="患者共有" class="ntss-fab-icon" />
+          <img :src="publicAssetPath('img/patdata-share/patdata-share.png')" title="患者共有" class="ntss-fab-icon" />
         </v-ons-icon>
       </v-ons-speed-dial-item>
       <!-- mod #12462 患者情報共有 関 end -->
-      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && false && !isPasswordExpired" 
-        @click='hideItemPopover(), showSplitFramePopover($event)'>
+      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && false && !isPasswordExpired" @click='hideItemPopover(), showSplitFramePopover($event)'>
         <v-ons-icon>
           <!-- 仮アイコン -->
           <label style="font-size: 17px">分割</label>
         </v-ons-icon>
       </v-ons-speed-dial-item>
-      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isPasswordExpired" 
-        @click='showMenuBarEdit(), closeUserMenu()'>
+      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isPasswordExpired" @click='showMenuBarEdit(), closeUserMenu()'>
         <v-ons-icon>
-          <img src="img/fab/menu2.png" title="メニューバー設定" class="ntss-fab-icon" />
+          <img :src="publicAssetPath('img/fab/menu2.png')" title="メニューバー設定" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
-      <v-ons-speed-dial-item 
-        v-if="!isProvisional && !isWeightMode && !isOnlyReMS && !isPasswordExpired" 
-        @click='showWindowPrintDialog()'>
+      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isOnlyReMS && !isPasswordExpired" @click='showWindowPrintDialog()'>
         <v-ons-icon>
-          <img src="img/fab/screen_printing4.png" title="画面印刷" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/screen_printing4.png')" title="画面印刷" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
-      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isOnlyReMS && !isPasswordExpired" :disabled="!canReport" @click='hideItemPopover(), showReportPopover()'>
+      <v-ons-speed-dial-item
+        v-if="isReportButtonVisible"
+        ref="reportButton"
+        :disabled="reportButtonDisabled ? true : null"
+        @click='hideItemPopover(), showReportPopover($event)'>
         <v-ons-icon>
-          <img src="img/fab/F_Print.png" title="機能帳票印刷" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/F_Print.png')" title="機能帳票印刷" class="ntss-fab-icon"/>
         </v-ons-icon>
-        <!-- 仮アイコン -->
-        <label style="font-size: 17px">印刷</label>
       </v-ons-speed-dial-item>
       <v-ons-speed-dial-item  v-if="!isProvisional && !isWeightMode && !isPasswordExpired" @click='hideItemPopover(), showHelpPopover($event)'>
         <v-ons-icon>
-          <img src="img/fab/help.png" title="ヘルプ" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/help.png')" title="ヘルプ" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
       <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && isAvailableNotification() && getIsRegisteredNotification && !isPasswordExpired">
         <v-ons-icon @click='unregisterNotification(), closeUserMenu()'>
-          <img src="img/fab/noti_on.png" title="通知ON状態" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/noti_on.png')" title="通知ON状態" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
       <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && isAvailableNotification() && !getIsRegisteredNotification && !isPasswordExpired">
         <v-ons-icon @click='registerNotification(), closeUserMenu()'>
-          <img src="img/fab/noti_off.png" title="通知OFF状態" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/noti_off.png')" title="通知OFF状態" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
       <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isAvailableNotification() && !isPasswordExpired">
         <v-ons-icon @click='unavailableMessage(), closeUserMenu()'>
-          <img src="img/fab/noti_unavailable.png" title="通知無効状態" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/noti_unavailable.png')" title="通知無効状態" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
       <!-- add FNSI-メニューに共有ON／共有OFFを追加する。 周 start -->
@@ -115,7 +103,7 @@
       <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && getIsRegisteredShared && false">
         <!--mod 患者共有を隠す 劉 end-->
         <v-ons-icon @click='unregisterShared(), closeUserMenu()'>
-          <img src="img/fab/shared_on.png" title="共有ON状態" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/shared_on.png')" title="共有ON状態" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
       <!--mod 患者共有を隠す 劉 start-->
@@ -123,23 +111,23 @@
       <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !getIsRegisteredShared && false">
         <!--mod 患者共有を隠す 劉 end-->
         <v-ons-icon @click='registerShared(), closeUserMenu()'>
-          <img src="img/fab/shared_off.png" title="共有OFF状態" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/shared_off.png')" title="共有OFF状態" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
       <!-- add FNSI-メニューに共有ON／共有OFFを追加する。 周 end -->
       <v-ons-speed-dial-item v-if="!isWeightMode">
         <v-ons-icon @click='signOut'>
-          <img src="img/fab/signout3.png" title="サインアウト" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/signout3.png')" title="サインアウト" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
       <v-ons-speed-dial-item v-if="isWeightMode">
         <v-ons-icon @click='signOutAndExit'>
-          <img src="img/fab/exit.png" title="終了" class="ntss-fab-icon"/>
+          <img :src="publicAssetPath('img/fab/exit.png')" title="終了" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
     </v-ons-speed-dial>
 
-    <div id="manualPdfArea" v-show="isShowManual">
+    <div ref="manualPdfArea" id="manualPdfArea" v-show="isShowManual">
       <a href="help/FNSi/FutureNetWeb+Si操作マニュアル.pdf" class="manual-download-btn control-z-index" download="FutureNetWeb+Si操作マニュアル.pdf" v-if="device != 'iOS' && showManualType == '1'">
         <ons-icon icon="fa-download"></ons-icon>
       </a>
@@ -152,15 +140,15 @@
       <ons-toolbar-button class="close-btn manual-close-btn" @click="closeManual()">
         <ons-icon icon="fa-times"></ons-icon>
       </ons-toolbar-button>
-      <div id="pdf-container"  v-show="showManualType == '2'" style="width:100%;height:100%;overflow-y:scroll;-webkit-overflow-scrolling: touch;">
+      <div ref="pdfContainer" id="pdf-container"  v-show="showManualType == '2'" style="width:100%;height:100%;overflow-y:scroll;-webkit-overflow-scrolling: touch;">
       </div>
-      <div id="pdf-container-fnsi" v-show="showManualType == '1'" style="width:100%;height:100%;overflow-y:scroll;-webkit-overflow-scrolling: touch;">
+      <div ref="pdfContainerFnsi" id="pdf-container-fnsi" v-show="showManualType == '1'" style="width:100%;height:100%;overflow-y:scroll;-webkit-overflow-scrolling: touch;">
       </div>
     </div>
 
-    <v-ons-popover :class="fontSizeSet" id="user-menu-popover" cancelable :visible.sync='userMenuPopoverVisible' :target='userMenuPopoverTarget' cover-target=true @prehide="closeUserMenu">
+    <v-ons-popover :class="fontSizeSet" id="user-menu-popover" cancelable v-model:visible='userMenuPopoverVisible' :target='userMenuPopoverTarget' :cover-target="true" @prehide="closeUserMenu">
     </v-ons-popover>
-    <v-ons-popover :class="[fontSizeSet, 'user-menu-item-popover']" :visible.sync='fontSizePopoverVisible' :target='fontSizePopoverTarget' :direction='fontSizePopoverDirection'>
+    <v-ons-popover :class="[fontSizeSet, 'user-menu-item-popover']" v-model:visible='fontSizePopoverVisible' :target='fontSizePopoverTarget' :direction='fontSizePopoverDirection'>
       <!-- add/ #12498 プルダウンui異常 tianqidong start-->
       <v-ons-range v-model='fontSize' min='0' max='3' @input="onFountSizeChange"></v-ons-range>
       <!-- add/ #12498 プルダウンui異常 tianqidong end-->
@@ -170,7 +158,7 @@
         <!--mod FNSI-画面部品デザイン じょはく end-->
       </div>
     </v-ons-popover>
-    <v-ons-popover :class="[fontSizeSet, 'user-menu-item-popover theme']" :visible.sync='themePopoverVisible' :target='themePopoverTarget' :direction='themePopoverDirection'>
+    <v-ons-popover :class="[fontSizeSet, 'user-menu-item-popover theme']" v-model:visible='themePopoverVisible' :target='themePopoverTarget' :direction='themePopoverDirection'>
       <v-ons-switch v-model='isBlackTheme'></v-ons-switch>
       <div class="popover-label">
         <!--mod FNSI-画面部品デザイン じょはく start-->
@@ -179,19 +167,17 @@
       </div>
     </v-ons-popover>
 
-    <!--20260105 liyanze-z add 施設切替 表示リスト  start-->
     <div class="facilitiesPopoverView" v-if="facilitiesPopoverVisible">
       <v-ons-popover :id="checkDomClass" :class="[fontSizeSet, 'user-menu-item-popover theme facilitesBox']"
-        :visible.sync='facilitiesPopoverVisible' :target='facilitiesPopoverTarget'
+        v-model:visible='facilitiesPopoverVisible' :target='facilitiesPopoverTarget'
         :direction='facilitiesPopoverDirection'>
         <can-login-facilities @childSendClose="childSendCloseFN" @childSendHidden="childSendHiddenFN" />
       </v-ons-popover>
     </div>
-    <!--20260105 liyanze-z add 施設切替 表示リスト  end-->
 
     <!-- mod #12462 患者情報共有 関 start -->
     <div v-if="patientSharedPopoverVisible">
-      <v-ons-popover :class="[fontSizeSet, 'user-menu-item-popover']" :visible.sync='patientSharedPopoverVisible'
+      <v-ons-popover :class="[fontSizeSet, 'user-menu-item-popover']" v-model:visible='patientSharedPopoverVisible'
         :target='patientSharedPopoverTarget' :direction='patientSharedPopoverDirection'>
 
         <div class="radio-center-group">
@@ -220,19 +206,40 @@
       </v-ons-popover>
     </div>
     <!-- mod #12462 患者情報共有 関 end -->
-    <v-ons-popover :class="[fontSizeSet, 'user-menu-item-popover popover-help']" :visible.sync='helpPopoverVisible' :target='helpPopoverTarget' :direction='helpPopoverDirection'>
-      <ons-list>
-        <ons-list-header class="popover-help-header">取扱説明書</ons-list-header>
-        <ons-list-item class = "popover-text" tappable modifier="longdivider" v-show="isFNSi" @click="showHelpFnsi(), closeUserMenu()">FutureNetWeb⁺Si取扱説明書</ons-list-item>
-        <ons-list-item class = "popover-text" tappable modifier="longdivider" v-show="isReMS" @click="showHelp(), closeUserMenu()">ReMS取扱説明書</ons-list-item>
-      </ons-list>
-      <ons-list>
-        <ons-list-header class="popover-help-header">リリース情報</ons-list-header>
-        <ons-list-item class = "popover-text" tappable modifier="longdivider" @click="showReleaseInfo(), closeUserMenu()">リリース情報一覧</ons-list-item>
-      </ons-list>
+
+    <v-ons-popover
+      :class="[fontSizeSet, 'user-menu-item-popover popover-help']"
+      cancelable
+      v-model:visible="helpPopoverVisible"
+      :target="helpPopoverTarget"
+      :direction="helpPopoverDirection"
+    >
+      <div class="popover-help-panel">
+        <ons-list class="popover-help-list">
+          <ons-list-header class="popover-help-header">取扱説明書</ons-list-header>
+          <ons-list-item
+            class="popover-help-item"
+            tappable
+            v-show="isFNSi"
+            @click="showHelpFnsi(); closeUserMenu()"
+          >FutureNetWeb⁺Si取扱説明書</ons-list-item>
+          <ons-list-item
+            class="popover-help-item"
+            tappable
+            v-show="isReMS"
+            @click="showHelp(); closeUserMenu()"
+          >ReMS取扱説明書</ons-list-item>
+          <ons-list-header class="popover-help-header popover-help-header--section">リリース情報</ons-list-header>
+          <ons-list-item
+            class="popover-help-item"
+            tappable
+            @click="showReleaseInfo(); closeUserMenu()"
+          >リリース情報一覧</ons-list-item>
+        </ons-list>
+      </div>
     </v-ons-popover>
 
-    <v-ons-popover :class="[fontSizeSet, 'user-menu-item-popover']" :visible.sync='splitFramePopoverVisible' :target='splitFramePopoverTarget' :direction='splitFramePopoverDirection'>
+    <v-ons-popover :class="[fontSizeSet, 'user-menu-item-popover']" v-model:visible='splitFramePopoverVisible' :target='splitFramePopoverTarget' :direction='splitFramePopoverDirection'>
       <v-ons-switch v-model='isSplitFrame'></v-ons-switch>
       <div class="popover-label">
         <label>画面フレーム分割切替</label>
@@ -245,7 +252,7 @@
     />
     <div v-if="messageDialogInfo.isDialogVisible">
       <message-dialog
-        :visible.sync="messageDialogInfo.isDialogVisible"
+        v-model:visible="messageDialogInfo.isDialogVisible"
         :title="messageDialogInfo.title"
         :message-cd="messageDialogInfo.messageCd"
         :type="messageDialogInfo.type"
@@ -257,21 +264,29 @@
 
 <script>
 //mod 6011 個人設定>デフォルト設定>治療状況マップで設定したレイアウトを表示しない 関俊楠 start
-//import { mapActions, mapGetters } from "vuex";
-import { mapActions, mapGetters, mapMutations } from "vuex";
+//import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 //mod 6011 個人設定>デフォルト設定>治療状況マップで設定したレイアウトを表示しない 関俊楠 end
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import ReportSelectorComponent from "@/components/ReportSelectorComponent";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { webPushSubscribe, saveNotificationList } from "@/functions/WebPushFunctions";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import canLoginFacilities from "@/components/canLoginFacilities/canLoginFacilities";
-
 import { LOCAL_STORAGE_KEY } from "@/constants/localStorageConstants";
 import PopoverMixin from "@/components/PopoverMixin";
 import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
 import { PASSWORD_VALIDITY_PERIOD } from "@/constants/facilitySetting";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
+import { getFooterMenuHeight, getFooterMenuClientHeight, getViewportHeight, getScopedWindow, getScopedLocalStorage, getScopedUserAgent, createScopedImageElement } from "@/functions/common/LayoutMeasureHelper";
+import { publicAssetPath } from "@/compat/assets/public-path";
+import {
+  getOnsSpeedDialElement,
+  getOnsSpeedDialFabElement,
+  getOnsSpeedDialItemElements,
+  getOnsSpeedDialIconElements,
+  getOnsSpeedDialEventTarget
+} from "@/functions/common/OnsenFunctions";
 // add FNSI-#522、IES364 選択された機能により、対象の帳票を表示する。 夏 start
 import store from "@/stores";
 import { getCurrentFunctionCd } from "@/router/routing-helper";
@@ -287,8 +302,8 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 import customRadio from "@/components/common/custom-form-tags/CustomRadio";
 import CustomSelect from "@/components/common/custom-form-tags/CustomSelect";
 import { FUNC_SHARING_PATIENT_INFORMATION } from "@/constants/function-code.js";
-import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // mod #12462 患者情報共有 関 end
+import { getAuthorized } from "@/functions/common/CommonFunctions";
 
 /* テーマ定義 */
 const THEME_WHITE = 0;
@@ -310,6 +325,16 @@ const FNSI_MANUAL_LIST_URL = "help/FNSi/operation_manual/list.txt";
 
 // 未読件数表示上限
 const UNREAD_COUNT_MAX = 99;
+const REPORT_FETCH_EXCLUDED_FUNC_CDS = [
+  "02303",
+  "03201",
+  "03301",
+  "03401",
+  "02102",
+  "02202",
+  "01802",
+  "02101"
+];
 
 export default {
   mixins: [PopoverMixin],
@@ -336,12 +361,9 @@ export default {
       themePopoverVisible: false,
       themePopoverTarget: null,
       themePopoverDirection: "left",
-
-      /***20260105 liyanze-z add facilities keys  施設切替 start */
       facilitiesPopoverVisible: false,
       facilitiesPopoverTarget: null,
       facilitiesPopoverDirection: "left",
-      /***20260105 liyanze-z add facilities keys  施設切替  end */
       // mod #12462 患者情報共有 関 start
       patientSharedPopoverTarget: false,
       patientSharedPopoverVisible: null,
@@ -395,7 +417,7 @@ export default {
         totalJSHeapSize: "",
         usedJSHeapSize: "",
       },
-      checkDomClass: '',
+      checkDomClass: "",
       // mod #12462 患者情報共有 関 start
       patientShareMode: {
         initValue: 0,
@@ -506,9 +528,9 @@ export default {
         return true;
       }
       // 現在日時
-      const nowDate = moment(new Date());
+      const nowDate = dayjs(new Date());
       // パスワード変更日時
-      const regPasswordDate = moment(this.getStateUserAccountInfo.regPasswordDate);
+      const regPasswordDate = dayjs(this.getStateUserAccountInfo.regPasswordDate);
       // 差分
       const monthDiff = nowDate.diff(regPasswordDate, 'months');
       return monthDiff >= this.passwordValidityPeriod;
@@ -563,12 +585,18 @@ export default {
     canReport() {
       //mod 7297 初回リリース対象外の機能とその関連機能を隠す 姜 start
       // return this.getMstReports.length > 0;
-      if (this.$router.currentRoute.name == "split-graph") {
-        return this.getSelPat.length > 0;
+      if (this.$route.name == "split-graph") {
+        return Array.isArray(this.getSelPat) && this.getSelPat.length > 0;
       } else {
-       return this.getMstReports.length > 0;
+        return Array.isArray(this.getMstReports) && this.getMstReports.length > 0;
       }
       //mod 7297 初回リリース対象外の機能とその関連機能を隠す 姜 end
+    },
+    isReportButtonVisible() {
+      return !this.isProvisional && !this.isWeightMode && !this.isOnlyReMS && !this.isPasswordExpired;
+    },
+    reportButtonDisabled() {
+      return !this.canReport;
     },
     // 体重計モードかどうか
     isWeightMode() {
@@ -760,7 +788,7 @@ export default {
       if (this.getPatientShareMode === 1) {
         selectedFacility = this.getOtherFacilityCd
       }
-      if (to.name?.startsWith("pat-info-sharing-detail") || from.name?.startsWith("split-graph")|| to.name?.startsWith("split-graph")) {
+      if (to.name?.startsWith("pat-info-sharing-detail") || from.name?.startsWith("split-graph") || to.name?.startsWith("split-graph")) {
         selectedFacility = null;
       }
       this.selectPat({
@@ -771,13 +799,14 @@ export default {
     //add 5984 機能帳票でパラメータが正しく渡されていない 吉 end
     userMenuOpen(value) {
       this.userMenuPopoverVisible = value;
-      //add #9907 ユーザーフロートボタンメニューが画面から飛び出る zhangbo start
-      if(value){
-        this.moveSpeedDialItems();
-        // フッターを閉じる
-        EventBus.$emit("closeFooterList");
-      }
-      //add #9907 ユーザーフロートボタンメニューが画面から飛び出る zhangbo end
+      this.$nextTick(() => {
+        this.syncReportButtonDisabled();
+        this.syncFabCompatDom();
+        if (value) {
+          this.moveSpeedDialItems();
+          EventBus.$emit("closeFooterList");
+        }
+      });
     },
     /**
      * ウィンドウの高さが変更した時
@@ -791,12 +820,13 @@ export default {
     selectedPat() {
       this.changePrintFlag();
     },
-    isLockDevTool() {
-      this.updatePerformanceMemory();
+    canReport() {
+      this.syncReportButtonDisabled();
     },
     // mod #12462 患者情報共有 関 start
     selectedPatId(newVal, oldVal) {
       this.refreshFacilityData();
+      this.changePrintFlag();
       if (newVal && oldVal && newVal !== oldVal) {
         if (this.patientShareMode.editValue == 0 && this.selectedFacilityCd.editValue == null) {
           this.setOtherFacilityInfo({
@@ -812,8 +842,124 @@ export default {
       }
     },
     // mod #12462 患者情報共有 関 end
+    isLockDevTool() {
+      this.updatePerformanceMemory();
+    },
   },
   methods: {
+    publicAssetPath,
+    onFooterLayoutChanged() {
+      this.$nextTick(() => {
+        this.syncFabCompatDom();
+        if (this.userMenuOpen) {
+          this.moveSpeedDialItems();
+        }
+      });
+    },
+    resolveFooterOffset() {
+      return getFooterMenuClientHeight(this.$el || null);
+    },
+    getUserMenuRoot() {
+      return getOnsSpeedDialElement(this.$refs.user_menu, this.$el, "#user-menu");
+    },
+    getUserMenuFabButton(menuRoot = this.getUserMenuRoot()) {
+      return getOnsSpeedDialFabElement(menuRoot);
+    },
+    getUserMenuItemNodes(menuRoot = this.getUserMenuRoot()) {
+      return getOnsSpeedDialItemElements(menuRoot);
+    },
+    getFabDocument() {
+      return this.getUserMenuRoot()?.ownerDocument
+        || this.$refs.manualPdfArea?.ownerDocument
+        || this.$el?.ownerDocument
+        || null;
+    },
+    getFabHead() {
+      return this.getFabDocument()?.head || null;
+    },
+    getViewportMeta() {
+      return Array.from(this.getFabHead()?.children || []).find((element) => {
+        return element?.tagName === 'META' && element.getAttribute?.('name') === 'viewport';
+      }) || null;
+    },
+    setViewportContent(content) {
+      this.getViewportMeta()?.setAttribute('content', content);
+    },
+    getManualViewer(type = 'rems') {
+      const manualRoot = this.$refs.manualPdfArea || null;
+      if (type === 'fnsi') {
+        return this.$refs.pdfContainerFnsi
+          || manualRoot?.querySelector?.('#pdf-container-fnsi')
+          || null;
+      }
+      return this.$refs.pdfContainer
+        || manualRoot?.querySelector?.('#pdf-container')
+        || null;
+    },
+    createManualImage(viewer, src) {
+      const img = createScopedImageElement(viewer || this.$el || this);
+      if (!img) {
+        return null;
+      }
+      img.src = src;
+      img.style.width = "100%";
+      return img;
+    },
+    appendManualImage(viewer, src) {
+      const img = this.createManualImage(viewer, src);
+      if (img) {
+        viewer?.appendChild?.(img);
+      }
+      return img;
+    },
+    getUserMenuPopoverElements() {
+      const refs = ['userMenuPopover', 'fontSizePopover', 'themePopover', 'helpPopover', 'splitFramePopover', 'reportPopover']
+        .map((name) => this.$refs[name]?.$el || this.$refs[name])
+        .filter(Boolean);
+      return refs.length > 0 ? refs : [];
+    },
+    syncFabCompatDom() {
+      const menuRoot = this.getUserMenuRoot();
+      if (!menuRoot) {
+        return;
+      }
+      const footerOffset = this.resolveFooterOffset();
+      menuRoot.setAttribute("data-ntss-fab-role", "user-menu");
+      menuRoot.style.setProperty("--ntss-footer-offset", `${footerOffset}px`);
+      const fab = getOnsSpeedDialFabElement(menuRoot);
+      if (fab) {
+        fab.setAttribute("data-ntss-fab-role", "fab-button");
+        fab.classList.remove("ntss-user-fab-button");
+      }
+      menuRoot.classList.remove("ntss-user-fab-root");
+      getOnsSpeedDialItemElements(menuRoot).forEach((item, index) => {
+        item.setAttribute("data-ntss-fab-role", `fab-item-${index}`);
+        item.classList.remove("ntss-user-fab-item");
+      });
+      menuRoot.querySelectorAll(".ntss-user-fab-icon").forEach((node) => {
+        if (node.tagName !== "IMG") {
+          node.classList.remove("ntss-user-fab-icon");
+        }
+      });
+      getOnsSpeedDialIconElements(menuRoot).forEach((icon) => {
+        icon.classList.add("ntss-user-fab-icon");
+      });
+    },
+    getUserMenuItems() {
+      const menuRoot = this.getUserMenuRoot();
+      if (!menuRoot) {
+        return [];
+      }
+      const fabButton = this.getUserMenuFabButton(menuRoot);
+      const items = this.getUserMenuItemNodes(menuRoot);
+      return fabButton ? [fabButton, ...items] : items;
+    },
+    resolvePopoverTarget(evt) {
+      return getOnsSpeedDialEventTarget(evt);
+    },
+    getFabFooterOffset() {
+      return getFooterMenuHeight({ isDispMenu: this.isDispMenu });
+    },
 //add 6011 個人設定>デフォルト設定>治療状況マップで設定したレイアウトを表示しない 関俊楠 start
     ...mapMutations("status-list/list", [
       "clearConditionTreatList"
@@ -878,20 +1024,23 @@ export default {
     }),
     // add FNSI-患者選択された状態 じょはく start
     changePrintFlag() {
-      this.printFlag = this.selectedPat;
-      if ( this.selectedPat === null ) {
-        this.printFlag = 0;
-      } else if ( this.selectedPat !== null ) {
-        this.printFlag = 1;
-      }
+      const hasSelectedPatient =
+        (
+          this.selectedPatId !== null &&
+          this.selectedPatId !== undefined &&
+          this.selectedPatId !== ""
+        ) ||
+        this.selectedPat !== null;
+      this.printFlag = hasSelectedPatient ? 1 : 0;
       // add FNSI-#522、IES364 選択された機能により、対象の帳票を表示する。 夏 start
       const funcCd = getCurrentFunctionCd();
       // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 start
-      if(funcCd!="02303" &&　funcCd!="03201" &&　funcCd!="03301" &&　funcCd!="03401"
-        &&　funcCd!="02102" &&　funcCd!="02202" &&　funcCd!="01802" && funcCd!="02101"){
+      if(!REPORT_FETCH_EXCLUDED_FUNC_CDS.includes(funcCd)){
         // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 end
         if (funcCd) {
-          store.dispatch("report/getMstReport", {funcCd: funcCd, printFlag: this.printFlag});
+          store.dispatch("report/getMstReport", {funcCd: funcCd, printFlag: this.printFlag}).catch(error => {
+            getErrorMessage("FabComponent.vue", "changePrintFlag", error);
+          });
         }
       }
       // add FNSI-#522、IES364 選択された機能により、対象の帳票を表示する。 夏 end
@@ -902,21 +1051,28 @@ export default {
      * 初期処理.
      */
     init() {
-      if (this.$refs.user_menu.$children.length <= 2) {
+      if (this.getUserMenuItems().length <= 2) {
         // メニューアイテムが１つ以下(fab除く)の場合処理しない
         return;
       }
+      const menuRoot = this.getUserMenuRoot();
+      if (!menuRoot) {
+        return;
+      }
       // fab以外を取得
-      const items = this.$refs.user_menu.$children.slice(1);
+      const items = this.getUserMenuItems().slice(1);
+      const rootRect = menuRoot.getBoundingClientRect?.() || { top: 0, left: 0 };
+      const firstRect = items[0].getBoundingClientRect?.() || { top: 0, left: 0, height: items[0].clientHeight, width: items[0].clientWidth };
+      const secondRect = items[1].getBoundingClientRect?.() || firstRect;
       // アイコンサイズ取得
-      this.itemHeight = items[0].$el.clientHeight;
-      this.itemWidth = items[0].$el.clientWidth;
+      this.itemHeight = firstRect.height || items[0].clientHeight;
+      this.itemWidth = firstRect.width || items[0].clientWidth;
       // 一番左の一番上のアイコン位置を取得
-      this.itemTop = Number(items[0].$el.style.top.replace("px", ""));
-      this.itemLeft = Number(items[0].$el.style.left.replace("px", ""));
+      this.itemTop = Math.max(firstRect.top - rootRect.top, 0);
+      this.itemLeft = firstRect.left - rootRect.left;
       // 余白を取得(アイテム同士のtop位置から算出)
-      const top1 = Number(items[0].$el.style.top.replace("px", ""));
-      const top2 = Number(items[1].$el.style.top.replace("px", ""));
+      const top1 = firstRect.top - rootRect.top;
+      const top2 = secondRect.top - rootRect.top;
       this.itemMargin = top2 - top1 - this.itemHeight;
     },
     /**
@@ -929,28 +1085,27 @@ export default {
       //   return;
       // }
       //add #9907 ユーザーフロートボタンメニューが画面から飛び出る zhangbo end
+      const menuRoot = this.getUserMenuRoot();
+      if (!menuRoot) {
+        return;
+      }
       // フッタメニュー除いた表示領域を取得
       let fmh = 5;
       if (this.isDispMenu === 1) {
-        // フッタ表示設定
-        const footerMenuElem = document.getElementById("footer-menu");
-        if (footerMenuElem) {
-          // フッタ要素が存在
-          fmh = footerMenuElem.clientHeight + 5;
-        }
+        fmh = this.getFabFooterOffset() + 5;
       }
-      const areaHeight = document.body.clientHeight - fmh;
+      const rootRect = menuRoot.getBoundingClientRect?.() || { top: 0 };
+      const areaHeight = getViewportHeight() - fmh - rootRect.top;
 
       // Top,Leftの初期値設定
       let top = this.itemTop;
       let left = this.itemLeft - (this.itemWidth + this.itemMargin);
 
       // ウィンドウ外に位置する最初のアイテムを検索.
-      const items = this.$refs.user_menu.$children;
-      let pos = items.findIndex(item => {
-        // アイテムの底辺の座標を取得してチェック.
+      const items = this.getUserMenuItems();
+      let pos = items.findIndex((item) => {
         const bottom =
-          Number(item.$el.style.top.replace("px", "")) +
+          Number((item.style.top || "0").replace("px", "")) +
           this.itemHeight +
           this.itemMargin;
         return areaHeight <= bottom;
@@ -959,22 +1114,21 @@ export default {
       if (pos < 0) {
         // ウィンドウ内に収まっている場合,２列目以降の再調整が可能か調べる
         pos = items.findIndex(
-          item => Number(item.$el.style.left.replace("px", "")) < 0
-        );
+          (item) => Number((item.style.left || "0").replace("px", "")) < 0);
         if (pos < 0) {
           // 再調整不要
           return;
         }
         // 2列目の最初のメニューアイテムを１列目の最後尾に移動
         const item = items[pos];
-        item.$el.style.top =
-          Number(items[pos - 1].$el.style.top.replace("px", "")) +
+        item.style.top =
+          Number((items[pos - 1].style.top || "0").replace("px", "")) +
           this.itemHeight +
           this.itemMargin +
           "px";
-        item.$el.style.left = items[pos - 1].$el.style.left;
+        item.style.left = items[pos - 1].style.left;
         const bottom =
-          Number(item.$el.style.top.replace("px", "")) + this.itemHeight;
+          Number((item.style.top || "0").replace("px", "")) + this.itemHeight;
         if (areaHeight > bottom) {
           // 移動後に収まっていれば次のアイテムから位置を調整とする
           pos++;
@@ -984,8 +1138,8 @@ export default {
       // 外れたメニューアイテム以降を全て位置調整する
       for (let i = pos; i < items.length; i++) {
         const item = items[i];
-        item.$el.style.top = top + "px";
-        item.$el.style.left = left + "px";
+        item.style.top = top + "px";
+        item.style.left = left + "px";
         // 次の位置を算出
         top += this.itemHeight + this.itemMargin;
         const bottom = top + this.itemHeight + this.itemMargin;
@@ -997,8 +1151,8 @@ export default {
       }
     },
     // ユーザーメニューボタン押下時のポップオーバー表示
-    showUserMenuPopover() {
-      this.userMenuPopoverTarget = event.target;
+    showUserMenuPopover(evt) {
+      this.userMenuPopoverTarget = this.resolvePopoverTarget(evt);
       //add #9907 ユーザーフロートボタンメニューが画面から飛び出る zhangbo start
       // this.$nextTick(() => {
       //   this.moveSpeedDialItems();
@@ -1011,13 +1165,10 @@ export default {
       this.fontSizePopoverVisible = false;
       this.themePopoverTarget = null;
       this.themePopoverVisible = false;
-
       this.facilitiesPopoverTarget = null;
       this.facilitiesPopoverVisible = false;
-      // mod #12462 患者情報共有 関 start
       this.patientSharedPopoverTarget = null;
       this.patientSharedPopoverVisible = false;
-      // mod #12462 患者情報共有 関 end
       this.helpPopoverTarget = null;
       this.helpPopoverVisible = false;
       this.splitFramePopoverTarget = null;
@@ -1025,36 +1176,54 @@ export default {
       this.reportPopoverTarget = null;
       this.reportPopoverVisible = false;
     },
+    getReportButtonElement() {
+      const button = this.$refs.reportButton;
+      return button?.$el || button || null;
+    },
+    syncReportButtonDisabled() {
+      this.$nextTick(() => {
+        const button = this.getReportButtonElement();
+        if (!button) {
+          return;
+        }
+        if (this.reportButtonDisabled) {
+          button.disabled = true;
+          button.setAttribute("disabled", "");
+        } else {
+          button.disabled = false;
+          button.removeAttribute("disabled");
+        }
+      });
+    },
     // Fab内ボタン押下時のポップオーバー表示
-    showFabPopover() {
-      this.fontSizePopoverTarget = event.target;
+    showFabPopover(evt) {
+      this.fontSizePopoverTarget = this.resolvePopoverTarget(evt);
       this.fontSizePopoverVisible = true;
     },
     // Fab内のテーマボタン押下時のポップオーバー表示
-    showThemePopover() {
-      this.themePopoverTarget = event.target;
+    showThemePopover(evt) {
+      this.themePopoverTarget = this.resolvePopoverTarget(evt);
       this.themePopoverVisible = true;
     },
-    // Fab内ボタン押下時   施設切替 表示  liyanze-z
-    showFacilitiesBtn() {
-      this.facilitiesPopoverTarget = event.target;
+    // Fab内の施設切替ボタン押下時のポップオーバー表示
+    showFacilitiesBtn(evt) {
+      this.facilitiesPopoverTarget = this.resolvePopoverTarget(evt);
       this.facilitiesPopoverVisible = true;
     },
-    // mod #12462 患者情報共有 関 start
-    showPatientSharedBtn() {
-      this.patientSharedPopoverTarget = event.target;
+    // Fab内の患者共有ボタン押下時のポップオーバー表示
+    showPatientSharedBtn(evt) {
+      this.patientSharedPopoverTarget = this.resolvePopoverTarget(evt);
       this.patientSharedPopoverVisible = true;
       this.refreshFacilityData();
     },
-    // mod #12462 患者情報共有 関 end
     // Fab内ボタン押下時のポップオーバー表示
-    showHelpPopover() {
-      this.helpPopoverTarget = event.target;
+    showHelpPopover(evt) {
+      this.helpPopoverTarget = this.resolvePopoverTarget(evt);
       this.helpPopoverVisible = true;
     },
     // Fab内の画面フレーム分割設定ボタン押下時のポップオーバー表示
-    showSplitFramePopover() {
-      this.splitFramePopoverTarget = event.target;
+    showSplitFramePopover(evt) {
+      this.splitFramePopoverTarget = this.resolvePopoverTarget(evt);
       this.splitFramePopoverVisible = true;
     },
     // 印刷ダイアログ呼び出し
@@ -1065,30 +1234,38 @@ export default {
       EventBus.$emit('print-start')
 // add FNSI redmain_3937 指示受け・指示承認で画面印刷を行うとレイアウトが崩れる dou end
       this.closeUserMenu();
-      const interval = setInterval(() => {
-        const popoverList = document.querySelectorAll(".user-menu-item-popover");
-        const isAllClosed = Array.from(popoverList).every(popover => popover.style.display === "none");
+      const ownerWindow = getScopedWindow(this.$el) || window;
+      const interval = ownerWindow.setInterval(() => {
+        const popoverList = this.getUserMenuPopoverElements();
+        const isAllClosed = Array.from(popoverList).every(popover => (popover.style?.display || "none") === "none");
         if (isAllClosed) {
-          clearInterval(interval);
-          setTimeout(() => {
-            window.print();
+          ownerWindow.clearInterval(interval);
+          ownerWindow.setTimeout(() => {
+            ownerWindow.print();
             EventBus.$emit('print-end')
           }, 1000);
         }
       });
     },
     // Fab内の印刷ボタン押下時のポップオーバー表示
-    showReportPopover() {
-      this.reportPopoverTarget = event.target;
+    showReportPopover(evt) {
+      if (!this.canReport) {
+        return;
+      }
+      this.reportPopoverTarget = this.resolvePopoverTarget(evt);
       this.reportPopoverVisible = true;
+    },
+    getItemAuthorized(pageCd, itemCd) {
+      return getAuthorized(pageCd, itemCd);
     },
     // ReMSヘルプページ(PDF)表示（別タブに表示）
     async showHelp() {
       if (this.device == "notMobile") {
-        this.showHelpNotMobile(HELP_URL);
+        const helpWindow = (getScopedWindow(this.$el) || window).open("about:blank");
+        helpWindow.location.href = HELP_URL;
       } else {
-        const viewer = document.getElementById("pdf-container");
-        document.querySelector("meta[name='viewport']").setAttribute('content', '"width=device-width, initial-scale=1.0, user-scalable=yes');
+        const viewer = this.getManualViewer('rems');
+        this.setViewportContent('"width=device-width, initial-scale=1.0, user-scalable=yes');
         if (viewer.hasChildNodes()) {
           this.isShowManual = true;
           this.showManualType = "2";
@@ -1112,10 +1289,7 @@ export default {
             this.manualImgPageCnt = this.lstManualImg.length;
             // 読み込んだ画像をイメージとして書き出す(まずは5ページ分書き出し)
             for(let idx = 0; idx < 5; idx++){
-              var img = new Image();
-              img.src = MANUAL_DIR_URL + "/" + this.lstManualImg[idx];
-              img.style.width = "100%";
-              viewer.appendChild(img);
+              this.appendManualImage(viewer, MANUAL_DIR_URL + "/" + this.lstManualImg[idx]);
               this.dispManualPageCnt += 1;
             }
             this.isShowManual = true;
@@ -1130,12 +1304,9 @@ export default {
       if((target.scrollHeight - (target.offsetHeight + target.scrollTop)) / target.scrollHeight <= 0){
         // スクロール最下部に来ていた場合最大2ページ分追加読込する
         if (this.dispManualPageCnt < this.manualImgPageCnt) {
-          const viewer = document.getElementById("pdf-container");
+          const viewer = this.getManualViewer('rems');
           for(let i = 0; i < 2; i++){
-            var img = new Image();
-            img.src = MANUAL_DIR_URL + "/" + this.lstManualImg[this.dispManualPageCnt];
-            img.style.width = "100%";
-            viewer.appendChild(img);
+            this.appendManualImage(viewer, MANUAL_DIR_URL + "/" + this.lstManualImg[this.dispManualPageCnt]);
             this.dispManualPageCnt += 1;
             if (this.dispManualPageCnt === this.manualImgPageCnt){
               break;
@@ -1148,10 +1319,11 @@ export default {
     // FNSiヘルプページ(PDF)表示（別タブに表示）
     async showHelpFnsi() {
       if (this.device == "notMobile") {
-        this.showHelpNotMobile(FNSI_HELP_URL);
+        const helpWindow = (getScopedWindow(this.$el) || window).open("about:blank");
+        helpWindow.location.href = FNSI_HELP_URL;
       } else {
-        const viewer = document.getElementById("pdf-container-fnsi");
-        document.querySelector("meta[name='viewport']").setAttribute('content', '"width=device-width, initial-scale=1.0, user-scalable=yes');
+        const viewer = this.getManualViewer('fnsi');
+        this.setViewportContent('"width=device-width, initial-scale=1.0, user-scalable=yes');
         if (viewer.hasChildNodes()) {
           this.isShowManual = true;
           this.showManualType = "1";
@@ -1175,10 +1347,7 @@ export default {
             this.manualImgPageCntFnsi = this.lstManualImgFnsi.length;
             // 読み込んだ画像をイメージとして書き出す(まずは5ページ分書き出し)
             for(let idx = 0; idx < 5; idx++){
-              var img = new Image();
-              img.src = FNSI_MANUAL_DIR_URL + "/" + this.lstManualImgFnsi[idx];
-              img.style.width = "100%";
-              viewer.appendChild(img);
+              this.appendManualImage(viewer, FNSI_MANUAL_DIR_URL + "/" + this.lstManualImgFnsi[idx]);
               this.dispManualPageCntFnsi += 1;
             }
             this.isShowManual = true;
@@ -1193,12 +1362,9 @@ export default {
       if((target.scrollHeight - (target.offsetHeight + target.scrollTop)) / target.scrollHeight <= 0){
         // スクロール最下部に来ていた場合最大2ページ分追加読込する
         if (this.dispManualPageCntFnsi < this.manualImgPageCntFnsi) {
-          const viewer = document.getElementById("pdf-container-fnsi");
+          const viewer = this.getManualViewer('fnsi');
           for(let i = 0; i < 2; i++){
-            var img = new Image();
-            img.src = FNSI_MANUAL_DIR_URL + "/" + this.lstManualImgFnsi[this.dispManualPageCntFnsi];
-            img.style.width = "100%";
-            viewer.appendChild(img);
+            this.appendManualImage(viewer, FNSI_MANUAL_DIR_URL + "/" + this.lstManualImgFnsi[this.dispManualPageCntFnsi]);
             this.dispManualPageCntFnsi += 1;
             if (this.dispManualPageCntFnsi === this.manualImgPageCntFnsi){
               break;
@@ -1209,7 +1375,7 @@ export default {
     },
     // ヘルプページ(PDF)を閉じる
     closeManual() {
-      document.querySelector("meta[name='viewport']").setAttribute('content', '"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0');
+      this.setViewportContent('"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0');
       this.isShowManual = false;
       this.showManualType = null;
     },
@@ -1231,9 +1397,9 @@ export default {
             // ログイン画面へ遷移
             // ※URLにパラメータが含まれている場合に書き変わらない為、
             // window.locationで遷移するように変更
-            window.location.href = this.url;
+            (getScopedWindow(this.$el) || window).location.href = this.url;
             // #8576 【デグレ】サインアウト後サインインすると強制サインアウトのメッセージが表示される dou start
-            window.location.reload();
+            (getScopedWindow(this.$el) || window).location.reload();
             // #8576 【デグレ】サインアウト後サインインすると強制サインアウトのメッセージが表示される dou end
             // パンくずリストをクリア
             this.resetKeepHistory();
@@ -1277,9 +1443,9 @@ export default {
           	// 利用者情報をクリアする
             this.clearUserInfo();
           	// 全画面を解除する
-            window.open('', '_blank').close();
+            (getScopedWindow(this.$el) || window).open('', '_blank').close();
             // 空白に遷移
-            window.open('about:blank', '_self');
+            (getScopedWindow(this.$el) || window).open('about:blank', '_self');
           }
         }
       });
@@ -1333,7 +1499,7 @@ export default {
       // if (
       //   this.$route.name === "facility-calendar" &&
       //   (this.viewMode === 1 || this.viewMode === 2)
-      // ) {
+      //) {
       //   EventBus.$emit("updateViewCalendar", this.viewMode);
       // }
       // del #9717 施設カレンダーでサイドコンテンツの開閉の際に読み込みが走り表示に時間がかかる linjunfeng end
@@ -1397,7 +1563,7 @@ export default {
       this.closeUserMenu();
     },
     childSendHiddenFN(data) {
-      this.checkDomClass = data.class
+      this.checkDomClass = data.class;
     },
     // ユーザーメニューを閉じる
     closeUserMenu() {
@@ -1405,7 +1571,7 @@ export default {
       this.userMenuOpen = false;
     },
     toggleDevTool() {
-      this.lockDevToolTimeout = setTimeout(() => {
+      this.lockDevToolTimeout = (getScopedWindow(this.$el) || window).setTimeout(() => {
         // 171[左Ctrl]
         // 161[左shift]
         // 181[左Alt]
@@ -1421,13 +1587,13 @@ export default {
       }, 5000);
     },
     cancelToggleDevTool() {
-      clearTimeout(this.lockDevToolTimeout);
+      (getScopedWindow(this.$el) || window).clearTimeout(this.lockDevToolTimeout);
     },
     // 通知をONにする
     async registerNotification() {
       // 端末固有IDを取得
       this.terminalUniqueString =
-        localStorage.getItem(LOCAL_STORAGE_KEY.TERMINAL_UNIQUE_STRING);
+        getScopedLocalStorage(this.$el).getItem(LOCAL_STORAGE_KEY.TERMINAL_UNIQUE_STRING);
       // 公開鍵
       let publicKey = null;
       // Subscription処理の戻り値
@@ -1446,7 +1612,7 @@ export default {
       });
 
       // [02] Subscription
-      await webPushSubscribe(publicKey)
+      await webPushSubscribe(publicKey, this.$el)
       .then(response => {
         subscriptionObj = response;
       })
@@ -1471,7 +1637,7 @@ export default {
       // [03] 端末固有IDの生成
       if (this.terminalUniqueString === null) {
         this.terminalUniqueString = new Date().getTime().toString(16) + Math.floor(1000 * Math.random()).toString(16);
-        localStorage.setItem('terminalUniqueString', this.terminalUniqueString);
+        getScopedLocalStorage(this.$el).setItem('terminalUniqueString', this.terminalUniqueString);
       }
 
       // [04] 宛先情報をサーバに保存
@@ -1479,20 +1645,20 @@ export default {
         this.getFacilityCd,
         this.getStateUserAccountInfo.userId,
         this.terminalUniqueString,
-        subscriptionObj
+        subscriptionObj,
+        this.$el
       );
-      // mod FNSI-外結バッグを修正する 江 start
-      // this.setIsRegisteredNotificationFromDb(this.terminalUniqueString);
-      this.setIsRegisteredNotificationFromDb(this.terminalUniqueString, this.getFacilityCd, this.getStateUserAccountInfo.userId);
-      // mod FNSI-外結バッグを修正する 江 end
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
+      this.setIsRegisteredNotificationFromDb(this.terminalUniqueString);
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
     },
     // 通知をOFFにする
     async unregisterNotification() {
       // 端末固有IDを取得
-      this.terminalUniqueString = localStorage.getItem(LOCAL_STORAGE_KEY.TERMINAL_UNIQUE_STRING);
+      this.terminalUniqueString = getScopedLocalStorage(this.$el).getItem(LOCAL_STORAGE_KEY.TERMINAL_UNIQUE_STRING);
 
       // ブラウザの通知解除(unSubscribe)
-      navigator.serviceWorker.ready.then(function(reg) {
+      (getScopedWindow(this.$el) || window).navigator.serviceWorker.ready.then(function(reg) {
         reg.pushManager.getSubscription().then(function(subscription) {
           subscription.unsubscribe();
         })
@@ -1508,10 +1674,9 @@ export default {
           throw error;
         });
       }
-      // mod FNSI-外結バッグを修正する 江 start
-      // this.setIsRegisteredNotificationFromDb(this.terminalUniqueString);
-      this.setIsRegisteredNotificationFromDb(this.terminalUniqueString, this.getFacilityCd, this.getStateUserAccountInfo.userId);
-      // mod FNSI-外結バッグを修正する 江 end
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
+      this.setIsRegisteredNotificationFromDb(this.terminalUniqueString);
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
     },
     // add FNSI-メニューに共有ON／共有OFFを追加する。 周 start
     // 共有をONにする
@@ -1531,10 +1696,11 @@ export default {
     // add FNSI-メニューに共有ON／共有OFFを追加する。 周 end
     // 通知が使えるかどうか（通知設定：許可 and ブラウザが通知対応）
     isAvailableNotification() {
-      if ("Notification" in window === false) {
+      const ownerWindow = getScopedWindow(this.$el) || window;
+      if ("Notification" in ownerWindow === false) {
         return false;
       }
-      return Notification.permission === "granted";
+      return ownerWindow.Notification.permission === "granted";
     },
     // 通知無効時のメッセージ
     unavailableMessage() {
@@ -1549,11 +1715,6 @@ export default {
       this.messageDialogInfo.type = "1";
       this.messageDialogInfo.isDialogVisible = true;
     },
-    // add #12462 患者情報共有 関 start
-    getItemAuthorized(pageCd, itemCd) {
-      return getAuthorized(pageCd, itemCd);
-    },
-    // add #12462 患者情報共有 関 end
     updatePerformanceMemory() {
       if (this.isLockDevTool || !this.performanceMemory) return;
       Object.keys(this.performanceMemory).forEach(key => {
@@ -1568,58 +1729,6 @@ export default {
         EventBus.$emit("onResize");
       },0)
     },
-        /**
-     * 他施設取得
-     */
-    async refreshFacilityData() {
-      if (!this.selectedPatId) {
-        let options = [];
-        options.unshift({
-          value: null,
-          displayValue: "マージ表示"
-        });
-        this.facilityOptions = options;
-        return;
-      }
-      try {
-        const response = await ApiHelper.get(
-          `/patInfo/getPatHospitalById/${this.selectedPatId}`
-        );
-        const options = response.data.map(item => ({
-          value: item.facilityCd,
-          displayValue: item.facilityName
-        }));
-
-        options.unshift({
-          value: null,
-          displayValue: "マージ表示"
-        });
-
-        this.facilityOptions = options;
-
-      } catch (error) {
-        getErrorMessage("FabComponent.vue.vue", "refreshFacilityData", error);
-        throw error;
-      }
-    },
-    // mod #12462 患者情報共有 20260330 start
-    //操作マニュアルの表示
-    showHelpNotMobile(url){
-      const FAVICON_URL = {
-        0: "/ntss-admin-web/img/login/NIKKISO.ico",
-        1: "/ntss-admin-web/img/login/NIKKISO.ico",  // ReMS
-        2: "/ntss-admin-web/img/login/favicon.ico",  // FNSi
-        3: "/ntss-admin-web/img/login/favicon.ico"  // FNSi＋ReMS
-      };
-      //システム利用設定の取得
-      let systemUseSetting = this.getSystemUseSetting != null ? this.getSystemUseSetting : 0;
-      //favicon.icoのURLの設定
-      localStorage.setItem("faviconURL", FAVICON_URL[systemUseSetting]);
-      let helpWindow = window.open("about:blank");
-      helpWindow.location.href = url;
-      helpWindow = null;
-    },
-     // mod #12462 患者情報共有 関 start
     /**
      * 他施設取得
      */
@@ -1649,13 +1758,13 @@ export default {
 
         this.facilityOptions = options;
         if (
-          this.facilityOptions.length == 1 && 
-          this.facilityOptions[0].value == null && 
+          this.facilityOptions.length == 1 &&
+          this.facilityOptions[0].value == null &&
           this.patientShareMode.editValue !== 1
         ) {
-          this.selectedFacilityCd.initValue = null
-          this.selectedFacilityCd.editValue = null
-          this.setPatientShareFacilityCdMode(null)
+          this.selectedFacilityCd.initValue = null;
+          this.selectedFacilityCd.editValue = null;
+          this.setPatientShareFacilityCdMode(null);
           this.setOtherFacilityInfo({
             isOtherFacility: null,
             otherFacilityCd: null
@@ -1710,8 +1819,8 @@ export default {
         });
       }
       const isTargetScreen =
-        this.$router.currentRoute.name === "pat-info" ||
-        this.$router.currentRoute.name === "deviceset-info";
+        this.$route.name === "pat-info" ||
+        this.$route.name === "deviceset-info";
       if (!isTargetScreen && facilityCd !== null) {
         facilityCd = this.getFacilityCd;
       }
@@ -1734,8 +1843,8 @@ export default {
       this.setPatientShareFacilityCdMode(val);
       let facilityCd = val;
       const isTargetScreen =
-        this.$router.currentRoute.name === "pat-info" ||
-        this.$router.currentRoute.name === "deviceset-info";
+        this.$route.name === "pat-info" ||
+        this.$route.name === "deviceset-info";
       let isOther = val && val !== this.getFacilityCd;
       if (!isTargetScreen) {
         if (this.selectedFacilityCd.editValue == null) {
@@ -1769,7 +1878,22 @@ export default {
       // add #12462 患者情報共有 20260330 end
     },
     // mod #12462 患者情報共有 20260330 end
-    // mod #12462 患者情報共有 関 end
+    //操作マニュアルの表示
+    showHelpNotMobile(url){
+      const FAVICON_URL = {
+        0: "/ntss-admin-web/img/login/NIKKISO.ico",
+        1: "/ntss-admin-web/img/login/NIKKISO.ico",  // ReMS
+        2: "/ntss-admin-web/img/login/favicon.ico",  // FNSi
+        3: "/ntss-admin-web/img/login/favicon.ico"  // FNSi＋ReMS
+      };
+      //システム利用設定の取得
+      let systemUseSetting = this.getSystemUseSetting != null ? this.getSystemUseSetting : 0;
+      //favicon.icoのURLの設定
+      localStorage.setItem("faviconURL", FAVICON_URL[systemUseSetting]);
+      let helpWindow = window.open("about:blank");
+      helpWindow.location.href = url;
+      helpWindow = null;
+    }
   },
   async created() {
     this.updatePerformanceMemory();
@@ -1778,10 +1902,12 @@ export default {
     // add FNSI-患者選択された状態 じょはく end
     // add 性能改善メモリ不足 shan start
     EventBus.$off("closeUserMenu", this.closeUserMenu);
+    EventBus.$off("footerLayoutChanged", this.onFooterLayoutChanged);
     EventBus.$on("closeUserMenu", this.closeUserMenu);
+    EventBus.$on("footerLayoutChanged", this.onFooterLayoutChanged);
     // add 性能改善メモリ不足 shan end
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = getScopedUserAgent(this.$el);
     if (ua.match(/iPhone|iPad/)) {
       this.device = "iOS";
     } else if (!ua.match(/Android/)) {
@@ -1808,7 +1934,9 @@ export default {
   mounted() {
     this.changePrintFlag();
     this.$nextTick(() => {
+      this.syncReportButtonDisabled();
       this.init();
+      this.syncFabCompatDom();
     });
     //Service Workerの登録
     if (this.device == "notMobile" && 'serviceWorker' in navigator) {
@@ -1816,11 +1944,13 @@ export default {
       .catch((e) => console.error(e));
     }
   },
-  beforeDestroy() {
+  // add 性能改善メモリ不足 shan start
+  beforeUnmount() {
     this.patientShareMode.initValue = "1";
     this.patientShareMode.editValue = "1";
     this.changePatientShareMode(1)
     EventBus.$off("closeUserMenu", this.closeUserMenu);
+    EventBus.$off("footerLayoutChanged", this.onFooterLayoutChanged);
     //Service Workerの登録解除
     if (this.device == "notMobile" && 'serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(registrations => {
@@ -1839,7 +1969,7 @@ export default {
 </script>
 
 <style scoped>
-.dev-tool-unlocked >>> ons-speed-dial ons-fab ons-icon {
+.dev-tool-unlocked :deep(ons-speed-dial ons-fab ons-icon) {
   background-color: var(--emergency-background-color);
 }
 .button {
@@ -1853,6 +1983,57 @@ ons-speed-dial .ons-icon {
   font-size: 11pt;
   font-weight: normal;
   display: block;
+}
+ons-speed-dial .fab__icon,
+ons-speed-dial ons-fab .fab__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+ons-speed-dial .fab__icon .ons-icon,
+ons-speed-dial ons-fab .fab__icon .ons-icon,
+ons-speed-dial ons-fab ons-icon.fa-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  text-align: center;
+  line-height: 1;
+}
+/* fix 2026/06/09 Safari FABユーザ名大文字化 fa-icon誤適用 start */
+ons-speed-dial ons-fab ons-icon.fa-icon {
+  font-family: inherit;
+  text-transform: none;
+}
+/* fix 2026/06/09 Safari FABユーザ名大文字化 fa-icon誤適用 end */
+#user-menu :deep(ons-speed-dial-item.speed-dial__item > .ons-icon),
+#user-menu :deep(ons-speed-dial-item.speed-dial__item > ons-icon) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  line-height: 1;
+  transform: none;
+}
+#user-menu :deep(ons-speed-dial-item.speed-dial__item .ntss-fab-icon) {
+  display: block;
+  flex: 0 0 auto;
+  margin: 5px auto 0;
+  vertical-align: top;
 }
 ons-speed-dial .fab {
   box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.12);
@@ -1884,6 +2065,27 @@ ons-speed-dial .fab {
   margin-left: 5%;
   margin-top: 5%;
 }
+
+.facilitesBox :deep(.popover__content) {
+  width: 300px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.facilitesBox :deep(.card-header) {
+  padding-left: 12px;
+}
+
+.facilitesBox :deep(.card-header-button-area) {
+  position: absolute;
+  right: 0;
+  margin: 1px 10px 0 0;
+}
+
+#needHidden :deep(.popover) {
+  z-index: 2000;
+}
+
 .switch {
   position: absolute;
   top: 50%;
@@ -1930,19 +2132,94 @@ ons-speed-dial .fab {
   font-size: 15px;
   color: #999999;
 }
-.popover-help ons-list {
-  background-color: unset;
-  background-image: unset;
+/* ヘルプメニュー：一体型カード（取扱説明書／リリース情報） */
+/* Onsen 既定の .popover__content は width:220px + overflow:auto のため横スクロールが出やすい → 上書き */
+.popover-help :deep(.popover__content) {
+  padding: 0;
+  background: transparent;
+  width: auto !important;
+  min-width: 0;
+  max-width: min(94vw, 360px);
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: visible;
 }
-.popover-help-header {
-  background-color: #333333;
-  background-image: unset;
-  box-shadow: unset;
-  height: unset;
+
+.popover-help-panel {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 260px;
+  max-width: min(92vw, 320px);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  background: #ffffff;
 }
-.popover-text {
-  color: var(--all-label-color)!important;
-  background-image: linear-gradient(0deg, #ccc, #ccc 100%);
+
+.popover-help :deep(ons-list.popover-help-list) {
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  background-image: none;
+  overflow-x: hidden;
+}
+
+.popover-help :deep(ons-list-header.popover-help-header) {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: #333333;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.95em;
+  min-height: auto;
+  line-height: 1.4;
+  padding: 0.65em 0.95em;
+  text-transform: none;
+  text-align: left;
+}
+
+.popover-help :deep(ons-list-header.popover-help-header:first-of-type) {
+  border-radius: 8px 8px 0 0;
+}
+
+.popover-help :deep(ons-list-header.popover-help-header--section) {
+  margin-top: 0;
+}
+
+.popover-help :deep(ons-list-item.popover-help-item) {
+  width: 100%;
+  box-sizing: border-box;
+  color: var(--all-label-color, #212121) !important;
+  background: #ffffff;
+  background-image: none;
+  border-bottom: 1px solid #e8e8e8;
+  min-height: auto;
+}
+
+.popover-help :deep(ons-list-item.popover-help-item.list-item) {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.popover-help :deep(ons-list-item.popover-help-item:last-of-type) {
+  border-bottom: none;
+  border-radius: 0 0 8px 8px;
+}
+
+.popover-help :deep(ons-list-item.popover-help-item .list-item__center) {
+  padding: 0.65em 0.95em;
+  white-space: normal;
+  word-break: break-word;
+  min-width: 0;
+}
+
+.popover-help :deep(ons-list-item.popover-help-item:active) {
+  background: #f3f3f3;
 }
 /*mod FNSI-モーダル表示中だとユーザーフロートを表に出す 徐博 start*/
 #user-menu {
@@ -1954,15 +2231,15 @@ ons-speed-dial .fab {
   z-index: 10002;
 }
 /*mod FNSI-モーダル表示中だとユーザーフロートを表に出す 徐博 start*/
-#user-menu-popover >>> .popover-mask {
+#user-menu-popover :deep(.popover-mask) {
   /*z-index: 99;*/
   z-index: 9998;
 }
 /*mod FNSI-モーダル表示中だとユーザーフロートを表に出す 徐博 end*/
-#user-menu-popover >>> .popover {
+#user-menu-popover :deep(.popover) {
   display: none;
 }
-.user-menu-item-popover >>> .popover-mask {
+.user-menu-item-popover :deep(.popover-mask) {
   display: none;
 }
 #hideText {
@@ -2000,7 +2277,7 @@ ons-speed-dial .fab {
   z-index: 10000;
 }
 /*mod FNSI-モーダル表示中だとユーザーフロートを表に出す 徐博 end*/
-.theme >>> .popover__content{
+.theme :deep(.popover__content) {
   min-height: 120px;
 }
 
@@ -2017,38 +2294,12 @@ ons-speed-dial .fab {
   white-space: pre-wrap;
 }
 
-
-
-/***表示機能を切り替えるときにDOMの幅を変更する liyanze-z start*/
-.facilitesBox>>>.popover__content {
-  width: 300px;
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-.facilitesBox>>>.card-header {
-  padding-left: 12px;
-}
-
-
-.facilitesBox>>>.card-header-button-area {
-  position: absolute;
-  right: 0;
-  margin: 1px 10px 0 0;
-}
-
-#needHidden>>>.popover {
-  z-index: 2000;
-}
-
-/***表示機能を切り替えるときにDOMの幅を変更する liyanze-z  end*/
-
 @media print {
   /** 1枚に収める */
   ons-speed-dial-item.speed-dial__item {
     display: none;
   }
- }
+}
 /* mod #12462 患者情報共有 関 start */
 .radio-center-group {
   display: flex;
@@ -2069,7 +2320,6 @@ ons-speed-dial .fab {
   width: 150px;
 }
 
-/* mod #12462 患者情報共有 関 end */
 .warning-msg {
   margin-top: 6px;
 }
@@ -2083,4 +2333,6 @@ ons-speed-dial .fab {
 .msg-wrapper {
   width: 100%;
 }
+
+/* mod #12462 患者情報共有 関 end */
 </style>

@@ -34,6 +34,19 @@ function handleSuccess(response) {
   return Promise.resolve(response);
 }
 
+function getCurrentRouteName() {
+  const curRoute = router.currentRoute && router.currentRoute.value
+    ? router.currentRoute.value
+    : router.currentRoute;
+  return curRoute && curRoute.name;
+}
+
+function pushLoginRoute(routeName) {
+  if (getCurrentRouteName() !== routeName) {
+    router.push({ name: routeName });
+  }
+}
+
 /**
  * APIエラー時ハンドラ
  * @param {*} error エラー
@@ -48,21 +61,16 @@ function handleError(error) {
   
   const isFacility = store.getters["user/isFacilityRole"];
   const isUser = store.getters["user/isUserRole"];
-  const curRoute = router.currentRoute;
   if (isUser) {
-    if (curRoute.name !== "clManagementLogin") {
-      router.push({ name: "clManagementLogin" });
-    }
+    pushLoginRoute("clManagementLogin");
   } else if (isFacility) {
-    if (curRoute.name !== "clDownloadLogin") {
-      router.push({ name: "clDownloadLogin" });
-    }
+    pushLoginRoute("clDownloadLogin");
   } else {
     if (
-      curRoute.name !== "clManagementLogin" &&
-      curRoute.name !== "clDownloadLogin"
+      getCurrentRouteName() !== "clManagementLogin" &&
+      getCurrentRouteName() !== "clDownloadLogin"
     ) {
-      router.push({ name: "clManagementLogin" });
+      pushLoginRoute("clManagementLogin");
     }
   }
 

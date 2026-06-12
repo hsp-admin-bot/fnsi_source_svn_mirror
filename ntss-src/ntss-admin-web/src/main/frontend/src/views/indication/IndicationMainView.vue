@@ -16,7 +16,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
@@ -51,31 +51,35 @@ export default {
     this.setLoadingScreenMessage("処理中・・・");
     this.setLoadingScreenVisible(true);
     // FNSI6729-ローダーが他の画面と異なる 周 add end
-    await Promise.all([
-      this.checkFacilitySetting(),
-      this.getUserInfo(),
-      this.getMst(),
-      this.checkIsDoctor()
-    ]);
+    try {
+      await Promise.all([
+        this.checkFacilitySetting(),
+        this.getUserInfo(),
+        this.getMst(),
+        this.checkIsDoctor()
+      ]);
 
-    if (this.isTreatmentUnit === null) {
-      // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-      // this.$ons.notification.alert("施設マスタにて施設単位の設定が必要です。", {
-      //   title: "エラー"
-      // });
-      this.$ons.notification.alert(messageFormat(DIALOG_MESSAGES[12000287].message)  , {
-        title: DIALOG_MESSAGES[12000287].title
-      });
-      // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
+      if (this.isTreatmentUnit === null) {
+        // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
+        // this.$ons.notification.alert("施設マスタにて施設単位の設定が必要です。", {
+        //   title: "エラー"
+        // });
+        this.$ons.notification.alert(messageFormat(DIALOG_MESSAGES[12000287].message)  , {
+          title: DIALOG_MESSAGES[12000287].title
+        });
+        // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
+      }
+    } finally {
+      this.isLoading = false;
+
+      // FNSI6729-ローダーが他の画面と異なる 周 add start
+      this.setLoadingScreenVisible(false);
+      // FNSI6729-ローダーが他の画面と異なる 周 add end
     }
-
-    this.isLoading = false;
-
-    // FNSI6729-ローダーが他の画面と異なる 周 add start
-    this.setLoadingScreenVisible(false);
-    // FNSI6729-ローダーが他の画面と異なる 周 add end
   },
-  beforeDestroy() {
+  beforeUnmount() {
+    // 自画面で開始した共通ローダーを、遷移時にも Vue2 の画面破棄と同じく閉じる。
+    this.setLoadingScreenVisible(false);
     this.clearState();
     this.setSrcFuncName("");
     this.setOrdNoForSideBarRecord(null);

@@ -1,6 +1,8 @@
 /* eslint-disable */
-import axios from 'axios';
+
 import * as types from './mutation-types';
+import dayjs from "@/compat/date/dayjs";
+import axios from "@/compat/http/axios";
 
 // 施設コード
 // const facilitycd = 999900;
@@ -27,7 +29,7 @@ const getmachineitems = `${apiPrefix}api/machines/`;
 // 自動更新デモ用API（使用している個所はソースコード内に NOTE: と記述）
 const getmonitordata = `${apiPrefix}api/mni_monitor/search_ex?`;
 const getmonitordataDiff = `${apiPrefix}api/mni_monitor/search_ex_diff?`;
-// >>>>
+// ----
 
 // 工程
 const processstate = [
@@ -156,7 +158,7 @@ const state = {
     moniNo: 17,
     moniName: ''
   },
-  // >>>>ここまで
+  // ----ここまで
   staffcd: staffcd,
   facilityCd: '',
   // フレーム分割表示有無(0:なし、1：あり)
@@ -883,7 +885,7 @@ const actions = {
         }else if(array[index].moniNo == state.exInfo.moniNo){
           state.exInfo.moniName = array[index].monDataName;
         }
-        // >>>>>
+        // ---->
 
         // リストグラフのモニタ項目 state.graphsettings.list.moni_graph.graph_info.moni_info[0].moni_no
         for (let i = 0; i < listmoni_info.length; i++) {
@@ -1229,7 +1231,7 @@ const actions = {
         // TODO: <<<< タイマー更新機能不要時には削除
         // NOTE: 差分1点のみ返すスペシャルなAPI
         rest = getmonitordataDiff;
-        // >>>> ここまで
+        // ---- ここまで
 
         getstr += '&' + 'bioMoniCtlNo=' + dispdata[indexno].ctlno;
       }
@@ -1457,7 +1459,7 @@ const actions = {
           dispdata[indexno].alertStyle = { 'ntss-monitoring-basepane-info': true };
           dispdata[indexno].alertTextStyle = { 'ntss-monitoring-basepane-info-text': true };
         }
-        // >>>>>
+        // ---->
 
         // リスト・詳細グラフデータ更新
         for (let i = 0; i < setdata.length; i++) {
@@ -1720,7 +1722,7 @@ const actions = {
         // TODO: タイマー更新機能不要時には削除？残しても動くかも <<<<
         // NOTE: 差分1点のみ返すスペシャルなAPI
         rest = getmonitordataDiff;
-        // >>>> ここまで
+        // ---- ここまで
 
         gitem = state.detailgraph;
         getstr += '&' + 'bioMoniCtlNo=' + dispdata[indexno].ctlno;
@@ -1729,7 +1731,7 @@ const actions = {
         // TODO: タイマー更新機能不要時には削除？残しても動くかも <<<<
         // NOTE: 学会対応、静的データのうち一覧グラフで読み込み済みの範囲を取得する
         getstr += '&' + 'lastBioMoniCtlNo=' + dispdata[indexno].ctlno;
-        // >>>> ここまで
+        // ---- ここまで
       }
 
       // 最新値（詳細グラフ表示用）項目番号
@@ -1817,7 +1819,7 @@ const actions = {
       // const moment = require('moment');
       // moment.locale('ja');
       // const dateformat = 'YYYY年MM月DD日dddd';
-      // const momentDate = moment(new Date());
+      // const momentDate = dayjs(new Date());
       // let setdate = momentDate.format(dateformat);
       // viewmachinedata.latedate = setdate;
 
@@ -2169,12 +2171,12 @@ function getdetaildata(data, monino) {
  */
 function getState(stateno) {
   // 検索
-  for (let ilp = 0; ilp < detailstate.length; ilp++) {
-    if (detailstate[ilp].no == stateno) {
-      return detailstate[ilp];
+  for (let ilp = 0; ilp < processstate.length; ilp++) {
+    if (processstate[ilp].no == stateno) {
+      return processstate[ilp];
     }
   }
-  return detailstate[0];
+  return processstate[0];
 }
 
 /**
@@ -2217,7 +2219,7 @@ function setStartEndLine(gobj, idx) {
       if (gobj.xAxis.plotLines[1].value != getElapsedTime(state.machinedata[idx].endDate, idx)) {
         // 終了線クリア
         gobj.xAxis.plotLines.splice(1, 1);
-        gobj.xAxis.plotLines.push({ color: 'green', width: 2, value: xdate })
+        gobj.xAxis.plotLines.push({ color: 'green', width: 2, value: getElapsedTime(state.machinedata[idx].endDate, idx) })
       }
     }
   }
@@ -2228,10 +2230,8 @@ function setStartEndLine(gobj, idx) {
  * @param {日付時刻} date
  */
 function formatDate(date) {
-  const moment = require('moment');
   const dateformat = 'YYYY/MM/DD HH:mm:ss';
-  const momentDate = moment(date);
-  return momentDate.format(dateformat);
+  return dayjs(date).format(dateformat);
 }
 
 // 経過時間を秒単位で返す

@@ -12,7 +12,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
@@ -915,7 +915,7 @@ public class PatIntroductionLetterImpl implements PatIntroductionLetterService {
         reportMenuService.IntroductionLetterPrintPdfReport(byteMap,reportName, printerCd,ntssUser.getFacilityCd(), "紹介状");
         //mod #9616 帳票印刷失敗通知がされない 李 end
         // mod 9608 紹介状印刷時に同時に出力される透析レポートについて　吉 end
-        return new ResponseEntity<>(null, HttpStatus.OK);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
       } catch (Exception e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -1108,7 +1108,7 @@ public class PatIntroductionLetterImpl implements PatIntroductionLetterService {
 //        logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_PAT_INTRO_LETTER, AFTER_LOG_FLG_INFO, mappingUrl, null,
 //          null);
 //        // wp アプリケーションログの適正化 Add End
-//        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+//        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
 //      }
 //      String reportName = "IntroductionLetter";
 //      Long reportCd = Long.parseLong(payload.get("reportCd").toString());
@@ -1135,7 +1135,7 @@ public class PatIntroductionLetterImpl implements PatIntroductionLetterService {
 //        logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_PAT_INTRO_LETTER, AFTER_LOG_FLG_INFO, mappingUrl, null,
 //          null);
 //        // wp アプリケーションログの適正化 Add End
-//        return new ResponseEntity<>(null, HttpStatus.OK);
+//        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //      } catch (Exception e) {
 //
 //        // wp アプリケーションログの適正化 Add Start
@@ -1250,7 +1250,7 @@ public class PatIntroductionLetterImpl implements PatIntroductionLetterService {
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_PAT_INTRO_LETTER, AFTER_LOG_FLG_INFO, mappingUrl, null,
       null);
     // wp アプリケーションログの適正化 Add End
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   //add  Aspose.cells plug-in integration  吉 start

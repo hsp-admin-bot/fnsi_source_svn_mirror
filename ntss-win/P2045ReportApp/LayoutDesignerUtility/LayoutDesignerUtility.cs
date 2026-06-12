@@ -865,7 +865,9 @@ namespace LayoutDesignerUtilityLib
                 LayoutDesignerUtility.S3Bucket = "";
 
                 // 最新ファイルダウンロード先フォルダ
-                DownloadSourceFolder = wInfo.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFolder", string.Empty).Trim();
+                // del #11660 単体アプリの自己アップデート修正 高 start
+                //DownloadSourceFolder = wInfo.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFolder", string.Empty).Trim();
+                // del #11660 単体アプリの自己アップデート修正 高 end
 
 				// サインイン前にサインインを行ってくれるクラスに[クライアント証明書を検索するためのキー値]をセット
                 NKKWebAccessLib.NKKWebAccess.ClientCertificateSearchValue1 = wInfo.GetSingleLineValue(CONFIG_COMMON_SECTION, "ClientCertificateSearchValue1", string.Empty).Trim();
@@ -889,11 +891,15 @@ namespace LayoutDesignerUtilityLib
 
                 // add サンプルレイアウトをサーバからダウンロードして、編集できる機能。 陳 start
                 // 最新ファイル取得先ファイル名
-                DownloadFileName = wInfo.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFileName", string.Empty).Trim();
+                // del #11660 単体アプリの自己アップデート修正 高 start
+                //DownloadFileName = wInfo.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFileName", string.Empty).Trim();
+                //DownloadFileName = "LayoutDesignerUpdate.zip";
                 // サンプルレイアウト取得先フォルダ
-                ModelFolder = wInfo.GetSingleLineValue(CONFIG_COMMON_SECTION, "ModelFolder", string.Empty).Trim();
+                //ModelFolder = wInfo.GetSingleLineValue(CONFIG_COMMON_SECTION, "ModelFolder", string.Empty).Trim();
                 // サンプルレイアウト取得先ファイル名
-                ModelFileName = wInfo.GetSingleLineValue(CONFIG_COMMON_SECTION, "ModelFileName", string.Empty).Trim();
+                //ModelFileName = wInfo.GetSingleLineValue(CONFIG_COMMON_SECTION, "ModelFileName", string.Empty).Trim();
+                //ModelFileName = "ModelUpdate.zip";
+                // del #11660 単体アプリの自己アップデート修正 高 end
                 // add サンプルレイアウトをサーバからダウンロードして、編集できる機能。 陳 end
                 // add #7297 初回リリース対象外の機能とその関連機能を隠す xiaosonglei start
                 // 新規登録タブのドロップダウンリスト設定

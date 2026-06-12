@@ -5,20 +5,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.amazonaws.util.IOUtils;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import jp.co.nikkiso.ntss.core.dao.SysSystemDefineDao;
 import jp.co.nikkiso.ntss.core.entity.SysSystemDefine;
 import org.springframework.beans.factory.annotation.Value;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 /**
- * {@link AmazonS3} wrapper
+ * {@link S3Client} wrapper
  *
  */
 public class AmazonS3Wrapper {
@@ -35,7 +34,7 @@ public class AmazonS3Wrapper {
 
   /** Amazon S3. */
   @Autowired(required = false)
-  private AmazonS3 s3;
+  private S3Client s3;
 
   @Value("${ntss.report.s3-bucket}")
   private String s3Bucket;
@@ -100,7 +99,7 @@ public class AmazonS3Wrapper {
   // mod 2021-03-19 問題確認：NODEJS側に確認JAVA側のPDFファイルを送付しました。 孫 end
 
   /**
-   * {@link AmazonS3#getObject(GetObjectRequest)} to byte[]
+   * {@link S3Client#getObject(GetObjectRequest)} to byte[]
    *
    * @param key キー名
    * @return byte[]
@@ -126,9 +125,8 @@ public class AmazonS3Wrapper {
     }
 
     if (status.equals("off")) {
-      S3Object s3Object = this.getS3Object(key);
-      try (S3ObjectInputStream inputStream = s3Object.getObjectContent()) {
-        return IOUtils.toByteArray(inputStream);
+      try (ResponseInputStream<GetObjectResponse> inputStream = getS3Object(key)) {
+        return inputStream.readAllBytes();
       } catch (IOException e) {
         throw e;
       }
@@ -142,16 +140,19 @@ public class AmazonS3Wrapper {
   }
 
   /**
-   * {@link AmazonS3#getObject(GetObjectRequest)}
+   * {@link S3Client#getObject(GetObjectRequest)}
    *
    * @param key キー名
-   * @return {@link S3Object}
+   * @return S3 object stream
    */
-  public S3Object getS3Object(String key) {
+  public ResponseInputStream<GetObjectResponse> getS3Object(String key) {
     // mod 2021-03-19 問題確認：NODEJS側に確認JAVA側のPDFファイルを送付しました。 孫 start
 //    GetObjectRequest request = new GetObjectRequest(bucketName, key);
 //    return S3.getObject(request);
-    GetObjectRequest request = new GetObjectRequest(s3Bucket, key);
+    GetObjectRequest request = GetObjectRequest.builder()
+      .bucket(s3Bucket)
+      .key(key)
+      .build();
     return s3.getObject(request);
     // mod 2021-03-19 問題確認：NODEJS側に確認JAVA側のPDFファイルを送付しました。 孫 end
   }

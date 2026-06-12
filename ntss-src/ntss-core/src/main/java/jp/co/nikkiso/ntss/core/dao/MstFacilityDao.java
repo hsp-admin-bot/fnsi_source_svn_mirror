@@ -1,6 +1,7 @@
 package jp.co.nikkiso.ntss.core.dao;
 
 import java.util.List;
+import java.util.Map;
 
 import org.seasar.doma.Dao;
 import org.seasar.doma.Delete;
@@ -18,7 +19,7 @@ import jp.co.nikkiso.ntss.core.entity.custom.MstFacilityWithSchExtStartEndTime;
  */
 @ConfigAutowireable
 @Dao
-public interface MstFacilityDao {
+public interface MstFacilityDao extends MasterDao<Map<String, Object>> {
 
   @Select
   List<MstFacility> selectAll();
@@ -100,4 +101,10 @@ public interface MstFacilityDao {
   @Select
   List<MstFacility> selectFacilityByFunctionCd (String facilityCd);
   // add #12462 患者情報共有->けいれつしせつ end
+
+  /**
+   * mst-list-compose 用：施設マスタ
+   */
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
 }

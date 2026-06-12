@@ -34,10 +34,10 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nonnull;
+import org.springframework.lang.NonNull;
 import javax.sql.DataSource;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 import jp.co.nikkiso.ntss.core.dao.OrdScheduleDao;
@@ -1382,7 +1382,7 @@ public class ScheduleExtendUtil {
           try {
             logService.log(LogLevel.INFO, eventLogMessage,"",SERVICE_NAME.FNSI, null);
             ResponseEntity<?> response = notificationBatchService.genericNotificationsReceiver(jsonArray.toString());
-            httpStatus = response.getStatusCode();
+            httpStatus = HttpStatus.valueOf(response.getStatusCode().value());
             if (HttpStatus.OK != httpStatus) {
               eventLogMessage.setLogMessage("汎用通知レシーバーへの接続失敗:" + status);
               logService.log(LogLevel.ERROR, eventLogMessage,"",SERVICE_NAME.FNSI, null);
@@ -2295,7 +2295,7 @@ public class ScheduleExtendUtil {
       String base64replaceData = new String(Base64.getEncoder().encode(replaceData.toString().getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
       jsonBody.put("replaceData", base64replaceData);
       ResponseEntity<?> response = notificationResource.genericNotificationReciever(jsonBody.toString());
-      status = response.getStatusCode();
+      status = HttpStatus.valueOf(response.getStatusCode().value());
       if (HttpStatus.OK != status) {
         eventLogMessage.setLogMessage("汎用通知レシーバーへの接続失敗:" + status);
         logService.log(LogLevel.ERROR, eventLogMessage,"",SERVICE_NAME.FNSI, null);
@@ -2419,7 +2419,7 @@ public class ScheduleExtendUtil {
 
     try {
       ResponseEntity<?> response = notificationBatchService.genericNotificationsReceiver(jsonArray.toString());
-      status = response.getStatusCode();
+      status = HttpStatus.valueOf(response.getStatusCode().value());
       if (HttpStatus.OK != status) {
         eventLogMessage.setLogMessage("汎用通知レシーバーへの接続失敗:" + status);
         logService.log(LogLevel.ERROR, eventLogMessage,"",SERVICE_NAME.FNSI, null);
@@ -2540,7 +2540,7 @@ public class ScheduleExtendUtil {
       "values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?," +
       "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", new BatchPreparedStatementSetter() {
       @Override
-      public void setValues(@Nonnull PreparedStatement ps, int i) throws SQLException {
+      public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
         OrdMain main = ordMains.get(i);
         set(ps, 1, main.getPatId());
         set(ps, 2, main.getFnPatId());
@@ -2697,7 +2697,7 @@ public class ScheduleExtendUtil {
           "  current_timestamp, " +
           "  ?)", new BatchPreparedStatementSetter() {
           @Override
-          public void setValues(@Nonnull PreparedStatement ps, int i) throws SQLException {
+          public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
             OrdMain ord = triggerOrdMainList.get(i);
             set(ps, 1, ord.getFacilityCd());
             set(ps,2, ord.getOrdNo());
@@ -2737,7 +2737,7 @@ public class ScheduleExtendUtil {
           "  current_timestamp, " +
           "  ?)", new BatchPreparedStatementSetter() {
           @Override
-          public void setValues(@Nonnull PreparedStatement ps, int i) throws SQLException {
+          public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
             OrdScheduleNewKurPreview sch = dummyScheduleList.get(i);
             set(ps, 1, sch.getFacilityCd());
             set(ps,2, sch.getKeyNo());
@@ -2806,7 +2806,7 @@ public class ScheduleExtendUtil {
           "  '0', " +
           "  ?)", new BatchPreparedStatementSetter() {
           @Override
-          public void setValues(@Nonnull PreparedStatement ps, int i) throws SQLException {
+          public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
             OrdMain ord = approveOrdNoSetOrdMainList.get(i);
             set(ps,1, ord.getOrdNo());
             set(ps,2, ord.getFacilityCd());

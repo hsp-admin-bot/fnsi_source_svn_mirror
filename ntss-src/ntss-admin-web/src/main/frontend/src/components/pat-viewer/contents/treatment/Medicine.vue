@@ -37,8 +37,8 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 /**
  * ベースコンポーネント
@@ -49,12 +49,12 @@ import baseContent from "@/components/pat-viewer/contents/base/BaseContent";
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 共通操作
  */
-import { deepCopy } from "@/functions/common/CommonFunctions";
+import { deepCopy, parseStoredArray } from "@/functions/common/CommonFunctions";
 
 /**
  * コンポーネント共通操作
@@ -144,6 +144,7 @@ export default {
     ]),
     // add 1006-398 指示の切り替わりポイントを赤くする 陳 start
     ...mapGetters("pat-info", { patId: "selectedPatId" }),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     // add 1006-398 指示の切り替わりポイントを赤くする 陳 end
     ...mapGetters("pat-viewer-modal", ["getDefaultSettingMedicineData"]),
 
@@ -192,99 +193,100 @@ export default {
     // 表示用に投与薬剤情報を加工
     this.convertMedicinetData({
       listIndex: this.rowIndex,
-      selectLayoutCd: this.selectedLayoutCd
+      selectLayoutCd: this.selectedLayoutCd,
+      selectedPatId: this.selectedPatId
     }).then(async medicineDataListLet => {
       // add FNSI-薬剤、医療材料の表示順の設定を追加する 李 start
-
       //#11397 薬剤の表示順の修正 false start
-      // if (medicineDataListLet) {
-      //   // RestAPI実行
-      //   var facility_cd = this.getFacilityCd;
-      //   const response = await ApiHelper.get(
-      //     "/mainData/displayOrder",
-      //     //mod FNSI-7270 劉全航 start
-      //     { facility_cd }
-      //     //mod FNSI-7270 劉全航 end
-      //   ).catch(err => {
-      //     //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
-      //     getErrorMessage('Medicine.vue', 'created', err);
-      //     //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
-      //     throw err;
-      //   });
-      //   if (response.data) {
-      //     let medOrderNo = response.data.find(item => item.facilitySettingNo == '3007');
-      //     if (medOrderNo) {
-      //         //FNSI-修正 #5879 投薬の表示順の修正　ljx start
-      //         let medOrderNoValueArray = eval(medOrderNo.value);
-      //         let sortKeyObj = {};
-      //         for(let i=0;i<medOrderNoValueArray.length;i++){
-      //               switch (medOrderNoValueArray[i]){
-      //                   // 薬剤分類マスタ表示順
-      //                   case '1':
-      //                     // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
-      //                     //sortKeyObj['classCd'] = "ascending";
-      //                     sortKeyObj['classCdIndex'] = "ascending";
-      //                     // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 end
-      //                     break;
-      //                   // 薬剤区分
-      //                   case '2':
-      //                     sortKeyObj['medicineType'] = "ascending";
-      //                     break;
-      //                   // 薬剤マスタ表示順
-      //                   case '3':
-      //                     sortKeyObj['index'] = "ascending";
-      //                     break;
-      //                   // 投与タイミングマスタ表示順
-      //                   case '4':
-      //                     // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
-      //                     //sortKeyObj['medicateTimingCd2'] = "ascending";
-      //                     sortKeyObj['medicateTimingCdIndex'] = "ascending";
-      //                     // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 end
-      //                     break;
-      //                   // 手技マスタ表示順
-      //                   case '5':
-      //                    // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
-      //                    // sortKeyObj['procedureCd2'] = "ascending";
-      //                    sortKeyObj['procedureCdIndex'] = "ascending";
-      //                    // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 end
-      //                     break;
-      //                   // 投薬パターンコード
-      //                   case '6':
-      //                     sortKeyObj['dateInterval'] = "ascending";
-      //                     break;
-      //               }
-      //         }
-      //       medicineDataListLet.sort((frontValue, nextValue) => this.sortByProps(frontValue,nextValue,sortKeyObj));
-      //         //switch (medOrderNo.value) {
-      //         // 薬剤分類名称コード
-      //         //case '1':
-      //           //medicineDataListLet.sort((frontValue, nextValue) => frontValue.classCd - nextValue.classCd);
-      //           //break;
-      //         // 薬剤区分
-      //         //case '2':
-      //           //medicineDataListLet.sort((frontValue, nextValue) => frontValue.medicineType - nextValue.medicineType);
-      //           //break;
-      //         // 薬剤マスタ表示順
-      //         //case '3':
-      //           //medicineDataListLet.sort((frontValue, nextValue) => frontValue.index - nextValue.index);
-      //           //break;
-      //         // 投与時間帯
-      //         //case '4':
-      //           //medicineDataListLet.sort((frontValue, nextValue) => frontValue.medicateTimingCd - nextValue.medicateTimingCd);
-      //           //break;
-      //         // 手技
-      //         //case '5':
-      //           //medicineDataListLet.sort((frontValue, nextValue) => frontValue.procedureCd - nextValue.procedureCd);
-      //           //break;
-      //         // 投薬パターンコード
-      //         //case '6':
-      //           //medicineDataListLet.sort((frontValue, nextValue) => frontValue.dateInterval - nextValue.dateInterval);
-      //           //break;
-      //       //}
-      //           //FNSI-修正 #5879 投薬の表示順の修正　ljx end
-      //     }
-      //   }
-      // }
+      // #11397: Vue2 disables display-order sorting in this revision.
+      if (false && medicineDataListLet) {
+        // RestAPI実行
+        var facility_cd = this.getFacilityCd;
+        const response = await ApiHelper.get(
+          "/mainData/displayOrder",
+          //mod FNSI-7270 劉全航 start
+          { facility_cd, selectedPatId: this.selectedPatId }
+          //mod FNSI-7270 劉全航 end
+        ).catch(err => {
+          //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
+          getErrorMessage('Medicine.vue', 'created', err);
+          //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
+          throw err;
+        });
+        if (response.data) {
+          let medOrderNo = response.data.find(item => item.facilitySettingNo == '3007');
+          if (medOrderNo) {
+              //FNSI-修正 #5879 投薬の表示順の修正　ljx start
+              let medOrderNoValueArray = parseStoredArray(medOrderNo.value);
+              let sortKeyObj = {};
+              for(let i=0;i<medOrderNoValueArray.length;i++){
+                    switch (medOrderNoValueArray[i]){
+                        // 薬剤分類マスタ表示順
+                        case '1':
+                          // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
+                          //sortKeyObj['classCd'] = "ascending";
+                          sortKeyObj['classCdIndex'] = "ascending";
+                          // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 end
+                          break;
+                        // 薬剤区分
+                        case '2':
+                          sortKeyObj['medicineType'] = "ascending";
+                          break;
+                        // 薬剤マスタ表示順
+                        case '3':
+                          sortKeyObj['index'] = "ascending";
+                          break;
+                        // 投与タイミングマスタ表示順
+                        case '4':
+                          // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
+                          //sortKeyObj['medicateTimingCd2'] = "ascending";
+                          sortKeyObj['medicateTimingCdIndex'] = "ascending";
+                          // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 end
+                          break;
+                        // 手技マスタ表示順
+                        case '5':
+                         // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
+                         // sortKeyObj['procedureCd2'] = "ascending";
+                         sortKeyObj['procedureCdIndex'] = "ascending";
+                         // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 end
+                          break;
+                        // 投薬パターンコード
+                        case '6':
+                          sortKeyObj['dateInterval'] = "ascending";
+                          break;
+                    }
+              }
+            medicineDataListLet.sort((frontValue, nextValue) => this.sortByProps(frontValue,nextValue,sortKeyObj));
+              //switch (medOrderNo.value) {
+              // 薬剤分類名称コード
+              //case '1':
+                //medicineDataListLet.sort((frontValue, nextValue) => frontValue.classCd - nextValue.classCd);
+                //break;
+              // 薬剤区分
+              //case '2':
+                //medicineDataListLet.sort((frontValue, nextValue) => frontValue.medicineType - nextValue.medicineType);
+                //break;
+              // 薬剤マスタ表示順
+              //case '3':
+                //medicineDataListLet.sort((frontValue, nextValue) => frontValue.index - nextValue.index);
+                //break;
+              // 投与時間帯
+              //case '4':
+                //medicineDataListLet.sort((frontValue, nextValue) => frontValue.medicateTimingCd - nextValue.medicateTimingCd);
+                //break;
+              // 手技
+              //case '5':
+                //medicineDataListLet.sort((frontValue, nextValue) => frontValue.procedureCd - nextValue.procedureCd);
+                //break;
+              // 投薬パターンコード
+              //case '6':
+                //medicineDataListLet.sort((frontValue, nextValue) => frontValue.dateInterval - nextValue.dateInterval);
+                //break;
+            //}
+                //FNSI-修正 #5879 投薬の表示順の修正　ljx end
+          }
+        }
+      }
       //#11397 薬剤の表示順の修正 false end
       // add FNSI-薬剤、医療材料の表示順の設定を追加する 李 end
 
@@ -372,12 +374,12 @@ export default {
       //       let hasaftFlg = false;
       //       let befTreatDateDatas = null;
       //       let aftTreatDateDatas = null;
-      //       let befStartDt = moment(data.treatDate).add(-7, "days").format("YYYYMMDD");
-      //       let befEndDt = moment(data.treatDate).add(-1, "days").format("YYYYMMDD");
-      //       let aftStartDt = moment(data.treatDate).add(1, "days").format("YYYYMMDD");
-      //       let aftEndDt = moment(data.treatDate).add(7, "days").format("YYYYMMDD");
+      //       let befStartDt = dayjs(data.treatDate).add(-7, "days").format("YYYYMMDD");
+      //       let befEndDt = dayjs(data.treatDate).add(-1, "days").format("YYYYMMDD");
+      //       let aftStartDt = dayjs(data.treatDate).add(1, "days").format("YYYYMMDD");
+      //       let aftEndDt = dayjs(data.treatDate).add(7, "days").format("YYYYMMDD");
       //       datasKeep.forEach(dataKeep =>{
-      //         if (moment(dataKeep.treatDate).isBetween(befStartDt, befEndDt, "day", "[]")){
+      //         if (dayjs(dataKeep.treatDate).isBetween(befStartDt, befEndDt, "day", "[]")){
       //           if (data.deviceMode === 9) {
       //             if (data.treatMethodCd === dataKeep.treatMethodCd) {
       //               hasbefFlg = true;
@@ -390,7 +392,7 @@ export default {
       //             }
       //           }
       //         }
-      //         if (moment(dataKeep.treatDate).isBetween(aftStartDt, aftEndDt, "day", "[]")) {
+      //         if (dayjs(dataKeep.treatDate).isBetween(aftStartDt, aftEndDt, "day", "[]")) {
       //           if (data.deviceMode === 9) {
       //             if (data.treatMethodCd === dataKeep.treatMethodCd) {
       //               hasaftFlg = true;
@@ -459,7 +461,8 @@ export default {
         if (l !== this.rowIndex) {
           let medicineDataListLetTmp = await this.convertMedicinetData({
             listIndex: l,
-            selectLayoutCd: this.selectedLayoutCd
+            selectLayoutCd: this.selectedLayoutCd,
+            selectedPatId: this.selectedPatId
           });
           for (let i = 0; i < medicineDataListLet.length; i++) {
             let datas = medicineDataListLet[i].data;
@@ -507,7 +510,7 @@ export default {
     // mod FNSI-性能を最適化する 李 end
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -565,7 +568,7 @@ export default {
       // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng end
       // 治療日
       // mod FNSI-【1006】最新の改修対象一覧の678対応 韓 start
-      //const treatDate = moment(this.baseDate, "YYYYMMDD").format("YYYY-MM-DD");
+      //const treatDate = dayjs(this.baseDate, "YYYYMMDD").format("YYYY-MM-DD");
       //FNSI-修正　#4707　【患者経過総合ビューア】→【投与薬剤】、「開始日」「初回投与日」 修正、xugj add start
       let treatDate = this.getRecentBaseDate();
       // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng start
@@ -631,6 +634,9 @@ export default {
      * @param rowInfo 行情報
      */
     onSubTitleClick(event, rowInfo, itemInfo, itemIndex) {
+      if (rowInfo.readOnly) {
+        return;
+      }
       // すべて過去日の場合、操作不可メッセージを表示
       // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng start
       // if (this.getIsPastDate) {
@@ -638,11 +644,6 @@ export default {
       //   return;
       // }
 
-      /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
-      if (rowInfo.readOnly) {
-        return;
-      }
-      /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
 
       // 一覧上に治療予定がない場合は処理終了
       // if (!this.isTreatPlan) {
@@ -741,12 +742,9 @@ export default {
         return;
       }
       // add #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --start */
-      // if (cellInfo.isNotClickable) {
       if (isIndClick && cellInfo.isNotClickable) {
         return;
       }
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --end */
       //add FNSI内容修正 バグ284、286 姜
       let ordNoList = [];
       ordNoList.push(cellInfo.ordNo);
@@ -824,7 +822,7 @@ export default {
       // 施設コード
       settingData.facilityCd = this.facilityCd;
       // 治療日のフォーマットを調整
-      treatDate = moment(treatDate).format("YYYY-MM-DD");
+      treatDate = dayjs(treatDate).format("YYYY-MM-DD");
       // 治療開始日
       settingData.startDate = treatDate;
       // 治療終了日
@@ -850,12 +848,12 @@ export default {
         // 選択された曜日以外をfalseへ変更
         for (let i = 0; i < 7; i++) {
           settingData[this.changeWeekStr(i)] =
-            i !== moment(treatDate, "YYYYMMDD").day() ? false : true;
+            i !== dayjs(treatDate, "YYYYMMDD").day() ? false : true;
         }
       }
       if (!isCreate) {
         // 投与薬剤デフォルトデータ
-        const date = moment(treatDate).format("YYYYMMDD");
+        const date = dayjs(treatDate).format("YYYYMMDD");
         settingData.fieldsData = this.setDefaultData(date, itemIndex);
       }
       if (isCreate) {
@@ -1065,5 +1063,5 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 </style>

@@ -3,6 +3,7 @@
 <!-- #5590 2023/05/12 iPadでSafariを使うと、数字に×が被る。修正 start -->
   <div class="time-input">
     <input
+      ref="input"
       type="time"
       :class="classes"
       class="time-wrapper"
@@ -11,30 +12,35 @@
       :min="min"
       :max="max"
       :disabled="disabled"
-      v-validate="'date_format:HH:mm'"
-      :name="nameForVeeValidate"
+      v-rules="'date_format:HH:mm'"
+      :name="validationFieldName"
       v-bind="$attrs"
       @change="handleChange"
       @input="handleInput"
       @blur="handleBlur"
       @focus="handleFocus"
       @keydown="handleKeydown"
+      @wheel.prevent="handleWheel"
       :style="computedStyle"
     />
-    <span v-if="!disabled && dateValue && dateValue !== 'defaultValue' && !isRequired" :style="{left:left+'%'}" class="k-icon k-i-close close-btn" title="clear" @click="handleClearInput"></span>
+    <span v-if="!disabled && dateValue && !isRequired" :style="{left:left+'%', top:top+'%'}" class="k-icon k-i-close close-btn" title="clear" @click="handleClearInput"></span>
     <!-- //  #5590 2023/05/12 iPadでSafariを使うと、数字に×が被る。修正 end -->
   </div>
 </template>
 <script>
   
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
+import { applyModelModifiers } from "@/compat/vue/model";
+import { syncLegacyTimeInputDom } from "@/components/common/time-input-dom";
   
 export default {
   name: 'TimeInput',
+  inheritAttrs: false,
   modal: {
     event: 'blur'
   },
   props: {
+    modelValue: [String, Number],
     value: [String, Number],
     id: String,
     disabled: Boolean,
@@ -74,6 +80,10 @@ export default {
       type: String,
       default: ""
     },
+    modelModifiers: {
+      type: Object,
+      default: () => ({})
+    },
     //  #5590 2023/05/12 iPadでSafariを使うと、数字に×が被る。修正 start
     width:{
       type: Number,
@@ -81,9 +91,13 @@ export default {
     },
     left:{
       type: Number,
-      default: 65,
-    }
+      default: 66,
+    },
     //  #5590 2023/05/12 iPadでSafariを使うと、数字に×が被る。修正 end
+    top:{
+      type: Number,
+      default: 60,
+    }
   },
   data() {
     return {
@@ -91,26 +105,67 @@ export default {
     };
   },
   computed: {
-    nameForVeeValidate() {
-      // v-validateを指定する際はname（もしくはdata-vv-name）の
+    validationFieldName() {
+      // v-rulesを指定する際はname（もしくはdata-validation-name）の
       // 指定も必要なため、指定されていない場合は代替の値を設定する
-      return this.$attrs.name || this.$attrs["data-vv-name"] || this.id || "TimeInput";
+      return this.$attrs.name || this.$attrs["data-validation-name"] || this.id || "TimeInput";
+    },
+    externalValue() {
+      return this.modelValue !== undefined ? this.modelValue : this.value;
     },
     dateValue() {
-      // 無効な時刻の場合は親側に通知
-      if (this.value === "aN:aN") {
-        this.$emit('input', "");
-        this.$emit('blur', "");
-      }
-      return this.value || null
+      return this.normalizeTimeInputValue(this.externalValue);
     },  
     computedStyle() {
       return !this.isRequired ? { width: this.width + 'em' } : {};
     }
   },
+  mounted() {
+    this.syncLegacyDom();
+  },
+  updated() {
+    this.syncLegacyDom();
+  },
   methods: {
+    syncLegacyDom() {
+      syncLegacyTimeInputDom(this.$refs.input, { required: this.isRequired });
+    },
     handleClearInput() {
       this.$emit('handleClearInput')
+    },
+    emitInputValue(value, options = {}) {
+      // const nextValue = applyModelModifiers(value, this.modelModifiers);
+      // if (!options.force && this.isSameTimeValue(nextValue, this.externalValue)) {
+      //   return;
+      // }
+      this.$emit('update:modelValue', value);
+      this.$emit('input', value);
+    },
+    isSameTimeValue(left, right) {
+      if (left === right) {
+        return true;
+      }
+      if (left == null && right == null) {
+        return true;
+      }
+      return String(left ?? "") === String(right ?? "");
+    },
+    normalizeTimeInputValue(value) {
+      if (value === null || value === undefined || value === "") {
+        return null;
+      }
+      const text = String(value);
+      if (/^\d{2}:\d{2}(?::\d{2}(?:\.\d{3})?)?$/.test(text)) {
+        return text;
+      }
+      if (/^\d{4}$/.test(text)) {
+        const hours = Number(text.slice(0, 2));
+        const minutes = Number(text.slice(2, 4));
+        if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+          return `${text.slice(0, 2)}:${text.slice(2, 4)}`;
+        }
+      }
+      return null;
     },
     handleKeydown(event) {
       this.clickAllowUp = event.key === "ArrowUp";
@@ -137,16 +192,19 @@ export default {
         // 分→時分変換
         value = this.convertMinutesToTime(totalMinutes);
       }
-      this.$emit('input', value);
+      this.emitInputValue(value);
     },
     handleChange(event) {
+      if (event?.target) {
+        this.emitInputValue(event.target.value, { force: true });
+      }
       this.$emit('change', event);
     },
     handleBlur (event) {
       let value = event.target.value;
       
       // 補正前後の値が同じ場合、入力フィールドの値が更新されないためinputイベントを発火して現在の入力フィールドの値をクリアする
-      this.$emit('input', "");
+      this.emitInputValue("", { force: true });
       
       // 空入力、欠落入力の場合
       if (!value) {
@@ -172,31 +230,83 @@ export default {
         // 分→時分変換
         value = this.convertMinutesToTime(totalMinutes);
       }
-      this.$emit('input', value);
+      if(this.max == "23:59"){
+        this.emitInputValue(value, { force: true });
+      }
+      else{
+        setTimeout(() => {
+          this.emitInputValue(value, { force: true });
+        }, 0);
+      }
+      
       this.$emit('blur', event);
     },
     handleFocus (event) {
       this.$emit('focus', event);
     },
+    handleWheel(event) {
+      event.preventDefault();
+      if (this.disabled) {
+        return;
+      }
+
+      const input = event.target;
+      const ownerDocument = input.ownerDocument || document;
+      if (ownerDocument.activeElement !== input) {
+        return;
+      }
+
+      const minTotalMinutes = this.convertTimeToMinutes(this.min);
+      const maxTotalMinutes = this.convertTimeToMinutes(this.max);
+      let currentTotalMinutes = input.value
+        ? this.convertTimeToMinutes(input.value)
+        : minTotalMinutes;
+
+      if (event.deltaY < 0) {
+        currentTotalMinutes = currentTotalMinutes >= maxTotalMinutes
+          ? minTotalMinutes
+          : currentTotalMinutes + 1;
+      } else {
+        currentTotalMinutes = currentTotalMinutes <= minTotalMinutes
+          ? maxTotalMinutes
+          : currentTotalMinutes - 1;
+      }
+
+      const newValue = this.convertMinutesToTime(currentTotalMinutes);
+      input.value = newValue;
+      this.emitInputValue(newValue, { force: true });
+      this.$emit("change", newValue);
+    },
     /**
      * @description 時分→分変換
      */
     convertTimeToMinutes(time) {
-      return moment.duration(time).asMinutes();
+      if (time === null || time === undefined || time === "") {
+        return 0;
+      }
+      if (typeof time === "number") {
+        return time;
+      }
+      if (typeof time === "string" && time.includes(":")) {
+        const [hourText, minuteText = "0"] = time.split(":");
+        const hour = Number(hourText);
+        const minute = Number(minuteText);
+        if (!Number.isNaN(hour) && !Number.isNaN(minute)) {
+          return hour * 60 + minute;
+        }
+      }
+      return dayjs.duration(time).asMinutes();
     },
     /**
      * @description 分→時分変換
      */
     convertMinutesToTime(minutes) {
       // 分を時間と分に
-      const duration = moment.duration(minutes, "minutes");
+      const duration = dayjs.duration(minutes, "minutes");
       const hour = duration.hours();
       const minute = duration.minutes();
-      // 時間と分からモーメントを作成しフォーマット
-      const mo = moment();
-      mo.hours(hour);
-      mo.minutes(minute);
-      return mo.format("HH:mm");
+      // 時間と分から日時を作成しフォーマット
+      return dayjs().hour(hour).minute(minute).format("HH:mm");
     },
     /**
      * @description 現在の日時の分をHH:mm形式で取得

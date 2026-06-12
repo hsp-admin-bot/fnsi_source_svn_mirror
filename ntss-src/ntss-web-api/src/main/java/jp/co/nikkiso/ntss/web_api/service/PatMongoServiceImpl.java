@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.web_api.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.dao.MasterMaintenanceGenericDao;
 import jp.co.nikkiso.ntss.core.dao.MntMachineStateDao;
@@ -171,7 +171,7 @@ public class PatMongoServiceImpl implements PatMongoService {
         ObjectMapper mapper = new ObjectMapper();
         // mod #10245 マスタ変更時点で患者情報履歴テーブルの追加や更新をしていないため正しいデータを出力できない ztc 20240712 end
         // add #11159 特定の患者だけ患者情報編集時にエラーが発生する ztc 20241003 start
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper = mapper.rebuild().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build();
         // add #11159 特定の患者だけ患者情報編集時にエラーが発生する ztc 20241003 end
         Timestamp now = new Timestamp(new Date().getTime());
 
@@ -752,7 +752,7 @@ public class PatMongoServiceImpl implements PatMongoService {
     ObjectMapper mapper = new ObjectMapper();
     // mod #10245 マスタ変更時点で患者情報履歴テーブルの追加や更新をしていないため正しいデータを出力できない ztc 20240712 end
     // add #11159 特定の患者だけ患者情報編集時にエラーが発生する ztc 20241003 start
-    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    mapper = mapper.rebuild().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build();
     // add #11159 特定の患者だけ患者情報編集時にエラーが発生する ztc 20241003 end
     Long patId = patInfo.getPatMain().getPat_id();
     PatMain patMain = patInfo.getPatMain();
@@ -2481,7 +2481,7 @@ public class PatMongoServiceImpl implements PatMongoService {
           PatMainHistory patMainHistory = null;
           for(PatInfo patInfo : patsInfo) {
             mapper = new ObjectMapper();
-            mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            mapper = mapper.rebuild().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build();
             patPersonalMain = patInfo.getPatPersonalMain();
             patMain = patInfo.getPatMain();
             patUnique = patInfo.getPatUnique();

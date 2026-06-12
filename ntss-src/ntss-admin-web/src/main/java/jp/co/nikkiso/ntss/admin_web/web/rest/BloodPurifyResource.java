@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
+import jp.co.nikkiso.ntss.admin_web.service.OrdMainService;
+import jp.co.nikkiso.ntss.core.entity.OrdMain;
 import jp.co.nikkiso.ntss.admin_web.response.bloodPurify.BPOrdInfoResponse;
 import jp.co.nikkiso.ntss.admin_web.service.bloodPurify.BloodPurifyService;
 import jp.co.nikkiso.ntss.admin_web.service.bloodPurify.DatabasePusher;
@@ -29,6 +31,9 @@ import jp.co.nikkiso.ntss.core.entity.MstKur;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 浄化装置通信アプリのResourceクラス.
@@ -52,6 +57,10 @@ public class BloodPurifyResource {
   @Autowired
   LogEventUtils logEventUtils;
   // wp アプリケーションログの適正化 Add End
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Autowired
+  OrdMainService ordMainService;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
   /**
    * 呼び出し元メソッドのメソッド名を返す
@@ -68,7 +77,21 @@ public class BloodPurifyResource {
   @GetMapping("/ord_main/bp_device/{facilityCd}/{startYyyyMmDd}")
   public ResponseEntity<?> getBloodPurifyOrdInfoForBloodPurifyDevice(
       @PathVariable(name = "facilityCd", required = true) String argFacilityCd,
-      @PathVariable(name = "startYyyyMmDd", required = true) String argStartYyyyMmDd) {
+      @PathVariable(name = "startYyyyMmDd", required = true) String argStartYyyyMmDd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (argFacilityCd != null && !argFacilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + argFacilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.BLOOD_PURIFY + "/ord_main/bp_device";
@@ -109,7 +132,21 @@ public class BloodPurifyResource {
    */
   @GetMapping("/mst_kur/{facilityCd}")
   public ResponseEntity<?> getMstKur(
-      @PathVariable(name = "facilityCd", required = true) String argFacilityCd) {
+      @PathVariable(name = "facilityCd", required = true) String argFacilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (argFacilityCd != null && !argFacilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + argFacilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.BLOOD_PURIFY + "/mst_kur";
@@ -150,7 +187,21 @@ public class BloodPurifyResource {
   @GetMapping("/ord_main/nkk_device/{facilityCd}/{startYyyyMmDd}")
   public ResponseEntity<?> getBloodPurifyOrdInfoForNkkDevice(
       @PathVariable(name = "facilityCd", required = true) String argFacilityCd,
-      @PathVariable(name = "startYyyyMmDd", required = true) String argStartYyyyMmDd) {
+      @PathVariable(name = "startYyyyMmDd", required = true) String argStartYyyyMmDd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (argFacilityCd != null && !argFacilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + argFacilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.BLOOD_PURIFY + "/ord_main/nkk_device";
@@ -193,7 +244,23 @@ public class BloodPurifyResource {
   @PostMapping("/post_data/{ordNo}")
   public ResponseEntity<Void> postData(
       HttpServletRequest request,
-      @PathVariable(name = "ordNo", required = true) Long ordNo) {
+      @PathVariable(name = "ordNo", required = true) Long ordNo,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain ordMain = ordMainService.selectByOrdNo(ordNo);
+      if (ordMain != null && ordMain.getFacilityCd() != null &&
+        !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.BLOOD_PURIFY + "/post_data";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_LIST, AFTER_LOG_FLG_INFO, mappingUrl, null,
@@ -268,7 +335,21 @@ public class BloodPurifyResource {
    */
   @GetMapping("/mst_getdialysisdevice/{facilityCd}")
   public ResponseEntity<?> getDialysisDevice(
-    @PathVariable(name = "facilityCd", required = true) String argFacilityCd) {
+    @PathVariable(name = "facilityCd", required = true) String argFacilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (argFacilityCd != null && !argFacilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + argFacilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 //    EventLogMessage elm = new EventLogMessage();
 //
 //    elm.setLogMessage("REST " + methodName() + " start");

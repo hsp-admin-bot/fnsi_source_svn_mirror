@@ -1,5 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,7 @@ import jp.co.nikkiso.ntss.admin_web.service.mstSynchro.MstSynchroService;
 import lombok.extern.slf4j.Slf4j;
 
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * マスタ同期のResourceクラス.
@@ -80,7 +83,21 @@ public class MstSynchroResource {
  //8104   心電図スイッチ      ljd Start
 
   @GetMapping("/sysFunctionAdvanced_facilitycd")
-  public   Integer getAllSysFunctionAdvanceds(String facilityCd) {
+  public   Integer getAllSysFunctionAdvanceds(String facilityCd,
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                              @AuthenticationPrincipal NtssUser ntssUser
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return null;
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
     String func_advcd = "A12";
     return mstSynchroService.selectAllSysFunctionAdvanceds(func_advcd,facilityCd);
   }
@@ -92,7 +109,21 @@ public class MstSynchroResource {
    * @return デバイスエッジマスタ情報のresponse
    */
   @GetMapping("/mst_device_edge/{facilityCd}")
-  public ResponseEntity<?> getMstDeviceEdge(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getMstDeviceEdge(@PathVariable String facilityCd,
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                            @AuthenticationPrincipal NtssUser ntssUser
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.MST_SYNCHRO + "/mst_device_edge";
@@ -123,7 +154,22 @@ public class MstSynchroResource {
    * @return
    */
   @PostMapping("/synchro/start")
-  public ResponseEntity<?> startMstSynchro(@RequestBody MstSynchroRequest request) {
+  public ResponseEntity<?> startMstSynchro(@RequestBody MstSynchroRequest request,
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                           @AuthenticationPrincipal NtssUser ntssUser
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      String facilityCd = request.getFacilityCd();
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.MST_SYNCHRO + "/synchro/start";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -158,7 +204,22 @@ public class MstSynchroResource {
    * @return
    */
   @PostMapping("/synchro/start_proc")
-  public ResponseEntity<?> startMstSynchroProc(@RequestBody MstSynchroRequest request) {
+  public ResponseEntity<?> startMstSynchroProc(@RequestBody MstSynchroRequest request,
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      String facilityCd = request.getFacilityCd();
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
     String mappingUrl = Uri.MST_SYNCHRO + "/synchro/start_proc";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
       "[REST request] マスタ同期開始");

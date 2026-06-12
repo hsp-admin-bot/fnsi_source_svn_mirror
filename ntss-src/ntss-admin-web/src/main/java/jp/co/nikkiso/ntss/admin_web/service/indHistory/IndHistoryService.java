@@ -42,6 +42,15 @@ public interface IndHistoryService {
    * @return
    */
   boolean updateIndHistoryInDetailScreen(List<IndDetailUpdateCondition> params);
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260427 start
+  /**
+   * 指示詳細画面で更新する
+   * @param params
+   * @param facilityCd ログインユーザー施設
+   * @return
+   */
+  boolean updateIndHistoryInDetailScreen(List<IndDetailUpdateCondition> params, String facilityCd);
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260427 end
   /**
    * 指示を取得
    * @param params _ids

@@ -8,7 +8,7 @@ import jp.co.nikkiso.ntss.admin_web.request.webSocketCertification.WSCertificati
 import jp.co.nikkiso.ntss.core.entity.MntWebsocketCertification;
 import org.springframework.http.ResponseEntity;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * WebSocket認証コードサービス

@@ -38,9 +38,10 @@ export default {
      * @param {*} ordNo オーダ番号
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
-    getTreatmentRecordSetting({ commit }, ordNo) {
-      return sendRequestGetTreatmentRecordSetting(ordNo);
+    getTreatmentRecordSetting({ commit }, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetTreatmentRecordSetting(ordNo, selectedPatId);
     },
     /**
      * 設定値読出し指示.
@@ -49,7 +50,6 @@ export default {
      * @param {*} param パラメータオブジェクト
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     postOrderReadSettingValue({ commit }, param) {
       return sendRequestPostOrderReadSettingValue(param);
     },
@@ -60,9 +60,10 @@ export default {
      * @param {*} ordNo オーダ番号
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
-    getTreatmentRecordRstDeviceSetInfo({ commit }, ordNo) {
-      return sendRequestGetTreatmentRecordRstDeviceSetInfo(ordNo).then(response => {
+    getTreatmentRecordRstDeviceSetInfo({ commit }, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetTreatmentRecordRstDeviceSetInfo(ordNo, selectedPatId).then(response => {
         commit("setRstDeviceSetInfo", response.data.rst_device_set_info);
         return response;
       });

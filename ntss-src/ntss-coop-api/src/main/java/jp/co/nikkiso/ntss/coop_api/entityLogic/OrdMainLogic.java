@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
-import com.fasterxml.jackson.databind.JavaType;
+import tools.jackson.databind.JavaType;
 
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
 import jp.co.nikkiso.ntss.coop_api.utils.CheckNecessaryParamUtil;

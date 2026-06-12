@@ -13,15 +13,17 @@
 <template>
   <ntss-layout-content>
     <!-- mod FNSI-顯示調整 関 start -->
-    <!-- <header-component slot="header-content" />
+    <!-- <header-component #header-content />
     <bread-crumbs-component
-      slot="bread-crumbs-content"
+      #bread-crumbs-content
       :no-split="true"
       :history-key="historyKey"
       @refresh="refresh"
     /> -->
     <!-- mod FNSI-顯示調整 関 end -->
-    <main-component slot="main-content" ref="mainComponent" :history-key="historyKey" />
+    <template #main-content>
+      <main-component ref="mainComponent" :history-key="historyKey" />
+    </template>
   </ntss-layout-content>
 </template>
 

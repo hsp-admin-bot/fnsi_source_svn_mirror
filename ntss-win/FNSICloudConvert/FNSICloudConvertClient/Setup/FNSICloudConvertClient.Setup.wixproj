@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="WixToolset.Sdk/4.0.6">
+
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <OutputType>Package</OutputType>
+    <OutputName>FNSICloudConvertClient</OutputName>
+    <Cultures>ja-JP</Cultures>
+    <SuppressIces>ICE03;ICE61</SuppressIces>
+    <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
+    <AppBinDir Condition="'$(AppBinDir)' == ''">$(MSBuildThisFileDirectory)..\FNSICloudConvertClient\bin\$(Configuration)</AppBinDir>
+    <!--
+      ★ バージョンアップ時はここだけ変更する ★
+      ProductCode は UpgradeCodeGuid + ProductVersion から自動生成される（UUID v5）
+      UpgradeCodeGuid は既存 MSI からのアップグレード互換のため維持する
+    -->
+    <ProductVersion>2.0.1</ProductVersion>
+    <UpgradeCodeGuid>C0FFEE01-DEAD-BEEF-CAFE-123456789ABC</UpgradeCodeGuid>
+    <DefineConstants>$(DefineConstants);AppBinDir=$(AppBinDir);ProductVersion=$(ProductVersion)</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <IntermediateOutputPath>obj\Debug\</IntermediateOutputPath>
+    <DefineConstants>$(DefineConstants);Debug</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <IntermediateOutputPath>obj\Release\</IntermediateOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="4.0.6" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="4.0.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FNSICloudConvertClient\FNSICloudConvertClient.csproj">
+      <Name>FNSICloudConvertClient</Name>
+      <Project>{1C2D3E4F-5A6B-7C8D-9E0F-1A2B3C4D5E6F}</Project>
+      <SetConfiguration>Configuration=$(Configuration)</SetConfiguration>
+      <SetPlatform>Platform=AnyCPU</SetPlatform>
+      <Private>true</Private>
+      <DoNotHarvest>true</DoNotHarvest>
+      <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
+      <RefTargetDir>INSTALLFOLDER</RefTargetDir>
+    </ProjectReference>
+  </ItemGroup>
+
+  <UsingTask TaskName="GenerateUuidV5ProductCode"
+             TaskFactory="CodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <UpgradeCode ParameterType="System.String" Required="true" />
+      <ProductVersion ParameterType="System.String" Required="true" />
+      <OutputFile ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var nsGuid  = System.Guid.Parse(UpgradeCode);
+        var nsBytes = nsGuid.ToByteArray();
+        System.Array.Reverse(nsBytes, 0, 4);
+        System.Array.Reverse(nsBytes, 4, 2);
+        System.Array.Reverse(nsBytes, 6, 2);
+
+        var verBytes = System.Text.Encoding.UTF8.GetBytes(ProductVersion);
+        var input    = new byte[nsBytes.Length + verBytes.Length];
+        System.Array.Copy(nsBytes,  0, input, 0,             nsBytes.Length);
+        System.Array.Copy(verBytes, 0, input, nsBytes.Length, verBytes.Length);
+
+        var sha1 = System.Security.Cryptography.SHA1.Create();
+        var hash = sha1.ComputeHash(input);
+
+        var h = new byte[16];
+        System.Array.Copy(hash, h, 16);
+        h[6] = (byte)((h[6] & 0x0F) | 0x50);
+        h[8] = (byte)((h[8] & 0x3F) | 0x80);
+
+        System.Array.Reverse(h, 0, 4);
+        System.Array.Reverse(h, 4, 2);
+        System.Array.Reverse(h, 6, 2);
+
+        var productCode = new System.Guid(h).ToString("B").ToUpper();
+        Log.LogMessage(MessageImportance.High, "ProductCode (v" + ProductVersion + "): " + productCode);
+
+        var lines = new string[] {
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>",
+            "<Include>",
+            "  <?define ProductCode = \"" + productCode + "\" ?>",
+            "</Include>"
+        };
+        System.IO.File.WriteAllLines(OutputFile, lines, System.Text.Encoding.UTF8);
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="GenerateProductCode" BeforeTargets="CoreCompile;Build">
+    <GenerateUuidV5ProductCode
+      UpgradeCode="$(UpgradeCodeGuid)"
+      ProductVersion="$(ProductVersion)"
+      OutputFile="$(MSBuildProjectDirectory)\GeneratedProductCode.wxi" />
+  </Target>
+
+</Project>

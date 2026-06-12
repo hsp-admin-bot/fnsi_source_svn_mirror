@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div id="water-modal-content" slot="body" class="main-content">
+    <template #body>
+      <div id="water-modal-content" class="main-content">
       <div class="water-option">
         <v-ons-row class="input-row">
           <v-ons-col class="input-item-name">
@@ -44,16 +45,18 @@
             <!-- mod  FNSI-権限 徐 end -->
           </v-ons-col>
         </v-ons-row>
+          </div>
       </div>
-    </div>
-    <div slot="footer" class="flex-container">
-      <div class="denial-btn-area" style="background:none">
+    </template>
+    <template #footer>
+      <div class="flex-container">
+        <div class="denial-btn-area" style="background:none">
         <!-- mod 画面スタイル(ボタン)対応 徐 start -->
         <!-- <button class="button denial-btn" @click="cancel">キャンセル</button> -->
         <button class="button btn2-cancel" @click="cancel">キャンセル</button>
         <!-- mod 画面スタイル(ボタン)対応 徐 end -->
       </div>
-      <div class="registration-btn-area" style="background:none">
+        <div class="registration-btn-area" style="background:none">
         <!-- mod  FNSI-権限 徐 start -->
         <!-- <button class="button registration-btn" @click="reflect">確定</button> -->
         <!-- mod 画面スタイル(ボタン)対応 徐 start -->
@@ -64,16 +67,17 @@
 <!--        mod #10054 破棄確認・保存活性(複数変更含む)・削除対応_水質管理 20231225 ztc end-->
         <!-- mod 画面スタイル(ボタン)対応 徐 end -->
         <!-- mod  FNSI-権限 徐 end -->
+        </div>
       </div>
-    </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import SubModalBase from "@/components/modals/SubModalBase";
 import MultiSubModalMixin from "@/components/modals/MultiSubModalMixin";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import CommonTextArea from "@/components/common/CommonTextArea";
 // add  FNSI-権限 徐 start
 import PopoverMixin from "@/components/PopoverMixin";
@@ -221,7 +225,7 @@ export default {
 </script>
 
 <style scoped>
-div >>> .water-textare {
+div :deep(.water-textare) {
   height: 350px;
 }
 #water-modal-content {
@@ -247,13 +251,13 @@ div >>> .water-textare {
   padding-bottom: 5px;
   border-bottom: 1px solid #bbb;
 }
-div >>> textarea {
+div :deep(textarea) {
   width: 100%;
   border: solid 1px rgb(150, 150, 150);
   min-height: 10em;
   resize: both;
 }
-div >>> textarea:focus {
+div :deep(textarea:focus) {
   border: 2px green solid;
 }
 .input-item-name {
@@ -280,7 +284,7 @@ div >>> textarea:focus {
 .input-item-textarea {
   max-width: 100%;
 }
-.input-item-textarea >>> .textarea {
+.input-item-textarea :deep(.textarea) {
   font-size: unset;
 }
 .input-item-num {

@@ -1,10 +1,11 @@
 <template>
   <modal-base @onClose="closeCheckListModal" class="custom-modal">
-    <div slot="header">
+    <template #header>
       <component :is="header"></component>
-    </div>
+    </template>
 
-    <div slot="body" style="font-size: 1.5em">
+    <template #body>
+      <div style="font-size: 1.5em">
       <div id="checklist-modal-header">
         <!-- タイトル -->
         <v-ons-row>
@@ -215,7 +216,7 @@
                     :disabled="!hasDevEditAuthority">
                     <option style="padding-left: 40%!important;" v-for="item in ansList" :key="item.id"
                       :value="item.id">
-                      <span style="text-align:center;">{{ item.name }}</span>
+                      {{ item.name }}
                     </option>
                   </v-ons-select>
                 </v-ons-col>
@@ -270,7 +271,7 @@
                               @change="changeAns($event, 1)" v-model="editData.inspectInfor.menteAnsHeader1"
                               :disabled="!hasDevEditAuthority">
                               <option v-for="item in djjlList" :key="item.id" :value="item.id">
-                                <span style="text-align:center;">{{ item.name }}</span>
+                                {{ item.name }}
                               </option>
                             </v-ons-select>
 
@@ -292,14 +293,14 @@
                               class="ntss-separate-dosing select-center" v-model="i.judge"
                               @change="updateStatusItem(i, 1, $event)" :disabled="!hasDevEditAuthority">
                               <option v-for="item in djjlList" :key="item.id" :value="item.id">
-                                <span style="text-align:center;">{{ item.name }}</span>
+                                {{ item.name }}
                               </option>
                             </v-ons-select>
                             <v-ons-select style="width: 100%" v-if="i.ansPattern == 2"
                               class="ntss-separate-dosing select-center" v-model="i.judge"
                               @change="updateStatusItem(i, 1, i.ansPattern)" :disabled="!hasDevEditAuthority">
                               <option v-for="item in djjlList1" :key="item.id" :value="item.id">
-                                <span style="text-align:center;">{{ item.name }}</span>
+                                {{ item.name }}
                               </option>
                             </v-ons-select>
                           </td>
@@ -408,7 +409,9 @@
       </div>
     </div>
     <!-- ボタン -->
-    <div slot="footer" class="flex-container" style="overflow-x: auto">
+    </template>
+    <template #footer>
+      <div class="flex-container" style="overflow-x: auto">
       <div>
         <v-ons-button class="btn2-cancel" style="width: 100px; margin-right: 0.5em;" @click="closeCheckListModal()">
           キャンセル
@@ -441,15 +444,16 @@
           保存
         </v-ons-button>
       </div>
-    </div>
+          </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions, mapMutations } from "vuex";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 import MasterSelector from "@/components/common/master-selector/MasterSelector";
 import { getCurrentFunctionCd } from "@/router/routing-helper";
 import store from "@/stores";
@@ -460,7 +464,7 @@ import { AUTHORITY_CODES } from "@/constants/userAuthority";
 import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
 import MachinePartsRunningComponent from "@/components/periodic-inspection/MachinePartsRunningComponent";
 import {ApiHelper} from "@/apis/AxiosHelper";
-import isEqualWith from "lodash/isEqualWith";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
 import { customComparatorForType } from "@/utils/util.js";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 
@@ -566,8 +570,7 @@ export default {
         : this.$refs[this.selectedTarget];
     },
     isChanged() {
-      //全ページのうち1ページでも画面の入力値(初期値)と画面の入力値(現在の値)に差異がある場合、保存ボタンを活性化
-      return this.menteLayoutList.some(menteLayout => !isEqualWith(menteLayout.initEditData,menteLayout.editData,customComparatorForType));
+      return this.menteLayoutList.some(menteLayout => !isEqualWith(menteLayout.initEditData, menteLayout.editData, customComparatorForType));
     }
   },
   methods: {
@@ -586,8 +589,10 @@ export default {
     ...mapMutations("periodic-inspection", [
       "setMachine",
       "setBeforeModel",
+      // add #12262 定期点検画面の機能帳票で装置毎の点検一覧と記録簿が出せない limingzhe start
       "setIsOpenBySubView",
-      "setDetailData"
+      // add #12262 定期点検画面の機能帳票で装置毎の点検一覧と記録簿が出せない limingzhe end
+      "setDetailData",
     ]),
     requestrReportParams(param) {
       // add #12262 定期点検画面の機能帳票で装置毎の点検一覧と記録簿が出せない limingzhe start
@@ -600,9 +605,9 @@ export default {
         var arr = [this.editData.machineInfor.machineNo];
         const param = {
           patId: this.selectedPatId,
-          date: moment(this.editData.inspectInfor.menteDate).format("YYYYMMDD"),
-          fromDate: moment(this.editData.inspectInfor.menteDate).format("YYYYMMDD"),
-          toDate: moment(this.editData.inspectInfor.menteDate).format("YYYYMMDD"),
+          date: dayjs(this.editData.inspectInfor.menteDate).format("YYYYMMDD"),
+          fromDate: dayjs(this.editData.inspectInfor.menteDate).format("YYYYMMDD"),
+          toDate: dayjs(this.editData.inspectInfor.menteDate).format("YYYYMMDD"),
           mainte_no: this.editData.inspectInfor.devMenteNo,
           functionCd: "03301",
           facilityCd: this.getFacilityCd,
@@ -762,7 +767,7 @@ export default {
           judge: item.judge,
           user_id: userId,
           tableIndex: tableIndex,
-          date: moment(item.upDate).toISOString(),
+          date: dayjs(item.upDate).toISOString(),
           edition: item.edition,
           cate_cd: item.cate_cd,
           cate_edi: item.cate_edi,
@@ -774,7 +779,7 @@ export default {
           judge: item.judge,
           user_id: this.accountInfo.userId,
           tableIndex: tableIndex,
-          date: moment(item.upDate).toISOString(),
+          date: dayjs(item.upDate).toISOString(),
           edition: item.edition,
           cate_cd: item.cate_cd,
           cate_edi: item.cate_edi,
@@ -848,7 +853,7 @@ export default {
               judge: itemDetail.judge,
               user_id: userId,
               tableIndex: table,
-              date: moment(itemDetail.upDate).toISOString(),
+              date: dayjs(itemDetail.upDate).toISOString(),
               edition: itemDetail.edition,
               cate_cd: itemDetail.cate_cd,
             };
@@ -859,7 +864,7 @@ export default {
               judge: itemDetail.judge,
               user_id: this.accountInfo.userId,
               tableIndex: table,
-              date: moment(itemDetail.upDate).toISOString(),
+              date: dayjs(itemDetail.upDate).toISOString(),
               edition: itemDetail.edition,
               cate_cd: itemDetail.cate_cd,
             });
@@ -912,7 +917,7 @@ export default {
         );
         if (jsonIndex >= 0) {
           detail[jsonIndex].comment = detailTable ? detailTable.comment : "";
-          detail[jsonIndex].date = moment(detailTable.upDate).toISOString();
+          detail[jsonIndex].date = dayjs(detailTable.upDate).toISOString();
           detail[jsonIndex].edition = detailTable.edition;
           detail[jsonIndex].user_id = userId;
           detail[jsonIndex].judge =
@@ -925,7 +930,7 @@ export default {
             judge: detailTable.judge,
             user_id: this.accountInfo.userId,
             tableIndex: tableIndex,
-            date: moment(detailTable.upDate).toISOString(),
+            date: dayjs(detailTable.upDate).toISOString(),
             edition: detailTable.edition,
             cate_cd: detailTable.cate_cd,
           });
@@ -980,7 +985,7 @@ export default {
       // add #12262 定期点検画面の機能帳票で装置毎の点検一覧と記録簿が出せない limingzhe end
       this.setLoadingScreenVisible(true);
       var flag = false;
-      if (null != this.updateDate && null != this.updateDate.length > 0) {
+      if (this.updateDate != null && this.updateDate.length > 0) {
         for (var i = 0; i < this.updateDate.length; i++) {
           var nowDate = this.updateDate[i];
           for (var k = 0; k < this.oldDateDetail.length; k++) {
@@ -1010,8 +1015,8 @@ export default {
         if (flag) {
           const cloneObj = JSON.parse(JSON.stringify(this.updateDate))
 
-          for (var i = 0; i < cloneObj.length; i++) {
-            var nowDate = cloneObj[i];
+          for (let i = 0; i < cloneObj.length; i++) {
+            const nowDate = cloneObj[i];
             const listDetail1 = [];
             if(!(nowDate.item == null || nowDate.item == "")){
               JSON.parse(nowDate.item.detail).forEach((item) => {
@@ -1022,7 +1027,7 @@ export default {
                     judge: item.judge ? '1' : '',
                     user_id: item.user_id,
                     tableIndex: item.tableIndex,
-                    date: moment(item.upDate).toISOString(),
+                    date: dayjs(item.upDate).toISOString(),
                     edition: item.edition,
                     cate_cd: item.cate_cd,
                     cate_edi: item.cate_edi,
@@ -1034,7 +1039,6 @@ export default {
               nowDate.item.detail = JSON.stringify(listDetail1);
             }
           }
-
 
           await this.sendRequestUpdateMente(cloneObj);
           this.setLoadingScreenVisible(false);
@@ -1103,7 +1107,7 @@ export default {
       }
     },
     setCheckerName1(dataDetail1, item) {
-      this.$set(item, 'checkerFullName', '');
+      item.checkerFullName = '';
       const listDetail1 = [];
       JSON.parse(dataDetail1.detail).forEach((obj) => {
         if (obj.tableIndex == 1) {
@@ -1129,7 +1133,7 @@ export default {
       });
     },
     setCheckerName2(dataDetail2, item) {
-      this.$set(item, 'checkerFullName', '');
+      item.checkerFullName = '';
       const listDetail2 = [];
       JSON.parse(dataDetail2.detail).forEach((obj) => {
         if (obj.tableIndex == 2) {
@@ -1171,8 +1175,7 @@ export default {
       var listLayoutGroup = this.getLayoutGroupList;
       this.layoutGroupName = listLayoutGroup.find(
         (x) =>
-          x.menteLayoutGroupCd === this.getParamsGetDetail.menteLayoutGroupCd
-      ).groupName;
+          x.menteLayoutGroupCd === this.getParamsGetDetail.menteLayoutGroupCd).groupName;
       if (
         null != this.updateDate &&
         this.updateDate.length != 0 &&
@@ -1193,15 +1196,13 @@ export default {
           this.layoutName = listLayout[2].find(
             (x) =>
               x.mainteLayoutCd === this.editData.inspectInfor.menteLayoutCd &&
-              x.editionNo === this.editData.inspectInfor.menteLayoutNo
-          ).layoutHeader;
+              x.editionNo === this.editData.inspectInfor.menteLayoutNo).layoutHeader;
         }
 
       } else {
         if (listLayout[1].find((x) => x.menteLayoutCd === this.editData.inspectInfor.menteLayoutCd) !== undefined) {
           this.layoutName = listLayout[1].find(
-            (x) => x.menteLayoutCd === this.editData.inspectInfor.menteLayoutCd
-          ).layoutHeader;
+            (x) => x.menteLayoutCd === this.editData.inspectInfor.menteLayoutCd).layoutHeader;
         }
       }
       this.popoverData.popoverContentDataset = this.getAllUser.map((item) => {
@@ -1245,8 +1246,7 @@ export default {
       var listLayoutGroup = this.getLayoutGroupList;
       this.layoutGroupName = listLayoutGroup.find(
         (x) =>
-          x.menteLayoutGroupCd === this.getParamsGetDetail.menteLayoutGroupCd
-      ).groupName;
+          x.menteLayoutGroupCd === this.getParamsGetDetail.menteLayoutGroupCd).groupName;
       // add  吉 start
       var listLayout = this.getLayoutList;
       // add  吉 end
@@ -1269,14 +1269,12 @@ export default {
           this.layoutName = listLayout[2].find(
             (x) =>
               x.mainteLayoutCd === this.editData.inspectInfor.menteLayoutCd &&
-              x.editionNo === this.editData.inspectInfor.menteLayoutNo
-          ).layoutHeader;
+              x.editionNo === this.editData.inspectInfor.menteLayoutNo).layoutHeader;
         }
       } else {
         if (listLayout[1].find((x) => x.menteLayoutCd === this.editData.inspectInfor.menteLayoutCd) !== undefined) {
           this.layoutName = listLayout[1].find(
-            (x) => x.menteLayoutCd === this.editData.inspectInfor.menteLayoutCd
-          ).layoutHeader;
+            (x) => x.menteLayoutCd === this.editData.inspectInfor.menteLayoutCd).layoutHeader;
         }
       }
       this.popoverData.popoverContentDataset = this.getAllUser.map((item) => {
@@ -1308,14 +1306,11 @@ export default {
     },
     async reload() {
       this.setLoadingScreenVisible(true);
-      this.setInitData();
+      await this.setInitData();
       this.setLoadingScreenVisible(false);
     },
-    
-    /**
-     * @description 定期点検の初期データの作成
-     */
-    async setInitData(){
+
+    async setInitData() {
       this.confirmVisible = true;
       let listLayoutGroup = this.getLayoutGroupList;
       const menteLayoutList = [];
@@ -1340,8 +1335,7 @@ export default {
       }
       this.layoutGroupName = listLayoutGroup.find(
         (x) =>
-          x.menteLayoutGroupCd === this.getParamsGetDetail.menteLayoutGroupCd
-      ).groupName;
+          x.menteLayoutGroupCd === this.getParamsGetDetail.menteLayoutGroupCd).groupName;
       let listLayout = this.getLayoutList;
       await this.sendRequestGetDetail(this.getParamsGetDetail);
       const copyEditData = deepCopy(this.editData);
@@ -1356,14 +1350,12 @@ export default {
           this.layoutName = listLayout[2].find(
             (x) =>
               x.mainteLayoutCd === this.editData.inspectInfor.menteLayoutCd &&
-              x.editionNo === this.editData.inspectInfor.menteLayoutNo
-          ).layoutHeader;
+              x.editionNo === this.editData.inspectInfor.menteLayoutNo).layoutHeader;
         }
       } else {
         if (listLayout[1].find((x) => x.menteLayoutCd === this.editData.inspectInfor.menteLayoutCd) !== undefined) {
           this.layoutName = listLayout[1].find(
-            (x) => x.menteLayoutCd === this.editData.inspectInfor.menteLayoutCd
-          ).layoutHeader;
+            (x) => x.menteLayoutCd === this.editData.inspectInfor.menteLayoutCd).layoutHeader;
         }
       }
       this.popoverData.popoverContentDataset = this.getAllUser.map((item) => {
@@ -1379,7 +1371,7 @@ export default {
       };
       this.oldDateDetail.push(param);
     },
-    
+
     /**
      * @description 定期点検記録簿、定期交換部品記録簿の初期データの復元
      * @param {Object} initDataList  画面の初期値
@@ -1454,7 +1446,6 @@ export default {
       }
       return userId;
     },
-
     /**
      * @description                コメント格納処理
      * @param {string} inputValue  入力値
@@ -1523,13 +1514,12 @@ export default {
     EventBus.$on("reload", this.reload);
     EventBus.$on("requestReportParams", this.requestrReportParams);
     let listLayoutGroup = this.getLayoutGroupList;
-    if (this.getParamsGetDetail != null &&  this.getParamsGetDetail.letmenteLayoutGroupNo != null) {
+    if (this.getParamsGetDetail != null && this.getParamsGetDetail.letmenteLayoutGroupNo != null) {
       for (let i = 0;i < this.getParamsGetDetail.letmenteLayoutGroupNo.length;i++) {
         let layoutGroupNameStr = listLayoutGroup.find(
           (x) =>
             x.menteLayoutGroupCd ===
-            this.getParamsGetDetail.letmenteLayoutGroupNo[i]
-        ).groupName;
+            this.getParamsGetDetail.letmenteLayoutGroupNo[i]).groupName;
         const param = {
           layoutGroupName: layoutGroupNameStr,
           item: "",
@@ -1543,7 +1533,7 @@ export default {
     this.hasAns = '' !== this.initEditData.inspectInfor.menteAns1;
     this.setLoadingScreenVisible(false);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // mod #12262 定期点検画面の機能帳票で装置毎の点検一覧と記録簿が出せない limingzhe start
     //store.dispatch("report/getMstReport", { funcCd: "03301", printFlag: 0 });
     if(!this.getIsOpenByHistoryView) {
@@ -1614,9 +1604,14 @@ td.not-padding {
   word-break: break-all;
   color: #000000;
 }
-.custom-input>>>.text-input:disabled,
-.custom-input>>>.text-input,
-.custom-font-size>>>.text-input {
+.custom-input :deep(.text-input:disabled) {
+  color: #000000;
+  font-size: 15px;
+  opacity: 1;
+}
+
+.custom-input :deep(.text-input),
+.custom-font-size :deep(.text-input) {
   color: #000000;
   font-size: 15px;
   opacity: 1;
@@ -1766,13 +1761,13 @@ th.ntss-list-title {
 
 /* #9789 確認者の吹き出し内のリストが中央寄せ 蔡 start */
 /*
-::v-deep .select-input{
+:deep(.select-input) {
   text-align: center;
   padding-right: 0px;
   padding-left: 0px;
 }
 */
-.select-center>>>.select-input {
+.select-center :deep(.select-input) {
   text-align: center;
   padding-right: 0px;
   padding-left: 0px;
@@ -1786,7 +1781,7 @@ input {
   border-left-width: 0px;
 }
 
-div>>>.modal-body {
+div :deep(.modal-body) {
   overflow-x: hidden;
 }
 
@@ -1800,7 +1795,7 @@ div>>>.modal-body {
   height: 20px;
 }
 
-.custom-checkbox>>>.checkbox {
+.custom-checkbox :deep(.checkbox) {
   margin-top: 2px;
 }
 .custom-checkbox {
@@ -1844,14 +1839,15 @@ div>>>.modal-body {
 .ons-checkbox.checkbox {
   margin-right: 0px !important;
 }
+
 @media print {
-  .modal-mask >>> .modal-container {
+  .modal-mask :deep(.modal-container) {
     width: 95%;
   }
-  .modal-mask >>> .modal-wrapper {
+  .modal-mask :deep(.modal-wrapper) {
     display: inline-block !important;
   }
-  
+
   /* テーブル全体を印刷幅に収める */
   .custom-table-check-modal {
     width: 100% !important;
@@ -1873,6 +1869,6 @@ div>>>.modal-body {
   .custom-table-check-modal .col-standard {
     width: 12em !important;
     min-width: 12em !important;
-  } 
+  }
 }
 </style>

@@ -79,11 +79,11 @@
                         </span>
                       </span>
                       <!-- 子要素 -->
-                      <template v-for="(item, k) in category.children">
+                      <template v-for="(item, k) in category.children" :key="k">
                         <p
-                          v-if="category.expandFlg && (item.type == undefined || item.type != 'rstChart' )"
+                          v-if="category.expandFlg && (item.type == undefined || item.type != 'rstChart')"
                           v-show="category.triangleDirection === 'top' && !item.isDummy"
-                          :key="k"
+                         
                           :class="[{
                             'calendar-content-item': 1,
                             'calendar-content-parent-other': isOtherParentClass(category),
@@ -121,6 +121,7 @@
                         </p>
                         <!-- バイタル・モニタグラフ -->
                         <div
+                          class="pat-calendar-chart-cell"
                           v-if="item.type == 'rstChart' && category.expandFlg"
                           v-show="category.triangleDirection === 'top'"
                           :key="item.key"
@@ -149,24 +150,24 @@
 </template>
 
 <script>
+import { EventBus } from "@/compat/vue/event-bus.js";
 // mod 編集権限の適用  劉全航 start
 //mod FNSI-患者カレンダに表示する予定の不足情報を追加する 江 start
-// import { mapGetters} from "vuex";
-import { mapGetters, mapActions} from "vuex";
+// import { mapGetters} from "@/compat/vue/vuex";
+import { mapGetters, mapActions} from "@/compat/vue/vuex";
 import RstChartForPatClendar from "@/components/pat-calendar/RstChartForPatClendar";
 //mod FNSI-患者カレンダに表示する予定の不足情報を追加する 江 end
 import { FUNC_PAT_CALENDAR, FUNC_PAT_EVENT } from "@/constants/function-code.js";
 // mod 編集権限の適用  劉全航 end
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
-import moment from "moment";
-import { Chart } from "highcharts-vue";
-import VueTouch from "vue-touch";
+import dayjs from "@/compat/date/dayjs";
+import { getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+import { Chart } from "@/compat/charts/highcharts";
 import {
   createCalendarMonth,
   createCalendarWeek,
   splitCalendarArrayByWeek
 } from "@/components/common/contents-calendar/Functions.js";
-import Vue from "vue";
 import PopoverMixin from "@/components/PopoverMixin";
 // add カレンダー指定での指定日ジャンプに対応 江 start
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
@@ -175,17 +176,12 @@ import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/co
 // add #8091 2023/03/14 患者カレンダー/患者カレンダーレイアウトマスタの動作不正 林峻峰 start
 import { LAYOUT_CATEGORY_EXAMREQUEST, LAYOUT_CATEGORY_EXAMRESULT, LAYOUT_CATEGORY_RADREQUEST } from "@/components/pat-calendar/Definitions.js";
 import {deepCopy} from "@/functions/common/CommonFunctions";
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
-// add #10359、#10331 編集権限について、対応する。 dengshen start
-import { messageFormat } from '@/functions/common/MessageFormat'
-// add #10359、#10331 編集権限について、対応する。 dengshen end
 
-// add #8091 2023/03/14 患者カレンダー/患者カレンダーレイアウトマスタの動作不正 林峻峰 end
-// #9620 文字サイズを大きくすると部品がかさなる linjunfeng start
-import { EventBus } from "@/eventBus.js";
 // #9620 文字サイズを大きくすると部品がかさなる linjunfeng end
 import DateInput from "@/components/common/DateInput";
-Vue.use(VueTouch);
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+
 
 /**
  * @description カレンダーコンポーネント
@@ -233,7 +229,7 @@ export default {
 
     baseDate: {
       type: Object,
-      default: moment()
+      default: dayjs()
       // default: ()=>{ return {} }
     },
 
@@ -267,7 +263,7 @@ export default {
   },
 
   data() {
-    return {
+    const data = {
       weekdays: ["月", "火", "水", "木", "金", "土", "日"],
       popoverTarget: null,
       popoverContent: null,
@@ -288,57 +284,49 @@ export default {
       commonCalendarAreaLeft: 500,
       calendarInputFlexWrap: 'nowrap',
       observer: null,
+      pendingMoveCurrentMonthForDate: false,
+      isBootstrappingDateToday: false,
       // add #9562 患者カレンダーの表示が遅い 20240523 ztc start
       scrollListeningFlag: true,
       // add #9562 患者カレンダーの表示が遅い 20240523 ztc end
       fCd:''
     };
+    return data;
   },
 
   watch: {
     // add カレンダー指定での指定日ジャンプに対応 江 start
     dateToday(value) {
-      if (!value) {
-        return;
-      }
-
-      // 表示年月日を日付IFから変更したことを親に通知     
-      this.handleDateTodayChange();
-      
-      this.calendarArray = splitCalendarArrayByWeek(
-        createCalendarMonth(moment(this.dateToday, "YYYY-MM-DD"))
-      );
-      // FNSi-9947-患者カレンダーの展開動作がされていない zhoubin add start
-      this.setDateExpandFlg(this.calendarArray);
-      // FNSi-9947-患者カレンダーの展開動作がされていない zhoubin add end
-      this.createCalendarContents();
-      if (this.baseDateNow) {
-        this.baseDate = this.baseDateNow;
-      }
-      this.addWeeksToCalendar(3);
-      this.moveCurrentMonthForDate();
+        if (!value || this.isBootstrappingDateToday) {
+          return;
+        }
+        this.bootstrapCalendarForDate(value, {
+          emitBaseDate: true,
+          appendWeeks: true,
+          requestMove: true
+        });
     },
     // add カレンダー指定での指定日ジャンプに対応 江 end
     contents() {
       this.$nextTick(() => {
         this.createCalendarContents();
       });
-      this.$forceUpdate();
+      this.requestCalendarForceUpdate("watch:contents");
     },
     // add #8091 2023/03/14 患者カレンダー/患者カレンダーレイアウトマスタの動作不正 林峻峰 start
     expandFlg() {
       this.handleChangeAllTriangleDirection();
       // add #8091 2023/04/06 3/1を基準日設定する、日付表示不全 林峻峰 start
-      this.moveCurrentMonthForDate();
+      this.requestMoveCurrentMonthForDate();
       // add #8091 2023/04/06 3/1を基準日設定する、日付表示不全 林峻峰 end
-      this.$forceUpdate();
+      this.requestCalendarForceUpdate("watch:expandFlg");
     }
     // add #8091 2023/03/14 患者カレンダー/患者カレンダーレイアウトマスタの動作不正 林峻峰 end
   },
 
   created() {
     // 編集権限の取得
-    this.isAuthorized = this.getAuthorizedFunctions.includes(FUNC_PAT_CALENDAR);
+    this.isAuthorized = Array.isArray(this.getAuthorizedFunctions) && this.getAuthorizedFunctions.includes(FUNC_PAT_CALENDAR);
     const calendarArray = createCalendarMonth(this.baseDate);
     this.calendarArray = splitCalendarArrayByWeek(calendarArray);
 
@@ -351,7 +339,7 @@ export default {
     this.calendarArray.forEach(everyArr => {
       if (isSelectWeek == 0) {
         everyArr.forEach(everyDay => {
-          if (parseInt(everyDay.format("YYMMDD")) >= parseInt(moment().format("YYMMDD"))) {
+          if (parseInt(everyDay.format("YYMMDD")) >= parseInt(dayjs().format("YYMMDD"))) {
             isSelectWeek = 1;
           }
         });
@@ -361,45 +349,59 @@ export default {
       }
     });
     this.calendarArray = calendarArrayFromThisWeek;
+    this.normalizeCalendarArrayDays(this.calendarArray);
+    // FNSi-9947-患者カレンダーの展開動作がされていない zhoubin add start
+    this.setDateExpandFlg(this.calendarArray);
+    // FNSi-9947-患者カレンダーの展開動作がされていない zhoubin add end
     // add FNSI-NO429初期表示スクロール位置を制御する。 関 end
   	// add カレンダー指定での指定日ジャンプに対応 江 start
-    this.dateToday = moment(new Date()).format("YYYY-MM-DD");
-  	// add カレンダー指定での指定日ジャンプに対応 江 end
-    setTimeout(() => {
-      this.createCalendarContents();
-    }, 0)
-    this.addWeeksToCalendar(3);
-    // #9620 文字サイズを大きくすると部品がかさなる linjunfeng start
-    EventBus.$on("switchSidebar", ()=>{
-      this.handleResizeWindow(document.getElementById("main-id").clientWidth)
+    this.isBootstrappingDateToday = true;
+    this.dateToday = dayjs(new Date()).format("YYYY-MM-DD");
+    this.handleDateTodayChange();
+    this.bootstrapCalendarForDate(this.dateToday, {
+      emitBaseDate: false,
+      appendWeeks: true,
+      requestMove: false
     });
+    this.isBootstrappingDateToday = false;
+    this.pendingMoveCurrentMonthForDate = true;
+  	// add カレンダー指定での指定日ジャンプに対応 江 end
+    // #9620 文字サイズを大きくすると部品がかさなる linjunfeng start
+    EventBus.$off("switchSidebar", this.handleSwitchSidebar);
+    EventBus.$on("switchSidebar", this.handleSwitchSidebar);
     // #9620 文字サイズを大きくすると部品がかさなる linjunfeng end
   },
 
   mounted() {
     // mod 編集権限の適用  劉全航 start
-    this.isAuthorized = this.getAuthorizedFunctions.includes(FUNC_PAT_CALENDAR);
+    this.isAuthorized = Array.isArray(this.getAuthorizedFunctions) && this.getAuthorizedFunctions.includes(FUNC_PAT_CALENDAR);
     if(this.isAuthorized === false){
        this.styleObject.color = "#666666";
     }
     // mod 編集権限の適用  劉全航 end
-    const element = document.getElementById("main-id")
+    const element = getScopedElementById("main-id", this.$el || null)
     this.observer  = new ResizeObserver(entries => {
       const { width } = entries[0].contentRect;
       this.handleResizeWindow(width);
     });
-    this.observer.observe(element);
+    if (element) {
+      this.observer.observe(element);
+      this.handleResizeWindow(element.clientWidth);
+    }
+    this.$nextTick(() => {
+      this.flushPendingMoveCurrentMonthForDate();
+    });
 
   },
   // mod 編集権限の適用  劉全航 start
 
-  beforeDestroy() {
+  beforeUnmount() {
     this.clearHolidays(); // storeの休日マスタをクリア
     // #9620 文字サイズを大きくすると部品がかさなる linjunfeng start
-    EventBus.$off("switchSidebar");
+    EventBus.$off("switchSidebar", this.handleSwitchSidebar);
     // #9620 文字サイズを大きくすると部品がかさなる linjunfeng end
     // #9947 患者カレンダーの展開動作がされていない、他の画面に遷移する時、ResizeObserverを実行しないようにする xugj mod start
-    // const element = document.getElementById("main-id")
+    // const element = getScopedElementById("main-id", this.$el || null)
     // if (this.observer && element) {
     //   this.observer.unobserve(element)
     // }
@@ -420,23 +422,43 @@ export default {
     ...mapGetters("pat-viewer", ["getTreatmentData"]),
     ...mapGetters("mst-holiday", ["getHolidays"]),
     formatedDisplay() {
-      return moment(this.dateToday).format('YYYY/MM/DD');
+      return dayjs(this.dateToday).format('YYYY/MM/DD');
     },
     // 患者IDが選択済み、且つ患者イベントの表示権限があるか
     selectedIdAndPatEventPermission() {
-      return this.patId && this.getAuthorizedFunctions.includes(FUNC_PAT_EVENT);
+      return this.patId && Array.isArray(this.getAuthorizedFunctions) && this.getAuthorizedFunctions.includes(FUNC_PAT_EVENT);
     },
     // 権限が患者イベントの表示権限のみか
     patEventViewPermissionOnly() {
-      return this.getAuthorizedFunctions.includes(FUNC_PAT_EVENT) &&
+      return Array.isArray(this.getAuthorizedFunctions) && this.getAuthorizedFunctions.includes(FUNC_PAT_EVENT) &&
              !(this.getUserAuthorityCds().includes(AUTHORITY_CODES.PAT_EVENT_EDIT) ||
                this.getUserAuthorityCds().includes(AUTHORITY_CODES.PAT_EVENT_PEDIT))
     },
     /** データを読み込めている範囲の新古末端月を取得 */
     contentsMonthRange() {
+      if (!Array.isArray(this.contents) || this.contents.length === 0) {
+        if (!Array.isArray(this.getDateList) || this.getDateList.length === 0) {
+          return null;
+        }
+        const [start, end] = [this.getDateList[0], this.getDateList.at(-1)];
+        return {
+          minMonth: dayjs(start, "YYYYMMDD").startOf("month"),
+          maxMonth: dayjs(end, "YYYYMMDD").startOf("month")
+        };
+      }
+
+      const dates = this.contents
+        .map(c => dayjs(c.date, "YYYYMMDD"))
+        .filter(date => date && typeof date.startOf === "function" && date.isValid())
+        .sort((a, b) => a.valueOf() - b.valueOf());
+
+      if (dates.length === 0) {
+        return null;
+      }
+
       return {
-        minMonth: moment(this.loadedDateRange.start, "YYYYMMDD").startOf("month"),
-        maxMonth: moment(this.loadedDateRange.end, "YYYYMMDD").startOf("month")
+        minMonth: dayjs(dates[0]).startOf("month"),
+        maxMonth: dayjs(dates[dates.length - 1]).startOf("month")
       };
     }
   },
@@ -476,14 +498,92 @@ export default {
     },
 
     // #9620 文字サイズを大きくすると部品がかさなる linjunfeng start
+    requestCalendarForceUpdate(context) {
+      if (this.$?.isMounted) {
+        this.$forceUpdate();
+      }
+    },
+    handleSwitchSidebar() {
+      this.handleResizeWindow(Number(getScopedElementById("main-id", this.$el || null)?.clientWidth || 0));
+    },
+    getCalendarBodyElement() {
+      return this.$refs?.calendarBody || null;
+    },
+    getCalendarHeaderHeight(calendarBody = null) {
+      const body = calendarBody || this.getCalendarBodyElement();
+      return body?.querySelector("thead")?.clientHeight || 0;
+    },
+    getCalendarRowHeight(calendarBody = null) {
+      const body = calendarBody || this.getCalendarBodyElement();
+      return body?.querySelector("tbody tr")?.clientHeight || 0;
+    },
+    bootstrapCalendarForDate(dateValue, options = {}) {
+      const {
+        emitBaseDate = true,
+        appendWeeks = true,
+        requestMove = true
+      } = options;
+      const nextDate = dayjs(dateValue, "YYYY-MM-DD");
+      const nextCalendarArray = splitCalendarArrayByWeek(
+        createCalendarMonth(nextDate)
+      );
+      this.normalizeCalendarArrayDays(nextCalendarArray);
+      this.calendarArray = nextCalendarArray;
+      this.setDateExpandFlg(this.calendarArray);
+      this.createCalendarContents();
+      if (emitBaseDate && this.baseDateNow) {
+        this.$emit("update:baseDate", this.baseDateNow);
+      }
+      if (appendWeeks) {
+        this.addWeeksToCalendar(3);
+      }
+      if (requestMove) {
+        this.requestMoveCurrentMonthForDate();
+      }
+    },
+    normalizeCalendarArrayDays(calendarArray) {
+      if (!Array.isArray(calendarArray)) {
+        return;
+      }
+      calendarArray.forEach((week, weekIndex) => {
+        if (!Array.isArray(week)) {
+          return;
+        }
+        week.forEach((day, dayIndex) => {
+          if (day && !day.dateObj) {
+            day.dateObj = day;
+          }
+          if (day && day.content == null) {
+            day.content = { items: [] };
+          }
+        });
+      });
+    },
+    requestMoveCurrentMonthForDate() {
+      this.pendingMoveCurrentMonthForDate = true;
+      this.$nextTick(() => {
+        this.flushPendingMoveCurrentMonthForDate();
+      });
+    },
+    flushPendingMoveCurrentMonthForDate() {
+      if (!this.pendingMoveCurrentMonthForDate) {
+        return;
+      }
+      const calendarBody = this.$refs?.calendarBody;
+      if (!calendarBody) {
+        return;
+      }
+      this.pendingMoveCurrentMonthForDate = false;
+      this.moveCurrentMonthForDate();
+    },
     handleResizeWindow(width) {
       /** レイアウト選択 + 展開チェック(header)、日付IF・今日ボタン・新規登録ボタン(中央要素) の配置を追従 */
       let expandStyle = {};
-      const dropdownlistWidth = document.getElementsByClassName('k-widget k-dropdown variable_width')[0]?.clientWidth;
-      const expandWidth = document.getElementsByClassName('expand')[0]?.clientWidth;
-      const commonCalendarAreaWidth = document.getElementsByClassName('common-calendar-area')[0]?.clientWidth;
+      const dropdownlistWidth = getScopedElementsByClassName('k-widget k-dropdown variable_width', this.$el || null)[0]?.clientWidth;
+      const expandWidth = getScopedElementsByClassName('expand', this.$el || null)[0]?.clientWidth;
+      const commonCalendarAreaWidth = getScopedElementsByClassName('common-calendar-area', this.$el || null)[0]?.clientWidth;
       // プルダウンの高さを取得（中央要素折り返し時に下へ配置するため）
-      const dropdownHeight = document.getElementsByClassName('k-widget k-dropdown variable_width')[0]?.clientHeight || 0;
+      const dropdownHeight = getScopedElementsByClassName('k-widget k-dropdown variable_width', this.$el || null)[0]?.clientHeight || 0;
       // レイアウト選択 + 展開チェック の横幅合計 ※40=余白
       const baseWidth = dropdownlistWidth + expandWidth + 40;
       // 「header右端 + カレンダー幅」
@@ -512,75 +612,85 @@ export default {
       }
       if (width <= baseWidth) {
         // 展開チェック → 下に折り返す
-        this.commonCalendarAreaTop = document.getElementsByClassName('k-widget k-dropdown variable_width')[0]?.clientHeight + document.getElementsByClassName('expand')[0]?.clientHeight + 10;
+        this.commonCalendarAreaTop = (getScopedElementsByClassName('k-widget k-dropdown variable_width', this.$el || null)[0]?.clientHeight || 0) + (getScopedElementsByClassName('expand', this.$el || null)[0]?.clientHeight || 0) + 10;
         this.commonCalendarAreaLeft = 0;
         this.calendarInputFlexWrap = 'wrap';
         expandStyle.left = 5;
-        expandStyle.top = document.getElementsByClassName('k-widget k-dropdown variable_width')[0]?.clientHeight + 7;
+        expandStyle.top = (getScopedElementsByClassName('k-widget k-dropdown variable_width', this.$el || null)[0]?.clientHeight || 0) + 7;
       } else {
         // 展開チェック → 横並び表示
         this.calendarInputFlexWrap = 'nowrap';
-        expandStyle.left = document.getElementsByClassName('k-widget k-dropdown variable_width')[0]?.clientWidth + 15;
+        expandStyle.left = (getScopedElementsByClassName('k-widget k-dropdown variable_width', this.$el || null)[0]?.clientWidth || 0) + 15;
         expandStyle.top = 4;
       }
-      this.$forceUpdate()
+      this.requestCalendarForceUpdate("handleResizeWindow")
       this.$emit('backChangeExpandStyle', expandStyle)
     },
     // #9620 文字サイズを大きくすると部品がかさなる linjunfeng end
     moveCurrentMonthForDate() {
-      if (this.$refs.calendarBody.scrollTop === 1) return;
-      let isoWeekTmp = moment(this.dateToday, "YYYY-MM-DD").isoWeek();
-      let isoWeekStart = moment(this.dateToday, "YYYY-MM-DD").isoWeekday(1).format('YYYY-MM-DD');
-      let yearTmp = moment(isoWeekStart, "YYYY-MM-DD").isoWeekYear();
+      const calendarBody = this.getCalendarBodyElement();
+      if (!calendarBody) {
+        this.pendingMoveCurrentMonthForDate = true;
+        return;
+      }
+      if (calendarBody.scrollTop === 1) return;
+      const currentDate = dayjs(this.dateToday, "YYYY-MM-DD");
+      if (!currentDate?.isValid?.()) {
+        return;
+      }
+      const isoWeekTmp = currentDate.isoWeek();
+      const isoWeekStart = currentDate.isoWeekday(1).format('YYYY-MM-DD');
+      const yearTmp = dayjs(isoWeekStart, "YYYY-MM-DD").isoWeekYear();
 
       this.$nextTick(() => {
         // 当月の第1週を取得
-        const week = [...this.$refs.calendarBody.querySelectorAll("[id]")].find(
-          i => moment(i.id, "YYYYMMDD").isoWeek() === isoWeekTmp &&
-            moment(i.id, "YYYYMMDD").isoWeekYear() === yearTmp
-        );
+        const week = [...calendarBody.querySelectorAll("[id]")].find(
+          i => dayjs(i.id, "YYYYMMDD").isoWeek() === isoWeekTmp &&
+            dayjs(i.id, "YYYYMMDD").isoWeekYear() === yearTmp);
         if (week) {
           // add #9562 患者カレンダーの表示が遅い 20240523 ztc start
           this.scrollListeningFlag = false;
           // add #9562 患者カレンダーの表示が遅い 20240523 ztc end
           week.scrollIntoView();
-            this.$refs.calendarBody.scrollTop -= this.$refs.calendarBody.querySelector(
-            "thead"
-            ).clientHeight;
-          this.$emit("update:baseDate", moment(this.dateToday, "YYYY-MM-DD"));
+          calendarBody.scrollTop -= this.getCalendarHeaderHeight(calendarBody);
+          this.$emit("update:baseDate", currentDate);
         }
       });
     },
     moveToMonth(date) {
-      this.$emit("update:baseDate", moment(date, "YYYYMMDD"));
+      this.$emit("update:baseDate", dayjs(date, "YYYYMMDD"));
     },
 
     movePrevMonth() {
       this.$emit(
         "update:baseDate",
-        moment(this.baseDate).subtract(1, "months")
-      );
+        dayjs(this.baseDate).subtract(1, "months"));
     },
 
     moveNextMonth() {
-      this.$emit("update:baseDate", moment(this.baseDate).add(1, "months"));
+      this.$emit("update:baseDate", dayjs(this.baseDate).add(1, "months"));
     },
     // add FNSI-NO547本日に移動できない 関 start
     moveToday() {
       // add カレンダー指定での指定日ジャンプに対応 江 start
-      this.dateToday = moment(new Date()).format("YYYY-MM-DD");
-      let isoWeekTmp = moment().isoWeek();
-      let isoWeekStart = moment().weekday(1).format('YYYY-MM-DD');
-      let yearTmp = moment(isoWeekStart, "YYYY-MM-DD").year();
+      const calendarBody = this.getCalendarBodyElement();
+      const today = dayjs();
+      this.dateToday = today.format("YYYY-MM-DD");
+      if (!calendarBody) {
+        this.requestMoveCurrentMonthForDate();
+        return;
+      }
+      const isoWeekTmp = today.isoWeek();
+      const isoWeekStart = today.weekday(1).format('YYYY-MM-DD');
+      const yearTmp = dayjs(isoWeekStart, "YYYY-MM-DD").year();
       // add カレンダー指定での指定日ジャンプに対応 江 end
-      const week = [...this.$refs.calendarBody.querySelectorAll("[id]")].find(
+      const week = [...calendarBody.querySelectorAll("[id]")].find(
         i =>
           // mod カレンダー指定での指定日ジャンプに対応 江 start
-          // moment(i.id, "YYYYMMDD").isoWeek() ===
-          //   moment()
-          //     .isoWeek() && moment(i.id, "YYYYMMDD").year() === moment().year()
-            moment(i.id, "YYYYMMDD").isoWeek() === isoWeekTmp &&
-            moment(i.id, "YYYYMMDD").year() === yearTmp
+          // dayjs(i.id, "YYYYMMDD").isoWeek() ===
+          //   dayjs().isoWeek() && dayjs(i.id, "YYYYMMDD").year() === dayjs().year()
+          dayjs(i.id, "YYYYMMDD").isoWeek() === isoWeekTmp &&
+          dayjs(i.id, "YYYYMMDD").year() === yearTmp
           // mod カレンダー指定での指定日ジャンプに対応 江 end
       );
       if (week) {
@@ -588,41 +698,37 @@ export default {
         this.scrollListeningFlag = false;
         // add #9562 患者カレンダーの表示が遅い 20240523 ztc end
         week.scrollIntoView();
-        this.$refs.calendarBody.scrollTop -= this.$refs.calendarBody.querySelector(
-          "thead"
-        ).clientHeight;
-        this.$emit("update:baseDate", moment());
-        // 表示年月日を今日ボタンから変更したことを親に通知
-        this.handleDateTodayChange();
+        calendarBody.scrollTop -= this.getCalendarHeaderHeight(calendarBody);
+        this.$emit("update:baseDate", today);
       }
     },
     // add FNSI-NO547本日に移動できない 関 end
     moveCurrentMonth() {
-      if (this.$refs.calendarBody.scrollTop === 1) return;
+      const calendarBody = this.getCalendarBodyElement();
+      if (!calendarBody) {
+        this.requestMoveCurrentMonthForDate();
+        return;
+      }
+      if (calendarBody.scrollTop === 1) return;
 
       // 当月の第1週を取得
-      const week = [...this.$refs.calendarBody.querySelectorAll("[id]")].find(
-        i =>
-          moment(i.id, "YYYYMMDD").isoWeek() ===
-            moment()
-              .startOf("month")
-              .isoWeek() && moment(i.id, "YYYYMMDD").year() === moment().year()
-      );
+      const currentMonth = dayjs().startOf("month");
+      const week = [...calendarBody.querySelectorAll("[id]")].find(
+        i => dayjs(i.id, "YYYYMMDD").isoWeek() === currentMonth.isoWeek() &&
+          dayjs(i.id, "YYYYMMDD").year() === dayjs().year());
       if (week) {
         // add #9562 患者カレンダーの表示が遅い 20240523 ztc start
         this.scrollListeningFlag = false;
         // add #9562 患者カレンダーの表示が遅い 20240523 ztc end
         week.scrollIntoView();
-        this.$refs.calendarBody.scrollTop -= this.$refs.calendarBody.querySelector(
-          "thead"
-        ).clientHeight;
-        this.$emit("update:baseDate", moment());
+        calendarBody.scrollTop -= this.getCalendarHeaderHeight(calendarBody);
+        this.$emit("update:baseDate", dayjs());
       }
     },
 
     calendarDate(date) {
       const className = "calendar-date";
-      const today = moment();
+      const today = dayjs();
       var checkHoliday = this.getHolidays;
       let ret = [className];
       const formatDate = date.format("YYYY-MM-DD");
@@ -652,7 +758,7 @@ export default {
       }
       
       // 指定日(画面上部の日付IF指定日)：青枠
-      if (this.dateToday == formatDate ) {
+      if (this.dateToday == formatDate) {
         ret.push("calendar-date-baseday");
       }
       
@@ -676,6 +782,7 @@ export default {
       //mod FNSI-redmin bug #3835 【休日マスタの祝日とそれ以外を区別する】を修正 江 end
       // mod #7732 【休日マスタで設定した名称を表示させる必要は無い。】end
     },
+
     getfCd(item){
       if (item && item.facility_cd) {
         this.fCd = item.facility_cd
@@ -683,11 +790,11 @@ export default {
     },
     onClickLink(item, date) {
       const { routerLink, readOnly, content, categoryCd } = item;
-      const formatDate = moment(date).format("YYYY-MM-DD");
+      const formatDate = dayjs(date).format("YYYY-MM-DD");
 
       //add FNSI-患者カレンダに表示する予定の不足情報を追加する 江 start
-      var startDate = moment(date).add(-3, "months").format("YYYY-MM-DD");
-      var endDate = moment(date).add(3, "months").format("YYYY-MM-DD");
+      var startDate = dayjs(date).add(-3, "months").format("YYYY-MM-DD");
+      var endDate = dayjs(date).add(3, "months").format("YYYY-MM-DD");
       //mod FutreNetWeb+SI課題管理 no.5574 劉全航 start
       if(routerLink === "pat-event"){
         startDate = formatDate;
@@ -747,37 +854,30 @@ export default {
      */
     createCalendarContents(contents) {
       const newContents = contents ? contents : this.contents
-      this.calendarArray.forEach(week => {
-        week.forEach(day => {
-          
+      this.normalizeCalendarArrayDays(this.calendarArray);
+      this.calendarArray.forEach((week, weekIndex) => {
+        week.forEach((day, dayIndex) => {
           let skip = false;
-          
           if (!day.dateObj) day.dateObj = day;
-
           if (this.contents.length > 0) {
             const contentsArr = newContents.find(
-            ({ date }) => date === day.dateObj.format("YYYYMMDD")
-            )
-            
+            ({ date }) => date === day.dateObj.format("YYYYMMDD"))
             // 既に読み込んだデータは展開折畳を維持するため上書かない
             if (!day.content || !day.content.items || day.content.items.length === 0) {
               day.content = contentsArr ? deepCopy(contentsArr) : { items: [] };
             } else {
               skip = true;
             }
-
-          // add #11313 【たくしん会】患者カレンダーの表示が更新されない linjunfeng start
+          // add #11313 【たくしより】患者カレンダーの表示が更新されない linjunfeng start
           } else {
             day.content = { items: [] };
           }
-          // add #11313 【たくしん会】患者カレンダーの表示が更新されない linjunfeng end
+          // add #11313 【たくしより】患者カレンダーの表示が更新されない linjunfeng end
           if (day.content && !skip) {
             day.content.items = this.getCategoryData(day.content.items);
           }
-
         });
       });
-
       // FNSi-9947-患者カレンダーの展開動作がされていない zhoubin add start
       this.setDateExpandFlg(this.calendarArray);
       // FNSi-9947-患者カレンダーの展開動作がされていない zhoubin add end
@@ -842,8 +942,7 @@ export default {
         
         // 親が検査予定で子なしの場合は展開折畳がなしで平打ち
         if (
-          item.layoutCategoryKey === LAYOUT_CATEGORY_EXAMREQUEST.key && !item.isDispGroup
-        ) {
+          item.layoutCategoryKey === LAYOUT_CATEGORY_EXAMREQUEST.key && !item.isDispGroup) {
           expandFalseArr.push(LAYOUT_CATEGORY_EXAMREQUEST.key);
         }
       
@@ -871,9 +970,9 @@ export default {
       // add #9562 患者カレンダーの表示が遅い 20240523 ztc end
       const e = this.$refs.calendarBody;
       const isScrolledTop = e?.scrollTop === 0;
-      // 患者カレンダーのスクロールによる読み込み不正　6423  shan start
+      // 患者カレンダーのスクロールによる読み込み不正 6423  shan start
       const isScrolledBottom =  Math.abs(e.scrollTop + e.clientHeight - e.scrollHeight) < 4;
-      // 患者カレンダーのスクロールによる読み込み不正　6423  shan end
+      // 患者カレンダーのスクロールによる読み込み不正 6423  shan end
             
       // 15日が属する週の行の中央がスクロール領域に入ったらtrueを返す
       const isScrolledIntoView = elem => {
@@ -904,20 +1003,27 @@ export default {
       // 読み込めている範囲の新古末端月の月半ば(15日)になったら、月を切り替える
       const currentMonthElem = [...e.querySelectorAll("[id]")].find(
         i =>
-          moment(i.id, "YYYYMMDD").isoWeek() ===
-            moment(i.id, "YYYYMMDD")
+          dayjs(i.id, "YYYYMMDD").isoWeek() ===
+            dayjs(i.id, "YYYYMMDD")
               .date(15)
-              .isoWeek() && isScrolledIntoView(i)
-      );
+              .isoWeek() && isScrolledIntoView(i));
             
       if (currentMonthElem) {
         // 読み込めている範囲の新古末端月を取得
-        const { minMonth, maxMonth } = this.contentsMonthRange;
-        const hitMonth = moment(currentMonthElem.id, "YYYYMMDD").startOf("month");
-      
+        const monthRange = this.contentsMonthRange;
+        if (!monthRange || !monthRange.minMonth || !monthRange.maxMonth) {
+          return;
+        }
+        const { minMonth, maxMonth } = monthRange;
+        const hitMonth = dayjs(currentMonthElem.id, "YYYYMMDD").startOf("month");
+
+        if (!hitMonth.isValid()) {
+          return;
+        }
+
         const diffMin = hitMonth.diff(minMonth, "months");
         const diffMax = hitMonth.diff(maxMonth, "months");
-      
+
         // 読み込めている範囲の新古末端月の15日を含む週なら切り替える
         if (diffMin <= 0 || diffMax >= 0) {
           this.moveToMonth(currentMonthElem.id);
@@ -932,13 +1038,13 @@ export default {
     addWeeksToCalendar(numWeeks) {
       const isAddToEndOfCalendar = numWeeks > 0;
       const baseDate = isAddToEndOfCalendar
-        ? moment(
-            this.calendarArray[this.calendarArray.length - 1][0].dateObj
-          ).add(1, "week")
-        : moment(this.calendarArray[0][0].dateObj).add(numWeeks, "week");
+        ? dayjs(
+            this.calendarArray[this.calendarArray.length - 1][0].dateObj).add(1, "week")
+        : dayjs(this.calendarArray[0][0].dateObj).add(numWeeks, "week");
 
       const newWeek = createCalendarWeek(baseDate, numWeeks);
       const calendarWeeksArray = splitCalendarArrayByWeek(newWeek);
+      this.normalizeCalendarArrayDays(calendarWeeksArray);
       if (isAddToEndOfCalendar) {
         this.calendarArray.push(...calendarWeeksArray);
       } else {
@@ -949,8 +1055,7 @@ export default {
 
     isRstClass(category) {
       return category.children?.some(
-        child => child.indRstClass === "rst" || child.type === "rstChart"
-      ) ?? false;
+        child => child.indRstClass === "rst" || child.type === "rstChart") ?? false;
     },
     /** 検査結果、検査予定(子なし)、一般撮影検査予定は親のスタイル適用 */
     isOtherParentClass(category) {
@@ -982,7 +1087,7 @@ export default {
     createNewFromCalendar(momentObj) {
       if (!this.selectedIdAndPatEventPermission) {
         // add #10359、#10331 編集権限について、対応する。 dengshen start
-        if (!this.getAuthorizedFunctions.includes(FUNC_PAT_EVENT)) {
+        if (!(Array.isArray(this.getAuthorizedFunctions) && this.getAuthorizedFunctions.includes(FUNC_PAT_EVENT))) {
           this.$ons.notification.alert({
             // title: "権限エラー",
             // message: functionName+"を操作する権限がありません。管理者に確認してください。"
@@ -1018,7 +1123,7 @@ export default {
       // 患者イベントの編集権限有り
       const routerLink = "pat-event";
       // 隣の日付欄から日付を取得する
-      const date = moment(this.dateToday);
+      const date = dayjs(this.dateToday);
       const createNew = true;
       this.$emit("content-clicked", { item: { routerLink }, date, createNew });
     },
@@ -1032,7 +1137,7 @@ export default {
         });
       });
 
-      this.$forceUpdate();
+      this.requestCalendarForceUpdate("handleChangeDateExpandFlg");
     },
 
     /** 日付 展開折畳制御 */
@@ -1056,7 +1161,7 @@ export default {
         }
       }
 
-      this.$forceUpdate();
+      this.requestCalendarForceUpdate("handleChangeDateExpandFlg");
     },
     // FNSi-9947-患者カレンダーの展開動作がされていない add end
     // add #8091 2023/03/14 患者カレンダー/患者カレンダーレイアウトマスタの動作不正 林峻峰 start
@@ -1071,7 +1176,7 @@ export default {
                 // 親要素ありの場合のみ展開折畳を制御
                 if (item.layoutCategoryKey === layoutCategoryKey && day.content.date === date) {
                   item.triangleDirection = item.triangleDirection === 'top' ? 'bottom' : 'top';
-                  this.$forceUpdate();
+                  this.requestCalendarForceUpdate("handleChangeTriangleDirection");
                 }
               });
           }
@@ -1109,7 +1214,7 @@ export default {
   box-sizing: border-box;
 }
 // mod FutreNetWeb+SI課題管理 no.5025 劉全航 start
-@media screen and(max-width:500px) {
+@media screen and (max-width: 500px) {
   thead,tbody {
     tr {
       width: 350% !important;
@@ -1210,6 +1315,13 @@ export default {
   }
 }
 
+.pat-calendar-chart-cell {
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+}
+
 .calendar-content {
   text-align: left;
   overflow-y: auto;
@@ -1246,6 +1358,10 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
+
+  /* add #9846 start */
+  padding: .25em 0;
+  /* add #9846 end */
   &-link {
     // mod FNSI-テーマ：黒い場合、文字見えないの修正 江 start
     // color: gray;
@@ -1312,7 +1428,11 @@ export default {
   max-height: 65px;
   overflow: hidden;
   /* add #6462 文字サイズ：特大のときに指示コメントが見切れる。 xiaosonglei end */
-  padding: .25em 0;
+
+  /* add #9846 start */
+  /* padding: .25em 0;*/
+  /* add #9846 end */
+  
 }
 // add FNSI-穿刺針と治療提案の情報表示を最適化します 関 end
 // add FNSI-関test start
@@ -1346,7 +1466,7 @@ thead {
 </style>
 
 <style scoped>
-.content-popover >>> .popover__content {
+.content-popover :deep(.popover__content) {
   width: 300px;
   max-height: 200px;
   font-size: 1.5em;
@@ -1383,6 +1503,7 @@ thead {
   margin: 0 auto;
   display: flex;
   align-items: center;
+  min-width: 300px; 
 }
 .calendar-content-input{
   display: flex;

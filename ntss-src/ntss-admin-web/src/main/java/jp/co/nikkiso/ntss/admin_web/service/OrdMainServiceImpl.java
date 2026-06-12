@@ -1,10 +1,11 @@
 package jp.co.nikkiso.ntss.admin_web.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.NullNode;
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
@@ -203,7 +204,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
@@ -258,6 +259,7 @@ import static jp.co.nikkiso.ntss.core.utils.IvCalAmountAndSpeedUtil.SPECIAL_DEVI
 import static jp.co.nikkiso.ntss.core.utils.IvCalAmountAndSpeedUtil.calIvAmountAndIvSpeed;
 import static jp.co.nikkiso.ntss.core.utils.LiquidCalculateUtils.getIhdfCalculateLiquidAmoutAndSpeed;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 // add 9200 by kangjie end
 //2019.01.29 import jp.co.nikkiso.ntss.core.dao.DummyOrdMainDao;
 //2019.01.29 import jp.co.nikkiso.ntss.core.entity.DummyOrdMain;
@@ -522,6 +524,10 @@ public class OrdMainServiceImpl implements OrdMainService {
   private MstImplantDao mstImplantDao;
   //add #12462 患者情報共有 zrx end
 
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
+
   @Resource(name = "crawlExecutorPool")
   private ExecutorService threadExector;
   // add FNSI-改修内容 補液量、補液速度、血流量、透析温度のチェックを追加 穆 start
@@ -618,7 +624,6 @@ public class OrdMainServiceImpl implements OrdMainService {
   public List<OrdMain> selectByPatIdAndDeviceMode(String facilityCd,Long patId, Integer mode) {
     return ordMainDao.selectByPatIdAndDeviceMode(facilityCd,patId,mode);
   }
-
   @Override
   public List<OrdMain> selectBySingleNeedle(String facilityCd, Long patId) {
     return ordMainDao.selectBySingleNeedle(facilityCd,patId);
@@ -1590,7 +1595,7 @@ public class OrdMainServiceImpl implements OrdMainService {
           StringBuffer wheresOrdMainDao = new StringBuffer("");
           wheresOrdMainDao.append(" WHERE ord_no in (" + getIntegerValueStr(updateOrdNoList) +") \n");
           // logCommon設定
-          DataUpdateLogCommonNew logCommonOrdMainDao = getLogCommon(ordMainDao, tableNameOrdMainDao, wheresOrdMainDao, getEventLogMessage());
+          DataUpdateLogCommonNew logCommonOrdMainDao = getLogCommon(tableNameOrdMainDao, wheresOrdMainDao, getEventLogMessage());
           // ログ出力カラム情報及び更新前データ情報取得
           boolean setResultOrdMainDao = logCommonOrdMainDao.setInfo();
 
@@ -2143,7 +2148,7 @@ public class OrdMainServiceImpl implements OrdMainService {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
           logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
             // mod FNSI-検体検査の表示の修正 楊 start
-            // return new ResponseEntity<>("検体検査の日付更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            // return new ResponseEntity<>("検体検査の日付更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
             OrdMainWeekPatternResponse response = new OrdMainWeekPatternResponse();
             response.setBody("検査予定の日付更新に失敗しました。");
             response.setHeaders(null);
@@ -2223,7 +2228,7 @@ public class OrdMainServiceImpl implements OrdMainService {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
           logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
             // mod FNSI-検体検査の表示の修正 楊 start
-            // return new ResponseEntity<>("検体検査のキャンセルに失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+            // return new ResponseEntity<>("検体検査のキャンセルに失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
             OrdMainWeekPatternResponse response = new OrdMainWeekPatternResponse();
             response.setBody("検査予定のキャンセルに失敗しました。");
             response.setHeaders(null);
@@ -2854,7 +2859,7 @@ public class OrdMainServiceImpl implements OrdMainService {
         }
         ArrayNode sortedNode = sortIndEquipInfoArray((ArrayNode) root, sortKeys, facilityCd);
         sharingInfo.setIndEquipInfo(sortedNode.toString());
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         EventLogMessage eventLogMessage = new EventLogMessage();
         eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
         eventLogMessage.setFacilityCd(facilityCd);
@@ -2881,7 +2886,7 @@ public class OrdMainServiceImpl implements OrdMainService {
         }
         ArrayNode sortedNode = sortIndMediInfoArray((ArrayNode) root, sortKeys, facilityCd);
         sharingInfo.setIndMediInfo(sortedNode.toString());
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         EventLogMessage eventLogMessage = new EventLogMessage();
         eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
         eventLogMessage.setFacilityCd(facilityCd);
@@ -3891,7 +3896,7 @@ public class OrdMainServiceImpl implements OrdMainService {
     wheres.append(" WHERE\n");
     wheres.append(inStr + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -4088,7 +4093,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       wheres.append("AND setting.facility_setting_no = '1022'" + "\n");
       wheres.append("AND value = '1')" + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -4140,7 +4145,7 @@ public class OrdMainServiceImpl implements OrdMainService {
     StringBuffer wheresOrdMainDao = new StringBuffer("");
     wheresOrdMainDao.append(" WHERE ord_no in (" + getIntegerValueStr(ord_no) +") \n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommonOrdMainDao = getLogCommon(ordMainDao, tableNameOrdMainDao, wheresOrdMainDao, getEventLogMessage());
+    DataUpdateLogCommonNew logCommonOrdMainDao = getLogCommon(tableNameOrdMainDao, wheresOrdMainDao, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResultOrdMainDao = logCommonOrdMainDao.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -4264,7 +4269,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       wheres.append(" WHERE\n");
       wheres.append(inStr + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -4373,7 +4378,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       wheres.append(" WHERE\n");
       wheres.append(inStr + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -4415,7 +4420,7 @@ public class OrdMainServiceImpl implements OrdMainService {
 //    wheres.append(" WHERE\n");
 //    wheres.append(" ord_no = " + ord_no + "\n");
 //    // logCommon設定
-//    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+//    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
 //    // ログ出力カラム情報及び更新前データ情報取得
 //    boolean setResult = logCommon.setInfo();
 //    // DB更新ログ出力ロジック wangzuo End
@@ -4492,7 +4497,7 @@ public class OrdMainServiceImpl implements OrdMainService {
 //      wheres.append(" WHERE\n");
 //      wheres.append(" ord_no = " + ord_no + "\n");
 //      // logCommon設定
-//      DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+//      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
 //      // ログ出力カラム情報及び更新前データ情報取得
 //      boolean setResult = logCommon.setInfo();
 //      // DB更新ログ出力ロジック wangzuo End
@@ -4638,7 +4643,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       wheres.append(" WHERE\n");
       wheres.append(inStr + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -4697,7 +4702,7 @@ public class OrdMainServiceImpl implements OrdMainService {
     wheres.append(" WHERE\n");
     wheres.append(inStr + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -4839,7 +4844,7 @@ public class OrdMainServiceImpl implements OrdMainService {
     wheres.append(" WHERE\n");
     wheres.append(" ord_no = " + ordNo + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -4881,7 +4886,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       wheres.append(" WHERE\n");
       wheres.append(" ord_no = " + ordNo + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -5121,7 +5126,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       wheres.append(" WHERE\n");
       wheres.append(inStr + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -5224,11 +5229,11 @@ public class OrdMainServiceImpl implements OrdMainService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -6430,7 +6435,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       wheres.append(" WHERE\n");
       wheres.append(" ord_no = " + ord.getOrdNo() + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // 更新後データ取得、差分あれば、log出力
@@ -6481,7 +6486,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       wheres.append(" WHERE\n");
       wheres.append(inStr + "\n");
       // logCommon設定
-      logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     }
@@ -6576,7 +6581,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       wheres.append(" WHERE\n");
       wheres.append(inStr + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew patIndApprovelogCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew patIndApprovelogCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean patIndApproveSetResult = patIndApprovelogCommon.setInfo();
       int patUpdateCount = 0;
@@ -6606,7 +6611,7 @@ public class OrdMainServiceImpl implements OrdMainService {
     wheres.append(" WHERE\n");
     wheres.append(" ord_no = " + ord.getOrdNo() + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     /* modify by chamaojia 2024-01-23 [10196]  No need to modify the content of 'indScheduleUserInfo' --start */
@@ -6669,7 +6674,7 @@ public class OrdMainServiceImpl implements OrdMainService {
     wheres.append(" WHERE\n");
     wheres.append(inStr + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -6710,7 +6715,7 @@ public class OrdMainServiceImpl implements OrdMainService {
     if (updateCount > 0) {
       tableName = "pat_ind_approve";
       // logCommon設定
-      DataUpdateLogCommonNew patIndApprovelogCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew patIndApprovelogCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean patIndApproveSetResult = patIndApprovelogCommon.setInfo();
 
@@ -6870,7 +6875,7 @@ public class OrdMainServiceImpl implements OrdMainService {
         //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
       }
       // 引数は、ボディデータ、ヘッダーデータ、ステータス
-      return new ResponseEntity<>("パラメータエラー", null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>("パラメータエラー", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
     List<Integer> weeksArry = new ArrayList<Integer>();
     weeksArry.add(0);
@@ -6880,7 +6885,7 @@ public class OrdMainServiceImpl implements OrdMainService {
     if (1 != listOrdMainRet.size()) {
       HttpStatus status = HttpStatus.BAD_REQUEST;
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      ResponseEntity<String> re = new ResponseEntity<>("治療情報参照エラー", null, status);
+      ResponseEntity<String> re = new ResponseEntity<>("治療情報参照エラー", (org.springframework.http.HttpHeaders) null, status);
       return re;
     }
     //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 start
@@ -6904,7 +6909,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
       HttpStatus status = HttpStatus.BAD_REQUEST;
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      ResponseEntity<String> re = new ResponseEntity<>("排他エラー", null, status);
+      ResponseEntity<String> re = new ResponseEntity<>("排他エラー", (org.springframework.http.HttpHeaders) null, status);
       return re;
     }
 
@@ -6915,7 +6920,7 @@ public class OrdMainServiceImpl implements OrdMainService {
     if (listPatMain.size() == 0) {
       HttpStatus status = HttpStatus.BAD_REQUEST;
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      ResponseEntity<String> re = new ResponseEntity<>("患者情報(pat_main)参照エラー", null, status);
+      ResponseEntity<String> re = new ResponseEntity<>("患者情報(pat_main)参照エラー", (org.springframework.http.HttpHeaders) null, status);
       return re;
     }
     PatMain patMain = listPatMain.get(0);
@@ -6983,7 +6988,7 @@ public class OrdMainServiceImpl implements OrdMainService {
         //レコード作成に失敗した場合
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         //引数は、ボディデータ,ヘッダーデータ,ステータス
-        ResponseEntity<String> re = new ResponseEntity<>("レコードの作成に失敗しました。", null, status);
+        ResponseEntity<String> re = new ResponseEntity<>("レコードの作成に失敗しました。", (org.springframework.http.HttpHeaders) null, status);
 
         return re;
       } else {
@@ -7004,7 +7009,7 @@ public class OrdMainServiceImpl implements OrdMainService {
         String strMsg = "患者治療パターン登録に失敗しました(スケジュール情報異常:[ベッドコード=" + ordMain.getIndBedCd() + "、治療開始時刻=" + ordMain.getIndTreatStartTime() + "、指示者=" + bodyData.getInd_user_id() + "、更新者=" + bodyData.getUpd_user_id() + "])";
         eventLogMessage.setLogMessage(strMsg);
         logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-        return new ResponseEntity<>("患者治療パターン情報の登録に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>("患者治療パターン情報の登録に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
       editData.setTreatType(Double.parseDouble(bodyData.getTreat_type()));
       editData.setIndTreatStartDate(treatDays.getString(0));
@@ -7107,7 +7112,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       });
     }
     //add #12680 直近の過去指示（投与薬剤を含まない）で予定を作成すると不正データが発生する zrx end
-    return new ResponseEntity<>(ordNoList.toString(), null, HttpStatus.OK);
+    return new ResponseEntity<>(ordNoList.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   //add #11841 【たくしん会】ord_mainの登録不正 zrx start
@@ -7118,7 +7123,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       String indCondInfo = ordMain.getIndCondInfo();
 
       JsonNode indCondJsonNode = mapper.readTree(indCondInfo);
-      Iterator<Map.Entry<String, JsonNode>> indCondFields = indCondJsonNode.fields();
+      Iterator<Map.Entry<String, JsonNode>> indCondFields = indCondJsonNode.properties().iterator();
       while(indCondFields.hasNext()) {
         Map.Entry<String, JsonNode> field = indCondFields.next();
         String key = field.getKey();
@@ -7560,7 +7565,7 @@ public class OrdMainServiceImpl implements OrdMainService {
 //    // メッセージ情報を格納
 //    if (ret.getStatusCode() != HttpStatus.OK) {
 //      responseData.put("retMsg", 99999998);
-//      return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+//      return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //    }
 //    //mod FNSI-6817 劉全航 end
 //    OrdMain ordMain = ordMainDao.selectByOrdNo(ord_no);
@@ -7678,7 +7683,7 @@ public class OrdMainServiceImpl implements OrdMainService {
 //    // #10196 del by Zhou.tao Start  >> There's no need to rebuild materialSave record.
 ////    treatmentStatusListService.middleCheck(ordMain);
 //    // #10196 del by Zhou.tao End
-//    return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+//    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //  }
   // del 11454 時間外加算自動処理が機能していない zkm end
 
@@ -8160,7 +8165,7 @@ public class OrdMainServiceImpl implements OrdMainService {
     deviceEdgeOrder.setMachineNo(machineNo);
 
     ResponseEntity<?> res = deviceEdgeOrderResource.PostOrderCancelCondition(deviceEdgeOrder, null);
-    status = res.getStatusCode();
+    status = HttpStatus.valueOf(res.getStatusCode().value());
     if (status != HttpStatus.OK) {
       retMsg = "通信サーバーへの通知失敗";
       eventLogMessage.setLogMessage(className + "." + methodName + " " + retMsg);
@@ -8169,7 +8174,7 @@ public class OrdMainServiceImpl implements OrdMainService {
 
     eventLogMessage.setLogMessage(className + "." + methodName + " 処理終了");
     logService.log(LogLevel.INFO, eventLogMessage, "", SERVICE_NAME.FNSI, null);
-    return new ResponseEntity<String>(retMsg, null, status);
+    return new ResponseEntity<String>(retMsg, (org.springframework.http.HttpHeaders) null, status);
   }
   /**
    * 条件送信済みクールと登録治療予定クール比較
@@ -8533,27 +8538,27 @@ public class OrdMainServiceImpl implements OrdMainService {
               // チェックリスト実績.チェックリスト項目情報「数量」
               if (Objects.equals(classCode, "15")) {
                 // 「17：透析液使用数」
-                JsonNode item17Node = condNodeList.has("17") ? condNodeList.get("17") : new TextNode(null);
-                JsonNode item17valueNode = jsonNodeIsNull(item17Node) || ! item17Node.has("value") ? new TextNode(null) : item17Node.get("value");
+                JsonNode item17Node = condNodeList.has("17") ? condNodeList.get("17") : NullNode.getInstance();
+                JsonNode item17valueNode = jsonNodeIsNull(item17Node) || ! item17Node.has("value") ? NullNode.getInstance() : item17Node.get("value");
                 BigDecimal item17 = jsonNodeIsNull(item17valueNode) ? BigDecimal.ZERO : new BigDecimal(item17valueNode.asText());
 
 //                regCheckInfo.setAmount(item17.toString());
                 regCheckInfo.setAmount(item17.toPlainString());
               } else if (Objects.equals(classCode, "19")) {
                 // 「22：補液使用数」
-                JsonNode item22Node = condNodeList.has("22") ? condNodeList.get("22") : new TextNode(null);
-                JsonNode item22valueNode = jsonNodeIsNull(item22Node) || ! item22Node.has("value") ? new TextNode(null) : item22Node.get("value");
+                JsonNode item22Node = condNodeList.has("22") ? condNodeList.get("22") : NullNode.getInstance();
+                JsonNode item22valueNode = jsonNodeIsNull(item22Node) || ! item22Node.has("value") ? NullNode.getInstance() : item22Node.get("value");
                 BigDecimal item22 = jsonNodeIsNull(item22valueNode) ? BigDecimal.ZERO : new BigDecimal(item22valueNode.asText());
 
 //                regCheckInfo.setAmount(item22.toString());
                 regCheckInfo.setAmount(item22.toPlainString());
               } else if (Objects.equals(classCode, "25")) {
                 // 「26：抗凝固剤ワンショット量」＋「28：抗凝固剤持続総量」
-                JsonNode item26Node = condNodeList.has("26") ? condNodeList.get("26") : new TextNode(null);
-                JsonNode item26valueNode = jsonNodeIsNull(item26Node) || ! item26Node.has("value") ? new TextNode(null) : item26Node.get("value");
+                JsonNode item26Node = condNodeList.has("26") ? condNodeList.get("26") : NullNode.getInstance();
+                JsonNode item26valueNode = jsonNodeIsNull(item26Node) || ! item26Node.has("value") ? NullNode.getInstance() : item26Node.get("value");
                 BigDecimal item26 = jsonNodeIsNull(item26valueNode) ? BigDecimal.ZERO : new BigDecimal(item26valueNode.asText());
-                JsonNode item28Node = condNodeList.has("28") ? condNodeList.get("28") : new TextNode(null);
-                JsonNode item28valueNode = jsonNodeIsNull(item28Node) || ! item28Node.has("value") ? new TextNode(null) : item28Node.get("value");
+                JsonNode item28Node = condNodeList.has("28") ? condNodeList.get("28") : NullNode.getInstance();
+                JsonNode item28valueNode = jsonNodeIsNull(item28Node) || ! item28Node.has("value") ? NullNode.getInstance() : item28Node.get("value");
                 BigDecimal item28 = jsonNodeIsNull(item28valueNode) ? BigDecimal.ZERO : new BigDecimal(item28valueNode.asText());
 
 //                regCheckInfo.setAmount(item26.add(item28).toString());
@@ -9653,7 +9658,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       wheres.append("AND setting.facility_setting_no = '1022'" + "\n");
       wheres.append("AND value = '1')" + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -12370,7 +12375,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       StringBuffer wheres = new StringBuffer();
       wheres.append(" WHERE\n");
       wheres.append(inStr).append("\n");
-      logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch (Exception e) {

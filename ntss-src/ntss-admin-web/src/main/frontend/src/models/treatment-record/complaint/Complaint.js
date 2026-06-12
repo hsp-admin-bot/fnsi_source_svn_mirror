@@ -115,7 +115,7 @@ export class Complaint {
   // ファクトリメソッド
   static of(args, forOxygen = false, isDummy = false) {
     const getOrElse = (obj, prop, defaultValue) => {
-      return obj.hasOwnProperty(prop) ? obj[prop] : defaultValue;
+      return Object.prototype.hasOwnProperty.call(obj, prop) ? obj[prop] : defaultValue;
     };
 
     return new Complaint(

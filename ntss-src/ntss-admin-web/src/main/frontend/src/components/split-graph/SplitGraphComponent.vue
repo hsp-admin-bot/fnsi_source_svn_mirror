@@ -40,7 +40,7 @@
       <!-- popover level 1 -->
       <v-ons-popover
         cancelable
-        :visible.sync="duplicatePlotListVisible"
+        v-model:visible="duplicatePlotListVisible"
         :target="duplicatePlotListTarget"
         :direction="duplicatePlotListDirection"
         :cover-target="false"
@@ -144,7 +144,7 @@
       <!-- 2レベルのポップオーバー -->
       <v-ons-popover
         cancelable
-        :visible.sync="menuVisible"
+        v-model:visible="menuVisible"
         :target="menuTarget"
         :direction="menuDirection"
         :cover-target="false"
@@ -159,9 +159,8 @@
           <div class="pop-menu">
             <table class="menu-list">
               <tbody>
-                <template v-for="(menu, index) in menuList">
+                <template v-for="(menu, index) in menuList" :key="`menu-${index}`">
                   <tr
-                    :key="`menu-${index}`"
                     :class="{
                       'menu-body-tr': true,
                       'non-display': hideMenuButton(menu.cd)
@@ -193,6 +192,7 @@
                 <input
                   type="radio"
                   class="identification"
+                  :class="currentTab === 1?'identification' + currentTab:''"
                   name="popover-tab-button"
                   id="input-tooltip"
                   @click="switchTab(1);"
@@ -202,6 +202,7 @@
                 <input
                   type="radio"
                   class="identification"
+                   :class="currentTab === 2?'identification' + currentTab:'identification2Not'"
                   name="popover-tab-button"
                   id="input-menu"
                   @click="switchTab(2);"
@@ -221,9 +222,8 @@
               <div class="pop-menu">
                 <table class="menu-list">
                   <tbody>
-                    <template v-for="(menu, index) in menuList">
+                    <template v-for="(menu, index) in menuList" :key="`menu-${index}`">
                       <tr
-                        :key="`menu-${index}`"
                         :class="{
                           'menu-body-tr': true,
                           'non-display': hideMenuButton(menu.cd)
@@ -255,8 +255,9 @@
 </template>
 
 <script>
-import { Chart } from "highcharts-vue";
-import { mapGetters, mapActions } from "vuex";
+import { Chart } from "@/compat/charts/highcharts";
+import { getClosestMainContentAreaElement, getMainContentAreaElement, getScopedDocument, getScopedWindow, getScopedElementById, getScopedElementsByClassName, queryScopedSelector, appendScopedChild } from "@/functions/common/LayoutMeasureHelper";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import PatHeaderControlMixin from "@/components/common/PatHeadControlMixin";
 import {
@@ -277,8 +278,8 @@ import {
   // mod bug 7940 修正 chen end
   getGraphSettings
 } from "@/apis/split-graph";
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // del #10359 編集権限の動作不正 dengshen start
 // import {
 //   FUNC_EXAM_RECORD,
@@ -298,6 +299,8 @@ import { popoverPreShowOther, popoverPostShowOther, popoverPosthideOther } from 
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import nameDuplicationImg from "../../assets/name_duplication.png";
+import { publicAssetPath } from "@/compat/assets/public-path";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 export default {
   name: "SplitGraphComponent",
@@ -345,17 +348,17 @@ export default {
           cd: 0,
           name: "検査結果",
           title: "検査結果画面に遷移します",
-          icon: require("@/../public/img/exam-record/exam-record.png")
+          icon: publicAssetPath("img/exam-record/exam-record.png")
         }, {
           cd: 1,
           name: "患者経過総合ビューア",
           title: "患者経過総合ビューア画面に遷移します",
-          icon: require("@/../public/img/pat-viewer/pat-viewer.png")
+          icon: publicAssetPath("img/pat-viewer/pat-viewer.png")
         }, {
           cd: 2,
           name: "治療記録",
           title: "治療記録画面に遷移します",
-          icon: require("@/../public/img/treatment-record/treatment-record.png")
+          icon: publicAssetPath("img/treatment-record/treatment-record.png")
         }, {
           cd: 3,
           name: "経過に切替",
@@ -417,7 +420,17 @@ export default {
           events: {
             click: this.onSelectArea,
             redraw: this.redrawGraph,
-            load: this.redrawGraph
+            load: this.redrawGraph,
+            render() {
+              const chart = this;
+              requestAnimationFrame(() => {
+                chart.container
+                  .querySelectorAll('.highcharts-tick')
+                  .forEach(el => {
+                    el.setAttribute('stroke', '#ccd6eb');
+                  });
+              });
+            }
           }
         },
         // プロットオプション
@@ -473,7 +486,7 @@ export default {
       currentTab: 1,
       updateSuccessFlag: false,
       // 同姓同名アイコン
-      image_src_same: require('../../assets/name_duplication.png')
+      image_src_same: nameDuplicationImg
     };
   },
   computed: {
@@ -495,11 +508,16 @@ export default {
     ...mapGetters("account-edit", {
       getFontSize: "getFontSize",
       getUseFunctions: "getUseFunctions",
-      getPatientShareMode: "getPatientShareMode",//自施設(1) or 他施設(0)
-      getPatientShareFacilityCdMode: "getPatientShareFacilityCdMode"//施設cd
+      getPatientShareMode: "getPatientShareMode",
+      getPatientShareFacilityCdMode: "getPatientShareFacilityCdMode"
     }),
     // mod 機能帳票パラメータ確認 陳 start
-    ...mapGetters("pat-info", ["searchedPatList", "selectedPatId", "getIsOtherFacility", "getOtherFacilityCd"]),
+    ...mapGetters("pat-info", [
+      "searchedPatList",
+      "selectedPatId",
+      "getIsOtherFacility",
+      "getOtherFacilityCd"
+    ]),
     // mod 機能帳票パラメータ確認 陳 end
 
     /**
@@ -512,8 +530,7 @@ export default {
         let hostPatId = "";
         if (this.selectedPatient.pat_id) {
           let pat = this.searchedPatList.find(
-            pat => pat.pat_id === this.selectedPatient.pat_id
-          );
+            pat => pat.pat_id === this.selectedPatient.pat_id);
           if (pat) {
             hostPatId = pat.hosp_pat_id;
           }
@@ -593,23 +610,39 @@ export default {
     },
 
     graphType() {
-      const sumaryDiv = document.querySelector("div.sumary-table");
+      const sumaryDiv = this.getScopedSelectorSafe("div.sumary-table");
       if (this.graphType === this.GRAPH_TYPE.BLANK) {
         sumaryDiv.style.zIndex = 2020;
       } else {
         sumaryDiv.style.zIndex = -2020;
       }
     },
-    // add #12462 患者情報共有 Ji start
+
     getPatientShareMode() {
       this.init();
     },
+
     getPatientShareFacilityCdMode() {
       this.init();
     }
-    // add #12462 患者情報共有 Ji end
   },
   methods: {
+    getScopedOwnerDocument() {
+      return getScopedDocument(this.$el || null);
+    },
+    getScopedElementByIdSafe(id) {
+      return getScopedElementById(id, this.$el || null) || this.getScopedOwnerDocument()?.getElementById?.(id) || null;
+    },
+    getScopedClassElementSafe(className) {
+      return getScopedElementsByClassName(className, this.$el || null)[0] || this.getScopedOwnerDocument()?.getElementsByClassName?.(className)?.[0] || null;
+    },
+    getScopedClassElementsSafe(className) {
+      const scoped = getScopedElementsByClassName(className, this.$el || null);
+      return scoped.length ? scoped : Array.from(this.getScopedOwnerDocument()?.getElementsByClassName?.(className) || []);
+    },
+    getScopedSelectorSafe(selector) {
+      return queryScopedSelector(selector, this.$el || null) || this.getScopedOwnerDocument()?.querySelector?.(selector) || null;
+    },
     ...mapActions("split-graph", [
       "setSelectedPlot",
       "setExamRecordDate",
@@ -622,12 +655,10 @@ export default {
     // add FNSI-FutreNetWeb+SI課題管理No.4091 李 start
     ...mapActions("pat-viewer", ["setTreatBaseDate"]),
     // add FNSI-FutreNetWeb+SI課題管理No.4091 李 end
-    // add #12462 患者情報共有 Ji start
     ...mapActions("account-edit", [
-        "setPatientShareMode",
-        "setPatientShareFacilityCdMode",
-      ]),
-    // add #12462 患者情報共有 Ji end
+      "setPatientShareMode",
+      "setPatientShareFacilityCdMode"
+    ]),
     popoverPreShow,
     popoverPostShow,
     popoverPosthide,
@@ -674,9 +705,14 @@ export default {
     },
     /** グラフ、集計テーブルresize */
     handleResizeGraph() {
-      if (this.$refs.highcharts && this.$refs.highcharts.chart) {
-        this.$refs.highcharts.chart.setSize(null);
+      //#9846 start
+      // if (this.$refs.highcharts && this.$refs.highcharts.chart) {
+      //   this.$refs.highcharts.chart.setSize(null);
+      // }
+      if (this.$refs.highcharts?.chart) {
+        this.$refs.highcharts.chart.reflow();
       }
+      //#9846 end
       setTimeout(() => {
         this.redrawGraph();
       }, 500);
@@ -725,13 +761,13 @@ export default {
             // date: this.searchCondition.startDate,
             // fromDate: this.searchCondition.startDate,
             // toDate: this.searchCondition.endDate
-            date: this.searchCondition.startDate != null ? this.searchCondition.startDate : (this.searchCondition.endDate != null ? this.searchCondition.endDate : moment(Date.now()).format("YYYYMMDD")),
-            fromDate: this.searchCondition.startDate != null ? this.searchCondition.startDate : (this.searchCondition.endDate != null ? this.searchCondition.endDate : moment(Date.now()).format("YYYYMMDD")),
-            toDate: this.searchCondition.endDate != null ? this.searchCondition.endDate : (this.searchCondition.startDate != null ? this.searchCondition.startDate : moment(Date.now()).format("YYYYMMDD")),
+            date: this.searchCondition.startDate != null ? this.searchCondition.startDate : (this.searchCondition.endDate != null ? this.searchCondition.endDate : dayjs(Date.now()).format("YYYYMMDD")),
+            fromDate: this.searchCondition.startDate != null ? this.searchCondition.startDate : (this.searchCondition.endDate != null ? this.searchCondition.endDate : dayjs(Date.now()).format("YYYYMMDD")),
+            toDate: this.searchCondition.endDate != null ? this.searchCondition.endDate : (this.searchCondition.startDate != null ? this.searchCondition.startDate : dayjs(Date.now()).format("YYYYMMDD")),
             // mod #11679 複数患者帳票で「透析条件.補液量」が出ない 20250527 limingzhe start
-            //dialysisDate: moment(Date.now()).format("YYYYMMDD"),
+            //dialysisDate: dayjs(Date.now()).format("YYYYMMDD"),
             // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-            //dialysisDate: this.searchCondition.startDate != null ? this.searchCondition.startDate : (this.searchCondition.endDate != null ? this.searchCondition.endDate : moment(Date.now()).format("YYYYMMDD")),
+            //dialysisDate: this.searchCondition.startDate != null ? this.searchCondition.startDate : (this.searchCondition.endDate != null ? this.searchCondition.endDate : dayjs(Date.now()).format("YYYYMMDD")),
             // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
             // mod #11679 複数患者帳票で「透析条件.補液量」が出ない 20250527 limingzhe end
             // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
@@ -744,7 +780,7 @@ export default {
             // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
             //patIds: patFalg,
             // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-            //dialysisDate: moment(Date.now()).format("YYYYMMDD"),
+            //dialysisDate: dayjs(Date.now()).format("YYYYMMDD"),
             // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
             // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
             //mod 7297 初回リリース対象外の機能とその関連機能を隠す 姜 start
@@ -756,9 +792,9 @@ export default {
             // date: this.searchCondition.startDate,
             // fromDate: this.searchCondition.startDate,
             // toDate: this.searchCondition.endDate
-            date: moment(Date.now()).format("YYYY/MM/DD"),
-            fromDate: moment(Date.now()).format("YYYY/MM/DD"),
-            toDate: moment(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYY/MM/DD"),
+            date: dayjs(Date.now()).format("YYYY/MM/DD"),
+            fromDate: dayjs(Date.now()).format("YYYY/MM/DD"),
+            toDate: dayjs(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYY/MM/DD"),
             // mod #9558 機能帳票で正しく変数が引き渡されていない 2024/08/27 limingzhe end
           };
         }
@@ -767,25 +803,28 @@ export default {
       }
     },
     // add 画面印刷プレビューと印刷の実現 陳 end
-    async onResize() {
+    onResize() {
       this.duplicatePlotListVisible = false;
       this.menuVisible = false;
-      if (this.graphType === this.GRAPH_TYPE.BLANK) {
-        this.handleResizeGraph();
-      } else {
-        this.chartOptions.series = [];
-        clearTimeout(this.resizeTimer);
-        this.resizeTimer = setTimeout(async () => {
-          await this.init();
-          this.updatePointColor();
-        }, 500);
-      }
+      //#9846 start
+      // if (this.graphType === this.GRAPH_TYPE.BLANK) {
+      //   this.handleResizeGraph();
+      // } else {
+      //   this.chartOptions.series = [];
+      //   (getScopedWindow(this.$el) || window).clearTimeout(this.resizeTimer);
+      //   this.resizeTimer = (getScopedWindow(this.$el) || window).setTimeout(async () => {
+      //     await this.init();
+      //     this.updatePointColor();
+      //   }, 500);
+      // }
+      this.handleResizeGraph();
+      //#9846 end
     },
     /**
      * グラフ設定一覧取得用アクション
      */
     async getSettings() {
-      await getGraphSettings(this.facilityCd)
+      await getGraphSettings(this.facilityCd, this.selectedPatId)
         .then(response => {
           if (response.data && response.status === 200) {
             this.graphSettings = response.data;
@@ -818,44 +857,36 @@ export default {
         this.setValidGraphSettingStatus(true);
         // Y軸の範囲が表示されない場合
         let fullHeight = Math.abs(
-          this.graphSettings.limitUpperY - this.graphSettings.limitLowerY
-        );
+          this.graphSettings.limitUpperY - this.graphSettings.limitLowerY);
         let height1 =
           Math.abs(
             this.graphSettings.limitUpperY -
-              this.graphSettings.limitUpperThresholdY
-          ) / fullHeight;
+              this.graphSettings.limitUpperThresholdY) / fullHeight;
         let height2 =
           Math.abs(
             this.graphSettings.limitUpperThresholdY -
-              this.graphSettings.limitLowerThresholdY
-          ) / fullHeight;
+              this.graphSettings.limitLowerThresholdY) / fullHeight;
         let height3 =
           Math.abs(
             this.graphSettings.limitLowerThresholdY -
-              this.graphSettings.limitLowerY
-          ) / fullHeight;
+              this.graphSettings.limitLowerY) / fullHeight;
         this.heightRatioArray = [height1, height2, height3];
 
         // X軸の範囲が表示されない場合
         let fullWidth = Math.abs(
-          this.graphSettings.limitUpperX - this.graphSettings.limitLowerX
-        );
+          this.graphSettings.limitUpperX - this.graphSettings.limitLowerX);
         let width1 =
           Math.abs(
             this.graphSettings.limitLowerThresholdX -
-              this.graphSettings.limitLowerX
-          ) / fullWidth;
+              this.graphSettings.limitLowerX) / fullWidth;
         let width2 =
           Math.abs(
             this.graphSettings.limitUpperThresholdX -
-              this.graphSettings.limitLowerThresholdX
-          ) / fullWidth;
+              this.graphSettings.limitLowerThresholdX) / fullWidth;
         let width3 =
           Math.abs(
             this.graphSettings.limitUpperX -
-              this.graphSettings.limitUpperThresholdX
-          ) / fullWidth;
+              this.graphSettings.limitUpperThresholdX) / fullWidth;
         this.widthRatioArray = [width1, width2, width3];
       }
     },
@@ -880,21 +911,16 @@ export default {
     async init(isDataReloadRequired = true) {
       this.chartOptions.series = isDataReloadRequired ? await this.seriesData() : this.seriesDataCache();
       this.chartOptions.xAxis = this.xAxisData();
+      this.chartOptions.xAxis.gridLineWidth = 1;
       this.chartOptions.yAxis = this.yAxisData();
       this.chartOptions.legend = this.legendData();
       this.chartOptions.tooltip = this.tooltipData();
       this.chartOptions.plotOptions.series = {
         ...this.chartOptions.plotOptions.series,
-	      // mod #12462 患者情報共有 Ji start
-        // ...this.plotOptionsData().series
         ...(this.plotOptionsData()?.series || {})
-	      // mod #12462 患者情報共有 Ji end
       };
 
-      // mod #12462 患者情報共有 Ji start
-      // if (this.chartOptions.series.length > 0) {
       if ((this.chartOptions?.series || []).length > 0) {
-      // mod #12462 患者情報共有 Ji end
         this.keyGraph++;
       }
     },
@@ -962,9 +988,7 @@ export default {
      * xAxisデータを処理する。
      */
     xAxisData() {
-      // add #12462 患者情報共有 Ji start
-      if (!this.graphSettings) return
-      // add #12462 患者情報共有 Ji end
+      if (!this.graphSettings) return;
       return {
         title: {
           text:
@@ -1007,9 +1031,7 @@ export default {
      * yAxisデータを処理する。
      */
     yAxisData() {
-      // add #12462 患者情報共有 Ji start
-      if (!this.graphSettings) return
-      // add #12462 患者情報共有 Ji end
+      if (!this.graphSettings) return;
       return {
         title: {
           text:
@@ -1107,9 +1129,7 @@ export default {
      * プロットオプションデータを処理する。
      */
     plotOptionsData() {
-      // add #12462 患者情報共有 Ji start
-      if (!this.graphSettings) return
-      // add #12462 患者情報共有 Ji end
+      if (!this.graphSettings) return;
       return {
         series: {
           cursor: "pointer",
@@ -1153,9 +1173,7 @@ export default {
         !(
         this.graphSettings[`patientGroupArea${area}`] !== null &&
         this.graphSettings[`patientGroupArea${area}`] !== "" &&
-        this.graphSettings[`patientGroupArea${area}`].toString() !== "0"
-        )
-      ) {
+        this.graphSettings[`patientGroupArea${area}`].toString() !== "0")) {
         this.$ons.notification.alert({
           title: DIALOG_MESSAGES['70000037'].title,
           message: messageFormat(DIALOG_MESSAGES['70000037'].message, area),
@@ -1165,10 +1183,8 @@ export default {
 
       if (this.selectedAreaList.includes(area)) {
         this.selectedAreaList = this.selectedAreaList.filter(
-          item => item !== area
-        );
+          item => item !== area);
       } else {
-        // eslint-disable-next-line vue/no-side-effects-in-computed-properties
         this.selectedAreaList.push(area);
       }
     },
@@ -1176,33 +1192,36 @@ export default {
      * 画面に合わせてグラフのサイズを計算します
      */
     redrawGraph() {
-      const main = document.querySelector(".main-content-area");
-      const rect = document.querySelector("rect.highcharts-background");
-      const areaWrapper = document.querySelector(
-        "rect.highcharts-plot-background"
-      );
-      const bottomInfo = document.querySelector("#bottom-info");
+      const main = getClosestMainContentAreaElement(this.$el) || getMainContentAreaElement(this.$el);
+      const rect = this.getScopedSelectorSafe("rect.highcharts-background");
+      const areaWrapper = this.getScopedSelectorSafe("rect.highcharts-plot-background");
+      const bottomInfo = this.getScopedElementByIdSafe("bottom-info");
       if (main && rect) {
         const newHeight = main.offsetHeight - 12 - bottomInfo.offsetHeight;
         this.chartHeight = newHeight < 300 ? 300 : newHeight;
         this.chartOptions.chart.height = this.chartHeight;
+        //#9846 start
+        if (this.$refs.highcharts?.chart) {
+          this.$refs.highcharts.chart.setSize(undefined, this.chartHeight, false);
+        }
+        //#9846 end
         rect.style.fill = "unset";
         rect.style.opacity = "0";
         // チャートのサイズを使用して、合計情報テーブルに適用します
-        const xAxis = document.querySelector(".highcharts-axis-line");
+        const xAxis = this.getScopedSelectorSafe(".highcharts-axis-line");
         this.statisticalElementWidth = xAxis
           ? xAxis.getBoundingClientRect().width
           : 0;
-        const yAxis = document.querySelector(".highcharts-grid-line");
+        const yAxis = this.getScopedSelectorSafe(".highcharts-grid-line");
         this.statisticalElementHeight = yAxis
           ? yAxis.getBoundingClientRect().height
           : 0;
-        const sumary = document.querySelector(".sumary-table");
+        const sumary = this.getScopedSelectorSafe(".sumary-table");
         sumary.style.top = `${areaWrapper.attributes.y.value}px`;
         sumary.style.left = `${areaWrapper.attributes.x.value}px`;
         sumary.style.width = `${areaWrapper.attributes.width.value}px`;
         sumary.style.height = `${areaWrapper.attributes.height.value}px`;
-        const highchartLegend = document.querySelector(".highcharts-legend");
+        const highchartLegend = this.getScopedSelectorSafe(".highcharts-legend");
         if (highchartLegend && highchartLegend.attributes.transform) {
           highchartLegend.attributes.transform.value = `translate(${areaWrapper.attributes.x.value},${areaWrapper.attributes.y.value})`;
         }
@@ -1217,9 +1236,7 @@ export default {
      * それより古い期間は、隣接する末尾期間と同等とする。
      */
     async progressGraphSeries() {
-      // add #12462 患者情報共有 Ji start
-      if (!this.selectedPatient) return
-      // add #12462 患者情報共有 Ji end
+      if (!this.selectedPatient) return;
       let retData = [];
       const params = {
         patId: this.selectedPatient.pat_id,
@@ -1236,9 +1253,12 @@ export default {
               ? null
               : this.searchCondition.endDate,
           facilityCd: this.facilityCd,
-	        // add #12462 患者情報共有 Ji start
-          patientShareMode: (this.getIsOtherFacility === false || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.facilityCd)) ? "1" : this.getPatientShareMode.toString()
-	        // add #12462 患者情報共有 Ji end
+          patientShareMode:
+            this.getIsOtherFacility === false ||
+            (this.getOtherFacilityCd !== null &&
+              this.getOtherFacilityCd !== this.facilityCd)
+              ? "1"
+              : this.getPatientShareMode.toString()
         }
       };
       let examPoints = [];
@@ -1280,8 +1300,7 @@ export default {
             bfData &&
             bfDataLength > 0 &&
             duration.data &&
-            duration.data.length > 0
-          ) {
+            duration.data.length > 0) {
             let clonePlot = { ...bfData[bfDataLength - 1] };
             clonePlot.linkedPoint = true;
             duration.data.unshift(clonePlot);
@@ -1298,12 +1317,11 @@ export default {
      * yyyy/mm/dd〜yyyy/mm/dd は yyyy/mm〜mm に変更されます
      */
     legendName(range) {
-      let startDate = moment(range.start, "YYYY/MM/DD");
-      let endDate = moment(range.end, "YYYY/MM/DD");
+      let startDate = dayjs(range.start, "YYYY/MM/DD");
+      let endDate = dayjs(range.end, "YYYY/MM/DD");
       // 凡例4期目は2年以上遡るデータも含めて表示するため、全て年・月ともに表示
       return `${startDate.format("YYYY")}/${startDate.format(
-        "M"
-      )}～${endDate.format("YYYY")}/${endDate.format("M")}`;
+        "M")}～${endDate.format("YYYY")}/${endDate.format("M")}`;
     },
     /**
      * 散布シリーズ
@@ -1363,13 +1381,11 @@ export default {
      */
     async distributionGraphData() {
       let data = [];
-      // add #12462 患者情報共有 Ji start
       if (!this.searchedPatList || this.searchedPatList.length === 0) {
         this.statisticalInformation = this.getSumaryAreaData([]);
         this.examDataLength = 0;
         return [];
       }
-      // add #12462 患者情報共有 Ji end
       const params = {
         regOrderClass: this.categoryList(this.graphSettings.examCategory),
         examItemX: this.graphSettings.examItemCdX.toString(),
@@ -1384,17 +1400,19 @@ export default {
             : this.searchCondition.endDate,
         facilityCd: this.facilityCd,
         patList: JSON.stringify(this.searchedPatList.map(pat => pat.pat_id)),
-	      // add #12462 患者情報共有 Ji start
-        patientShareMode: (this.getIsOtherFacility === false || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.facilityCd)) ? "1" : this.getPatientShareMode.toString()
-	      // add #12462 患者情報共有 Ji end
+        patientShareMode:
+          this.getIsOtherFacility === false ||
+          (this.getOtherFacilityCd !== null &&
+            this.getOtherFacilityCd !== this.facilityCd)
+            ? "1"
+            : this.getPatientShareMode.toString()
       };
-      await sendRequestGetDistributionGraph(params)
+      await sendRequestGetDistributionGraph(params, this.selectedPatId)
         .then(response => {
           if (
             response.status === 200 &&
             response.data &&
-            response.data.length > 0
-          ) {
+            response.data.length > 0) {
             data = [...response.data];
             this.updatePlotOutsideColor(this.cookingData(data));
             EventBus.$emit("setPatList", data.map(pat => pat.patId));
@@ -1498,8 +1516,7 @@ export default {
           if(flgX){
             if (
             this.graphSettings.limitLowerX <= plot.x &&
-            plot.x < this.graphSettings.limitLowerThresholdX
-            ) {
+            plot.x < this.graphSettings.limitLowerThresholdX) {
 
               plot.xStatus = this.SYMBOL.LOW;
             }
@@ -1508,8 +1525,7 @@ export default {
           // グラフ閾値上限 < 検査値 <= グラフ上限値
           if (
             this.graphSettings.limitUpperThresholdX < plot.x &&
-            plot.x <= this.graphSettings.limitUpperX
-          ) {
+            plot.x <= this.graphSettings.limitUpperX) {
             plot.xStatus = this.SYMBOL.UP;
           }
           // グラフ上限値 < 検査値
@@ -1537,8 +1553,7 @@ export default {
           if(flgY){
             if (
             this.graphSettings.limitLowerY <= plot.y &&
-            plot.y < this.graphSettings.limitLowerThresholdY
-            ) {
+            plot.y < this.graphSettings.limitLowerThresholdY) {
               plot.yStatus = this.SYMBOL.LOW;
             }
           }
@@ -1546,8 +1561,7 @@ export default {
           // グラフ閾値上限 < 検査値 <= グラフ上限値
           if (
             this.graphSettings.limitUpperThresholdY < plot.y &&
-            plot.y <= this.graphSettings.limitUpperY
-          ) {
+            plot.y <= this.graphSettings.limitUpperY) {
             plot.yStatus = this.SYMBOL.UP;
           }
           // グラフ上限値 < 検査値
@@ -1564,8 +1578,7 @@ export default {
           plot.hostPatId = "";
           if (plot.patId) {
             let pat = this.searchedPatList.find(
-              pat => pat.pat_id.toString() === plot.patId
-            );
+              pat => pat.pat_id.toString() === plot.patId);
             if (pat) {
               plot.hostPatId = pat.hosp_pat_id;
             }
@@ -1578,12 +1591,10 @@ export default {
     updatePlotOutsideColor(data) {
       if (data && data.length > 0) {
         let outsidePlotList = data.filter(
-          plot => plot.overX != plot.x || plot.overY != plot.y
-        );
+          plot => plot.overX != plot.x || plot.overY != plot.y);
         outsidePlotList.forEach(outSideplot => {
           let duplicatePlotList = data.filter(
-            plot => plot.x === outSideplot.x && plot.y === outSideplot.y
-          );
+            plot => plot.x === outSideplot.x && plot.y === outSideplot.y);
           duplicatePlotList.forEach(dupPlot => {
             dupPlot.color = this.graphSettings.plotOutsideColor;
             dupPlot.marker =
@@ -1604,8 +1615,7 @@ export default {
       let pat = null;
       if (id) {
         pat = this.searchedPatList.find(
-          pat => pat.pat_id.toString() === id.toString()
-        );
+          pat => pat.pat_id.toString() === id.toString());
       }
       //mod 9251 NKK連携 profile（標準）（拡張） 姓名を分割して保存していたデータが、姓の欄に結合して更新されてしまう。 zhou start
       //return pat ? `${pat.pat_last_name} ${pat.pat_first_name}` : "";
@@ -1619,7 +1629,7 @@ export default {
     onSelectPlot(event) {
       // 表エリアに縦スクロールが発生していた場合、スクロールしていた分だけeventから取得できる高さがズレます
       let scrollTop = 0;
-      let caObj = document.getElementsByClassName("highchart-area");
+      let caObj = this.getScopedClassElementsSafe ? this.getScopedClassElementsSafe("highchart-area") : getScopedElementsByClassName("highchart-area", this.$el || null);
       if (caObj.length > 0) {
         scrollTop = caObj[0].scrollTop;
       }
@@ -1639,14 +1649,19 @@ export default {
         plot =>
           plot.x === event.point.x &&
           plot.y === event.point.y &&
-          !plot.linkedPoint
-      );
+          !plot.linkedPoint);
       this.filterDuplicatePlotList = this.duplicatePlotList.slice();
-      let virtualPoint = document.querySelector("#virtualPoint");
+      let virtualPoint = this.getScopedElementByIdSafe("virtualPoint");
       if (!virtualPoint) {
-        virtualPoint = document.createElement("label");
+        const appendTarget = getClosestMainContentAreaElement(this.$el)
+          || getMainContentAreaElement(this.$el)
+          || this.getScopedOwnerDocument?.()?.body
+          || this.$el?.ownerDocument?.body
+          || null;
+        const ownerDocument = appendTarget?.ownerDocument || this.getScopedOwnerDocument?.() || this.$el?.ownerDocument || document;
+        virtualPoint = ownerDocument.createElement("label");
         virtualPoint.id = "virtualPoint";
-        document.querySelector(".main-content-area").appendChild(virtualPoint);
+        appendScopedChild(appendTarget || ownerDocument.body, virtualPoint);
       }
       this.duplicatePlotListVisible = null;
       this.menuVisible = null;
@@ -1682,13 +1697,10 @@ export default {
     customDefaultTooltip(event) {
       let highchartTooltip = null;
       let highchartTooltipLabel = null;
-      let posInterval = setInterval(() => {
-        highchartTooltip = document.querySelector(
-          "div.highcharts-label.highcharts-tooltip"
-        );
-        highchartTooltipLabel = document.querySelector(
-          "div.highcharts-label.highcharts-tooltip>span"
-        );
+      const ownerWindow = getScopedWindow(this.$el) || window;
+      let posInterval = ownerWindow.setInterval(() => {
+        highchartTooltip = this.getScopedSelectorSafe("div.highcharts-label.highcharts-tooltip");
+        highchartTooltipLabel = this.getScopedSelectorSafe("div.highcharts-label.highcharts-tooltip>span");
         if (highchartTooltip && highchartTooltipLabel) {
           let ls = [];
           if (this.$refs.highcharts && this.$refs.highcharts.chart) {
@@ -1702,8 +1714,7 @@ export default {
             plot =>
               plot.x === event.target.x &&
               plot.y === event.target.y &&
-              !plot.linkedPoint
-          );
+              !plot.linkedPoint);
           let _this = this;
           this.spanText = "";
           // プロット(患者)が重複している場合
@@ -1732,8 +1743,7 @@ export default {
             highchartTooltipLabel.innerHTML = _this.spanText;
             setTimeout(() => {
               if (
-                Math.abs(highchartTooltip.offsetTop - event.target.plotY) > 5
-              ) {
+                Math.abs(highchartTooltip.offsetTop - event.target.plotY) > 5) {
                 highchartTooltip.style.top = `${event.target.plotY -
                   highchartTooltipLabel.offsetHeight -
                   8}px`;
@@ -1745,7 +1755,7 @@ export default {
           highchartTooltipLabel.style.color = this.ntssBaseColor;
           highchartTooltipLabel.style.backgroundColor = this.ntssBaseBackground;
           highchartTooltipLabel.style.border = this.ntssBorder;
-          clearInterval(posInterval);
+          ownerWindow.clearInterval(posInterval);
         }
       }, 100);
     },
@@ -1878,8 +1888,7 @@ export default {
     getAreaInfo(index) {
       if (
         this.statisticalInformation &&
-        this.statisticalInformation[index - 1]
-      ) {
+        this.statisticalInformation[index - 1]) {
         return this.statisticalInformation[index - 1];
       }
       return {
@@ -1895,8 +1904,7 @@ export default {
         this.menuVisible = false;
       }
       this.filterDuplicatePlotList = this.duplicatePlotList.filter(
-        this.isInclude
-      );
+        this.isInclude);
     },
     /**
      * 項目保存チェック
@@ -1917,8 +1925,7 @@ export default {
         const chart = this.$refs.highcharts.chart;
         if (this.graphType === this.GRAPH_TYPE.DISTRIBUTION &&
           chart.series[0] &&
-          chart.series[0].points.length > 0
-        ) {
+          chart.series[0].points.length > 0) {
           let activePlot = null;
           if (this.selectedPatient) {
             // 選択患者のプロット
@@ -1966,8 +1973,7 @@ export default {
       let validAreaList = [];
       this.selectedAreaList.forEach(area => {
         let areaPoints = this.$refs.highcharts.chart.series[0].points.filter(
-          p => p.areaIndex === area
-        );
+          p => p.areaIndex === area);
         validAreaList.push({
           patArea: area,
           patList: JSON.stringify(areaPoints.map(p => parseInt(p.patId))),
@@ -1984,8 +1990,7 @@ export default {
         if (
           this.graphSettings[`patientGroupArea${area.patArea}`] !== null &&
           this.graphSettings[`patientGroupArea${area.patArea}`] !== "" &&
-          this.graphSettings[`patientGroupArea${area.patArea}`].toString() !== "0"
-        ) {
+          this.graphSettings[`patientGroupArea${area.patArea}`].toString() !== "0") {
           hasGroupList.push(area);
         }
       });
@@ -2127,15 +2132,7 @@ export default {
             : 0;
         let object = {
           title: `${percent}%(${pointInArea.length}名/${ls.length})`,
-	        // mod #12462 患者情報共有 Ji start
-          // content: this.graphSettings[`distributionGraphTooltip${i + 1}`].split(
-          //   // mod 9462 P-Ca９分割グラフ設定マスタのコンバートが正しくない start zhao
-          //   // "<br>"
-          //   "\n"
-          //   // mod 9462 P-Ca９分割グラフ設定マスタのコンバートが正しくない end zhao
-          // )
           content: (this.graphSettings?.[`distributionGraphTooltip${i + 1}`] || "").split("\n")
-	        // mod #12462 患者情報共有 Ji end
         };
         ret.push(object);
       }
@@ -2155,7 +2152,7 @@ export default {
      * YYYY/MM/DD => M/D
      */
     shortDateFormat(date) {
-      var check = moment(date, "YYYY/MM/DD");
+      var check = dayjs(date, "YYYY/MM/DD");
       return `${check.format("M")}/${check.format("D")}`;
     },
     /**
@@ -2183,8 +2180,7 @@ export default {
     removeCloneTooltip() {
       if (
         (!this.duplicatePlotListVisible && this.menuVisible) ||
-        !this.menuVisible
-      ) {
+        !this.menuVisible) {
         this.currentTab = 1;
       }
     },
@@ -2213,8 +2209,7 @@ export default {
       return {
         width: "100%",
         height: `${Math.floor(
-          this.statisticalElementHeight * this.heightRatioArray[rowIndex]
-        )}px`
+          this.statisticalElementHeight * this.heightRatioArray[rowIndex])}px`
       };
     },
     /**
@@ -2231,8 +2226,7 @@ export default {
       }
       return {
         width: `${Math.floor(
-          this.statisticalElementWidth * this.widthRatioArray[colIndex]
-        )}px`,
+          this.statisticalElementWidth * this.widthRatioArray[colIndex])}px`,
         height: "100%",
         float: "left"
       };
@@ -2261,6 +2255,10 @@ export default {
           this.menuVisible = false;
         }
       }
+    },
+    async onSearchExam() {
+      await this.init();
+      this.updatePointColor();
     },
     // 患者名入外色設定
     patInOutClass(patId) {
@@ -2292,10 +2290,9 @@ export default {
     if (this.graphSettings) {
       this.graphType = this.getGraphType;
       this.statisticalInformation = this.getSumaryAreaData([]);
-      EventBus.$on("searchExam", async () => {
-        await this.init();
-        this.updatePointColor();
-      });
+      EventBus.$off("searchExam", this.onSearchExam);
+      EventBus.$on("searchExam", this.onSearchExam);
+      EventBus.$off("updatePatientGroup", this.validateBeforeUpdate);
       EventBus.$on("updatePatientGroup", this.validateBeforeUpdate);
       await this.init();
       this.updatePointColor();
@@ -2309,15 +2306,15 @@ export default {
     // add 画面印刷プレビューと印刷の実現 陳 end
   },
   mounted() {
-    window.addEventListener("resize", this.onResize);    
+    (getScopedWindow(this.$el) || window).addEventListener("resize", this.onResize);
     // 画面印刷時のイベント追加
     EventBus.$on("print-start", this.handleBeforePrint);
     EventBus.$on("print-end", this.handleAfterPrint);
   },
-  beforeDestroy() {
-    window.removeEventListener("resize", this.onResize);
-    EventBus.$off("searchExam");
-    EventBus.$off("updatePatientGroup");
+  beforeUnmount() {
+    (getScopedWindow(this.$el) || window).removeEventListener("resize", this.onResize);
+    EventBus.$off("searchExam", this.onSearchExam);
+    EventBus.$off("updatePatientGroup", this.validateBeforeUpdate);
     EventBus.$off("requestReportParams", this.requestrReportParams);
     EventBus.$off("print-start", this.handleBeforePrint);
     EventBus.$off("print-end", this.handleAfterPrint);
@@ -2325,9 +2322,6 @@ export default {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  destroyed() {
-
-  }
 };
 </script>
 <style scoped>
@@ -2401,7 +2395,10 @@ export default {
   bottom: 0;
   word-break: break-all;
   overflow: auto;
-  max-height: calc(100% - 40px);
+  /**-#9846 add start */
+  /* max-height: calc(100% - 40px);*/
+  max-height: calc(100% - 52px);
+  /**-#9846 add end */
   width: calc(100% - 16px);
 }
 .pop-menu {
@@ -2490,10 +2487,10 @@ input[type="radio"] {
   max-height: calc(40vh + 2em + 15px);
 }
 /* mod FNSI-4458 文字サイズ：特大の際の遷移先表示の不正 liumx start */
-.split-graph-popover >>> .popover {
+.split-graph-popover :deep(.popover) {
   width: auto;
 }
-.split-graph-popover >>> .popover__content {
+.split-graph-popover :deep(.popover__content) {
   width: 16em;
 }
 /* mod FNSI-4458 文字サイズ：特大の際の遷移先表示の不正 liumx end */
@@ -2511,9 +2508,45 @@ input[type="radio"] {
   height: 20px;
 }
 @media print {
-  .highchart-area /deep/ .highcharts-container,
+  .highchart-area :deep(.highcharts-container),
    #bottom-info {
     position: absolute !important;
   }
 }
+
+
+:deep(.highcharts-xaxis-labels text){
+  font-family: "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", sans-serif !important;
+}
+:deep(.highcharts-axis-labels text){
+  font-family: "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", sans-serif!important;
+}
+:deep(.highcharts-yaxis-labels text){
+  font-family: "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", sans-serif !important;
+}
+:deep(.highcharts-axis-labels text){
+  font-family: "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", sans-serif!important;
+}
+
+:deep(.highcharts-root){
+  font-size: 0.8em!important;
+}
+
+:deep(.highcharts-legend-item text){
+  color: #333333;
+  cursor: pointer;
+  font-size: 1em !important;
+  font-weight: bold;
+  fill: #333333;
+  font-family: "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif!important;
+}
+:deep(.highcharts-tooltip span) {
+  font-size: 14px !important;
+  line-height: 24px;
+  font-weight: normal;
+  font-family: "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif!important;
+}
+
+
+
 </style>

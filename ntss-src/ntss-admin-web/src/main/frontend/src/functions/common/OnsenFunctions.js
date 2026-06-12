@@ -1,12 +1,22 @@
-import ons from "onsenui";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from "@/functions/common/MessageFormat";
+import {
+  ConfirmAnswer,
+  showAlertDialog,
+  showConfirmDialog,
+  onsNotificationAlert,
+  onsNotificationConfirm,
+  createOnsCompat
+} from "@/compat/onsen/functions.js";
 
-/** ons.notification.confirmの結果の値 */
-export const ConfirmAnswer = Object.freeze({
-  Cancel: 0,
-  Ok: 1,
-});
+export {
+  ConfirmAnswer,
+  showAlertDialog,
+  showConfirmDialog,
+  onsNotificationAlert,
+  onsNotificationConfirm,
+  createOnsCompat
+};
 
 /**
  * ons.notification.confirmでOKを選択した場合はtrueを返す形にするラッパー
@@ -14,12 +24,14 @@ export const ConfirmAnswer = Object.freeze({
  * @param {any[]} args messages.message とともに messageFormat に渡す引数
  */
 export const confirmIsOk = async (messages, ...args) => {
-  const answer = await ons.notification.confirm({
-    title: messages.title,
-    message: messageFormat(messages.message, ...args),
+  const formatted = messageFormat(messages.message, ...args);
+  return showConfirmDialog({
+    title: messages.title != null ? String(messages.title) : "",
+    message: formatted,
+    buttonLabels: ["Cancel", "OK"]
   });
-  return (answer === ConfirmAnswer.Ok);
 };
+
 /**
  * ons.notification.confirmでOKを選択した場合はtrueを返す形にするラッパー
  * @param {string | number} key DIALOG_MESSAGESのキー
@@ -34,10 +46,13 @@ export const confirmIsOkByKey = async (key, ...args) => (
  * @param {{ title: string, message: string }} messages DIALOG_MESSAGESの要素
  * @param {any[]} args messages.message とともに messageFormat に渡す引数
  */
-export const alertByMessages = (messages, ...args) => ons.notification.alert({
-  title: messages.title,
-  message: messageFormat(messages.message, ...args),
-});
+export const alertByMessages = (messages, ...args) => (
+  showAlertDialog({
+    title: messages.title,
+    message: messageFormat(messages.message, ...args)
+  })
+);
+
 /**
  * DIALOG_MESSAGESのコードを指定してons.notification.alertを使うラッパー
  * @param {string | number} key DIALOG_MESSAGESのキー
@@ -46,3 +61,7 @@ export const alertByMessages = (messages, ...args) => ons.notification.alert({
 export const alertByKey = (key, ...args) => (
   alertByMessages(DIALOG_MESSAGES[key], ...args)
 );
+
+export * from "@/compat/onsen/dialog.js";
+export * from "@/compat/onsen/popover.js";
+export * from "@/compat/onsen/speed-dial.js";

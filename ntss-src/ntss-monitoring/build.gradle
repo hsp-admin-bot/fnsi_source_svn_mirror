@@ -5,21 +5,28 @@ buildscript {
 //    jcenter()
     mavenLocal()
     mavenCentral()
-    maven { url "https://start.spring.io/plugins-release" }
-    maven { url "https://start.spring.io/milestone" }
-    maven { url "https://plugins.gradle.org/m2/" }
+    maven { url = uri("https://start.spring.io/plugins-release") }
+    maven { url = uri("https://start.spring.io/milestone") }
+    maven { url = uri("https://plugins.gradle.org/m2/") }
   }
   dependencies {
     classpath "org.springframework.boot:spring-boot-gradle-plugin:${spring_boot_version}"
 //    classpath 'io.spring.gradle:propdeps-plugin:0.0.10.RELEASE'
-    classpath "com.github.node-gradle:gradle-node-plugin:3.5.1"
-    classpath "io.spring.gradle:dependency-management-plugin:1.0.7.RELEASE"
+    classpath "com.github.node-gradle.node:com.github.node-gradle.node.gradle.plugin:${node_gradle_plugin_version}"
+    classpath "org.asciidoctor:asciidoctor-gradle-jvm:${asciidoctor_plugin_version}"
+    classpath "io.spring.gradle:dependency-management-plugin:${dependency_management_plugin_version}"
   }
 }
 
-plugins {
-  id "org.asciidoctor.convert" version "1.5.3"
-  id "com.github.node-gradle.node" version "3.5.1"
+def enableAsciidoctorPlugin = gradle.startParameter.taskNames.any { taskName ->
+  def normalizedTask = taskName.toLowerCase()
+  normalizedTask.endsWith('asciidoctor') || normalizedTask.contains('apidoc')
+}
+if (enableAsciidoctorPlugin) {
+  apply plugin: 'org.asciidoctor.jvm.convert'
+  asciidoctorj {
+    version = "${asciidoctorj_version}"
+  }
 }
 
 apply plugin: 'maven-publish'
@@ -87,8 +94,8 @@ jacoco {
 
 jacocoTestReport {
   reports {
-      xml.enabled false
-      csv.enabled false
+      xml.required = false
+      csv.required = false
   }
 }
 
@@ -108,12 +115,16 @@ repositories {
   mavenLocal()
   mavenCentral()
 //  jcenter()
-  maven { url 'https://start.spring.io/milestone' }
-  maven { url 'https://start.spring.io/snapshot' }
-  maven { url 'https://repository.jboss.org/nexus/content/repositories/releases' }
-  maven { url 'https://oss.sonatype.org/content/repositories/releases' }
-  maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
-  maven { url 'https://repo.maven.apache.org/maven2' }
+  maven { url = uri('https://start.spring.io/milestone') }
+  maven { url = uri('https://start.spring.io/snapshot') }
+  maven { url = uri('https://repository.jboss.org/nexus/content/repositories/releases') }
+  maven { url = uri('https://oss.sonatype.org/content/repositories/releases') }
+  maven { url = uri('https://oss.sonatype.org/content/repositories/snapshots') }
+  maven { url = uri('https://repo.maven.apache.org/maven2') }
+}
+
+configurations {
+  asciidoctorExt
 }
 
 dependencies {
@@ -122,53 +133,73 @@ dependencies {
   providedRuntime "org.springframework.boot:spring-boot-starter-tomcat"
   implementation "org.springframework.boot:spring-boot-starter-jdbc"
   implementation "org.springframework.boot:spring-boot-starter-actuator"
-  implementation 'org.springframework.cloud:spring-cloud-starter-aws-messaging:1.2.1.RELEASE'
-  implementation 'org.springframework.cloud:spring-cloud-aws-context:1.2.1.RELEASE'
-  implementation 'org.projectlombok:lombok:1.18.28'
-  annotationProcessor 'org.projectlombok:lombok:1.18.28'
-  implementation 'org.modelmapper:modelmapper:2.3.0'
+  implementation "org.projectlombok:lombok:${lombok_version}"
+  annotationProcessor "org.projectlombok:lombok:${lombok_version}"
+  implementation "org.modelmapper:modelmapper:${modelmapper_version}"
   testImplementation ("org.springframework.boot:spring-boot-starter-test") {
     exclude group: 'com.vaadin.external.google', module: 'android-json'
   }
+  testImplementation "org.springframework.boot:spring-boot-starter-webmvc-test"
   testImplementation "org.springframework.boot:spring-boot-test"
   testImplementation "junit:junit"
   testImplementation "org.mockito:mockito-core"
   annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
-  asciidoctor 'org.springframework.restdocs:spring-restdocs-asciidoctor:2.0.2.RELEASE'
-  testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc:2.0.2.RELEASE'
+  asciidoctorExt("org.springframework.restdocs:spring-restdocs-asciidoctor:${spring_restdocs_version}") {
+    exclude group: "org.asciidoctor", module: "asciidoctorj"
+    exclude group: "org.asciidoctor", module: "asciidoctorj-api"
+    exclude group: "org.jruby"
+  }
+  testImplementation "org.springframework.restdocs:spring-restdocs-mockmvc:${spring_restdocs_version}"
+  implementation project(':ntss-core')
+  testCompileOnly "org.projectlombok:lombok:${lombok_version}"
+  testAnnotationProcessor "org.projectlombok:lombok:${lombok_version}"
 }
 
-asciidoctor {
-  sourceDir = snippetsDir
-  outputDir = apiDocDir
-  dependsOn test
-}
+if (enableAsciidoctorPlugin) {
+  asciidoctor {
+    configurations 'asciidoctorExt'
+    sourceDir = snippetsDir
+    outputDir = apiDocDir
+    dependsOn test
+  }
 
-task apiDocCopy(type: Copy) {
-  from 'src/docs/asciidoc'
-  into snippetsDir
-}
+  asciidoctor.doFirst {
+    copy {
+      from 'src/docs/asciidoc'
+      into snippetsDir
+    }
+  }
 
-task apiDoc {
-  delete snippetsDir
-  delete apiDocDir
-  dependsOn apiDocCopy
-  dependsOn asciidoctor
+  task apiDoc(dependsOn: asciidoctor) {
+  }
 }
 
 clean { delete "target" }
 
 task cleanResources(type: Delete) { delete 'build/resources' }
 
-task wrapper(type: Wrapper) { gradleVersion = '7.2' }
-
 task stage(dependsOn: 'bootWar') {
 }
 
 // Doma2のSQLファイルをJavaのコンパイル前にコピーしておく
 // SQLファイルが存在するかしないとJavaのコンパイル時にSQLファイルが存在するかのチェックでエラーになるため。
-processResources.destinationDir = compileJava.destinationDir
-compileJava.dependsOn processResources
+def domaResources = ['doma.compile.config', 'META-INF/**/*.sql']
+task copyDomaResourcesJava(type: Copy) {
+  from sourceSets.main.resources.srcDirs
+  into compileJava.destinationDirectory
+  include domaResources
+}
+compileJava {
+  dependsOn copyDomaResourcesJava
+}
+processResources {
+  exclude domaResources
+}
 
 processResources.dependsOn cleanResources, bootBuildInfo
 bootBuildInfo.mustRunAfter cleanResources
+
+// skip tasks
+def enableTestCompileProbe = project.hasProperty('someProperty') || project.hasProperty('enableTestCompileProbe')
+
+compileTestJava.onlyIf { enableTestCompileProbe }

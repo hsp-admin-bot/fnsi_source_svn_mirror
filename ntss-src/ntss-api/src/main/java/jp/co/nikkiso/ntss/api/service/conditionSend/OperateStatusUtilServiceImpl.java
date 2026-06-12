@@ -9,6 +9,7 @@ import jp.co.nikkiso.ntss.core.logger.EventLoggerFactory;
 import org.seasar.doma.jdbc.Config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 /**
  * スケジュール表のService実装クラス.
@@ -27,6 +28,10 @@ public class OperateStatusUtilServiceImpl implements OperateStatusUtilService {
   private EventLoggerFactory eventLoggerFactory;
   @Autowired
   private LogServiceCore logServiceCore;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // DB更新ログ出力ロジック wangzuo End
 
   /**
@@ -52,7 +57,7 @@ public class OperateStatusUtilServiceImpl implements OperateStatusUtilService {
     wheres.append(" WHERE\n");
     wheres.append(" ord_no = " + ord_no + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(operateStatusDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -117,11 +122,11 @@ public class OperateStatusUtilServiceImpl implements OperateStatusUtilService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

@@ -1,5 +1,22 @@
 import {ApiHelper} from "@/apis/AxiosHelper.js";
 
+const pendingMstRequests = new Map();
+const resolvedMstRequests = new Map();
+const RESOLVED_MST_REQUEST_TTL_MS = 1000;
+
+const createMstRequestKey = (uri, alias, facilityCd) =>
+  `${uri}|${alias}|${facilityCd == null ? "" : facilityCd}`;
+
+const createFacilityMstRequestKey = (uri, facilityCd) =>
+  `${uri}|facilityCd|${facilityCd == null ? "" : facilityCd}`;
+
+const cloneMstData = data => {
+  if (data == null || typeof data !== "object") {
+    return data;
+  }
+  return JSON.parse(JSON.stringify(data));
+};
+
 /**
  * @description エラーメッセージ
  */
@@ -12,14 +29,39 @@ const createErrorMessage = uri => `WebAPI: "${uri}の実行に失敗しました
  * @returns {Array} マスタの配列
  */
 const getMstByFacilityCd = async (uri, facilityCd) => {
-  const stackTrace = new Error();
-  const response = await ApiHelper.get(uri, { facilityCd }).catch(error => {
-    logError(error);
-    stackTrace.message = createErrorMessage(uri);
-    throw stackTrace;
-  });
+  const requestKey = createFacilityMstRequestKey(uri, facilityCd);
+  const resolvedRequest = resolvedMstRequests.get(requestKey);
+  if (
+    resolvedRequest &&
+    Date.now() - resolvedRequest.resolvedAt < RESOLVED_MST_REQUEST_TTL_MS
+  ) {
+    return cloneMstData(resolvedRequest.data);
+  }
 
-  return response.data;
+  if (pendingMstRequests.has(requestKey)) {
+    return cloneMstData(await pendingMstRequests.get(requestKey));
+  }
+
+  const stackTrace = new Error();
+  const request = ApiHelper.get(uri, { facilityCd })
+    .then(response => {
+      resolvedMstRequests.set(requestKey, {
+        data: response.data,
+        resolvedAt: Date.now()
+      });
+      return response.data;
+    })
+    .catch(error => {
+      logError(error);
+      stackTrace.message = createErrorMessage(uri);
+      throw stackTrace;
+    })
+    .finally(() => {
+      pendingMstRequests.delete(requestKey);
+    });
+  pendingMstRequests.set(requestKey, request);
+
+  return cloneMstData(await request);
 };
 
 /**
@@ -49,12 +91,36 @@ class MstGetter {
   }
 
   async getMst() {
-    const { data } = await ApiHelper.get(this.uri, {
-      [this.alias]: this.facilityCd
-    }).catch(error => {
-      throw new Error(error);
-    });
-    return data;
+    const requestKey = createMstRequestKey(this.uri, this.alias, this.facilityCd);
+    const resolvedRequest = resolvedMstRequests.get(requestKey);
+    if (
+      resolvedRequest &&
+      Date.now() - resolvedRequest.resolvedAt < RESOLVED_MST_REQUEST_TTL_MS
+    ) {
+      return cloneMstData(resolvedRequest.data);
+    }
+
+    if (!pendingMstRequests.has(requestKey)) {
+      const request = ApiHelper.get(this.uri, {
+        [this.alias]: this.facilityCd
+      })
+        .then(({ data }) => {
+          resolvedMstRequests.set(requestKey, {
+            data,
+            resolvedAt: Date.now()
+          });
+          return data;
+        })
+        .catch(error => {
+          throw new Error(error);
+        })
+        .finally(() => {
+          pendingMstRequests.delete(requestKey);
+        });
+      pendingMstRequests.set(requestKey, request);
+    }
+
+    return cloneMstData(await pendingMstRequests.get(requestKey));
   }
 
   async getMstSelector() {
@@ -103,23 +169,23 @@ export const dialyzerSelector = async facilityCd =>
 export const dialyzerTabooAllergy = async patId =>
   new MstGetter(
     `/mstInfo/mstDialyzer/${patId}`).getMst();
-//#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
+//#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 Start
 export const dialyzerTabooAllergyNoexpire = async (patId, TreatDate) =>
   new MstGetter(
     `/mstInfo/mstDialyzer/${patId}/${TreatDate}`).getMst();
-//#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
+//#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 End
 /** 削除済み・期限切れも含めたダイアライザ(並び順(mst_selector)の考慮あり) */
 export const dialyzerIncludeDeleted = async facilityCd =>
   new MstGetter(
     "/mstInfo/mstDialyzerIncludeDeleted",
     facilityCd
   ).getMst();
-//#8484　医療材料選択IFのリスト不正　Start
+//#8484 医療材料選択IFのリスト不正 Start
 /** 削除済み・期限切れ、禁忌・アレルギーも含めたダイアライザ(並び順(mst_selector)の考慮あり) */
 export const dialyzerTabooAllergyIncludeDeleted = async patId =>
   new MstGetter(
     `/mstInfo/mstDialyzerTabooAllergyIncludeDeleted/${patId}`).getMst();
-//#8484　医療材料選択IFのリスト不正　End
+//#8484 医療材料選択IFのリスト不正 End
 // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
 export const dialyzerTabooAllergyDeleted = async (patId) =>
   new MstGetter(
@@ -157,12 +223,12 @@ export const equipmentIncludeDeleted = async facilityCd =>
 export const equipmentTabooAllergy = async patId =>
   new MstGetter(
     `/mstInfo/mstEquipment/${patId}`).getMst();
-//#8484　医療材料選択IFのリスト不正　Start
+//#8484 医療材料選択IFのリスト不正 Start
 /** 削除済み・期限切れ、禁忌・アレルギーも含めた医療材料(並び順(mst_selector)の考慮あり) */
 export const equipmentTabooAllergyIncludeDeleted = async patId =>
   new MstGetter(
     `/mstInfo/mstEquipmentTabooAllergyIncludeDeleted/${patId}`).getMst();
-//#8484　医療材料選択IFのリスト不正　End
+//#8484 医療材料選択IFのリスト不正 End
 // mod FNSI-障害票一覧_患者経過総合ビューアNo.46-47 李 start
 export const equipmentAllergy = async (patId, isDelFlg) =>
   new MstGetter(
@@ -585,4 +651,3 @@ export const getMstCoopFacility = facilityCd =>
 // 掲示板種別マスタ
 export const bbsKindIncludeDeleted = async facilityCd =>
 new MstGetter("/mstInfo/mstBbsKindIncludeDeleted", facilityCd).getMst();
-

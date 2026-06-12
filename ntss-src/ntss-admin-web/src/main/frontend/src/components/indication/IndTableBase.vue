@@ -47,6 +47,7 @@
 </template>
 
 <script>
+import { resolveDefaultSlotComponent } from "@/compat/vue/slots";
 export default {
   props: {
     tableData: {
@@ -69,16 +70,19 @@ export default {
   },
 
   methods: {
+    getDefaultSlotComponent() {
+      return resolveDefaultSlotComponent(this);
+    },
     hideModal() {
-      this.$slots.default[0].componentInstance.clickCancel(this.ordMainFlag);
+      this.getDefaultSlotComponent()?.clickCancel(this.ordMainFlag);
     },
 
     updateOrdMain() {
-      this.$slots.default[0].componentInstance.clickSave(this.ordMainFlag);
+      this.getDefaultSlotComponent()?.clickSave(this.ordMainFlag);
     },
 
     selectUnit(event) {
-      this.$slots.default[0].componentInstance.selectUnit(event.target.value);
+      this.getDefaultSlotComponent()?.selectUnit(event.target.value);
     }
   },
 

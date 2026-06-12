@@ -8,6 +8,9 @@ WHERE
   AND mainte_class = '2' -- 定期点検
   AND machine_no in /* machineNoList*/(0)
   AND (mainte_ans_1 IS NULL OR mainte_ans_1 = '') -- 点検結果未登録
+  -- #11205 -ペンテスト2－4認可制御の不備  add 20260416 start
+  AND facility_cd = /* facilityCd */'X'
+  -- #11205 -ペンテスト2－4認可制御の不備  add 20260416 end
   AND  NOT EXISTS (
     SELECT
       1

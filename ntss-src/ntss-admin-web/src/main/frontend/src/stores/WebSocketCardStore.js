@@ -1,6 +1,8 @@
 // del FNSI-4200ポートを使用している 孫 start
 //const URL = "ws://localhost:4200";
 // del FNSI-4200ポートを使用している 孫 end
+import { getScopedLocalStorage, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
+
 
 export default {
   strict: true,
@@ -80,7 +82,9 @@ export default {
         if (state.cardAppPort === null) {
           url = "ws://localhost:" + state.port;
         }
-        const socket = new WebSocket(url);
+        const scopedWindow = getScopedWindow();
+        const WebSocketCtor = scopedWindow?.WebSocket || WebSocket;
+        const socket = new WebSocketCtor(url);
         // mod FNSI-4200ポートを使用している 孫 end
         socket.onopen = event => {
           commit("SOCKET_ONOPEN", { socket: socket, event: event });
@@ -157,6 +161,7 @@ export default {
       //   }
       // }, 30000);
       // del FNSI-4200ポートを使用している 孫 end
+
     },
     SOCKET_ONCLOSE(state, event) {
       state.socketInfo.isConnected = false;
@@ -164,7 +169,8 @@ export default {
       state.notifyMessages = null;
       state.socket = null;
       // タイマー終了
-      clearInterval(state.timerAction);
+      const scopedWindow = getScopedWindow();
+      (scopedWindow?.clearInterval || clearInterval)(state.timerAction);
     },
     SOCKET_ONERROR(state, event) {
       state.socketInfo.isError = true;
@@ -182,7 +188,7 @@ export default {
               // add FNSI-4200ポートを使用している 孫 start
               // localStorageにportを設定する
               state.cardAppPort = splitMsg[3];
-              localStorage.setItem("CARD_APP_PORT", splitMsg[3]);
+              getScopedLocalStorage().setItem("CARD_APP_PORT", splitMsg[3]);
               // add FNSI-4200ポートを使用している 孫 end
               state.cardDeviceStatus = JSON.parse(
                 splitMsg[2].toLowerCase()

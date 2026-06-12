@@ -34,35 +34,47 @@
 <script>
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
+import okImg from "../../assets/ok.png";
+
 // add #10359 編集権限の動作不正 dengshen end
 export default {
   name: "IndicationDetailButtonsComponent",
   mounted() {
-    const indicationType = this.templateArgs.indicationType;
-    const parentComponent = this.templateArgs.parentComponent;
-    let list = parentComponent.mstPersonalUser;
-// add  FNSI-権限 陳 start
-    this.hasIndReceiveAuthority = parentComponent.hasIndReceiveAuthority;
-// add  FNSI-権限 陳 end
-
-    list.forEach(detail => {
-      if (
-        Number(this.templateArgs.item[indicationType]) === Number(detail.userId)
-      ) {
-        this.userFullName = detail.userFullName;
-      }
-    });
+    this.syncTemplateState();
   },
   methods: {
+    syncTemplateState() {
+      const templateArgs = this.templateArgs && Object.keys(this.templateArgs).length > 0
+        ? this.templateArgs
+        : (this.$attrs?.templateArgs || {});
+      this.templateArgs = templateArgs;
+      const indicationType = templateArgs?.indicationType;
+      const parentComponent = templateArgs?.parentComponent;
+      const list = Array.isArray(parentComponent?.mstPersonalUser) ? parentComponent.mstPersonalUser : [];
+// add  FNSI-権限 陳 start
+      this.hasIndReceiveAuthority = parentComponent?.hasIndReceiveAuthority ?? this.hasIndReceiveAuthority;
+// add  FNSI-権限 陳 end
+      this.userFullName = "";
+      list.forEach(detail => {
+        if (
+          Number(templateArgs?.item?.[indicationType]) === Number(detail.userId)
+        ) {
+          this.userFullName = detail.userFullName;
+        }
+      });
+    },
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
       return getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
     updateDetails: function() {
-      this.templateArgs.parentComponent.onClickUpdateDetails(
-        this.templateArgs.item,
-        this.templateArgs.indicationType
+      const templateArgs = this.templateArgs && Object.keys(this.templateArgs).length > 0
+        ? this.templateArgs
+        : (this.$attrs?.templateArgs || {});
+      templateArgs?.parentComponent?.onClickUpdateDetails(
+        templateArgs?.item,
+        templateArgs?.indicationType
       );
     }
   },
@@ -73,7 +85,7 @@ export default {
 // add  FNSI-権限 陳 start
       hasIndReceiveAuthority: "",
 // add  FNSI-権限 陳 end
-      okIcon: require("../../assets/ok.png")
+      okIcon: okImg
     };
   }
 };

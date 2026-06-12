@@ -3,7 +3,7 @@
   <div class="tare-off-water-grid custom-tare-off-water-grid">
     <v-ons-row>
       <v-ons-col style="text-align: start;">
-        <v-ons-segment style="width: 120px;" :index.sync="segmentIndex">
+        <v-ons-segment style="width: 120px;" v-model:index="segmentIndex">
           <button value="0" class="segment-button" @click="selectUnit">g
           </button>
           <button value="1" class="segment-button" @click="selectUnit">kg
@@ -15,74 +15,13 @@
     <v-touch v-on:swipeleft="selectNextWeek" v-bind:swipe-options="{ direction: 'left', threshold: 70 }">
       <v-touch v-on:swiperight="selectPreWeek" v-bind:swipe-options="{ direction: 'right', threshold: 70 }">
         <!-- mod #9820 利用者マスタの患者情報編集権限がOFFなのに患者経過総合ビューアで編集/保存ができてしまう 商 start -->
-        <!-- <kendo-grid
+        <div
           :key="refreshKey"
           ref="tareAndOffWaterInfoGrid"
+          class="tare-off-water-direct-grid ntss-kendo-grid-legacy"
           :class="targetTable === 1 ? 'tare-offwater' : null"
-          :data-source="localDataSource"
-          :editable="!disEdit"
-          :scrollable="false"
-          :edit="addInputAssist"
-          @save="onSave"
-          @cellclose="
-            () => {
-              swipeFlag = true;
-            }
-          "
-        > -->
-        <kendo-grid
-          :key="refreshKey"
-          ref="tareAndOffWaterInfoGrid"
-          :class="targetTable === 1 ? 'tare-offwater' : null"
-          :data-source="localDataSource"
-          :editable="!disEdit && !editFlag && !isOtherFacilityRow()"
-          :scrollable="false"
-          :edit="addInputAssist"
-          @save="onSave"
-          @cellclose="
-            () => {
-              swipeFlag = true;
-            }
-          "
-        >
+        ></div>
         <!-- mod #9820 利用者マスタの患者情報編集権限がOFFなのに患者経過総合ビューアで編集/保存ができてしまう 商 end -->
-          <!-- 項目名 -->
-          <!-- mod #10359 編集権限の動作不正 dengshen start -->
-          <!-- <kendo-grid-column -->
-          <!--   :field="'rowTitle'" -->
-          <!--   :title="'項目'" -->
-          <!--   :width="90" -->
-          <!--   :attributes="{ class: 'deviceSetInfo-row-name' }" -->
-          <!--   :header-attributes="{ class: 'deviceSetInfo-header-row-name' }" -->
-          <!--   @editable="() => false" -->
-          <!-- /> -->
-          <kendo-grid-column
-            :field="'rowTitle'"
-            :title="'項目'"
-            :width="90"
-            :attributes="{ class: 'deviceSetInfo-row-name' }"
-            :header-attributes="{ class: 'deviceSetInfo-header-row-name' }"
-            @editable="() => false"
-            :disabled="!getItemAuthorized('Indication', 'item_base_tare_off_water')"
-          />
-          <!-- mod #10359 編集権限の動作不正 dengshen end -->
-          <!-- データセル() -->
-          <!-- mod #10359 編集権限の動作不正 dengshen start -->
-          <!-- <kendo-grid-column -->
-          <!--   :columns="multColumnList" -->
-          <!--   :title="columnHeaderTitle" -->
-          <!--   :header-attributes="columnHeaderClass" -->
-          <!--   :header-template="headerTemplate" -->
-          <!-- /> -->
-          <kendo-grid-column
-            :columns="multColumnList"
-            :title="columnHeaderTitle"
-            :header-attributes="columnHeaderClass"
-            :header-template="headerTemplate"
-            :disabled="!getItemAuthorized('Indication', 'item_base_tare_off_water')"
-          />
-          <!-- mod #10359 編集権限の動作不正 dengshen end -->
-        </kendo-grid>
       </v-touch>
     </v-touch>
   </div>
@@ -99,38 +38,75 @@ import { deepCopy } from "@/functions/common/CommonFunctions";
 /**
  * jQuery
  */
-import $ from "jquery";
+
 /**
  * 日時操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 /**
  * オブジェクト、配列操作
  */
-import _ from "underscore";
 
 /**
  * Vue関連
  */
 // #8061-装置設定が保存出来ない 周 mod start
-//import { mapGetters } from "vuex";
-import { mapGetters, mapActions } from "vuex";
+//import { mapGetters } from "@/compat/vue/vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 // #8061-装置設定が保存出来ない 周 mod end
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 /**
  * 小数点計算
  */
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
 // add #9820 利用者マスタの患者情報編集権限がOFFなのに患者経過総合ビューアで編集/保存ができてしまう 商 start
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
 import { FUNC_PAT_INFO } from "@/constants/function-code";
+import { getScopedWindow, getScopedJQuery, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
+import DeviceSetOwnerMixin from '@/components/deviceset-info/base-modules/DeviceSetOwnerMixin';
+
+function installComponentJQuery() {
+  if (typeof window !== "undefined") {
+    window.$ = window.$ || $;
+    window.jQuery = window.jQuery || $;
+  }
+  if (typeof globalThis !== "undefined") {
+    globalThis.$ = globalThis.$ || $;
+    globalThis.jQuery = globalThis.jQuery || $;
+  }
+  // @progress/kendo-ui import は jQuery plugin 登録の side effect 用。
+  return kendo;
+}
+
+function mountDirectNumericTextBox(element, options) {
+  installComponentJQuery();
+  const $element = $(element);
+  $element.kendoNumericTextBox(options);
+  return $element.data("kendoNumericTextBox");
+}
+
+function getDirectKendoWidgetValue(widget) {
+  return typeof widget?.value === "function" ? widget.value() : widget?.element?.val?.();
+}
+
+function setDirectKendoWidgetValue(widget, value) {
+  if (typeof widget?.value === "function") {
+    widget.value(value);
+  } else {
+    widget?.element?.val?.(value);
+  }
+}
+import $ from "@/compat/jquery";
+import kendo from "@progress/kendo-ui";
+import { bindGridEditorEnterToCloseCell } from "@/compat/kendo/grid-edit";
 // add #9820 利用者マスタの患者情報編集権限がOFFなのに患者経過総合ビューアで編集/保存ができてしまう 商 end
 
 export default {
+  mixins: [DeviceSetOwnerMixin],
   props: {
     /**
      * オーダー番号
@@ -287,6 +263,15 @@ export default {
       isPatViewAuthorized: null,
       isPatEditAuthorized: null,
       editFlag: null,
+      directGridWidget: null,
+      directGridColumnSignature: "",
+      directGridLayoutRafId: null,
+      /** Grid初期描画: DOM準備完了 */
+      isGridDomReady: false,
+      /** Grid初期描画: DBデータ読込完了 */
+      isGridDataReady: false,
+      /** Grid初期描画済み */
+      isInitialGridRendered: false,
       // add #9820 利用者マスタの患者情報編集権限がOFFなのに患者経過総合ビューアで編集/保存ができてしまう 商 end
       /**
        * モーダル表示データ
@@ -298,17 +283,11 @@ export default {
   computed: {
     //施設コード取得用
     ...mapGetters("user", ["getFacilityCd"]),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     // add #9820 利用者マスタの患者情報編集権限がOFFなのに患者経過総合ビューアで編集/保存ができてしまう 商 start
     ...mapGetters("account-edit", ["getStateUserAccountInfo", "getUseFunctions"]),
     // add #9820 利用者マスタの患者情報編集権限がOFFなのに患者経過総合ビューアで編集/保存ができてしまう 商 end
     ...mapGetters("pat-viewer-modal", { settingIndData: "getSettingIndData" }),
-
-    /**
-     * 施設コード
-     */
-    // getFacilityCd() {
-    //   return this.getFacilityCd;
-    // },
 
     /**
      * 曜日列ヘッダータイトル
@@ -328,6 +307,13 @@ export default {
         // 平日列編集時
         return { class: "deviceSetInfo-header-first-name" };
       }
+    },
+
+    /**
+     * 装置設定デフォルトマスタ等は単行ヘッダー（項目/名称/重さ）で表示
+     */
+    isFlatHeaderLayout() {
+      return 1 !== this.targetTable;
     },
 
     /**
@@ -445,8 +431,9 @@ export default {
     const getData = await this.getTareAndOffWaterInfo();
     // DBデータを内部用データに加工
     this.localDataSource.data = this.convertGridData(getData);
-    // Grid再描画処理
-    await this.gridRefresh();
+    // 合計・書式のみ先に計算（Grid描画は mounted 後に実施）
+    await this.calculateSum();
+    await this.changeFormat();
     // 変更比較(変更前)データ作成
     this.initValue = this.adjustmentInitValue(this.setInitValue(getData));
     // 変更比較(変更後)データ作成
@@ -459,16 +446,26 @@ export default {
       this.getAlertOrdMain();
     }
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = getScopedWindow(this.$el || this)?.navigator?.userAgent || "";
     if (ua.match(/iPhone|iPad/)) {
       this.iosFlg = true;
     }
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fang add start
-    this.$parent.$parent.$parent.isDialogType9_offWater = true;
+    this._deviceSetRootOwner().isDialogType9_offWater = true;
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fang add end
+    this.isGridDataReady = true;
+    await this.scheduleInitialGridRefresh();
   },
 
-  beforeDestroy() {
+  mounted() {
+    this.isGridDomReady = true;
+    this.$nextTick(() => {
+      this.scheduleInitialGridRefresh();
+    });
+  },
+
+  beforeUnmount() {
+    this.destroyDirectGrid();
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -487,6 +484,270 @@ export default {
       return getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
+    /**
+     * 初回描画: API読込(created)とDOM生成(mounted)の両方完了後にGridを描画
+     */
+    async scheduleInitialGridRefresh() {
+      if (!this.isGridDomReady || !this.isGridDataReady || this.isInitialGridRendered) {
+        return;
+      }
+      await this.$nextTick();
+      await this.gridRefresh();
+      this.isInitialGridRendered = true;
+    },
+    getTareAndOffWaterInfoGridRef() {
+      return this.$refs.tareAndOffWaterInfoGrid || null;
+    },
+    getTareAndOffWaterInfoGridWidget() {
+      return this.directGridWidget || this.getTareAndOffWaterInfoGridRef()?.gridWidget?.() || this.getTareAndOffWaterInfoGridRef()?.kendoWidget?.() || null;
+    },
+    isDirectGridEditable() {
+      return !this.disEdit && !this.editFlag && !this.isOtherFacilityRow() && this.getItemAuthorized('Indication', 'item_base_tare_off_water');
+    },
+    getDirectGridDataSourceOption() {
+      return {
+        schema: this.localDataSource.schema,
+        data: Array.isArray(this.localDataSource.data) ? this.localDataSource.data : []
+      };
+    },
+    createDirectGridDataSource() {
+      installComponentJQuery();
+      return new kendo.data.DataSource(this.getDirectGridDataSourceOption());
+    },
+    buildDirectGridColumns() {
+      const editable = this.isDirectGridEditable();
+      const rowTitleColumn = {
+        field: 'rowTitle',
+        title: '項目',
+        width: 90,
+        attributes: { class: 'deviceSetInfo-row-name' },
+        headerAttributes: { class: 'deviceSetInfo-header-row-name' },
+        editable: () => false
+      };
+      const dataColumns = (this.multColumnList || []).map(column => ({
+        ...column,
+        editor: (container, options) => this.setEditor(container, options),
+        editable: () => editable
+      }));
+
+      if (this.isFlatHeaderLayout) {
+        return [rowTitleColumn, ...dataColumns];
+      }
+
+      return [
+        rowTitleColumn,
+        {
+          columns: dataColumns,
+          title: this.columnHeaderTitle,
+          headerAttributes: this.columnHeaderClass,
+          headerTemplate: () => this.headerTemplate()
+        }
+      ];
+    },
+    getDirectGridColumnSignature() {
+      return JSON.stringify({
+        editable: this.isDirectGridEditable(),
+        flatHeader: this.isFlatHeaderLayout,
+        title: this.columnHeaderTitle,
+        headerClass: this.columnHeaderClass,
+        columns: (this.multColumnList || []).map(column => ({
+          field: column.field,
+          title: column.title,
+          width: column.width,
+          format: column.format,
+          attributes: column.attributes,
+          headerAttributes: column.headerAttributes
+        }))
+      });
+    },
+    installDirectGridFacade() {
+      const root = this.getTareAndOffWaterInfoGridRef();
+      if (!root) {
+        return;
+      }
+      root.kendoWidget = () => this.directGridWidget;
+      root.gridWidget = () => this.directGridWidget;
+      root.resizeGrid = () => this.directGridWidget?.resize?.(true);
+      root.gridRootEl = () => root;
+      root.gridContentEl = () => root.querySelector?.('.k-grid-content');
+      root.gridTableEl = () => root.querySelector?.('.k-grid-content table, table');
+    },
+    initDirectGridIfReady() {
+      const root = this.getTareAndOffWaterInfoGridRef();
+      if (!root || !Array.isArray(this.multColumnList) || this.multColumnList.length === 0) {
+        return;
+      }
+      installComponentJQuery();
+      const $root = $(root);
+      const existingGrid = $root.data('kendoGrid');
+      if (existingGrid) {
+        this.directGridWidget = existingGrid;
+        this.installDirectGridFacade();
+        this.applyDirectGridColumnsContract();
+        this.applyDirectGridDataSourceContract();
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+      $root.kendoGrid({
+        dataSource: this.createDirectGridDataSource(),
+        columns: this.buildDirectGridColumns(),
+        editable: this.isDirectGridEditable(),
+        scrollable: false,
+        dataBound: () => {
+          this.applyDirectGridStyleContract();
+          this.addClickEvent();
+        },
+        edit: event => this.addInputAssist(event),
+        save: event => this.onSave(event),
+        cellClose: () => {
+          this.swipeFlag = true;
+        }
+      });
+      this.directGridWidget = $root.data('kendoGrid') || null;
+      this.directGridColumnSignature = this.getDirectGridColumnSignature();
+      this.installDirectGridFacade();
+      this.scheduleDirectGridLayoutContract();
+    },
+    applyDirectGridColumnsContract() {
+      const grid = this.getTareAndOffWaterInfoGridWidget();
+      if (!grid) {
+        return;
+      }
+      const nextSignature = this.getDirectGridColumnSignature();
+      if (this.directGridColumnSignature !== nextSignature) {
+        grid.setOptions({
+          columns: this.buildDirectGridColumns(),
+          editable: this.isDirectGridEditable()
+        });
+        this.directGridColumnSignature = nextSignature;
+      }
+    },
+    applyDirectGridDataSourceContract() {
+      const grid = this.getTareAndOffWaterInfoGridWidget();
+      if (!grid) {
+        return;
+      }
+      const dataSource = this.createDirectGridDataSource();
+      grid.setDataSource(dataSource);
+      if (typeof dataSource.read === "function") {
+        dataSource.read();
+      } else if (typeof grid.refresh === "function") {
+        grid.refresh();
+      }
+      this.applyDirectGridStyleContract();
+    },
+    applyDirectGridStyleContract() {
+      const root = this.getTareAndOffWaterInfoGridRef();
+      if (!root) {
+        return;
+      }
+      root.classList.add('ntss-kendo-grid-legacy', 'k-widget', 'k-grid', 'k-editable', 'k-display-block');
+      root.querySelectorAll('.k-grid-header th, .k-grid-header .k-table-th').forEach(th => th.classList.add('k-header'));
+      ['.k-grid-content tbody', '.k-grid-content-locked tbody'].forEach(selector => {
+        root.querySelectorAll(selector).forEach(tbody => {
+          Array.from(tbody.children || []).forEach((tr, index) => {
+            tr.classList.add('k-master-row');
+            tr.classList.toggle('k-alt', index % 2 === 1);
+          });
+        });
+      });
+      root.querySelectorAll('.k-grid-content tbody td, .k-grid-content-locked tbody td').forEach(td => {
+        td.classList.add('k-td', 'k-table-td');
+      });
+      this.applyDirectGridHeaderClassContract(root);
+      this.applyDirectGridCellClassContract(root);
+    },
+    applyDirectGridHeaderClassContract(root) {
+      const headerClasses = this.isFlatHeaderLayout
+        ? [
+            'deviceSetInfo-header-row-name',
+            ...(this.multColumnList || []).map(column => column?.headerAttributes?.class || '')
+          ]
+        : ['deviceSetInfo-header-row-name'];
+      const headerRows = root.querySelectorAll('.k-grid-header thead tr');
+      const targetRow = headerRows[headerRows.length - 1];
+      if (!targetRow) {
+        return;
+      }
+      Array.from(targetRow.children || []).forEach((th, index) => {
+        const className = headerClasses[index];
+        if (typeof className === 'string' && className) {
+          className.split(/\s+/).filter(Boolean).forEach(name => th.classList.add(name));
+        }
+      });
+    },
+    /**
+     * Vue2 kendo-grid-column の attributes 相当のクラスを DOM に付与
+     */
+    applyDirectGridCellClassContract(root) {
+      const columns = [
+        { field: 'rowTitle', attributes: { class: 'deviceSetInfo-row-name' } },
+        ...(this.multColumnList || [])
+      ];
+      root.querySelectorAll('.k-grid-content tbody tr, .k-grid-content-locked tbody tr').forEach(tr => {
+        Array.from(tr.children || []).forEach((td, index) => {
+          const field = columns[index]?.field || '';
+          const attributeClass = columns[index]?.attributes?.class;
+          if (typeof attributeClass === 'string') {
+            attributeClass.split(/\s+/).filter(Boolean).forEach(className => td.classList.add(className));
+          }
+          td.classList.toggle('deviceSetInfo-name-content', field === 'name');
+          td.classList.toggle('deviceSetInfo-weight-content', field === 'weight');
+        });
+      });
+    },
+    scheduleDirectGridLayoutContract() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+      }
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.directGridLayoutRafId = null;
+        this.getTareAndOffWaterInfoGridWidget()?.resize?.(true);
+        this.applyDirectGridStyleContract();
+      });
+    },
+    destroyDirectGrid() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+        this.directGridLayoutRafId = null;
+      }
+      const root = this.getTareAndOffWaterInfoGridRef();
+      const widget = this.getTareAndOffWaterInfoGridWidget();
+      try {
+        widget?.destroy?.();
+      } catch (_error) {
+        // noop
+      }
+      if (root) {
+        root.kendoWidget = undefined;
+        root.gridWidget = undefined;
+        root.resizeGrid = undefined;
+        root.innerHTML = '';
+      }
+      this.directGridWidget = null;
+      this.directGridColumnSignature = '';
+    },
+    traverseGridColumns(columns, onColumn) {
+      if (!Array.isArray(columns) || typeof onColumn !== "function") {
+        return;
+      }
+      columns.forEach((column) => {
+        if (!column) {
+          return;
+        }
+        onColumn(column);
+        if (Array.isArray(column.columns) && column.columns.length) {
+          this.traverseGridColumns(column.columns, onColumn);
+        }
+      });
+    },
+    syncGridColumnsToWidget() {
+      this.initDirectGridIfReady();
+      this.applyDirectGridColumnsContract();
+    },
+    alignGridLayout() {
+      this.scheduleDirectGridLayoutContract();
+    },
     /**
      * 単位選択
      */
@@ -634,8 +895,7 @@ export default {
       for (let i = 0; i < loacalData.length - 1; i++) {
         if (
           null !== data[this.selectedWeek] &&
-          undefined !== data[this.selectedWeek]
-        ) {
+          undefined !== data[this.selectedWeek]) {
           if (undefined !== data[this.selectedWeek]) {
             // 名称項目
             loacalData[i].name = data[this.selectedWeek][`name_${i + 1}`];
@@ -645,8 +905,7 @@ export default {
             if (
               1 === this.selectedUnit &&
               null !== weightValue &&
-              "" !== weightValue
-            ) {
+              "" !== weightValue) {
               loacalData[i].weight = this.procDecimal(weightValue);
             } else {
               loacalData[i].weight = weightValue;
@@ -758,7 +1017,9 @@ export default {
       }
       const url = `deviceSetInfo/getSysTareAndOffWaterById/${this.facilityCd}`;
       // データ取得
-      const response = await ApiHelper.get(url).catch(error => {
+      const response = await ApiHelper.get(url, {
+        selectedPatId: this.selectedPatId
+      }).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('BaseTareAndOffWaterInfoEditor.vue', 'getMstDeviceSetInfoDefault', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -770,8 +1031,7 @@ export default {
         if (null !== JSON.stringify(response.data[0])[this.columnName]) {
           // 選択曜日のデフォルト値を編集曜日とする
           getData[this.selectedWeek] = JSON.parse(
-            JSON.parse(response.data[0])[this.columnName]
-          );
+            JSON.parse(response.data[0])[this.columnName]);
         }
       }
       return getData;
@@ -812,9 +1072,13 @@ export default {
       }
       const url = `deviceSetInfo/getIndTareAndOffWaterById`;
       // データ取得
-      const response = await ApiHelper.post(url, {
+      const response = await ApiHelper.configPost(url, {
         ordNo: this.ordNo,
         flgIndRst: 0
+      }, {
+        params: {
+          selectedPatId: this.selectedPatId
+        }
       }).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('BaseTareAndOffWaterInfoEditor.vue', 'getOrdMain', error);
@@ -827,26 +1091,22 @@ export default {
         if (null !== JSON.parse(response.data[0])[this.columnName]) {
           // 対象曜日格納
           this.selectedWeek = String(
-            JSON.parse(JSON.parse(response.data[0]).treatWeek)
-          );
+            JSON.parse(JSON.parse(response.data[0]).treatWeek));
           // 対象曜日列に除水補正情報格納
           getData[this.selectedWeek] = JSON.parse(
-            JSON.parse(response.data[0])[this.columnName]
-          );
+            JSON.parse(response.data[0])[this.columnName]);
           // 治療状況
           this.dialysisState = JSON.parse(
-            JSON.parse(response.data[0]).rstDialysisState
-          );
+            JSON.parse(response.data[0]).rstDialysisState);
           if (
             Number(this.dialysisState) >= 4 &&
-            6 >= Number(this.dialysisState)
-          ) {
+            6 >= Number(this.dialysisState)) {
             // 治療予定限定時
-            if (this.$parent.$parent.weekEdit) {
+            if (this._deviceSetDialogOwner().weekEdit) {
               // 編集不可フラグをtrue
               this.disEdit = true;
               // IndEditBaseの保存ボタンを非活性化
-              this.$parent.$parent.updateDisable = true;
+              this._deviceSetDialogOwner().updateDisable = true;
             }
           }
         }
@@ -864,9 +1124,13 @@ export default {
       }
       const url = `deviceSetInfo/getIndTareAndOffWaterById`;
       // データ取得
-      const { data } = await ApiHelper.post(url, {
+      const { data } = await ApiHelper.configPost(url, {
         ordNo: this.ordNo,
         flgIndRst: 1
+      }, {
+        params: {
+          selectedPatId: this.selectedPatId
+        }
       }).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('BaseTareAndOffWaterInfoEditor.vue', 'getOrdMain', error);
@@ -876,8 +1140,7 @@ export default {
       const getData = {};
       if (data) {
         getData[this.selectedWeek] = JSON.parse(
-          JSON.parse(data[0])[this.columnName]
-        );
+          JSON.parse(data[0])[this.columnName]);
       }
       return getData;
     },
@@ -893,11 +1156,15 @@ export default {
       await this.calculateSum();
       // フォーマット変更
       await this.changeFormat();
+      // Vue2 wrapper と同じ列定義反映タイミングに合わせる
+      this.syncGridColumnsToWidget();
       // Gridのリフレッシュ
       await this.refresh();
+      await this.$nextTick();
+      this.alignGridLayout();
       // スクロール量の設定()
       this.setScrollPos();
-      // 編集色の付与
+      // Grid描画完了後に編集色を反映
       this.setEditColor();
       // クリックイベントの追加
       this.addClickEvent();
@@ -909,14 +1176,16 @@ export default {
      * スクロール量取得
      */
     getScrollPos() {
-      this.scrollPos = $(".indInfo-style-modal-container").scrollTop();
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
+      this.scrollPos = scoped$(".indInfo-style-modal-container").scrollTop();
     },
 
     /**
      * スクロール量の設定
      */
     setScrollPos() {
-      $(".indInfo-style-modal-container").scrollTop(this.scrollPos);
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
+      scoped$(".indInfo-style-modal-container").scrollTop(this.scrollPos);
     },
 
     /**
@@ -946,59 +1215,69 @@ export default {
     },
 
     /**
-     * 桁数変換
+     * 桁数変換（editValue の g 基準値から表示用 localDataSource を再構築）
      */
     changeDigit() {
-      for (let i = 0; i < this.localDataSource.data.length - 1; i++) {
-        let value = this.localDataSource.data[i].weight;
-        // 値がnullでなければ
-        if (null !== value && undefined !== value) {
-          // 「g」に変換時は1000倍、「kg」に変換時は1000で除算
-          value =
-            0 === this.selectedUnit
-              ? new BigNumber(value).times(1000).toNumber()
-              : this.procDecimal(value);
-        }
-        this.localDataSource.data[i].weight = value;
-      }
-
-      // 単位「g」選択時は以降の処理を行わない
-      if (0 === this.selectedUnit) {
+      const weekData = this.editValue[this.selectedWeek];
+      if (!weekData) {
         return;
       }
-
-      // 変更比較データに値を格納
-      for (const week in this.editValue) {
-        for (let i = 1; i <= 5; i++) {
-          const value = this.editValue[week][`weight_${i}`];
-          // 値がnullでなけれeditValueのデータを変換する
-          if (null !== value && "" !== value && undefined !== value) {
-            this.editValue[week][`weight_${i}`] =
-              new BigNumber(this.procDecimal(value)).times(1000).toNumber();
-          }
-        }
+      for (let i = 0; i < this.localDataSource.data.length - 1; i++) {
+        this.localDataSource.data[i].weight = this.convertWeightForDisplay(
+          weekData[`weight_${i + 1}`]
+        );
       }
+    },
+
+    /**
+     * g 基準の値を現在の表示単位へ変換
+     */
+    convertWeightForDisplay(gramValue) {
+      if (gramValue == null || gramValue === "") {
+        return gramValue;
+      }
+      if (0 === this.selectedUnit) {
+        return new BigNumber(gramValue).toNumber();
+      }
+      return this.procDecimal(gramValue);
     },
 
     /**
      * 小数点操作
      * @description 風袋->小数点第三位切り捨て、除水補正->小数点第3位切り上げ
-     * @param value 小数点操作を行う値
+     * @param value 小数点操作を行う値（g 基準）
      */
     procDecimal(value) {
-      // 風袋
-      if (0 === this.propsTareOffWaterInfoFlag) {
-        return new BigNumber(value).div(1000).dp(2, BigNumber.ROUND_DOWN).toNumber()
-      } else {
-        return new BigNumber(value).div(1000).dp(2, BigNumber.ROUND_UP).toNumber()
+      const grams = new BigNumber(value);
+      if (!grams.isFinite()) {
+        return null;
       }
+      // 除水補正
+      if (0 !== this.propsTareOffWaterInfoFlag) {
+        return grams.div(1000).dp(2, BigNumber.ROUND_UP).toNumber();
+      }
+      // 風袋: 第三位切捨。0g 超かつ 0.01kg 未満は 0.01kg 表示（升级前同等）
+      const kgRounded = grams.div(1000).dp(2, BigNumber.ROUND_DOWN);
+      if (!grams.isZero() && kgRounded.isZero()) {
+        return 0.01;
+      }
+      return kgRounded.toNumber();
     },
 
     /**
      * 画面再描画処理
      */
     refresh() {
-      this.refreshKey++;
+      return new Promise(resolve => {
+        this.$nextTick(() => {
+          this.initDirectGridIfReady();
+          this.applyDirectGridColumnsContract();
+          this.applyDirectGridDataSourceContract();
+          this.scheduleDirectGridLayoutContract();
+          this.addClickEvent();
+          resolve();
+        });
+      });
     },
 
     /**
@@ -1006,15 +1285,13 @@ export default {
      * @description 親からこの関数を呼んで更新処理を行う
      */
     async updateInfo(structData) {
-      console.log("BaseTareAndOffWaterInfoEditor.vue updateInfo this.startLoadingScreen();");
       this.startLoadingScreen();
       // 更新日時(現在日時)
-      this.upDate = moment().format("YYYY-MM-DD HH:mm:ss.SSS");
+      this.upDate = dayjs().format("YYYY-MM-DD HH:mm:ss.SSS");
       // 更新情報(初期値と編集値の差分)
       const updateData = this.createDifferenceValue(
         this.initValue,
-        this.editValue
-      );
+        this.editValue);
       switch (this.targetTable) {
         // 装置設定デフォルトマスタ更新
         case 0:
@@ -1028,8 +1305,7 @@ export default {
           // 患者情報にも反映をするかのメッセージを表示する
           this.showMessage(
             0 === this.propsTareOffWaterInfoFlag ? 13010003 : 13010004,
-            "5"
-          );
+            "5");
           break;
 
         // 患者情報更新
@@ -1042,8 +1318,7 @@ export default {
             13010001,
             "2",
             ["今日含む未来の指示情報", ""],
-            "FUTURE_ORD_MAIN"
-          );
+            "FUTURE_ORD_MAIN");
           break;
 
         // 治療情報更新
@@ -1074,9 +1349,8 @@ export default {
       sendJson.up_date = this.upDate;
       // データ更新
       ApiHelper.post(
-        "/deviceSetInfo/updateSysTareOffWaterInfo/",
-        sendJson
-      ).catch(error => {
+        "/deviceSetInfo/updateSysTareOffWaterInfo",
+        sendJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('BaseTareAndOffWaterInfoEditor.vue', 'updateMstDeviceSetInfoDefault', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1098,9 +1372,8 @@ export default {
       sendJson.up_date = this.upDate;
       // データ更新
       await ApiHelper.post(
-        "/deviceSetInfo/updatePatTareOffWaterInfo/",
-        sendJson
-      ).catch(error => {
+        "/deviceSetInfo/updatePatTareOffWaterInfo",
+        sendJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('BaseTareAndOffWaterInfoEditor.vue', 'updatePatMain', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1120,14 +1393,12 @@ export default {
       // 施設コード
       sendJson.facility_cd = structData.facilityCd;
       // 治療開始日
-      sendJson.start_date = moment(
+      sendJson.start_date = dayjs(
         structData.indStartDate,
-        "YYYY-MM-DD"
-      ).format("YYYYMMDD");
+        "YYYY-MM-DD").format("YYYYMMDD");
       // 治療終了日
-      sendJson.end_date = moment(structData.indEndDate, "YYYY-MM-DD").format(
-        "YYYYMMDD"
-      );
+      sendJson.end_date = dayjs(structData.indEndDate, "YYYY-MM-DD").format(
+        "YYYYMMDD");
       // 編集対象曜日
       sendJson.weeks = JSON.stringify(structData.indWeeks);
       // 編集対象治療方法
@@ -1138,7 +1409,7 @@ export default {
       //mod 10206 編集箇所のみ保存の修正 zy start
       // sendJson[this.columnName] = JSON.stringify(
       //   this.editValue[this.selectedWeek]
-      // );
+      //);
       const updateData = this.createDifferenceValue(this.initValue,this.editValue)[this.selectedWeek]
       sendJson[this.columnName] = structData.editOnly ? JSON.stringify(updateData) : JSON.stringify(this.editValue[this.selectedWeek]);
       //mod 10206 編集箇所のみ保存の修正 zy end
@@ -1161,9 +1432,8 @@ export default {
       //add by ztc 2023-02-27 [Optimize runtime No.5482] --end
       // データ更新
       await ApiHelper.post(
-        "/deviceSetInfo/updateIndTareOffWaterInfo/",
-        sendJson
-      ).catch(error => {
+        "/deviceSetInfo/updateIndTareOffWaterInfo",
+        sendJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('BaseTareAndOffWaterInfoEditor.vue', 'updateOrdMain', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1171,7 +1441,7 @@ export default {
       });
       EventBus.$emit("isRefresh");
       // モーダルを閉じる
-      this.$parent.$parent.$emit("hide-modal");
+      this._hideDeviceSetModal();
     },
 
     /**
@@ -1195,8 +1465,7 @@ export default {
       // データの取得
       const response = await ApiHelper.post(
         `/mainData/TreatDateList`,
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('BaseTareAndOffWaterInfoEditor.vue', 'getTargetOrdMain', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1220,9 +1489,9 @@ export default {
      */
     getReflectOrdMain() {
       // 本日の日付け
-      const day = moment().format("YYYYMMDD");
+      const day = dayjs().format("YYYYMMDD");
       // 前日の日付け
-      const yesterday = moment()
+      const yesterday = dayjs()
         .subtract(1, "days")
         .format("YYYYMMDD");
       // 更新対象を格納(本日または前日の治療状況が条件送信後～後体重確認前)
@@ -1231,8 +1500,7 @@ export default {
           Number(day) >= Number(eleObj.treatDate) &&
           Number(eleObj.treatDate) >= Number(yesterday) &&
           Number(eleObj.rstDialysisState) >= 1 &&
-          6 > Number(eleObj.rstDialysisState)
-        );
+          6 > Number(eleObj.rstDialysisState));
       });
       // 編集対象曜日取得
       const editWeekArr = this.getEditWeekArr();
@@ -1271,11 +1539,10 @@ export default {
         // 更新対象オーダー番号リストの格納
         this.ordNoList.push(eleItem.ordNo);
         // 更新対象を曜日ごとに格納
-        if (_.has(this.targetUpdateInfo, eleItem.treatWeek.toString())) {
+        if (Object.prototype.hasOwnProperty.call(this.targetUpdateInfo, eleItem.treatWeek.toString())) {
           // キーが存在している場合、オーダー番号をpush
           this.targetUpdateInfo[eleItem.treatWeek.toString()].push(
-            eleItem.ordNo
-          );
+            eleItem.ordNo);
         } else {
           // キーが存在していない場合は直接代入
           this.targetUpdateInfo[eleItem.treatWeek.toString()] = [eleItem.ordNo];
@@ -1290,8 +1557,7 @@ export default {
         messageCd,
         "2",
         [`以下の透析中実績の${dispStr1}情報`, dispStr2],
-        "TARGET_ORD_MAIN"
-      );
+        "TARGET_ORD_MAIN");
     },
 
     /**
@@ -1303,15 +1569,14 @@ export default {
      */
     getAlertOrdMain() {
       // 2日前の日付け
-      const dayBeforeYesterday = moment()
+      const dayBeforeYesterday = dayjs()
         .subtract(2, "days")
         .format("YYYYMMDD");
       this.alertOrdMainList = this.ordMainList.filter(eleObj => {
         return (
           Number(dayBeforeYesterday) >= Number(eleObj.treatDate) &&
           Number(eleObj.rstDialysisState) >= 3 &&
-          6 > Number(eleObj.rstDialysisState)
-        );
+          6 > Number(eleObj.rstDialysisState));
       });
     },
 
@@ -1345,8 +1610,7 @@ export default {
       // 変更情報を取得
       const differenceValue = this.createDifferenceValue(
         this.initValue,
-        this.editValue
-      );
+        this.editValue);
       // 変更のあった曜日を格納
       for (const treatWeek in differenceValue) {
         arr.push(treatWeek);
@@ -1361,7 +1625,7 @@ export default {
      */
     createMessageStr(obj, preDispStr) {
       // 治療日
-      const treatDate = moment(obj.treatDate, "YYYYMMDD").format("YYYY/MM/DD");
+      const treatDate = dayjs(obj.treatDate, "YYYYMMDD").format("YYYY/MM/DD");
       // 治療曜日
       const treatWeek = this.convertStrWeek(Number(obj.treatWeek));
       // ベッド名
@@ -1370,8 +1634,7 @@ export default {
       const indKurName = obj.indKurName;
       // 治療状況
       const rstDialysisState = this.convertDialysisState(
-        Number(obj.rstDialysisState)
-      );
+        Number(obj.rstDialysisState));
       // 表示文字列
       const dispStr = `\n治療日:${treatDate}(${treatWeek})\nベッド:${indBedName}\nクール:${indKurName}\n治療状況:${rstDialysisState}\n`;
       // 前回の表示文字列と結合する
@@ -1389,14 +1652,12 @@ export default {
         sendJson.ord_no = JSON.stringify(this.ordNoList);
         // 風袋・除水補正情報
         sendJson[this.columnName] = JSON.stringify(
-          this.editValue[treatWeek.toString()]
-        );
+          this.editValue[treatWeek.toString()]);
         // 更新日時
         sendJson.up_date = this.upDate;
         await ApiHelper.post(
           `/deviceSetInfo/updateRstTareOffWaterInfo`,
-          sendJson
-        ).catch(error => {
+          sendJson).catch(error => {
           //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
           getErrorMessage('BaseTareAndOffWaterInfoEditor.vue', 'reflectOrdMainInfo', error);
           //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1419,8 +1680,7 @@ export default {
       // 反映情報
       const updateData = this.createDifferenceValue(
         this.initValue,
-        this.editValue
-      );
+        this.editValue);
       // 変更のあった曜日リスト
       const editWeek = [];
       for (const week in updateData) {
@@ -1430,9 +1690,8 @@ export default {
       // 更新日時
       sendJson.up_date = this.upDate;
       await ApiHelper.post(
-        "/deviceSetInfo/updateFutureIndTareOffWaterInfo/",
-        sendJson
-      ).catch(error => {
+        "/deviceSetInfo/updateFutureIndTareOffWaterInfo",
+        sendJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('BaseTareAndOffWaterInfoEditor.vue', 'updateFutureIndTareAndOffWaterInfo', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1458,8 +1717,7 @@ export default {
         // updateInfo[i.toString()] = this.editValue[this.selectedWeek];
         updateInfo[i.toString()] = this.createDifferenceValue(
           this.initValue,
-          this.editValue
-        )[this.selectedWeek];
+          this.editValue)[this.selectedWeek];
         // mod 装置設定デフォルトマスタで変更した内容を患者情報に反映するのが不正なことを対応 劉 end
       }
       sendJson[this.columnName] = JSON.stringify(updateInfo);
@@ -1467,9 +1725,8 @@ export default {
       sendJson.up_date = this.upDate;
       // 更新APIの呼び出し
       await ApiHelper.post(
-        "/deviceSetInfo/updatePatTareOffWaterInfo/",
-        sendJson
-      ).catch(error => {
+        "/deviceSetInfo/updatePatTareOffWaterInfo",
+        sendJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('BaseTareAndOffWaterInfoEditor.vue', 'updatePatInfoDefault', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1534,8 +1791,7 @@ export default {
       for (const key in initData) {
         // 初期値と差異のあるものを取り出す
         const difference = Object.keys(editData[key]).filter(
-          item => editData[key][item] !== initData[key][item]
-        );
+          item => editData[key][item] !== initData[key][item]);
         // 初期データと編集データで際のあったものを格納する
         if (0 !== difference.length) {
           differenceData[key] = {};
@@ -1555,8 +1811,7 @@ export default {
       // 初期値と変更値の差分を取得
       const differenceData = this.createDifferenceValue(
         this.initValue,
-        this.editValue
-      );
+        this.editValue);
       // 変更箇所数
       let editCount = 0;
       for (const weekNum in differenceData) {
@@ -1575,8 +1830,7 @@ export default {
       // 初期値と変更値の差分を取得
       const differenceData = this.createDifferenceValue(
         this.initValue,
-        this.editValue
-      );
+        this.editValue);
       // 変更箇所数
       let editCount = 0;
       for (const weekNum in differenceData) {
@@ -1589,38 +1843,104 @@ export default {
     // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc end
 
     /**
+     * 編集色判定（名称は厳密一致、重さは g 基準で等价判定）
+     */
+    isEquivalentCellValue(itemName, initVal, editVal) {
+      if ("name" === itemName) {
+        return initVal === editVal;
+      }
+      if (initVal === editVal) {
+        return true;
+      }
+      const initEmpty = initVal == null || initVal === "";
+      const editEmpty = editVal == null || editVal === "";
+      if (initEmpty || editEmpty) {
+        return initEmpty && editEmpty;
+      }
+      try {
+        const initNum = new BigNumber(initVal);
+        const editNum = new BigNumber(editVal);
+        if (initNum.isEqualTo(editNum)) {
+          return true;
+        }
+        if (initNum.times(1000).isEqualTo(editNum) || editNum.times(1000).isEqualTo(initNum)) {
+          return true;
+        }
+      } catch (e) {
+        return false;
+      }
+      return false;
+    },
+
+    /**
      * 編集色の設定
      */
     setEditColor() {
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
       // 初期値 ※each内でthisが使用できないため定数に格納
       const initData = deepCopy(this.initValue[this.selectedWeek]);
       // 編集値
       const editData = deepCopy(this.editValue[this.selectedWeek]);
-      // 名称項目、重さ項目でループ
-      for (let i = 0; i < 2; i++) {
-        const itemName = 0 === i ? "name" : "weight";
-        // 名称項目編集チェック
-        $(`.${itemName}-item`).each((index, elment) => {
-          // 合計量行は処理を行わない
-          if (5 === index) {
-            return;
-          }
-          // 初期値と編集値が異なれば、編集職のクラスを追加
-          // kg/g切り替え、データが変化しない場合、文字色、背景色は変わりません。
-          if ( initData[`${itemName}_${index + 1}`] * 1000 ===  editData[`${itemName}_${index + 1}`] || editData[`${itemName}_${index + 1}`] * 1000 ===  initData[`${itemName}_${index + 1}`]) {
-            $(elment).removeClass("grid-edited-cell");
-          } else if (
-            initData[`${itemName}_${index + 1}`] !==
-            editData[`${itemName}_${index + 1}`]
-          ) {
-            // 文字色、背景色を変更するクラスを追加(変更箇所あり)
-            $(elment).addClass("grid-edited-cell");
-          } else {
-            // クラスを削除(変更箇所なし)
-            $(elment).removeClass("grid-edited-cell");
-          }
-        });
+      setTimeout(() => {
+        // 名称項目、重さ項目でループ
+        for (let i = 0; i < 2; i++) {
+          const itemName = 0 === i ? "name" : "weight";
+          // 名称項目編集チェック
+          scoped$(`.${itemName}-item`).each((index, elment) => {
+            // 合計量行は処理を行わない
+            if (5 === index) {
+              return;
+            }
+            const key = `${itemName}_${index + 1}`;
+            if (this.isEquivalentCellValue(itemName, initData[key], editData[key])) {
+              scoped$(elment).removeClass("grid-edited-cell");
+            } else {
+              scoped$(elment).addClass("grid-edited-cell");
+            }
+          });
+        }
+      }, 0);
+    },
+
+    /**
+     * 重さセル編集時の入力値を数値に変換（カンマ区切り・全角マイナス対応）
+     */
+    parseEditorNumericValue(rawValue) {
+      if (rawValue === null || rawValue === undefined) {
+        return null;
       }
+      const text = String(rawValue).replace(/,/g, "").replace(/－/g, "-").trim();
+      if (text === "" || text === "-") {
+        return null;
+      }
+      const parsed = Number(text);
+      return Number.isFinite(parsed) ? parsed : null;
+    },
+
+    /**
+     * 重さセル編集時の丸め処理（風袋/除水補正・g/kg）
+     */
+    applyWeightInputRounding(rawValue, isIntegerStep, isTare) {
+      const num = this.parseEditorNumericValue(rawValue);
+      if (num === null) {
+        return null;
+      }
+      if (isIntegerStep) {
+        return isTare ? Math.floor(num) : Math.ceil(num);
+      }
+      const valueStr = String(rawValue).replace(/,/g, "");
+      const dotIndex = valueStr.indexOf(".");
+      const hasThirdDecimal =
+        dotIndex >= 0 &&
+        valueStr.length > dotIndex + 3 &&
+        valueStr[dotIndex + 3] !== "0";
+      const factor = 100;
+      if (hasThirdDecimal) {
+        return isTare
+          ? Math.floor(num * factor) / factor
+          : Math.ceil(num * factor) / factor;
+      }
+      return Math.round(num * factor) / factor;
     },
 
     /**
@@ -1664,116 +1984,108 @@ export default {
           const step = this.numericStepValue;
           // kendoNumericTextBoxの有効小数点桁数
           const decimals = this.numericDecimalsValue;
+          // Vue2 の editor 初期値承継（name バインドだけでは Vue3 native 側に反映されない）
+          const rawEditorValue = data.model[data.field];
+          const normalizedEditorValue = rawEditorValue === null || rawEditorValue === undefined || rawEditorValue === ""
+            ? null
+            : Number(String(rawEditorValue).replace(/,/g, ""));
           // 数値型テキストボックス(kendo UI)
           //区別します風袋とです除水補正
           const propsTareOffWaterInfoFlag = this.propsTareOffWaterInfoFlag;
-          $(
-            `<input class="deviceSetInfo-numbersTextbox" id="Calories" name="${data.field}" />`
-          )
-            .appendTo(container)
-            .kendoNumericTextBox({
+          const component = this;
+          const isIntegerStep = step === 1;
+          const isTare = propsTareOffWaterInfoFlag === 0;
+          let numericTextBox = null;
+          numericTextBox = mountDirectNumericTextBox(
+            $(
+              `<input class="deviceSetInfo-numbersTextbox" id="Calories" name="${data.field}" />`)
+              .appendTo(container)[0],
+            {
               // mod #5589 2023/04/11 数値IFのスタイル全不正 林峻峰 start
               // min,
               // max,
+              value: Number.isFinite(normalizedEditorValue) ? normalizedEditorValue : null,
               step,
               decimals,
-              spin: (e) => {
-                let value = $('#Calories').data('kendoNumericTextBox').value()
+              spin: () => {
+                let value = getDirectKendoWidgetValue(numericTextBox)
                 // 数値範囲内かどうかの確認
                 if (value > max) {
-                  $('#Calories').data('kendoNumericTextBox').value(min)
+                  setDirectKendoWidgetValue(numericTextBox, min)
                 } else if (value <  min) {
-                  $('#Calories').data('kendoNumericTextBox').value(max)
+                  setDirectKendoWidgetValue(numericTextBox, max)
                 }
               },
               change: (e) => {
-                let value = e.sender._value
+                let value = getDirectKendoWidgetValue(numericTextBox);
+                if (value === null || value === undefined) {
+                  value = component.parseEditorNumericValue(e.sender?._value);
+                }
+                if (value === null) {
+                  component.blurFlg = false;
+                  return;
+                }
                 // 数値範囲内かどうかの確認
                 if (value > max) {
                   data.model.set(data.field, max);
-                  this.blurFlg = true;
-                } else if (value <  min) {
+                  component.blurFlg = true;
+                } else if (value < min) {
                   data.model.set(data.field, min);
-                  this.blurFlg = true;
+                  component.blurFlg = true;
                 } else {
-                  this.blurFlg = false;
+                  component.blurFlg = false;
                 }
               }
               // mod #5589 2023/04/11 数値IFのスタイル全不正 林峻峰 end
-            })
-            // マウスホイールイベントイベント
-            .on("mousewheel", function(e) {
-              if (e.originalEvent.wheelDelta / 120 > 0) {
-                this.value =
-                  max > Number(this.value)
-                    ? Number(this.value) + step
-                    // mod #5589 2023/04/11 数値IFのスタイル全不正 林峻峰 start
-                    // : Number(this.value);
-                    : min;
-                    // mod #5589 2023/04/11 数値IFのスタイル全不正 林峻峰 end
-                // 小数点第2位で切り上げ
-                this.value = Math.round(this.value * 100) / 100;
-              } else {
-                // 最小値より値が大きければ処理
-                this.value =
-                  Number(this.value) > min
-                    ? Number(this.value) - step
-                    // mod #5589 2023/04/11 数値IFのスタイル全不正 林峻峰 start
-                    // : Number(this.value);
-                    : max;
-                    // mod #5589 2023/04/11 数値IFのスタイル全不正 林峻峰 end
-                // 小数点第2位で切り上げ
-                this.value = Math.round(Number(this.value) * 100) / 100;
-              }
-            })
-            //除水補正上に整列します 風袋下方向に整列します,修正します 张博 start
-            .on("change", function(e) {
-              if (propsTareOffWaterInfoFlag === 0) {
-                if (step == "1") {
-                   this.value = Math.floor(e.target.value);
-                }else{
-                   let value = e.target.value;
-                if (value.substr(4,1)>0) {
-                   this.value = Math.floor(Number(value) * 100) / 100;
-                }else{
-                   this.value = Math.round(Number(value) * 100) / 100;
-                }
-              }
-              }else{
-                 if (step == "1") {
-                    this.value = Math.ceil(e.target.value);
-                 }else{
-                    let value = e.target.value;
-                 if (value.substr(4,1)>0) {
-                    this.value = Math.ceil(Number(value) * 100) / 100;
-                 }else{
-                    this.value = Math.round(Number(value) * 100) / 100;
-                }
-              }
-              }
             });
-             //入力は力を入れて上方に取ります,修正します 张博 end
-            // add #5589 2023/04/11 数値IFのスタイル全不正 林峻峰 start
-            this.$nextTick(()=>{
-              $('#Calories').prev().attr('type','number')
-            });
-            // add #5589 2023/04/11 数値IFのスタイル全不正 林峻峰 end
-            //6659------------------------------lig  start
-              $("#Calories").trigger("input");
-	  	        $("#Calories").bind("input propertychange", function() {
-              for(let i=0; i<Calories.value.length; i++) {
-              if(Calories.value[i] ==='－') {
-              Calories.value= Calories.value.replace(Calories.value[i],"")
-                }
+          // マウスホイールイベントイベント
+          numericTextBox.element.on("mousewheel", function(e) {
+            const current = component.parseEditorNumericValue(this.value) ?? 0;
+            if (e.originalEvent.wheelDelta / 120 > 0) {
+              this.value =
+                max > current
+                  ? current + step
+                  : min;
+              this.value = Math.round(this.value * 100) / 100;
+            } else {
+              this.value =
+                current > min
+                  ? current - step
+                  : max;
+              this.value = Math.round(Number(this.value) * 100) / 100;
             }
-            if(Calories.value.length==0){
-                    Calories.value =0
-              }
-              if(Calories.value.length==2 && !isNaN(Calories.value) && Calories.value[0]==0 ){
-                Calories.value=Calories.value%10
-              }
-		          });
-           //6659---------------------------------ljg   end
+          });
+          // 風袋/除水補正の丸め（千位カンマ付き表示値でも正しく数値化）
+          numericTextBox.element.on("change", function(e) {
+            const rounded = component.applyWeightInputRounding(
+              e.target.value,
+              isIntegerStep,
+              isTare
+            );
+            if (rounded !== null) {
+              this.value = rounded;
+            }
+          });
+          //6659 全角マイナス除去・先頭0の2桁入力補正
+          numericTextBox.element.on("input propertychange", function() {
+            const inputElement = numericTextBox.element.get(0);
+            if (!inputElement) {
+              return;
+            }
+            const sanitized = inputElement.value.replace(/－/g, "");
+            if (sanitized !== inputElement.value) {
+              inputElement.value = sanitized;
+            }
+            if (
+              sanitized.length === 2 &&
+              !isNaN(sanitized) &&
+              sanitized[0] === "0" &&
+              sanitized[1] !== "."
+            ) {
+              inputElement.value = String(Number(sanitized) % 10);
+            }
+          });
+          bindGridEditorEnterToCloseCell(this.getTareAndOffWaterInfoGridWidget(), container);
         } else {
           // 名称項目列クリック時
           this.swipeFlag = false;
@@ -1781,11 +2093,11 @@ export default {
             //#10500:装置設定デフォルトマスタにて風袋と除水補正の編集ができない Start
             `<textarea name="${data.field}" rows="1" class="k-valid k-textarea resize-obs-target" style="font-size: 1.0em; width:100%; resize: none; max-height: 30vh; min-height: unset;"/>`
             //#10500:装置設定デフォルトマスタにて風袋と除水補正の編集ができない End
-          ).on({
+            ).on({
             "input": (e)=>{
               setTimeout(() => {
                 e.currentTarget.style.height = "auto";
-                e.currentTarget.style.height = ( e.currentTarget.scrollHeight + 5 ) + "px";
+                e.currentTarget.style.height = ( e.currentTarget.scrollHeight + 5) + "px";
               }, 0);
             },
             "keydown": (e)=>{
@@ -1848,6 +2160,15 @@ export default {
     },
 
     /**
+     * @description 該当行が他院情報かどうかを判定
+     * @returns {Boolean} true = 他施設のデータは参照のみ
+     */
+    isOtherFacilityRow() {
+      const facilityCd = this.settingIndData?.facilityCd;
+      return facilityCd ? facilityCd !== this.getFacilityCd : false;
+    },
+
+    /**
      * ヘッダーテンプレート
      */
     headerTemplate() {
@@ -1871,12 +2192,13 @@ export default {
      * 矢印にクリックイベントの追加
      */
     addClickEvent() {
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
       // 左矢印にクリックした際1つ前の曜日に遷移する処理を追加
-      $("#left-arrow").on("click", () => {
+      scoped$("#left-arrow").off("click").on("click", () => {
         this.selectPreWeek();
       });
       // 右矢印にクリックした際1つ先の曜日に遷移する処理を追加
-      $("#right-arrow").on("click", () => {
+      scoped$("#right-arrow").off("click").on("click", () => {
         this.selectNextWeek();
       });
     },
@@ -1910,8 +2232,8 @@ export default {
      */
     addInputAssist() {
       if (this.iosFlg) {
-        if (document.getElementsByClassName("k-numerictextbox").length !== 0) {
-          const spinnerObj = document.getElementsByClassName("k-numerictextbox")[0].getElementsByClassName("k-select")[0];
+        const spinnerObj = queryScopedSelector(".k-numerictextbox .k-select", this.$el || this) || null;
+        if (spinnerObj) {
           // 編集が終了するとオブジェクトが削除される為、removeEvent処理は不要
           spinnerObj.ontouchend = function(event) {
             event.stopPropagation();
@@ -1922,14 +2244,14 @@ export default {
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fang add start
     async resetComponentIndData(structData){
       if (this.checkEdit()) {
-        this.$parent.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+        this._deviceSetRootOwner().messageDialogInfo.messageCd = 70000028;
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-        this.$parent.$parent.$parent.messageDialogInfo.type = "9";
+        this._deviceSetRootOwner().messageDialogInfo.type = "9";
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-        this.$parent.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._deviceSetRootOwner().messageDialogInfo.isDialogVisible = true;
         return;
       } else {
-        this.getComponentData(structData, 2);
+        return this.getComponentData(structData, 2);
       }
     },
     async getComponentData(structData, answer) {
@@ -1997,8 +2319,7 @@ export default {
       // 対象日時の治療情報取得(開始日付・治療方法・クールで絞り込み)
       let response = await ApiHelper.post(
         "/mainData/getOrdMainDataInfo",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         getErrorMessage('IndActionChart.vue', 'resetComponentData', error);
         throw error;
       });
@@ -2071,8 +2392,7 @@ export default {
       for (let i = 0; i < loacalData.length - 1; i++) {
         if (
           null !== data &&
-          undefined !== data
-        ) {
+          undefined !== data) {
           if (undefined !== data) {
             // 名称項目
             loacalData[i].name = data[`name_${i + 1}`];
@@ -2082,8 +2402,7 @@ export default {
             if (
               1 === this.selectedUnit &&
               null !== weightValue &&
-              "" !== weightValue
-            ) {
+              "" !== weightValue) {
               loacalData[i].weight = this.procDecimal(weightValue);
             } else {
               loacalData[i].weight = weightValue;
@@ -2094,57 +2413,183 @@ export default {
       return loacalData;
     },
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fang add end
-  /**
-   * @description 該当行が他院情報かどうかを判定
-   * @returns {Boolean} true = 他施設のデータは参照のみ
-   */
-    isOtherFacilityRow() {
-      if (!this.settingIndData) {
-        return false
-      }
-      return this.settingIndData.facilityCd ? this.settingIndData.facilityCd !== this.getFacilityCd : false
-    }
   }
 };
 </script>
 
 <style scoped>
-.tare-off-water-grid >>> .k-grid td {
+.tare-off-water-grid :deep(.k-grid td) {
   word-break: break-all;
   white-space: normal;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
+}
+
+.tare-off-water-grid :deep(.k-grid .k-table-td) {
+  word-break: break-all;
+  white-space: normal;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
 }
 
 @media screen and (min-height: 569px) {
-  .tare-offwater >>> .k-grid-content {
+  .tare-offwater :deep(.k-grid-content) {
     height: auto !important;
   }
 }
 
 .custom-tare-off-water-grid .segment-button,
-.custom-tare-off-water-grid >>> .segment__button,
-.custom-tare-off-water-grid >>> .segment__input,
-.custom-tare-off-water-grid >>> .deviceSetInfo-header-secound-name,
-.custom-tare-off-water-grid >>> .k-widget,
-.custom-tare-off-water-grid >>> .deviceSetInfo-header-row-name,
-.custom-tare-off-water-grid >>> .deviceSetInfo-row-name,
-.custom-tare-off-water-grid >>> .deviceSetInfo-name-content,
-.custom-tare-off-water-grid >>> .deviceSetInfo-weight-content {
+.custom-tare-off-water-grid :deep(.segment__button),
+.custom-tare-off-water-grid :deep(.segment__input),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-secound-name),
+.custom-tare-off-water-grid :deep(.k-widget),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-row-name),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-row-name),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-name-content),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-weight-content) {
   font-size: unset;
   border-radius: 0px;
   box-shadow: unset;
 }
 
 /* add redmine 5535 風袋・除水補正のkg/g切替ボタンのスタイル不正 宋qy start */
-.custom-tare-off-water-grid >>> .segment__button {
+.custom-tare-off-water-grid :deep(.segment__button) {
   background-color: #72a8de;
   color: #ffffff;
   border: none;
 }
-.custom-tare-off-water-grid >>> :checked + .segment__button {
+.custom-tare-off-water-grid :deep(:checked + .segment__button) {
   background-color: var(--btn1-execute-color);
 }
 /* add redmine 5535 風袋・除水補正のkg/g切替ボタンのスタイル不正 宋qy end */
-.custom-tare-off-water-grid >>> .resize-obs-target::-webkit-scrollbar {
+.custom-tare-off-water-grid :deep(.resize-obs-target::-webkit-scrollbar) {
   display: none;
+}
+
+.custom-tare-off-water-grid :deep(.k-grid table),
+.custom-tare-off-water-grid :deep(.k-grid-table) {
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse;
+}
+
+.custom-tare-off-water-grid :deep(.k-grid),
+.custom-tare-off-water-grid :deep(.k-grid-container),
+.custom-tare-off-water-grid :deep(.k-grid-content),
+.custom-tare-off-water-grid :deep(.k-grid-content-locked),
+.custom-tare-off-water-grid :deep(.k-grid-footer),
+.custom-tare-off-water-grid :deep(.k-grid-footer-locked),
+.custom-tare-off-water-grid :deep(.k-grid-footer-wrap) {
+  background-color: var(--main-background-color) !important;
+}
+
+.custom-tare-off-water-grid :deep(.k-grid-header) {
+  background: var(--ntss-list-header-background-color);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,0.1) 100%);
+}
+
+.custom-tare-off-water-grid :deep(.k-grid-header th),
+.custom-tare-off-water-grid :deep(.k-grid-header .k-table-th),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-row-name),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-first-name),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-secound-name) {
+  color: #ffffff;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-row-name .k-link),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-first-header .k-link),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-secound-name .k-link),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-row-name .k-cell-inner),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-first-header .k-cell-inner),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-secound-name .k-cell-inner),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-row-name .k-column-title),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-first-name .k-column-title),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-secound-name .k-column-title) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  text-align: center !important;
+}
+
+.custom-tare-off-water-grid :deep(th.deviceSetInfo-header-row-name),
+.custom-tare-off-water-grid :deep(td.deviceSetInfo-row-name),
+.custom-tare-off-water-grid :deep(.k-table-td.deviceSetInfo-row-name) {
+  width: 90px !important;
+  max-width: 90px !important;
+  background-color: var(--ntss-header-background-color) !important;
+  color: var(--ntss-header-color) !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  border-bottom: solid 0.1px var(--ntss-list-border-color) !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.custom-tare-off-water-grid :deep(.deviceSetInfo-row-name .k-cell-inner) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.custom-tare-off-water-grid :deep(.deviceSetInfo-name-content),
+.custom-tare-off-water-grid :deep(td.deviceSetInfo-name-content),
+.custom-tare-off-water-grid :deep(.k-table-td.deviceSetInfo-name-content) {
+  text-align: left !important;
+  background-color: var(--ntss-base-background-color) !important;
+  color: var(--row-1-color) !important;
+  border-left: solid 0.1px var(--ntss-list-border-color) !important;
+  border-bottom: solid 0.1px var(--ntss-list-border-color) !important;
+}
+
+.custom-tare-off-water-grid :deep(.deviceSetInfo-weight-content),
+.custom-tare-off-water-grid :deep(td.deviceSetInfo-weight-content),
+.custom-tare-off-water-grid :deep(.k-table-td.deviceSetInfo-weight-content) {
+  text-align: right !important;
+  background-color: var(--ntss-base-background-color) !important;
+  color: var(--row-1-color) !important;
+  border-left: solid 0.1px var(--ntss-list-border-color) !important;
+  border-bottom: solid 0.1px var(--ntss-list-border-color) !important;
+  padding-right: 12px !important;
+}
+
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-first-name),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-header-secound-name) {
+  border-left: solid 0.1px var(--ntss-list-border-color) !important;
+}
+
+.custom-tare-off-water-grid :deep(.k-grid-header),
+.custom-tare-off-water-grid :deep(.k-grid-content),
+.custom-tare-off-water-grid :deep(.k-table),
+.custom-tare-off-water-grid :deep(table),
+.custom-tare-off-water-grid :deep(th),
+.custom-tare-off-water-grid :deep(td),
+.custom-tare-off-water-grid :deep(.k-table-th),
+.custom-tare-off-water-grid :deep(.k-table-td) {
+  box-sizing: content-box !important;
+}
+
+.custom-tare-off-water-grid :deep(.k-table-row) {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.custom-tare-off-water-grid :deep(.k-table-thead .k-table-row:nth-child(2) > .deviceSetInfo-header-secound-name:nth-child(1)) {
+  border-right: none;
+}
+
+.custom-tare-off-water-grid :deep(td.deviceSetInfo-weight-content.k-edit-cell .k-numerictextbox .k-input-inner),
+.custom-tare-off-water-grid :deep(td.deviceSetInfo-weight-content .deviceSetInfo-numbersTextbox),
+.custom-tare-off-water-grid :deep(.deviceSetInfo-weight-content .k-input-inner) {
+  text-align: right !important;
 }
 </style>

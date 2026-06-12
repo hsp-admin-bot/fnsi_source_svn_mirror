@@ -41,7 +41,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -65,7 +65,7 @@
                 type="date"
                 model-event="change"
                 v-model="localCondition.treatDate"
-                v-validate="'required|date_format:yyyy-MM-dd'"
+                v-rules="'required|date_format:yyyy-MM-dd'"
               >
               <common-calendar v-model="localCondition.treatDate" />
             </div> -->
@@ -77,8 +77,8 @@
                 name="treatDate"
                 type="date"
                 v-model="localCondition.treatDate"
-                data-vv-scope="localCondition"
-                v-validate="'required|date_format:yyyy-MM-dd'"
+                data-validation-scope="localCondition"
+                v-rules="'required|date_format:yyyy-MM-dd'"
               > -->
               <!--#10715:日付IF修正Start（必須追加+param修正）-->
               <date-input
@@ -88,24 +88,24 @@
                 :isRequired="true"
                 v-model="localCondition.treatDate"
                 @handleClearInput="localCondition.treatDate = null"
-                data-vv-scope="localCondition"
+                data-validation-scope="localCondition"
               />
               <!--#10715:日付IF修正End（必須追加+param修正）-->
               <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 end -->
               <common-calendar v-model="localCondition.treatDate" />
             </div>
             <span class="error-message">{{
-              errors.first("localCondition.treatDate")
+              getValidationError("localCondition.treatDate")
             }}</span>
             <!-- mod FNSI-横展開 日付のチェックの追加対応_チェックリスト機能分 周 end -->
           </v-ons-col>
         </v-ons-row>
-        <v-ons-row v-show="errors.has('treatDate')">
+        <v-ons-row v-show="hasValidationError('treatDate')">
           <td>
             <p
-              v-show="errors.has('treatDate')"
+              v-show="hasValidationError('treatDate')"
               class="error-message"
-            >{{ errors.first('treatDate') }}</p>
+            >{{ getValidationError('treatDate') }}</p>
           </td>
         </v-ons-row>
         <v-ons-row class="condition-row" v-if="getIsDisplayTreatingMode">
@@ -197,10 +197,10 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { EventBus } from "@/eventBus.js";
-import { mapGetters, mapActions } from "vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -210,6 +210,7 @@ import { CHECK_LIST } from "@/constants/defaultSettingConstants";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 //#5590 2023/04/20 ×を常に表示するように修正 張博 start
 import DateInput from "@/components/common/DateInput.vue";
+import { getScopedSessionStorage } from "@/functions/common/LayoutMeasureHelper";
 //#5590 2023/04/20 ×を常に表示するように修正 張博 end
 
 export default {
@@ -278,7 +279,7 @@ export default {
      * OKボタンがクリックできるかどうか.
      */
     canSave() {
-      return this.isChanged && this.$validator.errors.items.length === 0;
+      return this.isChanged && this.validationErrors.length === 0;
     },
     //add FNSI修正 redmine4255 房 start
     // -----------------------------------------
@@ -361,7 +362,7 @@ export default {
       // 検索条件クリアして画面を更新
       this.localCondition.bedGroupCd = -1;
       this.localCondition.nextPat = 0;
-      let today = moment(new Date());
+      let today = dayjs(new Date());
       this.localCondition.treatDate = today.format("YYYY-MM-DD");
       this.localCondition.kurCd = -1;
       this.localCondition.viewTreatDate = false;
@@ -431,17 +432,23 @@ export default {
       	condList.push({ name:"ベッドグループ", text: "すべて" });
       }
       // add #11285 機能帳票の印刷情報対応② 高 start
-      sessionStorage.setItem('roomBedGroupNameCheckList', JSON.stringify(condList.find(item => item.name === "ベッドグループ").text));
+      getScopedSessionStorage(this.$el || this).setItem('roomBedGroupNameCheckList', JSON.stringify(condList.find(item => item.name === "ベッドグループ").text));
       // add #11285 機能帳票の印刷情報対応② 高 end
       // クール
-      if (!this.getIsDisplayTreatingMode && `${condObj.kurCd}` !== "-1") {
+      if (!this.getIsDisplayTreatingMode) {
         const kur = this.findKurSelectorByCode(condObj.kurCd);
-        const text = kur ? kur.name : "";
-        condList.push({ name:"クール", text });
+        if (kur) {
+          condList.push({ name:"クール", text: kur.name });
+        } else {
+          this.localCondition.kurCd = -1;
+          condList.push({ name:"クール", text: "すべて" });
+          // 抽出条件登録
+          this.setCondition(deepCopy(this.localCondition));
+        }
       }
       // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
       const kurItem = condList.find(item => item.name === "クール");
-      sessionStorage.setItem('kurGroupNameStatusList', JSON.stringify(kurItem ? kurItem.text : ""));
+      getScopedSessionStorage(this.$el || this).setItem('kurGroupNameStatusList', JSON.stringify(kurItem ? kurItem.text : ""));
       // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy end
       // 治療日列表示
       if (condObj.viewTreatDate) {
@@ -462,9 +469,9 @@ export default {
   watch:{
     "localCondition.treatDate": {
       handler() {
-        this.$validator.reset("localCondition");
+        this.resetValidation("localCondition");
         setTimeout(() => {
-          this.$validator.validate("localCondition.treatDate");
+          this.validateField("localCondition.treatDate");
         }, 0);
       }
     }
@@ -482,7 +489,7 @@ export default {
     } else {
       // 画面遷移パラメータ取得
       const queryParameters = this.getQueryParameters();
-      let treatDate = moment(new Date()).format("YYYY-MM-DD");
+      let treatDate = dayjs(new Date()).format("YYYY-MM-DD");
       if (queryParameters.DATE) {
         treatDate = queryParameters.DATE;
         this.changeDisplayName(false);
@@ -499,7 +506,7 @@ export default {
         // mod 不具合 #6265 dou start
         // this.localCondition.kurCd = -1;
         this.localCondition.kurCd = this.defaultCondition.kurCd;
-        this.localCondition.dispMode = this.defaultCondition.dispMode;
+        this.changeIsDisplayTreatingMode(this.defaultCondition.dispMode === "1" ? true : false);
         // mod 不具合 #6265 dou end
         this.localCondition.treatDate = treatDate;
         this.setCondition(deepCopy(this.localCondition));
@@ -531,7 +538,7 @@ export default {
   mounted () {
     EventBus.$emit("addLeftmostHeaderMargin");
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   }

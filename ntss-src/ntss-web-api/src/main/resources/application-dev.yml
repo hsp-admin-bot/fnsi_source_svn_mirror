@@ -25,8 +25,9 @@ spring:
       username: nkk4
       password: nkk4
   jackson:
-    serialization:
-      WRITE_DATES_AS_TIMESTAMPS: false
+    datatype:
+      datetime:
+        WRITE_DATES_AS_TIMESTAMPS: false
   servlet:
     multipart:
       max-file-size: 100MB

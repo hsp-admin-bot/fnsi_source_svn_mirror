@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body">
+    <template #body>
+      <div>
       <v-ons-list modifier="inset">
         <v-ons-list-header>メニューバー表示設定</v-ons-list-header>
         <v-ons-list-item class="ntss-theme-screen">
@@ -74,26 +75,29 @@
           </draggable>
         </v-ons-list-item>
       </v-ons-list>
-    </div>
-    <div slot="footer" class="flex-container">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button btn2-cancel denial-btn" @click="cancel">キャンセル</v-ons-button>
       </div>
       <div class="registration-btn-area" style="background:none">
         <v-ons-button class="button btn1-execute registration-btn" :disabled="!isChanged" @click="registration">保存</v-ons-button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { FUNC_DEVICE_EDGE_OPERATION } from "@/constants/function-code";
-import { EventBus } from "@/eventBus.js";
-import vuedraggable from "vuedraggable";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
@@ -102,6 +106,13 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 import { fetchMenuData } from "@/functions/MenuBarFunctions";
+import {
+  getModalContainerElement,
+  getModalFooterElement,
+  getModalToolbarElement,
+  getScopedElementsByClassName,
+  getScopedNavigator
+} from "@/functions/common/LayoutMeasureHelper";
 
 //URI
 const uriFunction = "/mstInfo/sysFunction";
@@ -113,7 +124,7 @@ export default {
   mixins: [MultiModalMixin],
   components: {
     "modal-base": ModalBase,
-    "draggable": vuedraggable
+    "draggable": VueDraggable
   },
   data() {
     return {
@@ -376,6 +387,28 @@ export default {
         width: node.offsetWidth * 1.1,
         height: node.offsetHeight
       };
+    },
+    adjustModalLayout() {
+      const root = this.$el || this;
+      const listItems = getScopedElementsByClassName("list-item", root);
+      if (!listItems[1]) {
+        return;
+      }
+      listItems[1].style.paddingLeft = "0px";
+      const dialogHeigth = getModalContainerElement(root)?.offsetHeight || 0;
+      const dialogHeaderHeigth = getModalToolbarElement(root)?.offsetHeight || 0;
+      const dialogFooterHeigth = getModalFooterElement(root)?.offsetHeight || 0;
+      const settingAreaHeigth = (listItems[0]?.offsetHeight || 0) + 28;
+      let adjustHeigth = 0;
+      if (getScopedNavigator(root)?.userAgent?.match(/Android/)) {
+        adjustHeigth = 82;
+      } else {
+        adjustHeigth = 47;
+      }
+      listItems[1].style.height = `${dialogHeigth - dialogHeaderHeigth - dialogFooterHeigth - settingAreaHeigth - adjustHeigth}px`;
+      if (listItems[1].firstElementChild) {
+        listItems[1].firstElementChild.style.display = "unset";
+      }
     }
   },
   created() {
@@ -384,7 +417,7 @@ export default {
     // 共通ローダー:表示開始
     this.setLoadingScreenVisible(true);
 
-    const ua = navigator.userAgent;
+    const ua = getScopedNavigator(this.$el || this).userAgent;
     if (ua.match(/Android/)) {
       this.isAndroid = true;
     }
@@ -452,20 +485,7 @@ export default {
           .filter(e => this.inputModel.useFuncs.includes(e));
 
         // スタイルの調整
-        document.getElementsByClassName("list-item")[1].style.paddingLeft = "0px"
-        const dialogHeigth = document.getElementsByClassName("modal-container")[0].offsetHeight;
-        const dialogHeaderHeigth = document.getElementsByClassName("toolbar")[0].offsetHeight;
-        const dialogFooterHeigth = document.getElementsByClassName("modal-footer")[0].offsetHeight;
-        const settingAreaHeigth = document.getElementsByClassName("list-item")[0].offsetHeight + 28;
-        // ヘッダー、フッター以外のマージン等の調整
-        let adjustHeigth = 0;
-        if (navigator.userAgent.match(/Android/)) {
-          adjustHeigth = 82;
-        } else {
-          adjustHeigth = 47;
-        }
-        document.getElementsByClassName("list-item")[1].style.height = (dialogHeigth - dialogHeaderHeigth - dialogFooterHeigth - settingAreaHeigth - adjustHeigth) + "px";
-        document.getElementsByClassName("list-item")[1].firstElementChild.style.display = "unset";
+        this.adjustModalLayout();
       })
       .catch(error => {
         // 共通ローダー:表示終了

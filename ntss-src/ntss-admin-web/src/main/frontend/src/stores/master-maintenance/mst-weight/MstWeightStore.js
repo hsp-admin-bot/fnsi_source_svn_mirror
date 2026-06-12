@@ -5,36 +5,30 @@ import MstWeightCheckStore from "@/stores/master-maintenance/mst-weight/MstWeigh
 // @ts-ignore
 import MstWeightPrintingStore from "@/stores/master-maintenance/mst-weight/MstWeightPrintingStore";
 // @ts-ignore
-import {sendRequestPostMstMntSynchro, sendRequestPostMstMntSynchroByFacilityCd, sendRequestMstChangedNotify} from "@/apis/mst-weight-maintenance";
-// #11987 2025.12.08 add スケールベッド対応 Storeの追加 TDC渡辺 start
-// スケールベッドStore
-// @ts-ignore
 import MstWeightScaleBedStore from "@/stores/master-maintenance/mst-weight/MstWeightScaleBedStore";
-// #11987 2025.12.08 add スケールベッド対応 Storeの追加 TDC渡辺 end
+
+import {sendRequestPostMstMntSynchro, sendRequestPostMstMntSynchroByFacilityCd, sendRequestMstChangedNotify} from "@/apis/mst-weight-maintenance";
 
 export default {
   // @ts-ignore
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   namespaced: true,
   modules: {
     check: MstWeightCheckStore,
-    // #11987 2025.12.08 mod スケールベッド対応 Storeの追加 TDC渡辺 start
-    //print: MstWeightPrintingStore
     print: MstWeightPrintingStore,
     scale_bed: MstWeightScaleBedStore
-    // #11987 2025.12.08 mod スケールベッド対応 Storeの追加 TDC渡辺 start
   },
   state: {
     // 同一画面内共通編集フラグ
     isGridEditing: false,
-    // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start
+    // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start   
     isChangedMstWeight:true,
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 end
   },
   getters: {
     // 編集フラグ
     getIsGridEditing: state => state.isGridEditing,
-    // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start
+    // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start   
     getIsChangedMstWeight :state =>state.isChangedMstWeight
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 end
   },
@@ -49,7 +43,7 @@ export default {
     setIsGridEditing({ commit }, isEditing) {
       commit("setIsGridEditing", isEditing);
     },
-    // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start
+    // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start   
     /**
      * @param {{commit: function}} context
      * @param {Boolean} isChangedMstWeight
@@ -72,7 +66,7 @@ export default {
     // add マスタ一覧 1･施設切替を可能とする 孔s start
     requestMst2MntTableByFacilityCd(tmp, facilityCd) {
       return sendRequestPostMstMntSynchroByFacilityCd(facilityCd);
-    },
+    }
     // add マスタ一覧 1･施設切替を可能とする 孔s end
   },
   mutations: {
@@ -86,7 +80,7 @@ export default {
     setIsGridEditing(state, isEditing) {
       state.isGridEditing = isEditing;
     },
-    // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start
+    // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start 
     setIsChangedMstWeight(state, isChangedMstWeight) {
       state.isChangedMstWeight = isChangedMstWeight
     }

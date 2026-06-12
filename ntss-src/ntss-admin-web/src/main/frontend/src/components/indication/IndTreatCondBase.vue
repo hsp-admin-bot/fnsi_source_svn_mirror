@@ -1,21 +1,24 @@
 <script>
-import { mapGetters,mapActions } from "vuex";
+import { mapGetters,mapActions } from "@/compat/vue/vuex";
 import MasterSelector from "@/components/common/master-selector/MasterSelector";
 import customInput from "@/components/common/custom-form-tags/CustomInput";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
 import customInputTime from "@/components/common/custom-form-tags/CustomInputTime";
 import customRadio from "@/components/common/custom-form-tags/CustomRadio";
 import customInputTimeSpecial from "@/components/common/custom-form-tags/CustomInputTimeSpecial";
-import customDivShowSelectedItemTreatCond from "@/components/common/custom-form-tags/CustomDivShowSelectedItemTreatCond";
+import customDivShowSelectedItem from "@/components/common/custom-form-tags/CustomDivShowSelectedItem";
 //add #10150 piao start
 import {CODES} from "@/constants/TreatmentRecord";
 //add #10150 piao end
 // add #10196 数値IFのスタイル全不正 linjunfeng start
-import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro'
-import BigNumber from 'bignumber.js';
+
+import IndicationOwnerMixin from '@/components/indication/IndicationOwnerMixin';
+import BigNumber from "@/compat/number/bignumber";
 // add #10196 数値IFのスタイル全不正 linjunfeng end
 
 export default {
+  mixins: [IndicationOwnerMixin],
   components: {
     "pop-over": MasterSelector,
     "custom-input": customInput,
@@ -23,11 +26,14 @@ export default {
     "custom-input-time": customInputTime,
     "custom-radio": customRadio,
     "custom-input-time-special":customInputTimeSpecial,
-    "show-selected-item": customDivShowSelectedItemTreatCond,
+    "show-selected-item": customDivShowSelectedItem,
     // add #10196 数値IFのスタイル全不正 linjunfeng start
     "custom-input-number-pro": CustomInputNumberPro,
     // add #10196 数値IFのスタイル全不正 linjunfeng end
   },
+
+  // 親が @input リスナで使用するため input を明示宣言する。
+  emits: ["input"],
 
   props: {
     /**
@@ -95,7 +101,10 @@ export default {
         initValue: this.value,
         //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 start
         //editValue: this.value
-        editValue: this.velue ? this.velue : this.value,
+        // mod #10937 20260428 Ji start
+        // editValue: this.velue ? this.velue : this.value,
+        editValue: this.velue ?? this.value,
+        // mod #10937 20260428 Ji end
         //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 end
         /* add by chamaojia 2023-04-20 [8537] 初回計算フラグの追加  --start */
         firstCalculateFlag : true
@@ -147,8 +156,7 @@ export default {
       const useMedicineMixList = ["15","19","25"];
       if (
         useMedicineMixList.includes(this.treatItemCd) &&
-        editedValue !== null && typeof editedValue !== 'undefined'
-      ) {
+        editedValue !== null && typeof editedValue !== 'undefined') {
         //if (String(editedValue).match(/\$/)) {
         if (editedType == '2') {
           //editedValue = Number(editedValue.split("$")[0]);
@@ -252,7 +260,7 @@ export default {
       if (!this.isMst) {
         const useMedicineList = ["17","22","26","27","28"];
         if (useMedicineList.includes(this.treatItemCd) && this.decPoint) {
-          let componentDataList = this.$parent.$parent.componentData.filter(item => {
+          let componentDataList = this._indicationFlowOwner().componentData.filter(item => {
             return String(item.cd) === this.treatItemCd;
           });
           let rstDialysisState = componentDataList[0].fields.rstDialysisState;
@@ -346,6 +354,9 @@ export default {
 
       this.popoverData.popoverContentSelected = data;
       this.displayInputValue.editValue = data.text || null;
+      if (data && Object.prototype.hasOwnProperty.call(data, "unit")) {
+        this.unit = data.unit;
+      }
       this.popoverData.isMedicineCdChg = true;
       // add 10179 by kangjie 20240226 start
       this.popoverData.type = type;
@@ -468,7 +479,7 @@ export default {
         // #10196 数値IFのスタイル全不正 linjunfeng end
         // mod FNSI-小数点の修正 楊 end
         // mod FNSI-【8630】単位が表示されない対応 曲 end
-      ) {
+        ) {
         return 0;
       } else {
         return 1;
@@ -545,12 +556,12 @@ ons-row {
   padding: 10px;
 }
 
-.action-condition-data-column >>> .time-span {
+.action-condition-data-column :deep(.time-span) {
   min-width: fit-content;
   height: 2em;
   box-sizing: border-box;
 }
-.action-condition-data-column >>> input[type="number"] {
+.action-condition-data-column :deep(input[type="number"]) {
   min-width: 1.4em;
   height: fit-content !important;
 }
@@ -566,10 +577,10 @@ ons-row {
 }
 /* add FNSI-薬剤指示画面等の画面崩れの修正 楊 end */
 /*// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start*/
-::v-deep .com-basic-sub-btn {
+:deep(.com-basic-sub-btn) {
     margin-left: 5px
   }
-  ::v-deep .com-basic-sub-input { 
+  :deep(.com-basic-sub-input) {
     margin-left: 10px;
     min-width: 13em;
     width: 100%;

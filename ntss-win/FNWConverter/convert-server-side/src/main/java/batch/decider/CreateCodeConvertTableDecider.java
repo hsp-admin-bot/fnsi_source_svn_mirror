@@ -4,12 +4,12 @@ import batch.ApplicationConst;
 import batch.ApplicationConst.YmlElementNames;
 import batch.config.DbRelationConfig;
 import batch.part.PsqlCopyUtils;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.job.flow.FlowExecutionStatus;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
-import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

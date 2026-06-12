@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.core.entity;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import lombok.Getter;
 import lombok.Setter;
 import org.seasar.doma.Entity;
@@ -25,7 +25,7 @@ import java.util.Objects;
 @Table(name = "mni_monitor")
 @Getter
 @Setter
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class MniMonitor extends BaseEntity {
   /**
    * 生体モニタリング管理番号

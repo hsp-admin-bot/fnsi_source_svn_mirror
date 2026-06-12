@@ -3,14 +3,14 @@ package jp.co.nikkiso.ntss.device_edge_updater.config;
 import java.io.File;
 import java.nio.file.Paths;
 
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.server.MimeMappings;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.boot.web.servlet.ServletContextInitializer;
-import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
+import org.springframework.boot.web.server.servlet.ConfigurableServletWebServerFactory;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 

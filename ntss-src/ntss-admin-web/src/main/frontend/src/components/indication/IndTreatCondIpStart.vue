@@ -67,9 +67,9 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import IndTreatCondBase from "@/components/indication/IndTreatCondBase";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 export default {
   mixins: [IndTreatCondBase],
 
@@ -96,8 +96,12 @@ export default {
   //8204 zhou 【デグレ】治療条件モーダルにて、使用しない項目を設定できてしまう add start
   created(){
     if (this.isIndication) {
-      this.displayInputValue.editValue = this.velue == 0 ? 0 : 1
-      this.displayInputValue.initValue = this.value == 0 ? 0 : 1
+      // mod #10937 20260428 Ji start
+      // this.displayInputValue.editValue = this.velue === 0 ? 0 : 1
+      // this.displayInputValue.initValue = this.value === 0 ? 0 : 1 
+      this.displayInputValue.editValue = this.velue === null ? null : this.velue == 0 ? 0 : 1
+      this.displayInputValue.initValue = this.value === null ? null : this.value == 0 ? 0 : 1 
+      // mod #10937 20260428 Ji end
     }
   },
   //8204 zhou 【デグレ】治療条件モーダルにて、使用しない項目を設定できてしまう add end

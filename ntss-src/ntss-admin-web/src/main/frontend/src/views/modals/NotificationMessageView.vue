@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="onClose">
-    <div slot="body" class="notification-message-list">
+    <template #body>
+      <div class="notification-message-list">
       <div class="list-condition" style="height: 4em;line-height:4em;">
         <v-ons-row>
           <v-ons-col style="max-width: 12em;">
@@ -21,8 +22,8 @@
       <div class="message-list" ref="ntssList">
       <!-- mod #10110 通知一覧から既読にした通知以外も消える dengshen end -->
       <!-- mod FNSI-通知表示が遅いを修正 江 end -->
-        <template v-for="(message, index) in messages">
-          <transition name="message-area" :key="message.no">
+        <template v-for="(message, index) in messages" :key="message.no">
+          <transition name="message-area">
             <v-ons-row
               v-if="displayAll || !message.isRead"
             >
@@ -82,8 +83,10 @@
         >メーカー通知登録</v-ons-button>
         <!-- mod FNSI-コードをマージ 江 end -->
       </div>
-    </div>
-    <div slot="footer" class="flex-container">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <!-- mod FNSI-コードをマージ 江 start -->
       <!-- <div class="registration-btn-area" style="background:none">
         <v-ons-button class="button registration-btn" @click="onClose">閉じる</v-ons-button>
@@ -92,21 +95,23 @@
         <v-ons-button class="button btn2-cancel denial-btn" @click="onClose">閉じる</v-ons-button>
       </div>
       <!-- mod FNSI-コードをマージ 江 end -->
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import NotificationMessageMixin from "@/components/common/notification-message/NotificationMessageMixin";
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
-import sortBy from "lodash/sortBy";
-import partition from "lodash/partition";
-import orderBy from "lodash/orderBy";
+import sortBy from "@/compat/collections/lodash/sortBy";
+import partition from "@/compat/collections/lodash/partition";
+import orderBy from "@/compat/collections/lodash/orderBy";
+import nameDuplication3Img from "@/assets/name_duplication3.png";
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
 
 export default {
@@ -122,7 +127,7 @@ export default {
       isDispMakerNotice: false,
       offset: 0,
       // 同姓同名アイコン
-      image_src_same: require('../../assets/name_duplication3.png'),
+      image_src_same: nameDuplication3Img,
       allDataList: []
     };
   },
@@ -319,7 +324,7 @@ export default {
       list.addEventListener('scroll', this.onScroll);
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     const list = this.$refs.ntssList;
     if (list) {
       list.removeEventListener('scroll', this.onScroll);

@@ -19,9 +19,7 @@ public class MstListComposeResource {
 
   @PostMapping("/mst-list-compose")
   public MstListComposeResponse selectMstListCompose(
-    @RequestBody MstListComposeRequest request
-  ) {
+    @RequestBody MstListComposeRequest request) {
     return mstListComposeService.selectMstListCompose(request);
   }
-
 }

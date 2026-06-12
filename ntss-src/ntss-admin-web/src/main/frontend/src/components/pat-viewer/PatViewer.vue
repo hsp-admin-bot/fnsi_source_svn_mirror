@@ -118,7 +118,7 @@
     <div>
       <v-ons-popover
         :class="[fontSizeSet, 'popover-style']"
-        :visible.sync="popoverVisible1"
+        v-model:visible="popoverVisible1"
         :target="popoverTarget1"
         :direction="popoverDirection1"
         :cover-target="popoverCoverTarget1"
@@ -141,7 +141,11 @@
     </div>
 
     <!-- コンテンツ部分 -->
-    <div v-if="0 !== ordMainData.length" class="list-content-div"  :style="contentClass">
+    <div
+      v-if="patId != null && (0 !== ordMainData.length || !dataReady)"
+      class="list-content-div"
+      :style="contentClass"
+    >
       <div v-for="(layout, index) in selectedLayout" :key="index">
         <component
           v-if="dataReady && allComponents.includes(layout.component)"
@@ -156,7 +160,7 @@
     <!-- 表示条件用ポップオーバー -->
     <div v-show="popoverVisible">
       <v-ons-popover
-        :visible.sync="popoverVisible"
+        v-model:visible="popoverVisible"
         :target="popoverTarget"
         :direction="popoverDirection"
         :cover-target="popoverCoverTarget"
@@ -205,22 +209,22 @@
                     name="baseDay"
                     type="date"
                     v-model="baseDay"
-                    data-vv-scope="baseDayScope"
-                    v-validate="'required|date_format:yyyy-MM-dd'"
+                    data-validation-scope="baseDayScope"
+                    v-rules="'required|date_format:yyyy-MM-dd'"
                     /> -->
                     <date-input
                       v-model="baseDay"
                       id="baseDay"
                       name="baseDay"
                       :classes="'input-area ntss-input-date ntss-custom-input'"
-                      data-vv-scope="baseDayScope"
+                      data-validation-scope="baseDayScope"
                       isRequired
                     />
                     <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 end -->
                   <common-calendar v-model="baseDay" />
                 </div>
                 <span class="error-message">{{
-                  errors.first("baseDayScope.baseDay")
+                  getValidationError("baseDayScope.baseDay")
                 }}</span>
               </div>
               <!-- mod FNSI-横展開 日付のチェックの追加対応_患者経過総合ビューア「初期表示」機能分 周 end -->
@@ -430,7 +434,7 @@
               <v-ons-button
                 class="common-style-select-button"
                 @click="
-                  showIndSupportModal();
+                  showIndSupportModal({ startDate: baseDay });
                   popoverVisible = false;
                 "
               >
@@ -470,7 +474,7 @@
 
       <div v-if="messageDialogInfo.isDialogVisible">
         <message-dialog
-          :visible.sync="messageDialogInfo.isDialogVisible"
+          v-model:visible="messageDialogInfo.isDialogVisible"
           :message-cd="messageDialogInfo.messageCd"
           :type="messageDialogInfo.type"
           :string-params="messageDialogInfo.stringParams"
@@ -492,13 +496,13 @@
 /**
  * Vue関連
  */
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 
 /**
  * 外部ライブラリ関連
  */
 // 日付操作
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * ポップオーバー関連
@@ -556,8 +560,8 @@ import Complaint from "@/components/pat-viewer/contents/treatment/Complaint";
 /**
  * jQuery
  */
-import $ from "jquery";
-import _ from "underscore";
+
+import _ from "@/compat/collections/lodash";
 
 /**
  * 共通操作
@@ -565,8 +569,9 @@ import _ from "underscore";
 import { deepCopy, getHolidayStyle } from "@/functions/common/CommonFunctions";
 
 import { ApiHelper } from "@/apis/AxiosHelper";
+import { sendRequestPostTreatDateList } from "@/apis/ord-main";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 import PopoverMixin from "@/components/PopoverMixin";
 import { KEY_NAME_PAT_VIEWER } from "@/constants/defaultSettingConstants";
@@ -584,10 +589,17 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 import { getMstInfo } from "@/apis/mst-info.js";
 import DateInput from "@/components/common/DateInput.vue";
 import PrintMixin from "@/components/PrintMixin";
+import asset0Img from "../../assets/0.png";
+import asset1Img from "../../assets/1.png";
+import asset3Img from "../../assets/3.png";
+import asset4Img from "../../assets/4.png";
+import asset6Img from "../../assets/6.png";
+import { getLatestHeaderElement, getHeaderHeight, getFooterMenuClientHeight, getScopedElementById, getScopedElementsByClassName, getScopedJQuery } from "@/functions/common/LayoutMeasureHelper";
+
 /**
  * 曜日の日本語化
  */
-moment.updateLocale("ja", {
+dayjs.updateLocale("ja", {
   weekdays: [
     "日曜日",
     "月曜日",
@@ -827,15 +839,14 @@ export default {
       isShowComponents: new Set(),
       dataReady: false,
       printTargetClass: ["list-content"],
-      // add #9713 特定操作で3/7/14日表示のグラフの横幅が1カ月表示になる wangchao 20260520 start
       chartRenderedCount: 0,
       totalChartsExpected: 0,
       chartRenderResolve: null,
-      // add #9713 特定操作で3/7/14日表示のグラフの横幅が1カ月表示になる wangchao 20260520 end
     };
   },
 
   computed: {
+    ...mapGetters("loading-screen", ["getLoadingScreenLocked"]),
     ...mapGetters("pat-viewer", [
       "getDateList",
       "getDialysisStateArray",
@@ -848,7 +859,7 @@ export default {
       isDieMessage: "getIsDieMessage"
     }),
 
-    ...mapGetters("pat-info", ["selectedPat"]),
+    ...mapGetters("pat-info", ["selectedPat", "selectedPatId"]),
     ...mapGetters("pat-info", {
       patId: "selectedPatId"
     }),
@@ -886,10 +897,8 @@ export default {
     ...mapGetters("account-edit", {
       getFontSize: "getFontSize",
       getDefaultSetting: "getDefaultSetting",
-      /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
       getPatientShareMode: "getPatientShareMode",
-      getPatientShareFacilityCdMode: "getPatientShareFacilityCdMode",
-      /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
+      getPatientShareFacilityCdMode: "getPatientShareFacilityCdMode"
     }),
 
     facilityCd() {
@@ -923,7 +932,7 @@ export default {
      */
     selectedLayout() {
       const layout = this.getDispLayoutItemListData.find(ele => {
-        return this.selectedLayoutCd === ele.layoutCd;
+        return Number(this.selectedLayoutCd) === Number(ele.layoutCd);
       });
       if (!layout) {
         return [];
@@ -936,13 +945,13 @@ export default {
      */
     getTitleDay() {
       // 表示開始日の年
-      const yearStart = moment(this.startDay).year();
+      const yearStart = dayjs(this.startDay).year();
       // 表示終了日の年
-      const yearEnd = moment(this.endDay).year();
+      const yearEnd = dayjs(this.endDay).year();
       // 表示開始日の月
-      const monthStart = moment(this.startDay).month() + 1;
+      const monthStart = dayjs(this.startDay).month() + 1;
       // 表示終了日の月
-      const monthEnd = moment(this.endDay).month() + 1;
+      const monthEnd = dayjs(this.endDay).month() + 1;
 
       // 表示開始年月の文字列
       let label = `${yearStart}.${monthStart}`;
@@ -967,7 +976,7 @@ export default {
      * OKボタンがクリックできるかどうか.
      */
     canSave() {
-      return this.$validator.errors.items.length === 0;
+      return this.validationErrors.length === 0;
     },
     // add FNSI-横展開 日付のチェックの追加対応_患者経過総合ビューア「初期表示」機能分 周 end
     /**
@@ -1110,8 +1119,7 @@ export default {
     },
   },
   watch: {
-    /* add by chamaojia 2026-03-20 [12462] 患者情報共有->患者経過総合ビューア --start */
-    getPatientShareMode(newValue) {
+    getPatientShareMode() {
       if (!this.getPatientShareFacilityCdMode) {
         this.refresh();
       }
@@ -1121,63 +1129,28 @@ export default {
         this.refresh();
       }
     },
-    /* add by chamaojia 2026-03-20 [12462] 患者情報共有->患者経過総合ビューア --end */
     selectedPat: {
       handler(newVal) {
         // 選択患者変更時サイドバーを閉じる
         this.isSideBarVisble = false;
 
         // 患者名の文字数により文字サイズを変更する
-        let nameArea = document.getElementById("pat-header-pat-name");
-        if (newVal === null || nameArea.classList.contains("pat-create")) {
-          nameArea.style.fontSize = "";
+        const nameArea = getScopedElementById("pat-header-pat-name", this.$el || null);
+        if (!nameArea || newVal === null || nameArea.classList.contains("pat-create")) {
+          if (nameArea) {
+            nameArea.style.fontSize = "";
+          }
            //mod FNSI-6904 劉全航 start
           if(this.isTreatmentOnly
-            ||baseDay
+            ||this.baseDay
             ||this.selectedPeriod
-            ||setSelectedLayoutCd
-            ||isExtendedView
-            ||selectedShowIndRst){
+            ||this.setSelectedLayoutCd
+            ||this.isExtendedView
+            ||this.selectedShowIndRst){
             this.setDispSetting();
           }
           //mod FNSI-6904 劉全航 end
-        } 
-        /* del by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --start */
-        // 削除理由:
-        // 患者名フォントサイズの最終調整は PatHeader.vue 側の calPatNameAreaWidth で再実行されるため、
-        // ここでの個別フォント変更処理は重複し、最終表示に対する効果が限定的なため削除。
-        // else {
-        //   if (
-        //     newVal.pat_personal_main !== null &&
-        //     newVal.pat_personal_main != undefined
-        //   ) {
-        //     // mod 7872患者カレンダー>透析予定でスケジュールが表示されない時がある gaoey start
-        //     // let nameLen =
-        //     //   newVal.pat_personal_main.pat_last_name.length +
-        //     //   1 +
-        //     //   newVal.pat_personal_main.pat_first_name.length;
-        //     let nameLen = 0
-        //     if (newVal.pat_personal_main.pat_first_name != null && newVal.pat_personal_main.pat_first_name != undefined) {
-        //       nameLen =
-        //         newVal.pat_personal_main.pat_last_name.length +
-        //         1 +
-        //         newVal.pat_personal_main.pat_first_name.length;
-        //     } else {
-        //       nameLen =
-        //         newVal.pat_personal_main.pat_last_name.length
-        //     }
-        //     // mod 7872患者カレンダー>透析予定でスケジュールが表示されない時がある gaoey end
-        //     if (nameLen <= 7) {
-        //       nameArea.style.fontSize = "30px";
-        //     } else if (nameLen <= 9) {
-        //       nameArea.style.fontSize = "24px";
-        //     } else {
-        //       nameArea.style.fontSize = "18px";
-        //     }
-        //   }
-
-        // }
-        /* del by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --end */
+        }
       },
       deep: true
     },
@@ -1199,7 +1172,7 @@ export default {
     "baseDay": {
       handler() {
         setTimeout(() => {
-          this.$validator.validate("baseDayScope.baseDay");
+          this.validateField("baseDayScope.baseDay");
         }, 0);
       }
     },
@@ -1353,9 +1326,10 @@ export default {
   },
   async created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     this.resetLoadingScreenVisibleCount();
     this.startLoadingScreen();
+    this.lockLoadingScreen();
     this.setPatIdKeep("");
     this.isDisflg = false;
     if (this.isPatSelected) {
@@ -1390,7 +1364,7 @@ export default {
     var periodType = this.selectedPeriod < 4 ? "small" : "large";
     this.selectedLayoutCdByPeriodType[periodType] = this.setSelectedLayoutCd;
     if (this.$route.params.startDate != null && this.$route.params.startDate != undefined) {
-      this.baseDay = moment(this.$route.params.startDate).format("YYYY-MM-DD");
+      this.baseDay = dayjs(this.$route.params.startDate).format("YYYY-MM-DD");
     }
 
     // ストアに格納されている治療日(基準日を取得)
@@ -1441,10 +1415,8 @@ export default {
     await this.fetchHolidays(this.getFacilityCd);
 
     await this.refresh();
-    this.$nextTick(() => {
-      this.isDisflg = true;
-    });
-    this.finishLoadingScreen();
+    this.isDisflg = true;
+    await this.$nextTick();
   },
   mounted() {
     EventBus.$on("isRefresh", this.refresh);
@@ -1459,7 +1431,7 @@ export default {
       this.calculateGridSize();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.clearHolidays(); // storeの休日マスタをクリア
     // Vueインスタンス破棄前に表示データの初期化
     this.clearTreatmentData();
@@ -1548,7 +1520,9 @@ export default {
     ...mapActions("loading-screen", [
       "startLoadingScreen",
       "finishLoadingScreen",
-      "resetLoadingScreenVisibleCount"
+      "resetLoadingScreenVisibleCount",
+      "lockLoadingScreen",
+      "unlockLoadingScreen"
     ]),
     ...mapMutations("pat-viewer", [
       "setSelectedLayout",
@@ -1581,7 +1555,7 @@ export default {
 // add 9200 by kangjie 20230918 start
     async setStartEndTime(){
       if (!this.baseDay) {
-        this.baseDay = moment().format("YYYY-MM-DD");
+        this.baseDay = dayjs().format("YYYY-MM-DD");
       }
       if (undefined !== this.patId && null !== this.patId) {
         // 治療日のみ表示
@@ -1634,16 +1608,16 @@ export default {
           //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
           functionCd:"00401",
           //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
-          baseDate:moment(this.baseDay).format("YYYYMMDD"),
+          baseDate:dayjs(this.baseDay).format("YYYYMMDD"),
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
-          //date: moment(Date.now()).format("YYYY/MM/DD"),
+          //date: dayjs(Date.now()).format("YYYY/MM/DD"),
           facilityCd: this.getFacilityCd,
           patId: this.patId,
-          date: moment(Date.now()).format("YYYYMMDD"),
-          fromDate: moment(Date.now()).format("YYYYMMDD"),
-          toDate: moment(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYYMMDD"),
+          date: dayjs(Date.now()).format("YYYYMMDD"),
+          fromDate: dayjs(Date.now()).format("YYYYMMDD"),
+          toDate: dayjs(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: moment(this.baseDay).format("YYYYMMDD"),
+          //dialysisDate: dayjs(this.baseDay).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
         };
@@ -1654,7 +1628,7 @@ export default {
 
     setBaseDayByTreatBaseDate() {
       // 基準日を設定
-      this.baseDay = moment(this.getTreatBaseDate, "YYYYMMDD").format("YYYY-MM-DD");
+      this.baseDay = dayjs(this.getTreatBaseDate, "YYYYMMDD").format("YYYY-MM-DD");
       // 期間が長期の場合は短期の7日分に切り替えて
       // レイアウトはリスト最上部のものに設定する
       const isSelectedPeriodSmall = this.selectedPeriod < "4";
@@ -1676,7 +1650,10 @@ export default {
     async initProc() {
       this.startLoadingScreen();
       // 患者経過総合ビューアレイアウトマスタ取得
-      await this.getDispLayoutItemList({ facilityCd: this.facilityCd })
+      await this.getDispLayoutItemList({
+        facilityCd: this.facilityCd,
+        selectedPatId: this.selectedPatId
+      })
       .catch(
         error => {
           getErrorMessage('PatViewer.vue', 'initProc', error);
@@ -1705,7 +1682,7 @@ export default {
       if (selectedPatId === null) {
         this.setIsNullPat(true);
         // 現在の表示画面が治療状況リストの場合、治療状況を再読み込みさせる
-        if (this.$router.currentRoute.name.indexOf("treatment-record") === 0) {
+        if (this.$route.name.indexOf("treatment-record") === 0) {
           EventBus.$emit("refresh");
         }
       } else {
@@ -1726,7 +1703,7 @@ export default {
      * TODO: ここで全てのマスタを取得すると、遅延の原因となる可能性があるため、別途取得方法の検討が必要
      */
     getMst() { // refresh
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         const reqMstNamesArr = [
           "mstTreatment", "mstTreatmentDeleted", "mstVa", "mstVaDeleted",
           "mstDialyze", "mstDialyzeDeleted", "mstMedicine", "mstMedicineMix",
@@ -1735,8 +1712,8 @@ export default {
         ];
 
         Promise.all([
-          getMstInfo({ reqMstNamesArr: reqMstNamesArr }),
-          this.getBedAndMachine({ facilityCd: this.facilityCd }),
+          getMstInfo({ reqMstNamesArr: reqMstNamesArr, selectedPatId: this.selectedPatId }),
+          this.getBedAndMachine({ facilityCd: this.facilityCd, selectedPatId: this.selectedPatId }),
         this.getMstDialyzerTabooAllergy({ patId: this.patId }), // TreatCond.vue mstClass: 13; findConvertData.itemNo: 5; convertEquipmentData
           // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
           this.getMstDialyzerTabooAllergyDeleted({ patId: this.patId}),
@@ -1781,19 +1758,14 @@ export default {
      */
     async setIndMediInfoData() {
       this.startLoadingScreen();
-      /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --start */
-      // 0: マージ  1: 自施設
       const patShareMode = this.getPatientShareMode == 0 && !this.getPatientShareFacilityCdMode ? 0 : 1;
-      /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --end */
       await this.getOrdMainOfIndMediInfo(
           {
             facilityCd: this.facilityCd,
             patId: this.patId,
             // ページに表示された最後の日付です
             startTime: this.endDay,
-            /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
-            patShareMode: patShareMode
-            /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
+            patShareMode
           }
       )
       .catch(err =>{
@@ -1816,7 +1788,8 @@ export default {
         // endDay: this.endDay,
         endDay: "9999-12-24",
         // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng end
-        weekPattern: `[{ 'text': '全', 'done': true, 'value': 0 }]`
+        weekPattern: `[{ 'text': '全', 'done': true, 'value': 0 }]`,
+        selectedPatId: this.selectedPatId
       }).then(async() => {
         const includes = (components) => {
           return components.some((item) => {
@@ -1841,37 +1814,44 @@ export default {
      */
     async setTreatmentDataOfPeriod() {
       this.startLoadingScreen();
-      // 最大の治療日を取得します
-      const patId = this.patId;
-      const facilityCd = this.facilityCd;
-      let currentWeekFirstDay = this.startDay;
-      let lastDayOfNextWeek = this.endDay;
-      ApiHelper.get("mainData/changeDay/maxTreatmentDate", {patId, facilityCd}).then(response => {
-        if (response && response.data) {
-          let startDateYMD = moment(this.indTreatStartDate).format('YYYYMMDD');
-          let endDateYMD = response.data;
-          if (startDateYMD && endDateYMD) {
-            const weekOfDay = moment(endDateYMD, 'YYYYMMDD').format("E");
-            currentWeekFirstDay = moment(startDateYMD).startOf("week").add(1, 'days').format("YYYYMMDD");
-            lastDayOfNextWeek = moment(endDateYMD, 'YYYYMMDD').add(14 - weekOfDay, 'days').format('YYYYMMDD');
-          }
-          this.startLoadingScreen();
-          this.getOrdMainOfPeriod({
-            facilityCd: this.facilityCd,
-            patId: this.patId,
-            startDay: currentWeekFirstDay,
-            endDay: lastDayOfNextWeek,
-            weekPattern: `[{ 'text': '全', 'done': true, 'value': 0 }]`
-          }).catch(err => {
-            getErrorMessage('PatViewer.vue', 'setTreatmentData', err);
-            alert(err);
-          }).finally(() => {
-            this.finishLoadingScreen();
-          });
+      try {
+        const patId = this.patId;
+        const facilityCd = this.facilityCd;
+        const response = await ApiHelper.get(
+          "mainData/changeDay/maxTreatmentDate",
+          { patId, facilityCd }
+        );
+        if (!response?.data) {
+          return;
         }
-      }).finally(() => {
+        const startDateYMD = dayjs(this.indTreatStartDate).format("YYYYMMDD");
+        const endDateYMD = response.data;
+        if (!startDateYMD || !endDateYMD) {
+          return;
+        }
+        const endDateStr = String(endDateYMD);
+        const formattedEndDate = `${endDateStr.slice(0, 4)}-${endDateStr.slice(4, 6)}-${endDateStr.slice(6, 8)}`;
+        const weekOfDay = dayjs(formattedEndDate).day();
+        const currentWeekFirstDay = dayjs(startDateYMD, "YYYYMMDD")
+          .startOf("week")
+          .add(1, "day")
+          .format("YYYYMMDD");
+        const lastDayOfNextWeek = dayjs(formattedEndDate)
+          .add(14 - weekOfDay, "day")
+          .format("YYYYMMDD");
+        await this.getOrdMainOfPeriod({
+          facilityCd: this.facilityCd,
+          patId: this.patId,
+          startDay: currentWeekFirstDay,
+          endDay: lastDayOfNextWeek,
+          weekPattern: `[{ 'text': '全', 'done': true, 'value': 0 }]`
+        });
+      } catch (err) {
+        getErrorMessage("PatViewer.vue", "setTreatmentDataOfPeriod", err);
+        alert(err);
+      } finally {
         this.finishLoadingScreen();
-      });
+      }
     },
     //内部remine 5840  add ljx start
 
@@ -1880,17 +1860,12 @@ export default {
      */
     async setExamMainData() {
       if (this.patId !== null) {
-        /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --start */
-        // 0: マージ  1: 自施設
         const patShareMode = this.getPatientShareMode == 0 && !this.getPatientShareFacilityCdMode ? 0 : 1;
-        /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --end */
         await this.getPatExamMain({
           patId: this.patId,
           startDay: this.startDay,
           endDay: this.endDay,
-          /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
-          patShareMode: patShareMode
-          /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
+          patShareMode
         }).catch(err => {
           //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
           getErrorMessage('PatViewer.vue', 'setExamMainData', "患者検査結果の取得に失敗しました。");
@@ -1913,19 +1888,14 @@ export default {
      */
     async setLastExamMainData() {
       if (this.patId !== null) {
-        /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --start */
-        // 0: マージ  1: 自施設
         const patShareMode = this.getPatientShareMode == 0 && !this.getPatientShareFacilityCdMode ? 0 : 1;
-        /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --end */
         await this.getExamMainDataLastDate({
           patId: this.patId,
           // mod #9772 前回検査予定日の日付が不正 蔡 start
           //startDay: this.startDay
-          startDay: moment().format("YYYYMMDD"),
+          startDay: dayjs().format("YYYYMMDD"),
           // mod #9772 前回検査予定日の日付が不正 蔡 end
-          /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
-          patShareMode: patShareMode
-          /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
+          patShareMode
         }).catch(err => {
           //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
           getErrorMessage('PatViewer.vue', 'setLastExamMainData', "患者検査結果の前回検査日の取得に失敗しました。");
@@ -1948,17 +1918,12 @@ export default {
      */
     async setRadMainData() {
       if (this.patId !== null) {
-        /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --start */
-        // 0: マージ  1: 自施設
         const patShareMode = this.getPatientShareMode == 0 && !this.getPatientShareFacilityCdMode ? 0 : 1;
-        /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --end */
         await this.getPatRadMain({
           patId: this.patId,
           startDay: this.startDay,
           endDay: this.endDay,
-          /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
-          patShareMode: patShareMode
-          /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
+          patShareMode
         }).catch(err => {
           //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
           getErrorMessage('PatViewer.vue', 'setRadMainData', "一般撮影検査結果の取得に失敗しました。");
@@ -1981,19 +1946,14 @@ export default {
      */
     async setLastRadDate() {
       if (this.patId !== null) {
-        /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --start */
-        // 0: マージ  1: 自施設
         const patShareMode = this.getPatientShareMode == 0 && !this.getPatientShareFacilityCdMode ? 0 : 1;
-        /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --end */
         await this.getPatRadMainLastDate({
           patId: this.patId,
           // mod #9772 前回検査予定日の日付が不正 蔡 start
           //startDay: this.startDay
-          startDay: moment().format("YYYYMMDD"),
+          startDay: dayjs().format("YYYYMMDD"),
           // mod #9772 前回検査予定日の日付が不正 蔡 end
-          /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
-          patShareMode: patShareMode
-          /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
+          patShareMode
         }).catch(err => {
           //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
           getErrorMessage('PatViewer.vue', 'setLastRadDate', "一般撮影検査結果の前回検査日の取得に失敗しました。");
@@ -2090,17 +2050,12 @@ export default {
     //7342 add 紹介状のイベント日付が登録日になる 張 start
     async setLetterData() {
       if (this.patId !== null) {
-        /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --start */
-        // 0: マージ  1: 自施設
         const patShareMode = this.getPatientShareMode == 0 && !this.getPatientShareFacilityCdMode ? 0 : 1;
-        /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --end */
         await this.getLetterData({
           patId: this.patId,
           startDay: this.startDay,
           endDay: this.endDay,
-          /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
-          patShareMode: patShareMode
-          /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
+          patShareMode
         }).catch(err => {
           //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
           getErrorMessage('PatViewer.vue', 'getLetterData', "紹介状の取得に失敗しました。");
@@ -2127,18 +2082,13 @@ export default {
         // await this.getPrescriptionData({
           //   patId: this.patId,
         //   facilityCd: this.facilityCd
-        /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --start */
-        // 0: マージ  1: 自施設
         const patShareMode = this.getPatientShareMode == 0 && !this.getPatientShareFacilityCdMode ? 0 : 1;
-        /* add by chamaojia 2026-03-23 [12462] 患者情報共有->患者経過総合ビューア --end */
         await this.getPrescriptionData({
           patId: this.patId,
           facilityCd: this.facilityCd,
           startDay: this.startDay,
           endDay: this.endDay,
-          /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
-          patShareMode: patShareMode
-          /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
+          patShareMode
           // mod #9738 患者経過総合ビューアで検査依頼、一般撮影検査依頼、招待状、処方、患者イベントのデータが正常に表示されない zy end
         }).catch(err => {
           //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
@@ -2163,7 +2113,8 @@ export default {
      */
     async getIsShowFlag() {
       const response = await ApiHelper.get(
-        `/facilities/getFacilityInfoByCd/${this.facilityCd}`
+        `/facilities/getFacilityInfoByCd/${this.facilityCd}`,
+        { selectedPatId: this.selectedPatId }
       ).catch(err => {
         throw err;
       });
@@ -2189,108 +2140,160 @@ export default {
      * @param isNewPat 患者切替フラグ
      */
     async refresh(isChangePat) {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
-      this.startLoadingScreen();
+      const loadingAlreadyLocked = this.getLoadingScreenLocked;
+      if (!loadingAlreadyLocked) {
+        this.startLoadingScreen();
+        this.lockLoadingScreen();
+      }
       this.dataReady = false;
-      this.setIndPlanCreateDate([this.startDay, this.endDay]);
-      // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 start
-      this.chartRenderedCount = 0;
-      this.totalChartsExpected = 0;
-      // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 end
-      // スクロール量を取得
-      this.getScrollPos(isChangePat);
-      // 表示データの初期化
-      await this.clearTreatmentData();
-
-      // 患者未選択時は未実施
-      if (undefined !== this.patId && null !== this.patId) {
-        // 共通ローダーを表示
-        if (this.isTreatmentOnly&& this.selectedPeriod <= 3) {
-          await this.setIsTreatmentOnlyStartEndDay();
-        }
-        await this.getMst();
-        const interfaces = [];
-        const includes = (components) => {
-          return components.some((item) => {
-            return this.isShowComponents.has(item);
-          });
-        };
-        // 投与薬剤
-        includes(['medicine']) && this.setIndMediInfoData();
-        // 患者検査結果(pat_rad_main)取得
-        includes(['treat-plan', 'rad-info']) && interfaces.push(this.setRadMainData())
-        // `/rad/TreatDateList/${patId}/${startDay}/${endDay}`
-        // 一般撮影検査前回検査日取得
-        includes(['rad-info']) && interfaces.push(this.setLastRadDate());
-        // `/rad/TreatDateList/${patId}/${startDay}`
-        // 患者検査結果(pat_exam_main)取得
-        includes(['treat-plan', 'exam-info']) && interfaces.push(this.setExamMainData());
-        // `/exam/TreatDateList/${patId}/${startDay}/${endDay}`
-        includes(['exam-info']) && interfaces.push(this.setLastExamMainData());
-        // `/exam/TreatDateList/${patId}/${startDay}`
-        // 観察記録の取得
-        includes(['obser']) && interfaces.push(this.setPatEventData());
-        // `/pat_event/PatEventList/${patId}/${startDay}/${endDay}`
-        // 患者イベント（仮）の取得
-        includes(['patient']) && interfaces.push(this.setPatientData());
-        // `/pat_event/PatientList/${patId}/${startDay}/${endDay}`
-        includes(['letter']) && interfaces.push(this.setLetterData());
-        // `/pat_event/selectByLetterDate/${patId}/${startDay}/${endDay}`
-        // 患者イベント（仮）の取得
-        includes(['prescription']) && interfaces.push(this.setPatPrescriptionData());
-        // `/pat-prescription/prescriptionDateList/${patId}/${facilityCd}/${startDay}/${endDay}`
-        interfaces.push(this.setTreatmentData());
-        await Promise.all(interfaces).then(() => {
-          this.dataReady = true;
-        }).catch((err) => {
-          getErrorMessage('PatViewer.vue', 'refresh', err);
-        });
-        // 治療情報(ord_main)取得
-        this.setTreatmentDataOfPeriod();
-        // "mainData/changeDay/maxTreatmentDate"
-        // "/mainData/sharingInfo/TreatDateList"
-        // 指示・実績表示切替の格納
-        this.setShowIndRst(this.selectedShowIndRst);
-      } else {
+      try {
+        this.setIndPlanCreateDate([this.startDay, this.endDay]);
+        this.chartRenderedCount = 0;
+        this.totalChartsExpected = 0;
+        // スクロール量を取得
+        this.getScrollPos(isChangePat);
         // 表示データの初期化
         await this.clearTreatmentData();
-        this.dataReady = true;
-      }
-      this.finishLoadingScreen();
 
-      // 子コンポーネント(表示しているコンテンツ)のDOM更新が完了するのを待つ
-      const contentsCnt = Object.keys(this.$refs).filter(refName => refName.startsWith("childContent")).length;
-      for (let i = 0; i < contentsCnt; i++) {
+        // 患者未選択時は未実施
+        if (undefined !== this.patId && null !== this.patId) {
+          if (this.isTreatmentOnly && this.selectedPeriod <= 3) {
+            await this.setIsTreatmentOnlyStartEndDay();
+          }
+          await this.getMst();
+          const interfaces = [];
+          const includes = (components) => {
+            return components.some((item) => {
+              return this.isShowComponents.has(item);
+            });
+          };
+          if (includes(["medicine"])) {
+            interfaces.push(this.setIndMediInfoData());
+          }
+          if (includes(["treat-plan", "rad-info"])) {
+            interfaces.push(this.setRadMainData());
+          }
+          if (includes(["rad-info"])) {
+            interfaces.push(this.setLastRadDate());
+          }
+          if (includes(["treat-plan", "exam-info"])) {
+            interfaces.push(this.setExamMainData());
+          }
+          if (includes(["exam-info"])) {
+            interfaces.push(this.setLastExamMainData());
+          }
+          if (includes(["obser"])) {
+            interfaces.push(this.setPatEventData());
+          }
+          if (includes(["patient"])) {
+            interfaces.push(this.setPatientData());
+          }
+          if (includes(["letter"])) {
+            interfaces.push(this.setLetterData());
+          }
+          if (includes(["prescription"])) {
+            interfaces.push(this.setPatPrescriptionData());
+          }
+          interfaces.push(this.setTreatmentData());
+          interfaces.push(this.setTreatmentDataOfPeriod());
+          try {
+            await Promise.all(interfaces);
+          } catch (err) {
+            getErrorMessage("PatViewer.vue", "refresh", err);
+          }
+          let treatPlanLoadPromise = null;
+          if (includes(["treat-plan"])) {
+            treatPlanLoadPromise = this.waitForTreatPlanDataReady(
+              this.getTreatPlanRowCount()
+            );
+          }
+          this.dataReady = true;
+          await this.flushChildComponentMounts();
+          if (treatPlanLoadPromise) {
+            await treatPlanLoadPromise;
+          }
+          await this.flushChildComponentMounts();
+          this.setShowIndRst(this.selectedShowIndRst);
+        } else {
+          await this.clearTreatmentData();
+          this.dataReady = true;
+        }
+        // 子コンポーネント(表示しているコンテンツ)のDOM更新が完了するのを待つ
+        const contentsCnt = Object.keys(this.$refs).filter(
+          refName => refName.startsWith("childContent")
+        ).length;
+        for (let i = 0; i < contentsCnt; i++) {
+          await this.$nextTick();
+        }
         await this.$nextTick();
+        this.totalChartsExpected = this.calculateExpectedChartCount();
+        if (this.totalChartsExpected > 0) {
+          await this.waitForChartsToRender();
+        }
+      } finally {
+        this.unlockLoadingScreen();
+        if (!loadingAlreadyLocked) {
+          this.finishLoadingScreen();
+        }
+        this.resetLoadingScreenVisibleCount();
       }
-      // スクロール位置を復元
-      // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 start
-      this.totalChartsExpected = this.calculateExpectedChartCount();
-      if (this.totalChartsExpected > 0) {
-        await this.waitForChartsToRender();
-      } else {
-      }
-      this.finishLoadingScreen();
-      // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 end
       this.setScrollPos();
 
       // 拡張表示
       this.setExtendedView();
 
       // 警告ダイアログ表示
-      if (this.nextWarningFlg) {
-        this.messageDialogInfo.messageCd = "71000004";
-        this.messageDialogInfo.type = "1";
-        this.messageDialogInfo.isDialogVisible = true;
-        this.nextWarningFlg = false;
-      } else if (this.prevWarningFlg) {
-        this.messageDialogInfo.messageCd = "71000003";
-        this.messageDialogInfo.type = "1";
-        this.messageDialogInfo.isDialogVisible = true;
-        this.prevWarningFlg = false;
+      this.showWarningDialogs();
+    },
+    async flushChildComponentMounts() {
+      await this.$nextTick();
+      await this.$nextTick();
+      await new Promise((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(resolve);
+        });
+      });
+      await this.$nextTick();
+    },
+    getTreatPlanRowCount() {
+      const treatmentData = this.getTreatmentData;
+      if (!treatmentData) {
+        return 0;
       }
+      return Array.isArray(treatmentData)
+        ? treatmentData.length
+        : Object.keys(treatmentData).length;
+    },
+    /**
+     * 計画(treat-plan)行のデータ読込完了を待つ（refresh 中の lock 解除前）
+     */
+    waitForTreatPlanDataReady(expectedCount) {
+      if (!expectedCount || expectedCount === 0) {
+        return Promise.resolve();
+      }
+      return new Promise((resolve) => {
+        let completed = 0;
+        const eventName = "pat-viewer-treat-plan-loaded";
+        const onLoaded = () => {
+          completed += 1;
+          if (completed >= expectedCount) {
+            cleanup();
+            resolve();
+          }
+        };
+        const cleanup = () => {
+          clearTimeout(timeoutId);
+          EventBus.$off(eventName, onLoaded);
+        };
+        const timeoutId = setTimeout(() => {
+          cleanup();
+          resolve();
+        }, 15000);
+        EventBus.$on(eventName, onLoaded);
+      });
     },
     // add #9713 特定操作で3/7/14日表示のグラフの横幅が1カ月表示になる wangchao 20260520 start
     calculateExpectedChartCount() {
@@ -2330,7 +2333,7 @@ export default {
       return chartComponents.includes(componentName);
     },
     waitForChartsToRender() {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         const timeout = setTimeout(() => {
           EventBus.$off('chartRendered', onChartRendered);
           EventBus.$off('chartRenderComplete', onChartRendered);
@@ -2368,11 +2371,11 @@ export default {
     async getTreatDateList() {
       const treatmentData = this.getTreatmentData[0] || {}
       const lastIndex = Object.keys(treatmentData).length - 1;
-      let startDate = moment(
+      let startDate = dayjs(
         Object.keys(treatmentData)[0] || this.getDateList[0],
         "YYYYMMDD"
       ).startOf("day");
-      let endDate = moment(
+      let endDate = dayjs(
         Object.keys(treatmentData)[lastIndex] ||
         this.getDateList[this.getDateList.length - 1],
         "YYYYMMDD"
@@ -2409,10 +2412,7 @@ export default {
         patShareMode: patShareMode
         // add #12462 患者情報共有->患者経過総合ビューア fang end
       };
-      return await ApiHelper.post(
-        "/mainData/TreatDateList",
-        sendData
-      ).then((response) => {
+      return await sendRequestPostTreatDateList(sendData, this.patId).then((response) => {
         this.setTreatDateList(deepCopy(response))
         return response;
       }).catch(err => {
@@ -2429,18 +2429,21 @@ export default {
      * @param isChangePat 患者切替フラグ
      */
     getScrollPos(isChangePat) {
-      this.scrollPos = isChangePat === true ? 0 : $(".list-content").scrollTop();
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
+      this.scrollPos = isChangePat === true ? 0 : scoped$(".list-content").scrollTop();
     },
 
     /**
      * スクロール位置の設定
      */
     setScrollPos() {
-      $(".list-content").scrollTop(this.scrollPos);
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
+      const listContent = scoped$(".list-content");
+      listContent.scrollTop(this.scrollPos);
       // 治療日のみ表示が非チェック、且つ14日分表示の場合は、基準日が中央になるのでスクロールさせる
-      if (this.selectedPeriod == "3") {
-        const scr = ($(".list-content")[0].scrollWidth / 2) - 80;
-        $(".list-content")[0].scrollLeft = scr;
+      if (this.selectedPeriod == "3" && listContent[0]) {
+        const scr = (listContent[0].scrollWidth / 2) - 80;
+        listContent[0].scrollLeft = scr;
       }
     },
 
@@ -2465,24 +2468,31 @@ export default {
         }
       }
 
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
+      const listContent = scoped$(".list-content");
       // ヘッダー固定位置の高さ
-      const fixedHeight = $(".list-header-div").height();
+      const fixedHeight = scoped$(".list-header-div").height();
       // 一覧情報ができていない場合は指定位置取得の処理を終了する
       // mod 9560 患者経過総合ビューアで長期間表示のグラフの時間軸が不正 張玲 start
-      if (!$(".list-content").offset() && !$(".list-content").offset().top) {
+      const listContentOffset = listContent.offset();
+      if (!listContentOffset || !listContentOffset.top) {
         return;
       }
       // mod 9560 患者経過総合ビューアで長期間表示のグラフの時間軸が不正 張玲 end
       // 要素内のベースになる高さ
-      const baseHeight = $(".list-content").offset().top;
+      const baseHeight = listContentOffset.top;
 
       // 現在のスクロール位置
-      const currentPos = $(".list-content").scrollTop();
+      const currentPos = listContent.scrollTop();
 
       // 治療予定ごとのスクロール位置を指定
       for (let i = 0; i < statusMaxAmount; i++) {
         // 対象治療予定の高さ
-        const target = $(`.status${i}`).offset().top;
+        const targetOffset = scoped$(`.status${i}`).offset();
+        if (!targetOffset) {
+          continue;
+        }
+        const target = targetOffset.top;
         // 治療予定ごとのスクロール位置を格納
         this.specifiedPos[`status${i}`] =
           target - fixedHeight - baseHeight + currentPos;
@@ -2497,7 +2507,8 @@ export default {
       // 治療予定ごとのスクロール位置を取得
       this.getSpecifiedPos(checkScroll);
       // 特定の治療予定の先頭に移動する
-      $(".list-content").animate(
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
+      scoped$(".list-content").animate(
         { scrollTop: this.specifiedPos[`status${index}`] },
         1000,
         "swing"
@@ -2573,7 +2584,7 @@ export default {
      */
     clearDispSetting() {
       // 基準日: 本日日付
-      this.baseDay = moment().format("YYYY-MM-DD");
+      this.baseDay = dayjs().format("YYYY-MM-DD");
 
       // 期間: 7日分
       this.selectedPeriod = "2";
@@ -2695,8 +2706,10 @@ export default {
 
         this.selectedLayoutCd = this.setSelectedLayoutCd;
 
-        // 画面更新処理
-        setTimeout(await this.refresh, 10);
+        // 既存仕様：ポップオーバーを先に閉じてから計画画面側で loading
+        this.popoverVisible = false;
+        await this.$nextTick();
+        await this.refresh();
       } else {
         // 表示開始日・終了日の設定
         this.setStartEndDay();
@@ -2720,9 +2733,7 @@ export default {
       // 表示期間の格納
       this.currentSelectedPeriod = this.selectedPeriod;
 
-      // add #9713 特定操作で3/7/14日表示のグラフの横幅が1カ月表示になる wangchao 20260520 start
       this.$store.commit('pat-viewer/setSelectedPeriod', this.selectedPeriod);
-      // add #9713 特定操作で3/7/14日表示のグラフの横幅が1カ月表示になる wangchao 20260520 end
 
       const conditionSearch = {
         isTreatmentOnly: this.isTreatmentOnly,
@@ -2736,8 +2747,9 @@ export default {
       // add redmine 6057 yuqizheng start
       EventBus.$emit("indicationRefresh");
       // add redmine 6057 yuqizheng end
-      // 表示条件設定ポップオーバーを閉じる
-      this.popoverVisible = false;
+      if (this.popoverVisible) {
+        this.popoverVisible = false;
+      }
       // // add 9200 by kangjie 20230912 start
       // // 投与薬剤
       // await this.setIndMediInfoData();
@@ -2789,43 +2801,43 @@ export default {
     setStartEndDay() {
       // 基準日が未入力の場合は本日日付で処理
       if (!this.baseDay) {
-        this.baseDay = moment().format("YYYY-MM-DD");
+        this.baseDay = dayjs().format("YYYY-MM-DD");
       }
       // 表示期間を計算、設定
       switch (this.selectedPeriod) {
         case "1":
           // 3日分
-          this.endDay = moment(this.baseDay)
+          this.endDay = dayjs(this.baseDay)
             .add(2, "days")
             .format("YYYYMMDD");
-          this.startDay = moment(this.baseDay).format("YYYYMMDD");
+          this.startDay = dayjs(this.baseDay).format("YYYYMMDD");
           break;
 
         case "2":
           // 7日分
-          this.endDay = moment(this.baseDay)
+          this.endDay = dayjs(this.baseDay)
             .add(6, "days")
             .format("YYYYMMDD");
-          this.startDay = moment(this.baseDay).format("YYYYMMDD");
+          this.startDay = dayjs(this.baseDay).format("YYYYMMDD");
           break;
 
         case "3":
           // 14日分
           // 基準日から過去7日分、未来6日分を表示する
-          this.endDay = moment(this.baseDay)
+          this.endDay = dayjs(this.baseDay)
             .add(6, "days")
             .format("YYYYMMDD");
-          this.startDay = moment(this.baseDay)
+          this.startDay = dayjs(this.baseDay)
             .subtract(7, "days")
             .format("YYYYMMDD");
           break;
         case "4":
           // 12週
           // 月曜からスタート
-          this.endDay = moment(this.baseDay)
+          this.endDay = dayjs(this.baseDay)
             .startOf("isoWeek")
             .format("YYYYMMDD");
-          this.startDay = moment(this.baseDay)
+          this.startDay = dayjs(this.baseDay)
             .add(-11, "weeks")
             .startOf("isoWeek")
             .format("YYYYMMDD");
@@ -2833,8 +2845,8 @@ export default {
 
         case "5":
           // 6ヶ月
-          this.endDay = moment(this.baseDay).format("YYYYMMDD");
-          this.startDay = moment(this.baseDay)
+          this.endDay = dayjs(this.baseDay).format("YYYYMMDD");
+          this.startDay = dayjs(this.baseDay)
             .add(-5, "months")
             .startOf("month")
             .format("YYYYMMDD");
@@ -2842,8 +2854,8 @@ export default {
 
         case "6":
           // 1年
-          this.endDay = moment(this.baseDay).format("YYYYMMDD");
-          this.startDay = moment(this.baseDay)
+          this.endDay = dayjs(this.baseDay).format("YYYYMMDD");
+          this.startDay = dayjs(this.baseDay)
             .add(-11, "months")
             .startOf("month")
             .format("YYYYMMDD");
@@ -2851,8 +2863,8 @@ export default {
 
         case "7":
           // 3年
-          this.endDay = moment(this.baseDay).format("YYYYMMDD");
-          this.startDay = moment(this.baseDay)
+          this.endDay = dayjs(this.baseDay).format("YYYYMMDD");
+          this.startDay = dayjs(this.baseDay)
             .add(-35, "months")
             .startOf("month")
             .format("YYYYMMDD");
@@ -2874,9 +2886,8 @@ export default {
     getWeek(date) {
       let cssString = "";
       if (
-        false === moment(date).isValid() ||
-        ["4", "5", "6", "7"].includes(this.currentSelectedPeriod)
-      ) {
+        false === dayjs(date).isValid() ||
+        ["4", "5", "6", "7"].includes(this.currentSelectedPeriod)) {
         return cssString;
       }
       return getHolidayStyle(date);
@@ -2886,11 +2897,11 @@ export default {
      * 基準日を含むカラムに罫線を追加
      */
     needOutline(date) {
-      const normalDate = moment(date);
-      const popBaseday = moment(this.popBaseDay);
-      const daysDiff = moment(date).add(1, "weeks").diff(popBaseday, "days");
-      const monthsDiff = moment(date).diff(popBaseday, "months");
-      const yearsDiff = moment(date).diff(popBaseday, "years");
+      const normalDate = dayjs(date);
+      const popBaseday = dayjs(this.popBaseDay);
+      const daysDiff = dayjs(date).add(1, "weeks").diff(popBaseday, "days");
+      const monthsDiff = dayjs(date).diff(popBaseday, "months");
+      const yearsDiff = dayjs(date).diff(popBaseday, "years");
 
       switch (this.popSelectedPeriod) {
         case "1":
@@ -2917,9 +2928,9 @@ export default {
      * 当日を含むカラムの背景色を変更
      */
     needTodayBG(date) {
-      const normalDate = moment(date);
-      const today = moment();
-      const yearsDiff = moment(date).diff(today, "years");
+      const normalDate = dayjs(date);
+      const today = dayjs();
+      const yearsDiff = dayjs(date).diff(today, "years");
 
       switch (this.popSelectedPeriod) {
         case "1":
@@ -2951,9 +2962,9 @@ export default {
         return;
       }
       // 今日の日付を取得
-      const day = moment().format("YYYYMMDD");
+      const day = dayjs().format("YYYYMMDD");
       // 治療日を比較用データに変換
-      const checkTreatDate = moment(treatDate).format("YYYYMMDD");
+      const checkTreatDate = dayjs(treatDate).format("YYYYMMDD");
       // 治療日が過去日の場合、治療予定作成モーダルを直接表示
       const menuInfo = deepCopy(defaultMenuInfo);
       // 治療日の格納
@@ -3113,7 +3124,7 @@ export default {
       if (dyalState == '3') {
       // mod FNSI-redmine 4688 劉祥霖 end
         return "#2CA06F";
-      } else if(dyalState == '1' || dyalState == '2' ){
+      } else if(dyalState == '1' || dyalState == '2'){
         return "#42CB92";
       // mod FNSI-redmine 4688 劉祥霖 start
       } else if(dyalState == '4' || dyalState == '5'){
@@ -3132,12 +3143,12 @@ export default {
       arrTreatDate.forEach(itemTreatDateArray => {
         if (itemTreatDateArray.rstDialysisState === "3") {
           //mod 7680 治療の進捗状態を示す棒グラフが一致しない_再発 張 start
-          // start_date_time =  moment(itemTreatDateArray.treatDate).format('YYYY-MM-DD') + ' ' + moment(itemTreatDateArray.indTreatStartTime, "hmm").format("HH:mm");
+          // start_date_time =  dayjs(itemTreatDateArray.treatDate).format('YYYY-MM-DD') + ' ' + dayjs(itemTreatDateArray.indTreatStartTime, "hmm").format("HH:mm");
           if (itemTreatDateArray.rstStartDate) {
-            // start_date_time =  moment(itemTreatDateArray.rstStartDate, 'YYYY-MM-DD HH:mm:ss').format("YYYY-MM-DD HH:mm");
-            start_date_time = moment(moment.utc(itemTreatDateArray.rstStartDate).toDate()).format("YYYY-MM-DD HH:mm");
+            // start_date_time =  dayjs(itemTreatDateArray.rstStartDate, 'YYYY-MM-DD HH:mm:ss').format("YYYY-MM-DD HH:mm");
+            start_date_time = dayjs(dayjs.utc(itemTreatDateArray.rstStartDate).toDate()).format("YYYY-MM-DD HH:mm");
           }else{
-            start_date_time =  moment(itemTreatDateArray.treatDate).format('YYYY-MM-DD') + ' ' + moment(itemTreatDateArray.indTreatStartTime, "hmm").format("HH:mm");
+            start_date_time =  dayjs(itemTreatDateArray.treatDate).format('YYYY-MM-DD') + ' ' + dayjs(itemTreatDateArray.indTreatStartTime, "hmm").format("HH:mm");
           }
           //mod 7680 治療の進捗状態を示す棒グラフが一致しない_再発 張 end
          treatment_time = itemTreatDateArray.indCondInfo['1'].value;
@@ -3147,8 +3158,8 @@ export default {
         return 0;
       }
       // "3": 経過時間表示
-      const treatmentStartDateTime = moment(start_date_time);
-      const now = moment();
+      const treatmentStartDateTime = dayjs(start_date_time);
+      const now = dayjs();
       // ミリ秒を分へ変換
       const treatmentProgressTime = now.diff(treatmentStartDateTime) / 60000;
       // %へ変換
@@ -3161,12 +3172,11 @@ export default {
       if (treatmentTimeRatio < 0) {
         return 0;
       }
-      // let tmpTreatmentTimeRatio = (treatmentTimeRatio * 80 ) / 95;
+      // let tmpTreatmentTimeRatio = (treatmentTimeRatio * 80) / 95;
       // return treatmentTimeRatio >= 95 ? 80 : tmpTreatmentTimeRatio;
       return treatmentTimeRatio >= 98 ? 98 : treatmentTimeRatio;
       //mod 6816 治療の進捗状態を示す棒グラフが一致しない 張 end
     },
-
 
     /**
      * @description 治療状況に応じて色を変更
@@ -3184,17 +3194,17 @@ export default {
       switch (value) {
         // 条件送信前
         case "0":
-          return require("../../assets/0.png");
+          return asset0Img;
         case "1":
         case "2":
-          return require("../../assets/1.png");
+          return asset1Img;
         case "3":
-          return require("../../assets/3.png");
+          return asset3Img;
         case "4":
         case "5":
-          return require("../../assets/4.png");
+          return asset4Img;
         case "6":
-          return require("../../assets/6.png");
+          return asset6Img;
         default:
           break;
       }
@@ -3259,7 +3269,7 @@ export default {
         });
       } else {
         // 取得件数が0件の場合、基準日を格納
-        treatDateList.push(moment(this.baseDay).format("YYYYMMDD"));
+        treatDateList.push(dayjs(this.baseDay).format("YYYYMMDD"));
       }
       // 治療日の重複を排除
       treatDateList = treatDateList.filter((x, i, self) => {
@@ -3280,7 +3290,7 @@ export default {
             // 治療日リストが3日分になるまで現在の最後尾の治療日に1日ずつ加算していく
             while (3 > treatDateList.length) {
               treatDateList.push(
-                moment(treatDateList[treatDateList.length - 1])
+                dayjs(treatDateList[treatDateList.length - 1])
                   .add(1, "days")
                   .format("YYYYMMDD")
               );
@@ -3295,7 +3305,7 @@ export default {
             // 治療日リストが7日分になるまで現在の最後尾の治療日に1日ずつ加算していく
             while (7 > treatDateList.length) {
               treatDateList.push(
-                moment(treatDateList[treatDateList.length - 1])
+                dayjs(treatDateList[treatDateList.length - 1])
                   .add(1, "days")
                   .format("YYYYMMDD")
               );
@@ -3310,18 +3320,16 @@ export default {
             // 基準日に満たないデータを抽出し7件未満なら不足日数分をtreatDateListに追加
             const pastTreatDateList = treatDateList.filter(
               (element, index, array) => {
-                return element < moment(this.baseDay).format("YYYYMMDD");
-              }
-            );
+                return element < dayjs(this.baseDay).format("YYYYMMDD");
+              });
             const futureTreatDateList = treatDateList.filter(
               (element, index, array) => {
-                return element >= moment(this.baseDay).format("YYYYMMDD");
-              }
-            );
+                return element >= dayjs(this.baseDay).format("YYYYMMDD");
+              });
             if (7 !== pastTreatDateList.length) {
               while (treatDateList.length !== futureTreatDateList.length + 7) {
                 treatDateList.unshift(
-                  moment(treatDateList[0])
+                  dayjs(treatDateList[0])
                     .subtract(1, "days")
                     .format("YYYYMMDD")
                 );
@@ -3331,7 +3339,7 @@ export default {
             // 治療日リストが14日分になるまで現在の最後尾の治療日に1日ずつ加算していく
             while (14 > treatDateList.length) {
               treatDateList.push(
-                moment(treatDateList[treatDateList.length - 1])
+                dayjs(treatDateList[treatDateList.length - 1])
                   .add(1, "days")
                   .format("YYYYMMDD")
               );
@@ -3366,7 +3374,6 @@ export default {
       // 表示終了日を設定
       this.endDay = treatDateList[treatDateList.length - 1];
 
-
       // 治療日のみ一覧ヘッダーの日付リスト設定
       this.setIsTreatmentOnlyDateList({
         dateList: treatDateList
@@ -3379,7 +3386,7 @@ export default {
       // 画面表示時検索条件の再セット
       this.setPopTempToDialog();
       // 基準日の格納
-      this.baseDay = moment().format("YYYY-MM-DD");
+      this.baseDay = dayjs().format("YYYY-MM-DD");
       // 表示条件設定保存処理を呼び出し
       await this.setDispSetting();
     },
@@ -3451,20 +3458,20 @@ export default {
         // 基準日
         switch (this.selectedPeriod + "") {
           case "1":
-            sendJson.base_date = moment(this.startDay)
+            sendJson.base_date = dayjs(this.startDay)
               .subtract(1, "days")
               .format("YYYY-MM-DD");
             break;
 
           case "2":
-            sendJson.base_date = moment(this.startDay)
+            sendJson.base_date = dayjs(this.startDay)
               .subtract(1, "days")
               .format("YYYY-MM-DD");
             break;
 
           case "3":
             //基準日が画面中央日付のためdispBaseDayを使用
-            sendJson.base_date = moment(this.dispBaseDay)
+            sendJson.base_date = dayjs(this.dispBaseDay)
               .subtract(1, "days")
               .format("YYYY-MM-DD");
             break;
@@ -3474,7 +3481,7 @@ export default {
           // del 9560 患者経過総合ビューアで長期間表示のグラフの時間軸が不正 張玲 end
 
           default:
-            sendJson.base_date = moment(this.startDay)
+            sendJson.base_date = dayjs(this.startDay)
               .subtract(1, "days")
               .format("YYYY-MM-DD");
             break;
@@ -3515,7 +3522,7 @@ export default {
         // 取得した治療日リストが1件以上あり14日以外の場合
         if (1 <= treatDateList.length && this.selectedPeriod + "" !== "3") {
           // 表示開始日を設定
-          this.baseDay = moment(treatDateList[0]).format("YYYY-MM-DD");
+          this.baseDay = dayjs(treatDateList[0]).format("YYYY-MM-DD");
           // 表示条件設定保存処理を呼び出し
           await this.setDispSetting();
         } else if (
@@ -3524,7 +3531,7 @@ export default {
           period === 1
         ) {
           // 表示開始日を設定
-          this.baseDay = moment(treatDateList[0]).format("YYYY-MM-DD");
+          this.baseDay = dayjs(treatDateList[0]).format("YYYY-MM-DD");
           // 表示条件設定保存処理を呼び出し
           await this.setDispSetting();
         } else if (this.selectedPeriod + "" === "3") {
@@ -3544,7 +3551,7 @@ export default {
           } else if (treatDateList.length <= 21) {
             // 対象日数：7日～13日（画面左端に対して余剰日付が１日以上あり／１４日までの場合 14+7日）
             // 押下後の表示は左端が最初データになるように基準日にセット
-            this.baseDay = moment(treatDateList[7]).format("YYYY-MM-DD");
+            this.baseDay = dayjs(treatDateList[7]).format("YYYY-MM-DD");
             // 警告ダイアログ表示
             this.prevWarningFlg = true;
             // 表示条件設定保存処理を呼び出し
@@ -3552,7 +3559,7 @@ export default {
           } else {
             // 対象日数：14日以上（表示後の画面右端がまだ最終データではない）
             // 表示開始日を設定
-            this.baseDay = moment(treatDateList[8]).format("YYYY-MM-DD");
+            this.baseDay = dayjs(treatDateList[8]).format("YYYY-MM-DD");
             // 表示条件設定保存処理を呼び出し
             await this.setDispSetting();
           }
@@ -3569,51 +3576,51 @@ export default {
           case "1":
           case "2":
             //基準日が一覧初期値のためsubtract間隔=movePeriod
-            this.baseDay = moment(this.startDay)
+            this.baseDay = dayjs(this.startDay)
               .subtract(movePeriod, "days")
               .format("YYYY-MM-DD");
             break;
           case "3":
             //基準日が一覧中央値のためsubtract間隔を変更
             // mod bug #6604 修正 chen start
-            this.baseDay = moment(this.baseDay)
+            this.baseDay = dayjs(this.baseDay)
               .subtract(movePeriod, "days")
               .format("YYYY-MM-DD");
-            // this.baseDay = moment(this.startDay)
+            // this.baseDay = dayjs(this.startDay)
             //   .subtract(movePeriod - 7, "days")
             //   .format("YYYY-MM-DD");
             // mod bug #6604 修正 chen end
             break;
 
           case "4":
-            this.baseDay = moment(this.startDay)
+            this.baseDay = dayjs(this.startDay)
               .subtract(movePeriod - 11, "weeks")
               .format("YYYY-MM-DD");
             break;
 
           case "5":
-            this.baseDay = moment(this.startDay)
+            this.baseDay = dayjs(this.startDay)
               .subtract(movePeriod - 5, "months")
               .format("YYYY-MM-DD");
             break;
 
           case "6":
-            this.baseDay = moment(this.startDay)
+            this.baseDay = dayjs(this.startDay)
               .subtract(movePeriod - 11, "months")
               .format("YYYY-MM-DD");
             break;
 
           case "7":
-            this.baseDay = moment(this.startDay)
+            this.baseDay = dayjs(this.startDay)
               .subtract(movePeriod - 3, "years")
               .format("YYYY-MM-DD");
-            this.baseDay = moment(this.baseDay)
+            this.baseDay = dayjs(this.baseDay)
               .subtract(1, "months")
               .format("YYYY-MM-DD");
             break;
 
           default:
-            this.baseDay = moment(this.startDay)
+            this.baseDay = dayjs(this.startDay)
               .subtract(movePeriod, "days")
               .format("YYYY-MM-DD");
             break;
@@ -3689,20 +3696,20 @@ export default {
         // 基準日
         switch (this.selectedPeriod + "") {
           case "1":
-            sendJson.base_date = moment(this.startDay)
+            sendJson.base_date = dayjs(this.startDay)
               .add(1, "days")
               .format("YYYY-MM-DD");
             break;
 
           case "2":
-            sendJson.base_date = moment(this.startDay)
+            sendJson.base_date = dayjs(this.startDay)
               .add(1, "days")
               .format("YYYY-MM-DD");
             break;
 
           case "3":
             //基準日が画面中央日付のためdispBaseDayを使用
-            sendJson.base_date = moment(this.dispBaseDay)
+            sendJson.base_date = dayjs(this.dispBaseDay)
               .add(1, "days")
               .format("YYYY-MM-DD");
             break;
@@ -3712,7 +3719,7 @@ export default {
           // del 9560 患者経過総合ビューアで長期間表示のグラフの時間軸が不正 張玲 end
 
           default:
-            sendJson.base_date = moment(this.startDay)
+            sendJson.base_date = dayjs(this.startDay)
               .add(1, "days")
               .format("YYYY-MM-DD");
             break;
@@ -3755,15 +3762,14 @@ export default {
         if (movePeriod === treatDateList.length && this.selectedPeriod + "" !== "3") {
           // 1.取得した治療日リストが指定日(3/7)分入っている
           // 表示開始日を設定
-          this.baseDay = moment(treatDateList[movePeriod - 1]).format(
-            "YYYY-MM-DD"
-          );
+          this.baseDay = dayjs(treatDateList[movePeriod - 1]).format(
+            "YYYY-MM-DD");
 
           // 表示条件設定保存処理を呼び出し
           await this.setDispSetting();
         } else if (this.selectedPeriod + "" === "3" && period == 1) {
           // 2.14日表示かつ１日移動で対象データ無し時
-          sendJson.base_date = moment(this.dispBaseDay).format("YYYY-MM-DD");
+          sendJson.base_date = dayjs(this.dispBaseDay).format("YYYY-MM-DD");
           // dispBaseDayを加算せずにもう一度実施
           const response = await ApiHelper.post(
             "/mainData/IsTreaOnlyTreatDateList",
@@ -3777,7 +3783,7 @@ export default {
           });
           if (0 !== response.data.length) {
             // 表示開始日を設定
-            this.baseDay = moment(this.dispBaseDay)
+            this.baseDay = dayjs(this.dispBaseDay)
               .add(1, "days")
               .format("YYYY-MM-DD");
             // 表示条件設定保存処理を呼び出し
@@ -3805,9 +3811,8 @@ export default {
           } else if (treatDateList.length <= 20) {
             // 対象日数：7日～13日（画面右端に対して余剰日付が１日以上あり／１４日までの場合:14+6日）
             // 押下後の表示は右端が最終データになるように基準日にセット
-            this.baseDay = moment(
-              treatDateList[treatDateList.length - 7]
-            ).format("YYYY-MM-DD");
+            this.baseDay = dayjs(
+              treatDateList[treatDateList.length - 7]).format("YYYY-MM-DD");
             // 警告ダイアログ表示
             this.nextWarningFlg = true;
             // 表示条件設定保存処理を呼び出し
@@ -3815,9 +3820,8 @@ export default {
           } else {
             // 対象日数：14日以上（表示後の画面右端がまだ最終データではない）
             // 表示開始日を設定
-            this.baseDay = moment(treatDateList[movePeriod - 9]).format(
-              "YYYY-MM-DD"
-            );
+            this.baseDay = dayjs(treatDateList[movePeriod - 9]).format(
+              "YYYY-MM-DD");
             // 表示条件設定保存処理を呼び出し
             await this.setDispSetting();
           }
@@ -3834,51 +3838,51 @@ export default {
           case "1":
           case "2":
             //基準日が一覧初期値のためadd間隔=movePeriod
-            this.baseDay = moment(this.startDay)
+            this.baseDay = dayjs(this.startDay)
               .add(movePeriod, "days")
               .format("YYYY-MM-DD");
             break;
           case "3":
             //基準日が一覧中央値のためadd間隔を変更
             // mod bug #6604 修正 chen start
-            this.baseDay = moment(this.baseDay)
+            this.baseDay = dayjs(this.baseDay)
               .add(movePeriod, "days")
               .format("YYYY-MM-DD");
-            // this.baseDay = moment(this.startDay)
+            // this.baseDay = dayjs(this.startDay)
             //   .add(movePeriod + 7, "days")
             //   .format("YYYY-MM-DD");
             // mod bug #6604 修正 chen end
             break;
 
           case "4":
-            this.baseDay = moment(this.startDay)
+            this.baseDay = dayjs(this.startDay)
               .add(movePeriod + 11, "weeks")
               .format("YYYY-MM-DD");
             break;
 
           case "5":
-            this.baseDay = moment(this.startDay)
+            this.baseDay = dayjs(this.startDay)
               .add(movePeriod + 5, "months")
               .format("YYYY-MM-DD");
             break;
 
           case "6":
-            this.baseDay = moment(this.startDay)
+            this.baseDay = dayjs(this.startDay)
               .add(movePeriod + 11, "months")
               .format("YYYY-MM-DD");
             break;
 
           case "7":
-            this.baseDay = moment(this.startDay)
+            this.baseDay = dayjs(this.startDay)
               .add(movePeriod + 3, "years")
               .format("YYYY-MM-DD");
-            this.baseDay = moment(this.baseDay)
+            this.baseDay = dayjs(this.baseDay)
               .subtract(1, "months")
               .format("YYYY-MM-DD");
             break;
 
           default:
-            this.baseDay = moment(this.startDay)
+            this.baseDay = dayjs(this.startDay)
               .add(movePeriod, "days")
               .format("YYYY-MM-DD");
             break;
@@ -3957,19 +3961,19 @@ export default {
     dateFormatter(date) {
       switch (this.currentSelectedPeriod) {
         case "4":
-          return moment(date).format("M/D～");
+          return dayjs(date).format("M/D～");
 
         case "5":
         case "6":
-          return moment(date).format("M月");
+          return dayjs(date).format("M月");
 
         case "7":
-          return `${moment(date).format("'YY.M")}～${moment(date)
+          return `${dayjs(date).format("'YY.M")}～${dayjs(date)
             .add(11, "months")
             .format("'YY.M")}`;
 
         default:
-          return moment(date).format("D日(ddd)");
+          return dayjs(date).format("D日(ddd)");
       }
     },
 
@@ -3992,7 +3996,7 @@ export default {
           );
         }
       );
-      return _.mapObject(responsePat.data, patInfoJson =>
+      return _.mapValues(responsePat.data, patInfoJson =>
         JSON.parse(patInfoJson)
       );
     },
@@ -4026,7 +4030,7 @@ export default {
             dieInfo.die_date = `${year}${month}${day}`;
           }
         } else {
-          dieInfo.die_date = moment(date, "YYYY-MM-DD HH:mm:ss").format(
+          dieInfo.die_date = dayjs(date, "YYYY-MM-DD HH:mm:ss").format(
             "YYYYMMDD"
           );
         }
@@ -4124,14 +4128,20 @@ export default {
       const sbWidth = this.sidebarWidth;
       if(sbWidth){
         const contWidth = contentWidth - sbWidth;
-        document.getElementsByClassName("list-content")[0].style.width = contWidth + 'px';
+        const listContent = getScopedElementsByClassName("list-content", this.$el || null)[0];
+        if (listContent) {
+          listContent.style.width = contWidth + 'px';
+        }
       }else{
-        document.getElementsByClassName("list-content")[0].style.width = contentWidth + 'px';
+        const listContent = getScopedElementsByClassName("list-content", this.$el || null)[0];
+        if (listContent) {
+          listContent.style.width = contentWidth + 'px';
+        }
       }
 
       const wh = this.windowHeight;
-      const hh = document.getElementsByClassName("header")[0].offsetHeight;
-      const fh = document.getElementById("footer-menu").clientHeight;
+      const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
+      const fh = getFooterMenuClientHeight(this.$el || null);
       const contHeight = wh - hh - fh - 5;
       this.contentHeight = contHeight;
      },
@@ -4156,7 +4166,7 @@ export default {
 /* 患者経過総合ビューア共通スタイル定義 */
 /* mod bug 7185 修正 chen start */
 /* @import "/css/style.scss"; */
-@import "css/style.scss";
+@use "css/style.scss" as *;
 /* mod bug 7185 修正 chen start */
 
 .status-figure-label {
@@ -4224,7 +4234,7 @@ img {
   width: 50%;
 }
 
-.popover-style /deep/ .popover--top {
+.popover-style :deep(.popover--top) {
   width: 200px;
 }
 

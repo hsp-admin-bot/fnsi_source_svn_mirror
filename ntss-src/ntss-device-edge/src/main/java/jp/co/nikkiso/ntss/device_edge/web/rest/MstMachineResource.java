@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
@@ -141,7 +141,7 @@ public class MstMachineResource {
       ObjectMapper mapper = new ObjectMapper();
       try {
         json = mapper.writeValueAsString(dto);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
 
         // wp アプリケーションログの適正化 Add Start
         logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_ERROR, mappingUrl, facility_cd, e.getMessage());

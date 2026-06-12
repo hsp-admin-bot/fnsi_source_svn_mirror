@@ -1,13 +1,13 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.request.authority.UserAuthorityRequest;
 import jp.co.nikkiso.ntss.core.dao.MstUserDao;
 import jp.co.nikkiso.ntss.core.entity.MstUser;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
@@ -70,7 +70,7 @@ public class UserAuthorityResourceIntegrationTest extends AbstractResourceIntegr
     // action
     ResultActions result = mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/user-authority/{user_id}/list", userId)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     result
       .andExpect(status().isOk())
@@ -107,7 +107,7 @@ public class UserAuthorityResourceIntegrationTest extends AbstractResourceIntegr
     // action
     ResultActions result = mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/user-authority/{user_id}/list", userId)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -130,7 +130,7 @@ public class UserAuthorityResourceIntegrationTest extends AbstractResourceIntegr
     // action
     ResultActions result = mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/user-authority/login/list")
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     result
       .andExpect(status().isOk())
@@ -161,7 +161,7 @@ public class UserAuthorityResourceIntegrationTest extends AbstractResourceIntegr
     // action
     ResultActions result = mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/user-authority/login/list")
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -210,7 +210,7 @@ public class UserAuthorityResourceIntegrationTest extends AbstractResourceIntegr
     // action
     ResultActions result = mockMvc
       .perform(RestDocumentationRequestBuilders.put("/api/user-authority/list")
-        .contentType(MediaType.APPLICATION_JSON_UTF8)
+        .contentType(MediaType.APPLICATION_JSON)
         .content(requestBody)
         .with(csrf())
       );
@@ -271,7 +271,7 @@ public class UserAuthorityResourceIntegrationTest extends AbstractResourceIntegr
     // action
     ResultActions result = mockMvc
       .perform(RestDocumentationRequestBuilders.put("/api/user-authority/list")
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // assert
     result

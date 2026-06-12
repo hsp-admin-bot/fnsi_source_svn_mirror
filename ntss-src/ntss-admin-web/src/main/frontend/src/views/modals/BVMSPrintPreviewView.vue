@@ -1,24 +1,31 @@
 /**
-* 印刷プレビューページ
-*/
+ * 印刷プレビューページ
+ */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="print-preview"
-      :style="isMobileBrowser() ? 'width: 100%; box-sizing: border-box;' : 'width: fit-content'"
-      v-show="previewHtml !== null" v-html="previewHtml"></div>
-    <div slot="footer" class="flex-container">
+    <template #body>
+      <div
+        class="print-preview"
+        :style="isMobileBrowser() ? 'width: 100%; box-sizing: border-box;' : 'width: fit-content'"
+        v-show="previewHtml !== null"
+        v-html="previewHtml"
+      ></div>
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <button class="button btn2-cancel denial-btn" @click="cancel">キャンセル</button>
       </div>
       <div class="registration-btn-area" style="background:none">
         <button class="button btn3-normal registration-btn" @click="print">印刷</button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
@@ -50,10 +57,8 @@ export default {
     init() {
       this.setLoadingScreenVisible(true);
       this.getReportHTMLForBVMS(this.getOrdNo).then(response => {
-        /* fix #12159 lichaolong 20260303 start */
         const processed = this.isMobileBrowser() ? this.ensureViewBox(response.data.reportHtml) : response.data.reportHtml;
         this.previewHtml = processed;
-        /* fix #12159 lichaolong 20260303 end */
         this.setLoadingScreenVisible(false);
       });
     },
@@ -84,7 +89,6 @@ export default {
       });
     },
     /**
-     * fix #12159 lichaolong 20260303 start
      * モバイルブラウザでSVGのviewBoxがない場合に、viewBoxを付与する
      */
     detectPlatform() {
@@ -96,11 +100,9 @@ export default {
       const isAndroid = /android/.test(low);
       const isIphone = /iphone/.test(low) && !isAndroid;
       const isIpadUA = /ipad/.test(low);
-      // iPadOS 13 以降の iPad は userAgent に "Mac" を含むため、platform と maxTouchPoints で判別
       const isIpadMacTouch = platform === 'MacIntel' && nav.maxTouchPoints && nav.maxTouchPoints > 1;
       const isIpad = isIpadUA || isIpadMacTouch;
 
-      // iPad を Mac から除外（iPadOS は上記で処理済み）
       const isMac = (/macintosh|mac os x/.test(low) || /macintel/i.test(platform)) && !isIpad;
       const isWindows = /windows/.test(low);
       const isLinux = /linux/.test(low) && !isAndroid;
@@ -123,7 +125,7 @@ export default {
         isLinux,
         ua,
         platform
-      }
+      };
     },
     isMobileBrowser() {
       const platform = this.detectPlatform();
@@ -171,7 +173,6 @@ export default {
       }
     }
   },
-  /* fix #12159 lichaolong 20260303 end */
   created() {
     this.init();
   }
@@ -183,16 +184,16 @@ export default {
   margin: 0px auto;
   border: 1px solid lightgray;
 }
-div >>> .modal-header .toolbar {
+div :deep(.modal-header .toolbar) {
   background-color: var(--ntss-header-background-color);
 }
-div >>> .modal-header .toolbar__title.toolbar__left {
+div :deep(.modal-header .toolbar__title.toolbar__left) {
   color: var(--ntss-header-color) !important;
 }
-div >>> .modal-search,
-div >>> .modal-body,
-div >>> .modal-footer,
-div >>> .modal-footer .bottom-bar {
+div :deep(.modal-search),
+div :deep(.modal-body),
+div :deep(.modal-footer),
+div :deep(.modal-footer .bottom-bar) {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }

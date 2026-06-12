@@ -66,7 +66,7 @@ public class ReportS3ServiceImplTest {
 
       try {
         target.putFile(bucket, filePath, tmpPath);
-      } catch (com.amazonaws.SdkClientException e) {
+      } catch (software.amazon.awssdk.core.exception.SdkClientException e) {
         // S3疑似環境だと、アップロードに成功してから例外が発生するので無視する
       }
 
@@ -103,7 +103,7 @@ public class ReportS3ServiceImplTest {
 
       try {
         target.putFile(bucket, filePath, tmpPath);
-      } catch (com.amazonaws.SdkClientException e) {
+      } catch (software.amazon.awssdk.core.exception.SdkClientException e) {
         // S3疑似環境だと、アップロードに成功してから例外が発生するので無視する
       }
 

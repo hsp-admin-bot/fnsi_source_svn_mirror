@@ -7,6 +7,7 @@ import org.seasar.doma.Insert;
 import org.seasar.doma.Select;
 import org.seasar.doma.boot.ConfigAutowireable;
 
+import jp.co.nikkiso.ntss.core.entity.DevMenteMain;
 import jp.co.nikkiso.ntss.core.entity.MstMainteLayoutHst;
 
 /**
@@ -18,6 +19,9 @@ public interface MstMainteLayoutHstDao {
 
   @Select
   MstMainteLayoutHst selectByIdAndEdition(String facilityCd, Long mainteLayoutCd, Integer editionNo);
+
+  @Select
+  List<MstMainteLayoutHst> selectByListIdAndEdition(String facilityCd, List<DevMenteMain> devMenteMains);
 
   @Insert(sqlFile = true)
   int insertList(List<MstMainteLayoutHst> mstMainteLayoutHsts);

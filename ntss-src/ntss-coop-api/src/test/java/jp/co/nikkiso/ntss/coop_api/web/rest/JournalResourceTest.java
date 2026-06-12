@@ -29,10 +29,10 @@ import org.apache.commons.codec.binary.Hex;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.jdbc.Sql;
@@ -66,25 +66,25 @@ import jp.co.nikkiso.ntss.core.exception.NtssException;
 @Transactional
 @Sql("classpath:resource.script/JournalResourceTest/JournalResourceTest.db5.before.sql")
 public class JournalResourceTest extends AbstractResourceTest {
-  @SpyBean
+  @MockitoSpyBean
   private DeliveryService deliveryService;
 
-  @SpyBean
+  @MockitoSpyBean
   private HealthService healthService;
 
-  @MockBean
+  @MockitoBean
   AmazonS3Wrapper amazonS3Wrapper;
 
-  @MockBean
+  @MockitoBean
   ClockWrapper clockWrapper;
 
-  @SpyBean
+  @MockitoSpyBean
   private SysCoopJournalDao sysCoopJournalDao;
 
   @Autowired
   private SysCoopJournalWithMstCoopDistributeDao sysCoopJournalWithMstCoopDistributeDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private MntIfEdgeHealthmonDao mntIfEdgeHealthmonDao;
 
   @Test

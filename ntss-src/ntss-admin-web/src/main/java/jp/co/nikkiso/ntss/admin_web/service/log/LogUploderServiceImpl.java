@@ -16,15 +16,12 @@ import java.util.regex.Pattern;
 
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
-import jp.co.nikkiso.ntss.admin_web.config.AwsConfiguration;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.dao.MstFacilitySettingDao;
 import jp.co.nikkiso.ntss.core.dao.SysSystemDefineDao;
@@ -62,23 +59,6 @@ public class LogUploderServiceImpl implements LogUploaderService {
   // #11987 2026.03.24 add スケールベッドアプリのTRACEログアップロード TDC伊東 start
   public static final String APP_NAME_NKKSCALEBED = "NKKScaleBed"; // スケールベッドアプリ
   // #11987 2026.03.24 add スケールベッドアプリのTRACEログアップロード TDC伊東 end
-  // TODO: S3へのアップロードを行う場合には以下の処理を使用する(現時点では未使用)
-  /**
-   * S3バケット名
-   */
-  @Value("${ntss.log.s3-bucket:}")
-  private String s3Bucket;
-
-  /**
-   * S3オブジェクト取得
-   * @return s3 S3オブジェクト
-   */
-  @Autowired
-  private AwsConfiguration awsS3;
-  private AmazonS3 s3() {
-    return awsS3.s3();
-  }
-
   @Autowired
   private SysSystemDefineDao sysSystemDefineDao;
   @Autowired

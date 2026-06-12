@@ -21,10 +21,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.dao.MstMachineRecordControlDao;
 import jp.co.nikkiso.ntss.core.entity.MstMachineRecordControl;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 /**
  * 装置記録マスタのService実装クラス.
@@ -55,6 +56,10 @@ public class MasterMachineRecordServiceImpl implements MasterMachineRecordServic
    */
   @Autowired
   private MstDiseaseDao mstDiseaseDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // add #7390 コンバート後、病名マスタを開くと処理中のまま終わらない 徐博 end
 
 
@@ -79,7 +84,7 @@ public class MasterMachineRecordServiceImpl implements MasterMachineRecordServic
         wheres.append(" facility_cd = '" + mstMachineRecordControl.getFacilityCd() + "'" +"\n");
         // logCommon設定
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(mstMachineRecordControlDao, mmsTbN, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         //DB更新ログ出力ロジック wp end
@@ -148,11 +153,11 @@ public class MasterMachineRecordServiceImpl implements MasterMachineRecordServic
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

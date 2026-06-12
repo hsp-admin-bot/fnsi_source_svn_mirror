@@ -21,16 +21,13 @@
       <!-- mod FNSI-共有を追加 王 20200921 start -->
       <!-- mod #10359 編集権限の動作不正 start -->
       <!-- <v-ons-select
-        float
         id="kind"
         v-model="inputModel.selectedOrdNo"
         class="ntss-pat-event-label"
         :disabled="getViewMode || !isShared"
         @change="onChangeLinkData()"
       > -->
-      <!-- mod #12462 患者情報共有 20260312 start -->
       <v-ons-select
-        float
         id="kind"
         v-model="inputModel.selectedOrdNo"
         class="ntss-pat-event-label"
@@ -42,7 +39,6 @@
         "
         @change="onChangeLinkData()"
       >
-      <!-- mod #12462 患者情報共有 20260312 end -->
         <!-- mod #10359 編集権限の動作不正 end -->
       <!-- mod FNSI-共有を追加 王 20200921 end -->
         <option :value="0">(治療実績未選択)</option>
@@ -66,17 +62,19 @@
 </template>
 
 <script>
-  import {mapActions, mapGetters} from "vuex";
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   import {deepCopy} from "@/functions/common/CommonFunctions";
-  import moment from "moment";
+  import dayjs from "@/compat/date/dayjs";
 // add #10359 編集権限の動作不正 start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
+import PatEventOwnerMixin from "@/components/pat-event/PatEventOwnerMixin";
 // add #10359 編集権限の動作不正 end
 
   export default {
+    mixins: [PatEventOwnerMixin],
   name: "PatEventDialysisDateLink",
   props: ["propsIndex"],
-  components: {},
   data() {
     return {
       selectedOrdNoOld: 0,
@@ -102,9 +100,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
     ]),
     ...mapGetters("observe-record/list", [
       "getEditingOrdNo",
-      // add #12462 患者情報共有 20260312 start
       "getIsOtherFacilitys"
-      // add #12462 患者情報共有 20260312 end
     ]),
     // add FNSi5673-治療実績リンクの選択肢に実績のない日が表示される 周 start
     ...mapGetters("bread-crumb", {keepHistories: "getKeepHistory"}),
@@ -113,9 +109,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
-    // add #12462 患者情報共有 20260312 start
     ...mapGetters("pat-info", ["selectedPatId"]),
-    // add #12462 患者情報共有 20260312 end
     isShared() {
       if(this.getPatEventRecord.isComRec){
         return this.getFacilityCd === this.getSharedFacilityCd;
@@ -137,12 +131,12 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
     /*add FNSI-改修内容redmain5673 任 start*/
     "inputModel.selectedOrdNo"() {
       if(this.selectedOrdNoOld !== this.inputModel.selectedOrdNo){
-        if(document.getElementById("kind") !== null){
-          document.getElementById("kind")?.classList?.add("custom-select-edited");
+        if(this.getScopedElementById("kind") !== null){
+          this.getScopedElementById("kind")?.classList?.add("custom-select-edited");
         }
       }else{
-        if(document.getElementById("kind") !== null){
-          document.getElementById("kind").classList.remove("custom-select-edited");
+        if(this.getScopedElementById("kind") !== null){
+          this.getScopedElementById("kind").classList.remove("custom-select-edited");
         }
       }
 
@@ -165,7 +159,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
       //     let length = this.getComboOrdMain.length;
       //     const startDate = this.getUpdateMode ? this.$parent.$refs.tab.eventStartDate : this.$parent.$refs.tab.inputModel.dayStartDate;
       //     for(let i = 0;i < length;i++){
-      //       const viewDate = this.getComboOrdMain[i].viewTreatDate === null ? moment(this.getComboOrdMain[i].treatDate).format("YYYY-MM-DD") : moment(this.getComboOrdMain[i].viewTreatDate).format("YYYY-MM-DD")
+      //       const viewDate = this.getComboOrdMain[i].viewTreatDate === null ? dayjs(this.getComboOrdMain[i].treatDate).format("YYYY-MM-DD") : dayjs(this.getComboOrdMain[i].viewTreatDate).format("YYYY-MM-DD")
       //       if(startDate !== viewDate){
       //         this.getComboOrdMain.splice(i,1);
       //         length -= 1;
@@ -182,11 +176,11 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
   //   this.setEditingOrdNo(0);
   // },
   // del 6757 観察記録の新規登録時、カテゴリ選択を切り替えると入力欄の初期値が正しく表示されない 関  end
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  created() {},
+
   mounted() {
     // del 9954 観察記録における実績リンクが編集済み表示となる 関 start
     // this.selectedOrdNoOld = this.inputModel.selectedOrdNo;
@@ -200,6 +194,19 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
     }
   },
   methods: {
+    getScopedElementById(id) {
+      return getScopedElementById(id, this);
+    },
+    getScopedElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this);
+    },
+    getScopedQuery(selector) {
+      return queryScopedSelector(selector, this);
+    },
+    getScopedQueryAll(selector) {
+      return queryScopedSelectorAll(selector, this);
+    },
+
     ...mapActions("pat-event/detail", [
       "setPatEventResultParamsUpdate",
       "setPatEventRecord",
@@ -219,9 +226,10 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
       if(undefined !== this.getComboOrdMain && null !== this.getComboOrdMain) {
       // add FNSi5791患者イベントが２件に分かれて患者カレンダーに表示される 周 end
           let length = this.getComboOrdMain.length;
-          const startDate = this.getUpdateMode ? this.$parent.$refs.tab.eventStartDate : this.$parent.$refs.tab.inputModel.dayStartDate;
+          const tabComponent = this._patEventTabComponent();
+          const startDate = this.getUpdateMode ? tabComponent?.eventStartDate : tabComponent?.inputModel?.dayStartDate;
           for(let i = 0;i < length;i++){
-            const viewDate = this.getComboOrdMain[i].viewTreatDate === null ? moment(this.getComboOrdMain[i].treatDate).format("YYYY-MM-DD") : moment(this.getComboOrdMain[i].viewTreatDate).format("YYYY-MM-DD")
+            const viewDate = this.getComboOrdMain[i].viewTreatDate === null ? dayjs(this.getComboOrdMain[i].treatDate).format("YYYY-MM-DD") : dayjs(this.getComboOrdMain[i].viewTreatDate).format("YYYY-MM-DD")
             if(startDate !== viewDate){
               this.getComboOrdMain.splice(i,1);
               length -= 1;
@@ -253,10 +261,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
     getComboOrdMain2() {
       // 取得済みオーダー
       const rec = this.getPatEventRecord;
-      // mod #12462 患者情報共有 20260312 start
-      // const patId = rec.patId;
       const patId = this.selectedPatId;
-      // mod #12462 患者情報共有 20260312 end
       this.ordMains = [];
       if (this.getEditingOrdNo) {
         // オーダーしていあり
@@ -299,10 +304,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
     findSelectedOrderMain() {
       // 取得済みオーダー
       const rec = this.getPatEventRecord;
-      // mod #12462 患者情報共有 20260312 start
-      // const patId = rec.patId;
       const patId = this.selectedPatId;
-      // mod #12462 患者情報共有 20260312 end
       if (rec.ordNo) {
         // オーダーしていあり
         this.fetchOrdMainRecord({
@@ -324,11 +326,8 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
     async searchOrdMain() {
       // オーダ検索処理
       const rec = this.getPatEventRecord;
-      // mod #12462 患者情報共有 20260312 start
-      // const patId = rec.patId;
       const eventCd = rec.patEventCd;
       const patId = this.selectedPatId;
-      // mod #12462 患者情報共有 20260312 end
       /*mod FNSI-改修内容患者event bug 任 start*/
       /*let sdt = new Date(rec.eventDate);*/
       let sdt = new Date(rec.eventStartDate);
@@ -359,17 +358,17 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
       if (ordMain.rstDialysisState === "0") {
 
         ret =
-          `${ordMain.viewTreatDate === null ? moment(ordMain.treatDate).format("YYYY/MM/DD") : ordMain.viewTreatDate}` +
+          `${ordMain.viewTreatDate === null ? dayjs(ordMain.treatDate).format("YYYY/MM/DD") : ordMain.viewTreatDate}` +
           " 予定 " +
           `${ordMain.indKurName === null ? "-" : ordMain.indKurName} ${ordMain.indBedName === null ? "-" : ordMain.indBedName} ${ordMain.indTreatmentName === null ? "-" : ordMain.indTreatmentName}`;
       } else {
         // mod 5673 デグレ：治療実績リンクの選択肢に実績のない日が表示される 関 start
         //  ret =
-        //   `${ordMain.viewTreatDate === null ? moment(ordMain.treatDate).format("YYYY/MM/DD") : ordMain.viewTreatDate}` +
+        //   `${ordMain.viewTreatDate === null ? dayjs(ordMain.treatDate).format("YYYY/MM/DD") : ordMain.viewTreatDate}` +
         //   " 実績 " +
         //   `${ordMain.rstKurName === null ? "-" : ordMain.rstKurName} ${ordMain.rstBedName === null ? "-" : ordMain.rstBedName} ${ordMain.rstTreatmentName === null ? "-" : ordMain.rstTreatmentName}`;
         ret =
-          `${moment(ordMain.treatDate).format("YYYY/MM/DD")}` +
+          `${dayjs(ordMain.treatDate).format("YYYY/MM/DD")}` +
           " 実績 " +
           `${ordMain.rstKurName === null ? "-" : ordMain.rstKurName} ${ordMain.rstBedName === null ? "-" : ordMain.rstBedName} ${ordMain.rstTreatmentName === null ? "-" : ordMain.rstTreatmentName}`;
           // mod 5673 デグレ：治療実績リンクの選択肢に実績のない日が表示される 関 end
@@ -378,7 +377,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 
     },
     formatterYMd(value) {
-      return moment(value, "YYYY-MM-DD").format("YYYYMMDD");
+      return dayjs(value).format("YYYYMMDD");
     },
     async selectComboOrdMain() {
       await this.searchOrdMain();
@@ -471,8 +470,10 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
   margin-left: 10px;
   margin-top: 10px;
 }
+ 
 /* 患者イベントのテキストエリアの文字サイズが大きい  6095  shan   end */
-.select >>> .select-input {
+.select :deep(.select-input) {
+  font-family: -apple-system, 'Helvetica Neue', 'Helvetica', 'Arial', 'Lucida Grande', sans-serif !important;
   opacity: 1;
 }
   /*mod FNSI-改修内容レイアウト表示と見た目調整。ラベルとデータ項目の区別がつかない。任 start*/

@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.response.notificationMessage;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import jp.co.nikkiso.ntss.core.entity.NotificationMessage;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -16,7 +16,7 @@ import java.util.List;
 //@Getter
 @Data
 // mod FNSi6531通知が重複して行われる 周 end
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class NotificationListResponse {
 
   /**

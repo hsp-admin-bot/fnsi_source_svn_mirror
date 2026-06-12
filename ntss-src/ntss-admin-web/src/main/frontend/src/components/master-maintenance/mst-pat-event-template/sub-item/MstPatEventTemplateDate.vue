@@ -17,12 +17,14 @@
 </div>
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 //import { ApiHelper } from "@/apis/AxiosHelper";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 export default {
   name: "MstPatEventTemplateText",
@@ -94,12 +96,17 @@ export default {
       },
     },
   },
-  watch: {
-  },
-  created() {
 
-  },
   methods: {
+    getTemplateElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || this);
+    },
+    queryTemplateSelector(selector) {
+      return queryScopedSelector(selector, this.$el || this);
+    },
+    queryTemplateSelectorAll(selector) {
+      return queryScopedSelectorAll(selector, this.$el || this);
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("mst-pat-event-template", [
       "setInputParams",
@@ -146,7 +153,7 @@ export default {
         return true;
       }
       if(!validationResult.fieldNameValid) {
-        document.getElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
+        this.getTemplateElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
       }
       // メッセージ組み立て
       // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
@@ -199,11 +206,11 @@ export default {
 .disp-item-area tr th {
   text-align: left;
 }
-.input-required >>> input{
+.input-required :deep(input){
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> input{
+.input-invalid :deep(input){
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }

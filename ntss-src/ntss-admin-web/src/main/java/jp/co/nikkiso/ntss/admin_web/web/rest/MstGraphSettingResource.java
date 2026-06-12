@@ -25,6 +25,12 @@ import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import jp.co.nikkiso.ntss.core.entity.MstGraphSetting;
 
 /**
  * P-Ca9分割グラフ設定マスタ画面のResourceクラス.
@@ -50,7 +56,22 @@ public class MstGraphSettingResource {
   *
   */
   @GetMapping("/mst_graph_setting/{facilityCd}")
-  public ResponseEntity<?> getMasterData(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getMasterData(@PathVariable String facilityCd,
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                         @AuthenticationPrincipal NtssUser ntssUser
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -110,7 +131,39 @@ public class MstGraphSettingResource {
   /**
    * P-Ca9分割グラフマスタ登録・更新
    */
-  public ResponseEntity<Void> saveMstGraphSetting(@RequestBody Map<String, List<String>> payload) {
+  public ResponseEntity<Void> saveMstGraphSetting(@RequestBody Map<String, List<String>> payload,
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try {
+      if(!ntssUser.isNkkAdminUser()) {
+        if (payload.get("insertRecord") != null && !payload.get("insertRecord").isEmpty()) {
+          ObjectMapper mapper = new ObjectMapper();
+          MstGraphSetting mstGraphSetting = mapper.readValue(payload.get("insertRecord").get(payload.get("insertRecord").size() - 1),
+            MstGraphSetting.class);
+          if (mstGraphSetting != null && mstGraphSetting.getFacilityCd() != null &&
+            !mstGraphSetting.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstGraphSetting.getFacilityCd() + " " + "getGraphSettingNo=" + mstGraphSetting.getGraphSettingNo() + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            EventLogMessage eventLogMessage = new EventLogMessage();
+            eventLogMessage.setLogMessage("セキュリティチェックの例外!");
+            logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_DETAIL_FACILITIES_LIST, SERVICE_NAME.FNSI, null);
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    } catch (JacksonException e) {
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+      if (!ntssUser.isNkkAdminUser()) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " JsonProcessingException during security check ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     try {
       mstGraphSettingService.saveMstGraphSetting(payload);
       return new ResponseEntity<>(HttpStatus.OK);

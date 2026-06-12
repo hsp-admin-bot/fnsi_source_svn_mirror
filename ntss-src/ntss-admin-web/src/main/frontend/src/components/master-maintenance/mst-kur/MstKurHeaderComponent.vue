@@ -22,8 +22,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
@@ -70,10 +70,7 @@ export default {
 
     },
   },
-  created() {
-  },
-  destroyed() {
-  },
+
   mounted() {
     EventBus.$emit("addLeftmostHeaderMargin");
   }

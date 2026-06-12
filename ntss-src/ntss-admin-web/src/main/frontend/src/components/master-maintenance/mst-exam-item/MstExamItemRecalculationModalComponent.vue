@@ -3,10 +3,13 @@
  */
 <template>
   <modal-base @onClose="closeModal(false)">
-    <div slot="header">
+        <template #header>
+<div>
       <component :is="header" />
     </div>
-    <div slot="body" style="margin-left: 5%;overflow-y: scroll;max-height:100%">
+    </template>
+    <template #body>
+    <div style="margin-left: 5%;overflow-y: scroll;max-height:100%">
       <v-ons-row class="input-row">
         <v-ons-col class="input-item-name">
           <label>対象期間</label>
@@ -62,8 +65,8 @@
                 </tr>
               </thead>
               <tbody>
-                <template v-for="(itemcd, index) in displayPatExamMainList" >
-                <tr :key="index">
+                <template v-for="(itemcd, index) in displayPatExamMainList"  :key="index">
+                <tr>
                   <td style="text-align: center" :style="{ backgroundColor:itemcd.isComplete ?  'rgb(138 137 137)' : 'var(--ntss-list-item-background-color)' }">
                     <input type="checkbox" v-model="itemcd.isDisp" :disabled="isBatTime" />
                   </td>
@@ -144,8 +147,9 @@
         </v-ons-col>
       </v-ons-row>
     </div>
+    </template>
+    <template #footer>
     <div
-      slot="footer"
       class="flex-container"
       style="justify-content: initial"
       id="footer"
@@ -183,12 +187,13 @@
         >
       </div>
     </div>
-  </modal-base>
+      </template>
+</modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { sendRequestGetMstExamItemList} from "@/apis/exam-Record";
 import { ApiHelper } from "@/apis/AxiosHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
@@ -201,6 +206,8 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #7523 「対象期間を選択するカレンダー表示」について、対応する。 dengshen start
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 import {EXAM_RECALC_MSG, EXAM_RECALC_STATUS} from "@/constants/mstExamItemDefine";
+import { queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
+
 // add #7523 「対象期間を選択するカレンダー表示」について、対応する。 dengshen end
 
 export default {
@@ -308,16 +315,13 @@ export default {
       resetLoadingScreenVisibleCount: "resetLoadingScreenVisibleCount",
     }),
     ...mapActions("mst-wheel-chair", ["fetchPatPersonalSimpleByFacilityCd"]),
-    /* del by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
-    // ...mapActions("pat-viewer", ["getPatExamMain"]),
-    /* del by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       // モーダルのbodyの高さ
-      const mb = document.getElementsByClassName("modal-body")[0];
+      const mb = this.getCurrentModalBody();
       const mh = mb ? mb.clientHeight : 0;
       // モーダルのヘッダの高さ
-      const hElm = document.getElementById("infomation-box");
+      const hElm = this.getInformationBoxElement();
       const hh = hElm ? hElm.clientHeight : 0;
       this.gridHeight = mh - hh;
       -35;
@@ -350,7 +354,7 @@ export default {
       })
       if (this.mntRecalcQue)
         await ApiHelper.post(
-        `/exam/updateMntRecalcQue/`,{
+        `/exam/updateMntRecalcQue`,{
           dispFlg:"0",
           upId:this.accountInfo.userId,
           recalcQueCd:this.mntRecalcQue.recalcQueCd
@@ -389,11 +393,11 @@ export default {
     isCover(e, index) {
       if (e.target.name == "cover" && e.target.checked) {
         this.getExamItemList[index].isCover = true;
-        document.getElementsByName("unCover")[index].checked = false;
+        this.getNamedInputElements("unCover")[index].checked = false;
       }
       if (e.target.name == "unCover" && e.target.checked) {
         this.getExamItemList[index].isCover = false;
-        document.getElementsByName("cover")[index].checked = false;
+        this.getNamedInputElements("cover")[index].checked = false;
       }
     },
     deselect(e, index) {
@@ -437,14 +441,13 @@ export default {
      if (this.mntRecalcQue.status == EXAM_RECALC_STATUS.PROGRESS_COMPLETE || this.isClear) {
      // mod #8598 検査再計算ツールで対象患者と再計算項目の選択ができず計算ができない dou end
        await ApiHelper.post(
-         `/exam/createMntRecalcQue/`,{
+         `/exam/createMntRecalcQue`,{
            facilityCd:this.getFacilityCd,
            status:"0",
            content: JSON.stringify(content),
            detail:JSON.stringify(detail),
            regId:this.accountInfo.userId
-         }
-       ).
+         }).
        catch(error => {
          //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
          getErrorMessage('MstExamItemRecalculationModalComponent.vue', 'handleStart', error);
@@ -456,7 +459,7 @@ export default {
      // add #8598 検査再計算ツールで対象患者と再計算項目の選択ができず計算ができない dou end
        if (this.mntRecalcQue) {
          await ApiHelper.post(
-           `/exam/updateMntRecalcQue/`,{
+           `/exam/updateMntRecalcQue`,{
              status: "0",
              content: JSON.stringify(content),
              upId:this.accountInfo.userId,
@@ -478,9 +481,8 @@ export default {
     },
     async handleSuspension() {
       await ApiHelper.get(
-      `/exam/MntRecalcQue/${this.getFacilitySwitch}`
-      ).then((response) =>{
-        if(response.data ) {
+      `/exam/MntRecalcQue/${this.getFacilitySwitch}`).then((response) =>{
+        if(response.data) {
           response.data.forEach (e =>{
             if (e.status != "2" && e.status != "9") {
               this.mntRecalcQue = e;
@@ -537,12 +539,12 @@ export default {
     async updateForProgressStopedu() {
       this.mntRecalcQue.status = "9";
       await ApiHelper.post(
-        `/exam/updateMntRecalcQue/`,{
+        `/exam/updateMntRecalcQue`,{
           status: this.mntRecalcQue.status,
           content: this.mntRecalcQue.content,
           upId:this.accountInfo.userId,
           recalcQueCd:this.mntRecalcQue.recalcQueCd
-        } ).
+        }).
       catch(error => {
         getErrorMessage('MstExamItemRecalculationModalComponent.vue', 'handleSuspension', error);
         throw error;
@@ -592,19 +594,25 @@ export default {
     },
     numberOfDevices() {},
     calculateModalWidthHeight() {
-      document.getElementsByClassName("modal-container")[0].style.maxWidth =
+      const modalContainer = this.getCurrentModalContainer();
+      const modalBody = this.getCurrentModalBody();
+      const modalFooter = this.getCurrentModalFooter();
+      if (!modalContainer || !modalBody) {
+        return;
+      }
+      modalContainer.style.maxWidth =
         "1200px";
-      document.getElementsByClassName("modal-container")[0].style.maxHeight =
+      modalContainer.style.maxHeight =
         "1120px";
       ("70%");
 
-      document.getElementsByClassName("modal-container")[0].style.width = "58%";
-      let bottomBar = document.getElementsByClassName("bottom-bar")[0].clientHeight;
-      document.getElementsByClassName("modal-container")[0].style.height =
+      modalContainer.style.width = "58%";
+      let bottomBar = (queryScopedSelector('.bottom-bar', modalFooter) || modalFooter?.querySelector?.('.bottom-bar'))?.clientHeight || 0;
+      modalContainer.style.height =
         "70%";
-      document.getElementsByClassName("modal-body")[0].style.overflow =
+      modalBody.style.overflow =
         "hidden";
-      document.getElementsByClassName("modal-body")[0].style.height =
+      modalBody.style.height =
         "calc(100% - "+bottomBar +"px- 2em)";
     },
     async init() {
@@ -680,9 +688,8 @@ export default {
       this.getExamItem();
           // データの取得
       await ApiHelper.get(
-      `/exam/MntRecalcQue/${this.getFacilitySwitch}`
-      ).then((response) =>{
-        if(response.data ) {
+      `/exam/MntRecalcQue/${this.getFacilitySwitch}`).then((response) =>{
+        if(response.data) {
           response.data.forEach (e =>{
             if (e.status != "2" && e.status != "9") {
               this.startFalg = false;
@@ -784,7 +791,7 @@ export default {
     this.isClear = false;
     this.setLoadingScreenVisible(false);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // ポーリング終了
     this.endPolling();
   },
@@ -881,7 +888,7 @@ tr {
   display: flex;
   align-items: center;
 }
-.select >>> .select-input {
+.select :deep(.select-input) {
   font-size: 1em;
   line-height: unset;
 }

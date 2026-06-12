@@ -23,8 +23,9 @@ import jp.co.nikkiso.ntss.certificate_management.service.log.LogService;
 import jp.co.nikkiso.ntss.core.entity.ClDetail;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
+import org.springframework.web.bind.annotation.RestController;
 
-@Service
+@RestController
 @RequestMapping(Uri.CLDETAILS)
 public class ClDetailsResource {
 

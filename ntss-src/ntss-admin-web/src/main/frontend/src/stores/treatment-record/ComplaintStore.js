@@ -167,9 +167,10 @@ export default {
      * @param {*} ordNo オーダ番号
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
-    getTreatmentRecordComplaint({ commit }, ordNo) {
-      return sendRequestGetTreatmentRecordComplaint(ordNo).then(response => {
+    getTreatmentRecordComplaint({ commit }, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetTreatmentRecordComplaint(ordNo, selectedPatId).then(response => {
         commit("setUpDate", response.data.up_date);
         return response;
       });
@@ -181,7 +182,6 @@ export default {
      * @param {*} payload 愁訴処置情報
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     updateTreatmentRecordComplaint({ commit, state }, { ordNo, forcedChangeFlag, payload }) {
       return sendRequestUpdateTreatmentRecordComplaint(
         ordNo,
@@ -196,15 +196,17 @@ export default {
      * 愁訴マスタ取得.
      * @param {*} commit commitオブジェクト
      */
-    getMstComplaint({ commit }) {
-      return sendRequestGetMstComplaint();
+    getMstComplaint({ commit }, payload) {
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetMstComplaint(selectedPatId);
     },
     /**
      * 処置マスタ取得.
      * @param {*} commit commitオブジェクト
      */
-    getMstCompTreatment({ commit }) {
-      return sendRequestGetMstCompTreatment();
+    getMstCompTreatment({ commit }, payload) {
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetMstCompTreatment(selectedPatId);
     },
     /**
      *
@@ -246,10 +248,8 @@ export default {
     },
     //add FNSI改修内容 愁訴処置編集修正 房 end
     //add FNSI修正401改修 房 start
-    // mod #12462 患者情報共有 Ji start
-    getMonitorMsgRecord({ commit }, { ordNo, facilityCd }) {
-      return sendRequestgetMonitorMsgRecord(ordNo, facilityCd).then(response => {
-    // mod #12462 患者情報共有 Ji end
+    getMonitorMsgRecord({ commit }, { ordNo, facilityCd, selectedPatId }) {
+      return sendRequestgetMonitorMsgRecord(ordNo, facilityCd, selectedPatId).then(response => {
         return response;
       });
     },

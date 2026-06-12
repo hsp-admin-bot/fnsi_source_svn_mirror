@@ -2,7 +2,7 @@
  * リリース情報モーダル用ストア
  */
 import {
-  sendRequestGetSySReleaseInfo,
+  sendRequestGetSysReleaseInfo,
   sendRequestGetReleaseDetail
 } from "@/apis/sys-release-info.js";
 
@@ -37,7 +37,7 @@ export default {
   actions: {
     // 施設マスタ情報取得（全件)
     async getSystemReleaseInfosAll({ commit }) {
-      return sendRequestGetSySReleaseInfo().then(response => {
+      return sendRequestGetSysReleaseInfo().then(response => {
         const releaseInfo = response.data;
         commit("setReleaseInfos", releaseInfo);
       });

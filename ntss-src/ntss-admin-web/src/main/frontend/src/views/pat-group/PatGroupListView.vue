@@ -1,8 +1,14 @@
 <template>
   <ntss-layout-split>
-    <header-component slot="header-content" />
-    <bread-crumbs-component slot="bread-crumbs-content" :history-key="historyKey" />
-    <main-component slot="main-content" ref="mainComponent" :history-key="historyKey" />
+    <template #header-content>
+      <header-component />
+    </template>
+    <template #bread-crumbs-content>
+      <bread-crumbs-component :history-key="historyKey" />
+    </template>
+    <template #main-content>
+      <main-component ref="mainComponent" :history-key="historyKey" />
+    </template>
   </ntss-layout-split>
 </template>
 
@@ -12,7 +18,7 @@ import BreadCrumbsComponent from "@/components/BreadCrumbsComponent";
 import MainComponent from "@/components/pat-group/PatGroupListComponent";
 import { HISTORY_KEY_PAT_GROUP_LIST } from "@/router/pat-group/HistoryKeyConstants";
 import store from "@/stores";
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
 

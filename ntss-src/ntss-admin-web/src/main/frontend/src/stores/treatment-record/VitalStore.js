@@ -36,9 +36,8 @@ export default {
      * @param {*} ordNo オーダ番号
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
-    getTreatmentRecordVitalMonitor({ commit }, { facilityCd, ordNo }) {
-      return sendRequestGetTreatmentRecordVitalMonitor(facilityCd, ordNo);
+    getTreatmentRecordVitalMonitor({ commit }, { facilityCd, ordNo, selectedPatId }) {
+      return sendRequestGetTreatmentRecordVitalMonitor(facilityCd, ordNo, selectedPatId);
     },
     /**
      * 実績情報取得
@@ -46,8 +45,10 @@ export default {
      * @param {*} ordNo オーダ番号
      * @return オーダ番号に該当する実績情報
      */
-    getTreatmentRecordResult({commit}, ordNo) {
-      return sendRequestGetTreatmentRecordResult(ordNo);
+    getTreatmentRecordResult({commit}, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetTreatmentRecordResult(ordNo, selectedPatId);
     },
     /**
      * バイタル更新.
@@ -58,7 +59,6 @@ export default {
      * @param {*} payload バイタル情報
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     updateTreatmentRecordVitalForMniMonitor({ commit, state }, { ordNo, payload }) {
       return sendRequestUpdateTreatmentRecordVitalForMniMonitor(
         ordNo,
@@ -73,8 +73,10 @@ export default {
      *
      * @param {*} commit commitオブジェクト
      */
-    getVitalGraphDefine({ commit }, facilityCd) {
-      return sendRequestGetVitalGraphDefine(facilityCd);
+    getVitalGraphDefine({ commit }, payload) {
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetVitalGraphDefine(facilityCd, selectedPatId);
     },
     //add FNSI-改修内容 グラフ様式修正 房 end
   }

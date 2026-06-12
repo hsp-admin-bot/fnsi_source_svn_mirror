@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.admin_web.request.weight;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 
 import org.modelmapper.ModelMapper;
@@ -8,8 +7,8 @@ import org.seasar.doma.Domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import lombok.Data;
 import lombok.Getter;
@@ -60,7 +59,7 @@ public class WeightStateRequest {
       try {
         CardReadValue obj = objectMapper.readValue(value, CardReadValue.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
       }
     }
 
@@ -72,7 +71,7 @@ public class WeightStateRequest {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }

@@ -89,9 +89,10 @@
 // 機能コードに関する定数ファイル
 import { FUNC_OPERATION_VIEWER, FUNC_DEVICE_EDGE_OPERATION } from "@/constants/function-code";
 import FooterUrlComponent from "@/components/FooterUrlComponent";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { getRouterItem } from "@/router/routing-helper";
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { getFooterMenuElement, getVisibleFooterMenuHeight, getScopedWindow, getScopedUserAgent } from "@/functions/common/LayoutMeasureHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -99,6 +100,7 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { messageFormat } from '@/functions/common/MessageFormat'
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages'
 // add #6107 2023/03/08 メッセージボックス全調整 林峻峰 end
+import RoutingDefs from "@/router/json/routing-defs.json";
 
 const ACTIVE_ROUTER_COLOR = "#2ca06f";
 
@@ -121,11 +123,12 @@ export default {
       iosScreenWidth: 0,
       iosScreenHeight: 0,
       activeRouterName: "",
-      listOpenButton: "img/list-open-button/up_arrow.png",
-      listCloseButton: "img/list-open-button/down_arrow.png",
+      listOpenButton: `${import.meta.env.BASE_URL}img/list-open-button/up_arrow.png`,
+      listCloseButton: `${import.meta.env.BASE_URL}img/list-open-button/down_arrow.png`,
       msgFlg: false,
       // 現在開いているメニューグループを保持
       selectMenuGroupCd: null,
+      footerToolbarFrameId: 0,
     };
   },
   computed: {
@@ -197,9 +200,7 @@ export default {
         return acc;
       }, []);
       // フッターが既に表示されている場合は表示の更新
-      if (
-        document.getElementById("footer-menu") !== null
-      ) {
+      if (this.getFooterMenuEl() !== null) {
         this.setSizeInfo(menuItemList.length + 1);
         this.handleResize();
       }
@@ -273,12 +274,88 @@ export default {
       // メニューグループエリア スタイル設定
       this.setMenuGroupStyle(item);
     },
-
-    getFooterHeight() {
-      if (document.getElementById("footer-menu") != null) {
-        return document.getElementById("footer-menu").offsetHeight;
+    getFooterMenuEl() {
+      const root = this.$el || null;
+      if (root?.matches?.('[data-ntss-layout-role="footer-menu"], #footer-menu, .ntss-footer')) {
+        return root;
       }
-      return 0;
+      return getFooterMenuElement(root);
+    },
+    getFooterBaseEl() {
+      return this.getFooterMenuEl()?.firstElementChild || null;
+    },
+    getFooterFirstRowCollapsedHeight() {
+      const footerBase = this.getFooterBaseEl();
+      if (!footerBase) {
+        return 0;
+      }
+      const scopedWindow = footerBase.ownerDocument?.defaultView || window;
+      const candidates = Array.from(footerBase.children || []).filter((child) => {
+        const style = scopedWindow?.getComputedStyle?.(child);
+        if (style && (style.display === "none" || style.visibility === "hidden")) {
+          return false;
+        }
+        const rect = child.getBoundingClientRect?.();
+        return !!rect && rect.height > 0 && rect.width > 0;
+      });
+      if (candidates.length === 0) {
+        return Number(this.StandardFooterHeight || 0);
+      }
+      const rects = candidates.map((child) => child.getBoundingClientRect());
+      const minTop = Math.min(...rects.map((rect) => rect.top));
+      const firstRow = rects.filter((rect) => Math.abs(rect.top - minTop) <= 2);
+      const rowHeight = firstRow.length > 0
+        ? Math.max(...firstRow.map((rect) => rect.bottom - minTop))
+        : 0;
+      const listRect = this.getListOpenBtnAreaEl()?.getBoundingClientRect?.();
+      const listHeight = listRect ? listRect.height : 0;
+      return Math.ceil(Math.max(rowHeight, listHeight, Number(this.StandardFooterHeight || 0), 0));
+    },
+    setFooterToolbarHeight() {
+      const footerMenu = this.getFooterMenuEl();
+      if (!footerMenu) {
+        return;
+      }
+      footerMenu.style.height = "";
+      footerMenu.style.minHeight = "";
+      footerMenu.style.maxHeight = "";
+      delete footerMenu.dataset.ntssFooterResolvedHeight;
+    },
+    syncFooterToolbarHeight() {
+      const scopedWindow = getScopedWindow(this.$el) || window;
+      const cancelFrame = scopedWindow.cancelAnimationFrame?.bind(scopedWindow) || scopedWindow.clearTimeout?.bind(scopedWindow) || clearTimeout;
+      const scheduleFrame = scopedWindow.requestAnimationFrame?.bind(scopedWindow) || ((callback) => scopedWindow.setTimeout(callback, 0));
+      cancelFrame(this.footerToolbarFrameId);
+      this.footerToolbarFrameId = scheduleFrame(() => {
+        const footerBase = this.getFooterBaseEl();
+        if (!footerBase) {
+          return;
+        }
+        this.setFooterToolbarHeight();
+      });
+    },
+    getListOpenBtnAreaEl() {
+      return this.$el?.querySelector?.('#listOpenBtnArea') || null;
+    },
+    getDummyBtnAreaEl() {
+      return this.$el?.querySelector?.('#dummyBtnArea') || null;
+    },
+    getListOpenBtnEl() {
+      return this.$el?.querySelector?.('#listOpenBtn') || null;
+    },
+    getFooterHeight() {
+      return getVisibleFooterMenuHeight(this.$el || null);
+    },
+    emitFooterLayoutChanged() {
+      this.syncFooterToolbarHeight();
+      this.$nextTick(() => {
+        (getScopedWindow(this.$el) || window).requestAnimationFrame?.(() => {
+          EventBus.$emit("footerLayoutChanged", {
+            height: this.getFooterHeight(),
+            isExpanded: this.getFooterBaseEl()?.style?.height !== "inherit"
+          });
+        });
+      });
     },
     changeView(menuItem) {
       if (this.msgFlg) {
@@ -384,29 +461,41 @@ export default {
     /* add by chamaojia 2023-08-21 [9272] メニューをクリックしてページをジャンプして共通メソッドを追加する  --end */
     // アイコンの表示数等の情報をセット
     setSizeInfo(count) {
-      const footerObj = document.getElementById("footer-menu").children[0]
-        .children;
+      const footerObj = Array.from(this.getFooterBaseEl()?.children || []);
       // カラム数(処理ボタン数)取得
       if (count >= 0) {
         this.colCount = count;
       } else {
-        this.colCount = footerObj.length - 1;
+        this.colCount = Math.max(footerObj.length - 1, 0);
+      }
+
+      if (this.colCount === 0 || footerObj.length === 0) {
+        this.colWidth = 0;
+        this.orikaeshiSizeList = [0, 0, 0, 0];
+        return;
       }
 
       // アイコン幅を取得
-      if (this.colCount != 0) {
-        // リロード時に画像サイズが0になってしまう対策
-        if (footerObj[0].firstElementChild.firstElementChild.offsetWidth == 0) {
-          this.colWidth = footerObj[0].offsetWidth + 40;
-        } else {
-          this.colWidth = footerObj[0].offsetWidth;
-        }
-        document.getElementById("listOpenBtnArea").style.width =
-          this.colWidth + "px";
-        document.getElementById("dummyBtnArea").style.width =
-          this.colWidth + "px";
+      const firstMenuArea = footerObj[0] || null;
+      const firstButton = firstMenuArea?.firstElementChild || null;
+      const firstIcon = firstButton?.firstElementChild || null;
+
+      // リロード時に画像サイズが0になってしまう対策（Vue2 同等）
+      if ((firstIcon?.offsetWidth || 0) === 0) {
+        this.colWidth = (firstMenuArea?.offsetWidth || 0) + 40;
       } else {
-        this.colWidth = 0;
+        this.colWidth = firstMenuArea?.offsetWidth || 0;
+      }
+      if (this.colWidth <= 0) {
+        this.colWidth = 62;
+      }
+      const listOpenBtnArea = this.getListOpenBtnAreaEl();
+      const dummyBtnArea = this.getDummyBtnAreaEl();
+      if (listOpenBtnArea) {
+        listOpenBtnArea.style.width = this.colWidth + "px";
+      }
+      if (dummyBtnArea) {
+        dummyBtnArea.style.width = this.colWidth + "px";
       }
 
       // 2行目発生画面サイズ
@@ -422,22 +511,24 @@ export default {
     // iOS環境でのresizeイベント発生時に実行する処理
     handleResizeForiOS() {
       // iOS/PWA環境では、縦⇔横変更時に幅が正常に取得できない為、画面表示時に値を取得しておき、縦⇔横変更時に幅を入れ替える。
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      const orientation = ownerWindow.orientation;
       if (this.iosCurrentWidth === 0) {
         // 画面表示時の処理
-        this.iosScreenWidth = screen.width;
-        this.iosScreenHeight = screen.height;
+        this.iosScreenWidth = ownerWindow.screen.width;
+        this.iosScreenHeight = ownerWindow.screen.height;
         // 現在の向きを判定
-        if (window.orientation === 0){
+        if (orientation === 0){
           // 縦画面の時
           this.iosCurrentWidth = this.iosScreenWidth;
         } else {
           // 横画面の時
           this.iosCurrentWidth = this.iosScreenHeight;
         }
-      } else if (window.orientation === 0 && this.iosCurrentWidth === this.iosScreenHeight) {
+      } else if (orientation === 0 && this.iosCurrentWidth === this.iosScreenHeight) {
         // 縦画面になった時の処理
         this.iosCurrentWidth = this.iosScreenWidth;
-      } else if ((window.orientation === 90 || window.orientation === -90) && this.iosCurrentWidth === this.iosScreenWidth) {
+      } else if ((orientation === 90 || orientation === -90) && this.iosCurrentWidth === this.iosScreenWidth) {
         // 横画面になった時の処理
         this.iosCurrentWidth = this.iosScreenHeight;
       }
@@ -445,8 +536,10 @@ export default {
     },
     // resizeイベント発生時に実行する処理
     handleResize() {
-      const footerObj = document.getElementById("footer-menu")
-        .firstElementChild;
+      const footerObj = this.getFooterBaseEl();
+      if (!footerObj) {
+        return;
+      }
       if (this.iosCurrentWidth !== 0){
         // handleResizeForiOSから発火された場合の処理
         this.rowWidth = this.iosCurrentWidth;
@@ -483,6 +576,7 @@ export default {
         if (footerObj.style.height != "inherit") {
           this.closeFooterList();
         }
+        this.emitFooterLayoutChanged();
         // 折り返しがない場合は処理を抜ける
         return;
       }
@@ -491,58 +585,76 @@ export default {
       if (footerObj.style.height != "inherit") {
         this.openFooterList();
       }
+      this.emitFooterLayoutChanged();
     },
     // フッターのリスト開閉ボタン
     listOpen() {
-      const footerObj = document.getElementById("footer-menu")
-        .firstElementChild;
+      const footerObj = this.getFooterBaseEl();
+      if (!footerObj) {
+        return;
+      }
       // ボタン表示を変更
-      const btnAreaObj = document.getElementById("listOpenBtnArea");
+      const btnAreaObj = this.getListOpenBtnAreaEl();
       if (footerObj.style.height != "inherit") {
         this.closeFooterList();
         btnAreaObj?.classList?.add("list-open-button-area");
-        btnAreaObj.classList.remove("list-close-button-area");
+        btnAreaObj?.classList?.remove("list-close-button-area");
       } else {
         this.openFooterList();
         // ボタン表示を変更
-        let btnObj = document.getElementById("listOpenBtn");
-        btnObj.src = this.listCloseButton;
+        let btnObj = this.getListOpenBtnEl();
+        if (btnObj) {
+          btnObj.src = this.listCloseButton;
+        }
         btnAreaObj?.classList?.add("list-close-button-area");
-        btnAreaObj.classList.remove("list-open-button-area");
+        btnAreaObj?.classList?.remove("list-open-button-area");
       }
+      this.emitFooterLayoutChanged();
     },
     // フッターリストを開く
     openFooterList() {
-      let footerObj = document.getElementById("footer-menu").firstElementChild;
+      let footerObj = this.getFooterBaseEl();
+      if (!footerObj) {
+        return;
+      }
       footerObj.style.height = this.footerHeight + "px";
       footerObj.style.overflowY = this.scrollbar;
       footerObj.style.justifyContent = "flex-start";
       // 横位置の調整
       const rightMargin = this.rowWidth % this.colWidth;
-      document.getElementById("listOpenBtnArea").style.right =
-        rightMargin + "px";
+      const listOpenBtnArea = this.getListOpenBtnAreaEl();
+      if (listOpenBtnArea) {
+        listOpenBtnArea.style.right = rightMargin + "px";
+      }
       // メニューグループ強制折畳
-      this.closeMenuGroup();        
+      this.closeMenuGroup();
+      this.emitFooterLayoutChanged();
     },
     /**
      *フッターリストを閉じる
      */
     closeFooterList() {
-      let tDom = document.getElementById("footer-menu");
-      if(!tDom)return
-      let footerObj = document.getElementById("footer-menu").firstElementChild;
+      let footerObj = this.getFooterBaseEl();
+      if (!footerObj) {
+        return;
+      }
       footerObj.style.height = "inherit";
       footerObj.style.overflowY = "";
       footerObj.style.justifyContent = "space-around";
-      document.getElementById("listOpenBtnArea").style.right = "0px";
-      // ボタン表示を変更
-      let btnObj = document.getElementById("listOpenBtn");
-      const btnAreaObj = document.getElementById("listOpenBtnArea");
-      btnObj.src = this.listOpenButton;
+      const listOpenBtnArea = this.getListOpenBtnAreaEl();
+      if (listOpenBtnArea) {
+        listOpenBtnArea.style.right = "0px";
+      }
+      let btnObj = this.getListOpenBtnEl();
+      const btnAreaObj = this.getListOpenBtnAreaEl();
+      if (btnObj) {
+        btnObj.src = this.listOpenButton;
+      }
       btnAreaObj?.classList?.add("list-open-button-area");
-      btnAreaObj.classList.remove("list-close-button-area");
+      btnAreaObj?.classList?.remove("list-close-button-area");
       // メニューグループ強制折畳
       this.closeMenuGroup();
+      this.emitFooterLayoutChanged();
     },
     // 現在のルーターを取得する
     getActiveRouter() {
@@ -557,20 +669,42 @@ export default {
             this.activeRouterName = "exam-record";
             return;
         }
-        //liyanze-z
-        let tParams = this.$route.params
-        if (this.keepHistories.length > 1 && tParams.type && tParams.type=== "check") {
+        const params = this.$route?.params || {};
+        if (this.keepHistories.length > 1 && params.type && params.type === "check") {
           this.activeRouterName = this.keepHistories[1].routerName;
           return;
         }
-        this.activeRouterName = this.keepHistories[0].routerName;
+        this.activeRouterName = this.getActiveRouterName(this.keepHistories[0].routerName);
       } else {
         this.activeRouterName = "";
       }
     },
+    getActiveRouterName(routerName) {
+      const routingItems = RoutingDefs.routing_defs.routing_items;
+      const direct = routingItems.find(item => item.router_name === routerName);
+      if (direct) {
+        return direct.router_name;
+      }
+      for (const item of routingItems) {
+        if (
+          item.routes &&
+          Array.isArray(item.routes) &&
+          item.routes.includes(routerName)
+        ) {
+          return item.router_name;
+        }
+      }
+      return routerName;
+    },
+    isActiveMenuItem(item) {
+      if (!item || !this.activeRouterName) {
+        return false;
+      }
+      return this.activeRouterName === item.router_name;
+    },
     // アイコンの切り替え
     displayIcon(item) {
-      if (this.activeRouterName === item.router_name){
+      if (this.isActiveMenuItem(item)){
         return item.active_icon;
       } else {
         return item.function_icon
@@ -581,7 +715,7 @@ export default {
      * @param {*} item 
      */
     menuStyles(item) {
-      if (this.activeRouterName === item.router_name) {
+      if (this.isActiveMenuItem(item)) {
         return {
           backgroundColor: ACTIVE_ROUTER_COLOR,
         };
@@ -626,15 +760,18 @@ export default {
       // メニューグループも強制折畳
       this.selectMenuGroupCd = null;
     },
+    onSetFooterMsgFlg(data) {
+      this.msgFlg = data;
+    },
   },
   created() {
     // add 性能改善メモリ不足 shan start
     EventBus.$off("closeFooterList", this.closeFooterList);
     EventBus.$off("refreshUrlList", this.getUrlAndGroupList);
+    EventBus.$off("setFooterMsgFlg", this.onSetFooterMsgFlg);
     EventBus.$on("closeFooterList", this.closeFooterList);
     EventBus.$on("refreshUrlList", this.getUrlAndGroupList);
-    EventBus.$off("setFooterMsgFlg");
-    EventBus.$on("setFooterMsgFlg", data => (this.msgFlg = data));
+    EventBus.$on("setFooterMsgFlg", this.onSetFooterMsgFlg);
     this.getUrlAndGroupList();
     // add 性能改善メモリ不足 shan end
   },
@@ -642,21 +779,26 @@ export default {
     this.getActiveRouter();
     this.setSizeInfo(-1);
     // 端末を判別し、画面リサイズ時のイベントを設定
-    const ua = navigator.userAgent;
+    const ua = getScopedUserAgent(this.$el);
     if (ua.match(/iPhone|iPad/)) {
-      window.addEventListener("orientationchange", this.handleResizeForiOS);
+      (getScopedWindow(this.$el) || window).addEventListener("orientationchange", this.handleResizeForiOS);
       this.handleResizeForiOS();
     } else {
-      window.addEventListener("resize", this.handleResize);
+      (getScopedWindow(this.$el) || window).addEventListener("resize", this.handleResize);
       this.handleResize();
     }
+    this.closeFooterList();
+    this.emitFooterLayoutChanged();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // 画面を閉じたときにイベントを除去
-    window.removeEventListener("resize", this.handleResize);
-    window.removeEventListener("orientationchange", this.handleResizeForiOS);
+    (getScopedWindow(this.$el) || window).removeEventListener("resize", this.handleResize);
+    (getScopedWindow(this.$el) || window).removeEventListener("orientationchange", this.handleResizeForiOS);
+    const scopedWindow = getScopedWindow(this.$el) || window;
+    const cancelFrame = scopedWindow.cancelAnimationFrame?.bind(scopedWindow) || scopedWindow.clearTimeout?.bind(scopedWindow) || clearTimeout;
+    cancelFrame(this.footerToolbarFrameId);
     // add 性能改善メモリ不足 shan start
-    EventBus.$off("setFooterMsgFlg");
+    EventBus.$off("setFooterMsgFlg", this.onSetFooterMsgFlg);
     EventBus.$off("closeFooterList", this.closeFooterList);
     EventBus.$off("refreshUrlList", this.getUrlAndGroupList);
     // add 性能改善メモリ不足 shan end

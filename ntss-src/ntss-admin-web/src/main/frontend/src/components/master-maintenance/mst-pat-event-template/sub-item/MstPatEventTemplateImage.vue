@@ -68,13 +68,15 @@
   </div>
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
-import {EventBus} from "@/eventBus";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 import CustomInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
+import { getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
 export default {
   name: "MstPatEventTemplateList",
   props: ["propsIndex"],
@@ -135,10 +137,9 @@ export default {
       return this.getImageList();
     }
   },
-  watch: {},
   created() {
     //フィールド追加時にcreatedイベントが起動
-    if(!this.textImageNum > 0) {
+    if (this.isEmptyValue(this.textImageNum)) {
       this.textImageNum = 1;
       this.textImageColNum = 1;
       this.addRow();
@@ -166,8 +167,17 @@ export default {
       }
     }
   },
-  mounted() {},
+
   methods: {
+    getTemplateElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || this);
+    },
+    queryTemplateSelector(selector) {
+      return queryScopedSelector(selector, this.$el || this);
+    },
+    queryTemplateSelectorAll(selector) {
+      return queryScopedSelectorAll(selector, this.$el || this);
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("mst-pat-event-template", [
       "setInputParams",
@@ -179,6 +189,9 @@ export default {
 
     getSchemaByField(field) {
       return this.schema.model.fields[field];
+    },
+    isEmptyValue(value) {
+      return value === null || value === undefined || value === "";
     },
 
     updateEditRecord(key, value) {
@@ -196,8 +209,8 @@ export default {
     },
     // mod #5589 2023/04/12 数値IFのスタイル全不正 張博 end
     setTextImageNumCss (e, key) {
-      if(e.target.value && document.getElementsByClassName(e.target.name)[0])
-      document.getElementsByClassName(e.target.name)[0].classList.remove("input-invalid");
+      if(e.target.value && this.getTemplateElementsByClassName(e.target.name)[0])
+      this.getTemplateElementsByClassName(e.target.name)[0].classList.remove("input-invalid");
       if(key === "textImageNum"){
         //画像数の値の設定
         this.textImageNum = e.target.value;
@@ -336,13 +349,15 @@ export default {
         const values = contact.values;
         valueslength = values.length;
       }
+      const hasImageNum = !this.isEmptyValue(imageNum);
+      const hasImageColNum = !this.isEmptyValue(imageColNum);
       const formatClass = this.getInputParams[this.propsIndex].format_class;
       const fieldName = this.getInputParams[this.propsIndex].field_name;
       fieldNameValid = fieldName !== null && fieldName !== "";
       return {
-        imageColNum: 0 < imageColNum,
-        imageNum: 0 < imageNum,
-        valueslength: 0 < valueslength,
+        imageColNum: hasImageColNum,
+        imageNum: hasImageNum,
+        valueslength: Number(imageNum) === 0 || 0 < valueslength,
         formatClassValid: 0 <= formatClass,
         fieldNameValid: fieldNameValid
       };
@@ -356,13 +371,13 @@ export default {
         return true;
       }
       if(!validationResult.fieldNameValid) {
-        document.getElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
+        this.getTemplateElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
       }
       if(!validationResult.imageNum) {
-        document.getElementsByClassName("textImageNum"+this.propsIndex)[0]?.classList?.add("input-invalid");
+        this.getTemplateElementsByClassName("textImageNum"+this.propsIndex)[0]?.classList?.add("input-invalid");
       }
       if(!validationResult.imageColNum) {
-        document.getElementsByClassName("textImageColNum"+this.propsIndex)[0]?.classList?.add("input-invalid");
+        this.getTemplateElementsByClassName("textImageColNum"+this.propsIndex)[0]?.classList?.add("input-invalid");
       }
       // メッセージ組み立て
       // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
@@ -435,11 +450,11 @@ export default {
 .disp-item-area tr {
   height: 2em;
 }
-.input-required >>> input{
+.input-required :deep(input){
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> input{
+.input-invalid :deep(input){
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }

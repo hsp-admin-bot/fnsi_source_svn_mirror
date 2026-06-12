@@ -1,5 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.config;
 
+import java.util.List;
+
 import jp.co.nikkiso.ntss.admin_web.DownloadProperties;
 import jp.co.nikkiso.ntss.admin_web.service.utils.MasterCacheHandlerInterceptor;
 import jp.co.nikkiso.ntss.admin_web.service.utils.IndHistoryCleanupInterceptor;
@@ -10,6 +12,9 @@ import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.CacheControl;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.HttpMessageConverters;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -27,6 +32,20 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
 
   public WebMvcConfiguration(DownloadProperties downloadProperties) {
     this.downloadProperties = downloadProperties;
+  }
+
+  @Override
+  public void configureMessageConverters(HttpMessageConverters.ServerBuilder builder) {
+    builder.configureMessageConvertersList(converters -> {
+      for (int i = 0; i < converters.size(); i++) {
+        HttpMessageConverter<?> converter = converters.get(i);
+        if (converter instanceof StringHttpMessageConverter) {
+          converters.remove(i);
+          converters.add(0, converter);
+          break;
+        }
+      }
+    });
   }
 
   @Override

@@ -2,13 +2,8 @@
  * 患者/スケジュール割り当て系API
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
-
-/**
- * 一時的ストア
- */
 import store from "@/stores";
-
-import router from "../router";
+import { getCurrentRoutePath } from "@/compat/vue/router-facade.js";
 
 /**
  * 患者/スケジュール割り当てURL
@@ -17,7 +12,7 @@ const SCHEDULE_ASSIGNMENT = "/schedule-assignment";
 
 /**
  * 指定オーダー番号のスケジュール情報取得
- * @param {*} ordNo オーダー番号
+ * @param {string|number} ordNo オーダー番号
  */
 export function sendRequestGetOrdMainByOrdNo(ordNo) {
   return getWithLoader(`${SCHEDULE_ASSIGNMENT}/getorder/${ordNo}`);
@@ -32,9 +27,7 @@ export function sendRequestGetPatList() {
 
 /**
  * 対象のスケジュール一覧情報取得
- * @param {*} startDate 治療開始日付
- * @param {*} startDate 治療終了日付(治療中の場合は現在日付)
- * @param {*} bedCd ベッドコード
+ * @param {{ startDate: string, endDate: string, bedCd: string }} param 検索条件
  */
 export function sendRequestGetScheduleList(param) {
   return getWithLoader(
@@ -44,8 +37,7 @@ export function sendRequestGetScheduleList(param) {
 
 /**
  * 患者割り当て
- * @param {*} patid 患者ID
- * @param {*} ordNo オーダー番号
+ * @param {{ patId: string|number, ordNo: string|number }} param 患者ID・オーダー番号
  */
 export function sendRequestPatAssignment(param) {
   return postWithLoader(
@@ -55,14 +47,14 @@ export function sendRequestPatAssignment(param) {
 
 /**
  * スケジュール割り当て
- * @param {*} baseOrdno オーダー番号
- * @param {*} ordNo オーダー番号
+ * @param {{ baseOrdNo: string|number, ordNo: string|number, rstInputClass: string }} param 割当パラメータ
  */
 export function sendRequestScheduleAssignment(param) {
-
-  let path = router.currentRoute.path;
+  const path = getCurrentRoutePath();
   let flg = "list";
-  if (path) flg = (/status-list/.test(path) ? "list" : "map");
+  if (path) {
+    flg = /status-list/.test(path) ? "list" : "map";
+  }
 
   return postWithLoader(
     `${SCHEDULE_ASSIGNMENT}/scheduleassignment/${param.baseOrdNo}/${
@@ -84,8 +76,8 @@ export function sendRequestScheduleAssignment(param) {
 
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {Record<string, unknown>} [params] パラメータ
  */
 function getWithLoader(url, params = undefined) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -97,8 +89,8 @@ function getWithLoader(url, params = undefined) {
 
 /**
  * 共通ローダを実行するPOSTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} [params] パラメータ
  */
 function postWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");

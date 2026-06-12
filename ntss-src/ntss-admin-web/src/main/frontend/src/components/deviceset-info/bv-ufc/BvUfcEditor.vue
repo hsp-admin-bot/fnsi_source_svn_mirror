@@ -480,13 +480,13 @@
       </div>
 
       <message-dialog
-        :visible.sync="isDialogVisble"
+        v-model:visible="isDialogVisble"
         v-bind="dialogProps"
         type="1"
         @confirm="saveEdit"
       />
       <message-dialog
-        :visible.sync="isCancelDialogVisble"
+        v-model:visible="isCancelDialogVisble"
         v-bind="dialogProps"
         type="2"
         @confirm="cancelEdit"
@@ -502,8 +502,7 @@ import {deepCopy, getAuthorized } from "@/functions/common/CommonFunctions.js";
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
-import _ from "underscore";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import {
   DEVICE_TYPE_BVUFC,
   DATA_SOURCE_TYPE_ORD
@@ -511,16 +510,17 @@ import {
 import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoEditor.vue";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 //add #10246  message change zrx start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import DeviceSetOwnerMixin from '@/components/deviceset-info/base-modules/DeviceSetOwnerMixin';
 //add #10246  message change zrx start
 
 /**
  * @description BV-UFC設定値編集画面
  */
 export default {
-  mixins: [baseEditor],
+  mixins: [DeviceSetOwnerMixin, baseEditor],
 
   props: {
     // add #10359 編集権限の動作不正 dengshen start
@@ -671,8 +671,8 @@ export default {
      * 患者経過総合ビューアで表示している時は、画面が小さい時のスタイル用classを付与する
      */
     isUnderIndModal() {
-      let indObj = document.getElementsByClassName("indInfo-style-modal-container");
-      if (indObj.length > 0) {
+      const indObj = this._deviceSetClosestOrScopedElement(".indInfo-style-modal-container");
+      if (indObj) {
         return "ind-style-media-query";
       }
       return "";
@@ -681,7 +681,7 @@ export default {
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fang add start
   created() {
     this.setLoadingScreenVisible(true);
-    this.$parent.$parent.isDialogType9 = true;
+    this._deviceSetDialogOwner().isDialogType9 = true;
   },
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fang add end
   // mod redmine 6055 BV-UFCの設定画面で表示枠から単位が飛び出ている 宋qy start
@@ -709,7 +709,7 @@ export default {
       // 初期状態:指示装置設定画面のみ透析予定・治療時間を参照する
       if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
         // 親のスタイル修正
-        this.$parent.styleObj = { "max-width": "580px", width: "100%" };
+        this._deviceSetDialogOwner().styleObj = { "max-width": "580px", width: "100%" };
 
         // オーダー番号が格納されていない場合処理終了
         if (null === this.ordNo) {
@@ -736,11 +736,11 @@ export default {
               : ordInfo;
         });
         // 治療条件情報が存在する場合、治療条件情報を格納
-        const indCondInfo = _.has(ordInfo, "indCondInfo")
+        const indCondInfo = Object.prototype.hasOwnProperty.call(ordInfo, "indCondInfo")
           ? JSON.parse(ordInfo.indCondInfo)
           : null;
         // 治療条件情報に治療時間が存在すれば値を格納
-        if (_.has(indCondInfo, "1")) {
+        if (indCondInfo != null && Object.prototype.hasOwnProperty.call(indCondInfo, "1")) {
           this.treatTime = indCondInfo["1"].value;
         }
       }
@@ -802,7 +802,15 @@ export default {
     ]),
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd));
+      return this.isMst || (this.isMst != true && !this.isOtherFacilityRow() && getAuthorized(pageCd, itemCd));
+    },
+    /**
+     * @description 該当行が他院情報かどうかを判定
+     * @returns {Boolean} true = 他施設のデータは参照のみ
+     */
+    isOtherFacilityRow() {
+      const facilityCd = this.getSettingIndChildData?.facilityCd;
+      return facilityCd ? facilityCd !== this.getFacilityCd : false;
     },
     // add #10359 編集権限の動作不正 dengshen end
 
@@ -975,20 +983,20 @@ export default {
      */
     saveEdit() {
       if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
-        this.$parent.$parent.updateDisable = false;
+        this._deviceSetDialogOwner().updateDisable = false;
       }
     },
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fang add start
     async resetComponentIndData(structData){
       if (this.isEdit()) {
-        this.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+        this._deviceSetDialogOwner().messageDialogInfo.messageCd = 70000028;
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-        this.$parent.$parent.messageDialogInfo.type = "9";
+        this._deviceSetDialogOwner().messageDialogInfo.type = "9";
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._deviceSetDialogOwner().messageDialogInfo.isDialogVisible = true;
         return;
       } else {
-        this.getComponentData(structData, 2);
+        return this.getComponentData(structData, 2);
       }
     },
     isEdit() {
@@ -1208,16 +1216,6 @@ export default {
       }
     },
     //mod FNSI-6783 劉全航 end
-    /**
-   * @description 該当行が他院情報かどうかを判定
-   * @returns {Boolean} true = 他施設のデータは参照のみ
-   */
-    isOtherFacilityRow() {
-      if (!this.getSettingIndChildData) {
-        return false
-      }
-      return this.getSettingIndChildData.facilityCd ? this.getSettingIndChildData.facilityCd !== this.getFacilityCd : false
-    },
   },
 };
 </script>

@@ -57,6 +57,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static jp.co.nikkiso.ntss.admin_web.service.SameCategoryFluidComponent.removeKey;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
 /**
@@ -106,6 +107,10 @@ public class PatTreatmentPatternUtils {
    */
   @Autowired
   private MstPersonalUserDao mstPersonalUserDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // add 9281 日次処理にて正しくスケジュールが作成されない事がある 関 end
 
   //add 10810月跨ぎの日次処理によるスケジュール自動延長にて濾過率から算出が-1となる zhao start
@@ -260,7 +265,7 @@ public class PatTreatmentPatternUtils {
         wheres.append(" WHERE\n");
         wheres.append(" pat_id = " + patId + "\n");
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(patMainDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -1115,7 +1120,7 @@ public class PatTreatmentPatternUtils {
         wheres.append(inStr + "\n");
         wheres.append("AND pat_id = '" + patIdSr + "'\n");
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(patTreatmentPatternDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -2405,7 +2410,7 @@ public class PatTreatmentPatternUtils {
         wheres.append(inStr + "\n");
         wheres.append("AND pat_id = '" + patIdSr + "'\n");
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(patTreatmentPatternDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -2650,7 +2655,7 @@ public class PatTreatmentPatternUtils {
         wheres.append(inStr + "\n");
         wheres.append("AND pat_id = '" + patIdSr + "'\n");
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(patTreatmentPatternDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         try {
@@ -3236,11 +3241,11 @@ public class PatTreatmentPatternUtils {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

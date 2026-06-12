@@ -41,6 +41,18 @@ namespace CoopSettingTool.Service
         }
 
         /// <summary>
+        /// Gets the current MST coop filename list.
+        /// </summary>
+        /// <param name="facilityCd">The facility cd.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopFilenameEntity&gt;&gt;&gt;.</returns>
+        public async Task<BaseResponse<List<MstCoopFilenameEntity>>> GetCurrentMstCoopFilenameList(string facilityCd)
+        {
+            var res = (await ServerAccess.GetInstance().GetAsync<List<MstCoopFilenameEntity>>(Constant.GET_CURRENT_MST_COOP_FILENAME_BY_FACILITY + "/" + facilityCd, null, true, false));
+
+            return res;
+        }
+
+        /// <summary>
         /// Gets the MST coop filename by control no.
         /// </summary>
         /// <param name="ctlNo">The control no.</param>
@@ -48,6 +60,18 @@ namespace CoopSettingTool.Service
         public async Task<BaseResponse<MstCoopFilenameEntity>> GetMstCoopFilenameByCtlNo(string ctlNo)
         {
             var res = (await ServerAccess.GetInstance().GetAsync<MstCoopFilenameEntity>(Constant.GET_MST_COOP_FILENAME_BY_CTL_NO + "/" + ctlNo, null, true, false));
+
+            return res;
+        }
+
+        /// <summary>
+        /// Gets the source MST coop filename.
+        /// </summary>
+        /// <param name="condition">The condition.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopFilenameEntity&gt;&gt;&gt;.</returns>
+        public async Task<BaseResponse<List<MstCoopFilenameEntity>>> GetSourceMstCoopFilename(MstCoopFilenameEntity condition)
+        {
+            var res = (await ServerAccess.GetInstance().PostAsync<List<MstCoopFilenameEntity>>(Constant.GET_SOURCE_MST_COOP_FILENAME, condition, true, true));
 
             return res;
         }

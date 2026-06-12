@@ -1118,7 +1118,7 @@
               v-if="!isTreatRecord"
               class="common-style-ok-button"
               @click="saveConfirm()"
-              :disabled="!getItemAuthorized('DevicesetInfo', 'default_authority')"
+              :disabled="!getItemAuthorized('DevicesetInfo', 'default_authority') || getIsOtherFacility"
             >
             <!-- mod #10359 編集権限の動作不正 dengshen end -->
               {{ saveButtonLabel }}
@@ -1128,18 +1128,18 @@
       </div>
 
       <message-dialog
-        :visible.sync="isDialogVisble"
+        v-model:visible="isDialogVisble"
         v-bind="dialogProps"
         type="1"
       />
       <message-dialog
-        :visible.sync="isCancelDialogVisble"
+        v-model:visible="isCancelDialogVisble"
         v-bind="dialogProps"
         type="2"
         @confirm="cancelEdit"
       />
       <message-dialog
-        :visible.sync="isUpdateAllPatDialogVisble"
+        v-model:visible="isUpdateAllPatDialogVisble"
         v-bind="dialogProps"
         type="5"
         @confirm="setUpdateAllPatFlg"
@@ -1164,16 +1164,15 @@ import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } f
 import {REPLENISHER_QDQS_SETTING, REPLENISHER_CALCULATION_SETTING, REPLENISHER_FILTRATION_SETTING} from "@/constants/facilitySetting";
 // add 装置設定デフォルトマスタ DP=Qd+Qs(補液速度加算)、表示非表示設定 end
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // add #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
-import { mapGetters } from "vuex";
 
 /**
  * @description 操作範囲設定値編集画面
@@ -1203,7 +1202,6 @@ export default {
     };
   },
   computed: {
-    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd"]),
     /**
      * @description クリップ式気泡検出器切りSW・除水計算選択・除水計算優先項目選択
      */
@@ -1341,11 +1339,12 @@ export default {
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
       // return this.isEditedHt ? "-" : this.devC[91].value.editValue;
       // mod #9811 装置設定>操作範囲>ヘマトクリットと総タンパクの検査値が不正 修正 20231113 ztc start
-      // return this.isEditedHt ? "-" : moment(this.devC[91].value.editValue, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm");
-      return !!this.devC[91] && this.devC[91].value.editValue === '-' ?
-          this.devC[91].value.editValue : moment(this.devC[91].value.editValue, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm");
+      // return this.isEditedHt ? "-" : dayjs(this.devC[91].value.editValue, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm");
+      return this.formatExamDate(this.devC[91]?.value?.editValue);
+      // return !!this.devC[91] && this.devC[91].value.editValue === '-' ?
+      //     this.devC[91].value.editValue : dayjs(this.devC[91].value.editValue, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm");
       // return this.isEditedHt ? "-" : this.devC[91].value.editValue === '-' ?
-      //     this.devC[91].value.editValue : moment(this.devC[91].value.editValue, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm");
+      //     this.devC[91].value.editValue : dayjs(this.devC[91].value.editValue, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm");
       // mod #9811 装置設定>操作範囲>ヘマトクリットと総タンパクの検査値が不正 修正 20231113 ztc emd
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
     },
@@ -1358,11 +1357,12 @@ export default {
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
       //return this.isEditedTP ? "-" : this.devC[92].value.editValue;
       // mod #9811 装置設定>操作範囲>ヘマトクリットと総タンパクの検査値が不正 修正 20231113 ztc start
-      // return this.isEditedTP ? "-" : moment(this.devC[92].value.editValue, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm");
-      return !!this.devC[92] && this.devC[92].value.editValue === '-' ?
-          this.devC[92].value.editValue : moment(this.devC[92].value.editValue, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm");
+      // return this.isEditedTP ? "-" : dayjs(this.devC[92].value.editValue, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm");
+      // return !!this.devC[92] && this.devC[92].value.editValue === '-' ?
+      //     this.devC[92].value.editValue : dayjs(this.devC[92].value.editValue, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm");
+      return this.formatExamDate(this.devC[92]?.value?.editValue);
       // return this.isEditedTP ? "-" : this.devC[92].value.editValue === '-' ?
-      //     this.devC[92].value.editValue : moment(this.devC[92].value.editValue, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm");
+      //     this.devC[92].value.editValue : dayjs(this.devC[92].value.editValue, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm");
       // mod #9811 装置設定>操作範囲>ヘマトクリットと総タンパクの検査値が不正 修正 20231113 ztc end
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
     },
@@ -1385,57 +1385,49 @@ export default {
       // mod 装置設定デフォルトマスタ DP=Qd+Qs(補液速度加算)、表示非表示設定 start
       // const systemQdQsSetting = 1;
       // this.isShowQdQs = systemQdQsSetting === 1;
-      // mod #12462 患者情報共有 Ji start
-      const facilityCd = this.getIsOtherFacility ? this.getOtherFacilityCd : this.facilityCd
-      // await getMstFacilitySettingValue(this.facilityCd, REPLENISHER_QDQS_SETTING)
-      await getMstFacilitySettingValue(facilityCd, REPLENISHER_QDQS_SETTING)
-      // mod #12462 患者情報共有 Ji end
+      const facilityCd = this.getIsOtherFacility ? this.getOtherFacilityCd : this.facilityCd;
+      // 他施設参照時は患者共有認可用に selectedPatId を付与
+      const selectedPatId = this.getIsOtherFacility ? this.selectedPatId : undefined;
+      await getMstFacilitySettingValue(facilityCd, REPLENISHER_QDQS_SETTING, selectedPatId)
         .then(response => {
           this.isShowQdQs = response.data === 1;
         });
       // mod 装置設定デフォルトマスタ DP=Qd+Qs(補液速度加算)、表示非表示設定 end
 
       // 補液比率(前後補液)・補液計算優先項目から補液比率、表示非表示設定： システム設定ID122値：1「表示」、0「非表示」
-      // mod #12462 患者情報共有 Ji start
-      // await getMstFacilitySettingValue(this.facilityCd, REPLENISHER_CALCULATION_SETTING)
-      await getMstFacilitySettingValue(facilityCd, REPLENISHER_CALCULATION_SETTING)
-      // mod #12462 患者情報共有 Ji end
+      await getMstFacilitySettingValue(facilityCd, REPLENISHER_CALCULATION_SETTING, selectedPatId)
         .then(response => {
           this.isShowReplenisher = response.data === 1;
         });
       //add補液計算-濾過率から算出有効化設定
-      // mod #12462 患者情報共有 Ji start
-      // await getMstFacilitySettingValue(this.facilityCd, REPLENISHER_FILTRATION_SETTING)
-      await getMstFacilitySettingValue(facilityCd, REPLENISHER_FILTRATION_SETTING)
-      // mod #12462 患者情報共有 Ji end
+      await getMstFacilitySettingValue(facilityCd, REPLENISHER_FILTRATION_SETTING, selectedPatId)
         .then(response => {
           this.isShowReplenisherFiltrat = response.data === 1;
         });
       this.$nextTick(function() {
+        const replenisherCalcInfo = this.devA[389];
         // ビュー全体がレンダリングされた後にのみ実行されるコード
         if (!this.isShowReplenisher) {
-          const options = this.$refs.radio4.deviceInfo.options.filter(
-            item => item.radioValue !== "2"
-          );
+          const options = replenisherCalcInfo.options.filter(
+            item => item.radioValue !== "2");
           // 補液計算優先項目から補液比率のラジオボタンのみ非表示
-          this.$refs.radio4.deviceInfo.options = options;
+          replenisherCalcInfo.options = options;
         }
         if (!this.isShowReplenisherFiltrat) {
-          const options = this.$refs.radio4.deviceInfo.options.filter(
-            item => item.radioValue !== "3"
-          );
+          const options = replenisherCalcInfo.options.filter(
+            item => item.radioValue !== "3");
           // 補液計算優先項目から濾過率から算出のラジオボタンのみ非表示
-          this.$refs.radio4.deviceInfo.options = options;
+          replenisherCalcInfo.options = options;
         }
         // 内部【施設設定マスタ】NO113_装置設定マスタ设定后处理不正 start
-        if (this.$refs.radio4.deviceInfo.options.length > 0) {
+        if (replenisherCalcInfo.options.length > 0) {
           this.refreshArr = []
-          this.$refs.radio4.deviceInfo.options.forEach(element => {
+          replenisherCalcInfo.options.forEach(element => {
             this.refreshArr.push(element.radioValue)
           });
-          if (!this.refreshArr.includes(this.$refs.radio4.deviceInfo.value.editValue)) {
-          this.$refs.radio4.deviceInfo.value.editValue = '0'
-          this.$refs.radio4.deviceInfo.value.initValue = '0'
+          if (!this.refreshArr.includes(replenisherCalcInfo.value.editValue)) {
+          replenisherCalcInfo.value.editValue = '0'
+          replenisherCalcInfo.value.initValue = '0'
         } else {
           this.countFlag++
         }
@@ -1450,9 +1442,23 @@ export default {
   },
 
   methods: {
+    formatExamDate(value) {
+      if (value === "-" || value === null || value === undefined || value === "") {
+        return "-";
+      }
+      const text = String(value);
+      const formats = ["YYYYMMDDHHmmss", "YYYYMMDDHHmm"];
+      for (const format of formats) {
+        const parsed = dayjs(text, format, true);
+        if (parsed.isValid()) {
+          return parsed.format("YYYY/MM/DD HH:mm");
+        }
+      }
+      return "-";
+    },
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return getAuthorized(pageCd, itemCd);
+      return !this.getIsOtherFacility && getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
     /**
@@ -1505,8 +1511,7 @@ export default {
             this.deviceSetInfoRaw.pat &&
             this.deviceSetInfoRaw.pat.war &&
             this.deviceSetInfoRaw.pat.war.dev &&
-            this.deviceSetInfoRaw.pat.war.dev.A
-          ) {
+            this.deviceSetInfoRaw.pat.war.dev.A) {
             const obj = this.deviceSetInfoRaw.pat.war.dev.A;
             fixedUpper = obj[132];
             fixedLower = obj[133];
@@ -1520,8 +1525,7 @@ export default {
             this.deviceSetInfoRaw &&
             this.deviceSetInfoRaw.war &&
             this.deviceSetInfoRaw.war.dev &&
-            this.deviceSetInfoRaw.war.dev.A
-          ) {
+            this.deviceSetInfoRaw.war.dev.A) {
             const obj = this.deviceSetInfoRaw.war.dev.A;
             fixedUpper = obj[132];
             fixedLower = obj[133];
@@ -1671,7 +1675,7 @@ export default {
 @media screen and (max-width: 53em) {
   /* mod FNSI-8148 劉全航 end */
   /* スマホ用のCSS */
-  .device-info-cell-value >>> .custom-radio {
+  .device-info-cell-value :deep(.custom-radio) {
     display: block;
   }
   .radio-area {
@@ -1680,5 +1684,8 @@ export default {
     display: block;
     /* add FNSI-8148 劉全航 end */
   }
+}
+.device-info-cell-value :deep(.custom-common-number-input-pro) {
+  width: 6em;
 }
 </style>

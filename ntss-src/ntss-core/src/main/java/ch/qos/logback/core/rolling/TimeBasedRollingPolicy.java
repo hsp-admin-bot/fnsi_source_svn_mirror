@@ -109,7 +109,7 @@ public class TimeBasedRollingPolicy<E> extends RollingPolicyBase implements Trig
       if (cleanHistoryOnStart) {
         addInfo("Cleaning on start up");
         Date now = new Date(timeBasedFileNamingAndTriggeringPolicy.getCurrentTime());
-        cleanUpFuture = archiveRemover.cleanAsynchronously(now);
+        cleanUpFuture = archiveRemover.cleanAsynchronously(now.toInstant());
       }
     } else if (!isUnboundedTotalSizeCap()) {
       addWarn("'maxHistory' is not set, ignoring 'totalSizeCap' option with value ["+totalSizeCap+"]");
@@ -182,7 +182,7 @@ public class TimeBasedRollingPolicy<E> extends RollingPolicyBase implements Trig
 
     if (archiveRemover != null) {
       Date now = new Date(timeBasedFileNamingAndTriggeringPolicy.getCurrentTime());
-      this.cleanUpFuture = archiveRemover.cleanAsynchronously(now);
+      this.cleanUpFuture = archiveRemover.cleanAsynchronously(now.toInstant());
     }
   }
 

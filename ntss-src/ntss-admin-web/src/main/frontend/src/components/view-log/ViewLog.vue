@@ -26,7 +26,7 @@
                   v-for="item in columns"
                   :key="`col_${item.cd}`"
                   :class="colTheadClass(item)"
-                  :style="{'width': `${colWidth}px`}"
+                  :style="{ width: colHeaderWidth(item) }"
                 >
                 <div class="thead-container" @click="theadClicked(item)">
                   <span :class="colTheadSpanClass(item)">
@@ -43,7 +43,7 @@
               </tr>
             </thead>
               <draggable
-                :v-model="filterLog(sortLog)"
+                :v-model="filteredSortLog"
                 tag="tbody"
                 animation="200"
                 delay="10"
@@ -52,7 +52,7 @@
                 :key="`draggable_key_${draggableKey}_${idxTab}`"
               >
                 <tr
-                  v-for="(item, idxRow) in filterLog(sortLog)"
+                  v-for="(item, idxRow) in filteredSortLog"
                   :key="`row_${idxRow}`"
                   :class="{
                     'ntss-list-body-tr': true,
@@ -104,7 +104,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="filterVisible"
+      v-model:visible="filterVisible"
       :target="filterTarget"
       :direction="filterDirection"
       :cover-target="false"
@@ -118,7 +118,7 @@
               <label>フリーワード</label>
             </v-ons-col>
             <v-ons-col vertical-align="center">
-              <v-ons-input v-model="tempFreeword" class="input-area" type="text"></v-ons-input>
+              <v-ons-input v-model="tempFreeword" class="input-area ntss-custom-input filter-freeword-input" type="text"></v-ons-input>
             </v-ons-col>
           </v-ons-row>
         </div>
@@ -136,10 +136,10 @@
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
-import _ from "underscore";
-import moment from "moment";
-import { mapGetters, mapActions } from "vuex";
-import vuedraggable from "vuedraggable";
+import _ from "@/compat/collections/lodash";
+import dayjs from "@/compat/date/dayjs";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 import {
   //update FNSI-mongoDBに挿入、検索できることの対応 start
   sendRequestGetFilterLog
@@ -152,11 +152,12 @@ import {
 } from "./Functions.js";
 import { TabModel } from "./TabModel";
 import PopoverMixin from "@/components/PopoverMixin";
-import { EventBus } from "@/eventBus.js";
+import PrintMixin from "@/components/PrintMixin";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper.js";
 //add FNSI-mongoDBに挿入、検索できることの対応 start
 import { PAGE_SIZE } from "@/constants/PageableConstant.js";
-import encoding from "encoding-japanese";
+import encoding from "@/compat/encoding/encoding-japanese";
 //add FNSI-mongoDBに挿入、検索できることの対応 end
 const uriUser = "/master_maintenance/mst_user";
 //add FNSI-mongoDBに挿入、検索できることの対応 start
@@ -168,12 +169,15 @@ import { messageFormat } from '@/functions/common/MessageFormat'
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages'
 // add #6107 2023/03/08 メッセージボックス全調整 林峻峰 end
 import { LOG_REFERENCE_GENERAL_PAT_ID, LOG_REFERENCE_PAT_ID, LOG_REFERENCE_USER_ID } from "@/components/view-log/Definitions";
-import PrintMixin from "@/components/PrintMixin";
+import filterImg from "../../assets/filter.png";
+import filterDarkImg from "../../assets/filter_dark.png";
+import { getViewportHeight, getScopedUserAgent, triggerScopedDownload } from "@/functions/common/LayoutMeasureHelper";
+
 export default {
   mixins: [PopoverMixin, PrintMixin],
   name: "ViewLogComponent",
   components: {
-    draggable: vuedraggable
+    draggable: VueDraggable
   },
   data() {
     return {
@@ -200,6 +204,7 @@ export default {
       columns: [],
       viewLogAreaHeight: 500,
       colWidth: 180,
+      columnWidths: {},
       userList: [],
       isResizing: false,
       timeOut: null,
@@ -209,13 +214,14 @@ export default {
       filterTimes: 0,
       scrollFlg: true,
       //add FNSI-mongoDBに挿入、検索できることの対応 end
-      image_src_filter: require("../../assets/filter.png"),           // フィルタ適用あり
-      image_src_filter_dark: require("../../assets/filter_dark.png"), // フィルタ適用なし
+      image_src_filter: filterImg,           // フィルタ適用あり
+      image_src_filter_dark: filterDarkImg, // フィルタ適用なし
       lastScrollTop: 0,
       // フィルタ実行時に行の追加読込をスキップするフラグ
       skipScrollHandler: false,
-      scrollQuerySelector: ".scroll-area", // スクロールコンテナ
-      addClassTargetQuerySelector: ["table.data-table"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
+      updatedTimerId: null,
+      scrollQuerySelector: ".scroll-area",
+      addClassTargetQuerySelector: ["table.data-table"]
     };
   },
   computed: {
@@ -239,6 +245,10 @@ export default {
 
     isMasterUser() {
       return this.getStateUserAccountInfo.userType === 1 ? true : false;
+    },
+
+    filteredSortLog() {
+      return this.filterLog(this.sortLog);
     },
 
     sortLog() {
@@ -286,6 +296,7 @@ export default {
 
     async searchRequest() {
       await this.getUser();
+      this.ensureDefaultCondition();
       this.createTab(this.getCondition);
     },
 
@@ -299,15 +310,8 @@ export default {
       displayItems: this.displayItems,
       columns: this.columns
     });
-    // add/ #9603 ログ参照画面の表示項目の内容保持されていない。 tianqidong start
-    if(this.getSelectedItem){
-      this.$nextTick(() => {
-        this.columns = this.getSelectedItemList;
-        this.displayItems = this.getSelectedItemList;
-      });
-    }
-    // add/ #9603 ログ参照画面の表示項目の内容保持されていない。 tianqidong end
-    const tables = document.getElementsByClassName('data-table');
+    this.clearManagedRuntimeHandlers();
+    const tables = this.getDataTables();
     for (let i=0; i<tables.length;i++){
       this.resizableGrid(tables[i]);
     }
@@ -315,7 +319,12 @@ export default {
 
   updated() {
     this.$nextTick(() => {
-      setTimeout(() => {
+      const ownerWindow = this.getViewLogOwnerDocument()?.defaultView || window;
+      if (this.updatedTimerId) {
+        ownerWindow.clearTimeout?.(this.updatedTimerId);
+      }
+      this.updatedTimerId = this.setManagedTimeout(() => {
+        this.updatedTimerId = null;
         this.calculateMaxHeight();
         // mod FNSI-解決の糸口がつかめない 関 start
         // this.calculateColumnWidth();
@@ -325,6 +334,59 @@ export default {
   },
 
   methods: {
+    clearManagedRuntimeHandlers() {
+      if (Array.isArray(this._managedEventDisposers)) {
+        while (this._managedEventDisposers.length) {
+          try {
+            this._managedEventDisposers.pop()?.();
+          } catch (_error) {
+            // noop
+          }
+        }
+      }
+      if (Array.isArray(this._managedTimeouts)) {
+        const ownerWindow = this.getViewLogOwnerDocument()?.defaultView || window;
+        this._managedTimeouts.forEach((timerId) => ownerWindow.clearTimeout?.(timerId));
+        this._managedTimeouts = [];
+      }
+      this.updatedTimerId = null;
+    },
+    addManagedEventListener(target, eventName, handler, options) {
+      if (!target?.addEventListener || typeof handler !== "function") {
+        return handler;
+      }
+      this._managedEventDisposers = this._managedEventDisposers || [];
+      target.addEventListener(eventName, handler, options);
+      this._managedEventDisposers.push(() => target.removeEventListener?.(eventName, handler, options));
+      return handler;
+    },
+    setManagedTimeout(handler, delay = 0) {
+      const ownerWindow = this.getViewLogOwnerDocument()?.defaultView || window;
+      this._managedTimeouts = this._managedTimeouts || [];
+      const timerId = ownerWindow.setTimeout?.(() => {
+        this._managedTimeouts = (this._managedTimeouts || []).filter((id) => id !== timerId);
+        handler?.();
+      }, delay);
+      if (timerId !== undefined && timerId !== null) {
+        this._managedTimeouts.push(timerId);
+      }
+      return timerId;
+    },
+    getViewLogRootElement() {
+      return this.$refs.refMain || this.$el || null;
+    },
+    getViewLogOwnerDocument() {
+      return this.getViewLogRootElement()?.ownerDocument || document;
+    },
+    getDataTables() {
+      return Array.from(this.getViewLogRootElement()?.getElementsByClassName?.("data-table") || []);
+    },
+    getLogTableElement() {
+      return this.getViewLogRootElement()?.querySelector?.("#log-table") || null;
+    },
+    getSortedHeaderElement(className) {
+      return this.getViewLogRootElement()?.getElementsByClassName?.(className)?.[0] || null;
+    },
     ...mapActions("multi-modal", ["showItemSettingModal"]),
     ...mapActions("view-log", [
       "setRole",
@@ -360,7 +422,7 @@ export default {
     //add FNSI-7366 追加読み込みの実施中にローダーが発生しない 劉全航 end
     /*add マウスの盗聴方法を追加します 馬宇婷 start*/
     widthChange(movement) {
-      let height = window.innerHeight;
+      let height = getViewportHeight();
       this.heightUp -= (movement / height) * 100;
 
       if (this.heightUp < 20) {
@@ -379,7 +441,8 @@ export default {
       }
     },
     mouseDown(event) {
-      document.addEventListener("mousemove", this.mouseMove);
+      this.getViewLogOwnerDocument().removeEventListener("mousemove", this.mouseMove);
+      this.getViewLogOwnerDocument().addEventListener("mousemove", this.mouseMove);
       this.lastY = event.clientY;
     },
     mouseMove(event) {
@@ -388,7 +451,7 @@ export default {
     },
     mouseUp() {
       this.lastY = "";
-      document.removeEventListener("mousemove", this.mouseMove);
+      this.getViewLogOwnerDocument().removeEventListener("mousemove", this.mouseMove);
     },
     /*add マウスの盗聴方法を追加します 馬宇婷 end*/
 
@@ -399,6 +462,12 @@ export default {
         this.switchTab(this.displayTabs[0]);
         this.previousTab = this.displayTabs[0];
       }
+    },
+    ensureDefaultCondition() {
+      if (!this.getDefaultCondition) {
+        this.setDefaultCondition(Object.assign({}, this.defaultCondition()));
+      }
+      return this.getDefaultCondition || this.defaultCondition();
     },
     //add FNSI-mongoDBに挿入、検索できることの対応 start
     async scrollHandler() {
@@ -435,11 +504,9 @@ export default {
     //add FNSI-mongoDBに挿入、検索できることの対応 end
 
     filterLog(logs) {
-      this.skipScrollHandler = true;   // フィルタ直後の追加読込を防ぐ
-      // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang start
-      // return logs ? logs.filter(this.filterValidate) : [];
-      return logs;
-      // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang end
+      // mod #10016 列ヘッダフィルタはAPIで再取得する（追加読込分だけクライアント絞込みしない）
+      this.skipScrollHandler = true;
+      return logs || [];
     },
 
     // ソートするキーを設定する
@@ -469,9 +536,7 @@ export default {
     // add FNSI-NO7326検索条件に施設IDが漏れ、追加する。ljx start
       // this.getCondition.facilityCd = [{facilityCd: this.getStateUserAccountInfo.facilityCd}];
     // add FNSI-NO7326検索条件に施設IDが漏れ、追加する。ljx end
-      // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang start
-      this.getLogReference(this.getCondition,false, true);
-      // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang end
+      this.getLogReference(this.getCondition, false, { clearColumnFilter: false });
       //add FNSI-mongoDBに挿入、検索できることの対応 end
     },
 
@@ -575,10 +640,12 @@ export default {
     },
 
     changeViewDetail() {
+      this.syncColumnWidthsFromDom();
       this.viewDetail = !this.viewDetail;
       /* update 様式修正  馬宇婷  start */
       this.heightUp = this.viewDetail ? 80 : 100;
      /* update 様式修正  馬宇婷  end */
+      this.$nextTick(() => this.applyStoredColumnWidths());
     },
 
     getModuleName(serviceName) {
@@ -602,11 +669,17 @@ export default {
         //update FNSI-mongoDBに挿入、検索できることの対応 end
     },
       //update FNSI-mongoDBに挿入、検索できることの対応 start
-    // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang start
-    async getLogReference(condition, scrollSelect, preserveColumnFilters = false) {
-      // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang end
+    async getLogReference(condition, scrollSelect, options = {}) {
+      const clearColumnFilter = options.clearColumnFilter === true;
+      // #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang start
+      if (scrollSelect === false && clearColumnFilter && this.openingTab) {
+        this.cancelFilter();
+      }
+      // #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang end
       let displayTabs = this.displayTabs;
       let sendCondition = this.formatSendCondition(condition);
+      // 追加読込前も列幅を退避（読込後の tbody 再描画で表头幅がリセットされるのを防ぐ）
+      this.syncColumnWidthsFromDom();
 
       const params = {
         folderName: this.getStateUserAccountInfo.facilityCd,
@@ -658,7 +731,7 @@ export default {
                       Math.round(Math.random() * 1000000),
                       this.titleTab(condition),
                       { key: sortKey, isAsc: isAsc },
-                      { freeWord: "", column: "" },
+                      this.cloneOpeningTabFilter(),
                       response.data
                   );
                   // mod bug #4273 修正 chen end
@@ -687,12 +760,6 @@ export default {
               this.openingTab.cellSelected = null;
               this.openingTab.rowActive = null;
               this.switchTab(this.openingTab);
-              // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang start
-              // 追加読込以外の場合はフィルタ条件クリア（列ヘッダフィルタからの再取得時は維持する）
-              if (scrollSelect == false && !preserveColumnFilters) {
-                this.cancelFilter();
-              }
-              // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang end
             } else {
               displayTabs.push(savedTabData);
               this.switchTab(savedTabData);
@@ -704,11 +771,6 @@ export default {
               if (scrollSelect == false) {
                 if (this.openingTab) {
                   this.openingTab.dataSource = [];
-                  // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang start
-                  if (!preserveColumnFilters) {
-                    this.cancelFilter();
-                  }
-                  // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang end
                 }
                 this.$ons.notification.alert({
                   // add #6107 2023/03/08 メッセージボックス全調整 林峻峰 start
@@ -725,11 +787,6 @@ export default {
             if (scrollSelect == false) {
               if (this.openingTab) {
                 this.openingTab.dataSource = [];
-                // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang start
-                if (!preserveColumnFilters) {
-                  this.cancelFilter();
-                }
-                // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang end
               }
                 this.$ons.notification.alert({
                   // add #6107 2023/03/08 メッセージボックス全調整 林峻峰 start
@@ -742,6 +799,7 @@ export default {
             }
         }
         //add FNSI-7366 追加読み込みの実施中にローダーが発生しない 劉全航 start
+        this.$nextTick(() => this.applyStoredColumnWidths());
         this.setLoadingScreenVisible(false);
         //add FNSI-7366 追加読み込みの実施中にローダーが発生しない 劉全航 end
       })
@@ -750,6 +808,7 @@ export default {
         getErrorMessage('ViewLog.vue','getLogReference',err);
         //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
         //add FNSI-7366 追加読み込みの実施中にローダーが発生しない 劉全航 start
+        this.$nextTick(() => this.applyStoredColumnWidths());
         this.setLoadingScreenVisible(false);
         //add FNSI-7366 追加読み込みの実施中にローダーが発生しない 劉全航 end
         if (scrollSelect == false) {
@@ -796,14 +855,28 @@ export default {
     },
       //update FNSI-mongoDBに挿入、検索できることの対応 end
 
+    buildDisplayItemsForRequest() {
+      const filterColumns = this.openingTab?.filter?.columns || [];
+      return this.displayItems.map(item => {
+        const matched = filterColumns.find(
+          column => String(column.cd) === String(item.cd)
+        );
+        const freeWord =
+          matched?.freeWord != null && String(matched.freeWord).trim() !== ""
+            ? String(matched.freeWord)
+            : "";
+        return { ...item, freeWord };
+      });
+    },
+
     formatSendCondition(condition) {
-      const startTime = condition.noticeStartTime ? `${condition.noticeStartTime}:00` : moment().startOf('day').format("HH:mm:ss");
-      const endTime = condition.noticeEndTime ? `${condition.noticeEndTime}:00` : moment().format("HH:mm:ss");
+      const startTime = condition.noticeStartTime ? `${condition.noticeStartTime}:00` : dayjs().startOf('day').format("HH:mm:ss");
+      const endTime = condition.noticeEndTime ? `${condition.noticeEndTime}:00` : dayjs().format("HH:mm:ss");
       const startDateTime = condition.noticeStartDate
-        ? `${moment(condition.noticeStartDate).format("YYYY/MM/DD")} ${startTime}`
+        ? `${dayjs(condition.noticeStartDate).format("YYYY/MM/DD")} ${startTime}`
         : null
       const endDateTime = condition.noticeEndDate
-        ? `${moment(condition.noticeEndDate).format("YYYY/MM/DD")} ${endTime}`
+        ? `${dayjs(condition.noticeEndDate).format("YYYY/MM/DD")} ${endTime}`
         : null
       return {
         strFromDate: startDateTime,
@@ -838,7 +911,7 @@ export default {
           pageSize: condition.pageSize,
           //add FNSI-mongoDBに挿入、検索できることの対応 end
           // add #6775 ログの抽出が正しく行われない 鄭爽 start
-          displayItems: this.displayItems,
+          displayItems: this.buildDisplayItemsForRequest(),
           // add #6775 ログの抽出が正しく行われない 鄭爽 end
         moduleName: condition.moduleName && condition.moduleName.length > 0
           ? condition.moduleName[0].toString()
@@ -869,7 +942,7 @@ export default {
           condition.sortKey = "";
           condition.sortOrder = null;
         }
-        this.getLogReference(condition, false);
+        this.getLogReference(condition, false, { clearColumnFilter: true });
         //update FNSI-mongoDBに挿入、検索できることの対応 end
       } else {
         //update FNSI-mongoDBに挿入、検索できることの対応 start
@@ -883,10 +956,10 @@ export default {
         // this.displayTabs.push(savedTabData);
         // this.syncTabLocalToStore(this.displayTabs);
         // this.switchTab(savedTabData);
-        this.getCondition.noticeStartDate = moment().format("YYYY-MM-DD");
-        this.getCondition.noticeStartTime = moment().startOf('day').format("HH:mm");
-        this.getCondition.noticeEndDate = moment().format("YYYY-MM-DD");
-        this.getCondition.noticeEndTime = moment().format("HH:mm");
+        this.getCondition.noticeStartDate = dayjs().format("YYYY-MM-DD");
+        this.getCondition.noticeStartTime = dayjs().startOf('day').format("HH:mm");
+        this.getCondition.noticeEndDate = dayjs().format("YYYY-MM-DD");
+        this.getCondition.noticeEndTime = dayjs().format("HH:mm");
         this.getCondition.limitTo = 0;
         this.filterTimes = 0;
         this.getCondition.pageSize = PAGE_SIZE;
@@ -897,11 +970,13 @@ export default {
           this.openingTab.sort.key = "";
           this.openingTab.sort.isAsc = null;
         }
-        if (document.getElementsByClassName("sorted-desc")[0]) {
-          document.getElementsByClassName("sorted-desc")[0].classList.remove("sorted-desc");
+        const sortedDesc = this.getSortedHeaderElement("sorted-desc");
+        if (sortedDesc) {
+          sortedDesc.classList.remove("sorted-desc");
         }
-        if (document.getElementsByClassName("sorted-asc")[0]) {
-          document.getElementsByClassName("sorted-asc")[0].classList.remove("sorted-asc");
+        const sortedAsc = this.getSortedHeaderElement("sorted-asc");
+        if (sortedAsc) {
+          sortedAsc.classList.remove("sorted-asc");
         }
         // add 障害票一覧_NKK 修正 chen end
 
@@ -918,18 +993,22 @@ export default {
         // this.getCondition.facilityCd = [{facilityCd: this.getStateUserAccountInfo.facilityCd}]
         //del 6513 2023-03-09 引き継いだ抽出条件での利用者選択・患者選択で内容が表示されない 張 end
         // add FNSI-NO578日機装ユーザーでログ検索が実行されない。(施設ユーザでは検索可能) 張岩 end
-        this.setDefaultCondition(Object.assign({}, this.defaultCondition()));
-        this.getLogReference(this.getCondition, false);
+        const defaults = this.defaultCondition();
+        this.getCondition.logClass = defaults.logClass;
+        this.getCondition.logType = defaults.logType;
+        this.getCondition.typeSearch = defaults.typeSearch;
+        this.setDefaultCondition(Object.assign({}, defaults));
+        this.getLogReference(this.getCondition, false, { clearColumnFilter: true });
         //update FNSI-mongoDBに挿入、検索できることの対応 end
       }
     },
       //add FNSI-mongoDBに挿入、検索できることの対応 start
       defaultCondition() {
           let ret = {
-              noticeStartDate: moment().format("YYYY-MM-DD"),
-              noticeStartTime: moment().startOf('day').format("HH:mm"),
-              noticeEndDate: moment().format("YYYY-MM-DD"),
-              noticeEndTime: moment().format("HH:mm"),
+              noticeStartDate: dayjs().format("YYYY-MM-DD"),
+              noticeStartTime: dayjs().startOf('day').format("HH:mm"),
+              noticeEndDate: dayjs().format("YYYY-MM-DD"),
+              noticeEndTime: dayjs().format("HH:mm"),
               duration: 0,
               facilityCd: [],
               moduleName: [],
@@ -992,7 +1071,7 @@ export default {
           if (this.displayTabs[index]) {
             this.switchTab(this.displayTabs[index]);
           } else {
-              setTimeout(() => {
+              this.setManagedTimeout(() => {
                 this.switchTab(this.displayTabs[index - 1]);
               }, 300); // switchTab関数の効果を制限する
           }
@@ -1010,7 +1089,7 @@ export default {
      * @returns { String } タイトルタブ
      */
     titleTab(currentCondition) {
-      const defaultCondition = this.getDefaultCondition;
+      const defaultCondition = this.ensureDefaultCondition();
 
       if (currentCondition != defaultCondition) {
         // 1. 検索文字列
@@ -1070,7 +1149,7 @@ export default {
      * @returns { String } タイトルが編集されました
      */
     limitTitleLength(title, value) {
-      const ua = navigator.userAgent;
+      const ua = getScopedUserAgent(this.$el);
       const limit = ua.match(/Android/) || ua.match(/iPhone|iPad/) ? 6 : 24;
       let titleTab = "";
       switch (title) {
@@ -1099,6 +1178,7 @@ export default {
         title: DIALOG_MESSAGES[13000043].title,
         // message: "ログファイルをダウンロードします。<br>よろしいですか？",
         message: messageFormat(DIALOG_MESSAGES[13000043].message),
+        buttonLabels: ["Cancel", "OK"],
         // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
         callback: answer => {
           if (answer === 1) {
@@ -1150,10 +1230,11 @@ export default {
       const uint8s = new Uint8Array(sjisCodes);
 
       const blob = new Blob([uint8s], { type: 'text/csv;charset=sjis;' });
-      let link = document.createElement("a");
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `ログ_${moment().format("YYYYMMDDHHmmssSSS")}.csv`;
-      link.click();
+      triggerScopedDownload({
+        blob,
+        filename: `ログ_${dayjs().format("YYYYMMDDHHmmssSSS")}.csv`,
+        root: this.$el
+      });
       // let downloadTable = this.$refs[`download_${this.openingTab.cd}`];
       // let tableRows = downloadTable[0].rows;
       // let rowData = [...tableRows];
@@ -1169,7 +1250,7 @@ export default {
       // });
       // let link = document.createElement("a");
       // link.href = "data:text/csv;charset=utf-8,%EF%BB%BF" + encodeURI(csvContent);
-      // link.download = `ログ_${moment().format("YYYYMMDDHHmmssSSS")}.csv`;
+      // link.download = `ログ_${dayjs().format("YYYYMMDDHHmmssSSS")}.csv`;
       // link.click();
       // mod ダウンロードしたファイルに検索条件に満たす対象レコードが一部だけ含めてしまう。全部含む必要 修正 陳 end
     },
@@ -1181,7 +1262,7 @@ export default {
     getFieldText(item, field) {
       const key = this.columns.find(i => i.cd === field.cd).key;
       if (field.key === "date" && key) {
-        return moment(item[key]).format("YYYY/MM/DD HH:mm:ss");
+        return dayjs(item[key]).format("YYYY/MM/DD HH:mm:ss");
       }
       return item[key] ? item[key] : "";
     },
@@ -1233,7 +1314,7 @@ export default {
      * @returns {String} YYYYMMDDHHmmssSSS
      */
     componentKey(str) {
-      return `${moment().format("YYYYMMDDHHmmssSSS")}${str}`;
+      return `${dayjs().format("YYYYMMDDHHmmssSSS")}${str}`;
     },
 
     /**
@@ -1248,9 +1329,83 @@ export default {
      */
     theadClicked(item) {
       if (this.isResizing) return;
+      this.syncColumnWidthsFromDom();
       this.draggableKey++;
       // ソート実行
       this.sortBy(item.key);
+    },
+
+    colHeaderWidth(item) {
+      return this.columnWidths[item.cd] || `${this.colWidth}px`;
+    },
+
+    syncColumnWidthsFromDom() {
+      const tables = this.getDataTables();
+      const table = tables.find(t => t.style.display !== "none") || tables[0];
+      if (!table) return;
+
+      const ths = table.querySelectorAll("thead tr th");
+      for (let i = 1; i < ths.length && i - 1 < this.columns.length; i++) {
+        const col = this.columns[i - 1];
+        const th = ths[i];
+        const measured = Math.round(this.getThColumnWidth(th));
+        if (measured <= 0) continue;
+
+        const saved = parseInt(this.columnWidths[col.cd], 10);
+        const defaultWidth = this.colWidth;
+        // 已保存且与 DOM 一致：跳过，避免 offsetWidth 反复叠加 padding/border 导致变宽
+        if (saved && Math.abs(measured - saved) <= 2) continue;
+        // 未拉宽（仍接近默认宽）：不写 columnWidths
+        if (!saved && Math.abs(measured - defaultWidth) <= 2) continue;
+
+        this.columnWidths[col.cd] = `${measured}px`;
+      }
+    },
+
+    applyStoredColumnWidths() {
+      if (!Object.keys(this.columnWidths).length) {
+        return;
+      }
+      const tables = this.getDataTables();
+      const table = tables.find(t => t.style.display !== "none") || tables[0];
+      if (!table) {
+        return;
+      }
+      const ths = table.querySelectorAll("thead tr th");
+      for (let i = 1; i < ths.length && i - 1 < this.columns.length; i++) {
+        const col = this.columns[i - 1];
+        const width = this.columnWidths[col.cd];
+        if (width) {
+          ths[i].style.width = width;
+        }
+      }
+    },
+
+    getThColumnWidth(th) {
+      const inlineWidth = parseInt(th.style.width, 10);
+      if (inlineWidth > 0) return inlineWidth;
+      const rect = th.getBoundingClientRect();
+      const style = getComputedStyle(th);
+      if (style.boxSizing === "border-box") {
+        return rect.width;
+      }
+      const padding =
+        parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const border =
+        parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+      return rect.width - padding - border;
+    },
+
+    saveColumnWidthFromTh(th) {
+      const row = th.parentElement;
+      if (!row) return;
+      const thIndex = Array.from(row.children).indexOf(th);
+      if (thIndex <= 0 || thIndex - 1 >= this.columns.length) return;
+      const col = this.columns[thIndex - 1];
+      const width = Math.round(this.getThColumnWidth(th));
+      if (width > 0) {
+        this.columnWidths[col.cd] = `${width}px`;
+      }
     },
     /**
      * @description 列ヘッダ フィルタアイコン クリック時の処理
@@ -1269,50 +1424,53 @@ export default {
       if (this.openingTab.filter.columns) {
         const targetColumnIndex = this.openingTab.filter.columns.findIndex(c => c.name === filterTargetName);
         if (targetColumnIndex !== -1) {
-          if (targetColumnIndex > -1) {
-            this.openingTab.filter.columns.splice(targetColumnIndex, 1);
-          }
+          this.openingTab.filter.columns.splice(targetColumnIndex, 1);
           const filteringIndex = this.filteringColName.findIndex(c => c.name === filterTargetName);
           if (filteringIndex > -1) {
             this.filteringColName.splice(filteringIndex, 1);
           }
-          this.openingTab.filter.column = null;
-          this.filterVisible = false;
-          this.openingTab.filter.freeWord = '';
         }
       }
       // add bug #4110 修正 chen end
       const targetColumn = this.displayItems.find(item => item.name.trim() === filterTargetName);
-      this.openingTab.filter.column = targetColumn
+      if (!targetColumn) {
+        this.filterVisible = false;
+        return;
+      }
+      const filterWord = (this.tempFreeword ?? "").trim();
+      this.openingTab.filter.column = targetColumn;
       this.filterVisible = false;
-      this.openingTab.filter.freeWord = this.tempFreeword;
-      targetColumn.freeWord = this.tempFreeword;
+      this.openingTab.filter.freeWord = filterWord;
+      targetColumn.freeWord = filterWord;
+      const matchedColumn = this.columns.find(item => String(item.cd) === String(targetColumn.cd));
+      if (matchedColumn) {
+        matchedColumn.freeWord = filterWord;
+      }
       if (!this.openingTab.filter.columns) {
         this.openingTab.filter.columns = [];
       }
-      this.openingTab.filter.columns.push(targetColumn);
-      if (this.openingTab.filter.columns.length ===0) {
-        this.filteringColName = [];
-      } else {
-        if (targetColumn.freeWord !== "") {
-          // フィルタ文字列指定ありの場合のみリストに追加
+      if (filterWord !== "") {
+        this.openingTab.filter.columns.push({ ...targetColumn, freeWord: filterWord });
+        if (!this.filteringColName.find(c => String(c.cd) === String(targetColumn.cd))) {
           this.filteringColName.push(targetColumn);
         }
+      } else {
+        this.openingTab.filter.column = null;
+        this.openingTab.filter.freeWord = "";
       }
-      
-      // add #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang start
-      // 列フィルタ確定後、現在の検索条件・ソートで先頭ページから再取得する（スクロール追加読込分だけをクライアント絞込みしない）
+
+      // mod #10016 列フィルタ確定後はAPIで先頭ページから再取得（列ヘッダフィルタ状態は維持）
       this.limitTo = 0;
       this.filterTimes = 0;
       this.getCondition.limitTo = 0;
       this.getCondition.filterTimes = 0;
       this.getCondition.pageSize = PAGE_SIZE;
-      if (this.openingTab && this.openingTab.sort) {
+      if (this.openingTab?.sort) {
         this.getCondition.sortKey = this.openingTab.sort.key;
         this.getCondition.sortOrder = this.openingTab.sort.isAsc;
       }
-      this.getLogReference(this.getCondition, false, true);
-      // add #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang end
+      this.getLogReference(this.getCondition, false, { clearColumnFilter: false });
+
       // フィルタ直後にスクロール位置が最下端の場合のみ下方向スクロール領域を確保するため上に10pxずらす
       this.$nextTick(() => {
         const e = this.$refs.ntssList;
@@ -1322,6 +1480,18 @@ export default {
         }
       });
     },
+    cloneOpeningTabFilter() {
+      const filter = this.openingTab?.filter;
+      if (!filter) {
+        return { freeWord: "", column: null, columns: [] };
+      }
+      return {
+        freeWord: filter.freeWord ?? "",
+        column: filter.column ? { ...filter.column } : null,
+        columns: (filter.columns || []).map(column => ({ ...column }))
+      };
+    },
+
     /**
      * 列ヘッダのフィルタクリア
      */ 
@@ -1332,6 +1502,12 @@ export default {
       this.filterVisible = false;
       this.openingTab.filter.freeWord = "";
       this.tempFreeword = "";
+      this.skipScrollHandler = true;
+      const clearColumnFreeWord = column => {
+        column.freeWord = "";
+      };
+      this.displayItems.forEach(clearColumnFreeWord);
+      this.columns.forEach(clearColumnFreeWord);
     },
 
     filterValidate(data) {
@@ -1342,11 +1518,12 @@ export default {
       }
       let isValid = true;
       this.openingTab.filter.columns.forEach(column => {
-        if (column.key === "date" && !moment(data[column.key]).format("YYYY/MM/DD HH:mm:ss").includes(column.freeWord)) {
+        if (column.key === "date" && !dayjs(data[column.key]).format("YYYY/MM/DD HH:mm:ss").includes(column.freeWord)) {
           isValid = false;
-          // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang start
-        } else if (!data[column.key].toLowerCase().includes(column.freeWord?.toLowerCase())) {
-          // mod #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang end
+        } else if (
+          data[column.key] != null &&
+          !String(data[column.key]).toLowerCase().includes(String(column.freeWord ?? "").toLowerCase())
+        ) {
           isValid = false;
         }
       });
@@ -1371,8 +1548,8 @@ export default {
 
     calculateMaxHeight() {
       if (this.$refs.refTab && this.$refs.refBottomControl) {
-        const mainId = document.getElementById("main-id");
-        let mainIdHeight = mainId.offsetHeight;
+        const mainId = this.$refs.refMain || this.getViewLogRootElement();
+        let mainIdHeight = mainId ? mainId.offsetHeight : 0;
         this.viewLogAreaHeight =
           mainIdHeight -
           this.$refs.refTab.clientHeight -
@@ -1381,7 +1558,7 @@ export default {
     },
 
     calculateColumnWidth() {
-      const table = document.getElementsByClassName("table data-table")[0];
+      const table = this.getDataTables()[0];
       const columnNumbers = this.isMasterUser ? this.displayItems.length : this.displayItems.length - 1;
       // columnNumbersマネージャーには列ログ種別が表示されないため、1を減算する必要があります
       if (table) {
@@ -1412,7 +1589,7 @@ export default {
       }
       const requestUser = [];
       facCds.forEach(facility => {
-        if (facility.hasOwnProperty('facilityCd')) {
+        if (Object.prototype.hasOwnProperty.call(facility, 'facilityCd')) {
           requestUser.push(ApiHelper.get(`${uriUser}/${facility.facilityCd}`));
         } else {
           requestUser.push(ApiHelper.get(`${uriUser}/${facility}`));
@@ -1442,8 +1619,8 @@ export default {
       let headerHeight = header.offsetHeight;
 
       let spliter = createSpliter();
-      let logTable = document.getElementById('log-table');
-      logTable.appendChild(spliter);
+      const logTable = this.getLogTableElement();
+      logTable?.appendChild(spliter);
       setTableListeners(spliter);
 
       for (let i=0;i<cols.length;i++){
@@ -1455,29 +1632,31 @@ export default {
       }
 
       function setListenerForParent(parent) {
-        parent.addEventListener('click', (e) => {
+        that.addManagedEventListener(parent, 'click', (e) => {
           e.preventDefault();
           e.stopPropagation();
         });
       }
 
+      const resizeOwnerDocument = table?.ownerDocument || this.getViewLogOwnerDocument();
+
       function setTableListeners(div){
       let pageY,tableHeight;
-      let table = document.getElementById('log-table');
-      div.addEventListener('mousedown', (e) => {
+      const table = this.getLogTableElement();
+      that.addManagedEventListener(div, 'mousedown', (e) => {
         pageY = e.pageY;
-        tableHeight = table.offsetHeight;
+        tableHeight = table ? table.offsetHeight : 0;
 
       });
 
-      document.addEventListener('mousemove', (e) => {
+      that.addManagedEventListener(resizeOwnerDocument, 'mousemove', (e) => {
         if (table) {
         let diffY = e.pageY - pageY;
         table.style.height = tableHeight + diffY + 'px';
         }
       });
 
-      document.addEventListener('mouseup', () => {
+      that.addManagedEventListener(resizeOwnerDocument, 'mouseup', () => {
         pageY = undefined;
         tableHeight = undefined;
       });
@@ -1486,7 +1665,7 @@ export default {
       function setListeners(div){
       let pageX,curCol,curColWidth,tableWidth;
 
-      div.addEventListener('mousedown', (e) => {
+      that.addManagedEventListener(div, 'mousedown', (e) => {
         clearTimeout(that.timeOut);
         that.isResizing = true;
         curCol = e.target.parentElement;
@@ -1495,7 +1674,7 @@ export default {
         tableWidth = table.offsetWidth;
       });
 
-      document.addEventListener('mousemove', (e) => {
+      that.addManagedEventListener(resizeOwnerDocument, 'mousemove', (e) => {
         if (curCol) {
         let diffX = e.pageX - pageX;
         curCol.style.width = (curColWidth + diffX)+'px';
@@ -1503,12 +1682,15 @@ export default {
         }
       });
 
-      document.addEventListener('mouseup', () => {
+      that.addManagedEventListener(resizeOwnerDocument, 'mouseup', () => {
+        if (curCol) {
+          that.saveColumnWidthFromTh(curCol);
+        }
         curCol = undefined;
         pageX = undefined;
         curColWidth = undefined
         if (that.isResizing) {
-          that.timeOut = setTimeout(() => {
+          that.timeOut = that.setManagedTimeout(() => {
             that.isResizing = false;
           }, 0);
         }
@@ -1516,7 +1698,7 @@ export default {
       }
 
       function createDiv(height){
-        let div = document.createElement('div');
+        let div = resizeOwnerDocument.createElement('div');
         div.style.top = 0;
         div.style.right = 0;
         div.style.width = '5px';
@@ -1527,7 +1709,7 @@ export default {
         return div;
       }
       function createSpliter(){
-        let div = document.createElement('div');
+        let div = resizeOwnerDocument.createElement('div');
         div.style.bottom = 0;
         div.style.right = 0;
         div.style.width = '100%';
@@ -1549,7 +1731,7 @@ export default {
 
   async created() {
     /*add マウスを追加する 馬宇婷 start*/
-    document.addEventListener("mouseup", this.mouseUp);
+    this.getViewLogOwnerDocument().addEventListener("mouseup", this.mouseUp);
     /*add マウスを追加する 馬宇婷 end*/
 
     // add 性能改善メモリ不足 shan start
@@ -1562,6 +1744,7 @@ export default {
     EventBus.$on('changeViewDetail', this.changeViewDetail);
     this.columns = createColumns(this.isMasterUser);
     this.displayItems = createDisplayColumns(this.isMasterUser);
+    this.ensureDefaultCondition();
     // mod bug 修正 chen start
     if (this.getCondition.noticeStartDate) {
       this.createTab(this.getCondition);
@@ -1577,8 +1760,10 @@ export default {
     }
   },
 
-  beforeDestroy() {
-    document.removeEventListener("mouseup", this.mouseUp);
+  beforeUnmount() {
+    this.clearManagedRuntimeHandlers();
+    this.getViewLogOwnerDocument().removeEventListener("mousemove", this.mouseMove);
+    this.getViewLogOwnerDocument().removeEventListener("mouseup", this.mouseUp);
     EventBus.$off('download', this.onClickDownload);
     EventBus.$off('changeViewDetail', this.changeViewDetail);
     // mod 画面パフォーマンス対応 chen start
@@ -1687,6 +1872,7 @@ table.table {
 }
 
 .resize-col {
+  box-sizing: border-box;
   resize: horizontal;
   overflow-x: hidden;
 }
@@ -1695,12 +1881,28 @@ table.table {
   display: none;
 }
 
-.popover-area >>> .popover-mask {
+.popover-area :deep(.popover-mask) {
   z-index: 100;
 }
 
 .pop-area {
   margin: 10px;
+}
+
+/* フリーワード：通常の灰枠を維持、focus 時の緑枠（#7229）のみ抑止 */
+.pop-area .filter-freeword-input {
+  border: none !important;
+  box-shadow: none !important;
+}
+.pop-area .filter-freeword-input :deep(.text-input) {
+  border: 1px solid #ccc !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: var(--search-input-background-color, #fff);
+}
+.pop-area .filter-freeword-input :deep(.text-input:focus) {
+  border: 1px solid #ccc !important;
+  outline: none !important;
 }
 
 .ok-button {
@@ -1806,6 +2008,12 @@ table.table {
   text-align: center;
 }
 
+.clickable-header-label.sorted-asc::after,
+.clickable-header-label.sorted-desc::after,
+.clickable-header-label.non-sort::after {
+  margin-left: 0.3em;
+}
+
 .non-sort::after {
   display: initial;
   content: "▲";
@@ -1817,7 +2025,7 @@ table.table {
 .thead-container {
   display: flex;
   align-items: center;
-  justify-content: center;  /* テキストは中央 */
+  justify-content: center;
   position: relative;
   width: 100%;
   height: 100%;
@@ -1838,7 +2046,8 @@ table.table {
   box-sizing: border-box;
   overflow: hidden;
   align-content: center;
-  padding-left: 1em; /* フィルタアイコン幅 + 余白 */
+  padding-left: 1em;
+  transform: translateX(2px);
 }
 /* add FNSI-改修内容5056修正 関　start */
 @media only screen and (min-device-width : 768px) and (max-device-width : 1024px){

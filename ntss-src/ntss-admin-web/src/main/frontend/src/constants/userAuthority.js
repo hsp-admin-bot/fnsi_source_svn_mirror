@@ -96,6 +96,6 @@ export const AUTHORITY_CODES = {
   FCL_VIEW: "011",
   // mod #12462 患者情報共有 関 start
   // 患者共有
-  PATIENT_SHARE: "1002",
+  PATIENT_SHARE: "143",
   // mod #12462 患者情報共有 関 end
 };

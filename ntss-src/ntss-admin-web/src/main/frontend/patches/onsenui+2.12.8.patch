@@ -1,21 +1,85 @@
 diff --git a/node_modules/onsenui/esm/elements/ons-popover.js b/node_modules/onsenui/esm/elements/ons-popover.js
-index 9a927b1..4035622 100644
+index 9a927b1..ee7a156 100644
 --- a/node_modules/onsenui/esm/elements/ons-popover.js
 +++ b/node_modules/onsenui/esm/elements/ons-popover.js
-@@ -285,8 +285,14 @@ export default class PopoverElement extends BaseDialogElement {
+@@ -48,6 +48,29 @@ const positions = {
+ };
+ 
+ const directions = Object.keys(positions);
++
++const resolveTargetDocument = owner => owner && owner.ownerDocument || document;
++const isTargetElement = target => target instanceof HTMLElement || !!target && target.nodeType === 1;
++const isTargetEvent = target => target instanceof Event || !!target && typeof target === 'object' && !isTargetElement(target) && target.target;
++const normalizeTargetSelector = target => String(target || '').trim();
++const resolveTargetElement = (target, owner = null) => {
++  const ownerDocument = resolveTargetDocument(owner);
++  if (typeof target === 'string') {
++    const selector = normalizeTargetSelector(target);
++    if (!selector) {
++      return null;
++    }
++    try {
++      return ownerDocument.querySelector(selector) || ownerDocument.getElementById(selector.replace(/^#/, ''));
++    } catch (_error) {
++      return ownerDocument.getElementById(selector.replace(/^#/, ''));
++    }
++  }
++  if (isTargetEvent(target)) {
++    return target.target;
++  }
++  return target;
++};
+ /**
+  * @element ons-popover
+  * @category dialog
+@@ -281,12 +304,18 @@ export default class PopoverElement extends BaseDialogElement {
+   _toggleStyle(shouldShow, options = {}) {
+     if (shouldShow) {
+       this.style.display = 'block';
+-      let target = options.target;
++      let target = resolveTargetElement(options.target, this);
        if (!target && this.target) {
-         target = document.getElementById(this.target);
+-        target = document.getElementById(this.target);
++        target = resolveTargetElement(this.target, this);
++      }
++
++      if (!isTargetElement(target)) {
++        this.style.display = 'none';
++        this._clearStyles();
++      } else {
++        this._currentTarget = target;
++        this._positionPopover(target);
        }
 -      this._currentTarget = target;
 -      this._positionPopover(target);
-+
-+      if(!target){
-+        this.style.display = 'none';
-+        this._clearStyles();
-+      }else{
-+        this._currentTarget = target;
-+        this._positionPopover(target);
-+      }
      } else {
        this.style.display = 'none';
        this._clearStyles();
+@@ -464,23 +493,19 @@ export default class PopoverElement extends BaseDialogElement {
+    */
+   show(target, options = {}) {
+     // Copy options and include options.target
+-    if (target && typeof target === 'object' && !(target instanceof Event) && !(target instanceof HTMLElement)) {
++    if (target && typeof target === 'object' && !isTargetEvent(target) && !isTargetElement(target)) {
+       options = { ...target };
+     } else {
+       options = { ...options, target };
+     }
+ 
+-    if (typeof options.target === 'string') {
+-      options.target = document.querySelector(options.target);
+-    } else if (options.target instanceof Event) {
+-      options.target = options.target.target;
+-    }
++    options.target = resolveTargetElement(options.target, this);
+ 
+     if (!options.target && this.target) {
+-      options.target = document.getElementById(this.target);
++      options.target = resolveTargetElement(this.target, this);
+     }
+ 
+-    if (!(options.target instanceof HTMLElement)) {
++    if (!isTargetElement(options.target)) {
+      util.throw('Invalid target type or undefined');
+     }
+ 

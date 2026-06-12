@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-ons-row v-for="(file, index) in value" :key="index" style="line-height: 1.5em; flex-wrap: nowrap;">
+    <v-ons-row v-for="(file, index) in modelValue" :key="index" style="line-height: 1.5em; flex-wrap: nowrap;">
       <v-ons-icon class="attachment-icon" icon="fa-paperclip" />
       <div class="download-link" @click="downloadFile(file)">
         {{ file.name }}
@@ -17,16 +17,19 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper.js";
 import { sendRequestGetDownload } from "@/apis/pat-event";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import { triggerScopedDownload } from "@/functions/common/LayoutMeasureHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
 
 export default {
+  emits: ["update:modelValue"],
   props: {
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: Array,
       required: true,
       default() {
@@ -90,18 +93,11 @@ export default {
       const blob = new Blob([this.hexStringToArrayBuffer(downloadData)], {
         type: "application/zip"
       });
-      if (window.navigator.msSaveBlob) {
-        window.navigator.msSaveBlob(blob, filename);
-      } else {
-        const downloadUrl = (window.URL || window.webkitURL).createObjectURL(
-          blob
-        );
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = filename;
-        link.click();
-        (window.URL || window.webkitURL).revokeObjectURL(blob);
-      }
+      triggerScopedDownload({
+        blob,
+        filename,
+        root: this.$el
+      });
     },
 
     /**
@@ -111,8 +107,8 @@ export default {
     deleteFile(file) {
       const filepath = file.path;
       const filename = file.name;
-      const fileInfo = this.value.filter(i => i !== file);
-      this.$emit("input", fileInfo);
+      const fileInfo = this.modelValue.filter(i => i !== file);
+      this.$emit("update:modelValue", fileInfo);
       const deletefile = JSON.stringify({ name: filename, path: filepath });
       const pathList = this.selectedBbs.file_info.map(i => i.path);
 
@@ -188,7 +184,7 @@ export default {
     }
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   }

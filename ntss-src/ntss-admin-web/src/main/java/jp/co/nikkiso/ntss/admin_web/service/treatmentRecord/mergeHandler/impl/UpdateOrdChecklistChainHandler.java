@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.service.treatmentRecord.mergeHandler.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import jp.co.nikkiso.ntss.admin_web.service.checkList.CheckListService;
 import jp.co.nikkiso.ntss.admin_web.service.treatmentRecord.mergeHandler.TreatmentRecordMergeChainHandler;
 import jp.co.nikkiso.ntss.admin_web.service.utils.ApplicationContextUtil;

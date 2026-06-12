@@ -11,11 +11,11 @@
   /**
    * Vue関連
    */
-  import {mapActions, mapGetters} from "vuex";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   /**
    * 日付操作
    */
-  import moment from "moment";
+  import dayjs from "@/compat/date/dayjs";
   /**
    * ベースコンポーネント
    * @summary このコンポーネントへ表示する情報を渡す
@@ -103,15 +103,15 @@
       this.finishLoadingScreen();
     });
     // add FNSI-性能を最適化する 李 end
-    sendRequestGetPatEventCateMst().then(res => {
+    sendRequestGetPatEventCateMst(this.selectedPatId).then(res => {
         this.mstPatEventCategory=res.data.localDataSource.data.filter(item => item.isDisp)
     });
-    sendRequestGetPatSubEventCateMst().then(res => {
+    sendRequestGetPatSubEventCateMst(this.selectedPatId).then(res => {
         this.mstPatEventSubCategory=res.data.localDataSource.data.filter(item => item.isDisp)
     });
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -146,7 +146,7 @@
       }
       const model = {
         type: "pat_event",
-        treatDate: moment(cellInfo.treatDate).format('YYYY/MM/DD'),
+        treatDate: dayjs(cellInfo.treatDate).format('YYYY/MM/DD'),
         eventStartDate: cellInfo.treatDate,
         eventEndDate: cellInfo.treatDate,
         categoryCd:patEvent?patEvent.code:"",

@@ -43,7 +43,7 @@
           </v-ons-button>
           <!-- mod #10359 編集権限の動作不正 end -->
           <!-- mod 8074【デグレ】ログに誤った利用者が記録される 関  end -->
-          <template v-for="subMenu in subMenus">
+          <template v-for="subMenu in subMenus" :key="subMenu.key">
             <!-- ？？？？患者(patId=null)の場合、観察記録画面に遷移させない -->
             <!-- mod FNSI修正観察記録内結バッグ1 房 start -->
             <!-- #9692 mod  治療記録のモニタ画面を表示しながら患者を切り替えてもモニタデータが更新されない 2023-11-28 卓 start -->
@@ -54,7 +54,6 @@
                 subMenu.key !== 'Bvms' &&
                 (!subMenuPatIdIsNull.includes(subMenu.key) || getObserveRecord)
               "
-              :key="subMenu.key"
               :to="{
                 name:
                   !getOrdNo ||
@@ -78,15 +77,14 @@
             <!-- #9692 mod  治療記録のモニタ画面を表示しながら患者を切り替えてもモニタデータが更新されない 2023-11-28 卓 end -->
             <!-- mod FNSI修正観察記録内結バッグ1 房 end -->
           </template>
-          <template v-for="subMenu in subMenus">
+          <template v-for="subMenu in subMenus" :key="subMenu.key">
             <round-type-selector
               v-if="subMenu.key === roundRouteDef.name"
-              :key="subMenu.key"
               :deletedOrCancelCond="deletedOrCancelCond"
               @update="checkRstDialysisState"
             ></round-type-selector>
           </template>
-          <template v-for="subMenu in subMenus">
+          <template v-for="subMenu in subMenus" :key="subMenu.key">
             <!-- mod FNSI修正観察記録内結バッグ1 房 start -->
             <!-- #9692 mod  治療記録のモニタ画面を表示しながら患者を切り替えてもモニタデータが更新されない 2023-11-28 卓 start -->
             <router-link
@@ -96,7 +94,6 @@
                 isShowBvms &&
                 (!subMenuPatIdIsNull.includes(subMenu.key) || getObserveRecord)
               "
-              :key="subMenu.key"
               :to="{
                 name:
                   !getOrdNo ||
@@ -140,7 +137,7 @@
             :disabled="
               !getOrdNo ||
               deletedOrCancelCond ||
-              !getItemAuthorized('TreatmentRecord', 'default_authority') || 
+              !getItemAuthorized('TreatmentRecord', 'default_authority') ||
               !isShared
             "
             @click="offlineResultMerge"
@@ -235,7 +232,7 @@
             @click="deleteRecord"
             :disabled="
               !getOrdNo ||
-              deletedOrCancelCond || 
+              deletedOrCancelCond ||
               !isShared
             "
             v-show="canDeleteRecord"
@@ -285,10 +282,8 @@
         :visible="diaView"
         class="ons-dialog-c"
       >
-        <span slot="title"
-          >未実施の投与薬剤が含まれていますがよろしいですか？</span
-        >
-        <template slot="footer">
+        <template #title><span>未実施の投与薬剤が含まれていますがよろしいですか？</span></template>
+        <template #footer>
           <v-ons-alert-dialog-button @click="zisekiConfirmCancel()"
             >キャンセル</v-ons-alert-dialog-button
           >
@@ -352,8 +347,10 @@ import { sendRequestDeleteTreatmentRecordRst } from "@/apis/treatment-record";
 //add 6987 2023-03-01 【デグレ】患者経過総合ビューア、治療記録画面を開くとTypeErrorが発生する。横展開 張 start
 import { FUNC_OBSERVE_RECORD } from "@/constants/function-code";
 //add 6987 2023-03-01 【デグレ】患者経過総合ビューア、治療記録画面を開くとTypeErrorが発生する。横展開 張 end
-import { EventBus } from "@/eventBus.js";
-import { mapGetters, mapActions, mapMutations, mapState } from "vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+import { getOnsAlertDialogPanelElement, getOnsAlertDialogScopedElementsByClassName } from "@/functions/common/OnsenFunctions";
+import { mapGetters, mapActions, mapMutations, mapState } from "@/compat/vue/vuex";
 import routing, { ROUND } from "@/router/treatment-record/index";
 import TreatmentSummaryComponent from "@/components/treatment-record/TreatmentSummaryComponent";
 import TreatmentReportComponent from "@/components/treatment-record/TreatmentReportComponent";
@@ -369,7 +366,7 @@ import { getCurrentFunctionCd } from "@/router/routing-helper";
 import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
 import { MediInfo } from "@/models/treatment-record/medicine/MediInfo";
 // add 画面印刷プレビューと印刷の実現 黄 start
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // add 画面印刷プレビューと印刷の実現 黄 end
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -487,8 +484,8 @@ export default {
       //mod FNSI-7531 劉全航 start
       "getStateUserAccountInfo",
       //mod FNSI-7531 劉全航 end
-      "getPatientShareMode", 
-      "getPatientShareFacilityCdMode"
+      "getPatientShareMode",
+      "getPatientShareFacilityCdMode",
     ]),
     ...mapGetters("window-size", {
       windowHeight: "getWindowHeight",
@@ -563,11 +560,9 @@ export default {
       return !(this.dialysisState && this.dialysisState >= 3);
     },
     // #10196 add logic : only when dialysisState >= 3, rst can be merging. Add by zhou.tao End
-    // add #12462 患者情報共有 Ji start
     isShared() {
       return this.facilityCd === this.getSharedFacilityCd;
-    }
-    // add #12462 患者情報共有 Ji end
+    },
   },
   watch: {
     $route(to) {
@@ -595,7 +590,7 @@ export default {
     // mod FNSI-7967 治療状況リスト，マップから治療記録を開いた後に患者を切り替えて表示できない時がある 房 end
     //add FNSI-修正 共有設定 房 start
     getSharedFlag() {
-      const submenu = document.getElementsByClassName("submenu-area");
+      const submenu = getScopedElementsByClassName("submenu-area", this.$el || null);
       if (
         this.getSharedFacilityCd !== undefined &&
         this.getSharedFacilityCd != null
@@ -613,7 +608,7 @@ export default {
       }
     },
     patId() {
-      const submenu = document.getElementsByClassName("submenu-area");
+      const submenu = getScopedElementsByClassName("submenu-area", this.$el || null);
       if (
         this.getSharedFacilityCd !== undefined &&
         this.getSharedFacilityCd != null
@@ -631,7 +626,7 @@ export default {
       }
     },
     getSharedFacilityCd() {
-      const submenu = document.getElementsByClassName("submenu-area");
+      const submenu = getScopedElementsByClassName("submenu-area", this.$el || null);
       if (
         this.getSharedFacilityCd !== undefined &&
         this.getSharedFacilityCd != null
@@ -869,8 +864,11 @@ export default {
               this.recordList.push(tempMediInfo);
             }
             this.diaView = true;
-            let elements = document.getElementsByClassName("ons-dialog-c");
-            elements[0].childNodes[1].style.width = "28em";
+            const dialog = getOnsAlertDialogScopedElementsByClassName(this.$el || null, "ons-dialog-c", this.$el?.ownerDocument || document)[0];
+            const panel = getOnsAlertDialogPanelElement(dialog);
+            if (panel) {
+              panel.style.width = "28em";
+            }
           } else {
             const param = this.buildConfirmParamJournal(
               [
@@ -1016,7 +1014,8 @@ export default {
       });
       //add #7790 初版確定前の治療実績削除で不要なイベントが登録される 20220720 zhaoqi start
       let ordMain = await ApiHelper.get(
-        `/mainData/getOrdMainByOrdNo/${this.getOrdNo}`
+        `/mainData/getOrdMainByOrdNo/${this.getOrdNo}`,
+        { selectedPatId: this.patId }
       );
       //add #7790 初版確定前の治療実績削除で不要なイベントが登録される 20220720 zhaoqi end
       if (dialogDispFlg) {
@@ -1039,7 +1038,7 @@ export default {
           return;
         }
         // add 6963 過去のスケジュールを編集すると対象のベッドの装置の次患者が再送される 房 start
-        let nowDate = moment().format("YYYYMMDD");
+        let nowDate = dayjs().format("YYYYMMDD");
         // add 6963 過去のスケジュールを編集すると対象のベッドの装置の次患者が再送される 房 end
         // 実績削除処理
         // ？？？？患者は論理削除を行う.
@@ -1147,7 +1146,10 @@ export default {
         const tempOrdNo = this.getOrdNo;
         //add 次患者情報更新の追加 房 end
         try {
-          this.getMstMachineByOrdNoRst(this.getOrdNo).then((machineRes) => {
+          this.getMstMachineByOrdNoRst({
+            ordNo: this.getOrdNo,
+            selectedPatId: this.patId
+          }).then((machineRes) => {
             this.mstMachine = machineRes.data;
           });
           // 通常患者
@@ -1274,7 +1276,10 @@ export default {
       // 治療記録削除ボタン、条件送信破棄ボタン表示判定
       if (this.getOrdNo) {
         this.startLoadingScreen();
-        this.getTreatmentRecordResult(this.getOrdNo)
+        this.getTreatmentRecordResult({
+          ordNo: this.getOrdNo,
+          selectedPatId: this.patId
+        })
           .then(async (response) => {
             let treatmentRecordData = response.data;
             //add FNSI修正 No.305 start
@@ -1324,6 +1329,7 @@ export default {
               const machineStateParams = {
                 facilityCd: this.facilityCd,
                 ordNo: this.getOrdNo,
+                selectedPatId: this.patId,
               };
               const machineStateRes = await this.getMntMachineState(
                 machineStateParams
@@ -1336,7 +1342,10 @@ export default {
               ) {
                 // 装置マスタの取得
                 const machineRes = await this.getMstMachineByOrdNoRst(
-                  this.getOrdNo
+                  {
+                    ordNo: this.getOrdNo,
+                    selectedPatId: this.patId
+                  }
                 );
                 // add FNSI-「治療開始」ボタン表示不正 徐 end
                 this.mstMachine = machineRes.data;
@@ -1355,7 +1364,10 @@ export default {
                 ) {
                   // 通信フォーマットがFでない場合、特殊浄化かどうかを判定する
                   const isPurification = await this.getIsPurification(
-                    treatmentRecordData.rst_treatment_cd
+                    {
+                      treatmentCd: treatmentRecordData.rst_treatment_cd,
+                      selectedPatId: this.patId
+                    }
                   );
                   // 特殊浄化モードの場合に治療開始ボタンを表示
                   this.isTreatStart = String(isPurification.data) === "1";
@@ -1374,7 +1386,10 @@ export default {
               CODES.DIALYSIS_STATE.DURING_TREATMENT.cd
             ) {
               // 装置マスタの取得
-              await this.getMstMachineByOrdNoRst(this.getOrdNo).then(
+              await this.getMstMachineByOrdNoRst({
+                ordNo: this.getOrdNo,
+                selectedPatId: this.patId
+              }).then(
                 async (machineRes) => {
                   this.mstMachine = machineRes.data;
                   if (this.mstMachine.length > 0) {
@@ -1391,7 +1406,10 @@ export default {
                     ) {
                       // 通信フォーマットがFでない場合、特殊浄化かどうかを判定する
                       await this.getIsPurification(
-                        treatmentRecordData.rst_treatment_cd
+                        {
+                          treatmentCd: treatmentRecordData.rst_treatment_cd,
+                          selectedPatId: this.patId
+                        }
                       ).then((isPurification) => {
                         // 特殊浄化モードの場合に治療終了ボタンを表示
                         this.isTreatEnd = String(isPurification.data) === "1";
@@ -1402,6 +1420,7 @@ export default {
                       const params = {
                         facilityCd: this.facilityCd,
                         ordNo: this.getOrdNo,
+                        selectedPatId: this.patId,
                       };
                       this.getMntMachineState(params).then(
                         (machineStateRes) => {
@@ -1733,7 +1752,10 @@ export default {
           await _sleep(500);
           const currentStateResponse =
             await this.sendRequestGetTreatmentRecordCurrentRstDialysisState(
-              this.getOrdNo
+              {
+                ordNo: this.getOrdNo,
+                selectedPatId: this.patId
+              }
             );
 
           if (Number(currentStateResponse.data) >= Number(state)) {
@@ -1922,7 +1944,7 @@ export default {
      */
     isOpenButtonArea() {
       this.isOpen = !this.isOpen;
-      let elementCancel = document.getElementsByClassName("scroll-area")[0];
+      let elementCancel = getScopedElementsByClassName("scroll-area", this.$el || null)[0];
       if (this.isOpen) {
         elementCancel.style.width = "10em";
       } else {
@@ -2029,14 +2051,14 @@ export default {
             patId: this.patId,
             ordNo: this.getOrdNo,
             // add 画面印刷プレビューと印刷の実現 黄 start
-            date: moment(datee).format("YYYY/MM/DD"),
+            date: dayjs(datee).format("YYYY/MM/DD"),
             // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
-            //fromDate: moment(datee).format("YYYY/MM/DD"),
-            //toDate: moment(datee).format("YYYY/MM/DD"),
+            //fromDate: dayjs(datee).format("YYYY/MM/DD"),
+            //toDate: dayjs(datee).format("YYYY/MM/DD"),
             facilityCd: this.facilityCd,
-            treatDate: moment(datee).format("YYYYMMDD"),
-            fromDate: moment(new Date()).format("YYYYMMDD"),
-            toDate: moment(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYYMMDD"),
+            treatDate: dayjs(datee).format("YYYYMMDD"),
+            fromDate: dayjs(new Date()).format("YYYYMMDD"),
+            toDate: dayjs(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYYMMDD"),
             // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
             // add 画面印刷プレビューと印刷の実現 黄 end
             functionCd: "00601",
@@ -2083,7 +2105,10 @@ export default {
       // add FNSI7836-治療記録画面で患者を変更しても更新しない 周 start
       if (this.getOrdNo) {
         // add FNSI7836-治療記録画面で患者を変更しても更新しない 周 end
-        this.getMstMachineByOrdNoRst(this.getOrdNo).then((machineRes) => {
+        this.getMstMachineByOrdNoRst({
+          ordNo: this.getOrdNo,
+          selectedPatId: this.patId
+        }).then((machineRes) => {
           this.mstMachine = machineRes.data;
           // mod #7233 デフォルト帳票について 日本指摘対応 商 start
           // if (this.mstMachine[0] != undefined) {
@@ -2092,7 +2117,10 @@ export default {
             this.mstMachine[0].deviceEdgeNo != null
           ) {
             // mod #7233 デフォルト帳票について 日本指摘対応 商 end
-            this.getmonistatus(this.mstMachine[0].deviceEdgeNo).then(
+            this.getmonistatus({
+              deviceEdgeNo: this.mstMachine[0].deviceEdgeNo,
+              selectedPatId: this.patId
+            }).then(
               (result) => {
                 if (result.data === "01") {
                   this.alivemonistatus = true;
@@ -2117,7 +2145,7 @@ export default {
     //add FSNI修正外結バッグ35 房 end
     calculateGridHeight() {
       let targetObj = null;
-      const objList = document.getElementsByClassName("treatment-summary");
+      const objList = getScopedElementsByClassName("treatment-summary", this.$el || null);
       if (objList.length !== 0) {
         // class 対象が2つある為、取得対象(divタグ部品)を取得する
         for (let i = 0; objList.length > i; i++) {
@@ -2163,7 +2191,7 @@ export default {
   },
   mounted() {
     //add FNSI-修正 共有設定 房 start
-    const submenu = document.getElementsByClassName("submenu-area");
+    const submenu = getScopedElementsByClassName("submenu-area", this.$el || null);
     if (
       this.getSharedFacilityCd !== undefined &&
       this.getSharedFacilityCd != null
@@ -2201,9 +2229,9 @@ export default {
     window.addEventListener("beforeprint", this.handleBeforePrint);
     window.addEventListener("afterprint", this.handleAfterPrint);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // ポップオーバーの削除
-    let hel2 = document.getElementsByClassName("popover-elem");
+    let hel2 = getScopedElementsByClassName("popover-elem", this.$el || null);
     if (hel2.length > 0) {
       for (let ii = 0; ii < hel2.length; ii++) {
         hel2[ii].remove();
@@ -2215,7 +2243,7 @@ export default {
     // EventBus.$off("requestReportParams");
     EventBus.$off("requestReportParams", this.requestrReportParams);
     // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 end
-    EventBus.$off("checkRstDialysisState");
+    EventBus.$off("checkRstDialysisState", this.checkRstDialysisState);
     
     window.removeEventListener("beforeprint", this.handleBeforePrint);
     window.removeEventListener("afterprint", this.handleAfterPrint);
@@ -2245,6 +2273,7 @@ export default {
   width: 8em;
   margin: 1px;
   padding: 2px;
+  /* font-family: 'Microsoft YaHei'; */
 }
 .button-area {
   background: none;
@@ -2356,5 +2385,40 @@ export default {
 }
 .registration-btn-area {
   width: 9em;
+}
+:deep(.k-svg-i-x) {
+  left: -0.5px !important;
+}
+:deep(.time-input .k-icon.k-i-close) {
+  position: absolute !important;
+  top: calc(50% + 1px) !important;
+  transform: translateY(-50%) !important;
+}
+@supports (-webkit-touch-callout: none) {
+  :deep(.time-input .k-icon.k-i-close.close-btn::before) {
+    top: -3px !important;
+    -webkit-transform: translateY(-3px) !important;
+    transform: translateY(-3px) !important;
+  }
+}
+:deep(input[type="date"].ntss-input-date),:deep(.common-style-select-button){
+  font-family: -apple-system,Helvetica Neue,Helvetica,'Microsoft YaHei' !important;
+}
+:deep(:is(.k-dropdownlist.k-picker, .k-widget.k-dropdown.k-legacy-dropdownlist):is(.k-state-disabled, .k-disabled) :is(.k-dropdown-wrap, .k-input-inner, .k-input-value-text)){
+  background-color: #e0e0dc !important;
+  opacity: 1;
+  color: #212529 !important;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,.08)!important;
+  border: 1px solid #dcdcdc !important;
+}
+:deep(:is(.k-dropdownlist.k-picker, .k-widget.k-dropdown.k-legacy-dropdownlist):is(.k-state-disabled, .k-disabled) > .k-input-button.k-select){
+  background-color: #e0e0dc !important;
+  opacity: 1;
+}
+:deep(.k-icon.k-svg-icon.k-i-arrow-60-down::before){
+  content: "\e006" !important;
+  font-size: 1em !important;
+  color: #212529 !important;
+  opacity: 1 !important;
 }
 </style>

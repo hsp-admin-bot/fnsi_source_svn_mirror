@@ -15,22 +15,23 @@
 </template>
 
 <script>
-import { Chart } from "highcharts-vue";
-import Highcharts from "highcharts";
-import Boost from "highcharts/modules/boost";
-import moment from "moment";
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { Chart } from "@/compat/charts/highcharts";
+import Highcharts from "@/compat/charts/highcharts";
+import { Boost } from "@/compat/charts/highcharts";
+import dayjs from "@/compat/date/dayjs";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+
 import { generateDates } from "@/utils/util";
 import graphDataMixins from "./graphDataMixins";
-import elementResizeDetectorMaker from "element-resize-detector";
+import elementResizeDetectorMaker from "@/compat/resize/element-resize-detector";
 const erd = elementResizeDetectorMaker({
   strategy: "scroll"
 });
 
 Boost(Highcharts);
 // add bug 6602 修正 chen start
-import BrokenAxis from "highcharts/modules/broken-axis";
+import { BrokenAxis } from "@/compat/charts/highcharts";
 BrokenAxis(Highcharts);
 // add bug 6602 修正 chen end
 
@@ -57,10 +58,8 @@ export default {
   data() {
     return {
       isMounted: false,
-      // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 start
       isRendered: false,
       chartId: null,
-      // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 end
       chartOptions: {
         plotOptions: {
           line: {
@@ -70,7 +69,7 @@ export default {
         },
         chart: {
           height: 150,
-          margin: [0, -1, 20, 0],
+          margin: [0, -1, 16, 0],
           events: {
             load() {
               var xAxis = this.xAxis[0];
@@ -89,15 +88,12 @@ export default {
                     }
                   }
                 });
-                // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 start
                 EventBus.$emit('chartRendered', {
                   chartId: this.userOptions.chartId || 'unknown',
                   timestamp: Date.now()
                 });
-                // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 end
               }, 200);
             },
-            // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 start
             render() {
               if (!this.hasSentRenderEvent) {
                 this.hasSentRenderEvent = true;
@@ -121,15 +117,21 @@ export default {
         },
         xAxis: {
           tickmarkPlacement: 'on',
-          tickLength: 20,
+          tickLength: 3,
           displayPeriod: this.displayPeriod,
           title: {
             enabled: false
           },
           breaks: this.breaks ? this.breaks : [],
+          // Highcharts v12: 中間の縦グリッドを表示（ラベル間隔は v9 同様に自動）
+          gridLineWidth: 1,
           labels: {
+            y: 12,
+            style: {
+              fontSize: "11px"
+            },
             formatter() {
-              const date = moment(this.value);
+              const date = dayjs(this.value);
               const isLongPeriod = ["4", "5", "6", "7"].includes(
                 this.axis.userOptions.displayPeriod
                 );
@@ -181,24 +183,24 @@ export default {
             // scatter系列の特別処理
             if (this.series && this.series.type === 'scatter') {
               const point = this.point;
-              
+
               const chart = this.series.chart;
-              
+
               // 時間情報を取得
               let headerEle;
               let targetX = point.x;
               let targetDate = point.date;
-              
+
               if (targetDate) {
                 // 長期間表示の場合
-                headerEle = `<span>${moment(targetDate).format("YYYY/MM/DD(ddd)")}</span>`;
+                headerEle = `<span>${dayjs(targetDate).format("YYYY/MM/DD(ddd)")}</span>`;
               } else {
                 // 短期間表示の場合
-                headerEle = `<span>${moment(targetX).format("YYYY/MM/DD(ddd) HH:mm")}</span>`;
+                headerEle = `<span>${dayjs(targetX).format("YYYY/MM/DD(ddd) HH:mm")}</span>`;
               }
-              
+
               let tooltipContent = headerEle;
-              
+
               // まず現在のscatter点の情報を表示
               const currentExamClassText = getExamClassText(point.examClass);
               let currentValue = point.originalY;
@@ -207,16 +209,16 @@ export default {
               }
               const currentValueWithClass = currentExamClassText ? `${currentValue}${currentExamClassText}` : currentValue;
               tooltipContent += `<br><span style='color:${point.seriesColor}'>●</span>${point.seriesName}_範囲外: <b>${currentValueWithClass}</b>`;
-              
+
               // 他の系列から同じ時間点のデータを取得（現在のscatter点に対応する主系列は除外）
               chart.userOptions.xAxis.type !== 'datetime' && chart.series.forEach(series => {
                 if (series.type !== 'scatter' && series.visible && series.name !== point.seriesName) {
                   let sameTimePoints = [];
-                  
+
                   // データ点を検索
                   series.data.forEach(dataPoint => {
                     if (!dataPoint || dataPoint.y === null || dataPoint.y === undefined) return;
-                    
+
                     let isMatch = false;
                     if (targetDate) {
                       // 長期間表示：dateで比較
@@ -226,25 +228,25 @@ export default {
                       const timeDiff = Math.abs(dataPoint.x - targetX);
                       isMatch = timeDiff < 300000; // 5分の許容範囲
                     }
-                    
+
                     if (isMatch) {
                       sameTimePoints.push(dataPoint);
                     }
                   });
-                  
+
                   if (sameTimePoints.length > 0) {
                     if (sameTimePoints.length === 1) {
                       const dataPoint = sameTimePoints[0];
                       const examClassText = getExamClassText(dataPoint.examClass);
-                      
+
                       // 元の値を取得（体温の場合は小数点1桁まで表示）
                       let originalValue = dataPoint.originalY || dataPoint.y0 || dataPoint.y;
                       if (series.name === '体温' && originalValue !== null) {
                         originalValue = parseFloat(originalValue).toFixed(1);
                       }
-                      
+
                       const valueWithClass = examClassText ? `${originalValue}${examClassText}` : originalValue;
-                      
+
                       tooltipContent += `<br><span style='color:${series.color}'>●</span>${series.name}${dataPoint.isTransformed ? '_範囲外' : ''}: <b>${valueWithClass}</b>`;
                     } else {
                       // 同じ時間に複数の値がある場合
@@ -257,20 +259,21 @@ export default {
                         const value = examClassText ? `${originalValue}${examClassText}` : originalValue;
                         return `<b style="margin-right: 4px;">${value}</b>`;
                       });
-                      
-                      tooltipContent += `<br><span style='color:${series.color}'>●</span>${series.name}${dataPoint.isTransformed ? '_範囲外' : ''}: ${valuesWithClass.join('')}`;
+
+                      const hasTransformedPoint = sameTimePoints.some((sameTimePoint) => sameTimePoint.isTransformed);
+                      tooltipContent += `<br><span style='color:${series.color}'>●</span>${series.name}${hasTransformedPoint ? '_範囲外' : ''}: ${valuesWithClass.join('')}`;
                     }
                   }
                 }
               });
-              
+
               return tooltipContent;
             }
 
             // 非scatter系列の既存処理
             if (this?.points?.length) {
               const pointDate = this.points[0].point.date || this.points[0].point.category;
-              let headerEle = `<span>${moment(pointDate).format("YYYY/MM/DD(ddd)")}</span>`;
+              let headerEle = `<span>${dayjs(pointDate).format("YYYY/MM/DD(ddd)")}</span>`;
               this.points.forEach((item) => {
                 const point = item.point;
                 const seriesName = point.series.name;
@@ -300,9 +303,9 @@ export default {
               const sameXPoints = this.series.data.filter(point => {
                 return point && point.x === currentX && point.y !== null && point.y !== undefined;
               });
-              
-              var s = moment(this.x).format("YYYY/MM/DD(ddd) HH:mm");
-              
+
+              var s = dayjs(this.x).format("YYYY/MM/DD(ddd) HH:mm");
+
               if (sameXPoints.length === 1) {
                 const examClassText = getExamClassText(this.point.examClass);
                 if (this.series.name=="体温"){
@@ -461,10 +464,8 @@ export default {
 
   created() {
     this.init();
-    // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 start
     this.chartId = `${this.dispDataItem}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     this.chartOptions.chartId = this.chartId;
-    // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 end
   },
 
   mounted() {
@@ -474,16 +475,21 @@ export default {
         if (entry.isIntersecting) {
           this.shouldRenderChart = true;
           observer.unobserve(entry.target);
-          erd.listenTo(this.$parent.$el, () => {
-            if (this.$refs[this.dispDataItem]) {
-              this.$refs[this.dispDataItem]?.chart?.reflow();
-            }
+          this.$nextTick(() => {
+            const tickPositions = this.chartOptions.xAxis?.tickPositions;
+            this.syncChartAxis(tickPositions);
           });
-          // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 start
+          const resizeHost = this.getResizeHostElement();
+          if (resizeHost) {
+            erd.listenTo(resizeHost, () => {
+              if (this.$refs[this.dispDataItem]) {
+                this.$refs[this.dispDataItem]?.chart?.reflow();
+              }
+            });
+          }
           setTimeout(() => {
             this.notifyChartRendered();
           }, 1000);
-          // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 end
         }
       });
     });
@@ -506,6 +512,9 @@ export default {
   },
 
   methods: {
+    getResizeHostElement() {
+      return this.$el?.parentElement || null;
+    },
     ...mapActions("pat-viewer", [
       "setTickPositions",
     ]),
@@ -519,22 +528,31 @@ export default {
       }
       // add 5930 バイタル・モニタグラフ入室～退室のマスタおよび画面表示不正 張 end
 
+      this.applyPatViewerChartBottomLayout(this.chartOptions);
+      this.chartOptions.yAxis = this.buildYAxisWithGrid(this.yAxis);
+      this.chartOptions.xAxis.breaks = this.breaks || [];
+
+      let tickPositions = [];
       if (this.isLongPeriod) {
         this.chartOptions.xAxis.plotLines = this.caculatePlotLines();
         this.chartOptions.xAxis.categories = generateDates(this.xAxisMin, this.xAxisMax, this.displayPeriod !== "4");
         this.chartOptions.xAxis.max = this.chartOptions.xAxis.categories.length;
         this.chartOptions.tooltip.shared = true;
-        this.chartOptions.xAxis.tickPositions = this.caculateTickPositions();
+        tickPositions = this.caculateTickPositions();
+        this.chartOptions.xAxis.tickPositions = tickPositions;
         this.chartOptions.xAxis.className = "highcharts-x-axis";
       } else {
         this.chartOptions.xAxis.type = "datetime";
         this.chartOptions.xAxis.min = this.xAxisMin;
         this.chartOptions.xAxis.max = this.xAxisMax;
         this.chartOptions.tooltip.xDateFormat = "%Y年%b月%e(%a) %H:%M";
-        this.chartOptions.xAxis.tickPositions = this.tickPositioner();
+        tickPositions = this.tickPositioner();
+        this.chartOptions.xAxis.tickPositions = tickPositions;
       }
       this.chartOptions.series = this.seriesData(this.xAxisMin, this.xAxisMax);
-      // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 start
+
+      this.syncChartAxis(tickPositions);
+
       this.chartOptions.chart.events = {
         ...this.chartOptions.chart.events,
         render: () => {
@@ -551,9 +569,27 @@ export default {
           }
         }
       };
-      // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 end
     },
-    // add #9713 グラフの描画が遅い/共通ローダーが消えるのが早い wangchao 20260520 start
+
+    /**
+     * X軸の目盛り・縦グリッド・plotLines を Highcharts v12 で確実に反映する
+     */
+    syncChartAxis(tickPositions) {
+      this.$nextTick(() => {
+        const chart = this.$refs[this.dispDataItem]?.chart;
+        if (!chart) {
+          return;
+        }
+        this.syncPatViewerChartAxis(chart, {
+          tickPositions,
+          breaks: this.breaks || [],
+          plotLines: this.chartOptions.xAxis.plotLines || [],
+          isDatetime: !this.isLongPeriod,
+          xAxisMin: this.xAxisMin,
+          xAxisMax: this.xAxisMax
+        });
+      });
+    },
     notifyChartRendered() {
       if (this.$refs[this.dispDataItem]?.chart) {
         EventBus.$emit('chartRendered', {
@@ -571,8 +607,8 @@ export default {
       const ticks = [];
 
       // 表示期間によって目盛りの数を設定
-      let maxD = moment(this.xAxisMax).startOf('day');
-      let minD = moment(this.xAxisMin).startOf('day');
+      let maxD = dayjs(this.xAxisMax).startOf('day');
+      let minD = dayjs(this.xAxisMin).startOf('day');
       let days = maxD.diff(minD, 'days');
       switch (this.displayPeriod + "") {
         case "1":
@@ -625,14 +661,14 @@ export default {
           // IDが存在しない場合、そのIDを格納
           legendIdArr.push(item.name);
         }
-        
+
         let transformedData = [];
         const outOfRangePoints = [];
-        
+
         // mod #10174【因島】患者経過総合ビューアの長期間表示にて検査項目に対して区分の選択肢がない 関 start
         if (this.isLongPeriod) {
           const dataMap = item.data.reduce((map, entry) => {
-            const dateKey = moment(entry[0]).format("YYYYMMDD_HHmmss");
+            const dateKey = dayjs(entry[0]).format("YYYYMMDD_HHmmss");
             if (!map[dateKey]) {
               map[dateKey] = [];
             }
@@ -706,7 +742,7 @@ export default {
           // mod #10174【因島】患者経過総合ビューアの長期間表示にて検査項目に対して区分の選択肢がない 関 end
         } else {
           const flatData = item.data.map(i => {
-            const x = moment(i[0]).valueOf();
+            const x = dayjs(i[0]).valueOf();
             const y = i[1];
             return {
               x: x,
@@ -771,11 +807,8 @@ export default {
           });
         }
 
-        /* add by chamaojia 2026-04-02 [12462] 患者情報共有->患者経過総合ビューア --start */
-        // 折れ線の逆走描画を防ぐため、x座標で昇順ソートする
         transformedData.sort((a, b) => (a.x ?? 0) - (b.x ?? 0));
         outOfRangePoints.sort((a, b) => (a.x ?? 0) - (b.x ?? 0));
-        /* add by chamaojia 2026-04-02 [12462] 患者情報共有->患者経過総合ビューア --end */
 
         // 主系列を追加
         const series = {
@@ -793,17 +826,17 @@ export default {
               const point = this;
               let valueText = point.originalY || point.y0;
               let suffixText = "";
-              
+
               // 検査区分のテキスト処理
               if (point.examClass) {
-                const examClassText = point.examClass === "1" ? "(前)" : 
-                                    point.examClass === "2" ? "(後)" : 
+                const examClassText = point.examClass === "1" ? "(前)" :
+                                    point.examClass === "2" ? "(後)" :
                                     point.examClass === "3" ? "(他)" : "";
                 if (examClassText) {
                   valueText = `${valueText}${examClassText}`;
                 }
               }
-              
+
               return `<span style='color:${point.color}'>●</span> ${point.series.name}${point.isTransformed ? '_範囲外' : ''}: <b>${valueText}</b><br/>`;
             }
           },
@@ -818,12 +851,12 @@ export default {
               mouseOver: function() {
                 const chart = this.series.chart;
                 const seriesName = this.series.name;
-                const scatterSeries = chart.series.find(s => 
+                const scatterSeries = chart.series.find(s =>
                   s.name === `${seriesName}_範囲外`
                 );
-                
+
                 this.setState('hover');
-                
+
                 if (scatterSeries && scatterSeries.visible) {
                   const newData = scatterSeries.data.map(point => ({
                     ...point.options,
@@ -838,12 +871,12 @@ export default {
               mouseOut: function() {
                 const chart = this.series.chart;
                 const seriesName = this.series.name;
-                const scatterSeries = chart.series.find(s => 
+                const scatterSeries = chart.series.find(s =>
                   s.name === `${seriesName}_範囲外`
                 );
-                
+
                 this.setState('');
-                
+
                 if (scatterSeries && scatterSeries.visible) {
                   const newData = scatterSeries.data.map(point => ({
                     ...point.options,
@@ -863,13 +896,13 @@ export default {
               const chart = this.chart;
               const seriesName = this.name;
               const willBeVisible = !this.visible;
-              
+
               setTimeout(() => {
                 // 関連するscatter系列を検索
-                const scatterSeries = chart.series.find(s => 
+                const scatterSeries = chart.series.find(s =>
                   s.name === `${seriesName}_範囲外`
                 );
-                
+
                 if (scatterSeries) {
                   if (willBeVisible) {
                     scatterSeries.show();
@@ -960,27 +993,27 @@ export default {
                 mouseOver: function() {
                   const chart = this.series.chart;
                   const lineName = this.series.name.replace('_範囲外', '');
-                  const lineSeries = chart.series.find(s => 
+                  const lineSeries = chart.series.find(s =>
                     s.name === lineName && (s.type === 'line' || !s.type)
                   );
-                  
+
                   // 設置line系列為hover狀態
                   if (lineSeries && lineSeries.visible) {
                     lineSeries.setState('hover');
                   }
-                  
+
                   // 同時激活當前scatter點的視覺效果
                   this.setState('hover');
                 },
                 mouseOut: function() {
                   const chart = this.series.chart;
                   const lineName = this.series.name.replace('_範囲外', '');
-                  const lineSeries = chart.series.find(s => 
+                  const lineSeries = chart.series.find(s =>
                     s.name === lineName && (s.type === 'line' || !s.type)
                   );
-                  
+
                   this.setState('');
-                  
+
                   if (lineSeries && lineSeries.visible) {
                     lineSeries.setState('');
                   }
@@ -995,9 +1028,10 @@ export default {
       return seriesArr[0] === undefined ? [{ data: dateArr.fill(null) }] : seriesArr;
     },
   },
-  beforeDestroy() {
-    if (this.$parent?.$el) {
-      erd.uninstall(this.$parent.$el);
+  beforeUnmount() {
+    const resizeHost = this.getResizeHostElement();
+    if (resizeHost) {
+      erd.uninstall(resizeHost);
     }
 
     if (this.observer) {
@@ -1035,10 +1069,18 @@ export default {
   opacity: 0.2;
   /* add FNSI-4400 グラフの要素凡例表示非表示アイコンの透過 liumx end */
 }
-::v-deep .highcharts-x-axis .highcharts-grid-line {
-  stroke: unset;
+:deep(.highcharts-x-axis .highcharts-grid-line),
+:deep(.highcharts-yaxis-grid .highcharts-grid-line) {
+  stroke: #e6e6e6;
+  stroke-width: 1px;
 }
-::v-deep .highcharts-legend-item text {
+:deep(.highcharts-xaxis-labels text) {
+  font-size: 11px;
+}
+:deep(.highcharts-axis.highcharts-xaxis .highcharts-tick) {
+  stroke: #ccd6eb;
+}
+:deep(.highcharts-legend-item text) {
   fill: #333333 !important;
 }
 .chart-position {

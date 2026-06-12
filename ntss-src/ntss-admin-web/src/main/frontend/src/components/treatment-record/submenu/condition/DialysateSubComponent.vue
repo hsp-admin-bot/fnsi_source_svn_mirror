@@ -11,27 +11,29 @@
       <!-- mod FNSI-redmine3855 徐 start -->
       <!-- <com-master-selector name="dialysate" labelName="透析液" :readMasterData="getMaster" :masterDefine="masterDef" v-model="inputModel.dialysate" @changeUnit="onChangeUnit" @changeDecPoint="onChangeDecPoint" :class="styleFlag?'column-ground-color':null"/> -->
       <!-- mod FutreNetWeb+SI課題管理 no.5531 劉全航 start -->
-      <v-ons-row :class="styleFlag?'column-ground-color':null">
+      <v-ons-row :class="isUseObj[15]?'column-ground-color':null">
         <v-ons-col class="title d-flex align-items-center">
           <label class="text-color">
             透析液
           </label>
         </v-ons-col>
         <v-ons-col class="value d-flex align-items-center">
-          <show-selected-item
-            :propInitValue="initModel.dialysate.name"
-            :propEditValue="inputModel.dialysate.name"
-            propBackgroundColor="#f7f7f7"
-            style="min-width: 11em; width: 100%; max-width: 13em;"
+          <common-master-selector
+            :masterType="MasterType.MEDICATION_TREATMENT_CLASSTYPE_RECORD"
+            :initItem="dialysateSelectorInitItem"
+            :editItem="dialysateSelectorEditItem"
+            :patientId="selectedPatId"
+            :extraParams="dialysateSelectorExtraParams"
+            :facilityCd="getFacilityCd"
+            :dialysisState="getDialysisState"
+            :hasChangedOption="true"
+            :changeOptionMode="'nameAndUnit'"
+            :selectedItemClass="'com-basic-sub-input'"
+            :backgroundColor="'#f7f7f7'"
+            :btnClass="'com-basic-sub-btn'"
+            :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
+            @popover-return="updateInput('dialysate', $event)"
           />
-          <!-- mod #9342 start ljx -->
-          <!--          <com-master-selector name="dialysate" :readMasterData="getMaster" :masterDefine="masterDef" v-model="inputModel.dialysate" @changeUnit="onChangeUnit" @changeDecPoint="onChangeDecPoint" v-show="!isMobileBrowser" :isDisabled="styleFlag" />
-                    <com-master-selector name="dialysate" :readMasterData="getMaster" :masterDefine="masterDef" v-model="inputModel.dialysate" @changeUnit="onChangeUnit" @changeDecPoint="onChangeDecPoint" v-show="isMobileBrowser" :isDisabled="styleFlag" />-->
-        <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
-          <com-master-selector name="dialysate" :readMasterData="getMaster" :masterDefine="masterDef" v-model="inputModel.dialysate" @changeUnit="onChangeUnit" @changeDecPoint="onChangeDecPoint" v-show="!isMobileBrowser" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') ||!isShared"/>
-          <com-master-selector name="dialysate" :readMasterData="getMaster" :masterDefine="masterDef" v-model="inputModel.dialysate" @changeUnit="onChangeUnit" @changeDecPoint="onChangeDecPoint" v-show="isMobileBrowser" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') ||!isShared"/>
-        <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
-          <!-- mod #9342 end ljx -->
         </v-ons-col>
       </v-ons-row>
       <!-- <com-master-selector name="dialysate" labelName="透析液" :readMasterData="getMaster" :masterDefine="masterDef" v-model="inputModel.dialysate" @changeUnit="onChangeUnit" @changeDecPoint="onChangeDecPoint" v-show="!isMobileBrowser" :class="['isClass', styleFlag?'column-ground-color':null]"/>
@@ -48,9 +50,9 @@
       <com-number-input name="dialysate-amount" labelName="透析液使用数" :unitName="inputModel.amountUnit" input-min-width="10em" :step="this.unitStep" :inputMin=0.00 :inputMax=99999.99 :inputType='"number"' :initialValueLock="true" v-model="inputModel.amount" :disabled="!isShared || styleFlag" :class="styleFlag?'column-ground-color':null" :initValue="initModel.amount" />
       <com-number-input name="dialysate-temperature" labelName="透析液温度" unitName="℃" input-min-width="10em" :step=0.1 :inputMin=33.0 :inputMax=40.0 :inputType='"number"' v-model="inputModel.temperature" :disabled="!isShared || styleFlag" :class="styleFlag?'column-ground-color':null" :initValue="initModel.temperature" />-->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
-      <com-number-input name="dialysate-flow-rate" labelName="透析液流量" unitName="mL/min" input-min-width="10em" :step="1" :inputMin="100"  :inputMax="700" :inputType='"number"' v-model="inputModel.flowRate" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority') ||!isShared" :class="styleFlag?'column-ground-color':null" :initValue="initModel.flowRate" />
-      <com-number-input name="dialysate-amount" labelName="透析液使用数" :unitName="inputModel.amountUnit" input-min-width="10em" :step="this.unitStep" :inputMin=0.00 :inputMax=99999.99 :inputType='"number"' :initialValueLock="true" v-model="inputModel.amount" :disabled=" !getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared" :class="styleFlag?'column-ground-color':null" :initValue="initModel.amount" />
-      <com-number-input name="dialysate-temperature" labelName="透析液温度" unitName="℃" input-min-width="10em" :step=0.1 :inputMin=33.0 :inputMax=40.0 :inputType='"number"' v-model="inputModel.temperature" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared" :class="styleFlag?'column-ground-color':null" :initValue="initModel.temperature" />
+      <com-number-input name="dialysate-flow-rate" labelName="透析液流量" unitName="mL/min" input-min-width="10em" :step="1" :inputMin="100"  :inputMax="700" :inputType='"number"' v-model="inputModel.flowRate" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority') ||!isShared" :class="isUseObj[16]?'column-ground-color':null" :initValue="initModel.flowRate" />
+      <com-number-input name="dialysate-amount" labelName="透析液使用数" :unitName="inputModel.amountUnit" input-min-width="10em" :step="this.unitStep" :inputMin=0.00 :inputMax=99999.99 :inputType='"number"' :initialValueLock="true" v-model="inputModel.amount" :disabled=" !getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared" :class="isUseObj[17]?'column-ground-color':null" :initValue="initModel.amount" />
+      <com-number-input name="dialysate-temperature" labelName="透析液温度" unitName="℃" input-min-width="10em" :step=0.1 :inputMin=33.0 :inputMax=40.0 :inputType='"number"' v-model="inputModel.temperature" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared" :class="isUseObj[18]?'column-ground-color':null" :initValue="initModel.temperature" />
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
       <!-- mod #9342 end ljx -->
       <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 end -->
@@ -61,7 +63,7 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import CommonNumberInputComponent from "@/components/treatment-record/submenu/common/CommonNumberInputComponent";
 // mod FutreNetWeb+SI課題管理 no.5531 劉全航 start
 // import CommonMasterSelectorComponent from "@/components/common/master-selector/CommonMasterSelectorComponent";
@@ -77,7 +79,7 @@ import { medicineDialysateReplacement } from "@/components/common/master-selecto
 //#10123:透析液/補液の薬剤選択モーダルの薬剤区分の表示が不要 End
 import { CODES } from "@/constants/TreatmentRecord";
 import { Dialysate } from "@/models/treatment-record/condition/Dialysate";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 start
 // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
 // import { getAuthorized } from "@/functions/common/CommonFunctions.js";
@@ -87,15 +89,21 @@ import { getAuthorized, getPrefix } from "@/functions/common/CommonFunctions.js"
 // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
 import { medicineAllergy } from "@/functions/mst/MstGetters.js";
 // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
+import { Master } from "@/models/common/master-selector-condition/Master";
 
 export default {
   components: {
     "com-number-input": CommonNumberInputComponent,
     "com-master-selector": CommonMasterSelectorComponent,
-    "show-selected-item": CustomDivShowSelectedItem
+    "show-selected-item": CustomDivShowSelectedItem,
+    "common-master-selector": commonMasterSelector
   },
+  emits: ["update:modelValue"],
   props: {
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: Dialysate
     },
     //mod FNSI-改修内容背景色 房 start
@@ -129,19 +137,27 @@ export default {
       //mod FNSI-改修内容背景色 房 end
       initModel: new Dialysate(),
       initFlag: 1,
+      isUseObj: {},
+      MasterType,
+      initItem:{
+        text: "",
+        value: ""
+      },
+      extraParamsList:{},
+      receiptUnitForCd: null,
     };
   },
   computed: {
     ...mapGetters("pat-info", ["selectedPatId"]),
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
-    ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
+    ...mapGetters("treatment-record/common", ["getSharedFacilityCd", "getTreatDate", "getDialysisState"]),
     isShared() {
       return this.getFacilityCd === this.getSharedFacilityCd;
     },
     // add FNSI-redmine3855 徐 start
     isMobileBrowser() {
-      return /android|iphone|ipad/i.test(navigator.userAgent);
+      return /android|iphone|ipad/i.test(((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || ""));
     },
     // add FNSI-redmine3855 徐 end
     // add FNSI-共有を追加 王 20200921 end
@@ -154,14 +170,75 @@ export default {
       var data = Number(BigNumber(10).exponentiatedBy(BigNumber(num).negated()).valueOf());
       return data;
     },
+    dialysateSelectorInitItem() {
+      return {
+        text: this.initItem && this.initItem.text ? this.initItem.text : "",
+        value: this.initItem && this.initItem.value != null ? this.initItem.value : null,
+        unit:
+          this.initModel && this.initModel.unit != null && this.initModel.unit !== ""
+            ? String(this.initModel.unit)
+            : null,
+        unitSecond:
+          this.initModel && this.initModel.amountUnit != null && this.initModel.amountUnit !== ""
+            ? String(this.initModel.amountUnit)
+            : null
+      };
+    },
+    dialysateSelectorEditItem() {
+      return {
+        text:
+          this.inputModel && this.inputModel.dialysate && this.inputModel.dialysate.name
+            ? this.inputModel.dialysate.name
+            : "",
+        value:
+          this.inputModel && this.inputModel.dialysate && this.inputModel.dialysate.cd != null
+            ? this.inputModel.dialysate.cd
+            : null,
+        unit:
+          this.inputModel && this.inputModel.unit != null && this.inputModel.unit !== ""
+            ? String(this.inputModel.unit)
+            : null,
+        unitSecond: this.receiptUnitForCd != null && this.receiptUnitForCd !== "" ? this.receiptUnitForCd : null
+      };
+    },
+    dialysateSelectorExtraParams() {
+      const extra = Object.assign({}, this.extraParamsList || {});
+      extra.receiptUnit = this.initModel.amountUnit;
+      extra.compareReceiptUnit = true;
+      return extra;
+    },
   },
   watch: {
-    value() {
-      this.inputModel = this.value;
+    modelValue() {
+      this.inputModel = this.modelValue;
       //mod 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 start
-      Object.assign(this.initModel, this.value);
+      Object.assign(this.initModel, this.modelValue);
+      this.initItem.text = this.initModel.dialysate.name;
+      this.initItem.value = this.initModel.dialysate.cd;
+      this.receiptUnitForCd =
+        this.inputModel && this.inputModel.amountUnit != null && this.inputModel.amountUnit !== ""
+          ? String(this.inputModel.amountUnit)
+          : null;
+      this.extraParamsList = {
+        treatDate: this.getTreatDate,
+        rstInfo: {
+          rstName: this.inputModel.dialysate.name,
+          rstUnit: this.inputModel.amountUnit
+        },
+        actualName:
+          (this.initModel && this.initModel.dialysate && this.initModel.dialysate.name
+            ? this.initModel.dialysate.name
+            : (this.inputModel && this.inputModel.dialysate && this.inputModel.dialysate.name
+              ? this.inputModel.dialysate.name
+              : "")),
+        classType: 2,
+        // 初期値が削除・非表示でも SQL INIT で拾えるように渡す
+        initValue: this.initModel.dialysate.cd,
+        // 透析液は通常薬剤として扱う
+        medicineType: 1
+      };
       // if (this.initFlag == 1) {
-      //   Object.assign(this.initModel, this.value);
+      //   Object.assign(this.initModel, this.modelValue);
       //   this.initFlag = 2;
       // }
       //mod 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 end
@@ -184,7 +261,7 @@ export default {
           }
         }
         //add FNSI修正 結合バッグ20 房 end
-        this.$emit("input", val);
+        this.$emit("update:modelValue", val);
       },
       deep: true
     },
@@ -198,12 +275,15 @@ export default {
       const items = this.columnList.filter(e => e.category_no === 3);
       // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc start
       // if (items[0].items[0].is_use === "1") {
-      if (items[0].items[0]?.is_use === "1") {
+      if (items[0] && items[0].items && items[0].items[0] && items[0].items[0].is_use === "1") {
         // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
         this.styleFlag = false;
       } else {
         this.styleFlag = true;
       }
+      items?.[0]?.items?.forEach((item) => {
+        this.isUseObj[item.ctl_no] = item.is_use === '0';
+      });
     }
     //mod FNSI-改修内容背景色 房 end
   },
@@ -216,7 +296,7 @@ export default {
       // ]);
       let medicineList = Promise.all([
         getMedicineAllTabooAllergyFilterByType(this.selectedPatId, CODES.MEDICINE_CLASS.DIALYSATE.classType),
-        sendRequestGetMstMedicineClass()
+        sendRequestGetMstMedicineClass(this.selectedPatId)
       ])
       await medicineList.then(async (response)=>{
         let medicinePopover = response[0].data;
@@ -269,6 +349,17 @@ export default {
       return getAuthorized(pageCd, itemCd);
     },
     //#10359 mod 編集権限の動作不正 2024-06-05 卓 end
+    updateInput(fieldKey, data = {}){
+      const master = new Master(data.value, data.text);
+      this.inputModel[fieldKey] = master;
+      this.inputModel.unit = data.unit != null && data.unit !== "" ? String(data.unit) : null;
+      this.receiptUnitForCd = data.unitSecond != null && data.unitSecond !== "" ? String(data.unitSecond) : null;
+      this.inputModel.amountUnit = this.receiptUnitForCd;
+      this.inputModel.decPoint =
+        data.unitDecimalPointSecond != null && data.unitDecimalPointSecond !== ""
+          ? data.unitDecimalPointSecond
+          : data.unitDecimalPoint;
+    },
   }
 };
 </script>
@@ -280,12 +371,12 @@ export default {
 }
 
 /* column-ground-color をあてた場合、黒背景だと文字が見えなくなる為、文字色(白)を解除する */
-.column-ground-color >>> label {
+.column-ground-color :deep(label) {
   color: unset !important;
 }
  /* mod FutreNetWeb+SI課題管理 no.5531 劉全航 start */
 /* add FNSI-redmine3855 徐 start */
-/* .isClass >>> ons-button {
+/* .isClass :deep(ons-button){
   margin-right:30em
 } */
 /* add FNSI-redmine3855 徐 end */
@@ -296,5 +387,14 @@ export default {
 .expandable-content {
   overflow: auto;
   padding: 0.2em 0px 0.2em 0;
+}
+:deep(.com-basic-sub-btn) {
+  margin-left: 5px
+}
+:deep(.com-basic-sub-input) {
+  min-width: 11em;
+  width: 100%;
+  max-width: 13em;
+  background-color: #f7f7f7;
 }
 </style>

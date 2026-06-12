@@ -6,8 +6,8 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
-import javax.validation.Valid;
-import javax.xml.bind.DatatypeConverter;
+import jakarta.validation.Valid;
+import java.util.HexFormat;
 
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 
@@ -42,6 +42,7 @@ import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 @RestController
 @RequestMapping(Uri.DEVICE_EDGE_MANAGE)
@@ -75,7 +76,11 @@ public class DeviceEdgeManageResource {
   private final short statusError = -2;
 
   @GetMapping("/device-edge-info")
-  public ResponseEntity<?> getDeviceEdgeStateAll() {
+  public ResponseEntity<?> getDeviceEdgeStateAll(
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_MANAGE + "/device-edge-info";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_DEVICE_EDGE_OPERATION, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -87,6 +92,18 @@ public class DeviceEdgeManageResource {
 //    logService.log(LogLevel.INFO, eventLogMessage, FUNCTION_CODE.FUNC_DEVICE_EDGE_OPERATION, SERVICE_NAME.REMS,null);
     try {
       List<DeviceEdgeStateWithManage> res = deviceEdgeMaganeService.getDeviceEdgeState();
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if (!ntssUser.isNkkAdminUser()) {
+        for (DeviceEdgeStateWithManage re : res) {
+          if (re != null && re.getFacilityCd() != null &&
+            !re.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + re.getFacilityCd() + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
 //      eventLogMessage.setLogMessage( "RETURN getDeviceEdgeState ");
 //      logService.log(LogLevel.INFO, eventLogMessage, FUNCTION_CODE.FUNC_DEVICE_EDGE_OPERATION, SERVICE_NAME.REMS,
@@ -111,7 +128,29 @@ public class DeviceEdgeManageResource {
 
   @GetMapping("/device-edge-info/{facility_cd}/{device_edge_no}")
   public ResponseEntity<?> getDeviceEdgeState(@PathVariable("facility_cd") String facilityCd,
-      @PathVariable("device_edge_no") Integer deviceEdgeNo) {
+      @PathVariable("device_edge_no") Integer deviceEdgeNo,
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                              @AuthenticationPrincipal NtssUser ntssUser
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.isEmpty() &&
+      !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+        !facilityCd.equals(ntssUser.getFacilityCd())) {
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }catch (Exception ignored) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 //    EventLogMessage eventLogMessage = new EventLogMessage();
 //    eventLogMessage.setLogMessage(
 //        "CALL getDeviceEdgeState [favility_cd: " + facilityCd + ", device_edge_no: " + deviceEdgeNo + "]");
@@ -149,7 +188,33 @@ public class DeviceEdgeManageResource {
 
   @GetMapping("/status/{manage_no}")
   public ResponseEntity<?> getDeviceEdgeUpdaterManageStatus(
-      @PathVariable("manage_no") Long manageNo) {
+      @PathVariable("manage_no") Long manageNo,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if (!ntssUser.isNkkAdminUser()) {
+      MntDeviceEdgeManage manage = deviceEdgeMaganeService.selectByManageNo(manageNo);
+      if (manage != null && manage.getFacilityCd() != null &&
+        !manage.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + manage.getFacilityCd() + " " + "manageNo=" + manageNo + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      MntDeviceEdgeManage manage = deviceEdgeMaganeService.selectByManageNo(manageNo);
+      if (manage != null && manage.getFacilityCd() != null &&
+        !manage.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }catch (Exception ignored) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_MANAGE + "/status";
@@ -351,7 +416,22 @@ public class DeviceEdgeManageResource {
   }
 
   @GetMapping("/target-s3-bucket")
-  public ResponseEntity<ResponseS3Bucket> getUploadTargetInfo() {
+  public ResponseEntity<ResponseS3Bucket> getUploadTargetInfo(// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                              @AuthenticationPrincipal NtssUser ntssUser
+                                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      List<SysSystemDefine> data = sysSystemDefineDao.selectByCtlNo(37);
+      for (SysSystemDefine datum : data) {
+        if (datum != null && datum.getFacilityCd() != null &&
+          !datum.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }catch (Exception ignored) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_MANAGE + "/target-s3-bucket";
@@ -386,7 +466,29 @@ public class DeviceEdgeManageResource {
   @GetMapping("/target-conf-upload-info/{facility_cd}/{device_edge_no}")
   public ResponseEntity<ResponseS3Bucket> getUploadTargetInfo(
       @PathVariable("facility_cd") String facilityCd,
-      @PathVariable("device_edge_no") int deviceEdgeNo) {
+      @PathVariable("device_edge_no") int deviceEdgeNo,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.isEmpty() &&
+      !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+        !facilityCd.equals(ntssUser.getFacilityCd())) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }catch (Exception ignored) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_MANAGE + "/target-conf-upload-info";
@@ -434,7 +536,29 @@ public class DeviceEdgeManageResource {
   public ResponseEntity<ResponseS3Bucket> getLogDownloadTargetInfo(
       @PathVariable("facility_cd") String facilityCd,
       @PathVariable("device_edge_no") int deviceEdgeNo,
-      @PathVariable("date") String dateStr) {
+      @PathVariable("date") String dateStr,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.isEmpty() &&
+      !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+        !facilityCd.equals(ntssUser.getFacilityCd())) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }catch (Exception ignored) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_MANAGE + "/target-log-file-info";
@@ -484,7 +608,7 @@ public class DeviceEdgeManageResource {
       Path path = Paths.get(fileLocation);
       byte[] bytes = Files.readAllBytes(path);
       // 16進数文字列に変換
-      String hexString = DatatypeConverter.printHexBinary(bytes);
+      String hexString = HexFormat.of().withUpperCase().formatHex(bytes);
 
       //　ログ出力
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_DEVICE_EDGE_OPERATION, AFTER_LOG_FLG_INFO, mappingUrl, null, null);
@@ -504,7 +628,29 @@ public class DeviceEdgeManageResource {
   @GetMapping("/target-conf-file-info/{facility_cd}/{device_edge_no}")
   public ResponseEntity<ResponseS3Bucket> getLogDownloadTargetInfo(
       @PathVariable("facility_cd") String facilityCd,
-      @PathVariable("device_edge_no") int deviceEdgeNo) {
+      @PathVariable("device_edge_no") int deviceEdgeNo,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.isEmpty() &&
+      !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+        !facilityCd.equals(ntssUser.getFacilityCd())) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }catch (Exception ignored) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_EDGE_MANAGE + "/target-log-file-info";
@@ -561,6 +707,12 @@ public class DeviceEdgeManageResource {
     DeviceEdgeManageResponse res = new DeviceEdgeManageResponse();
     try {
       String targetFacilityCd = request.getTargetFacilityCd();
+      if (!ntssUser.isNkkAdminUser() && targetFacilityCd != null && !targetFacilityCd.isEmpty()
+          && !targetFacilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "targetFacilityCd=" + targetFacilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
       Integer deviceEdgeNo = request.getDeviceEdgeNo();
       MntDeviceEdgeManage param = request.getManageParam();
       MntDeviceEdgeManage.ManageInfo manageInfo = new MntDeviceEdgeManage.ManageInfo();
@@ -627,6 +779,12 @@ public class DeviceEdgeManageResource {
     DeviceEdgeManageResponse res = new DeviceEdgeManageResponse();
     try {
       String targetFacilityCd = request.getTargetFacilityCd();
+      if (!ntssUser.isNkkAdminUser() && targetFacilityCd != null && !targetFacilityCd.isEmpty()
+          && !targetFacilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "targetFacilityCd=" + targetFacilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
       Integer deviceEdgeNo = request.getDeviceEdgeNo();
       MntDeviceEdgeManage param = request.getManageParam();
       MntDeviceEdgeManage.ManageInfo manageInfo = new MntDeviceEdgeManage.ManageInfo();
@@ -680,6 +838,12 @@ public class DeviceEdgeManageResource {
     DeviceEdgeManageResponse res = new DeviceEdgeManageResponse();
     try {
       String targetFacilityCd = request.getTargetFacilityCd();
+      if (!ntssUser.isNkkAdminUser() && targetFacilityCd != null && !targetFacilityCd.isEmpty()
+          && !targetFacilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "targetFacilityCd=" + targetFacilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
       Integer deviceEdgeNo = request.getDeviceEdgeNo();
       MntDeviceEdgeManage param = request.getManageParam();
       MntDeviceEdgeManage.ManageInfo manageInfo = new MntDeviceEdgeManage.ManageInfo();

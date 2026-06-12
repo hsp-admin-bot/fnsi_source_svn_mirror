@@ -32,11 +32,25 @@ namespace CoopSettingTool.Service
         Task<BaseResponse<List<string>>> GetNewestMstCoopFilenameCtlNoList(string facilityCd);
 
         /// <summary>
+        /// Gets the current MST coop filename list.
+        /// </summary>
+        /// <param name="facilityCd">The facility cd.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopFilenameEntity&gt;&gt;&gt;.</returns>
+        Task<BaseResponse<List<MstCoopFilenameEntity>>> GetCurrentMstCoopFilenameList(string facilityCd);
+
+        /// <summary>
         /// Gets the MST coop filename by control no.
         /// </summary>
         /// <param name="ctlNo">The control no.</param>
         /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopFilenameEntity&gt;&gt;&gt;.</returns>
         Task<BaseResponse<MstCoopFilenameEntity>> GetMstCoopFilenameByCtlNo(string ctlNo);
+
+        /// <summary>
+        /// Gets the source MST coop filename.
+        /// </summary>
+        /// <param name="condition">The condition.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopFilenameEntity&gt;&gt;&gt;.</returns>
+        Task<BaseResponse<List<MstCoopFilenameEntity>>> GetSourceMstCoopFilename(MstCoopFilenameEntity condition);
 
         /// <summary>
         /// Creates the or update MST coop filename.

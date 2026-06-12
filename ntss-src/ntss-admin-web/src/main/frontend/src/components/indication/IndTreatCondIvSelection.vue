@@ -66,11 +66,11 @@
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 // mod FNSI-【1006】最新の改修対象一覧の412対応 韓 start
-// import { mapGetters } from "vuex";
-   import { mapGetters, mapMutations } from "vuex";
+// import { mapGetters } from "@/compat/vue/vuex";
+   import { mapGetters, mapMutations } from "@/compat/vue/vuex";
 // mod FNSI-【1006】最新の改修対象一覧の412対応 韓 end
 import IndTreatCondBase from "@/components/indication/IndTreatCondBase";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 export default {
   mixins: [IndTreatCondBase],
 
@@ -128,3 +128,9 @@ export default {
 // add FNSI-【1006】最新の改修対象一覧の412対応 韓 end
 };
 </script>
+
+<style scoped>
+.cell-disabled {
+  background-color: var(--pat-viewer-ind-cond-info-disabled);
+}
+</style>

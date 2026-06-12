@@ -7,6 +7,7 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,9 +16,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.PatIndApproveHistoryService;
+import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
 import jp.co.nikkiso.ntss.core.dto.PatIndApproveHistory.PatIndApproveHistoryDTO;
+import jp.co.nikkiso.ntss.core.entity.OrdMain;
 import jp.co.nikkiso.ntss.core.entity.PatIndApproveHistory;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 import jp.co.nikkiso.ntss.admin_web.response.indications.PatIndApproveHistoryResponse;
 
@@ -34,6 +39,10 @@ public class PatIndApproveHistoryResource {
   @Autowired
   LogEventUtils logEventUtils;
   // wp アプリケーションログの適正化 Add End
+  // #11205 add 20260421 start
+  @Autowired
+  OrdMainDao ordMainDao;
+  // #11205 add 20260421 end
 
   /**
    * 指示受け・承認詳細作成
@@ -41,7 +50,12 @@ public class PatIndApproveHistoryResource {
    * @return
    */
   @PostMapping("")
-  public ResponseEntity<Void> createPathIndApproveHistory(@RequestBody PatIndApproveHistoryDTO patIndApproveHistoryDTO) {
+  public ResponseEntity<Void> createPathIndApproveHistory(
+    @RequestBody PatIndApproveHistoryDTO patIndApproveHistoryDTO,
+    // #11205 add 20260421 start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 add 20260421 end
+  ) {
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.PAT_IND_APPROVE_HISTORY ;
@@ -60,6 +74,21 @@ public class PatIndApproveHistoryResource {
       // wp アプリケーションログの適正化 Add End
       return new ResponseEntity<>(HttpStatus.NOT_MODIFIED);
     }
+
+    // #11205 add 20260421 start
+    if (ntssUser != null && !ntssUser.isNkkAdminUser()
+            && patIndApproveHistoryDTO.getOrdNo() != null) {
+      for (Long ordNo : patIndApproveHistoryDTO.getOrdNo()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        if (ordMain != null && ordMain.getFacilityCd() != null
+                && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "ordMain.getFacilityCd()=" + ordMain.getFacilityCd();
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 add 20260421 end
     int count = patIndApproveHistoryService.createHistory(patIndApproveHistoryDTO);
     if (count > 0) {
 
@@ -88,17 +117,33 @@ public class PatIndApproveHistoryResource {
    */
   //mod #12663 #12665 securify】SQLインジェクション(High) まとめ zrx start
   @GetMapping("")
-  public PatIndApproveHistoryResponse findByOrdNo(
+  public ResponseEntity<PatIndApproveHistoryResponse> findByOrdNo(
     @RequestParam(name = "ordNo", required = true) Long ordNo,
     @RequestParam(name = "page", required = false, defaultValue = "1") Long page,
     @RequestParam(name = "size", required = false, defaultValue = "5") Long size,
-    @RequestParam(name = "kind", required = true) String kind) {
+    @RequestParam(name = "kind", required = true) String kind,
+    // #11205 add 20260421 start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 add 20260421 end
+  ) {
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.PAT_IND_APPROVE_HISTORY ;
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
       Arrays.asList(ordNo, page, size, kind));
     // wp アプリケーションログの適正化 Add End
+
+    // #11205 add 20260421 start
+    if (ntssUser != null && !ntssUser.isNkkAdminUser()) {
+      OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+      if (ordMain != null && ordMain.getFacilityCd() != null
+          && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "ordMain.getFacilityCd()=" + ordMain.getFacilityCd();
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 add 20260421 end
 
     PatIndApproveHistoryResponse patIndHistoryRes= new PatIndApproveHistoryResponse();
     List<PatIndApproveHistory> results = patIndApproveHistoryService.findPatIndApproveHistoryByOrdNo(ordNo, page, size, kind);
@@ -116,7 +161,7 @@ public class PatIndApproveHistoryResource {
       Arrays.asList(ordNo, page, size, kind));
     // wp アプリケーションログの適正化 Add End
 
-    return patIndHistoryRes;
+    return new ResponseEntity<>(patIndHistoryRes, HttpStatus.OK);
   }
   //mod #12663 #12665 securify】SQLインジェクション(High) まとめ zrx end
 

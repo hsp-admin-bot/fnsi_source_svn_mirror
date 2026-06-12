@@ -143,10 +143,10 @@
                 handle: '.column-handle'
               }"
             >
-              <template v-for="(item, index2) in column.categoryItem">
+              <template v-for="(item, index2) in column.categoryItem" :key="index2">
                 <v-ons-row
                   v-if="item.key !== 'inspection_date_time'"
-                  :key="index2"
+                 
                   class="word-border"
                   :class="{ 'layout-column-dragging': isDraggingCategory }"
                 >
@@ -172,17 +172,17 @@
     <!-- 表示項目設定ここまで -->
 
     <message-dialog
-      :visible.sync="dailyRegular"
+      v-model:visible="dailyRegular"
       :message-cd="12000064"
       type="1"
     />
     <message-dialog
-      :visible.sync="dailyRegularDefault"
+      v-model:visible="dailyRegularDefault"
       :message-cd="12000065"
       type="1"
     />
     <message-dialog
-      :visible.sync="columnsIndicateItems"
+      v-model:visible="columnsIndicateItems"
       :message-cd="12000066"
       type="1"
     />
@@ -191,11 +191,10 @@
 </template>
 
 <script>
-import _ from "underscore";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { mstPatListLayoutDefine } from "@/constants/mstPatListLayoutDefine";
-import { mapGetters, mapActions } from "vuex";
-import vuedraggable from "vuedraggable";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 import { getMstJob } from "@/functions/mst/MstGetters"
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import DynamicTemplateMasterComponent from "@/components/master-maintenance/mst-pat-list-layout/DynamicTemplateMasterComponent";
@@ -218,14 +217,16 @@ import {
 } from "@/constants/cooperationDefine";
 import {ApiHelper} from "@/apis/AxiosHelper";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 
 export default {
   components: {
-    draggable: vuedraggable,
+    draggable: VueDraggable,
     "dynamic-template": DynamicTemplateMasterComponent,
     "message-dialog": messageDialog
   },
@@ -610,7 +611,7 @@ export default {
     /**
      * @description 画面サイズで各項目の横幅を変えるようイベントを設定
      */
-    window.addEventListener("resize", this.resizeWidth);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.resizeWidth);
 
     let mstMainteLayoutData;
     let mstMainteLayoutGroupData;
@@ -634,11 +635,11 @@ export default {
        this.templateList = this.templateList.filter(data => data.template_cd !== 12)
      }
   },
-  destroyed() {
+  unmounted() {
     //イベントリスナーを手放してメモリを開放
     this.setPrevEditRecord([]);
     this.setOriginalList([]);
-    window.removeEventListener("resize", this.resizeWidth);
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.resizeWidth);
   },
 
   mounted() {
@@ -862,14 +863,12 @@ export default {
     resizeWidth() {
       if (this.selectedTemplate !== PAT_INFO_TEMPLATE_CD) return;
       //表示項目設定画面のカテゴリの幅を取得
-      const category = document
-        .getElementById("category")
-        .getBoundingClientRect();
-      this.dispWidth = category.width;
+      const category = getScopedElementById("category", this.$el)?.getBoundingClientRect?.();
+      this.dispWidth = category?.width || 0;
 
       //表示項目設定画面のカテゴリ+項目の幅を取得
-      const header = document.getElementById("header").getBoundingClientRect();
-      this.headWidth = header.width;
+      const header = getScopedElementById("header", this.$el)?.getBoundingClientRect?.();
+      this.headWidth = header?.width || 0;
     },
 
     setTemplateId(id) {
@@ -1033,7 +1032,7 @@ export default {
       categories.forEach(column => {
         listDataListItem.push(column.categoryItem);
       });
-      listDataListItem = _.flatten(listDataListItem);
+      listDataListItem = listDataListItem.flat();
 
       // 全てのチェックした項目をフィルタする。
       const listDataListItemChecked = listDataListItem.filter(l => l.isChecked);

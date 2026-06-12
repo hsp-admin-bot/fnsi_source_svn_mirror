@@ -19,9 +19,8 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
-import com.amazonaws.util.StringUtils;
 import jp.co.nikkiso.ntss.api.service.NameConcat.NameConcatService;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
@@ -5769,7 +5768,7 @@ public class WebAPICheckConditionSend {
           else
           {//透析液流量比率制御値(A-0268)が比率設定の場合
             // 実際のエラー内容は「QB、QDプログラムが入になっていたから」の追加 xujl add start
-            if (StringUtils.isNullOrEmpty(itemA269) || Double.parseDouble(itemA269) == 0) {
+            if (ObjectUtils.isEmpty(itemA269) || Double.parseDouble(itemA269) == 0) {
               //警告メッセージを表示し、測定画面に戻る（送信処理は行わない）
               retMsg = String.format(CHECKMESSAGE.MSG000020.get()) ;
               retLogMsg = String.format(CHECKMESSAGE.MSG000020LOG.get()) ;

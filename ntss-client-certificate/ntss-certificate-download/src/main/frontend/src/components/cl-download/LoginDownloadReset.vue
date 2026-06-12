@@ -8,6 +8,7 @@
         <!-- 題名 -->
         <p id="login-title">パスワード変更</p>
         <div class="panel">
+          <form @submit.prevent>
           <v-ons-row>
             <v-ons-col class="input-row">
               <!-- 施設パスワードラベル -->
@@ -19,6 +20,7 @@
                 input-id="current-password"
                 name="current-password"
                 type="password"
+                autocomplete="current-password"
                 v-model="userPasswordCurrent"
                 @keyup.enter="setFocus('password')"
                 @blur="checkMatchCurrentPassword"
@@ -73,6 +75,7 @@
               input-id="password"
                 name="password"
                 type="password"
+                autocomplete="new-password"
                 maxlength="40"
                 v-model="userPassword"
                 ref="password"
@@ -101,6 +104,7 @@
               input-id="confirm-password"
               name="confirm-password"
               type="password"
+              autocomplete="new-password"
               maxlength="40"
               v-model="userPasswordConfirm"
               ref="confirm-password"
@@ -145,6 +149,7 @@
           </v-ons-col>
         </div>
       </v-ons-row>
+          </form>
      </div>
     </div>
   </div>
@@ -389,7 +394,7 @@ ons-input {
   flex: 0 0 70%;
   max-width: 70%;
 }
-ons-input >>> .text-input {
+ons-input :deep(.text-input) {
   font-size: 1.7em;
   width: 100%;
 }

@@ -13,7 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 //#7239 2022-11-23 add  処理保留イベントの最適化処理が行われない start
 @Component
@@ -25,9 +26,14 @@ public class JournalLogUtil {
   @Autowired
   private LogServiceCore logServiceCoreTemp;
 
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfigTemp;
+
   private static LogService logService;
   private static EventLoggerFactory eventLoggerFactory;
   private static LogServiceCore logServiceCore;
+  private static Config defaultDbConfig;
 
 
   @PostConstruct
@@ -35,6 +41,7 @@ public class JournalLogUtil {
     logService = logServiceTemp;
     logServiceCore = logServiceCoreTemp;
     eventLoggerFactory = eventLoggerFactoryTemp;
+    defaultDbConfig = defaultDbConfigTemp;
   }
 
   public static void eventMessageDebug(String messageTemplate, SysCoopJournal journal, String className, String fnsi) {
@@ -74,11 +81,11 @@ public class JournalLogUtil {
    *
    * @return logCommon ログ出力共通クラス
    */
-  public static DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  public static DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

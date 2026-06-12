@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.request.validator;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 
 /**
  * {@link NtssFlexibleDateTime} の実装.

@@ -6,7 +6,7 @@ import static jp.co.nikkiso.ntss.coop_api.utils.JournalConvertConstants.EXT_SETT
 
 import java.util.Map;
 
-import org.apache.commons.collections.MapUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

@@ -18,7 +18,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -71,12 +71,12 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapState, mapMutations } from "vuex";
-import { EventBus } from "@/eventBus";
+import { mapState, mapMutations } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import commonSearchArea from "@/components/common/CommonSearchArea";
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
 import ConditionContrastObj from "./MasterCondition.js";
 
 export default {

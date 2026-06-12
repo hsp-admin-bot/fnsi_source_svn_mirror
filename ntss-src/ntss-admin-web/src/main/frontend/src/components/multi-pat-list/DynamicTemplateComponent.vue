@@ -1,123 +1,79 @@
 <template>
-  <div id="multi-pat-list-dynamic" class="multi-pat-list" style="width: 100%; height: 100%">
-    <div class="scroll-table">
-      <table class="grid-record-list" style="width: max-content;">
-        <col />
-        <thead>
-          <tr id="first-row">
-            <th rowspan="2" class="ntss-list-header-th-sticky headcol frezee-column-name manual-width">
-              <span @click="sortBy('name')" class="clickable-header-label" :class="sortedClass('name')">データ名</span>
-            </th>
-            <template v-for="(dayObj, index) in rangeDate(getSelectedDynamicLayout.templateCd)">
-            <!-- //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善、initFlag追加 xugj add start -->
-              <th
-                v-if="dayObj.showGroup && initFlag !== 0"
-                :colspan="dayObj.countGroup"
-                class="ntss-list-header-th-sticky headcol text-center manual-width"
-                :key="index"
-              >
-                {{ dayObj.headerGroupItem }}
-              </th>
-            </template>
-            <th v-if="initFlag !== 0" rowspan="2" class="ntss-list-header-th-sticky headcol frezee-column-name manual-width">
-              <span @click="sortBy('total')" class="clickable-header-label" :class="sortedClass('total')">合計</span>
-            </th>
-          </tr>
-          <tr v-if="initFlag !== 0">
-          <!-- //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善、initFlag追加 xugj add end -->
-            <!-- <th
-              class="ntss-list-header-th-sticky headcol text-center th-sticky-day"
-              :style="{top: topPosition + 'px'}"
-              v-for="(dayObj, index) in rangeDate(getSelectedDynamicLayout.templateCd)"
-              :key="index"
-            >{{ dayObj.headerItem + "(" + dayObj.name + ")" }}</th> -->
-            <th
-              class="ntss-list-header-th-sticky headcol text-center th-sticky-day manual-width"
-              v-for="(dayObj, index) in rangeDate(getSelectedDynamicLayout.templateCd)"
-              :key="index"
-            >
-              <span @click="sortBy('title:' + index)" class="clickable-header-label" :class="sortedClass('title:' + index)">{{ dayObj.headerItem + "(" + dayObj.name + ")" }}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(item, indexRow) in sortedListItems" :key="indexRow">
-            <td class="frezee-column-name sticky-body-items">{{ item.name }}</td>
-            <td
-              v-for="(dayObj, indexCol) in item.dateRange"
-              :key="indexCol"
-              :id="dayObj.date + '|' + item.id + '|' + item.dataListDetailCd"
-            >
-              <!-- mod #6543 付 start -->
-              <span v-if="dayObj.data !== null">{{ dayObj.data + item.cellDisplayPattern }}</span>
-              <!-- mod #6543 付 end -->
-              <span v-else-if="checkFlag !== 0"></span>
-              <span class="align-loading" v-else>
-                <v-ons-icon icon="fa-spinner" spin />
-              </span>
-            </td>
-            <!-- //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add start -->
-            <td v-if="initFlag !== 0">
-            <!-- //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add end -->
-              <span v-if="item.total !== ''">{{ item.total + ' ' + item.unit}}</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+  <div
+    id="multi-pat-list-dynamic"
+    ref="gridContainer"
+    class="multi-pat-list"
+    style="width: 100%; height: 100%"
+  >
+    <KendoGridView
+      ref="grid"
+      :columns="gridColumns"
+      :options="gridDataSourceOptions"
+      :height="gridHeight"
+      :scrollable="scrollableConfig"
+      :pageable="false"
+      :resizable="true"
+      :data-bound="onGridDataBound"
+    />
   </div>
 </template>
 
 <script>
-import _ from "underscore";
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
-import encoding from "encoding-japanese";
-// mod FNSI-No.530 処理が遅い。非同期処理となっているが、別機能遷移でサーバー側の処理をとめる dou start
-// import { mapGetters, mapActions } from "vuex";
-import { mapGetters, mapActions, mapMutations } from "vuex";
-// mod FNSI-No.530 処理が遅い。非同期処理となっているが、別機能遷移でサーバー側の処理をとめる dou end
+import _ from "@/compat/collections/lodash";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import encoding from "@/compat/encoding/encoding-japanese";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
-// import { saveExcel } from "@progress/kendo-vue-excel-export";
-var workbook_1 = require("@progress/kendo-vue-excel-export");
-var kendo_file_saver_1 = require("@progress/kendo-file-saver");
 import { DATE_TEMPLATE_CD, MONTH_TEMPLATE_CD } from "@/constants/dataListConstant";
-// add 画面印刷プレビューと印刷の実現 黄 start
 import { getCurrentFunctionCd } from "@/router/routing-helper";
-// add 画面印刷プレビューと印刷の実現 黄 end
-//FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
-//FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
-//FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add start
 import { deepCopy } from "@/functions/common/CommonFunctions";
-//FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add end
-import { updateSort, getSortedClass, sortableCompare } from "@/functions/SortFunctions";
+import { sortableCompare } from "@/functions/SortFunctions";
 import PrintMixin from "@/components/PrintMixin";
+import KendoGridView from "@/components/kendo-ui/KendoGridView.vue";
+import {
+  plusDecimal
+} from "@/functions/treatment-record/NumberFunctions.js";
+import $ from "@/compat/jquery";
+import * as workbook_1 from "@/functions/common/KendoFunctions";
+import * as kendo_file_saver_1 from "@/functions/common/KendoFunctions";
 
 export default {
+  components: {
+    KendoGridView,
+  },
   mixins: [PrintMixin],
   data() {
     return {
-      //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add start
-      initFlag: 0,
-      //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add end
-      layoutData: [],
+      pageSize: 200,
       listItems: [],
-      topPosition: 0,
-      breakCallApi: false,
-      checkFlag: 0,
       selfScreenName: "",
       sort: {
         key: "",
         isAsc: true
       },
-      // ソート可否フラグ（集計中のソートを抑止するフラグ）
       isSortAllowed: true ,
-      scrollQuerySelector: ".scroll-table", // スクロールコンテナ
-      addClassTargetQuerySelector: ["table.grid-record-list"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
+      scrollQuerySelector: "#multi-pat-list-dynamic .k-virtual-scrollable-wrap",
+      addClassTargetQuerySelector: ["#multi-pat-list-dynamic .k-grid table"],
+      gridResizeObserver: null,
+      gridColumns: [
+        { field: "name", title: "データ名", locked: true, width: "240px;", headerAttributes: { style: "text-align: center" } },
+        { field: "totalCount", title: "合計", width: "100px", headerAttributes: { style: "text-align: center" } }
+      ],
+      total: 0,
+      searchData: null,
+      pageList: new Set(),
+      scrollableConfig: {
+        virtual: {
+          itemHeight: 40,
+          scrollContainer: null,
+        }
+      },
+      gridHeight: 580,
+      params: []
     };
   },
-
   computed: {
     ...mapGetters("data-list", [
       "getSelectedDynamicLayout",
@@ -125,18 +81,16 @@ export default {
       "getRequestExportExcel",
       "getRequestExportCSV"
     ]),
-// add FNSI-No.530 処理が遅い。非同期処理となっているが、別機能遷移でサーバー側の処理をとめる dou start
-    ...mapGetters("multi-pat-list", ["getLoopFlag"]),
-// add FNSI-No.530 処理が遅い。非同期処理となっているが、別機能遷移でサーバー側の処理をとめる dou end
-    ...mapGetters("account-edit", ["getFontSize"]),
-
-    // add 画面印刷プレビューと印刷の実現 黄 start
-    ...mapGetters("pat-info", ["searchedPatList", "selectedPatId"]),
-    // add #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
+    ...mapGetters("pat-info", ["searchedPatList"]),
     ...mapGetters('user', ['getFacilityCd']),
-    // add #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
-    ...mapGetters("exam-record/list",["getCondition"]),
-    // add 画面印刷プレビューと印刷の実現 黄 end
+    ...mapGetters("window-size", {
+      windowHeight: "getWindowHeight"
+    }),
+    ...mapGetters('account-edit', ['getFontSize']),
+    ...mapGetters("window-size", {
+      windowWidth: "getSplittedWidth",
+      windowHeight: "getWindowHeight"
+    }),
 
     sortedListItems() {
       const sortField = this.sort.key;
@@ -181,30 +135,44 @@ export default {
     },
     isShowData() {
       return this.getRangeDate.length !== null;
-    }
+    },
+
+    gridDataSourceOptions() {
+      return {
+        transport: {
+          read: options => this.onGridDataSourceRead(options),
+        },
+        schema: {
+          data: "data",
+          total: "total",
+        },
+        pageSize: this.pageSize,
+        serverPaging: true,
+        serverSorting: true,
+        serverFiltering: true,
+      };
+    },
   },
 
   watch: {
-    getRangeDate(value) {
-      if (value) {
-        this.getPositionHeader();
-      }
-    },
-
-    getFontSize: {
-      immediate: true,
-      handler() {
-        this.getPositionHeader();
-      }
-    },
-
     getRequestExportExcel() {
       this.onCreateTemplateToExcel();
     },
-
     getRequestExportCSV() {
       this.exportToCSV();
-    }
+    },
+    windowWidth() {
+      this.calculateReportArea();
+    },
+    windowHeight() {
+      this.calculateReportArea();
+    },
+    getFontSize() {
+      this.$nextTick(() => {
+        this.updateGridHeight();
+        this.$refs.grid?.resize();
+      });
+    },
   },
 
   methods: {
@@ -213,301 +181,125 @@ export default {
       "setLoadingScreenVisible",
       "setLoadingScreenMessage"
     ]),
-// add FNSI-No.530 処理が遅い。非同期処理となっているが、別機能遷移でサーバー側の処理をとめる dou start
-
     ...mapMutations("multi-pat-list", [
       "setLoopFlag",
     ]),
-// add FNSI-No.530 処理が遅い。非同期処理となっているが、別機能遷移でサーバー側の処理をとめる dou end
-
-    // 昇順/降順のclassを作成
-    sortedClass(key) {
-      return getSortedClass(key, this.sort);
-    },
-    // ソートするキーを設定する
-    sortBy(key) {
-      if (!this.isSortAllowed) return; // 集計中はソート不可
-      updateSort(key, this.sort);
-    },
-    getPositionHeader() {
-      let firstRowEle = null;
-      const interval = setInterval(() => {
-        firstRowEle = document.getElementById("first-row");
-        if (firstRowEle) {
-          const rowHeight = firstRowEle.offsetHeight;
-          this.topPosition = rowHeight;
-          clearInterval(interval);
+    async initHeaderColumn(){
+      let listRangeDate = this.rangeDate(this.getSelectedDynamicLayout.templateCd);
+      this.gridColumns = [{ field: "name", title: "データ名", locked: true, width: "240px", headerAttributes: { style: "text-align: center" } }];
+      if(listRangeDate) {
+        let level1Title = '';
+        let tempColumns = [];
+        listRangeDate.forEach(el => {
+          let tempTitle = this.getSelectedDynamicLayout.templateCd === MONTH_TEMPLATE_CD ? el.date.substring(0, 4) : (el.date.substring(0, 4) + '/' + el.date.substring(4, 6))
+          if(level1Title !== tempTitle) {
+            if(level1Title !== '' ) {
+              this.gridColumns.push({
+                title: level1Title,
+                headerAttributes: { style: "text-align: center" },
+                columns: tempColumns,
+              });
+              tempColumns = [];
+            }
+            level1Title = tempTitle;
+          }
+          tempColumns.push({
+            date: el.date,
+            field: "item" + (this.getSelectedDynamicLayout.templateCd === MONTH_TEMPLATE_CD ? el.date.substring(0, 6) : el.date),
+            title: el.headerItem + "(" + el.name + ")",
+            headerAttributes: { style: "text-align: center" },
+            width: "100px"
+          });
+        });
+        if(level1Title !== '' ) {
+          this.gridColumns.push({
+            title: level1Title,
+            headerAttributes: { style: "text-align: center" },
+            columns: tempColumns,
+          });
         }
-      }, 1000);
+      }
+      this.gridColumns.push({ field: "totalCount", title: "合計", width: "100px", headerAttributes: { style: "text-align: center" } })
     },
-
     async initLayout(flag) {
       if (this.selfScreenName !== this.$router.currentRoute.name) {
         return;
       }
-      this.checkFlag = flag;
-      //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add start
-      this.initFlag = 0;
-      //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add end
-      if (!this.breakCallApi) {
-        this.breakCallApi = true;
-      }
-      if (this.checkFlag === 0) {
-        this.breakCallApi = false;
-      }
+      this.searchData = [];
+      this.pageList = new Set();
       this.listItems = [];
+      await this.initHeaderColumn();
       this.setLoadingScreenVisible(true);
       const url = `sysDataListDetail/getByLayoutCd/${this.getSelectedDynamicLayout.patListLayoutCd}`;
       let response;
       try {
         response = await ApiHelper.get(url);
-        // del FNSI6272-集計処理に時間がかかりすぎる 周 start
-        //this.setLoadingScreenVisible(false);
-        // del FNSI6272-集計処理に時間がかかりすぎる 周 end
-      } catch (error) {
-        //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
-        getErrorMessage('DynamicTemplateComponent.vue', 'initLayout', error);
-        //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
-        // del FNSI6272-集計処理に時間がかかりすぎる 周 start
-        //this.setLoadingScreenVisible(false);
-        // del FNSI6272-集計処理に時間がかかりすぎる 周 end
-        console.log(error);
-      } finally {
-        // mod FNSI6272-集計処理に時間がかかりすぎる 周 start
-        // let list = [];
-        // //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add start
-        // let initList = [];
-        // let tmpListItems = [];
-        // //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add start
-        // const data = response.data;
-        // if (data && data.length) {
-        //   const dataRange = this.rangeDate(
-        //           this.getSelectedDynamicLayout.templateCd
-        //         );
-        //   data.forEach(d => {
-        //     const listItems = d.items;
-        //     const displayName = !d.displayName ? "" : d.displayName.trim();
-        //     if (listItems && listItems.length) {
-        //       listItems.forEach(item => {
-        //         item.categoryCd = d.categoryCd;
-        //         item.name = this.formatName(item, displayName);
-        //         item.dataListDetailCd = d.dataListDetailCd;
-        //         item.dispOrder = d.dispOrder;
-        //         item.dateRange = dataRange
-        //         item.total = "";
-        //         item.unit = "";
-        //       });
-        //       list.push(listItems);
-
-        //       //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add start
-        //       tmpListItems = deepCopy(listItems);
-        //       tmpListItems = tmpListItems.map(item => {
-        //         item.categoryCd = d.categoryCd;
-        //         item.name = this.formatName(item, displayName);
-        //         item.dataListDetailCd = d.dataListDetailCd;
-        //         item.dispOrder = d.dispOrder;
-        //         item.dateRange = [];
-        //         item.total = "";
-        //         item.unit = "";
-
-        //         return item;
-        //       });
-        //       initList.push(tmpListItems);
-        //       //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add end
-        //     }
-        //   });
-        // }
-
-
-        // //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add start
-        // this.listItems = _.flatten(initList);
-        // //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add end
-
-        // // ソート
-        // this.listItems.sort((a, b) => {
-        //   if (a.categoryCd > b.categoryCd) return -1;
-        //   if (a.categoryCd < b.categoryCd) return 1;
-
-        //   if (a.dispOrder > b.dispOrder) return -1;
-        //   if (a.dispOrder < b.dispOrder) return 1;
-        // });
-
-        // // this.listItems.forEach(elem => {
-        // //   });
-
-        // this.breakCallApi = false;
-        // if (this.checkFlag === 1) {
-        //   //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add start
-        //   this.listItems = _.flatten(deepCopy(list));
-        //   // ソート
-        //   this.listItems.sort((a, b) => {
-        //   if (a.categoryCd > b.categoryCd) return -1;
-        //   if (a.categoryCd < b.categoryCd) return 1;
-
-        //   if (a.dispOrder > b.dispOrder) return -1;
-        //   if (a.dispOrder < b.dispOrder) return 1;
-        //   });
-        //   this.initFlag = 1;
-        //   //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add end
-        //   this.loadCellDisplay();
-        //   this.checkFlag = 0;
-        // }
-
-        this.breakCallApi = false;
-        if (this.checkFlag === 1) {
-          let list = [];
-          const data = response.data;
-          // add #11528 【たくしん会】データリスト並び順不正 房 start
-          if(data) {
-            data.forEach(dataEl => {
-              let hasCd = dataEl.items.some(itemObj => itemObj.hasOwnProperty("cd"));
-              if(hasCd) {
-                let tempSortItems = dataEl.items;
-                if(dataEl.items) {
-                  dataEl.items.sort((a, b) => {
-                    let aIndex = dataEl.itemCds.findIndex(itemCd => itemCd == a.cd);
-                    let bIndex = dataEl.itemCds.findIndex(itemCd => itemCd == b.cd);
-                    if(aIndex == bIndex) {
-                      let aSubIndex = tempSortItems.findIndex(itemIdObj => itemIdObj.id == a.id);
-                      let bSubIndex = tempSortItems.findIndex(itemIdObj => itemIdObj.id == b.id);
-                      return aSubIndex - bSubIndex;
-                    } else {
-                      return aIndex - bIndex;
-                    }
-                  });
-                }
-              } else {
-                if(dataEl.items) {
-                  dataEl.items.sort((a, b) => {
-                    let aIndex = dataEl.itemCds.findIndex(itemCd => itemCd == a.id);
-                    let bIndex = dataEl.itemCds.findIndex(itemCd => itemCd == b.id);
+        let list = [];
+        const data = response.data;
+        if(data) {
+          data.forEach(dataEl => {
+            let hasCd = dataEl.items.some(itemObj => itemObj.hasOwnProperty("cd"));
+            if(hasCd) {
+              let tempSortItems = dataEl.items;
+              if(dataEl.items) {
+                dataEl.items.sort((a, b) => {
+                  let aIndex = dataEl.itemCds.findIndex(itemCd => itemCd == a.cd);
+                  let bIndex = dataEl.itemCds.findIndex(itemCd => itemCd == b.cd);
+                  if(aIndex == bIndex) {
+                    let aSubIndex = tempSortItems.findIndex(itemIdObj => itemIdObj.id == a.id);
+                    let bSubIndex = tempSortItems.findIndex(itemIdObj => itemIdObj.id == b.id);
+                    return aSubIndex - bSubIndex;
+                  } else {
                     return aIndex - bIndex;
-                  });
-                }
-              }
-            });
-          }
-          // add #11528 【たくしん会】データリスト並び順不正 房 end
-          if (data && data.length) {
-            const dataRange = this.rangeDate(
-                    this.getSelectedDynamicLayout.templateCd
-                  );
-            data.forEach(d => {
-              const listItems = d.items;
-              const displayName = !d.displayName ? "" : d.displayName.trim();
-              if (listItems && listItems.length) {
-                listItems.forEach(item => {
-                  item.categoryCd = d.categoryCd;
-                  item.name = this.formatName(item, displayName);
-                  item.dataListDetailCd = d.dataListDetailCd;
-                  item.dispOrder = d.dispOrder;
-                  item.dateRange = dataRange
-                  item.total = "";
-                  item.unit = "";
+                  }
                 });
-                list.push(listItems);
               }
-            });
-          }
-
-          this.listItems = _.flatten(deepCopy(list));
-          // ソート
-          // del #11528 【たくしん会】データリスト並び順不正 房 start
-          // ソート
-          // this.listItems.sort((a, b) => {
-          // if (a.categoryCd > b.categoryCd) return -1;
-          // if (a.categoryCd < b.categoryCd) return 1;
-          //
-          // if (a.dispOrder > b.dispOrder) return -1;
-          // if (a.dispOrder < b.dispOrder) return 1;
-          // });
-          // del #11528 【たくしん会】データリスト並び順不正 房 end
-          this.initFlag = 1;
-          //FNSI-修正 【集計(日別)_物品予定】【集計(日別)_物品実績】【集計(日別)_治療.検査状況】【集計（日別）部品】初期化性能改善 xugj add end
-          this.loadCellDisplay();
-          this.checkFlag = 0;
-
-        } else {
-          let initList = [];
-          let tmpListItems = [];
-          const data = response.data;
-          // add #11528 【たくしん会】データリスト並び順不正 房 start
-          if(data) {
-            data.forEach(dataEl => {
-              let hasCd = dataEl.items.some(itemObj => itemObj.hasOwnProperty("cd"));
-              if(hasCd) {
-                let tempSortItems = dataEl.items;
-                if(dataEl.items) {
-                  dataEl.items.sort((a, b) => {
-                    let aIndex = dataEl.itemCds.findIndex(itemCd => itemCd == a.cd);
-                    let bIndex = dataEl.itemCds.findIndex(itemCd => itemCd == b.cd);
-                    if(aIndex == bIndex) {
-                      let aSubIndex = tempSortItems.findIndex(itemIdObj => itemIdObj.id == a.id);
-                      let bSubIndex = tempSortItems.findIndex(itemIdObj => itemIdObj.id == b.id);
-                      return aSubIndex - bSubIndex;
-                    } else {
-                      return aIndex - bIndex;
-                    }
-                  });
-                }
-              } else {
-                if(dataEl.items) {
-                  dataEl.items.sort((a, b) => {
-                    let aIndex = dataEl.itemCds.findIndex(itemCd => itemCd == a.id);
-                    let bIndex = dataEl.itemCds.findIndex(itemCd => itemCd == b.id);
-                    return aIndex - bIndex;
-                  });
-                }
-              }
-            });
-          }
-          // add #11528 【たくしん会】データリスト並び順不正 房 end
-          if (data && data.length) {
-            const dataRange = this.rangeDate(
-                    this.getSelectedDynamicLayout.templateCd
-                  );
-            data.forEach(d => {
-              const listItems = d.items;
-              const displayName = !d.displayName ? "" : d.displayName.trim();
-              if (listItems && listItems.length) {
-                tmpListItems = deepCopy(listItems);
-                tmpListItems = tmpListItems.map(item => {
-                  item.categoryCd = d.categoryCd;
-                  item.name = this.formatName(item, displayName);
-                  item.dataListDetailCd = d.dataListDetailCd;
-                  item.dispOrder = d.dispOrder;
-                  item.dateRange = [];
-                  item.total = "";
-                  item.unit = "";
-
-                  return item;
+            } else {
+              if(dataEl.items) {
+                dataEl.items.sort((a, b) => {
+                  let aIndex = dataEl.itemCds.findIndex(itemCd => itemCd == a.id);
+                  let bIndex = dataEl.itemCds.findIndex(itemCd => itemCd == b.id);
+                  return aIndex - bIndex;
                 });
-                initList.push(tmpListItems);
               }
-            });
-          }
-
-          this.listItems = _.flatten(initList);
-
-          // ソート
-          // del #11528 【たくしん会】データリスト並び順不正 房 start
-          // this.listItems.sort((a, b) => {
-          //   if (a.categoryCd > b.categoryCd) return -1;
-          //   if (a.categoryCd < b.categoryCd) return 1;
-          //
-          //   if (a.dispOrder > b.dispOrder) return -1;
-          //   if (a.dispOrder < b.dispOrder) return 1;
-          // });
-          // del #11528 【たくしん会】データリスト並び順不正 房 end
+            }
+          });
         }
-        // add end
+        if (data && data.length) {
+          const dataRange = this.rangeDate(
+                  this.getSelectedDynamicLayout.templateCd
+                );
+          data.forEach(d => {
+            const listItems = d.items;
+            const displayName = !d.displayName ? "" : d.displayName.trim();
+            if (listItems && listItems.length) {
+              listItems.forEach(item => {
+                item.categoryCd = d.categoryCd;
+                item.name = this.formatName(item, displayName);
+                item.dataListDetailCd = d.dataListDetailCd;
+                item.dispOrder = d.dispOrder;
+                item.dateRange = dataRange
+                item.total = "";
+                item.unit = "";
+              });
+              list.push(listItems);
+            }
+          });
+        }
+        this.listItems = _.flatten(deepCopy(list));
+        this.total = this.listItems.length;
+        if(this.total > 0) {
+          this.editDisplayParams();
+          if(this.params) {
+            await this.loadCellDisplay();
+          }
+        }
+      } catch (error) {
+        getErrorMessage('DynamicTemplateComponent.vue', 'initLayout', error);
+      } finally {
+        this.setLoadingScreenVisible(false);
       }
-
-      this.setLoadingScreenVisible(false);
-      // mod FNSI6272-集計処理に時間がかかりすぎる 周 end
     },
-
-    // add 画面印刷プレビューと印刷の実現 黄 start
     requestrReportParams(param) {
       // 機能コード判定
       if (param.substring(0, 3) === getCurrentFunctionCd().substring(0, 3)) {
@@ -516,38 +308,26 @@ export default {
           d => d.layoutCd === patListLayoutCd
         );
         if (!rangeDate) return;
-        let startDate = moment(rangeDate.dayObj.startDate).format('YYYY-MM-DD');
-        let endDate = moment(rangeDate.dayObj.endDate).format('YYYY-MM-DD');
+        let startDate = dayjs(rangeDate.dayObj.startDate).format('YYYY-MM-DD');
+        let endDate = dayjs(rangeDate.dayObj.endDate).format('YYYY-MM-DD');
         const param = {
-          // del #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
-          //patId: this.selectedPatId,
-          // del #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
           // mod #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
           //patIds: this.searchedPatList.map(({ pat_id }) => pat_id),
           patIds: [],
           machineNos: [],
           // mod #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           facilityCd: this.getFacilityCd,
-          //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
           functionCd:"00801",
-          // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
-          // date:moment(startDate).format('YYYY/MM/DD'),
-          //add 5984 機能帳票でパラメータが正しく渡されていない 吉 end
-          // fromDate: moment(startDate).format('YYYY/MM/DD'),
-          // toDate: moment(endDate).format('YYYY/MM/DD'),
-          date: moment(Date.now()).format("YYYYMMDD"),
-          fromDate: moment(Date.now()).format("YYYYMMDD"),
-          toDate: moment(Date.now()).format("YYYYMMDD"),
+          date: dayjs(Date.now()).format("YYYYMMDD"),
+          fromDate: dayjs(Date.now()).format("YYYYMMDD"),
+          toDate: dayjs(Date.now()).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: moment(Date.now()).format("YYYYMMDD"),
+          //dialysisDate: dayjs(Date.now()).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
-          // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
         };
         EventBus.$emit("sendReportParams", param);
       }
     },
-    // add 画面印刷プレビューと印刷の実現 黄 end
-
     formatName(item, displayName) {
       let strName = "";
       if (!displayName && item.id !== 0) {
@@ -565,7 +345,6 @@ export default {
       });
       return strName.trim();
     },
-
     rangeDate(templateCd) {
       let listRangeDate = [];
       if (this.getRangeDate.length === 0) {
@@ -593,27 +372,24 @@ export default {
 
       return listRangeDate;
     },
-
     groupDateByMonth(startDate, endDate) {
       const dateRange = [];
-      let start = moment(startDate);
-      let end = moment(endDate);
+      let start = dayjs(startDate);
+      let end = dayjs(endDate);
       while (start <= end) {
         const dateObj = {
-          // add #6543 付 start
-          from:moment(start).format("YYYYMMDD"),
-          to:moment(end).format("YYYYMMDD"),
-          // add #6543 付 end
-          headerItem: moment(start).format("DD"),
-          headerGroupItem: moment(start).format("YYYY/MM"),
-          date: moment(start).format("YYYYMMDD"),
-          name: moment(start)
+          from:dayjs(start).format("YYYYMMDD"),
+          to:dayjs(end).format("YYYYMMDD"),
+          headerItem: dayjs(start).format("DD"),
+          headerGroupItem: dayjs(start).format("YYYY/MM"),
+          date: dayjs(start).format("YYYYMMDD"),
+          name: dayjs(start)
             .format("dddd")
             .replace("曜日", ""),
           data: null
         };
         dateRange.push(dateObj);
-        start = moment(start).add(1, "days");
+        start = dayjs(start).add(1, "days");
       }
 
       let a = 1;
@@ -633,28 +409,23 @@ export default {
       }, []);
       return dateRange;
     },
-
     groupMonthByYear(startDate, endDate) {
       const dateRange = [];
-      let start = moment(startDate);
-      let end = moment(endDate);
-      // add #6543 付 start
+      let start = dayjs(startDate);
+      let end = dayjs(endDate);
       let endDay = end.endOf('month').format("YYYYMMDD")
-      // add #6543 付 end
       while (start <= end) {
         const dateObj = {
-          // add #6543 付 start
-          from: moment(start).format('YYYYMMDD'),
+          from: dayjs(start).format('YYYYMMDD'),
           to: endDay,
-          // add #6543 付 end
-          headerItem: moment(start).format("MM"),
-          headerGroupItem: moment(start).format("YYYY"),
-          date: moment(start).format("YYYYMMDD"),
+          headerItem: dayjs(start).format("MM"),
+          headerGroupItem: dayjs(start).format("YYYY"),
+          date: dayjs(start).format("YYYYMMDD"),
           name: "月",
           data: null
         };
         dateRange.push(dateObj);
-        start = moment(start).add(1, "months");
+        start = dayjs(start).add(1, "months");
       }
 
       let a = 1;
@@ -674,32 +445,16 @@ export default {
       }, []);
       return dateRange;
     },
-
-    async loadCellDisplay() {
+    editDisplayParams() {
+      // パラメーター初期化
+      this.params = [];
       if (this.listItems.length === 0) return;
-      // 集計処理中はソート不可
-      this.isSortAllowed = false;
-      let listObj = [];
       this.listItems.forEach(item => {
         const dateRange = item.dateRange;
         if (dateRange.length) {
-          // mod #6543 付 start
-          // dateRange.forEach(dateObj => {
-          //   const obj = {
-          //     date: dateObj.date,
-          //     id: item.id,
-          //     dataListDetailCd: item.dataListDetailCd,
-          //     // add bug #5177 修正 chen start
-          //     kubun: item.kubun ? item.kubun : 0
-          //     // add bug #5177 修正 chen end
-          //   };
-          //   if ("type" in item) {
-          //     obj["type"] = item.type;
-          //   }
-          //   listObj.push(obj);
-          // });
           const obj = {
             id: item.id,
+            name: item.name,
             dataListDetailCd: item.dataListDetailCd,
             kubun: item.kubun ? item.kubun : 0,
             date: item.dateRange[0].date,
@@ -709,85 +464,100 @@ export default {
           if ("type" in item) {
             obj["type"] = item.type
           }
-          listObj.push(obj)
-          // mod #6543 付 end
+          this.params.push(obj)
         }
-      });
-      const pageSize = 10;
-      const totalPage = Math.ceil(listObj.length / pageSize);
-      let index = 0;
-// add FNSI-No.530 処理が遅い。非同期処理となっているが、別機能遷移でサーバー側の処理をとめる dou start
-      this.setLoopFlag(false);
-// add FNSI-No.530 処理が遅い。非同期処理となっているが、別機能遷移でサーバー側の処理をとめる dou end
-      do {
-// mod FNSI-No.530 処理が遅い。非同期処理となっているが、別機能遷移でサーバー側の処理をとめる dou start
-        // if (this.$route.name !== "multi-pat-list") {
-        //   break;
-        // }
-        if (this.$route.name !== "multi-pat-list" || this.getLoopFlag) {
-          break;
-        }
-// mod FNSI-No.530 処理が遅い。非同期処理となっているが、別機能遷移でサーバー側の処理をとめる dou end
-        index += 1;
-        let i = (index - 1) * 10;
-        const listDataParams = listObj.slice(i, i + 10).map(obj => {
-          let paramDateObj = {
-            dateFrom: "",
-            dateTo: ""
-          };
-          if (
-            this.getSelectedDynamicLayout &&
-            this.getSelectedDynamicLayout.templateCd == DATE_TEMPLATE_CD
-          ) {
-            // mod #6543 付 start
-            // paramDateObj.dateFrom = obj.date;
-            // paramDateObj.dateTo = obj.date;
-            paramDateObj.dateFrom = obj.from;
-            paramDateObj.dateTo = obj.to;
-            // mod #6543 付 end
-          }
-          if (
-            this.getSelectedDynamicLayout &&
-            this.getSelectedDynamicLayout.templateCd == MONTH_TEMPLATE_CD
-          ) {
-            // mod #6543 付 start
-            // paramDateObj.dateFrom = moment(obj.date)
-            //   .startOf("month")
-            //   .format("YYYYMMDD");
-            // paramDateObj.dateTo = moment(obj.date)
-            //   .endOf("month")
-            //   .format("YYYYMMDD");
-            paramDateObj.dateFrom = obj.from;
-            paramDateObj.dateTo = obj.to;
-            // mod #6543 付 end
-          }
-          // mod #6543 付 start
-          // let url = `sysDataListDetail/cellResult?dataListDetailCd=${obj.dataListDetailCd}&itemId=${obj.id}&dateFrom=${paramDateObj.dateFrom}&dateTo=${paramDateObj.dateTo}&kubun=${obj.kubun}`;
-          let url = `sysDataListDetail/rowResult?dataListDetailCd=${obj.dataListDetailCd}&itemId=${obj.id}&dateFrom=${paramDateObj.dateFrom}&dateTo=${paramDateObj.dateTo}&kubun=${obj.kubun}`;
-          // mod #6543 付 end
-          if ("type" in obj) {
-            url = url.concat(`&type=${obj.type}`);
-          }
-          return {
-            ...obj,
-            url: url
-          };
-        });
-        const getData = param =>
-          ApiHelper.get(param.url)
-            .then(res => this.mapData(res.data, param))
-            .catch(() => this.mapData({}, param));
-        const listPromise = listDataParams.map(param => getData(param));
-        await Promise.all(listPromise);
-      } while (index < totalPage && !this.breakCallApi);
-      this.$nextTick(() => {
-        EventBus.$emit("setFooterMsgFlg", false);
-        EventBus.$emit("allowEditTrue", false);
-        // 集計処理完了後にソート許可
-        this.isSortAllowed = true;
       });
     },
+    async onGridDataSourceRead(options) {
+      const params = this.params ?? [];
+      if (!params.length) {
+        options.success({ total: 0, data: [] });
+        return;
+      }
 
+      let startIndex = (options.data.page - 1) * options.data.pageSize;
+      let endIndex = startIndex + options.data.pageSize;
+      if (endIndex > params.length) {
+        endIndex = params.length;
+      }
+      const searchData = this.searchData ?? [];
+      if (!this.pageList.has(options.data.page) && searchData.length > 0) {
+        const tempData = params.slice(startIndex, endIndex);
+        if (tempData.length > 0) {
+          for (let i = 0; i < tempData.length; i++) {
+            const handleIndex = searchData.findIndex(
+              el =>
+                el.id == tempData[i].id &&
+                el.detailCd == tempData[i].dataListDetailCd
+            );
+            this.mapData(searchData[handleIndex], tempData[i]);
+          }
+        }
+        this.pageList.add(options.data.page);
+      }
+      const tempResult = this.getData(this.listItems.slice(startIndex, endIndex));
+      EventBus.$emit("allowEditTrue", false);
+      EventBus.$emit("setFooterMsgFlg", false);
+      options.success({
+        total: this.total,
+        data: tempResult,
+      });
+    },
+    async loadCellDisplay() {
+      await this.editResData(this.params);
+      this.$nextTick(() => {
+        this.$refs.grid?.getWidget()?.dataSource?.read();
+        this.calculateReportArea();
+      });
+    },
+    setupGridHeightObserver() {
+      const container = this.$refs.gridContainer;
+      if (!container || typeof ResizeObserver === "undefined") {
+        return;
+      }
+      this.gridResizeObserver = new ResizeObserver(() => {
+        this.updateGridHeight();
+      });
+      this.gridResizeObserver.observe(container);
+    },
+    updateGridHeight() {
+      const container = this.$refs.gridContainer;
+      if (!container) {
+        return;
+      }
+      const height = container.clientHeight;
+      if (height > 0 && height !== this.gridHeight) {
+        this.gridHeight = height;
+        this.$nextTick(() => this.$refs.grid?.resize());
+      }
+    },
+    onGridDataBound() {
+      this.$nextTick(() => {
+        this.setLockedContentHeight();
+        this.setLockedHeaderHeight();
+        this.setRowHeight();
+        this.$refs.grid?.resize();
+      });
+    },
+    async editResData(params) {
+      let url = `sysDataListDetail/rowResult`;
+      let reqParams = [];
+      if(params) {
+        params.forEach(el => {
+          reqParams.push({
+            dataListDetailCd: el.dataListDetailCd,
+            itemId: el.id,
+            dateFrom: el.from,
+            dateTo: el.to,
+            kubun: el.kubun
+          });
+        });
+      }
+      const res = await ApiHelper.post(url, reqParams);
+      if(res.status == 200) {
+        this.searchData = res.data;
+      }
+    },
     mapData(dataResponse, dataParams) {
       const indexItem = this.listItems.findIndex(
         i =>
@@ -800,12 +570,9 @@ export default {
         );
         if (indexDate >= 0) {
           if (_.isEmpty(dataResponse)) {
-            // mod #6543 付 start
-            // this.listItems[indexItem].dateRange[indexDate].data = "";
             for (let i = 0; i < this.listItems[indexItem].dateRange.length; i++) {
               this.listItems[indexItem].dateRange[i].data = ''
             }
-            // mod #6543 付 end
             return;
           }
           let unit = "";
@@ -817,7 +584,6 @@ export default {
           let cellDisplayPattern = !dataResponse.cellDisplay
             ? ""
             : dataResponse.cellDisplay;
-          // mod #6543 付 start
           const arr = cellDisplayPattern.split(' ')
           if (arr[arr.length - 1] !== '集計') {
             this.listItems[indexItem].unit = ' ' + unit + ' ' + arr[arr.length - 1]
@@ -825,7 +591,6 @@ export default {
             this.listItems[indexItem].unit = unit
           }
           this.listItems[indexItem].cellDisplayPattern = ' ' + unit + ' ' + arr[arr.length - 1]
-          // let count = !dataResponse.count ? 0 : dataResponse.count;
           let count = !dataResponse.count ? [] : dataResponse.count;
           let item;
           if (count.length > 0) {
@@ -835,20 +600,15 @@ export default {
                 if (this.getSelectedDynamicLayout.templateCd == DATE_TEMPLATE_CD) {
                   item = this.listItems[indexItem].dateRange.find(item => item.date == count[j].treat_date)
                 } else if (this.getSelectedDynamicLayout.templateCd == MONTH_TEMPLATE_CD) {
-                  // mod 11528 【たくしん会】データリスト並び順不正 zkm start
-                  // item = this.listItems[indexItem].dateRange.find(item => { return moment(item.date).format('YYYYMM') == count[j].treat_date })
-                  item = this.listItems[indexItem].dateRange.find(item => { return moment(item.date).format('YYYYMM') == moment(count[j].treat_date).format('YYYYMM') })
-                  // mod 11528 【たくしん会】データリスト並び順不正 zkm end
+                  item = this.listItems[indexItem].dateRange.find(item => { return dayjs(item.date).format('YYYYMM') == dayjs(count[j].treat_date).format('YYYYMM') })
                 }
                 if (item) {
-                  // mod 11600 【たくしん会】データリスト並び順不正 zkm start
-                  // item.data = count[j].count
-                  if (this.getSelectedDynamicLayout.templateCd == MONTH_TEMPLATE_CD) {
-                    item.data += count[j].count
-                  } else {
-                    item.data = count[j].count
-                  }
-                  // mod 11600 【たくしん会】データリスト並び順不正 zkm end
+                  // if (this.getSelectedDynamicLayout.templateCd == MONTH_TEMPLATE_CD) {
+                  //   item.data += count[j].count
+                  // } else {
+                  //   item.data = count[j].count
+                  // }
+                  item.data = count[j].count
                 }
               }
             }
@@ -866,73 +626,17 @@ export default {
             total = parseFloat(total).toFixed(1)
           }
           this.listItems[indexItem].total = total
-
-          // mod #6543 付 end
-
-          // Object.keys(dataResponse).forEach(key => {
-          //   if (cellDisplayPattern.includes(`[${key}]`)) {
-          //     let dataReplace;
-          //     if (_.isNumber(dataResponse[key])) {
-          //       dataReplace = dataResponse[key];
-          //     // add #6543 付 start
-          //     } else if (Array.isArray(dataResponse[key])) {
-          //       dataReplace = dataResponse[key] // [{...}, {...}]
-          //     }
-          //     // add #6543 付 end
-          //     else {
-          //       dataReplace = !dataResponse[key] ? "" : dataResponse[key];
-          //     }
-          //     cellDisplayPattern = cellDisplayPattern.split(`[${key}]`).join(dataReplace);
-          //   }
-          // });
-          // // mod FNSI-改修内容単位の表示不正 付 start
-          // let arr = cellDisplayPattern.trim().split(" ");
-          // if (unit === "" && arr[1]) {
-          //   unit = arr[1];
-          // }
-          // let cellDisplayPat = "";
-          // if (arr[2] == "[unit]") {
-          //   cellDisplayPat = arr[0] + arr[1] + arr[3];
-          //   this.listItems[indexItem].dateRange[indexDate].data = cellDisplayPat.trim();
-          // } else if (arr[0] == "[count]" && arr[1] == "件") {
-          //   cellDisplayPat = '0 ' + arr[1];
-          //   this.listItems[indexItem].dateRange[indexDate].data = cellDisplayPat;
-          // } else {
-          //   this.listItems[indexItem].dateRange[indexDate].data = cellDisplayPattern.trim();
-          // }
-          // // mod FNSI-改修内容単位の表示不正 付 end
-          // this.listItems[indexItem].unit = unit;
-          // const total = +this.listItems[indexItem].total;
-          // this.listItems[indexItem].total = this.addNum(total, count);
         }
       }
     },
-    addNum(num1, num2) {
-      let sq1 = 0;
-      let sq2 = 0;
-      let m = 0;
-      try {
-        sq1 = num1.toString().split(".")[1].length;
-      } catch (e) {
-        sq1 = 0;
-      }
-      try {
-        sq2 = num2.toString().split(".")[1].length;
-      } catch (e) {
-        sq2 = 0;
-      }
-      m = Math.pow(10, Math.max(sq1, sq2));
-      return (num1 * m + num2 * m) / m;
-    },
-
-    onCreateTemplateToExcel() {
+    async onCreateTemplateToExcel() {
       if (this.sortedListItems.length === 0) return;
-
+      await this.asyncExportData();
       const columns = this.getColumns(this.sortedListItems);
       const data = this.getData(this.sortedListItems);
       this.saveExcel({
         data: data.length === 0 ? null : data,
-        fileName: `データリスト_${moment().format("YYYYMMDDHHmmss")}`,
+        fileName: `データリスト_${dayjs().format("YYYYMMDDHHmmss")}`,
         columns: columns
       });
     },
@@ -968,16 +672,15 @@ export default {
       });
       workbook_1.toDataURL(options).then(saveFn);
     },
-
     getColumns(listItems) {
       const columns = [];
       if (listItems && listItems.length) {
         const firstCol = {
-          field: "dataName",
+          field: "name",
           title: "データ名"
         };
         const lastCol = {
-          field: "total",
+          field: "totalCount",
           title: "合計"
         };
         columns.push(firstCol);
@@ -985,15 +688,15 @@ export default {
           listItems[0].dateRange.forEach(dayObj => {
             let dateFormat;
             if (this.getSelectedDynamicLayout.templateCd === DATE_TEMPLATE_CD) {
-              dateFormat = moment(dayObj.date).format("YYYY/MM/DD");
+              dateFormat = dayjs(dayObj.date).format("YYYY/MM/DD");
             }
 
             if (this.getSelectedDynamicLayout.templateCd === MONTH_TEMPLATE_CD) {
               dateFormat = `${dayObj.headerGroupItem}/${dayObj.headerItem}`;
             }
-
+            let field = "item" + (this.getSelectedDynamicLayout.templateCd === MONTH_TEMPLATE_CD ? dayObj.date.substring(0, 6) : dayObj.date)
             const colObj = {
-              field: dayObj.date,
+              field: field,
               title: `${dateFormat}(${dayObj.name})`
             };
             columns.push(colObj);
@@ -1003,7 +706,33 @@ export default {
       }
       return columns;
     },
-
+    async asyncExportData() {
+      EventBus.$emit("allowEditTrue", true);
+      EventBus.$emit("setFooterMsgFlg", true);
+      const totalPage = Math.ceil(this.total / this.pageSize);
+      for(let i = 1; i <= totalPage; i++) {
+        if(!this.pageList.has(i)) {
+          this.pageList.add(i);
+          let startIndex = (i - 1) * this.pageSize;
+          let endIndex = startIndex + this.pageSize;
+          if(endIndex > this.params.length) {
+            endIndex = this.params.length;
+          }
+          // 検索条件
+          let tempData = this.params.slice(startIndex, endIndex);
+          // 項目分、繰り返す
+          if(tempData && tempData.length > 0) {
+            for(let i = 0; i < tempData.length; i++) {
+              let handleIndex = this.searchData.findIndex(el => el.id == tempData[i].id 
+                && el.detailCd == tempData[i].dataListDetailCd);
+              this.mapData(this.searchData[handleIndex], tempData[i]);
+            }
+          }
+        }
+      }
+      EventBus.$emit("allowEditTrue", false);
+      EventBus.$emit("setFooterMsgFlg", false);
+    },
     getData(listItems) {
       let data = [];
       if (listItems && listItems.length) {
@@ -1011,11 +740,16 @@ export default {
           const obj = {};
           if (item.dateRange && item.dateRange.length) {
             item.dateRange.forEach(dayObj => {
-              obj[dayObj.date] = dayObj.data;
+              let field = "item" + (this.getSelectedDynamicLayout.templateCd === MONTH_TEMPLATE_CD ? dayObj.date.substring(0, 6) : dayObj.date)
+              if(dayObj.data) {
+                obj[field] = dayObj.data + item.cellDisplayPattern;
+              } else {
+                obj[field] = "0 " + item.unit;
+              }
             });
           }
-          obj["dataName"] = item.name;
-          obj["total"] = item.total + " " + item.unit;
+          obj["name"] = item.name;
+          obj["totalCount"] = item.total + " " + item.unit;
           data.push(obj);
         });
       }
@@ -1027,8 +761,8 @@ export default {
       });
       return data;
     },
-
-    exportToCSV() {
+    async exportToCSV() {
+      await this.asyncExportData();
       const columns = this.getColumns(this.sortedListItems);
       const data = this.getData(this.sortedListItems);
 
@@ -1054,25 +788,8 @@ export default {
             tempData.push("");
           }
         });
-        // Object.keys(data).forEach(key => {
-        //   if (!arrayFields.includes(key)) {
-        //     return;
-        //   } else {
-        //     tempData.push(data[key]);
-        //   }
-        // });
         addNewData.push(tempData);
       });
-      // addNewData = addNewData.map(i => i.reverse());
-      // addNewData = addNewData.map(ii => {
-      //   if (ii.length > 0) {
-      //     const first = ii[0];
-      //     ii.shift();
-      //     ii.push(first);
-      //   }
-      //   return ii;
-      // });
-
       Array(addNewData).forEach(t => {
         Object.values(t).forEach(k => {
           Object.values(k).forEach(r => {
@@ -1100,44 +817,119 @@ export default {
 
       let link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
-      link.download = `データリスト_${moment().format("YYYYMMDDHHmmss")}.csv`;
+      link.download = `データリスト_${dayjs().format("YYYYMMDDHHmmss")}.csv`;
       link.click();
+    },
+    calculateReportArea() {
+      this.$nextTick(() => {
+        this.updateGridHeight();
+        const grid = this.$refs.grid?.getWidget();
+        if (!grid) {
+          return;
+        }
+        grid.resize($(".multi-pat-list-header-switch"));
+        this.setLockedContentHeight();
+        this.setLockedHeaderHeight();
+        this.setRowHeight();
+      });
+    },
+    /**
+     * 固定列、スクロール列の高さが倍率変更時にズレる為
+     * 二つを合わせる処理を行う
+     */
+    setLockedContentHeight() {
+      // 固定列、スクロール列の要素の高さを合わせる
+      const scrollHeight = parseFloat(getComputedStyle(document.getElementsByClassName("k-auto-scrollable")[1]).height);
+      const lockedArea = document.getElementsByClassName("k-grid-content-locked");
+      if(lockedArea && lockedArea[0]) {
+        lockedArea[0].style.height = `${scrollHeight}px`;
+      }
+    },
+    /**
+     * フォントサイズの変更時に固定列ヘッダの高さがズレる為
+     * スクロール列ヘッダの高さと合わせる処理を行う
+     */
+    setLockedHeaderHeight() {
+      // ヘッダ要素取得
+      const lockHeader = document.getElementsByClassName('k-grid-header-locked')[0];
+      const scrollHeader = document.getElementsByClassName('k-auto-scrollable')[0];
+      const scrollTh = scrollHeader.children[0].children[1];
+
+      // 固定列要素の高さ更新
+      const lockHeaderHeight = scrollTh.getBoundingClientRect().height;
+      if(lockHeader) {
+        const lockTr = lockHeader.children[0].children[1].children[0];
+        lockTr.style.height = `${lockHeaderHeight}px`;
+      }
+    },
+    /**
+     * テーブル内の各行の高さの調節を行う
+     */
+    setRowHeight() {
+      // tr要素取得
+      let lockTrs = $(".k-grid-content-locked").find('tr');
+      let scrollTrs = $(".k-grid-content").find('tr');
+
+      // 高さ設定
+      for (let i = 0; i < lockTrs.length; i += 1) {
+        let lockTr = lockTrs[i];
+        let scrollTr = scrollTrs[i];
+
+        // スタイルリセット
+        lockTr.style.height = `auto`;
+        scrollTr.style.height = `auto`;
+
+        // 要素の高さを取得
+        let lockH = lockTr.getBoundingClientRect().height;
+        let scrollH = scrollTr.getBoundingClientRect().height;
+
+        // 高さが異なる場合は高いほうに合わせる
+        if (lockH < scrollH) {
+          lockTr.style.height = `${scrollH}px`;
+        } else if (scrollH < lockH) {
+          scrollTr.style.height = `${lockH}px`;
+        }
+      }
     }
   },
-
+  mounted() {
+    this.setupGridHeightObserver();
+    this.$nextTick(() => this.updateGridHeight());
+  },
   async created() {
     // 画面名称取得
     this.selfScreenName = this.$router.currentRoute.name;
-// add FNSI-No.530 処理が遅い。非同期処理となっているが、別機能遷移でサーバー側の処理をとめる dou start
     this.setLoopFlag(true);
-    // add 性能改善メモリ不足 shan start
     EventBus.$off("onInitLayout", this.initLayout);
     EventBus.$off("refresh", this.initLayout);
     EventBus.$off("requestReportParams", this.requestrReportParams);
-    // add 性能改善メモリ不足 shan end
-// add FNSI-No.530 処理が遅い。非同期処理となっているが、別機能遷移でサーバー側の処理をとめる dou end
     EventBus.$on("onInitLayout", this.initLayout);
     EventBus.$on("refresh", this.initLayout);
-    // add 画面印刷プレビューと印刷の実現 黄 start
     // 印刷パラメータ要求
     EventBus.$on("requestReportParams", this.requestrReportParams);
-    // add 画面印刷プレビューと印刷の実現 黄 end
   },
-  // add 性能改善メモリ不足 shan start
   beforeDestroy() {
     EventBus.$off("onInitLayout", this.initLayout);
     EventBus.$off("refresh", this.initLayout);
     EventBus.$off("requestReportParams", this.requestrReportParams);
 
+    if (this.gridResizeObserver) {
+      this.gridResizeObserver.disconnect();
+      this.gridResizeObserver = null;
+    }
+
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   }
-  // add 性能改善メモリ不足 shan end
 };
 </script>
 
 <style>
 @media print {
+  /** tableレイアウト崩れ回避 */
+  body:has(#multi-pat-list-dynamic) #main-id {
+    display: inline-block;
+  }
   /** ヘッダレイアウト崩れ回避 */
   body:has(#multi-pat-list-dynamic) #bbs-search-area {
     width: 60%;
@@ -1145,113 +937,150 @@ export default {
   body:has(#multi-pat-list-dynamic) .file-button {
     margin-left: 10%;
   }
-  /** 右端スクロール時はみ出し回避 */
-  body:has(#multi-pat-list-dynamic) #main-id {
-    margin-left: -1px;
-  }
 }
 </style>
 
-<style scoped lang="scss">
-.scroll-table {
-  overflow: auto;
-  height: 100%;
-  overflow-x:scroll;
-
-  .grid-record-list {
-    border-collapse: collapse;
-    background-color: var(--ntss-list-background-color);
-
-    .text-center {
-      text-align: center;
-      height: 32.8px;
-      min-width: 80px;
-      box-shadow: 0 0 0 0.5px var(--ntss-list-border-color);
-      z-index: 9;
-    }
-    // add スタイル  shan start
-    .th-sticky-day {
-      top: 41px;
-    }
-    // add スタイル  shan end
-    .frezee-column-id {
-      box-shadow: 0 0 0 0.5px var(--ntss-list-border-color);
-      left: 0;
-      z-index: 9;
-      position: sticky;
-      min-width: 70px;
-    }
-
-    .frezee-column-name {
-      box-shadow: 0 0 0 0.5px var(--ntss-list-border-color);
-      left: 0px;
-      z-index: 10;
-      position: sticky;
-    }
-    .sticky-body-items {
-      z-index: 8;
-      background-color: var(--body-background-color);
-    }
-
-    thead {
-      tr {
-        height: 2em;
-      }
-    }
-    tbody {
-      tr {
-        td {
-          border: solid 1px var(--ntss-list-border-color);
-          padding: 4px;
-          height: 23px;
-          // white-space: nowrap;
-          color: var(--ntss-base-color);
-
-          .align-loading {
-            display: flex;
-            justify-content: center;
-            z-index: -1;
-          }
-        }
-        &:nth-child(even) {
-          background-color: var(
-            --ntss-list-content-2nd-background-color
-          ) !important;
-          td {
-            background-color: var(
-              --ntss-list-content-2nd-background-color
-            ) !important;
-          }
-        }
-      }
-    }
-  }
+<style scoped>
+.multi-pat-list {
+  max-height: 97%;
+  background-color: var(--main-background-color);
+  color: var(--ntss-list-body-color);
 }
-.manual-width {
-  resize: horizontal;
-  overflow-x: auto;
-}.clickable-header-label {
-  display: block;
+
+/* kendo-grid用style */
+.multi-pat-list :deep(.k-grid) {
+  background-color: var(--ntss-list-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+
+.multi-pat-list :deep(.k-widget) {
+  font-size: 1em;
+}
+
+.multi-pat-list :deep(.k-grid tr),
+.multi-pat-list :deep(.k-grid td),
+.multi-pat-list :deep(.k-grid th),
+.multi-pat-list :deep(.k-grid .k-table-td),
+.multi-pat-list :deep(.k-grid .k-table-th),
+.multi-pat-list :deep(.k-grid-header-locked th),
+.multi-pat-list :deep(.k-grid-header-locked .k-table-th) {
+  border-color: var(--master-maintenance-kgrid-border-color) !important;
+}
+
+.multi-pat-list :deep(.k-grid-header-locked th),
+.multi-pat-list :deep(.k-grid-header-locked .k-table-th) {
+  background-image: none;
+  background-color: #333333;
+}
+
+.multi-pat-list :deep(.k-grid-header-wrap table tr:nth-child(2) th),
+.multi-pat-list :deep(.k-grid-header-wrap table tr:nth-child(2) .k-table-th) {
+  background-image: none;
+}
+
+.multi-pat-list :deep(.k-grid-header-wrap .k-header[data-field='totalCount']),
+.multi-pat-list :deep(.k-grid-header-wrap .k-table-th[data-field='totalCount']) {
+  background-image: none;
+}
+
+.multi-pat-list :deep(.k-grid-header-wrap .k-header),
+.multi-pat-list :deep(.k-grid-header-wrap .k-table-th) {
+  background-color: #333333;
+}
+
+.multi-pat-list :deep(.k-virtual-scrollable-wrap) {
   width: 100%;
-  height: 100%;
-  padding: 0 4px;
-  box-sizing: border-box;
-  overflow: hidden;
-  align-content: center;
 }
+
+#multi-pat-list-dynamic :deep(.k-grid-content-locked td),
+#multi-pat-list-dynamic :deep(.k-grid-content-locked .k-table-td),
+#multi-pat-list-dynamic :deep(.k-virtual-scrollable-wrap td),
+#multi-pat-list-dynamic :deep(.k-virtual-scrollable-wrap .k-table-td) {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+:deep(.k-grid-header) {
+  background: var(--ntss-list-header-background-color);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,0.1) 100%);
+}
+
 @media print {
-  /** ヘッダ固定 */
-  .ntss-list-header-th-sticky {
-    position: sticky !important;
+  .multi-pat-list {
+    position: absolute;
   }
   /** スクロールコンテナ */
-  .scroll-table {
+  .multi-pat-list :deep(.k-grid-header-wrap),
+  .multi-pat-list :deep(.k-grid-content) {
     overflow: hidden !important;
     height: auto !important;
   }
-  .scroll-rightmost {
-    position: relative;
-    float: right;
+  /** 固定列調整 */
+  .multi-pat-list :deep(.k-grid-content-locked) {
+    height: auto !important;
   }
+  /** 固定列枠線 */
+  .multi-pat-list :deep(.k-grid-header-locked::after) {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1px;
+    height: 100%;
+    background: var(--master-maintenance-kgrid-header-background-color);
+    pointer-events: none;
+  }
+  .multi-pat-list :deep(.k-grid-content-locked::after) {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1px;
+    height: 100%;
+    background: var(--master-maintenance-kgrid-border-color);
+    pointer-events: none;
+  }
+  /** ヘッダのズレ原因を除去 */
+  .multi-pat-list :deep(.k-grid-header) {
+    padding-right: 0 !important;
+  }
+  /** gridの幅 */
+  .multi-pat-list :deep(.k-grid) {
+    width: 100vw;
+    height: auto !important;
+  }
+  /** 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
+  .multi-pat-list:has(table.scroll-rightmost) :deep(.k-grid-content-locked),
+  .multi-pat-list:has(table.scroll-rightmost) :deep(.k-grid-header-locked) {
+    z-index: 1;
+    background-color: inherit;
+  }
+  .multi-pat-list:has(table.scroll-rightmost) {
+    margin-left: -1px !important;
+  }
+  .multi-pat-list :deep(.k-grid-header-wrap:has(table.scroll-rightmost)),
+  .multi-pat-list :deep(.k-grid-content:has(table.scroll-rightmost)) {
+    position: static;
+  }
+}
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+}
+
+:deep(.k-grid-content) {
+  height: 100% !important;
+}
+
+:deep(.k-grid-header-locked th),
+:deep(.k-grid-header-locked .k-table-th) {
+  background-image: none;
 }
 </style>

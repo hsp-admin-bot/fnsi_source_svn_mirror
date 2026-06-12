@@ -1,18 +1,24 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.response.userAccount.UserAccountResponse;
 import jp.co.nikkiso.ntss.admin_web.service.PatPersonalMainService;
 import jp.co.nikkiso.ntss.admin_web.service.accessCard.AccessCardService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
+import jp.co.nikkiso.ntss.admin_web.service.master.user.MstUserService;
 import jp.co.nikkiso.ntss.admin_web.service.userAccount.UserAccountService;
 import jp.co.nikkiso.ntss.admin_web.service.webSocketNotify.WebSocketNotifyService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
+import jp.co.nikkiso.ntss.core.dao.PatMainDao;
 import jp.co.nikkiso.ntss.core.entity.MntCardappPort;
+import jp.co.nikkiso.ntss.core.entity.MstUser;
+import jp.co.nikkiso.ntss.core.entity.PatMain;
 import jp.co.nikkiso.ntss.core.entity.PatPersonalMain;
 import jp.co.nikkiso.ntss.core.entity.custom.UserAccountInfo;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -26,8 +32,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -55,8 +62,32 @@ public class AccessCardResource {
     @Autowired
     private LogService logService;
 
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @Autowired
+    private MstUserService mstUserService;
+    @Autowired
+    private PatMainDao patMainDao;
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     @GetMapping("/staff_info/{facilityCd}/{staffId}")
-    public ResponseEntity<?> createStaff(HttpServletRequest request, @PathVariable String facilityCd, @PathVariable Long staffId){
+    public ResponseEntity<?> createStaff(HttpServletRequest request,
+                                         @PathVariable String facilityCd,
+                                         @PathVariable Long staffId,
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                         @AuthenticationPrincipal NtssUser ntssUser
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+    ) {
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+        if(!ntssUser.isNkkAdminUser()) {
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                    "facilityCd=" + facilityCd + " ";
+            InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
         // 毛 アプリケーションログの適正化 Add Start
         EventLogMessage eventLogMessage = new EventLogMessage();
@@ -104,7 +135,24 @@ public class AccessCardResource {
     }
 
     @GetMapping("/pat_info/{facilityCd}/{patId}")
-    public ResponseEntity<?> createPat(HttpServletRequest request, @PathVariable String facilityCd, @PathVariable Long patId){
+    public ResponseEntity<?> createPat(HttpServletRequest request,
+                                       @PathVariable String facilityCd,
+                                       @PathVariable Long patId,
+                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                       @AuthenticationPrincipal NtssUser ntssUser
+                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+    ) {
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+        if(!ntssUser.isNkkAdminUser()) {
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                    "facilityCd=" + facilityCd + " ";
+            InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
         // 毛 アプリケーションログの適正化 Add Start
         EventLogMessage eventLogMessage = new EventLogMessage();
@@ -167,7 +215,24 @@ public class AccessCardResource {
     @PostMapping("setCard/{userId}")
     public ResponseEntity<?> setCardNo(
         @PathVariable(name = "userId", required = true) Long userId,
-        @RequestBody String cardIdm) {
+        @RequestBody String cardIdm,
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+        @AuthenticationPrincipal NtssUser ntssUser
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+    ) {
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+        if(!ntssUser.isNkkAdminUser()) {
+          MstUser mstUser = mstUserService.getByUserId(userId);
+          if (mstUser != null && mstUser.getFacilityCd() != null &&
+            !mstUser.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                    "mstUser.getFacilityCd()=" + mstUser.getFacilityCd() + " ";
+            InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
       // wangzuo アプリケーションログの適正化 Add Start
       EventLogMessage eventLogMessage = new EventLogMessage();
@@ -196,7 +261,23 @@ public class AccessCardResource {
     @PostMapping("setPatCard/{patId}")
     public ResponseEntity<?> setPatCardNo(
         @PathVariable(name = "patId", required = true) Long patId,
-        @RequestBody String cardIdm) {
+        @RequestBody String cardIdm,
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+        @AuthenticationPrincipal NtssUser ntssUser
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+    ) {
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+        if(!ntssUser.isNkkAdminUser()) {
+          PatMain patMain = patMainDao.selectById(patId);
+          if (patMain != null && patMain.getFacility_cd() != null &&
+            !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                    "patMain.getFacility_cd()=" + patMain.getFacility_cd() + " ";
+            InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
       // wangzuo アプリケーションログの適正化 Add Start
       EventLogMessage eventLogMessage = new EventLogMessage();
@@ -223,9 +304,23 @@ public class AccessCardResource {
     // add 2020-08-13 FNSI-仕様追加 患者基本情報(pat_main)にアクセスカード番号(card_idm)の追加処理 夏 end
 
     //  add 2020-09-25 FNSI-4200ポートを使用している 孫 start
-    @PutMapping("/update_card_app_port/")
+    @PutMapping("/update_card_app_port")
     public ResponseEntity<?> updateCardAppPort(
-      @RequestBody MntCardappPort cardAppPortInfo) {
+      @RequestBody MntCardappPort cardAppPortInfo,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+    ) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (cardAppPortInfo.getFacilityCd() != null && !cardAppPortInfo.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                  "cardAppPortInfo.getFacilityCd()=" + cardAppPortInfo.getFacilityCd() + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
       // wangzuo アプリケーションログの適正化 Add Start
       EventLogMessage eventLogMessage = new EventLogMessage();
@@ -252,7 +347,22 @@ public class AccessCardResource {
 
     @GetMapping("/get_card_app_ports/{facilityCd}")
     public ResponseEntity<?> GetCardAppPorts(
-      @PathVariable(name = "facilityCd", required = true) String facilityCd) {
+      @PathVariable(name = "facilityCd", required = true) String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+    ) {
+       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                  "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
       // wangzuo アプリケーションログの適正化 Add Start
       EventLogMessage eventLogMessage = new EventLogMessage();

@@ -38,8 +38,8 @@
                      @change="changeButton"
                      :options="{ ...dragOptions, handle: '.column-handle' }">
           <!-- mod redmine 5375 治療状況透析液調製装置トレンドレイアウトマスタ詳細の並び順変更ができない 宋qy end -->
-            <template v-for="(item,index) in inputModel.seriesInfo">
-            <tr v-if="!item.model_type || item.model_type == inputModel.model" :key="index">
+            <template v-for="(item,index) in inputModel.seriesInfo" :key="index">
+            <tr v-if="!item.model_type || item.model_type == inputModel.model">
               <td class="ntss-list-body-td graph-list-select">
                 <ons-checkbox :checked="item.checked" @change="onSelectRow($event, index)" />
               </td>
@@ -67,21 +67,23 @@
   </div>
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { MACHINE_MODEL, NX_MACHINE_ID } from "@/constants/machineModel";
 import { ApiHelper } from "@/apis/AxiosHelper.js";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import vuedraggable from "vuedraggable";
-import {EventBus} from "@/eventBus";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { queryScopedSelector, getModalContainerElement, getModalFooterElement, getModalToolbarElement, getModalBodyElement } from '@/functions/common/LayoutMeasureHelper';
+import { messageFormat } from "@/functions/common/MessageFormat";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 
 export default {
   name: "MstTrendGraphTemplateModal",
   components: {
-    draggable: vuedraggable
+    draggable: VueDraggable
   },
   data() {
     return {
@@ -422,7 +424,7 @@ export default {
   created() {
     this.setLoadingScreenVisible(true);
     // 端末判別 鞠 5103 start
-    const ua = navigator.userAgent;
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
     if (ua.match(/Android/)) {
       this.androidFlg = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -431,6 +433,57 @@ export default {
     // 端末判別 鞠 5103 end
   },
   methods: {
+    getTrendMonitorDocument() {
+      return this.$el?.ownerDocument || document;
+    },
+    getCurrentModalContainer() {
+      return getModalContainerElement(this.$el) || this.$el?.closest?.('.modal-container') || this.getTrendMonitorDocument().getElementsByClassName('modal-container')[0] || null;
+    },
+    getCurrentModalBody() {
+      return getModalBodyElement(this.$el) || this.getCurrentModalContainer()?.querySelector?.('.modal-body, .modal-body-search, .modal-body-no-footer') || this.getTrendMonitorDocument().getElementsByClassName('modal-body')[0] || null;
+    },
+    getTrendMonitorScopeRoot() {
+      return this.getCurrentModalBody() || this.getCurrentModalContainer() || this.$el || null;
+    },
+    getTrendMonitorSearchRoots() {
+      return [this.getCurrentModalBody(), this.getCurrentModalContainer(), this.$el].filter(Boolean);
+    },
+    getTrendMonitorScopedElement(selector, roots = this.getTrendMonitorSearchRoots()) {
+      for (const root of roots) {
+        const directElement = root?.querySelector?.(selector);
+        if (directElement) {
+          return directElement;
+        }
+        const scopedElement = queryScopedSelector(selector, root);
+        if (scopedElement) {
+          return scopedElement;
+        }
+      }
+      return null;
+    },
+    getTrendMonitorElement(selector) {
+      return this.getTrendMonitorScopedElement(selector) || queryScopedSelector(selector, this.$el);
+    },
+    getDispItemAreaEl() {
+      return this.getTrendMonitorScopedElement('.disp-item-area')
+        || this.getTrendMonitorDocument().getElementsByClassName('disp-item-area')[0]
+        || null;
+    },
+    getGraphListHeaderEl(selector = '.ntss-list-header-th-sticky.graph-list-header.graph-list-name') {
+      return this.getTrendMonitorScopedElement(selector, [this.getDispItemAreaEl(), ...this.getTrendMonitorSearchRoots()].filter(Boolean))
+        || this.getTrendMonitorDocument().querySelector(selector)
+        || null;
+    },
+    getTrendMonitorInvalidInputEl() {
+      return this.getTrendMonitorScopedElement('.custom-input-invalid', [this.getDispItemAreaEl(), ...this.getTrendMonitorSearchRoots()].filter(Boolean))
+        || this.getTrendMonitorDocument().getElementsByClassName('custom-input-invalid')[0]
+        || null;
+    },
+    getTrendMonitorRequiredInputEl() {
+      return this.getTrendMonitorScopedElement('.custom-input-required', [this.getDispItemAreaEl(), ...this.getTrendMonitorSearchRoots()].filter(Boolean))
+        || this.getTrendMonitorDocument().getElementsByClassName('custom-input-required')[0]
+        || null;
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("loading-screen", ["setLoadingScreenVisible"]),
     getValueByField(field) {
@@ -447,13 +500,11 @@ export default {
      * Gridの高さを調整する
      */
     calculateGridHeight() {
-      const modal = document.getElementsByClassName("modal-container")[0];
-      const modalHeight = modal.clientHeight;
-      const modalHeaderHeight = document.getElementsByClassName("toolbar")[0].clientHeight;
-      const modalFooterHeight = modal.lastElementChild.clientHeight;
-      const contentsHeight1 = document.getElementsByClassName(
-        "disp-item-area"
-      )[0].clientHeight;
+      const modal = this.getCurrentModalContainer();
+      const modalHeight = Number(modal?.clientHeight || 0);
+      const modalHeaderHeight = Number((this.getCurrentModalContainer()?.querySelector?.('.toolbar') || getModalToolbarElement(this.$el))?.clientHeight || 0);
+      const modalFooterHeight = Number((this.getCurrentModalContainer()?.querySelector?.('.modal-footer') || getModalFooterElement(this.$el) || modal?.lastElementChild)?.clientHeight || 0);
+      const contentsHeight1 = Number(this.getDispItemAreaEl()?.clientHeight || 0);
       this.contentsAreaHeight =
         modalHeight -
         modalHeaderHeight -
@@ -462,9 +513,15 @@ export default {
         30;
       // add 鞠 5103 スマホ詳細画面の項目名が横に長すぎる start
       if(this.androidFlg === true) {
-        document.getElementsByClassName("ntss-list-header-th-sticky graph-list-header graph-list-name")[0].style.minWidth = "14em"
+        const graphListNameHeader = this.getGraphListHeaderEl();
+        if (graphListNameHeader) {
+          graphListNameHeader.style.minWidth = "14em";
+        }
       }else{
-        document.getElementsByClassName("ntss-list-header-th-sticky graph-list-header graph-list-name")[0].style.minWidth = "40em"
+        const graphListNameHeader = this.getGraphListHeaderEl();
+        if (graphListNameHeader) {
+          graphListNameHeader.style.minWidth = "40em";
+        }
       }
       // add 鞠 5103 スマホ詳細画面の項目名が横に長すぎる end
     },
@@ -508,8 +565,9 @@ export default {
     }
     },
     setCss(value) {
-      if(value && document.getElementsByClassName("custom-input-invalid")[0])
-      document.getElementsByClassName("custom-input-invalid")[0].classList.remove("custom-input-invalid");
+      const invalidInput = this.getTrendMonitorInvalidInputEl();
+      if(value && invalidInput)
+      invalidInput.classList.remove("custom-input-invalid");
     },
     /**
      * 表示項目の選択
@@ -573,7 +631,7 @@ export default {
         return true;
       }
       if (!validationResult.nameValid) {
-        document.getElementsByClassName("custom-input-required")[0]?.classList?.add("custom-input-invalid");
+        this.getTrendMonitorRequiredInputEl()?.classList?.add('custom-input-invalid');
       }
       // メッセージ組み立て
       // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start

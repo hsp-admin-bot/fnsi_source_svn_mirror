@@ -55,10 +55,11 @@
       <!-- mod FNSI-警報・報知追加 付 end -->
       <!-- ツールチップ -->
       <v-ons-dialog
+        ref="machinePopoverDialog"
         v-if="popoverVisible"
         animation="none"
         cancelable
-        :visible.sync="popoverVisible"
+        v-model:visible="popoverVisible"
         :target="'#machine-' + machineData.bedLayout.machine_no"
         :direction="popoverDirection"
         @postshow="popoverAdjustment"
@@ -91,21 +92,25 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import ScheduleMapBed from "@/components/status-map/schedule/ScheduleMapBedComponent";
 import ScheduleMapBedAtHome from "@/components/status-map/schedule/ScheduleMapBedAtHomeComponent";
 import ScheduleMapBedAtHomePopOver from "@/components/status-map/schedule/ScheduleMapBedAtHomePopOverComponent";
 import ScheduleMapMachineRoom from "@/components/status-map/schedule/ScheduleMapMachineRoomComponent";
 // 機能コード 在宅透析施設用
 import { MACHINE_MODEL } from "@/constants/machineModel";
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add FNSI redmine 5461 劉祥霖 start
 import {ApiHelper} from "@/apis/AxiosHelper";
 // add FNSI redmine 5461 劉祥霖 end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import allViewImg from "../../../assets/all_view.png";
+import allViewDarkImg from "../../../assets/all_view_dark.png";
+import { getOnsDialogScopedElementsByClassName } from "@/functions/common/OnsenFunctions.js";
+
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 start
 const DEF_SHUNT_NONE = "3";
@@ -125,8 +130,8 @@ export default {
 
       //  mod FNSI redmine 6031 陳 start
       // image_src_all_view: require("../../../assets/all_view.png")
-      image_src_all_view: require("../../../assets/all_view.png"),
-      image_src_all_view_dark: require("../../../assets/all_view_dark.png"),
+      image_src_all_view: allViewImg,
+      image_src_all_view_dark: allViewDarkImg,
       //  mod FNSI redmine 6031 陳 end
       //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 start
       bedDataInfo: []
@@ -200,6 +205,23 @@ export default {
   },
   props: ["machineData", "historyKey"],
   methods: {
+    getMachineOwnerDocument() {
+      return this.$refs["machine-container"]?.ownerDocument || document;
+    },
+    getMachinePopoverElements(directionClass) {
+      return getOnsDialogScopedElementsByClassName(
+        this.$refs.machinePopoverDialog,
+        directionClass,
+        this.$refs["machine-container"] || this.$el || null,
+        "tool-tip"
+      );
+    },
+    getMovingChipElements() {
+      const scopeRoot = this.$refs["machine-container"]?.closest?.("[data-ntss-layout-root], .main-content-area, #app")
+        || this.getMachineOwnerDocument().body
+        || document;
+      return Array.from(scopeRoot?.querySelectorAll?.(".machine.cls_move_chip") || []);
+    },
     // add #6940 2022/8/17 【DBデータ整合性を壊す】治療状況マップのスケジュールにてスケジュール操作で画面更新がされる前に別のスケジュール操作が可能。 dou start
     // 共通ローダー設定
     ...mapActions("loading-screen", ["setLoadingScreenVisible"]),
@@ -295,7 +317,6 @@ export default {
     },
     // add FNSI redmine 5461 劉祥霖 end
 
-
     // add FNSI redmine 6588 劉祥霖 start
     async checkBedForSwap(
       facilityCd,
@@ -370,9 +391,6 @@ export default {
     },
     // add FNSI redmine 6588 劉祥霖 end
 
-
-
-
     /**
      * 空きベッドに対する未割当スケジュール選択
      */
@@ -410,7 +428,7 @@ export default {
               0 < machineData.bedLayout.bed_cd
             ) {
             // mod #10649 治療状況マップのスケジュール表示にてスケジュール割り当てができない【マニュアル検証指摘】20240618 ztc end
-              const date = moment(this.getConditionTreatMapCurrentDate).format(
+              const date = dayjs(this.getConditionTreatMapCurrentDate).format(
                 "YYYYMMDD"
               );
               // 未割当の治療データ選択
@@ -513,7 +531,7 @@ export default {
                   });
                   if (machineData.treatment?.ordNo && machineData.treatment?.patId) {
                     // 移動元ベッド割り当て前チェック
-                    //add FNSI redmine 6588 劉祥霖 start
+                    //add FNSI redmine 6588 劉祥霖　start
                     //ベッド入れ替えの場合、ダミースケジュールチェック
                     await this.checkBedForSwap(
                       this.getFacilityCd,
@@ -551,7 +569,7 @@ export default {
                       this.setFilterSignal(true);
                       return;
                     }
-                    //add FNSI redmine 6588 劉祥霖 end
+                    //add FNSI redmine 6588 劉祥霖　end
                     let err2 = await this.checkBeforeMoveOrdMain({
                       ordNo: machineData.treatment.ordNo,
                       bedCd: selectedInfo.bedLayout.bed_cd
@@ -704,11 +722,10 @@ export default {
      */
     popoverAdjustment() {
       // 右表示の位置調整(在宅アイコン)
-      if (document.getElementsByClassName("popover--left") != null) {
-        let leftPopOver = document.getElementsByClassName("popover--left");
+      const leftPopOver = this.getMachinePopoverElements("popover--left");
+      if (leftPopOver.length > 0) {
         this.$nextTick(() => {
-          let arrayLeftPopOver = Array.from(leftPopOver);
-          arrayLeftPopOver.forEach(pop => {
+          leftPopOver.forEach(pop => {
             const newAttr =
               pop.getAttribute("style") + " transform-origin: left;";
             pop.setAttribute("style", newAttr);
@@ -716,11 +733,10 @@ export default {
         });
       }
       // 左表示の位置調整(在宅アイコン)
-      if (document.getElementsByClassName("popover--right") != null) {
-        let rightPopOver = document.getElementsByClassName("popover--right");
+      const rightPopOver = this.getMachinePopoverElements("popover--right");
+      if (rightPopOver.length > 0) {
         this.$nextTick(() => {
-          let arrayRightPopOver = Array.from(rightPopOver);
-          arrayRightPopOver.forEach(pop => {
+          rightPopOver.forEach(pop => {
             const newAttr =
               pop.getAttribute("style") + " transform-origin: right;";
             pop.setAttribute("style", newAttr);
@@ -728,11 +744,10 @@ export default {
         });
       }
       // 上表示の位置調整(在宅アイコン)
-      if (document.getElementsByClassName("popover--top") != null) {
-        let topPopOver = document.getElementsByClassName("popover--top");
+      const topPopOver = this.getMachinePopoverElements("popover--top");
+      if (topPopOver.length > 0) {
         this.$nextTick(() => {
-          let arrayTopPopOver = Array.from(topPopOver);
-          arrayTopPopOver.forEach(pop => {
+          topPopOver.forEach(pop => {
             const newAttr =
               pop.getAttribute("style") + " transform-origin: top;";
             pop.setAttribute("style", newAttr);
@@ -740,11 +755,10 @@ export default {
         });
       }
       // 下表示の位置調整(在宅アイコン)
-      if (document.getElementsByClassName("popover--bottom") != null) {
-        let bottomPopOver = document.getElementsByClassName("popover--bottom");
+      const bottomPopOver = this.getMachinePopoverElements("popover--bottom");
+      if (bottomPopOver.length > 0) {
         this.$nextTick(() => {
-          let arrayBottomPopOver = Array.from(bottomPopOver);
-          arrayBottomPopOver.forEach(pop => {
+          bottomPopOver.forEach(pop => {
             const newAttr =
               pop.getAttribute("style") + " transform-origin: bottom;";
             pop.setAttribute("style", newAttr);
@@ -789,7 +803,7 @@ export default {
         if(this.machineData.treatment.isDummy=="1"){
           //mod FNSI-redmine 6588 劉祥霖 start
           // 6588による5461のメッセージを削除
-          let move_chip=document.getElementsByClassName("machine cls_move_chip");
+          let move_chip=this.getMovingChipElements();
           let length=move_chip.length;
           if(length > 0){
             this.$ons.notification.alert({
@@ -924,7 +938,7 @@ export default {
     }
     //add FNSI redmine5436 fang end
   },
-  beforeCreate() {},
+
   //mod #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 start
   async created() {
     // add FNSI-popup close 付 start
@@ -941,7 +955,7 @@ export default {
     })
     //mod #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 end
   },
-  beforeMount() {},
+
   mounted() {
     this.observer = new IntersectionObserver((entries, observer) => {
       entries.forEach(entry => {
@@ -953,15 +967,12 @@ export default {
     });
     this.observer.observe(this.$refs["machine-container"]);
   },
-  beforeUpdate() {},
-  updated() {},
-  beforeDestroy() {
+
+
+  beforeUnmount() {
     this.observer?.disconnect();
     EventBus.$off("closeDialog", this.closeDialog);
   },
-  destroyed() {
-
-  }
 };
 </script>
 <style scoped>

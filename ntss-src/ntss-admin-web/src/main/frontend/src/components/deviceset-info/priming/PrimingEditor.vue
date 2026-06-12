@@ -22,7 +22,7 @@
 
           <v-ons-row class="device-info-cell">
             <v-ons-col class="device-info-cell-name">動脈充填</v-ons-col>
-            <v-ons-col class="device-info-cell-name">
+            <v-ons-col class="device-info-cell-value">
               <!-- mod #10359 編集権限の動作不正 dengshen start -->
               <!-- <device-input-number -->
               <!--   ref="required1" -->
@@ -42,7 +42,7 @@
               />
               <!-- mod #10359 編集権限の動作不正 dengshen end -->
             </v-ons-col>
-            <v-ons-col class="device-info-cell-name">
+            <v-ons-col class="device-info-cell-value">
               <!-- mod #10359 編集権限の動作不正 dengshen start -->
               <!-- <device-input-number -->
               <!--   ref="required2" -->
@@ -82,7 +82,7 @@
 
           <v-ons-row class="device-info-cell">
             <v-ons-col class="device-info-cell-name">静脈充填</v-ons-col>
-            <v-ons-col class="device-info-cell-name">
+            <v-ons-col class="device-info-cell-value">
               <!-- mod #10359 編集権限の動作不正 dengshen start -->
               <!-- <device-input-number -->
               <!--   ref="required3" -->
@@ -102,7 +102,7 @@
               />
               <!-- mod #10359 編集権限の動作不正 dengshen end -->
             </v-ons-col>
-            <v-ons-col class="device-info-cell-name">
+            <v-ons-col class="device-info-cell-value">
               <!-- mod #10359 編集権限の動作不正 dengshen start -->
               <!-- <device-input-number -->
               <!--   ref="required4" -->
@@ -142,7 +142,7 @@
 
           <v-ons-row class="device-info-cell">
             <v-ons-col class="device-info-cell-name">気泡抜き</v-ons-col>
-            <v-ons-col class="device-info-cell-name">
+            <v-ons-col class="device-info-cell-value">
               <!-- mod #10359 編集権限の動作不正 dengshen start -->
               <!-- <device-input-number -->
               <!--   ref="required5" -->
@@ -162,7 +162,7 @@
               />
               <!-- mod #10359 編集権限の動作不正 dengshen end -->
             </v-ons-col>
-            <v-ons-col class="device-info-cell-name">
+            <v-ons-col class="device-info-cell-value">
               <!-- mod #10359 編集権限の動作不正 dengshen start -->
               <!-- <device-input-number -->
               <!--   ref="required6" -->
@@ -357,7 +357,7 @@
 
           <v-ons-row class="device-info-cell">
             <v-ons-col class="device-info-cell-name">送液</v-ons-col>
-            <v-ons-col class="device-info-cell-name">
+            <v-ons-col class="device-info-cell-value">
               <!-- mod #10359 編集権限の動作不正 dengshen start -->
               <!-- <device-input-number -->
               <!--   ref="required13" -->
@@ -377,7 +377,7 @@
               />
               <!-- mod #10359 編集権限の動作不正 dengshen end -->
             </v-ons-col>
-            <v-ons-col class="device-info-cell-name">
+            <v-ons-col class="device-info-cell-value">
               <!-- mod #10359 編集権限の動作不正 dengshen start -->
               <!-- <device-input-number -->
               <!--   ref="required14" -->
@@ -693,7 +693,7 @@
               v-if="!isTreatRecord"
               class="common-style-ok-button"
               @click="saveConfirm()"
-              :disabled="!getItemAuthorized('DevicesetInfo', 'default_authority')"
+              :disabled="!getItemAuthorized('DevicesetInfo', 'default_authority') || getIsOtherFacility"
             >
             <!-- mod #10359 編集権限の動作不正 dengshen end -->
               {{ saveButtonLabel }}
@@ -703,18 +703,18 @@
       </div>
 
       <message-dialog
-        :visible.sync="isDialogVisble"
+        v-model:visible="isDialogVisble"
         v-bind="dialogProps"
         type="1"
       />
       <message-dialog
-        :visible.sync="isCancelDialogVisble"
+        v-model:visible="isCancelDialogVisble"
         v-bind="dialogProps"
         type="2"
         @confirm="cancelEdit"
       />
       <message-dialog
-        :visible.sync="isUpdateAllPatDialogVisble"
+        v-model:visible="isUpdateAllPatDialogVisble"
         v-bind="dialogProps"
         type="5"
         @confirm="setUpdateAllPatFlg"
@@ -730,9 +730,8 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 import { DEVICE_TYPE_PRI } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
 import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoEditor.vue";
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
-import { mapGetters } from "vuex";
 
 /**
  * @description プライミング設定値編集画面
@@ -756,16 +755,11 @@ export default {
     },
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return getAuthorized(pageCd, itemCd);
+      return !this.getIsOtherFacility && getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
-  },
-  // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
-  // add #12462 患者情報共有 Ji start
-  computed: {
-    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd"]),
   }
-  // add #12462 患者情報共有 Ji end
+  // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
 };
 </script>
 
@@ -786,16 +780,16 @@ export default {
 
 @media screen and (max-width: 320px) {
   /* カスタム系スタイル指定 */
-  .device-input-number >>> .custom-input-number,
-  .device-input-time >>> .custom-input-time {
+  .device-input-number :deep(.custom-input-number),
+  .device-input-time :deep(.custom-input-time) {
     width: 45px;
   }
-  .device-info-cell-value >>> .custom-radio {
+  .device-info-cell-value :deep(.custom-radio) {
     display: block;
   }
 }
 @media print {
-  .device-input-number >>> .custom-input-number {
+  .device-input-number :deep(.custom-input-number){
     width: 4.5em;
   }
   ons-row > ons-col:first-child {
@@ -804,5 +798,8 @@ export default {
   ons-row > ons-col:first-child ~ ons-col {
     flex: 1 1 0;
   }
+}
+.device-info-cell-value :deep(.custom-common-number-input-pro) {
+  width: 6em;
 }
 </style>

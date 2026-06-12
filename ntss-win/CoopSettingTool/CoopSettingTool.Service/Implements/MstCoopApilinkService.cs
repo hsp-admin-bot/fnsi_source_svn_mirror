@@ -56,5 +56,23 @@ namespace CoopSettingTool.Service
             GetMstCoopApilinkResponse res = (await ServerAccess.GetInstance().GetAsync<List<MstCoopApilinkEntity>>(Constant.GET_MST_COOP_APILINK + "/" + facilityCd, null)).ToClass<List<MstCoopApilinkEntity>, GetMstCoopApilinkResponse>();
             return res;
         }
+
+        /// <summary>
+        /// Gets the source MST coop apilink.
+        /// </summary>
+        /// <param name="coopVersion">The coop version.</param>
+        /// <param name="coopCd">The coop cd.</param>
+        /// <returns>Task&lt;GetMstCoopApilinkResponse&gt;.</returns>
+        public async Task<GetMstCoopApilinkResponse> GetSourceMstCoopApilink(string coopVersion, string coopCd)
+        {
+            MstCoopApilinkEntity condition = new MstCoopApilinkEntity()
+            {
+                CoopVersion = coopVersion,
+                CoopCd = coopCd
+            };
+
+            GetMstCoopApilinkResponse res = (await ServerAccess.GetInstance().PostAsync<List<MstCoopApilinkEntity>>(Constant.GET_SOURCE_MST_COOP_APILINK, condition, true, true)).ToClass<List<MstCoopApilinkEntity>, GetMstCoopApilinkResponse>();
+            return res;
+        }
     }
 }

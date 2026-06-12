@@ -43,7 +43,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
@@ -53,7 +53,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.dao.TreatmentRecordDao;
 
 /**
@@ -97,7 +97,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     result
       .andExpect(status().isOk())
@@ -224,7 +224,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -250,7 +250,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(get("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -305,7 +305,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -452,7 +452,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/result", notExistOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -484,7 +484,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/result", deletedOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -512,7 +512,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -543,7 +543,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/result", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -572,7 +572,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/medi_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
@@ -622,7 +622,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/condition", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     result
       .andExpect(status().isOk())
@@ -668,7 +668,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/equip_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
@@ -711,7 +711,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/medi_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isInternalServerError())
       .andDo(
@@ -738,7 +738,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/condition", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -765,7 +765,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/equip_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isInternalServerError())
       .andDo(
@@ -793,7 +793,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/medi_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isInternalServerError())
       .andDo(
@@ -820,7 +820,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(get("/api/treatment-record/{ord_no}/condition", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -843,7 +843,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/equip_info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isInternalServerError())
       .andDo(
@@ -874,7 +874,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/condition", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -924,7 +924,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/condition", notExistOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -955,7 +955,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/condition", deletedOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -982,7 +982,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/condition", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1014,7 +1014,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/medi_info", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1066,7 +1066,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/medi_info", notExistOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1098,7 +1098,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/medi_info", deletedOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1127,7 +1127,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/equip_info", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1176,7 +1176,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/equip_info", notExistOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1208,7 +1208,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/equip_info", deletedOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1232,7 +1232,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/recirculation-rate", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     result
       .andExpect(status().isOk())
@@ -1290,7 +1290,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/recirculation-rate", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     result
       .andExpect(status().isOk())
@@ -1312,7 +1312,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/weight", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     result
       .andExpect(status().isOk())
@@ -1365,7 +1365,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/weight", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -1391,7 +1391,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(get("/api/treatment-record/{ord_no}/weight", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -1418,7 +1418,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/weight", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1474,7 +1474,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/weight", notExistOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1506,7 +1506,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/weight", deletedOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1534,7 +1534,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/weight", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1565,7 +1565,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/weight", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1652,7 +1652,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/summary", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     result
       .andExpect(status().isOk())
@@ -1693,7 +1693,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/summary", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -1719,7 +1719,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(get("/api/treatment-record/{ord_no}/summary", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -1742,7 +1742,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/addition", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
@@ -1799,7 +1799,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/addition", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isInternalServerError())
       .andDo(
@@ -1827,7 +1827,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/addition", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isInternalServerError())
       .andDo(
@@ -1858,7 +1858,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/addition", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1913,7 +1913,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/addition", notExistOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1944,7 +1944,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/addition", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -1972,7 +1972,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/vital-monitor", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     result
       .andExpect(status().isOk())
@@ -2034,7 +2034,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/monitor", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     result
       .andExpect(status().isOk())
@@ -2151,7 +2151,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
   private void validateNotFoundMonitor(final Long ordNo) throws Exception {
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/monitor", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
     result
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", hasSize(0)))
@@ -2165,7 +2165,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
   private void validateFoundMonitor(final Long ordNo) throws Exception {
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/monitor", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
     result
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", hasSize(1)))
@@ -2187,7 +2187,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/setting", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
@@ -2236,7 +2236,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/rst-device-set-info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
@@ -2277,7 +2277,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/rst-device-set-info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isInternalServerError())
       .andDo(
@@ -2305,7 +2305,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/rst-device-set-info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isInternalServerError())
       .andDo(
@@ -2333,7 +2333,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/rst-rounds-info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
@@ -2374,7 +2374,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/rst-rounds-info", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       // assert
       .andExpect(status().isInternalServerError())
       .andDo(
@@ -2404,7 +2404,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/rst-rounds-info", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -2451,7 +2451,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/rst-rounds-info", notExistOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -2484,7 +2484,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result = mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/result-merge", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     result
       .andExpect(status().isOk())
@@ -2629,7 +2629,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result = mockMvc
       .perform(RestDocumentationRequestBuilders.get("/api/treatment-record/{ord_no}/result-merge", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -2656,7 +2656,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result = mockMvc
       .perform(get("/api/treatment-record/{ord_no}/result-merge", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -2734,7 +2734,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result = mockMvc
       .perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/result-merge", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -2883,7 +2883,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result = mockMvc
       .perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/result-merge", notExistOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -2916,7 +2916,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
     // action
     ResultActions result = mockMvc
       .perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/result-merge", deletedOrdNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -2951,7 +2951,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/vital-monitor-data", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // assert
     result
@@ -3029,7 +3029,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/vital-monitor-data", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // assert
     result
@@ -3066,7 +3066,7 @@ public class TreatmentRecordResourceIntegrationTest extends AbstractResourceInte
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/treatment-record/{ord_no}/vital-monitor-data", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // assert
     result.andExpect(status().isOk());

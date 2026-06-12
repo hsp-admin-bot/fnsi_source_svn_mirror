@@ -49,25 +49,27 @@ namespace CoopSettingTool.App.Views
         /// </summary>
         private void InitializeComponent()
         {
-            this.clbCoopArtifact = new System.Windows.Forms.CheckedListBox();
+            this.tvCoopArtifact = new System.Windows.Forms.TreeView();
             this.btnCancel = new MaterialSkin.Controls.MaterialRaisedButton();
             this.btnSave = new MaterialSkin.Controls.MaterialRaisedButton();
             this.cbShowFullCoop = new System.Windows.Forms.CheckBox();
             this.lbFacName = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
-            // clbCoopArtifact
+            // tvCoopArtifact
             // 
-            this.clbCoopArtifact.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.tvCoopArtifact.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.clbCoopArtifact.CheckOnClick = true;
-            this.clbCoopArtifact.Font = new System.Drawing.Font("MS UI Gothic", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.clbCoopArtifact.FormattingEnabled = true;
-            this.clbCoopArtifact.Location = new System.Drawing.Point(12, 94);
-            this.clbCoopArtifact.Name = "clbCoopArtifact";
-            this.clbCoopArtifact.Size = new System.Drawing.Size(460, 364);
-            this.clbCoopArtifact.TabIndex = 0;
+            this.tvCoopArtifact.CheckBoxes = true;
+            this.tvCoopArtifact.Font = new System.Drawing.Font("MS UI Gothic", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
+            this.tvCoopArtifact.HideSelection = false;
+            this.tvCoopArtifact.Location = new System.Drawing.Point(12, 94);
+            this.tvCoopArtifact.Name = "tvCoopArtifact";
+            this.tvCoopArtifact.ShowPlusMinus = true;
+            this.tvCoopArtifact.ShowRootLines = true;
+            this.tvCoopArtifact.Size = new System.Drawing.Size(460, 364);
+            this.tvCoopArtifact.TabIndex = 0;
             // 
             // btnCancel
             // 
@@ -133,7 +135,7 @@ namespace CoopSettingTool.App.Views
             this.Controls.Add(this.cbShowFullCoop);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnSave);
-            this.Controls.Add(this.clbCoopArtifact);
+            this.Controls.Add(this.tvCoopArtifact);
             this.Name = "CoopInstallView";
             this.Sizable = true;
             this.Text = "連携機能インストール";
@@ -145,9 +147,9 @@ namespace CoopSettingTool.App.Views
         #endregion
 
         /// <summary>
-        /// The CLB coop artifact
+        /// The TV coop artifact
         /// </summary>
-        private System.Windows.Forms.CheckedListBox clbCoopArtifact;
+        private System.Windows.Forms.TreeView tvCoopArtifact;
         /// <summary>
         /// The BTN cancel
         /// </summary>

@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.request.notificationMessage.ReadStatusRequest;
 import jp.co.nikkiso.ntss.admin_web.request.notificationMessage.RegisterRequest;
 import jp.co.nikkiso.ntss.core.dao.MntNotificationMessageDao;
@@ -12,7 +12,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
@@ -88,7 +88,7 @@ public class NotificationMessageResourceIntegrationTest extends AbstractResource
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.post("/api/notification-message")
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -146,7 +146,7 @@ public class NotificationMessageResourceIntegrationTest extends AbstractResource
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.post("/api/notification-message")
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -181,7 +181,7 @@ public class NotificationMessageResourceIntegrationTest extends AbstractResource
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/notification-message")
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     result
       .andExpect(status().isOk())
@@ -236,7 +236,7 @@ public class NotificationMessageResourceIntegrationTest extends AbstractResource
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/notification-message/all")
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     result
       .andExpect(status().isOk())
@@ -311,7 +311,7 @@ public class NotificationMessageResourceIntegrationTest extends AbstractResource
 
     // action
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders.put("/api/notification-message/status")
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );

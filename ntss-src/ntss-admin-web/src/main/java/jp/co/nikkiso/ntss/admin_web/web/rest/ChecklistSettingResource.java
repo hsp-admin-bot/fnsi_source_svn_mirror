@@ -3,10 +3,15 @@ package jp.co.nikkiso.ntss.admin_web.web.rest;
 import java.util.List;
 import java.util.Map;
 
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
+import jp.co.nikkiso.ntss.core.entity.PatMain;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,7 +49,22 @@ public class ChecklistSettingResource {
 
   @GetMapping("/get/{facilityCd}")
   public ResponseEntity<?> getWeightScaleByFacilityCd(
-      @PathVariable String facilityCd) {
+      @PathVariable String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }catch (Exception ignored) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // 施設のチェックリスト設定情報を取得
 
     // wp アプリケーションログの適正化 Add Start
@@ -65,7 +85,22 @@ public class ChecklistSettingResource {
 
   @GetMapping("/get/equip-class/{facilityCd}")
   public ResponseEntity<?> getMstEquipClassByFacilityCd(
-      @PathVariable String facilityCd) {
+      @PathVariable String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }catch (Exception ignored) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // 施設のチェックリスト設定情報を取得
 
     // wp アプリケーションログの適正化 Add Start
@@ -93,7 +128,23 @@ public class ChecklistSettingResource {
   public ResponseEntity<?> mstChecklistUpdate(
       // mod #8344 【デグレ】チェックリストマスタの保存までが長い dou start
       // @RequestBody MstChecklist request) {
-      @RequestBody Map<String, Object> request) {
+      @RequestBody Map<String, Object> request,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try {
+      if (!ntssUser.isNkkAdminUser()) {
+        ObjectMapper mapper = new ObjectMapper();
+        MstChecklist param = mapper.convertValue(request.get("mstChecklist"), new TypeReference<MstChecklist>() {
+        });
+        if (param.getFacilityCd() != null && !param.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    } catch (Exception ignored) {}
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
       // mod #8344 【デグレ】チェックリストマスタの保存までが長い dou end
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECKLIST_SETTING + "/update";
@@ -138,7 +189,22 @@ public class ChecklistSettingResource {
    */
   @PostMapping("/insert")
   public ResponseEntity<?> mstChecklistInsert(
-      @RequestBody MstChecklist request) {
+      @RequestBody MstChecklist request,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        if (request != null && request.getFacilityCd() != null &&
+          !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }catch (Exception ignored) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECKLIST_SETTING + "/insert";

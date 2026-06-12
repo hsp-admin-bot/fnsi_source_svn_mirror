@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class ItemInfo {
 
-  private Item ItemInfo;
+  private Item itemInfo;
 
   @Data
   public static class Item {

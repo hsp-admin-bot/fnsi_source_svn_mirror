@@ -1,10 +1,11 @@
 <template>
   <modal-base @onClose="cancel">
-    <div slot="header">
+    <template #header>
       <component :is="header"></component>
-    </div>
+    </template>
 
-    <div :class="['body', modalMessageSize]" slot="body" style="height: 100%">
+    <template #body>
+      <div :class="['body', modalMessageSize]" style="height: 100%">
       <v-ons-row>
         <v-ons-col>
           <com-textarea
@@ -19,9 +20,11 @@
           />
         </v-ons-col>
       </v-ons-row>
-    </div>
+      </div>
+    </template>
 
-    <div slot="footer" class="flex-container">
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <button class="button denial-btn btn2-cancel" @click="cancel">
           キャンセル
@@ -37,14 +40,15 @@
           確定
         </button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import CommonTextArea from "@/components/common/CommonTextArea";
 // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
@@ -144,7 +148,7 @@ export default {
 </script>
 
 <style scoped>
-div >>> .dumpPath-textare {
+div :deep(.dumpPath-textare) {
   box-sizing: border-box;
   padding: 5px;
   word-wrap: break-word;

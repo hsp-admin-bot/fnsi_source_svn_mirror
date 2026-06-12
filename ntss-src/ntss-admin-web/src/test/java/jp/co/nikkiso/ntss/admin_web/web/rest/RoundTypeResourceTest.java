@@ -16,9 +16,9 @@ import java.util.List;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import jp.co.nikkiso.ntss.admin_web.response.roundType.RoundTypeNameAndContentResponse;
@@ -34,7 +34,7 @@ public class RoundTypeResourceTest extends AbstractResourceTest {
   /**
    * 種別マスタサービスクラス.
    */
-  @MockBean
+  @MockitoBean
   private RoundTypeService roundTypeService;
 
   /**

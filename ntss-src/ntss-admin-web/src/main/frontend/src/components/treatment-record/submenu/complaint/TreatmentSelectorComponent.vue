@@ -40,8 +40,8 @@
               <label>未登録</label>
             </td>
           </tr>
-          <template v-for="(item, index) in selectItems">
-            <tr :key="index" class="ntss-list-body-tr">
+          <template v-for="(item, index) in selectItems" :key="index">
+            <tr class="ntss-list-body-tr">
               <td
                 v-if="(index % perPage) == 0"
                 v-show="isVisiblePage(selectItems, index, hasMatchedName)"
@@ -78,14 +78,17 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import { MstCompTreatment } from "@/models/treatment-record/complaint/MstCompTreatment";
 import ComplaintComponentMixin from "@/components/treatment-record/submenu/complaint/ComplaintComponentMixin";
 import SelectorComponentMixin from "@/components/treatment-record/submenu/complaint/SelectorComponentMixin";
 import { CODES } from "@/constants/TreatmentRecord";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 import PopoverMixin from "@/components/PopoverMixin";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
+import { getMstListCompose } from "@/apis/pat-prescription";
+import { getMasterConfig } from "@/components/common/master-selector/builder/masterPopoverConfig";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
 const CLASS_MISMATCH_LABEL = "【分類不一致】";
@@ -95,6 +98,7 @@ export default {
   mixins: [ComplaintComponentMixin, SelectorComponentMixin, PopoverMixin],
   computed: {
     ...mapGetters("account-edit", ["getTheme"]),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     themeBlack() {
       return this.getTheme === 1 ? "ntss-list-body-tr-black" : "";
     }
@@ -103,7 +107,6 @@ export default {
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
     ...mapGetters("treatment-record/common", ["getDialysisState"]),
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
-    ...mapActions("treatment-record/complaint", ["getMstCompTreatment"]),
     popoverPreShow,
     popoverPostShow,
     popoverPosthide,
@@ -113,21 +116,22 @@ export default {
     async init() {
       this.nonSelectValue = new MstCompTreatment();
 
-      // 処置マスタから一覧取得
-      const response = await this.getMstCompTreatment();
-      this.selectItems = response.data
-        .filter(e => e.is_disp === "1")
+      const query = getMasterConfig(MasterType.COMP_TREATMENT_RECORD, {
+        facilityCd: this.facilityCd
+      });
+      const response = await getMstListCompose(query);
+      const items = response?.data?.master?.items ?? [];
+      this.selectItems = items
+        .filter(e => e.isDisp === "1")
         .map(
           e =>
             new MstCompTreatment(
-              e.comp_treatment_cd,
+              e.compTreatmentCd,
               e.treatment,
-              e.treat_class,
-              e.treat_medicine_cd,
+              e.treatClass,
+              e.treatMedicineCd,
               e.amount,
-              e.procedure_cd
-            )
-        );
+              e.procedureCd));
 
       // 薬剤名・手技名を設定する
       const treatMedicines = await this.readMedicineItems();
@@ -148,15 +152,17 @@ export default {
       this.selectItems.forEach(e => {
         // 薬剤マスタ or 調整薬剤マスタ
         let treatMedicine = null;
-        if (e.treatClass === CODES.TREATMENT_CLASS.MIX.cd) {
+        const treatClassCd = e.treatClass != null ? Number(e.treatClass) : null;
+        const treatMedicineCd = e?.treatMedicine?.cd != null ? String(e.treatMedicine.cd) : null;
+        if (treatClassCd === CODES.TREATMENT_CLASS.MIX.cd) {
           // 調整薬剤マスタから名称及び単位を取得
           treatMedicine = mstMedicineMix.find(
-            medi => medi.cd ===  e.treatMedicine.cd
+            medi => treatMedicineCd != null && String(medi.cd) === treatMedicineCd
           );
-        } else if (e.treatClass === CODES.TREATMENT_CLASS.NORMAL.cd) {
+        } else if (treatClassCd === CODES.TREATMENT_CLASS.NORMAL.cd) {
           // 薬剤マスタから名称及び単位を取得
           treatMedicine = mstMedicine.find(
-            medi => medi.cd ===  e.treatMedicine.cd
+            medi => treatMedicineCd != null && String(medi.cd) === treatMedicineCd
           );
         }
         if (treatMedicine) {
@@ -185,12 +191,11 @@ export default {
       const medicineAndClassResponse = await this.fetchMedicineAll();
 // mod/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
       // const medicines = medicineAndClassResponse[0].data;
-      const medicines = medicineAndClassResponse[2].data.lists.list3.items;
+      const medicines = medicineAndClassResponse[2].data.master.items;
       
 
       return medicines.map(e => {
         
-        let prefix = '';
         let statusText = '';
         let keyName = 'medicineName'
         let keyCd = 'medicineCd'
@@ -198,9 +203,7 @@ export default {
           keyName = 'medicineMixName'
           keyCd = 'medicineMixCd'
         }
-        if (e.key_type == 2 && e.key_class == -1) {
-          prefix = CLASS_MISMATCH_LABEL;
-        }
+        const prefix = e.classInconsistent || '';
         
         if (this.getDialysisState() == 0) {
           statusText = `${e.expired}${e.deleted}${e.includeDeleted}`;
@@ -248,12 +251,12 @@ export default {
   width: 4em;
   font-size: 1.5em;
 }
-.treatment-popover >>> .popover__content {
+.treatment-popover :deep(.popover__content) {
   padding: 5px;
 }
-.treatment-popover >>> .popover__content,
-.treatment-popover >>> .popover--top,
-.treatment-popover >>> .popover--bottom {
+.treatment-popover :deep(.popover__content),
+.treatment-popover :deep(.popover--top),
+.treatment-popover :deep(.popover--bottom) {
   width: 700px;
   max-width: 98vw;
 }

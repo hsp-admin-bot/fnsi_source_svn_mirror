@@ -9,7 +9,7 @@ import {
 } from "@/apis/pat-event";
 import { DATE_CHOICES } from "@/constants/defaultSettingConstants";
 import { calcTargetDate } from "@/functions/modals/default-setting/defaultSettingUtils"
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 
 const DefaultHistoryInfoPatEvent = {
@@ -106,12 +106,10 @@ export default {
     setIsOtherFacility(state, isOtherFacility) {
       state.isOtherFacility = isOtherFacility;
     },
-    /*add FNSI-改修内容転入時の紹介状取込ができない 任 end*/
-    // add #12462 患者情報共有 20260310 start
     resetIsOtherFacility(state) {
       state.isOtherFacility = false;
     },
-    // add #12462 患者情報共有 20260310 end
+    /*add FNSI-改修内容転入時の紹介状取込ができない 任 end*/
     /**
      * 処理モード
      * @param {*} state
@@ -275,8 +273,10 @@ export default {
       commit("setPatEventFlg", value);
     },
     // add FNSI-コントロールの削除 徐 end
-    async fetchPatEventMaster({ commit } ,facilityCd = undefined) {
-      const response = await sendRequestGetPatEventMaster(facilityCd);
+    async fetchPatEventMaster({ commit } ,payload = undefined) {
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      const response = await sendRequestGetPatEventMaster(facilityCd, selectedPatId);
       /*mod FNSI-改修内容カテゴリ、サブカテゴリ、テンプレートが削除された或いは修正された場合、患者イベントの履歴の内容がもともとの内容で表示するように修正 任 start*/
       /*if (response.data.template.length > 0) {
         commit("setMstTemplateRecords", response.data.template);
@@ -325,12 +325,10 @@ export default {
     setIsOtherFacility({ commit }, value) {
       commit("setIsOtherFacility", value);
     },
-    /*add FNSI-改修内容転入時の紹介状取込ができない 任 end*/
-    // add #12462 患者情報共有 20260310 start
     resetIsOtherFacility({ commit }) {
       commit("resetIsOtherFacility");
     },
-    // add #12462 患者情報共有 20260310 end
+    /*add FNSI-改修内容転入時の紹介状取込ができない 任 end*/
     setIsEdit({ commit }, value) {
       commit("setIsEdit", value);
     },
@@ -373,17 +371,14 @@ export default {
     async findPatEventByCd({ commit, rootGetters }, info) {
       const params = info[0];
       commit("clearPatEventRecord");
-      const response = await sendRequestGetPatEventRecord(params);
+      const response = await sendRequestGetPatEventRecord(params, params.selectedPatId);
       if (response.data[0] !== null) {
         const patEventRecord = response.data;
         if (patEventRecord.length > 0) {
           commit("setPatEventRecord", patEventRecord);
-          // add #12462 患者情報共有 20260310 start
           const userFacilityCd = rootGetters["user/getFacilityCd"];
           const recordFacilityCd = patEventRecord[0].facilityCd;
-          const isOtherFacility = userFacilityCd !== recordFacilityCd;
-          commit("setIsOtherFacility", isOtherFacility);
-          // add #12462 患者情報共有 20260310 end
+          commit("setIsOtherFacility", userFacilityCd !== recordFacilityCd);
         }
       }
     },
@@ -392,8 +387,10 @@ export default {
      * @param {*} param0
      * @param {*} info
      */
-    async findPatIntroLetterByCd({ commit }, patEventCd) {
-      const response = await sendRequestGetPatIntroLetter(patEventCd);
+    async findPatIntroLetterByCd({ commit }, payload) {
+      const patEventCd = payload && typeof payload === "object" ? payload.patEventCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      const response = await sendRequestGetPatIntroLetter(patEventCd, selectedPatId);
       if (response.data[0] !== null) {
         const patIntroLetter = response.data;
         if (patIntroLetter.length > 0) {
@@ -491,7 +488,7 @@ export default {
       return state.condition;
     },
     getSystemDefaultConditionDate() {
-      const dateFromSetting = (choice) => moment(calcTargetDate(choice.value)).toDate();
+      const dateFromSetting = (choice) => dayjs(calcTargetDate(choice.value)).toDate();
       return {
         startDate: dateFromSetting(DATE_CHOICES.BEFORE_ONE_WEEK),
         endDate: dateFromSetting(DATE_CHOICES.TODAY),

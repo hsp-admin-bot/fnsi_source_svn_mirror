@@ -4,14 +4,24 @@
 <template>
   <ntss-layout>
     <!--mod #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 start-->
-<!--    <header-component slot='header-content' ref='headerComponent' />-->
-    <header-component slot='header-content' ref='headerComponent' />
+<!--    <template #header-content>
+      <header-component ref='headerComponent' />
+    </template>-->
+    <template #header-content>
+      <header-component ref='headerComponent' />
+    </template>
     <!--mod #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 end-->
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start -->
-    <!-- <bread-crumbs-component slot='bread-crumbs-content' :history-key="historyKey" :no-split="true" @refresh='refresh' /> -->
-    <bread-crumbs-component slot='bread-crumbs-content' :history-key="historyKey" :no-split="true" />
+    <!-- <template #bread-crumbs-content>
+      <bread-crumbs-component :history-key="historyKey" :no-split="true" @refresh='refresh' />
+    </template> -->
+    <template #bread-crumbs-content>
+      <bread-crumbs-component :history-key="historyKey" :no-split="true" />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng end -->
-    <main-component slot='main-content' ref='mainComponent' :history-key="historyKey" />
+    <template #main-content>
+      <main-component ref="mainComponent" :history-key="historyKey" />
+    </template>
   </ntss-layout>
 </template>
 

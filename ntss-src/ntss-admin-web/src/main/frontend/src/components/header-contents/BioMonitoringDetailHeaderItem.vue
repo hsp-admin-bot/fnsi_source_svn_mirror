@@ -46,15 +46,21 @@
 
 <script>
 /* eslint-disable */
-import { mapState, mapActions } from 'vuex';
+import { mapState } from "@/compat/vue/vuex";
+
+import hospitalizationImg from "../../assets/hospitalization.png";
+import outpatientImg from "../../assets/outpatient.png";
+import nameDuplicationImg from "../../assets/name_duplication.png";
+import infectionImg from "../../assets/infection.png";
+
 export default {
   data() {
     return {
-      image_src_in: require('../../assets/hospitalization.png'),
-      image_src_out: require('../../assets/outpatient.png'),
-      image_src_same: require('../../assets/name_duplication.png'),
-      image_src_taboo: require('../../assets/infection.png'),
-      image_src_infect: require('../../assets/infection.png')
+      image_src_in: hospitalizationImg,
+      image_src_out: outpatientImg,
+      image_src_same: nameDuplicationImg,
+      image_src_taboo: infectionImg,
+      image_src_infect: infectionImg
     };
   },
   computed: {
@@ -63,7 +69,6 @@ export default {
   methods: {
     loadData() {}
   },
-  created() {}
 };
 </script>
 

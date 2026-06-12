@@ -9,14 +9,16 @@ import batch.part.TableNameToDbType;
 import batch.step.DeleteTableInConvertDbStep;
 import com.zaxxer.hikari.HikariDataSource;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
-import org.springframework.batch.core.launch.support.RunIdIncrementer;
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.core.job.parameters.RunIdIncrementer;
+import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -49,10 +51,7 @@ public class DeleteTableJob {
     private final String JOB_NAME = "DeleteTableJob";
 
     @Autowired
-    JobBuilderFactory jobBuilderFactory;
-
-    @Autowired
-    StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
 
     @Autowired
     ConvertPriorityConfig convertPriorityConfig;
@@ -80,7 +79,7 @@ public class DeleteTableJob {
 
     @Bean
     Step initialStep() {
-        return stepBuilderFactory.get("initialStep")
+        return new StepBuilder("initialStep", jobRepository)
         .tasklet((contribution, chunkContext) -> {
             // 削除対象の施設コードの取得
             String facilityCd = chunkContext.getStepContext().getJobParameters()
@@ -101,7 +100,7 @@ public class DeleteTableJob {
     @Bean
     public Step getTargetTableNamesStep() {
  
-        return stepBuilderFactory.get("getTargetTableNamesStep")
+        return new StepBuilder("getTargetTableNamesStep", jobRepository)
         .tasklet((contribution, chunkContext) -> {
             // 削除対象の施設コードの取得
             String facilityCd = chunkContext.getStepContext().getJobParameters()
@@ -118,26 +117,49 @@ public class DeleteTableJob {
     @Bean
     public Step deleteTableInProductionDbStep() {
  
-        return stepBuilderFactory.get("deleteTableInProductionDbStep")
-        .tasklet((contribution, chunkContext) -> {
-            // 削除対象の施設コードの取得
-            String facilityCd = chunkContext.getStepContext().getJobParameters()
+        return new StepBuilder("deleteTableInProductionDbStep", jobRepository)
+                .tasklet((contribution, chunkContext) -> executeDeleteTableInProductionDbTasklet(chunkContext))
+                .build();
+    }
+
+    /**
+     * 本番DBテーブル削除ステップのタスクレット処理を実行する
+     */
+    private RepeatStatus executeDeleteTableInProductionDbTasklet(ChunkContext chunkContext) throws Exception {
+        String facilityCd = resolveFacilityCdFromChunkContext(chunkContext);
+        List<String> deleteTableNameList = buildProductionDeleteTableNameList();
+        List<Long> userIds = fetchPersonalUserIdsForSpecialDelete(facilityCd);
+        cleanupResidualFilesAndPatMongo(chunkContext, facilityCd);
+        removeExcludedProductionTables(deleteTableNameList);
+        int deleteTableCount = deleteAllProductionTables(facilityCd, deleteTableNameList, userIds);
+        completeProductionDbDeletionStep(chunkContext, facilityCd, deleteTableCount);
+        return RepeatStatus.FINISHED;
+    }
+
+    /**
+     * ジョブパラメータから施設コードを取得する
+     */
+    private String resolveFacilityCdFromChunkContext(ChunkContext chunkContext) {
+        return chunkContext.getStepContext().getJobParameters()
             .get(JobParameterKeys.FACILITY_CD).toString();
-            // 削除対象のテーブル名の取得
+    }
+
+    /**
+     * 本番DB削除対象テーブル名リストを構築する
+     */
+    private List<String> buildProductionDeleteTableNameList() {
             List<String> deleteTableNameList = convertPriorityConfig.getTableNames();
             //mod 12193 start
             deleteTableNameList.addAll(utils.deleteProductionDbTable);
 
             //mod 12193 end
-            //10159
-            // 特殊処理テーブルリスト
-            List<String> noDeleteTableNameList = Arrays.asList(
-                "mst_user_authentication", 
-                "mst_user", 
-                "mst_personal_user");
-            
-            // 削除テーブル数カウント
-            int deleteTableCount = 0;
+        return deleteTableNameList;
+    }
+
+    /**
+     * 特殊削除条件用にmst_personal_userのuser_id一覧を取得する
+     */
+    private List<Long> fetchPersonalUserIdsForSpecialDelete(String facilityCd) throws Exception {
 
             // add　削除条件変更　李　start
             TableNameToDbType tableNameToDbType2 = new TableNameToDbType(appContext);
@@ -147,10 +169,15 @@ public class DeleteTableJob {
                     table_prefix2 = table_prefix2 == null ? "" : table_prefix2;
                     JdbcTemplate jdbcTemplate2 = new JdbcTemplate(ds2);
                     String sql2 = "select user_id  from " + table_prefix2 + "mst_personal_user" + " where facility_cd= ?" + " and fn_staff_cd is null";
-                    List<Long> userIds = jdbcTemplate2.queryForList(sql2, new Object[]{facilityCd}, Long.class);
+                    return jdbcTemplate2.queryForList(sql2, new Object[]{facilityCd}, Long.class);
                     // mod #10418 SQL注入対策：文字列連結を削除し、NamedParameterJdbcTemplateを使用 start
                     // add　削除条件変更　李　end
+    }
 
+    /**
+     * 残存ファイル削除およびPatMongoジョブオペレータ削除を実行する
+     */
+    private void cleanupResidualFilesAndPatMongo(ChunkContext chunkContext, String facilityCd) throws Exception {
                     // add #8471 削除ボタンの動きが異常 limingyang start
                     // マルチファシリテーション同時実行：IPアドレスはGlobalContext.ipAddressを使用する代わりに、JobParametersから読み取られます。 #11998 add
                     Object ipParam = chunkContext.getStepContext().getJobParameters().get(JobParameterKeys.IP_ADDRESS); // #11998 add
@@ -168,12 +195,41 @@ public class DeleteTableJob {
                     eventLoggerUtil.recordLog(facilityCd, eventLogMessagefile, LogLevel.INFO);
                     progressManagement.DelPatMongoJobOperator(facilityCd);
                     // add #8471 削除ボタンの動きが異常 limingyang end
+    }
 
-            // 削除対象から外す
-            Set<String> toRemove = new HashSet<>(Arrays.asList("mst_facility", "mst_report"));
-            deleteTableNameList.removeAll(toRemove);
-            for(String deleteTableName : deleteTableNameList){
-                // 削除する本番DBのTypeの取得
+    /**
+     * 削除対象から固定除外テーブルを除外する
+     */
+    private void removeExcludedProductionTables(List<String> deleteTableNameList) {
+        Set<String> toRemove = new HashSet<>(Arrays.asList("mst_facility", "mst_report"));
+        deleteTableNameList.removeAll(toRemove);
+    }
+
+    /**
+     * 本番DBの全削除対象テーブルを順次削除処理する
+     */
+    private int deleteAllProductionTables(String facilityCd, List<String> deleteTableNameList, List<Long> userIds) throws Exception {
+        int deleteTableCount = 0;
+        List<String> noDeleteTableNameList = Arrays.asList(
+                "mst_user_authentication",
+                "mst_user",
+                "mst_personal_user");
+        for (String deleteTableName : deleteTableNameList) {
+            deleteTableCount += processOneProductionTableDeletion(
+                    facilityCd, deleteTableName, deleteTableNameList, userIds, noDeleteTableNameList);
+        }
+        return deleteTableCount;
+    }
+
+    /**
+     * 1テーブル分の本番DB削除処理を実行する（削除カウント増分値を返す）
+     */
+    private int processOneProductionTableDeletion(
+            String facilityCd,
+            String deleteTableName,
+            List<String> deleteTableNameList,
+            List<Long> userIds,
+            List<String> noDeleteTableNameList) throws Exception {
                 TableNameToDbType tableNameToDbType = new TableNameToDbType(appContext);
                 String registDbType =tableNameToDbType.getDbTypeByTableName(deleteTableName);
 
@@ -190,6 +246,25 @@ public class DeleteTableJob {
                 InfomationSchemaControl isc = new InfomationSchemaControl(appContext);
 
                 if ("mnt_motion_record".equals(deleteTableName)) {
+            return deleteMntMotionRecordTable(facilityCd, deleteTableName, jdbcTemplate, registDbType);
+        }
+        if (noDeleteTableNameList.contains(deleteTableName) && !userIds.isEmpty()) {
+            return deleteNoDeleteTableWithExcludedUserIds(
+                    facilityCd, deleteTableName, registDbType, table_prefix, ds, userIds);
+        }
+        if (noDeleteTableNameList.contains(deleteTableName) && userIds.isEmpty()) {
+            return 0;
+        }
+        return deleteStandardProductionTable(
+                facilityCd, deleteTableName, deleteTableNameList, registDbType,
+                table_prefix, jdbcTemplate, isc, noDeleteTableNameList);
+    }
+
+    /**
+     * mnt_motion_recordテーブルのバッチ削除を実行する
+     */
+    private int deleteMntMotionRecordTable(
+            String facilityCd, String deleteTableName, JdbcTemplate jdbcTemplate, String registDbType) {
                     try{
                         performBatchDelete(deleteTableName,facilityCd,jdbcTemplate,registDbType);
                     }catch (Exception e){
@@ -197,12 +272,21 @@ public class DeleteTableJob {
                                 facilityCd, "DeleteTableJob.deleteTableInProductionDbStep()");
                         eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.ERROR);
                     }
-                    continue;
+        return 0;
                 }
-                // 特殊処理テーブルリストの特殊処理
+
+    /**
+     * 特殊処理テーブルをuser_id除外条件付きで削除する
+     */
+    private int deleteNoDeleteTableWithExcludedUserIds(
+            String facilityCd,
+            String deleteTableName,
+            String registDbType,
+            String table_prefix,
+            HikariDataSource ds,
+            List<Long> userIds) {
                 // mod　削除条件変更　李　start
                 // mod #10418 SQL注入対策：NamedParameterJdbcTemplateを使用してIN句を安全に処理 start
-                if(noDeleteTableNameList.contains(deleteTableName) && !userIds.isEmpty()) {
 
                     String sql3 = "delete from " + table_prefix + deleteTableName + " where facility_cd = :facilityCd and user_id not in (:userIds)";
                     //ログ
@@ -226,31 +310,24 @@ public class DeleteTableJob {
                     }
                     // mod #11302 コンバートの削除処理で処理が進まなくなることがある limingyang end
                     // mod #10418 SQL注入対策：NamedParameterJdbcTemplateを使用してIN句を安全に処理 end
-                    deleteTableCount++;
-                    continue;
+        return 1;
                 }
                 // add 7406  ReMS利用施設をコンバートすると送信先グループマスタや警報通知マスタなどのデータが消えている start
-                else if(noDeleteTableNameList.contains(deleteTableName) && userIds.isEmpty())
-                {
-                    continue;
-                }
-                // add 7406  ReMS利用施設をコンバートすると送信先グループマスタや警報通知マスタなどのデータが消えている end
-
+    /**
+     * 通常の本番DBテーブル削除またはtruncate中止ログを処理する
+     */
+    private int deleteStandardProductionTable(
+            String facilityCd,
+            String deleteTableName,
+            List<String> deleteTableNameList,
+            String registDbType,
+            String table_prefix,
+            JdbcTemplate jdbcTemplate,
+            InfomationSchemaControl isc,
+            List<String> noDeleteTableNameList) throws Exception {
                 String sql;
                 if(isc.hasFacilityCd(deleteTableName)){
-                    // 施設コードを保持しているテーブルを削除する
-                    // mod 2020-11-27 FNSI-改修内容 ntss.テーブルプレフィックスを追加 う start
-                    sql = "delete from " + table_prefix + deleteTableName
-                        + " where facility_cd =?";
-                    // mod 2020-11-27 FNSI-改修内容 ntss.テーブルプレフィックスを追加 う end
-                    // add mst_selectorの処理 limingyang start
-                    if (deleteTableName.equals("mst_selector")){
-                        List<String> deleteTableNameListU = deleteTableNameList.stream().filter(e -> !noDeleteTableNameList.contains(e)).collect(Collectors.toList());
-                        String deleteTableNameListStr = String.join("','", deleteTableNameListU);
-                        sql = sql.concat(" and master_physical_name in ('" + deleteTableNameListStr + "')");
-                    }
-                    // add mst_selectorの処理 limingyang end
-                    //ログ
+            sql = buildFacilityCdDeleteSql(deleteTableName, table_prefix, deleteTableNameList, noDeleteTableNameList);
                     EventLogMessage eventLogMessage1 = eventLoggerUtil.getEventLogMessage("本番DBテーブル削除実行：" + registDbType + "：" + facilityCd + ":"+ sql,
                             facilityCd, "DeleteTableJob.deleteTableInProductionDbStep()");
                     eventLoggerUtil.recordLog(facilityCd, eventLogMessage1, LogLevel.INFO);
@@ -263,8 +340,35 @@ public class DeleteTableJob {
                     EventLogMessage eventLogMessage2 = eventLoggerUtil.getEventLogMessage("本番DBテーブル削除中止：" + registDbType + "：" + facilityCd + ":"+ deleteTableName,
                             facilityCd, "DeleteTableJob.deleteTableInProductionDbStep()");
                     eventLoggerUtil.recordLog(facilityCd, eventLogMessage2, LogLevel.INFO);
-                    continue;
-                }
+            return 0;
+        }
+        executeFacilityCdDeleteSql(facilityCd, deleteTableName, jdbcTemplate, sql);
+        return 1;
+    }
+
+    /**
+     * facility_cd条件付き削除SQLを組み立てる
+     */
+    private String buildFacilityCdDeleteSql(
+            String deleteTableName,
+            String table_prefix,
+            List<String> deleteTableNameList,
+            List<String> noDeleteTableNameList) {
+        String sql = "delete from " + table_prefix + deleteTableName
+                + " where facility_cd =?";
+        if (deleteTableName.equals("mst_selector")) {
+            List<String> deleteTableNameListU = deleteTableNameList.stream().filter(e -> !noDeleteTableNameList.contains(e)).collect(Collectors.toList());
+            String deleteTableNameListStr = String.join("','", deleteTableNameListU);
+            sql = sql.concat(" and master_physical_name in ('" + deleteTableNameListStr + "')");
+        }
+        return sql;
+    }
+
+    /**
+     * facility_cd条件付き削除SQLを実行する
+     */
+    private void executeFacilityCdDeleteSql(
+            String facilityCd, String deleteTableName, JdbcTemplate jdbcTemplate, String sql) {
                 // mod #11302 コンバートの削除処理で処理が進まなくなることがある limingyang start
                 try{
                     jdbcTemplate.update(sql, new Object[]{facilityCd});
@@ -274,9 +378,12 @@ public class DeleteTableJob {
                             facilityCd, "DeleteTableJob.deleteTableInProductionDbStep()"), LogLevel.ERROR);
                 }
                 // mod #11302 コンバートの削除処理で処理が進まなくなることがある limingyang end
-                deleteTableCount++;         
             }
             // 進捗更新
+    /**
+     * 本番DB削除ステップ完了時の進捗更新を行う
+     */
+    private void completeProductionDbDeletionStep(ChunkContext chunkContext, String facilityCd, int deleteTableCount) {
             long jobInstanceId = chunkContext.getStepContext().getStepExecution().getJobExecution().getJobInstance().getInstanceId();
             int convertProcId = progressManagement.getConvertProcId(facilityCd);
             progressManagement.updateBatchStatus(convertProcId,facilityCd, progressManagement.COMPLETED, jobInstanceId, JOB_NAME);
@@ -287,8 +394,6 @@ public class DeleteTableJob {
             cxt.put(ApplicationConst.PromotionKeys.CONVERT_PROC_ID,convertProcId);
             cxt.put(ApplicationConst.PromotionKeys.CONVERT_PROGRESS, progress);
             progressManagement.createConvertTableStatus(chunkContext, "本番DBテーブル削除");
-            return RepeatStatus.FINISHED;
-        }).build();
     }
 
     @Transactional
@@ -322,7 +427,7 @@ public class DeleteTableJob {
      */
     @Bean(name = JOB_NAME)
     public Job job() throws Exception {
-        return jobBuilderFactory.get(JOB_NAME).incrementer(new RunIdIncrementer())
+        return new JobBuilder(JOB_NAME, jobRepository).incrementer(new RunIdIncrementer())
                 .start(initialStep())
                 .next(getTargetTableNamesStep())
                 .next(deleteTableInConvertDbStep.step())

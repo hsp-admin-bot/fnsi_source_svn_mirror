@@ -25,31 +25,30 @@
         <!-- mod #10359 編集権限の動作不正 start -->
         <!-- <file-uploader
           v-if="
-            this.getShowFile || this.$router.currentRoute.name !== 'pat-event'
+            this.getShowFile || this.$route.name !== 'pat-event'
           "
           ref="fileUploader"
           v-model="file_info"
-          :is-loading-bbs.sync="isLoadingBbs"
+          v-model:is-loading-bbs="isLoadingBbs"
           :index="index"
           @deleteFile="deleteFile"
         />   -->
-        <!-- mod #12462 患者情報共有 20260312 start -->
         <file-uploader
           v-if="
-            this.getShowFile || this.$router.currentRoute.name !== 'pat-event'
+            this.getShowFile || this.$route.name !== 'pat-event'
           "
           ref="fileUploader"
           v-model="file_info"
-          :is-loading-bbs.sync="isLoadingBbs"
+          v-model:is-loading-bbs="isLoadingBbs"
           :key="'uploader-' + index"
           :index="index"
           :disabled="
             !getItemAuthorized('PatEvent', 'default_authority') ||
-            getIsOtherFacility || getIsOtherFacilitys
+            getIsOtherFacility ||
+            getIsOtherFacilitys
           "
           @deleteFile="deleteFile"
         />
-        <!-- mod #12462 患者情報共有 20260312 end -->
         <!-- mod #10359 編集権限の動作不正 end -->
         <!--#9937:患者イベント画面を開くと添付ファイルのフィールドがなくなる。End -->
         <!--mod FNSI-改修内容添付ファイル修正 任 end-->
@@ -76,7 +75,7 @@
           &lt;!&ndash;<file-uploader
             ref="fileUploader"
             v-model="file_info"
-            :is-loading-bbs.sync="isLoadingBbs"
+            v-model:is-loading-bbs="isLoadingBbs"
             :index="index"
             @deleteFile="deleteFile"
           />&ndash;&gt;
@@ -84,7 +83,7 @@
             v-if="this.getShowFile"
             ref="fileUploader"
             v-model="file_info"
-            :is-loading-bbs.sync="isLoadingBbs"
+            v-model:is-loading-bbs="isLoadingBbs"
             :index="index"
             @deleteFile="deleteFile"
           />
@@ -99,7 +98,7 @@
 </template>
 
 <script>
-  import {mapActions, mapGetters} from "vuex";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   import FileUploader from "@/components/pat-event/sub-item/PatEventFileUploader";
   import FileDownloader from "@/components/pat-event/sub-item/PatEventFileDownloader";
 // add #10359 編集権限の動作不正 start
@@ -137,10 +136,8 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
         /*add FNSI-改修内容添付ファイル修正 任 end*/
         "getPatEventUpStaffInfo"
       ]),
-      // add #12462 患者情報共有 20260312 start
       ...mapGetters("pat-event/list", ["getIsOtherFacility"]),
       ...mapGetters("observe-record/list", ["getIsOtherFacilitys"]),
-      // add #12462 患者情報共有 20260312 end
       getTemplateMaxSize() {
         return this.getPatEventInputParams[this.propsIndex].item_json.max_size;
       },
@@ -157,13 +154,11 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
         return this.getPatEventResultParams[this.propsIndex].result_value;
       }
     },
-    watch: {},
-    beforeDestroy() {
+    beforeUnmount() {
       // dataの初期化
       Object.assign(this.$data, this.$options.data());
     },
-    destroyed() { },
-    created() {},
+
     mounted() {
       this.initFile();
       this.index = this.propsIndex;

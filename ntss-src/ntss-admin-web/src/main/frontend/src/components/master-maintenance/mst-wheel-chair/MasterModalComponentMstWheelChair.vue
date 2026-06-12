@@ -115,13 +115,13 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import BigNumber from "bignumber.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import BigNumber from "@/compat/number/bignumber";
 import { tareG2Kg } from "@/functions/common/WeightFunctions";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import customInput from "@/components/common/custom-form-tags/CustomInput";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import MasterSelector from "@/components/common/master-selector/MasterSelector";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -129,6 +129,7 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getScopedElementsByClassName } from '@/functions/common/LayoutMeasureHelper';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 
 export default {
@@ -235,7 +236,7 @@ export default {
     EventBus.$on("onReceiveMeasureValue", this.onReceiveMeasureValue);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("onReceiveMeasureValue", this.onReceiveMeasureValue);
   },
   // add 性能改善メモリ不足 shan end
@@ -269,13 +270,10 @@ export default {
         );
         this.wheelChairInfo.scaleDate.editValue = this.wheelChairInfo.scaleDate.initValue;
         //日付変換処理
-        this.dispScaleDate =
-          this.wheelChairInfo.scaleDate.editValue === null
-            ? null
-            : moment(
-                this.wheelChairInfo.scaleDate.editValue,
-                "YYYY-MM-DD"
-              ).format("YYYY/MM/DD(ddd)");
+        const value = this.wheelChairInfo.scaleDate.editValue;
+        this.dispScaleDate = value
+          ? dayjs(value).format("YYYY/MM/DD(ddd)")
+          : null;
       } else if (this.columnDefinition[num].field === "scaleUserId") {
         this.wheelChairInfo.scaleUserId.initValue = this.getValueByField(
           this.columnDefinition[num].field
@@ -349,6 +347,9 @@ export default {
     // add #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（車いすマスタ画面）20231107 ztc end
   },
   methods: {
+    getWheelChairElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || this);
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("mst-wheel-chair", [
       "fetchPersonalUserWithDeletedByFacilityCd",
@@ -405,8 +406,8 @@ export default {
       this.popoverData.popoverVisible = false;
     },
     returnPopover(selectData) {
-      if(this.wheelChairInfo.patId.editValue !== selectData.value ){
-        document.getElementsByClassName("text-input")[3].classList.remove("custom-input-invalid");
+      if(this.wheelChairInfo.patId.editValue !== selectData.value){
+        this.getWheelChairElementsByClassName("text-input")[3].classList.remove("custom-input-invalid");
       }
       this.wheelChairInfo.patId.editValue = selectData.value;
       this.popoverData.popoverContentSelected.value = selectData.value;
@@ -441,17 +442,17 @@ export default {
             // this.wheelChairInfo.wheelChairName.editValue
             this.wheelChairInfo.wheelChairName.editValue !== null ? this.wheelChairInfo.wheelChairName.editValue : ''
             // mod #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（車いすマスタ画面）20231107 ztc end
-          );
+            );
         }
       }
     },
     // 車いす名称の未入力背景を解除する
     warningCancel() {
-      document.getElementsByClassName("custom-input-required")[0].classList.remove("custom-input-invalid");
+      this.getWheelChairElementsByClassName("custom-input-required")[0].classList.remove("custom-input-invalid");
     },
     // 車いす重量の未入力背景を解除する
     oninput(e) {
-      document.getElementsByClassName("custom-input-number")[0].classList.remove("custom-input-number-invalid");
+      this.getWheelChairElementsByClassName("custom-input-number")[0].classList.remove("custom-input-number-invalid");
     },
     // 車いす重量に「e」が入力できてしまうのを抑制
     inputECancel() {
@@ -463,18 +464,23 @@ export default {
     onWeightChange() {
       for (const num in this.columnDefinition) {
         if (this.columnDefinition[num].field === "wheelChairWeight") {
-          this.wheelChairInfo.wheelChairWeight.editValue = new BigNumber(
-            this.wheelChairInfo.wheelChairWeightKiloGram.editValue
-          )
-            .times(1)
-            .toNumber();
+          const weightKiloGram = this.wheelChairInfo.wheelChairWeightKiloGram.editValue;
+          if (weightKiloGram === null || weightKiloGram === "" || weightKiloGram === undefined) {
+            this.wheelChairInfo.wheelChairWeight.editValue = null;
+          } else {
+            this.wheelChairInfo.wheelChairWeight.editValue = new BigNumber(
+              weightKiloGram
+            )
+              .times(1)
+              .toNumber();
+          }
           this.updateEditRecord(
             "wheelChairWeight",
             // mod #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（車いすマスタ画面）20231107 ztc start
             // this.wheelChairInfo.wheelChairWeight.editValue
             this.wheelChairInfo.wheelChairWeight.editValue !== null ? this.wheelChairInfo.wheelChairWeight.editValue : ''
             // mod #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（車いすマスタ画面）20231107 ztc end
-          );
+            );
         }
       }
     },
@@ -579,7 +585,7 @@ export default {
                 this.dispPatName = "";
                 this.fetchPatNameByPatId(intPatId).then(
                   response => {
-                    if(!!response.data){
+                    if(response.data){
                       const name = (response.data.pat_last_name ? response.data.pat_last_name: "") + (response.data.pat_first_name ? response.data.pat_first_name : "")
                       this.dispPatName = "【削除済み】" + name;
                     }
@@ -634,15 +640,15 @@ export default {
           // 重量変更
 
           // 校正日を設定
-          this.editRecord["scaleDate"] = moment().format("YYYY-MM-DD");
+          this.editRecord["scaleDate"] = dayjs().format("YYYY-MM-DD");
           this.setEditRecord(this.editRecord);
           //[確認]ボタンの状態の変更をトリガーします
           // del #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（車いすマスタ画面）20231107 ztc start
           // this.changeButton();
           // del #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（車いすマスタ画面）20231107 ztc end
-          this.wheelChairInfo.scaleDate.initValue = moment().toDate();
+          this.wheelChairInfo.scaleDate.initValue = dayjs().toDate();
           this.wheelChairInfo.scaleDate.editValue = this.wheelChairInfo.scaleDate.initValue;
-          this.dispScaleDate = moment(
+          this.dispScaleDate = dayjs(
             this.wheelChairInfo.scaleDate.editValue,
             "YYYY-MM-DD"
           ).format("YYYY/MM/DD(ddd)");
@@ -698,13 +704,13 @@ export default {
         `;
 
       if(!validationResult.nameValid || !validationResult.nameLengthValid){
-        document.getElementsByClassName("custom-input-required")[0]?.classList?.add("custom-input-invalid");
+        this.getWheelChairElementsByClassName("custom-input-required")[0]?.classList?.add("custom-input-invalid");
       }
       if(!validationResult.weightValid){
-        document.getElementsByClassName("custom-input-number")[0]?.classList?.add("custom-input-number-invalid");
+        this.getWheelChairElementsByClassName("custom-input-number")[0]?.classList?.add("custom-input-number-invalid");
       }
       if(!validationResult.personalExistsValid || !validationResult.personalValid){
-        document.getElementsByClassName("text-input")[3]?.classList?.add("custom-input-invalid");
+        this.getWheelChairElementsByClassName("text-input")[3]?.classList?.add("custom-input-invalid");
       }
 
 
@@ -744,7 +750,7 @@ export default {
   width: 6em;
 }
 
-.scale-input >>> .text-input {
+.scale-input :deep(.text-input) {
   font-size: unset;
 }
 
@@ -762,7 +768,7 @@ export default {
   background-color: rgba(255, 0, 0, 0.7);
 }
 
-.custom-input-number-invalid >>> input[type=number] {
+.custom-input-number-invalid :deep(input[type=number]) {
   color: black;
   background-color: rgba(255, 0, 0, 0.7);
 }

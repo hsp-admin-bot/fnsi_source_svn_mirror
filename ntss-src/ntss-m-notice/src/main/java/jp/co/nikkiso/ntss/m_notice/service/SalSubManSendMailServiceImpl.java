@@ -1,7 +1,6 @@
 package jp.co.nikkiso.ntss.m_notice.service;
 
 import java.net.URLEncoder;
-import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,9 +14,10 @@ import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.dao.MstFacilityDao;
 import jp.co.nikkiso.ntss.core.dao.MstFacilityHashDao;
@@ -275,7 +275,7 @@ public class SalSubManSendMailServiceImpl implements SalSubManSendMailService {
 			try {
 				JsonNode root = mapper.readTree(sysSystemDefine.getValue());
 				value = root.get("mail_subject").asText();
-			} catch (IOException e) {
+			} catch (JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -293,7 +293,7 @@ public class SalSubManSendMailServiceImpl implements SalSubManSendMailService {
 			try {
 				JsonNode root = mapper.readTree(sysSystemDefine.getValue());
 				value = root.get("mail_body").asText();
-			} catch (IOException e) {
+			} catch (JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end

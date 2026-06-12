@@ -2,16 +2,16 @@
  * 装置記録マスタページ  MainContent
  */
 <template>
-  <div class='main-content-area master-maintenance-page'>
-    <div class='ntss-list' :style="ntssListStyles" v-kendo-validator="kendoValidatorSetup">
-      <kendo-grid-toolbar class="k-grid-toolbar kendo-grid-toolbar-style" :style="heightStyles">
-        <div id="grid-header" class='header-btn-area right'>
+  <div class="main-content-area master-maintenance-page">
+    <div class="ntss-list" :style="ntssListStyles">
+      <div class="k-grid-toolbar k-header kendo-grid-toolbar-style" :style="heightStyles">
+        <div id="grid-header" :class="['header-btn-area', 'right', isMobileDevice ? 'mobile-header' : '']">
           <v-ons-row v-show="isMobileDevice" style="width: 7em;">
             <v-ons-col width="45%" vertical-align="center">
               <label class="fab-font-color">編集</label>
             </v-ons-col>
             <v-ons-col width="55%" vertical-align="center">
-              <v-ons-switch modifier="outline" class="custom-switch" v-model="allowEdit" />
+              <v-ons-switch modifier="outline" v-model="allowEdit" />
             </v-ons-col>
           </v-ons-row>
           <!-- del マスタ一覧 1･施設切替を可能とする 王 start -->
@@ -26,49 +26,18 @@
           <!--              @change="onChangeFacility"-->
           <!--              style="width: 13em;">-->
           <!--          </kendo-dropdownlist>-->
-          <v-ons-button modifier="outline" class="btn3-normal toolbar-btn" v-show=" !iosFlg && !androidFlg" @click="importCsv()">CSV取込</v-ons-button>
+          <v-ons-button modifier="outline" class="btn3-normal toolbar-btn" v-show=" !iosFlg && !androidFlg" @click="importCsv($event)">CSV取込</v-ons-button>
           <!-- <v-ons-button modifier="outline" class="toolbar-btn" v-show="!isSortMode && isAllowSort" @click="toRankEditBtnClick()">並び順表示</v-ons-button> -->
           <!-- <v-ons-button modifier="outline" class="toolbar-btn" v-show="isSortMode && isAllowSort" @click="sortBtnClick()">反映</v-ons-button> -->
           <!-- del マスタ一覧 1･施設切替を可能とする 王 start -->
         </div>
-        <kendo-grid ref="grid" :class="fontSizeSet"
-            :data-source="dataSourceItems"
-            :editable="true"
-            :selectable="true"
-            :reorderable="false"
-            :height=kendoGridHeight
-            :scrollable-virtual="true"
-            :beforeEdit=onBeforeEdit
-            :edit=addInputAssist
-            :cellClose=editEnd
-            @save="onSave"
-            @databound="onDataBoundKendoGrid">
-            <template v-for="(column, index) in columns" >
-              <kendo-grid-column v-if="column.field === 'code'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="false"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values">
-              </kendo-grid-column>
-              <kendo-grid-column v-else
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values">
-              </kendo-grid-column>
-            </template>
-        </kendo-grid>
-      </kendo-grid-toolbar>
+        <div
+          v-show="columns.length > 1"
+          id="grid-font-size"
+          ref="gridRoot"
+          :class="[fontSizeSet, 'ntss-kendo-grid-legacy', 'mst-machine-record-control-direct-jq-grid']"
+        ></div>
+      </div>
       <div id="grid-footer">
 <!--        del 装置記録マスタ ページネーションを削除 start-->
 <!--        <v-ons-row width="100%" style="margin-bottom: 3px;text-align: center;">-->
@@ -100,36 +69,44 @@
           </v-ons-col>
         </v-ons-row>
       </div>
-    <master-csv
-      :popoverVisible="masterCsvVisible"
-      :popoverTarget="masterCsvTarget"
-      @popover-close="prehideCsvPopover"
-    />
+      <master-csv
+        :popoverVisible="masterCsvVisible"
+        :popoverTarget="masterCsvTarget"
+        @popover-close="prehideCsvPopover"
+      />
     </div>
   </div>
 </template>
-
 <script>
-import moment from "moment";
-import _ from "underscore";
-import { mapActions, mapGetters } from "vuex";
-import NextTransitionMixin from "@/components/NextTransitionMixin";
-import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
-import { EventBus } from "@/eventBus.js";
-import { Validator } from "@progress/kendo-validator-vue-wrapper";
+import dayjs from "@/compat/date/dayjs";
+import _ from "@/compat/collections/lodash";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { markRaw } from "@/compat/vue/runtime";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
-// import $ from "jquery";
 import MasterCsvComponent from "@/components/master-maintenance/MasterCsvComponent";
-// import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
-// import Vue from "vue";
 import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import { getScopedAlertDialogs, getScopedDocument, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import kendo from "@progress/kendo-ui";
+import $ from "jquery";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-// add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
+
+function installComponentJQuery() {
+  if (typeof window !== "undefined") {
+    window.$ = window.$ || $;
+    window.jQuery = window.jQuery || $;
+  }
+  if (typeof globalThis !== "undefined") {
+    globalThis.$ = globalThis.$ || $;
+    globalThis.jQuery = globalThis.jQuery || $;
+  }
+}
+
 
 /**
  * TODO
@@ -137,9 +114,7 @@ import { messageFormat } from '@/functions/common/MessageFormat';
  */
 export default {
   name:"MstMachineRecordControl",
-  mixins: [NextTransitionMixin, MasterMaintenanceMixin],
-  Validator,
-    components: {
+  components: {
     "master-csv": MasterCsvComponent
   },
   data() {
@@ -181,6 +156,7 @@ export default {
       },
       //Android端末で編集中であることを示すフラグ
       editingFlg: false,
+      editFlg: false,
       androidFlg: false,
       iosFlg: false,
       scrollPosition: {
@@ -203,6 +179,10 @@ export default {
       // totalPage:0,
       // pageInputValue:1
       // del 装置記録マスタ ページネーションを削除 end
+      pageNum: 1,
+      pageSize: 100,
+      totalPage: 1,
+      pageInputValue: 1,
       lastScrollTop: 0,
       lastScrollLeft: 0,
       // add 性能改善 劉 start
@@ -211,6 +191,20 @@ export default {
       allowEdit: true, // NOTE: true = 編集モード、 false = 閲覧モード
       zoomObserver: null,
       scrollRestored: true,
+      directGridWidget: null,
+      directGridMounted: false,
+      directGridLayoutRafId: null,
+      directGridFilterRefreshRafId: null,
+      directGridScrollSyncRafId: null,
+      directGridScrollRestoreTimer: null,
+      directGridTouchCleanup: null,
+      directGridScrollHandler: null,
+      directGridScrollTrackingTargets: null,
+      preserveGridScrollAfterSave: false,
+      pendingSaveScrollSnapshot: null,
+      directGridSaveScrollRestoreTimerIds: [],
+      directGridRowVisualRafIds: markRaw(new Map()),
+      kendoValidator: null,
     };
   },
   computed: {
@@ -233,6 +227,14 @@ export default {
     },
     ntssListStyles() {
       return { display: this.columns.length == 1 ? "none" : "inherit" };
+    },
+    fontSizeSet() {
+      const names = ["small", "medium", "large", "x-large"];
+      return `font-size-set-${names[this.getFontSize] || "medium"}`;
+    },
+    masterConditionSignature() {
+      const condition = this.$store?.state?.["master-maintenance"]?.condition || this.condition || {};
+      return `${condition.recordCode || ""}|${condition.recordName || ""}|${condition.recordMessage || ""}|${condition.dispFlg || ""}|${condition.includeDeleted ? 1 : 0}`;
     },
     ...mapGetters("master-maintenance", {
       getMasterRecordList: "getMasterRecordList",
@@ -296,7 +298,7 @@ export default {
       return (
         this.getStateUserAccountInfo !== null &&
         data !== undefined &&
-        (this.isRecordModified || (this.kendoValidator&&!this.kendoValidator.validate()))
+        (this.isRecordModified || !this.validateBeforeGridAction())
       );
     },
     isMobileDevice() {
@@ -304,79 +306,40 @@ export default {
     },
   },
   watch: {
-    // 装置記録マスタ バグ修正 start
-    viewMasterRecords: {
-      handler() {
-        this.editBackgroundColor()
-      },
-      deep: true
-    },
-    // getMasterRecordList: {
-    //   handler() {
-    //     this.dataSourceItems = this.generatedGridData();
-    //   },
-    //   deep: true
-    // },
-    // 装置記録マスタ バグ修正 end
     windowHeight() {
       this.calculateColumnsWidth();
       this.calculateGridHeight();
-      // this.calculateGridWidth();
-      // add start 馬 #9185
-      this.$refs.grid.kendoWidget().resize(document.getElementsByClassName("k-grid-content-locked"));
-      // add end 馬 #9185
+      this.scheduleDirectGridLayoutContract();
     },
     windowWidth() {
       this.calculateColumnsWidth();
       this.calculateGridHeight();
-      // this.calculateGridWidth();
-      // add start 馬 #9185
-      this.$refs.grid.kendoWidget().resize(document.getElementsByClassName("k-grid-content-locked"));
-      // add end 馬 #9185
+      this.scheduleDirectGridLayoutContract();
     },
     isDispMenu() {
       this.calculateColumnsWidth();
       this.calculateGridHeight();
-      // this.calculateGridWidth();
-      // add start 馬 #9185
-      this.$refs.grid.kendoWidget().resize(document.getElementsByClassName("k-grid-content-locked"));
-      // add end 馬 #9185
+      this.scheduleDirectGridLayoutContract();
     },
     getFontSize() {
       this.calculateColumnsWidth();
       this.calculateGridHeight();
-      // this.calculateGridWidth();
-      // add start 馬 #9185
+      this.$nextTick(() => this.refreshDirectGridPageSizeByFont());
+    },
+    columns(val) {
       this.$nextTick(() => {
-        this.$refs.grid.kendoWidget().resize(document.getElementsByClassName("k-grid-content-locked"));
-        // Gridインスタンスの取得と仮想スクロールの存在確認
-        const grid = this.$refs.grid?.kendoWidget?.();
-        if (!grid || !grid.virtualScrollable) return;
-        // フォントサイズ変更に伴う行高変化に対応して pageSize を再計算
-        const rowHeight = this.$el.querySelector('.k-grid-content tr')?.clientHeight ?? 30;
-        const gridHeight = this.$refs.grid?.$el?.offsetHeight ?? 900;
-        const newPageSize = Math.floor(gridHeight / rowHeight);
-        // 現在の pageSize を取得（仮想スクロールの表示行数）
-        const currentPageSize = this.dataSourceItems?.pageSize();
-        // pageSize が変化している場合は、DataSource を再生成して Grid をリサイズ
-        if (newPageSize !== currentPageSize) {
-          this.dataSourceItems = this.generatedGridData(newPageSize);
-          grid.resize();
+        if (val.length > 1) {
+          this.setLoadingScreenVisible(false);
+          this.calculateGridHeight();
+          this.calculateGridWidth();
+          this.initDirectGridIfReady();
+          this.scheduleDirectGridLayoutContract();
         }
       });
-      // add end 馬 #9185
     },
-    columns:function(val){
-      this.$nextTick(function(){
-        if (val.length > 1)
-        this.setLoadingScreenVisible(false);
-      });
+    masterConditionSignature() {
+      this.scheduleDirectGridFilterRefresh();
     },
-    // #10142 装置記録マスタにてメッセージを変更したCSV取り込みを行ったが更新されない linjunfeng start
-    masterRecords () {
-      this.dataSourceItems = this.generatedGridData();
-    },
-    // #10142 装置記録マスタにてメッセージを変更したCSV取り込みを行ったが更新されない linjunfeng end
   },
   methods: {
     ...mapActions("multi-modal", ["showMasterEdit"]),
@@ -403,111 +366,671 @@ export default {
       setLoadingScreenMessage: "setLoadingScreenMessage",
       resetLoadingScreenVisibleCount:  "resetLoadingScreenVisibleCount"
     }),
+    getCurrentRouteName() {
+      return this.$router?.currentRoute?.value?.name || this.$router?.currentRoute?.name || this.$route?.name || "";
+    },
+    cancel() {
+      this.$router?.back?.();
+    },
+    getisChanged() {
+      return this.isChanged;
+    },
+    validateBeforeGridAction() {
+      return this.kendoValidator?.validate?.() !== false;
+    },
+    validateDirectKendoGrid() {
+      return true;
+    },
+    convertToStr(messageArr) {
+      if (!messageArr || messageArr.length === 0) {
+        return "";
+      }
+      const unique = messageArr.reduce((acc, cur) => {
+        if (acc.indexOf(cur) === -1) {
+          acc.push(cur);
+        }
+        return acc;
+      }, []);
+      const prefix = "</br>&nbsp&nbsp・";
+      return prefix + unique.join(prefix);
+    },
+    validateRequired() {
+      const validateMessageArr = [];
+      const rows = (this.getMasterRecordList?.data || []).filter(row => row.isDisp !== "0");
+      const fields = this.getMasterRecordList?.schema?.model?.fields || {};
+      rows.forEach(row => {
+        Object.keys(fields).forEach(key => {
+          const validation = fields[key]?.validation;
+          if (validation?.required && row[key] !== null && row[key] === "") {
+            const columnInfo = this.columns.find(column => column.field == key);
+            if (columnInfo?.title) {
+              validateMessageArr.push(columnInfo.title);
+            }
+          }
+        });
+      });
+      return this.convertToStr(validateMessageArr);
+    },
+    validateComboValue() {
+      const comboFields = this.columns
+        .filter(column => column.values != null)
+        .map(column => ({ field: column.field, title: column.title, values: column.values }));
+      const rows = (this.getMasterRecordList?.data || []).filter(row => row.isDisp !== "0" && row.isDel === "0");
+      const validateMessageArr = [];
+      rows.forEach(row => {
+        comboFields.forEach(combo => {
+          const value = row[combo.field];
+          const empty = value === null || value === undefined || value === "" || value === "null";
+          if (empty) return;
+          const exists = (combo.values || []).some(item => String(item?.value) === String(value));
+          if (!exists) validateMessageArr.push(combo.title);
+        });
+      });
+      return this.convertToStr(validateMessageArr);
+    },
+    getColumnIndex(fieldName) {
+      return this.columns.findIndex(e => e.field === fieldName);
+    },
+    getGridRootEl() {
+      return this.$refs.gridRoot || null;
+    },
+    getGridWidget() {
+      return this.directGridWidget || null;
+    },
+    getGridContentElement() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-content") || null;
+    },
+    getGridLockedContentElement() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-content-locked") || null;
+    },
+    getGridAutoScrollableElement() {
+      return this.getGridContentElement();
+    },
+    getGridHeaderEl() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-header") || null;
+    },
+    getGridBodyRows() {
+      return this.getGridRootEl()?.querySelectorAll?.(".k-grid-content tbody tr") || [];
+    },
+    getGridDataSource() {
+      return this.dataSourceItems;
+    },
+    getDirectGridHorizontalScrollTargets() {
+      const content = this.getGridContentElement();
+      const headerWrap = this.getGridRootEl()?.querySelector?.(".k-grid-header-wrap");
+      const grid = this.directGridWidget;
+      const gridContent = grid?.content?.[0];
+      const targets = [content, headerWrap];
+      if (content?.firstElementChild) {
+        targets.push(content.firstElementChild);
+      }
+      if (gridContent && gridContent !== content) {
+        targets.push(gridContent);
+      }
+      return [...new Set(targets.filter(Boolean))];
+    },
+    getGridScrollPosition() {
+      const content = this.getGridContentElement();
+      const grid = this.directGridWidget;
+      const virtualScrollbar = grid?.virtualScrollable?.verticalScrollbar?.[0] || null;
+      const topValues = [virtualScrollbar?.scrollTop, content?.scrollTop]
+        .map(value => Number(value))
+        .filter(value => Number.isFinite(value));
+      const leftValues = this.getDirectGridHorizontalScrollTargets()
+        .map(el => Number(el.scrollLeft))
+        .concat([Number(grid?._scrollLeft)])
+        .filter(value => Number.isFinite(value));
+      return {
+        top: topValues.length ? Math.max(...topValues) : 0,
+        left: leftValues.length ? Math.max(...leftValues) : 0
+      };
+    },
+    setGridScrollPosition(position = {}) {
+      const content = this.getGridContentElement();
+      const grid = this.directGridWidget;
+      const top = Number.isFinite(position.top) ? position.top : null;
+      const left = Number.isFinite(position.left) ? position.left : null;
+      const virtualScrollable = grid?.virtualScrollable;
+      const virtualScrollbar = virtualScrollable?.verticalScrollbar?.[0];
+      const wrapper = virtualScrollable?.wrapper?.[0];
+      if (virtualScrollbar && top !== null) {
+        virtualScrollable._preventScroll = false;
+        $(virtualScrollbar).scrollTop(top).trigger("scroll");
+      }
+      if (wrapper && top !== null) {
+        wrapper.scrollTop = top;
+      }
+      if (content && top !== null) {
+        content.scrollTop = top;
+      }
+      if (left !== null) {
+        this.getDirectGridHorizontalScrollTargets().forEach(el => {
+          el.scrollLeft = left;
+        });
+        if (grid && typeof grid._scrollLeft !== "undefined") {
+          grid._scrollLeft = left;
+        }
+      }
+      const lockedContent = this.getGridLockedContentElement();
+      if (lockedContent && top !== null) {
+        lockedContent.scrollTop = top;
+      } else if (lockedContent && wrapper) {
+        lockedContent.scrollTop = wrapper.scrollTop;
+      }
+      this.syncDirectGridLockedScrollContract();
+      if (content && (top !== null || left !== null)) {
+        try {
+          content.dispatchEvent(new Event("scroll", { bubbles: true }));
+          $(content).trigger("scroll");
+        } catch (_error) {
+          // noop
+        }
+      }
+    },
+    capturePendingSaveScrollSnapshot() {
+      const position = this.getGridScrollPosition();
+      this.pendingSaveScrollSnapshot = {
+        top: position.top,
+        left: position.left
+      };
+      this.scrollPosition.top = position.top;
+      this.scrollPosition.left = position.left;
+      this.lastScrollTop = position.top;
+      this.lastScrollLeft = position.left;
+      this.preserveGridScrollAfterSave = true;
+      this.scrollRestored = false;
+    },
+    clearPendingSaveScrollSnapshot() {
+      this.clearPendingSaveScrollRestoreTimers();
+      this.pendingSaveScrollSnapshot = null;
+      this.preserveGridScrollAfterSave = false;
+    },
+    clearPendingSaveScrollRestoreTimers() {
+      this.directGridSaveScrollRestoreTimerIds.forEach(id => clearTimeout(id));
+      this.directGridSaveScrollRestoreTimerIds = [];
+      clearTimeout(this.directGridScrollRestoreTimer);
+      this.directGridScrollRestoreTimer = null;
+    },
+    getPendingSaveScrollSnapshot() {
+      return this.pendingSaveScrollSnapshot;
+    },
+    schedulePendingSaveScrollRestore() {
+      const snapshot = this.getPendingSaveScrollSnapshot();
+      if (!snapshot) return;
+      this.clearPendingSaveScrollRestoreTimers();
+      const restoreScroll = () => this.setGridScrollPosition(snapshot);
+      restoreScroll();
+      this.$nextTick(() => {
+        restoreScroll();
+        requestAnimationFrame(() => {
+          restoreScroll();
+          requestAnimationFrame(restoreScroll);
+        });
+      });
+      [50, 150, 300, 500, 1000].forEach(ms => {
+        const timerId = setTimeout(() => {
+          if (!this.preserveGridScrollAfterSave) return;
+          restoreScroll();
+          if (ms === 1000) {
+            this.lastScrollTop = 0;
+            this.lastScrollLeft = 0;
+            this.scrollRestored = true;
+            this.clearPendingSaveScrollSnapshot();
+          }
+        }, ms);
+        this.directGridSaveScrollRestoreTimerIds.push(timerId);
+      });
+    },
+    storeDirectGridScrollPosition() {
+      if (this.preserveGridScrollAfterSave && this.pendingSaveScrollSnapshot) {
+        return;
+      }
+      const position = this.getGridScrollPosition();
+      this.scrollPosition.top = position.top;
+      this.scrollPosition.left = position.left;
+      this.lastScrollTop = position.top;
+      this.lastScrollLeft = position.left;
+    },
+    bindDirectGridScrollPositionTracking() {
+      this.unbindDirectGridScrollPositionTracking();
+      const onScroll = () => {
+        this.storeDirectGridScrollPosition();
+      };
+      this.directGridScrollHandler = onScroll;
+      const content = this.getGridContentElement();
+      const headerWrap = this.getGridRootEl()?.querySelector?.(".k-grid-header-wrap");
+      const targets = [content, headerWrap].filter(Boolean);
+      targets.forEach(el => {
+        el.addEventListener("scroll", onScroll, { passive: true });
+      });
+      this.directGridScrollTrackingTargets = targets;
+    },
+    unbindDirectGridScrollPositionTracking() {
+      const handler = this.directGridScrollHandler;
+      if (!handler) return;
+      (this.directGridScrollTrackingTargets || this.getDirectGridHorizontalScrollTargets()).forEach(el => {
+        el.removeEventListener("scroll", handler);
+      });
+      this.directGridScrollHandler = null;
+      this.directGridScrollTrackingTargets = null;
+    },
+    resizeGridStableTargets() {
+      this.resizeDirectGrid();
+    },
+    calculateColumnsWidth() {
+      const fontSize = Number(this.getFontSize || 1);
+      const widthMap = [12, 14, 16, 18];
+      this.columnWidth = widthMap[fontSize] || 14;
+    },
+    calculateGridHeight() {
+      if (this.editingFlg) return;
+      const ownerDocument = getScopedDocument(this.$el);
+      const ownerWindow = ownerDocument.defaultView || window;
+      const wh = this.windowHeight || ownerWindow.innerHeight || 0;
+      const headerElements = ownerDocument.getElementsByClassName("header");
+      const hh = headerElements.length ? headerElements[headerElements.length - 1].clientHeight : 0;
+      const footerMenu = getScopedElementById("footer-menu", this.$el) || ownerDocument.getElementById?.("footer-menu");
+      const fmh = (this.isDispMenu === 1 && footerMenu ? footerMenu.clientHeight : 0) + 5;
+      this.kendoGridToolbarHeight = Math.max(100, wh - hh - fmh - 10);
+
+      const gridFooter = getScopedElementById("grid-footer", this.$el) || ownerDocument.getElementById?.("grid-footer");
+      const gridFooterHeight = gridFooter ? gridFooter.clientHeight : 0;
+      const gridHeader = getScopedElementById("grid-header", this.$el) || ownerDocument.getElementById?.("grid-header");
+      const headerAreaHeight = gridHeader ? gridHeader.clientHeight : 0;
+      this.kendoGridHeight = Math.max(160, this.kendoGridToolbarHeight - (gridFooterHeight + headerAreaHeight));
+
+      const gridRoot = this.getGridRootEl();
+      if (gridRoot && Number.isFinite(this.kendoGridHeight)) {
+        gridRoot.style.height = `${this.kendoGridHeight}px`;
+      }
+    },
+    calculateGridWidth() {
+      this.resizeDirectGrid();
+    },
+    showSortColumn() {
+      this.applyDirectGridColumnsContract();
+      this.scheduleDirectGridLayoutContract();
+    },
+    editStart() {
+      this.editingFlg = true;
+      this.storeDirectGridScrollPosition();
+    },
+    editEnd() {
+      this.editingFlg = false;
+      this.restoreDirectGridScrollPositionAfterEdit();
+    },
+    addInputAssist() {
+      // Vue2 wrapper の edit hook と同じ時点だけ維持する。入力補助は各 editor / Kendo に委譲。
+    },
+    changeEditColor(currentTrc) {
+      let edited = false;
+      Array.from(currentTrc || []).forEach(td => {
+        if (td.querySelector?.(".k-dirty") || td.classList.contains("k-dirty-cell")) {
+          td.classList.add("master-edited-row");
+          edited = true;
+        }
+      });
+      return edited;
+    },
+    changeRowColor(currentTrc, currentLockTrc, edited) {
+      [...Array.from(currentTrc || []), ...Array.from(currentLockTrc || [])].forEach(td => {
+        td.classList.toggle("master-edited-row", !!edited);
+      });
+    },
+    importCsv(event) {
+      if (!this.validateBeforeGridAction()) return;
+      this.masterCsvTarget = event?.target || null;
+      this.masterCsvVisible = true;
+    },
+    prehideCsvPopover() {
+      this.masterCsvVisible = false;
+      this.dataSourceItems = this.generatedGridData();
+      this.$nextTick(() => {
+        this.applyDirectGridDataSourceContract();
+        this.scheduleDirectGridLayoutContract();
+      });
+    },
+    onCloseMasterEditModal() {
+      this.gridDataRefresh();
+    },
+    getDirectGridPageSize() {
+      const rowHeight = this.getGridContentElement()?.querySelector?.("tr")?.clientHeight || 30;
+      const gridHeight = this.getGridRootEl()?.offsetHeight || this.kendoGridHeight || 900;
+      return Math.max(1, Math.floor(gridHeight / rowHeight));
+    },
+    refreshDirectGridPageSizeByFont() {
+      const grid = this.directGridWidget;
+      if (!grid || !grid.virtualScrollable) return;
+      const newPageSize = this.getDirectGridPageSize();
+      const currentPageSize = this.dataSourceItems?.pageSize?.();
+      if (newPageSize !== currentPageSize) {
+        this.dataSourceItems = this.generatedGridData(newPageSize);
+        this.applyDirectGridDataSourceContract();
+      }
+      this.resizeDirectGrid();
+    },
+    buildDirectGridColumns() {
+      return (this.columns || []).map(column => {
+        const gridColumn = { ...column };
+        if (column.field === "code") {
+          gridColumn.hidden = false;
+        }
+        return gridColumn;
+      });
+    },
+    initDirectGridIfReady() {
+      const root = this.getGridRootEl();
+      if (!this.directGridMounted || !root || this.columns.length <= 1 || !this.dataSourceItems) return;
+      if (this.directGridWidget) {
+        this.applyDirectGridColumnsContract();
+        this.applyDirectGridDataSourceContract();
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+      installComponentJQuery();
+      $(root).empty();
+      $(root).kendoGrid({
+        dataSource: this.dataSourceItems,
+        editable: true,
+        selectable: true,
+        reorderable: false,
+        height: this.kendoGridHeight,
+        scrollable: { virtual: true },
+        beforeEdit: event => this.onBeforeEdit(event),
+        edit: event => this.addInputAssist(event),
+        cellClose: event => this.editEnd(event),
+        save: event => this.onDirectGridSave(event),
+        dataBound: event => this.onDataBoundKendoGrid(event),
+        columns: this.buildDirectGridColumns()
+      });
+      this.directGridWidget = markRaw($(root).data("kendoGrid"));
+      this.installDirectGridFacade();
+      this.applyDirectGridStyleContract();
+      this.scheduleDirectGridLayoutContract();
+    },
+    destroyDirectGrid() {
+      this.clearPendingSaveScrollRestoreTimers();
+      this.unbindDirectGridScrollPositionTracking();
+      if (this.directGridWidget) {
+        try { this.directGridWidget.destroy(); } catch (_error) { /* noop */ }
+      }
+      const root = this.getGridRootEl();
+      if (root) $(root).empty();
+      this.directGridWidget = null;
+      this.directGridMounted = false;
+      if (this.directGridTouchCleanup) {
+        this.directGridTouchCleanup();
+        this.directGridTouchCleanup = null;
+      }
+    },
+    installDirectGridFacade() {
+      const root = this.getGridRootEl();
+      if (!root) return;
+      root.kendoWidget = () => this.directGridWidget;
+      root.gridWidget = () => this.directGridWidget;
+      root.gridVerticalScrollbarEl = () => this.directGridWidget?.virtualScrollable?.verticalScrollbar?.[0] || null;
+      root.gridScrollPosition = () => this.getGridScrollPosition();
+      root.scrollGridTo = position => this.setGridScrollPosition(position);
+      root.gridContentEl = () => this.getGridContentElement();
+      root.gridLockedContentEl = () => this.getGridLockedContentElement();
+      this.bindDirectGridScrollPositionTracking();
+    },
+    applyDirectGridColumnsContract() {
+      const grid = this.directGridWidget;
+      if (!grid) return;
+      const oldFields = (grid.columns || []).map(column => column.field).join("|");
+      const newFields = (this.columns || []).map(column => column.field).join("|");
+      if (oldFields !== newFields) {
+        const snapshot = this.getPendingSaveScrollSnapshot();
+        const position = snapshot || this.getGridScrollPosition();
+        grid.setOptions({ columns: this.buildDirectGridColumns() });
+        if (snapshot || this.preserveGridScrollAfterSave) {
+          this.$nextTick(() => {
+            this.setGridScrollPosition(position);
+            this.schedulePendingSaveScrollRestore();
+          });
+        }
+      }
+    },
+    refreshDirectGridDataFromMasterRecords(resetScroll = false) {
+      const grid = this.directGridWidget;
+      if (!grid?.dataSource) return false;
+      const nextData = this.masterRecords?.data || [];
+      try {
+        grid.dataSource.data(nextData);
+      } catch (_error) {
+        return false;
+      }
+      if (resetScroll) {
+        this.setGridScrollPosition({ top: 0, left: 0 });
+      } else {
+        this.restoreDirectGridScrollFromSnapshotIfNeeded();
+      }
+      this.$nextTick(() => {
+        this.applyDirectGridStyleContract();
+        if (!resetScroll) {
+          this.restoreDirectGridScrollFromSnapshotIfNeeded();
+        }
+      });
+      return true;
+    },
+    applyDirectGridDataSourceContract(options = {}) {
+      const grid = this.directGridWidget;
+      if (!grid) return;
+      const preserveScroll = this.preserveGridScrollAfterSave || !!options.preserveScroll;
+      if (grid.dataSource && (preserveScroll || options.refreshInPlace)) {
+        this.refreshDirectGridDataFromMasterRecords(!!options.resetScroll);
+        return;
+      }
+      if (!this.dataSourceItems) return;
+      const snapshot = this.getPendingSaveScrollSnapshot();
+      if (grid.dataSource !== this.dataSourceItems) {
+        grid.setDataSource(this.dataSourceItems);
+        if (snapshot) {
+          this.$nextTick(() => this.setGridScrollPosition(snapshot));
+        }
+      }
+      this.installDirectGridFacade();
+      this.scheduleDirectGridLayoutContract({
+        skipVirtualRefresh: !!options.skipVirtualRefresh || this.preserveGridScrollAfterSave
+      });
+    },
+    scheduleDirectGridFilterRefresh() {
+      if (this.directGridFilterRefreshRafId != null) cancelAnimationFrame(this.directGridFilterRefreshRafId);
+      this.directGridFilterRefreshRafId = requestAnimationFrame(() => {
+        this.directGridFilterRefreshRafId = null;
+        const preservedScroll = this.getPendingSaveScrollSnapshot();
+        if (preservedScroll && this.refreshDirectGridDataFromMasterRecords(false)) {
+          this.schedulePendingSaveScrollRestore();
+          return;
+        }
+        this.dataSourceItems = this.generatedGridData();
+        this.applyDirectGridDataSourceContract({ resetScroll: !preservedScroll });
+        if (preservedScroll) {
+          this.setGridScrollPosition(preservedScroll);
+        } else {
+          this.setGridScrollPosition({ top: 0, left: 0 });
+        }
+      });
+    },
+    refreshDirectGridVirtualScrollable() {
+      const grid = this.directGridWidget;
+      if (!grid || this.preserveGridScrollAfterSave) return;
+      grid.virtualScrollable?.refresh?.();
+      grid.virtualScrollable?.repaintScrollbar?.();
+    },
+    restoreDirectGridScrollFromSnapshotIfNeeded() {
+      const snapshot = this.getPendingSaveScrollSnapshot();
+      if (snapshot) {
+        this.setGridScrollPosition(snapshot);
+        return;
+      }
+      if (!this.scrollRestored && (this.lastScrollTop > 0 || this.lastScrollLeft > 0)) {
+        this.restoreDirectGridScrollPosition();
+      }
+    },
+    resizeDirectGrid() {
+      const grid = this.directGridWidget;
+      if (!grid) return;
+      const snapshot = this.getPendingSaveScrollSnapshot();
+      try {
+        grid.setOptions({ height: this.kendoGridHeight });
+        grid.resize(true);
+        if (!this.preserveGridScrollAfterSave) {
+          this.refreshDirectGridVirtualScrollable();
+        }
+        this.restoreDirectGridScrollFromSnapshotIfNeeded();
+      } catch (_error) {
+        // direct jq では resize 失敗時に追加 rebuild しない。
+      }
+      if (snapshot) {
+        this.setGridScrollPosition(snapshot);
+      }
+      this.applyDirectGridStyleContract();
+    },
+    scheduleDirectGridLayoutContract(options = {}) {
+      if (this.directGridLayoutRafId != null) cancelAnimationFrame(this.directGridLayoutRafId);
+      const skipVirtualRefresh = !!options.skipVirtualRefresh || this.preserveGridScrollAfterSave;
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.directGridLayoutRafId = null;
+        this.applyDirectGridStyleContract();
+        if (!skipVirtualRefresh) {
+          this.refreshDirectGridVirtualScrollable();
+        }
+        this.restoreDirectGridScrollFromSnapshotIfNeeded();
+      });
+    },
+    restoreDirectGridScrollPositionAfterEdit() {
+      const position = {
+        top: this.scrollPosition.top,
+        left: this.scrollPosition.left
+      };
+      const restoreScroll = () => this.setGridScrollPosition(position);
+      restoreScroll();
+      this.$nextTick(() => {
+        restoreScroll();
+        requestAnimationFrame(restoreScroll);
+      });
+    },
+    restoreDirectGridScrollPosition() {
+      const grid = this.directGridWidget;
+      if (!grid) return;
+      this.setGridScrollPosition({
+        top: this.lastScrollTop,
+        left: this.lastScrollLeft
+      });
+    },
+    applyDirectGridLockedWidthContract() {
+      const root = this.getGridRootEl();
+      if (!root) return;
+      const fontSize = parseFloat(getComputedStyle(root).fontSize || "16") || 16;
+      const width = (this.columns || []).reduce((sum, column) => {
+        if (!column.locked || column.hidden) return sum;
+        const value = `${column.width || ""}`.trim();
+        if (value.endsWith("em")) return sum + parseFloat(value) * fontSize;
+        if (value.endsWith("px")) return sum + parseFloat(value);
+        const numeric = parseFloat(value);
+        return sum + (Number.isFinite(numeric) ? numeric : 0);
+      }, 0);
+      if (!width) return;
+      const px = `${Math.ceil(width)}px`;
+      root.querySelectorAll(".k-grid-header-locked,.k-grid-content-locked").forEach(element => {
+        element.style.width = px;
+      });
+    },
+    applyDirectGridLockedHeightContract() {
+      const content = this.getGridContentElement();
+      const lockedContent = this.getGridLockedContentElement();
+      if (!content || !lockedContent) return;
+      lockedContent.style.height = `${content.clientHeight}px`;
+      lockedContent.style.maxHeight = `${content.clientHeight}px`;
+    },
+    syncDirectGridLockedScrollContract() {
+      const content = this.getGridContentElement();
+      const lockedContent = this.getGridLockedContentElement();
+      if (!content || !lockedContent) return;
+      const wrapper = this.directGridWidget?.virtualScrollable?.wrapper?.[0];
+      lockedContent.scrollTop = wrapper ? wrapper.scrollTop : content.scrollTop;
+    },
+    applyDirectGridStyleContract() {
+      const root = this.getGridRootEl();
+      if (!root) return;
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-editable", "k-display-block");
+      root.querySelectorAll("th").forEach(th => th.classList.add("k-header"));
+      root.querySelectorAll("tbody tr").forEach((tr, index) => {
+        tr.classList.add("k-master-row");
+        tr.classList.toggle("k-alt", index % 2 === 1);
+      });
+      root.querySelectorAll("td").forEach(td => td.classList.add("k-td", "k-table-td"));
+      this.applyDirectGridLockedWidthContract();
+      this.applyDirectGridLockedHeightContract();
+      this.syncDirectGridLockedScrollContract();
+      this.refreshDirectGridDirtyVisualState();
+    },
+    onDirectGridSave(ev) {
+      this.storeDirectGridScrollPosition();
+      this.editFlg = true;
+      this.editingFlg = false;
+      Object.keys(ev.values || {}).forEach(field => {
+        if (typeof ev.model?.set === "function") {
+          ev.model.set(field, ev.values[field]);
+        } else if (ev.model) {
+          ev.model[field] = ev.values[field];
+        }
+      });
+      this.edit({ editRecord: ev.model, isSortMode: this.isSortMode });
+      if (ev.model?.operation === 1) {
+        ev.model.edited = true;
+      }
+      this.scheduleDirectGridCurrentRowVisual(ev.model);
+    },
+    scheduleDirectGridCurrentRowVisual(record) {
+      const key = record?.uid || record?.code;
+      if (!key) return;
+      const old = this.directGridRowVisualRafIds.get(key);
+      if (old != null) cancelAnimationFrame(old);
+      const raf = requestAnimationFrame(() => {
+        this.directGridRowVisualRafIds.delete(key);
+        this.applyDirectGridRowVisual(record);
+      });
+      this.directGridRowVisualRafIds.set(key, raf);
+    },
+    applyDirectGridRowVisual(record) {
+      if (!record?.uid) return;
+      const root = this.getGridRootEl();
+      const dummyIndex = this.getColumnIndex("dummy");
+      root?.querySelectorAll?.(`tr[data-uid="${record.uid}"]`)?.forEach?.(row => {
+        row.classList.remove("master-edited-row");
+        Array.from(row.children || []).forEach((cell, index) => {
+          const colIndex = Number(cell.getAttribute("aria-colindex")) - 1;
+          const effectiveIndex = Number.isFinite(colIndex) ? colIndex : index;
+          if (effectiveIndex === dummyIndex) {
+            cell.classList.remove("master-edited-row");
+            return;
+          }
+          cell.classList.toggle("master-edited-row", !!record.operation || !!record.edited);
+        });
+      });
+    },
+    refreshDirectGridDirtyVisualState() {
+      (this.getMasterRecordList?.data || []).forEach(record => {
+        if (record?.operation || record?.edited) {
+          this.applyDirectGridRowVisual(record);
+        }
+      });
+    },
     // 装置記録マスタ バグ修正 start
-    // delete start #9395
-    // calculateGridWidth() {
-    //   // 描画後に実行
-    //   if (document.getElementsByClassName("k-grid-content-locked").length !== 0) {
-    //     // 固定列数のカウント
-    //     const lockedColumns = this.columns
-    //       .filter(col => col.locked === true && col.hidden === false).length;
-
-    //     // 固定列幅算出
-    //     // ソートモード以外では -1 する(ダミー列)
-    //     const sortColumn = this.isSortMode ? 0 : 1;
-    //     let lockedColumnWidth = (lockedColumns - sortColumn) * this.columnWidth;
-    //     if (this.lockedColumnsWidth) {
-    //       lockedColumnWidth = this.lockedColumnsWidth;
-    //     }
-    //     // リサイズする前のscroll値を取得する
-    //     let tmpScrollLeft = 0;
-    //     let tmpScrollTop = 0;
-    //     if (this.editFlg) {
-    //       tmpScrollLeft = this.scrollLeft;
-    //       tmpScrollTop = this.scrollTop;
-    //       this.editFlg = false;
-    //     } else {
-    //       tmpScrollLeft = document.getElementsByClassName("k-grid-content k-auto-scrollable")[0].scrollLeft;
-    //       tmpScrollTop = document.getElementsByClassName("k-grid-content k-auto-scrollable")[0].scrollTop;
-    //     }
-
-    //     // スマートフォン以外で固定行有：空白行幅の調整値
-    //     const targetWidth = ((this.androidFlg || this.iosFlg) || lockedColumnWidth == 0) ? 0 : 14;
-    //     // kendoGridのリサイズを呼び出して自動リサイズがされないケースがある問題に対応
-    //     if (this.$refs.grid != null) {
-    //       const setWidth = parseInt(this.$refs.grid.kendoWidget().columns[0].width);
-    //       this.$refs.grid.kendoWidget().resizeColumn(this.$refs.grid.kendoWidget().columns[0], setWidth);
-    //     }
-    //     if (lockedColumnWidth != 0) {
-    //     // 固定列の幅確保
-    //       document.getElementsByClassName("k-grid-header-locked")[0].style.width = lockedColumnWidth + 'em';
-    //       document.getElementsByClassName("k-grid-content-locked")[0].style.width = lockedColumnWidth + 'em';
-    //     }
-
-    //     // 画面幅よりも固定列の幅が大きくなった場合、可変列のヘッダが見切れるため
-    //     // グリッドサイズを画面幅以上に拡張する
-    //     if (document.getElementsByClassName('k-grid')[0].clientWidth
-    //       < document.getElementsByClassName("k-grid-header-locked")[0].clientWidth
-    //     ) {
-    //       // グリッドサイズ拡張
-    //       document.getElementsByClassName('k-grid')[0].style.width
-    //         = (document.getElementsByClassName("k-grid-header-locked")[0].clientWidth
-    //         + 100 + targetWidth) + 'px';
-    //       // 拡張分の幅で可変列のヘッダ幅定義
-    //       document.getElementsByClassName("k-grid-header-wrap k-auto-scrollable")[0].style.width
-    //         = (100 + targetWidth) + 'px';
-    //     } else {
-    //         const scrollbarWidth = document.getElementsByClassName('k-scrollbar k-scrollbar-vertical')[0].offsetWidth
-
-    //       const headerLockWidth = (document.getElementsByClassName('k-grid')[0].clientWidth
-    //         - document.getElementsByClassName("k-grid-header-locked")[0].clientWidth) + targetWidth;
-    //       const contentScrollableWidth = (document.getElementsByClassName('k-grid')[0].clientWidth
-    //         - document.getElementsByClassName("k-grid-content-locked")[0].clientWidth) + targetWidth - scrollbarWidth;
-
-    //       // 固定列の幅を確保
-    //       document.getElementsByClassName("k-grid-header-wrap k-auto-scrollable")[0].style.width = headerLockWidth + 'px';
-    //       document.getElementsByClassName("k-grid-content k-auto-scrollable")[0].style.width = contentScrollableWidth + 'px';
-    //       // 縦スクロールの幅を確保
-    //       if (headerLockWidth === contentScrollableWidth && lockedColumnWidth) {
-    //         document.getElementsByClassName("k-grid-content k-auto-scrollable")[0].style.width = (contentScrollableWidth - 17) + 'px';
-    //       }
-    //       if (this.iosFlg) {
-    //         document.getElementsByClassName("k-grid-content k-auto-scrollable")[0].style.width = (contentScrollableWidth) + 'px';
-    //       }
-    //     }
-
-    //     if (document.getElementsByClassName("k-grid-content").length !== 0
-    //       && document.getElementsByClassName('k-grid-content-locked')[0].clientHeight
-    //       !== document.getElementsByClassName('k-grid-content')[0].clientHeight
-    //       && !this.androidFlg && !this.iosFlg
-    //     ) {
-    //       document.getElementsByClassName('k-grid-content-locked')[0].style.height =
-    //         document.getElementsByClassName('k-grid-content')[0].offsetHeight - 17 + 'px';
-    //     }
-
-    //     // 固定列の幅確保後、リサイズする前のscroll値を設定
-    //     setTimeout(() => {
-    //       document.getElementsByClassName("k-grid-content k-auto-scrollable")[0].scrollLeft = tmpScrollLeft;
-    //       document.getElementsByClassName("k-grid-content k-auto-scrollable")[0].scrollTop = tmpScrollTop;
-    //     });
-    //   }
-    // },
-    // delete end #9395
     // add start #9395
     onDataBoundKendoGrid(ev) {
-      if (!this.scrollRestored && (this.lastScrollTop > 0 || this.lastScrollLeft > 0)) {
-        this.scrollRestored = true;
-        //スクロールバーの位置をイベント発生前の位置に戻す
-        this.$nextTick(() => {
-          ev.sender.content[0].lastChild.scrollTop = this.lastScrollTop;
-          ev.sender.content[0].firstChild.scrollLeft = this.lastScrollLeft;
-        });
-      }
-
-      const grid = this.$refs.grid?.kendoWidget?.();
+      const grid = this.getGridWidget();
       if (!grid || !grid.virtualScrollable) return;
 
-      const wrapper = grid.wrapper?.[0];
+      if (this.preserveGridScrollAfterSave) {
+        this.restoreDirectGridScrollFromSnapshotIfNeeded();
+        this.schedulePendingSaveScrollRestore();
+      }
+
+      const wrapper = this.getGridRootEl();
       if (!wrapper) return;
 
       let startY = 0;
@@ -517,7 +1040,7 @@ export default {
       wrapper.addEventListener('touchstart', (e) => {
         if (e.touches.length === 1) {
           startY = e.touches[0].clientY;
-          scrollStart = grid.virtualScrollable.verticalScrollbar[0].scrollTop;
+          scrollStart = this.getGridScrollPosition().top || 0;
           isVerticalScroll = false;
         }
       }, { passive: true });
@@ -535,7 +1058,7 @@ export default {
             const newScrollTop = scrollStart + deltaY;
 
             requestAnimationFrame(() => {
-              grid.virtualScrollable.verticalScrollbar[0].scrollTop = newScrollTop;
+              this.setGridScrollPosition({ top: newScrollTop });
             });
 
             e.preventDefault(); // iOSでスクロールを有効にするために必要
@@ -547,16 +1070,16 @@ export default {
     editBackgroundColor() {
       this.$nextTick(() => {
         // グリッドが表示されていなかったら処理終了
-        const gridHeader = this.$refs.grid.$el.firstChild;
-        if (gridHeader.textContent === " ") {
+        const gridHeader = this.getGridHeaderEl();
+        if (!gridHeader || gridHeader.textContent === " ") {
           return;
         }
         gridHeader?.classList?.add("master-grid-header");
 
         // グリッドにレコードがなければ処理終了
         // 固定列、可変列、データソースの取得
-        const tbodyc = this.$refs.grid.$el.lastChild.firstChild.lastChild.tBodies?.[0].children;
-        const gridData = this.$refs.grid.dataSource;
+        const tbodyc = this.getGridBodyRows();
+        const gridData = this.getGridDataSource();
 
         // 列の行数は固定・可変で同一なため可変列の行数を使用
         for (let rwCount = 0; rwCount < tbodyc?.length; rwCount++) {
@@ -569,7 +1092,7 @@ export default {
 
           // モーダルからの編集も色を変更する
           if (
-            this.isEdited(gridData._view[rwCount].code)
+            this.isEdited(gridData?._view?.[rwCount]?.code)
           ) {
             edited = true;
           }
@@ -642,8 +1165,7 @@ export default {
           columnObject[name] = column;
         }
       })
-      // eslint-disable-next-line no-undef
-      return new kendo.data.DataSource({
+      return markRaw(new kendo.data.DataSource({
         // mod #6251 装置記録マスタの表がMAX30行固定のため無駄な余白ができる 付 start
         pageSize: pageSize,
         // mod #6251 装置記録マスタの表がMAX30行固定のため無駄な余白ができる 付 end
@@ -655,7 +1177,7 @@ export default {
         schema: {
           fields: columnObject
         }
-      })
+      }));
     },
     // add 性能改善 劉 end
     //  条件にマスタ名が設定されている場合は名前で抽出
@@ -700,16 +1222,17 @@ export default {
 
       // 装置記録マスタ バグ修正 start
       this.dataSourceItems = this.generatedGridData();
+      this.applyDirectGridDataSourceContract();
       // 装置記録マスタ バグ修正 end
     },
 
     // グリッドのデータ再表示
     gridDataRefresh() {
-      const grid = this.$refs.grid;
-      // mod 性能改善 劉 start
-      // grid.dataSource = this.masterRecords;
-      grid.dataSource = this.generatedGridData();
-      // mod 性能改善 劉 end
+      if (this.refreshDirectGridDataFromMasterRecords(false)) {
+        return;
+      }
+      this.dataSourceItems = this.generatedGridData();
+      this.applyDirectGridDataSourceContract();
     },
 
     // 施設一覧のデータを取得
@@ -758,10 +1281,10 @@ export default {
         this.pageNum = 1;
         // 選択施設の拡張設定を取得
         var newFacilityAdvancedSettings = {};
-        let selectedIndex = e.sender.selectedIndex;
+        const selectedItem = e.sender?.dataItem?.() || {};
         try {
-          if (e.sender.dataSource.options.data[selectedIndex].advancedSettings) {
-            newFacilityAdvancedSettings = JSON.parse(e.sender.dataSource.options.data[selectedIndex].advancedSettings);
+          if (selectedItem?.advancedSettings) {
+            newFacilityAdvancedSettings = JSON.parse(selectedItem.advancedSettings);
           }
         } catch(error) {
           //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
@@ -853,7 +1376,10 @@ export default {
               column.hidden = true;
             }
           });
-          this.columns = toFunction;
+          // 並び順列は本マスタでは使用しないため除外
+          this.columns = toFunction.filter(
+            column => column.field !== "sortRank" && column.field !== "sortInputTime"
+          );
 
           // 横スクロールバーを表示するために列幅を指定
           this.columns.forEach(column => {
@@ -891,8 +1417,6 @@ export default {
           //   this.calculateGridHeight();
           //   this.calculateGridWidth();
           //   /* add スクロールの位置を維持 楊 start */
-          //   document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].scrollTop = this.lastScrollTop;
-          //   document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].scrollLeft = this.lastScrollLeft;
           //   setTimeout(() => {
           //       this.lastScrollTop = 0;
           //       this.lastScrollLeft = 0;
@@ -902,8 +1426,24 @@ export default {
           // 初期データ内容を保存
           this.setComparisonRecordModel();
           // add 性能改善 劉 start
-          this.dataSourceItems = null;
-          this.dataSourceItems = this.generatedGridData();
+          const shouldRefreshGridInPlace = this.preserveGridScrollAfterSave && !!this.directGridWidget;
+          if (!shouldRefreshGridInPlace) {
+            this.dataSourceItems = null;
+            this.dataSourceItems = this.generatedGridData();
+          }
+          this.$nextTick(() => {
+            this.calculateGridHeight();
+            if (shouldRefreshGridInPlace) {
+              this.calculateGridWidth();
+              this.refreshDirectGridDataFromMasterRecords(false);
+              this.schedulePendingSaveScrollRestore();
+              return;
+            }
+            this.calculateGridWidth();
+            this.initDirectGridIfReady();
+            this.applyDirectGridDataSourceContract();
+            this.scheduleDirectGridLayoutContract();
+          });
           // add 性能改善 劉 end
         })
         .catch(error => {
@@ -936,11 +1476,11 @@ export default {
       // 共通ローダー:表示開始
       this.setLoadingScreenVisible(true);
       //イベント発生前のスクロールバーの位置を保持
-      this.lastScrollTop = document.getElementsByClassName('k-scrollbar k-scrollbar-vertical')[0].scrollTop;
-      this.lastScrollLeft = document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].scrollLeft;
+      this.capturePendingSaveScrollSnapshot();
       // グリッドでエラーが発生している場合は処理を中断
-      if (!this.kendoValidator.validate()) {
+      if (!this.validateBeforeGridAction()) {
         // 共通ローダー：表示終了
+        this.clearPendingSaveScrollSnapshot();
         this.setLoadingScreenVisible(false);
         return;
       }
@@ -973,6 +1513,7 @@ export default {
       // エラーメッセージは左寄せで表示
       if (message.length !== 0) {
         //共通ローダー：表示終了
+        this.clearPendingSaveScrollSnapshot();
         this.setLoadingScreenVisible(false);
         this.$ons.notification.alert({
           // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
@@ -1005,7 +1546,7 @@ export default {
       }
 
       // 登録日時・更新日時用の現在日時
-      const now = moment().format("YYYY-MM-DDTHH:mm:ss.SSSZ");
+      const now = dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZ");
 
       const serializedInsertRecords = insertRecords.map(record =>
         JSON.stringify({
@@ -1049,10 +1590,10 @@ export default {
               message: error.response.data.errorMessage
             });
           }
+          this.clearPendingSaveScrollSnapshot();
         })
         // 共通ローダー：表示終了
         .finally(() => this.setLoadingScreenVisible(false));
-      this.scrollRestored = false;
     },
     loadGridData(){
       this.findList();
@@ -1062,8 +1603,8 @@ export default {
     },
     refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
-      if (this.selfScreenName === this.$router.currentRoute.name
-        && document.getElementsByTagName('ons-alert-dialog').length === 0) {
+      if (this.selfScreenName === this.getCurrentRouteName()
+        && getScopedAlertDialogs(this.$el || this).length === 0) {
         if (this.getisChanged()) {
           this.$ons.notification.confirm({
             // title: "内容破棄",
@@ -1090,25 +1631,12 @@ export default {
      * @description スクロールバーの位置をクリアする
     */
     clearScrollPosition() {
+      this.clearPendingSaveScrollSnapshot();
       this.lastScrollTop = 0;
       this.lastScrollLeft = 0;
     },
     onSave(ev) {
-      this.scrollRestored = false;
-      //イベント発生前のスクロールバーの位置を保持
-      const scrollTop = ev.sender.content[0].lastChild.scrollTop;
-      const scrollLeft = ev.sender.content[0].firstChild.scrollLeft;
-      this.lastScrollTop = scrollTop;
-      this.lastScrollLeft = scrollLeft;
-      this.editFlg = true;
-      this.editingFlg = false;
-      this.edit({editRecord: ev.model, isSortMode: this.isSortMode});
-      ev.sender.refresh();
-      if (ev.model.operation === 1) {
-        ev.model.edited = true;
-      }
-      // 状態に合わせて背景色を変更
-      this.editBackgroundColor();
+      this.onDirectGridSave(ev);
     },
     onBeforeEdit(e) {
       if (this.isMobileDevice && !this.allowEdit) {
@@ -1123,19 +1651,12 @@ export default {
       this.editStart(e);
     },
     observeZoomChange() {
-      const target = document.body;
+      const target = this.getGridRootEl()?.ownerDocument?.body || this.$el?.ownerDocument?.body || globalThis?.document?.body || null;
+      if (!target || typeof ResizeObserver === "undefined") {
+        return;
+      }
       this.zoomObserver = new ResizeObserver(() => {
-        this.$nextTick(() => {
-          const rowHeight = this.$el.querySelector('.k-grid-content tr')?.clientHeight || 30;
-          const gridHeight = this.$refs.grid?.$el?.offsetHeight || 900;
-          const newPageSize = Math.floor(gridHeight / rowHeight);
-
-          const currentPageSize = this.dataSourceItems?.pageSize();
-          if (newPageSize !== currentPageSize) {
-            this.dataSourceItems = this.generatedGridData(newPageSize);
-            this.$refs.grid?.kendoWidget?.().resize();
-          }
-        });
+        this.$nextTick(() => this.refreshDirectGridPageSizeByFont());
       });
       this.zoomObserver.observe(target);
     },
@@ -1159,46 +1680,46 @@ export default {
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("処理中・・・");
     // 端末判別
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toLowerCase();
     if (/android/.test(ua)) {
       this.androidFlg = true;
     } else if (/iphone|ipad|mac|os/.test(ua)) {
       this.iosFlg = true;
     }
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.getCurrentRouteName();
     EventBus.$on("onCloseMasterEditModal", this.onCloseMasterEditModal);
     EventBus.$on("refresh", this.refresh);
     EventBus.$on("setMchineRecordColntrolcondition", this.setMchineRecordColntrolcondition);
   },
   updated() {
-    // Storeの更新等で画面が再描画された場合に背景色を変更
-    this.editBackgroundColor();
-    this.$nextTick(() => {
-      this.calculateColumnsWidth();
-      this.calculateGridHeight();
-      // this.calculateGridWidth();
-    });
-    //スクロールバーの位置が再描画の前後で変化している場合、スクロールバーの位置を制御するフラグを更新する
-    if(this.lastScrollTop != document.getElementsByClassName('k-scrollbar k-scrollbar-vertical')[0].scrollTop){
-      this.scrollRestored = false;
-    }
+    // direct jq では Vue updated ごとに全表 scan / dataSource rebuild をしない。
   },
 
   mounted() {
+    this.directGridMounted = true;
+    this.kendoValidator = { validate: () => this.validateDirectKendoGrid() };
     this.$nextTick(() => {
       this.calculateColumnsWidth();
       this.calculateGridHeight();
-      // this.calculateGridWidth();
+      this.initDirectGridIfReady();
+      this.scheduleDirectGridLayoutContract();
       this.observeZoomChange();
     });
     EventBus.$on("clearScrollPosition", this.clearScrollPosition);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.zoomObserver) {
       this.zoomObserver.disconnect();
       this.zoomObserver = null;
     }
+    this.destroyDirectGrid();
+    this.clearPendingSaveScrollRestoreTimers();
+    [this.directGridLayoutRafId, this.directGridFilterRefreshRafId, this.directGridScrollSyncRafId].forEach(id => {
+      if (id != null) cancelAnimationFrame(id);
+    });
+    this.directGridRowVisualRafIds?.forEach?.(id => cancelAnimationFrame(id));
+    this.directGridRowVisualRafIds?.clear?.();
     EventBus.$off("onCloseMasterEditModal", this.onCloseMasterEditModal);
     EventBus.$off("refresh", this.refresh);
     EventBus.$off("setMchineRecordColntrolcondition", this.setMchineRecordColntrolcondition);
@@ -1223,6 +1744,9 @@ export default {
   bottom: 0;
   position: absolute;
   width: inherit;
+  z-index: 2;
+  background-color: var(--ntss-list-background-color);
+  box-sizing: border-box;
 }
 .kendo-grid-toolbar-style {
   --height: 200px;
@@ -1239,61 +1763,64 @@ export default {
  margin-right: 1em;
 }
 /*del 装置記録マスタ ページネーションを削除 start*/
-.k-grid-toolbar {
+.kendo-grid-toolbar-style {
   padding: 0.1em 0.3em;
 }
+ 
+ 
+ 
+ 
+
 /*del 装置記録マスタ ページネーションを削除 start*/
-/* .kendo-grid-toolbar-style >>> .k-tooltip.k-tooltip-validation { */
+/* .kendo-grid-toolbar-style :deep(.k-tooltip.k-tooltip-validation){ */
 /*  width: auto;*/
 /*}
 /*del 装置記録マスタ ページネーションを削除 start*/
 
-.kendo-grid-toolbar-style
-  >>> .k-grid
+.kendo-grid-toolbar-style :deep(.k-grid
   tr:nth-child(n + 3):last-child
   .k-tooltip.k-tooltip-validation
-  .k-callout {
+  .k-callout) {
   border-bottom: 0;
   border-top: 6px solid #000;
   top: unset;
   bottom: -6px;
 }
 
-.kendo-grid-toolbar-style
-  >>> .k-grid
+.kendo-grid-toolbar-style :deep(.k-grid
   tr:nth-child(n + 3):last-child
-  .k-tooltip.k-tooltip-validation {
+  .k-tooltip.k-tooltip-validation) {
   bottom: 38px;
 }
 
-.kendo-grid-toolbar-style >>> .k-edit-cell {
+.kendo-grid-toolbar-style :deep(.k-edit-cell) {
   position: relative;
   overflow: visible;
 }
 
-.kendo-grid-toolbar-style >>> .k-grid-content > .k-selectable {
+.kendo-grid-toolbar-style :deep(.k-grid-content > .k-selectable) {
   box-shadow: 1px 0px 0px 0px white;
   border-right: 1px solid transparent;
 }
 
-.kendo-grid-toolbar-style >>> .k-grid-header-locked > table {
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked > table) {
   border-right-width: 0px;
 }
 
-.kendo-grid-toolbar-style >>> .k-grid-header-locked {
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked) {
   border-right: 1px solid var(--ntss-list-border-color) !important;
 }
 
-.kendo-grid-toolbar-style >>> .k-grid-content-locked {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked) {
   z-index: 1;
   box-shadow: 1px 0px 0px 0px var(--ntss-border-color) !important;
 }
 
-.kendo-grid-toolbar-style >>> .k-grid-header-locked > table {
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked > table) {
   border-right-width: 0px;
 }
 
-.kendo-grid-toolbar-style >>> .k-grid-content-locked > .k-selectable {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked > .k-selectable) {
   border-right-width: 0px;
 }
 .paginationClass {
@@ -1305,19 +1832,62 @@ export default {
   pointer-events: none;
   color: #000;
 }
-.pageInput >>> input{
+.pageInput :deep(input){
   height: 100%;
 }
-.pageInput >>> input::-webkit-outer-spin-button,
-.pageInput >>> input::-webkit-inner-spin-button {
+.pageInput :deep(input::-webkit-outer-spin-button),
+.pageInput :deep(input::-webkit-inner-spin-button) {
   -webkit-appearance: none;
 }
-.pageInput >>> input[type="number"]{
+.pageInput :deep(input[type="number"]){
   -moz-appearance: textfield;
 }
 .custom-switch {
   transform: scale(0.85);
   transform-origin: center;
   touch-action: manipulation;
+}
+.mst-machine-record-control-direct-jq-grid {
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Vue2 kendo-grid wrapper style contract for this direct jq screen. */
+.kendo-grid-toolbar-style :deep(.toolbar-btn),
+.kendo-grid-toolbar-style :deep(.toolbar-btn *) {
+  font-family: inherit;
+}
+.kendo-grid-toolbar-style :deep(.k-grid-header th),
+.kendo-grid-toolbar-style :deep(.k-grid-header .k-table-th),
+.kendo-grid-toolbar-style :deep(.k-grid-header .k-link),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked th),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked .k-table-th),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked .k-link) {
+  border-right-color: currentColor;
+  cursor: default;
+}
+
+.mst-machine-record-control-direct-jq-grid :deep(td.master-edited-row),
+.mst-machine-record-control-direct-jq-grid :deep(tr.k-selected > td.master-edited-row),
+.mst-machine-record-control-direct-jq-grid :deep(tr.k-state-selected > td.master-edited-row),
+.mst-machine-record-control-direct-jq-grid :deep(tr.k-table-row.k-selected > td.master-edited-row) {
+  color: #003300 !important;
+  background-color: #ccffcc !important;
+}
+.mst-machine-record-control-direct-jq-grid :deep(td.master-edited-cell) {
+  color: #003300 !important;
+  font-weight: bold !important;
+}
+
+
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 </style>

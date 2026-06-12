@@ -1,18 +1,19 @@
 package jp.co.nikkiso.ntss.admin_web.config;
 
+import java.net.URI;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 /**
  * DynamoDB設定
@@ -31,36 +32,20 @@ public class DynamoDBConfig {
   @Value("${amazon.dynamodb.region}")
   private String amazonDynamoDBRegion;
 
-	public AWSCredentialsProvider amazonAWSCredentialsProvider() {
-		return new AWSStaticCredentialsProvider(amazonAWSCredentials());
-	}
-
-	@Bean
-	public AWSCredentials amazonAWSCredentials() {
-		return new BasicAWSCredentials(amazonDynamoDBAccessKey, amazonDynamoDBSecretKey);
-	}
-
-	@Bean
-	public DynamoDBMapperConfig dynamoDBMapperConfig() {
-		return DynamoDBMapperConfig.DEFAULT;
-	}
-
-  @Bean
-  public EndpointConfiguration endpointConfiguration() {
-    return new EndpointConfiguration(amazonDynamoDBEndpoint, amazonDynamoDBRegion);
+  private AwsCredentialsProvider amazonAwsCredentialsProvider() {
+    if (StringUtils.hasText(amazonDynamoDBAccessKey) && StringUtils.hasText(amazonDynamoDBSecretKey)) {
+      return StaticCredentialsProvider.create(AwsBasicCredentials.create(amazonDynamoDBAccessKey, amazonDynamoDBSecretKey));
+    }
+    return DefaultCredentialsProvider.create();
   }
 
   @Bean
-  public DynamoDBMapper dynamoDBMapper() {
-    return new DynamoDBMapper(amazonDynamoDB());
-  }
-
-  @Bean
-  public AmazonDynamoDB amazonDynamoDB() {
-    AmazonDynamoDB amazonDynamoDB = AmazonDynamoDBClientBuilder.standard()
-      .withCredentials(amazonAWSCredentialsProvider())
-      .withEndpointConfiguration(endpointConfiguration())
+  public DynamoDbClient dynamoDbClient() {
+    return DynamoDbClient.builder()
+      .httpClientBuilder(UrlConnectionHttpClient.builder())
+      .credentialsProvider(amazonAwsCredentialsProvider())
+      .endpointOverride(URI.create(amazonDynamoDBEndpoint))
+      .region(Region.of(amazonDynamoDBRegion))
       .build();
-    return amazonDynamoDB;
   }
 }

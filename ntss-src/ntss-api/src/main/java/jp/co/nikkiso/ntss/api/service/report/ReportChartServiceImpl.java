@@ -1,9 +1,10 @@
 package jp.co.nikkiso.ntss.api.service.report;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.PropertyNamingStrategies;
 // add redmain #4822 鄧シン start
 import com.sun.management.OperatingSystemMXBean;
 import jp.co.nikkiso.ntss.api.constant.ApiConstant;
@@ -1266,7 +1267,7 @@ public class ReportChartServiceImpl implements ReportChartService {
           Map<String, String> convItemMap = null;
           try {
             convItemMap = mapper.readValue(sysMonitorItem.getConvItem(), new TypeReference<Map<String, String>>(){});
-          } catch (IOException e) {
+          } catch (JacksonException e) {
             // 変換項目のJSONの読込に失敗した場合は変換は行わない.
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
@@ -1384,7 +1385,7 @@ public class ReportChartServiceImpl implements ReportChartService {
             Map<String, String> convItemMap = null;
             try {
               convItemMap = mapper.readValue(sysMonitorItem.getConvItem(), new TypeReference<Map<String, String>>(){});
-            } catch (IOException e) {
+            } catch (JacksonException e) {
               // 変換項目のJSONの読込に失敗した場合は変換は行わない.
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
@@ -1640,9 +1641,9 @@ public class ReportChartServiceImpl implements ReportChartService {
     // 帳票グラフ設定のjson文字列を分解
     try {
       // オブジェクトマッパー
-      ObjectMapper mapper = new ObjectMapper();
-      // json命名規約設定
-      mapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
+      ObjectMapper mapper = new ObjectMapper().rebuild()
+          .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+          .build();
       JSONArray jsonArray = new JSONArray(mstTreatment.getReportGraphSetting());
       // add #12678 【因島】ΔBVの値表示に関する再調整 sunsy start
       ReportGraphSetting graphSetting17 = null;
@@ -1727,7 +1728,7 @@ public class ReportChartServiceImpl implements ReportChartService {
             reportGraphSettingList.add(entity);
           }
           // mod #11847 【因島：改良】治療方法マスタ＞帳票グラフ設定にて血圧の表示非表示を変更可能とする 吉 end
-        } catch (IOException e) {
+        } catch (JacksonException e) {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -1860,7 +1861,7 @@ public class ReportChartServiceImpl implements ReportChartService {
     /**
      * 血圧情報有無
      * ※{@link JsonProperty} アノテーションは意図的に付与しています.
-     *   {@link ObjectMapper#setPropertyNamingStrategy(PropertyNamingStrategy)}で指定した場合でも、
+     *   {@link ObjectMapper#setPropertyNamingStrategies(PropertyNamingStrategies)}で指定した場合でも、
      *   正しく設定されない為、{@link JsonProperty}で対応しています.
      */
     @JsonProperty("is_bp")
@@ -2467,7 +2468,7 @@ public class ReportChartServiceImpl implements ReportChartService {
           Map<String, String> convItemMap = null;
           try {
             convItemMap = mapper.readValue(sysMonitorItem.getConvItem(), new TypeReference<Map<String, String>>(){});
-          } catch (IOException e) {
+          } catch (JacksonException e) {
             // 変換項目のJSONの読込に失敗した場合は変換は行わない.
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();

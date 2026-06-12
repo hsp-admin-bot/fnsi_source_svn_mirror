@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.TimeZone;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.google.common.base.Strings;
 import jp.co.nikkiso.ntss.api.service.NameConcat.NameConcatService;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
@@ -37,8 +37,8 @@ import org.seasar.doma.jdbc.SelectOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.entity.custom.lcdReq.LcdReq32;
 import jp.co.nikkiso.ntss.core.entity.custom.lcdReq.LcdReq33;
@@ -223,7 +223,7 @@ public class LcdReqServiceImpl implements LcdReqService {
       JsonNode rstMediInfoJson;
       try {
         rstMediInfoJson = mapper.readTree(sortedRstMediInfo);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         throw new RuntimeException(e);
       }
 
@@ -315,10 +315,10 @@ public class LcdReqServiceImpl implements LcdReqService {
 
   /**
    * {@inheritDoc}
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Override
-  public List<LcdReqExamResponse> lcdReqExamResult(Long patId) throws JsonProcessingException {
+  public List<LcdReqExamResponse> lcdReqExamResult(Long patId) throws JacksonException {
     List<LcdReq46> LcdReq46 = patExamDao.selectPatExamMainByPatIdComSv(patId);
     List<LcdReqExamResponse> resExam = new ArrayList<>();
     ObjectMapper mapper = new ObjectMapper();
@@ -444,7 +444,7 @@ public class LcdReqServiceImpl implements LcdReqService {
       PhysicalInfo physicalInfo = null;
       try {
         physicalInfo = new PhysicalInfo(physicalInfoStr, "");
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         EventLogMessage eventLogMessage = new EventLogMessage();
         eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
         logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);

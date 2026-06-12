@@ -4,7 +4,12 @@ import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
+import jp.co.nikkiso.ntss.admin_web.service.OrdMainService;
 import jp.co.nikkiso.ntss.admin_web.service.treatmentRecord.TreatmentRecordComplaintService;
+import jp.co.nikkiso.ntss.admin_web.service.bloodPurify.MntMotionRecordService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
+import jp.co.nikkiso.ntss.core.entity.MntMotionRecord;
+import jp.co.nikkiso.ntss.core.entity.OrdMain;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.entity.MntMonitorMsgRecord;
 import jp.co.nikkiso.ntss.core.entity.TreatmentRecordComplaint;
@@ -24,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import static java.util.Collections.emptyList;
@@ -34,6 +39,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 治療記録(愁訴処置)のResourceクラス.
@@ -49,6 +55,12 @@ public class TreatmentRecordComplaintResource {
   private TreatmentRecordComplaintService treatmentRecordComplaintService;
   @Autowired
   OrdMaterialSaveService ordMaterialSaveService;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Autowired
+  OrdMainService ordMainService;
+  @Autowired
+  MntMotionRecordService mntMotionRecordService;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
   /**
    * ログ出力Service.
@@ -58,6 +70,9 @@ public class TreatmentRecordComplaintResource {
   // wp アプリケーションログの適正化 Add Start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // wp アプリケーションログの適正化 Add End
 
   /**
@@ -69,7 +84,11 @@ public class TreatmentRecordComplaintResource {
   @GetMapping("/{ord_no}/complaint")
   public ResponseEntity<?> getTreatmentRecordComplaint(
     @PathVariable("ord_no") Long ordNo,
+    @RequestParam(required = false) Long selectedPatId,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasOrdOrSelectedPatShareAccess(ntssUser, ordNo, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.TREATMENT_RECORD + "/complaint";
@@ -106,6 +125,18 @@ public class TreatmentRecordComplaintResource {
     @PathVariable("ord_no") Long ordNo,
     @Valid @RequestBody TreatmentRecordComplaint request,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain checkOrdMain = ordMainService.selectByOrdNo(ordNo);
+      if (checkOrdMain != null && checkOrdMain.getFacilityCd() != null && !checkOrdMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + checkOrdMain.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "patId=" + checkOrdMain.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.TREATMENT_RECORD + "/complaint";
@@ -158,6 +189,18 @@ public class TreatmentRecordComplaintResource {
     @PathVariable("forced_change_flag") Boolean forcedChangeFlag,
     @Valid @RequestBody TreatmentRecordComplaint request,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain checkOrdMain = ordMainService.selectByOrdNo(ordNo);
+      if (checkOrdMain != null && checkOrdMain.getFacilityCd() != null && !checkOrdMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + checkOrdMain.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "patId=" + checkOrdMain.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     String mappingUrl = Uri.TREATMENT_RECORD + "/complaint";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -177,7 +220,7 @@ public class TreatmentRecordComplaintResource {
 //    }
     ordMaterialSaveService.bulkUpdateByOrdNoInTreatment(ordNo);
     // mod 12250 ord_material_saveの処理を2回重複実行している zkm end
-    return new ResponseEntity(msgExist ,null, HttpStatus.OK);
+    return new ResponseEntity(msgExist , (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 
   }
   // add 11420 【たくしん会】H9愁訴処置の表示が壊れる、データが倍増する、データが登録されない 関 end
@@ -191,7 +234,12 @@ public class TreatmentRecordComplaintResource {
   public ResponseEntity<?> getMonitorMsgRecord(
     @PathVariable("ord_no") Long ordNo,
     @RequestParam(name = "facilityCd") String facilityCd,
-    @AuthenticationPrincipal NtssUser ntssUser) {
+    @RequestParam(required = false) Long selectedPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) {    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.TREATMENT_RECORD + "/monitor_record";
@@ -227,7 +275,25 @@ public class TreatmentRecordComplaintResource {
    * @return 治療記録（愁訴処置情報）データのResponse
    */
   @PutMapping("/update/monitor_record")
-  public ResponseEntity<Void> updMonitorMsgRecord(@Valid @RequestBody MntMonitorMsgRecord request){
+  public ResponseEntity<Void> updMonitorMsgRecord(@Valid @RequestBody MntMonitorMsgRecord request,
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+){
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request.getMotionRecordNo() != null) {
+        MntMotionRecord mntMotionRecord = mntMotionRecordService.findByManageNo(Long.valueOf(request.getMotionRecordNo()));
+        if (mntMotionRecord != null && mntMotionRecord.getFacilityCd() != null && !mntMotionRecord.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          // #11205 mod 20260421 start
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mntMotionRecord.getFacilityCd() + " " + "motionRecordNo=" + request.getMotionRecordNo() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          // #11205 mod 20260421 end
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.TREATMENT_RECORD + "/update/monitor_record";

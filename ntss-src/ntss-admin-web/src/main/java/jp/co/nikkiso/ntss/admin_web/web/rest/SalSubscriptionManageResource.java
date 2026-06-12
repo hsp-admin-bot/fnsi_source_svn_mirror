@@ -7,10 +7,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
 
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
@@ -65,6 +65,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * オプション申込のリソースクラス
@@ -216,6 +217,23 @@ public class SalSubscriptionManageResource {
 	@PostMapping("")
 	public ResponseEntity<Long> createSalSubscriptionManage(@RequestBody SalSubscriptionManageRequest salReq,
 			@AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (salReq.getFacilityCd() != null && !salReq.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + salReq.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (salReq.getFacilityCd() != null && !salReq.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.SAL_SUBSCRIPTION_MANAGE ;
@@ -275,6 +293,9 @@ public class SalSubscriptionManageResource {
 	@PutMapping("/updateReception/{subscriptionNo}")
 	public ResponseEntity<Void> updateReception(@PathVariable long subscriptionNo,
 			@RequestBody SalSubscriptionManageRequest salReq, @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasSubscriptionAccess(ntssUser, subscriptionNo)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.SAL_SUBSCRIPTION_MANAGE + "updateReception" ;
@@ -326,6 +347,9 @@ public class SalSubscriptionManageResource {
 	@PutMapping("/updateCompletion/{subscriptionNo}")
 	public ResponseEntity<Void> updateCompletion(@PathVariable long subscriptionNo,
 			@RequestBody SalSubscriptionManageRequest salReq, @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasSubscriptionAccess(ntssUser, subscriptionNo)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.SAL_SUBSCRIPTION_MANAGE + "updateCompletion" ;
@@ -394,6 +418,9 @@ public class SalSubscriptionManageResource {
 	@PutMapping("/updateCancel/{subscriptionNo}")
 	public ResponseEntity<Void> updateCancel(@PathVariable long subscriptionNo,
 			@RequestBody SalSubscriptionManageRequest salReq, @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasSubscriptionAccess(ntssUser, subscriptionNo)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.SAL_SUBSCRIPTION_MANAGE + "updateCancel" ;
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -502,7 +529,7 @@ public class SalSubscriptionManageResource {
        long start = System.currentTimeMillis();
 			// リクエスト処理
 		      ResponseEntity<String> response = rt.exchange(request, String.class);
-		      status = response.getStatusCode();
+		      status = HttpStatus.valueOf(response.getStatusCode().value());
        long cost = System.currentTimeMillis() - start;
        Map<String, Object> map = new HashMap<>();
        map.put("logType", "RESTTEMPLATE-LOG");
@@ -548,6 +575,36 @@ public class SalSubscriptionManageResource {
    */
   private String getMethodName() {
     return Thread.currentThread().getStackTrace()[2].getMethodName();
+  }
+
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    boolean hasAccess = ntssUser != null && (ntssUser.isNkkAdminUser() || facilityCd == null || facilityCd.equals(ntssUser.getFacilityCd()));
+    // #11205 mod 20260421 start
+    if (!hasAccess) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+    }
+    // #11205 mod 20260421 end
+    return hasAccess;
+  }
+
+  private boolean hasSubscriptionAccess(NtssUser ntssUser, long subscriptionNo) {
+    if (ntssUser == null) {
+      return false;
+    }
+    if (ntssUser.isNkkAdminUser()) {
+      return true;
+    }
+    SalSubscriptionManage subscription = salSubscriptionManageDao.selectBySubscriptionNo(subscriptionNo);
+    boolean hasAccess = subscription == null || subscription.getFacilityCd() == null
+      || subscription.getFacilityCd().equals(ntssUser.getFacilityCd());
+    // #11205 mod 20260421 start
+    if (!hasAccess) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + (subscription != null ? subscription.getFacilityCd() : "null") + " " + "subscriptionNo=" + subscriptionNo + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+    }
+    // #11205 mod 20260421 end
+    return hasAccess;
   }
 
 }

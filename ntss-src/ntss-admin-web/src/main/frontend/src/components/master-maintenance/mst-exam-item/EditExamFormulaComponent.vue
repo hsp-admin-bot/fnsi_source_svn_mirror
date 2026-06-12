@@ -162,7 +162,7 @@
 
 <script>
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -170,17 +170,16 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
 
 //URI
-const uriGetExamItem = "/mstInfo/mstExamItemForExamCalc/";
+const uriGetExamItem = "/mstInfo/mstExamItemForExamCalc";
 const uriSelectorExamItem = "/mstInfo/mst_exam_item/mstSelector";
 
 export default {
   name: "multi-calender",
   mixins: [MultiModalMixin],
-  components: {
-  },
   data() {
     return {
       // 取得可能情報リスト
@@ -345,7 +344,7 @@ export default {
       this.clickOperator(strAddWord);
     },
     clickOperator(addWord) {
-      var textarea = document.getElementById("inputFormula");
+      var textarea = getScopedElementById("inputFormula", this.$el || this);
       var sentence = textarea.value;
       var len = sentence.length;
       var pos = textarea.selectionStart;
@@ -574,7 +573,7 @@ export default {
      */
     cancel() {
       // 変更の有無を判断
-      var isChange = (document.getElementById("inputFormula").value !== this.getStrFormula);
+      var isChange = (getScopedElementById("inputFormula", this.$el || this)?.value !== this.getStrFormula);
 
       // 変更がある場合はメッセージを表示
       if (isChange) {
@@ -601,7 +600,7 @@ export default {
      */
     registration() {
       // 入力数式のチェック処理を行う
-      const strFormula = document.getElementById("inputFormula").value;
+      const strFormula = getScopedElementById("inputFormula", this.$el || this)?.value;
       var validateErrMsg = this.validateFormula(strFormula);
       if (validateErrMsg != ""){
         // エラーメッセージ表示
@@ -747,9 +746,12 @@ export default {
 </script>
 
 <style scoped>
+@import "../../../assets/styles/modal.css";
+
 #editFormulaModalContainer {
   height: 100%;
   width: 100%;
+  font-size: 1em;
 }
 .inputFormulaArea {
   margin-left: 1em;
@@ -770,5 +772,4 @@ export default {
   max-width: 100vw;
   max-height: 80vh;
 }
-@import "../../../assets/styles/modal.css";
 </style>

@@ -7,24 +7,12 @@
 /**
  * マスターメンテナンスメインフレーム
  */
-//import { mapGetters, mapActions } from "vuex";
+//import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 
 export default {
   mixins: [NextTransitionMixin],
-  data() {
-    return {
-    };
-  },
-  computed: {
-  },
-  methods: {
-  },
-  mounted() {
-  },
-  destroyed() {
-  },
-  watch: {
-  }
+
+
 };
 </script>

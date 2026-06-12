@@ -212,21 +212,22 @@
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 // mod FNSI-改修内容 持抗凝固剤続総量チェックボックスを追加 穆 start
-// import { mapGetters } from "vuex";
-import { mapGetters, mapMutations } from "vuex";
+// import { mapGetters } from "@/compat/vue/vuex";
+import { mapGetters, mapMutations } from "@/compat/vue/vuex";
 // add FNSI-改修内容 持抗凝固剤続総量チェックボックスを追加 穆 end
 import IndTreatCondBase from "@/components/indication/IndTreatCondBase";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import {
   simpleAccDivision, accMulti, accSub
 } from "@/functions/common/NumberFunctions.js";
 // add #10196 数値IFのスタイル全不正 linjunfeng start
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
 import {messageFormat} from "@/functions/common/MessageFormat";
+import IndicationOwnerMixin from '@/components/indication/IndicationOwnerMixin';
 // add #10196 数値IFのスタイル全不正 linjunfeng end
 export default {
-  mixins: [IndTreatCondBase],
+  mixins: [IndicationOwnerMixin, IndTreatCondBase],
   // add FNSI-改修内容 持抗凝固剤続総量チェックボックスを追加 穆 start
   data() {
     return {
@@ -347,7 +348,7 @@ export default {
         return 1;
       }
       if (!this.isMst) {
-          let componentDataList = this.$parent.$parent.componentData.filter(item => {
+          let componentDataList = this._indicationFlowOwner().componentData.filter(item => {
             return item.cd === 26;
           });
           let rstDialysisState = "0";

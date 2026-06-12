@@ -1,8 +1,5 @@
 package jp.co.nikkiso.ntss.device_edge.web.rest;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
@@ -17,15 +14,19 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
-import javax.validation.Valid;
-import javax.xml.bind.DatatypeConverter;
+import jakarta.validation.Valid;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
+
+import jp.co.nikkiso.ntss.core.utils.HexCodecUtils;
 
 @RestController
 @RequestMapping("/api/s3/download")
@@ -39,7 +40,7 @@ public class DownloadApiResource {
 //  private MyProperties myPropaties;
   /** Amazon S3. */
   @Autowired
-  private AmazonS3 s3;
+  private S3Client s3;
 
   @Autowired
   private DownloadFileService downloadFileService;
@@ -135,54 +136,39 @@ public class DownloadApiResource {
     }
 
     // Start to download file.
-    InputStream is = null;
-    ByteArrayOutputStream os = null;
-
     try {
       // Download file form server local store.
       if ("on".equals(premiseResultMap.get("status"))) {
         String fileLocation = premiseResultMap.get("path") + "/" + bucket + "/" + filename;
         byte[] bytes = Files.readAllBytes(Paths.get(fileLocation));
         // 16進数文字列に変換
-        return new ResponseEntity<>(DatatypeConverter.printHexBinary(bytes), HttpStatus.OK);
+        return new ResponseEntity<>(HexCodecUtils.printHexBinary(bytes), HttpStatus.OK);
       }
       // Download file from S3 server.
       else {
-
-        // S3オブジェクト取得
-        S3Object object = s3.getObject(new GetObjectRequest(bucket, filename));
-        if (object == null) {
-          eventLogMessage.setLogMessage("ファイルダウンロードAPI：S3オブジェクト取得しで例外発生");
-          eventLogMessage.setInvokeClass(this.getClass().getName());
-          logService.log(LogLevel.ERROR, eventLogMessage, null, LoggingConstant.SERVICE_NAME.REMS, null);
-          return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-
-        // レスポンス用データ生成
-        is = object.getObjectContent();
-        os = new ByteArrayOutputStream();
-
-        byte[] buffer = new byte[1024];
-        while (true) {
-          int len = is.read(buffer);
-          if (len < 0) {
-            break;
+        try (ResponseInputStream<GetObjectResponse> is = s3.getObject(GetObjectRequest.builder()
+            .bucket(bucket)
+            .key(filename)
+            .build());
+             ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+          byte[] buffer = new byte[1024];
+          while (true) {
+            int len = is.read(buffer);
+            if (len < 0) {
+              break;
+            }
+            os.write(buffer, 0, len);
           }
-          os.write(buffer, 0, len);
+          byte[] content = os.toByteArray();
+          // 16進数文字列に変換
+          return new ResponseEntity<>(HexCodecUtils.printHexBinary(content), HttpStatus.OK);
         }
-        byte[] content = os.toByteArray();
-        // 16進数文字列に変換
-        return new ResponseEntity<>(DatatypeConverter.printHexBinary(content), HttpStatus.OK);
       }
     } catch (IOException e) {
       eventLogMessage.setLogMessage("ファイルダウンロードAPI：ファイルダウンロード処理で例外発生 " + e.getMessage());
       eventLogMessage.setInvokeClass(this.getClass().getName());
       logService.log(LogLevel.ERROR, eventLogMessage, null, LoggingConstant.SERVICE_NAME.REMS, null);
       return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-    } finally {
-      // close these stream when they were been used already.
-      if (is != null) try { is.close(); } catch (IOException ignored) {}
-      if (os != null) try { os.close(); } catch (IOException ignored) {}
     }
 
   }

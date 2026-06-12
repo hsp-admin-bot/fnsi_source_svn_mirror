@@ -11,8 +11,8 @@ import org.seasar.doma.jdbc.entity.NamingType;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.entity.entityListener.BaseEntityListener;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
@@ -96,7 +96,7 @@ public class MntIfEdgeManage extends BaseEntity {
       try {
         EdgeResult obj = objectMapper.readValue(value, EdgeResult.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("連携エッジ制御指示管理Entityパラメータが不正です");
       }
     }
@@ -109,7 +109,7 @@ public class MntIfEdgeManage extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }

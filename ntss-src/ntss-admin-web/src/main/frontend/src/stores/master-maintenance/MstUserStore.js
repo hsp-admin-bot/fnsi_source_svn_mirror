@@ -31,7 +31,6 @@ import {
 } from "@/apis/mst-user-maintenance";
 import { sendRequestGetMstFacilitySettingValue } from "@/apis/facility-setting";
 import { DISP_CREATE_CARD } from "@/constants/facilitySetting";
-import Vue from "vue";
 
 export default {
   strict: true,
@@ -136,7 +135,7 @@ export default {
         if (isSortMode) {
           editRecord.sortInputTime = Date.now();
         }
-        Vue.set(state.masterRecordList.data, index, editRecord);
+        state.masterRecordList.data.splice(index, 1, editRecord);
       }
     },
     // add FNSI-メニューに共有ON／共有OFFを追加する。 周 start
@@ -245,7 +244,6 @@ export default {
     // -----------------------------------------
     // 指定施設-MstSelectorを更新
     // -----------------------------------------
-    /* eslint-disable no-unused-vars */
     async updateMstSelecterByFacilityCd({ commit }, objArgs) {
       return sendRequestUpdateMstSelecterByFacilityCd(objArgs.facilityCd, objArgs.request);
     },
@@ -573,7 +571,7 @@ export default {
     getDeleteTargetEmailAddress(state) {
       let resultMessage = "";
       state.deleteTargetEmailAddress.forEach(data => {
-        let mail = "";
+        let mail;
         if (data.userEmailAddress1 != null) {
           mail = "のメールアドレス1\n";
         } else {

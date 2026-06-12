@@ -28,13 +28,14 @@
         </thead>
       </table>
       <draggable
+        :key="draggableKey"
         v-model="localDataSource"
         animation="250"
         handle=".drag-handle"
         :forceFallback="true"
         @change="sortStaffList"
       >
-        <div v-for="(item, index) in localDataSource" :index="index" :key="item.code">
+        <div v-for="(item, index) in localDataSource" :index="index" :key="getStaffRowKey(item, index)">
           <div class="drag-item">
             <div align="center" class="drag-item-button-area">
               <ons-toolbar-button class="close-btn manual-close-btn" @click="deleteRow(item)"><ons-icon icon="fa-times"></ons-icon></ons-toolbar-button>
@@ -77,23 +78,24 @@
 </template>
 
 <script>
-import vuedraggable from "vuedraggable";
-import { mapActions, mapGetters } from "vuex";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import MasterSelector from "@/components/common/master-selector/MasterSelector";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import { createPopoverData } from "@/functions/PopoverFunctions";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import MasterSelectorMultiple from "@/components/common/master-selector/MasterSelectorMultiple";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
 export default {
   name: "comsvSettingLcdStaffList",
   mixins: [MasterMaintenanceMixin],
   components: {
-    "draggable": vuedraggable,
+    "draggable": VueDraggable,
     "pop-over": MasterSelector,
     /* add スタッフ追加の複数追加と空欄追加 楊 start */
     "pop-over-multiple": MasterSelectorMultiple
@@ -132,7 +134,9 @@ export default {
       },
       dispPatName: null,
       mstPersonalUser: [],
-      selectedIndex: null
+      selectedIndex: null,
+      // 非表示タブ内で Sortable 初期化されると D&D が効かないため、表示時に再生成する
+      draggableKey: 0
     };
   },
   computed: {
@@ -180,6 +184,19 @@ export default {
     updateEditRecord(key, value) {
       this.editRecord[key] = value;
       this.setEditRecord(this.editRecord);
+    },
+
+    getStaffRowKey(item, index) {
+      return `staff-${index}-${item.user_id ?? ""}-${item.no ?? ""}`;
+    },
+
+    /**
+     * スタッフタブ表示時・一覧読込後に Sortable を再生成する（親の clickStaffTab からも呼ばれる）
+     */
+    updateWidget() {
+      this.$nextTick(() => {
+        this.draggableKey += 1;
+      });
     },
 
     selectStaff(index) {
@@ -284,8 +301,10 @@ export default {
       };
       // 追加した行を表示するよう、再下部までスクロールする
       this.$nextTick(() => {
-        const scrollArea = document.getElementById("staff-list-wrapper");
-        scrollArea.scrollTop = scrollArea.scrollHeight;
+        const scrollArea = getScopedElementById("staff-list-wrapper", this.$el || this);
+        if (scrollArea) {
+          scrollArea.scrollTop = scrollArea.scrollHeight;
+        }
       });
       this.updateEditRecord("lcdStaffList", JSON.stringify(jsonData));
     },
@@ -338,6 +357,7 @@ export default {
       this.localDataSource.forEach(data => {
         data.no = ++idx;
       });
+      this.updateWidget();
     },
     /**
      * 行を追加する
@@ -370,24 +390,19 @@ export default {
       this.updateEditRecord("lcdStaffList", JSON.stringify(jsonData));
     },
     sortStaffList() {
-      this.$nextTick(() => {
-        //番号の振り直し
-        let idx = 0;
-        let tmpData = deepCopy(this.localDataSource);
-        tmpData.forEach(data => {
-          data.no = ++idx;
-        });
-        this.localDataSource = tmpData;
-        this.updateEditRecord(
-          "lcdStaffList",
-          JSON.stringify({
-            staff_list: this.localDataSource.map((staff) => ({
-              no: staff.no,
-              user_id: staff.user_id
-            }))
-          })
-        );
+      // 番号の振り直し（配列の差し替えは v-model と Sortable の同期を壊すため行わない）
+      this.localDataSource.forEach((data, idx) => {
+        data.no = idx + 1;
       });
+      this.updateEditRecord(
+        "lcdStaffList",
+        JSON.stringify({
+          staff_list: this.localDataSource.map((staff) => ({
+            no: staff.no,
+            user_id: staff.user_id
+          }))
+        })
+      );
     }
   },
   mounted() {
@@ -488,6 +503,13 @@ input[type="text"] {
   width: 5em;
   padding-bottom: 3px;
   min-width: max-content;
+}
+.drag-handle {
+  cursor: grab;
+  touch-action: none;
+}
+.drag-handle:active {
+  cursor: grabbing;
 }
 .th-font-weight {
   font-weight: unset;

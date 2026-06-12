@@ -796,7 +796,7 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber.vue";
 import customCheckbox from "@/components/common/custom-form-tags/CustomCheckbox";
@@ -810,10 +810,11 @@ import customCheckbox from "@/components/common/custom-form-tags/CustomCheckbox"
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
+import DeviceSetOwnerMixin from '@/components/deviceset-info/base-modules/DeviceSetOwnerMixin';
 export default {
   components: {
     "custom-input-number": customInputNumber,
@@ -824,6 +825,8 @@ export default {
   // mixins: [ComponentGuardMixin],
   // // add FNSI-改修内容 権限関連 趙 end
   // del #10359 編集権限の動作不正 dengshen end
+  // Vue3 $parent チェーン代替：祖先owner参照をmixinで提供する
+  mixins: [DeviceSetOwnerMixin],
   props: {
     /**
      * 表示画面(マスタ画面/患者情報)
@@ -1084,7 +1087,7 @@ export default {
   },
   // add FNSI-改修内容 権限関連 趙 start
   computed: {
-    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd"]),
+    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd", "selectedPatId"]),
     // del #10359 編集権限の動作不正 dengshen start
     // ishasDailyCheckAuthority() {
     //   return this.hasDailyCheckAuthority;
@@ -1102,7 +1105,7 @@ export default {
     // 上限値と下限値がある数値入力項目の上限値と下限値のデータ参照をペアにした配列
     limitedValuePair() {
       const pairData = [];
-      
+
       for (const key of this.limitedUpperValueKeys) {
         pairData.push({
           name: this.$refs[key].formName.replace("上限値", "").trim(),
@@ -1145,12 +1148,12 @@ export default {
 
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return getAuthorized(pageCd, itemCd);
+      return !this.getIsOtherFacility && getAuthorized(pageCd, itemCd);
     },
     /**
      * 入力項目の値が未入力であるかを判定する
      * ※空文字を含み、数値 0 は除く
-     * @param value 
+     * @param value
      */
     isEmpty(value) {
       return (value === null || value === "");
@@ -1158,7 +1161,7 @@ export default {
     /**
      * 入力項目の値の変更イベントハンドラ
      * 入力項目の値が初期値から変更された項目の有無を判定して保存ボタンを活性化する
-     * 
+     *
      * イベント毎の対応
      * @input (このイベントは判定しない)
      *   ※数値入力イベント発生中は編集値([項目データ].editValue)は未設定のため、判定処理不可のため
@@ -1206,7 +1209,7 @@ export default {
         // 装置設定デフォルトマスタ
         case 1:
         // add FNSI6062-装置情報で項目の不足 周 start
-        // del #7668 2022-7-13  装置設定>ホスト報知の設定が保存できない  孟堅 start　　
+        // del #7668 2022-7-13  装置設定>ホスト報知の設定が保存できない  孟堅 start
         // case 2:
         // del #7668 2022-7-13  装置設定>ホスト報知の設定が保存できない  孟堅 end
         // add FNSI6062-装置情報で項目の不足 周 end
@@ -1234,7 +1237,9 @@ export default {
       }
       const url = `deviceSetInfo/getSysHostNoticeById/${this.propsFacilityCd}`;
       // データ取得
-      const response = await ApiHelper.get(url).catch(error => {
+      const response = await ApiHelper.get(url, {
+        selectedPatId: this.selectedPatId
+      }).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('HostNoticeEditor.vue', 'getMstDeviceSetInfoDefault', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1255,12 +1260,9 @@ export default {
       if (!this.propsPatId) {
         return {};
       }
-      // mod #12462 患者情報共有 Ji start
-      // const url = `deviceSetInfo/getPatHostNoticeById/${this.propsPatId}`;   "getIsOtherFacility", "getOtherFacilityCd"
       const url = this.getIsOtherFacility
-        ? `deviceSetInfo/getPatHostNoticeById/${this.propsPatId}/${this.getOtherFacilityCd}` 
+        ? `deviceSetInfo/getPatHostNoticeById/${this.propsPatId}/${this.getOtherFacilityCd}`
         : `deviceSetInfo/getPatHostNoticeById/${this.propsPatId}`;
-      // mod #12462 患者情報共有 Ji end
       // データ取得
       const response = await ApiHelper.get(url).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
@@ -1701,7 +1703,7 @@ export default {
           // add #6512 個人装置画面の分の修正 劉 end
           await this.updatePatMain(differenceData);
           // モーダルを閉じる
-          this.$parent.$parent.$emit("hide-modal");
+          this._hideDeviceSetModal();
           break;
         default:
           break;
@@ -1720,12 +1722,12 @@ export default {
       // 更新情報
       sendJson.host_notification_info = JSON.stringify(updateData);
       // 更新日時
-      sendJson.up_date = moment().format("YYYY-MM-DD HH:mm:ss.SSS");
+      sendJson.up_date = dayjs().format("YYYY-MM-DD HH:mm:ss.SSS");
       // dataSourceタイプ
       sendJson.data_source_type = this.dataSourceType;
       // データ更新
       await ApiHelper.post(
-        "/deviceSetInfo/updateHostNotificationInfo/",
+        "/deviceSetInfo/updateHostNotificationInfo",
         sendJson
       ).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
@@ -1749,12 +1751,12 @@ export default {
       // 更新情報
       sendJson.host_notification_info = JSON.stringify(updateData);
       // 更新日時(現在日時)
-      sendJson.up_date = moment().format("YYYY-MM-DD HH:mm:ss.SSS");
+      sendJson.up_date = dayjs().format("YYYY-MM-DD HH:mm:ss.SSS");
       // dataSourceタイプ
       sendJson.data_source_type = this.dataSourceType;
       // データ更新
       await ApiHelper.post(
-        "/deviceSetInfo/updateHostNotificationInfo/",
+        "/deviceSetInfo/updateHostNotificationInfo",
         sendJson
       ).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
@@ -1776,12 +1778,12 @@ export default {
       // 更新情報
       sendJson.host_notification_info = JSON.stringify(await this.summarizeEditData(true));
       // 更新日時(現在日時)
-      sendJson.up_date = moment().format("YYYY-MM-DD HH:mm:ss.SSS");
+      sendJson.up_date = dayjs().format("YYYY-MM-DD HH:mm:ss.SSS");
       // dataSourceタイプ(患者情報更新 = 2)
       sendJson.data_source_type = 2;
       // データ更新
       await ApiHelper.post(
-        "/deviceSetInfo/updateHostNotificationInfo/",
+        "/deviceSetInfo/updateHostNotificationInfo",
         sendJson
       ).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
@@ -1801,17 +1803,17 @@ export default {
      */
     showMessage(code, type, stringParams, targetName) {
       // メッセージコードを格納
-      this.$parent.$parent.messageDialogInfo.messageCd = code;
+      this._deviceSetDialogOwner().messageDialogInfo.messageCd = code;
       // メッセージタイプを格納
-      this.$parent.$parent.messageDialogInfo.type = type;
+      this._deviceSetDialogOwner().messageDialogInfo.type = type;
       // メッセージ置換文字列を格納
-      this.$parent.$parent.messageDialogInfo.stringParams =
+      this._deviceSetDialogOwner().messageDialogInfo.stringParams =
         undefined !== stringParams ? stringParams : [];
       // メッセージ表示対象名を格納
-      this.$parent.$parent.messageDialogInfo.targetName = targetName;
+      this._deviceSetDialogOwner().messageDialogInfo.targetName = targetName;
       // メッセージを表示
       setTimeout(() => {
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._deviceSetDialogOwner().messageDialogInfo.isDialogVisible = true;
       }, 10);
     },
     // del #10359 編集権限の動作不正 dengshen start

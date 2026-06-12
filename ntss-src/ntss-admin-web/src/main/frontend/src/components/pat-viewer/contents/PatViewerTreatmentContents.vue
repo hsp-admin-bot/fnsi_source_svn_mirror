@@ -24,7 +24,7 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 
 /**
  * 治療情報関連
@@ -120,9 +120,6 @@ export default {
     }
   },
 
-  data() {
-    return {};
-  },
 
   computed: {
     ...mapGetters("pat-viewer", ["getTreatmentData"]),
@@ -155,7 +152,6 @@ export default {
     }
   },
 
-  created() {},
 
   methods: {
     /**
@@ -199,5 +195,5 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../css/style.scss";
+@use "../css/style.scss" as *;
 </style>

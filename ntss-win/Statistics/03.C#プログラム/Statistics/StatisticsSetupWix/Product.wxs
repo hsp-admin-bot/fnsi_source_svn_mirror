@@ -138,7 +138,6 @@
     <!-- (6) NuGet DLL 群 -->
     <ComponentGroup Id="CG_NuGetDlls" Directory="DIR_STATISTICSTOOL">
       <Component Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B021}"><File Source="$(var.SrcBin)Newtonsoft.Json.dll" /></Component>
-      <Component Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B022}"><File Source="$(var.SrcBin)System.ValueTuple.dll" /></Component>
     </ComponentGroup>
 
     <!-- (7) config サブディレクトリ -->

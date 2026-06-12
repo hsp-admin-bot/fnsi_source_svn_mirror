@@ -2,8 +2,9 @@
  * アカウント編集Page
  */
 <template>
-  <modal-base @onClose="cancel">
-    <div slot="body" class="account-edit" v-bind:class="[this.isAndroid || this.isIOS ? 'scroll-adjust' : '']">
+  <modal-base ref="modalBase" @onClose="cancel">
+    <template #body>
+      <div class="account-edit" v-bind:class="[this.isAndroid || this.isIOS ? 'scroll-adjust' : '']">
       <div class="account-edit-input">
         <div style="text-align:left;">
           <p class="required">*必須</p>
@@ -77,7 +78,7 @@
                       @blur="checkMatchCurrentPassword"
                       model-event="change"
                       input-id="current-password"
-                      data-vv-as="現在のパスワード"
+                      data-validation-label="現在のパスワード"
                       name="current-password"
                     />
                     <v-ons-icon icon="fa-eye" size="18px" class="password-eyeicon" @click="clickEyeIcon($event)"/>
@@ -104,15 +105,17 @@
                       model-event="change"
                       input-id="password"
                       name="password"
+                      data-validation-label="パスワード"
+                      v-rules="''"
                       ref="password"
                       autocomplete="new-password"
                     />
                     <v-ons-icon icon="fa-eye" size="18px" class="password-eyeicon" @click="clickEyeIcon($event)"/>
                   </div>
                   <p
-                    v-show="errors.has('password')"
+                    v-show="hasValidationError('password')"
                     class="error-message"
-                  >{{ errors.first('password') }}</p>
+                  >{{ getValidationError('password') }}</p>
                 </td>
               </tr>
               <tr>
@@ -130,16 +133,16 @@
                       v-model="inputModel.userPasswordConfirm"
                       model-event="change"
                       input-id="confirm-password"
-                      data-vv-as="確認パスワード"
+                      data-validation-label="確認パスワード"
                       name="confirm-password"
-                      v-validate="!inputModel.userPassword ? '' : 'required|confirmed:password'"
+                      v-rules="!inputModel.userPassword ? '' : 'required|confirmed:password'"
                     />
                     <v-ons-icon icon="fa-eye" size="18px" class="password-eyeicon" @click="clickEyeIcon($event)"/>
                   </div>
                   <p
-                    v-show="errors.has('confirm-password')"
+                    v-show="hasValidationError('confirm-password')"
                     class="error-message"
-                  >{{ errors.first('confirm-password') }}</p>
+                  >{{ getValidationError('confirm-password') }}</p>
                 </td>
               </tr>
               <tr v-if="!remsOnly">
@@ -792,6 +795,159 @@
             </template>
             <!-- add #12462 患者共有権限 関 end -->
           </v-ons-list>
+          <v-ons-list modifier="inset">
+            <div>
+              <v-ons-list-header>
+                <span>施設</span>
+                <span v-if="inputModel.canLoginFacilities && inputModel.canLoginFacilities.length && inputModel.canLoginFacilities.length !== 0">
+                  （{{ inputModel.canLoginFacilities.length }}）
+                </span>
+              </v-ons-list-header>
+              <v-ons-list-item class="ntss-theme-screen" modifier="nodivider">
+                <div class="topBtnView">
+                  <div v-if="isOpenAddFlag === false">
+                    <v-ons-button
+                      class="nik-btn btn3-normal addBtn"
+                      @click="clickChangeAddView()"
+                    >追加</v-ons-button>
+                  </div>
+                  <div v-else>
+                    <v-ons-button
+                      class="btn2-cancel cancelBtn"
+                      @click="clickChangeAddView()"
+                    >キャンセル</v-ons-button>
+                    <v-ons-button
+                      class="btn1-execute addBtn"
+                      :disabled="isNeedSecondFlag === true || isCanVerify || isRequest"
+                      @click="verifyFN()"
+                    >確認</v-ons-button>
+                  </div>
+                </div>
+                <div class="addFacilitiesView">
+                  <div v-if="isOpenAddFlag === true">
+                    <div v-for="(item, index) in showAddFrom" :key="index">
+                      <button
+                        v-show="false"
+                        class="button-delete ntss-btn-outset"
+                        @click="deleteThatFacilitie(index)"
+                      >
+                        <v-ons-icon icon="fa-trash"/>
+                      </button>
+                      <br />
+                      <table class="card-table">
+                        <tbody>
+                          <tr>
+                            <td class="item-title">ハッシュ値</td>
+                            <td colspan="2" class="item-data">
+                              <v-ons-input :disabled="isNeedSecondFlag" maxlength="300" type="text" v-model.trim="item.facilityHash" float></v-ons-input>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="item-title">ユーザーID</td>
+                            <td colspan="2" class="item-data">
+                              <v-ons-input :disabled="isNeedSecondFlag" maxlength="50" type="text" v-model.trim="item.username" float></v-ons-input>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="item-title">パスワード</td>
+                            <td colspan="2" class="item-data">
+                              <div class="password-wrapper">
+                                <v-ons-input input-id="passwd" maxlength="30" :disabled="isNeedSecondFlag" type="password" v-model.trim="item.password" ref="passwd" float></v-ons-input>
+                                <v-ons-icon icon="fa-eye" size="18px" class="password-eyeicon" @click="clickEyeIcon($event)"/>
+                              </div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div class="secondView" v-if="isNeedSecondFlag">
+                        <v-ons-row>
+                          <v-ons-col>
+                            <div>
+                              <label>2要素認証</label>
+                              <hr/>
+                            </div>
+                          </v-ons-col>
+                        </v-ons-row>
+                        <v-ons-row>
+                          <v-ons-col>
+                            <div class="secondText">
+                              <label>ワンタイムパスワードを入力してください。</label><br>
+                              <v-ons-input max-length="30" type="text" input-id="otp" v-model="secondOtpKey" ref="otp" float autofocus autocapitalize="off" @keyup.enter="secondVerifyFN"></v-ons-input>
+                            </div>
+                          </v-ons-col>
+                        </v-ons-row>
+                        <v-ons-row>
+                          <v-ons-col>
+                            <div class="opBtnView">
+                              <v-ons-button class="btn2-cancel opyCancelBtn" @click="closeSecondOtpFN">CLOSE</v-ons-button>
+                              <v-ons-button class="btn1-execute secondVerifyBtn" :disabled="secondOtpKey.length === 0" ref="checkOtpButton" @click="secondVerifyFN">送信</v-ons-button>
+                            </div>
+                          </v-ons-col>
+                        </v-ons-row>
+                      </div>
+                      <div class="borderView" v-if="index + 1 !== showAddFrom.length || showAddFrom.length === 1"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="showAllFacilitiesView">
+                  <div class="nothaveList" v-if="inputModel.canLoginFacilities && inputModel.canLoginFacilities.length === 0">データなし</div>
+                  <div
+                    v-for="(item, index) in inputModel.canLoginFacilities"
+                    class="facilitiesListView"
+                    :key="index"
+                  >
+                    <p class="facilitiesListText">
+                      <v-ons-button
+                        v-if="item.massage != null && item.optAuth === true"
+                        class="btn4-alert mfa-button"
+                        @click="openListAdd(item)"
+                      >
+                        2要素認証
+                      </v-ons-button>
+                      <span>{{ index + 1 }} . </span>
+                      <span>{{ item.facilityName }}</span>
+                      <span v-if="item.facilityName"> • </span>
+                      <span>{{ item.username }}</span>
+                    </p>
+                    <button
+                      v-show="true"
+                      class="button-delete ntss-btn-outset"
+                      @click="deleteThatFacilitie(index)"
+                    >
+                      <v-ons-icon icon="fa-trash"/>
+                    </button>
+                    <div v-if="item.isOpenAgainAdd && item.isOpenAgainAdd === true" class="facilitiesListOpenAddView">
+                      <v-ons-row>
+                        <v-ons-col>
+                          <div>
+                            <label>2要素認証</label>
+                            <hr/>
+                          </div>
+                        </v-ons-col>
+                      </v-ons-row>
+                      <v-ons-row>
+                        <v-ons-col>
+                          <div class="secondText">
+                            <label>ワンタイムパスワードを入力してください。</label><br>
+                            <v-ons-input max-length="30" type="text" input-id="otp" v-model="secondAgainOtpKey" ref="otp" float autofocus autocapitalize="off" @keyup.enter="againSecondVerifyFN(item)"></v-ons-input>
+                          </div>
+                        </v-ons-col>
+                      </v-ons-row>
+                      <v-ons-row>
+                        <v-ons-col>
+                          <div class="opBtnView">
+                            <v-ons-button class="btn2-cancel opyCancelBtn" @click="againSecondClose(item)">CLOSE</v-ons-button>
+                            <v-ons-button class="btn1-execute secondVerifyBtn" :disabled="secondAgainOtpKey.length === 0" ref="checkOtpButton" @click="againSecondVerifyFN(item)">送信</v-ons-button>
+                          </div>
+                        </v-ons-col>
+                      </v-ons-row>
+                    </div>
+                    <div class="borderView1" v-if="index + 1 !== inputModel.canLoginFacilities.length"></div>
+                  </div>
+                </div>
+              </v-ons-list-item>
+            </div>
+          </v-ons-list>
           <v-ons-list modifier="inset" v-if="this.checkValueSignIn()">
             <div>
               <v-ons-list-header > 2要素認証登録</v-ons-list-header>
@@ -873,173 +1029,9 @@
                 </table>
             </div>
           </v-ons-list>
-          <v-ons-list modifier="inset">
-            <!--20260108 add 施舍admin start-->
-            <div>
-              <v-ons-list-header>
-                <span>施設</span>
-                <span v-if="inputModel.canLoginFacilities&&inputModel.canLoginFacilities.length&&inputModel.canLoginFacilities.length!=0">（{{ inputModel.canLoginFacilities.length }}）</span>
-              </v-ons-list-header>
-              <v-ons-list-item class="ntss-theme-screen" modifier="nodivider">
-                <div class="topBtnView">
-                  <div v-if="isOpenAddFlag == false">
-                    <v-ons-button
-                    
-                    class="nik-btn btn3-normal addBtn"
-                    @click="clickChangeAddView()"
-                  >追加</v-ons-button>
-                  </div>
-                  <div v-else>
-                    <v-ons-button
-                      class="btn2-cancel cancelBtn"
-                      @click="clickChangeAddView()"
-                    >キャンセル</v-ons-button>
-                    <v-ons-button
-                      class="btn1-execute addBtn"
-                      :disabled="isNeedSecondFlag==true||isCanVerify||isRequest"
-                      @click="verifyFN()"
-                    >確認</v-ons-button>
-                  </div>
-                </div>
-                <!--add -->
-                <div class="addFacilitiesView">
-                  <div v-if="isOpenAddFlag == true">
-                    <div  v-for="(item, index) in showAddFrom"
-                      :key="index">
-                      <table class="card-table">
-                        <button
-                          v-show="false"
-                          class="button-delete ntss-btn-outset"
-                          @click="deleteThatFacilitie(index)"
-                        >
-                          <v-ons-icon icon="fa-trash"/>
-                        </button>
-                        <br />
-                        <tr>
-                          <td class="item-title">ハッシュ値</td>
-                          <td colspan="2" class="item-data">
-                            <v-ons-input :disabled="isNeedSecondFlag" maxlength="300" type='text' v-model.trim='item.facilityHash'  float></v-ons-input>
-                            <!-- mod #10359 編集権限の動作不正 dengshen end -->
-                          </td>
-                        </tr>
-                        <tr>
-                          <td class="item-title">ユーザーID</td>
-                          <td colspan="2" class="item-data">
-                            <v-ons-input :disabled="isNeedSecondFlag" maxlength="50" type='text' v-model.trim='item.username'  float></v-ons-input>
-                            <!-- mod #10359 編集権限の動作不正 dengshen end -->
-                          </td>
-                        </tr>
-                        <tr>
-                          <td class="item-title">パスワード</td>
-                          <td colspan="2" class="item-data">
-                            <div class="password-wrapper">
-                                <v-ons-input  input-id='passwd' maxlength="30" :disabled="isNeedSecondFlag" type='password' v-model.trim='item.password' ref='passwd' @keyup.enter='signIn' float></v-ons-input>
-                                <v-ons-icon icon="fa-eye" size="18px" class="password-eyeicon" @click="clickEyeIcon($event)"/>
-                              </div>
-                            <!-- mod #10359 編集権限の動作不正 dengshen end -->
-                          </td>
-                        </tr>
-                      </table> 
-                      <!---isNeedSecondFlag-->
-                      <div class="secondView" v-if="isNeedSecondFlag">
-                        <v-ons-row>
-                          <v-ons-col>
-                            <div>
-                              <label>2要素認証</label>
-                              <hr/>
-                            </div>
-                          </v-ons-col>
-                        </v-ons-row>
-                        <v-ons-row>
-                          <v-ons-col>
-                            <div class="secondText">
-                              <label>ワンタイムパスワードを入力してください。</label><br>
-                              <v-ons-input max-length="30" type='text' input-id="otp" v-model="secondOtpKey" ref='otp' float autofocus autocapitalize="off" @keyup.enter='secondVerifyFN'></v-ons-input>
-                            </div>
-                          </v-ons-col>
-                        </v-ons-row>
-                        <v-ons-row>
-                          <v-ons-col>
-                            <div class="opBtnView">
-                              <v-ons-button class="btn2-cancel  opyCancelBtn" @click='closeSecondOtpFN'>CLOSE</v-ons-button>
-                              <v-ons-button class="btn1-execute secondVerifyBtn" :disabled='secondOtpKey.length==0?true:false' ref='checkOtpButton' @click='secondVerifyFN'>送信</v-ons-button>
-                              <!-- <v-ons-button class="btn2-cancel"  @click='backToLogin'>キャンセル</v-ons-button> -->
-                            </div>
-                          </v-ons-col>
-                        </v-ons-row>
-                      </div>
-                      <div class="borderView" v-if="index + 1!=showAddFrom.length||showAddFrom.length==1"></div>
-                    </div>
-                    
-                  </div>
-                </div>
-                <!--all list-->
-                <div class="showAllFacilitiesView">
-                  <div class="nothaveList" v-if="inputModel.canLoginFacilities&&inputModel.canLoginFacilities.length == 0">データなし</div>
-                  <div v-for="(item, index) in inputModel.canLoginFacilities"
-                    class="facilitiesListView"
-                    :key="index">
-                    <p class="facilitiesListText">
-                      <v-ons-button
-                      v-if="item.massage!=null&&item.optAuth==true"
-                        class="btn4-alert mfa-button"
-                        @click="openListAdd(item)"
-                      >
-                        2要素認証
-                      </v-ons-button>
-                      <span>{{index + 1}} . </span>
-                      <span>{{ item.facilityName }}</span>
-                      <span v-if="item.facilityName"> • </span>
-                      <span>{{ item.username }}</span>
-                    </p>
-                    <button
-                        v-show="true"
-                        class="button-delete ntss-btn-outset"
-                        @click="deleteThatFacilitie(index)"
-                      >
-                        <v-ons-icon icon="fa-trash"/>
-                    </button>
-                    <!--list 2要素認証-->
-                    <div v-if="item.isOpenAgainAdd&&item.isOpenAgainAdd==true" class="facilitiesListOpenAddView">
-                      <v-ons-row>
-                          <v-ons-col>
-                            <div>
-                              <label>2要素認証</label>
-                              <hr/>
-                            </div>
-                          </v-ons-col>
-                        </v-ons-row>
-                        <v-ons-row>
-                          <v-ons-col>
-                            <div class="secondText">
-                              <label>ワンタイムパスワードを入力してください。</label><br>
-                              <v-ons-input max-length="30"  type='text' input-id="otp" v-model="secondAgainOtpKey" ref='otp' float autofocus autocapitalize="off" @keyup.enter='againSecondVerifyFN(item)'></v-ons-input>
-                            </div>
-                          </v-ons-col>
-                        </v-ons-row>
-                        <v-ons-row>
-                          <v-ons-col>
-                            <div class="opBtnView">
-                              <v-ons-button class="btn2-cancel  opyCancelBtn" @click='againSecondClose(item)'>CLOSE</v-ons-button>
-                              <v-ons-button class="btn1-execute secondVerifyBtn" :disabled='secondAgainOtpKey.length==0?true:false' ref='checkOtpButton' @click='againSecondVerifyFN(item)'>送信</v-ons-button>
-                              <!-- <v-ons-button class="btn2-cancel"  @click='backToLogin'>キャンセル</v-ons-button> -->
-                            </div>
-                          </v-ons-col>
-                        </v-ons-row>
-                    </div>
-                    <!--border-->
-                    <div class="borderView1" v-if="index + 1!=inputModel.canLoginFacilities.length"></div>
-                  </div>
-                </div>
-              </v-ons-list-item >
-            </div>
-            <!--20260108 add 施舍admin end-->
-          </v-ons-list>
-
-
           <v-ons-popover
             cancelable
-            :visible.sync="userMenuPopoverVisible"
+            v-model:visible="userMenuPopoverVisible"
             :target="userMenuPopoverTarget"
             :cover-target="false"
             :direction="userMenuPopoverDirection"
@@ -1053,15 +1045,16 @@
         </div>
       </div>
     </div>
-    <div slot="footer" class="flex-container">
+        </template>
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button btn2-cancel denial-btn btn-cancel" @click="cancel">キャンセル</v-ons-button>
       </div>
       <div class="registration-btn-area" style="background:none">
         <!-- onclick="" は iOS で blurイベントを発火させる為 -->
-        <!--20260115 liyanze-z facilitiesChange-->
         <v-ons-button
-          v-if="facilitiesChange == false"
+          v-if="facilitiesChange === false"
           class="button btn1-execute registration-btn btn-save"
           onclick=""
           @click="registration"
@@ -1075,30 +1068,30 @@
           :disabled="!facilitiesChange"
         >保存</v-ons-button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import { EventBus } from "@/eventBus.js";
-import { mapActions, mapGetters } from "vuex";
-// mod #12462 患者情報共有 関 start
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import {
   editAuthorityList,
   deleteAuthorityList,
   patientSharedAuthorityList
 } from "@/constants/authorityList";
 import { FUNC_SHARING_PATIENT_INFORMATION } from "@/constants/function-code.js";
-// mod #12462 患者情報共有 関 end
 import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
 import { sendRequestCheckMatchCurrentPassword, sendRequestIsAvailablePassword } from "@/apis/User";
-// liyanze-z add 施舍 api
-import { getInfoRetrieve,getInfoOPT } from "@/apis/facilities-can-login.js";
+import { getInfoRetrieve, getInfoOPT } from "@/apis/facilities-can-login.js";
 import { PASSWORD_POLICY, NUM_OF_PASSWORD, pwdLvLow, pwdLvNormal, pwdLvHigh } from "@/constants/facilitySetting";
 import { SYS_USE_TYPE } from "@/constants/sysUseConstants";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -1154,9 +1147,7 @@ export default {
       // 権限項目
       editAuthList: editAuthorityList,
       deleteAuthList: deleteAuthorityList,
-      // add #12462 患者共有権限 関 start
       patientSharedAuthorityList: patientSharedAuthorityList,
-      // add #12462 患者共有権限 関 end
       checkedAuthority: [],
       // 吹き出し関連制御
       userMenuPopoverVisible: false,
@@ -1173,40 +1164,31 @@ export default {
       isIOS: false,
       fontSize: "",
       isCorrectCurrentPassword: false,
-      //OTP値
       otp: "",
-      /*** 
-       * 施舍 list
-      */
-      copyData:{},
-      facilitiesList:[],
-      facilitiesChange:false,
-      isOpenAddFlag:false,
-      isCanVerify:true,
-      //add form
-      addForm:{
-        facilityHash:'',
-        //facilityName:'',
-        username:'',
-        password:'',
+      copyData: {},
+      facilitiesList: [],
+      facilitiesChange: false,
+      isOpenAddFlag: false,
+      isCanVerify: true,
+      addForm: {
+        facilityHash: "",
+        username: "",
+        password: "",
       },
-      showAddFrom:[],
-      isRequest:false,
-      //2要素認証
-      isNeedSecondFlag:false,
-      secondOtpKey:'',
-      secondAgainOtpKey:'',
-      secretKey:'',
+      showAddFrom: [],
+      isRequest: false,
+      isNeedSecondFlag: false,
+      secondOtpKey: "",
+      secondAgainOtpKey: "",
+      secretKey: "",
     };
   },
   computed: {
-    // mod #12462 患者情報共有 関 start
     ...mapGetters("account-edit", [
       "getStateUserAccountInfo",
       "getValidationResults",
       "getFontSize"
     ]),
-    // mod #12462 患者情報共有 関 end
     ...mapGetters("facility", ["isUseFunction"]),
     ...mapGetters("master-maintenance", ["getFacilitySwitch"]),
     ...mapGetters("mst-facility-setting", { getValueSignIn: "getValueSignIn" }),
@@ -1227,11 +1209,9 @@ export default {
     remsOnly() {
       return this.systemUseSetting === SYS_USE_TYPE.REMS_ONLY;
     },
-    // mod #12462 患者情報共有 関 start
     isPatientSharedAuthorized() {
       return this.isUseFunction(FUNC_SHARING_PATIENT_INFORMATION);
     },
-    // mod #12462 患者情報共有 関 end
     // ----- バリデーション結果確認 -----
     checkDispUserId() {
       return this.getValidationResults.dispUserId;
@@ -1307,7 +1287,7 @@ export default {
         }, validationResult);
       }, validationResults);
       // エラーがなければ、falseが返る
-      return isError || this.$validator.errors.items.length !== 0;
+      return isError || this.validationErrors.length !== 0;
     },
     /**
      * ユーザ情報取得.
@@ -1326,8 +1306,7 @@ export default {
       // inputModelとStore.userAccountInfoを比較する
       const result = Object.keys(this.inputModel)
         // パスワード確認、ダイアログ用のzipcdは対象外
-        //liyanze-z &&key!=='canLoginFacilities'  このフィールドは精度に影響するからです。
-        .filter(key => key !== "userPasswordConfirm" && key !== "zipcd"&&key!=='canLoginFacilities')
+        .filter(key => key !== "userPasswordConfirm" && key !== "zipcd" && key !== "canLoginFacilities")
         .find(key => {
           let userAccountInfoValue;
           if (key === "infoDispToAdmin") {
@@ -1450,6 +1429,16 @@ export default {
     //...mapActions("websocket-card", ["connect", "sendSocketMessage", "close", "clearSocketMessage"]),
     ...mapActions("websocket-card", ["init", "connect", "sendSocketMessage", "close", "clearSocketMessage"]),
     // mod FNSI-4200ポートを使用している 孫 end
+    onSelectPatInfoAddress(event) {
+      if (!this.mapVisible) return;
+      // zipcdの取得とバリデーション
+      this.inputModel.zipcd = event.zipCd;
+      this.chkZipcd(event.zipCd);
+      // 住所の取得とバリデーション
+      this.inputModel.address = event.address;
+      this.validate("address");
+      this.mapVisible = false;
+    },
     /**
      * 処理：入力された現在のパスワードをチェック
      */
@@ -2127,7 +2116,7 @@ export default {
         return;
       }
 
-      let newSendData = {
+      const newSendData = {
         userId: this.inputModel.userId,
         dispUserId: this.inputModel.dispUserId,
         userPassword: this.inputModel.userPassword,
@@ -2153,8 +2142,8 @@ export default {
         inHospitalCd_2: this.inputModel.inHospitalCd_2,
         facilityCd: this.inputModel.facilityCd,
         infoDispToAdmin: this.inputModel.infoDispToAdmin ? "1" : "0",
-      }
-      newSendData.canLoginFacilitiesList = this.inputModel.canLoginFacilities
+      };
+      newSendData.canLoginFacilitiesList = this.inputModel.canLoginFacilities;
       // 更新処理
       await this.registUserAccount(newSendData)
         .then(() => {
@@ -2219,331 +2208,235 @@ export default {
         this.hideModal();
       }
     },
-
-    /***
-     * 20260108 liyanze-z add  about facilities
-    */
-    //show or hidden  add 施舍
-    clickChangeAddView(){
-      //false - hidden
-      if(this.isOpenAddFlag){
+    clickChangeAddView() {
+      if (this.isOpenAddFlag) {
         this.showAddFrom = [];
         this.addForm = {
-          facilityHash:'',
-          //facilityName:'',
-          username:'',
-          password:'',
+          facilityHash: "",
+          username: "",
+          password: "",
         };
-        //2要素認証  hidden
-        this.closeSecondOtpFN()
-      }else{
-        this.showAddFrom.push(this.addForm)
+        this.closeSecondOtpFN();
+      } else {
+        this.showAddFrom.push(this.addForm);
       }
       this.isOpenAddFlag = !this.isOpenAddFlag;
     },
-    //!=null
     allFieldsNotEmpty(arr) {
       return arr.every(obj =>
         Object.values(obj).every(
-          value => value !== null && value !== undefined && value !== ''&& value !== ' '
+          value => value !== null && value !== undefined && value !== "" && value !== " "
         )
       );
     },
-    //!=""
     hasMultipleSpaces(obj) {
       return Object.values(obj).some(v =>
-        typeof v === 'string' && /\s{2,}/.test(v)
+        typeof v === "string" && /\s{2,}/.test(v)
       );
     },
-    //ishave
-    eachAllRetrieve(obj){
-      let tArr = this.inputModel.canLoginFacilities;
-      let exists = tArr.some(item =>
+    eachAllRetrieve(obj) {
+      const targetList = this.inputModel.canLoginFacilities || [];
+      return targetList.some(item =>
         item.facilityHash === obj.facilityHash && item.username === obj.username
-      )
-      return exists
+      );
     },
-    //認証 newadd
-    async verifyFN(){
-      
-      let tObj = this.showAddFrom[0];
-      //!=""
-      let isMoreSpace = this.hasMultipleSpaces(tObj);
-      if(isMoreSpace){
-        //message
-        this.spacesErrorAlert()
-        return
+    async verifyFN() {
+      const target = this.showAddFrom[0];
+      if (this.hasMultipleSpaces(target)) {
+        this.spacesErrorAlert();
+        return;
       }
-      
-      //already
-      let isHaveFlag = false;
-      isHaveFlag = this.eachAllRetrieve(tObj);
-      if(isHaveFlag){
+
+      if (this.eachAllRetrieve(target)) {
         this.$ons.notification.alert({
-          title: '',
-          message: messageFormat('現在施設はすでに登録されております')
+          title: "",
+          message: messageFormat("現在施設はすでに登録されております")
         });
-        return
+        return;
       }
-      /**
-       * 3つの状況
-       * 認証合格 add
-       * 
-       * 認証に失敗しました again
-       * 
-       * 2要素
-       * 
-       */
+
       this.isRequest = true;
-      let sendData = {
-        userId:tObj.username,
-        password:tObj.password,
-        facilityCd:tObj.facilityHash,
-      }
+      const sendData = {
+        userId: target.username,
+        password: target.password,
+        facilityCd: target.facilityHash,
+      };
       await getInfoRetrieve(sendData).then(res => {
-        let tRes = res.data;
-        let msgText = '';
+        const result = res.data;
+        let msgText = "";
         let flagSuccess = false;
-        //true-認証合格 false-認証に失敗
-        if(tRes&&tRes.succeed == true){
-          //null-- ok
-          if(tRes.secretKey == null){
-            msgText = tRes.errMsg?tRes.errMsg:'アカウント情報が正常に認証されました'
+        if (result && result.succeed === true) {
+          if (result.secretKey == null) {
+            msgText = result.errMsg ? result.errMsg : "アカウント情報が正常に認証されました";
             flagSuccess = true;
-            let tName = tRes.facilityName
-            //add 
-            this.addAlreadyVerfyOK("0",tName)
-          }else{
-            //get key
-            this.secretKey = tRes.secretKey
-            //show 2要素
+            this.addAlreadyVerfyOK("0", result.facilityName);
+          } else {
+            this.secretKey = result.secretKey;
             this.isNeedSecondFlag = true;
-            if(tRes.errMsg){
-              msgText = tRes.errMsg
-              // msgText = tRes.errMsg?tRes.errMsg:"ユーザー[" + tObj.username +"]の2要素認証情報が変更されました。再認証して下さい。"
-            }else{
+            if (result.errMsg) {
+              msgText = result.errMsg;
+            } else {
               this.isRequest = false;
-              return
+              return;
             }
           }
-        }else{
-          msgText = tRes.errMsg?tRes.errMsg:'認証に失敗しました。認証情報を確認して下さい。'
+        } else {
+          msgText = result.errMsg ? result.errMsg : "認証に失敗しました。認証情報を確認して下さい。";
         }
-        //message
         this.$ons.notification.alert({
-          title: flagSuccess?'認証成功':'認証エラー',
+          title: flagSuccess ? "認証成功" : "認証エラー",
           message: messageFormat(msgText)
         });
         this.isRequest = false;
-      }).catch(err =>{
-        console.log(err)
+      }).catch(error => {
+        console.log(error);
         this.isRequest = false;
         this.$ons.notification.alert({
-          title: '認証エラー',
-          message: messageFormat('認証に失敗しました。認証情報を確認して下さい。')
+          title: "認証エラー",
+          message: messageFormat("認証に失敗しました。認証情報を確認して下さい。")
         });
-      })
-      
-    },
-    //2要素 click
-    async secondVerifyFN(){
-      //!=""
-      let tObj = {sendKey:this.secondOtpKey}
-      let isMoreSpace = this.hasMultipleSpaces(tObj);
-      if(isMoreSpace){
-        //message
-        this.spacesErrorAlert()
-        return
-      }
-      /**
-       * 2つの状況
-       * 
-       * 認証合格 add
-       * 
-       * 認証に失敗しました again
-       * 
-       */
-
-      let sendData = {
-        opt:this.secondOtpKey,
-        secretKey:this.secretKey,
-        facilityHash:this.showAddFrom[0].facilityHash
-      }
-      let msgText = '';
-      let flagSuccess = false;
-      await getInfoOPT(sendData).then(res => {
-        let tRes = res.data;
-        if(tRes.optSuccess&&tRes.optSuccess == true){
-          flagSuccess = true;
-          msgText = '2要素認証が完了しました'
-          let tName = tRes.facilityName
-          this.addAlreadyVerfyOK("1",tName)
-          this.closeSecondOtpFN();
-        }else{
-          msgText = '2要素認証に失敗しました'
-        }
-        //message
-        this.$ons.notification.alert({
-          title: flagSuccess?'認証成功':'認証エラー',
-          message: messageFormat(msgText)
-        });
-        
-      }).catch(err => {
-        this.$ons.notification.alert({
-          title: '認証エラー',
-          message: messageFormat('認証に失敗しました。認証情報を確認して下さい。')
-        });
-      })
-    },
-    //2要素 key hidden
-    closeSecondOtpFN(){
-      this.isNeedSecondFlag = false;
-      this.secondOtpKey = '';
-      this.secretKey = '';
-    },
-    //2要素 again
-    async againSecondVerifyFN(item){
-      //!=""
-      let tObj = {sendKey:this.secondAgainOtpKey}
-      let isMoreSpace = this.hasMultipleSpaces(tObj);
-      if(isMoreSpace){
-        //message
-        this.spacesErrorAlert()
-        return
-      }
-
-      let sendData = {
-        opt:this.secondAgainOtpKey,
-        secretKey:item.secretKey,
-        facilityHash:item.facilityHash
-      }
-      let msgText = '';
-      let flagSuccess = false;
-      await getInfoOPT(sendData).then(res => {
-        let tRes = res.data;
-        if(tRes.optSuccess&&tRes.optSuccess == true){
-          flagSuccess = true;
-          msgText = '2要素認証が完了しました'
-          //change status 
-          item.optStatus = 1;
-          
-          //hidden
-          item.optAuth = false;
-          item.isOpenAgainAdd = false;
-          this.secondAgainOtpKey  = '';
-          
-
-          //変更!
-          this.facilitiesListChange();
-        }else{
-          msgText = '2要素認証に失敗しました'
-        }
-        //message
-        this.$ons.notification.alert({
-          title: flagSuccess?'認証成功':'認証エラー',
-          message: messageFormat(msgText)
-        });
-        
-      }).catch(err => {
-        this.$ons.notification.alert({
-          title: '認証エラー',
-          message: messageFormat('認証に失敗しました。認証情報を確認して下さい。')
-        });
-      })
-
-      // console.log(item)
-      // this.secondVerifyFN = '';
-    },
-    againSecondClose(item){
-      item.isOpenAgainAdd = false;
-      this.$forceUpdate()
-    },
-    //spaces ==""
-    spacesErrorAlert(){
-      this.$ons.notification.alert({
-        title: '',
-        message: messageFormat('非標準')
       });
     },
-    //add list
-    addAlreadyVerfyOK(type,name){
-      let tObj = this.showAddFrom[0];
-      //変更 status = 0
-      tObj.optStatus = type;
+    async secondVerifyFN() {
+      const target = { sendKey: this.secondOtpKey };
+      if (this.hasMultipleSpaces(target)) {
+        this.spacesErrorAlert();
+        return;
+      }
 
-      //施しの名称
-      if(name)tObj.facilityName = name;
-      
-      //消除パスワード
-      delete tObj['password'];
-      //unshift
-      this.inputModel.canLoginFacilities.unshift(tObj);
+      const sendData = {
+        opt: this.secondOtpKey,
+        secretKey: this.secretKey,
+        facilityHash: this.showAddFrom[0].facilityHash
+      };
+      let msgText = "";
+      let flagSuccess = false;
+      await getInfoOPT(sendData).then(res => {
+        const result = res.data;
+        if (result.optSuccess && result.optSuccess === true) {
+          flagSuccess = true;
+          msgText = "2要素認証が完了しました";
+          this.addAlreadyVerfyOK("1", result.facilityName);
+          this.closeSecondOtpFN();
+        } else {
+          msgText = "2要素認証に失敗しました";
+        }
+        this.$ons.notification.alert({
+          title: flagSuccess ? "認証成功" : "認証エラー",
+          message: messageFormat(msgText)
+        });
+      }).catch(() => {
+        this.$ons.notification.alert({
+          title: "認証エラー",
+          message: messageFormat("認証に失敗しました。認証情報を確認して下さい。")
+        });
+      });
+    },
+    closeSecondOtpFN() {
+      this.isNeedSecondFlag = false;
+      this.secondOtpKey = "";
+      this.secretKey = "";
+    },
+    async againSecondVerifyFN(item) {
+      const target = { sendKey: this.secondAgainOtpKey };
+      if (this.hasMultipleSpaces(target)) {
+        this.spacesErrorAlert();
+        return;
+      }
 
-      //变更?
+      const sendData = {
+        opt: this.secondAgainOtpKey,
+        secretKey: item.secretKey,
+        facilityHash: item.facilityHash
+      };
+      let msgText = "";
+      let flagSuccess = false;
+      await getInfoOPT(sendData).then(res => {
+        const result = res.data;
+        if (result.optSuccess && result.optSuccess === true) {
+          flagSuccess = true;
+          msgText = "2要素認証が完了しました";
+          item.optStatus = 1;
+          item.optAuth = false;
+          item.isOpenAgainAdd = false;
+          this.secondAgainOtpKey = "";
+          this.facilitiesListChange();
+        } else {
+          msgText = "2要素認証に失敗しました";
+        }
+        this.$ons.notification.alert({
+          title: flagSuccess ? "認証成功" : "認証エラー",
+          message: messageFormat(msgText)
+        });
+      }).catch(() => {
+        this.$ons.notification.alert({
+          title: "認証エラー",
+          message: messageFormat("認証に失敗しました。認証情報を確認して下さい。")
+        });
+      });
+    },
+    againSecondClose(item) {
+      item.isOpenAgainAdd = false;
+      this.$forceUpdate();
+    },
+    spacesErrorAlert() {
+      this.$ons.notification.alert({
+        title: "",
+        message: messageFormat("非標準")
+      });
+    },
+    addAlreadyVerfyOK(type, name) {
+      const target = this.showAddFrom[0];
+      target.optStatus = type;
+      if (name) target.facilityName = name;
+      delete target.password;
+      if (!Array.isArray(this.inputModel.canLoginFacilities)) {
+        this.inputModel.canLoginFacilities = [];
+      }
+      this.inputModel.canLoginFacilities.unshift(target);
       this.facilitiesListChange();
-      //success hidden
-      this.clickChangeAddView()
-
+      this.clickChangeAddView();
     },
-    //消除選択済み
-    deleteThatFacilitie(index){
-       this.$ons.notification.confirm({
-        // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
-        // // title: "サインアウト",
-        // title: DIALOG_MESSAGES[13000001].title,
-        // // message: "サインアウトします。<br>よろしいですか？",
-        // message: messageFormat(DIALOG_MESSAGES[13000001].message),
-        title: '削除確認',
-        message: '施設情報を削除しますが、よろしいでしょうか？',
+    deleteThatFacilitie(index) {
+      this.$ons.notification.confirm({
+        title: "削除確認",
+        message: "施設情報を削除しますが、よろしいでしょうか？",
         callback: answer => {
-            if (answer == 1) {
-              this.inputModel.canLoginFacilities.splice(index, 1);
-              //削除後の変更
-              this.facilitiesListChange()
-            }
+          if (answer == 1) {
+            this.inputModel.canLoginFacilities.splice(index, 1);
+            this.facilitiesListChange();
+          }
         }
-       })
+      });
     },
-    /***liyanze-z  変更 ? */
-    facilitiesListChange(){
-      let dataA = this.copyData;
-      let dataB = this.inputModel;
-      /**
-       * true 変更  
-       * false 変更なし 
-       */
-      let tFlag = false;  
-      if(dataA.canLoginFacilities&&dataB.canLoginFacilities){
-        function deepEqual(a, b) {
-          return JSON.stringify(a) === JSON.stringify(b);
-        }
-        if(dataA.canLoginFacilities,length==dataB.canLoginFacilities,length){
-          tFlag = !deepEqual(dataA.canLoginFacilities,dataB.canLoginFacilities)
-        }else{
-          tFlag =  true
+    facilitiesListChange() {
+      const dataA = this.copyData;
+      const dataB = this.inputModel;
+      let hasChanged = false;
+      if (dataA.canLoginFacilities && dataB.canLoginFacilities) {
+        const deepEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+        if (dataA.canLoginFacilities.length === dataB.canLoginFacilities.length) {
+          hasChanged = !deepEqual(dataA.canLoginFacilities, dataB.canLoginFacilities);
+        } else {
+          hasChanged = true;
         }
       }
-      this.facilitiesChange = tFlag
+      this.facilitiesChange = hasChanged;
     },
-    //2要素 again
-    openListAdd(item){
-      //消除
-      this.secondAgainOtpKey = '';
-      //inputModel.canLoginFacilities
+    openListAdd(item) {
+      this.secondAgainOtpKey = "";
       for (let z = 0; z < this.inputModel.canLoginFacilities.length; z++) {
-        this.inputModel.canLoginFacilities[z].isOpenAgainAdd = false
+        this.inputModel.canLoginFacilities[z].isOpenAgainAdd = false;
       }
       item.isOpenAgainAdd = true;
-      this.$forceUpdate()
+      this.$forceUpdate();
     },
-
-
     /**
      * 吹き出し表示処理
      */
     showPopOver(event, message) {
-      var pop = document.getElementById("popOverMessage");
-      pop.innerText = message;
+      var pop = getScopedElementById("popOverMessage", this.$el || this);
+      if (pop) pop.innerText = message;
       this.userMenuPopoverTarget = event;
       this.userMenuPopoverVisible = true;
     },
@@ -2587,13 +2480,13 @@ export default {
       this.setLoadingScreenVisible(false);
       //  add #6449 アカウント情報で、2要素認証未登録の状態で秘密鍵作成ボタンを押下した際、画面最下部へとスクロールさせる 付 start
       this.$nextTick(() => {
-        this.$children[0].scrollToBottom()
+        this.$refs.modalBase?.scrollToBottom?.()
       })
       //  add #6449 アカウント情報で、2要素認証未登録の状態で秘密鍵作成ボタンを押下した際、画面最下部へとスクロールさせる 付 end
     },
     //値サインインを確認
     checkValueSignIn(){
-      if(this.valueSignIn&&this.valueSignIn != 0){
+      if(this.valueSignIn && this.valueSignIn != 0){
         return true;
       }else{
         return false;
@@ -2743,12 +2636,12 @@ export default {
 
       // localStorageのportを利用する
       let defaultPort = localStorage.getItem("CARD_APP_PORT");
-      // add 9511 FNSiカードアプリが一方のブラウザとしかつながらない。　吉 start
+      // add 9511 FNSiカードアプリが一方のブラウザとしかつながらない。 吉 start
       if(!/^\d+$/.test(defaultPort)){
         localStorage.removeItem("CARD_APP_PORT");
         defaultPort = null;
       }
-      // add 9511 FNSiカードアプリが一方のブラウザとしかつながらない。　吉 end
+      // add 9511 FNSiカードアプリが一方のブラウザとしかつながらない。 吉 end
       if (null !== defaultPort) {
         // localStorageがあり場合、接続を実施する
         this.init({ port: defaultPort, facilityCd: "" });
@@ -2802,15 +2695,14 @@ export default {
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("処理中・・・");
     await this.getUserAccountInfo();
-    // liyanze-z add
-    this.copyData = JSON.parse(JSON.stringify(this.getStateUserAccountInfo))
+    this.copyData = JSON.parse(JSON.stringify(this.getStateUserAccountInfo));
     // inputModelにstateの値をコピー
     this.inputModel = {
       userId: this.getStateUserAccountInfo.userId,
       dispUserId: this.getStateUserAccountInfo.dispUserId,
       userType: this.getStateUserAccountInfo.userType,
       administrator: this.getStateUserAccountInfo.administrator,
-      canLoginFacilities: this.getStateUserAccountInfo.canLoginFacilities,
+      canLoginFacilities: this.getStateUserAccountInfo.canLoginFacilities || [],
       facilityCd: this.getStateUserAccountInfo.facilityCd,
       userLastName: this.getStateUserAccountInfo.userLastName,
       userFirstName: this.getStateUserAccountInfo.userFirstName,
@@ -2837,9 +2729,8 @@ export default {
       inHospitalCd_2: this.getStateUserAccountInfo.inHospitalCd_2,
       infoDispToAdmin: this.getStateUserAccountInfo.infoDispToAdmin  === "1" ? true : false
     };
-    //liyanze-z add key
     for (let z = 0; z < this.inputModel.canLoginFacilities.length; z++) {
-      this.inputModel.canLoginFacilities[z].isOpenAgainAdd = false
+      this.inputModel.canLoginFacilities[z].isOpenAgainAdd = false;
     }
 
     this.resetValidationResults();
@@ -2863,28 +2754,15 @@ export default {
       // EventBus.$off("selectPatInfoAddress")
       // add 性能改善メモリ不足 shan end
     // 住所検索受取(都度モーダルごと破棄される為、EventBus.$offは不要)
-    EventBus.$on("selectPatInfoAddress", event => {
-      if (!this.mapVisible) return;
-      // zipcdの取得とバリデーション
-      this.inputModel.zipcd = event.zipCd;
-      this.chkZipcd(event.zipCd);
-      // add FNSI-画面の「郵便番号」を表示する 鄧シン start
-      // del FNSI-画面の「郵便番号」を表示する 関 start
-      // this.inputModel.zipcd.initValue = event.zipCd;
-      // del FNSI-画面の「郵便番号」を表示する 関 end
-      // add FNSI-画面の「郵便番号」を表示する 鄧シン end
-      // 住所の取得とバリデーション
-      this.inputModel.address = event.address;
-      this.validate("address");
-      this.mapVisible = false;
-    });
+    EventBus.$off("selectPatInfoAddress", this.onSelectPatInfoAddress);
+    EventBus.$on("selectPatInfoAddress", this.onSelectPatInfoAddress);
     //値の取得ログイン
     this.sendRequestGetValueSignInByFacilityCd(this.getStateUserAccountInfo.facilityCd);
     //  del #6449 アカウント情報で、2要素認証未登録の状態で秘密鍵作成ボタンを押下した際、画面最下部へとスクロールさせる dou start
     //  add #6449 アカウント情報で、2要素認証未登録の状態で秘密鍵作成ボタンを押下した際、画面最下部へとスクロールさせる 付 start
     // this.$nextTick(() => {
     //   if (!this.getStateUserAccountInfo.isSetQrCode) {
-    //     this.$children[0].scrollToBottom()
+    //     this.$refs.modalBase?.scrollToBottom?.()
     //   }
     // })
     //  add #6449 アカウント情報で、2要素認証未登録の状態で秘密鍵作成ボタンを押下した際、画面最下部へとスクロールさせる 付 end
@@ -2901,14 +2779,14 @@ export default {
   },
   mounted() {
     // パスワード入力時にパスワード(確認)のバリデーションが通るようにするため
-    this.$validator.validateAll().catch((error) => {
+    this.validateAllFields().catch((error) => {
       //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
       getErrorMessage('AccountEditView.vue','mounted',error);
       //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
     });
   },
-  beforeDestroy() {
-    EventBus.$off("selectPatInfoAddress")
+  beforeUnmount() {
+    EventBus.$off("selectPatInfoAddress", this.onSelectPatInfoAddress)
     clearInterval(this.socketInterval);
   },
   watch: {
@@ -2962,11 +2840,11 @@ export default {
     },
     showAddFrom: {
       handler(newVal) {
-        if(newVal.length==0){
-          this.isCanVerify = true
-        }else{
-          let  isHasEmptyName = this.allFieldsNotEmpty(newVal)
-          isHasEmptyName?this.isCanVerify=false:this.isCanVerify=true
+        if (newVal.length === 0) {
+          this.isCanVerify = true;
+        } else {
+          const isHasEmptyName = this.allFieldsNotEmpty(newVal);
+          this.isCanVerify = !isHasEmptyName;
         }
       },
       deep: true
@@ -3122,160 +3000,172 @@ td textarea:focus {
   border-color: unset;
 }
 
-/*** 20260105 施舍 定義 liyanze-z  start*/
-.facilitiesNav{
+.facilitiesNav {
   position: relative;
 }
-.facilitiesNav >>> .card-header-button-area{
+
+.facilitiesNav :deep(.card-header-button-area) {
   position: absolute;
-  right:0;
-  top:0;
-}
-.facilitiesNav >>> .card-header-button{
-  margin-left:12px;
+  right: 0;
+  top: 0;
 }
 
-.facilitiesNav >>> .btn-text{
-  color:#ffffff;
-  margin-left:12px;
+.facilitiesNav :deep(.card-header-button) {
+  margin-left: 12px;
+}
+
+.facilitiesNav :deep(.btn-text) {
+  color: #ffffff;
+  margin-left: 12px;
   position: relative;
-  top:-8px;
-  left:-5px;
+  top: -8px;
+  left: -5px;
 }
 
-.topBtnView{
-  width:100%;
+.topBtnView {
+  width: 100%;
   text-align: right;
   box-sizing: border-box;
 }
-.cancelBtn,.addBtn{
-  width:6em;
-  height:30px;
+
+.cancelBtn,
+.addBtn {
+  width: 6em;
+  height: 30px;
 }
-.cancelBtn{
-  margin-right:16px;
+
+.cancelBtn {
+  margin-right: 16px;
 }
-.addFacilitiesView{
-  width:100%;
+
+.addFacilitiesView {
+  width: 100%;
   overflow: hidden;
 }
-.showAllFacilitiesView{
-  width:100%;
+
+.showAllFacilitiesView {
+  width: 100%;
   overflow: hidden;
-  margin-top:20px;
+  margin-top: 20px;
 }
-.facilitiesListView{
-  width:100%;
-  min-height:50px;
+
+.facilitiesListView {
+  width: 100%;
+  min-height: 50px;
   position: relative;
   box-sizing: border-box;
-  padding-left:16px;
+  padding-left: 16px;
 }
-.facilitiesListOpenAddView{
-  padding-bottom:10px;
+
+.facilitiesListOpenAddView {
+  padding-bottom: 10px;
 }
-.facilitiesListView > .facilitiesListText{
+
+.facilitiesListView > .facilitiesListText {
   line-height: 50px;
 }
-.facilitiesListOpenAddView > ons-row{
-  width:calc(100% - 60px)!important;
+
+.facilitiesListOpenAddView > ons-row {
+  width: calc(100% - 60px) !important;
 }
-.nothaveList{
+
+.nothaveList {
   text-align: center;
 }
-.mon-table-head-one{
+
+.mon-table-head-one {
   padding: var(--list-header-padding);
   color: #ffffff;
   background-color: var(--ntss-list-header-background-color);
-  background-image: -webkit-linear-gradient(rgba(255, 255, 255, .3) 0%, transparent 50%, transparent 50%, rgba(0, 0, 0, .1) 100%);
   background-image: linear-gradient(rgba(255, 255, 255, .3) 0%, transparent 50%, transparent 50%, rgba(0, 0, 0, .1) 100%);
   box-shadow: 0 2px 2px 0 rgba(255, 255, 255, .2) inset, 0 2px 20px 0 rgba(255, 255, 255, .5) inset, 0 -2px 2px 0 rgba(0, 0, 0, .1);
 }
 
 .card-table {
-    width: 98%;
-    /* border: 1px solid; */
-    border-color: #555555;
-    border-top-width: thin;
-    margin: 0px 1% 0px 1%;
-    -webkit-box-sizing: border-box;
-    box-sizing: border-box;
-    position: relative;
-    box-sizing: border-box;
-    padding-right:30px;
+  width: 98%;
+  border-color: #555555;
+  border-top-width: thin;
+  margin: 0 1%;
+  box-sizing: border-box;
+  position: relative;
+  padding-right: 30px;
 }
 
-.borderView{
-  width:98%;
-  height:1px;
-  background:#999999;
+.borderView {
+  width: 98%;
+  height: 1px;
+  background: #999999;
   box-sizing: border-box;
-  margin:10px auto;
-}
-.borderView1{
-  width:100%;
-  height:1px;
-  background:#999999;
-  box-sizing: border-box;
-}
-.button-delete{
-    position: absolute;
-    top: 0;
-    right: 0;
-    height: 100%;
-    z-index: 1;
+  margin: 10px auto;
 }
 
-.opBtnView{
+.borderView1 {
+  width: 100%;
+  height: 1px;
+  background: #999999;
+  box-sizing: border-box;
+}
+
+.button-delete {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  z-index: 1;
+}
+
+.opBtnView {
   display: flex;
-  -webkit-box-pack: justify;
-  -ms-flex-pack: justify;
   justify-content: flex-end;
-  -ms-flex-wrap: wrap;
   flex-wrap: wrap;
 }
-.opyCancelBtn{
-  width:6em;
-  margin-top:12px;
+
+.opyCancelBtn {
+  width: 6em;
+  margin-top: 12px;
   color: #ffffff !important;
   background-color: var(--btn2-cancel-color);
   background-image: linear-gradient(var(--btn2-cancel-color), var(--btn2-cancel-color)) !important;
   border-bottom: solid 3px var(--btn-common-border-color) !important;
   box-shadow: unset;
-  margin-right:16px;
+  margin-right: 16px;
 }
 
-.secondVerifyBtn{
-  margin-top:12px;
-  width:6em;
+.secondVerifyBtn {
+  margin-top: 12px;
+  width: 6em;
 }
-.secondText{
-  margin-top:12px;
+
+.secondText {
+  margin-top: 12px;
 }
-button:not([class^='pika']), label.toggle, .k-button, .btn-ntss-custom {
-    border-radius: 3px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+
+button:not([class^='pika']),
+label.toggle,
+.k-button,
+.btn-ntss-custom {
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
+
 .ntss-btn-outset {
-    border-style: outset;
-    border-image-repeat: stretch;
-    border-color: unset;
-}
-.item-title{
-    width: 16%;
+  border-style: outset;
+  border-image-repeat: stretch;
+  border-color: unset;
 }
 
-.secondView{
+.item-title {
+  width: 16%;
+}
+
+.secondView {
   box-sizing: border-box;
-  padding-left:18px;
-  padding-right:48px;
-  margin-top:12px;
+  padding-left: 18px;
+  padding-right: 48px;
+  margin-top: 12px;
 }
-
-/*** 20260105  施舍 定義 liyanze-z  end*/
-
 
 @media print {
   /** 住所検索印刷時は親を消す */

@@ -7,7 +7,6 @@ describe("MediInfoList#toString", () => {
     const mediInfoList = new MediInfoList();
 
     // action
-    /* eslint-disable */
     const result = mediInfoList.toString();
 
     // assert
@@ -18,7 +17,6 @@ describe("MediInfoList#toString", () => {
     // arrange
     const mediInfoList = new MediInfoList();
     mediInfoList.add(getMediInfo());
-    /* eslint-disable */
     const expected = "[{" +
       `"no":100` +
       `,"class_cd":101` +
@@ -76,7 +74,6 @@ describe("MediInfoList#toString", () => {
     mediInfo2.cd = 1002;
     mediInfo2.name = "medicineName2";
     mediInfoList.addAll([mediInfo1, mediInfo2]);
-    /* eslint-disable*/
     const expected = "[{" +
       `"no":100` +
       `,"class_cd":101` +
@@ -162,7 +159,6 @@ describe("MediInfoList#toString", () => {
       `,"effect_user_first_name":"effectFirst"` +
     "}]";
     // action
-    /* eslint-disable */
     const result = mediInfoList.toString();
 
     // assert

@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.request.notificationMessage.ReadStatusRequest;
 // add FNSI-コードをマージ 江 start
@@ -59,7 +59,7 @@ import java.util.Map;
 // add FNSI-コードをマージ 江 start
 // add FNSI-コードをマージ 江 end
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
@@ -139,7 +139,7 @@ public class NotificationMessageResource {
 
     ResponseEntity<?> ret = registerNotificationMessage(reqRegistMessage, ntssUser);
     if (ret.getStatusCode() != HttpStatus.OK) {
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     // メール送信処理呼び出し
@@ -149,11 +149,11 @@ public class NotificationMessageResource {
 
     ret = sendMakerNoticeMail(reqSendMail);
     if (ret.getStatusCode() != HttpStatus.OK) {
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     // レスポンス生成
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
   // add FNSI-コードをマージ 江 end
 
@@ -203,7 +203,7 @@ public class NotificationMessageResource {
       eventLogMessageNew.setLogMessage(ExcetionStackTraceToString(e));
       logService.log(LogLevel.ERROR, eventLogMessageNew, "", LoggingConstant.SERVICE_NAME.FNSI, null);
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang end
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     } catch (RuntimeException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -213,11 +213,11 @@ public class NotificationMessageResource {
       eventLogMessageNew.setLogMessage(ExcetionStackTraceToString(e));
       logService.log(LogLevel.ERROR, eventLogMessageNew, "", LoggingConstant.SERVICE_NAME.FNSI, null);
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang end
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     // レスポンス生成
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   /**
@@ -499,7 +499,7 @@ public class NotificationMessageResource {
       long start = System.currentTimeMillis();
       // リクエスト処理
       ResponseEntity<String> response = rt.exchange(request, String.class);
-      status = response.getStatusCode();
+      status = HttpStatus.valueOf(response.getStatusCode().value());
       ret = response.getBody();
       long cost = System.currentTimeMillis() - start;
       Map<String, Object> map = new HashMap<>();
@@ -531,7 +531,7 @@ public class NotificationMessageResource {
       return new ResponseEntity<>(ret, status);
     }
 
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     }
 
 }

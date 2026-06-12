@@ -7,35 +7,11 @@
     <div class="check-list-main-content">
       <!-- 患者一覧のグリッド -->
       <div :style="[condition.isShowUsageGuide ? { 'height':kendoGridHeight + 'px', 'overflow': 'auto', 'position': 'relative' } : {}]" class="grid-area">
-        <kendo-grid
+        <div
           id="kendo"
-                    ref="grid"
-                    :data-source="listDataSource"
-                    :data-bound="gridSetting"
-                    :resizable="true"
-                    :selectable='"cell"'
-                    :change="onCellClick"
-                    :sortable="{ compare: compareByField }"
-                    :height="kendoGridHeight"
-                    :sort="sortHandler"
-                    :columnResize="columnResizeEvevt"
-                    class="ntss-list check-list-main-content-list">
-          <kendo-grid-column v-for="column in checkGridColumnsHeader" :key="column.field"
-                            :field="column.field"
-                            :locked="lockFlg"
-                            :title="$sanitize(column.title)"
-                            :attributes="{'class':'#= setDataClass({rstDialysisState})#'}"
-                            :width="column.width[selectedFontSize]">
-          </kendo-grid-column>
-          <kendo-grid-column v-for="column in getChecklistColumn" :key="column.field"
-                            :hidden="column.hidden"
-                            :field="column.field"
-                            :template="column.template"
-                            :title="$sanitize(column.title)"
-                            :attributes="column.field === 'hospPatId' ? { class: 'hosp-pat-id-body' } : {}"
-                            :width="column.width[selectedFontSize]">
-          </kendo-grid-column>
-        </kendo-grid>
+          ref="grid"
+          class="ntss-list check-list-main-content-list"
+        ></div>
       </div>
         <div v-if="condition.isShowUsageGuide" id="area_usage_guide">
         <div class="usage-guide-div">
@@ -76,18 +52,20 @@
 
 <script>
 // add FNSI-横展開 患者名ソート改善_チェックリスト機能分 周 start
-import Kendo from "@progress/kendo-ui";
+import kendo from "@progress/kendo-ui";
+import $ from "jquery";
+import { markRaw } from "@/compat/vue/runtime";
 // add FNSI-横展開 患者名ソート改善_チェックリスト機能分 周 end
-import { mapGetters, mapActions, mapMutations } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import PatHeaderControlMixin from "@/components/common/PatHeadControlMixin";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { dialysisState } from "@/constants/weightDefine";
 import { getCurrentFunctionCd } from "@/router/routing-helper";
 //FNSI-修正 左サイドバー切り替えする時、画面の右スクロールバーの表示がおかしいについての修正 xugj add start
-import $$ from "jquery";
+
 //FNSI-修正 左サイドバー切り替えする時、画面の右スクロールバーの表示がおかしいについての修正 xugj add end
 // add 5984 機能帳票でパラメータが正しく渡されていない 歴 start
 import store from "@/stores";
@@ -96,15 +74,93 @@ import { CHECK_LIST_FORCE_SIGNOUT } from "@/constants/facilitySetting";
 import { initForceSignOutFlag } from "@/functions/common/CommonFunctions";
 import { addPatNameSortToList, sortableCompare } from "@/functions/SortFunctions";
 
+import { getLatestHeaderElement, getHeaderHeight, getFooterMenuClientHeight, getMainContentAreaElement, getScopedElementById, getScopedSessionStorage } from "@/functions/common/LayoutMeasureHelper";
+
+const { updated: _checkListMasterMaintenanceUpdated, ...CheckListMasterMaintenanceMixin } = MasterMaintenanceMixin;
+
+function getChecklistGridRoot(sender) {
+  if (!sender) return null;
+  if (sender.wrapper?.[0]) return sender.wrapper[0];
+  if (sender.element?.[0]) return sender.element[0];
+  if (sender.nodeType === 1) return sender;
+  return null;
+}
+
+function findChecklistGridContent(root) {
+  return root?.querySelector?.(".k-grid-content") || null;
+}
+
+function findChecklistLockedContent(root) {
+  return root?.querySelector?.(".k-grid-content-locked") || null;
+}
+
+function captureChecklistGridScrollPosition(sender) {
+  const root = getChecklistGridRoot(sender);
+  const content = findChecklistGridContent(root);
+  return {
+    top: content?.scrollTop || 0,
+    left: content?.scrollLeft || 0
+  };
+}
+
+function restoreChecklistGridScrollPosition(sender, position = {}) {
+  const root = getChecklistGridRoot(sender);
+  const content = findChecklistGridContent(root);
+  const lockedContent = findChecklistLockedContent(root);
+  if (content) {
+    content.scrollTop = position.top || 0;
+    content.scrollLeft = position.left || 0;
+    try {
+      content.dispatchEvent(new Event("scroll", { bubbles: true }));
+    } catch (_error) {
+      $(content).trigger("scroll");
+    }
+  }
+  if (lockedContent) {
+    lockedContent.scrollTop = position.top || 0;
+  }
+}
+
+function attachChecklistLockedContentScrollSync(sender, { cleanupList = [], wheel = false } = {}) {
+  const root = getChecklistGridRoot(sender);
+  const content = findChecklistGridContent(root);
+  const lockedContent = findChecklistLockedContent(root);
+  if (!content || !lockedContent) return;
+  const sync = () => {
+    lockedContent.scrollTop = content.scrollTop;
+  };
+  content.addEventListener("scroll", sync, { passive: true });
+  cleanupList.push(() => content.removeEventListener("scroll", sync));
+  if (wheel) {
+    const wheelSync = event => {
+      lockedContent.scrollTop += event.deltaY || 0;
+      content.scrollTop = lockedContent.scrollTop;
+    };
+    lockedContent.addEventListener("wheel", wheelSync, { passive: true });
+    cleanupList.push(() => lockedContent.removeEventListener("wheel", wheelSync));
+  }
+}
+
+function createChecklistDataSource(options) {
+  return new kendo.data.DataSource(options);
+}
+
 // ソートキー変換用のマップ
 const SORT_KEY_MAP = {
   viewTreatDate: "treatDate", // 治療日 ※viewTreatDateは"MM/DD(曜日)" 形式のためtreatDateでソートする
 };
 
+const BED_DIALYSIS_STATE_CLASSES = [
+  "td-send-condition",
+  "td-dialysis",
+  "td-after-dialysis",
+  "td-after-record",
+  "td-not-send-condition"
+];
+
 export default {
-  props: {},
-  components: {},
-  mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
+
+  mixins: [NextTransitionMixin, CheckListMasterMaintenanceMixin, PatHeaderControlMixin],
   data() {
     return {
       androidFlg: false,
@@ -113,6 +169,10 @@ export default {
       kendoMode: false,
       kendoGridToolbarHeight: 500,
       kendoGridHeight: 300,
+      gridScrollSyncCleanup: [],
+      directGridWidget: null,
+      directGridColumnSignature: "",
+      directGridLayoutRafId: null,
       mainHeight: 300,
       // mod FNSI-横展開 患者名ソート改善_チェックリスト機能分 周 start
       // sort: {
@@ -333,6 +393,15 @@ export default {
     // mod FNSI-横展開 患者名ソート改善_チェックリスト機能分 周 end
   },
   methods: {
+    getCheckListPageRoot() {
+      return getMainContentAreaElement(this.$el || null) || this.$el || document;
+    },
+    getUsageGuideElement() {
+      return getScopedElementById('area_usage_guide', this.getCheckListPageRoot()) || null;
+    },
+    getPatientSearchSidebarButton() {
+      return getScopedElementById('showPatientSearchSidebarBtn', this.getCheckListPageRoot()) || null;
+    },
     ...mapActions("multi-modal", [
       "showChecklist",
       "showMedicine",
@@ -395,6 +464,11 @@ export default {
      */
     sortHandler(e) {
       this.currentSort = e.sort;
+      this.$nextTick(() => {
+        requestAnimationFrame(() => {
+          this.applyBedDialysisStateColors();
+        });
+      });
     },
     /**
      * 列ヘッダクリック時のソート処理
@@ -466,16 +540,260 @@ export default {
         .slice();
     },
 
+    scheduleGridHeightCalculation() {
+      // Vue3ではKendo Grid本体DOMの生成がVue2より遅れる場合があるため、
+      // content DOM未生成時は次tickで再同期する。
+      this.$nextTick(() => {
+        this.calculateGridHeight();
+      });
+    },
+    getGridScrollSender() {
+      return this.$refs.grid?.gridWidget?.() || this.getGridRootEl?.() || this.$refs.grid?.$el || null;
+    },
+    captureGridScrollPosition() {
+      return captureChecklistGridScrollPosition(this.getGridScrollSender());
+    },
+    restoreGridScrollPosition(position = {}) {
+      restoreChecklistGridScrollPosition(this.getGridScrollSender(), position);
+      if (Number.isFinite(position?.top)) {
+        this.currentScrollTop = position.top;
+      }
+      if (Number.isFinite(position?.left)) {
+        this.currentScrollLeft = position.left;
+      }
+    },
+    getDirectGridRoot() {
+      const ref = this.$refs.grid;
+      return ref?.nodeType === 1 ? ref : ref?.$el || null;
+    },
+    getDirectGridColumnSignature() {
+      const summarize = column => ({
+        field: column.field,
+        title: column.title,
+        hidden: column.hidden === true,
+        locked: column.field === "bedName" || column.locked === true,
+        width: column.width?.[this.selectedFontSize] || column.width || "",
+        hasTemplate: !!column.template
+      });
+      return JSON.stringify([
+        ...(this.checkGridColumnsHeader || []).map(summarize),
+        ...(this.getChecklistColumn || []).map(summarize)
+      ]);
+    },
+    buildDirectGridColumns() {
+      const headerColumns = (this.checkGridColumnsHeader || []).map(column => ({
+        field: column.field,
+        locked: column.field === "bedName",
+        title: this.$sanitize ? this.$sanitize(column.title) : column.title,
+        width: column.width?.[this.selectedFontSize] || column.width,
+      }));
+      const bodyColumns = (this.getChecklistColumn || [])
+        .filter(column => column.field !== "bedName")
+        .map(column => ({
+          field: column.field,
+          hidden: !!column.hidden,
+          locked: false,
+          template: column.template,
+          title: this.$sanitize ? this.$sanitize(column.title) : column.title,
+          attributes: column.field === "hospPatId" ? { class: "hosp-pat-id-body" } : {},
+          width: column.width?.[this.selectedFontSize] || column.width,
+        }));
+      return [...headerColumns, ...bodyColumns];
+    },
+    getDirectGridHeaderFields(isLocked) {
+      const root = this.getDirectGridRoot();
+      if (!root) {
+        return [];
+      }
+      const headerRoot = isLocked
+        ? root.querySelector(".k-grid-header-locked")
+        : root.querySelector(".k-grid-header-wrap");
+      if (!headerRoot) {
+        return [];
+      }
+      return Array.from(
+        headerRoot.querySelectorAll("th[data-field][role='columnheader'], th[data-field].k-header")
+      ).map(th => th.getAttribute("data-field"));
+    },
+    getDirectGridFieldByCell(cell) {
+      if (!cell) {
+        return null;
+      }
+      const isLocked = !!cell.closest(".k-grid-content-locked");
+      const cellIndex = cell.cellIndex ?? -1;
+      if (cellIndex < 0) {
+        return null;
+      }
+      const field = this.getDirectGridHeaderFields(isLocked)[cellIndex];
+      if (field) {
+        return field;
+      }
+      const grid = this.directGridWidget;
+      if (grid?.cellIndex) {
+        const columnIndex = grid.cellIndex($(cell));
+        if (columnIndex >= 0) {
+          return grid.columns?.[columnIndex]?.field || null;
+        }
+      }
+      return null;
+    },
+    installDirectGridFacade() {
+      const root = this.getDirectGridRoot();
+      if (!root) return;
+      root.kendoWidget = () => this.directGridWidget;
+      root.gridWidget = () => this.directGridWidget;
+      root.gridDataSource = () => this.directGridWidget?.dataSource || null;
+      root.gridRootEl = () => root;
+      root.gridElement = () => root;
+      root.gridContentEl = () => root.querySelector(".k-grid-content");
+      root.gridLockedContentEl = () => root.querySelector(".k-grid-content-locked");
+      root.gridAutoScrollableEl = () => root.querySelector(".k-grid-content");
+      root.gridHeaderEl = () => root.querySelector(".k-grid-header");
+      root.gridHeaderWrapEl = () => root.querySelector(".k-grid-header-wrap");
+      root.gridTbodyEl = () => this.directGridWidget?.tbody?.[0] || root.querySelector(".k-grid-content tbody");
+      root.gridDataItem = row => this.directGridWidget?.dataItem?.(row) || null;
+      root.clearGridSelection = () => this.directGridWidget?.clearSelection?.();
+      root.gridResizeTargets = () => [root.querySelector(".k-grid-header"), root.querySelector(".k-grid-content")].filter(Boolean);
+    },
+    getDirectGridDataSourceOption() {
+      if (this.listDataSource?.data) {
+        return this.listDataSource;
+      }
+      return createChecklistDataSource({
+        data: Array.isArray(this.listDataSource) ? this.listDataSource : [],
+        sort: this.currentSort || null
+      });
+    },
+    initDirectGridIfReady() {
+      const root = this.getDirectGridRoot();
+      if (!root || !this.listDataSource || !this.checkGridColumnsHeader?.length) {
+        return;
+      }
+      const nextSignature = this.getDirectGridColumnSignature();
+      if (this.directGridWidget) {
+        if (this.directGridColumnSignature !== nextSignature) {
+          this.directGridWidget.setOptions({ columns: this.buildDirectGridColumns() });
+          this.directGridColumnSignature = nextSignature;
+          this.directGridWidget.refresh?.();
+        }
+        this.applyDirectGridDataSourceContract();
+        this.installDirectGridFacade();
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+      const $root = $(root);
+      $root.kendoGrid({
+        dataSource: this.getDirectGridDataSourceOption(),
+        columns: this.buildDirectGridColumns(),
+        scrollable: true,
+        resizable: true,
+        selectable: "cell",
+        sortable: { compare: this.compareByField },
+        height: this.kendoGridHeight,
+        sort: event => this.sortHandler(event),
+        columnResize: event => this.columnResizeEvevt(event),
+        change: event => this.onCellClick(event),
+        dataBound: () => this.gridSetting()
+      });
+      this.directGridWidget = markRaw($root.data("kendoGrid"));
+      this.directGridColumnSignature = nextSignature;
+      this.installDirectGridFacade();
+      this.applyDirectGridStyleContract();
+      this.scheduleDirectGridLayoutContract();
+    },
+    applyDirectGridDataSourceContract() {
+      const grid = this.directGridWidget;
+      const dataSource = this.getDirectGridDataSourceOption();
+      if (!grid || !dataSource) return;
+      if (grid.dataSource !== dataSource) {
+        grid.setDataSource(dataSource);
+        return;
+      }
+      const latestData = typeof dataSource.data === "function" ? dataSource.data() : [];
+      if (Array.isArray(latestData) && latestData.length > 0) {
+        grid.dataSource.data(latestData);
+      }
+      if (this.currentSort) {
+        grid.dataSource.sort(this.currentSort);
+      }
+    },
+    scheduleDirectGridLayoutContract() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+      }
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.directGridLayoutRafId = null;
+        this.applyDirectGridStyleContract();
+        this.directGridWidget?.resize?.(true);
+      });
+    },
+    applyDirectGridStyleContract() {
+      const root = this.getDirectGridRoot();
+      if (!root) return;
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-display-block");
+      root.querySelectorAll(".k-grid-header th, .k-grid-header .k-table-th").forEach(th => th.classList.add("k-header"));
+      [".k-grid-content tbody", ".k-grid-content-locked tbody"].forEach(selector => {
+        root.querySelectorAll(selector).forEach(tbody => {
+          Array.from(tbody.children || []).forEach((tr, index) => {
+            tr.classList.add("k-master-row");
+            tr.classList.toggle("k-alt", index % 2 === 1);
+          });
+        });
+      });
+      root.querySelectorAll(".k-grid-content tbody td, .k-grid-content-locked tbody td").forEach(td => td.classList.add("k-td", "k-table-td"));
+      this.applyBedDialysisStateColors();
+    },
+    applyBedDialysisStateColors() {
+      const root = this.getDirectGridRoot();
+      const grid = this.directGridWidget;
+      if (!root || !grid) {
+        return;
+      }
+      const paintLockedRow = row => {
+        if (!row?.closest?.(".k-grid-content-locked")) {
+          return;
+        }
+        const dataItem = grid.dataItem?.(row) || grid.dataItem?.($(row));
+        if (!dataItem) {
+          return;
+        }
+        const firstCell = row.querySelector("td");
+        if (!firstCell) {
+          return;
+        }
+        BED_DIALYSIS_STATE_CLASSES.forEach(className => {
+          firstCell.classList.remove(className);
+        });
+        firstCell.classList.add(this.dialysisStateBackColor(dataItem));
+      };
+      root.querySelectorAll(".k-grid-content-locked tbody tr[data-uid]").forEach(paintLockedRow);
+      grid.tbody?.children?.().each?.((_index, row) => {
+        const uid = row.getAttribute("data-uid");
+        if (!uid) {
+          return;
+        }
+        root.querySelectorAll(`.k-grid-content-locked tr[data-uid="${uid}"]`).forEach(paintLockedRow);
+      });
+    },
+    destroyDirectGrid() {
+      try {
+        this.directGridWidget?.destroy?.();
+      } catch (_error) {
+        // noop
+      }
+      this.directGridWidget = null;
+      this.directGridColumnSignature = "";
+      const root = this.getDirectGridRoot();
+      if (root) root.innerHTML = "";
+    },
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
+      const scrollPosition = this.captureGridScrollPosition();
       const wh = this.windowHeight;
-      const hc = Array.prototype.slice
-        .call(document.getElementsByClassName("header"))
-        .shift();
-      const hh = hc ? hc.clientHeight : 0;
+      const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
       const fmh =
         (this.isDispMenu === 1
-          ? document.getElementById("footer-menu").clientHeight
+          ? getFooterMenuClientHeight(this.$el || null)
           : 0) + 5;
       this.kendoGridToolbarHeight = wh - hh - fmh - 3;
       this.mainHeight = wh - hh - fmh;
@@ -486,35 +804,43 @@ export default {
 
       //const gfh = document.getElementById("grid-footer").clientHeight;
       //this.kendoGridHeight = this.kendoGridToolbarHeight - (gfh + 40);
-      const guideClientHeight = document.getElementById("area_usage_guide")
-        ? document.getElementById("area_usage_guide").clientHeight
+      const usageGuide = this.getUsageGuideElement();
+      const guideClientHeight = usageGuide
+        ? usageGuide.clientHeight
         : 0;
       this.kendoGridHeight = this.kendoGridToolbarHeight - guideClientHeight;
 
       //FNSI-修正 左サイドバー切り替えする時、画面の右スクロールバーの表示がおかしいについての修正 xugj add start
-      const gridWidget = $$('#kendo').data('kendoGrid');
-      gridWidget.resize($$('.k-grid-header'));
-      gridWidget.resize($$('.k-grid-content'));
+      const gridWidget = this.getGridWidget();
+      const resizeTargets = this.$refs.grid?.gridResizeTargets?.() || [];
+      gridWidget?.resize?.(resizeTargets.length ? resizeTargets : [this.getGridHeaderEl(), this.getGridContentEl()].filter(Boolean));
       //FNSI-修正 左サイドバー切り替えする時、画面の右スクロールバーの表示がおかしいについての修正 xugj add end
       // add bug 6697 修正 chen start
       this.$nextTick(() => {
-        const headerHeight = document.getElementsByClassName("k-grid-header")[0].offsetHeight + 2;
-        const gridContent = document.getElementsByClassName("k-grid-content")[0];
+        const gridContent = this.getGridContentEl();
+        if (!gridContent) {
+          // Vue3ではKendo Grid本体DOMの生成がVue2より遅れる場合があるため、DOM生成前は次回同期に委ねる。
+          requestAnimationFrame(() => {
+            if (this.getGridContentEl()) {
+              this.calculateGridHeight();
+            }
+          });
+          return;
+        }
+        const headerHeight = (this.getGridHeaderEl()?.offsetHeight || 0) + 2;
         const isHorizontalScroll = gridContent.scrollWidth > gridContent.clientWidth;
         let lockRowHeight = this.kendoGridHeight - headerHeight;
         // PCでの表示時のみ、スクロールバー分の不要な高さが発生する為、高さの調整を行う
         if (!this.androidFlg && !this.iosFlg && isHorizontalScroll) {
           lockRowHeight -= 17;
         }
-        const lockedRows = document.getElementsByClassName("k-grid-content-locked");
+        const lockedContent = this.getGridLockedContentEl();
+        const lockedRows = lockedContent ? [lockedContent] : [];
         if (lockedRows && lockedRows.length > 0) {
           lockedRows[0].style.height = lockRowHeight + "px";
         }
-        if  (gridContent) {
-          // スクロール位置復帰
-          gridContent.scrollTop = this.currentScrollTop;
-          gridContent.scrollLeft = this.currentScrollLeft;
-        }
+        // スクロール位置復帰（resize 前の実際位置を使う。currentScrollTop は dataLoad 時のみ更新される）
+        this.restoreGridScrollPosition(scrollPosition);
       });
       // add bug 6697 修正 chen end
     },
@@ -527,10 +853,11 @@ export default {
       } else {
         this.filteredCheckList();
         // add FNSI-横展開 表示条件のサインイン内保持_チェックリスト機能分 周 start
-        this.listDataSource = new Kendo.data.DataSource({
+        this.listDataSource = createChecklistDataSource({
           data: this.getListDataSource,
           sort: this.currentSort ? this.currentSort : null // ソート条件保持
         });
+        this.$nextTick(() => this.initDirectGridIfReady());
         // add FNSI-横展開 表示条件のサインイン内保持_チェックリスト機能分 周 end
       }
     },
@@ -539,7 +866,7 @@ export default {
       if (this.getIsDataLoading) {
         return;
       }
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       this.endPolling();
@@ -552,9 +879,16 @@ export default {
     },
     async dataLoad(autoRefreshFlag) {
       // スクロール位置を保存
-      const gridContent = document.getElementsByClassName("k-grid-content")[0];
-      this.currentScrollTop = gridContent.scrollTop;
-      this.currentScrollLeft = gridContent.scrollLeft;
+      const gridContent = this.getGridContentEl();
+      if (gridContent) {
+        this.currentScrollTop = gridContent.scrollTop;
+        this.currentScrollLeft = gridContent.scrollLeft;
+      } else {
+        // Vue3では初期mounted時点でKendo Gridのcontent DOMが未生成の場合がある。
+        // Vue2と同じスクロール復帰値を保持するため、未生成時は既存値を維持する。
+        this.currentScrollTop = this.currentScrollTop || 0;
+        this.currentScrollLeft = this.currentScrollLeft || 0;
+      }
       // FNSI-修正 #5407 xie add start
       this.setLoadingScreenVisible(true);
       // FNSI-修正 #5407 xie add end
@@ -596,11 +930,12 @@ export default {
         this.filteredCheckList();
       }
       // add FNSI-横展開 患者名ソート改善_チェックリスト機能分 周 start
-      this.listDataSource = new Kendo.data.DataSource({
+      this.listDataSource = createChecklistDataSource({
         data: this.getListDataSource,
         sort: this.currentSort ? this.currentSort : null // ソート条件保持
       });
       this.calculateGridHeight();
+      this.$nextTick(() => this.initDirectGridIfReady());
       // add FNSI-横展開 患者名ソート改善_チェックリスト機能分 周 end
 
       // 読み込み処理が走ってしまった時点でフラグを落とす
@@ -912,6 +1247,9 @@ export default {
     },
     // add FNSI-redmine_#3908_ソート方法の改善 周 start
     columnResizeEvevt (event) {
+      if (event?.end === false) {
+        return;
+      }
       if (event.column.field === "bedName") {
         this.setChecklistColumnHeaderWidth({
           selectedFontSize: this.selectedFontSize,
@@ -964,7 +1302,7 @@ export default {
         this.updateTreatmentPatList(this.CheckListToPatList);
         // 機能コード設定、選択 ord_no を保持
         this.setOrdNoForSideBarRecord(selOrdNo);
-        this.setSrcFuncName(this.$router.currentRoute.name);
+        this.setSrcFuncName(this.$route.name);
 
         // ordNoセット
         this.sendConditionSetSelectOrdNo({
@@ -981,7 +1319,7 @@ export default {
         this.updateTreatmentPatList(this.CheckListToPatList);
         // 機能コード設定、選択 ord_no を保持
         this.setOrdNoForSideBarRecord(selOrdNo);
-        this.setSrcFuncName(this.$router.currentRoute.name);
+        this.setSrcFuncName(this.$route.name);
 
         // 治療中以降の患者の場合
         this.setSelectedPatHeader(selPatId).then(() => {
@@ -1042,7 +1380,7 @@ export default {
           this.updateTreatmentPatList(this.CheckListToPatList);
           // 機能コード設定、選択 ord_no を保持
           this.setOrdNoForSideBarRecord(selOrdNo);
-          this.setSrcFuncName(this.$router.currentRoute.name);
+          this.setSrcFuncName(this.$route.name);
 
           // ordNoセット
           this.sendConditionSetSelectOrdNo({
@@ -1061,7 +1399,7 @@ export default {
           this.updateTreatmentPatList(this.CheckListToPatList);
           // 機能コード設定、選択 ord_no を保持
           this.setOrdNoForSideBarRecord(selOrdNo);
-          this.setSrcFuncName(this.$router.currentRoute.name);
+          this.setSrcFuncName(this.$route.name);
 
           // 条件送信以降の患者の場合
           this.setSelectedPatHeader(selPatId).then(() => {
@@ -1161,8 +1499,7 @@ export default {
         } else {
           patGroups = "すべて";
         }
-        // eslint-disable-next-line vue/no-side-effects-in-computed-properties
-        this.bedCdListString = JSON.parse(sessionStorage.getItem('roomBedGroupNameCheckList')) || [];
+        this.bedCdListString = JSON.parse(getScopedSessionStorage(this.$el || this).getItem('roomBedGroupNameCheckList')) || [];
         // add #11285 機能帳票の印刷情報対応② 高 end
         // 機能一致
 
@@ -1174,12 +1511,12 @@ export default {
           if (this.getIsDisplayTreatingMode === true) {
             treatdDte = Date.now();
             // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
-            kurNames = JSON.parse(sessionStorage.getItem('kurGroupNameStatusList'));
+            kurNames = JSON.parse(getScopedSessionStorage(this.$el || this).getItem('kurGroupNameStatusList'));
             // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy end
           } else {
             treatdDte = this.condition.treatDate;
             // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
-            kurNames = JSON.parse(sessionStorage.getItem('kurGroupNameStatusList')) || "すべて";
+            kurNames = JSON.parse(getScopedSessionStorage(this.$el || this).getItem('kurGroupNameStatusList')) || "すべて";
             // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy end
           }
           // add 5984 機能帳票でパラメータが正しく渡されていない 歴 end
@@ -1206,12 +1543,12 @@ export default {
             // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 end
             // add 5984 機能帳票でパラメータが正しく渡されていない 歴 end
             // mod 5984 機能帳票でパラメータが正しく渡されていない 歴 start
-            // date: moment(treatdDte).format("YYYY/MM/DD"),
-            // fromDate: moment(treatdDte).format("YYYY/MM/DD"),
-            // toDate: moment(treatdDte).format("YYYY/MM/DD")
-            date: moment(treatdDte).format("YYYYMMDD"),
-            fromDate: moment(treatdDte).format("YYYYMMDD"),
-            toDate: moment(treatdDte).format("YYYYMMDD"),
+            // date: dayjs(treatdDte).format("YYYY/MM/DD"),
+            // fromDate: dayjs(treatdDte).format("YYYY/MM/DD"),
+            // toDate: dayjs(treatdDte).format("YYYY/MM/DD")
+            date: dayjs(treatdDte).format("YYYYMMDD"),
+            fromDate: dayjs(treatdDte).format("YYYYMMDD"),
+            toDate: dayjs(treatdDte).format("YYYYMMDD"),
             // add #11285 機能帳票の印刷情報対応② 高 start
             treatDate:this.getStorSimlpSearchQurey.treatDate,
             freeWord:this.getStorSimlpSearchQurey.freeWord,
@@ -1232,9 +1569,9 @@ export default {
               // add #11968 iPadで治療記録画面の機能帳票表示に失敗する 高　end
               patId: this.getSelectOrdMainMedimodal.patId,
               bedCd: this.getSelectOrdMainMedimodal.bedCd,
-              date: moment(this.getSelectOrdMainMedimodal.treatDate).format("YYYYMMDD"),
-              fromDate: moment(this.getSelectOrdMainMedimodal.treatDate).format("YYYYMMDD"),
-              toDate: moment(this.getSelectOrdMainMedimodal.treatDate).format("YYYYMMDD")
+              date: dayjs(this.getSelectOrdMainMedimodal.treatDate).format("YYYYMMDD"),
+              fromDate: dayjs(this.getSelectOrdMainMedimodal.treatDate).format("YYYYMMDD"),
+              toDate: dayjs(this.getSelectOrdMainMedimodal.treatDate).format("YYYYMMDD")
             };
             EventBus.$emit("sendReportParams", param);
           }
@@ -1247,9 +1584,9 @@ export default {
               // add #11968 iPadで治療記録画面の機能帳票表示に失敗する 高　end
               patId: this.getSelectOrdMainModal.patId,
               bedCd: this.getSelectOrdMainModal.bedCd,
-              date: moment(this.getSelectOrdMainModal.treatDate).format("YYYYMMDD"),
-              fromDate: moment(this.getSelectOrdMainModal.treatDate).format("YYYYMMDD"),
-              toDate: moment(this.getSelectOrdMainModal.treatDate).format("YYYYMMDD")
+              date: dayjs(this.getSelectOrdMainModal.treatDate).format("YYYYMMDD"),
+              fromDate: dayjs(this.getSelectOrdMainModal.treatDate).format("YYYYMMDD"),
+              toDate: dayjs(this.getSelectOrdMainModal.treatDate).format("YYYYMMDD")
             };
             EventBus.$emit("sendReportParams", param);
           }
@@ -1258,16 +1595,31 @@ export default {
       }
     },
     addCustomClass() {
-      const $grid = this.$refs.grid.kendoWidget();
+      const $grid = this.getGridWidget();
       const that = this;
-      this.$refs.grid.kendoWidget().tbody.find("tr").each(function() {
-        const row = document.querySelectorAll(`[data-uid="${this.getAttribute("data-uid")}"]`);
-        if (row.length > 1) {
-          const cells = row[1].querySelectorAll("td");
-          cells.forEach((cell, cellIndex) => {
-            const headerData = document.querySelectorAll("th[role='columnheader']");
-            const field = headerData[cellIndex + 1].getAttribute("data-field");
-            const rowData = $grid.dataItem(row);
+      const gridRoot = this.getGridRootEl();
+      const gridTbody = this.getGridTbodyEl();
+      if (!$grid || !gridRoot || !gridTbody) {
+        return;
+      }
+      $(gridTbody).find("tr").each(function() {
+        const uid = this.getAttribute("data-uid");
+        const rows = uid ? Array.from(gridRoot?.querySelectorAll?.(`[data-uid="${uid}"]`) || []) : [this];
+        const scrollRow = rows.find(row => row.closest(".k-grid-content")) || this;
+        const rowData = $grid?.dataItem?.(scrollRow) || that.$refs.grid?.gridDataItem?.(scrollRow) || null;
+        if (!rowData) {
+          return;
+        }
+        rows.forEach(targetRow => {
+          if (!targetRow.closest(".k-grid-content")) {
+            return;
+          }
+          const cells = targetRow.querySelectorAll("td");
+          cells.forEach((cell) => {
+            const field = that.getDirectGridFieldByCell(cell);
+            if (!field) {
+              return;
+            }
             const style = that.progressBackgroundColor({field}, rowData);
             if (style && style != null) {
               const styleSplit = style.split(':');
@@ -1290,105 +1642,144 @@ export default {
             // // add FNSI-横展開 入院患者名の配布_チェックリスト機能分 周 end
             // del FNSI-入院患者名の配布表示を修正 周 end
           });
-        }
+        });
       });
     },
     onCellClick(event) {
       event.preventDefault();
 
-      const $grid = this.$refs.grid.kendoWidget();
-      const selectedRow = $grid.select().closest("tr");
-      const selectedRowData = $grid.dataItem(selectedRow);
-      const cellIndex = event.sender.cellIndex(event.sender.select().closest("td"));
-      const headerData = document.querySelectorAll("th[role='columnheader']");
-      const field = headerData[cellIndex].getAttribute("data-field");
+      const grid = event?.sender || this.getGridWidget();
+      if (!grid) {
+        return;
+      }
+      const selected = grid.select?.();
+      const selectedCell = selected?.closest?.("td")?.[0] || selected?.[0] || null;
+      const selectedRow = selectedCell?.closest?.("tr") || selected?.closest?.("tr")?.[0] || null;
+      if (!selectedRow) {
+        return;
+      }
+      const selectedRowData = grid.dataItem?.(selectedRow) || this.$refs.grid?.gridDataItem?.(selectedRow) || null;
+      if (!selectedRowData) {
+        return;
+      }
+      const field = this.getDirectGridFieldByCell(selectedCell);
+      if (!field) {
+        return;
+      }
       let columnCode = null;
 
       if (field.startsWith("checklist_")) {
-        columnCode = this.getChecklistColumn.find(col => col.field === field).code;
+        columnCode = this.getChecklistColumn.find(col => col.field === field)?.code || null;
       }
       if (field == 'bedName') {
         this.onClickBed(selectedRowData);
       } else {
         this.onClick(selectedRowData, {field, code: columnCode});
       }
+      this.$nextTick(() => {
+        this.clearGridSelection();
+        this.applyBedDialysisStateColors();
+      });
+    },
+    clearGridScrollSync() {
+      (this.gridScrollSyncCleanup || []).forEach((cleanup) => {
+        try {
+          cleanup();
+        } catch (_error) {
+          // noop
+        }
+      });
+      this.gridScrollSyncCleanup = [];
     },
     gridSetting(){
-      this.addCustomClass();
-      const lockedContent = document.querySelector('.k-grid-content-locked');
-      const scrollableContent = document.querySelector('.k-grid-content');
+      this.$nextTick(() => {
+        requestAnimationFrame(() => {
+          this.addCustomClass();
+          this.applyBedDialysisStateColors();
+        });
+      });
+      const lockedContent = this.getGridLockedContentEl();
+      const scrollableContent = this.getGridContentEl();
+      this.clearGridScrollSync();
       if (!lockedContent || !scrollableContent) return;
 
       // Grid高さの調整
       this.$nextTick(() => {
         this.calculateGridHeight();
-        const headerHeight = document.getElementsByClassName("k-grid-header")[0].offsetHeight + 2;
-        const gridContent = document.getElementsByClassName("k-grid-content")[0];
+        const headerHeight = (this.getGridHeaderEl()?.offsetHeight || 0) + 2;
+        const gridContent = this.getGridContentEl();
+        if (!gridContent) {
+          // Vue3ではKendo Grid本体DOMの生成がVue2より遅れる場合があるため、DOM生成前は次回同期に委ねる。
+          return;
+        }
         const isHorizontalScroll = gridContent.scrollWidth > gridContent.clientWidth;
         let lockRowHeight = this.kendoGridHeight - headerHeight;
         // PCでの表示時のみ、スクロールバー分の不要な高さが発生する為、高さの調整を行う
         if (!this.androidFlg && !this.iosFlg && isHorizontalScroll) {
           lockRowHeight -= 17;
         }
-        document.getElementsByClassName("k-grid-content-locked")[0].style.height = lockRowHeight + "px";
+        if (lockedContent) {
+          lockedContent.style.height = lockRowHeight + "px";
+        }
+        // ヘッダーにスタイル適用
+        const gridHeaderEl = this.getGridHeaderEl();
+        if (gridHeaderEl) {
+          gridHeaderEl.style.backgroundColor = "var(--ntss-list-header-background-color)";
+          if (gridHeaderEl.firstElementChild) {
+            gridHeaderEl.firstElementChild.style.borderColor = "var(--ntss-base-background-color)";
+          }
+        }
+        // 慣性スクロール用のクラスを追加
+        const gridScrollEl = this.getGridAutoScrollableEl();
+        if (gridScrollEl) {
+          gridScrollEl.style.WebkitOverflowScrolling = "touch";
+        }
       });
 
-      if (lockedContent) {
-        let startY = 0;
-        // タッチ開始位置を記録（iOS/Android対応）
-        lockedContent.addEventListener('touchstart', (e) => {
-          startY = e.touches[0].clientY;
-        }, { passive: false });
+      attachChecklistLockedContentScrollSync(this.$refs.grid?.gridWidget?.() || this.getGridRootEl?.() || this.$refs.grid?.$el, {
+        cleanupList: this.gridScrollSyncCleanup,
+        wheel: false,
+      });
 
-        lockedContent.addEventListener('touchmove', (e) => {
-          // タッチ移動に応じてスクロール（iOS/Android対応）
-          const deltaY = startY - e.touches[0].clientY;
-          lockedContent.scrollTop += deltaY;
-          startY = e.touches[0].clientY;
-          e.preventDefault(); // 慣性スクロールを有効にするために必要
-        }, { passive: false });
-      }
-
-      if (lockedContent && scrollableContent) {
-        // 固定列のスクロールに応じて可動列を同期（縦スクロールの一体化）
-        lockedContent.addEventListener('scroll', () => {
-          scrollableContent.scrollTop = lockedContent.scrollTop;
-        });
-
-        // 可動列のスクロールに応じて固定列を同期（双方向同期）
-        scrollableContent.addEventListener('scroll', () => {
-          lockedContent.scrollTop = scrollableContent.scrollTop;
-        });
-      }
-      // ヘッダーにスタイル適用
-      this.$refs.grid.$el.firstElementChild.style.backgroundColor = "var(--ntss-list-header-background-color)";
-      this.$refs.grid.$el.firstElementChild.firstElementChild.style.borderColor = "var(--ntss-base-background-color)";
-      // 慣性スクロール用のクラスを追加
-      document.getElementsByClassName("k-auto-scrollable")[1].style.WebkitOverflowScrolling = "touch";
     },
     getGridColumnResize() {
-      const that = this;
-      // FNSI-チェックリスト画面表示を修正 周 mod start
-      // const $grid = this.$refs.grid.kendoWidget();
-      // $grid.bind("columnResize", function() {
-      //   that.gridSetting();
-      // });
-      if (that && this.$refs && this.$refs.grid && this.$refs.grid.kendoWidget()) {
-        const $grid = this.$refs.grid.kendoWidget();
-        $grid.bind("columnResize", function() {
-          that.gridSetting();
-        });
-      }
-      // FNSI-チェックリスト画面表示を修正 周 mod end
+      // columnResize prop と data-bound の gridSetting で十分。drag 中の二重 gridSetting はスクロール位置をリセットする。
     },
     /**
      * 列固定切り替え(印刷時)
      */
     changeLock(){
       this.lockFlg = !this.lockFlg;
+    },
+    clearGridSelection() {
+      const grid = this.getGridWidget();
+      grid?.clearSelection?.();
+
+      const root = this.getGridRootEl();
+      if (!root) {
+        return;
+      }
+
+      root.querySelectorAll(
+        ".k-grid-content .k-selected, .k-grid-content .k-state-selected, " +
+        ".k-grid-content .k-focus, .k-grid-content-locked .k-selected, " +
+        ".k-grid-content-locked .k-state-selected, .k-grid-content-locked .k-focus, " +
+        ".k-grid-content [aria-selected='true'], .k-grid-content-locked [aria-selected='true']"
+      ).forEach(el => {
+        el.classList.remove("k-selected", "k-state-selected", "k-focus");
+        if (el.getAttribute?.("aria-selected") === "true") {
+          el.removeAttribute("aria-selected");
+        }
+      });
     }
   },
   watch: {
+    listDataSource() {
+      this.$nextTick(() => this.initDirectGridIfReady());
+    },
+    getChecklistColumn() {
+      this.$nextTick(() => this.initDirectGridIfReady());
+    },
     windowHeight() {
       this.calculateGridHeight();
     },
@@ -1410,9 +1801,10 @@ export default {
     getIsAsynComplete(value) {
       if (value) {
         this.$nextTick(() => {
-          this.listDataSource = new Kendo.data.DataSource({
+          this.listDataSource = createChecklistDataSource({
             data: this.getListDataSource
           });
+          this.initDirectGridIfReady();
           // FNSI-修正 #5407 xie add start
           this.setLoadingScreenVisible(false);
           // FNSI-修正 #5407 xie add end
@@ -1430,7 +1822,7 @@ export default {
     // FNSI-修正 #5407 xie add start
     this.setLoadingScreenMessage("処理中・・・");
     //FNSI-修正 #5407 xie add end
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toLowerCase();
     if (/android/.test(ua)) {
       this.androidFlg = true;
     } else if (/iphone|ipad|mac|os/.test(ua)) {
@@ -1441,26 +1833,24 @@ export default {
     EventBus.$off("dataUpdate", this.setCheckList);
     EventBus.$off("refresh", this.setCheckList);
     EventBus.$off("closeModal", this.startPolling);
-    EventBus.$off("requestReportParams", this.requestrReportParams );
+    EventBus.$off("requestReportParams", this.requestrReportParams);
     EventBus.$off("ScheduleAssignment", this.moveTreatmentRecord);
     // add 性能改善メモリ不足 shan end
 
     EventBus.$on("filterCheckList", this.setFilterCondition);
     EventBus.$on("dataUpdate", this.setCheckList);
     EventBus.$on("refresh", this.setCheckList);
-    EventBus.$on("closeModal", this.startPolling);
-
     // 印刷パラメータ要求
-    EventBus.$on("requestReportParams", this.requestrReportParams );
+    EventBus.$on("requestReportParams", this.requestrReportParams);
 
     // スケジュール割当後の治療記録への遷移
     EventBus.$on("ScheduleAssignment", this.moveTreatmentRecord);
 
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
 
     // del FNSI-横展開 表示条件のサインイン内保持_チェックリスト機能分 周 start
-    // let today = moment(new Date());
+    // let today = dayjs(new Date());
     // this.condition.treatDate = today.format("YYYY-MM-DD");
     // // 抽出条件セット
     // this.setCondition(this.condition);
@@ -1470,6 +1860,10 @@ export default {
 
   },
   async mounted() {
+    this.closeModalHandler = () => {
+      this.clearGridSelection();
+      this.startPolling();
+    };
     /* 自動更新サインアウトフラグ取得 */
     await initForceSignOutFlag("check-list/list/setForceSignOutFlag", CHECK_LIST_FORCE_SIGNOUT);
     // データ取得
@@ -1480,20 +1874,27 @@ export default {
     this.getGridColumnResize();
     // Rootページのサイドバーボタン要素のイベントリスナー設定
     // ※「左サイドバー切り替えする時、画面の右スクロールバーの表示がおかしいについての修正」をリファクタ
-    const rootSideBarBtn = document.querySelector('#showPatientSearchSidebarBtn');
+    const rootSideBarBtn = this.getPatientSearchSidebarButton();
     rootSideBarBtn?.addEventListener('click', this.calculateGridHeight);
     EventBus.$on("print-start", this.changeLock);
     EventBus.$on("print-end", this.changeLock);
+    EventBus.$on("closeModal", this.closeModalHandler);
   },
-  beforeDestroy() {
-    EventBus.$off("print-start", this.changeLock);
-    EventBus.$off("print-end", this.changeLock);
+  beforeUnmount() {
+    this.clearGridScrollSync();
+    if (this.directGridLayoutRafId != null) {
+      cancelAnimationFrame(this.directGridLayoutRafId);
+      this.directGridLayoutRafId = null;
+    }
+    this.destroyDirectGrid();
     EventBus.$off("filterCheckList", this.setFilterCondition);
     EventBus.$off("dataUpdate", this.setCheckList);
     EventBus.$off("refresh", this.setCheckList);
-    EventBus.$off("closeModal", this.startPolling);
+    EventBus.$off("closeModal", this.closeModalHandler);
+    EventBus.$off("print-start", this.changeLock);
+    EventBus.$off("print-end", this.changeLock);
     // 印刷パラメータ要求
-    EventBus.$off("requestReportParams", this.requestrReportParams );
+    EventBus.$off("requestReportParams", this.requestrReportParams);
 
     // スケジュール割当後の治療記録への遷移
     EventBus.$off("ScheduleAssignment", this.moveTreatmentRecord);
@@ -1505,18 +1906,24 @@ export default {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
     // Rootページのサイドバーボタン要素のイベントリスナー解除
-    const rootSideBarBtn = document.querySelector('#showPatientSearchSidebarBtn');
+    const rootSideBarBtn = this.getPatientSearchSidebarButton();
     rootSideBarBtn?.removeEventListener('click', this.calculateGridHeight);
   }
 };
 </script>
 <style scoped>
-div >>> .k-i-sort-asc-sm::before {
+.master-maintenance-page :deep(.k-grid .k-table-th),
+.master-maintenance-page :deep(.k-grid .k-table-td),
+.master-maintenance-page :deep(.k-grid th),
+.master-maintenance-page :deep(.k-grid td) {
+  padding: 0.28125rem 0.84375rem !important;
+}
+div :deep(.k-i-sort-asc-sm::before) {
   content: "▲" !important;
   color: #ffffff;
 }
 
-div >>> .k-i-sort-desc-sm::before {
+div :deep(.k-i-sort-desc-sm::before) {
   content: "▼" !important;
   color: #ffffff;
 }
@@ -1524,22 +1931,67 @@ div >>> .k-i-sort-desc-sm::before {
   flex: 1;
 }
 
-.k-grid >>> .change-color-patient{
+.k-grid :deep(.change-color-patient){
   /* mod FNSI-障害票一覧_チェックリスト#2。 周 start */
   /* color: mediumorchid; */
   color: purple;
   /* mod FNSI-障害票一覧_チェックリスト#2。 周 end */
 }
 
-.master-maintenance-page >>> .k-state-selected {
+.check-list-main-content-list :deep(td.k-selected),
+.check-list-main-content-list :deep(td.k-state-selected),
+.check-list-main-content-list :deep(td.k-focus),
+.check-list-main-content-list :deep(.k-table-td.k-selected),
+.check-list-main-content-list :deep(.k-table-td.k-state-selected),
+.check-list-main-content-list :deep(.k-table-td.k-focus) {
+  background-color: unset !important;
+  color: inherit !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.check-list-main-content-list :deep(td.k-selected:hover),
+.check-list-main-content-list :deep(td.k-state-selected:hover),
+.check-list-main-content-list :deep(td.k-focus:hover) {
   background-color: unset !important;
 }
 
-.master-maintenance-page >>> .k-state-selected:hover {
-  background-color: #FFFFFF !important;
+.check-list-main-content-list :deep(td.k-selected.td-not-send-condition),
+.check-list-main-content-list :deep(td.k-state-selected.td-not-send-condition) {
+  color: #050505 !important;
+  background-color: white !important;
 }
 
-.master-maintenance-page >>> .k-grid-header {
+.check-list-main-content-list :deep(td.k-selected.td-send-condition),
+.check-list-main-content-list :deep(td.k-state-selected.td-send-condition) {
+  color: white !important;
+  background-color: #42CB92 !important;
+}
+
+.check-list-main-content-list :deep(td.k-selected.td-dialysis),
+.check-list-main-content-list :deep(td.k-state-selected.td-dialysis) {
+  color: white !important;
+  background-color: #2CA06F !important;
+}
+
+.check-list-main-content-list :deep(td.k-selected.td-after-dialysis),
+.check-list-main-content-list :deep(td.k-state-selected.td-after-dialysis) {
+  color: white !important;
+  background-color: #557769 !important;
+}
+
+.check-list-main-content-list :deep(td.k-selected.td-after-record),
+.check-list-main-content-list :deep(td.k-state-selected.td-after-record) {
+  color: white !important;
+  background-color: #808080 !important;
+}
+
+.check-list-main-content-list :deep(td.k-selected.pat-name-in-hospital),
+.check-list-main-content-list :deep(td.k-state-selected.pat-name-in-hospital) {
+  color: rgb(163, 86, 163) !important;
+}
+
+.master-maintenance-page :deep(.k-grid-header) {
   background: var(--ntss-list-header-background-color);
   background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,0.1) 100%);
 }
@@ -1564,14 +2016,18 @@ div >>> .k-i-sort-desc-sm::before {
   height: 1em;
   margin-top: 0.2em;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked) {
   overflow-y: scroll !important;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked::-webkit-scrollbar {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked::-webkit-scrollbar) {
   display: none;
+}
+
+:deep(.k-grid .k-table-th) {
+  border-color: white !important;
 }
 
 @media print {
@@ -1579,36 +2035,36 @@ div >>> .k-i-sort-desc-sm::before {
   .main-content-area
   ,.grid-area
   , .check-list-main-content-list
-  ,.check-list-main-content-list >>> .k-grid-content-locked
-  , .check-list-main-content-list >>> .k-auto-scrollable{
+  ,.check-list-main-content-list :deep(.k-grid-content-locked)
+  , .check-list-main-content-list :deep(.k-auto-scrollable){
     height: auto !important;
   }
 
   /* 各セルの横幅設定を削除 */
-  .check-list-main-content-list >>> colgroup {
+  .check-list-main-content-list :deep(colgroup){
     display: none;
   }
 
   /* 見切れ文字改行設定 */
-  .check-list-main-content-list  >>> .k-grid-header th
-  ,  .check-list-main-content-list  >>> .k-grid-header th
-  ,  .check-list-main-content-list  >>> .k-grid-content td {
+  .check-list-main-content-list :deep(.k-grid-header th)
+  ,  .check-list-main-content-list :deep(.k-grid-header th)
+  ,  .check-list-main-content-list :deep(.k-grid-content td){
     white-space: normal;
     word-break: break-all;
   }
 
   /* テーブルの横幅をレスポンシブ化 */
-  .check-list-main-content-list >>> table {
+  .check-list-main-content-list :deep(table){
     width: 100% !important;
   }
 
   /* テーブル内部の横幅を微調整 */
-  .check-list-main-content-list >>> .k-grid-content {
+  .check-list-main-content-list :deep(.k-grid-content){
     width: calc(100% - 16px) !important;
   }
 
     /* テーブル内部の横幅を微調整 */
-  .check-list-main-content-list >>> .k-grid-content {
+  .check-list-main-content-list :deep(.k-grid-content){
     width: calc(100% - 16px) !important;
   }
 
@@ -1618,4 +2074,60 @@ div >>> .k-i-sort-desc-sm::before {
   }
 }
 
+:deep(.k-svg-icon) {
+  width: 1em !important;
+  height: 1em !important;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  font-size: 16px !important;
+  font-family: "WebComponentsIcons";
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1 !important;
+  text-transform: none;
+  text-decoration: none;
+  display: inline-block !important;
+  vertical-align: middle;
+  position: relative;
+}
+
+:deep(.k-svg-i-sort-asc-small svg),
+:deep(.k-svg-i-sort-desc-small svg) {
+  display: none !important;
+}
+
+:deep(.k-svg-i-sort-asc-small)::before {
+  content: "▲" !important;;
+  color: #ffffff;
+  /* font-size: 12px; */
+}
+
+:deep(.k-svg-i-sort-desc-small)::before {
+  content: "▼" !important;;
+  color: #ffffff;
+  /* font-size: 12px; */
+}
+:deep(.k-grid-content){
+  background-color: inherit !important;
+}
+:deep(.k-table-td){
+  box-sizing: border-box !important;
+  height: 40px !important;
+}
+#kendo{
+  height: 100% !important;
+}
+
+
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+}
 </style>

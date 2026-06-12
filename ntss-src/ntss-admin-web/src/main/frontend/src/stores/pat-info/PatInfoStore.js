@@ -1,17 +1,30 @@
 import { ApiHelper } from "@/apis/AxiosHelper";
 import store from "@/stores";
-import _ from "underscore";
 import {
   deepCopy,
   deduplicateObjects,
-  deduplicateObjectsGroup
+  deduplicateObjectsGroup,
+  mapObject
 } from "@/functions/common/CommonFunctions";
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 import { getPatById } from "@/functions/PatInfoFunctions";
 import { sendRequestGetMstFacilityByCd } from "@/apis/facility";
-import imgDuplication from "@/assets/name_duplication.png"
+import imgDuplication from "@/assets/name_duplication.png";
+
 import { sendRequestGetMstFacilitySettingValue } from "@/apis/facility-setting";
 import { FACILITY_PAT_SEARCH_DISP_SETTING } from "@/constants/facilitySetting";
+
+function hasSelectedPatId(selectedPatId) {
+  return selectedPatId !== null && selectedPatId !== undefined && selectedPatId !== "";
+}
+
+function selectedPatIdParams(selectedPatId) {
+  return hasSelectedPatId(selectedPatId) ? { selectedPatId } : undefined;
+}
+
+function selectedPatIdConfig(selectedPatId) {
+  return hasSelectedPatId(selectedPatId) ? { params: { selectedPatId } } : undefined;
+}
 
 // 11729 患者情報・新規患者登録画面のカード展開/折畳状態の保持不正 start
 const CardShowingDef = {
@@ -379,6 +392,7 @@ export default {
     isNullShrPat: (state) => state.isNullShrPat,
     getIsOtherFacility: (state) => state.isOtherFacility,
     getOtherFacilityCd: (state) => state.otherFacilityCd,
+
     patAdditionInfo(state) {
       return state.patAdditionInfo;
     },
@@ -452,7 +466,7 @@ export default {
      * @param {Object} patInfo 登録用患者情報+変更箇所({ pat_personal_main, pat_main, pat_unique, pat_group_info, changed_record })
      */
     async createPat({ getters, commit }, patInfo) {
-      const patInfoJson = _.mapObject(patInfo, (value) =>
+      const patInfoJson = mapObject(patInfo, (value) =>
         JSON.stringify(value)
       );
       const response = await ApiHelper.post(
@@ -520,11 +534,11 @@ export default {
       if(!patId) return
       // add FNSI-FutreNetWeb+SI課題管理No.5494 李 start
       // const patInfo = await getPatById(patId).catch(() => {
-      //   throw new Error();
+      //   throw new Error("患者取得失敗", { cause: error });
       // }).finally(() =>store.dispatch("loading-screen/setLoadingScreenVisible", false));
       store.dispatch("loading-screen/startLoadingScreen");
-      const patInfo = await getPatById(patId, facilityCd).catch(() => {
-        throw new Error();
+      const patInfo = await getPatById(patId, facilityCd).catch(error => {
+        throw new Error("患者取得失敗", { cause: error });
       });
       
       // 元データ（削除済み含む）を退避
@@ -533,6 +547,7 @@ export default {
       // add 8331 患者情報の感染症で削除済みの項目がSi側で表示される 関 start
       const requestParam = {
         facilityCd: patInfo.pat_main.facility_cd,
+        ...selectedPatIdParams(patId)
       };
       const response = await ApiHelper.get(
         "/mstInfo/mstInfection",
@@ -595,8 +610,8 @@ export default {
 
     /**
      * @description 選択患者をストアに格納する
-     * @summary 患者選択画面で患者保持のために使用する
-     * @param {Number} patId 選択された患者ID
+     * @summary 患者情報共有で患者保持のために使用する
+     * @param {Number|Object} payload 選択された患者IDまたは患者/施設情報
      */
     async selectSharePat({ commit }, payload) {
       let patId;
@@ -611,13 +626,14 @@ export default {
         facilityCd = payload?.selectedFacility ?? null;
         unfinishedShareFlg = payload?.unfinishedShareFlg ?? false;
       }
-      if(!patId) return
+      if (!patId) return;
       store.dispatch("loading-screen/startLoadingScreen");
       const patInfo = await getPatById(patId, facilityCd).catch(() => {
         throw new Error();
       });
       const requestParam = {
         facilityCd: patInfo.pat_main.facility_cd,
+        ...selectedPatIdParams(patId)
       };
       const response = await ApiHelper.get(
         "/mstInfo/mstInfection",
@@ -666,7 +682,7 @@ export default {
       }
       patInfo.pat_main.infect_info = JSON.stringify(infectinfoList);
       commit("setSelectedShrPat", deepCopy(patInfo));
-      if (!unfinishedShareFlg) { 
+      if (!unfinishedShareFlg) {
         commit("setSelectedPat", patInfo);
         commit("setPhysicalInfoUpDate", null);
       }
@@ -680,6 +696,9 @@ export default {
       commit("setSelectedPat", null);
       commit("setSelectedPatIncludeDel", null);
     },
+    clearSelectedShrPat({ commit }) {
+      commit("clearSelectedShrPat");
+    },
 
     /**
      * @description 選択患者更新
@@ -689,7 +708,7 @@ export default {
     async updatePat({ getters, commit }, patInfo) {
       const uri = "/patInfo/updatePatById";
       const patId = getters.selectedPatId;
-      const patInfoJson = _.mapObject(patInfo, (value) =>
+      const patInfoJson = mapObject(patInfo, (value) =>
         JSON.stringify(value)
       );
 
@@ -740,17 +759,21 @@ export default {
      * @param {String} sql 検索用SQL
      * @returns {Array} 患者情報オブジェクト配列([{ pat_id, hosp_pat_id, pat_last_name, pat_first_name }, ...])
      */
-    async searchPat({ commit }, sql) {
+    async searchPat({ commit }, payload) {
+      const sql = payload && typeof payload === "object" ? payload.sql : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : null;
       const uri = `/patInfo/getSearchResultPersonal`;
-      const response = await ApiHelper.post(`${uri}`, { sql }).catch(() => {
+      const response = await ApiHelper.configPost(`${uri}`, { sql }, selectedPatIdConfig(selectedPatId)).catch(() => {
         throw new Error("患者検索失敗");
       });
       commit("addSearchedPatList", response.data);
     },
     // 患者詳細検索の検索結果がサイドコンテンツにのみ反映される  5836  shan  start
-    async searchPatPatGroup({ commit }, sql) {
+    async searchPatPatGroup({ commit }, payload) {
+      const sql = payload && typeof payload === "object" ? payload.sql : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : null;
       const uri = `/patInfo/getSearchResultPersonal`;
-      const response = await ApiHelper.post(`${uri}`, { sql }).catch(() => {
+      const response = await ApiHelper.configPost(`${uri}`, { sql }, selectedPatIdConfig(selectedPatId)).catch(() => {
         throw new Error("患者検索失敗");
       });
       commit("addSearchedPatListPatGroup", response.data);
@@ -782,7 +805,9 @@ export default {
      *     { key(第3ソートキー文字列), isAsc }
      *   ]
      */
-    async sortPatList({ getters, commit, rootGetters }, sortConditions) {
+    async sortPatList({ getters, commit, rootGetters }, payload) {
+      const sortConditions = payload?.sortConditions ?? payload;
+      const selectedPatId = payload?.selectedPatId ?? null;
       const facilityCd = rootGetters["user/getFacilityCd"];
       const treatDate = rootGetters["report-menu/getTreatDate"];
       // add 11315 【たくしん会】患者検索の患者リストのソートが正しく動作しない 関 start
@@ -796,7 +821,7 @@ export default {
       // mod #9579 患者グループ編集で個人設定のソート条件が適応されていない 商 start
       let isPatGroup = false;
       for (const condition of sortConditions) {
-        if (condition.hasOwnProperty("patGroup")) {
+        if (Object.prototype.hasOwnProperty.call(condition, "patGroup")) {
           isPatGroup = true;
           break;
         }
@@ -830,7 +855,7 @@ export default {
         return;
       }
       //mod 10389 フロントエンドソート解除機能 gjn start
-      const { data: patList } = await ApiHelper.post(
+      const { data: patList } = await ApiHelper.configPost(
         "/patInfo/getPatByIdList/" + "1",
         {
           patIdList,
@@ -841,7 +866,8 @@ export default {
           // add 11315 【たくしん会】患者検索の患者リストのソートが正しく動作しない 関 start
           detailedCondtion,
           // add 11315 【たくしん会】患者検索の患者リストのソートが正しく動作しない 関 end
-        }
+        },
+        selectedPatIdConfig(selectedPatId)
       ).catch((err) => {
         throw new Error(err);
       });
@@ -1215,7 +1241,7 @@ export default {
      * @description 在宅透析患者フラグ
      */
     async checkHomeDialysisPat({ getters, commit }) {
-      let returnval = false;
+      let returnval;
       const response = await ApiHelper.put(
         `/patInfo/findHomeDialysisPat/${getters.selectedPatId}`
       ).catch((error) => {
@@ -1231,7 +1257,8 @@ export default {
 
     async setAdvancedSettings({ getters, commit }) {
       const responseFacility = await sendRequestGetMstFacilityByCd(
-        getters.selectedPatFacilityCd
+        getters.selectedPatFacilityCd,
+        getters.selectedPatId
       ).catch((error) => {
         throw error;
       });
@@ -1274,8 +1301,8 @@ export default {
       // ？？？？患者フラグセット
       commit("setIsNullPat", bool);
     },
-    setIsNullShrPat: (state, b) => {
-      state.isNullShrPat = b;
+    setIsNullShrPat({ commit }, bool) {
+      commit("setIsNullShrPat", bool);
     },
     /*add FNSI-改修内容転入転出の患者情報連動 任 start*/
     setReportStartDate({ commit }, reportStartDate) {
@@ -1291,18 +1318,13 @@ export default {
      */
     async sendRequestGetMstAddition(
       { state, commit, rootGetters, getters },
-      {routeName, loginFacilityCd, ownFacility}
+      { routeName, loginFacilityCd, ownFacility }
     ) {
       // 初期化
       commit("setPatAdditionInfo", []);
       commit("setMstAddition", []);
 
       // 施設コードの取得 新規患者登録時か否かで取得元変更
-      // const facilityCd =
-      //   state.selectedPat && routeName !== "pat-info-create"
-      //     ? state.selectedPat.pat_personal_main.facility_cd
-      //     : rootGetters["user/getFacilityCd"];
-
       const facilityCd =
         state.selectedPat && routeName !== "pat-info-create"
           ? (state.isOtherFacility
@@ -1318,8 +1340,8 @@ export default {
           "/addition_info/calculationDateList",
           {
             patId: getters.selectedPatId,
-            ownFacility: ownFacility,
-            facilityCd: facilityCd
+            ownFacility,
+            facilityCd,
           }
         ).catch((error) => {
           throw error;
@@ -1365,7 +1387,10 @@ export default {
         }
       );
       // add 7770 患者情報のパンくずリストの更新でマスタ情報を読み込んでいない 趙 start
-      ApiHelper.get("/mstInfo/mstWardIncludeDel", { facilityCd })
+      ApiHelper.get("/mstInfo/mstWardIncludeDel", {
+        facilityCd,
+        ...selectedPatIdParams(getters.selectedPatId)
+      })
         .then((response) => {
           let deleteMstWard = response.data;
           let mstWard = response.data.filter((item) => {
@@ -1488,7 +1513,9 @@ export default {
       // 表示列設定取得
       const facilityCd = rootGetters["user/getFacilityCd"];
       const response = await sendRequestGetMstFacilitySettingValue(
-        facilityCd, FACILITY_PAT_SEARCH_DISP_SETTING
+        facilityCd,
+        FACILITY_PAT_SEARCH_DISP_SETTING,
+        getters.selectedPatId
       );
 
       // 表示対象の列設定をセット
@@ -1557,7 +1584,7 @@ export default {
               break;
             case "4":
               // 名前部
-              const nameText = `if (pat_id) { if (pat_last_name) {##: pat_last_name # # } if (pat_first_name) {##: pat_first_name # # } } else { # ？？？？患者 # }`
+              var nameText = `if (pat_id) { if (pat_last_name) {##: pat_last_name # # } if (pat_first_name) {##: pat_first_name # # } } else { # ？？？？患者 # }`
               columns.push(
                 {
                   key: "patName",
@@ -1569,7 +1596,7 @@ export default {
                   hidden: false,
                   lockable: false,
                   headerTemplate:`患者名<span class="searched-cnt">${searchedCountText}</span>`,
-                  template: `#if (is_same === \"1\") { ${nameText}#<img src=\"${imgDuplication}\" class=\"same-icon\"> #} else { ${nameText} } #`,
+                  template: `#if (is_same === "1") { ${nameText}#<img src="${imgDuplication}" class="same-icon"> #} else { ${nameText} } #`,
 
                 }
               )

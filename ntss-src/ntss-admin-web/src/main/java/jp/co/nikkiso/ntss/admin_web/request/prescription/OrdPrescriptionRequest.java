@@ -1,9 +1,9 @@
 package jp.co.nikkiso.ntss.admin_web.request.prescription;
 
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
-import javax.validation.constraints.Digits;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Digits;
 
 import jp.co.nikkiso.ntss.admin_web.request.validator.NtssFlexibleDateTime;
 import jp.co.nikkiso.ntss.admin_web.request.validator.NtssFlexibleDateTimeParseMode;

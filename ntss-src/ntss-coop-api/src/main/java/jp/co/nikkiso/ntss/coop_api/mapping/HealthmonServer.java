@@ -3,8 +3,8 @@ package jp.co.nikkiso.ntss.coop_api.mapping;
 import java.sql.Timestamp;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import lombok.Data;
@@ -14,7 +14,7 @@ import lombok.Data;
  *
  */
 @Data
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class HealthmonServer {
   /** ステータス */
   private String status;

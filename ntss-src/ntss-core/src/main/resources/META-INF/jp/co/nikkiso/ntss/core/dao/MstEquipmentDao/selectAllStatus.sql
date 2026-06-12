@@ -52,75 +52,138 @@ GROUP BY pat_id, category_class, cd
 SELECT DISTINCT *
 from TABOO_ALLERGY_data_pat
 where category_class = '3'
-  )
-SELECT
-    A.equipment_cd            AS "equipmentCd",
-    A.facility_cd             AS "facilityCd",
-    A.fn_equipment_cd         AS "fnEquipmentCd",
-    A.standard_equipment_cd   AS "standardEquipmentCd",
-    A.is_trial                AS "isTrial",
-    A.equipment_name          AS "equipmentName",
-    A.equipment_short_name    AS "equipmentShortName",
-    A.class_cd                AS "classCd",
-    A.unit                    AS "unit",
-    A.use_start_date          AS "useStartDate",
-    A.use_end_date            AS "useEndDate",
-    A.in_hospital_cd_1        AS "inHospitalCd1",
-    A.in_hospital_cd_2        AS "inHospitalCd2",
-    A.in_hospital_cd_3        AS "inHospitalCd3",
-    A.is_disp                 AS "isDisp",
-    A.is_del                  AS "isDel",
-    A.reg_date                AS "regDate",
-    A.up_date                 AS "upDate",
-    A.in_hospital_cd_4        AS "inHospitalCd4",
+  ),
+BASE AS (
+  SELECT
+      A.equipment_cd            AS "equipmentCd",
+      A.facility_cd             AS "facilityCd",
+      A.fn_equipment_cd         AS "fnEquipmentCd",
+      A.standard_equipment_cd   AS "standardEquipmentCd",
+      A.is_trial                AS "isTrial",
+      A.equipment_name          AS "equipmentName",
+      A.equipment_short_name    AS "equipmentShortName",
+      A.class_cd                AS "classCd",
+      A.unit                    AS "unit",
+      A.use_start_date          AS "useStartDate",
+      A.use_end_date            AS "useEndDate",
+      A.in_hospital_cd_1        AS "inHospitalCd1",
+      A.in_hospital_cd_2        AS "inHospitalCd2",
+      A.in_hospital_cd_3        AS "inHospitalCd3",
+      A.is_disp                 AS "isDisp",
+      A.is_del                  AS "isDel",
+      A.reg_date                AS "regDate",
+      A.up_date                 AS "upDate",
+      A.in_hospital_cd_4        AS "inHospitalCd4",
 
+      CASE
+          WHEN ms.code IS NOT NULL THEN 0 ELSE 1
+      END                      AS "sortGroup",
+      ms.selector_index        AS "medicineMixSelectorIndex",
+      CASE
+        WHEN TATM.is_taboo AND TATM.is_allergy THEN '【禁忌・ｱﾚﾙｷﾞｰ】'
+        WHEN TATM.is_taboo THEN '【禁忌】'
+        WHEN TATM.is_allergy THEN '【ｱﾚﾙｷﾞｰ】'
+        ELSE ''
+      END                      AS "tabooAllergy",
+      CASE
+        WHEN
+          (A.use_start_date IS NOT NULL AND A.use_start_date >
+            /*%if params.get("treatDate") != null && !params.get("treatDate").trim().isEmpty() */
+              /* params.get("treatDate") */'20000101'
+            /*%else */
+              TO_CHAR(CURRENT_DATE, 'YYYYMMDD')
+            /*%end */
+          )
+            OR
+          (A.use_end_date   IS NOT NULL AND A.use_end_date   <
+            /*%if params.get("treatDate") != null && !params.get("treatDate").trim().isEmpty() */
+              /* params.get("treatDate") */'20000101'
+            /*%else */
+              TO_CHAR(CURRENT_DATE, 'YYYYMMDD')
+            /*%end */
+          )
+          THEN '【期限切れ】'
+        ELSE ''
+      END                      AS "expired",
+      CASE
+        WHEN /* params.get("classType") */'' <> ''
+             AND (
+               MEC.class_type IS NULL
+               OR NOT (MEC.class_type = ANY(string_to_array(/* params.get("classType") */'0', ',')::int[]))
+             )
+          THEN '【分類不一致】'
+        ELSE ''
+      END                      AS "classInconsistent"
+  FROM
+      mst_equipment A
+      LEFT JOIN mst_equipment_class MEC
+        ON MEC.class_cd = A.class_cd
+      LEFT JOIN TABOO_ALLERGY_TO_MST TATM ON A.equipment_cd = TATM.cd
+      LEFT JOIN LATERAL (
+          SELECT
+              mss.facility_cd      AS facility_cd,
+              ms.code              AS code,
+              ms.name              AS name,
+              ROW_NUMBER() OVER () AS selector_index
+          FROM
+              mst_selector mss
+              CROSS JOIN LATERAL jsonb_to_recordset(
+                  mss.order_settings -> 'items'
+              ) AS ms(code BIGINT, name TEXT)
+          WHERE
+              mss.master_physical_name = 'mst_equipment'
+      ) ms
+          ON A.facility_cd = ms.facility_cd
+         AND A.equipment_cd = ms.code
+  WHERE
+      A.facility_cd = /* params.get("facilityCd") */'0'
+),
+MAIN AS (
+  SELECT
+    B.*,
+    '' AS "deleted",
+    '' AS "includeDeleted"
+  FROM BASE B
+  WHERE
+    B."isDisp" = '1'
+    AND B."isDel" = '0'
+    /*%if params.get("excludeEquipmentCdList") != null && !params.get("excludeEquipmentCdList").trim().isEmpty()*/
+    AND NOT (
+      B."equipmentCd" = ANY(string_to_array(/* params.get("excludeEquipmentCdList") */'0', ',')::int[])
+    )
+    /*%end*/
+    /*%if params.get("classType") != null && !params.get("classType").trim().isEmpty()*/
+    AND B."classInconsistent" = ''
+    /*%end*/
+),
+INIT AS (
+  SELECT
+    B.*,
     CASE
-        WHEN ms.code IS NOT NULL THEN 0 ELSE 1
-    END                      AS "sortGroup",
-    ms.selector_index        AS "medicineMixSelectorIndex",
-    CASE
-      WHEN TATM.is_taboo AND TATM.is_allergy THEN '【禁忌・ｱﾚﾙｷﾞｰ】'
-      WHEN TATM.is_taboo THEN '【禁忌】'
-      WHEN TATM.is_allergy THEN '【ｱﾚﾙｷﾞｰ】'
-      ELSE ''
-    END                      AS "tabooAllergy",
-    CASE
-      WHEN
-        (A.use_start_date IS NOT NULL AND A.use_start_date > TO_CHAR(CURRENT_DATE, 'YYYYMMDD'))
-          OR
-        (A.use_end_date   IS NOT NULL AND A.use_end_date   < TO_CHAR(CURRENT_DATE, 'YYYYMMDD'))
-        THEN '【期限切れ】'
-      ELSE ''
-    END                      AS "expired",
-    CASE
-      WHEN
-        A.is_disp = '0' OR A.is_del = '1'
+      WHEN B."isDisp" = '0' OR B."isDel" = '1'
         THEN '【削除済み】'
       ELSE ''
-    END                      AS "deleted",
+    END AS "deleted",
     '' AS "includeDeleted"
-FROM
-    mst_equipment A
-    LEFT JOIN TABOO_ALLERGY_TO_MST TATM ON A.equipment_cd = TATM.cd
-    LEFT JOIN LATERAL (
-        SELECT
-            mss.facility_cd      AS facility_cd,
-            ms.code              AS code,
-            ms.name              AS name,
-            ROW_NUMBER() OVER () AS selector_index
-        FROM
-            mst_selector mss
-            CROSS JOIN LATERAL jsonb_to_recordset(
-                mss.order_settings -> 'items'
-            ) AS ms(code BIGINT, name TEXT)
-        WHERE
-            mss.master_physical_name = 'mst_equipment'
-    ) ms
-        ON A.facility_cd = ms.facility_cd
-       AND A.equipment_cd = ms.code
-WHERE
-    A.facility_cd = /* params.get("facilityCd") */'0'
+  FROM BASE B
+  WHERE
+    /*%if params.get("initEquipmentCd") != null && !params.get("initEquipmentCd").trim().isEmpty() */
+    B."equipmentCd" = (/* params.get("initEquipmentCd") */0)::int
+    /*%else */
+    1 = 0
+    /*%end */
+)
+SELECT *
+FROM MAIN
+UNION ALL
+SELECT I.*
+FROM INIT I
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM MAIN M
+  WHERE M."equipmentCd" = I."equipmentCd"
+)
 ORDER BY
     "sortGroup" ASC,
-    ms.selector_index NULLS LAST,
-    A.equipment_cd;
+    "medicineMixSelectorIndex" NULLS LAST,
+    "equipmentCd";

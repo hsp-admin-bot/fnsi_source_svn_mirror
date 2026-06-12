@@ -209,4 +209,15 @@ public interface MstMachineDao {
   @Select
   List<Long> selectByMachineTypeCd(String facilityCd, String machineTypeCd);
   // add #12549 現状の設定仕様では装置点検帳票の要求を満たせない limingzhe end
+
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang start
+  @Select
+  List<MstMachineDatalistMainte> selectDatalistMaintePart1(String startDate, String endDate, String facilityCd);
+
+  @Select
+  List<MstMachineDatalistMainte> selectDatalistMaintePart2(String startDate, String endDate, String facilityCd);
+
+  @Select
+  List<MstMachineDatalistMainte> selectDatalistMaintePart3(String startDate, String endDate, String facilityCd);
+  // mod #11718 【#11600持ち越し】データリスト画面不正② fang end
 }

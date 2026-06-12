@@ -10,7 +10,6 @@
       <div v-if="getViewMode || getIsOtherFacilitys">
         <label class="ntss-pat-event-label" style="padding-left: 10px;">{{inputModel.listName}}</label>
       </div>
-      <!-- <div v-if="!getViewMode"> -->
       <div v-else>
         <!-- mod FNSI-共有を追加 王 20200921 start -->
         <!-- mod #10359 編集権限の動作不正 start -->
@@ -46,7 +45,8 @@
             :disabled="
               getViewMode ||
               !isShared ||
-              !getItemAuthorized('PatEvent', 'default_authority')
+              !getItemAuthorized('PatEvent', 'default_authority') ||
+              getIsOtherFacilitys
             "
           >{{ item.name }}</option>
             <!-- mod #10359 編集権限の動作不正 end -->
@@ -57,7 +57,7 @@
   </div>
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 // add #10359 編集権限の動作不正 start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 end
@@ -84,10 +84,8 @@ export default {
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
-    // add #12462 患者情報共有 wangchao 20260323 start
     ...mapGetters("pat-event/list", ["getIsOtherFacility"]),
     ...mapGetters("observe-record/list", ["getIsOtherFacilitys"]),
-    // add #12462 患者情報共有 wangchao 20260323 end
     isShared() {
       if(this.getPatEventRecord.isComRec){
         return this.getFacilityCd === this.getSharedFacilityCd;
@@ -128,12 +126,11 @@ export default {
       }
     }
   },
-  watch: {},
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  created() {},
+
   mounted() {
     this.inputModel.listName = this.getResultSelectList;
   },
@@ -220,7 +217,7 @@ export default {
   margin-left: 10px;
   /*add FNSI-改修内容レイアウト表示と見た目調整。ラベルとデータ項目の区別がつかない。任 end*/
 }
-.select >>> .select-input {
+.select :deep(.select-input) {
   opacity: 1;
   font-size: 1em;
   /* color: var(--ntss-base-color); */

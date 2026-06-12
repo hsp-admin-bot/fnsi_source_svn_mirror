@@ -17,8 +17,8 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.beans.BeanUtils;
 import org.json.JSONArray;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;

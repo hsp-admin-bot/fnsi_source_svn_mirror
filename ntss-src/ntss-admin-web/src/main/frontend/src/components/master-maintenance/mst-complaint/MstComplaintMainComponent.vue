@@ -235,7 +235,7 @@
                   <td
                     class="ntss-list-body-td sort-rank"
                     :class="getRowStyleClassSort(dataSource.mstComplaints[index-1])"
-                    @click="addInput(index,'mstComplaintsSort')"
+                    @click="addInput(index,'mstComplaintsSort', $event)"
                     v-show="isSortMode"
                   ><span>{{dataSource.mstComplaints[index-1].sortRankFirst}}</span></td>
                   <!-- mod 愁訴処置マスタ 6・並び順制御を他のマスタに合わせる。孔 end -->
@@ -249,7 +249,7 @@
                   <td
                     class="ntss-list-body-td"
                     :class="getRowStyleClassEdit(dataSource.mstComplaints[index-1])"
-                    @click="addInput(index,'mstComplaints')"
+                    @click="addInput(index,'mstComplaints', $event)"
                   ><span>{{dataSource.mstComplaints[index-1].name}}</span></td>
                   <!-- mod 愁訴処置マスタ 愁訴クリックでモーダルを起動せずに直接テキストボックスでの入力を可能とする 孔 end -->
                   <td
@@ -316,7 +316,7 @@
                   <td
                     class="ntss-list-body-td grid-line-td sort-rank"
                     :class="getRowStyleClassSort(dataSource.mstCompTreatments[index-1])"
-                    @click="addInput(index,'mstCompTreatmentsSort')"
+                    @click="addInput(index,'mstCompTreatmentsSort', $event)"
                     v-show="isSortMode"
                   ><span>{{dataSource.mstCompTreatments[index-1].sortRankFirst}}</span></td>
                   <!-- mod 愁訴処置マスタ 6・並び順制御を他のマスタに合わせる。孔 end -->
@@ -329,7 +329,7 @@
                   <td
                     class="ntss-list-body-td"
                     :class="getRowStyleClassEdit(dataSource.mstCompTreatments[index-1])"
-                    @click="addInput(index,'mstCompTreatments')"
+                    @click="addInput(index,'mstCompTreatments', $event)"
                   ><span>{{dataSource.mstCompTreatments[index-1].treatment}}</span></td>
                   <td
                     class="ntss-list-body-td"
@@ -423,7 +423,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import MstComplaintComponentMixin from "@/components/master-maintenance/mst-complaint/MstComplaintComponentMixin";
@@ -432,18 +432,22 @@ import { MstCompTreatment } from "@/models/master-maintenance/mst-complaint/MstC
 // del 愁訴処置マスタ 6・並び順制御を他のマスタに合わせる 孔s start
 // import CommonNumberInputComponent from "@/components/treatment-record/submenu/common/CommonNumberInputComponent";
 // del 愁訴処置マスタ 6・並び順制御を他のマスタに合わせる 孔s end
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { CODES,MASTER_DELETE_DISPLAY } from "@/constants/TreatmentRecord";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 import { ApiHelper } from "@/apis/AxiosHelper";
-import $ from "jquery";
+
 import MasterCsvComponent from "@/components/master-maintenance/MasterCsvComponent";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
+import { getScopedElement, queryScopedSelector, getScopedAlertDialogs } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import $ from "@/compat/jquery";
+import { mountNumericTextBox } from "@/compat/kendo/native-widgets";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
 const CLASS_MISMATCH_LABEL = "【分類不一致】";
@@ -491,6 +495,9 @@ export default {
     };
   },
   methods: {
+    getScrollTableElement() {
+      return getScopedElement(this.$el || null, ".scroll-table") || queryScopedSelector(".scroll-table", this.$el || null);
+    },
     ...mapActions("multi-modal", [
       "showMstComplaintEdit",
       "showMstCompTreatmentEdit"
@@ -532,9 +539,11 @@ export default {
       "setLoadingScreenMessage"
     ]),
     // add 愁訴処置マスタ 愁訴クリックでモーダルを起動せずに直接テキストボックスでの入力を可能とする。 孔 start
-    addInput(index,dataSourceType){
+    addInput(index, dataSourceType, domEvent){
       if(this.isEditing) return
-      var evtTarget = event.target || event.srcElement;
+      const nativeEvent = domEvent || (typeof event !== "undefined" ? event : null);
+      if (!nativeEvent?.target) return;
+      var evtTarget = nativeEvent.target || nativeEvent.srcElement;
       // add 愁訴処置マスタ 障害対応 No236 項目「愁訴」を一定桁数文字で更新→ほか場所をクリック→再び編集できない 孔 start
       if (evtTarget.tagName === "SPAN") evtTarget = evtTarget.parentNode;
       // add 愁訴処置マスタ 障害対応 No236 項目「愁訴」を一定桁数文字で更新→ほか場所をクリック→再び編集できない 孔 end
@@ -582,23 +591,29 @@ export default {
       if (dataSourceType=="mstComplaintsSort" || dataSourceType=="mstCompTreatmentsSort") {
         if(!this.isSortMode) return;
         this.isEditing = true;
-        // evtTarget.innerText="";
         const spanSort = evtTarget.getElementsByTagName("span")[0];
         spanSort.style.display='none';
-        $(
-          `<input name="list_name" >`
-        ).appendTo(evtTarget)
-        .kendoNumericTextBox({
+        const originalElement = $(`<input name="list_name">`).appendTo(evtTarget)[0];
+        const numericTextBox = mountNumericTextBox(originalElement, {
           format: "n0",
           min: 0,
           max: 9999999999,
-          setp: 1,
-          value: oldValue
-        })
-        .blur(function(){$(this.parentNode.parentNode).remove();spanSort.style.display='inline';that.isEditing=false})
-        .change((e)=>{this.setContentData(e.target.value,index,dataSourceType)});
-
-        $(evtTarget).find("input").get(0).focus();
+          step: 1,
+          value: oldValue,
+          change: (e) => {
+            const newValue = e?.sender?.value?.() ?? e?.value;
+            spanSort.textContent = newValue;
+            this.setContentData(newValue, index, dataSourceType);
+          }
+        });
+        const cleanupSortInput = () => {
+          numericTextBox.destroy();
+          $(originalElement).remove();
+          spanSort.style.display = 'inline';
+          that.isEditing = false;
+        };
+        numericTextBox.bind("blur", cleanupSortInput);
+        numericTextBox.focus();
       }
     },
     setContentData(newValue, index, type){
@@ -611,11 +626,11 @@ export default {
         this.dataSource.mstCompTreatments[index-1].up_date=null;
       }
       if (type == "mstComplaintsSort") {
-        this.dataSource.mstComplaints[index-1].sortRankFirst=newValue;
+        this.dataSource.mstComplaints[index-1].sortRankFirst = Number(newValue);
         this.setSortRankSecondComplaint(index);
       }
       if (type == "mstCompTreatmentsSort") {
-        this.dataSource.mstCompTreatments[index-1].sortRankFirst=newValue;
+        this.dataSource.mstCompTreatments[index-1].sortRankFirst = Number(newValue);
         this.setSortRankSecondCompTreatment(index);
       }
     },
@@ -630,15 +645,20 @@ export default {
       const numberOfComplaint = this.allMstComplaints.filter(e => (e.isDel === false && e.code != 0)).length;
       /* mod 並び順修正 楊 end */
 
+      this.lastScrollLeft = 0;
       this.addMstComplaint(new MstComplaint(null, numberOfComplaint, this.newRecordCdComplaint));
       this.newRecordCdComplaint--;
       // dataSource()プロパティが再評価されるようにするためthis.getFilteredDataSourceで使用しているchangeFlgを初期化する
       this.setChangeFlg(false);
       this.$nextTick(() => {
-        if(numberOfComplaint > 2) {
-          document.querySelector('.scroll-table').scrollTop = document.querySelector('.scroll-table').lastChild.tBodies[0].querySelector(`tr:nth-child(${numberOfComplaint-2})`)?.offsetTop;
-        } else {
-          document.querySelector('.scroll-table').scrollTop = document.querySelector('.scroll-table').lastChild.tBodies[0].querySelector(`tr:nth-child(${numberOfComplaint})`)?.offsetTop;
+        const scrollTable = this.getScrollTableElement();
+        if (scrollTable) {
+          scrollTable.scrollLeft = 0;
+          if (numberOfComplaint > 2) {
+            scrollTable.scrollTop = scrollTable.lastChild.tBodies[0].querySelector(`tr:nth-child(${numberOfComplaint - 2})`)?.offsetTop;
+          } else {
+            scrollTable.scrollTop = scrollTable.lastChild.tBodies[0].querySelector(`tr:nth-child(${numberOfComplaint})`)?.offsetTop;
+          }
         }
       });
     },
@@ -652,15 +672,20 @@ export default {
       const numberOfCompTreatment = this.allMstCompTreatments.filter(e => (e.isDel === false && e.code != 0)).length;
       /* mod 並び順修正 楊 end */
 
+      this.lastScrollLeft = 0;
       this.addMstCompTreatment(new MstCompTreatment(null, numberOfCompTreatment, this.newRecordCdCompTreatment));
       this.newRecordCdCompTreatment--;
       // dataSource()プロパティが再評価されるようにするためthis.getFilteredDataSourceで使用しているchangeFlgを初期化する
       this.setChangeFlg(false);
       this.$nextTick(() => {
-        if(numberOfCompTreatment > 2) {
-          document.querySelector('.scroll-table').scrollTop = document.querySelector('.scroll-table').lastChild.tBodies[0].querySelector(`tr:nth-child(${numberOfCompTreatment-2})`)?.offsetTop;
-        } else {
-          document.querySelector('.scroll-table').scrollTop = document.querySelector('.scroll-table').lastChild.tBodies[0].querySelector(`tr:nth-child(${numberOfCompTreatment})`)?.offsetTop;
+        const scrollTable = this.getScrollTableElement();
+        if (scrollTable) {
+          scrollTable.scrollLeft = 0;
+          if (numberOfCompTreatment > 2) {
+            scrollTable.scrollTop = scrollTable.lastChild.tBodies[0].querySelector(`tr:nth-child(${numberOfCompTreatment - 2})`)?.offsetTop;
+          } else {
+            scrollTable.scrollTop = scrollTable.lastChild.tBodies[0].querySelector(`tr:nth-child(${numberOfCompTreatment})`)?.offsetTop;
+          }
         }
       });
     },
@@ -854,8 +879,9 @@ export default {
       // 共通ローダー:表示開始
       this.setLoadingScreenVisible(true);
       /* add スクロールの位置を維持 楊 start */
-      this.lastScrollTop = document.getElementsByClassName('scroll-table')[0].scrollTop;
-      this.lastScrollLeft= document.getElementsByClassName('scroll-table')[0].scrollLeft;
+      const scrollTable = this.getScrollTableElement();
+      this.lastScrollTop = scrollTable?.scrollTop || 0;
+      this.lastScrollLeft = scrollTable?.scrollLeft || 0;
       /* add スクロールの位置を維持 楊 end */
 
       // 愁訴マスタと処置マスタを更新する
@@ -961,8 +987,11 @@ export default {
       this.$nextTick(() => {
         this.calculateGridHeight();
         /* add スクロールの位置を維持 楊 start */
-        document.getElementsByClassName('scroll-table')[0].scrollTop = this.lastScrollTop;
-        document.getElementsByClassName('scroll-table')[0].scrollLeft = this.lastScrollLeft;
+        const scrollTable = this.getScrollTableElement();
+        if (scrollTable) {
+          scrollTable.scrollTop = this.lastScrollTop;
+          scrollTable.scrollLeft = this.lastScrollLeft;
+        }
         setTimeout(() => {
           this.lastScrollTop = 0;
           this.lastScrollLeft = 0;
@@ -1004,7 +1033,7 @@ export default {
           let decPoint = (numbers[1]) ? numbers[1].length : 0;
           // mod FNSI- typeofの使い方が違います。 徐博 start
           // if(typeof(medicine === "undefined")){
-          if ( typeof medicine === "undefined" ){
+          if ( typeof medicine === "undefined"){
             // mod FNSI- typeofの使い方が違います。 徐博 end
             e.amount = BigNumber(1 * e.amount).toFixed();
           }else
@@ -1039,7 +1068,11 @@ export default {
       const arr = await ApiHelper.get("/mstInfo/mstMedicineIncludeDeleted", requestParam);
       const response = await this.fetchMedicineAll(this.getFacilitySwitch);
       // mod/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
-      const resData = response[2].data.lists.list3.items.filter(item => item.isDisp == 1 && item.isDel == 0);
+      const masterItems = response[2]?.data?.master?.items ?? [];
+      if (!masterItems.length) {
+        return { medicines: [], medicinesMix: [] };
+      }
+      const resData = masterItems.filter(item => item.isDisp == 1 && item.isDel == 0);
       const normalMedicines = resData.filter(e =>{
         return e.key_type == CODES.MEDICINE_TYPE.NORMAL.cd
       });
@@ -1092,7 +1125,7 @@ export default {
             code: e.medicineCd,
             // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
             //name: e.medicineName,
-            name: (e.key_type == 2 && e.key_class == -1 ? CLASS_MISMATCH_LABEL : '') + e.tabooAllergy + e.expired + e.deleted + e.includeDeleted + e.medicineName,
+            name: (e.classInconsistent || '') + e.tabooAllergy + e.expired + e.deleted + e.includeDeleted + e.medicineName,
             // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
             unit: e.unit,
             decPoint: e.unitDecimalPoint
@@ -1105,7 +1138,7 @@ export default {
             //code: e.medicineCd,
             code: e.medicineMixCd,
             //name: e.medicineName,
-            name: (e.key_type == 2 && e.key_class == -1 ? CLASS_MISMATCH_LABEL : '') + e.tabooAllergy + e.expired + e.deleted + e.includeDeleted + e.medicineMixName,
+            name: (e.classInconsistent || '') + e.tabooAllergy + e.expired + e.deleted + e.includeDeleted + e.medicineMixName,
             // mod/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
             unit: e.unit,
             decPoint: e.unitDecimalPoint
@@ -1143,14 +1176,7 @@ export default {
      * 一覧の領域（高さ）を再計算します.
      */
     calculateGridHeight() {
-      const wh = this.windowHeight;
-      const hh = Array.prototype.slice
-        .call(document.getElementsByClassName("header"))
-        .pop().clientHeight;
-      const fmh =
-        (this.isDispMenu === 1
-          ? document.getElementById("footer-menu").clientHeight
-          : 0) + 5;
+      const { wh, hh, fmh } = this.getMasterViewportBaseHeight(5);
       this.gridToolbarHeight = wh - hh - fmh;
       this.gridToolbarHeight =
         this.gridToolbarHeight < 340 ? 340 : this.gridToolbarHeight;
@@ -1162,7 +1188,7 @@ export default {
      */
      calculateGridFooterAreaHeight() {
 
-      const gfh = document.getElementById("grid-footer").clientHeight;
+      const gfh = this.getMasterGridFooterHeight(0);
 
       // 反映ボタンのみの場合、CSV取込・並び順表示ボタンの改行分の考慮不要
       switch (this.getFontSize) {
@@ -1277,10 +1303,7 @@ export default {
      * 処置マスタの第2ソートキーを設定します.
      */
     setSortRankSecondCompTreatment(index) {
-      // #9863 Cannot read properties of undefined (reading 'initSortRankFirst') 横展開2 linjunfeng start
-      // if(this.dataSource.mstComplaints[index-1].initSortRankFirst != this.dataSource.mstCompTreatments[index-1].sortRankFirst) {
-      if(this.dataSource.mstComplaints[index-1]?.initSortRankFirst != this.dataSource.mstCompTreatments[index-1]?.sortRankFirst) {
-      // #9863 Cannot read properties of undefined (reading 'initSortRankFirst') 横展開2 linjunfeng send 
+      if(this.dataSource.mstCompTreatments[index-1]?.initSortRankFirst != this.dataSource.mstCompTreatments[index-1]?.sortRankFirst) {
         this.dataSource.mstCompTreatments[index-1].setSortRankSecond();
       }
       this.editMstCompTreatment(this.dataSource.mstCompTreatments[index-1])
@@ -1307,8 +1330,8 @@ export default {
     // add 愁訴処置マスタ 障害対応 No235 データを更新→マスタ一覧リンクを押下→メッセージが表示されない 孔 start
     refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
-      if (this.selfScreenName === this.$router.currentRoute.name
-          && document.getElementsByTagName("ons-alert-dialog").length === 0) {
+      if (this.selfScreenName === this.$route.name
+          && getScopedAlertDialogs(this.$el || this).length === 0) {
         if (this.isChanged) {
           this.$ons.notification.confirm({
             title: DIALOG_MESSAGES[12000014].title,
@@ -1429,7 +1452,7 @@ export default {
   },
   async created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     this.setLoadingScreenVisible(true);
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("処理中・・・");
@@ -1463,7 +1486,7 @@ export default {
     EventBus.$on("refresh", this.refresh);
     // add 愁訴処置マスタ 障害対応 No235 データを更新→マスタ一覧リンクを押下→メッセージが表示されない 孔 start
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // ストアクリア
     this.setMstComplaints([]);
     this.setMstCompTreatments([]);
@@ -1521,7 +1544,7 @@ export default {
   background-color: var(--ntss-list-content-2nd-background-color) !important;
   color: var(--ntss-list-body-color) !important;
 }
-.grid-record-list >>> ons-input .text-input  {
+.grid-record-list :deep(ons-input .text-input)  {
   color: var(--ntss-list-body-color);
   background-color: var(--ntss-list-item-background-color);
 }
@@ -1546,7 +1569,7 @@ export default {
 td.disp-select-box {
   width: 5em;
 }
-.selectbox >>> .select-input {
+.selectbox :deep(.select-input) {
   font-size: 1.0em;
   font-weight: bold;
 }
@@ -1556,7 +1579,7 @@ td.disp-select-box {
   padding: 0px;
   padding-left: 0.3em;
 }
-/* .sort-rank >>> ons-input {
+/* .sort-rank :deep(ons-input){
   width: 8em;
   border: none;
 } */
@@ -1567,7 +1590,7 @@ td.disp-select-box {
   background-color: #ffff66;
   color: #333333;
 }
-.sort-edited >>> ons-input .text-input {
+.sort-edited :deep(ons-input .text-input) {
   background-color: #ffff66;
 }
 .dummy-row {
@@ -1577,13 +1600,13 @@ td.disp-select-box {
   background-color: var(--master-maintenance-complaint-dummy-row-background-color);
   display: none;
 }
-.sort-rank >>> .k-numerictextbox {
+.sort-rank :deep(.k-numerictextbox) {
   width: 100%;
 }
 .ntss-list-body-td {
   padding: 0.25rem 0.75rem !important
 }
-.ntss-list-body-td >>> input.k-textbox {
+.ntss-list-body-td :deep(input.k-textbox) {
   width: 100%;
 }
 .complaint-button{

@@ -1,72 +1,82 @@
 <template>
 <!--mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 start -->
     <!--<v-ons-alert-dialog
-      :visible="visible"
+      v-model:visible="visible"
       modifier="rowfooter"
       :footer="footerButton"
       :class="typeFooter"
     >-->
+    <!-- add メッセージダイアログのデフォルトボタン（OK 等）フォーカス対応 start -->
     <v-ons-alert-dialog
+      ref="alertDialog"
       :visible="visible"
+      @update:visible="$emit('update:visible', $event)"
+      @postshow="focusDefaultButton"
       modifier="rowfooter"
       :class="typeFooter"
     >
-      <span slot="title">{{ dialogTitle }}</span>
+    <!-- add メッセージダイアログのデフォルトボタン（OK 等）フォーカス対応 end -->
+      <template #title><span>{{ dialogTitle }}</span></template>
       <div :class="{'overflow_y':overflowY}">
         <p>
-          <template v-for="(item, index) in message">
-            <span :key="index">{{ item }}<br></span>
+          <template v-for="(item, index) in message" :key="index">
+            <span>{{ item }}<br></span>
           </template>
         </p>
       </div>
       <!-- mod 7211 曜日パターン変更のメッセージ表示や治療予定の移動動作がおかしい 張 end -->
       <!-- add #7185 centOS7サポート切れ 付 start -->
-      <template slot="footer" v-if="type === TYPE_OK">
-        <v-ons-alert-dialog-button @click="confirmOk()">OK</v-ons-alert-dialog-button>
+      <!-- mod メッセージダイアログのデフォルトボタン（OK 等）フォーカス対応：各 type の主ボタンに modifier="primal" を付与 start -->
+      <template #footer v-if="type === TYPE_OK">
+        <v-ons-alert-dialog-button modifier="primal" @click="confirmOk()">OK</v-ons-alert-dialog-button>
       </template>
-      <template slot="footer" v-else-if="type === TYPE_OK_CANCEL">
+      <template #footer v-else-if="type === TYPE_OK_CANCEL">
         <v-ons-alert-dialog-button @click="confirmCancel()">Cancel</v-ons-alert-dialog-button>
-        <v-ons-alert-dialog-button @click="confirmOk()">OK</v-ons-alert-dialog-button>
+        <v-ons-alert-dialog-button modifier="primal" @click="confirmOk()">OK</v-ons-alert-dialog-button>
       </template>
-      <template slot="footer" v-else-if="type === TYPE_YES_NO_CANCEL">
+      <template #footer v-else-if="type === TYPE_YES_NO_CANCEL">
         <v-ons-alert-dialog-button @click="confirmCancel()">Cancel</v-ons-alert-dialog-button>
-        <v-ons-alert-dialog-button @click="confirmYes()">Yes</v-ons-alert-dialog-button>
+        <v-ons-alert-dialog-button modifier="primal" @click="confirmYes()">Yes</v-ons-alert-dialog-button>
         <v-ons-alert-dialog-button @click="confirmNo()">No</v-ons-alert-dialog-button>
       </template>
-      <template slot="footer" v-else-if="type === TYPE_YES_NO">
-        <v-ons-alert-dialog-button @click="confirmYes()">Yes</v-ons-alert-dialog-button>
+      <template #footer v-else-if="type === TYPE_YES_NO">
+        <v-ons-alert-dialog-button modifier="primal" @click="confirmYes()">Yes</v-ons-alert-dialog-button>
         <v-ons-alert-dialog-button @click="confirmNo()">No</v-ons-alert-dialog-button>
       </template>
-      <template slot="footer" v-else-if="type === TYPE_SAVE_EXPAND">
-        <v-ons-alert-dialog-button @click="confirmYes()">保存</v-ons-alert-dialog-button>
+      <template #footer v-else-if="type === TYPE_SAVE_EXPAND">
+        <v-ons-alert-dialog-button modifier="primal" @click="confirmYes()">保存</v-ons-alert-dialog-button>
         <v-ons-alert-dialog-button @click="confirmNo()">展開保存</v-ons-alert-dialog-button>
       </template>
-      <template slot="footer" v-else-if="type === TYPE_YES_NO_CANCEL_JPN">
+      <template #footer v-else-if="type === TYPE_YES_NO_CANCEL_JPN">
         <v-ons-alert-dialog-button @click="confirmCancel()">ｷｬﾝｾﾙ</v-ons-alert-dialog-button>
         <v-ons-alert-dialog-button @click="confirmNo()">いいえ</v-ons-alert-dialog-button>
-        <v-ons-alert-dialog-button @click="confirmYes()">はい</v-ons-alert-dialog-button>
+        <v-ons-alert-dialog-button modifier="primal" @click="confirmYes()">はい</v-ons-alert-dialog-button>
       </template>
-      <template slot="footer" v-else-if="type === TYPE_DELSAVE_SAVE_CANCEL">
-        <v-ons-alert-dialog-button @click="confirmYes()">上書き優先</v-ons-alert-dialog-button>
+      <template #footer v-else-if="type === TYPE_DELSAVE_SAVE_CANCEL">
+        <v-ons-alert-dialog-button modifier="primal" @click="confirmYes()">上書き優先</v-ons-alert-dialog-button>
         <v-ons-alert-dialog-button @click="confirmNo()">既存優先</v-ons-alert-dialog-button>
         <v-ons-alert-dialog-button @click="confirmCancel()">キャンセル</v-ons-alert-dialog-button>
       </template>
-      <template slot="footer" v-else-if="type === TYPE_123">
-        <v-ons-alert-dialog-button @click="confirm(1)">1</v-ons-alert-dialog-button>
+      <template #footer v-else-if="type === TYPE_123">
+        <v-ons-alert-dialog-button modifier="primal" @click="confirm(1)">1</v-ons-alert-dialog-button>
         <v-ons-alert-dialog-button @click="confirm(2)">2</v-ons-alert-dialog-button>
         <v-ons-alert-dialog-button @click="confirm(3)">3</v-ons-alert-dialog-button>
       </template>
-      <template slot="footer" v-else-if="type === TYPE_WORD">
-        <v-ons-alert-dialog-button @click="confirm(1)">表示維持</v-ons-alert-dialog-button>
+      <template #footer v-else-if="type === TYPE_WORD">
+        <v-ons-alert-dialog-button modifier="primal" @click="confirm(1)">表示維持</v-ons-alert-dialog-button>
         <v-ons-alert-dialog-button @click="confirm(2)">編集破棄</v-ons-alert-dialog-button>
         <v-ons-alert-dialog-button @click="confirm(3)">編集維持</v-ons-alert-dialog-button>
       </template>
+      <!-- mod メッセージダイアログのデフォルトボタン（OK 等）フォーカス対応：各 type の主ボタンに modifier="primal" を付与 end -->
       <!-- add #7185 centOS7サポート切れ 付 end -->
     </v-ons-alert-dialog>
 </template>
 
 <script>
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
+// add メッセージダイアログのデフォルトボタン（OK 等）フォーカス対応 start
+import { focusAlertDialogDefaultButton, getOnsAlertDialogElement } from "@/compat/onsen/dialog";
+// add メッセージダイアログのデフォルトボタン（OK 等）フォーカス対応 end
 
 // ダイアログタイプ定数
 const TYPE_OK = "1";
@@ -98,7 +108,7 @@ const TYPE_WORD = "9";
  * @example
  *   <button @click="isDialogVisible = true;">ダイアログ表示</button>
  *   <message-dialog
- *     :visible.sync="isDialogVisible"
+ *     v-model:visible="isDialogVisible"
  *     :message-cd="1"
  *     type="2"
  *     :string-params="['置換文字列1', '置換文字列2']"
@@ -116,7 +126,7 @@ const TYPE_WORD = "9";
  *   }
  */
 //#10300：装置設定デフォルト＞風袋と除水補正のpopover内の文字サイズが適応されていない。 Start
-import {mapGetters} from "vuex";
+import {mapGetters,mapMutations} from "vuex";
 //#10300：装置設定デフォルト＞風袋と除水補正のpopover内の文字サイズが適応されていない。 End
 export default {
   data () {
@@ -144,7 +154,7 @@ export default {
     //mod 11061 患者経過総合ビューア＞スケジュール編集でベッドのプルダウンリスト展開でDB負荷が高くシステムが操作不可となる。(恒久対応) end
     //add 7211 曜日パターン変更のメッセージ表示や治療予定の移動動作がおかしい 張 end
     // 必ずsync修飾子を付与すること!
-    // ⇒ :visible.sync="flg"
+    // ⇒ v-model:visible="flg"
     visible: {
       type: Boolean
     },
@@ -311,6 +321,9 @@ export default {
 
   methods: {
     confirm(answer) {
+      // add #10937 20260428 Ji start
+      sessionStorage.setItem('press_footer_flag', Date.now());
+      // add #10937 20260428 Ji end
       this.closeDialog();
       this.$emit("confirm", answer);
     },
@@ -334,6 +347,18 @@ export default {
     closeDialog() {
       // 親に表示フラグを折らせる
       this.$emit("update:visible", false);
+    },
+
+    /**
+     * ダイアログ表示完了（postshow）後、type に応じたデフォルトボタン（OK/Yes/はい 等）を選択状態にする
+     */
+    focusDefaultButton() {
+      this.$nextTick(() => {
+        focusAlertDialogDefaultButton(
+          getOnsAlertDialogElement(this.$refs.alertDialog?.$el),
+          { type: this.type }
+        );
+      });
     }
   }
 };

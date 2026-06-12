@@ -13,9 +13,9 @@
 
 <script>
 // ライブラリ
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 //日付処理用
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 export default {
   data() {
@@ -34,7 +34,7 @@ export default {
       let list = [];
       this.getExamRequests.forEach(exam => {
         if (
-          moment(exam.regExamDate).format("YYYYMMDD") ===
+          dayjs(exam.regExamDate).format("YYYYMMDD") ===
           this.getHeaderDispInfo.treatDate
         ) {
           list = [

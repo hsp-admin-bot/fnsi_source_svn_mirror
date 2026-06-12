@@ -3,12 +3,18 @@
  */
  <template>
   <ntss-layout-split>
-    <header-component slot='header-content' />
+    <template #header-content>
+      <header-component />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start -->
     <!-- <bread-crumbs-component slot='bread-crumbs-content' :history-key="historyKey" /> -->
-    <bread-crumbs-component slot='bread-crumbs-content' :history-key="historyKey"  @refresh='refresh'/>
+    <template #bread-crumbs-content>
+      <bread-crumbs-component :history-key="historyKey"  @refresh='refresh'/>
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng end -->
-    <main-component slot='main-content' ref='mainComponent' :history-key="historyKey" />
+    <template #main-content>
+      <main-component ref="mainComponent" :history-key="historyKey" />
+    </template>
   </ntss-layout-split>
 </template>
 

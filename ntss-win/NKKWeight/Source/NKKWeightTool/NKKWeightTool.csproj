@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>NKKWeightTool</RootNamespace>
     <AssemblyName>FNWSiScaleTool</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <IsWebBootstrapper>false</IsWebBootstrapper>
@@ -112,13 +112,6 @@
       <Project>{9e38647a-227c-4570-8e08-6bd25d0e3154}</Project>
       <Name>NKKCommon</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Properties\NKKWeight.ico" />

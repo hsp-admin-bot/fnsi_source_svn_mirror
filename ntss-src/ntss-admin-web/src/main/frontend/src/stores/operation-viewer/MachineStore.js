@@ -157,7 +157,7 @@ export default {
         let defectCount = 0;
         let serviceSupportCount = 0;
         for (const machine of machines) {
-          emergencyCount += machine.mnoticeCnt > 0 ? 1 : 0;
+          emergencyCount += (machine.mNoticeCnt ?? machine.mnoticeCnt ?? 0) > 0 ? 1 : 0;
           prophylaxisCount += machine.preventiveMainteCnt > 0 ? 1 : 0;
           defectCount += machine.isPreventiveMainte > 0 ? 1 : 0;
           serviceSupportCount += machine.serviceSupportCnt > 0 ? 1 : 0;
@@ -208,12 +208,11 @@ export default {
     // 対象装置の自己診断判定情報を設定
     // -----------------------------------------
     async getSelfMeasureResultInfo({ state, commit, dispatch }, machine) {
-      // add/ #9291 自己診断判定の対象でない項目の値が表示される tianqidong start
       const targetFacilityCd = machine.facilityCd || state.facilityCd;
       if (targetFacilityCd && targetFacilityCd !== state.facilityCd) {
         commit("setFacilityCd", targetFacilityCd);
       }
-      // 先按製造番号回查装置主档，优先使用主档中的型式/版本来匹配判定信息
+
       let targetMachine = {
         machineTypeCd: machine.machineTypeCd,
         version: machine.version
@@ -244,7 +243,7 @@ export default {
           const machineInf = arrMachines[i2];
           if (machineInf.type_cd === targetMachine.machineTypeCd){
             // バージョン情報の整形
-            let strVerUp = "";
+            let strVerUp;
             if (machineInf.ver_up) {
               strVerUp = await dispatch("formatVersionInf", machineInf.ver_up);
             } else {
@@ -252,7 +251,7 @@ export default {
               strVerUp = "999.999ZZZ";
             }
 
-            let strVerLow = "";
+            let strVerLow;
             if (machineInf.ver_low) {
               strVerLow = await dispatch("formatVersionInf", machineInf.ver_low);
             } else {
@@ -264,7 +263,6 @@ export default {
               machineVerUp: strVerUp,
               machineVerLow: strVerLow,
               selfMeasureResult: response.data[i].selfMeasureResult,
-              // 同一レンジで複数候補がある場合は、最新(codeが大きい)を優先
               recordCode: Number.isNaN(recordCode) ? 0 : recordCode
             };
             arrResInfAll.push(machineData);
@@ -287,18 +285,15 @@ export default {
       if (arrResInfAll.length > 0){
         if (targetMachine.version) {
           const machineVer = await dispatch("formatVersionInf", targetMachine.version);
-          // 装置のバージョンが登録されている場合は、レンジ一致候補から「最新」を採用
           const matchCandidates = arrResInfAll.filter((item) => {
             return machineVer >= item.machineVerLow && machineVer <= item.machineVerUp;
           });
           if (matchCandidates.length > 0) {
             matchCandidates.sort((a, b) => {
-              // まずバージョンレンジの近さ(下限が高いもの)を優先
               if (a.machineVerLow < b.machineVerLow) return 1;
               if (a.machineVerLow > b.machineVerLow) return -1;
               if (a.machineVerUp < b.machineVerUp) return 1;
               if (a.machineVerUp > b.machineVerUp) return -1;
-              // 同一レンジは最新codeを優先
               if (a.recordCode < b.recordCode) return 1;
               if (a.recordCode > b.recordCode) return -1;
               return 0;
@@ -306,7 +301,6 @@ export default {
             machineSelfMeasureResultInfo = matchCandidates[0].selfMeasureResult;
           }
         } else {
-          // 装置バージョン未登録時は、最新codeの1件を適用
           const latest = arrResInfAll.slice().sort((a, b) => {
             if (a.recordCode < b.recordCode) return 1;
             if (a.recordCode > b.recordCode) return -1;
@@ -315,7 +309,6 @@ export default {
           machineSelfMeasureResultInfo = latest?.selfMeasureResult || "[]";
         }
       }
-      // add/ #9291 自己診断判定の対象でない項目の値が表示される tianqidong start
       commit("setSelfMeasureResultInfo", JSON.parse(machineSelfMeasureResultInfo));
     },
     
@@ -323,9 +316,8 @@ export default {
     // バージョン情報を整形
     // -----------------------------------------
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     formatVersionInf({ state }, version) {
-      let retStr = "";
+      let retStr;
       const arrVer = version.split(".");
       if (arrVer.length === 1) {
         // メジャーバージョンのみ

@@ -27,6 +27,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 
 /**
@@ -69,7 +72,22 @@ public class MachineResource {
    * @return 装置一覧
    */
   @GetMapping("mst_machine/{facilityCd}")
-  public ResponseEntity<?> getMstmachines( @PathVariable String facilityCd) {
+  public ResponseEntity<?> getMstmachines( @PathVariable String facilityCd,
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                           @AuthenticationPrincipal NtssUser ntssUser
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -102,7 +120,22 @@ public class MachineResource {
   public ResponseEntity<?> getMachines(
     @PathVariable String facilityCd,
     @RequestParam(name="isNkkFacility") boolean isNkkFacility
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "isNkkFacility=" + isNkkFacility + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -128,7 +161,22 @@ public class MachineResource {
    */
   @GetMapping("/parts_running/{facilityCd}/{machineTypeCd}/{machineSerial}")
   public ResponseEntity<?> getPartsRunning(@PathVariable String facilityCd, @PathVariable String machineTypeCd,
-      @PathVariable String machineSerial) {
+      @PathVariable String machineSerial,
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                           @AuthenticationPrincipal NtssUser ntssUser
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "machineTypeCd=" + machineTypeCd + " " + "machineSerial=" + machineSerial + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -164,7 +212,22 @@ public class MachineResource {
   @GetMapping("/{facilityCd}/{machineTypeCd}/{machineSerial}")
   public ResponseEntity<?> getMachine(@PathVariable String facilityCd,
                                       @PathVariable String machineTypeCd,
-                                      @PathVariable String machineSerial) {
+                                      @PathVariable String machineSerial,
+                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                      @AuthenticationPrincipal NtssUser ntssUser
+                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "machineTypeCd=" + machineTypeCd + " " + "machineSerial=" + machineSerial + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     try {
       // ログ出力
       EventLogMessage eventLogMessage = new EventLogMessage();
@@ -197,7 +260,22 @@ public class MachineResource {
    * @return 自己診断判定情報
    */
   @GetMapping("/{facilityCd}/{machineTypeCd}")
-  public ResponseEntity<?> getSelfMeasureResultInfo(@PathVariable String facilityCd, @PathVariable String machineTypeCd) {
+  public ResponseEntity<?> getSelfMeasureResultInfo(@PathVariable String facilityCd, @PathVariable String machineTypeCd,
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                    @AuthenticationPrincipal NtssUser ntssUser
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "machineTypeCd=" + machineTypeCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     try {
       // ログ出力
       EventLogMessage eventLogMessage = new EventLogMessage();

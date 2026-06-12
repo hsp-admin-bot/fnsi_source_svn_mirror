@@ -151,20 +151,19 @@
             @input="changeColor($event)"
             v-model="inputModel.port">
           </v-ons-input> -->
-          <v-ons-input
-            :disabled="isUsingMachine"
-            type="number"
+          <custom-input-number-pro
             input-id="port"
-            maxlength="5"
-            step="1"
+            :disabled="isUsingMachine"
+            class="machine-port-input"
             :class="handleJudgeEdited(inputModel.port, 'port')"
-            @change="changeColor($event, true, '0', '65535')"
-            @blur="formatValue($event, 0, '0', '65535')"
-            @focus="handleFocus(0)"
-            @mousewheel.prevent="stopScrollFun($event, 'port', '0', '65535', 0)"
-            onKeypress="return (/[\d]/.test(String.fromCharCode(event.keyCode)))"
-            v-model="inputModel.port">
-          </v-ons-input>
+            :value="inputModel.port"
+            :step="1"
+            :min="0"
+            :max="65535"
+            :rollFlag="false"
+            :valueModifiers="{ lazy: true }"
+            @handlerInput="updatePort"
+          />
           <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 end -->
         </v-ons-col>
       </v-ons-row>
@@ -475,17 +474,18 @@
             :class="handleJudgeEdited(inputModel.tmp_center_hd, 'tmp_center_hd')"
             v-model="inputModel.tmp_center_hd">
           </v-ons-input> -->
-          <v-ons-input
-            type="number"
+          <custom-input-number-pro
             input-id="tmp-center-hd"
-            step="1"
-            @change="changeColor($event,true)"
-            @mousewheel.prevent="stopScrollFun($event, 'tmp_center_hd','','', 1)"
-            @blur="formatValue($event, 1)"
-            @focus="handleFocus(1)"
+            :value="inputModel.tmp_center_hd"
+            :step="1"
+            :min="-200"
+            :max="200"
+            :rollFlag="false"
+            :valueModifiers="{ lazy: true }"
             :class="handleJudgeEdited(inputModel.tmp_center_hd, 'tmp_center_hd')"
-            v-model="inputModel.tmp_center_hd">
-          </v-ons-input>
+            style="width: 100%;"
+            @handlerInput="(value) => updateTmpCenter('tmp_center_hd', value)"
+          />
           <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 end -->
         <!-- mod redmine 4519 TMPゼロ補正中点がホイールによるピックアップダウンができない 宋qy end -->
         </v-ons-col>
@@ -509,17 +509,18 @@
             :class="handleJudgeEdited(inputModel.tmp_center_ecum, 'tmp_center_ecum')"
             v-model="inputModel.tmp_center_ecum">
           </v-ons-input> -->
-           <v-ons-input
-            type="number"
+          <custom-input-number-pro
             input-id="tmp-center-ecum"
-            step="1"
-            @change="changeColor($event,true)"
-            @blur="formatValue($event, 2)"
-            @focus="handleFocus(2)"
-            @mousewheel.prevent="stopScrollFun($event, 'tmp_center_ecum','','', 2)"
+            :value="inputModel.tmp_center_ecum"
+            :step="1"
+            :min="-200"
+            :max="200"
+            :rollFlag="false"
+            :valueModifiers="{ lazy: true }"
             :class="handleJudgeEdited(inputModel.tmp_center_ecum, 'tmp_center_ecum')"
-            v-model="inputModel.tmp_center_ecum">
-          </v-ons-input>
+            style="width: 100%;"
+            @handlerInput="(value) => updateTmpCenter('tmp_center_ecum', value)"
+          />
           <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 end -->
           <!-- mod redmine 4519 TMPゼロ補正中点がホイールによるピックアップダウンができない 宋qy end -->
         </v-ons-col>
@@ -543,18 +544,18 @@
             :class="handleJudgeEdited(inputModel.tmp_center_hdf, 'tmp_center_hdf')"
             v-model="inputModel.tmp_center_hdf">
           </v-ons-input> -->
-           <v-ons-input
-            type="number"
+          <custom-input-number-pro
             input-id="tmp-center-hdf"
-            step="1"
-            @change="changeColor($event,true)"
-            @blur="formatValue($event, 3)"
-            @focus="handleFocus(3)"
-            @mousewheel.prevent="stopScrollFun($event, 'tmp_center_hdf','','', 3)"
-            @DOMMouseScroll="stopScrollFun($event)"
+            :value="inputModel.tmp_center_hdf"
+            :step="1"
+            :min="-200"
+            :max="200"
+            :rollFlag="false"
+            :valueModifiers="{ lazy: true }"
             :class="handleJudgeEdited(inputModel.tmp_center_hdf, 'tmp_center_hdf')"
-            v-model="inputModel.tmp_center_hdf">
-          </v-ons-input>
+            style="width: 100%;"
+            @handlerInput="(value) => updateTmpCenter('tmp_center_hdf', value)"
+          />
           <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 end -->
           <!-- mod redmine 4519 TMPゼロ補正中点がホイールによるピックアップダウンができない 宋qy end -->
         </v-ons-col>
@@ -578,17 +579,18 @@
             :class="handleJudgeEdited(inputModel.tmp_center_hf, 'tmp_center_hf')"
             v-model="inputModel.tmp_center_hf">
           </v-ons-input> -->
-          <v-ons-input
-            type="number"
+          <custom-input-number-pro
             input-id="tmp-center-hf"
-            step="1"
-            @change="changeColor($event,true)"
-            @blur="formatValue($event, 4)"
-            @focus="handleFocus(4)"
-            @mousewheel.prevent="stopScrollFun($event, 'tmp_center_hf','','', 4)"
+            :value="inputModel.tmp_center_hf"
+            :step="1"
+            :min="-200"
+            :max="200"
+            :rollFlag="false"
+            :valueModifiers="{ lazy: true }"
             :class="handleJudgeEdited(inputModel.tmp_center_hf, 'tmp_center_hf')"
-            v-model="inputModel.tmp_center_hf">
-          </v-ons-input>
+            style="width: 100%;"
+            @handlerInput="(value) => updateTmpCenter('tmp_center_hf', value)"
+          />
           <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 end -->
           <!-- mod redmine 4519 TMPゼロ補正中点がホイールによるピックアップダウンができない 宋qy end -->
         </v-ons-col>
@@ -612,17 +614,18 @@
             :class="handleJudgeEdited(inputModel.tmp_center_hd_ho, 'tmp_center_hd_ho')"
             v-model="inputModel.tmp_center_hd_ho">
           </v-ons-input> -->
-          <v-ons-input
-            type="number"
+          <custom-input-number-pro
             input-id="tmp-center-hd-ho"
-            step="1"
-            @change="changeColor($event,true)"
-            @blur="formatValue($event, 5)"
-            @focus="handleFocus(5)"
-            @mousewheel.prevent="stopScrollFun($event, 'tmp_center_hd_ho','','', 5)"
+            :value="inputModel.tmp_center_hd_ho"
+            :step="1"
+            :min="-200"
+            :max="200"
+            :rollFlag="false"
+            :valueModifiers="{ lazy: true }"
             :class="handleJudgeEdited(inputModel.tmp_center_hd_ho, 'tmp_center_hd_ho')"
-            v-model="inputModel.tmp_center_hd_ho">
-          </v-ons-input>
+            style="width: 100%;"
+            @handlerInput="(value) => updateTmpCenter('tmp_center_hd_ho', value)"
+          />
           <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 end -->
           <!-- mod redmine 4519 TMPゼロ補正中点がホイールによるピックアップダウンができない 宋qy end -->
         </v-ons-col>
@@ -646,17 +649,18 @@
             :class="handleJudgeEdited(inputModel.tmp_center_ohdf, 'tmp_center_ohdf')"
             v-model="inputModel.tmp_center_ohdf">
           </v-ons-input> -->
-           <v-ons-input
-            type="number"
+          <custom-input-number-pro
             input-id="tmp-center-ohdf"
-            step="1"
-            @change="changeColor($event,true)"
-            @blur="formatValue($event, 6)"
-            @focus="handleFocus(6)"
-            @mousewheel.prevent="stopScrollFun($event, 'tmp_center_ohdf','','', 6)"
+            :value="inputModel.tmp_center_ohdf"
+            :step="1"
+            :min="-200"
+            :max="200"
+            :rollFlag="false"
+            :valueModifiers="{ lazy: true }"
             :class="handleJudgeEdited(inputModel.tmp_center_ohdf, 'tmp_center_ohdf')"
-            v-model="inputModel.tmp_center_ohdf">
-          </v-ons-input>
+            style="width: 100%;"
+            @handlerInput="(value) => updateTmpCenter('tmp_center_ohdf', value)"
+          />
           <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 end -->
           <!-- mod redmine 4519 TMPゼロ補正中点がホイールによるピックアップダウンができない 宋qy end -->
         </v-ons-col>
@@ -680,17 +684,18 @@
             :class="handleJudgeEdited(inputModel.tmp_center_ohf, 'tmp_center_ohf')"
             v-model="inputModel.tmp_center_ohf">
           </v-ons-input> -->
-          <v-ons-input
-            type="number"
+          <custom-input-number-pro
             input-id="tmp-center-ohf"
-            step="1"
-            @change="changeColor($event,true)"
-            @blur="formatValue($event, 7)"
-            @focus="handleFocus(7)"
-            @mousewheel.prevent="stopScrollFun($event, 'tmp_center_ohf','','', 7)"
+            :value="inputModel.tmp_center_ohf"
+            :step="1"
+            :min="-200"
+            :max="200"
+            :rollFlag="false"
+            :valueModifiers="{ lazy: true }"
             :class="handleJudgeEdited(inputModel.tmp_center_ohf, 'tmp_center_ohf')"
-            v-model="inputModel.tmp_center_ohf">
-          </v-ons-input>
+            style="width: 100%;"
+            @handlerInput="(value) => updateTmpCenter('tmp_center_ohf', value)"
+          />
           <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 end -->
           <!-- mod redmine 4519 TMPゼロ補正中点がホイールによるピックアップダウンができない 宋qy end -->
         </v-ons-col>
@@ -888,7 +893,8 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { getScopedElementsByClassName, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import {
   DATE_FORMAT,
@@ -898,7 +904,7 @@ import CommonTextArea from "@/components/common/CommonTextArea";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 import {sendRequestGetMstFacilityByCd} from "@/apis/facility";
 import {ADVANCED_SETTINGS} from "@/constants/advancedSettings";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
@@ -907,11 +913,13 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 //#5590 2023/04/19 ×を常に表示するように修正 張博 start
 import DateInput from "@/components/common/DateInput.vue";
 //#5590 2023/04/19 ×を常に表示するように修正 張博 end
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
 export default {
   components: {
     "common-calendar": commonCalender,
     "com-textarea": CommonTextArea,
     "date-input": DateInput,
+    "custom-input-number-pro": CustomInputNumberPro,
   },
   mixins: [MasterMaintenanceMixin],
   name: "mstMachineMainModal",
@@ -1421,6 +1429,17 @@ export default {
           return;
       }
     },
+    updatePort(value) {
+      // 初期値が数値の場合は、編集後も数値として保持する。
+      this.inputModel.port =
+        typeof this.inputModel.port === "number" && value !== "" && value !== null
+          ? Number(value)
+          : value;
+    },
+    updateTmpCenter(key, value) {
+      // TMPゼロ補正中点は数値項目のため、親側では数値型を維持する。
+      this.inputModel[key] = value !== "" && value !== null ? Number(value) : value;
+    },
     // String(0:false,1:true)をBoolに変換
     strToBool(str) {
       switch (str) {
@@ -1591,8 +1610,8 @@ export default {
           : ""
       }
         `;
-      let arr = document.getElementsByClassName("custom-input-required");
-      let select = document.getElementsByClassName("custom-select-required");
+      let arr = getScopedElementsByClassName("custom-input-required", this.$el || null);
+      let select = getScopedElementsByClassName("custom-select-required", this.$el || null);
       if(!validationResult.nameValid || !validationResult.nameLengthValid){
         arr[0]?.classList?.add("custom-input-invalid");
       }
@@ -1603,10 +1622,10 @@ export default {
         select[0]?.classList?.add("custom-select-invalid");
       }
       if(!validationResult.ipAddressValid){
-        document.getElementById("ip-address").parentElement?.classList?.add("custom-input-invalid");
+        getScopedElementById("ip-address", this.$el || null)?.parentElement?.classList?.add("custom-input-invalid");
       }
       if(!validationResult.portValid || !validationResult.versionLengthValid){
-        document.getElementById("port").parentElement?.classList?.add("input-number-invalid");
+        getScopedElementById("port", this.$el || null)?.parentElement?.classList?.add("input-number-invalid");
       }
       const map = new Map()
         .set("tmp-center-hd",!validationResult.tmpCenterHdValid)
@@ -1619,7 +1638,7 @@ export default {
 
       for(let [key,value] of map.entries()){
         if(value){
-          document.getElementById(key).parentElement?.classList?.add("input-number-invalid");
+          getScopedElementById(key, this.$el || null)?.parentElement?.classList?.add("input-number-invalid");
         }
       }
 
@@ -1746,7 +1765,7 @@ export default {
     if (advanced !== null) {
       this.is_pur_show = advanced.func_advcds.findIndex(item => item.func_advcd === ADVANCED_SETTINGS.PURIFICATION_COMMUNICATION) !== -1;
       if (this.is_pur_show) {
-        let a = document.getElementsByClassName("input-item-name")
+        let a = getScopedElementsByClassName("input-item-name", this.$el || null)
         for (let i = 0; i < a.length; i++) {
           a[i].style.maxWidth = '278px';
         }
@@ -1765,7 +1784,7 @@ export default {
   },
   async mounted() {
     // 縦スクロールバー表示
-    let modalObj = document.getElementsByClassName("modal-body");
+    let modalObj = getScopedElementsByClassName("modal-body", this.$el || null);
     if (modalObj.length >= 1){
       modalObj[0].classList.remove("modal-overflow-hidden");
       modalObj[0]?.classList?.add("modal-scroll");
@@ -1791,7 +1810,7 @@ export default {
   margin-bottom: 20px;
   margin-right: 20px;
 }
-.machine-setting >>> .text-input {
+.machine-setting :deep(.text-input) {
   font-size: unset;
 }
 .machine-option {
@@ -1828,13 +1847,13 @@ table tr {
   padding-bottom: 5px;
   border-bottom: 1px solid #bbb;
 }
-div >>> textarea {
+div :deep(textarea) {
   width: 100%;
   border: solid 1px rgb(150, 150, 150);
   min-height: 10em;
   resize: both;
 }
-div >>> textarea:focus {
+div :deep(textarea:focus) {
   border: 2px green solid;
 }
 .input-item-name {
@@ -1861,7 +1880,7 @@ div >>> textarea:focus {
 .input-item-textarea {
   max-width: 100%;
 }
-.input-item-textarea >>> .textarea {
+.input-item-textarea :deep(.textarea) {
   font-size: unset;
 }
 .input-item-num {
@@ -1939,23 +1958,23 @@ textarea:focus {
   color: black;
   background-color: rgba(255, 0, 0, 0.5);
 }
-.input-number-invalid >>> input[type="number"] {
+.input-number-invalid :deep(input[type="number"]) {
   color: black;
   background-color: rgba(255, 0, 0, 0.7) !important;
 }
-.custom-select-required >>> select{
+.custom-select-required :deep(select){
   background-color: #ffff99 !important;
 }
-.custom-select-required >>> option{
+.custom-select-required :deep(option){
   background-color: white;
 }
-.custom-select-invalid >>> select{
+.custom-select-invalid :deep(select){
   background-color: rgba(255, 0, 0, 0.7) !important;
 }
-.custom-select-invalid >>> option{
+.custom-select-invalid :deep(option){
   background-color: white;
 }
-::v-deep .custom-input-edited>input[type="number"], ::v-deep .custom-input-edited>input[type="date"], ::v-deep .custom-input-edited>select, ::v-deep .custom-input-edited>textarea{
+:deep(.custom-input-edited>input[type="number"]), :deep(.custom-input-edited>input[type="date"]), :deep(.custom-input-edited>select), :deep(.custom-input-edited>textarea){
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;

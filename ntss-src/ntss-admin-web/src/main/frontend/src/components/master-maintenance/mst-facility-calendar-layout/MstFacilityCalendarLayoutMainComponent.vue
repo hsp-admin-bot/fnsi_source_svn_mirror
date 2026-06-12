@@ -74,25 +74,25 @@
 
 <script>
 import { mstFacilityCalendarLayoutDefine } from "@/constants/mstFacilityCalendarLayoutDefine";
-import { mapGetters, mapActions } from "vuex";
-import vuedraggable from "vuedraggable";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 import { ApiHelper } from "@/apis/AxiosHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_施設カレンダーレイアウトマスタ 張玲 2024/01/04 start
-import cloneDeep from "lodash/cloneDeep";
-import isEqualWith from "lodash/isEqualWith";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
 // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_施設カレンダーレイアウトマスタ 張玲 2024/01/04 end
 
 export default {
   components: {
-    draggable: vuedraggable
+    draggable: VueDraggable
   },
 
   data() {

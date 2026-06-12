@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
 import jp.co.nikkiso.ntss.admin_web.request.userAccount.AlterProvisionalInfoRequest;
 import jp.co.nikkiso.ntss.admin_web.request.userAccount.UpdateUserAccountInfoRequest;
@@ -17,9 +17,9 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -60,13 +60,13 @@ public class UserResourceTest extends AbstractResourceTest {
   /**
    * アカウント情報Service.
    */
-  @MockBean
+  @MockitoBean
   private UserAccountService userAccountService;
 
   /**
    * 仮ユーザService.
    */
-  @MockBean
+  @MockitoBean
   private ProvisionalUserService provisionalUserService;
 
   /**
@@ -109,7 +109,7 @@ public class UserResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user/provisional")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(provisionalUserService, times(1))
@@ -152,7 +152,7 @@ public class UserResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user/provisional")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     result.andExpect(status().isBadRequest())
@@ -193,7 +193,7 @@ public class UserResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user/provisional")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     result.andExpect(status().isBadRequest())
@@ -235,7 +235,7 @@ public class UserResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user/provisional")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     result.andExpect(status().isInternalServerError())
@@ -398,7 +398,7 @@ public class UserResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(userAccountService, times(1))
@@ -496,7 +496,7 @@ public class UserResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user/provisional")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     result.andExpect(status().isInternalServerError())
@@ -553,7 +553,7 @@ public class UserResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     result.andExpect(status().isInternalServerError())

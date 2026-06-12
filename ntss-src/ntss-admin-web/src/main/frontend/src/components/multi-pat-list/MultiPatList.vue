@@ -1,85 +1,22 @@
 <template>
-  <div id="multi-pat-list" class="multi-pat-list" style="height: 100%">
+  <div class="multi-pat-list" style="height: 100%">
     <div class='multi-pat-list-header-switch'>
       <v-ons-row v-show="isMobileDevice" style="margin-left: 5px; width: 6em;" class="edit-mode">
         <v-ons-col width="45%" vertical-align="center">
           <label>編集</label>
         </v-ons-col>
         <v-ons-col width="55%" vertical-align="center">
-          <v-ons-switch modifier="outline" class="custom-switch" style="float: left; margin-left: 2px;" v-model="allowEdit" />
+          <v-ons-switch modifier="outline" style="float: left; margin-left: 2px;" v-model="allowEdit" />
         </v-ons-col>
       </v-ons-row>
     </div>
     <!-- 初期表示時にcolumnsの定義が存在していないと正常に表示できないのでレイアウト選択まで表示させない -->
-    <kendo-grid
+    <div
       v-if="isSelectedLayout"
       id="kendo"
       class="pat-num"
       ref="grid"
-      :data-source="kendoDataSource"
-      :editable="itemAuthorized"
-      :reorderable="true"
-      :resizable="true"
-      :sortable="{ compare: compareByField }"
-      :scrollable="true"
-      :data-bound="kgridDataBound"
-      :beforeEdit=onBeforeEdit
-      height="100%"
-      @save="editCell"
-      :sort="sortHandler"
-    >
-      <!-- width属性を付与する場合は全カラムに存在しないと正しく表示されないので注意 -->
-      <kendo-grid-column
-        v-for="(column, index) in columns"
-        :key="index"
-        :title="column.title"
-        :field="column.field"
-        :locked="isLockedColumn"
-        :editable="column.editable"
-        :width="column.width"
-        :attributes="{ class: column.attributes }"
-      ></kendo-grid-column>
-      <template v-for="(category, i) in kendoGridColumns">
-        <!-- mod #10359_NG対応 編集権限の動作不正 dengshen start -->
-        <!-- <kendo-grid-column -->
-        <!--   v-if="category.key === 'card_creation'" -->
-        <!--   :attributes="{ class: 'btn3-kendo-normal' }" -->
-        <!--   :command="isCardDeviceConnected ? { text: 'カード作成', click: createCard } : null" -->
-        <!--   width="130px" -->
-        <!--   :key="`column_${i}`" -->
-        <!--   :title="category.title" -->
-        <!-- /> -->
-        <kendo-grid-column
-          v-if="category.key === 'card_creation' && getItemAuthorized('MultiPatList', 'default_authority')"
-          :attributes="{ class: 'btn3-kendo-normal' }"
-          :command="isCardDeviceConnected ? { text: 'カード作成', click: createCard } : null"
-          width="130px"
-          :key="`column_${i}`"
-          :title="category.title"
-        />
-        <kendo-grid-column
-          v-else-if="category.key === 'card_creation' && !getItemAuthorized('MultiPatList', 'default_authority')"
-          :template='isCardDeviceConnected ? "<button disabled=true>カード作成</button>" : null'
-          width="130px"
-          :key="`column_${i}`"
-          :title="category.title"
-        />
-        <!-- mod #10359_NG対応 編集権限の動作不正 dengshen end -->
-
-        <kendo-grid-column
-          v-else-if="isSingleColumnCategory(category.key)"
-          :key="`column_${i}`"
-          v-bind="category.columns[0]"
-        />
-
-        <kendo-grid-column
-          v-else
-          :key="`column_${i}`"
-          :title="category.title"
-          :columns="category.columns"
-        />
-      </template>
-    </kendo-grid>
+    ></div>
     <div class="multi-pat-list-footer-btn">
       <v-ons-button
         class="btn2-cancel-right btn2-cancel common-style-cancel-button"
@@ -112,10 +49,10 @@
 
     <v-ons-popover
       v-if="isPopoverVisible"
-      :visible.sync="isPopoverVisible"
+      v-model:visible="isPopoverVisible"
       :target="popoverTarget"
       cancelable
-      :class="fontSizeSet"
+      :class="[fontSizeSet, 'multi-pat-transition-popover']"
       @preshow="popoverPreShow"
       @postshow="popoverPostShow"
       @posthide="popoverPosthide"
@@ -141,24 +78,24 @@
     </v-ons-popover>
 
     <message-dialog
-      :visible.sync="isNoEditDialogVisible"
+      v-model:visible="isNoEditDialogVisible"
       :message-cd="20010003"
       type="1"
     />
     <message-dialog
-      :visible.sync="isCancelEditDialogVisible"
+      v-model:visible="isCancelEditDialogVisible"
       :message-cd="20010001"
       type="2"
       @confirm="confirmCancelEdit"
     />
     <message-dialog
-      :visible.sync="isSomeStaffDialogVisible"
+      v-model:visible="isSomeStaffDialogVisible"
       :message-cd="73000001"
       :string-params="[stringParams]"
       type="1"
     />
     <message-dialog
-      :visible.sync="isValidateVisible"
+      v-model:visible="isValidateVisible"
       :message-cd="20010002"
       :string-params="[validateStringParams]"
       type="1"
@@ -167,19 +104,48 @@
 </template>
 
 <script>
-import $$ from "jquery";
-import _ from "underscore";
-import cloneDeep from "lodash/cloneDeep";
+import $$ from "@/compat/jquery";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { markRaw } from "@/compat/vue/runtime";
+
+import _ from "@/compat/collections/lodash";
+import {
+  asKendoJQueryElement,
+  findKendoGridCellByDataItemField,
+  findKendoGridContent,
+  findKendoGridScrollHost,
+  getKendoEventContainerElement,
+  findKendoGridLockedContent,
+  findKendoGridHeaderWrap,
+  findKendoGridLockedHeader,
+  findKendoGridRowByDataItem,
+  findKendoGridRowCellsByDataItem,
+  findKendoGridTable,
+  findKendoGridLockedTable,
+  getKendoGridDataItem,
+  getKendoGridDataItems,
+  getKendoGridDataSourceItem,
+  getKendoGridWrapperElement
+} from "@/compat/kendo/dom.js";
+import {
+  isPatLockedHeaderCell,
+  syncMultiPatGridLockedHeaderLayout,
+} from "@/components/multi-pat-list/kendoGridLockedHeaderLayout.js";
+import { findBodyGridCell } from "@/components/multi-pat-list/gridEditedCellLocator.js";
+import {
+  captureKendoGridScrollPosition,
+  measureKendoGridLockedContentHeight,
+  restoreKendoGridScrollPosition,
+} from "@/compat/kendo/grid-scroll.js";
+import { validateKendoValidator } from "@/compat/kendo/validator.js";
+import { workbookOptions as kendoWorkbookOptions, toDataURL as kendoWorkbookToDataURL, saveAs as saveKendoFile } from "@/compat/kendo/excel-export.js";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
 // add FNSI-改修内容 パンくずリスト押下時に最新の情報を取得する。表示条件の変更はしない dou start
-import { EventBus } from '@/eventBus.js'
-// import { mstCdToName } from "@/functions/common/CommonFunctions.js";
+
 // add FNSI-改修内容 パンくずリスト押下時に最新の情報を取得する。表示条件の変更はしない dou end
-// import { saveExcel } from "@progress/kendo-vue-excel-export";
-var workbook_1 = require("@progress/kendo-vue-excel-export");
-var kendo_file_saver_1 = require("@progress/kendo-file-saver");
-import moment from "moment";
-import {mapGetters, mapActions, mapMutations} from "vuex";
-import encoding from "encoding-japanese";
+import dayjs from "@/compat/date/dayjs";
+import {mapGetters, mapActions, mapMutations} from "@/compat/vue/vuex";
+import encoding from "@/compat/encoding/encoding-japanese";
 import { ApiHelper } from "@/apis/AxiosHelper";
 // add FNSI-改修内容 権限関連 dou start
 import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
@@ -208,6 +174,7 @@ import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
 import PopoverMixin from "@/components/PopoverMixin";
+import PrintMixin from "@/components/PrintMixin";
 // add データリストの患者情報修正 陳 start
 import { LAYOUT_ITEM_KEY_SUFFIX_DATEOBJECT, LAYOUT_ITEM_KEY_SUFFIX_MSTNAME, PSEUDO_MST_LIST } from "@/components/multi-pat-list/Definitions";
 import { sendRequestGetMstTreatment } from "@/apis/treatment-record";
@@ -229,13 +196,16 @@ import { sendRequestFindRecordListByFacilityCd } from "@/apis/master-maintenance
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
-import DateInput from "@/components/common/DateInput";
-import TimeInput from "@/components/common/TimeInput";
+
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
-import { DATE_FORMAT, dateFormat } from "@/functions/common/DateTimeUtils";
+import DateInput from "@/components/common/DateInput.vue";
+import TimeInput from "@/components/common/TimeInput.vue";
+
 import { sortableCompare } from "@/functions/SortFunctions";
-import Vue from "vue";
-import PrintMixin from "@/components/PrintMixin";
+import { createApp, defineComponent } from "@/compat/vue/runtime";
+import { publicAssetPath } from "@/compat/assets/public-path";
+import { getScopedElementById, getSidebarToggleButtonElement, triggerScopedDownload,
+  getScopedJQuery as createScopedJQuery} from "@/functions/common/LayoutMeasureHelper";
 
 const JSON_ARRAY_ITEM = {
   other_contact_info: {
@@ -357,9 +327,9 @@ export default {
       // add #10359 編集権限の動作不正 dengshen end
       sameList: [],
       inOutList: [],
-      imagePatInfo: require("@/../public/img/pat-info/pat-info.png"),
-      imagePatViewer: require("@/../public/img/pat-viewer/pat-viewer.png"),
-      imageTreatmentRecord: require("@/../public/img/treatment-record/treatment-record.png"),
+      imagePatInfo: publicAssetPath("img/pat-info/pat-info.png"),
+      imagePatViewer: publicAssetPath("img/pat-viewer/pat-viewer.png"),
+      imageTreatmentRecord: publicAssetPath("img/treatment-record/treatment-record.png"),
       //患者経過総合ビューア
       hasPatViewerAuthority: false,
       //治療記録
@@ -411,11 +381,26 @@ export default {
       ],
       unSavedInfo: [],
       selfScreenName: "",
+      scrollQuerySelector: ".k-grid-content",
+      addClassTargetQuerySelector: [".k-grid-header-wrap table, .k-grid-content table"],
       androidFlg: false,
       iosFlg: false,
       allowEdit: true, // NOTE: true = 編集モード、 false = 閲覧モード
-      scrollQuerySelector: ".k-grid-content", // スクロールコンテナ
-      addClassTargetQuerySelector: [".k-grid-header-wrap table, .k-grid-content table"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
+      lockedScrollSyncCleanup: [],
+      headerDateTimeMountApps: [],
+      /** グリッド再描画後も検査日ヘッダ入力値を維持する */
+      headerExamDateInputValue: '',
+      headerExamTimeInputValue: '',
+      /** グリッド再描画・セル編集後も検査タイミングヘッダの選択値を維持する */
+      headerOrderClassValue: null,
+      /** グリッド再描画・セル編集後も指示者ヘッダの選択値を維持する */
+      headerIndicatorCdValue: null,
+      mappedKendoGridColumns: [],
+      gridLayoutRefreshTimers: [],
+      directGridWidget: null,
+      directGridColumnSignature: "",
+      directGridLayoutRafId: null,
+      directGridLockedHeightRafId: null,
     };
   },
   props: {
@@ -440,7 +425,10 @@ export default {
   computed: {
     ...mapGetters("pat-info", ["searchedPatList"]),
     ...mapGetters("user", { facilityCd: "getFacilityCd", userId: "getUserId"  }),
-    ...mapGetters("account-edit", { fontSize: "getFontSize" }),
+    ...mapGetters("account-edit", {
+      fontSize: "getFontSize",
+      stateUserAccountInfo: "getStateUserAccountInfo"
+    }),
     ...mapGetters("data-list", { initflg: "getInitflg"}),
     ...mapGetters("data-list", {
       reqExportExcel: "getRequestExportExcel",
@@ -471,12 +459,63 @@ export default {
         .map(el => el.pat_id);
     },
 
-    kendoGridColumns() {
+    rawKendoGridColumns() {
       if (this.getSelectedLayout == null) {
-        // this.getSelectedLayout が null の場合は処理を実施しない
         return [];
       }
       return createKendoColumns(this.getSelectedLayout);
+    },
+
+    kendoGridColumns() {
+      if (Array.isArray(this.mappedKendoGridColumns) && this.mappedKendoGridColumns.length > 0) {
+        return this.mappedKendoGridColumns;
+      }
+      return this.rawKendoGridColumns;
+    },
+
+    // width属性を付与する場合は全カラムに存在しないと正しく表示されないので注意
+    resolvedGridColumns() {
+      const locked = this.isLockedColumn;
+      const baseColumns = (this.columns || []).map((column) => ({
+        ...cloneDeep(column),
+        locked,
+        attributes: { class: column.attributes }
+      }));
+      const dynamicColumns = (this.kendoGridColumns || []).map((category, i) => {
+        // mod #10359_NG対応 編集権限の動作不正 dengshen start
+        // card_creation 権限あり: 編集可能カードボタンを表示
+        if (category.key === 'card_creation' && this.getItemAuthorized('MultiPatList', 'default_authority')) {
+          return {
+            key: `column_${i}`,
+            title: category.title,
+            width: '130px',
+            attributes: { class: 'btn3-kendo-normal multi-pat-card-creation-body' },
+            headerAttributes: { class: 'k-header multi-pat-card-creation-header' },
+            command: this.isCardDeviceConnected ? { text: 'カード作成', click: event => this.createCard(event) } : null
+          };
+        }
+        // card_creation 権限なし: disabledボタンテンプレート表示
+        if (category.key === 'card_creation' && !this.getItemAuthorized('MultiPatList', 'default_authority')) {
+          return {
+            key: `column_${i}`,
+            title: category.title,
+            width: '130px',
+            attributes: { class: 'btn3-kendo-normal multi-pat-card-creation-body' },
+            headerAttributes: { class: 'k-header multi-pat-card-creation-header' },
+            template: this.isCardDeviceConnected ? '<button disabled=true>カード作成</button>' : null
+          };
+        }
+        // mod #10359_NG対応 編集権限の動作不正 dengshen end
+        if (this.isSingleColumnCategory(category.key)) {
+          return cloneDeep(category.columns?.[0] || {});
+        }
+        return {
+          key: `column_${i}`,
+          title: category.title,
+          columns: cloneDeep(category.columns || [])
+        };
+      });
+      return [...baseColumns, ...dynamicColumns];
     },
 
     isEdited() {
@@ -549,7 +588,10 @@ export default {
 
     getSelectedLayout(value) {
       if (value) {
-        this.setGridHeight();
+        this.$nextTick(() => {
+          this.initDirectGridIfReady();
+          this.setGridHeight();
+        });
       }
     },
     reqExportCSV() {
@@ -565,6 +607,7 @@ export default {
       this.setGridHeight();
       if (this.getSelectedLayout !== null) {
         this.$nextTick(() => {
+          this.initDirectGridIfReady();
           // this.findRequiredCell();
           // add FNSI6256-背景色が変わらない 周 start
           this.findPatInDialysis();
@@ -634,6 +677,11 @@ export default {
     getCardDeviceStatus(value) {
       this.isCardDeviceConnected = value;
     },
+    stateUserAccountInfo(value) {
+      if (value?.userSettings?.authorized_authorities) {
+        this.setAuthority();
+      }
+    },
     isEdited() {
       this.setIsDataChanged(this.isEdited);
     },
@@ -641,23 +689,31 @@ export default {
 
   async created() {
     // 端末判別
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toLowerCase();
     if (/android/.test(ua)) {
       this.androidFlg = true;
     } else if (/iphone|ipad|mac|os/.test(ua)) {
       this.iosFlg = true;
     }
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     EventBus.$off("requestReportParams", this.requestrReportParams);
     EventBus.$on("requestReportParams", this.requestrReportParams);
     EventBus.$off("resizeToFitTextArea", this.resizeToFitTextArea);
     EventBus.$on("resizeToFitTextArea", this.resizeToFitTextArea);
+    EventBus.$off("switchSidebar", this.scheduleGridLayoutRefreshForSidebar);
+    EventBus.$on("switchSidebar", this.scheduleGridLayoutRefreshForSidebar);
     // データリスト変更後保存ボタンが不活性になります
     this.setAuthority()
   },
 
   methods: {
+
+    scopedJQuery() {
+
+      return createScopedJQuery(this.$el || this, $$) || $$;
+
+    },
     ...mapGetters("account-edit", ["getUserId", "getUserName"]),
     ...mapActions("data-list", [
       "setInitflg",
@@ -676,12 +732,92 @@ export default {
     popoverPostShow,
     popoverPosthide,
 
+    getGridRootEl() {
+      const ref = this.$refs.grid;
+      if (ref?.nodeType === 1) {
+        return ref;
+      }
+      return ref?.gridRootEl?.() || ref?.$el || null;
+    },
+    getGridContentEl() {
+      const root = this.getGridRootEl();
+      return this.$refs.grid?.gridContentEl?.()
+        || findKendoGridScrollHost(root)
+        || root?.querySelector?.(".k-grid-content:not(.k-grid-content-locked)")
+        || findKendoGridContent(root)
+        || null;
+    },
+    getGridLockedContentEl() {
+      return this.$refs.grid?.gridLockedContentEl?.() || findKendoGridLockedContent(this.getGridRootEl()) || null;
+    },
+    getGridAutoScrollableEl() {
+      return this.$refs.grid?.gridAutoScrollableEl?.() || this.getGridContentEl();
+    },
+    getGridHeaderWrapEl() {
+      return this.$refs.grid?.gridHeaderWrapEl?.() || findKendoGridHeaderWrap(this.getGridRootEl()) || null;
+    },
+    getGridLockedHeaderEl() {
+      return this.$refs.grid?.gridLockedHeaderEl?.() || findKendoGridLockedHeader(this.getGridRootEl()) || null;
+    },
+    getGridTableEl() {
+      return this.$refs.grid?.gridTableEl?.() || findKendoGridTable(this.getGridRootEl()) || null;
+    },
+    getGridLockedTableEl() {
+      return this.$refs.grid?.gridLockedTableEl?.() || findKendoGridLockedTable(this.getGridRootEl()) || null;
+    },
+
     /**
      * 列ヘッダクリック時にソート順を設定
      * @param {*} e 
      */
     sortHandler(e) {
       this.currentSort = e.sort;
+      this.schedulePostColumnStructureChangeLayout();
+    },
+    /**
+     * 列ドラッグ並べ替え・列幅リサイズ後: Kendo の _syncLockedHeaderHeight と
+     * 多段ヘッダ用 DOM 同期が重なり第1行ヘッダが二重になるため、sort と同様に修復する。
+     */
+    columnReorderHandler() {
+      this.schedulePostColumnStructureChangeLayout();
+    },
+    columnResizeHandler() {
+      this.schedulePostColumnStructureChangeLayout();
+    },
+    schedulePostColumnStructureChangeLayout() {
+      const scrollSnapshot = this.captureDirectGridScrollSnapshot();
+      const originalData = cloneDeep(getKendoGridDataItems(this.getGridDataSourceInstance()));
+      this.$nextTick(() => {
+        requestAnimationFrame(() => {
+          if (Array.isArray(originalData) && originalData.length > 0) {
+            this.reinitializeHeaderControls(originalData);
+          }
+          const gridWidget = this.getGridWidgetInstance();
+          if (gridWidget) {
+            try {
+              gridWidget.resize(true);
+            } catch (_error) {
+              try {
+                gridWidget.resize();
+              } catch (_ignored) {
+                // noop
+              }
+            }
+          }
+          this.restoreDirectGridScrollSnapshot(scrollSnapshot);
+          this.repairLockedHeaderLayout();
+          this.restoreDirectGridScrollSnapshot(scrollSnapshot);
+          this.scheduleDirectGridLockedHeightContract(scrollSnapshot);
+          // 列幅変更で横スクロールバーの有無が変わるため、レイアウト確定後にも再計測する
+          [80, 240].forEach((delay) => {
+            const timerId = setTimeout(() => {
+              this.gridLayoutRefreshTimers = (this.gridLayoutRefreshTimers || []).filter((id) => id !== timerId);
+              this.scheduleDirectGridLockedHeightContract(scrollSnapshot);
+            }, delay);
+            this.gridLayoutRefreshTimers.push(timerId);
+          });
+        });
+      });
     },
     /**
      * 列ヘッダクリック時のソート処理
@@ -698,6 +834,10 @@ export default {
     
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
+      const userInfo = this.stateUserAccountInfo;
+      if (!userInfo?.userSettings?.authorized_authorities) {
+        return false;
+      }
       return getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
@@ -714,15 +854,15 @@ export default {
           patIds: this.searchedPatList.map(({ pat_id }) => pat_id),
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
           // facilityCd: this.getFacilityCd,
-          // date:moment(this.indStartDate).format('YYYY/MM/DD'),
-          // fromDate: moment(this.indStartDate).format('YYYY/MM/DD'),
-          // toDate: moment(this.indEndDate).format('YYYY/MM/DD'),
+          // date:dayjs(this.indStartDate).format('YYYY/MM/DD'),
+          // fromDate: dayjs(this.indStartDate).format('YYYY/MM/DD'),
+          // toDate: dayjs(this.indEndDate).format('YYYY/MM/DD'),
           facilityCd: this.facilityCd,
-          date: moment(Date.now()).format("YYYYMMDD"),
-          fromDate: moment(Date.now()).format("YYYYMMDD"),
-          toDate: moment(Date.now()).format("YYYYMMDD"),
+          date: dayjs(Date.now()).format("YYYYMMDD"),
+          fromDate: dayjs(Date.now()).format("YYYYMMDD"),
+          toDate: dayjs(Date.now()).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: moment(Date.now()).format("YYYYMMDD"),
+          //dialysisDate: dayjs(Date.now()).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
           functionCd:"00801",
@@ -731,16 +871,459 @@ export default {
       }
     },
 // add FNSI-改修内容 入外区分が入院の場合、患者名は紫色にする。同姓同名患者の場合はそれが判断可能にする。 dou start
+    getGridRootElement() {
+      const root = this.getGridRootEl();
+      return root?.isConnected ? root : null;
+    },
+    getGridWidgetInstance() {
+      return this.directGridWidget || this.$refs.grid?.kendoWidget?.() || null;
+    },
+    getGridDataSourceInstance() {
+      return this.$refs.grid?.gridDataSource?.() || this.getGridWidgetInstance()?.dataSource || null;
+    },
+    normalizeDirectGridColumn(column = {}) {
+      const directColumn = cloneDeep(column);
+      if (directColumn.command) {
+        const commands = Array.isArray(directColumn.command) ? directColumn.command : [directColumn.command];
+        const normalizedCommands = commands.map(command => ({
+          ...command,
+          click: typeof command.click === "function" ? event => command.click(event) : command.click
+        }));
+        directColumn.command = Array.isArray(directColumn.command) ? normalizedCommands : normalizedCommands[0];
+      }
+      if (Array.isArray(directColumn.columns)) {
+        directColumn.columns = directColumn.columns.map(child => this.normalizeDirectGridColumn(child));
+      }
+      return directColumn;
+    },
+    buildDirectGridColumns() {
+      return (this.resolvedGridColumns || []).map(column => this.normalizeDirectGridColumn(column));
+    },
+    getDirectGridColumnSignature() {
+      const summarize = (column = {}) => ({
+        field: column.field || "",
+        title: column.title || "",
+        width: column.width || "",
+        hidden: column.hidden === true,
+        locked: column.locked === true,
+        hasCommand: !!column.command,
+        template: !!column.template,
+        columns: Array.isArray(column.columns) ? column.columns.map(summarize) : []
+      });
+      return JSON.stringify((this.resolvedGridColumns || []).map(summarize));
+    },
+    installDirectGridFacade() {
+      const root = this.$refs.grid;
+      if (!root || root.nodeType !== 1) {
+        return;
+      }
+      root.kendoWidget = () => this.directGridWidget;
+      root.gridWidget = () => this.directGridWidget;
+      root.gridDataSource = () => this.directGridWidget?.dataSource || null;
+      root.gridRootEl = () => root;
+      root.gridContentEl = () => findKendoGridScrollHost(root)
+        || root.querySelector?.(".k-grid-content:not(.k-grid-content-locked)")
+        || findKendoGridContent(root);
+      root.gridLockedContentEl = () => findKendoGridLockedContent(root);
+      root.gridAutoScrollableEl = () => findKendoGridScrollHost(root)
+        || root.querySelector?.(".k-grid-content:not(.k-grid-content-locked)")
+        || findKendoGridContent(root);
+      root.gridHeaderWrapEl = () => findKendoGridHeaderWrap(root);
+      root.gridLockedHeaderEl = () => findKendoGridLockedHeader(root);
+      root.gridTableEl = () => findKendoGridTable(root);
+      root.gridLockedTableEl = () => findKendoGridLockedTable(root);
+    },
+    getDirectGridDataSourceOption() {
+      return this.kendoDataSource || {
+        data: [],
+        schema: { model: { id: "pat_id", fields: {} } },
+        sort: this.currentSort || null
+      };
+    },
+    initDirectGridIfReady() {
+      const root = this.getGridRootEl();
+      if (!this.isSelectedLayout || !root || !this.kendoDataSource) {
+        return;
+      }
+      const nextSignature = this.getDirectGridColumnSignature();
+      if (this.directGridWidget) {
+        if (this.directGridColumnSignature !== nextSignature) {
+          this.directGridWidget.setOptions({ columns: this.buildDirectGridColumns() });
+          this.directGridColumnSignature = nextSignature;
+        }
+        this.applyDirectGridDataSourceContract();
+        this.installDirectGridFacade();
+        this.scheduleGridLayoutRefresh(0);
+        return;
+      }
+      const $root = $$(root);
+      $root.kendoGrid({
+        dataSource: this.getDirectGridDataSourceOption(),
+        columns: this.buildDirectGridColumns(),
+        editable: this.itemAuthorized,
+        reorderable: true,
+        resizable: true,
+        sortable: { compare: this.compareByField },
+        scrollable: true,
+        height: "100%",
+        dataBound: event => this.kgridDataBound(event),
+        beforeEdit: event => this.onBeforeEdit(event),
+        save: event => this.editCell(event),
+        sort: event => this.sortHandler(event),
+        columnReorder: () => this.columnReorderHandler(),
+        columnResize: () => this.columnResizeHandler()
+      });
+      this.directGridWidget = markRaw($root.data("kendoGrid"));
+      this.directGridColumnSignature = nextSignature;
+      this.installDirectGridFacade();
+      this.applyDirectGridStyleContract();
+      this.scheduleGridLayoutRefresh(0);
+    },
+    applyDirectGridDataSourceContract() {
+      const grid = this.getGridWidgetInstance();
+      const option = this.getDirectGridDataSourceOption();
+      if (!grid?.dataSource || !option) {
+        return;
+      }
+      const data = Array.isArray(option.data) ? option.data : [];
+      grid.dataSource.data(data);
+      if (option.sort) {
+        grid.dataSource.sort(option.sort);
+      }
+      this.currentSort = option.sort || this.currentSort || null;
+    },
+    applyDirectGridStyleContract() {
+      const root = this.getGridRootEl();
+      if (!root) {
+        return;
+      }
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-editable", "k-display-block");
+      root.querySelectorAll(".k-grid-header th, .k-grid-header .k-table-th").forEach(th => th.classList.add("k-header"));
+      [".k-grid-content tbody", ".k-grid-content-locked tbody"].forEach(selector => {
+        root.querySelectorAll(selector).forEach(tbody => {
+          Array.from(tbody.children || []).forEach((tr, index) => {
+            tr.classList.add("k-master-row");
+            tr.classList.toggle("k-alt", index % 2 === 1);
+          });
+        });
+      });
+      root.querySelectorAll(".k-grid-content tbody td, .k-grid-content-locked tbody td").forEach(td => td.classList.add("k-td", "k-table-td"));
+      this.applyDirectGridLockedLayoutContract(root);
+    },
+    destroyDirectGrid() {
+      try {
+        this.directGridWidget?.destroy?.();
+      } catch (_error) {
+        // noop
+      }
+      this.directGridWidget = null;
+      this.directGridColumnSignature = "";
+      const root = this.$refs.grid;
+      if (root?.nodeType === 1) {
+        root.innerHTML = "";
+      }
+    },
+    getSafeMaxCtlNo(jsonArray = []) {
+      const validCtlItems = (Array.isArray(jsonArray) ? jsonArray : []).filter((json) => Number.isFinite(Number(json?.ctl_no)));
+      return validCtlItems.length > 0 ? Number(_.maxBy(validCtlItems, (json) => Number(json.ctl_no))?.ctl_no) : -1;
+    },
+    getRecordPatId(gridPat = {}) {
+      return gridPat?.pat_unique?.pat_id ?? gridPat?.pat_personal_main?.pat_id ?? null;
+    },
+    disposeHeaderDateTimeMountApps() {
+      (this.headerDateTimeMountApps || []).forEach((entry) => {
+        try {
+          entry?.app?.unmount?.();
+        } catch (_error) {
+          // noop
+        }
+      });
+      this.headerDateTimeMountApps = [];
+    },
+    getGridScopedElement(selector) {
+      const gridRoot = this.getGridRootElement();
+      return gridRoot?.querySelector?.(selector) || null;
+    },
+    getGridScopedElements(selector) {
+      const gridRoot = this.getGridRootElement();
+      return Array.from(gridRoot?.querySelectorAll?.(selector) || []);
+    },
+    sumTableColWidths(tableEl) {
+      if (!tableEl) return 0;
+      const cols = Array.from(tableEl.querySelectorAll('colgroup > col'));
+      const width = cols.reduce((sum, col) => {
+        const styleWidth = parseFloat(col.style.width || '0');
+        const rectWidth = col.getBoundingClientRect?.().width || 0;
+        return sum + (styleWidth || rectWidth || 0);
+      }, 0);
+      if (width > 0) {
+        return Math.round(width);
+      }
+      const tableStyleWidth = parseFloat(tableEl.style.width || '0');
+      const tableRectWidth = tableEl.getBoundingClientRect?.().width || 0;
+      return Math.round(tableStyleWidth || tableRectWidth || 0);
+    },
+    repairLockedHeaderLayout() {
+      const gridRoot = this.getGridRootElement();
+      const lockedHeader = this.getGridLockedHeaderEl();
+      const lockedContent = this.getGridLockedContentEl();
+      const lockedHeaderTable = lockedHeader?.querySelector?.('table') || null;
+      const lockedTable = this.getGridLockedTableEl();
+      if (!gridRoot || !lockedHeader || !lockedHeaderTable) {
+        return;
+      }
+
+      // Vue2 の旧 jQuery Kendo Grid は、サイドバー開閉後も locked 側だけを
+      // 既存 DOM 幅に合わせ、scrollable header/content の幅は Kendo 自身の resize に任せていた。
+      // Vue3 側で .k-grid-header-wrap の width まで固定すると、左サイドバー開閉後に
+      // グループヘッダだけ旧幅に残り、横スクロールは出るが header が Vue2 と違う表示になる。
+      this.clearScrollableHeaderWidthOverride();
+
+      const lockedWidth = this.sumTableColWidths(lockedHeaderTable) || this.sumTableColWidths(lockedTable);
+      if (lockedWidth > 0) {
+        lockedHeader.style.width = `${lockedWidth}px`;
+        lockedHeaderTable.style.width = `${lockedWidth}px`;
+        if (lockedContent) {
+          lockedContent.style.width = `${lockedWidth}px`;
+        }
+        if (lockedTable) {
+          lockedTable.style.width = `${lockedWidth}px`;
+        }
+      }
+      this.applyDirectGridLockedLayoutContract(gridRoot);
+      const headerWrap = this.getGridHeaderWrapEl();
+      syncMultiPatGridLockedHeaderLayout(headerWrap, lockedHeader, {
+        lockedHeaderCellFilter: isPatLockedHeaderCell,
+      });
+      this.syncScrollableHeaderTableWidth();
+      this.syncHeaderScrollLeft();
+    },
+    applyDirectGridLockedLayoutContract(gridRoot = this.getGridRootElement()) {
+      const root = gridRoot || this.getGridRootElement();
+      if (!root) {
+        return;
+      }
+      const content = this.getGridContentEl();
+      const lockedContent = this.getGridLockedContentEl();
+      const lockedHeader = this.getGridLockedHeaderEl();
+      const lockedTable = this.getGridLockedTableEl();
+      const lockedHeaderTable = lockedHeader?.querySelector?.("table") || null;
+
+      const widthSource = lockedHeaderTable || lockedTable;
+      const lockedWidth = this.sumTableColWidths(widthSource);
+      if (lockedWidth > 0) {
+        const width = `${lockedWidth}px`;
+        [lockedHeader, lockedContent, lockedHeaderTable, lockedTable].forEach(element => {
+          if (element?.style) {
+            element.style.width = width;
+            element.style.minWidth = width;
+          }
+        });
+      }
+
+      this.scheduleDirectGridLockedHeightContract();
+    },
+    applyDirectGridLockedHeightContract(content = null, lockedContent = null) {
+      const root = this.getGridRootElement();
+      const scrollableContent = content || this.getGridContentEl();
+      const locked = lockedContent || this.getGridLockedContentEl();
+      if (!scrollableContent || !locked) {
+        return;
+      }
+      const height = measureKendoGridLockedContentHeight(root, locked, scrollableContent);
+      if (height > 0) {
+        const px = `${Math.round(height)}px`;
+        locked.style.height = px;
+        locked.style.minHeight = px;
+        locked.style.maxHeight = "";
+      }
+      locked.scrollTop = scrollableContent.scrollTop || 0;
+    },
+    captureDirectGridScrollSnapshot() {
+      const gridRoot = this.getGridRootElement();
+      const content = this.getGridContentEl();
+      if (!gridRoot || !content) {
+        return null;
+      }
+      const position = captureKendoGridScrollPosition(gridRoot);
+      const maxTop = Math.max(0, content.scrollHeight - content.clientHeight);
+      const top = Number.isFinite(position?.top) ? position.top : 0;
+      return {
+        top,
+        left: Number.isFinite(position?.left) ? position.left : 0,
+        atBottom: top >= maxTop - 2,
+      };
+    },
+    restoreDirectGridScrollSnapshot(snapshot) {
+      if (!snapshot) {
+        return;
+      }
+      const gridRoot = this.getGridRootElement();
+      const content = this.getGridContentEl();
+      if (!gridRoot || !content) {
+        return;
+      }
+      let top = snapshot.top || 0;
+      const maxTop = Math.max(0, content.scrollHeight - content.clientHeight);
+      if (snapshot.atBottom) {
+        top = maxTop;
+      } else {
+        top = Math.min(top, maxTop);
+      }
+      restoreKendoGridScrollPosition(gridRoot, {
+        top,
+        left: snapshot.left || 0,
+      });
+      this.syncHeaderScrollLeft();
+    },
+    scheduleDirectGridLockedHeightContract(scrollSnapshot = null) {
+      if (this.directGridLockedHeightRafId != null) {
+        cancelAnimationFrame(this.directGridLockedHeightRafId);
+      }
+      this.directGridLockedHeightRafId = requestAnimationFrame(() => {
+        this.directGridLockedHeightRafId = requestAnimationFrame(() => {
+          this.directGridLockedHeightRafId = null;
+          this.applyDirectGridLockedHeightContract();
+          if (scrollSnapshot) {
+            this.restoreDirectGridScrollSnapshot(scrollSnapshot);
+          }
+        });
+      });
+    },
+    syncLockedHeaderLayout() {
+      const headerWrap = this.getGridHeaderWrapEl();
+      const lockedHeader = this.getGridLockedHeaderEl();
+      syncMultiPatGridLockedHeaderLayout(headerWrap, lockedHeader, {
+        lockedHeaderCellFilter: isPatLockedHeaderCell,
+      });
+    },
+    clearScrollableHeaderWidthOverride() {
+      const headerWrap = this.getGridHeaderWrapEl();
+      if (headerWrap) {
+        headerWrap.style.width = "";
+      }
+    },
+    syncScrollableHeaderTableWidth() {
+      const headerWrap = this.getGridHeaderWrapEl();
+      const headerTable = headerWrap?.querySelector?.('table') || null;
+      const contentTable = this.getGridTableEl();
+      if (!headerTable || !contentTable) {
+        return;
+      }
+      const contentWidth = this.sumTableColWidths(contentTable);
+      if (contentWidth > 0) {
+        headerTable.style.width = `${contentWidth}px`;
+      }
+    },
+    syncHeaderScrollLeft() {
+      const headerWrap = this.getGridHeaderWrapEl();
+      const content = this.getGridContentEl();
+      if (!headerWrap || !content) {
+        return;
+      }
+      headerWrap.scrollLeft = content.scrollLeft || 0;
+    },
+    clearGridLayoutRefreshTimers() {
+      (this.gridLayoutRefreshTimers || []).forEach((timerId) => {
+        clearTimeout(timerId);
+      });
+      this.gridLayoutRefreshTimers = [];
+    },
+    scheduleGridLayoutRefresh(delay = 0) {
+      const timerId = setTimeout(() => {
+        this.gridLayoutRefreshTimers = (this.gridLayoutRefreshTimers || []).filter((id) => id !== timerId);
+        this.$nextTick(() => {
+          requestAnimationFrame(() => {
+            this.refreshGridLayoutForCurrentSize();
+          });
+        });
+      }, delay);
+      this.gridLayoutRefreshTimers.push(timerId);
+    },
+    scheduleGridLayoutRefreshForSidebar() {
+      // RootView は sidebar/router-view width を transition で変える。
+      // Vue2 は jQuery Kendo が最終幅で resize されて横スクロール/ヘッダを再計算していたため、
+      // Vue3 でも開閉直後・transition 中・終了後の順に同じ再計算を行う。
+      [0, 80, 240, 360].forEach((delay) => this.scheduleGridLayoutRefresh(delay));
+    },
+    refreshGridLayoutForCurrentSize() {
+      if (!this.isSelectedLayout) {
+        return;
+      }
+      const gridWidget = this.getGridWidgetInstance();
+      const gridRoot = this.getGridRootElement();
+      if (!gridWidget || !gridRoot?.isConnected) {
+        return;
+      }
+      this.clearScrollableHeaderWidthOverride();
+
+      const editMode = this.scopedJQuery()(".edit-mode").get(0)?.clientHeight || 0;
+      const mainArea = this.scopedJQuery()("#main-id").get(0)?.clientHeight || 0;
+      const cancelArea = this.scopedJQuery()(".btn2-cancel").get(0)?.clientHeight || 0;
+      const saveArea = this.scopedJQuery()(".btn1-execute").get(0)?.clientHeight || 0;
+      const buttonArea = Math.max(cancelArea, saveArea);
+      const height = mainArea - editMode - buttonArea - 5;
+
+      const gridWrapper = getKendoGridWrapperElement(gridWidget);
+      if (gridWrapper && height > 0) {
+        gridWrapper.style.height = `${height}px`;
+      }
+      const gridRows = getKendoGridDataItems(this.getGridDataSourceInstance());
+      const hasGridRows = Array.isArray(gridRows) && gridRows.length > 0;
+      // 行が無い状態で Kendo resize / ヘッダ幅同期をかけると、グループ列ヘッダが潰れる（梳子状）
+      if (hasGridRows) {
+        try {
+          gridWidget.resize(true);
+        } catch (_error) {
+          try {
+            gridWidget.resize();
+          } catch (_ignored) {
+            // noop
+          }
+        }
+      }
+      if (hasGridRows) {
+        this.repairLockedHeaderLayout();
+      } else {
+        this.syncLockedHeaderLayout();
+      }
+      this.scheduleDirectGridLockedHeightContract();
+    },
+    reinitializeHeaderControls(originalData = null) {
+      const data = Array.isArray(originalData) && originalData.length > 0
+        ? originalData
+        : cloneDeep(getKendoGridDataItems(this.getGridDataSourceInstance()));
+      if (!Array.isArray(data) || data.length === 0) {
+        return;
+      }
+      this.initializeDropDown(data);
+      const checkAll = this.getGridScopedElement('#target-weight-check-all');
+      if (checkAll) {
+        $$(checkAll).off('change.ntssHeaderCheckAll');
+        $$(checkAll).on('change.ntssHeaderCheckAll', (e) => {
+          this.handleCheckAllChange(e, getKendoGridDataItems(this.getGridDataSourceInstance()));
+        });
+      }
+      this.initializeDateTimeInput(data);
+    },
     setSameName(){
+      const gridRoot = this.getGridRootElement();
+      const lockedContent = this.$refs.grid?.gridLockedContentEl?.() || gridRoot?.querySelector?.('.k-grid-content-locked') || null;
+      const scrollableContent = this.$refs.grid?.gridContentEl?.() || gridRoot?.querySelector?.('.k-grid-content') || null;
+      const hospPatIdCells = gridRoot ? $$(gridRoot).find("td.cell-hosppatid") : $$("td.cell-hosppatid");
+      const patNameCells = gridRoot ? $$(gridRoot).find("td.cell-patname") : $$("td.cell-patname");
       if (this.inOutList.length > 0) {
         this.inOutList.forEach(x => {
-          $$("td.cell-hosppatid").filter(function () {
+          hospPatIdCells.filter(function () {
             return $$(this).text().trim() === x;
           }).each(function () {
             // このtdの論理的な行インデックスを取得
             const rowIndex = $$(this).closest("tr").index();
             // rowIndexに対応する全てのtr（固定列 + 可変列）を取得
-            const matchedRows = $$(`.k-grid-content-locked tr:eq(${rowIndex}), .k-grid-content tr:eq(${rowIndex})`);
+            const matchedRows = $$( [
+              lockedContent?.querySelectorAll?.("tr")?.[rowIndex],
+              scrollableContent?.querySelectorAll?.("tr")?.[rowIndex]
+            ].filter(Boolean) );
             matchedRows.each(function () {
               // 対象行から patname セルを探して色変更
               $$(this).find("td.cell-patname").css("color", "#A356A3");
@@ -749,12 +1332,12 @@ export default {
         });
       }
       if (this.sameList.length > 0) {
-        this.sameList = _.uniq(this.sameList);
-        let img = `<img class="same-icon" src="${require('../../assets/name_duplication.png')}"/>`;
+        this.sameList = Array.from(new Set(this.sameList));
+        let img = `<img class="same-icon" src="${new URL('../../assets/name_duplication.png', import.meta.url).href}"/>`;
         this.sameList.forEach(x => {
           // mod #11321 【たくしん会】データリストレイアウトマスタ＞身体情報(追加登録)とデータリスト表示バグ zkm start
           // let el2 = $$(`td.cell-patname:contains(${x})`);
-          let el = $$(`td.cell-patname:contains(${x})`).filter(function() {
+          let el = patNameCells.filter(function() {
             return $$(this).text().trim() === x;
           });
           // mod #11321 【たくしん会】データリストレイアウトマスタ＞身体情報(追加登録)とデータリスト表示バグ zkm end
@@ -788,7 +1371,7 @@ export default {
 // add FNSI-改修内容 権限関連 dou end
 // add FNSI-改修内容 パンくずリスト押下時に最新の情報を取得する。表示条件の変更はしない dou start
     async getInitData() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       this.setAuthority()
@@ -800,9 +1383,9 @@ export default {
         }
 
         // localStorageのportを利用する
-        let defaultPort = localStorage.getItem("CARD_APP_PORT");
+        let defaultPort = (this.$el?.ownerDocument?.defaultView?.localStorage || globalThis?.localStorage)?.getItem("CARD_APP_PORT");
         if(!/^\d+$/.test(defaultPort)){
-          localStorage.removeItem("CARD_APP_PORT");
+          (this.$el?.ownerDocument?.defaultView?.localStorage || globalThis?.localStorage)?.removeItem("CARD_APP_PORT");
           defaultPort = null;
         }
         if (null !== defaultPort) {
@@ -850,7 +1433,7 @@ export default {
         this.isCardDeviceConnected = this.getCardDeviceStatus
       }
       // Windowリサイズ検知(ズーム等の操作)
-      window.addEventListener("resize", this.setGridHeight, false);
+      (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.setGridHeight, false);
       this.startLoadingScreen();
       // 指示者ドロップダウンの設定
       const response = await this.getIndUserList(AUTHORITY_CODES.IND_EDIT, AUTHORITY_CODES.IND_PEDIT);
@@ -873,9 +1456,9 @@ export default {
 
       // Rootページのサイドバーボタン要素のイベントリスナー解除・登録
       // ※「サイドバーイベント発火用※サイドバー表示非表示のスタイル崩れ防止」のリファクタ
-      const rootSideBarBtn = document.querySelector('#showPatientSearchSidebarBtn');
-      rootSideBarBtn?.removeEventListener('click', this.setGridHeight);
-      rootSideBarBtn?.addEventListener('click', this.setGridHeight);
+      const rootSideBarBtn = getSidebarToggleButtonElement(this.$el || this);
+      rootSideBarBtn?.removeEventListener('click', this.scheduleGridLayoutRefreshForSidebar);
+      rootSideBarBtn?.addEventListener('click', this.scheduleGridLayoutRefreshForSidebar);
 
       this.finishLoadingScreen();
     },
@@ -925,10 +1508,8 @@ export default {
       if (this.kendoDataSource !== null) {
         const addNewData = [];
         // ソート後のdataSourceをファイル出力
-        const grid = this.$refs.grid.kendoWidget();
-        const viewData = grid.dataSource.view();
-        const dataArray = Array.from(viewData)
-        
+        const grid = this.$refs.grid?.gridWidget?.() || this.$refs.grid?.kendoWidget?.();
+        const dataArray = getKendoGridDataItems(this.getGridDataSourceInstance());
         Array(dataArray).forEach(data => {
           Object.values(data).forEach(e => {
             const tempData = [];
@@ -975,17 +1556,16 @@ export default {
       const sjisCodes = encoding.convert(charCodes, "sjis", "unicode");
       const uint8s = new Uint8Array(sjisCodes);
       const blob = new Blob([uint8s], { type: "test/csv" });
-
-      let link = document.createElement("a");
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `データリスト_${moment().format("YYYYMMDDHHmmss")}.csv`;
-      link.click();
+      triggerScopedDownload({
+        blob,
+        filename: `データリスト_${dayjs().format("YYYYMMDDHHmmss")}.csv`,
+        root: this.$el
+      });
     },
     async onCreateTemplateToExcel() {
       // ソート後のdataSourceをファイル出力
-      const grid = this.$refs.grid.kendoWidget();
-      const viewData = grid.dataSource.view();
-      const dataArray = Array.from(viewData)
+      const grid = this.$refs.grid?.gridWidget?.() || this.$refs.grid?.kendoWidget?.();
+      const dataArray = getKendoGridDataItems(this.getGridDataSourceInstance());
       
       if (this.isEdited) {
         this.$ons.notification.confirm({
@@ -1002,7 +1582,7 @@ export default {
               await this.changeDisplayPat();
               this.saveExcel({
                 data: dataArray,
-                fileName: `データリスト_${moment().format("YYYYMMDDHHmmss")}`,
+                fileName: `データリスト_${dayjs().format("YYYYMMDDHHmmss")}`,
                 columns: this.getData()
               });
             }
@@ -1013,19 +1593,19 @@ export default {
         this.saveExcel({
           data:
             this.kendoDataSource !== null ? dataArray : null,
-          fileName: `データリスト_${moment().format("YYYYMMDDHHmmss")}`,
+          fileName: `データリスト_${dayjs().format("YYYYMMDDHHmmss")}`,
           columns: this.getData()
         });
       }
     },
     saveExcel(exportOptions) {
       let saveFn = function (dataURL) {
-        kendo_file_saver_1.saveAs(dataURL, exportOptions.fileName, {
+        saveKendoFile(dataURL, exportOptions.fileName, {
           forceProxy: exportOptions.forceProxy,
           proxyURL: exportOptions.proxyURL
         });
       };
-      let options = workbook_1.workbookOptions(exportOptions);
+      let options = kendoWorkbookOptions(exportOptions);
       options.sheets.forEach(item => {
         item.rows.forEach(row => {
           if (row.type === 'data') {
@@ -1048,7 +1628,7 @@ export default {
           }
         });
       });
-      workbook_1.toDataURL(options).then(saveFn);
+      kendoWorkbookToDataURL(options).then(saveFn);
     },
     getData() {
       let physicalNames = [];
@@ -1075,8 +1655,8 @@ export default {
     },
     createCard(e) {
       e.preventDefault();
-      const row = this.$refs.grid.kendoWidget();
-      const dataItem = row.dataItem(e.currentTarget.closest("tr"));
+      const row = this.$refs.grid?.gridWidget?.() || this.$refs.grid?.kendoWidget?.();
+      const dataItem = getKendoGridDataItem(row, e.currentTarget.closest("tr"));
       const patId = dataItem.pat_id;
       if (this.getSocketIsConnected) {
         this.startLoadingScreen("処理中・・・");
@@ -1188,36 +1768,11 @@ export default {
           },
           sort: this.currentSort ? this.currentSort : null // データリスト側のソート状態を保持
         };
-        this.$nextTick(() => {
-          let div = document.getElementById("kendo");
-          let clientHeight2 = div.clientHeight - div.children[0].clientHeight;
-          let clientHeight1 = clientHeight2 - 17;
-          if (div.children[1]) {
-            div.children[1].style.height = clientHeight1 + "px";
-          }
-          if (div.children[2]) {
-            div.children[2].style.height = clientHeight2 + "px";
-          }
-          // add start 馬 #10626、10710、10185
-          const dataSource = this.$refs.grid?.kendoWidget().dataSource;
-          const originalData = cloneDeep(dataSource.data());
-          // ヘッダ列 検査タイミング、指示者 ドロップダウンリストを初期化
-          this.initializeDropDown(originalData);
-          $$("#target-weight-check-all").change((e) => {
-            this.handleCheckAllChange(e, this.$refs.grid?.kendoWidget().dataSource?.data());
-          });
-          // ヘッダ列 検査日、検査時刻に共通日付/時刻IFを追加
-          this.initializeDateTimeInput(originalData);
-          this.setSameName();
-          // add end 馬 #10626、10710、10185
-        });
-        // 一覧セル デフォルト値 設定
-        let date = new Date();
-        let strdateymd = moment(date).format("YYYY/MM/DD");
-        let dateymd = new Date(strdateymd);
+        // 一覧セル デフォルト値 設定（ヘッダ再初期化より先に適用し、表示と一致させる）
         this.kendoDataSource.data.forEach((gridPat) => {
-          gridPat["pat_unique$physical_info$exam_date"] = strdateymd;
-          gridPat["pat_unique$physical_info$exam_date_DateObject"] = dateymd;
+          const defaultExamDate = dayjs().format("YYYY/MM/DD");
+          gridPat["pat_unique$physical_info$exam_date"] = defaultExamDate;
+          gridPat["pat_unique$physical_info$exam_date_DateObject"] = dayjs(defaultExamDate, "YYYY/MM/DD", true).toDate();
           gridPat["pat_unique$physical_info$indicator_start_date"] = null;
           // gridPat["pat_unique$physical_info$indicator_start_date_DateObject"] = null;
           gridPat["pat_unique$physical_info$order_class"] = 2; // 身体情報(追加登録).検査タイミング「2：透析後」
@@ -1228,6 +1783,26 @@ export default {
           gridPat["pat_unique$physical_info$indicator_cd"] = null;
           gridPat["pat_unique$physical_info$indicator_cd_MstName"] = null;
         });
+        this.$nextTick(() => {
+          const runPostDataSourceLayout = () => {
+            if (!this.getGridWidgetInstance()) {
+              return false;
+            }
+            this.applyDirectGridDataSourceContract();
+            this.syncKendoGridContentAreaHeights();
+            const originalData = cloneDeep(this.kendoDataSource?.data || []);
+            this.reinitializeHeaderControls(originalData);
+            this.setSameName();
+            this.repairLockedHeaderLayout();
+            return true;
+          };
+          if (!runPostDataSourceLayout()) {
+            this.scheduleGridLayoutRefresh(0);
+            this.$nextTick(() => {
+              runPostDataSourceLayout();
+            });
+          }
+        });
       } else {
         this.kendoDataSource = null;
       }
@@ -1236,16 +1811,25 @@ export default {
       this.initializeUpdateRecords();
       this.bindShowPopoverEvent();
       this.$nextTick(() => {
-        const sortGrid = $$("#kendo").data("kendoGrid");
+        const sortGrid = this.$refs.grid?.kendoWidget?.();
         if (sortGrid != null) {
           sortGrid.bind("sort", () => {
             // ソートイベント発生時にも bindShowPopoverEvent を再度実行
             // ソートで行の並びが変わると、対象位置も変わるので再バインドが必要
             this.bindShowPopoverEvent();
             this.$nextTick(() => {
+              const originalData = cloneDeep(getKendoGridDataItems(this.getGridDataSourceInstance()));
+              if (Array.isArray(originalData) && originalData.length > 0) {
+                this.reinitializeHeaderControls(originalData);
+              }
               this.setSameName();
               this.findPatInDialysis();
               this.setGridHeight();
+              requestAnimationFrame(() => {
+                if (Array.isArray(originalData) && originalData.length > 0) {
+                  this.repairLockedHeaderLayout();
+                }
+              });
             })
           });
         }
@@ -1269,14 +1853,14 @@ export default {
           // 現在のフィールドリストを取得
           const currentFields = this.editedPatIdFieldList[item.pat_id];
           // 汚れたフィールドの状態に応じて、現在のフィールドリストにフィールドを追加または削除
-          this.$set(this.editedPatIdFieldList, item.pat_id, isDirty? currentFields.concat(fields) : currentFields.filter(f =>!fields.includes(f)));
+          this.editedPatIdFieldList[item.pat_id] = isDirty ? currentFields.concat(fields) : currentFields.filter(f => !fields.includes(f));
         } else if (isDirty) {
           // 編集済みフィールドリストが存在しない場合は、新しいフィールドリストを作成
-          this.$set(this.editedPatIdFieldList, item.pat_id, fields);
+          this.editedPatIdFieldList[item.pat_id] = fields;
         }
         // 編集済みフィールドリストが空の場合は、オブジェクトからそのキーを削除
         if (this.editedPatIdFieldList[item.pat_id] && this.editedPatIdFieldList[item.pat_id].length === 0) {
-          this.$delete(this.editedPatIdFieldList, item.pat_id);
+          delete this.editedPatIdFieldList[item.pat_id];
         }
       };
 
@@ -1299,88 +1883,591 @@ export default {
       updateFieldList(fieldNames);
     },
 
+    shouldPreserveHeaderEditorState() {
+      return this.isEdited;
+    },
+
+    resetHeaderEditorState() {
+      this.headerOrderClassValue = null;
+      this.headerIndicatorCdValue = null;
+      this.headerExamDateInputValue = "";
+      this.headerExamTimeInputValue = "";
+      const checkAll = this.getGridScopedElement("#target-weight-check-all");
+      if (checkAll) {
+        checkAll.checked = false;
+      }
+    },
+
+    resolveHeaderOrderClassValue(data = []) {
+      if (!Array.isArray(data) || data.length === 0) {
+        return null;
+      }
+      const field = "pat_unique$physical_info$order_class";
+      const first = data[0]?.[field];
+      if (first === undefined || first === null || first === "") {
+        return null;
+      }
+      const allSame = data.every((row) => row?.[field] === first);
+      return allSame ? first : null;
+    },
+
+    resolveHeaderExamDateValue(data = []) {
+      return "";
+    },
+
+    resolveHeaderExamTimeValue(data = []) {
+      if (!Array.isArray(data) || data.length === 0) {
+        return "";
+      }
+      const field = "pat_unique$physical_info$exam_time";
+      const first = data[0]?.[field];
+      if (first === undefined || first === null || first === "") {
+        return "";
+      }
+      const allSame = data.every((row) => row?.[field] === first);
+      return allSame ? String(first) : "";
+    },
+    syncHeaderOrderClassDropdown(value) {
+      const target = this.getGridScopedElement("#header-order-classname");
+      if (!target) {
+        return;
+      }
+      const widget = $$(target).data("kendoDropDownList");
+      if (!widget) {
+        return;
+      }
+      const nextValue = value === undefined ? this.headerOrderClassValue : value;
+      if (widget.value() !== nextValue) {
+        widget.value(nextValue);
+      }
+    },
+    canApplyHeaderIndicatorUpdate(item) {
+      return Boolean(
+        (item?.pat_unique$physical_info$target_weight_chkbox
+          && item?.pat_unique$physical_info$target_weight)
+        || item?.pat_unique$physical_info$dw
+      );
+    },
+    resolveHeaderIndicatorValue(data = []) {
+      if (!Array.isArray(data) || data.length === 0) {
+        return null;
+      }
+      const field = "pat_unique$physical_info$indicator_cd";
+      const first = data[0]?.[field];
+      if (first === undefined || first === null || first === "") {
+        return null;
+      }
+      const allSame = data.every((row) => row?.[field] === first);
+      return allSame ? first : null;
+    },
+    syncHeaderIndicatorDropdown(value) {
+      const target = this.getGridScopedElement("#user-category");
+      if (!target) {
+        return;
+      }
+      const widget = $$(target).data("kendoDropDownList");
+      if (!widget) {
+        return;
+      }
+      const nextValue = value === undefined ? this.headerIndicatorCdValue : value;
+      if (widget.value() !== nextValue) {
+        widget.value(nextValue);
+      }
+    },
+
+    /**
+     * 一括更新中のみ Grid の change→refresh を止める（unbind 第2引数で _refreshHandler のみ外す）
+     * @returns {{ dataSource, refreshHandler } | null}
+     */
+    pauseGridDataSourceRefresh(grid) {
+      const dataSource = grid?.dataSource;
+      const refreshHandler = grid?._refreshHandler;
+      if (dataSource && refreshHandler) {
+        dataSource.unbind("change", refreshHandler);
+        return { dataSource, refreshHandler };
+      }
+      return null;
+    },
+    resumeGridDataSourceRefresh(paused) {
+      if (paused?.dataSource && paused?.refreshHandler) {
+        paused.dataSource.bind("change", paused.refreshHandler);
+      }
+    },
+
+    isPhysicalInfoGridField(editedField) {
+      return editedField === "pat_unique$physical_info$ctr"
+        || editedField === "pat_unique$physical_info$target_weight"
+        || editedField === "pat_unique$physical_info$exam_date"
+        || editedField === "pat_unique$physical_info$exam_time"
+        || editedField === "pat_unique$physical_info$order_class"
+        || editedField === "pat_unique$physical_info$breast_dia"
+        || editedField === "pat_unique$physical_info$chest_dia"
+        || editedField === "pat_unique$physical_info$dw"
+        || editedField === "pat_unique$physical_info$memo"
+        || editedField === "pat_unique$physical_info$height"
+        || editedField === "pat_unique$physical_info$ctr_weight"
+        || editedField === "pat_unique$physical_info$indicator_start_date"
+        || editedField === "pat_unique$physical_info$indicator_cd";
+    },
+
+    resolveEditedGridCellFields(editedField) {
+      return [
+        editedField,
+        editedField + LAYOUT_ITEM_KEY_SUFFIX_MSTNAME,
+        editedField + LAYOUT_ITEM_KEY_SUFFIX_DATEOBJECT
+      ];
+    },
+
+    applyEditedGridCellStyle(grid, dataItem, editedField) {
+      const cellElement = findBodyGridCell(grid, dataItem, this.resolveEditedGridCellFields(editedField));
+      if (!cellElement) {
+        return;
+      }
+      cellElement.classList.add(CLASS_EDITED_CELL);
+      cellElement.classList.add("k-dirty-cell");
+    },
+
+    removeEditedGridCellStyle(grid, dataItem, editedField) {
+      const cellElement = findBodyGridCell(grid, dataItem, this.resolveEditedGridCellFields(editedField));
+      if (!cellElement) {
+        return;
+      }
+      cellElement.classList.remove(CLASS_EDITED_CELL);
+      cellElement.classList.remove("k-dirty-cell");
+    },
+
+    reapplyEditedPatIdFieldListStyles() {
+      const grid = this.$refs.grid?.gridWidget?.() || this.$refs.grid?.kendoWidget?.();
+      if (!grid) {
+        return;
+      }
+      const data = this.resolveKendoGridDataSourceItems(grid, grid.dataSource);
+      Object.entries(this.editedPatIdFieldList).forEach(([patId, fields]) => {
+        const dataItem = data.find((item) => String(item?.pat_id) === String(patId));
+        if (!dataItem) {
+          return;
+        }
+        (fields || []).forEach((field) => {
+          if (field.endsWith(LAYOUT_ITEM_KEY_SUFFIX_DATEOBJECT)) {
+            return;
+          }
+          this.applyEditedGridCellStyle(grid, dataItem, field);
+        });
+      });
+    },
+
+    applyPatRecordFieldUpdate(model, editedField, rawValue) {
+      if (isNoUpdateField(editedField) || !model) {
+        return null;
+      }
+      let editedValue = rawValue === "" ? null : rawValue;
+      const editedPatId = model.pat_id;
+      const targetPatIndex = this.kendoDataSource.data.findIndex(
+        el => el.pat_id === editedPatId
+      );
+      if (targetPatIndex < 0) {
+        return null;
+      }
+
+      let [table, column, jsonKey, jsonArrayIndex] = editedField.split("$");
+      if (this.changeInfo[column]) {
+        [table, column, jsonKey, jsonArrayIndex, editedValue] = this.changeInfo[column](
+          targetPatIndex,
+          table,
+          column,
+          jsonArrayIndex,
+          jsonKey,
+          editedField,
+          editedValue
+        );
+        jsonArrayIndex = String(jsonArrayIndex);
+      }
+
+      let convertedValue = editedValue;
+      if (editedValue !== null) {
+        convertedValue = convertToUpdateValue(table, column, jsonKey, editedValue);
+      }
+      if (!jsonKey) {
+        this.patRecordsForUpdating[targetPatIndex][table][column] = convertedValue;
+      } else if (!jsonArrayIndex) {
+        this.patRecordsForUpdating[targetPatIndex][table][column][jsonKey] = convertedValue;
+      } else {
+        const jsonArray = this.patRecordsForUpdating[targetPatIndex][table][column];
+        if (!jsonArray[jsonArrayIndex]) {
+          while (!jsonArray[jsonArrayIndex]) {
+            const addJson = { ...JSON_ARRAY_ITEM[column] };
+            const maxCtlNo = this.getSafeMaxCtlNo(jsonArray);
+            addJson.ctl_no = maxCtlNo >= 0 ? maxCtlNo + 1 : 0;
+            if (this.settingColumnsFuc[column]) {
+              const setjsonKey = this.getSettingjsonKey(column, editedField);
+              if (setjsonKey) {
+                this.settingColumnsFuc[column](addJson, setjsonKey);
+              }
+            }
+            if (column === "medical_hst_info") {
+              if (jsonKey === "is_diagnosed" || jsonKey === "cause_death") {
+                addJson.out_come = "10";
+                addJson.is_dialysis_underlying_disease = "";
+              }
+              if (jsonKey === "disease_cd" || jsonKey === "is_confirmation_biopsy" || jsonKey === "disease_date") {
+                addJson.out_come = "";
+                addJson.is_dialysis_underlying_disease = "1";
+              }
+            }
+            jsonArray.push(addJson);
+          }
+        }
+        this.patRecordsForUpdating[targetPatIndex][table][column][jsonArrayIndex][jsonKey] = convertedValue;
+      }
+
+      return {
+        targetPatIndex,
+        table,
+        column,
+        jsonKey,
+        jsonArrayIndex,
+        editedField,
+        editedValue
+      };
+    },
+
+    markGridFieldAsEdited(grid, model, editedField, applyResult) {
+      if (!grid || !applyResult) {
+        return;
+      }
+      const { targetPatIndex, editedValue } = applyResult;
+      const editedPatId = model.pat_id;
+      const initialValue = this.kendoDataSourceClone.data[targetPatIndex]?.[editedField];
+      const encodeInitialValue = initialValue === undefined ? null : initialValue;
+      const dataItem = getKendoGridDataSourceItem(grid, targetPatIndex);
+
+      if (editedValue === encodeInitialValue) {
+        if (this.isPhysicalInfoGridField(editedField)) {
+          this.removeEditedGridCellStyle(grid, dataItem, editedField);
+        }
+        if (this.editedPatIdFieldList[editedPatId]) {
+          this.editedPatIdFieldList[editedPatId] = this.editedPatIdFieldList[editedPatId].filter(
+            (columnString) => columnString !== editedField
+          );
+          if (!this.editedPatIdFieldList[editedPatId].length) {
+            delete this.editedPatIdFieldList[editedPatId];
+          }
+        }
+        return;
+      }
+
+      if (this.isPhysicalInfoGridField(editedField)) {
+        this.applyEditedGridCellStyle(grid, dataItem, editedField);
+      }
+
+      if (!this.editedPatIdFieldList[editedPatId]) {
+        this.editedPatIdFieldList[editedPatId] = [];
+      }
+      if (!this.editedPatIdFieldList[editedPatId].includes(editedField)) {
+        this.editedPatIdFieldList[editedPatId].push(editedField);
+      }
+    },
+
+    async syncBulkExamCtrWeights(examWeightEntries) {
+      if (!examWeightEntries.length) {
+        return;
+      }
+      const grid = this.$refs.grid?.gridWidget?.() || this.$refs.grid?.kendoWidget?.();
+      const results = await Promise.all(examWeightEntries.map(async ({ item, applyResult }) => {
+        const { targetPatIndex, table, column, jsonArrayIndex } = applyResult;
+        const editPhysicalInfo = this.patRecordsForUpdating[targetPatIndex][table][column][jsonArrayIndex];
+        const patId = this.patRecordsForUpdating[targetPatIndex].pat_personal_main?.pat_id;
+        const trWeight = await this.setTrWeight(
+          editPhysicalInfo.exam_date,
+          editPhysicalInfo.exam_time,
+          editPhysicalInfo.order_class,
+          patId
+        );
+        return { item, trWeight, editPhysicalInfo };
+      }));
+
+      const pausedRefresh = this.pauseGridDataSourceRefresh(grid);
+      try {
+        results.forEach(({ item, trWeight, editPhysicalInfo }) => {
+          editPhysicalInfo.ctr_weight = trWeight;
+          this.setKendoGridItemField(item, "pat_unique$physical_info$ctr_weight", trWeight);
+          const ctrApply = this.applyPatRecordFieldUpdate(item, "pat_unique$physical_info$ctr_weight", trWeight);
+          const initialCtr = this.kendoDataSourceClone.data.find(row => row.pat_id === item.pat_id)?.[
+            "pat_unique$physical_info$ctr_weight"
+          ];
+          const isDirty = trWeight != (initialCtr === undefined ? null : initialCtr);
+          this.updateDirtyFields(item, ["pat_unique$physical_info$ctr_weight"], isDirty);
+          if (ctrApply) {
+            this.markGridFieldAsEdited(grid, item, "pat_unique$physical_info$ctr_weight", ctrApply);
+          }
+        });
+      } finally {
+        this.resumeGridDataSourceRefresh(pausedRefresh);
+      }
+    },
+
+    async commitBulkHeaderGridChanges(entries, { primaryField } = {}) {
+      if (!Array.isArray(entries) || entries.length === 0) {
+        this.finishBulkHeaderGridUpdate(primaryField);
+        return;
+      }
+      const grid = this.$refs.grid?.gridWidget?.() || this.$refs.grid?.kendoWidget?.();
+      const examWeightEntries = [];
+      const sortPhysicalInfoIndexes = new Set();
+
+      entries.forEach(({ item, field, value }) => {
+        const applyResult = this.applyPatRecordFieldUpdate(item, field, value);
+        if (!applyResult) {
+          return;
+        }
+        this.markGridFieldAsEdited(grid, item, field, applyResult);
+        if (field.match(/exam_date|order_class|exam_time/)) {
+          examWeightEntries.push({ item, applyResult });
+        }
+        if (field === "pat_unique$physical_info$indicator_cd") {
+          sortPhysicalInfoIndexes.add(applyResult.targetPatIndex);
+        }
+      });
+
+      if (examWeightEntries.length) {
+        await this.syncBulkExamCtrWeights(examWeightEntries);
+      }
+
+      sortPhysicalInfoIndexes.forEach((targetPatIndex) => {
+        const physicalInfo = this.patRecordsForUpdating[targetPatIndex]?.pat_unique?.physical_info;
+        if (physicalInfo) {
+          this.sortColumnInfo(physicalInfo);
+        }
+      });
+
+      this.finishBulkHeaderGridUpdate(primaryField);
+    },
+
+    finishBulkHeaderGridUpdate(primaryField) {
+      this.refreshKendoGridRows(primaryField, { once: true });
+      this.$nextTick(() => {
+        this.bindShowPopoverEvent();
+        this.setSameName();
+        this.findPatInDialysis();
+        this.setGridHeight();
+        this.reapplyEditedPatIdFieldListStyles();
+        requestAnimationFrame(() => {
+          this.repairLockedHeaderLayout();
+          this.reapplyEditedPatIdFieldListStyles();
+        });
+      });
+    },
+
+    resolveKendoGridDataSourceItems(grid, dataSource) {
+      try {
+        if (typeof dataSource?.data === "function") {
+          const sourceData = dataSource.data();
+          if (sourceData) {
+            return Array.from(sourceData);
+          }
+        }
+      } catch (_error) {
+        // noop
+      }
+      return getKendoGridDataItems(grid);
+    },
+    setKendoGridItemField(item, fieldName, newValue) {
+      if (!item) {
+        return;
+      }
+      try {
+        if (typeof item.set === "function") {
+          item.set(fieldName, newValue);
+          return;
+        }
+      } catch (_error) {
+        // Vue3 側の Kendo データ項目が ObservableObject でない場合は直接代入へ戻す。
+      }
+      item[fieldName] = newValue;
+    },
+    refreshKendoGridRows(field, { once = false } = {}) {
+      const grid = this.$refs.grid?.gridWidget?.() || this.$refs.grid?.kendoWidget?.();
+      const dataSource = grid?.dataSource || this.$refs.grid?.dataSourceInstance || null;
+      const refresh = () => {
+        try {
+          dataSource?.trigger?.("change", { action: "itemchange", field });
+        } catch (_error) {
+          // noop
+        }
+        try {
+          grid?.refresh?.();
+        } catch (_error) {
+          // noop
+        }
+        try {
+          grid?.refreshGrid?.();
+        } catch (_error) {
+          // noop
+        }
+        try {
+          this.$refs.grid?.refresh?.();
+        } catch (_error) {
+          // noop
+        }
+        try {
+          this.$refs.grid?.refreshGrid?.();
+        } catch (_error) {
+          // noop
+        }
+      };
+      if (once) {
+        this.$nextTick(() => {
+          refresh();
+        });
+        return;
+      }
+      refresh();
+      this.$nextTick(() => {
+        refresh();
+      });
+    },
     /**
      * ヘッダ列 検査タイミング、指示者 ドロップダウンリストを初期化
      * @param {*} originalData 元データ配列
      */
     initializeDropDown(originalData) {
-      const grid = this.$refs.grid.kendoWidget();
+      const grid = this.$refs.grid?.gridWidget?.() || this.$refs.grid?.kendoWidget?.();
+      if (!grid || !Array.isArray(originalData) || originalData.length === 0) {
+        return;
+      }
       const dataSource = grid.dataSource;
+      const resolveTarget = (selector) => this.getGridScopedElement(selector);
+
+      const destroyDropDown = (target) => {
+        if (!target) return;
+        try {
+          const widget = $$(target).data('kendoDropDownList');
+          widget?.destroy?.();
+        } catch (_error) {
+          // noop
+        }
+        target.innerHTML = '';
+      };
 
       // 共通のドロップダウンリスト作成関数
-      const createDropDownList = (element, options) => {
-        element.kendoDropDownList({
+      const createDropDownList = (target, options) => {
+        if (!target) {
+          return;
+        }
+        destroyDropDown(target);
+        $$(target).kendoDropDownList({
           dataTextField: options.dataTextField,
           dataValueField: options.dataValueField,
           dataSource: options.dataSource,
-          filter: "contains",
-          valuePrimitive: true,
-          value: options.value || null, // デフォルト値を設定
+          filter: 'contains',
+          value: options.value ?? null,
           select: (e) => {
-            const data = dataSource?.data();
-            data.forEach((item, index) => {
-              // 編集されたかを判定
-              const isDirty = options.isDirty(item, index, e.dataItem);
-              // 更新処理
-              options.updateFields(item, e.dataItem);
-              // 編集状態を更新
-              this.updateDirtyFields(item, options.fieldsToUpdate, isDirty);
-              // 検査タイミングドロップダウンの場合、kendogridのsaveイベントを手動で発火
-              if (options.triggerSave) {
-                this.triggerSave(item, options.fieldsToUpdate[0], item[options.fieldsToUpdate[0]]);
-              }
+            const data = this.resolveKendoGridDataSourceItems(grid, dataSource);
+            const primaryField = options.fieldsToUpdate[0];
+            const bulkEntries = [];
+            const pausedRefresh = this.pauseGridDataSourceRefresh(grid);
+            try {
+              data.forEach((item, index) => {
+                if (options.canApplyUpdate && !options.canApplyUpdate(item)) {
+                  return;
+                }
+                options.updateFields(item, e.dataItem, (fieldName, newValue) => {
+                  this.setKendoGridItemField(item, fieldName, newValue);
+                });
+                const isDirty = options.isDirty(item, index, e.dataItem);
+                this.updateDirtyFields(item, options.fieldsToUpdate, isDirty);
+                if (!isDirty) {
+                  return;
+                }
+                if (options.shouldTriggerSave && !options.shouldTriggerSave(item)) {
+                  return;
+                }
+                bulkEntries.push({
+                  item,
+                  field: primaryField,
+                  value: item[primaryField]
+                });
+              });
+            } finally {
+              this.resumeGridDataSourceRefresh(pausedRefresh);
+            }
+            void this.commitBulkHeaderGridChanges(bulkEntries, { primaryField }).then(() => {
+              options.afterSelect?.(e);
             });
-            // データソースを更新
-            dataSource.data(data);
-            this.$nextTick(() => {
-              this.bindShowPopoverEvent();
-              this.setSameName();
-              this.findPatInDialysis();
-              this.setGridHeight();
-            });
-          },
+          }
         });
       };
 
-      // 検査タイミング ドロップダウンリスト設定
-      createDropDownList(
-        grid.element.find("#header-order-classname"),
-        {
-          dataTextField: "name",
-          dataValueField: "code",
-          dataSource: PSEUDO_MST_LIST.orderClass,
-          fieldsToUpdate: ["pat_unique$physical_info$order_class", "pat_unique$physical_info$order_class_MstName"],
-          isDirty: (_, index, dataItem) => dataItem.code !== originalData[index].pat_unique$physical_info$order_class,
-          updateFields: (item, dataItem) => {
-            item.pat_unique$physical_info$order_class = dataItem.code;
-            item.pat_unique$physical_info$order_class_MstName = dataItem.name;
-          },
-          triggerSave: true, // saveイベントを発火するよう指定
-          value: 2 // デフォルト値：身体情報(追加登録).検査タイミング「2：透析後」
-        }
-      );
+      const orderClassHeaderTarget = resolveTarget("#header-order-classname");
+      const preserveHeaderState = this.shouldPreserveHeaderEditorState();
+      const preservedOrderClassValue = preserveHeaderState
+        ? ($$(orderClassHeaderTarget).data("kendoDropDownList")?.value?.()
+          ?? this.headerOrderClassValue
+          ?? this.resolveHeaderOrderClassValue(originalData))
+        : this.resolveHeaderOrderClassValue(originalData);
+      this.headerOrderClassValue = preservedOrderClassValue;
 
-      // 指示者 ドロップダウンリスト設定
-      createDropDownList(
-        grid.element.find("#user-category"),
-        {
-          dataTextField: "userName",
-          dataValueField: "userId",
-          dataSource: [{ userName: "未登録", userId: null }, ...this.getDoctorList],
-          fieldsToUpdate: ["pat_unique$physical_info$indicator_cd", "pat_unique$physical_info$indicator_cd_MstName"],
-          isDirty: (item, index, dataItem) =>
-            item.pat_unique$physical_info$target_weight_chkbox &&
-            item.pat_unique$physical_info$target_weight &&
-            dataItem.userId !== originalData[index].pat_unique$physical_info$indicator_cd,
-          updateFields: (item, dataItem) => {
-            if (item.pat_unique$physical_info$target_weight_chkbox && item.pat_unique$physical_info$target_weight) {
-              item.pat_unique$physical_info$indicator_cd = dataItem.userId;
-              item.pat_unique$physical_info$indicator_cd_MstName = dataItem.userName;
-            }
-          },
-          triggerSave: false,
+      createDropDownList(orderClassHeaderTarget, {
+        dataTextField: 'name',
+        dataValueField: 'code',
+        dataSource: PSEUDO_MST_LIST.orderClass,
+        fieldsToUpdate: ['pat_unique$physical_info$order_class', 'pat_unique$physical_info$order_class_MstName'],
+        isDirty: (_, index, dataItem) => dataItem.code !== originalData[index].pat_unique$physical_info$order_class,
+        updateFields: (item, dataItem, setField) => {
+          setField("pat_unique$physical_info$order_class", dataItem.code);
+          setField("pat_unique$physical_info$order_class_MstName", dataItem.name);
+        },
+        value: preservedOrderClassValue,
+        afterSelect: (e) => {
+          this.headerOrderClassValue = e.dataItem?.code ?? null;
         }
-      );
+      });
+
+      const indicatorHeaderTarget = resolveTarget("#user-category");
+      const preservedIndicatorValue = preserveHeaderState
+        ? ($$(indicatorHeaderTarget).data("kendoDropDownList")?.value?.()
+          ?? this.headerIndicatorCdValue
+          ?? this.resolveHeaderIndicatorValue(originalData))
+        : this.resolveHeaderIndicatorValue(originalData);
+      this.headerIndicatorCdValue = preservedIndicatorValue;
+
+      createDropDownList(indicatorHeaderTarget, {
+        dataTextField: 'userName',
+        dataValueField: 'userId',
+        dataSource: [{ userName: '未登録', userId: null }, ...this.getDoctorList],
+        fieldsToUpdate: ['pat_unique$physical_info$indicator_cd', 'pat_unique$physical_info$indicator_cd_MstName'],
+        canApplyUpdate: (item) => this.canApplyHeaderIndicatorUpdate(item),
+        isDirty: (item, index, dataItem) =>
+          this.canApplyHeaderIndicatorUpdate(item)
+          && dataItem.userId !== originalData[index].pat_unique$physical_info$indicator_cd,
+        updateFields: (item, dataItem, setField) => {
+          setField("pat_unique$physical_info$indicator_cd", dataItem.userId);
+          setField("pat_unique$physical_info$indicator_cd_MstName", dataItem.userName);
+        },
+        shouldTriggerSave: (item) => this.canApplyHeaderIndicatorUpdate(item),
+        value: preservedIndicatorValue,
+        afterSelect: (e) => {
+          this.headerIndicatorCdValue = e.dataItem?.userId ?? null;
+        }
+      });
+    },
+
+    normalizeHeaderExamDateValue(value) {
+      if (!value) {
+        return '';
+      }
+      const text = String(value).trim();
+      if (text === '0000/01/01' || text === '0000-01-01') {
+        return '';
+      }
+      if (text.includes('T')) {
+        const isoParsed = dayjs(text, 'YYYY-MM-DDTHH:mm:ss.SSSZ', true);
+        if (isoParsed.isValid()) {
+          return isoParsed.format('YYYY-MM-DD');
+        }
+      }
+      const parsed = dayjs(text, ['YYYY-MM-DD', 'YYYY/MM/DD', 'YYYYMMDD'], true);
+      return parsed.isValid() ? parsed.format('YYYY-MM-DD') : '';
     },
 
     /**
@@ -1388,101 +2475,165 @@ export default {
      * @param {*} originalData 元データ配列
      */
     initializeDateTimeInput(originalData) {
+      const dateWrapperTarget = this.getGridScopedElement('#header-exam-date-wrapper');
+      const calendarWrapperTarget = this.getGridScopedElement('#header-exam-calendar-wrapper');
+      const timeWrapperTarget = this.getGridScopedElement('#header-exam-time-wrapper');
+      if (!dateWrapperTarget && !calendarWrapperTarget && !timeWrapperTarget) {
+        return;
+      }
 
-      // 共通日付IF/時刻IF 作成関数
-      const createInputWrapper = (inputType, originalData, handleDateTimeInput, targetId, field) => {
-        const InputWrapper = Vue.extend({
-          template: `
-            <component
-              :is="dynamicComponent"
-              :id="'header-exam-' + inputType"
-              :classes="'custom-header'"
-              v-model="inputValue"
-              style="margin-left: 5px;"
-              @handleClearInput="handleClearInput"
-              @blur="handleBlur"
-            />`,
-          props: {
-            originalData: Object,
-            handleDateTimeInput: Function
-          },
-          data() {
-            return {
-              inputValue: "",
-              inputType // createInputWrapperで受取る引数をそのまま設定
-            };
-          },
-          computed: {
-            dynamicComponent() {
-              // コンポーネントを切り替える
-              return this.inputType === "date" ? "date-input" : "time-input";
-            },
-          },
-          components: {
-            "date-input": DateInput,
-            "time-input": TimeInput,
-          },
-          methods: {
-            handleBlur(event) {
-              const value = event.target.value;
-              this.inputValue = value;
-              const formattedValue = inputType === "date" && value
-                ? moment(value).format("YYYY/MM/DD")
-                : value;
-              this.handleDateTimeInput(this.originalData, field, formattedValue);
-              this.$emit("input-changed", value, this.inputType); // カレンダーに値変更イベントを通知
-            },
-            handleClearInput() {
-              this.inputValue = null;
-              this.$emit("input-changed", null, this.inputType);
-            },
-            updateInputValue(newValue) {
-              this.inputValue = newValue;
-            }
-          },
-        });
-        const wrapperInstance = new InputWrapper({
-          propsData: { originalData, handleDateTimeInput }
-        });
-        wrapperInstance.$mount(targetId);
-        return wrapperInstance;
+      const preserveHeaderState = this.shouldPreserveHeaderEditorState();
+      // dataBound による再初期化前に値を退避（編集中のみ。キャンセル後は一覧データから復元）
+      const preservedDateValue = preserveHeaderState
+        ? this.normalizeHeaderExamDateValue(
+          this.getGridScopedElement('#header-exam-date')?.value
+          || this.headerExamDateInputValue
+          || ''
+        )
+        : this.resolveHeaderExamDateValue(originalData);
+      const preservedTimeValue = preserveHeaderState
+        ? (this.getGridScopedElement('#header-exam-time')?.value
+          || this.headerExamTimeInputValue
+          || '')
+        : this.resolveHeaderExamTimeValue(originalData);
+      this.headerExamDateInputValue = preservedDateValue;
+      this.headerExamTimeInputValue = preservedTimeValue;
+
+      this.disposeHeaderDateTimeMountApps();
+
+      const existingDateValue = preservedDateValue;
+      const existingTimeValue = preservedTimeValue;
+      const ownerDocument = dateWrapperTarget?.ownerDocument
+        || calendarWrapperTarget?.ownerDocument
+        || timeWrapperTarget?.ownerDocument
+        || this.$el?.ownerDocument
+        || document;
+
+      let dateVm = null;
+      let calendarVm = null;
+
+      const syncHeaderDateInputValue = (value) => {
+        const normalizedValue = this.normalizeHeaderExamDateValue(value);
+        this.headerExamDateInputValue = normalizedValue;
+        dateVm?.updateInputValue?.(normalizedValue);
       };
 
-      // 検査日 共通日付IFのwrapper作成
-      const dateInputWrapperInstance = createInputWrapper(
-        "date",
-        originalData,
-        this.handleDateTimeInput.bind(this),
-        "#header-exam-date-wrapper",
-        "pat_unique$physical_info$exam_date"
-      );
+      const commitHeaderValue = (field, rawValue) => {
+        if (!rawValue) {
+          return;
+        }
+        const formattedValue = field === 'pat_unique$physical_info$exam_date'
+          ? dayjs(rawValue).format('YYYY/MM/DD')
+          : rawValue;
+        this.handleDateTimeInput(originalData, field, formattedValue);
+      };
 
-      // 検査日 共通カレンダーIFのwrapper作成
-      const commonCalenderPicker = new (Vue.extend(commonCalender))();
-      commonCalenderPicker.$on("input", value => {
-        // カレンダーで日付を選択した場合、日付入力フィールドに反映
-        dateInputWrapperInstance.updateInputValue(value);
-        this.handleDateTimeInput(originalData, "pat_unique$physical_info$exam_date", dateFormat.normalDate(value));
-      });
-      dateInputWrapperInstance.$on("input-changed", (value, inputType) => {
-        // 共通日付IFの変更を監視しカレンダーに反映
-        if (inputType === "date") {
-          const dateValue = !value ? dateFormat.format(new Date(), DATE_FORMAT) : value;
-          commonCalenderPicker.setSilently(dateValue);
+      const normalizeDateValue = (value) => this.normalizeHeaderExamDateValue(value);
+      const syncHeaderTimeInputValue = (value) => {
+        this.headerExamTimeInputValue = value || '';
+      };
+
+      if (dateWrapperTarget) {
+        dateWrapperTarget.innerHTML = '';
+        const HeaderExamDateBridge = defineComponent({
+          name: 'HeaderExamDateBridge',
+          components: { DateInput },
+          data() {
+            return {
+              inputValue: existingDateValue
+            };
+          },
+          methods: {
+            handleDateBlur(event) {
+              const value = event.target?.value || this.inputValue || '';
+              this.inputValue = value;
+              syncHeaderDateInputValue(value);
+              commitHeaderValue('pat_unique$physical_info$exam_date', value);
+              calendarVm?.setSilently?.(value);
+            },
+            handleClearInput() {
+              this.inputValue = '';
+              calendarVm?.setSilently?.('');
+              syncHeaderDateInputValue('');
+            },
+            handleDateInput(value) {
+              syncHeaderDateInputValue(value);
+            },
+            updateInputValue(value) {
+              this.inputValue = normalizeDateValue(value);
+            }
+          },
+          template: '<date-input id="header-exam-date" name="header-exam-date" classes="custom-header" style="margin-left: 5px;" v-model="inputValue" @update:modelValue="handleDateInput" @blur="handleDateBlur" @handleClearInput="handleClearInput" />'
+        });
+        const dateApp = createApp(HeaderExamDateBridge);
+        dateVm = dateApp.mount(dateWrapperTarget);
+        this.headerDateTimeMountApps.push({ type: 'date', app: dateApp, vm: dateVm });
+      }
+      if (calendarWrapperTarget) {
+        calendarWrapperTarget.innerHTML = '';
+        const calendarMountRoot = ownerDocument.createElement('div');
+        calendarWrapperTarget.appendChild(calendarMountRoot);
+        const HeaderExamCalendarBridge = defineComponent({
+          name: 'HeaderExamCalendarBridge',
+          components: { commonCalender },
+          data() {
+            return {
+              currentValue: existingDateValue || ''
+            };
+          },
+          methods: {
+            handleInput(value) {
+              this.currentValue = value || '';
+              syncHeaderDateInputValue(this.currentValue);
+              commitHeaderValue('pat_unique$physical_info$exam_date', value);
+            },
+            setSilently(value) {
+              this.currentValue = value || '';
+              this.$refs.calendar?.setSilently?.(value);
+            }
+          },
+          template: '<common-calender ref="calendar" :value="currentValue" @input="handleInput" />'
+        });
+        const calendarApp = createApp(HeaderExamCalendarBridge);
+        calendarVm = calendarApp.mount(calendarMountRoot);
+        this.headerDateTimeMountApps.push({ type: 'calendar', app: calendarApp, vm: calendarVm });
+      }
+      if (timeWrapperTarget) {
+        timeWrapperTarget.innerHTML = '';
+        const HeaderExamTimeBridge = defineComponent({
+          name: 'HeaderExamTimeBridge',
+          components: { TimeInput },
+          data() {
+            return {
+              inputValue: existingTimeValue || ''
+            };
+          },
+          methods: {
+            handleTimeBlur(event) {
+              const value = event.target?.value || this.inputValue || '';
+              this.inputValue = value;
+              syncHeaderTimeInputValue(value);
+              commitHeaderValue('pat_unique$physical_info$exam_time', value);
+            }
+          },
+          template: '<time-input id="header-exam-time" name="header-exam-time" classes="custom-header" style="width: 7em;" v-model="inputValue" @blur="handleTimeBlur" />'
+        });
+        const timeApp = createApp(HeaderExamTimeBridge);
+        const timeVm = timeApp.mount(timeWrapperTarget);
+        this.headerDateTimeMountApps.push({ type: 'time', app: timeApp, vm: timeVm });
+      }
+
+      if (calendarVm && existingDateValue) {
+        calendarVm.setSilently?.(existingDateValue);
+      }
+
+      this.$nextTick(() => {
+        const headerDateInput = this.getGridScopedElement('#header-exam-date');
+        if (headerDateInput) {
+          headerDateInput.setAttribute('title', 'yyyy/mm/dd');
         }
       });
-      commonCalenderPicker.$mount("#header-exam-calendar-wrapper");
 
-      // 検査時刻 共通時刻IFのwrapper作成
-      createInputWrapper(
-        "time",
-        originalData,
-        this.handleDateTimeInput.bind(this),
-        "#header-exam-time-wrapper",
-        "pat_unique$physical_info$exam_time"
-      );
-
-      // 検査日、検査時刻 ヘッダにイベントリスナー追加
       this.addEventListenersToHeaders();
     },
 
@@ -1492,36 +2643,60 @@ export default {
      * @param {String} field 更新項目
      * @param {String} value ヘッダ列の入力値
      */
-    handleDateTimeInput(originalData, field, value) {
+    async handleDateTimeInput(originalData, field, value) {
       // 入力値が空の場合は処理しない
       if (!value) return;
 
-      const grid = this.$refs.grid.kendoWidget();
-      // 一覧表示している配下セルにvalueを反映する
-      const data = grid.dataSource.data();
-      data.forEach((item, index) => {
-        // 編集されたかを判定
-        const newValue = value || null;
-        const isDirty = newValue != originalData[index][field];
-        // セルの値を更新
-        item[field] = newValue;
-        if (field === "pat_unique$physical_info$exam_date") {
-          item["pat_unique$physical_info$exam_date_DateObject"] = newValue;
+      const grid = this.$refs.grid?.gridWidget?.() || this.$refs.grid?.kendoWidget?.();
+      const dataSource = grid?.dataSource || this.$refs.grid?.dataSourceInstance || null;
+      const resolveDataSourceItems = () => {
+        try {
+          if (typeof dataSource?.data === 'function') {
+            const sourceData = dataSource.data();
+            if (sourceData) {
+              return Array.from(sourceData);
+            }
+          }
+        } catch (_error) {
+          // noop
         }
-        // 編集状態を更新
-        const fieldsToUpdate = [field];
-        this.updateDirtyFields(item, fieldsToUpdate, isDirty);
-        // kendogridのsaveイベントを手動で発火
-        this.triggerSave(item, fieldsToUpdate[0], item[fieldsToUpdate[0]]);
-      });
-      // データソースを更新
-      grid.dataSource.data(data);
-      this.$nextTick(() => {
-        this.bindShowPopoverEvent();
-        this.setSameName();
-        this.findPatInDialysis();
-        this.setGridHeight();
-      });
+        return getKendoGridDataItems(grid);
+      };
+      const data = resolveDataSourceItems();
+      const bulkEntries = [];
+      const fieldsToUpdate = field === "pat_unique$physical_info$exam_date"
+        ? [field, "pat_unique$physical_info$exam_date_DateObject"]
+        : [field];
+
+      const pausedRefresh = this.pauseGridDataSourceRefresh(grid);
+      try {
+        data.forEach((item, index) => {
+          const newValue = value || null;
+          const originalItem = Array.isArray(originalData) ? (originalData[index] || {}) : {};
+          const isDirty = newValue != originalItem[field];
+          this.setKendoGridItemField(item, field, newValue);
+          if (field === "pat_unique$physical_info$exam_date") {
+            this.setKendoGridItemField(item, "pat_unique$physical_info$exam_date_DateObject", newValue);
+          }
+          this.updateDirtyFields(item, fieldsToUpdate, isDirty);
+          if (!isDirty) {
+            const applyResult = this.applyPatRecordFieldUpdate(item, field, newValue);
+            if (applyResult) {
+              this.markGridFieldAsEdited(grid, item, field, applyResult);
+            }
+            return;
+          }
+          bulkEntries.push({
+            item,
+            field,
+            value: item[field]
+          });
+        });
+      } finally {
+        this.resumeGridDataSourceRefresh(pausedRefresh);
+      }
+
+      await this.commitBulkHeaderGridChanges(bulkEntries, { primaryField: field });
     },
 
     /**
@@ -1535,7 +2710,7 @@ export default {
       const toggleHeaderClassBlur = (event) => {
         this.toggleHeaderClass(false, event.target.id);
       };
-      const headerFields = document.querySelectorAll(".custom-header");
+      const headerFields = this.getGridScopedElements('.custom-header');
       headerFields.forEach(headerField => {
         headerField.removeEventListener("click", toggleHeaderClassClick);
         headerField.removeEventListener("blur", toggleHeaderClassBlur);
@@ -1557,7 +2732,10 @@ export default {
       };
       const field = fields[id];
 
-      const headerField = document.querySelector(`[data-field="${field}"]`);
+      const headerField = field ? this.getGridScopedElement(`[data-field="${field}"]`) : null;
+      if (!headerField) {
+        return;
+      }
       if (isDummy) {
         headerField.classList.add("k-header-dummy");
         headerField.classList.remove("k-header");
@@ -1574,10 +2752,11 @@ export default {
      * @param {Any} value - 保存する値
      */
     triggerSave(model, field, value) {
-      const grid = this.$refs.grid.kendoWidget();
-      const container = grid.table.find(`tr[data-uid="${model.uid}"] td[data-field="${field}"]`);
+      const grid = this.$refs.grid?.gridWidget?.() || this.$refs.grid?.kendoWidget?.();
+      const cell = findKendoGridCellByDataItemField(grid, model, field);
+      const container = asKendoJQueryElement(cell) || cell;
       // saveイベントを発火
-      grid.trigger("save", {
+      grid?.trigger?.("save", {
         container, // 保存対象のセル
         model, // 保存対象のモデル
         values: { [field]: value }, // 保存する値
@@ -1590,7 +2769,7 @@ export default {
      * @param {Array} data データ配列
      */
     handleCheckAllChange(e, data) {
-      const dataSource = this.$refs.grid.kendoWidget().dataSource;
+      const dataSource = this.$refs.grid?.gridDataSource?.() || this.$refs.grid?.kendoWidget?.().dataSource;
 
       // データ配列内の各項目について
       data.forEach((item) => {
@@ -1601,7 +2780,7 @@ export default {
           item["pat_unique$physical_info$target_weight_chkbox"] = isChecked;
           // チェックされている場合は「DWと同じ」、チェックされていない場合はnullにする
           item["pat_unique$physical_info$target_weight"] = isChecked ? "DWと同じ" : null;
-          item["pat_unique$physical_info$indicator_start_date"] = isChecked ? moment().format("YYYY/MM/DD") : null;
+          item["pat_unique$physical_info$indicator_start_date"] = isChecked ? dayjs().format("YYYY/MM/DD") : null;
           // item["pat_unique$physical_info$pat_unique$physical_info$indicator_start_date_DateObject"] = isChecked ? new Date() : null;
           item["pat_unique$physical_info$indicator_cd"] = isChecked ? this.getDoctorId : null;
           item["pat_unique$physical_info$indicator_cd_MstName"] = isChecked ? this.getDoctorName : null;
@@ -1612,22 +2791,20 @@ export default {
         }
       });
 
-      // データソースのデータ更新
-      dataSource.data(data);
+      this.refreshKendoGridRows("pat_unique$physical_info$target_weight_chkbox");
       this.$nextTick(() => {
         this.setSameName();
         this.findPatInDialysis();
       });
     },
 
-
     async setTrWeight(exam_date, exam_time, order_class, patId) {
       let trWeight = null;
       if (exam_date === null || order_class === null || patId === null) {
         return trWeight;
       }
-      const treatDate = moment(exam_date).format("YYYYMMDD");
-      const treatTime = exam_time ? moment(exam_time, "HH:mm").format("HHmm") : null;
+      const treatDate = dayjs(exam_date).format("YYYYMMDD");
+      const treatTime = exam_time ? dayjs(exam_time, "HH:mm").format("HHmm") : null;
       await getWeightByTreatDateAndOrdClass({
         facilityCd: this.facilityCd,
         patId,
@@ -1654,14 +2831,20 @@ export default {
     initializeUpdateRecords() {
       this.patRecordsForUpdating = cloneDeep(this.initialPatRecords);
       let date = new Date();
-      let strdateymd = moment(date).format("YYYY-MM-DD");
+      let strdateymd = dayjs(date).format("YYYY-MM-DD");
       if (this.initialPatRecords) {
         this.patRecordsForUpdating.forEach((gridPat) => {
-          let jsonArray = gridPat["pat_unique"]["physical_info"];
-          let index = gridPat["pat_unique"]["physical_info"].length;
+          let jsonArray = Array.isArray(gridPat?.pat_unique?.physical_info) ? gridPat.pat_unique.physical_info : [];
+          if (!gridPat?.pat_unique) {
+            return;
+          }
+          if (!Array.isArray(gridPat.pat_unique.physical_info)) {
+            gridPat.pat_unique.physical_info = jsonArray;
+          }
+          let index = jsonArray.length;
           // コントロール番号設定
           const addJson = { ...JSON_ARRAY_ITEM["physical_info"] };
-          const maxCtlNo = _.max(jsonArray, json => json.ctl_no).ctl_no;
+          const maxCtlNo = this.getSafeMaxCtlNo(jsonArray);
           addJson.ctl_no = maxCtlNo >= 0 ? maxCtlNo + 1 : 0;
 
           // 特定のjsonKey初期値設定
@@ -1676,15 +2859,19 @@ export default {
           jsonArray[index]["exam_date"] = strdateymd;
           jsonArray[index]["ctr_weight"] = null;
           if(this.unSavedInfo.length > 0){
-            let patInfo = this.unSavedInfo.find(o => o.patId === gridPat.pat_unique.pat_id);
+            const currentPatId = this.getRecordPatId(gridPat);
+            let patInfo = this.unSavedInfo.find(o => o.patId === currentPatId);
             if(patInfo){
-              let physicalInfo =  jsonArray.find(o => o.ctl_no === patInfo.data.ctl_no);
-              physicalInfo.dw = patInfo.data.dw;
+              let physicalInfo =  jsonArray.find(o => o?.ctl_no === patInfo?.data?.ctl_no);
+              if (physicalInfo) {
+                physicalInfo.dw = patInfo.data.dw;
+              }
             }
           }
-          if(gridPat.ord_mains.length === 0){
-            if(this.editedPatIdFieldList[gridPat.pat_personal_main.pat_id]){
-              Reflect.deleteProperty(this.editedPatIdFieldList, gridPat.pat_personal_main.pat_id);
+          if ((Array.isArray(gridPat?.ord_mains) ? gridPat.ord_mains : []).length === 0) {
+            const currentPatId = this.getRecordPatId(gridPat);
+            if (currentPatId && this.editedPatIdFieldList[currentPatId]) {
+              Reflect.deleteProperty(this.editedPatIdFieldList, currentPatId);
             }
           }
         });
@@ -1692,34 +2879,35 @@ export default {
     },
 
     refreshKendoColumn() {
+      // 列幅リサイズは Kendo インスタンス内にのみ残るため、再取得時は Grid を破棄してデフォルト列幅へ戻す
+      this.destroyDirectGrid();
       // kendo gridの表示に必要なプロパティをレイアウト情報にマップしていく
       this.kendoDataSource = null;
-      this.kendoGridColumns.forEach((category, categoryIndex) => {
-        category.columns = category.columns.map((column, columnIndex) => {
-          const categoryKey = this.getSelectedLayout[categoryIndex].category;
-          const itemKey = this.getSelectedLayout[categoryIndex].items[columnIndex];
-          if (isIndUserColumn(itemKey)) {
-            // 指示者項目の場合は指示者共通IFを使用
-            return mapKendoDisplayPropertyIndUser(
+      const mappedCategories = this.rawKendoGridColumns.map((category, categoryIndex) => {
+        const categoryKey = this.getSelectedLayout[categoryIndex].category;
+        return {
+          ...category,
+          columns: category.columns.map((column, columnIndex) => {
+            const itemKey = this.getSelectedLayout[categoryIndex].items[columnIndex];
+            if (isIndUserColumn(itemKey)) {
+              return mapKendoDisplayPropertyIndUser(
                 column,
                 categoryKey,
                 itemKey,
-                /* upd EOL対応内部 #6921 by ztc 2023-07-08 --start */
                 this.getDoctorList
-                // this.doctorList
-                /* upd EOL対応内部 #6921 by ztc 2023-07-08 --end */
-            );
-          } else {
+              );
+            }
             return mapKendoDisplayProperty(
-                column,
-                categoryKey,
-                itemKey,
-                this.mstList,
-                EventBus
+              column,
+              categoryKey,
+              itemKey,
+              this.mstList,
+              EventBus
             );
-          }
-        });
+          })
+        };
       });
+      this.mappedKendoGridColumns = mappedCategories;
       this.bindShowPopoverEvent();
 
       this.$nextTick(() => {
@@ -1791,8 +2979,8 @@ export default {
       if (editedField === "pat_unique$physical_info$target_weight_chkbox") {
         this.$nextTick(() => {
           this.patRecordsForUpdating[targetPatIndex][table][column][jsonArrayIndex]["indicator_cd"] = editedValue ? this.getDoctorId : null;
-          this.patRecordsForUpdating[targetPatIndex][table][column][jsonArrayIndex]["indicator_start_date"] = editedValue ? moment().format("YYYY/MM/DD") : null;
-          e.model.set("pat_unique$physical_info$indicator_start_date", editedValue ? moment().format("YYYY/MM/DD") : null);
+          this.patRecordsForUpdating[targetPatIndex][table][column][jsonArrayIndex]["indicator_start_date"] = editedValue ? dayjs().format("YYYY/MM/DD") : null;
+          e.model.set("pat_unique$physical_info$indicator_start_date", editedValue ? dayjs().format("YYYY/MM/DD") : null);
           // e.model.set("pat_unique$physical_info$indicator_start_date_DateObject", editedValue ? new Date() : null);
           e.model.set("pat_unique$physical_info$indicator_cd", editedValue ? this.getDoctorId : null);
           e.model.set("pat_unique$physical_info$indicator_cd_MstName", editedValue ? this.getDoctorName : null);
@@ -1841,7 +3029,7 @@ export default {
             // 指定の要素数になるまで項目追加
             // コントロール番号設定
             const addJson = { ...JSON_ARRAY_ITEM[column] };
-            const maxCtlNo = _.max(jsonArray, json => json.ctl_no).ctl_no;
+            const maxCtlNo = this.getSafeMaxCtlNo(jsonArray);
             addJson.ctl_no = maxCtlNo >= 0 ? maxCtlNo + 1 : 0;
 
             // 特定のjsonKey初期値設定
@@ -1875,9 +3063,56 @@ export default {
         const fields = item.columns.map(column => column.field);
         columnList = [...columnList, ...fields];
       });
-      const grid = $$("#kendo").data("kendoGrid");
-      const dataItem = grid.dataSource.at(targetPatIndex);
-      const rowCells = grid.element.find(`tr[data-uid=${dataItem.uid}] td`);
+      const grid = this.$refs.grid?.kendoWidget?.();
+      const dataItem = getKendoGridDataSourceItem(grid, targetPatIndex);
+      const rowCells = findKendoGridRowCellsByDataItem(grid, dataItem);
+
+      const physicalInfoEditedFields = [
+        "pat_unique$physical_info$ctr",
+        "pat_unique$physical_info$target_weight",
+        "pat_unique$physical_info$exam_date",
+        "pat_unique$physical_info$exam_time",
+        "pat_unique$physical_info$order_class",
+        "pat_unique$physical_info$breast_dia",
+        "pat_unique$physical_info$chest_dia",
+        "pat_unique$physical_info$dw",
+        "pat_unique$physical_info$memo",
+        "pat_unique$physical_info$height",
+        "pat_unique$physical_info$ctr_weight",
+        "pat_unique$physical_info$indicator_start_date",
+        "pat_unique$physical_info$indicator_cd"
+      ];
+      const isPhysicalInfoEditedField = field => physicalInfoEditedFields.includes(field);
+      const resolvePhysicalInfoEditCell = field => {
+        const candidates = [
+          field,
+          field + LAYOUT_ITEM_KEY_SUFFIX_MSTNAME,
+          field + LAYOUT_ITEM_KEY_SUFFIX_DATEOBJECT
+        ];
+        const editedElement = getKendoEventContainerElement(e);
+        const cellByField = candidates
+          .map(field => findKendoGridCellByDataItemField(grid, dataItem, field))
+          .find(Boolean);
+        if (cellByField) {
+          return cellByField;
+        }
+        const cellIndex = candidates.map(field => columnList.indexOf(field)).find(index => index !== -1);
+        const indexedCell = Number.isInteger(cellIndex) && cellIndex >= 0 ? rowCells[cellIndex] : null;
+        return indexedCell
+          || (editedElement?.matches?.("td,th") ? editedElement : editedElement?.closest?.("td,th"))
+          || null;
+      };
+      const hasOtherEditedPhysicalInfoInSameCell = cellElement => {
+        if (!cellElement) {
+          return false;
+        }
+        const editedFieldList = this.editedPatIdFieldList[editedPatId] || [];
+        return editedFieldList.some(field =>
+          field !== editedField
+          && isPhysicalInfoEditedField(field)
+          && resolvePhysicalInfoEditCell(field) === cellElement
+        );
+      };
 
       /* 編集色設定 */
       // kendo data sourceから初期値を取得
@@ -1886,67 +3121,31 @@ export default {
       ];
       const encodeInitialValue =
         initialValue === undefined ? null : initialValue;
-      const editedElement = e.container[0];
+      const editedElement = getKendoEventContainerElement(e);
       // 編集されたかどうか初期値と比較 ※更新用変換値ではなく編集直後の値を比較
       if (editedValue !== encodeInitialValue) {
-        if (editedField === "pat_unique$physical_info$ctr" ||
-          editedField === "pat_unique$physical_info$target_weight"||
-          editedField === "pat_unique$physical_info$exam_date"||
-          editedField === "pat_unique$physical_info$exam_time"||
-          editedField === "pat_unique$physical_info$order_class"||
-          editedField === "pat_unique$physical_info$breast_dia"||
-          editedField === "pat_unique$physical_info$chest_dia"||
-          editedField === "pat_unique$physical_info$dw"||
-          editedField === "pat_unique$physical_info$memo"||
-          editedField === "pat_unique$physical_info$height"||
-          editedField === "pat_unique$physical_info$ctr_weight" ||
-          editedField === "pat_unique$physical_info$indicator_start_date" ||
-          editedField === "pat_unique$physical_info$indicator_cd") {
-          let cellIndex = columnList.indexOf(editedField);
-          if (cellIndex === -1) {
-            cellIndex = columnList.indexOf(editedField + LAYOUT_ITEM_KEY_SUFFIX_MSTNAME);
-          }
-          if (cellIndex === -1) {
-            cellIndex = columnList.indexOf(editedField + LAYOUT_ITEM_KEY_SUFFIX_DATEOBJECT);
-          }
-          const cell = $$(rowCells[cellIndex]);
-          cell[0]?.classList?.add(CLASS_EDITED_CELL);
+        if (isPhysicalInfoEditedField(editedField)) {
+          const cellElement = resolvePhysicalInfoEditCell(editedField);
+          cellElement?.classList?.add(CLASS_EDITED_CELL);
         } else {
           editedElement?.classList?.add(CLASS_EDITED_CELL);
         }
         // 患者ID・カラム名を更新対象として保持
         if (!this.editedPatIdFieldList[editedPatId]) {
-          this.$set(this.editedPatIdFieldList, editedPatId, []);
+          this.editedPatIdFieldList[editedPatId] = [];
         }
         if(!this.editedPatIdFieldList[editedPatId].includes(editedField)){
           this.editedPatIdFieldList[editedPatId].push(editedField);
         }
       } else {
         delete e.model.dirtyFields[Object.keys(e.values)[0]];
-        if (editedField === "pat_unique$physical_info$ctr" ||
-          editedField === "pat_unique$physical_info$target_weight"||
-          editedField === "pat_unique$physical_info$exam_date"||
-          editedField === "pat_unique$physical_info$exam_time"||
-          editedField === "pat_unique$physical_info$order_class"||
-          editedField === "pat_unique$physical_info$breast_dia"||
-          editedField === "pat_unique$physical_info$chest_dia"||
-          editedField === "pat_unique$physical_info$dw"||
-          editedField === "pat_unique$physical_info$memo"||
-          editedField === "pat_unique$physical_info$height"||
-          editedField === "pat_unique$physical_info$ctr_weight" ||
-          editedField === "pat_unique$physical_info$indicator_start_date" ||
-          editedField === "pat_unique$physical_info$indicator_cd") {
-          let cellIndex = columnList.indexOf(editedField);
-          if (cellIndex === -1) {
-            cellIndex = columnList.indexOf(editedField + LAYOUT_ITEM_KEY_SUFFIX_MSTNAME);
-          }
-          if (cellIndex === -1) {
-            cellIndex = columnList.indexOf(editedField + LAYOUT_ITEM_KEY_SUFFIX_DATEOBJECT);
-          }
-          const cell = $$(rowCells[cellIndex]);
+        if (isPhysicalInfoEditedField(editedField)) {
+          const cellElement = resolvePhysicalInfoEditCell(editedField);
           this.$nextTick(() => {
-            cell[0].classList.remove(CLASS_EDITED_CELL);
-            cell[0].classList.remove("k-dirty-cell");
+            if (!hasOtherEditedPhysicalInfoInSameCell(cellElement)) {
+              cellElement?.classList?.remove(CLASS_EDITED_CELL);
+              cellElement?.classList?.remove("k-dirty-cell");
+            }
           });
         } else {
           editedElement.classList.remove(CLASS_EDITED_CELL);
@@ -1954,15 +3153,10 @@ export default {
         }
         if (this.editedPatIdFieldList[editedPatId]) {
           // カラム名を更新対象から除外
-          this.$set(
-            this.editedPatIdFieldList,
-            editedPatId,
-            this.editedPatIdFieldList[editedPatId].filter(
-              columnString => columnString !== editedField
-            )
-          );
+          this.editedPatIdFieldList[editedPatId] = this.editedPatIdFieldList[editedPatId].filter(
+              columnString => columnString !== editedField);
           if (!this.editedPatIdFieldList[editedPatId].length) {
-            this.$delete(this.editedPatIdFieldList, editedPatId);
+            delete this.editedPatIdFieldList[editedPatId];
           }
         }
       }
@@ -2016,6 +3210,17 @@ export default {
         const orderClass = editedField.match(/order_class/);
         const examTime = editedField.match(/exam_time/);
         if (examDate || orderClass || examTime) {
+          if (orderClass) {
+            const orderClassCode = editPhysicalInfo.order_class;
+            const orderClassItem = PSEUDO_MST_LIST.orderClass.find((item) => item.code == orderClassCode);
+            if (orderClassItem) {
+              e.model.set("pat_unique$physical_info$order_class_MstName", orderClassItem.name);
+            }
+            this.headerOrderClassValue = orderClassCode;
+            this.$nextTick(() => {
+              this.syncHeaderOrderClassDropdown(orderClassCode);
+            });
+          }
           const trWeight = await this.setTrWeight(editPhysicalInfo.exam_date, editPhysicalInfo.exam_time,
           editPhysicalInfo.order_class, this.patRecordsForUpdating[targetPatIndex]["pat_personal_main"].pat_id);
           editPhysicalInfo.ctr_weight = trWeight;
@@ -2028,6 +3233,18 @@ export default {
             });
             // ヘッダで検査日、検査タイミングを一括変更したり、検査日セルを変更しても検査時体重のsaveイベントが発火しないため手動で発火する
             this.triggerSave(e.model, "pat_unique$physical_info$ctr_weight", trWeight);
+          });
+        }
+        if (editedField === "pat_unique$physical_info$indicator_cd") {
+          const indicatorCode = editPhysicalInfo.indicator_cd;
+          const indicatorItem = [{ userName: "未登録", userId: null }, ...this.getDoctorList]
+            .find((item) => item.userId == indicatorCode);
+          if (indicatorItem) {
+            e.model.set("pat_unique$physical_info$indicator_cd_MstName", indicatorItem.userName);
+          }
+          this.headerIndicatorCdValue = indicatorCode;
+          this.$nextTick(() => {
+            this.syncHeaderIndicatorDropdown(indicatorCode);
           });
         }
         const physicalInfo = this.patRecordsForUpdating[targetPatIndex][table][
@@ -2136,7 +3353,7 @@ export default {
         physicalInfoItem.facility_cd = this.facilityCd;
         physicalInfoItem.inspect_date = newObject.exam_date?.replaceAll('/', '');
         physicalInfoItem.indicator_start_date = physicalInfoItem.indicator_start_date ?.replaceAll('/', '');
-        physicalInfoItem.exam_date = newObject.exam_time ? moment(exam_date, "YYYY-MM-DD HH:mm").format("YYYY-MM-DDTHH:mm:ss.SSSZ"): exam_date.replaceAll("/", "-");
+        physicalInfoItem.exam_date = newObject.exam_time ? dayjs(exam_date, "YYYY-MM-DD HH:mm").format("YYYY-MM-DDTHH:mm:ss.SSSZ"): exam_date.replaceAll("/", "-");
         physicalInfoItem.exam_time = newObject.exam_time;
         if (newObject.target_weight === "DWと同じ") {
           physicalInfoItem.target_weight = "-1";
@@ -2153,7 +3370,7 @@ export default {
         // mod 11101【総合検証NG】データリストの患者情報１にて患者情報を編集/保存すると共通ローダが終わらない 房 end
       };
 
-      const dataSources = this.$refs.grid.kendoWidget().dataSource;
+      const dataSources = this.$refs.grid?.gridDataSource?.() || this.$refs.grid?.kendoWidget?.().dataSource;
       const physicalInfoNewItems = new Map();
       // add 11101【総合検証NG】データリストの患者情報１にて患者情報を編集/保存すると共通ローダが終わらない 房 start
       const patPersonalMain = new Map();
@@ -2258,7 +3475,7 @@ export default {
       if(this.kendoGridColumns.some(item => item.key === "physical_info") && addPhysicalInfoFlag) {
         updateItems.forEach(item => {
           // add #11400 by kangjie 20241213 start
-          item.pat_unique.up_date = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
+          item.pat_unique.up_date = dayjs(new Date()).format("YYYY-MM-DD HH:mm:ss");
           // add #11400 by kangjie 20241213 end
           if (!this.editedPatIdFieldList[item.pat_personal_main.pat_id].some(i => i.includes('physical_info'))) {
             return;
@@ -2271,7 +3488,7 @@ export default {
             is_delete : false,
             is_change : false,
             examTime_pre : null,
-            examTime_aft : newInfoItem.exam_time ? moment(newInfoItem.exam_date).format("YYYY-MM-DD HH:mm:ss.SSS") : newInfoItem.exam_date.replaceAll("/", "-"),
+            examTime_aft : newInfoItem.exam_time ? dayjs(newInfoItem.exam_date).format("YYYY-MM-DD HH:mm:ss.SSS") : newInfoItem.exam_date.replaceAll("/", "-"),
             dw_pre : "未登録",
             dw_aft : newInfoItem.dw || "未登録",
             operation_order : null,
@@ -2289,7 +3506,7 @@ export default {
               isSameExamDateItems.push(item.pat_personal_main.pat_id);
               return;
             }
-            const maxCtlNo = _.max(physicalInfo, json => json.ctl_no).ctl_no;
+            const maxCtlNo = this.getSafeMaxCtlNo(physicalInfo);
             newInfoItem.ctl_no = maxCtlNo >= 0 ? maxCtlNo + 1 : 0;
             physicalInfo.push(newInfoItem);
             const parseDate = dateStr => new Date(dateStr);
@@ -2331,7 +3548,7 @@ export default {
               return item?.includes("physical_info");
             })
           });
-          const dataSources = this.$refs.grid.kendoWidget().dataSource;
+          const dataSources = this.$refs.grid?.gridDataSource?.() || this.$refs.grid?.kendoWidget?.().dataSource;
           const questionPatId = [];
           const dwQuestionPatId = [];
           let messages = [];
@@ -2408,7 +3625,7 @@ export default {
                 medicalHst.is_confirmation_biopsy = "";
                 medicalHst.disease_cd = medicalHst.cause_death;
                 const addJson = { ...JSON_ARRAY_ITEM["medical_hst_info"] };
-                const maxCtlNo = _.max(medicalHsts, json => json.ctl_no).ctl_no;
+                const maxCtlNo = this.getSafeMaxCtlNo(medicalHsts);
                 addJson.ctl_no = maxCtlNo >= 0 ? maxCtlNo + 1 : 0;
                 addJson.disease_cd = disease_cd;
                 addJson.is_confirmation_biopsy = is_confirmation_biopsy;
@@ -2449,12 +3666,13 @@ export default {
         this.unSavedInfo = [];
         this.editedPatIdFieldList = {};
         //mod FNSI-6478 劉全航 end
+        this.resetHeaderEditorState();
         this.initializeDataSource(cloneDeep(this.initialPatRecords));
       }
     },
 
     bindShowPopoverEvent() {
-      const sortGrid = $$("#kendo").data("kendoGrid");
+      const sortGrid = this.$refs.grid?.kendoWidget?.();
       if (sortGrid == null) {
         return;
       }
@@ -2474,9 +3692,9 @@ export default {
           };
         };
 
-        const $$hospPatId = $$(".cell-hosppatid");
+        const $$hospPatId = this.scopedJQuery()(".cell-hosppatid");
         $$hospPatId.on("click", clickHandler($$hospPatId));
-        const $$patName = $$(".cell-patname");
+        const $$patName = this.scopedJQuery()(".cell-patname");
         $$patName.on("click", clickHandler($$patName));
       });
     },
@@ -2489,48 +3707,57 @@ export default {
       await this.selectPat(this.selectedPatId);
       this.$router.push({ name: routeName });
     },
+    getMainContentRootElement() {
+      return this.scopedJQuery?.("#main-id")?.get?.(0)
+        || getScopedElementById("main-id", this.$el || this)
+        || null;
+    },
+    /**
+     * Grid 本体・container の高さを main 領域に合わせる（Vue2 互換。Kendo DOM 構造差異に耐える）
+     * @returns {boolean} 高さ同期を実行したか
+     */
+    syncKendoGridContentAreaHeights() {
+      const div = this.getGridRootElement() || getScopedElementById("kendo", this.$el || this);
+      if (!div?.isConnected) {
+        return false;
+      }
+      const divMain = this.getMainContentRootElement();
+      if (divMain?.clientHeight > 0) {
+        div.style.height = `${divMain.clientHeight}px`;
+      }
+      const headerEl =
+        div.querySelector(".k-grid-toolbar")
+        || div.querySelector(".k-grid-header")
+        || div.children[0];
+      const headerHeight = headerEl?.clientHeight || 0;
+      const baseHeight = divMain?.clientHeight || div?.clientHeight || 0;
+      const clientHeight2 = Math.max(0, baseHeight - headerHeight);
+      const containerEl = div.querySelector(".k-grid-container") || div.children[2];
+      const middleEl =
+        div.children[1] && div.children[1] !== containerEl ? div.children[1] : null;
+
+      if (middleEl?.style) {
+        middleEl.style.height = `${clientHeight2}px`;
+      }
+      if (containerEl?.style) {
+        containerEl.style.height = `${clientHeight2}px`;
+      }
+      this.scheduleDirectGridLockedHeightContract();
+      return true;
+    },
     /**
      * 固定列、スクロール列の高さが倍率変更時にズレる為
      * 二つを合わせる処理を行う
      */
     setLockedContentHeight() {
-      // 固定列、スクロール列の要素の高さを合わせる
-      const scrollHeight = parseFloat(getComputedStyle(document.getElementsByClassName("k-auto-scrollable")[1]).height);
-
-      // mod #11321 【たくしん会】データリストレイアウトマスタ＞身体情報(追加登録)とデータリスト表示バグ zkm start
-      // document.getElementsByClassName("k-grid-content-locked")[0].style.height = `${scrollHeight}px`;
-      if (document.getElementsByClassName("k-grid-content-locked").length > 0) {
-        document.getElementsByClassName("k-grid-content-locked")[0].style.height = `${scrollHeight}px`;
-      }
-      // mod #11321 【たくしん会】データリストレイアウトマスタ＞身体情報(追加登録)とデータリスト表示バグ zkm end
+      this.scheduleDirectGridLockedHeightContract();
     },
     /**
      * @description スタイル調整(グリッドサイズ)
      */
     setGridHeight() {
       if (this.isSelectedLayout) {
-        const editMode = $$(".edit-mode").get(0).clientHeight;
-        const mainArea = $$("#main-id").get(0).clientHeight;
-        const cancelArea = $$(".btn2-cancel").get(0).clientHeight;
-        const saveArea = $$(".btn1-execute").get(0).clientHeight;
-        let buttonArea = cancelArea > saveArea ? cancelArea : saveArea;
-        // ボタン高さを認識しない場合がある
-        // buttonArea = buttonArea >= 30 ? buttonArea : 30;
-        // ボタンに重ならない高さを取得
-        // mod FNSI-改修内容 初回初期表示時、横スクロールは表示不正 dou start
-        // const height = mainArea - selectArea - buttonArea;
-        const height = mainArea - editMode - buttonArea - 5;
-        // mod FNSI-改修内容 初回初期表示時、横スクロールは表示不正 dou end
-        this.$nextTick(() => {
-          const gridWidget = $$("#kendo").data("kendoGrid");
-          // グリッドに高さを設定
-          gridWidget.wrapper.height(height);
-          // 画面へ適応
-          gridWidget.resize($$(".multi-pat-list-header-switch"));
-          gridWidget.resize($$(".multi-pat-list-footer-btn"));
-          // 固定列、スクロール列の高さの調整
-          this.setLockedContentHeight();
-        });
+        this.scheduleGridLayoutRefresh(0);
       }
     },
 
@@ -2540,9 +3767,18 @@ export default {
      */
     kgridDataBound() {
       this.$nextTick(() => {
+        this.applyDirectGridStyleContract();
         // 固定列、スクロール列の高さの調整
-        this.setLockedContentHeight();
+        this.refreshGridLayoutForCurrentSize();
         this.enableLockedColumnScroll();
+        const originalData = cloneDeep(getKendoGridDataItems(this.getGridDataSourceInstance()));
+        if (!Array.isArray(originalData) || originalData.length === 0) {
+          return;
+        }
+        this.reinitializeHeaderControls(originalData);
+        requestAnimationFrame(() => {
+          this.repairLockedHeaderLayout();
+        });
       });
     },
     /**
@@ -2701,7 +3937,7 @@ export default {
         return;
       }
 
-      const grid = $$("#kendo").data("kendoGrid");
+      const grid = this.$refs.grid?.kendoWidget?.();
       hasRequiredList.forEach(required => {
         // 患者数ループ
         this.kendoDataSource.data.forEach((gridPat, gridIndex) => {
@@ -2710,9 +3946,9 @@ export default {
           );
           const patId = patInfo.pat_personal_main.pat_id;
           // 患者行指定
-          const dataItem = grid.dataSource.at(gridIndex);
+          const dataItem = getKendoGridDataSourceItem(grid, gridIndex);
           // 患者行取得
-          const rowCells = grid.element.find(`tr[data-uid=${dataItem.uid}] td`);
+          const rowCells = findKendoGridRowCellsByDataItem(grid, dataItem);
 
           const requiredValue = this.getRequiredValue(patInfo, required);
 
@@ -2735,7 +3971,7 @@ export default {
         });
       });
       // TODO: sort(グリッドヘッダ押下)後クラス再設定必要
-      // const sortGrid = $$("#kendo").data("kendoGrid");
+      // const sortGrid = this.$refs.grid?.kendoWidget?.();
       // sortGrid.bind("sort", function(e) {
       // });
     },
@@ -2749,7 +3985,7 @@ export default {
       if (this.kendoDataSource === null || !this.kendoDataSource.data || this.kendoDataSource.data.length === 0) {
         return;
       }
-      const grid = $$("#kendo").data("kendoGrid");
+      const grid = this.$refs.grid?.kendoWidget?.();
       if (null === grid) {
         return;
       } else {
@@ -2776,12 +4012,14 @@ export default {
       if (condition.arr.length > 0) {
         ordNoList.forEach(ordNo => {
           if (condition.arr.includes(ordNo)) {
-            const row = grid.element.find(`tr[data-uid=${grid.dataSource.at(i)?.uid}]`);
-            row.each((_, cell) => {
-              for (const element of cell.getElementsByClassName("cell-hosppatid")) {
-                element.classList.add(condition.className);
-              }
-            });
+            const dataItem = getKendoGridDataSourceItem(grid, i);
+            const row = findKendoGridRowByDataItem(grid, dataItem);
+            if (!row) {
+              return;
+            }
+            for (const element of row.getElementsByClassName("cell-hosppatid")) {
+              element.classList.add(condition.className);
+            }
           }
         });
       }
@@ -2798,8 +4036,7 @@ export default {
         itemIndex = Number(itemIndex);
         let counter = 0;
         jsonArrayIndex = `${patInfo[table][column].findIndex(
-          staff => staff[staffClass] === "1" && ++counter === itemIndex
-        )}`;
+          staff => staff[staffClass] === "1" && ++counter === itemIndex)}`;
       }
 
       if (!jsonKey) {
@@ -2819,9 +4056,7 @@ export default {
      * @returns true: 保存, false: 保存失敗
      */
     isValidate() {
-      const kendoValidator = $$("#kendo")
-      .kendoValidator()
-      .data("kendoValidator");
+      const isValid = validateKendoValidator(this.scopedJQuery()("#kendo"));
       const keys = Object.keys(this.validateObject);
       const requiredList = keys.filter(
         key => this.validateObject[key].length > 0
@@ -2840,7 +4075,7 @@ export default {
       } else {
         this.validateStringParams = "";
       }
-      return requiredList.length === 0 && kendoValidator.validate();
+      return requiredList.length === 0 && isValid;
     },
 
     sortColumnInfo(array) {
@@ -2861,9 +4096,8 @@ export default {
      * @returns {String}
      */
     formatterDay(json) {
-      return moment(json.exam_date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format(
-        "YYYYMMDD"
-      );
+      return dayjs(json.exam_date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format(
+        "YYYYMMDD");
     },
 
     /**
@@ -2875,7 +4109,7 @@ export default {
       const date = json.exam_date;
 
       if (date && date.match(/T/)) {
-        return moment(date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format("HHmm");
+        return dayjs(date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format("HHmm");
       }
       return null;
     },
@@ -2894,13 +4128,12 @@ export default {
       if (initDate) {
         editDay = initDate;
         if (editDay.match(/T/)) {
-          const encodeInitDate = moment(
+          const encodeInitDate = dayjs(
             `${initDate}:00+09:00`,
           // mod #10054 破棄確認・保存活性(複数変更含む)・削除対応_データリスト（患者情報） 20231221 ztc start
           //   "YYYY-MM-DDTHH:mm:ss.SSSZ"
-          // ).format("YYYY-MM-DDTHH:mm");
-            "YYYY/MM/DDTHH:mm:ss.SSSZ"
-          ).format("YYYY/MM/DDTHH:mm");
+          //).format("YYYY-MM-DDTHH:mm");
+            "YYYY/MM/DDTHH:mm:ss.SSSZ").format("YYYY/MM/DDTHH:mm");
           // mod #10054 破棄確認・保存活性(複数変更含む)・削除対応_データリスト（患者情報） 20231221 ztc end
           const dateList = encodeInitDate.split(/T/);
           editDay = dateList[0];
@@ -2921,12 +4154,12 @@ export default {
         // return editDay === "0000-01-01"
         return editDay === "0000/01/01"
           ? null
-          // : moment(`${editDay}`, "YYYY-MM-DD").format("YYYY-MM-DD");
-          : moment(`${editDay}`, "YYYY/MM/DD").format("YYYY/MM/DD");
+          // : dayjs(`${editDay}`, "YYYY-MM-DD").format("YYYY-MM-DD");
+          : dayjs(`${editDay}`, "YYYY/MM/DD").format("YYYY/MM/DD");
         // mod #10054 破棄確認・保存活性(複数変更含む)・削除対応_データリスト（患者情報） 20231221 ztc end
       }
 
-      const editDate = moment(
+      const editDate = dayjs(
         `${editDay}T${editTime}`,
         "YYYY/MM/DDTHH:mm"
       ).format("YYYY/MM/DDTHH:mm:ss.SSSZ");
@@ -2936,13 +4169,13 @@ export default {
 
     setExamDate(value) {
       if (value && value.match(/T/)) {
-        const encodeInitDate = moment(
+        const encodeInitDate = dayjs(
           `${value}:00+09:00`,
           "YYYY-MM-DDTHH:mm:ss.SSSZ"
         // mod #10054 破棄確認・保存活性(複数変更含む)・削除対応_データリスト（患者情報） 20231221 ztc start
-        // ).format("YYYY-MM-DDTHH:mm");
-        //   "YYYY/MM/DDTHH:mm:ss.SSSZ"
         ).format("YYYY/MM/DDTHH:mm");
+        // const encodeInitDate = dayjs(`${value}:00+09:00`, "YYYY-MM-DDTHH:mm:ss.SSSZ").format("YYYY-MM-DDTHH:mm");
+        // const encodeInitDate = dayjs(`${value}:00+09:00`, "YYYY/MM/DDTHH:mm:ss.SSSZ").format("YYYY/MM/DDTHH:mm");
         const dateList = encodeInitDate.split(/T/);
         // return dateList[0] !== "0000-01-01";
         return dateList[0] !== "0000/01/01";
@@ -2988,8 +4221,7 @@ export default {
 
       let counter = 0;
       jsonArrayIndex = `${jsonArray.findIndex(
-        staff => staff[staffClass] === "1" && ++counter === itemIndex
-      )}`;
+        staff => staff[staffClass] === "1" && ++counter === itemIndex)}`;
 
       if (jsonArrayIndex < 0) {
         const maxIndex = this.changeIndexToInfinity(jsonArray, jsonArrayIndex);
@@ -3096,7 +4328,7 @@ export default {
 
           const indStartDate = physicalInfo.indicator_start_date;
           // 一年後
-          const indEndDate = moment(indStartDate, "YYYYMMDD")
+          const indEndDate = dayjs(indStartDate, "YYYYMMDD")
             .add(1, "y")
             .subtract(1, "days")
             .format("YYYYMMDD");
@@ -3147,47 +4379,55 @@ export default {
      */
     resizeToFitTextArea() {
       if (this.$refs.grid != null) {
-        const setWidth = parseInt(this.$refs.grid.kendoWidget().columns[0].width);
-        this.$refs.grid.kendoWidget().resizeColumn(this.$refs.grid.kendoWidget().columns[0], setWidth);
+        const firstVisibleColumn = this.$refs.grid?.gridFirstVisibleColumn?.();
+        if (firstVisibleColumn) {
+          const setWidth = parseInt(firstVisibleColumn.width, 10);
+          this.$refs.grid?.resizeGridColumn?.(firstVisibleColumn, setWidth);
+        }
         this.$nextTick(() => {
           this.setGridHeight();
         });
       }
     },
+    clearLockedColumnScrollSync() {
+      (this.lockedScrollSyncCleanup || []).forEach((cleanup) => {
+        try {
+          cleanup();
+        } catch (_error) {
+          // noop
+        }
+      });
+      this.lockedScrollSyncCleanup = [];
+    },
     enableLockedColumnScroll() {
-      const lockedContent = document.querySelector('.k-grid-content-locked');
-      const scrollableContent = document.querySelector('.k-grid-content'); // 可動列
-
-      if (lockedContent) {
-        lockedContent.addEventListener('wheel', (e) => {
-          e.preventDefault();
-          lockedContent.scrollTop += e.deltaY;
-        });
-
-        let startY = 0;
-        lockedContent.addEventListener('touchstart', (e) => {
-          startY = e.touches[0].clientY;
-        }, { passive: false });
-
-        lockedContent.addEventListener('touchmove', (e) => {
-          const deltaY = startY - e.touches[0].clientY;
-          lockedContent.scrollTop += deltaY;
-          startY = e.touches[0].clientY;
-          e.preventDefault();
-        }, { passive: false });
+      const lockedContent = this.getGridLockedContentEl();
+      const scrollableContent = this.getGridContentEl();
+      this.clearLockedColumnScrollSync();
+      if (!lockedContent || !scrollableContent) {
+        return;
       }
 
-      if (lockedContent && scrollableContent) {
-        // 固定列のスクロールに応じて可動列を同期
-        lockedContent.addEventListener('scroll', () => {
-          scrollableContent.scrollTop = lockedContent.scrollTop;
+      let syncing = false;
+      const syncScrollTop = (source, target) => {
+        if (syncing || !source || !target) {
+          return;
+        }
+        syncing = true;
+        target.scrollTop = source.scrollTop || 0;
+        requestAnimationFrame(() => {
+          syncing = false;
         });
+      };
+      const syncFromScrollable = () => syncScrollTop(scrollableContent, lockedContent);
+      const syncFromLocked = () => syncScrollTop(lockedContent, scrollableContent);
 
-        // 可動列のスクロールに応じて固定列を同期（双方向同期）
-        scrollableContent.addEventListener('scroll', () => {
-          lockedContent.scrollTop = scrollableContent.scrollTop;
-        });
-      }
+      scrollableContent.addEventListener("scroll", syncFromScrollable, { passive: true });
+      lockedContent.addEventListener("scroll", syncFromLocked, { passive: true });
+      this.lockedScrollSyncCleanup.push(() => {
+        scrollableContent.removeEventListener("scroll", syncFromScrollable);
+        lockedContent.removeEventListener("scroll", syncFromLocked);
+      });
+      syncFromScrollable();
     },
     onBeforeEdit(e) {
       if (this.isMobileDevice && !this.allowEdit) {
@@ -3203,13 +4443,27 @@ export default {
     },
   },
 // add FNSI-改修内容 パンくずリスト押下時に最新の情報を取得する。表示条件の変更はしない dou start
-  beforeDestroy() {
-    window.removeEventListener("resize", this.setGridHeight, false);
+  beforeUnmount() {
+    this.disposeHeaderDateTimeMountApps();
+    this.clearLockedColumnScrollSync();
+    this.clearGridLayoutRefreshTimers();
+    if (this.directGridLayoutRafId != null) {
+      cancelAnimationFrame(this.directGridLayoutRafId);
+      this.directGridLayoutRafId = null;
+    }
+    if (this.directGridLockedHeightRafId != null) {
+      cancelAnimationFrame(this.directGridLockedHeightRafId);
+      this.directGridLockedHeightRafId = null;
+    }
+    this.destroyDirectGrid();
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.setGridHeight, false);
     // Rootページのサイドバーボタン要素のイベントリスナー解除
-    const rootSideBarBtn = document.querySelector('#showPatientSearchSidebarBtn');
-    rootSideBarBtn?.removeEventListener('click', this.setGridHeight);
+    const rootSideBarBtn = getSidebarToggleButtonElement(this.$el || this);
+    rootSideBarBtn?.removeEventListener('click', this.scheduleGridLayoutRefreshForSidebar);
     //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
     EventBus.$off("requestReportParams", this.requestrReportParams);
+    EventBus.$off("resizeToFitTextArea", this.resizeToFitTextArea);
+    EventBus.$off("switchSidebar", this.scheduleGridLayoutRefreshForSidebar);
     //add 5984 機能帳票でパラメータが正しく渡されていない 吉 end
     // del #10054 破棄確認・保存活性(複数変更含む)・削除対応_データリスト（患者情報） 20231221 ztc start
     // EventBus.$off("refresh", this.getInitData);
@@ -3223,34 +4477,30 @@ export default {
 };
 </script>
 
-<style>
-@media print {
-  /** 患者情報1 tableレイアウト崩れ回避 */
-  body:has(#multi-pat-list) #main-id {
-    display: inline-block;
-  }
-}
-</style>
-
 <style scoped>
-::v-deep .k-dirty{
+:deep(.k-dirty){
   display: none;
 }
-::v-deep .k-dirty-cell .k-dirty{
+:deep(.k-dirty-cell .k-dirty){
   display: block;
 }
 
-::v-deep .k-dirty-cell{
+:deep(.k-dirty-cell){
   background-color: #ccffcc;
   font-weight: bold;
 }
 
-::v-deep .userCategory {
-  margin-left: 10px;
+:deep(.userCategory) {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  vertical-align: middle;
 }
-::v-deep .userCategory>.k-widget.k-dropdown{
-  width: 120px;
-  margin-left: 10px;
+:deep(.userCategory > .k-widget.k-dropdown) {
+  width: 100px;
+  flex: 0 0 auto;
+  margin-left: 5px;
 }
 .multi-pat-list {
   background-color: var(--main-background-color);
@@ -3300,140 +4550,322 @@ export default {
 
 /* kendo-grid用style */
 /* 全体の色 */
-.multi-pat-list >>> .k-grid {
+.multi-pat-list :deep(.k-grid) {
   background-color: var(--ntss-list-background-color) !important;
   color: var(--ntss-list-body-color) !important;
 }
 
-.multi-pat-list >>> .k-widget {
+.multi-pat-list :deep(.k-widget) {
   font-size: 1em;
 }
 
-.multi-pat-list >>> .k-button {
+.multi-pat-list :deep(.k-button) {
   font-size: 1em;
 }
 
 /* セルの枠線(なぜか縦線にしか色がつかない) */
-.multi-pat-list >>> .k-grid tr,
-.multi-pat-list >>> .k-grid td {
+.multi-pat-list :deep(.k-grid tr),
+.multi-pat-list :deep(.k-grid td) {
+  border-color: var(--master-maintenance-kgrid-border-color) !important;
+}
+
+.multi-pat-list :deep(.k-grid .k-table-td) {
   border-color: var(--master-maintenance-kgrid-border-color) !important;
 }
 
 /* 行マウスオーバー */
-.multi-pat-list >>> .k-grid tr:hover {
+.multi-pat-list :deep(.k-grid tr:hover) {
   background-color: var(--ntss-list-body-background-color) !important;
   color: var(--ntss-list-body-color) !important;
 }
 
 /* 列ヘッダ */
-.multi-pat-list >>> .k-header-dummy {
+.multi-pat-list :deep(.k-header-dummy) {
   vertical-align: middle !important;
   background-color: var(--ntss-list-header-background-color);
   color: #ffffff;
   position: relative;
   cursor: default;
 }
-.multi-pat-list >>> .k-header {
+.multi-pat-list :deep(.k-header) {
   vertical-align: middle !important;
   background-color: var(--ntss-list-header-background-color);
   color: #ffffff;
 }
-.multi-pat-list >>> .k-header[data-role="columnsorter"] {
+.multi-pat-list :deep(.k-header[data-role="columnsorter"]) {
   vertical-align: middle !important;
   background-color: #333333;
   background-image: none;
 }
-.multi-pat-list >>> .k-header[data-field="pat_personal_main$hosp_pat_id"] {
+.multi-pat-list :deep(.k-header[data-field="pat_personal_main$hosp_pat_id"]) {
   /* width: 125px; */
   vertical-align: middle !important;
   background-color: #333333;
   background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
 }
-.multi-pat-list >>> .k-header[data-field="pat_personal_main$pat_name"] {
+.multi-pat-list :deep(.k-header[data-field="pat_personal_main$pat_name"]) {
   /* width: 125px; */
   vertical-align: middle !important;
   background-color: #333333;
   background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%) !important;
 }
 
+/* 列ヘッダ全体: ラベル・入力・ドロップダウン等を折り返さず同一行に表示 */
+.multi-pat-list :deep(.k-grid-header th),
+.multi-pat-list :deep(.k-grid-header-locked th) {
+  white-space: nowrap;
+}
+
+.multi-pat-list :deep(.k-grid-header th .k-cell-inner),
+.multi-pat-list :deep(.k-grid-header th .k-link),
+.multi-pat-list :deep(.k-grid-header-locked th .k-cell-inner),
+.multi-pat-list :deep(.k-grid-header-locked th .k-link) {
+  display: inline-flex !important;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.multi-pat-list :deep(.k-grid-header th .k-link > *),
+.multi-pat-list :deep(.k-grid-header-locked th .k-link > *) {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.multi-pat-list :deep(.multi-pat-header-row),
+.multi-pat-list :deep(.k-grid-header [id^="header-"]),
+.multi-pat-list :deep(.k-grid-header-locked [id^="header-"]) {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  vertical-align: middle;
+  flex: 0 0 auto;
+}
+
+.multi-pat-list :deep(.k-grid-header th label),
+.multi-pat-list :deep(.k-grid-header-locked th label) {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.multi-pat-list :deep(.k-grid-header th .checkbox),
+.multi-pat-list :deep(.k-grid-header-locked th .checkbox) {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  margin-right: 4px;
+}
+
+.multi-pat-list :deep(#header-exam-date-wrapper),
+.multi-pat-list :deep(#header-exam-calendar-wrapper),
+.multi-pat-list :deep(#header-exam-time-wrapper),
+.multi-pat-list :deep(#header-order-classname),
+.multi-pat-list :deep(#user-category) {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  margin-left: 5px;
+}
+
+.multi-pat-list :deep(#header-exam-time-wrapper .time-input) {
+  display: inline-block;
+}
+
+/* グリッドセル日付エディタ: 入力とカレンダーを同一行に表示（table-cell 内の折返し抑制のためブロック flex） */
+.multi-pat-list :deep(.ntss-grid-date-editor-row) {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  vertical-align: middle;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.multi-pat-list :deep(.ntss-grid-date-editor-row .ntss-grid-date-input-host) {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+.multi-pat-list :deep(.ntss-grid-date-editor-row .ntss-grid-date-editor-calendar),
+.multi-pat-list :deep(.ntss-grid-date-editor-row .ntss-custom-calendar-host) {
+  display: inline-flex;
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+.multi-pat-list :deep(.ntss-grid-date-input-host) {
+  position: relative;
+}
+
+/* 固定列ヘッダ: 患者ID・患者名はスクロール側の2段ヘッダと同じ高さで縦方向に占有 */
+.multi-pat-list :deep(.k-grid-header-locked th[data-field="pat_personal_main$hosp_pat_id"]),
+.multi-pat-list :deep(.k-grid-header-locked th[data-field="pat_personal_main$pat_name"]) {
+  vertical-align: middle !important;
+  box-sizing: border-box;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+/* カード作成（command列）: attributes の btn3-kendo-normal がヘッダに付くと rowspan セルが欠ける */
+.multi-pat-list :deep(.k-grid-header-wrap th.multi-pat-card-creation-header),
+.multi-pat-list :deep(.k-grid-header-wrap th[data-title="カード作成"]),
+.multi-pat-list :deep(.k-grid-header th.multi-pat-card-creation-header),
+.multi-pat-list :deep(.k-grid-header th[data-title="カード作成"]),
+.multi-pat-list :deep(.k-grid-header th.btn3-kendo-normal) {
+  vertical-align: middle !important;
+  background-color: #333333 !important;
+  background-image: linear-gradient(
+    rgba(255, 255, 255, 0.3) 0%,
+    transparent 50%,
+    transparent 50%,
+    rgba(0, 0, 0, 0.1) 100%
+  ) !important;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  box-sizing: border-box;
+}
+.multi-pat-list :deep(.k-grid-header-wrap th.multi-pat-card-creation-header .k-cell-inner),
+.multi-pat-list :deep(.k-grid-header-wrap th.multi-pat-card-creation-header .k-link),
+.multi-pat-list :deep(.k-grid-header-wrap th[data-title="カード作成"] .k-cell-inner),
+.multi-pat-list :deep(.k-grid-header-wrap th[data-title="カード作成"] .k-link),
+.multi-pat-list :deep(.k-grid-header th.multi-pat-card-creation-header .k-cell-inner),
+.multi-pat-list :deep(.k-grid-header th.multi-pat-card-creation-header .k-link),
+.multi-pat-list :deep(.k-grid-header th[data-title="カード作成"] .k-cell-inner),
+.multi-pat-list :deep(.k-grid-header th[data-title="カード作成"] .k-link),
+.multi-pat-list :deep(.k-grid-header th.btn3-kendo-normal .k-cell-inner),
+.multi-pat-list :deep(.k-grid-header th.btn3-kendo-normal .k-link) {
+  height: 100%;
+  min-height: 100%;
+  background: transparent !important;
+  box-sizing: border-box;
+}
+
 /* 入力不可列のヘッダ */
-.multi-pat-list >>> .k-header-disabled {
+.multi-pat-list :deep(.k-header-disabled) {
   background-color: #808080 !important;
   background-image: none;
 }
 
-.multi-pat-list >>> .k-grid-header {
+.multi-pat-list :deep(.k-grid-header) {
   background: var(--ntss-list-header-background-color);
   background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,0.1) 100%);
 }
 
 /* 偶数行 */
-.multi-pat-list >>> .k-alt {
+.multi-pat-list :deep(.k-alt) {
   background-color: var(--ntss-list-content-2nd-background-color) !important;
   color: var(--ntss-list-body-color) !important;
 }
 
 /* 入力UI */
-.multi-pat-list >>> .k-textbox,
-.multi-pat-list >>> .k-dropdown-wrap,
-.multi-pat-list >>> .k-numeric,
-.multi-pat-list >>> .k-select,
-.multi-pat-list >>> .k-popup {
+.multi-pat-list :deep(.k-textbox),
+.multi-pat-list :deep(.k-dropdown-wrap),
+.multi-pat-list :deep(.k-numeric),
+.multi-pat-list :deep(.k-select),
+.multi-pat-list :deep(.k-popup),
+:global(.multi-pat-list.k-popup),
+:global(.multi-pat-list .k-popup) {
+  background-color: var(--main-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+
+.multi-pat-list :deep(.k-picker),
+.multi-pat-list :deep(.k-input-inner) {
   background-color: var(--main-background-color) !important;
   color: var(--ntss-list-body-color) !important;
 }
 
 /* kendoDropDownListの選択肢 */
-.multi-pat-list >>> .k-popup {
+.multi-pat-list :deep(.k-popup),
+:global(.multi-pat-list.k-popup),
+:global(.multi-pat-list .k-popup) {
   border-color: var(--ntss-list-body-background-color) !important;
 }
 
 /* kendoDropDownListの選択肢のマウスオーバー */
-.multi-pat-list >>> .k-popup li:hover {
+.multi-pat-list :deep(.k-popup li:hover),
+:global(.multi-pat-list.k-popup li:hover),
+:global(.multi-pat-list .k-popup li:hover) {
   background-color: var(--ntss-list-body-background-color) !important;
   color: var(--ntss-list-body-color) !important;
 }
 
-#kendo >>> .grid-required-cell {
+#kendo :deep(.grid-required-cell) {
   background-color: #ff6358 !important;
 }
 
 /* 前体重測定済 */
-#kendo >>> .grid-after-send-condition-cell {
+#kendo :deep(.grid-after-send-condition-cell) {
   background-color: #42cb92 !important;
 }
 /* 治療中 */
-#kendo >>> .grid-dialysis-cell {
+#kendo :deep(.grid-dialysis-cell) {
   background-color: #2ca06f !important;
 }
 /* 治療終了 */
-#kendo >>> .grid-after-dialysis-cell {
+#kendo :deep(.grid-after-dialysis-cell) {
   background-color: #557769 !important;
 }
 
-#kendo >>> .grid-edited-cell {
+#kendo :deep(.grid-edited-cell) {
   text-overflow: ellipsis !important;
   overflow: hidden !important;
 }
 
-.multi-pat-list >>>.k-grid td{
+.multi-pat-list :deep(.k-grid td) {
   white-space: pre-line !important;
 }
-.multi-pat-list >>> .k-i-sort-asc-sm::before {
+
+.multi-pat-list :deep(.k-grid .k-table-td) {
+  white-space: pre-line !important;
+}
+
+/* 編集セルは折り返さない。td に display:flex を付けない（table-cell を壊し行高が半分になるため） */
+.multi-pat-list :deep(.k-grid td.k-edit-cell),
+.multi-pat-list :deep(.k-grid .k-table-td.k-edit-cell) {
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+}
+
+/* 直下のラッパー（日付 editor の span 等）に flex を当て、td は table-cell のまま折り返しを防ぐ。
+ * 注意: editorChkNumeric は label + Numeric を td 直下に並べる。各子に width:100% を付けると
+ * 先頭が一行を占有し二番目が折り下がるため、inline-flex + width:auto にする。
+ * 単体の input/textarea/select は除外（テキストエリアの改行・標準入力の挙動を維持） */
+.multi-pat-list :deep(.k-grid td.k-edit-cell > *:not(input):not(textarea):not(select)),
+.multi-pat-list :deep(.k-grid .k-table-td.k-edit-cell > *:not(input):not(textarea):not(select)) {
+  display: inline-flex !important;
+  flex-flow: row nowrap !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+}
+
+.multi-pat-list :deep(.k-i-sort-asc-sm::before) {
   content: "▲" !important;
   color: #ffffff;
 }
-.multi-pat-list >>> .k-i-sort-desc-sm::before {
+.multi-pat-list :deep(.k-i-sort-desc-sm::before) {
   content: "▼" !important;
   color: #ffffff;
 }
 
-ons-popover >>> .popover__content {
+ons-popover :deep(.popover__content) {
+  /*min-width: 235px;*/
+  width: 14em;
+}
+
+.multi-pat-transition-popover :deep(.popover__content) {
   /*min-width: 235px;*/
   width: 14em;
 }
 /* add FNSI-改修内容 入外区分が入院の場合、患者名は紫色にする。同姓同名患者の場合はそれが判断可能にする。 dou start */
-#kendo >>> .same-icon {
+#kendo :deep(.same-icon) {
   height: 1em;
   display: inline-block;
   margin-left: 0.5em;
@@ -3447,63 +4879,92 @@ ons-popover >>> .popover__content {
 
 /* 携帯が似合う shan start */
 
-/* ::v-deep .k-grid-header-locked{
+/* :deep(.k-grid-header-locked){
    width: 300px !important;
  }
-::v-deep .k-grid-content-locked{
+:deep(.k-grid-content-locked){
    width: 300px !important;
  } */
-::v-deep .multi-pat-list .k-grid td{
+:deep(.multi-pat-list .k-grid td) {
+   width: 150px !important;
+ }
+
+:deep(.multi-pat-list .k-grid .k-table-td) {
    width: 150px !important;
  }
 
  @media screen and (max-width: 600px){
-/* ::v-deep   .k-grid-header-locked {
+/* :deep(.k-grid-header-locked) {
      width: 180px !important;
    }
-::v-deep .k-header[data-field="pat_personal_main$hosp_pat_id"] {
+:deep(.k-header[data-field="pat_personal_main$hosp_pat_id"]) {
     width: 65px !important;
   }
-::v-deep .k-header[data-field="pat_personal_main$pat_name"] {
+:deep(.k-header[data-field="pat_personal_main$pat_name"]) {
     width: 65px !important;
   }
-::v-deep .k-grid-content-locked{
+:deep(.k-grid-content-locked){
    width: 180px !important;
  }
-::v-deep .multi-pat-list .k-grid td{
+:deep(.multi-pat-list .k-grid td),
+:deep(.multi-pat-list .k-grid .k-table-td){
    width: 100px !important;
  } */
 }
-::v-deep .k-grid td{
+:deep(.k-grid td) {
+  word-wrap:break-word;
+}
+
+:deep(.k-grid .k-table-td) {
   word-wrap:break-word;
 }
 /* 携帯が似合う shan end */
 
-.kendo-grid-toolbar-style >>> .k-grid-content-locked {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked) {
   overflow-y: scroll !important;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked::-webkit-scrollbar {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked::-webkit-scrollbar) {
   display: none;
 }
+:deep(.k-grid-content) {
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+:deep(.k-dropdownlist) {
+  width: 7.5rem !important;
+}
+
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+}
+
 @media print {
   .multi-pat-list {
     position: absolute;
   }
   /** スクロールコンテナ */
-  .multi-pat-list >>> .k-grid-header-wrap,
-  .multi-pat-list >>> .k-grid-content {
+  .multi-pat-list :deep(.k-grid-header-wrap),
+  .multi-pat-list :deep(.k-grid-content) {
     overflow: hidden !important;
     height: auto !important;
   }
   /** 固定列調整 */
-  .multi-pat-list >>> .k-grid-content-locked {
+  .multi-pat-list :deep(.k-grid-content-locked) {
     height: auto !important;
   }
   /** 固定列枠線 */
-  .multi-pat-list >>> .k-grid-header-locked::after {
+  .multi-pat-list :deep(.k-grid-header-locked::after) {
     content: "";
     position: absolute;
     top: 0;
@@ -3513,7 +4974,7 @@ ons-popover >>> .popover__content {
     background: var(--master-maintenance-kgrid-header-background-color);
     pointer-events: none;
   }
-  .multi-pat-list >>> .k-grid-content-locked::after {
+  .multi-pat-list :deep(.k-grid-content-locked::after) {
     content: "";
     position: absolute;
     top: 0;
@@ -3524,30 +4985,30 @@ ons-popover >>> .popover__content {
     pointer-events: none;
   }
   /** ヘッダのズレ原因を除去 */
-  .multi-pat-list >>> .k-grid-header {
+  .multi-pat-list :deep(.k-grid-header) {
     padding-right: 0 !important;
   }
   /** gridの幅 */
-  .multi-pat-list >>> .k-grid {
+  .multi-pat-list :deep(.k-grid) {
     width: 100vw;
     height: auto !important;
   }
   /** 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
   /* 右端時固定列最前面表示*/
-  .multi-pat-list:has(table.scroll-rightmost) >>> .k-grid-content-locked,
-  .multi-pat-list:has(table.scroll-rightmost) >>> .k-grid-header-locked {
+  :global(.multi-pat-list:has(table.scroll-rightmost) .k-grid-content-locked),
+  :global(.multi-pat-list:has(table.scroll-rightmost) .k-grid-header-locked) {
     z-index: 1;
     background-color: inherit;
   }
-  .multi-pat-list:has(table.scroll-rightmost) {
+  :global(.multi-pat-list:has(table.scroll-rightmost)) {
     margin-left: -1px !important;
   }
-  .multi-pat-list >>> .k-grid-header-wrap:has(table.scroll-rightmost),
-  .multi-pat-list >>> .k-grid-content:has(table.scroll-rightmost) {
+  :global(.multi-pat-list .k-grid-header-wrap:has(table.scroll-rightmost)),
+  :global(.multi-pat-list .k-grid-content:has(table.scroll-rightmost)) {
     position: static;
   }
   /* フッターボタン非表示 */
-  .multi-pat-list >>> .multi-pat-list-footer-btn {
+  .multi-pat-list :deep(.multi-pat-list-footer-btn) {
     display: none;
   }
 }

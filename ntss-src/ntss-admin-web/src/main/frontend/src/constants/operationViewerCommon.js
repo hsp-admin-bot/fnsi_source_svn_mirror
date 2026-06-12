@@ -1,4 +1,4 @@
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 // --------------------------------------
 // 工程に関する設定(json)
@@ -551,8 +551,8 @@ export default {
     a = a[key];
     b = b[key];
 
-    let sortItem1 = 0;
-    let sortItem2 = 0;
+    let sortItem1;
+    let sortItem2;
 
     if (a === b) {
       sortItem1 = 0;
@@ -581,11 +581,11 @@ export default {
    * @param {Boolean} isAsc 昇順の場合trueを指定(デフォルト)
    */
   compareTimeKey(a, b, key, isAsc = true ) {
-    const timeA = moment(new Date(a[key]));
-    const timeB = moment(new Date(b[key]));
+    const timeA = dayjs(new Date(a[key]));
+    const timeB = dayjs(new Date(b[key]));
 
-    let sortItem1 = 0;
-    let sortItem2 = 0;
+    let sortItem1;
+    let sortItem2;
 
     if (timeA.isSame(timeB)) {
       sortItem1 = 0;

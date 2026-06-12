@@ -4,11 +4,11 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.List;
 
-import javax.xml.bind.JAXB;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElements;
-import javax.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.JAXB;
+import jakarta.xml.bind.annotation.XmlAttribute;
+import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlElements;
+import jakarta.xml.bind.annotation.XmlRootElement;
 
 import org.modelmapper.ModelMapper;
 import org.seasar.doma.Domain;

@@ -14,16 +14,17 @@
               @click="changeTab($event, scaleTabId)"
               checked
             />
-            <!-- #11987 2025.11.28 mod スケールベッド対応 タブ名称の変更 TDC渡辺 start  -->
-            <!--<label class="tab_item" for="scale">体重計設定</label> -->
-            <label class="tab_item" for="scale">{{ isScaleBed ? 'スケールベッド設定' : '体重計設定' }}</label>
-            <!-- #11987 2025.11.28 mod スケールベッド対応 タブ名称の変更 TDC渡辺 end -->
-            <!-- #11987 2025.11.28 add スケールベッド対応 タブの追加 TDC渡辺 start -->
+            <label class="tab_item" for="scale">{{ isScaleBed ? "スケールベッド設定" : "体重計設定" }}</label>
             <template v-if="isScaleBed">
-              <input id="scale_bed" type="radio" name="tab_item" @click="changeTab($event, scaleMstTabId)" @change="clickScaleMstTab" />
+              <input
+                id="scale_bed"
+                type="radio"
+                name="tab_item"
+                @click="changeTab($event, scaleMstTabId)"
+                @change="clickScaleMstTab"
+              />
               <label class="tab_item" for="scale_bed">スケールベッドマスタ</label>
             </template>
-            <!-- #11987 2025.11.28 add スケールベッド対応 タブの追加 TDC渡辺 end -->
             <input
               id="check"
               type="radio"
@@ -36,16 +37,11 @@
             <label class="tab_item" for="print">印字</label>
             <input id="color" type="radio" name="tab_item" @click="changeTab($event, colorTabId)" />
             <label class="tab_item" for="color">配色</label>
-            <!-- #11987 2025.11.13 mod スケールベッド対応 タブの有効無効 TDC渡辺 start -->
-            <!--
-              <input id="guide" type="radio" name="tab_item" @click="changeTab($event, guideTabId)" />
-              <label class="tab_item" for="guide">音声ガイダンス</label>
-            -->
             <template v-if="!isScaleBed">
               <input id="guide" type="radio" name="tab_item" @click="changeTab($event, guideTabId)" />
               <label class="tab_item" for="guide">音声ガイダンス</label>
             </template>
-            <!-- #11987 2025.11.13 mod スケールベッド対応 タブの有効無効 TDC渡辺 end -->
+
             <!-- 体重計設定タブ -->
             <div class="tab_content" id="scale_content">
               <div class="tab_content_description">
@@ -78,14 +74,12 @@
                 <mst-weight-setting-audio-item ref="audio" />
               </div>
             </div>
-            <!-- #11987 2025.12.02 add スケールベッド対応 スケールベッドマスタータブ追加 TDC渡辺 start -->
             <!-- スケールベッドマスタータブ -->
             <div class="tab_content" id="scale_bed_content">
               <div class="tab_content_description">
                 <mst-scale-bed-setting-item ref="scaleBed" />
               </div>
             </div>
-            <!-- #11987 2025.12.02 add スケールベッド対応 スケールベッドマスタータブ追加 TDC渡辺 end -->
           </div>
         </div>
       </kendo-grid-toolbar>
@@ -104,23 +98,23 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import MstWeightSettingItem from "@/components/master-maintenance/mst-weight/sub-item/MstWeightTabConfig";
 import MstWeightSettingCheckItem from "@/components/master-maintenance/mst-weight/sub-item/MstWeightTabCheck";
 import MstWeightSettingAudioItem from "@/components/master-maintenance/mst-weight/sub-item/MstWeightTabAudio";
 import MstWeightSettingColorItem from "@/components/master-maintenance/mst-weight/sub-item/MstWeightTabColor";
 import MstWeightSettingPrintingItem from "@/components/master-maintenance/mst-weight/sub-item/MstWeightTabPrinting";
+import MstScaleBedSettingItem from "@/components/master-maintenance/mst-weight/sub-item/MstScaleBedTabConfig";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 //mod マスタ詳細画面がありません破棄メッセージ 张博 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 //mod マスタ詳細画面がありません破棄メッセージ 张博 end
-import cloneDeep from "lodash/cloneDeep";
-import isEqualWith from "lodash/isEqualWith";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
+import { getLatestHeaderElement, getHeaderHeight, getFooterMenuClientHeight, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
 import { customComparator } from "@/utils/util.js"
-// #11987 2025.12.02 add スケールベッド対応 スケールベッドマスター画面追加 TDC渡辺 start
-import MstScaleBedSettingItem from "@/components/master-maintenance/mst-weight/sub-item/MstScaleBedTabConfig";
-// #11987 2025.12.02 add スケールベッド対応 スケールベッドマスター画面追加 TDC渡辺 end
 
 // ストアについて
 // testStateストアの実体は/stores/modules/test-store.jsである。
@@ -138,9 +132,7 @@ export default {
     "mst-weight-setting-audio-item": MstWeightSettingAudioItem,
     "mst-weight-setting-color-item": MstWeightSettingColorItem,
     "mst-weight-setting-printing-item": MstWeightSettingPrintingItem,
-    // #11987 2025.12.02 add スケールベッド対応 スケールベッドマスター画面追加 TDC渡辺 start
     "mst-scale-bed-setting-item": MstScaleBedSettingItem
-    // #11987 2025.12.02 add スケールベッド対応 スケールベッドマスター画面追加 TDC渡辺 end
   },
   data() {
     return {
@@ -148,9 +140,7 @@ export default {
       mstWeightHeight: 300,
       tabSelectedId: 0,
       whetherToEdit: true,
-      // #11987 2025.11.28 add スケールベッド対応 修正データのセット TDC渡辺 start
       editRecordClone: {}
-      // #11987 2025.11.28 add スケールベッド対応 修正データのセット TDC渡辺 end
     };
   },
   computed: {
@@ -180,16 +170,12 @@ export default {
         printTabId: 2,
         colorTabId: 3,
         guideTabId: 4,
-        // #11987 2025.12.02 add スケールベッド対応 スケールベッドマスタータブ追加 TDC渡辺 start
         scaleMstTabId: 5
-        // #11987 2025.12.02 add スケールベッド対応 スケールベッドマスタータブ追加 TDC渡辺 end
-       };
+      };
     },
-    // #11987 2025.12.02 add スケールベッド対応 スケールベッドマスタータブ追加 TDC渡辺 start
     scaleMstTabId() {
       return this.const.scaleMstTabId;
     },
-    // #11987 2025.12.02 add スケールベッド対応 スケールベッドマスタータブ追加 TDC渡辺 end
     scaleTabId() {
       return this.const.scaleTabId;
     },
@@ -210,11 +196,9 @@ export default {
       // main部の高さをCSS変数を利用して書き換え
       return { "--height": `${this.mainAreaHeight}px` };
     },
-    // #11987 2025.11.28 add スケールベッド スケールベッド設定判断 TDC渡辺 start
     isScaleBed() {
-      return this.editRecordClone?.weightType === '1';
+      return this.editRecordClone?.weightType === "1";
     }
-    // #11987 2025.11.28 add スケールベッド スケールベッド設定判断 end
   },
   methods: {
     ...mapActions("master-maintenance", [
@@ -223,7 +207,7 @@ export default {
       "editRecordBeEmpty"
     ]),
     ...mapActions("send-condition/scale/audio", ["initAudio"]),
-    // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start
+    // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start   
     ...mapActions("mst-weight",["setIsChangedMstWeight"]),
     // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 end
     changeTab(ev, selectedId) {
@@ -254,44 +238,55 @@ export default {
         updateWidget();
       }
     },
-    // #11987 2025.11.28 add スケールベッド対応 スケールベッドマスタ変更イベント TDC渡辺 start
     clickScaleMstTab() {
-      const updateWidget = this.$refs.scaleBed.updateWidget;
+      const updateWidget = this.$refs.scaleBed?.updateWidget;
       if (updateWidget) {
         updateWidget();
       }
-    // #11987 2025.11.28 add スケールベッド対応 スケールベッドマスタ変更イベント TDC渡辺 end
     },
 
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       if (!this.getIsGridEditing) {
         const wh = this.windowHeight;
-        const hh = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .pop().offsetHeight;
+        const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
         const fmh =
           this.isDispMenu === 1
-            ? document.getElementById("footer-menu").offsetHeight
+            ? getFooterMenuClientHeight(this.$el || null)
             : 0;
         // main部の高さ設定(ウィンドウ高さ－ヘッダー高さ－メニューバー高さ)
         this.mainAreaHeight = wh - hh - fmh;
 
-        const gfh = document.getElementById("detail-footer").offsetHeight;
+        const gfh = getScopedElementById("detail-footer", this.$el || this).offsetHeight;
         // 体重計マスタmainコンテンツ高さ設定(親要素(main部)の高さ－確定/キャンセルボタンエリア高さ)
         this.$refs.mstWeightMainContentArea.style.height = `calc(100% - ${gfh}px)`;
       }
     },
+    syncChildEditRecords() {
+      // 確定ボタン押下時にフォーカスアウトしていない入力値もeditRecordへ反映する。
+      [
+        this.$refs.child,
+        this.$refs.chk,
+        this.$refs.print,
+        this.$refs.color,
+        this.$refs.audio,
+        this.$refs.scaleBed
+      ].forEach(ref => {
+        if (typeof ref?.syncEditRecord === "function") {
+          ref.syncEditRecord();
+        }
+      });
+    },
     // キャンセルボタン
     dispCancel() {
       //mod マスタ詳細画面がありません破棄メッセージ 张博 start
-      // del #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start
+      // del #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start     
       // const item1 = this.$refs["child"].passFather();
       // const item2 = this.$refs["audio"].passFather();
       // const item3 = this.$refs["color"].passFather();
       // const item4 = this.$refs["print"].passFather();
       // del #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 end
-      // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start
+      // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start   
       // if (item1||item2||item3||item4) {
       if (!this.whetherToEdit) {
       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 end
@@ -318,16 +313,16 @@ export default {
     },
     // 確定ボタン
     updSetting() {
+      // フォーカスアウト前の入力値も確定対象にする。
+      this.syncChildEditRecords();
       // 体重計設定情報登録
       const onRegistrationList = [
-        this.$refs.child.validateOnRegistration,
-        this.$refs.chk.validateOnRegistration,
-        this.$refs.print.validateOnRegistration,
-        this.$refs.color.validateOnRegistration,
-        this.$refs.audio.validateOnRegistration,
-        // #11987 2025.12.02 add スケールベッド対応 保存処理の追加 TDC渡辺 start
-        this.$refs.scaleBed.validateOnRegistration
-        // #11987 2025.12.02 add スケールベッド対応 保存処理の追加 TDC渡辺 end
+        this.$refs.child?.validateOnRegistration,
+        this.$refs.chk?.validateOnRegistration,
+        this.$refs.print?.validateOnRegistration,
+        this.$refs.color?.validateOnRegistration,
+        this.$refs.audio?.validateOnRegistration,
+        this.$refs.scaleBed?.validateOnRegistration
       ];
       for (const onRegistration of onRegistrationList) {
         if (onRegistration) {
@@ -335,7 +330,7 @@ export default {
           if (!validationResult) return;
         }
       }
-      
+
       const masterRecordList = this.getMasterRecordList;
 
       // state.editRecordを取得
@@ -386,7 +381,7 @@ export default {
           cloneTemp2[item] = cloneTemp2[item] ? JSON.parse(cloneTemp2[item]) : [];
         });
         this.whetherToEdit = isEqualWith(cloneTemp, cloneTemp2, customComparator);
-        // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start
+        // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start      
         this.setIsChangedMstWeight(this.whetherToEdit)
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 end
       },
@@ -402,11 +397,8 @@ export default {
       this.calculateGridHeight();
     });
     this.whetherToEdit = true;
-    // #11987 2025.12.02 add スケールベッド対応 スケールベッドマスター画面追加 TDC渡辺 start
     this.editRecordClone = cloneDeep(this.editRecord);
-    // #11987 2025.12.02 add スケールベッド対応 スケールベッドマスター画面追加 TDC渡辺 end
   },
-  destroyed() { }
 };
 </script>
 <style scoped>
@@ -459,9 +451,7 @@ input[name="tab_item"] {
 #check:checked ~ #check_content,
 #print:checked ~ #print_content,
 #color:checked ~ #color_content,
-/* #11987 2025.12.02 add スケールベッド対応 スケールベッドマスター画面追加 TDC渡辺 start */
 #scale_bed:checked ~ #scale_bed_content,
-/* #11987 2025.12.02 add スケールベッド対応 スケールベッドマスター画面追加 TDC渡辺 end */
 #guide:checked ~ #guide_content {
   display: block;
 }
@@ -509,7 +499,7 @@ input[name="tab_item"] {
   flex-basis: 80%;
 }
 
-.k-grid-toolbar {
+.kendo-grid-toolbar-style {
   padding: 0; /* ライブラリのスタイル打消し */
 }
 .kendo-grid-toolbar-style {

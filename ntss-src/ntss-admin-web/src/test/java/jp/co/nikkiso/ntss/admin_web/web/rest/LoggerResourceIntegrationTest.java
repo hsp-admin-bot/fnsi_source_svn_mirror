@@ -1,12 +1,12 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -15,7 +15,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -55,7 +55,7 @@ public class LoggerResourceIntegrationTest extends AbstractResourceIntegrationTe
     // 実行
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders
       .put("/api/logging/{logClass}/{logLevel}", strLogClass, strLogLevel)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .with(new RequestPostProcessor() {
         @Override
         public MockHttpServletRequest postProcessRequest(MockHttpServletRequest request) {
@@ -88,7 +88,7 @@ public class LoggerResourceIntegrationTest extends AbstractResourceIntegrationTe
     // 実行
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders
       .put("/api/logging/{logClass}/{logLevel}", strLogClass, strLogLevel)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .with(new RequestPostProcessor() {
         @Override
         public MockHttpServletRequest postProcessRequest(MockHttpServletRequest request) {
@@ -120,7 +120,7 @@ public class LoggerResourceIntegrationTest extends AbstractResourceIntegrationTe
     // 実行
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders
       .put("/api/logging/{logClass}/{logLevel}", strLogClass, null)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .with(new RequestPostProcessor() {
         @Override
         public MockHttpServletRequest postProcessRequest(MockHttpServletRequest request) {
@@ -151,7 +151,7 @@ public class LoggerResourceIntegrationTest extends AbstractResourceIntegrationTe
     // 実行
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders
       .put("/api/logging/{logClass}/{logLevel}", strLogClass, strLogLevel)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .with(new RequestPostProcessor() {
         @Override
         public MockHttpServletRequest postProcessRequest(MockHttpServletRequest request) {
@@ -182,7 +182,7 @@ public class LoggerResourceIntegrationTest extends AbstractResourceIntegrationTe
     // 実行
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders
       .put("/api/logging/{logClass}/{logLevel}", strLogClass, strLogLevel)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .with(new RequestPostProcessor() {
         @Override
         public MockHttpServletRequest postProcessRequest(MockHttpServletRequest request) {
@@ -214,7 +214,7 @@ public class LoggerResourceIntegrationTest extends AbstractResourceIntegrationTe
     // 実行
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders
       .put("/api/logging/{logClass}/{logLevel}", null, strLogLevel)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .with(new RequestPostProcessor() {
         @Override
         public MockHttpServletRequest postProcessRequest(MockHttpServletRequest request) {
@@ -245,7 +245,7 @@ public class LoggerResourceIntegrationTest extends AbstractResourceIntegrationTe
     // 実行
     ResultActions result = mockMvc.perform(RestDocumentationRequestBuilders
       .put("/api/logging/{logClass}/{logLevel}", strLogClass, strLogLevel)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .with(new RequestPostProcessor() {
         @Override
         public MockHttpServletRequest postProcessRequest(MockHttpServletRequest request) {

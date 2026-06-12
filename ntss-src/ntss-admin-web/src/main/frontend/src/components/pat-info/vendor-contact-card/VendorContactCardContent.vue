@@ -15,6 +15,10 @@
         :class="classObjectItem(json)"
       >
         <table class="card-table">
+          <tbody>
+          
+            <tr class="card-index-row">
+            <td colspan="3" class="item-data">
           {{
             index + 1
           }}
@@ -29,6 +33,8 @@
           </button>
           <br />
 <!--          add 編集権限の適用 liang start-->
+            </td>
+          </tr>
           <tr>
             <td class="item-title">会社名</td>
             <td colspan="2" class="item-data">
@@ -189,6 +195,9 @@
               />
             </td>
           </tr>
+          
+        
+          </tbody>
         </table>
       </div>
     </draggable>
@@ -199,8 +208,8 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import {mapActions, mapGetters} from "vuex";
-import { EventBus } from "@/eventBus.js";
+import {mapActions, mapGetters} from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
 // del #10359 編集権限の動作不正 dengshen start
 // import { FUNC_PAT_INFO, FUNC_PAT_INFO_CREATE } from "@/constants/function-code";
@@ -226,7 +235,8 @@ export default {
       // // add 編集権限の適用 liang end
       // del #10359 編集権限の動作不正 dengshen end
       mapUpdateTarget: null,
-      deleteIndexArr: []
+      deleteIndexArr: [],
+      selectPatInfoAddressEventName: null
     };
   },
   // add 編集権限の適用 liang start
@@ -272,28 +282,29 @@ export default {
   },
 
   created() {
-    const eventBusName = this.isCreationPat ? "selectPatInfoAddressVendorContactNew" : "selectPatInfoAddressVendorContactChange";
-    EventBus.$on(eventBusName, event => {
+    this.selectPatInfoAddressEventName = this.isCreationPat ? "selectPatInfoAddressVendorContactNew" : "selectPatInfoAddressVendorContactChange";
+    EventBus.$off(this.selectPatInfoAddressEventName, this.onSelectPatInfoAddress);
+    EventBus.$on(this.selectPatInfoAddressEventName, this.onSelectPatInfoAddress);
+  },
+  beforeUnmount() {
+    // mod #10789 新患登録画面を経由すると患者情報の住所が上書きできなくなる 本田 start
+    // EventBus.$off("selectPatInfoAddressVendorContact")
+    if (this.selectPatInfoAddressEventName) {
+      EventBus.$off(this.selectPatInfoAddressEventName, this.onSelectPatInfoAddress);
+    }
+    // mod #10789 新患登録画面を経由すると患者情報の住所が上書きできなくなる 本田 end
+  },
+
+  methods: {
+    ...mapActions("multi-modal", ["showAddressSearchModal"]),
+    onSelectPatInfoAddress(event) {
       if (!this.mapVisible) return;
 
       this.setPatDataJsonArray(this.mapUpdateTarget, "address", event.address);
       this.setPatDataJsonArray(this.mapUpdateTarget, "zip_cd", event.zipCd);
       this.mapVisible = false;
       this.mapUpdateTarget = null;
-    });
-  },
-  beforeDestroy() {
-    // mod #10789 新患登録画面を経由すると患者情報の住所が上書きできなくなる 本田 start
-    // EventBus.$off("selectPatInfoAddressVendorContact")
-    const eventBusName = this.isCreationPat ? "selectPatInfoAddressVendorContactNew" : "selectPatInfoAddressVendorContactChange";
-    EventBus.$off(eventBusName);
-    // mod #10789 新患登録画面を経由すると患者情報の住所が上書きできなくなる 本田 end
-    // dataの初期化
-    Object.assign(this.$data, this.$options.data());
-  },
-
-  methods: {
-    ...mapActions("multi-modal", ["showAddressSearchModal"]),
+    },
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
       return getAuthorized(pageCd, itemCd);
@@ -339,10 +350,13 @@ export default {
 <style src="../base-components/BaseCardStyle.css" scoped></style>
 <style scoped>
 /* カード個別のスタイルはここ */
+.card-table .card-index-row td {
+  padding: 0;
+}
 .zip-hyphen {
   font-size: 10px;
 }
-.card-table >>> textarea.custom-textarea {
+.card-table :deep(textarea.custom-textarea) {
   color: black !important;
 }
 .custom-textarea-edited {

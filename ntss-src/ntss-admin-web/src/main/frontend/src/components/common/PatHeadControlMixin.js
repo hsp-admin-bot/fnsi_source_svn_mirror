@@ -2,7 +2,7 @@
  * 患者ヘッダーに指定の患者をセットする用のMixin
  * mapMutations使わないもっといい方法がないか
  */
-import { mapActions } from "vuex";
+import { mapActions } from "@/compat/vue/vuex";
 
 export default {
   methods: {

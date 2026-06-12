@@ -3,11 +3,14 @@
  */
  <template>
   <modal-base @onClose="closeModal" class="custom-modal">
-    <div slot="header">
+        <template #header>
+<div>
       <component :is="header"></component>
     </div>
+    </template>
     <!-- 表 -->
-    <div slot="body" class="modal-content">
+        <template #body>
+<div class="modal-content">
       あなたの透析条件です。指示通りの透析を行ってください。<br>
       指示された材料が自宅に届きます。適切に使用してください。<br>
       <div class="disp-item-content-area">
@@ -138,20 +141,23 @@
         </v-ons-row>
       </div>
     </div>
+    </template>
     <!-- フッター -->
-    <div slot="footer" class="flex-container flex-container-footer">
+        <template #footer>
+<div class="flex-container flex-container-footer">
       <div class="denial-btn-area" style="background:none; margin-right: 1em;">
         <button class="button registration-btn" @click="closeModal">閉じる</button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { IND_COND_ID } from "@/constants/IndCondInfoConstants.js";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -367,7 +373,7 @@ export default {
     const funcGetPatHhdPattern = this.getPatHhdPattern();
 
     // 今日の日付(YYYYMMDD)
-    const today = moment().format("YYYYMMDD");
+    const today = dayjs().format("YYYYMMDD");
 
     // DBから治療情報などを取得
     const patId = this.selectedPatId;
@@ -398,7 +404,7 @@ export default {
           if (0 < sortedPatHhdPattern.length) {
             this.indCondInfo = JSON.parse(sortedPatHhdPattern[0].indCondInfo);
             this.indMediInfo = JSON.parse(sortedPatHhdPattern[0].indMediInfo);
-            this.signatureDate = moment(sortedPatHhdPattern[0].upDate, "YYYY-MM-DDTHH:mm:ss.SSSZ");
+            this.signatureDate = dayjs(sortedPatHhdPattern[0].upDate, "YYYY-MM-DDTHH:mm:ss.SSSZ");
           } else {
             this.indCondInfo = "";
             this.indMediInfo = "";
@@ -472,44 +478,30 @@ export default {
         // シングルニードル未使用
         if (0 === useSingleNeedle) {
           // 穿刺針(A): No9
-          let needleA = "";
           if (this.indCondInfo[IND_COND_ID.NEEDLE_A]) {
             const needleACd = this.indCondInfo[IND_COND_ID.NEEDLE_A].value;
-            if (null !== this.mstEquipmentInfo) {
-              if (null === needleACd || "" === needleACd) {
-                needleA = "";
-              } else {
-                const mstEquipmentNeedleA = this.mstEquipmentInfo.filter(
-                  obj => obj.equipmentCd === needleACd
-                );
-                if (0 < mstEquipmentNeedleA.length) {
-                  needleA = mstEquipmentNeedleA[0].equipmentName;
-                  this.needle = "(A)" + needleA;
-                } else {
-                  needleA = "";
-                }
+            if (null !== this.mstEquipmentInfo && null !== needleACd && "" !== needleACd) {
+              const mstEquipmentNeedleA = this.mstEquipmentInfo.filter(
+                obj => obj.equipmentCd === needleACd
+              );
+              if (0 < mstEquipmentNeedleA.length) {
+                const needleAName = mstEquipmentNeedleA[0].equipmentName;
+                this.needle = "(A)" + needleAName;
               }
             }
             this.getInstractorCd(this.indCondInfo[IND_COND_ID.NEEDLE_A].ind_user_id);
           }
 
           // 穿刺針(V): No10
-          let needleV = "";
           if (this.indCondInfo[IND_COND_ID.NEEDLE_V]) {
             const needleVCd = this.indCondInfo[IND_COND_ID.NEEDLE_V].value;
-            if (null !== this.mstEquipmentInfo) {
-              if (null === needleVCd || "" === needleVCd) {
-                needleV = "";
-              } else {
-                const mstEquipmentNeedleV = this.mstEquipmentInfo.filter(
-                  obj => obj.equipmentCd == needleVCd // mod #9973 value Number→文字列  shiyw
-                );
-                if (0 < mstEquipmentNeedleV.length) {
-                  needleV = mstEquipmentNeedleV[0].equipmentName;
-                  this.needle = this.needle + " (V)" + needleV;
-                } else {
-                  needleV = "";
-                }
+            if (null !== this.mstEquipmentInfo && null !== needleVCd && "" !== needleVCd) {
+              const mstEquipmentNeedleV = this.mstEquipmentInfo.filter(
+                obj => obj.equipmentCd == needleVCd // mod #9973 value Number→文字列  shiyw
+              );
+              if (0 < mstEquipmentNeedleV.length) {
+                const needleVName = mstEquipmentNeedleV[0].equipmentName;
+                this.needle = this.needle + " (V)" + needleVName;
               }
             }
             this.getInstractorCd(this.indCondInfo[IND_COND_ID.NEEDLE_V].ind_user_id);

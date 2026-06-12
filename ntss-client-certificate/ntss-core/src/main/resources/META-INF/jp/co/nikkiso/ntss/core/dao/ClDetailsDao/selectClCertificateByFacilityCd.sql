@@ -9,7 +9,7 @@ SELECT password_decrypt(password_cl) AS password_cl,
 FROM client_cer_detail
 WHERE facility_cd = /*facilityCd*/''
 and  is_delete ='0'
--- is_merge_issued='1' ¤Î¥ì¥³©`¥É¤Ï ntss-certificate-download ¤Î /user »­Ãæ£¨Ô^Ã÷•ø¥À¥¦¥ó¥í©`¥ÉÒ»ÓE£©¤Ç¤Ï·Ç±íÊ¾¤Ë¤¹¤ë¡£
--- ¥Ş©`¥¸°kĞĞÔ^Ã÷•ø¤Ï¥Ş©`¥¸ÍêÁË•r¤Ë¤½¤Îˆö¤Ç¥À¥¦¥ó¥í©`¥É¤¹¤ëÒ»»ØÏŞ¤ê¤Î™CÄÜ¤Î¤¿¤á¡¢¥À¥¦¥ó¥í©`¥ÉÒ»ÓE¤Ø¤Î±íÊ¾¤Ï²»Òª¡£
--- ¹ÜÀí¶Ë¤Î CLCertificateDetails »­Ãæ¤Ï„e¤Î SQL£¨selectAllCertificatesByFacilityCd£©¤òÊ¹ÓÃ¤¹¤ë¤¿¤áÓ°í‘¤Ê¤·¡£
+-- is_merge_issued='1' ã®ãƒ¬ã‚³ãƒ¼ãƒ‰ã¯ ntss-certificate-download ã® /user ç”»é¢ï¼ˆè¨¼æ˜æ›¸ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ä¸€è¦§ï¼‰ã§ã¯éè¡¨ç¤ºã«ã™ã‚‹ã€‚
+-- ãƒãƒ¼ã‚¸ç™ºè¡Œè¨¼æ˜æ›¸ã¯ãƒãƒ¼ã‚¸å®Œäº†æ™‚ã«ãã®å ´ã§ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ã™ã‚‹ä¸€å›é™ã‚Šã®æ©Ÿèƒ½ã®ãŸã‚ã€ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ä¸€è¦§ã¸ã®è¡¨ç¤ºã¯ä¸è¦ã€‚
+-- ç®¡ç†ç«¯ã® CLCertificateDetails ç”»é¢ã¯åˆ¥ã® SQLï¼ˆselectAllCertificatesByFacilityCdï¼‰ã‚’ä½¿ç”¨ã™ã‚‹ãŸã‚å½±éŸ¿ãªã—ã€‚
 and  (is_merge_issued IS NULL OR is_merge_issued != '1')

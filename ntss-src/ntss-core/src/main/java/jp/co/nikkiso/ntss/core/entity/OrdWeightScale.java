@@ -3,7 +3,12 @@ package jp.co.nikkiso.ntss.core.entity;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
-import org.seasar.doma.*;
+import org.seasar.doma.Entity;
+import org.seasar.doma.GeneratedValue;
+import org.seasar.doma.GenerationType;
+import org.seasar.doma.Id;
+import org.seasar.doma.SequenceGenerator;
+import org.seasar.doma.Table;
 import org.seasar.doma.jdbc.entity.NamingType;
 
 import jp.co.nikkiso.ntss.core.entity.entityListener.BaseEntityListener;

@@ -3,6 +3,7 @@ package jp.co.nikkiso.ntss.admin_web.service.observeRecord;
 import java.sql.Timestamp;
 import java.util.List;
 
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.core.entity.PatObsRec;
 import jp.co.nikkiso.ntss.core.entity.custom.OrdMainPatObsRecCombo;
 import jp.co.nikkiso.ntss.core.entity.custom.PatObsRecView;
@@ -68,7 +69,7 @@ public interface PatObsRecService {
    * @return
    */
   int insertRenew(PatObsRec param);
-  
+
   /**
    * 掲示板管理番号から取得する（resourceあり）
    * @param bbsCtlNo 掲示板管理番号
@@ -76,4 +77,8 @@ public interface PatObsRecService {
    */
   List<PatObsRec> getObsRecByBbsCtlNo(Long bbsCtlNo);
 
+
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  PatObsRec selectByObsRecNo(Long obsRecNo);
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 }

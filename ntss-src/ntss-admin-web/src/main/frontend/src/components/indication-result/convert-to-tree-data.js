@@ -123,7 +123,7 @@ export function convertToTreeDataPattern1(list) {
   const patViewList = list.filter(element => element.ordNo);
   // 患者経過総合ビューアデータがあるの場合
   if (patViewList) {
-    let ysTreeData = [];
+    let ysTreeData;
     ysTreeData = extractCategories(patViewList).map(eo => {
       return {
         title: eo.text,
@@ -138,7 +138,7 @@ export function convertToTreeDataPattern1(list) {
   const patList = list.filter(element => element.type == 'pat_event');
   // 患者イベント画面データがあるの場合
   if (patList) {
-    let patTreeData = [];
+    let patTreeData;
     patTreeData = Array.from(new Set(patList.map(eo => eo.type))).map(et => {
       return {
         title: '患者イベント',
@@ -160,7 +160,7 @@ export function convertToTreeDataPattern1(list) {
     // 時間の降順
     scheduleList.sort((frontValue, behindValue) =>
       behindValue.treatDate.replaceAll('/', '') - frontValue.treatDate.replaceAll('/', ''));
-    let schTreeData = [];
+    let schTreeData;
 
     schTreeData = Array.from(new Set(scheduleList.map(eo => eo.title = '検査'))).map(et => {
       return {
@@ -176,7 +176,7 @@ export function convertToTreeDataPattern1(list) {
   const photoScheduleList = list.filter(element => element.type == 'in_photo');
   // 一般撮影検査予定画面データがあるの場合
   if (photoScheduleList) {
-    let photoTreeData = [];
+    let photoTreeData;
 
     photoTreeData = Array.from(new Set(photoScheduleList.map(eo => eo.type))).map(et => {
       return {
@@ -192,7 +192,7 @@ export function convertToTreeDataPattern1(list) {
   const prescriptionList = list.filter(element => element.type == 'prescription');
   // 処方画面データがあるの場合
   if (prescriptionList) {
-    let prescriptionTreeData = [];
+    let prescriptionTreeData;
 
     prescriptionTreeData = Array.from(new Set(prescriptionList.map(eo => eo.type))).map(et => {
       return {
@@ -234,7 +234,7 @@ export function convertToTreeDataPattern2(list) {
   const patViewList = list.filter(element => element.ordNo);
   // 患者経過総合ビューアデータがあるの場合
   if (patViewList) {
-    let ysTreeList = [];
+    let ysTreeList;
 
     ysTreeList = extractCategories(patViewList).map(c => {
       return {
@@ -257,7 +257,7 @@ export function convertToTreeDataPattern2(list) {
   const patList = list.filter(element => element.type == 'pat_event');
   // 患者イベントデータがあるの場合
   if (patList) {
-    let patTreeList = [];
+    let patTreeList;
 
     patTreeList = Array.from(new Set(patList.map(eo => eo.title = '患者イベント'))).map(et => {
       return {
@@ -282,7 +282,7 @@ export function convertToTreeDataPattern2(list) {
   Array.prototype.push.apply(scheduleList, resultList);
   // 検査予定画面/検査結果画面データがあるの場合
   if (scheduleList) {
-    let schTreeData = [];
+    let schTreeData;
 
     schTreeData = Array.from(new Set(scheduleList.map(eo => eo.title = '検査'))).map(et => {
       return {
@@ -303,7 +303,7 @@ export function convertToTreeDataPattern2(list) {
   const photoScheduleList = list.filter(element => element.type == 'in_photo');
   // 一般撮影検査予定データがあるの場合
   if (photoScheduleList) {
-    let photoTreeData = [];
+    let photoTreeData;
 
     photoTreeData = Array.from(new Set(photoScheduleList.map(eo => eo.title = '一般撮影予定'))).map(et => {
       return {
@@ -324,7 +324,7 @@ export function convertToTreeDataPattern2(list) {
   const prescriptionList = list.filter(element => element.type == 'prescription');
   // 処方画面データがあるの場合
   if (prescriptionList) {
-    let prescriptionTreeData = [];
+    let prescriptionTreeData;
 
     prescriptionTreeData = Array.from(new Set(prescriptionList.map(eo => eo.title = '処方'))).map(et => {
       return {
@@ -371,7 +371,7 @@ export function convertToTreeDataPattern3(list) {
   const patViewList = list.filter(element => element.ordNo);
   // 患者経過総合ビューアデータがあるの場合
   if (patViewList) {
-    let ysTreeList = [];
+    let ysTreeList;
 
     ysTreeList = extractCategories(patViewList).map(c => {
       return {
@@ -394,7 +394,7 @@ export function convertToTreeDataPattern3(list) {
   const patList = list.filter(element => element.type == 'pat_event');
   // 患者イベントデータがあるの場合
   if (patList) {
-    let patTreeList = [];
+    let patTreeList;
 
     patTreeList = Array.from(new Set(patList.map(eo => eo.title = '患者イベント'))).map(et => {
       return {
@@ -424,7 +424,7 @@ export function convertToTreeDataPattern3(list) {
 
   // 検査予定/検査結果/一般撮影検査予定画面データがあるの場合
   if (scheduleList) {
-    let schTreeData = [];
+    let schTreeData;
 
     schTreeData = Array.from(new Set(scheduleList.map(eo => eo.title = '検査'))).map(et => {
       return {

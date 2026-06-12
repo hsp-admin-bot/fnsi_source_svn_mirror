@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.service.master.supportSetting;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.response.exceptionPeriod.ExceptionPeriodResponse;
 import jp.co.nikkiso.ntss.admin_web.service.exceptionPeriod.ExceptionPeriodService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
@@ -94,9 +94,11 @@ public class MstSupportSettingServiceImpl implements MstSupportSettingService {
    * {@inheritDoc}
    */
   @Override
-  public Map<String,Object> selectRange(String cd) {
-    return mstSupportDao.selectRange(cd);
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 start
+  public Map<String,Object> selectRange(String cd, String facilityCd) {
+    return mstSupportDao.selectRange(cd, facilityCd);
   }
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 end
 
   /**
    * {@inheritDoc}
@@ -548,4 +550,11 @@ public class MstSupportSettingServiceImpl implements MstSupportSettingService {
     return listExceptionPeriod;
   }
   /* add by zhouyingying  2023-02-02 [CodeOptimization] start */
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @Override
+    public MntMedicineSupport selectMntMedicineSupportByCd(String cd) {
+        return mstSupportDao.selectMntMedicineSupportByCd(cd);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
 }

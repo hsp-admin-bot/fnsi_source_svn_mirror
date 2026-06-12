@@ -31,16 +31,11 @@ export default {
     }
   },
   props: ["percent"],
-  methods: {},
-  watch: {},
-  beforeCreate() {},
-  created() {},
-  beforeMount() {},
-  mounted() {},
-  beforeUpdate() {},
-  updated() {},
-  beforeDestroy() { },
-  destroyed() { }
+
+
+
+
+
 };
 </script>
 
@@ -65,15 +60,15 @@ ons-progress-circular.graph {
   -webkit-transform: translateY(-50%) translateX(-50%);
   margin: auto;
 }
-* >>> .progress-circular__background {
+* :deep(.progress-circular__background) {
   stroke-width: 10%;
 }
 
-* >>> .progress-circular__secondary {
+* :deep(.progress-circular__secondary) {
   stroke-width: 10%;
 }
 
-* >>> .progress-circular__primary {
+* :deep(.progress-circular__primary) {
   stroke-width: 10%;
 }
 </style>

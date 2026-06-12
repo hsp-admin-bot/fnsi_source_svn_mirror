@@ -16,8 +16,10 @@ export default {
   components: {
     "com-radio": CommonRadio
   },
+  emits: ["update:modelValue"],
   props: {
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: SingleNeedle
     }
   },
@@ -30,12 +32,12 @@ export default {
     };
   },
   watch: {
-    value() {
-      this.inputModel = this.value;
+    modelValue() {
+      this.inputModel = this.modelValue;
     },
     inputModel: {
       handler: function(val) {
-        this.$emit("input", val);
+        this.$emit("update:modelValue", val);
       },
       deep: true
     }

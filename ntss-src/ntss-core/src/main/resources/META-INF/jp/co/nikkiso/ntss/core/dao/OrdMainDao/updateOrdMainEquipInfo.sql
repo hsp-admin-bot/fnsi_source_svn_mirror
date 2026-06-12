@@ -1,18 +1,120 @@
 WITH raw_data AS (
   SELECT
     elem ->> 'equip_type' AS equip_type
-    ,(elem ->>'cd')::int AS cd
-    ,elem - 'class_cd' - 'class_name' - 'class_type' - 'name' - 'short_name' - 'unit' - 'needle_type' AS elem
+    ,(elem ->>'cd')::numeric AS cd
+    ,elem - 'class_cd' - 'class_name' - 'class_type' - 'name' - 'short_name' - 'needle_type' AS elem
   FROM jsonb_array_elements(/*changeEquipInfo*/'[{"cd":93,"auto_insert":"0","upd_user_first_name":"KM","amount":"2","upd_user_id":12397,"ind_user_first_name":"KM","cop_order_no":null,"input_class":1,"is_editable":"1","upd_user_last_name":"Z","ind_user_id":12397,"ind_user_last_name":"Z","equip_type":0}]'::jsonb) AS t(elem)
 )
 ,base_ord AS (
   SELECT
     ord_no
+    ,pat_id
     ,ind_equip_info
     ,rst_equip_info
     ,rst_dialysis_state
   FROM ord_main
   WHERE ord_no in /*ordNoList*/(11346460)
+)
+,PAT_INFO AS (
+  SELECT
+    pat_main.pat_id,
+    elem ->> 'category_class' AS category_class,
+    elem ->> 'taboo_allergy_class' AS taboo_allergy_class,
+    (elem ->> 'taboo_allergy_cd')::int AS taboo_allergy_cd
+  FROM pat_main
+  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(pat_main.taboo_allergy_info, '[]'::jsonb)) elem
+  WHERE pat_main.pat_id IN (SELECT DISTINCT bo.pat_id FROM base_ord bo WHERE bo.pat_id IS NOT NULL)
+)
+,TABOO_ALLERGY AS (
+  SELECT
+    pd.pat_id,
+    elem ->> 'classCd' AS category_class,
+    pd.taboo_allergy_class,
+    (elem ->> 'cd')::int AS cd
+  FROM PAT_INFO pd
+  INNER JOIN mst_taboo_allergy mta
+    ON pd.taboo_allergy_cd = mta.taboo_allergy_cd
+    AND pd.category_class = '0'
+  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(mta.detail_info, '[]'::jsonb)) elem
+  WHERE elem ->> 'classCd' IN ('1', '2', '3', '4')
+)
+,TABOO_ALLERGY_TMP AS (
+  SELECT * FROM TABOO_ALLERGY
+  UNION
+  SELECT pat_id, category_class, taboo_allergy_class, taboo_allergy_cd AS cd
+  FROM PAT_INFO
+  WHERE category_class IN ('1', '2', '3', '4')
+)
+,TABOO_ALLERGY_data_pat AS (
+  SELECT
+    pat_id,
+    category_class,
+    cd,
+    BOOL_OR(taboo_allergy_class = '1') AS is_taboo,
+    BOOL_OR(taboo_allergy_class = '2') AS is_allergy
+  FROM TABOO_ALLERGY_TMP t
+  GROUP BY pat_id, category_class, cd
+)
+,mst_enriched AS (
+  SELECT
+    b.ord_no,
+    r.cd,
+    r.equip_type,
+    me.class_cd,
+    (
+      CASE
+        WHEN COALESCE(tat.is_taboo, false) AND COALESCE(tat.is_allergy, false) THEN '【禁忌・ｱﾚﾙｷﾞｰ】'
+        WHEN COALESCE(tat.is_taboo, false) THEN '【禁忌】'
+        WHEN COALESCE(tat.is_allergy, false) THEN '【ｱﾚﾙｷﾞｰ】'
+        ELSE ''
+      END
+    ) || me.equipment_name AS name,
+    me.equipment_short_name AS short_name,
+    me.unit,
+    mc.class_name,
+    mc.class_type
+  FROM raw_data r
+  INNER JOIN base_ord b ON TRUE
+  INNER JOIN mst_equipment me
+    ON r.cd = me.equipment_cd
+    AND r.equip_type = '0'
+    AND me.is_del = '0'
+  LEFT JOIN TABOO_ALLERGY_data_pat tat
+    ON tat.pat_id = b.pat_id
+    AND tat.category_class = '3'
+    AND tat.cd = me.equipment_cd
+  LEFT JOIN mst_equipment_class mc
+    ON me.class_cd IS NOT NULL
+    AND mc.class_cd = me.class_cd
+    AND mc.is_del = '0'
+  UNION ALL
+  SELECT
+    b.ord_no,
+    r.cd,
+    r.equip_type,
+    null AS class_cd,
+    (
+      CASE
+        WHEN COALESCE(tat.is_taboo, false) AND COALESCE(tat.is_allergy, false) THEN '【禁忌・ｱﾚﾙｷﾞｰ】'
+        WHEN COALESCE(tat.is_taboo, false) THEN '【禁忌】'
+        WHEN COALESCE(tat.is_allergy, false) THEN '【ｱﾚﾙｷﾞｰ】'
+        ELSE ''
+      END
+    ) || md.model_number AS name,
+    md.model_number AS short_name,
+    '本' AS unit,
+    null AS class_name,
+    null AS class_type
+  FROM raw_data r
+  INNER JOIN base_ord b ON TRUE
+  INNER JOIN mst_dialyzer md
+    ON r.cd = md.dialyzer_cd
+    AND r.equip_type = '1'
+    AND md.is_del = '0'
+  LEFT JOIN TABOO_ALLERGY_data_pat tat
+    ON tat.pat_id = b.pat_id
+    AND tat.category_class = '4'
+    AND tat.cd = md.dialyzer_cd
 )
 ,all_old AS (
   SELECT
@@ -74,43 +176,9 @@ WITH raw_data AS (
       END AS map
   FROM old_map om
 )
-,mst_data AS (
-  SELECT
-    r.cd,
-    r.equip_type,
-    me.class_cd,
-    me.equipment_name AS name,
-    me.equipment_short_name AS short_name,
-    me.unit,
-    mc.class_name,
-    mc.class_type
-  FROM raw_data r
-    JOIN mst_equipment me
-      ON r.cd = me.equipment_cd
-      AND r.equip_type = '0'
-      AND me.is_del = '0'
-    LEFT JOIN mst_equipment_class mc
-      ON me.class_cd IS NOT NULL
-      AND mc.class_cd = me.class_cd
-      AND mc.is_del = '0'
-  UNION ALL
-  SELECT
-    r.cd,
-    r.equip_type,
-    null AS class_cd,
-    md.model_number AS name,
-    md.model_number AS short_name,
-    '本' AS unit,
-    null AS class_name,
-    null AS class_type
-  FROM raw_data r
-    JOIN mst_dialyzer md
-      ON r.cd = md.dialyzer_cd
-      AND r.equip_type = '1'
-      AND md.is_del = '0'
-)
 ,raw_with_mst AS (
   SELECT
+    b.ord_no,
     r.*,
     m.class_cd,
     m.name,
@@ -118,8 +186,12 @@ WITH raw_data AS (
     m.unit,
     m.class_name,
     m.class_type
-  FROM raw_data r
-    LEFT JOIN mst_data m ON m.cd = r.cd and m.equip_type = r.equip_type
+  FROM base_ord b
+    CROSS JOIN raw_data r
+    LEFT JOIN mst_enriched m
+      ON m.ord_no = b.ord_no
+      AND m.cd = r.cd
+      AND m.equip_type = r.equip_type
 )
 ,old_amount AS (
   SELECT
@@ -165,16 +237,22 @@ WITH raw_data AS (
         END,
       '{no}',
       COALESCE(
-        NULLIF(
-          (om_no.map -> ((m.elem ->> 'cd') || '_' || (m.elem ->> 'equip_type'))) -> 'no',
-          'null'::jsonb
+        (
+          SELECT NULLIF(ov.value -> 'no', 'null'::jsonb)
+          FROM old_map oi
+            CROSS JOIN LATERAL jsonb_each(oi.map) AS ov(key, value)
+          WHERE oi.ord_no = b.ord_no
+            AND oi.src = src_pick.src
+            AND ov.key = (m.elem ->> 'cd') || '_' || (m.elem ->> 'equip_type')
+          LIMIT 1
         ),
         m.elem -> 'no',
         'null'::jsonb
       )
     ) AS final_elem
   FROM base_ord b
-    CROSS JOIN raw_with_mst m
+    JOIN raw_with_mst m
+      ON m.ord_no = b.ord_no
     LEFT JOIN old_amount oa on b.ord_no = oa.ord_no
     CROSS JOIN LATERAL (
       SELECT unnest(
@@ -230,9 +308,6 @@ WITH raw_data AS (
         END
       ) AS src
     ) AS src_pick(src)
-    LEFT JOIN old_map om_no
-      ON om_no.ord_no = b.ord_no
-      AND om_no.src = src_pick.src
 )
 ,new_map AS (
   SELECT
@@ -406,7 +481,7 @@ WITH raw_data AS (
   WHERE (
       /*dualType*/'del_add' = 'add'
       OR (
-        /*dualType*/'del_add' = 'upd'
+        /*dualType*/'del_add' IN ('upd', 'del_add')
         AND EXISTS (
           SELECT 1
           FROM jsonb_each(n.map) AS e(key, value)

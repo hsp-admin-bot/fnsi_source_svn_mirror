@@ -1,6 +1,21 @@
 /**
  * アプリケーション共通のstore
  */
+
+/** vue-onsenui グローバルダイアログ（v-ons-alert-dialog）用 Promise 完了コールバック */
+let pendingOnsAlert = null;
+let pendingOnsConfirm = null;
+
+function normalizeOnsButtonLabels(buttonLabels, fallbackLabels) {
+  if (typeof buttonLabels === "string") {
+    return [buttonLabels];
+  }
+  if (!Array.isArray(buttonLabels) || buttonLabels.length === 0) {
+    return fallbackLabels;
+  }
+  return buttonLabels.map(label => label != null ? String(label) : "");
+}
+
 export default {
   strict: true,
   namespaced: true,
@@ -17,11 +32,23 @@ export default {
     },
     queryParameters: {},
     functionCd: "",
-    //liyanze-z 施舍切替互換性がある obj
-    refreshKeyObj:{
-      status:false,
-      date:0
+    refreshKeyObj: {
+      status: false,
+      date: 0
     },
+    /** ルーター／API 等からの共通アラート・確認（vue-onsenui / v-ons-alert-dialog） */
+    onsDialog: {
+      visible: false,
+      mode: "alert",
+      title: "",
+      message: "",
+      messageHTML: "",
+      buttonLabels: ["OK"],
+      modifier: "",
+      dialogClass: "",
+      /** 確認ダイアログでマスク／バックキー等によるキャンセルを許可するか（false のときはボタンのみ） */
+      cancelable: false
+    }
   },
   mutations: {
     // store設定
@@ -54,10 +81,23 @@ export default {
     setFunctionCd(state, functionCd) {
       state.functionCd = functionCd;
     },
-    //liyanze-z 施舍切替互換性がある change
     refreshFunction(state, obj) {
       state.refreshKeyObj = obj;
     },
+    setOnsDialog(state, payload) {
+      state.onsDialog = { ...state.onsDialog, ...payload };
+    },
+    resetOnsDialog(state) {
+      state.onsDialog.visible = false;
+      state.onsDialog.mode = "alert";
+      state.onsDialog.title = "";
+      state.onsDialog.message = "";
+      state.onsDialog.messageHTML = "";
+      state.onsDialog.buttonLabels = ["OK"];
+      state.onsDialog.modifier = "";
+      state.onsDialog.dialogClass = "";
+      state.onsDialog.cancelable = false;
+    }
   },
   actions: {
     setState({ commit }, connectInfo) {
@@ -78,10 +118,93 @@ export default {
     setFunctionCd({ commit }, functionCd) {
       commit("setFunctionCd", functionCd);
     },
-    //liyanze-z 施舍切替互換性がある  actions
     refreshFunction({ commit }, obj) {
       commit("refreshFunction", obj);
     },
+    /**
+     * アラート表示（単一 OK）。完了時に Promise resolve
+     * @param {{ title?: string | null, message?: string | null, messageHTML?: string | null, buttonLabels?: unknown }} payload
+     */
+    showOnsAlert({ commit }, { title, message, messageHTML, buttonLabels, modifier, dialogClass }) {
+      return new Promise((resolve) => {
+        if (pendingOnsAlert) {
+          pendingOnsAlert();
+          pendingOnsAlert = null;
+        }
+        if (pendingOnsConfirm) {
+          pendingOnsConfirm(false);
+          pendingOnsConfirm = null;
+        }
+        pendingOnsAlert = resolve;
+        commit("setOnsDialog", {
+          visible: true,
+          mode: "alert",
+          title: title != null ? String(title) : "",
+          message: message != null ? String(message) : "",
+          messageHTML: messageHTML != null ? String(messageHTML) : "",
+          buttonLabels: normalizeOnsButtonLabels(buttonLabels, ["OK"]),
+          modifier: modifier != null ? String(modifier) : "",
+          dialogClass: dialogClass != null ? dialogClass : "",
+          cancelable: false
+        });
+      });
+    },
+    /**
+     * 確認ダイアログ（OK / キャンセル）。選択されたボタンの index を返す
+     * @param {{ title?: string | null, message?: string | null, messageHTML?: string | null, buttonLabels?: unknown, cancelable?: boolean }} payload
+     */
+    showOnsConfirm({ commit }, { title, message, messageHTML, buttonLabels, cancelable, modifier, dialogClass }) {
+      return new Promise((resolve) => {
+        if (pendingOnsAlert) {
+          pendingOnsAlert();
+          pendingOnsAlert = null;
+        }
+        if (pendingOnsConfirm) {
+          pendingOnsConfirm(false);
+          pendingOnsConfirm = null;
+        }
+        pendingOnsConfirm = resolve;
+        commit("setOnsDialog", {
+          visible: true,
+          mode: "confirm",
+          title: title != null ? String(title) : "",
+          message: message != null ? String(message) : "",
+          messageHTML: messageHTML != null ? String(messageHTML) : "",
+          // buttonLabels: normalizeOnsButtonLabels(buttonLabels, ["キャンセル", "OK"]),
+          buttonLabels: normalizeOnsButtonLabels(buttonLabels, ["Cancel", "OK"]),
+          modifier: modifier != null ? String(modifier) : "",
+          dialogClass: dialogClass != null ? dialogClass : "",
+          cancelable: cancelable === true
+        });
+      });
+    },
+    dismissOnsAlert({ commit }) {
+      if (!pendingOnsAlert) {
+        return;
+      }
+      commit("resetOnsDialog");
+      const resolve = pendingOnsAlert;
+      pendingOnsAlert = null;
+      resolve();
+    },
+    confirmOnsDialog({ commit }, answer = 1) {
+      if (!pendingOnsConfirm) {
+        return;
+      }
+      commit("resetOnsDialog");
+      const resolve = pendingOnsConfirm;
+      pendingOnsConfirm = null;
+      resolve(Number.isInteger(answer) ? answer : 1);
+    },
+    cancelOnsDialog({ commit }, answer = 0) {
+      if (!pendingOnsConfirm) {
+        return;
+      }
+      commit("resetOnsDialog");
+      const resolve = pendingOnsConfirm;
+      pendingOnsConfirm = null;
+      resolve(Number.isInteger(answer) ? answer : 0);
+    }
   },
   getters: {
     getProtocol(state) {
@@ -121,9 +244,11 @@ export default {
     getFunctionCd(state) {
       return state.functionCd;
     },
-    //liyanze-z 施舍切替互換性がある  getter
-    getRefresh(state){
+    getRefresh(state) {
       return state.refreshKeyObj;
+    },
+    getOnsDialog(state) {
+      return state.onsDialog;
     }
   }
 };

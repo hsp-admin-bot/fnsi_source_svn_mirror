@@ -9,7 +9,7 @@
           id="pat-group-name"
           name="pat-group-name"
           v-model.trim="editedPatGroup.patGroupName"
-          v-validate.immediate="'required'"
+          v-rules.immediate="'required'"
           autocomplete="off"
           @blur="delFocusCss($event)"
           @focus="addFocusCss($event)"
@@ -20,7 +20,7 @@
         <!--   id="pat-group-name" -->
         <!--   name="pat-group-name" -->
         <!--   v-model.trim="editedPatGroup.patGroupName" -->
-        <!--   v-validate.immediate="'required'" -->
+        <!--   v-rules.immediate="'required'" -->
         <!--   autocomplete="off" -->
         <!--   @blur="delFocusCss($event)" -->
         <!--   @focus="addFocusCss($event)" -->
@@ -31,7 +31,7 @@
           id="pat-group-name"
           name="pat-group-name"
           v-model.trim="editedPatGroup.patGroupName"
-          v-validate.immediate="'required'"
+          v-rules.immediate="'required'"
           autocomplete="off"
           @blur="delFocusCss($event)"
           @focus="addFocusCss($event)"
@@ -135,7 +135,7 @@
               "
             >
             <!-- mod コンソール繰返しkey値エラー end -->
-              {{ pat | format }}
+              {{ formatPatId(pat) }}
             </div>
             <div
               :class="[
@@ -148,7 +148,7 @@
               @click.shift.exact="rangeSelect('unselected', index)"
               style="width: 50%; border-bottom: 1px solid #dee2e6"
             >
-              {{ pat | formatRight }}
+              {{ formatPatName(pat) }}
               <img
                 v-if="pat.is_same === '1'"
                 class="same-icon"
@@ -266,13 +266,13 @@
               @click.exact="singleSelect('selected', index)"
               @click.shift.exact="rangeSelect('selected', index)"
             >
-              {{ pat | format }}
+              {{ formatPatId(pat) }}
             </div>
           </div>
         </div>
 
         <span class="error-message">
-          {{ errors.first("selected-pat-list") }}
+          {{ getValidationError("selected-pat-list") }}
         </span>
       </div>
       &lt;!&ndash; Selected pat list &ndash;&gt;
@@ -318,7 +318,7 @@
                     border-right: 1px solid #dee2e6;
                   "
                 >
-                  {{ pat | format }}
+                  {{ formatPatId(pat) }}
                 </div>
 
                 <div
@@ -332,7 +332,7 @@
                   @click.shift.exact="rangeSelect('selected', index)"
                   style="width: 50%; border-bottom: 1px solid #dee2e6"
                 >
-                  {{ pat | formatRight }}
+                  {{ formatPatName(pat) }}
                   <img
                     v-if="pat.is_same === '1'"
                     class="same-icon"
@@ -342,7 +342,7 @@
               </div>
             </div>
             <span class="error-message">
-              {{ errors.first("selected-pat-list") }}
+              {{ getValidationError("selected-pat-list") }}
             </span>
           </div> -->
           <div
@@ -368,7 +368,7 @@
               "
             >
             <!-- mod コンソール繰返しkey値エラー end -->
-              {{ pat | format }}
+              {{ formatPatId(pat) }}
             </div>
             <div
               :class="[
@@ -381,7 +381,7 @@
               @click.shift.exact="rangeSelect('selected', index)"
               style="width: 50%; border-bottom: 1px solid #dee2e6"
             >
-              {{ pat | formatRight }}
+              {{ formatPatName(pat) }}
               <img
                 v-if="pat.is_same === '1'"
                 class="same-icon"
@@ -467,13 +467,6 @@
       <!--      mod  FNSI-印刷対応 xie end -->
 
       <!--      mod  FNSI-権限 陳 start-->
-      <!--      <v-ons-button-->
-      <!--        class="nik-btn save"-->
-      <!--        @click="save"-->
-      <!--        :disabled="errors.count() > 0"-->
-      <!--      >保存</v-ons-button-->
-      <!--      >-->
-
       <!--      mod  FNSI-印刷対応 xie start-->
       <!--  <v-ons-button
         class="nik-btn save"
@@ -530,7 +523,7 @@
     <!-- / Loading -->
     <!-- add BUG修正 陳 start -->
     <message-dialog
-      :visible.sync="isDialogVisble"
+      v-model:visible="isDialogVisble"
       v-bind="dialogProps"
       type="1"
     />
@@ -538,7 +531,7 @@
     <!--add FNSI-改修内容患者グループ名を重複登録可の問題対応 任 start-->
     <message-dialog
       v-if="messageDialogInfo.isDialogVisible"
-      :visible.sync="messageDialogInfo.isDialogVisible"
+      v-model:visible="messageDialogInfo.isDialogVisible"
       :message-cd="messageDialogInfo.messageCd"
       :type="messageDialogInfo.type"
     />
@@ -550,7 +543,7 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import PatGroup from "@/apis/pat-group";
 // add  FNSI-権限 陳 start
@@ -562,7 +555,7 @@ import messageDialog from "@/components/common/message-dialog/MessageDialog.vue"
 // add  FNSI-権限 陳 end
 import CustomSimpleTextareaTypeB from "@/components/common/custom-form-tags/CustomSimpleTextareaTypeB";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add #9579 患者グループ編集で個人設定のソート条件が適応されていない 商 start
 import {PATIENT_SEARCH} from "@/constants/defaultSettingConstants";
 import {deepCopy} from "@/functions/common/CommonFunctions";
@@ -571,6 +564,10 @@ import {deepCopy} from "@/functions/common/CommonFunctions";
 import { FUNC_PAT_INFO, FUNC_PAT_INFO_CREATE } from "@/constants/function-code";
 // add #9820 利用者マスタの患者情報編集権限がOFFなのに患者経過総合ビューアで編集/保存ができてしまう 商 end
 import { messageFormat } from '@/functions/common/MessageFormat';
+import nameDuplicationImg from "../../assets/name_duplication.png";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { findAncestorWithMethod } from "@/functions/common/ComponentOwnerResolver";
+
 // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 start
 // del #9558 機能帳票で正しく変数が引き渡されていない 杜天成 start
 // import store from "@/stores";
@@ -605,7 +602,7 @@ export default {
       ],
       // add #9579 患者グループ編集で個人設定のソート条件が適応されていない 商 end
       /*add FNSI-改修内容患者groupbug 任 start*/
-      image_src_same: require("../../assets/name_duplication.png"),
+      image_src_same: nameDuplicationImg,
       /*add FNSI-改修内容患者groupbug 任 end*/
       isShowDetailSearch: false,
       isLoading: false,
@@ -655,7 +652,7 @@ export default {
     ...mapGetters("user", { facilityCd: "getFacilityCd" }),
     // mod #9579 患者グループ編集で個人設定のソート条件が適応されていない 商 start
     // mod 10389 患者リストのソートが遅い gjn start
-    ...mapGetters("pat-info", ["searchedPatListPatGroup","unselectedPatList","getSortPatInfo", "getSortPatInfo"]),
+    ...mapGetters("pat-info", ["searchedPatListPatGroup","unselectedPatList","getSortPatInfo", "getSortPatInfo", "selectedPatId"]),
     // mod 10389 患者リストのソートが遅い gjn end
     // mod #9579 患者グループ編集で個人設定のソート条件が適応されていない 商 end
     // mod #9820 利用者マスタの患者情報編集権限がOFFなのに患者経過総合ビューアで編集/保存ができてしまう 商 start
@@ -740,23 +737,13 @@ export default {
     },
     // add end 馬 #9578
   },
-  filters: {
-    /*mod FNSI-改修内容移動前と移動後の様式修正、行を単位で選択。 任 start*/
-    /*format({ hosp_pat_id, pat_last_name, pat_first_name }) {
-      return `ID:${hosp_pat_id}|${pat_last_name} ${pat_first_name}`;
-    }*/
-    format({ hosp_pat_id }) {
+  methods: {
+    formatPatId({ hosp_pat_id }) {
       return `${hosp_pat_id}`;
     },
-    formatRight({ pat_last_name, pat_first_name }) {
-      //mod 9251 nullを空文字列判定に変換します 張博 start
-      return `${pat_last_name == null ? "" : pat_last_name}
-      ${pat_first_name ==null ? "" : pat_first_name}`;
-      //mod 9251 nullを空文字列判定に変換します 張博 end
+    formatPatName({ pat_last_name, pat_first_name }) {
+      return `${pat_last_name == null ? "" : pat_last_name} ${pat_first_name == null ? "" : pat_first_name}`;
     },
-    /*mod FNSI-改修内容移動前と移動後の様式修正、行を単位で選択。 任 end*/
-  },
-  methods: {
     ...mapActions("multi-modal", ["showDetailedSearchModalo"]),
     // add #9579 患者グループ編集で個人設定のソート条件が適応されていない 商 start
     ...mapActions("pat-info", ["sortPatList","setUnselectedPatListForGroup"]),
@@ -820,8 +807,10 @@ export default {
     // 患者グループ名の初期化
     initPatGroupName() {
       // 背景色の初期化
-      const objPatGroupName = document.getElementById("pat-group-name");
-      objPatGroupName.style.background = "#ffff99";
+      const objPatGroupName = this.getPatGroupNameInput();
+      if (objPatGroupName) {
+        objPatGroupName.style.background = "#ffff99";
+      }
     },
     getPatGroup() {
       /*mod FNSI-改修内容画面が正常表示できないとメッセージ不正修正 任 start*/
@@ -841,8 +830,7 @@ export default {
               hosp_pat_id: patHospId,
               pat_last_name: patLastName,
               pat_first_name: patFirstName
-            })
-          );*/
+            }));*/
           const selectedPatList = data.patGroupDetail.map(
             ({ patId, patHospId, patLastName, patFirstName, inOutClass }) => ({
               pat_id: patId,
@@ -904,8 +892,10 @@ export default {
     searchPatSimple() {
       this.handleEventBlur = true;
       this.startLoading("患者検索中");
-      return ApiHelper.post("/patInfo/getSimpleSearchResult", {
+      return ApiHelper.configPost("/patInfo/getSimpleSearchResult", {
         facilityCdList: [this.facilityCd],
+      }, {
+        params: { selectedPatId: this.selectedPatId }
       })
         .then(({ data }) => this.normalizePatData(data))
         // modify #9578 start
@@ -1114,19 +1104,20 @@ export default {
           }
         });
     },
-    save() {
+    async save() {
       // add BUG修正 陳 start
-      // 開始日の必須入力スタイル
-      if (this.errors.count() > 0) {
-        document.getElementById("pat-group-name").style.background =
-          "rgba(255, 0, 0, 0.5)";
+      // 患者グループ名の必須入力スタイル
+      const patGroupNameInput = this.getPatGroupNameInput();
+      const isPatGroupNameValid = await this.validateField("pat-group-name");
+
+      if (patGroupNameInput) {
+        patGroupNameInput.style.background = isPatGroupNameValid
+          ? "#ffff99"
+          : "rgba(255, 0, 0, 0.5)";
       }
-      if (this.errors.count() == 0) {
-        document.getElementById("pat-group-name").style.background = "#ffff99";
-      }
-      if (this.errors.count() > 0) {
-        // 未入力項目あり
-        let firstEmptyFormName = "患者グループ名";
+
+      if (!isPatGroupNameValid) {
+        const firstEmptyFormName = "患者グループ名";
         this.showDialog({
           messageCd: 22010001,
           title: DIALOG_MESSAGES[22010001].title,
@@ -1276,8 +1267,7 @@ export default {
           hosp_pat_id,
           pat_last_name,
           pat_first_name
-        })
-      );*/
+        }));*/
       return data.map(
         ({
           pat_id,
@@ -1333,9 +1323,15 @@ export default {
           var param = { patGroup: null }
           gsp.push(param);
           // 患者グループ画面左側の患者リストを順に更新
-          await this.sortPatList(gsp);
+          await this.sortPatList({
+            sortConditions: gsp,
+            selectedPatId: this.selectedPatId
+          });
           // 患者グループ画面右側の患者リストを順に更新
-          await this.sortPatListRight(gsp);
+          await this.sortPatListRight({
+            sortConditions: gsp,
+            selectedPatId: this.selectedPatId
+          });
         }
         // mod 10389 患者リストのソートが遅い gjn end
         // add #9579 患者グループ編集で個人設定のソート条件が適応されていない 商 end
@@ -1390,12 +1386,12 @@ export default {
     /* del FNSI-改修内容患者グループ名を入力たけ、グループ保存できるように修正 王 start */
     /*checkSelectedPatListError() {
       if (this.editedPatGroup.selectedPatList.length === 0) {
-        this.$validator.errors.add({
+        this.pushValidationError({
           field: "selected-pat-list",
           msg: "患者が一人以上ご選択ください。"
         });
       } else {
-        this.$validator.errors.remove("selected-pat-list");
+        this.removeValidationErrorById("selected-pat-list");
       }
     },*/
     /* del FNSI-改修内容患者グループ名を入力たけ、グループ保存できるように修正 王 end */
@@ -1432,8 +1428,10 @@ export default {
       this.isLoading = false;
       this.loadingMessage = "";
       // 背景色の初期化
-      const objPatGroupName = document.getElementById("pat-group-name");
-      objPatGroupName.style.background = "#ffff99";
+      const objPatGroupName = this.getPatGroupNameInput();
+      if (objPatGroupName) {
+        objPatGroupName.style.background = "#ffff99";
+      }
     },
     clone(data) {
       return JSON.parse(JSON.stringify(data));
@@ -1483,11 +1481,18 @@ export default {
     clearCondition() {
       EventBus.$emit("clearCondition")
     },
+    getPatGroupNameInput() {
+      return getScopedElementById("pat-group-name", this.$el || null);
+    },
+    resolvePatGroupOwner() {
+      return findAncestorWithMethod(this, ["isContentChanged"], { maxDepth: 12 });
+    },
     // #9271 パンくずを押しても内容の最新データの表示がされない。 linjunfeng start
     refresh(flag = false) {
       // 引数がtrueの場合処理を行う
       if(flag){
-        if (this.$parent.$parent.isContentChanged()) {
+        const patGroupOwner = this.resolvePatGroupOwner();
+        if (patGroupOwner?.isContentChanged?.()) {
           this.$ons.notification.confirm({
             title: DIALOG_MESSAGES[13000004].title,
             message: messageFormat(DIALOG_MESSAGES[13000004].message),
@@ -1522,7 +1527,7 @@ export default {
     //   this.isPatEditAuthorized = this.getStateUserAccountInfo.userSettings.authorized_authorities.includes(AUTHORITY_CODES.PAT_EDIT);
     //   this.editFlag = !(this.isPatViewAuthorized && this.isPatEditAuthorized);
     // }
-    if ( this.isCreationPat ) {
+    if ( this.isCreationPat) {
       this.editFlag = !this.getUseFunctions.includes(FUNC_PAT_INFO_CREATE);
     } else {
       this.editFlag = !this.getUseFunctions.includes(FUNC_PAT_INFO);
@@ -1537,7 +1542,7 @@ export default {
     // del #10359 編集権限の動作不正 dengshen end
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     this.clearState();
     // #9271 パンくずを押しても内容の最新データの表示がされない。 linjunfeng start
     EventBus.$off('refresh', this.refresh);
@@ -1561,7 +1566,7 @@ label {
   margin-right: 0.4em;
   white-space: nowrap;
 }
-ons-input >>> input {
+ons-input :deep(input) {
   color: var(--ntss-list-body-color);
   background-color: var(--ntss-list-background-color);
 }
@@ -1727,5 +1732,18 @@ textarea.custom-input-color {
   display: flex;
   align-items: center;
   justify-content: space-around;
+}
+
+
+
+.k-button[disabled]{
+  outline: none;
+  cursor: default;
+  opacity: .65;
+  -webkit-filter: grayscale(.1);
+  filter: grayscale(.1);
+  pointer-events: none;
+  -webkit-box-shadow: none;
+  box-shadow: none;
 }
 </style>

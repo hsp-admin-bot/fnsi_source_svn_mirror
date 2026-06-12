@@ -21,11 +21,11 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
-      :class="fontSizeSet"
+      :class="[fontSizeSet, 'external-coop-header-popover']"
       @preshow="popoverPreShow"
       @postshow="popoverPostShow($event); addLineStyle($event)"
       @posthide="popoverPosthide"
@@ -54,8 +54,9 @@
           <v-ons-col width="16%" vertical-align="center" style="min-width: 6em;">
             <label>電文種別</label>
           </v-ons-col>
-          <v-ons-col vertical-align="center" class="coop-cd-select">
+          <v-ons-col vertical-align="center" class="external-coop-filter-ms external-coop-ms-dropdown coop-cd-select external-coop-coopcd-ms">
             <kendo-multiselect
+              class="browser-default-font"
               :data-source="coopCdsList"
               v-model="condition.inProgress.coopCd"
               data-text-field="text"
@@ -90,8 +91,9 @@
           <v-ons-col width="16%" vertical-align="center" style="min-width: 6em;">
             <label>処理結果</label>
           </v-ons-col>
-          <v-ons-col vertical-align="center">
+          <v-ons-col vertical-align="center" class="external-coop-filter-ms external-coop-ms-dropdown">
             <kendo-multiselect
+              class="browser-default-font"
               :data-source="anaResultList"
               v-model="condition.inProgress.anaResult"
               data-text-field="text"
@@ -107,8 +109,9 @@
           <v-ons-col width="16%" vertical-align="center" style="min-width: 6em;">
             <label>通信結果</label>
           </v-ons-col>
-          <v-ons-col vertical-align="center">
+          <v-ons-col vertical-align="center" class="browser-default-font external-coop-filter-ms external-coop-ms-dropdown">
             <kendo-multiselect
+              class="browser-default-font"
               :data-source="coopResultList"
               v-model="condition.inProgress.coopResult"
               data-text-field="text"
@@ -168,7 +171,6 @@
             <!-- #9489 検索条件の動作が不正 2023-08-30 卓 end -->
             <!-- #5590 2023/04/18 ×を常に表示するように修正 張博 start -->
             <time-input
-              class="ntss-input-date input-area ntss-custom-input"
               float
               style="width: auto;"
               v-model="condition.inProgress.date.to.time"
@@ -334,9 +336,9 @@
 </template>
 
 <script>
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
-import { mapGetters, mapActions, mapMutations } from "vuex";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 import { facilitySort as getFacility } from "@/functions/mst/MstGetters.js";
 import { deepCopy, hasEqualValues } from "@/functions/common/CommonFunctions";
 // modify 9583 by kangjie 20240403 start 通知一覧の連携エラー通知の遷移不正
@@ -352,6 +354,8 @@ import DateInput from "@/components/common/DateInput.vue";
 import TimeInput from "@/components/common/TimeInput.vue";
 // #5590 2023/04/18 ×を常に表示するように修正 張博 end
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
+import { getOnsPopoverElement } from "@/functions/common/OnsenFunctions";
+import { getKendoWidgetValue, setKendoWidgetValue } from "@/functions/common/KendoFunctions";
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 export default {
@@ -416,6 +420,9 @@ export default {
     coopResultList() { return COOP_RESULT_LIST; },
   },
   methods: {
+    getDropdownWidget() {
+      return this.$refs.dropdown?.kendoWidget?.() || null;
+    },
     ...mapActions("loading-screen", [
       "setLoadingScreenVisible",
       "setLoadingScreenMessage",
@@ -446,7 +453,7 @@ export default {
     initCondition() {
       const jumpChangeCoopState = this.getJumpChangeCoopState;
       let defaultCondition = null;
-      if (jumpChangeCoopState.baseDate || jumpChangeCoopState.ctlNo || jumpChangeCoopState.ordNo || jumpChangeCoopState.coopCd ){
+      if (jumpChangeCoopState.baseDate || jumpChangeCoopState.ctlNo || jumpChangeCoopState.ordNo || jumpChangeCoopState.coopCd){
         defaultCondition = {
           limit: 100,
           coopCd: [jumpChangeCoopState.coopCd],
@@ -529,10 +536,10 @@ export default {
       const startTime = fromTime ? fromTime : "00:00";
       const endTime = toTime ? toTime : "23:59";
       const startDateTime = fromDate
-        ? `${moment(fromDate).format("YYYY/MM/DD")} ${startTime}`
+        ? `${dayjs(fromDate).format("YYYY/MM/DD")} ${startTime}`
         : null;
       const endDateTime = toDate
-        ? `${moment(toDate).format("YYYY/MM/DD")} ${endTime}`
+        ? `${dayjs(toDate).format("YYYY/MM/DD")} ${endTime}`
         : null;
 
       return {
@@ -629,6 +636,9 @@ export default {
       this.popoverTarget = event;
       this.popoverVisible = true;
     },
+    onHasChangesUpdated(value) {
+      this.hasChangesFromMain = value;
+    },
     dialogClear() {
       this.condition.inProgress = makeDefaultCondition();
     },
@@ -669,16 +679,16 @@ export default {
         if (!ok) {
           this.toFacilityCd = this.previousFacilityCd;
           this.$nextTick(() => {
-            const widget = this.$refs.dropdown.kendoWidget();
+            const widget = this.getDropdownWidget();
             if (widget) {
-              widget.value(this.previousFacilityCd);
+              setKendoWidgetValue(widget, this.previousFacilityCd);
             }
           });
           return;
         }
       }
       // add NKK権限のユーザーでログインして、【連携】画面、施設プルダウン変換する時、施設コードはログインユーザーの施設コードで変わらない xugj zhaoqi start
-      let fac = event.sender._old;
+      let fac = getKendoWidgetValue(event.sender, event.sender?._old);
       this.toFacilityCd = fac;
       this.previousFacilityCd = fac;
       // add NKK権限のユーザーでログインして、【連携】画面、施設プルダウン変換する時、施設コードはログインユーザーの施設コードで変わらない xugj zhaoqi end
@@ -704,10 +714,11 @@ export default {
     async callSearch() {
       this.setLoadingScreenMessage("処理中・・・");
       this.setLoadingScreenVisible(true);
+      try {
 
       const inUsed = this.condition.inUsed;
       const toDateTimeParameter = (dateTime, defaultTime) => dateTime.date
-        ? `${moment(dateTime.date).format("YYYY/MM/DD")} ${dateTime.time ? dateTime.time : defaultTime}`
+        ? `${dayjs(dateTime.date).format("YYYY/MM/DD")} ${dateTime.time ? dateTime.time : defaultTime}`
         : null;
       const formatDateTime = (fromToDateTime) => ({
         startDateTime: toDateTimeParameter(fromToDateTime.from, "00:00"),
@@ -767,9 +778,11 @@ export default {
       this.setToFacilityCd(this.toFacilityCd);
       await this.searchExternalCoopList(payload);
       this.checkCloudInfo(this.getExternalCoopList);
-      EventBus.$emit("generateDataSource");
+      await EventBus.$emit("generateDataSource");
 
+      } finally {
       this.setLoadingScreenVisible(false);
+      }
     },
     checkCloudInfo(list) {
       let pendingCase = 0;
@@ -856,42 +869,42 @@ export default {
       //#9489 検索条件の動作が不正 2023-08-30 卓 start
       // 处理期间
       if (inUsed.date.from.date == null && inUsed.date.from.time != null) {
-        inUsed.date.from.date = moment(new Date()).format("YYYY/MM/DD");
+        inUsed.date.from.date = dayjs(new Date()).format("YYYY/MM/DD");
       }
       if (inUsed.date.to.date == null && inUsed.date.to.time != null) {
-        inUsed.date.to.date = moment(new Date()).format("YYYY/MM/DD");
+        inUsed.date.to.date = dayjs(new Date()).format("YYYY/MM/DD");
       }
       if (inUsed.date.from.date != null && inUsed.date.from.time == null) {
-        inUsed.date.from.time = moment().startOf('day').format("HH:mm");
+        inUsed.date.from.time = dayjs().startOf('day').format("HH:mm");
       }
       if (inUsed.date.to.date != null && inUsed.date.to.time == null) {
-        inUsed.date.to.time = moment().endOf('day').format("HH:mm");
+        inUsed.date.to.time = dayjs().endOf('day').format("HH:mm");
       }
       // 通信期間
       if (inUsed.regDate.from.date == null && inUsed.regDate.from.time != null) {
-        inUsed.regDate.from.date = moment(new Date()).format("YYYY/MM/DD");
+        inUsed.regDate.from.date = dayjs(new Date()).format("YYYY/MM/DD");
       }
       if (inUsed.regDate.to.date == null && inUsed.regDate.to.time != null) {
-        inUsed.regDate.to.date = moment(new Date()).format("YYYY/MM/DD");
+        inUsed.regDate.to.date = dayjs(new Date()).format("YYYY/MM/DD");
       }
       if (inUsed.regDate.from.date != null && inUsed.regDate.from.time == null) {
-        inUsed.regDate.from.time = moment().startOf('day').format("HH:mm");
+        inUsed.regDate.from.time = dayjs().startOf('day').format("HH:mm");
       }
       if (inUsed.regDate.to.date != null && inUsed.regDate.to.time == null) {
-        inUsed.regDate.to.time = moment().endOf('day').format("HH:mm");
+        inUsed.regDate.to.time = dayjs().endOf('day').format("HH:mm");
       }
       // 基準日
       if (inUsed.baseDate.from.date == null && inUsed.baseDate.from.time != null) {
-        inUsed.baseDate.from.date = moment(new Date()).format("YYYY/MM/DD");
+        inUsed.baseDate.from.date = dayjs(new Date()).format("YYYY/MM/DD");
       }
       if (inUsed.baseDate.to.date == null && inUsed.baseDate.to.time != null) {
-        inUsed.baseDate.to.date = moment(new Date()).format("YYYY/MM/DD");
+        inUsed.baseDate.to.date = dayjs(new Date()).format("YYYY/MM/DD");
       }
       if (inUsed.baseDate.from.date != null && inUsed.baseDate.from.time == null) {
-        inUsed.baseDate.from.time = moment().startOf('day').format("HH:mm");
+        inUsed.baseDate.from.time = dayjs().startOf('day').format("HH:mm");
       }
       if (inUsed.baseDate.to.date != null && inUsed.baseDate.to.time == null) {
-        inUsed.baseDate.to.time = moment().endOf('day').format("HH:mm");
+        inUsed.baseDate.to.time = dayjs().endOf('day').format("HH:mm");
       }
       //#9489 検索条件の動作が不正 2023-08-30 卓 end
 
@@ -946,14 +959,15 @@ export default {
 
     //「～」の右寄せスタイル適用
     addLineStyle(event) {
-      const lineObj = event.popover.getElementsByClassName("date-line-chk");
+      const popover = getOnsPopoverElement(event?.popover || event?.target);
+      const lineObj = popover?.getElementsByClassName?.("date-line-chk") || [];
       if (lineObj.length > 1) {
         let objStyle = "";
         if (lineObj[0].offsetTop < lineObj[1].offsetTop) {
           // 折り返しが発生している為、右寄せを解除する
           objStyle = "unset";
         }
-        const tildeObj = event.popover.getElementsByClassName("tilde-text");
+        const tildeObj = popover?.getElementsByClassName?.("tilde-text") || [];
         for (const obj of tildeObj) {
           obj.style.textAlign = objStyle;
         }
@@ -968,8 +982,8 @@ export default {
     EventBus.$off("callSearch", this.callSearch);
     // add 性能改善メモリ不足 shan end
     EventBus.$on("callSearch", this.callSearch);
-    EventBus.$off("hasChangesUpdated");
-    EventBus.$on("hasChangesUpdated", (value) => this.hasChangesFromMain = value);
+    EventBus.$off("hasChangesUpdated", this.onHasChangesUpdated);
+    EventBus.$on("hasChangesUpdated", this.onHasChangesUpdated);
 
     this.setInitCondition();
   },
@@ -993,14 +1007,14 @@ export default {
     this.setLoadingScreenVisible(false);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     // add 9583 by kangjie 20240403 start 通知一覧の連携エラー通知の遷移不正
     this.clearJumpCoopCondition();
     // add 9583 by kangjie 20240403 end 通知一覧の連携エラー通知の遷移不正
     EventBus.$off("callSearch", this.callSearch);
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
-    EventBus.$off("hasChangesUpdated");
+    EventBus.$off("hasChangesUpdated", this.onHasChangesUpdated);
   }
   // add 性能改善メモリ不足 shan end
   // add 9583 by kangjie 20240411 start cache update ,reflush page
@@ -1019,22 +1033,33 @@ export default {
 
 <style scoped>
 .condition-search-col {
-  flex: 0 0 50%
+  flex: 0 0 50%;
 }
 .facility-picker-col {
-  flex: 0 0 40%
+  flex: 0 0 40%;
 }
-.facility-picker-col >>> .facility-picker {
+.facility-picker-col :deep(.facility-picker) {
   border-radius: 10px;
   width: 100%;
   height:calc(100% - 8px);
   margin: 4px 10px;
   font-size: 1.5em;
 }
-.facility-picker-col >>> .k-dropdown-wrap {
+.facility-picker-col :deep(.k-dropdown-wrap) {
   align-items: center;
 }
-.backgroud-white >>> .k-dropdown-wrap {
+
+.facility-picker-col :deep(.k-picker),
+.facility-picker-col :deep(.k-input-inner) {
+  align-items: center;
+}
+.backgroud-white :deep(.k-dropdown-wrap) {
+  border-color: white;
+  background-color: white;
+}
+
+.backgroud-white :deep(.k-picker),
+.backgroud-white :deep(.k-input-inner) {
   border-color: white;
   background-color: white;
 }
@@ -1073,19 +1098,158 @@ export default {
 .m-t {
   margin-top: 2px;
 }
-ons-popover >>> .popover--top {
+ons-popover :deep(.popover--top) {
   max-width: 550px;
   width: 97%;
 }
-ons-popover >>> .date-time {
+
+.external-coop-header-popover :deep(.popover--top) {
+  max-width: 550px;
+  width: 97%;
+}
+ons-popover :deep(.date-time) {
   margin-bottom: 5px;
 }
-.coop-cd-select >>> .k-multiselect-wrap {
+
+.external-coop-header-popover :deep(.date-time) {
+  margin-bottom: 5px;
+}
+/* browser-default-font は select のみに限定（col 直下の * に当てるとタグ表示まで変わる） */
+.external-coop-header-popover :deep(select.browser-default-font) {
+  font-family: "Helvetica Neue", Helvetica, Arial, "Yu Gothic UI", Osaka, Meiryo, "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif !important;
+}
+:global(.ntss-kendo-popup-owner-browser-default-font .k-list-item),
+:global(.ntss-kendo-popup-owner-browser-default-font .k-list-item .k-list-item-text) {
+  font-family: "Helvetica Neue", Helvetica, Arial, "Yu Gothic UI", Osaka, Meiryo, "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif !important;
+}
+
+.coop-cd-select :deep(.k-multiselect-wrap) {
   max-height: 114px;
   overflow-y: auto;
 }
-ons-input >>> .text-input,
-ons-select >>> .select-input {
+
+.coop-cd-select :deep(.k-input-values.k-multiselect-wrap),
+.coop-cd-select :deep(.k-input-values) {
+  max-height: 114px;
+  overflow-y: auto;
+}
+
+/* 連携検索ポップ内 MultiSelect: 入力枠は白（選んだ後に表示されるタグの字体は触らない） */
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-legacy-multiselect.k-multiselect),
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-widget.k-multiselect.k-legacy-multiselect) {
+  background-color: #fff !important;
+  min-height: 0 !important;
+}
+
+/* 検索ポップ内 MultiSelect: theme.css の :before 空行占位を抑え、chip/input を同一 flex 流で折り返す */
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-legacy-multiselect > .k-input-values.k-multiselect-wrap::before) {
+  content: none !important;
+  display: none !important;
+  height: 0 !important;
+  float: none !important;
+}
+
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-input-values.k-multiselect-wrap) {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  align-content: flex-start !important;
+  gap: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-chip-list.k-reset),
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-selection-multiple.k-reset),
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-multiselect-wrap > ul.k-reset) {
+  display: contents !important;
+}
+
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-chip.k-button),
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-multiselect-wrap > ul.k-reset > li.k-button) {
+  flex: 0 0 auto !important;
+}
+
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-input-inner.k-input),
+.external-coop-header-popover .external-coop-filter-ms :deep(input.k-input) {
+  flex: 0 1 20px !important;
+  width: auto !important;
+  min-width: 20px !important;
+  max-width: 100% !important;
+}
+
+/* 連携検索ポップ内の全 MultiSelect：値（タグ）内の×は常に表示（電文種別含む） */
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-chip-remove-action.k-select),
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-multiselect-wrap > ul.k-reset > li.k-button > .k-select) {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(4px);
+}
+
+/* preshow 中（.popover が visibility:hidden）× だけ先に見えるのを防ぐ */
+.external-coop-header-popover :deep(.popover[style*="visibility: hidden"] .external-coop-filter-ms .k-clear-value),
+.external-coop-header-popover :deep(.popover[style*="visibility: hidden"] .external-coop-filter-ms .k-chip-remove-action) {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-chip-remove-action .k-icon::before),
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-chip-remove-action .k-svg-icon::before),
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-multiselect-wrap > ul.k-reset > li.k-button > .k-select > .k-icon::before) {
+  font-size: 22px !important;
+  font-weight: normal !important;
+  line-height: 1 !important;
+}
+
+/* 右端一括クリア（.k-clear-value）：処理結果・通信結果はホバー/フォーカス時のみ表示 */
+.external-coop-header-popover .external-coop-filter-ms:not(.external-coop-coopcd-ms) :deep(.k-legacy-multiselect .k-clear-value),
+.external-coop-header-popover .external-coop-filter-ms:not(.external-coop-coopcd-ms) :deep(.k-widget.k-multiselect .k-clear-value) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.12s ease;
+}
+
+.external-coop-header-popover .external-coop-filter-ms:not(.external-coop-coopcd-ms) :deep(.k-legacy-multiselect.k-multiselect:hover .k-clear-value),
+.external-coop-header-popover .external-coop-filter-ms:not(.external-coop-coopcd-ms) :deep(.k-legacy-multiselect.k-multiselect:focus-within .k-clear-value),
+.external-coop-header-popover .external-coop-filter-ms:not(.external-coop-coopcd-ms) :deep(.k-widget.k-multiselect.k-legacy-multiselect:hover .k-clear-value),
+.external-coop-header-popover .external-coop-filter-ms:not(.external-coop-coopcd-ms) :deep(.k-widget.k-multiselect.k-legacy-multiselect:focus-within .k-clear-value) {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* 電文種別：右端一括クリア×もホバー/フォーカス時のみ表示（タグ×と同じ運用） */
+.external-coop-header-popover .external-coop-coopcd-ms :deep(.k-legacy-multiselect .k-clear-value),
+.external-coop-header-popover .external-coop-coopcd-ms :deep(.k-widget.k-multiselect .k-clear-value) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.12s ease;
+}
+
+.external-coop-header-popover .external-coop-coopcd-ms:hover :deep(.k-legacy-multiselect .k-clear-value),
+.external-coop-header-popover .external-coop-coopcd-ms:focus-within :deep(.k-legacy-multiselect .k-clear-value),
+.external-coop-header-popover .external-coop-coopcd-ms :deep(.k-legacy-multiselect.k-multiselect:hover .k-clear-value),
+.external-coop-header-popover .external-coop-coopcd-ms :deep(.k-legacy-multiselect.k-multiselect:focus-within .k-clear-value),
+.external-coop-header-popover .external-coop-coopcd-ms:hover :deep(.k-widget.k-multiselect .k-clear-value),
+.external-coop-header-popover .external-coop-coopcd-ms:focus-within :deep(.k-widget.k-multiselect .k-clear-value),
+.external-coop-header-popover .external-coop-coopcd-ms :deep(.k-widget.k-multiselect.k-legacy-multiselect:hover .k-clear-value),
+.external-coop-header-popover .external-coop-coopcd-ms :deep(.k-widget.k-multiselect.k-legacy-multiselect:focus-within .k-clear-value) {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-clear-value > .k-icon::before),
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-clear-value > .k-svg-icon::before),
+.external-coop-header-popover .external-coop-filter-ms :deep(.k-clear-value::before) {
+  font-size: 22px !important;
+  font-weight: normal !important;
+  line-height: 1 !important;
+}
+ons-select :deep(.select-input) {
+  padding-left: 4px;
+}
+
+ons-input :deep(.text-input) {
   padding-left: 4px;
 }
 .coopCd-style {
@@ -1098,6 +1262,11 @@ ons-select >>> .select-input {
   text-align: end;
   padding-right: 1em;
 }
+:deep(.k-legacy-multiselect > .k-input-values.k-multiselect-wrap),
+:deep(.k-legacy-multiselect > .k-multiselect-wrap),
+:deep(.k-legacy-multiselect .k-input-values.k-multiselect-wrap) {
+  background: #fff !important;
+}
 @media screen and (max-width: 492px) {
   .w-492 {
     width: 45%;
@@ -1108,4 +1277,121 @@ ons-select >>> .select-input {
     white-space: nowrap;
   }
 }
+</style>
+
+<!-- MultiSelect のリストは body 側ポータルになるため global（collectLegacyPopupOwnerClasses で ntss-kendo-popup-owner-external-coop-ms-dropdown が付与される） -->
+<style>
+/* Kendo テーマが padding-inline に使う変数を潰す */
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown.k-animation-container {
+  --kendo-list-md-item-padding-x: 0 !important;
+  --kendo-list-sm-item-padding-x: 0 !important;
+  --kendo-list-lg-item-padding-x: 0 !important;
+}
+
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-ul {
+  font-family: "Helvetica Neue", Helvetica, Arial, "Yu Gothic UI", Osaka, Meiryo, "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif !important;
+}
+
+/* 左側の余白を構造ごとゼロに（ポップアップ配下のみ） */
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown.k-animation-container,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-popup,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-container,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-scroller,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-content,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-ul,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown [role="listbox"],
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-child-noderender,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-virtual-content {
+  padding-left: 0 !important;
+  padding-inline-start: 0 !important;
+  margin-left: 0 !important;
+  margin-inline-start: 0 !important;
+}
+
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-content {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Kendo theme-core: .k-list:has(.k-list-item-icon) が全行に padding-inline-start を付ける → 左が空く */
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list.k-list-sm:has(.k-list-item-icon) li.k-list-item,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list.k-list-md:has(.k-list-item-icon) li.k-list-item,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list.k-list-lg:has(.k-list-item-icon) li.k-list-item,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list.k-list-sm:has(.k-list-item-icon) .k-list-group-item,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list.k-list-md:has(.k-list-item-icon) .k-list-group-item,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list.k-list-lg:has(.k-list-item-icon) .k-list-group-item {
+  padding-inline-start: 0 !important;
+}
+
+/* サイズ修飾子付き .k-list-item の横パディングを確実に上書き */
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list.k-list-sm li.k-list-item,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list.k-list-md li.k-list-item,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list.k-list-lg li.k-list-item {
+  padding-inline-start: 0 !important;
+}
+
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-popup {
+  border: 1px solid #ced4da;
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-ul,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown [role="listbox"] {
+  background-color: #fff;
+}
+
+/* ドロップダウン行：Kendo の font 一括を html body で上書き（字級はポップ内タグと同じ 0.8125rem） */
+html body .ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-item,
+html body .ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-item,
+html body .ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown [role="option"] {
+  box-sizing: border-box;
+  font: 400 0.8125rem/1.45 "Helvetica Neue", Helvetica, Arial, "Yu Gothic UI", Osaka, Meiryo, "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif !important;
+  padding-block: 8px !important;
+  padding-inline: 0 12px !important;
+  margin: 0 !important;
+  margin-inline: 0 !important;
+  text-indent: 0 !important;
+  gap: 0 !important;
+  column-gap: 0 !important;
+  row-gap: 0 !important;
+  color: #212529 !important;
+  background-color: #fff !important;
+  border-radius: 0 !important;
+}
+
+html body .ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-item .k-list-item-text,
+html body .ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-item .k-list-item-text,
+html body .ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-item-content,
+html body .ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-item-body {
+  font: inherit !important;
+  color: inherit !important;
+  padding: 0 !important;
+  padding-left: 0 !important;
+  padding-inline-start: 0 !important;
+  margin: 0 !important;
+  margin-inline-start: 0 !important;
+}
+
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-item .k-checkbox,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-item .k-checkbox-wrap,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown [role="option"] .k-checkbox,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown [role="option"] .k-checkbox-wrap {
+  margin-left: 0 !important;
+  margin-inline-start: 0 !important;
+  padding-left: 0 !important;
+  padding-inline-start: 0 !important;
+}
+
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-item .k-list-item-icon-wrapper,
+.ntss-kendo-multiselect-popup-legacy.ntss-kendo-popup-owner-external-coop-ms-dropdown .k-list-item .k-list-item-icon {
+  margin-left: 0 !important;
+  margin-inline-start: 0 !important;
+  padding-left: 0 !important;
+  padding-inline-start: 0 !important;
+}
+
 </style>

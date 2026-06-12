@@ -53,6 +53,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.concurrent.atomic.AtomicInteger;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -153,6 +154,10 @@ public class RadRequestServiceImpl implements RadRequestService {
 
   @Autowired
   private JournalService journalService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zy end
 
   @Override
@@ -219,7 +224,7 @@ public class RadRequestServiceImpl implements RadRequestService {
       wheres.append(" pat_id = '" + params.get("patId") + "'\n");
       wheres.append(" and to_char(reg_rad_date,'YYYY/MM/DD') = '" + params.get("beforeDate") + "' \n");
       // logCommon設定
-      logCommon = getLogCommon(patRadMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -269,7 +274,7 @@ public class RadRequestServiceImpl implements RadRequestService {
       wheres.append(" and rad_result_cd = '" + params.get("radResultCd") + "'\n");
       wheres.append(" and to_char(reg_rad_date,'YYYY/MM/DD') = '" + params.get("beforeDate") + "' \n");
       // logCommon設定
-      logCommon = getLogCommon(patRadMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -409,7 +414,7 @@ public class RadRequestServiceImpl implements RadRequestService {
       wheres.append(" pat_id = '" + params.get("patId") + "'\n");
       wheres.append(" and to_char(reg_rad_date,'YYYY/MM/DD')  = '" + params.get("date") + "'\n");
       // logCommon設定
-      logCommon = getLogCommon(patRadMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -457,7 +462,7 @@ public class RadRequestServiceImpl implements RadRequestService {
 //      wheres.append(" and to_char(reg_rad_date,'YYYY/MM/DD')  = '" + params.get("date") + "'\n");
       wheres.append(" and ").append(getInStr("to_char(reg_rad_date,'YYYY/MM/DD') in ", dateList)).append("\n");
       // logCommon設定
-      logCommon = getLogCommon(patRadMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -630,7 +635,7 @@ public class RadRequestServiceImpl implements RadRequestService {
             wheres.append(" WHERE\n");
             wheres.append(" pat_id = '" + patId + "'\n");
             // logCommon設定
-            logCommon = getLogCommon(patMainDao, tableName, wheres, getEventLogMessage());
+            logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
             // ログ出力カラム情報及び更新前データ情報取得
             setResult = logCommon.setInfo();
           } catch(Exception e) {
@@ -859,11 +864,11 @@ public class RadRequestServiceImpl implements RadRequestService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

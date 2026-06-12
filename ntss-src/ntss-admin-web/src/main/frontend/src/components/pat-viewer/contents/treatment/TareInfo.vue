@@ -16,7 +16,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * ベースコンポーネント
@@ -27,7 +27,7 @@ import baseContent from "@/components/pat-viewer/contents/base/BaseContent";
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 共通操作
@@ -47,6 +47,7 @@ import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 export default {
   components: {
@@ -103,36 +104,47 @@ export default {
 
   computed: {
     ...mapGetters("pat-viewer-modal", ["getDefaultSettingTareInfoData"]),
+    ...mapGetters("pat-viewer", ["getTreatmentData"]),
 
     /**
      * 指示コメント(IndEditBase)に渡すデータ(雛形)
      */
     faultSettingIndTareInfoData() {
       return this.getDefaultSettingTareInfoData;
+    },
+
+    /** 治療データ読込完了を監視する */
+    treatmentDataForRow() {
+      return this.getTreatmentData?.[this.rowIndex];
     }
   },
 
-  beforeDestroy() {
-    // dataの初期化
-    Object.assign(this.$data, this.$options.data());
+  watch: {
+    treatmentDataForRow: {
+      handler(newVal, oldVal) {
+        if (!newVal) {
+          return;
+        }
+        // 治療データ初回到着時のみ再読込（参照差し替えだけでは再読込しない）
+        if (!oldVal || !Object.keys(oldVal).length) {
+          this.loadTareInfoData();
+        }
+      }
+    }
   },
 
   async created() {
-    this.startLoadingScreen();
-    this.flagAuthority = this.getTreatmentRecordAuthority();
-    this.convertTareInfoData({
-      listIndex: this.rowIndex
-    }).then(tareInfoDataList => {
-      this.tareInfoDataList = tareInfoDataList;
-      // 風袋補正合計量算出
-      this.calculateSum();
-      // 合計量単位付与
-      this.addUnitSum();
-      // 重さの数値にカンマを付与
-      this.separatedComma();
-    }).finally(() => {
-      this.finishLoadingScreen();
-    });
+    await this.loadTareInfoData();
+  },
+
+  mounted() {
+    EventBus.$on("isRefresh", this.loadTareInfoData);
+  },
+
+  beforeUnmount() {
+    EventBus.$off("isRefresh", this.loadTareInfoData);
+    // dataの初期化
+    Object.assign(this.$data, this.$options.data());
   },
 
   methods: {
@@ -147,6 +159,40 @@ export default {
       return getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
+    async loadTareInfoData() {
+      this.startLoadingScreen();
+      this.flagAuthority = this.getTreatmentRecordAuthority();
+      try {
+        const tareInfoDataList = await this.convertTareInfoData({
+          listIndex: this.rowIndex
+        });
+        this.tareInfoDataList = tareInfoDataList || [];
+        this.calculateSum();
+        this.addUnitSum();
+        this.separatedComma();
+      } catch (e) {
+        console.error("風袋データの読み込みに失敗しました", e);
+        if (!this.tareInfoDataList.length) {
+          this.tareInfoDataList = [];
+        }
+      } finally {
+        this.finishLoadingScreen();
+      }
+    },
+
+    getTareSumRow() {
+      return this.tareInfoDataList.find(item => item.itemNo === 11);
+    },
+
+    parseNumericGramValue(value) {
+      if (value == null || value === "") {
+        return 0;
+      }
+      const str = String(value);
+      const numStr = str.endsWith("g") ? str.slice(0, -1) : str;
+      return Number(numStr.replace(/,/g, "")) || 0;
+    },
+
     /**
      * 「風袋」タイトルクリック時処理
      * @summary 風袋編集モーダル表示
@@ -184,7 +230,7 @@ export default {
       }
       // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng end
       // 編集対象日
-      const treatDate = moment(recentDate, "YYYYMMDD").format("YYYY-MM-DD");
+      const treatDate = dayjs(recentDate, "YYYYMMDD").format("YYYY-MM-DD");
       // 風袋モーダルの表示
 
       //mod #10266  start
@@ -218,7 +264,7 @@ export default {
       }
       // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng end
       // 編集対象日
-      const treatDate = moment(recentDate, "YYYYMMDD").format("YYYY-MM-DD");
+      const treatDate = dayjs(recentDate, "YYYYMMDD").format("YYYY-MM-DD");
       // 風袋モーダルの表示
 
       //mod #10266  start
@@ -242,16 +288,13 @@ export default {
         return;
       }
       // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --start */
-      // if(cellInfo.isNotClickable) {
       if(isIndClick && cellInfo.isNotClickable) {
         return;
       }
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --end */
       // 指示項目がクリックされた場合以下の処理を実行
       if (isIndClick) {
         // 編集対象日
-        const treatDate = moment(cellInfo.treatDate, "YYYYMMDD").format(
+        const treatDate = dayjs(cellInfo.treatDate, "YYYYMMDD").format(
           "YYYY-MM-DD"
         );
         // 風袋モーダルの表示
@@ -328,7 +371,7 @@ export default {
         // 全曜日選択を未選択状態にする
         settingData.allWeek = false;
         // 対象曜日を格納
-        const week = moment(startDate, "YYYY-MM-DD").day();
+        const week = dayjs(startDate, "YYYY-MM-DD").day();
         for (let i = 0; i < 7; i++) {
           // すべての曜日を未選択状態にする
           settingData[this.changeWeekStr(i)] = i !== week ? false : true;
@@ -360,23 +403,25 @@ export default {
      * 合計量算出
      */
     calculateSum() {
-      for (let i = 0; i < this.tareInfoDataList.length - 1; i++) {
+      const sumRow = this.getTareSumRow();
+      if (!sumRow || !sumRow.data) {
+        return;
+      }
+      for (let i = 0; i < this.tareInfoDataList.length; i++) {
         const tareInfo = this.tareInfoDataList[i];
-        // 重さ項目合計量算出
-        if (0 === tareInfo.itemNo % 2) {
-          for (let j = 0; j < tareInfo.data.length; j++) {
-            // value1がnullでなければ合計量に加算
-            if (null !== tareInfo.data[j].value1) {
-              this.tareInfoDataList[10].data[j].value1 += Number(
-                tareInfo.data[j].value1.slice(0, -1)
-              );
-            }
-            // value2がnullでなければ合計量に加算
-            if (null !== tareInfo.data[j].value2) {
-              this.tareInfoDataList[10].data[j].value2 += Number(
-                tareInfo.data[j].value2.slice(0, -1)
-              );
-            }
+        if (!tareInfo || tareInfo.itemNo === 11 || tareInfo.itemNo % 2 !== 0) {
+          continue;
+        }
+        for (let j = 0; j < tareInfo.data.length; j++) {
+          if (null !== tareInfo.data[j].value1) {
+            sumRow.data[j].value1 =
+              (sumRow.data[j].value1 || 0) +
+              this.parseNumericGramValue(tareInfo.data[j].value1);
+          }
+          if (null !== tareInfo.data[j].value2) {
+            sumRow.data[j].value2 =
+              (sumRow.data[j].value2 || 0) +
+              this.parseNumericGramValue(tareInfo.data[j].value2);
           }
         }
       }
@@ -386,14 +431,15 @@ export default {
      * 風袋補正合計量への単位付与
      */
     addUnitSum() {
-      for (let i = 0; i < this.tareInfoDataList[10].data.length; i++) {
-        const value1 = this.tareInfoDataList[10].data[i].value1;
-        const value2 = this.tareInfoDataList[10].data[i].value2;
-        // 値が入っていれば、単位を付与する
-        this.tareInfoDataList[10].data[i].value1 =
-          null !== value1 ? `${value1}g` : value1;
-        this.tareInfoDataList[10].data[i].value2 =
-          null !== value2 ? `${value2}g` : value2;
+      const sumRow = this.getTareSumRow();
+      if (!sumRow || !sumRow.data) {
+        return;
+      }
+      for (let i = 0; i < sumRow.data.length; i++) {
+        const value1 = sumRow.data[i].value1;
+        const value2 = sumRow.data[i].value2;
+        sumRow.data[i].value1 = null != value1 && value1 !== "" ? `${value1}g` : value1;
+        sumRow.data[i].value2 = null != value2 && value2 !== "" ? `${value2}g` : value2;
       }
     },
 
@@ -402,17 +448,22 @@ export default {
      */
     separatedComma() {
       for (let i = 0; i < this.tareInfoDataList.length; i++) {
-        if (i % 2 === 1 || i === this.tareInfoDataList.length - 1) {
-          for (let j = 0; j < this.tareInfoDataList[i].data.length; j++) {
-            const value1 = this.tareInfoDataList[i].data[j].value1;
-            const value2 = this.tareInfoDataList[i].data[j].value2;
-            // 値があれば、カンマ区切り
-            this.tareInfoDataList[i].data[j].value1 = !value1
-              ? value1
-              : value1.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
-            this.tareInfoDataList[i].data[j].value2 = !value2
-              ? value2
-              : value2.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
+        const tareInfo = this.tareInfoDataList[i];
+        if (!tareInfo || !tareInfo.data) {
+          continue;
+        }
+        if (tareInfo.itemNo % 2 === 0 || tareInfo.itemNo === 11) {
+          for (let j = 0; j < tareInfo.data.length; j++) {
+            const value1 = tareInfo.data[j].value1;
+            const value2 = tareInfo.data[j].value2;
+            if (value1 != null && value1 !== "") {
+              const numStr = String(value1).replace(/g$/, "");
+              tareInfo.data[j].value1 = numStr.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
+            }
+            if (value2 != null && value2 !== "") {
+              const numStr = String(value2).replace(/g$/, "");
+              tareInfo.data[j].value2 = numStr.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
+            }
           }
         }
       }
@@ -429,5 +480,5 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 </style>

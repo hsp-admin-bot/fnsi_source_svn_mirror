@@ -12,11 +12,11 @@
     <!-- Treatment unit search -->
     <v-ons-popover
       cancelable
-      :visible.sync="treatmentSearchVisible"
+      v-model:visible="treatmentSearchVisible"
       :target="$refs.searchBar"
       direction="down"
       @prehide="prehideTreatmentSearch"
-      :class="fontSizeSet"
+      :class="[fontSizeSet, 'indication-list-header-popover']"
       @preshow="popoverPreShow"
       @postshow="popoverPostShow"
       @posthide="popoverPosthide"
@@ -31,13 +31,13 @@
                 :classes="'ntss-input-date ntss-custom-input'"
                 id="treatment-date"
                 name="treatment-date"
-                data-vv-scope="treatment"
+                data-validation-scope="treatment"
                 isRequired
               />
               <common-calendar v-model="tempTreatmentSearchCondition.treatmentDate" />
             </div>
             <span class="error-message">{{
-              errors.first("treatment.treatment-date")
+              getValidationError("treatment.treatment-date")
             }}</span>
           </div>
         </div>
@@ -51,11 +51,11 @@
               data-text-field="treatmentName"
               data-value-field="treatmentCd"
               name="treatment-method"
-              data-vv-scope="treatment"
-              v-validate.immediate="'required'"
+              data-validation-scope="treatment"
+              v-rules.immediate="'required'"
             />
             <span class="error-message">{{
-              errors.first("treatment.treatment-method")
+              getValidationError("treatment.treatment-method")
             }}</span>
           </div>
         </div>
@@ -69,7 +69,7 @@
               data-text-field="kurName"
               data-value-field="kurCd"
               name="kur"
-              data-vv-scope="treatment"
+              data-validation-scope="treatment"
             />
           </div>
         </div>
@@ -152,13 +152,13 @@
         <v-ons-button
           class="btn3-normal common-style-ok-button"
           @click="searchTreatment"
-          :disabled="errors.any('treatment')"
+          :disabled="hasValidationErrorsIn('treatment')"
           >OK</v-ons-button
         >
         <!-- <v-ons-button -->
         <!--   class="nik-btn search" -->
         <!--   @click="searchTreatment" -->
-        <!--   :disabled="errors.any('treatment')" -->
+        <!--   :disabled="hasValidationErrorsIn('treatment')" -->
         <!--   >検索</v-ons-button -->
         <!-- > -->
         <!-- mod 画面部品デザイン定義 修正 chen end -->
@@ -170,11 +170,11 @@
     <!-- Indication unit search -->
     <v-ons-popover
       cancelable
-      :visible.sync="indicationSearchVisible"
+      v-model:visible="indicationSearchVisible"
       :target="$refs.searchBar"
       direction="down"
       @prehide="prehideIndicationSearch"
-      :class="fontSizeSet"
+      :class="[fontSizeSet, 'indication-list-header-popover']"
       @preshow="popoverPreShow"
       @postshow="popoverPostShow"
       @posthide="popoverPosthide"
@@ -219,21 +219,21 @@
               name="instruction-date"
               type="date"
               v-model="tempIndicationSearchCondition.treatmentStartDate"
-              data-vv-scope="indication"
-              v-validate="'required'"
+              data-validation-scope="indication"
+              v-rules="'required'"
             />
             <common-calendar v-model="tempIndicationSearchCondition.treatmentStartDate" />
           </div> -->
           <!-- <span class="error-message">{{
-            errors.first("indication.instruction-date")
+            getValidationError("indication.instruction-date")
           }}</span> -->
           <date-input
             v-model="tempIndicationSearchCondition.treatmentStartDate"
             :classes="'ntss-input-date ntss-custom-input start-date'"
             id="instruction-date"
             name="instruction-date"
-            data-vv-scope="indication"
-            v-validate="'required'"
+            data-validation-scope="indication"
+            v-rules="'required'"
             @keyup="getStartDate"
             @blur="getStartDate"
             isRequired
@@ -479,9 +479,9 @@
 </template>
 
 <script>
-import moment from "moment";
-import _ from "underscore";
-import {mapGetters, mapActions, mapMutations} from "vuex";
+import dayjs from "@/compat/date/dayjs";
+import _ from "@/compat/collections/lodash";
+import {mapGetters, mapActions, mapMutations} from "@/compat/vue/vuex";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -492,13 +492,14 @@ import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.j
 /* add FNSI-改修内容日付のチェックの追加対応。 dou end*/
 // add 画面印刷プレビューと印刷の実現 黄 start
 import { getCurrentFunctionCd } from "@/router/routing-helper";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add 画面印刷プレビューと印刷の実現 黄 end
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 import DateInput from "@/components/common/DateInput";
+import { getScopedElementsByClassName, getScopedSessionStorage } from "@/functions/common/LayoutMeasureHelper";
 
 const ALL = "1";
 const UNCHECKED = "2";
@@ -638,7 +639,7 @@ export default {
         //   endData = this.addStringNumber(this.tempIndicationSearchCondition.treatmentStartDate.replaceAll("-", ""), "10000");
         //   startData = data;
         // } else {
-        //   data = moment(Date.now()).format("YYYY/MM/DD");
+        //   data = dayjs(Date.now()).format("YYYY/MM/DD");
         //   endData = this.addStringNumber(data.replaceAll("/", ""), "10000");
         //   startData = data;
         // }
@@ -647,16 +648,16 @@ export default {
           patId: this.selectedPatId,
           facilityCd: this.getFacilityCd,
           // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 start
-          date: moment(data).format("YYYY/MM/DD"),
+          date: dayjs(data).format("YYYY/MM/DD"),
           // mod #9558機能帳票でパラメータが正しく渡されていない 杜天成 start
-          // fromDate: moment(Date.now()).format("YYYY/MM/DD"),
-          // toDate: moment(Date.now()).format("YYYY/MM/DD")
-          fromDate: moment(data).format("YYYY/MM/DD"),
-          toDate: moment(data).format("YYYY/MM/DD")
+          // fromDate: dayjs(Date.now()).format("YYYY/MM/DD"),
+          // toDate: dayjs(Date.now()).format("YYYY/MM/DD")
+          fromDate: dayjs(data).format("YYYY/MM/DD"),
+          toDate: dayjs(data).format("YYYY/MM/DD")
           // mod #9558機能帳票でパラメータが正しく渡されていない 杜天成 end
-        // date: moment(Date.now()).format("YYYY/MM/DD"),
-        // fromDate: moment(startData).format("YYYY/MM/DD"),
-        // toDate: moment(endData).format("YYYY/MM/DD")
+        // date: dayjs(Date.now()).format("YYYY/MM/DD"),
+        // fromDate: dayjs(startData).format("YYYY/MM/DD"),
+        // toDate: dayjs(endData).format("YYYY/MM/DD")
           // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 end
         };
         EventBus.$emit("setDateParams", dateParam);
@@ -670,7 +671,8 @@ export default {
     ]),
     /* add FNSI-改修内容日付のチェックの追加対応。 dou start*/
     getStartDate(){
-      this.showErrorStartDate = document.getElementsByClassName("start-date")[0].value ? document.getElementsByClassName("start-date")[0].validationMessage !== "" : false;
+      const startDateInput = getScopedElementsByClassName("start-date", this.$el || this)[0];
+      this.showErrorStartDate = startDateInput?.value ? startDateInput.validationMessage !== "" : false;
     },
     /* add FNSI-改修内容日付のチェックの追加対応。 dou end*/
     showSearch() {
@@ -679,7 +681,7 @@ export default {
         : (this.indicationSearchVisible = true);
     },
     resetTreatmentSearchCondition() {
-      this.$validator.reset();
+      this.resetValidation();
       // サインインユーザのデフォルト設定を取得
       const defaultIndication = this.defaultSetting[INDICATION.KEY_NAME];
       this.tempTreatmentSearchCondition = initTreatmentSearchCondition(defaultIndication);
@@ -700,11 +702,13 @@ export default {
       await this.getIndications();
       this.setConditionList();
       // add 障害票一覧_NKK 修正 chen start
-      if (document.getElementsByClassName("sorted-desc")[0]) {
-        document.getElementsByClassName("sorted-desc")[0].classList.remove("sorted-desc");
+      const sortedDesc = getScopedElementsByClassName("sorted-desc", this.$el || this)[0];
+      if (sortedDesc) {
+        sortedDesc.classList.remove("sorted-desc");
       }
-      if (document.getElementsByClassName("sorted-asc")[0]) {
-        document.getElementsByClassName("sorted-asc")[0].classList.remove("sorted-asc");
+      const sortedAsc = getScopedElementsByClassName("sorted-asc", this.$el || this)[0];
+      if (sortedAsc) {
+        sortedAsc.classList.remove("sorted-asc");
       }
       // mod FNSI6299-患者の表示順が勝手に入れ替わる start
       //this.resetTreatmentIndications();
@@ -716,7 +720,7 @@ export default {
       this.isLoading = false;
     },
     resetIndicationSearchCondition() {
-      this.$validator.reset();
+      this.resetValidation();
       // サインインユーザのデフォルト設定を取得
       const defaultIndication = this.defaultSetting[INDICATION.KEY_NAME];
       this.tempIndicationSearchCondition = initIndicationSearchCondition(defaultIndication);
@@ -857,26 +861,25 @@ export default {
           switch (condition) {
             case "treatmentDate":
               // 治療日(治療単位)
-              value = moment(value, "YYYY-MM-DD").format("YYYY/MM/DD");
+              value = dayjs(value, "YYYY-MM-DD").format("YYYY/MM/DD");
               condList.push({ name:"治療日", text:value });
               break;
             case "treatmentStartDate": {
               // 指示発行日/指示開始日(指示単位)
               const itemName = searchCondition.treatmentDateOpt === "1" ? "指示発行日" : "指示開始日";
-              value = moment(value, "YYYY-MM-DD").format("YYYY/MM/DD");
+              value = dayjs(value, "YYYY-MM-DD").format("YYYY/MM/DD");
               condList.push({ name:itemName, text:value });
               break;
             }
             case "treatmentScheduledDate":
               // 治療予定日(指示単位)
-              value = moment(value, "YYYY-MM-DD").format("YYYY/MM/DD");
+              value = dayjs(value, "YYYY-MM-DD").format("YYYY/MM/DD");
               condList.push({ name:"治療予定日", text:value });
               break;
             case "treatmentCd":
               // 治療方法(治療単位)
               value = this.mstTreatment.find(
-                treatment => +treatment.treatmentCd === +value
-              ).treatmentName;
+                treatment => +treatment.treatmentCd === +value).treatmentName;
               condList.push({ name:"治療方法", text:value });
               break;
             case "kurCds":
@@ -890,8 +893,7 @@ export default {
             case "bedGroupCd":
               // ベッドグループ(治療単位)
               value = this.mstRoomBedGroup.find(
-                bed => +bed.roomBedGroupCd === +value
-                ).roomBedGroupName;
+                bed => +bed.roomBedGroupCd === +value).roomBedGroupName;
               if (value) {
                 condList.push({ name:"ベッドグループ", text:value });
               }
@@ -1023,8 +1025,7 @@ export default {
               // 対象指示(指示単位)
               if (
                 searchCondition.indicationList &&
-                searchCondition.indicationList.length > 0
-              ) {
+                searchCondition.indicationList.length > 0) {
                 let valueStr = "";
                 searchCondition.indicationList.forEach(item => {
                   valueStr += (item + "、");
@@ -1038,8 +1039,9 @@ export default {
         });
       }
       // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
-      sessionStorage.setItem('roomBedGroupNameStatusList', JSON.stringify(condList.find(item => item.name === "ベッドグループ")?.text || ''));
-      sessionStorage.setItem('kurGroupNameStatusList', JSON.stringify(condList.find(item => item.name === "クール")?.text || ''));
+      const scopedSessionStorage = getScopedSessionStorage(this.$el);
+      scopedSessionStorage.setItem('roomBedGroupNameStatusList', JSON.stringify(condList.find(item => item.name === "ベッドグループ")?.text || ''));
+      scopedSessionStorage.setItem('kurGroupNameStatusList', JSON.stringify(condList.find(item => item.name === "クール")?.text || ''));
       // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy end
       this.conditionList = condList;
     }
@@ -1051,11 +1053,11 @@ export default {
     },
     "tempTreatmentSearchCondition.treatmentDate":{
       handler(){
-        this.$validator.reset("treatment");
+        this.resetValidation("treatment");
         // mod 画面パフォーマンス対応 chen start
         this.$nextTick(() => {
           // setTimeout(() => {
-            this.$validator.validate("treatment.treatment-date");
+            this.validateField("treatment.treatment-date");
           // }, 0);
         });
         // mod 画面パフォーマンス対応 chen end
@@ -1127,7 +1129,7 @@ export default {
     });
   },
   // add 画面印刷プレビューと印刷の実現 黄 start
-  beforeDestroy () {
+  beforeUnmount () {
     // 印刷パラメータ要求
     EventBus.$off("requestReportParams", this.requestrReportParams);
     // #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start
@@ -1156,7 +1158,7 @@ export default {
 function initTreatmentSearchCondition(defaultIndication) {
   const mstKur = []
   let defTreatSearchCond = {
-    treatmentDate: moment().format("YYYY-MM-DD"),
+    treatmentDate: dayjs().format("YYYY-MM-DD"),
     treatmentCd: "0",
     kurCds: mstKur.map(({ kurCd }) => kurCd),
     bedGroupCd: "0",
@@ -1210,7 +1212,7 @@ function initIndicationSearchCondition(defaultIndication) {
   const mstKur = [];
   let defIndSearchCond = {
     treatmentDateOpt: ISSUE_DATE,
-    treatmentStartDate: moment().format("YYYY-MM-DD"),
+    treatmentStartDate: dayjs().format("YYYY-MM-DD"),
     treatmentScheduledDate: null,
     kurCds: mstKur.map(({ kurCd }) => kurCd),
     // #10997 Mod 個人設定＞デフォルト設定の各設定にてベッドグループが空値が初期表示になっている Start
@@ -1275,7 +1277,11 @@ function initIndicationSearchCondition(defaultIndication) {
 .loading-modal {
   font-size: 2.4em;
 }
-ons-popover >>> .popover--top {
+ons-popover :deep(.popover--top) {
+  width: unset;
+}
+
+.indication-list-header-popover :deep(.popover--top) {
   width: unset;
 }
 .popover-search {
@@ -1289,13 +1295,13 @@ ons-popover >>> .popover--top {
 .popover-search > div.d-flex:last-child {
   margin-bottom: 0;
 }
-.popover-search >>> .k-dropdown {
+.popover-search :deep(.k-dropdown) {
   width: 100%;
 }
 .popover-search .actions {
   margin-top: 1em;
 }
-ons-input >>> .text-input {
+ons-input :deep(.text-input) {
   font-size: inherit;
 }
 input[type="date"] {

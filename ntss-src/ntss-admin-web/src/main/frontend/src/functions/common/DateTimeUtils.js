@@ -1,7 +1,7 @@
 /**
  * 日付関係ユーティリティ
  */
-import moment from "moment-timezone";
+import dayjs from "@/compat/date/dayjs";
 
 export const DATE_FORMAT_QUEUE= "YYYYMMDD";
 export const DATE_FORMAT = "yyyy-MM-dd";
@@ -50,12 +50,14 @@ export const dateFormat = {
    * example
    *   input:  2019-01-01T00:00:00Z
    *   output: 2019-01-01T00:00:00.000+09:00
-   * @param {String} utcDate
+   * @param {string|Date} utcDate
    */
   utc2Jst: function(utcDate) {
-    return moment(utcDate)
-      .tz("Asia/Tokyo")
-      .format("YYYY-MM-DDTHH:mm:ss.SSS+09:00");
+    // Vue2 の moment(utcDate).tz("Asia/Tokyo") と同じく、
+    // タイムゾーン指定のないローカル日時文字列は UTC として扱わない。
+    // 画面入力由来の「YYYY-MM-DD HH:mm」を dayjs.utc() で読むと +9h され、
+    // 日付変更時に時刻がずれるため、Vue2 と同じ parse -> tz の順にする。
+    return dayjs(utcDate).tz("Asia/Tokyo").format("YYYY-MM-DDTHH:mm:ss.SSS+09:00");
   },
   /**
    * HHMMを表す文字列をHH:mmに変換する
@@ -105,21 +107,21 @@ export const dateFormat = {
    * @param {String} date
    */
   queueDate: function(date) {
-    return moment(date).format(DATE_FORMAT_QUEUE);
+    return dayjs(date).format(DATE_FORMAT_QUEUE);
   },
   /**
    * YYYY/MM/DDを表す文字列に変換する
    * @param {String} date
    */
   normalDate: function(date) {
-    return moment(date).format(DATE_FORMAT_NORMAL);
+    return dayjs(date).format(DATE_FORMAT_NORMAL);
   },
   /**
    * YYYY/MM/DDを表す文字列に変換する(変換できなかった場合は空文字を返す)
    * @param {String} date
    */
   normalDateWithCheck: function(date) {
-    const rtnDate = moment(date);
+    const rtnDate = dayjs(date);
     return rtnDate.isValid() ? rtnDate.format(DATE_FORMAT_NORMAL) : "";
   }
 };
@@ -161,7 +163,7 @@ export function date2UTC(date) {
  */
 export const getMaxDay = (year, month) => {
   if (month === "02") {
-    const targetYear = moment(year + "0101");
+    const targetYear = dayjs(year + "0101", "YYYYMMDD");
     if (targetYear.isValid()) {
       return targetYear.isLeapYear() ? 29 : 28;
     } else {
@@ -179,18 +181,19 @@ export const getMaxDay = (year, month) => {
  */
 export const getDeadlineDate = (deadlineCondition) => {
   let count = 0;
-  let nowDate = moment(new Date());
-  let rtnDate = moment(nowDate.format("YYYY/MM/DD"));
+  let nowDate = dayjs(new Date());
+  let rtnDate = dayjs(nowDate.format("YYYY/MM/DD"));
   while (count < deadlineCondition.deadlineDateCount) {
-    rtnDate.add(1, "days");
-    if (rtnDate.format('E') !== "7") {
+    rtnDate = rtnDate.add(1, "day");
+    // 日曜（day()===0）は締切日数に含めない（従来 moment の E!==7 と同等）
+    if (rtnDate.day() !== 0) {
       count++;
     }
   }
   // 締切時刻を過ぎている場合、さらに+1加算
   const time = deadlineCondition.deadlineTimeCount.split(':');
-  if (nowDate.isAfter(moment(nowDate.format("YYYY/MM/DD")).hour(Number(time[0])).minutes(Number(time[1])))) {
-    rtnDate.add(1, "days");
+  if (nowDate.isAfter(dayjs(nowDate.format("YYYY/MM/DD")).hour(Number(time[0])).minute(Number(time[1])))) {
+    rtnDate = rtnDate.add(1, "day");
   }
   return rtnDate.format("YYYY/MM/DD");
 }
@@ -211,11 +214,11 @@ export const fitTermCheck = (strUseStartDate, strUseEndDate, strStartDate) => {
 
   let rtn = false;
   // 開始日
-  const startDate = moment(strStartDate);
+  const startDate = dayjs(strStartDate);
   // 使用期間開始日
-  const objStartDate = !strUseStartDate ? null : moment(strUseStartDate);
+  const objStartDate = !strUseStartDate ? null : dayjs(strUseStartDate);
   // 使用期間終了日
-  const objEndDate = !strUseEndDate ? null : moment(strUseEndDate);
+  const objEndDate = !strUseEndDate ? null : dayjs(strUseEndDate);
 
   if(objStartDate && !objEndDate) {
     // 使用期間開始日のみの場合
@@ -258,13 +261,13 @@ export const fitTermCheckForUpdate = (strUseStartDate, strUseEndDate, strStartDa
 
   let rtn = false;
   // 開始日
-  const startDate = moment(strStartDate);
+  const startDate = dayjs(strStartDate);
   // 終了日
-  const endDate = moment(strEndDate);
+  const endDate = dayjs(strEndDate);
   // 使用期間開始日
-  const objStartDate = !strUseStartDate ? null : moment(strUseStartDate);
+  const objStartDate = !strUseStartDate ? null : dayjs(strUseStartDate);
   // 使用期間終了日
-  const objEndDate = !strUseEndDate ? null : moment(strUseEndDate);
+  const objEndDate = !strUseEndDate ? null : dayjs(strUseEndDate);
 
   if(objStartDate && !objEndDate) {
     // 使用期間開始日のみの場合

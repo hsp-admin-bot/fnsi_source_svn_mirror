@@ -5,7 +5,7 @@
 import { sendRequestGetWeightState } from "@/apis/weight-state";
 
 export default {
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   namespaced: true,
   state: {
     weightState: {

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
+import jp.co.nikkiso.ntss.core.entity.PatMain;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
@@ -26,6 +27,7 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.waterSurvey.WaterSurveyService;
 import jp.co.nikkiso.ntss.core.entity.MntWaterSurvey;
 import jp.co.nikkiso.ntss.core.entity.custom.WaterSurvey;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
@@ -104,7 +106,11 @@ public class WaterSurveyResource {
 	 */
 	@GetMapping("/{surveyRecordNo}")
 	public ResponseEntity<?> getWaterSurvey(
-			@PathVariable Long surveyRecordNo) {
+			@PathVariable Long surveyRecordNo,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+      ) {
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WATER_SURVEY ;
@@ -114,6 +120,17 @@ public class WaterSurveyResource {
 
 		try {
 			WaterSurvey res = waterSurveyService.selectBySurveyRecordNo(surveyRecordNo);
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (res.getFacilityCd() != null && !res.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          // #11205 mod 20260421 start
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + res.getFacilityCd() + " " + "surveyRecordNo=" + surveyRecordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          // #11205 mod 20260421 end
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
       // wp アプリケーションログの適正化 Add Start
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_WATER_QUALITY_SURVEY, AFTER_LOG_FLG_INFO, mappingUrl, null,
@@ -140,7 +157,24 @@ public class WaterSurveyResource {
 	 * @return httpStatus
 	 */
 	@PostMapping("/saveMulti")
-	public ResponseEntity<?> saveMultiWaterSurvey(@RequestBody List<WaterSurvey> watSurveys) {
+	public ResponseEntity<?> saveMultiWaterSurvey(@RequestBody List<WaterSurvey> watSurveys,
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                @AuthenticationPrincipal NtssUser ntssUser
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      for (WaterSurvey watSurvey : watSurveys) {
+        if (watSurvey.getFacilityCd() != null && !watSurvey.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          // #11205 mod 20260421 start
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + watSurvey.getFacilityCd() + " " + "surveyRecordNo=" + (watSurvey.getSurveyRecordNo() != null ? watSurvey.getSurveyRecordNo() : "null") + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          // #11205 mod 20260421 end
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WATER_SURVEY +"/saveMulti";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_WATER_QUALITY_SURVEY, BEFORE_LOG_FLG_INFO, mappingUrl, null,

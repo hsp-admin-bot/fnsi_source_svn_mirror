@@ -13,12 +13,12 @@
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 共通操作
@@ -46,8 +46,7 @@ import MakeStructionColorMixin from "./MakeStructionColorMixin";
 import { ApiHelper } from "@/apis/AxiosHelper";
 // add FNSI-マスタ削除表示の対応課題--治療方法 李 end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 
 export default {
@@ -142,7 +141,7 @@ export default {
     }
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -154,9 +153,9 @@ export default {
     this.convertTreatMethodData({
       listIndex: this.rowIndex,
       selectLayoutCd: this.selectedLayoutCd
-    }).then(treatMethodDataListLet => {
+    }).then(async treatMethodDataListLet => {
       // 指示の切り替わりポイント処理を呼び出す
-      this.makeStructionColor(treatMethodDataListLet, 1);
+      await this.makeStructionColor(treatMethodDataListLet, 1);
       this.treatMethodDataList = treatMethodDataListLet;
 
       // 治療方法加工データがない場合、処理中止
@@ -279,13 +278,10 @@ export default {
         return;
       }
       // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --start */
-      // if (cellInfo.isNotClickable) {
       if (isIndClick && cellInfo.isNotClickable) {
         // 画面遷移しない
         return;
       }
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --end */
       // 指示項目クリック時以下の処理を実行する
       if (isIndClick) {
         // 治療方法変更モーダルを閉じる
@@ -343,7 +339,7 @@ export default {
       // オーダー番号
       settingData.ordNo = ordNo;
       // 治療開始日
-      settingData.startDate = moment(treatDate, "YYYYMMDD").format(
+      settingData.startDate = dayjs(treatDate, "YYYYMMDD").format(
         "YYYY-MM-DD"
       );
       // 終了日
@@ -362,7 +358,7 @@ export default {
         // 選択された曜日以外をfalseへ変更
         for (let i = 0; i < 7; i++) {
           settingData[this.changeWeekStr(i)] =
-            i !== moment(treatDate, "YYYYMMDD").day() ? false : true;
+            i !== dayjs(treatDate, "YYYYMMDD").day() ? false : true;
         }
       }
       // 子コンポーネント(IndTreatMethod)にわたす情報
@@ -376,7 +372,7 @@ export default {
       if (null === ordInfo.indTreatStartTime) {
         indTreatStartTime = "未登録";
       } else {
-        indTreatStartTime = moment(ordInfo.indTreatStartTime, "HHmm").format(
+        indTreatStartTime = dayjs(ordInfo.indTreatStartTime, "HHmm").format(
           "HH:mm"
         );
       }
@@ -445,5 +441,5 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 </style>

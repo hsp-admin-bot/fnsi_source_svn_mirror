@@ -4,7 +4,7 @@
     :value="displayTimeValue"
     :classes="'time-input-focus ' +classes"
     @input="inputValue"
-    v-on="$listeners"
+    v-bind="$attrs"
     :disabled="disabled"
     @handleClearInput="handleClearEvent"
     :is-required="isRequired"
@@ -15,7 +15,7 @@
 </template>
 
 <script>
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // 共通タグ用ベースコンポーネント
 import baseCustomForm from "@/components/common/custom-form-tags/BaseCustomForm.vue";
 // #5590 2023/04/19 ×を常に表示するように修正 林峻峰 start
@@ -32,6 +32,7 @@ import TimeInput from "@/components/common/TimeInput.vue";
  *     ・minutesMode(任意): 分入力モードフラグ ※例: 「01:00」は60(分)を表す ※デフォルト: 普通に時分入力
  */
 export default {
+  inheritAttrs: false,
   mixins: [baseCustomForm],
   // #5590 2023/04/19 ×を常に表示するように修正 林峻峰 start
   components: {
@@ -74,19 +75,8 @@ export default {
     }
   },
 
-  data() {
-    return {
-      // 入力フィールドの値をクリアするかを判定するフラグ
-      isClear: false
-    };
-  },
-
   computed: {
     displayTimeValue() {
-      // 画面で入力不備がある場合、入力値をクリアする
-      if (this.editValue === null && this.isClear) {
-        return "defaultValue";
-      }
       if (this.minutesMode) {
         // 分→時分変換
         return this.editValue === null
@@ -95,7 +85,7 @@ export default {
       } else {
         return this.editValue === null
           ? null
-          : moment(this.editValue, "HHmm").format("HH:mm");
+          : dayjs(this.editValue, "HHmm").format("HH:mm");
       }
     },
     classes() {
@@ -120,15 +110,6 @@ export default {
       // const inputTime = event.target.value;
     // #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end
       const inputTime = value;
-      // 入力フィールドの値をクリアするかを判定するフラグを初期化
-      this.isClear = false;
-
-      // 画面で入力不備がある場合、未入力状態にする
-      if (inputTime === "aN:aN") {
-        this.editValue = null;
-        this.isClear = true;
-        return;
-      }
 
       if (inputTime !== "") {
         // 空欄じゃなければ上下限判定
@@ -151,7 +132,7 @@ export default {
               // 分変換
               this.editValue = this.convertTimeToMinutes(looptime);
             } else {
-              this.editValue = moment(looptime, "HH:mm").format("HHmm");
+              this.editValue = dayjs(looptime, "HH:mm").format("HHmm");
             }
           } else {
             // ループ設定なしの場合は入力しない
@@ -169,7 +150,7 @@ export default {
           inputTime === "" ? null : this.convertTimeToMinutes(inputTime);
       } else {
         this.editValue =
-            inputTime === "" ? null : moment(inputTime, "HH:mm").format("HHmm");
+            inputTime === "" ? null : dayjs(inputTime, "HH:mm").format("HHmm");
       }
     },
 
@@ -177,7 +158,21 @@ export default {
      * @description 時分→分変換
      */
     convertTimeToMinutes(time) {
-      return moment.duration(time).asMinutes();
+      if (time === null || time === undefined || time === "") {
+        return 0;
+      }
+      if (typeof time === "number") {
+        return time;
+      }
+      if (typeof time === "string" && time.includes(":")) {
+        const [hourText, minuteText = "0"] = time.split(":");
+        const hour = Number(hourText);
+        const minute = Number(minuteText);
+        if (!Number.isNaN(hour) && !Number.isNaN(minute)) {
+          return hour * 60 + minute;
+        }
+      }
+      return dayjs.duration(time).asMinutes();
     },
 
     /**
@@ -185,14 +180,11 @@ export default {
      */
     convertMinutesToTime(minutes) {
       // 分を時間と分に
-      const duration = moment.duration(minutes, "minutes");
+      const duration = dayjs.duration(minutes, "minutes");
       const hour = duration.hours();
       const minute = duration.minutes();
-      // 時間と分からモーメントを作成しフォーマット
-      const mo = moment();
-      mo.hours(hour);
-      mo.minutes(minute);
-      return mo.format("HH:mm");
+      // 時間と分から日時を作成しフォーマット
+      return dayjs().hour(hour).minute(minute).format("HH:mm");
     },
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20240227 ztc start
     isTimeEdited(){
@@ -216,7 +208,6 @@ export default {
     // clear event
     handleClearEvent() {
       this.editValue = null;
-      this.isClear = true;
       this.$emit("change", null)
     }
     /* ===== #10704 ADD END ===== */

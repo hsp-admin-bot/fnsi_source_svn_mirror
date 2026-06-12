@@ -19,9 +19,9 @@ Sub DetectByWmi(ByRef runningText)
   Set oWMI = GetObject("winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2")
   If Err.Number <> 0 Then Exit Sub
 
-  Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'FNW2FNSI_Converter.exe'")
+  Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'FNWSiConvertTool.exe'")
   If oItems.Count > 0 Then
-    runningText = "FNW2FNSI_Converter.exe"
+    runningText = "FNWSiConvertTool.exe"
   End If
 End Sub
 
@@ -31,17 +31,17 @@ Sub DetectByTasklist(ByRef runningText)
 
   ' Exact match by IMAGENAME
   Err.Clear
-  ret = sh.Run("cmd /c tasklist /FI ""IMAGENAME eq FNW2FNSI_Converter.exe"" | find /I ""FNW2FNSI_Converter.exe"" >nul", 0, True)
+  ret = sh.Run("cmd /c tasklist /FI ""IMAGENAME eq FNWSiConvertTool.exe"" | find /I ""FNWSiConvertTool.exe"" >nul", 0, True)
   If Err.Number = 0 And ret = 0 Then
-    runningText = "FNW2FNSI_Converter.exe"
+    runningText = "FNWSiConvertTool.exe"
     Exit Sub
   End If
 
   ' Fallback: substring match (更に保険)
   Err.Clear
-  ret = sh.Run("cmd /c tasklist | find /I ""FNW2FNSI_Converter"" >nul", 0, True)
+  ret = sh.Run("cmd /c tasklist | find /I ""FNWSiConvertTool"" >nul", 0, True)
   If Err.Number = 0 And ret = 0 Then
-    runningText = "FNW2FNSI_Converter.exe"
+    runningText = "FNWSiConvertTool.exe"
   End If
 End Sub
 

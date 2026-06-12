@@ -3,7 +3,7 @@
  */
 
 import {ApiHelper} from "@/apis/AxiosHelper.js";
-import ons from 'onsenui';
+import { showAlertDialog } from "@/functions/common/OnsenFunctions";
 import {
   extractFontsFromSVG,
   isFontAvailable,
@@ -115,7 +115,7 @@ function parseSpanHtmlFromTemplate(htmlTemplate) {
 // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end
 
 export default {
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   namespaced: true,
   state: {
     // 患者イベントレコード
@@ -145,12 +145,10 @@ export default {
     /*add FNSI-改修内容新規ボタン押下した、登録ボタン非活性する、前回履歴をクリアする。 任 end*/
     /*add FNSI-改修内容転入時の紹介状取込ができない/紹介状登録と編集画面改修四つボタン改修/帳票テンプレートが存在しない場合のメッセージをPOPUP表示ではないく、画面に表示するように修正。 任 end*/
     reportList: [],
-    // add 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 start
-    cltNo:null
-    // add 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 end
-    // add #12650 登録済み紹介状が帳票マスタ削除の影響を受けるのは不適切 zhao start
-    , reportIsDel:null,
-    // add #12650 登録済み紹介状が帳票マスタ削除の影響を受けるのは不適切 zhao end
+    // add 11488 紹介状登録内容保存時に帳票の版も記憶する 1.1A  吉 start
+    cltNo:null,
+    // add 11488 紹介状登録内容保存時に帳票の版も記憶する 1.1A  吉 end
+    reportIsDel:null,
     // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 start
     templateImageInfo: {},
     initialTemplateData: null,
@@ -221,21 +219,19 @@ export default {
     setReportList: (state, value) => {
       state.reportList = value;
     },
-    // add 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 start
+    // add 11488 紹介状登録内容保存時に帳票の版も記憶する 1.1A  吉 start
     setCltNo: (state, value) => {
       state.cltNo = value;
     },
-    // add 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 end
-    // add #12650 登録済み紹介状が帳票マスタ削除の影響を受けるのは不適切 zhao start
-    setReportIsDel: (state, value) => {
-      state.reportIsDel = value;
-    },
-    // add #12650 登録済み紹介状が帳票マスタ削除の影響を受けるのは不適切 zhao end
+    // add 11488 紹介状登録内容保存時に帳票の版も記憶する 1.1A  吉 end
     // add FNSI-改修内容患者イベント(紹介状)施設選択の箇所に、施設マスタTBL⇒全施設マスタTBL、医療機関コードがkeyとして取得、保存する要 赵 start
     setToMedicalInstitutionCd: (state, value) => {
       state.toMedicalInstitutionCd = value;
     },
     // add FNSI-改修内容患者イベント(紹介状)施設選択の箇所に、施設マスタTBL⇒全施設マスタTBL、医療機関コードがkeyとして取得、保存する要 赵 end
+    setReportIsDel: (state, value) => {
+      state.reportIsDel = value;
+    },
     // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 start
     setTemplateImageInfo: (state, value) => {
       state.templateImageInfo = value;
@@ -325,13 +321,13 @@ export default {
     },
     // add FNSI-改修内容患者イベント(紹介状)施設選択の箇所に、施設マスタTBL⇒全施設マスタTBL、医療機関コードがkeyとして取得、保存する要 赵 end
     async setTemplate({ commit }, params) {
-      // mod 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 start
+      // mod 11488 紹介状登録内容保存時に帳票の版も記憶する 1.1A  吉 start
       //await ApiHelper.get(`/pat-introduction-letter/get-intro-letter-template/${params.patId}/${params.reportCd}`)
       // mod #12196 紹介状作成時に参照される各データが常に最新値になるのはNG zhao start
        //await ApiHelper.get(`/pat-introduction-letter/get-intro-letter-template/${params.patId}/${params.reportCd}/${params.ctlNo}/${params.isUpdate}`)
        await ApiHelper.get(`/pat-introduction-letter/get-intro-letter-template/${params.patId}/${params.reportCd}/${params.ctlNo}/${params.isUpdate}/${params.reportStartDate}`)
       // mod #12196 紹介状作成時に参照される各データが常に最新値になるのはNG zhao end
-       // mod 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 end
+       // mod 11488 紹介状登録内容保存時に帳票の版も記憶する 1.1A  吉 end
         .then(async response => {
           let data = response.data;
           // add #11425 紹介状画面のhtml内で1つのタグにid属性が重複設定される limingzhe start
@@ -373,7 +369,7 @@ export default {
           //   })
           //   if(fallbackMap) {
           //     data.htmlTemplate = replaceUnavailableFonts(data.htmlTemplate, fallbackMap);
-          //     commit("setHtmlTemplate", data.htmlTemplate);
+          //     commit("setHtmlTemplate", processedTemplate);
           //   }
           // });
           // add #10633 【たくしん会】帳票のフォント問題 limingzhe 20250516 end
@@ -401,22 +397,20 @@ export default {
             console.error("fontError:", fontError);
           }
           // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end
-          commit("setHtmlTemplate", data.htmlTemplate);
+          commit("setHtmlTemplate", processedTemplate);
           commit("setReportCd", params.reportCd);
-          // add 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 start
+          // add 11488 紹介状登録内容保存時に帳票の版も記憶する 1.1A  吉 start
           if (data.ctlNo) {
             commit("setCltNo", data.ctlNo);
           }
-          // add 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 end
-          // add #12650 登録済み紹介状が帳票マスタ削除の影響を受けるのは不適切 zhao start
-          commit("setReportIsDel", data.reportIsDel);
-          // add #12650 登録済み紹介状が帳票マスタ削除の影響を受けるのは不適切 zhao end
+          // add 11488 紹介状登録内容保存時に帳票の版も記憶する 1.1A  吉 end
           /*add FNSI-改修内容帳票テンプレートが存在しない場合のメッセージをPOPUP表示ではないく、画面に表示するように修正。 任 start*/
           commit("setIsNotExit",false);
           /*add FNSI-改修内容紹介状登録と編集画面改修四つボタン改修 任 start*/
           commit("setIsShowSomeThing",false);
           /*add FNSI-改修内容紹介状登録と編集画面改修四つボタン改修 任 end*/
           /*add FNSI-改修内容帳票テンプレートが存在しない場合のメッセージをPOPUP表示ではないく、画面に表示するように修正。 任 end*/
+          commit("setReportIsDel", data.reportIsDel);
         })
         .catch (() => {
           commit("setHtmlTemplate", null);
@@ -437,7 +431,7 @@ export default {
    /* async onUpdatePatInfo(temp, params) {*/
     async onUpdatePatInfo({ commit }, params) {
       /*mod FNSI-改修内容紹介状登録と編集画面改修四つボタン改修 任 end*/
-      await ApiHelper.post(`/pat-introduction-letter/sync-patient-information/`, {
+      await ApiHelper.post(`/pat-introduction-letter/sync-patient-information`, {
         letterData: params.letterData,
         reportCd: params.reportCd,
         patId: params.patId
@@ -459,7 +453,7 @@ export default {
           /*add FNSI-改修内容患者イベント外结No.6 任 end*/
         }else{
           commit("setDialogMsg", true);
-          ons.notification.alert({
+          showAlertDialog({
             title: "更新完了",
             message: "患者情報更新が完了しました。"
           });
@@ -467,14 +461,14 @@ export default {
         /*mod FNSI-改修内容紹介状登録と編集画面改修四つボタン改修 任 end*/
       })
       .catch ( () => {
-        ons.notification.alert({
+        showAlertDialog({
           title: "更新失敗",
           message: "患者情報が</br>更新されませんでした。"
         });
       })
     },
     async onPrintLetter(temp, params) {
-      await ApiHelper.post(`/pat-introduction-letter/print-report/`, {
+      await ApiHelper.post(`/pat-introduction-letter/print-report`, {
         htmlTemplate: params.htmlTemplate,
         patId: params.patId,
         /*add FNSI-改修内容マスタ画面の修正に伴い、紐付ける帳票を一括印刷するように修正 任 start*/
@@ -487,7 +481,7 @@ export default {
         // add #12650 登録済み紹介状が帳票マスタ削除の影響を受けるのは不適切 zhao end
       })
         .then( () => {
-          ons.notification.alert({
+          showAlertDialog({
             title: "",
             message: "印刷完了しました。"
           });
@@ -503,7 +497,7 @@ export default {
           //   title: "",
           //   message: "印刷失敗しました。"
           // });
-          ons.notification.alert({
+          showAlertDialog({
             title: DIALOG_MESSAGES[12000207].title,
             message: DIALOG_MESSAGES[12000207].message
           });
@@ -539,12 +533,9 @@ export default {
     /*add FNSI-改修内容新規ボタン押下した、登録ボタン非活性する、前回履歴をクリアする。 任 end*/
     /*add FNSI-改修内容転入時の紹介状取込ができない/紹介状登録と編集画面改修四つボタン改修/帳票テンプレートが存在しない場合のメッセージをPOPUP表示ではないく、画面に表示するように修正。 任 end*/
     getReportList: state => state.reportList,
-    // add 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 start
+    // add 11488 紹介状登録内容保存時に帳票の版も記憶する 1.1A  吉 start
     getCltNo:state => state.cltNo,
-    // add 11488 紹介状登録内容保存時に帳票の版も記憶する　1.1A  吉 end
-    // add #12650 登録済み紹介状が帳票マスタ削除の影響を受けるのは不適切 zhao start
-    getReportIsDel:state => state.reportIsDel,
-    // add #12650 登録済み紹介状が帳票マスタ削除の影響を受けるのは不適切 zhao end
+    // add 11488 紹介状登録内容保存時に帳票の版も記憶する 1.1A  吉 end
     /*add FNSI-改修内容転入転出の患者情報連動 任 start*/
     getIsUpdateLetter: state => state.isUpdateLetter,
     /*add FNSI-改修内容患者イベントbug 任 start*/
@@ -554,9 +545,9 @@ export default {
     // add FNSI-改修内容患者イベント(紹介状)施設選択の箇所に、施設マスタTBL⇒全施設マスタTBL、医療機関コードがkeyとして取得、保存する要 赵 start
     getToMedicalInstitutionCd: state => state.toMedicalInstitutionCd,
     // add FNSI-改修内容患者イベント(紹介状)施設選択の箇所に、施設マスタTBL⇒全施設マスタTBL、医療機関コードがkeyとして取得、保存する要 赵 end
-    // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 start
+    getReportIsDel:state => state.reportIsDel,
     getTemplateImageInfo: state => state.templateImageInfo,
-    getImageInfoByCoordinate: (state) => (coordinate) => {
+    getImageInfoByCoordinate: state => coordinate => {
       return state.templateImageInfo[coordinate] || null;
     },
     hasTemplateImages: state => {
@@ -565,16 +556,15 @@ export default {
     getInitialTemplateData: state => state.initialTemplateData,
     getHasInitialTemplate: state => state.hasInitialTemplate,
     getTemplateImageCoordinates: state => state.templateImageCoordinates,
-    isTemplateImage: (state) => (coordinate) => {
+    isTemplateImage: state => coordinate => {
       return state.templateImageCoordinates.includes(coordinate);
     },
-    getSpanHtmlByCoordinate: (state) => (coordinate) => {
+    getSpanHtmlByCoordinate: state => coordinate => {
       return state.spanHtmlMap[coordinate] || null;
     },
-    getImageSizeByCoordinate: (state) => (coordinate) => {
+    getImageSizeByCoordinate: state => coordinate => {
       return state.imageSizeMap[coordinate] || null;
     },
-    getImageSizeMap: (state) => state.imageSizeMap,
-    // add #12402 紹介状の編集で画像の追加や差し替えができない wangchao 20260422 end
+    getImageSizeMap: state => state.imageSizeMap,
   },
 };

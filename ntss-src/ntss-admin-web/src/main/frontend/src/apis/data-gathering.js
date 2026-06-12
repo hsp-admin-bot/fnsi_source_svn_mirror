@@ -1,8 +1,12 @@
+/**
+ * データ収集（モーション記録）系API
+ */
 import { ApiHelper } from "@/apis/AxiosHelper";
+import { encodeApiBase64 } from "@/apis/ApiRuntime";
 
 /**
  * データ収集RestAPI
- * @param {*} params リクエストパラメータ
+ * @param {Record<string, unknown>} params リクエストパラメータ
  */
 export function sendRequestDataGathering(params) {
   // check
@@ -24,7 +28,7 @@ export function sendRequestDataGathering(params) {
   const userId = params.userId.toString().padEnd(12);
   const planContent = `${facilityCd}${deviceEdgeNo}${machineTypeCd}${comFormatCd}${machineSerial}${userId}`;
   // string -> base64
-  const base64Content = window.btoa(planContent);
+  const base64Content = encodeApiBase64(planContent);
   return ApiHelper.post(`motion_record/request/data_gathering`, {
     content: base64Content
   });

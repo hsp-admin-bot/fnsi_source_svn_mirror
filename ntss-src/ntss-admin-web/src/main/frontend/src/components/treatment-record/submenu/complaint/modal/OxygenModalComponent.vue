@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body">
+    <template #body>
+      <div>
       <table class="oxygen-table treatment-record-accordion treatment-record-modal">
         <tr v-for="(item, index) in actualModel" :key="index">
           <td class="oxygen-tb-content" :class="{ 'edited-row': item.isNew }">
@@ -33,14 +34,22 @@
                 v-model="item.oxygenSpeed"
                 :initValue="initModel[index].oxygenSpeed"
                 :disabled="!item.isEditable"
-                @getChildData="setOxygenAmount($event, index, 'oxygenSpeed')"
+                @blur="onOxygenSpeedBlur(index)"
               />
               <v-ons-row class="user-name-1">
                 <v-ons-col class="title">
                   <label>処置者</label>
                 </v-ons-col>
                 <v-ons-col width="13em" class="value d-flex align-items-center">
-                  <custom-input :value="userNameValue[index]" :disabled="true" />
+                  <common-master-selector
+                    :masterType="MasterType.PERSONAL_USER_TREATMENT_RECORD"
+                    :facilityCd="userFacilityCd"
+                    :initItem="createStaffPickerItem(index)"
+                    :editItem="createStaffPickerItem(index)"
+                    :selectedItemClass="'selector-input'"
+                    :btnVisible="false"
+                    :btnDisabled="true"
+                  />
                 </v-ons-col>
                 <v-ons-col width="5em" class="select d-flex align-items-center">
                   <!-- mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm start-->
@@ -56,17 +65,15 @@
 <!--                    :class="['isClass']"-->
 <!--                    :isDisabled="!item.isEditable"-->
 <!--                  />-->
-                  <com-master-selector
-                    name="personal-user-all"
-                    :value="createStaffValue(index)"
-                    :showLabelName="false"
-                    :showClassFilter="true"
-                    :readMasterData="fetchPersonalUserAll"
-                    :masterDefine="personalUser"
-                    :index="index"
-                    @changePersonalUser="setUser"
-                    :class="['isClass']"
-                    :isDisabled="!item.isEditable"
+                  <common-master-selector
+                    :masterType="MasterType.PERSONAL_USER_TREATMENT_RECORD"
+                    :facilityCd="userFacilityCd"
+                    :initItem="createStaffPickerItem(index)"
+                    :editItem="createStaffPickerItem(index)"
+                    :isVisible="false"
+                    :btnClass="'btn3-normal'"
+                    :btnDisabled="!item.isEditable"
+                    @popover-return="d => onPopoverStaff(d, index)"
                   />
                   <!-- mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm end-->
                 </v-ons-col>
@@ -84,6 +91,7 @@
                 @input="setOxygenAmount($event, index, 'endDate')"
               />
               <com-number-input
+                :key="'oxygen-amount-' + index + '-' + (oxygenAmountInputKeys[index] || 0)"
                 labelName="吸入量"
                 unitName="L"
                 :step="0.01"
@@ -93,13 +101,22 @@
                 v-model="item.oxygenAmount"
                 :initValue="initModel[index].oxygenAmount"
                 :disabled="!item.isEditable"
+                @input="markOxygenAmountManualEdited(index)"
               />
               <v-ons-row class="user-name-2">
                 <v-ons-col class="title">
                   <label>処置者</label>
                 </v-ons-col>
                 <v-ons-col width="13em" class="value d-flex align-items-center">
-                  <custom-input :value="userNameValue[index]" :disabled="true" />
+                  <common-master-selector
+                    :masterType="MasterType.PERSONAL_USER_TREATMENT_RECORD"
+                    :facilityCd="userFacilityCd"
+                    :initItem="createStaffPickerItem(index)"
+                    :editItem="createStaffPickerItem(index)"
+                    :selectedItemClass="'selector-input'"
+                    :btnVisible="false"
+                    :btnDisabled="true"
+                  />
                 </v-ons-col>
                 <v-ons-col width="5em" class="select d-flex align-items-center">
                   <!-- mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm start-->
@@ -115,17 +132,15 @@
 <!--                    :class="['isClass']"-->
 <!--                    :isDisabled="!item.isEditable"-->
 <!--                  />-->
-                  <com-master-selector
-                    name="personal-user-all"
-                    :value="createStaffValue(index)"
-                    :showLabelName="false"
-                    :showClassFilter="true"
-                    :readMasterData="fetchPersonalUserAll"
-                    :masterDefine="personalUser"
-                    :index="index"
-                    @changePersonalUser="setUser"
-                    :class="['isClass']"
-                    :isDisabled="!item.isEditable"
+                  <common-master-selector
+                    :masterType="MasterType.PERSONAL_USER_TREATMENT_RECORD"
+                    :facilityCd="userFacilityCd"
+                    :initItem="createStaffPickerItem(index)"
+                    :editItem="createStaffPickerItem(index)"
+                    :isVisible="false"
+                    :btnClass="'btn3-normal'"
+                    :btnDisabled="!item.isEditable"
+                    @popover-return="d => onPopoverStaff(d, index)"
                   />
 
                   <!-- mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm end-->
@@ -143,12 +158,14 @@
           labelName="合計吸入量"
           unitName="L"
           :digits="2"
-          v-model="totalAmount"
+          :value="totalAmount"
         />
       </div>
       <br>
-    </div>
-    <div slot="footer" class="flex-container" style="overflow-x: auto;">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container" style="overflow-x: auto;">
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
       <div class="denial-btn-area" style="background: none">
         <v-ons-button class="button denial-btn btn2-cancel" @click="cancel"
@@ -164,21 +181,24 @@
         >
       </div>
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import moment from "moment";
-import { mapGetters, mapActions } from "vuex";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
+import dayjs from "@/compat/date/dayjs";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
 import CommonNumberInputComponent from "@/components/treatment-record/submenu/common/CommonNumberInputComponent";
 import CommonDateTimeComponent from "@/components/treatment-record/submenu/common/CommonDateTimeComponent";
 import CommonNumberDisplayComponent from "@/components/treatment-record/submenu/common/CommonNumberDisplayComponent";
-import CommonMasterSelectorComponent from "@/components/common/master-selector/TreatmentRecordSelectorComponent";
-import { personalUser } from "@/components/common/master-selector/MasterSelectorDefinitions";
+import CommonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 import ComplaintComponentMixin from "@/components/treatment-record/submenu/complaint/ComplaintComponentMixin";
 import { Complaint } from "@/models/treatment-record/complaint/Complaint";
 import { OxygenModal } from "@/models/treatment-record/complaint/OxygenModal";
@@ -186,13 +206,8 @@ import { Treatment } from "@/models/treatment-record/complaint/Treatment";
 import { Master } from "@/models/common/master-selector-condition/Master";
 import { CODES } from "@/constants/TreatmentRecord";
 import { dateFormat } from "@/functions/common/DateTimeUtils";
-import { EventBus } from "@/eventBus.js";
-import {
-  sendRequestGetMstPersonalUser,
-  sendRequestMstGetJobs,
-} from "@/apis/user-selector-popover";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // FNSI-add redmine4848 徐 start
-import customInput from "@/components/common/custom-form-tags/CustomInput";
 // FNSI-add redmine4848 徐 end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
@@ -206,14 +221,11 @@ export default {
     "com-number-input": CommonNumberInputComponent,
     "com-date-time-input": CommonDateTimeComponent,
     "com-number-display": CommonNumberDisplayComponent,
-    "com-master-selector": CommonMasterSelectorComponent,
-    // FNSI-add redmine4848 徐 start
-    "custom-input": customInput,
-    // FNSI-add redmine4848 徐 end
+    "common-master-selector": CommonMasterSelector,
   },
   data() {
     return {
-      personalUser: personalUser,
+      MasterType,
       actualModel: [],
       // del FNSI-8014 劉全航 start
       // totalAmount: null,
@@ -228,14 +240,17 @@ export default {
         treatMedicineCd: null,
         treatMedicineName: null,
       },
-      userNameValue: [],
       // #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng start
       initModel: [],
+      // 日時変更による吸入量再算出時のみ入力欄を再描画する
+      oxygenAmountInputKeys: {},
+      // 吸入量手動入力時の速度スナップショット（終了ブロックindex -> 速度）
+      oxygenAmountManualSpeedSnapshot: {},
       // #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng end
     };
   },
   computed: {
-    ...mapGetters("user", { facilityCd: "getFacilityCd" }),
+    ...mapGetters("user", { userFacilityCd: "getFacilityCd" }),
     ...mapGetters("treatment-record/common", ["getDialysisState", "getRstEndDate"]),
     //add FNSI修正内容 愁訴処置の登録および表示修正 房 start
     ...mapGetters("treatment-record/complaint", ["getTempCtlNo"]),
@@ -411,7 +426,7 @@ export default {
           const index = i + 1;
           if (model.isStart) {
             // 開始ブロックの処理
-            const startDate = moment(model.startDate);
+            const startDate = dayjs(model.startDate);
             const startComplaint = Complaint.of({
               ctlNo: ctlNo,
               rowNo,
@@ -529,42 +544,71 @@ export default {
       }
     },
 
-    fetchPersonalUserAll() {
-      return Promise.all([
-        sendRequestGetMstPersonalUser(this.facilityCd),
-        sendRequestMstGetJobs(this.facilityCd),
-      ]);
+    onPopoverStaff(data, index) {
+      this.actualModel[index].staff.name = data?.text ?? "";
+      this.actualModel[index].staff.cd = data?.value ?? null;
     },
-
-    // FNSI-add redmine4848 徐 start
-    setUser(userInfo, index) {
-      let userName = "";
-      if (userInfo && userInfo.lastName) {
-        userName = userInfo.lastName + " ";
-      }
-      if (userInfo && userInfo.firstName) {
-        userName = userName + userInfo.firstName;
-      }
-      this.actualModel[index].staff.name = userName;
-      this.actualModel[index].staff.cd = userInfo ? userInfo.id : null;
-
-      // リアクティブに通知してUIが更新されるようにspliceで配列を更新する
-      const newValue = {
-        ...this.userNameValue[index],
-        editValue: this.actualModel[index].staff.name
-      };
-      this.userNameValue.splice(index, 1, newValue);
-    },
-    // FNSI-add redmine4848 徐 end
-    createStaffValue(index) {
-      // mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm start
-      // return new Master(this.actualModel[index].staff.cd, this.actualModel[index].staff.name);
-      return new Master(null == this.actualModel[index].staff.cd || "" === this.actualModel[index].staff.cd
-        ? this.userInfo.userId : this.actualModel[index].staff.cd, this.actualModel[index].staff.name);
-      // mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm end
+    createStaffPickerItem(index) {
+      const staffCd = this.actualModel[index]?.staff?.cd;
+      const value =
+        staffCd == null || String(staffCd) === "" ? this.userInfo.userId : staffCd;
+      const text = this.actualModel[index]?.staff?.name ?? "";
+      return { value, text };
     },
     /**
-     * 吸入量 設定
+     * 吸入量を手動入力した時点の速度を記録
+     * @param {Number} endIndex 終了ブロックのindex
+     */
+    markOxygenAmountManualEdited(endIndex) {
+      const startIndex = endIndex - 1;
+      if (startIndex < 0) {
+        return;
+      }
+      this.oxygenAmountManualSpeedSnapshot = {
+        ...this.oxygenAmountManualSpeedSnapshot,
+        [endIndex]: this.actualModel[startIndex].oxygenSpeed,
+      };
+    },
+    /**
+     * 吸入量手動入力時の速度スナップショットを解除
+     * @param {Number} endIndex 終了ブロックのindex
+     */
+    clearOxygenAmountManualSnapshot(endIndex) {
+      if (!Object.prototype.hasOwnProperty.call(this.oxygenAmountManualSpeedSnapshot, endIndex)) {
+        return;
+      }
+      const next = { ...this.oxygenAmountManualSpeedSnapshot };
+      delete next[endIndex];
+      this.oxygenAmountManualSpeedSnapshot = next;
+    },
+    /**
+     * 速度入力blur時に吸入量を再算出
+     * 手動入力後かつ速度が変わっていない場合のみスキップ
+     * @param {Number} index 開始ブロックのindex
+     */
+    onOxygenSpeedBlur(index) {
+      this.$nextTick(() => {
+        const endIndex = index + 1;
+        if (endIndex >= this.actualModel.length) {
+          return;
+        }
+        const endOxygenModal = this.actualModel[endIndex];
+        if (!endOxygenModal?.isEditable) {
+          return;
+        }
+        const currentSpeed = this.actualModel[index].oxygenSpeed;
+        if (
+          Object.prototype.hasOwnProperty.call(this.oxygenAmountManualSpeedSnapshot, endIndex)
+          && this.oxygenAmountManualSpeedSnapshot[endIndex] == currentSpeed
+        ) {
+          return;
+        }
+        const startOxygenModal = { ...this.actualModel[index] };
+        this.applyOxygenAmountCalc(endIndex, endOxygenModal.endDate, startOxygenModal);
+      });
+    },
+    /**
+     * 吸入量 設定（開始・終了日時変更時）
      * @param {*} newValue 変更後の値
      * @param {Number} index 表示中のModelのindex
      * @param {String} field 変更したフィールド名
@@ -573,35 +617,90 @@ export default {
       let startOxygenModal = null;
       let endOxygenModal = null;
       let endDate = null;
-      if (["startDate", "oxygenSpeed"].includes(field)) {
+      let endIndex = null;
+      if (field === "startDate") {
         // 開始ブロック取得
         startOxygenModal = { ...this.actualModel[index] };
-        // 速度変更時だけmodelに変更後の値が反映されていないためnewValueを上書き
-        startOxygenModal.oxygenSpeed = "oxygenSpeed" === field ? newValue : startOxygenModal.oxygenSpeed;
+        startOxygenModal.startDate = newValue;
         // 終了日時取得
         if ((index + 1) < this.actualModel.length) {
           endOxygenModal = this.actualModel[index + 1];
           endDate = endOxygenModal.endDate;
+          endIndex = index + 1;
 
           // 終了が編集不可の場合は算出処理を行わない
           if (!endOxygenModal.isEditable) {
             return;
           }
         }
-      } else {
+      } else if (field === "endDate") {
         // 開始ブロック取得
         startOxygenModal = { ...this.actualModel[index - 1] };
         // 終了日時取得
         endOxygenModal = this.actualModel[index];
-        endDate = endOxygenModal.endDate;
+        endDate = newValue;
+        endIndex = index;
+      } else {
+        return;
       }
 
       if (endOxygenModal) {
-        // 吸入量の算出
-        const oxygenAmount = this.calcOxygenAmount(endDate, startOxygenModal);
-        // 結果がnullの場合はパラメータ不足のため未計算。元の値を更新しない
-        endOxygenModal.oxygenAmount = oxygenAmount !== null ? oxygenAmount : endOxygenModal.oxygenAmount;
+        this.clearOxygenAmountManualSnapshot(endIndex);
+        this.applyOxygenAmountCalc(endIndex, endDate, startOxygenModal);
       }
+    },
+    /**
+     * 算出した吸入量を反映
+     * @param {Number} endIndex 終了ブロックのindex
+     * @param {*} endDate 終了日時
+     * @param {*} startOxygenModal 開始ブロック
+     */
+    applyOxygenAmountCalc(endIndex, endDate, startOxygenModal) {
+      const endOxygenModal = this.actualModel[endIndex];
+      if (!endOxygenModal?.isEditable) {
+        return;
+      }
+      const oxygenAmount = this.calcOxygenAmount(endDate, startOxygenModal);
+      if (oxygenAmount !== null) {
+        endOxygenModal.oxygenAmount = oxygenAmount;
+        this.bumpOxygenAmountInputKey(endIndex);
+        this.clearOxygenAmountManualSnapshot(endIndex);
+      }
+    },
+    /**
+     * 日時変更による吸入量再算出時に入力欄を再描画
+     * @param {Number} endIndex 終了ブロックのindex
+     */
+    bumpOxygenAmountInputKey(endIndex) {
+      this.oxygenAmountInputKeys = {
+        ...this.oxygenAmountInputKeys,
+        [endIndex]: (this.oxygenAmountInputKeys[endIndex] || 0) + 1,
+      };
+    },
+    /**
+     * 全終了ブロックの吸入量を再算出
+     */
+    recalculateAllOxygenAmounts() {
+      this.actualModel.forEach((item, index) => {
+        if (item.isStart || index === 0) {
+          return;
+        }
+        if (item.oxygenAmount !== null && item.oxygenAmount !== "") {
+          return;
+        }
+        if (!item.isEditable) {
+          return;
+        }
+        const startOxygenModal = this.actualModel[index - 1];
+        if (!startOxygenModal?.isStart) {
+          return;
+        }
+        const oxygenAmount = this.calcOxygenAmount(item.endDate, startOxygenModal);
+        if (oxygenAmount !== null) {
+          item.oxygenAmount = oxygenAmount;
+          this.bumpOxygenAmountInputKey(index);
+        }
+      });
     },
     /**
      * 吸入量の算出
@@ -609,15 +708,22 @@ export default {
      * @param {*} preOxygenModal
      */
     calcOxygenAmount(endDate, preOxygenModal) {
+      const oxygenSpeed = Number(preOxygenModal.oxygenSpeed);
       // パラメータが不足している場合は計算しない
-      if (endDate === null || preOxygenModal.startDate === null || preOxygenModal.oxygenSpeed === null || preOxygenModal.oxygenSpeed === "") {
+      if (
+        endDate === null
+        || preOxygenModal.startDate === null
+        || preOxygenModal.oxygenSpeed === null
+        || preOxygenModal.oxygenSpeed === ""
+        || Number.isNaN(oxygenSpeed)
+      ) {
         return null;
       }
       // 吸入量に1つ前の開始速度*(終了日時－1つ前の開始日時)を計算
-      const diff = moment(endDate).diff(moment(preOxygenModal.startDate), "minutes");
+      const diff = dayjs(endDate).diff(dayjs(preOxygenModal.startDate), "minutes");
       if (diff >= 0) {
-        let total = isNaN(diff) ? null : diff * preOxygenModal.oxygenSpeed;
-        return Math.round(total * 100) / 100; // 計算結果を返す
+        const total = diff * oxygenSpeed;
+        return isNaN(total) ? null : Math.round(total * 100) / 100; // 計算結果を返す
       }
       return null; // 差が0未満の場合はnullを返す
     },
@@ -659,14 +765,16 @@ export default {
       }
       // 処置者：サインインユーザー
       oxygenModal.staff = new Master(this.getUserId(), this.getUserName());
-      this.userNameValue.push({ initValue: "", editValue: oxygenModal.staff.name });
 
       // 編集後データ
       this.actualModel.push(oxygenModal);
+      if (!preIsStart) {
+        this.bumpOxygenAmountInputKey(this.actualModel.length - 1);
+      }
 
       // 一番下にスクロールする
       this.$nextTick(() => {
-        const scrollBody = document.getElementById("scrollbody");
+        const scrollBody = getScopedElementById("scrollbody", this.$el || this);
         scrollBody.scrollTop = scrollBody.scrollHeight;
       });
     },
@@ -677,10 +785,9 @@ export default {
       EventBus.$off('deleteOxygenOrElectrocardiogram', this.removeLastElement);
       this.actualModel.pop();
       this.initModel.pop();
-      this.userNameValue.pop();
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
     EventBus.$off('deleteOxygenOrElectrocardiogram', this.removeLastElement);
@@ -694,19 +801,6 @@ export default {
         const defaultDate = this.getDefaultDate(null);
         const oxygenModal = new OxygenModal(null, true, defaultDate);
         this.actualModel.push(oxygenModal);
-      } else {
-        // oxygenModalsの最後尾が開始日時の場合は終了ブロックを追加
-        const preOxygenModal = this.actualModel.at(-1);
-        if (preOxygenModal.isStart) {
-          // 1つ前が開始の場合、終了ブロック追加
-          // デフォルト日時に1つ前の開始日時以上を設定
-          const defaultDate = this.getDefaultDate(preOxygenModal.startDate);
-          const oxygenModal = new OxygenModal(null, false, defaultDate);
-          // 吸入量を算出
-          oxygenModal.oxygenAmount = this.calcOxygenAmount(defaultDate, preOxygenModal);
-
-          this.actualModel.push(oxygenModal);
-        }
       }
       // #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng start
       this.initModel = JSON.parse(JSON.stringify(this.actualModel));
@@ -731,14 +825,11 @@ export default {
         if (!item.isStart && item.endDate === null) {
           item.endDate = item.defaultDate;
         }
-        // 処置者：サインインユーザー
-        this.userNameValue[index] = { initValue: null, editValue: null }; // 初期化
-        this.userNameValue[index].initValue = item.staff != null ? item.staff.name : "";
         if (item.staff === null) {
           item.staff = new Master(this.getUserId(), this.getUserName());
         }
-        this.userNameValue[index].editValue = item.staff.name;
       });
+      this.recalculateAllOxygenAmounts();
     });
   }
 };
@@ -756,10 +847,10 @@ export default {
   border-bottom: 1px solid #cccccc;
   padding: 10px;
 }
-.oxygen-tb-content >>> ons-row {
+.oxygen-tb-content :deep(ons-row) {
   flex-wrap: nowrap;
 }
-.oxygen-tb-content >>> ons-col.title {
+.oxygen-tb-content :deep(ons-col.title) {
   /* treatment-record-accordion 関連設定の幅だけ上書きする */
   flex: 0 0 30%;
   min-width: 7em;
@@ -768,38 +859,38 @@ export default {
   min-width: 7em;
   max-width: 35.4em;
 }
-.total-container >>> ons-row {
+.total-container :deep(ons-row) {
   flex-wrap: nowrap;
   width: 90%;
   margin-top: 10px;
 }
-.total-container >>> ons-col.title {
+.total-container :deep(ons-col.title) {
   min-width: 7.5em;
   max-width: 25em;
   text-align: right;
   padding-left: 40px;
 }
-.total-container >>> ons-col.num-value {
+.total-container :deep(ons-col.num-value) {
   flex: 0 0 5em;
   max-width: 5em;
   text-align: right;
 }
-div >>> .modal-container,
-div >>> .modal-search,
-div >>> .modal-body,
-div >>> .modal-footer,
-div >>> .modal-footer .bottom-bar {
+div :deep(.modal-container),
+div :deep(.modal-search),
+div :deep(.modal-body),
+div :deep(.modal-footer),
+div :deep(.modal-footer .bottom-bar) {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }
-div >>> .modal-body {
+div :deep(.modal-body) {
   overflow-x: hidden;
 }
 /* add FNSI-redmine3855 徐 start */
 .isClass {
   padding: unset;
 }
-.isClass >>> ons-button {
+.isClass :deep(ons-button) {
   margin-right:35em;
 }
 /* add FNSI-redmine3855 徐 end */

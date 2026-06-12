@@ -1,7 +1,6 @@
 <script>
-import { mapMutations, mapGetters } from "vuex";
-import { has, isArray } from "underscore";
-import vuedraggable from "vuedraggable";
+import { mapGetters, mapMutations } from "@/compat/vue/vuex";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
 // import { deepCopy, mstCdToName, mstCdToNameFreeWord, mstCdToNameIncludeDeleted } from "@/functions/common/CommonFunctions";
 import {
@@ -38,17 +37,146 @@ import DiseaMasterSelector from "@/components/common/master-selector/DiseaMaster
 import masterSelectorFacility from "@/components/common/master-selector/MasterSelectorFacility";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import CommonTextArea from "@/components/common/CommonTextArea";
-import isEqualWith from "lodash/isEqualWith";
-import orderBy from "lodash/orderBy";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
+import orderBy from "@/compat/collections/lodash/orderBy";
 import { customComparatorForType } from "@/utils/util.js"
 
-// import { EventBus } from "@/eventBus.js";
+
+import { has, isArray } from "@/compat/collections/lodash";
+// import { EventBus } from "@/compat/vue/event-bus.js";
+
+/** custom-simple-textarea-a 用の高さ余白 */
+const SIMPLE_TEXTAREA_HEIGHT_MARGIN = 4;
+
+/** com-textarea 用の高さ余白（CustomTextarea TEXTAREA_HEIGHT_MARGIN と揃える） */
+const COM_TEXTAREA_HEIGHT_MARGIN = 5;
+
+/** com-textarea 用の最小高さ */
+const COM_TEXTAREA_MIN_HEIGHT = 26;
+
+/** CustomTextarea の空欄 defaultHeight */
+const CUSTOM_TEXTAREA_DEFAULT_HEIGHT = 40;
+
+/** Vue3 pat-info：空欄 defaultHeight との差分 */
+const COM_TEXTAREA_EMPTY_HEIGHT_OFFSET = 3;
+
+/** Vue3 pat-info：文字あり scrollHeight+margin との差分 */
+const COM_TEXTAREA_CONTENT_HEIGHT_OFFSET = 4;
+
+const PAT_INFO_TEXTAREA_RESIZE_DELAYS = [200, 800];
+const PAT_INFO_TEXTAREA_LAYOUT_RESIZE_DELAYS = [0, 100, 300, 800];
+
+function getComTextareaComponentFromElement(el) {
+  if (!el) {
+    return null;
+  }
+  const wrapper = el.closest?.(".comTextarea") || el;
+  const vm = wrapper.__vueParentComponent?.proxy
+    ?? wrapper.__vueParentComponent?.ctx
+    ?? wrapper.__vue__;
+  if (vm?.getTextareaElement && vm?.resizeTextarea) {
+    return vm;
+  }
+  return null;
+}
+
+function measureTextareaScrollHeight(element) {
+  const previousOverflow = element.style.overflow;
+  const previousHeight = element.style.height;
+  element.style.overflow = "hidden";
+  element.style.height = "0px";
+  const scrollHeight = element.scrollHeight;
+  element.style.overflow = previousOverflow;
+  element.style.height = previousHeight;
+  return scrollHeight;
+}
+
+function parsePatInfoComTextareaDefaultHeight(component) {
+  const raw = component?.defaultHeight;
+  if (raw == null || raw === "") {
+    return CUSTOM_TEXTAREA_DEFAULT_HEIGHT;
+  }
+  const parsed = parseFloat(String(raw));
+  return Number.isFinite(parsed) ? parsed : CUSTOM_TEXTAREA_DEFAULT_HEIGHT;
+}
+
+function resolvePatInfoComTextareaElement(elOrWrapper, component) {
+  if (component?.getTextareaElement) {
+    return component.getTextareaElement();
+  }
+  if (elOrWrapper?.tagName === "TEXTAREA") {
+    return elOrWrapper;
+  }
+  return elOrWrapper?.querySelector?.("textarea") ?? null;
+}
+
+function applyPatInfoComTextareaHeight(elOrWrapper) {
+  let component = null;
+  if (elOrWrapper?.getTextareaElement && elOrWrapper?.resizeTextarea) {
+    component = elOrWrapper;
+  } else {
+    component = getComTextareaComponentFromElement(elOrWrapper);
+  }
+
+  const el = resolvePatInfoComTextareaElement(elOrWrapper, component);
+  if (!el) {
+    return;
+  }
+
+  const margin = typeof component?.resizeHeightMargin === "number"
+    ? component.resizeHeightMargin
+    : typeof elOrWrapper?.resizeHeightMargin === "number"
+      ? elOrWrapper.resizeHeightMargin
+      : COM_TEXTAREA_HEIGHT_MARGIN;
+  const defaultHeight = parsePatInfoComTextareaDefaultHeight(component ?? elOrWrapper);
+  const minEmptyHeight = defaultHeight - COM_TEXTAREA_EMPTY_HEIGHT_OFFSET;
+  const value = el.value;
+  const isEmpty = value == null || String(value).trim() === "";
+
+  let height;
+  if (isEmpty) {
+    height = minEmptyHeight;
+  } else {
+    const scrollHeight = measureTextareaScrollHeight(el);
+    height = scrollHeight < defaultHeight
+      ? minEmptyHeight
+      : scrollHeight + margin - COM_TEXTAREA_CONTENT_HEIGHT_OFFSET;
+  }
+
+  el.style.setProperty(
+    "height",
+    `${Math.max(height, COM_TEXTAREA_MIN_HEIGHT)}px`,
+    "important"
+  );
+}
+
+function applyPatInfoSimpleTextareaHeight(el) {
+  if (!el) {
+    return;
+  }
+  el.style.height = "auto";
+  el.style.setProperty(
+    "height",
+    `${Math.max(el.scrollHeight + SIMPLE_TEXTAREA_HEIGHT_MARGIN, COM_TEXTAREA_MIN_HEIGHT)}px`,
+    "important"
+  );
+}
+
+function schedulePatInfoTextareaHeights(runAdjust, delays = PAT_INFO_TEXTAREA_RESIZE_DELAYS) {
+  delays.forEach(ms => {
+    setTimeout(() => runAdjust(), ms);
+  });
+}
+
+function schedulePatInfoTextareaHeightsAfterLayout(runAdjust) {
+  schedulePatInfoTextareaHeights(runAdjust, PAT_INFO_TEXTAREA_LAYOUT_RESIZE_DELAYS);
+}
 
 export default {
   // 共通タグコンポーネント読み込み]
 
   components: {
-    draggable: vuedraggable,
+    draggable: VueDraggable,
     "custom-input": customInput,
     "custom-input-number": customInputNumber,
     "custom-input-date": customInputDate,
@@ -74,10 +202,6 @@ export default {
     }
   },
 
-  computed: {
-    //施設コード取得用
-    ...mapGetters("user", ["getFacilityCd"]),
-  },
   data() {
     return {
     // 編集する患者情報レコード
@@ -95,26 +219,35 @@ export default {
     };
   },
 
+  computed: {
+    ...mapGetters("account-edit", ["getFontSize"]),
+    ...mapGetters("user", ["getFacilityCd"]),
+    ...mapGetters("window-size", {
+      patInfoWindowWidth: "getWindowWidth",
+      patInfoSidebarWidth: "getSidebarWidth"
+    })
+  },
+
   watch: {
+    getFontSize() {
+      this.onPatInfoLayoutChanged();
+    },
+    patInfoWindowWidth() {
+      this.onPatInfoLayoutChanged();
+    },
+    patInfoSidebarWidth() {
+      this.onPatInfoLayoutChanged();
+    },
     patRecord: {
       handler(val) {
         this.editRecord = null;
         this.initRecord = null;
         if (!val) return;
-        // add 11518 入外区分がnullになる zkm start
-        let inOutInitValue = val?.["in_out_class"]?.initValue
+        const inOutInitValue = val?.["in_out_class"]?.initValue;
         if (val["in_out_class"] && (inOutInitValue === "" || inOutInitValue == null)) {
           val["in_out_class"].initValue = 3;
           val["in_out_class"].editValue = 3;
         }
-        // add 11518 入外区分がnullになる zkm end
-        // this.editRecord = deepCopy(val);
-        // const currentComponent = this.$options.name;
-        // if (!["DifficultySeverityTransportCard", "AdditionSettingCard", "VisitHstCard",
-        //  "ChargeStaffCard", "OtherContactCard", "MedicalHstCard", "TabooAllergyCard",
-        //   "PhysicalInfoCard", "InfectionCard"].includes(currentComponent)) {
-        //   this.initRecord = deepCopy(val);
-        // }
         const normalize = (record) => {
           if (!Array.isArray(record.pat_additions)) {
             record.pat_additions = [];
@@ -124,6 +257,7 @@ export default {
         const newRecord = normalize(deepCopy(val));
         this.editRecord = newRecord;
         this.initRecord = deepCopy(newRecord);
+        this.scheduleAdjustCardTextareaHeights();
       },
       immediate: true
     },
@@ -138,7 +272,6 @@ export default {
           if (this.$options.name === 'AdditionSettingCard') {
             isEqual = !record['addition_info'].some((item) => {
               return Object.values(item).some((i) => {
-                // return i.editValue !== i.initValue;
                 return JSON.stringify(i.editValue) !== JSON.stringify(i.initValue);
               })
             })
@@ -152,14 +285,7 @@ export default {
                 return item.patGroupCd?.editValue;
               })?.sort();
               isEqual = isEqualWith(pat_group_list, init_pat_group_list, customComparatorForType);
-            }
-	    // mod #12462 患者情報共有 Ji start
-            // else if (this.$options.name === 'VisitHstCard') {
-            //   const visitCur = orderBy(deepCopy(record["in_out_visit_history_info"]), item => Number(item.ctl_no.initValue), ['asc']);
-            //   const visitIni = orderBy(deepCopy(this.initRecord["in_out_visit_history_info"]), item => Number(item.ctl_no.initValue), ['asc']);
-            //   isEqual = isEqualWith(visitCur, visitIni, customComparatorForType);
-            // } 
-            else if (this.$options.name === 'VisitHstCard') {
+            } else if (this.$options.name === 'VisitHstCard') {
               const normalize = (arr = []) => {
                 return orderBy(
                   arr
@@ -172,17 +298,16 @@ export default {
               const visitCur = normalize(deepCopy(record["in_out_visit_history_info"]));
               const visitIni = normalize(deepCopy(this.initRecord["in_out_visit_history_info"]));
               isEqual = isEqualWith(visitCur, visitIni, customComparatorForType);
-            }
-            else if (this.$options.name === 'MedicalHstCard') {
+            } else if (this.$options.name === 'MedicalHstCard') {
               const bloodChanged = record.is_blood_suger_exam?.editValue !== this.initRecord.is_blood_suger_exam?.editValue;
               const diabetesChanged = record.is_diabetes?.editValue !== this.initRecord.is_diabetes?.editValue;
               if (bloodChanged || diabetesChanged) {
                 isEqual = false;
               } else {
-                const medicalHstCur = record['medical_hst_info'].filter(item => {
+                const medicalHstCur = deepCopy(record['medical_hst_info']).filter(item => {
                   return item?.facility_cd?.initValue === this.getFacilityCd;
                 });
-                const medicalHstIni = this.initRecord['medical_hst_info'].filter(item => {
+                const medicalHstIni = deepCopy(this.initRecord['medical_hst_info']).filter(item => {
                   return item?.facility_cd?.initValue === this.getFacilityCd;
                 });
                 const hasPrimaryDiseaseCd = medicalHstIni.some(
@@ -224,7 +349,6 @@ export default {
                 DifficultySeverityTransportIni,
                 customComparatorForType
               );
-	    // mod #12462 患者情報共有 Ji end
             } else {
               isEqual = isEqualWith(record, this.initRecord, customComparatorForType);
             }
@@ -238,6 +362,10 @@ export default {
       },
       deep: true
     },
+  },
+
+  mounted() {
+    this.scheduleAdjustCardTextareaHeights();
   },
 
   methods: {
@@ -261,6 +389,99 @@ export default {
     // マスタ選択ポップオーバークローズ用関数
     closePopover,
 
+    isComTextareaElement(el) {
+      return Boolean(
+        el?.closest?.(".comTextarea")
+        || el?.id?.startsWith?.("com-textarea-")
+      );
+    },
+
+    adjustComTextareaRef(comTextarea) {
+      if (!comTextarea?.getTextareaElement) {
+        return;
+      }
+      this.$nextTick(() => {
+        setTimeout(() => this.resizePatInfoComTextarea(comTextarea), 50);
+      });
+    },
+
+    adjustComTextareaHeight(id, refName) {
+      const comTextarea = refName ? this.$refs[refName] : null;
+      if (comTextarea) {
+        const refs = Array.isArray(comTextarea) ? comTextarea : [comTextarea];
+        refs.forEach(ref => this.adjustComTextareaRef(ref));
+        return;
+      }
+      this.$nextTick(() => {
+        setTimeout(() => {
+          const el = this.$el?.querySelector?.(`#${id}`);
+          this.resizePatInfoComTextarea(el);
+        }, 50);
+      });
+    },
+
+    adjustComTextareaHeights() {
+      this.$nextTick(() => {
+        setTimeout(() => {
+          const seen = new Set();
+          const invoke = target => {
+            if (!target || seen.has(target)) {
+              return;
+            }
+            seen.add(target);
+            this.resizePatInfoComTextarea(target);
+          };
+
+          Object.values(this.$refs).forEach(ref => {
+            const items = Array.isArray(ref) ? ref : [ref];
+            items.forEach(item => {
+              if (item?.getTextareaElement) {
+                invoke(item);
+              }
+            });
+          });
+
+          this.$el?.querySelectorAll?.(".comTextarea")?.forEach(el => {
+            invoke(getComTextareaComponentFromElement(el) ?? el);
+          });
+        }, 50);
+      });
+    },
+
+    adjustSimpleTextareaHeights() {
+      this.$nextTick(() => {
+        setTimeout(() => {
+          this.$el?.querySelectorAll?.("textarea.custom-textarea")?.forEach(el => {
+            if (this.isComTextareaElement(el)) {
+              return;
+            }
+            this.resizePatInfoSimpleTextarea(el);
+          });
+        }, 50);
+      });
+    },
+
+    adjustCardTextareaHeights() {
+      this.adjustComTextareaHeights();
+      setTimeout(() => this.adjustSimpleTextareaHeights(), 60);
+    },
+
+    resizePatInfoComTextarea(elOrWrapper) {
+      applyPatInfoComTextareaHeight(elOrWrapper);
+    },
+
+    resizePatInfoSimpleTextarea(el) {
+      applyPatInfoSimpleTextareaHeight(el);
+    },
+
+    onPatInfoLayoutChanged() {
+      schedulePatInfoTextareaHeightsAfterLayout(() => this.adjustCardTextareaHeights());
+    },
+
+    scheduleAdjustCardTextareaHeights() {
+      schedulePatInfoTextareaHeights(() => this.adjustCardTextareaHeights());
+    },
+
     /**
      * 患者情報レコードデータ取得
      *   hopePatId等の単一カラム取得用
@@ -268,7 +489,7 @@ export default {
      * @return {object} 患者情報レコードデータ { initValue: 初期値, editValue 編集中の値 }
      */
     getPatData(columnName) {
-      if (!has(this.editRecord, columnName)) {
+      if (!Object.prototype.hasOwnProperty.call(this.editRecord, columnName)) {
         throw new Error(
           `患者情報レコードにカラム[${columnName}]は存在しません。`
         );
@@ -283,7 +504,7 @@ export default {
      * @param value 値
      */
     setPatData(columnName, value) {
-      if (!has(this.editRecord, columnName)) {
+      if (!Object.prototype.hasOwnProperty.call(this.editRecord, columnName)) {
         throw new Error(
           `患者情報レコードにカラム[${columnName}]は存在しません。`
         );
@@ -301,21 +522,21 @@ export default {
      */
     getPatDataJson(columnName, jsonKey) {
       // mod FNSI-Check Data change 関 start
-      // if (!has(this.editRecord, columnName)) {
+      // if (!Object.prototype.hasOwnProperty.call(this.editRecord, columnName)) {
       //   throw new Error(
       //     `患者情報レコードにカラム[${columnName}]は存在しません。`
       //   );
       // }
-      // if (!has(this.editRecord[columnName], jsonKey)) {
+      // if (!Object.prototype.hasOwnProperty.call(this.editRecord[columnName], jsonKey)) {
       //   throw new Error(
       //     `患者情報レコードのJSONカラム[${columnName}]にキー[${jsonKey}]は存在しません。`
       //   );
       // }
       this.editRecord = this.editRecord ?? {};
-      if (!has(this.editRecord, columnName)) {
+      if (!Object.prototype.hasOwnProperty.call(this.editRecord, columnName)) {
         this.editRecord[columnName] = [];
       }
-      if (!has(this.editRecord[columnName], jsonKey)) {
+      if (!Object.prototype.hasOwnProperty.call(this.editRecord[columnName], jsonKey)) {
         this.editRecord[columnName][jsonKey] = "";
       }
       // mod FNSI-Check Data change 関 end
@@ -325,10 +546,10 @@ export default {
 
     // add FNSI-患者通算透析回数 じょはく start
     getPatDataJsonWithoutThrow(columnName, jsonKey) {
-      if (!has(this.editRecord, columnName)) {
+      if (!Object.prototype.hasOwnProperty.call(this.editRecord, columnName)) {
         this.editRecord[columnName] = [];
       }
-      if (!has(this.editRecord[columnName], jsonKey)) {
+      if (!Object.prototype.hasOwnProperty.call(this.editRecord[columnName], jsonKey)) {
         this.editRecord[columnName][jsonKey] = 0;
       }
 
@@ -338,10 +559,10 @@ export default {
 
     // add FNSI-患者通算透析回数 じょはく start
     getPatCreateDataJson(columnName, jsonKey) {
-      if (!has(this.editRecord, columnName)) {
+      if (!Object.prototype.hasOwnProperty.call(this.editRecord, columnName)) {
         return false;
       }
-      if (!has(this.editRecord[columnName], jsonKey)) {
+      if (!Object.prototype.hasOwnProperty.call(this.editRecord[columnName], jsonKey)) {
         return false;
       }
       return this.editRecord?.[columnName][jsonKey];
@@ -357,20 +578,20 @@ export default {
      */
     setPatDataJson(columnName, jsonKey, value) {
       // mod FNSI-Check Data change 関 start
-      // if (!has(this.editRecord, columnName)) {
+      // if (!Object.prototype.hasOwnProperty.call(this.editRecord, columnName)) {
       //   throw new Error(
       //     `患者情報レコードにカラム[${columnName}]は存在しません。`
       //   );
       // }
-      // if (!has(this.editRecord[columnName], jsonKey)) {
+      // if (!Object.prototype.hasOwnProperty.call(this.editRecord[columnName], jsonKey)) {
       //   throw new Error(
       //     `患者情報レコードのJSONカラム[${columnName}]にキー[${jsonKey}]は存在しません。`
       //   );
       // }
-      if (!has(this.editRecord, columnName)) {
+      if (!Object.prototype.hasOwnProperty.call(this.editRecord, columnName)) {
         this.editRecord[columnName] = [];
       }
-      if (!has(this.editRecord[columnName], jsonKey)) {
+      if (!Object.prototype.hasOwnProperty.call(this.editRecord[columnName], jsonKey)) {
         this.editRecord[columnName][jsonKey] = new Object;
       }
       // mod FNSI-Check Data change 関 end
@@ -378,10 +599,10 @@ export default {
     },
     // add FNSI-患者通算透析回数 じょはく start
     setPatDataJsonWithoutThrow(columnName, jsonKey, value) {
-      if (!has(this.editRecord, columnName)) {
+      if (!Object.prototype.hasOwnProperty.call(this.editRecord, columnName)) {
         this.editRecord[columnName] = [];
       }
-      if (!has(this.editRecord[columnName], jsonKey)) {
+      if (!Object.prototype.hasOwnProperty.call(this.editRecord[columnName], jsonKey)) {
         this.editRecord[columnName][jsonKey] = new Object;
       }
 
@@ -397,9 +618,9 @@ export default {
      * @return {object} 患者情報レコードデータ { initValue: 初期値, editValue 編集中の値 }
      */
     getPatDataJsonArray(json, jsonKey) {
-      if (!has(json, jsonKey)) {
+      if (!Object.prototype.hasOwnProperty.call(json, jsonKey)) {
         // キーごとにダミーのオブジェクト詰め込み
-        this.dummyArray[jsonKey] = this.$set(this.dummyObj, jsonKey, {
+        this.dummyArray[jsonKey] = ((this.dummyObj)[jsonKey] = {
           initValue: null,
           editValue: null
         });
@@ -416,9 +637,9 @@ export default {
      * @param value 値
      */
     setPatDataJsonArray(json, jsonKey, value) {
-      if (!has(json, jsonKey)) {
+      if (!Object.prototype.hasOwnProperty.call(json, jsonKey)) {
         // キーごとにダミーのオブジェクト詰め込み
-        this.dummyArray[jsonKey] = this.$set(this.dummyObj, jsonKey, {
+        this.dummyArray[jsonKey] = ((this.dummyObj)[jsonKey] = {
           initValue: null,
           editValue: null
         });
@@ -441,6 +662,7 @@ export default {
       if (!this.editRecord?.[columnName]) return
       // add #10305 患者共通ヘッダーで編集＞保存をするとコンソールエラーが出力される yangqingzhe end
       this.editRecord[columnName].push(encodeEditableRecord(newItem));
+      this.scheduleAdjustCardTextareaHeights();
     },
 
     /**
@@ -489,7 +711,7 @@ export default {
 
       // 編集有無を設定
       for (const key of keys) {
-        if (isArray(editColumnList[key])) {
+        if (Array.isArray(editColumnList[key])) {
           // カラムが配列型なら
           if (this.isEditedArrayColumn(editColumnList[key], key, patRecord)) {
             // 編集済みなら
@@ -511,7 +733,7 @@ export default {
      * @summary true:編集済み, false：未編集
      */
     isEditedObjectColumn(editColumn) {
-      if (has(editColumn, "editValue")) {
+      if (Object.prototype.hasOwnProperty.call(editColumn, "editValue")) {
         // 階層がない場合
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc start
         if (editColumn.initValue === null && editColumn.editValue === "") {
@@ -523,7 +745,7 @@ export default {
         // さらに階層がある場合
         const columnList = Object.keys(editColumn);
         return columnList.find(key => {
-          if (has(editColumn[key], "editValue")) {
+          if (Object.prototype.hasOwnProperty.call(editColumn[key], "editValue")) {
             // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc start
             if (editColumn[key].initValue === null && editColumn[key].editValue === "") {
               editColumn[key].editValue = null
@@ -578,10 +800,6 @@ export default {
         }
       });
     }
-  },
-  beforeDestroy () {
-    this.editRecord = null;
-    this.initRecord = null;
   }
 };
 </script>

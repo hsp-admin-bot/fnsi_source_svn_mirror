@@ -37,9 +37,9 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { OPERATION_VIEWER_AUTO_SETTING, OPERATION_VIEWER_FORCE_SIGNOUT } from "@/constants/facilitySetting";
 import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
 import commonjs from "@/constants/operationViewerCommon";
@@ -346,7 +346,7 @@ export default {
           this.refreshInterval = 30000;
         }
       } else if (data.status == 400) {
-        getErrorMessage("FacilitiesMainComponent.vue", "getInterval", error);
+        getErrorMessage("FacilitiesMainComponent.vue", "getInterval", { response: data });
         this.refreshInterval = 30000;
       }
       /* 自動更新サインアウトフラグ取得 */
@@ -355,7 +355,7 @@ export default {
   },
   async created() {
     // 画面名称取得
-    this.selfScreenPath = this.$router.currentRoute.path;
+    this.selfScreenPath = this.$route.path;
     // add 性能改善メモリ不足 shan start
     EventBus.$off("refresh", this.refresh);
     // add 性能改善メモリ不足 shan end
@@ -363,7 +363,7 @@ export default {
     await this.refreshVal();
     this.refresh();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
     clearTimeout(this.timerObj);
     // dataの初期化

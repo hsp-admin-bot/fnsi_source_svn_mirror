@@ -23,49 +23,49 @@ public class ValueEvaluatorUtilTest extends BaseServiceTest {
 
   @Test
   public void 正常系_const変換_定数値で置換される() {
-    String result = valueEvaluatorUtil.eval("A", "const:11", null, null);
+    String result = valueEvaluatorUtil.eval("A", "const:11", null, null, false);
     assertThat(result).isEqualTo("11");
   }
 
   @Test
   public void 正常系_json変換_jsonマップから取得した値で置換される() {
     LayoutExtSetting les = new LayoutExtSetting("{\"json-key\":{\"jsonKey\":{\"A\":\"22\"}}}");
-    String result = valueEvaluatorUtil.eval("A", "json:jsonKey", null, les);
+    String result = valueEvaluatorUtil.eval("A", "json:jsonKey", null, les, false);
     assertThat(result).isEqualTo("22");
   }
 
   @Test
   public void 正常系_特殊値指定がnullの場合は切り出した値を返す() {
     // 特殊値指定なしの場合1
-    String result = valueEvaluatorUtil.eval("ABC", null, null, null);
+    String result = valueEvaluatorUtil.eval("ABC", null, null, null, false);
     assertThat(result).isEqualTo("ABC");
   }
 
   @Test
   public void 正常系_特殊値指定がブランクの場合は切り出した値を返す() {
     // 特殊値指定なしの場合2
-    String result = valueEvaluatorUtil.eval("DEF", "", null, null);
+    String result = valueEvaluatorUtil.eval("DEF", "", null, null, false);
     assertThat(result).isEqualTo("DEF");
   }
 
   @Test(expected = NtssException.class)
   public void 異常系_特殊値指定の形式のみ未指定の場合は例外を発生させる() {
-    valueEvaluatorUtil.eval("GHI", ";100", null, null);
+    valueEvaluatorUtil.eval("GHI", ";100", null, null, false);
   }
 
   @Test(expected = NtssException.class)
   public void 異常系_特殊値指定にコロンがない場合は例外を発生させる() {
-    valueEvaluatorUtil.eval("ghi", "const100", null, null);
+    valueEvaluatorUtil.eval("ghi", "const100", null, null, false);
   }
 
   @Test(expected = NtssException.class)
   public void 異常系_特殊値指定が未対応の形式の場合は例外を発生させる() {
-    valueEvaluatorUtil.eval("JKL", "foobar;100", null, null);
+    valueEvaluatorUtil.eval("JKL", "foobar;100", null, null, false);
   }
 
   @Test(expected = NtssException.class)
   public void 異常系_JSONが指定されたが構造が不正の場合は例外を発生させる() {
-    valueEvaluatorUtil.eval("a", "json:{\"a\":\"1\"", null, null);
+    valueEvaluatorUtil.eval("a", "json:{\"a\":\"1\"", null, null, false);
   }
 
 }

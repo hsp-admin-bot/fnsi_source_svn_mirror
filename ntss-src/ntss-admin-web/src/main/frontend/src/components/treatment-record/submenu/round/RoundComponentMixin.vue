@@ -1,6 +1,6 @@
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { RstRoundInfo } from "@/models/treatment-record/round/RstRoundInfo";
 
 export default {
@@ -9,6 +9,7 @@ export default {
       isNewRoundInfo: "isNewRoundInfo",
       rstRoundsInfoInProgress: "rstRoundsInfoInProgress",
     }),
+    ...mapGetters("pat-info", ["selectedPatId"]),
   },
   methods: {
     ...mapActions("treatment-record/addition", [
@@ -27,7 +28,10 @@ export default {
       //add 9724 ljx start コンソールError修正
       if(this.getOrdNo){
 	  //add 9724 ljx end コンソールError修正
-      const response = await this.getTreatmentRecordRstRoundsInfo(this.getOrdNo);
+      const response = await this.getTreatmentRecordRstRoundsInfo({
+        ordNo: this.getOrdNo,
+        selectedPatId: this.selectedPatId
+      });
       const json = JSON.parse(response.data.rst_rounds_info);
       // add 9553 by kangjie 20230915 start
       //   this.rstRoundsInfo.toCompare = json ? RstRoundInfo.of(json) : null;

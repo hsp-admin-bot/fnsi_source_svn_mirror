@@ -1,4 +1,4 @@
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * プロット対象となる検査結果の最新の検査日を基準として、
@@ -12,8 +12,8 @@ export function getExamInRange(listExam, startDate, endDate) {
   if (startDate && endDate) {
       return listExam.filter(
         exam =>
-          moment(exam.date) >= moment(startDate) &&
-          moment(exam.date) <= moment(endDate)
+          dayjs(exam.date) >= dayjs(startDate) &&
+          dayjs(exam.date) <= dayjs(endDate)
       );
   } else {
     return listExam;
@@ -21,7 +21,7 @@ export function getExamInRange(listExam, startDate, endDate) {
 }
 
 export function simpleDateFormat(date) {
-  return moment(date).format("YYYY/MM/DD");
+  return dayjs(date).format("YYYY/MM/DD");
 }
 
 /**
@@ -31,48 +31,48 @@ export function periods(data) {
   let periods = [];
   if (data[0]) {
     // 最新の情報を取得
-    let newestDay = moment(data[0].date, "YYYY/MM/DD");
+    let newestDay = dayjs(data[0].date, "YYYY/MM/DD");
     let month = newestDay.format("M");
     let year = newestDay.format("YYYY");
     let beginOfYear = month < 7;
     // 初回検査日の情報を取得
-    let lastDate = moment(data[data.length-1].date, "YYYY/MM/DD");
+    let lastDate = dayjs(data[data.length-1].date, "YYYY/MM/DD");
     let lastMonth = lastDate.format("M");
     let lastYear = lastDate.format("YYYY");
     for (let i = 0; i < 4; i++) {
-      let start = moment().format("YYYY/MM/DD");
-      let end = moment().format("YYYY/MM/DD");
+      let start = dayjs().format("YYYY/MM/DD");
+      let end = dayjs().format("YYYY/MM/DD");
       // 検査日データが全て2年以内
       if (i < 3 || i == 3 && lastYear >= year) {
         if (beginOfYear) {
-          start = moment(`${year}-01-01`)
+          start = dayjs(`${year}-01-01`)
             .startOf("month")
             .format("YYYY/MM/DD");
-          end = moment(`${year}-06-01`)
+          end = dayjs(`${year}-06-01`)
             .endOf("month")
             .format("YYYY/MM/DD");
           year--;
         } else {
-          start = moment(`${year}-07-01`)
+          start = dayjs(`${year}-07-01`)
             .startOf("month")
             .format("YYYY/MM/DD");
-          end = moment(`${year}-12-01`)
+          end = dayjs(`${year}-12-01`)
             .endOf("month")
             .format("YYYY/MM/DD");
         }
       } else {
         if (beginOfYear) {
-          start = moment(`${lastYear}-${lastMonth}-01`)
+          start = dayjs(`${lastYear}-${lastMonth}-01`)
             .startOf("month")
             .format("YYYY/MM/DD");
-          end = moment(`${year}-06-01`)
+          end = dayjs(`${year}-06-01`)
             .endOf("month")
             .format("YYYY/MM/DD");
         } else {
-          start = moment(`${lastYear}-${lastMonth}-01`)
+          start = dayjs(`${lastYear}-${lastMonth}-01`)
             .startOf("month")
             .format("YYYY/MM/DD");
-          end = moment(`${year}-12-01`)
+          end = dayjs(`${year}-12-01`)
             .endOf("month")
             .format("YYYY/MM/DD");
         }

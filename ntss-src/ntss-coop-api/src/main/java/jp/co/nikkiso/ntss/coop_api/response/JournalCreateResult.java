@@ -5,8 +5,8 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 
 import jp.co.nikkiso.ntss.core.entity.SysCoopJournal;
 import lombok.AllArgsConstructor;
@@ -17,13 +17,13 @@ import lombok.NoArgsConstructor;
  *  ジャーナル作成APIレスポンス
  *
  */
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Data
 @AllArgsConstructor
 public class JournalCreateResult {
   @Data
   @NoArgsConstructor
-  @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public static class JournalCreateResults {
     /** 施設コード */
     private String facilityCd;

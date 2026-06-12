@@ -32,14 +32,14 @@ export default {
   mutations: {
     setSysDataSet(state, sysDataSet) {
       /* mod データ取得元修正 楊 start */
-      // mod #6776 20230704 患者イベントテンプレートマスタ：テキストボックスのデータ　表示未指定　表示未指定、プルダウンフレーム内容なしです　孟堅　start
+      // mod #6776 20230704 患者イベントテンプレートマスタ：テキストボックスのデータ 表示未指定 表示未指定、プルダウンフレーム内容なしです 孟堅 start
       // const list = sysDataSet.list.filter(element => element.memo == null?false:!element.memo.includes("リストボックス"));
       // const text = sysDataSet.text.filter(element => element.memo == null?false:!element.memo.includes("リストボックス"));
       // const listList = sysDataSet.list.filter(element => element.memo == null?false:element.memo.includes("リストボックス"));
       // const listText = sysDataSet.text.filter(element => element.memo == null?false:element.memo.includes("リストボックス"));
        const list = sysDataSet.list;
        const text = sysDataSet.text;
-      // mod #6776 20230704 患者イベントテンプレートマスタ：テキストボックスのデータ　表示未指定　表示未指定、プルダウンフレーム内容なしです　孟堅　end
+      // mod #6776 20230704 患者イベントテンプレートマスタ：テキストボックスのデータ 表示未指定 表示未指定、プルダウンフレーム内容なしです 孟堅 end
       /* mod データ取得元修正 楊 end */
       if (list.length === 0) {
         state.sysDataSet.list = [];
@@ -47,7 +47,7 @@ export default {
       if (text.length === 0) {
         state.sysDataSet.text = [];
       }
-      // del #6776 20230704 患者イベントテンプレートマスタ：テキストボックスのデータ　表示未指定　表示未指定、プルダウンフレーム内容なしです　孟堅　start
+      // del #6776 20230704 患者イベントテンプレートマスタ：テキストボックスのデータ 表示未指定 表示未指定、プルダウンフレーム内容なしです 孟堅 start
       /* add データ取得元修正 楊 start */
       // if (listList.length === 0) {
       //   state.sysListDataSet.list = [];
@@ -55,7 +55,7 @@ export default {
       // if (listText.length === 0) {
       //   state.sysListDataSet.text = [];
       // }
-      // del #6776 20230704 患者イベントテンプレートマスタ：テキストボックスのデータ　表示未指定　表示未指定、プルダウンフレーム内容なしです　孟堅　end
+      // del #6776 20230704 患者イベントテンプレートマスタ：テキストボックスのデータ 表示未指定 表示未指定、プルダウンフレーム内容なしです 孟堅 end
       /* add リストボックス->データ取得元修正 楊 end */
       const buildList = dataSet => {
         let itemList = [];
@@ -89,12 +89,12 @@ export default {
       };
       state.sysDataSet.list = buildList(list);
       state.sysDataSet.text = buildList(text);
-      // del #6776 20230704 患者イベントテンプレートマスタ：テキストボックスのデータ　表示未指定　表示未指定、プルダウンフレーム内容なしです　孟堅　start
+      // del #6776 20230704 患者イベントテンプレートマスタ：テキストボックスのデータ 表示未指定 表示未指定、プルダウンフレーム内容なしです 孟堅 start
       /* add データ取得元修正 楊 start */
       // state.sysListDataSet.list = buildList(listList);
       // state.sysListDataSet.text = buildList(listText);
       /* add データ取得元修正 楊 end */
-      // del #6776 20230704 患者イベントテンプレートマスタ：テキストボックスのデータ　表示未指定　表示未指定、プルダウンフレーム内容なしです　孟堅　end
+      // del #6776 20230704 患者イベントテンプレートマスタ：テキストボックスのデータ 表示未指定 表示未指定、プルダウンフレーム内容なしです 孟堅 end
     },
     /* add リストボックス->データ取得元修正 楊 start */
     setInputParamsList(state, {key, inputParams}) {
@@ -151,9 +151,24 @@ export default {
     setInputParamsDelete(state, index) {
       state.inputParams.splice(index, 1);
     },
+    setInputParamsItemProperty(state, { index, field, value }) {
+      if (state.inputParams[index]) {
+        state.inputParams[index][field] = value;
+      }
+    },
+    setInputParamsItemJsonCalc(state, { index, calc }) {
+      if (state.inputParams[index]?.item_json) {
+        state.inputParams[index].item_json.calc = calc;
+      }
+    },
+    setInputParamsItemJson(state, { index, itemJson }) {
+      if (state.inputParams[index]) {
+        state.inputParams[index].item_json = itemJson;
+      }
+    },
     setInitListScore(state) {
       state.initListScore = [];
-      let value = [];
+      let value;
       const contact = state.initInputParams;
       for (let i = 0; i < contact.length; i++) {
         switch (contact[i].format_class) {
@@ -172,7 +187,7 @@ export default {
     },
     setListScore(state) {
       state.listScore = [];
-      let value = [];
+      let value;
       const contact = state.inputParams;
       for (let i = 0; i < contact.length; i++) {
         switch (contact[i].format_class) {
@@ -222,6 +237,18 @@ export default {
     setInputParamsDelete({ commit }, index) {
       commit("setInputParamsDelete", index);
       commit("setListScore");
+    },
+    setInputParamsItemProperty({ commit }, payload) {
+      commit("setInputParamsItemProperty", payload);
+      if (payload.field === "field_name" || payload.field === "format_class") {
+        commit("setListScore");
+      }
+    },
+    setInputParamsItemJsonCalc({ commit }, payload) {
+      commit("setInputParamsItemJsonCalc", payload);
+    },
+    setInputParamsItemJson({ commit }, payload) {
+      commit("setInputParamsItemJson", payload);
     },
     /** sys_data_Setマスタ取得 */
     async fetchSysDataSet({ commit }) {

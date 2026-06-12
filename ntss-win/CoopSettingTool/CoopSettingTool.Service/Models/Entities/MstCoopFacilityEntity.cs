@@ -102,6 +102,14 @@ namespace CoopSettingTool.Service.Models
         public string CoopName { get; set; }
 
         /// <summary>
+        /// Gets or sets the coop vender.
+        /// </summary>
+        /// <value>The coop vender.</value>
+        [JsonProperty("coop_vender")]
+        [DisplayName("対応ベンダー名")]
+        public string CoopVender { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether [create index].
         /// </summary>
         /// <value><c>true</c> if [create index]; otherwise, <c>false</c>.</value>

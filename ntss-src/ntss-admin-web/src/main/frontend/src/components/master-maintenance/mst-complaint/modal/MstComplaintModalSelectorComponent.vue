@@ -15,11 +15,11 @@
       ></v-ons-input> -->
       <!--// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start-->
       <common-master-selector
-        :masterType="MasterType.ANTICOAGULANT_INDICATION"
-        :initItem="{text:value.initName,value:value.initCd}"
-        :editItem="{text:value.name,value:value.cd}"
-        :patientId="selectedPatId"
-        :extraParams="{treatDate: '', rstInfo:{rstName:value.name,rstUnit: value.unit}}"
+        :masterType="MasterType.MEDICATION_TREATMENT_RECORD"
+        :initItem="{text:modelValue.initName,value:modelValue.initCd}"
+        :editItem="{text:modelValue.name,value:modelValue.cd}"
+        :patientId="null"
+        :extraParams="{ treatDate: '', rstInfo: { rstName: modelValue.name, rstUnit: modelValue.unit }, medicineType: modelValue.type != null ? modelValue.type : modelValue.medicineType }"
         :facilityCd="getFacilityCd"
         :isMedicament="'0'"
         :hasChangedOption="true"
@@ -32,7 +32,7 @@
         @popover-return="masterUpdateInput($event);"
       />
        <!--<v-ons-input
-        v-model="value.name"
+        v-model="modelValue.name"
         class="input-padding"
         type="text"
         readonly
@@ -42,7 +42,7 @@
       <!--// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end-->
       <!-- mod #7727 処置薬剤と数量は必須であってはいけない。end -->
       <!-- <input
-        v-model="value.name"
+        v-model="modelValue.name"
         class="input-required equipment-input-style common-input-style"
         type="text"
         readonly
@@ -52,7 +52,7 @@
       <!--// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start-->
       <!--<v-ons-button
         class="button select-btn btn3-normal"
-        @click="createPopoverData(value ? value.cd : null)"
+        @click="createPopoverData(modelValue ? modelValue.cd : null)"
         :disabled="isDisabled">選択</v-ons-button>
       <pop-over v-bind="popoverData" @popover-close="closePopover" @popover-return="updateInput" />-->
       <!--// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end-->
@@ -66,8 +66,9 @@ import { Master } from "@/models/common/master-selector-condition/Master";
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
 import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
 import * as MasterType from "@/components/common/master-selector/MasterType";
-import { getMstListCompose } from "@/apis/pat-prescription"
-import { mapMutations, mapGetters } from "vuex";
+
+import { mapGetters } from "@/compat/vue/vuex";
+
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
 export default {
   mixins: [MasterSelectorMixin],
@@ -84,6 +85,12 @@ export default {
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
     }
   },
+  emits: [
+    "update:modelValue",
+    "changeUnit",
+    "changeDecPoint",
+    "changePersonalUser"
+  ],
   props: {
     index: {
       type: Number,
@@ -103,7 +110,8 @@ export default {
       type: Boolean,
       default: true
     },
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: Object
     },
     isDisabled: {
@@ -118,14 +126,15 @@ export default {
   },
   methods: {
     masterUpdateInput(val){
+      const medicineKbn = val.kbnValue ?? val.key_type ?? val._sourceTag;
       const data = {
         fnValue:{
           '薬剤分類': val.classCd,
-          '薬剤区分': val.kbnValue
+          '薬剤区分': medicineKbn
         },
         isDisp: val.isDisp,
         text: val.text,
-        type: val.kbnValue,
+        type: medicineKbn,
         value: Number(val.value),
         unit: val.unit,
         decPoint: val.unitDecimalPoint
@@ -142,7 +151,7 @@ export default {
         master.needle = data.needle;
       }
       this.popoverData.popoverContentSelected = data;
-      this.$emit("input", master, this.index);
+      this.$emit("update:modelValue", master, this.index);
       this.$emit("changeUnit", data.unit, this.index);
       this.$emit("changeDecPoint",data.decPoint, this.index);
       this.$emit("changePersonalUser", data.personalUserInfo, this.index);
@@ -166,11 +175,11 @@ export default {
   color: #212529;
 }
 /* del #7727 処置薬剤と数量は必須であってはいけない。start */
-/* .input-required >>> input {
+/* .input-required :deep(input){
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> input {
+.input-invalid :deep(input){
   color: black;
   background-color: rgba(255, 0, 0, 1);
 } */
@@ -179,14 +188,14 @@ export default {
   padding: 0 5px 0 0;
 }
 
-.input-padding > ::v-deep .text-input:disabled {
+.input-padding > :deep(.text-input:disabled) {
   opacity: unset !important;
 }
 /*// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start*/
-::v-deep .com-basic-sub-btn {
+:deep(.com-basic-sub-btn) {
   margin-left: 5px
 }
-::v-deep .com-basic-sub-input {
+:deep(.com-basic-sub-input) {
   min-width: 13em;
   width: 100%;
   max-width: 28em;

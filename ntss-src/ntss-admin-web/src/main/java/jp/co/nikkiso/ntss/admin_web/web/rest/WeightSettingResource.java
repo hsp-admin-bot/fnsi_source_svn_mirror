@@ -8,6 +8,11 @@ import jp.co.nikkiso.ntss.admin_web.request.weight.WeightStateRequest;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.webSocketNotify.PayloadBuilder;
 import jp.co.nikkiso.ntss.admin_web.service.webSocketNotify.WebSocketNotifyService;
+import jp.co.nikkiso.ntss.core.dao.MstWeightDao;
+import jp.co.nikkiso.ntss.core.dao.MstWeightScaleDao;
+import jp.co.nikkiso.ntss.core.dao.MstWheelChairDao;
+import jp.co.nikkiso.ntss.core.dao.PatMainDao;
+import jp.co.nikkiso.ntss.core.entity.MstWheelChair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
@@ -33,6 +39,7 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.PersonalUserService;
 import jp.co.nikkiso.ntss.admin_web.service.master.weight.MstWeightService;
 import jp.co.nikkiso.ntss.admin_web.service.master.wheelChair.MstWheelChairService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.entity.MstWeight;
 import jp.co.nikkiso.ntss.core.entity.MstWeightScale;
@@ -43,7 +50,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
-import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.*;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 @RestController
 @Slf4j
@@ -62,11 +69,24 @@ public class WeightSettingResource {
   // wp アプリケーションログの適正化 Add Start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // wp アプリケーションログの適正化 Add End
   // #11987 2026.05.08 add 体重計マスタの変更をアプリに通知 TDC片口 start
   @Autowired
   WebSocketNotifyService sendWsMsg;
   // #11987 2026.05.08 add 体重計マスタの変更をアプリに通知 TDC片口 end
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Autowired
+  MstWeightScaleDao mstWeightScaleDao;
+  @Autowired
+  MstWheelChairDao mstWheelChairDao;
+  @Autowired
+  MstWeightDao mstWeightDao;
+  @Autowired
+  PatMainDao patMainDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
 
   @GetMapping("/users/{viewMode}")
@@ -145,7 +165,14 @@ public class WeightSettingResource {
    */
   @GetMapping("/wheel_chair/find_all/{facilityCd}")
   public ResponseEntity<?> getWheelChairAllByFacilityCd(
-      @PathVariable String facilityCd) {
+      @PathVariable String facilityCd,
+      @RequestParam(required = false) Long selectedPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
     // 施設の車いす情報を取得(削除済み含む)
     String mappingUrl = Uri.WEIGHT_SETTING + "/wheel_chair/find_all";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, facilityCd,
@@ -185,6 +212,11 @@ public class WeightSettingResource {
   public ResponseEntity<?> getWheelChairByPatId(
       @PathVariable Long patId,
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 start
+    if (!hasPatAccess(ntssUser, patId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 end
     // 車いす情報を取得
 
     // wp アプリケーションログの適正化 Add Start
@@ -245,7 +277,14 @@ public class WeightSettingResource {
 
   // add マスタ一覧 1･施設切替を可能とする 孔 start
   @GetMapping("/scale/get-edit-data/{facilityCd}")
-  public ResponseEntity<?> getMasterDataByFacilityCd(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getMasterDataByFacilityCd(@PathVariable String facilityCd,
+                                                     @RequestParam(required = false) Long selectedPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -304,8 +343,17 @@ public class WeightSettingResource {
   // add マスタ一覧 1･施設切替を可能とする 孔 start
   @PutMapping("/scale/put-edit-data/{facilityCd}")
   public ResponseEntity<?> updateMasterDataByFacilityCd(
-      @RequestBody MasterUpdateRequest request, @PathVariable String facilityCd) {
-
+      @RequestBody MasterUpdateRequest request, @PathVariable String facilityCd, @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (!ntssUser.getFacilityCd().equals(facilityCd)) {
+        // #11205 mod 20260421 start
+        InvestigateLogUtils.info("WeightSettingResource.updateMasterDataByFacilityCd", "facilityCd=" + facilityCd + ", ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd());
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to update records :  mst_weight_scale");
@@ -357,7 +405,18 @@ public class WeightSettingResource {
    */
   @PutMapping("/scale/update")
   public ResponseEntity<?> postScaleUpdate(
-      @RequestBody MstWeightScale request) {
+    @RequestBody MstWeightScale request, @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      MstWeightScale mstWeightScale = mstWeightScaleDao.selectByWeightScaleCd(request.getWeightScaleCd());
+      if (mstWeightScale != null && !ntssUser.getFacilityCd().equals(mstWeightScale.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        InvestigateLogUtils.info("WeightSettingResource.postScaleUpdate", "weightScaleCd=" + request.getWeightScaleCd() + ", mstWeightScale.getFacilityCd()=" + mstWeightScale.getFacilityCd() + ", ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd());
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     try {
       int r = mstWeightService.mstWeightScaleUpdate(request);
       if (r > 0) {
@@ -369,6 +428,9 @@ public class WeightSettingResource {
       EventLogMessage eventLogMessage = new EventLogMessage();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
       eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
+      if (ntssUser != null && ntssUser.getFacilityCd() != null) {
+        eventLogMessage.setFacilityCd(ntssUser.getFacilityCd());
+      }
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
       logService.log(LogLevel.ERROR, eventLogMessage,"",SERVICE_NAME.FNSI, null);
       return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -382,7 +444,21 @@ public class WeightSettingResource {
    */
   @PostMapping("/scale/insert")
   public ResponseEntity<?> postScaleInsert(
-      @RequestBody MstWeightScale request) {
+      @RequestBody MstWeightScale request,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        InvestigateLogUtils.info("WeightSettingResource.postScaleInsert", "request.getFacilityCd()=" + request.getFacilityCd() + ", ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd());
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     try {
       int r = mstWeightService.mstWeightScaleInsert(request);
       if (r > 0) {
@@ -394,6 +470,9 @@ public class WeightSettingResource {
       EventLogMessage eventLogMessage = new EventLogMessage();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
       eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
+      if (ntssUser != null && ntssUser.getFacilityCd() != null) {
+        eventLogMessage.setFacilityCd(ntssUser.getFacilityCd());
+      }
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
       logService.log(LogLevel.ERROR, eventLogMessage,"",SERVICE_NAME.FNSI, null);
       return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -538,8 +617,12 @@ public class WeightSettingResource {
   @GetMapping("/wheel_chair/check/calibration/{facilityCd}/{wheelChairCd}")
   public ResponseEntity<?> checkCalibrationByCd(
       @PathVariable String facilityCd,
-      @PathVariable Long wheelChairCd
+      @PathVariable Long wheelChairCd,
+      @AuthenticationPrincipal NtssUser ntssUser
   ) {
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     // 校正切れ判定
     String mappingUrl = Uri.WEIGHT_SETTING + "/wheel_chair/check/calibration";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, facilityCd, wheelChairCd);
@@ -562,5 +645,56 @@ public class WeightSettingResource {
    */
   private String getMethodName() {
     return Thread.currentThread().getStackTrace()[2].getMethodName();
+  }
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    boolean hasAccess = ntssUser == null
+      || ntssUser.isNkkAdminUser()
+      || facilityCd == null
+      || facilityCd.equals(ntssUser.getFacilityCd());
+    // #11205 mod 20260421 start
+    if (!hasAccess) {
+      InvestigateLogUtils.info("WeightSettingResource.hasFacilityAccess", "facilityCd=" + facilityCd + ", ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null"));
+    }
+    // #11205 mod 20260421 end
+    return hasAccess;
+  }
+
+  private boolean hasPatAccess(NtssUser ntssUser, Long patId) {
+    if (ntssUser == null || patId == null) {
+      return false;
+    }
+    return ntssUser.isNkkAdminUser() || patMainDao.countByPatIdAndFacilityCd(patId, ntssUser.getFacilityCd()) > 0;
+  }
+
+  private boolean hasWheelChairAccess(NtssUser ntssUser, Long wheelChairCd) {
+    if (ntssUser == null || ntssUser.isNkkAdminUser() || wheelChairCd == null) {
+      return true;
+    }
+    MstWheelChair mstWheelChair = mstWheelChairDao.selectByWheelChairCd(wheelChairCd, "0", "0");
+    boolean hasAccess = mstWheelChair == null || mstWheelChair.getFacilityCd() == null
+      || mstWheelChair.getFacilityCd().equals(ntssUser.getFacilityCd());
+    // #11205 mod 20260421 start
+    if (!hasAccess) {
+      String wheelchairFacilityCd = (mstWheelChair != null && mstWheelChair.getFacilityCd() != null) ? mstWheelChair.getFacilityCd() : "null";
+      InvestigateLogUtils.info("WeightSettingResource.hasWheelChairAccess", "wheelChairCd=" + wheelChairCd + ", mstWheelChair.getFacilityCd()=" + wheelchairFacilityCd + ", ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd());
+    }
+    // #11205 mod 20260421 end
+    return hasAccess;
+  }
+
+  private boolean hasWeightAccess(NtssUser ntssUser, Long weightCd) {
+    if (ntssUser == null || ntssUser.isNkkAdminUser() || weightCd == null) {
+      return true;
+    }
+    MstWeight mstWeight = mstWeightDao.selectByWeightCd(weightCd);
+    boolean hasAccess = mstWeight == null || mstWeight.getFacilityCd() == null
+      || mstWeight.getFacilityCd().equals(ntssUser.getFacilityCd());
+    // #11205 mod 20260421 start
+    if (!hasAccess) {
+      String weightFacilityCd = (mstWeight != null && mstWeight.getFacilityCd() != null) ? mstWeight.getFacilityCd() : "null";
+      InvestigateLogUtils.info("WeightSettingResource.hasWeightAccess", "weightCd=" + weightCd + ", mstWeight.getFacilityCd()=" + weightFacilityCd + ", ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd());
+    }
+    // #11205 mod 20260421 end
+    return hasAccess;
   }
 }

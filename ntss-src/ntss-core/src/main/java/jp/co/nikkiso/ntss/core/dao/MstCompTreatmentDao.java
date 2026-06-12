@@ -8,13 +8,14 @@ import org.seasar.doma.Update;
 import org.seasar.doma.boot.ConfigAutowireable;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 処置マスタのDaoインタフェース.
  */
 @ConfigAutowireable
 @Dao
-public interface MstCompTreatmentDao {
+public interface MstCompTreatmentDao extends MasterDao<Map<String, Object>> {
 
   /**
    * 指定された施設コードに一致する処置マスタを取得します.
@@ -47,4 +48,8 @@ public interface MstCompTreatmentDao {
    */
   @Select
   Integer selectCurrentSeq();
+
+  @Override
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
 }

@@ -13,7 +13,7 @@
 /**
  * Vue関連
  */
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 
 /**
  * ベースコンポーネント
@@ -24,7 +24,7 @@ import baseContent from "@/components/pat-viewer/contents/base/BaseContent";
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 共通操作
@@ -38,7 +38,7 @@ import { encodeEditableRecord } from "@/functions/PatInfoFunctions";
  */
 import BaseComponent from "@/components/pat-viewer/contents/base/BaseComponent";
 
-import _ from "underscore";
+import _ from "@/compat/collections/lodash";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import {
   dateFormat,
@@ -52,8 +52,7 @@ import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
 import MakeStructionColorMixin from "./MakeStructionColorMixin";
 // add FNSI-障害票一覧_患者経過総合ビューアNo.16-19(指示の切り替わりポイントを赤くする) 李 end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 import {IND_COND_ID} from "@/constants/IndCondInfoConstants";
 import MODAL_TITLE from "@/components/common/ModalTitleContrast.js";
@@ -565,7 +564,7 @@ export default {
     }
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -577,9 +576,9 @@ export default {
     this.convertTreatCondData({
       listIndex: this.rowIndex,
       selectLayoutCd: this.selectedLayoutCd
-    }).then(treatCondDataListLet => {
+    }).then(async treatCondDataListLet => {
       // 指示の切り替わりポイント処理を呼び出す
-      this.makeStructionColor(treatCondDataListLet, 3);
+      await this.makeStructionColor(treatCondDataListLet, 3);
 
       this.treatCondDataList = treatCondDataListLet;
 
@@ -825,20 +824,17 @@ export default {
       }
       /* modify by chamaojia 2023-10-30 [9973] 指示と実際のdisabledは区別する --end */
 
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --start */
-      // if (cellInfo.isNotClickable) {
       if (isIndClick && cellInfo.isNotClickable) {
         // 画面遷移しない
         return;
       }
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --end */
 
       // モーダル物理情報を表示する
       // mod FNSI-【1006】最新の改修対象一覧の411対応 韓 start
       // if (cellInfo.itemNo === -1) {
       if (cellInfo.itemNo === -1 && cellInfo.rstDialysisState === '0') {
       // mod FNSI-【1006】最新の改修対象一覧の411対応 韓 end
-        const cellTreatDate = moment(cellInfo.treatDate, "YYYYMMDD").format(
+        const cellTreatDate = dayjs(cellInfo.treatDate, "YYYYMMDD").format(
           "YYYY-MM-DD"
         );
         this.showPhysicalInfoModal(cellTreatDate);
@@ -848,7 +844,7 @@ export default {
       // 指示項目がクリックされた場合、以下の処理を実行する
       if (isIndClick) {
         // 治療条件編集モーダルに設定する治療開始日
-        const treatDate = moment(cellInfo.treatDate, "YYYYMMDD").format(
+        const treatDate = dayjs(cellInfo.treatDate, "YYYYMMDD").format(
           "YYYY-MM-DD"
         );
         // add FNSI-【1006】最新の改修対象一覧の411対応 韓 start
@@ -937,8 +933,8 @@ export default {
       // 治療条件ストアを初期化
       this.initTreatCondData({
         indCondInfo: isInitStore
-          ? ((this.ordMainData[moment(treatDate).format("YYYYMMDD")] && this.ordMainData[moment(treatDate).format("YYYYMMDD")].indCondInfo) ? JSON.parse(
-            this.ordMainData[moment(treatDate).format("YYYYMMDD")].indCondInfo
+          ? ((this.ordMainData[dayjs(treatDate).format("YYYYMMDD")] && this.ordMainData[dayjs(treatDate).format("YYYYMMDD")].indCondInfo) ? JSON.parse(
+            this.ordMainData[dayjs(treatDate).format("YYYYMMDD")].indCondInfo
           ) : null)
           : null
       });
@@ -948,15 +944,15 @@ export default {
         this.getMstTreatmentData.find(
           ({ treatmentCd }) =>
             treatmentCd ===
-            ((this.ordMainData[moment(treatDate).format("YYYYMMDD")] && this.ordMainData[moment(treatDate).format("YYYYMMDD")]
-              .indTreatmentCd) ? this.ordMainData[moment(treatDate).format("YYYYMMDD")]
+            ((this.ordMainData[dayjs(treatDate).format("YYYYMMDD")] && this.ordMainData[dayjs(treatDate).format("YYYYMMDD")]
+              .indTreatmentCd) ? this.ordMainData[dayjs(treatDate).format("YYYYMMDD")]
               .indTreatmentCd : null)
         );
       const deviceMode = treatment && treatment.deviceMode;
       this.setDeviceMode(deviceMode);
 
       // add #10150 piao start
-      const ordMainData = this.ordMainData[moment(treatDate).format("YYYYMMDD")] ? this.ordMainData[moment(treatDate).format("YYYYMMDD")] : null;
+      const ordMainData = this.ordMainData[dayjs(treatDate).format("YYYYMMDD")] ? this.ordMainData[dayjs(treatDate).format("YYYYMMDD")] : null;
       if(ordMainData){
         const rstDialysisState = ordMainData.rstDialysisState;
         const dataObject  = ordMainData.indCondInfo ? JSON.parse(ordMainData.indCondInfo) : null;
@@ -1014,7 +1010,7 @@ export default {
       // 施設コード
       settingData.facilityCd = this.facilityCd;
       // 治療日のフォーマット調整
-      treatDate = moment(treatDate).format("YYYY-MM-DD");
+      treatDate = dayjs(treatDate).format("YYYY-MM-DD");
       // 治療開始日
       settingData.startDate = treatDate;
       // 治療終了日
@@ -1036,7 +1032,7 @@ export default {
         // 選択された曜日以外をfalseへ変更
         for (let i = 0; i < 7; i++) {
           settingData[this.changeWeekStr(i)] =
-            i !== moment(treatDate, "YYYYMMDD").day() ? false : true;
+            i !== dayjs(treatDate, "YYYYMMDD").day() ? false : true;
         }
       }
       // 子コンポーネント(IndActionChart)にわたす情報
@@ -1059,9 +1055,9 @@ export default {
 
      // add FNSI-【1006】最新の改修対象一覧の679対応 韓 start
      // 初期値を反映するため、オーダー番号を格納する。
-     settingData.ordNo = (this.ordMainData[moment(treatDate).format("YYYYMMDD")] && this.ordMainData[moment(treatDate).format("YYYYMMDD")].ordNo) ? this.ordMainData[moment(treatDate).format("YYYYMMDD")].ordNo : null;
+     settingData.ordNo = (this.ordMainData[dayjs(treatDate).format("YYYYMMDD")] && this.ordMainData[dayjs(treatDate).format("YYYYMMDD")].ordNo) ? this.ordMainData[dayjs(treatDate).format("YYYYMMDD")].ordNo : null;
      // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-     settingData.orderMainData = this.ordMainData[moment(treatDate).format("YYYYMMDD")];
+     settingData.orderMainData = this.ordMainData[dayjs(treatDate).format("YYYYMMDD")];
      // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
      // add FNSI-【1006】最新の改修対象一覧の679対応 韓 end
       // DW分岐
@@ -1103,14 +1099,14 @@ export default {
       //   const physical_info = JSON.parse(response.data[0].physical_info);
       //   //add #9929  DWの内外が一致しません ljg start
       //   const dwList =physical_info.filter(json => json.dw !== null
-      //         && moment(json.exam_date).format("YYYYMMDD") <= moment(treatDate).format("YYYYMMDD")
+      //         && dayjs(json.exam_date).format("YYYYMMDD") <= dayjs(treatDate).format("YYYYMMDD")
       //         )
       //   if (dwList.length == 0) {
       //   //add #9929  DWの内外が一致しません ljg end
       //     const physicalInfoData = encodeEditableRecord({
       //     ctl_no: 0,
       //     exam_date: null,
-      //     exam_day: moment(treatDate).format("YYYYMMDD"),
+      //     exam_day: dayjs(treatDate).format("YYYYMMDD"),
       //     exam_time: null,
       //     order_class: null,
       //     height: null,
@@ -1135,7 +1131,7 @@ export default {
       //     });
       //   }
       //   else {
-      //         const physicalInfo = _.max(dwList, el => {
+      //         const physicalInfo = _.maxBy(dwList, el => {
       //         return this.formatterDay(el) + this.formatterTime(el);
       //         });
       //         let exam_time = null;
@@ -1188,7 +1184,7 @@ export default {
       const physicalInfoData = encodeEditableRecord({
         ctl_no: 0,
         exam_date: null,
-        exam_day: moment(treatDate).format("YYYYMMDD"),
+        exam_day: dayjs(treatDate).format("YYYYMMDD"),
         exam_time: null,
         order_class: PAT_UNIQUE_COL_PHYSICAL_INFO_ORDER_CLASS[0].value,
         height: null,
@@ -1220,7 +1216,7 @@ export default {
      * @returns {String}
      */
      formatterDay(json) {
-      return moment(json.exam_date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format(
+      return dayjs(json.exam_date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format(
         "YYYYMMDD"
       );
     },
@@ -1230,7 +1226,7 @@ export default {
      * @returns {String}
      */
      formatterTime(json) {
-      return moment(json.exam_date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format("HHmm");
+      return dayjs(json.exam_date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format("HHmm");
     },
    //add #9929  時間のフォーマットです ljg end
     /**
@@ -1247,7 +1243,7 @@ export default {
         if (null === targetDate) {
           return treatCondData;
         }
-        targetDate = moment(targetDate).format("YYYYMMDD");
+        targetDate = dayjs(targetDate).format("YYYYMMDD");
 
         treatCondData[0].fields = this.ordMainData[targetDate].indDw;
 
@@ -1261,7 +1257,7 @@ export default {
           return treatCondData;
         }
 
-        targetDate = moment(targetDate).format("YYYYMMDD");
+        targetDate = dayjs(targetDate).format("YYYYMMDD");
 
         // ストアに格納されている治療情報から「治療条件」カラムのデータを取得
         const dataObject = (this.ordMainData[targetDate] && this.ordMainData[targetDate].indCondInfo) ? JSON.parse(this.ordMainData[targetDate].indCondInfo) : null;
@@ -1326,12 +1322,12 @@ export default {
             let dw = (this.ordMainData[targetDate] && this.ordMainData[targetDate].indDw) ? this.ordMainData[targetDate].indDw : null;
             if (dw === null || dw === undefined) {
               // indDwが取得できないならば身体情報から治療日最直近のDWを取得
-              const tDate = moment(targetDate, "YYYYMMDD").add(1, "day");
+              const tDate = dayjs(targetDate, "YYYYMMDD").add(1, "day");
               for (const physicalInfo of this.getPhysicalInfo) {
                 if (
                   physicalInfo &&
                   physicalInfo.exam_date &&
-                  moment(physicalInfo.exam_date) < tDate
+                  dayjs(physicalInfo.exam_date) < tDate
                 ) {
                   // 治療日より未来の登録日を除外する
                   if (
@@ -1720,5 +1716,5 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 </style>

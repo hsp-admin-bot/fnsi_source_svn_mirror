@@ -1,3 +1,5 @@
+@import "./print.scss";
+
 .modal-mask {
   position: fixed;
   z-index: 9998;
@@ -117,17 +119,16 @@
   overflow-y: auto;
 }
 
-@import "./print.scss";
 @media print {
-  ::v-deep .print-height-auto {
+  :deep(.print-height-auto) {
     height: auto !important;
   }
   
-  ::v-deep #staff-list-wrapper {
+  :deep(#staff-list-wrapper) {
     height: auto !important;
   }
   
-  ::v-deep .ntss-theme-screen {
+  :deep(.ntss-theme-screen) {
     height: auto !important;
   }
 }

@@ -11,22 +11,24 @@
         <!--   class="common-style-select-button" -->
         <!--   @click="createPopoverDataMedicineSet()" -->
         <!-- > -->
-        <v-ons-button
-          ref="popoverButtonMedicineSet"
-          class="common-style-select-button"
-          @click="createPopoverDataMedicineSet()"
-          :disabled="!getItemAuthorized('Indication', 'default_authority')"
-        >
-        <!-- mod #10359 編集権限の動作不正 dengshen end -->
-          追加
-        </v-ons-button>
+        <common-master-selector
+          :masterType="MasterType.MEDICINE_SET_INDICATION_RECORD"
+          :initItem="{ value: null }"
+          :editItem="{ value: null }"
+          :extraParams="{ treatDate: getIndStartDate }"
+          :patientId="selectedPatId"
+          :facilityCd="facilityCd"
+          :dialysisState="0"
+          :hasChangedOption="false"
+          :changeOptionMode="'nameOnly'"
+          :hasUnregisteredOption="false"
+          :btnName="'追加'"
+          :isVisible="false"
+          :btnClass="'common-style-select-button'"
+          :btnDisabled="!getItemAuthorized('Indication', 'default_authority')"
+          @popover-return="updateInputMedicineSet($event)"
+        />
       </v-ons-col>
-      <pop-over
-        v-bind="popoverDataMedicineSet"
-        :target-position-element="$refs.popoverButtonMedicineSet"
-        @popover-close="closePopoverMedicineSet"
-        @popover-return="updateInputMedicineSet"
-      />
     </v-ons-row>
     <v-ons-row class="container-row-style">
       <v-ons-col width="10em"> 薬剤 </v-ons-col>
@@ -48,18 +50,18 @@
            <!--追加
         </v-ons-button>-->
         <common-master-selector
-          :masterType="MasterType.ANTICOAGULANT_INDICATION"
+          :masterType="MasterType.MEDICATION_TREATMENT_RECORD"
           :extraParams="{treatDate: treatDate,rstInfo:{ rstName:'', rstUnit: ''}}"
           :patientId="selectedPatId"
           :facilityCd="facilityCd"
+          :dialysisState="Number(rstDialysisState || 0)"
           :btnName="'追加'"
           :isVisible="false"
+          :hasUnregisteredOption="false"
           :hasChangedOption="true"
           :selectedItemClass="'com-basic-sub-input'"
           :backgroundColor="'#f7f7f7'"
           :btnClass="'com-basic-sub-btn'"
-          :isSelectionRequired="true"
-          :hasUnregisteredOption="false"
           :btnDisabled="!getItemAuthorized('Indication', 'default_authority')"
           @popover-return="masterUpdateInput($event);"
         />
@@ -117,10 +119,9 @@ import { getAuthorized, getPrefix } from "@/functions/common/CommonFunctions.js"
 // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
 // add #10359 編集権限の動作不正 dengshen end
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { mapGetters, mapActions } from "vuex";
-import { medicine, medicineClass, medicineMix, medicineMixTabooAllergy, medicineSetWithDeleted, medicineTabooAllergy } from "@/functions/mst/MstGetters.js";
-import _ from "underscore";
-import MasterSelector from "@/components/common/master-selector/MasterSelector";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { medicine, medicineClass, medicineMix, medicineMixTabooAllergy, medicineTabooAllergy } from "@/functions/mst/MstGetters.js";
+import _ from "@/compat/collections/lodash";
 import IndMedicineEdit from "@/components/indication/IndMedicineEdit";
 import { dateFormat, fitTermCheck, fitTermCheckForUpdate } from "@/functions/common/DateTimeUtils";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
@@ -133,32 +134,26 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
 import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
 import * as MasterType from "@/components/common/master-selector/MasterType";
-import { Master } from "@/models/common/master-selector-condition/Master";
+
+import { nextId } from "@/functions/common/id";
+import IndicationOwnerMixin from '@/components/indication/IndicationOwnerMixin';
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
 export default {
+  mixins: [IndicationOwnerMixin],
   components: {
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
     "common-master-selector": commonMasterSelector,
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
-    "pop-over": MasterSelector,
     "ind-medicine-edit": IndMedicineEdit
   },
 
   data() {
     return {
+      isMasterSelecting: false,
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
       treatDate:'',
       MasterType,
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
-      popoverDataMedicineSet: {
-        popoverVisible: false,
-        popoverTitleHeader: "",
-        popoverFilter: [],
-        popoverContentLabel: "",
-        popoverContentDataset: [],
-        popoverContentSelected: {},
-        hasUnregisteredOption: false
-      },
       popoverDataMedicine: {
         popoverVisible: false,
         popoverTitleHeader: "",
@@ -169,7 +164,6 @@ export default {
       },
       listData: [],
       isLoading: false,
-      medicineSetData: [],
       medicineData: [],
       medicineMixData: []
     };
@@ -178,7 +172,21 @@ export default {
   computed: {
     ...mapGetters("user", { facilityCd: "getFacilityCd" }),
     ...mapGetters("pat-info", ["selectedPatId"]),
-    ...mapGetters("pat-viewer-popover", ["getIndStartDate"])
+    ...mapGetters("pat-viewer-popover", ["getIndStartDate"]),
+    ...mapGetters("pat-viewer-modal", { settingIndData: "getSettingIndData" }),
+    rstDialysisState() {
+      const om = this.settingIndData && this.settingIndData.orderMainData;
+      return om && om.rstDialysisState != null ? om.rstDialysisState : 0;
+    },
+  },
+
+  watch: {
+    getIndStartDate: {
+      handler(val) {
+        this.treatDate = this.normalizeTreatDate(val);
+      },
+      immediate: true
+    },
   },
 
   methods: {
@@ -192,14 +200,25 @@ export default {
     }),
     ...mapActions("treatment-record/common", ["getMstMachineByOrdNoRst", "sendGetNoticeMedi"]),
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
-    masterUpdateInput(val){
+    normalizeTreatDate(val) {
+      if (val == null) return "";
+      return String(val).replaceAll("-", "");
+    },
+    masterUpdateInput(val) {
+      if (this.isMasterSelecting) {
+        return;
+      }
+      this.isMasterSelecting = true
       let item = {
         isDisp: val.isDisp,
         text: val.text,
         value: val.value,
-        type: val.kbnValue
+        type: val.key_type ?? val.kbnValue ?? val.type
       }
       this.updateInputMedicine(item)
+      setTimeout(() => {
+        this.isMasterSelecting = false;
+      }, 500);
     },
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
     // add #10359 編集権限の動作不正 dengshen start
@@ -208,39 +227,6 @@ export default {
     },
     // add #10359 編集権限の動作不正 dengshen end
 
-    /**
-     * @description ポップオーバーを表示する前に、必要なデータを取得して、
-     *              ポップオーバー用フォーマットをコンバートする
-     */
-    async createPopoverDataMedicineSet() {
-      // del FNSI-改修内容6512修正 xuty start
-      // this.$parent.$parent.editAddFlg = true;
-      // del FNSI-改修内容6512修正 xuty end
-      this.medicineSetData = await medicineSetWithDeleted(this.selectedPatId).catch(
-        error => {
-          //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
-          getErrorMessage('IndMedicineSet.vue', 'createPopoverDataMedicineSet', error);
-          //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
-          throw error;
-        }
-      );
-
-      const contentArr = this.medicineSetData.map(item => {
-        return {
-          value: item.medicineSetCd,
-          text: item.medicineSetName
-        };
-      });
-      this.popoverDataMedicineSet.popoverTitleHeader = "薬剤セット";
-      this.popoverDataMedicineSet.popoverContentLabel = "薬剤セット名";
-      this.popoverDataMedicineSet.popoverContentDataset = contentArr;
-      this.showPopoverMedicineSet();
-    },
-
-    /**
-     * @description ポップオーバーを表示する前に、必要なデータを取得して、
-     *              ポップオーバー用フォーマットをコンバートする
-     */
     async createPopoverDataMedicine() {
       // del FNSI-改修内容6512修正 xuty start
       // this.$parent.$parent.editAddFlg = true;
@@ -334,24 +320,10 @@ export default {
     },
 
     /**
-     * @description 薬剤セットマスター選択を表示
-     */
-    showPopoverMedicineSet() {
-      this.popoverDataMedicineSet.popoverVisible = true;
-    },
-
-    /**
      * @description 薬剤マスター選択を表示
      */
     showPopoverMedicine() {
       this.popoverDataMedicine.popoverVisible = true;
-    },
-
-    /**
-     * @description 薬剤セットマスター選択を非表示
-     */
-    closePopoverMedicineSet() {
-      this.popoverDataMedicineSet.popoverVisible = false;
     },
 
     /**
@@ -367,13 +339,9 @@ export default {
     async updateInputMedicineSet(data) {
       this.isLoading = true;
 
-      const medicineSetData = this.medicineSetData.find(item => {
-        return item.medicineSetCd === data.value;
-      });
-
       let listData = [
         {
-          id: _.uniqueId("medicine"),
+          id: nextId("medicine"),
           cd: null,
           unit: null,
           amount: 0,
@@ -384,10 +352,41 @@ export default {
         }
       ];
 
-      if (medicineSetData) {
+      const setInfoRaw = data?.setInfo;
+      if (setInfoRaw == null || setInfoRaw === "") {
+        this.isLoading = false;
+        return;
+      }
+
+      let medicineSetJson;
+      try {
+        if (typeof setInfoRaw === "string") {
+          medicineSetJson = JSON.parse(setInfoRaw);
+        } else if (Array.isArray(setInfoRaw)) {
+          medicineSetJson = setInfoRaw;
+        } else if (
+          typeof setInfoRaw === "object" &&
+          setInfoRaw.value != null &&
+          typeof setInfoRaw.value === "string"
+        ) {
+          medicineSetJson = JSON.parse(setInfoRaw.value);
+        } else {
+          medicineSetJson = setInfoRaw;
+        }
+      } catch (error) {
+        getErrorMessage("IndMedicineSet.vue", "updateInputMedicineSet", error);
+        this.isLoading = false;
+        return;
+      }
+
+      if (!Array.isArray(medicineSetJson)) {
+        this.isLoading = false;
+        return;
+      }
+
+      if (medicineSetJson.length) {
         // データ順番を薬剤セット画面の表示順に合わせる
         /* modify by chamaojia 2023-08-01 [9197] 薬剤セットは正常な順序で展示されており、順序を反転する必要はありません  --start */
-        const medicineSetJson = JSON.parse(medicineSetData.setInfo);
         /* modify by chamaojia 2023-08-01 [9197] 薬剤セットは正常な順序で展示されており、順序を反転する必要はありません  --end */
         const medicineData = await medicine(this.facilityCd).catch(
           error => {
@@ -410,7 +409,11 @@ export default {
           // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
           //const medicineType = String(item.class);
           // mod #10101 条件送信後にチェックリストが0件になる dou start
-          const medicineType = parseInt(String(item.class) ? String(item.class) : "1");
+          const rawType = item?.key_class;
+          let medicineType = Number(rawType);
+          if (!Number.isFinite(medicineType) || (medicineType !== 1 && medicineType !== 2)) {
+            medicineType = 1;
+          }
           // mod #10101 条件送信後にチェックリストが0件になる dou end
           // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
           let mstMedi = medicineData;
@@ -425,7 +428,7 @@ export default {
           }
           const med = mstMedi.find(i => item.cd === i[mstMediCd]);
           return {
-            id: _.uniqueId("medicine"),
+            id: nextId("medicine"),
             cd: med && med[mstMediCd],
             unit: med && med.unit,
             amount: item.amount,
@@ -441,7 +444,7 @@ export default {
       this.listData = this.listData.concat(listData.filter(item => item.cd));
       this.isLoading = false;
       // add FNSI-改修内容6512修正 xuty start
-      this.$parent.$parent.editAddFlg = this.listData.length > 0;
+      this._indicationDialogOwner().editAddFlg = this.listData.length > 0;
       // add FNSI-改修内容6512修正 xuty end
     },
 
@@ -455,7 +458,12 @@ export default {
       let medicineCdKey = "medicineCd";
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
       //const medicineType = String(data.value).match(/\$/) ? "2" : "1";
-      const medicineType = data.type;
+      const medicineType =
+        selectedData.key_type ??
+        selectedData.keyType ??
+        selectedData.kbnValue ??
+        selectedData.type ??
+        null;
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
       //if (medicineType === "2") {
@@ -469,7 +477,7 @@ export default {
           throw error;
         });
         medicineCdKey = "medicineMixCd";
-        selectedData.value = Number(selectedData.value.split("$")[0]);
+        selectedData.value = Number(String(selectedData.value).split("$")[0]);
       } else {
         mstmedi = await medicine(this.facilityCd).catch(error => {
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
@@ -485,7 +493,7 @@ export default {
 
       const listData = selectedData.value
         ? {
-            id: _.uniqueId("medicine"),
+            id: nextId("medicine"),
             cd: medicineData[medicineCdKey],
             unit: medicineData.unit,
             amount: 0,
@@ -495,7 +503,7 @@ export default {
             medicineType
           }
         : {
-            id: _.uniqueId("medicine"),
+            id: nextId("medicine"),
             cd: null,
             unit: null,
             amount: 0,
@@ -509,7 +517,7 @@ export default {
       this.listData = this.listData.concat(listData);
       this.isLoading = false;
       // add FNSI-改修内容6512修正 xuty start
-      this.$parent.$parent.editAddFlg = true;
+      this._indicationDialogOwner().editAddFlg = true;
       // add FNSI-改修内容6512修正 xuty end
     },
 
@@ -519,7 +527,7 @@ export default {
     deleteRow(item) {
       this.listData.splice(item, 1);
       if (this.listData.length === 0) {
-        this.$parent.$parent.editAddFlg = false;
+        this._indicationDialogOwner().editAddFlg = false;
       }
     },
 
@@ -542,10 +550,10 @@ export default {
       // 未選択チェック
       if (await this.chkUnselected(medicineSetItems)) {
         stringParam = "薬剤";
-        this.$parent.$parent.messageDialogInfo.messageCd = 22010001;
-        this.$parent.$parent.messageDialogInfo.type = "1";
-        this.$parent.$parent.messageDialogInfo.stringParams = [stringParam];
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.messageCd = 22010001;
+        this._indicationDialogOwner().messageDialogInfo.type = "1";
+        this._indicationDialogOwner().messageDialogInfo.stringParams = [stringParam];
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         console.log("IndMedicineSet.vue updateIndInfo return true; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         return true;
@@ -661,12 +669,11 @@ export default {
       }
       /* add #IES_6790 by zhangruixue 2023-07-04 --end */
 
-
       if (200 === response.status && undefined !== response.data.msgCd) {
-        this.$parent.$parent.messageDialogInfo.messageCd = response.data.msgCd;
-        this.$parent.$parent.messageDialogInfo.type = "1";
-        this.$parent.$parent.messageDialogInfo.stringParams = [""];
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.messageCd = response.data.msgCd;
+        this._indicationDialogOwner().messageDialogInfo.type = "1";
+        this._indicationDialogOwner().messageDialogInfo.stringParams = [""];
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         console.log("IndMedicineSet.vue updateIndInfo return true; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         // 処理終了
@@ -746,7 +753,7 @@ export default {
               rtn = true;
             } else {
               // 処理を中止するので保存ボタン無効を解除
-              this.$parent.$parent.updateDisable = false;
+              this._indicationDialogOwner().updateDisable = false;
             }
           }
         });
@@ -769,9 +776,9 @@ export default {
         Object.keys(medicineSetItems).forEach(key => {
           if (medicineSetItems[key][0]) {
             if (medicineSetItems[key][0].checkEdit()) {
-              this.$parent.$parent.messageDialogInfo.messageCd = 20010001;
-              this.$parent.$parent.messageDialogInfo.type = "2";
-              this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+              this._indicationDialogOwner().messageDialogInfo.messageCd = 20010001;
+              this._indicationDialogOwner().messageDialogInfo.type = "2";
+              this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
               isCheck = medicineSetItems[key][0].checkEdit();
             }
           }

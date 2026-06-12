@@ -334,7 +334,7 @@
     </v-ons-row>
     <div v-if="messageDialogInfo.isDialogVisible">
       <message-dialog
-        :visible.sync="messageDialogInfo.isDialogVisible"
+        v-model:visible="messageDialogInfo.isDialogVisible"
         :message-cd="messageDialogInfo.messageCd"
         :type="messageDialogInfo.type"
         :string-params="messageDialogInfo.stringParams"
@@ -345,7 +345,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import { ApiHelper } from "@/apis/AxiosHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
@@ -353,11 +353,10 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
 // FNSI-修正 マスタ削除の対応 楊 add start
 import { MASTER_DELETE_DISPLAY } from "@/constants/TreatmentRecord";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // FNSI-修正 マスタ削除の対応 楊 add end
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber"
 import customInputTimeSpecial from "@/components/common/custom-form-tags/CustomInputTimeSpecial";
@@ -404,6 +403,10 @@ export class MstAddition {
   in_hospital_cd3;
 
 }
+
+import { queryScopedSelector, getModalBodyElement, getModalContainerElement, getModalFooterElement, getModalToolbarElement, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 
 export default {
   name: "MstAddition",
@@ -765,7 +768,7 @@ export default {
    */
   mounted() {
     //add/ #12498 プルダウンui幅異常  tianqidong start
-    window.addEventListener('resize',this.onResize)
+    this.getAdditionOwnerWindow()?.addEventListener?.('resize', this.onResize)
     //add/#12498 プルダウンui幅異常 tianqidong end
      //最初のボタンはグレーで表示されます
     setTimeout(() => {
@@ -780,8 +783,8 @@ export default {
     // del #9863 加算マスタ詳細を開くとtypeエラーが発生する 蔡 end
   },
   //add/ #12498 プルダウンui幅異常  tianqidong start
-  beforeDestroy(){
-    window.removeEventListener('resize',this.onResize)
+  beforeUnmount(){
+    this.getAdditionOwnerWindow()?.removeEventListener?.('resize', this.onResize)
     EventBus.$off( "onResize", null);
   },
   //add/#12498 プルダウンui幅異常 tianqidong end
@@ -789,6 +792,74 @@ export default {
    *
    */
   methods: {
+    getAdditionDocument() {
+      return this.$el?.ownerDocument || document;
+    },
+    getAdditionOwnerWindow(element = null) {
+      return element?.ownerDocument?.defaultView || this.getAdditionDocument()?.defaultView || window;
+    },
+    getAdditionComputedStyle(element) {
+      if (!element) {
+        return null;
+      }
+      return this.getAdditionOwnerWindow(element).getComputedStyle(element);
+    },
+    getAdditionSearchRoots() {
+      return [this.getCurrentModalBody(), this.getCurrentModalContainer(), this.$el].filter(Boolean);
+    },
+    getAdditionScopedElementFromRoots(selector, roots = this.getAdditionSearchRoots()) {
+      for (const root of roots) {
+        const directElement = root?.querySelector?.(selector);
+        if (directElement) {
+          return directElement;
+        }
+        const scopedElement = queryScopedSelector(selector, root);
+        if (scopedElement) {
+          return scopedElement;
+        }
+      }
+      return null;
+    },
+    getAdditionDocumentElementByClassName(className) {
+      return this.getAdditionDocument().getElementsByClassName(className)[0] || null;
+    },
+    getAdditionDocumentElementById(id) {
+      return this.getAdditionDocument().getElementById(id) || null;
+    },
+    getCurrentModalContainer() {
+      return getModalContainerElement(this.$el) || this.$el?.closest?.('.modal-container') || this.getAdditionDocumentElementByClassName('modal-container') || null;
+    },
+    getCurrentModalBody() {
+      return getModalBodyElement(this.$el) || this.getCurrentModalContainer()?.querySelector?.('.modal-body, .modal-body-search, .modal-body-no-footer') || this.getAdditionDocumentElementByClassName('modal-body') || null;
+    },
+    getCurrentModalToolbar() {
+      return getModalToolbarElement(this.$el) || this.getCurrentModalContainer()?.querySelector?.('.toolbar') || this.getAdditionDocumentElementByClassName('toolbar') || null;
+    },
+    getCurrentModalFooter() {
+      return getModalFooterElement(this.$el) || this.getCurrentModalContainer()?.querySelector?.('.modal-footer') || this.getAdditionDocumentElementByClassName('modal-footer') || null;
+    },
+    getAdditionElement(selector) {
+      return this.getAdditionScopedElementFromRoots(selector) || queryScopedSelector(selector, this.$el);
+    },
+    getAdditionScopeRoot() {
+      return this.getCurrentModalBody() || this.getCurrentModalContainer() || this.$el || null;
+    },
+    getAdditionDataTableEl() {
+      return this.getAdditionScopedElementFromRoots('.data-table')
+        || this.getAdditionDocumentElementByClassName('data-table')
+        || null;
+    },
+    getAdditionInfoEl() {
+      return this.getAdditionScopedElementFromRoots('.addition-info')
+        || this.getAdditionDocumentElementByClassName('addition-info')
+        || null;
+    },
+    getAdditionNameInputEl() {
+      return getScopedElementById('addition-name', this.getAdditionScopeRoot())
+        || getScopedElementById('addition-name', this.$el)
+        || this.getAdditionDocumentElementById('addition-name')
+        || null;
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
 
     ...mapActions("loading-screen", ["setLoadingScreenVisible", "setLoadingScreenMessage"]),
@@ -848,7 +919,7 @@ export default {
         return true;
       }
       if (!validationResult.additionNameValid) {
-        document.getElementById("addition-name")?.classList?.add("input-invalid");
+        this.getAdditionNameInputEl()?.classList?.add("input-invalid");
       }
       if (!validationResult.add_cnt1_week) {
         document.getElementById("add-cnt1-week")?.classList?.add("input-invalid");
@@ -946,7 +1017,7 @@ export default {
           // 算定回数上限
           case "additionLimit":
             // 特定の算定種別の場合は、無制限となる為、""を代入する
-            const list = ["1", "5", "9", "10", "11"];
+            var list = ["1", "5", "9", "10", "11"];
             if(list.includes(this.mstAddition.addition_class)) {
               this.mstAddition.addition_limit.editValue = null;
             }
@@ -1057,7 +1128,7 @@ export default {
       this.changeButton();
 
       this.$nextTick(() => {
-        const ele = document.getElementsByClassName("data-table")[0];
+        const ele = this.getAdditionDataTableEl();
         if (ele) {
           ele.scrollTop = ele.scrollHeight;
         }
@@ -1094,10 +1165,10 @@ export default {
       const select = Array.isArray(refs) ? refs[0] : refs;
       if (!select || !text) return text;
 
-      const style = window.getComputedStyle(select);
-      const font = `${style.fontSize} ${style.fontFamily}`;
+      const style = this.getAdditionComputedStyle(select);
+      const font = `${style?.fontSize || ""} ${style?.fontFamily || ""}`;
 
-      const canvas = document.createElement('canvas');
+      const canvas = (select.ownerDocument || this.$el?.ownerDocument || document).createElement('canvas');
       const ctx = canvas.getContext('2d');
       ctx.font = font;
 
@@ -1212,7 +1283,7 @@ export default {
         // NOTE: 慢性維持透析患者外来医学管理料の場合、「算定回（月１）」を表示
         this.mstAddition.addition_span = '0';
         this.mstAddition.addition_limit_type = this.mstAddition.addition_limit_type || '1';
-        this.mstAddition.add_cnt1.editValue = this.mstAddition.add_cnt1.editValue || 1;
+        this.setDefaultAddCnt1Value();
       }
 
       // 算定回数
@@ -1232,6 +1303,23 @@ export default {
         this.calculateListHeight();
       });
     },
+    isEmptyAddCnt1Value(value) {
+      return value === null || value === undefined || value === "" || value === 0 || value === "0";
+    },
+    setDefaultAddCnt1Value(forceEditValue = false) {
+      const addCnt1 = this.mstAddition.add_cnt1;
+      const defaultValue = 1;
+      const shouldDefaultEditValue = forceEditValue || this.isEmptyAddCnt1Value(addCnt1.editValue);
+
+      if (!shouldDefaultEditValue) {
+        return;
+      }
+
+      addCnt1.editValue = defaultValue;
+      if (this.isEmptyAddCnt1Value(addCnt1.initValue)) {
+        addCnt1.initValue = defaultValue;
+      }
+    },
     /**
      * 算定回数の変更時処理
      */
@@ -1241,11 +1329,7 @@ export default {
         this.mstAddition.addition_limit.editValue = 1;
       }
       //画面の初期表示後に、算定回（週１）・算定回（月１）が最初に表示された場合
-      if(this.mstAddition.add_cnt1.initValue === 0){
-        this.mstAddition.add_cnt1.initValue = this.mstAddition.add_cnt1.editValue = 1;
-      } else {
-        this.mstAddition.add_cnt1.editValue = 1;
-      }
+      this.setDefaultAddCnt1Value(true);
     },
     /**
      * 算定回（月１）の設定処理
@@ -1253,8 +1337,8 @@ export default {
      */
     setEditAddCnt1(selectedAdditionLimitType){
       //算定回の種別が1、かつ、算定回（月１）がnullの場合、算定回（月１）に1を設定する
-      if(selectedAdditionLimitType === "1" && this.mstAddition.add_cnt1.editValue === null){
-        this.mstAddition.add_cnt1.editValue = 1;
+      if(selectedAdditionLimitType === "1"){
+        this.setDefaultAddCnt1Value();
       }
     },
     /**
@@ -1268,9 +1352,9 @@ export default {
 
     // 高さを計算する
     calculateListHeight() {
-      const dataList = document.getElementsByClassName("data-table")[0];
+      const dataList = this.getAdditionDataTableEl();
       if (!dataList) return;
-      const modalBody = document.getElementsByClassName('modal-body')[0];
+      const modalBody = this.getCurrentModalBody();
       // NOTE: 500px 以下の場合、全体スクロール（スマホサイズ）
       if (this.windowWidth <= 500) {
         dataList.style.removeProperty('height');
@@ -1282,10 +1366,10 @@ export default {
         return;
       }
       // NOTE: 501px 以上の場合、一覧のみスクロール
-      const infoHeight = document.getElementsByClassName("addition-info")[0].clientHeight;
-      const totalHeight = document.getElementsByClassName("modal-container")[0].clientHeight;
-      const topHeight = document.getElementsByClassName("toolbar")[0].clientHeight;
-      const bottomHeight = document.getElementsByClassName("modal-footer")[0].clientHeight;
+      const infoHeight = this.getAdditionInfoEl()?.clientHeight || 0;
+      const totalHeight = this.getCurrentModalContainer()?.clientHeight || 0;
+      const topHeight = this.getCurrentModalToolbar()?.clientHeight || 0;
+      const bottomHeight = this.getCurrentModalFooter()?.clientHeight || 0;
       // NOTE: addition-infoエリアのマージン（14px + 7px = 21px）
       const actualHeight = totalHeight - topHeight - bottomHeight - infoHeight - 21;
       if (actualHeight > 0) {
@@ -1342,7 +1426,7 @@ export default {
 .mst_addition select {
   padding: 3px 0;
 }
-ons-select >>> .select-input {
+ons-select :deep(.select-input) {
   height: 2.2em;
   line-height: 20px;
 }
@@ -1453,11 +1537,11 @@ ons-select >>> .select-input {
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }
-.input-required >>> input{
+.input-required :deep(input){
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> input{
+.input-invalid :deep(input){
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }
@@ -1472,7 +1556,7 @@ ons-select >>> .select-input {
   outline: 0;
   border-radius: 5px;
 }
-::v-deep .custom-select-edited > select {
+:deep(.custom-select-edited > select) {
     color: #333333;
     font-weight: unset;
 }

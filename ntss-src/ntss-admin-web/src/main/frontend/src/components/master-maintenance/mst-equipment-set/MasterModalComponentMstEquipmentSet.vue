@@ -1,12 +1,4 @@
-/**
- * マスタメンテナンス機能 医療材料セットマスタ 医療材料セットマスタ詳細.
- * <p>マスタの取得基準: 削除済み・期限切れも含めた医療材料およびダイアライザ(ともに並び順(mst_selector)の考慮あり)</p>
- *
- * <p>マスタ選択ポップオーバー画面における選択項目一覧、選択項目で医療材料とダイアライザのコード重複を回避するため<br />
- * ダイアライザのコンポーネント内部展開コードはdialyzer{n}とする(例. 10(DB上のダイアライザのコード) -> "dialyzer10")。</p>
- *
- */
- <template>
+<template>
   <div>
     <div class="equip-set-info">
       <v-ons-row class="row-height">
@@ -142,7 +134,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 // [共通部品] UI関連
 import customInput from "@/components/common/custom-form-tags/CustomInput";
@@ -159,10 +151,12 @@ import {
   detectEquipTypeFromCode 
 } from "@/functions/EquipTypeFunctions";
 
-import { EventBus } from "@/eventBus";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add #9848+9849 数値IFのスタイル全不正 linjunfeng start
 import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro'
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
+import { nextId } from "@/functions/common/id";
+import { getModalContainerElement, getModalBodyElement, getModalToolbarElement, getModalFooterElement, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
 // add #9848+9849 数値IFのスタイル全不正 linjunfeng end
 
 export default {
@@ -280,12 +274,59 @@ export default {
   /**
    * コンポーネント破棄前.
    */
-   beforeDestroy() {
+   beforeUnmount() {
     // dataの初期化(メモリリークに対する基本的な対応)
     Object.assign(this.$data, this.$options.data());
   },
 
   methods: {
+    getEquipmentSetDocument() {
+      return this.$el?.ownerDocument || document;
+    },
+    getCurrentModalContainer() {
+      return getModalContainerElement(this.$el) || this.$el?.closest?.('.modal-container') || this.getEquipmentSetDocument().getElementsByClassName('modal-container')[0] || null;
+    },
+    getCurrentModalBody() {
+      return getModalBodyElement(this.$el) || this.getCurrentModalContainer()?.querySelector?.('.modal-body, .modal-body-search, .modal-body-no-footer') || this.getEquipmentSetDocument().getElementsByClassName('modal-body')[0] || null;
+    },
+    getCurrentModalToolbar() {
+      return getModalToolbarElement(this.$el) || this.getCurrentModalContainer()?.querySelector?.('.toolbar') || this.getEquipmentSetDocument().getElementsByClassName('toolbar')[0] || null;
+    },
+    getCurrentModalFooter() {
+      return getModalFooterElement(this.$el) || this.getCurrentModalContainer()?.querySelector?.('.modal-footer') || this.getEquipmentSetDocument().getElementsByClassName('modal-footer')[0] || null;
+    },
+    getEquipmentSetScopeRoot() {
+      return this.getCurrentModalBody() || this.getCurrentModalContainer() || this.$el || null;
+    },
+    getEquipmentSetSearchRoots() {
+      return [this.getCurrentModalBody(), this.getCurrentModalContainer(), this.$el].filter(Boolean);
+    },
+    getEquipmentSetScopedElement(selector, roots = this.getEquipmentSetSearchRoots()) {
+      for (const root of roots) {
+        const directElement = root?.querySelector?.(selector);
+        if (directElement) {
+          return directElement;
+        }
+        const scopedElement = queryScopedSelector(selector, root);
+        if (scopedElement) {
+          return scopedElement;
+        }
+      }
+      return null;
+    },
+    getEquipmentSetElement(selector) {
+      return this.getEquipmentSetScopedElement(selector) || queryScopedSelector(selector, this.$el);
+    },
+    getEquipmentSetDataTableEl() {
+      return this.getEquipmentSetScopedElement('.data-table')
+        || this.getEquipmentSetDocument().getElementsByClassName('data-table')[0]
+        || null;
+    },
+    getEquipmentSetInfoEl() {
+      return this.getEquipmentSetScopedElement('.equip-set-info')
+        || this.getEquipmentSetDocument().getElementsByClassName('equip-set-info')[0]
+        || null;
+    },
     ...mapActions("loading-screen", ["setLoadingScreenVisible"]), // 共通ローダー・表示状態(true: 表示, false: 非表示)
 
     /**
@@ -410,7 +451,7 @@ export default {
       // 表示用ローカル配列(画面の表示要素の制御用)に、入力項目(材料コード・数量・医療材料区分・画面上の削除フラグ("1": 画面操作者から削除の指示(デフォルト:0)))を編集
       for (const i in this.equipmentSetInfo.setInfoJsonArr) {
         this.dispArr.splice(i, 1, {
-          id: _.uniqueId("equipment"),
+          id: nextId("equipment"),
           cd: {
             initValue: this.equipmentSetInfo.setInfoJsonArr[i].cd,
             editValue: this.equipmentSetInfo.setInfoJsonArr[i].cd
@@ -420,8 +461,8 @@ export default {
             editValue: this.equipmentSetInfo.setInfoJsonArr[i].amount >0 && this.equipmentSetInfo.setInfoJsonArr[i].amount <  9999 ? this.equipmentSetInfo.setInfoJsonArr[i].amount: 0,
           },
           equip_type: {
-            initValue: this.equipmentSetInfo.setInfoJsonArr[i].hasOwnProperty("equip_type") ? this.equipmentSetInfo.setInfoJsonArr[i].equip_type : 0,
-            editValue: this.equipmentSetInfo.setInfoJsonArr[i].hasOwnProperty("equip_type") ? this.equipmentSetInfo.setInfoJsonArr[i].equip_type : 0
+            initValue: Object.prototype.hasOwnProperty.call(this.equipmentSetInfo.setInfoJsonArr[i], "equip_type") ? this.equipmentSetInfo.setInfoJsonArr[i].equip_type : 0,
+            editValue: Object.prototype.hasOwnProperty.call(this.equipmentSetInfo.setInfoJsonArr[i], "equip_type") ? this.equipmentSetInfo.setInfoJsonArr[i].equip_type : 0
           },
           del_check: {
             initValue: "0",
@@ -444,7 +485,7 @@ export default {
         equip_type: null
       });
       this.dispArr.push({
-        id: _.uniqueId("equipment"),
+        id: nextId("equipment"),
         cd: { initValue: "", editValue: "" },
         // add 9973 -4 by kangjie 20231025 start
         // amount: { initValue: 1, editValue: 1 },
@@ -457,7 +498,7 @@ export default {
 
       // 医療材料一覧の最下部までスクロールする
       this.$nextTick(() => {
-        const ele = document.getElementsByClassName("data-table")[0];
+        const ele = this.getEquipmentSetDataTableEl();
         if (ele) {
           ele.scrollTop = ele.scrollHeight;
         }
@@ -612,19 +653,19 @@ export default {
      * 共通部品 医療材料選択(有効なマスタからの選択と数量入力)の画面の再表示を指示する.
      */
     doSubComponentReload() {
-      this.subComponentReload = false;
-      this.$nextTick(() => (this.subComponentReload = true));
+      this.$emit("update:subComponentReload", false);
+      this.$nextTick(() => this.$emit("update:subComponentReload", true));
     },
 
     /**
      * @description 医療材料一覧の表示高さを再計算.
      */
     calculateDataListHeight(){
-      let infoHeight = document.getElementsByClassName("equip-set-info")[0].clientHeight;
-      let totalHeight = document.getElementsByClassName("modal-container")[0].clientHeight;
-      let topHeight = document.getElementsByClassName("toolbar")[0].clientHeight;
-      let bottomHeight = document.getElementsByClassName("modal-footer")[0].clientHeight;
-      let dataList = document.getElementsByClassName("data-table")[0]
+      let infoHeight = this.getEquipmentSetInfoEl()?.clientHeight || 0;
+      let totalHeight = this.getCurrentModalContainer()?.clientHeight || 0;
+      let topHeight = this.getCurrentModalToolbar()?.clientHeight || 0;
+      let bottomHeight = this.getCurrentModalFooter()?.clientHeight || 0;
+      let dataList = this.getEquipmentSetDataTableEl()
 
       let actualHeight = totalHeight - topHeight - bottomHeight - infoHeight - 9;
 
@@ -757,12 +798,12 @@ th.ntss-list-header-th-sticky {
   }
 }
 @media screen and (max-width: 667px) {
-  .setInfo-list >>> .item-title {
+  .setInfo-list :deep(.item-title) {
     max-height: 62px;
   }
 }
 @media screen and (max-width: 375px) {
-  .setInfo-list >>> .item-title {
+  .setInfo-list :deep(.item-title) {
     max-height: 62vh;
   }
 }
@@ -774,11 +815,11 @@ th.ntss-list-header-th-sticky {
   display: block;
   overflow-x: auto;
 }
-.data-table >>> ons-row {
+.data-table :deep(ons-row) {
   min-width: 640px;
 }
 @media screen and (max-width: 667px) {
-  .setInfo-list >>> .item-title {
+  .setInfo-list :deep(.item-title) {
     max-height: 62px;
   }
   .data-table {
@@ -787,7 +828,7 @@ th.ntss-list-header-th-sticky {
   }
 }
 @media screen and (max-width: 375px) {
-  .setInfo-list >>> .item-title {
+  .setInfo-list :deep(.item-title) {
     max-height: 62vh;
   }
   .data-table {

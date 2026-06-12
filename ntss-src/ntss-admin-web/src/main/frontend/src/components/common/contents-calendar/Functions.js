@@ -1,4 +1,4 @@
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * @description 基準日を第3週とするカレンダー配列作成
@@ -8,7 +8,7 @@ import moment from "moment";
  */
 export const createCalendarArray = (baseDate, isBaseDateOnCenterWeek) => {
   // 基準日の月の一日
-  const firstDayOfMonth = moment([baseDate.year(), baseDate.month(), 1]).day();
+  const firstDayOfMonth = dayjs([baseDate.year(), baseDate.month(), 1]).day();
   // 基準日が第何週か
   const weekOfMonth = isBaseDateOnCenterWeek
     ? Math.floor((baseDate.date() - baseDate.isoWeekday() + 12) / 7)
@@ -18,7 +18,7 @@ export const createCalendarArray = (baseDate, isBaseDateOnCenterWeek) => {
     .fill()
     // 要素に日付を割り振る
     .map((_, i) =>
-      moment(
+      dayjs(
         new Date(
           baseDate.year(),
           baseDate.month(),
@@ -50,7 +50,7 @@ export const createCalendarMonth = baseDate => {
   // mod FNSI-関 end
     .fill()
     .map((_, i) =>
-      moment(baseDate)
+      dayjs(baseDate)
         .startOf("month")
         .startOf("isoWeek")
         .add(i, "day")
@@ -60,7 +60,7 @@ export const createCalendarMonth = baseDate => {
 export const createCalendarWeek = (baseDate, numWeeks) => {
   return Array(7 * Math.abs(numWeeks))
     .fill()
-    .map((_, i) => moment(baseDate).startOf("isoWeek").add(i, "day"));
+    .map((_, i) => dayjs(baseDate).startOf("isoWeek").add(i, "day"));
 };
 
 export const createCalendarDayContents = (date, contents) => {

@@ -41,7 +41,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -73,25 +73,25 @@ public class ReportServiceImplTest {
   /**
    * 帳票取得のServiceのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private ReportS3Service reportS3Service;
 
   /**
    * 機能帳票マスタDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstFunctionReportDao mstFunctionReportDao;
 
   /**
    * 帳票マスタDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstReportDao mstReportDao;
 
   /**
    * SysDataSetから帳票出力情報を取得するServiceのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private SysDataSetService sysDataSetService;
 
   /**
@@ -804,13 +804,13 @@ public class ReportServiceImplTest {
     //      , ReportXmlParam.of(null,"7", "1", "", null, "", "", "", "", "[4.1]-[5.1]", null, null, "", null,  null, null, null, null, null, null, null, null)
     //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"1", "", "", "1", "", "", "", "", "", null, null, null, "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"2", "", "", "2", "", "", "", "", "", null, null, null, "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"3", "", "", "2", "", "", "", "", "", null, null, null, "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"4", "", "", "3", "", "", "", "", "", null, null, null, "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"5", "", "", "", "", "", "", "", "", null, null, null, "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"6", "", "", null, "", "", "", "", "", null, null, null, "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"7", "1", "", null, "", "", "", "", "[4.1]-[5.1]", null, null, "", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"1", "", "", "1", "", "", "", "", "", null, null, null, "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"2", "", "", "2", "", "", "", "", "", null, null, null, "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"3", "", "", "2", "", "", "", "", "", null, null, null, "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"4", "", "", "3", "", "", "", "", "", null, null, null, "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"5", "", "", "", "", "", "", "", "", null, null, null, "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"6", "", "", null, "", "", "", "", "", null, null, null, "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"7", "1", "", null, "", "", "", "", "[4.1]-[5.1]", null, null, "", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
 
@@ -872,23 +872,23 @@ public class ReportServiceImplTest {
 //      , ReportXmlParam.of(null,"18", "", "8", "10", "", "0", "5", "", "", "", "", "1", "",  null, null, null, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"1", "", "1", "1", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"2", "", "1", "2", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"3", "", "2", "2", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"4", "", "1", "3", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"5", "", "3", "2", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"6", "", "1", "4", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"7", "", "1", "5", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"8", "", "1", "5", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"10", "", "0", "10", "", "0", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"11", "", "1", "10", "", "0", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"12", "", "2", "10", "", "0", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"13", "", "3", "10", "", "0", "", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"14", "", "4", "10", "", "0", "5", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"15", "", "5", "10", "", "1", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"16", "", "6", "10", "", "0", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"17", "", "7", "10", "", "0", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"18", "", "8", "10", "", "0", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"1", "", "1", "1", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"2", "", "1", "2", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"3", "", "2", "2", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"4", "", "1", "3", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"5", "", "3", "2", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"6", "", "1", "4", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"7", "", "1", "5", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"8", "", "1", "5", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"10", "", "0", "10", "", "0", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"11", "", "1", "10", "", "0", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"12", "", "2", "10", "", "0", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"13", "", "3", "10", "", "0", "", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"14", "", "4", "10", "", "0", "5", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"15", "", "5", "10", "", "1", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"16", "", "6", "10", "", "0", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"17", "", "7", "10", "", "0", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"18", "", "8", "10", "", "0", "5", "", "", "", "", "1", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     // Map<SqlCode, List<Map<DataCode, Value>>>
@@ -1001,11 +1001,11 @@ public class ReportServiceImplTest {
 //      , ReportXmlParam.of(null,"5", "", "4", "2",  "", "", "", "", "", "", "24","", "",  null, group24, null, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"1", "", "1", "1", "", "", "", "", "", "11", "", "", "", "",  null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"2", "", "1", "2", "", "", "", "", "", "21", "", "", "", "",  null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"3", "", "2", "2", "", "", "", "", "", "22", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"4", "", "3", "2", "", "", "", "", "", "23", "", "", "", "",  null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"5", "", "4", "2",  "", "", "", "", "", "", "24","", "", "",  null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"1", "", "1", "1", "", "", "", "", "", "11", "", "", "", "",  null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"2", "", "1", "2", "", "", "", "", "", "21", "", "", "", "",  null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"3", "", "2", "2", "", "", "", "", "", "22", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"4", "", "3", "2", "", "", "", "", "", "23", "", "", "", "",  null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"5", "", "4", "2",  "", "", "", "", "", "", "24","", "", "",  null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
 
@@ -1100,9 +1100,9 @@ public class ReportServiceImplTest {
 //      , ReportXmlParam.of(null,"3", "", "2", "2", "", "", "", "", "", "22", "", "", "",  null, null, null, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"1", "", "1", "1", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"2", "", "1", "2", "", "", "", "", "", "22", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"3", "", "2", "2", "", "", "", "", "", "22", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"1", "", "1", "1", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"2", "", "1", "2", "", "", "", "", "", "22", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"3", "", "2", "2", "", "", "", "", "", "22", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     // Map<SqlCode, List<Map<DataCode, Value>>>
@@ -1173,12 +1173,12 @@ public class ReportServiceImplTest {
 //      , ReportXmlParam.of(null,"6", "", "1", "3", "", "", "", "", "", "", "1", "", "", null, null, null, null, null, tmplRepeat, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"1", "", "1", "1", "", "", "", "", "", "", "0", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"2", "", "2", "1", "", "", "", "", "", "", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"3", "", "3", "1", "", "", "", "", "", "", "0", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"4", "", "1", "2", "", "", "", "", "", "", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"5", "", "2", "2", "", "", "", "", "", "1", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"6", "", "1", "3", "", "", "", "", "", "", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"1", "", "1", "1", "", "", "", "", "", "", "0", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"2", "", "2", "1", "", "", "", "", "", "", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"3", "", "3", "1", "", "", "", "", "", "", "0", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"4", "", "1", "2", "", "", "", "", "", "", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"5", "", "2", "2", "", "", "", "", "", "1", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"6", "", "1", "3", "", "", "", "", "", "", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
 
@@ -1278,12 +1278,12 @@ public class ReportServiceImplTest {
 //      , ReportXmlParam.of(null,"6", "", "1", "3", "", "", "", "", "", "", "1", "", "",  null, null, null, null, null, tmplRepeat, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"1", "", "1", "1", "", "", "", "", "", "", "0", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"2", "", "2", "1", "", "", "", "", "", "", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"3", "", "3", "1", "", "", "", "", "", "", "0", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"4", "", "1", "2", "", "", "", "", "", "", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"5", "", "2", "2", "", "", "", "", "", "1", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"6", "", "1", "3", "", "", "", "", "", "", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"1", "", "1", "1", "", "", "", "", "", "", "0", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"2", "", "2", "1", "", "", "", "", "", "", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"3", "", "3", "1", "", "", "", "", "", "", "0", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"4", "", "1", "2", "", "", "", "", "", "", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"5", "", "2", "2", "", "", "", "", "", "1", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"6", "", "1", "3", "", "", "", "", "", "", "1", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
 
@@ -1389,14 +1389,14 @@ public class ReportServiceImplTest {
 //      , ReportXmlParam.of(null,null, "", "1", "6", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"1", "", "1", "1", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"2", "", "1", "2", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"3", "", "2", "2", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"4", "", "1", "3", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"5", "", "3", "2", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"6", "", "1", "4", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"", "", "1", "5", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,null, "", "1", "6", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"1", "", "1", "1", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"2", "", "1", "2", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"3", "", "2", "2", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"4", "", "1", "3", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"5", "", "3", "2", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"6", "", "1", "4", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"", "", "1", "5", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,null, "", "1", "6", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
 
@@ -1460,7 +1460,7 @@ public class ReportServiceImplTest {
     ReportXmlGroup group = new ReportXmlGroup("", 0, 0, "", filters);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"", "", "", "", "", "", "", "", "", "", "", "", "", null, group, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     List<Map<String, Object>> reportInfo = Arrays.asList(
       new HashMap<String, Object>() {
@@ -1501,7 +1501,7 @@ public class ReportServiceImplTest {
     ReportXmlGroup group = new ReportXmlGroup("", 0, 0, "", filters);
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
     // ReportXmlParam param = ReportXmlParam.of(null,"", "", "", "", "", "", "", "", "", "", "", "", "", null, group, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     List<Map<String, Object>> reportInfo = Arrays.asList(
       new HashMap<String, Object>() {
@@ -1553,7 +1553,7 @@ public class ReportServiceImplTest {
     ReportXmlGroup group = new ReportXmlGroup("", 0, 0, "", filters);
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
     // ReportXmlParam param = ReportXmlParam.of(null,"", "", "", "", "", "", "", "", "", "", "", "", "", null, group, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
 
     List<Map<String, Object>> reportInfo = Arrays.asList(
@@ -1612,7 +1612,7 @@ public class ReportServiceImplTest {
     ReportXmlGroup group = new ReportXmlGroup("", 0, 0, "", filters);
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
     // ReportXmlParam param = ReportXmlParam.of(null,"", "", "", "", "", "", "", "", "", "", "", "", "", null, group, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
 
     List<Map<String, Object>> reportInfo = Arrays.asList(
@@ -1672,7 +1672,7 @@ public class ReportServiceImplTest {
     ReportXmlGroup group = new ReportXmlGroup("", 0, 0, "", filters);
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
     // ReportXmlParam param = ReportXmlParam.of(null,"", "", "", "", "", "", "", "", "", "", "", "", "", null, group, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     List<Map<String, Object>> reportInfo = Arrays.asList(
       new HashMap<String, Object>() {
@@ -1702,7 +1702,7 @@ public class ReportServiceImplTest {
     ReportXmlGroup group = new ReportXmlGroup("", 0, 0, "", filters);
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
     // ReportXmlParam param = ReportXmlParam.of(null,"", "", "", "", "", "", "", "", "", "", "", "", "", null, group, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     List<Map<String, Object>> reportInfo = Arrays.asList(
       new HashMap<String, Object>() {
@@ -1732,7 +1732,7 @@ public class ReportServiceImplTest {
     ReportXmlGroup group = null;
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
     //    ReportXmlParam param = ReportXmlParam.of(null,"", "", "", "", "", "", "", "", "", "", "", "", "", null, group, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"", "", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     List<Map<String, Object>> reportInfo = Arrays.asList(
       new HashMap<String, Object>() {
@@ -1761,7 +1761,7 @@ public class ReportServiceImplTest {
     // 事前準備
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
     //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1", "", "string", "", "", "", "%.10s", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "string", "", "", "", "%.10s", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "string", "", "", "", "%.10s", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String value = "１２３４５６７８９０１";
     String expected = "１２３４５６７８９０";
@@ -1784,7 +1784,7 @@ public class ReportServiceImplTest {
     // 事前準備
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1", "", "decimal", "", "", "", "%.2f", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "decimal", "", "", "", "%.2f", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "decimal", "", "", "", "%.2f", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     BigDecimal value = BigDecimal.valueOf(19.3);
     String expected = "19.30";
@@ -1807,7 +1807,7 @@ public class ReportServiceImplTest {
     // 事前準備
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1",  "", "DateTime", "", "", "", "HH:mm", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "DateTime", "", "", "", "HH:mm", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "DateTime", "", "", "", "HH:mm", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String value = "2018-08-30T18:30:02.000+09:00";
     String expected = "18:30";
@@ -1830,7 +1830,7 @@ public class ReportServiceImplTest {
     // 事前準備
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1", "", "DateTime", "", "", "HH:mm", "", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "DateTime", "", "", "HH:mm", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "DateTime", "", "", "HH:mm", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Timestamp value = Timestamp.valueOf("2018-08-30 18:30:02.000");
     String expected = "18:30";
@@ -1853,7 +1853,7 @@ public class ReportServiceImplTest {
     // 事前準備
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1", "", "DateTime", "", "", "HH:mm", "", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "DateTime", "", "", "HH:mm", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "DateTime", "", "", "HH:mm", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Date value = Date.from(LocalDateTime.of(2019, 8, 30, 18, 30, 10).toInstant(ZoneOffset.of("+9")));
     String expected = "18:30";
@@ -1876,7 +1876,7 @@ public class ReportServiceImplTest {
     // 事前準備
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1",  "", "DateTime", "", "", "HH:mm", "", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "DateTime", "", "", "HH:mm", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "DateTime", "", "", "HH:mm", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     int value = 1;
     String expected = "1";
@@ -1899,7 +1899,7 @@ public class ReportServiceImplTest {
     // 事前準備
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1", "", "DateTime", "", "", "HH:mm", "", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "DateTime", "", "", "HH:mm", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "DateTime", "", "", "HH:mm", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String value = "test";
     String expected = "test";
@@ -1922,7 +1922,7 @@ public class ReportServiceImplTest {
     // 事前準備
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1", "", "decimal", "", "", "0.00", "", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "decimal", "", "", "0.00", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "decimal", "", "", "0.00", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String value = "test";
     String expected = "test";
@@ -1945,7 +1945,7 @@ public class ReportServiceImplTest {
     // 事前準備
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1",  "", "int", "", "", "%.10s", "", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "int", "", "", "%.10s", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "int", "", "", "%.10s", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String value = "１２３４５６７８９０１";
     String expected = "１２３４５６７８９０１";
@@ -1968,7 +1968,7 @@ public class ReportServiceImplTest {
     // 事前準備
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1", "", "", "", "", "%.10s", "", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "%.10s", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "%.10s", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String value = "１２３４５６７８９０１";
     String expected = "１２３４５６７８９０１";
@@ -1991,7 +1991,7 @@ public class ReportServiceImplTest {
     // 事前準備
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String value = "１２３４５６７８９０１";
     String expected = "１２３４５６７８９０１";
@@ -2014,7 +2014,7 @@ public class ReportServiceImplTest {
     // 事前準備
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1", "", "string", "", "", "%.10s", "", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "string", "", "", "%.10s", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "string", "", "", "%.10s", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String value = "";
     String expected = "";
@@ -2037,7 +2037,7 @@ public class ReportServiceImplTest {
     // 事前準備
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1",  "", "string", "", "", "%.10s", "", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "string", "", "", "%.10s", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "string", "", "", "%.10s", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String expected = "";
 
@@ -2063,7 +2063,7 @@ public class ReportServiceImplTest {
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", reportXmlConvs, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String value = "1";
     String expected = "disp01";
@@ -2090,7 +2090,7 @@ public class ReportServiceImplTest {
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", reportXmlConvs, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String value = "99";
     String expected = "99";
@@ -2117,7 +2117,7 @@ public class ReportServiceImplTest {
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", reportXmlConvs, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String value = "";
     String expected = "";
@@ -2140,7 +2140,7 @@ public class ReportServiceImplTest {
     // 事前準備
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String value = "1";
     String expected = "1";
@@ -2163,7 +2163,7 @@ public class ReportServiceImplTest {
     // 事前準備
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    ReportXmlParam param = ReportXmlParam.of(null,"A1", "1",  "", "", "", "", "", "", "", "", "", "", "", Collections.EMPTY_LIST, null, null, null, null, null, null, null);
-    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null);
+    ReportXmlParam param = ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     String value = "1";
     String expected = "1";
@@ -2192,10 +2192,10 @@ public class ReportServiceImplTest {
 //      , ReportXmlParam.of(null,"A4", "1", "", "", "", "", "", "[2.1] / 100", "", "", "", "", "", null, null, null, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "[1.1]-[1.2]", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"A2", "0", "", "", "", "", "", "", "[1.1]-[1.2]", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"A3", "1", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
-      , ReportXmlParam.of(null,null,"A4", "1", "", "", "", "", "", "", "[2.1] / 100", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "[1.1]-[1.2]", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"A2", "0", "", "", "", "", "", "", "[1.1]-[1.2]", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"A3", "1", "", "", "", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+      , ReportXmlParam.of(null,null,"A4", "1", "", "", "", "", "", "", "[2.1] / 100", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     // Map<SqlCode, List<Map<DataCode, Value>>>
@@ -2246,7 +2246,7 @@ public class ReportServiceImplTest {
 ////      ReportXmlParam.of(null,"A1", "1", "", "", "", "", "", "[1.1]-[1.2]", "", "", "", "", "", null, null, null, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "[1.1]-[1.2]", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "[1.1]-[1.2]", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
 
@@ -2291,7 +2291,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"A1", "1", "", "", "", "", "", "[1.1]-[1.2]", "", "", "", "", "", null, null, null, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "[1.1]-[1.2]", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"A1", "1", "", "", "", "", "", "", "[1.1]-[1.2]", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     // Map<SqlCode, List<Map<DataCode, Value>>>
@@ -2653,7 +2653,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"A4", "1", "", "string", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -2696,7 +2696,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"A4", "1", "", "string", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -2735,7 +2735,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"A4", "1", "", "string", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -2778,7 +2778,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"A4", "1", "", "string", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -2817,7 +2817,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"A4", "1", "", "string", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -2860,7 +2860,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"A4", "1", "", "string", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -2899,7 +2899,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"A4", "1", "", "string", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -2942,7 +2942,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"A4", "1",  "", "string", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"A4", "1", "", "", "string", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -2981,7 +2981,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"B10", "1", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -3024,7 +3024,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"B10", "1", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -3063,7 +3063,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"B10", "1",  "", "decimal", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -3103,7 +3103,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"B10", "1", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -3147,7 +3147,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"B10", "1", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -3190,7 +3190,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"B10", "1",  "", "decimal", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -3234,7 +3234,7 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"B10", "1", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, reportXmlFormatConditions, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"B10", "1", "", "", "decimal", "", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -3306,12 +3306,12 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"F2:F2", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50",  null, null, null, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"A1:A2", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null),
-      ReportXmlParam.of(null,null,"B1:C1", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null),
-      ReportXmlParam.of(null,null,"B2:C2", "1", "", "", "decimal", "0", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null),
-      ReportXmlParam.of(null,null,"B3:C3", "1", "", "", "decimal", "1", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null),
-      ReportXmlParam.of(null,null,"B4:C4", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null),
-      ReportXmlParam.of(null,null,"F2:F2", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"A1:A2", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+      ReportXmlParam.of(null,null,"B1:C1", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+      ReportXmlParam.of(null,null,"B2:C2", "1", "", "", "decimal", "0", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+      ReportXmlParam.of(null,null,"B3:C3", "1", "", "", "decimal", "1", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+      ReportXmlParam.of(null,null,"B4:C4", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+      ReportXmlParam.of(null,null,"F2:F2", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {
@@ -3392,11 +3392,11 @@ public class ReportServiceImplTest {
 //      ReportXmlParam.of(null,"F2:F2", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50",  null, null, null, null, null, null, null, null)
 //    );
     List<ReportXmlParam> params = Arrays.asList(
-      ReportXmlParam.of(null,null,"A1:A2", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null),
-      ReportXmlParam.of(null,null,"B1:C1", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null),
-      ReportXmlParam.of(null,null,"B2:C2", "1", "", "", "decimal", "0", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null),
-      ReportXmlParam.of(null,null,"B3:C3", "1", "", "", "decimal", "1", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null),
-      ReportXmlParam.of(null,null,"F2:F2", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null)
+      ReportXmlParam.of(null,null,"A1:A2", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+      ReportXmlParam.of(null,null,"B1:C1", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+      ReportXmlParam.of(null,null,"B2:C2", "1", "", "", "decimal", "0", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+      ReportXmlParam.of(null,null,"B3:C3", "1", "", "", "decimal", "1", "", "", "", "", "", "", "", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+      ReportXmlParam.of(null,null,"F2:F2", "1", "", "", "decimal", "1", "", "", "", "", "", "", "50", "", null, null, null, null, null, null, null, null, null, null, null, null, null, null)
     );
 // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
     Map<String, String> reportOutputInfo = new HashMap<String, String>() {

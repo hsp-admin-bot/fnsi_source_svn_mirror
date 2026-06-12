@@ -11,6 +11,7 @@ import jp.co.nikkiso.ntss.core.logger.LogClass;
 import jp.co.nikkiso.ntss.core.logger.LogObjectUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 /**

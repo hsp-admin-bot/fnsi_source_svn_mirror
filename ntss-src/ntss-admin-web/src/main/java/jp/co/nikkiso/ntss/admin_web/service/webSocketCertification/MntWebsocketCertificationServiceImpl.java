@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import jp.co.nikkiso.ntss.core.entity.MntWebsocketCertification;
 import jp.co.nikkiso.ntss.core.dao.MntWebsocketCertificationDao;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import org.springframework.util.StringUtils;
 

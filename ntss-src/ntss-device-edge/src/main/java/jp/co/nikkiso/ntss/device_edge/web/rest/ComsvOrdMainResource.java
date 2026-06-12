@@ -26,9 +26,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
 import jp.co.nikkiso.ntss.api.request.AdditionCalculationRequest;
 import jp.co.nikkiso.ntss.api.service.additionInfo.AdditionCalculationService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
@@ -52,7 +52,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
@@ -65,7 +65,7 @@ import jp.co.nikkiso.ntss.device_edge.service.ComsvPatRelatedService;
 import jp.co.nikkiso.ntss.device_edge.service.LogService;
 import jp.co.nikkiso.ntss.device_edge.web.rest.util.WebApiCallCommonUtil;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -1458,7 +1458,7 @@ public class ComsvOrdMainResource {
     try {
       dto = weight == null || weight.isEmpty() ? new OrdMainRstWeightInfo()
         : mapper.readValue(weight, OrdMainRstWeightInfo.class);
-    } catch (IOException e) {
+    } catch (JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -1583,7 +1583,7 @@ public class ComsvOrdMainResource {
           JsonNode root = null;
           try {
             root = mapper.readTree(monitorData);
-          } catch (IOException e) {
+          } catch (JacksonException e) {
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -1639,7 +1639,7 @@ public class ComsvOrdMainResource {
 
     try {
       ret = comsvOrdMainService.updateWeightInfo(ord_no, mapper.writeValueAsString(dto));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -2007,7 +2007,7 @@ public class ComsvOrdMainResource {
     try {
       dto = weight == null || weight.isEmpty() ? new OrdMainRstWeightInfo()
         : mapper.readValue(weight, OrdMainRstWeightInfo.class);
-    } catch (IOException e) {
+    } catch (JacksonException e) {
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang start
@@ -2147,7 +2147,7 @@ public class ComsvOrdMainResource {
 
     try {
       ret = comsvOrdMainService.updateWeightInfo(ord_no, mapper.writeValueAsString(dto));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end

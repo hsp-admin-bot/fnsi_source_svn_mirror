@@ -1,13 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.service.deviceEdgeManage;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jp.co.nikkiso.ntss.admin_web.config.AwsConfiguration;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.WebSocketTopic.DeviceEdgeManage;
 import jp.co.nikkiso.ntss.admin_web.response.deviceEdgeManage.DeviceEdgeManageResponse;
 import jp.co.nikkiso.ntss.admin_web.response.deviceEdgeManage.ResponseS3Bucket;
@@ -43,6 +37,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.StringJoiner;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 @Service
 public class DeviceEdgeManageServiceImpl implements DeviceEdgeManageService {
@@ -71,10 +70,7 @@ public class DeviceEdgeManageServiceImpl implements DeviceEdgeManageService {
    * Amazon S3.
    */
   @Autowired
-  private AwsConfiguration awsS3;
-  private AmazonS3 s3() {
-    return awsS3.s3();
-  }
+  private S3Client s3;
 
   /**
    * {@inheritDoc}
@@ -314,21 +310,16 @@ public class DeviceEdgeManageServiceImpl implements DeviceEdgeManageService {
 
     // S3を検索
     try {
-      final ListObjectsV2Request req = new ListObjectsV2Request().withBucketName(s3BucketName).withPrefix(prefix);
-      ListObjectsV2Result result;
       Date lastModified = null;
-      do {
-        result = s3().listObjectsV2(req);
-
-        res.setExists(res.isExists() || result.getObjectSummaries().size() > 0);
-        for (S3ObjectSummary objectSummary : result.getObjectSummaries()) {
-          if (lastModified == null || lastModified.before(objectSummary.getLastModified())) {
-            lastModified = objectSummary.getLastModified();
-            res.setFileName(objectSummary.getKey());
-          }
+      List<S3Object> objects = listObjects(s3BucketName, prefix);
+      res.setExists(!objects.isEmpty());
+      for (S3Object objectSummary : objects) {
+        Date objectModified = Date.from(objectSummary.lastModified());
+        if (lastModified == null || lastModified.before(objectModified)) {
+          lastModified = objectModified;
+          res.setFileName(objectSummary.key());
         }
-        req.setContinuationToken(result.getNextContinuationToken());
-      } while (result.isTruncated() == true);
+      }
 
       if (res.isExists()) {
 
@@ -340,7 +331,7 @@ public class DeviceEdgeManageServiceImpl implements DeviceEdgeManageService {
       } else {
         res.setMessage("ダウンロードするファイルがありません。");
       }
-    } catch (AmazonS3Exception ex) {
+    } catch (S3Exception ex) {
       res.setMessage("ダウンロードするファイルがありません。");
     }
 
@@ -357,18 +348,12 @@ public class DeviceEdgeManageServiceImpl implements DeviceEdgeManageService {
 
     // S3を検索
     try {
-      final ListObjectsV2Request req = new ListObjectsV2Request().withBucketName(s3Bucket).withPrefix(path);
-      ListObjectsV2Result result;
-      do {
-        result = s3().listObjectsV2(req);
-        for (S3ObjectSummary objectSummary : result.getObjectSummaries()) {
-          if (!Objects.equals(objectSummary.getKey(), fileName)) {
-            s3().deleteObject(s3Bucket, objectSummary.getKey());
-          }
+      for (S3Object objectSummary : listObjects(s3Bucket, path)) {
+        if (!Objects.equals(objectSummary.key(), fileName)) {
+          deleteObject(s3Bucket, objectSummary.key());
         }
-        req.setContinuationToken(result.getNextContinuationToken());
-      } while (result.isTruncated() == true);
-    } catch (AmazonS3Exception e) {
+      }
+    } catch (S3Exception e) {
       EventLogMessage eventLogMessage = new EventLogMessage();
       eventLogMessage.setLogMessage("[removeOtherFileS3]古いファイル削除に失敗[" + e.getMessage() + "]");
       logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI, null);
@@ -377,6 +362,23 @@ public class DeviceEdgeManageServiceImpl implements DeviceEdgeManageService {
       eventLogMessage.setLogMessage("[removeOtherFileS3]古いファイル削除で想定外のエラー[" + e.getMessage() + "]");
       logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI, null);
     }
+  }
+
+  private List<S3Object> listObjects(String bucket, String prefix) {
+    return s3.listObjectsV2Paginator(ListObjectsV2Request.builder()
+        .bucket(bucket)
+        .prefix(prefix)
+        .build())
+      .contents()
+      .stream()
+      .toList();
+  }
+
+  private void deleteObject(String bucket, String key) {
+    s3.deleteObject(DeleteObjectRequest.builder()
+        .bucket(bucket)
+        .key(key)
+        .build());
   }
 
   private ResponseS3Bucket findConfS3InfoOnPremise(String s3Bucket, int deviceEdgeNo, String localStore) {

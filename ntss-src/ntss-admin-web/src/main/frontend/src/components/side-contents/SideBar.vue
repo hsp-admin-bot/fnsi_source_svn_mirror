@@ -36,7 +36,7 @@ import simpleSearch from "@/components/side-contents/SimpleSearch.vue";
 import patList from "@/components/side-contents/PatList.vue";
 import { SearchQuery } from "@/components/side-contents/SearchDefinitions.js";
 import IndicationResultComponent from "@/components/indication-result/IndicationResultComponent";
-import { mapActions } from "vuex";
+import { mapActions } from "@/compat/vue/vuex";
 
 /**
  * @description サイドバー

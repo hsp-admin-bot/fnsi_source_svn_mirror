@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="fullHeight">
     <div>
       <v-ons-row class="row-height">
         <v-ons-col class="item-title">薬剤グループ名</v-ons-col>
@@ -167,7 +167,7 @@
       @popover-close="closePopover(popParam)"
     />
     <v-ons-popover cancelable
-                   :visible.sync="userMenuPopoverVisible"
+                   v-model:visible="userMenuPopoverVisible"
                    :target="userMenuPopoverTarget"
                    :cover-target="false"
                    :direction="userMenuPopoverDirection"
@@ -179,27 +179,28 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import customInput from "@/components/common/custom-form-tags/CustomInput";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
 import customCheckbox from "@/components/common/custom-form-tags/CustomCheckbox";
 import { showPopover, closePopover } from "@/functions/PopoverFunctions";
 import MasterSelector from "@/components/common/master-selector/MasterSelector";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
+import { getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 import { MASTER_DELETE_DISPLAY } from "@/constants/TreatmentRecord.js";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
 import PopoverMixin from "@/components/PopoverMixin";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_薬効換算マスタ 張玲 2024/01/04 start
-import cloneDeep from "lodash/cloneDeep";
-import isEqualWith from "lodash/isEqualWith";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
 // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_薬効換算マスタ 張玲 2024/01/04 end
 
 // 薬剤区分
@@ -319,7 +320,7 @@ export default {
       handler(val) {
         this.regMediInfoNew = val;
         EventBus.$emit("mstHolidayRegistered",isEqualWith(this.editRecord.name,this.initName) 
-                && isEqualWith(JSON.stringify(val.regInfoJsonArr),JSON.stringify(this.regMediInfoDefault.regInfoJsonArr)) )
+                && isEqualWith(JSON.stringify(val.regInfoJsonArr),JSON.stringify(this.regMediInfoDefault.regInfoJsonArr)))
       },
       deep:true
     },
@@ -458,6 +459,12 @@ export default {
   },
 
   methods: {
+    getScopedElementByIdSafe(id) {
+      return getScopedElementById(id, this.$el || null);
+    },
+    getScopedClassElementSafe(className) {
+      return getScopedElementsByClassName(className, this.$el || null)[0] || null;
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("loading-screen", ["setLoadingScreenVisible"]),
 
@@ -660,7 +667,7 @@ export default {
 
       // 最後までスクロールする
       this.$nextTick(() => {
-        const ele = document.getElementsByClassName("data-table")[0];
+        const ele = this.getScopedClassElementSafe("data-table");
         if (ele) {
           ele.scrollTop = ele.scrollHeight;
         }
@@ -814,9 +821,8 @@ export default {
         this.dispArr[arrLength].mediFlg = medi_cate.normal.VALUE;
 
         // 更新日時
-        this.dispArr[arrLength].update.editValue = moment().format(
-          "YYYY-MM-DD HH:mm:ss"
-        );
+        this.dispArr[arrLength].update.editValue = dayjs().format(
+          "YYYY-MM-DD HH:mm:ss");
       }
     },
 
@@ -852,9 +858,8 @@ export default {
         this.dispArr[arrLength].mediFlg = medi_cate.mix.VALUE;
 
         // 更新日時
-        this.dispArr[arrLength].update.editValue = moment().format(
-          "YYYY-MM-DD HH:mm:ss"
-        );
+        this.dispArr[arrLength].update.editValue = dayjs().format(
+          "YYYY-MM-DD HH:mm:ss");
       }
     },
 
@@ -863,7 +868,7 @@ export default {
      * @param
      */
     doSelectMedicineSet(event) {
-      let updateTime = moment().format("YYYY-MM-DD HH:mm:ss");
+      let updateTime = dayjs().format("YYYY-MM-DD HH:mm:ss");
 
       if (this.addFlg) {
         this.regMediInfo.regInfoJsonArr.pop();
@@ -901,8 +906,7 @@ export default {
           for(let j = 0; j < this.dispArr.length; j++){
             if(setInfoArr[i].cd == this.dispArr[j].cd.editValue &&
               (setInfoArr[i].class == "1" && this.dispArr[j].mediFlg == medi_cate.normal.VALUE
-              || setInfoArr[i].class == "2" && this.dispArr[j].mediFlg == medi_cate.mix.VALUE )
-              ) {
+              || setInfoArr[i].class == "2" && this.dispArr[j].mediFlg == medi_cate.mix.VALUE)) {
               // cdが一致かつ薬剤同士、調製薬剤同士の場合
               existFlg = true;
               break;
@@ -942,8 +946,7 @@ export default {
       arr.forEach(e => {
         if(e.cd == value &&
           (e.class == "1" && mediFlg == medi_cate.normal.VALUE
-          || e.class == "2" && mediFlg == medi_cate.mix.VALUE )
-        ) {
+          || e.class == "2" && mediFlg == medi_cate.mix.VALUE)) {
           // cdが一致かつ薬剤同士、調製薬剤同士の場合
           checkFlg = true;
         }
@@ -1072,7 +1075,7 @@ export default {
      * @description プロンプト
      */
     showPopOver(event) {
-      let pop = document.getElementById("popOverMessage");
+      let pop = this.getScopedElementByIdSafe("popOverMessage");
       // add 全マスタメッセージ調整 王 start
       // pop.innerText = "指示数量1あたりの数量を入れる。";
       pop.innerText = DIALOG_MESSAGES[12000067].message;
@@ -1085,16 +1088,16 @@ export default {
      */
     calculateDataListHeight(){
       // #9863 Error in created hook (Promise/async): "TypeError: Cannot read properties of undefined (reading 'clientHeight')" 横展開2 linjunfeng start
-      // let rowHeight = document.getElementsByClassName("row-height")[0].clientHeight;
-      // let totalHeight = document.getElementsByClassName("modal-container")[0].clientHeight;
-      // let topHeight = document.getElementsByClassName("toolbar")[0].clientHeight;
-      // let bottomHeight = document.getElementsByClassName("modal-footer")[0].clientHeight;
-      let rowHeight = document.getElementsByClassName("row-height")[0] ? document.getElementsByClassName("row-height")[0].clientHeight : 0;
-      let totalHeight = document.getElementsByClassName("modal-container")[0] ? document.getElementsByClassName("modal-container")[0].clientHeight : 0;
-      let topHeight = document.getElementsByClassName("toolbar")[0] ? document.getElementsByClassName("toolbar")[0].clientHeight : 0;
-      let bottomHeight = document.getElementsByClassName("modal-footer")[0] ? document.getElementsByClassName("modal-footer")[0].clientHeight : 0;
+      // let rowHeight = this.getScopedClassElementSafe("row-height").clientHeight;
+      // let totalHeight = this.$el?.closest?.(".modal-container") || this.getScopedClassElementSafe("modal-container").clientHeight;
+      // let topHeight = this.getScopedClassElementSafe("toolbar").clientHeight;
+      // let bottomHeight = this.$el?.closest?.(".modal-container")?.querySelector?.(".modal-footer") || this.getScopedClassElementSafe("modal-footer").clientHeight;
+      let rowHeight = this.getScopedClassElementSafe("row-height") ? this.getScopedClassElementSafe("row-height").clientHeight : 0;
+      let totalHeight = this.$el?.closest?.(".modal-container") || this.getScopedClassElementSafe("modal-container") ? this.$el?.closest?.(".modal-container") || this.getScopedClassElementSafe("modal-container").clientHeight : 0;
+      let topHeight = this.getScopedClassElementSafe("toolbar") ? this.getScopedClassElementSafe("toolbar").clientHeight : 0;
+      let bottomHeight = this.$el?.closest?.(".modal-container")?.querySelector?.(".modal-footer") || this.getScopedClassElementSafe("modal-footer") ? this.$el?.closest?.(".modal-container")?.querySelector?.(".modal-footer") || this.getScopedClassElementSafe("modal-footer").clientHeight : 0;
       // #9863 Error in created hook (Promise/async): "TypeError: Cannot read properties of undefined (reading 'clientHeight')" 横展開2 linjunfeng end
-      let dataList = document.getElementsByClassName("data-table")[0];
+      let dataList = this.getScopedClassElementSafe("data-table");
 
       let actualHeight = totalHeight - topHeight - bottomHeight - rowHeight - 11;
 
@@ -1214,11 +1217,11 @@ th.ntss-list-header-th-sticky {
   display: block;
   overflow-x: auto;
 }
-.data-table >>> ons-row {
+.data-table :deep(ons-row) {
   min-width: 550px;
   overflow-x: auto;
 }
-.data-table >>> ons-row >>> ons-col{
+.data-table :deep(ons-row ons-col){
   white-space: normal;
 }
 .drug-group-name {
@@ -1293,5 +1296,14 @@ th.ntss-list-header-th-sticky {
 .button-delete {
   display: block;
   margin: auto;
+}
+.fullHeight,.fullHeight>div{
+  height: 100%;
+}
+.row-height{
+  height: 37px;
+}
+.frame{
+  height: calc(100% - 37px);
 }
 </style>

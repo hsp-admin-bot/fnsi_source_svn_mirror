@@ -54,7 +54,7 @@
         <label
           v-if="this.addFlag && getItemAuthorized('PatInfo', 'default_authority')"
           class="card-header-button"
-          :class="{ 'disabled': getIsOtherFacility }"
+          :class="{ disabled: getIsOtherFacility }"
           @click="addItem"
         >
         <!-- mod #10359 編集権限の動作不正 dengshen end -->
@@ -75,7 +75,7 @@
         <label
           v-if="this.editFlag && getItemAuthorized('PatInfo', 'default_authority')"
           class="card-header-button"
-          :class="{ 'disabled': getIsOtherFacility }"
+          :class="{ disabled: getIsOtherFacility }"
           @click="switchActionMode">
         <!-- mod #10359 編集権限の動作不正 dengshen end -->
           <img class="pat-create-btn" src="img/pat-info/del.png"/>
@@ -108,6 +108,8 @@
 </template>
 
 <script>
+import { resolveDefaultSlotComponent } from "@/compat/vue/slots";
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
 /**
  * write a component's description
  */
@@ -115,7 +117,7 @@
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 // mod 編集権限の適用 じょはく start
-import {mapActions, mapGetters,mapMutations} from "vuex";
+import {mapActions, mapGetters,mapMutations} from "@/compat/vue/vuex";
 // mod 編集権限の適用 じょはく end
 // add 編集権限の適用 じょはく start
 // del #10359 編集権限の動作不正 dengshen start
@@ -255,17 +257,47 @@ export default {
     }
   },
 
+  watch:{
+    contentsNum() {
+      this.$nextTick(() => {
+        this.$emit("trigger-show", true);
+      });
+    }
+  },
   mounted() {
     // slotにコンポーネントが埋め込まれるのを待ってカード内容を保持 ※待たないとundefined
-    this.$nextTick(() => (
-      this.cardContent = this.$slots.default && this.$slots.default[0].componentInstance || null
-    ));
+    this.$nextTick(() => {
+      this.resolveCardContent();
+    });
   },
 
   methods: {
+    getScopedElementById(id) {
+      return getScopedElementById(id, this);
+    },
+    getScopedElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this);
+    },
+    getScopedQuery(selector) {
+      return queryScopedSelector(selector, this);
+    },
+    getScopedQueryAll(selector) {
+      return queryScopedSelectorAll(selector, this);
+    },
+
+    getDefaultSlotComponent() {
+      return resolveDefaultSlotComponent(this);
+    },
+    resolveCardContent() {
+      const cardContent = this.getDefaultSlotComponent() || this.$parent?.cardContent || this.$parent?.$refs?.cardContent || null;
+      if (cardContent) {
+        this.cardContent = cardContent;
+      }
+      return this.cardContent;
+    },
     // mod FNSI redmine #4342修正 鄧シン start
     // ...mapActions("pat-insurance", ["setInsuranceModalVisible", "setIsCreate"]),
-    ...mapActions("pat-insurance", ["setInsuranceModalVisible", "setIsCreate", "updatePatInsurance"]),
+    ...mapActions("pat-insurance", ["setIsCreate", "updatePatInsurance"]),
     // mod FNSI redmine #4342修正 鄧シン end
     ...mapMutations("pat-info", ["setIsAdd"]),
     // add #10359 編集権限の動作不正 dengshen start
@@ -275,15 +307,15 @@ export default {
     // add #10359 編集権限の動作不正 dengshen end
     setAllClass () {
       for (const card of this.cardData) {
-        if (document.getElementById(card)) {
-          document.getElementById(card).setAttribute("class","btn3-normal");
+        if (this.getScopedElementById(card)) {
+          this.getScopedElementById(card).setAttribute("class","btn3-normal");
         }
       }
     },
     setAllHeadClass () {
       for (const header of this.headerData) {
-        if (document.getElementById(header)) {
-          document.getElementById(header).children[0].setAttribute("class","card-header color-header");
+        if (this.getScopedElementById(header)) {
+          this.getScopedElementById(header).children[0].setAttribute("class","card-header color-header");
         }
       }
     },
@@ -295,97 +327,97 @@ export default {
       if ( this.isCardShowing === true ) {
         this.$el.children[0].setAttribute("class", "card-header color-header");
       } else {
-        this.$el.children[0].setAttribute("class", "color-header-selected");
+        this.$el.children[0].setAttribute("class", "card-header color-header-selected");
         switch (this.cardName) {
           case "本人情報":
-            document.getElementById("basicInfoCard").setAttribute("class","green-btn");
-            document.getElementById("basic-info-card-content").children[0].setAttribute("class", "color-header-selected");
-            document.querySelector("#basic-info-card-content").scrollIntoView();
+            this.getScopedElementById("basicInfoCard").setAttribute("class","green-btn");
+            this.getScopedElementById("basic-info-card-content").children[0].setAttribute("class", "color-header-selected");
+            this.getScopedQuery("#basic-info-card-content").scrollIntoView();
             break;
           case "連絡先":
-            document.getElementById("otherContactCard").setAttribute("class","green-btn");
-            document.getElementById("other-contact-card-content").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#other-contact-card-content").scrollIntoView();
+            this.getScopedElementById("otherContactCard").setAttribute("class","green-btn");
+            this.getScopedElementById("other-contact-card-content").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#other-contact-card-content").scrollIntoView();
             break;
             // mod FNSI-画面部品デザイン じょはく start
           case "連絡先(サービス業者)":
-            document.getElementById("vendorContactCard").setAttribute("class","green-btn");
-            document.getElementById("vendor-contact-card-contents").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#vendor-contact-card-contents").scrollIntoView();
+            this.getScopedElementById("vendorContactCard").setAttribute("class","green-btn");
+            this.getScopedElementById("vendor-contact-card-contents").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#vendor-contact-card-contents").scrollIntoView();
             break;
             // mod FNSI-画面部品デザイン じょはく end
           case "患者メモ":
-            document.getElementById("patMemoCard").setAttribute("class","green-btn");
-            document.getElementById("pat-memo-card-contents").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#pat-memo-card-contents").scrollIntoView();
+            this.getScopedElementById("patMemoCard").setAttribute("class","green-btn");
+            this.getScopedElementById("pat-memo-card-contents").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#pat-memo-card-contents").scrollIntoView();
             break;
           case "保険情報":
-            document.getElementById("insuranceInfoCard").setAttribute("class","green-btn");
-            document.getElementById("insurance-info-card").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#insurance-info-card").scrollIntoView();
+            this.getScopedElementById("insuranceInfoCard").setAttribute("class","green-btn");
+            this.getScopedElementById("insurance-info-card").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#insurance-info-card").scrollIntoView();
             break;
           case "透析困難・重症度・搬送区分":
-            document.getElementById("difficultySeverityTransportCard").setAttribute("class","green-btn");
-            document.getElementById("difficulty-severity-transport-card-content").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#difficulty-severity-transport-card-content").scrollIntoView();
+            this.getScopedElementById("difficultySeverityTransportCard").setAttribute("class","green-btn");
+            this.getScopedElementById("difficulty-severity-transport-card-content").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#difficulty-severity-transport-card-content").scrollIntoView();
             break;
           case "診療情報":
-            document.getElementById("medicalCareInfoCard").setAttribute("class","green-btn");
-            document.getElementById("medical-care-info-card-content").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#medical-care-info-card-content").scrollIntoView();
+            this.getScopedElementById("medicalCareInfoCard").setAttribute("class","green-btn");
+            this.getScopedElementById("medical-care-info-card-content").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#medical-care-info-card-content").scrollIntoView();
             break;
           case "担当者":
-            document.getElementById("chargeStaffCard").setAttribute("class","green-btn");
-            document.getElementById("charge-staff-card-content").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#charge-staff-card-content").scrollIntoView();
+            this.getScopedElementById("chargeStaffCard").setAttribute("class","green-btn");
+            this.getScopedElementById("charge-staff-card-content").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#charge-staff-card-content").scrollIntoView();
             break;
           case "禁忌・アレルギー":
-            document.getElementById("tabooAllergyCard").setAttribute("class","green-btn");
-            document.getElementById("taboo-allergy-card-content").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#taboo-allergy-card-content").scrollIntoView();
+            this.getScopedElementById("tabooAllergyCard").setAttribute("class","green-btn");
+            this.getScopedElementById("taboo-allergy-card-content").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#taboo-allergy-card-content").scrollIntoView();
             break;
           case "感染症":
-            document.getElementById("infectionCard").setAttribute("class","green-btn");
-            document.getElementById("infection-card-contents").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#infection-card-contents").scrollIntoView();
+            this.getScopedElementById("infectionCard").setAttribute("class","green-btn");
+            this.getScopedElementById("infection-card-contents").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#infection-card-contents").scrollIntoView();
             break;
           case "インプラント":
-            document.getElementById("implantCard").setAttribute("class","green-btn");
-            document.getElementById("implant-card-content").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#implant-card-content").scrollIntoView();
+            this.getScopedElementById("implantCard").setAttribute("class","green-btn");
+            this.getScopedElementById("implant-card-content").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#implant-card-content").scrollIntoView();
             break;
           case "既往歴":
-            document.getElementById("medicalHstCard").setAttribute("class","green-btn");
-            document.getElementById("medical-hst-card-content").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#medical-hst-card-content").scrollIntoView();
+            this.getScopedElementById("medicalHstCard").setAttribute("class","green-btn");
+            this.getScopedElementById("medical-hst-card-content").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#medical-hst-card-content").scrollIntoView();
             break;
           case "入外・転入出":
-            document.getElementById("visitHstCard").setAttribute("class","green-btn");
-            document.getElementById("visit-hst-card-content").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#visit-hst-card-content").scrollIntoView();
+            this.getScopedElementById("visitHstCard").setAttribute("class","green-btn");
+            this.getScopedElementById("visit-hst-card-content").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#visit-hst-card-content").scrollIntoView();
             break;
           case "身体情報":
-            document.getElementById("physicalInfoCard").setAttribute("class","green-btn");
-            document.getElementById("physical-info-card-contents").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#physical-info-card-contents").scrollIntoView();
+            this.getScopedElementById("physicalInfoCard").setAttribute("class","green-btn");
+            this.getScopedElementById("physical-info-card-contents").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#physical-info-card-contents").scrollIntoView();
             break;
           case "患者グループ":
-            document.getElementById("patGroupCard").setAttribute("class","green-btn");
-            document.getElementById("pat-group-card-content").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#pat-group-card-content").scrollIntoView();
+            this.getScopedElementById("patGroupCard").setAttribute("class","green-btn");
+            this.getScopedElementById("pat-group-card-content").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#pat-group-card-content").scrollIntoView();
             break;
           case "利用遠隔モニタリングサービス":
-            document.getElementById("remoteMonitorCard").setAttribute("class","green-btn");
-            document.getElementById("remote-monitor-card-content").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#remote-monitor-card-content").scrollIntoView();
+            this.getScopedElementById("remoteMonitorCard").setAttribute("class","green-btn");
+            this.getScopedElementById("remote-monitor-card-content").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#remote-monitor-card-content").scrollIntoView();
             break;
           case "加算・管理料":
-            document.getElementById("additionSetting").setAttribute("class","green-btn");
-            document.getElementById("addition-setting-card-content").children[0].setAttribute("class","color-header-selected");
-            document.querySelector("#addition-setting-card-content").scrollIntoView();
+            this.getScopedElementById("additionSetting").setAttribute("class","green-btn");
+            this.getScopedElementById("addition-setting-card-content").children[0].setAttribute("class","color-header-selected");
+            this.getScopedQuery("#addition-setting-card-content").scrollIntoView();
             break;
           default:
-            document.querySelector("#basic-info-card-content").scrollIntoView();
+            this.getScopedQuery("#basic-info-card-content").scrollIntoView();
             break;
         }
       }
@@ -401,115 +433,120 @@ export default {
      *   カード内容部分に実装されたaddItem()を実行し項目追加を行う
      */
     addItem() {
-      // add #12462 患者情報共有 Ji start
       if (this.getIsOtherFacility) {
         return;
       }
-      // add #12462 患者情報共有 Ji end
       this.setIsAdd(1);
       // add FNSI-カードとボタンの調整 じょはく start
       this.setAllHeadClass();
       this.setAllClass();
-      this.$el.children[0].setAttribute("class", "color-header-selected");
+      this.$el.children[0].setAttribute("class", "card-header color-header-selected");
       switch (this.cardName) {
         case "本人情報":
-          document.getElementById("basicInfoCard").setAttribute("class","green-btn");
-          document.getElementById("basic-info-card-content").children[0].setAttribute("class", "color-header-selected");
-          document.querySelector("#basic-info-card-content").scrollIntoView();
+          this.getScopedElementById("basicInfoCard").setAttribute("class","green-btn");
+          this.getScopedElementById("basic-info-card-content").children[0].setAttribute("class", "color-header-selected");
+          this.getScopedQuery("#basic-info-card-content").scrollIntoView();
           break;
         case "連絡先":
-          document.getElementById("otherContactCard").setAttribute("class","green-btn");
-          document.getElementById("other-contact-card-content").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#other-contact-card-content").scrollIntoView();
+          this.getScopedElementById("otherContactCard").setAttribute("class","green-btn");
+          this.getScopedElementById("other-contact-card-content").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#other-contact-card-content").scrollIntoView();
           break;
           // mod FNSI-画面部品デザイン じょはく start
         case "連絡先(サービス業者)":
-          document.getElementById("vendorContactCard").setAttribute("class","green-btn");
-          document.getElementById("vendor-contact-card-contents").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#vendor-contact-card-contents").scrollIntoView();
+          this.getScopedElementById("vendorContactCard").setAttribute("class","green-btn");
+          this.getScopedElementById("vendor-contact-card-contents").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#vendor-contact-card-contents").scrollIntoView();
           break;
           // mod FNSI-画面部品デザイン じょはく end
         case "患者メモ":
-          document.getElementById("patMemoCard").setAttribute("class","green-btn");
-          document.getElementById("pat-memo-card-contents").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#pat-memo-card-contents").scrollIntoView();
+          this.getScopedElementById("patMemoCard").setAttribute("class","green-btn");
+          this.getScopedElementById("pat-memo-card-contents").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#pat-memo-card-contents").scrollIntoView();
           break;
         case "保険情報":
-          document.getElementById("insuranceInfoCard").setAttribute("class","green-btn");
-          document.getElementById("insurance-info-card").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#insurance-info-card").scrollIntoView();
+          this.getScopedElementById("insuranceInfoCard").setAttribute("class","green-btn");
+          this.getScopedElementById("insurance-info-card").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#insurance-info-card").scrollIntoView();
           break;
         case "透析困難・重症度・搬送区分":
-          document.getElementById("difficultySeverityTransportCard").setAttribute("class","green-btn");
-          document.getElementById("difficulty-severity-transport-card-content").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#difficulty-severity-transport-card-content").scrollIntoView();
+          this.getScopedElementById("difficultySeverityTransportCard").setAttribute("class","green-btn");
+          this.getScopedElementById("difficulty-severity-transport-card-content").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#difficulty-severity-transport-card-content").scrollIntoView();
           break;
         case "診療情報":
-          document.getElementById("medicalCareInfoCard").setAttribute("class","green-btn");
-          document.getElementById("medical-care-info-card-content").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#medical-care-info-card-content").scrollIntoView();
+          this.getScopedElementById("medicalCareInfoCard").setAttribute("class","green-btn");
+          this.getScopedElementById("medical-care-info-card-content").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#medical-care-info-card-content").scrollIntoView();
           break;
         case "担当者":
-          document.getElementById("chargeStaffCard").setAttribute("class","green-btn");
-          document.getElementById("charge-staff-card-content").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#charge-staff-card-content").scrollIntoView();
+          this.getScopedElementById("chargeStaffCard").setAttribute("class","green-btn");
+          this.getScopedElementById("charge-staff-card-content").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#charge-staff-card-content").scrollIntoView();
           break;
         case "禁忌・アレルギー":
-          document.getElementById("tabooAllergyCard").setAttribute("class","green-btn");
-          document.getElementById("taboo-allergy-card-content").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#taboo-allergy-card-content").scrollIntoView();
+          this.getScopedElementById("tabooAllergyCard").setAttribute("class","green-btn");
+          this.getScopedElementById("taboo-allergy-card-content").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#taboo-allergy-card-content").scrollIntoView();
           break;
         case "感染症":
-          document.getElementById("infectionCard").setAttribute("class","green-btn");
-          document.getElementById("infection-card-contents").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#infection-card-contents").scrollIntoView();
+          this.getScopedElementById("infectionCard").setAttribute("class","green-btn");
+          this.getScopedElementById("infection-card-contents").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#infection-card-contents").scrollIntoView();
           break;
         case "インプラント":
-          document.getElementById("implantCard").setAttribute("class","green-btn");
-          document.getElementById("implant-card-content").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#implant-card-content").scrollIntoView();
+          this.getScopedElementById("implantCard").setAttribute("class","green-btn");
+          this.getScopedElementById("implant-card-content").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#implant-card-content").scrollIntoView();
           break;
         case "既往歴":
-          document.getElementById("medicalHstCard").setAttribute("class","green-btn");
-          document.getElementById("medical-hst-card-content").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#medical-hst-card-content").scrollIntoView();
+          this.getScopedElementById("medicalHstCard").setAttribute("class","green-btn");
+          this.getScopedElementById("medical-hst-card-content").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#medical-hst-card-content").scrollIntoView();
           break;
         case "入外・転入出":
-          document.getElementById("visitHstCard").setAttribute("class","green-btn");
-          document.getElementById("visit-hst-card-content").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#visit-hst-card-content").scrollIntoView();
+          this.getScopedElementById("visitHstCard").setAttribute("class","green-btn");
+          this.getScopedElementById("visit-hst-card-content").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#visit-hst-card-content").scrollIntoView();
           break;
         case "身体情報":
-          document.getElementById("physicalInfoCard").setAttribute("class","green-btn");
-          document.getElementById("physical-info-card-contents").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#physical-info-card-contents").scrollIntoView();
+          this.getScopedElementById("physicalInfoCard").setAttribute("class","green-btn");
+          this.getScopedElementById("physical-info-card-contents").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#physical-info-card-contents").scrollIntoView();
           break;
         case "患者グループ":
-          document.getElementById("patGroupCard").setAttribute("class","green-btn");
-          document.getElementById("pat-group-card-content").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#pat-group-card-content").scrollIntoView();
+          this.getScopedElementById("patGroupCard").setAttribute("class","green-btn");
+          this.getScopedElementById("pat-group-card-content").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#pat-group-card-content").scrollIntoView();
           break;
         case "利用遠隔モニタリングサービス":
-          document.getElementById("remoteMonitorCard").setAttribute("class","green-btn");
-          document.getElementById("remote-monitor-card-content").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#remote-monitor-card-content").scrollIntoView();
+          this.getScopedElementById("remoteMonitorCard").setAttribute("class","green-btn");
+          this.getScopedElementById("remote-monitor-card-content").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#remote-monitor-card-content").scrollIntoView();
           break;
         case "加算・管理料":
-          document.getElementById("isShowAdditionInfo").setAttribute("class","green-btn");
-          document.getElementById("addition-setting-card-content").children[0].setAttribute("class","color-header-selected");
-          document.querySelector("#addition-setting-card-content").scrollIntoView();
+          this.getScopedElementById("isShowAdditionInfo").setAttribute("class","green-btn");
+          this.getScopedElementById("addition-setting-card-content").children[0].setAttribute("class","color-header-selected");
+          this.getScopedQuery("#addition-setting-card-content").scrollIntoView();
           break;
         default:
-          document.querySelector("#basic-info-card-content").scrollIntoView();
+          this.getScopedQuery("#basic-info-card-content").scrollIntoView();
           break;
       }
       // add FNSI-カードとボタンの調整 じょはく end
       this.isCardShowing = true;
-      if (this.cardContent.addItem === undefined) {
+
+      this.$emit("card-show", this.isCardShowing);
+
+      const cardContent = this.resolveCardContent();
+      if (cardContent === null || cardContent.addItem === undefined) {
         throw new Error(`${this.cardName}カードの項目追加処理が未実装です。`);
       } else {
-        this.cardContent.addItem();
+        cardContent.addItem();
       }
+      this.$nextTick(() => {
+        this.$emit("trigger-show", true);
+      });
     },
 
     /**
@@ -520,6 +557,7 @@ export default {
         return;
       }
       this.isCardShowing = true;
+       this.$emit("card-show", this.isCardShowing);
       if (
         this.cardContent.editRecord[this.getKeyByName(this.cardName)] &&
         this.cardContent.editRecord[this.getKeyByName(this.cardName)].length === 0
@@ -587,10 +625,13 @@ export default {
 </script>
 
 <style scoped>
-/* カードヘッダ全体 */
+/* カードヘッダ全体（ntss.css の .color-header { height: 2em } を上書き） */
 .card-header {
   border: 1px solid;
   position: relative;
+  height: auto;
+  min-height: 2em;
+  box-sizing: border-box;
 }
 
 /* カード名 */
@@ -612,6 +653,10 @@ export default {
   padding: 0 2px;
 }
 
+.disabled .pat-create-btn {
+  filter: grayscale(80%) brightness(0.8);
+}
+
 /* カード内容部分 */
 .card-contents {
   border: 1px solid #dddddd;
@@ -629,10 +674,5 @@ export default {
 .no-data-inner {
   padding: 6px 7px;
   display: inline-block;
-}
-
-/* 他施設選択時：非活性だが見やすくする */
-.disabled .pat-create-btn {
-  filter: grayscale(80%) brightness(0.8);
 }
 </style>

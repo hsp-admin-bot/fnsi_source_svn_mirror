@@ -1,7 +1,7 @@
 version: '2'
 services:
     ntss-postgresql:
-        image: postgres:15.2
+        image: postgres:17.9
         # volumes:
         #     - ~/volumes/ntss/postgresql/:/var/lib/postgresql/data/
         environment:
@@ -10,7 +10,7 @@ services:
         ports:
             - 5432:5432
     ntss-test-db:
-        image: postgres:15.2
+        image: postgres:17.9
         # volumes:
         #     - ~/volumes/ntss/postgresql/:/var/lib/postgresql/data/
         environment:

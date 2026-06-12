@@ -30,8 +30,8 @@ set
 /*%else */
   ',"add_water_total": null' ||
 /*%end */
-/*%if param.KtvMeasure != null */
-  ',"kt_v_measure": ' || to_number(/*param.KtvMeasure*/'0', '9.99') ||
+/*%if param.ktvMeasure != null */
+  ',"kt_v_measure": ' || to_number(/*param.ktvMeasure*/'0', '9.99') ||
 /*%else */
   ',"kt_v_measure": null' ||
 /*%end */

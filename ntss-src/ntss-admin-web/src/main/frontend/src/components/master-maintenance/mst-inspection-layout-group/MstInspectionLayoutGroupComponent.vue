@@ -37,7 +37,7 @@
     </v-ons-row>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverInfo.popoverVisible"
+      v-model:visible="popoverInfo.popoverVisible"
       :target="popoverInfo.popoverTarget"
       :direction="popoverInfo.popoverDirection"
       :class="[fontSizeSet, 'popover-style']"
@@ -71,13 +71,15 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import PopoverMixin from "@/components/PopoverMixin";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getModalBodyElement, queryScopedSelector, queryScopedSelectorAll } from '@/functions/common/LayoutMeasureHelper';
+import { messageFormat } from "@/functions/common/MessageFormat";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 
 export default {
@@ -153,6 +155,12 @@ export default {
     this.listGroupName=this.editRecord.groupName;
   },
   methods: {
+    getCurrentModalBody() {
+      return getModalBodyElement(this.$el) || null;
+    },
+    getInspectionLayoutElement(selector) {
+      return this.getCurrentModalBody()?.querySelector?.(selector) || this.$el?.querySelector?.(selector) || queryScopedSelector(selector, this.$el);
+    },
     ...mapActions("mst-layout", ["senRequestGetListLayoutByLayoutClassAndFacilityCd"]),
     ...mapActions("loading-screen", ["setLoadingScreenVisible"]),
     popoverPreShow,
@@ -235,8 +243,10 @@ export default {
       this.editRecord.groupName = value;
     },
     setCss(value) {
-      if(value && document.getElementsByClassName("input-invalid")[0])
-        document.getElementsByClassName("input-invalid")[0].classList.remove("input-invalid");
+      const invalidInput = this.getInspectionLayoutElement('.input-invalid');
+      if (value && invalidInput) {
+        invalidInput.classList.remove('input-invalid');
+      }
     },
     validateData() {
       this.editRecord.layoutList = JSON.stringify(this.listItemSelected);
@@ -256,7 +266,7 @@ export default {
         return true;
       }
       if (!validationResult.nameValid) {
-        document.getElementsByClassName("input-required")[0]?.classList?.add("input-invalid");
+        this.getInspectionLayoutElement('.input-required')?.classList?.add('input-invalid');
       }
       // メッセージ組み立て
       // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
@@ -311,11 +321,11 @@ export default {
     },
     calculateListHeight() {
       // 画面の高さ
-      const bodyHeight = document.getElementsByClassName("modal-body")[0].clientHeight;
+      const bodyHeight = this.getCurrentModalBody()?.clientHeight || 0;
 
       // ヘッダーの高さ
-      const headHeight = document.getElementsByClassName("item-head")[0].clientHeight +
-        document.getElementsByClassName("item-head")[1].clientHeight
+      const itemHeads = queryScopedSelectorAll('.item-head', this.getCurrentModalBody() || this.$el);
+      const headHeight = (itemHeads[0]?.clientHeight || 0) + (itemHeads[1]?.clientHeight || 0)
       // リストの高さを設定
       this.listHeight = bodyHeight - headHeight;
     },
@@ -357,16 +367,16 @@ export default {
 .ntss-list {
   position: unset;
 }
-.input-required >>> input {
+.input-required :deep(input) {
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> input {
+.input-invalid :deep(input) {
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: fit-content;
   height: 100%;
   padding: 25px;

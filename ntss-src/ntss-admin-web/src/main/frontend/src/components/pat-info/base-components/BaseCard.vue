@@ -15,13 +15,13 @@
 </template>
 
 <script>
-import {isArray, values} from "underscore";
 import cardFrame from "@/components/pat-info/base-components/BaseCardFrame.vue";
-import elementResizeDetectorMaker from "element-resize-detector";
+import elementResizeDetectorMaker from "@/compat/resize/element-resize-detector";
 const erd = elementResizeDetectorMaker({
   strategy: "scroll"
 });
-
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { isArray, values } from "@/compat/collections/lodash";
 export default {
   components: {
     "card-frame": cardFrame
@@ -103,16 +103,42 @@ export default {
      * @summary 空の項目を全て背景色赤にし、最初にひっかかった項目名だけを返す
      * @returns {String} 未入力のフォーム名 ※未入力がない場合は空文字
      */
+    getCardElementForRequiredForm() {
+      const attrCardId = this.$attrs?.id;
+      const legacyCardId = this.cardFrame?.$options?.parent?.$vnode?.data?.ref;
+      const candidateIds = [attrCardId, legacyCardId].filter((id, index, ids) => id && ids.indexOf(id) === index);
+      for (const cardId of candidateIds) {
+        const cardElement = getScopedElementById(cardId, this.$el || this);
+        if (cardElement !== undefined && cardElement !== null) {
+          return cardElement;
+        }
+        if (this.$el?.id === cardId) {
+          return this.$el;
+        }
+        if (this.cardFrame?.$el?.id === cardId) {
+          return this.cardFrame.$el;
+        }
+      }
+      return null;
+    },
+
     checkAllRequiredForm() {
       let emptyFormName = "";
       let cardName = "";
-      let cardID = this.cardFrame.$options.parent.$vnode.data.ref;
-      let cardElement = document.getElementById(cardID);
+      let cardElement = this.getCardElementForRequiredForm();
       if (cardElement !== undefined && cardElement !== null) {
-        cardName = "(" + cardElement.innerText + ")";
+        const titleEl = cardElement.querySelector('.card-name');
+        if (titleEl) {
+          const raw = titleEl.innerText.trim();
+          const cleaned = raw.replace(/\s*\(\d+件\)\s*$/, '');
+          cardName = `(${cleaned})`;
+        } else {
+          cardName = "";
+        }
       }
-      for (const form of values(this.cardContent.$refs)) {
-        if (isArray(form)) {
+      const cardContentRefs = this.cardContent?.$refs || {};
+      for (const form of Object.values(cardContentRefs)) {
+        if (Array.isArray(form)) {
           // JSON配列の場合
           for (const jsonForm of form) {
             if (!this.checkRequired(jsonForm)) {
@@ -163,8 +189,8 @@ export default {
      * @returns {String} バリデーション失敗理由 ※成功時は空文字
      */
     validateAllForm() {
-      for (const form of values(this.cardContent.$refs)) {
-        if (isArray(form)) {
+      for (const form of Object.values(this.cardContent.$refs)) {
+        if (Array.isArray(form)) {
           // JSON配列の場合
           for (const jsonForm of form) {
             const invalidReason = this.validateForm(jsonForm);
@@ -215,8 +241,8 @@ export default {
     //   validateAllForm() {
     //     // カードコンテンツ内のref属性がついた共通タグ全てをバリデーション
     //     let isValid = true;
-    //     for (const form of _.values(this.cardContent.$refs)) {
-    //       if (_.isArray(form)) {
+    //     for (const form of Object.values(this.cardContent.$refs)) {
+    //       if (Array.isArray(form)) {
     //         // JSON配列の場合
     //         for (const jsonForm of form) {
     //           if (jsonForm.validateForCommitting !== undefined && !jsonForm.validateForCommitting()) {
@@ -234,7 +260,7 @@ export default {
     //     return isValid;
     //   },
   },
-  beforeDestroy () {
+  beforeUnmount () {
     erd.removeAllListeners(this.$el)
     erd.uninstall(this.$el)
   },

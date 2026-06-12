@@ -8,11 +8,11 @@ import java.util.Map;
 
 import org.springframework.util.StringUtils;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.CollectionType;
-import com.fasterxml.jackson.databind.type.MapType;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.type.CollectionType;
+import tools.jackson.databind.type.MapType;
 
 /**
  * Singleton {@link ObjectMapper} Util

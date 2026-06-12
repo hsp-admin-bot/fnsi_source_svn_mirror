@@ -44,11 +44,16 @@ export default {
       return this.propEditValue;
     },
     chkEdited() {
-      if (this.initValue !== this.selectedItem) {
+      // mod #10937 20260428 Ji start
+      const init = this.initValue ?? "";
+      const edit = this.selectedItem ?? "";
+      // if (this.initValue !== this.selectedItem) {
+      if (init !== edit) {
         return "custom-div-show-selected-item-edited";
       } else {
         return "";
       }
+      // mod #10937 20260428 Ji end
     },
     bgColor() {
       return { "background-color": this.propBackgroundColor };
@@ -68,13 +73,17 @@ export default {
   },
 
   created() {
+    // mod #10937 20260428 Ji start
     // 初期値の指定がなかった場合は、propEditValue の値を設定しておく
-    if (this.propInitValue === "") {
-      this.initValue = this.propEditValue;
-    }
+    // if (this.propInitValue === "") {
+    //   this.initValue = this.propEditValue;
+    // } else {
+    //   this.initValue = this.propInitValue;
+    // }
+    this.initValue = this.propInitValue;
+    // mod #10937 20260428 Ji end
   },
 
-  methods: {}
 };
 </script>
 

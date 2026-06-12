@@ -1,12 +1,9 @@
-import Vue from "vue";
-import VueRouter from "vue-router";
+import { createRouter, createWebHashHistory } from "vue-router";
 import store from "@/stores";
 
 import LoginCL from "@/components/cl-login/LoginCL";
 import ManageSite from "@/components/cl-manage-view/ManageSite";
 import CLCertificateDetails from "@/components/cl-show/CLCertificateDetails";
-Vue.use(VueRouter);
-
 const routes = [
   {
     path: "/",
@@ -27,8 +24,8 @@ const routes = [
   }
 ];
 
-const router = new VueRouter({
-  mode: "hash",
+const router = createRouter({
+  history: createWebHashHistory(),
   routes
 });
 

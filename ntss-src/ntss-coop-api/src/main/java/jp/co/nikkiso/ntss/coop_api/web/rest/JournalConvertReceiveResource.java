@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.coop_api.web.rest;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.sql.Timestamp;
 import java.text.DateFormat;
@@ -83,7 +82,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.fasterxml.jackson.databind.SerializationFeature;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.SerializationFeature;
 
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
 import jp.co.nikkiso.ntss.coop_api.request.JournalConvertReceiveRequest;
@@ -2670,18 +2670,18 @@ public class JournalConvertReceiveResource {
    * @param resultList ジャーナル変換結果
    */
   private void outputConversionLog(String facilityCd, List<ResultMap> resultList) {
-    ObjectMapperUtil.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
     try {
       EventLogMessage eventLogMessage = new EventLogMessage();
-      eventLogMessage.setLogMessage(facilityCd + ":電文解析結果（JSON変換）:" + ObjectMapperUtil.write(resultList));
+      String conversionJson = ObjectMapperUtil.getObjectMapper()
+          .writer(SerializationFeature.INDENT_OUTPUT)
+          .writeValueAsString(resultList);
+      eventLogMessage.setLogMessage(facilityCd + ":電文解析結果（JSON変換）:" + conversionJson);
       eventLogMessage.setFacilityCd(facilityCd);
       // add 2020-12-08 No.718：各APIのログ出力→共通ログ 孫 start
       eventLogMessage.setInvokeClass(this.getClass().getName());
       // add 2020-12-08 No.718：各APIのログ出力→共通ログ 孫 end
       logService.log(LogLevel.DEBUG, eventLogMessage, null, SERVICE_NAME.FNSI, null);
-    } catch (IOException e) {
-    } finally {
-      ObjectMapperUtil.getObjectMapper().disable(SerializationFeature.INDENT_OUTPUT);
+    } catch (JacksonException e) {
     }
   }
 

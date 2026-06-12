@@ -25,6 +25,7 @@
 </template>
 
 <script>
+import { h } from "vue";
 export default {
   props: {
     field: String,
@@ -43,6 +44,25 @@ export default {
     onClickContentChange(e) {
       this.$emit("clickContentChange", e, this.dataItem);
     }
+  },
+  render() {
+    const contentChanged = this.dataItem?.IsContentChanged;
+    const attrs = {
+      colspan: this.colSpan,
+      role: "gridcell",
+      "data-grid-col-index": this.columnIndex,
+      class: `${(this.className || "").trim()}${contentChanged}`
+    };
+    if (this.dataItem?.ordNo !== null && contentChanged === "1") {
+      return h("td", { ...attrs, onClick: this.onClickContentChange }, "変更あり");
+    }
+    if (this.dataItem?.ordNo !== null && contentChanged === "2") {
+      return h("td", attrs, "条件未送信");
+    }
+    if (this.dataItem?.patId !== null && (contentChanged === "0" || contentChanged === null)) {
+      return h("td", { ...attrs, onClick: this.onClickContentChange }, "変更なし");
+    }
+    return h("td", { ...attrs, onClick: this.onClickContentChange });
   }
 };
 </script>

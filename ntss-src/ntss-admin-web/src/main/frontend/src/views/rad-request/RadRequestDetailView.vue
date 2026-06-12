@@ -3,9 +3,15 @@
  */
 <template>
   <ntss-layout>
-    <header-component slot="header-content" />
-    <bread-crumbs-component slot="bread-crumbs-content" :history-key="historyKey" :no-split="true" />
-    <main-component slot="main-content" ref="mainComponent" :history-key="historyKey" :controller="controller" />
+    <template #header-content>
+      <header-component />
+    </template>
+    <template #bread-crumbs-content>
+      <bread-crumbs-component :history-key="historyKey" :no-split="true" />
+    </template>
+    <template #main-content>
+      <main-component ref="mainComponent" :history-key="historyKey" :controller="controller" />
+    </template>
   </ntss-layout>
 </template>
 

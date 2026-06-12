@@ -1321,7 +1321,7 @@ export default {
     // 自己診断データセット
     setTestResults(state, testResults) {
       const waitLoop = setInterval(function(){
-        if (state.selftList.hasOwnProperty("selftList")) {
+        if (Object.prototype.hasOwnProperty.call(state.selftList, "selftList")) {
           clearInterval(waitLoop);
           if (testResults.ufrc) {
             // 配管の表のみ使う
@@ -1575,7 +1575,6 @@ export default {
      * @param {*} param リクエストパラメータ
      * @param {Boolean} 成功した場合trueを返却する.
      */
-    /* eslint-disable no-unused-vars */
     updateServiceSupport({ commit }, param) {
       return sendRequestUpdateServiceSupport(param).then(() =>{
         commit("changeServiceSupportInfo", param.serviceSupportType);

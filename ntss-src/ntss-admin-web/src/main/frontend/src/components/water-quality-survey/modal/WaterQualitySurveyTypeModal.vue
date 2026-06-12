@@ -29,7 +29,8 @@
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { getModalBodyElement } from "@/functions/common/LayoutMeasureHelper";
 export default {
   data() {
     return {
@@ -81,10 +82,10 @@ export default {
   },
   async mounted() {
     // 縦スクロールバー表示
-    let modalObj = document.getElementsByClassName("modal-body");
-    if (modalObj.length >= 1) {
-      modalObj[0].classList.remove("modal-overflow-hidden");
-      modalObj[0]?.classList?.add("modal-scroll");
+    const modalObj = getModalBodyElement(this.$el || this);
+    if (modalObj) {
+      modalObj.classList.remove("modal-overflow-hidden");
+      modalObj?.classList?.add("modal-scroll");
     }
   }
 };

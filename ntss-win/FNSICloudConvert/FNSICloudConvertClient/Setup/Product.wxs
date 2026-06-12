@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FNSICloudConvertClient WiX v4 インストーラー
+  製品名   : FNSICloudConvertClient
+  バージョン: 1.0.1（wixproj の ProductVersion を参照）
+  メーカー : NKK
+  インストール先: C:\FNWSiTools\FNSICloudConvertClient
+-->
+<?include GeneratedProductCode.wxi?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Package Name="FNSICloudConvertClient"
+           Language="1041"
+           Version="$(var.ProductVersion)"
+           Manufacturer="NKK"
+           ProductCode="$(var.ProductCode)"
+           UpgradeCode="{C0FFEE01-DEAD-BEEF-CAFE-123456789ABC}"
+           Scope="perMachine"
+           Compressed="yes"
+           InstallerVersion="500">
+    <SummaryInformation Description="FNSICloudConvertClient installer" Manufacturer="NKK" Keywords="FNSI Cloud Convert Client" Codepage="932" />
+
+    <Upgrade Id="{C0FFEE01-DEAD-BEEF-CAFE-123456789ABC}">
+      <UpgradeVersion
+        Minimum="0.0.0"
+        Maximum="$(var.ProductVersion)"
+        IncludeMinimum="yes"
+        IncludeMaximum="no"
+        Property="OLDERVERSIONBEINGUPGRADED"
+        MigrateFeatures="yes" />
+      <UpgradeVersion
+        Minimum="$(var.ProductVersion)"
+        IncludeMinimum="no"
+        Property="NEWERVERSIONALREADYINSTALLED" />
+    </Upgrade>
+
+    <Launch Condition="NOT NEWERVERSIONALREADYINSTALLED"
+            Message="より新しいバージョンがインストール済みです。アンインストールしてから再度インストールしてください。" />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+    <SetProperty Id="INSTALLFOLDER" After="AppSearch" Value="[WindowsVolume]FNWSiTools\FNSICloudConvertClient" />
+
+    <Property Id="PROP_BASE_URI" Value="http://localhost:8080" />
+    <Property Id="PROP_CONVERTER_URI" Value="http://localhost:8080" />
+    <Property Id="PROP_USE_CERT" Value="0" />
+    <Property Id="FORCE_WRITE_CONFIG" Value="0" />
+    <Property Id="SKIP_CONFIG" Value="0" />
+
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="InstallFolderPermissions" Guid="{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}">
+        <CreateFolder>
+          <Permission User="Users" GenericAll="yes" />
+        </CreateFolder>
+      </Component>
+    </DirectoryRef>
+
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="DesktopShortcutComp" Guid="{D4B72E91-6A3C-4F85-B210-73E9C4A05F28}">
+        <Shortcut Id="DesktopShortcut" Directory="DesktopFolder" Name="FNSICloudConvertClient" Target="[INSTALLFOLDER]FNSICloudConvertClient.exe" WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\NKK\FNSICloudConvertClient" Name="ShortcutInstalled" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="ProductFeature" Title="FNSICloudConvertClient" Level="1">
+      <ComponentGroupRef Id="HarvestedComponents" />
+      <ComponentRef Id="InstallFolderPermissions" />
+      <ComponentRef Id="DesktopShortcutComp" />
+    </Feature>
+
+    <CustomAction Id="WriteConfig_SetParam" Property="WriteConfig" Value="[INSTALLFOLDER]~|~[PROP_BASE_URI]~|~[PROP_USE_CERT]~|~[PROP_CONVERTER_URI]" />
+
+    <CustomAction Id="WriteConfig" Script="vbscript" Execute="deferred" Return="check" Impersonate="no" ScriptSourceFile="WriteConfig.vbs" />
+
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallInitialize" />
+
+      <Custom Action="WriteConfig_SetParam" Before="WriteConfig" Condition="NOT REMOVE AND SKIP_CONFIG &lt;&gt; &quot;1&quot; AND (NOT OLDERVERSIONBEINGUPGRADED OR FORCE_WRITE_CONFIG = &quot;1&quot;)" />
+      <Custom Action="WriteConfig" After="InstallFiles" Condition="NOT REMOVE AND SKIP_CONFIG &lt;&gt; &quot;1&quot; AND (NOT OLDERVERSIONBEINGUPGRADED OR FORCE_WRITE_CONFIG = &quot;1&quot;)" />
+    </InstallExecuteSequence>
+
+    <UIRef Id="WixUI_InstallDirConfig" />
+
+    <StandardDirectory Id="DesktopFolder" />
+    <Directory Id="FNWSiToolsFolder" Name="FNWSiTools">
+      <Directory Id="INSTALLFOLDER" Name="FNSICloudConvertClient" />
+    </Directory>
+  </Package>
+
+</Wix>

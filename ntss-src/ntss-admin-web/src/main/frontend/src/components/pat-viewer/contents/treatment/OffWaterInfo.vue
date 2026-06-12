@@ -16,7 +16,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * ベースコンポーネント
@@ -27,7 +27,7 @@ import baseContent from "@/components/pat-viewer/contents/base/BaseContent";
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 共通操作
@@ -47,6 +47,7 @@ import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 export default {
   components: {
@@ -105,35 +106,43 @@ export default {
 
   computed: {
     ...mapGetters("pat-viewer-modal", ["getDefaultSettingOffWaterInfoData"]),
+    ...mapGetters("pat-viewer", ["getTreatmentData"]),
 
     /**
      * 指示コメント(IndEditBase)に渡すデータ(雛形)
      */
     faultSettingIndOffWaterInfoData() {
       return this.getDefaultSettingOffWaterInfoData;
+    },
+
+    treatmentDataForRow() {
+      return this.getTreatmentData?.[this.rowIndex];
+    }
+  },
+
+  watch: {
+    treatmentDataForRow: {
+      handler(newVal, oldVal) {
+        if (!newVal) {
+          return;
+        }
+        if (!oldVal || !Object.keys(oldVal).length) {
+          this.loadOffWaterInfoData();
+        }
+      }
     }
   },
 
   async created() {
-    this.startLoadingScreen();
-    this.flagAuthority = this.getTreatmentRecordAuthority();
-    this.convertOffWaterInfoData({
-      listIndex: this.rowIndex
-    }).then(offWaterInfoDataList => {
-      this.offWaterInfoDataList = offWaterInfoDataList;
-
-      // 合計量計算
-      this.calculateSum();
-      // 合計量単位付与
-      this.addUnitSum();
-      // 重さ項目数値カンマ区切り
-      this.separatedComma();
-    }).finally(() => {
-      this.finishLoadingScreen();
-    });
+    await this.loadOffWaterInfoData();
   },
 
-  beforeDestroy() {
+  mounted() {
+    EventBus.$on("isRefresh", this.loadOffWaterInfoData);
+  },
+
+  beforeUnmount() {
+    EventBus.$off("isRefresh", this.loadOffWaterInfoData);
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -150,6 +159,39 @@ export default {
       return getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
+    async loadOffWaterInfoData() {
+      this.startLoadingScreen();
+      this.flagAuthority = this.getTreatmentRecordAuthority();
+      try {
+        const offWaterInfoDataList = await this.convertOffWaterInfoData({
+          listIndex: this.rowIndex
+        });
+        this.offWaterInfoDataList = offWaterInfoDataList || [];
+        this.calculateSum();
+        this.addUnitSum();
+        this.separatedComma();
+      } catch (e) {
+        console.error("除水補正データの読み込みに失敗しました", e);
+        if (!this.offWaterInfoDataList.length) {
+          this.offWaterInfoDataList = [];
+        }
+      } finally {
+        this.finishLoadingScreen();
+      }
+    },
+
+    getOffWaterSumRow() {
+      return this.offWaterInfoDataList.find(item => item.itemNo === 11);
+    },
+
+    parseNumericGramValue(value) {
+      if (value == null || value === "") {
+        return 0;
+      }
+      const str = String(value);
+      const numStr = str.endsWith("g") ? str.slice(0, -1) : str;
+      return Number(numStr.replace(/,/g, "")) || 0;
+    },
 
     /**
      * 「除水補正」タイトルクリック時処理
@@ -187,7 +229,7 @@ export default {
       }
       // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng end
       // 編集対象日
-      const treatDate = moment(recentDate, "YYYYMMDD").format("YYYY-MM-DD");
+      const treatDate = dayjs(recentDate, "YYYYMMDD").format("YYYY-MM-DD");
       // 除水補正モーダルの表示
 
       //mod #10266  start
@@ -222,7 +264,7 @@ export default {
       }
       // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng end
       // 編集対象日
-      const treatDate = moment(recentDate, "YYYYMMDD").format("YYYY-MM-DD");
+      const treatDate = dayjs(recentDate, "YYYYMMDD").format("YYYY-MM-DD");
       // 除水補正モーダルの表示
 
       //mod #10266  start
@@ -246,16 +288,13 @@ export default {
         return;
       }
       // upd #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --start */
-      // if(cellInfo.isNotClickable) {
       if(isIndClick && cellInfo.isNotClickable) {
         return;
       }
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --end */
       // 指示項目がクリックされた場合以下の処理を実行
       if (isIndClick) {
         // 編集対象日
-        const treatDate = moment(cellInfo.treatDate, "YYYYMMDD").format(
+        const treatDate = dayjs(cellInfo.treatDate, "YYYYMMDD").format(
           "YYYY-MM-DD"
         );
         // 除水補正モーダルの表示
@@ -330,7 +369,7 @@ export default {
         // 全曜日選択を未選択状態にする
         settingData.allWeek = false;
         // 対象曜日の格納
-        const week = moment(startDate, "YYYY-MM-DD").day();
+        const week = dayjs(startDate, "YYYY-MM-DD").day();
         for (let i = 0; i < 7; i++) {
           // すべての曜日を未選択状態にする
           settingData[this.changeWeekStr(i)] = i !== week ? false : true;
@@ -361,23 +400,25 @@ export default {
      * 合計量算出
      */
     calculateSum() {
-      for (let i = 0; i < this.offWaterInfoDataList.length - 1; i++) {
+      const sumRow = this.getOffWaterSumRow();
+      if (!sumRow || !sumRow.data) {
+        return;
+      }
+      for (let i = 0; i < this.offWaterInfoDataList.length; i++) {
         const offWaterInfo = this.offWaterInfoDataList[i];
-        // 重さ項目合計量算出
-        if (0 === offWaterInfo.itemNo % 2) {
-          for (let j = 0; j < offWaterInfo.data.length; j++) {
-            // value1がnullでなければ除水補正量合計に加算していく
-            if (null !== offWaterInfo.data[j].value1) {
-              this.offWaterInfoDataList[10].data[j].value1 += Number(
-                offWaterInfo.data[j].value1.slice(0, -1)
-              );
-            }
-            // value2がnullでなければ除水補正量合計に加算していく
-            if (null !== offWaterInfo.data[j].value2) {
-              this.offWaterInfoDataList[10].data[j].value2 += Number(
-                offWaterInfo.data[j].value2.slice(0, -1)
-              );
-            }
+        if (!offWaterInfo || offWaterInfo.itemNo === 11 || offWaterInfo.itemNo % 2 !== 0) {
+          continue;
+        }
+        for (let j = 0; j < offWaterInfo.data.length; j++) {
+          if (null !== offWaterInfo.data[j].value1) {
+            sumRow.data[j].value1 =
+              (sumRow.data[j].value1 || 0) +
+              this.parseNumericGramValue(offWaterInfo.data[j].value1);
+          }
+          if (null !== offWaterInfo.data[j].value2) {
+            sumRow.data[j].value2 =
+              (sumRow.data[j].value2 || 0) +
+              this.parseNumericGramValue(offWaterInfo.data[j].value2);
           }
         }
       }
@@ -387,14 +428,15 @@ export default {
      * 除水補正合計量への単位付与
      */
     addUnitSum() {
-      for (let i = 0; i < this.offWaterInfoDataList[10].data.length; i++) {
-        const value1 = this.offWaterInfoDataList[10].data[i].value1;
-        const value2 = this.offWaterInfoDataList[10].data[i].value2;
-        // 値が入っていれば、単位を格納する
-        this.offWaterInfoDataList[10].data[i].value1 =
-          null !== value1 ? `${value1}g` : value1;
-        this.offWaterInfoDataList[10].data[i].value2 =
-          null !== value2 ? `${value2}g` : value2;
+      const sumRow = this.getOffWaterSumRow();
+      if (!sumRow || !sumRow.data) {
+        return;
+      }
+      for (let i = 0; i < sumRow.data.length; i++) {
+        const value1 = sumRow.data[i].value1;
+        const value2 = sumRow.data[i].value2;
+        sumRow.data[i].value1 = null != value1 && value1 !== "" ? `${value1}g` : value1;
+        sumRow.data[i].value2 = null != value2 && value2 !== "" ? `${value2}g` : value2;
       }
     },
 
@@ -403,17 +445,22 @@ export default {
      */
     separatedComma() {
       for (let i = 0; i < this.offWaterInfoDataList.length; i++) {
-        if (i % 2 === 1 || i === this.offWaterInfoDataList.length - 1) {
-          for (let j = 0; j < this.offWaterInfoDataList[i].data.length; j++) {
-            const value1 = this.offWaterInfoDataList[i].data[j].value1;
-            const value2 = this.offWaterInfoDataList[i].data[j].value2;
-            // 値があれば、カンマ区切り
-            this.offWaterInfoDataList[i].data[j].value1 = !value1
-              ? value1
-              : value1.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
-            this.offWaterInfoDataList[i].data[j].value2 = !value2
-              ? value2
-              : value2.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
+        const offWaterInfo = this.offWaterInfoDataList[i];
+        if (!offWaterInfo || !offWaterInfo.data) {
+          continue;
+        }
+        if (offWaterInfo.itemNo % 2 === 0 || offWaterInfo.itemNo === 11) {
+          for (let j = 0; j < offWaterInfo.data.length; j++) {
+            const value1 = offWaterInfo.data[j].value1;
+            const value2 = offWaterInfo.data[j].value2;
+            if (value1 != null && value1 !== "") {
+              const numStr = String(value1).replace(/g$/, "");
+              offWaterInfo.data[j].value1 = numStr.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
+            }
+            if (value2 != null && value2 !== "") {
+              const numStr = String(value2).replace(/g$/, "");
+              offWaterInfo.data[j].value2 = numStr.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
+            }
           }
         }
       }
@@ -430,5 +477,5 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 </style>

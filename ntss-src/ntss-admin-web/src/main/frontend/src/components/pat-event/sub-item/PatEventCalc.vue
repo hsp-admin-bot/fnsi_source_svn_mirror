@@ -44,7 +44,7 @@
 </template>
 
 <script>
-  import {mapActions, mapGetters} from "vuex";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   import BigEval from "@/functions/BigEvalEx";
 // add #10359 編集権限の動作不正 start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
@@ -52,7 +52,6 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 
   export default {
   props: ["propsIndex"],
-  components: {},
   data() {
     return {
       inputModel: {
@@ -78,10 +77,8 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
-    // add #12462 患者情報共有 wangchao 20260323 start
     ...mapGetters("pat-event/list", ["getIsOtherFacility"]),
     ...mapGetters("observe-record/list", ["getIsOtherFacilitys"]),
-    // add #12462 患者情報共有 wangchao 20260323 end
     isShared() {
       if(this.getPatEventRecord.isComRec){
         return this.getFacilityCd === this.getSharedFacilityCd;
@@ -102,13 +99,11 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
       }
     }
   },
-  watch: {},
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  destroyed() { },
-  created() {},
+
   mounted() {
     const result = this.getPatEventResultParams[this.propsIndex];
     const templateJson = this.getMstTemplateJson;

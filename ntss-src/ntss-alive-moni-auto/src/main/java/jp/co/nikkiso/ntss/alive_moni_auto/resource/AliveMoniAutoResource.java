@@ -1,5 +1,7 @@
 package jp.co.nikkiso.ntss.alive_moni_auto.resource;
 
+
+import jp.co.nikkiso.ntss.core.utils.Ec2MetadataHelper;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -16,8 +18,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.amazonaws.util.EC2MetadataUtils;
 
 import jp.co.nikkiso.ntss.alive_moni_auto.constant.SysSystemDefineCtlNo;
 import jp.co.nikkiso.ntss.alive_moni_auto.entity.MstFacilityCustom;
@@ -101,7 +101,7 @@ public class AliveMoniAutoResource {
     String ipAddr;
     try {
       // EC2からPrivateIPを取得
-      ipAddr = EC2MetadataUtils.getInstanceInfo().getPrivateIp();
+      ipAddr = Ec2MetadataHelper.getPrivateIp();
     } catch (Exception e) {
       // EC2からPrivateIPを取得できなかった場合(EC2以外で実行した場合、など)、以下を実行して取得を試みる
 

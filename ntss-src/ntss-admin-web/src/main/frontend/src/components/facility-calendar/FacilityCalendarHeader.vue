@@ -47,7 +47,7 @@
     <!-- 検索条件：入力エリア -->
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -263,16 +263,14 @@
 
 <script>
   // ライブラリ
-  import Vue from "vue";
-  import moment from "moment";
-  import { EventBus } from "@/eventBus.js";
-  import VueTouch from "vue-touch";
-  import { ApiHelper } from "@/apis/AxiosHelper";
+    import dayjs from "@/compat/date/dayjs";
+  import { EventBus } from "@/compat/vue/event-bus.js";
+    import { ApiHelper } from "@/apis/AxiosHelper";
   import NextTransitionMixin from "@/components/NextTransitionMixin";
   import { deepCopy } from "@/functions/common/CommonFunctions";
   import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
   import commonSearchArea from "@/components/common/CommonSearchArea";
-  import { mapGetters, mapActions } from "vuex";
+  import { mapGetters, mapActions } from "@/compat/vue/vuex";
   import { ROUTERLINK_FACILITY_CALENDAR, ROUTERLINK_FACILITY_CALENDAR_CREATE } from "@/components/facility-calendar/Definitions";
   import PopoverMixin from "@/components/PopoverMixin";
   import { FACILITY_CALENDAR } from "@/constants/defaultSettingConstants";
@@ -288,12 +286,11 @@
   import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
   //#5590 2023/04/19 ×を常に表示するように修正 張博 start
   import DateInput from "@/components/common/DateInput.vue";
+  import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
   //#5590 2023/04/19 ×を常に表示するように修正 張博 end
   // add #11065 【03】編集権限バグ修正 関 start
   import { getAuthorized } from "@/functions/common/CommonFunctions.js";
   // add #11065 【03】編集権限バグ修正 関 end
-
-  Vue.use(VueTouch);
   const mstKur = "mst_kur";
   const uriKur = `/mstInfo/${mstKur}/mstSelector`;
   const mstRoomBedGroup = "mstRoomBedGroup";
@@ -375,8 +372,9 @@
         showErrorDialysisDate:false,
         /*add FNSI-改修内容日付のチェックの追加対応。 趙立強 end*/
         // add #9558 機能帳票で正しく変数が引き渡されていない limingzhe start
-        selectedDate: null
+        selectedDate: null,
         // add #9558 機能帳票で正しく変数が引き渡されていない limingzhe end
+        deferViewModeApply: false,
       };
     },
 
@@ -405,7 +403,12 @@
           return this.viewMode;
         },
         set(value) {
-          this.setViewMode(Number.parseInt(value));
+          const parsed = Number.parseInt(value);
+          if (this.deferViewModeApply) {
+            EventBus.$emit("facilityCalendarQueueViewMode", parsed);
+            return;
+          }
+          this.setViewMode(parsed);
         }
       },
 
@@ -512,7 +515,7 @@
           return null;
         }
 
-        return moment(startDate, "YYYY-MM-DD").format("YYYY/MM/DD");
+        return dayjs(startDate, "YYYY-MM-DD").format("YYYY/MM/DD");
       },
 
       /**
@@ -525,7 +528,7 @@
           return null;
         }
 
-        return moment(endDate, "YYYY-MM-DD").format("YYYY/MM/DD");
+        return dayjs(endDate, "YYYY-MM-DD").format("YYYY/MM/DD");
       },
 
       /**
@@ -538,7 +541,7 @@
           return null;
         }
 
-        return moment(dialysisDate, "YYYY-MM-DD").format("YYYY/MM/DD");
+        return dayjs(dialysisDate, "YYYY-MM-DD").format("YYYY/MM/DD");
       },
 
       NOT_USER() {
@@ -573,22 +576,22 @@
       },
       /*add FNSI-改修内容日付のチェックの追加対応。 趙立強 start*/
       'searchCondition.noticeEndDate'() {
-        if(document.getElementsByClassName("end-date")[0].validationMessage !== ""){
-          this.showErrorEndDate = !(document.getElementsByClassName("end-date")[0].value === "" && document.getElementsByClassName("end-date-comment")[0].value !== "");
+        if(this.getHeaderInputByClassName("end-date").validationMessage !== ""){
+          this.showErrorEndDate = !(this.getHeaderInputByClassName("end-date").value === "" && this.getHeaderInputByClassName("end-date-comment").value !== "");
         }else{
           this.showErrorEndDate = false;
         }
       },
       'searchCondition.noticeStartDate'() {
-        if(document.getElementsByClassName("start-date")[0].validationMessage !== ""){
-          this.showErrorStartDate = !(document.getElementsByClassName("start-date")[0].value === "" && document.getElementsByClassName("start-date-comment")[0].value !== "");
+        if(this.getHeaderInputByClassName("start-date").validationMessage !== ""){
+          this.showErrorStartDate = !(this.getHeaderInputByClassName("start-date").value === "" && this.getHeaderInputByClassName("start-date-comment").value !== "");
         }else{
           this.showErrorStartDate = false;
         }
       },
       'searchCondition.dialysisDate'() {
-        if(document.getElementsByClassName("dialysis-date")[0].validationMessage !== ""){
-          this.showErrorDialysisDate = !(document.getElementsByClassName("dialysis-date")[0].value === "" && document.getElementsByClassName("dialysis-date-comment")[0].value !== "");
+        if(this.getHeaderInputByClassName("dialysis-date").validationMessage !== ""){
+          this.showErrorDialysisDate = !(this.getHeaderInputByClassName("dialysis-date").value === "" && this.getHeaderInputByClassName("dialysis-date-comment").value !== "");
         }else{
           this.showErrorDialysisDate = false;
         }
@@ -670,15 +673,17 @@
       EventBus.$on("goFacilityCalendar", this.goFacilityCalendar);
       EventBus.$on("getSelectedDate", this.getSelectedDate);
       EventBus.$on("createEvent", this.createEvent);
+      EventBus.$on("facilityCalendarViewModeApplyDone", this.onViewModeApplyDone);
       this.setLoadingScreenVisible(false);
     },
 
-    beforeDestroy() {
+    beforeUnmount() {
       EventBus.$off("searchConditionFacilityCalendar", this.sendInfo);
       EventBus.$off("requestReportParams", this.requestrReportParams);
       EventBus.$off("goFacilityCalendar", this.goFacilityCalendar);
       EventBus.$off("getSelectedDate", this.getSelectedDate);
       EventBus.$off("createEvent", this.createEvent);
+      EventBus.$off("facilityCalendarViewModeApplyDone", this.onViewModeApplyDone);
       this.mstBbsKind = null;
       this.mstKur = null;
       this.mstRoomBedGroup = null;
@@ -703,6 +708,10 @@
     },
 
     methods: {
+      getHeaderInputByClassName(className) {
+        return getScopedElementsByClassName(className, this.popoverTarget || this.$el || null)?.[0] || null;
+      },
+
       // ※検索条件はログイン中保持するため、ストア管理
       //add FutreNetWeb+SI課題管理No4298対応 于 start
       ...mapActions("facility-calendar", [
@@ -746,7 +755,7 @@
         var bedNames = "";
         // mod #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
         // if (this.selectedCondition.roomBedGroup.bedGroupCd == 0) {
-        if (this.selectedCondition.roomBedGroup.bedCdList.length == 0 ) {
+        if (this.selectedCondition.roomBedGroup.bedCdList.length == 0) {
           // bedNames = "複数ベッドグループ";
           bedNames = "すべて";
         // mod #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy end
@@ -801,14 +810,14 @@
           // add #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 end
           // mod #9558 機能帳票で正しく変数が引き渡されていない limingzhe start
           // facilityCd: this.getFacilityCd,
-          // date: moment(Date.now()).format("YYYY/MM/DD"),
-          // fromDate: moment(this.searchCondition.noticeStartDate).format("YYYY/MM/DD"),
-          // toDate: moment(this.searchCondition.noticeEndDate).format("YYYY/MM/DD")
+          // date: dayjs(Date.now()).format("YYYY/MM/DD"),
+          // fromDate: dayjs(this.searchCondition.noticeStartDate).format("YYYY/MM/DD"),
+          // toDate: dayjs(this.searchCondition.noticeEndDate).format("YYYY/MM/DD")
           functionCd:"03701",
           facilityCd: this.facilityCd,
-          date: moment(selectDate).format("YYYY/MM/DD"),
-          fromDate: moment(firstDate).format("YYYY/MM/DD"),
-          toDate: moment(lastDate).format("YYYY/MM/DD"),
+          date: dayjs(selectDate).format("YYYY/MM/DD"),
+          fromDate: dayjs(firstDate).format("YYYY/MM/DD"),
+          toDate: dayjs(lastDate).format("YYYY/MM/DD"),
           // mod #9558 機能帳票で正しく変数が引き渡されていない limingzhe end
           // add #11285 機能帳票の印刷情報対応② 高 start
           freeWord: this.searchCondition.freeWord,
@@ -851,7 +860,7 @@
         // ダミー値はシステム日付にしておく
         this.searchCondition.noticeStartDate
         = this.searchCondition.noticeEndDate
-        = this.searchCondition.dialysisDate = moment().format("YYYY-MM-DD");
+        = this.searchCondition.dialysisDate = dayjs().format("YYYY-MM-DD");
         // searchConditionの変更がinputに反映されるのを待つ
         await this.$nextTick();
 
@@ -944,8 +953,7 @@
 
       setBedGroupCd(value) {
         const selectedBedGroup = this.mstRoomBedGroup.find(
-          mst => mst.roomBedGroupCd === value
-        );
+          mst => mst.roomBedGroupCd === value);
         this.searchCondition.roomBedGroup.bedCdList = selectedBedGroup.bedList ? selectedBedGroup.bedList : [];
       },
 
@@ -957,7 +965,7 @@
         if(date){
           noticeDate = date;
         }else{
-          noticeDate = this.getCalendarSearchDate ? this.getCalendarSearchDate : moment().format("YYYY-MM-DD");
+          noticeDate = this.getCalendarSearchDate ? this.getCalendarSearchDate : dayjs().format("YYYY-MM-DD");
         }
         // 選択掲示板クリア
         this.setSelectedBbs(
@@ -993,8 +1001,7 @@
             is_time_end_flg: "1",
             color: null,
             font_color:null,
-          }
-        );
+          });
         // デフォルトコンテンツの初期化
         let defaultContents = "";
         // 掲示板種別マスタ作成済の場合
@@ -1016,14 +1023,12 @@
 
       async goFacilityCalendar(viewMode) {
         this.$router.push({ name: ROUTERLINK_FACILITY_CALENDAR });
-        await this.setViewMode(viewMode);
-        await this.sendInfo();
-        if (viewMode !== 3) {
-          // #9717 施設カレンダーでサイドコンテンツの開閉の際に読み込みが走り表示に時間がかかる linjunfeng start
-          // EventBus.$emit("updateDateFollowScreen", viewMode);
-          // #9717 施設カレンダーでサイドコンテンツの開閉の際に読み込みが走り表示に時間がかかる linjunfeng end
-          EventBus.$emit("updateConfigCurrentDate", viewMode);
-        }
+        this.deferViewModeApply = true;
+        EventBus.$emit("facilityCalendarQueueViewMode", viewMode);
+        this.sendInfo();
+      },
+      onViewModeApplyDone() {
+        this.deferViewModeApply = false;
       },
       // add #9558 機能帳票で正しく変数が引き渡されていない limingzhe start
       getSelectedDate(date){
@@ -1042,22 +1047,22 @@
       // del #9717 施設カレンダーでサイドコンテンツの開閉の際に読み込みが走り表示に時間がかかる linjunfeng start
       /*add FNSI-改修内容日付のチェックの追加対応。 趙立強 start*/
       showStartMsg(){
-      this.showErrorStartDate = document.getElementsByClassName("start-date")[0].validationMessage !== "";
+      this.showErrorStartDate = this.getHeaderInputByClassName("start-date").validationMessage !== "";
       },
       showEndMsg(){
-        this.showErrorEndDate = document.getElementsByClassName("end-date")[0].validationMessage !== "";
+        this.showErrorEndDate = this.getHeaderInputByClassName("end-date").validationMessage !== "";
       },
       showDialysisMsg(){
-        this.showErrorDialysisDate = document.getElementsByClassName("dialysis-date")[0].validationMessage !== "";
+        this.showErrorDialysisDate = this.getHeaderInputByClassName("dialysis-date").validationMessage !== "";
       },
       getStartDate(){
-        this.showErrorStartDate = document.getElementsByClassName("start-date")[0].validationMessage !== "";
+        this.showErrorStartDate = this.getHeaderInputByClassName("start-date").validationMessage !== "";
       },
       getEndDate(){
-        this.showErrorEndDate = document.getElementsByClassName("end-date")[0].validationMessage !== "";
+        this.showErrorEndDate = this.getHeaderInputByClassName("end-date").validationMessage !== "";
       },
       getDialysisDate(){
-        this.showErrorDialysisDate = document.getElementsByClassName("dialysis-date")[0].validationMessage !== "";
+        this.showErrorDialysisDate = this.getHeaderInputByClassName("dialysis-date").validationMessage !== "";
       },
       /*add FNSI-改修内容日付のチェックの追加対応。 趙立強 end*/
       // add #11065 【03】編集権限バグ修正 関 start
@@ -1195,11 +1200,11 @@
     display: none;
   }
 
-  .popover-area >>> .popover-mask {
+  .popover-area :deep(.popover-mask) {
     z-index: 100;
   }
 
-  .popover-area >>> .popover {
+  .popover-area :deep(.popover) {
     z-index: 200;
     min-width: 35em;
   }

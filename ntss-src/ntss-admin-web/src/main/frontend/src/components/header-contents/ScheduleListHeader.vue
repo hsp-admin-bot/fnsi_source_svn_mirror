@@ -1,6 +1,7 @@
 <template>
   <div class="pat-header">
     <table class="event-area mark-leftmost-header">
+      <tbody>
       <tr>
         <template v-if="headerDispMode == 1">
           <!-- 患者情報表示モード -->
@@ -53,7 +54,7 @@
               />
             </div>
             <v-ons-popover
-              :visible.sync="patEventsVisible"
+              v-model:visible="patEventsVisible"
               :target="popoverTarget"
               :direction="popoverDirection"
               cancelable
@@ -66,7 +67,7 @@
               <pat-events/>
             </v-ons-popover>
             <v-ons-popover
-              :visible.sync="examRequestsVisible"
+              v-model:visible="examRequestsVisible"
               :target="popoverTarget"
               :direction="popoverDirection"
               cancelable
@@ -79,7 +80,7 @@
               <exam-requests/>
             </v-ons-popover>
             <v-ons-popover
-              :visible.sync="radRequestsVisible"
+              v-model:visible="radRequestsVisible"
               :target="popoverTarget"
               :direction="popoverDirection"
               cancelable
@@ -116,11 +117,13 @@
           </td>
         </template>
       </tr>
+    
+      </tbody>
     </table>
 
     <!-- メニューエリア -->
     <v-ons-popover cancelable
-                   :visible.sync="headerPopoverShowFlag"
+                   v-model:visible="headerPopoverShowFlag"
                    :target="popoverTarget"
                    :direction="popoverDirection"
                    :cover-target="false"
@@ -270,10 +273,10 @@
       <card-list :pat-record="selectedPat" :header-click="true" />
       <!-- add FNSI 画面部品デザイン start -- Sanjingye Sun 20210114-->
       <div v-if="selectedPat !== null" class="type-right">
-        <img v-if="this.getTheme === 0 && direction === 'left' " class="menu-btn" id="menu-btn" src="img/pat-info/left_w.png" @click="menuDisplay()" style="z-index: 10; opacity: 0.5; top: -85vh; margin-left: 130px;"/>
-        <img v-else-if="this.getTheme === 0 && direction === 'right' " class="menu-btn" id="menu-btn" src="img/pat-info/right_w.png" @click="menuDisplay()" style="z-index: 10; opacity: 0.5; top: -85vh; margin-left: 130px;"/>
-        <img v-else-if="this.getTheme === 1 && direction === 'left' " class="menu-btn" id="menu-btn" src="img/pat-info/left_b.png" @click="menuDisplay()" style="z-index: 10; opacity: 0.5; top: -85vh; margin-left: 130px;"/>
-        <img v-else-if="this.getTheme === 1 && direction === 'right' " class="menu-btn" id="menu-btn" src="img/pat-info/right_b.png" @click="menuDisplay()" style="z-index: 10; opacity: 0.5; top: -85vh; margin-left: 130px;"/>
+        <img v-if="this.getTheme === 0 && direction === 'left' " class="menu-btn" id="menu-btn"  :src="publicAssetPath('img/pat-info/left_w.png')" @click="menuDisplay()" style="z-index: 10; opacity: 0.5; top: -85vh; margin-left: 130px;"/>
+        <img v-else-if="this.getTheme === 0 && direction === 'right' " class="menu-btn" id="menu-btn"  :src="publicAssetPath('img/pat-info/right_w.png')" @click="menuDisplay()" style="z-index: 10; opacity: 0.5; top: -85vh; margin-left: 130px;"/>
+        <img v-else-if="this.getTheme === 1 && direction === 'left' " class="menu-btn" id="menu-btn"  :src="publicAssetPath('img/pat-info/left_b.png')" @click="menuDisplay()" style="z-index: 10; opacity: 0.5; top: -85vh; margin-left: 130px;"/>
+        <img v-else-if="this.getTheme === 1 && direction === 'right' " class="menu-btn" id="menu-btn"  :src="publicAssetPath('img/pat-info/right_b.png')" @click="menuDisplay()" style="z-index: 10; opacity: 0.5; top: -85vh; margin-left: 130px;"/>
       </div>
       <!-- add FNSI 画面部品デザイン end -- Sanjingye Sun 20210114-->
     </div>
@@ -293,27 +296,28 @@ import {
   // add FNSI スケジュール表 権限対応 end -- Sanjingye Sun 20201229
 } from "@/constants/function-code.js";
 import PopoverMixin from "@/components/PopoverMixin";
+import { publicAssetPath } from "@/compat/assets/public-path";
 // 画像
-import mismatchInfectionImg from "@/../public/img/schedule-list/mismatch_infection.png";
-import matchInfectionImg from "@/../public/img/schedule-list/match_infection.png";
-import mismatchVaImg from "@/../public/img/schedule-list/mismatch_va.png";
-import matchVaImg from "@/../public/img/schedule-list/match_va.png";
-import mismatchTreatmentImg from "@/../public/img/schedule-list/mismatch_treatment.png";
-import matchTreatmentImg from "@/../public/img/schedule-list/match_treatment.png";
-import mismatchEventImg from "@/../public/img/schedule-list/mismatch_event.png";
-import matchEventImg from "@/../public/img/schedule-list/match_event.png";
-import mismatchInspectionImg from "@/../public/img/schedule-list/mismatch_inspection.png";
-import matchInspectionImg from "@/../public/img/schedule-list/match_inspection.png";
-import mismatchRadiationImg from "@/../public/img/schedule-list/mismatch_radiation.png";
-import matchRadiationImg from "@/../public/img/schedule-list/match_radiation.png";
+const mismatchInfectionImg = publicAssetPath("img/schedule-list/mismatch_infection.png");
+const matchInfectionImg = publicAssetPath("img/schedule-list/match_infection.png");
+const mismatchVaImg = publicAssetPath("img/schedule-list/mismatch_va.png");
+const matchVaImg = publicAssetPath("img/schedule-list/match_va.png");
+const mismatchTreatmentImg = publicAssetPath("img/schedule-list/mismatch_treatment.png");
+const matchTreatmentImg = publicAssetPath("img/schedule-list/match_treatment.png");
+const mismatchEventImg = publicAssetPath("img/schedule-list/mismatch_event.png");
+const matchEventImg = publicAssetPath("img/schedule-list/match_event.png");
+const mismatchInspectionImg = publicAssetPath("img/schedule-list/mismatch_inspection.png");
+const matchInspectionImg = publicAssetPath("img/schedule-list/match_inspection.png");
+const mismatchRadiationImg = publicAssetPath("img/schedule-list/mismatch_radiation.png");
+const matchRadiationImg = publicAssetPath("img/schedule-list/match_radiation.png");
 
 // ライブラリ
 
-import { mapGetters, mapActions, mapMutations } from "vuex";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 //日付処理用
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 //サイドバーボタンの余白を設定
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 // コンポーネント
 import cardList from "@/components/pat-info/PatInfoCardList.vue";
@@ -324,9 +328,11 @@ import radRequest from "@/components/header-contents/ScheduleListHeaderRadReques
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
+import { getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 // add #10371 編集権限について、対応する。 dengshen start
 import UserAuthorityMixin from "@/components/common/UserAuthorityMixin";
 // add #10371 編集権限について、対応する。 dengshen end
+import nameDuplication3Img from "../../assets/name_duplication3.png";
 //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx start
 import {
   DEF_DISABLED,
@@ -351,6 +357,11 @@ import {
  * @description 患者情報ヘッダ
  */
 export default {
+  inject: {
+    getNtssMainComponent: {
+      default: null
+    }
+  },
   // mod #10371 編集権限について、対応する。 dengshen start
   // mixins: [PopoverMixin],
   mixins: [PopoverMixin, UserAuthorityMixin],
@@ -405,15 +416,15 @@ export default {
       },
       headerPopoverShowFlag: false, //メニューの表示フラグ
       sendCondFlag: true, //条件送信可不可フラグ true:可能
-      image_src_same: require('../../assets/name_duplication3.png'), //同姓同名アイコン
+      image_src_same: nameDuplication3Img, //同姓同名アイコン
       patNameFontSize: 0, //患者名の文字サイズ
       examRequestsVisible: false,
       radRequestsVisible: false,
       patEventsVisible: false,
-      imagePatInfo: require("@/../public/img/pat-info/pat-info.png"),
-      imagePatViewer: require("@/../public/img/pat-viewer/pat-viewer.png"),
-      imageWeight: require("@/../public/img/weight/weight.png"),
-      imageTreatmentRecord: require("@/../public/img/treatment-record/treatment-record.png"),
+      imagePatInfo: publicAssetPath("img/pat-info/pat-info.png"),
+      imagePatViewer: publicAssetPath("img/pat-viewer/pat-viewer.png"),
+      imageWeight: publicAssetPath("img/weight/weight.png"),
+      imageTreatmentRecord: publicAssetPath("img/treatment-record/treatment-record.png"),
       isPatInfoVisibleLocal: false // add by #9691 shiyw // mod #10234 スケジュール表のヘッダーから表示される患者情報画面の動作不正修正 宮崎
     };
   },
@@ -492,6 +503,9 @@ export default {
     },
     // 患者名の文字サイズを設定
     patNameFontStyle() {
+      if (!this.patNameFontSize) {
+        return {};
+      }
       return { "font-size": `${this.patNameFontSize}px`};
     },
     showExamRequestsBtn() {
@@ -592,7 +606,7 @@ export default {
         }
         const setJson = {};
         // mod 9485 nullを空文字列判定に変換します 張博 start
-        setJson.selectedPatName = `${patJson.patLastName === (null||undefined) ? "" : patJson.patLastName} ${patJson.patFirstName === (null||undefined) ? "" : patJson.patFirstName}`;
+        setJson.selectedPatName = `${patJson.patLastName == null ? "" : patJson.patLastName} ${patJson.patFirstName == null ? "" : patJson.patFirstName}`;
         // mod 9485 nullを空文字列判定に変換します 張博 end
         //TODO:削除 setJson.selectedPatId = Math.round(Math.random() * 1000000); //患者ID  TODO:データから設定
         // setJson.selectedPatId = patJson.pat_id; //患者ID  TODO:データから設定
@@ -619,7 +633,7 @@ export default {
         if (this.showExamRequestsBtn) {
           this.initExamRequests({
             patIdList: [patJson.pat_id],
-            startDate: moment(patJson.treatDate, 'YYYYMMDD').format('YYYY/MM/DD'),
+            startDate: dayjs(patJson.treatDate, 'YYYYMMDD').format('YYYY/MM/DD'),
             endDate: null
           });
         }
@@ -627,7 +641,7 @@ export default {
         if (this.showRadRequestsBtn) {
           this.initRadRequests({
             patIdList: [patJson.pat_id],
-            startDate: moment(patJson.treatDate, 'YYYYMMDD').format('YYYY/MM/DD'),
+            startDate: dayjs(patJson.treatDate, 'YYYYMMDD').format('YYYY/MM/DD'),
             endDate: null
           });
         }
@@ -657,7 +671,7 @@ export default {
 
         this.setTreatBaseDate(treatDate_yyyy_mm_dd);
 
-        const mToday = moment().format("YYYY-MM-DD");
+        const mToday = dayjs().format("YYYY-MM-DD");
 
         //条件送信可不可確認
         if (
@@ -722,7 +736,7 @@ export default {
     EventBus.$on("changeMismatchTreatment", this.changeMismatchTreatment);
     //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx end
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("changeMismatchVa", this.changeMismatchVa);
     //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx start
     EventBus.$off("changeMismatchInfection", this.changeMismatchInfection);
@@ -731,6 +745,7 @@ export default {
   },
 
   methods: {
+    publicAssetPath,
     ...mapActions("schedule-list", [
       "setHeaderInfo",
       "setBedInfoForHeader",
@@ -766,17 +781,23 @@ export default {
     //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx end
     //  add FNSI-ジャンルメニューの固定化 start --Sanjingye Sun 20210114
     menuDisplay() {
-      let name = document.getElementById("menu-bar-id");
-      if (name.classList.contains("block")) {
+      const root = this.$el || null;
+      const menuBar = getScopedElementById("menu-bar-id", root);
+      const menuBtn = getScopedElementById("menu-btn", root);
+      const cardInfos = getScopedElementsByClassName("card-infos", root)[0];
+      if (!menuBar || !menuBtn || !cardInfos) {
+        return;
+      }
+      if (menuBar.classList.contains("block")) {
         this.direction = "right";
-        document.getElementById("menu-btn").style.marginLeft = "0px";
-        document.getElementById("menu-bar-id").setAttribute("class", "menu-bar-contents button-size none");
-        document.getElementsByClassName("card-infos")[0].style.marginLeft = "0px";
+        menuBtn.style.marginLeft = "0px";
+        menuBar.setAttribute("class", "menu-bar-contents button-size none");
+        cardInfos.style.marginLeft = "0px";
       } else {
         this.direction = "left";
-        document.getElementById("menu-btn").style.marginLeft = "130px";
-        document.getElementById("menu-bar-id").setAttribute("class", "menu-bar-contents button-size block");
-        document.getElementsByClassName("card-infos")[0].style.marginLeft = "143px";
+        menuBtn.style.marginLeft = "130px";
+        menuBar.setAttribute("class", "menu-bar-contents button-size block");
+        cardInfos.style.marginLeft = "143px";
       }
     },
     //  add FNSI-ジャンプメニューの固定化 start --Sanjingye Sun 20210114
@@ -862,7 +883,12 @@ export default {
       this.headerPopoverShowFlag = false;
       this.setHeaderSelectionFlag(this.headerPopoverShowFlag);
       //add FutreNetWeb+SI課題管理No4221対応 呉 start
-      this.$parent.$children[2].senntakuKaijyou();
+      const mainComponent = typeof this.getNtssMainComponent === "function"
+        ? this.getNtssMainComponent()
+        : null;
+      if (typeof mainComponent?.senntakuKaijyou === "function") {
+        mainComponent.senntakuKaijyou();
+      }
       //add FutreNetWeb+SI課題管理No4221対応 呉 end
     },
     /**
@@ -910,7 +936,7 @@ export default {
       //選択 ord_no を保持
       this.setOrdNoForSideBarRecord(this.selectedPatInfo.ordNo);
       //画面遷移
-      this.setSrcFuncName(this.$router.currentRoute.name);
+      this.setSrcFuncName(this.$route.name);
       this.$router.push({ name: toName });
     },
     showPatEvents(event) {
@@ -933,9 +959,20 @@ export default {
     },
     // ID・名前エリアの横幅設定
     calPatNameAreaWidth() {
+      const root = this.$el || null;
+      const patNameLabel = getScopedElementById("pat-name-label", root);
+      const eventArea = getScopedElementsByClassName("event-area", root)[0];
+      const patHeader = getScopedElementsByClassName("pat-header", root)[0];
+      const patIconArea = getScopedElementsByClassName("pat-icon-area", root)[0];
+      const patButtonArea = getScopedElementsByClassName("pat-button-area", root)[0];
+      const userMenu = getScopedElementById("user-menu", root);
+      const patName = getScopedElementById("pat-name", root);
+      const patNameArea = getScopedElementById("pat-name-area", root);
+      const hospPatIdLabel = getScopedElementsByClassName("hosp-pat-id", root)[0];
+
       // ID表示部の縦位置を戻す
-      if (document.getElementById("pat-name-label")) {
-        document.getElementById("pat-name-label").style.verticalAlign = "0em";
+      if (patNameLabel) {
+        patNameLabel.style.verticalAlign = "0em";
       }
 
       if (this.headerDispMode === 2) {
@@ -946,25 +983,30 @@ export default {
         return;
       }
 
+      if (!eventArea || !patHeader || !patIconArea || !patButtonArea || !userMenu || !patName || !patNameArea) {
+        return;
+      }
+
       // サイドバー表示エリアのサイズチェック
-      const searchButtonAreaStyles = window.getComputedStyle(document.getElementsByClassName("event-area")[0]);
+      const ownerWindow = eventArea.ownerDocument?.defaultView || this.$el?.ownerDocument?.defaultView || window;
+      const searchButtonAreaStyles = ownerWindow.getComputedStyle(eventArea);
       const searchButtonAreaLength = Number(searchButtonAreaStyles.getPropertyValue("margin-left").replace("px",""));
 
       // ID・名前エリア MAX幅
       // ヘッダー横幅 - サイドコンテンツ - ②エリア - ③エリア - フロートメニュー
-      let patNameMaxWidth = document.getElementsByClassName("pat-header")[0].clientWidth
+      let patNameMaxWidth = patHeader.clientWidth
         - searchButtonAreaLength
-        - document.getElementsByClassName("pat-icon-area")[0].clientWidth
-        - document.getElementsByClassName("pat-button-area")[0].clientWidth
-        - document.getElementById("user-menu").clientWidth;
+        - patIconArea.clientWidth
+        - patButtonArea.clientWidth
+        - userMenu.clientWidth;
 
       // ID・名前エリア MIN幅
       // iPhone横幅(375px) - サイドコンテンツ - ②エリア - ③エリア - フロートメニュー
       let patNameMinWidth = 375
         - searchButtonAreaLength
-        - document.getElementsByClassName("pat-icon-area")[0].clientWidth
-        - document.getElementsByClassName("pat-button-area")[0].clientWidth
-        - document.getElementById("user-menu").clientWidth;
+        - patIconArea.clientWidth
+        - patButtonArea.clientWidth
+        - userMenu.clientWidth;
 
       // エリア削除してもMAX幅がMIN幅未満の場合、MAX幅 = MIN幅にする
       if(patNameMaxWidth < patNameMinWidth) {
@@ -973,35 +1015,34 @@ export default {
       }
 
       // 患者名フォントサイズ：標準
-      document.getElementById("pat-name").style.fontSize = "3.5em";
+      patName.style.fontSize = "3.5em";
 
       // ID・名前エリアはMIN幅・MAX幅のみ設定し、横幅を自動変更できるようにする
-      document.getElementById("pat-name-area").style.minWidth = patNameMinWidth + "px" ;
-      document.getElementById("pat-name-area").style.maxWidth = patNameMaxWidth + "px" ;
-      document.getElementById("pat-name").style.maxWidth = patNameMaxWidth + "px" ;
+      patNameArea.style.minWidth = patNameMinWidth + "px" ;
+      patNameArea.style.maxWidth = patNameMaxWidth + "px" ;
+      patName.style.maxWidth = patNameMaxWidth + "px" ;
 
       // 変更後の幅を取る
-      let changedWidth = document.getElementById("pat-name").clientWidth;
+      let changedWidth = patName.clientWidth;
 
       // 変更後の幅がMAX幅を超える場合、フォントサイズを小さくする
       if (changedWidth >= patNameMaxWidth) {
         // 患者名フォントサイズ：第1段階
-        document.getElementById("pat-name").style.fontSize = "2.5em";
+        patName.style.fontSize = "2.5em";
 
         // 変更後の幅を取る
-        changedWidth = document.getElementById("pat-name").clientWidth;
+        changedWidth = patName.clientWidth;
 
         // 変更後の幅がMAX幅を超える場合、フォントサイズを小さくする
         // ここまで小さくしても収まらない場合、「…」で省略
         if (changedWidth >= patNameMaxWidth) {
           // 患者名フォントサイズ：第2段階
-          document.getElementById("pat-name").style.fontSize = "1.5em";
+          patName.style.fontSize = "1.5em";
 
           // アイコンが隠れる可能性がある場合、縦位置調整
-          let hospPatIdLabel = document.getElementsByClassName("hosp-pat-id")[0].clientWidth;
-          changedWidth = document.getElementById("pat-name").clientWidth;
-          if (hospPatIdLabel >= changedWidth) {
-            document.getElementById("pat-name-label").style.verticalAlign = "0.5em";
+          changedWidth = patName.clientWidth;
+          if (hospPatIdLabel && hospPatIdLabel.clientWidth >= changedWidth && patNameLabel) {
+            patNameLabel.style.verticalAlign = "0.5em";
           }
         }
       }
@@ -1152,7 +1193,7 @@ export default {
   margin: 0 5px 0 5px;
 }
 
-.schedule-list-header >>> .popover--top {
+.schedule-list-header :deep(.popover--top) {
   width: auto;
 }
 
@@ -1161,7 +1202,7 @@ export default {
 }
 
 /* add FNSI 画面部品デザイン start -- Sanjingye Sun 20210114 */
-.card-list >>> .menu-bar {
+.card-list :deep(.menu-bar) {
   position: absolute;
   left: 161px !important;
   top: 20px;
@@ -1169,7 +1210,7 @@ export default {
 
 /*mod FNSI-画面部品デザイン じょはく start*/
 /* mod #10260 文字サイズ特大にしたときに保存、キャンセルボタンの高さに白背景があっていない。不要な余白の排除 宮崎 start */
-.card-list >>> .card-infos {
+.card-list :deep(.card-infos) {
   height: 100% !important;
   margin-left: 143px;
   overflow-y: scroll;
@@ -1234,10 +1275,10 @@ export default {
     height: auto !important;
     background-color: unset;
   }
-  .card-list >>> .menu-bar {
+  .card-list :deep(.menu-bar){
     top: 0;
   }
-  .card-list >>> div {
+  .card-list :deep(div){
     height: auto !important;
   }
   /** 見出し開閉ボタン非表示 */

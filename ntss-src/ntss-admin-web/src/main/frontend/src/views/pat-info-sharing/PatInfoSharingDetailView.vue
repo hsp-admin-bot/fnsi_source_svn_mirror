@@ -1,16 +1,20 @@
 <template>
   <shr-split-layout>
-    <header-component slot="header-content" />
-    <bread-crumbs-component
-      slot="bread-crumbs-content"
-      :history-key="historyKey"
-      @refresh="refresh"
-    />
-    <main-component
-      slot="main-content"
-      ref="mainComponent"
-      :history-key="historyKey"
-    />
+    <template #header-content>
+      <header-component />
+    </template>
+    <template #bread-crumbs-content>
+      <bread-crumbs-component
+        :history-key="historyKey"
+        @refresh="refresh"
+      />
+    </template>
+    <template #main-content>
+      <main-component
+        ref="mainComponent"
+        :history-key="historyKey"
+      />
+    </template>
   </shr-split-layout>
 </template>
 
@@ -19,7 +23,7 @@ import ShrSplitLayout from "@/views/pat-info-sharing/ShrSplitLayout";
 import HeaderComponent from "@/components/pat-info-sharing/detail/SharingDetailHeaderComponent";
 import MainComponent from "@/components/pat-info-sharing/detail/SharingDetailMainComponent";
 import BreadCrumbsComponent from "@/components/BreadCrumbsComponent";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { HISTORY_KEY_PAT_INFO_SHARING_DETAIL } from "@/router/pat-info-sharing/HistoryKeyConstants";
 
 export default {
@@ -38,7 +42,7 @@ export default {
   created() {
     EventBus.$on("refresh", this.refresh);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
   },
   methods: {

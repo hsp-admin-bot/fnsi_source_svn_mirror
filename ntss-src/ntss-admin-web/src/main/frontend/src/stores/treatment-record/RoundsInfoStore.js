@@ -140,9 +140,10 @@ export default {
      * @param {*} ordNo オーダ番号
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
-    getTreatmentRecordRstRoundsInfo({ commit }, ordNo) {
-      return sendRequestGetTreatmentRecordRstRoundsInfo(ordNo).then(response => {
+    getTreatmentRecordRstRoundsInfo({ commit }, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetTreatmentRecordRstRoundsInfo(ordNo, selectedPatId).then(response => {
         commit("setUpDate", response.data.up_date);
         return response;
       });
@@ -155,7 +156,6 @@ export default {
      * @param {*} ordNo オーダ番号
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     updateTreatmentRecordRstRoundsInfo({ commit, state }, payload) {
       return sendRequestUpdateTreatmentRecordRstRoundsInfo(
         payload.ordNo,
@@ -172,9 +172,11 @@ export default {
      * @param {*} facilityCd 施設コード
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
-    getRoundTypeNameAndContent({ commit }, facilityCd) {
-      return sendRequestGetRoundTypeNameAndContent(facilityCd);
+    getRoundTypeNameAndContent({ commit }, payload) {
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const patId = payload && typeof payload === "object" ? payload.patId : undefined;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetRoundTypeNameAndContent(facilityCd, patId, selectedPatId);
     },
     /**
      * 医師取得.
@@ -183,9 +185,10 @@ export default {
      * @param {*} facilityCd 施設コード
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
-    getDoctorsAtFacility({ commit }, facilityCd) {
-      return sendRequestGetDoctorsAtFacility(facilityCd);
+    getDoctorsAtFacility({ commit }, payload) {
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetDoctorsAtFacility(facilityCd, selectedPatId);
     },
     /**
      * 定型文取得.
@@ -194,17 +197,20 @@ export default {
      * @param {*} facilityCd 施設コード
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
-    getFixedPhrase({ commit }, facilityCd) {
-      return sendRequestGetFixedPhrase(facilityCd);
+    getFixedPhrase({ commit }, payload) {
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetFixedPhrase(facilityCd, selectedPatId);
     },
     /**
      * 種別を取得し、Storeに保存する
      */
     async fetchRoundTypes({ commit }, payload) {
-      // mod #12462 患者情報共有 Ji start
-      const response = await sendRequestGetRoundTypeNameAndContent(payload.facilityCd, payload.patId);
-      // mod #12462 患者情報共有 Ji end
+      const response = await sendRequestGetRoundTypeNameAndContent(
+        payload.facilityCd,
+        payload.patId,
+        payload.selectedPatId
+      );
       commit("saveRoundTypes", {
         roundTypes: response.data
       });
@@ -249,9 +255,7 @@ export default {
      * @param {*} commit commitオブジェクト
      * @param {*} payload 指示コメント情報
      */
-    /* eslint-disable no-unused-vars */
     updateIndComment({ commit }, payload) {
-      /* eslint-enable no-unused-vars */
       return sendUpdateIndComment(payload);
     },
     /**

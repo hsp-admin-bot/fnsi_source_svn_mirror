@@ -14,6 +14,7 @@ import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.utils.MongoHealthCheckService;
 import org.seasar.doma.MapKeyNamingType;
+import jp.co.nikkiso.ntss.core.config.PersonalDb;
 import org.seasar.doma.jdbc.Config;
 import org.seasar.doma.jdbc.builder.SelectBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,6 +78,10 @@ public class LogEventServiceImpl implements ILogEventService {
   @Autowired
   private MstUserAuthenticationDao mstUserAuthenticationDao;
 //  add 8074 【デグレ】ログに誤った利用者が記録される 関  end
+
+  @Autowired
+  @PersonalDb
+  private Config personalDbConfig;
   /**
    * mongoDB検索
    *
@@ -104,7 +109,7 @@ public class LogEventServiceImpl implements ILogEventService {
     }
 
     String returnValue = "";
-    Config config = Config.get(patPersonalMainDao);
+    Config config = personalDbConfig;
     SelectBuilder selectBuilder = SelectBuilder.newInstance(config);
     selectBuilder.sql("select personal_info_decrypt('" + inData +"') as decrypt_value");
     List<Map<String, Object>> results = selectBuilder.getMapResultList(MapKeyNamingType.NONE);
@@ -132,7 +137,7 @@ public class LogEventServiceImpl implements ILogEventService {
       return "";
     }
     String returnValue = "";
-    Config config = Config.get(patPersonalMainDao);
+    Config config = personalDbConfig;
     SelectBuilder selectBuilder = SelectBuilder.newInstance(config);
     selectBuilder.sql("select personal_info_encrypt('" + inData +"') as encrypt_value");
     List<Map<String, Object>> results = selectBuilder.getMapResultList(MapKeyNamingType.NONE);

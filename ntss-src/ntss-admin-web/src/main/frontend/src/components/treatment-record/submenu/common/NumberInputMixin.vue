@@ -4,7 +4,7 @@ import {
   divideDecimal,
   plusDecimal
 } from "@/functions/treatment-record/NumberFunctions.js";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 
 const ARROW_UP_KEYCODE = 38;
 const ARROW_DOWN_KEYCODE = 40;
@@ -122,7 +122,8 @@ export default {
 		onMousewheel(event){
 			//console.log(document.activeElement)
 			//console.log(event.target)
-			if(event.target === document.activeElement){
+			const ownerDocument = event?.target?.ownerDocument || this.$el?.ownerDocument || document;
+			if(event.target === ownerDocument.activeElement){
 				this.currentValue = this.getRoundedValue(
 				  plusDecimal(
 					Number(this.currentValue),

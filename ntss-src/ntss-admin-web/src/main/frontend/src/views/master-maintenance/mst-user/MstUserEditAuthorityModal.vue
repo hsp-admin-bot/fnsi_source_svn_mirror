@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="custom-ons-list-header">
+    <template #body>
+      <div class="custom-ons-list-header">
       <v-ons-list modifier="inset">
         <v-ons-list-header>編集権限</v-ons-list-header>
         <v-ons-list-item class="ntss-theme-screen" modifier="nodivider">
@@ -103,7 +104,7 @@
         <!-- add #12462 患者共有権限 関 end -->
       </v-ons-list>
       <v-ons-popover cancelable
-        :visible.sync="userMenuPopoverVisible"
+        v-model:visible="userMenuPopoverVisible"
         :target="userMenuPopoverTarget"
         :cover-target="false"
         :direction="userMenuPopoverDirection"
@@ -115,14 +116,17 @@
          <p class="popover-message" id="popOverMessage">テスト</p>
        </v-ons-popover>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="btn2-cancel denial-btn" @click="cancel">キャンセル</v-ons-button>
       </div>
       <div class="registration-btn-area" style="background:none">
         <v-ons-button class="btn1-execute registration-btn" :disabled="registeredFlag" @click="registration">保存</v-ons-button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
@@ -131,12 +135,10 @@ import { sendRequestGetMstFacilitySettingValue } from "@/apis/facility-setting";
 import ModalBase from "@/components/modals/ModalBase";
 import { PERMISSION_CHANGE_SIGNOUT } from "@/constants/facilitySetting";
 import { MSG_SETTING_REFLECTION } from "@/constants/masterMaintenanceConstants";
-// mod #12462 患者情報共有 関 start
-import { editAuthorityList, deleteAuthorityList, patientSharedAuthorityList} from "@/constants/authorityList";
+import { editAuthorityList, deleteAuthorityList, patientSharedAuthorityList } from "@/constants/authorityList";
 import { FUNC_SHARING_PATIENT_INFORMATION } from "@/constants/function-code.js";
-// mod #12462 患者情報共有 関 end
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import { mapState, mapActions, mapGetters, mapMutations } from "vuex";
+import { mapState, mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import PopoverMixin from "@/components/PopoverMixin";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
@@ -146,12 +148,12 @@ import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/co
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
-import cloneDeep from "lodash/cloneDeep";
-import isEqualWith from "lodash/isEqualWith";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
 import { sortCompare } from "@/utils/util.js"
-// mod #12462 患者情報共有 関 start
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { facilityByCd } from "@/functions/mst/MstGetters.js";
-// mod #12462 患者情報共有 関 end
 export default {
   name: "MstUserEditAuthorityModal",
   mixins: [MultiModalMixin, PopoverMixin],
@@ -163,11 +165,9 @@ export default {
       // 入力項目
       editAuthList: editAuthorityList,
       deleteAuthList: deleteAuthorityList,
-      // add #12462 患者共有権限 関 start
       patientSharedAuthorityList: patientSharedAuthorityList,
       // store を更新せず、当画面表示用に最新機能権限を保持
       latestUseFunctions: null,
-      // add #12462 患者共有権限 関 end
       checkedAuthority: [],
       // 編集ユーザー情報
       editUserId: "",
@@ -182,25 +182,21 @@ export default {
     };
   },
   computed: {
-    // mod #12462 患者情報共有 関 start
     ...mapGetters("account-edit", [
         "getStateUserAccountInfo"
     ]),
-    // mod #12462 患者情報共有 関 end
     ...mapGetters("facility", ["isUseFunction"]),
     ...mapState("mst-user", ["userInfoModal"]),
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_利用者マスタ 20240105 mrx start
     registeredFlag() {
       return isEqualWith(this.checkedAuthority, this.defaultAuthority, sortCompare);
     },
-    // mod #12462 患者情報共有 関 start
     isPatientSharedAuthorized() {
       if (Array.isArray(this.latestUseFunctions)) {
         return this.latestUseFunctions.indexOf(FUNC_SHARING_PATIENT_INFORMATION) >= 0;
       }
       return this.isUseFunction(FUNC_SHARING_PATIENT_INFORMATION);
     }
-    // mod #12462 患者情報共有 関 end
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_利用者マスタ 20240105 mrx end
   },
   watch: {
@@ -246,9 +242,10 @@ export default {
     // mod #12462 患者共有権限 関 end
 
     if (this.userInfoModal.authorities.length !== 0){
-      this.userInfoModal.authorities.forEach(item => {
-        this.checkedAuthority.push(item);
-      });
+      this.checkedAuthority = [...this.checkedAuthority,...this.userInfoModal.authorities];
+      // this.userInfoModal.authorities.forEach(item => {
+      //   this.checkedAuthority.push(item);
+      // });
     }
     // mod #9386 施設設定マスタNo64で有効として権限を編集しても対象のアカウントが強制サインアウトされない dou start
     // this.defaultAuthority = this.checkedAuthority;
@@ -273,9 +270,7 @@ export default {
     ...mapActions("multi-modal", ["hideModal"]),
     ...mapActions("account-edit", ["updateAuthority", "getUserAccountInfo"]),
     ...mapMutations("account-edit", ["setUserAccountInfo"]),
-    // mod #12462 患者情報共有 関 start
     ...mapActions("mst-user", ["resetUserDataList", "getUserDataList", "setUserData"]),
-    // mod #12462 患者情報共有 関 end
 
     // 共通ローダー設定
     ...mapActions("loading-screen", {
@@ -298,8 +293,8 @@ export default {
           if (this.checkedAuthority[i] !== e.target.value && this.checkedAuthority[i].indexOf(chkValHead) === 0){
             this.checkedAuthority.splice(i, 1);
             // なぜかチェックした要素が未チェック状態になったのでチェックされるように修正
-            this.checkedAuthority.push(e.target.value);
-            break;
+            // this.checkedAuthority.push(e.target.value);
+            // break;
           }
         }
       }
@@ -341,7 +336,8 @@ export default {
             }
 
             // ユーザー情報更新
-            this.resetUserDataList(this.editFacilityCd);
+            await this.resetUserDataList(this.editFacilityCd);
+            EventBus.$emit("mst-user-grid-refresh");
 
             // 共通ローダー：表示終了
             this.setLoadingScreenVisible(false);
@@ -427,7 +423,7 @@ export default {
      * 吹き出し表示処理
      */
     showPopOver(event, message) {
-      var pop = document.getElementById("popOverMessage");
+      var pop = getScopedElementById("popOverMessage", this.$el || this);
       pop.innerText = message;
       this.userMenuPopoverTarget = event;
       this.userMenuPopoverVisible = true;
@@ -441,7 +437,7 @@ export default {
   width: 5em;
 }
 
-.custom-ons-list-header >>> ons-list-header {
+.custom-ons-list-header :deep(ons-list-header) {
   font-size: inherit;
   display: flex;
   align-items: center;

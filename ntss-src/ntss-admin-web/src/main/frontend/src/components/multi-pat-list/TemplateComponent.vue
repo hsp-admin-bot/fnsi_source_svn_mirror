@@ -1,43 +1,26 @@
 <template>
   <!-- mod FNSI-7483 劉全航 start -->
   <!-- <div class="multi-pat-list" style="height: 100%" v-if="isDisplay"> -->
-  <div id="multi-pat-list-template" class="multi-pat-list" style="height: 100%" v-show="isDisplay">
+  <div
+    id="multi-pat-list-template"
+    ref="gridContainer"
+    class="multi-pat-list"
+    style="height: 100%"
+    v-show="isDisplay"
+  >
     <!-- mod FNSI-7483 劉全航 end -->
-<!--    No.7167 upd Paging Optimization runtime by ztc start-->
-    <kendo-grid
-      id="kendo"
-      class="pat-num"
+    <KendoGridView
       ref="grid"
-      :data-source="kendoDataSource"
-      :reorderable="false"
+      class="pat-num"
+      :columns="kendoColumns"
+      :options="gridDataSourceOptions"
+      :height="gridHeight"
+      :scrollable="gridScrollable"
+      :sortable="gridSortable"
       :resizable="true"
-      :sortable="{ compare: compareByField }"
-      :virtual-scroll-mode="'continuous'"
-      :row-height="50"
+      :reorderable="true"
       :data-bound="kgridDataBound"
-      height="100%"
-      :sort="sortHandler"
-    >
-<!--      No.7167 upd Paging Optimization runtime by ztc end-->
-      <template v-for="(column, index) in columns">
-        <kendo-grid-column
-          :key="index"
-          :title="column.title"
-          :field="column.field"
-          :width="column.width"
-          :locked="column.locked"
-          :hidden="column.hidden"
-          :attributes="{ class: column.attributes }"
-        ></kendo-grid-column>
-      </template>
-      <template v-for="(category, i) in kendoGridColumns">
-        <kendo-grid-column
-          :key="`column_${i}`"
-          :title="category.title"
-          :columns="category.columns"
-        />
-      </template>
-    </kendo-grid>
+    />
 
     <v-ons-popover
       v-if="isPopoverVisible"
@@ -63,18 +46,18 @@
 </template>
 
 <script>
-    //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
+  import { publicAssetPath } from "@/compat/assets/public-path";
+  //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
   import { getCurrentFunctionCd } from "@/router/routing-helper";
   //add 5984 機能帳票でパラメータが正しく渡されていない 吉 end
-  import $$ from 'jquery';
-  import {EventBus} from '@/eventBus.js';
-  import _ from 'underscore';
-  // import {saveExcel} from '@progress/kendo-vue-excel-export';
-  var workbook_1 = require("@progress/kendo-vue-excel-export");
-  var kendo_file_saver_1 = require("@progress/kendo-file-saver");
-  import moment from 'moment';
-  import {mapActions, mapGetters} from 'vuex';
-  import encoding from 'encoding-japanese';
+  import $$ from "@/compat/jquery";
+  import { EventBus } from "@/compat/vue/event-bus.js";
+  import { has, values } from "@/compat/collections/lodash";
+  import * as workbook_1 from "@/functions/common/KendoFunctions";
+  import * as kendo_file_saver_1 from "@/functions/common/KendoFunctions";
+  import dayjs from "@/compat/date/dayjs";
+  import { mapActions, mapGetters } from "@/compat/vue/vuex";
+  import encoding from "@/compat/encoding/encoding-japanese";
   import {ApiHelper} from '@/apis/AxiosHelper';
   import {AUTHORITY_CODES} from '@/constants/userAuthority';
   import ComponentGuardMixin from '@/components/common/ComponentGuardMixin';
@@ -628,13 +611,39 @@
   import { dateFormat } from "@/functions/common/DateTimeUtils";
   import { sortableCompare } from "@/functions/SortFunctions";
   import PrintMixin from "@/components/PrintMixin";
+  import KendoGridView from "@/components/kendo-ui/KendoGridView.vue";
 
+  const GRID_PAGE_SIZE = 20;
   const CLASS_EDITED_CELL = 'grid-edited-cell';
   const CLASS_AFTERSENDCONDITION_CELL = "grid-after-send-condition-cell";
   const CLASS_DIALYSIS_CELL = "grid-dialysis-cell";
   const CLASS_AFTERDIALYSIS_CELL = "grid-after-dialysis-cell";
 
+  function omitKey(object, key) {
+    const { [key]: _omitted, ...rest } = object;
+    return rest;
+  }
+
+  function groupByKey(items, keySelector) {
+    return items.reduce((groups, item) => {
+      const groupKey = keySelector(item);
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(item);
+      return groups;
+    }, {});
+  }
+
+  function intersectionArrays(left, right) {
+    const rightSet = new Set(right);
+    return left.filter(item => rightSet.has(item));
+  }
+
 export default {
+  components: {
+    KendoGridView,
+  },
   mixins: [IndUserSelectMixin, PopoverMixin, ComponentGuardMixin, PrintMixin],
   data() {
     return {
@@ -673,12 +682,12 @@ export default {
       titleList: [],
       titleListCategory: [],
       firstFlg: false,
-      imagePatInfo: require("@/../public/img/pat-info/pat-info.png"),
-      imagePatViewer: require("@/../public/img/pat-viewer/pat-viewer.png"),
-      imageTreatmentRecord: require("@/../public/img/treatment-record/treatment-record.png"),
-      imageExamRecord: require("@/../public/img/exam-record/exam-record.png"),
-      imageExamRequest: require("@/../public/img/exam-request/exam-request.png"),
-      imageDevicesetInfo: require("@/../public/img/deviceset-info/deviceset-info.png"),
+      imagePatInfo: publicAssetPath("img/pat-info/pat-info.png"),
+      imagePatViewer: publicAssetPath("img/pat-viewer/pat-viewer.png"),
+      imageTreatmentRecord: publicAssetPath("img/treatment-record/treatment-record.png"),
+      imageExamRecord: publicAssetPath("img/exam-record/exam-record.png"),
+      imageExamRequest: publicAssetPath("img/exam-request/exam-request.png"),
+      imageDevicesetInfo: publicAssetPath("img/deviceset-info/deviceset-info.png"),
       //FNSI-修正 【治療予定・治療記録】初期化性能改善 xugj add end
       idList: [],
       kendoGridColumns: [],
@@ -736,9 +745,14 @@ export default {
       /* add by chamaojia 2023-05-05 [8610] ヘッダーロードフラグ変数の追加 --start */
       titleLoadingFlag : false,  // ヘッダロードフラグ   true:ロード中
       /* add by chamaojia 2023-04-21 [8610] ヘッダーロードフラグ変数の追加 --end */
+      // 列リサイズ前の初期幅を保持（パンくずリフレッシュ時に復元する）
+      initialColumnsSnapshot: null,
+      initialKendoGridColumnsSnapshot: null,
       currentSort: null,
-      scrollQuerySelector: ".k-grid-content", // スクロールコンテナ
-      addClassTargetQuerySelector: [".k-grid-header-wrap table, .k-grid-content table"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
+      gridHeight: 400,
+      gridResizeObserver: null,
+      scrollQuerySelector: "#multi-pat-list-template .k-virtual-scrollable-wrap",
+      addClassTargetQuerySelector: ["#multi-pat-list-template .k-grid table"],
     };
   },
   // add #6256 背景色が変わらない 徐博 start
@@ -816,6 +830,54 @@ export default {
         medical_hst_info: this.changeInfoToMedicalHstInfo,
         physical_info: this.changeInfoToPhysicalInfo,
       };
+    },
+
+    kendoColumns() {
+      const fixedColumns = (this.columns || []).map(col => {
+        const kendoCol = {
+          field: col.field,
+          title: col.title,
+          width: col.width,
+          locked: col.locked,
+          hidden: col.hidden,
+        };
+        if (col.attributes) {
+          kendoCol.attributes = { class: col.attributes };
+        }
+        return kendoCol;
+      });
+      return [...fixedColumns, ...(this.kendoGridColumns || [])];
+    },
+
+    gridDataSourceOptions() {
+      const ds = this.kendoDataSource;
+      if (!ds) {
+        return {
+          data: [],
+          serverPaging: false,
+          pageSize: GRID_PAGE_SIZE,
+        };
+      }
+      const options = {
+        data: ds.data ?? [],
+        serverPaging: false,
+        pageSize: GRID_PAGE_SIZE,
+      };
+      if (ds.schema) {
+        options.schema = ds.schema;
+      }
+      if (ds.sort) {
+        options.sort = ds.sort;
+      }
+      return options;
+    },
+
+    gridScrollable() {
+      return { virtual: "rows, columns" };
+    },
+
+    gridSortable() {
+      return { compare: this.compareByField };
     },
   },
   watch: {
@@ -913,6 +975,8 @@ export default {
     // Rootページのサイドバーボタン要素のイベントリスナー設定
     const rootSideBarBtn = document.querySelector('#showPatientSearchSidebarBtn');
     rootSideBarBtn?.addEventListener('click', this.setGridHeight);
+    this.setupGridHeightObserver();
+    this.$nextTick(() => this.updateGridHeight());
   },
   methods: {
     ...mapActions('pat-info', ['selectPat']),
@@ -932,6 +996,33 @@ export default {
     popoverPreShow,
     popoverPostShow,
     popoverPosthide,
+
+    getGridWidget() {
+      return this.$refs.grid?.getWidget?.() ?? null;
+    },
+
+    setupGridHeightObserver() {
+      const container = this.$refs.gridContainer;
+      if (!container || typeof ResizeObserver === "undefined") {
+        return;
+      }
+      this.gridResizeObserver = new ResizeObserver(() => {
+        this.updateGridHeight();
+      });
+      this.gridResizeObserver.observe(container);
+    },
+
+    updateGridHeight() {
+      const container = this.$refs.gridContainer;
+      if (!container) {
+        return;
+      }
+      const height = container.clientHeight;
+      if (height > 0 && height !== this.gridHeight) {
+        this.gridHeight = height;
+        this.$nextTick(() => this.$refs.grid?.resize());
+      }
+    },
 
     /**
      * 列ヘッダクリック時にソート順を設定
@@ -977,7 +1068,7 @@ export default {
       if (this.kendoDataSource === null || !this.kendoDataSource.data || this.kendoDataSource.data.length === 0) {
         return;
       }
-      const grid = $$("#kendo").data("kendoGrid");
+      const grid = this.getGridWidget();
       if (!grid) {
         return;
       }
@@ -1055,15 +1146,15 @@ export default {
           // mod #9558 機能帳票で正しく変数が引き渡されていない 2024/06/13 高　end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
           // facilityCd: this.getFacilityCd,
-          // date:moment(this.indStartDate).format('YYYY/MM/DD'),
-          // fromDate: moment(this.indStartDate).format('YYYY/MM/DD'),
-          // toDate: moment(this.indEndDate).format('YYYY/MM/DD'),
+          // date:dayjs(this.indStartDate).format('YYYY/MM/DD'),
+          // fromDate: dayjs(this.indStartDate).format('YYYY/MM/DD'),
+          // toDate: dayjs(this.indEndDate).format('YYYY/MM/DD'),
           facilityCd: this.facilityCd,
-          date: moment(Date.now()).format("YYYYMMDD"),
-          fromDate: moment(Date.now()).format("YYYYMMDD"),
-          toDate: moment(Date.now()).format("YYYYMMDD"),
+          date: dayjs(Date.now()).format("YYYYMMDD"),
+          fromDate: dayjs(Date.now()).format("YYYYMMDD"),
+          toDate: dayjs(Date.now()).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: moment(Date.now()).format("YYYYMMDD"),
+          //dialysisDate: dayjs(Date.now()).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
           functionCd:"00801",
@@ -1163,12 +1254,30 @@ export default {
           break;
       }
     },
+    // getTitle 完了時の列定義をスナップショットとして保存する
+    saveInitialGridColumnSnapshot() {
+      this.initialColumnsSnapshot = JSON.parse(JSON.stringify(this.columns));
+      this.initialKendoGridColumnsSnapshot = JSON.parse(
+        JSON.stringify(this.kendoGridColumns)
+      );
+    },
+    // ユーザーによる列リサイズを破棄し、初期列幅に戻す
+    restoreInitialGridColumns() {
+      if (this.initialColumnsSnapshot) {
+        this.columns = JSON.parse(JSON.stringify(this.initialColumnsSnapshot));
+      }
+      if (this.initialKendoGridColumnsSnapshot) {
+        this.kendoGridColumns = JSON.parse(
+          JSON.stringify(this.initialKendoGridColumnsSnapshot)
+        );
+      }
+    },
     async getInitData() {
       //No.7167 upd Paging Optimization runtime by ztc start
       //del 9796データリスト画面で患者情報2のデータが表示されない。start
       //window.removeEventListener("scroll", this.handleScroll, true);
       //del 9796データリスト画面で患者情報2のデータが表示されない。end
-      if (_.has(this.getSelectedDynamicLayout,'templateCd') &&
+      if (has(this.getSelectedDynamicLayout,'templateCd') &&
         (this.getSelectedDynamicLayout.templateCd == PAT_INFO_TWO_TEMPLATE_CD || this.getSelectedDynamicLayout.templateCd == TREATMENT_PLAN_TREATMENT_RECORD)) {
         //del 9796データリスト画面で患者情報2のデータが表示されない。start
         //window.addEventListener("scroll", this.handleScroll, true);
@@ -1190,98 +1299,35 @@ export default {
       this.patIdArr = this.patIdListToDisplay;
       //No.7167 upd Paging Optimization runtime by ztc end
       this.setLink();
+      this.restoreInitialGridColumns();
       this.setLoadingScreenVisible(true);
       await this.getDataSource();
       this.setLoadingScreenVisible(false);
+      this.$nextTick(() => {
+        this.$refs.grid?.refreshColumns(this.kendoColumns);
+        this.$refs.grid?.resize();
+      });
       setTimeout(() => {
-        const sortGrid = $$('#kendo').data('kendoGrid');
+        const sortGrid = this.getGridWidget();
         if (sortGrid != null) {
           this.bindShowPopoverEvent();
-          sortGrid.bind('sort', () => {
+          sortGrid.bind('sort', e => {
+            this.sortHandler(e);
             this.bindShowPopoverEvent();
             this.$nextTick(() => {
               this.findPatInDialysis();
-            })
+            });
           });
         }
         this.setSame();
       }, 100);
-    },
-    /**
-     * 固定列、スクロール列の高さが倍率変更時にズレる為
-     * 二つを合わせる処理を行う
-     */
-    setLockedContentHeight() {
-      // 固定列、スクロール列の要素の高さを合わせる
-      const scrollHeight = parseFloat(getComputedStyle(document.getElementsByClassName("k-auto-scrollable")[1]).height);
-      document.getElementsByClassName("k-grid-content-locked")[0].style.height = `${scrollHeight}px`;
-    },
-    /**
-     * フォントサイズの変更時に固定列ヘッダの高さがズレる為
-     * スクロール列ヘッダの高さと合わせる処理を行う
-     */
-    setLockedHeaderHeight() {
-      // ヘッダ要素取得
-      const lockHeader = document.getElementsByClassName('k-grid-header-locked')[0];
-      const lockTr = lockHeader.children[0].children[1].children[0];
-      const scrollHeader = document.getElementsByClassName('k-auto-scrollable')[0];
-      const scrollTh = scrollHeader.children[0].children[1];
-
-      // 固定列要素の高さ更新
-      const lockHeaderHeight = scrollTh.getBoundingClientRect().height;
-      lockTr.style.height = `${lockHeaderHeight}px`;
-    },
-    /**
-     * テーブル内の各行の高さの調節を行う
-     */
-    setRowHeight() {
-      // tr要素取得
-      let lockTrs = $$(".k-grid-content-locked").find('tr');
-      let scrollTrs = $$(".k-grid-content").find('tr');
-
-      // 高さ設定
-      for (let i = 0; i < lockTrs.length; i += 1) {
-        let lockTr = lockTrs[i];
-        let scrollTr = scrollTrs[i];
-
-        // スタイルリセット
-        lockTr.style.height = `auto`;
-        scrollTr.style.height = `auto`;
-
-        // 要素の高さを取得
-        let lockH = lockTr.getBoundingClientRect().height;
-        let scrollH = scrollTr.getBoundingClientRect().height;
-
-        // 高さが異なる場合は高いほうに合わせる
-        if (lockH < scrollH) {
-          lockTr.style.height = `${scrollH}px`;
-        } else if (scrollH < lockH) {
-          scrollTr.style.height = `${lockH}px`;
-        }
-      }
     },
     calculateReportArea() {
       this.isDisplay = false;
       this.$nextTick(() => {
         this.isDisplay = true;
         this.$nextTick(() => {
-          let div = document.getElementById("kendo");
-          let divMain = document.getElementById("main-id");
-          div.style.height = divMain.clientHeight + "px";
-          let clientHeight2 = divMain.clientHeight - div.children[0].clientHeight;
-          let clientHeight1 = clientHeight2 - 17;
-          if (div.children[1]) {
-            div.children[1].style.height = clientHeight1 + "px";
-          }
-          if (div.children[2]) {
-            div.children[2].style.height = clientHeight2 + "px";
-          }
-          // 固定列、スクロール列の高さの調整
-          this.setLockedContentHeight();
-          // 固定列、スクロール列のヘッダの高さの調整
-          this.setLockedHeaderHeight();
-          // 固定列、スクロール列の行高さの調整
-          this.setRowHeight();
+          this.updateGridHeight();
         });
       });
     },
@@ -1291,9 +1337,7 @@ export default {
      */
     kgridDataBound() {
       this.$nextTick(() => {
-        // 固定列、スクロール列の高さの調整
-        this.setLockedContentHeight();
-        this.enableLockedColumnScroll();
+        this.setSame();
       });
     },
 
@@ -1310,8 +1354,8 @@ export default {
 
       if (this.sameList.length > 0) {
         if (this.sameList.length > 0) {
-          this.sameList = _.uniq(this.sameList);
-          let img = `<img class="same-icon" src="${require('../../assets/name_duplication.png')}"/>`;
+          this.sameList = Array.from(new Set(this.sameList));
+          let img = `<img class="same-icon" src="${new URL('../../assets/name_duplication.png', import.meta.url).href}"/>`;
           this.sameList.forEach(x => {
             let el = $$(`td.cell-patname:contains(${x})`);
             if (el.html()) {
@@ -1416,9 +1460,9 @@ export default {
           x.title = titleName[0].categoryName;
         }
         // mod FNSI6519-実行ボタンを押下しなくてもデータが読み込まれる 周 end
-        x = _.omit(x, 'category');
+        x = omitKey(x, 'category');
         x.columns = x.items;
-        x = _.omit(x, 'items');
+        x = omitKey(x, 'items');
         x.columns = x.columns.map(y => ({ title: y }));
         let data = response.data.filter(
           y => y.dataListDetailCd == x.data_list_detail_cd
@@ -1482,18 +1526,18 @@ export default {
           // add #10077 by zhangruixue 2024-01-03 --end
           return y;
         });
-        x = _.omit(x, 'data_list_detail_cd');
+        x = omitKey(x, 'data_list_detail_cd');
         return x;
       });
-      kendoGridColumn = _.groupBy(kendoGridColumn, x => x.key);
+      kendoGridColumn = groupByKey(kendoGridColumn, x => x.key);
       // add #6523 DWが登録されているのにも関わらず、DWの欄に「未登録」と表示される dou start
-      const allCategory = _.keys(kendoGridColumn);
+      const allCategory = Object.keys(kendoGridColumn);
       // add #6523 DWが登録されているのにも関わらず、DWの欄に「未登録」と表示される dou end
-      kendoGridColumn = _.values(kendoGridColumn);
+      kendoGridColumn = values(kendoGridColumn);
       let kendoGridColumnTmp = kendoGridColumn.map(x => {
         let m = [];
         x.forEach(y => m.push(y.columns));
-        m = _.flatten(m);
+        m = m.flat();
         let n = {
           key: x[0].key,
           title: x[0].title,
@@ -1508,8 +1552,8 @@ export default {
         });
         kendoGridColumn = kendoGridColumns;
         // add #6523 DWが登録されているのにも関わらず、DWの欄に「未登録」と表示される dou start
-        if (_.intersection(allCategory, IND_CATEGORY_LIST).length == 0
-          && _.intersection(allCategory, RST_CATEGORY_LIST).length > 0) {
+        if (intersectionArrays(allCategory, IND_CATEGORY_LIST).length == 0
+          && intersectionArrays(allCategory, RST_CATEGORY_LIST).length > 0) {
           this.isOnlyRst = true;
           //No.7167 upd Paging Optimization runtime by ztc start
         } else {
@@ -1965,8 +2009,9 @@ export default {
           },
         ];
       }
-      selectedLayout = selectedLayout.map(x => _.omit(x, 'key'));
+      selectedLayout = selectedLayout.map(x => omitKey(x, 'key'));
       this.kendoGridColumns = kendoGridColumn;
+      this.saveInitialGridColumnSnapshot();
       this.setSelectedLayout(selectedLayout);
       this.setLoadingScreenVisible(false);
       this.kendoDataSource = {
@@ -1977,6 +2022,10 @@ export default {
           },
         },
       };
+      this.$nextTick(() => {
+        this.$refs.grid?.refreshColumns(this.kendoColumns);
+        this.$refs.grid?.resize();
+      });
     },
 
     /* add by chamaojia 2023-06-08 [8610] hash値を取得する関数の追加  --start */
@@ -2033,15 +2082,15 @@ export default {
         //No.7167 upd Paging Optimization runtime by ztc end
         return;
       }
-      let startDate = moment().format('YYYY-MM-DD');
-      let endDate = moment().format('YYYY-MM-DD');
+      let startDate = dayjs().format('YYYY-MM-DD');
+      let endDate = dayjs().format('YYYY-MM-DD');
       const patListLayoutCd = this.getSelectedDynamicLayout.patListLayoutCd;
       const rangeDateTmp = this.getRangeDate.find(rangeDate => rangeDate.layoutCd === patListLayoutCd);
       if (rangeDateTmp && rangeDateTmp.dayObj) {
-        startDate = moment(rangeDateTmp.dayObj.startDate).format(
+        startDate = dayjs(rangeDateTmp.dayObj.startDate).format(
           'YYYY-MM-DD'
         );
-        endDate = moment(rangeDateTmp.dayObj.endDate).format(
+        endDate = dayjs(rangeDateTmp.dayObj.endDate).format(
           'YYYY-MM-DD'
         );
       }
@@ -2049,11 +2098,18 @@ export default {
       // const templateCd = this.getSelectedDynamicLayout.templateCd;
       //FNSI-修正 【治療予定・治療記録】初期化性能改善 xugj add end
       //No.7167 upd Paging Optimization runtime by ztc start
-      let url = '';
+      // mod #11718 【#11600持ち越し】データリスト画面不正② fang start
+      let url = 'sysDataListDetail/getTemplateValueForTreatmentRecord';
+      const reqParams = {
+        patIdList: patIdList,
+        startDate: startDate,
+        endDate: endDate,
+        templateCd: templateCd
+      }
       if (templateCd == TREATMENT_PLAN_TREATMENT_RECORD) {
-        url = `sysDataListDetail/getTemplateValue/${patIdList}/${startDate}/${endDate}/${templateCd}/${this.offset}?isOnlyRst=${this.isOnlyRst}`;
-      } else {
-        url = `sysDataListDetail/getTemplateValue/${patIdList}/${startDate}/${endDate}/${templateCd}`;
+        // url = `sysDataListDetail/getTemplateValue/${patIdList}/${startDate}/${endDate}/${templateCd}/${this.offset}?isOnlyRst=${this.isOnlyRst}`;
+        reqParams['offset'] = this.offset
+        reqParams['isOnlyRst'] = this.isOnlyRst
       }
       // let url = `sysDataListDetail/getTemplateValue/${patIdList}/${startDate}/${endDate}/${templateCd}`;
       //No.7167 upd Paging Optimization runtime by ztc end
@@ -2065,7 +2121,8 @@ export default {
       let responseFigure;
       /*add FNSI-改修内容5237 任 end*/
       try {
-        response = await ApiHelper.get(url);
+        // response = await ApiHelper.get(url);
+        response = await ApiHelper.post(url, reqParams);
         /*add FNSI-改修内容5237 任 start*/
         responseFigure = await ApiHelper.get(urlFigure);
         /*add FNSI-改修内容5237 任 end*/
@@ -2075,6 +2132,7 @@ export default {
         //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
         console.log(error);
       }
+      // mod #11718 【#11600持ち越し】データリスト画面不正② fang end
       // add #11528 【たくしん会】データリスト並び順不正 房 start
       const sortFunc = (a, b) => {
         let aIndex = this.searchedPatList.findIndex(patInfoObj => patInfoObj.pat_id == a.pat_id);
@@ -2202,17 +2260,17 @@ export default {
           return y;
         });
         x.list = this.dataGroupingToArray(x.list, keyList2);
-        x.list = x.list.map(y => _.omit(y, 'list'));
+        x.list = x.list.map(y => omitKey(y, 'list'));
         x.list.map(y => {
-          let key = _.values(y);
+          let key = values(y);
           let list = key[0].substr(1).split('$');
           let value = list[0];
-          list = _.rest(list);
+          list = list.slice(1);
           list = list.join('$');
           list = '$' + list;
           x[list] = value;
         });
-        x = _.omit(x, 'list');
+        x = omitKey(x, 'list');
         let valueList = [];
         if (
           templateCd == TREATMENT_PLAN_TREATMENT_RECORD ||
@@ -2223,8 +2281,8 @@ export default {
           x.pat_name = valueList[1];
           // NOTE: スクロール列側で設定していた「治療日(1404)」から固定列用に「治療日」を設定する
           x.treat_date = x[`$1404$0`];
-          x.datetime = moment(valueList[2]).format('YYYY/MM/DD HH:mm');
-          x = _.omit(x, 'hosp_pat_idpat_namedatetime');
+          x.datetime = dayjs(valueList[2]).format('YYYY/MM/DD HH:mm');
+          x = omitKey(x, 'hosp_pat_idpat_namedatetime');
         } else if (templateCd == VITAL_MONITORS_COMPLAINTS_CD) {
           // mod bug 7578 修正 chen start
           // mod #11420 【たくしん会】H9愁訴処置の表示が壊れる、データが倍増する、データが登録されない。　V1.0B zkm start
@@ -2233,20 +2291,20 @@ export default {
           // mod #11420 【たくしん会】H9愁訴処置の表示が壊れる、データが倍増する、データが登録されない。　V1.0B zkm end
           x.hosp_pat_id = valueList[0];
           x.pat_name = valueList[1];
-          x.ind_date = moment(valueList[2]).format('YYYY/MM/DD');
-          x.datetime = moment(valueList[3]).format('YYYY/MM/DD HH:mm');
+          x.ind_date = dayjs(valueList[2]).format('YYYY/MM/DD');
+          x.datetime = dayjs(valueList[3]).format('YYYY/MM/DD HH:mm');
           x.ctl_no = valueList[4];
           // mod #11420 【たくしん会】H9愁訴処置の表示が壊れる、データが倍増する、データが登録されない。　V1.0B zkm start
           x.row_no = valueList[5];
-          // x = _.omit(x, 'hosp_pat_idpat_nameind_datedatetimectl_no');
-          x = _.omit(x, 'hosp_pat_idpat_nameind_datedatetimectl_norow_no');
+          // x = omitKey(x, 'hosp_pat_idpat_nameind_datedatetimectl_no');
+          x = omitKey(x, 'hosp_pat_idpat_nameind_datedatetimectl_norow_no');
           // mod #11420 【たくしん会】H9愁訴処置の表示が壊れる、データが倍増する、データが登録されない。　V1.0B zkm end
           // mod bug 7578 修正 chen end
         } else {
           valueList = x.hosp_pat_idpat_name.substr(1).split('$');
           x.hosp_pat_id = valueList[0];
           x.pat_name = valueList[1];
-          x = _.omit(x, 'hosp_pat_idpat_name');
+          x = omitKey(x, 'hosp_pat_idpat_name');
         }
         return x;
       });
@@ -2388,26 +2446,20 @@ export default {
       };
       // add bug 5286 修正 chen start
       this.$nextTick(() => {
-        // let div = document.getElementsByClassName("k-grid-content k-auto-scrollable")[0];
-        // let heightTmp = parseInt(div.currentStyle ? div.currentStyle["height"] : getComputedStyle(div)["height"]);
-        // document.getElementsByClassName("k-grid-content-locked")[0].style.height = heightTmp + "px";
-        let div = document.getElementById("kendo");
-        let divMain = document.getElementById("main-id");
-        div.style.height = divMain.clientHeight + "px";
-        let clientHeight2 = divMain.clientHeight - div.children[0].clientHeight;
-        let clientHeight1 = clientHeight2 - 17;
-        if (div.children[1]) {
-          div.children[1].style.height = clientHeight1 + "px";
-        }
-        if (div.children[2]) {
-          div.children[2].style.height = clientHeight2 + "px";
+        this.updateGridHeight();
+        const grid = this.getGridWidget();
+        if (grid?.dataSource && this.currentSort) {
+          grid.dataSource.sort(this.currentSort);
         }
         //No.7167 upd Paging Optimization runtime by ztc start
-        if (_.has(this.getSelectedDynamicLayout,'templateCd') &&
+        if (has(this.getSelectedDynamicLayout,'templateCd') &&
           (this.getSelectedDynamicLayout.templateCd == PAT_INFO_TWO_TEMPLATE_CD || this.getSelectedDynamicLayout.templateCd == TREATMENT_PLAN_TREATMENT_RECORD)) {
-          const scrollable = document.getElementsByClassName("k-auto-scrollable")[1];
-          scrollable.scrollTop = this.currentScrollTop;
-          scrollable.scrollLeft = this.currentScrollLeft;
+          const scrollable = this.$refs.gridContainer?.querySelector(".k-virtual-scrollable-wrap")
+            || document.getElementsByClassName("k-auto-scrollable")[1];
+          if (scrollable) {
+            scrollable.scrollTop = this.currentScrollTop;
+            scrollable.scrollLeft = this.currentScrollLeft;
+          }
         }
       });
       this.scrollFlag = true
@@ -3112,8 +3164,8 @@ export default {
           let purification_count = "";
           let dyalysis_hst = "";
           let y = JSON.parse(x.medical_care_info);
-          let dialHstYear = moment().diff(y.dialysis_start_date, "years");
-          let dialHstMonth = moment().diff(y.dialysis_start_date, "months") % 12;
+          let dialHstYear = dayjs().diff(y.dialysis_start_date, "years");
+          let dialHstMonth = dayjs().diff(y.dialysis_start_date, "months") % 12;
           let dialHst = `${!dialHstYear ? 0 : dialHstYear}年 ${!dialHstMonth ? 0 : dialHstMonth}ヶ月`;
           //mod 9796 pat_mainで保存された旧データの中で、ward_cd、main_course_cd、dialysis_course_cdが文字型である場合あるので、ここの処理を調整。 ljx start
           //let course = mstCourses.find(item => item.courseCd === y.main_course_cd && item.facilityCd === x.facility_cd);
@@ -3927,8 +3979,8 @@ export default {
                   infectDiseaseNoCheckDate,
                   /*mod FNSI-改修内容5217 任 start*/
                   /*y.exam_date*/
-                  moment(y.exam_date).isValid()
-                    ? moment(y.exam_date).format('YYYY/MM/DD')
+                  dayjs(y.exam_date).isValid()
+                    ? dayjs(y.exam_date).format('YYYY/MM/DD')
                     : ''
                   /*mod FNSI-改修内容5217 任 end*/
                 );
@@ -3937,8 +3989,8 @@ export default {
                   infectDiseaseNoUpdate,
                   /*mod FNSI-改修内容5217 任 start*/
                   /*y.up_date*/
-                  moment(y.up_date).isValid()
-                    ? moment(y.up_date).format('YYYY/MM/DD')
+                  dayjs(y.up_date).isValid()
+                    ? dayjs(y.up_date).format('YYYY/MM/DD')
                     : ''
                   /*mod FNSI-改修内容5217 任 end*/
                 );
@@ -3957,8 +4009,8 @@ export default {
                   infectDiseaseYnCheckDate,
                   /*mod FNSI-改修内容5217 任 start*/
                   /*y.exam_date*/
-                  moment(y.exam_date).isValid()
-                    ? moment(y.exam_date).format('YYYY/MM/DD')
+                  dayjs(y.exam_date).isValid()
+                    ? dayjs(y.exam_date).format('YYYY/MM/DD')
                     : ''
                   /*mod FNSI-改修内容5217 任 end*/
                 );
@@ -3967,8 +4019,8 @@ export default {
                   infectDiseaseYnUpdateDate,
                   /*mod FNSI-改修内容5217 任 start*/
                   /*y.up_date*/
-                  moment(y.up_date).isValid()
-                    ? moment(y.up_date).format('YYYY/MM/DD')
+                  dayjs(y.up_date).isValid()
+                    ? dayjs(y.up_date).format('YYYY/MM/DD')
                     : ''
                   /*mod FNSI-改修内容5217 任 end*/
                 );
@@ -3985,8 +4037,8 @@ export default {
                   infectDiseaseYesCheckDate,
                   /*mod FNSI-改修内容5217 任 start*/
                   /*y.exam_date*/
-                  moment(y.exam_date).isValid()
-                    ? moment(y.exam_date).format('YYYY/MM/DD')
+                  dayjs(y.exam_date).isValid()
+                    ? dayjs(y.exam_date).format('YYYY/MM/DD')
                     : ''
                   /*mod FNSI-改修内容5217 任 end*/
                 );
@@ -3995,8 +4047,8 @@ export default {
                   infectDiseaseYesUpdate,
                   /*mod FNSI-改修内容5217 任 start*/
                   /*y.up_date*/
-                  moment(y.up_date).isValid()
-                    ? moment(y.up_date).format('YYYY/MM/DD')
+                  dayjs(y.up_date).isValid()
+                    ? dayjs(y.up_date).format('YYYY/MM/DD')
                     : ''
                   /*mod FNSI-改修内容5217 任 end*/
                 );
@@ -4015,8 +4067,8 @@ export default {
                   infectDiseaseYnCheckDate,
                   /*mod FNSI-改修内容5217 任 start*/
                   /*y.exam_date*/
-                  moment(y.exam_date).isValid()
-                    ? moment(y.exam_date).format('YYYY/MM/DD')
+                  dayjs(y.exam_date).isValid()
+                    ? dayjs(y.exam_date).format('YYYY/MM/DD')
                     : ''
                   /*mod FNSI-改修内容5217 任 end*/
                 );
@@ -4025,8 +4077,8 @@ export default {
                   infectDiseaseYnUpdateDate,
                   /*mod FNSI-改修内容5217 任 start*/
                   /*y.up_date*/
-                  moment(y.up_date).isValid()
-                    ? moment(y.up_date).format('YYYY/MM/DD')
+                  dayjs(y.up_date).isValid()
+                    ? dayjs(y.up_date).format('YYYY/MM/DD')
                     : ''
                   /*mod FNSI-改修内容5217 任 end*/
                 );
@@ -4043,16 +4095,16 @@ export default {
               infectDiseaseCheckDate,
               /*mod FNSI-改修内容5217 任 start*/
               /*y.exam_date*/
-              moment(y.exam_date).isValid()
-                ? moment(y.exam_date).format('YYYY/MM/DD')
+              dayjs(y.exam_date).isValid()
+                ? dayjs(y.exam_date).format('YYYY/MM/DD')
                 : ''
               /*mod FNSI-改修内容5217 任 end*/
             );
             //感染症_更新日
             /*mod FNSI-改修内容5217 任 start*/
             /*infectDiseaseUpdate = this.addLine(infectDiseaseUpdate, y.up_date);*/
-            infectDiseaseUpdate = this.addLinePatInfoTwo(infectDiseaseUpdate, moment(y.up_date).isValid()
-              ? moment(y.up_date).format('YYYY/MM/DD')
+            infectDiseaseUpdate = this.addLinePatInfoTwo(infectDiseaseUpdate, dayjs(y.up_date).isValid()
+              ? dayjs(y.up_date).format('YYYY/MM/DD')
               : '');
             /*mod FNSI-改修内容5217 任 end*/
           });
@@ -4174,15 +4226,15 @@ export default {
             //インプラント_導入日
             /*mod FNSI-改修内容5217 任 start*/
             /*implantRegDate = this.addLine(implantRegDate, y.reg_date);*/
-            implantRegDate = this.addLinePatInfoTwo(implantRegDate, moment(y.reg_date).isValid()
-              ? moment(y.reg_date).format('YYYY/MM/DD')
+            implantRegDate = this.addLinePatInfoTwo(implantRegDate, dayjs(y.reg_date).isValid()
+              ? dayjs(y.reg_date).format('YYYY/MM/DD')
               : '');
             /*mod FNSI-改修内容5217 任 end*/
             //インプラント_除去日
             /*mod FNSI-改修内容5217 任 start*/
             /*implantRemoveDate = this.addLine(implantRemoveDate, y.remove_date);*/
-            implantRemoveDate = this.addLinePatInfoTwo(implantRemoveDate, moment(y.remove_date).isValid()
-              ? moment(y.remove_date).format('YYYY/MM/DD')
+            implantRemoveDate = this.addLinePatInfoTwo(implantRemoveDate, dayjs(y.remove_date).isValid()
+              ? dayjs(y.remove_date).format('YYYY/MM/DD')
               : '');
             /*mod FNSI-改修内容5217 任 end*/
           });
@@ -4259,8 +4311,8 @@ export default {
               //加算・管理料_算定日最新算定日
               additionNameDay = this.addLinePatInfoTwo(
                 additionNameDay,
-                moment(y.start_date).isValid()
-                  ? moment(y.start_date).format('YYYY/MM/DD')
+                dayjs(y.start_date).isValid()
+                  ? dayjs(y.start_date).format('YYYY/MM/DD')
                   : ' '
               );
               name=name+additionNameDay;
@@ -4284,8 +4336,8 @@ export default {
               //加算・管理料_算定日最新算定日
               additionLatestCalcDay = this.addLinePatInfoTwo(
                 additionLatestCalcDay,
-                moment(addition.last_date).isValid()
-                  ? moment(addition.last_date).format('YYYY/MM/DD')
+                dayjs(addition.last_date).isValid()
+                  ? dayjs(addition.last_date).format('YYYY/MM/DD')
                   : ' '
               );
             } else {
@@ -4392,8 +4444,8 @@ export default {
             /*mod FNSI-改修内容5217 任 start*/
             /*diseaseCrisisDay = this.addLine(diseaseCrisisDay, m.disease_date);*/
             // mod #9796データリスト画面で患者情報2のデータが表示されない。dengshen start
-            // diseaseCrisisDay = this.addLinePatInfoTwo(diseaseCrisisDay, m.disease_date && moment(m.disease_date.substring(0, 8)).isValid()
-            //   ? moment(m.disease_date.substring(0, 8)).format('YYYY/MM/DD')
+            // diseaseCrisisDay = this.addLinePatInfoTwo(diseaseCrisisDay, m.disease_date && dayjs(m.disease_date.substring(0, 8)).isValid()
+            //   ? dayjs(m.disease_date.substring(0, 8)).format('YYYY/MM/DD')
             //   : '');
             if (!m.disease_year && !m.disease_month && !m.disease_day) {
               diseaseCrisisDay = this.addLinePatInfoTwo(
@@ -4454,11 +4506,11 @@ export default {
               /*mod FNSI-改修内容5217 任 start*/
               /*m.diagnosis_day*/
               //mod 9796データリスト画面で患者情報2のデータが表示されない。zhao start
-              // m.diagnosis_day && moment(m.diagnosis_day.substring(0, 8)).isValid()
-              //   ? moment(m.diagnosis_day.substring(0, 8)).format('YYYY/MM/DD')
+              // m.diagnosis_day && dayjs(m.diagnosis_day.substring(0, 8)).isValid()
+              //   ? dayjs(m.diagnosis_day.substring(0, 8)).format('YYYY/MM/DD')
               //   : ''
-              // m.diagnosis_date && moment(m.diagnosis_date.substring(0, 8)).isValid()
-              //   ? moment(m.diagnosis_day.substring(0, 8)).format('YYYY/MM/DD')
+              // m.diagnosis_date && dayjs(m.diagnosis_date.substring(0, 8)).isValid()
+              //   ? dayjs(m.diagnosis_day.substring(0, 8)).format('YYYY/MM/DD')
               //   : ''
               diagnosisYear+"/"+diagnosisMonth+"/"+diagnosisDay
 
@@ -4584,8 +4636,8 @@ export default {
               diseaseReturnChangeDay,
               /*mod FNSI-改修内容5217 任 start*/
               /*m.out_come_date*/
-              moment(m.out_come_date).isValid()
-                ? moment(m.out_come_date).format('YYYY/MM/DD')
+              dayjs(m.out_come_date).isValid()
+                ? dayjs(m.out_come_date).format('YYYY/MM/DD')
                 : ''
               /*mod FNSI-改修内容5217 任 end*/
             );
@@ -4924,16 +4976,16 @@ export default {
             //   inoutInfoStartDate,
             //   /*mod FNSI-改修内容5217 任 start*/
             //   /*m.period_start*/
-            //   moment(m.period_start).isValid()
-            //     ? moment(m.period_start).format('YYYY/MM/DD')
+            //   dayjs(m.period_start).isValid()
+            //     ? dayjs(m.period_start).format('YYYY/MM/DD')
             //     : ''
             //   /*mod FNSI-改修内容5217 任 end*/
             // );
             // //入外・転入出_日付終了日
             // /*mod FNSI-改修内容5217 任 start*/
             // /*inoutInfoEndDate = this.addLine(inoutInfoEndDate, m.period_end);*/
-            // inoutInfoEndDate = this.addLinePatInfoTwo(inoutInfoEndDate, moment(m.period_end).isValid()
-            //   ? moment(m.period_end).format('YYYY/MM/DD')
+            // inoutInfoEndDate = this.addLinePatInfoTwo(inoutInfoEndDate, dayjs(m.period_end).isValid()
+            //   ? dayjs(m.period_end).format('YYYY/MM/DD')
             //   : '');
             // /*mod FNSI-改修内容5217 任 end*/
             let periodStartYear = '';
@@ -5102,8 +5154,8 @@ export default {
             //身体情報_測定日時
             physicalInfoInspectionDateTime = this.addLinePatInfoTwo(
               physicalInfoInspectionDateTime,
-              moment(m.exam_date).isValid()
-                ? moment(m.exam_date).format('YYYY/MM/DD HH:mm:ss')
+              dayjs(m.exam_date).isValid()
+                ? dayjs(m.exam_date).format('YYYY/MM/DD HH:mm:ss')
                 : ''
             );
             //身体情報_測定タイミング
@@ -5220,8 +5272,8 @@ export default {
               physicalInfoIndStartDate,
               /*mod FNSI-改修内容5217 任 start*/
               /*m.indicator_start_date*/
-              moment(m.indicator_start_date).isValid()
-                ? moment(m.indicator_start_date).format('YYYY/MM/DD')
+              dayjs(m.indicator_start_date).isValid()
+                ? dayjs(m.indicator_start_date).format('YYYY/MM/DD')
                 : ''
               /*mod FNSI-改修内容5217 任 end*/
             );
@@ -5439,7 +5491,7 @@ export default {
         }
         complaints = this.setDataAddLine(
           BASIC_INFO_PAT_BIRTHDAY,
-          x.pat_birthday ? moment(x.pat_birthday).format("YYYY/MM/DD") : "",
+          x.pat_birthday ? dayjs(x.pat_birthday).format("YYYY/MM/DD") : "",
           hosp_pat_id,
           pat_name,
           complaints
@@ -6828,8 +6880,8 @@ export default {
               // //透析困難_登録日時
               // /*mod FNSI-改修内容5217 任 start*/
               // /*insuDstLoginDate = this.addLine(insuDstLoginDate, y.reg_date);*/
-              // insuDstLoginDate = this.addLinePatInfoTwo(insuDstLoginDate, moment(y.reg_date.substring(0, 8)).isValid()
-              //   ? moment(y.reg_date.substring(0, 8)).format('YYYY/MM/DD')
+              // insuDstLoginDate = this.addLinePatInfoTwo(insuDstLoginDate, dayjs(y.reg_date.substring(0, 8)).isValid()
+              //   ? dayjs(y.reg_date.substring(0, 8)).format('YYYY/MM/DD')
               //   : '');
               if(dialysisDifficulty){
                 insuDstDialDiffComment = this.addLinePatInfoTwo(
@@ -6839,8 +6891,8 @@ export default {
                 //透析困難_登録日時
                 /*mod FNSI-改修内容5217 任 start*/
                 /*insuDstLoginDate = this.addLine(insuDstLoginDate, y.reg_date);*/
-                insuDstLoginDate = this.addLinePatInfoTwo(insuDstLoginDate, moment(y.reg_date.substring(0, 8)).isValid()
-                  ? moment(y.reg_date.substring(0, 8)).format('YYYY/MM/DD')
+                insuDstLoginDate = this.addLinePatInfoTwo(insuDstLoginDate, dayjs(y.reg_date.substring(0, 8)).isValid()
+                  ? dayjs(y.reg_date.substring(0, 8)).format('YYYY/MM/DD')
                   : '');
               }
               //9796 データリスト画面で患者情報2のデータが表示されない。zhao end
@@ -6923,22 +6975,22 @@ export default {
               //保険情報・保険_開始日
               /*mod FNSI-改修内容5217 任 start*/
               /*insuStartDate = this.addLine(insuStartDate, i.start_date);*/
-              insuStartDate = this.addLinePatInfoTwo(insuStartDate, moment(i.start_date).isValid()
-                ? moment(i.start_date).format('YYYY/MM/DD')
+              insuStartDate = this.addLinePatInfoTwo(insuStartDate, dayjs(i.start_date).isValid()
+                ? dayjs(i.start_date).format('YYYY/MM/DD')
                 : '');
               /*mod FNSI-改修内容5217 任 end*/
               //保険情報・保険_終了日
               /*mod FNSI-改修内容5217 任 start*/
               /*insuEndDate = this.addLine(insuEndDate, i.end_date);*/
-              insuEndDate = this.addLinePatInfoTwo(insuEndDate, moment(i.end_date).isValid()
-                ? moment(i.end_date).format('YYYY/MM/DD')
+              insuEndDate = this.addLinePatInfoTwo(insuEndDate, dayjs(i.end_date).isValid()
+                ? dayjs(i.end_date).format('YYYY/MM/DD')
                 : '');
               /*mod FNSI-改修内容5217 任 end*/
               //保険情報・保険_確認日
               /*mod FNSI-改修内容5217 任 start*/
               /*insuConfirmDate = this.addLine(insuConfirmDate, i.check_date);*/
-              insuConfirmDate = this.addLinePatInfoTwo(insuConfirmDate, moment(i.check_date).isValid()
-                ? moment(i.check_date).format('YYYY/MM/DD')
+              insuConfirmDate = this.addLinePatInfoTwo(insuConfirmDate, dayjs(i.check_date).isValid()
+                ? dayjs(i.check_date).format('YYYY/MM/DD')
                 : '');
               /*mod FNSI-改修内容5217 任 end*/
               //保険情報・保険_保険者名称
@@ -7030,16 +7082,16 @@ export default {
                 insuPublicStartDate,
                 /*mod FNSI-改修内容5217 任 start*/
                 /*i.start_date*/
-                moment(i.start_date).isValid()
-                  ? moment(i.start_date).format('YYYY/MM/DD')
+                dayjs(i.start_date).isValid()
+                  ? dayjs(i.start_date).format('YYYY/MM/DD')
                   : ''
                 /*mod FNSI-改修内容5217 任 end*/
               );
               //保険情報・公費_終了日
               /*mod FNSI-改修内容5217 任 start*/
               /*insuPublicEndDate = this.addLine(insuPublicEndDate, i.end_date);*/
-              insuPublicEndDate = this.addLinePatInfoTwo(insuPublicEndDate, moment(i.end_date).isValid()
-                ? moment(i.end_date).format('YYYY/MM/DD')
+              insuPublicEndDate = this.addLinePatInfoTwo(insuPublicEndDate, dayjs(i.end_date).isValid()
+                ? dayjs(i.end_date).format('YYYY/MM/DD')
                 : '');
               /*mod FNSI-改修内容5217 任 end*/
               //保険情報・公費_確認日
@@ -7047,8 +7099,8 @@ export default {
                 insuPublicConfirmDate,
                 /*mod FNSI-改修内容5217 任 start*/
                 /*i.check_date*/
-                moment(i.check_date).isValid()
-                  ? moment(i.check_date).format('YYYY/MM/DD')
+                dayjs(i.check_date).isValid()
+                  ? dayjs(i.check_date).format('YYYY/MM/DD')
                   : ''
                 /*mod FNSI-改修内容5217 任 end*/
               );
@@ -7432,7 +7484,7 @@ export default {
       });
       list = list.filter(y => y);
       if (list.length > 0) {
-        list = _.flatten(list);
+        list = list.flat();
         monitor_data = JSON.parse(monitor_data);
         list.forEach(item => {
           item.split(',').forEach(y => {
@@ -7538,7 +7590,7 @@ export default {
       });
       list = list.filter(y => y);
       if (list.length > 0) {
-        list = _.flatten(list);
+        list = list.flat();
         monitor_data = JSON.parse(monitor_data);
         list.forEach(item => {
           item.split(',').forEach(y => {
@@ -7732,8 +7784,8 @@ export default {
             // 検査日時
             complaints = this.setComplaintsDatahasDate(
               RESULT_DATE_CD,
-              moment(y.result_date).isValid()
-                ? moment(y.result_date).format('YYYY/MM/DD HH:mm:ss')
+              dayjs(y.result_date).isValid()
+                ? dayjs(y.result_date).format('YYYY/MM/DD HH:mm:ss')
                 : '',
               hosp_pat_id,
               pat_name,
@@ -7806,7 +7858,9 @@ export default {
             // 検査結果
             complaints = this.setComplaintsDatahasDate(
               RESULT_CD,
-              resultFigure,
+              // mod #11718 【#11600持ち越し】データリスト画面不正② fang start
+              resultFigure && !isNaN(resultFigure) ? Number(resultFigure).toFixed(2) : '0.00',
+              // mod #11718 【#11600持ち越し】データリスト画面不正② fang end
               hosp_pat_id,
               pat_name,
               count,
@@ -7815,7 +7869,7 @@ export default {
             // 正常値（下限）
             complaints = this.setComplaintsDatahasDate(
               LOWER_CD,
-              y.lower,
+              y.lower && y.lower != 'null' ? Number(y.lower).toFixed(2) : '0.00',
               hosp_pat_id,
               pat_name,
               count,
@@ -7824,7 +7878,7 @@ export default {
             // 正常値（上限）
             complaints = this.setComplaintsDatahasDate(
               UPPER_CD,
-              y.upper,
+              y.upper && y.upper != 'null' ? Number(y.upper).toFixed(2) : '0.00',
               hosp_pat_id,
               pat_name,
               count,
@@ -7851,8 +7905,8 @@ export default {
             // 更新日時
             complaints = this.setComplaintsDatahasDate(
               UP_DATE_CD,
-              moment(x.up_date).isValid()
-                ? moment(x.up_date).format('YYYY/MM/DD HH:mm:ss')
+              dayjs(x.up_date).isValid()
+                ? dayjs(x.up_date).format('YYYY/MM/DD HH:mm:ss')
                 : '',
               hosp_pat_id,
               pat_name,
@@ -8282,13 +8336,19 @@ export default {
             //ヘマトクリット（Ht）/検査日時
             const ope_dev_a91 = device_set_info.ope.dev.A[91] ? this.addUnits(device_set_info.ope.dev.A[91], ' %') : '';
             // mod #11528 【たくしん会】データリスト並び順不正 房 start
-            // const ope_dev_c91 = moment(device_set_info.ope.dev.C[91]).isValid() ? moment(device_set_info.ope.dev.C[91]).format('YYYY/MM/DD HH:mm') : device_set_info.ope.dev.C[91];
+            // const ope_dev_c91 = dayjs(device_set_info.ope.dev.C[91]).isValid() ? dayjs(device_set_info.ope.dev.C[91]).format('YYYY/MM/DD HH:mm') : device_set_info.ope.dev.C[91];
+            // mod #11718 【#11600持ち越し】データリスト画面不正② fang start
             let ope_dev_c91 = "";
             if(device_set_info.ope.dev.C[91] != null && device_set_info.ope.dev.C[91] != 'null') {
               ope_dev_c91 = device_set_info.ope.dev.C[91] + "";
-              ope_dev_c91 = ope_dev_c91.substring(0, 4) + "/" + ope_dev_c91.substring(4, 6) + "/" + ope_dev_c91.substring(6, 8)
-                + " " + ope_dev_c91.substring(8, 10) + ":" + ope_dev_c91.substring(10, 12);
+              if(ope_dev_c91.trim().length >= 12) {
+                ope_dev_c91 = ope_dev_c91.substring(0, 4) + "/" + ope_dev_c91.substring(4, 6) + "/" + ope_dev_c91.substring(6, 8)
+                  + " " + ope_dev_c91.substring(8, 10) + ":" + ope_dev_c91.substring(10, 12);
+              } else {
+                ope_dev_c91 = "";
+              }
             }
+            // mod #11718 【#11600持ち越し】データリスト画面不正② fang end
             // mod #11528 【たくしん会】データリスト並び順不正 房 end
             // const hematocrit_ht_date_cd = ope_dev_a91 + " / " + ope_dev_c91;
             complaints = this.setComplaintsData(
@@ -8312,13 +8372,19 @@ export default {
             //総タンパク(TP)/検査日時
             const ope_dev_a92 = device_set_info.ope.dev.A[92] ? this.addUnits(this.getDecimalValue(device_set_info.ope.dev.A[92],1), ' g/dL') : '';
             // mod #11528 【たくしん会】データリスト並び順不正 房 start
-            // const ope_dev_c92 = moment(device_set_info.ope.dev.C[92]).isValid() ? moment(device_set_info.ope.dev.C[92]).format('YYYY/MM/DD HH:mm') : device_set_info.ope.dev.C[92];
+            // const ope_dev_c92 = dayjs(device_set_info.ope.dev.C[92]).isValid() ? dayjs(device_set_info.ope.dev.C[92]).format('YYYY/MM/DD HH:mm') : device_set_info.ope.dev.C[92];
+            // mod #11718 【#11600持ち越し】データリスト画面不正② fang start
             let ope_dev_c92 = "";
             if(device_set_info.ope.dev.C[92] != null && device_set_info.ope.dev.C[92] != 'null') {
               ope_dev_c92 = "" + device_set_info.ope.dev.C[92];
-              ope_dev_c92 = ope_dev_c92.substring(0, 4) + "/" + ope_dev_c92.substring(4, 6) + "/" + ope_dev_c92.substring(6, 8)
-                + " " + ope_dev_c92.substring(8, 10) + ":" + ope_dev_c92.substring(10, 12);
+              if(ope_dev_c92.trim().length >= 12) {
+                ope_dev_c92 = ope_dev_c92.substring(0, 4) + "/" + ope_dev_c92.substring(4, 6) + "/" + ope_dev_c92.substring(6, 8)
+                  + " " + ope_dev_c92.substring(8, 10) + ":" + ope_dev_c92.substring(10, 12);
+              } else {
+                ope_dev_c92 = ""
+              }
             }
+            // mod #11718 【#11600持ち越し】データリスト画面不正② fang end
             // mod #11528 【たくしん会】データリスト並び順不正 房 end
             // const total_tp_inspection_date_cd = ope_dev_a92 + " / " + ope_dev_c92;
             complaints = this.setComplaintsData(
@@ -8566,7 +8632,7 @@ export default {
             //ＥＣＵＭ時間
             complaints = this.setComplaintsData(
               ECUM_TIME_CD,
-              moment(device_set_info.ecum.dev.A[18]).isValid() ? moment("20200101").minute(device_set_info.ecum.dev.A[18]).format('HH:mm') : null,
+              dayjs(device_set_info.ecum.dev.A[18]).isValid() ? dayjs("20200101").minute(device_set_info.ecum.dev.A[18]).format('HH:mm') : null,
               hosp_pat_id,
               pat_name,
               complaints
@@ -9872,7 +9938,7 @@ export default {
             //BV計_アクセス再循環率測定_自動測定1
             complaints = this.setComplaintsData(
               AUTO_MEASURE1_CD,
-              moment(device_set_info.bv.dev.A[259]).isValid() ? moment("20200101").minute(device_set_info.bv.dev.A[259]).format('HH:mm') : null,
+              dayjs(device_set_info.bv.dev.A[259]).isValid() ? dayjs("20200101").minute(device_set_info.bv.dev.A[259]).format('HH:mm') : null,
               hosp_pat_id,
               pat_name,
               complaints
@@ -9880,7 +9946,7 @@ export default {
             //BV計_アクセス再循環率測定_自動測定2
             complaints = this.setComplaintsData(
               AUTO_MEASURE2_CD,
-              moment(device_set_info.bv.dev.A[263]).isValid() ? moment("20200101").minute(device_set_info.bv.dev.A[263]).format('HH:mm') : null,
+              dayjs(device_set_info.bv.dev.A[263]).isValid() ? dayjs("20200101").minute(device_set_info.bv.dev.A[263]).format('HH:mm') : null,
               hosp_pat_id,
               pat_name,
               complaints
@@ -9888,7 +9954,7 @@ export default {
             //BV計_アクセス再循環率測定_自動測定3
             complaints = this.setComplaintsData(
               AUTO_MEASURE3_CD,
-              moment(device_set_info.bv.dev.A[264]).isValid() ? moment("20200101").minute(device_set_info.bv.dev.A[264]).format('HH:mm') : null,
+              dayjs(device_set_info.bv.dev.A[264]).isValid() ? dayjs("20200101").minute(device_set_info.bv.dev.A[264]).format('HH:mm') : null,
               hosp_pat_id,
               pat_name,
               complaints
@@ -9896,7 +9962,7 @@ export default {
             //BV計_アクセス再循環率測定_自動測定4
             complaints = this.setComplaintsData(
               AUTO_MEASURE4_CD,
-              moment(device_set_info.bv.dev.A[265]).isValid() ? moment("20200101").minute(device_set_info.bv.dev.A[265]).format('HH:mm') : null,
+              dayjs(device_set_info.bv.dev.A[265]).isValid() ? dayjs("20200101").minute(device_set_info.bv.dev.A[265]).format('HH:mm') : null,
               hosp_pat_id,
               pat_name,
               complaints
@@ -9904,7 +9970,7 @@ export default {
             //BV計_アクセス再循環率測定_自動測定5
             complaints = this.setComplaintsData(
               AUTO_MEASURE5_CD,
-              moment(device_set_info.bv.dev.A[266]).isValid() ? moment("20200101").minute(device_set_info.bv.dev.A[266]).format('HH:mm') : null,
+              dayjs(device_set_info.bv.dev.A[266]).isValid() ? dayjs("20200101").minute(device_set_info.bv.dev.A[266]).format('HH:mm') : null,
               hosp_pat_id,
               pat_name,
               complaints
@@ -11178,7 +11244,7 @@ export default {
       if (keyArry.length <= 0) return array;
       var aMap = [];
       var aResult = [];
-      for (var i = 0; i < array.length; i++) {
+      for (var i = 0; i < array?.length; i++) {
         var item = array[i];
         var repetitionValue = '';
         var repetitionKey = '';
@@ -11224,7 +11290,10 @@ export default {
       let physicalNames = '';
       const arrayFields = [];
       // ソート後のdataSourceをファイル出力
-      const grid = this.$refs.grid.kendoWidget();
+      const grid = this.getGridWidget();
+      if (!grid) {
+        return;
+      }
       const viewData = grid.dataSource.view();
       const dataArray = Array.from(viewData)
 
@@ -11299,12 +11368,15 @@ export default {
 
       let link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
-      link.download = `データリスト_${moment().format('YYYYMMDDHHmmss')}.csv`;
+      link.download = `データリスト_${dayjs().format('YYYYMMDDHHmmss')}.csv`;
       link.click();
     },
     async onCreateTemplateToExcel() {
       // ソート後のdataSourceをファイル出力
-      const grid = this.$refs.grid.kendoWidget();
+      const grid = this.getGridWidget();
+      if (!grid) {
+        return;
+      }
       const viewData = grid.dataSource.view();
       const dataArray = Array.from(viewData)
 
@@ -11322,7 +11394,7 @@ export default {
               await this.updatePatRecords();
               this.saveExcel({
                 data: dataArray,
-                fileName: `データリスト_${moment().format('YYYYMMDDHHmmss')}`,
+                fileName: `データリスト_${dayjs().format('YYYYMMDDHHmmss')}`,
                 columns: this.getData(),
               });
             }
@@ -11332,7 +11404,7 @@ export default {
         this.saveExcel({
           data:
             this.kendoDataSource !== null ? dataArray : null,
-          fileName: `データリスト_${moment().format('YYYYMMDDHHmmss')}`,
+          fileName: `データリスト_${dayjs().format('YYYYMMDDHHmmss')}`,
           columns: this.getData(),
         });
       }
@@ -11399,10 +11471,7 @@ export default {
     setGridHeight() {
       if (this.isSelectedLayout) {
         this.$nextTick(() => {
-          const gridWidget = $$('#kendo').data('kendoGrid');
-          if (gridWidget) {
-            gridWidget.resize($$('.multi-pat-list-footer-btn'));
-          }
+          this.updateGridHeight();
         });
       }
     },
@@ -11496,7 +11565,7 @@ export default {
     },
 
     bindShowPopoverEvent() {
-      const sortGrid = $$('#kendo').data('kendoGrid');
+      const sortGrid = this.getGridWidget();
       if (sortGrid == null) {
         return;
       }
@@ -11633,7 +11702,7 @@ export default {
      * @returns true: 保存, false: 保存失敗
      */
     isValidate() {
-      const kendoValidator = $$('#kendo')
+      const kendoValidator = $$('#multi-pat-list-template')
         .kendoValidator()
         .data('kendoValidator');
       const keys = Object.keys(this.validateObject);
@@ -11670,7 +11739,7 @@ export default {
       if (initDate) {
         editDay = initDate;
         if (editDay.match(/T/)) {
-          const encodeInitDate = moment(
+          const encodeInitDate = dayjs(
             `${initDate}:00+09:00`,
             'YYYY-MM-DDTHH:mm:ss.SSSZ'
           ).format('YYYY-MM-DDTHH:mm');
@@ -11688,10 +11757,10 @@ export default {
       if (editTime === '' || !editTime) {
         return editDay === '0000-01-01'
           ? null
-          : moment(`${editDay}`, 'YYYY-MM-DD').format('YYYY-MM-DD');
+          : dayjs(`${editDay}`, 'YYYY-MM-DD').format('YYYY-MM-DD');
       }
 
-      const editDate = moment(
+      const editDate = dayjs(
         `${editDay}T${editTime}`,
         'YYYY-MM-DDTHH:mm'
       ).format('YYYY-MM-DDTHH:mm:ss.SSSZ');
@@ -11799,7 +11868,7 @@ export default {
         const physicalInfo = record.pat_unique.physical_info[0];
         const indStartDate = physicalInfo.indicator_start_date;
         // 一年後
-        const indEndDate = moment(indStartDate, 'YYYYMMDD')
+        const indEndDate = dayjs(indStartDate, 'YYYYMMDD')
           .add(1, 'y')
           .subtract(1, 'days')
           .format('YYYYMMDD');
@@ -11830,7 +11899,7 @@ export default {
         };
       });
 
-      await ApiHelper.post('/mainData/updateOrdMainList/', sendJsonList).catch(
+      await ApiHelper.post('/mainData/updateOrdMainList', sendJsonList).catch(
         error => {
           //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
           getErrorMessage('TemplateComponent.vue', 'updateOrdMain', error);
@@ -11844,44 +11913,10 @@ export default {
       return new Date(dateStr.replace(/\//g, "-").replace(" ", "T"));
     },
     // add #11528 【たくしん会】データリスト並び順不正 房 end
-    enableLockedColumnScroll() {
-      const lockedContent = document.querySelector('.k-grid-content-locked');
-      const scrollableContent = document.querySelector('.k-grid-content'); // 可動列
-
-      if (lockedContent) {
-        lockedContent.addEventListener('wheel', (e) => {
-          e.preventDefault();
-          lockedContent.scrollTop += e.deltaY;
-        });
-
-        let startY = 0;
-        lockedContent.addEventListener('touchstart', (e) => {
-          startY = e.touches[0].clientY;
-        }, { passive: false });
-
-        lockedContent.addEventListener('touchmove', (e) => {
-          const deltaY = startY - e.touches[0].clientY;
-          lockedContent.scrollTop += deltaY;
-          startY = e.touches[0].clientY;
-          e.preventDefault();
-        }, { passive: false });
-      }
-
-      if (lockedContent && scrollableContent) {
-        // 固定列のスクロールに応じて可動列を同期
-        lockedContent.addEventListener('scroll', () => {
-          scrollableContent.scrollTop = lockedContent.scrollTop;
-        });
-
-        // 可動列のスクロールに応じて固定列を同期（双方向同期）
-        scrollableContent.addEventListener('scroll', () => {
-          lockedContent.scrollTop = scrollableContent.scrollTop;
-        });
-      }
-    }
   },
   // add 性能改善メモリ不足 shan start
   beforeDestroy() {
+    this.gridResizeObserver?.disconnect();
     // Rootページのサイドバーボタン要素のイベントリスナー解除
     const rootSideBarBtn = document.querySelector('#showPatientSearchSidebarBtn');
     rootSideBarBtn?.removeEventListener('click', this.setGridHeight);
@@ -11972,40 +12007,40 @@ export default {
 
 /* kendo-grid用style */
 /* 全体の色 */
-.multi-pat-list >>> .k-grid {
+.multi-pat-list :deep(.k-grid) {
   background-color: var(--ntss-list-background-color) !important;
   color: var(--ntss-list-body-color) !important;
 }
 
-.multi-pat-list >>> .k-widget {
+.multi-pat-list :deep(.k-widget) {
   font-size: 1em;
 }
 
 /* セルの枠線(なぜか縦線にしか色がつかない) */
-.multi-pat-list >>> .k-grid tr,
-.multi-pat-list >>> .k-grid td {
+.multi-pat-list :deep(.k-grid tr),
+.multi-pat-list :deep(.k-grid td) {
   border-color: var(--master-maintenance-kgrid-border-color) !important;
 }
 
 /* 行マウスオーバー */
-.multi-pat-list >>> .k-grid tr:hover {
+.multi-pat-list :deep(.k-grid tr:hover) {
   background-color: var(--ntss-list-body-background-color) !important;
   color: var(--ntss-list-body-color) !important;
 }
 
 /* 列ヘッダ */
-.multi-pat-list >>> .k-header {
+.multi-pat-list :deep(.k-header) {
   vertical-align: middle !important;
   background-color: var(--ntss-list-header-background-color);
   color: #ffffff;
 }
-.multi-pat-list >>> .k-header[data-role='columnsorter'] {
+.multi-pat-list :deep(.k-header[data-role='columnsorter']) {
   /* width: 125px; */
   vertical-align: middle !important;
   background-color: #333333;
   background-image: none;
 }
-.multi-pat-list >>> .k-header[data-field='pat_personal_main$hosp_pat_id'] {
+.multi-pat-list :deep(.k-header[data-field='pat_personal_main$hosp_pat_id']) {
   /* width: 125px; */
   vertical-align: middle !important;
   background-color: #333333;
@@ -12016,7 +12051,7 @@ export default {
     rgba(0, 0, 0, 0.1) 100%
   );
 }
-.multi-pat-list >>> .k-header[data-field='pat_personal_main$pat_name'] {
+.multi-pat-list :deep(.k-header[data-field='pat_personal_main$pat_name']) {
   width: 125px;
   vertical-align: middle !important;
   background-color: #333333;
@@ -12029,60 +12064,56 @@ export default {
 }
 
 /* 入力不可列のヘッダ */
-.multi-pat-list >>> .k-header-disabled {
+.multi-pat-list :deep(.k-header-disabled) {
   background-color: #808080 !important;
   background-image: none;
 }
 
 /* 偶数行 */
-.multi-pat-list >>> .k-alt {
+.multi-pat-list :deep(.k-alt) {
   background-color: var(--ntss-list-content-2nd-background-color) !important;
   color: var(--ntss-list-body-color) !important;
 }
 
 /* 入力UI */
-.multi-pat-list >>> .k-textbox,
-.multi-pat-list >>> .k-dropdown-wrap,
-.multi-pat-list >>> .k-numeric,
-.multi-pat-list >>> .k-select,
-.multi-pat-list >>> .k-popup {
+.multi-pat-list :deep(.k-textbox),
+.multi-pat-list :deep(.k-dropdown-wrap),
+.multi-pat-list :deep(.k-numeric),
+.multi-pat-list :deep(.k-select),
+.multi-pat-list :deep(.k-popup) {
   background-color: var(--main-background-color) !important;
   color: var(--ntss-list-body-color) !important;
 }
 
 /* kendoDropDownListの選択肢 */
-.multi-pat-list >>> .k-popup {
+.multi-pat-list :deep(.k-popup) {
   border-color: var(--ntss-list-body-background-color) !important;
 }
 
 /* kendoDropDownListの選択肢のマウスオーバー */
-.multi-pat-list >>> .k-popup li:hover {
+.multi-pat-list :deep(.k-popup li:hover) {
   background-color: var(--ntss-list-body-background-color) !important;
   color: var(--ntss-list-body-color) !important;
 }
-.multi-pat-list >>> .k-i-sort-asc-sm::before {
+.multi-pat-list :deep(.k-i-sort-asc-sm::before) {
   content: "▲" !important;
   color: #ffffff;
 }
-.multi-pat-list >>> .k-i-sort-desc-sm::before {
+.multi-pat-list :deep(.k-i-sort-desc-sm::before) {
   content: "▼" !important;
   color: #ffffff;
 }
 
-#kendo >>> .grid-required-cell {
+#multi-pat-list-template :deep(.grid-required-cell) {
   background-color: #ff6358 !important;
 }
 
-#kendo >>> .grid-edited-cell {
+#multi-pat-list-template :deep(.grid-edited-cell) {
   text-overflow: ellipsis !important;
   overflow: hidden !important;
 }
 
-.multi-pat-list >>> .k-grid td {
-  white-space: pre-line !important;
-}
-
-ons-popover >>> .popover__content {
+ons-popover :deep(.popover__content) {
   width: 14em;
 }
 
@@ -12091,96 +12122,101 @@ ons-popover >>> .popover__content {
   width: 1.5em;
   margin: 0 5px 0 5px;
 }
-#kendo >>> .same-icon {
+#multi-pat-list-template :deep(.same-icon) {
   height: 1em;
   display: inline-block;
   margin-left: 0.5em;
 }
 
 /* 携帯が似合う shan start */
-/* ::v-deep .k-grid-header-locked{
+/* :deep(.k-grid-header-locked){
    width: 375px !important;
  }
-::v-deep .k-grid-content-locked{
+:deep(.k-grid-content-locked){
    width: 375px !important;
  } */
-/* ::v-deep .k-grid-header-wrap{
+/* :deep(.k-grid-header-wrap){
    width: calc(100%-375px) !important;
  }
-::v-deep .k-grid-content{
+:deep(.k-grid-content){
    width: calc(100%-375px) !important;
  } */
-::v-deep .multi-pat-list .k-grid td{
-   width: 150px !important;
- }
+:deep(.multi-pat-list .k-grid td) {
+  width: 150px !important;
+}
 
- @media screen and (max-width: 600px){
-/* ::v-deep   .k-grid-header-locked {
+@media screen and (max-width: 600px) {
+/* :deep(.k-grid-header-locked) {
      width: 180px !important;
    } */
-/* ::v-deep .k-header[data-field="pat_personal_main$hosp_pat_id"] {
+/* :deep(.k-header[data-field="pat_personal_main$hosp_pat_id"]) {
     width: 65px !important;
     text-overflow: clip !important;
   }
-::v-deep .k-header[data-field="pat_personal_main$pat_name"] {
+:deep(.k-header[data-field="pat_personal_main$pat_name"]) {
     width: 65px !important;
   } */
-/* ::v-deep .k-grid-content-locked{
+/* :deep(.k-grid-content-locked){
    width: 180px !important;
  }
-::v-deep .multi-pat-list .k-grid td{
+:deep(.multi-pat-list .k-grid td){
    width: 100px !important;
  } */
 }
-::v-deep .k-grid td{
-  word-wrap:break-word;
+:deep(.k-grid td) {
+  word-wrap: break-word;
 }
-::v-deep .k-grid th{
-  word-wrap:break-word;
+:deep(.k-grid th) {
+  word-wrap: break-word;
 }
 /* 携帯が似合う shan end */
 /*add #6256 背景色が変わらない 徐博 start*/
-#kendo >>> .grid-required-cell {
+#multi-pat-list-template :deep(.grid-required-cell) {
   background-color: #ff6358 !important;
 }
 /*add #6256 背景色が変わらない 徐博 end*/
 /* 前体重測定済 */
-#kendo >>> .grid-after-send-condition-cell {
+#multi-pat-list-template :deep(.grid-after-send-condition-cell) {
   background-color: #42cb92 !important;
 }
 /* 治療中 */
-#kendo >>> .grid-dialysis-cell {
+#multi-pat-list-template :deep(.grid-dialysis-cell) {
   background-color: #2ca06f !important;
 }
 /* 治療終了 */
-#kendo >>> .grid-after-dialysis-cell {
+#multi-pat-list-template :deep(.grid-after-dialysis-cell) {
   background-color: #557769 !important;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked) {
   overflow-y: scroll !important;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked::-webkit-scrollbar {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked::-webkit-scrollbar) {
   display: none;
+}
+:deep(.k-grid-container td) {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 @media print {
   .multi-pat-list {
     position: absolute;
   }
   /** スクロールコンテナ */
-  .multi-pat-list >>> .k-grid-header-wrap,
-  .multi-pat-list >>> .k-grid-content {
+  .multi-pat-list :deep(.k-grid-header-wrap),
+  .multi-pat-list :deep(.k-grid-content) {
     overflow: hidden !important;
     height: auto !important;
   }
   /** 固定列調整 */
-  .multi-pat-list >>> .k-grid-content-locked {
+  .multi-pat-list :deep(.k-grid-content-locked) {
     height: auto !important;
   }
   /** 固定列枠線 */
-  .multi-pat-list >>> .k-grid-header-locked::after {
+  .multi-pat-list :deep(.k-grid-header-locked::after) {
     content: "";
     position: absolute;
     top: 0;
@@ -12190,7 +12226,7 @@ ons-popover >>> .popover__content {
     background: var(--master-maintenance-kgrid-header-background-color);
     pointer-events: none;
   }
-  .multi-pat-list >>> .k-grid-content-locked::after {
+  .multi-pat-list :deep(.k-grid-content-locked::after) {
     content: "";
     position: absolute;
     top: 0;
@@ -12201,26 +12237,26 @@ ons-popover >>> .popover__content {
     pointer-events: none;
   }
   /** ヘッダのズレ原因を除去 */
-  .multi-pat-list >>> .k-grid-header {
+  .multi-pat-list :deep(.k-grid-header) {
     padding-right: 0 !important;
   }
   /** gridの幅 */
-  .multi-pat-list >>> .k-grid {
+  .multi-pat-list :deep(.k-grid) {
     width: 100vw;
     height: auto !important;
   }
   /** 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
   /* 右端時固定列最前面表示*/
-  .multi-pat-list:has(table.scroll-rightmost) >>> .k-grid-content-locked,
-  .multi-pat-list:has(table.scroll-rightmost) >>> .k-grid-header-locked {
+  .multi-pat-list:has(table.scroll-rightmost) :deep(.k-grid-content-locked),
+  .multi-pat-list:has(table.scroll-rightmost) :deep(.k-grid-header-locked) {
     z-index: 1;
     background-color: inherit;
   }
   .multi-pat-list:has(table.scroll-rightmost) {
     margin-left: -1px !important;
   }
-  .multi-pat-list >>> .k-grid-header-wrap:has(table.scroll-rightmost),
-  .multi-pat-list >>> .k-grid-content:has(table.scroll-rightmost) {
+  .multi-pat-list :deep(.k-grid-header-wrap:has(table.scroll-rightmost)),
+  .multi-pat-list :deep(.k-grid-content:has(table.scroll-rightmost)) {
     position: static;
   }
 }

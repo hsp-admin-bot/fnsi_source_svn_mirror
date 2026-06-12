@@ -32,6 +32,9 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * bed_layoutのRestクラス
@@ -65,7 +68,23 @@ public class BedLayoutResource {
   @GetMapping("/{facilityCd}/{layoutId}")
   public ResponseEntity<?> getStatusMapBedLayout(
       @PathVariable(name = "facilityCd", required = true) String facilityCd,
-      @PathVariable(name = "layoutId", required = true) String layoutId) {
+      @PathVariable(name = "layoutId", required = true) String layoutId,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.BED_LAYOUT ;
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, facilityCd,
@@ -120,7 +139,21 @@ public class BedLayoutResource {
    */
   @GetMapping("/{facilityCd}")
   public ResponseEntity<?> getStatusMapBedLayoutByFacilityCd(
-      @PathVariable(name = "facilityCd", required = true) String facilityCd) {
+      @PathVariable(name = "facilityCd", required = true) String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.BED_LAYOUT ;
@@ -162,7 +195,21 @@ public class BedLayoutResource {
    */
   @PostMapping("/insert")
   public ResponseEntity<Object> insertBedLayout(
-      @RequestBody MstStatusMapBedLayout mstStatusMapBedLayout) throws URISyntaxException {
+      @RequestBody MstStatusMapBedLayout mstStatusMapBedLayout,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (mstStatusMapBedLayout.getFacilityCd() != null && !mstStatusMapBedLayout.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstStatusMapBedLayout.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.BED_LAYOUT + "/insert";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -237,7 +284,21 @@ public class BedLayoutResource {
    */
   @PutMapping("/update")
   public ResponseEntity<Void> updateBedLayout(
-      @RequestBody MstStatusMapBedLayout mstStatusMapBedLayout) {
+      @RequestBody MstStatusMapBedLayout mstStatusMapBedLayout,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (mstStatusMapBedLayout.getFacilityCd() != null && !mstStatusMapBedLayout.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstStatusMapBedLayout.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.BED_LAYOUT + "/update";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -298,7 +359,21 @@ public class BedLayoutResource {
    */
   @GetMapping("/mst_machine/{facilityCd}")
   public ResponseEntity<?> getMstMachine(
-      @PathVariable(name = "facilityCd", required = true) String facilityCd){
+      @PathVariable(name = "facilityCd", required = true) String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+){
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.BED_LAYOUT + "/mst_machine";
@@ -348,7 +423,21 @@ public class BedLayoutResource {
    */
   @GetMapping("/mst_bed/{facilityCd}")
   public ResponseEntity<?> getMstBed(
-      @PathVariable(name = "facilityCd", required = true) String facilityCd){
+      @PathVariable(name = "facilityCd", required = true) String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+){
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.BED_LAYOUT + "/mst_bed";

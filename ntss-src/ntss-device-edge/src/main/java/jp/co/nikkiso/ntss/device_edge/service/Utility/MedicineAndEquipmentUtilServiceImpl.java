@@ -1,10 +1,10 @@
 package jp.co.nikkiso.ntss.device_edge.service.Utility;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import com.google.common.base.Strings;
 import jp.co.nikkiso.ntss.core.dao.MstDialyzerDao;
 import jp.co.nikkiso.ntss.core.dao.MstEquipmentDao;
@@ -189,7 +189,7 @@ public class MedicineAndEquipmentUtilServiceImpl implements MedicineAndEquipment
       for (int i = 0; i < jsonNodeArray.size(); i++) {
         JsonNode jsonNode = jsonNodeArray.get(i);
         // jsonNodeは読み取り専用のため、ObjectNodeに変換
-        ObjectNode objectNode = jsonNode.deepCopy();
+        ObjectNode objectNode = jsonNode.deepCopy().asObject();
         // ソートに必要な項目のセット
         objectNode.put(EquipSortKeyNames.JsonIdx.KEY, i);
 
@@ -250,7 +250,7 @@ public class MedicineAndEquipmentUtilServiceImpl implements MedicineAndEquipment
       }
       return mapper.writeValueAsString(arrayNode);
 
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new RuntimeException(e);
     }
   }
@@ -277,7 +277,7 @@ public class MedicineAndEquipmentUtilServiceImpl implements MedicineAndEquipment
       for (int i = 0; i < jsonNodeArray.size(); i++) {
         JsonNode jsonNode = jsonNodeArray.get(i);
         // jsonNodeは読み取り専用のため、ObjectNodeに変換
-        ObjectNode objectNode = jsonNode.deepCopy();
+        ObjectNode objectNode = jsonNode.deepCopy().asObject();
         // ソートに必要な項目のセット
         objectNode.put(MedicineSortKeyNames.JsonIdx.KEY, i);
 
@@ -351,7 +351,7 @@ public class MedicineAndEquipmentUtilServiceImpl implements MedicineAndEquipment
       }
       return mapper.writeValueAsString(arrayNode);
 
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new RuntimeException(e);
     }
   }
@@ -377,7 +377,7 @@ public class MedicineAndEquipmentUtilServiceImpl implements MedicineAndEquipment
 
       return new MstEquipAndDialyzer(equipments, dialyzerList);
 
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new RuntimeException(e);
     }
   }
@@ -404,7 +404,7 @@ public class MedicineAndEquipmentUtilServiceImpl implements MedicineAndEquipment
 
       return new MstMedicineAndMix(medicines, medicineMixes);
 
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new RuntimeException(e);
     }
   }

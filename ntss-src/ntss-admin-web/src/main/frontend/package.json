@@ -1,165 +1,103 @@
 {
   "name": "ReMS",
-  "version": "0.1.0",
   "private": true,
+  "version": "0.1.0",
+  "type": "module",
   "scripts": {
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
-    "test": "vue-cli-service test:unit",
-    "lint": "vue-cli-service lint",
+    "dev": "vite --config ./vue.config.js --host 0.0.0.0",
+    "build": "vite build --config ./vue.config.js",
+    "test": "npm run test:unit",
+    "lint": "eslint src tests *.js --ext .js,.vue",
     "test:e2e": "node -e \"console.log('test:e2e is intentionally disabled in this branch')\"",
-    "test:unit": "vue-cli-service test:unit",
+    "test:unit": "vitest run --environment jsdom --config ./vue.config.js",
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-free-webfonts": "^1.0.9",
-    "@progress/kendo-barcodes-vue-wrapper": "^2019.3.1023",
-    "@progress/kendo-data-query": "^1.6.0",
-    "@progress/kendo-datasource-vue-wrapper": "^2019.3.1023",
-    "@progress/kendo-dropdowns-vue-wrapper": "^2019.3.1023",
-    "@progress/kendo-file-saver": "^1.1.1",
-    "@progress/kendo-grid-vue-wrapper": "^2019.3.1023",
-    "@progress/kendo-layout-vue-wrapper": "^2019.3.1023",
-    "@progress/kendo-licensing": "^1.1.4",
-    "@progress/kendo-scheduler-vue-wrapper": "^2019.3.1023",
-    "@progress/kendo-theme-bootstrap": "^3.2.0",
-    "@progress/kendo-ui": "^2019.3.1114",
-    "@progress/kendo-upload-vue-wrapper": "^2019.3.1023",
-    "@progress/kendo-validator-vue-wrapper": "^2019.3.1023",
-    "@progress/kendo-vue-dialogs": "^2.1.5",
-    "@progress/kendo-vue-excel-export": "^0.5.2",
-    "@progress/kendo-vue-grid": "^1.2.0",
-    "axios": "1.15.0",
-    "bigeval": "^3.2.2",
-    "bignumber.js": "^9.1.1",
-    "csv-parser": "^3.0.0",
+    "@fortawesome/fontawesome-free": "^7.2.0",
+    "@kyvg/vue3-notification": "^3.4.2",
+    "@marsio/vue-grid-layout": "^1.0.3",
+    "@progress/kendo-data-query": "^1.7.4",
+    "@progress/kendo-date-math": "^1.5.17",
+    "@progress/kendo-file-saver": "^1.1.2",
+    "@progress/kendo-licensing": "^1.11.1",
+    "@progress/kendo-svg-icons": "^4.9.2",
+    "@progress/kendo-theme-bootstrap": "^14.0.0",
+    "@progress/kendo-ui": "^2026.1.415",
+    "@progress/kendo-vue-animation": "^8.3.0",
+    "@progress/kendo-vue-buttons": "^8.3.0",
+    "@progress/kendo-vue-common": "^8.3.0",
+    "@progress/kendo-vue-dateinputs": "^8.3.0",
+    "@progress/kendo-vue-dialogs": "^8.3.0",
+    "@progress/kendo-vue-dropdowns": "^8.3.0",
+    "@progress/kendo-vue-editor": "^8.3.0",
+    "@progress/kendo-vue-excel-export": "^8.3.0",
+    "@progress/kendo-vue-form": "^8.3.0",
+    "@progress/kendo-vue-grid": "^8.3.0",
+    "@progress/kendo-vue-inputs": "^8.3.0",
+    "@progress/kendo-vue-intl": "^8.3.0",
+    "@progress/kendo-vue-labels": "^8.3.0",
+    "@progress/kendo-vue-layout": "^8.3.0",
+    "@progress/kendo-vue-popup": "^8.3.0",
+    "@progress/kendo-vue-scheduler": "^8.3.0",
+    "@progress/kendo-vue-tooltip": "^8.3.0",
+    "@progress/kendo-vue-upload": "^8.3.0",
+    "@vuepic/vue-datepicker": "^12.1.0",
+    "axios": "^1.16.1",
+    "bigeval": "^3.2.3",
+    "bignumber.js": "^11.1.1",
+    "csv-parse": "^6.2.1",
+    "date-fns": "^4.1.0",
+    "dayjs": "^1.11.20",
     "element-resize-detector": "^1.2.4",
-    "encoding-japanese": "^2.0.0",
-    "file-loader": "^6.2.0",
-    "heic2any": "0.0.4",
-    "highcharts": "9.2.2",
-    "highcharts-vue": "1.4.0",
-    "howler": "^2.2.3",
-    "jquery": "^3.7.0",
+    "encoding-japanese": "^2.2.0",
+    "heic2any": "^0.0.4",
+    "highcharts": "^12.6.0",
+    "highcharts-vue": "^2.0.1",
+    "howler": "^2.2.4",
+    "jquery": "^4.0.0",
+    "lodash": "^4.18.1",
     "masonry-layout": "^4.2.2",
-    "moment": "2.29.4",
-    "moment-timezone": "^0.5.43",
-    "onsenui": "2.12.8",
-    "patch-package": "^8.0.0",
-    "pdfjs-dist": "^2.16.105",
-    "pikaday": "^1.8.2",
-    "process": "^0.11.10",
-    "q": "^1.5.1",
-    "qs": "^6.11.1",
+    "mitt": "^3.0.1",
+    "onsenui": "^2.12.8",
+    "pdfjs-dist": "^5.7.284",
+    "qs": "^6.15.1",
     "register-service-worker": "^1.7.2",
-    "stream": "npm:stream-browserify@^3.0.0",
-    "underscore": "1.13.6",
-    "v-calendar": "^1.0.0-beta.16",
-    "vee-validate": "^2.1.7",
-    "vue": "2.6.14",
-    "vue-grid-layout": "^2.4.0",
-    "vue-highcharts": "0.1.0",
-    "vue-notification": "^1.3.20",
-    "vue-onsenui": "2.7.2",
-    "vue-router": "^3.6.5",
-    "vue-sanitize": "^0.2.3",
-    "vue-touch": "^2.0.0-beta.4",
-    "vue-touch-keyboard": "^0.3.2",
-    "vuedraggable": "2.24.3",
-    "vuex": "^3.6.2",
-    "vuex-persistedstate": "^4.1.0",
-    "worker-loader": "^3.0.8"
+    "simple-keyboard": "^3.8.141",
+    "stream-browserify": "^3.0.0",
+    "v-calendar": "^3.1.2",
+    "vee-validate": "^4.15.1",
+    "vue": "^3.5.34",
+    "vue-dompurify-html": "^5.3.0",
+    "vue-onsenui": "^3.0.0",
+    "vue-router": "^4.6.4",
+    "vue3-touch-events": "^5.0.15",
+    "vuedraggable": "^4.1.0",
+    "vuex": "^4.1.0",
+    "vuex-persistedstate": "^4.1.0"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "^5.0.8",
-    "@vue/cli-plugin-eslint": "^5.0.8",
-    "@vue/cli-plugin-pwa": "^5.0.8",
-    "@vue/cli-plugin-unit-jest": "^5.0.8",
-    "@vue/cli-service": "^5.0.8",
-    "@vue/test-utils": "^1.0.0-beta.29",
-    "babel-core": "6.26.3",
-    "babel-jest": "^27.5.1",
-    "eslint": "^8.57.1",
-    "eslint-plugin-vue": "~9.33.0",
-    "node-sass": "^8.0.0",
-    "sass-loader": "^13.2.2",
-    "vue-template-compiler": "2.6.14",
-    "workbox-webpack-plugin": "6.6.0"
-  },
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "node": true
-    },
-    "extends": [
-      "plugin:vue/essential",
-      "eslint:recommended"
-    ],
-    "rules": {
-      "no-console": "off"
-    },
-    "parserOptions": {
-      "parser": "babel-eslint"
-    }
-  },
-  "postcss": {
-    "plugins": {
-      "autoprefixer": {}
-    }
+    "@eslint/js": "^10.0.1",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "autoprefixer": "^10.5.0",
+    "eslint": "^10.4.1",
+    "eslint-plugin-vue": "^10.9.2",
+    "globals": "^17.6.0",
+    "jsdom": "^29.1.1",
+    "patch-package": "^8.0.1",
+    "sass": "^1.99.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.6",
+    "vue-eslint-parser": "^10.4.1",
+    "vue-tsc": "^3.2.9"
   },
   "overrides": {
-    "ajv@5.5.2": "6.12.5",
-    "cross-spawn": {
-      "semver": "6.3.1"
-    },
-    "cross-spawn@6.0.6": {
-      "semver": "6.3.1"
-    },
-    "form-data": "2.5.4",
-    "js-yaml": "4.1.1",
-    "minimatch@3.0.3": "3.1.5",
-    "minimatch@3.0.8": "3.1.5",
-    "minimatch@3.1.2": "3.1.5",
-    "minimist@0.0.8": "1.2.8",
-    "minimist@0.0.10": "1.2.8",
-    "normalize-package-data@2.5.0": "3.0.3",
-    "read-pkg": {
-      "semver": "6.3.1"
-    },
-    "read-pkg@5.2.0": {
-      "normalize-package-data": "3.0.3"
-    },
-    "semver@5.0.3": "6.3.1",
-    "semver@5.7.2": "6.3.1",
-    "tar": "7.5.7",
-    "tough-cookie": "4.1.3"
+    "rimraf": "^6.1.3",
+    "tar": "^7.5.15",
+    "follow-redirects": "^1.16.0",
+    "uuid": "^14.0.0"
   },
-  "browserslist": [
-    "> 1%",
-    "last 2 versions",
-    "not ie <= 8"
-  ],
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "jsx",
-      "json",
-      "vue"
-    ],
-    "transform": {
-      "^.+\\.vue$": "vue-jest",
-      ".+\\.(css|styl|less|sass|scss|png|jpg|ttf|woff|woff2)$": "jest-transform-stub",
-      "^.+\\.jsx?$": "babel-jest"
-    },
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/src/$1"
-    },
-    "snapshotSerializers": [
-      "jest-serializer-vue"
-    ],
-    "testMatch": [
-      "**/tests/unit/**/*.spec.(js|jsx|ts|tsx)|**/__tests__/*.(js|jsx|ts|tsx)"
-    ],
-    "testURL": "http://localhost/"
+  "engines": {
+    "node": "24.x"
   }
 }

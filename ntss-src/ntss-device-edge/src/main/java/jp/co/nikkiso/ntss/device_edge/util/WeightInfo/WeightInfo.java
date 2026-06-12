@@ -6,8 +6,8 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Objects;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.device_edge.util.Utilities;
 import lombok.Getter;

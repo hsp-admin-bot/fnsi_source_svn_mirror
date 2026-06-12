@@ -2,8 +2,8 @@ package jp.co.nikkiso.ntss.coop_api.request;
 
 import org.springframework.util.StringUtils;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 
 import lombok.Data;
 
@@ -11,7 +11,7 @@ import lombok.Data;
  *  * ジャーナル作成APIリクエスト
  *
  */
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Data
 public class JournalCreateRequest {
   /** 施設コード */

@@ -11,7 +11,7 @@
         <v-ons-button
         class="button common-style-select-button btn3-normal"
         style="margin-left:5px;"
-        @click="createPopoverData(value ? value.cd : null, index)"
+        @click="createPopoverData(externalValue ? externalValue.cd : null, index)"
         :class="isClass"
         :disabled="isDisabled">選択</v-ons-button>
       <!-- #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end -->
@@ -25,6 +25,13 @@ import { Master } from "@/models/common/master-selector-condition/Master";
 
 export default {
   mixins: [MasterSelectorMixin],
+  emits: [
+    "update:modelValue",
+    "input",
+    "changeUnit",
+    "changeDecPoint",
+    "changePersonalUser"
+  ],
   props: {
     index: {
       type: Number,
@@ -44,8 +51,14 @@ export default {
       type: Boolean,
       default: true
     },
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
+      type: Object,
+      default: undefined
+    },
     value: {
-      type: Object
+      type: Object,
+      default: undefined
     },
     isDisabled: {
       type: Boolean,
@@ -64,6 +77,11 @@ export default {
       default: true
     },
   },
+  computed: {
+    externalValue() {
+      return this.modelValue !== undefined ? this.modelValue : this.value;
+    }
+  },
   methods: {
     updateInput(data) {
       // add #11585 治療記録＞医療材料で登録済み医療材料と同一の医療材料を追加できてしまう。 linjunfeng start
@@ -76,6 +94,7 @@ export default {
         master.needle = data.needle;
       }
       this.popoverData.popoverContentSelected = data;
+      this.$emit("update:modelValue", master, this.index);
       this.$emit("input", master, this.index);
       this.$emit("changeUnit", data.unit, this.index);
       this.$emit("changeDecPoint",data.decPoint, this.index);

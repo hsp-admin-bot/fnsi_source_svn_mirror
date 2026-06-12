@@ -15,9 +15,9 @@
           <kendo-grid-toolbar class="k-grid-toolbar kendo-grid-toolbar-style" :style="heightStyles" >
             <div class="header-btn-area">
               <label class="grid-align-default">【施設名】</label>
-              <label class="grid-align-default">{{ this.facilityName }}</label>
+              <label class="grid-align-default">{{ facilityName }}</label>
               <label class="grid-align-default">【施設コード】</label>
-              <label class="grid-align-default">{{ this.facilityCd }}</label>
+              <label class="grid-align-default">{{ facilityCd }}</label>
             </div>
             <div class="grid-container">
               <kendo-grid
@@ -32,10 +32,9 @@
                 :resizable="true"
                 :sortable="true"
               >
-                <template v-for="(column, index) in certificateColumns">
+                <template v-for="(column, index) in certificateColumns" :key="index">
                   <kendo-grid-column
                     v-if="column.field === '$modalType'"
-                    :key="index"
                     :title="column.title"
                     :field="column.field"
                     :hidden="column.hidden"
@@ -51,7 +50,6 @@
                   />
                   <kendo-grid-column
                     v-else
-                    :key="index"
                     :title="column.title"
                     :field="column.field"
                     :hidden="column.hidden"
@@ -353,7 +351,7 @@ export default {
           clCertificateId: clCertificateId
         };
         await ApiHelper.post("/cl-details/deleteCl", obj);
-      } catch (error) {
+      } catch {
           this.$ons.notification.alert({
             title: "",
             message: DIALOG_MESSAGES[this.deletemessageCd]
@@ -370,13 +368,21 @@ export default {
     //施設一覧を戻る。
     // add #6690 「操作するたびに対象施設が表示していない1ページ目にもどる」について、対応する。 dengshen start
     // this.$router.push({ name: "clManagementView" });
+    // this.$router.push({
+    //   name: "clManagementView",
+    //   params: {
+    //     page: this.$route.params.page || 1,
+    //     sort: this.$route.params.sort || null
+    //   }
+    // });
     this.$router.push({
-      name: "clManagementView",
-      params: {
-        page: this.$route.params.page || 1,
-        sort: this.$route.params.sort || null
-      }
-    });
+  name: "clManagementView",
+  query: {
+    page: this.$route.query.page || 1,
+    sort: this.$route.query.sort || null
+  }
+});
+
     // add #6690 「操作するたびに対象施設が表示していない1ページ目にもどる」について、対応する。 dengshen end
   }
   },
@@ -458,7 +464,7 @@ export default {
 .k-grid-toolbar {
   padding: 1.5em 0.3em;
 }
-.kendo-grid-toolbar-style >>> .k-tooltip.k-tooltip-validation {
+.kendo-grid-toolbar-style :deep(.k-tooltip.k-tooltip-validation) {
   width: auto;
 }
 .btn-kendo {
@@ -473,7 +479,7 @@ export default {
   float: right;
   border-radius: 5px;
 }
-.k-grid-toolbar >>> * + * {
+.k-grid-toolbar :deep(* + *) {
   margin-left: 0;
 }
 
@@ -512,7 +518,7 @@ export default {
     width: 1600px;
   }
 
-  #facility-grid >>> .k-auto-scrollable {
+  #facility-grid :deep(.k-auto-scrollable) {
     width: auto;
   }
 }

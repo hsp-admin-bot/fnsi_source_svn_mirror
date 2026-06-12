@@ -3,22 +3,25 @@
  */
 <template>
   <submenu-base v-if="hasOrdNo">
-    <div slot="main" id="weight-component">
+    <template #main>
+      <div id="weight-component">
       <v-ons-list class="treatment-record-accordion">
-        <v-ons-list-item expandable :expanded.sync="isExpandedWeight" id="weight-sub">
+        <v-ons-list-item expandable v-model:expanded="isExpandedWeight" id="weight-sub">
           <label>体重</label>
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
 <!--          <weight-sub v-model="actualModel.weight" :authorityCds="authorityCds" ref='weight' />-->
           <weight-sub v-model="actualModel.weight"  ref='weight' />
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
         </v-ons-list-item>
-        <v-ons-list-item expandable :expanded.sync="isExpandedMonitor" ref="monitorSub" id="monitor-sub">
+        <v-ons-list-item expandable v-model:expanded="isExpandedMonitor" ref="monitorSub" id="monitor-sub">
           <label>モニタ</label>
           <monitor-sub v-model="actualModel.monitor" :ord-no="getOrdNo" ref='monitor' />
         </v-ons-list-item>
       </v-ons-list>
-    </div>
-    <div slot="footer" class="flex-container treatment-submenu">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container treatment-submenu">
       <div class="denial-btn-area">
         <!-- add FNSI-「キャンセル」権限の修正 徐 start -->
         <!-- <v-ons-button class="button denial-btn" @click="onClickCancel">キャンセル</v-ons-button> -->
@@ -36,14 +39,16 @@
         <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
         <!-- mod FNSI-共有を追加 王 20200921 end -->
       </div>
-    </div>
+      </div>
+    </template>
   </submenu-base>
 </template>
 
 <script>
+import { resolveRefElement } from "@/functions/common/LayoutMeasureHelper";
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 start
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc start
-import {mapActions, mapGetters, mapMutations} from "vuex";
+import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end
 import SubmenuBase from "@/components/treatment-record/SubmenuBaseComponent";
 import WeightSubComponent from "@/components/treatment-record/submenu/weight/WeightSubComponent";
@@ -54,7 +59,7 @@ import { Weight } from "@/models/treatment-record/weight/Weight";
 import { Monitor } from "@/models/treatment-record/weight/Monitor";
 import { WeightModal } from "@/models/treatment-record/weight/WeightModal";
 // import { AUTHORITY_CODES } from "@/constants/userAuthority";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add FNSI-日付書式の修正 徐 start
 import { dateFormat, DATE_TIME_FORMAT, DATE_FORMAT } from "@/functions/common/DateTimeUtils";
 // add FNSI-日付書式の修正 徐 end
@@ -112,6 +117,7 @@ export default {
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     isShared() {
       return this.getFacilityCd === this.getSharedFacilityCd;
     },
@@ -161,9 +167,9 @@ export default {
      */
     canSave() {
       // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc start
-      this.setIsPatInfoChaned(this.isChanged && this.$validator.errors.items.length === 0)
+      this.setIsPatInfoChaned(this.isChanged && this.validationErrors.length === 0)
       // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end
-      return this.isChanged && this.$validator.errors.items.length === 0;
+      return this.isChanged && this.validationErrors.length === 0;
     },
     /**
      * 後体重測定済みにすることができるかどうか
@@ -245,7 +251,10 @@ export default {
       if (!this.getOrdNo) {
         return;
       }
-      this.getTreatmentRecordWeight(this.getOrdNo).then(response => {
+      this.getTreatmentRecordWeight({
+        ordNo: this.getOrdNo,
+        selectedPatId: this.selectedPatId
+      }).then(response => {
         const w = response.data;
         const rstOffWaterInfo = JSON.parse(w.rst_off_water_info);
         const rstTareInfo = JSON.parse(w.rst_tare_info);
@@ -263,7 +272,7 @@ export default {
         let maxKey = 0;
         for (let index = 5; index > 0; index--) {
           let hasKey = "" + index;
-          if (recrcls.hasOwnProperty(hasKey)) {
+          if (Object.prototype.hasOwnProperty.call(recrcls, hasKey)) {
             maxKey = index;
             break;
           }
@@ -364,7 +373,7 @@ export default {
           re_loop_rate_main: this.safeField(rstWeightInfo, 're_loop_rate_main'),
           // add FNSI-体重情報のJSONに四つカラムを追加 徐 start
           sttc_vns_prssr: this.safeField(rstWeightInfo, 'sttc_vns_prssr'),
-          iap_rt: this.safeField(rstWeightInfo, 'iap_rt'),
+          iap_rt: this.safeField(rstWeightInfo, 'iap_rt', true),
           recrcl_rt: rstWeightInfo ? rstWeightInfo.recrcl_rt : null
           // add FNSI-体重情報のJSONに四つカラムを追加 徐 end
         });
@@ -388,7 +397,7 @@ export default {
     refresh() {
       // 子機能ボタンエリアの更新
       this.$emit("update");
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       //mod メッセージ順番修正 房 start
@@ -405,7 +414,7 @@ export default {
     },
     // add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
     eventBusRefresh() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       if (this.isChanged && this.alertFlag) {
@@ -420,6 +429,13 @@ export default {
      * 更新API用RequestBody生成.
      */
     createUpdateRequestBody() {
+      const parseNullableNumber = value => {
+        if (value === null || value === undefined || value === "") {
+          return null;
+        }
+        const numberValue = Number(value);
+        return Number.isNaN(numberValue) ? null : numberValue;
+      };
       const weightInfo = this.originalWeight.rst_weight_info ? JSON.parse(this.originalWeight.rst_weight_info) : {};
       Object.assign(weightInfo, this.actualModel.weight.toJson());
       Object.assign(weightInfo, this.actualModel.monitor.toJson());
@@ -447,7 +463,7 @@ export default {
         rst_tare_info: JSON.stringify(tareInfo),
         rst_off_water_info: JSON.stringify(offWaterInfo),
         // mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
-        rst_dw: this.actualModel.weight.rstDw? parseFloat(this.actualModel.weight.rstDw) : null
+        rst_dw: parseNullableNumber(this.actualModel.weight.rstDw)
         // mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue end
       };
     },
@@ -670,15 +686,15 @@ export default {
       return sortedRecrclRt;
     },
     // mod #12313 【因島】過去の治療記録-体重で無編集にも関わらず別画面に遷移すると「内容破棄」のメッセージが表示される 関 start
-    safeField(obj, key) {
+    safeField(obj, key, allowMinusOne = false) {
       const val = obj && obj[key];
-      return val != null && val !== -1 ? val : null;
+      return val != null && (allowMinusOne || val !== -1) ? val : null;
     }
     // mod #12313 【因島】過去の治療記録-体重で無編集にも関わらず別画面に遷移すると「内容破棄」のメッセージが表示される 関 end
   },
   created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // イベント登録
     EventBus.$on("refresh", this.eventBusRefresh);
     // OrdMainレコードをチェックする
@@ -690,7 +706,7 @@ export default {
   /**
    * コンポーネント破棄
    */
-  beforeDestroy() {
+  beforeUnmount() {
     // イベント解除
     // del refresh方法処理不正について、対応する。 dengshen start
     // EventBus.$off("refresh");
@@ -707,7 +723,7 @@ export default {
   mounted() {
     // BVMS画面からこのコンポーネントを開くと自動的に展開されます
     if (this.openSecondBarfromBvms === true) {
-      this.$refs.monitorSub.$el.showExpansion();
+      (this.$refs.monitorSub?.showExpansion || resolveRefElement(this, "monitorSub")?.showExpansion)?.call(this.$refs.monitorSub || resolveRefElement(this, "monitorSub"));
       this.isExpandedMonitor = true;
     }
   }

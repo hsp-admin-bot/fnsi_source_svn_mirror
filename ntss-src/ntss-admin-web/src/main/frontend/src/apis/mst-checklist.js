@@ -10,21 +10,29 @@ import store from "@/stores";
 const URL_BASE_MST_CHECKLIST = "checklist_setting";
 
 /**
+ * 自動更新時のバックグラウンド呼び出し用クエリ（check-list と同様）
+ * @returns {string} 空文字 or "?__background_call__=true"
+ */
+function getMstChecklistBackgroundQuery() {
+  const forceSignOutFlag = store.getters["check-list/list/getForceSignOutFlag"];
+  return forceSignOutFlag === 0 ? "?__background_call__=true" : "";
+}
+
+/**
  * チェックリストマスタ設定情報取得
- * @param {*} param 施設コード、自動更新フラグ
+ * @param {{ facilityCd: string; autoRefreshFlag?: boolean }} param 施設コード、自動更新フラグ
  */
 export function sendRequestGetMstChecklist(param) {
-  // 自動更新サインアウトON/OFFチェック
-  const forceSignOutFlag = store.getters["check-list/list/getForceSignOutFlag"];
-  const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
   const baseUrl = `${URL_BASE_MST_CHECKLIST}/get/${param.facilityCd}`;
-  const requestUrl = param.autoRefreshFlag ? `${baseUrl}${queryParams}` : `${baseUrl}`;
+  const requestUrl = param.autoRefreshFlag
+    ? `${baseUrl}${getMstChecklistBackgroundQuery()}`
+    : baseUrl;
   return ApiHelper.get(requestUrl);
 }
 
 /**
  * 医療材料分類マスタ情報取得
- * @param {*} param 施設コード
+ * @param {{ facilityCd: string }} param 施設コード
  */
 export function sendRequestGetMstEquipClass(param) {
   return ApiHelper.get(
@@ -34,7 +42,7 @@ export function sendRequestGetMstEquipClass(param) {
 
 /**
  * チェックリストマスタ設定の新規登録
- * @param {*} params 登録データ
+ * @param {Record<string, unknown>} params 登録データ
  */
 export function sendRequestInsertMstChecklist(params) {
   return ApiHelper.post(`${URL_BASE_MST_CHECKLIST}/insert`, params);
@@ -42,8 +50,7 @@ export function sendRequestInsertMstChecklist(params) {
 
 /**
  * チェックリストマスタ設定の更新登録
- * @param {*} weightCd 主キー
- * @param {*} params 登録データ
+ * @param {Record<string, unknown>} params 登録データ
  */
 export function sendRequestUpdateMstChecklist(params) {
   return ApiHelper.put(`${URL_BASE_MST_CHECKLIST}/update`, params);

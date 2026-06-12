@@ -1,10 +1,10 @@
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import {
   searchBbsList,
   searchPatList,
   selectedBbsInfo
 } from "@/functions/BbsInfoFunctions.js";
-import { deserializeJsonColumn } from "@/functions/common/CommonFunctions";
+import { deserializeJsonColumn, customSanitizer } from "@/functions/common/CommonFunctions";
 import {ApiHelper} from "@/apis/AxiosHelper";
 
 /**
@@ -23,9 +23,9 @@ export default {
       // フリーワード
       freeWord: "", // 初期値設定:未入力
       // 掲載開始日
-      noticeStartDate: moment().format("YYYY-MM-DD"), // 初期値設定:本日
+      noticeStartDate: dayjs().format("YYYY-MM-DD"), // 初期値設定:本日
       // 掲載終了日
-      noticeEndDate: moment().format("YYYY-MM-DD"), // 初期値設定:本日,
+      noticeEndDate: dayjs().format("YYYY-MM-DD"), // 初期値設定:本日,
       // 透析日
       dialysisDate: null, // 初期値設定:未入力
       // クール
@@ -88,11 +88,9 @@ export default {
      * @description 検索結果を保持する掲示板一覧※掲示板一覧画面のみで使用(未読等の絞り込みしない)
      */
     searchedKeepBbsList: [],
-/* del by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --start */
-// // add マスタ削除 対応 chen start
-//     mstBbsKindAll: [],
-// // add マスタ削除 対応 chen end
-/* del by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --end */
+// add マスタ削除 対応 chen start
+    mstBbsKindAll: [],
+// add マスタ削除 対応 chen end
 
     /**
      * @description 掲示板読み込み中フラグ
@@ -172,13 +170,11 @@ export default {
       return state.searchedKeepBbsList;
     },
 
-/* del by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --start */
-// // add マスタ削除 対応 chen start
-//     mstBbsKindAll(state) {
-//       return state.mstBbsKindAll;
-//     },
-// // add マスタ削除 対応 chen end
-/* del by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --end */
+// add マスタ削除 対応 chen start
+    mstBbsKindAll(state) {
+      return state.mstBbsKindAll;
+    },
+// add マスタ削除 対応 chen end
 
     isLoadingBbs: state => state.isLoadingBbs,
 
@@ -235,13 +231,11 @@ export default {
       state.searchedKeepBbsList = recordList;
     },
 
-/* del by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --start */
-// // add マスタ削除 対応 chen start
-//     setMstBbsKindAll(state, mstBbsKindAll) {
-//       state.mstBbsKindAll = mstBbsKindAll;
-//     },
-// // add マスタ削除 対応 chen end
-/* del by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --end */
+// add マスタ削除 対応 chen start
+    setMstBbsKindAll(state, mstBbsKindAll) {
+      state.mstBbsKindAll = mstBbsKindAll;
+    },
+// add マスタ削除 対応 chen end
 
     setIsLoadingBbs: (state, b) => {
       state.isLoadingBbs = b;
@@ -423,28 +417,29 @@ export default {
         commit("setSearchedKeepBbsList", keepBbsList);
       }
 
-/* del by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --start */
-// // add マスタ削除 対応 chen start
-//       const mstBbsKindAll = await ApiHelper.get(`/mstInfo/mstBbsKindAll`, {
-//         facilityCd: condition.facilityCd
-//       });
-//       commit("setMstBbsKindAll", mstBbsKindAll.data);
-// // add マスタ削除 対応 chen end
-/* del by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --end */
+// add マスタ削除 対応 chen start
+      const mstBbsKindAll = await ApiHelper.get(`/mstInfo/mstBbsKindAll`, {
+        facilityCd: condition.facilityCd
+      });
+      commit("setMstBbsKindAll", mstBbsKindAll.data);
+// add マスタ削除 対応 chen end
       // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 end
     },
 
     /**
      * @description 選択した掲示板番号の詳細情報取得
      */
-    async setSelectedBbsInfo({ commit }, bbsCtlNo) {
+    async setSelectedBbsInfo({ commit }, payload) {
+      const bbsCtlNo = payload && typeof payload === "object" ? payload.bbsCtlNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
       // 選択した掲示板番号の詳細情報をDBから取得
-      const responseBbsInfo = await selectedBbsInfo(bbsCtlNo);
+      const responseBbsInfo = await selectedBbsInfo(bbsCtlNo, selectedPatId);
       const deserializeRecordList = responseBbsInfo.data;
 
       const jsonColumns = ["pat_info", "staff_info", "file_info"];
       // 掲示板情報取得
       const bbsInfo = deserializeJsonColumn(deserializeRecordList, jsonColumns);
+      bbsInfo.html_content = customSanitizer(bbsInfo.html_content);
       // 詳細画面で情報を展開するため、取得したDBデータをストアに格納する
       commit("setSelectedBbs", bbsInfo);
       commit("setRegFuncClass", bbsInfo.reg_func_class);
@@ -458,13 +453,11 @@ export default {
     setSearchedKeepBbsList({ commit }, bbsInfoList) {
       commit("setSearchedKeepBbsList", bbsInfoList);
     },
-/* del by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --start */
-// // add マスタ削除 対応 chen start
-//     setMstBbsKindAll({ commit }, mstBbsKindAll) {
-//       commit("setMstBbsKindAll", mstBbsKindAll);
-//     },
-// // add マスタ削除 対応 chen end
-/* del by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --end */
+// add マスタ削除 対応 chen start
+    setMstBbsKindAll({ commit }, mstBbsKindAll) {
+      commit("setMstBbsKindAll", mstBbsKindAll);
+    },
+// add マスタ削除 対応 chen end
 
     // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 start
     setSortColumn({ commit }, sortColumn) {
@@ -485,9 +478,9 @@ export default {
       const responseBbsInfo = await selectedBbsInfo(bbsCtlNo);
       const deserializeRecordList = responseBbsInfo.data;
       const isExistBbsInfo = 
-        deserializeRecordList.hasOwnProperty("pat_info") &&
-        deserializeRecordList.hasOwnProperty("staff_info") &&
-        deserializeRecordList.hasOwnProperty("file_info");
+        Object.prototype.hasOwnProperty.call(deserializeRecordList, "pat_info") &&
+        Object.prototype.hasOwnProperty.call(deserializeRecordList, "staff_info") &&
+        Object.prototype.hasOwnProperty.call(deserializeRecordList, "file_info");
       commit("setIsExistBbsInfo", isExistBbsInfo);
     },
 

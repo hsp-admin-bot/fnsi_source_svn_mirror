@@ -1,32 +1,19 @@
 <template>
   <div class="flex-align-center">
-    <!--mod FNSI-改修内容日付のチェックの追加対応。 任 start-->
-    <!--<input
-      type="date"
-      :min="dateMin"
-      :max="dateMax"
-      v-model="inputModel.weekEndDate"
-      class="input_date ntss-input-date"
-    />-->
-    <!--#10715:日付IF修正Start-->
-    <!--#10715：日付IF修正20240910検証NG対応：村上(プロパティ不正) Start -->
-    <input
-      type="date"
+    <date-input
       :min="dateMin"
       :max="dateMax"
       v-model="valueInput"
       id="inputdatetemp"
       class="input_date ntss-input-date"
-      :class="[classObject,this.className]"
+      :classes="[...Object.keys(classObject).filter(key => classObject[key]), this.className].join(' ')"
       :disabled="disabled"
-      v-on="$listeners"
+      v-bind="$attrs"
   	  @input="onInput($event)"
       @blur="onFocusOut($event)"
       @focus="onFocusIn($event)"
+      :is-required="isRequired"
     />
-    <!--#10715:日付IF修正End-->
-    <!--#10715：日付IF修正20240910検証NG対応：村上(プロパティ不正) End -->
-    <!--mod FNSI-改修内容日付のチェックの追加対応。 任 end-->
     <common-calendar
 	  v-model="valueInput"
 	  @input="inputEvent"
@@ -35,17 +22,18 @@
 </template>
 
 <script>
-  import moment from "moment";
+  import dayjs from "@/compat/date/dayjs";
   import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
   import BaseCustomInputStatus from '@/components/common/custom-form-tags/BaseCustomInputStatus.vue'
-  //#10715：日付IF修正20240910検証NG対応：村上Start
-  import {DATE_FORMAT, dateFormat } from "@/functions/common/DateTimeUtils.js";
-  //#10715：日付IF修正20240910検証NG対応：村上End
+  import { findAncestorWithMethod } from "@/functions/common/ComponentOwnerResolver";
+  import DateInput from "@/components/common/DateInput";
 
   export default {
+  inheritAttrs: false,
   mixins:[BaseCustomInputStatus],
 	components:{
 		"common-calendar": commonCalender,
+    "date-input": DateInput,
 	},
   props:{
     dateMin:{
@@ -75,12 +63,25 @@
       hasInput: false,
       inputModel:{
         date:this.data
-      }
+      },
+      initialized: false
+    }
+  },
+  mounted() {
+    if (!this.functionArgs) {
+      this.initValue = this.editValue = this.inputModel.date;
     }
   },
   /*add FNSI-改修内容6186 任 start*/
   watch:{
     data(value){
+      if (!this.initialized) {
+        if (!this.functionArgs && this.initValue === null && this.editValue === null) {
+          this.initValue = this.editValue = value;
+        }
+      }
+      this.initialized = true;
+
       this.valueInput = value
       return value
     }
@@ -91,7 +92,7 @@
 	  displayDateValue() {
 	    return this.editValue === null
 	      ? null
-	      : moment(this.editValue).format("YYYY-MM-DD");
+	      : dayjs(this.editValue).format("YYYY-MM-DD");
 	  },
 
 	  calendarValue: {
@@ -109,9 +110,9 @@
 	      // 常に適用されるclass
 	      "custom-input-date": true,
 	      // 編集時に適用されるclass
-	      "custom-input-date-edited": this.isEdited,
+	      "date-input-edited": !this.functionArgs ? this.isEdited : false,
 	      // 必須項目に適用されるclass
-	      "custom-input-date-required": this.isRequired,
+	      "date-input-required": this.isRequired,
 	      // add じょはく start
 	      // データ不正時に適用されるclass
 	      "custom-input-date-invalid": !this.isValid
@@ -120,6 +121,12 @@
 	  }
   },
   methods:{
+    resolveTemplateOwner() {
+      return findAncestorWithMethod(this, ["changeCondition"], { maxDepth: 12 }) ||
+        findAncestorWithMethod(this, ["setStartNoticeValue"], { maxDepth: 12 }) ||
+        findAncestorWithMethod(this, ["setEndNoticeValue"], { maxDepth: 12 }) ||
+        this;
+    },
     onFocusIn(event) {
       this.addFocusCss(event);
   	  if (this.tempName == 'tabTemp') {
@@ -133,13 +140,10 @@
           this.hasInput = true;
         }
       } else {
-        this.inputEvent(event.target.value);
+        this.inputEvent(event);
       }
     },
     onFocusOut(event) {
-      //#10715：日付IF修正20240910検証NG対応：村上Start
-      this.validateValue(event);
-      //#10715：日付IF修正20240910検証NG対応：村上End
       if (this.tempName == 'tabTemp') {
         this.hasFocus = false;
         if (this.hasInput) {
@@ -152,66 +156,23 @@
   	  if (this.tempName == 'tabTemp' && this.hasFocus) return;
       /*mod FNSI-改修内容6186 任 start*/
       /*if(this.tempName == 'bbsTemp'){
-        this.$parent.setEndNoticeValue(event)
+        this.resolveTemplateOwner()?.setEndNoticeValue?.(event)
       }*/
 	  if(this.tempName == 'bbsTempnoticeStartDate'){
-	    this.$parent.setStartNoticeValue(event)
+	    this.resolveTemplateOwner()?.setStartNoticeValue?.(event)
 
 	  }
 	  if(this.tempName == 'bbsTempnoticeEndDate'){
-      this.$parent.setEndNoticeValue(event)
+      this.resolveTemplateOwner()?.setEndNoticeValue?.(event)
     }
       /*mod FNSI-改修内容6186 任 end*/
 	  if(this.tempName == 'tabTemp'){
 
 		this.$emit('update:data',event)
-		this.$parent.changeCondition(this.functionArgs)
+		this.resolveTemplateOwner()?.changeCondition?.(this.functionArgs)
 	  }
 
-    },
-	/**
-	 * 全角入力や貼り付けなど
-	 * 最大値と最小値の間に値が含まれているかどうかをチェックし、
-	 * 範囲外なら最大／最小値に設定しなおす
-	 */
-  //#10715：日付IF修正20240910検証NG対応：村上Start
-	validateValue(event) {
-  //#10715：日付IF修正20240910検証NG対応：村上End
-    //#10715:日付IF修正Start
-    //#10715：日付IF修正20240910検証NG対応：村上Start
-    if((this.editValue == "" || this.editValue == null) && this.valueInput == null) {
-    //#10715:日付IF修正End
-      if (this.isRequired) {
-        this.editValue = dateFormat.format(new Date(), DATE_FORMAT);
-        event.target.value = this.editValue ;
-      } else {
-        //必須以外
-        this.isValid = !this.isValid
-      }
     }
-    //#10715：日付IF修正20240910検証NG対応：村上End
-	  // 有効な入力値かつ入力制限値を超える場合：入力制限値に上書き
-	  if(this.editValue !== "" && this.editValue !== null){
-	    // 上限値を超える値:上限値をセット
-	    if(this.disableDatesAfter !== "" && this.disableDatesAfter < moment(this.editValue).format("YYYYMMDD")){
-	      this.editValue = this.disableDatesAfter;
-	    }
-	    // 下限値未満の値：下限値をセット
-	    if(this.disableDatesBefore !== "" && this.disableDatesBefore > moment(this.editValue).format("YYYYMMDD")){
-	      this.editValue = this.disableDatesBefore;
-	    }
-	  }
-	},
-	// 生年月日入力モードかつAndroidまたはiOSの場合、
-	// フォームタップで75年前の日付を表示
-	focusInput() {
-	  if (this.birthdayMode && !this.displayDateValue &&
-	     (this.androidFlg || this.iosFlg)) {
-	    this.inputValue(moment()
-	        .subtract(75, "years")
-	        .toDate())
-	  }
-	}
   }
 }
 </script>
@@ -222,21 +183,4 @@
     background-color: var(--ntss-list-background-color);
   }
 
-  .custom-input-date-edited {
-    border: 2px green solid;
-    outline: 0;
-  }
-
-  .custom-input-date-required {
-    color: black;
-    background-color: #ffff99;
-  }
-/* ▼を消す */
-.custom-input-date::-webkit-calendar-picker-indicator {
-  display: none;
-}
-  .custom-input-date-invalid {
-    color: black;
-    background-color: rgba(255, 0, 0, 0.5);
-  }
 </style>

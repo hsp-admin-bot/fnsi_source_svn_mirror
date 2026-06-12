@@ -3,12 +3,9 @@
   <!--  mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20240103 ztc start-->
   <!--  <modal-base @onClose="hideModal">-->
   <modal-base @onClose="hideModal('hide-modal')">
-    <!--  mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20240103 ztc end-->
-    <div
-      slot="body"
-      class="indInfo-style-modal-container"
-      style="overflow: initial"
-    >
+<!--  mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20240103 ztc end-->
+        <template #body>
+<div ref="modalBodyRoot" class="indInfo-style-modal-container" style="overflow: initial;">
       <v-ons-row class="row-style">
         <v-ons-col class="col-style-right-title">
           <label>コピー元 治療日</label>
@@ -24,15 +21,17 @@
             class="date-input common-style-input ntss-input-date ntss-custom-input"
             :max="maxDate"
           /> -->
-          <input
+          <date-input
             v-model="selectedDialysisDate"
             id="date-copy"
-            type="date"
             class="date-input common-style-input ntss-input-date ntss-custom-input date-copy-input"
+            classes="date-input-required date-input-unjust-size date-input-focus"
             :max="maxDate"
-            @blur="delFocusCss($event)"
-            @focus="addFocusCss($event)"
             :class="classObject"
+            @focus="beforeDialysisDate = selectedDialysisDate"
+            @blur="onBlurDialysisDate"
+            isRequired
+            defaultEmpty
           />
           <!-- mod FNSI-横展開--inputの色 関 end -->
           <!-- mod FNSI-7629 劉全航 start -->
@@ -46,7 +45,7 @@
           /> -->
           <custom-calendar
             v-if="customCalendarFlag"
-            v-model="selectedDialysisDate"
+            v-model="calendarDialysisDate"
             :is-disabled-past-dates="false"
             :selected-dates="treatDatelist"
             :disabled-dates="disabledDates"
@@ -115,15 +114,17 @@
             class="date-input common-style-input ntss-input-date ntss-custom-input"
             :max="maxDate"
           /> -->
-          <input
+          <date-input
             v-model="selectedDialysisDate"
             id="date-copy"
-            type="date"
             class="date-input common-style-input ntss-input-date ntss-custom-input date-copy-input"
+            classes="date-input-required date-input-unjust-size date-input-focus"
             :max="maxDate"
-            @blur="delFocusCss($event)"
-            @focus="addFocusCss($event)"
             :class="classObject"
+            @focus="beforeDialysisDate = selectedDialysisDate"
+            @blur="onBlurDialysisDate"
+            isRequired
+            defaultEmpty
           />
           <!-- mod FNSI-横展開--inputの色 関 end -->
           <!-- add FNSI-予定コピー仕様修正、障害票一覧_患者経過総合ビューアNo.16-19 start -->
@@ -133,7 +134,7 @@
             :disable-dates-after="disableDatesAfter"
           /> -->
           <custom-calendar
-            v-model="selectedDialysisDate"
+            v-model="calendarDialysisDate"
             :is-disabled-past-dates="false"
             :disable-dates-after="disableDatesAfter"
           />
@@ -196,7 +197,7 @@
 
       <div v-if="messageDialogInfo.isDialogVisible">
         <message-dialog
-          :visible.sync="messageDialogInfo.isDialogVisible"
+          v-model:visible="messageDialogInfo.isDialogVisible"
           :message-cd="messageDialogInfo.messageCd"
           :type="messageDialogInfo.type"
           :string-params="messageDialogInfo.stringParams"
@@ -204,8 +205,10 @@
         />
       </div>
     </div>
+    </template>
 
-    <div slot="footer" class="in-ind-dropdown-area">
+        <template #footer>
+<div ref="modalFooterRoot" class="in-ind-dropdown-area">
       <v-ons-row class="row-style-footer">
         <v-ons-col style="text-align: end; padding-right: 10px; margin: auto">
           <label>指示者</label>
@@ -218,8 +221,8 @@
             :data-value-field="'user_id'"
             style="width: 100%"
             class="common-style-input select-style-list"
-          >
-          </kendo-dropdownlist>
+            @open="onIndUserDropdownOpen"
+          />
         </v-ons-col>
       </v-ons-row>
 
@@ -280,6 +283,7 @@
         </v-ons-col>
       </v-ons-row>
     </div>
+    </template>
   </modal-base>
 </template>
 <script>
@@ -287,18 +291,15 @@ import { ApiHelper } from "@/apis/AxiosHelper";
 /**
  * Vue関連
  */
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 
 import CustomCalendar from "@/components/common/custom-calendar/CustomCalendar";
 
 /**
  * 日付操作
  */
-import moment from "moment";
-import {
-  dateFormat,
-  fitTermCheckForUpdate,
-} from "@/functions/common/DateTimeUtils";
+import dayjs from "@/compat/date/dayjs";
+import { dateFormat, fitTermCheckForUpdate } from "@/functions/common/DateTimeUtils";
 
 /**
  * メッセージダイアログ
@@ -319,7 +320,10 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
 // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 import { messageFormat } from "@/functions/common/MessageFormat";
+import DateInput from "@/components/common/DateInput";
+
 // mod #6107 2023/03/22 メッセージボックス全調整 張博 end
 
 export default {
@@ -332,6 +336,7 @@ export default {
     "custom-calendar": CustomCalendar,
     "message-dialog": messageDialog,
     ModalBase,
+    "date-input": DateInput,
   },
 
   props: {
@@ -516,9 +521,13 @@ export default {
 
       /**
        * 「投与薬剤を含めてコピーする」データ
-       */
+      */
       isIncludingMedicine: false,
       initIsIncludingMedicine: false,
+      // 変更前 コピー元治療日／コピー先治療日
+      beforeDialysisDate: "",
+      // custom-calendar用 コピー元治療日／コピー先治療日がカレンダーから選択されたかを判別可能とする
+      calendarDialysisDate: "",
     };
   },
 
@@ -568,7 +577,7 @@ export default {
      * 表示治療日
      */
     dispTreatDate() {
-      const dispStr = moment(this.dispDialysisDate, "YYYY-MM-DD").format(
+      const dispStr = dayjs(this.dispDialysisDate, "YYYY-MM-DD").format(
         "YYYY/MM/DD(ddd)"
       );
       return dispStr;
@@ -592,20 +601,20 @@ export default {
      * 終了日の最大日(本日から一年未満)
      */
     maxDate() {
-      const day = moment().format("YYYYMMDD");
+      const day = dayjs().format("YYYYMMDD");
       // 一年後に最大日を設定
       let endMaxDate = this.schExtEndDate
-        ? moment(this.schExtEndDate, "YYYYMMDD")
-        : moment(day).add(1, "year");
-      endMaxDate = moment(endMaxDate).endOf("month");
-      return moment(endMaxDate).format("YYYY-MM-DD");
+        ? dayjs(this.schExtEndDate, "YYYYMMDD")
+        : dayjs(day).add(1, "year");
+      endMaxDate = dayjs(endMaxDate).endOf("month");
+      return dayjs(endMaxDate).format("YYYY-MM-DD");
     },
 
     /**
      * 指定日以降編集不可
      */
     disableDatesAfter() {
-      return moment(this.maxDate).format("YYYYMMDD");
+      return dayjs(this.maxDate).format("YYYYMMDD");
     },
 
     /**
@@ -644,18 +653,21 @@ export default {
   },
 
   watch: {
-    selectedDialysisDate(value) {
+    calendarDialysisDate(value) {
+      this.selectedDialysisDate = value;
+
       // 選択治療日が空の場合もしくはコピー先治療日の変更の場合処理終了
       if (null === value || "" === value) {
         return;
-      }else{
-        document.getElementById("date-copy").style.background = "#ffff99";
+      } else {
+        this.setDateCopyBackground("#ffff99");
       }
       // 選択治療日が1年後よりも後に行かないよう制御
-      const maxDate = parseInt(moment(this.maxDate).format("YYYYMMDD"));
-      const date = parseInt(moment(value).format("YYYYMMDD"));
+      const maxDate = parseInt(dayjs(this.maxDate).format("YYYYMMDD"));
+      const date = parseInt(dayjs(value).format("YYYYMMDD"));
       if (date > maxDate) {
-        this.selectedDialysisDate = this.maxDate;
+        this.calendarDialysisDate = this.maxDate;
+        return;
       }
       if (0 !== this.propSelFlag) {
         // 治療方法&クールリスト作成
@@ -732,9 +744,13 @@ export default {
         this.initIndUser = this.indUser;
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc end
         // 表示領域の調整
-        document.getElementsByClassName(
-          "in-ind-dropdown-area"
-        )[0].parentElement.parentElement.style.height = "calc(5rem + 1em)";
+        const dropdownArea = getScopedElementsByClassName(
+          "in-ind-dropdown-area",
+          this.$refs?.modalFooterRoot || this.getScopedRoot()
+        )[0];
+        if (dropdownArea?.parentElement?.parentElement) {
+          dropdownArea.parentElement.parentElement.style.height = "calc(5rem + 1em)";
+        }
       });
     });
     // コピー元治療日が格納された場合治療方法&クールリスト作成
@@ -777,6 +793,21 @@ export default {
     // add FutreNetWeb+SI課題管理No7067 趙 start
     ...mapActions("pat-viewer-modal", ["setSettingIndData"]),
     // add FutreNetWeb+SI課題管理No7067 趙 end
+
+    getScopedRoot() {
+      return this.$refs?.modalBodyRoot || this.$refs?.modalFooterRoot || this.$el || this;
+    },
+
+    getDateCopyInput() {
+      return getScopedElementById("date-copy", this.getScopedRoot());
+    },
+
+    setDateCopyBackground(background) {
+      const dateCopyInput = this.getDateCopyInput();
+      if (dateCopyInput?.style) {
+        dateCopyInput.style.setProperty("background", background, "important");
+      }
+    },
 
     /**
      * モーダルを閉じる
@@ -848,7 +879,7 @@ export default {
 
         // 更新API呼び出し
         const response = await ApiHelper.post(
-          "/mainData/copyTreatPlan/",
+          "/mainData/copyTreatPlan",
           sendJson
         ).catch((error) => {
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
@@ -960,11 +991,10 @@ export default {
       }
       //コピー元 治療日 コピー先 治療日の必須入力スタイル
       if ("" === this.selectedDialysisDate) {
-        document.getElementById("date-copy").style.background =
-          "rgba(255, 0, 0, 0.5)";
+        this.setDateCopyBackground("rgba(255, 0, 0, 0.5)");
       }
       if ("" !== this.selectedDialysisDate) {
-        document.getElementById("date-copy").style.background = "#ffff99";
+        this.setDateCopyBackground("#ffff99");
       }
       // 治療方法&クール入力チェック
       if (null === this.ordNo && null === dispStr) {
@@ -984,13 +1014,13 @@ export default {
 
       // コピー先治療日上限チェック
       if (0 === this.propSelFlag && null === dispStr) {
-        const maxDate = parseInt(moment(this.maxDate).format("YYYYMMDD"));
+        const maxDate = parseInt(dayjs(this.maxDate).format("YYYYMMDD"));
         const treatDate = parseInt(
-          moment(this.selectedDialysisDate).format("YYYYMMDD")
+          dayjs(this.selectedDialysisDate).format("YYYYMMDD")
         );
         if (treatDate > maxDate) {
           messageCd = 22010002;
-          dispStr = `コピー先治療日は${moment(
+          dispStr = `コピー先治療日は${dayjs(
             this.maxDate,
             "YYYY-MM-DD"
           ).format("YYYY年M月D日以下")}`;
@@ -1364,6 +1394,8 @@ export default {
     // #10196 2つの異なる予定がありますが、第2の治療予定を選択した場合は、第1の治療が予定されている治療法となります。 linjunfeng start
     // async setTreatmentAndKurList(date) {
     async setTreatmentAndKurList(date, type) {
+      this.startLoadingScreen();
+
       // #10196 2つの異なる予定がありますが、第2の治療予定を選択した場合は、第1の治療が予定されている治療法となります。 linjunfeng end
       const dataList = [];
       const paramJson = {};
@@ -1386,6 +1418,8 @@ export default {
         getErrorMessage("TreatPlanCopy.vue", "setTreatmentAndKurList", error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
         throw error;
+      }).finally(() => {
+        this.finishLoadingScreen();
       });
       if (0 !== response.data) {
         response.data.forEach((eleItem) => {
@@ -1453,15 +1487,11 @@ export default {
       this.setLoadingScreenMessage("治療予定取得中...");
       this.setLoadingScreenVisible(true);
 
-      const formatDate = moment(date).format("YYYYMMDD");
-      const url =
-        "/mainData/getReservedOrdScheduleList/" +
-        this.facilityCd +
-        "/" +
-        formatDate +
-        "/" +
-        this.patId;
-      const response = await ApiHelper.post(url).catch((error) => {
+      const formatDate = dayjs(date).format("YYYYMMDD");
+      const url = "/mainData/getReservedOrdScheduleList/" + this.facilityCd + "/" + formatDate + "/" + this.patId;
+      const response = await ApiHelper.post(
+        url
+      ).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage("TreatPlanCopy.vue", "setOrdSchList", error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -1546,7 +1576,7 @@ export default {
       const dataList = [];
       // 本日の日付取得
       //mod FNSI-7629 劉全航 start
-      //const day = moment().format("YYYYMMDD");
+      //const day = dayjs().format("YYYYMMDD");
       //mod FNSI-7629 劉全航 end
       const paramJson = {};
       // 施設情報
@@ -1619,16 +1649,16 @@ export default {
       const targetPeriodDateList = [];
 
       // 本日の日付を取得
-      let startDate = moment(dataList[0]);
+      let startDate = dayjs(dataList[0]);
       // 本日から1年後の日付を取得
-      let endDate = moment(startDate).add(1, "year");
+      let endDate = dayjs(startDate).add(1, "year");
       // 一年後から1日戻す
-      endDate = moment(endDate).subtract(1, "days");
+      endDate = dayjs(endDate).subtract(1, "days");
 
       // 今日から来年の昨日までの日時をリストで取得
       while (startDate.diff(endDate) <= 0) {
-        targetPeriodDateList.push(moment(startDate).format("YYYYMMDD"));
-        startDate.add(1, "days");
+        targetPeriodDateList.push(dayjs(startDate).format("YYYYMMDD"));
+        startDate = startDate.add(1, "days");
       }
 
       // 今日から来年の昨日までの日付をループ
@@ -1664,7 +1694,7 @@ export default {
           ordMainitem.indTreatmentCd === ordMain.indTreatmentCd &&
           ordMainitem.indKurCd === ordMain.indKurCd &&
           ordMainitem.treatDate ===
-            moment(this.selectedDialysisDate, "YYYY-MM-DD").format("YYYYMMDD")
+            dayjs(this.selectedDialysisDate, "YYYY-MM-DD").format("YYYYMMDD")
         ) {
           duplicateFlag = true;
         }
@@ -1679,16 +1709,13 @@ export default {
       // メッセージが表示された場合、更新不可フラグをfalseに
       this.updateDisable = false;
     },
-    // mod FNSI-横展開-inputの色 関 start
-    addFocusCss(event) {
-      let element = event.target;
-      element?.classList?.add("custom-input-edited");
+    /** コピー元治療日／コピー先治療日フォーカスアウト時の処理 */
+    onBlurDialysisDate() {
+      if (this.beforeDialysisDate === this.selectedDialysisDate) {
+        return;
+      }
+      this.calendarDialysisDate = this.selectedDialysisDate;
     },
-    delFocusCss(event) {
-      let element = event.target;
-      element.classList.remove("custom-input-edited");
-    },
-    // mod FNSI-横展開-inputの色 関 end
   },
 };
 </script>
@@ -1741,16 +1768,6 @@ input::-webkit-calendar-picker-indicator {
     width: 120px;
   }
 }
-/* mod FNSI-横展開-inputの色 関 start */
-.date-copy-input {
-  background-color: #ffff99;
-}
-.custom-input-edited {
-  border: 2px green solid;
-  outline: 0;
-}
-/* mod FNSI-横展開-inputの色 関 end */
-
 /* add FNSI-患者経過総合ビューア 画面デザイン 李 start */
 .width-padding {
   width: 100px;

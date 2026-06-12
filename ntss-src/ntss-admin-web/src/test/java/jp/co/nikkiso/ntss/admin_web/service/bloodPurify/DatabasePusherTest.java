@@ -51,13 +51,11 @@ public class DatabasePusherTest {
     } catch (InvocationTargetException e) {
       throw e.getCause();
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang start
-//      e.printStackTrace();
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang end
+      e.printStackTrace();
     }
     return null;
   }
-
+  
   /**
    * 外部警報1ONメッセージ変換の検証.
    * 条件：外部警報1ONのメッセージを入力 結果：施設設定マスタで指定された値に変換できること
@@ -76,7 +74,7 @@ public class DatabasePusherTest {
     try {
       mntMotionRecord.setMachineRecordMessage(invokeConvertExternalAlarmMessage(machineRecordCd, facilityCd, message));
     } catch (Throwable e1) {
-//      e1.printStackTrace();
+      e1.printStackTrace();
     }
 
     // 作成されたデータの確認
@@ -102,14 +100,14 @@ public class DatabasePusherTest {
     try {
       mntMotionRecord.setMachineRecordMessage(invokeConvertExternalAlarmMessage(machineRecordCd, facilityCd, message));
     } catch (Throwable e1) {
-//      e1.printStackTrace();
+      e1.printStackTrace();
     }
 
     // 作成されたデータの確認
     final String messageExpected = "外部警報2ONのメッセージです";
     assertThat(mntMotionRecord.getMachineRecordMessage(), is(messageExpected));
   }
-
+  
   /**
    * 外部警報3ONメッセージ変換の検証.
    * 条件：外部警報3ONのメッセージを入力 結果：施設設定マスタで指定された値に変換できること
@@ -128,14 +126,14 @@ public class DatabasePusherTest {
     try {
       mntMotionRecord.setMachineRecordMessage(invokeConvertExternalAlarmMessage(machineRecordCd, facilityCd, message));
     } catch (Throwable e1) {
-//      e1.printStackTrace();
+      e1.printStackTrace();
     }
 
     // 作成されたデータの確認
     final String messageExpected = "外部警報3ONのメッセージです";
     assertThat(mntMotionRecord.getMachineRecordMessage(), is(messageExpected));
   }
-
+  
   /**
    * 外部警報4ONメッセージ変換の検証.
    * 条件：外部警報4ONのメッセージを入力 結果：施設設定マスタで指定された値に変換できること
@@ -154,9 +152,9 @@ public class DatabasePusherTest {
     try {
       mntMotionRecord.setMachineRecordMessage(invokeConvertExternalAlarmMessage(machineRecordCd, facilityCd, message));
     } catch (Throwable e1) {
-//      e1.printStackTrace();
+      e1.printStackTrace();
     }
-
+    
     // 作成されたデータの確認
     final String messageExpected = "外部警報4ONのメッセージです";
     assertThat(mntMotionRecord.getMachineRecordMessage(), is(messageExpected));
@@ -180,7 +178,7 @@ public class DatabasePusherTest {
     try {
       mntMotionRecord.setMachineRecordMessage(invokeConvertExternalAlarmMessage(machineRecordCd, facilityCd, message));
     } catch (Throwable e1) {
-//      e1.printStackTrace();
+      e1.printStackTrace();
     }
 
     // 作成されたデータの確認
@@ -206,14 +204,14 @@ public class DatabasePusherTest {
     try {
       mntMotionRecord.setMachineRecordMessage(invokeConvertExternalAlarmMessage(machineRecordCd, facilityCd, message));
     } catch (Throwable e1) {
-//      e1.printStackTrace();
+      e1.printStackTrace();
     }
 
     // 作成されたデータの確認
     final String messageExpected = "外部警報2OFFのメッセージです";
     assertThat(mntMotionRecord.getMachineRecordMessage(), is(messageExpected));
   }
-
+  
   /**
    * 外部警報3OFFメッセージ変換の検証.
    * 条件：外部警報3OFFのメッセージを入力 結果：施設設定マスタで指定された値に変換できること
@@ -232,14 +230,14 @@ public class DatabasePusherTest {
     try {
       mntMotionRecord.setMachineRecordMessage(invokeConvertExternalAlarmMessage(machineRecordCd, facilityCd, message));
     } catch (Throwable e1) {
-//      e1.printStackTrace();
+      e1.printStackTrace();
     }
 
     // 作成されたデータの確認
     final String messageExpected = "外部警報3OFFのメッセージです";
     assertThat(mntMotionRecord.getMachineRecordMessage(), is(messageExpected));
   }
-
+  
   /**
    * 外部警報4OFFメッセージ変換の検証.
    * 条件：外部警報4OFFのメッセージを入力 結果：施設設定マスタで指定された値に変換できること
@@ -258,14 +256,14 @@ public class DatabasePusherTest {
     try {
       mntMotionRecord.setMachineRecordMessage(invokeConvertExternalAlarmMessage(machineRecordCd, facilityCd, message));
     } catch (Throwable e1) {
-//      e1.printStackTrace();
+      e1.printStackTrace();
     }
-
+    
     // 作成されたデータの確認
     final String messageExpected = "外部警報4OFFのメッセージです";
     assertThat(mntMotionRecord.getMachineRecordMessage(), is(messageExpected));
   }
-
+  
   /**
    * 外部警報以外のメッセージ変換の検証.
    * 条件：外部警報ではないメッセージを入力 結果：元のメッセージがそのまま返ること
@@ -284,14 +282,14 @@ public class DatabasePusherTest {
     try {
       mntMotionRecord.setMachineRecordMessage(invokeConvertExternalAlarmMessage(machineRecordCd, facilityCd, message));
     } catch (Throwable e1) {
-//      e1.printStackTrace();
+      e1.printStackTrace();
     }
 
     // 作成されたデータの確認
     final String messageExpected = "変換前のメッセージです。";
     assertThat(mntMotionRecord.getMachineRecordMessage(), is(messageExpected));
   }
-
+  
   /**
    * 装置記録コードなし時の検証.
    * 条件：装置記録なし(null) 結果：元のメッセージがそのまま返ること、装置記録コードがnullのままであること
@@ -310,7 +308,7 @@ public class DatabasePusherTest {
     try {
       mntMotionRecord.setMachineRecordMessage(invokeConvertExternalAlarmMessage(machineRecordCd, facilityCd, message));
     } catch (Throwable e1) {
-//      e1.printStackTrace();
+      e1.printStackTrace();
     }
 
     // 作成されたデータの確認
@@ -318,5 +316,5 @@ public class DatabasePusherTest {
     assertThat(mntMotionRecord.getMachineRecordCd(), is(nullValue()));
     assertThat(mntMotionRecord.getMachineRecordMessage(), is(messageExpected));
   }
-
+  
 }

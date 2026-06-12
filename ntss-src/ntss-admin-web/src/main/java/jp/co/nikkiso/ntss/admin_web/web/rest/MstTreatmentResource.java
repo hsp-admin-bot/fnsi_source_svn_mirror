@@ -6,6 +6,7 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.nextpat.NextPatService;
 import jp.co.nikkiso.ntss.api.service.utils.InvokeResult;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
+import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
 import jp.co.nikkiso.ntss.core.entity.MstTreatment;
 import jp.co.nikkiso.ntss.core.entity.OrdMain;
 import jp.co.nikkiso.ntss.core.entity.PatTreatmentPattern;
@@ -42,6 +43,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 
 /**
@@ -63,10 +65,10 @@ public class MstTreatmentResource {
   private JournalService journalService;
   // add bug 8099 修正 chen end
 
-  /* del by gaojuncheng  2023-02-01 [CodeOptimization]  start */
-//  @Autowired
-//  private OrdMainDao ordMainDao;
-  /* del by gaojuncheng  2023-02-01 [CodeOptimization]  end */
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Autowired
+  private OrdMainDao ordMainDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
   //add #10412 次患者更新関連全体見直し対応 朴 start
   /**
@@ -95,7 +97,23 @@ public class MstTreatmentResource {
   * @return org.springframework.http.ResponseEntity<?>
   **/
   @GetMapping("/getMstTreatmentBycd/{tratmentCd}")
-  public ResponseEntity<?> getMstTreatmentBycd(@PathVariable Integer tratmentCd) {
+  public ResponseEntity<?> getMstTreatmentBycd(@PathVariable Integer tratmentCd,
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+          String facilityCd = treatmentService.selectByCd(tratmentCd).getFacilityCd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+              !facilityCd.equals(ntssUser.getFacilityCd())) {
+              String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "tratmentCd=" + tratmentCd + " ";
+              InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+              return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     if (tratmentCd == null) {
       return new ResponseEntity<>(new MstTreatment(), HttpStatus.OK);
     }
@@ -106,7 +124,23 @@ public class MstTreatmentResource {
 
   //  add #7327-治療方法マスタ操作時の動作がおかしい 徐博 start
   @GetMapping("/getOrdMainByCd/{indTreatmentCd}")
-  public ResponseEntity<?> getOrdMainByCd(@PathVariable String indTreatmentCd) {
+  public ResponseEntity<?> getOrdMainByCd(@PathVariable String indTreatmentCd,
+                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                          @AuthenticationPrincipal NtssUser ntssUser
+                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+          String facilityCd = treatmentService.selectByCd(Integer.valueOf(indTreatmentCd)).getFacilityCd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+              !facilityCd.equals(ntssUser.getFacilityCd())) {
+              String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "indTreatmentCd=" + indTreatmentCd + " ";
+              InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+              return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     int count = 0;
     try {
       count = treatmentService.getOrdMainByCd(indTreatmentCd);
@@ -126,7 +160,25 @@ public class MstTreatmentResource {
 
   // add by zhaoqj 2023-03-29 [#8495] 解決フライアウト早期クローズと一括クエリーの変更 --start /
   @PostMapping("/getOrdMainByCds")
-  public ResponseEntity<?> getOrdMainByCds(@RequestBody List<Integer> cdList) {
+  public ResponseEntity<?> getOrdMainByCds(@RequestBody List<Integer> cdList,
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                           @AuthenticationPrincipal NtssUser ntssUser
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+          for (Integer cd : cdList) {
+              String facilityCd = treatmentService.selectByCd(cd).getFacilityCd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "cd=" + cd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     Map<Integer,Integer> dataMap = new HashMap<Integer,Integer>();
     List<Integer> dataList = null;
     try {
@@ -158,6 +210,16 @@ public class MstTreatmentResource {
 	@PutMapping("/updateTreatment/{facilityCd}")
 	public ResponseEntity<?> updateTreatmentRecord(@PathVariable String facilityCd,
 			@RequestBody List<Map<String, Object>> request, @AuthenticationPrincipal NtssUser ntssUser) {
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+            if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+              String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+              InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+              return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+            }
+          }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.MST_TREATMENT + "/updateTreatment";
@@ -228,7 +290,23 @@ public class MstTreatmentResource {
    * @return
    */
   @PostMapping("/updatetByTreatSetCdSup")
-  public ResponseEntity<?> updatetByTreatSetCdSup(@RequestBody Map<String, Long> request) {
+  public ResponseEntity<?> updatetByTreatSetCdSup(@RequestBody Map<String, Long> request,
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+          OrdMain ordMain = ordMainDao.selectByOrdNo(request.get("ordNo"));
+          if (ordMain != null && ordMain.getFacilityCd() != null &&
+              !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+              String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + request.get("ordNo") + " ";
+              InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+              return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.MST_TREATMENT + "/updatetByTreatSetCdSup";
@@ -304,6 +382,16 @@ public class MstTreatmentResource {
   @PutMapping("/updateOrdMainForTreatment/{facilityCd}")
   public ResponseEntity<?> updateOrdMainForTreatment(@PathVariable String facilityCd,
        @RequestBody List<Map<String, Object>> request, @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.MST_TREATMENT + "/updateOrdMainForTreatment";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_REPORT_MENU, BEFORE_LOG_FLG_INFO, mappingUrl, null,null);
@@ -389,7 +477,7 @@ public class MstTreatmentResource {
     data.put("error", error);
     data.put("patPatternSuccess", patPatternSuccess);
     data.put("patPatternError", patPatternError);
-    return new ResponseEntity<>(data.toString(), null, HttpStatus.OK);
+    return new ResponseEntity<>(data.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
   // add 治療方法マスタ 4・条件項目の対象を変更した場合の条件送信未実施治療予定および自動延長用パターンデータへの不足jsonキーの配布 孔s end
 }

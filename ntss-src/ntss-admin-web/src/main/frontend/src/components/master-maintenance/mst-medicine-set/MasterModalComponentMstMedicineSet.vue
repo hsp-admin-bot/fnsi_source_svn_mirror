@@ -122,12 +122,11 @@
                   選択
                 </v-ons-button>-->
                 <common-master-selector
-                  :masterType="MasterType.ANTICOAGULANT_INDICATION"
+                  :masterType="MasterType.MEDICATION_TREATMENT_RECORD"
                   :initItem="{text: dispArr[index].text, value: dispArr[index].value}"
                   :editItem="{text: getMediName(dispArr[index].cd.editValue, dispArr[index].class.editValue), value: dispArr[index].cd.editValue}"
-                  :extraParams="{treatDate: treatDate,rstInfo:{ rstName:getMediName(dispArr[index].cd.editValue, dispArr[index].class.editValue), 
-                    rstUnit:getMediUnit(dispArr[index].cd.editValue, dispArr[index].class.editValue)}}"
-                  :patientId="selectedPatId"
+                  :extraParams="{ treatDate: treatDate, rstInfo: { rstName: getMediName(dispArr[index].cd.editValue, dispArr[index].class.editValue), rstUnit: getMediUnit(dispArr[index].cd.editValue, dispArr[index].class.editValue) }, medicineType: dispArr[index].class.editValue != null && dispArr[index].class.editValue !== '' ? dispArr[index].class.editValue : dispArr[index].class.initValue }"
+                  :patientId="null"
                   :facilityCd="getFacilityCd"
                   :hasChangedOption="true"
                   :selectedItemClass="'com-basic-sub-input'"
@@ -256,10 +255,11 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import customInput from "@/components/common/custom-form-tags/CustomInput";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
 import customSelect from "@/components/common/custom-form-tags/CustomSelect";
 import customCheckbox from "@/components/common/custom-form-tags/CustomCheckbox";
 import { showPopover, closePopover } from "@/functions/PopoverFunctions";
@@ -270,22 +270,25 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 // FNSI-修正 マスタ削除の対応 楊 add start
 import { MASTER_DELETE_DISPLAY } from "@/constants/TreatmentRecord";
 // FNSI-修正 マスタ削除の対応 楊 add end
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_薬剤セットマスタ 張玲 2024/01/08 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
-import cloneDeep from "lodash/cloneDeep";
-import isEqualWith from "lodash/isEqualWith";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
 import { customComparator } from "@/utils/util.js";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_薬剤セットマスタ 張玲 2024/01/08 end
 // add #9848+9849 数値IFのスタイル全不正 linjunfeng start
-import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro'
-import BigNumber from "bignumber.js";
+
 // add #9848+9849 数値IFのスタイル全不正 linjunfeng end
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
+import BigNumber from "@/compat/number/bignumber";
 import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
 import * as MasterType from "@/components/common/master-selector/MasterType";
-import { Master } from "@/models/common/master-selector-condition/Master";
+
 import { getMstListCompose } from "@/apis/pat-prescription"
+import { getMasterConfig } from "@/components/common/master-selector/builder/masterPopoverConfig";
+import { nextId } from "@/functions/common/id";
+import { queryScopedSelector, queryScopedSelectorAll, getModalContainerElement, getModalFooterElement, getModalToolbarElement, getModalBodyElement } from "@/functions/common/LayoutMeasureHelper";
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
 
 export default {
@@ -464,62 +467,23 @@ export default {
 
     // add 削除されたデータの処理  王 start
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
-    const item = {
-      lists: [
-        {
-          id: "list1",
-          name: "固定分类",
-          sourceType: "FIXED",
-          fixedItems: [
-            { value: "0", text: "すべて" },
-            { value: "1", text: "通常薬剤" },
-            { value: "2", text: "調製薬剤" }
-          ],
-          keyMapping: [
-            { keyName: "key_type", valueFrom: "value" }
-          ]
-        },
-        {
-          id: "list2",
-          name: "药剂分类MST",
-          sourceType: "MST",
-          mstSource: {
-            mstCode: "mstMedicineClassDaoImpl",
-            sqlParams: { facilityCd: this.getFacilityCd }
-          },
-          keyMapping: [
-            { keyName: "key_class", valueFrom: "classCd" }
-          ]
-        },
-        {
-          id: "list3",
-          name: "通常药剂 + 调制药剂 合并",
-          sourceType: "MST_COMBINED",
-          mstSourceList: [
-            {
-              mstCode: "mstMedicineDaoImpl",
-              sourceTag: "1",
-              sqlParams: { facilityCd: this.getFacilityCd,patId: null },
-              keyMapping: [
-                { keyName: "key_type", valueFrom: "sourceTag" },
-                { keyName: "key_class", valueFrom: "classCd" },
-                { keyName: "key_cd", valueFrom: "medicineCd" }
-              ]
-            },
-            {
-              mstCode: "mstMedicineMixDaoImpl",
-              sourceTag: "2",
-              sqlParams: { facilityCd: this.getFacilityCd,patId: null },
-              keyMapping: [
-                { keyName: "key_type", valueFrom: "sourceTag" },
-                { keyName: "key_class", valueFrom: "classCd" },
-                { keyName: "key_cd", valueFrom: "medicineMixCd" }
-              ]
-            }
-          ]
-        }
-      ]
-    }
+    const firstRow = this.medicineSetInfo?.setInfoJsonArr?.[0];
+    const firstCd = firstRow?.cd;
+    const firstClass = firstRow?.class;
+    const context = {
+      facilityCd: this.getFacilityCd,
+      patientId: null,
+      extraParams: {
+        treatDate: this.treatDate || "",
+        rstInfo: { rstName: "", rstUnit: "" },
+        ...(firstCd != null && firstCd !== ""
+          ? { initValue: firstCd, medicineType: firstClass }
+          : {})
+      },
+      dialysisState: 0,
+      allowedFields: {}
+    };
+    const item = getMasterConfig(MasterType.MEDICATION_TREATMENT_RECORD, context);
     const res = await getMstListCompose(item);
     const [
       // 薬剤マスタ
@@ -554,8 +518,8 @@ export default {
     });
     // this.mstMedicine = responseMstMedicine.data;
     //this.mstMedicine = responseMstMedicineData.data;
-    const responseMstMedicineData = resMstListCompose.data.lists.list3.items.filter(item => item.key_type == 1)
-    const responseMstMedicineMixData = resMstListCompose.data.lists.list3.items.filter(item => item.key_type == 2)
+    const responseMstMedicineData = (resMstListCompose.data?.master?.items ?? []).filter(item => item.key_type == 1)
+    const responseMstMedicineMixData = (resMstListCompose.data?.master?.items ?? []).filter(item => item.key_type == 2)
 
     this.mstMedicine = responseMstMedicineData;
     this.mstMedicine = this.mstMedicine.map((item) =>{
@@ -566,7 +530,8 @@ export default {
       }
     )
     //this.mstMediClass = responseMstMediClass.data;
-    this.mstMediClass = resMstListCompose.data.lists.list2.items;
+    const filterList = resMstListCompose.data?.filterList;
+    this.mstMediClass = filterList?.[0]?.list2?.items ?? filterList?.list2?.items ?? [];
     mstProcedure = responseMstProcedure.data;
     mstMedicateTiming = responseMstMedicateTiming.data;
 
@@ -578,8 +543,7 @@ export default {
           item.medicineMixName = MASTER_DELETE_DISPLAY.DELETED + item.medicineMixName;
         }
         return item;
-      }
-    )*/
+      })*/
     // add 削除されたデータの処理  王 end
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
     for (const num in mstProcedure) {
@@ -610,7 +574,7 @@ export default {
     // 表示用ローカル配列に、入力項目をコピー
     for (const i in this.medicineSetInfo.setInfoJsonArr) {
       this.dispArr.splice(i, 1, {
-        id: _.uniqueId("medicine"),
+        id: nextId("medicine"),
         // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
         text: this.getMediName(this.medicineSetInfo.setInfoJsonArr[i].cd,this.medicineSetInfo.setInfoJsonArr[i].class),
         value: this.medicineSetInfo.setInfoJsonArr[i].cd,
@@ -624,8 +588,8 @@ export default {
           editValue: this.medicineSetInfo.setInfoJsonArr[i].class
         },
         amount: {
-          initValue: this.medicineSetInfo.setInfoJsonArr[i].amount > 0 && this.medicineSetInfo.setInfoJsonArr[i].amount < 99999999.999999999 ? this.medicineSetInfo.setInfoJsonArr[i].amount : 0,
-          editValue: this.medicineSetInfo.setInfoJsonArr[i].amount > 0 && this.medicineSetInfo.setInfoJsonArr[i].amount < 99999999.999999999 ? this.medicineSetInfo.setInfoJsonArr[i].amount : 0,
+          initValue: this.medicineSetInfo.setInfoJsonArr[i].amount > 0 && this.medicineSetInfo.setInfoJsonArr[i].amount < Number("99999999.999999999") ? this.medicineSetInfo.setInfoJsonArr[i].amount : 0,
+          editValue: this.medicineSetInfo.setInfoJsonArr[i].amount > 0 && this.medicineSetInfo.setInfoJsonArr[i].amount < Number("99999999.999999999") ? this.medicineSetInfo.setInfoJsonArr[i].amount : 0,
         },
         procedure_timing_cd: {
           initValue: this.medicineSetInfo.setInfoJsonArr[i].procedure_timing_cd,
@@ -729,6 +693,59 @@ export default {
   },
 
   methods: {
+    getMedicineSetDocument() {
+      return this.$el?.ownerDocument || document;
+    },
+    getMedicineSetSearchRoots() {
+      return [this.getCurrentModalBody(), this.getCurrentModalContainer(), this.$el].filter(Boolean);
+    },
+    getMedicineSetScopedElementFromRoots(selector, roots = this.getMedicineSetSearchRoots()) {
+      for (const root of roots) {
+        const directElement = root?.querySelector?.(selector);
+        if (directElement) {
+          return directElement;
+        }
+        const scopedElement = queryScopedSelector(selector, root);
+        if (scopedElement) {
+          return scopedElement;
+        }
+      }
+      return null;
+    },
+    getMedicineSetDocumentElementByClassName(className) {
+      return this.getMedicineSetDocument().getElementsByClassName(className)[0] || null;
+    },
+    getCurrentModalContainer() {
+      return getModalContainerElement(this.$el) || this.$el?.closest?.('.modal-container') || this.getMedicineSetDocumentElementByClassName('modal-container');
+    },
+    getCurrentModalBody() {
+      return getModalBodyElement(this.$el) || this.getCurrentModalContainer()?.querySelector?.('.modal-body, .modal-body-search, .modal-body-no-footer') || this.getMedicineSetDocumentElementByClassName('modal-body') || null;
+    },
+    getCurrentModalToolbar() {
+      return getModalToolbarElement(this.$el) || this.getCurrentModalContainer()?.querySelector?.('.toolbar') || this.getMedicineSetDocumentElementByClassName('toolbar') || null;
+    },
+    getCurrentModalFooter() {
+      return getModalFooterElement(this.$el) || this.getCurrentModalContainer()?.querySelector?.('.modal-footer') || this.getMedicineSetDocumentElementByClassName('modal-footer') || null;
+    },
+    getMedicineSetElement(selector) {
+      return this.getMedicineSetScopedElementFromRoots(selector) || queryScopedSelector(selector, this.$el);
+    },
+    getMedicineSetScopeRoot() {
+      return this.getCurrentModalBody() || this.getCurrentModalContainer() || this.$el || null;
+    },
+    getMedicineSetDataTableEl() {
+      return this.getMedicineSetScopedElementFromRoots('.data-table')
+        || this.getMedicineSetDocumentElementByClassName('data-table')
+        || null;
+    },
+    getMedicineSetInfoEl() {
+      return this.getMedicineSetScopedElementFromRoots('.medicine-set-info')
+        || this.getMedicineSetDocumentElementByClassName('medicine-set-info')
+        || null;
+    },
+    getMedicineSetBodyCells() {
+      return queryScopedSelectorAll('.ntss-list-body-td.ntss-list-body-td-background', this.getMedicineSetScopeRoot());
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("loading-screen", ["setLoadingScreenVisible"]),
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
@@ -924,7 +941,7 @@ export default {
         medicate_timing_cd: ""
       })
       this.dispArr.push({
-        id: _.uniqueId("medicine"),
+        id: nextId("medicine"),
         cd: { initValue: "", editValue: "" },
         class: { initValue: "", editValue: "" },
         // add 9973 -4 by kangjie 20231025 start
@@ -944,7 +961,7 @@ export default {
 
       // 最後までスクロールする
       this.$nextTick(() => {
-        const ele = document.getElementsByClassName("data-table")[0];
+        const ele = this.getMedicineSetDataTableEl();
         if (ele) {
           ele.scrollTop = ele.scrollHeight;
         }
@@ -1113,17 +1130,21 @@ export default {
 
     // セット情報の薬剤が変更された際、薬剤名称と薬剤分類を変更する処理
     mediChange(event, index) {
-      let medicineCd = event.value;
+      const rawValue = event?.value;
+      let medicineCd = rawValue;
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
       //const medicineType = medicineCd ? event.fnValue.薬剤区分 : null;
-      const medicineType = event.kbnValue || null;
+      const medicineType =
+        (event?.key_type ?? event?.keyType ?? event?.kbnValue ?? event?.type ?? null);
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
       //if (medicineType === "2") {
       if (medicineType == 2) {
         // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
         // 調製薬剤コードのみString型で取得するためNumberへ変換
-        medicineCd = Number(event.value.split("$")[0]);
+        medicineCd = rawValue == null ? rawValue : String(rawValue).split("$")[0];
+      } else {
+        medicineCd = rawValue == null ? rawValue : String(rawValue).split("$")[0];
       }
 
       //選択した薬剤のコードをリストに格納
@@ -1132,7 +1153,7 @@ export default {
       //選択した薬剤の薬剤分類をリストに格納
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
       //this.dispArr[index].class.editValue = medicineType;
-      this.dispArr[index].class.editValue = event.kbnValue
+      this.dispArr[index].class.editValue = medicineType
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
 
       // #9848+9849 薬剤変更時,薬剤マスタ依存＋薬剤マスタで未指定の場合変更しない linjunfeng start
@@ -1162,7 +1183,8 @@ export default {
         mstData = this.mstMedicineMix;
         cdKey = "medicineMixCd";
       }
-      const medicineInfo = mstData.find(mst => mst[cdKey] === medicineCd);
+      const cdKeyValue = medicineCd == null ? null : String(medicineCd).split("$")[0];
+      const medicineInfo = mstData.find(mst => String(mst[cdKey]) === cdKeyValue);
       if (!medicineInfo) {
         return null;
       }
@@ -1178,6 +1200,7 @@ export default {
     getMediName(cd, medicineType) {
       //薬剤名称(nullだと薬剤コードが画面に表示される、空文字で定義)
       let mediName = "";
+      const cdKeyValue = cd == null ? null : String(cd).split("$")[0];
 
       let mstData = this.mstMedicine;
       let cdKey = "medicineCd";
@@ -1196,10 +1219,10 @@ export default {
       if (mstData) {
         for (const item of mstData) {
           //薬剤マスタの薬剤コードと画面上の薬剤コードが同じ薬剤の名称を取得
-          if (item[cdKey] === cd) {
+          if (String(item[cdKey]) === cdKeyValue) {
             // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
             //mediName = item[nameKey];
-            mediName = (item.key_type == 2 && item.key_class == -1 ? "【分類不一致】" : '') + item.tabooAllergy + item.expired + item.deleted + item.includeDeleted + item[nameKey];
+            mediName = (item.classInconsistent || '') + item.tabooAllergy + item.expired + item.deleted + item.includeDeleted + item[nameKey];
             // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
             break;
           }
@@ -1236,6 +1259,7 @@ export default {
     getMediUnit(cd, medicineType) {
       //薬剤単位
       let mediUnit = null;
+      const cdKeyValue = cd == null ? null : String(cd).split("$")[0];
 
       let mstData = this.mstMedicine;
       let cdKey = "medicineCd";
@@ -1252,7 +1276,7 @@ export default {
       if (mstData) {
         for (const item of mstData) {
           //薬剤マスタの薬剤コードと画面上の薬剤コードが同じ薬剤の名称を取得
-          if (item[cdKey] === cd) {
+          if (String(item[cdKey]) === cdKeyValue) {
             mediUnit = item.unit;
             break;
           }
@@ -1334,12 +1358,12 @@ export default {
       // let totalHeight = document.getElementsByClassName("modal-container")[0].clientHeight;
       // let topHeight = document.getElementsByClassName("toolbar")[0].clientHeight;
       // let bottomHeight = document.getElementsByClassName("modal-footer")[0].clientHeight;
-      let rowHeight = document.getElementsByClassName("medicine-set-info")[0] ? document.getElementsByClassName("medicine-set-info")[0].clientHeight : 0;
-      let totalHeight = document.getElementsByClassName("modal-container")[0] ? document.getElementsByClassName("modal-container")[0].clientHeight : 0;
-      let topHeight = document.getElementsByClassName("toolbar")[0] ? document.getElementsByClassName("toolbar")[0].clientHeight : 0;
-      let bottomHeight = document.getElementsByClassName("modal-footer")[0] ? document.getElementsByClassName("modal-footer")[0].clientHeight : 0;
+      let rowHeight = this.getMedicineSetInfoEl()?.clientHeight || 0;
+      let totalHeight = this.getCurrentModalContainer()?.clientHeight || 0;
+      let topHeight = this.getCurrentModalToolbar()?.clientHeight || 0;
+      let bottomHeight = this.getCurrentModalFooter()?.clientHeight || 0;
       // #9863 加算マスタ詳細を開くとtypeエラーが発生する 横展開2 linjunfeng end
-      let dataList = document.getElementsByClassName("data-table")[0];
+      let dataList = this.getMedicineSetDataTableEl();
 
       let actualHeight = totalHeight - topHeight - bottomHeight - rowHeight - 9;
       if (dataList) {
@@ -1347,8 +1371,9 @@ export default {
       }
 
       // add 薬剤名の長さの調整 鞠 start
-      if (document.getElementsByClassName("ntss-list-body-td ntss-list-body-td-background")[2]) {
-        document.getElementsByClassName("ntss-list-body-td ntss-list-body-td-background")[2].style.width="30%"
+      const bodyCells = this.getMedicineSetBodyCells();
+      if (bodyCells[2]) {
+        bodyCells[2].style.width="30%"
       }
       // add 薬剤名の長さの調整 鞠 end
     },
@@ -1409,7 +1434,7 @@ th.ntss-list-header-th-sticky {
   z-index: 1;
 }
 
-ons-col >>> * {
+ons-col :deep(*) {
   box-sizing: border-box;
 }
 
@@ -1475,7 +1500,7 @@ ons-col >>> * {
   display: block;
   overflow-x: auto;
 }
-.data-table >>> ons-row {
+.data-table :deep(ons-row) {
   min-width: 640px;
 }
 .link-code-input {
@@ -1529,7 +1554,7 @@ ons-col >>> * {
   }
 }
 @media screen and (max-width: 667px) {
-  .setInfo-list >>> .item-title {
+  .setInfo-list :deep(.item-title) {
     max-height: 62px;
   }
   .data-table {
@@ -1538,7 +1563,7 @@ ons-col >>> * {
   }
 }
 @media screen and (max-width: 375px) {
-  .setInfo-list >>> .item-title {
+  .setInfo-list :deep(.item-title) {
     max-height: 62vh;
   }
   .data-table {
@@ -1569,10 +1594,10 @@ ons-col >>> * {
   margin: auto;
 }
 /*// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start*/
-::v-deep .com-basic-sub-btn {
+:deep(.com-basic-sub-btn) {
   margin-left: 5px
 }
-::v-deep .com-basic-sub-input {
+:deep(.com-basic-sub-input) {
   min-width: 13em;
   width: 100%;
   max-width: 28em;

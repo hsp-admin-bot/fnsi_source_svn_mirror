@@ -28,6 +28,7 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.nextpat.NextPatService;
 // del #11004 連携イベント発生部分不正 piao start
 // import jp.co.nikkiso.ntss.admin_web.service.treatmentRecord.TreatmentRecordService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 // del #11004 連携イベント発生部分不正 piao end
 //add #10632 装置設定画面の更新時にpat_main_historyがインサートされない 20240530 ztc start
 import jp.co.nikkiso.ntss.api.service.PatMainDeviceSetInfo.PatMainDeviceSetInfoService;
@@ -52,12 +53,12 @@ import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.jsoup.internal.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -65,6 +66,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jp.co.nikkiso.ntss.admin_web.web.rest.validation.ApiEntityDeviceSetInfo;
@@ -78,6 +80,10 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
+import org.apache.commons.lang3.ObjectUtils;
+import java.util.Collections;
+import java.util.Set;
 
 @RestController
 @RequestMapping(Uri.DEVICE_SET_INFO)
@@ -109,6 +115,9 @@ public class DeviceSetInfoResource {
   // wp アプリケーションログの適正化 Add Start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // wp アプリケーションログの適正化 Add End
 
   // add FNSi6002-補液速度操作範囲上限を超えて設定できる 周 start
@@ -165,7 +174,15 @@ public class DeviceSetInfoResource {
    * @return 装置設定JSON
    */
   @GetMapping("/getDeviceSetInfoMst/{facility_cd}")
-  public ResponseEntity<String> getDeviceSetInfoMst(@PathVariable String facility_cd) {
+  public ResponseEntity<String> getDeviceSetInfoMst(@PathVariable String facility_cd,
+                                                    @RequestParam(required = false) Long selectedPatId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                    @AuthenticationPrincipal NtssUser ntssUser
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facility_cd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/getDeviceSetInfoMst";
@@ -204,7 +221,22 @@ public class DeviceSetInfoResource {
    * @return 装置設定JSON
    */
   @GetMapping({"/getDeviceSetInfoPat/{pat_id}","/getDeviceSetInfoPat/{pat_id}/{facility_cd}"})
-  public ResponseEntity<String> getDeviceSetInfoPat(@PathVariable Long pat_id,@PathVariable(required = false) String facility_cd) {
+  public ResponseEntity<String> getDeviceSetInfoPat(@PathVariable Long pat_id,@PathVariable(required = false) String facility_cd,
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                    @AuthenticationPrincipal NtssUser ntssUser
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        PatMain patMain = patMainDao.selectById(pat_id);
+        if (patMain != null && patMain.getFacility_cd() != null &&
+          !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facility_cd=" + patMain.getFacility_cd() + " " + "pat_id=" + pat_id + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/getDeviceSetInfoPat";
@@ -214,7 +246,7 @@ public class DeviceSetInfoResource {
     String deviceSetInfo = null;
     try {
       // add facility_cdパラメータを追加 #12462 患者情報共有 zrx start
-      if(!StringUtil.isBlank(facility_cd)) {
+      if (StringUtils.hasText(facility_cd)) {
         deviceSetInfo = deviceSetInfoService.getDeviceSetInfoPat(pat_id,facility_cd);
       } else {
         // add facility_cdパラメータを追加 #12462 患者情報共有 zrx end
@@ -248,7 +280,17 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
    * @return 装置設定JSON
    */
   @GetMapping("/getDeviceSetInfoOrd/{ord_no}")
-  public ResponseEntity<String> getDeviceSetInfoOrd(@PathVariable Long ord_no) {
+  public ResponseEntity<String> getDeviceSetInfoOrd(@PathVariable Long ord_no,
+                                                    @RequestParam(required = false) Long selectedPatId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                    @AuthenticationPrincipal NtssUser ntssUser
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    OrdMain ordMain = ordMainDao.selectByOrdNo(ord_no);
+    if (ordMain != null && !facilityAccessService.hasFacilityOrSelectedPatShareAccessForFacilityCds(
+        ntssUser, Collections.singletonList(ordMain.getFacilityCd()), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/getDeviceSetInfoOrd";
@@ -286,7 +328,22 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
    * @return 装置設定JSON
    */
   @PostMapping("/updateDeviceSetInfoMst/{facility_cd}")
-  public ResponseEntity<Void> updateDeviceSetInfoMst(@PathVariable String facility_cd, @RequestBody Map<String, String> payload) {
+  public ResponseEntity<Void> updateDeviceSetInfoMst(@PathVariable String facility_cd, @RequestBody Map<String, String> payload,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                     @AuthenticationPrincipal NtssUser ntssUser
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (!ObjectUtils.isEmpty(facility_cd) &&
+          !facility_cd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facility_cd=" + facility_cd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/updateDeviceSetInfoMst";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_DEVICE_SET, BEFORE_LOG_FLG_INFO, mappingUrl, facility_cd,
@@ -324,7 +381,24 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
    * @return 装置設定JSON
    */
   @PostMapping("/updateDeviceSetInfoPat")
-  public ResponseEntity<?> updateDeviceSetInfoPat(@RequestBody Map<String, String> payload) {
+  public ResponseEntity<?> updateDeviceSetInfoPat(@RequestBody Map<String, String> payload,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = payload.get("facilityCd");
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/updateDeviceSetInfoPat";
@@ -344,6 +418,17 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
       List<PatPersonalMain> listPatPersonalMain = patPersonalMainDao.selectByIdList(patIdList);
       PatPersonalMain patPersonalMain = listPatPersonalMain.get(0);
       facilityCd = patPersonalMain.getFacility_cd();
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+      // patId 経由で解決した facilityCd がセッションの施設と一致するか確認
+      if (!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "patId=" + patId + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
     }
 
     //add #10412 次患者更新関連全体見直し対応 朴 start
@@ -1074,7 +1159,23 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
   @PostMapping("updateDeviceSetInfoOrd")
   public ResponseEntity<String> updateDeviceSetInfoOrd(
       @Validated @RequestBody ApiEntityDeviceSetInfo.ValiDeviceSetInfo bodyData ,BindingResult validationResult
-  ) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = bodyData.getFacility_cd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "pat_id=" + bodyData.getPat_id() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/updateDeviceSetInfoOrd";
@@ -1598,7 +1699,12 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
   @PostMapping("getDeviceData")
   public ResponseEntity<List<String>> getDeviceSetInfoList(
       @Validated @RequestBody ApiEntityDeviceSetInfo.ValiDeviceSetInfo bodyData ,BindingResult validationResult
-      ) throws URISyntaxException {
+      ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/getDeviceData";
@@ -1615,6 +1721,16 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
         bodyData.getStart_date(),
         bodyData.getWeek()
         )) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (bodyData != null && bodyData.getFacility_cd() != null &&
+        !bodyData.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " facility_cd=" + bodyData.getFacility_cd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
 
       // wp アプリケーションログの適正化 Add Start
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_DEVICE_SET, AFTER_LOG_FLG_INFO, mappingUrl, null,
@@ -1676,7 +1792,16 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
    * @return 対象患者の風袋・除水情報
    */
   @GetMapping("/getSysTareAndOffWaterById/{facility_cd}")
-  public ResponseEntity<List<String>> getSysTareAndOffWaterById(@PathVariable String facility_cd) {
+  public ResponseEntity<List<String>> getSysTareAndOffWaterById(@PathVariable String facility_cd,
+                                                                @RequestParam(required = false) Long selectedPatId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                                @AuthenticationPrincipal NtssUser ntssUser
+                                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facility_cd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/getSysTareAndOffWaterById";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_DEVICE_SET, BEFORE_LOG_FLG_INFO, mappingUrl, facility_cd,
@@ -1717,7 +1842,22 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
    * @return 対象患者の風袋・除水情報
    */
   @GetMapping({"/getPatTareAndOffWaterById/{pat_id}","/getPatTareAndOffWaterById/{pat_id}/{facilityCd}"})
-  public ResponseEntity<List<String>> getPatTareAndOffWaterById(@PathVariable long pat_id,@PathVariable(required = false) String facilityCd) {
+  public ResponseEntity<List<String>> getPatTareAndOffWaterById(@PathVariable long pat_id,@PathVariable(required = false) String facilityCd,
+                                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                                @AuthenticationPrincipal NtssUser ntssUser
+                                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if(!ntssUser.isNkkAdminUser()) {
+      PatMain patMain = patMainDao.selectById(pat_id);
+      if (patMain != null && patMain.getFacility_cd() != null &&
+        !patMain.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " facility_cd=" + patMain.getFacility_cd() + " pat_id=" + pat_id + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/getPatTareAndOffWaterById";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_DEVICE_SET, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -1758,7 +1898,18 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
    * 風袋・除水データ取得(治療情報)
    */
   @PostMapping("/getIndTareAndOffWaterById")
-  public ResponseEntity<List<String>> getIndTareAndOffWaterById(@RequestBody Map<String, String> payload) {
+  public ResponseEntity<List<String>> getIndTareAndOffWaterById(@RequestBody Map<String, String> payload,
+                                                                @RequestParam(required = false) Long selectedPatId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                                @AuthenticationPrincipal NtssUser ntssUser
+                                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    Long ordNo = Long.parseLong(payload.get("ordNo"));
+    OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+    if (ordMain != null && !facilityAccessService.hasFacilityOrSelectedPatShareAccessForFacilityCds(
+        ntssUser, Collections.singletonList(ordMain.getFacilityCd()), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/getIndTareAndOffWaterById";
@@ -1766,7 +1917,6 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
       payload);
     // wp アプリケーションログの適正化 Add End
     List<String> getTateAndOffWater = null;
-    Long ordNo = Long.parseLong(payload.get("ordNo"));
     Integer flgIndRst = Integer.parseInt(payload.get("flgIndRst"));
     try {
       getTateAndOffWater = deviceSetInfoService.selectTareAndOffWater(null, null, ordNo, flgIndRst);
@@ -1798,7 +1948,22 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
    * 風袋・除水更新対象抽出(治療情報編集時)
    */
   @GetMapping("/getTareAndOffUpdateCondition/{pat_id}")
-    public ResponseEntity<List<String>> getTareAndOffUpdateCondition(@PathVariable long pat_id) {
+    public ResponseEntity<List<String>> getTareAndOffUpdateCondition(@PathVariable long pat_id,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                                     @AuthenticationPrincipal NtssUser ntssUser
+                                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if (!ntssUser.isNkkAdminUser()) {
+      long count = patMainDao.countByPatIdAndFacilityCd(pat_id, ntssUser.getFacilityCd());
+      if (count == 0) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " pat_id=" + pat_id + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/getTareAndOffUpdateCondition";
@@ -1846,7 +2011,16 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
    * @return 対象施設のホスト報知情報
    */
   @GetMapping("/getSysHostNoticeById/{facility_cd}")
-  public ResponseEntity<List<String>> getSysHostNoticeById(@PathVariable String facility_cd) {
+  public ResponseEntity<List<String>> getSysHostNoticeById(@PathVariable String facility_cd,
+                                                           @RequestParam(required = false) Long selectedPatId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                           @AuthenticationPrincipal NtssUser ntssUser
+                                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facility_cd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/getSysHostNoticeById";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_DEVICE_SET, BEFORE_LOG_FLG_INFO, mappingUrl, facility_cd,
@@ -1927,7 +2101,22 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
    * 2日以上前の版が確定していない透析中以降の実績の抽出
    */
   @GetMapping("/getDisableUpdate/{pat_id}")
-  public ResponseEntity<List<String>> getDisableUpdate(@PathVariable long pat_id) {
+  public ResponseEntity<List<String>> getDisableUpdate(@PathVariable long pat_id,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                       @AuthenticationPrincipal NtssUser ntssUser
+                                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if (!ntssUser.isNkkAdminUser()) {
+      long count = patMainDao.countByPatIdAndFacilityCd(pat_id, ntssUser.getFacilityCd());
+      if (count == 0) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " pat_id=" + pat_id + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/getDisableUpdate";
@@ -1987,7 +2176,22 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
   @PostMapping("updateDeviceSetInfo")
   public ResponseEntity<Void> updateDeviceSetInfo(
       @Validated @RequestBody ApiEntityDeviceSetInfo.ValiDeviceSetInfo bodyData ,BindingResult validationResult
-      ) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+      ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (bodyData != null && bodyData.getFacility_cd() != null &&
+        !bodyData.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " facility_cd=" + bodyData.getFacility_cd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
 
     // wp アプリケーションログの適正化 Add Start
@@ -2032,7 +2236,7 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_DEVICE_SET, AFTER_LOG_FLG_INFO, mappingUrl, null,
         null);
       // wp アプリケーションログの適正化 Add End
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     // 更新するテーブルを配列で作成
@@ -2129,7 +2333,12 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
   @PostMapping("updateStartTareAndOffWater")
   public ResponseEntity<Void> updateStartTareAndOffWater(
       @Validated @RequestBody ApiEntityDeviceSetInfo.ValiTareAndOffWater bodyData ,BindingResult validationResult
-      ) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+      ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/updateStartTareAndOffWater";
@@ -2149,6 +2358,16 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
 
     // 患者ID(Long型に変換)
     Long patInfoCd = Long.parseLong(bodyData.getPat_id());
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if (!ntssUser.isNkkAdminUser()) {
+      long count = patMainDao.countByPatIdAndFacilityCd(patInfoCd, ntssUser.getFacilityCd());
+      if (count == 0) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " patInfoCd=" + patInfoCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
 
     try {
       deviceSetInfoService.updateStartTareAndOffWater(patInfoCd, bodyData.getOff_water_info(), bodyData.getTare_info());
@@ -2181,7 +2400,12 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
   @PostMapping("updateIndStartTareAndOffWater")
   public ResponseEntity<Void> updateIndStartTareAndOffWater(
       @Validated @RequestBody ApiEntityDeviceSetInfo.ValiTareAndOffWater bodyData ,BindingResult validationResult
-      ) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+      ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/updateIndStartTareAndOffWater";
@@ -2205,6 +2429,16 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
 
     // Ord番号(Long型に変換)
     Long ordCd = Long.parseLong(bodyData.getOrd_no());
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if (!ntssUser.isNkkAdminUser()) {
+      long count = deviceSetInfoService.countByOrdNoAndFacilityCd(ntssUser.getFacilityCd(), Collections.singletonList(ordCd));
+      if (count == 0) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ordCd=" + ordCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
 
     try {
       deviceSetInfoService.updateIndStartTareAndOffWater(ordCd, bodyData.getOff_water_info(), bodyData.getTare_info());
@@ -2241,7 +2475,12 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
   @PostMapping("updateImmediateTareAndOffWater")
   public ResponseEntity<String> updateImmediateTareAndOffWater(
       @Validated @RequestBody ApiEntityDeviceSetInfo.ValiTareAndOffWater bodyData ,BindingResult validationResult
-      ) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+      ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/updateImmediateTareAndOffWater";
@@ -2268,6 +2507,16 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
 
     // 患者ID(Long型に変換)
     Long patInfoCd = Long.parseLong(bodyData.getPat_id());
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if (!ntssUser.isNkkAdminUser()) {
+      long count = patMainDao.countByPatIdAndFacilityCd(patInfoCd, ntssUser.getFacilityCd());
+      if (count == 0) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " patInfoCd=" + patInfoCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
 
     try {
       if (bodyData.getOff_water_info() != null) {
@@ -2309,7 +2558,12 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
   @PostMapping("updateIndImmediateTareAndOffWater")
   public ResponseEntity<Void> updateIndImmediateTareAndOffWater(
       @Validated @RequestBody ApiEntityDeviceSetInfo.ValiTareAndOffWater bodyData ,BindingResult validationResult
-      ) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+      ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/updateIndImmediateTareAndOffWater";
@@ -2335,6 +2589,16 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
 
     // Ord番号(Long型に変換)
     Long ordCd = Long.parseLong(bodyData.getOrd_no());
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if (!ntssUser.isNkkAdminUser()) {
+      long count = deviceSetInfoService.countByOrdNoAndFacilityCd(ntssUser.getFacilityCd(), Collections.singletonList(ordCd));
+      if (count == 0) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ordCd=" + ordCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
 
     try {
       if (bodyData.getOff_water_info() != null) {
@@ -2372,7 +2636,12 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
    @PostMapping("updateTareOffWaterInfo")
    public ResponseEntity<Void> updateTareOffWaterInfo(
        @Validated @RequestBody ApiEntityDeviceSetInfo.ValiTareAndOffWater bodyData ,BindingResult validationResult
-       ) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+       ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+       @AuthenticationPrincipal NtssUser ntssUser
+       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+
 
      // wp アプリケーションログの適正化 Add Start
      String mappingUrl = Uri.DEVICE_SET_INFO + "/updateTareOffWaterInfo";
@@ -2381,6 +2650,35 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
      // wp アプリケーションログの適正化 Add End
 
      int tableFlag = Integer.parseInt(bodyData.getTable_flag());
+     // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+     if (!ntssUser.isNkkAdminUser()) {
+       if (tableFlag == 0) {
+         String facilityCd = bodyData.getFacility_cd();
+         if (facilityCd != null && !facilityCd.isEmpty() &&
+           !facilityCd.equals(ntssUser.getFacilityCd())) {
+           String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " facilityCd=" + facilityCd + " ";
+           InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+           return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+         }
+       } else if (tableFlag == 1) {
+         Long patId = Long.parseLong(bodyData.getPat_id());
+         long count = patMainDao.countByPatIdAndFacilityCd(patId, ntssUser.getFacilityCd());
+         if (count == 0) {
+           String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " patId=" + patId + " ";
+           InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+           return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+         }
+       } else {
+         Long ordNo = Long.parseLong(bodyData.getOrd_no());
+         long count = deviceSetInfoService.countByOrdNoAndFacilityCd(ntssUser.getFacilityCd(), Collections.singletonList(ordNo));
+         if (count == 0) {
+           String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ordNo=" + ordNo + " ";
+           InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+           return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+         }
+       }
+     }
+     // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
 
      try {
        if (0 == tableFlag) {
@@ -2423,7 +2721,23 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
     @PostMapping("updateSysTareOffWaterInfo")
     public ResponseEntity<Void> updateSysTareOffWaterInfo(
         @Validated @RequestBody ApiEntityDeviceSetInfo.ValiTareAndOffWater bodyData ,BindingResult validationResult
-        ) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+        ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+        @AuthenticationPrincipal NtssUser ntssUser
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = bodyData.getFacility_cd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.DEVICE_SET_INFO + "/updateSysTareOffWaterInfo";
@@ -2477,7 +2791,13 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
      @PostMapping("updatePatTareOffWaterInfo")
      public ResponseEntity<Void> updatePatTareOffWaterInfo(
          @Validated @RequestBody ApiEntityDeviceSetInfo.ValiTareAndOffWater bodyData ,BindingResult validationResult
-         ) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+         ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+         @AuthenticationPrincipal NtssUser ntssUser
+         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+
+
 
        // wp アプリケーションログの適正化 Add Start
        String mappingUrl = Uri.DEVICE_SET_INFO + "/updatePatTareOffWaterInfo";
@@ -2494,6 +2814,16 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
        Long patId = this.getLongPattern(bodyData.getPat_id());
        // 施設コード
        String facilityCd = bodyData.getFacility_cd();
+       // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+       if (!ntssUser.isNkkAdminUser()) {
+         if (facilityCd != null && !facilityCd.isEmpty() &&
+             !facilityCd.equals(ntssUser.getFacilityCd())) {
+           String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " facilityCd=" + facilityCd + " ";
+           InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+           return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+         }
+       }
+       // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
        //add #10632 装置設定画面の更新時にpat_main_historyがインサートされない 20240530 ztc start
        if (facilityCd == null && patId != null) {
          List<Long> patIdList = new ArrayList<Long>();
@@ -2501,6 +2831,17 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
          List<PatPersonalMain> listPatPersonalMain = patPersonalMainDao.selectByIdList(patIdList);
          PatPersonalMain patPersonalMain = listPatPersonalMain.get(0);
          facilityCd = patPersonalMain.getFacility_cd();
+         // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+         // patId 経由で解決した facilityCd がセッションの施設と一致するか確認
+         if (!ntssUser.isNkkAdminUser()) {
+           if (facilityCd != null && !facilityCd.isEmpty() &&
+               !facilityCd.equals(ntssUser.getFacilityCd())) {
+             String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " facilityCd=" + facilityCd + " patId=" + patId + " ";
+             InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+             return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+           }
+         }
+         // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
        }
        //add #10632 装置設定画面の更新時にpat_main_historyがインサートされない 20240530 ztc end
        // 風袋情報
@@ -2555,6 +2896,18 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
       , @AuthenticationPrincipal NtssUser user
         // add #10553 ④装置設定＞風袋・除水補正にて指示への展開保存をした場合には、変更された治療予定毎の連携イベントが必要 piao end
         ) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+        if(!user.isNkkAdminUser()) {
+          String facilityCd = bodyData.getFacility_cd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(user.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "user.getFacilityCd()=" + user.getFacilityCd() + " facilityCd=" + facilityCd + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.DEVICE_SET_INFO + "/updateIndTareOffWaterInfo";
@@ -2798,7 +3151,12 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
     @PostMapping("updateRstTareOffWaterInfo")
     public ResponseEntity<Void> updateRstTareOffWaterInfo(
         @Validated @RequestBody ApiEntityDeviceSetInfo.ValiTareAndOffWater bodyData ,BindingResult validationResult
-        ) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+        ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+        @AuthenticationPrincipal NtssUser ntssUser
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.DEVICE_SET_INFO + "/updateRstTareOffWaterInfo";
@@ -2808,6 +3166,16 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
 
       // オーダー番号リスト
       List<Long> ordNoList = this.getLongValueList(bodyData.getOrd_no());
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 start
+      if (!ntssUser.isNkkAdminUser()) {
+        long count = deviceSetInfoService.countByOrdNoAndFacilityCd(ntssUser.getFacilityCd(), ordNoList);
+        if (count != ordNoList.size()) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " ordNoList=" + ordNoList + " count=" + count + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 end
       // 風袋情報
       String tareInfo = bodyData.getTare_info();
       // 除水補正情報
@@ -2856,6 +3224,17 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
       , @AuthenticationPrincipal NtssUser user
         // add #10553 ④装置設定＞風袋・除水補正にて指示への展開保存をした場合には、変更された治療予定毎の連携イベントが必要 piao end
         ) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+      if(!user.isNkkAdminUser()) {
+        if (bodyData != null && bodyData.getFacility_cd() != null &&
+          !bodyData.getFacility_cd().equals(user.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "user.getFacilityCd()=" + user.getFacilityCd() + " facility_cd=" + bodyData.getFacility_cd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
       // wp アプリケーションログの適正化 Add Start
       String mappingUrl = Uri.DEVICE_SET_INFO + "/updateFutureIndTareOffWaterInfo";
@@ -3148,7 +3527,23 @@ logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.F
   @PostMapping("updateHostNotificationInfo")
   public ResponseEntity<Void> updateHostNotificationInfo(
     @Validated @RequestBody ApiEntityDeviceSetInfo.ValiHostNotification bodyData ,BindingResult validationResult
-    ) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+    ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException,JSONException,ArrayIndexOutOfBoundsException,NullPointerException {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = bodyData.getFacility_cd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.DEVICE_SET_INFO + "/updateHostNotificationInfo";
@@ -3701,5 +4096,3 @@ eventLogMessage.setLogMessage("エラー発生："+ExcetionStackTraceToString(e)
     return Thread.currentThread().getStackTrace()[2].getMethodName();
   }
 }
-
-

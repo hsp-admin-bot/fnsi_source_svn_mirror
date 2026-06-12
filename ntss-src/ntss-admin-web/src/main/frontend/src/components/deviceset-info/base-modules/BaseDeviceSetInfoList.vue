@@ -39,7 +39,7 @@ import iap from "@/components/deviceset-info/iap/IapEditor.vue";
 // add FNSI7658-装置設定>プライミングにて動脈充填の流量を変更すると血流量の見直しの注意喚起メッセージが表示される 周 end
 import hostNotice from "@/components/deviceset-info/host-notification/HostNoticeEditor.vue";
 import baseTareOffwater from "@/components/deviceset-info/base-modules/TareAndOffWaterInfoEditBase.vue";
-import { mapActions } from "vuex";
+import { mapActions } from "@/compat/vue/vuex";
 
 /**
  * @description 装置設定一覧ベースコンポーネント

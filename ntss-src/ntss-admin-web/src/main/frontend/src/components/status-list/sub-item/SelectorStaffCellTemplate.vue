@@ -2,7 +2,13 @@
 <template>
   <!-- modify by chamaojia 2024-05-10 [10573] add the "isDisabled" parameter to pass in the subcomponent   start -->
   <!-- mod FNSI-画面スタイル(ボタン)対応 付 start -->
-  <td :colspan="colSpan" role="gridcell" :data-grid-col-index="columnIndex" :class="[className, 'selector-cell-template']">
+  <td
+    :colspan="colSpan"
+    role="gridcell"
+    :data-grid-col-index="columnIndex"
+    :class="[className, 'selector-cell-template']"
+    @click.stop
+  >
     <!-- mod #10359 編集権限の動作不正 dengshen start -->
     <!-- <com-master-selector -->
     <!--   :showLabelName="false" -->
@@ -25,7 +31,6 @@
       :exeLableName="'保存'"
       @changePersonalUser="onChangePersonalUser"
       :value="getStaffName"
-      @click="onClick"
       style="btn3-normal"
       @popover-visible-changed="handlePopoverVisibleChange"
     />
@@ -46,9 +51,10 @@ import {
   sendRequestMstGetJobs
 } from "@/apis/user-selector-popover";
 import { Master } from "@/models/common/master-selector-condition/Master";
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 
 export default {
+  inheritAttrs: false,
   props: {
     field: String,
     dataItem: Object,
@@ -111,10 +117,6 @@ export default {
       return getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
-    onClick() {
-      this.$set(this.dataItem, "inEdit", this.field);
-      this.$emit("editStart");
-    },
     onChangePersonalUser(user) {
       this.selectValue = user ? user.id : -1;
       this.$emit(
@@ -143,13 +145,12 @@ export default {
   // async created() {
   //   await this.getMst();
   // }
-  created() {}
-  // mod FNSI-画面パフォーマンス対応 付 end
+// mod FNSI-画面パフォーマンス対応 付 end
 };
 </script>
 
 <style scoped>
-.selector-cell-template >>> ons-button.select-btn {
+.selector-cell-template :deep(ons-button.select-btn) {
   font-size: 1em;
 }
 </style>

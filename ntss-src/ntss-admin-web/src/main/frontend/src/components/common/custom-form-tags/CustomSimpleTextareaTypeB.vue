@@ -4,8 +4,8 @@
       ref="main"
       rows="1"
       :class="classList"
-      v-on="listeners"
-      :value="value"
+      v-bind="listeners"
+      :value="modelValue"
       :disabled="disabled"
       @focus="onFocus()"
       @blur="onBlur($event)"
@@ -16,7 +16,7 @@
       rows="1"
       class="auto-width-shadow"
       :class="classList"
-      :value="value"
+      :value="modelValue"
       :disabled="disabled"
     ></textarea>
   </div>
@@ -25,8 +25,8 @@
     ref="main"
     rows="1"
     :class="classList"
-    v-on="listeners"
-    :value="value"
+    v-bind="listeners"
+    :value="modelValue"
     :disabled="disabled"
     @focus="onFocus()"
     @blur="onBlur($event)"
@@ -52,16 +52,24 @@
  *     :disabled="disabled" (必要に応じて)
  *   />
  *   ※ v-model は、:value="value" @input="value = value(戻り値)" と同じ動作をします。
- *   ※ v-on="listeners" の定義によりイベントが伝番する為、@blur等のイベントはそのまま使用可能です。
+ *   ※ v-bind="listeners" の定義によりイベントが伝番する為、@blur等のイベントはそのまま使用可能です。
  */
 
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
+import { applyModelModifiers } from "@/compat/vue/model.js";
 
 export default {
+  inheritAttrs: false,
+  emits: ["update:modelValue", "input", "blur"],
   props: {
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: String,
       default: ""
+    },
+    modelModifiers: {
+      type: Object,
+      default: () => ({})
     },
     disabled: {
       type: Boolean,
@@ -105,17 +113,21 @@ export default {
       sidebarWidth: "getSidebarWidth",
     }),
 
-    /* v-on="$listeners" により応答される @input の応答データ補正処理です */
+    /* v-bind="$attrs" により応答される @input の応答データ補正処理です */
     listeners() {
       return {
-        ...this.$listeners,
-        input: event => this.$emit('input', event.target.value),
+        ...this.$attrs,
+        onInput: event => {
+          const nextValue = applyModelModifiers(event.target.value, this.modelModifiers);
+          this.$emit("update:modelValue", nextValue);
+          this.$emit("input", nextValue);
+        },
       };
     },
     // add 6827 入力欄の編集済み表現不正（治療記録＞バイタル） 房 start
     classList() {
       let isChanged = true;
-      if ((this.value === this.initValue) || (!this.value && !this.initValue)) {
+      if ((this.modelValue === this.initValue) || (!this.modelValue && !this.initValue)) {
         if (this.isOnFocus) {
           isChanged = true;
         } else {
@@ -132,7 +144,7 @@ export default {
   },
 
   watch: {
-    value() {
+    modelValue() {
       this.resizeTextarea();
     },
     fontSize() {
@@ -234,7 +246,7 @@ export default {
     this.startStopResizeObserver();
     this.resizeTextarea();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.stopResizeObserver();
   },
 };

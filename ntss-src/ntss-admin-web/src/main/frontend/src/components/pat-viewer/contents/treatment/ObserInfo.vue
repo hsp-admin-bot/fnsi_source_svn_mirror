@@ -13,12 +13,11 @@
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * 日付操作
  */
-import moment from "moment";
 
 /**
  * ベースコンポーネント
@@ -104,7 +103,7 @@ export default {
     });
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },

@@ -195,14 +195,10 @@
       </v-ons-row>
       <!-- add FNSI-体重計モードテンキーの追加 徐 start -->
       <div>
-        <!-- mod FutreNetWeb+SI課題管理No7332 趙 start-->
-        <!-- <v-ons-popover cancelable :visible.sync="cavisible" :target="popoverTarget" direction="down" class="popoverClass">-->
-          <!-- <vue-touch-keyboard :options="options" :layout="layout" :cancel="hide" :accept="accept" :input="input"  />-->
-        <!-- </v-ons-popover>-->
         <v-ons-popover
           cancelable
           id="weightPopOver"
-          :visible.sync="cavisible"
+          v-model:visible="cavisible"
           :target="popoverTarget"
           direction="down"
           @posthide="tenkeyClose"
@@ -220,18 +216,19 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapGetters } from "vuex";
-import {EventBus} from "@/eventBus";
+import { mapGetters, mapMutations } from "@/compat/vue/vuex";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import IndTreatCondBase from "@/components/indication/IndTreatCondBase";
+import TouchKeyboard from "@/compat/keyboard/TouchKeyboard.vue";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { publicAssetPath } from "@/compat/assets/public-path";
 // add FNSI-体重計モードテンキーの追加 徐 start
-import VueTouchKeyboard from "vue-touch-keyboard/dist/vue-touch-keyboard";
-import "./../../../public/css/vue-touch-keyboard.css";
 // add FNSI-体重計モードテンキーの追加 徐 end
 export default {
   mixins: [IndTreatCondBase],
   // add FNSI-体重計モードテンキーの追加 徐 start
   components: {
-    "vue-touch-keyboard":VueTouchKeyboard.component
+    "vue-touch-keyboard": TouchKeyboard
   },
   // add FNSI-体重計モードテンキーの追加 徐 end
   data() {
@@ -259,9 +256,12 @@ export default {
         useKbEvents: false,
         preventClickEvent: false
       },
-      image_src: require("@/../public/img/keyboard/keyboard.png"),
-      popoverTarget: null
+      image_src: publicAssetPath("img/keyboard/keyboard.png"),
+      popoverTarget: null,
       // add FNSI-体重計モードテンキーの追加 徐 end
+      // mod #10937 20260428 Ji start
+      inputCache: null,
+      // mod #10937 20260428 Ji start
     };
   },
 
@@ -278,7 +278,6 @@ export default {
     // add 8204 周安寧 end
     targetWeightDisabled() {
       // add FNSI-体重計モードテンキーの追加 徐 start
-      // eslint-disable-next-line vue/no-side-effects-in-computed-properties
       this.cavisible = false;
       // add FNSI-体重計モードテンキーの追加 徐 end
       // mod FNSI-障害票一覧_目標体重除水量制限編集のNo.1対応 韓 start
@@ -305,13 +304,24 @@ export default {
         "custom-input-number-edited": this.isEdited,
         "action-condition-input": !this.isEdited,
       };
-    }
+    },
     // add FutreNetWeb+SI課題管理No7332 趙 end
+    // add #10937 20260428 Ji start
+    computedInitValue() {
+      if (this.targetWeightValue.editValue == 0) {
+        return this.displayInputValue.editValue;
+      }
+      return this.displayInputValue.initValue;
+    }
+    // add #10937 20260428 Ji end
   },
 
   watch: {
     targetWeightValue: {
       handler({ editValue }) {
+        // add #10937 20260428 Ji start
+        this.setPressDwSwitchButton(true);
+        // add #10937 20260428 Ji end
         // add FNSI-DW指定する 徐 start
         // this.displayInputValue.editValue = +editValue
         //   ? this.displayInputValue.initValue || 0
@@ -320,9 +330,19 @@ export default {
         // this.displayInputValue.editValue = +editValue
         //   ? this.displayInputValue.initValue ? this.displayInputValue.initValue : this.getIndDryWeight.value
         //   : null;
-        this.displayInputValue.editValue = +editValue
-          ? this.displayInputValue.editValue ? this.displayInputValue.editValue : this.getIndDryWeight.value
-          : null;
+        // mod #10937 20260428 Ji start
+        // this.displayInputValue.editValue = +editValue
+        //   ? this.displayInputValue.editValue ? this.displayInputValue.editValue : this.getIndDryWeight.value
+        //   : null;
+        if (+editValue) {
+          this.displayInputValue.editValue = this.displayInputValue.editValue ?? this.inputCache ?? this.getIndDryWeight.value;
+        } else {
+          if (this.displayInputValue.editValue !== null) {
+            this.inputCache = this.displayInputValue.editValue;
+          }
+          this.displayInputValue.editValue = null;
+        }
+        // mod #10937 20260428 Ji end
         // add FNSI-DW指定する 徐 end
         //8204 【デグレ】治療条件モーダルにて、使用しない項目を設定できてしまう mod end
       },
@@ -339,7 +359,10 @@ export default {
     if (this.isIndication) {
       // add #10196 数値IFのスタイル全不正 linjunfeng start
       // this.displayInputValue.editValue = this.velue;
-      this.displayInputValue.editValue = this.velue == -1 ? null : this.velue;
+      // mod #10937 20260428 Ji start
+      // this.displayInputValue.editValue = this.velue == -1 ? null : this.displayInputValue.editValue;
+      this.displayInputValue.editValue = this.velue != null ? (this.velue == -1 ? null : this.velue) : this.displayInputValue.editValue;
+      // mod #10937 20260428 Ji end
       // add #10196 数値IFのスタイル全不正 linjunfeng end
       this.targetWeightValue.editValue = this.velue == -1 || this.velue == null ? 0 : 1
       this.targetWeightValue.initValue = this.value == -1 || this.value == null ? 0 : 1
@@ -353,6 +376,14 @@ export default {
   },
 
   methods: {
+    // add #10937 20260428 Ji start
+    ...mapMutations("pat-viewer-treat-cond", [
+      "setPressDwSwitchButton"
+    ]),
+    // add #10937 20260428 Ji start
+    getScopedInputElement(id) {
+      return getScopedElementById(id, this.$el || null);
+    },
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
       return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd));
@@ -463,8 +494,8 @@ export default {
     },
     next() {
       let reverseVal = 0;
-      reverseVal = Number(document.getElementById("indTreatID").value) * (-1);
-      document.getElementById("indTreatID").value = reverseVal.toFixed(2);
+      reverseVal = Number(this.getScopedInputElement("indTreatID").value) * (-1);
+      this.getScopedInputElement("indTreatID").value = reverseVal.toFixed(2);
       this.displayInputValue.editValue = reverseVal.toFixed(2);
       this.moveCursor();
     },
@@ -504,16 +535,16 @@ export default {
     // テンキー用関数 tenkeyClose: 画面テンキーを閉じた際の内部処理
     tenkeyClose() {
       // 入力を番号に戻す
-      document.getElementById("indTreatID").setAttribute("type", "number");
+      this.getScopedInputElement("indTreatID").setAttribute("type", "number");
       // 異常データの場合の初期化
-      this.changeMeasureVal(this.displayInputValue.editValue, {target: document.getElementById("indTreatID")}, true);
+      this.changeMeasureVal(this.displayInputValue.editValue, {target: this.getScopedInputElement("indTreatID")}, true);
       this.input = null;
     },
     // add FutreNetWeb+SI課題管理No7332 趙 end
     accept() {
       // mod FutreNetWeb+SI課題管理No7332 趙 start
       // this.hide();
-      if (document.getElementById("indTreatID").value !== "0.00") this.doClearTwice = true;
+      if (this.getScopedInputElement("indTreatID").value !== "0.00") this.doClearTwice = true;
       this.clearValue();
       this.moveCursor();
       // mod FutreNetWeb+SI課題管理No7332 趙 end
@@ -521,9 +552,9 @@ export default {
     show() {
       if (this.getWeightMode.isWeightMode) {
         // mod FutreNetWeb+SI課題管理No7332 趙 start
-        // this.input = document.getElementById("indTreatID").firstElementChild;
-        // this.popoverTarget = document.getElementById("indTreatID");
-        let indTreatIDElem = document.getElementById("indTreatID");
+        // this.input = this.getScopedInputElement("indTreatID").firstElementChild;
+        // this.popoverTarget = this.getScopedInputElement("indTreatID");
+        let indTreatIDElem = this.getScopedInputElement("indTreatID");
         indTreatIDElem.setAttribute("type", "text");
         this.input = indTreatIDElem.firstElementChild;
         this.input.setAttribute("readonly", "readonly");
@@ -539,8 +570,8 @@ export default {
     },
     hide() {
       // mod FutreNetWeb+SI課題管理No7332 趙 start
-      // document.getElementById("indTreatID").value = null;
-      document.getElementById("weightPopOver").hide();
+      // this.getScopedInputElement("indTreatID").value = null;
+      this.getScopedInputElement("weightPopOver").hide();
       this.cavisible = false;
       // mod FutreNetWeb+SI課題管理No7332 趙 end
     }
@@ -594,11 +625,12 @@ export default {
 .action-condition-row {
   align-items: center;
 }
+ 
 /* add FNSI-体重計モードテンキーの追加 徐 start */
-ons-input >>> .text-input {
+ons-input :deep(.text-input) {
   text-align: right;
 }
-.popoverClass >>> .popover--top {
+.popoverClass :deep(.popover--top) {
   width: auto;
 }
 /* add FNSI-体重計モードテンキーの追加 徐 end */

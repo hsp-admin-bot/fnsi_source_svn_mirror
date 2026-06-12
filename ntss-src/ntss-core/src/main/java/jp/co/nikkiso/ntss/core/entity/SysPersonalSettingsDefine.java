@@ -17,10 +17,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import jp.co.nikkiso.ntss.core.entity.custom.ReferenceComboTargetTable;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
 import lombok.AllArgsConstructor;
@@ -34,7 +34,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class SysPersonalSettingsDefine {
 
   /**
@@ -123,7 +123,7 @@ public class SysPersonalSettingsDefine {
         ItemInfoValidation obj
           = objectMapper.readValue(value, ItemInfoValidation.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("バリデーション定義の設定内容が不正です") {
         };
       }
@@ -179,7 +179,7 @@ public class SysPersonalSettingsDefine {
         ItemInfoDetail obj
           = objectMapper.readValue(value, ItemInfoDetail.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("設定項目情報の設定内容が不正です") {
         };
       }
@@ -194,7 +194,7 @@ public class SysPersonalSettingsDefine {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -232,7 +232,7 @@ public class SysPersonalSettingsDefine {
         ItemInfo obj
           = objectMapper.readValue(value, ItemInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("設定項目情報が不正です") {
         };
       }
@@ -247,7 +247,7 @@ public class SysPersonalSettingsDefine {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -290,7 +290,7 @@ public class SysPersonalSettingsDefine {
         StaticComboValue obj
           = objectMapper.readValue(value, StaticComboValue.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("固定型コンボデータの値が不正です") {
         };
       }
@@ -331,7 +331,7 @@ public class SysPersonalSettingsDefine {
         StaticCombo obj
           = objectMapper.readValue(value, StaticCombo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("固定型コンボデータの設定内容が不正です") {
         };
       }
@@ -367,7 +367,7 @@ public class SysPersonalSettingsDefine {
         StaticComboInfo obj
           = objectMapper.readValue(value, StaticComboInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("固定型コンボデータの定義内容が不正です") {
         };
       }
@@ -382,7 +382,7 @@ public class SysPersonalSettingsDefine {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -441,7 +441,7 @@ public class SysPersonalSettingsDefine {
         TargetTable obj
           = objectMapper.readValue(value, TargetTable.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("参照先テーブルの設定内容が不正です") {
         };
       }
@@ -482,7 +482,7 @@ public class SysPersonalSettingsDefine {
         ReferenceCombo obj
           = objectMapper.readValue(value, ReferenceCombo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("参照型コンボデータの設定内容が不正です") {
         };
       }
@@ -518,7 +518,7 @@ public class SysPersonalSettingsDefine {
         ReferenceComboDef obj
           = objectMapper.readValue(value, ReferenceComboDef.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("参照型コンボデータの定義内容が不正です") {
         };
       }
@@ -533,7 +533,7 @@ public class SysPersonalSettingsDefine {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }

@@ -10,7 +10,7 @@
       type="number"
       v-model="hours"
       @input="handleInput"
-      @focus="handleFocus('hours')"
+      @focus="handleFocus('hours', $event)"
       @blur="handleBlur('hours')"
       @keydown="handleKeyDown"
       :min="0"
@@ -25,7 +25,7 @@
       type="number"
       v-model="minutes"
       @input="handleInput"
-      @focus="handleFocus('minutes')"
+      @focus="handleFocus('minutes', $event)"
       @blur="handleBlur('minutes')"
       @keydown="handleKeyDown"
       :min="0"
@@ -41,6 +41,10 @@
 <script>
 export default {
   props: {
+    modelValue: {
+      type: String,
+      default: undefined
+    },
     value: {
       type: String,
       default: ''
@@ -62,6 +66,7 @@ export default {
       default: false
     }
   },
+  emits: ["update:modelValue", "input"],
   data() {
     return {
       hours: '',
@@ -70,15 +75,20 @@ export default {
       activeField: null
     };
   },
+  computed: {
+    externalValue() {
+      return this.modelValue !== undefined ? this.modelValue : this.value;
+    }
+  },
   watch: {
-    value: {
+    externalValue: {
       immediate: true,
       handler(newVal) {
-      if (newVal) {
-        const [h, m] = newVal.split(':');
+        if (newVal) {
+          const [h, m] = newVal.split(':');
           this.hours = h;
           this.minutes = m;
-      } else {
+        } else {
           this.hours = this.placeholder ? '' : '00';
           this.minutes = this.placeholder ? '' : '00';
         }
@@ -86,6 +96,11 @@ export default {
     }
   },
   methods: {
+    emitInputValue(value) {
+      this.$emit('update:modelValue', value);
+      this.$emit('input', value);
+    },
+
     handleInput() {
       if (this.hours !== '') {
         let parsedHours = parseInt(this.hours, 10);
@@ -110,10 +125,10 @@ export default {
       }
 
       const formattedTime = this.formatTime();
-        this.$emit('input', formattedTime);
+      this.emitInputValue(formattedTime);
 
       if (String(Number(this.hours)).length === 2 && this.activeField === 'hours') {
-        this.$refs.minutesInput.focus();
+        this.$refs.minutesInput?.focus?.();
       }
     },
 
@@ -124,10 +139,10 @@ export default {
       return `${h}:${m}`;
     },
 
-    handleFocus(field) {
+    handleFocus(field, event) {
       this.isFocused = true;
       this.activeField = field;
-      event.target.select();
+      event?.target?.select?.();
     },
 
     handleBlur(field) {
@@ -192,17 +207,17 @@ export default {
         case 'Tab':
           if (isHoursInput && !event.shiftKey) {
             event.preventDefault();
-            this.$refs.minutesInput.focus();
+            this.$refs.minutesInput?.focus?.();
           } else if (isMinutesInput && event.shiftKey) {
             event.preventDefault();
-            this.$refs.hoursInput.focus();
+            this.$refs.hoursInput?.focus?.();
           }
           break;
 
         case ':':
           if (isHoursInput) {
             event.preventDefault();
-            this.$refs.minutesInput.focus();
+            this.$refs.minutesInput?.focus?.();
           }
           break;
       }

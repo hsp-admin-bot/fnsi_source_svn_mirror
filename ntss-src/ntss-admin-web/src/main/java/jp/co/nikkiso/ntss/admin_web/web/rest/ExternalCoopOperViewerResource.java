@@ -15,6 +15,7 @@ import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.MstInfoService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
+import jp.co.nikkiso.ntss.core.dao.SysCoopJournalDao;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
@@ -68,6 +69,8 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
+import jp.co.nikkiso.ntss.core.entity.SysCoopJournal;
 
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 
@@ -93,6 +96,9 @@ public class ExternalCoopOperViewerResource {
   @Autowired
   MstInfoService mstInfoService;
 
+  @Autowired
+  SysCoopJournalDao sysCoopJournalDao;
+
   /**
    * ロギングのServiceインタフェース.
    */
@@ -106,7 +112,22 @@ public class ExternalCoopOperViewerResource {
 
   @PostMapping("/sys_coop_journal/{facilityCd}")
   public ResponseEntity<?> getSysCoopJourlarByCondition(@PathVariable String facilityCd,
-                                                        @RequestBody ExternalCoopPayload payload) {
+                                                        @RequestBody ExternalCoopPayload payload,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                        @AuthenticationPrincipal NtssUser ntssUser
+                                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.EXTERNAL_COOP_OPER_VIEWER + "/sys_coop_journal";
@@ -132,7 +153,22 @@ public class ExternalCoopOperViewerResource {
   }
 
   @GetMapping("/if_edge_healmon/{facilityCd}")
-  public ResponseEntity<?> getHealthmonFacilityConn(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getHealthmonFacilityConn(@PathVariable String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                    @AuthenticationPrincipal NtssUser ntssUser
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.EXTERNAL_COOP_OPER_VIEWER + "/if_edge_healmon";
@@ -181,27 +217,31 @@ public class ExternalCoopOperViewerResource {
                 request.put("facilityCd",facilityCd);
                 HttpEntity<Object> entity = new HttpEntity<>(request, headers);
 				// #9698 アプリケーションログの内容修正 20260328 mod yangxuewang start
-                long start = System.currentTimeMillis();
-                ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.POST, entity, String.class);
-                long cost = System.currentTimeMillis() - start;
-                Map<String, Object> map = new HashMap<>();
-                map.put("logType", "RESTTEMPLATE-LOG");
-                map.put("className", "jp.co.nikkiso.ntss.admin_web.web.rest.ExternalCoopOperViewerResource");
-                map.put("methodName", "getHealthmonFacilityConn");
-                map.put("method", HttpMethod.POST);
-                map.put("url", uri);
-                map.put("headers", headers.toSingleValueMap());
-                map.put("requestParameter", request);
-                map.put("status",response.getStatusCode());
-                map.put("cost", cost);
-                map.put("result",response.getBody());
-                EventLogMessage restTemplateEventLogMessage = new EventLogMessage();
-                restTemplateEventLogMessage.setFacilityCd(facilityCd);
-                restTemplateEventLogMessage.setLogMessage(toJson(map));
-                logService.log(LogLevel.INFO, restTemplateEventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI, null);
-                // #9698 アプリケーションログの内容修正 20260328 mod yangxuewang end
-                if(200 == response.getStatusCodeValue()){
-                  flag = true;
+                try {
+                  long start = System.currentTimeMillis();
+                  ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.POST, entity, String.class);
+                  long cost = System.currentTimeMillis() - start;
+                  Map<String, Object> map = new HashMap<>();
+                  map.put("logType", "RESTTEMPLATE-LOG");
+                  map.put("className", "jp.co.nikkiso.ntss.admin_web.web.rest.ExternalCoopOperViewerResource");
+                  map.put("methodName", "getHealthmonFacilityConn");
+                  map.put("method", HttpMethod.POST);
+                  map.put("url", uri);
+                  map.put("headers", headers.toSingleValueMap());
+                  map.put("requestParameter", request);
+                  map.put("status",response.getStatusCode());
+                  map.put("cost", cost);
+                  map.put("result",response.getBody());
+                  EventLogMessage restTemplateEventLogMessage = new EventLogMessage();
+                  restTemplateEventLogMessage.setFacilityCd(facilityCd);
+                  restTemplateEventLogMessage.setLogMessage(toJson(map));
+                  logService.log(LogLevel.INFO, restTemplateEventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI, null);
+                  // #9698 アプリケーションログの内容修正 20260328 mod yangxuewang end
+                  if(200 == response.getStatusCode().value()){
+                    flag = true;
+                  }
+                } catch (RestClientException e) {
+                  logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXTERNAL_COOP, AFTER_LOG_FLG_ERROR, mappingUrl, facilityCd, e.getMessage());
                 }
               }
             } catch (ParseException e) {
@@ -247,7 +287,22 @@ public class ExternalCoopOperViewerResource {
 //  @GetMapping("/pat_coop_detail/{facilityCd}/{selectedPatId}")
 //  public ResponseEntity<?> getConIntelligenceList(@PathVariable String facilityCd, @PathVariable String selectedPatId) {
   @GetMapping("/pat_coop_detail/{facilityCd}/{coopVersion}/{selectedPatId}")
-  public ResponseEntity<?> getConIntelligenceList(@PathVariable String facilityCd, @PathVariable String coopVersion, @PathVariable String selectedPatId) {
+  public ResponseEntity<?> getConIntelligenceList(@PathVariable String facilityCd, @PathVariable String coopVersion, @PathVariable String selectedPatId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 // mod 2023-01-04 bug #7304 異なる連携の機能を組み合わせて使用する方法 孫 end
 
     // wp アプリケーションログの適正化 Add Start
@@ -287,7 +342,28 @@ public class ExternalCoopOperViewerResource {
   // add FNSI-連携情報を追加 李 end
 
   @PutMapping("/update_sys_coop_journal")
-  public ResponseEntity<?> updateSysCoopJourlar(@RequestBody List<SysCoopJournalDetail> listSys) {
+  public ResponseEntity<?> updateSysCoopJourlar(@RequestBody List<SysCoopJournalDetail> listSys,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                @AuthenticationPrincipal NtssUser ntssUser
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260423 start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (!listSys.isEmpty()) {
+          for (SysCoopJournalDetail sysCoopJournalDetail : listSys) {
+            SysCoopJournal dbSysCoopJournal = sysCoopJournalDao.selectByPK(sysCoopJournalDetail.getCtlNo());
+            String dbFacilityCd = dbSysCoopJournal == null ? null : dbSysCoopJournal.getFacilityCd();
+            if (dbFacilityCd != null &&
+              !dbFacilityCd.equals(ntssUser.getFacilityCd())) {
+              String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + dbFacilityCd + " " + "patId=" + dbSysCoopJournal.getPatId() + " " + "ctlNo=" + dbSysCoopJournal.getCtlNo() + " ";
+              InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+              return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+            }
+          }
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260423 end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.EXTERNAL_COOP_OPER_VIEWER + "/update_sys_coop_journal";
@@ -604,7 +680,9 @@ public class ExternalCoopOperViewerResource {
   }
 //  add 5615 IFエッジコマンド実行 関 start
   @PostMapping("/commandKey/coop")
-  public ResponseEntity<?> postCommandKeyCoop(@RequestBody Map<String,Object> request) {
+  public ResponseEntity<?> postCommandKeyCoop(@RequestBody Map<String,Object> request,
+                                              @AuthenticationPrincipal NtssUser ntssUser) {
+
     String mappingUrl = Uri.EXTERNAL_COOP_OPER_VIEWER + "/commandKey/coop";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXTERNAL_COOP, BEFORE_LOG_FLG_INFO, mappingUrl, null,
       null);
@@ -620,6 +698,18 @@ public class ExternalCoopOperViewerResource {
       /* add by chamaojia 2024-06-27 [10574] communication security related additions --end */
       HttpEntity<Object> entity = null;
       List<String> list = (List<String>) request.get("facility_cd");
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+      if (!ntssUser.isNkkAdminUser() && list != null) {
+        for (String currentFacilityCd : list) {
+          if (currentFacilityCd != null && !currentFacilityCd.isEmpty()
+            && !currentFacilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "currentFacilityCd=" + currentFacilityCd + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
       if(list.size() > 0){
         for (int i = 0; i <list.size() ; i++) {
           facilityCd = list.get(i);
@@ -727,7 +817,22 @@ public class ExternalCoopOperViewerResource {
    * @return
    */
   @GetMapping("/if_edge_client_connect/{facilityCd}")
-  public ResponseEntity<?> getIfEdgeClientConn(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getIfEdgeClientConn(@PathVariable String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     String mappingUrl = Uri.EXTERNAL_COOP_OPER_VIEWER + "/if_edge_client_connect";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXTERNAL_COOP, BEFORE_LOG_FLG_INFO, mappingUrl, facilityCd,null);
     try {
@@ -783,10 +888,29 @@ public class ExternalCoopOperViewerResource {
    * @return {@link ResponseEntity}
    */
   @PostMapping("/reset_edge_status")
-  public ResponseEntity<?> resetEdgeStatus(@RequestBody Map<String,Object> request){
+  public ResponseEntity<?> resetEdgeStatus(@RequestBody Map<String,Object> request,
+                                           @AuthenticationPrincipal NtssUser ntssUser){
+
     String mappingUrl = Uri.EXTERNAL_COOP_OPER_VIEWER + "/reset_edge_status";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXTERNAL_COOP, BEFORE_LOG_FLG_INFO, mappingUrl, null,null);
     try {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+      if (!ntssUser.isNkkAdminUser()) {
+        Object facilityCdValue = request.get("facility_cd");
+        if (facilityCdValue instanceof List<?>) {
+          for (Object facilityCdObj : (List<?>) facilityCdValue) {
+            if (facilityCdObj != null) {
+              String facilityCd = facilityCdObj.toString();
+              if (!facilityCd.isEmpty() && !facilityCd.equals(ntssUser.getFacilityCd())) {
+                String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+                InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+            }
+          }
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
       final String uri = coopApi + "/ifedge/resetStatusByFacilityCds";
       RestTemplate restTemplate = new RestTemplate();
       HttpHeaders headers = new HttpHeaders();
@@ -799,7 +923,7 @@ public class ExternalCoopOperViewerResource {
       long start = System.currentTimeMillis();
       ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.POST, entity, String.class);
       //結果の取得
-      HttpStatus status = response.getStatusCode();
+      HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
       String body = response.getBody();
       long cost = System.currentTimeMillis() - start;
       Map<String, Object> map = new HashMap<>();
@@ -831,7 +955,22 @@ public class ExternalCoopOperViewerResource {
    * @return
    */
   @GetMapping("/has_if_edge/{facilityCd}")
-  public ResponseEntity<?> getIfEdge(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getIfEdge(@PathVariable String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                     @AuthenticationPrincipal NtssUser ntssUser
+                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     String mappingUrl = Uri.EXTERNAL_COOP_OPER_VIEWER + "/has_if_edge";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_EXTERNAL_COOP, BEFORE_LOG_FLG_INFO, mappingUrl, facilityCd,null);
     try {
@@ -852,7 +991,22 @@ public class ExternalCoopOperViewerResource {
    * @return
    */
   @GetMapping("/if_edge_healmon_on/{facilityCd}")
-  public ResponseEntity<?> getHealthmonFacilityConnByOn(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getHealthmonFacilityConnByOn(@PathVariable String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                        @AuthenticationPrincipal NtssUser ntssUser
+                                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     String jsonString = externalCoopOperViewerService.getHealthmonFacilityConnByOn(facilityCd);
     return new ResponseEntity<>(jsonString, HttpStatus.OK);
   }

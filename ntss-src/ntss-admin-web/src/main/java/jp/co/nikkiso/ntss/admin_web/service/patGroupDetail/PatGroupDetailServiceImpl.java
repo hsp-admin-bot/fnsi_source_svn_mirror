@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.service.patGroupDetail;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.request.patGroup.PatGroupDetailRequest;
 import jp.co.nikkiso.ntss.core.dao.PatGroupDetailDao;
 import jp.co.nikkiso.ntss.core.dao.PatPersonalMainDao;

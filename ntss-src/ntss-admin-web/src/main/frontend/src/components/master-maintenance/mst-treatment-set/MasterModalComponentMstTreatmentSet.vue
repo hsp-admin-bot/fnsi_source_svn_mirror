@@ -10,6 +10,7 @@
     </v-ons-button>
 
     <table class="disp-item-area custom-disp-item-area mst-treatment-set-area">
+      <tbody>
       <tr>
         <td height="30">
           セット名
@@ -130,9 +131,9 @@
                 <v-ons-col>
                   <!--// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start-->
                   <common-master-selector
-                    :masterType="MasterType.ANTICOAGULANT_INDICATION"
+                    :masterType="MasterType.MEDICATION_TREATMENT_RECORD"
                     :extraParams="{treatDate: '',rstInfo:{ rstName:'', rstUnit: ''}}"
-                    :patientId="selectedPatId"
+                    :patientId="null"
                     :facilityCd="facilityCd"
                     :btnName="'追加'"
                     :dialysisState="getDialysisState"
@@ -390,7 +391,7 @@
                   v-for="device in deviceArr"
                   :key="device.name"
                   @click="showSubModalSpcl(device, dataSourceType)"
-                  :style="[getDeviceListStyle(device), { padding: '10px' }]"
+                  :style="{ ...getDeviceListStyle(device), padding: '10px' }"
                   v-show="(device.type != DEVICE_TYPE_BVUFC && device.type != DEVICE_TYPE_DIA)
                   || device.type == DEVICE_TYPE_BVUFC && hasExtendBVUFCFuncPermiss
                   || device.type == DEVICE_TYPE_DIA && hasExtendDIAFuncPermiss"
@@ -405,17 +406,70 @@
           </div>
         </td>
       </tr>
+      </tbody>
     </table>
   </div>
 </template>
 
 <script>
 
+import { markRaw } from "vue";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { mapGetters, mapActions, mapMutations } from "vuex";
-import { equipmentSet, medicine, medicineClass, medicineMix, medicineSet, treatment } from "@/functions/mst/MstGetters.js";
-import _ from "underscore";
+import {
+  dialyzerIncludeDeleted,
+  equipmentClass,
+  equipmentIncludeDeleted,
+  equipmentSet,
+  medicine,
+  medicineClass,
+  medicineIncludeDeleted,
+  medicineMix,
+  medicineMixIncludeDeleted,
+  medicineSet,
+  treatment,
+  va
+} from "@/functions/mst/MstGetters.js";
+import _ from "lodash";
 import IndMedicineEdit from "@/components/indication/IndMedicineEdit";
+import IndTreatCondTimeComponent from "@/components/indication/IndTreatCondTime.vue";
+import IndTreatCondVaComponent from "@/components/indication/IndTreatCondVa.vue";
+import IndTreatCondTargetWeightComponent from "@/components/indication/IndTreatCondTargetWeight.vue";
+import IndTreatCondFilterLimitComponent from "@/components/indication/IndTreatCondFilterLimit.vue";
+import IndTreatCondDialyzerComponent from "@/components/indication/IndTreatCondDialyzer.vue";
+import IndTreatCondSeparatoryColumnComponent from "@/components/indication/IndTreatCondSeparatoryColumn.vue";
+import IndTreatCondFirstPassComponent from "@/components/indication/IndTreatCondFirstPass.vue";
+import IndTreatCondSecondPassComponent from "@/components/indication/IndTreatCondSecondPass.vue";
+import IndTreatCondNeedleSelectionComponent from "@/components/indication/IndTreatCondNeedleSelection.vue";
+import IndTreatCondNeedleAComponent from "@/components/indication/IndTreatCondNeedleA.vue";
+import IndTreatCondNeedleVComponent from "@/components/indication/IndTreatCondNeedleV.vue";
+import IndTreatCondNeedleSNComponent from "@/components/indication/IndTreatCondNeedleSN.vue";
+import IndTreatCondTubeComponent from "@/components/indication/IndTreatCondTube.vue";
+import IndTreatCondBloodFlowRateComponent from "@/components/indication/IndTreatCondBloodFlowRate.vue";
+import IndTreatCondDialysateComponent from "@/components/indication/IndTreatCondDialysate.vue";
+import IndTreatCondDialysateFlowRateComponent from "@/components/indication/IndTreatCondDialysateFlowRate.vue";
+import IndTreatCondDialysateAmountComponent from "@/components/indication/IndTreatCondDialysateAmount.vue";
+import IndTreatCondDialysateTemperatureComponent from "@/components/indication/IndTreatCondDialysateTemperature.vue";
+import IndTreatCondIvComponent from "@/components/indication/IndTreatCondIv.vue";
+import IndTreatCondIvAmountComponent from "@/components/indication/IndTreatCondIvAmount.vue";
+import IndTreatCondIvSelectionComponent from "@/components/indication/IndTreatCondIvSelection.vue";
+import IndTreatCondIvCountComponent from "@/components/indication/IndTreatCondIvCount.vue";
+import IndTreatCondIvTemperatureComponent from "@/components/indication/IndTreatCondIvTemperature.vue";
+import IndTreatCondIvFlowRateComponent from "@/components/indication/IndTreatCondIvFlowRate.vue";
+import IndTreatCondAntiCoagulantComponent from "@/components/indication/IndTreatCondAntiCoagulant.vue";
+import IndTreatCondAntiCoagulantFlowRateComponent from "@/components/indication/IndTreatCondAntiCoagulantFlowRate.vue";
+import IndTreatCondIpSelectionComponent from "@/components/indication/IndTreatCondIpSelection.vue";
+import IndTreatCondIpStartComponent from "@/components/indication/IndTreatCondIpStart.vue";
+import IndTreatCondIpFlowRateComponent from "@/components/indication/IndTreatCondIpFlowRate.vue";
+import IndTreatCondIpFlowRateLimitComponent from "@/components/indication/IndTreatCondIpFlowRateLimit.vue";
+import IndTreatCondIpOneshotSelectionComponent from "@/components/indication/IndTreatCondIpOneshotSelection.vue";
+import IndTreatCondIpOneshotAmountComponent from "@/components/indication/IndTreatCondIpOneshotAmount.vue";
+import IndTreatCondIpAutoOffComponent from "@/components/indication/IndTreatCondIpAutoOff.vue";
+import IndTreatCondIpAutoOffTimingComponent from "@/components/indication/IndTreatCondIpAutoOffTiming.vue";
+import IndTreatCondIpMonitorOffComponent from "@/components/indication/IndTreatCondIpMonitorOff.vue";
+import IndTreatCondIpMonitorOffTimingComponent from "@/components/indication/IndTreatCondIpMonitorOffTiming.vue";
+import IndTreatCondAntiCoagulantOneshotAmountComponent from "@/components/indication/IndTreatCondAntiCoagulantOneshotAmount.vue";
+import IndTreatCondAntiCoagulantAmountTotalComponent from "@/components/indication/IndTreatCondAntiCoagulantAmountTotal.vue";
 
 
 // [共通部品] UI関連
@@ -449,7 +503,7 @@ import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
-import {EventBus} from "@/eventBus";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
@@ -469,8 +523,53 @@ class Device {
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
 import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
 import * as MasterType from "@/components/common/master-selector/MasterType";
-import { Master } from "@/models/common/master-selector-condition/Master";
 // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
+function setReactive(target, key, value) {
+  if (target) {
+    target[key] = value;
+  }
+  return value;
+}
+
+const createTreatCondComponent = component => markRaw(component);
+const IndTreatCondTime = createTreatCondComponent(IndTreatCondTimeComponent);
+const IndTreatCondVa = createTreatCondComponent(IndTreatCondVaComponent);
+const IndTreatCondTargetWeight = createTreatCondComponent(IndTreatCondTargetWeightComponent);
+const IndTreatCondFilterLimit = createTreatCondComponent(IndTreatCondFilterLimitComponent);
+const IndTreatCondDialyzer = createTreatCondComponent(IndTreatCondDialyzerComponent);
+const IndTreatCondSeparatoryColumn = createTreatCondComponent(IndTreatCondSeparatoryColumnComponent);
+const IndTreatCondFirstPass = createTreatCondComponent(IndTreatCondFirstPassComponent);
+const IndTreatCondSecondPass = createTreatCondComponent(IndTreatCondSecondPassComponent);
+const IndTreatCondNeedleSelection = createTreatCondComponent(IndTreatCondNeedleSelectionComponent);
+const IndTreatCondNeedleA = createTreatCondComponent(IndTreatCondNeedleAComponent);
+const IndTreatCondNeedleV = createTreatCondComponent(IndTreatCondNeedleVComponent);
+const IndTreatCondNeedleSN = createTreatCondComponent(IndTreatCondNeedleSNComponent);
+const IndTreatCondTube = createTreatCondComponent(IndTreatCondTubeComponent);
+const IndTreatCondBloodFlowRate = createTreatCondComponent(IndTreatCondBloodFlowRateComponent);
+const IndTreatCondDialysate = createTreatCondComponent(IndTreatCondDialysateComponent);
+const IndTreatCondDialysateFlowRate = createTreatCondComponent(IndTreatCondDialysateFlowRateComponent);
+const IndTreatCondDialysateAmount = createTreatCondComponent(IndTreatCondDialysateAmountComponent);
+const IndTreatCondDialysateTemperature = createTreatCondComponent(IndTreatCondDialysateTemperatureComponent);
+const IndTreatCondIv = createTreatCondComponent(IndTreatCondIvComponent);
+const IndTreatCondIvAmount = createTreatCondComponent(IndTreatCondIvAmountComponent);
+const IndTreatCondIvSelection = createTreatCondComponent(IndTreatCondIvSelectionComponent);
+const IndTreatCondIvCount = createTreatCondComponent(IndTreatCondIvCountComponent);
+const IndTreatCondIvTemperature = createTreatCondComponent(IndTreatCondIvTemperatureComponent);
+const IndTreatCondIvFlowRate = createTreatCondComponent(IndTreatCondIvFlowRateComponent);
+const IndTreatCondAntiCoagulant = createTreatCondComponent(IndTreatCondAntiCoagulantComponent);
+const IndTreatCondAntiCoagulantFlowRate = createTreatCondComponent(IndTreatCondAntiCoagulantFlowRateComponent);
+const IndTreatCondIpSelection = createTreatCondComponent(IndTreatCondIpSelectionComponent);
+const IndTreatCondIpStart = createTreatCondComponent(IndTreatCondIpStartComponent);
+const IndTreatCondIpFlowRate = createTreatCondComponent(IndTreatCondIpFlowRateComponent);
+const IndTreatCondIpFlowRateLimit = createTreatCondComponent(IndTreatCondIpFlowRateLimitComponent);
+const IndTreatCondIpOneshotSelection = createTreatCondComponent(IndTreatCondIpOneshotSelectionComponent);
+const IndTreatCondIpOneshotAmount = createTreatCondComponent(IndTreatCondIpOneshotAmountComponent);
+const IndTreatCondIpAutoOff = createTreatCondComponent(IndTreatCondIpAutoOffComponent);
+const IndTreatCondIpAutoOffTiming = createTreatCondComponent(IndTreatCondIpAutoOffTimingComponent);
+const IndTreatCondIpMonitorOff = createTreatCondComponent(IndTreatCondIpMonitorOffComponent);
+const IndTreatCondIpMonitorOffTiming = createTreatCondComponent(IndTreatCondIpMonitorOffTimingComponent);
+const IndTreatCondAntiCoagulantOneshotAmount = createTreatCondComponent(IndTreatCondAntiCoagulantOneshotAmountComponent);
+const IndTreatCondAntiCoagulantAmountTotal = createTreatCondComponent(IndTreatCondAntiCoagulantAmountTotalComponent);
 export default {
   name: "MstTreatmentSet",
   components: {
@@ -501,14 +600,14 @@ export default {
         {
           id: _.uniqueId("cond"),
           treatCondNo: "1",
-          component: () => import("@/components/indication/IndTreatCondTime"),
+          component: IndTreatCondTime,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "2",
-          component: () => import("@/components/indication/IndTreatCondVa"),
+          component: IndTreatCondVa,
           value: null,
           medicineType: null
         },
@@ -525,290 +624,252 @@ export default {
         {
           id: _.uniqueId("cond"),
           treatCondNo: "3",
-          component: () =>
-            import("@/components/indication/IndTreatCondTargetWeight"),
+          component: IndTreatCondTargetWeight,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "4",
-          component: () =>
-            import("@/components/indication/IndTreatCondFilterLimit"),
+          component: IndTreatCondFilterLimit,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "5",
-          component: () =>
-            import("@/components/indication/IndTreatCondDialyzer"),
+          component: IndTreatCondDialyzer,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "6",
-          component: () =>
-            import("@/components/indication/IndTreatCondSeparatoryColumn"),
+          component: IndTreatCondSeparatoryColumn,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "7",
-          component: () =>
-            import("@/components/indication/IndTreatCondFirstPass"),
+          component: IndTreatCondFirstPass,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "8",
-          component: () =>
-            import("@/components/indication/IndTreatCondSecondPass"),
+          component: IndTreatCondSecondPass,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "12",
-          component: () =>
-            import("@/components/indication/IndTreatCondNeedleSelection"),
+          component: IndTreatCondNeedleSelection,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "9",
-          component: () =>
-            import("@/components/indication/IndTreatCondNeedleA"),
+          component: IndTreatCondNeedleA,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "10",
-          component: () =>
-            import("@/components/indication/IndTreatCondNeedleV"),
+          component: IndTreatCondNeedleV,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "11",
-          component: () =>
-            import("@/components/indication/IndTreatCondNeedleSN"),
+          component: IndTreatCondNeedleSN,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "13",
-          component: () => import("@/components/indication/IndTreatCondTube"),
+          component: IndTreatCondTube,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "14",
-          component: () =>
-            import("@/components/indication/IndTreatCondBloodFlowRate"),
+          component: IndTreatCondBloodFlowRate,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "15",
-          component: () =>
-            import("@/components/indication/IndTreatCondDialysate"),
+          component: IndTreatCondDialysate,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "16",
-          component: () =>
-            import("@/components/indication/IndTreatCondDialysateFlowRate"),
+          component: IndTreatCondDialysateFlowRate,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "17",
-          component: () =>
-            import("@/components/indication/IndTreatCondDialysateAmount"),
+          component: IndTreatCondDialysateAmount,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "18",
-          component: () =>
-            import("@/components/indication/IndTreatCondDialysateTemperature"),
+          component: IndTreatCondDialysateTemperature,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "19",
-          component: () => import("@/components/indication/IndTreatCondIv"),
+          component: IndTreatCondIv,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "20",
-          component: () =>
-            import("@/components/indication/IndTreatCondIvAmount"),
+          component: IndTreatCondIvAmount,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "21",
-          component: () =>
-            import("@/components/indication/IndTreatCondIvSelection"),
+          component: IndTreatCondIvSelection,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "22",
-          component: () =>
-            import("@/components/indication/IndTreatCondIvCount"),
+          component: IndTreatCondIvCount,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "23",
-          component: () =>
-            import("@/components/indication/IndTreatCondIvTemperature"),
+          component: IndTreatCondIvTemperature,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "24",
-          component: () =>
-            import("@/components/indication/IndTreatCondIvFlowRate"),
+          component: IndTreatCondIvFlowRate,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "25",
-          component: () =>
-            import("@/components/indication/IndTreatCondAntiCoagulant"),
+          component: IndTreatCondAntiCoagulant,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "26",
-          component: () =>
-            import(
-              "@/components/indication/IndTreatCondAntiCoagulantOneshotAmount"
-            ),
+          component: IndTreatCondAntiCoagulantOneshotAmount,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "27",
-          component: () =>
-            import("@/components/indication/IndTreatCondAntiCoagulantFlowRate"),
+          component: IndTreatCondAntiCoagulantFlowRate,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "28",
-          component: () =>
-            import(
-              "@/components/indication/IndTreatCondAntiCoagulantAmountTotal"
-            ),
+          component: IndTreatCondAntiCoagulantAmountTotal,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "29",
-          component: () =>
-            import("@/components/indication/IndTreatCondIpSelection"),
+          component: IndTreatCondIpSelection,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "30",
-          component: () =>
-            import("@/components/indication/IndTreatCondIpStart"),
+          component: IndTreatCondIpStart,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "32",
-          component: () =>
-            import("@/components/indication/IndTreatCondIpFlowRate"),
+          component: IndTreatCondIpFlowRate,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "33",
-          component: () =>
-            import("@/components/indication/IndTreatCondIpFlowRateLimit"),
+          component: IndTreatCondIpFlowRateLimit,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "34",
-          component: () =>
-            import("@/components/indication/IndTreatCondIpOneshotSelection"),
+          component: IndTreatCondIpOneshotSelection,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "31",
-          component: () =>
-            import("@/components/indication/IndTreatCondIpOneshotAmount"),
+          component: IndTreatCondIpOneshotAmount,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "35",
-          component: () =>
-            import("@/components/indication/IndTreatCondIpAutoOff"),
+          component: IndTreatCondIpAutoOff,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "36",
-          component: () =>
-            import("@/components/indication/IndTreatCondIpAutoOffTiming"),
+          component: IndTreatCondIpAutoOffTiming,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "37",
-          component: () =>
-            import("@/components/indication/IndTreatCondIpMonitorOff"),
+          component: IndTreatCondIpMonitorOff,
           value: null,
           medicineType: null
         },
         {
           id: _.uniqueId("cond"),
           treatCondNo: "38",
-          component: () =>
-            import("@/components/indication/IndTreatCondIpMonitorOffTiming"),
+          component: IndTreatCondIpMonitorOffTiming,
           value: null,
           medicineType: null
         }
@@ -1215,14 +1276,14 @@ export default {
           : null;
         const isUse = setting ? Number(setting.is_use) : 1;
 
-        this.$set(this.treatCond.find(cond => cond.treatCondNo === value.treatCondNo), "isUse", isUse);
+        setReactive(this.treatCond.find(cond => cond.treatCondNo === value.treatCondNo), "isUse", isUse);
 
         if (!isUse) {
-          this.$set(this.treatCond.find(cond => cond.treatCondNo === value.treatCondNo), "value", null);
+          setReactive(this.treatCond.find(cond => cond.treatCondNo === value.treatCondNo), "value", null);
         }
         // add 10739 by shiyw 20250303 start
         else if (value.treatCondNo === CODES.TREATMENT_CONDITION_ITEM.TARGET_WEIGHT.cd) {
-          this.$set(this.treatCond.find(cond => cond.treatCondNo === value.treatCondNo), "value", "-1");
+          setReactive(this.treatCond.find(cond => cond.treatCondNo === value.treatCondNo), "value", "-1");
         }
         // add 10739 by shiyw 20250303 end
       });
@@ -1238,7 +1299,7 @@ export default {
         if(this.treatMethodDeviceMode !== -1){
           MChar = this.changeConTreatTime(MChar);
         }
-        this.$set(this.treatCond.find(cond => cond.treatCondNo === '1'), "value", MChar);
+        setReactive(this.treatCond.find(cond => cond.treatCondNo === '1'), "value", MChar);
         this.mstTreatmentSetDayDisplay = false;
         this.mstTreatmentSetDay = 0;
       }
@@ -1257,7 +1318,7 @@ export default {
         if(this.newIndTreatCondIvMode === "onLine"){
           // 治療方法にOHDF、OHF、HD+補液、ECUM+補液が選択されている場合は、補液情報を透析液情報で上書きする
           //this.$set(this.treatCond.find(cond => cond.treatCondNo === CODES.TREATMENT_CONDITION_ITEM.FLUID_REPLACEMENT.cd), "medicineType", this.selectTreatCondByTreatCondNo(CODES.TREATMENT_CONDITION_ITEM.DIALYSATE.cd).medicineType);
-          this.$set(this.treatCond.find(cond => cond.treatCondNo === CODES.TREATMENT_CONDITION_ITEM.FLUID_REPLACEMENT.cd), "medicineType",
+          setReactive(this.treatCond.find(cond => cond.treatCondNo === CODES.TREATMENT_CONDITION_ITEM.FLUID_REPLACEMENT.cd), "medicineType",
             this.selectTreatCondByTreatCondNo(CODES.TREATMENT_CONDITION_ITEM.DIALYSATE.cd).medicineType != null ?
               Number(this.selectTreatCondByTreatCondNo(CODES.TREATMENT_CONDITION_ITEM.DIALYSATE.cd).medicineType) : null);
           //mod 9306  ljx start
@@ -1268,7 +1329,7 @@ export default {
         }
         if(this.newIndTreatCondIvMode === "offLine" && this.oldIndTreatCondIvMode === "onLine"){
           // 補液情報をクリア
-          this.$set(this.treatCond.find(cond => cond.treatCondNo === CODES.TREATMENT_CONDITION_ITEM.FLUID_REPLACEMENT.cd), "medicineType", null);
+          setReactive(this.treatCond.find(cond => cond.treatCondNo === CODES.TREATMENT_CONDITION_ITEM.FLUID_REPLACEMENT.cd), "medicineType", null);
           this.setTreatCondValue(CODES.TREATMENT_CONDITION_ITEM.FLUID_REPLACEMENT.cd, null);
         }
         if(this.oldIndTreatCondIvMode === "noIv"){
@@ -1401,16 +1462,25 @@ export default {
       deep: true
     },
 
-    medicine(data) {
-      this.setIndMediInfo(data);
+    medicine: {
+      handler(data) {
+        this.setIndMediInfo(data);
+      },
+      deep: true
     },
 
-    equipment(data) {
-      this.setIndEquipInfo(data);
+    equipment: {
+      handler(data) {
+        this.setIndEquipInfo(data);
+      },
+      deep: true
     },
 
-    treatComment(data) {
-      this.setIndCommentInfo(data);
+    treatComment: {
+      handler(data) {
+        this.setIndCommentInfo(data);
+      },
+      deep: true
     },
     // add #7762 【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 付 start
     getSelectedDeviceSetState (data) {
@@ -1420,35 +1490,35 @@ export default {
         if (this.getSelectedDeviceSetType === 'ufr') {
           if (data === '0' || data === null) {
             // this.$set(this.deviceArr, 1, { name: '除水プログラム', type: this.DEVICE_TYPE_UFR, info: '（切り）' })
-            this.$set(this.deviceArr, 0, { name: '除水プログラム', type: this.DEVICE_TYPE_UFR, info: '（切り）' })
+            setReactive(this.deviceArr, 0, { name: '除水プログラム', type: this.DEVICE_TYPE_UFR, info: '（切り）' })
           } else if (data === '1') {
             // this.$set(this.deviceArr, 1, { name: '除水プログラム', type: this.DEVICE_TYPE_UFR, info: '（入り[ステップ]）' })
-            this.$set(this.deviceArr, 0, { name: '除水プログラム', type: this.DEVICE_TYPE_UFR, info: '（入り[ステップ]）' })
+            setReactive(this.deviceArr, 0, { name: '除水プログラム', type: this.DEVICE_TYPE_UFR, info: '（入り[ステップ]）' })
           } else if (data === '2') {
             // this.$set(this.deviceArr, 1, { name: '除水プログラム', type: this.DEVICE_TYPE_UFR, info: '（入り[コース]）' })
-            this.$set(this.deviceArr, 0, { name: '除水プログラム', type: this.DEVICE_TYPE_UFR, info: '（入り[コース]）' })
+            setReactive(this.deviceArr, 0, { name: '除水プログラム', type: this.DEVICE_TYPE_UFR, info: '（入り[コース]）' })
           }
         } else if (this.getSelectedDeviceSetType === 'na') {
           if (data === '0' || data === null) {
             // this.$set(this.deviceArr, 2, { name: 'Na注入プログラム', type: this.DEVICE_TYPE_NA, info: '（切り）' })
-            this.$set(this.deviceArr, 1, { name: 'Na注入プログラム', type: this.DEVICE_TYPE_NA, info: '（切り）' })
+            setReactive(this.deviceArr, 1, { name: 'Na注入プログラム', type: this.DEVICE_TYPE_NA, info: '（切り）' })
           } else if (data === '1') {
             // this.$set(this.deviceArr, 2, { name: 'Na注入プログラム', type: this.DEVICE_TYPE_NA, info: '（入り[ステップ]）' })
-            this.$set(this.deviceArr, 1, { name: 'Na注入プログラム', type: this.DEVICE_TYPE_NA, info: '（入り[ステップ]）' })
+            setReactive(this.deviceArr, 1, { name: 'Na注入プログラム', type: this.DEVICE_TYPE_NA, info: '（入り[ステップ]）' })
           } else if (data === '2') {
             // this.$set(this.deviceArr, 2, { name: 'Na注入プログラム', type: this.DEVICE_TYPE_NA, info: '（入り[コース]）' })
-            this.$set(this.deviceArr, 1, { name: 'Na注入プログラム', type: this.DEVICE_TYPE_NA, info: '（入り[コース]）' })
+            setReactive(this.deviceArr, 1, { name: 'Na注入プログラム', type: this.DEVICE_TYPE_NA, info: '（入り[コース]）' })
           }
         } else if (this.getSelectedDeviceSetType === 'dc') {
           if (data === '0' || data === null) {
             // this.$set(this.deviceArr, 3, { name: '透析液濃度プログラム', type: this.DEVICE_TYPE_DC, info: '（切り）' })
-            this.$set(this.deviceArr, 2, { name: '透析液濃度プログラム', type: this.DEVICE_TYPE_DC, info: '（切り）' })
+            setReactive(this.deviceArr, 2, { name: '透析液濃度プログラム', type: this.DEVICE_TYPE_DC, info: '（切り）' })
           } else if (data === '2') {
             // this.$set(this.deviceArr, 3, { name: '透析液濃度プログラム', type: this.DEVICE_TYPE_DC, info: '（入り[ステップ]）' })
-            this.$set(this.deviceArr, 2, { name: '透析液濃度プログラム', type: this.DEVICE_TYPE_DC, info: '（入り[ステップ]）' })
+            setReactive(this.deviceArr, 2, { name: '透析液濃度プログラム', type: this.DEVICE_TYPE_DC, info: '（入り[ステップ]）' })
           } else if (data === '3') {
             // this.$set(this.deviceArr, 3, { name: '透析液濃度プログラム', type: this.DEVICE_TYPE_DC, info: '（入り[コース]）' })
-            this.$set(this.deviceArr, 2, { name: '透析液濃度プログラム', type: this.DEVICE_TYPE_DC, info: '（入り[コース]）' })
+            setReactive(this.deviceArr, 2, { name: '透析液濃度プログラム', type: this.DEVICE_TYPE_DC, info: '（入り[コース]）' })
           }
         } else if (this.getSelectedDeviceSetType === 'qbqd') {
           let qbqdInfo = "（「Qdプログラム："
@@ -1463,20 +1533,20 @@ export default {
             qbqdInfo += "入」）"
           }
           // this.$set(this.deviceArr, 4, { name: '血流量・透析液流量プログラム', type: this.DEVICE_TYPE_QBQD, info: qbqdInfo })
-          this.$set(this.deviceArr, 3, { name: '血流量・透析液流量プログラム', type: this.DEVICE_TYPE_QBQD, info: qbqdInfo })
+          setReactive(this.deviceArr, 3, { name: '血流量・透析液流量プログラム', type: this.DEVICE_TYPE_QBQD, info: qbqdInfo })
         } else if (this.getSelectedDeviceSetType === 'bvufc') {
           const msg = data === '1' ? '（使用する）' : '（使用しない）'
-          this.$set(this.deviceArr, 5, { name: 'BV-UFC', type: this.DEVICE_TYPE_BVUFC, info: msg })
+          setReactive(this.deviceArr, 5, { name: 'BV-UFC', type: this.DEVICE_TYPE_BVUFC, info: msg })
         } else if (this.getSelectedDeviceSetType === 'dia') {
           const msg = data === '1' ? '（使用する）' : '（使用しない）'
-          this.$set(this.deviceArr, 6, { name: '透析量プログラム', type: this.DEVICE_TYPE_DIA, info: msg })
+          setReactive(this.deviceArr, 6, { name: '透析量プログラム', type: this.DEVICE_TYPE_DIA, info: msg })
         } else if (this.getSelectedDeviceSetType === 'ihdf') {
           // mod #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
           // const msg = data === '1' ? '（使用する）' : '（使用しない）'
           const msg = data === '1' ? '（I-HDFプログラム使用する）' : ' （I-HDFプログラム使用しない）'
           // this.$set(this.deviceArr, 0, { name: 'I-HDF', type: this.DEVICE_TYPE_IHDF, info: msg })
           // this.$set(this.deviceArr, 0, { name: 'I-HDF設定', type: this.DEVICE_TYPE_IHDF, info: msg })
-          this.$set(this.deviceArr, 4, { name: 'I-HDF設定', type: this.DEVICE_TYPE_IHDF, info: msg })
+          setReactive(this.deviceArr, 4, { name: 'I-HDF設定', type: this.DEVICE_TYPE_IHDF, info: msg })
           // mod #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc end
         }
         // mod #9340_#10246 装置プログラムの並び順追を修正する 20240708 ztc end
@@ -1762,31 +1832,10 @@ export default {
       //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
       throw error;
     });
-
     // mod マスタ一覧 412画面と同じように記載を表示する。 start
-    const response = await ApiHelper.get(
-      `/deviceSetInfo/getDeviceSetInfoMst/${this.facilityCd}`
-    ).catch(error => {
-      //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
-      getErrorMessage('MasterModalComponentMstTreatmentSet.vue', 'created', error);
-      //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
-      throw new Error(error);
-    });
-    this.setLiquidDelayTiming(Number(response.data.pat.ope.dev.A[398]));
+    await this.applyLiquidCalculationSettings("created");
 
-    const val_389 = response.data.pat.ope.dev.A[389];
-    const displayStringLiquidAmount = LIQUID_AMOUNT_TEXT[parseInt(val_389)];
-    const displayStringLiquidSpeed = LIQUID_SPEED_TEXT[parseInt(val_389)];
-
-    // 補液速度のメッセージ表示設定
-    this.setLiquidAmountDisplayString(displayStringLiquidAmount);
-    this.setLiquidAmountCommentIsShow(true);
-    // 補液量のメッセージ表示設定
-    this.setLiquidSpeedDisplayString(displayStringLiquidSpeed);
-    this.setLiquidSpeedCommentIsShow(true);
-
-    document.getElementsByClassName("mst-treatment-set-amount")[0].style.minWidth = '50%'
-    document.getElementsByClassName("mst-treatment-set-speed")[0].style.minWidth = '50%';
+    this.scheduleTreatmentSetAmountSpeedStyle();
     this.initTreatMethodCd = this.treatMethodCd;
   },
 
@@ -1798,17 +1847,66 @@ export default {
     this.$el.parentElement.style.height = "98%";
     // mod redmine 4551 小窓時の詳細モーダルのスクロール不正 孔 end
     this.retrieveMstData();
+    this.scheduleTreatmentSetAmountSpeedStyle();
     setTimeout(() => {
       EventBus.$emit("mstHolidayRegistered", true);
     }, 200);
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化(メモリリークに対する基本的な対応)
     Object.assign(this.$data, this.$options.data());
   },
 
   methods: {
+    async applyLiquidCalculationSettings(errorSource = "applyLiquidCalculationSettings") {
+      const response = await ApiHelper.get(
+        `/deviceSetInfo/getDeviceSetInfoMst/${this.facilityCd}`
+      ).catch(error => {
+        //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
+        getErrorMessage('MasterModalComponentMstTreatmentSet.vue', errorSource, error);
+        //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
+        throw new Error(error);
+      });
+      this.setLiquidDelayTiming(Number(response.data.pat.ope.dev.A[398]));
+
+      const val_389 = response.data.pat.ope.dev.A[389];
+      const displayStringLiquidAmount = LIQUID_AMOUNT_TEXT[parseInt(val_389)];
+      const displayStringLiquidSpeed = LIQUID_SPEED_TEXT[parseInt(val_389)];
+
+      // 補液速度のメッセージ表示設定
+      this.setLiquidAmountDisplayString(displayStringLiquidAmount);
+      this.setLiquidAmountCommentIsShow(true);
+      // 補液量のメッセージ表示設定
+      this.setLiquidSpeedDisplayString(displayStringLiquidSpeed);
+      this.setLiquidSpeedCommentIsShow(true);
+    },
+    applyTreatmentSetAmountSpeedStyle() {
+      const amountEl = document.getElementsByClassName("mst-treatment-set-amount")[0];
+      const speedEl = document.getElementsByClassName("mst-treatment-set-speed")[0];
+
+      if (amountEl) {
+        amountEl.style.minWidth = "50%";
+      }
+      if (speedEl) {
+        speedEl.style.minWidth = "50%";
+      }
+
+      return Boolean(amountEl && speedEl);
+    },
+    scheduleTreatmentSetAmountSpeedStyle(retryCount = 0) {
+      this.$nextTick(() => {
+        if (this.applyTreatmentSetAmountSpeedStyle()) {
+          return;
+        }
+        if (retryCount >= 10 || typeof window === "undefined") {
+          return;
+        }
+        window.setTimeout(() => {
+          this.scheduleTreatmentSetAmountSpeedStyle(retryCount + 1);
+        }, 50);
+      });
+    },
     // mod マスタ一覧 412画面と同じように記載を表示する。 start
     ...mapMutations("pat-viewer-treat-cond", [
       "setLiquidAmountCommentIsShow",
@@ -1837,14 +1935,16 @@ export default {
     },
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
     masterUpdateInput(val){
+      const keyType = val?.key_type ?? val?.keyType ?? null;
       const data = {
         fnValue:{
           '薬剤分類': val.classCd,
-          '薬剤区分': val.kbnValue
+          '薬剤区分': keyType ?? val.kbnValue
         },
         isDisp: val.isDisp,
         text: val.text,
-        type: val.kbnValue,
+        key_type: keyType,
+        type: keyType ?? val.kbnValue,
         value: val.value
       }
       this.updateInputMedicine(data)
@@ -1853,20 +1953,9 @@ export default {
     // add 治療方法セットマスタ 指示_条件送信_治療方法セットマスタ start
     getDeviceListStyle(device){
       if (device && device.type === this.DEVICE_TYPE_IHDF) { //I-HDF
-        const deviceMode = this.treatMethodDeviceMode;
-        // mod redmine 6044 I-HDFプログラムは治療方法がI-HDFではない場合は使用するに設定できないようにする。宋qy start
-        // mod #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
-        if (
-          // deviceMode === CODES.DEVICE_MODE.HD.cd || deviceMode === CODES.DEVICE_MODE.ECUM.cd || //HD・ECUM
-          // deviceMode === CODES.DEVICE_MODE.HDF.cd || deviceMode === CODES.DEVICE_MODE.HF.cd || //HDF・HF
-          // deviceMode === CODES.DEVICE_MODE.OHDF.cd || deviceMode === CODES.DEVICE_MODE.OHF.cd || //OHDF・OHF
-          // deviceMode === CODES.DEVICE_MODE.AFBF.cd //AFBF
-          deviceMode !== CODES.DEVICE_MODE.IHDF.cd
-        ) {
-        // mod #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc end
-        // mod redmine 6044 I-HDFプログラムは治療方法がI-HDFではない場合は使用するに設定できないようにする。宋qy end
-          return "background-color: #696969;"
-        }
+        // #9340/#10246以降、治療方法セットマスタではI-HDF設定を治療方法に関係なく編集可能にする。
+        // そのため、この一覧では非活性を示す背景色を付けない。
+        return {};
       }
       // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
       // if (this.treatMethodDeviceMode && this.treatMethodDeviceMode === CODES.DEVICE_MODE.PURIFICATION.cd) { //特殊浄化
@@ -1901,7 +1990,7 @@ export default {
       // }
       // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc end
       // add #7762 【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 王永吉 end
-      return ""
+      return {}
     },
 
     setDeviceInfo(type, code, value){
@@ -2262,6 +2351,7 @@ export default {
 
       // 治療条件のストアを初期化
       this.initTreatCondData({ indCondInfo: treatCond });
+      await this.applyLiquidCalculationSettings("retrieveMstData");
       // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240108 linjunfeng start
       this.getEditRecordDefault.indCondInfo = JSON.stringify(treatCond);
       // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240108 linjunfeng end
@@ -2309,6 +2399,25 @@ export default {
       // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240108 linjunfeng start
       this.getEditRecordDefault = deepCopy(this.getEditRecord);
       // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240108 linjunfeng end
+      this.prefetchTreatmentCondMstData();
+    },
+
+    async prefetchTreatmentCondMstData() {
+      const requests = [
+        va(this.facilityCd),
+        dialyzerIncludeDeleted(this.facilityCd),
+        equipmentIncludeDeleted(this.facilityCd),
+        equipmentClass(this.facilityCd),
+        medicineIncludeDeleted(this.facilityCd),
+        medicineMixIncludeDeleted(this.facilityCd),
+        medicineClass(this.facilityCd)
+      ];
+
+      await Promise.all(
+        requests.map(request =>
+          request.catch(() => null)
+        )
+      );
     },
 
     /**
@@ -2334,7 +2443,7 @@ export default {
     changeMstTreatmentSetDay(data){
       this.mstTreatmentSetDay = data.mstTreatmentSetDay;
       let MChar = Number(this.mstTreatmentSetDay*24*60 + data.conTreatTime);
-      this.$set(this.treatCond.find(cond => cond.treatCondNo === '1'), "value", MChar);
+      setReactive(this.treatCond.find(cond => cond.treatCondNo === '1'), "value", MChar);
     },
 
     /**
@@ -2560,15 +2669,15 @@ export default {
                 if (popoverEditedType == 2) {
               // mod/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
                 // 調製薬剤
-                this.$set(this.treatCond.find(cond => cond.treatCondNo === id), "medicineType", 2);
+                setReactive(this.treatCond.find(cond => cond.treatCondNo === id), "medicineType", 2);
                 // this.$set(this.treatCond.find(cond => cond.treatCondNo === id), "medicineType", "2");
               } else {
                 // 薬剤
-                this.$set(this.treatCond.find(cond => cond.treatCondNo === id), "medicineType", 1);
+                setReactive(this.treatCond.find(cond => cond.treatCondNo === id), "medicineType", 1);
                 // this.$set(this.treatCond.find(cond => cond.treatCondNo === id), "medicineType", "1");
               }
             } else {
-              this.$set(this.treatCond.find(cond => cond.treatCondNo === id), "medicineType", null);
+              setReactive(this.treatCond.find(cond => cond.treatCondNo === id), "medicineType", null);
             }
             // mod #9973 cond No.15 19 25 medicineType complement 20240105 ztc end
           }
@@ -2593,7 +2702,7 @@ export default {
           // chgDataFlg = data != this.selectTreatCondByTreatCondNo(id).value;  // mod #9973 value Number→文字列  shiyw
           //del 9664補液及び透析液仕様修正します yangqingzhe end
           this.setTreatCondDefault(id, data);
-          this.$set(this.treatCond.find(cond => cond.treatCondNo === id), "value", data);
+          setReactive(this.treatCond.find(cond => cond.treatCondNo === id), "value", data);
 
           // 治療方法にOHDF、OHF、HD+補液、ECUM+補液が選択されている場合
           // 透析液変更時に補液も同じ変更を行う
@@ -2605,11 +2714,11 @@ export default {
               String(popoverEditedValue).match(/\$/)
             ) {
               // 調製薬剤
-              this.$set(this.treatCond.find(cond => cond.treatCondNo === CODES.TREATMENT_CONDITION_ITEM.FLUID_REPLACEMENT.cd), "medicineType", 2);
+              setReactive(this.treatCond.find(cond => cond.treatCondNo === CODES.TREATMENT_CONDITION_ITEM.FLUID_REPLACEMENT.cd), "medicineType", 2);
               // this.$set(this.treatCond.find(cond => cond.treatCondNo === CODES.TREATMENT_CONDITION_ITEM.FLUID_REPLACEMENT.cd), "medicineType", "2");
             } else {
               // 薬剤
-              this.$set(this.treatCond.find(cond => cond.treatCondNo === CODES.TREATMENT_CONDITION_ITEM.FLUID_REPLACEMENT.cd), "medicineType", 1);
+              setReactive(this.treatCond.find(cond => cond.treatCondNo === CODES.TREATMENT_CONDITION_ITEM.FLUID_REPLACEMENT.cd), "medicineType", 1);
               // this.$set(this.treatCond.find(cond => cond.treatCondNo === CODES.TREATMENT_CONDITION_ITEM.FLUID_REPLACEMENT.cd), "medicineType", "1");
             }
             // デフォルト値の格納処理
@@ -2633,7 +2742,7 @@ export default {
             return item.id === id;
           });
 
-          this.$set(this.medicine, editIndex, {
+          setReactive(this.medicine, editIndex, {
             ...this.medicine[editIndex],
             ...data
           });
@@ -2643,7 +2752,7 @@ export default {
             return item.id === id;
           });
 
-          this.$set(this.equipment, editIndex, {
+          setReactive(this.equipment, editIndex, {
             ...this.equipment[editIndex],
             ...data
           });
@@ -2660,7 +2769,7 @@ export default {
             return item.id === id;
           });
           // data をオブジェクトリテラルで展開してthis.treatComment[editIndex]のプロパティの値を上書きして$setで更新する
-          this.$set(this.treatComment, editIndex, {
+          setReactive(this.treatComment, editIndex, {
             ...this.treatComment[editIndex],
             ...data
           });
@@ -2682,7 +2791,7 @@ export default {
       // this.$set(this.equipment[editIndex], 'amount', Number(data.target.value));
       // #9848+9849 数値IFのスタイル全不正 linjunfeng start
       // this.$set(this.equipment[editIndex], 'amount', Number(data.target.value) +"");
-      this.$set(this.equipment[editIndex], 'amount', Number(data) +"");
+      setReactive(this.equipment[editIndex], 'amount', Number(data) +"");
       // #9848+9849 数値IFのスタイル全不正 linjunfeng end
       // add 9973 -4 by kangjie 20231102 end
       // 医療材料の保存
@@ -2838,13 +2947,13 @@ export default {
       const fields = this.getMasterRecordList.schema.model.fields;
       Object.keys(fields).forEach(k => {
         if (fields[k].defaultValue) {
-          this.$set(d, k, fields[k].defaultValue);
+          setReactive(d, k, fields[k].defaultValue);
         } else if ("string" === fields[k].type) {
-          this.$set(d, k, "");
+          setReactive(d, k, "");
         } else if ("number" === fields[k].type) {
-          this.$set(d, k, 0);
+          setReactive(d, k, 0);
         } else {
-          this.$set(d, k, null);
+          setReactive(d, k, null);
         }
         // 治療方法コード、治療条件、投与薬剤、医療材料、指示コメント格納用
         let setValue = null;
@@ -2878,13 +2987,13 @@ export default {
             break;
         }
         if (null !== setValue) {
-          this.$set(d, k, setValue);
+          setReactive(d, k, setValue);
         }
       });
       // 削除フラグ情報を格納する
-      this.$set(d, "isDel", "0");
+      setReactive(d, "isDel", "0");
       // 編集済みとする
-      this.$set(d, "operation", 2);
+      setReactive(d, "operation", 2);
       // レコードを追加する
       this.edit({ editRecord: d, isSortMode: false });
       // ====================================================================================
@@ -2925,9 +3034,12 @@ export default {
      */
     setTreatCondValue(id, data) {
       // 編集コンポーネントの値格納
-      this.$set(this.$refs[id][0].displayInputValue, "editValue", data);
+      const refComponent = Array.isArray(this.$refs[id]) ? this.$refs[id][0] : this.$refs[id];
+      if (refComponent && refComponent.displayInputValue) {
+        setReactive(refComponent.displayInputValue, "editValue", data);
+      }
       // 内部値の格納
-      this.$set(this.treatCond.find(cond => cond.treatCondNo === id), "value", data);
+      setReactive(this.treatCond.find(cond => cond.treatCondNo === id), "value", data);
     },
 
     /**
@@ -3021,10 +3133,10 @@ export default {
       for (let i = 1; i <= 38; i++) {
         // キーが存在しない場合
         if (!_.has(treatCondInfo, String(i))) {
-          this.$set(treatCondInfo, String(i), {});
+          setReactive(treatCondInfo, String(i), {});
         }
         // 取得したデフォルト値を格納する
-        this.$set(
+        setReactive(
           treatCondInfo[String(i)],
           "value",
           this.getTreatCondDefaultValue(i)
@@ -3463,13 +3575,13 @@ export default {
         return item.medicineSetCd === data.value;
       });
       const medicineSetJson = JSON.parse(medicineSetData.setInfo);
-      const medicineData = await medicine(this.facilityCd).catch(error => {
+      const medicineData = await medicineIncludeDeleted(this.facilityCd).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
         getErrorMessage('MasterModalComponentMstTreatmentSet.vue', 'updateInputMedicineSet', error);
         //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
         throw error;
       });
-      const medicineMixData = await medicineMix(this.facilityCd).catch(
+      const medicineMixData = await medicineMixIncludeDeleted(this.facilityCd).catch(
         error => {
           //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
           getErrorMessage('MasterModalComponentMstTreatmentSet.vue', 'updateInputMedicineSet', error);
@@ -3493,7 +3605,7 @@ export default {
           mstMediCd = "medicineMixCd";
         }
         const med = mstMedi.find(i => {
-          return item.cd === i[mstMediCd];
+          return item.cd == i[mstMediCd];
         });
 
         return {
@@ -3528,13 +3640,17 @@ export default {
      * @description 薬剤マスター選択から選択後のコールバック
      */
     async updateInputMedicine(data) {
-      const selectedData = data;
+      const selectedData = data || {};
       let mstmedi = [];
       let medicineCdKey = "medicineCd";
       // const medicineType = String(data.value).match(/\$/) ? "2" : "1";
       // mod/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
       //const medicineType = String(data.value).match(/\$/) ? 2 : 1;
-      const medicineType = data.type
+      const medicineType =
+        selectedData.key_type ??
+        selectedData.keyType ??
+        selectedData.type ??
+        null;
       // mod/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
       //if (medicineType === "2") {
@@ -3543,16 +3659,21 @@ export default {
         // 調製薬剤マスタ
         mstmedi = this.medicineMixData;
         medicineCdKey = "medicineMixCd";
-        selectedData.value = Number(selectedData.value.split("$")[0]);
       } else {
         mstmedi = this.medicineData;
       }
 
-      const medicineData = mstmedi.find(item => {
-        return item[medicineCdKey] === selectedData.value;
-      });
+      const selectedValue =
+        selectedData.value != null ? String(selectedData.value) : null;
+      if (selectedValue == null || selectedValue.trim() === "") return;
+      const selectedValueKey = selectedValue.split("$")[0];
 
-      const listData = selectedData.value
+      const medicineData = mstmedi.find(item => {
+        return String(item[medicineCdKey]) === selectedValueKey;
+      });
+      if (!medicineData) return;
+
+      const listData = selectedValueKey
         ? {
             id: _.uniqueId("medicine"),
             cd: medicineData[medicineCdKey],
@@ -3645,7 +3766,7 @@ export default {
             return item.id == this.buttonPosi;
         });
         if (editIndex > -1) {
-          this.$set(this.equipment, editIndex, {
+          setReactive(this.equipment, editIndex, {
             ...this.equipment[editIndex],
             ...data
           });
@@ -3767,6 +3888,7 @@ export default {
   /* height: 50vh; */
 }
 
+
 .disp-item-content-area ons-row {
   height: auto;
 }
@@ -3817,6 +3939,15 @@ export default {
   border: 1px solid var(--ntss-border-color);
 }
 
+.cond-td-style > div > div > ons-row {
+  align-items: center;
+}
+
+.cond-td-style > div > div > ons-row :deep(.action-condition-data-column) {
+  display: flex;
+  align-items: center;
+}
+
 .cond-td-style-child {
   padding: 10px 0 10px 10px;
 }
@@ -3829,7 +3960,7 @@ export default {
   height: 100%;
 }
 
-.cond-disabled * {
+.cond-disabled > * {
   /* mod 9664補液及び透析液仕様修正します yangqingzhe start */
   /* opacity: 0.5; */
   pointer-events: none;
@@ -3857,26 +3988,26 @@ export default {
   margin-bottom: 10px;
 }
 
-.ind-comment-create >>> .title-area {
+.ind-comment-create :deep(.title-area) {
   flex: 0 0 9.4em;
   max-width: 30%;
 }
 
-.ind-comment-create >>> .text-area {
+.ind-comment-create :deep(.text-area) {
   text-align: initial;
   padding-left: 10px;
 }
 /* mod #11731_【因島：改良】指示コメント番号の指定方法（スペルミス） */
-.ind-comment-create >>> .instructionNumber {
+.ind-comment-create :deep(.instructionNumber) {
   margin: 10px 0;
 }
 
-ons-col >>> .action-condition-column {
+ons-col :deep(.action-condition-column) {
   flex: 0 0 9.4em;
   max-width: 30%;
 }
 
-ons-col >>> .custom-div-show-selected-item{
+ons-col :deep(.custom-div-show-selected-item){
   width: 100%;
   max-width: 300px;
   margin: 0 5px 0 0;
@@ -3889,12 +4020,12 @@ ons-col >>> .custom-div-show-selected-item{
     padding: 0;
   }
 
-  ons-col >>> .action-condition-column {
+  ons-col :deep(.action-condition-column) {
     flex: none;
     max-width: 100%;
   }
 
-  ons-col >>> .action-condition-data-column {
+  ons-col :deep(.action-condition-data-column) {
     padding-left: 0;
     display: -webkit-box;
     display: -moz-box;
@@ -3904,13 +4035,13 @@ ons-col >>> .custom-div-show-selected-item{
     align-items: center;
   }
 
-  ons-col >>> .action-condition-input {
+  ons-col :deep(.action-condition-input) {
     width: 70%;
     box-sizing: border-box;
     margin: 0;
   }
 
-  ons-col >>> .common-style-select-button {
+  ons-col :deep(.common-style-select-button) {
     /*mod redmine 5078 詳細モーダル内のボタンが大きすぎる 孔 start*/
     /*width: 30% !important;*/
     width: 15% !important;
@@ -3919,31 +4050,31 @@ ons-col >>> .custom-div-show-selected-item{
     min-width: 3.5em !important;
   }
 
-  ons-col >>> .medicine-column {
+  ons-col :deep(.medicine-column) {
     flex: none;
     max-width: 100%;
   }
 
-  ons-col >>> .medicine-data-column {
+  ons-col :deep(.medicine-data-column) {
     padding-left: 0;
   }
 
-  ons-col >>> .medicine-input-style {
+  ons-col :deep(.medicine-input-style) {
     width: 70%;
     box-sizing: border-box;
     margin: 0;
   }
 
-  ons-col >>> .equipment-column {
+  ons-col :deep(.equipment-column) {
     flex: none;
     max-width: 100%;
   }
 
-  ons-col >>> .equipment-data-column {
+  ons-col :deep(.equipment-data-column) {
     padding-left: 0;
   }
 
-  ons-col >>> .equipment-input-style {
+  ons-col :deep(.equipment-input-style) {
     width: 70%;
     box-sizing: border-box;
     margin: 0;
@@ -3967,12 +4098,12 @@ ons-col >>> .custom-div-show-selected-item{
     display: inline-flex;
   }
 
-  .ind-comment-create >>> .title-area {
+  .ind-comment-create :deep(.title-area) {
         flex: none;
       max-width: 100%;
   }
 
-  .ind-comment-create >>> .text-area {
+  .ind-comment-create :deep(.text-area) {
     text-align: initial;
     padding-left: 0;
   }
@@ -4001,19 +4132,19 @@ ons-col >>> .custom-div-show-selected-item{
   background-color: rgba(255, 0, 0, 0.5);
 }
 /* #11731_【因島：改良】指示コメント番号の指定方法（チェックエラーの背景色） start */
-.input-invalid-comment-number >>> .instructionNumber select {
+.input-invalid-comment-number :deep(.instructionNumber select) {
   color: black;
   background-color: rgba(255, 0, 0, 0.5);
 }
 
-.input-invalid-comment-content >>> .instructionComment textarea {
+.input-invalid-comment-content :deep(.instructionComment textarea) {
   color: black;
   background-color: rgba(255, 0, 0, 0.5);
 }
 /* #11731_【因島：改良】指示コメント番号の指定方法 end */
 
 /* add redmine 4901 指示コメント欄が横に広げられない 宋qy start */
-.cond-td-style >>> .comTextarea textarea {
+.cond-td-style :deep(.comTextarea textarea) {
   resize: both;
   max-width: 100%;
 }
@@ -4024,10 +4155,10 @@ ons-col >>> .custom-div-show-selected-item{
   padding: 0.3em;
 }
 /*// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start*/
-::v-deep .com-basic-sub-btn {
+:deep(.com-basic-sub-btn) {
     margin-left: 0px
 }
-::v-deep .com-basic-sub-input {
+:deep(.com-basic-sub-input) {
   min-width: 13em;
   width: 100%;
   max-width: 28em;

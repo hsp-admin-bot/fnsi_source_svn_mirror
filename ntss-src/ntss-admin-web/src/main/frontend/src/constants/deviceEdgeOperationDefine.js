@@ -11,8 +11,8 @@ export const compareKey = (a, b, key, isAsc = true) => {
   a = a[key];
   b = b[key];
 
-  let sortItem1 = 0;
-  let sortItem2 = 0;
+  let sortItem1;
+  let sortItem2;
 
   if (a === b) {
     sortItem1 = 0;

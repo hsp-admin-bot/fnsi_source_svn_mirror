@@ -3,6 +3,7 @@
   <div class="treatment-summary">
     <!-- 治療記録子機能ボタンエリア開閉ボタン -->
     <ons-icon
+      :key="isOpen"
       class="ons-icon ion-navicon ons-icon--ion treatment-summary-openclose-icon"
       :class="{ 'icon-opacity': isOpen }"
       icon="ion-ios-menu"
@@ -11,6 +12,7 @@
     <v-touch tag="span" class="v-touch" @swipeleft="next" @swiperight="prev">
       <v-ons-icon
         icon="fa-chevron-left"
+        class="ons-icon fa fa-chevron-left"
         :class="['prev', { disabled: !prevOrd }]"
         @click="prev"
       />
@@ -21,12 +23,14 @@
         :date-show-input="model.treatment_date"
         :disablefacility="disablefacility"
         :classes="getStyle(model.treatment_date)"
+        :istype="true"
         @inputCalendar="reloadTreatmentRecord"
         @spanCalendarOpen="spanCalendarOpen"
         @spanCalendarClose="spanCalendarClose"
       />
       <v-ons-icon
         icon="fa-chevron-right"
+        class="ons-icon fa fa-chevron-right"
         :class="['next', { disabled: !nextOrd }]"
         @click="next"
       />&emsp;
@@ -45,7 +49,7 @@
     </span>
     <v-ons-popover
       :target="popoverTarget"
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :class="[fontSizeSet, 'popover-style', 'popover-elem']"
       direction="down"
       cancelable
@@ -56,19 +60,20 @@
 </template>
 
 <script>
-import { EventBus } from "@/eventBus.js";
-import { mapGetters, mapActions, mapMutations, mapState } from "vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapGetters, mapActions, mapMutations, mapState } from "@/compat/vue/vuex";
 import { getOrdNoListWithShared } from "@/apis/ord-main";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
 import CustomSpanCalendar from "@/components/common/custom-span-calendar/CustomSpanCalendar.vue";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import PopoverMixin from "@/components/PopoverMixin";
-import { cloneDeep } from "lodash";
+import { cloneDeep } from "@/compat/collections/lodash";
 //add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
 //add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 end
 import { getHolidayStyle } from "@/functions/common/CommonFunctions";
+import { findAncestorComponent } from "@/functions/common/ComponentOwnerResolver";
 export default {
   mixins: [PopoverMixin],
   components: {
@@ -147,26 +152,12 @@ export default {
     },
     getOrdNo(val) {
       if (val) {
-      	// mod #12462 患者情報共有 Ji start
-        // const currentOrdIndex = this.ordNoDataSources.findIndex(
-        //   (data) => data.ordNo === val
-        // );
-        // if (currentOrdIndex > 0) {
-        //   this.setSharedFacilityCd(
-        //     this.ordNoDataSources[currentOrdIndex].facilityCd
-        //   );
-        // }
-        // if (currentOrdIndex === 0) {
-        //   this.updateOrdList();
-        // }
-        // this.refresh();
         const current = this.ordNoDataSources.find(
           (data) => data.ordNo === val
         );
         if (!current) return;
         this.setSharedFacilityCd(current.facilityCd);
         if (current.facilityCd === this.getFacilityCd) {
-	// mod #12462 患者情報共有 Ji end
           this.updateOrdList();
         }
         this.refresh();
@@ -198,7 +189,6 @@ export default {
     getSharedFlag() {
       this.initOrdNoList();
     },
-    // add #12462 患者情報共有 Ji start
     async getPatientShareMode() {
       await this.awaitDataReady();
       if (!this.ordNoDataSources?.length) {
@@ -216,16 +206,11 @@ export default {
         this.refresh();
         return;
       }
-      let targetList;
-      if (isShared) {
-        // 他施設含む
-        targetList = this.ordNoDataSources;
-      } else {
-        // 自施設のみ
-        targetList = this.ordNoDataSources.filter(
+      const targetList = isShared
+        ? this.ordNoDataSources
+        : this.ordNoDataSources.filter(
           item => item.facilityCd === this.getFacilityCd
         );
-      }
       if (!targetList.length) {
         this.setOrdNo(null);
         this.refresh();
@@ -250,22 +235,19 @@ export default {
         item => item.ordNo === this.getOrdNo
       );
       const isCurrentValid = current && (
-        (isOtherSelected
+        isOtherSelected
           ? current.facilityCd === this.getFacilityCd
-          : true)
+          : true
       );
       if (isCurrentValid) {
         this.refresh();
         return;
       }
-      let targetList;
-      if (isOtherSelected) {
-        targetList = this.ordNoDataSources.filter(
+      const targetList = isOtherSelected
+        ? this.ordNoDataSources.filter(
           item => item.facilityCd === this.getFacilityCd
-        );
-      } else {
-        targetList = this.ordNoDataSources;
-      }
+        )
+        : this.ordNoDataSources;
       if (!targetList.length) {
         this.setOrdNo(null);
         this.refresh();
@@ -276,7 +258,6 @@ export default {
       this.setSharedFacilityCd(latest.facilityCd);
       this.refresh();
     },
-    // add #12462 患者情報共有 Ji end
   },
   computed: {
     ...mapGetters("pat-info", [
@@ -289,10 +270,8 @@ export default {
       //add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 start
       "isPatInfoChaned",
       //add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 end
-      // add #12462 患者情報共有 Ji start
-      "getIsOtherFacility", 
+      "getIsOtherFacility",
       "getOtherFacilityCd"
-      // add #12462 患者情報共有 Ji end
     ]),
     ...mapGetters("treatment-record/common", [
       "getOrdNo",
@@ -306,13 +285,15 @@ export default {
     // add FNSI-修正 共有設定 房 start
     ...mapGetters("mst-user", { getSharedFlag: "getIsRegisteredShared" }),
     // add FNSI-修正 共有設定 房 end
-    // mod #12462 患者情報共有 Ji start
-    ...mapState("treatment-record/common", ["ordNoDataSourcesState", "ordNoDataSourceForOtherPage", "ordNoDataReady"]),
+    ...mapState("treatment-record/common", [
+      "ordNoDataSourcesState",
+      "ordNoDataSourceForOtherPage",
+      "ordNoDataReady"
+    ]),
     ...mapGetters("account-edit", [
       "getPatientShareMode",
       "getPatientShareFacilityCdMode"
     ]),
-    // mod #12462 患者情報共有 Ji end
   },
   methods: {
     ...mapActions("treatment-record/common", [
@@ -325,9 +306,10 @@ export default {
     ]),
     ...mapActions("multi-modal", ["showIndicationResult"]),
     ...mapGetters("user", ["getUserAuthorityCds"]),
-    // mod #12462 患者情報共有 Ji start
-    ...mapMutations("treatment-record/common", ["setSharedFacilityCd", "setOrdNoDataSources"]),
-    // mod #12462 患者情報共有 Ji end
+    ...mapMutations("treatment-record/common", [
+      "setSharedFacilityCd",
+      "setOrdNoDataSources"
+    ]),
       //add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 start
     ...mapMutations("pat-info", ["setIsPatInfoChaned"]),
       //add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 end
@@ -348,24 +330,26 @@ export default {
       "fetchHolidays",
       "clearHolidays"
     ]),
-    // add #12462 患者情報共有 Ji start
     awaitDataReady() {
       return new Promise(resolve => {
         if (this.ordNoDataReady) {
           resolve();
-        } else {
-          const unwatch = this.$watch('ordNoDataReady', (newVal) => {
-            if (newVal === true) {
-              unwatch();
-              resolve();
-            }
-          });
+          return;
         }
+        const unwatch = this.$watch("ordNoDataReady", (newVal) => {
+          if (newVal === true) {
+            unwatch();
+            resolve();
+          }
+        });
       });
     },
     async getOrdNoList() {
-      const sharedFlag = (this.getIsOtherFacility === false || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.facilityCd))
-        ? 0 
+      const sharedFlag = (
+        this.getIsOtherFacility === false ||
+        (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd)
+      )
+        ? 0
         : (this.getPatientShareMode == 0 ? 1 : 0);
       try {
         const response = await getOrdNoListWithShared(
@@ -374,8 +358,7 @@ export default {
           this.limit,
           sharedFlag
         );
-
-        let ordNoDataSources = response.data.sort((a, b) => {
+        const ordNoDataSources = response.data.sort((a, b) => {
           if (a.rstDialysisState === b.rstDialysisState) {
             return b.treatDate - a.treatDate;
           }
@@ -387,7 +370,13 @@ export default {
         console.log(e);
       }
     },
-    // add #12462 患者情報共有 Ji end
+    getObserveRecordMainComponent() {
+      const owner = findAncestorComponent(this, vm => vm?.$refs?.subComponent?.$refs?.mainComponent, { maxDepth: 12 });
+      return owner?.$refs?.subComponent?.$refs?.mainComponent || null;
+    },
+    hasObserveRecordChanges() {
+      return !!this.getObserveRecordMainComponent()?.isChanged;
+    },
     /**
      * 概要を再表示する.
      */
@@ -400,7 +389,7 @@ export default {
         // 指定日がある場合は日付を設定してカレンダーを表示できるようにする
         let tDate = null;
         if (this.getTreatDate) {
-          const mObj = moment(this.getTreatDate);
+          const mObj = dayjs(this.getTreatDate);
           tDate =
             mObj.format("YYYY/MM/DD") +
             "(" +
@@ -425,18 +414,18 @@ export default {
         }
         if (flag === "cancelSendCond") {
           temp.treatment_date = "治療前・治療中・未確定";
-          temp.date_handle = moment(this.getTreatDate).format("YYYY/MM/DD")
+          temp.date_handle = dayjs(this.getTreatDate).format("YYYY/MM/DD")
           this.model = temp;
           return;
         }
         if (this.getTreatDate && this.ordNoDataSources?.some((item) => item.treatDate === this.getTreatDate) && hasEqualDialsysState) {
-          temp.date_handle = moment(this.getTreatDate).format("YYYY/MM/DD")
+          temp.date_handle = dayjs(this.getTreatDate).format("YYYY/MM/DD")
         } else if (this.ordNoDataSources?.length && (hasEqualDialsysState || this.getDialysisState == "6")) {
-          temp.date_handle = moment(this.getTreatDate ?? this.ordNoDataSources[0].treatDate).format("YYYY/MM/DD");
+          temp.date_handle = dayjs(this.getTreatDate ?? this.ordNoDataSources[0].treatDate).format("YYYY/MM/DD");
         } else if (this.selectedPatId) {
           temp.treatment_date = "治療前・治療中・未確定";
         }
-        this.$set(this, "model", temp);
+        this.model = temp;
         // this.model = temp;
 
         if (this.getDialysisState == "6") {
@@ -477,7 +466,10 @@ export default {
         }
         return;
       }
-      this.getSummary(this.getOrdNo).then((response) => {
+      this.getSummary({
+        ordNo: this.getOrdNo,
+        selectedPatId: this.selectedPatId
+      }).then((response) => {
         response.data.date_handle = response.data.treatment_date.slice(0, 10);
         this.model = response.data;
         // ベッド・クール・治療方法未登録の場合（実績削除後のデータ）
@@ -500,7 +492,10 @@ export default {
         }
       });
       if (this.getSharedFlag === 1) {
-        this.getFacilityName(this.getSharedFacilityCd).then((response) => {
+        this.getFacilityName({
+          facilityCd: this.getSharedFacilityCd,
+          selectedPatId: this.selectedPatId
+        }).then((response) => {
           this.facilityName =
             this.model.treatment_name != null
               ? "　" + response.data
@@ -530,7 +525,7 @@ export default {
       // }
       // mod #10774 治療記録＞観察記録 患者・実績を切替た場合 ztc 20240726 start
       if (this.$route.name === 'treatment-observe-detail') {
-        if (!this.$parent.$refs.subComponent.$refs.mainComponent.isChanged) {
+        if (!this.hasObserveRecordChanges()) {
           this.preOrNextMethod(tempPrev)
         } else {
           this.$ons.notification.confirm({
@@ -599,7 +594,7 @@ export default {
       // }
       // mod #10774 治療記録＞観察記録 患者・実績を切替た場合 ztc 20240726 start
       if (this.$route.name === 'treatment-observe-detail') {
-        if (!this.$parent.$refs.subComponent.$refs.mainComponent.isChanged) {
+        if (!this.hasObserveRecordChanges()) {
           this.preOrNextMethod(tempNext)
         } else {
           this.$ons.notification.confirm({
@@ -667,7 +662,10 @@ export default {
       this.setOrd(tempNext);
       this.setSharedFacilityCd(tempNext.facilityCd);
       if (this.getSharedFlag === 1) {
-        this.getFacilityName(tempNext.facilityCd).then((response) => {
+        this.getFacilityName({
+          facilityCd: tempNext.facilityCd,
+          selectedPatId: this.selectedPatId
+        }).then((response) => {
           this.facilityName =
             this.model.treatment_name != null
               ? "　" + response.data
@@ -708,7 +706,7 @@ export default {
         this.dataofday = [];
         // this.listKurStartTime = {};
         this.ordNoDataSources?.forEach((item) => {
-          if (this.ordNodisabledNotExistDates.hasOwnProperty(item.treatDate)) {
+          if (Object.prototype.hasOwnProperty.call(this.ordNodisabledNotExistDates, item.treatDate)) {
             this.ordNodisabledNotExistDates[item.treatDate][
               this.ordNodisabledNotExistDates[item.treatDate].length
             ] = item.ordNo;
@@ -733,7 +731,10 @@ export default {
         this.ordNodisabledNotExistDates = {};
 
         // ordNoから治療日を取得する
-        this.getSummary(this.getOrdNoForSideBarRecord).then((response) => {
+        this.getSummary({
+          ordNo: this.getOrdNoForSideBarRecord,
+          selectedPatId: this.selectedPatId
+        }).then((response) => {
           const treatmentDate = response.data.treatment_date
             .slice(0, 10)
             .replace(/\//g, "");
@@ -764,7 +765,7 @@ export default {
       }
       if (value) {
         //mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 start
-        // const convertValue = moment(value).format("YYYYMMDD");
+        // const convertValue = dayjs(value).format("YYYYMMDD");
         // const ordNos = this.ordNodisabledNotExistDates[convertValue];
         // let currentOrdIndex = ordNos.findIndex(
         //   (data) => data === this.getOrdNo
@@ -784,7 +785,7 @@ export default {
         // this.setOrdNo(ordNos[currentOrdIndex]);
         // add #10774 治療記録＞観察記録 患者・実績を切替た場合 ztc 20240726 start
         if (this.$route.name === 'treatment-observe-detail') {
-          if (!this.$parent.$refs.subComponent.$refs.mainComponent.isChanged) {
+          if (!this.hasObserveRecordChanges()) {
             this.clickDate(value)
           } else {
             this.$ons.notification.confirm({
@@ -840,28 +841,28 @@ export default {
         await this.$router.push({ name: "treatment-record-observation" , params: { ignoreWatchGetOrdNo: '1' }});
       }
       // add #10774 治療記録＞観察記録 患者・実績を切替た場合 ztc 20240726 end
-      const convertValue = moment(value).format("YYYYMMDD");
-        const ordNos = this.ordNodisabledNotExistDates[convertValue];
-        let currentOrdIndex = ordNos.findIndex(
-          (data) => data === this.getOrdNo
-        );
-        if (currentOrdIndex === ordNos.length - 1) {
+      const convertValue = dayjs(value).format("YYYYMMDD");
+      const ordNos = this.ordNodisabledNotExistDates[convertValue];
+      let currentOrdIndex = ordNos.findIndex(
+        (data) => data === this.getOrdNo
+      );
+      if (currentOrdIndex === ordNos.length - 1) {
+        currentOrdIndex = 0;
+      } else {
+        if (currentOrdIndex === undefined) {
           currentOrdIndex = 0;
         } else {
-          if (currentOrdIndex === undefined) {
-            currentOrdIndex = 0;
-          } else {
-            currentOrdIndex = currentOrdIndex + 1;
-          }
+          currentOrdIndex = currentOrdIndex + 1;
         }
-        if (this.srcFuncName) {
-          this.setOrdNoForSideBarRecord(ordNos[currentOrdIndex]);
-        }
-        this.setOrdNo(ordNos[currentOrdIndex]);
-        this.setTreatDate(convertValue);
-        // add #10774 治療記録＞観察記録 患者・実績を切替た場合 ztc 20240726 start
-        this.setObserveRecord(ordNos[currentOrdIndex]);
-        // add #10774 治療記録＞観察記録 患者・実績を切替た場合 ztc 20240726 end
+      }
+      if (this.srcFuncName) {
+        this.setOrdNoForSideBarRecord(ordNos[currentOrdIndex]);
+      }
+      this.setOrdNo(ordNos[currentOrdIndex]);
+      this.setTreatDate(convertValue);
+      // add #10774 治療記録＞観察記録 患者・実績を切替た場合 ztc 20240726 start
+      this.setObserveRecord(ordNos[currentOrdIndex]);
+      // add #10774 治療記録＞観察記録 患者・実績を切替た場合 ztc 20240726 end
     },
     //add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 end
 
@@ -872,19 +873,17 @@ export default {
         // add FNSI-修正 redmine3916 房 start
         this.setLoadingScreenVisible(true);
         // add FNSI-修正 redmine3916 房 end
-	// add #12462 患者情報共有 Ji start
-        const sharedFlag = (this.getIsOtherFacility === false || (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd))
-        ? 0 
-        : (this.getPatientShareMode == 0 ? 1 : 0);
-	// mod #12462 患者情報共有 Ji end
+        const sharedFlag = (
+          this.getIsOtherFacility === false ||
+          (this.getOtherFacilityCd !== null && this.getOtherFacilityCd !== this.getFacilityCd)
+        )
+          ? 0
+          : (this.getPatientShareMode == 0 ? 1 : 0);
         const res = await getOrdNoListWithShared(
           this.selectedPatId,
           this.offset,
           this.limit,
-          // this.getSharedFlag == 0 ? 0 : 1,
-	  // add #12462 患者情報共有 Ji start
           sharedFlag
-	  // add #12462 患者情報共有 Ji end
         );
         // add FNSI-修正 redmine3916 房 start
         this.setLoadingScreenVisible(false);
@@ -932,11 +931,11 @@ export default {
     // add FNSI-修正 処理中複数回表示の対応 xie start
     this.setLoadingScreenMessage("処理中...");
     this.setLoadingScreenVisible(true);
-    // add #12462 患者情報共有 Ji start
+    // add FNSI-修正 処理中複数回表示の対応 xie end
     if (this.selectedPatId) {
-      await this.getOrdNoList()
+      await this.getOrdNoList();
     }
-    if(this.ordNoDataSources){
+    if (this.ordNoDataSources) {
       const current = this.ordNoDataSources.find(
         (data) => data.ordNo === this.getOrdNo
       );
@@ -944,21 +943,19 @@ export default {
         this.setSharedFacilityCd(current.facilityCd);
       }
     }
-    // add #12462 患者情報共有 Ji end
-    // add FNSI-修正 処理中複数回表示の対応 xie end
     await this.initOrdNoList();
 
     // add FNSI-修正 処理中複数回表示の対応 xie start
     this.setLoadingScreenVisible(false);
     // add FNSI-修正 処理中複数回表示の対応 xie end
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.clearHolidays(); // storeの休日マスタをクリア
     this.curOrd = null;
     this.prevOrd = null;
     this.nextOrd = null;
-    EventBus.$off("initOrdNoList");
-    EventBus.$off("refreshSummary");
+    EventBus.$off("initOrdNoList", this.initOrdNoList);
+    EventBus.$off("refreshSummary", this.refresh);
 
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
@@ -1003,7 +1000,7 @@ export default {
   cursor: not-allowed;
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   font-size: 1em;
   min-height: 2em;
   width: 250px;
@@ -1019,5 +1016,11 @@ export default {
 
 .icon-opacity {
   opacity: 0.2;
+}
+.fa-chevron-left{
+  margin-right: 5px;
+}
+.fa-chevron-right{
+  margin-left: 5px;
 }
 </style>

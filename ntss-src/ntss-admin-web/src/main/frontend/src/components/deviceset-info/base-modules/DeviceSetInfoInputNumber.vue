@@ -1,12 +1,12 @@
 <template>
-  <span class="device-input-number">
+  <span :class="[$attrs.class, 'device-input-number']" :style="[$attrs.style]">
   <!--mod #11120 I-HDF設定内の破棄確認メッセージ不正 張玲 start-->
     <!-- <custom-input-number
       ref="el"
       v-bind="deviceInfo"
       :is-required="required"
       :disabled="disabled"
-      v-on="$listeners"
+      v-bind="$attrs"
     /> -->
     <custom-input-number-pro
       class="custom-input-number"
@@ -20,7 +20,7 @@
       :disabled="disabled"
       @handlerInput="handlerInput"
       @mouseup="handlerMouseUp"
-      v-on="$listeners"
+      v-bind="mergeAttrs"
     />
   <!--mod #11120 I-HDF設定内の破棄確認メッセージ不正 張玲 end-->
     {{ deviceInfo.unitName }}
@@ -41,6 +41,7 @@ import baseForm from "@/components/deviceset-info/base-modules/BaseDeviceSetInfo
  *     ・required(任意): 入力必須フラグ ※必須ではない場合のみfalseを与えること
  */
 export default {
+  inheritAttrs: false,
   components: {
     //mod #11120 I-HDF設定内の破棄確認メッセージ不正 張玲 start
     // "custom-input-number": customInputNumber
@@ -50,10 +51,20 @@ export default {
 
   mixins: [baseForm],
 
+  // 親が @input リスナで使用するため input を明示宣言する。
+  emits: ["input"],
+
   props: {
     required: {
       type: Boolean,
       default: true
+    }
+  },
+  computed: {
+    mergeAttrs() {
+      const attr = this.$attrs || {};
+      const { class: _cls, style: _style, ...rest } = attr;
+      return rest;
     }
   },
   //add #11120 I-HDF設定内の破棄確認メッセージ不正 張玲 start

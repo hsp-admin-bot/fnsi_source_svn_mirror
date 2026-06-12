@@ -51,11 +51,11 @@
     </table>
 
         <v-ons-popover id="pop-over-show" cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target="false"
-                   :class="fontSizeSet"
+                   :class="[fontSizeSet, 'machines-main-popover']"
                    >
       <div style='margin:10px;'>
         <v-ons-row class='condition-row'>
@@ -73,8 +73,8 @@
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 // 共通JavaScriptファイル
 import commonjs from "@/constants/operationViewerCommon";
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { OPERATION_VIEWER_AUTO_SETTING, OPERATION_VIEWER_FORCE_SIGNOUT } from "@/constants/facilitySetting";
 import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -83,6 +83,7 @@ import PopoverMixin from "@/components/PopoverMixin";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
 import { initForceSignOutFlag } from "@/functions/common/CommonFunctions.js";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   mixins: [NextTransitionMixin, PopoverMixin],
@@ -456,7 +457,7 @@ export default {
         //   filterMachines.push(machines[idx]);
         // } else if (isEmergency) {
         //   // filterMachines.push(machines[idx]);
-        //   if (this.isNkkFacility ? machines[idx].serviceSupportCnt > 0 : machines[idx].mnoticeCnt > 0) {
+        //   if (this.isNkkFacility ? machines[idx].serviceSupportCnt > 0 : machines[idx].mNoticeCnt > 0) {
         //     filterMachines.push(machines[idx]);
         //   }
         // } else if (isProphylaxis && machines[idx].preventiveMainteCnt > 0) {
@@ -469,7 +470,7 @@ export default {
         } else {
           let pushFalg = false
           if (isEmergency) {
-            if (this.isNkkFacility ? machines[idx].serviceSupportCnt > 0 : machines[idx].mnoticeCnt > 0) {
+            if (this.isNkkFacility ? machines[idx].serviceSupportCnt > 0 : (machines[idx].mNoticeCnt ?? machines[idx].mnoticeCnt ?? 0) > 0) {
               pushFalg = true;
             }
           }
@@ -730,7 +731,7 @@ export default {
           this.refreshInterval = 30000;
         }
       } else if (data.status == 400) {
-        getErrorMessage("MachinesMainComponent.vue", "startPolling", error);
+        getErrorMessage("MachinesMainComponent.vue", "startPolling", { response: data });
         this.refreshInterval = 30000;
       }
       /* 自動更新サインアウトフラグ取得 */
@@ -740,7 +741,7 @@ export default {
   },
   async created() {
     // 画面名称取得
-    this.selfScreenPath = this.$router.currentRoute.path;
+    this.selfScreenPath = this.$route.path;
     // add 性能改善メモリ不足 shan start
     EventBus.$off("refresh", this.refresh);
     // add 性能改善メモリ不足 shan end
@@ -751,7 +752,7 @@ export default {
   // #8640 警報を対処済にしてもバックカラーが赤いまま start
   mounted () {
     this.$nextTick(() => {
-      let table = document.getElementById('myTable');
+      const table = getScopedElementById('myTable', this.$el || this);
       table.addEventListener('scroll', async(event) => {
       const scrollTop = table.scrollTop;
       const scrollHeight = table.scrollHeight;
@@ -766,7 +767,7 @@ export default {
     });
   },
   // #8640 警報を対処済にしてもバックカラーが赤いまま end
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
     clearTimeout(this.timerObj);
     // dataの初期化
@@ -781,20 +782,29 @@ export default {
   text-align: center;
 }
 
-
-
-</style>
-<style>
 #pop-over-show .popover--top,
 #pop-over-show .popover--bottom {
   width: auto !important;
 }
 
-#pop-over-show .popover__content{
+.machines-main-popover :deep(.popover--top),
+.machines-main-popover :deep(.popover--bottom) {
+  width: auto !important;
+}
+
+#pop-over-show .popover__content {
   min-height: 100% !important;
 }
 
-#pop-over-show .popover--bottom__content{
+.machines-main-popover :deep(.popover__content) {
+  min-height: 100% !important;
+}
+
+#pop-over-show .popover--bottom__content {
+  width: 100%;
+}
+
+.machines-main-popover :deep(.popover--bottom__content) {
   width: 100%;
 }
 </style>

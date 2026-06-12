@@ -18,7 +18,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.lang.reflect.Method;
@@ -52,31 +52,31 @@ public class TreatmentRecordDeleteServiceImplTest {
   /**
    * {@link OrdMainDao} のMockBean
    */
-  @MockBean
+  @MockitoBean
   private OrdMainDao ordMainDao;
 
   /**
    * {@link PatMainDao} のMockBean
    */
-  @MockBean
+  @MockitoBean
   private PatMainDao patMainDao;
 
   /**
    * {@link MntMachineStateDao} のMockBean
    */
-  @MockBean
+  @MockitoBean
   private MntMachineStateDao mntMachineStateDao;
 
   /**
    * {@link DeviceEdgeOrderService} のMockBean
    */
-  @MockBean
+  @MockitoBean
   private DeviceEdgeOrderService deviceEdgeOrderService;
 
   /**
    * {@link WebSocketNotifyService} のMockBean
    */
-  @MockBean
+  @MockitoBean
   private WebSocketNotifyService webSocketNotifyService;
 
   /**
@@ -200,7 +200,7 @@ public class TreatmentRecordDeleteServiceImplTest {
       method.setAccessible(true);
       return (OrdMain) method.invoke(target, ordMain);
     } catch (Exception ex) {
-//      ex.printStackTrace();
+      ex.printStackTrace();
       throw ex;
     }
   }
@@ -303,7 +303,7 @@ public class TreatmentRecordDeleteServiceImplTest {
       method.setAccessible(true);
       return (OrdMain) method.invoke(target, ordMain);
     } catch (Exception ex) {
-//      ex.printStackTrace();
+      ex.printStackTrace();
       throw ex;
     }
   }

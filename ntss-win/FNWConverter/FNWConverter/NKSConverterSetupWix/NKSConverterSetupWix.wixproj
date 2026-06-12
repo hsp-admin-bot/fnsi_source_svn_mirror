@@ -12,7 +12,7 @@
       ProductCode は UpgradeCodeGuid + ProductVersion から自動生成される（UUID v5）
       UpgradeCodeGuid は絶対に変えない
     -->
-    <ProductVersion>2.0.33</ProductVersion>
+    <ProductVersion>2.0.34</ProductVersion>
     <UpgradeCodeGuid>D3D92813-23E0-4C96-B845-E9430C3E8F30</UpgradeCodeGuid>
     <DefineConstants>
       SrcBin=$(MSBuildProjectDirectory)\..\NKSConverter\bin\$(Configuration)\;

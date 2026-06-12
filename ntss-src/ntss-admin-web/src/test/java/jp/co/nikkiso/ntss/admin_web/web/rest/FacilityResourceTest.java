@@ -25,15 +25,15 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
 import jp.co.nikkiso.ntss.admin_web.request.facility.SetStaffFacilityRequest;
 import jp.co.nikkiso.ntss.admin_web.response.StaffFacilitySettingsResponse;
@@ -58,19 +58,19 @@ public class FacilityResourceTest extends AbstractResourceTest {
   /**
    * 稼働ビューア施設一覧Service.
    */
-  @MockBean
+  @MockitoBean
   private FacilitiesService facilitiesService;
 
   /**
    * 個人設定タブ定義のService.
    */
-  @MockBean
+  @MockitoBean
   private PersonalTabDefineService personalTabDefineService;
 
   /**
    * 利用者のService.
    */
-  @MockBean
+  @MockitoBean
   private PersonalUserService personalUserService;
 
   /**
@@ -183,7 +183,7 @@ public class FacilityResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result =  mockMvc.perform(put("/api/facilities/staff_facility/{userId}", userId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(facilitiesService, times(1)).updateStaffFacility(userId, staffFacilityCds);
@@ -217,7 +217,7 @@ public class FacilityResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result =  mockMvc.perform(put("/api/facilities/staff_facility/{userId}", userId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(facilitiesService, times(1)).updateStaffFacility(userId, staffFacilityCds);
@@ -251,7 +251,7 @@ public class FacilityResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result =  mockMvc.perform(put("/api/facilities/staff_facility/{userId}", userId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(facilitiesService, times(1)).updateStaffFacility(userId, staffFacilityCds);
@@ -285,7 +285,7 @@ public class FacilityResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result =  mockMvc.perform(put("/api/facilities/staff_facility/{userId}", userId)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(facilitiesService, times(1)).updateStaffFacility(userId, staffFacilityCds);
@@ -310,7 +310,7 @@ public class FacilityResourceTest extends AbstractResourceTest {
 
     // action
     ResultActions result =  mockMvc.perform(get("/api/facilities/{facilityCd}/use-functions", facilityCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     verify(facilitiesService, times(1)).getUseFunctions(facilityCd);
@@ -337,7 +337,7 @@ public class FacilityResourceTest extends AbstractResourceTest {
 
     // action
     ResultActions result =  mockMvc.perform(get("/api/facilities/{facilityCd}/use-functions", facilityCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     verify(facilitiesService, times(1)).getUseFunctions(facilityCd);
@@ -369,7 +369,7 @@ public class FacilityResourceTest extends AbstractResourceTest {
 
     // action
     ResultActions result =  mockMvc.perform(get("/api/facilities/{facilityCd}/personal-setting/tab/define", facilityCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     verify(personalTabDefineService, times(1)).getDisplayNameAndContentsIdByFacilityCd(any());
@@ -413,7 +413,7 @@ public class FacilityResourceTest extends AbstractResourceTest {
 
     // action
     ResultActions result =  mockMvc.perform(get("/api/facilities/{facilityCd}/personal-setting/tab/define", facilityCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     verify(personalTabDefineService, times(1)).getDisplayNameAndContentsIdByFacilityCd(any());
@@ -447,7 +447,7 @@ public class FacilityResourceTest extends AbstractResourceTest {
 
     // action
     ResultActions result =  mockMvc.perform(get("/api/facilities/{facilityCd}/personal-user/job/doctor", facilityCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     verify(personalUserService, times(1)).getDoctorsByFacilityCd(facilityCd);
@@ -482,7 +482,7 @@ public class FacilityResourceTest extends AbstractResourceTest {
 
     // action
     ResultActions result =  mockMvc.perform(get("/api/facilities/{facilityCd}/personal-user/job/doctor", facilityCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     verify(personalUserService, times(1)).getDoctorsByFacilityCd(facilityCd);

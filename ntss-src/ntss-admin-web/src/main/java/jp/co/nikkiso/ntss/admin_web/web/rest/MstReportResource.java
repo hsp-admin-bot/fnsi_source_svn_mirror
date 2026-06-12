@@ -34,6 +34,7 @@ import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 
 /**
@@ -109,7 +110,22 @@ public class MstReportResource {
 //  public ResponseEntity<?> getAllByFacilityCd(@PathVariable(name = "facilityCd", required = true) String facilityCd) {
   @GetMapping("/data/{facilityCd}/{vorcFlag}")
   public ResponseEntity<?> getAllByFacilityCd(@PathVariable(name = "facilityCd", required = true) String facilityCd,
-                                              @PathVariable(name = "vorcFlag", required = false) String vorcFlag) {
+                                              @PathVariable(name = "vorcFlag", required = false) String vorcFlag,
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                              @AuthenticationPrincipal NtssUser ntssUser
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 //mod 6502 6498 5984 定期・日常が分離されていない 吉 end
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -154,7 +170,24 @@ public class MstReportResource {
    * @return マスタデータのResponse
    */
   @GetMapping("/{reportCd}")
-  public ResponseEntity<?> getByCd(@PathVariable(name = "reportCd", required = true) long reportCd) {
+  public ResponseEntity<?> getByCd(@PathVariable(name = "reportCd", required = true) long reportCd,
+                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                   @AuthenticationPrincipal NtssUser ntssUser
+                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              MstReport resReport = mstReportService.getMstReport(reportCd);
+              String facilityCd = resReport.getFacilityCd();
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "reportCd=" + reportCd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -189,7 +222,23 @@ public class MstReportResource {
    * @return
    */
   @PutMapping("/report_name")
-  public ResponseEntity<?> putReportName(@RequestBody MstReport request) {
+  public ResponseEntity<?> putReportName(@RequestBody MstReport request,
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                         @AuthenticationPrincipal NtssUser ntssUser
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstReport mstReport = mstReportService.getMstReport(request.getReportCd());
+        if (mstReport != null && mstReport.getFacilityCd() != null &&
+          !mstReport.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstReport.getFacilityCd() + " " + "reportCd=" + request.getReportCd() + " " + "reportName=" + request.getReportName() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     try {
 
@@ -223,7 +272,38 @@ public class MstReportResource {
    * @return
    */
   @PutMapping("/report_path")
-  public ResponseEntity<?> putReportPath(@RequestBody MstReport request) {
+  public ResponseEntity<?> putReportPath(@RequestBody MstReport request,
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                         @AuthenticationPrincipal NtssUser ntssUser
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 start
+      if (ntssUser != null && !ntssUser.isNkkAdminUser()) {
+        request.setFacilityCd(ntssUser.getFacilityCd());
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        MstReport mstReport = mstReportService.getMstReport(request.getReportCd());
+        if (mstReport != null && mstReport.getFacilityCd() != null &&
+          !mstReport.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstReport.getFacilityCd() + " " + "reportCd=" + request.getReportCd() + " " + "reportPath=" + request.getReportPath() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    } catch (Exception e) {
+      if (!ntssUser.isNkkAdminUser()) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " Exception during security check ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
     try {
 
@@ -257,7 +337,32 @@ public class MstReportResource {
    * @return
    */
   @PutMapping("/is_disp")
-  public ResponseEntity<?> putIsDisp(@RequestBody MstReport request) {
+  public ResponseEntity<?> putIsDisp(@RequestBody MstReport request,
+                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                     @AuthenticationPrincipal NtssUser ntssUser
+                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        MstReport mstReport = mstReportService.getMstReport(request.getReportCd());
+        if (mstReport != null && mstReport.getFacilityCd() != null &&
+          !mstReport.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstReport.getFacilityCd() + " " + "reportCd=" + request.getReportCd() + " " + "reportPath=" + request.getReportPath() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    } catch (Exception e) {
+      if (!ntssUser.isNkkAdminUser()) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " Exception during security check ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
     try {
 
@@ -294,6 +399,25 @@ public class MstReportResource {
   public ResponseEntity<?> putReportNameDispDel(@RequestBody List<MstReport> request,
                                                 @PathVariable(name = "facilityCd", required = true) String facilityCd,
                                                 @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    } catch (Exception e) {
+      if (!ntssUser.isNkkAdminUser()) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " Exception during security check ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
     try {
 
@@ -341,6 +465,27 @@ public class MstReportResource {
   // add 6589 帳票ツールの版数を適用するためのインターフェースの抽出　吉 start
   @PutMapping("/edit_report_no")
   public ResponseEntity<?> putReportNoInfo(@RequestBody Map<String, String> request, @AuthenticationPrincipal NtssUser ntssUser) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try {
+      if (!ntssUser.isNkkAdminUser()) {
+        MstReport mstReport = mstReportService.getMstReport(Long.parseLong(request.get("reportCd")));
+        if (mstReport != null && mstReport.getFacilityCd() != null &&
+          !mstReport.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstReport.getFacilityCd() + " " + "reportCd=" + request.get("reportCd") + " " + "selectedHistory=" + request.get("selectedHistory") + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    } catch (Exception e) {
+      if (!ntssUser.isNkkAdminUser()) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " Exception during security check ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     try {
       // ログ出力
       EventLogMessage eventLogMessage = new EventLogMessage();
@@ -402,6 +547,27 @@ public class MstReportResource {
    */
   @PutMapping("/{reportCd}/is_del")
   public ResponseEntity<?> putIsDel(@PathVariable(name = "reportCd", required = true) long reportCd, @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        MstReport mstReport = mstReportService.getMstReport(reportCd);
+        if (mstReport != null && mstReport.getFacilityCd() != null &&
+          !mstReport.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstReport.getFacilityCd() + " " + "reportCd=" + reportCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    } catch (Exception e) {
+      if (!ntssUser.isNkkAdminUser()) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " Exception during security check ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
     try {
 
@@ -439,7 +605,22 @@ public class MstReportResource {
    *
    */
   @GetMapping("/{facilityCd}/facilityCd")
-  public ResponseEntity<?> getDataByFacilityCd(@PathVariable(name = "facilityCd", required = true) String facilityCd) {
+  public ResponseEntity<?> getDataByFacilityCd(@PathVariable(name = "facilityCd", required = true) String facilityCd,
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -488,6 +669,17 @@ public class MstReportResource {
   public ResponseEntity<?> insertMstReport(@RequestBody MstReport request,
                                              @PathVariable(name = "facilityCd", required = true) String facilityCd,
                                              @AuthenticationPrincipal NtssUser ntssUser) {
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+              if(!ntssUser.isNkkAdminUser()) {
+                  if (facilityCd != null && !facilityCd.isEmpty() &&
+                      !facilityCd.equals(ntssUser.getFacilityCd())) {
+                      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+                      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+                  }
+              }
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     try {
 
@@ -528,6 +720,25 @@ public class MstReportResource {
   public ResponseEntity<?> updateMstReport(@RequestBody List<MstReport> request,
                                              @PathVariable(name = "facilityCd", required = true) String facilityCd,
                                              @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    } catch (Exception e) {
+      if (!ntssUser.isNkkAdminUser()) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " Exception during security check ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
 
     try {
 
@@ -568,7 +779,22 @@ public class MstReportResource {
    */
   @PutMapping("/{facilityCd}/checkIsCanDelete")
   public ResponseEntity<?> checkIsCanDelete(@RequestBody List<MstReport> reportList,
-                                           @PathVariable(name = "facilityCd", required = true) String facilityCd) {
+                                           @PathVariable(name = "facilityCd", required = true) String facilityCd,
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260416 start
+                                           @AuthenticationPrincipal NtssUser ntssUser
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260416 end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260416 start
+    if (!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260416 end
+
     try {
       // ログ出力
       EventLogMessage eventLogMessage = new EventLogMessage();

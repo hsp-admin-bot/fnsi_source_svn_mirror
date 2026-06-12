@@ -16,8 +16,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.google.common.base.CaseFormat;
 
 import jp.co.nikkiso.ntss.core.entity.custom.ReferenceComboDefNode;
@@ -268,6 +268,10 @@ public class SysMasterDefine extends BaseEntity {
   /**
    * 項目のタイプクラス.
    */
+  private static ObjectMapper createObjectMapper() {
+    return new ObjectMapper().rebuild().configureForJackson2().build();
+  }
+
   public enum FieldType {
 
     /**
@@ -371,7 +375,7 @@ public class SysMasterDefine extends BaseEntity {
   @NoArgsConstructor
   public static class ColumnInfo {
     /** ObjectMapper */
-    private static ObjectMapper objectMapper = new ObjectMapper();
+    private static ObjectMapper objectMapper = createObjectMapper();
 
     /** ModelMapper */
     private static ModelMapper modelMapper = new ModelMapper();
@@ -392,7 +396,7 @@ public class SysMasterDefine extends BaseEntity {
       try {
         ColumnInfo obj = objectMapper.readValue(value, ColumnInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("マスタ定義のカラム情報設定内容が不正です") {
         };
       }
@@ -407,7 +411,7 @@ public class SysMasterDefine extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -468,7 +472,7 @@ public class SysMasterDefine extends BaseEntity {
   @NoArgsConstructor
   public static class ComboData {
     /** ObjectMapper */
-    private static ObjectMapper objectMapper = new ObjectMapper();
+    private static ObjectMapper objectMapper = createObjectMapper();
 
     /** ModelMapper */
     private static ModelMapper modelMapper = new ModelMapper();
@@ -489,7 +493,7 @@ public class SysMasterDefine extends BaseEntity {
       try {
         ComboData obj = objectMapper.readValue(value, ComboData.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("マスタ定義のコンボデータ設定内容が不正です") {
         };
       }
@@ -504,7 +508,7 @@ public class SysMasterDefine extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -519,7 +523,7 @@ public class SysMasterDefine extends BaseEntity {
   @NoArgsConstructor
   public static class ReferenceComboDef {
     /** ObjectMapper */
-    private static ObjectMapper objectMapper = new ObjectMapper();
+    private static ObjectMapper objectMapper = createObjectMapper();
 
     /** ModelMapper */
     private static ModelMapper modelMapper = new ModelMapper();
@@ -541,7 +545,7 @@ public class SysMasterDefine extends BaseEntity {
         ReferenceComboDef obj
           = objectMapper.readValue(value, ReferenceComboDef.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("参照型コンボ定義の設定内容が不正です") {
         };
       }
@@ -556,7 +560,7 @@ public class SysMasterDefine extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }

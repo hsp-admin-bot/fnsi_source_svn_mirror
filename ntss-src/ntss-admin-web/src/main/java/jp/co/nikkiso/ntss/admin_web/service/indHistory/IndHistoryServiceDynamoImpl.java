@@ -1,14 +1,15 @@
 package jp.co.nikkiso.ntss.admin_web.service.indHistory;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.Date;
 import java.text.SimpleDateFormat;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -16,28 +17,35 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.PropertyNamingStrategies;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-
-// import jp.co.nikkiso.ntss.core.entity.custom.IndHistory;
-// import jp.co.nikkiso.ntss.core.entity.custom.IndHistoryOptions;
-import jp.co.nikkiso.ntss.admin_web.service.indHistory.IndHistory;
-import jp.co.nikkiso.ntss.admin_web.service.indHistory.IndHistoryOptions;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 
 @Service
 public class IndHistoryServiceDynamoImpl implements IndHistoryServiceDynamo {
-  @Autowired
-  DynamoDBMapper dynamoDBMapper;
+  private static final String TABLE_NAME = "ind_history";
+  private static final Set<String> KEY_FIELDS = Set.of("pat_id", "log_date");
+  private static final Set<String> NUMERIC_FIELDS = Set.of("sort_no", "created_user_id", "updated_user_id");
+  private static final ObjectMapper NON_NULL_SNAKE_CASE_MAPPER = new ObjectMapper()
+      .rebuild()
+      .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+      .build();
+  private static final ObjectMapper SNAKE_CASE_MAPPER = new ObjectMapper()
+      .rebuild()
+      .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+      .build();
 
-  @Autowired
-  DynamoDBMapperConfig dynamoDBMapperConfig;
+  private final DynamoDbClient dynamoDbClient;
+
+  public IndHistoryServiceDynamoImpl(DynamoDbClient dynamoDbClient) {
+    this.dynamoDbClient = dynamoDbClient;
+  }
 
   /**
    * DynamoDBを使用GET API
@@ -50,6 +58,16 @@ public class IndHistoryServiceDynamoImpl implements IndHistoryServiceDynamo {
    */
   @Override
   public Page<IndHistory> findAll(Pageable pageable, IndHistory params, IndHistoryOptions options) {
+    if (params == null) {
+      params = new IndHistory();
+    }
+    if (options == null) {
+      options = new IndHistoryOptions();
+    }
+    if (!StringUtils.hasText(params.getPatId())) {
+      return new PageImpl<>(Collections.emptyList(), pageable, 0);
+    }
+
     // 取得データ
     List<IndHistory> result = new ArrayList<IndHistory>();
     // 取得データ総数
@@ -65,66 +83,34 @@ public class IndHistoryServiceDynamoImpl implements IndHistoryServiceDynamo {
     // 属性(パーティションキーとソートキー以外)の抽出条件
     String filterExpression = null;
     // 「keyExpression」と「filterExpression」の値代入
-    Map<String, AttributeValue> expressionAttributes = null;
-    // (ページネーション用)最後のリクエストからの「lastEvaluatedKey」
-    Map<String, AttributeValue> exclusiveStartKey = null;
-
-    /**
-     * ページネーション設定
-     */
-    // try {
-    //   JSONObject pageLastEvalJson = new JSONObject(pageLastEval);
-
-    //   if (pageLastEval != null && pageLastEvalJson.length() > 0) {
-    //     exclusiveStartKey = new HashMap<String, AttributeValue>();
-    //     exclusiveStartKey.put("pat_id", new AttributeValue(pageLastEvalJson.getString("patId")));
-    //     exclusiveStartKey.put("log_date", new AttributeValue(pageLastEvalJson.getString("logDate")));
-    //   }
-    // } catch (Exception e) {
-    //   e.printStackTrace();
-    // }
+    Map<String, AttributeValue> expressionAttributes = new HashMap<String, AttributeValue>();
+    expressionAttributes.put(":pat_id", stringAttribute(params.getPatId()));
 
     /**
      * 開始日・終了日処理
      */
-    if (!StringUtils.isEmpty(options.getLogDateStart()) && !StringUtils.isEmpty(options.getLogDateEnd())) {
+    if (StringUtils.hasText(options.getLogDateStart()) && StringUtils.hasText(options.getLogDateEnd())) {
       keyExpression += " and log_date between :log_date_start and :log_date_end";
 
-      if (expressionAttributes == null) {
-        expressionAttributes = new HashMap<String, AttributeValue>();
-      }
-
-      expressionAttributes.put(":log_date_start", new AttributeValue(options.getLogDateStart().replaceAll("-", "") + "000000000" ));
-      expressionAttributes.put(":log_date_end", new AttributeValue(options.getLogDateEnd().replaceAll("-", "") + "999999999"));
+      expressionAttributes.put(":log_date_start", stringAttribute(options.getLogDateStart().replaceAll("-", "") + "000000000" ));
+      expressionAttributes.put(":log_date_end", stringAttribute(options.getLogDateEnd().replaceAll("-", "") + "999999999"));
     }
-    else if (!StringUtils.isEmpty(options.getLogDateStart()) && StringUtils.isEmpty(options.getLogDateEnd())) {
+    else if (StringUtils.hasText(options.getLogDateStart()) && !StringUtils.hasText(options.getLogDateEnd())) {
       keyExpression += " and log_date >= :log_date_start";
 
-      if (expressionAttributes == null) {
-        expressionAttributes = new HashMap<String, AttributeValue>();
-      }
-
-      expressionAttributes.put(":log_date_start", new AttributeValue(options.getLogDateStart().replaceAll("-", "") + "000000000" ));
+      expressionAttributes.put(":log_date_start", stringAttribute(options.getLogDateStart().replaceAll("-", "") + "000000000" ));
     }
-    else if (StringUtils.isEmpty(options.getLogDateStart()) && !StringUtils.isEmpty(options.getLogDateEnd())) {
+    else if (!StringUtils.hasText(options.getLogDateStart()) && StringUtils.hasText(options.getLogDateEnd())) {
       keyExpression += " and log_date <= :log_date_end";
 
-      if (expressionAttributes == null) {
-        expressionAttributes = new HashMap<String, AttributeValue>();
-      }
-
-      expressionAttributes.put(":log_date_end", new AttributeValue(options.getLogDateEnd().replaceAll("-", "") + "999999999"));
+      expressionAttributes.put(":log_date_end", stringAttribute(options.getLogDateEnd().replaceAll("-", "") + "999999999"));
     }
 
     /**
      * 抽出条件処理
      * 以下はEntityの非nullフィールドをクエリ条件として処理する
      */
-    Iterator<Map.Entry<String, JsonNode>> iter = new ObjectMapper()
-        .setSerializationInclusion(Include.NON_NULL)
-        .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE)
-        .valueToTree(params)
-        .fields();
+    Iterator<Map.Entry<String, JsonNode>> iter = NON_NULL_SNAKE_CASE_MAPPER.valueToTree(params).properties().iterator();
     Map.Entry<String, JsonNode> curr = null;
 
     while (iter.hasNext()) {
@@ -133,15 +119,9 @@ public class IndHistoryServiceDynamoImpl implements IndHistoryServiceDynamo {
       String paramNameSub = ":" + paramName;
       String paramValue = curr.getValue().textValue();
 
-      if (!StringUtils.isEmpty(paramValue)) {
-      // if (paramValue != "null" && paramValue != null && !paramValue.isEmpty()) {
-        if (expressionAttributes == null) {
-          expressionAttributes = new HashMap<String, AttributeValue>();
-        }
-
+      if (!curr.getValue().isNull() && StringUtils.hasText(paramValue)) {
         // その他の属性の場合、「filterExpression」に追加
-        if (paramName.compareTo("pat_id") != 0 &&
-            paramName.compareTo("log_date") != 0) {
+        if (!KEY_FIELDS.contains(paramName) && !NUMERIC_FIELDS.contains(paramName)) {
           if (filterExpression == null) {
             filterExpression = "";
           }
@@ -151,17 +131,16 @@ public class IndHistoryServiceDynamoImpl implements IndHistoryServiceDynamo {
           }
 
           filterExpression += paramName + " = " + paramNameSub;
+          expressionAttributes.put(paramNameSub, stringAttribute(paramValue));
         }
-
-        expressionAttributes.put(paramNameSub, new AttributeValue(paramValue));
       }
     }
 
     /**
      * フリーワード処理
      */
-    if(!StringUtils.isEmpty(options.getSearchString())) {
-      expressionAttributes.put(":search_string", new AttributeValue(options.getSearchString()));
+    if(StringUtils.hasText(options.getSearchString())) {
+      expressionAttributes.put(":search_string", stringAttribute(options.getSearchString()));
 
       if (filterExpression != null && !filterExpression.isEmpty()) {
         filterExpression += " and ";
@@ -174,20 +153,14 @@ public class IndHistoryServiceDynamoImpl implements IndHistoryServiceDynamo {
 
       String subFilterExpression = null;
 
-      iter = new ObjectMapper()
-        .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE)
-        .valueToTree(params)
-        .fields();
+      iter = SNAKE_CASE_MAPPER.valueToTree(params).properties().iterator();
       curr = null;
 
       while (iter.hasNext()) {
         curr = iter.next();
         String paramName = curr.getKey();
-        String paramNameSub = ":" + paramName;
-        String paramValue = curr.getValue().textValue();
 
-        if (paramName.compareTo("pat_id") != 0 &&
-            paramName.compareTo("log_date") != 0) {
+        if (!KEY_FIELDS.contains(paramName) && !NUMERIC_FIELDS.contains(paramName)) {
           if (subFilterExpression == null) {
             subFilterExpression = "";
           }
@@ -201,25 +174,35 @@ public class IndHistoryServiceDynamoImpl implements IndHistoryServiceDynamo {
         }
       }
 
-      filterExpression += subFilterExpression + ")";
+      if (subFilterExpression != null) {
+        filterExpression += subFilterExpression + ")";
+      } else {
+        filterExpression = null;
+      }
     }
 
     /**
      * クエリ作成
      */
-    DynamoDBQueryExpression<IndHistory> queryExpression = new DynamoDBQueryExpression<IndHistory>()
-        .withKeyConditionExpression(keyExpression)
-        .withFilterExpression(filterExpression)
-        .withExpressionAttributeValues(expressionAttributes)
-        .withScanIndexForward(scanIndexForward)
-        .withExclusiveStartKey(exclusiveStartKey);
+    QueryRequest.Builder queryRequestBuilder = QueryRequest.builder()
+        .tableName(TABLE_NAME)
+        .keyConditionExpression(keyExpression)
+        .expressionAttributeValues(expressionAttributes)
+        .scanIndexForward(scanIndexForward);
+    if (StringUtils.hasText(filterExpression)) {
+      queryRequestBuilder.filterExpression(filterExpression);
+    }
 
     /**
      * クエリ実行
      */
-    result = dynamoDBMapper.query(IndHistory.class, queryExpression, dynamoDBMapperConfig);
-    result = result.subList(skip, Math.min(result.size(), skip + limit));
-    resultCount = dynamoDBMapper.count(IndHistory.class, queryExpression, dynamoDBMapperConfig);
+    result = queryAll(queryRequestBuilder);
+    resultCount = result.size();
+    if (skip >= result.size()) {
+      result = Collections.emptyList();
+    } else {
+      result = new ArrayList<>(result.subList(skip, Math.min(result.size(), skip + limit)));
+    }
 
     return new PageImpl<>(result, pageable, resultCount);
   }
@@ -233,8 +216,80 @@ public class IndHistoryServiceDynamoImpl implements IndHistoryServiceDynamo {
   @Transactional
   public IndHistory create(IndHistory params) {
     params.setLogDate(new SimpleDateFormat("yyyyMMddHHmmssSSS").format(new Date()));
-    dynamoDBMapper.save(params);
+    dynamoDbClient.putItem(PutItemRequest.builder()
+        .tableName(TABLE_NAME)
+        .item(toItem(params))
+        .build());
 
     return params;
+  }
+
+  private List<IndHistory> queryAll(QueryRequest.Builder queryRequestBuilder) {
+    List<IndHistory> result = new ArrayList<>();
+    Map<String, AttributeValue> exclusiveStartKey = null;
+
+    do {
+      QueryRequest.Builder pageRequestBuilder = queryRequestBuilder;
+      if (exclusiveStartKey != null && !exclusiveStartKey.isEmpty()) {
+        pageRequestBuilder = queryRequestBuilder.exclusiveStartKey(exclusiveStartKey);
+      }
+      QueryResponse response = dynamoDbClient.query(pageRequestBuilder.build());
+      response.items().stream()
+          .map(this::fromItem)
+          .forEach(result::add);
+      exclusiveStartKey = response.lastEvaluatedKey();
+    } while (exclusiveStartKey != null && !exclusiveStartKey.isEmpty());
+
+    return result;
+  }
+
+  private IndHistory fromItem(Map<String, AttributeValue> item) {
+    Map<String, Object> values = new HashMap<>();
+    item.forEach((key, value) -> {
+      if (value.s() != null) {
+        values.put(key, value.s());
+      } else if (value.n() != null) {
+        if ("sort_no".equals(key)) {
+          values.put(key, Integer.valueOf(value.n()));
+        } else if ("created_user_id".equals(key) || "updated_user_id".equals(key)) {
+          values.put(key, Long.valueOf(value.n()));
+        } else {
+          values.put(key, value.n());
+        }
+      }
+    });
+    return NON_NULL_SNAKE_CASE_MAPPER.convertValue(values, IndHistory.class);
+  }
+
+  private Map<String, AttributeValue> toItem(IndHistory params) {
+    Map<String, AttributeValue> item = new HashMap<>();
+    Iterator<Map.Entry<String, JsonNode>> iter = NON_NULL_SNAKE_CASE_MAPPER.valueToTree(params).properties().iterator();
+
+    while (iter.hasNext()) {
+      Map.Entry<String, JsonNode> entry = iter.next();
+      JsonNode value = entry.getValue();
+
+      if (value.isNull()) {
+        continue;
+      } else if (value.isNumber()) {
+        item.put(entry.getKey(), numberAttribute(value.asText()));
+      } else if (value.isTextual() && StringUtils.hasText(value.textValue())) {
+        item.put(entry.getKey(), stringAttribute(value.textValue()));
+      }
+    }
+
+    return item;
+  }
+
+  private AttributeValue stringAttribute(String value) {
+    return AttributeValue.builder()
+        .s(value)
+        .build();
+  }
+
+  private AttributeValue numberAttribute(String value) {
+    return AttributeValue.builder()
+        .n(value)
+        .build();
   }
 }

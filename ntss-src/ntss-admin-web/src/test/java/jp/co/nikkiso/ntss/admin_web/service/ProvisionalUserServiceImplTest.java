@@ -21,7 +21,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -62,20 +62,20 @@ public class ProvisionalUserServiceImplTest {
   /**
    * 利用者マスタDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstUserDao mstUserDao;
 
   /**
    * 利用者マスタ(認証DB)DaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstUserAuthenticationDao mstUserAuthenticationDao;
 
 
   /**
    * 利用者マスタ(個人情報DB)DaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstPersonalUserDao mstPersonalUserDao;
 
 

@@ -5,8 +5,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
@@ -32,6 +32,7 @@ import jp.co.nikkiso.ntss.core.dao.MstEquipmentClassDao;
 import jp.co.nikkiso.ntss.core.dao.OrdChecklistDao;
 import jp.co.nikkiso.ntss.core.entity.MstChecklist;
 import jp.co.nikkiso.ntss.core.entity.custom.MstEquipmentClassForChecklist;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -59,6 +60,10 @@ public class MstChecklistServiceImpl implements MstChecklistService {
   // add #8344 【デグレ】チェックリストマスタの保存までが長い dou start
   @Autowired
   private LogService logService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   private final static String KEY_EDIT_LIST = "editList";
   private final static String KEY_LIST_CD = "list_cd";
@@ -195,7 +200,7 @@ public class MstChecklistServiceImpl implements MstChecklistService {
       wheres.append(" AND\n");
       wheres.append(" facility_cd = '" + param.getFacilityCd() + "'" + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(mstChecklistDao, mmsTbN, wheres, getEventLogMessage(), null);
+      DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage(), null);
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // 更新前の情報削除フラグセット
@@ -324,12 +329,12 @@ public class MstChecklistServiceImpl implements MstChecklistService {
    */
   // mod #7783 2022-07-13 チェックリストマスタを保存するとWebAppサーバーがダウンする。 dou start
   // private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage, String limit) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage, String limit) {
   // mod #7783 2022-07-13 チェックリストマスタを保存するとWebAppサーバーがダウンする。 dou end
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

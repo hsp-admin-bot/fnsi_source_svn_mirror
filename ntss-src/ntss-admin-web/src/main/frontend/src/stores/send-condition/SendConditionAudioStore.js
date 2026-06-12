@@ -1,7 +1,7 @@
-import { Howl } from "howler";
+import { Howl } from "@/compat/media/howler";
 
 export default {
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   namespaced: true,
   state: {
     audioFile: {

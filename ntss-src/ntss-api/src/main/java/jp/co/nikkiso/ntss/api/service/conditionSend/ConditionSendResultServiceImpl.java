@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.api.service.conditionSend;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.api.request.AdditionCalculationRequest;
 import jp.co.nikkiso.ntss.api.service.LogService;
 import jp.co.nikkiso.ntss.api.service.additionInfo.AdditionCalculationService;

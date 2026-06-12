@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body">
+        <template #body>
+<div>
       <div class="expandable-content">
         <v-ons-row class="col-width">
           <v-ons-col width="30%">
@@ -47,7 +48,7 @@
               :readMasterData="fetchMedicineAllByFacilityCd"
               :masterDefine="treatMedicineMasterDef"
               v-model="selectedTreatMedicine.model"
-              @input="onSelectTreatMedicine"
+              @update:modelValue="onSelectTreatMedicine"
               @changeUnit="(unit) => actualModel.treatMedicine.unit = unit"
               @changeDecPoint="(decPoint) => actualModel.treatMedicine.decPoint = decPoint"
             />
@@ -56,23 +57,8 @@
         <v-ons-row class="col-width">
           <v-ons-col>
             <!-- mod #5589  2023/04/14 数値IFのスタイル全不正 林峻峰 start -->
-            <!-- <com-number-input
-              class="number-input input-required input_change"
-              style="margin-top: 0;"
-              input-id="amount"
-              name="amount"
-              labelName="数量"
-              :step="this.unitStep"
-              :min="0"
-              :max="9999999999.999999999"
-              :unitName="actualModel.treatMedicine.unit"
-              :disabled="actualModel.isTreatment"
-              :initialValueLock="true"
-              v-model="actualModel.amount"
-              @input.native="setCss2($event)"
-            /> -->
              <com-number-input
-              class="number-input input-required input_change"
+              :class="['number-input', 'input_change', { 'input-required': !actualModel.isTreatment }]"
               style="margin-top: 0;"
               input-id="amount"
               labelName="数量"
@@ -86,7 +72,7 @@
               :inputMin="0"
               :inputMax="9999999999.999999999"
               v-model="actualModel.amount"
-              @input.native="setCss2($event)"
+              @input="setCss2($event)"
             />
             <!-- mod #5589  2023/04/14 数値IFのスタイル全不正 林峻峰 end -->
           </v-ons-col>
@@ -276,7 +262,9 @@
         -->
       </div>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+        <template #footer>
+<div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button btn2-cancel denial-btn" @click="cancel">
           キャンセル
@@ -292,11 +280,12 @@
         </v-ons-button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import MstComplaintComponentMixin from "@/components/master-maintenance/mst-complaint/MstComplaintComponentMixin";
@@ -308,8 +297,9 @@ import {
 import CommonNumberInputComponent from "@/components/treatment-record/submenu/common/CommonNumberInputComponent";
 import { Master } from "@/models/common/master-selector-condition/Master";
 import { MstCompTreatment } from "@/models/master-maintenance/mst-complaint/MstCompTreatment";
-import moment from "moment";
-import BigNumber from "bignumber.js";
+import dayjs from "@/compat/date/dayjs";
+import BigNumber from "@/compat/number/bignumber";
+import { queryElementBySelectors, queryElementsBySelectors } from "@/functions/common/LayoutMeasureHelper";
 import { CODES } from "@/constants/TreatmentRecord";
 import CommonTextArea from "@/components/common/CommonTextArea";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
@@ -388,9 +378,6 @@ export default {
 
         // 最新の薬剤を取得
         const medicine = medicineAndClassResponse[0].data;
-        // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
-        const filtered = medicineAndClassResponse[2].data.lists.list3.items.filter(item => item.isDisp == 1 && item.isDel == 0);
-        // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
         // 薬剤マスタ or 調整薬剤マスタ
         let treatMedicine = null;
         const mstMedicine = medicine.filter(m => {
@@ -501,10 +488,14 @@ export default {
     /**
      * 処置薬剤選択イベント処理
      */
-    onSelectTreatMedicine() {
+    onSelectTreatMedicine(master) {
+      const selectedModel =
+        master && typeof master === "object" && "cd" in master
+          ? master
+          : this.selectedTreatMedicine.model;
       // 選択された薬剤コードが数値ではない場合、調整薬剤とする.
       let medicineCd;
-      if (this.selectedTreatMedicine.model.cd === null) {
+      if (selectedModel.cd === null) {
         // 薬剤で未登録選択時 → 処置
         // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
         //this.actualModel.treatClass = "2";
@@ -514,10 +505,10 @@ export default {
       } else {
         // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
         //if (isNaN(this.selectedTreatMedicine.model.cd)) {
-          if (this.selectedTreatMedicine.model.type == 2) {
+          if (selectedModel.type == 2) {
           // 調製薬剤
-          //medicineCd = Number(this.selectedTreatMedicine.model.cd.split("$")[0]);
-          medicineCd = Number(this.selectedTreatMedicine.model.cd);
+          //medicineCd = Number(selectedModel.cd.split("$")[0]);
+          medicineCd = Number(selectedModel.cd);
         // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
           // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
           //this.actualModel.treatClass = "0"
@@ -525,14 +516,14 @@ export default {
           // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
         } else {
           // 通常薬剤
-          medicineCd = this.selectedTreatMedicine.model.cd;
+          medicineCd = selectedModel.cd;
           // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
           //this.actualModel.treatClass = "1"
           this.actualModel.treatClass = 1;
           // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
         }
         this.actualModel.treatMedicine.code = medicineCd;
-        this.actualModel.treatMedicine.name = this.selectedTreatMedicine.model.name;
+        this.actualModel.treatMedicine.name = selectedModel.name;
       }
       // del #7727 処置薬剤と数量は必須であってはいけない。start
       // document.getElementsByClassName("input_change")[1].classList.remove("input-invalid");
@@ -608,11 +599,11 @@ export default {
         // 処置以外は薬剤と数量が必須
         if (
           !this.actualModel.treatMedicine ||
-          (!this.actualModel.treatMedicine.code || !this.actualModel.amount)
+          (!this.actualModel.treatMedicine.code || this.isAmountEmpty(this.actualModel.amount))
         ) {
           // mod #7727 処置薬剤と数量は必須であってはいけない。start
           //document.getElementsByClassName("input-required")[2]?.classList?.add("input-invalid");
-          document.getElementsByClassName("input-required")[0]?.classList?.add("input-invalid");
+          this.getRequiredInputElements()[0]?.classList?.add("input-invalid");
           // mod #7727 処置薬剤と数量は必須であってはいけない。end
           // add 愁訴処置マスタ 障害対応 No237 詳細画面項目「処置薬剤」を入力→確定を押下→未入力と提示される 孔 start
           // const message =
@@ -628,7 +619,7 @@ export default {
             // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
           if (!this.actualModel.treatMedicine.code)
             message += '<br>&nbsp;&nbsp;・処置薬剤';
-          if (!this.actualModel.amount)
+          if (this.isAmountEmpty(this.actualModel.amount))
             message += '<br>&nbsp;&nbsp;・数量';
           message += '</div>';
           // add 愁訴処置マスタ 障害対応 No237 詳細画面項目「処置薬剤」を入力→確定を押下→未入力と提示される 孔 end
@@ -644,6 +635,16 @@ export default {
         // TODO 削除済みマスタ（薬剤、手技、用法）を参照していないこと
       }
       return true;
+    },
+
+    getRequiredInputElements() {
+      return queryElementsBySelectors(['.input-required'], this.$el || null);
+    },
+    getChangedInputElements() {
+      return queryElementsBySelectors(['.input_change'], this.$el || null);
+    },
+    getTreatmentTextareaElement() {
+      return queryElementBySelectors(['#com-textarea-treatment'], this.$el || null);
     },
     /**
      * 薬剤情報をクリア(未登録を選択)時に薬剤をクリアする.
@@ -663,6 +664,10 @@ export default {
     setContentData(newValue) {
       this.actualModel.treatment = newValue;
     },
+    // 数量は0も有効値のため、未入力判定では空文字とnullのみを対象にする。
+    isAmountEmpty(value) {
+      return value === null || value === undefined || value === "";
+    },
     // del #7727 処置薬剤と数量は必須であってはいけない。start
     // setCss(value) {
     //   if(value && document.getElementsByClassName("input-invalid")[0])
@@ -675,8 +680,8 @@ export default {
     //     document.getElementsByClassName("input_change")[2].classList.remove("input-invalid");
     // },
     setCss2(value) {
-      if(value !== null && value !== 0)
-        document.getElementsByClassName("input_change")[0].classList.remove("input-invalid");
+      if(!this.isAmountEmpty(value))
+        this.getChangedInputElements()[0]?.classList?.remove("input-invalid");
     },
     // mod #7727 処置薬剤と数量は必須であってはいけない。end
   },
@@ -720,14 +725,14 @@ export default {
           return null;
         }
         // #5590 2023/04/20 ×を常に表示するように修正 張博 end
-        return moment(this.actualModel.inHospAStartdate).format("YYYY-MM-DD");
+        return dayjs(this.actualModel.inHospAStartdate).format("YYYY-MM-DD");
       },
       set: function(newValue) {
         /* mod 日付項目修正 楊 start */
         if(newValue === "") {
           this.actualModel.inHospAStartdate = null;
         }else{
-          this.actualModel.inHospAStartdate = moment(newValue).format("YYYYMMDD");
+          this.actualModel.inHospAStartdate = dayjs(newValue).format("YYYYMMDD");
         }
         /* mod 日付項目修正 楊 end */
       }
@@ -739,14 +744,14 @@ export default {
           return null
         }
         // #5590 2023/04/20 ×を常に表示するように修正 張博 end
-        return moment(this.actualModel.inHospBStartdate).format("YYYY-MM-DD");
+        return dayjs(this.actualModel.inHospBStartdate).format("YYYY-MM-DD");
       },
       set: function(newValue) {
         /* mod 日付項目修正 楊 start */
         if(newValue === "") {
           this.actualModel.inHospBStartdate = null;
         }else{
-          this.actualModel.inHospBStartdate = moment(newValue).format("YYYYMMDD");
+          this.actualModel.inHospBStartdate = dayjs(newValue).format("YYYYMMDD");
         }
         /* mod 日付項目修正 楊 end */
       }
@@ -769,7 +774,7 @@ export default {
   },
   mounted() {
     this.$nextTick(() => {
-      document.getElementById("com-textarea-treatment").focus();
+      this.getTreatmentTextareaElement()?.focus();
     });
   }
 };
@@ -782,63 +787,69 @@ export default {
   font-family: inherit;
   padding: 1em;
 }
-.expandable-content >>> ons-row {
+.expandable-content :deep(ons-row) {
   margin-top: 15px;
 }
-.expandable-content >>> .k-button,
-.expandable-content >>> .text-input,
-.expandable-content >>> textarea,
-.expandable-content >>> select {
+.expandable-content :deep(.k-button),
+.expandable-content :deep(textarea),
+.expandable-content :deep(select) {
   font-size: 1em;
   line-height: unset;
   font-family: inherit;
 }
-.expandable-content >>> textarea {
+
+.expandable-content :deep(.text-input) {
+  font-size: 1em;
+  line-height: unset;
+  font-family: inherit;
+}
+.expandable-content :deep(textarea) {
   width: 100%;
   border: 1px solid var(--master-maintenance-complaint-select-border-color);
 }
-.expandable-content >>> .num-value ons-input {
+.expandable-content :deep(.num-value ons-input) {
   width: 8em;
 }
-.number-input >>> .title,
-.treat-medicine-selector >>> .title {
+.number-input :deep(.title),
+.treat-medicine-selector :deep(.title) {
   flex: 0 0 30%;
   max-width: 30%;
 }
-.expandable-content >>> ons-col.num-value {
+.expandable-content :deep(ons-col.num-value) {
   display: flex;
   align-items: center;
 }
-.expandable-content >>> .num-value ons-input {
+.expandable-content :deep(.num-value ons-input) {
   min-width: 8.5em;
 }
-.treat-medicine-selector >>> .theme {
+.treat-medicine-selector :deep(.theme) {
   vertical-align: -webkit-baseline-middle;
 }
-.treat-medicine-selector >>> .select-button {
+.treat-medicine-selector :deep(.select-button) {
   text-align: center;
   background-image: none;
 }
-.treat-medicine-selector >>> .k-button {
+.treat-medicine-selector :deep(.k-button) {
   width: auto;
 }
 .inhosp-style {
   font-size: 1em;
   height: 31px;
 }
-.input-required >>> textarea {
+.input-required :deep(textarea) {
   color: black;
   background-color: #ffff99;
 }
-.input-required >>> input {
+/* 処置以外は数量が必須のため、入力済みでも必須項目の黄色背景を維持する。 */
+.input-required :deep(input.text-input) {
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> textarea {
+.input-invalid :deep(textarea) {
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }
-.input-invalid >>> input {
+.input-invalid :deep(input.text-input) {
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }

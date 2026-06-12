@@ -10,7 +10,7 @@
 import { ApiHelper } from "@/apis/AxiosHelper";
 
 export function getErrorMessage(fileName, methodName, err) {
-  var tmpMessage = '';
+  var tmpMessage;
   if (err.response) {
     if (err.response.data.errorMessage == undefined) {
       tmpMessage = err.response.status + ' ' + err.response.statusText;

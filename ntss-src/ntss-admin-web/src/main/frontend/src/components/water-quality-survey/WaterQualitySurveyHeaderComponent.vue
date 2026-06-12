@@ -43,7 +43,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -68,7 +68,7 @@
                 float
                 class="ntss-input-date ntss-custom-input"
                 type="date"
-                v-validate="'required|date_format:yyyy-MM-dd'"
+                v-rules="'required|date_format:yyyy-MM-dd'"
               /> -->
               <!-- #5590 2023/04/19 ×を常に表示するように修正 張博 start -->
               <!-- <input
@@ -76,7 +76,7 @@
                 float
                 class="ntss-input-date ntss-custom-input"
                 type="date"
-                v-validate="'required|date_format:yyyy-MM-dd'"
+                v-rules="'required|date_format:yyyy-MM-dd'"
                 max="9999-12-31"
                 id="startDate"
                 @keyup="showMsg(1)"
@@ -110,7 +110,7 @@
                 float
                 class="ntss-input-date ntss-custom-input"
                 type="date"
-                v-validate="'required|date_format:yyyy-MM-dd'"
+                v-rules="'required|date_format:yyyy-MM-dd'"
               /> -->
               <!-- #5590 2023/04/19 ×を常に表示するように修正 張博 start -->
               <!-- <input
@@ -118,7 +118,7 @@
                 float
                 class="ntss-input-date ntss-custom-input"
                 type="date"
-                v-validate="'required|date_format:yyyy-MM-dd'"
+                v-rules="'required|date_format:yyyy-MM-dd'"
                 id="endDate"
                 max="9999-12-31"
                 @keyup="showMsg(2)"
@@ -231,9 +231,9 @@
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
-import { mapGetters, mapActions } from "vuex";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
 import commonSearchArea from "@/components/common/CommonSearchArea";
@@ -249,6 +249,7 @@ import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
 // add FNSI-横展開 日付のチェックの追加 徐 end
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
+import { getScopedDocument, getScopedElementById, getScopedSessionStorage } from "@/functions/common/LayoutMeasureHelper";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
@@ -335,7 +336,7 @@ export default {
     // 表示領域の幅をCSS変数を利用して書き換える
     areaWidthStyle() {
       // モバイル端末とで幅を分ける
-      const ua = navigator.userAgent;
+      const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
       if (ua.match(/Android/) || ua.match(/iPhone|iPad/)) {
         return { width: "6rem" };
       } else {
@@ -365,20 +366,25 @@ export default {
     popoverPreShow,
     popoverPostShow,
     popoverPosthide,
+    getOwnerDocument() {
+      return getScopedDocument(this.$el || null);
+    },
+    getHeaderElementById(id) {
+      return getScopedElementById(id, this.$el || null) || this.getOwnerDocument()?.getElementById?.(id) || null;
+    },
     // 表示期間のデフォルト設定取得
     getDefaultDate(dataField) {
       const defaultCondition = this.getDefaultCondition;
       if (defaultCondition && defaultCondition[dataField]) {
         return defaultCondition[dataField];
       }
-      return getFormatStartDate();
+      return dataField === "toDate" ? this.getFormatEndDate() : this.getFormatStartDate();
     },
     getFormatStartDate() {
       const currentDate = new Date();
       const prev = new Date(
-        new Date().setFullYear(currentDate.getFullYear() - 1)
-      );
-      return moment(prev).format("YYYY-MM-DD");
+        new Date().setFullYear(currentDate.getFullYear() - 1));
+      return dayjs(prev).format("YYYY-MM-DD");
     },
 
     // add  FNSI-権限 姜 start
@@ -389,9 +395,8 @@ export default {
     getFormatEndDate() {
       const currentDate = new Date();
       const next = new Date(
-        new Date().setFullYear(currentDate.getFullYear() + 1)
-      );
-      return moment(next).format("YYYY-MM-DD");
+        new Date().setFullYear(currentDate.getFullYear() + 1));
+      return dayjs(next).format("YYYY-MM-DD");
     },
 
     getSurveyTypeName(cd) {
@@ -467,14 +472,12 @@ export default {
       // 変更がある場合は検査セット設定を更新する
       if (
         this.inProgress.fromDate === "" ||
-        moment(this.inProgress.fromDate).isAfter(moment(this.inProgress.toDate))
-      ) {
+        dayjs(this.inProgress.fromDate).isAfter(dayjs(this.inProgress.toDate))) {
         this.inProgress.fromDate = this.getCondition.fromDate;
       }
       if (
         this.inProgress.toDate === "" ||
-        moment(this.inProgress.toDate).isBefore(moment(this.inProgress.fromDate))
-      ) {
+        dayjs(this.inProgress.toDate).isBefore(dayjs(this.inProgress.fromDate))) {
         this.inProgress.toDate = this.getCondition.toDate;
       }
       this.localCondition = deepCopy(this.inProgress);
@@ -484,7 +487,7 @@ export default {
       });
     },
     formatDate(date) {
-      return moment(date).format("YYYY/MM/DD");
+      return dayjs(date).format("YYYY/MM/DD");
     },
     internalServerError(error) {
       console.log(error);
@@ -500,29 +503,29 @@ export default {
     getFormatStartDateFromCalendar(paramDate) {
       const currentDate = new Date(paramDate);
       const prev = new Date(
-        currentDate.setFullYear(currentDate.getFullYear() - 1)
-      );
-      return moment(prev).format("YYYY-MM-DD");
+        currentDate.setFullYear(currentDate.getFullYear() - 1));
+      return dayjs(prev).format("YYYY-MM-DD");
     },
 
     getFormatEndDateFromCalendar(paramDate) {
       const currentDate = new Date(paramDate);
       const next = new Date(
-        currentDate.setFullYear(currentDate.getFullYear() + 1)
-      );
-      return moment(next).format("YYYY-MM-DD");
+        currentDate.setFullYear(currentDate.getFullYear() + 1));
+      return dayjs(next).format("YYYY-MM-DD");
     },
     // add FNSI-横展開 日付のチェックの追加 徐 start
     showMsg(e) {
       if (e === 1) {
-        if (this.inProgress.fromDate && document.getElementById("startDate").validationMessage) {
+        const startDateInput = this.getHeaderElementById("startDate");
+        if (this.inProgress.fromDate && startDateInput?.validationMessage) {
           this.showStartError = true;
         } else {
           this.showStartError = false;
         }
       }
       if (e === 2) {
-        if (this.inProgress.toDate && document.getElementById("endDate").validationMessage) {
+        const endDateInput = this.getHeaderElementById("endDate");
+        if (this.inProgress.toDate && endDateInput?.validationMessage) {
           this.showEndError = true;
         } else {
           this.showEndError = false;
@@ -540,25 +543,15 @@ export default {
       if (condObj.fromDate != '' && condObj.toDate != '') {
         condList.push({ name:"表示期間", text:this.formatDate(condObj.fromDate) + " ~ " + this.formatDate(condObj.toDate) });
       }
-      // 調査種別
+      // 検査種別
       if (condObj.surveyTypeCd.length > 0) {
-        let strType = "";
-        condObj.surveyTypeCd.forEach(cd => {
-          strType = strType + this.getSurveyTypeName(cd) + "、";
-        });
-        // mod FNSI-redmine4807 徐 start
-        // condList.push({ name:"調査種別", text:strType.slice(0, -1) });
-        condList.push({ name:"検査種別", text:strType.slice(0, -1) });
-        // mod FNSI-redmine4807 徐 end
-      }
-      // add FNSI-redmine4297 徐 start
-      else if (condObj.surveyTypeCd.length == 0) {
-        // mod FNSI-redmine4807 徐 start
-        // condList.push({ name:"調査種別", text:"すべて" });
+        const validCdList = condObj.surveyTypeCd.filter(cd => this.mstSurveyType.some(r => r.surveyTypeCd == cd));
+        const text = validCdList.length > 0 ? validCdList.map(cd => this.getSurveyTypeName(cd)).join("、") : "すべて";
+        condObj.surveyTypeCd = validCdList;
+        condList.push({ name:"検査種別", text });
+      } else {
         condList.push({ name:"検査種別", text:"すべて" });
-        // mod FNSI-redmine4807 徐 end
       }
-      // add FNSI-redmine4297 徐 end
       // ベッドグループ
       if (condObj.bedGroupCd !== null) {
         let strBed = this.getRoomBedGroupName(condObj.bedGroupCd);
@@ -575,7 +568,7 @@ export default {
         condList.push({ name:"ベッドグループ", text:"すべて" });
       }
       // add #11285 機能帳票の印刷情報対応② 高 start
-      sessionStorage.setItem('roomBedGroupNameWater', JSON.stringify(condList.find(item => item.name === "ベッドグループ").text));
+      getScopedSessionStorage(this.$el || this).setItem('roomBedGroupNameWater', JSON.stringify(condList.find(item => item.name === "ベッドグループ").text));
       // add #11285 機能帳票の印刷情報対応② 高 end
       // add FNSI-redmine4297 徐 end
       // 装置名列表示
@@ -592,10 +585,10 @@ export default {
       this.conditionList = condList;
       this.setCondition(condObj);
       // add FNSI-redmine3996 徐 start
-      var startDate = moment(condObj.fromDate).format("YYYYMMDD");
-      var endDate = moment(condObj.toDate).format("YYYYMMDD");
+      var startDate = dayjs(condObj.fromDate).format("YYYYMMDD");
+      var endDate = dayjs(condObj.toDate).format("YYYYMMDD");
       setTimeout(() => {
-        var water = document.getElementById("water");
+        var water = this.getOwnerDocument()?.getElementById?.("water");
         if (water !== null && water !== undefined) {
           var nowDate = new Date();
           var today = nowDate.getFullYear() + '';
@@ -610,12 +603,12 @@ export default {
             today = today + nowDate.getDate();
           }
           var setDay = today;
+          const water = this.getOwnerDocument()?.getElementById?.("water");
           if (today > startDate && today >= endDate) {
-            water.scrollLeft = 9999999999;
+            if (water) water.scrollLeft = 9999999999;
           } else if (today <= startDate && today < endDate) {
-            water.scrollLeft = 0;
+            if (water) water.scrollLeft = 0;
           } else if (today > startDate && today < endDate) {
-            var water = document.getElementById("water");
             if (water !== null && water !== undefined) {
               let row = water.childNodes[0].childNodes[1].childNodes[0].childNodes[0].childNodes[0].childNodes;
               var length = 0;
@@ -634,7 +627,6 @@ export default {
       // add FNSI-redmine3996 徐 end
     }
   },
-  watch: {},
   async created() {
     // add  FNSI-権限 姜 start
     this.hasTreatmentRecordAuthority = this.getTreatmentRecordAuthority();
@@ -684,7 +676,7 @@ export default {
 
     this.localCondition = this.getCondition;
     // mod FutreNetWeb+SI課題管理No6831 趙 start
-    // if (moment(this.getWaterQualityDayView).format("YYYY-MM-DD") == "Invalid date") {
+    // if (dayjs(this.getWaterQualityDayView).format("YYYY-MM-DD") == "Invalid date") {
     //   if (this.localCondition.fromDate === "") {
     //     this.localCondition.fromDate = this.getFormatStartDate();
     //   }
@@ -694,13 +686,13 @@ export default {
     // } else {
     //   this.setItemDateFromCalendar(this.getWaterQualityDayView);
     //   this.localCondition.fromDate = this.getFormatStartDateFromCalendar(
-    //     moment(this.getWaterQualityDayView).format("YYYY-MM-DD")
+    //     dayjs(this.getWaterQualityDayView).format("YYYY-MM-DD")
     //   );
     //   this.localCondition.toDate = this.getFormatEndDateFromCalendar(
-    //     moment(this.getWaterQualityDayView).format("YYYY-MM-DD")
+    //     dayjs(this.getWaterQualityDayView).format("YYYY-MM-DD")
     //   );
     if (this.keepHistories[0].routerName === "facility-calendar"){
-      if (moment(this.getWaterQualityDayView).format("YYYY-MM-DD") == "Invalid date") {
+      if (dayjs(this.getWaterQualityDayView).format("YYYY-MM-DD") == "Invalid date") {
         if (this.localCondition.fromDate === "") {
           this.localCondition.fromDate = this.getFormatStartDate();
         }
@@ -709,8 +701,8 @@ export default {
         }
       } else {
         this.setItemDateFromCalendar(this.getWaterQualityDayView);
-        this.localCondition.fromDate = moment(this.getWaterQualityDayView).format("YYYY-MM-DD");
-        this.localCondition.toDate = moment(this.getWaterQualityDayView).format("YYYY-MM-DD");
+        this.localCondition.fromDate = dayjs(this.getWaterQualityDayView).format("YYYY-MM-DD");
+        this.localCondition.toDate = dayjs(this.getWaterQualityDayView).format("YYYY-MM-DD");
         this.localCondition.surveyTypeCd = [];
         this.localCondition.bedGroupCd = null;
         const defaultWaterQualitySurvey = this.defaultSetting[WATER_QUALITY_SURVEY.KEY_NAME];
@@ -795,11 +787,24 @@ export default {
   pointer-events: none;
   opacity: 0.5;
 }
-.water-quality-survey-header >>> .popover {
+.water-quality-survey-header :deep(.popover) {
   width: auto;
 }
-.water-quality-survey-header >>> .popover__content {
+.water-quality-survey-header :deep(.popover__content) {
   max-height: 400px;
   width: 430px;
+}
+:deep(.k-legacy-multiselect .k-input-inner.k-input, .k-legacy-multiselect input.k-input){
+  /*** #9846 start*/
+  /***  width: 49px !important; */
+  min-width: 49px !important;
+  max-width: 78px !important;
+  /*** #9846 end*/
+}
+:deep(.k-legacy-multiselect .k-chip-remove-action .k-icon::before),
+:deep(.k-legacy-multiselect .k-chip-remove-action .k-svg-icon::before){
+  font-size: 24px !important;
+  font-weight: 300 !important;
+  margin-top: 5.5px;
 }
 </style>

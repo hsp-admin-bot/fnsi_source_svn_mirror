@@ -96,6 +96,7 @@ namespace NKKWeightTool
         /// </summary>
         //----------------------------------------------------------------------------------------------------
         private Dictionary<String, String> m_lstViewLogInfo = new Dictionary<String, String>();
+        private readonly object m_lstViewLogInfoLock = new object();
         //----------------------------------------------------------------------------------------------------
         /// <summary>
         /// 画面タイトル
@@ -358,8 +359,14 @@ namespace NKKWeightTool
                 DateTime dtnow = DateTime.Now;
                 StringBuilder sbwork = new StringBuilder();
 
+                List<KeyValuePair<String, String>> logSnapshot;
+                lock (this.m_lstViewLogInfoLock)
+                {
+                    logSnapshot = new List<KeyValuePair<String, String>>(this.m_lstViewLogInfo);
+                }
+
                 // 保持要素すべてが対象
-                foreach ( KeyValuePair<String, String> item in this.m_lstViewLogInfo )
+                foreach ( KeyValuePair<String, String> item in logSnapshot )
                 {
                     // 項目の分割
                     String[] stritems = item.Value.Split('\t');
@@ -406,19 +413,22 @@ namespace NKKWeightTool
                 String[] stritem = strline.Split('\t');
 
                 // 処理履歴の保持
-                if (this.m_lstViewLogInfo.ContainsKey(stritem[0]) == true)
+                lock (this.m_lstViewLogInfoLock)
                 {
-                    // 該当情報あり
+                    if (this.m_lstViewLogInfo.ContainsKey(stritem[0]) == true)
+                    {
+                        // 該当情報あり
 
-                    //　更新
-                    this.m_lstViewLogInfo[stritem[0]] = strline;
-                }
-                else
-                {
-                    // 該当情報なし
+                        //　更新
+                        this.m_lstViewLogInfo[stritem[0]] = strline;
+                    }
+                    else
+                    {
+                        // 該当情報なし
 
-                    //　新規追加
-                    this.m_lstViewLogInfo.Add(stritem[0], strline);
+                        //　新規追加
+                        this.m_lstViewLogInfo.Add(stritem[0], strline);
+                    }
                 }
 
                 // 画面が表示されている場合
@@ -547,7 +557,12 @@ namespace NKKWeightTool
         private void FormViewLog_Shown(object sender, EventArgs e)
         {
             // 処理履歴の表示
-            foreach( KeyValuePair<String, String> item in this.m_lstViewLogInfo)
+            List<KeyValuePair<String, String>> logSnapshot;
+            lock (this.m_lstViewLogInfoLock)
+            {
+                logSnapshot = new List<KeyValuePair<String, String>>(this.m_lstViewLogInfo);
+            }
+            foreach( KeyValuePair<String, String> item in logSnapshot)
             {
                 ShowListView(item.Value);
             }

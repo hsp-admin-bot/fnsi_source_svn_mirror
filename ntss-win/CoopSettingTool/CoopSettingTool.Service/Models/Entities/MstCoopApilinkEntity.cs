@@ -205,6 +205,14 @@ namespace CoopSettingTool.Service.Models
         public string IsDel { get; set; }
 
         /// <summary>
+        /// Gets or sets the coop version.
+        /// </summary>
+        /// <value>The coop version.</value>
+        [JsonProperty("coopVersion")]
+        [Browsable(false)]
+        public string CoopVersion { get; set; }
+
+        /// <summary>
         /// Gets or sets the user identifier.
         /// </summary>
         /// <value>The user identifier.</value>
@@ -235,20 +243,14 @@ namespace CoopSettingTool.Service.Models
         /// <returns><c>true</c> if the specified apilink is similar; otherwise, <c>false</c>.</returns>
         public bool IsSimilar(MstCoopApilinkEntity apilink)
         {
-            if (this.CoopCd.Equals(apilink.CoopCd)
-                && this.CoopCdIndex.Equals(apilink.CoopCdIndex)
-                && this.Crud.Equals(apilink.Crud)
-                && this.Direction.Equals(apilink.Direction)
-                && this.ApiTimingIo.Equals(apilink.ApiTimingIo)
-                && this.ApiTimingBa.Equals(apilink.ApiTimingBa)
-                && this.ApiTimingSeq.Equals(apilink.ApiTimingSeq))
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            return string.Equals(this.CoopCd, apilink.CoopCd, StringComparison.Ordinal)
+                && string.Equals(this.CoopCdIndex, apilink.CoopCdIndex, StringComparison.Ordinal)
+                && string.Equals(this.CoopVersion, apilink.CoopVersion, StringComparison.Ordinal)
+                && string.Equals(this.Crud, apilink.Crud, StringComparison.Ordinal)
+                && string.Equals(this.Direction, apilink.Direction, StringComparison.Ordinal)
+                && string.Equals(this.ApiTimingIo, apilink.ApiTimingIo, StringComparison.Ordinal)
+                && string.Equals(this.ApiTimingBa, apilink.ApiTimingBa, StringComparison.Ordinal)
+                && this.ApiTimingSeq.Equals(apilink.ApiTimingSeq);
         }
     }
 }

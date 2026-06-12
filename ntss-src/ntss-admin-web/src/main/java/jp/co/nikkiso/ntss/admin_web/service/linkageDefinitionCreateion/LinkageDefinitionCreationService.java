@@ -31,11 +31,16 @@ public interface LinkageDefinitionCreationService {
 	/* FacilityCd、CoopCd、CoopCdSubによってMstCoopLayoutを選択します */
 	List<MstCoopLayout> selectMstCoopLayoutByFacilityCdOrCoopCdOrCoopCdSub(MstCoopLayout mstCoopLayout) throws Exception;
 
+	/* コピー元のレイアウトを取得します */
+	List<MstCoopLayout> selectSourceMstCoopLayouts(MstCoopLayout mstCoopLayout) throws Exception;
+
 	/* MstCoopLayoutをCoopNameで選択します */
 	Page<MstCoopLayout> selectMstCoopLayoutByCoopName(Pageable pageable, String coop_name);
 
 	/* 最新のMstCoopLayoutのCtlNoを選択します */
 	List<String> selectNewestMstCoopLayoutCtlNoByFacilityCd(String facilityCd);
+
+	List<MstCoopLayout> selectCurrentMstCoopLayoutsByFacilityCd(String facilityCd);
 
 	/* MstCoopLayoutを保存する */
 	boolean submitMstCoopLayout(MstCoopLayout mstCoopLayout, final Long userId);
@@ -47,8 +52,13 @@ public interface LinkageDefinitionCreationService {
 	/* 最新のMstCoopLayoutDetailのCtlNoを選択します */
 	List<String> selectNewestMstCoopLayoutDetailCtlNoByFacilityCd(String facilityCd);
 
+	List<MstCoopLayoutDetail> selectCurrentMstCoopLayoutDetailsByFacilityCd(String facilityCd);
+
 	/* CtlNoによってMstCoopLayoutDetailを選択します */
 	MstCoopLayoutDetail selectMstCoopLayoutDetailByCtlNo(Long ctlNo);
+
+	/* コピー元のレイアウト詳細を取得します */
+	List<MstCoopLayoutDetail> selectSourceMstCoopLayoutDetails(MstCoopLayoutDetail mstCoopLayoutDetail) throws Exception;
 
 	/* MstCoopLayoutDetailを保存する */
 	boolean submitMstCoopLayoutDetail(MstCoopLayoutDetail mstCoopLayoutDetail, final Long userId);
@@ -56,8 +66,13 @@ public interface LinkageDefinitionCreationService {
 	/* 最新のMstCoopFilenameのCtlNoを選択します */
 	List<String> selectNewestMstCoopFilenameCtlNoByFacilityCd(String facilityCd);
 
+	List<MstCoopFilename> selectCurrentMstCoopFilenamesByFacilityCd(String facilityCd);
+
 	/* CtlNoによってMstCoopFilenameを選択します */
 	MstCoopFilename selectMstCoopFilenameByCtlNo(Long ctlNo);
+
+	/* コピー元のMstCoopFilenameを取得します */
+	List<MstCoopFilename> selectSourceMstCoopFilenames(MstCoopFilename mstCoopFilename) throws Exception;
 
 	/* MstCoopFilenameを保存する */
 	boolean submitMstCoopFilename(MstCoopFilename mstCoopFilename, final Long userId);
@@ -78,6 +93,11 @@ public interface LinkageDefinitionCreationService {
 
 	/* 最新のMstCoopDistributeのCtlNoを取得する */
 	List<String> selectNewestMstCoopDistributeCtlNoByFacilityCd(String facilityCd);
+
+	List<MstCoopDistribute> selectCurrentMstCoopDistributesByFacilityCd(String facilityCd);
+
+	/* コピー元のMstCoopDistributeを取得します */
+	List<MstCoopDistribute> selectSourceMstCoopDistributes(MstCoopDistribute mstCoopDistribute) throws Exception;
 
 	/* MstCoopDistributeを保存する */
 	boolean submitMstCoopDistribute(MstCoopDistribute mstCoopDistribute, final Long userId);
@@ -108,6 +128,9 @@ public interface LinkageDefinitionCreationService {
 
 	/* 連携API関連付けマスタEntityを取得する */
 	List<MstCoopApilink> selectMstCoopApilinksByFacility(String facilityCd) throws Exception;
+
+	/* コピー元の連携API関連付けマスタEntityを取得する */
+	List<MstCoopApilink> selectSourceMstCoopApilinks(MstCoopApilink mstCoopApilink) throws Exception;
 
 	/* 連携API関連付けマスタEntityを保存する */
 	Boolean submitMstCoopApilink(MstCoopApilink mstCoopApilink, Long userId) throws Exception;

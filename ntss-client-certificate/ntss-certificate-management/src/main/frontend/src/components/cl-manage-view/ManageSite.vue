@@ -82,7 +82,7 @@
 <!--           <kendo-grid
                 ref="facilityGrid"
                 id="facility-grid"
-                :dataSource="this.falicityData"
+                :dataSource="falicityData"
                 :editable="true"
                 :pageable="pageable"
                 :selectable="true"
@@ -109,10 +109,9 @@
                 @hook:mounted="setTableRecordHistory"
               >
                 <!-- mod #6690 「操作するたびに対象施設が表示していない1ページ目にもどる」について、対応する。 dengshen end -->
-                <template v-for="(column, index) in facilitiesColumns">
+                <template v-for="(column, index) in facilitiesColumns" :key="index">
                   <kendo-grid-column
                     v-if="column.field === '$modalType'"
-                    :key="index"
                     :title="column.title"
                     :field="column.field"
                     :hidden="column.hidden"
@@ -127,7 +126,6 @@
                   />
                   <kendo-grid-column
                     v-else-if="column.field === 'isLocked'"
-                    :key="index"
                     :title="column.title"
                     :field="column.field"
                     :hidden="column.hidden"
@@ -142,7 +140,6 @@
                   <!-- add FNSI-チェックボックスを追加 解 start -->
                   <kendo-grid-column
                     v-else-if="column.field === 'facilitiesChk'"
-                    :key="index"
                     :title="column.title"
                     :field="column.field"
                     :hidden="column.hidden"
@@ -160,7 +157,6 @@
                   <!--add FNSI-【1006】最新の改修対象一覧.NO51を修正 周安寧 start -->
                   <!-- <kendo-grid-column
                     v-else
-                    :key="index"
                     :title="column.title"
                     :field="column.field"
                     :hidden="column.hidden"
@@ -172,7 +168,6 @@
                   ></kendo-grid-column> -->
                   <kendo-grid-column
                     v-else
-                    :key="index"
                     :title="column.title"
                     :field="column.field"
                     :hidden="column.hidden"
@@ -262,10 +257,9 @@
                 :sort="onSortUser"
                 @change="userOnChange"
               >
-                <template v-for="(column, index) in userColumns">
+                <template v-for="(column, index) in userColumns" :key="index">
                   <kendo-grid-column
                     v-if="column.field === '$modalType'"
-                    :key="index"
                     :title="column.title"
                     :field="column.field"
                     :hidden="column.hidden"
@@ -280,7 +274,6 @@
                   />
                   <kendo-grid-column
                     v-else-if="column.field === 'isLock'"
-                    :key="index"
                     :title="column.title"
                     :field="column.field"
                     :hidden="column.hidden"
@@ -293,7 +286,6 @@
                   />
                   <kendo-grid-column
                     v-else
-                    :key="index"
                     :title="column.title"
                     :field="column.field"
                     :hidden="column.hidden"
@@ -478,9 +470,18 @@ export default {
     }
   },
   mounted() {
-    this.calculateTableHeight();
-    this.calculateMarginModalHeight();
+
     this.$nextTick(() => {
+
+      this.calculateTableHeight();
+      this.calculateMarginModalHeight();
+      const navigation = performance.getEntriesByType("navigation")[0];
+  const isRefresh = navigation && navigation.type === "reload";
+
+  if (isRefresh) {
+    this.$router.replace({ name: "clManagementView" });
+    return;
+  }
       document.getElementById("searchValue").value = "";
       this.clearModalUserState();
       this.closeCLCertificateAdd();
@@ -877,16 +878,7 @@ export default {
     },
     // 県IDを県名に変換し、それがtrueまたはfalseであるかどうかのロックを決定します
     falicityData() {
-      // add #6690 「操作するたびに対象施設が表示していない1ページ目にもどる」について、対応する。 dengshen start
-      const page = this.getPage;
-      const sort = this.getSort;
-      if (sort || page) {
-        this.$nextTick(() => {
-          sort && $("#facility-grid").data("kendoGrid").dataSource.sort(sort)
-          page && $("#facility-grid").data("kendoGrid").pager.dataSource.page(page)
-        });
-      }
-      // add #6690 「操作するたびに対象施設が表示していない1ページ目にもどる」について、対応する。 dengshen end
+
       let facilityList = this.facilities.map(facility => {
         let prefectureNames = this.prefectureDataSource.filter(
           prefecture => prefecture.value === facility.prefecturesCd
@@ -1007,6 +999,15 @@ export default {
       this.setFacilitySearch(this.facilitySearch);
     },
     // add #6690 「操作するたびに対象施設が表示していない1ページ目にもどる」について、対応する。 dengshen end
+    falicityData() {
+      // mod 20260605 Grid再描画完了後にページ復元するため二重nextTickを使用 start
+      this.$nextTick(() => {
+        this.$nextTick(() => {
+          this.restoreFacilityGridState(this.getSort, this.getPage);
+        });
+      });
+      // mod 20260605 Grid再描画完了後にページ復元するため二重nextTickを使用 end
+    },
     windowHeight() {
       this.calculateTableHeight();
       this.calculateMarginModalHeight();
@@ -1023,24 +1024,56 @@ export default {
       this.manyCerDisabledFlg = list.length <= 1;
     },
     /* add #9245 CL証明書管理サイトの「複数施設証明書の発行する」ボタンが非活性になる 20260403 end */
+    // mod 20260605 ページ・ソートが既に一致している場合は復元処理をスキップする start
+    restoreFacilityGridState(sort, page, delay = 0) {
+      if (!sort && !page) {
+        return;
+      }
+      const apply = () => {
+        const grid = $("#facility-grid").data("kendoGrid");
+        if (!grid) {
+          return;
+        }
+        const dataSource = grid.dataSource;
+        const pagerDataSource = grid.pager?.dataSource || dataSource;
+        const currentPage = typeof pagerDataSource.page === "function"
+          ? pagerDataSource.page()
+          : pagerDataSource._page;
+        const currentSort = typeof dataSource.sort === "function"
+          ? dataSource.sort()
+          : dataSource._sort;
+        if (sort && JSON.stringify(currentSort) !== JSON.stringify(sort)) {
+          dataSource.sort(sort);
+        }
+        if (page && currentPage !== page) {
+          pagerDataSource.page(page);
+        }
+      };
+      if (delay > 0) {
+        setTimeout(apply, delay);
+        return;
+      }
+      apply();
+    },
+    // mod 20260605 ページ・ソートが既に一致している場合は復元処理をスキップする end
     // add #6690 「操作するたびに対象施設が表示していない1ページ目にもどる」について、対応する。 dengshen start
     setTableRecordHistory () {
       let sort = null
       let page = null
-      if (this.$route.params.sort) {
-        sort = this.$route.params.sort[0]
-      }
-      if (this.$route.params.page) {
-        page = this.$route.params.page
-      }
-      if (sort || page) {
-        this.$nextTick(() => {
-          setTimeout(() => {
-            sort && $("#facility-grid").data("kendoGrid").dataSource.sort(sort)
-            page && $("#facility-grid").data("kendoGrid").pager.dataSource.page(page)
-          }, 500);
-        })
-      }
+      // if (this.$route.params.sort) {
+      //   sort = this.$route.params.sort[0]
+      // }
+      // if (this.$route.params.page) {
+      //   page = this.$route.params.page
+      // }
+       if (this.$route.query.sort) {
+    sort = JSON.parse(this.$route.query.sort)
+  }
+  if (this.$route.query.page) {
+    page = Number(this.$route.query.page)
+  }
+
+      this.restoreFacilityGridState(sort, page, 500)
     },
     // add #6690 「操作するたびに対象施設が表示していない1ページ目にもどる」について、対応する。 dengshen end
     // add FNSI-「複数施設証明書を発行する」対応 解 start
@@ -1080,12 +1113,7 @@ export default {
       this.setManyCerDisabledFlg();
       const page = $("#facility-grid").data("kendoGrid").pager.dataSource._page
       const sort = $("#facility-grid").data("kendoGrid").dataSource._sort
-      if (sort || page) {
-        this.$nextTick(() => {
-          sort && $("#facility-grid").data("kendoGrid").dataSource.sort(sort)
-          page && $("#facility-grid").data("kendoGrid").pager.dataSource.page(page)
-        });
-      }
+      this.restoreFacilityGridState(sort, page);
       // add #6690 「操作するたびに対象施設が表示していない1ページ目にもどる」について、対応する。 dengshen end
     },
     getFacilityCds() {
@@ -1199,15 +1227,16 @@ export default {
 
     // add FNSI-「複数施設証明書を発行する」対応 解 end
     calculateTableHeight() {
-      let tabstripHeight = document.getElementsByClassName(
-        "k-tabstrip-wrapper"
-      )[0].scrollHeight;
-      let headerBtnArea = document.getElementsByClassName("header-btn-area")[0]
-        .scrollHeight;
-      let gridFooter = document.getElementsByClassName("grid-footer")[0]
-        .scrollHeight;
-      let kPaperWrap = document.getElementsByClassName("k-pager-wrap")[0]
-        .scrollHeight;
+      const getScrollHeight = (...selectors) => {
+        const element = selectors
+          .map(selector => document.querySelector(selector))
+          .find(Boolean);
+        return element ? element.scrollHeight : 0;
+      };
+      let tabstripHeight = getScrollHeight(".k-tabstrip-wrapper", ".k-tabstrip");
+      let headerBtnArea = getScrollHeight(".header-btn-area");
+      let gridFooter = getScrollHeight(".grid-footer");
+      let kPaperWrap = getScrollHeight(".k-pager-wrap", ".k-grid-pager", ".k-pager");
 
       let subElementHeight =
         tabstripHeight + headerBtnArea + gridFooter + kPaperWrap;
@@ -1301,6 +1330,10 @@ export default {
       this.setShowFacility(true); // 施設表を表示
       this.setShowUser(false); // ユーザーテーブルを表示
       this.setSelectfilterList("prefecturesCd");
+      // add ログアウト後の再ログイン時に操作前のページが復元されないようリセット start
+      this.setPage(1);
+      this.setSort(null);
+      // add ログアウト後の再ログイン時に操作前のページが復元されないようリセット end
       // add #6690 「操作するたびに対象施設が表示していない1ページ目にもどる」について、対応する。 dengshen end
       this.signOut();
       this.$router.push({ name: "clManagementLogin" });
@@ -1383,6 +1416,7 @@ export default {
 
     //行をクリックしたときにユーザーを選択
     userOnChange(event) {
+
       this.setSelectedUser({
         id: event.sender.select()[0].cells[7].innerText,
         userId: event.sender.select()[0].cells[1].innerText,
@@ -1413,7 +1447,12 @@ export default {
       // this.$router.push({ name: "CLCertificateDetails" });
       const page = $("#facility-grid").data("kendoGrid").pager.dataSource._page
       const sort = $("#facility-grid").data("kendoGrid").dataSource._sort
-      this.$router.push({ name: "CLCertificateDetails", params: {page, sort} });
+      // this.$router.push({ name: "CLCertificateDetails", params: {page, sort} });
+      this.$router.push({
+  name: "CLCertificateDetails",
+  query: { page, sort: JSON.stringify(sort) }
+});
+
       // mod #6690 「操作するたびに対象施設が表示していない1ページ目にもどる」について、対応する。 dengshen end
     },
   //add FNSI-【1006】最新の改修対象一覧.NO51を修正 周安寧 start
@@ -1570,6 +1609,14 @@ export default {
     },
     //列をクリックしたときにドロップダウンリストを表示
     editorUserDropDown(container, data) {
+        this.setSelectedUser({
+        id:data.model.id,
+        userId: data.model.userId,
+        userName: data.model.userName,
+        departmentCd: data.model.departmentCd,
+        userRole: data.model.userRole,
+        userPass: ""
+      });
       $(`<input class="k-textbox" name="${data.field}"/>`)
         .appendTo(container)
         .kendoDropDownList({
@@ -1722,6 +1769,7 @@ export default {
     alert() {
       if (this.hasApiError) {
         // エラー保持状況フラグを更新
+
         this.$nextTick(() => {
           const alert = {
             title: "エラー",
@@ -1848,6 +1896,7 @@ export default {
   background-color: grey;
 }
 .dropdown {
+
   margin-left: 20px;
   text-align: center;
   width: 30%;
@@ -1874,6 +1923,23 @@ export default {
   width: 99%;
   /*mod FNSI-【1006】最新の改修対象一覧.NO43を追加 周安寧 end*/
   margin-left: 1%;
+  font-weight: lighter !important;
+}
+.k-tabstrip-top>.k-tabstrip-items-wrapper .k-tabstrip-item:active, .k-tabstrip-top>.k-tabstrip-items-wrapper .k-tabstrip-item.k-active, .k-tabstrip-top>.k-tabstrip-items-wrapper .k-item:active, .k-tabstrip-top>.k-tabstrip-items-wrapper .k-item.k-active
+ {
+    margin-block-end: 0px !important;
+
+ }
+
+ .k-tabstrip-items-wrapper .k-tabstrip-item:focus, .k-tabstrip-items-wrapper .k-tabstrip-item.k-focus, .k-tabstrip-items-wrapper .k-item:focus, .k-tabstrip-items-wrapper .k-item.k-focus {
+    box-shadow: none !important;
+
+
+
+  }
+
+  .k-tabstrip-items .k-tabstrip-item:active, .k-tabstrip-items .k-tabstrip-item.k-active, .k-tabstrip-items .k-tabstrip-item.k-selected, .k-tabstrip-items .k-item:active, .k-tabstrip-items .k-item.k-active, .k-tabstrip-items .k-item.k-selected {
+    font-weight:lighter !important;
 }
 .right {
   text-align: right;
@@ -1905,7 +1971,7 @@ export default {
 .k-grid-toolbar {
   padding: 0.1em 0.3em;
 }
-.kendo-grid-toolbar-style >>> .k-tooltip.k-tooltip-validation {
+.kendo-grid-toolbar-style :deep(.k-tooltip.k-tooltip-validation) {
   width: auto;
 }
 .btn-kendo {
@@ -1920,7 +1986,7 @@ export default {
   float: right;
   border-radius: 5px;
 }
-.k-grid-toolbar >>> * + * {
+.k-grid-toolbar :deep(* + *) {
   margin-left: 0;
 }
 .searchBtn {
@@ -1972,7 +2038,7 @@ export default {
   .k-tabstrip {
     width: 100%;
   }
-  #facility-grid >>> .k-auto-scrollable {
+  #facility-grid :deep(.k-auto-scrollable) {
     width: auto;
   }
 }

@@ -226,11 +226,10 @@
 </template>
 
 <script>
-// add #10359 編集権限の動作不正 dengshen start
+// add 10436#10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import _ from "underscore";
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
 import { deepCopy } from "@/functions/common/CommonFunctions";
@@ -238,18 +237,23 @@ import { AUTHORITY_CODES } from "@/constants/userAuthority";
 import { FUNC_PAT_GROUP, FUNC_PAT_INFO } from "@/constants/function-code";
 import {ADVANCED_SETTINGS} from "@/constants/advancedSettings";
 import {createJournal} from "@/apis/journal";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
-import { MENU_BAR } from "@/components/pat-info/PatInfoConfig.js"
+import { getFooterMenuElement, getContentContainerElement, getPatInfoHeaderAreaElement, getPatHeaderElement, getRightExeButtonElement, getScopedElementById, getScopedElementsByClassName, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
+import { MENU_BAR } from "@/components/pat-info/PatInfoConfig.js";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 // add 10436 同姓同名フラグの更新時に対になる患者のpat_main_historyがinsertされていない 関 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add 10436 同姓同名フラグの更新時に対になる患者のpat_main_historyがinsertされていない 関 end
 
 export default {
+  inject: {
+    getNtssLayoutRootElement: { default: null },
+    getNtssFooterMenuElement: { default: null }
+  },
   mixins: [ComponentGuardMixin],
   props: {
     cardComponents: { required: true },
@@ -358,7 +362,7 @@ export default {
   },
   mounted() {
     // メニューサイズが各デバイスの画面サイズに合わせるため、ダイナミック変化
-    let ua = navigator.userAgent.toUpperCase();
+    let ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toUpperCase();
     let isIpad = false;
     let isIphone = false;
     let isPc = true;
@@ -375,18 +379,21 @@ export default {
     }
     // 展開ボタンを少し下す
     if (isIphone) {
-      let isIphoneObj = document.getElementById('menu-bar-trigger-id');
+      const isIphoneObj = this.getPatInfoElementById('menu-bar-trigger-id');
       if (isIphoneObj) {
         isIphoneObj?.classList?.add("ios-margin-bottom");
       }
     }
-    this.intervalId = setInterval(function(){
+    this.intervalId = setInterval(() => {
       if (isPc || isIpad) {
-        document.getElementById('menu-bar-id').style.overflow = "scroll";
+        const menuBar = this.getPatInfoElementById('menu-bar-id');
+        if (menuBar) {
+          menuBar.style.overflow = "scroll";
+        }
       }
     }, 1000);
     // ResizeObserverの設定
-    const headerObj = document.getElementsByClassName("header");
+    const headerObj = getScopedElementsByClassName("header", this.getPatInfoLayoutRoot());
     if (headerObj.length > 0) {
       let tmpThis = this;
       this.tmpObserver = new ResizeObserver((entries) => {
@@ -413,10 +420,10 @@ export default {
         // 遅延のミリ秒(millisecond)
         let delayMillisecond = 1000;
         // localStorageのportを利用する
-        let defaultPort = localStorage.getItem("CARD_APP_PORT");
+        let defaultPort = (this.$el?.ownerDocument?.defaultView?.localStorage || globalThis?.localStorage)?.getItem("CARD_APP_PORT");
         // add 9511 FNSiカードアプリが一方のブラウザとしかつながらない。　吉 start
         if(!/^\d+$/.test(defaultPort)){
-          localStorage.removeItem("CARD_APP_PORT");
+          (this.$el?.ownerDocument?.defaultView?.localStorage || globalThis?.localStorage)?.removeItem("CARD_APP_PORT");
           defaultPort = null;
         }
         // add 9511 FNSiカードアプリが一方のブラウザとしかつながらない。　吉 end
@@ -495,7 +502,23 @@ export default {
     }
   },
   methods: {
+
     ...mapGetters("account-edit", ["getUserId"]),
+    getPatInfoLayoutRoot() {
+      return typeof this.getNtssLayoutRootElement === "function"
+        ? this.getNtssLayoutRootElement()
+        : (this.$el || null);
+    },
+    getPatInfoElementById(id) {
+      return getScopedElementById(id, this.getPatInfoLayoutRoot());
+    },
+    getPatInfoFirstByClassName(className) {
+      return getScopedElementsByClassName(className, this.getPatInfoLayoutRoot())[0]
+        || null;
+    },
+    queryPatInfo(selector) {
+      return queryScopedSelector(selector, this.getPatInfoLayoutRoot());
+    },
     // mod 10436 同姓同名フラグの更新時に対になる患者のpat_main_historyがinsertされていない 関 start
     // ...mapActions("pat-info", ["clearSelectedPat", "checkHomeDialysisPat", "setAdvancedSettings", "setIsOwnFacility"]),
     ...mapActions("pat-info", ["clearSelectedPat", "checkHomeDialysisPat", "setAdvancedSettings", "setIsOwnFacility", "setSearchedPatList", "sortPatList"]),
@@ -553,7 +576,7 @@ export default {
         pat_id: this.selectedPat.pat_personal_main.pat_id,
         hosp_pat_id: this.selectedPat.pat_personal_main.hosp_pat_id,
         ord_no: "",
-        base_date: moment().format("YYYYMMDD"),
+        base_date: dayjs().format("YYYYMMDD"),
         ope_cd: "007001",
         user_id: this.getUserId()
       };
@@ -598,15 +621,17 @@ export default {
     },
     setAllClass () {
       for (const card of this.cardData) {
-        if (document.getElementById(card)) {
-          document.getElementById(card).setAttribute("class","btn3-normal");
+        const cardEl = this.getPatInfoElementById(card);
+        if (cardEl) {
+          cardEl.setAttribute("class","btn3-normal");
         }
       }
     },
     setAllHeadClass () {
       for (const header of this.headerData) {
-        if (document.getElementById(header)) {
-          document.getElementById(header).children[0].setAttribute("class","card-header color-header");
+        const headerEl = this.getPatInfoElementById(header);
+        if (headerEl?.children?.[0]) {
+          headerEl.children[0].setAttribute("class","card-header color-header");
         }
       }
     },
@@ -615,6 +640,13 @@ export default {
       return str.replace(re, function($0,$1){
         return $1.toUpperCase();
       })
+    },
+    getCardButtonId(cardComponent) {
+      const cardEntry = Object.entries(this.cardComponents).find(([, component]) => component === cardComponent);
+      if (!cardEntry) {
+        return cardComponent?.$options?._componentTag && this.toHump(cardComponent.$options._componentTag);
+      }
+      return cardEntry[0] === "additionSettingCard" ? "additionSetting" : cardEntry[0];
     },
     // ボタンクリックで該当カードにスクロールする。閉鎖カードだけを展開
     toggleClosingCardToShowing(cardComponents) {
@@ -625,15 +657,18 @@ export default {
       }
       this.setAllClass();
       this.setAllHeadClass();
-      document.getElementById(this.toHump(cardComponents.$options._componentTag)).setAttribute("class","green-btn");
-      document.getElementById(cardComponents.$attrs.id).children[0].setAttribute("class", "color-header-selected");
-      document.querySelector('#' + cardComponents.$attrs.id).scrollIntoView();
+      this.getPatInfoElementById(this.getCardButtonId(cardComponents))?.setAttribute("class","green-btn");
+      const selectedHeader = this.getPatInfoElementById(cardComponents.$attrs.id);
+      if (selectedHeader?.children?.[0]) {
+        selectedHeader.children[0].setAttribute("class", "color-header-selected");
+      }
+      this.queryPatInfo('#' + cardComponents.$attrs.id)?.scrollIntoView?.();
     },
     // 全カードオープン
     openAllCard() {
       this.setAllClass();
       this.setAllHeadClass();
-      for (const card of _.values(this.cardComponents)) {
+      for (const card of Object.values(this.cardComponents)) {
         card.openCard();
       }
       this.$emit('all-card-show', true);
@@ -642,7 +677,7 @@ export default {
     closeAllCard() {
       this.setAllClass();
       this.setAllHeadClass();
-      for (const card of _.values(this.cardComponents)) {
+      for (const card of Object.values(this.cardComponents)) {
         card.closeCard();
       }
       this.$emit('all-card-show', false);
@@ -703,7 +738,7 @@ export default {
         pat_id: this.selectedPat.pat_personal_main.pat_id,
         hosp_pat_id: this.selectedPat.pat_personal_main.hosp_pat_id,
         ord_no: "",
-        base_date: moment().format("YYYYMMDD"),
+        base_date: dayjs().format("YYYYMMDD"),
         user_id: this.getUserId(),
       };
       // 患者削除処理（論理削除）
@@ -771,7 +806,10 @@ export default {
         this.setSearchedPatList(searchPatList);
         if (null !== this.getSortPatInfo && this.getSortPatInfo.length >0) {
           if (null !== this.getSortPatInfo[0].key) {
-            await this.sortPatList(this.getSortPatInfo);
+            await this.sortPatList({
+              sortConditions: this.getSortPatInfo,
+              selectedPatId: this.selectedPatId
+            });
           }
         }
         EventBus.$emit("scrollTop");
@@ -825,37 +863,38 @@ export default {
       }
     },
     resizeHeight() {
+      // ヘッダーとフッターの高さを取得
       // ヘッダーの高さを取得
       let headerHeight = 0;
-      const headerObj = document.getElementsByClassName("header");
+      const headerObj = getScopedElementsByClassName("header", this.getPatInfoLayoutRoot());
       if (headerObj.length > 0) {
         headerHeight = headerObj[0].offsetHeight;
       }
       // フッターの高さを取得
       let footerHeight = 0;
-      const footerObj = document.getElementById("footer-menu");
+      const footerObj = getFooterMenuElement(this.getPatInfoLayoutRoot());
       if (footerObj) {
         footerHeight = footerObj.offsetHeight;
       }
       // 高さを設定
       this.menuBarHeight = this.windowHeight - (headerHeight + footerHeight);
       // add #10260 文字サイズ特大にしたときに保存、キャンセルボタンの高さに白背景があっていない。不要な余白の排除 宮崎 start
-      let patInfo = document.getElementsByClassName("pat-info-header-area")[0];
+      let patInfo = getPatInfoHeaderAreaElement(this.getPatInfoLayoutRoot());
       // ヘッダから表示された患者情報画面の場合のみ、ヘッダーエリアの高さを計算して適用する
       if (!patInfo) {
         return;
       }
-      let rightExeBtn = document.getElementsByClassName("right-exe-btn");
+      let rightExeBtn = getScopedElementsByClassName("right-exe-btn", this.getPatInfoLayoutRoot());
       let btnHeight = rightExeBtn[0].clientHeight;
-      let contentContainer = document.getElementsByClassName("content-container")[0].clientHeight;
-      let patHeader = document.getElementsByClassName("pat-header")[0].clientHeight;
+      let contentContainer = getContentContainerElement(this.getPatInfoLayoutRoot())?.clientHeight || 0;
+      let patHeader = getPatHeaderElement(this.getPatInfoLayoutRoot())?.clientHeight || 0;
       // ヘッダーエリアの高さと、メニューバーの高さを合わせる
       this.menuBarHeight = contentContainer - patHeader - btnHeight - 5 - 40;
       patInfo.style.height = this.menuBarHeight + "px";
       // add #10260 文字サイズ特大にしたときに保存、キャンセルボタンの高さに白背景があっていない。不要な余白の排除 宮崎 end
     }
   },
-  beforeDestroy () {
+  beforeUnmount () {
     clearInterval(this.socketInterval);
     // インターバルをクリア
     if (this.intervalId !== undefined) {

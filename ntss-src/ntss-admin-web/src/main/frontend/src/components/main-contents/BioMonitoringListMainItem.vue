@@ -15,14 +15,15 @@
 </template>
 
 <script>
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 /* eslint-disable */
-import { mapState, mapActions } from "vuex";
+import { mapState, mapActions } from "@/compat/vue/vuex";
 import Appitem from "@/components/main-contents/sub-contents/Appitem";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
 export default {
-  props: {},
+
   components: {
     Appitem
   },
@@ -58,9 +59,7 @@ export default {
       return this.$store.state.websocket.socket.message;
     }
   },
-  data() {
-    return {};
-  },
+
   methods: {
     ...mapActions("listGraph", {
       setFacilityCode: "setFacilityCode",
@@ -260,12 +259,12 @@ export default {
   },
   mounted() {
     // リスト画面の要素にクラス名を追加
-    let elm = document.getElementsByClassName("page")[0];
+    let elm = getScopedElementsByClassName("page", this.$el || null)[0];
     elm?.classList?.add("ntss-monitoring-listMainItem");
 
     this.loadData();
   },
-  destroyed() {
+  unmounted() {
     clearInterval(this.timerAction);
 
     // TODO: タイマー更新機能不要時には削除

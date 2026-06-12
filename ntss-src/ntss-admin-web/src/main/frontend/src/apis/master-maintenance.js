@@ -1,7 +1,7 @@
 /**
  * マスタメンテナンス系API
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { ApiHelper } from "@/apis/AxiosHelper";
 
 // add 5515 標準医薬品マスタ検索で検索できない 周安寧 start
@@ -19,7 +19,7 @@ export function sendRequestFindMasterList() {
 
 /**
  * データ一覧取得.
- * @param {*} masterName マスタ物理名
+ * @param {string} masterName マスタ物理名
  */
 export function sendRequestFindRecordList(masterName) {
   // 全件取得対象マスタリスト
@@ -34,20 +34,32 @@ export function sendRequestFindRecordList(masterName) {
 
 /**
  * データ一覧取得(引数指定した施設コードのデータ).
- * @param {*} masterName マスタ物理名
- * @param {*} facilityCd 施設コード
+ * @param {string} masterName マスタ物理名
+ * @param {string} facilityCd 施設コード
  */
-export function sendRequestFindRecordListByFacilityCd(masterName, facilityCd) {
-// mod 5515 標準医薬品マスタ検索で検索できない 周安寧 start
-  //return ApiHelper.get(`/master_maintenance/${masterName}/data/${facilityCd}`);
-  return getWithLoader(`/master_maintenance/${masterName}/data/${facilityCd}`);
-// mod 5515 標準医薬品マスタ検索で検索できない 周安寧 end
+export function sendRequestFindRecordListByFacilityCd(masterName, facilityCd, selectedPatId) {
+  // mod 5515 標準医薬品マスタ検索で検索できない 周安寧 start
+  // return ApiHelper.get(`/master_maintenance/${masterName}/data/${facilityCd}`);
+  const params = selectedPatId === null || selectedPatId === undefined || selectedPatId === ""
+    ? undefined
+    : { selectedPatId };
+  return getWithLoader(`/master_maintenance/${masterName}/data/${facilityCd}`, params);
+  // mod 5515 標準医薬品マスタ検索で検索できない 周安寧 end
 }
+
+// #11205 -ペンテスト2－4認可制御の不備  mst_holiday日機装標準は専用GET（パスにnkknkkを載せない）  add 20260507 start
+/**
+ * 休日マスタ（日機装標準施設）。施設コードはAPI側で固定.
+ */
+export function sendRequestFindMstHolidayNikkisoCorporateData() {
+  return getWithLoader(`/master_maintenance/mst_holiday/data/nikkiso-corporate`);
+}
+// #11205 -ペンテスト2－4認可制御の不備  add 20260507 end
 // add 5515 標準医薬品マスタ検索で検索できない 周安寧 start
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {Record<string, unknown>} [params] パラメータ
  */
 function getWithLoader(url, params = undefined) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -59,8 +71,8 @@ function getWithLoader(url, params = undefined) {
 // add 5515 標準医薬品マスタ検索で検索できない 周安寧 end
 /**
  * データ一覧取得(SQL指定).
- * @param {*} masterName マスタ物理名
- * @param {*} facilityCd 施設コード
+ * @param {string} masterName マスタ物理名
+ * @param {string} facilityCd 施設コード
  */
 export function sendRequestFindRecordListByFacilityCdWithSql(masterName, facilityCd) {
   return ApiHelper.get(`/master_maintenance/${masterName}/data/sql/${facilityCd}`);
@@ -68,7 +80,7 @@ export function sendRequestFindRecordListByFacilityCdWithSql(masterName, facilit
 
 /**
  * カラム定義情報取得.
- * @param {*} masterName マスタ物理名
+ * @param {string} masterName マスタ物理名
  */
 export function sendRequestFindColumnInfo(masterName) {
   return ApiHelper.get(`/master_maintenance/${masterName}/column_info`);
@@ -76,8 +88,8 @@ export function sendRequestFindColumnInfo(masterName) {
 
 /**
  * データ一覧更新.
- * @param {*} masterName マスタ物理名
- * @param {*} request リクエストデータ
+ * @param {string} masterName マスタ物理名
+ * @param {Record<string, unknown>[]} request リクエストデータ
  */
 export function sendRequestUpdateRecordList(masterName, request) {
   // Date -> String 変換
@@ -92,9 +104,9 @@ export function sendRequestUpdateRecordList(masterName, request) {
 
 /**
  * データ一覧更新.
- * @param {*} masterName マスタ物理名
- * @param {*} facilityCd 施設コード
- * @param {*} request リクエストデータ
+ * @param {string} masterName マスタ物理名
+ * @param {string} facilityCd 施設コード
+ * @param {Record<string, unknown>[]} request リクエストデータ
  */
 export function sendRequestUpdateRecordListByFacilityCd(masterName, facilityCd, request) {
   // Date -> String 変換
@@ -111,29 +123,33 @@ export function sendRequestUpdateRecordListByFacilityCd(masterName, facilityCd, 
  * 指定されたオブジェクトが持つDate型の値を文字列(YYYY-MM-DDTHH:mm:ss.SSS)に変換する.
  * リクエスト送信の際にDate型は、UTCとして文字列変換されてしまう.
  * 事前に文字列変換することで、意図しない日時に変換されることを回避する.
- * @param {*} o オブジェクト
+ * @param {Record<string, unknown>} o オブジェクト
  */
 function dateToString(o) {
   const toString = Object.prototype.toString;
   Object.keys(o)
     .filter(key => toString.call(o[key]).slice(8, -1) === "Date")
     .forEach(
-      key => (o[key] = moment(o[key]).format("YYYY-MM-DDTHH:mm:ss.SSS"))
+      key => (o[key] = dayjs(o[key]).format("YYYY-MM-DDTHH:mm:ss.SSS"))
     );
 }
 // add 治療方法マスタ 4・条件項目の対象を変更した場合の条件送信未実施治療予定および自動延長用パターンデータへの不足jsonキーの配布 孔s start
 /**
- * ord_main,pat_treatment_pattern更新
- * @param {*} facilityCd 施設コード
- * @param {*} request リクエストデータ
+ * ord_main, pat_treatment_pattern 更新
+ * @param {string} facilityCd 施設コード
+ * @param {Record<string, unknown>[]} request リクエストデータ
  */
-export function sendequestUpdateIndCondInfoByTreatmentCd(facilityCd, request) {
-  // Date -> String 変換
+export function sendRequestUpdateIndCondInfoByTreatmentCd(facilityCd, request) {
   request.forEach(e => dateToString(e));
-  // プロパティ"edited"除去
   let params = JSON.parse(JSON.stringify(request));
-  params = params.filter(r => {return (r.operation === 1 && r.edited) || r.operation === 2})
+  params = params.filter(
+    r => (r.operation === 1 && r.edited) || r.operation === 2
+  );
   params.filter(p => "edited" in p).forEach(p => delete p.edited);
   return ApiHelper.put(`/mst_treatment/updateTreatment/${facilityCd}`, params);
 }
 // add 治療方法マスタ 4・条件項目の対象を変更した場合の条件送信未実施治療予定および自動延長用パターンデータへの不足jsonキーの配布 孔s end
+
+
+/** @deprecated 旧名のタイポ互換。{@link sendRequestUpdateIndCondInfoByTreatmentCd} を使用 */
+export const sendequestUpdateIndCondInfoByTreatmentCd = sendRequestUpdateIndCondInfoByTreatmentCd;

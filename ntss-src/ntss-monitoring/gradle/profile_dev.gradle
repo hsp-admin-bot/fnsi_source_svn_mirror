@@ -13,7 +13,7 @@ def profiles = 'dev'
 
 bootRun { args = [] }
 
-war { webAppDirName = 'build/www/' }
+war { webAppDirectory = file('build/www/') }
 
 processResources {
   filesMatching('**/logback-spring.xml') {

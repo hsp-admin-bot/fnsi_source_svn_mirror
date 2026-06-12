@@ -16,7 +16,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import jp.co.nikkiso.ntss.admin_web.response.MachineRecordResponse;
@@ -39,7 +39,7 @@ public class MachineRecordServiceImplTest {
   /**
    * 装置記録のMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstMachineRecordDao mstMachineRecordDao;
 
   // テスト用データ

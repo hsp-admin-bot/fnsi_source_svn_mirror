@@ -41,11 +41,11 @@ public class SysNotificationResource {
   /**
   * 通知定義データ取得.
   */
-  @GetMapping("/getSysNotification/")
+  @GetMapping("/getSysNotification")
   public ResponseEntity<?> getSysNotification() {
 
     // ログ出力
-    
+
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to get master : getSysNotification");
     logService.log(LogLevel.DEBUG, eventLogMessage, null, SERVICE_NAME.FNSI, null);

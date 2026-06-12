@@ -4,8 +4,9 @@
   @onClose="hideModal()"
   class="custom-modal"
   >
-    <div class="container-area" id="container-area" slot="body">
-      <div class="header-area" id="header-area">
+    <template #body>
+      <div class="container-area" id="container-area">
+        <div class="header-area" id="header-area">
         <div class="header-details">
           <v-ons-row id="list-header-wrapper">
             <!-- <v-ons-col class="color-header title-search" style="display:flex;"> -->
@@ -32,8 +33,8 @@
             <v-ons-col>
               <v-ons-select v-model="searchFilter.classCd">
                 <option :value="nullValue">すべて</option>
-                <template v-for="item in medicineClassList">
-                  <option :key="item.classCd" :value="item.classCd">{{ item.className }}</option>
+                <template v-for="item in medicineClassList" :key="item.classCd">
+                  <option :value="item.classCd">{{ item.className }}</option>
                 </template>
               </v-ons-select>
             </v-ons-col>
@@ -56,7 +57,7 @@
           </v-ons-row>
         </div>
       </div>
-      <div class="detail-area print-height-auto" :style="detailAreaHeight" ref="ntssList" @scroll="handleScroll">
+        <div class="detail-area print-height-auto" :style="detailAreaHeight" ref="ntssList" @scroll="handleScroll">
         <table border="1" class="table-area custom-table-area">
           <thead>
             <tr>
@@ -153,10 +154,10 @@
           </tbody>
         </table>
       </div>
-    </div>
-      <!-- mod no5047 薬剤選択モーダルの薬剤名が見切れる 張 start-->
-    <!-- <div slot="footer" class="flex-container"> -->
-    <div slot="footer" class="flex-container my-flex-container">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container my-flex-container">
       <!-- mod no5047 薬剤選択モーダルの薬剤名が見切れる 張 end-->
       <div class="denial-btn-area" style="background:none">
         <!--mod 画面部品デザイン定義 ボタンスタイル 劉全航 start-->
@@ -164,45 +165,45 @@
         <v-ons-button class="btn2-cancel" @click="hideModal()">キャンセル</v-ons-button>
         <!--mod 画面部品デザイン定義 ボタンスタイル 劉全航 end-->
       </div>
-      <!-- mod no5047 薬剤選択モーダルの薬剤名が見切れる 張 start-->
-      <!-- <div class="flex-container"> -->
       <div class="flex-container my-flex-container">
-        <!-- mod no5047 薬剤選択モーダルの薬剤名が見切れる 張 end-->
         <div class="registration-btn-area" style="background:none">
-          <!--mod 画面部品デザイン定義 ボタンスタイル 劉全航 start-->
-          <!-- <button
-            class="button registration-btn"
-            @click="setSelectedMedicineOption"
-            :disabled="!canSelect || !selectedRow.medicineCd"
-          >薬剤を反映</button> -->
-          <v-ons-button
-            class="btn3-normal"
-            @click="setSelectedMedicineOption"
-            :disabled="!canSelect || !selectedRow.medicineCd"
-          >薬剤を反映</v-ons-button>
-          <!--mod 画面部品デザイン定義 ボタンスタイル 劉全航 end-->
-        </div>
-        <div class="registration-btn-area" style="background:none">
-          <!--mod 画面部品デザイン定義 ボタンスタイル 劉全航 start-->
-          <!-- <button
-            class="button registration-btn"
-            @click="setSelectedGenericOption"
-            :disabled="!canSelect || !selectedRow.genericCd"
-          >一般名処方を反映</button> -->
-          <v-ons-button
-            class="btn3-normal"
-            @click="setSelectedGenericOption"
-            :disabled="!canSelect || !selectedRow.genericCd"
-          >一般名処方を反映</v-ons-button>
-          <!--mod 画面部品デザイン定義 ボタンスタイル 劉全航 end-->
+            <!--mod 画面部品デザイン定義 ボタンスタイル 劉全航 start-->
+            <!-- <button
+              class="button registration-btn"
+              @click="setSelectedMedicineOption"
+              :disabled="!canSelect || !selectedRow.medicineCd"
+            >薬剤を反映</button> -->
+            <v-ons-button
+              class="btn3-normal"
+              @click="setSelectedMedicineOption"
+              :disabled="!canSelect || !selectedRow.medicineCd"
+            >薬剤を反映</v-ons-button>
+            <!--mod 画面部品デザイン定義 ボタンスタイル 劉全航 end-->
+          </div>
+          <div class="registration-btn-area" style="background:none">
+            <!--mod 画面部品デザイン定義 ボタンスタイル 劉全航 start-->
+            <!-- <button
+              class="button registration-btn"
+              @click="setSelectedGenericOption"
+              :disabled="!canSelect || !selectedRow.genericCd"
+            >一般名処方を反映</button> -->
+            <v-ons-button
+              class="btn3-normal"
+              @click="setSelectedGenericOption"
+              :disabled="!canSelect || !selectedRow.genericCd"
+            >一般名処方を反映</v-ons-button>
+            <!--mod 画面部品デザイン定義 ボタンスタイル 劉全航 end-->
+          </div>
         </div>
       </div>
-    </div>
+    </template>
   </component>
 </template>
 <script>
-import moment from "moment";
-import { mapActions, mapGetters } from "vuex";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
+import dayjs from "@/compat/date/dayjs";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import ModalBase from "@/components/modals/ModalBase";
 import SubModalBase from "@/components/modals/SubModalBase";
 import { sendRequestGetAllMedicineClass } from "@/apis/pat-prescription";
@@ -332,7 +333,7 @@ export default {
     this.setLoadingScreenMessage("処理中...");
     this.setLoadingScreenVisible(true);
     this.searchFilter.facilityCd = this.getFacilityCd;
-    const res = await sendRequestGetAllMedicineClass(this.getFacilityCd);
+    const res = await sendRequestGetAllMedicineClass(this.getFacilityCd, this.selectedPatId);
     this.medicineClassList = res.data;
     // mod FNSI5516処方薬剤選択画面の表示が遅い 周 start
     //this.searchDrug();
@@ -342,7 +343,7 @@ export default {
     this.setLoadingScreenVisible(false);
     this.calculateTableHeight();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -380,19 +381,17 @@ export default {
       //   this.searchFilter.genericName = this.searchFilter.genericName.trim();
       //   this.searchFilter.patId = this.selectedPatId;
       //   this.searchFilter.offset = this.getDrugList.length;
-      //   console.log("handleScroll addDrugList begin:" + moment(new Date()).format("YYYY-MM-DDTHH:mm:ss.SSS"));
       //   // mod #5516 処方薬剤選択画面の表示が遅い 付 start
       //   this.setLoadingScreenVisible(true);
       //   await this.addDrugListFrom(this.searchFilter);
       //   this.setLoadingScreenVisible(false);
       //   // this.addDrugListFrom(this.searchFilter);
       //   // mod #5516 処方薬剤選択画面の表示が遅い 付 end
-      //   console.log("handleScroll addDrugList end:" + moment(new Date()).format("YYYY-MM-DDTHH:mm:ss.SSS"));
       // }
       // del #10225 処方薬剤選択に一般名処方が表示しない。yqz end
       // add #10225 処方薬剤選択に一般名処方が表示しない。yqz start
       // mod #10225 処方薬剤選択に一般名処方が表示しない。yqz start
-      if (scrollHeight - (clientHeight + scrollTop) < 10 ) {
+      if (scrollHeight - (clientHeight + scrollTop) < 10) {
         // if ((e.scrollHeight - (e.offsetHeight + e.scrollTop)) / e.scrollHeight <= 0) {
         // mod #10225 処方薬剤選択に一般名処方が表示しない。yqz end
         this.initPage();
@@ -509,10 +508,8 @@ export default {
       this.searchFilter.genericName = this.searchFilter.genericName.trim();
       this.searchFilter.patId = !this.isSubModal ? this.selectedPatId : null;
       // mod FNSI5516処方薬剤選択画面の表示が遅い 周 start
-      console.log("setDrugList begin:" + moment(new Date()).format("YYYY-MM-DDTHH:mm:ss.SSS"));
       //this.setDrugList(this.searchFilter);
       await this.setDrugList(this.searchFilter);
-      console.log("setDrugList end:" + moment(new Date()).format("YYYY-MM-DDTHH:mm:ss.SSS"));
       // mod FNSI5516処方薬剤選択画面の表示が遅い 周 end
       //  add 10225処方薬剤選択に一般名処方が表示しない。 関  start
       this.setLoadingScreenVisible(false);
@@ -533,8 +530,8 @@ export default {
     },
 
     calculateTableHeight() {
-      let containerAreaHeight = document.getElementById("container-area").clientHeight;
-      let headerAreaHeight = document.getElementById("header-area").scrollHeight;
+      let containerAreaHeight = getScopedElementById("container-area", this.$el || this)?.clientHeight || 0;
+      let headerAreaHeight = getScopedElementById("header-area", this.$el || this)?.scrollHeight || 0;
       let detailAreaHeight = containerAreaHeight - headerAreaHeight - 10;
       //  mod no5047 薬剤選択モーダルの薬剤名が見切れる 張 start
       // this.contentAreaHeight = detailAreaHeight;
@@ -638,7 +635,7 @@ td {
   margin: 5px 0;
 }
 
-ons-input >>> .text-input {
+ons-input :deep(.text-input) {
   font-size: 15px;
 }
 

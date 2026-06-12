@@ -8,17 +8,15 @@ import { ApiHelper } from "@/apis/AxiosHelper";
  * @param {*} facilityCd
  */
 export function sendRequestGetPatPersonal(facilityCd) {
-  let conditions = null;
   let ord_schedule = null;
-  conditions = { ord_schedule, facilityCdList: [facilityCd] };
+  const conditions = { ord_schedule, facilityCdList: [facilityCd] };
   return ApiHelper.post("/patInfo/getSimpleSearchResult", { ...conditions });
 }
 
 // add マスタ一覧 1･施設切替を可能とする 孔 start
 export function sendRequestGetPatPersonalByFacilityCd(facilityCd) {
-  let conditions = null;
   let ord_schedule = null;
-  conditions = { ord_schedule, facilityCdList: [facilityCd] };
+  const conditions = { ord_schedule, facilityCdList: [facilityCd] };
   return ApiHelper.post(`/patInfo/getSimpleSearchResult/${facilityCd}`, { ...conditions });
 }
 // add マスタ一覧 1･施設切替を可能とする 孔 end

@@ -1,3 +1,26 @@
+import dayjs from "@/compat/date/dayjs";
+
+function normalizeDateFormat(format) {
+  return String(format || "")
+    .replace(/yyyy/g, "YYYY")
+    .replace(/dd/g, "DD");
+}
+
+function ntssExternalCoopFormatDate(value, format) {
+  if (value === undefined || value === null || value === "") {
+    return "";
+  }
+  const parsed = dayjs(value);
+  if (!parsed.isValid()) {
+    return "";
+  }
+  return parsed.format(normalizeDateFormat(format));
+}
+
+if (typeof globalThis !== "undefined") {
+  globalThis.ntssExternalCoopFormatDate = ntssExternalCoopFormatDate;
+}
+
 export const COOP_LIST = [
   {
     value: "ini_dial",
@@ -101,7 +124,7 @@ export const GRID_COLUMNS = [
     field: "baseDate",
     title: "データ日",
     type:"datetime",
-    template: "#=  (baseDate == null)? '' : kendo.toString(kendo.parseDate(baseDate), 'yyyy/MM/dd') #",
+    template: "#=  (baseDate == null)? '' : ntssExternalCoopFormatDate(baseDate, 'yyyy/MM/dd') #",
     editable: () => false,
     width: "250px",
     values: ""
@@ -117,7 +140,7 @@ export const GRID_COLUMNS = [
     field: "regDate",
     title: "イベント発生日時",
     type:"datetime",
-    template: "#=  (regDate == null)? '' : kendo.toString(kendo.parseDate(regDate), 'yyyy/MM/dd HH:mm:ss') #",
+    template: "#=  (regDate == null)? '' : ntssExternalCoopFormatDate(regDate, 'yyyy/MM/dd HH:mm:ss') #",
     editable: () => false,
     width: "200px",
     values: null
@@ -330,7 +353,7 @@ export const GRID_COLUMNS = [
     field: "inAnaDate",
     title: "処理開始日時",
     type:"datetime",
-    template: "#=  (inAnaDate == null)? '' : kendo.toString(kendo.parseDate(inAnaDate), 'yyyy/MM/dd HH:mm:ss') #",
+    template: "#=  (inAnaDate == null)? '' : ntssExternalCoopFormatDate(inAnaDate, 'yyyy/MM/dd HH:mm:ss') #",
     editable: () => false,
     width: "250px",
     values: null
@@ -339,7 +362,7 @@ export const GRID_COLUMNS = [
     field: "outAnaDate",
     title: "処理完了日時",
     type:"datetime",
-    template: "#=  (outAnaDate == null)? '' : kendo.toString(kendo.parseDate(outAnaDate), 'yyyy/MM/dd HH:mm:ss') #",
+    template: "#=  (outAnaDate == null)? '' : ntssExternalCoopFormatDate(outAnaDate, 'yyyy/MM/dd HH:mm:ss') #",
     editable: () => false,
     width: "250px",
     values: null
@@ -348,7 +371,7 @@ export const GRID_COLUMNS = [
     field: "inRegDate",
     title: "通信開始日時",
     type:"datetime",
-    template: "#=  (inRegDate == null)? '' : kendo.toString(kendo.parseDate(inRegDate), 'yyyy/MM/dd HH:mm:ss') #",
+    template: "#=  (inRegDate == null)? '' : ntssExternalCoopFormatDate(inRegDate, 'yyyy/MM/dd HH:mm:ss') #",
     editable: () => false,
     width: "250px",
     values: null
@@ -357,7 +380,7 @@ export const GRID_COLUMNS = [
     field: "outRegDate",
     title: "通信完了日時",
     type:"datetime",
-    template: "#=  (outRegDate == null)? '' : kendo.toString(kendo.parseDate(outRegDate), 'yyyy/MM/dd HH:mm:ss') #",
+    template: "#=  (outRegDate == null)? '' : ntssExternalCoopFormatDate(outRegDate, 'yyyy/MM/dd HH:mm:ss') #",
     editable: () => false,
     width: "250px",
     values: null

@@ -1,6 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.service.sysDataListDetail;
 
 import jp.co.nikkiso.ntss.admin_web.response.sysDataListDetail.SysDataListDetailResponse;
+import jp.co.nikkiso.ntss.core.entity.DataListAggregationParam;
 import jp.co.nikkiso.ntss.core.entity.MstExamItem;
 import jp.co.nikkiso.ntss.core.entity.MstWaterSurveyPointType;
 import jp.co.nikkiso.ntss.core.entity.SysDataListCategory;
@@ -68,4 +69,8 @@ public interface SysDataListDetailService {
   List<MstExamItem> getFigureValue(String facilityCd);
   List<MstWaterSurveyPointType> getDecimalValue(String facilityCd);
   /*add FNSI-改修内容5237 任 end*/
+
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang start
+  List<Object> getRowDataNew(String facilityCd, Map<String, List<DataListAggregationParam>> groupMap) throws Exception;
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang end
 }

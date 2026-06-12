@@ -4,7 +4,6 @@ describe("Equipment#toString", () => {
   test("of by default", () => {
     // arrange
     const equipment = Equipment.of();
-    /* eslint-disable*/
     const expected = "{" +
       `"class_cd":null` +
       `,"class_name":null` +
@@ -12,15 +11,8 @@ describe("Equipment#toString", () => {
       `,"cd":null` +
       `,"name":null` +
       `,"short_name":null` +
-      `,"needle_type":0` +
       `,"amount":null` +
       `,"unit":null` +
-      `,"ind_user_id":null` +
-      `,"ind_user_last_name":null` +
-      `,"ind_user_first_name":null` +
-      `,"upd_user_id":null` +
-      `,"upd_user_last_name":null` +
-      `,"upd_user_first_name":null` +
       // mod #7475 �R���o�[�g����ord_main�Ƀf�[�^������Ȍ`�ŃR���o�[�g����Ă��Ȃ� dou start
       //`,"input_class":"1"` +
       `,"input_class":1` +
@@ -66,7 +58,6 @@ describe("Equipment#toString", () => {
       equip_type: 3
     };
     const equipment = Equipment.of(equipmentObj);
-    /* eslint-disable*/
     const expected = "{" +
       `"class_cd":101` +
       `,"class_name":"classA"` +
@@ -74,15 +65,8 @@ describe("Equipment#toString", () => {
       `,"cd":1000` +
       `,"name":"equipmentName"` +
       `,"short_name":"equipmentShortName"` +
-      `,"needle_type":0` +
       `,"amount":1` +
       `,"unit":"L"` +
-      `,"ind_user_id":4000` +
-      `,"ind_user_last_name":"indLast"` +
-      `,"ind_user_first_name":"indFirst"` +
-      `,"upd_user_id":5000` +
-      `,"upd_user_last_name":"updLast"` +
-      `,"upd_user_first_name":"updFirst"` +
       // mod #7475 �R���o�[�g����ord_main�Ƀf�[�^������Ȍ`�ŃR���o�[�g����Ă��Ȃ� dou start
       //`,"input_class":"2"` +
       `,"input_class":2` +

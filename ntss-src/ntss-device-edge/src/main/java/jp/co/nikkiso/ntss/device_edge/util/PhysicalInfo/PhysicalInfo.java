@@ -1,17 +1,16 @@
 package jp.co.nikkiso.ntss.device_edge.util.PhysicalInfo;
 
-import java.io.IOException;
+
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import lombok.Getter;
-import org.joda.time.DateTime;
-
 /**
  *  身体情報情報クラス.
  */
@@ -65,7 +64,7 @@ public class PhysicalInfo {
    * @param physicalInfo 身体情報のJSON文字列
    */
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
-  public PhysicalInfo(String physicalInfo, String treatDateYYYYMMDD) throws JsonProcessingException {
+  public PhysicalInfo(String physicalInfo, String treatDateYYYYMMDD) throws JacksonException {
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
     // allRecordsフィールドを初期化
     this.allRecords = new ArrayList<PhysicalInfoItem>();
@@ -161,7 +160,7 @@ public class PhysicalInfo {
     // JSON文字列として出力
     try {
       rtn = mapper.writeValueAsString(root);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // 例外が発生した場合は空文字列を返す
       rtn = "";
     }
@@ -173,7 +172,7 @@ public class PhysicalInfo {
    * @param physicalInfo 身体情報のJSON文字列
    */
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
-  private void setPhysicalInfo(String physicalInfo, String treatDateYYYYMMDD) throws JsonProcessingException {
+  private void setPhysicalInfo(String physicalInfo, String treatDateYYYYMMDD) throws JacksonException {
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
     if (physicalInfo != null) {
       ObjectMapper mapper = new ObjectMapper();
@@ -181,7 +180,7 @@ public class PhysicalInfo {
         JsonNode jsonNode_parent = mapper.readTree(physicalInfo);
         this.setItems(jsonNode_parent, treatDateYYYYMMDD);
 
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang start
 //        e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang end
@@ -295,7 +294,7 @@ public class PhysicalInfo {
     // #9147 2024.06.26 add 次患者整形 指示DW→無ければpat_uniqueの透析日以前の最新DW TDC山崎 start
     String yyyy_mm_dd;
     if (treatDateYYYYMMDD.isEmpty()) {
-      yyyy_mm_dd = DateTime.now().toString("yyyy-MM-dd");
+      yyyy_mm_dd = LocalDate.now().toString();
     } else {
       yyyy_mm_dd = treatDateYYYYMMDD.substring(0, 4) + "-" + treatDateYYYYMMDD.substring(4, 6) + "-" + treatDateYYYYMMDD.substring(6, 8);
     }
@@ -308,7 +307,7 @@ public class PhysicalInfo {
 
       PhysicalInfoItem item = this.allRecords.get(lop);
       // #9147 2024.06.26 chg 次患者整形 指示DW→無ければpat_uniqueの透析日以前の最新DW TDC山崎 start
-//      if (item.examDate.compareTo(DateTime.now().toString("yyyy-MM-dd")) > 0) {
+//      if (item.examDate.compareTo(LocalDate.now().toString()) > 0) {
 //        continue; // 現在日付より未来方向のデータは採用しないで次のループへ
 //      }
       if (item.examDate.compareTo(yyyy_mm_dd) > 0) {

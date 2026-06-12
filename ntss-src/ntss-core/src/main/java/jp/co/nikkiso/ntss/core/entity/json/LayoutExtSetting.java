@@ -2,11 +2,14 @@ package jp.co.nikkiso.ntss.core.entity.json;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import org.seasar.doma.Domain;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.entity.MstCoopLayoutDetail;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
@@ -28,16 +31,19 @@ public class LayoutExtSetting extends HashMap<String, Object> {
    *
    * @param value 文字列表現
    */
+  @JsonCreator(mode = JsonCreator.Mode.DISABLED)
   public LayoutExtSetting(String value) {
 
     try {
-      LayoutExtSetting l = objectMapper.readValue(value, LayoutExtSetting.class);
+      Map<String, Object> map =
+              objectMapper.readValue(
+                      value,
+                      new TypeReference<Map<String, Object>>() {}
+              );
 
-      for (String key : l.keySet()) {
-        put(key, l.get(key));
-      }
+      putAll(map);
 
-    } catch (IOException e) {
+    } catch (JacksonException e) {
       throw new NtssException("変換レイアウトマスタJSONに不整合があります。", e);
     }
   }
@@ -50,7 +56,7 @@ public class LayoutExtSetting extends HashMap<String, Object> {
   public String getValue() {
     try {
       return objectMapper.writeValueAsString(this);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new NtssException("JSON文字列への変換でエラーが発生しました。", e);
     }
   }

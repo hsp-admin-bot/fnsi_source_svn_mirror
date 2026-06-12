@@ -1176,7 +1176,7 @@ public class SubTransactionComponent {
         long start = System.currentTimeMillis();
         // リクエスト処理
         ResponseEntity<HttpStatus> response = rt.exchange(request, HttpStatus.class);
-        HttpStatus status = response.getStatusCode();
+        HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
         // log start
         long cost = System.currentTimeMillis() - start;
         Map<String, Object> map = new HashMap<>();
@@ -1346,7 +1346,7 @@ public class SubTransactionComponent {
 	// #9698 アプリケーションログの内容修正 20260328 mod yangxuewang start
       long start = System.currentTimeMillis();
       ResponseEntity<Object> response = rt.exchange(request, Object.class);
-      HttpStatus status = response.getStatusCode();
+      HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
       // log start
       long cost = System.currentTimeMillis() - start;
       Map<String, Object> map = new HashMap<>();

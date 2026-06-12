@@ -26,7 +26,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * ベースコンポーネント
@@ -37,7 +37,7 @@ import baseContent from "@/components/pat-viewer/contents/base/BaseContent";
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 共通操作
@@ -153,7 +153,7 @@ export default {
     // 表示用に指示コメント情報を加工
     this.convertIndCommentData({
       listIndex: this.rowIndex
-    }).then(indCommentDataListLet => {
+    }).then(async indCommentDataListLet => {
       if (0 === indCommentDataListLet.length) { return; }
 
       indCommentDataListLet.sort((a, b) => {
@@ -161,7 +161,7 @@ export default {
       });
 
       // 指示の切り替わりポイント処理を呼び出す
-      this.makeStructionColor(indCommentDataListLet, 6);
+      await this.makeStructionColor(indCommentDataListLet, 6);
 
       this.indCommentDataList = indCommentDataListLet;
       // add 1006-398 指示の切り替わりポイントを赤くする 陳 end
@@ -171,7 +171,7 @@ export default {
     // mod FNSI-性能を最適化する 李 end
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -298,11 +298,9 @@ export default {
      *          サブタイトルが「指示コメント<番号>」の場合、指示コメント編集モダール表示
      */
     onSubTitleClick(event, rowInfo) {
-      /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
       if (rowInfo.readOnly) {
         return;
       }
-      /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
       // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng start
       // すべて過去日の場合、操作不可メッセージを表示
       // if (this.getIsPastDate) {
@@ -396,12 +394,9 @@ export default {
         return;
       }
 
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --start */
-      // if(cellInfo.isNotClickable) {
       if(isIndClick && cellInfo.isNotClickable) {
         return;
       }
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --end */
       // 指示項目がクリックされた場合、以下の処理を実行する
       if (isIndClick) {
         // クリックしたセルに指示コメントが登録されていない場合、処理終了
@@ -480,7 +475,7 @@ export default {
       // 【編集】【中止】切替ボタン-非表示
       settingData.showNewEdit = showNewEdit;
       // 治療日のフォーマットを調整
-      treatDate = moment(treatDate).format("YYYY-MM-DD");
+      treatDate = dayjs(treatDate).format("YYYY-MM-DD");
       // 治療開始日
       settingData.startDate = treatDate;
       // 治療終了日
@@ -502,7 +497,7 @@ export default {
         // 選択された曜日以外をfalseへ変更
         for (let i = 0; i < 7; i++) {
           settingData[this.changeWeekStr(i)] =
-            i !== moment(treatDate, "YYYYMMDD").day() ? false : true;
+            i !== dayjs(treatDate, "YYYYMMDD").day() ? false : true;
         }
       }
       // モーダル表示
@@ -548,7 +543,7 @@ export default {
      */
     getTargetDateIndComment(date, commentNo) {
       // 治療日のフォーマットを調整
-      const treatDate = moment(date).format("YYYYMMDD");
+      const treatDate = dayjs(date).format("YYYYMMDD");
       // 指示コメント内容格納用
       let content = null;
       // 対象治療日の治療情報取得
@@ -579,5 +574,5 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 </style>

@@ -36,9 +36,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
@@ -56,6 +57,7 @@ import jp.co.nikkiso.ntss.admin_web.service.JournalService;
 import jp.co.nikkiso.ntss.admin_web.service.PatInfoService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.rad.RadRequestService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.entity.MstRadSet;
 import jp.co.nikkiso.ntss.core.entity.PatMain;
@@ -66,6 +68,7 @@ import lombok.extern.slf4j.Slf4j;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 検査依頼（exam-request）系のリソースクラス
@@ -108,6 +111,9 @@ public class RadRequestResource {
   // add FNSi5712アプリケーションログが出力しない 周 start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // add FNSi5712アプリケーションログが出力しない 周 end
   // add 10553 連携イベント発生部分不正 関 start
   @Autowired
@@ -133,8 +139,23 @@ public class RadRequestResource {
       @PathVariable String date_from,
       @PathVariable String date_to,
       @RequestBody Map<String, Object> requestBody
-      ) throws Exception
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+) throws Exception
   {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if (!ntssUser.isNkkAdminUser()) {
+      long count = patMainDao.countByPatIdAndFacilityCd(pat_id, ntssUser.getFacilityCd());
+      if (count == 0) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "pat_id=" + pat_id + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.RAD + "/TreatDateList/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_RAD_REQUEST,
@@ -168,8 +189,23 @@ public class RadRequestResource {
     @PathVariable int pat_id,
     @PathVariable String date_from,
     @PathVariable String date_to
-  ) throws Exception
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+) throws Exception
   {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if (!ntssUser.isNkkAdminUser()) {
+      long count = patMainDao.countByPatIdAndFacilityCd(pat_id, ntssUser.getFacilityCd());
+      if (count == 0) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "pat_id=" + pat_id + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
     String mappingUrl = Uri.RAD + "/TreatDateListByIsOrder/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_RAD_REQUEST,
       BEFORE_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(pat_id, date_from, date_to));
@@ -194,8 +230,23 @@ public class RadRequestResource {
     @PathVariable long pat_id,
     @PathVariable String date_from,
     @RequestBody Map<String, Object> requestBody
-  ) throws Exception
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws Exception
   {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if (!ntssUser.isNkkAdminUser()) {
+      long count = patMainDao.countByPatIdAndFacilityCd(pat_id, ntssUser.getFacilityCd());
+      if (count == 0) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "pat_id=" + pat_id + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.RAD + "/TreatDateList/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_RAD_REQUEST,
@@ -219,7 +270,23 @@ public class RadRequestResource {
    * 透析予定日変更時、放射線検査依頼日追従
    * @param params 患者ID,変更前日付,変更後日付
    */
-  public ResponseEntity<Void> updateRegRadDate(@RequestBody Map<String,String> params) {
+  public ResponseEntity<Void> updateRegRadDate(@RequestBody Map<String,String> params,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && params.get("patId") != null) {
+      try {
+        long count = patMainDao.countByPatIdAndFacilityCd(Long.parseLong(params.get("patId")), ntssUser.getFacilityCd());
+        if (count == 0) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + params.get("patId") + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      } catch (NumberFormatException ignored) {}
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.RAD + "/updateRegRadDate";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_RAD_REQUEST,
@@ -251,7 +318,23 @@ public class RadRequestResource {
    * 透析予定日変更時、放射線検査依頼削除
    * @param params 患者ID,日付
    */
-  public ResponseEntity<Void> updateIsDel(@RequestBody Map<String,String> params) {
+  public ResponseEntity<Void> updateIsDel(@RequestBody Map<String,String> params,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && params.get("patId") != null) {
+      try {
+        long count = patMainDao.countByPatIdAndFacilityCd(Long.parseLong(params.get("patId")), ntssUser.getFacilityCd());
+        if (count == 0) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + params.get("patId") + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      } catch (NumberFormatException ignored) {}
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.RAD + "/updateIsDel";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_RAD_REQUEST,
@@ -287,6 +370,19 @@ public class RadRequestResource {
       @RequestBody RadRequest reqData,
       @AuthenticationPrincipal NtssUser ntssUser
       ) throws Exception {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && !CollectionUtils.isEmpty(reqData.getPatIdList())) {
+      for (Long patId : reqData.getPatIdList()) {
+        long count = patMainDao.countByPatIdAndFacilityCd(patId, ntssUser.getFacilityCd());
+        if (count == 0) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + patId + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.RAD + "/radRequest";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_RAD_REQUEST,
@@ -318,6 +414,7 @@ public class RadRequestResource {
       @RequestBody SaveRadRequest request,
       @AuthenticationPrincipal NtssUser ntssUser
       ) throws Exception {
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.RAD + "/radRequest/save";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_RAD_REQUEST,
@@ -329,6 +426,18 @@ public class RadRequestResource {
     if (!CollectionUtils.isEmpty(request.getPatRadPatternList())) {
       patIds = request.getPatRadPatternList().stream().map(PatRadPattern::getPatId).toList();
     }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && !CollectionUtils.isEmpty(patIds)) {
+      for (Long patId : patIds) {
+        long count = patMainDao.countByPatIdAndFacilityCd(patId, ntssUser.getFacilityCd());
+        if (count == 0) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + patId + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
     List<PatMain> patMains = patMainDao.selectByIdList(patIds);
     // スケジュール延長処理中の場合、予定作成を中止する
     List<Long> schExtPatIds = patMains.stream().filter(p -> ("1").equals(p.getSch_ext_status())).map(PatMain::getPat_id).toList();
@@ -554,7 +663,15 @@ public class RadRequestResource {
   *
   */
   @GetMapping("/radRequest/radSet/{facilityCd}")
-  public ResponseEntity<?> getRadSetList(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getRadSetList(@PathVariable String facilityCd,
+                                         @RequestParam(required = false) Long selectedPatId,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // ログ出力
     // add FNSi5712アプリケーションログが出力しない 周 start
@@ -595,16 +712,24 @@ public class RadRequestResource {
    */
   @PostMapping("/radRequest/getPatInfoList")
   public ResponseEntity<?> getPatInfoList(
-      @RequestBody Map<String, String> payload
-    ) throws Exception
-    {
+      @RequestBody Map<String, String> payload,
+      @RequestParam(required = false) Long selectedPatId
+    ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+) throws Exception {
+    List<Long> patIdList = this.getLongValueList(payload.get("patIdList"));
+    if (!facilityAccessService.hasPatIdsOrSelectedPatShareAccess(ntssUser, patIdList, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
       // add FNSi5712アプリケーションログが出力しない 周 start
       String mappingUrl = Uri.RAD + "/radRequest/getPatInfoList";
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_RAD_REQUEST,
         BEFORE_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(payload));
       // add FNSi5712アプリケーションログが出力しない 周 end
     try {
-      List<Long> patIdList = this.getLongValueList(payload.get("patIdList"));
       List<PatMain> response = patInfoService.getPatSchExtEndDateList(patIdList);
 
       // add FNSi5712アプリケーションログが出力しない 周 start
@@ -636,6 +761,21 @@ public class RadRequestResource {
    */
   @PostMapping("/deletePatRadRequest")
   public ResponseEntity<?> deleteDeadPatRequest(@RequestBody Map<String, Object> payload, @AuthenticationPrincipal NtssUser ntssUser){
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (payload != null && !payload.isEmpty()) {
+        if (Objects.nonNull(payload.get("facilityCd"))) {
+          String facilityCd = payload.get("facilityCd").toString();
+          if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "patId=" + (payload.get("patId") != null ? payload.get("patId") : "null") + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.RAD + "/deletePatRadRequest";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_RAD_REQUEST,

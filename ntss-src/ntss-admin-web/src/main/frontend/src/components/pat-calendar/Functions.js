@@ -1,6 +1,6 @@
-import _ from "lodash";
-import BigNumber from "bignumber.js";
-import moment from "moment";
+import _ from "@/compat/collections/lodash";
+import BigNumber from "@/compat/number/bignumber";
+import dayjs from "@/compat/date/dayjs";
 import store from "@/stores";
 import { bedIncludeDeleted as _bedIncludeDeleted, equipmentClass as _equipmentClass, medicineClass as _medicineClass, treatmentIncludeDeleted as _treatmentIncludeDeleted, implantIncludeDeleted as _implantIncludeDeleted, infectionIncludeDeleted as _infectionIncludeDeleted, kur as _kur, vaIncludeDeleted as _vaIncludeDeleted, patCalendarLayout as _patCalendarLayout, diseaseIncludeDeleted as _diseaseIncludeDeleted, patEventSubCategoryIncludeDeleted as _patEventSubCategoryIncludeDeleted, bbsKindIncludeDeleted as _bbsKindIncludeDeleted } from "@/functions/mst/MstGetters.js";
 import * as Def from "./Definitions.js";
@@ -13,8 +13,6 @@ import {
   getSeriesMarker
 } from "@/functions/pat-viewer/PatViewerFunctions";
 import { getValueWithDecPointInMst } from "../multi-pat-list/template2"
-
-
 
 /* add by chamaojia 2026-03-27 [12462] 患者情報共有->患者経過総合ビューア --start */
 const TABOO_CLASS_PREFIX = "【禁忌】";
@@ -34,8 +32,6 @@ function getTabooAllergyPrefixNew(isTaboo, isAllergy) {
 }
 
 /* add by chamaojia 2026-03-27 [12462] 患者情報共有->患者経過総合ビューア --end */
-
-
 
 // ===== 固定ラベル =====
 const TYPE_UNMATCH_LABEL = "【分類不一致】";
@@ -105,7 +101,6 @@ export const getRequiredMst = async facilityCd => {
 };
 
 // add FNSI5415-カレンダー内のセルの表示に時間がかかる 周 start
-//mod #12462 患者情報共有 Ji start
 /**
  * @description 3ヶ月分の指示を取得
  * @param {Number} patId 患者ID
@@ -113,6 +108,7 @@ export const getRequiredMst = async facilityCd => {
  * @param {moment} currentDate 基準日moment
  * @returns {Array} ord_mainレコード
  */
+//mod #12462 患者情報共有 Ji start
 export const getPatEventFor3Months = async (patId, facilityCd, currentDate, patientShareMode) => {
   const param = {
     facility_cd: facilityCd,
@@ -120,9 +116,9 @@ export const getPatEventFor3Months = async (patId, facilityCd, currentDate, pati
     // 全曜日
     week_pattern: "[{'text':'全','done':false,'value':0}]",
     // 開始日(基準日の前月一日)
-    ind_start_date: moment(currentDate).subtract(1, "months").startOf("month").format("YYYYMMDD"),
+    ind_start_date: dayjs(currentDate).subtract(1, "months").startOf("month").format("YYYYMMDD"),
     // 終了日(基準日の翌月末日)
-    ind_end_date: moment(currentDate).add(1, "months").endOf("month").format("YYYYMMDD"),
+    ind_end_date: dayjs(currentDate).add(1, "months").endOf("month").format("YYYYMMDD"),
     patShareMode: patientShareMode
   };
 
@@ -213,6 +209,7 @@ export const createEventDataCollectionNew = (
       //add #12462 患者情報共有 Ji end
     };
   });
+
   //add #12462 患者情報共有 Ji start
   let infectInfo = []
   let implantInfo = []
@@ -229,6 +226,7 @@ export const createEventDataCollectionNew = (
     }
   })
   //add #12462 患者情報共有 Ji end
+
   return {
     //mod #12462 患者情報共有 Ji start
     // [LAYOUT_CATEGORY_INFECTINFO.key]: pat_main.infect_info,
@@ -258,20 +256,20 @@ export const createEventDataCollectionNew = (
 const createIndInfo3MonthsEventData = (indInfo, currentDate) => {
   /* 3ヶ月分(前月一日～翌月末日)の治療日リストを作成する */
   // 各月の日数
-  const daysOfPrevMonth = moment(currentDate)
+  const daysOfPrevMonth = dayjs(currentDate)
     .subtract(1, "months")
     .endOf("month")
     .date();
-  const daysOfCurrentMonth = moment(currentDate)
+  const daysOfCurrentMonth = dayjs(currentDate)
     .endOf("month")
     .date();
-  const daysOfNextMonth = moment(currentDate)
+  const daysOfNextMonth = dayjs(currentDate)
     .add(1, "months")
     .endOf("month")
     .date();
 
   // 前月一日
-  const firstDayOfPrevMonth = moment(currentDate)
+  const firstDayOfPrevMonth = dayjs(currentDate)
     .subtract(1, "months")
     .date(1);
   const treatDateList = Array(
@@ -280,7 +278,7 @@ const createIndInfo3MonthsEventData = (indInfo, currentDate) => {
     .fill()
     .map((_, i) =>
       // 前月一日から翌月末日まで日付を割り当てる
-      moment(firstDayOfPrevMonth)
+      dayjs(firstDayOfPrevMonth)
         .add(i, "days")
         .format("YYYYMMDD")
     );
@@ -554,7 +552,9 @@ const mstCodeToName = (
     return null;
   }
 
-  const target = mst.find(el => el[codeString] == code);
+  const target = Array.isArray(mst)
+    ? mst.find(el => el[codeString] == code)
+    : null;
   // 削除済みを含んだマスタ
   if (target) {
     const isDeleted = target.isDisp === "0" || target.isDel === "1";
@@ -980,10 +980,10 @@ const addImplantInfoToCalendar = (calendarContents, implantInfoJSON, mst, layout
       const name = facility_cd !== getFacilityCd
         ? implant_name
         : mstCodeToName(
-          mst.implantIncludeDeleted, 
+          mst.implantIncludeDeleted,
           implant_cd,
-          false, 
-          "implantCd", 
+          false,
+          "implantCd",
           "implantName"
         );
       if (name == null) continue;
@@ -1048,7 +1048,6 @@ const addInOutInfoToCalendar = (calendarContents, inOutInfoJSON, mst, layoutCate
   );
 
   /** カレンダー表示内容生成関数 */
-  //mod #12462 患者情報共有 Ji start
   const buildInOutContents = ({
     move_in_out,
     moveInOut,
@@ -1091,15 +1090,14 @@ const addInOutInfoToCalendar = (calendarContents, inOutInfoJSON, mst, layoutCate
         facilityName = to_facility ?? from_facility ?? "";
       }
     }
-    //mod #12462 患者情報共有 Ji end
 
     // 一時転出
     if (move_in_out === "9") {
       const endText = period_end
-        ? `(～${moment(period_end, "YYYYMMDD").format("M/D")})`
+        ? `(～${dayjs(period_end, "YYYYMMDD").format("M/D")})`
         : "";
       const startText = period_start
-        ? `(${moment(period_start, "YYYYMMDD").format("M/D")}～)`
+        ? `(${dayjs(period_start, "YYYYMMDD").format("M/D")}～)`
         : "";
 
       contentStart =
@@ -1236,8 +1234,8 @@ const addMediHstInfoToCalendar = (calendarContents, mediHstInfoJSON, mst, layout
 
       // mod 10366 患者カレンダーで特定条件下で既往歴の病名が削除済みと表示されてしまう zhao start
       //mod #12462 患者情報共有 Ji start
-      const name = info.facility_cd !== getFacilityCd 
-        ? info.disease_name 
+      const name = info.facility_cd !== getFacilityCd
+        ? info.disease_name
         : mstCodeToName(mst.diseaseIncludeDeleted, info.disease_cd, false, "cd", "nm", false);
       //mod #12462 患者情報共有 Ji end
 
@@ -1333,7 +1331,7 @@ const addPhysicalInfoToCalendar = (
     physicalInfoAll.map(physicalInfo => {
       return {
         ...physicalInfo,
-        exam_date: moment(physicalInfo.exam_date).format("YYYYMMDD"),
+        exam_date: dayjs(physicalInfo.exam_date).format("YYYYMMDD"),
         readOnly: physicalInfo.readOnly
       };
     }),
@@ -1341,7 +1339,7 @@ const addPhysicalInfoToCalendar = (
   );
 
   latestPhysicalInfo.forEach(physicalInfo => {
-    const examDate = moment(physicalInfo.exam_date).format("YYYYMMDD");
+    const examDate = dayjs(physicalInfo.exam_date).format("YYYYMMDD");
     for (const items of layoutItems) {
       const { itemKey } = items;
       let content = physicalInfo[itemKey];
@@ -1575,9 +1573,7 @@ const addTreatInfoToCalendar = (
           ordNo: ordNo,
           isDispGroup,
           isDummy: true,
-          //add #12462 患者情報共有 Ji start
           facility_cd: treatEvent.facility_cd
-          //add #12462 患者情報共有 Ji end
         };
         addContentToCalendar(
           calendarContents,
@@ -1650,10 +1646,10 @@ const buildTreatPlanTitle = (
     if (cls === "rst") {
       // 治療開始日時
       value = treatEvent[LAYOUT_ITEM_RSTINFO_STARTDATE.key];
-      startTime = value ? moment(value).format("HH:mm") : "";
+      startTime = value ? dayjs(value).format("HH:mm") : "";
       // 治療終了日時
       value = treatEvent[LAYOUT_ITEM_RSTINFO_ENDDATE.key];
-      endTime = value ? moment(value).format("HH:mm") : "";
+      endTime = value ? dayjs(value).format("HH:mm") : "";
     }
 
     return [
@@ -1704,15 +1700,13 @@ const addTreatCondInfoToCalendar = (
   const getFacilityCd = store.getters["user/getFacilityCd"];
 
   const { rstDialysisState, indCondInfoJSON, rstCondInfoJSON, indDw, rstDw, treatDate, facility_cd } = treatCondEvent;
-  
-  //liyanze-z #12462 add other unitDecimalPoint  start 
-  let otherAllData = allData
-  let otherAllMData = allMData
-  if(facility_cd!=getFacilityCd){
-    otherAllData = mst.otherMST?.mstMedicineIncludeDeleted?mst.otherMST.mstMedicineIncludeDeleted:[];
-    otherAllMData = mst.otherMST?.mstMedicineMixIncludeDeleted?mst.otherMST.mstMedicineMixIncludeDeleted:[];
+
+  let otherAllData = allData;
+  let otherAllMData = allMData;
+  if (facility_cd !== getFacilityCd) {
+    otherAllData = mst.otherMST?.mstMedicineIncludeDeleted ?? [];
+    otherAllMData = mst.otherMST?.mstMedicineMixIncludeDeleted ?? [];
   }
-  //liyanze-z #12462 add other unitDecimalPoint end 
 
   /**【分類不一致】判定に使用するMap生成 */
   let equipmentMap = new Object;
@@ -1826,19 +1820,13 @@ const addTreatCondInfoToCalendar = (
       case LAYOUT_ITEM_TREATCONDINFO_28.key:
         //mod #10196 ord_mainのデータ定義から外れているデータ登録・参照処理の修正 zhaoqi 20240424 start
         if(treatCondInfo[25].medicine_type == "2"){
-          //liyanze-z #12462 add other unitDecimalPoint  start 
-          //record = allMData.find(d => d.medicineMixCd == treatCondInfo[25].value);
           record = otherAllMData.find(d => d.medicineMixCd == treatCondInfo[25].value);
-          //liyanze-z #12462 add other unitDecimalPoint  end 
           if (record) {
             decPoint = record.unitDecimalPoint;
             content = getValueWithDecPointInMst(decPoint, rstDialysisState, value);
           }
         }else{
-          //liyanze-z #12462 add other unitDecimalPoint  start 
-          //record = allData.find(d => d.medicineCd == treatCondInfo[25].value);
           record = otherAllData.find(d => d.medicineCd == treatCondInfo[25].value);
-          //liyanze-z #12462 add other unitDecimalPoint  end 
           if (record) {
             decPoint = record.unitDecimalPoint;
             content = getValueWithDecPointInMst(decPoint, rstDialysisState, value);
@@ -1853,15 +1841,9 @@ const addTreatCondInfoToCalendar = (
 
         // 抗凝固剤持続総量＋抗凝固剤ワンショット量。負の値の場合0、計算パラーメータの欠落やnullは0代入で計算する
         if (treatCondInfo[LAYOUT_ITEM_TREATCONDINFO_25.key].medicine_type == "2") {
-          //liyanze-z #12462 add other unitDecimalPoint  start 
-          //record = allMData.find(d => d.medicineMixCd == treatCondInfo[LAYOUT_ITEM_TREATCONDINFO_25.key].value);
           record = otherAllMData.find(d => d.medicineMixCd == treatCondInfo[LAYOUT_ITEM_TREATCONDINFO_25.key].value);
-          //liyanze-z #12462 add other unitDecimalPoint  end 
         } else {
-          //liyanze-z #12462 add other unitDecimalPoint  start 
-          //record = allData.find(d => d.medicineCd == treatCondInfo[LAYOUT_ITEM_TREATCONDINFO_25.key].value);
           record = otherAllData.find(d => d.medicineCd == treatCondInfo[LAYOUT_ITEM_TREATCONDINFO_25.key].value);
-          //liyanze-z #12462 add other unitDecimalPoint  end 
         }
         decPoint = record ? record.unitDecimalPoint : 0;
         // null → 0
@@ -1890,7 +1872,7 @@ const addTreatCondInfoToCalendar = (
     }
     // add FNSI-患者日历顯示調整 関 end
     let title = "";
-    let needunit = true
+    let needunit = true;
 
     switch (itemKey) {
       case LAYOUT_ITEM_TREATCONDINFO_1.key:
@@ -1898,11 +1880,11 @@ const addTreatCondInfoToCalendar = (
         unit = "";
         if (value) {
           // 分を時間換算
-          const duration = moment.duration(value, "minutes");
-          const hours = duration.hours(); // ゼロ埋めしない
-          const minutes = `${duration.minutes()}`.padStart(2, "0");
+          const totalMinutes = Number(value);
+          const hours = Math.floor(totalMinutes / 60);
+          const minutes = `${Math.abs(totalMinutes % 60)}`.padStart(2, "0");
           content = `${hours}:${minutes}`;  // h:mm
-          needunit = false
+          needunit = false;
         }
         break;
 
@@ -1912,7 +1894,7 @@ const addTreatCondInfoToCalendar = (
           name = mstCodeToName(mst.vaIncludeDeleted, value, false, "vaCd", "vaName");
         }
         content = name;
-        needunit = false
+        needunit = false;
         break;
 
       case LAYOUT_ITEM_TREATCONDINFO_DW.key:
@@ -1928,23 +1910,22 @@ const addTreatCondInfoToCalendar = (
           physicalInfoJSON
         ) {
           // indDwが取得できない場合は身体情報から治療日最直近のDWを取得
-          const limitDate = moment(treatCondEvent.treatDate, "YYYYMMDD").add(1, "day");
+          const limitDate = dayjs(treatCondEvent.treatDate, "YYYYMMDD").add(1, "day");
           const physicalInfoAll = JSON.parse(physicalInfoJSON);
-          //liyanze-z #12462 add facility_cd same start
-          let listFacilityCd = treatCondEvent.facility_cd;
+
+          const listFacilityCd = treatCondEvent.facility_cd;
           for (const { exam_date, dw, facility_cd } of physicalInfoAll) {
             if (
               exam_date &&
-              moment(exam_date).isBefore(limitDate) &&
+              dayjs(exam_date).isBefore(limitDate) &&
               dw != null &&
-              facility_cd &&                        
-              facility_cd === listFacilityCd      
+              facility_cd &&
+              facility_cd === listFacilityCd
             ) {
               content = dw;
               break;
             }
           }
-          //liyanze-z #12462 add facility_cd same end 
         }
         title = LAYOUT_ITEM_TREATCONDINFO_DW.title;
         unit = "kg";
@@ -1958,7 +1939,7 @@ const addTreatCondInfoToCalendar = (
           unit = "kg";
         } else {
           content = "DWと同じ";
-          needunit = false
+          needunit = false;
         }
         break;
 
@@ -1973,8 +1954,8 @@ const addTreatCondInfoToCalendar = (
         // 名称未展開の場合は各種チェック実施 ※名称展開済の場合はprefix付で登録されている
         if (!name) {
           // 名称未展開の場合はコードからマスタ名称取得
-          if (facility_cd !== getFacilityCd){
-            name = treatCondInfo[itemKey]?.disp_name
+          if (facility_cd !== getFacilityCd) {
+            name = treatCondInfo[itemKey]?.disp_name;
           } else {
             name = mstCodeToName(
               allDData,
@@ -1992,16 +1973,15 @@ const addTreatCondInfoToCalendar = (
             "dialyzerCd",
             mstTabooAllergy
           );
-
-          //liyanze-z #12462  add 接頭辞 start 
-          if (facility_cd !== getFacilityCd&&mst.getOtherPatTabooAllergy&&mst.getOtherPatTabooAllergy.length!=0) {
+          if (facility_cd !== getFacilityCd && mst.getOtherPatTabooAllergy?.length) {
             const otherTabooAllergyInfo = mst.getOtherPatTabooAllergy.find(item => item.cd == value);
-            if(otherTabooAllergyInfo)prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy) 
+            if (otherTabooAllergyInfo) {
+              prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy);
+            }
           }
-          //liyanze-z #12462  add 接頭辞 end 
         }
         content = name ? `${prefix}${name}` : null;
-        needunit = false
+        needunit = false;
         break;
 
       case LAYOUT_ITEM_TREATCONDINFO_6.key:
@@ -2030,17 +2010,15 @@ const addTreatCondInfoToCalendar = (
             itemKey,
             equipmentMap
           );
-          //liyanze-z #12462  add 接頭辞 start 
-          if (facility_cd !== getFacilityCd&&mst.getOtherPatTabooAllergy&&mst.getOtherPatTabooAllergy.length!=0) {
+          if (facility_cd !== getFacilityCd && mst.getOtherPatTabooAllergy?.length) {
             const otherTabooAllergyInfo = mst.getOtherPatTabooAllergy.find(item => item.cd == value);
-            if(otherTabooAllergyInfo)prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy) 
+            if (otherTabooAllergyInfo) {
+              prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy);
+            }
           }
-          //liyanze-z #12462  add 接頭辞 end 
         }
         content = name ? `${prefix}${name}` : null;
-        //20260414 liyanze-z #12462  add unit  start
-        needunit = false
-        //20260414 liyanze-z #12462  add unit  end
+        needunit = false;
         break;
 
       case LAYOUT_ITEM_TREATCONDINFO_105.key:
@@ -2095,12 +2073,6 @@ const addTreatCondInfoToCalendar = (
                 "equipmentCd",
                 "equipmentName"
               );
-
-              //20260414 liyanze-z #12462  add name start
-              // if(name===null||name===undefined){
-              //   const getItem = Object.values(treatCondInfo || {}).find(item => item?.value == value);
-              //   name = getItem?.disp_name ?? getItem?.value_name_1 ?? "";
-              // }
               if (treatCondEvent.readOnly) {
                 if (treatCondInfo[itemKey].disp_name && treatCondEvent.rstDialysisState == 0) {
                   name = treatCondInfo[itemKey].disp_name;
@@ -2108,8 +2080,6 @@ const addTreatCondInfoToCalendar = (
                   name = treatCondInfo[itemKey].value_name_1;
                 }
               }
-              //20260414 liyanze-z #12462  add name end
-              
               // 分類不一致、禁忌ｱﾚﾙｷﾞｰ、期限切れのチェック
               prefix = getDisplayPrefix(
                 value,
@@ -2121,18 +2091,16 @@ const addTreatCondInfoToCalendar = (
                 equipmentMap,
                 classType
               );
-              //liyanze-z add #12462  接頭辞 start 
-              if (facility_cd !== getFacilityCd&&mst.getOtherPatTabooAllergy&&mst.getOtherPatTabooAllergy.length!=0) {
+              if (facility_cd !== getFacilityCd && mst.getOtherPatTabooAllergy?.length) {
                 const otherTabooAllergyInfo = mst.getOtherPatTabooAllergy.find(item => item.cd == value);
                 const hasAnyPrefix =
-                  name.includes(ALLERGY_CLASS_PREFIX) ||
-                  name.includes(TABOO_ALLERGY_CLASS_PREFIX) ||
-                  name.includes(TABOO_CLASS_PREFIX);
-                if(otherTabooAllergyInfo&&!hasAnyPrefix){
-                  prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy) 
+                  (name || "").includes(ALLERGY_CLASS_PREFIX) ||
+                  (name || "").includes(TABOO_ALLERGY_CLASS_PREFIX) ||
+                  (name || "").includes(TABOO_CLASS_PREFIX);
+                if (otherTabooAllergyInfo && !hasAnyPrefix) {
+                  prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy);
                 }
               }
-              //liyanze-z add #12462  接頭辞 end 
             }
             content = `${title} ${prefix}${name}`;
           }
@@ -2149,7 +2117,7 @@ const addTreatCondInfoToCalendar = (
             layoutCategoryTitle,
             ordNo: treatCondEvent.ordNo,
             isDispGroup,
-            facility_cd: facility_cd
+            facility_cd
           };
 
           addContentToCalendar(
@@ -2168,8 +2136,8 @@ const addTreatCondInfoToCalendar = (
         if (!name) {
           // 名称未展開の場合はコードからマスタ名称取得
           if (facility_cd !== getFacilityCd) {
-            name = treatCondInfo[itemKey]?.disp_name
-          } else{
+            name = treatCondInfo[itemKey]?.disp_name;
+          } else {
             name = mstCodeToName(
               allEData,
               value,
@@ -2188,15 +2156,15 @@ const addTreatCondInfoToCalendar = (
             itemKey,
             equipmentMap
           );
-          //liyanze-z #12462  add 接頭辞 start 
-          if (facility_cd !== getFacilityCd&&mst.getOtherPatTabooAllergy&&mst.getOtherPatTabooAllergy.length!=0) {
+          if (facility_cd !== getFacilityCd && mst.getOtherPatTabooAllergy?.length) {
             const otherTabooAllergyInfo = mst.getOtherPatTabooAllergy.find(item => item.cd == value);
-            if(otherTabooAllergyInfo)prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy) 
+            if (otherTabooAllergyInfo) {
+              prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy);
+            }
           }
-          //liyanze-z #12462  add 接頭辞 end 
         }
         content = name ? `${prefix}${name}` : null;
-        needunit = false
+        needunit = false;
         break;
 
       case LAYOUT_ITEM_TREATCONDINFO_12.key:
@@ -2253,19 +2221,17 @@ const addTreatCondInfoToCalendar = (
           } else {  //通常薬剤
 
             // 名称未展開の場合はコードからマスタ名称取得
-            //mod #12462 患者情報共有 Ji start
             if (facility_cd !== getFacilityCd) {
-              name = treatCondInfo[itemKey]?.disp_name
+              name = treatCondInfo[itemKey]?.disp_name;
             } else {
               name = mstCodeToName(
-              allData,
-              value,
-              false,
-              "medicineCd",
-              "medicineName"
+                allData,
+                value,
+                false,
+                "medicineCd",
+                "medicineName"
               );
             }
-            //mod #12462 患者情報共有 Ji end
             // 分類不一致、禁忌ｱﾚﾙｷﾞｰ、期限切れのチェック
             prefix = getDisplayPrefix(
               value,
@@ -2283,15 +2249,14 @@ const addTreatCondInfoToCalendar = (
             );
           }
         }
-        //liyanze-z #12462  add 接頭辞 start 
-        if (facility_cd !== getFacilityCd&&mst.getOtherPatTabooAllergy&&mst.getOtherPatTabooAllergy.length!=0) {
+        if (facility_cd !== getFacilityCd && mst.getOtherPatTabooAllergy?.length) {
           const otherTabooAllergyInfo = mst.getOtherPatTabooAllergy.find(item => item.cd == value);
-          if(otherTabooAllergyInfo)prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy) 
+          if (otherTabooAllergyInfo) {
+            prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy);
+          }
         }
-        //liyanze-z #12462  add 接頭辞 end 
-        
         content = name ? `${prefix}${name}` : null;
-        needunit = false
+        needunit = false;
         break;
 
       case LAYOUT_ITEM_TREATCONDINFO_17.key:
@@ -2359,12 +2324,9 @@ const addTreatCondInfoToCalendar = (
           if (unitTmp !== "") {
             unit = `${unitTmp}${itemKey === LAYOUT_ITEM_TREATCONDINFO_27.key ? "/h" : ""}`;
           } else {
-            //20260414 liyanze-z #12462  add unit start
-            //unit = "";
             const getObj = treatCondInfo[LAYOUT_ITEM_TREATCONDINFO_25.key];
-            let getUnit = getObj?.unit ?? getObj?.disp_unit;
-            unit = getUnit?getUnit:'';
-            //20260414 liyanze-z #12462  add unit end
+            const getUnit = getObj?.unit ?? getObj?.disp_unit;
+            unit = getUnit ? getUnit : "";
           }
           //mod #10196 ord_mainのデータ定義から外れているデータ登録・参照処理の修正 zhaoqi 20240529 end
         }
@@ -2472,41 +2434,35 @@ const addTreatCondInfoToCalendar = (
         content =  Number(content).toFixed(1);
       }
     }
-    //mod #12462 患者情報共有 Ji start
-    let overunit = unit
-    // unit 処理
+    //add 8385患者カレンダー>治療指示に表示される数値の小数点以下表示桁が患者経過総合ビューアと異なる。zhao end
+    // mod FNSI-患者日历顯示調整 関 end
+    let overunit = unit;
     if (!needunit) {
-      overunit = '';
+      overunit = "";
     } else if (treatCondEvent.facility_cd !== getFacilityCd) {
-      if ((treatCondInfo[itemKey]?.disp_unit && treatCondEvent.rstDialysisState == 0) || indRstClass === 'ind') {
-        overunit = treatCondInfo[itemKey]?.disp_unit;
-        //20260414 liyanze-z #12462  add unit start
-        if(!overunit)overunit = unit
-        //20260414 liyanze-z #12462  add unit end
-        if(overunit == 'Kg' && itemKey == 3){
-          overunit = 'kg'
+      if ((treatCondInfo[itemKey]?.disp_unit && treatCondEvent.rstDialysisState == 0) || indRstClass === "ind") {
+        overunit = treatCondInfo[itemKey]?.disp_unit || unit;
+        if (overunit === "Kg" && itemKey == 3) {
+          overunit = "kg";
         }
-      } else if (treatCondInfo[itemKey]?.unit && indRstClass === 'rst') {
+      } else if (treatCondInfo[itemKey]?.unit && indRstClass === "rst") {
         overunit = treatCondInfo[itemKey]?.unit;
-        if(overunit == 'Kg' && itemKey == 3){
-          overunit = 'kg'
+        if (overunit === "Kg" && itemKey == 3) {
+          overunit = "kg";
         }
       }
     }
 
-    // title 特殊処理
     if (itemKey == 2) {
-      title = '';
+      title = "";
     }
 
-    // content 処理
     let displayContent = content;
-    
     if (treatCondEvent.facility_cd !== getFacilityCd) {
       if (treatCondInfo[itemKey]?.disp_name && treatCondEvent.rstDialysisState == 0) {
         const dispName = treatCondInfo[itemKey]?.disp_name ?? "";
-        const otherInfo = mst.getOtherPatTabooAllergy.find(item => item.cd == value) || {};
-        const prefix = getTabooAllergyPrefixNew(otherInfo?.taboo,otherInfo?.allergy);
+        const otherInfo = mst.getOtherPatTabooAllergy?.find?.(item => item.cd == value) || {};
+        const prefix = getTabooAllergyPrefixNew(otherInfo?.taboo, otherInfo?.allergy);
         const hasAnyPrefix =
           dispName.includes(ALLERGY_CLASS_PREFIX) ||
           dispName.includes(TABOO_ALLERGY_CLASS_PREFIX) ||
@@ -2521,19 +2477,12 @@ const addTreatCondInfoToCalendar = (
       }
     }
 
-    //20260414 liyanze-z #12462  add title start
-    if(content != displayContent){
+    if (content !== displayContent) {
       title = title.replace("未登録", "");
     }
-    //20260414 liyanze-z #12462  add title end
 
-    const overcontent = `${title ? `${title} ` : ''}${displayContent}${overunit || ''}`;
-    //add #12462 患者情報共有 Ji end
-    //add 8385患者カレンダー>治療指示に表示される数値の小数点以下表示桁が患者経過総合ビューアと異なる。zhao end
-    // mod FNSI-患者日历顯示調整 関 end
-    //mod #12462 患者情報共有 Ji start
+    const overcontent = `${title ? `${title} ` : ""}${displayContent}${overunit || ""}`;
     const calendarContent = {
-      // content: `${title ? `${title} ` : ""}${content}${unit || ""}`,
       content: overcontent,
       routerLink: routerLink,
       readOnly: treatCondEvent.readOnly,
@@ -2544,7 +2493,6 @@ const addTreatCondInfoToCalendar = (
       isDispGroup,
       facility_cd: treatCondEvent.facility_cd
     };
-    //mod #12462 患者情報共有 Ji end
     addContentToCalendar(
       calendarContents,
       treatCondEvent.treatDate,
@@ -2614,7 +2562,7 @@ const addScheduleInfoToCalendar = (
     case LAYOUT_ITEM_INFO_STARTTIME.key:
       title = "開始";
       value = treatScheduleEvent[LAYOUT_ITEM_RSTINFO_STARTDATE.key];
-      content = value ? moment(value).format("HH:mm") : null;
+      content = value ? dayjs(value).format("HH:mm") : null;
       if (indRstClass === "ind") {
         title = "開始予定";
         value = treatScheduleEvent[LAYOUT_ITEM_INDINFO_STARTTIME.key];
@@ -2629,7 +2577,7 @@ const addScheduleInfoToCalendar = (
     case LAYOUT_ITEM_RSTINFO_ENDDATE.key:
       if (indRstClass === "rst") {
         title = "終了";
-        content = value ? moment(value).format("HH:mm") : null;
+        content = value ? dayjs(value).format("HH:mm") : null;
       }
       break;
 
@@ -2661,9 +2609,7 @@ const addScheduleInfoToCalendar = (
     layoutCategoryTitle,
     ordNo: treatScheduleEvent.ordNo,
     isDispGroup,
-    //add #12462 患者情報共有 Ji start
-    facility_cd: treatScheduleEvent.facility_cd,
-    //add #12462 患者情報共有 Ji end
+    facility_cd: treatScheduleEvent.facility_cd
   };
 
   addContentToCalendar(
@@ -2810,14 +2756,14 @@ const addRstInfoToCalendar = (
         const end = rstEvent["rstEndDate"];
 
         if (start && end) {
-          const startMoment = moment(start);
-          const endMoment   = moment(end);
+          const startMoment = dayjs(start);
+          const endMoment   = dayjs(end);
 
           const diffMs = endMoment.diff(startMoment);
           if (diffMs >= 0) {
-            const duration = moment.duration(diffMs);
-            const hours = Math.floor(duration.asHours());
-            const minutes = duration.minutes();
+            const totalMinutes = Math.floor(diffMs / 60000);
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
             content = hours + ":" + String(minutes).padStart(2, "0");
           }
         }
@@ -2933,10 +2879,7 @@ const addRstInfoToCalendar = (
 
     // 「未登録」の場合に項目は表示しない
     if (content === null || content === undefined) {
-      //mod #12462 患者情報共有 liyanze-z start
-      //return;
-      continue
-      //mod #12462 患者情報共有 liyanze-z end
+      continue;
     }
 
     // 値の補正と単位設定
@@ -2963,9 +2906,6 @@ const addRstInfoToCalendar = (
         unit = "L";
         break;
       case LAYOUT_ITEM_RSTINFO_KTVMEASURE.key:
-      case LAYOUT_ITEM_RSTINFO_WATERREMOVALRST.key:
-      case LAYOUT_ITEM_RSTINFO_ADDWATERTOTAL.key:
-      case LAYOUT_ITEM_RSTINFO_IHDFPLL.key:
         content =  Number(content).toFixed(2);
         break;
       case LAYOUT_ITEM_RSTINFO_RECRCLRT_BLDVL.key:
@@ -2995,9 +2935,7 @@ const addRstInfoToCalendar = (
       layoutCategoryTitle,
       ordNo: rstEvent.ordNo,
       isDispGroup,
-      //mod #12462 患者情報共有 Ji start
       facility_cd: rstEvent.facility_cd
-      //mod #12462 患者情報共有 Ji end
     };
     addContentToCalendar(
       calendarContents,
@@ -3029,13 +2967,11 @@ const addTreatMediInfoToCalendar = (
   indRstClass
 ) => {
   // 各日付の投与薬剤から指定レイアウト項目を取り出しカレンダーに追加していく
-  //mod #12462 患者情報共有 Ji start
   const { indMediInfoJSON, rstMediInfoJSON, treatDate, facility_cd } = mediEvent;
   const mstTabooAllergy = mst.mstTabooAllergy;
   const allData = mst.mstMedicineIncludeDeleted;
   const allMData = mst.mstMedicineMixIncludeDeleted;
   const getFacilityCd = store.getters["user/getFacilityCd"];
-  //mod #12462 患者情報共有 Ji end
 
   // デフォルト（実績）
   let treatMediInfoJSON = rstMediInfoJSON;
@@ -3051,7 +2987,6 @@ const addTreatMediInfoToCalendar = (
 
   const treatMediInfo = JSON.parse(treatMediInfoJSON);
 
-  //mod #12462 患者情報共有 Ji start
   for (let { cd, name, amount, unit, medicine_type, effect_flg, disp_name, disp_unit } of treatMediInfo) {
     let prefix = "";
     let effected = ""; // [投与済み■／未投与□]を付与
@@ -3061,8 +2996,8 @@ const addTreatMediInfoToCalendar = (
 
       if (medicine_type == 2) { // 調整薬剤
         if (facility_cd !== getFacilityCd) {
-          name = disp_name
-          unit = disp_unit
+          name = disp_name;
+          unit = disp_unit;
         } else {
           name = mstCodeToName(
             allMData,
@@ -3073,7 +3008,6 @@ const addTreatMediInfoToCalendar = (
           );
           unit = mstCodeToUnit(allMData, cd, "medicineMixCd");
         }
-        //mod #12462 患者情報共有 Ji end
         allMData.forEach(function(everyMed){
           if (everyMed.medicineCd == cd) {
             amount = formatDecimalPoint(amount, everyMed.unitDecimalPoint);
@@ -3098,10 +3032,10 @@ const addTreatMediInfoToCalendar = (
         }
 
       } else {  //通常薬剤
-        //mod #12462 患者情報共有 Ji start
+
         if (facility_cd !== getFacilityCd) {
-          name = disp_name
-          unit = disp_unit
+          name = disp_name;
+          unit = disp_unit;
         } else {
           name = mstCodeToName(
             allData,
@@ -3112,7 +3046,6 @@ const addTreatMediInfoToCalendar = (
           );
           unit = mstCodeToUnit(allData, cd, "medicineCd");
         }
-        //mod #12462 患者情報共有 Ji end
         // 名称未展開の場合は禁忌ｱﾚﾙｷﾞｰ、期限切れの接頭辞を付与
         prefix = getDisplayPrefix(
           cd,
@@ -3127,26 +3060,21 @@ const addTreatMediInfoToCalendar = (
           }
         });
       }
-      
-      //liyanze-z #12462  add 接頭辞 start 
-      if (facility_cd !== getFacilityCd&&mst.getOtherPatTabooAllergy&&mst.getOtherPatTabooAllergy.length!=0) {
-        const otherTabooAllergyInfo = mst.getOtherPatTabooAllergy.find(item => item.cd == cd);
-        if(otherTabooAllergyInfo)prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy) 
 
-        if (medicine_type == 2){
-          const medicineMixData = mst.getOthetMstMixData.find(item =>
-              item.medicineMixCd == cd
-          );
+      if (facility_cd !== getFacilityCd && mst.getOtherPatTabooAllergy?.length) {
+        const otherTabooAllergyInfo = mst.getOtherPatTabooAllergy.find(item => item.cd == cd);
+        if (otherTabooAllergyInfo) {
+          prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy);
+        }
+
+        if (medicine_type == 2) {
+          const medicineMixData = mst.getOthetMstMixData?.find?.(item => item.medicineMixCd == cd);
           if (medicineMixData) {
-            const mixInfo = JSON.parse(medicineMixData.mixInfo)
+            const mixInfo = JSON.parse(medicineMixData.mixInfo);
             let taboo = false;
             let allergy = false;
-            for (let medicineData of mixInfo) {
-              // console.log(mediEvent)
-              // console.log(mediEvent.rstDialysisState)
-              // console.log(mediEvent.patId)
+            for (const medicineData of mixInfo) {
               const tabooAllergyInfo = mst.getOtherPatTabooAllergy.find(item =>
-                // item.patId == mediEvent.patId &&
                 item.classType == "1" &&
                 item.cd == medicineData.cd
               );
@@ -3163,12 +3091,11 @@ const addTreatMediInfoToCalendar = (
               if (taboo && allergy) break;
             }
             if (taboo || allergy) {
-              prefix  = getTabooAllergyPrefixNew(taboo, allergy);
+              prefix = getTabooAllergyPrefixNew(taboo, allergy);
             }
           }
         }
       }
-    //liyanze-z #12462  add 接頭辞 end 
 
     } else {
       // 名称展開済（実績）の場合は頭に[投与済み■／未投与□]を付与
@@ -3184,9 +3111,7 @@ const addTreatMediInfoToCalendar = (
       layoutCategoryTitle,
       ordNo: mediEvent.ordNo,
       isDispGroup,
-      //add #12462 患者情報共有 Ji start
-      facility_cd: facility_cd
-      //add #12462 患者情報共有 Ji end
+      facility_cd
     };
 
     addContentToCalendar(
@@ -3219,13 +3144,11 @@ const addTreatEquipInfoToCalendar = (
   indRstClass
   ) => {
     // 各日付の医療材料から指定レイアウト項目を取り出しカレンダーに追加していく
-    //mod #12462 患者情報共有 Ji start
     const { indEquipInfoJSON, rstEquipInfoJSON, facility_cd } = equipEvent;
     const mstTabooAllergy = mst.mstTabooAllergy;
     const allEData = mst.mstEquipmentIncludeDeleted;
     const allDData = mst.mstDialyzerIncludeDeleted;
     const getFacilityCd = store.getters["user/getFacilityCd"];
-    //mod #12462 患者情報共有 Ji end
 
     // デフォルト（実績）
     let treatEquipInfoJSON = rstEquipInfoJSON;
@@ -3241,7 +3164,6 @@ const addTreatEquipInfoToCalendar = (
 
     const treatEquipInfo = JSON.parse(treatEquipInfoJSON);
 
-    //mod #12462 患者情報共有 Ji start
     for (let { cd, name, amount, unit, equip_type, disp_name, disp_unit } of treatEquipInfo) {
 
       let prefix = "";
@@ -3250,7 +3172,7 @@ const addTreatEquipInfoToCalendar = (
           // ダイアライザ
           // 名称未展開の場合はコードからマスタ名称取得
           if (facility_cd !== getFacilityCd) {
-            name = disp_name
+            name = disp_name;
           } else {
             name = mstCodeToName(
               allDData,
@@ -3260,7 +3182,6 @@ const addTreatEquipInfoToCalendar = (
               "modelNumber"
             );
           }
-          //mod #12462 患者情報共有 Ji end
           // 禁忌ｱﾚﾙｷﾞｰ、期限切れのチェック
           prefix = getDisplayPrefix(
             cd,
@@ -3273,9 +3194,8 @@ const addTreatEquipInfoToCalendar = (
           unit = "";
         }else{
           // 医療材料
-          //mod #12462 患者情報共有 Ji start
           if (facility_cd !== getFacilityCd) {
-            name = disp_name
+            name = disp_name;
           } else {
             name = mstCodeToName(
               allEData,
@@ -3285,7 +3205,6 @@ const addTreatEquipInfoToCalendar = (
               "equipmentName"
             );
           }
-          //mod #12462 患者情報共有 Ji end
           prefix = getDisplayPrefix(
             cd,
             equipEvent.treatDate,
@@ -3295,22 +3214,20 @@ const addTreatEquipInfoToCalendar = (
           );
           if (!unit) {
             // 単位未展開の場合はコードからマスタ単位名取得
-            //mod #12462 患者情報共有 Ji start
             if (facility_cd !== getFacilityCd) {
-              unit = disp_unit
+              unit = disp_unit;
             } else {
               unit = mstCodeToUnit(allEData, cd, "equipmentCd");
             }
-            //mod #12462 患者情報共有 Ji end
           }
         }
       }
-      //liyanze-z #12462  add 接頭辞 start 
-      if (facility_cd !== getFacilityCd&&mst.getOtherPatTabooAllergy&&mst.getOtherPatTabooAllergy.length!=0) {
+      if (facility_cd !== getFacilityCd && mst.getOtherPatTabooAllergy?.length) {
         const otherTabooAllergyInfo = mst.getOtherPatTabooAllergy.find(item => item.cd == cd);
-        if(otherTabooAllergyInfo)prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy) 
+        if (otherTabooAllergyInfo) {
+          prefix = getTabooAllergyPrefixNew(otherTabooAllergyInfo.taboo, otherTabooAllergyInfo.allergy);
+        }
       }
-      //liyanze-z #12462  add 接頭辞 end 
 
       const calendarContent = {
         // 数量0のときamountにはnullが登録されているので0とする
@@ -3326,9 +3243,7 @@ const addTreatEquipInfoToCalendar = (
         // add #8091 2023/03/14 患者カレンダー/患者カレンダーレイアウトマスタの動作不正 林峻峰 end
         ordNo: equipEvent.ordNo,
         isDispGroup,
-        //add #12462 患者情報共有 Ji start
-        facility_cd: facility_cd
-        //add #12462 患者情報共有 Ji end
+        facility_cd
       };
       addContentToCalendar(
         calendarContents,
@@ -3357,7 +3272,6 @@ const addTreatIndCommentInfoToCalendar = (
   indRstClass
 ) => {
   // 各日付の指示コメントから指定レイアウト項目を取り出しカレンダーに追加していく
-  //mod #12462 患者情報共有 Ji start
   const { indIndCommentInfoJSON, rstIndCommentInfoJSON, facility_cd } = indCommentEvent;
 
   // デフォルト（実績）
@@ -3387,8 +3301,7 @@ const addTreatIndCommentInfoToCalendar = (
       layoutCategoryTitle,
       ordNo: indCommentEvent.ordNo,
       isDispGroup,
-      facility_cd: facility_cd
-    //mod #12462 患者情報共有 Ji end
+      facility_cd
     };
     addContentToCalendar(
       calendarContents,
@@ -3414,7 +3327,6 @@ const addExamInfoToCalendar = (
   layoutCategoryTitle
   // add #8091 2023/03/14 患者カレンダー/患者カレンダーレイアウトマスタの動作不正 林峻峰 end
 ) => {
-  //mod #12462 患者情報共有 Ji start
   for (const examCommentEvent of (eventData || [])) {
     const calendarContent = {
       content: "検査結果 あり",
@@ -3426,7 +3338,6 @@ const addExamInfoToCalendar = (
       layoutCategoryTitle,
       // add #8091 2023/03/14 患者カレンダー/患者カレンダーレイアウトマスタの動作不正 林峻峰 end
       facility_cd: examCommentEvent.facility_cd
-      //mod #12462 患者情報共有 Ji end
     };
     addContentToCalendar(
       calendarContents,
@@ -3534,9 +3445,7 @@ const addExamRequestInfoToCalendar = (
       layoutCategoryTitle: `${layoutCategoryTitle} ${examDateCountMap[event.strExamDate]}セット`,
       // add #8091 2023/03/14 患者カレンダー/患者カレンダーレイアウトマスタの動作不正 林峻峰 end
       isDispGroup: hasLayoutItems ? isDispGroup : false,
-      //add #12462 患者情報共有 Ji start
       facility_cd: event.facility_cd
-      //add #12462 患者情報共有 Ji end
     };
 
     addContentToCalendar(
@@ -3627,9 +3536,7 @@ const addPrescriptionInfoToCalendar = (
         layoutCategoryTitle: title,
         // add 2023/06/13 患者カレンダー 患者カレンダー画面で、処方表示不正 kang end
         isDispGroup,
-        //add #12462 患者情報共有 Ji start
         facility_cd: event.facility_cd
-        //add #12462 患者情報共有 Ji end
       };
       addContentToCalendar(
         calendarContents,
@@ -3648,9 +3555,7 @@ const addPrescriptionInfoToCalendar = (
         layoutCategoryTitle: title,
         // add 2023/06/13 患者カレンダー 患者カレンダー画面で、処方表示不正 kang end
         isDispGroup,
-        //add #12462 患者情報共有 Ji end
         facility_cd: event.facility_cd
-        //add #12462 患者情報共有 Ji end
       };
       addContentToCalendar(
         calendarContents,
@@ -3708,10 +3613,9 @@ const addPatEventInfoToCalendar = (
 
     const key = String(patEvent.subCategoryCd);
 
-    //liyanze-z #12462  add 患者イベント start
-    if(patEvent.readonly == true){
+    if (patEvent.readonly == true) {
       const totalCount = totalCountByDate.get(patEvent.eventStartDate) ?? 0;
-      const subCategoryName = patEvent.subCategoryName
+      const subCategoryName = patEvent.subCategoryName;
       const calendarContent = {
         content: `${subCategoryName}: ${patEvent.subCategoryCount}件`,
         routerLink: ROUTERLINK_PATEVENT,
@@ -3730,11 +3634,10 @@ const addPatEventInfoToCalendar = (
         patEvent.eventStartDate,
         calendarContent
       );
-    }else{
+    } else {
       // layoutItems に存在しないものは対象外
       if (!layoutItemMap.has(key)) continue;
     }
-    //liyanze-z #12462  add 患者イベント end
 
     if (!eventMap.has(key)) {
       eventMap.set(key, []);
@@ -3772,9 +3675,7 @@ const addPatEventInfoToCalendar = (
         // ★ 日付ごとの子の件数
         layoutCategoryTitle: `${layoutCategoryTitle} ${totalCount}件`,
         isDispGroup: isDispGroup,
-        //add #12462 患者情報共有 Ji start
         facility_cd: patEvent.facility_cd
-        //add #12462 患者情報共有 Ji end
       };
 
       addContentToCalendar(
@@ -3823,16 +3724,11 @@ const addBbsInfoToCalendar = (
 
   // 施設イベントカテゴリ ごとに eventData をまとめる
   const eventMap = new Map();
-
-  //liyanze-z #12462  add 施設 start
   const getFacilityCd = store.getters["user/getFacilityCd"];
   const currentFacilityCd = getFacilityCd;
   const otherFacilityEvents = [];
   const otherDayMap = new Map();
-  //liyanze-z #12462  add 施設 end
-
   for (const bbsInfo of eventData) {
-    //liyanze-z #12462  add 施設 start
     if (bbsInfo.facility_cd != currentFacilityCd) {
       otherFacilityEvents.push(bbsInfo);
     }
@@ -3843,26 +3739,18 @@ const addBbsInfoToCalendar = (
     }
     otherDayMap.get(infoDate).push(bbsInfo);
     const isSameFacility = bbsInfo.facility_cd === currentFacilityCd;
-    //liyanze-z #12462  add 施設 end
 
     const kindKey = String(bbsInfo.kind_no);
 
-    //liyanze-z #12462  add 施設 start
     // layoutItems に存在しないものは対象外
-    //if (!layoutItemMap.has(kindKey)) continue;
-    if (isSameFacility) {
-      // layoutItems に存在しないものは対象外
-      if (!layoutItemMap.has(kindKey)) continue;
-    }
-    //liyanze-z #12462  add 施設 end
-    
+    if (isSameFacility && !layoutItemMap.has(kindKey)) continue;
 
     // ===== 件数集計 =====
-    const facStart = moment(
+    const facStart = dayjs(
       bbsInfo.notice_fac_cal_start_date,
       "YYYYMMDD"
     );
-    const facEnd = moment(
+    const facEnd = dayjs(
       bbsInfo.notice_fac_cal_end_date ?? bbsInfo.notice_fac_cal_start_date,
       "YYYYMMDD"
     );
@@ -3902,9 +3790,9 @@ const addBbsInfoToCalendar = (
           ? ROUTERLINK_BBSINFO
           : ROUTERLINK_FACILITY_CALENDAR;
 
-      const facStart = moment(bbsInfo.notice_fac_cal_start_date, "YYYYMMDD");
+      const facStart = dayjs(bbsInfo.notice_fac_cal_start_date, "YYYYMMDD");
       const facEnd = bbsInfo.notice_fac_cal_end_date
-        ? moment(bbsInfo.notice_fac_cal_end_date, "YYYYMMDD")
+        ? dayjs(bbsInfo.notice_fac_cal_end_date, "YYYYMMDD")
         : facStart.clone();
 
       let current = facStart.clone();
@@ -3923,16 +3811,13 @@ const addBbsInfoToCalendar = (
           startDate: bbsInfo.notice_start_date,
           endDate: bbsInfo.notice_end_date,
           bbsCtlNo: bbsInfo.bbs_ctl_no,
-          //add #12462 患者情報共有 Ji start
           facility_cd: bbsInfo.facility_cd
-          //add #12462 患者情報共有 Ji end
         });
 
         current.add(1, "day");
       }
     }
   }
-  //liyanze-z #12462  add otherFacilityEvents start
   for (const bbsInfo of otherFacilityEvents) {
     const title = bbsInfo.title ?? "";
     const routerLink =
@@ -3960,7 +3845,72 @@ const addBbsInfoToCalendar = (
       isOtherFacility: true
     });
   }
-  //liyanze-z #12462  add otherFacilityEvents end
+};
+
+/**
+ * モニタ日付をローカル暦日（YYYY/MM/DD）に正規化する。
+ * - DB/API が ISO(UTC) の場合もブラウザローカル日付で扱う（例: 2026-05-22T15:00:00.000Z → 2026/05/23 JST）
+ * - 従来の YYYYMMDD 文字列もそのまま受け付ける
+ */
+const toLocalCalendarDateSlash = value => {
+  if (value == null || value === "") {
+    return null;
+  }
+  if (typeof value === "string" && /^\d{8}$/.test(value)) {
+    const parsed = dayjs(value, "YYYYMMDD");
+    return parsed.isValid() ? parsed.format("YYYY/MM/DD") : null;
+  }
+  const parsed = dayjs(value);
+  return parsed.isValid() ? parsed.format("YYYY/MM/DD") : null;
+};
+
+const toLocalCalendarDateYmd = value => {
+  const slash = toLocalCalendarDateSlash(value);
+  return slash ? dayjs(slash, "YYYY/MM/DD").format("YYYYMMDD") : null;
+};
+
+const parseMonitorDataField = monitorItem => {
+  const raw = monitorItem.monitor_data ?? monitorItem.monitorData;
+  if (raw == null || raw === "") {
+    return null;
+  }
+  if (typeof raw === "object") {
+    return raw;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+const normalizeMonitorRecord = monitorItem => {
+  const isDeleted = monitorItem.is_del ?? monitorItem.isDel;
+  if (isDeleted === "1" || isDeleted === 1) {
+    return null;
+  }
+
+  const monitorData = parseMonitorDataField(monitorItem);
+  if (!monitorData) {
+    return null;
+  }
+
+  const occurDate = monitorItem.occur_date ?? monitorItem.occurDate;
+  const treatDate = monitorItem.treat_date ?? monitorItem.treatDate;
+  const treatDateSlash = toLocalCalendarDateSlash(treatDate);
+
+  if (!treatDateSlash) {
+    return null;
+  }
+
+  return {
+    monitorData,
+    occurDate,
+    treatDate,
+    treatDateSlash,
+    dataType: monitorItem.data_type ?? monitorItem.dataType,
+    ordNo: monitorItem.ord_no ?? monitorItem.ordNo
+  };
 };
 
 /**
@@ -3980,25 +3930,22 @@ export const convertVitalInfoForPatCalendar = (
   const convertDataList = [];
 
   /** 日付フォーマットキャッシュ */
-  const treatDateFormatMap = new Map(); // YYYYMMDD -> YYYY/MM/DD
+  const treatDateFormatMap = new Map();
   const formatTreatDate = treatDate => {
     if (!treatDateFormatMap.has(treatDate)) {
-      treatDateFormatMap.set(
-        treatDate,
-        moment(treatDate, "YYYYMMDD").format("YYYY/MM/DD")
-      );
+      treatDateFormatMap.set(treatDate, toLocalCalendarDateSlash(treatDate));
     }
     return treatDateFormatMap.get(treatDate);
   };
 
   /** 治療実績情報からチャート横軸範囲を算出 */
   const getChartRangeByOrdInfo = (copyTreatmentData, date) => {
-    const treatDate = moment(date, "YYYY/MM/DD").format("YYYYMMDD");
+    const treatDate = dayjs(date, "YYYY/MM/DD").format("YYYYMMDD");
     const ordInfo = copyTreatmentData[treatDate];
 
     // デフォルト：当日 0:00 ～ 翌日 0:00
-    let startDate = moment(treatDate, "YYYYMMDD").startOf("day");
-    let endDate   = moment(treatDate, "YYYYMMDD").add(1, "days").startOf("day");
+    let startDate = dayjs(treatDate, "YYYYMMDD").startOf("day");
+    let endDate   = dayjs(treatDate, "YYYYMMDD").add(1, "days").startOf("day");
 
     if (!ordInfo) {
       return { startDate, endDate };
@@ -4008,12 +3955,12 @@ export const convertVitalInfoForPatCalendar = (
     const rstWeightBeforeDate =
       ordInfo.rstWeightInfo &&
       JSON.parse(ordInfo.rstWeightInfo)?.weight_before_date
-        ? moment(JSON.parse(ordInfo.rstWeightInfo).weight_before_date)
+        ? dayjs(JSON.parse(ordInfo.rstWeightInfo).weight_before_date)
         : null;
 
     // 治療開始日時
     const rstStartDate = ordInfo.rstStartDate
-      ? moment(ordInfo.rstStartDate)
+      ? dayjs(ordInfo.rstStartDate)
       : null;
 
     if (rstWeightBeforeDate) {
@@ -4026,12 +3973,12 @@ export const convertVitalInfoForPatCalendar = (
     const rstWeightAfterDate =
       ordInfo.rstWeightInfo &&
       JSON.parse(ordInfo.rstWeightInfo)?.weight_after_date
-        ? moment(JSON.parse(ordInfo.rstWeightInfo).weight_after_date)
+        ? dayjs(JSON.parse(ordInfo.rstWeightInfo).weight_after_date)
         : null;
 
     // 治療終了日時
     const rstEndDate = ordInfo.rstEndDate
-      ? moment(ordInfo.rstEndDate)
+      ? dayjs(ordInfo.rstEndDate)
       : null;
 
     if (rstWeightAfterDate) {
@@ -4067,16 +4014,16 @@ export const convertVitalInfoForPatCalendar = (
           const pstNo = parseInt(itemNo);
           if (!tempArr[pstNo]) {
             // #8091 5.4には5.5のモニタグラフ表示される 修正 林峻峰 start
-            // tempArr[pstNo] = [...[], [moment(rec.occurDate, "YYYYMMDD").format("YYYY/MM/DD"),rec.occurDate, Number(rec.monitorData[itemNo])]];
-            tempArr[pstNo] = [...[], [moment(rec.treatDate, "YYYYMMDD").format("YYYY/MM/DD"), rec.occurDate, Number(rec.monitorData[itemNo])]];
+            // tempArr[pstNo] = [...[], [dayjs(rec.occurDate, "YYYYMMDD").format("YYYY/MM/DD"),rec.occurDate, Number(rec.monitorData[itemNo])]];
+            tempArr[pstNo] = [...[], [rec.treatDateSlash, rec.occurDate, Number(rec.monitorData[itemNo])]];
             // #8091 5.4には5.5のモニタグラフ表示される 修正 林峻峰 end
           } else {
             // #8091 5.4には5.5のモニタグラフ表示される 修正 林峻峰 start
-            // tempArr[pstNo] = [...tempArr[pstNo], [moment(rec.occurDate, "YYYYMMDD").format("YYYY/MM/DD"),rec.occurDate, Number(rec.monitorData[itemNo])]];
+            // tempArr[pstNo] = [...tempArr[pstNo], [dayjs(rec.occurDate, "YYYYMMDD").format("YYYY/MM/DD"),rec.occurDate, Number(rec.monitorData[itemNo])]];
             /* modify by chamaojia 2023-10-12 [9713] 配列追加値のパフォーマンス最適化  --start */
             // 配列追加値の性能が悪く、pushに置き換える
-            // tempArr[pstNo] = [...tempArr[pstNo], [moment(rec.treatDate, "YYYYMMDD").format("YYYY/MM/DD"), rec.occurDate, Number(rec.monitorData[itemNo])]];
-            tempArr[pstNo].push([moment(rec.treatDate, "YYYYMMDD").format("YYYY/MM/DD"), rec.occurDate, Number(rec.monitorData[itemNo])]);
+            // tempArr[pstNo] = [...tempArr[pstNo], [dayjs(rec.treatDate, "YYYYMMDD").format("YYYY/MM/DD"), rec.occurDate, Number(rec.monitorData[itemNo])]];
+            tempArr[pstNo].push([rec.treatDateSlash, rec.occurDate, Number(rec.monitorData[itemNo])]);
             /* modify by chamaojia 2023-10-12 [9713] 配列追加値のパフォーマンス最適化  --end */
             // #8091 5.4には5.5のモニタグラフ表示される 修正 林峻峰 end
           }
@@ -4122,16 +4069,10 @@ export const convertVitalInfoForPatCalendar = (
       if (!resMniMonitor) continue;
 
       resMniMonitor.data.forEach(monitorItem => {
-        // 削除データは表示しない
-        if (monitorItem.is_del === "1") return;
-
-        vitalInfo.push({
-          monitorData: monitorItem.monitor_data && JSON.parse(monitorItem.monitor_data),
-          occurDate: monitorItem.occur_date,
-          treatDate: monitorItem.treat_date,
-          dataType: monitorItem.data_type,
-          ordNo: monitorItem.ord_no
-        });
+        const normalized = normalizeMonitorRecord(monitorItem);
+        if (normalized) {
+          vitalInfo.push(normalized);
+        }
       });
     }
 
@@ -4146,9 +4087,10 @@ export const convertVitalInfoForPatCalendar = (
       if (!xAxisMap.has(date)) {
         xAxisMap.set(date, []);
       }
-      xAxisMap
-        .get(date)
-        .push(moment(rec.occurDate, "YYYYMMDD").format("YYYY/MM/DD"));
+      const occurDateSlash = toLocalCalendarDateSlash(rec.occurDate);
+      if (occurDateSlash) {
+        xAxisMap.get(date).push(occurDateSlash);
+      }
     });
 
     const dateArr = [...dateSet];
@@ -4162,7 +4104,7 @@ export const convertVitalInfoForPatCalendar = (
 
       for (const vitalItem of vitalInfo) {
         for (const key of filterArr) {
-          if (vitalItem.monitorData?.hasOwnProperty(key)) {
+          if (Object.prototype.hasOwnProperty.call(vitalItem.monitorData || {}, key)) {
             vitalResultArr.push(vitalItem.monitorData[key]);
           }
         }
@@ -4239,7 +4181,7 @@ export const convertVitalInfoForPatCalendar = (
       const chartData = createChartData(date);
 
       convertDataList.push({
-        date: moment(date).format("YYYYMMDD"),
+        date: toLocalCalendarDateYmd(date),
         content: {
           key: dataKey,
           type: "rstChart",
@@ -4291,7 +4233,7 @@ const addContentToCalendar = (calendarContents, eventDate, content) => {
  * @returns {String} フォーマット後の日付文字列
  */
 const formatDate = (date, format) => {
-  const mo = moment(date);
+  const mo = dayjs(date);
   return mo.isValid() ? mo.format(format) : null;
 };
 
@@ -4301,7 +4243,7 @@ const formatDate = (date, format) => {
  * @returns {String} 引数がHHmm形式文字列: 'HH:mm', 不正な文字列: ''
  */
 const formatTimeString = hhmm => {
-  const time = moment(hhmm, "HHmm");
+  const time = dayjs(hhmm, "HHmm");
   return time.isValid() ? time.format("HH:mm") : null;
 };
 

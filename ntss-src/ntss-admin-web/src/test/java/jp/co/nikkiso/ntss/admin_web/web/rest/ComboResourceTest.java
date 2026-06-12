@@ -15,9 +15,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
@@ -39,7 +39,7 @@ public class ComboResourceTest extends AbstractResourceTest {
   /**
    * 参照型コンボボックス用Service.
    */
-  @MockBean
+  @MockitoBean
   private ReferenceComboService referenceComboService;
 
   /**
@@ -66,7 +66,7 @@ public class ComboResourceTest extends AbstractResourceTest {
     String cdColName = "foober";
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders
         .get("/api/combo/{master_physical_name}/{text_column_physical_name}/{cd_column_physical_name}", masterName, textColName, cdColName)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(referenceComboService, times(1)).build(any(), any());
@@ -105,7 +105,7 @@ public class ComboResourceTest extends AbstractResourceTest {
     String cdColName = "foober";
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders
         .get("/api/combo/{master_physical_name}/{text_column_physical_name}/{cd_column_physical_name}", masterName, textColName, cdColName)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(referenceComboService, times(1)).build(any(), any());
@@ -143,7 +143,7 @@ public class ComboResourceTest extends AbstractResourceTest {
     String cdColName = "foober";
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders
         .get("/api/combo/{master_physical_name}/{text_column_physical_name}/{cd_column_physical_name}", masterName, textColName, cdColName)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(referenceComboService, times(1)).build(any(), any());
@@ -174,7 +174,7 @@ public class ComboResourceTest extends AbstractResourceTest {
     String cdColName = "foober";
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders
       .get("/api/combo/{master_physical_name}/{text_column_physical_name}/{cd_column_physical_name}", masterName, textColName, cdColName)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(referenceComboService, times(1)).build(any(), any());

@@ -4,7 +4,7 @@
   <div>
     <!-- cancelable:背景をタッチした際にポップオーバーを閉じる -->
     <v-ons-popover
-      :visible.sync="popoverData.popoverVisible"
+      v-model:visible="popoverData.popoverVisible"
       :target="popoverData.popoverTarget"
       :direction="popoverData.popoverDirection"
       @posthide="closePopover"
@@ -18,7 +18,7 @@
             :settingData="settingData"
             @hide-modal="hideModalCreate"
           >
-            <div :is="selectTag" :component-names="componentNames" v-bind="sampleDates"></div>
+            <component :is="selectTag" :component-names="componentNames" v-bind="sampleDates" />
           </input-item>
         </v-ons-modal>
         <v-ons-row style="text-align: center;">

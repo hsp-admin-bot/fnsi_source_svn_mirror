@@ -1,12 +1,11 @@
 package jp.co.nikkiso.ntss.api.service.utils;
 
 
-import com.amazonaws.util.StringUtils;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import jp.co.nikkiso.ntss.api.constant.InOutInfoConstant;
 import jp.co.nikkiso.ntss.api.request.AdditionCalculationRequest;
 import jp.co.nikkiso.ntss.api.service.LogService;
@@ -1257,7 +1256,7 @@ public class ConditionSendResultUtil {
 //    if (ordMainData != null) {
 //      outOrdMain.setFacilityCd(ordMainData.getFacilityCd());
 //      outOrdMain.setPatId(ordMainData.getPatId());
-//      if (StringUtils.isNullOrEmpty(outOrdMain.getTreatDate()))
+//      if (ObjectUtils.isEmpty(outOrdMain.getTreatDate()))
 //        outOrdMain.setTreatDate(ordMainData.getTreatDate());
 //    }
 //    this.ordMaterialSaveService.batchProcessingData(
@@ -2079,14 +2078,19 @@ public class ConditionSendResultUtil {
         String useEndDate = useEndDateObj == null ? null : useEndDateObj.toString();
         String isDisp = getValueFromMap(dialyzerMap, PARAMKEY.DATA_IS_DISP.get()).toString();
         String isDel = getValueFromMap(dialyzerMap, PARAMKEY.DATA_IS_DEL.get()).toString();
+        /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
         String prefixName = getPrefixOfName(patTabooAllergyInfo, tabooAllergyList, "4", dialyzerCd
-                , "5", null, useEndDate, isDisp, isDel, null);
+                , "5", null, useEndDate, isDisp, isDel, null, false);
+        /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
         itemObj.put(PARAMKEY.COND_NAME_1.get(), prefixName + dialyzerName) ;
         //翻訳2:メーカー名
         itemObj.put(PARAMKEY.COND_NAME_2.get(), getValueFromMap(dialyzerMap, PARAMKEY.COND_MAKER.get())) ;
       } else {
         if (dialyzerCd != null) {
-          itemObj.put(PARAMKEY.COND_NAME_1.get(), CoreConstant.NamePrefixJapan.DELETED) ;
+          /* update by chamaojia 2026-01-16 [11072] 名前が値を取得できなかった場合、cdを代入する --start */
+          // itemObj.put(PARAMKEY.COND_NAME_1.get(), CoreConstant.NamePrefixJapan.DELETED) ;
+          itemObj.put(PARAMKEY.COND_NAME_1.get(), dialyzerCd) ;
+          /* update by chamaojia 2026-01-16 [11072] 名前が値を取得できなかった場合、cdを代入する --end */
         }
       }
       /* modify by chamaojia 2024-06-07 [10754] 接頭文字対応 --end */
@@ -2548,7 +2552,7 @@ public class ConditionSendResultUtil {
     // Short rstInputClass = Short.valueOf(CONSTDEF.RST_INPUT_CLASS_MANUAL.get());
     //実績：登録区分 -> 通常(透析装置や通信サーバーなどを伴う治療)
     Short rstInputClass;
-    if (StringUtils.isNullOrEmpty(rstDialysisState)) {
+    if (ObjectUtils.isEmpty(rstDialysisState)) {
       // 実績：登録区分 -> 「透析装置や通信サーバーなどを伴う治療」
       rstInputClass = Short.valueOf(CONSTDEF.RST_INPUT_CLASS_DEFAULT.get());
     } else {
@@ -3954,18 +3958,25 @@ public class ConditionSendResultUtil {
           String isDel = medicineMap.get(PARAMKEY.DATA_IS_DEL.get()).toString();
           String prefixName = "";
           if (type == 1) {
+            /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
             prefixName = getPrefixOfName(patTabooAllergyInfo, tabooAllergyList, type.toString()
-                    , cd, itemList[i], classType, useEndDate, isDisp, isDel, indDeviceMode);
+                    , cd, itemList[i], classType, useEndDate, isDisp, isDel, indDeviceMode, false);
+            /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
           } else if (type == 2) {
             String mixInfo = medicineMap.get(PARAMKEY.MEDI_MIX_INFO.get()).toString();
+            /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
             prefixName = getMedicineMixPrefixOfName(patTabooAllergyInfo, tabooAllergyList
-                    , cd, itemList[i], classType, isDisp, isDel, mixInfo, facilityCd);
+                    , cd, itemList[i], classType, isDisp, isDel, mixInfo, facilityCd, false);
+            /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
           }
           tmpObj.put(PARAMKEY.COND_NAME_1.get(), prefixName + medicineName) ;
           //TODO:単位保管場所はCDの保管場所と違うため一旦無効化
           //tmpObj.put(PARAMKEY.COND_UNIT.get(), (String)medicineMap.get(PARAMKEY.MEDI_UNIT.get()));
         } else {
-          tmpObj.put(PARAMKEY.COND_NAME_1.get(), CoreConstant.NamePrefixJapan.DELETED) ;
+          /* update by chamaojia 2026-01-16 [11072] 名前が値を取得できなかった場合、cdを代入する --start */
+          // tmpObj.put(PARAMKEY.COND_NAME_1.get(), CoreConstant.NamePrefixJapan.DELETED) ;
+          tmpObj.put(PARAMKEY.COND_NAME_1.get(), cd) ;
+          /* update by chamaojia 2026-01-16 [11072] 名前が値を取得できなかった場合、cdを代入する --end */
         }
         /* modify by chamaojia 2024-06-07 [10754] 接頭文字対応 --end */
       }
@@ -4119,21 +4130,29 @@ public class ConditionSendResultUtil {
             Integer classType = parseInteger(equipMap.get().get(PARAMKEY.EQUI_CLASS_TYPE.get()));
             Object useEndDateObj = equipMap.get().get(PARAMKEY.DATA_USE_END_DATE.get());
             String useEndDate = useEndDateObj == null ? null : useEndDateObj.toString();
+            /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
             prefixName = getPrefixOfName(patTabooAllergyInfo, tabooAllergyList, "3", equipCd
-                    , itemList[i], classType, useEndDate, isDisp, isDel, null);
-          } else {
-            // VA prefix
-            if (isDataDeleted(isDisp, isDel)) {
-              prefixName = CoreConstant.NamePrefixJapan.DELETED;
-            }
+                    , itemList[i], classType, useEndDate, isDisp, isDel, null, false);
+            /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
           }
+          /* del by chamaojia 2026-01-16 [11072] マスタに関連する接頭語は不要です --start */
+          // } else {
+          //   // VA prefix
+          //   if (isDataDeleted(isDisp, isDel)) {
+          //     prefixName = CoreConstant.NamePrefixJapan.DELETED;
+          //   }
+          // }
+          /* del by chamaojia 2026-01-16 [11072] マスタに関連する接頭語は不要です --end */
           objList.get(i).put(PARAMKEY.COND_NAME_1.get(), prefixName + equipmentName) ;
           if (target.equals(PARAMKEY.COND_CAT_EQUIP.get())) {
             objList.get(i).put(PARAMKEY.COND_UNIT.get(), (String)equipMap.get().get(PARAMKEY.COND_UNIT.get())) ;
           }
 
         } else {
-          objList.get(i).put(PARAMKEY.COND_NAME_1.get(), CoreConstant.NamePrefixJapan.DELETED) ;
+          /* update by chamaojia 2026-01-16 [11072] 名前が値を取得できなかった場合、cdを代入する --start */
+          // objList.get(i).put(PARAMKEY.COND_NAME_1.get(), CoreConstant.NamePrefixJapan.DELETED) ;
+          objList.get(i).put(PARAMKEY.COND_NAME_1.get(), equipCd) ;
+          /* update by chamaojia 2026-01-16 [11072] 名前が値を取得できなかった場合、cdを代入する --end */
         }
 
 //        // 取得した名称Listのループ
@@ -4434,15 +4453,20 @@ public class ConditionSendResultUtil {
           String useEndDate = useEndDateObj == null ? null : useEndDateObj.toString();
           String isDisp = getValueFromMap(mediMap, PARAMKEY.DATA_IS_DISP.get()).toString();
           String isDel = getValueFromMap(mediMap, PARAMKEY.DATA_IS_DEL.get()).toString();
+          /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
           String prefixName = getPrefixOfName(patTabooAllergyInfo, tabooAllergyList, "3", cd
-                  , null, null, useEndDate, isDisp, isDel, null);
+                  , null, null, useEndDate, isDisp, isDel, null, false);
+          /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
           setJsonKeyAndValue(jObj, PARAMKEY.EQUI_NAME.get(), prefixName + equitmentName);
           //省略医療材料名
           setJsonKeyAndValue(jObj, PARAMKEY.EQUI_SHORT_NAME.get(), getValueFromMap(mediMap, PARAMKEY.EQUI_SHORT_NAME.get()));
           //単位
           setJsonKeyAndValue(jObj, PARAMKEY.EQUI_UNIT.get(), getValueFromMap(mediMap, PARAMKEY.EQUI_UNIT.get()));
         } else {
-          setJsonKeyAndValue(jObj, PARAMKEY.EQUI_NAME.get(), CoreConstant.NamePrefixJapan.DELETED);
+          /* update by chamaojia 2026-01-16 [11072] 名前が値を取得できなかった場合、cdを代入する --start */
+          // setJsonKeyAndValue(jObj, PARAMKEY.EQUI_NAME.get(), CoreConstant.NamePrefixJapan.DELETED);
+          setJsonKeyAndValue(jObj, PARAMKEY.EQUI_NAME.get(), cd);
+          /* update by chamaojia 2026-01-16 [11072] 名前が値を取得できなかった場合、cdを代入する --end */
         }
         /* modify by chamaojia 2024-06-07 [10754] 接頭文字対応 --end */
       } else if (equipType == 1) {
@@ -4459,8 +4483,10 @@ public class ConditionSendResultUtil {
           String useEndDate = useEndDateObj == null ? null : useEndDateObj.toString();
           String isDisp = getValueFromMap(mediMap, PARAMKEY.DATA_IS_DISP.get()).toString();
           String isDel = getValueFromMap(mediMap, PARAMKEY.DATA_IS_DEL.get()).toString();
+          /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
           String prefixName = getPrefixOfName(patTabooAllergyInfo, tabooAllergyList, "4", cd
-                  , null, null, useEndDate, isDisp, isDel, null);
+                  , null, null, useEndDate, isDisp, isDel, null, false);
+          /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
           setJsonKeyAndValue(jObj, PARAMKEY.EQUI_NAME.get(), prefixName + dialyzerName);
           // add #11586 治療記録＞医療材料にてダイアライザを追加すると保存できない。 関 start
           setJsonKeyAndValue(jObj, PARAMKEY.EQUI_UNIT.get(), "本");
@@ -4471,7 +4497,10 @@ public class ConditionSendResultUtil {
           setJsonKeyAndValue(jObj, PARAMKEY.EQUI_SHORT_NAME.get(), dialyzerName);
           // add #11586 治療記録＞医療材料にてダイアライザを追加すると保存できない。 関 end
         } else {
-          setJsonKeyAndValue(jObj, PARAMKEY.EQUI_NAME.get(), CoreConstant.NamePrefixJapan.DELETED);
+          /* update by chamaojia 2026-01-16 [11072] 名前が値を取得できなかった場合、cdを代入する --start */
+          // setJsonKeyAndValue(jObj, PARAMKEY.EQUI_NAME.get(), CoreConstant.NamePrefixJapan.DELETED);
+          setJsonKeyAndValue(jObj, PARAMKEY.EQUI_NAME.get(), cd);
+          /* update by chamaojia 2026-01-16 [11072] 名前が値を取得できなかった場合、cdを代入する --end */
         }
         /* modify by chamaojia 2024-06-07 [10754] 接頭文字対応 --end */
       }
@@ -4580,12 +4609,16 @@ public class ConditionSendResultUtil {
         String isDel = getValueFromMap(mediMap, PARAMKEY.DATA_IS_DEL.get()).toString();
         String prefixName = "";
         if (medicine_type == 1) {
+          /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
           prefixName = getPrefixOfName(patTabooAllergyInfo, tabooAllergyList, medicine_type.toString(), cd
-                  , null, null, useEndDate, isDisp, isDel, null);
+                  , null, null, useEndDate, isDisp, isDel, null, false);
+          /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
         } else if (medicine_type == 2) {
           String mixInfo = getValueFromMap(mediMap, PARAMKEY.MEDI_MIX_INFO.get()).toString();
+          /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
           prefixName = getMedicineMixPrefixOfName(patTabooAllergyInfo, tabooAllergyList, cd
-                  , null, null, isDisp, isDel, mixInfo, facilityCd);
+                  , null, null, isDisp, isDel, mixInfo, facilityCd, false);
+          /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
         }
         setJsonKeyAndValue(jObj, PARAMKEY.MEDI_NAME.get(), prefixName + medicineName) ;
         //省略薬剤名
@@ -4617,7 +4650,10 @@ public class ConditionSendResultUtil {
         //手技名称
         jObj.put(PARAMKEY.MEDI_PROCEDURE_NAME.get(), procedure_name) ;
       } else {
-        setJsonKeyAndValue(jObj, PARAMKEY.MEDI_NAME.get(), CoreConstant.NamePrefixJapan.DELETED) ;
+        /* update by chamaojia 2026-01-16 [11072] 名前が値を取得できなかった場合、cdを代入する --start */
+        // setJsonKeyAndValue(jObj, PARAMKEY.MEDI_NAME.get(), CoreConstant.NamePrefixJapan.DELETED) ;
+        setJsonKeyAndValue(jObj, PARAMKEY.MEDI_NAME.get(), cd) ;
+        /* update by chamaojia 2026-01-16 [11072] 名前が値を取得できなかった場合、cdを代入する --end */
       }
       /* modify by chamaojia 2024-06-07 [10754] 接頭文字対応 --end */
     }
@@ -5095,6 +5131,7 @@ public class ConditionSendResultUtil {
   }
   //add 9914 補液計算優先項目を「濾過率から算出」に設定した時の補液速度と補液量の表示が不正 end zhao
 
+  /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
   /* add by chamaojia 2024-06-07 [10754] 接頭文字対応 --start */
   /**
    * 薬剤/医療材料/ダイアライザ 名前の接頭辞取得
@@ -5109,11 +5146,12 @@ public class ConditionSendResultUtil {
    * @param isDisp               表示フラグ
    * @param isDel                削除フラグ
    * @param indDeviceMode        装置モード
+   * @param needMstPrefix        マスタに関連する接頭語が必要です   true: need
    * @return
    */
   private String getPrefixOfName(String patTabooAllergyInfo, List<MstTabooAllergy> tabooAllergyList
           , String dataType, Integer cd, String itemCd, Integer classType, String useEndDate
-          , String isDisp, String isDel, Integer indDeviceMode) {
+          , String isDisp, String isDel, Integer indDeviceMode, boolean needMstPrefix) {
     StringBuilder prefixName = new StringBuilder();
     // 【禁忌・ｱﾚﾙｷﾞｰ】、【禁忌】、【ｱﾚﾙｷﾞｰ】prefix supplementation
     String tabooAllergyType = getTabooAllergyType(patTabooAllergyInfo, tabooAllergyList, dataType, cd);
@@ -5129,19 +5167,21 @@ public class ConditionSendResultUtil {
       prefixName.append(tabooAllergyPrefix);
     }
 
-    // 【分類不一致】prefix supplementation
-    if (isDataInconsistentClassification(itemCd, classType, indDeviceMode)) {
-      prefixName.append(CoreConstant.NamePrefixJapan.INCONSISTENT_CLASSIFICATION);
-    }
+    if (needMstPrefix) {
+      // 【分類不一致】prefix supplementation
+      if (isDataInconsistentClassification(itemCd, classType, indDeviceMode)) {
+        prefixName.append(CoreConstant.NamePrefixJapan.INCONSISTENT_CLASSIFICATION);
+      }
 
-    // 【期限切れ】prefix supplementation
-    if (isDataExpired(useEndDate)) {
-      prefixName.append(CoreConstant.NamePrefixJapan.EXPIRED);
-    }
+      // 【期限切れ】prefix supplementation
+      if (isDataExpired(useEndDate)) {
+        prefixName.append(CoreConstant.NamePrefixJapan.EXPIRED);
+      }
 
-    // 【削除済み】prefix supplementation
-    if (isDataDeleted(isDisp, isDel)) {
-      prefixName.append(CoreConstant.NamePrefixJapan.DELETED);
+      // 【削除済み】prefix supplementation
+      if (isDataDeleted(isDisp, isDel)) {
+        prefixName.append(CoreConstant.NamePrefixJapan.DELETED);
+      }
     }
 
     return prefixName.toString();
@@ -5158,10 +5198,12 @@ public class ConditionSendResultUtil {
    * @param isDel                削除フラグ
    * @param mixInfo              調整薬剤情報
    * @param facilityCd           施設コード
+   * @param needMstPrefix        マスタに関連する接頭語が必要です   true: need
    * @return
    */
   private String getMedicineMixPrefixOfName(String patTabooAllergyInfo, List<MstTabooAllergy> tabooAllergyList
-          , Integer cd, String itemCd, Integer classType, String isDisp, String isDel, String mixInfo, String facilityCd) {
+          , Integer cd, String itemCd, Integer classType, String isDisp, String isDel, String mixInfo, String facilityCd
+          , boolean needMstPrefix) {
     StringBuilder prefixName = new StringBuilder();
     JSONArray mixInfoJSONArray = ObjectUtils.isEmpty(mixInfo) ? new JSONArray() : new JSONArray(mixInfo);
 
@@ -5204,35 +5246,6 @@ public class ConditionSendResultUtil {
       }
     }
 
-    for (int i = 0; i < mixInfoJSONArray.length(); i++) {
-      JSONObject mediObj = mixInfoJSONArray.getJSONObject(i);
-      if (mediObj == null || mediObj.get(PARAMKEY.MEDI_CD.get()) == null) {
-        continue;
-      }
-
-      Map<String,Object> mediMap = conditionSendResultUtilService.getMedicineInfo(
-              facilityCd,
-              1,
-              Integer.valueOf(mediObj.get(PARAMKEY.MEDI_CD.get()).toString()));
-      if (mediMap != null) {
-        Object useEndDateObj = getValueFromMap(mediMap, PARAMKEY.DATA_USE_END_DATE.get());
-        String useEndDate = useEndDateObj == null ? null : useEndDateObj.toString();
-        if (isDataExpired(useEndDate)) {
-          isDataExpired = true;
-        }
-
-        if (!isDataDeleted) {
-          String isDispToSub = getValueFromMap(mediMap, PARAMKEY.DATA_IS_DISP.get()).toString();
-          String isDelToSub = getValueFromMap(mediMap, PARAMKEY.DATA_IS_DEL.get()).toString();
-          if (isDataDeleted(isDispToSub, isDelToSub)) {
-            isDataIncludeDeleted = true;
-          }
-        }
-      } else {
-        isDataIncludeDeleted = true;
-      }
-    }
-
     // 【禁忌・ｱﾚﾙｷﾞｰ】、【禁忌】、【ｱﾚﾙｷﾞｰ】prefix supplementation
     if (!ObjectUtils.isEmpty(tabooAllergyType)) {
       String tabooAllergyPrefix = "";
@@ -5246,27 +5259,59 @@ public class ConditionSendResultUtil {
       prefixName.append(tabooAllergyPrefix);
     }
 
-    // 【分類不一致】prefix supplementation
-    if (isDataInconsistentClassification(itemCd, classType, null)) {
-      prefixName.append(CoreConstant.NamePrefixJapan.INCONSISTENT_CLASSIFICATION);
-    }
+    if (needMstPrefix) {
+      for (int i = 0; i < mixInfoJSONArray.length(); i++) {
+        JSONObject mediObj = mixInfoJSONArray.getJSONObject(i);
+        if (mediObj == null || mediObj.get(PARAMKEY.MEDI_CD.get()) == null) {
+          continue;
+        }
 
-    // 【期限切れ】prefix supplementation
-    if (isDataExpired) {
-      prefixName.append(CoreConstant.NamePrefixJapan.EXPIRED);
-    }
+        Map<String,Object> mediMap = conditionSendResultUtilService.getMedicineInfo(
+                facilityCd,
+                1,
+                Integer.valueOf(mediObj.get(PARAMKEY.MEDI_CD.get()).toString()));
+        if (mediMap != null) {
+          Object useEndDateObj = getValueFromMap(mediMap, PARAMKEY.DATA_USE_END_DATE.get());
+          String useEndDate = useEndDateObj == null ? null : useEndDateObj.toString();
+          if (isDataExpired(useEndDate)) {
+            isDataExpired = true;
+          }
 
-    // 【削除済み】prefix supplementation
-    if (isDataDeleted) {
-      prefixName.append(CoreConstant.NamePrefixJapan.DELETED);
-    } else {
-      if (isDataIncludeDeleted) {
-        prefixName.append(CoreConstant.NamePrefixJapan.INCLUDE_DELETED);
+          if (!isDataDeleted) {
+            String isDispToSub = getValueFromMap(mediMap, PARAMKEY.DATA_IS_DISP.get()).toString();
+            String isDelToSub = getValueFromMap(mediMap, PARAMKEY.DATA_IS_DEL.get()).toString();
+            if (isDataDeleted(isDispToSub, isDelToSub)) {
+              isDataIncludeDeleted = true;
+            }
+          }
+        } else {
+          isDataIncludeDeleted = true;
+        }
+      }
+
+      // 【分類不一致】prefix supplementation
+      if (isDataInconsistentClassification(itemCd, classType, null)) {
+        prefixName.append(CoreConstant.NamePrefixJapan.INCONSISTENT_CLASSIFICATION);
+      }
+
+      // 【期限切れ】prefix supplementation
+      if (isDataExpired) {
+        prefixName.append(CoreConstant.NamePrefixJapan.EXPIRED);
+      }
+
+      // 【削除済み】prefix supplementation
+      if (isDataDeleted) {
+        prefixName.append(CoreConstant.NamePrefixJapan.DELETED);
+      } else {
+        if (isDataIncludeDeleted) {
+          prefixName.append(CoreConstant.NamePrefixJapan.INCLUDE_DELETED);
+        }
       }
     }
 
     return prefixName.toString();
   }
+  /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
 
   /**
    * Judgment of contraindications and allergies
@@ -5320,7 +5365,7 @@ public class ConditionSendResultUtil {
         // 禁忌・ｱﾚﾙｷﾞｰ
         return "3";
       }
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -5610,8 +5655,10 @@ public class ConditionSendResultUtil {
                         String useEndDate = useEndDateObj == null ? null : useEndDateObj.toString();
                         String isDisp = getValueFromMap(dialyzerMap, PARAMKEY.DATA_IS_DISP.get()).toString();
                         String isDel = getValueFromMap(dialyzerMap, PARAMKEY.DATA_IS_DEL.get()).toString();
+                        /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
                         String prefixName = getPrefixOfName(patTabooAllergyInfo, tabooAllergyList, "4", itemCd
-                          , "5", null, useEndDate, isDisp, isDel, null);
+                          , "5", null, useEndDate, isDisp, isDel, null, true);
+                        /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
                         valueNode.put(PREFIX, prefixName);
                         valueNode.put(DISP_VAL, dialyzerName);
                       } else {
@@ -5633,8 +5680,10 @@ public class ConditionSendResultUtil {
                         Integer classType = parseInteger(equipMap.get().get(PARAMKEY.EQUI_CLASS_TYPE.get()));
                         Object useEndDateObj = equipMap.get().get(PARAMKEY.DATA_USE_END_DATE.get());
                         String useEndDate = useEndDateObj == null ? null : useEndDateObj.toString();
+                        /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
                         prefixName = getPrefixOfName(patTabooAllergyInfo, tabooAllergyList, "3", itemCd
-                          , String.valueOf(itemNo), classType, useEndDate, isDisp, isDel, null);
+                          , String.valueOf(itemNo), classType, useEndDate, isDisp, isDel, null, true);
+                        /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
                         valueNode.put(PREFIX, prefixName);
                         valueNode.put(DISP_VAL, equipmentName);
                       } else {
@@ -5657,12 +5706,16 @@ public class ConditionSendResultUtil {
                         String isDel = medicineMap.get(PARAMKEY.DATA_IS_DEL.get()).toString();
                         String prefixName = "";
                         if (itemType == 1) {
+                          /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
                           prefixName = getPrefixOfName(patTabooAllergyInfo, tabooAllergyList, String.valueOf(itemType)
-                            , itemCd, String.valueOf(itemNo), classType, useEndDate, isDisp, isDel, indDeviceMode);
+                            , itemCd, String.valueOf(itemNo), classType, useEndDate, isDisp, isDel, indDeviceMode, true);
+                          /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
                         } else if (itemType == 2) {
                           String mixInfo = medicineMap.get(PARAMKEY.MEDI_MIX_INFO.get()).toString();
+                          /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
                           prefixName = getMedicineMixPrefixOfName(patTabooAllergyInfo, tabooAllergyList
-                            , itemCd, String.valueOf(itemNo), classType, isDisp, isDel, mixInfo, facilityCd);
+                            , itemCd, String.valueOf(itemNo), classType, isDisp, isDel, mixInfo, facilityCd, true);
+                          /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
                         }
                         valueNode.put(PREFIX, prefixName);
                         valueNode.put(DISP_VAL, medicineName);
@@ -5696,12 +5749,16 @@ public class ConditionSendResultUtil {
                   String isDel = getValueFromMap(mediMap, PARAMKEY.DATA_IS_DEL.get()).toString();
                   String prefixName = "";
                   if (itemType == 1) {
+                    /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
                     prefixName = getPrefixOfName(patTabooAllergyInfo, tabooAllergyList, itemType.toString(), itemCd
-                      , null, null, useEndDate, isDisp, isDel, null);
+                      , null, null, useEndDate, isDisp, isDel, null, true);
+                    /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
                   } else if (itemType == 2) {
                     String mixInfo = getValueFromMap(mediMap, PARAMKEY.MEDI_MIX_INFO.get()).toString();
+                    /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
                     prefixName = getMedicineMixPrefixOfName(patTabooAllergyInfo, tabooAllergyList, itemCd
-                      , null, null, isDisp, isDel, mixInfo, facilityCd);
+                      , null, null, isDisp, isDel, mixInfo, facilityCd, true);
+                    /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
                   }
                   valueNode.put(PREFIX, prefixName);
                   valueNode.put(UNIT, null != getValueFromMap(mediMap, PARAMKEY.MEDI_UNIT.get())
@@ -5723,8 +5780,10 @@ public class ConditionSendResultUtil {
                     String useEndDate = useEndDateObj == null ? null : useEndDateObj.toString();
                     String isDisp = getValueFromMap(map, PARAMKEY.DATA_IS_DISP.get()).toString();
                     String isDel = getValueFromMap(map, PARAMKEY.DATA_IS_DEL.get()).toString();
+                    /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
                     String prefixName = getPrefixOfName(patTabooAllergyInfo, tabooAllergyList, "3", itemCd
-                      , null, null, useEndDate, isDisp, isDel, null);
+                      , null, null, useEndDate, isDisp, isDel, null, true);
+                    /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
                     valueNode.put(PREFIX, prefixName);
                     valueNode.put(UNIT, null != getValueFromMap(map, PARAMKEY.EQUI_UNIT.get())
                       ? String.valueOf(getValueFromMap(map, PARAMKEY.EQUI_UNIT.get())) : "");
@@ -5740,8 +5799,10 @@ public class ConditionSendResultUtil {
                     String useEndDate = useEndDateObj == null ? null : useEndDateObj.toString();
                     String isDisp = getValueFromMap(map, PARAMKEY.DATA_IS_DISP.get()).toString();
                     String isDel = getValueFromMap(map, PARAMKEY.DATA_IS_DEL.get()).toString();
+                    /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --start */
                     String prefixName = getPrefixOfName(patTabooAllergyInfo, tabooAllergyList, "4", itemCd
-                      , null, null, useEndDate, isDisp, isDel, null);
+                      , null, null, useEndDate, isDisp, isDel, null, true);
+                    /* update by chamaojia 2026-01-16 [11072] インターフェースの入力パラメータ【needMstPrefix】を追加する --end */
                     valueNode.put(PREFIX, prefixName);
                     valueNode.put(UNIT, "本");
                   } else {
@@ -5802,8 +5863,8 @@ public class ConditionSendResultUtil {
                     case 22 -> unitMap.getOrDefault(19, null);
                     case 18, 23 ->"℃";
                     case 24 -> "L/h";
-                    case 26, 28 -> unitMap.containsKey(25) ? StringUtils.isNullOrEmpty(unitMap.get(25)) ? null : unitMap.get(25) : null;
-                    case 27 -> unitMap.containsKey(25) ? StringUtils.isNullOrEmpty(unitMap.get(25)) ? null : unitMap.get(25) + "/h" : null;
+                    case 26, 28 -> unitMap.containsKey(25) ? ObjectUtils.isEmpty(unitMap.get(25)) ? null : unitMap.get(25) : null;
+                    case 27 -> unitMap.containsKey(25) ? ObjectUtils.isEmpty(unitMap.get(25)) ? null : unitMap.get(25) + "/h" : null;
                     case 31 -> "mL";
                     case 32,33 -> "mL/h";
                     case 36,38 -> "分";

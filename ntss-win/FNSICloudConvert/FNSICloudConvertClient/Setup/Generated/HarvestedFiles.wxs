@@ -1,0 +1,166 @@
+﻿<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="Cmp_6E1F789514FA35AC8F3F5497" Guid="{A2D4FA2C-3D6D-FB5F-73E7-950A9D86D7EB}">
+        <File Id="File_6E1F789514FA35AC8F3F5497" KeyPath="yes" Source="$(var.AppBinDir)\DnsClient.dll" />
+      </Component>
+      <Component Id="Cmp_AC605CEC5D9C85DF4A0D546B" Guid="{01EA4B4C-4E05-FADC-55FB-A52B1C1FAB2D}">
+        <File Id="File_AC605CEC5D9C85DF4A0D546B" KeyPath="yes" Source="$(var.AppBinDir)\FNSICloudConvertClient.config" />
+      </Component>
+      <Component Id="Cmp_90D6EC130E2D289F10E1DF54" Guid="{B17EDD9E-CD4F-A373-6555-DB390B2CDCC3}">
+        <File Id="File_90D6EC130E2D289F10E1DF54" KeyPath="yes" Source="$(var.AppBinDir)\FNSICloudConvertClient.exe" />
+      </Component>
+      <Component Id="Cmp_9356E427D5EE832D19223873" Guid="{AFE3D794-EA50-8BB6-9854-9A080CB0DB35}">
+        <File Id="File_9356E427D5EE832D19223873" KeyPath="yes" Source="$(var.AppBinDir)\FNSICloudConvertClient.exe.config" />
+      </Component>
+      <Component Id="Cmp_A8CBD829E54E496D02EE155A" Guid="{B7E80302-9C96-2E18-D757-E87B75CCF82C}">
+        <File Id="File_A8CBD829E54E496D02EE155A" KeyPath="yes" Source="$(var.AppBinDir)\ICSharpCode.SharpZipLib.dll" />
+      </Component>
+      <Component Id="Cmp_F2BC22452D8860BE0C004B86" Guid="{3115BA78-794D-9568-8D1A-6B918FFEAFBE}">
+        <File Id="File_F2BC22452D8860BE0C004B86" KeyPath="yes" Source="$(var.AppBinDir)\Microsoft.Bcl.AsyncInterfaces.dll" />
+      </Component>
+      <Component Id="Cmp_MICROSOFT_BCL_HASHCODE" Guid="{50505CC0-102F-4A01-8490-4A97DC362788}">
+        <File Id="File_MICROSOFT_BCL_HASHCODE" KeyPath="yes" Source="$(var.AppBinDir)\Microsoft.Bcl.HashCode.dll" />
+      </Component>
+      <Component Id="Cmp_MICROSOFT_EXT_DI_ABSTRACTIONS" Guid="{88FA9077-AC1E-48CF-A8C1-4B0BCA5AC2BE}">
+        <File Id="File_MICROSOFT_EXT_DI_ABSTRACTIONS" KeyPath="yes" Source="$(var.AppBinDir)\Microsoft.Extensions.DependencyInjection.Abstractions.dll" />
+      </Component>
+      <Component Id="Cmp_3E507E572AC41C6781B5B7AD" Guid="{B2968B5D-A669-EDA1-3DBD-DD2C66FDB917}">
+        <File Id="File_3E507E572AC41C6781B5B7AD" KeyPath="yes" Source="$(var.AppBinDir)\Microsoft.Extensions.Logging.Abstractions.dll" />
+      </Component>
+      <Component Id="Cmp_0F0C026EED0C119D0478C70B" Guid="{5FA939CD-C141-1705-D7DD-756317656028}">
+        <File Id="File_0F0C026EED0C119D0478C70B" KeyPath="yes" Source="$(var.AppBinDir)\Microsoft.Win32.Registry.dll" />
+      </Component>
+      <Component Id="Cmp_160104D0AD8B18EA747EBBB7" Guid="{6A1D7C29-D846-BA43-0EBA-A5318CEABA60}">
+        <File Id="File_160104D0AD8B18EA747EBBB7" KeyPath="yes" Source="$(var.AppBinDir)\mongo_dump_config.yaml" />
+      </Component>
+      <Component Id="Cmp_DF58D35B93B91741AEB694F1" Guid="{D3281BB1-C24B-414E-D216-59D4744B3489}">
+        <File Id="File_DF58D35B93B91741AEB694F1" KeyPath="yes" Source="$(var.AppBinDir)\MongoDB.Bson.dll" />
+      </Component>
+      <Component Id="Cmp_0ACDA2BB937C735C45D86A2E" Guid="{E249DD7E-F9ED-FFF6-7690-26A943599254}">
+        <File Id="File_0ACDA2BB937C735C45D86A2E" KeyPath="yes" Source="$(var.AppBinDir)\MongoDB.Driver.dll" />
+      </Component>
+      <Component Id="Cmp_583453C568F18B2B41D1A934" Guid="{C7B60009-0529-8A78-CA61-3F89FE739BD3}">
+        <File Id="File_583453C568F18B2B41D1A934" KeyPath="yes" Source="$(var.AppBinDir)\Newtonsoft.Json.dll" />
+      </Component>
+      <Component Id="Cmp_452FFA8AC3232EA00E684CF4" Guid="{42883FA9-F3C3-0CCE-0854-5BFEC8E3BE78}">
+        <File Id="File_452FFA8AC3232EA00E684CF4" KeyPath="yes" Source="$(var.AppBinDir)\Npgsql.dll" />
+      </Component>
+      <Component Id="Cmp_FE053C1778A640A079CD01CF" Guid="{2A5E4F1D-364E-69B9-111E-7E2D40BA060F}">
+        <File Id="File_FE053C1778A640A079CD01CF" KeyPath="yes" Source="$(var.AppBinDir)\pg_dump_config.yaml" />
+      </Component>
+      <Component Id="Cmp_D90A0BDF709FC022582767B8" Guid="{CF356B5D-2DD9-83B7-F056-31952DF0B9F7}">
+        <File Id="File_D90A0BDF709FC022582767B8" KeyPath="yes" Source="$(var.AppBinDir)\SharpCompress.dll" />
+      </Component>
+      <Component Id="Cmp_2B8802A5DE6C01A8447C7444" Guid="{B12EDB0A-350C-01B1-2489-7AA2B7B9CA0B}">
+        <File Id="File_2B8802A5DE6C01A8447C7444" KeyPath="yes" Source="$(var.AppBinDir)\Snappier.dll" />
+      </Component>
+      <Component Id="Cmp_B57923D8357852D120329C10" Guid="{D94D1A04-8CDE-8FB3-D8A2-F5080C8550F4}">
+        <File Id="File_B57923D8357852D120329C10" KeyPath="yes" Source="$(var.AppBinDir)\System.Buffers.dll" />
+      </Component>
+      <Component Id="Cmp_SYSTEM_COLLECTIONS_IMMUTABLE" Guid="{A9D2B91B-27AA-4E7C-9737-E7753A72B47B}">
+        <File Id="File_SYSTEM_COLLECTIONS_IMMUTABLE" KeyPath="yes" Source="$(var.AppBinDir)\System.Collections.Immutable.dll" />
+      </Component>
+      <Component Id="Cmp_SYSTEM_DIAGNOSTICS_DIAGNOSTICSOURCE" Guid="{BDD8B619-1336-4A99-BD20-3D9AC5B43B4A}">
+        <File Id="File_SYSTEM_DIAGNOSTICS_DIAGNOSTICSOURCE" KeyPath="yes" Source="$(var.AppBinDir)\System.Diagnostics.DiagnosticSource.dll" />
+      </Component>
+      <Component Id="Cmp_SYSTEM_IO_PIPELINES" Guid="{7D030340-590A-4167-8C3D-FD83D0DD446F}">
+        <File Id="File_SYSTEM_IO_PIPELINES" KeyPath="yes" Source="$(var.AppBinDir)\System.IO.Pipelines.dll" />
+      </Component>
+      <Component Id="Cmp_8DF31C6101B3ED6D750B95C1" Guid="{BBFF6EF0-829D-AFE5-C379-5FB3382DA899}">
+        <File Id="File_8DF31C6101B3ED6D750B95C1" KeyPath="yes" Source="$(var.AppBinDir)\System.Memory.dll" />
+      </Component>
+      <Component Id="Cmp_C7D483225824EAE675472222" Guid="{CFB5584A-883B-9DB7-3951-861E9B5AAC4C}">
+        <File Id="File_C7D483225824EAE675472222" KeyPath="yes" Source="$(var.AppBinDir)\System.Numerics.Vectors.dll" />
+      </Component>
+      <Component Id="Cmp_E0B7CD76587BC7F0DB19A549" Guid="{88B0EE5C-6745-1487-3B93-2C9C05966B37}">
+        <File Id="File_E0B7CD76587BC7F0DB19A549" KeyPath="yes" Source="$(var.AppBinDir)\System.Runtime.CompilerServices.Unsafe.dll" />
+      </Component>
+      <Component Id="Cmp_69D52E9EABD9FB6455554370" Guid="{287985DD-C973-E8CC-14E5-C7E0CE3E7EAD}">
+        <File Id="File_69D52E9EABD9FB6455554370" KeyPath="yes" Source="$(var.AppBinDir)\System.Security.AccessControl.dll" />
+      </Component>
+      <Component Id="Cmp_CD36FA267676A273408BA619" Guid="{E7D565A2-9825-8240-2AF9-25152B4595EE}">
+        <File Id="File_CD36FA267676A273408BA619" KeyPath="yes" Source="$(var.AppBinDir)\System.Security.Principal.Windows.dll" />
+      </Component>
+      <Component Id="Cmp_930E2BD04A638E5932C7ACE6" Guid="{23CB542F-89E8-EA15-15F1-9D94801412B7}">
+        <File Id="File_930E2BD04A638E5932C7ACE6" KeyPath="yes" Source="$(var.AppBinDir)\System.Text.Encoding.CodePages.dll" />
+      </Component>
+      <Component Id="Cmp_E6B4B6B428562F8EE52D0E8C" Guid="{D01089F1-FD13-02D3-525E-049220D5BBFF}">
+        <File Id="File_E6B4B6B428562F8EE52D0E8C" KeyPath="yes" Source="$(var.AppBinDir)\System.Text.Encodings.Web.dll" />
+      </Component>
+      <Component Id="Cmp_322853B3A877971FB8EAB928" Guid="{F020320A-EC30-818A-7380-D7739DD0127B}">
+        <File Id="File_322853B3A877971FB8EAB928" KeyPath="yes" Source="$(var.AppBinDir)\System.Text.Json.dll" />
+      </Component>
+      <Component Id="Cmp_SYSTEM_THREADING_CHANNELS" Guid="{BB991ECA-7F31-4720-9370-1F04D8E70467}">
+        <File Id="File_SYSTEM_THREADING_CHANNELS" KeyPath="yes" Source="$(var.AppBinDir)\System.Threading.Channels.dll" />
+      </Component>
+      <Component Id="Cmp_00F9349BB20A30B1A3E731BE" Guid="{C053BFF2-6272-92DD-F6F1-6241ADAC9EF4}">
+        <File Id="File_00F9349BB20A30B1A3E731BE" KeyPath="yes" Source="$(var.AppBinDir)\System.Threading.Tasks.Extensions.dll" />
+      </Component>
+      <Component Id="Cmp_375992F1D6F61FFE5FE19773" Guid="{AE1629CC-A39F-511F-8E65-3181C00572B4}">
+        <File Id="File_375992F1D6F61FFE5FE19773" KeyPath="yes" Source="$(var.AppBinDir)\ZstdSharp.dll" />
+      </Component>
+      <Directory Id="Dir_DB1DFD45B163E0F299B0E158" Name="Sql">
+        <Directory Id="Dir_61BDB54DB37F4E1EE6125B87" Name="Common">
+          <Component Id="Cmp_0A0E16325478C400D87AD238" Guid="{5AC6AFAD-AD6B-C220-0FD8-67E6EE34D7FB}">
+            <File Id="File_0A0E16325478C400D87AD238" KeyPath="yes" Source="$(var.AppBinDir)\Sql\Common\get_facilities.sql" />
+          </Component>
+        </Directory>
+        <Directory Id="Dir_5393B2FBFB3C1CEC0CCFEF94" Name="Export">
+          <Component Id="Cmp_B8BF39C19E60042A281115B4" Guid="{57A99D6F-FAED-8279-CC83-A87804EEE515}">
+            <File Id="File_B8BF39C19E60042A281115B4" KeyPath="yes" Source="$(var.AppBinDir)\Sql\Export\get_facility_tables.sql" />
+          </Component>
+          <Component Id="Cmp_B96C95168CD53F29788C9B96" Guid="{336B42E8-014D-427E-003A-E64B49C72FBD}">
+            <File Id="File_B96C95168CD53F29788C9B96" KeyPath="yes" Source="$(var.AppBinDir)\Sql\Export\get_patients.sql" />
+          </Component>
+        </Directory>
+        <Directory Id="Dir_28EEC9765D6945BDEB854833" Name="Import">
+          <Component Id="Cmp_0FFDBF6DF2099AA7A4AFC3C8" Guid="{78E0C1C9-BC86-4421-7CD8-98890A03594F}">
+            <File Id="File_0FFDBF6DF2099AA7A4AFC3C8" KeyPath="yes" Source="$(var.AppBinDir)\Sql\Import\upsert_patient.sql" />
+          </Component>
+        </Directory>
+      </Directory>
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <ComponentGroup Id="HarvestedComponents">
+      <ComponentRef Id="Cmp_00F9349BB20A30B1A3E731BE" />
+      <ComponentRef Id="Cmp_0A0E16325478C400D87AD238" />
+      <ComponentRef Id="Cmp_0ACDA2BB937C735C45D86A2E" />
+      <ComponentRef Id="Cmp_0F0C026EED0C119D0478C70B" />
+      <ComponentRef Id="Cmp_0FFDBF6DF2099AA7A4AFC3C8" />
+      <ComponentRef Id="Cmp_160104D0AD8B18EA747EBBB7" />
+      <ComponentRef Id="Cmp_2B8802A5DE6C01A8447C7444" />
+      <ComponentRef Id="Cmp_322853B3A877971FB8EAB928" />
+      <ComponentRef Id="Cmp_375992F1D6F61FFE5FE19773" />
+      <ComponentRef Id="Cmp_3E507E572AC41C6781B5B7AD" />
+      <ComponentRef Id="Cmp_452FFA8AC3232EA00E684CF4" />
+      <ComponentRef Id="Cmp_583453C568F18B2B41D1A934" />
+      <ComponentRef Id="Cmp_69D52E9EABD9FB6455554370" />
+      <ComponentRef Id="Cmp_6E1F789514FA35AC8F3F5497" />
+      <ComponentRef Id="Cmp_8DF31C6101B3ED6D750B95C1" />
+      <ComponentRef Id="Cmp_90D6EC130E2D289F10E1DF54" />
+      <ComponentRef Id="Cmp_930E2BD04A638E5932C7ACE6" />
+      <ComponentRef Id="Cmp_9356E427D5EE832D19223873" />
+      <ComponentRef Id="Cmp_A8CBD829E54E496D02EE155A" />
+      <ComponentRef Id="Cmp_AC605CEC5D9C85DF4A0D546B" />
+      <ComponentRef Id="Cmp_B57923D8357852D120329C10" />
+      <ComponentRef Id="Cmp_B8BF39C19E60042A281115B4" />
+      <ComponentRef Id="Cmp_B96C95168CD53F29788C9B96" />
+      <ComponentRef Id="Cmp_C7D483225824EAE675472222" />
+      <ComponentRef Id="Cmp_CD36FA267676A273408BA619" />
+      <ComponentRef Id="Cmp_D90A0BDF709FC022582767B8" />
+      <ComponentRef Id="Cmp_DF58D35B93B91741AEB694F1" />
+      <ComponentRef Id="Cmp_E0B7CD76587BC7F0DB19A549" />
+      <ComponentRef Id="Cmp_E6B4B6B428562F8EE52D0E8C" />
+      <ComponentRef Id="Cmp_F2BC22452D8860BE0C004B86" />
+      <ComponentRef Id="Cmp_FE053C1778A640A079CD01CF" />
+      <ComponentRef Id="Cmp_MICROSOFT_BCL_HASHCODE" />
+      <ComponentRef Id="Cmp_MICROSOFT_EXT_DI_ABSTRACTIONS" />
+      <ComponentRef Id="Cmp_SYSTEM_COLLECTIONS_IMMUTABLE" />
+      <ComponentRef Id="Cmp_SYSTEM_DIAGNOSTICS_DIAGNOSTICSOURCE" />
+      <ComponentRef Id="Cmp_SYSTEM_IO_PIPELINES" />
+      <ComponentRef Id="Cmp_SYSTEM_THREADING_CHANNELS" />
+    </ComponentGroup>
+  </Fragment>
+</Wix>

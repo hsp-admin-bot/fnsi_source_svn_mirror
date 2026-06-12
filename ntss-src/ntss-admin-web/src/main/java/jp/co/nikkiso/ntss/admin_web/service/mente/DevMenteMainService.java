@@ -201,7 +201,9 @@ public interface DevMenteMainService {
    * @param devMenteNo 結果検査詳細
    * @return 検査結果更新
    */
-  int delDetailWhenCellClick(Long devMenteNo) throws Exception;
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 start
+  int delDetailWhenCellClick(Long devMenteNo, String facilityCd) throws Exception;
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 end
   // add 11021 定期点検結果のみ削除仕様 zkm end
 
   /**
@@ -244,7 +246,9 @@ public interface DevMenteMainService {
    * @param mainCd 検査結果コード
    * @return 結果
    */
-  boolean deleleMainteMain(List<Long> mainNo) throws Exception;
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 start
+  boolean deleleMainteMain(List<Long> mainNo, String facilityCd) throws Exception;
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 end
 
   /**
    * （日常点検用）点検日範囲と装置番号を指定して点検結果リストを取得する
@@ -263,7 +267,9 @@ public interface DevMenteMainService {
   PartsRunningResponse createPartsRunningResponse(String facilityCd, String machineTypeCd, String machineSerial)
     throws IOException;
 
-  boolean deleleMainteMainByTemDate(UpdateMainteMainRequest updateMainteMainRequest) throws Exception;
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 start
+  boolean deleleMainteMainByTemDate(UpdateMainteMainRequest updateMainteMainRequest, String facilityCd) throws Exception;
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 end
 
   /**
    * 型式、ベッドグループコードに該当する装置情報のリストを取得する

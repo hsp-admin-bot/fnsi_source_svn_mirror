@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.core.dao.MstFacilityDao;
 import jp.co.nikkiso.ntss.core.dao.SysSystemManagerDao;
@@ -18,7 +18,7 @@ import org.springframework.util.StringUtils;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import jp.co.nikkiso.ntss.core.dao.MstFacilityHashDao;
 import jp.co.nikkiso.ntss.core.entity.MstFacilityHash;

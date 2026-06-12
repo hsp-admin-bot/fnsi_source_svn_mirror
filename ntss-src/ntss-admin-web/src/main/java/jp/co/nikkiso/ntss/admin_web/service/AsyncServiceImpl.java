@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.service;
 
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
 import jp.co.nikkiso.ntss.admin_web.request.patientCapture.JournalCreateRequestPayload;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;

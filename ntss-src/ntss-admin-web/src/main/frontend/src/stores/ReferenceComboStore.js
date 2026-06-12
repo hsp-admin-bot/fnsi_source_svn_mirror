@@ -11,35 +11,36 @@ export default {
     // -----------------------------------------
     // クールのコンボデータ取得
     // -----------------------------------------
-    getKurComboList() {
-      return sendRequestGetComboList("mst_kur", "kur_name", "kur_cd");
+    getKurComboList(_context, payload = {}) {
+      return sendRequestGetComboList("mst_kur", "kur_name", "kur_cd", payload.selectedPatId);
     },
     // -----------------------------------------
     // ベッドのコンボデータ取得
     // -----------------------------------------
-    getBedComboList() {
-      return sendRequestGetComboList("mst_bed", "bed_name", "bed_cd");
+    getBedComboList(_context, payload = {}) {
+      return sendRequestGetComboList("mst_bed", "bed_name", "bed_cd", payload.selectedPatId);
     },
     // -----------------------------------------
     // 病棟のコンボデータ取得
     // -----------------------------------------
-    getWardComboList() {
-      return sendRequestGetComboList("mst_ward", "ward_name", "ward_cd");
+    getWardComboList(_context, payload = {}) {
+      return sendRequestGetComboList("mst_ward", "ward_name", "ward_cd", payload.selectedPatId);
     },
     // -----------------------------------------
     // 診療科のコンボデータ取得
     // -----------------------------------------
-    getCourseComboList() {
-      return sendRequestGetComboList("mst_course", "course_name", "course_cd");
+    getCourseComboList(_context, payload = {}) {
+      return sendRequestGetComboList("mst_course", "course_name", "course_cd", payload.selectedPatId);
     },
     // -----------------------------------------
     // 送信先グループのコンボデータ取得
     // -----------------------------------------
-    getDestinationGroupComboList() {
+    getDestinationGroupComboList(_context, payload = {}) {
       return sendRequestGetComboList(
         "mst_destination_group",
         "destination_group_name",
-        "destination_group_cd"
+        "destination_group_cd",
+        payload.selectedPatId
       );
     },
     // add マスタ一覧 1･施設切替を可能とする 孔s start
@@ -55,12 +56,13 @@ export default {
     // -----------------------------------------
     // 手技のコンボデータ取得
     // -----------------------------------------
-    getProcedureComboList() {
+    getProcedureComboList(_context, payload = {}) {
       return sendRequestGetComboList(
         "mst_procedure",
         // テーブル設計書の誤りか
         "pricedure_name",
-        "procedure_cd"
+        "procedure_cd",
+        payload.selectedPatId
       );
     },
     getProcedureComboListByFacilityCd(tmp, facilityCd) {
@@ -75,31 +77,34 @@ export default {
     // -----------------------------------------
     // 時間帯のコンボデータ取得
     // -----------------------------------------
-    getMedicateTimingComboList() {
+    getMedicateTimingComboList(_context, payload = {}) {
       return sendRequestGetComboList(
         "mst_medicate_timing",
         "medicate_timing_name",
-        "medicate_timing_cd"
+        "medicate_timing_cd",
+        payload.selectedPatId
       );
     },
     // -----------------------------------------
     // 薬剤のコンボデータ取得
     // -----------------------------------------
-    getMedicineComboList() {
+    getMedicineComboList(_context, payload = {}) {
       return sendRequestGetComboList(
         "mst_medicine",
         "medicine_name",
-        "medicine_cd"
+        "medicine_cd",
+        payload.selectedPatId
       );
     },
     // -----------------------------------------
     // 治療方法のコンボデータ取得
     // -----------------------------------------
-    getTreatmentMethodComboList() {
+    getTreatmentMethodComboList(_context, payload = {}) {
       return sendRequestGetComboList(
         "mst_treatment",
         "treatment_name",
-        "treatment_cd"
+        "treatment_cd",
+        payload.selectedPatId
       );
     }
   }

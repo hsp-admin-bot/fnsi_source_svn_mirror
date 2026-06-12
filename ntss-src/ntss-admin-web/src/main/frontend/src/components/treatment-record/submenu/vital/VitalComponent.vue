@@ -3,7 +3,8 @@
  */
 <template>
   <submenu-base>
-    <div slot="main" id="vital-component">
+    <template #main>
+      <div id="vital-component">
       <div class="chart-area">
         <div class="chart-selection-area">
           <div>
@@ -32,7 +33,7 @@
             ref="chartComponent"
           /> -->
           <chart-component
-            v-model="vitalDataForGraph"
+            :value="vitalDataForGraph"
             :start-date="rstStartDate"
             :end-date="rstEndDate"
             :chart-scale="chartScale"
@@ -44,19 +45,21 @@
         <!-- mod 6004 バイタル、モニタ画面のグラフの緑線不正、グラフ生成不正 赵 end -->
         </div>
       </div>
-      <div class="grid-area" :style="{ height: gridHeight }">
+      <div class="grid-area">
         <!-- mod FNSI修正 NKK3827 房 start -->
         <!-- mod 6827 入力欄の編集済み表現不正（治療記録＞バイタル） 房 start -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
-        <grid-component v-model="vitalData"  @modifiedValue="setModified" @updateVitalData="updateVitalData"
+        <grid-component :value="vitalData" @modifiedValue="setModified" @updateVitalData="updateVitalData"  @changeValue="changeValue"
           :displayVitalItem="dispVitalItemList" :ordNo="getOrdNo" :treatEndDate="rstEndDate"
           ref="gridComponent" />
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
         <!-- mod 6827 入力欄の編集済み表現不正（治療記録＞バイタル） 房 end -->
         <!-- mod FNSI修正 NKK3827 房 end -->
       </div>
-    </div>
-    <div slot="footer" class="flex-container justify-content-flex-end">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container justify-content-flex-end">
       <div class="registration-btn-area" style="background:none">
         <!-- 画面スタイル(ボタン)対応 姜 start -->
         <!-- <v-ons-button class="button registration-btn" :disabled="!canSave || isReadOnly" @click="onClickSave">保存</v-ons-button> -->
@@ -65,16 +68,19 @@
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
         <!-- 画面スタイル(ボタン)対応 姜 end -->
       </div>
-    </div>
+      </div>
+    </template>
   </submenu-base>
 </template>
 
 <script>
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc start
-import {mapActions, mapGetters, mapMutations, mapState} from "vuex";
+import {mapActions, mapGetters, mapMutations, mapState} from "@/compat/vue/vuex";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end
 import SubmenuBase from "@/components/treatment-record/SubmenuBaseComponent";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
+import PrintMixin from "@/components/PrintMixin";
 // del #10359 編集権限の動作不正 dengshen start
 // import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
 // del #10359 編集権限の動作不正 dengshen end
@@ -87,7 +93,7 @@ import { CODES } from "@/constants/TreatmentRecord";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
 import ChartComponent from "@/components/treatment-record/submenu/vital/VitalGraphComponent";
 import GridComponent from "@/components/treatment-record/submenu/vital/VitalGridComponent";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //add FNSI-改修内容 グラフ様式修正 房 start
 import { VitalGraphDefine } from "@/models/treatment-record/vital/VitalGraphDefine";
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
@@ -97,7 +103,6 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 //#10359 add 編集権限の動作不正 2024-06-05 卓 start
 import { getAuthorized } from "@/functions/common/CommonFunctions";
 //#10359 add 編集権限の動作不正 2024-06-05 卓 end
-import PrintMixin from "@/components/PrintMixin";
 
 const GRAPH_DEFINE_DEFAULT = [new VitalGraphDefine(
   1,
@@ -181,7 +186,6 @@ export default {
       //add 6004 バイタル、モニタ画面のグラフの緑線不正、グラフ生成不正 赵 end
       isModified: false,
       authorityCds: [AUTHORITY_CODES.RST_PEDIT, AUTHORITY_CODES.RST_EDIT],
-      gridHeight: "auto",
       selfScreenName: "",
       // 表示バイタル項目
       dispVitalItemList: [],
@@ -194,8 +198,8 @@ export default {
       //add FNSI-改修内容 新規ボタン追加 房 start
       noDeleteData: [],
       //add FNSI-改修内容 新規ボタン追加 房 end
-      scrollQuerySelector: ".grid-area", // スクロールコンテナ
-      addClassTargetQuerySelector: ["table.vital-grid"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
+      scrollQuerySelector: ".grid-area",
+      addClassTargetQuerySelector: ["table.vital-grid"],
     };
   },
   computed: {
@@ -203,13 +207,16 @@ export default {
     ...mapGetters("account-edit", ["getFontSize"]),
     ...mapGetters("treatment-record/common", [
       "getOrd",
+      "getOrdNo",
       "getTreatDate",
       "getSharedFacilityCd"
     ]),
+    ...mapState("treatment-record/common", {
+      ordNoDataSourcesState: state => state.ordNoDataSourcesState
+    }),
     //add FNSI-改修内容 グラフ様式修正 房 start
     ...mapGetters("user", ["getFacilityCd"]),
     //add FNSI-改修内容 グラフ様式修正 房 end
-    ...mapState("treatment-record/common", ["ordNoDataSourcesState"]),
     /**
      * 保存できるかを返す
      */
@@ -287,7 +294,7 @@ export default {
         this.$emit("update");
       });
       // add 6827 入力欄の編集済み表現不正（治療記録＞バイタル） 房 start
-      let elements = document.getElementsByClassName("custom-input-edited");
+      let elements = getScopedElementsByClassName("custom-input-edited", this.$el || null);
       for (let i = elements.length-1; i >= 0; i--) {
         elements[i].classList.remove("custom-input-edited");
       }
@@ -405,7 +412,10 @@ export default {
       this.isModified = false;
 
       //add FNSI-改修内容 グラフ様式修正 房 start
-      await this.getVitalGraphDefine(this.getFacilityCd).then(response => {
+      await this.getVitalGraphDefine({
+        facilityCd: this.getFacilityCd,
+        selectedPatId: this.selectedPatId()
+      }).then(response => {
         // モニタグラフ設定をModel化
         const vitalGraphDefine = response.data;
         if (vitalGraphDefine.length > 0) {
@@ -430,22 +440,17 @@ export default {
         // モニタデータ種別
         moniDataType: CODES.MONI_DATA_TYPE.MACHINE.cd,
         // バイタルモニタ区分
-        vitalMonitorClass: CODES.VITAL_MONITOR_CLASS.VITAL.cd
+        vitalMonitorClass: CODES.VITAL_MONITOR_CLASS.VITAL.cd,
+        selectedPatId: this.selectedPatId()
       };
 
-      // mod #12462 患者情報共有 Ji start
-      // const treatmentRecordParam = {
-      //   facilityCd: this.getFacilityCd,
-      //   ordNo: this.getOrdNo
-      // }
-      const matchedRecord = this.ordNoDataSourcesState.find(
-        item => item.treatDate === this.getTreatDate
-      );
+      const matchedRecord = (this.ordNoDataSourcesState || []).find(item => item.treatDate === this.getTreatDate);
       const treatmentRecordParam = {
+        facilityCd: matchedRecord?.facilityCd ?? null,
         ordNo: this.getOrdNo,
-        facilityCd: matchedRecord?.facilityCd ?? null
-      };
-      // mod #12462 患者情報共有 Ji end
+        selectedPatId: this.selectedPatId()
+      }
+
       // 表示する為の必要なデータ取得.
       // ・sys_monitor_item からバイタル項目の取得
       // ・mst_add_monitor からバイタル項目の取得
@@ -453,15 +458,15 @@ export default {
       // ・実績情報の取得
       Promise.all([
         this.getSysMonitorItem(sysMonitorItemSerachCondition),
-	// mod #12462 患者情報共有 Ji start
-        // this.getMstAddMonitor(CODES.VITAL_MONITOR_CLASS.VITAL.cd),
         this.getMstAddMonitor({
           vitalMonitorClass: CODES.VITAL_MONITOR_CLASS.VITAL.cd,
           facilityCd: this.getSharedFacilityCd
         }),
-	// mod #12462 患者情報共有 Ji end
         this.getTreatmentRecordVitalMonitor(treatmentRecordParam),
-        this.getTreatmentRecordResult(this.getOrdNo),
+        this.getTreatmentRecordResult({
+          ordNo: this.getOrdNo,
+          selectedPatId: this.selectedPatId()
+        }),
       ]).then(response => {
 
         // sys_monitor_itemから取得したデータ
@@ -594,15 +599,6 @@ export default {
         dummy
       );
     },
-    setGridHeight() {
-      this.$nextTick(function() {
-        const mainHeight = document.querySelector(".submenu-main").clientHeight;
-        const chartHeight = document.querySelector(".chart-area").clientHeight;
-        let gridHeight = mainHeight - chartHeight - 10;
-        gridHeight = gridHeight < 205 ? "auto" : `${gridHeight}px`;
-        this.gridHeight = gridHeight;
-      });
-    },
     /**
      * グラフエリアのリサイズ
      */
@@ -615,7 +611,7 @@ export default {
     refresh() {
       // 子機能ボタンエリアの更新
       this.$emit("update");
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       //mod メッセージ順番修正 房 start
@@ -632,7 +628,7 @@ export default {
     },
     //add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 start
     eventBusRefresh() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       if (this.isChanged && this.alertFlag) {
@@ -658,23 +654,26 @@ export default {
     //#10359 add 編集権限の動作不正 2024-06-05 卓 end
     updateVitalData(newData) {
       this.vitalData = newData;
-    }
+    },
+    changeValue(newData){
+      this.vitalData = newData
+    },
   },
   watch: {
     windowHeight() {
-      this.setGridHeight();
+      this.graphResize();
     },
     windowWidth() {
-      this.setGridHeight();
+      this.graphResize();
     },
     getFontSize() {
-      this.setGridHeight();
+      this.graphResize();
     }
   },
   created() {
     this.init();
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // イベント登録
     //mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 start
     // EventBus.$on("refresh", this.refresh);
@@ -682,15 +681,14 @@ export default {
     //mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 end
   },
   mounted() {
-    this.setGridHeight();
-  },
-  updated() {
-    this.setGridHeight();
+    this.$nextTick(() => {
+      this.graphResize();
+    });
   },
   /**
    * コンポーネント破棄
    */
-  beforeDestroy() {
+  beforeUnmount() {
     // イベント解除
     // del refresh方法処理不正について、対応する。 dengshen start
     // EventBus.$off("refresh");
@@ -708,7 +706,15 @@ export default {
 </script>
 
 <style scoped>
+#vital-component {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .chart-area {
+  flex: 0 0 auto;
   margin: 0 0 5px;
   display: flex;
   align-content: flex-start;
@@ -727,6 +733,8 @@ export default {
   margin: 0 5px 0;
 }
 .grid-area {
+  flex: 1 1 0;
+  min-height: 0;
   margin: 10px 0 0;
   overflow: auto;
 }
@@ -739,36 +747,34 @@ export default {
 .chart-selection-area label {
   color: var(--ntss-list-body-color);
 }
-#vital-component {
-  min-height: 400px !important;
-}
 @media print {
   /** グラフ */
-  .chart-area >>> .vitalGraphView {
+  .chart-area :deep(.vitalGraphView) {
     width: 100% !important;
   }
-  .chart-area >>> .highcharts-container {
+  .chart-area :deep(.highcharts-container) {
     width: auto !important;
     height: auto !important;
   }
-  .chart-area >>> .highcharts-root {
+  .chart-area :deep(.highcharts-root) {
     width: 100%;
     height: 100%;
   }
-  
+
   /** grid */
   .grid-area {
     overflow: hidden !important;
     width: auto !important;
     height: auto !important;
   }
-  .grid-area >>> .scroll-table {
+  .grid-area :deep(.scroll-table) {
     width: 100% !important;
   }
   /** 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
-  .grid-area >>> table.scroll-rightmost {
+  .grid-area :deep(table.scroll-rightmost) {
     position: relative !important;
     float: right !important;
   }
 }
+
 </style>

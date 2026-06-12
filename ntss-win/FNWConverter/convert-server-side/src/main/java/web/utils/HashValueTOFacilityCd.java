@@ -1,7 +1,9 @@
 package web.utils;
 
 import batch.ApplicationConst;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpStatus;
@@ -9,7 +11,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
-import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +33,7 @@ public class HashValueTOFacilityCd {
        List<String> hashValues;
        try {
            ObjectMapper mapper = new ObjectMapper();
-           hashValues = mapper.readValue(hash_value, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+           hashValues = mapper.readValue(hash_value, new TypeReference<List<String>>() {});
        } catch (Exception e) {
            //#12737 【securify】convert-server-sideが落ちる start
            throw new ResponseStatusException(

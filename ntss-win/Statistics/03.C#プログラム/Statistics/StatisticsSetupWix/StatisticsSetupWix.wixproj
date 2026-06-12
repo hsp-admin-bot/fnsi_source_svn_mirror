@@ -12,7 +12,7 @@
       ProductCode は UpgradeCodeGuid + ProductVersion から自動生成される（UUID v5）
       UpgradeCodeGuid は絶対に変えない
     -->
-    <ProductVersion>2.0.8</ProductVersion>
+    <ProductVersion>2.0.9</ProductVersion>
     <UpgradeCodeGuid>F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9E3F1</UpgradeCodeGuid>
     <DefineConstants>
       SrcBin=$(MSBuildProjectDirectory)\..\StatisticsTool\bin\$(Configuration)\;

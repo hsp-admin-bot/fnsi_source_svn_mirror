@@ -1,20 +1,16 @@
 
-import {
-    outputLog
-} from "@/apis/logging";
-
+import { outputLog } from "@/apis/logging";
 
 /**
  * ログ出力
  */
 export default {
-    /* eslint-disable no-unused-vars */
     /**
      * 初期処理
-     * @param {*} Vue Vueオブジェクト
+     * @param {*} app Vue3 アプリインスタンス
      * @param {*} options オプション(未使用)
      */
-    install(Vue, options) {
+    install(app, options) {
         /**
          * 
          * @param {String} logLevel ログレベル
@@ -28,7 +24,7 @@ export default {
         /**
          * ログ出力
          */
-        Vue.prototype.$log = {
+        const logger = {
             /**
              * 情報ログを出力する.
              * @param {LogMessage} content 
@@ -58,5 +54,8 @@ export default {
                 log("debug", content);
             }
         };
+
+        app.config.globalProperties.$log = logger;
+        app.provide("$log", logger);
     }
 };

@@ -3,6 +3,7 @@
 <template>
     <div border="2">
       <table class="table-area">
+        <tbody>
         <tr>
           <th class="date-time-area">検査日時</th>
           <th class="dw-area">DW<br />[kg]</th>
@@ -43,13 +44,6 @@
             v-if="getPatDataJsonArray(json, 'ctl_no').editValue >= 0"
             class="edit-area"
           >
-            <!-- <v-ons-button
-              v-if="getItemAuthorized('PatInfo', 'default_authority')"
-              class="common-style-select-button ntss-custom-button-table btn3-normal"
-              @click="editItem(json, index)"
-            >
-              編集
-            </v-ons-button> -->
             <v-ons-button
               v-if="getItemAuthorized('PatInfo', 'default_authority')"
               class="common-style-select-button ntss-custom-button-table btn3-normal"
@@ -66,6 +60,8 @@
             </v-ons-button>
           </td>
         </tr>
+      
+        </tbody>
       </table>
 
       <div>
@@ -79,10 +75,10 @@
 </template>
 
 <script>
-import _ from "underscore";
-import moment from "moment";
+import _ from "@/compat/collections/lodash";
+import dayjs from "@/compat/date/dayjs";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
-import { mapGetters, mapMutations, mapActions } from "vuex";
+import { mapGetters, mapMutations, mapActions } from "@/compat/vue/vuex";
 import {deepCopy, getAuthorized} from "@/functions/common/CommonFunctions";
 import { toFixed } from "@/functions/common/NumberFunctions.js";
 // del #10359 編集権限の動作不正 dengshen start
@@ -228,7 +224,7 @@ export default {
         return null;
       }
 
-      const json = _.max(dwList, el => {
+      const json = _.maxBy(dwList, el => {
         if (this.formatterTime(el) === null) {
           return this.formatterDay(el);
         }
@@ -239,6 +235,9 @@ export default {
   },
 
   watch: {
+    totalNumber() {
+      this.normalizePageRange();
+    },
     isModalOpened(isModalOpened) {
       if (!isModalOpened && this.physicalInfoVisible) {
         this.jsonArray = deepCopy(this.selectedPhysicalInfoData.jsonArray);
@@ -258,6 +257,7 @@ export default {
 
   async created() {
     this.beforeTotalNumber = this.totalNumber;
+    this.normalizePageRange();
     // #9819 add 利用者マスタの患者情報編集権限をOFFにした際に患者情報画面で入外区分の編集/保存ができる 2023-11-01 卓 start
     // del #10359 編集権限の動作不正 dengshen start
     // // add 編集権限の適用 じょはく start
@@ -309,10 +309,16 @@ export default {
      * @returns {String}
      */
     formatterDay(json) {
-      return moment(
-        json.exam_date.editValue,
-        "YYYY-MM-DDTHH:mm:ss.SSSZ"
-      ).format("YYYYMMDD");
+      const date = json.exam_date?.editValue;
+      if (!date || typeof date !== "string") {
+        return null;
+      }
+      const format = date.includes("T")
+        ? "YYYY-MM-DDTHH:mm:ss.SSSZ"
+        : "YYYY-MM-DD";
+      return dayjs(date, format).isValid()
+        ? dayjs(date, format).format("YYYYMMDD")
+        : null;
     },
 
     /**
@@ -321,13 +327,16 @@ export default {
      * @returns {String}
      */
     formatterTime(json) {
-      const date = json.exam_date.editValue;
-      const time = date.match(/T/);
-
-      if (time === null) {
+      const date = json.exam_date?.editValue;
+      if (!date || typeof date !== "string") {
         return null;
       }
-      return moment(date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format("HHmm");
+      if (!date.includes("T")) {
+        return null;
+      }
+      return dayjs(date, "YYYY-MM-DDTHH:mm:ss.SSSZ").isValid()
+        ? dayjs(date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format("HHmm")
+        : null;
     },
 
     editItem(json, index) {
@@ -401,9 +410,7 @@ export default {
         pre_scale_lower: json.pre_scale_lower,
         target_weight: target_weight,
         indicator_cd: json.indicator_cd || nullObj,
-	// add #12462 患者情報共有 Ji start
         indicator_name: json.indicator_name || nullObj,
-	// add #12462 患者情報共有 Ji end
         indicator_start_date: json.indicator_start_date || nullObj,
         memo: json.memo,
         facility_cd: facility_cd
@@ -437,21 +444,25 @@ export default {
 
     displayDateValue(json) {
       const date = this.getPatDataJsonArray(json, "exam_date").initValue;
-
-      return date === null
-        ? null
-        : moment(date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format("YYYY/MM/DD");
+      if (!date) {
+        return null;
+      }
+      return dayjs(date).isValid()
+        ? dayjs(date).format("YYYY/MM/DD")
+        : null;
     },
 
     displayTimeValue(json) {
-      const date = this.getPatDataJsonArray(json, "exam_date").initValue;
-      const time = date.match(/T/);
-      if (time === null) {
+      const date = this.getPatDataJsonArray(json, "exam_date")?.initValue;
+      if (!date || typeof date !== "string") {
         return null;
       }
-      return date === null
-        ? null
-        : moment(date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format("HH:mm");
+      if (!date.includes("T")) {
+        return null;
+      }
+      return dayjs(date).isValid()
+        ? dayjs(date).format("HH:mm")
+        : null;
     },
 
     // 表示用に変換
@@ -465,7 +476,7 @@ export default {
      * @description 表示箇所
      * @param {int} index 配列要素番号
      */
-    showIndex(index) {
+    normalizePageRange() {
       if (this.totalNumber < this.beforeTotalNumber) {
         // 件数が減少時、強制的に表示箇所を変更
         if (
@@ -476,12 +487,11 @@ export default {
           // 0より低い場合は表示できなくなるため、減算しない
           this.showMinNumber -= this.showNumber;
           this.showMaxNumber -= this.showNumber;
-          this.beforeTotalNumber = this.totalNumber;
         }
-      } else if (this.totalNumber > this.beforeTotalNumber) {
-        // 件数増加時
-        this.beforeTotalNumber = this.totalNumber;
       }
+      this.beforeTotalNumber = this.totalNumber;
+    },
+    showIndex(index) {
       return this.showMinNumber <= index && index <= this.showMaxNumber;
     },
 
@@ -489,16 +499,9 @@ export default {
     getItemAuthorized(pageCd, itemCd) {
       return getAuthorized(pageCd, itemCd);
     },
-    // add #12462 患者情報共有 Ji start
-    /**
-     * @description 該当行が他院情報かどうかを判定
-     * @param {Object} json - 患者情報
-     * @returns {Boolean} true = 他施設のデータは参照のみ
-     */
     isOtherFacilityRow(json) {
       return json.facility_cd?.initValue !== this.facilityCd;
-    }
-    // add #12462 患者情報共有 Ji end
+    },
   }
 };
 </script>

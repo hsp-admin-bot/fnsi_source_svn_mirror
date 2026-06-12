@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -41,7 +41,7 @@
               </td>
               <td class="default-setting-content-last-row">
                 <!-- mod #11873【因島】データリスト「治療予定・実績」テンプレートでサーバダウン fang start -->
-                <!--<kendo-dropdownlist
+                <!--<ntss-dropdown-list
                   :data-source="lstDispTermStart"
                   v-model="startDate"
                   data-text-field="title"
@@ -80,9 +80,9 @@
 </template>
 
  <script>
-   import {mapGetters, mapActions} from "vuex";
+   import {mapGetters, mapActions} from "@/compat/vue/vuex";
    /*add FNSI-改修内容4214 任 start*/
-   import $ from "jquery";
+
    /*add FNSI-改修内容4214 任 end*/
    import {DATE_CHOICES, KEY_NAME_MULTI_PAT_LIST} from "@/constants/defaultSettingConstants";
    import {deepCopy} from "@/functions/common/CommonFunctions";
@@ -91,12 +91,11 @@
    import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
    //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
    //add FNSI-5687 劉全航 start
-   import { EventBus } from "@/eventBus.js";
+   import { EventBus } from "@/compat/vue/event-bus.js";
+import { getScopedElementById, isScopedElementDisplayInline } from "@/functions/common/LayoutMeasureHelper";
    //add FNSI-5687 劉全航 end
 
 export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -292,8 +291,8 @@ export default {
     // 表示期間開始日・選択肢の設定終了後
     this.$nextTick(() => {
       // デフォルト設定のデータリストが未登録の場合のデフォルト値の初期値を設定する
-      // ・レイアウト選択リストに初期値なしの値（空白）を表示する値で初期化する
-      this.initialValue[KEY_NAME_MULTI_PAT_LIST.KEY_NAME_SELECTED_LAYOUT] = 0; // レイアウトの値が未設定
+      // ・レイアウト選択リストにリスト先頭を設定する（マスタなしは初期値なしの値（空白）を表示する値で初期化する）
+      this.initialValue[KEY_NAME_MULTI_PAT_LIST.KEY_NAME_SELECTED_LAYOUT] = this.layoutMst[0] ? this.layoutMst[0].patListLayoutCd : 0;
       // ・レイアウト選択した場合に期間のデフォルト値（本日）でない値（未設定）で初期化する
       this.initialValue[KEY_NAME_MULTI_PAT_LIST.KEY_NAME_START_DATE] = DATE_CHOICES.UNDETERMINED.value; // 期間の値が未設定
       // デフォルト設定のレイアウトマスタの値
@@ -304,6 +303,9 @@ export default {
       } else {
         if (this.editRecord[KEY_NAME_MULTI_PAT_LIST.KEY_NAME_SELECTED_LAYOUT] == null) {
           this.editRecord[KEY_NAME_MULTI_PAT_LIST.KEY_NAME_SELECTED_LAYOUT] = this.initialValue[KEY_NAME_MULTI_PAT_LIST.KEY_NAME_SELECTED_LAYOUT];
+        } else if (!this.layoutMst.some(l => +l.patListLayoutCd === +this.editRecord[KEY_NAME_MULTI_PAT_LIST.KEY_NAME_SELECTED_LAYOUT])) {
+          // NOTE: マスタ削除された場合、リストの先頭
+          this.editRecord[KEY_NAME_MULTI_PAT_LIST.KEY_NAME_SELECTED_LAYOUT] = this.layoutMst[0] ? this.layoutMst[0].patListLayoutCd : 0;
         }
         if (this.editRecord[KEY_NAME_MULTI_PAT_LIST.KEY_NAME_START_DATE] == null) {
           this.editRecord[KEY_NAME_MULTI_PAT_LIST.KEY_NAME_START_DATE] = this.initialValue[KEY_NAME_MULTI_PAT_LIST.KEY_NAME_START_DATE];
@@ -311,8 +313,14 @@ export default {
         this.initialValue = deepCopy(this.editRecord);
       }
       /*add FNSI-改修内容4214 任 start*/
-      if($("#phone-show-pat-list").css("display") === "inline"){
-        document.getElementById("phone-show-pat-list").innerText =  document.getElementById("phone-show-pat-list").innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+      if(isScopedElementDisplayInline("phone-show-pat-list", this.$el || this)){
+        const phoneShowElement = getScopedElementById("phone-show-pat-list", this.$el || this);
+
+        if (phoneShowElement) {
+
+          phoneShowElement.innerText = phoneShowElement.innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+
+        }
       }
       /*add FNSI-改修内容4214 任 end*/
       // 開始期間の選択リストの設定完了
@@ -320,11 +328,9 @@ export default {
       this.isExpanded = this.defaultExpanded;
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     Object.assign(this.$data, this.$options.data());
   },
-  mounted() {
-  }
 };
 </script>
 

@@ -1,7 +1,7 @@
 package batch.reader;
 
-import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.mapping.PassThroughLineMapper;
+import org.springframework.batch.infrastructure.item.file.FlatFileItemReader;
+import org.springframework.batch.infrastructure.item.file.mapping.PassThroughLineMapper;
 import org.springframework.core.io.FileSystemResource;
 
 /**
@@ -17,9 +17,9 @@ public class FlatFileLineReader extends FlatFileItemReader<String>{
      *                      ・java.nio.charset.StandardCharsetsに定義されているもの
      */
     public FlatFileLineReader(String readFilePath, String encode){
+        super(new PassThroughLineMapper());
         this.setSaveState(false);
         this.setResource(new FileSystemResource(readFilePath));
         this.setEncoding(encode);
-        this.setLineMapper(new PassThroughLineMapper());
     }
 }

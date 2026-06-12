@@ -19,7 +19,7 @@
 </template>
 
 <script>
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import LayoutMixin from "@/views/LayoutMixin";
 export default {
   mixins: [LayoutMixin],

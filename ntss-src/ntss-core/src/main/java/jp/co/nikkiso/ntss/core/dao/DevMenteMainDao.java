@@ -98,6 +98,11 @@ public interface DevMenteMainDao {
   @Select
   DevMenteMain findMenteMainById(Long devMenteNo);
 
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260416 start
+  @Select
+  DevMenteMain findMenteMainByIdAndFacilityCd(Long devMenteNo, String facilityCd);
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260416 end
+
   @Select
   CusMachineInfoPeriodic selectMachineDetail(Long machineNo);
 
@@ -106,8 +111,10 @@ public interface DevMenteMainDao {
       String facilityCd, String mainteClass, String mainteDateStart,
       String mainteDateEnd);
 
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 start
   @Update(sqlFile = true)
-  int updateIsDeleteRecord(List<Long> mainNoList);
+  int updateIsDeleteRecord(List<Long> mainNoList, String facilityCd);
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 end
 
   @Select
   PartsRunning selectUseTimeByKey(
@@ -118,8 +125,10 @@ public interface DevMenteMainDao {
       Date menteDate, Long menteLayoutGroupCd, Long machineNo,
       String facilityCd, String menteClass);
 
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 start
   @Update(sqlFile = true)
-  int updateDeletMainteMainByTemDate(String temDate, List<Long> machineNoList);
+  int updateDeletMainteMainByTemDate(String temDate, List<Long> machineNoList, String facilityCd);
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 end
   @Update(sqlFile = true)
   int updateDeletMainteMainByDevMenteMain(
       String temDate, Long menteLayoutGroupCd, Long machineNo);

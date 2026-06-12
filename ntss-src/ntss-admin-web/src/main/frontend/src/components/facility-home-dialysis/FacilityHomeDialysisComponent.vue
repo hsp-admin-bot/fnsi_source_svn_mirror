@@ -12,6 +12,7 @@
     </div>
     <div class="disp-item-content-area">
       <table class="disp-item-area">
+        <tbody>
         <tr>
           <td>
             <v-ons-row>
@@ -123,6 +124,8 @@
             </v-ons-row>
           </td>
         </tr>
+      
+        </tbody>
       </table>
     </div>
     <!-- 下部ボタン部 -->
@@ -138,19 +141,99 @@
 
 <script>
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { mapGetters, mapActions } from "vuex";
+import { markRaw } from "vue";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { treatment } from "@/functions/mst/MstGetters.js";
-import _ from "underscore";
+import _ from "@/compat/collections/lodash";
 import IndMedicineEdit from "@/components/indication/IndMedicineEdit";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+
+import { nextId } from "@/functions/common/id";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 
+import { setKendoPopupSurfaceStyles } from "@/functions/common/KendoFunctions";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import IndTreatCondTimeComponent from "@/components/indication/IndTreatCondTime.vue";
+import IndTreatCondVaComponent from "@/components/indication/IndTreatCondVa.vue";
+import IndTreatCondTargetWeightComponent from "@/components/indication/IndTreatCondTargetWeight.vue";
+import IndTreatCondFilterLimitComponent from "@/components/indication/IndTreatCondFilterLimit.vue";
+import IndTreatCondDialyzerComponent from "@/components/indication/IndTreatCondDialyzer.vue";
+import IndTreatCondSeparatoryColumnComponent from "@/components/indication/IndTreatCondSeparatoryColumn.vue";
+import IndTreatCondFirstPassComponent from "@/components/indication/IndTreatCondFirstPass.vue";
+import IndTreatCondSecondPassComponent from "@/components/indication/IndTreatCondSecondPass.vue";
+import IndTreatCondNeedleAComponent from "@/components/indication/IndTreatCondNeedleA.vue";
+import IndTreatCondNeedleVComponent from "@/components/indication/IndTreatCondNeedleV.vue";
+import IndTreatCondNeedleSNComponent from "@/components/indication/IndTreatCondNeedleSN.vue";
+import IndTreatCondNeedleSelectionComponent from "@/components/indication/IndTreatCondNeedleSelection.vue";
+import IndTreatCondTubeComponent from "@/components/indication/IndTreatCondTube.vue";
+import IndTreatCondBloodFlowRateComponent from "@/components/indication/IndTreatCondBloodFlowRate.vue";
+import IndTreatCondDialysateComponent from "@/components/indication/IndTreatCondDialysate.vue";
+import IndTreatCondDialysateAmountComponent from "@/components/indication/IndTreatCondDialysateAmount.vue";
+import IndTreatCondDialysateFlowRateComponent from "@/components/indication/IndTreatCondDialysateFlowRate.vue";
+import IndTreatCondDialysateTemperatureComponent from "@/components/indication/IndTreatCondDialysateTemperature.vue";
+import IndTreatCondIvComponent from "@/components/indication/IndTreatCondIv.vue";
+import IndTreatCondIvAmountComponent from "@/components/indication/IndTreatCondIvAmount.vue";
+import IndTreatCondIvSelectionComponent from "@/components/indication/IndTreatCondIvSelection.vue";
+import IndTreatCondIvCountComponent from "@/components/indication/IndTreatCondIvCount.vue";
+import IndTreatCondIvTemperatureComponent from "@/components/indication/IndTreatCondIvTemperature.vue";
+import IndTreatCondIvFlowRateComponent from "@/components/indication/IndTreatCondIvFlowRate.vue";
+import IndTreatCondAntiCoagulantComponent from "@/components/indication/IndTreatCondAntiCoagulant.vue";
+import IndTreatCondAntiCoagulantOneshotAmountComponent from "@/components/indication/IndTreatCondAntiCoagulantOneshotAmount.vue";
+import IndTreatCondAntiCoagulantFlowRateComponent from "@/components/indication/IndTreatCondAntiCoagulantFlowRate.vue";
+import IndTreatCondAntiCoagulantAmountTotalComponent from "@/components/indication/IndTreatCondAntiCoagulantAmountTotal.vue";
+import IndTreatCondIpSelectionComponent from "@/components/indication/IndTreatCondIpSelection.vue";
+import IndTreatCondIpStartComponent from "@/components/indication/IndTreatCondIpStart.vue";
+import IndTreatCondIpOneshotAmountComponent from "@/components/indication/IndTreatCondIpOneshotAmount.vue";
+import IndTreatCondIpFlowRateComponent from "@/components/indication/IndTreatCondIpFlowRate.vue";
+import IndTreatCondIpFlowRateLimitComponent from "@/components/indication/IndTreatCondIpFlowRateLimit.vue";
+import IndTreatCondIpOneshotSelectionComponent from "@/components/indication/IndTreatCondIpOneshotSelection.vue";
+import IndTreatCondIpAutoOffComponent from "@/components/indication/IndTreatCondIpAutoOff.vue";
+import IndTreatCondIpAutoOffTimingComponent from "@/components/indication/IndTreatCondIpAutoOffTiming.vue";
+import IndTreatCondIpMonitorOffComponent from "@/components/indication/IndTreatCondIpMonitorOff.vue";
+import IndTreatCondIpMonitorOffTimingComponent from "@/components/indication/IndTreatCondIpMonitorOffTiming.vue";
+const IndTreatCondTime = markRaw(IndTreatCondTimeComponent);
+const IndTreatCondVa = markRaw(IndTreatCondVaComponent);
+const IndTreatCondTargetWeight = markRaw(IndTreatCondTargetWeightComponent);
+const IndTreatCondFilterLimit = markRaw(IndTreatCondFilterLimitComponent);
+const IndTreatCondDialyzer = markRaw(IndTreatCondDialyzerComponent);
+const IndTreatCondSeparatoryColumn = markRaw(IndTreatCondSeparatoryColumnComponent);
+const IndTreatCondFirstPass = markRaw(IndTreatCondFirstPassComponent);
+const IndTreatCondSecondPass = markRaw(IndTreatCondSecondPassComponent);
+const IndTreatCondNeedleA = markRaw(IndTreatCondNeedleAComponent);
+const IndTreatCondNeedleV = markRaw(IndTreatCondNeedleVComponent);
+const IndTreatCondNeedleSN = markRaw(IndTreatCondNeedleSNComponent);
+const IndTreatCondNeedleSelection = markRaw(IndTreatCondNeedleSelectionComponent);
+const IndTreatCondTube = markRaw(IndTreatCondTubeComponent);
+const IndTreatCondBloodFlowRate = markRaw(IndTreatCondBloodFlowRateComponent);
+const IndTreatCondDialysate = markRaw(IndTreatCondDialysateComponent);
+const IndTreatCondDialysateAmount = markRaw(IndTreatCondDialysateAmountComponent);
+const IndTreatCondDialysateFlowRate = markRaw(IndTreatCondDialysateFlowRateComponent);
+const IndTreatCondDialysateTemperature = markRaw(IndTreatCondDialysateTemperatureComponent);
+const IndTreatCondIv = markRaw(IndTreatCondIvComponent);
+const IndTreatCondIvAmount = markRaw(IndTreatCondIvAmountComponent);
+const IndTreatCondIvSelection = markRaw(IndTreatCondIvSelectionComponent);
+const IndTreatCondIvCount = markRaw(IndTreatCondIvCountComponent);
+const IndTreatCondIvTemperature = markRaw(IndTreatCondIvTemperatureComponent);
+const IndTreatCondIvFlowRate = markRaw(IndTreatCondIvFlowRateComponent);
+const IndTreatCondAntiCoagulant = markRaw(IndTreatCondAntiCoagulantComponent);
+const IndTreatCondAntiCoagulantOneshotAmount = markRaw(IndTreatCondAntiCoagulantOneshotAmountComponent);
+const IndTreatCondAntiCoagulantFlowRate = markRaw(IndTreatCondAntiCoagulantFlowRateComponent);
+const IndTreatCondAntiCoagulantAmountTotal = markRaw(IndTreatCondAntiCoagulantAmountTotalComponent);
+const IndTreatCondIpSelection = markRaw(IndTreatCondIpSelectionComponent);
+const IndTreatCondIpStart = markRaw(IndTreatCondIpStartComponent);
+const IndTreatCondIpOneshotAmount = markRaw(IndTreatCondIpOneshotAmountComponent);
+const IndTreatCondIpFlowRate = markRaw(IndTreatCondIpFlowRateComponent);
+const IndTreatCondIpFlowRateLimit = markRaw(IndTreatCondIpFlowRateLimitComponent);
+const IndTreatCondIpOneshotSelection = markRaw(IndTreatCondIpOneshotSelectionComponent);
+const IndTreatCondIpAutoOff = markRaw(IndTreatCondIpAutoOffComponent);
+const IndTreatCondIpAutoOffTiming = markRaw(IndTreatCondIpAutoOffTimingComponent);
+const IndTreatCondIpMonitorOff = markRaw(IndTreatCondIpMonitorOffComponent);
+const IndTreatCondIpMonitorOffTiming = markRaw(IndTreatCondIpMonitorOffTimingComponent);
 export default {
   components: {
     "ind-medicine-edit": IndMedicineEdit,
@@ -163,275 +246,237 @@ export default {
       treatMethod: null,
       treatCond: {
         "1": {
-          id: _.uniqueId("cond"),
-          component: () => import("@/components/indication/IndTreatCondTime"),
+          id: nextId("cond"),
+          component: IndTreatCondTime,
           value: null,
           medicineType: null
         },
         "2": {
-          id: _.uniqueId("cond"),
-          component: () => import("@/components/indication/IndTreatCondVa"),
+          id: nextId("cond"),
+          component: IndTreatCondVa,
           value: null,
           medicineType: null
         },
         "3": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondTargetWeight"),
+          id: nextId("cond"),
+          component: IndTreatCondTargetWeight,
           value: null,
           medicineType: null
         },
         "4": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondFilterLimit"),
+          id: nextId("cond"),
+          component: IndTreatCondFilterLimit,
           value: null,
           medicineType: null
         },
         "5": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondDialyzer"),
+          id: nextId("cond"),
+          component: IndTreatCondDialyzer,
           value: null,
           medicineType: null
         },
         "6": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondSeparatoryColumn"),
+          id: nextId("cond"),
+          component: IndTreatCondSeparatoryColumn,
           value: null,
           medicineType: null
         },
         "7": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondFirstPass"),
+          id: nextId("cond"),
+          component: IndTreatCondFirstPass,
           value: null,
           medicineType: null
         },
         "8": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondSecondPass"),
+          id: nextId("cond"),
+          component: IndTreatCondSecondPass,
           value: null,
           medicineType: null
         },
         "9": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondNeedleA"),
+          id: nextId("cond"),
+          component: IndTreatCondNeedleA,
           value: null,
           medicineType: null
         },
         "10": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondNeedleV"),
+          id: nextId("cond"),
+          component: IndTreatCondNeedleV,
           value: null,
           medicineType: null
         },
         "11": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondNeedleSN"),
+          id: nextId("cond"),
+          component: IndTreatCondNeedleSN,
           value: null,
           medicineType: null
         },
         "12": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondNeedleSelection"),
+          id: nextId("cond"),
+          component: IndTreatCondNeedleSelection,
           value: null,
           medicineType: null
         },
         "13": {
-          id: _.uniqueId("cond"),
-          component: () => import("@/components/indication/IndTreatCondTube"),
+          id: nextId("cond"),
+          component: IndTreatCondTube,
           value: null,
           medicineType: null
         },
         "14": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondBloodFlowRate"),
+          id: nextId("cond"),
+          component: IndTreatCondBloodFlowRate,
           value: null,
           medicineType: null
         },
         "15": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondDialysate"),
+          id: nextId("cond"),
+          component: IndTreatCondDialysate,
           value: null,
           medicineType: null
         },
         "16": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondDialysateAmount"),
+          id: nextId("cond"),
+          component: IndTreatCondDialysateAmount,
           value: null,
           medicineType: null
         },
         "17": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondDialysateFlowRate"),
+          id: nextId("cond"),
+          component: IndTreatCondDialysateFlowRate,
           value: null,
           medicineType: null
         },
         "18": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondDialysateTemperature"),
+          id: nextId("cond"),
+          component: IndTreatCondDialysateTemperature,
           value: null,
           medicineType: null
         },
         "19": {
-          id: _.uniqueId("cond"),
-          component: () => import("@/components/indication/IndTreatCondIv"),
+          id: nextId("cond"),
+          component: IndTreatCondIv,
           value: null,
           medicineType: null
         },
         "20": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIvAmount"),
+          id: nextId("cond"),
+          component: IndTreatCondIvAmount,
           value: null,
           medicineType: null
         },
         "21": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIvSelection"),
+          id: nextId("cond"),
+          component: IndTreatCondIvSelection,
           value: null,
           medicineType: null
         },
         "22": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIvCount"),
+          id: nextId("cond"),
+          component: IndTreatCondIvCount,
           value: null,
           medicineType: null
         },
         "23": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIvTemperature"),
+          id: nextId("cond"),
+          component: IndTreatCondIvTemperature,
           value: null,
           medicineType: null
         },
         "24": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIvFlowRate"),
+          id: nextId("cond"),
+          component: IndTreatCondIvFlowRate,
           value: null,
           medicineType: null
         },
         "25": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondAntiCoagulant"),
+          id: nextId("cond"),
+          component: IndTreatCondAntiCoagulant,
           value: null,
           medicineType: null
         },
         "26": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import(
-              "@/components/indication/IndTreatCondAntiCoagulantOneshotAmount"
-            ),
+          id: nextId("cond"),
+          component: IndTreatCondAntiCoagulantOneshotAmount,
           value: null,
           medicineType: null
         },
         "27": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondAntiCoagulantFlowRate"),
+          id: nextId("cond"),
+          component: IndTreatCondAntiCoagulantFlowRate,
           value: null,
           medicineType: null
         },
         "28": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import(
-              "@/components/indication/IndTreatCondAntiCoagulantAmountTotal"
-            ),
+          id: nextId("cond"),
+          component: IndTreatCondAntiCoagulantAmountTotal,
           value: null,
           medicineType: null
         },
         "29": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIpSelection"),
+          id: nextId("cond"),
+          component: IndTreatCondIpSelection,
           value: null,
           medicineType: null
         },
         "30": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIpStart"),
+          id: nextId("cond"),
+          component: IndTreatCondIpStart,
           value: null,
           medicineType: null
         },
         "31": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIpOneshotAmount"),
+          id: nextId("cond"),
+          component: IndTreatCondIpOneshotAmount,
           value: null,
           medicineType: null
         },
         "32": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIpFlowRate"),
+          id: nextId("cond"),
+          component: IndTreatCondIpFlowRate,
           value: null,
           medicineType: null
         },
         "33": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIpFlowRateLimit"),
+          id: nextId("cond"),
+          component: IndTreatCondIpFlowRateLimit,
           value: null,
           medicineType: null
         },
         "34": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIpOneshotSelection"),
+          id: nextId("cond"),
+          component: IndTreatCondIpOneshotSelection,
           value: null,
           medicineType: null
         },
         "35": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIpAutoOff"),
+          id: nextId("cond"),
+          component: IndTreatCondIpAutoOff,
           value: null,
           medicineType: null
         },
         "36": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIpAutoOffTiming"),
+          id: nextId("cond"),
+          component: IndTreatCondIpAutoOffTiming,
           value: null,
           medicineType: null
         },
         "37": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIpMonitorOff"),
+          id: nextId("cond"),
+          component: IndTreatCondIpMonitorOff,
           value: null,
           medicineType: null
         },
         "38": {
-          id: _.uniqueId("cond"),
-          component: () =>
-            import("@/components/indication/IndTreatCondIpMonitorOffTiming"),
+          id: nextId("cond"),
+          component: IndTreatCondIpMonitorOffTiming,
           value: null,
           medicineType: null
         }
       },
       medicine: [
         {
-          id: _.uniqueId("medicine"),
+          id: nextId("medicine"),
           cd: null,
           amount: null,
           timingCd: null,
@@ -541,10 +586,9 @@ export default {
     ]),
 
     // dropDownを開いた時にデータに応じて表示枠を広げる
-    addMaxContentStyle() {
+    addMaxContentStyle(event) {
       this.$nextTick(() => {
-        document.getElementsByClassName("k-animation-container")[0].firstElementChild.style.width = "max-content";
-        document.getElementsByClassName("k-animation-container")[0].firstElementChild.style.bottom = "0px";
+        setKendoPopupSurfaceStyles(event, { width: "max-content", bottom: "0px" }, this.$el);
       });
     },
     /**
@@ -556,7 +600,7 @@ export default {
       let medicine = JSON.parse(this.recordDefaultData.indMediInfo)
 
       // 治療条件
-      treatCond = _.mapObject(treatCond, (value, key) => {
+      treatCond = _.mapValues(treatCond, (value, key) => {
             return {
               component: this.treatCond[key].component,
               value: value.value,
@@ -582,7 +626,7 @@ export default {
         ? this.medicine
         : medicine.map(item => {
             return {
-              id: _.uniqueId("medicine"),
+              id: nextId("medicine"),
               cd: item.cd,
               amount: item.amount,
               timingCd: item.timing_cd,
@@ -599,7 +643,7 @@ export default {
      */
     setIndCondInfo(value) {
       const indCondInfo = JSON.stringify(
-        _.mapObject(value, o => {
+        _.mapValues(value, o => {
           return {
             value: o.value,
             medicine_type: o.medicineType,
@@ -657,17 +701,17 @@ export default {
       let editIndex = null;
       switch (type) {
         case "cond":
-          this.$set(this.treatCond[id], "value", data);
+          this.treatCond[id].value = data;
           break;
         case "medicine":
           editIndex = this.medicine.findIndex(item => {
             return item.id === id;
           });
 
-          this.$set(this.medicine, editIndex, {
+          this.medicine[editIndex] = {
             ...this.medicine[editIndex],
             ...data
-          });
+          };
           break;
         default:
           break;
@@ -682,7 +726,7 @@ export default {
       switch (type) {
         case "medicine":
           this.medicine.push({
-            id: _.uniqueId("medicine"),
+            id: nextId("medicine"),
             cd: null,
             amount: null,
             timingCd: null,
@@ -726,11 +770,11 @@ export default {
       // 治療方法による治療条件設定の可否チェック
       _.each(this.treatCond, (value, key) => {
         const settingItems = this.treatCondSetting
-          ? _.flatten(
+          ? (
               this.treatCondSetting.map(item => {
                 return item.items;
               })
-            )
+            ).flat()
           : null;
         const setting = settingItems
           ? settingItems.find(item => {
@@ -739,15 +783,15 @@ export default {
           : null;
         const isUse = setting ? Number(setting.is_use) : 1;
 
-        this.$set(this.treatCond[key], "isUse", isUse);
+        this.treatCond[key].isUse = isUse;
 
         if (!isUse) {
-          this.$set(this.treatCond[key], "value", null);
+          this.treatCond[key].value = null;
         }
       });
       // 補液が編集不可の場合、未登録を格納
       0 === Number(this.treatCond["19"].isUse)
-        ? this.$set(this.treatCond["19"], "value", null)
+        ? (this.treatCond["19"].value = null)
         : null;
       // 補液が未登録になった場合
       this.setTreatCondDefault("19", this.treatCond["19"].value);
@@ -760,9 +804,9 @@ export default {
      */
     setTreatCondValue(id, data) {
       // 編集コンポーネントの値格納
-      this.$set(this.$refs[id][0].displayInputValue, "editValue", data);
+      this.$refs[id][0].displayInputValue.editValue = data;
       // 内部値の格納
-      this.$set(this.treatCond[id], "value", data);
+      this.treatCond[id].value = data;
     },
 
     /**
@@ -1199,7 +1243,7 @@ export default {
   height: 100%;
 }
 
-.cond-disabled * {
+.cond-disabled > * {
   opacity: 0.5;
   pointer-events: none;
 }

@@ -15,7 +15,10 @@
         :class="classObjectItem(json)"
       >
         <table class="card-table">
-          {{
+          <tbody>
+          <tr class="card-index-row">
+            <td colspan="3" class="item-data">
+              {{
             index + 1
           }}
           <!-- mod 入力必須項目のチェックがされない / 入力欄の色の不正 5795 関 start -->
@@ -28,6 +31,8 @@
           </button>
           <!-- mod 入力必須項目のチェックがされない / 入力欄の色の不正 5795 関 end -->
           <br />
+            </td>
+          </tr>
           <tr>
             <td class="item-title">担当者名</td>
             <td class="item-data">
@@ -42,14 +47,18 @@
               />
             </td>
             <td class="item-data choice-button-area">
-              <v-ons-button
-                :ref="'btnSelectMst' + index"
-                class="common-style-select-button btn3-normal"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-                @click="selectStaff(index)"
-              >
-                選択
-              </v-ons-button>
+              <common-master-selector
+                :masterType="MasterType.STAFF_PAT_INFO"
+                :facilityCd="getFacilityCd"
+                :initItem="{ value: getPatDataJsonArray(json, 'staff_cd').initValue }"
+                :editItem="{ value: getPatDataJsonArray(json, 'staff_cd').editValue }"
+                :extraParams="staffPatInfoExtraParams(json)"
+                :btnName="'選択'"
+                :isVisible="false"
+                :btnClass="'common-style-select-button btn3-normal'"
+                :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+                @popover-return="setStaff($event, index)"
+              />
             </td>
           </tr>
           <tr>
@@ -57,7 +66,7 @@
             <td class="item-data charge-staff-check-area" style="display: flex; flex-flow: wrap;">
               <custom-checkbox
                 :value="getPatDataJsonArray(json, 'is_main')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 checked-value="1"
                 unchecked-value="0"
               >
@@ -65,7 +74,7 @@
               </custom-checkbox>
               <custom-checkbox
                 :value="getPatDataJsonArray(json, 'is_charge')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 checked-value="1"
                 unchecked-value="0"
               >
@@ -73,7 +82,7 @@
               </custom-checkbox>
               <custom-checkbox
                 :value="getPatDataJsonArray(json, 'is_puncture')"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
                 checked-value="1"
                 unchecked-value="0"
               >
@@ -81,16 +90,12 @@
               </custom-checkbox>
             </td>
           </tr>
+          
+        
+          </tbody>
         </table>
       </div>
     </draggable>
-    <!-- 担当者選択ポップオーバー -->
-    <pop-over
-      v-bind="popoverData"
-      :target-position-element="popoverTargetElement"
-      @popover-close="closePopover(popoverData)"
-      @popover-return="setStaff"
-    />
   </div>
 </template>
 
@@ -98,7 +103,7 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized, deepCopy } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
 // add 編集権限の適用 じょはく start
@@ -110,19 +115,22 @@ import baseCardContent from "@/components/pat-info/base-components/BaseCardConte
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 
 export default {
   name: "ChargeStaffCard",
+  components: {
+    "common-master-selector": commonMasterSelector
+  },
   mixins: [baseCardContent],
 
   data() {
     return {
       arrayColName: "charge_staff_info",
-      popoverData: {},
+      MasterType,
       staffNameMap: {},
       mstUserNameQueue: [],
-      selectedIndex: null,
-      mstJob: null,
       // del #10359 編集権限の動作不正 dengshen start
       // // add 編集権限の適用 じょはく start
       // isPatViewAuthorized: null,
@@ -170,36 +178,6 @@ export default {
         this.editRecord[this.arrayColName] = sortedAry;
       }
     },
-
-    // マスタ選択ポップオーバーの表示位置とする対象コンポーネント
-    popoverTargetElement() {
-      // 初期表示時は未選択なのでnull
-      return this.selectedIndex === null
-        ? null
-        : this.$refs[`btnSelectMst${this.selectedIndex}`][0];
-    },
-
-    popoverJobFilter() {
-      // ポップオーバのフィルタデータを取りまとめる
-      const all = { text: "すべて", value: 0 };
-      const filterArr = [
-        all,
-        ...this.mstJob.map(item => ({
-          text: item.jobName,
-          value: String(item.jobCd)
-        }))
-      ];
-
-      // ドロップダウン選択肢設定
-      const popoverFilter = [
-        {
-          popoverFilterLabel: "職種",
-          popoverFilterDataset: filterArr
-        }
-      ];
-
-      return popoverFilter;
-    },
   },
 
   created() {
@@ -225,9 +203,7 @@ export default {
     // del #10359 編集権限の動作不正 dengshen end
   },
   // add bug #7125 修正 chen start
-  beforeDestroy() {
-    // dataの初期化
-    Object.assign(this.$data, this.$options.data());
+  beforeUnmount() {
   },
   // add bug #7125 修正 chen end
   methods: {
@@ -262,18 +238,12 @@ export default {
             staffCdList.push(staffCd);
           }
         });
-        const facility_cd = this.getFacilityCd;
-        const [
-          responseJob,
-        ] = await Promise.all([
-          ApiHelper.get(`/master_maintenance/mst_user/mst_job/${facility_cd}`),
-          this.addMstUserNameQueue(staffCdList),
-        ]).catch(error => {
+        await this.addMstUserNameQueue(staffCdList).catch(error => {
           getErrorMessage("ChargeStaffCardContent.vue", "refreshData", error);
           throw error;
         });
-        this.mstJob = responseJob.data;
       } catch (error) {
+        getErrorMessage("ChargeStaffCardContent.vue", "refreshData", error);
       } finally {
         this.setLoadingScreenVisible(false);
       }
@@ -306,9 +276,10 @@ export default {
         // 変化した後の this.mstUserNameQueue の内容が使われる場合があるようなので
         // ApiHelper.post 呼び出し専用にクローンしておく
         const userIdList = [...this.mstUserNameQueue];
-        const responseUserName = await ApiHelper.post(
+        const responseUserName = await ApiHelper.configPost(
           "/mstInfo/mstPersonalUserByIdList",
-          userIdList
+          userIdList,
+          { params: { selectedPatId: this.selectedPatId } }
         );
         if (responseUserName) {
           responseUserName.data.forEach(this.setStaffNameMap);
@@ -321,10 +292,10 @@ export default {
     setStaffNameMap(user) {
       if (user?.userId) {
         // 利用者マスタデータから姓名取得する
-        this.$set(this.staffNameMap, "" + user.userId, this.mstUserToName(user));
+        ((this.staffNameMap)["" + user.userId] = this.mstUserToName(user));
       } else if (user?.value) {
         // 担当者選択の選択肢データから名称取得する
-        this.$set(this.staffNameMap, "" + user.value, user.text);
+        ((this.staffNameMap)["" + user.value] = user.text);
       }
     },
     mstUserToName(user) {
@@ -336,68 +307,31 @@ export default {
       return (lastName == null || firstName == null) ? null : `${lastName} ${firstName}`;
     },
 
-    async selectStaff(index) {
-      // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
-      this.selectedIndex = null;
-      // 選択ボタンを押した位置を保持
-      this.selectedIndex = index;
-      // mod 11872 利用者指定IFのデフォルト選択状態 zkm start
-      // const staffCd = this.getPatDataJsonArray(this.jsonArray[this.selectedIndex], "staff_cd").editValue;
-      let staffCd = this.getPatDataJsonArray(this.jsonArray[this.selectedIndex], "staff_cd").editValue;
+    staffPatInfoExtraParams(json) {
+      const base = {};
+      const staffCd = this.getPatDataJsonArray(json, "staff_cd").editValue;
+      if (!this.isStaffCdUnsetForDefaultInit(staffCd)) return base;
+      const account = this.getStateUserAccountInfo;
+      const uid = account && account.userId;
+      if (uid == null || String(uid).trim() === "") return base;
+      return { ...base, initValue: uid };
+    },
 
-      //liyanze-z add flag is used userID  
-      let isUsedUserInfoID = false;
-      if ('' === staffCd || null == staffCd) {
-        staffCd = this.getStateUserAccountInfo.userId;
-        isUsedUserInfoID = true
-      }
-      // mod 11872 利用者指定IFのデフォルト選択状態 zkm end
-      // const mstPersonalUserResponse = await ApiHelper.get("/mstInfo/mstPersonalUser", { facility_cd: this.getFacilityCd });
-      const mstPersonalUserResponse = await ApiHelper.get("/mstInfo/mstPersonalUserIncludeDel", { facility_cd: this.getFacilityCd });
-      const mstUser = mstPersonalUserResponse?.data.filter(item => {
-        return item.isDisp == '1' || item.userId == staffCd
-      }).map(item => ({
-        ...item,
-        userLastName: item.isDisp === "0"
-            ? `【削除済み】${item.userLastName}`
-            : item.userLastName,
-      })) || [];
-      // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc end
-      this.popoverData = this.createPopoverData(
-        "担当者",
-        null,
-        null,
-        "担当者名",
-        mstUser,
-        "userId",
-        "userLastName",
-        // 絞り込みデータ
-        "jobCd",
-        // 名前表示用
-        "userFirstName"
+    isStaffCdUnsetForDefaultInit(value) {
+      return (
+        value == null ||
+        value === "" ||
+        String(value).trim() === "" ||
+        String(value).trim() === "undefined"
       );
-      // ドロップダウン選択肢設定
-      this.popoverData.popoverFilter = this.popoverJobFilter;
-      // ドロップダウン選択肢に紐づけるvalueを設定
-      this.popoverData.popoverContentDataset.forEach(
-        item => item.fnValue = { "職種": item.fnValue }
-      );
-      this.popoverData.popoverContentSelected.value = staffCd;
-
-      // mod 11872 利用者指定IFのデフォルト選択状態 liyanze-z add  ログインID  start 
-      this.popoverData.isUsedUserInfoID = isUsedUserInfoID;
-      // mod 11872 利用者指定IFのデフォルト選択状態 liyanze-z add  ログインID  end 
-
-      // ポップオーバーを表示
-      this.showPopover(this.popoverData);
     },
 
     // ポップオーバー確定イベントハンドラ
-    setStaff(selectedData) {
-      const selectedCd = selectedData.value;
+    setStaff(selectedData, index) {
+      const selectedCd = selectedData?.value ?? null;
       // 選択ボタンを押した項目に担当者を設定
       this.setPatDataJsonArray(
-        this.jsonArray[this.selectedIndex],
+        this.jsonArray[index],
         "staff_cd",
         selectedCd
       );
@@ -412,7 +346,7 @@ export default {
       // 未選択の場合はnullを返す
       if (!staffCd) return null;
       const key = "" + staffCd;
-      if (!this.staffNameMap.hasOwnProperty(key)) {
+      if (!Object.prototype.hasOwnProperty.call(this.staffNameMap, key)) {
         // まだstaffNameMapに存在しないコードの場合はAPIで取得する処理を非同期に開始しておく
         this.addMstUserNameQueue(staffCd);
       }
@@ -448,7 +382,13 @@ export default {
 <!-- カード共通スタイル読み込み -->
 <style src="../base-components/BaseCardStyle.css" scoped></style>
 <style scoped>
+:deep(ons-checkbox.checkbox) {
+  margin-top: 0;
+}
 /* カード個別のスタイルはここ */
+.card-table .card-index-row td {
+  padding: 0;
+}
 .charge-staff-check-area label {
   display: flex;
   flex-flow: nowrap;

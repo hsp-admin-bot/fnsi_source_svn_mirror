@@ -28,6 +28,10 @@ public interface ExamRequestService {
    */
   //mod #12462 患者情報共有 zrx start
 //  ExamRequestResponse createExamRequestResponse(List<Long> patIdList, String startDate, String endDate, String facilityCd);
+  default ExamRequestResponse createExamRequestResponse(List<Long> patIdList, String startDate, String endDate, String facilityCd) throws Exception {
+    return createExamRequestResponse(patIdList, startDate, endDate, facilityCd, null);
+  }
+
   ExamRequestResponse createExamRequestResponse(List<Long> patIdList, String startDate, String endDate, String facilityCd, Integer patientShareMode) throws Exception;
   //mod #12462 患者情報共有 zrx end
 

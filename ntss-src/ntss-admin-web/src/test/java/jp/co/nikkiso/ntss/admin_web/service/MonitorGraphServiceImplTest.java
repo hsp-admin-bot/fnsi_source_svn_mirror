@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import jp.co.nikkiso.ntss.admin_web.response.monitor.MonitorGraphDefineResponse;
 import jp.co.nikkiso.ntss.core.dao.MstMonitorGraphDao;
 import jp.co.nikkiso.ntss.core.dao.MstSelectorDao;
@@ -12,7 +12,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,13 +39,13 @@ public class MonitorGraphServiceImplTest {
   /**
    * モニタグラフマスタDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstMonitorGraphDao mstMonitorGraphDao;
 
   /**
    * MstSelectorのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstSelectorDao mstSelectorDao;
 
   /**
@@ -116,9 +116,9 @@ public class MonitorGraphServiceImplTest {
    * MstSelectorの初期化（データあり）.
    * @param tableName テーブル物理名
    * @return
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
-  private MstSelector createMstSelectorContainsSelector(String tableName) throws JsonProcessingException {
+  private MstSelector createMstSelectorContainsSelector(String tableName) throws JacksonException {
    List<Item> items = Arrays.asList(
        new Item() {{
          setCode(1L);
@@ -149,9 +149,9 @@ public class MonitorGraphServiceImplTest {
    * MstSelectorの初期化（データなし）.
    * @param tableName テーブル物理名
    * @return
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
-  private MstSelector createMstSelectorNotContainsSelector(String tableName) throws JsonProcessingException {
+  private MstSelector createMstSelectorNotContainsSelector(String tableName) throws JacksonException {
     List<Item> items = emptyList();
 
     OrderSettings orderSettings = new OrderSettings();
@@ -170,10 +170,10 @@ public class MonitorGraphServiceImplTest {
    *
    * 条件：モニタグラフマスタと並び順管理マスタに該当のデータがある
    * 結果：施設コードに該当するモニタグラフマスタが取得できること（mst_selector登録順+未登録データ）
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_createMonitorGraphDefineResponse_正常_モニタグラフマスタと並び順管理マスタに該当のデータがある() throws JsonProcessingException {
+  public void test_createMonitorGraphDefineResponse_正常_モニタグラフマスタと並び順管理マスタに該当のデータがある() throws JacksonException {
     // arrange
     List<MstMonitorGraph> mstMonitorGraphs = createMonitorGraphEntity();
 
@@ -220,10 +220,10 @@ public class MonitorGraphServiceImplTest {
    *
    * 条件：モニタグラフマスタに該当のデータがあり並び順管理マスタに該当のデータがない
    * 結果：施設コードに該当するモニタグラフマスタが取得できること（mst_selector未登録データ）
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_createMonitorGraphDefineResponse_正常_モニタグラフマスタに該当のデータがあり並び順管理マスタに該当のデータがない() throws JsonProcessingException {
+  public void test_createMonitorGraphDefineResponse_正常_モニタグラフマスタに該当のデータがあり並び順管理マスタに該当のデータがない() throws JacksonException {
     // arrange
     List<MstMonitorGraph> mstMonitorGraphs = createMonitorGraphEntity();
 
@@ -250,10 +250,10 @@ public class MonitorGraphServiceImplTest {
    *
    * 条件：モニタグラフマスタに該当のデータがなく並び順管理マスタにデータがある
    * 結果：空のリストが取得できること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_createMonitorGraphDefineResponse_正常_モニタグラフマスタに該当のデータがなく並び順管理マスタにデータがある() throws JsonProcessingException {
+  public void test_createMonitorGraphDefineResponse_正常_モニタグラフマスタに該当のデータがなく並び順管理マスタにデータがある() throws JacksonException {
     // arrange
     final String facilityCd = "1001";
     given(mstMonitorGraphDao.selectByFacilityCd(facilityCd))
@@ -278,10 +278,10 @@ public class MonitorGraphServiceImplTest {
    *
    * 条件：モニタグラフマスタに該当のデータがない
    * 結果：空のリストが取得できること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_createMonitorGraphDefineResponse_正常_モニタグラフマスタに該当のデータがない() throws JsonProcessingException {
+  public void test_createMonitorGraphDefineResponse_正常_モニタグラフマスタに該当のデータがない() throws JacksonException {
     // arrange
     final String facilityCd = "9999";
     given(mstMonitorGraphDao.selectByFacilityCd(facilityCd))

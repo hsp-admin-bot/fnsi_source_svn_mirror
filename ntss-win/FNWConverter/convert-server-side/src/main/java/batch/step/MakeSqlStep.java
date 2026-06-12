@@ -8,12 +8,13 @@ import batch.part.InfomationSchemaControl;
 import batch.part.PsqlCopyUtils;
 import batch.part.TableNameToDbType;
 import com.zaxxer.hikari.HikariDataSource;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.Step;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
@@ -42,7 +43,7 @@ public class MakeSqlStep extends StepStartEndListener implements Tasklet {
     public static final String STEP_NAME = "MakeSqlStep";
 
     @Autowired
-    private StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
 
     @Autowired
     private ApplicationContext appContext;
@@ -185,6 +186,22 @@ public class MakeSqlStep extends StepStartEndListener implements Tasklet {
         table_prefix = table_prefix == null ? "" : table_prefix;
         String[] names = setUtilSqlKeys(convertDbDs, tableName, facilityCd, fnValueList,table_prefix);
 
+        condSql = buildConvertToProductionCondSql(tableName, facilityCd, columnNameList, names, globalContext, condSql);
+        delSql = buildConvertToProductionDelSql(tableName, facilityCd, columnNameList, delSql);
+
+        String[] command = psqlCopyUtils.createCopyCommandByCond(inputFilePath, tableName, ApplicationConst.DbType.CONVERT, registDbType, columnNameList,
+                facilityCd, condSql, delSql, true);
+
+        writeConvertDbToProductionDbFileContent(tableName, facilityCd, inputFilePath, registDbType, columnNameList,
+                fileConvertDbToProductionDbStep, globalContext, delSql, command);
+
+    }
+
+    /**
+     * コンバートDBから本番DBへのコピー条件SQLを構築する
+     */
+    private String buildConvertToProductionCondSql(String tableName, String facilityCd, List<String> columnNameList,
+                                                   String[] names, GlobalContext globalContext, String condSql) {
         // #Mod #8127 コンバータ施設の指示受け指示承認が指示検索中のまま Start
         String tableKey = convertKeyConfig.getTableKey(tableName); // #11998 add
         if (!"".equals(tableKey)) // #11998 add
@@ -209,17 +226,12 @@ public class MakeSqlStep extends StepStartEndListener implements Tasklet {
         // add 7406 ReMS利用施設をコンバートすると送信先グループマスタや警報通知マスタなどのデータが消えている 楊 start
         // mst_user_authenticationの場合、更新データを含むので、施設コードより、全てコピー
         if ("mst_user_authentication".equals(tableName)) {
-            // 本番データを削除
-            delSql = "delete from " + tableName + " where facility_cd='" + facilityCd + "'";
             // 施設コードより、全てコピー
             condSql = " 1 = 1 ";
         }
         if ("mst_comsv_setting".equals(tableName)) {
-            // 本番データを削除
-            delSql = "delete from " + tableName + " where facility_cd='" + facilityCd + "'";
             // 施設コードより、全てコピー
             condSql = " 1 = 1 ";
-            columnNameList.remove("convert_id");
         }
         // add 7406 ReMS利用施設をコンバートすると送信先グループマスタや警報通知マスタなどのデータが消えている 楊 end
 
@@ -233,9 +245,37 @@ public class MakeSqlStep extends StepStartEndListener implements Tasklet {
                     + globalContext.insFnKey + ") = trim(tmp.ids) ";
         }
         // add zl end
-        String[] command = psqlCopyUtils.createCopyCommandByCond(inputFilePath, tableName, ApplicationConst.DbType.CONVERT, registDbType, columnNameList,
-                facilityCd, condSql, delSql, true);
+        return condSql;
+    }
 
+    /**
+     * コンバートDBから本番DBへの削除SQLを構築する
+     */
+    private String buildConvertToProductionDelSql(String tableName, String facilityCd, List<String> columnNameList,
+                                                  String delSql) {
+        // add 7406 ReMS利用施設をコンバートすると送信先グループマスタや警報通知マスタなどのデータが消えている 楊 start
+        // mst_user_authenticationの場合、更新データを含むので、施設コードより、全てコピー
+        if ("mst_user_authentication".equals(tableName)) {
+            // 本番データを削除
+            delSql = "delete from " + tableName + " where facility_cd='" + facilityCd + "'";
+        }
+        if ("mst_comsv_setting".equals(tableName)) {
+            // 本番データを削除
+            delSql = "delete from " + tableName + " where facility_cd='" + facilityCd + "'";
+            columnNameList.remove("convert_id");
+        }
+        // add 7406 ReMS利用施設をコンバートすると送信先グループマスタや警報通知マスタなどのデータが消えている 楊 end
+        return delSql;
+    }
+
+    /**
+     * コンバートDBから本番DBへのSQLファイル内容を書き込む
+     */
+    private void writeConvertDbToProductionDbFileContent(String tableName, String facilityCd, String inputFilePath,
+                                                         String registDbType, List<String> columnNameList,
+                                                         File fileConvertDbToProductionDbStep,
+                                                         GlobalContext globalContext, String delSql,
+                                                         String[] command) throws Exception {
         // ファイルが存在しないの場合、ファイルを作成
         if (!fileConvertDbToProductionDbStep.exists())
         {
@@ -310,10 +350,20 @@ public class MakeSqlStep extends StepStartEndListener implements Tasklet {
         // 本番dbからコピー用fnkey
         globalContext.insFnKey = realData;
         // 新規レコードのfnkeyを取得
-        String sql = "";
-        // mod 8309 【デグレ】FNWデモ環境からコンバートするツールがエラーで停止する 楊 start
         String tableKey = convertKeyConfig.getTableKey(tableName); // #11998 add
         if (!"".equals(tableKey)) { // #11998 add
+            setSeqRegistForTableKey(tableName, facilityCd, table_prefix, tableKey, globalContext);
+        } else {
+            setInsFnValueFromConvertDb(tableName, facilityCd, fnValueList, table_prefix, names, realData, globalContext);
+        }
+        return names;
+    }
+
+    /**
+     * テーブルキーに基づきseqRegistを設定する
+     */
+    private void setSeqRegistForTableKey(String tableName, String facilityCd, String table_prefix,
+                                         String tableKey, GlobalContext globalContext) throws Exception {
             // add 12229
             if (utils.ConvertNotData.contains(tableName)) {
                 // 本番DBのseq
@@ -337,8 +387,15 @@ public class MakeSqlStep extends StepStartEndListener implements Tasklet {
                 // 本番DBのseq
                 globalContext.seqRegist = seq;
             }
+    }
 
-        } else {
+    /**
+     * コンバートDBからinsFnValueを取得して設定する
+     */
+    private void setInsFnValueFromConvertDb(String tableName, String facilityCd, List<String> fnValueList,
+                                            String table_prefix, String[] names, String realData,
+                                            GlobalContext globalContext) {
+        String sql = "";
         // mod 8309 【デグレ】FNWデモ環境からコンバートするツールがエラーで停止する 楊 start
             if (names != null && names.length > 0 && (!names[0].isEmpty()) && "facility_cd".equals(names[1].trim())) {
         // mod 8309 【デグレ】FNWデモ環境からコンバートするツールがエラーで停止する 楊 end
@@ -379,8 +436,6 @@ public class MakeSqlStep extends StepStartEndListener implements Tasklet {
             // 本番dbからコピー用fnvalue
             globalContext.insFnValue = fnValue;
         }
-        return names;
-    }
 
     /**
      * コンバートDB削除のsqlをファイルに書き
@@ -430,6 +485,23 @@ public class MakeSqlStep extends StepStartEndListener implements Tasklet {
         String inputFilePath = chunkContext.getStepContext().getJobParameters().get(ApplicationConst.JobParameterKeys.INPUT_FILE_PATH)
                 .toString();
         GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
+        String condSql = buildProductionToConvertCondSql(tableName, globalContext);
+        // 実行するコピーコマンドの組み立て
+        String[] command = psqlCopyUtils.createCopyCommandByCond(inputFilePath, tableName,
+                productionDbType,
+                ApplicationConst.DbType.CONVERT,
+                columnNameList,
+                facilityCd, condSql, "", false);
+        StringBuffer stringBuffer = buildProductionToConvertFileBuffer(tableName, facilityCd, inputFilePath,
+                productionDbType, columnNameList, fileProductionDbToConvertDbStep, globalContext, condSql, command);
+        writeProductionToConvertDbFileContent(tableName, facilityCd, chunkContext, productionDbType, columnNameList,
+                fileProductionDbToConvertDbStep, condSql, stringBuffer);
+    }
+
+    /**
+     * 本番DBからコンバートDBへのコピー条件SQLを構築する
+     */
+    private String buildProductionToConvertCondSql(String tableName, GlobalContext globalContext) {
         String cols = convertKeyConfig.getConvertKey(tableName);
 
         if (cols == null || cols.trim().isEmpty()) {
@@ -442,13 +514,17 @@ public class MakeSqlStep extends StepStartEndListener implements Tasklet {
                 condSql = globalContext.seqKey + " > " + globalContext.seqRegist;
             }
         }
-        // 実行するコピーコマンドの組み立て
-        String[] command = psqlCopyUtils.createCopyCommandByCond(inputFilePath, tableName,
-                productionDbType,
-                ApplicationConst.DbType.CONVERT,
-                columnNameList,
-                facilityCd, condSql, "", false);
-        String inputPath = chunkContext.getStepContext().getJobParameters().get(ApplicationConst.JobParameterKeys.INPUT_FILE_PATH).toString();
+        return condSql;
+    }
+
+    /**
+     * 本番DBからコンバートDBへのSQLファイルバッファを構築する
+     */
+    private StringBuffer buildProductionToConvertFileBuffer(String tableName, String facilityCd, String inputFilePath,
+                                                            String productionDbType, List<String> columnNameList,
+                                                            File fileProductionDbToConvertDbStep,
+                                                            GlobalContext globalContext, String condSql,
+                                                            String[] command) throws Exception {
         // ファイルが存在しないの場合、ファイルを作成
         if (!fileProductionDbToConvertDbStep.exists()) {
             fileProductionDbToConvertDbStep.createNewFile();
@@ -484,7 +560,19 @@ public class MakeSqlStep extends StepStartEndListener implements Tasklet {
                 commandSubList.add(commandSub);
             }
         }
+        return stringBuffer;
+    }
 
+    /**
+     * 本番DBからコンバートDBへのSQLファイルを書き込む
+     */
+    private void writeProductionToConvertDbFileContent(String tableName, String facilityCd, ChunkContext chunkContext,
+                                                       String productionDbType, List<String> columnNameList,
+                                                       File fileProductionDbToConvertDbStep, String condSql,
+                                                       StringBuffer stringBuffer) throws Exception {
+        String inputFilePath = chunkContext.getStepContext().getJobParameters().get(ApplicationConst.JobParameterKeys.INPUT_FILE_PATH)
+                .toString();
+        String inputPath = chunkContext.getStepContext().getJobParameters().get(ApplicationConst.JobParameterKeys.INPUT_FILE_PATH).toString();
         // mod #9448 mst_mainte_category.detail再設定 zkm start
         if(utils.mainteHistCopySourceList.contains(tableName)){
         // mod #9448 mst_mainte_category.detail再設定 zkm end
@@ -506,7 +594,7 @@ public class MakeSqlStep extends StepStartEndListener implements Tasklet {
 
     @Bean(name=STEP_NAME)
     public Step step() {
-        return stepBuilderFactory.get(STEP_NAME)
+        return new StepBuilder(STEP_NAME, jobRepository)
             .tasklet(this)
             .build();
     }

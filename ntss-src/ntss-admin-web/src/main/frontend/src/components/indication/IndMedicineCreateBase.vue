@@ -2,7 +2,8 @@
 
 <template>
   <modal-base @onClose="hideModal">
-    <div slot="body" class="indInfo-style-modal-container scroll-style">
+        <template #body>
+<div ref="modalBodyRoot" class="indInfo-style-modal-container scroll-style">
       <div
         v-if="settingData.showSegment"
         class="div-style"
@@ -99,20 +100,18 @@
               <!--     createNumDaysList($event,'indStartDate'); -->
               <!--   " -->
               <!-- /> -->
-              <input
+              <date-input
                 v-model="structData.indStartDate"
                 :disabled="settingData.startDateEdit || !getItemAuthorized('Indication', 'default_authority')"
-                type="date"
                 id="date-start"
                 class="date-input common-style-input ntss-input-date date-start-input"
+                classes="date-input-required"
                 data-target="indStartDate"
                 onkeydown="(function(event){if(event.altKey && event.key=='ArrowDown'){event.preventDefault();}})(event)"
-                @focus="focusStartEditing()"
+                @focus="focusStartEditing(structData.indStartDate)"
                 max="9999-12-31"
-                @blur="AdjustTreatStartDate(structData.indStartDate,true);
-                  createKurAndTreatmentList($event);
-                  createNumDaysList($event,'indStartDate');
-                "
+                @blur="AdjustTreatStartDate(structData.indStartDate,true); onBlurDate($event, structData.indStartDate, 'indStartDate');"
+                isRequired
               />
               <!-- mod #10359 編集権限の動作不正 dengshen end -->
               <!-- mod FNSI-画面デザイン修正_患者経過総合ビューア「デートピッカー削除なし」 周 end -->
@@ -281,11 +280,8 @@
                     id="date-end"
                     data-target="indEndDate"
                     class="date-input common-style-input ntss-input-date"
-                    @focus="focusStartEditing()"
-                    @blur="AdjustTreatStartDate(structData.indEndDate,false);
-                      createKurAndTreatmentList($event);
-                      createNumDaysList($event);
-                    "
+                    @focus="focusStartEditing(structData.indEndDate)"
+                    @blur="AdjustTreatStartDate(structData.indEndDate,false); onBlurDate($event, structData.indEndDate, 'indEndDate');"
                   />
                   <!-- mod #10359 編集権限の動作不正 dengshen end -->
                   <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 end -->
@@ -584,16 +580,18 @@
                 ref="startDate"
                 :disabled="!getItemAuthorized('Indication', 'default_authority')"
               /> -->
-              <input
+              <date-input
                 v-model="indDayIntervalStartDateInput"
-                type="date"
                 max="9999-12-31"
                 id="date-first"
                 onkeypress="function()"
                 class="date-input common-style-input ntss-input-date"
-                @blur="createNumDaysList($event, 'indDayIntervalStartDate');handleIndDayIntervalStartDateBlur($event)"
+                classes="date-input-required"
+                @focus="beforeDate = indDayIntervalStartDateInput"
+                @blur="onBlurIntervalStartDate($event); handleIndDayIntervalStartDateBlur($event)"
                 ref="startDate"
                 :disabled="!getItemAuthorized('Indication', 'default_authority')"
+                isRequired
               />
               <!-- #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng end -->
               <!-- mod #10359 編集権限の動作不正 dengshen end -->
@@ -648,10 +646,11 @@
                 :disabled="settingData.endDateEdit || !getItemAuthorized('Indication', 'default_authority')"
                 v-model="structData.indDayIntervalStartDate"
                 :disable-dates-after="disableDatesAfter"
-                @blur="createNumDaysList($event, 'indDayIntervalStartDate')"
-                @todayButtonClick="createNumDaysList($event, 'indDayIntervalStartDate')"
-                :selected-dates="firstTurnTreatDateList"
                 :active-date="true"
+                enable-today-button
+                @input="handleIndDayIntervalStartDateChange($event)"
+                @todayButtonClick="handleIndDayIntervalStartDateTodayClick"
+                :selected-dates="firstTurnTreatDateList"
               />
               <!-- #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng end -->
               <!--modify 10266 by kangjie 20240712 end-->
@@ -744,14 +743,14 @@
       <div v-if="messageDialogInfo.isDialogVisible">
         <!-- #11473 投与間隔・初回投与日関連バグ修正 linjunfeng start -->
         <!-- <message-dialog
-          :visible.sync="messageDialogInfo.isDialogVisible"
+          v-model:visible="messageDialogInfo.isDialogVisible"
           :message-cd="messageDialogInfo.messageCd"
           :type="messageDialogInfo.type"
           :string-params="messageDialogInfo.stringParams"
           @confirm="confirmResult"
         /> -->
         <message-dialog
-          :visible.sync="messageDialogInfo.isDialogVisible"
+          v-model:visible="messageDialogInfo.isDialogVisible"
           :message-cd="messageDialogInfo.messageCd"
           :type="messageDialogInfo.type"
           :title="messageDialogInfo.title"
@@ -761,7 +760,9 @@
         <!-- #11473 投与間隔・初回投与日関連バグ修正 linjunfeng end -->
       </div>
     </div>
-    <div slot="footer" class="in-ind-dropdown-area">
+    </template>
+        <template #footer>
+<div class="in-ind-dropdown-area">
       <v-ons-row class="div-style">
         <v-ons-col>
           <custom-calendar :selected-dates="selectedDates" :view-mode="true" />
@@ -798,6 +799,7 @@
             style="width: 100%;"
             class="common-style-input select-style-list"
             :disabled="!getItemAuthorized('Indication', 'default_authority')"
+            @open="onIndUserDropdownOpen"
           />
           <!-- mod #10359 編集権限の動作不正 dengshen end -->
           <!-- mod 画面デザイン改善対応 李 end -->
@@ -958,25 +960,28 @@
         </v-ons-row>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
+import { resolveDefaultSlotComponent } from "@/compat/vue/slots";
+import { setKendoDropDownListEditedState } from "@/functions/common/KendoFunctions";
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized, containsTabooAllergyTag } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapGetters, mapActions, mapMutations } from "vuex";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { deduplicateObjects } from "@/functions/common/CommonFunctions";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
 import CustomCalendar from "@/components/common/custom-calendar/CustomCalendar";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import ModalBase from "@/components/modals/ModalBase";
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 // add 画面デザイン改善対応 李 start
-import $ from "jquery";
+
 // add 画面デザイン改善対応 李 end
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -987,6 +992,7 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 //#5590 2023/04/20 ×を常に表示するように修正 張博 start
 import DateInput from "@/components/common/DateInput.vue";
+import { getScopedElementById, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
 //#5590 2023/04/20 ×を常に表示するように修正 張博 end
 
 export default {
@@ -1329,6 +1335,8 @@ export default {
       // add #11473 投与間隔・初回投与日関連バグ修正 linjunfeng start
       initWeeks: [],
       // add #11473 投与間隔・初回投与日関連バグ修正 linjunfeng end
+      // 変更前の開始日・終了日・初回投与日
+      beforeDate: "",
     };
   },
   computed: {
@@ -1383,31 +1391,31 @@ export default {
      * 終了日の最大日(本日から一年未満)
      */
     maxDate() {
-      const day = moment().format("YYYYMMDD");
+      const day = dayjs().format("YYYYMMDD");
       // 一年後に最大日を設定
       let endMaxDate = this.schExtEndDate
-        ? moment(this.schExtEndDate, "YYYYMMDD")
-        : moment(day).add(1, "year");
+        ? dayjs(this.schExtEndDate, "YYYYMMDD")
+        : dayjs(day).add(1, "year");
       // 一年後から1日戻す
-      endMaxDate = moment(endMaxDate).endOf("month");
-      return moment(endMaxDate).format("YYYY-MM-DD");
+      endMaxDate = dayjs(endMaxDate).endOf("month");
+      return dayjs(endMaxDate).format("YYYY-MM-DD");
     },
 
     /**
      * 指定日以降編集不可
      */
     disableDatesAfter() {
-      return moment(this.maxDate).format("YYYYMMDD");
+      return dayjs(this.maxDate).format("YYYYMMDD");
     },
     //add 9864 患者経過総合ビューアの指示編集画面で翌年を指示開始日に設定すると、終了日が自動でセットされ無期限指示変更ができない。zy start
     /**
      * 指定日前編集不可
      */
     disableDatesBefore() {
-      return moment(this.structData.indStartDate).format("YYYYMMDD");
+      return dayjs(this.structData.indStartDate).format("YYYYMMDD");
     },
     toMonth() {
-      return moment(this.structData.indStartDate).format("YYYY-MM-DD");
+      return dayjs(this.structData.indStartDate).format("YYYY-MM-DD");
     },
     //add 9864 患者経過総合ビューアの指示編集画面で翌年を指示開始日に設定すると、終了日が自動でセットされ無期限指示変更ができない。zy end
     //mod FNSI-5448 劉全航 start
@@ -1476,18 +1484,15 @@ export default {
     displayEndDate() {
       if (
         this.structData.indEndDate === null ||
-        this.structData.indEndDate === ""
-      ) {
+        this.structData.indEndDate === "") {
         //mod FNSI-5448 劉全航 start
         // return;
-        return moment(this.structData.treatDates[this.structData.treatDates.length-1]).format(
-        "YYYY/MM/DD"
-      );
+        return dayjs(this.structData.treatDates[this.structData.treatDates.length-1]).format(
+        "YYYY/MM/DD");
       //mod FNSI-5448 劉全航 end
       }
-      return moment(this.structData.indEndDate, "YYYY-MM-DD").format(
-        "YYYY/MM/DD"
-      );
+      return dayjs(this.structData.indEndDate, "YYYY-MM-DD").format(
+        "YYYY/MM/DD");
     },
 
     /**
@@ -1495,8 +1500,7 @@ export default {
      */
     hasSameDateTreat() {
       return (
-        new Set(this.treatDateListAll).size !== this.treatDateListAll.length
-      );
+        new Set(this.treatDateListAll).size !== this.treatDateListAll.length);
     },
 
     /**
@@ -1517,11 +1521,46 @@ export default {
     },
 
     // 治療方法
-    "structData.selectedTreat"(value) {
+    async "structData.selectedTreat"(value) {
       if (null !== this.treatMaxSelectedItems) {
-        this.$slots.default[0].componentInstance.changeMultSelect(value);
+        const component = await this.getDefaultSlotComponentAfterRender();
+        component?.changeMultSelect(value);
       }
     },
+
+    // 開始日の入力
+    "structData.indStartDate"(value) {
+      // 開始日の制御
+      // this.AdjustTreatStartDate(value);
+
+    },
+
+    // 終了日の入力
+    "structData.indEndDate"(value) {
+      // 期間指定での操作の場合以下の処理を実行
+      // if (!this.weekEdit) {
+      //   const date = parseInt(dayjs(value).format("YYYYMMDD"));
+      //   // 最小値の制御
+      //   const minDate =
+      //     "" === this.structData.indStartDate
+      //       ? parseInt(dayjs().format("YYYYMMDD"))
+      //       : parseInt(dayjs(this.structData.indStartDate).format("YYYYMMDD"));
+      //   if (minDate > date) {
+      //     this.structData.indEndDate = dayjs(String(minDate)).format(
+      //       "YYYY-MM-DD"
+      //     );
+      //   }
+      //   // 最大値の制御
+      //   const maxDate = parseInt(dayjs(this.maxDate).format("YYYYMMDD"));
+      //   if (date > maxDate) {
+      //     this.structData.indEndDate = dayjs(this.maxDate).format(
+      //       "YYYY-MM-DD"
+      //     );
+      //   }
+      // }
+
+    },
+
     // 回数の入力
     // "structData.indNumDays.edit"(value) {
     //   if (!value || value < 0) {
@@ -1537,6 +1576,42 @@ export default {
       // #10196 初回投与日  数字の手動入力はできません linjunfeng start
       this.indDayIntervalStartDateInput = newVal;
       // #10196 初回投与日  数字の手動入力はできません linjunfeng end
+      // del 10266 by kangjie 20240716 start
+      // if (dayjs(newVal) < dayjs(this.structData.indStartDate)) {
+      //   // mod #10196投与薬品行ヘッター親、初回投与日選択可開始日前、操作卓誤選択済 yangqingzhe start
+      //   //  this.$refs.startDate.blur();
+      //   if (typeof this.$refs.startDate.blur === "function") {
+      //     this.$refs.startDate.blur();
+      //   }
+      //   // mod #10196投与薬品行ヘッター親、初回投与日選択可開始日前、操作卓誤選択済 yangqingzhe end
+      //   this.$ons.notification.alert({
+      //     // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
+      //     // title: "",
+      //     // message: "開始日以前に初回投与日を設定できません。",
+      //     title: DIALOG_MESSAGES['00200032'].title,
+      //     message: messageFormat(DIALOG_MESSAGES['00200032'].message),
+      //     // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
+      //     callback: () => {
+      //       this.structData.indDayIntervalStartDate = oldVal;
+      //       // 投与開始日をStoreに保存
+      //       this.setIndStartDate(this.structData.indDayIntervalStartDate);
+      //
+      //       // add FNSI-画面デザイン修正_患者経過総合ビューア「デートピッカー削除なし」 周 start
+      //       if (this.settingData.startDate === newVal) {
+      //         this.getScopedDateMarkerElement('date-first')?.classList?.remove("custom-input-changed");
+      //       } else {
+      //         this.getScopedDateMarkerElement('date-first')?.classList?.add("custom-input-changed");
+      //       }
+      //       // add FNSI-画面デザイン修正_患者経過総合ビューア「デートピッカー削除なし」 周 end
+      //     }
+      //   });
+      // } else {
+      //   // 投与開始日をStoreに保存
+      //   this.setIndStartDate(this.structData.indDayIntervalStartDate);
+      // del 10266 by kangjie 20240716 end
+      // del 10266 by kangjie 20240716 start
+      // }
+      // del 10266 by kangjie 20240716 end
     },
 
     // add 画面デザイン改善対応 李 start
@@ -1546,16 +1621,15 @@ export default {
         this.callsNumberIntervalFlg = true;
         this.firIntervalValue = oldVal;
       }
+
     },
 
     "structData.indUser"(val) {
       // 選択した値と初期値が異なる場合
       if ((val ?? "") != (this.firDesignatorValue ?? "")) {
-        $('#kendo-dropdownlist-select-id').addClass('kendo-dropdownlist-select-edited');
-        $('#kendo-dropdownlist-select-id_listbox').addClass('kendo-dropdownlist-listbox');
+        setKendoDropDownListEditedState(this.$el || this, { enabled: true });
       } else {
-        $('#kendo-dropdownlist-select-id').removeClass('kendo-dropdownlist-select-edited');
-        $('#kendo-dropdownlist-select-id_listbox').removeClass('kendo-dropdownlist-listbox');
+        setKendoDropDownListEditedState(this.$el || this, { enabled: false });
       }
     }
     // add 画面デザイン改善対応 李 end
@@ -1579,8 +1653,7 @@ export default {
     // 指示者リスト設定
     this.getIndUserList(
       AUTHORITY_CODES.IND_EDIT,
-      AUTHORITY_CODES.IND_PEDIT
-    ).then(response => {
+      AUTHORITY_CODES.IND_PEDIT).then(response => {
       this.structData.userOptions = response.doctorList;
       this.$nextTick(() => {
         this.structData.indUser = response.iniSelectId;
@@ -1591,8 +1664,7 @@ export default {
     // 治療方法・クールデフォルト値設定
     await this.setDefaultTreatmentAndKur(
       this.structData.indStartDate,
-      this.structData.indEndDate
-    );
+      this.structData.indEndDate);
     // 治療予定リスト取得
     await this.getTreatDateList();
     // 回数デフォルト値設定
@@ -1617,13 +1689,36 @@ export default {
     }, 200);
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.setIntervalObj) {
       clearInterval(this.setIntervalObj);
     }
   },
 
   methods: {
+    getDefaultSlotComponent() {
+      return resolveDefaultSlotComponent(this);
+    },
+    async getDefaultSlotComponentAfterRender() {
+      let component = this.getDefaultSlotComponent();
+      if (!component) {
+        await this.$nextTick();
+        component = this.getDefaultSlotComponent();
+      }
+      return component;
+    },
+    getScopedRoot() {
+      return this.$refs.modalBodyRoot || this.$el || null;
+    },
+    getScopedDateMarkerElement(id) {
+      return getScopedElementById(id, this.getScopedRoot());
+    },
+    getScopedDateInput(target) {
+      return queryScopedSelector(`input[data-target^="${target}"]`, this.getScopedRoot());
+    },
+    getScopedDateValidity(target) {
+      return this.getScopedDateInput(target)?.validity || { badInput: false };
+    },
     ...mapActions("loading-screen", [
       "startLoadingScreen",
       "finishLoadingScreen",
@@ -1705,7 +1800,7 @@ export default {
     hideModal() {
       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20240103 ztc start
       // 変更箇所があればメッセージ表示
-      // if (this.$slots.default[0].componentInstance.checkEdit(1)) {
+      // if (this.getDefaultSlotComponent().checkEdit(1)) {
       //   return;
       // }
       // モーダル閉じる
@@ -1731,15 +1826,14 @@ export default {
       if (this.edit === 1) {
         this.structData.editOnly = true;
       }
-      this.$slots.default[0].componentInstance.selectSegment(
-        event.target.value
-      );
+      this.getDefaultSlotComponent().selectSegment(
+        event.target.value);
     },
     changeDialSegment(event) {
       this.structData.cycleWeek = event.target.value;
       if ("1" === this.structData.cycleWeek) {
         this.disabledWeekdays = [3, 4, 5, 6, 7];
-        const day = moment(this.structData.indStartDate, "YYYY-MM-DD");
+        const day = dayjs(this.structData.indStartDate, "YYYY-MM-DD");
         if (1 !== day.isoWeekday() && 2 !== day.isoWeekday()) {
           this.structData.indStartDate = "";
         }
@@ -1747,7 +1841,6 @@ export default {
         this.disabledWeekdays = [];
       }
     },
-
 
     // mod #12471 ord_main.ind_medi_infoに不正データが登録される zkm start
     // async updateIndInfo(num) {
@@ -1767,8 +1860,8 @@ export default {
       }
       // #5884 薬剤追加时，开始日为空并且点击保存按钮后，没有弹出错误信息 訾浩 end
       // add #9848+9849 確定時,薬剤指定済みの場合、必須チェック（空と0を区別する） linjunfeng start
-      const data = this.$slots.default[0].componentInstance.listData;
-      const medicineEle = this.$slots.default[0].componentInstance.$refs;
+      const data = this.getDefaultSlotComponent().listData;
+      const medicineEle = this.getDefaultSlotComponent().$refs;
       let medicineFlg = false;
       // 新規登録時無編集チェック
       if (!data?.length) {
@@ -1805,8 +1898,8 @@ export default {
       // add #12471 ord_main.ind_medi_infoに不正データが登録される zkm start
       baseData.type = type;
       // add #12471 ord_main.ind_medi_infoに不正データが登録される zkm end
-      const startDateValid = this.$el.querySelector('input[data-target^="indStartDate"]').validity;
-      const endDateValid = this.$el.querySelector('input[data-target^="indEndDate"]').validity;
+      const startDateValid = this.getScopedDateValidity("indStartDate");
+      const endDateValid = this.getScopedDateValidity("indEndDate");
 
       // 開始日の不完全入力チェック
       if ("" === baseData.indStartDate && startDateValid.badInput){
@@ -1827,8 +1920,7 @@ export default {
       if (
         null === messageCd &&
         null !== baseData.indEndDate &&
-        "" !== baseData.indEndDate
-      ) {
+        "" !== baseData.indEndDate) {
         if (baseData.indStartDate > baseData.indEndDate) {
           messageCd = 22010002;
           stringParams = "開始日≦終了日";
@@ -1838,13 +1930,10 @@ export default {
         if ("" === stringParams) {
           if (
             Number(
-              moment(baseData.indEndDate, "YYYY-MM-DD").format("YYYYMMDD")
-            ) > Number(moment(this.maxDate, "YYYY-MM-DD").format("YYYYMMDD"))
-          ) {
+              dayjs(baseData.indEndDate, "YYYY-MM-DD").format("YYYYMMDD")) > Number(dayjs(this.maxDate, "YYYY-MM-DD").format("YYYYMMDD"))) {
             messageCd = "22010002";
-            stringParams = `終了日は${moment(this.maxDate, "YYYY-MM-DD").format(
-              "YYYY年M月D日以下"
-            )}`;
+            stringParams = `終了日は${dayjs(this.maxDate, "YYYY-MM-DD").format(
+              "YYYY年M月D日以下")}`;
           }
         }
       }
@@ -1990,8 +2079,7 @@ export default {
         return [];
       }
       const ordMain = new Set(ordMainList.filter(
-        ord => ord.treatType === 1 || ord.treatType === 2 || ord.treatType === 3
-      ).map(item=>item.treatType));
+        ord => ord.treatType === 1 || ord.treatType === 2 || ord.treatType === 3).map(item=>item.treatType));
       return ordMain;
     },
     /**
@@ -2005,17 +2093,16 @@ export default {
         // 患者ID
         pat_id: this.structData.patId,
         // 治療開始日
-        ind_start_date: moment(this.structData.indStartDate).format("YYYY-MM-DD"),
+        ind_start_date: dayjs(this.structData.indStartDate).format("YYYY-MM-DD"),
         // 治療終了日
-        ind_end_date: moment(this.structData.indEndDate).format("YYYY-MM-DD")!="Invalid date"?moment(this.structData.indEndDate).format("YYYY-MM-DD"): "9999-12-31",
+        ind_end_date: dayjs(this.structData.indEndDate).format("YYYY-MM-DD")!="Invalid date"?dayjs(this.structData.indEndDate).format("YYYY-MM-DD"): "9999-12-31",
         // 曜日パターン
         week_pattern: "[{'text': '全','done': false,'value': 0}]"
       };
       // データの取得
       const response = await ApiHelper.post(
         `/mainData/TreatDateList`,
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add startupdateIndInfo
         getErrorMessage('IndEditBase.vue', 'ordMainList', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -2046,9 +2133,8 @@ export default {
       } else {
         baseData.flag = num;
         this.startLoadingScreen();
-        const hasError = await this.$slots.default[0].componentInstance.updateIndInfo(
-          baseData
-        ).finally(() => {
+        const hasError = await this.getDefaultSlotComponent().updateIndInfo(
+          baseData).finally(() => {
           this.finishLoadingScreen();
         });
         if (!hasError) {
@@ -2083,6 +2169,7 @@ export default {
         case 8:
         case 9:
         // add #11473 投与間隔・初回投与日関連バグ修正 linjunfeng start
+        // falls through
         case 10:
         // add #11473 投与間隔・初回投与日関連バグ修正 linjunfeng end
           this.structData.indWeeks.forEach(item => {
@@ -2179,6 +2266,7 @@ export default {
         case 8:
         case 9:
         // add #11473 投与間隔・初回投与日関連バグ修正 linjunfeng start
+        // falls through
         case 10:
         // add #11473 投与間隔・初回投与日関連バグ修正 linjunfeng end
           this.structData.indWeeks.forEach(item => {
@@ -2261,8 +2349,7 @@ export default {
           extractList,
           "indTreatmentCd",
           "indTreatmentName",
-          "treatOptions"
-        );
+          "treatOptions");
       }
     },
     /**
@@ -2317,8 +2404,7 @@ export default {
       // オーダー番号の指定がなければ、デフォルト値の設定処理終了
       if (
         null === this.settingData.ordNo ||
-        undefined === this.settingData.ordNo
-      ) {
+        undefined === this.settingData.ordNo) {
         return;
       }
 
@@ -2345,8 +2431,7 @@ export default {
       // 対象日時の治療情報取得
       const response = await ApiHelper.post(
         "/mainData/TreatDateList",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndMedicineCreateBase.vue', 'setDefaultTreatmentAndKur', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -2414,29 +2499,29 @@ export default {
     // add #11473 投与間隔・初回投与日関連バグ修正 linjunfeng start
     getNthWeekDates(startDate, endDate, n) {
       const result = [];
-      const start = moment(startDate);
-      const end = moment(endDate);
+      let start = dayjs(startDate);
+      const end = dayjs(endDate);
       while (start.isBefore(end)) {
-          const firstDayOfMonth = moment(start).startOf('month');
+          const firstDayOfMonth = dayjs(start).startOf('month');
           const startRange = firstDayOfMonth.add((n - 1) * 7, 'days');
-          const endRange = moment(startRange).add(6, 'days');
+          const endRange = dayjs(startRange).add(6, 'days');
           if (startRange.isBetween(startDate, endDate, null, '[]') || endRange.isBetween(startDate, endDate, null, '[]')) {
-              let currentDate = moment(startRange);
+              let currentDate = dayjs(startRange);
               while (currentDate.isSameOrBefore(endRange)) {
                   if (currentDate.isBetween(startDate, endDate, null, '[]')) {
                       result.push(currentDate.format('YYYYMMDD'));
                   }
-                  currentDate.add(1, 'day');
+                  currentDate = currentDate.add(1, 'day');
               }
           }
-          start.add(1, 'month').startOf('month');
+          start = start.add(1, 'month').startOf('month');
       }
       return result;
     },
     getLastDaysOfMonths(dateArray) {
       const monthLastDays = {};
       dateArray.forEach(date => {
-          const mDate = moment(date);
+          const mDate = dayjs(date);
           const monthKey = mDate.format('YYYY-MM');
           if (!monthLastDays[monthKey] || mDate.isAfter(monthLastDays[monthKey])) {
               monthLastDays[monthKey] = mDate;
@@ -2455,11 +2540,11 @@ export default {
      * - dateArrayの要素は、'YYYYMMDD'形式であることが前提。
      */
     getLastWeekDatesOfEachMonth(dateArray) {
-      const uniqueMonths = new Set(dateArray.map(date => moment(date).format('YYYYMM')));
+      const uniqueMonths = new Set(dateArray.map(date => dayjs(date).format('YYYYMM')));
       const lastWeekDates = new Set();
     
       uniqueMonths.forEach(month => {
-        const endOfMonth = moment(month, 'YYYYMM').endOf('month');
+        const endOfMonth = dayjs(month, 'YYYYMM').endOf('month');
         for (let i = 0; i < 7; i++) {
           lastWeekDates.add(endOfMonth.clone().subtract(i, 'days').format('YYYYMMDD'));
         }
@@ -2524,9 +2609,9 @@ export default {
             this.structData.indNumDays.edit = String(Number(this.structData.indNumDays.edit) + sameDayCount - 1);
           }
           //mod 5448投与薬剤で回数を入力すると終了日が計算できない  start
-          // const editEndDate = moment(setEndDate, "YYYYMMDD").format("YYYY-MM-DD");
+          // const editEndDate = dayjs(setEndDate, "YYYYMMDD").format("YYYY-MM-DD");
           //mod FNSI-5448 劉全航 start
-          // const editEndDate = setEndDate ? moment(setEndDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
+          // const editEndDate = setEndDate ? dayjs(setEndDate, "YYYYMMDD").format("YYYY-MM-DD") : "";
           //mod FNSI-5448 劉全航 end
           //mod 5448投与薬剤で回数を入力すると終了日が計算できない  end
           //mod FNSI-5448 劉全航 start
@@ -2547,21 +2632,24 @@ export default {
       // treatDateParamJson.weeks = JSON.stringify(this.structData.indWeeks);
       treatDateParamJson.weeks = JSON.stringify(this.initWeeks);
       // add #11473 投与間隔・初回投与日関連バグ修正 linjunfeng end
+      this.startLoadingScreen();
       const allPlantData = await ApiHelper.post(
         "/mainData/treatDateList/calendarFirstTrun",
-        treatDateParamJson
-      ).catch(error => {
+        treatDateParamJson).catch(error => {
         getErrorMessage('IndMedicineCreateBase.vue', 'createNumDaysList', error);
         throw error;
+      })
+      .finally(() => {
+        this.finishLoadingScreen();
       });
       this.firstTurnTreatDateList = allPlantData.data.map(item => {
         return item.treatDate;
       });
       // add #11473 投与間隔・初回投与日関連バグ修正 linjunfeng start
-      const startDates = moment(this.structData.indStartDate).format("YYYYMMDD");
+      const startDates = dayjs(this.structData.indStartDate).format("YYYYMMDD");
       let endDates = "";
       if (this.structData.indEndDate) {
-        endDates = moment(this.structData.indEndDate).format("YYYYMMDD");
+        endDates = dayjs(this.structData.indEndDate).format("YYYYMMDD");
       }
       this.firstTurnTreatDateList = this.firstTurnTreatDateList.filter(item => item >= startDates);
       if (endDates) {
@@ -2583,8 +2671,8 @@ export default {
 
       let indWeeksArr = [];
       this.firstTurnTreatDateList.forEach((item) => {
-        if (!indWeeksArr.includes(moment(item).isoWeekday())) {
-          indWeeksArr.push(moment(item).isoWeekday());
+        if (!indWeeksArr.includes(dayjs(item).isoWeekday())) {
+          indWeeksArr.push(dayjs(item).isoWeekday());
         }
       });
       this.structData.indWeeks.forEach((item) => {
@@ -2601,28 +2689,29 @@ export default {
               return item.value;
             });
           }
-          if (!weeks.includes(moment(event.target.value).isoWeekday()) && this.firstTurnTreatDateList.includes(moment(event.target.value).format("YYYYMMDD"))) {
-            weeks.push(moment(event.target.value).isoWeekday());
+          if (!weeks.includes(dayjs(event.target.value).isoWeekday()) && this.firstTurnTreatDateList.includes(dayjs(event.target.value).format("YYYYMMDD"))) {
+            weeks.push(dayjs(event.target.value).isoWeekday());
           }
         } else if ([2,3,4,5,6,7,8].includes(this.structData.indDayIntervalSelected)) {
-          let dateArr = this.firstTurnTreatDateList.filter(item => item >= moment(event).format("YYYYMMDD"));
+          const eventDateKey = this.getCreateNumDaysListEventDateKey(event);
+          let dateArr = this.firstTurnTreatDateList.filter(item => item >= eventDateKey);
           if (dateArr && dateArr[0]) {
-            weeks.push(moment(dateArr[0]).isoWeekday());
+            weeks.push(dayjs(dateArr[0]).isoWeekday());
           }
         } else if (this.structData.indDayIntervalSelected == 9) {
           // 投与間隔「1回／月：最終曜日」の時、「初回投与日の変更」以外の場合は、治療日リストの全曜日をweeksにpush
           // (投与間隔「1回／月：最終曜日」かつ「初回投与日の変更」の時、この分岐に入るのはevent?.target?.valueが不正な入力値の場合の為、weeksは空のままで後続処理へ進む。)
           if (type !== "indDayIntervalStartDate") {
             this.firstTurnTreatDateList.forEach((item) => {
-              if (!weeks.includes(moment(item).isoWeekday())) {
-                weeks.push(moment(item).isoWeekday());
+              if (!weeks.includes(dayjs(item).isoWeekday())) {
+                weeks.push(dayjs(item).isoWeekday());
               }
             });
           }
         } else {
           this.firstTurnTreatDateList.forEach((item) => {
-            if (!weeks.includes(moment(item).isoWeekday())) {
-              weeks.push(moment(item).isoWeekday());
+            if (!weeks.includes(dayjs(item).isoWeekday())) {
+              weeks.push(dayjs(item).isoWeekday());
             }
           })
         }
@@ -2658,17 +2747,19 @@ export default {
       paramJson.ind_kur_cd = JSON.stringify(this.structData.selectedKur);
       // 治療方法
       paramJson.ind_treatment_cd = JSON.stringify(
-        this.structData.selectedTreat
-      );
+        this.structData.selectedTreat);
+      this.startLoadingScreen();
       // 対象日時の治療情報取得(日付・曜日・治療方法・クールで絞り込み)
       const response = await ApiHelper.post(
         "/mainData/treatDateList",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndMedicineCreateBase.vue', 'createNumDaysList', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
         throw error;
+      })
+      .finally(() => {
+        this.finishLoadingScreen();
       });
 
       this.structData.treatDates = response.data.map(item => {
@@ -2683,24 +2774,34 @@ export default {
 
       // 開始日、終了日の範囲は上記取得処理で区切られている為、最大範囲でフィルタを作成する
       // #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng start
-      // const startDate = moment(this.structData.indDayIntervalStartDate);
-      let startDate = moment(this.structData.indStartDate);
-      const endDate = moment(this.maxDate.replace(/-/g, ""));
+      // const startDate = dayjs(this.structData.indDayIntervalStartDate);
+      let startDate = dayjs(this.structData.indStartDate);
+      const endDate = dayjs(this.maxDate.replace(/-/g, ""));
       // 1回／2週 1回／3週 1回／4週
       if ([2,3,4].includes(this.structData.indDayIntervalSelected)) {
         if (this.structData.treatDates && this.structData.treatDates[0]) {
-          startDate = moment(this.structData.treatDates[0]);
+          startDate = dayjs(this.structData.treatDates[0]);
         } else {
           this.structData.indWeeks.forEach(item => {
             if (item.done) {
-              startDate = moment(startDate).weekday(item.value);
+              startDate = dayjs(startDate).weekday(item.value);
             }
           });
         }
       }
       // 每回
       if (this.structData.indDayIntervalSelected == 0) {
-        startDate = moment(this.structData.treatDates[0]);
+        startDate = dayjs(this.structData.treatDates[0]);
+      }
+      // 初回投与日を開始日より前に選べる（#10266）。フィルタ起点を選択日に合わせる。
+      if (
+        (type === "indDayIntervalStartDate" || type === "indDayIntervalTodayButton") &&
+        this.structData.indDayIntervalStartDate
+      ) {
+        const selectedStart = dayjs(this.structData.indDayIntervalStartDate);
+        if (selectedStart.isBefore(startDate, "day")) {
+          startDate = selectedStart;
+        }
       }
       // 選択されている投与間隔により治療日をフィルタ
       // const treatDatesFilter = await this.filterDates(
@@ -2713,33 +2814,33 @@ export default {
       // add FNSI-【1006】最新の改修対象一覧の678対応 韓 start
       const treatDatesFilterInterval = await this.filterDates(
         // #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng start
-        // moment(this.structData.indStartDate),
+        // dayjs(this.structData.indStartDate),
         startDate,
         // #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng end
         endDate,
         this.structData.indDayIntervalSelected,
-        this.structData.indWeeks
-      );
+        this.structData.indWeeks);
 
       if (treatDatesFilterInterval.length > 0) {
         // mod FNSI-FutreNetWeb+SI課題管理No.3993 李 start
-        // this.structData.indDayIntervalStartDate = moment(treatDatesFilterInterval[0], "YYYYMMDD").format("YYYY-MM-DD");
+        // this.structData.indDayIntervalStartDate = dayjs(treatDatesFilterInterval[0], "YYYYMMDD").format("YYYY-MM-DD");
         let startDateFlg = false;
         //mod FNSI-5448 劉全航 start
         // #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng start
         // this.structData.treatDates.find(item => {
-        //   if (item == moment(this.structData.indDayIntervalStartDate).format("YYYYMMDD")) startDateFlg = true;
+        //   if (item == dayjs(this.structData.indDayIntervalStartDate).format("YYYYMMDD")) startDateFlg = true;
         // });
         // #11473 投与間隔・初回投与日関連バグ修正 linjunfeng start
         // if (type === 'indDayIntervalStartDate' && this.structData.indDayIntervalSelected != 10) {
-        if (type === 'indDayIntervalStartDate') {
-        // #11473 投与間隔・初回投与日関連バグ修正 linjunfeng end
-          // #11473 投与間隔・初回投与日関連バグ修正 linjunfeng start
-          // this.structData.treatDates.find(item => {
-          this.firstTurnTreatDateList.find(item => {
-          // #11473 投与間隔・初回投与日関連バグ修正 linjunfeng end
-            if (item == moment(this.structData.indDayIntervalStartDate).format("YYYYMMDD")) startDateFlg = true;
-          });
+        if (type === 'indDayIntervalStartDate' || type === 'indDayIntervalTodayButton') {
+          const selectedKey = dayjs(this.structData.indDayIntervalStartDate).format("YYYYMMDD");
+          if (treatDatesFilterInterval.includes(selectedKey)) {
+            startDateFlg = true;
+          } else {
+            this.firstTurnTreatDateList.find(item => {
+              if (item == selectedKey) startDateFlg = true;
+            });
+          }
         }
         // #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng end
         // add #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng start
@@ -2748,14 +2849,9 @@ export default {
         if (this.structData.indDayIntervalSelected == 1 || this.structData.indDayIntervalSelected == 0) {
         // #11473 投与間隔・初回投与日関連バグ修正 linjunfeng end
           if (type === 'indDayIntervalStartDate') {
-            this.indDayIntervalStartDateManual = moment(this.structData.indDayIntervalStartDate).format("YYYYMMDD")
-          } else {
-            if (this.structData.treatDates.includes(this.indDayIntervalStartDateManual)) {
-              this.structData.indDayIntervalStartDate = moment(this.indDayIntervalStartDateManual, "YYYYMMDD").format("YYYY-MM-DD");
-              startDateFlg = true;
-            } else {
-              this.indDayIntervalStartDateManual = "";
-            }
+            this.indDayIntervalStartDateManual = dayjs(this.structData.indDayIntervalStartDate).format("YYYYMMDD")
+          } else if (type === 'indDayIntervalTodayButton') {
+            // 今日ボタン: 以前の手動選択日(例: 6/1)を復元しない
             if (this.structData.treatDates && this.structData.treatDates.length > 0 && treatDatesFilterInterval) {
               const commonValues = this.structData.treatDates.filter(item => treatDatesFilterInterval.includes(item));
               treatDatesFilterInterval[0] = commonValues ? this.structData.treatDates[0] : treatDatesFilterInterval[0];
@@ -2773,6 +2869,11 @@ export default {
         }
         // add #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng end
         // add #11473 投与間隔・初回投与日関連バグ修正 linjunfeng start
+        const selectedIndDayKey = this.structData.indDayIntervalStartDate
+          ? dayjs(this.structData.indDayIntervalStartDate).format("YYYYMMDD")
+          : "";
+        const isSelectedInInterval =
+          selectedIndDayKey && treatDatesFilterInterval.includes(selectedIndDayKey);
         const indContent = this.firstTurnTreatDateList.find(item => treatDatesFilterInterval.includes(item));
         let weekDone = false;
         this.structData.indWeeks.forEach((item) => {
@@ -2781,21 +2882,28 @@ export default {
           }
         });
         if (![9, 10].includes(this.structData.indDayIntervalSelected)&& (!indContent || !weekDone)) {
-          this.structData.indDayIntervalStartDate = null;
-          startDateFlg = true;
+          if (
+            !(
+              (type === "indDayIntervalStartDate" || type === "indDayIntervalTodayButton") &&
+              isSelectedInInterval &&
+              weekDone
+            )
+          ) {
+            this.structData.indDayIntervalStartDate = null;
+            startDateFlg = true;
+          }
         }
         // add #11473 投与間隔・初回投与日関連バグ修正 linjunfeng end
-        // if(this.structData.treatDates[0] === moment(this.structData.indDayIntervalStartDate).format("YYYYMMDD")){
+        // if(this.structData.treatDates[0] === dayjs(this.structData.indDayIntervalStartDate).format("YYYYMMDD")){
         //   startDateFlg = true;
         // }
         //mod FNSI-5448 劉全航 end
 
-        if (!startDateFlg) this.structData.indDayIntervalStartDate = moment(treatDatesFilterInterval[0], "YYYYMMDD").format("YYYY-MM-DD");
-        startDateFlg = false;
+        if (!startDateFlg) this.structData.indDayIntervalStartDate = dayjs(treatDatesFilterInterval[0], "YYYYMMDD").format("YYYY-MM-DD");
         // mod FNSI-FutreNetWeb+SI課題管理No.3993 李 end
         // del #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng start
         // if (type === 'indStartDate') {
-        //   this.structData.indDayIntervalStartDate = this.structData.treatDates ?  moment(this.structData.treatDates[0], "YYYYMMDD").format("YYYY-MM-DD") : null;
+        //   this.structData.indDayIntervalStartDate = this.structData.treatDates ?  dayjs(this.structData.treatDates[0], "YYYYMMDD").format("YYYY-MM-DD") : null;
         // }
         // del #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng end
         // mod 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy end
@@ -2811,12 +2919,11 @@ export default {
       // add #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng start
       // 選択されている投与間隔により治療日をフィルタ
       const treatDatesFilter = await this.filterDates(
-        moment(this.structData.indDayIntervalStartDate),
+        dayjs(this.structData.indDayIntervalStartDate),
         endDate,
         this.structData.indDayIntervalSelected,
-        this.structData.indWeeks
-      );
-      // add #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng end
+        this.structData.indWeeks);
+      // add #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない V1.0B linjunfeng end
       // add FNSI-【1006】最新の改修対象一覧の678対応 韓 end
       // フィルタを適用
       this.structData.treatDates = await this.structData.treatDates.filter(item => {
@@ -2863,20 +2970,17 @@ export default {
 
       if (
         this.structData.indNumDays.edit &&
-        this.structData.indNumDays.edit !== ""
-      ) {
+        this.structData.indNumDays.edit !== "") {
         // 指定されている回数により治療日をフィルタ
         this.structData.treatDates = this.structData.treatDates.splice(
           0,
-          this.structData.indNumDays.edit
-        );
+          this.structData.indNumDays.edit);
       }
       //mod FNSI-5448 劉全航 start
       if (this.endDateLabel === "終了日") {
         if (
           (this.structData.indEndDate && this.structData.indNumDays.edit) ||
-          this.structData.indNumDays.edit === 0
-           ) {
+          this.structData.indNumDays.edit === 0) {
           this.endDateSublabel = `回数: ${this.structData.indNumDays.edit}回`;
           } else {
           this.endDateSublabel = `回数: ${this.structData.treatDates.length}回`;
@@ -2912,7 +3016,7 @@ export default {
       // }
       // del #10196 開始日の過去1年前に薬剤の新規修正に成功することはできません 20240311 ztc end
       const retArr = [];
-      const currentDate = startDate.clone();
+      let currentDate = startDate.clone();
       // #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng start
       // let currentWeek = currentDate.clone().week();
       let currentWeek = currentDate.clone().isoWeek();
@@ -2927,13 +3031,13 @@ export default {
        * @returns {Object}
        */
       const getWeekOfMonthDate = (weekday, ordinal) => {
-        const wd = moment()
+        let wd = dayjs()
           .year(currentDate.year())
           .month(currentDate.month())
           .date(1);
 
         while (wd.isoWeekday() !== weekday) {
-          wd.add(1, "d");
+          wd = wd.add(1, "d");
         }
 
         return wd.add(ordinal, "w");
@@ -2945,13 +3049,13 @@ export default {
        * @returns {Array}
        */
       const getMonthLastWeek = date => {
-        const d = date.clone().endOf("M");
+        let d = date.clone().endOf("M");
         const retArr = [];
 
         // 一週間分
         for (let i = 0; i < 7; i++) {
           retArr.push(d.clone());
-          d.subtract(1, "d");
+          d = d.subtract(1, "d");
         }
 
         return retArr;
@@ -2997,8 +3101,7 @@ export default {
           selectedWeekday &&
           currentDate.format("YYYYMMDD") ===
             getWeekOfMonthDate(selectedWeekday.value, ordinal).format(
-              "YYYYMMDD"
-            );
+              "YYYYMMDD");
 
         if (isSelectedDay) {
           retArr.push(formattedDate);
@@ -3047,8 +3150,7 @@ export default {
           // 対象日時の治療情報取得
           const response = await ApiHelper.post(
             "/mainData/TreatDateList",
-            paramJson
-          ).catch(error => {
+            paramJson).catch(error => {
             //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
             getErrorMessage('IndMedicineCreateBase.vue', 'setMonthLastTreatDate', error);
             //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3060,19 +3162,17 @@ export default {
 
         // 今月分の日付リストを作成
         const currentMonthDates = treatDateList.filter(treatDate => {
-          const date = moment(treatDate, "YYYYMMDD");
+          const date = dayjs(treatDate, "YYYYMMDD");
 
           return (
             date.year() === currentDate.year() &&
-            date.month() === currentDate.month()
-          );
+            date.month() === currentDate.month());
         });
 
         // 今月分の日付リストに最低1件の治療予定がある場合、最終治療日を取得
         if (currentMonthDates.length > 0) {
           const lastTreatDate = currentMonthDates.reduce((prevDate, currDate) =>
-            prevDate > currDate ? prevDate : currDate
-          );
+            prevDate > currDate ? prevDate : currDate);
 
           retArr.push(lastTreatDate);
         }
@@ -3133,9 +3233,9 @@ export default {
         }
 
         if (pattern === 10) {
-          currentDate.add(1, "M");
+          currentDate = currentDate.add(1, "M");
         } else {
-          currentDate.add(1, "d");
+          currentDate = currentDate.add(1, "d");
 
           // 次年になった場合の補正処理
           // #11350 【たくしん会】投与薬剤追加・編集の初回投与日に正しい値が入らない　V1.0B linjunfeng start
@@ -3197,22 +3297,22 @@ export default {
     // AdjustTreatStartDate(startDate) {
     //   // 期間指定での操作の場合以下の処理を実行
     //   if (!this.weekEdit) {
-    //     const date = parseInt(moment(startDate).format("YYYYMMDD"));
+    //     const date = parseInt(dayjs(startDate).format("YYYYMMDD"));
     //     // 過去日制御
-    //     const today = parseInt(moment().format("YYYYMMDD"));
+    //     const today = parseInt(dayjs().format("YYYYMMDD"));
     //     if (today > date) {
-    //       this.structData.indStartDate = moment().format("YYYY-MM-DD");
+    //       this.structData.indStartDate = dayjs().format("YYYY-MM-DD");
     //     }
     //     // 最大値の制御
-    //     const maxDate = parseInt(moment(this.maxDate).format("YYYYMMDD"));
+    //     const maxDate = parseInt(dayjs(this.maxDate).format("YYYYMMDD"));
     //     if (date > maxDate) {
-    //       this.structData.indStartDate = moment(this.maxDate).format(
+    //       this.structData.indStartDate = dayjs(this.maxDate).format(
     //         "YYYY-MM-DD"
     //       );
     //     }
     //   }
 
-    //   if (moment(startDate) > moment(this.structData.indDayIntervalStartDate)) {
+    //   if (dayjs(startDate) > dayjs(this.structData.indDayIntervalStartDate)) {
     //     this.structData.indDayIntervalStartDate = startDate;
     //   }
     //   // Storeに開始日(初回投与日)を保存
@@ -3229,36 +3329,36 @@ export default {
       //add 9864 患者経過総合ビューアの指示編集画面で翌年を指示開始日に設定すると、終了日が自動でセットされ無期限指示変更ができない。zy end
       // 期間指定での操作の場合以下の処理を実行
       if (!this.weekEdit) {
-        const date = parseInt(moment(treatDate).format("YYYYMMDD"));
+        const date = parseInt(dayjs(treatDate).format("YYYYMMDD"));
         // 過去日制御
         let today;
         // mod 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy start
         // if (startDate) {
-        //   today = parseInt(moment().format("YYYYMMDD"));
+        //   today = parseInt(dayjs().format("YYYYMMDD"));
         // }else{
-        today = parseInt(moment(this.structData.indStartDate).format("YYYYMMDD"));
+        today = parseInt(dayjs(this.structData.indStartDate).format("YYYYMMDD"));
         // }
         // if (today > date) {
         //   if (startDate) {
-        //     this.structData.indStartDate = moment().format("YYYY-MM-DD");
+        //     this.structData.indStartDate = dayjs().format("YYYY-MM-DD");
         //   }else{
-        //     this.structData.indEndDate = moment(this.structData.indStartDate).format("YYYY-MM-DD");
+        //     this.structData.indEndDate = dayjs(this.structData.indStartDate).format("YYYY-MM-DD");
         //   }
         // }else{
         if (startDate) {
-          this.structData.indStartDate = moment(treatDate).format("YYYY-MM-DD");
+          this.structData.indStartDate = dayjs(treatDate).format("YYYY-MM-DD");
         }else{
-          this.structData.indEndDate = moment(treatDate).format("YYYY-MM-DD");
+          this.structData.indEndDate = dayjs(treatDate).format("YYYY-MM-DD");
         }
         // }
         // mod 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy end
         // 最大値の制御
-        const maxDate = parseInt(moment(this.maxDate).format("YYYYMMDD"));
+        const maxDate = parseInt(dayjs(this.maxDate).format("YYYYMMDD"));
         if (date > maxDate) {
           if (startDate) {
-            this.structData.indStartDate = moment(this.maxDate).format("YYYY-MM-DD");
+            this.structData.indStartDate = dayjs(this.maxDate).format("YYYY-MM-DD");
           }else{
-            this.structData.indEndDate = moment(this.maxDate).format("YYYY-MM-DD");
+            this.structData.indEndDate = dayjs(this.maxDate).format("YYYY-MM-DD");
           }
         }
       }
@@ -3270,9 +3370,11 @@ export default {
     /**
      * 項目編集中のフラグをオンにする
      */
-    focusStartEditing() {
+    focusStartEditing(beforeDate) {
       this.startEditFlg = true;
       this.focusFlg= true;
+      // 変更前の日付退避
+      this.beforeDate = beforeDate;
     },
 
     /**
@@ -3294,14 +3396,12 @@ export default {
       paramJson.ind_kur_cd = JSON.stringify(this.structData.selectedKur);
       // 治療方法
       paramJson.ind_treatment_cd = JSON.stringify(
-        this.structData.selectedTreat
-      );
+        this.structData.selectedTreat);
 
       // 対象日時の治療情報取得(日付・曜日・治療方法・クールで絞り込み)
       const response = await ApiHelper.post(
         "/mainData/treatDateList",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndMedicineCreateBase.vue', 'getTreatDateList', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3311,11 +3411,10 @@ export default {
       this.treatDateListAll = response.data.map(({ treatDate }) => treatDate);
 
       // 本日日付からの最大範囲のデータを取得し、保持する
-      paramJson.start_date = moment(new Date()).format("YYYY-MM-DD");
+      paramJson.start_date = dayjs(new Date()).format("YYYY-MM-DD");
       const responseFixed = await ApiHelper.post(
         "/mainData/treatDateList",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndMedicineCreateBase.vue', 'responseFixed', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3336,13 +3435,13 @@ export default {
       const targetPeriodDateList = [];
 
       // 本日の日付を取得
-      const startDate = moment();
-      const endDate = moment(this.disableDatesAfter).add(1, "days");
+      let startDate = dayjs();
+      const endDate = dayjs(this.disableDatesAfter).add(1, "days");
 
       // 今日から来年の昨日までの日時をリストで取得
       while (startDate.diff(endDate) <= 0) {
-        targetPeriodDateList.push(moment(startDate).format("YYYYMMDD"));
-        startDate.add(1, "days");
+        targetPeriodDateList.push(dayjs(startDate).format("YYYYMMDD"));
+        startDate = startDate.add(1, "days");
       }
 
       // 今日から来年の昨日までの日付をループ
@@ -3364,10 +3463,80 @@ export default {
     },
     // add FNSI-FutreNetWeb+SI課題管理No.3993 李 end
     // #10196 初回投与日  数字の手動入力はできません linjunfeng start
+    getCreateNumDaysListEventDateKey(event) {
+      if (typeof event === "string") {
+        return dayjs(event).format("YYYYMMDD");
+      }
+      if (event?.target?.value) {
+        return dayjs(event.target.value).format("YYYYMMDD");
+      }
+      return dayjs().format("YYYYMMDD");
+    },
+    handleIndDayIntervalStartDateChange(eventOrValue) {
+      const value =
+        typeof eventOrValue === "string"
+          ? eventOrValue
+          : eventOrValue?.target?.value;
+      if (!value) {
+        return;
+      }
+      this.structData.indDayIntervalStartDate = value;
+      this.indDayIntervalStartDateInput = value;
+      this.createNumDaysList(
+        { type: "blur", target: { value } },
+        "indDayIntervalStartDate"
+      );
+    },
+    handleIndDayIntervalStartDateTodayClick() {
+      const today = dayjs();
+      const todayKey = today.format("YYYYMMDD");
+      const todayStr = today.format("YYYY-MM-DD");
+      const hasTreatToday = this.firstTurnTreatDateList?.includes(todayKey);
+      let effectiveDate = todayStr;
+      if (hasTreatToday) {
+        effectiveDate = todayStr;
+      } else if (
+        today.isBefore(dayjs(this.structData.indStartDate), "day") &&
+        this.firstTurnTreatDateList?.length > 0
+      ) {
+        effectiveDate = dayjs(this.firstTurnTreatDateList[0], "YYYYMMDD").format("YYYY-MM-DD");
+      } else {
+        effectiveDate = this.structData.indDayIntervalStartDate || todayStr;
+      }
+      this.indDayIntervalStartDateManual = "";
+      this.structData.indDayIntervalStartDate = effectiveDate;
+      this.indDayIntervalStartDateInput = effectiveDate;
+      // 今日ボタンは初期化同様、曜日パターンは変更しない
+      this.createNumDaysList(
+        { type: "blur", target: { value: effectiveDate } },
+        "indDayIntervalTodayButton"
+      );
+    },
     handleIndDayIntervalStartDateBlur(event) {
       this.structData.indDayIntervalStartDate = event.target.value;
     },
     // #10196 初回投与日  数字の手動入力はできません linjunfeng end
+
+    /** 開始日・終了日フォーカスアウト時の処理 */
+    onBlurDate(e, date, field) {
+      // 値変更なし
+      if (this.beforeDate === date) {
+        return;
+      }
+      // API実行
+      this.createKurAndTreatmentList(e);
+      this.createNumDaysList(e, field);
+    },
+
+    /** 初回投与日フォーカスアウト時の処理 */
+    onBlurIntervalStartDate(e) {
+      // 値変更なし
+      if (this.beforeDate === this.indDayIntervalStartDateInput) {
+        return;
+      }
+      // API実行
+      this.createNumDaysList(e, "indDayIntervalStartDate");
+    },
 
     /**
      * 子コンポーネントの入力値に禁忌・アレルギータグが含まれているかを判定し、
@@ -3375,7 +3544,7 @@ export default {
      */
     checkMedicineTabooAllergy() {
       this.setTabooMedicine(false);
-      const comp = this.$slots.default?.[0]?.componentInstance;
+      const comp = this.getDefaultSlotComponent();
       if (!comp) {
         return;
       }
@@ -3406,7 +3575,7 @@ export default {
   height: 100%;
 }
 
-.scroll-style >>> * {
+.scroll-style :deep(*) {
   font-size: inherit;
 }
 
@@ -3503,16 +3672,6 @@ input::-webkit-calendar-picker-indicator {
   background-color: #ffff99 !important;
 }
   /* add 7952 必須項目にも関わらず背景色が黄色になっていない 張 end */
-  /* #5884 薬剤追加时，开始日为空并且点击保存按钮后，没有弹出错误信息 訾浩 start */
-.date-start-input {
-  background-color: #ffff99 !important;
-}
-/* #10266 患者経過総合ビューアの投与薬剤、医療材料、指示コメントの新規追加行 linjunfeng start */
-.date-start-input[disabled]{
-  color: #999;
-}
-/* #10266 患者経過総合ビューアの投与薬剤、医療材料、指示コメントの新規追加行 linjunfeng end */
-/* #5884 薬剤追加时，开始日为空并且点击保存按钮后，没有弹出错误信息 訾浩 end */
 /* add 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy start */
 .date-first-input input{
   background-color: #ffff99 !important;

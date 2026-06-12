@@ -1,7 +1,7 @@
+import { publicAssetPath } from "@/compat/assets/public-path";
 import store from "@/stores";
-import router from "@/router";
-import ons from "onsenui";
-import moment from "moment";
+import { getCurrentRouteName } from "@/compat/vue/router-facade.js";
+import dayjs from "@/compat/date/dayjs";
 import { sendPostRequestGetMinSchExtEndDate } from "@/apis/exam-request";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -18,14 +18,14 @@ import {
 } from "@/constants/examRequestConstants";
 import { getAuthorized } from "@/functions/common/CommonFunctions";
 import { messageFormat } from "@/functions/common/MessageFormat";
-import { confirmIsOk } from "@/functions/common/OnsenFunctions";
+import { alertByKey, confirmIsOk, showAlertDialog } from "@/functions/common/OnsenFunctions";
 import { groupBy, sortableCompare } from "@/functions/SortFunctions";
 
 const INPUT_DATE_FORMAT = "YYYY-MM-DD";
 const NO_SEP_DATE_FORMAT = "YYYYMMDD";
 const SLASH_DATE_FORMAT = "YYYY/MM/DD";
 
-const getDefaultSchExtEndDateMoment = () => moment().add(12, "months").endOf("month");
+const getDefaultSchExtEndDateMoment = () => dayjs().add(12, "months").endOf("month");
 
 /** デフォルトのスケジュール延長最終日を取得 */
 export const getDefaultSchExtEndDate = () => getDefaultSchExtEndDateMoment().format(INPUT_DATE_FORMAT);
@@ -48,7 +48,7 @@ export const getMinSchExtEndDateCore = async (facilityCd, patIdList) => {
   // min処理によってnumberになっている。
   // そうでない場合はstringで空文字列になっている。
   const schExtEndDateMoment = minSchExtEndDate.data
-    ? moment("" + minSchExtEndDate.data, NO_SEP_DATE_FORMAT)
+    ? dayjs("" + minSchExtEndDate.data, NO_SEP_DATE_FORMAT)
     : getDefaultSchExtEndDateMoment();
   const schExtEndDate = schExtEndDateMoment.format(INPUT_DATE_FORMAT);
   return schExtEndDate;
@@ -60,8 +60,8 @@ export const getMinSchExtEndDateCore = async (facilityCd, patIdList) => {
  */
 export const modifyInputDateCore = (condition, conditionName, schExtEndDate) => {
   if (condition[conditionName]) {
-    const inputDate = moment(condition[conditionName], INPUT_DATE_FORMAT);
-    const maxDate = moment(schExtEndDate, INPUT_DATE_FORMAT);
+    const inputDate = dayjs(condition[conditionName], INPUT_DATE_FORMAT);
+    const maxDate = dayjs(schExtEndDate, INPUT_DATE_FORMAT);
     if (inputDate.isValid() && inputDate.isAfter(maxDate)) {
       condition[conditionName] = schExtEndDate;
     }
@@ -116,28 +116,29 @@ export const extractTargetDate = (condition, baseDayCount, patInfoList) => {
   if (!storePath) return [];
 
   const { startDate, endDate, selectedDayOfWeek } = condition;
-  const startDateMoment = moment(startDate);
-  const endDateMoment = moment(endDate || getDefaultSchExtEndDate());
+  const startDateMoment = dayjs(startDate);
+  const endDateMoment = dayjs(endDate || getDefaultSchExtEndDate());
   const rtnDateList = [];
 
   // 月ごとの対象日付を取得する (月曜：1～日曜：7、月曜始まり)
   for (
-    const dateWork = startDateMoment.clone();
+    let dateWork = startDateMoment.clone();
     dateWork.isSameOrBefore(endDateMoment, "month");
-    dateWork.add(1, "months")
+    dateWork = dateWork.add(1, "months")
   ) {
     // 月初めの日付を確認し、第1週の指定曜日まで進める
-    const firstDayWeek = dateWork.startOf("month").format("E");
-    if (firstDayWeek <= selectedDayOfWeek) {
-      dateWork.add(selectedDayOfWeek - firstDayWeek, "days");
+    let currentDate = dateWork.startOf("month");
+    const firstDayWeek = currentDate.day();
+    const normalizedFirst = firstDayWeek === 0 ? 7 : firstDayWeek;
+    const selected = Number(selectedDayOfWeek);
+    if (normalizedFirst <= selected) {
+      currentDate = currentDate.add(selected - normalizedFirst, "days");
     } else {
-      dateWork.add(7 - (firstDayWeek - selectedDayOfWeek), "days");
+      currentDate = currentDate.add(7 - (normalizedFirst - selected), "days");
     }
     // n週分日付を進める
-    dateWork.add(baseDayCount, "days");
-    rtnDateList.push(dateWork.format("YYYYMMDD"));
-    // 続く処理の為に、月初めの日付に戻す
-    dateWork.startOf("month");
+    currentDate = currentDate.add(baseDayCount, "days");
+    rtnDateList.push(currentDate.format("YYYYMMDD"));
   }
 
   if (rtnDateList.length) {
@@ -183,23 +184,23 @@ export const extractTargetDateBiweekly = (condition, patInfoList) => {
   if (!storePath) return [];
 
   const { startDate, endDate, selectedDayOfWeek } = condition;
-  const startDateMoment = moment(startDate);
-  const endDateMoment = moment(endDate || getDefaultSchExtEndDate());
+  const startDateMoment = dayjs(startDate);
+  const endDateMoment = dayjs(endDate || getDefaultSchExtEndDate());
   const rtnDateList = [];
 
   // 開始日付を取得
-  const firstDayWithWeek = startDateMoment.clone();
+  let firstDayWithWeek = startDateMoment.clone();
   const startDayWeek = firstDayWithWeek.format("E");
   if (startDayWeek <= selectedDayOfWeek) {
-    firstDayWithWeek.add(selectedDayOfWeek - startDayWeek, "days");
+    firstDayWithWeek = firstDayWithWeek.add(selectedDayOfWeek - startDayWeek, "days");
   } else {
-    firstDayWithWeek.add(7 - (startDayWeek - selectedDayOfWeek), "days");
+    firstDayWithWeek = firstDayWithWeek.add(7 - (startDayWeek - selectedDayOfWeek), "days");
   }
   // 隔週(14日毎)の日付を取得
   for (
-    const dateWork = firstDayWithWeek.clone();
+    let dateWork = firstDayWithWeek.clone();
     dateWork.isSameOrBefore(endDateMoment, "days");
-    dateWork.add(14, "days")
+    dateWork = dateWork.add(14, "days")
   ) {
     rtnDateList.push(dateWork.format("YYYYMMDD"));
   }
@@ -244,7 +245,7 @@ export {
 
 /** 現在の画面検査依頼一覧または一般撮影検査依頼一覧で、依頼の編集状態があり、破棄確認でキャンセルされた場合はfalseを返す */
 export const confirmAllowDiscardChangesInRequestList = async () => {
-  const thisName = router.currentRoute.name;
+  const thisName = getCurrentRouteName();
   // 検査依頼一覧、一般撮影検査依頼一覧のいずれでもない場合は確認不要
   if (!isRequestList(thisName)) return true;
   const isExamRequestList = isExamRequest(thisName);
@@ -272,7 +273,7 @@ export const confirmAllowDiscardChangesInRequestList = async () => {
 
 /** 現在の画面検査依頼または一般撮影検査依頼で、依頼の編集状態があり、破棄確認でキャンセルされた場合はfalseを返す */
 export const confirmAllowDiscardChangesInRequestDetail = async () => {
-  const thisName = router.currentRoute.name;
+  const thisName = getCurrentRouteName();
   // 検査依頼、一般撮影検査依頼のいずれでもない場合は確認不要
   if (!isRequestDetail(thisName)) return true;
   const isExamRequestDetail = isExamRequest(thisName);
@@ -306,7 +307,7 @@ export const validateSelectDoctor = selectDoctor => {
     // title: "必須項目未入力",
     // message: "{$1}は必須入力項目です。\n必ず値を入力してください。"
     const { title, message } = DIALOG_MESSAGES[22010001];
-    ons.notification.alert({
+    showAlertDialog({
       title,
       message: messageFormat(message, "指示者"),
     });
@@ -360,7 +361,7 @@ export const executeUploadTemplete = async (
 
     // title: "更新完了",
     // message: "更新が完了しました。"
-    ons.notification.alert(DIALOG_MESSAGES["00100002"]);
+    alertByKey("00100002");
 
     // 再表示
     showCalendarFunc();
@@ -368,7 +369,7 @@ export const executeUploadTemplete = async (
     getErrorMessage(fileName, methodName, error);
 
     if (error?.response?.status === 400) {
-      ons.notification.alert({
+      showAlertDialog({
         // title: "更新失敗",
         title: DIALOG_MESSAGES["00300005"].title,
         message: error?.response?.data?.errorMessage,
@@ -455,15 +456,12 @@ export const checkAndCreateSaveExamData = selectDoctor => {
 
   // 編集データから検査セット行だけを抽出する
   const examRequestListNoShap = getters["exam-request/list/getExamRequestListNoShap"];
-  // mod #12462 患者情報共有 Ji start
   const facilityCd = getters["user/getFacilityCd"];
-
   const kensaObjList = examRequestListNoShap.filter(item => !item.headerflg && item.facilityCd === facilityCd);
-  // mod #12462 患者情報共有 Ji end
 
   // 締切日確認に使用する日付
   const deadlineCondition = getters["exam-request/list/getDeadlineCondition"];
-  const deadlineDate = deadlineCondition.deadlineFlg ? moment(getDeadlineDate(deadlineCondition)) : null;
+  const deadlineDate = deadlineCondition.deadlineFlg ? dayjs(getDeadlineDate(deadlineCondition)) : null;
 
   // 変更されたデータを集計する
   kensaObjList.forEach(kensaObj => {
@@ -474,7 +472,7 @@ export const checkAndCreateSaveExamData = selectDoctor => {
     const isEcgExamSet = ecgExamSet.some(item => item.examSetCd === examSetCd);
     // 対象患者のスケジュール延長最終日を取得
     const schExtEndMinDateYyyymmdd = getSchExtEndDateWithPatMainList(patMainList, kensaObj.patId);
-    const schExtEndMinDate = moment(schExtEndMinDateYyyymmdd, "YYYYMMDD");
+    const schExtEndMinDate = dayjs(schExtEndMinDateYyyymmdd, "YYYYMMDD");
 
     examDateList.forEach(examDate => {
       const dataType = kensaObj.examData[examDate];
@@ -483,7 +481,7 @@ export const checkAndCreateSaveExamData = selectDoctor => {
       // 中止と追加のいずれでもない場合は処理しない
       if (!isCancelData && !isAddData) return;
       // スケジュール延長最終日より先の日付の追加は処理しない
-      if (isAddData && schExtEndMinDate.isBefore(moment(examDate, "YYYYMMDD"))) return;
+      if (isAddData && schExtEndMinDate.isBefore(dayjs(examDate, "YYYYMMDD"))) return;
 
       // 処理対象のレコードデータを取得する
       const record = selectOrCreateExamRecord(
@@ -497,7 +495,7 @@ export const checkAndCreateSaveExamData = selectDoctor => {
       // 依頼変更可否フラグ
       if (deadlineDate) {
         // （中止もしくは追加で）締切確認が有効な場合
-        if (deadlineDate.isAfter(moment(examDate, "YYYYMMDD"))) {
+        if (deadlineDate.isAfter(dayjs(examDate, "YYYYMMDD"))) {
           record.isLock = LockFlag.Locked;
           result.rtnDeadlineOverFlg = true;
         }
@@ -617,10 +615,8 @@ export const selectOrCreateExamRecord = (
   isCancelData,
   isEcgExamSet
 ) => {
-  // add #12462 患者情報共有 Ji start
   const { getters } = store;
   const facilityCd = getters["user/getFacilityCd"];
-  // add #12462 患者情報共有 Ji end
   const patId = kensaObj.patId;
   const regOrderClass = kensaObj.regOrderClass;
   const examSetCd = Number(kensaObj.examSetCd);
@@ -631,7 +627,7 @@ export const selectOrCreateExamRecord = (
     && item.regOrderClass === regOrderClass
   ));
 
-  let record = null;
+  let record;
   if (
     isCancelData
     || regOrderClass === OrderClass.Other
@@ -647,9 +643,7 @@ export const selectOrCreateExamRecord = (
     });
   } else {
     // 心電図検査以外の既存レコードのデータを取得する
-    // mod #12462 患者情報共有 Ji start
     record = recordList.find(item => item.phyOrdClass !== PhyOrdClass.Ecg && item.facilityCd == facilityCd);
-    // mod #12462 患者情報共有 Ji end
   }
 
   if (record) {
@@ -724,7 +718,7 @@ export const checkAndCreateSaveRadData = selectDoctor => {
 
   // 締切日確認に使用する日付
   const deadlineCondition = getters["rad-request/list/getDeadlineCondition"];
-  const deadlineDate = deadlineCondition.deadlineFlg ? moment(getDeadlineDate(deadlineCondition)) : null;
+  const deadlineDate = deadlineCondition.deadlineFlg ? dayjs(getDeadlineDate(deadlineCondition)) : null;
 
   // 変更されたデータを集計する
   kensaObjList.forEach(kensaObj => {
@@ -733,7 +727,7 @@ export const checkAndCreateSaveRadData = selectDoctor => {
     const radSetCd = Number(kensaObj.radSetCd);
     // 対象患者のスケジュール延長最終日を取得
     const schExtEndMinDateYyyymmdd = getSchExtEndDateWithPatMainList(patMainList, kensaObj.patId);
-    const schExtEndMinDate = moment(schExtEndMinDateYyyymmdd, "YYYYMMDD");
+    const schExtEndMinDate = dayjs(schExtEndMinDateYyyymmdd, "YYYYMMDD");
 
     radDateTimeList.forEach(radDateTime => {
       const [radDate, radTime] = radDateTime.split("_");
@@ -743,7 +737,7 @@ export const checkAndCreateSaveRadData = selectDoctor => {
       // 中止と追加のいずれでもない場合は処理しない
       if (!isCancelData && !isAddData) return;
       // スケジュール延長最終日より先の日付の追加は処理しない
-      if (isAddData && schExtEndMinDate.isBefore(moment(radDate, "YYYYMMDD"))) return;
+      if (isAddData && schExtEndMinDate.isBefore(dayjs(radDate, "YYYYMMDD"))) return;
 
       // 処理対象のレコードデータを取得する
       const record = selectOrCreateRadRecord(
@@ -757,7 +751,7 @@ export const checkAndCreateSaveRadData = selectDoctor => {
       // 依頼変更可否フラグ
       if (deadlineDate) {
         // （中止もしくは追加で）締切確認が有効な場合
-        if (deadlineDate.isAfter(moment(radDate, "YYYYMMDD"))) {
+        if (deadlineDate.isAfter(dayjs(radDate, "YYYYMMDD"))) {
           record.isLock = LockFlag.Locked;
           result.rtnDeadlineOverFlg = true;
         }
@@ -902,10 +896,8 @@ export const hasTreatmentPatternOnWeek = (requestPattern, selectedPatId = null) 
   const storePath = getStorePath();
   if (!storePath) return false;
   const weekName = selectValueByExamOrRad("examWeek", "radWeek");
-  // mod #12462 患者情報共有 Ji start
-  // const patId = selectedPatId || (requestPattern.patId ? Number(requestPattern.patId) : null);
-  let matchPatId = selectedPatId;
 
+  let matchPatId = selectedPatId;
   if (!matchPatId) {
     if (requestPattern.matchPatId) {
       matchPatId = Number(requestPattern.matchPatId);
@@ -916,31 +908,27 @@ export const hasTreatmentPatternOnWeek = (requestPattern, selectedPatId = null) 
     }
   }
   const requestWeek = requestPattern[weekName] ? Number(requestPattern[weekName]) : null;
-  // if (!patId || !requestWeek) return false;
   if (!matchPatId || !requestWeek) return false;
 
   const treatmentPatternList = store.getters[`${storePath}/getPatTreatmentPatternList`];
   return treatmentPatternList.some(treatmentPattern => (
-    (
-      treatmentPattern.ownPatId
-        ? matchPatId === Number(treatmentPattern.ownPatId)
-        : matchPatId === Number(treatmentPattern.patId)
-    ) &&
-    requestWeek === treatmentPattern.treatWeek
+    (treatmentPattern.ownPatId
+      ? matchPatId === Number(treatmentPattern.ownPatId)
+      : matchPatId === Number(treatmentPattern.patId))
+    && requestWeek === treatmentPattern.treatWeek
   ));
-  // mod #12462 患者情報共有 Ji end
 };
 
-/** router.currentRoute.nameから検査依頼用もしくは一般撮影検査依頼用の値を返す */
+/** getCurrentRouteName()から検査依頼用もしくは一般撮影検査依頼用の値を返す */
 export const selectValueByExamOrRad = (examValue, radValue, defaultValue = null) => {
-  const currentName = router.currentRoute.name;
+  const currentName = getCurrentRouteName();
   if (isExamRequest(currentName)) return examValue;
   if (isRadRequest(currentName)) return radValue;
   return defaultValue;
 };
-/** router.currentRoute.nameから検査依頼用もしくは一般撮影検査依頼用のストアパスを返す */
+/** getCurrentRouteName()から検査依頼用もしくは一般撮影検査依頼用のストアパスを返す */
 export const getStorePath = () => {
-  const routeName = router.currentRoute.name;
+  const routeName = getCurrentRouteName();
   const examRequestPath =
     routeName === 'exam-request-detail'                          // NOTE: 検査依頼詳細の場合、listのStore参照
       ? 'exam-request/list'
@@ -955,7 +943,7 @@ export const hasScheduleTreatment = (dateItem, selectedPatId) => {
   switch (dateItem.columnType) {
     case ColumnType.Date: {
       // 検査日付データの場合
-      const dateYyyymmdd = moment(dateItem.date).format("YYYYMMDD");
+      const dateYyyymmdd = dayjs(dateItem.date).format("YYYYMMDD");
       return hasScheduleOnTargetDate(selectedPatId, dateYyyymmdd);
     }
     case ColumnType.Pattern: {
@@ -988,41 +976,33 @@ export const getExamCellImgAttributesByDate = (celObj, setDate) => {
   const isLockFlg = celObj.examStatus[setDate] === "1" || celObj.nowIsLock[setDate] === "1";
   const hasSchedle = FILLCOLOR_HAS_SCHEDULE + "!important";
   const hasNotSchedle = FILLCOLOR_HAS_NOT_SCHEDULE + "!important";
-  // add #12462 患者情報共有 Ji start
-  const patId = celObj.ownPatId ? celObj.ownPatId : celObj.patId
-  // add #12462 患者情報共有 Ji end
+  const patId = celObj.ownPatId ? celObj.ownPatId : celObj.patId;
   switch (celObj.examData[setDate]) {
     case CANCEL:
       // 予定有無を判別して画像を変える
-      // mod #12462 患者情報共有 Ji start
-      // if (hasScheduleOnTargetDate(celObj.patId, setDate)) {
       if (hasScheduleOnTargetDate(patId, setDate)) {
-      // mod #12462 患者情報共有 Ji end
         Object.assign(imgAttrs, {
-          src: "img/exam-request/32-32_0.png",
+          src: publicAssetPath("img/exam-request/32-32_0.png"),
           class: "symbol-request-cancel td-img",
         });
       } else {
         Object.assign(imgAttrs, {
-          src: "img/exam-request/32-32_4.png",
+          src: publicAssetPath("img/exam-request/32-32_4.png"),
           class: "symbol-request-cancel td-img",
         });
       }
       break;
     case SAVED:
       // 予定有無を判別して画像を変える
-      // mod #12462 患者情報共有 Ji start
-      // if (hasScheduleOnTargetDate(celObj.patId, setDate)) {
       if (hasScheduleOnTargetDate(patId, setDate)) {
-      // mod #12462 患者情報共有 Ji end
         Object.assign(imgAttrs, {
-          src: "img/exam-request/32-32_2.png",
+          src: publicAssetPath("img/exam-request/32-32_2.png"),
           class: "symbol-request-saved td-img",
           style: `background-color: ${isLockFlg ? hasSchedle : FILLCOLOR_DEFAULT}`,
         });
       } else {
         Object.assign(imgAttrs, {
-          src: "img/exam-request/32-32_3.png",
+          src: publicAssetPath("img/exam-request/32-32_3.png"),
           class: "symbol-request-saved td-img",
           style: `background-color: ${isLockFlg ? hasNotSchedle : FILLCOLOR_DEFAULT}`,
         });
@@ -1030,14 +1010,14 @@ export const getExamCellImgAttributesByDate = (celObj, setDate) => {
       break;
     case ADD:
       Object.assign(imgAttrs, {
-        src: "img/exam-request/32-32_2.png",
+        src: publicAssetPath("img/exam-request/32-32_2.png"),
         class: "symbol-request-unsaved td-img",
         style: `background-color: ${isLockFlg ? hasSchedle : FILLCOLOR_DEFAULT}`,
       });
       break;
     case ADD_WARNING:
       Object.assign(imgAttrs, {
-        src: "img/exam-request/32-32_3.png",
+        src: publicAssetPath("img/exam-request/32-32_3.png"),
         class: "symbol-request-noplan td-img",
         style: `background-color: ${isLockFlg ? hasNotSchedle : FILLCOLOR_DEFAULT}`,
       });
@@ -1071,7 +1051,7 @@ export const DummyDateItem = Object.freeze({
  * 検査日付/検査日時データを生成する
  */
 export const createDateItem = (yyyymmdd, isDetail = false, hh_mm = "") => {
-  const dateMoment = moment(yyyymmdd);
+  const dateMoment = dayjs(yyyymmdd);
   const dateString = dateMoment.format(isDetail ? "YYYY/M/D(ddd)" : "M/D(ddd)");
   const timeString = (hh_mm && hh_mm !== "00:00") ? ` ${hh_mm}` : "";
   return {
@@ -1141,9 +1121,9 @@ export const setShowDateToCondition = (condition, startToEndDate) => {
 export const normalizeDateForInput = value => !value ? "" : formatToInputDate(value);
 
 /** momentコンストラクタの引数を受け取ってYYYYMMDDの文字列で返す */
-export const formatToYyyymmdd = (...args) => moment(...args).format("YYYYMMDD");
+export const formatToYyyymmdd = (...args) => dayjs(...args).format("YYYYMMDD");
 /** momentコンストラクタの引数を受け取ってYYYY-MM-DDの文字列で返す */
-export const formatToInputDate = (...args) => moment(...args).format(INPUT_DATE_FORMAT);
+export const formatToInputDate = (...args) => dayjs(...args).format(INPUT_DATE_FORMAT);
 
 // 権限がなければメッセージを表示する関数
 const checkAuthorized = (authorized, functionName) => {
@@ -1151,7 +1131,7 @@ const checkAuthorized = (authorized, functionName) => {
     // title: "権限エラー",
     // message: "{functionName}を操作する権限がありません。管理者に確認してください。"
     const { title, message } = DIALOG_MESSAGES[12000315];
-    ons.notification.alert({
+    showAlertDialog({
       title,
       message: messageFormat(message, functionName),
     });
@@ -1332,10 +1312,10 @@ export const sortList = (list, sort, getPatRowCellNumber, getPatternFiltered) =>
   );  
 }
 
-/** moment(input) -> 無効なら今日 -> format(fmt) */
+/** dayjs(input) -> 無効なら今日 -> format(fmt) */
 function formatOrToday(input, fmt) {
-  const d = moment(input);
-  const base = d.isValid() ? d : moment();
+  const d = dayjs(input);
+  const base = d.isValid() ? d : dayjs();
   return base.format(fmt);
 }
 /** 

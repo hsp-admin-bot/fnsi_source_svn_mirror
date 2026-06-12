@@ -22,12 +22,11 @@ import java.util.stream.Collectors;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.amazonaws.util.Base64;
-
+import java.util.Base64;
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
 import jp.co.nikkiso.ntss.coop_api.mapping.DeliveryResult;
 import jp.co.nikkiso.ntss.coop_api.response.DeliveryResults;
@@ -43,22 +42,22 @@ import jp.co.nikkiso.ntss.core.entity.custom.JournalDistribute;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class DeliveryServiceImplTest extends BaseServiceTest {
-  @SpyBean
+  @MockitoSpyBean
   DeliveryServiceImpl service;
 
-  @MockBean
+  @MockitoBean
   AmazonS3Wrapper amazonS3Wrapper;
 
-  @SpyBean
+  @MockitoSpyBean
   SysCoopJournalDao sysCoopJournalDao;
 
-  @MockBean
+  @MockitoBean
   ClockWrapper clockWrapper;
 
-  @SpyBean
+  @MockitoSpyBean
   PatPersonalMainDao patPersonalMainDao;
 
-  @SpyBean
+  @MockitoSpyBean
   OrdMainDao ordMainDao;
 
   @Test
@@ -342,7 +341,7 @@ public class DeliveryServiceImplTest extends BaseServiceTest {
     journalDistribute.setHospPatId("000000000003");
     journalDistribute.setPatId(3L);
     journalDistribute.setDumpPath("TEST_COOP_INDEX.txt");
-    journalDistribute.setDump(Base64.decode("VEVTVF9NT0NL".getBytes()));
+    journalDistribute.setDump(Base64.getDecoder().decode("VEVTVF9NT0NL".getBytes()));
     journalDistribute.setDistributeSetting("{\"protocolInfo\": {\"dummy\": \"\", \"delete\": \"\", \"address\": \"C:\\\\work\\\\distination\\\\\", \"protocol\": \"file\", \"renameWhenCopying\": \"\"}}");
     journalDistributeList.add(journalDistribute);
     return journalDistributeList;

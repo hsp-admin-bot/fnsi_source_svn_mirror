@@ -8,10 +8,7 @@ import {
 import {
   sendRequestPatRadMain
 } from "@/apis/rad-request";
-import moment from "moment";
-// add FNSI-6947 Deprecation warningの抑止 ljx start
-moment.suppressDeprecationWarnings = true;
-// add FNSI-6947 Deprecation warningの抑止 ljx end
+import dayjs from "@/compat/date/dayjs";
 import store from "@/stores";
 
 export const HEADER_DEFAULT_MSG =
@@ -1200,11 +1197,11 @@ export default {
         // add FNSI-仕様追加 画面の表示条件の通り帳票出力 夏 end
         // del #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
         //facilityCd: state.facilityCd,
-        //fromDate: moment(state.treatDateDim[0]).format("YYYY/MM/DD"),
+        //fromDate: dayjs(state.treatDateDim[0]).format("YYYY/MM/DD"),
         // del #9558 機能帳票で正しく変数が引き渡されていない 2024.8.23 高 start
-        // toDate: moment(state.treatDateDim[state.treatDateDim.length - 1]).format("YYYY/MM/DD"),
+        // toDate: dayjs(state.treatDateDim[state.treatDateDim.length - 1]).format("YYYY/MM/DD"),
         // del #9558 機能帳票で正しく変数が引き渡されていない 2024.8.23 高 end
-        //date: moment(state.treatDateDim[0]).format("YYYY/MM/DD")
+        //date: dayjs(state.treatDateDim[0]).format("YYYY/MM/DD")
         // del #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
       };
     },
@@ -1214,7 +1211,7 @@ export default {
     hasExamRequests: state => strDate => {
       let exam = false;
       for (const item of state.examRequests) {
-        if (moment(item.regExamDate).format('YYYYMMDD') === strDate) {
+        if (dayjs(item.regExamDate).format('YYYYMMDD') === strDate) {
           exam = true;
           break;
         }
@@ -1225,7 +1222,7 @@ export default {
     hasRadRequests: state => strDate => {
       let rad = false;
       for (const item of state.radRequests) {
-        if (moment(item.regRadDate).format('YYYYMMDD') === strDate) {
+        if (dayjs(item.regRadDate).format('YYYYMMDD') === strDate) {
           rad = true;
           break;
         }
@@ -1235,14 +1232,14 @@ export default {
     },
     hasPatEvents: state => strDate => {
       let startDate, endDate;
-      const treatDate = moment(strDate, "YYYYMMDD");
+      const treatDate = dayjs(strDate, "YYYYMMDD");
       return state.patEvents.some(item => {
-        startDate = moment(item.eventStartDate)
+        startDate = dayjs(item.eventStartDate)
           .hours(0)
           .minutes(0)
           .seconds(0)
           .milliseconds(0);
-        endDate = moment(item.eventEndDate)
+        endDate = dayjs(item.eventEndDate)
           .add(1, "d")
           .hours(0)
           .minutes(0)
@@ -1299,9 +1296,9 @@ export default {
     //      } else if (state.facilitySetting1007 != 4
     //       && state.facilitySettingExamChangeOnOffWithOrder === "1"
     //       && params.fromTreatDate != params.toTreatDate) {
-    //         if (Number(params.fromTreatDate) < Number(moment().add(state.facilitySettingExamScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
+    //         if (Number(params.fromTreatDate) < Number(dayjs().add(state.facilitySettingExamScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
     //           return true;
-    //         } else if (Number(params.fromTreatDate) === Number(moment().add(state.facilitySettingExamScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
+    //         } else if (Number(params.fromTreatDate) === Number(dayjs().add(state.facilitySettingExamScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
     //           const newDate = new Date();
     //           const hour = newDate.getHours();
     //           const minutes = newDate.getMinutes();
@@ -1334,9 +1331,9 @@ export default {
     //     } else if (state.facilitySetting1008 != 4
     //     && params.fromTreatDate != params.toTreatDate
     //     && state.facilitySettingRadChangeOnOffWithOrder === "1") {
-    //       if (Number(params.fromTreatDate) < Number(moment().add(state.facilitySettingRadScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
+    //       if (Number(params.fromTreatDate) < Number(dayjs().add(state.facilitySettingRadScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
     //         return true;
-    //       } else if (Number(params.fromTreatDate) === Number(moment().add(state.facilitySettingRadScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
+    //       } else if (Number(params.fromTreatDate) === Number(dayjs().add(state.facilitySettingRadScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
     //         const newDate = new Date();
     //           const hour = newDate.getHours();
     //           const minutes = newDate.getMinutes();
@@ -1384,9 +1381,9 @@ export default {
     //     //add 7646 ????患者で透析を行った後、そのベッドは条件送信済みの状態になる。end zhao
     //     if (params.checkFlg === "exam") {
     //       if (state.examStatus) {
-    //         if (Number(params.fromTreatDate) < Number(moment().add(state.facilitySettingExamScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
+    //         if (Number(params.fromTreatDate) < Number(dayjs().add(state.facilitySettingExamScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
     //           return true;
-    //         } else if (Number(params.fromTreatDate) === Number(moment().add(state.facilitySettingExamScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
+    //         } else if (Number(params.fromTreatDate) === Number(dayjs().add(state.facilitySettingExamScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
     //           const newDate = new Date();
     //           const hour = newDate.getHours();
     //           const minutes = newDate.getMinutes();
@@ -1400,9 +1397,9 @@ export default {
     //     }
     //     if (params.checkFlg === "rad") {
     //       if (state.radStatus) {
-    //         if (Number(params.fromTreatDate) < Number(moment().add(state.facilitySettingRadScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
+    //         if (Number(params.fromTreatDate) < Number(dayjs().add(state.facilitySettingRadScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
     //           return true;
-    //         } else if (Number(params.fromTreatDate) === Number(moment().add(state.facilitySettingRadScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
+    //         } else if (Number(params.fromTreatDate) === Number(dayjs().add(state.facilitySettingRadScheduleChangeLimitDay, "days").format("YYYYMMDD"))) {
     //           const newDate = new Date();
     //           const hour = newDate.getHours();
     //           const minutes = newDate.getMinutes();
@@ -1423,7 +1420,7 @@ export default {
       if (params.checkFlg == "exam" && state.examStatus
         && state.facilitySettingExamChangeOnOffWithOrder == "1"
         && params.fromTreatDate != params.toTreatDate) {
-        let deadline = Number(moment().add(state.facilitySettingExamScheduleChangeLimitDay, "days").format("YYYYMMDD"));
+        let deadline = Number(dayjs().add(state.facilitySettingExamScheduleChangeLimitDay, "days").format("YYYYMMDD"));
         if (Number(params.fromTreatDate) < deadline || Number(params.toTreatDate) < deadline) {
           return true;
         } else if (Number(params.fromTreatDate) == deadline || Number(params.toTreatDate) == deadline) {
@@ -1433,12 +1430,12 @@ export default {
           const formatTime = String(hour) + String(minutes);
           if (Number(state.facilitySettingExamScheduleChangeLimitTime.replace(":", "")) <= Number(formatTime)) {
             //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zhao start
-            deadline = Number(moment().add(state.facilitySettingExamScheduleChangeLimitDay + 1, "days").format("YYYYMMDD"));
+            deadline = Number(dayjs().add(state.facilitySettingExamScheduleChangeLimitDay + 1, "days").format("YYYYMMDD"));
             if (Number(params.fromTreatDate) < deadline || Number(params.toTreatDate) < deadline) {
               return true;
             }
           } else {
-            deadline = Number(moment().add(state.facilitySettingExamScheduleChangeLimitDay, "days").format("YYYYMMDD"));
+            deadline = Number(dayjs().add(state.facilitySettingExamScheduleChangeLimitDay, "days").format("YYYYMMDD"));
             if (Number(params.fromTreatDate) < deadline || Number(params.toTreatDate) < deadline) {
               return true;
             }
@@ -1449,7 +1446,7 @@ export default {
       if (params.checkFlg == "rad" && state.radStatus
         && state.facilitySettingRadChangeOnOffWithOrder == "1"
         && params.fromTreatDate != params.toTreatDate) {
-        let deadline = Number(moment().add(state.facilitySettingRadScheduleChangeLimitDay, "days").format("YYYYMMDD"));
+        let deadline = Number(dayjs().add(state.facilitySettingRadScheduleChangeLimitDay, "days").format("YYYYMMDD"));
         if (Number(params.fromTreatDate) < deadline || Number(params.toTreatDate) < deadline) {
           return true;
         } else if (Number(params.fromTreatDate) == deadline || Number(params.toTreatDate) == deadline) {
@@ -1459,12 +1456,12 @@ export default {
           const formatTime = String(hour) + String(minutes);
           if (Number(state.facilitySettingRadScheduleChangeLimitTime.replace(":", "")) <= Number(formatTime)) {
             //mod #10409 施設設定マスタNo7, 8の設定を4にした際の動作不正 zhao start
-            deadline = Number(moment().add(state.facilitySettingRadScheduleChangeLimitDay + 1, "days").format("YYYYMMDD"));
+            deadline = Number(dayjs().add(state.facilitySettingRadScheduleChangeLimitDay + 1, "days").format("YYYYMMDD"));
             if (Number(params.fromTreatDate) < deadline || Number(params.toTreatDate) < deadline) {
               return true;
             }
           } else {
-            deadline = Number(moment().add(state.facilitySettingRadScheduleChangeLimitDay, "days").format("YYYYMMDD"));
+            deadline = Number(dayjs().add(state.facilitySettingRadScheduleChangeLimitDay, "days").format("YYYYMMDD"));
             if (Number(params.fromTreatDate) < deadline || Number(params.toTreatDate) < deadline) {
               return true;
             }
@@ -1797,15 +1794,15 @@ export default {
       let baseDate = payload.baseDate;
 
       //表示の基準日をmoment化
-      if (!moment(baseDate).isValid()) {
+      if (!dayjs(baseDate).isValid()) {
         //日付が不正だったら当日からに設定
         baseDate = null;
       }
-      const dt = null === baseDate ? moment() : moment(baseDate);
+      let dt = null === baseDate ? dayjs() : dayjs(baseDate);
       //指定日を真ん中にする補正
       //例)14日出す場合、基準日の前が7日、後ろは基準日を含めて7日
       const minusDayNum = -1 * Math.floor(state.dayNum / 2);
-      dt.add(minusDayNum, "days");
+      dt = dt.add(minusDayNum, "days");
 
       // const daynum = state.dayNum;
 
@@ -1836,13 +1833,13 @@ export default {
           state.dayDispDim[d - 1] = false;
         } else {
           // 日機装施設祝日、自施設固有日、自施設祝日を休日とする
-          if (holidays[moment(treatDate).format("YYYY-MM-DD")]) {
+          if (holidays[dayjs(treatDate).format("YYYY-MM-DD")]) {
             state.dayDispDim[d - 1] = false;
           }
         }
         // FNSI-add redmine 3898 end
         //1日進める
-        dt.add(1, "days");
+        dt = dt.add(1, "days");
       }
 
       //データ読み込み->済
@@ -1931,9 +1928,9 @@ export default {
         toDate: getters.getReportParamToDate
       };
       if (param.baseDate) {
-        info.fromDate = moment(param.baseDate).format("YYYYMMDD");
+        info.fromDate = dayjs(param.baseDate).format("YYYYMMDD");
         if (param.dayNum) {
-          let toDate = moment(param.baseDate).add(Number(param.dayNum), 'd');
+          let toDate = dayjs(param.baseDate).add(Number(param.dayNum), 'd');
           info.toDate = toDate.format("YYYYMMDD");
         }
       }

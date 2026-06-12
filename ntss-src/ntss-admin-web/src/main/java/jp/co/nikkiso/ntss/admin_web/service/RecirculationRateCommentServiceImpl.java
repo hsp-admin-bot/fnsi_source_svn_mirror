@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.admin_web.service;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -9,8 +8,8 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.response.reLoopRateMain.RecirculationRateComment;
 import jp.co.nikkiso.ntss.admin_web.response.reLoopRateMain.RecirculationRateDTO;
@@ -67,7 +66,7 @@ public class RecirculationRateCommentServiceImpl implements RecirculationRateCom
             dto.setWeightInfo(getOrdMainRstWeightInfo(ordNo));
             dto.setComments(comments);
             return dto;
-        } catch (IOException e) {
+        } catch (tools.jackson.core.JacksonException e) {
             throw new NtssException(e);
         }
     }
@@ -91,7 +90,7 @@ public class RecirculationRateCommentServiceImpl implements RecirculationRateCom
 
             ObjectMapper mapper = new ObjectMapper();
             ordMainDao.updateWeightInfo(ordNo, mapper.writeValueAsString(dto));
-        } catch (IOException e) {
+        } catch (tools.jackson.core.JacksonException e) {
             throw new NtssException(e);
         }
     }
@@ -108,7 +107,7 @@ public class RecirculationRateCommentServiceImpl implements RecirculationRateCom
             OrdMainRstWeightInfo dto = getOrdMainRstWeightInfo(ordNo);
             dto.setReloopInfo(mapper.writeValueAsString(reloopInfos));
             ordMainDao.updateWeightInfo(ordNo, mapper.writeValueAsString(dto));
-        } catch (IOException e) {
+        } catch (tools.jackson.core.JacksonException e) {
             throw new NtssException(e);
         }
     }
@@ -138,7 +137,7 @@ public class RecirculationRateCommentServiceImpl implements RecirculationRateCom
         try {
             return weight == null || weight.isEmpty() ? new OrdMainRstWeightInfo()
                     : mapper.readValue(weight, OrdMainRstWeightInfo.class);
-        } catch (IOException e) {
+        } catch (tools.jackson.core.JacksonException e) {
             throw new NtssException(e);
         }
     }

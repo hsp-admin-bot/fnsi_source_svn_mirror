@@ -1,16 +1,20 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
+import jp.co.nikkiso.ntss.core.entity.PatMain;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 
@@ -19,11 +23,13 @@ import java.util.List;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.service.ca9Graph.Ca9GraphService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 @RestController
 @RequestMapping(Uri.CA9_GRAPH)
@@ -36,6 +42,9 @@ public class Ca9GraphResource {
   // wp アプリケーションログの適正化 Add Start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // wp アプリケーションログの適正化 Add End
 
   /**
@@ -45,7 +54,15 @@ public class Ca9GraphResource {
    * @return
    */
   @GetMapping("/setting/{facilityCd}")
-  public ResponseEntity<?> getGraphSetting(@PathVariable String facilityCd){
+  public ResponseEntity<?> getGraphSetting(@PathVariable String facilityCd,
+                                           @RequestParam(required = false) Long selectedPatId,
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                           @AuthenticationPrincipal NtssUser ntssUser
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CA9_GRAPH + "/setting";
@@ -89,7 +106,16 @@ public class Ca9GraphResource {
    * @return
    */
   @PostMapping("/distributionGraph")
-  public ResponseEntity<?> getDataDistributionGraph(@RequestBody Map<String, String> params) {
+  public ResponseEntity<?> getDataDistributionGraph(@RequestBody Map<String, String> params,
+                                                    @RequestParam(required = false) Long selectedPatId,
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                    @AuthenticationPrincipal NtssUser ntssUser
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, params.get("facilityCd"), selectedPatId)) {
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+
 //    EventLogMessage eventLogMessage = new EventLogMessage();
 //    eventLogMessage.setLogMessage("Rest request to get data for distribution graph");
 //    logService.log(LogLevel.INFO, eventLogMessage, FUNCTION_CODE.FUNC_SPLIT_GRAPH, SERVICE_NAME.FNSI, null);
@@ -130,7 +156,23 @@ public class Ca9GraphResource {
    * @return
    */
   @PostMapping("/progressGraph/{patId}")
-  public ResponseEntity<?> getDataProgressGraph(@RequestBody Map<String, String> params, @PathVariable Long patId) {
+  public ResponseEntity<?> getDataProgressGraph(@RequestBody Map<String, String> params, @PathVariable Long patId,
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                @AuthenticationPrincipal NtssUser ntssUser
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      String facilityCd = params.get("facilityCd");
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+        !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 //    EventLogMessage eventLogMessage = new EventLogMessage();
 //    eventLogMessage.setLogMessage("Rest request to get data for progress graph");
 //    logService.log(LogLevel.INFO, eventLogMessage, FUNCTION_CODE.FUNC_SPLIT_GRAPH, SERVICE_NAME.FNSI, null);
@@ -172,7 +214,27 @@ public class Ca9GraphResource {
    * @return
    */
   @PutMapping("/update/patGroup/{facilityCd}")
-  public ResponseEntity<?> updatePatGroup(@RequestBody List<Map<String, String>> payload, @PathVariable String facilityCd) {
+  public ResponseEntity<?> updatePatGroup(@RequestBody List<Map<String, String>> payload,
+                                          @PathVariable String facilityCd,
+                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                          @AuthenticationPrincipal NtssUser ntssUser
+                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 //    EventLogMessage eventLogMessage = new EventLogMessage();
 //    eventLogMessage.setLogMessage("Rest request to update pat group");
 //    logService.log(LogLevel.INFO, eventLogMessage, FUNCTION_CODE.FUNC_SPLIT_GRAPH, SERVICE_NAME.FNSI, null);
@@ -230,7 +292,28 @@ public class Ca9GraphResource {
    * @return
    */
   @PutMapping("/update/patGroup/{facilityCd}/{groupIdList}")
-  public ResponseEntity<?> updatePatGroupByGroupList(@RequestBody List<Map<String, String>> payload, @PathVariable String facilityCd, @PathVariable List<String> groupIdList) {
+  public ResponseEntity<?> updatePatGroupByGroupList(@RequestBody List<Map<String, String>> payload,
+                                                     @PathVariable String facilityCd,
+                                                     @PathVariable List<String> groupIdList,
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                     @AuthenticationPrincipal NtssUser ntssUser
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     String mappingUrl = Uri.CA9_GRAPH + "/update/patGroup";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_SPLIT_GRAPH, BEFORE_LOG_FLG_INFO, mappingUrl, facilityCd,

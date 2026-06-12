@@ -2001,7 +2001,7 @@
               v-if="!isTreatRecord"
               class="common-style-ok-button"
               @click="saveConfirm()"
-              :disabled="!getItemAuthorized('DevicesetInfo', 'default_authority')"
+              :disabled="!getItemAuthorized('DevicesetInfo', 'default_authority') || getIsOtherFacility"
             >
             <!-- mod #10359 編集権限の動作不正 dengshen end -->
               {{ saveButtonLabel }}
@@ -2010,18 +2010,18 @@
         </v-ons-row>
 
         <message-dialog
-          :visible.sync="isDialogVisble"
+          v-model:visible="isDialogVisble"
           v-bind="dialogProps"
           type="1"
         />
         <message-dialog
-          :visible.sync="isCancelDialogVisble"
+          v-model:visible="isCancelDialogVisble"
           v-bind="dialogProps"
           type="2"
           @confirm="cancelEdit"
         />
         <message-dialog
-          :visible.sync="isUpdateAllPatDialogVisble"
+          v-model:visible="isUpdateAllPatDialogVisble"
           v-bind="dialogProps"
           type="5"
           @confirm="setUpdateAllPatFlg"
@@ -2038,9 +2038,8 @@
   import {DEVICE_TYPE_WAR} from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
   import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoEditor.vue";
   // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
-  import { EventBus } from "@/eventBus.js";
+  import { EventBus } from "@/compat/vue/event-bus.js";
   // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
-  import { mapGetters } from "vuex";
 
   /**
  * @classdesc 警報点情報クラス
@@ -2072,7 +2071,6 @@ export default {
   },
 
   computed: {
-    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd"]),
     /**
      * @description TMP監視モード
      */
@@ -2232,7 +2230,7 @@ export default {
   methods: {
     // add #10359 編集権限の動作不正 start
     getItemAuthorized(pageCd, itemCd) {
-      return getAuthorized(pageCd, itemCd);
+      return !this.getIsOtherFacility && getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 end
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
@@ -2261,8 +2259,7 @@ export default {
             msgObj = this.validateUpperLowerValue(
               value.upper,
               value.lower,
-              `${category1} ${category2} ${value.name}`
-            );
+              `${category1} ${category2} ${value.name}`);
             if (msgObj !== null) {
               return msgObj;
             }
@@ -2277,8 +2274,7 @@ export default {
         /*mod FNSI-改修内容装置設定ポップアップメッセージ改修 趙慧敏 start */
         /*"Na濃度 自動設定警報幅"*/
         "準備回収 Ｎａ濃度 自動設定警報幅"
-        /*mod FNSI-改修内容装置設定ポップアップメッセージ改修 趙慧敏 end */
-      );
+        /*mod FNSI-改修内容装置設定ポップアップメッセージ改修 趙慧敏 end */);
       if (msgObj !== null) {
         return msgObj;
       }
@@ -2288,8 +2284,7 @@ export default {
         /*mod FNSI-改修内容装置設定ポップアップメッセージ改修 趙慧敏 start */
         /*"Na濃度 固定警報点"*/
         "準備回収 Ｎａ濃度 固定警報点"
-        /*mod FNSI-改修内容装置設定ポップアップメッセージ改修 趙慧敏 end */
-      );
+        /*mod FNSI-改修内容装置設定ポップアップメッセージ改修 趙慧敏 end */);
       if (msgObj !== null) {
         return msgObj;
       }
@@ -2365,7 +2360,7 @@ export default {
   width: var(--width);
 }
 
-/* .monitoring-enable >>> .custom-input-number {
+/* .monitoring-enable :deep(.custom-input-number){
   background-color: lightskyblue;
 } */
 
@@ -2407,9 +2402,10 @@ export default {
   flex: 0 0 15%;
 }
 
+ 
 /* カスタム系スタイル指定 */
-.device-input-number >>> .custom-input-number,
-.device-input-time >>> .custom-input-time {
+.device-input-number :deep(.custom-input-number),
+.device-input-time :deep(.custom-input-time) {
   /* mod FutreNetWeb+SI課題管理No3897対応 趙 start*/
   /* width: 45px; */
   /*mod FNSI-改修内容4371 任 start*/
@@ -2424,7 +2420,7 @@ export default {
 
 /* スマホ用 */
 @media screen and (max-width: 450px) {
-  .device-info-cell >>> .custom-radio {
+  .device-info-cell :deep(.custom-radio) {
     display: -webkit-box;
   }
 }
@@ -2465,7 +2461,7 @@ export default {
     flex: 0 0 11%;
   }
   /** 数値IFの固定幅解除 */
-  .device-input-number >>> .custom-input-number {
+  .device-input-number :deep(.custom-input-number){
     width: 100%;
   }
 }

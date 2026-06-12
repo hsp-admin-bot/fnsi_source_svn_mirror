@@ -1,18 +1,21 @@
 <template>
   <modal-base @onClose="closeMasterEditModal">
-    <div slot="header">
+    <template #header>
       <!-- eslint-disable-next-line vue/require-component-is -->
       <component :is="header" />
-    </div>
-    <div slot="body" :class="masterPhysicalName">
+    </template>
+    <template #body>
+      <div :class="masterPhysicalName">
       <!-- eslint-disable-next-line vue/require-component-is -->
       <component
         :is="main"
         ref="child"
         @closeMasterEditModal="closeMasterEditModal"
       />
-    </div>
-    <div slot="footer" class="flex-container">
+          </div>
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button btn2-cancel denial-btn" @click="closeMasterEditModal">
           キャンセル
@@ -27,7 +30,8 @@
           確定
         </v-ons-button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
@@ -38,18 +42,22 @@ import {
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
-import {mapActions, mapGetters} from "vuex";
+import {mapActions, mapGetters} from "@/compat/vue/vuex";
+import { defineAsyncComponent } from "@/compat/vue/runtime";
 import MasterEditModalBase from "@/views/master-maintenance/MasterEditModalBase";
-import {EventBus} from "@/eventBus.js";
-import _ from 'lodash';
-import {deepCopy} from "@/functions/common/CommonFunctions";
+import {EventBus} from "@/compat/vue/event-bus.js";
+import { deepCopy } from "@/functions/common/CommonFunctions";
+
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 import {accSub} from "@/functions/common/NumberFunctions";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { count } from '@progress/kendo-data-query/dist/npm/array.operators';
+import { count } from "@/functions/common/KendoFunctions";
+import { getContentContainerElement, getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+import _ from "@/compat/collections/lodash";
+import { mstPatEventSubCategoryDefine } from "@/constants/mstPatEventSubCategoryDefine";
 
 export default {
   name: "MasterEditModal",
@@ -65,357 +73,356 @@ export default {
     // --------------------------------------
     "modal-base": MasterEditModalBase,
     // TODO: eslintによるエラー
-    /* eslint-disable vue/no-unused-components */
-    "default-header": () =>
-      import("@/components/master-maintenance/MasterEditModalHeaderComponent"),
+    "default-header": defineAsyncComponent(() =>
+      import("@/components/master-maintenance/MasterEditModalHeaderComponent")),
     // (例)mst_test_tableの編集用モーダルは以下のようにインポートします。
     // ヘッダーをインポートしない場合は、default-headerがヘッダーコンポーネントとして利用されます。
-    "mst-test-table-header": () =>
+    "mst-test-table-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-test-table/MasterModalComponentMstTestTableHeader.vue"
-      ),
-    "mst-test-table": () =>
+      )),
+    "mst-test-table": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-test-table/MasterModalComponentMstTestTable.vue"
-      ),
-    "mst-destination-group-header": () =>
+      )),
+    "mst-destination-group-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-destination-group/MasterDestinationGroupComponentHeader.vue"
-      ),
-    "mst-destination-group": () =>
+      )),
+    "mst-destination-group": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-destination-group/MasterDestinationGroupComponent.vue"
-      ),
-    "mst-comsv-setting-header": () =>
+      )),
+    "mst-comsv-setting-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-comsv-setting/MasterModalComponentMstComSvSettingHeader.vue"
-      ),
-    "mst-comsv-setting": () =>
+      )),
+    "mst-comsv-setting": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-comsv-setting/MasterModalComponentMstComSvSetting.vue"
-      ),
-    "mst-alarm-notification-header": () =>
+      )),
+    "mst-alarm-notification-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-alarm-notification/MasterAlarmNotificationComponentHeader.vue"
-      ),
-    "mst-alarm-notification": () =>
+      )),
+    "mst-alarm-notification": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-alarm-notification/MasterAlarmNotificationComponent.vue"
-      ),
-    "mst-bed-header": () =>
-      import("@/components/master-maintenance/mst-bed/MstBedModalHeader.vue"),
-    "mst-bed": () =>
-      import("@/components/master-maintenance/mst-bed/MstBedModal.vue"),
-    "mst-medicine-group-header": () =>
+      )),
+    "mst-bed-header": defineAsyncComponent(() =>
+      import("@/components/master-maintenance/mst-bed/MstBedModalHeader.vue")),
+    "mst-bed": defineAsyncComponent(() =>
+      import("@/components/master-maintenance/mst-bed/MstBedModal.vue")),
+    "mst-medicine-group-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-medicine-group/MasterModalComponentMstMedicineGroupHeader.vue"
-      ),
-    "mst-medicine-group": () =>
+      )),
+    "mst-medicine-group": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-medicine-group/MasterModalComponentMstMedicineGroup.vue"
-      ),
-    "mst-medicine-set-header": () =>
+      )),
+    "mst-medicine-set-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-medicine-set/MasterModalComponentMstMedicineSetHeader.vue"
-      ),
-    "mst-medicine-set": () =>
+      )),
+    "mst-medicine-set": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-medicine-set/MasterModalComponentMstMedicineSet.vue"
-      ),
-    "mst-equipment-set-header": () =>
+      )),
+    "mst-equipment-set-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-equipment-set/MasterModalComponentMstEquipmentSetHeader.vue"
-      ),
-    "mst-equipment-set": () =>
+      )),
+    "mst-equipment-set": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-equipment-set/MasterModalComponentMstEquipmentSet.vue"
-      ),
-    "mst-pat-viewer-layout-header": () =>
+      )),
+    "mst-pat-viewer-layout-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-pat-viewer-layout/MasterModalComponentPatViewerLayoutHeader.vue"
-      ),
-    "mst-pat-viewer-layout": () =>
+      )),
+    "mst-pat-viewer-layout": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-pat-viewer-layout/MasterModalComponentPatViewerLayout.vue"
-      ),
-    "mst-room-bed-group-header": () =>
+      )),
+    "mst-room-bed-group-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-bed-group/MstRoomBedGroupMainComponentHeader.vue"
-      ),
-    "mst-room-bed-group": () =>
+      )),
+    "mst-room-bed-group": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-bed-group/MstRoomBedGroupMainComponent.vue"
-      ),
-    "mst-treatment-set-header": () =>
+      )),
+    "mst-treatment-set-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-treatment-set/MasterModalComponentMstTreatmentSetHeader.vue"
-      ),
-    "mst-treatment-set": () =>
+      )),
+    "mst-treatment-set": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-treatment-set/MasterModalComponentMstTreatmentSet.vue"
-      ),
-    "mst-treatment-status-layout-header": () =>
+      )),
+    "mst-treatment-status-layout-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-treatment-status-layout/MstTreatmentStatusLayoutComponentHeader.vue"
-      ),
-    "mst-treatment-status-layout": () =>
+      )),
+    "mst-treatment-status-layout": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-treatment-status-layout/MstTreatmentStatusLayoutComponent.vue"
-      ),
-    "mst-taboo-allergy-header": () =>
+      )),
+    "mst-taboo-allergy-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-taboo-allergy/MstTabooAllergyMainComponentHeader.vue"
-      ),
-    "mst-taboo-allergy": () =>
+      )),
+    "mst-taboo-allergy": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-taboo-allergy/MstTabooAllergyMainComponent.vue"
-      ),
+      )),
       //ADD 患者イベントサブカテゴリマスタ 孔s START
-    "mst-pat-event-sub-category-header": () =>
+    "mst-pat-event-sub-category-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst_pat_event_sub_category/MstModalPatEventSubCategoryHeaderComponent.vue"
-      ),
-    "mst-pat-event-sub-category": () =>
+      )),
+    "mst-pat-event-sub-category": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst_pat_event_sub_category/MstModalPatEventSubCategoryMainComponent.vue"
-      ),
+      )),
       //ADD 患者イベントサブカテゴリマスタ 孔s END
-    "mst-treatment-header": () =>
+    "mst-treatment-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-treatment/MstTreatmentMainComponentHeader.vue"
-      ),
-    "mst-treatment": () =>
+      )),
+    "mst-treatment": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-treatment/MstTreatmentMainComponent.vue"
-      ),
-    "mst-facility": () =>
+      )),
+    "mst-facility": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-facility/MstFacilityModal.vue"
-      ),
-    "mst-wheel-chair-header": () =>
+      )),
+    "mst-wheel-chair-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-wheel-chair/MasterModalComponentMstWheelChairHeader.vue"
-      ),
-    "mst-wheel-chair": () =>
+      )),
+    "mst-wheel-chair": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-wheel-chair/MasterModalComponentMstWheelChair.vue"
-      ),
-    "mst-job-header": () =>
+      )),
+    "mst-job-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-job/MstJobMainModalComponentHeader.vue"
-      ),
-    "mst-job": () =>
+      )),
+    "mst-job": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-job/MstJobMainModalComponent.vue"
-      ),
-    "mst-round-type-header": () =>
+      )),
+    "mst-round-type-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-round-type/MasterRoundTypeComponentHeader.vue"
-      ),
-    "mst-round-type": () =>
+      )),
+    "mst-round-type": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-round-type/MasterRoundTypeComponent.vue"
-      ),
-    "mst-pat-list-layout-header": () =>
+      )),
+    "mst-pat-list-layout-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-pat-list-layout/MstPatListLayoutMainComponentHeader.vue"
-      ),
-    "mst-pat-list-layout": () =>
+      )),
+    "mst-pat-list-layout": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-pat-list-layout/MstPatListLayoutMainComponent.vue"
-      ),
-    "mst-pat-event-data-template-header": () =>
+      )),
+    "mst-pat-event-data-template-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-pat-event-template/MstPatEventTemplateModalHeader.vue"
-      ),
-    "mst-pat-event-data-template": () =>
+      )),
+    "mst-pat-event-data-template": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-pat-event-template/MstPatEventTemplateModal.vue"
-      ),
-    "mst-trend-graph-template-header": () =>
+      )),
+    "mst-trend-graph-template-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-trend-graph-template/MstTrendGraphTemplateModalHeader.vue"
-      ),
-    "mst-trend-graph-template": () =>
+      )),
+    "mst-trend-graph-template": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-trend-graph-template/MstTrendGraphTemplateModal.vue"
-      ),
-    "mst-trend-graph-monitor-set-header": () =>
+      )),
+    "mst-trend-graph-monitor-set-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-trend-graph-monitor-set/MstTrendGraphMonitorSetModalHeader.vue"
-      ),
-    "mst-trend-graph-monitor-set": () =>
+      )),
+    "mst-trend-graph-monitor-set": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-trend-graph-monitor-set/MstTrendGraphMonitorSetModal.vue"
-      ),
-    "mst-com-fixed-phrase-header": () =>
+      )),
+    "mst-com-fixed-phrase-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-com-fixed-phrase/MstComFixedPhraseModalHeader.vue"
-      ),
-    "mst-com-fixed-phrase": () =>
+      )),
+    "mst-com-fixed-phrase": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-com-fixed-phrase/MstComFixedPhraseModal.vue"
-      ),
-    "mst-rad-set-header": () =>
+      )),
+    "mst-rad-set-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-rad-set/MstRadSetModalComponentHeader.vue"
-      ),
-    "mst-rad-set": () =>
+      )),
+    "mst-rad-set": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-rad-set/MstRadSetModalComponent.vue"
-      ),
-    "mst-exam-item-header": () =>
+      )),
+    "mst-exam-item-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-exam-item/MstExamItemMainModalComponentHeader.vue"
-      ),
-    "mst-exam-item": () =>
+      )),
+    "mst-exam-item": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-exam-item/MstExamItemMainModalComponent.vue"
-      ),
-    "mst-exam-set-header": () =>
+      )),
+    "mst-exam-set-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-exam-set/MstExamSetHeaderComponent.vue"
-      ),
-    "mst-exam-set": () =>
+      )),
+    "mst-exam-set": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-exam-set/MstExamSetMainComponent.vue"
-      ),
-    "mst-pat-calendar-layout-header": () =>
+      )),
+    "mst-pat-calendar-layout-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-pat-calendar-layout/MstPatCalendarLayoutMainComponentHeader.vue"
-      ),
-    "mst-pat-calendar-layout": () =>
+      )),
+    "mst-pat-calendar-layout": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-pat-calendar-layout/MstPatCalendarLayoutMainComponent.vue"
-      ),
-    "mst-medicine-header": () =>
+      )),
+    "mst-medicine-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-medicine/MstMedicineMainModalComponentHeader.vue"
-      ),
-    "mst-medicine": () =>
+      )),
+    "mst-medicine": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-medicine/MstMedicineMainModalComponent.vue"
-      ),
-    "mst-medicine-mix-header": () =>
+      )),
+    "mst-medicine-mix-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-medicine-mix/MasterModalComponentMstMedicineMixHeader.vue"
-      ),
-    "mst-medicine-mix": () =>
+      )),
+    "mst-medicine-mix": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-medicine-mix/MasterModalComponentMstMedicineMix.vue"
-      ),
-    "mst-machine-header": () =>
+      )),
+    "mst-machine-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-machine/MstMachineMainModalComponentHeader.vue"
-      ),
-    "mst-machine": () =>
+      )),
+    "mst-machine": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-machine/MstMachineMainModalComponent.vue"
-      ),
-    "mst-take-medicine-header": () =>
+      )),
+    "mst-take-medicine-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-take-medicine/MstTakeMedicineComponentHeader.vue"
-      ),
-    "mst-take-medicine": () =>
+      )),
+    "mst-take-medicine": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-take-medicine/MstTakeMedicineComponent.vue"
-      ),
-    "mst-facility-calendar-layout-header": () =>
+      )),
+    "mst-facility-calendar-layout-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-facility-calendar-layout/MstFacilityCalendarLayoutMainComponentHeader.vue"
-      ),
-    "mst-facility-calendar-layout": () =>
+      )),
+    "mst-facility-calendar-layout": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-facility-calendar-layout/MstFacilityCalendarLayoutMainComponent.vue"
-      ),
-    "mst-mainte-layout-group-header": () =>
+      )),
+    "mst-mainte-layout-group-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-inspection-layout-group/MstInspectionLayoutGroupHeader.vue"
-      ),
-    "mst-mainte-layout-group": () =>
+      )),
+    "mst-mainte-layout-group": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-inspection-layout-group/MstInspectionLayoutGroupComponent.vue"
-      ),
-    "mst-mainte-layout-header": () =>
+      )),
+    "mst-mainte-layout-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-inspection-layout/MstInspectionMainHeader.vue"
-      ),
-    "mst-mainte-layout": () =>
+      )),
+    "mst-mainte-layout": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-inspection-layout/MstInspectionMainComponent.vue"
-      ),
-    "mst-water-survey-point": () =>
+      )),
+    "mst-water-survey-point": defineAsyncComponent(() =>
       import (
         "@/components/water-quality-survey/modal/WaterQualitySurveyTypeModal.vue"
-      ),
-    "mst-menu-group": () =>
+      )),
+    "mst-menu-group": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-menu-group/MstMenuGroupModalComponent.vue"
-      ),
-    "mst-menu-group-header": () =>
+      )),
+    "mst-menu-group-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-menu-group/MstMenuGroupModalComponentHeader.vue"
-      ),
-    "mst-url-link-register": () =>
+      )),
+    "mst-url-link-register": defineAsyncComponent(() =>
       import(
         "@/components/url-link-register/UrlLinkRegisterMainComponent.vue"
-      ),
-    "mst-url-link-register-header": () =>
+      )),
+    "mst-url-link-register-header": defineAsyncComponent(() =>
       import(
         "@/components/url-link-register/UrlLinkRegisterHeaderComponent.vue"
-      ),
-    "mst-holiday-header": () =>
+      )),
+    "mst-holiday-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-holiday/MstHolidayMainModalComponentHeader.vue"
-      ),
-    "mst-holiday": () =>
+      )),
+    "mst-holiday": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-holiday/MstHolidayMainModalComponent.vue"
-      ),
-    "mst-addition-header": () =>
+      )),
+    "mst-addition-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-addition/MasterModalComponentMstAdditionHeader.vue"
-      ),
-    "mst-addition": () =>
+      )),
+    "mst-addition": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-addition/MasterModalComponentMstAddition.vue"
-      ),
-    "mst-mainte-category-header": () =>
+      )),
+    "mst-mainte-category-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-mainte-category/MstMainteCategoryMainHeader.vue"
-      ),
-    "mst-mainte-category": () =>
+      )),
+    "mst-mainte-category": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-mainte-category/MstMainteCategoryMainComponent.vue"
-      ),
+      )),
     //ADD 投薬支援マスタ 孔s START
-    "mst-medicine-support-header": () =>
+    "mst-medicine-support-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-medicine-support/MstMedicineSupportMainModalComponentHeader.vue"
-        ),
-    "mst-medicine-support": () =>
+        )),
+    "mst-medicine-support": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-medicine-support/MstMedicineSupportMainModalComponent.vue"
-        ),
+        )),
     //ADD 投薬支援マスタ 孔s END
     //ADD 水質検査種別マスタ 孔s START
-    "mst-water-survey-type-header": () =>
+    "mst-water-survey-type-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-water-survey-type/MstWaterSurveyTypeModalHeader.vue"
-        ),
-    "mst-water-survey-type": () =>
+        )),
+    "mst-water-survey-type": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-water-survey-type/MstWaterSurveyTypeModal.vue"
-        ),
+        )),
     //ADD 水質検査種別マスタ 孔s END
-    "mst-prescription-set": () =>
+    "mst-prescription-set": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-prescription-set/MstPrescriptionSetModalComponent.vue"
-      ),
-    "mst-prescription-set-header": () =>
+      )),
+    "mst-prescription-set-header": defineAsyncComponent(() =>
       import(
         "@/components/master-maintenance/mst-prescription-set/MstPrescriptionSetModalComponentHeader.vue"
-      ),    
+      ),   ),
   },
   data() {
     return {
@@ -437,7 +444,6 @@ export default {
     }),
   },
   watch: {
-    // add #12696 ベッドマスタ画面で不正2件 tianqidong start
     editRecord: {
       deep: true,
       handler() {
@@ -450,7 +456,6 @@ export default {
         this.syncBedRegisteredFlag();
       }
     }
-    // add #12696 ベッドマスタ画面で不正2件 tianqidong end
   },
   created() {
     // 物理名をケバブケースに変換、コンポーネントを設定
@@ -468,11 +473,11 @@ export default {
     EventBus.$on( "mstHolidayRegistered", this.modRegisteredFlag);
     window.onbeforeprint = () => {
       //印刷不要な要素を非表示にする
-      document.getElementsByClassName('content-container')[0].style.display = 'none'
+      getContentContainerElement(this.$el || this).style.display = 'none'
     };
     window.onafterprint = () => {
       //隠し要素を放す
-      document.getElementsByClassName('content-container')[0].style.display = 'block'
+      getContentContainerElement(this.$el || this).style.display = 'block'
     };
     this.$nextTick(() => {
       this.syncBedRegisteredFlag();
@@ -489,17 +494,14 @@ export default {
       "setIsMenuSettings"
     ]),
     modRegisteredFlag(val) {
-      // add #12696 ベッドマスタ画面で不正2件 tianqidong start
-      if (this.masterPhysicalName === "mst_bed") {
+      if (["mst_bed", "mst_pat_event_sub_category"].includes(this.masterPhysicalName)) {
         this.syncBedRegisteredFlag();
         return;
       }
-      // add #12696 ベッドマスタ画面で不正2件 tianqidong end
       this.registeredFlag = val;
     },
     syncBedRegisteredFlag() {
-      // add #12696 ベッドマスタ画面で不正2件 tianqidong start
-      if (this.masterPhysicalName !== "mst_bed") return;
+      if (!["mst_bed", "mst_pat_event_sub_category"].includes(this.masterPhysicalName)) return;
       if (!this.editRecord || !this.getMasterRecordList?.data) return;
       const existsInList = this.getMasterRecordList.data.some(
         record => record.code === this.editRecord.code
@@ -509,7 +511,38 @@ export default {
         return;
       }
       this.registeredFlag = this.hasChange(this.editRecord, this.getMasterRecordList);
-      // add #12696 ベッドマスタ画面で不正2件 tianqidong end
+    },
+    normalizePatEventSubCategoryDispItemInfo(record) {
+      if (!record || typeof record !== "object") {
+        return;
+      }
+      const createDefault = () => mstPatEventSubCategoryDefine.map(item => ({
+        ...item,
+        ...(item.itemNo === 1 ? { times: 0 } : { reportCd: 0 })
+      }));
+      let dispItemInfo = [];
+      if (record.dispItemInfo) {
+        try {
+          dispItemInfo = JSON.parse(record.dispItemInfo);
+        } catch (_error) {
+          dispItemInfo = [];
+        }
+      }
+      const merged = createDefault();
+      dispItemInfo.forEach(item => {
+        const target = merged.find(defaultItem => defaultItem.itemNo == item.itemNo);
+        if (target) {
+          Object.assign(target, item);
+        }
+      });
+      merged.forEach(item => {
+        if (item.itemNo === 1) {
+          item.times = item.times === "" || item.times == null ? 0 : Number(item.times);
+        } else {
+          item.reportCd = item.reportCd === "" || item.reportCd == null ? 0 : Number(item.reportCd);
+        }
+      });
+      record.dispItemInfo = JSON.stringify(merged);
     },
     objectToJson(record) {
       let clone = JSON.parse(JSON.stringify(record));
@@ -619,11 +652,15 @@ export default {
 
       const normalizedEditRecord = _.pick(editRecord, keys);
       const normalizedMasterRecord = _.pick(masterRecordList.data[index], keys);
-      // ベッドマスタ: 一覧と詳細で数値/文字列の揺れがあると「未変更」でも差分扱いになるため、比較前に揃える
       if (this.masterPhysicalName === "mst_bed") {
         this.applyBedCompareNormalizationForPick(normalizedEditRecord);
         this.applyBedCompareNormalizationForPick(normalizedMasterRecord);
       }
+      if (this.masterPhysicalName === "mst_pat_event_sub_category") {
+        this.normalizePatEventSubCategoryDispItemInfo(normalizedEditRecord);
+        this.normalizePatEventSubCategoryDispItemInfo(normalizedMasterRecord);
+      }
+
       const recordJson = this.objectToJson(normalizedEditRecord);
       const editRecordJson = this.objectToJson(normalizedMasterRecord);
 
@@ -755,8 +792,8 @@ export default {
       if ("mst_treatment_set" === this.masterPhysicalName) {
         const indInfo = JSON.parse(editRecord.indCondInfo);
         // mod 11943 抗凝固剤治療指示のバグ修正 追加 zkm start
-        // if (_.has(indInfo, "35") && _.has(indInfo, "1") && _.has(indInfo, "36")
-        if (_.has(indInfo, "29") && _.has(indInfo, "35") && _.has(indInfo, "1") && _.has(indInfo, "36")
+        // if (Object.prototype.hasOwnProperty.call(indInfo, "35") && Object.prototype.hasOwnProperty.call(indInfo, "1") && Object.prototype.hasOwnProperty.call(indInfo, "36")
+        if (Object.prototype.hasOwnProperty.call(indInfo, "29") && Object.prototype.hasOwnProperty.call(indInfo, "35") && Object.prototype.hasOwnProperty.call(indInfo, "1") && Object.prototype.hasOwnProperty.call(indInfo, "36")
           // mod 11943 抗凝固剤治療指示のバグ修正 追加 zkm end
           && this.hasAntiCoagulantAmountTotalChange(editRecord.code, masterRecordList, indInfo)) {
           // 「1: 入り」なら
@@ -865,7 +902,8 @@ export default {
     checkScoreEmpty(){
       let flag = false;
       const listScoreFormatClass = new Map().set(3, 'score-list').set(4, 'score-radio').set(6,'score-check');
-      let textCalcValue = document.getElementById("com-textarea-event-score-calc")?document.getElementById("com-textarea-event-score-calc").value:"";
+      const textCalcElement = getScopedElementById("com-textarea-event-score-calc", this.$el || this);
+      let textCalcValue = textCalcElement ? textCalcElement.value : "";
       if(textCalcValue !== ""){
         let textCalc = new Set(textCalcValue.replace(/\[|\]|\+|-|\*|\\|\//g, " ").split(' '));
         textCalc.delete("");
@@ -886,7 +924,7 @@ export default {
       return flag;
     },
     changecolor(className,inIt){
-      for(let item of document.getElementsByClassName(className)){
+      for(let item of getScopedElementsByClassName(className, this.$el || this)){
         if(inIt){
           item.firstElementChild.style.backgroundColor = '#F7F7F7';
         }else if(item.value === ""){
@@ -921,7 +959,7 @@ export default {
       return flag;
     },
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off( "mstHolidayRegistered", null);
     window.onbeforeprint = null
     window.onafterprint = null
@@ -941,5 +979,8 @@ export default {
 .mst_mainte_layout {
   height: 100%;
   overflow-y: auto;
+}
+:deep(.toolbar__title span) {
+  padding-left:0.5em;
 }
 </style>

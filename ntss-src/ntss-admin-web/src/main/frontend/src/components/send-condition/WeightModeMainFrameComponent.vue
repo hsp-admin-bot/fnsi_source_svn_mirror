@@ -1,13 +1,13 @@
 
 <template>
-  <router-view></router-view>
+  <router-view :history-key="historyKey"></router-view>
 </template>
 
 <script>
 /**
  * WebSocket受信待ち受け処理サンプル
  */
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 /**
  * 取得するメッセージのトピックを登録
  */
@@ -18,7 +18,7 @@ import {
   NOTIFY_TOPIC_WEIGHT_CONNECT,
   NOTIFY_TOPIC_SEND_CONDITION_RESULT
 } from "@/constants/websocketNotifyTopic";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import SendConditionMixin from "@/components/send-condition/SendConditionMixin";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
@@ -27,6 +27,7 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { removeScopedStylesheets } from "@/functions/common/LayoutMeasureHelper";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 
 export default {
@@ -123,7 +124,7 @@ export default {
       "removeSendConditionResponseCd"
     ])
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.stopDelayAudioAll();
     this.removeWatchTopics(this.notifyTopic.sendConditionResult);
     // add 2020-11/04 FNSI-改修内容No311 ブラウザまで値が到達しないケースが多い 孫 start
@@ -149,12 +150,7 @@ export default {
       isWeightMode: false,
       defaultDispMenu: null
     });
-    const cssLink = document.head.querySelectorAll(
-      "link[href='./css/ntss_weight_mode.css']"
-    );
-    for (const link of cssLink) {
-      document.head.removeChild(link);
-    }
+    removeScopedStylesheets("./css/ntss_weight_mode.css", this.$el || null);
   },
   watch: {
     getSocketIsConnected(value, oldValue) {

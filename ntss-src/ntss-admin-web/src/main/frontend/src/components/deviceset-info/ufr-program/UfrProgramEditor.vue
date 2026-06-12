@@ -319,13 +319,13 @@
         </div>
 
         <message-dialog
-          :visible.sync="isDialogVisble"
+          v-model:visible="isDialogVisble"
           v-bind="dialogProps"
           type="1"
           @confirm="saveEdit"
         />
         <message-dialog
-          :visible.sync="isCancelDialogVisble"
+          v-model:visible="isCancelDialogVisble"
           v-bind="dialogProps"
           type="2"
           @confirm="cancelEdit"
@@ -339,7 +339,7 @@
 // add #10359 編集権限の動作不正 dengshen start
 import {deepCopy, getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import {
   DEVICE_TYPE_UFR,
   DATA_SOURCE_TYPE_ORD
@@ -347,10 +347,12 @@ import {
 import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoEditor.vue";
 import UfrProgramChart from "@/components/deviceset-info/ufr-program/UfrProgramChart";
 // add FNSI-治療モードをI-HDFへ変更した際、電源をOFFにする 楊 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add FNSI-治療モードをI-HDFへ変更した際、電源をOFFにする 楊 end
 //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fan add start
 import { ApiHelper } from "@/apis/AxiosHelper";
+import DeviceSetOwnerMixin from '@/components/deviceset-info/base-modules/DeviceSetOwnerMixin';
+import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fan add end
 
 
@@ -363,7 +365,7 @@ export default {
     "ufr-program-chart": UfrProgramChart
   },
 
-  mixins: [baseEditor],
+  mixins: [DeviceSetOwnerMixin, baseEditor],
 
   props: {
     // add #10359 編集権限の動作不正 dengshen start
@@ -398,6 +400,7 @@ export default {
     ...mapGetters("pat-viewer-modal", ["getSettingIndChildData", "getIsShowUfrProgramModal"]),
     // mod FNSI-治療モードをI-HDFへ変更した際、電源をOFFにする 楊 end
     ...mapGetters("user", ["getFacilityCd"]),
+
     chartData() {
       let mode = 0;
 
@@ -489,8 +492,8 @@ export default {
 
     // 患者経過総合ビューアから表示されている場合はclassを付与する
     isUnderIndModal() {
-      let indObj = document.getElementsByClassName("indInfo-style-modal-container");
-      if (indObj.length > 0) {
+      const indObj = this._deviceSetClosestOrScopedElement(".indInfo-style-modal-container");
+      if (indObj) {
         return "ind-style-media-query";
       }
       return "";
@@ -498,8 +501,8 @@ export default {
 
     // SubModal上で表示されていた場合にclassを付与する
     isUnderSubModal() {
-      let subModalObj = document.getElementsByClassName("sub-modal-body");
-      if (subModalObj.length > 0) {
+      const subModalObj = this._deviceSetClosestOrScopedElement(".sub-modal-body");
+      if (subModalObj) {
         return "is-under-sub-modal";
       }
       return "";
@@ -515,7 +518,7 @@ export default {
 
       if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
         // 親のスタイル修正
-        this.$parent.styleObj = { "max-width": "850px", width: "100%" };
+        this._deviceSetDialogOwner().styleObj = { "max-width": "850px", width: "100%" };
       }
 
       //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
@@ -541,19 +544,20 @@ export default {
   },
   // add FNSI-治療モードをI-HDFへ変更した際、電源をOFFにする 楊 start
   mounted() {
-    // add 性能改善メモリ不足 shan start
-    EventBus.$off("ihdf-modal")
-    // add 性能改善メモリ不足 shan end
-    EventBus.$on("ihdf-modal", data => {
+    this.onIhdfModal = (data) => {
       if (this.getIsShowUfrProgramModal && data) {
         // 切りに設定する
         this.setEditValue();
-        const contentTreat = document.getElementById("ufrId")
+        const contentTreat = this._deviceSetElementById("ufrId")
         if (null !== contentTreat) {
           contentTreat.children[0].disabled = true;
         }
       }
-    });
+    };
+    // add 性能改善メモリ不足 shan start
+    EventBus.$off("ihdf-modal", this.onIhdfModal)
+    // add 性能改善メモリ不足 shan end
+    EventBus.$on("ihdf-modal", this.onIhdfModal);
     setTimeout(() => {
       this.decimalModi();
       this.changeButton(true);
@@ -563,17 +567,8 @@ export default {
   // add FNSI-治療モードをI-HDFへ変更した際、電源をOFFにする 楊 end
 
   // add FNSI-性能を最適化する 李 start
-  beforeDestroy() {
-    EventBus.$off("ihdf-modal", data => {
-      if (this.getIsShowUfrProgramModal && data) {
-        // 切りに設定する
-        this.setEditValue();
-        const contentTreat = document.getElementById("ufrId")
-        if (null !== contentTreat) {
-          contentTreat.children[0].disabled = true;
-        }
-      }
-    })
+  beforeUnmount() {
+    EventBus.$off("ihdf-modal", this.onIhdfModal);
   },
   // add FNSI-性能を最適化する 李 end
 
@@ -585,7 +580,15 @@ export default {
     ]),
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd));
+      return this.isMst || (this.isMst != true && !this.isOtherFacilityRow() && getAuthorized(pageCd, itemCd));
+    },
+    /**
+     * @description 該当行が他院情報かどうかを判定
+     * @returns {Boolean} true = 他施設のデータは参照のみ
+     */
+    isOtherFacilityRow() {
+      const facilityCd = this.getSettingIndChildData?.facilityCd;
+      return facilityCd ? facilityCd !== this.getFacilityCd : false;
     },
     // add #10359 編集権限の動作不正 dengshen end
 
@@ -661,7 +664,7 @@ export default {
      */
     saveEdit() {
       if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
-        this.$parent.$parent.updateDisable = false;
+        this._deviceSetDialogOwner().updateDisable = false;
       }
     },
     isEdit() {
@@ -683,14 +686,14 @@ export default {
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fan add start
     async resetComponentIndData(structData){
       if (this.isEdit()) {
-        this.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+        this._deviceSetDialogOwner().messageDialogInfo.messageCd = 70000028;
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-        this.$parent.$parent.messageDialogInfo.type = "9";
+        this._deviceSetDialogOwner().messageDialogInfo.type = "9";
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._deviceSetDialogOwner().messageDialogInfo.isDialogVisible = true;
         return;
       } else {
-        this.getComponentData(structData,2);
+        return this.getComponentData(structData,2);
       }
 
     },
@@ -764,8 +767,7 @@ export default {
       // 対象日時の治療情報取得(開始日付・治療方法・クールで絞り込み)
       let response = await ApiHelper.post(
         "/mainData/getOrdMainDataInfo",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         getErrorMessage('IndActionChart.vue', 'resetComponentData', error);
         throw error;
       });
@@ -811,7 +813,7 @@ export default {
     },
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add end
     decimalModi() {
-      let textInputs = document.getElementsByClassName("text-input");
+      const textInputs = this._deviceSetElementsByClassName("text-input");
       for (let i = 0; i < textInputs.length; i++) {
         if (textInputs[i].value !== "" && textInputs[i].value !== null && textInputs[i].type === "number") {
           let temp = textInputs[i].value + "";
@@ -836,23 +838,13 @@ export default {
       // }
       EventBus.$emit("deviceSetChanged", !val);
       // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng end
-    },
-  /**
-   * @description 該当行が他院情報かどうかを判定
-   * @returns {Boolean} true = 他施設のデータは参照のみ
-   */
-    isOtherFacilityRow() {
-      if (!this.getSettingIndChildData) {
-        return false
-      }
-      return this.getSettingIndChildData.facilityCd ? this.getSettingIndChildData.facilityCd !== this.getFacilityCd : false
-    },
+    }
   },
 
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fan add start
   async created() {
     this.setLoadingScreenVisible(true);
-    this.$parent.$parent.isDialogType9 = true;
+    this._deviceSetDialogOwner().isDialogType9 = true;
   }
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、fan add end
 };
@@ -870,8 +862,8 @@ export default {
   border: none;
 }
 
-.device-input-charts >>> .custom-input-number,
-.device-input-charts >>> .custom-select {
+.device-input-charts :deep(.custom-input-number),
+.device-input-charts :deep(.custom-select) {
   width: 100%;
 }
 
@@ -886,12 +878,12 @@ export default {
   margin: 4px;
 }
 
-.device-input-charts >>> .custom-input-number {
+.device-input-charts :deep(.custom-input-number) {
   padding: 0;
   margin: 0;
 }
 
-.device-input-charts >>> .select-input {
+.device-input-charts :deep(.select-input) {
   padding-right: 1em;
 }
 
@@ -937,7 +929,7 @@ export default {
   font-size: 1em;
 }
 
-.is-under-sub-modal >>> * {
+.is-under-sub-modal :deep(*) {
   font-size: inherit !important;
 }
 
@@ -949,7 +941,7 @@ export default {
   text-align: center;
 }
 
-.device-input-disabled >>> .custom-input-number {
+.device-input-disabled :deep(.custom-input-number) {
   background-color: rgb(235, 235, 228);
 }
 </style>

@@ -1,0 +1,313 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{1C2D3E4F-5A6B-7C8D-9E0F-1A2B3C4D5E6F}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>FNSICloudConvertClient</RootNamespace>
+    <AssemblyName>FNSICloudConvertClient</AssemblyName>
+    <!--
+      ターゲットフレームワーク: .NET Framework 4.8.1
+      ※ MongoDB.Driver 3.x (net472) / Npgsql 8.x (netstandard2.0) は net481 対応
+    -->
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\..\packages\SharpZipLib.1.4.2\lib\netstandard2.0\ICSharpCode.SharpZipLib.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Net.Http" />
+    <Reference Include="MongoDB.Driver">
+      <HintPath>..\..\packages\MongoDB.Driver.3.8.1\lib\net472\MongoDB.Driver.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="MongoDB.Bson">
+      <HintPath>..\..\packages\MongoDB.Bson.3.8.1\lib\net472\MongoDB.Bson.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="DnsClient">
+      <HintPath>..\..\packages\DnsClient.1.8.0\lib\net472\DnsClient.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces">
+      <HintPath>..\..\packages\Microsoft.Bcl.AsyncInterfaces.10.0.8\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.HashCode">
+      <HintPath>..\..\packages\Microsoft.Bcl.HashCode.6.0.0\lib\net462\Microsoft.Bcl.HashCode.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=10.0.0.8, Culture=neutral, PublicKeyToken=adb9793829ddae60">
+      <HintPath>..\..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.10.0.8\lib\net462\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Logging.Abstractions, Version=10.0.0.8, Culture=neutral, PublicKeyToken=adb9793829ddae60">
+      <HintPath>..\..\packages\Microsoft.Extensions.Logging.Abstractions.10.0.8\lib\net462\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Win32.Registry">
+      <HintPath>..\..\packages\Microsoft.Win32.Registry.5.0.0\lib\net461\Microsoft.Win32.Registry.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed">
+      <HintPath>..\..\packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Npgsql">
+      <HintPath>..\..\packages\Npgsql.8.0.9\lib\netstandard2.0\Npgsql.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="SharpCompress">
+      <HintPath>..\..\packages\SharpCompress.1.0.0\lib\net48\SharpCompress.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Snappier">
+      <HintPath>..\..\packages\Snappier.1.3.1\lib\net472\Snappier.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Buffers">
+      <HintPath>..\..\packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Collections.Immutable">
+      <HintPath>..\..\packages\System.Collections.Immutable.10.0.8\lib\net462\System.Collections.Immutable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Diagnostics.DiagnosticSource">
+      <HintPath>..\..\packages\System.Diagnostics.DiagnosticSource.10.0.8\lib\net462\System.Diagnostics.DiagnosticSource.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.IO.Pipelines">
+      <HintPath>..\..\packages\System.IO.Pipelines.10.0.8\lib\net462\System.IO.Pipelines.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Memory">
+      <HintPath>..\..\packages\System.Memory.4.6.3\lib\net462\System.Memory.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Numerics.Vectors">
+      <HintPath>..\..\packages\System.Numerics.Vectors.4.6.1\lib\net462\System.Numerics.Vectors.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>..\..\packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Security.AccessControl">
+      <HintPath>..\..\packages\System.Security.AccessControl.6.0.1\lib\net461\System.Security.AccessControl.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Security.Principal.Windows">
+      <HintPath>..\..\packages\System.Security.Principal.Windows.5.0.0\lib\net461\System.Security.Principal.Windows.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Text.Encoding.CodePages">
+      <HintPath>..\..\packages\System.Text.Encoding.CodePages.10.0.8\lib\net462\System.Text.Encoding.CodePages.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Text.Encodings.Web">
+      <HintPath>..\..\packages\System.Text.Encodings.Web.10.0.8\lib\net462\System.Text.Encodings.Web.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Text.Json">
+      <HintPath>..\..\packages\System.Text.Json.10.0.8\lib\net462\System.Text.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Threading.Channels">
+      <HintPath>..\..\packages\System.Threading.Channels.10.0.8\lib\net462\System.Threading.Channels.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions">
+      <HintPath>..\..\packages\System.Threading.Tasks.Extensions.4.6.3\lib\net462\System.Threading.Tasks.Extensions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="ZstdSharp">
+      <HintPath>..\..\packages\ZstdSharp.Port.0.8.8\lib\net462\ZstdSharp.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <!-- System.ValueTuple: .NET Framework 4.7 以降はフレームワーク本体に組み込み済み → 参照不要 -->
+  </ItemGroup>
+  <!-- ソースファイル -->
+  <ItemGroup>
+    <Compile Include="AppState.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Models\AppSettings.cs" />
+    <Compile Include="Models\FacilityInfo.cs" />
+    <Compile Include="Models\OperationMode.cs" />
+    <Compile Include="Models\ProgressInfo.cs" />
+    <Compile Include="Models\PgTableConfig.cs" />
+    <Compile Include="Models\MongoCollectionConfig.cs" />
+    <Compile Include="Logic\AppConfigLoader.cs" />
+    <Compile Include="Logic\AppLogger.cs" />
+    <Compile Include="Logic\PgDumpConfigLoader.cs" />
+    <Compile Include="Logic\MongoDumpConfigLoader.cs" />
+    <Compile Include="Logic\SimpleConfigReader.cs" />
+    <Compile Include="Logic\BusinessApiClient.cs" />
+    <Compile Include="Logic\UserSettingsStore.cs" />
+    <Compile Include="Logic\DataMigrationLogic.cs" />
+    <Compile Include="Logic\PgDumpExporter.cs" />
+    <Compile Include="Logic\MongoDbLogic.cs" />
+    <Compile Include="Logic\PostgreSqlLogic.cs" />
+    <Compile Include="Logic\FacilityLoader.cs" />
+    <Compile Include="Logic\SqlRunner.cs" />
+    <Compile Include="Logic\ZipArchiver.cs" />
+    <Compile Include="Logic\ConverterApiClient.cs" />
+    <Compile Include="Forms\FormLogin.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormLogin.Designer.cs">
+      <DependentUpon>FormLogin.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormSelectMode.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormSelectMode.Designer.cs">
+      <DependentUpon>FormSelectMode.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormFacilitySelect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormFacilitySelect.Designer.cs">
+      <DependentUpon>FormFacilitySelect.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\ProgressBarEx.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Forms\FormMain.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormMain.Designer.cs">
+      <DependentUpon>FormMain.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FormStopDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormSettings.Designer.cs">
+      <DependentUpon>FormSettings.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <!-- リソースファイル -->
+  <ItemGroup>
+    <EmbeddedResource Include="Forms\FormLogin.resx">
+      <DependentUpon>FormLogin.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormSelectMode.resx">
+      <DependentUpon>FormSelectMode.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormFacilitySelect.resx">
+      <DependentUpon>FormFacilitySelect.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormMain.resx">
+      <DependentUpon>FormMain.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FormSettings.resx">
+      <DependentUpon>FormSettings.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <!-- 設定ファイル -->
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+    <None Include="FNSICloudConvertClient.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- サーバーと同じ pg_dump_config.yaml を出力ディレクトリへコピー -->
+    <Content Include="..\..\FNSICloudConvertServer\src\main\resources\config\pg_dump_config.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>pg_dump_config.yaml</Link>
+    </Content>
+    <!-- サーバーと同じ mongo_dump_config.yaml を出力ディレクトリへコピー -->
+    <Content Include="..\..\FNSICloudConvertServer\src\main\resources\config\mongo_dump_config.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>mongo_dump_config.yaml</Link>
+    </Content>
+  </ItemGroup>
+  <!-- SQL ファイル（出力ディレクトリへコピー） -->
+  <ItemGroup>
+    <Content Include="Sql\Common\get_facilities.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Sql\Export\get_facility_tables.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Sql\Export\get_patients.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Sql\Import\upsert_patient.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>このプロジェクトは、このコンピューター上にない NuGet パッケージを参照しています。それらのパッケージをダウンロードするには、[NuGet パッケージの復元] を使用します。詳細については、http://go.microsoft.com/fwlink/?LinkID=322105 を参照してください。見つからないファイルは {0} です。</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\..\packages\DnsClient.1.8.0\lib\net472\DnsClient.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\DnsClient.1.8.0\lib\net472\DnsClient.dll'))" />
+    <Error Condition="!Exists('..\..\packages\Microsoft.Bcl.AsyncInterfaces.10.0.8\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Microsoft.Bcl.AsyncInterfaces.10.0.8\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll'))" />
+    <Error Condition="!Exists('..\..\packages\Microsoft.Bcl.HashCode.6.0.0\lib\net462\Microsoft.Bcl.HashCode.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Microsoft.Bcl.HashCode.6.0.0\lib\net462\Microsoft.Bcl.HashCode.dll'))" />
+    <Error Condition="!Exists('..\..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.10.0.8\lib\net462\Microsoft.Extensions.DependencyInjection.Abstractions.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.10.0.8\lib\net462\Microsoft.Extensions.DependencyInjection.Abstractions.dll'))" />
+    <Error Condition="!Exists('..\..\packages\Microsoft.Extensions.Logging.Abstractions.10.0.8\lib\net462\Microsoft.Extensions.Logging.Abstractions.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Microsoft.Extensions.Logging.Abstractions.10.0.8\lib\net462\Microsoft.Extensions.Logging.Abstractions.dll'))" />
+    <Error Condition="!Exists('..\..\packages\Microsoft.Win32.Registry.5.0.0\lib\net461\Microsoft.Win32.Registry.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Microsoft.Win32.Registry.5.0.0\lib\net461\Microsoft.Win32.Registry.dll'))" />
+    <Error Condition="!Exists('..\..\packages\MongoDB.Bson.3.8.1\lib\net472\MongoDB.Bson.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\MongoDB.Bson.3.8.1\lib\net472\MongoDB.Bson.dll'))" />
+    <Error Condition="!Exists('..\..\packages\MongoDB.Driver.3.8.1\lib\net472\MongoDB.Driver.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\MongoDB.Driver.3.8.1\lib\net472\MongoDB.Driver.dll'))" />
+    <Error Condition="!Exists('..\..\packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll'))" />
+    <Error Condition="!Exists('..\..\packages\Npgsql.8.0.9\lib\netstandard2.0\Npgsql.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Npgsql.8.0.9\lib\netstandard2.0\Npgsql.dll'))" />
+    <Error Condition="!Exists('..\..\packages\SharpCompress.1.0.0\lib\net48\SharpCompress.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\SharpCompress.1.0.0\lib\net48\SharpCompress.dll'))" />
+    <Error Condition="!Exists('..\..\packages\SharpZipLib.1.4.2\lib\netstandard2.0\ICSharpCode.SharpZipLib.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\SharpZipLib.1.4.2\lib\netstandard2.0\ICSharpCode.SharpZipLib.dll'))" />
+    <Error Condition="!Exists('..\..\packages\Snappier.1.3.1\lib\net472\Snappier.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Snappier.1.3.1\lib\net472\Snappier.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.Collections.Immutable.10.0.8\lib\net462\System.Collections.Immutable.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.Collections.Immutable.10.0.8\lib\net462\System.Collections.Immutable.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.Diagnostics.DiagnosticSource.10.0.8\lib\net462\System.Diagnostics.DiagnosticSource.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.Diagnostics.DiagnosticSource.10.0.8\lib\net462\System.Diagnostics.DiagnosticSource.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.IO.Pipelines.10.0.8\lib\net462\System.IO.Pipelines.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.IO.Pipelines.10.0.8\lib\net462\System.IO.Pipelines.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.Memory.4.6.3\lib\net462\System.Memory.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.Memory.4.6.3\lib\net462\System.Memory.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.Numerics.Vectors.4.6.1\lib\net462\System.Numerics.Vectors.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.Numerics.Vectors.4.6.1\lib\net462\System.Numerics.Vectors.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.Security.AccessControl.6.0.1\lib\net461\System.Security.AccessControl.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.Security.AccessControl.6.0.1\lib\net461\System.Security.AccessControl.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.Security.Principal.Windows.5.0.0\lib\net461\System.Security.Principal.Windows.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.Security.Principal.Windows.5.0.0\lib\net461\System.Security.Principal.Windows.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.Text.Encoding.CodePages.10.0.8\lib\net462\System.Text.Encoding.CodePages.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.Text.Encoding.CodePages.10.0.8\lib\net462\System.Text.Encoding.CodePages.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.Text.Encodings.Web.10.0.8\lib\net462\System.Text.Encodings.Web.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.Text.Encodings.Web.10.0.8\lib\net462\System.Text.Encodings.Web.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.Text.Json.10.0.8\lib\net462\System.Text.Json.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.Text.Json.10.0.8\lib\net462\System.Text.Json.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.Threading.Channels.10.0.8\lib\net462\System.Threading.Channels.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.Threading.Channels.10.0.8\lib\net462\System.Threading.Channels.dll'))" />
+    <Error Condition="!Exists('..\..\packages\System.Threading.Tasks.Extensions.4.6.3\lib\net462\System.Threading.Tasks.Extensions.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\System.Threading.Tasks.Extensions.4.6.3\lib\net462\System.Threading.Tasks.Extensions.dll'))" />
+    <Error Condition="!Exists('..\..\packages\ZstdSharp.Port.0.8.8\lib\net462\ZstdSharp.dll')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\ZstdSharp.Port.0.8.8\lib\net462\ZstdSharp.dll'))" />
+  </Target>
+</Project>

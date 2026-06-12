@@ -9,19 +9,12 @@
 
 <script>
 export default {
-  components: {},
-  computed: {},
   props: ["color"],
-  methods: {},
-  watch: {},
-  beforeCreate() {},
-  created() {},
-  beforeMount() {},
-  mounted() {},
-  beforeUpdate() {},
-  updated() {},
-  beforeDestroy() { },
-  destroyed() { }
+
+
+
+
+
 };
 </script>
 <style scoped>

@@ -36,8 +36,8 @@
               <label>未登録</label>
             </td>
           </tr>
-          <template v-for="(item, index) in selectItems">
-            <tr :key="index" class="ntss-list-body-tr">
+          <template v-for="(item, index) in selectItems" :key="index">
+            <tr class="ntss-list-body-tr">
               <td
                 v-if="(index % perPage) == 0"
                 v-show="isVisiblePage(selectItems, index, hasMatchedName)"
@@ -72,23 +72,26 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import { MstComplaint } from "@/models/treatment-record/complaint/MstComplaint";
 import ComplaintComponentMixin from "@/components/treatment-record/submenu/complaint/ComplaintComponentMixin";
 import SelectorComponentMixin from "@/components/treatment-record/submenu/complaint/SelectorComponentMixin";
 import PopoverMixin from "@/components/PopoverMixin";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
+import { getMstListCompose } from "@/apis/pat-prescription";
+import { getMasterConfig } from "@/components/common/master-selector/builder/masterPopoverConfig";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 
 export default {
   mixins: [ComplaintComponentMixin, SelectorComponentMixin, PopoverMixin],
   computed: {
     ...mapGetters("account-edit", ["getTheme"]),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     themeBlack() {
       return this.getTheme === 1 ? "ntss-list-body-tr-black" : "";
     }
   },
   methods: {
-    ...mapActions("treatment-record/complaint", ["getMstComplaint"]),
     popoverPreShow,
     popoverPostShow,
     popoverPosthide,
@@ -98,11 +101,14 @@ export default {
     async init() {
       this.nonSelectValue = new MstComplaint();
 
-      // 愁訴マスタから一覧取得
-      const response = await this.getMstComplaint();
-      this.selectItems = response.data
-        .filter(e => e.is_disp === "1")
-        .map(e => new MstComplaint(e.complaint_cd, e.complaint_name));
+      const query = getMasterConfig(MasterType.COMPLAINT_TREATMENT_RECORD, {
+        facilityCd: this.facilityCd
+      });
+      const response = await getMstListCompose(query);
+      const items = response?.data?.master?.items ?? [];
+      this.selectItems = items
+        .filter(e => e.isDisp === "1")
+        .map(e => new MstComplaint(e.complaintCd, e.complaintName));
     }
   }
 };
@@ -125,11 +131,11 @@ export default {
   width: 4em;
   font-size: 1.5em;
 }
-.complaint-popover >>> .popover__content {
+.complaint-popover :deep(.popover__content) {
   padding: 5px;
 }
-.complaint-popover >>> .popover__content,
-.complaint-popover >>> .popover--top {
+.complaint-popover :deep(.popover__content),
+.complaint-popover :deep(.popover--top) {
   width: 400px;
   max-width: 95vw;
 }
@@ -175,7 +181,7 @@ export default {
   background-color: var(--ntss-base-background-color);
   color: #fafafa;
 }
-.ntss-input-search >>> .text-input {
+.ntss-input-search :deep(.text-input) {
   background-color: var(--treatment-record-input-background-color);
 }
 </style>

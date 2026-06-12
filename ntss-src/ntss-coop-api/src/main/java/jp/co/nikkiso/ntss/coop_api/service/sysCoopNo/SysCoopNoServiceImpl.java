@@ -28,7 +28,7 @@ public class SysCoopNoServiceImpl implements SysCoopNoService {
     wheresSys.append(" WHERE\n");
     wheresSys.append(" ctl_no = " + sysCoopNoCtlNo + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommonSys = JournalLogUtil.getLogCommon(sysCoopNoDao, tableNameSys, wheresSys, JournalLogUtil.getEventLogMessage());
+    DataUpdateLogCommonNew logCommonSys = JournalLogUtil.getLogCommon(tableNameSys, wheresSys, JournalLogUtil.getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResultSys = logCommonSys.setInfo();
     // DB更新ログ出力ロジック wangzuo End

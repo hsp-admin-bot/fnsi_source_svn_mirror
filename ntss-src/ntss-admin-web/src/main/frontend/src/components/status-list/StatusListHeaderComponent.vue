@@ -58,10 +58,10 @@
     <!-- 抽出ダイアログ[始] -->
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
-      :class="fontSizeSet"
+      :class="[fontSizeSet, 'status-list-condition-popover']"
       @preshow="popoverPreShow"
       @postshow="popoverPostShow"
       @posthide="dialogClosed(); popoverPosthide($event)"
@@ -170,15 +170,16 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
 import { KEY_NAME_STATUS_LIST } from "@/constants/defaultSettingConstants";
 import PopoverMixin from "@/components/PopoverMixin";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
+import { getScopedSessionStorage, getScopedDocument } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   components: {
@@ -371,7 +372,7 @@ export default {
       if (kurGroupName !== this.viewCondition.kurGroupName) {
         return true;
       }
-      if (nextPatValue !== this.viewCondition.nextPatValue ) {
+      if (nextPatValue !== this.viewCondition.nextPatValue) {
         return true;
       }
       if (deviceNextValue !== this.viewCondition.deviceNextValue) {
@@ -476,8 +477,7 @@ export default {
             }
           }
           if (this.defaultCondition[KEY_NAME_STATUS_LIST.KEY_NAME_COL_ITEM_GROUP] != null) {
-            filter.colItemLayoutNo =
-              this.defaultCondition[KEY_NAME_STATUS_LIST.KEY_NAME_COL_ITEM_GROUP];
+            filter.colItemLayoutNo = this.defaultCondition[KEY_NAME_STATUS_LIST.KEY_NAME_COL_ITEM_GROUP];
           }
           if (this.defaultCondition[KEY_NAME_STATUS_LIST.KEY_NAME_NEXT_DEVICE] != null) {
             filter.deviceNextValue = this.defaultCondition[KEY_NAME_STATUS_LIST.KEY_NAME_NEXT_DEVICE];
@@ -486,7 +486,9 @@ export default {
             this.defaultCondition[KEY_NAME_STATUS_LIST.KEY_NAME_KUR_GROUP_LIST] &&
             this.defaultCondition[KEY_NAME_STATUS_LIST.KEY_NAME_KUR_GROUP_LIST].length !== 0
           ) {
-            filter.kurGroupList = this.defaultCondition[KEY_NAME_STATUS_LIST.KEY_NAME_KUR_GROUP_LIST];
+            const validMstKurCd = this.getKurGroupList.map(kur => kur.kurCd);
+            // 削除コードを除外して設定
+            filter.kurGroupList = this.defaultCondition[KEY_NAME_STATUS_LIST.KEY_NAME_KUR_GROUP_LIST].filter(value => validMstKurCd.includes(value));
           }
           if (this.defaultCondition[KEY_NAME_STATUS_LIST.KEY_NAME_NEXT_PAT_GROUP] != null) {
             filter.nextPatValue = this.defaultCondition[KEY_NAME_STATUS_LIST.KEY_NAME_NEXT_PAT_GROUP];
@@ -567,12 +569,9 @@ export default {
           });
         }
         condList.push({ name:"クール", text:str.slice(0, -1) });
-      }
-      // add #11285 機能帳票の印刷情報対応② 高 start
-      else {
+      } else if (Number(condObj.kurGroupList) === 0 && this.isShow) {
         condList.push({ name:"クール", text:"すべて" });
       }
-      // add #11285 機能帳票の印刷情報対応② 高 end
       // ベッドグループ
       if (condObj.bedGroupCd !== 0) {
         const bedGroup = this.getBedGroupList.find(bg => +bg.bedGroupCd === +condObj.bedGroupCd);
@@ -590,8 +589,10 @@ export default {
       }
 
       // add #11285 機能帳票の印刷情報対応② 高 start
-      sessionStorage.setItem('roomBedGroupNameStatusList', JSON.stringify(condList.find(item => item.name === "ベッドグループ").text));
-      sessionStorage.setItem('kurGroupNameStatusList', JSON.stringify(condList.find(item => item.name === "クール").text));
+      getScopedSessionStorage(this.$el || this).setItem('roomBedGroupNameStatusList', JSON.stringify(condList.find(item => item.name === "ベッドグループ").text));
+      // 機能帳票印刷時に出力する「クール」の条件を設定
+      const kurReportParam = this.isShow ? condList.find(item => item.name === "クール").text : "すべて";
+      getScopedSessionStorage(this.$el || this).setItem('kurGroupNameStatusList', JSON.stringify(kurReportParam));
       // add #11285 機能帳票の印刷情報対応② 高 end
 
       // 凡例
@@ -620,7 +621,7 @@ export default {
     // mod  FNSI-redmine#4277 付 end
     this.setStateCondition();
 
-    EventBus.$off("dataUpdateNextPatMode");
+    EventBus.$off("dataUpdateNextPatMode", this.setStateCondition);
 
     // 次患者選択更新通知イベントをセット
     EventBus.$on("dataUpdateNextPatMode", this.setStateCondition);
@@ -630,12 +631,13 @@ export default {
     // 情報取得
     this.loadData();
     // add FNSI-redmine#3965 付 start
-    this.startGaMenWidth = document.body.clientWidth;
+    const ownerDocument = this.$el?.ownerDocument || document;
+    this.startGaMenWidth = (ownerDocument?.body?.clientWidth || getScopedDocument(this.$el || this)?.body?.clientWidth || 0);
     // add FNSI-redmine#3965 付 end
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // 次患者選択更新通知イベントを解除
-    EventBus.$off("dataUpdateNextPatMode");
+    EventBus.$off("dataUpdateNextPatMode", this.setStateCondition);
 
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
@@ -712,9 +714,13 @@ input[type="checkbox"] {
 .div-zoom {
   text-align: center;
 }
+ons-popover :deep(.popover__content) {
+    min-width: 400px;
+  }
+
 /* mod FNSI-dialog表示不全 付 start */
 @media screen and (min-width: 1400px) {
-  ons-popover >>> .popover__content {
+  .status-list-condition-popover :deep(.popover__content) {
     min-width: 400px;
   }
 }
@@ -723,5 +729,3 @@ input[type="checkbox"] {
   font-size: 1.5em;
 }
 </style>
-
-

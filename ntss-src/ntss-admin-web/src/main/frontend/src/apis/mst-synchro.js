@@ -3,9 +3,6 @@
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
 
-/**
- * マスタ同期用URL
- */
 const URL_BASE = "/mst_synchro";
 
 /**
@@ -17,7 +14,7 @@ export function sendRequestGetMstFacilityList() {
 
 /**
  * 選択施設のデバイスエッジ情報取得
- * @param {*} facilityCd 施設コード
+ * @param {string} facilityCd 施設コード
  */
 export function sendRequestGetMstDeviceEdgeList(facilityCd) {
   return ApiHelper.get(`${URL_BASE}/mst_device_edge/${facilityCd}`);
@@ -25,15 +22,15 @@ export function sendRequestGetMstDeviceEdgeList(facilityCd) {
 
 /**
  * 同期開始要求
- * @param {*} params 同期対象情報
+ * @param {Record<string, unknown>} params 同期対象情報
  */
 export function sendRequestStartMstSynchro(params) {
   return ApiHelper.post(`${URL_BASE}/synchro/start`, params);
 }
 
 /**
- * 同期開始要求(マスタ同期(隠し画面))
- * @param {*} params 同期対象情報
+ * 同期開始要求（マスタ同期・隠し画面）
+ * @param {Record<string, unknown>} params 同期対象情報
  */
 export function sendRequestStartMstSynchroProc(params) {
   return ApiHelper.post(`${URL_BASE}/synchro/start_proc`, params);

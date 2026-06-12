@@ -12,22 +12,22 @@
         </v-ons-col>
         <!--// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start-->
         <common-master-selector
-          :masterType="MasterType.ANTICOAGULANT_INDICATION"
-          :initItem="initItem"
-          :editItem="initItem"
-          :patientId="this.selectedPatId"
-          :extraParams="this.extraParamsList"
-          :facilityCd="this.getFacilityCd"
+          :masterType="MasterType.MEDICATION_TREATMENT_CLASSTYPE_RECORD"
+          :initItem="antiCoagulantSelectorInitItem"
+          :editItem="antiCoagulantSelectorEditItem"
+          :patientId="selectedPatId"
+          :extraParams="antiCoagulantSelectorExtraParams"
+          :facilityCd="getFacilityCd"
           :dialysisState="getDialysisState"
           :isMedicament="'1'"
           :hasChangedOption="true"
+          :changeOptionMode="'nameAndUnit'"
           :selectedItemClass="'com-basic-sub-input'"
           :backgroundColor="'#f7f7f7'"
           :btnClass="'com-basic-sub-btn'"
           :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
           @popover-return="updateInput('antiCoagulant', $event)"
         />
-      </v-ons-col>
         <!--// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end-->
         <!--<v-ons-col class="value d-flex align-items-center">
           <show-selected-item
@@ -36,7 +36,7 @@
             propBackgroundColor="#f7f7f7"
             style="min-width: 11em; width: 100%; max-width: 13em;"
           />
-          <com-master-selector name="anti-coagulant" :readMasterData="getMaster" :masterDefine="masterDef" v-model="inputModel.antiCoagulant" @changeUnit="onChangeUnit"  @changeDecPoint="onChangeDecPoint" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') ||!isShared"/>
+          <com-master-selector name="anti-coagulant" :readMasterData="getMaster" :masterDefine="masterDef" v-model="inputModel.antiCoagulant" @changeUnit="onChangeUnit"  @changeDecPoint="onChangeDecPoint" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority')"/>
         </v-ons-col>-->
       </v-ons-row>
       <com-number-input name="anti-coagulant-one-shot-amount" labelName="ワンショット量" :unitName="inputModel.oneShotAmountUnit" input-min-width="10em" :step="this.unitStep" :inputMin=0.0 :inputMax=99999.99 :inputType='"number"' :initialValueLock="true" v-model="inputModel.oneShotAmount" :initValue="initModel.oneShotAmount" :disabled="!getItemAuthorized('TreatmentRecord', 'default_authority')||!isShared" :class="isUseObj[26]?'column-ground-color':null"/>
@@ -57,7 +57,7 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import CommonNumberInputComponent from "@/components/treatment-record/submenu/common/CommonNumberInputComponent";
 //mod FNSI-redmine5848 fang start
 import CommonRadio from "@/components/treatment-record/submenu/common/CommonRadioOffComponent";
@@ -73,7 +73,7 @@ import {
 import { medicineAntiCoagulant } from "@/components/common/master-selector/MasterSelectorDefinitions";
 import { CODES } from "@/constants/TreatmentRecord";
 import { AntiCoagulant } from "@/models/treatment-record/condition/AntiCoagulant";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 start
 // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
 import { getAuthorized, getPrefix } from "@/functions/common/CommonFunctions.js";
@@ -97,8 +97,10 @@ export default {
     "common-master-selector": commonMasterSelector,
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
   },
+  emits: ["update:modelValue"],
   props: {
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: AntiCoagulant
     },
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 start
@@ -140,7 +142,7 @@ export default {
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
-    ...mapGetters("treatment-record/common", ["getSharedFacilityCd","getDialysisState"]),
+    ...mapGetters("treatment-record/common", ["getSharedFacilityCd","getDialysisState","getTreatDate"]),
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
     isShared() {
       return this.getFacilityCd === this.getSharedFacilityCd;
@@ -154,31 +156,74 @@ export default {
       var data = Number(BigNumber(10).exponentiatedBy(BigNumber(num).negated()).valueOf());
       return data;
     },
+    antiCoagulantSelectorInitItem() {
+      return {
+        text:
+          this.initModel && this.initModel.antiCoagulant && this.initModel.antiCoagulant.name
+            ? this.initModel.antiCoagulant.name
+            : "",
+        value:
+          this.initModel && this.initModel.antiCoagulant && this.initModel.antiCoagulant.cd != null
+            ? this.initModel.antiCoagulant.cd
+            : null,
+        unit:
+          this.initModel && this.initModel.oneShotAmountUnit != null && this.initModel.oneShotAmountUnit !== ""
+            ? String(this.initModel.oneShotAmountUnit)
+            : null
+      };
+    },
+    antiCoagulantSelectorEditItem() {
+      return {
+        text:
+          this.inputModel && this.inputModel.antiCoagulant && this.inputModel.antiCoagulant.name
+            ? this.inputModel.antiCoagulant.name
+            : "",
+        value:
+          this.inputModel && this.inputModel.antiCoagulant && this.inputModel.antiCoagulant.cd != null
+            ? this.inputModel.antiCoagulant.cd
+            : null,
+        unit:
+          this.inputModel && this.inputModel.oneShotAmountUnit != null && this.inputModel.oneShotAmountUnit !== ""
+            ? String(this.inputModel.oneShotAmountUnit)
+            : null
+      };
+    },
+    antiCoagulantSelectorExtraParams() {
+      return Object.assign({}, this.extraParamsList || {});
+    },
   },
   watch: {
-    value() {
-      this.inputModel = this.value;
+    modelValue() {
+      this.inputModel = this.modelValue;
       // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
       if (this.inputModel?.antiCoagulant?.cd && !this.inputModel?.antiCoagulant?.cd?.toString().includes('$')) {
         this.inputModel.antiCoagulant.cd = Number(this.inputModel.antiCoagulant.cd);
       }
       // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
       //del 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 start
-        Object.assign(this.initModel, this.value);
+        Object.assign(this.initModel, this.modelValue);
         // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
-        this.initItem.text = this.initModel.antiCoagulant.name
-        this.initItem.value = this.initModel.antiCoagulant.cd
-        this.extraParamsList.treatDate = this.treatDate
-        this.extraParamsList.rstInfo  = {
-          rstName: this.inputModel.antiCoagulant.name,
-          rstUnit: this.inputModel.oneShotAmount.Unit
+        this.initItem.text = this.initModel.antiCoagulant.name;
+        this.initItem.value = this.initModel.antiCoagulant.cd;
+        this.extraParamsList = {
+          treatDate: this.getTreatDate,
+          rstInfo: {
+            rstName: this.inputModel.antiCoagulant.name,
+            rstUnit: this.inputModel.oneShotAmountUnit
+          },
+          actualName: this.initModel?.antiCoagulant?.name || this.inputModel?.antiCoagulant?.name || "",
+          classType: 1,
+          // 初期値が削除・非表示でも SQL INIT で拾えるように渡す
+          initValue: this.initModel.antiCoagulant.cd,
+          // 初期値が通常薬剤/調製薬剤どちらか判別するために渡す
+          medicineType: this.initModel.antiCoagulant.type ?? this.inputModel.antiCoagulant.type
         };
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
       //del 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 end
     },
     inputModel: {
       handler: function(val) {
-        this.$emit("input", val);
+        this.$emit("update:modelValue", val);
       },
       deep: true
     },
@@ -194,20 +239,20 @@ export default {
   },
   methods: {
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
-    updateInput(fieldKey, data){
-      let master = new Master(data.value, data.text);
-      master.type = data.kbnValue
-      this.inputModel.oneShotAmountUnit = data.unit
-      this.inputModel.speedUnit = data.unit ? data.unit + "/h" : ""
-      this.inputModel.totalAmountUnit = data.unit
-      this.$set(this.inputModel, fieldKey, master);
+    updateInput(fieldKey, data = {}){
+      const master = new Master(data.value, data.text);
+      master.type = data.kbnValue;
+      this.inputModel.oneShotAmountUnit = data.unit;
+      this.inputModel.speedUnit = data.unit ? data.unit + "/h" : "";
+      this.inputModel.totalAmountUnit = data.unit;
+      this.inputModel[fieldKey] = master;
     },
     // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
     // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
     async getMaster() {
       let medicineList = Promise.all([
         getMedicineAllTabooAllergyFilterByType(this.selectedPatId, CODES.MEDICINE_CLASS.ANTI_COAGULANT.classType),
-        sendRequestGetMstMedicineClass(),
+        sendRequestGetMstMedicineClass(this.selectedPatId),
       ]);
       await medicineList.then(async (response)=>{
         let medicinePopover = response[0].data;
@@ -274,16 +319,22 @@ export default {
 </script>
 
 <style scoped>
+:deep(ons-checkbox.checkbox) {
+  margin-top: 0;
+}
+
 .column-ground-color {
   background-color: #D3D3D3;
   min-width: fit-content;
 }
+ 
 /* column-ground-color をあてた場合、黒背景だと文字が見えなくなる為、文字色(白)を解除する */
-.column-ground-color >>> label {
+.column-ground-color :deep(label) {
   color: unset !important;
 }
+ 
 /* add FNSI-redmine3855 徐 start */
-.isClass >>> ons-button {
+.isClass :deep(ons-button) {
   margin-right:30em
 }
 /* add FNSI-redmine3855 徐 end */
@@ -295,10 +346,10 @@ export default {
   color:var(--treatment-record-text-color);
 }
 /*/ add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start*/
-::v-deep .com-basic-sub-btn {
+:deep(.com-basic-sub-btn) {
   margin-left: 5px
 }
-::v-deep .com-basic-sub-input {
+:deep(.com-basic-sub-input) {
   min-width: 11em;
   width: 100%;
   max-width: 13em;

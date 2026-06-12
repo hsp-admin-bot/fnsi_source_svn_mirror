@@ -1,6 +1,7 @@
 package jp.co.nikkiso.ntss.core.dao;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.groups.Tuple.tuple;
 
 import java.util.List;
 

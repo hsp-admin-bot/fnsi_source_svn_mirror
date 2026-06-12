@@ -1,10 +1,13 @@
 <template>
   <modal-base @onClose="closeIndicationModal" class="custom-modal">
-    <div slot="header">
-      <component :is="header"></component>
-    </div>
-    <div slot="body">
-      <div class="modal-content d-flex flex-column" :style="{ 'height':tableHeight + 'px' }">
+    <template #header>
+      <div>
+        <component :is="header"></component>
+      </div>
+    </template>
+    <template #body>
+      <div>
+        <div class="modal-content d-flex flex-column" :style="{ 'height':tableHeight + 'px' }">
         <!-- mod #10739 コンバート施設で指示受け(治療単位)が表示されない 20241218 zhaoqi start -->
         <!-- Grid -->
         <div>
@@ -76,9 +79,11 @@
         </v-ons-modal>
         <!-- / Loading -->
       </div>
-    </div>
+      </div>
+    </template>
 
-    <div slot="footer" class="flex-container">
+    <template #footer>
+      <div class="flex-container">
       <!-- mod FNSI-画面スタイル(ボタン)対応 付 start -->
       <div class="denial-btn-area" style="background:none">
         <button class="button denial-btn btn2-cancel" @click="closeIndicationModal">キャンセル</button>
@@ -89,16 +94,16 @@
         <!--#10407:変更なしでも画面を表示させる End-->
       </div>
       <!-- mod FNSI-画面スタイル(ボタン)対応 付 end -->
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions } from "vuex";
-import moment from "moment";
-import _ from "underscore";
-import "moment/locale/ja";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
+import _ from "@/compat/collections/lodash";
 import Indication from "@/apis/indication";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import {
@@ -110,14 +115,15 @@ import {
 } from "@/functions/mst/MstGetters.js";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import { getPatById } from "@/functions/PatInfoFunctions.js";
-import BigNumber from "bignumber.js";
-import { EventBus } from "@/eventBus.js";
+import BigNumber from "@/compat/number/bignumber";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getModalBodyElement } from "@/functions/common/LayoutMeasureHelper";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 export default {
   mixins: [MasterMaintenanceMixin],
@@ -183,9 +189,8 @@ export default {
     },
     dispDate() {
       if (this.ordDetail && this.ordDetail.treatDate) {
-        return moment(this.ordDetail.treatDate, "YYYYMMDD").format(
-          "YYYY/MM/DD(ddd)"
-        );
+        return dayjs(this.ordDetail.treatDate, "YYYYMMDD").format(
+          "YYYY/MM/DD(ddd)");
       }
       return "";
     }
@@ -513,8 +518,14 @@ export default {
       let dispValChk = checkedData.dispVal;
       let prefixChk = checkedData.prefix ? checkedData.prefix : "";
       let unitChk = checkedData.unit ? " " + checkedData.unit : "";
-      let checkedDataTmp = BigNumber(dispValChk).toFixed();
-      let valueTmp = BigNumber(val).toFixed();
+      let checkedDataTmp = undefined;
+      if (this.isNumber(dispValChk)) {
+        checkedDataTmp = BigNumber(dispValChk).toFixed();
+      }
+      let valueTmp = undefined;
+      if (this.isNumber(val)) {
+        valueTmp = BigNumber(val).toFixed();
+      }
       if (dialysisState == "0" && this.isNumber(checkedDataTmp) && this.isNumber(valueTmp)) {
         if (checkedDataTmp !== valueTmp) return true;
         if ((leftIsDisable && !rightIsDisable) || (!leftIsDisable && rightIsDisable)) return true;
@@ -552,13 +563,13 @@ export default {
       let itemCdChk = checkedDataItemInfo.itemCd;
       let prefixChk = checkedData.prefix ? checkedData.prefix : "";
       let dispValChk = checkedData.dispVal;
-      dispValChk = this.isNumber(dispValChk)?BigNumber(dispValChk).toFixed():dispValChk;
+      dispValChk = this.isNumber(dispValChk)?BigNumber(dispValChk ? dispValChk : 0).toFixed():dispValChk;
       let unitChk = checkedData.unit ? " " + checkedData.unit : "";
 
       let itemCd = itemInfo.itemCd;
       let prefix = itemInfo.data.value.prefix ? itemInfo.data.value.prefix : "";
       let dispVal = itemInfo.data.value.dispVal;
-      dispVal = this.isNumber(dispVal)?BigNumber(dispVal).toFixed():dispVal;
+      dispVal = this.isNumber(dispVal)?BigNumber(dispVal ? dispVal : 0).toFixed():dispVal;
       let unit = itemInfo.data.value.unit ? " " + itemInfo.data.value.unit : "";
 
       if(subCategoryNo == 2) { // 治療方法
@@ -668,7 +679,7 @@ export default {
       }
     },
     isNumber(value) {
-      const regex = /^\-?\d+(\.\d+)?$/;
+      const regex = /^-?\d+(\.\d+)?$/;
       return regex.test(value);
     },
     //add #10739 コンバート施設で指示受け(治療単位)が表示されない 20241218 zhaoqi end
@@ -738,9 +749,9 @@ export default {
     },
     // モーダルの高さからtableコンポーネント領域の高さを算出
     onResize() {
-      const mb = document.getElementsByClassName("modal-body");
+      const mb = getModalBodyElement(this.$el || this);
       if (mb) {
-        const mbh = Array.prototype.slice.call(mb).shift().clientHeight;
+        const mbh = mb.clientHeight;
 
         this.tableHeight = mbh - 3;
         this.tableHeight = this.tableHeight < 100 ? 100 : this.tableHeight;
@@ -765,14 +776,14 @@ export default {
   },
   mounted() {
     this.$nextTick(async () => {
-      window.addEventListener("resize", this.onResize);
+      (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.onResize);
       this.onResize();
       EventBus.$emit("stopMapPolling");
       EventBus.$emit("stopListPolling");
     });
   },
-  beforeDestroy() {
-    window.removeEventListener("resize", this.onResize);
+  beforeUnmount() {
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.onResize);
     this.setIndOrdNo(null);
     EventBus.$emit("startMapPolling");
     EventBus.$emit("startListPolling");
@@ -869,7 +880,7 @@ export default {
   border-radius: 4px;
   line-height: 20px;
 }
-.icon >>> img {
+.icon :deep(img) {
   width: 1.5em;
 }
 .is-disabled {
@@ -880,11 +891,11 @@ export default {
 }
 @media print {
   /** モーダル高さ確保 */
-  .modal-mask >>> div {
+  .modal-mask :deep(div){
     height: auto !important;
   }
   /** レイアウト崩れ防止 */
-  div >>> .modal-wrapper {
+  div :deep(.modal-wrapper){
     display: inline-block !important;
     width: 100%;
   }

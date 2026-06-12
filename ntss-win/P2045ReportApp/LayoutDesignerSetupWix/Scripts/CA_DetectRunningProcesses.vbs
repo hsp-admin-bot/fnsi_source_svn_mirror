@@ -6,9 +6,9 @@ sRunning = ""
 
 Set oWMI = GetObject("winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2")
 If Err.Number = 0 Then
-  Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'LayoutDesigner.exe'")
+  Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'FNWSiLayoutDesigner.exe'")
   If oItems.Count > 0 Then
-    sRunning = "LayoutDesigner.exe"
+    sRunning = "FNWSiLayoutDesigner.exe"
   End If
 End If
 

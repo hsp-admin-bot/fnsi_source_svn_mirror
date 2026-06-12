@@ -12,7 +12,7 @@ import java.util.Map;
 
 @ConfigAutowireable
 @Dao
-public interface MstMedicineDao  extends MasterDao<Map<String,Object>> {
+public interface MstMedicineDao extends MasterDao<Map<String,Object>>, UnifiedByCodeListDao {
   @Select
   List<MstMedicine> selectAll(SelectOptions options, MstMedicine params);
 
@@ -64,11 +64,17 @@ public interface MstMedicineDao  extends MasterDao<Map<String,Object>> {
   /*add FNSI-改修内容5204 任 end*/
 
   // add FNSI-改修内容6618修正 xuty start
+  // mod #11718 【#11600持ち越し】データリスト画面不正② fang start
   @Select
-  List<String> selectByStandardMedicineCd(List<String> standardMedicineCdList);
+  List<String> selectByStandardMedicineCd(String facilityCd, List<String> standardMedicineCdList);
+  // mod #11718 【#11600持ち越し】データリスト画面不正② fang end
   // add FNSI-改修内容6618修正 xuty end
 
   @Override
   @Select
   List<Map<String,Object>> selectAllStatus(Map<String,String> params);
+
+  @Override
+  @Select
+  List<Map<String, Object>> selectAllStatusByCodeList(List<Integer> codeList);
 }

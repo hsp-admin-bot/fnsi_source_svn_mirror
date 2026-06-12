@@ -27,7 +27,7 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target=false
@@ -52,7 +52,7 @@
         </v-ons-row>
         <div class='condition-row' style="height:30px;margin-bottom:5px;">
           <div style="float:left;">
-            <v-ons-button class='btn2-cancel denial-btn' @click='dialogClear'>クリア</v-ons-button>
+            <v-ons-button class='btn2-cancel clear' @click='dialogClear'>クリア</v-ons-button>
           </div>
           <div style="float:right;">
             <v-ons-button class='btn3-normal ok' @click='dialogOk'>OK</v-ons-button>
@@ -65,8 +65,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 
 export default {
@@ -83,7 +83,6 @@ export default {
       isSortMode: false
     };
   },
-  computed: {},
   methods: {
     ...mapActions("master-maintenance", ["setCondition"]),
     // -----------------------------------------
@@ -141,7 +140,7 @@ export default {
     EventBus.$on("setSortMode", this.setSortMode);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("setSortMode", this.setSortMode);
   },
   // add 性能改善メモリ不足 shan end

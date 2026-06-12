@@ -7,7 +7,7 @@
     <div
       class="tabs"
       v-if="
-        this.$router.currentRoute.name !== 'pat-intro-letter' &&
+        this.$route.name !== 'pat-intro-letter' &&
         getPatEventRecord.useType !== 3
       "
     >
@@ -71,7 +71,7 @@
             <input-datatemp
               :dateMin="dateMin"
               :dateMax="dateMax"
-              :data.sync="inputModel.dayStartDate"
+              v-model:data="inputModel.dayStartDate"
               :className="'event-start-date'"
               :functionArgs="1"
               :tempName="'tabTemp'"
@@ -165,7 +165,7 @@
             <input-datatemp
               :dateMin="dateMin"
               :dateMax="dateMax"
-              :data.sync="inputModel.everyStartDate"
+              v-model:data="inputModel.everyStartDate"
               :className="'every-start-date'"
               :functionArgs="2"
               :tempName="'tabTemp'"
@@ -207,7 +207,7 @@
             <input-datatemp
               :dateMin="dateMin"
               :dateMax="dateMax"
-              :data.sync="inputModel.everyEndDate"
+              v-model:data="inputModel.everyEndDate"
               :className="'every-end-date'"
               :functionArgs="2"
               :tempName="'tabTemp'"
@@ -309,7 +309,7 @@
             <input-datatemp
               :dateMin="dateMin"
               :dateMax="dateMax"
-              :data.sync="inputModel.weekStartDate"
+              v-model:data="inputModel.weekStartDate"
               :className="'week-start-date'"
               :functionArgs="3"
               :tempName="'tabTemp'"
@@ -351,7 +351,7 @@
             <input-datatemp
               :dateMin="dateMin"
               :dateMax="dateMax"
-              :data.sync="inputModel.weekEndDate"
+              v-model:data="inputModel.weekEndDate"
               :className="'week-end-date'"
               :functionArgs="3"
               :tempName="'tabTemp'"
@@ -403,7 +403,7 @@
             <label class="ntss-pat-event-label" style="margin-right: 1em">
               <v-ons-checkbox
                 input-id="check-1"
-                class="input"
+                class="input checkbox"
                 v-model="inputModel.week[0]"
                 @change="changeWeek(0, $event)"
               ></v-ons-checkbox>
@@ -412,7 +412,7 @@
             <label class="ntss-pat-event-label" style="margin-right: 1em">
               <v-ons-checkbox
                 input-id="check-2"
-                class="input"
+                class="input checkbox"
                 v-model="inputModel.week[1]"
                 @change="changeWeek(1, $event)"
               ></v-ons-checkbox>
@@ -421,7 +421,7 @@
             <label class="ntss-pat-event-label" style="margin-right: 1em">
               <v-ons-checkbox
                 input-id="check-3"
-                class="input"
+                class="input checkbox"
                 v-model="inputModel.week[2]"
                 @change="changeWeek(2, $event)"
               ></v-ons-checkbox>
@@ -430,7 +430,7 @@
             <label class="ntss-pat-event-label" style="margin-right: 1em">
               <v-ons-checkbox
                 input-id="check-4"
-                class="input"
+                class="input checkbox"
                 v-model="inputModel.week[3]"
                 @change="changeWeek(3, $event)"
               ></v-ons-checkbox>
@@ -439,7 +439,7 @@
             <label class="ntss-pat-event-label" style="margin-right: 1em">
               <v-ons-checkbox
                 input-id="check-5"
-                class="input"
+                class="input checkbox"
                 v-model="inputModel.week[4]"
                 @change="changeWeek(4, $event)"
               ></v-ons-checkbox>
@@ -448,7 +448,7 @@
             <label class="ntss-pat-event-label" style="margin-right: 1em">
               <v-ons-checkbox
                 input-id="check-6"
-                class="input"
+                class="input checkbox"
                 v-model="inputModel.week[5]"
                 @change="changeWeek(5, $event)"
               ></v-ons-checkbox>
@@ -457,7 +457,7 @@
             <label class="ntss-pat-event-label" style="margin-right: 1em">
               <v-ons-checkbox
                 input-id="check-7"
-                class="input"
+                class="input checkbox"
                 v-model="inputModel.week[6]"
                 @change="changeWeek(6, $event)"
               ></v-ons-checkbox>
@@ -536,7 +536,7 @@
             <input-datatemp
               :dateMin="dateMin"
               :dateMax="dateMax"
-              :data.sync="inputModel.monthStartDate"
+              v-model:data="inputModel.monthStartDate"
               :className="'month-start-date'"
               :functionArgs="4"
               :tempName="'tabTemp'"
@@ -559,7 +559,7 @@
             <input-datatemp
               :dateMin="dateMin"
               :dateMax="dateMax"
-              :data.sync="inputModel.monthEndDate"
+              v-model:data="inputModel.monthEndDate"
               :className="'month-end-date'"
               :functionArgs="4"
               :tempName="'tabTemp'"
@@ -1170,15 +1170,16 @@
   </div>
 </template>
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 // add No.18 付 start
 import InputDateTemplate from "@/components/common/custom-form-tags/InputDateTemplate";
 // add No.18 付 end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from "@/functions/common/MessageFormat";
+
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 // #5590 2023/04/20 ×を常に表示するように修正 林峻峰 start
@@ -1186,16 +1187,19 @@ import TimeInput from "@/components/common/TimeInput.vue";
 // #5590 2023/04/20 ×を常に表示するように修正 林峻峰 end
 // add #10359 編集権限の動作不正 start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
+import PatEventOwnerMixin from "@/components/pat-event/PatEventOwnerMixin";
 // add #10359 編集権限の動作不正 end
 //#10715:日付IF修正Start
 import DateInput from "@/components/common/DateInput.vue";
+import { messageFormat } from "@/functions/common/MessageFormat";
 //#10715:日付IF修正End
 export default {
+  mixins: [PatEventOwnerMixin],
   props: {
     // 初期日付
     inputStartDate: {
       type: String,
-      default: moment().format("YYYY-MM-DD"),
+      default: dayjs().format("YYYY-MM-DD"),
     },
   },
   components: {
@@ -1352,18 +1356,13 @@ export default {
     ]),
     // add FNSI-コントロールの削除 徐 start
     // ...mapGetters("pat-event/list", ["getUpdateMode"]),
-    ...mapGetters("pat-event/list", ["getUpdateMode", "getPatEventFlg"]),
+    ...mapGetters("pat-event/list", ["getUpdateMode", "getPatEventFlg", "getIsOtherFacility"]),
     // add FNSI-コントロールの削除 徐 end
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
-    // mod #12462 患者情報共有 20260312 start
-    ...mapGetters("pat-event/list", ["getIsEdit", "getUpdateMode", "getIsOtherFacility"]),
-    // mod #12462 患者情報共有 20260312 end
-    // add #12462 患者情報共有 20260312 start
     ...mapGetters("observe-record/list", ["getIsOtherFacilitys"]),
     ...mapGetters("pat-info", ["selectedPatId"]),
-    // add #12462 患者情報共有 20260312 end
     // add FNSI-共有を追加 王 20200921 end
     const() {
       return {
@@ -1427,18 +1426,18 @@ export default {
     },
     eventEndDateClass: {
       get() {
-        const from = moment(this.getPatEventRecord.eventStartDate)
+        const from = dayjs(this.getPatEventRecord.eventStartDate)
           .hours(0)
           .minutes(0)
           .seconds(0)
           .milliseconds(0);
-        const to = moment(this.getPatEventRecord.eventEndDate)
+        const to = dayjs(this.getPatEventRecord.eventEndDate)
           .hours(0)
           .minutes(0)
           .second(0)
-          .milliseconds(0);
-        to.add(1, "day");
-        to.add(-1, "milliseconds");
+          .milliseconds(0)
+          .add(1, "day")
+          .add(-1, "milliseconds");
         // 経過時間をミリ秒で取得
         const ms = to.diff(from); // 34214400
         // ミリ秒を日付に変換(端数切捨て)
@@ -1482,18 +1481,31 @@ export default {
       },
     },
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
   mounted() {
     //upd #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc start
-    if (this.$router.currentRoute.name != "observe-record-detail" && this.$router.currentRoute.name != "treatment-observe-detail") {
+    if (this.$route.name != "observe-record-detail" && this.$route.name != "treatment-observe-detail") {
       this.changeTabSelect(1);
     }
     //upd #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc end
   },
   methods: {
+    getScopedElementById(id) {
+      return getScopedElementById(id, this);
+    },
+    getScopedElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this);
+    },
+    getScopedQuery(selector) {
+      return queryScopedSelector(selector, this);
+    },
+    getScopedQueryAll(selector) {
+      return queryScopedSelectorAll(selector, this);
+    },
+
     // add #10359 編集権限の動作不正 start
     getItemAuthorized(pageCd, itemCd) {
       return getAuthorized(pageCd, itemCd);
@@ -1522,8 +1534,7 @@ export default {
       // 間隔が未入力の場合、補正処理をせずreturn
       if (
         this.inputModel.weekIntervalDay == null ||
-        this.inputModel.weekIntervalDay === ""
-      ) return;
+        this.inputModel.weekIntervalDay === "") return;
 
       //upd #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc start
       this.inputModel.weekIntervalDay = Number(this.inputModel.weekIntervalDay) > Number(this.timesMax) ?
@@ -1545,18 +1556,18 @@ export default {
       let startclassnm = null;
       let endclassnm = null;
       if (params.mode === 2) {
-        startclassnm = document.getElementsByClassName("every-start-date");
-        endclassnm = document.getElementsByClassName("every-end-date");
+        startclassnm = this.getScopedElementsByClassName("every-start-date");
+        endclassnm = this.getScopedElementsByClassName("every-end-date");
         startdate = params.startDate;
         enddate = params.endDate;
       } else if (params.mode === 3) {
-        startclassnm = document.getElementsByClassName("week-start-date");
-        endclassnm = document.getElementsByClassName("week-end-date");
+        startclassnm = this.getScopedElementsByClassName("week-start-date");
+        endclassnm = this.getScopedElementsByClassName("week-end-date");
         startdate = params.startDate;
         enddate = params.endDate;
       } else if (params.mode ===5) {
-        startclassnm = document.getElementsByClassName("month-start-date");
-        endclassnm = document.getElementsByClassName("month-end-date");
+        startclassnm = this.getScopedElementsByClassName("month-start-date");
+        endclassnm = this.getScopedElementsByClassName("month-end-date");
         startdate = params.startDate;
         enddate = params.endDate;
       }
@@ -1579,16 +1590,17 @@ export default {
       //upd #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc start
       // mod 6757 観察記録の新規登録時、カテゴリ選択を切り替えると入力欄の初期値が正しく表示されない 関 start
       // this.changeCondition(selectedId);
-      // if (this.$router.currentRoute.name != "treatment-observe-detail")
+      // if (this.$route.name != "treatment-observe-detail")
         this.changeCondition(selectedId);
       // mod 6757 観察記録の新規登録時、カテゴリ選択を切り替えると入力欄の初期値が正しく表示されない 関  end
       //upd #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc end
     },
     formatterDate(value) {
-      return moment(value, "YYYY-MM-DD").format("YYYY-MM-DD");
+      //return dayjs(value, "YYYY-MM-DD").format("YYYY-MM-DD");
+      return dayjs(value).format("YYYY-MM-DD");
     },
     formatterYMd(value) {
-      return moment(value, "YYYY-MM-DD").format("YYYYMMDD");
+      return dayjs(value).format("YYYYMMDD");
     },
     /**
      *
@@ -1737,10 +1749,7 @@ export default {
       await this.setPatPlansParams(params);
       // オーダ検索処理
       if (this.getPatEventRecord.patId) {
-        // mod #12462 患者情報共有 20260312 start
-        // const patId = this.getPatEventRecord.patId;
         const patId = this.selectedPatId;
-        // mod #12462 患者情報共有 20260312 end
         let sdt = new Date(params.startDate);
         /*mod FNSI-改修内容患者event bug 任 start*/
         /*let edt = new Date(params.startDate);*/
@@ -1751,10 +1760,8 @@ export default {
         edt.setDate(edt.getDate() + params.dateClass);
         const endDate = this.formatterYMd(edt);
         const startDate = this.formatterYMd(sdt);
-        // add #12462 患者情報共有 20260312 start
         const rec = this.getPatEventRecord;
         const eventCd = rec.patEventCd;
-        // add #12462 患者情報共有 20260312 end
         await this.fetchOrdMain({
           patId: patId,
           treatStartDate: startDate,
@@ -1817,10 +1824,7 @@ export default {
       await this.setPatPlansParams(params);
       // mod 8147 デフォルト値：当日 の日付の項目が、患者イベント開始日を変更しても更新されない 関  end
       if (this.getPatEventRecord.patId) {
-        // mod #12462 患者情報共有 20260312 start
-        // const patId = this.getPatEventRecord.patId;
         const patId = this.selectedPatId;
-        // mod #12462 患者情報共有 20260312 end
         let sdt = new Date(params.startDate);
         // mod FNSI5673-治療実績リンクの選択肢に実績のない日が表示される 周 start
         //let edt = new Date();
@@ -1830,10 +1834,8 @@ export default {
         // mod FNSI5673-治療実績リンクの選択肢に実績のない日が表示される 周 end
         const endDate = this.formatterYMd(edt);
         const startDate = this.formatterYMd(sdt);
-        // add #12462 患者情報共有 20260312 start
         const rec = this.getPatEventRecord;
         const eventCd = rec.patEventCd;
-        // add #12462 患者情報共有 20260312 end
         await this.fetchOrdMain({
           patId: patId,
           treatStartDate: startDate,
@@ -1871,10 +1873,7 @@ export default {
       await this.setPatPlansParams(params);
       // オーダ検索処理
       if (this.getPatEventRecord.patId) {
-        // mod #12462 患者情報共有 20260312 start
-        // const patId = this.getPatEventRecord.patId;
         const patId = this.selectedPatId;
-        // mod #12462 患者情報共有 20260312 end
         let sdt = new Date(params.startDate);
         /*mod FNSI-改修内容患者event bug 任 start*/
         /*let edt = new Date(params.startDate);*/
@@ -1885,10 +1884,8 @@ export default {
         edt.setDate(edt.getDate() + params.dateClass);
         const endDate = this.formatterYMd(edt);
         const startDate = this.formatterYMd(sdt);
-        // add #12462 患者情報共有 20260312 start
         const rec = this.getPatEventRecord;
         const eventCd = rec.patEventCd;
-        // add #12462 患者情報共有 20260312 end
         await this.fetchOrdMain({
           patId: patId,
           treatStartDate: startDate,
@@ -1916,7 +1913,7 @@ export default {
         if (params.startDate === null) {
           startDateIsInput = false;
         } else {
-          if (!moment(params.startDate, "YYYY-MM-DD", true).isValid()) {
+          if (!dayjs(params.startDate, "YYYY-MM-DD", true).isValid()) {
             startDateIsValid = false;
           }
         }
@@ -1924,21 +1921,19 @@ export default {
           if (params.endDate === null) {
             endDateIsInput = false;
           } else {
-            if (!moment(params.endDate, "YYYY-MM-DD", true).isValid()) {
+            if (!dayjs(params.endDate, "YYYY-MM-DD", true).isValid()) {
               endDateIsValid = false;
             }
-            const from1 = moment(params.startDate);
-            const to = moment(params.endDate);
+            const from1 = dayjs(params.startDate);
+            const to = dayjs(params.endDate);
             if (
               params.dateClass === 0 &&
               params.startTime !== null &&
-              params.endTime !== null
-            ) {
-              const fromTime = moment(
+              params.endTime !== null) {
+              const fromTime = dayjs(
                 params.startDate + "T" + params.startTime,
-                "YYYY-MM-DDTHH:mm"
-              );
-              const toTime = moment(
+                "YYYY-MM-DDTHH:mm");
+              const toTime = dayjs(
                 params.endDate + "T" + params.endTime,
                 "YYYY-MM-DDTHH:mm"
               );
@@ -1949,22 +1944,22 @@ export default {
               //#10715:日付IF修正Start
               if (params.mode === 2) {
                 //毎日：every-start-date
-                let startclassnm2 = document.getElementsByClassName("every-start-date");
-                let endclassnm2 = document.getElementsByClassName("every-end-date");
-                if (!startclassnm2[0].classList.contains("custom-input-date-invalid")) startclassnm2[0].classList.add("custom-input-date-invalid");
-                if (!endclassnm2[0].classList.contains("custom-input-date-invalid")) endclassnm2[0].classList.add("custom-input-date-invalid");
+                let startclassnm2 = this.getScopedElementsByClassName("every-start-date");
+                let endclassnm2 = this.getScopedElementsByClassName("every-end-date");
+                if (!startclassnm2[0]?.classList.contains("custom-input-date-invalid")) startclassnm2[0]?.classList.add("custom-input-date-invalid");
+                if (!endclassnm2[0]?.classList.contains("custom-input-date-invalid")) endclassnm2[0]?.classList.add("custom-input-date-invalid");
               } else if (params.mode === 3) {
                 //毎週：week-start-date
-                let startclassnm3 = document.getElementsByClassName("week-start-date");
-                let endclassnm3 = document.getElementsByClassName("week-end-date");
-                if (!startclassnm3[0].classList.contains("custom-input-date-invalid")) startclassnm3[0].classList.add("custom-input-date-invalid");
-                if (!endclassnm3[0].classList.contains("custom-input-date-invalid")) endclassnm3[0].classList.add("custom-input-date-invalid");
+                let startclassnm3 = this.getScopedElementsByClassName("week-start-date");
+                let endclassnm3 = this.getScopedElementsByClassName("week-end-date");
+                if (!startclassnm3[0]?.classList.contains("custom-input-date-invalid")) startclassnm3[0]?.classList.add("custom-input-date-invalid");
+                if (!endclassnm3[0]?.classList.contains("custom-input-date-invalid")) endclassnm3[0]?.classList.add("custom-input-date-invalid");
               } else if (params.mode === 5) {
                 //毎月：month-start-date
-                let startclassnm5 = document.getElementsByClassName("month-start-date");
-                let endclassnm5 = document.getElementsByClassName("month-end-date");
-                if (!startclassnm5[0].classList.contains("custom-input-date-invalid")) startclassnm5[0].classList.add("custom-input-date-invalid");
-                if (!endclassnm5[0].classList.contains("custom-input-date-invalid")) endclassnm5[0].classList.add("custom-input-date-invalid");
+                let startclassnm5 = this.getScopedElementsByClassName("month-start-date");
+                let endclassnm5 = this.getScopedElementsByClassName("month-end-date");
+                if (!startclassnm5[0]?.classList.contains("custom-input-date-invalid")) startclassnm5[0]?.classList.add("custom-input-date-invalid");
+                if (!endclassnm5[0]?.classList.contains("custom-input-date-invalid")) endclassnm5[0]?.classList.add("custom-input-date-invalid");
               }
               //#10715:日付IF修正End
               dateIsValid = false;
@@ -1974,10 +1969,9 @@ export default {
         if (
           params.dateClass === 0 &&
           params.startTime !== null &&
-          params.endTime !== null
-        ) {
-          const fromTime = moment(params.startTime, "HH:mm");
-          const toTime = moment(params.endTime, "HH:mm");
+          params.endTime !== null) {
+          const fromTime = dayjs(params.startTime, "HH:mm");
+          const toTime = dayjs(params.endTime, "HH:mm");
           if (!(fromTime <= toTime)) {
             timeIsValid = false;
           }
@@ -2019,7 +2013,7 @@ export default {
         const eventStartTime = this.eventStartTime;
         const eventEndDateClass = this.eventEndDateClass;
         const eventEndTime = this.eventEndTime;
-        if (!moment(eventStartDate, "YYYY-MM-DD", true).isValid()) {
+        if (!dayjs(eventStartDate, "YYYY-MM-DD", true).isValid()) {
           startDateIsValid = false;
         }
         // add FNSI-コントロールの削除 徐 start
@@ -2033,8 +2027,8 @@ export default {
             eventEndTime !== null
           ) {
             /*mod FNSI-改修内容履歴の内容を編集登録時の時間チェックが新規登録時のチェックと不一致。end*/
-            const fromTime = moment(eventStartTime, "HH:mm");
-            const toTime = moment(eventEndTime, "HH:mm");
+            const fromTime = dayjs(eventStartTime, "HH:mm");
+            const toTime = dayjs(eventEndTime, "HH:mm");
             if (!(fromTime <= toTime)) {
               timeIsValid = false;
             }
@@ -2180,7 +2174,7 @@ export default {
   watch: {
     /*add FNSI-改修内容redmain5673 任 start*/
     eventStartDate() {
-      this.$parent.editor();
+      this._patEventEditorOwner()?.editor?.();
     },
     /*add FNSI-改修内容redmain5673 任 end*/
     //add #9208 患者イベントの実績リンクでの選択肢が不正 関 start
@@ -2199,12 +2193,12 @@ export default {
     //upd #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc start
     // mod 6757 観察記録の新規登録時、カテゴリ選択を切り替えると入力欄の初期値が正しく表示されない 関 start
     // this.changeCondition(1);
-    // if (this.$router.currentRoute.name != "treatment-observe-detail")
+    // if (this.$route.name != "treatment-observe-detail")
       this.changeCondition(1);
     // mod 6757 観察記録の新規登録時、カテゴリ選択を切り替えると入力欄の初期値が正しく表示されない 関  end
     //upd #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc end
   },
-  destroyed() {},
+
 };
 </script>
 <style scoped>
@@ -2235,6 +2229,7 @@ export default {
   transition: all 0.2s ease;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: Helvetica Neue, Helvetica, Arial, Osaka, Meiryo, sans-serif !important;
 }
 .tab_item:hover {
   opacity: 0.75;
@@ -2285,7 +2280,8 @@ input[name="tab_item"] {
   max-width: 20em;
   vertical-align: middle;
 }
-.select >>> .select-input {
+.select :deep(.select-input) {
+  font-family: -apple-system, 'Helvetica Neue', 'Helvetica', 'Arial', 'Lucida Grande', sans-serif !important;
   opacity: 1;
 }
 .flex-wrap-div {

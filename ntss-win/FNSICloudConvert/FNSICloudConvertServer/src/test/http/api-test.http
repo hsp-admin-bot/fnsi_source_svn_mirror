@@ -1,0 +1,132 @@
+### 1. ログイン
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "facilityCd": "NKKSBR",
+  "dispUserId": "9439236869",
+  "password": "piao"
+}
+
+### 2. PG_DUMP アップロード
+POST http://localhost:8080/api/v1/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="uploadType"
+
+PG_DUMP
+--boundary
+Content-Disposition: form-data; name="facilityCode"
+
+NKKSBR
+--boundary
+Content-Disposition: form-data; name="file"; filename="pg_dump.zip"
+Content-Type: application/octet-stream
+
+< E:\tmp\uploads\pg_dump.zip
+--boundary--
+
+### 3. MONGO_DUMP アップロード
+POST http://localhost:8080/api/v1/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="uploadType"
+
+MONGO_DUMP
+--boundary
+Content-Disposition: form-data; name="facilityCode"
+
+NKKSBR
+--boundary
+Content-Disposition: form-data; name="file"; filename="mongo_dump.zip"
+Content-Type: application/octet-stream
+
+< E:\tmp\uploads\mongo_dump.zip
+--boundary--
+
+### 4. FILES アップロード
+POST http://localhost:8080/api/v1/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="uploadType"
+
+FILES
+--boundary
+Content-Disposition: form-data; name="facilityCode"
+
+NKKSBR
+--boundary
+Content-Disposition: form-data; name="file"; filename="files.zip"
+Content-Type: application/octet-stream
+
+< E:\tmp\uploads\files.zip
+--boundary--
+
+### 5. JOB開始 (off2on)
+POST http://localhost:8080/api/v1/jobs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "direction": "off2on",
+  "facilityCodes": ["NKKSBR"],
+  "uploadIds": {
+    "pgDump": "upload-20260317-f09956",
+    "mongoDump": "upload-20260317-f1f6ab",
+    "files": "upload-20260317-00a540"
+  }
+}
+
+### 6. JOBステータス確認
+GET http://localhost:8080/api/v1/jobs/33
+Authorization: Bearer {{token}}
+
+### 7. ログ確認
+GET http://localhost:8080/api/v1/jobs/33/logs?offset=0&limit=100
+Authorization: Bearer {{token}}
+
+### TASK1 単体実行
+POST http://localhost:8080/debug/jobs/33/tasks/TASK1_PG_IMPORT
+Authorization: Bearer {{token}}
+
+### TASK2 単体実行
+POST http://localhost:8080/debug/jobs/33/tasks/TASK2_PK_MAPPING
+Authorization: Bearer {{token}}
+
+### TASK3 単体実行
+POST http://localhost:8080/debug/jobs/33/tasks/TASK3_PK_REFRESH
+Authorization: Bearer {{token}}
+
+### TASK4 単体実行
+POST http://localhost:8080/debug/jobs/33/tasks/TASK4_FK_REFRESH
+Authorization: Bearer {{token}}
+
+### TASK5 単体実行
+POST http://localhost:8080/debug/jobs/33/tasks/TASK5_MONGO_IMPORT
+Authorization: Bearer {{token}}
+
+### TASK6 単体実行
+POST http://localhost:8080/debug/jobs/33/tasks/TASK6_MONGO_FK_REFRESH
+Authorization: Bearer {{token}}
+
+### TASK7 単体実行
+POST http://localhost:8080/debug/jobs/33/tasks/TASK7_PG_EXPORT
+Authorization: Bearer {{token}}
+
+### TASK8 単体実行
+POST http://localhost:8080/debug/jobs/33/tasks/TASK8_PG_RESTORE_PROD
+Authorization: Bearer {{token}}
+
+### TASK9 単体実行
+POST http://localhost:8080/debug/jobs/33/tasks/TASK9_MONGO_EXPORT_IMPORT
+Authorization: Bearer {{token}}
+
+### TASK10 単体実行
+POST http://localhost:8080/debug/jobs/33/tasks/TASK10_FILE_COPY
+Authorization: Bearer {{token}}

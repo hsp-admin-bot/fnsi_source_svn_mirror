@@ -23,8 +23,9 @@
 <script>
 import baseDeviceSetInfoList from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoList.vue";
 import { DATA_SOURCE_TYPE_MST } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
-import { mapGetters,mapActions } from "vuex";
+import { mapGetters,mapActions } from "@/compat/vue/vuex";
 import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
+import { getLatestHeaderElement, getHeaderHeight, getFooterMenuClientHeight, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 
 class Device {
   constructor(name, type) {
@@ -123,15 +124,15 @@ export default {
     calculateGridHeight() {
       if (!this.editingFlg) {
         const wh = this.windowHeight;
-        const hh = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .pop().clientHeight;
+        const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
         // フッターメニューの高さ
-        const fmh = document.getElementById("footer-menu").clientHeight
+        const fmh = getFooterMenuClientHeight(this.$el || null)
 
         // 追加ボタンや並び替えボタンエリアの高さ
-        if (document.getElementsByClassName("main-font")[1]) {
-          document.getElementsByClassName("main-font")[1].style.height = wh - hh - fmh + "px";
+        const mainFonts = getScopedElementsByClassName("main-font", this.$el || this);
+        const mainFont = this.$el?.closest?.(".main-font") || mainFonts[1] || mainFonts[0];
+        if (mainFont) {
+          mainFont.style.height = wh - hh - fmh + "px";
         }
       }
     },
@@ -149,7 +150,7 @@ export default {
       this.calculateGridHeight();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },

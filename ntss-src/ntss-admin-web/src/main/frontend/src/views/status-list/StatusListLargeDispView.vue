@@ -3,7 +3,9 @@
  */
 <template>
   <ntss-layout-split>
-    <main-component slot='main-content' ref='mainComponent' :history-key="historyKey" />
+    <template #main-content>
+      <main-component ref="mainComponent" :history-key="historyKey" />
+    </template>
   </ntss-layout-split>
 </template>
 

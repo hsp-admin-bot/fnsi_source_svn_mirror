@@ -15,5 +15,5 @@ public class WebApiCallProperties {
   /**
    * API呼び出しURL. 例（http://localhost:8080/ntss-web-api)
    */
-  private String Url;
+  private String url;
 }

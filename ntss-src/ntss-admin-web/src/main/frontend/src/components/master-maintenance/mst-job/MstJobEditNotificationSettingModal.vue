@@ -3,11 +3,14 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="personal-settings-body tab-contents-area">
+        <template #body>
+<div class="personal-settings-body tab-contents-area">
       <!-- すでにある個人設定タブ - 通知設定タブのコンポーネントを流用 -->
       <NotificationSettingComponent ref="notificationSettingComponentRef"  :showFooter="false" :mstJobEditMode="true" :mstJobData="initData"/>
     </div>
-    <div slot="footer" class="flex-container common-tab-footer">
+    </template>
+        <template #footer>
+<div class="flex-container common-tab-footer">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="btn2-cancel button denial-btn" @click="cancel">キャンセル</v-ons-button>
       </div>
@@ -15,18 +18,19 @@
         <v-ons-button class="common-style-select-button button registration-btn" :disabled="!isNotificationSettingChanged" @click="registration">確定</v-ons-button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import PopoverMixin from "@/components/PopoverMixin";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
 import NotificationSettingComponent from "@/components/modals/notification-setting/NotificationSettingComponent.vue";
 import { TAB_DEFINE_CD_NOTIFICATION_SETTING } from "@/constants/PersonalSettingConstants";
 
@@ -135,8 +139,6 @@ export default {
       );
     });
   },
-  beforeDestroy() {
-  }
 };
 </script>
 

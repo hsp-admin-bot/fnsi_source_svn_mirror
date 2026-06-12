@@ -29,13 +29,15 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 //定義
 import { 
   DEF_KUR_WIDTH,
   BACKGROUND_COLUMN_PAST_DAY, } from "@/components/schedule-list/Definitions.js";
 //日付扱い用
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 //シャント位置定義 '0':両方、'1':左、'2':右、'3':なし、'-':不明
 const DEF_SHUNT_BOTH = "0";
@@ -94,7 +96,7 @@ const DEF_CELL_HEIGHT_NOT_IN_USE = "0px";
 const DEF_SETTING_STYLE_THEME = "var(--ntss-list-background-color)";
 
 const DEF_AGENT_EDGE =
-  window.navigator.userAgent.toLowerCase()?.indexOf("edge") > -1;
+  (globalThis?.navigator?.userAgent || "").toLowerCase()?.indexOf("edge") > -1;
 
 export default {
   props: {
@@ -250,13 +252,13 @@ export default {
       this.resetDisp();
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
   mounted() {
     //自分自身のIDの取得
-    this.thisElem = document.getElementById(this.divId);
+    this.thisElem = this.$el?.id === this.divId ? this.$el : getScopedElementById(this.divId, this.$el || this);
 
     if (typeof this.propsJson !== DEF_UNDEFINED) {
       //設定があった場合、自分自身の表示設定処理をおこなう
@@ -372,7 +374,7 @@ export default {
       // mod #8844 Uncaught TypeError: Cannot read properties of null (reading 'style') 修正 林峻峰 end
 
       // 現在日付を取得する
-      const currentDate = moment(new Date()).format("YYYYMMDD");
+      const currentDate = dayjs(new Date()).format("YYYYMMDD");
 
       if (this.propsJson === null || !("title" in this.propsJson)) {
         //propsJsonの値設定がない、または、titleプロパティが無い時

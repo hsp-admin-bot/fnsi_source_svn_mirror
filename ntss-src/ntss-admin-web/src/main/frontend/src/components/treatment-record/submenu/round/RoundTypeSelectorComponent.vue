@@ -57,6 +57,7 @@
 <!--          style="font-size: inherit; width: 100%; margin: 2px;">-->
 <!--        </kendo-dropdownlist>-->
         <kendo-dropdownlist
+          ref="roundTypeDropdown"
           :disabled="!getOrdNo || atRound || !isNewRoundInfo || !getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
           v-model="selectedRoundTypeCd"
           @change="onChangeSelectedRoundTypeCd($event),onChangeRoundType()"
@@ -116,11 +117,12 @@
 // add #10570 回診記録指示コメント転記不具合_#10416指摘事項 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10570 回診記録指示コメント転記不具合_#10416指摘事項 dengshen end
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ROUND } from "@/router/treatment-record/index";
 import { RstRoundInfo } from "@/models/treatment-record/round/RstRoundInfo";
 import RoundComponentMixin from "@/components/treatment-record/submenu/round/RoundComponentMixin";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
 import { CODES } from "@/constants/TreatmentRecord";
 import {
   dateFormat,
@@ -136,14 +138,13 @@ import { sendRequestGetDoctorsAtFacility } from "@/apis/facility";
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
-// add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
-//add 9724 回診記録の動作が不正 start
-import cloneDeep from 'lodash/cloneDeep';
-//add 9724 回診記録の動作が不正 end
-//add #10593 NG マージ後，回診記録タイトル値がありません zhangyue start
-import { EventBus } from "@/eventBus.js";
+import { findKendoDropdownRoot, findKendoDropdownText, setKendoPopupSurfaceStyles } from "@/functions/common/KendoFunctions";
+
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { findKendoDropdownButton } from "@/compat/kendo/dom";
+
 //add #10593 NG マージ後，回診記録タイトル値がありません zhangyue end
 
 export default {
@@ -191,17 +192,9 @@ export default {
         }
         await this.getRstRoundsInfoAndSaveToStore();
         this.saveRoundType();
-        // style補正
-        let dropdownObj = document.getElementsByClassName("k-dropdown-wrap");
-        // fix FNSI-dropdownObjたまにundefinedになる 孫灝 20201105 start
-        if(dropdownObj) {
-          if(this.isNewRoundInfo){
-            dropdownObj[0].getElementsByClassName("k-select")[0].style.display = "";
-          } else {
-            dropdownObj[0].getElementsByClassName("k-select")[0].style.display = "none";
-          }
-        }
-        // fix FNSI-dropdownObjたまにundefinedになる 孫灝 20201105 end
+        this.$nextTick(() => {
+          this.syncRoundTypeDropdownPresentation();
+        });
         // modify start 馬 #9724
         if(!this.rstRoundsInfo.inProgress.round_type_cd && this.rstRoundsInfo.inProgress.round_type_name){
           this.roundTypes = cloneDeep(this.roundTypesAtStore_clone);
@@ -247,16 +240,9 @@ export default {
       }
     },
     isNewRoundInfo(){
-      let dropdownObj = document.getElementsByClassName("k-dropdown-wrap");
-      // fix FNSI-dropdownObjたまにundefinedになる 孫灝 20201105 start
-      if(dropdownObj) {
-        if(this.isNewRoundInfo){
-          dropdownObj[0].getElementsByClassName("k-select")[0].style.display = "";
-        } else {
-          dropdownObj[0].getElementsByClassName("k-select")[0].style.display = "none";
-        }
-      }
-      // fix FNSI-dropdownObjたまにundefinedになる 孫灝 20201105 end
+      this.$nextTick(() => {
+        this.syncRoundTypeDropdownPresentation();
+      });
     },
     // add 9724 start
     roundTypesAtStore(){
@@ -267,7 +253,7 @@ export default {
   computed: {
     ...mapGetters("pat-info", ["selectedPatId", "isNullPat"]),
     ...mapGetters("user", ["getFacilityCd"]),
-    ...mapGetters("treatment-record/common", ["getOrdNo"]),
+    ...mapGetters("treatment-record/common", ["getOrdNo", "getSharedFacilityCd"]),
     ...mapGetters("treatment-record/roundsInfo", {
       roundTypesAtStore: "roundTypes",
       rstRoundsInfoToCompare: "rstRoundsInfoToCompare",
@@ -281,16 +267,11 @@ export default {
     // add FNSI-指示者が「医者」以外の場合、回診記録タイトルと回診記録ステータスは非活性 徐 start
     ...mapGetters("indication", ["isDoctor"]),
     // add FNSI-指示者が「医者」以外の場合、回診記録タイトルと回診記録ステータスは非活性 徐 end
-    // add #12462 患者情報共有 Ji start
-    ...mapGetters("treatment-record/common", [
-      "getSharedFacilityCd",
-    ]),
-    ...mapGetters("user", {
-      facilityCd: "getFacilityCd",
-    }),
-    // add #12462 患者情報共有 Ji end
     registrationBtnTitle() {
       return this.isNewRoundInfo ? "未回診" : "回診済み";
+    },
+    isShared() {
+      return this.getFacilityCd === this.getSharedFacilityCd;
     },
     isRoundTypeSelected() {
       return this.selectedRoundTypeCd > -1;
@@ -313,11 +294,6 @@ export default {
       // 取得した強調表示値をもとにclass文字列返却
       return "registered-bg-color-" + highlighting;
     },
-    // add #12462 患者情報共有 Ji start
-    isShared() {
-      return this.facilityCd === this.getSharedFacilityCd;
-    }
-    // add #12462 患者情報共有 Ji end
   },
   methods: {
     ...mapActions("treatment-record/roundsInfo", [
@@ -399,7 +375,7 @@ export default {
         });
       } else {
         // 職種が医師の利用者一覧を取得
-        const doctorResponse = await sendRequestGetDoctorsAtFacility(this.getFacilityCd);
+        const doctorResponse = await sendRequestGetDoctorsAtFacility(this.getFacilityCd, this.selectedPatId);
         // add 9553 by kangjie 20231007 start ページボタンには既に権限制御が存在しているので、このコードに権限を判断する必要はありません。
         // 治療指示権限がない、又は対応する医師がいない場合は省略をしない
         // 指示コメントに転記のチェックがオン、且つ選択患者が？？？？患者(patId=null)の場合も省略しない
@@ -476,9 +452,7 @@ export default {
         this.commentInfo.treatDate :
         (() => {
           // 無期限の場合、`本日＋１年－1日`
-          const d = moment();
-          d.add("years", 1);
-          d.subtract('days', 1);
+          const d = dayjs().add(1, "years").subtract(1, 'days');
           return d.format("YYYYMMDD");
         })();
       return {
@@ -546,10 +520,8 @@ export default {
       let roundDateTime = dateFormat.utc2Jst(
         parseDate(
           roundDate,
-          roundTime
-        )
-      );
-      //9724-③　add  ljx end
+          roundTime));
+      //9724-③ add  ljx end
       return this.updateTreatmentRecordRstRoundsInfo({
         ordNo: this.getOrdNo,
         rstRoundsInfo: new RstRoundInfo(
@@ -613,9 +585,11 @@ export default {
             //await this.deleteRstIndComment();
             //del 10416治療記録＞回診記録の指示コメント展開バグ start end
             // add 9724 start
-	    // mod #12462 患者情報共有 Ji start
-            await this.fetchRoundTypes({facilityCd:this.getFacilityCd, patId:this.selectedPatId});
-	    // mod #12462 患者情報共有 Ji end
+            await this.fetchRoundTypes({
+              facilityCd: this.getFacilityCd,
+              patId: this.selectedPatId,
+              selectedPatId: this.selectedPatId
+            });
             // add 9724 end
 
             await this.getRstRoundsInfoAndSaveToStore();
@@ -627,10 +601,37 @@ export default {
         }
       });
     },
+    resolveRoundTypeDropdownRoot() {
+      const dropdownComponent = this.$refs.roundTypeDropdown;
+      const dropdownAnchor = dropdownComponent?.$el || dropdownComponent?.$refs?.root || this.$el?.querySelector(".type-selector");
+      return findKendoDropdownRoot(dropdownAnchor) || null;
+    },
+    resolveRoundTypeDropdownButton() {
+      const dropdownRoot = this.resolveRoundTypeDropdownRoot();
+      return findKendoDropdownButton(dropdownRoot) || null;
+    },
+    syncRoundTypeDropdownPresentation() {
+      const dropdownRoot = this.resolveRoundTypeDropdownRoot();
+      if (!dropdownRoot) {
+        return;
+      }
+      const textNode = findKendoDropdownText(dropdownRoot);
+      if (textNode) {
+        textNode.style.whiteSpace = "pre-wrap";
+        textNode.style.minHeight = "0.8em";
+        textNode.style.height = "auto";
+        textNode.style.color = "var(--kendo-input-color)";
+        textNode.style.backgroundColor = "var(--kendo-input-background-color)";
+      }
+      const trigger = this.resolveRoundTypeDropdownButton();
+      if (trigger) {
+        trigger.style.display = this.isNewRoundInfo ? "" : "none";
+      }
+    },
     // dropDownを開いた時にデータに応じて表示枠を広げる
-    addMaxContentStyle() {
+    addMaxContentStyle(event) {
       this.$nextTick(() => {
-        document.getElementsByClassName("k-animation-container")[0].firstElementChild.style.width = "max-content";
+        setKendoPopupSurfaceStyles(event, { width: "max-content" }, this.$el);
       });
     },
     //add #10593 NG マージ後，回診記録タイトル値がありません zhangyue start
@@ -645,9 +646,11 @@ export default {
     // add FNSI-指示者が「医者」以外の場合、回診記録タイトルと回診記録ステータスは非活性 徐 start
     // await this.fetchRoundTypes(this.getFacilityCd);
     await Promise.all([
-      // mod #12462 患者情報共有 Ji start
-      this.fetchRoundTypes({facilityCd:this.getFacilityCd, patId:this.selectedPatId}),
-      // mod #12462 患者情報共有 Ji end
+      this.fetchRoundTypes({
+        facilityCd: this.getFacilityCd,
+        patId: this.selectedPatId,
+        selectedPatId: this.selectedPatId
+      }),
       this.checkIsDoctor()
     ]);
     // add FNSI-指示者が「医者」以外の場合、回診記録タイトルと回診記録ステータスは非活性 徐 end
@@ -665,7 +668,7 @@ export default {
     EventBus.$on("refresh", this.refresh);
     //add #10593 NG マージ後，回診記録タイトル値がありません zhangyue end
   },
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.rstRoundsInfo.inProgress) {
       delete this.rstRoundsInfo.inProgress;
     }
@@ -679,13 +682,7 @@ export default {
     // 初期表示時のstyle補正
     this.$nextTick(() => {
       // CSS指定では適用されない為、要素作成を待ってstyleを付与する
-      let dropdownObj = document.getElementsByClassName("k-dropdown-wrap");
-      dropdownObj[0].firstElementChild.style.whiteSpace = "pre-wrap";
-      dropdownObj[0].firstElementChild.style.minHeight = "0.8em";
-      dropdownObj[0].firstElementChild.style.height = "auto";
-      dropdownObj[0].firstElementChild.style.color = "var(--kendo-input-color)"
-      dropdownObj[0].firstElementChild.style.backgroundColor = "var(--kendo-input-background-color)";
-      dropdownObj[0].getElementsByClassName("k-select")[0].style.display = "none";
+      this.syncRoundTypeDropdownPresentation();
     });
     // modify start 馬 #9724
     if (this.selectedRoundTypeCd == -1 && this.roundTypes[0] != undefined) {
@@ -713,7 +710,7 @@ export default {
 .type-selector .selectbox {
   width: 100%;
 }
-ons-select >>> .select-input {
+ons-select :deep(.select-input) {
   font-size: 1em !important;
   color: var(--treatment-record-text-color);
 }

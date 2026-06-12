@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.collections.MapUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.springframework.util.StringUtils;
 
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;

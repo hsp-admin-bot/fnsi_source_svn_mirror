@@ -8,12 +8,15 @@
     <offwater v-bind="tareOffwaterProps" />
   </base-tare-offwater>
   <modal-base v-else @onClose="cancelConfirm">
-    <!-- mod #10359 編集権限の動作不正 dengshen start -->
-    <!-- <component :is="selectedDeviceSetType" slot="body" ref="deviceSetInfo" v-bind="deviceProps" @close="hideModal()" /> -->
-    <component :is="selectedDeviceSetType" slot="body" :is-mst="true" ref="deviceSetInfo" v-bind="deviceProps" @close="hideModal()" />
-    <!-- mod #10359 編集権限の動作不正 dengshen end -->
+    <template #body>
+      <!-- mod #10359 編集権限の動作不正 dengshen start -->
+      <!-- <component :is="selectedDeviceSetType" slot="body" ref="deviceSetInfo" v-bind="deviceProps" @close="hideModal()" /> -->
+      <component :is="selectedDeviceSetType" :is-mst="true" ref="deviceSetInfo" v-bind="deviceProps" @close="hideModal()" />
+      <!-- mod #10359 編集権限の動作不正 dengshen end -->
+    </template>
 
-    <v-ons-row slot="footer" class="button-area">
+    <template #footer>
+      <v-ons-row class="button-area">
       <v-ons-col class="button-cancel">
         <v-ons-button class="btn2-cancel common-style-cancel-button" @click="cancelConfirm()">
           キャンセル
@@ -24,7 +27,8 @@
           確定
         </v-ons-button>
       </v-ons-col>
-    </v-ons-row>
+      </v-ons-row>
+    </template>
   </modal-base>
 </template>
 
@@ -32,7 +36,7 @@
   import {
     mapGetters,
     mapActions
-  } from "vuex";
+  } from "@/compat/vue/vuex";
   import {
     DATA_SOURCE_TYPE_MST,
     DATA_SOURCE_TYPE_PAT,
@@ -43,7 +47,7 @@
   import ModalBase from "@/components/modals/SubModalBase";
   import {
     EventBus
-  } from "@/eventBus";
+  } from "@/compat/vue/event-bus.js";
   // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
   import { messageFormat } from '@/functions/common/MessageFormat';
   import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
@@ -175,8 +179,7 @@
                       this.deviceType === this.DEVICE_TYPE_IHDF ||
                       this.deviceType === this.DEVICE_TYPE_BVUFC ||
                       this.deviceType === this.DEVICE_TYPE_DIA ||
-                      this.deviceType === this.DEVICE_TYPE_QBQD
-                  ) {
+                      this.deviceType === this.DEVICE_TYPE_QBQD) {
                     await this.$refs.deviceSetInfo.save();
                   } else {
                     await this.$refs.deviceSetInfo.saveConfirm();
@@ -208,8 +211,7 @@
                       this.deviceType === this.DEVICE_TYPE_IHDF ||
                       this.deviceType === this.DEVICE_TYPE_BVUFC ||
                       this.deviceType === this.DEVICE_TYPE_DIA ||
-                      this.deviceType === this.DEVICE_TYPE_QBQD
-                  ) {
+                      this.deviceType === this.DEVICE_TYPE_QBQD) {
                     await this.$refs.deviceSetInfo.save();
                   } else {
                     await this.$refs.deviceSetInfo.saveConfirm();
@@ -228,8 +230,7 @@
               this.deviceType === this.DEVICE_TYPE_IHDF ||
               this.deviceType === this.DEVICE_TYPE_BVUFC ||
               this.deviceType === this.DEVICE_TYPE_DIA ||
-              this.deviceType === this.DEVICE_TYPE_QBQD
-          ) {
+              this.deviceType === this.DEVICE_TYPE_QBQD) {
             await this.$refs.deviceSetInfo.save();
           } else {
             await this.$refs.deviceSetInfo.saveConfirm();
@@ -248,7 +249,7 @@
         // } else if (this.deviceType === 'qbqd') {
         //   await this.setSelectedDeviceSetInfoState(
         //     { deviceState: { 430: this.$refs.deviceSetInfo.devA[430].value.editValue, 431: this.$refs.deviceSetInfo.devA[431].value.editValue } }
-        //   )
+        //)
         // } else if (this.deviceType === 'bvufc') {
         //   await this.setSelectedDeviceSetInfoState({ deviceState: this.$refs.deviceSetInfo.devA[196].value.editValue })
         // } else if (this.deviceType === 'dia') {
@@ -269,7 +270,7 @@
       EventBus.$on("mstTreatmentSetRegistered", this.modRegisteredFlag);
     },
 
-    beforeDestroy() {
+    beforeUnmount() {
       EventBus.$off("mstTreatmentSetRegistered", null);
     }
   };
@@ -279,24 +280,24 @@
 
 <style scoped>
   /* TODO: 共通スタイル(modal.css)に定義 */
-  div>>>.sub-modal-header .toolbar {
+  div :deep(.sub-modal-header .toolbar) {
     background-color: var(--ntss-header-background-color);
   }
 
-  div>>>.sub-modal-header .toolbar__title.toolbar__left {
+  div :deep(.sub-modal-header .toolbar__title.toolbar__left) {
     color: var(--ntss-header-color) !important;
   }
 
-  div>>>.sub-modal-search,
-  div>>>.sub-modal-body,
-  div>>>.sub-modal-footer,
-  div>>>.sub-modal-footer .bottom-bar {
+  div :deep(.sub-modal-search),
+  div :deep(.sub-modal-body),
+  div :deep(.sub-modal-footer),
+  div :deep(.sub-modal-footer .bottom-bar) {
     background-color: var(--ntss-base-background-color);
     color: var(--ntss-base-color);
   }
 
   @media only screen and (max-width:667px) {
-    div>>>.sub-modal-footer {
+    div :deep(.sub-modal-footer) {
       bottom: -11px;
     }
   }

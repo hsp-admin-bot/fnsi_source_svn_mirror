@@ -8,7 +8,7 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
@@ -19,6 +19,7 @@ import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -64,7 +65,7 @@ private String CONNECT_BASE_URI;
    */
   final class NoProcResponseErrorHandler extends DefaultResponseErrorHandler {
     @Override
-    public void handleError(ClientHttpResponse response) throws IOException {
+    public void handleError(URI url, HttpMethod method, ClientHttpResponse response) throws IOException {
         // なにもしない→HttpStatusが異常値でも例外を発生させない
     }
   }
@@ -107,7 +108,7 @@ private String CONNECT_BASE_URI;
       long start = System.currentTimeMillis();
       // リクエスト処理
       ResponseEntity<String> response = rt.exchange(request, String.class);
-      status = response.getStatusCode();
+      status = HttpStatus.valueOf(response.getStatusCode().value());
       ret = response.getBody();
       // log start
       long cost = System.currentTimeMillis() - start;
@@ -182,7 +183,7 @@ private String CONNECT_BASE_URI;
       long start = System.currentTimeMillis();
       // リクエスト処理
       ResponseEntity<byte[]> response = rt.exchange(request, byte[].class);
-      status = response.getStatusCode();
+      status = HttpStatus.valueOf(response.getStatusCode().value());
       ret = response.getBody();
       // log start
       long cost = System.currentTimeMillis() - start;
@@ -232,7 +233,7 @@ private String CONNECT_BASE_URI;
    */
   public ResponseEntity<String>  registerFacilityCancelManage(JSONObject registerData) throws URISyntaxException,RuntimeException {
     if (registerData == null) {
-      return new ResponseEntity<>("施設解約登録情報が不正な値です。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("施設解約登録情報が不正な値です。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     String addUri = "/register";
     ResponseEntity<String> ret = this.webApiCallAsReturnString(
@@ -257,7 +258,7 @@ private String CONNECT_BASE_URI;
    */
   public ResponseEntity<String>  cancelFacilityCancelManage(JSONObject cancelData) throws URISyntaxException,RuntimeException {
     if (cancelData == null) {
-      return new ResponseEntity<>("施設解約キャンセル情報が不正な値です。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("施設解約キャンセル情報が不正な値です。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     String addUri = "/cancel";
     ResponseEntity<String> ret = this.webApiCallAsReturnString(
@@ -282,7 +283,7 @@ private String CONNECT_BASE_URI;
    */
   public ResponseEntity<String>  completeDeleteFacility(String facilityCd) throws URISyntaxException,RuntimeException {
     if (facilityCd.isEmpty()) {
-      return new ResponseEntity<>("施設コードが指定されていません。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("施設コードが指定されていません。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     String addUri = "/completeDelete";
     JSONObject jsonBody = new JSONObject();
@@ -309,7 +310,7 @@ private String CONNECT_BASE_URI;
    */
   public ResponseEntity<String>  deleteBackupFileFacility(String facilityCd) throws URISyntaxException,RuntimeException {
     if (facilityCd.isEmpty()) {
-      return new ResponseEntity<>("施設コードが指定されていません。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("施設コードが指定されていません。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     String addUri = "/dataDelete";
     JSONObject jsonBody = new JSONObject();
@@ -332,7 +333,7 @@ private String CONNECT_BASE_URI;
    */
   public ResponseEntity<byte[]> getBackupBinary(JSONObject registerData) throws URISyntaxException,RuntimeException {
     if (registerData == null) {
-      return new ResponseEntity<>(null, null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     String addUri = "/getBackupBinary";
     ResponseEntity<byte[]> ret = this.webApiCallAsReturnByte(

@@ -12,7 +12,7 @@
       ProductCode は UpgradeCodeGuid + ProductVersion から自動生成される（UUID v5）
       UpgradeCodeGuid は絶対に変えない
     -->
-    <ProductVersion>2.1.8</ProductVersion>
+    <ProductVersion>2.1.9</ProductVersion>
     <UpgradeCodeGuid>E5B21E3C-7E94-4B3A-8A9D-28F3B4C2A1D9</UpgradeCodeGuid>
     <DefineConstants>
       SrcBin=$(MSBuildProjectDirectory)\..\FNSiCSIService\bin\$(Configuration)\;

@@ -6,7 +6,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,12 +22,13 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import java.util.Arrays;
 
-import javax.annotation.Resource;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import jakarta.annotation.Resource;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
-import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -44,11 +44,9 @@ import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
 import jp.co.nikkiso.ntss.coop_api.request.WebSocketTimeDataSetRequest;
 import jp.co.nikkiso.ntss.coop_api.response.SysDataSetResult;
 import jp.co.nikkiso.ntss.coop_api.service.LogService;
-import jp.co.nikkiso.ntss.coop_api.utils.JournalConvertConstants;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 import jp.co.nikkiso.ntss.core.dao.MstCoopFacilityDao;
 import jp.co.nikkiso.ntss.core.dao.MstIfEdgeDao;
-import jp.co.nikkiso.ntss.core.entity.MstCoopFacility;
 import jp.co.nikkiso.ntss.core.entity.MstIfEdge;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
@@ -60,7 +58,7 @@ import lombok.Getter;
 public class IFEdgeTimeDataSetHandler extends TextWebSocketHandler {
 
   private final String NODE_KEY_VALUE = "NTSS-NKK-ESM-TDC-YSK-NODE";
-  
+
   /**
    * データセットService.
    */
@@ -262,8 +260,8 @@ public class IFEdgeTimeDataSetHandler extends TextWebSocketHandler {
           // add 2021-08-02 定時の外部viewのタイムアウト処理の対応 孫 start
 
           // Zipファイル名を作成する
-          //String fileTime = DateTime.now().toString("YYYYMMDDHHmmssSSS");
-          String fileTime = DateTime.now().toString("yyyyMMddHHmmssSSS"); 
+          //String fileTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+          String fileTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
           String zipFileName = "View_" + Thread.currentThread().getId() + "_" + fileTime;
 
           // ZIPファイルの準備
@@ -335,20 +333,20 @@ public class IFEdgeTimeDataSetHandler extends TextWebSocketHandler {
                 String fileName = keyName + "_" + fileTime + ".csv";
                 zos.putNextEntry(new ZipEntry(fileName));
 
-                eventLogMessage.setLogMessage("VIEW連携レスポンスデータ CSV変換処理開始" + DateTime.now().toString("yyyyMMddHHmmssSSS"));
+                eventLogMessage.setLogMessage("VIEW連携レスポンスデータ CSV変換処理開始" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS")));
                 logService.log(LogLevel.DEBUG, eventLogMessage, null, SERVICE_NAME.FNSI, null);
                 // データをCSV化する
                 String response = generateCSVString(dataSetResponse);
-                eventLogMessage.setLogMessage("VIEW連携レスポンスデータ CSV変換処理終了" + DateTime.now().toString("yyyyMMddHHmmssSSS"));
+                eventLogMessage.setLogMessage("VIEW連携レスポンスデータ CSV変換処理終了" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS")));
                 logService.log(LogLevel.DEBUG, eventLogMessage, null, SERVICE_NAME.FNSI, null);
-                
+
                 eventLogMessage.setLogMessage("VIEW連携レスポンスデータ byte配列変換処理開始");
                 logService.log(LogLevel.DEBUG, eventLogMessage, null, SERVICE_NAME.FNSI, null);
                 // データをbyte[]する
                 byte[] bytes = response.getBytes(Charset.forName("sjis"));
                 eventLogMessage.setLogMessage("VIEW連携レスポンスデータ byte配列変換処理終了");
                 logService.log(LogLevel.DEBUG, eventLogMessage, null, SERVICE_NAME.FNSI, null);
-                
+
                 eventLogMessage.setLogMessage("VIEW連携レスポンスデータ zip書き込み処理開始");
                 logService.log(LogLevel.DEBUG, eventLogMessage, null, SERVICE_NAME.FNSI, null);
                 zos.write(bytes, 0, bytes.length);
@@ -416,7 +414,7 @@ public class IFEdgeTimeDataSetHandler extends TextWebSocketHandler {
         resultMessage = future.get();
       }else{
         resultMessage = future.get(noderedTimeOut, TimeUnit.MILLISECONDS);
-      }	
+      }
     } catch (TimeoutException e) {
       future.cancel(true);
 
@@ -897,20 +895,20 @@ public class IFEdgeTimeDataSetHandler extends TextWebSocketHandler {
 
     return msgList;
   }
-  
-  
+
+
   public static String generateCSVString(List<Map<String, Object>> dataList) throws IOException {
       StringWriter stringWriter = new StringWriter();
       try (CSVPrinter printer = new CSVPrinter(stringWriter, CSVFormat.ORACLE)) {
-      	
+
       	String str =">゛j^q-(";
-      	
+
           // Write header
           if (!dataList.isEmpty()) {
               Map<String, Object> firstRow = dataList.get(0);
-              
+
               for (String header:firstRow.keySet()) {
-              	
+
               	if(header != null) {
               		printer.print(header);
               	}
@@ -918,12 +916,12 @@ public class IFEdgeTimeDataSetHandler extends TextWebSocketHandler {
               printer.print(str);
               printer.println();
           }
-          
+
           // Write data
           for (Map<String, Object> row : dataList) {
               for (Map.Entry<String, Object> entry : row.entrySet()) {
                   Object value = entry.getValue();
-                  
+
                   if (value != null) {
 
                   	 printer.print(value.toString());

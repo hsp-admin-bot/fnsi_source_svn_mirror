@@ -5,7 +5,7 @@
   <div class="common-tab-area">
     <div class="common-tab-content" :style="heightStyles">
       <v-ons-list style="height: auto;" class="record-accordion" v-for="cateInfo in categoryInfoList" :key="cateInfo.categoryNo">
-        <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="cateInfo.isExpanded">
+        <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="cateInfo.isExpanded">
           <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
             <div class="center card-header color-header">
               {{ cateInfo.categoryName }}
@@ -44,7 +44,7 @@
                       :step="1"
                       :min="1"
                       :max="999"
-                      style="width: 4em;"
+                      style="width: 4em;min-width:48px!important;"
                       @handlerInput="(val) => { editValue = Number(val) }"
                     />
                     <span style="margin-left: 5px;">秒</span>
@@ -148,7 +148,7 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-      :visible.sync="userMenuPopoverVisible"
+      v-model:visible="userMenuPopoverVisible"
       :target="userMenuPopoverTarget"
       :cover-target="false"
       :direction="userMenuPopoverDirection"
@@ -163,7 +163,7 @@
 </template>
 
  <script>
-   import {mapActions, mapGetters, mapMutations} from "vuex";
+   import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
    import {ApiHelper} from "@/apis/AxiosHelper";
    import PopoverMixin from "@/components/PopoverMixin";
    //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
@@ -178,6 +178,7 @@
   import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
   // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
   import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
+import { getScopedElementById, getScopedElementsByClassName, getScopedUserAgent } from "@/functions/common/LayoutMeasureHelper";
 
   const NOTIF_ID_TOAST_DURATION = '39'; // トースト通知表示時間（秒）
 
@@ -254,9 +255,9 @@
     //       // this.personalSettings[2]= flg;
     //       // this.personalSettings[21]= flg;
     //       // this.personalSettings[24]= flg;
-    //       this.$set(this.personalSettings, 2, flg);
-    //       this.$set(this.personalSettings, 21, flg);
-    //       this.$set(this.personalSettings, 24, flg);
+    //       this._compatSet(this.personalSettings, 2, flg);
+    //       this._compatSet(this.personalSettings, 21, flg);
+    //       this._compatSet(this.personalSettings, 24, flg);
     //       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_個別設定 20231117 ztc end
     //     }else{
     //       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_個別設定 20231117 ztc start
@@ -264,9 +265,9 @@
     //       // this.importantSettings[21]= flg;
     //       // this.importantSettings[24]= flg;
     //
-    //       this.$set(this.importantSettings, 2, flg);
-    //       this.$set(this.importantSettings, 21, flg);
-    //       this.$set(this.importantSettings, 24, flg);
+    //       this._compatSet(this.importantSettings, 2, flg);
+    //       this._compatSet(this.importantSettings, 21, flg);
+    //       this._compatSet(this.importantSettings, 24, flg);
     //
     //       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_個別設定 20231117 ztc end
     //     }
@@ -298,7 +299,6 @@
     /**
      * 保存ボタンクリックイベント処理.
      */
-    /* eslint-disable no-unused-vars */
     save() {
       // 共通ローダー:表示開始
       this.setLoadingScreenVisible(true);
@@ -374,8 +374,7 @@
           // )}</div>`
           title: DIALOG_MESSAGES['00200111'].title,
           message: `<div style="text-align:left;">${messageFormat(DIALOG_MESSAGES['00200111'].message)}${itemNames.join(
-            ""
-          )}</div>`
+            "")}</div>`
           // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
         });
         // チェックエラー時はnullを返却
@@ -403,8 +402,7 @@
           // )}</div>`
           title: DIALOG_MESSAGES['00200111'].title,
           message: `<div style="text-align:left;">${messageFormat(DIALOG_MESSAGES['00200111'].message)}${itemNames.join(
-            ""
-          )}</div>`
+            "")}</div>`
           // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
         });
         // チェックエラー時はnullを返却
@@ -503,7 +501,7 @@
      * 通知定義を取得し、設定項目情報に整形する.
      */
     async fetchTabDefine() {
-      const sysNotification = await ApiHelper.get("/sys_notification/getSysNotification/");
+      const sysNotification = await ApiHelper.get("/sys_notification/getSysNotification");
       const ctlNo = 12; // システム設定(sys_system_define)の管理番号
       const sysSystemDefine = await ApiHelper.get(`/sys_system_define/getSysSystemDefine/${ctlNo}`)
       const categoryNames = JSON.parse(sysSystemDefine.data[0].value);
@@ -566,7 +564,7 @@
           }
         }
         /*add FNSI-改修内容5748 任 end*/
-        if(categoryInfo.categoryNo !== 90 ){
+        if(categoryInfo.categoryNo !== 90){
           this.categoryInfoList.push(categoryInfo);
         }
       }
@@ -624,20 +622,20 @@
      * Gridの高さを調整する
      */
     calculateGridHeight() {
-      const contentsHeight = document.getElementsByClassName(
-        "tab-contents-area"
-      )[0].clientHeight;
-      const footerHeight = this.showFooter ? document.getElementsByClassName(
-        "common-tab-footer"
-      )[0].clientHeight : 0;
+      const contentsHeight = getScopedElementsByClassName(
+        "tab-contents-area", this.$el || this)[0]?.clientHeight || 0;
+      const footerHeight = this.showFooter ? getScopedElementsByClassName(
+        "common-tab-footer", this.$el || this)[0]?.clientHeight || 0 : 0;
       this.contentsAreaHeight = contentsHeight - footerHeight - 10;
     },
     /**
      * 吹き出し表示処理
      */
     showPopOver(event, message) {
-      var pop = document.getElementById("popOverMessage");
-      pop.innerText = message;
+      const pop = getScopedElementById("popOverMessage", this.$el || this);
+      if (pop) {
+        pop.innerText = message;
+      }
       this.userMenuPopoverTarget = event;
       this.userMenuPopoverVisible = true;
     },
@@ -765,7 +763,7 @@
     this.startLoadingScreen();
 
     // iOS/Androidの場合は吹き出しの向き変更
-    const ua = navigator.userAgent;
+    const ua = getScopedUserAgent(this.$el || null);
     if (ua.match(/Android/) || ua.match(/iPhone|iPad/)) {
       this.userMenuPopoverDirection = 'up';
     }
@@ -814,21 +812,24 @@
 .right {
   text-align: right;
 }
-.common-tab-content >>> .text-input,
-.common-tab-content >>> select {
+.common-tab-content :deep(select) {
   font-size: 1em;
 }
-.common-tab-content >>> ons-row {
+
+.common-tab-content :deep(.text-input) {
+  font-size: 1em;
+}
+.common-tab-content :deep(ons-row) {
   height: auto;
 }
-.common-tab-content >>> .tab-item {
+.common-tab-content :deep(.tab-item) {
   margin-bottom: 5px;
 }
 .item-checkbox {
   flex: 1 0 15px;
   max-width: 35px;
 }
-.common-tab-content >>> select {
+.common-tab-content :deep(select) {
   border: solid 1px var(--personal-setting-select-border-color);
 }
 .popover-message {
@@ -855,6 +856,9 @@
 }
 .record-accordion .card-contents table th {
   background-image: none !important;
+}
+.record-accordion .card-contents table thead tr th:last-child {
+  text-align: left;
 }
 .record-accordion .list-item {
   padding: 0;

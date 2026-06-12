@@ -3,7 +3,7 @@ package jp.co.nikkiso.ntss.web_api.web.rest;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import jp.co.nikkiso.ntss.web_api.service.LogEventUtils;
 import org.json.JSONArray;

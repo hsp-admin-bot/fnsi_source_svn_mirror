@@ -18,6 +18,7 @@ import jp.co.nikkiso.ntss.admin_web.service.ordmain.OrdMainMediInfoService;
 import jp.co.nikkiso.ntss.admin_web.service.ordmain.check.OrdMainCondInfoCheck;
 import jp.co.nikkiso.ntss.admin_web.service.ordmain.check.OrdMainOrdCheck;
 import jp.co.nikkiso.ntss.admin_web.service.ordmain.util.CommonUtils;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.web.rest.util.IndicationUtils;
 import jp.co.nikkiso.ntss.admin_web.web.rest.validation.ApiEntityOrdMain;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
@@ -30,7 +31,7 @@ import jp.co.nikkiso.ntss.core.entity.OrdMain;
 import jp.co.nikkiso.ntss.core.entity.PatMain;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -38,6 +39,7 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
 import org.springframework.validation.annotation.Validated;
@@ -59,6 +61,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * オーダメインの{@link RestController}クラス
@@ -110,7 +113,8 @@ public class OrdMainImproveResource {
    */
   @PostMapping("/ord/createByTreatSetCd")
   public ResponseEntity<String> createOrdByTreatSetCd(
-    @Validated @RequestBody ApiEntityOrdMain.ValiCreateTreatPlan bodyData, BindingResult validationResult) throws JSONException, ParseException {
+    @Validated @RequestBody ApiEntityOrdMain.ValiCreateTreatPlan bodyData, BindingResult validationResult,
+    @AuthenticationPrincipal NtssUser ntssUser) throws JSONException, ParseException {
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to insertByTreatSetCd OrdMain : " + bodyData.getTreatment_set_cd() + bodyData.getUp_date());
     logService.log(LogLevel.DEBUG, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
@@ -128,13 +132,17 @@ public class OrdMainImproveResource {
         logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
       }
       // 引数は、ボディデータ、ヘッダーデータ、ステータス
-      return new ResponseEntity<>("パラメータエラー", null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>("パラメータエラー", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     PatMain patMain = patMainDao.selectById(Long.parseLong(bodyData.getPat_id()));
 
     if (null == patMain) {
-      return new ResponseEntity<>("患者情報(pat_main)参照エラー", null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>("患者情報(pat_main)参照エラー", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
+    }
+    if (!hasFacilityAccess(ntssUser, bodyData.getFacility_cd())
+      || !hasFacilityAccess(ntssUser, patMain.getFacility_cd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
     }
 
     // チェック：スケジュール延長処理中の場合、処理を中止する
@@ -147,7 +155,7 @@ public class OrdMainImproveResource {
     // 治療方法セット取得
     List<MstTreatmentSet> listMstTreatSet = mstInfoService.findMstTreatmentSetByCd(Integer.parseInt(bodyData.getTreatment_set_cd()));
     if (1 != listMstTreatSet.size()) {
-      return new ResponseEntity<>("治療方法セットマスタ参照エラー", null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>("治療方法セットマスタ参照エラー", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     MstTreatmentSet treatmentSet = listMstTreatSet.get(0);
@@ -165,7 +173,7 @@ public class OrdMainImproveResource {
       validateTreatmentSetChangeEventLogMessage.setLogMessage(errorMsg);
       logService.log(LogLevel.INFO, validateTreatmentSetChangeEventLogMessage, StringUtils.EMPTY, LoggingConstant.SERVICE_NAME.FNSI, null);
 
-      return new ResponseEntity<>("排他エラー", null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>("排他エラー", (org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     JSONObject responseData = new JSONObject("{}");
@@ -174,7 +182,7 @@ public class OrdMainImproveResource {
     String errorMsg2 = ordMainOrdCheck.validateScheduleScope(bodyData, treatmentSet.getTreatmentCd());
     if (StringUtils.isNotEmpty(errorMsg2)) {
       responseData.put("errorMessage", errorMsg2);
-      return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+      return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     }
 
     HttpStatus status = HttpStatus.OK;
@@ -265,7 +273,7 @@ public class OrdMainImproveResource {
           LoggingConstant.SERVICE_NAME.FNSI, null);
       }
     }
-    return new ResponseEntity<>(responseData.toString(), null, status);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, status);
   }
   // add #12465 同患者同日同治療方法同クールの使用制限をしてもメッセージがでない zkm end
 
@@ -278,11 +286,17 @@ public class OrdMainImproveResource {
    */
   @PostMapping("/medications/create")
   public ResponseEntity<String> createOrdMainMediInfo(
-    @Validated @RequestBody List<ApiEntityOrdMain.ValiOrdMedi> bodyDataList) {
+    @Validated @RequestBody List<ApiEntityOrdMain.ValiOrdMedi> bodyDataList,
+    @AuthenticationPrincipal NtssUser ntssUser) {
 
     ApiEntityOrdMain.ValiOrdMedi valiOrdMedi = bodyDataList.get(0);
     long patId = Long.parseLong(valiOrdMedi.getPat_id());
     PatMain patMain = patMainDao.selectById(patId);
+    if (!hasFacilityAccess(ntssUser, valiOrdMedi.getFacility_cd())
+      || !hasFacilityAccess(ntssUser, patMain == null ? null : patMain.getFacility_cd())
+      || bodyDataList.stream().anyMatch(item -> !hasFacilityAccess(ntssUser, item.getFacility_cd()))) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     // チェック：スケジュール延長処理中の場合、治療条件変更を中止する
     String scheduleExtensionMsg = ordMainCondInfoCheck
       .validateScheduleExtension(valiOrdMedi.getIs_deadline(), patMain.getSch_ext_status());
@@ -380,7 +394,7 @@ public class OrdMainImproveResource {
         logService.log(LogLevel.ERROR, elm, LoggingConstant.FUNCTION_CODE.FUNC_PAT_VIEWER, LoggingConstant.SERVICE_NAME.FNSI, null);
       }
     }
-    return new ResponseEntity<>(responseData.toString(), null, status);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, status);
   }
 
   /**
@@ -392,11 +406,16 @@ public class OrdMainImproveResource {
   @PostMapping("/medications/update")
   public ResponseEntity<String> updateOrdMainMediInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData,
-    BindingResult validationResult
+    BindingResult validationResult,
+    @AuthenticationPrincipal NtssUser ntssUser
   ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
     long patId = Long.parseLong(bodyData.getPat_id());
     String facilityCd = bodyData.getFacility_cd();
     PatMain patMain = patMainDao.selectById(patId);
+    if (!hasFacilityAccess(ntssUser, facilityCd)
+      || !hasFacilityAccess(ntssUser, patMain == null ? null : patMain.getFacility_cd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     // チェック：スケジュール延長処理中の場合、治療条件変更を中止する
     String scheduleExtensionMsg = ordMainCondInfoCheck
       .validateScheduleExtension(bodyData.getIs_deadline(), patMain.getSch_ext_status());
@@ -439,7 +458,7 @@ public class OrdMainImproveResource {
           .filter(ord -> "0".equals(ord.getRstDialysisState())).collect(Collectors.toList());
       }
       if (updatePreOrdMains.isEmpty()) {
-        return new ResponseEntity<>(responseData.toString(), null, status);
+        return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, status);
       }
 
       // 更新対象ordNo List取得「削除フラグ（０：通常）」
@@ -545,11 +564,11 @@ public class OrdMainImproveResource {
         logService.log(LogLevel.ERROR, elm, LoggingConstant.FUNCTION_CODE.FUNC_PAT_VIEWER, LoggingConstant.SERVICE_NAME.FNSI, null);
       }
 
-      return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+      return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     } else if ("PARAM_ERR".equals(procResult)) {
       status = HttpStatus.BAD_REQUEST;
     }
-    return new ResponseEntity<>(responseData.toString(), null, status);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, status);
   }
 
   /**
@@ -561,11 +580,16 @@ public class OrdMainImproveResource {
   @PostMapping("/medications/delete")
   public ResponseEntity<String> deleteOrdMainMediInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdMedi bodyData,
-    BindingResult validationResult
+    BindingResult validationResult,
+    @AuthenticationPrincipal NtssUser ntssUser
   ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
     long patId = Long.parseLong(bodyData.getPat_id());
     String facilityCd = bodyData.getFacility_cd();
     PatMain patMain = patMainDao.selectById(patId);
+    if (!hasFacilityAccess(ntssUser, facilityCd)
+      || !hasFacilityAccess(ntssUser, patMain == null ? null : patMain.getFacility_cd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     // チェック：スケジュール延長処理中の場合、治療条件変更を中止する
     String scheduleExtensionMsg = ordMainCondInfoCheck
       .validateScheduleExtension(bodyData.getIs_deadline(), patMain.getSch_ext_status());
@@ -598,7 +622,7 @@ public class OrdMainImproveResource {
           .filter(ord -> "0".equals(ord.getRstDialysisState())).collect(Collectors.toList());
       }
       if (updatePreOrdMains.isEmpty()) {
-        return new ResponseEntity<>(responseData.toString(), null, status);
+        return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, status);
       }
     } catch (Exception e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
@@ -695,11 +719,11 @@ public class OrdMainImproveResource {
         logService.log(LogLevel.ERROR, elm, LoggingConstant.FUNCTION_CODE.FUNC_PAT_VIEWER, LoggingConstant.SERVICE_NAME.FNSI, null);
       }
 
-      return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+      return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     } else if ("PARAM_ERR".equals(procResult)) {
       status = HttpStatus.BAD_REQUEST;
     }
-    return new ResponseEntity<>(responseData.toString(), null, status);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, status);
   }
 
   private void callCreateJournalWithMediEquip(List<OrdMain> updatePreOrdMainList, String facilityCd,
@@ -747,12 +771,18 @@ public class OrdMainImproveResource {
    */
   @PostMapping("/equip/create")
   public ResponseEntity<String> createOrdMainEquipInfoBatch(
-    @Validated @RequestBody List<ApiEntityOrdMain.ValiOrdEquip> bodyDataList) {
+    @Validated @RequestBody List<ApiEntityOrdMain.ValiOrdEquip> bodyDataList,
+    @AuthenticationPrincipal NtssUser ntssUser) {
 
     ApiEntityOrdMain.ValiOrdEquip valiOrdEquip = bodyDataList.get(0);
     long patId = Long.parseLong(valiOrdEquip.getPat_id());
     String facilityCd = valiOrdEquip.getFacility_cd();
     PatMain patMain = patMainDao.selectById(patId);
+    if (!hasFacilityAccess(ntssUser, facilityCd)
+      || !hasFacilityAccess(ntssUser, patMain == null ? null : patMain.getFacility_cd())
+      || bodyDataList.stream().anyMatch(item -> !hasFacilityAccess(ntssUser, item.getFacility_cd()))) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     // チェック：スケジュール延長処理中の場合、治療条件変更を中止する
     String scheduleExtensionMsg = ordMainCondInfoCheck
       .validateScheduleExtension(valiOrdEquip.getIs_deadline(), patMain.getSch_ext_status());
@@ -846,7 +876,7 @@ public class OrdMainImproveResource {
         logService.log(LogLevel.ERROR, elm, LoggingConstant.FUNCTION_CODE.FUNC_PAT_VIEWER, LoggingConstant.SERVICE_NAME.FNSI, null);
       }
     }
-    return new ResponseEntity<>(responseData.toString(), null, status);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, status);
   }
 
   /**
@@ -858,11 +888,16 @@ public class OrdMainImproveResource {
    */
   @PostMapping("/equip/update")
   public ResponseEntity<String> updateOrdMainEquipInfo(
-    @Validated @RequestBody ApiEntityOrdMain.ValiOrdEquip bodyData, BindingResult validationResult
+    @Validated @RequestBody ApiEntityOrdMain.ValiOrdEquip bodyData, BindingResult validationResult,
+    @AuthenticationPrincipal NtssUser ntssUser
   ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
     long patId = Long.parseLong(bodyData.getPat_id());
     String facilityCd = bodyData.getFacility_cd();
     PatMain patMain = patMainDao.selectById(patId);
+    if (!hasFacilityAccess(ntssUser, facilityCd)
+      || !hasFacilityAccess(ntssUser, patMain == null ? null : patMain.getFacility_cd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     // チェック：スケジュール延長処理中の場合、治療条件変更を中止する
     String scheduleExtensionMsg = ordMainCondInfoCheck
       .validateScheduleExtension(bodyData.getIs_deadline(), patMain.getSch_ext_status());
@@ -906,7 +941,7 @@ public class OrdMainImproveResource {
           .filter(ord -> "0".equals(ord.getRstDialysisState())).collect(Collectors.toList());
       }
       if (updatePreOrdMains.isEmpty()) {
-        return new ResponseEntity<>(responseData.toString(), null, status);
+        return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, status);
       }
     } catch (Exception e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
@@ -1001,11 +1036,11 @@ public class OrdMainImproveResource {
         logService.log(LogLevel.ERROR, elm, LoggingConstant.FUNCTION_CODE.FUNC_PAT_VIEWER, LoggingConstant.SERVICE_NAME.FNSI, null);
       }
 
-      return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+      return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     } else if ("PARAM_ERR".equals(procResult)) {
       status = HttpStatus.BAD_REQUEST;
     }
-    return new ResponseEntity<>(responseData.toString(), null, status);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, status);
   }
 
   /**
@@ -1018,11 +1053,16 @@ public class OrdMainImproveResource {
   @PostMapping("/equip/delete")
   public ResponseEntity<String> deleteOrdMainEquipInfo(
     @Validated @RequestBody ApiEntityOrdMain.ValiOrdEquip bodyData,
-    BindingResult validationResult
+    BindingResult validationResult,
+    @AuthenticationPrincipal NtssUser ntssUser
   ) throws URISyntaxException, JSONException, ArrayIndexOutOfBoundsException {
     long patId = Long.parseLong(bodyData.getPat_id());
     String facilityCd = bodyData.getFacility_cd();
     PatMain patMain = patMainDao.selectById(patId);
+    if (!hasFacilityAccess(ntssUser, facilityCd)
+      || !hasFacilityAccess(ntssUser, patMain == null ? null : patMain.getFacility_cd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     // チェック：スケジュール延長処理中の場合、治療条件変更を中止する
     String scheduleExtensionMsg = ordMainCondInfoCheck
       .validateScheduleExtension(bodyData.getIs_deadline(), patMain.getSch_ext_status());
@@ -1067,7 +1107,7 @@ public class OrdMainImproveResource {
           .filter(ord -> "0".equals(ord.getRstDialysisState())).collect(Collectors.toList());
       }
       if (updatePreOrdMains.isEmpty()) {
-        return new ResponseEntity<>(responseData.toString(), null, status);
+        return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, status);
       }
     } catch (Exception e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
@@ -1163,11 +1203,24 @@ public class OrdMainImproveResource {
         logService.log(LogLevel.ERROR, elm, LoggingConstant.FUNCTION_CODE.FUNC_PAT_VIEWER, LoggingConstant.SERVICE_NAME.FNSI, null);
       }
 
-      return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+      return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     } else if ("PARAM_ERR".equals(procResult)) {
       status = HttpStatus.BAD_REQUEST;
     }
-    return new ResponseEntity<>(responseData.toString(), null, status);
+    return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, status);
   }
   // add #12455 条件送信後に医材変更＆実績反映すると数量が0になる zkm end
+
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    boolean hasAccess = ntssUser != null && (ntssUser.isNkkAdminUser()
+      || facilityCd == null
+      || facilityCd.isEmpty()
+      || facilityCd.equals(ntssUser.getFacilityCd()));
+    if (!hasAccess) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null") + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return false;
+    }
+    return hasAccess;
+  }
 }

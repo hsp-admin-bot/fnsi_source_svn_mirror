@@ -28,6 +28,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 @Component
 public class SendConditionCancelServiceImpl implements SendConditionCancelService {
@@ -65,6 +66,10 @@ public class SendConditionCancelServiceImpl implements SendConditionCancelServic
 
   @Autowired
   private LogServiceCore logServiceCore;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // DB更新ログ出力ロジック wangzuo End
 
   @Transactional(rollbackFor = Exception.class)
@@ -167,7 +172,7 @@ public class SendConditionCancelServiceImpl implements SendConditionCancelServic
       wheres.append(" WHERE\n");
       wheres.append(" ord_no = " + ordNo + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -303,7 +308,7 @@ public class SendConditionCancelServiceImpl implements SendConditionCancelServic
       wheres.append(" data_type = 1" + "\n");
 
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(mniMonitorDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -354,7 +359,7 @@ public class SendConditionCancelServiceImpl implements SendConditionCancelServic
       wheres.append(" AND\n");
       wheres.append(" is_disp = '1'\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(ordChecklistDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -407,7 +412,7 @@ public class SendConditionCancelServiceImpl implements SendConditionCancelServic
       wheres.append(" ord_no = " + ordNo + "\n");
 
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(mntMachineStateDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -457,11 +462,11 @@ public class SendConditionCancelServiceImpl implements SendConditionCancelServic
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

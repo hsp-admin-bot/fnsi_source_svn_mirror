@@ -3,7 +3,8 @@
 <template>
   <div>
     <modal-base @onClose="hideModal" class="custom-modal">
-      <div slot="body" class="indInfo-style-modal-container scroll-style">
+            <template #body>
+<div ref="modalBodyRoot" class="indInfo-style-modal-container scroll-style">
         <div
           v-if="settingData.showSegment"
           class="div-style"
@@ -173,16 +174,17 @@
                 <!--   @focus="addFocusCss($event)" -->
                 <!--   :class="classObject" -->
                 <!-- /> -->
-                <input v-if="!isIOS"
+                <date-input v-if="!isIOS"
                   v-model="structData.indStartDate"
-                  type="date"
                   id="date-start"
                   class="date-start-input common-style-input ntss-input-date ntss-custom-input"
+                  classes="date-input-required"
                   data-target="indStartDate"
                   :disabled="settingData.startDateEdit || !getItemAuthorized()"
-                  @change="createKurAndTreatmentList(structData.indStartDate)"
+                  @focus="beforeDate = structData.indStartDate"
                   max="9999-12-31"
-                  @blur="AdjustTreatStartDate(structData.indStartDate,true);resetComponentData()"
+                  @blur="onBlurDate(structData.indStartDate, 'indStartDate');"
+                  isRequired
                 />
                 <!-- mod #10359 編集権限の動作不正 dengshen end -->
                 <!-- modify by chamaojia 2023-05-04 [8560] resetComponentDataの呼び出しが焦点のないイベントに移行  end -->
@@ -223,9 +225,9 @@
                   :disabled="settingData.startDateEdit || !getItemAuthorized()"
                   class="date-start-input-ios common-style-input ntss-input-date ntss-custom-input"
                   data-target="indStartDate"
-                  @change="createKurAndTreatmentList"
+                  @focus="beforeDate = structData.indStartDate"
                   max="9999-12-31"
-                  @blur="AdjustTreatStartDate(structData.indStartDate,true);resetComponentData()"
+                  @blur="onBlurDate(structData.indStartDate, 'indStartDate');"
                 />
                 <!-- mod #10359 編集権限の動作不正 dengshen end -->
                 <!-- modify by chamaojia 2023-05-04 [8560] イベントは一貫性を保つ  end -->
@@ -271,13 +273,12 @@
                   @blur="resetComponentData()"
                 /> -->
                 <custom-calendar
-                  v-model="structData.indStartDate"
+                  v-model="calendarIndStartDate"
                   :disabled-weekdays="disabledWeekdays"
                   :disabled="settingData.startDateEdit || !getItemAuthorized()"
                   :disable-dates-after="disableDatesAfter"
-                  @input="createKurAndTreatmentList()"
-                  @blur="resetComponentData()"
-                  @todayButtonClick="resetComponentData()"
+                  :to-month="toMonth"
+                  @input="onCalendarIndStartDateInput"
                 />
                 <!-- add 9664補液及び透析液仕様修正します yangqingzhe end -->
                 <!-- mod #10359 編集権限の動作不正 dengshen end -->
@@ -373,7 +374,8 @@
                   :disabled="settingData.endDateEdit || !getItemAuthorized()"
                   :min="structData.indStartDate"
                   :max="maxDate"
-                  @blur="AdjustTreatStartDate(structData.indEndDate,false)"
+                  @focus="beforeDate = structData.indEndDate"
+                  @blur="onBlurDate(structData.indEndDate, 'indEndDate');"
                 />
                 <!-- mod #10359 編集権限の動作不正 dengshen end -->
                 <!-- #10266 終了日、何も変更せずに、再び焦点が合わなくなります。structData.indEndDate undefined linjunfeng end -->
@@ -431,8 +433,9 @@
                   data-target="indEndDate"
                   :min="structData.indStartDate"
                   :max="maxDate"
-                  @change="createKurAndTreatmentList()"
-                  @blur="AdjustTreatStartDate(structData.indEndDate,false);resetComponentData()"
+                  max="9999-12-31"
+                  @focus="beforeDate = structData.indEndDate"
+                  @blur="onBlurDate(structData.indEndDate, 'indEndDate');"
                 />
                 <!-- mod #10359 編集権限の動作不正 dengshen end -->
                 <!-- modify by chamaojia 2023-05-04 [8560] resetComponentDataの呼び出しが焦点のないイベントに移行  end -->
@@ -459,8 +462,8 @@
                  :disable-dates-before="disableDatesBefore"
                  :disable-dates-after="disableDatesAfter"
                  :to-month="toMonth"
-                 @input="createKurAndTreatmentList()"
-                 @blur="resetComponentData()"
+                 @input="onIndDateChange"
+                 @blur="delFocusCss($event)"
                /> -->
                 <!-- mod #10359 編集権限の動作不正 dengshen start -->
                 <!-- <custom-calendar -->
@@ -473,13 +476,12 @@
                 <!--   @blur="resetComponentData()" -->
                 <!-- /> -->
                 <custom-calendar
-                  v-model="structData.indEndDate"
+                  v-model="calendarIndEndDate"
                   :disabled="settingData.endDateEdit || !getItemAuthorized()"
                   :disable-dates-before="disableDatesBefore"
                   :disable-dates-after="disableDatesAfter"
                   :to-month="toMonth"
-                  @input="createKurAndTreatmentList()"
-                  @blur="resetComponentData()"
+                  @input="onCalendarIndEndDateInput"
                 />
                 <!-- mod #10359 編集権限の動作不正 dengshen end -->
                 <!-- mod 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy end -->
@@ -690,21 +692,21 @@
         <hr v-if="settingData.hrOnder" class="hr-style" />
         <!-- mod FNSI-【4650】【4646】 fan start -->
         <!--    <div class="slot-style" style="white-space: pre-line;"><slot></slot></div>-->
-        <div class="slot-style" style="white-space: pre-line;padding-bottom: 0;"><slot></slot></div>
+        <div ref="defaultSlotHost" class="slot-style" style="white-space: pre-line;padding-bottom: 0;"><slot></slot></div>
         <!-- mod FNSI-【4650】【4646】 fan end -->
         <hr v-if="settingData.hrUnder" class="hr-style" />
 
         <div v-if="messageDialogInfo.isDialogVisible">
           <!--mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 start -->
           <!--<message-dialog
-            :visible.sync="messageDialogInfo.isDialogVisible"
+            v-model:visible="messageDialogInfo.isDialogVisible"
             :message-cd="messageDialogInfo.messageCd"
             :type="messageDialogInfo.type"
             :string-params="messageDialogInfo.stringParams"
             @confirm="confirmResult"
           />-->
           <message-dialog
-            :visible.sync="messageDialogInfo.isDialogVisible"
+            v-model:visible="messageDialogInfo.isDialogVisible"
             :message-cd="messageDialogInfo.messageCd"
             :type="messageDialogInfo.type"
             :string-params="messageDialogInfo.stringParams"
@@ -714,8 +716,10 @@
           <!--mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end -->
         </div>
       </div>
+      </template>
 
-      <div slot="footer" class="in-ind-dropdown-area">
+            <template #footer>
+<div class="in-ind-dropdown-area">
         <v-ons-row v-show="editIndUser" class="div-style">
           <v-ons-col
             style="text-align: end; padding-right: 10px; margin: auto;"
@@ -752,6 +756,7 @@
               style="width: 100%;"
               class="common-style-input select-style-list"
               :disabled="!getItemAuthorized()"
+              @open="onIndUserDropdownOpen"
             />
             <!-- mod #10359 編集権限の動作不正 dengshen end -->
             <!-- mod 画面デザイン改善対応 李 end -->
@@ -858,7 +863,7 @@
                 class="btn1-execute width-padding"
                 style="margin-left: 1.5em;"
                 v-if="'予定作成' != settingData.headerTitle && '医療材料編集' != settingData.headerTitle && componentId !== 'ind-sch-edit'"
-                :disabled="updateDisable  || !getItemAuthorized()"
+                :disabled="updateDisable || !editFlg || !getItemAuthorized()"
                 @click="updateIndInfo(1)"
               >
                 保存
@@ -909,7 +914,7 @@
                   class="btn1-execute width-padding"
                   style="margin-left: 1.5em;"
                   v-if="'医療材料編集' != settingData.headerTitle"
-                  :disabled="updateDisable  || !getItemAuthorized()"
+                  :disabled="updateDisable || !editFlg || !getItemAuthorized()"
                   @click="updateIndInfo(2)"
                 >
                 <!-- mod #10359 編集権限の動作不正 dengshen end -->
@@ -973,34 +978,36 @@
           </v-ons-col>
         </v-ons-row>
       </div>
+      </template>
     </modal-base>
   </div>
 </template>
 
 <script>
+import { setKendoDropDownListEditedState } from "@/functions/common/KendoFunctions";
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized, containsTabooAllergyTag } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapGetters, mapActions, mapMutations } from "vuex";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { deduplicateObjects } from "@/functions/common/CommonFunctions";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
 import CustomCalendar from "@/components/common/custom-calendar/CustomCalendar";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import ModalBase from "@/components/modals/ModalBase";
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 
 // mod FNSI-濃度プログラムチェックの追加 楊 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // mod FNSI-濃度プログラムチェックの追加 楊 end
 
 //add FNSI-No.IES145 権限対応  吉 start
 import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
 //add FNSI-No.IES145 権限対応  吉 end
 // add 画面デザイン改善対応 李 start
-import $ from "jquery";
+
 // add 画面デザイン改善対応 李 end
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -1013,6 +1020,9 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 import DateInput from "@/components/common/DateInput.vue";
 //#5590 2023/04/20 ×を常に表示するように修正 張博 end
 import MODAL_TITLE from "@/components/common/ModalTitleContrast.js";
+import { getScopedElementById, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
+import { resolveDefaultSlotComponent } from "@/compat/vue/slots";
+import $ from "@/compat/jquery";
 
 export default {
   components: {
@@ -1398,7 +1408,12 @@ export default {
       /**
        * 治療条件リセット検知用フラグ
        */
-      isIndActionChartReset: false
+      isIndActionChartReset: false,
+      // 変更前の開始日・終了日
+      beforeDate: "",
+      // custom-calendar用 開始日・終了日がカレンダーから選択されたかを判別可能とする
+      calendarIndStartDate: this.settingData.startDate || "",
+      calendarIndEndDate: this.settingData.endDate || ""
     };
   },
   computed: {
@@ -1461,31 +1476,31 @@ export default {
      * 終了日の最大日(本日から一年未満)
      */
     maxDate() {
-      const day = moment().format("YYYYMMDD");
+      const day = dayjs().format("YYYYMMDD");
       // 一年後に最大日を設定
       let endMaxDate = this.schExtEndDate
-        ? moment(this.schExtEndDate, "YYYYMMDD")
-        : moment(day).add(1, "year");
+        ? dayjs(this.schExtEndDate, "YYYYMMDD")
+        : dayjs(day).add(1, "year");
       // 一年後から1日戻す
-      endMaxDate = moment(endMaxDate).endOf("month");
-      return moment(endMaxDate).format("YYYY-MM-DD");
+      endMaxDate = dayjs(endMaxDate).endOf("month");
+      return dayjs(endMaxDate).format("YYYY-MM-DD");
     },
 
     /**
      * 指定日以降編集不可
      */
     disableDatesAfter() {
-      return moment(this.maxDate).format("YYYYMMDD");
+      return dayjs(this.maxDate).format("YYYYMMDD");
     },
     //add 6686 スケジュール作成時の日付の初期値について 張 start
     /**
      * 指定日前編集不可
      */
     disableDatesBefore() {
-      return moment(this.structData.indStartDate).format("YYYYMMDD");
+      return dayjs(this.structData.indStartDate).format("YYYYMMDD");
     },
     toMonth() {
-      return moment(this.structData.indStartDate).format("YYYY-MM-DD");
+      return dayjs(this.structData.indStartDate).format("YYYY-MM-DD");
     },
     //add 6686 スケジュール作成時の日付の初期値について 張 end
     cycleWeek() {
@@ -1558,7 +1573,9 @@ export default {
       })
       if (titles.includes(this.settingData.headerTitle)) {
         // 子の変更チェックや非活性チェックより、変更ありか判定
-        isEdit = this.$slots.default[0].componentInstance?.isEdit() || this.ihdfChangeFlag || this.checkDisabled;
+        const slotComponent = this.getDefaultSlotComponent();
+        isEdit = (typeof slotComponent?.isEdit === "function" ? slotComponent.isEdit() : false)
+          || this.ihdfChangeFlag || this.checkDisabled;
       }
       return this.editSelectIdFlg || isEdit
     },
@@ -1632,76 +1649,45 @@ export default {
       }
     },
     // add #10266 スケジュール親/子ヘッダー押下　NG linjunfeng end
-    "structData.selectedTreat"(value) {
+    async "structData.selectedTreat"(value) {
       if (null !== this.treatMaxSelectedItems) {
-        this.$slots.default[0].componentInstance.changeMultSelect(value);
+        const component = await this.getDefaultSlotComponentAfterRender();
+        component?.changeMultSelect(value);
       }
 
       if (true === this.isWatchParent) {
         // #10266 スケジュール親/子ヘッダー押下　NG linjunfeng start
-        // this.$slots.default[0].componentInstance.changeParentInfo();
+        // this.getDefaultSlotComponent().changeParentInfo();
         this.doGetBedList = true;
         // #10266 スケジュール親/子ヘッダー押下　NG linjunfeng end
       }
     },
-    // mod 5785 追加で隔日，隔週のスケジュールが作成出来ない 張 start
-    // "structData.indStartDate"(value) {
-    async "structData.indStartDate"(value) {
-    // mod 5785 追加で隔日，隔週のスケジュールが作成出来ない 張 end
+    async calendarIndStartDate(value) {
+      this.structData.indStartDate = value;
+
       if (true === this.isWatchParent) {
         // #10266 スケジュール親/子ヘッダー押下　NG linjunfeng start
-        // this.$slots.default[0].componentInstance.changeParentInfo();
+        // this.getDefaultSlotComponent().changeParentInfo();
         this.doGetBedList = true;
         // #10266 スケジュール親/子ヘッダー押下　NG linjunfeng end
       }
 
-      // 開始日の制御
-      // this.AdjustTreatStartDate(value);
-
-        // add 5785 追加で隔日，隔週のスケジュールが作成出来ない 張 start
-        // 治療種別を設定
-        if (this.settingData.showSegment) {
-          await this.setTreatTypeInfo();
-        }
+      // add 5785 追加で隔日，隔週のスケジュールが作成出来ない 張 start
+      // 治療種別を設定
+      if (this.settingData.showSegment) {
+        await this.setTreatTypeInfo();
+      }
       // add 5785 追加で隔日，隔週のスケジュールが作成出来ない 張 end
     },
-    // mod 5785 追加で隔日，隔週のスケジュールが作成出来ない 張 start
-    //  "structData.indEndDate"(value) {
-    async "structData.indEndDate"(value) {
-    // mod 5785 追加で隔日，隔週のスケジュールが作成出来ない 張 end
+    async calendarIndEndDate(value) {
+      this.structData.indEndDate = value;
+
       if (true === this.isWatchParent) {
         // #10266 スケジュール親/子ヘッダー押下　NG linjunfeng start
-        // this.$slots.default[0].componentInstance.changeParentInfo();
+        // this.getDefaultSlotComponent().changeParentInfo();
         this.doGetBedList = true;
         // #10266 スケジュール親/子ヘッダー押下　NG linjunfeng end
       }
-
-      // 期間指定での操作の場合以下の処理を実行
-      // if (!this.weekEdit) {
-      //   const date = parseInt(moment(value).format("YYYYMMDD"));
-      //   // 最小値の制御
-      //   const minDate =
-      //     "" === this.structData.indStartDate
-      //       ? parseInt(moment().format("YYYYMMDD"))
-      //       : parseInt(moment(this.structData.indStartDate).format("YYYYMMDD"));
-      //   if (minDate > date) {
-      //     this.structData.indEndDate = moment(String(minDate)).format(
-      //       "YYYY-MM-DD"
-      //     );
-      //   }else{
-      //     this.structData.indEndDate = moment(value).format("YYYY-MM-DD");
-      //   }
-      //   // 最大値の制御
-      //   const maxDate = parseInt(moment(this.maxDate).format("YYYYMMDD"));
-      //   if (date > maxDate) {
-      //     this.structData.indEndDate = moment(this.maxDate).format(
-      //       "YYYY-MM-DD"
-      //     );
-      //   }
-      // }
-
-      // add FNSI-画面デザイン修正_患者経過総合ビューア「デートピッカー削除なし」 周 start
-      // add FNSI-画面デザイン修正_患者経過総合ビューア「デートピッカー削除なし」 周 end
       // add 5785 追加で隔日，隔週のスケジュールが作成出来ない 張 start
         // 治療種別を設定
         if (this.settingData.showSegment) {
@@ -1714,7 +1700,7 @@ export default {
       handler() {
         if (true === this.isWatchParent) {
           // #10266 スケジュール親/子ヘッダー押下　NG linjunfeng start
-          // this.$slots.default[0].componentInstance.changeParentInfo();
+          // this.getDefaultSlotComponent().changeParentInfo();
           this.doGetBedList = true;
           // #10266 スケジュール親/子ヘッダー押下　NG linjunfeng end
         }
@@ -1726,7 +1712,7 @@ export default {
       handler() {
         if (true === this.isWatchParent) {
           // #10266 スケジュール親/子ヘッダー押下　NG linjunfeng start
-          // this.$slots.default[0].componentInstance.changeParentInfo();
+          // this.getDefaultSlotComponent().changeParentInfo();
           this.doGetBedList = true;
           // #10266 スケジュール親/子ヘッダー押下　NG linjunfeng end
         }
@@ -1750,11 +1736,9 @@ export default {
     "structData.indUser"(val) {
       // 選択した値と初期値が異なる場合
       if ((val ?? "") != (this.firValue ?? "")) {
-        $('#kendo-dropdownlist-select-id').addClass('kendo-dropdownlist-select-edited');
-        $('#kendo-dropdownlist-select-id_listbox').addClass('kendo-dropdownlist-listbox');
+        setKendoDropDownListEditedState(this.$el || this, { enabled: true });
       } else {
-        $('#kendo-dropdownlist-select-id').removeClass('kendo-dropdownlist-select-edited');
-        $('#kendo-dropdownlist-select-id_listbox').removeClass('kendo-dropdownlist-listbox');
+        setKendoDropDownListEditedState(this.$el || this, { enabled: false });
       }
     }
     // add 画面デザイン改善対応 李 end
@@ -1762,7 +1746,7 @@ export default {
 
   async created() {
     //FNSI-修正 【患者経過総合ビューア】→【予定作成】iPadの日付コンポ改修、chromeと一緒 xugj add start
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toLowerCase();
     const mac = ua.indexOf('mac');
     const os = ua.indexOf('os');
     if(mac > 0 && os > 0){
@@ -1818,8 +1802,7 @@ export default {
     // 指示者リスト設定
     await this.getIndUserList(
         AUTHORITY_CODES.IND_EDIT,
-        AUTHORITY_CODES.IND_PEDIT
-    ).then(response => {
+        AUTHORITY_CODES.IND_PEDIT).then(response => {
       if(MODAL_TITLE["風袋編集"] == this.settingData.headerTitle || MODAL_TITLE["除水補正編集"] == this.settingData.headerTitle){
         this.authorityCds=[AUTHORITY_CODES.PAT_EDIT];
         this.flagAuthority = this.getTreatmentRecordAuthority();
@@ -1840,8 +1823,7 @@ export default {
     // 治療方法・クールデフォルト値設定
     await this.setDefaultTreatmentAndKur(
       this.structData.indStartDate,
-      this.structData.indEndDate
-    );
+      this.structData.indEndDate);
     // add 8204 周安寧 start
     await this.getTreatmentlist();
     // add 8204 周安寧 end
@@ -1891,7 +1873,7 @@ export default {
 
     // add FNSI-【1006】最新の改修対象一覧の483対応 韓 start
     await this.getDeviceSetInfoInd();
-    this.showOhdfComment();
+    await this.showOhdfComment();
     // add FNSI-【1006】最新の改修対象一覧の483対応 韓 end
     //add FNSI-No.IES145 権限対応  吉 start
     this.setLoadingScreenVisible(false);
@@ -1945,7 +1927,7 @@ export default {
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc end
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.setIntervalObj) {
       clearInterval(this.setIntervalObj);
     }
@@ -1955,12 +1937,216 @@ export default {
   },
 
   methods: {
+    getScopedRoot() {
+      return this.$refs.modalBodyRoot || this.$el || null;
+    },
+    getScopedDateMarkerElement(id) {
+      return getScopedElementById(id, this.getScopedRoot());
+    },
+    getScopedDateInput(target) {
+      return queryScopedSelector(`input[data-target^="${target}"]`, this.getScopedRoot());
+    },
+    getScopedDateValidity(target) {
+      return this.getScopedDateInput(target)?.validity || { badInput: false };
+    },
+    getDefaultSlotComponent() {
+      const host = this.$refs.defaultSlotHost || null;
+      if (host && this.$.subTree) {
+        const slotComponent = this.findSlotComponentFromHost(host);
+        if (this.isResolvableSlotComponent(slotComponent)) {
+          return slotComponent;
+        }
+      }
+      return resolveDefaultSlotComponent(this);
+    },
+    getTreatMethodSlotComponent() {
+      let component = this.getDefaultSlotComponent();
+      while (component && component !== this && !component.$data?.displayInputValue) {
+        component = component.$parent;
+      }
+      return component !== this ? component : null;
+    },
+    isResolvableSlotComponent(component) {
+      return !!component && (
+        typeof component.updateIndInfo === "function" ||
+        typeof component.resetComponentIndData === "function" ||
+        typeof component.isEdit === "function"
+      );
+    },
+    collectComponentProxies(vnode) {
+      const result = [];
+      const visit = (node) => {
+        if (!node) {
+          return;
+        }
+        if (Array.isArray(node)) {
+          node.forEach(visit);
+          return;
+        }
+        if (node.component?.proxy) {
+          result.push(node.component.proxy);
+        }
+        visit(node.component?.subTree);
+        if (Array.isArray(node.children)) {
+          node.children.forEach(visit);
+        }
+        if (Array.isArray(node.dynamicChildren)) {
+          node.dynamicChildren.forEach(visit);
+        }
+      };
+      visit(vnode);
+      return result;
+    },
+    findSlotComponentFromHost(host) {
+      let fallback = null;
+      let slotWithUpdateIndInfo = null;
+      let slotWithResetIndData = null;
+      let slotWithIsEdit = null;
+
+      const considerProxy = (proxy) => {
+        if (!proxy || proxy === this) {
+          return false;
+        }
+        const el = proxy.$el;
+        if (!el || typeof host.contains !== "function" || !host.contains(el)) {
+          return false;
+        }
+        if (!slotWithUpdateIndInfo && typeof proxy.updateIndInfo === "function") {
+          slotWithUpdateIndInfo = proxy;
+          return true;
+        }
+        if (!slotWithResetIndData && typeof proxy.resetComponentIndData === "function") {
+          slotWithResetIndData = proxy;
+        }
+        if (!slotWithIsEdit && typeof proxy.isEdit === "function") {
+          slotWithIsEdit = proxy;
+        }
+        fallback = proxy;
+        return false;
+      };
+
+      const visit = (node) => {
+        if (!node || slotWithUpdateIndInfo) {
+          return;
+        }
+        if (Array.isArray(node)) {
+          node.forEach(visit);
+          return;
+        }
+        if (node.component?.proxy && considerProxy(node.component.proxy)) {
+          return;
+        }
+        visit(node.component?.subTree);
+        if (slotWithUpdateIndInfo) {
+          return;
+        }
+        if (Array.isArray(node.children)) {
+          for (const child of node.children) {
+            visit(child);
+            if (slotWithUpdateIndInfo) {
+              return;
+            }
+          }
+        }
+        if (Array.isArray(node.dynamicChildren)) {
+          for (const child of node.dynamicChildren) {
+            visit(child);
+            if (slotWithUpdateIndInfo) {
+              return;
+            }
+          }
+        }
+      };
+
+      visit(this.$.subTree);
+      return slotWithUpdateIndInfo || slotWithResetIndData || slotWithIsEdit || fallback;
+    },
+    findFirstComponentProxyInHost(vnode, host) {
+      if (!vnode || !host) {
+        return null;
+      }
+      if (Array.isArray(vnode)) {
+        for (const child of vnode) {
+          const found = this.findFirstComponentProxyInHost(child, host);
+          if (found) {
+            return found;
+          }
+        }
+        return null;
+      }
+      if (vnode.component?.proxy && vnode.component.proxy !== this) {
+        const componentEl = this.getVNodeHostElement(vnode.component.subTree || vnode);
+        if (componentEl && host.contains(componentEl)) {
+          return vnode.component.proxy;
+        }
+      }
+      const nested = [
+        vnode.component?.subTree,
+        vnode.children,
+        vnode.dynamicChildren,
+        vnode.ssContent,
+        vnode.ssFallback
+      ];
+      for (const child of nested) {
+        const found = this.findFirstComponentProxyInHost(child, host);
+        if (found) {
+          return found;
+        }
+      }
+      return null;
+    },
+    async getDefaultSlotComponentAfterRender() {
+      let component = this.getDefaultSlotComponent();
+      if (!component) {
+        await this.$nextTick();
+        component = this.getDefaultSlotComponent();
+      }
+      return component;
+    },
+    getVNodeHostElement(vnode) {
+      if (!vnode) {
+        return null;
+      }
+      if (Array.isArray(vnode)) {
+        for (const child of vnode) {
+          const found = this.getVNodeHostElement(child);
+          if (found) {
+            return found;
+          }
+        }
+        return null;
+      }
+      if (vnode.el && typeof vnode.el.nodeType === 'number') {
+        return vnode.el;
+      }
+      if (vnode.component?.subTree) {
+        return this.getVNodeHostElement(vnode.component.subTree);
+      }
+      if (Array.isArray(vnode.children)) {
+        return this.getVNodeHostElement(vnode.children);
+      }
+      return null;
+    },
+    getRenderedChildren(target) {
+      return this.collectComponentProxies(target?.$.subTree);
+    },
+    getRenderedChild(target, indexes = []) {
+      let current = target;
+      for (const index of indexes) {
+        current = this.getRenderedChildren(current)[index];
+        if (!current) {
+          return null;
+        }
+      }
+      return current;
+    },
     ...mapActions("loading-screen", [
       "setLoadingScreenVisible",
       "setLoadingScreenMessage",
       "resetLoadingScreenVisibleCount",
       "startLoadingScreen",
       "finishLoadingScreen",
+      "executeWithLoadingScreen",
     ]),
     //FNSI-修正 #5525 横展開対応、xugj add start
     // ...mapActions("treatment-record/common",
@@ -2044,7 +2230,7 @@ export default {
       // #5827 【設計書作成】補液量上限チェック的title未消去 訾浩 end
       // 変更箇所があればメッセージ表示
       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc start
-      // if (this.$slots.default[0].componentInstance.checkEdit(1)) {
+      // if (this.getDefaultSlotComponent().checkEdit(1)) {
       //   return;
       // }
       if (this.editFlg || !this.structData.editOnly) {
@@ -2074,16 +2260,15 @@ export default {
         this.newEditFlag = true
         // #内部 風袋編集:「風袋編集」を選択し、「ある項目」を編集した場合、「編集項目の内容」にチェックを入れることを前提に、保存することはできません。end
       }
-      this.$slots.default[0].componentInstance.selectSegment(
-        event.target.value
-      );
+      this.getDefaultSlotComponent().selectSegment(
+        event.target.value);
     },
     changeDialSegment(value) {
       this.structData.cycleWeek = value;
       // this.structData.cycleWeek = event.target.value;
       if ("1" === this.structData.cycleWeek) {
         this.disabledWeekdays = [3, 4, 5, 6, 7];
-        const day = moment(this.structData.indStartDate, "YYYY-MM-DD");
+        const day = dayjs(this.structData.indStartDate, "YYYY-MM-DD");
         if (1 !== day.isoWeekday() && 2 !== day.isoWeekday()) {
           this.structData.indStartDate = "";
         }
@@ -2171,8 +2356,7 @@ export default {
         // 対象日時の治療情報取得(開始日付・治療方法・クールで絞り込み)
         const response = await ApiHelper.post(
           "/mainData/getTreatmentConditionSetting",
-          paramJson
-        ).catch(error => {
+          paramJson).catch(error => {
           getErrorMessage('IndActionChart.vue', 'getTreatmentlist', error);
           throw error;
         });
@@ -2198,7 +2382,7 @@ export default {
 
       //add FNSI-6783 劉全航 start
       if(this.settingData.headerTitle === MODAL_TITLE["BV‐UFC"]){
-        let BVOutOfLimits = this.$slots.default[0].componentInstance.BVOutOfLimits;
+        let BVOutOfLimits = this.getDefaultSlotComponent().BVOutOfLimits;
         if(BVOutOfLimits){
           let ok = await this.$ons.notification.confirm({
             // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
@@ -2255,13 +2439,13 @@ export default {
       let stringParams = "";
       if(this.settingData.headerTitle === MODAL_TITLE["治療方法編集"] && this.settingData.ordNo){
         var treatmentCd;
-        var selectedNo = this.$slots.default[0].componentInstance.$data.displayInputValue.editValue;
+        const treatMethodComp = this.getTreatMethodSlotComponent();
+        var selectedNo = treatMethodComp?.$data?.displayInputValue?.editValue;
         if(selectedNo === "1"){
-          treatmentCd = this.$slots.default[0].componentInstance.$data.selectedTreat;
-        }else if(selectedNo === "2"){
-          treatmentCd = this.$slots.default[0].componentInstance.$refs.incluceMediTreatPlan.selectedSet.treatmentCd;
+          treatmentCd = treatMethodComp?.$data?.selectedTreat;
         }else{
-          treatmentCd = this.$slots.default[0].componentInstance.$refs.disincludeMediTreatPlan.selectedSet.treatmentCd;
+          const activePlanCreate = treatMethodComp?.$refs?.activePlanCreate;
+          treatmentCd = activePlanCreate?.selectedSet?.treatmentCd;
         }
         // 予定内容入力チェック
         if(!treatmentCd){
@@ -2290,7 +2474,7 @@ export default {
       //add FNSI-6924 劉全航 end
 
       //FNSI-修正 #5658 治療方法に変えた際のメッセージ修正、xugj add start
-      if(this.isTreatTimeSettingFlg && this.$slots.default[0].componentInstance.$children[0].$children[0].displayInputValue) {
+      if(this.isTreatTimeSettingFlg && this.getRenderedChild(this.getDefaultSlotComponent(), [0, 0]).displayInputValue) {
         let selectedTreat = this.structData["treatOptions"].find(element => element.value === this.structData.selectedTreat[0]);
 
         // 装置モード
@@ -2367,7 +2551,7 @@ export default {
         //mod FNSI-6448 劉全航 end
 
         // 治療時間
-        let treatTime = this.$slots.default[0].componentInstance.$children[0].$children[0].displayInputValue.editValue;
+        let treatTime = this.getRenderedChild(this.getDefaultSlotComponent(), [0, 0]).displayInputValue.editValue;
 
         //【特殊浄化以外】の治療時間を個別に変更した場合
         if(this.treatAndKurEdit && deviceMode !== 9 && treatTime && treatTime > 600) {
@@ -2414,7 +2598,7 @@ export default {
       //FNSI-修正 #5658 治療方法に変えた際のメッセージ修正、xugj add end
       // add #9848+9849 確定時,薬剤指定済みの場合、必須チェック（空と0を区別する） linjunfeng start
       if (this.settingData.headerTitle === MODAL_TITLE["医療材料編集"]) {
-        const equipmentObj = this.$slots.default[0].componentInstance;
+        const equipmentObj = this.getDefaultSlotComponent();
         // 新規登録時無編集チェック
         if (type === 'equip-create' && !equipmentObj?.listData?.length) {
           this.$ons.notification.alert({
@@ -2442,8 +2626,8 @@ export default {
             return;
           }
         }
-        const amountInputValue = equipmentObj?.$children[0]?.$children[1]?.amountInputValue;
-        if (amountInputValue && (amountInputValue?.editValue === "" || isNaN(amountInputValue?.editValue) || amountInputValue?.editValue == 0 )) {
+        const amountInputValue = this.getRenderedChild(equipmentObj, [0, 1])?.amountInputValue;
+        if (amountInputValue && (amountInputValue?.editValue === "" || isNaN(amountInputValue?.editValue) || amountInputValue?.editValue == 0)) {
           this.$ons.notification.alert({
             title: DIALOG_MESSAGES[13000170].title,
             message: DIALOG_MESSAGES[13000170].message
@@ -2472,6 +2656,7 @@ export default {
       this.startLoadingScreen();
       // 保存ボタンを非活性
       this.updateDisable = true;
+      try {
       this.baseData = deepCopy(this.structData);
       // add #10772 10601で作成したスケジュール移動処理を拡張して全機能に展開する。 関 start
       // deepCopy により動的プロパティは消えるため、保持している値を書き戻す
@@ -2480,8 +2665,8 @@ export default {
       // add #12465 同患者同日同治療方法同クールの使用制限をしてもメッセージがでない zkm start
       this.baseData.type = type;
       // add #12465 同患者同日同治療方法同クールの使用制限をしてもメッセージがでない zkm end
-      const startDateValid = this.$el.querySelector('input[data-target^="indStartDate"]').validity;
-      const endDateValid = this.$el.querySelector('input[data-target^="indEndDate"]').validity;
+      const startDateValid = this.getScopedDateValidity("indStartDate");
+      const endDateValid = this.getScopedDateValidity("indEndDate");
 
       // 開始日の不完全入力チェック
       if ("" === this.baseData.indStartDate && startDateValid.badInput){
@@ -2496,22 +2681,20 @@ export default {
       }
       // 開始日の必須入力スタイル
         if("" === this.baseData.indStartDate){
-           document.getElementById('date-start').style.background = "rgba(255, 0, 0, 0.5)";
+           if (this.getScopedDateMarkerElement('date-start')) this.getScopedDateMarkerElement('date-start').style.background = "rgba(255, 0, 0, 0.5)";
         }
         if("" !== this.baseData.indStartDate && !this.settingData.startDateEdit){
-           document.getElementById('date-start').style.background = "#ffff99";
+           if (this.getScopedDateMarkerElement('date-start')) this.getScopedDateMarkerElement('date-start').style.background = "#ffff99";
         }
       // 終了日の不完全入力チェック
-      if (null === messageCd && "" === this.baseData.indEndDate && endDateValid.badInput
-      ){
+      if (null === messageCd && "" === this.baseData.indEndDate && endDateValid.badInput){
           messageCd = 22010008;
           stringParams = "終了日";
       }
       if (
         null === messageCd &&
         null !== this.baseData.indEndDate &&
-        "" !== this.baseData.indEndDate
-      ) {
+        "" !== this.baseData.indEndDate) {
         if (this.baseData.indStartDate > this.baseData.indEndDate) {
           messageCd = 22010002;
           stringParams = "開始日≦終了日";
@@ -2521,17 +2704,14 @@ export default {
         if ("" === stringParams) {
           if (
             Number(
-              moment(this.baseData.indEndDate, "YYYY-MM-DD").format("YYYYMMDD")
-            ) > Number(moment(this.maxDate, "YYYY-MM-DD").format("YYYYMMDD"))
-          ) {
+              dayjs(this.baseData.indEndDate, "YYYY-MM-DD").format("YYYYMMDD")) > Number(dayjs(this.maxDate, "YYYY-MM-DD").format("YYYYMMDD"))) {
             messageCd = "22010002";
             //mod FNSI-6926 劉全航 start
-            // stringParams = `終了日は${moment(this.maxDate, "YYYY-MM-DD").format(
+            // stringParams = `終了日は${dayjs(this.maxDate, "YYYY-MM-DD").format(
             //   "YYYY年M月D日以下"
-            // )}`;
-            stringParams = `開始日は${moment(this.maxDate, "YYYY-MM-DD").format(
-              "YYYY/MM/DD(ddd)まで"
-            )}`;
+            //)}`;
+            stringParams = `開始日は${dayjs(this.maxDate, "YYYY-MM-DD").format(
+              "YYYY/MM/DD(ddd)まで")}`;
             //mod FNSI-6926 劉全航 end
           }
         }
@@ -2564,8 +2744,7 @@ export default {
       const day = this.maxDate;
       if (
         null === this.baseData.indEndDate ||
-        "" === this.baseData.indEndDate
-      ) {
+        "" === this.baseData.indEndDate) {
         // 空の場合、1年後の日を設定
         this.baseData.indEndDate = day;
         // 終了日存在フラグをfalseに設定
@@ -2600,8 +2779,7 @@ export default {
         // 対象日時の治療情報取得(日付・曜日・治療方法・クールで絞り込み)
         const response = await ApiHelper.post(
           "/mainData/treatDateList",
-          paramJson
-        ).catch(error => {
+          paramJson).catch(error => {
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
           getErrorMessage('IndEditBase.vue', 'updateIndInfo', error);
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -2639,43 +2817,28 @@ export default {
         //add FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
         //add FutreNetWeb+SI課題管理 no.6422 劉全航 start
         if(this.getTabooEquipment === true) {
-          this.$ons.notification.confirm({
-            // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
-            // title: "禁忌アレルギー警告",
-            title: DIALOG_MESSAGES[13000056].title,
-            // message: "禁忌、アレルギーに指定されている物品が指示に含まれています。登録してよろしいですか？",
-            message: messageFormat(DIALOG_MESSAGES[13000056].message),
-            // mod #6107 2023/03/22 メッセージボックス全調整 張博 end
-            callback: answer => {
-              if(answer === 1){
-                this.setTabooEquipment(false);
-                // mod #10772 10601で作成したスケジュール移動処理を拡張して全機能に展開する。 関 start
-                this.$slots.default[0].componentInstance.updateIndInfo(this.baseData, childOptions);
-                // mod #10772 10601で作成したスケジュール移動処理を拡張して全機能に展開する。 関 end
-              }else{
-                this.updateDisable = false;
-                // del #11731_【因島：改良】指示コメント番号の指定方法 (不用なログ) start
-                // console.log("IndEditBase.vue updateIndInfo return; this.finishLoadingScreen();");
-                // del #11731_【因島：改良】指示コメント番号の指定方法 end
-                this.finishLoadingScreen();
-                return;
-              }
-            }
+          const tabooAnswer = await new Promise(resolve => {
+            this.$ons.notification.confirm({
+              title: DIALOG_MESSAGES[13000056].title,
+              message: messageFormat(DIALOG_MESSAGES[13000056].message),
+              callback: resolve
+            });
           });
-        }else{
-          // mod #10772 10601で作成したスケジュール移動処理を拡張して全機能に展開する。 関 start
-           this.$slots.default[0].componentInstance.updateIndInfo(this.baseData, childOptions);
-           // mod #10772 10601で作成したスケジュール移動処理を拡張して全機能に展開する。 関 end
+          if (tabooAnswer !== 1) {
+            this.updateDisable = false;
+            return;
+          }
+          this.setTabooEquipment(false);
         }
-        // this.$slots.default[0].componentInstance.updateIndInfo(this.baseData);
+        await this.getDefaultSlotComponent().updateIndInfo(this.baseData, childOptions);
+        // this.getDefaultSlotComponent().updateIndInfo(this.baseData);
         //add FutreNetWeb+SI課題管理 no.6422 劉全航 end
         // 参照元画面更新フラグをON
         // this.isRefresh = true;
       }
-      // del #11731_【因島：改良】指示コメント番号の指定方法 (不用なログ) start
-      // console.log("IndEditBase.vue updateIndInfo this.finishLoadingScreen();");
-      // del #11731_【因島：改良】指示コメント番号の指定方法 end
-      this.finishLoadingScreen();
+      } finally {
+        this.finishLoadingScreen();
+      }
     },
 
     chkChange(week) {
@@ -2762,24 +2925,29 @@ export default {
       // add 8204 周安寧 end
     },
 
+    async onIndDateChange() {
+      await this.createKurAndTreatmentList();
+      await this.resetComponentData();
+    },
+
     //add FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 start
     async resetComponentData() {
-      if (this.isIndActionChart) {
-        //mod #10150 piao start
-        this.$slots.default[0].componentInstance.resetComponentIndData(this.structData);
-        //mod #10150 end
+      const slotComponent = await this.getDefaultSlotComponentAfterRender();
+      if (typeof slotComponent?.resetComponentIndData === "function") {
+        await this.executeWithLoadingScreen(
+          () => slotComponent.resetComponentIndData(this.structData)
+        );
       }
 
-      //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
-      if(this.isDialogType9) {
-        this.$slots.default[0].componentInstance.resetComponentIndData(this.structData);
-      }
-      //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add end
       if (this.isDialogType9_offWater) {
-        this.$slots.default[0].componentInstance.$children[0].resetComponentIndData(this.structData);
+        await this.executeWithLoadingScreen(
+          () => this.getRenderedChild(slotComponent, [0])?.resetComponentIndData?.(this.structData)
+        );
       }
       if (this.isDialogType9_ihdf) {
-        this.$slots.default[0].componentInstance.$children[2].resetComponentIndData(this.structData);
+        await this.executeWithLoadingScreen(
+          () => this.getRenderedChild(slotComponent, [2])?.resetComponentIndData?.(this.structData)
+        );
       }
 
     },
@@ -2808,6 +2976,9 @@ export default {
         ind_end_date: this.structData.indEndDate,
         week_pattern: JSON.stringify(this.structData.indWeeks)
       };
+
+      if (this.count === 1) this.startLoadingScreen();
+
       // カレンダーインタフェースをクリックして複数回呼び出す start
       await this.count === 1 && ApiHelper.post("/mainData/KurAndTreatmentList", params)
       // カレンダーインタフェースをクリックして複数回呼び出す end
@@ -2832,6 +3003,9 @@ export default {
           getErrorMessage('IndEditBase.vue', 'createKurAndTreatmentList', error);
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
           throw error;
+        })
+        .finally(() => {
+          this.finishLoadingScreen();
         });
     },
     // add 8204 周安寧 start
@@ -3080,8 +3254,7 @@ export default {
       // オーダー番号の指定がなければ、デフォルト値の設定処理終了
       if (
         null === this.settingData.ordNo ||
-        undefined === this.settingData.ordNo
-      ) {
+        undefined === this.settingData.ordNo) {
         return;
       }
 
@@ -3112,8 +3285,7 @@ export default {
       // 対象日時の治療情報取得
       const response = await ApiHelper.post(
         "/mainData/TreatDateList",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndEditBase.vue', 'setDefaultTreatmentAndKur', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3246,7 +3418,7 @@ export default {
         case 13010001:
           if ("OK" === answer) {
             // 反映処理を行う
-            this.$slots.default[0].componentInstance.reflectIndInfo();
+            this.getDefaultSlotComponent().reflectIndInfo();
           }
           // モーダルを閉じる
           this.$emit("hide-modal");
@@ -3258,7 +3430,7 @@ export default {
               this.baseData.isSkipFlag = true;
               this.updateDisable = true;
               this.isUpdating = true;
-              this.$slots.default[0].componentInstance.updateIndInfo(
+              this.getDefaultSlotComponent().updateIndInfo(
                 this.baseData
               );
             }
@@ -3272,9 +3444,8 @@ export default {
               this.updateDisable = true;
               this.isUpdating = true;
               this.baseData.acceptWarnFlag = true;
-              this.$slots.default[0].componentInstance.updateIndInfo(
-                this.baseData
-              );
+              this.getDefaultSlotComponent().updateIndInfo(
+                this.baseData);
             }
           }
           break;
@@ -3298,7 +3469,7 @@ export default {
               this.updateDisable = true;
               this.isUpdating = true;
               const childOptions = this.lastUseOrdMoveCheckApi === true ? { useOrdMoveCheckApi: true } : {};
-              this.$slots.default[0].componentInstance.updateIndInfo(
+              this.getDefaultSlotComponent().updateIndInfo(
                 this.baseData,
                 childOptions
               );
@@ -3312,11 +3483,10 @@ export default {
               this.updateDisable = true;
               this.isUpdating = true;
               const childOptions = this.lastUseOrdMoveCheckApi === true ? { useOrdMoveCheckApi: true } : {};
-              this.$slots.default[0].componentInstance.updateIndInfo(
+              this.getDefaultSlotComponent().updateIndInfo(
                 this.baseData,
                 childOptions
               );
-              // mod #10772 10601で作成したスケジュール移動処理を拡張して全機能に展開する。 関 end
 
             //add 8611 デグレ】ベッド条件不一致のメッセージが二度表示される 張 start
             }else if ("Yes" != answer){
@@ -3333,23 +3503,24 @@ export default {
               this.updateDisable = true;
               this.isUpdating = true;
               this.baseData.chkExpiredFlag = true;
-              this.$slots.default[0].componentInstance.updateIndInfo(
-                this.baseData
-              );
+              this.getDefaultSlotComponent().updateIndInfo(
+                this.baseData);
             }
           }
           break;
-
 
         case 22010006:
         case 22010007:
         case 22020003:
         // add #8178 条件送信後に治療条件を変更した際のメッセージ不正 dou start
+        // falls through
         case 22020007:
         case 22020008:
         // add #8178 条件送信後に治療条件を変更した際のメッセージ不正 dou end
+        // falls through
         case 16010001:
         // add FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.28(外結)対応 韓 start
+        // falls through
         case 12000000:
         // add FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.28(外結)対応 韓 end
           this.isRefresh = true;
@@ -3363,7 +3534,7 @@ export default {
         //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
           if ("OK" === answer) {
             // 反映処理を行う
-            this.$slots.default[0].componentInstance.reflectIndInfo1();
+            this.getDefaultSlotComponent().reflectIndInfo1();
           }
           break;
         //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 start
@@ -3372,10 +3543,10 @@ export default {
         //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
           if ("OK" === answer) {
             // 反映処理を行う
-            this.$slots.default[0].componentInstance.reflectIndInfo2("1",this.messageDialogInfo.messageCd);
+            this.getDefaultSlotComponent().reflectIndInfo2("1",this.messageDialogInfo.messageCd);
           } else {
             // 反映処理を行う
-            this.$slots.default[0].componentInstance.reflectIndInfo2("0",this.messageDialogInfo.messageCd);
+            this.getDefaultSlotComponent().reflectIndInfo2("0",this.messageDialogInfo.messageCd);
           }
           break;
         // add FNSI redmine 5161劉祥霖 start
@@ -3383,30 +3554,30 @@ export default {
           //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
           if ("OK" === answer) {
             // 反映処理を行う
-            this.$slots.default[0].componentInstance.reflectIndInfo2("2",this.messageDialogInfo.messageCd);
+            this.getDefaultSlotComponent().reflectIndInfo2("2",this.messageDialogInfo.messageCd);
           } else {
             // 反映処理を行う
-            this.$slots.default[0].componentInstance.reflectIndInfo2("3",this.messageDialogInfo.messageCd);
+            this.getDefaultSlotComponent().reflectIndInfo2("3",this.messageDialogInfo.messageCd);
           }
           this.isUpdating = true;
           break;
         case 10400004:
           if ("OK" === answer) {
             // 反映処理を行う
-            this.$slots.default[0].componentInstance.reflectIndInfo2("4",this.messageDialogInfo.messageCd);
+            this.getDefaultSlotComponent().reflectIndInfo2("4",this.messageDialogInfo.messageCd);
           } else {
             // 反映処理を行う
-            this.$slots.default[0].componentInstance.reflectIndInfo2("5",this.messageDialogInfo.messageCd);
+            this.getDefaultSlotComponent().reflectIndInfo2("5",this.messageDialogInfo.messageCd);
           }
           this.isUpdating = true;
           break;
         case 10400005:
           if ("OK" === answer) {
             // 反映処理を行う
-            this.$slots.default[0].componentInstance.reflectIndInfo2("6",this.messageDialogInfo.messageCd);
+            this.getDefaultSlotComponent().reflectIndInfo2("6",this.messageDialogInfo.messageCd);
           } else {
             // 反映処理を行う
-            this.$slots.default[0].componentInstance.reflectIndInfo2("7",this.messageDialogInfo.messageCd);
+            this.getDefaultSlotComponent().reflectIndInfo2("7",this.messageDialogInfo.messageCd);
           }
           this.isUpdating = true;
           break;
@@ -3423,19 +3594,19 @@ export default {
         case 10400009:
           if ("OK" === answer) {
             this.itemMsgCd20Flg = false;
-            this.$slots.default[0].componentInstance.updateIndInfo(this.baseData);
+            this.getDefaultSlotComponent().updateIndInfo(this.baseData);
           }
           break;
         case 10400010:
           if ("OK" === answer) {
             this.itemMsgCd24Flg = false;
-            this.$slots.default[0].componentInstance.updateIndInfo(this.baseData);
+            this.getDefaultSlotComponent().updateIndInfo(this.baseData);
           }
           break;
         case 10400011:
           if ("OK" === answer) {
             this.itemMsgCd14Flg = false;
-            this.$slots.default[0].componentInstance.updateIndInfo(this.baseData);
+            this.getDefaultSlotComponent().updateIndInfo(this.baseData);
           }
           break;
         // mod FNSI-FutreNetWeb+SI課題管理No.5528 李 start
@@ -3443,7 +3614,7 @@ export default {
         // mod FNSI-FutreNetWeb+SI課題管理No.5528 李 end
           if ("OK" === answer) {
             this.itemMsgCd18Flg = false;
-            this.$slots.default[0].componentInstance.updateIndInfo(this.baseData);
+            this.getDefaultSlotComponent().updateIndInfo(this.baseData);
           }
           //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
           break;
@@ -3463,13 +3634,13 @@ export default {
         case 70000028:
           // 反映処理を行う
           //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 start
-          //this.$slots.default[0].componentInstance.saveIndCondInfo(this.baseData,answer);
+          //this.getDefaultSlotComponent().saveIndCondInfo(this.baseData,answer);
           if (this.isDialogType9_offWater) {
-            this.$slots.default[0].componentInstance.$children[0].getComponentData(this.structData,answer);
+            this.getRenderedChild(this.getDefaultSlotComponent(), [0])?.getComponentData(this.structData,answer);
           } else if(this.isDialogType9_ihdf) {
-            this.$slots.default[0].componentInstance.$children[2].getComponentData(this.structData,answer);
+            this.getRenderedChild(this.getDefaultSlotComponent(), [2])?.getComponentData(this.structData,answer);
           } else {
-            this.$slots.default[0].componentInstance.getComponentData(this.structData,answer);
+            this.getDefaultSlotComponent().getComponentData(this.structData,answer);
           }
           //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 start
           break;
@@ -3485,16 +3656,16 @@ export default {
     // AdjustTreatStartDate(startDate) {
     //   // 期間指定での操作の場合以下の処理を実行
     //   if (!this.weekEdit) {
-    //     const date = parseInt(moment(startDate).format("YYYYMMDD"));
+    //     const date = parseInt(dayjs(startDate).format("YYYYMMDD"));
     //     // 過去日制御
-    //     const today = parseInt(moment().format("YYYYMMDD"));
+    //     const today = parseInt(dayjs().format("YYYYMMDD"));
     //     if (today > date) {
-    //       this.structData.indStartDate = moment().format("YYYY-MM-DD");
+    //       this.structData.indStartDate = dayjs().format("YYYY-MM-DD");
     //     }
     //     // 最大値の制御
-    //     const maxDate = parseInt(moment(this.maxDate).format("YYYYMMDD"));
+    //     const maxDate = parseInt(dayjs(this.maxDate).format("YYYYMMDD"));
     //     if (date > maxDate) {
-    //       this.structData.indStartDate = moment(this.maxDate).format(
+    //       this.structData.indStartDate = dayjs(this.maxDate).format(
     //         "YYYY-MM-DD"
     //       );
     //     }
@@ -3513,36 +3684,36 @@ export default {
       //add 9864 患者経過総合ビューアの指示編集画面で翌年を指示開始日に設定すると、終了日が自動でセットされ無期限指示変更ができない。zy end
       // 期間指定での操作の場合以下の処理を実行
       if (!this.weekEdit) {
-        const date = parseInt(moment(treatDate).format("YYYYMMDD"));
+        const date = parseInt(dayjs(treatDate).format("YYYYMMDD"));
         // 過去日制御
         let today;
         // mod 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy start
         // if (startDate) {
-        //   today = parseInt(moment().format("YYYYMMDD"));
+        //   today = parseInt(dayjs().format("YYYYMMDD"));
         // }else{
-        today = parseInt(moment(this.structData.indStartDate).format("YYYYMMDD"));
+        today = parseInt(dayjs(this.structData.indStartDate).format("YYYYMMDD"));
         // }
         // if (today > date) {
         //   if (startDate) {
-        //     this.structData.indStartDate = moment().format("YYYY-MM-DD");
+        //     this.structData.indStartDate = dayjs().format("YYYY-MM-DD");
         //   }else{
-        //     this.structData.indEndDate = moment(this.structData.indStartDate).format("YYYY-MM-DD");
+        //     this.structData.indEndDate = dayjs(this.structData.indStartDate).format("YYYY-MM-DD");
         //   }
         // }else{
         if (startDate) {
-          this.structData.indStartDate = moment(treatDate).format("YYYY-MM-DD");
+          this.structData.indStartDate = dayjs(treatDate).format("YYYY-MM-DD");
         }else{
-          this.structData.indEndDate = moment(treatDate).format("YYYY-MM-DD");
+          this.structData.indEndDate = dayjs(treatDate).format("YYYY-MM-DD");
         }
         // }
         // mod 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy end
         // 最大値の制御
-        const maxDate = parseInt(moment(this.maxDate).format("YYYYMMDD"));
+        const maxDate = parseInt(dayjs(this.maxDate).format("YYYYMMDD"));
         if (date > maxDate) {
           if (startDate) {
-            this.structData.indStartDate = moment(this.maxDate).format("YYYY-MM-DD");
+            this.structData.indStartDate = dayjs(this.maxDate).format("YYYY-MM-DD");
           }else{
-            this.structData.indEndDate = moment(this.maxDate).format("YYYY-MM-DD");
+            this.structData.indEndDate = dayjs(this.maxDate).format("YYYY-MM-DD");
           }
         }
       }
@@ -3591,6 +3762,8 @@ export default {
      * @description 指示リスト取得
      */
     async ordMainList() {
+      this.startLoadingScreen();
+
       // データ取得条件の格納
       const paramJson = {
         // 施設コード
@@ -3599,11 +3772,11 @@ export default {
         pat_id: this.structData.patId,
         // 治療開始日
         // mod 5785 追加で隔日，隔週のスケジュールが作成出来ない 張 start
-        // ind_start_date: moment().format("YYYY-MM-DD"),
-        ind_start_date: moment(this.structData.indStartDate).format("YYYY-MM-DD"),
+        // ind_start_date: dayjs().format("YYYY-MM-DD"),
+        ind_start_date: dayjs(this.structData.indStartDate).format("YYYY-MM-DD"),
         // 治療終了日
         // ind_end_date:"9999-12-31",
-        ind_end_date: moment(this.structData.indEndDate).format("YYYY-MM-DD")!="Invalid date"?moment(this.structData.indEndDate).format("YYYY-MM-DD"): "9999-12-31",
+        ind_end_date: dayjs(this.structData.indEndDate).format("YYYY-MM-DD")!="Invalid date"?dayjs(this.structData.indEndDate).format("YYYY-MM-DD"): "9999-12-31",
         // mod 5785 追加で隔日，隔週のスケジュールが作成出来ない 張 start
         // 曜日パターン
         week_pattern: "[{'text': '全','done': false,'value': 0}]"
@@ -3611,12 +3784,14 @@ export default {
       // データの取得
       const response = await ApiHelper.post(
         `/mainData/TreatDateList`,
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add startupdateIndInfo
         getErrorMessage('IndEditBase.vue', 'ordMainList', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
         throw error;
+      })
+      .finally(() => {
+        this.finishLoadingScreen();
       });
       return response.data.length === 0 ? null : response.data;
     },
@@ -3627,9 +3802,9 @@ export default {
     getTreatTypeOrd(ordMainList) {
       // del 5785 追加で隔日，隔週のスケジュールが作成出来ない 張 start
       //mod FNSI no.5785 劉全航 start
-      // let newStartDate = moment(this.settingData.startDate);
-      // let endDate = moment(String(ordMainList[ordMainList.length-1].treatDate));
-      // let startDate = moment(String(ordMainList[0].treatDate));
+      // let newStartDate = dayjs(this.settingData.startDate);
+      // let endDate = dayjs(String(ordMainList[ordMainList.length-1].treatDate));
+      // let startDate = dayjs(String(ordMainList[0].treatDate));
       // if(newStartDate.isAfter(endDate)||newStartDate.isBefore(startDate) ){
       //   return;
       // }
@@ -3640,7 +3815,7 @@ export default {
         // ord => ord.treatType === 1 || ord.treatType === 2 || ord.treatType === 3
         ord => ord.rstDialysisState === "0"
         // #10266 予定作成モーダルで隔日/隔週のボタンが非活性となる。 linjunfeng end
-      );
+        );
       return ordMain;
     },
 
@@ -3687,14 +3862,12 @@ export default {
       paramJson.ind_kur_cd = JSON.stringify(this.structData.selectedKur);
       // 治療方法
       paramJson.ind_treatment_cd = JSON.stringify(
-        this.structData.selectedTreat
-      );
+        this.structData.selectedTreat);
 
       // 対象日時の治療情報取得(日付・曜日・治療方法・クールで絞り込み)
       const response = await ApiHelper.post(
         "/mainData/treatDateList",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndEditBase.vue', 'getTreatDateList', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -3705,16 +3878,18 @@ export default {
     },
     // add FNSI-【1006】最新の改修対象一覧の483対応 韓 start
     // 装置設定の内容の表示設定
-    showOhdfComment() {
+    async showOhdfComment() {
       if (this.isIndActionChart) {
-        this.$slots.default[0].componentInstance.reflectCommentShow(this.structData);
+        const component = await this.getDefaultSlotComponentAfterRender();
+        component?.reflectCommentShow(this.structData);
       }
     },
 
     // 装置設定の内容取得
     async getDeviceSetInfoInd() {
       if (this.isIndActionChart) {
-        this.$slots.default[0].componentInstance.getDeviceSetInfoPatOrd(this.settingData);
+        const component = await this.getDefaultSlotComponentAfterRender();
+        component?.getDeviceSetInfoPatOrd(this.settingData);
       }
     },
     // add FNSI-【1006】最新の改修対象一覧の483対応 韓 end
@@ -3743,12 +3918,12 @@ export default {
      */
     checkEquipmentTabooAllergy() {
       this.setTabooEquipment(false);
-      const comp = this.$slots.default?.[0]?.componentInstance;
+      const comp = this.getDefaultSlotComponent();
       if (!comp) {
         return;
       }
 
-      if (comp.hasOwnProperty('segmentValue')) {
+      if (Object.prototype.hasOwnProperty.call(comp, 'segmentValue')) {
         // 医療材料編集画面
         if (comp.segmentValue == 0) {
           // 編集時のみ入力値チェックを行い、中止時はチェックを行わない
@@ -3775,6 +3950,44 @@ export default {
       }
     },
 
+    /** カレンダーから開始日を選択した際の処理 */
+    onCalendarIndStartDateInput(date) {
+      if (!date) {
+        return;
+      }
+      this.AdjustTreatStartDate(date, true);
+      this.createKurAndTreatmentList();
+    },
+
+    /** カレンダーから終了日を選択した際の処理 */
+    onCalendarIndEndDateInput(date) {
+      if (!date) {
+        return;
+      }
+      this.AdjustTreatStartDate(date, false);
+      this.createKurAndTreatmentList();
+    },
+
+    /** 開始日・終了日フォーカスアウト時の処理 */
+    onBlurDate(date, field) {
+      // 値変更なし
+      if (this.beforeDate === date) {
+        return;
+      }
+
+      this.createKurAndTreatmentList();
+
+      // calendarIndStartDate・calendarIndEndDate変更時のwatchに処理を任せる
+      if (field === "indStartDate") {
+        this.AdjustTreatStartDate(date, true);
+        this.calendarIndStartDate = date;
+      }
+      if (field === "indEndDate") {
+        this.AdjustTreatStartDate(date, false);
+        this.calendarIndEndDate = date;
+      }
+    },
+
     /**
      * 子コンポーネントの入力値に禁忌・アレルギータグが含まれているかを判定し、
      * 判定結果（true/false）をストアのtabooEquipmentに設定する。
@@ -3782,7 +3995,7 @@ export default {
      */
     checkTabooAllergy() {
       this.setTabooEquipment(false);
-      const comp = this.$slots.default?.[0]?.componentInstance;
+      const comp = this.getDefaultSlotComponent();
       if (!comp) {
         return;
       }
@@ -3810,11 +4023,11 @@ export default {
   height: 100%;
 }
 
-.scroll-style >>> ons-row {
+.scroll-style :deep(ons-row) {
   height: auto;
 }
 
-.scroll-style >>> .device-info-content-area {
+.scroll-style :deep(.device-info-content-area) {
   padding: 0;
 }
 
@@ -3902,13 +4115,10 @@ export default {
 .date-start-input{
   width: calc(100% - 32px);
   padding-right: 2px !important;
-  background-color: #ffff99;
 }
 .date-start-input[disabled]{
   width: calc(100% - 32px);
   padding-right: 2px !important;
-  background-color: #ffff99;
-  color: #999;
 }
 .date-end-input{
   width: calc(100% - 32px);
@@ -3943,23 +4153,27 @@ input::-webkit-calendar-picker-indicator {
   padding-top: 8px;
 }
 /* add FNSI-患者経過総合ビューア 画面デザイン 李 end */
+
 @media print {
-  body:has(.modal-mask) .div-style {
-    padding: 0px 10px !important;
-  }
-  body:has(.device-info-content) div >>> .modal-wrapper {
-    margin-top: 1vh !important;
-  }
   .slot-style {
     padding: 0px 5px !important;
   }
-  .slot-style >>> .device-info-cell-value {
+  .slot-style :deep(.device-info-cell-value) {
     margin: 1px;
   }
 }
 </style>
 
 <style>
+@media print {
+  body:has(.modal-mask) .div-style {
+    padding: 0px 10px !important;
+  }
+  body:has(.device-info-content) div .modal-wrapper {
+    margin-top: 1vh !important;
+  }
+}
+
 /* add 画面デザイン改善対応 李 start */
 .kendo-dropdownlist-select-edited {
   color: green !important;

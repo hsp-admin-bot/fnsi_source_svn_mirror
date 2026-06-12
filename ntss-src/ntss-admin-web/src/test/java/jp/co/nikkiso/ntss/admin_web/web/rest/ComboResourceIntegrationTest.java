@@ -15,7 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
@@ -50,7 +50,7 @@ public class ComboResourceIntegrationTest extends AbstractResourceIntegrationTes
     // action
     ResultActions result
       = mockMvc.perform(get("/api/combo/{master_physical_name}/{text_column_physical_name}/{cd_column_physical_name}", targetTableName, textColName, cdColName)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -77,7 +77,7 @@ public class ComboResourceIntegrationTest extends AbstractResourceIntegrationTes
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/combo/{master_physical_name}/{text_column_physical_name}/{cd_column_physical_name}", targetTableName, textColName, cdColName)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -122,7 +122,7 @@ public class ComboResourceIntegrationTest extends AbstractResourceIntegrationTes
     // action
     ResultActions result
       = mockMvc.perform(get("/api/combo/{master_physical_name}/{text_column_physical_name}/{cd_column_physical_name}", targetTableName, textColName, cdColName)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -147,7 +147,7 @@ public class ComboResourceIntegrationTest extends AbstractResourceIntegrationTes
     // action
     ResultActions result
       = mockMvc.perform(get("/api/combo/{master_physical_name}/{text_column_physical_name}/{cd_column_physical_name}", targetTableName, textColName, cdColName)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -172,7 +172,7 @@ public class ComboResourceIntegrationTest extends AbstractResourceIntegrationTes
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/combo/{master_physical_name}/{text_column_physical_name}/{cd_column_physical_name}", targetTableName, textColName, cdColName)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -203,7 +203,7 @@ public class ComboResourceIntegrationTest extends AbstractResourceIntegrationTes
     // action
     ResultActions result
       = mockMvc.perform(RestDocumentationRequestBuilders.get("/api/combo/{master_physical_name}/{text_column_physical_name}/{cd_column_physical_name}", targetTableName, textColName, cdColName)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result

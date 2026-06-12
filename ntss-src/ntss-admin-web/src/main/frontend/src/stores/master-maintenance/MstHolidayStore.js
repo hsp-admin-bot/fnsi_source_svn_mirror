@@ -1,9 +1,12 @@
 /**
  * 休日マスタメンテナンスStore.
  */
+// #11205 -ペンテスト2－4認可制御の不備  日機装標準休日は sendRequestFindMstHolidayNikkisoCorporateData 使用  add 20260507 start
 import {
-  sendRequestFindRecordListByFacilityCd
+  sendRequestFindRecordListByFacilityCd,
+  sendRequestFindMstHolidayNikkisoCorporateData
 } from "@/apis/master-maintenance";
+// #11205 -ペンテスト2－4認可制御の不備  add 20260507 end
 
 export default {
   strict: true,
@@ -44,10 +47,14 @@ export default {
      * @param {*} paramFacilityCd
      */
     async fetchHolidays({ commit }, paramFacilityCd) {
-      await Promise.all(["nkknkk", paramFacilityCd].map(facilityCd =>
-        sendRequestFindRecordListByFacilityCd("mst_holiday", facilityCd)
-          .then(res => ({ facilityCd, res }))
-      ))
+      // #11205 -ペンテスト2－4認可制御の不備  並列①: /data/nkknkk 廃止→専用API  mod 20260507 start
+      await Promise.all([
+        sendRequestFindMstHolidayNikkisoCorporateData()
+          .then(res => ({ facilityCd: "nkknkk", res })),
+        sendRequestFindRecordListByFacilityCd("mst_holiday", paramFacilityCd)
+          .then(res => ({ facilityCd: paramFacilityCd, res }))
+      ])
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
       .then(results => {
         const holidayList = [];
         const ret = {};

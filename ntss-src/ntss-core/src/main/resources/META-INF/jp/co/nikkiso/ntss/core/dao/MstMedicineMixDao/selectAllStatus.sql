@@ -52,88 +52,142 @@ GROUP BY pat_id, category_class, cd
 SELECT DISTINCT *
 from TABOO_ALLERGY_data_pat
 where category_class = '2'
-  )
-SELECT
-    A.medicine_mix_cd        AS "medicineMixCd",
-    A.facility_cd            AS "facilityCd",
-    A.medicine_mix_name      AS "medicineMixName",
-    A.medicine_mix_short_name AS "medicineMixShortName",
-    A.class_cd               AS "classCd",
-    A.unit                   AS "unit",
-    A.amount_unit            AS "amountUnit",
-    A.amount_ml              AS "amountMl",
-    A.mix_info               AS "mixInfo",
-    A.is_shot                AS "isShot",
-    A.is_medicated           AS "isMedicated",
-    A.in_hospital_cd_1       AS "inHospitalCd1",
-    A.in_hospital_cd_2       AS "inHospitalCd2",
-    A.in_hospital_cd_3       AS "inHospitalCd3",
-    A.is_disp                AS "isDisp",
-    A.is_del                 AS "isDel",
-    A.reg_date               AS "regDate",
-    A.up_date                AS "upDate",
-    A.medicate_timing_cd     AS "medicateTimingCd",
-    A.procedure_cd           AS "procedureCd",
-    A.unit_decimal_point     AS "unitDecimalPoint",
-    A.fn_set_medicine_cd     AS "fnSetMedicineCd",
+  ),
+BASE AS (
+  SELECT
+      A.medicine_mix_cd        AS "medicineMixCd",
+      A.facility_cd            AS "facilityCd",
+      A.medicine_mix_name      AS "medicineMixName",
+      A.medicine_mix_short_name AS "medicineMixShortName",
+      A.class_cd               AS "classCd",
+      A.unit                   AS "unit",
+      A.amount_unit            AS "amountUnit",
+      A.amount_ml              AS "amountMl",
+      A.mix_info               AS "mixInfo",
+      A.is_shot                AS "isShot",
+      A.is_medicated           AS "isMedicated",
+      A.in_hospital_cd_1       AS "inHospitalCd1",
+      A.in_hospital_cd_2       AS "inHospitalCd2",
+      A.in_hospital_cd_3       AS "inHospitalCd3",
+      A.is_disp                AS "isDisp",
+      A.is_del                 AS "isDel",
+      A.reg_date               AS "regDate",
+      A.up_date                AS "upDate",
+      A.medicate_timing_cd     AS "medicateTimingCd",
+      A.procedure_cd           AS "procedureCd",
+      A.unit_decimal_point     AS "unitDecimalPoint",
+      A.fn_set_medicine_cd     AS "fnSetMedicineCd",
+      CASE
+          WHEN ms.code IS NOT NULL THEN 0 ELSE 1
+      END                      AS "sortGroup",
+      ms.selector_index        AS "medicineMixSelectorIndex",
+      CASE
+        WHEN TATM.is_taboo AND TATM.is_allergy THEN '【禁忌・ｱﾚﾙｷﾞｰ】'
+        WHEN TATM.is_taboo THEN '【禁忌】'
+        WHEN TATM.is_allergy THEN '【ｱﾚﾙｷﾞｰ】'
+        ELSE ''
+      END                      AS "tabooAllergy",
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM jsonb_to_recordset(A.mix_info) AS mi(cd int)
+                 JOIN mst_medicine m ON m.medicine_cd = mi.cd
+          WHERE (m.use_start_date IS NOT NULL AND m.use_start_date >
+                  /*%if params.get("treatDate") != null && !params.get("treatDate").trim().isEmpty() */
+                    /* params.get("treatDate") */'20000101'
+                  /*%else */
+                    TO_CHAR(CURRENT_DATE, 'YYYYMMDD')
+                  /*%end */
+                )
+             OR (m.use_end_date   IS NOT NULL AND m.use_end_date   <
+                  /*%if params.get("treatDate") != null && !params.get("treatDate").trim().isEmpty() */
+                    /* params.get("treatDate") */'20000101'
+                  /*%else */
+                    TO_CHAR(CURRENT_DATE, 'YYYYMMDD')
+                  /*%end */
+                )
+        ) THEN '【期限切れ】'
+        ELSE ''
+      END                      AS "expired",
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM jsonb_to_recordset(A.mix_info) AS mi(cd int)
+                 JOIN mst_medicine m ON m.medicine_cd = mi.cd
+          WHERE m.is_disp = '0'
+             OR m.is_del = '1'
+        ) THEN '【削除済み含む】'
+        ELSE ''
+      END                      AS "includeDeleted",
+      CASE
+        WHEN /* params.get("classType") */'' <> ''
+             AND MMC.class_type IS DISTINCT FROM /* params.get("classType") */'0'
+          THEN '【分類不一致】'
+        ELSE ''
+      END                      AS "classInconsistent"
+  FROM
+      mst_medicine_mix A
+      LEFT JOIN mst_medicine_class MMC
+        ON MMC.class_cd = A.class_cd
+      LEFT JOIN TABOO_ALLERGY_TO_MST TATM ON A.medicine_mix_cd = TATM.cd
+      LEFT JOIN LATERAL (
+          SELECT
+              mss.facility_cd      AS facility_cd,
+              ms.code              AS code,
+              ms.name              AS name,
+              ROW_NUMBER() OVER () AS selector_index
+          FROM
+              mst_selector mss
+              CROSS JOIN LATERAL jsonb_to_recordset(
+                  mss.order_settings -> 'items'
+              ) AS ms(code BIGINT, name TEXT)
+          WHERE
+              mss.master_physical_name = 'mst_medicine_mix'
+      ) ms
+          ON A.facility_cd = ms.facility_cd
+         AND A.medicine_mix_cd = ms.code
+  WHERE
+      A.facility_cd = /* params.get("facilityCd") */'0'
+),
+MAIN AS (
+  SELECT
+    B.*,
+    '' AS "deleted"
+  FROM BASE B
+  WHERE
+    B."isDisp" = '1'
+    AND B."isDel" = '0'
+    /*%if params.get("classType") != null && !params.get("classType").trim().isEmpty()*/
+    AND B."classInconsistent" = ''
+    /*%end*/
+),
+INIT AS (
+  SELECT
+    B.*,
     CASE
-        WHEN ms.code IS NOT NULL THEN 0 ELSE 1
-    END                      AS "sortGroup",
-    ms.selector_index        AS "medicineMixSelectorIndex",
-    CASE
-      WHEN TATM.is_taboo AND TATM.is_allergy THEN '【禁忌・ｱﾚﾙｷﾞｰ】'
-      WHEN TATM.is_taboo THEN '【禁忌】'
-      WHEN TATM.is_allergy THEN '【ｱﾚﾙｷﾞｰ】'
-      ELSE ''
-    END                      AS "tabooAllergy",
-    CASE
-      WHEN EXISTS (
-        SELECT 1
-        FROM jsonb_to_recordset(A.mix_info) AS mi(cd int)
-               JOIN mst_medicine m ON m.medicine_cd = mi.cd
-        WHERE (m.use_start_date IS NOT NULL AND m.use_start_date > TO_CHAR(CURRENT_DATE, 'YYYYMMDD'))
-           OR (m.use_end_date   IS NOT NULL AND m.use_end_date   < TO_CHAR(CURRENT_DATE, 'YYYYMMDD'))
-      ) THEN '【期限切れ】'
-      ELSE ''
-    END                      AS "expired",
-    CASE
-      WHEN
-        A.is_disp = '0' OR A.is_del = '1'
+      WHEN B."isDisp" = '0' OR B."isDel" = '1'
         THEN '【削除済み】'
       ELSE ''
-    END                      AS "deleted",
-    CASE
-      WHEN EXISTS (
-        SELECT 1
-        FROM jsonb_to_recordset(A.mix_info) AS mi(cd int)
-               JOIN mst_medicine m ON m.medicine_cd = mi.cd
-        WHERE m.is_disp = '0'
-           OR m.is_del = '1'
-      ) THEN '【削除済み含む】'
-      ELSE ''
-    END                      AS "includeDeleted"
-FROM
-    mst_medicine_mix A
-    LEFT JOIN TABOO_ALLERGY_TO_MST TATM ON A.medicine_mix_cd = TATM.cd
-    LEFT JOIN LATERAL (
-        SELECT
-            mss.facility_cd      AS facility_cd,
-            ms.code              AS code,
-            ms.name              AS name,
-            ROW_NUMBER() OVER () AS selector_index
-        FROM
-            mst_selector mss
-            CROSS JOIN LATERAL jsonb_to_recordset(
-                mss.order_settings -> 'items'
-            ) AS ms(code BIGINT, name TEXT)
-        WHERE
-            mss.master_physical_name = 'mst_medicine_mix'
-    ) ms
-        ON A.facility_cd = ms.facility_cd
-       AND A.medicine_mix_cd = ms.code
-WHERE
-    A.facility_cd = /* params.get("facilityCd") */'0'
+    END AS "deleted"
+  FROM BASE B
+  WHERE
+    /*%if params.get("initMedicineCd") != null && !params.get("initMedicineCd").trim().isEmpty() */
+    B."medicineMixCd" = (/* params.get("initMedicineCd") */0)::int
+    /*%else */
+    1 = 0
+    /*%end */
+)
+SELECT *
+FROM MAIN
+UNION ALL
+SELECT I.*
+FROM INIT I
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM MAIN M
+  WHERE M."medicineMixCd" = I."medicineMixCd"
+)
 ORDER BY
     "sortGroup" ASC,
-    ms.selector_index NULLS LAST,
-    A.medicine_mix_cd;
+    "medicineMixSelectorIndex" NULLS LAST,
+    "medicineMixCd";

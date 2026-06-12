@@ -49,9 +49,7 @@ export default {
      * @param {*} patId 患者ID
      * @param {*} condition 検索条件（治療開始日と治療終了日）
      */
-    /* eslint-disable no-unused-vars */
     getIndicationResultList({ commit }, { patId, condition }) {
-      /* eslint-enable no-unused-vars */
       return sendRequestGetIndicationResultList(patId, condition);
     },
     // add FNSI-No.342 患者イベント、検査結果、検査予定、一般撮影検査予定、処方の表示、機能遷移に対応 李 start
@@ -60,9 +58,7 @@ export default {
      * @param {*} commit commitオブジェクト
      * @param {*} condition 検索条件（患者ID、施設コード、治療開始日、治療終了日）
      */
-    /* eslint-disable no-unused-vars */
     getPatientEventResultList({ commit }, { condition }) {
-      /* eslint-disable no-unused-vars */
       return sendRequestGetPatientEventResultList(condition);
     },
 
@@ -71,9 +67,7 @@ export default {
      * @param {*} commit commitオブジェクト
      * @param {*} condition 検索条件 検査セットID
      */
-    /* eslint-disable no-unused-vars */
     getObtainedInspectionItems({ commit }, { condition }) {
-      /* eslint-disable no-unused-vars */
       return sendRequestGetObtainedInspectionItems(condition);
     },
 
@@ -82,9 +76,7 @@ export default {
      * @param {*} commit commitオブジェクト
      * @param {*} condition 検索条件（患者ID、施設コード、治療開始日、治療終了日）
      */
-    /* eslint-disable no-unused-vars */
     getInspectionResultList({ commit }, { condition }) {
-      /* eslint-disable no-unused-vars */
       return sendRequestGetInspectionResultList(condition);
     },
 
@@ -93,9 +85,7 @@ export default {
      * @param {*} commit commitオブジェクト
      * @param {*} condition 検索条件（患者ID、施設コード、治療開始日、治療終了日）
      */
-    /* eslint-disable no-unused-vars */
     getGenPhotoInsResultList({ commit }, { condition }) {
-      /* eslint-disable no-unused-vars */
       return sendRequestGetGenPhotoInsResultList(condition);
     },
 
@@ -104,9 +94,7 @@ export default {
      * @param {*} commit commitオブジェクト
      * @param {*} condition 検索条件（患者ID、施設コード、治療開始日、治療終了日）
      */
-    /* eslint-disable no-unused-vars */
     getPrescriptionResultList({ commit }, { condition }) {
-      /* eslint-disable no-unused-vars */
       return sendRequestGetPrescriptionResultList(condition);
     },
     // add FNSI-No.342 患者イベント、検査結果、検査予定、一般撮影検査予定、処方の表示、機能遷移に対応 李 end

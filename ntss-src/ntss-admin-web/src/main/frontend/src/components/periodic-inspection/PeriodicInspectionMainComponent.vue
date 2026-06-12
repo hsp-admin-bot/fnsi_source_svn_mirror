@@ -150,7 +150,7 @@
                   :key="colIndex"
                   class="custom-xo freeze-horizontal ntss-list-body-td ntss-list-body-td-center word-break-td"
                   style="padding: 5.6px !important;"
-                  @click="isCellBlank(inspect) && showResult(inspect, item, $event)"
+                  @click="isCellBlank(inspect) && showResult(inspect, item, $event, null, index, colIndex)"
                 >
                   <span
                     v-if="!isCellBlank(inspect)"
@@ -162,7 +162,7 @@
                     >
                       <span
                         style="vertical-align: text-top; white-space: pre-wrap; word-break: break-all;"
-                        @click="showResult(inspect, item, $event, groupIndex)"
+                        @click="showResult(inspect, item, $event, groupIndex, index, colIndex)"
                       >
                         <span
                           v-if="isAnswerPass(inspect, groupIndex)"
@@ -193,7 +193,7 @@
     <v-ons-popover
       :class="[fontSizeSet, 'popover-content popover-content-header']"
       cancelable
-      :visible.sync="popoverHeader.popoverVisible"
+      v-model:visible="popoverHeader.popoverVisible"
       :target="popoverHeader.popoverTarget"
       :direction="popoverHeader.popoverDirection"
     >
@@ -219,14 +219,12 @@
     </v-ons-popover>
     <!-- セルクリック時 吹き出し -->
     <v-ons-popover
+      v-if="popoverInfo.popoverVisible"
       cancelable
-      :visible.sync="popoverInfo.popoverVisible"
+      v-model:visible="popoverInfo.popoverVisible"
       :target="popoverInfo.popoverTarget"
       :direction="popoverInfo.popoverDirection"
       :class="[fontSizeSet, 'popover-style']"
-      @preshow="popoverPreShow"
-      @postshow="popoverPostShow"
-      @posthide="popoverPosthide"
     >
       <div class="popover-content-div">
         <v-ons-row
@@ -260,19 +258,14 @@ import { deepCopy, getHolidayStyle } from "@/functions/common/CommonFunctions";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
 import { MainteClass } from "@/constants/mainteConstants";
 import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
-import moment from "moment";
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import moment from "@/compat/date/dayjs";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import { sendRequestGetAllMachine } from "@/apis/periodic-inspection";
-import { EventBus } from "@/eventBus";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import PopoverMixin from "@/components/PopoverMixin";
 import { getCurrentFunctionCd } from "@/router/routing-helper";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
-import {
-  popoverPosthide,
-  popoverPostShow,
-  popoverPreShow,
-} from "@/functions/common/CommonPopoverFunctions";
 import store from "@/stores";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import {
@@ -285,7 +278,14 @@ import {
   sortableCompare,
 } from "@/functions/SortFunctions";
 import $ from "jquery";
+import { getLatestHeaderElement, getHeaderHeight, getFooterMenuClientHeight, getScopedElementById, getScopedSessionStorage } from "@/functions/common/LayoutMeasureHelper";
+import { sendRequestCreateMenteTemp } from "@/apis/periodic-inspection";
 import PrintMixin from "@/components/PrintMixin";
+import {
+  formatMenteDateHeader,
+  normalizeMenteDate,
+  normalizeMenteDateInResults,
+} from "@/functions/periodic-inspection/PeriodicInspectionDateUtil";
 
 const ScrollStartPostionState = Object.freeze({
   Initial: 0,
@@ -401,8 +401,8 @@ export default {
       iosFlg: false,
       androidFlg: false,
       setScrollStartPostionState: ScrollStartPostionState.Initial,
-      scrollQuerySelector: ".scroll-area", // スクロールコンテナ
-      addClassTargetQuerySelector: ["#scrollTable"] // scroll-rightmostクラスを付与する対象のクエリセレクタ      
+      scrollQuerySelector: ".scroll-area",
+      addClassTargetQuerySelector: ["#scrollTable"],
     };
   },
   computed: {
@@ -544,6 +544,9 @@ export default {
     },
   },
   methods: {
+    getScopedElementByIdSafe(id) {
+      return getScopedElementById(id, this.$el || null);
+    },
     ...mapActions("periodic-inspection", [
       "waitReadyToSearchByParam",
       "sendRequestGetAllLayoutGroup",
@@ -581,9 +584,50 @@ export default {
       "fetchHolidays",
       "clearHolidays",
     ]),
-    popoverPreShow,
-    popoverPostShow,
-    popoverPosthide,
+    getPopoverTargetCell(rowIndex, colIndex) {
+      if (rowIndex < 0 || colIndex < 0) {
+        return null;
+      }
+      const rows = this.getScopedElementByIdSafe("scrollTable")?.querySelectorAll?.("tbody > tr");
+      return rows?.[rowIndex]?.cells?.[colIndex] || null;
+    },
+    createPopoverAnchor(element) {
+      if (!element) {
+        return null;
+      }
+      return { target: element, currentTarget: element };
+    },
+    getPopoverDirectionByCell(cell) {
+      const rect = cell?.getBoundingClientRect?.();
+      if (!rect) {
+        return "down";
+      }
+      const viewportHeight = this.$el?.ownerDocument?.defaultView?.innerHeight
+        || document.documentElement?.clientHeight
+        || 0;
+      return rect.top > viewportHeight * 0.55 ? "up" : "down";
+    },
+    openCellPopover(event, rowIndex, colIndex, applyPopoverState) {
+      const cell = this.getPopoverTargetCell(rowIndex, colIndex)
+        || event?.target?.closest?.("td");
+      const anchor = this.createPopoverAnchor(cell);
+      if (!anchor) {
+        return;
+      }
+
+      const reopen = () => {
+        applyPopoverState(anchor, this.getPopoverDirectionByCell(cell));
+        this.popoverInfo.popoverVisible = true;
+      };
+
+      if (this.popoverInfo.popoverVisible) {
+        this.popoverInfo.popoverVisible = false;
+        this.popoverInfo.popoverTarget = null;
+        this.$nextTick(reopen);
+        return;
+      }
+      reopen();
+    },
 
     isCellBlank(inspect) {
       return !inspect.menteDate || inspect.devMenteNo == null;
@@ -625,8 +669,8 @@ export default {
         const patGroups = this.getStorSimlpSearchQurey.selectedPatGroupNames
           ? this.getStorSimlpSearchQurey.selectedPatGroupNames
           : "すべて";
-        const bedCdListString = JSON.parse(sessionStorage.getItem("bedGroupListPeriodic")) || [];
-        const machineTypeName = JSON.parse(sessionStorage.getItem("machineInspectionPeriodic"))
+        const bedCdListString = JSON.parse(getScopedSessionStorage(this.$el || this).getItem("bedGroupListPeriodic")) || [];
+        const machineTypeName = JSON.parse(getScopedSessionStorage(this.$el || this).getItem("machineInspectionPeriodic"))
           .replaceAll("、", "・") || "";
         // add #11285 機能帳票の印刷情報対応② 高 end
         // mod #11985 定期点検一覧帳票が正常に出せない limingzhe start
@@ -721,7 +765,7 @@ export default {
       this.executeWithLoadingScreen(this.initData());
     },
     async confirm(answer) {
-      this.isDialogVisible = false;
+      this.messageDialogInfo.confirmVisible = false;
       if (answer !== "OK") return;
 
       this.popoverHeader.popoverVisible = false;
@@ -779,7 +823,8 @@ export default {
     showSubModals(callModalFunction, arg = []) {
       callModalFunction(arg);
     },
-    showResult(inspect, machineItem, event, groupIndex = null) {
+    //#9846 add  rowIndex = -1, colIndex = -1
+    showResult(inspect, machineItem, event, groupIndex = null, rowIndex = -1, colIndex = -1) {
       // 編集権限がない場合は処理しない
       if (!this.hasDevEditAuthority) return;
 
@@ -793,7 +838,9 @@ export default {
       }
       this.inspectSelected = inspect;
       // 状況に応じたポップアップ表示
-      const popoverDirection = (event.clientY < 600) ? "down" : "up";
+      //#9846 start
+      //const popoverDirection = (event.clientY < 600) ? "down" : "up";
+      //#9846 end
       if (inspect.menteDate === "") {
         // 点検予定がないセルの場合
         const listLayoutGroup = this.getLayoutGroupByMachineTypeCd(machineTypeCd);
@@ -804,10 +851,18 @@ export default {
           alertByKey(13000166);
           return;
         }
-        this.popoverInfo.listvalue = listLayoutGroup;
-        this.popoverInfo.popoverTarget = event;
-        this.popoverInfo.popoverVisible = true;
-        this.popoverInfo.popoverDirection = popoverDirection;
+        //#9846 start
+        // this.openCellPopover(event, (target) => {
+        //   this.popoverInfo.listvalue = listLayoutGroup;
+        //   this.popoverInfo.popoverTarget = target;
+        //   this.popoverInfo.popoverDirection = popoverDirection;
+        // });
+        this.openCellPopover(event, rowIndex, colIndex, (anchor, popoverDirection) => {
+          this.popoverInfo.listvalue = listLayoutGroup;
+          this.popoverInfo.popoverTarget = anchor;
+          this.popoverInfo.popoverDirection = popoverDirection;
+        });
+        //#9846 end
         return;
       }
       if (inspect.menteDate) {
@@ -822,9 +877,16 @@ export default {
           // 点検結果が登録済の場合
           this.popoverInfo.listvalue = ListItemsHaveResult;
         }
-        this.popoverInfo.popoverTarget = event;
-        this.popoverInfo.popoverVisible = true;
-        this.popoverInfo.popoverDirection = popoverDirection;
+        //#9846 start
+        // this.openCellPopover(event, (target) => {
+        //   this.popoverInfo.popoverTarget = target;
+        //   this.popoverInfo.popoverDirection = popoverDirection;
+        // });
+        this.openCellPopover(event, rowIndex, colIndex, (anchor, popoverDirection) => {
+          this.popoverInfo.popoverTarget = anchor;
+          this.popoverInfo.popoverDirection = popoverDirection;
+        });
+        //#9846 end
         return;
       }
     },
@@ -954,6 +1016,7 @@ export default {
     },
     // ヘッダ画面のdialogOkイベントのemitによりこの関数が呼び出される
     setDataSource(resultData) {
+      resultData = normalizeMenteDateInResults(resultData);
       // グリッドの行（装置）データを検索条件のベッドグループと型式に
       // 従って絞り込みなおす
       let dataSourceFiltered = [];
@@ -1177,21 +1240,51 @@ export default {
       updateSort(key, this.sort);
     },
     // 日付列ヘッダクリック時
+    //  showPopover(event, dateString) {
+    //   const target = this.resolvePopoverClickTarget(event);
+    //   this.popoverHeader.dateString = dateString;
+    //   if (this.popoverHeader.popoverVisible) {
+    //     this.popoverHeader.popoverVisible = false;
+    //     this.$nextTick(() => {
+    //       this.popoverHeader.popoverTarget = target;
+    //       this.popoverHeader.popoverVisible = true;
+    //     });
+    //     return;
+    //   }
+    //   this.popoverHeader.popoverTarget = target;
+    //   this.popoverHeader.popoverVisible = true;
+    // },
     showPopover(event, dateString) {
-      this.popoverHeader.popoverTarget = event;
-      this.popoverHeader.popoverVisible = true;
       this.popoverHeader.dateString = dateString;
+      const header = this.getScopedElementByIdSafe(dateString)
+        || event?.target?.closest?.("th");
+      const anchor = this.createPopoverAnchor(header);
+      if (!anchor) {
+        return;
+      }
+
+      const reopen = () => {
+        this.popoverHeader.popoverTarget = anchor;
+        this.popoverHeader.popoverVisible = true;
+      };
+
+      if (this.popoverHeader.popoverVisible) {
+        this.popoverHeader.popoverVisible = false;
+        this.popoverHeader.popoverTarget = null;
+        this.$nextTick(reopen);
+        return;
+      }
+      reopen();
     },
     formatListDate(item) {
-      const week = moment(item.dateString).format("dd");
-      return `${item.year}/${item.mounth}/${item.date} (${week})`;
+      return formatMenteDateHeader(item.dateString);
     },
     dateStyle(item) {
       let result = {};
       const dateCurrent = moment(new Date()).format("YYYYMMDD");
       if (
         item.dateString !== "" &&
-        moment(item.dateString).isSame(dateCurrent)
+        moment(normalizeMenteDate(item.dateString)).format("YYYYMMDD") === dateCurrent
       ) {
         result["background-color"] = "#2ca06f";
       }
@@ -1318,9 +1411,9 @@ export default {
              // 日付数 = "0"の場合
              if (cols === 0) {
                // スクロールトップの取得
-               const scrollPosition = document.getElementById("fixedArea").scrollTop;
+               const scrollPosition = this.getScopedElementByIdSafe("fixedArea").scrollTop;
                // (固定エリア)スクロールの同期
-               document.getElementById("fixedArea").scrollTop = scrollPosition + event.deltaY;
+               this.getScopedElementByIdSafe("fixedArea").scrollTop = scrollPosition + event.deltaY;
                // 終了
                return false;
              }
@@ -1351,20 +1444,20 @@ export default {
       // 全体エリアスクロール状態 かつ スクロール(Y)状態以外の場合
       if (this.scrollState && !this.isScrollY) {
         // スクロールトップの取得
-        const scrollPosition = document.getElementById("allArea").scrollTop;
+        const scrollPosition = this.getScopedElementByIdSafe("allArea").scrollTop;
         // (全体エリア)スクロールの同期
-        document.getElementById("allArea").scrollTop = scrollPosition + event.deltaY;
+        this.getScopedElementByIdSafe("allArea").scrollTop = scrollPosition + event.deltaY;
       } else {
         // スクロールトップの取得
-        const scrollPosition = document.getElementById("scrollArea").scrollTop;
+        const scrollPosition = this.getScopedElementByIdSafe("scrollArea").scrollTop;
         // (スクロールエリア)スクロールの同期
-        document.getElementById("scrollArea").scrollTop = scrollPosition + event.deltaY;
+        this.getScopedElementByIdSafe("scrollArea").scrollTop = scrollPosition + event.deltaY;
       }
     },
     // マウススクロールイベント
     onScroll(event) {
       // 処理実行タイミングの最適化
-      window.requestAnimationFrame(async () => {
+      (this.$el?.ownerDocument?.defaultView || window).requestAnimationFrame(async () => {
         // 縦スクロール(現在のスクロールトップ ≠ 前回のスクロールトップ)の場合
         if (event.target.scrollTop != this.scrollTopPosition) {
           // スクロール位置の設定
@@ -1374,7 +1467,7 @@ export default {
           // スクロールトップの保持
           // dataSource変更時のwatch内でスクロールエリアの行高などを再設定する過程で高さが完全に設定されない状態の時にonScrollイベントが発生するため、
           // 縦スクロール可能な最大位置を取得して、操作時のスクロール位置が最大位置以下の場合のみ操作時のスクロール位置を退避する
-          const scrollArea = document.getElementById("scrollArea");
+          const scrollArea = this.getScopedElementByIdSafe("scrollArea");
           const maxScrollTop = scrollArea.scrollHeight - scrollArea.clientHeight;
           const maxScrollLeft = scrollArea.scrollWidth - scrollArea.clientWidth;
           const currentScrollTop = Math.min(Math.floor(event.target.scrollTop), maxScrollTop);
@@ -1464,32 +1557,32 @@ export default {
     setFixedAreaSize() {
       // -----height-----
       // ヘッダー高の取得
-      const headerHeight = document.getElementsByClassName("header")[0].offsetHeight;
+      const headerHeight = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
       // フッター高の取得
-      const footerHeight = document.getElementById("footer-menu").clientHeight;
+      const footerHeight = getFooterMenuClientHeight(this.$el || null);
       // 画面表示幅 - ヘッダー高 - フッター高 - 調整高
       const fixedAreaHeight = this.windowHeight - headerHeight - footerHeight - 20;
       // 固定テーブル高の取得
-      const fixedTableHeight = document.getElementById("fixedTable").clientHeight;
+      const fixedTableHeight = this.getScopedElementByIdSafe("fixedTable").clientHeight;
       // 固定エリア高 > 固定テーブル高
       if (fixedAreaHeight > fixedTableHeight) {
         // 横スクロールバーの高さ
-        const scrollArea = document.getElementById("scrollArea");
+        const scrollArea = this.getScopedElementByIdSafe("scrollArea");
         const scrollBarHeight = scrollArea.offsetHeight - scrollArea.clientHeight;
         // 固定テーブル高 + 調整高
         const val = fixedTableHeight + scrollBarHeight;
         // 固定エリア高の設定
-        document.getElementById("fixedArea").style.height = val + "px";
+        this.getScopedElementByIdSafe("fixedArea").style.height = val + "px";
         // スクロール調整エリアマージンの初期化
-        document.getElementById("scrollAdjustArea").style.marginTop = "0px";
+        this.getScopedElementByIdSafe("scrollAdjustArea").style.marginTop = "0px";
       } else {
         // 固定エリア高 - 調整高
         const val = fixedAreaHeight + (20 - 8);
         // 固定エリア高の設定
-        document.getElementById("fixedArea").style.height = val + "px";
+        this.getScopedElementByIdSafe("fixedArea").style.height = val + "px";
         // スクロール調整エリアマージンの固定化
         if (!this.isMobileDevice) {
-          document.getElementById("scrollAdjustArea").style.marginTop = "18px";
+          this.getScopedElementByIdSafe("scrollAdjustArea").style.marginTop = "18px";
         }
       }
     },
@@ -1497,44 +1590,44 @@ export default {
     setScrollAreaSize() {
       // -----height-----
       // ヘッダー高の取得
-      const headerHeight = document.getElementsByClassName("header")[0].offsetHeight;
+      const headerHeight = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
       // フッター高の取得
-      const footerHeight = document.getElementById("footer-menu").clientHeight;
+      const footerHeight = getFooterMenuClientHeight(this.$el || null);
       // スクロールエリア高の計算
       const scrollAreaHeight = this.windowHeight - headerHeight - footerHeight - 20;
       // スクロールテーブル高の取得
-      const scrollTableHeight = document.getElementById("scrollTable").clientHeight;
+      const scrollTableHeight = this.getScopedElementByIdSafe("scrollTable").clientHeight;
       // スクロールエリア高 > スクロールテーブル高
       if (scrollAreaHeight > scrollTableHeight) {
         // 横スクロールバーの高さ
-        const scrollArea = document.getElementById("scrollArea");
+        const scrollArea = this.getScopedElementByIdSafe("scrollArea");
         const scrollBarHeight = scrollArea.offsetHeight - scrollArea.clientHeight;
         // スクロールエリア高 + 調整高
         const val = scrollTableHeight + scrollBarHeight;
         // スクロールエリア高の設定
-        document.getElementById("scrollArea").style.height = val + "px";
+        this.getScopedElementByIdSafe("scrollArea").style.height = val + "px";
       } else {
         // スクロールエリア高 - 調整高
         const val = scrollAreaHeight + (20 - 8);
         // スクロールエリア高の設定
-        document.getElementById("scrollArea").style.height = val + "px";
+        this.getScopedElementByIdSafe("scrollArea").style.height = val + "px";
       }
       // -----width-----
       // サイドバー開閉有無の取得
-      const sideBarIsOpen = document.getElementById("patientSearchSidebarArea").style.cssText.toString().indexOf("transform:") === -1;
+      const sideBarIsOpen = this.getScopedElementByIdSafe("patientSearchSidebarArea").style.cssText.toString().indexOf("transform:") === -1;
       // 固定エリア幅の取得
-      const fixedAreaWidth = document.getElementById("fixedArea").clientWidth;
+      const fixedAreaWidth = this.getScopedElementByIdSafe("fixedArea").clientWidth;
       // サイドバー閉の場合
       if (!sideBarIsOpen) {
         // 画面表示幅 - 固定エリア幅 - 調整幅
         const val = this.windowWidth - fixedAreaWidth - 10;
         // スクロールエリア幅の設定
-        document.getElementById("scrollArea").style.width = val + "px";
+        this.getScopedElementByIdSafe("scrollArea").style.width = val + "px";
       } else {
         // 画面表示幅(サイドバー含む) - 固定エリア幅 - 調整幅
         const val = this.mainWindowWidth - fixedAreaWidth - 11;
         // スクロールエリア幅の設定
-        document.getElementById("scrollArea").style.width = val + "px";
+        this.getScopedElementByIdSafe("scrollArea").style.width = val + "px";
       }
     },
     // スクロールテーブル幅の初期化
@@ -1544,7 +1637,7 @@ export default {
       // 最小幅 * 日付数 + バッファー
       const val = this.minWidth * cols + this.buffer;
       // スクロールテーブル幅の設定
-      document.getElementById("scrollTable").style.width = val + "px";
+      this.getScopedElementByIdSafe("scrollTable").style.width = val + "px";
     },
     // スクロールテーブル幅の取得
     getScrollTableWidth() {
@@ -1566,7 +1659,7 @@ export default {
     // スクロールテーブル幅の設定
     setScrollTableWidth() {
       // ヘッダーの取得
-      let th = document.getElementById(this.targetID);
+      let th = this.getScopedElementByIdSafe(this.targetID);
       // ヘッダー幅の取得
       const thWidth = Number(th.style.width.replace("px", ""));
       // 現在列幅の評価
@@ -1578,7 +1671,7 @@ export default {
       // スクロールテーブル幅の計算
       const val = this.calculateScrollTableWidth(scrollTableWidth, currentWidth, baseWidth) + this.buffer;
       // スクロールテーブル幅の設定
-      document.getElementById("scrollTable").style.width = val + "px";
+      this.getScopedElementByIdSafe("scrollTable").style.width = val + "px";
       // 現在列幅の記録
       th.style.width = currentWidth + "px";
       // 基準(前回)列幅の記録
@@ -1612,9 +1705,9 @@ export default {
     // スクロールバーの設定
     setScrollBar() {
       // サイドバー開閉有無の取得
-      const sideBarIsOpen = document.getElementById("patientSearchSidebarArea").style.cssText.toString().indexOf("transform:") === -1;
+      const sideBarIsOpen = this.getScopedElementByIdSafe("patientSearchSidebarArea").style.cssText.toString().indexOf("transform:") === -1;
       // 固定エリア幅の取得
-      const fixedAreaWidth = document.getElementById("fixedArea").clientWidth;
+      const fixedAreaWidth = this.getScopedElementByIdSafe("fixedArea").clientWidth;
       // スクロールテーブル幅の取得
       const scrollTableWidth = this.getScrollTableWidth();
       // 日付数の取得
@@ -1644,9 +1737,9 @@ export default {
             // 全体エリアサイズの最適化
             this.optimizeAllAreaSize(true);
             // スクロールエリア幅の再設定
-            document.getElementById("scrollArea").style.width = "auto";
+            this.getScopedElementByIdSafe("scrollArea").style.width = "auto";
             // スクロールテーブル幅の再設定
-            document.getElementById("scrollTable").style.width = val +  "px";
+            this.getScopedElementByIdSafe("scrollTable").style.width = val +  "px";
             // 全体エリアスクロール状態
             this.scrollState = true;
             // スクロール(Y)状態
@@ -1659,7 +1752,7 @@ export default {
             // 全体エリアサイズの最適化
             this.optimizeAllAreaSize(true);
             // スクロールテーブル幅の再設定
-            document.getElementById("scrollTable").style.width = val + "px";
+            this.getScopedElementByIdSafe("scrollTable").style.width = val + "px";
             // スクロールエリアスクロール状態
             this.scrollState = false;
             // スクロール(XY)状態
@@ -1693,9 +1786,9 @@ export default {
             // 全体エリアサイズの最適化
             this.optimizeAllAreaSize(true);
             // スクロールエリア幅の再設定
-            document.getElementById("scrollArea").style.width = "auto";
+            this.getScopedElementByIdSafe("scrollArea").style.width = "auto";
             // スクロールテーブル幅の再設定
-            document.getElementById("scrollTable").style.width = val + "px";
+            this.getScopedElementByIdSafe("scrollTable").style.width = val + "px";
             // 全体エリアスクロール状態
             this.scrollState = true;
             // スクロール(Y)状態
@@ -1708,7 +1801,7 @@ export default {
             // 全体エリアサイズの最適化
             this.optimizeAllAreaSize(true);
             // スクロールテーブル幅の再設定
-            document.getElementById("scrollTable").style.width = val + "px";
+            this.getScopedElementByIdSafe("scrollTable").style.width = val + "px";
             // スクロールエリアスクロール状態
             this.scrollState = false;
             // スクロール(XY)状態
@@ -1729,55 +1822,55 @@ export default {
     // 全体エリアオーバーフローの有効化
     enableAllAreaOverflow() {
       // オーバーフロー
-      document.getElementById("allArea").style.overflow = "auto";
-      document.getElementById("fixedArea").style.overflow = "initial";
-      document.getElementById("scrollArea").style.overflow = "initial";
+      this.getScopedElementByIdSafe("allArea").style.overflow = "auto";
+      this.getScopedElementByIdSafe("fixedArea").style.overflow = "initial";
+      this.getScopedElementByIdSafe("scrollArea").style.overflow = "initial";
       // 位置
-      document.getElementById("fixedArea").style.left = "auto";
+      this.getScopedElementByIdSafe("fixedArea").style.left = "auto";
       // 調整(1)
-      document.getElementById("fixedArea").style.height = "max-content";
-      document.getElementById("scrollAdjustArea").style.marginTop = "0px";
+      this.getScopedElementByIdSafe("fixedArea").style.height = "max-content";
+      this.getScopedElementByIdSafe("scrollAdjustArea").style.marginTop = "0px";
       // 調整(2)
-      document.getElementById("scrollArea").style.height = "max-content";
+      this.getScopedElementByIdSafe("scrollArea").style.height = "max-content";
     },
     // 固定エリアオーバーフローの有効化
     enableFixedAreaOverflow(type) {
       // オーバーフロー
-      document.getElementById("allArea").style.overflow = "hidden";
-      document.getElementById("fixedArea").style.overflowX = "hidden";
-      document.getElementById("fixedArea").style.overflowY = "auto";
-      document.getElementById("scrollArea").style.overflow = "hidden";
+      this.getScopedElementByIdSafe("allArea").style.overflow = "hidden";
+      this.getScopedElementByIdSafe("fixedArea").style.overflowX = "hidden";
+      this.getScopedElementByIdSafe("fixedArea").style.overflowY = "auto";
+      this.getScopedElementByIdSafe("scrollArea").style.overflow = "hidden";
       // 位置
-      document.getElementById("fixedArea").style.left = "auto";
+      this.getScopedElementByIdSafe("fixedArea").style.left = "auto";
       // 調整
-      document.getElementById("scrollAdjustArea").style.marginTop = "0px";
+      this.getScopedElementByIdSafe("scrollAdjustArea").style.marginTop = "0px";
     },
     // スクロールエリアオーバーフローの有効化
     enableScrollAreaOverflow(type) {
       // オーバーフロー
-      document.getElementById("allArea").style.overflow = "hidden";
-      document.getElementById("fixedArea").style.overflow = "hidden";
+      this.getScopedElementByIdSafe("allArea").style.overflow = "hidden";
+      this.getScopedElementByIdSafe("fixedArea").style.overflow = "hidden";
       if (type == "XY") {
-        document.getElementById("scrollArea").style.overflow = "auto";
-        document.getElementById("fixedArea").style.overflowX = "scroll";
+        this.getScopedElementByIdSafe("scrollArea").style.overflow = "auto";
+        this.getScopedElementByIdSafe("fixedArea").style.overflowX = "scroll";
       } else {
-        document.getElementById("scrollArea").style.overflowX = "hidden";
-        document.getElementById("scrollArea").style.overflowY = "auto";
+        this.getScopedElementByIdSafe("scrollArea").style.overflowX = "hidden";
+        this.getScopedElementByIdSafe("scrollArea").style.overflowY = "auto";
       }
       // 位置
-      document.getElementById("fixedArea").style.left = "0";
+      this.getScopedElementByIdSafe("fixedArea").style.left = "0";
     },
     // 全体エリアサイズの最適化
     optimizeAllAreaSize(isScrollAreaOverflow) {
       // スクロールエリアオーバーフローの場合
       if (isScrollAreaOverflow) {
         // 全体エリアの最大化
-        document.getElementById("allArea").style.width = "max-content";
-        document.getElementById("allArea").style.height = "max-content";
+        this.getScopedElementByIdSafe("allArea").style.width = "max-content";
+        this.getScopedElementByIdSafe("allArea").style.height = "max-content";
       } else {
         // 全体エリアの初期化
-        document.getElementById("allArea").style.width = "auto";
-        document.getElementById("allArea").style.height = "auto";
+        this.getScopedElementByIdSafe("allArea").style.width = "auto";
+        this.getScopedElementByIdSafe("allArea").style.height = "auto";
       }
     },
     // スクロール位置の設定
@@ -1785,14 +1878,14 @@ export default {
       // イベント = "NULL"の場合
       if (event == null) {
         // スクロールトップの取得
-        const scrollTop = document.getElementById("scrollArea").scrollTop;
+        const scrollTop = this.getScopedElementByIdSafe("scrollArea").scrollTop;
         // (固定エリア)スクロール位置の同期
-        document.getElementById("fixedArea").scrollTop = scrollTop;
+        this.getScopedElementByIdSafe("fixedArea").scrollTop = scrollTop;
       } else {
         // スクロールトップの取得
         const scrollTop = event.target.scrollTop;
         // (固定エリア)スクロール位置の同期
-        document.getElementById("fixedArea").scrollTop = scrollTop;
+        this.getScopedElementByIdSafe("fixedArea").scrollTop = scrollTop;
       }
     },
     // 固定テーブル列最小幅の補正
@@ -1801,35 +1894,35 @@ export default {
       if (this.scrollState) {
         // -----ベッド-----
         // 列幅の取得
-        const bedNameWidth = document.getElementById("bedName").style.width != "" ? Number(document.getElementById("bedName").style.width.replace("px", "")) : this.minWidth;
+        const bedNameWidth = this.getScopedElementByIdSafe("bedName").style.width != "" ? Number(this.getScopedElementByIdSafe("bedName").style.width.replace("px", "")) : this.minWidth;
         // 現在列幅の評価
         const currentBedNameWidth = this.evaluateCurrentWidth(bedNameWidth, this.maxWidth, this.minWidth);
         // 最小列幅の設定
-        document.getElementById("bedName").style.minWidth = currentBedNameWidth + "px";
+        this.getScopedElementByIdSafe("bedName").style.minWidth = currentBedNameWidth + "px";
         // -----装置名-----
         // 列幅の取得
-        const machineNameWidth = document.getElementById("machineName").style.width != "" ? Number(document.getElementById("machineName").style.width.replace("px", "")) : this.minWidth;
+        const machineNameWidth = this.getScopedElementByIdSafe("machineName").style.width != "" ? Number(this.getScopedElementByIdSafe("machineName").style.width.replace("px", "")) : this.minWidth;
         // 現在列幅の評価
         const currentMachineNameWidth = this.evaluateCurrentWidth(machineNameWidth, this.maxWidth, this.minWidth);
         // 最小列幅の設定
-        document.getElementById("machineName").style.minWidth = currentMachineNameWidth + "px";
+        this.getScopedElementByIdSafe("machineName").style.minWidth = currentMachineNameWidth + "px";
         // -----型式名-----
         // 列幅の取得
-        const machineTypeWidth = document.getElementById("machineType").style.width != "" ? Number(document.getElementById("machineType").style.width.replace("px", "")) : this.minWidth;
+        const machineTypeWidth = this.getScopedElementByIdSafe("machineType").style.width != "" ? Number(this.getScopedElementByIdSafe("machineType").style.width.replace("px", "")) : this.minWidth;
         // 現在列幅の評価
         const currentMachineTypeWidth = this.evaluateCurrentWidth(machineTypeWidth, this.maxWidth, this.minWidth);
         // 最小列幅の設定
-        document.getElementById("machineType").style.minWidth = currentMachineTypeWidth + "px";
+        this.getScopedElementByIdSafe("machineType").style.minWidth = currentMachineTypeWidth + "px";
       } else {
         // -----ベッド-----
         // 最小列幅の初期化
-        document.getElementById("bedName").style.minWidth = "";
+        this.getScopedElementByIdSafe("bedName").style.minWidth = "";
         // -----装置名-----
         // 最小列幅の初期化
-        document.getElementById("machineName").style.minWidth = "";
+        this.getScopedElementByIdSafe("machineName").style.minWidth = "";
         // -----型式名-----
         // 最小列幅の初期化
-        document.getElementById("machineType").style.minWidth = "";
+        this.getScopedElementByIdSafe("machineType").style.minWidth = "";
       }
     },
     showHistorySearch(item) {
@@ -1908,7 +2001,7 @@ export default {
     },
     // スクロール開始位置
     setScrollStartPostion() {
-      const scrollArea = document.getElementById("scrollArea");
+      const scrollArea = this.getScopedElementByIdSafe("scrollArea");
       // スクロール開始位置調整が不要な状況の場合は処理しない
       if (!scrollArea || scrollArea.scrollLeft !== 0) return;
       const cols = scrollArea.childNodes[0].childNodes[0].childNodes[0].childNodes;
@@ -1960,8 +2053,8 @@ export default {
       if (event.touches.length === 1) {
         const currentY = event.touches[0].clientY;
         const deltaY = this.touchStartY - currentY;
-        const fixedArea = document.getElementById("fixedArea");
-        const scrollArea = document.getElementById("scrollArea");
+        const fixedArea = this.getScopedElementByIdSafe("fixedArea");
+        const scrollArea = this.getScopedElementByIdSafe("scrollArea");
         fixedArea.scrollTop += deltaY;
         scrollArea.scrollTop = fixedArea.scrollTop;
         this.touchStartY = currentY;
@@ -2015,7 +2108,7 @@ export default {
           this.resetFixedTableColumnMinWidth();
           // 画面操作時のスクロール位置の設定
           // 一括中止、予定中止、予定登録、結果登録、予定移動をして画面更新した際にスクロール位置を操作時の位置にする
-          const scrollArea = document.getElementById("scrollArea");
+          const scrollArea = this.getScopedElementByIdSafe("scrollArea");
           scrollArea.scrollTop = this.beforeUpdateScrollTopPosition;
           scrollArea.scrollLeft = this.scrollLeftPosition;
           // 固定エリアのスクロール位置を設定
@@ -2041,7 +2134,7 @@ export default {
   },
   async created() {
     // 端末判別
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toLowerCase();
     if (/android/.test(ua)) {
       this.androidFlg = true;
     } else if (/iphone|ipad|mac|os/.test(ua)) {
@@ -2061,6 +2154,7 @@ export default {
     // 　beforeDestroyでハンドラ指定なしのEventBus.$offを行っても上記の問題は起きない。
     // 　ここの"dialogOk"はthis.initDataを起点とする処理の中で呼ばれるイベントのため
     // 　その前にEventBus.$onを行わざるを得ない。
+    // 同名イベントに古い画面インスタンスが残る HMR/再生成ケースを避けるため、ここだけ全 listener をクリアする。
     EventBus.$off("dialogOk");
     EventBus.$on("dialogOk", this.setDataSource);
     await this.initData();
@@ -2080,7 +2174,7 @@ export default {
     EventBus.$on("refresh", this.refresh);
     this.finishLoadingScreen();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.clearHolidays(); // storeの休日マスタをクリア
     EventBus.$off("refresh", this.refresh);
     EventBus.$off("dialogOk", this.setDataSource);
@@ -2093,9 +2187,9 @@ export default {
     // 対象IDの削除
     this.targetID = null;
     // モーダル制御
-    EventBus.$off("showHistory");
-    EventBus.$off("closeHistory");
-    EventBus.$off("closesMachineModal");
+    EventBus.$off("showHistory", this.showHistory);
+    EventBus.$off("closeHistory", this.closeHistory);
+    EventBus.$off("closesMachineModal", this.closesMachineModal);
 
     Object.assign(this.$data, this.$options.data());
   },
@@ -2103,13 +2197,14 @@ export default {
 
 // YYYY-MM-DD形式の日付文字列から this.listDate 用のオブジェクトを生成する
 const makeListDateItem = (dateString) => {
-  const [year, mounth, date] = dateString.split("-");
+  const normalized = normalizeMenteDate(dateString);
+  const [year, mounth, date] = normalized.split("-");
   return {
-    dateString,
+    dateString: normalized,
     date,
     mounth,
     year,
-    timeValue: moment(dateString).valueOf(), // ソート処理用
+    timeValue: moment(normalized, "YYYY-MM-DD").valueOf(), // ソート処理用
   };
 };
 // 点検結果リストから this.listDate に入れる値を生成する
@@ -2128,12 +2223,13 @@ const makeListDate = (resultData, dataSource) => {
   }
 
   resultData.forEach(({ menteDate }) => {
+    const normalizedDate = normalizeMenteDate(menteDate);
     if (
-      menteDate && !listDate.some(
-        dateTime => dateTime.dateString === menteDate
+      normalizedDate && !listDate.some(
+        dateTime => dateTime.dateString === normalizedDate
       )
     ) {
-      listDate.push(makeListDateItem(menteDate));
+      listDate.push(makeListDateItem(normalizedDate));
     }
   });
   listDate.sort((a, b) => a.timeValue - b.timeValue);
@@ -2170,18 +2266,18 @@ const makeListDate = (resultData, dataSource) => {
 .table {
   height: 200px;
 }
-.popover-style >>> .popover,
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover),
+.popover-style :deep(.popover__content) {
   width: 200px;
   min-height: 45px;
 }
-.popover-content >>> .popover--top,
-.popover-content >>> .popover--right,
-.popover-content >>> .popover--left,
-.popover-content >>> .popover--bottom {
+.popover-content :deep(.popover--top),
+.popover-content :deep(.popover--right),
+.popover-content :deep(.popover--left),
+.popover-content :deep(.popover--bottom) {
   width: initial;
 }
-.popover-content-header >>> .popover__content {
+.popover-content-header :deep(.popover__content) {
   width: 200px;
   min-height: auto;
 }
@@ -2275,7 +2371,7 @@ const makeListDate = (resultData, dataSource) => {
   border: solid var(--ntss-list-border-color);
   border-width: 0 1px 1px 0;
 }
-.custom-checkbox >>> .checkbox {
+.custom-checkbox :deep(.checkbox) {
   margin-top: 2px;
 }
 .custom-col-date {
@@ -2462,7 +2558,7 @@ ons-alert-dialog[modifier="rowfooter"] {
   #allArea {
     width: 100% !important;
   }
-  
+
   /** 固定列、スクロールコンテナ */
   #fixedArea {
     overflow: visible !important;
@@ -2472,7 +2568,7 @@ ons-alert-dialog[modifier="rowfooter"] {
     overflow: hidden !important;
     height: auto !important;
   }
-  
+
   /** テーブル */
   #fixedTable,
   #scrollTable {
@@ -2483,7 +2579,7 @@ ons-alert-dialog[modifier="rowfooter"] {
     page-break-inside: avoid;
     break-inside: avoid;
   }
-  
+
   /* 右端スクロール時はテーブルを右寄せ */
   #scrollArea:has(table.scroll-rightmost) {
     display: flex;

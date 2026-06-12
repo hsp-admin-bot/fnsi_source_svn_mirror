@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.service.mente;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.FlagType;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.MainteClass;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.MainteAnswer.Daily;
@@ -80,6 +80,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -159,6 +160,10 @@ public class DevMenteMainServiceImpl implements DevMenteMainService {
 
   @Autowired
   private LogServiceCore logServiceCore;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   /**
    * 現在の日を取得する
@@ -1103,7 +1108,9 @@ public class DevMenteMainServiceImpl implements DevMenteMainService {
         devMenteMain.setUpDate(getTimeNow());
         devMenteMainDao.insert(devMenteMain).getEntity();
       } else {
-        DevMenteMain dto = devMenteMainDao.findMenteMainById(devMenteMain.getDevMenteNo());
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
+        DevMenteMain dto = devMenteMainDao.findMenteMainByIdAndFacilityCd(devMenteMain.getDevMenteNo(), devMenteMain.getFacilityCd());
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
         if (dto == null || ObjectUtils.isEmpty(dto)) {
           throw new Exception();
         } else {
@@ -1180,9 +1187,14 @@ public class DevMenteMainServiceImpl implements DevMenteMainService {
    * {@inheritDoc}
    */
   @Override
-  public int delDetailWhenCellClick(Long devMenteNo) {
-    DevMenteMain mainteMain = devMenteMainDao.findMenteMainById(devMenteNo);
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 start
+  public int delDetailWhenCellClick(Long devMenteNo, String facilityCd) {
+    DevMenteMain mainteMain = devMenteMainDao.findMenteMainByIdAndFacilityCd(devMenteNo, facilityCd);
+    if (mainteMain == null) {
+      return 0;
+    }
     String detail = mainteMain.getDetail();
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 end
     JSONArray detailArray = new JSONArray(detail);
     LocalDateTime now = LocalDateTime.now();
     for (int i = 0; i < detailArray.length(); i++) {
@@ -1273,11 +1285,11 @@ public class DevMenteMainServiceImpl implements DevMenteMainService {
       wheres.append(inStr + "\n");
 
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(devMenteMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
 
-      int cancelresult = devMenteMainDao.updateIsDeleteRecord(listCacel);
+      int cancelresult = devMenteMainDao.updateIsDeleteRecord(listCacel, facilityCd);
 
       // 更新後データ取得、差分あれば、log出力
       if (setResult && cancelresult > 0) {
@@ -1310,28 +1322,12 @@ public class DevMenteMainServiceImpl implements DevMenteMainService {
   }
 
   @Override
-  public boolean deleleMainteMain(List<Long> mainNo) throws Exception {
-    String tableName = "mnt_mainte_main";
-    // SQL検索条件
-    StringBuffer wheres = new StringBuffer("");
-    wheres.append(" WHERE\n");
-    String inStr = getInStr(" mainte_no in ", mainNo);
-    wheres.append(inStr + "\n");
-
-    // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(devMenteMainDao, tableName, wheres, getEventLogMessage());
-    // ログ出力カラム情報及び更新前データ情報取得
-    boolean setResult = logCommon.setInfo();
-
-    int result = devMenteMainDao.updateIsDeleteRecord(mainNo);
-
-    // 更新後データ取得、差分あれば、log出力
-    if (setResult && result > 0) {
-      logCommon.updateLog();
-    }
-
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 start
+  public boolean deleleMainteMain(List<Long> mainNo, String facilityCd) throws Exception {
+    int result = devMenteMainDao.updateIsDeleteRecord(mainNo, facilityCd);
     return result > 0;
   }
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 end
 
   @Override
   public PartsRunningResponse createPartsRunningResponse(String facilityCd, String machineTypeCd, String machineSerial)
@@ -1380,7 +1376,7 @@ public class DevMenteMainServiceImpl implements DevMenteMainService {
   private <D> D convertJsonStringToDto(String useTimeJson, Class<D> clazz) {
     try {
       return (useTimeJson == null) ? clazz.newInstance() : mapper.readValue(useTimeJson, clazz);
-    } catch (InstantiationException | IllegalAccessException | IOException e) {
+    } catch (InstantiationException | IllegalAccessException | tools.jackson.core.JacksonException e) {
       throw new RuntimeException(e);
     }
   }
@@ -1399,10 +1395,13 @@ public class DevMenteMainServiceImpl implements DevMenteMainService {
   }
 
   @Override
-  public boolean deleleMainteMainByTemDate(UpdateMainteMainRequest updateMainteMainRequest) throws Exception {
-    int result = devMenteMainDao.updateDeletMainteMainByTemDate(updateMainteMainRequest.getMainteDate(), updateMainteMainRequest.getMachineNoList());
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 start
+  public boolean deleleMainteMainByTemDate(UpdateMainteMainRequest updateMainteMainRequest, String facilityCd) throws Exception {
+    int result = devMenteMainDao.updateDeletMainteMainByTemDate(
+        updateMainteMainRequest.getMainteDate(), updateMainteMainRequest.getMachineNoList(), facilityCd);
     return result >= 0;
   }
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 end
 
   /**
    * ログ情報設定
@@ -1433,11 +1432,11 @@ public class DevMenteMainServiceImpl implements DevMenteMainService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -1481,7 +1480,7 @@ public class DevMenteMainServiceImpl implements DevMenteMainService {
             });
             listBedCd.addAll(bedGroupList);
           }
-        } catch (IOException e) {
+        } catch (tools.jackson.core.JacksonException e) {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -1505,7 +1504,7 @@ public class DevMenteMainServiceImpl implements DevMenteMainService {
           });
           listBedCd.addAll(bedGroupList);
         }
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end

@@ -3,6 +3,7 @@ package jp.co.nikkiso.ntss.admin_web.web.rest;
 import jp.co.nikkiso.ntss.admin_web.request.userSettings.AlterPatShareModeRequest;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
+import jp.co.nikkiso.ntss.core.dao.MstUserDao;
 import jp.co.nikkiso.ntss.core.entity.MstUser;
 import jp.co.nikkiso.ntss.core.entity.SysFunction;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
@@ -37,6 +38,7 @@ import java.util.Map;
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 
 /**
@@ -66,6 +68,10 @@ public class UserSettingsResource {
   @Autowired
   LogEventUtils logEventUtils;
   // wp アプリケーションログの適正化 Add End
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Autowired
+  private MstUserDao mstUserDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
   /**
    * 文字サイズ変更.
    *
@@ -74,7 +80,19 @@ public class UserSettingsResource {
    */
   @PutMapping("/font_size")
   public ResponseEntity<?>  alterFontSize(
-    @RequestBody AlterFontSizeRequest request) {
+    @RequestBody AlterFontSizeRequest request, @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      MstUser user = mstUserDao.selectById(request.getUserId());
+      if (user != null && user.getFacilityCd() != null && !user.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + user.getFacilityCd() + " " + "userId=" + request.getUserId();
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.USER_SETTINGS + "/font_size";
@@ -108,7 +126,19 @@ public class UserSettingsResource {
    * @return response
    */
   @PutMapping("/theme")
-  public ResponseEntity<?>  alterTheme(@RequestBody AlterThemeRequest request) {
+  public ResponseEntity<?>  alterTheme(@RequestBody AlterThemeRequest request, @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      MstUser user = mstUserDao.selectById(request.getUserId());
+      if (user != null && user.getFacilityCd() != null && !user.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + user.getFacilityCd() + " " + "userId=" + request.getUserId();
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.USER_SETTINGS + "/theme";
@@ -143,7 +173,20 @@ public class UserSettingsResource {
    * @return response
    */
   @PutMapping("/menu_bar")
-  public ResponseEntity<?> alterMenuBar(@RequestBody AlterMenuBarRequest request) {
+  public ResponseEntity<?> alterMenuBar(@RequestBody AlterMenuBarRequest request, @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      MstUser user = mstUserDao.selectById(request.getUserId());
+      if (user != null && user.getFacilityCd() != null && !user.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + user.getFacilityCd() + " " + "userId=" + request.getUserId();
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.USER_SETTINGS + "/menu_bar";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(),"", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -179,6 +222,17 @@ public class UserSettingsResource {
   public ResponseEntity<?>  alterPatShareMode(
     @RequestBody AlterPatShareModeRequest request,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 mod 20260421 start
+    if (!hasUserAccess(ntssUser, request.getUserId())) {
+      MstUser user = mstUserDao.selectById(request.getUserId());
+      if (user != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + user.getFacilityCd() + " " + "userId=" + request.getUserId() + "patShareMode=" + request.getPatShareMode() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(new UserSettingsResource(), HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
+
 
     String mappingUrl = Uri.USER_SETTINGS + "/pat_share_mode";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(),"", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -210,7 +264,19 @@ public class UserSettingsResource {
    * @return response
    */
   @PutMapping("/use_auth_functions")
-  public ResponseEntity<?> alterUseAuthFunctions(@RequestBody AlterUseAuthFunctionsRequest request) {
+  public ResponseEntity<?> alterUseAuthFunctions(@RequestBody AlterUseAuthFunctionsRequest request, @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      MstUser user = mstUserDao.selectById(request.getUserId());
+      if (user != null && user.getFacilityCd() != null && !user.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + user.getFacilityCd() + " " + "userId=" + request.getUserId();
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.USER_SETTINGS + "/use_auth_functions";
@@ -297,7 +363,7 @@ public class UserSettingsResource {
       null);
     // wp アプリケーションログの適正化 Add End
     // レスポンス生成
-    return new ResponseEntity<>(null, result ? HttpStatus.OK : HttpStatus.INTERNAL_SERVER_ERROR);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, result ? HttpStatus.OK : HttpStatus.INTERNAL_SERVER_ERROR);
   }
 
   /**
@@ -307,8 +373,19 @@ public class UserSettingsResource {
    * @return response
    */
   @PutMapping("/split_frame")
-  public ResponseEntity<?> alterSplitFrame(@RequestBody AlterSplitFrameRequest request) {
-
+  public ResponseEntity<?> alterSplitFrame(@RequestBody AlterSplitFrameRequest request, @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      MstUser user = mstUserDao.selectById(request.getUserId());
+      if (user != null && user.getFacilityCd() != null && !user.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + user.getFacilityCd() + " " + "userId=" + request.getUserId();
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.USER_SETTINGS + "/split_frame";
@@ -417,6 +494,14 @@ public class UserSettingsResource {
     return Thread.currentThread().getStackTrace()[2].getMethodName();
   }
 
+  private boolean hasUserAccess(NtssUser ntssUser, Long userId) {
+    if (ntssUser == null || ntssUser.isNkkAdminUser() || userId == null) {
+      return true;
+    }
+
+    MstUser user = mstUserDao.selectById(userId);
+    return user == null
+      || user.getFacilityCd() == null
+      || user.getFacilityCd().equals(ntssUser.getFacilityCd());
+  }
 }
-
-

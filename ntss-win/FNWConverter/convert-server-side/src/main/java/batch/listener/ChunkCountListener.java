@@ -3,9 +3,10 @@ package batch.listener;
 import java.text.MessageFormat;
 
 import batch.ApplicationConst;
-import org.springframework.batch.core.ChunkListener;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.listener.ChunkListener;
+import org.springframework.batch.core.scope.context.StepSynchronizationManager;
+import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.infrastructure.item.Chunk;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +20,7 @@ import web.logger.LogLevel;
  * 指定した間隔で処理されたアイテムの数を記録する
  */
 @Component
-public class ChunkCountListener implements ChunkListener{
+public class ChunkCountListener implements ChunkListener<String, String>{
 
 
 	private MessageFormat fmt = new MessageFormat("{0} 行 処理完了");
@@ -35,11 +36,16 @@ public class ChunkCountListener implements ChunkListener{
 	private EventLoggerUtil eventLoggerUtil;
 
 	@Override
-	public void beforeChunk(ChunkContext context) {
+	public void beforeChunk(Chunk<String> context) {
 		// ジョブ停止判定
-		String facility_cd = context.getStepContext().getJobParameters().get(JobParameterKeys.FACILITY_CD).toString();
+
+		StepExecution se =
+				StepSynchronizationManager.getContext().getStepExecution();
+		String facility_cd =
+				se.getJobParameters().getString(JobParameterKeys.FACILITY_CD);
 		boolean isTerminate = progressManagement.isStatusEqualsTerminate(facility_cd);
-		StepExecution se = context.getStepContext().getStepExecution();
+
+
 		if(isTerminate){
 			se.setTerminateOnly();
 			//ログ
@@ -55,14 +61,19 @@ public class ChunkCountListener implements ChunkListener{
 	}
 
 	@Override
-	public void afterChunk(ChunkContext context) {
+	public void afterChunk(Chunk<String> context) {
 
-		int count = context.getStepContext().getStepExecution().getReadCount();
+		StepExecution se =
+				StepSynchronizationManager.getContext().getStepExecution();
+
+		long count = context.getItems().size();
 		// csv 正しい実行行数の取得
 		if (context!=null && (context.toString().contains("mni_monitor") || context.toString().contains("mnt_motion_record"))){
 			count--;
 		}
-		String facility_cd = context.getStepContext().getJobParameters().get(JobParameterKeys.FACILITY_CD).toString();
+
+		String facility_cd =
+				se.getJobParameters().getString(JobParameterKeys.FACILITY_CD);
 		// 処理されたレコードの数がチャンク間隔の倍数である場合、または全件処理時、ログメッセージを出力
 		//ログ
 		EventLogMessage eventLogMessage1 = eventLoggerUtil.getEventLogMessage(fmt.format(new Object[] { count }),
@@ -71,13 +82,36 @@ public class ChunkCountListener implements ChunkListener{
 
 		// テーブル毎の進捗更新
 		// mod #10859-6 djy start
-		String progress = context.getStepContext().getJobExecutionContext().get(ApplicationConst.PromotionKeys.TABLE_PROGRESS).toString();
-		progressManagement.createConvertTableStatus(context,String.valueOf(count) + "件 処理完了"+"--"+progress+"--");
+		Object progressObj =
+				se.getJobExecution()
+						.getExecutionContext()
+						.get(ApplicationConst.PromotionKeys.TABLE_PROGRESS);
+		String progress =
+				progressObj == null ? "" : progressObj.toString();
+		progressManagement.createConvertTableStatus(se,String.valueOf(count) + "件 処理完了"+"--"+progress+"--");
 		// mod #10859-6 djy end
 	}
 
 	@Override
-	public void afterChunkError(ChunkContext context) {
-		// 何もしない
+	public void onChunkError(
+			Exception exception,
+			Chunk<String> chunk) {
+
+		StepExecution se =
+				StepSynchronizationManager.getContext().getStepExecution();
+
+		String facility_cd =
+				se.getJobParameters().getString(JobParameterKeys.FACILITY_CD);
+
+		EventLogMessage eventLogMessage =
+				eventLoggerUtil.getEventLogMessage(
+						exception.getMessage(),
+						facility_cd,
+						"ChunkCountListener.onChunkError");
+
+		eventLoggerUtil.recordLog(
+				facility_cd,
+				eventLogMessage,
+				LogLevel.ERROR);
 	}
 }

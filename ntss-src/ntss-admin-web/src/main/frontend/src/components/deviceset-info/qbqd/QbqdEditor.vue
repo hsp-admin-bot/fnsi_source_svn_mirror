@@ -424,13 +424,13 @@
       </div>
 
       <message-dialog
-        :visible.sync="isDialogVisble"
+        v-model:visible="isDialogVisble"
         v-bind="dialogProps"
         type="1"
         @confirm="saveEdit"
       />
       <message-dialog
-        :visible.sync="isCancelDialogVisble"
+        v-model:visible="isCancelDialogVisble"
         v-bind="dialogProps"
         type="2"
         @confirm="cancelEdit"
@@ -443,10 +443,10 @@
 // add #10359 編集権限の動作不正 dengshen start
 import {deepCopy, getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import _ from "underscore";
-import moment from "moment";
-import { mapActions, mapGetters } from "vuex";
-import { Chart } from "highcharts-vue";
+import _ from "@/compat/collections/lodash";
+import dayjs from "@/compat/date/dayjs";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { Chart } from "@/compat/charts/highcharts";
 import {
   DATA_SOURCE_TYPE_ORD,
   DATA_SOURCE_TYPE_TREAT,
@@ -454,23 +454,24 @@ import {
 } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
 import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoEditor.vue";
 // add FNSI-治療モードをI-HDFへ変更した際、電源をOFFにする 楊 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add FNSI-治療モードをI-HDFへ変更した際、電源をOFFにする 楊 end
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { getDeviceSetInfoMst } from "@/components/deviceset-info/base-modules/DeviceSetInfoFunctions.js";
 // #5590 2023/04/20 ×を常に表示するように修正 林峻峰 start
 import TimeInput from "@/components/common/TimeInput.vue";
+import DeviceSetOwnerMixin from '@/components/deviceset-info/base-modules/DeviceSetOwnerMixin';
 // #5590 2023/04/20 ×を常に表示するように修正 林峻峰 end
 
 // グラフx軸変換関数
 const formatter = function(value) {
   if (value < 1) {
     // 0.5 → "00:30"へ変換
-    return moment(value * 60, "s").format("mm:ss");
+    return dayjs().startOf('day').add(value * 60, 'minute').format('mm:ss')
   }
   // 1 → "01:00"へ変換
-  return moment(value, "m").format("mm:ss");
+ return dayjs().startOf('day').add(value, 'minute').format('mm:ss');
 };
 
 /**
@@ -484,7 +485,7 @@ export default {
     // #5590 2023/04/20 ×を常に表示するように修正 林峻峰 end
   },
 
-  mixins: [baseEditor],
+  mixins: [DeviceSetOwnerMixin, baseEditor],
 
   props: {
     // add #10359 編集権限の動作不正 dengshen start
@@ -546,6 +547,7 @@ export default {
     ...mapGetters("pat-viewer-modal", ["getSettingIndChildData", "getIsShowQbqdProgramModal"]),
     // mod FNSI-治療モードをI-HDFへ変更した際、電源をOFFにする 楊 end
     ...mapGetters("master-maintenance", {getFacilitySwitch: "getFacilitySwitch"}),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     ...mapGetters("account-edit", {
       fontSize: "getFontSize",
     }),
@@ -563,7 +565,7 @@ export default {
       if (this.dialysisDate === null) {
         return `透析時間参照なし`;
       }
-      const day = moment(this.dialysisDate, "YYYYMMDD").format("MM/DD");
+      const day = dayjs(this.dialysisDate, "YYYYMMDD").format("MM/DD");
       return `(${day}の透析時間参照)`;
     },
 
@@ -576,8 +578,7 @@ export default {
       if (
         this.dialysisDisplayTime === "00:00" ||
         this.dialysisTime === 0 ||
-        this.dialysisTime === null
-      ) {
+        this.dialysisTime === null) {
         return "---";
       }
       // 小数点切り捨て
@@ -592,8 +593,7 @@ export default {
       if (
         this.dialysisDisplayTime === "00:00" ||
         this.dialysisTime === 0 ||
-        this.dialysisTime === null
-      ) {
+        this.dialysisTime === null) {
         return "---";
       }
       // 小数点切り捨て
@@ -705,27 +705,23 @@ export default {
       if (
         this.dialysisDisplayTime < "01:00" &&
         this.dialysisDisplayTime !== "00:00" &&
-        this.dialysisDisplayTime !== ""
-      ) {
+        this.dialysisDisplayTime !== "") {
         xTickPositions = this.xTickPositions();
       }
-
       // 2分30秒 → 2.5変換
       const time = Number(
-        moment(this.dialysisDisplayTime, "HH:mm").format("HH")
-      );
+        dayjs(this.dialysisDisplayTime, "HH:mm").format("HH"));
       const minutes =
-        Number(moment(this.dialysisDisplayTime, "HH:mm").format("mm")) / 60;
+        Number(dayjs(this.dialysisDisplayTime, "HH:mm").format("mm")) / 60;
       let maxXAxis = time + minutes;
 
       // ※0なら初期表示へ
       if (
         this.dialysisDisplayTime === "00:00" ||
-        this.dialysisDisplayTime === ""
-      ) {
+        this.dialysisDisplayTime === "") {
         maxXAxis = null;
       }
-
+      
       return {
         chart: {
           height: "240",
@@ -742,6 +738,27 @@ export default {
               // setTimeout(() => {
                 this.reflow();
 //              }, 1000);
+            },
+            render: function () {
+              const chart = this;
+              // 重複作成を防止
+              if (chart.customBorder) {
+                  chart.customBorder.destroy();
+              }
+              const left = chart.plotLeft;
+              const top = chart.plotTop;
+              const width = chart.plotWidth;
+              const height = chart.plotHeight;
+              // インスタンスを保存
+              chart.customBorder = chart.renderer
+                  .rect(left,top,width,height,0)
+                  .attr({
+                      stroke: '#e1e1e1',
+                      'stroke-width': 2,
+                      fill: 'transparent',
+                      zIndex: 10
+                  })
+                  .add();
             }
           },
           marginTop: 25,
@@ -772,8 +789,12 @@ export default {
             tickPositions: xTickPositions,
             // 主目盛のピクセル幅
             tickWidth: 0,
+            // 時間軸の縦線（グリッド）
+            gridLineWidth: 1,
+            gridLineColor: "#e1e1e1",
             labels: {
               enabled: true,
+              y:20,
               // x軸表示変換
               formatter() {
                 return formatter(this.value);
@@ -869,8 +890,8 @@ export default {
      * @returns {String} class
      */
     isUnderIndModal() {
-      let indObj = document.getElementsByClassName("indInfo-style-modal-container");
-      if (indObj.length > 0) {
+      const indObj = this._deviceSetClosestOrScopedElement(".indInfo-style-modal-container");
+      if (indObj) {
         return "ind-style-media-query";
       }
       return "";
@@ -881,8 +902,8 @@ export default {
      * @returns {String} class
      */
     isUnderSubModal() {
-      let subModalObj = document.getElementsByClassName("sub-modal-body");
-      if (subModalObj.length > 0) {
+      const subModalObj = this._deviceSetClosestOrScopedElement(".sub-modal-body");
+      if (subModalObj) {
         return "is-under-sub-modal";
       }
       return "";
@@ -893,9 +914,9 @@ export default {
   async created() {
     this.setLoadingScreenVisible(true);
     this.deviceSetInfoMst = await getDeviceSetInfoMst(
-      this.getFacilitySwitch
-    )
-    this.$parent.$parent.isDialogType9 = true;
+      this.getFacilitySwitch,
+      this.selectedPatId)
+    this._deviceSetDialogOwner().isDialogType9 = true;
   },
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、yuqizheng add end
   watch: {
@@ -907,7 +928,7 @@ export default {
       // 初期状態：指示装置設定画面のみ透析予定・透析時間は参照する。
       if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
         // 親のスタイル修正
-        this.$parent.styleObj = { "max-width": "930px", width: "100%" };
+        this._deviceSetDialogOwner().styleObj = { "max-width": "930px", width: "100%" };
 
         // 初期値データ指示画面の透析時間参照
         // 選択した日付
@@ -936,10 +957,10 @@ export default {
           // const time = String(Math.floor(this.dialysisTime / 60));
           // const minutes = String(this.dialysisTime % 60);
           // // 透析時間："HH:mm"設定
-          // this.dialysisDisplayTime = moment(
+          // this.dialysisDisplayTime = dayjs(
           //   `${time}:${minutes}`,
           //   "HH:mm"
-          // ).format("HH:mm");
+          //).format("HH:mm");
           // del #7994 2022/10/10 【デグレ】血流量・透析液流量プログラムの計算用透析時間が0のまま dou end
           // 透析日表示フラグ
           this.isDialysisDay = true;
@@ -975,12 +996,11 @@ export default {
         const time = String(Math.floor(this.dialysisTime / 60));
         const minutes = String(this.dialysisTime % 60);
         // 透析時間："HH:mm"設定
-        this.dialysisDisplayTime = moment(
+        this.dialysisDisplayTime = dayjs(
           `${time}:${minutes}`,
-          "HH:mm"
-        ).format("HH:mm");
+          "HH:mm").format("HH:mm");
         // #6765 計画-血流量・透析液流量プログラム：修正時、修正していないが保存ボタンが有効になってしまっている 林峻峰 start
-        this.dialysisDisplayTimeInit = this.dialysisDisplayTime;
+        this.dialysisDisplayTimeInit = JSON.parse(JSON.stringify(this.dialysisDisplayTime));
         // #6765 計画-血流量・透析液流量プログラム：修正時、修正していないが保存ボタンが有効になってしまっている 林峻峰 end
       }
       // add #7994 2022/10/10 【デグレ】血流量・透析液流量プログラムの計算用透析時間が0のまま dou end
@@ -989,7 +1009,7 @@ export default {
       //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、yuqizheng add end
       // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng start
       this.devADefault = JSON.parse(JSON.stringify(this.devA));
-      this.dialysisDisplayTimeDefault = this.dialysisDisplayTime;
+      this.dialysisDisplayTimeDefault = JSON.parse(JSON.stringify(this.dialysisDisplayTime));
       // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng end
     },
     fontSize() {
@@ -1034,7 +1054,7 @@ export default {
   // add FNSI-治療モードをI-HDFへ変更した際、電源をOFFにする 楊 end
 
   // add FNSI-性能を最適化する 李 start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("ihdf-modal", this.handleIhdfModal);
     const chartRef = this.$refs.refQbqdChart;
     if (chartRef?.chart) {
@@ -1064,7 +1084,15 @@ export default {
     },
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd))
+      return this.isMst || (this.isMst != true && !this.isOtherFacilityRow() && getAuthorized(pageCd, itemCd))
+    },
+    /**
+     * @description 該当行が他院情報かどうかを判定
+     * @returns {Boolean} true = 他施設のデータは参照のみ
+     */
+    isOtherFacilityRow() {
+      const facilityCd = this.getSettingIndChildData?.facilityCd;
+      return facilityCd ? facilityCd !== this.getFacilityCd : false;
     },
     // add #10359 編集権限の動作不正 dengshen end
     // add FNSI-治療モードをI-HDFへ変更した際、電源をOFFにする 楊 start
@@ -1099,10 +1127,10 @@ export default {
         this.dialysisTime = null;
       } else {
         // 空欄でなければ時間を分に変換
-        // const time = moment(target.value, "HH:mm").format("HH");
-        const time = moment(value, "HH:mm").format("HH");
-        // const minutes = moment(target.value, "HH:mm").format("mm");
-        const minutes = moment(value, "HH:mm").format("mm");
+        // const time = dayjs(target.value, "HH:mm").format("HH");
+        const time = dayjs(value, "HH:mm").format("HH");
+        // const minutes = dayjs(target.value, "HH:mm").format("mm");
+        const minutes = dayjs(value, "HH:mm").format("mm");
         this.dialysisTime = Number(time) * 60 + Number(minutes);
       }
       // 表示変更の為、値設定
@@ -1148,14 +1176,18 @@ export default {
             lastFlow = flow;
             break;
           } else {
-            // 切替時間合計が透析時間を超えた場合：1つ前が最終流量
-            lastFlow = flowArray[i - 1].value.editValue;
+            if (i > 0) {
+              // 切替時間合計が透析時間を超えた場合：1つ前が最終流量
+              lastFlow = flowArray[i - 1].value.editValue;
+            }
             break;
           }
         } else if (i === stepNumber) {
           if (changeoverTimeSum >= this.dialysisTime) {
-            // 切替時間合計が透析時間以上だった場合：1つ前が最終流量
-            lastFlow = flowArray[i - 1].value.editValue;
+            if(i>0){
+              // 切替時間合計が透析時間以上だった場合：1つ前が最終流量
+              lastFlow = flowArray[i - 1].value.editValue;
+            }
           } else {
             // ステップ数が最終流量
             lastFlow = flowArray[i].value.editValue;
@@ -1180,8 +1212,7 @@ export default {
       // グラフx軸設定
       if (
         this.dialysisDisplayTime === "00:00" ||
-        this.dialysisDisplayTime === ""
-      ) {
+        this.dialysisDisplayTime === "") {
         // 「透析時間："00:00"」x軸を"04:00"まで表示
         for (let i = 0; i < 5; i++) {
           // ※5固定値："04:00"までグラフ空で表示
@@ -1236,7 +1267,7 @@ export default {
           chartData.push([xAxis, setData], stepsChartData[index]);
 
           if (this.dialysisDisplayTime > "10:00" && isLastFlow) {
-            const hour = moment(this.dialysisDisplayTime, "HH:mm").format("HH");
+            const hour = dayjs(this.dialysisDisplayTime, "HH:mm").format("HH");
             // 10時以降：＋1ずつ設定
             for (let i = 10; i <= hour; i++) {
               chartData.push([i + 1, setData]);
@@ -1255,9 +1286,11 @@ export default {
     yAxisMax(chartData) {
       if (
         this.dialysisDisplayTime === "00:00" ||
-        this.dialysisDisplayTime === ""
-      ) {
+        this.dialysisDisplayTime === "") {
         // 透析時間が"00:00"は最大値を700固定
+        return 700;
+      }
+      if (!chartData || chartData.length === 0) {
         return 700;
       }
 
@@ -1265,30 +1298,31 @@ export default {
       const xAxis = 0;
       // y軸 配列要素番号奇数：DB登録用の値、配列要素番号偶数：表示のみの値
       const yAxis = 1;
-      const yAxisMax = _.max(chartData, (item, index) => {
-        if (index % 2 === 0) {
+      const stepCount = Number(this.devA[429].value.editValue);
+      const yAxisMax = _.maxBy(chartData, (item, index) => {
+        if (index % 2 === 0 && item != null && Array.isArray(item)) {
           // 流量配列の値を取得するため、偶数番号のみ実行
           // 流量配列要素数を取得するためchartData配列要素数割る2※chartDataは階段グラフのため配列要素数を2倍にしている
           const chartIndex = index / 2;
 
           const time = this.dialysisDisplayTime;
-          const hour = moment(time, "HH:mm").format("HH");
-          const minutes = moment(time, "HH:mm").format("mm");
+          const hour = dayjs(time, "HH:mm").format("HH");
+          const minutes = dayjs(time, "HH:mm").format("mm");
           // 分へ変換 "01:30" → 90分
           const formatTime = Number(hour) * 60 + Number(minutes);
 
           // y軸最大値設定
           if (
             item[xAxis] * 60 <= formatTime &&
-            chartIndex < this.devA[429].value.editValue
-          ) {
+            chartIndex < stepCount) {
             // 透析時間とステップ数以下のステップ番号y値を最大値へ設定
             return item[yAxis];
           }
         }
       });
 
-      return yAxisMax[yAxis];
+      const maxValue = yAxisMax?.[yAxis];
+      return maxValue != null && !Number.isNaN(maxValue) ? maxValue : 700;
     },
 
     /**
@@ -1316,7 +1350,7 @@ export default {
     xTickPositions() {
       // 30秒 → 0.5へ変換
       const minutes =
-        Number(moment(this.dialysisDisplayTime, "HH:mm").format("mm")) / 60;
+        Number(dayjs(this.dialysisDisplayTime, "HH:mm").format("mm")) / 60;
       return [0, minutes];
     },
 
@@ -1368,20 +1402,20 @@ export default {
      */
     saveEdit() {
       if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
-        this.$parent.$parent.updateDisable = false;
+        this._deviceSetDialogOwner().updateDisable = false;
       }
     },
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、yuqizheng add start
     async resetComponentIndData(structData){
       if (this.isEdit()) {
-        this.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+        this._deviceSetDialogOwner().messageDialogInfo.messageCd = 70000028;
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-        this.$parent.$parent.messageDialogInfo.type = "9";
+        this._deviceSetDialogOwner().messageDialogInfo.type = "9";
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._deviceSetDialogOwner().messageDialogInfo.isDialogVisible = true;
         return;
       } else {
-        this.getComponentData(structData, 2);
+        return this.getComponentData(structData, 2);
       }
     },
     isEdit() {
@@ -1467,8 +1501,7 @@ export default {
       // 対象日時の治療情報取得(開始日付・治療方法・クールで絞り込み)
       let response = await ApiHelper.post(
         "/mainData/getOrdMainDataInfo",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         getErrorMessage('IndActionChart.vue', 'resetComponentData', error);
         throw error;
       });
@@ -1533,18 +1566,6 @@ export default {
       }
       return dialysisTime;
     },
-    // add #12462 患者情報共有 Ji start
-  /**
-   * @description 該当行が他院情報かどうかを判定
-   * @returns {Boolean} true = 他施設のデータは参照のみ
-   */
-    isOtherFacilityRow() {
-      if (!this.getSettingIndChildData) {
-        return false
-      }
-      return this.getSettingIndChildData.facilityCd ? this.getSettingIndChildData.facilityCd !== this.getFacilityCd : false
-    },
-    // add #12462 患者情報共有 Ji end
     /**
      * 計算用透析時間再設定
      */
@@ -1590,6 +1611,10 @@ export default {
 <style src="../base-modules/BeseDeviceSetInfoStyle.css" scoped></style>
 
 <style scoped>
+/* .device-info-content {
+  max-width: 920px;
+  max-height: 480px;
+} */
 @media print {
   .device-info-cell-value{
     min-width: 50px;
@@ -1647,7 +1672,7 @@ export default {
   margin: 4px;
 }
 
-.device-input-charts >>> .custom-input-number {
+.device-input-charts :deep(.custom-input-number) {
   width: 100%;
   padding: 0;
   margin: 0;
@@ -1666,7 +1691,7 @@ export default {
   font-size: 1em;
 }
 
-.is-under-sub-modal >>> * {
+.is-under-sub-modal :deep(*) {
   /* TODOD font-size: inherit !important; */
   font-size: inherit;
 }
@@ -1683,7 +1708,7 @@ export default {
   min-height: 20px;
 }
 
-.chart-area >>> ons-row {
+.chart-area :deep(ons-row) {
   height: auto;
 }
 
@@ -1711,5 +1736,8 @@ export default {
 .device-info-cell-title {
   width: 100px;
   text-align: right;
+}
+:deep(.device-info-cell .device-input-number>.custom-input-number){
+  width: 100%;
 }
 </style>

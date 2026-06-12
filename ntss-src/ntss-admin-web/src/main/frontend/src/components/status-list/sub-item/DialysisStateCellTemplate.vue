@@ -58,6 +58,7 @@
 </template>
 
 <script>
+import { h } from "vue";
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
@@ -66,7 +67,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // import { AUTHORITY_CODES } from "@/constants/userAuthority";
 // del #10359 編集権限の動作不正 dengshen end
 import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 // add FNSI-治療状況の權限 付 end
 // add #10359_NG対応 編集権限の動作不正 dengshen start
 import { messageFormat } from '@/functions/common/MessageFormat'
@@ -183,6 +184,40 @@ export default {
     onClickConfirmOrder(e) {
       this.$emit("clickConfirmOrder", e, this.dataItem);
     }
+  },
+  render() {
+    const cellBase = {
+      colspan: this.colSpan,
+      role: "gridcell",
+      "data-grid-col-index": this.columnIndex
+    };
+    const centeredStyle = "text-align: center; padding: 0.25rem 0rem !important";
+    if (this.dataItem?.patId === null && this.dataItem?.ordNo !== null && this.dataItem?.rstDialysisState >= 4) {
+      return h("td", {
+        ...cellBase,
+        class: [this.processStateClassName, this.classNm],
+        style: centeredStyle
+      }, [h("button", {
+        class: "status-list-unknown-delete-button button status-list-grid-button registration-btn btn4-alert",
+        style: { opacity: this.getItemAuthorized('StatusListMap', 'item_delete_btn') ? 1 : 0.6 },
+        onClick: this.onClickDeleteOrder
+      }, "削除")]);
+    }
+    if (this.dataItem?.rstDialysisState == 5) {
+      return h("td", {
+        ...cellBase,
+        class: [this.classNm, this.processStateClassName],
+        style: centeredStyle
+      }, [h("button", {
+        class: "status-list-confirm-button button status-list-grid-button registration-btn btn1-execute",
+        disabled: !this.getItemAuthorized('StatusListMap', 'default_authority'),
+        onClick: this.onClickConfirmOrder
+      }, "確定")]);
+    }
+    return h("td", {
+      ...cellBase,
+      class: [this.classNm, this.processStateClassName]
+    });
   }
 };
 </script>

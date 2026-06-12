@@ -52,7 +52,7 @@ public class ReportChartServiceImplTestForDebug {
     // 実行
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 start
 //    target.getMonitorChartData(ordNo, ReportChartService.ChartImageType.PNG);
-    target.getMonitorChartData(ordNo, ReportChartService.ChartImageType.PNG, colWidth, rowHeight);
+    target.getPngByPlayWright(ordNo, ReportChartService.ChartImageType.PNG, false, null);
     // mod #6077 透析レポートのグラフの縮尺が正しくない 王永吉 end
   }
 }

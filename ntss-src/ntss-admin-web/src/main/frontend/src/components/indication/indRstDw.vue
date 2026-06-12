@@ -20,14 +20,15 @@
 </template>
 
 <script>
-// eslint-disable-next-line no-unused-vars
 import { ApiHelper } from "@/apis/AxiosHelper";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
-import {mapActions, mapGetters} from "vuex";
+import {mapActions, mapGetters} from "@/compat/vue/vuex";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import IndicationOwnerMixin from '@/components/indication/IndicationOwnerMixin';
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
 export default {
+  mixins: [IndicationOwnerMixin],
   components: {
     "custom-input-number": customInputNumber
   },
@@ -82,8 +83,8 @@ export default {
         if (0 === num) {
           // データセルクリック時以外は以下の処理は行わない
           if (
-            !this.$parent.$parent.settingData.startDateEdit ||
-            !this.$parent.$parent.settingData.endDateEdit
+            !this._indicationFlowOwner().settingData.startDateEdit ||
+            !this._indicationFlowOwner().settingData.endDateEdit
           ) {
             return;
           }
@@ -99,9 +100,9 @@ export default {
           messageType = "2";
         }
       }
-      this.$parent.$parent.messageDialogInfo.messageCd = messageCd;
-      this.$parent.$parent.messageDialogInfo.type = messageType;
-      this.$parent.$parent.messageDialogInfo.isDialogVisible = showMessage;
+      this._indicationDialogOwner().messageDialogInfo.messageCd = messageCd;
+      this._indicationDialogOwner().messageDialogInfo.type = messageType;
+      this._indicationDialogOwner().messageDialogInfo.isDialogVisible = showMessage;
       return showMessage;
     },
 
@@ -126,10 +127,10 @@ export default {
       }
 
       if (stringParam) {
-        this.$parent.$parent.messageDialogInfo.messageCd = 22010001;
-        this.$parent.$parent.messageDialogInfo.type = "1";
-        this.$parent.$parent.messageDialogInfo.stringParams = [stringParam];
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.messageCd = 22010001;
+        this._indicationDialogOwner().messageDialogInfo.type = "1";
+        this._indicationDialogOwner().messageDialogInfo.stringParams = [stringParam];
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         console.log("indRstDw.vue updateIndInfo return; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         return;
@@ -142,7 +143,7 @@ export default {
       sendJson.dw = this.displayInputValue.editValue;
 
       //データの送信
-      await ApiHelper.put("/mainData/updateIndRstDw/", sendJson).catch(
+      await ApiHelper.put("/mainData/updateIndRstDw", sendJson).catch(
         error => {
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
           getErrorMessage('indRstDw.vue', 'updateIndInfo', error);
@@ -155,7 +156,7 @@ export default {
       console.log("indRstDw.vue updateIndInfo hide-modal this.finishLoadingScreen();");
       this.finishLoadingScreen();
       // モーダルを閉じる
-      this.$parent.$parent.$emit("hide-modal");
+      this._hideIndicationModal();
     }
   }
 };

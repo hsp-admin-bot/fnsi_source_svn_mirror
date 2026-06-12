@@ -8,6 +8,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 import com.google.common.base.Strings;
 import io.micrometer.core.instrument.util.StringUtils;
@@ -100,6 +101,11 @@ public class ComsvMntMachineStateResource {
   @Autowired
   private ComsvReloadNextPatServiceImpl comsvReloadNextPatServiceImpl;
   // add 10964 ????患者が作成された際にチェックリストマスタのデータが取得できていない。 関  end
+
+  // add #12739 SQLインジェクション(High) tomcat device_edge zrx start
+  private static final Pattern FACILITY_CD_PATTERN = Pattern.compile("^[A-Za-z0-9]{6}$");
+  private static final Pattern PROCESS_STATE_PATTERN = Pattern.compile("^[0-9]{1,2}$");
+  // add #12739 SQLインジェクション(High) tomcat device_edge zrx end
 
   /**
    * 通信サーバ用装置状態管理の取得（施設の装置全て）
@@ -776,6 +782,22 @@ public class ComsvMntMachineStateResource {
     eventLogMessage.setLogMessage("updateProcessState start = " + "facilityCd=" + facilityCd + " " + "machineTypeCd ="+ machineTypeCd + " " + "machineSerial ="+ machineSerial);
     logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI, null);
     // #8732 2023.06.06 add ログ強化 TDC片口 end
+
+    // add #12739 SQLインジェクション(High) tomcat device_edge zrx start
+    if (facilityCd == null || !FACILITY_CD_PATTERN.matcher(facilityCd).matches()) {
+      eventLogMessage.setLogMessage("updateProcessState parameter facilityCd error = " + "facilityCd=" + facilityCd +
+        " " + "machineTypeCd ="+ machineTypeCd + " " + "machineSerial ="+ machineSerial);
+      logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI, null);
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("facilityCdは英数字6桁のみ指定可能です。");
+    }
+
+    if (StringUtils.isNotEmpty(processState) && !PROCESS_STATE_PATTERN.matcher(processState).matches()) {
+      eventLogMessage.setLogMessage("updateProcessState parameter processState error = " + "facilityCd=" + facilityCd +
+        " " + "machineTypeCd ="+ machineTypeCd + " " + "machineSerial ="+ machineSerial);
+      logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI, null);
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("processStateは数字2文字以内で指定してください。");
+    }
+    // add #12739 SQLインジェクション(High) tomcat device_edge zrx end
 
     MntMachineState mntMachineState = new MntMachineState();
     mntMachineState.setFacilityCd(facilityCd);

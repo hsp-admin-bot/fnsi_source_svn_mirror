@@ -1424,8 +1424,16 @@ namespace LayoutDesigner
                     var list = RldLib.CurrentLayoutData.DesignParamList.Where(ele => ele.CellAddress == e.CellAddress).ToList();
                     if (list == null || list.Count == 0)
                     {
+                        // add #12752 デザイナーウィンドウでグループタブ下部の属性編集欄の更新が不適切 高 start
+                        this.DataClear(false);
+                        // add #12752 デザイナーウィンドウでグループタブ下部の属性編集欄の更新が不適切 高 end
                         return;
                     }
+
+                    // add #12752 デザイナーウィンドウでグループタブ下部の属性編集欄の更新が不適切 高 start
+                    bool bFind = false;
+                    // add #12752 デザイナーウィンドウでグループタブ下部の属性編集欄の更新が不適切 高 end
+
                     DesignParamData paramData = list[0];
                     if (paramData != null)
                     {
@@ -1441,10 +1449,19 @@ namespace LayoutDesigner
                                 this.dgvGroupList.Rows[i].Selected = true;
                                 this.dgvGroupList.CurrentCell = this.dgvGroupList.Rows[i].Cells[2];
                                 this.dgvGroupList.FirstDisplayedScrollingRowIndex = i;
+                                // add #12752 デザイナーウィンドウでグループタブ下部の属性編集欄の更新が不適切 高 start
+                                bFind = true;
+                                // add #12752 デザイナーウィンドウでグループタブ下部の属性編集欄の更新が不適切 高 end
                                 break;
                             }
                         }
                     }
+                    // add #12752 デザイナーウィンドウでグループタブ下部の属性編集欄の更新が不適切 高 start
+                    if(bFind == false)
+                    {
+                        this.DataClear(false);
+                    }
+                    // add #12752 デザイナーウィンドウでグループタブ下部の属性編集欄の更新が不適切 高 end
                 }
             }
         }

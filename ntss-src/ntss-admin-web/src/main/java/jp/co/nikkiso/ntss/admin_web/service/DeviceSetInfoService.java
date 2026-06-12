@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.request.deviceEdgeOrder.DeviceEdgeOrderRequest;
 import jp.co.nikkiso.ntss.admin_web.service.bloodPurify.MntMachineStateService;
@@ -32,7 +32,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.seasar.doma.jdbc.SelectOptions;
 import org.springframework.util.StringUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
@@ -62,6 +62,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 @Service
 public class DeviceSetInfoService {
@@ -121,6 +122,10 @@ public class DeviceSetInfoService {
   /* add #9355  by zhangruixue 2023-09-06 --start */
   @Autowired
   private IndHistoryMakeService indHistoryMakeService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   /* add #9355  by zhangruixue 2023-09-06 --end */
 
   /**
@@ -213,7 +218,7 @@ public class DeviceSetInfoService {
       wheres.append(" WHERE\n");
       wheres.append(" facility_cd = '" + facility_cd + "'\n");
       // logCommon設定
-      logCommon = getLogCommon(mstDeviceSetInfoDefaultDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -249,7 +254,7 @@ public class DeviceSetInfoService {
       wheres.append(" pat_id = '" + patId + "' and \n");
       wheres.append(" facility_cd = '" + facilityCd + "' \n");
       // logCommon設定
-      logCommon = getLogCommon(patMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -291,7 +296,7 @@ public class DeviceSetInfoService {
       wheres.append(" WHERE\n");
       wheres.append(" ord_no = " + ord_no + " \n");
       // logCommon設定
-      logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -341,7 +346,7 @@ public class DeviceSetInfoService {
       wheres.append(inStr + "\n");
       //upd by ztc 2023-03-14 [Batch modify data, log_event table has no data] --end /
       // logCommon設定
-      logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -742,7 +747,7 @@ public class DeviceSetInfoService {
         wheres.append(" WHERE\n");
         wheres.append(" facility_cd = '" + facility_cd + "'\n");
         // logCommon設定
-        logCommon = getLogCommon(mstDeviceSetInfoDefaultDao, tableName, wheres, getEventLogMessage());
+        logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         setResult = logCommon.setInfo();
       } catch(Exception e) {
@@ -769,7 +774,7 @@ public class DeviceSetInfoService {
         wheres.append(" pat_id = '" + pat_id + "' and \n");
         wheres.append(" facility_cd = '" + facility_cd + "'\n");
         // logCommon設定
-        logCommon = getLogCommon(patMainDao, tableName, wheres, getEventLogMessage());
+        logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         setResult = logCommon.setInfo();
       } catch(Exception e) {
@@ -835,7 +840,7 @@ public class DeviceSetInfoService {
         }
 
         // logCommon設定
-        logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+        logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         setResult = logCommon.setInfo();
       } catch(Exception e) {
@@ -905,7 +910,7 @@ public class DeviceSetInfoService {
         }
 
         // logCommon設定
-        logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+        logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         setResult = logCommon.setInfo();
       } catch(Exception e) {
@@ -941,7 +946,7 @@ public class DeviceSetInfoService {
     wheres.append(" WHERE\n");
     wheres.append(" pat_id = " + patId + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -977,7 +982,7 @@ public class DeviceSetInfoService {
     wheres.append(" WHERE\n");
     wheres.append(" ord_no = " + ordNo + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -1100,6 +1105,12 @@ public class DeviceSetInfoService {
    * @param jsonOffWaterValue
    * @return updateCount
    */
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260416 start
+  public long countByOrdNoAndFacilityCd(String facilityCd, List<Long> ordNoList) {
+    return ordMainDao.countByOrdNoAndFacilityCd(facilityCd, ordNoList);
+  }
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260416 end
+
   @Transactional
   public int updateRstTareOffWaterInfo(
     Long ordNo,
@@ -1123,7 +1134,7 @@ public class DeviceSetInfoService {
       wheres.append(" WHERE\n");
       wheres.append(" ord_no = " + ordNo + "\n");
       // logCommon設定
-      logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -1166,7 +1177,7 @@ public class DeviceSetInfoService {
         wheres.append(" WHERE\n");
         wheres.append(" facility_cd = '" + id + "'\n");
         // logCommon設定
-        logCommon = getLogCommon(mstDeviceSetInfoDefaultDao, tableName, wheres, getEventLogMessage());
+        logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         setResult = logCommon.setInfo();
       } catch(Exception e) {
@@ -1190,7 +1201,7 @@ public class DeviceSetInfoService {
         wheres.append(" WHERE\n");
         wheres.append(" pat_id = " + id + "\n");
         // logCommon設定
-        logCommon = getLogCommon(patMainDao, tableName, wheres, getEventLogMessage());
+        logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         setResult = logCommon.setInfo();
       } catch(Exception e) {
@@ -1221,7 +1232,7 @@ public class DeviceSetInfoService {
         wheres.append(" WHERE\n");
         wheres.append(" ord_no = " + id + "\n");
         // logCommon設定
-        logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+        logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         setResult = logCommon.setInfo();
       } catch(Exception e) {
@@ -1268,7 +1279,7 @@ public class DeviceSetInfoService {
       wheres.append(" WHERE\n");
       wheres.append(" facility_cd = '" + facilityCd + "'\n");
       // logCommon設定
-      logCommon = getLogCommon(mstDeviceSetInfoDefaultDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -1327,7 +1338,7 @@ public class DeviceSetInfoService {
     DataUpdateLogCommonNew logCommon = null;
     try {
       // logCommon設定
-      logCommon = getLogCommon(patMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       hasResult = logCommon.setInfo();
     } catch (Exception e) {
@@ -1386,7 +1397,7 @@ public class DeviceSetInfoService {
       wheres.append(" WHERE\n");
       wheres.append(" ord_no = " + ordNo + "\n");
       // logCommon設定
-      logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -1445,7 +1456,7 @@ public class DeviceSetInfoService {
       wheres.append(inStr + "\n");
       //upd by ztc 2023-03-14 [Batch modify data, log_event table has no data] --end /
       // logCommon設定
-      logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -1545,7 +1556,7 @@ public class DeviceSetInfoService {
     wheres.append(" rst_dialysis_state = '0'" + "\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -1594,7 +1605,7 @@ public class DeviceSetInfoService {
       wheres.append(" WHERE\n");
       wheres.append(" facility_cd = '" + facilityCd + "'\n");
       // logCommon設定
-      logCommon = getLogCommon(mstDeviceSetInfoDefaultDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -1647,7 +1658,7 @@ public class DeviceSetInfoService {
       }
 
       // logCommon設定
-      logCommon = getLogCommon(patMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -1758,11 +1769,11 @@ public class DeviceSetInfoService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -2201,7 +2212,7 @@ public class DeviceSetInfoService {
       ObjectMapper mapper = new ObjectMapper();
       try {
         JsonNode jsonNode = mapper.readTree(indDeviceSetInfo);
-        Iterator<Map.Entry<String, JsonNode>> fields = jsonNode.fields();
+        Iterator<Map.Entry<String, JsonNode>> fields = jsonNode.properties().iterator();
         while (fields.hasNext()) {
           Map.Entry<String, JsonNode> next = fields.next();
           String key = next.getKey();
@@ -2227,7 +2238,7 @@ public class DeviceSetInfoService {
         updateDeviceSetInfo.setIndDeviceSetInfo(jsonNode.toString());
         updateDeviceSetInfo.setUpIndUserId(indUserId);
         updateDeviceSetInfo.setUpUserId(updUserId);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         throw new RuntimeException(e);
       }
       deviceSetInfoOrdVoList.add(updateDeviceSetInfo);
@@ -2244,7 +2255,7 @@ public class DeviceSetInfoService {
       //        ObjectMapper mapper = new ObjectMapper();
       //        try {
       //          JsonNode jsonNode = mapper.readTree(indDeviceSetInfo);
-      //          Iterator<Map.Entry<String, JsonNode>> fields = jsonNode.fields();
+      //          Iterator<Map.Entry<String, JsonNode>> fields = jsonNode.properties().iterator();
       //          while (fields.hasNext()) {
       //            Map.Entry<String, JsonNode> next = fields.next();
       //            String key = next.getKey();
@@ -2264,7 +2275,7 @@ public class DeviceSetInfoService {
       //          item.setIndDeviceSetInfo(jsonNode.toString());
       //          item.setUpIndUserId(indUserId);
       //          item.setUpUserId(updUserId);
-      //        } catch (JsonProcessingException e) {
+      //        } catch (JacksonException e) {
       //          throw new RuntimeException(e);
       //        }
       //      });

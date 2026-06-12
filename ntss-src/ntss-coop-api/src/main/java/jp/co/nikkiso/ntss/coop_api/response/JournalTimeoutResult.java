@@ -1,11 +1,11 @@
 package jp.co.nikkiso.ntss.coop_api.response;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import lombok.Data;
 import org.springframework.http.HttpStatus;
 
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Data
 public class JournalTimeoutResult {
   public JournalTimeoutResult(HttpStatus httpStatus, String facilityCd, Long userId) {

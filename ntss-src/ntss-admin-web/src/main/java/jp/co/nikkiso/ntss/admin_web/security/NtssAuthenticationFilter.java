@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.security;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.dao.MstFacilityDao;
@@ -24,8 +24,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.StringUtils;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -85,7 +85,7 @@ public class NtssAuthenticationFilter extends UsernamePasswordAuthenticationFilt
     HttpServletRequest request,
     HttpServletResponse response) throws AuthenticationException {
 
-    if (!HttpMethod.POST.equals(HttpMethod.resolve(request.getMethod()))) {
+    if (!HttpMethod.POST.matches(request.getMethod())) {
       throw new AuthenticationServiceException("Authentication method not supported: " + request.getMethod());
     }
 

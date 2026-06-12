@@ -7,14 +7,14 @@
     :class="classObject"
     :disabled="disabled"
     @blur="validate()"
-    v-on="$listeners"
+    v-bind="$attrs"
   /> -->
   <v-ons-input
     type="text"
     v-model="valueInput"
     :class="classObject"
     :disabled="disabled"
-    v-on="$listeners"
+    v-bind="$attrs"
   />
   <!-- mod FNSI-inputの色 鄭 end -->
 </template>
@@ -35,6 +35,7 @@ import baseCustomForm from "@/components/common/custom-form-tags/BaseCustomForm"
  *     :display-string="マスタの名称" />
  */
 export default {
+  inheritAttrs: false,
   mixins: [baseCustomForm],
 
   props: {

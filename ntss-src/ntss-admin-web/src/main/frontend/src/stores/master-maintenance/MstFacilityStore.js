@@ -34,7 +34,6 @@ export default {
     // -----------------------------------------
     // データ一覧を更新
     // -----------------------------------------
-    /* eslint-disable no-unused-vars */
     setMasterHashRecordList({ commit }, masterHashRecordList) {
       commit("setMasterHashRecordList", masterHashRecordList);
     }

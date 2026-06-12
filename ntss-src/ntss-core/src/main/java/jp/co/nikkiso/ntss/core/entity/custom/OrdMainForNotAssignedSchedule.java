@@ -34,7 +34,7 @@ public class OrdMainForNotAssignedSchedule {
   /**
    * 患者ID
    */
-  private String HospPatId;
+  private String hospPatId;
    /**
    * 入外区分
    */

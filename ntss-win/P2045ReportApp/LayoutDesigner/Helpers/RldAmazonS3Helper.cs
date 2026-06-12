@@ -117,14 +117,16 @@ namespace LayoutDesigner
                 // アプリケーション共通設定ファイル読み込み
                 var wInfo = TdcLib.SystemSettingInfo.GetInstance();
 
-                if (S3Bucket.IndexOf("s3://") == -1)
-                {
-                    // 最新ファイルダウンロード先フォルダ
-                    DownloadSourceFolder = wInfo.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFolder", string.Empty).Trim();
+                // del #11660 単体アプリの自己アップデート修正 高 start
+                //if (S3Bucket.IndexOf("s3://") == -1)
+                //{
+                //    // 最新ファイルダウンロード先フォルダ
+                //    DownloadSourceFolder = wInfo.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFolder", string.Empty).Trim();
 
-                    String pathSub = DownloadSourceFolder.Substring(0, DownloadSourceFolder.LastIndexOf("/"));
-                    this.S3Bucket = pathSub + "/" + this.S3Bucket;
-                }
+                //    String pathSub = DownloadSourceFolder.Substring(0, DownloadSourceFolder.LastIndexOf("/"));
+                //    this.S3Bucket = pathSub + "/" + this.S3Bucket;
+                //}
+                // del #11660 単体アプリの自己アップデート修正 高 end
                 // add #7922 新規施設のデフォルト帳票に作成者・更新者が登録されている / デフォルト帳票が編集できない 姜 end
                 string wUri = $"{this.BaseUri}{RldConst.Uri.WEB_APP}{RldConst.Uri.POST_S3_DOWNLOAD}" + "/" + reportCode;
 

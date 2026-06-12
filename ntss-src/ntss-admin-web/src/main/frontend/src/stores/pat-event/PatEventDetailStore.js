@@ -13,7 +13,15 @@ import {
 //add #9208 患者イベントの実績リンクでの選択肢が不正 関 start
 import { sendRequestGetKur } from "@/apis/status-list";
 import { bedSelector } from "@/functions/mst/MstGetters.js";
+import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //add #9208 患者イベントの実績リンクでの選択肢が不正 関 end
+
+const ORD_MAIN_DATE_PATTERN = /^\d{8}$/;
+
+function isValidOrdMainDate(value) {
+  return typeof value === "string" && ORD_MAIN_DATE_PATTERN.test(value);
+}
+
 export default {
   strict: true,
   namespaced: true,
@@ -180,10 +188,10 @@ export default {
         if (aDate !== bDate) {
           return aDate.localeCompare(bDate);
         }
-        let aKurCd = "";
-        let bKurCd = "";
-        let aBedCd = "";
-        let bBedCd = "";
+        let aKurCd;
+        let bKurCd;
+        let aBedCd;
+        let bBedCd;
         if (a.rstDialysisState === "0") {
           aKurCd = a.indKurCd
           aBedCd = a.indBedCd
@@ -459,19 +467,17 @@ export default {
      * 患者別当報の取得
      * @param {*} param
      */
-    // mod #12462 患者情報共有 start
-    //async fetchOrdMain({ commit }, { patId, treatStartDate, treatEndDate }) {
     async fetchOrdMain({ commit }, { patId, treatStartDate, treatEndDate, patEventCd }) {
-    // mod #12462 患者情報共有 end
       await commit("clearComboOrdMain");
+      if (!patId || !isValidOrdMainDate(treatStartDate) || !isValidOrdMainDate(treatEndDate)) {
+        return;
+      }
       // 治療開始
       const response1 = await sendRequestGetOrdMainRecordList({
         patId: patId,
         treatStartDate: treatStartDate,
         treatEndDate: treatEndDate,
-        // add #12462 患者情報共有 start
         patEventCd: patEventCd,
-        // add #12462 患者情報共有 end
         getClass: 1
       });
       if (response1.data.length > 0 && response1.data[0] !== null) {
@@ -482,9 +488,7 @@ export default {
         patId: patId,
         treatStartDate: treatStartDate,
         treatEndDate: treatEndDate,
-        // add #12462 患者情報共有 start
         patEventCd: patEventCd,
-        // add #12462 患者情報共有 end
         getClass: 2
       });
       if (response2.data.length > 0 && response2.data[0] !== null) {
@@ -495,9 +499,7 @@ export default {
         patId: patId,
         treatStartDate: treatStartDate,
         treatEndDate: treatEndDate,
-        // add #12462 患者情報共有 start
         patEventCd: patEventCd,
-        // add #12462 患者情報共有 end
         getClass: 3
       });
       if (response3.data.length > 0 && response3.data[0] !== null) {
@@ -519,8 +521,10 @@ export default {
     // add #10774 治療記録＞観察記録 患者・実績を切替た場合 ztc 20240726 end
 
     //add #9208 患者イベントの実績リンクでの選択肢が不正 関 start
-    async getMst({ commit }, facilityCd) {
-      await sendRequestGetKur(facilityCd)
+    async getMst({ commit }, payload) {
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      await sendRequestGetKur(facilityCd, selectedPatId)
         .then(response => {
           commit("setMstKurList", response.data);
         })

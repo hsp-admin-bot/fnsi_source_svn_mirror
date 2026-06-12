@@ -1,6 +1,7 @@
 <script>
-import { mapGetters, mapActions } from "vuex";
-import moment from "moment";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import DeviceSetOwnerMixin from "@/components/deviceset-info/base-modules/DeviceSetOwnerMixin";
+import dayjs from "@/compat/date/dayjs";
 import {
   getDeviceSetInfoMst,
   getDeviceSetInfoPat,
@@ -64,12 +65,10 @@ import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.j
 // add FNSI-指示値・装置設定・装置プログラムの相関チェック 安寧 end
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import { messageFormat } from "@/functions/common/MessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-// add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
-// del #11004 連携イベント発生部分不正 piao start
-// import { sendRequestGetCoopIniSchModifySendClass } from "@/apis/treatment-record";
+
 // del #11004 連携イベント発生部分不正 piao end
 
 /**
@@ -124,6 +123,8 @@ export default {
   // mixins: [ComponentGuardMixin],
   // // add FNSI-改修内容 権限関連 趙慧敏 end
   // del #10359 編集権限の動作不正 dengshen end
+  // Vue3 $parent チェーン代替：祖先owner参照をmixinで提供する
+  mixins: [DeviceSetOwnerMixin],
 
   data() {
     return {
@@ -174,10 +175,7 @@ export default {
     // mod FNSI-連携イベントの登録適正化 楊 start
     ...mapGetters("pat-viewer-modal", { settingIndData: "getSettingIndData" }),
     ...mapGetters("account-edit", ["getStateUserAccountInfo"]),
-    // add #12462 患者情報共有 Ji start
-    ...mapGetters("pat-info", ["selectedPat", "getIsOtherFacility", "getOtherFacilityCd"]),
-    // add #12462 患者情報共有 Ji end
-
+    ...mapGetters("pat-info", ["selectedPat", "getIsOtherFacility", "getOtherFacilityCd", "selectedPatId"]),
     // mod FNSI-連携イベントの登録適正化 楊 end
     /**
      * @description 保存ボタンラベル
@@ -292,7 +290,8 @@ export default {
           throw new Error("施設コードが未指定です");
         }
         this.deviceSetInfoRaw = await getDeviceSetInfoMst(
-          this.facilityCd
+          this.facilityCd,
+          this.selectedPatId
         ).catch(error => {
           //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
           getErrorMessage('BaseDeviceSetInfoEditor.vue', 'created', error);
@@ -315,9 +314,7 @@ export default {
         if (this.patId === null) {
           throw new Error("患者が未選択です");
         }
-	// mod #12462 患者情報共有 Ji start
         this.deviceSetInfoRaw = await getDeviceSetInfoPat(this.patId, this.getOtherFacilityCd).catch(
-	// mod #12462 患者情報共有 Ji end
           error => {
             //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
             getErrorMessage('BaseDeviceSetInfoEditor.vue', 'created', error);
@@ -351,9 +348,9 @@ export default {
         }
         // #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng start
         let ordNo = this.ordNo;
-        let structData = this.$parent?.$parent?.$parent?.structData;
+        const structData = this._deviceSetRootOwner()?.structData || this._deviceSetDialogOwner()?.structData;
         if (structData) {
-          let indWeeks = [
+          const indWeeks = [
               {
               text: "全",
               done: true,
@@ -410,18 +407,16 @@ export default {
           paramJson.ind_treatment_cd = JSON.stringify(structData.selectedTreat);
           // 曜日パターン
           paramJson.weeks = JSON.stringify(indWeeks);
-          let response = await ApiHelper.post(
+          const response = await ApiHelper.post(
             "/mainData/getOrdMainDataInfo",
             paramJson
           );
           ordNo = response.data[0]?.ordNo ?? this.ordNo;
         }
         // const [resOrd, resPat, resMst] = await Promise.all([getDeviceSetInfoOrd(this.ordNo), getDeviceSetInfoPat(patId), getDeviceSetInfoMst(this.getFacilityCd)])
-	// mod #12462 患者情報共有 Ji start
-        const [resOrd, resPat, resMst] = await Promise.all([getDeviceSetInfoOrd(ordNo), getDeviceSetInfoPat(patId, this.getOtherFacilityCd), getDeviceSetInfoMst(this.getFacilityCd)])
-        // mod #12462 患者情報共有 Ji end
-	// #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng end
-        let deviceSetInfoRawTemp = JSON.parse(JSON.stringify({...resOrd, ...resPat}));
+        const [resOrd, resPat, resMst] = await Promise.all([getDeviceSetInfoOrd(ordNo, this.selectedPatId), getDeviceSetInfoPat(patId, this.getOtherFacilityCd), getDeviceSetInfoMst(this.getFacilityCd, this.selectedPatId)])
+        // #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng end
+        const deviceSetInfoRawTemp = JSON.parse(JSON.stringify({...resOrd, ...resPat}));
         deviceSetInfoRawTemp.ihdf.dev.A[1001] = resMst?.ord?.ihdf?.dev?.A[1001];
         deviceSetInfoRawTemp.ihdf.dev.A[1002] = resMst?.ord?.ihdf?.dev?.A[1002];
         this.deviceSetInfoRaw = deviceSetInfoRawTemp
@@ -449,7 +444,8 @@ export default {
               throw new Error("施設コードが未指定です");
             }
             this.deviceSetInfoMst = await getDeviceSetInfoMst(
-              this.facilityCd
+              this.facilityCd,
+              this.selectedPatId
             ).catch(error => {
               //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
               getErrorMessage('BaseDeviceSetInfoEditor.vue', 'created', error);
@@ -482,7 +478,7 @@ export default {
       );
       //mod FNSI-5993 劉全航 start
       if(this.dataSourceType === DATA_SOURCE_TYPE_ORD){
-        let deviceInfo = await getDeviceSetInfoPat(this.selectedPat.pat_main.pat_id).catch(
+        let deviceInfo = await getDeviceSetInfoPat(this.selectedPat.pat_main.pat_id, this.getOtherFacilityCd).catch(
           error => {
             //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
             getErrorMessage('BaseDeviceSetInfoEditor.vue', 'created', error);
@@ -504,10 +500,7 @@ export default {
       //mod FNSI-5993 劉全航 end
       //mod FNSI-5993 gaoey str
       if(this.dataSourceType === DATA_SOURCE_TYPE_PAT){
-        // mod #12462 患者情報共有 Ji start
-        // let deviceInfo = await getDeviceSetInfoPat(this.selectedPat.pat_main.pat_id).catch(
         let deviceInfo = await getDeviceSetInfoPat(this.selectedPat.pat_main.pat_id, this.getOtherFacilityCd).catch(
-	// mod #12462 患者情報共有 Ji end
           error => {
             //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
             getErrorMessage('BaseDeviceSetInfoEditor.vue', 'created', error);
@@ -534,6 +527,13 @@ export default {
   },
 
   methods: {
+    /**
+     * 装置設定保存時の注意メッセージ（左寄せ HTML）。messageFormat はタグをエスケープするため当画面専用。
+     */
+    buildDeviceSetAlertMessageHtml(messageCd) {
+      const raw = (DIALOG_MESSAGES[messageCd]?.message || "").replace(/\{\$\d*\}/g, "");
+      return `<div style="text-align:left;">${raw}</div>`;
+    },
     ...mapActions("multi-modal", ["hideModal"]),
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("loading-screen", [
@@ -604,7 +604,7 @@ export default {
                 // title: "注意",
                 // message: `<div style="text-align:left;">除水プログラムとBV-UFCは両方使用することはできません。<br> </div>`,
                 title: DIALOG_MESSAGES[12000085].title,
-                message: messageFormat(DIALOG_MESSAGES[12000085].message, '<div style="text-align:left;">', '</div>'),
+                messageHTML: this.buildDeviceSetAlertMessageHtml(12000085),
                 // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
                 callback:answer => {
                   if (answer == 0) {
@@ -625,7 +625,7 @@ export default {
                 // title: "注意",
                 // message: `<div style="text-align:left;">除水プログラムとBV-UFCは両方使用することはできません。<br> </div>`,
                 title: DIALOG_MESSAGES[12000085].title,
-                message: messageFormat(DIALOG_MESSAGES[12000085].message, '<div style="text-align:left;">', '</div>'),
+                messageHTML: this.buildDeviceSetAlertMessageHtml(12000085),
                 // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
                 callback:answer => {
                   if (answer == 0) {
@@ -646,7 +646,7 @@ export default {
                 // title: "注意",
                 // message: `<div style="text-align:left;">Naプログラムと濃度プログラムは両方使用することはできません。<br> </div>`,
                 title: DIALOG_MESSAGES[12000086].title,
-                message: messageFormat(DIALOG_MESSAGES[12000086].message, '<div style="text-align:left;">', '</div>'),
+                messageHTML: this.buildDeviceSetAlertMessageHtml(12000086),
                 // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
                 callback:answer => {
                   if (answer == 0) {
@@ -667,7 +667,7 @@ export default {
                 // title: "注意",
                 // message: `<div style="text-align:left;">Naプログラムと濃度プログラムは両方使用することはできません。<br> </div>`,
                 title: DIALOG_MESSAGES[12000086].title,
-                message: messageFormat(DIALOG_MESSAGES[12000086].message, '<div style="text-align:left;">', '</div>'),
+                messageHTML: this.buildDeviceSetAlertMessageHtml(12000086),
                 // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
                 callback:answer => {
                   if (answer == 0) {
@@ -727,7 +727,7 @@ export default {
 
     // add FNSI 1006 No.538 外部連携APIを呼び出 陳 start
     async callCreateJournal() {
-      let treatDate = moment(new Date()).format("YYYYMMDD");
+      let treatDate = dayjs(new Date()).format("YYYYMMDD");
       let opeCd = "";
       let w_crud = "";
       // del #10553 ④装置設定 #10429非関連イベント 処理取消 piao start
@@ -1347,12 +1347,12 @@ export default {
       // 施設コード
       sendJson.facility_cd = structData.facilityCd;
       // 治療開始日
-      sendJson.start_date = moment(
+      sendJson.start_date = dayjs(
         structData.indStartDate,
         "YYYY-MM-DD"
       ).format("YYYYMMDD");
       // 治療終了日
-      sendJson.end_date = moment(structData.indEndDate, "YYYY-MM-DD").format(
+      sendJson.end_date = dayjs(structData.indEndDate, "YYYY-MM-DD").format(
         "YYYYMMDD"
       );
       // 編集対象曜日
@@ -1509,7 +1509,7 @@ export default {
         this.closeModal();
       }
       //add 7809 濃度プログラムとNa注入プログラムを同時にONにしようとした際の動作不正 張 end
-             this.$parent.$parent.updateDisable = false;
+             this._deviceSetDialogOwner().updateDisable = false;
             // this.setLoadingScreenVisible(false);
              //mod 7295除水プログラムONの時にBV-UFCがONにできてしまう 張 end
           }
@@ -1919,8 +1919,9 @@ export default {
      */
     closeModal() {
       // 入力ボックスを優先的に隠す
-      for (let i = 0; i<document.getElementsByClassName("device-info-cell-value").length;i++){
-        document.getElementsByClassName("device-info-cell-value")[i].style.display = "none"
+      const cellValues = this._deviceSetElementsByClassName("device-info-cell-value");
+      for (let i = 0; i < cellValues.length; i++) {
+        cellValues[i].style.display = "none";
       }
       // 装置設定一覧の表示フラグを折る
       this.$emit("close");

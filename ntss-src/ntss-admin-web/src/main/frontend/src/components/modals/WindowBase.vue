@@ -22,9 +22,9 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from "vuex";
-import "@progress/kendo-theme-bootstrap/dist/all.css";
-import { Window } from "@progress/kendo-vue-dialogs";
+import { mapState, mapGetters } from "@/compat/vue/vuex";
+import { getViewportHeight, getViewportWidth } from "@/functions/common/LayoutMeasureHelper";
+import { Window } from "@/functions/common/KendoFunctions";
 
 export default {
   components: {
@@ -51,7 +51,10 @@ export default {
       // #8312 投薬支援の子画面のサイズをウィンドウ外まで大きくすることができ操作不能となる 訾浩 start
       clientX: null,
       monitorTop: null,
-      monitorTopFlag: true
+      monitorTopFlag: true,
+      dragMonitorHandler: null,
+      isApplyingLayout: false,
+      preFullscreenLayout: null
       // #8312 投薬支援の子画面のサイズをウィンドウ外まで大きくすることができ操作不能となる 訾浩 end
 // add FNSI-redmine#8312 高 end
     };
@@ -85,30 +88,90 @@ export default {
         return this.getFontSize;
       }
     },
+    fontSizeSet() {
+      const names = ["small", "medium", "large", "x-large"];
+      return "font-size-set-" + names[this.getFontSize];
+    },
   },
   methods: {
-    stagechange (event,t,s) {
-      // 表示、非表示を行わないと、top の値が内部的に反映されない為、一度非表示にする
+    getDialogRootElement() {
+      return this.$el?.querySelector?.(".k-window") || this.$el || null;
+    },
+    bindDragMonitor() {
+      const dialogRoot = this.getDialogRootElement();
+      if (!dialogRoot || this.dragMonitorHandler) {
+        return;
+      }
+      this.dragMonitorHandler = (params) => {
+        this.clientX = params?.gesture?.center?.clientX ?? this.clientX;
+      };
+      dialogRoot.addEventListener("drag", this.dragMonitorHandler);
+    },
+    unbindDragMonitor() {
+      const dialogRoot = this.getDialogRootElement();
+      if (dialogRoot && this.dragMonitorHandler) {
+        dialogRoot.removeEventListener("drag", this.dragMonitorHandler);
+      }
+      this.dragMonitorHandler = null;
+    },
+    refreshDialogLayout(layout, { preserveSetting = false } = {}) {
+      this.isApplyingLayout = true;
+      this.left = layout.left;
+      this.top = layout.top;
+      this.width = layout.width;
+      this.height = layout.height;
+      if (!preserveSetting) {
+        this.setting.left = this.left;
+        this.setting.top = this.top;
+        this.setting.width = this.width;
+        this.setting.height = this.height;
+      }
+      this.nowLeft = this.left;
+      this.windowsizeFlag = false;
+      this.monitorTopFlag = false;
+      this.unbindDragMonitor();
       this.visible = false;
+      this.$nextTick(() => {
+        this.visible = true;
+        this.$nextTick(() => {
+          this.syncDialogFontClass();
+          this.bindDragMonitor();
+          this.isApplyingLayout = false;
+        });
+      });
+    },
+    stagechange (event,t,s) {
       if (s.state === "FULLSCREEN") {
-        this.stage = "DEFAULT";
-        this.handleResize({
+        this.preFullscreenLayout = {
+          left: this.left,
+          top: this.top,
+          width: this.width,
+          height: this.height,
+        };
+        this.stage = "FULLSCREEN";
+        this.refreshDialogLayout({
           left: 0,
           top: 100,
-          width: window.innerWidth,
-          height: (window.innerHeight - 100)
-        });
-      } else if (s.state === "DEFAULT") {
+          width: this.windowWidth || getViewportWidth(),
+          height: (this.windowHeight || getViewportHeight()) - 100
+        }, { preserveSetting: true });
+        return;
+      }
+      if (s.state === "DEFAULT") {
         this.stage = "DEFAULT";
-        this.handleResize({
+        const layout = this.preFullscreenLayout ?? {
           left: this.setting.left,
           top: this.setting.top < 100 ? 100 : this.setting.top,
           width: this.setting.width,
           height: this.setting.height,
-        });
-      } else if (s.state === "MINIMIZED") {
+        };
+        this.preFullscreenLayout = null;
+        this.refreshDialogLayout(layout);
+        return;
+      }
+      if (s.state === "MINIMIZED") {
         this.stage = "MINIMIZED";
-        this.handleResize({
+        this.refreshDialogLayout({
           left: this.setting.left,
           top: this.setting.top < 100 ? 100 : this.setting.top,
           width: this.setting.width,
@@ -184,6 +247,9 @@ export default {
     },
 
     handleResize (event) {
+      if (this.isApplyingLayout || this.stage === "FULLSCREEN") {
+        return;
+      }
       // #8312 投薬支援の子画面のサイズをウィンドウ外まで大きくすることができ操作不能となる 訾浩 start
       this.monitorTop = event.top
       // add FNSI-redmine#8312 高 start
@@ -202,7 +268,7 @@ export default {
 //add 8312 2023-02-20 17：30 投薬支援の子画面のサイズをウィンドウ外まで大きくすることができ操作不能となる 張 start
       if (this.windowsizeFlag) {
       // add FNSI-redmine#8312 高 start
-        if(event.left > this.nowLeft ) {
+        if(event.left > this.nowLeft) {
           event.left = this.nowLeft;
         } else {
           event.left = this.left;
@@ -214,10 +280,7 @@ export default {
           event.width = 300;
         } else {
           // #8312 投薬支援の子画面のサイズをウィンドウ外まで大きくすることができ操作不能となる 訾浩 start
-          let div = document.querySelector("div");
-          div.addEventListener("drag", (params) => {
-            this.clientX = params.gesture.center.clientX
-          })
+          this.bindDragMonitor()
           if (this.clientX <= 300 && event.width > 302) {
             event.width = this.width;
               // event.height = this.height
@@ -315,6 +378,11 @@ export default {
       this.$nextTick(() => {
         // 表示、非表示を行わないと、top の値が内部的に反映されない為の対応
         this.visible = true;
+        this.$nextTick(() => {
+          // v-if 再描画後に .k-window へ文字サイズクラスを再適用（全画面化後の文字縮小を防止）
+          this.syncDialogFontClass();
+          this.bindDragMonitor();
+        });
       });
       // #8312 投薬支援の子画面のサイズをウィンドウ外まで大きくすることができ操作不能となる 訾浩 start
       this.monitorTopFlag = true
@@ -328,10 +396,27 @@ export default {
       }
     },
 
+    syncDialogFontClass() {
+      const fontSizeClasses = [
+        "font-size-set-small",
+        "font-size-set-medium",
+        "font-size-set-large",
+        "font-size-set-x-large"
+      ];
+      const dialogRoot = this.getDialogRootElement();
+      if (!dialogRoot) {
+        return;
+      }
+      dialogRoot.classList.remove(...fontSizeClasses);
+      dialogRoot.classList.add(this.fontSizeSet);
+      this.setTitleFontSize(this.getFontSize);
+    },
+
     // ヘッダー部に文字サイズの設定を適用する処理
     setTitleFontSize(fontSize) {
       const fSize = ["0.8em", "1em", "1.1em", "1.3em"];
-      const kendoObj = document.getElementsByClassName("kendo-dialogs");
+      const dialogRoot = this.getDialogRootElement();
+      const kendoObj = dialogRoot ? [dialogRoot] : [];
       if (kendoObj.length > 0) {
         const titleObj = kendoObj[0].getElementsByClassName("k-window-title");
         for (let tidx = 0; tidx < titleObj.length; tidx++) {
@@ -362,7 +447,7 @@ export default {
         height: Math.floor(this.setting.height / oldZoomVal * newZoomVal),
       });
       // ヘッダー部に文字サイズの設定を適用
-      this.setTitleFontSize(val);
+      this.syncDialogFontClass();
     },
 //add 8312 2023-03-07 14：15 投薬支援の子画面のサイズをウィンドウ外まで大きくすることができ操作不能となる 張 start
     windowWidth(newval){
@@ -415,34 +500,33 @@ export default {
 //add 8312 2023-02-20 17：30 投薬支援の子画面のサイズをウィンドウ外まで大きくすることができ操作不能となる 張 end
   },
   mounted() {
-    // ヘッダー部に文字サイズの設定を適用
-    this.setTitleFontSize(this.getFontSize);
+    this.$nextTick(() => {
+      this.syncDialogFontClass();
+    });
+    this.bindDragMonitor();
   },
   // #8312 投薬支援の子画面のサイズをウィンドウ外まで大きくすることができ操作不能となる 訾浩 start
-  beforeDestroy () {
-    let div = document.querySelector("div");
-    div.removeEventListener("drag", (params) => {
-      this.clientX = params.gesture.center.clientX
-    })
+  beforeUnmount () {
+    this.unbindDragMonitor();
   }
   // #8312 投薬支援の子画面のサイズをウィンドウ外まで大きくすることができ操作不能となる 訾浩 end
 };
 </script>
 
 <style scoped>
+@import "../../assets/styles/modal.css";
 @media print {
   .print-none {
     display: none;
   }
 }
-@import "../../assets/styles/modal.css";
 .kendo-dialogs {
   z-index: 9998;
   display: table;
   transition: opacity 0.3s ease;
 }
 
-.kendo-dialogs >>> .k-window-titlebar {
+.kendo-dialogs :deep(.k-window-titlebar) {
   color:rgb(255, 255, 255);
   background: unset;
   background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
@@ -451,7 +535,7 @@ export default {
   height: 11px;
   /* add FNSI-5058 投薬支援小窓のヘッダーが大きい liumx end */
 }
-.kendo-dialogs >>> .k-window-content {
+.kendo-dialogs :deep(.k-window-content) {
   background-color: var(--ntss-list-background-color);
   padding-bottom: unset;
 }

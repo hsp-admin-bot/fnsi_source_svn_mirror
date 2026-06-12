@@ -11,19 +11,83 @@ WITH raw_data as (
 ,base_ord as (
   SELECT
     ord_no
+    ,pat_id
     ,ind_medi_info
     ,rst_medi_info
     ,rst_dialysis_state
   FROM ord_main
   WHERE ord_no in /*ordNoList*/(10768848)
 )
-,mst_data AS (
+,PAT_INFO AS (
   SELECT
+    pat_main.pat_id,
+    elem ->> 'category_class' AS category_class,
+    elem ->> 'taboo_allergy_class' AS taboo_allergy_class,
+    (elem ->> 'taboo_allergy_cd')::int AS taboo_allergy_cd
+  FROM pat_main
+  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(pat_main.taboo_allergy_info, '[]'::jsonb)) elem
+  WHERE pat_main.pat_id IN (SELECT DISTINCT bo.pat_id FROM base_ord bo WHERE bo.pat_id IS NOT NULL)
+)
+,TABOO_ALLERGY AS (
+  SELECT
+    pd.pat_id,
+    elem ->> 'classCd' AS category_class,
+    pd.taboo_allergy_class,
+    (elem ->> 'cd')::int AS cd
+  FROM PAT_INFO pd
+  INNER JOIN mst_taboo_allergy mta
+    ON pd.taboo_allergy_cd = mta.taboo_allergy_cd
+    AND pd.category_class = '0'
+  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(mta.detail_info, '[]'::jsonb)) elem
+  WHERE elem ->> 'classCd' IN ('1', '2', '3', '4')
+)
+,TABOO_ALLERGY_TMP AS (
+  SELECT * FROM TABOO_ALLERGY
+  UNION
+  SELECT pat_id, category_class, taboo_allergy_class, taboo_allergy_cd AS cd
+  FROM PAT_INFO
+  WHERE category_class IN ('1', '2', '3', '4')
+)
+,TABOO_ALLERGY_medicine_mix_tmp AS (
+  SELECT
+    tat.pat_id,
+    '2' AS category_class,
+    tat.taboo_allergy_class,
+    mmm.medicine_mix_cd AS cd
+  FROM TABOO_ALLERGY_TMP tat
+  INNER JOIN mst_medicine_mix mmm
+    ON mmm.mix_info @> jsonb_build_array(jsonb_build_object('cd', tat.cd))
+  WHERE tat.category_class = '1'
+)
+,TABOO_ALLERGY_data_pat AS (
+  SELECT
+    pat_id,
+    category_class,
+    cd,
+    BOOL_OR(taboo_allergy_class = '1') AS is_taboo,
+    BOOL_OR(taboo_allergy_class = '2') AS is_allergy
+  FROM (
+    SELECT * FROM TABOO_ALLERGY_medicine_mix_tmp
+    UNION
+    SELECT * FROM TABOO_ALLERGY_TMP
+  ) t
+  GROUP BY pat_id, category_class, cd
+)
+,mst_enriched AS (
+  SELECT
+    b.ord_no,
     r.ordinality,
     r.cd,
     mm.class_cd,
-    mm.medicine_name AS name,
-    mm.medicine_name AS short_name,
+    (
+      CASE
+        WHEN COALESCE(tat.is_taboo, false) AND COALESCE(tat.is_allergy, false) THEN '【禁忌・ｱﾚﾙｷﾞｰ】'
+        WHEN COALESCE(tat.is_taboo, false) THEN '【禁忌】'
+        WHEN COALESCE(tat.is_allergy, false) THEN '【ｱﾚﾙｷﾞｰ】'
+        ELSE ''
+      END
+    ) || mm.medicine_name AS name,
+    mm.medicine_short_name AS short_name,
     mm.unit,
     mm.is_medicated,
     mc.class_name,
@@ -31,10 +95,15 @@ WITH raw_data as (
     mt.medicate_timing_name AS timing_name,
     mp.pricedure_name AS procedure_name
   FROM raw_data r
-    JOIN mst_medicine mm
+    INNER JOIN base_ord b ON TRUE
+    INNER JOIN mst_medicine mm
       ON r.cd = mm.medicine_cd
       AND r.medicine_type = '1'
       AND mm.is_del = '0'
+    LEFT JOIN TABOO_ALLERGY_data_pat tat
+      ON tat.pat_id = b.pat_id
+      AND tat.category_class = '1'
+      AND tat.cd = mm.medicine_cd
     LEFT JOIN mst_medicine_class mc
       ON mm.class_cd IS NOT NULL
       AND mc.class_cd = mm.class_cd
@@ -49,10 +118,18 @@ WITH raw_data as (
       AND mp.is_del = '0'
   UNION ALL
   SELECT
+    b.ord_no,
     r.ordinality,
     r.cd,
     mmm.class_cd,
-    mmm.medicine_mix_name AS name,
+    (
+      CASE
+        WHEN COALESCE(tat.is_taboo, false) AND COALESCE(tat.is_allergy, false) THEN '【禁忌・ｱﾚﾙｷﾞｰ】'
+        WHEN COALESCE(tat.is_taboo, false) THEN '【禁忌】'
+        WHEN COALESCE(tat.is_allergy, false) THEN '【ｱﾚﾙｷﾞｰ】'
+        ELSE ''
+      END
+    ) || mmm.medicine_mix_name AS name,
     mmm.medicine_mix_short_name AS short_name,
     mmm.unit,
     mmm.is_medicated,
@@ -61,11 +138,16 @@ WITH raw_data as (
     mt.medicate_timing_name AS timing_name,
     mp.pricedure_name AS procedure_name
   FROM raw_data r
-    JOIN mst_medicine_mix mmm
+    INNER JOIN base_ord b ON TRUE
+    INNER JOIN mst_medicine_mix mmm
       ON r.cd = mmm.medicine_mix_cd
       AND r.medicine_type = '2'
       AND mmm.is_del = '0'
       AND mmm.is_disp = '1'
+    LEFT JOIN TABOO_ALLERGY_data_pat tat
+      ON tat.pat_id = b.pat_id
+      AND tat.category_class = '2'
+      AND tat.cd = mmm.medicine_mix_cd
     LEFT JOIN mst_medicine_class mc
       ON mmm.class_cd IS NOT NULL
       AND mc.class_cd = mmm.class_cd
@@ -110,8 +192,9 @@ WITH raw_data as (
         END || r.elem AS final_elem
   FROM raw_data r
     JOIN base_ord b ON true
-    LEFT JOIN mst_data m
+    LEFT JOIN mst_enriched m
       ON r.ordinality = m.ordinality
+      AND b.ord_no = m.ord_no
 )
 ,upd_data as (
 SELECT

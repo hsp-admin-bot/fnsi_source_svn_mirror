@@ -44,9 +44,7 @@ export default {
      * 標準医薬品マスタを全件取得する.
      * @param {*} commit COMMITオブジェクト
      */
-    /* eslint-disable no-unused-vars */
     getSysMedicineAll({commit}) {
-      /* eslint-disable no-unused-vars */
       return sendRequestGetSysMedicineAll();
     },
     /**

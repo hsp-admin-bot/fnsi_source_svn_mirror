@@ -1,6 +1,7 @@
 <template>
   <modal-base @onClose="cancel" :showFooter="false" class="custom-modal">
-    <div slot="body" class="personal-settings-body">
+    <template #body>
+    <div class="personal-settings-body">
       <table class="table-userInfo">
         <tbody>
           <tr>
@@ -86,13 +87,14 @@
         </tbody>
       </table>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 
 export default {
   name: "accountEdit",
@@ -100,9 +102,7 @@ export default {
   components: {
     "modal-base": ModalBase
   },
-  data() {
-    return {};
-  },
+
   computed: {
     ...mapGetters("account-edit", [
       "getStateUserAccountInfo",
@@ -130,7 +130,6 @@ export default {
 
     this.checkedAuthority = this.getStateUserAccountInfo.userSettings.authorized_authorities;
   },
-  mounted() {}
 };
 </script>
 

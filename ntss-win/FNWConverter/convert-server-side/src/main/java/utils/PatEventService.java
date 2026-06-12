@@ -2,11 +2,12 @@ package utils;
 
 import batch.ApplicationConst;
 import batch.listener.JobStartEndLIstener;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -54,10 +55,11 @@ public class PatEventService {
    *
    * @return s3 S3オブジェクト
    */
-  @Autowired
-  private AwsConfiguration awsS3;
-  private AmazonS3 s3() {
-    return awsS3.s3();
+    @Autowired
+  private S3Client s3Client;
+
+  private S3Client s3() {
+    return s3Client;
   }
 
   /**
@@ -89,15 +91,7 @@ public class PatEventService {
    */
   public String UploadEventAddedFiles(String facilityCd, String inputFilePath, String basePathTmp, String subPathKey, Integer maxPrimaryForConvert) {
 	GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
-    // アップロードしたファイルをパスを取得する
-    String basePath = basePathTmp;
-    int index1 = inputFilePath.indexOf("ExportData_");
-    if (index1 != -1) {
-      int index2 = inputFilePath.indexOf(File.separator, index1);
-      if (index2 != -1) {
-        basePath = inputFilePath.substring(0, index2);
-      }
-    }
+    String basePath = resolveUploadEventBasePath(inputFilePath, basePathTmp);
 
     // 患者イベントのアップロードファイルを取得する
     HashMap<String, String> s3FileInfoList = GetEventUploadFiles(facilityCd, inputFilePath,maxPrimaryForConvert);
@@ -118,7 +112,28 @@ public class PatEventService {
       eventLoggerUtil.recordLog(facilityCd, eventLogMessageS3, LogLevel.ERROR);
       return STOP_STATUS.ERROR;
     }
+    return uploadEventFilesAndDetermineStatus(facilityCd, s3FileInfoList, addedFileBasePath);
+  }
 
+  /**
+   * アップロード対象ファイルの親パスを解決する
+   */
+  private String resolveUploadEventBasePath(String inputFilePath, String basePathTmp) {
+    String basePath = basePathTmp;
+    int index1 = inputFilePath.indexOf("ExportData_");
+    if (index1 != -1) {
+      int index2 = inputFilePath.indexOf(File.separator, index1);
+      if (index2 != -1) {
+        basePath = inputFilePath.substring(0, index2);
+      }
+    }
+    return basePath;
+  }
+
+  /**
+   * 患者イベントファイルをS3へアップロードし終了ステータスを返す
+   */
+  private String uploadEventFilesAndDetermineStatus(String facilityCd, HashMap<String, String> s3FileInfoList, String addedFileBasePath) {
     // ファイルアップロード (S3上)
     int okCnt  = 0;
     for(String s3File : s3FileInfoList.keySet()) {
@@ -156,6 +171,40 @@ public class PatEventService {
    */
   private HashMap<String, String> GetEventUploadFiles(String facilityCd, String inputFilePath,Integer maxPrimaryForConvert) {
     HashMap<String, String> uploadFiles = new HashMap<String, String>();
+    boolean useDiffFilter = inputFilePath.contains("[diff]");
+    String sql = buildPatEventUploadSql(useDiffFilter);
+
+    int[] errorCounts = new int[3];
+    try {
+      DataSource ds = (DataSource) appContext.getBean(ApplicationConst.DbType.CONVERT);
+      JdbcTemplate jdbcTemplate = new JdbcTemplate(ds);
+
+      List<Object> params = buildPatEventUploadSqlParams(facilityCd, maxPrimaryForConvert, useDiffFilter);
+      List<Map<String,Object>> eventList = jdbcTemplate.queryForList(sql, params.toArray());
+      populateEventUploadFilesFromQueryResult(facilityCd, uploadFiles, eventList, errorCounts);
+    } catch (Exception ex) {
+      EventLogMessage eventLogMessageS3 = eventLoggerUtil.getEventLogMessage(Arrays.toString(ex.getStackTrace()),
+              facilityCd, "GetEventUploadFiles(String facilityCd)");
+      eventLoggerUtil.recordLog(facilityCd, eventLogMessageS3, LogLevel.ERROR);
+
+      eventLoggerUtil.recordLog(
+              facilityCd,
+              eventLoggerUtil.getEventLogMessage(
+                      "GetEventUploadFiles(String facilityCd)："  + EventLoggerUtil.excetionStackTraceToString(ex),
+                      facilityCd,
+                      ex.getClass().getName() + ".GetEventUploadFiles()"),
+              LogLevel.ERROR);
+      return null;
+    }
+
+    logEventUploadFileErrorSummary(facilityCd, errorCounts[0], errorCounts[1], errorCounts[2]);
+    return uploadFiles;
+  }
+
+  /**
+   * 患者イベントアップロード用SQLを組み立てる
+   */
+  private String buildPatEventUploadSql(boolean useDiffFilter) {
     String sql = "WITH s3_file AS ( "
             + " SELECT "
             + " pat_event_cd, "
@@ -170,9 +219,7 @@ public class PatEventService {
             + "  AND info->>'format_class' = '2' "
             + "  AND (info->>'result_value' IS NOT NULL AND info->>'result_value' != '' AND info->>'result_value' != '[]') "
             + "  AND info->>'result_value' like '%old_full_file_name%' ";
-    // SQL Injection protection: parameterize maxPrimaryForConvert
-    boolean useDiffFilter1 = inputFilePath.contains("[diff]");
-    if (useDiffFilter1) {
+    if (useDiffFilter) {
       sql += " and pat_event_cd > ? ";
     }
     sql += " ) SELECT pat_event_cd, pat_id, fn_ctl_no, result_value FROM s3_file WHERE result_value like '%old_full_file_name%' "
@@ -190,31 +237,37 @@ public class PatEventService {
             + "  AND info->>'format_class' = '7' "
             + "  AND (info->>'result_value' IS NOT NULL AND info->>'result_value' != '' AND info->>'result_value' != '[]') "
             + "  AND info->>'result_value' like '%old_full_file_name%' ";
-    boolean useDiffFilter2 = inputFilePath.contains("[diff]");
-    if (useDiffFilter2) {
+    if (useDiffFilter) {
       sql += " and pat_event_cd > ? ";
     }
     sql += ") ";
+    return sql;
+  }
 
-    int oldErrorCnt = 0;
-    int s3ErrorCnt = 0;
-    int otherErrorCnt = 0;
-    try {
-      DataSource ds = (DataSource) appContext.getBean(ApplicationConst.DbType.CONVERT);
-      JdbcTemplate jdbcTemplate = new JdbcTemplate(ds);
-
-      // SQL Injection protection: add maxPrimaryForConvert as parameter
+    /**
+     * 患者イベントアップロード用SQLのパラメータを組み立てる
+     */
+    private List<Object> buildPatEventUploadSqlParams(String facilityCd, Integer maxPrimaryForConvert, boolean useDiffFilter) {
       List<Object> params = new ArrayList<>();
       params.add(facilityCd);
-      if (useDiffFilter1) {
+      if (useDiffFilter) {
         params.add(maxPrimaryForConvert);
       }
       params.add(facilityCd);
-      if (useDiffFilter2) {
+      if (useDiffFilter) {
         params.add(maxPrimaryForConvert);
       }
-      List<Map<String,Object>> eventList = jdbcTemplate.queryForList(sql, params.toArray());
-      if (eventList != null && !eventList.isEmpty()) {
+      return params;
+    }
+
+  /**
+   * クエリ結果からアップロードファイルMapを構築する
+   */
+  private void populateEventUploadFilesFromQueryResult(String facilityCd, HashMap<String, String> uploadFiles,
+                                                       List<Map<String,Object>> eventList, int[] errorCounts) throws Exception {
+    if (eventList == null || eventList.isEmpty()) {
+      return;
+    }
         ObjectMapper objectMapper = new ObjectMapper();
         for (Map<String,Object> event : eventList) {
           Long patEventCd = null;
@@ -263,7 +316,7 @@ public class PatEventService {
           }
 
           if (ObjectUtils.isEmpty(oldFile)) {
-            oldErrorCnt++;
+            errorCounts[0]++;
 
             // FNWファイル名がなし
             String error = String.format("pat_eventにFNWファイル名は存在しません。patEventCd=%d，patId=%d, fnCtlNo=%d, fileName=[FNW:%s, FNSi:%s]"
@@ -273,7 +326,7 @@ public class PatEventService {
             continue;
           }
           if (ObjectUtils.isEmpty(s3File)) {
-            s3ErrorCnt++;
+            errorCounts[1]++;
 
             // FNSiファイル名がなし
             String error = String.format("pat_eventにFNSiファイル名は存在しません。patEventCd=%d，patId=%d, fnCtlNo=%d, fileName=[FNW:%s, FNSi:%s]"
@@ -284,7 +337,7 @@ public class PatEventService {
           }
           if (uploadFiles.containsKey(s3File)){
             if (!oldFile.equals(uploadFiles.get(s3File))) {
-              otherErrorCnt++;
+              errorCounts[2]++;
 
               // FNSiファイル名は同じですが、FNWファイル名は異なります
               String error = String.format("pat_eventにFNSiファイル名は同じですが、FNWファイル名は異なります。patEventCd=%d，patId=%d, fnCtlNo=%d, fileName=[FNW:%s, FNSi:%s]->[FNW:%s, FNSi:%s]"
@@ -302,22 +355,10 @@ public class PatEventService {
           uploadFiles.put(s3File, oldFile);
         }
       }
-    } catch (Exception ex) {
-      //ログ
-      EventLogMessage eventLogMessageS3 = eventLoggerUtil.getEventLogMessage(Arrays.toString(ex.getStackTrace()),
-              facilityCd, "GetEventUploadFiles(String facilityCd)");
-      eventLoggerUtil.recordLog(facilityCd, eventLogMessageS3, LogLevel.ERROR);
-
-      eventLoggerUtil.recordLog(
-              facilityCd,
-              eventLoggerUtil.getEventLogMessage(
-                      "GetEventUploadFiles(String facilityCd)："  + EventLoggerUtil.excetionStackTraceToString(ex),
-                      facilityCd,
-                      ex.getClass().getName() + ".GetEventUploadFiles()"),
-              LogLevel.ERROR);
-      return null;
-    }
-
+  /**
+   * アップロードファイル取得時のエラー件数をログ出力する
+   */
+  private void logEventUploadFileErrorSummary(String facilityCd, int oldErrorCnt, int s3ErrorCnt, int otherErrorCnt) {
     if (oldErrorCnt != 0 || s3ErrorCnt != 0 || otherErrorCnt != 0) {
       //ログ
       String uploadInfo = String.format("FNWファイル名がなし[%d]件、FNSiファイル名がなし[%d]件、FNSiファイル名は同じですが、FNWファイル名は異なります[%d]件",
@@ -326,8 +367,6 @@ public class PatEventService {
               facilityCd, "uploadEventAddedFiles(String facilityCd, String basePath, String subPathKey)");
       eventLoggerUtil.recordLog(facilityCd, eventLogMessageS3_1, LogLevel.ERROR);
     }
-
-    return uploadFiles;
   }
 
   /**
@@ -425,7 +464,7 @@ public class PatEventService {
       } else {
         File uploadFile = new File(uploadFileName);
         // S3アップロード
-        s3().putObject(new PutObjectRequest(s3BucketInFcd, s3Path, uploadFile));
+        s3().putObject(PutObjectRequest.builder().bucket(s3BucketInFcd).key(s3Path).build(), RequestBody.fromFile(uploadFile));
       }
 
     } catch (Exception ex) {
@@ -540,7 +579,7 @@ public class PatEventService {
         }
       } else {
         try {
-          s3().deleteObject(new DeleteObjectRequest(s3BucketInFcd, path));
+          s3().deleteObject(DeleteObjectRequest.builder().bucket(s3BucketInFcd).key(path).build());
         } catch (Exception e) {
           String info = String.format("deleteObject無効。Status[%s],localStore[%s],S3Bucket[%s],S3ファイル[%s]"
                   , status, localStore, String.format(s3Bucket, facilityCd),  oldFilePath);

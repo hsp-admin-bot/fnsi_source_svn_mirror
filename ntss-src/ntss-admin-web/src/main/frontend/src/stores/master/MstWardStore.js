@@ -1,4 +1,3 @@
-/* eslint-disable */
 
 import { ApiHelper } from '@/apis/AxiosHelper';
 

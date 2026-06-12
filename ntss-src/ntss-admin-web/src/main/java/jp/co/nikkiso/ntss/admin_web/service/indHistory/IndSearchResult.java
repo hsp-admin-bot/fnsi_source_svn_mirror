@@ -2,6 +2,7 @@ package jp.co.nikkiso.ntss.admin_web.service.indHistory;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -47,6 +48,7 @@ public class IndSearchResult {
 	/**
 	 * _id一覧
 	 */
+  @JsonProperty("_id")
 	private List<String> _id;
 
 	private String hospPatId;

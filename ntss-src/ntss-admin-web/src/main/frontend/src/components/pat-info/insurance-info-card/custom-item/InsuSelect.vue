@@ -3,7 +3,7 @@
     v-model="selectedValue"
     :class="classObject"
     :disabled="disabled"
-    v-on="$listeners"
+    v-bind="$attrs"
   >
     <option :value="null"></option>
     <option
@@ -17,7 +17,6 @@
 </template>
 
 <script>
-import _ from "underscore";
 // 共通タグ用ベースコンポーネント
 import baseCustomForm from "@/components/common/custom-form-tags/BaseCustomForm";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
@@ -42,6 +41,7 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
  *   ⇒ 項目1、または項目2を選択可能なプルダウンメニュー
  */
 export default {
+  inheritAttrs: false,
   mixins: [baseCustomForm],
 
   props: {
@@ -51,9 +51,9 @@ export default {
       validator: options => {
         return options.every(
           option =>
-            _.keys(option).length === 2 &&
-            _.has(option, "value") &&
-            _.has(option, "displayValue")
+            Object.keys(option).length === 2 &&
+            Object.prototype.hasOwnProperty.call(option, "value") &&
+            Object.prototype.hasOwnProperty.call(option, "displayValue")
         );
       }
     },
@@ -109,13 +109,21 @@ export default {
             if (count == 2) {
               this.$ons.notification.alert({
                 // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-                // title: "選択エラー",
-                // message: "セット内で同じ公費は選択できません。"
+                // title: "",
+                // message: "一つのセットに同じ公費が選択できません。"
                 title: DIALOG_MESSAGES[12000195].title,
                 message: messageFormat(DIALOG_MESSAGES[12000195].message)
                 // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
               });
               this.editValue = null;
+              this.$nextTick(() => {
+                const selectEl = this.$el;
+
+                if (selectEl) {
+                  selectEl.selectedIndex = 0;
+                  selectEl.value = "";
+                }
+              });
               break; // stop the loop
             }
           }

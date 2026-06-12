@@ -18,25 +18,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.fasterxml.jackson.core.type.TypeReference;
-import jp.co.nikkiso.ntss.admin_web.config.AwsConfiguration;
-import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
+import tools.jackson.core.type.TypeReference;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
-import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
 import jp.co.nikkiso.ntss.core.dao.SysSystemDefineDao;
 import jp.co.nikkiso.ntss.core.entity.OrdMain;
 import jp.co.nikkiso.ntss.core.entity.SysSystemDefine;
-import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
-import jp.co.nikkiso.ntss.core.logger.LogLevel;
-import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.transaction.annotation.Transactional;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
@@ -45,8 +32,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.response.bvms.dto.BVMSGraphDTO;
 import jp.co.nikkiso.ntss.admin_web.response.bvms.dto.BVMSRowDTO;
@@ -55,8 +41,21 @@ import jp.co.nikkiso.ntss.admin_web.response.bvms.dto.ErrorCellDTO;
 import jp.co.nikkiso.ntss.admin_web.service.bvms.converter.BVMSRowConverter;
 import jp.co.nikkiso.ntss.admin_web.service.bvms.converter.CSVParserService;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
-
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
+import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
+import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
+import jp.co.nikkiso.ntss.core.logger.LogLevel;
+import org.apache.commons.lang3.StringUtils;
 
 public abstract class AbstractBVMSService<I, O> implements BVMSService<I, O> {
 
@@ -67,8 +66,8 @@ public abstract class AbstractBVMSService<I, O> implements BVMSService<I, O> {
   private LogService logService;
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang end
 
-    @Autowired(required = false)
-    private AmazonS3 s3;
+    @Autowired
+    private S3Client s3;
 
     @Value("${ntss.report.cache-dir}")
     private String cacheDir;
@@ -85,13 +84,6 @@ public abstract class AbstractBVMSService<I, O> implements BVMSService<I, O> {
     //add FNSI-8360 ljx start
     @Value("${ntss.bvms.s3-bucket:#{null}}")
     private String bvmsBucket;
-
-    @Autowired
-    private AwsConfiguration awsS3;
-
-    private AmazonS3 s3() {
-      return awsS3.s3();
-    }
 
     @Autowired
     private SysSystemDefineDao sysSystemDefineDao;
@@ -218,13 +210,11 @@ public abstract class AbstractBVMSService<I, O> implements BVMSService<I, O> {
 
         bucket = bucket.replace("s3://", "");
 
-        ObjectListing listObjects = s3.listObjects(bucket);
-        List<S3ObjectSummary> objectSummaries = listObjects.getObjectSummaries();
         String zipFilePath = "";
         boolean zipFileExsit = false;
         boolean isInRangeTime = false;
-        for (S3ObjectSummary s3ObjectSummary : objectSummaries) {
-            String fileName = s3ObjectSummary.getKey();
+        for (S3Object s3ObjectSummary : listObjects(bucket)) {
+            String fileName = s3ObjectSummary.key();
             if (fileName.contains(partOfzipFilePath)) {
                 zipFileExsit = true;
                 String timeFromPath = findTimeInZipFileName(fileName, zipFileNameDTO.getTreatDate());
@@ -246,8 +236,7 @@ public abstract class AbstractBVMSService<I, O> implements BVMSService<I, O> {
         }
         String baseName = zipFilePath.replace("/", "_");
         File cacheFile = getCacheFile(baseName);
-        try (S3Object object = s3.getObject(new GetObjectRequest(bucket, zipFilePath));
-             InputStream inputStream = object.getObjectContent();
+        try (ResponseInputStream<GetObjectResponse> inputStream = getObjectStream(bucket, zipFilePath);
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[1024];
             while (true) {
@@ -333,17 +322,9 @@ public abstract class AbstractBVMSService<I, O> implements BVMSService<I, O> {
       Files.write(filePath, bytes);
     } else {//S3へアップロードするの場合
 
-      try (InputStream inputStream = file.getInputStream()) {
-        //新たなファイルに差し替え可能とするのため、古いファイルは削除する
-        s3().deleteObject(new DeleteObjectRequest(s3BucketInFcd, path));
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setContentLength(file.getSize());
-        // S3アップロード
-        s3().putObject(new PutObjectRequest(s3BucketInFcd, path, file.getInputStream(), metadata));
-
-      } catch (Exception e) {
-        throw e;
-      }
+      //新たなファイルに差し替え可能とするのため、古いファイルは削除する
+      deleteObject(s3BucketInFcd, path);
+      putMultipartObject(s3BucketInFcd, path, file);
     }
     // DB更新（保存したcsvファイルの絶対パスをord_mainに保存）
     this.updateBvmsPath(ordNo,path,facilityCd);
@@ -410,9 +391,9 @@ public abstract class AbstractBVMSService<I, O> implements BVMSService<I, O> {
       return content;
     } else {//S3へアップロードするの場合
 
-      S3Object object = s3().getObject(new GetObjectRequest(s3BucketInFcd, filename));
       // レスポンス用データ生成
-      try (InputStream is = object.getObjectContent(); ByteArrayOutputStream os = new ByteArrayOutputStream();) {
+      try (ResponseInputStream<GetObjectResponse> is = getObjectStream(s3BucketInFcd, filename);
+           ByteArrayOutputStream os = new ByteArrayOutputStream();) {
         byte[] buffer = new byte[1024];
         while (true) {
           int len = is.read(buffer);
@@ -426,6 +407,40 @@ public abstract class AbstractBVMSService<I, O> implements BVMSService<I, O> {
       } catch (Exception e) {
         throw e;
       }
+    }
+  }
+
+  private List<S3Object> listObjects(String bucket) {
+    return s3.listObjectsV2Paginator(ListObjectsV2Request.builder()
+        .bucket(bucket)
+        .build())
+      .contents()
+      .stream()
+      .toList();
+  }
+
+  private ResponseInputStream<GetObjectResponse> getObjectStream(String bucket, String path) {
+    return s3.getObject(GetObjectRequest.builder()
+        .bucket(bucket)
+        .key(path)
+        .build());
+  }
+
+  private void deleteObject(String bucket, String path) {
+    s3.deleteObject(DeleteObjectRequest.builder()
+        .bucket(bucket)
+        .key(path)
+        .build());
+  }
+
+  private void putMultipartObject(String bucket, String path, MultipartFile file) throws IOException {
+    try (InputStream inputStream = file.getInputStream()) {
+      s3.putObject(PutObjectRequest.builder()
+          .bucket(bucket)
+          .key(path)
+          .contentLength(file.getSize())
+          .build(),
+        RequestBody.fromInputStream(inputStream, file.getSize()));
     }
   }
 

@@ -12,7 +12,6 @@ import {
   sendRequestGetDoctorsAtFacilityIncludeDel
   // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc end
 } from "@/apis/facility";
-import Vue from "vue";
 import { SYS_USE_TYPE, SYS_USE_DISP } from "@/constants/sysUseConstants";
 import { FUNC_SCALE_BED } from "@/constants/function-code";
 
@@ -79,7 +78,7 @@ export default {
         editRecord.sortInputTime = Date.now();
       }
 
-      Vue.set(state.masterRecordList.data, index, editRecord);
+      state.masterRecordList.data.splice(index, 1, editRecord);
     },
 
     setCondition(state, condition) {
@@ -145,12 +144,14 @@ export default {
 
     // -----------------------------------------
     // 施設担当医師一覧を取得
-    getDoctorsAtFacility(context, facilityCd) {
-      return sendRequestGetDoctorsAtFacility(facilityCd);
+    getDoctorsAtFacility(context, payload) {
+      const facilityCd = payload?.facilityCd ?? payload;
+      return sendRequestGetDoctorsAtFacility(facilityCd, payload?.selectedPatId);
     },
     // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
-    getDoctorsAtFacilityIncludeDel(context, facilityCd) {
-      return sendRequestGetDoctorsAtFacilityIncludeDel(facilityCd);
+    getDoctorsAtFacilityIncludeDel(context, payload) {
+      const facilityCd = payload?.facilityCd ?? payload;
+      return sendRequestGetDoctorsAtFacilityIncludeDel(facilityCd, payload?.selectedPatId);
     },
     // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc end
     // -----------------------------------------
@@ -248,7 +249,6 @@ export default {
 
       // #11987 2026.01.05 add スケールベッド機能が無効な場合、スケールベッドの設定項目を非表示にする TDC伊東 start
       // スケールベッド機能が有効な場合のみスケールベッドの設定項目を表示
-      // useFunctionはrootState.facility.useFunctionに格納されている
       const useFunction = rootState?.facility?.useFunction || [];
       if (!useFunction.includes(FUNC_SCALE_BED)) {
         returnData = returnData.filter(e => e.functionName !== "スケールベッド");

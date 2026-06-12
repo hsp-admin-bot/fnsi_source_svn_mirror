@@ -1,26 +1,61 @@
 import store from "@/stores";
-import ons from "onsenui";
-import $ from "jquery";
-import _ from "underscore";
-import moment from "moment";
-// add FNSI-改修内容 「測定日」と「目標体重指示開始日」表示IF不正 dou start
-import Vue from "vue";
+import { showConfirmDialog } from "@/functions/common/OnsenFunctions";
+import $ from "@/compat/jquery";
+import dayjs from "@/compat/date/dayjs";
+import { createApp, defineComponent } from "@/compat/vue/runtime";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
+import { normalizeGridDateInputValue } from "@/components/common/grid-date-input-display";
+import { asKendoJQueryElement, findKendoGridCellByDataItemField, getKendoWidgetValue, setKendoWidgetValue } from "@/functions/common/KendoFunctions";
+// add FNSI-改修内容 「測定日」と「目標体重指示開始日」表示IF不正 dou start
 // add FNSI-改修内容 「測定日」と「目標体重指示開始日」表示IF不正 dou end
 import { addition, courseSelector, dialysisDifficultySelector, diseaseSelector, implantSelector, infectionSelector, patListLayout, severitySelector, tabooAllergySelector, transportSelector, user, wardSelector } from "@/functions/mst/MstGetters.js";
-import { KENDO_CATEGORY_COLUMNS, LAYOUT_ADDITION_ADDITIONKIND, LAYOUT_CATEGORY_ADDITION, LAYOUT_CATEGORY_BASICINFO, LAYOUT_CATEGORY_CHARGESTAFFINFO, LAYOUT_CATEGORY_DIFFICULTY_MAIN, LAYOUT_CATEGORY_DIFFICULTY_OTHER, LAYOUT_CATEGORY_IMPLANT_INFO, LAYOUT_CATEGORY_INFECT_INFO, LAYOUT_CATEGORY_MEDICALCAREINFO, LAYOUT_CATEGORY_MEDICAL_HST_INFO, LAYOUT_CATEGORY_OTHERCONTACTINFO, LAYOUT_CATEGORY_OTHERCONTACTKEYPERSONINFO, LAYOUT_CATEGORY_PATIENT_GROUP, LAYOUT_CATEGORY_PATMEMOINFO, LAYOUT_CATEGORY_PHYSICAL_INFO, LAYOUT_CATEGORY_PHYSICAL_INFO_CTR, LAYOUT_CATEGORY_PHYSICAL_INFO_DW, LAYOUT_CATEGORY_PHYSICAL_INFO_HEIGHT, LAYOUT_CATEGORY_SEVERITY, LAYOUT_CATEGORY_TABOO_ALLERGY_INFO, LAYOUT_CATEGORY_TITLES, LAYOUT_CATEGORY_TRANSPORT, LAYOUT_CATEGORY_VENDORCONTACTINFO, LAYOUT_ITEM_ALLERGY, LAYOUT_ITEM_BASICINFO_AGE, LAYOUT_ITEM_BASICINFO_BIRTHDAY, LAYOUT_ITEM_BASICINFO_BIRTHDAYDATEOBJECT, LAYOUT_ITEM_BASICINFO_BLOODABOCODE, LAYOUT_ITEM_BASICINFO_BLOODABONAME, LAYOUT_ITEM_BASICINFO_BLOODRHCODE, LAYOUT_ITEM_BASICINFO_BLOODRHNAME, LAYOUT_ITEM_BASICINFO_BLOODSEROVARCODE, LAYOUT_ITEM_BASICINFO_BLOODSEROVARNAME, LAYOUT_ITEM_BASICINFO_CONTACT_ADDRESS, LAYOUT_ITEM_BASICINFO_CONTACT_EMAIL, LAYOUT_ITEM_BASICINFO_CONTACT_FAX, LAYOUT_ITEM_BASICINFO_CONTACT_MEMO1, LAYOUT_ITEM_BASICINFO_CONTACT_MEMO2, LAYOUT_ITEM_BASICINFO_CONTACT_TEL1, LAYOUT_ITEM_BASICINFO_CONTACT_TEL2, LAYOUT_ITEM_BASICINFO_CONTACT_WORK_NAME, LAYOUT_ITEM_BASICINFO_CONTACT_WORK_TEL, LAYOUT_ITEM_BASICINFO_CONTACT_ZIPCD, LAYOUT_ITEM_BASICINFO_HOSPPATID, LAYOUT_ITEM_BASICINFO_INHOSPITALSTATE, LAYOUT_ITEM_BASICINFO_INOUT, LAYOUT_ITEM_BASICINFO_NAME, LAYOUT_ITEM_BASICINFO_NAMEALPHA, LAYOUT_ITEM_BASICINFO_NAMEKANA, LAYOUT_ITEM_BASICINFO_NATIONALITYCODE, LAYOUT_ITEM_BASICINFO_NATIONALITYNAME, LAYOUT_ITEM_BASICINFO_PATID, LAYOUT_ITEM_BASICINFO_SEXCODE, LAYOUT_ITEM_BASICINFO_SEXNAME, LAYOUT_ITEM_BREAST_DIA, LAYOUT_ITEM_CAUSE_DEATH_CODE, LAYOUT_ITEM_CAUSE_DEATH_NAME, LAYOUT_ITEM_CHARGESTAFFINFO_CHARGECODE_1, LAYOUT_ITEM_CHARGESTAFFINFO_CHARGECODE_2, LAYOUT_ITEM_CHARGESTAFFINFO_CHARGECODE_3, LAYOUT_ITEM_CHARGESTAFFINFO_CHARGENAME_1, LAYOUT_ITEM_CHARGESTAFFINFO_CHARGENAME_2, LAYOUT_ITEM_CHARGESTAFFINFO_CHARGENAME_3, LAYOUT_ITEM_CHARGESTAFFINFO_DOCTORCODE_1, LAYOUT_ITEM_CHARGESTAFFINFO_DOCTORCODE_2, LAYOUT_ITEM_CHARGESTAFFINFO_DOCTORNAME_1, LAYOUT_ITEM_CHARGESTAFFINFO_DOCTORNAME_2, LAYOUT_ITEM_CHARGESTAFFINFO_PUNCTURECODE_1, LAYOUT_ITEM_CHARGESTAFFINFO_PUNCTURECODE_2, LAYOUT_ITEM_CHARGESTAFFINFO_PUNCTURENAME_1, LAYOUT_ITEM_CHARGESTAFFINFO_PUNCTURENAME_2, LAYOUT_ITEM_CHEST_DIA, LAYOUT_ITEM_CTR, LAYOUT_ITEM_CTR_BREAST_DIA, LAYOUT_ITEM_CTR_CHEST_DIA, LAYOUT_ITEM_CTR_CTR, LAYOUT_ITEM_CTR_DW, LAYOUT_ITEM_CTR_EXAM_DATE, LAYOUT_ITEM_CTR_EXAM_TIME, LAYOUT_ITEM_CTR_ORDER_CLASS, LAYOUT_ITEM_CTR_TR_WEIGHT, LAYOUT_ITEM_CTR_WEIGHT, LAYOUT_ITEM_DIFFICULTY_MAIN, LAYOUT_ITEM_DIFFICULTY_OTHER, LAYOUT_ITEM_DISEASE_CD, LAYOUT_ITEM_DISEASE_DATE, LAYOUT_ITEM_DISEASE_NAME, LAYOUT_ITEM_DW, LAYOUT_ITEM_DW_BREAST_DIA, LAYOUT_ITEM_DW_CHEST_DIA, LAYOUT_ITEM_DW_CTR, LAYOUT_ITEM_DW_DW, LAYOUT_ITEM_DW_EXAM_DATE, LAYOUT_ITEM_DW_EXAM_TIME, LAYOUT_ITEM_DW_ORDER_CLASS, LAYOUT_ITEM_DW_TR_WEIGHT, LAYOUT_ITEM_EXAM_DATE, LAYOUT_ITEM_EXAM_TIME, LAYOUT_ITEM_HEIGHT, LAYOUT_ITEM_HEIGHT_EXAM_DATE, LAYOUT_ITEM_HEIGHT_EXAM_TIME, LAYOUT_ITEM_HEIGHT_HEIGHT, LAYOUT_ITEM_IMPLANT, LAYOUT_ITEM_INDICATOR_CDCODE, LAYOUT_ITEM_INDICATOR_CDNAME, LAYOUT_ITEM_INDICATOR_START_DATE, LAYOUT_ITEM_IS_BLOOD_SUGER_EXAMCODE, LAYOUT_ITEM_IS_BLOOD_SUGER_EXAMNAME, LAYOUT_ITEM_IS_CONFIRMATION_BIOPSYCODE, LAYOUT_ITEM_IS_CONFIRMATION_BIOPSYNAME, LAYOUT_ITEM_IS_DIABETESCODE, LAYOUT_ITEM_IS_DIABETESNAME, LAYOUT_ITEM_IS_DIAGNOSEDCODE, LAYOUT_ITEM_IS_DIAGNOSEDNAME, LAYOUT_ITEM_IS_NOTICE, LAYOUT_ITEM_IS_NOTICE_2, LAYOUT_ITEM_IS_NOTICE_3, LAYOUT_ITEM_KEY_SUFFIX_CHKBOX, LAYOUT_ITEM_KEY_SUFFIX_DATEOBJECT, LAYOUT_ITEM_KEY_SUFFIX_MSTNAME, LAYOUT_ITEM_MEDICALCAREINFO_DIALYSISCOUNT, LAYOUT_ITEM_MEDICALCAREINFO_DIALYSISCOURSECODE, LAYOUT_ITEM_MEDICALCAREINFO_DIALYSISCOURSENAME, LAYOUT_ITEM_MEDICALCAREINFO_DIALYSISSTARTDATE, LAYOUT_ITEM_MEDICALCAREINFO_DYALYSISHST, LAYOUT_ITEM_MEDICALCAREINFO_FACILITYCODE, LAYOUT_ITEM_MEDICALCAREINFO_FACILITYNAME, LAYOUT_ITEM_MEDICALCAREINFO_MAINCOURSECODE, LAYOUT_ITEM_MEDICALCAREINFO_MAINCOURSENAME, LAYOUT_ITEM_MEDICALCAREINFO_PAT_DIALYSIS_COUNT, LAYOUT_ITEM_MEDICALCAREINFO_PURIFICATIONCOUNT, LAYOUT_ITEM_MEDICALCAREINFO_WARDCODE, LAYOUT_ITEM_MEDICALCAREINFO_WARDNAME, LAYOUT_ITEM_MEMO, LAYOUT_ITEM_NEGATIVE_INFECTION, LAYOUT_ITEM_ORDER_CLASSNAME, LAYOUT_ITEM_OTHERCONTACTINFO_ADDRESS, LAYOUT_ITEM_OTHERCONTACTINFO_EMAIL, LAYOUT_ITEM_OTHERCONTACTINFO_FAX, LAYOUT_ITEM_OTHERCONTACTINFO_FIRSTNAME, LAYOUT_ITEM_OTHERCONTACTINFO_LASTNAME, LAYOUT_ITEM_OTHERCONTACTINFO_MEMO1, LAYOUT_ITEM_OTHERCONTACTINFO_MEMO2, LAYOUT_ITEM_OTHERCONTACTINFO_RELATION, LAYOUT_ITEM_OTHERCONTACTINFO_RELATIONCD, LAYOUT_ITEM_OTHERCONTACTINFO_TEL1, LAYOUT_ITEM_OTHERCONTACTINFO_TEL2, LAYOUT_ITEM_OTHERCONTACTINFO_WORKNAME, LAYOUT_ITEM_OTHERCONTACTINFO_WORKTEL, LAYOUT_ITEM_OTHERCONTACTINFO_ZIPCD, LAYOUT_ITEM_OUT_COME_DATE, LAYOUT_ITEM_PATMEMOINFO_CONTENT_1, LAYOUT_ITEM_PATMEMOINFO_CONTENT_10, LAYOUT_ITEM_PATMEMOINFO_CONTENT_11, LAYOUT_ITEM_PATMEMOINFO_CONTENT_12, LAYOUT_ITEM_PATMEMOINFO_CONTENT_13, LAYOUT_ITEM_PATMEMOINFO_CONTENT_14, LAYOUT_ITEM_PATMEMOINFO_CONTENT_15, LAYOUT_ITEM_PATMEMOINFO_CONTENT_16, LAYOUT_ITEM_PATMEMOINFO_CONTENT_17, LAYOUT_ITEM_PATMEMOINFO_CONTENT_18, LAYOUT_ITEM_PATMEMOINFO_CONTENT_19, LAYOUT_ITEM_PATMEMOINFO_CONTENT_2, LAYOUT_ITEM_PATMEMOINFO_CONTENT_20, LAYOUT_ITEM_PATMEMOINFO_CONTENT_3, LAYOUT_ITEM_PATMEMOINFO_CONTENT_4, LAYOUT_ITEM_PATMEMOINFO_CONTENT_5, LAYOUT_ITEM_PATMEMOINFO_CONTENT_6, LAYOUT_ITEM_PATMEMOINFO_CONTENT_7, LAYOUT_ITEM_PATMEMOINFO_CONTENT_8, LAYOUT_ITEM_PATMEMOINFO_CONTENT_9, LAYOUT_ITEM_PATMEMOINFO_TITLE_1, LAYOUT_ITEM_PATMEMOINFO_TITLE_10, LAYOUT_ITEM_PATMEMOINFO_TITLE_11, LAYOUT_ITEM_PATMEMOINFO_TITLE_12, LAYOUT_ITEM_PATMEMOINFO_TITLE_13, LAYOUT_ITEM_PATMEMOINFO_TITLE_14, LAYOUT_ITEM_PATMEMOINFO_TITLE_15, LAYOUT_ITEM_PATMEMOINFO_TITLE_16, LAYOUT_ITEM_PATMEMOINFO_TITLE_17, LAYOUT_ITEM_PATMEMOINFO_TITLE_18, LAYOUT_ITEM_PATMEMOINFO_TITLE_19, LAYOUT_ITEM_PATMEMOINFO_TITLE_2, LAYOUT_ITEM_PATMEMOINFO_TITLE_20, LAYOUT_ITEM_PATMEMOINFO_TITLE_3, LAYOUT_ITEM_PATMEMOINFO_TITLE_4, LAYOUT_ITEM_PATMEMOINFO_TITLE_5, LAYOUT_ITEM_PATMEMOINFO_TITLE_6, LAYOUT_ITEM_PATMEMOINFO_TITLE_7, LAYOUT_ITEM_PATMEMOINFO_TITLE_8, LAYOUT_ITEM_PATMEMOINFO_TITLE_9, LAYOUT_ITEM_POSITIVE_INFECTION, LAYOUT_ITEM_PRE_SCALE_LOWER, LAYOUT_ITEM_PRE_SCALE_UPPER, LAYOUT_ITEM_SEVERITYCODE, LAYOUT_ITEM_SEVERITYNAME, LAYOUT_ITEM_TABOO, LAYOUT_ITEM_TARGET_WEIGHT, LAYOUT_ITEM_TRANSPORTCODE, LAYOUT_ITEM_TRANSPORTNAME, LAYOUT_ITEM_UNCLEAR_INFECTION, LAYOUT_ITEM_VENDORCONTACTINFO_ADDRESS, LAYOUT_ITEM_VENDORCONTACTINFO_COMPANYNAME, LAYOUT_ITEM_VENDORCONTACTINFO_COMPANYTEL, LAYOUT_ITEM_VENDORCONTACTINFO_FAX, LAYOUT_ITEM_VENDORCONTACTINFO_MEMO1, LAYOUT_ITEM_VENDORCONTACTINFO_MEMO2, LAYOUT_ITEM_VENDORCONTACTINFO_WORKEREMAIL, LAYOUT_ITEM_VENDORCONTACTINFO_WORKERFIRSTNAME, LAYOUT_ITEM_VENDORCONTACTINFO_WORKERLASTNAME, LAYOUT_ITEM_VENDORCONTACTINFO_WORKERTEL, LAYOUT_ITEM_VENDORCONTACTINFO_ZIPCD, LAYOUT_PATIENTGROUP_PATIENTGROUP, NO_UPDDATE_FIELD_SUFFIX_LIST, PSEUDO_MST_LIST } from "./Definitions.js";
+import { KENDO_CATEGORY_COLUMNS, LAYOUT_ADDITION_ADDITIONKIND, LAYOUT_CATEGORY_ADDITION, LAYOUT_CATEGORY_BASICINFO, LAYOUT_CATEGORY_CHARGESTAFFINFO, LAYOUT_CATEGORY_DIFFICULTY_MAIN, LAYOUT_CATEGORY_DIFFICULTY_OTHER, LAYOUT_CATEGORY_IMPLANT_INFO, LAYOUT_CATEGORY_INFECT_INFO, LAYOUT_CATEGORY_MEDICALCAREINFO, LAYOUT_CATEGORY_MEDICAL_HST_INFO, LAYOUT_CATEGORY_OTHERCONTACTINFO, LAYOUT_CATEGORY_OTHERCONTACTKEYPERSONINFO, LAYOUT_CATEGORY_PATIENT_GROUP, LAYOUT_CATEGORY_PATMEMOINFO, LAYOUT_CATEGORY_PHYSICAL_INFO, LAYOUT_CATEGORY_PHYSICAL_INFO_CTR, LAYOUT_CATEGORY_PHYSICAL_INFO_DW, LAYOUT_CATEGORY_PHYSICAL_INFO_HEIGHT, LAYOUT_CATEGORY_SEVERITY, LAYOUT_CATEGORY_TABOO_ALLERGY_INFO, LAYOUT_CATEGORY_TITLES, LAYOUT_CATEGORY_TRANSPORT, LAYOUT_CATEGORY_VENDORCONTACTINFO, LAYOUT_ITEM_ALLERGY, LAYOUT_ITEM_BASICINFO_AGE, LAYOUT_ITEM_BASICINFO_BIRTHDAY, LAYOUT_ITEM_BASICINFO_BIRTHDAYDATEOBJECT, LAYOUT_ITEM_BASICINFO_BLOODABOCODE, LAYOUT_ITEM_BASICINFO_BLOODABONAME, LAYOUT_ITEM_BASICINFO_BLOODRHCODE, LAYOUT_ITEM_BASICINFO_BLOODRHNAME, LAYOUT_ITEM_BASICINFO_BLOODSEROVARCODE, LAYOUT_ITEM_BASICINFO_BLOODSEROVARNAME, LAYOUT_ITEM_BASICINFO_CONTACT_ADDRESS, LAYOUT_ITEM_BASICINFO_CONTACT_EMAIL, LAYOUT_ITEM_BASICINFO_CONTACT_FAX, LAYOUT_ITEM_BASICINFO_CONTACT_MEMO1, LAYOUT_ITEM_BASICINFO_CONTACT_MEMO2, LAYOUT_ITEM_BASICINFO_CONTACT_TEL1, LAYOUT_ITEM_BASICINFO_CONTACT_TEL2, LAYOUT_ITEM_BASICINFO_CONTACT_WORK_NAME, LAYOUT_ITEM_BASICINFO_CONTACT_WORK_TEL, LAYOUT_ITEM_BASICINFO_CONTACT_ZIPCD, LAYOUT_ITEM_BASICINFO_HOSPPATID, LAYOUT_ITEM_BASICINFO_INHOSPITALSTATE, LAYOUT_ITEM_BASICINFO_INOUT, LAYOUT_ITEM_BASICINFO_NAME, LAYOUT_ITEM_BASICINFO_NAMEALPHA, LAYOUT_ITEM_BASICINFO_NAMEKANA, LAYOUT_ITEM_BASICINFO_NATIONALITYCODE, LAYOUT_ITEM_BASICINFO_NATIONALITYNAME, LAYOUT_ITEM_BASICINFO_PATID, LAYOUT_ITEM_BASICINFO_SEXCODE, LAYOUT_ITEM_BASICINFO_SEXNAME, LAYOUT_ITEM_BREAST_DIA, LAYOUT_ITEM_CAUSE_DEATH_CODE, LAYOUT_ITEM_CAUSE_DEATH_NAME, LAYOUT_ITEM_CHARGESTAFFINFO_CHARGECODE_1, LAYOUT_ITEM_CHARGESTAFFINFO_CHARGECODE_2, LAYOUT_ITEM_CHARGESTAFFINFO_CHARGECODE_3, LAYOUT_ITEM_CHARGESTAFFINFO_CHARGENAME_1, LAYOUT_ITEM_CHARGESTAFFINFO_CHARGENAME_2, LAYOUT_ITEM_CHARGESTAFFINFO_CHARGENAME_3, LAYOUT_ITEM_CHARGESTAFFINFO_DOCTORCODE_1, LAYOUT_ITEM_CHARGESTAFFINFO_DOCTORCODE_2, LAYOUT_ITEM_CHARGESTAFFINFO_DOCTORNAME_1, LAYOUT_ITEM_CHARGESTAFFINFO_DOCTORNAME_2, LAYOUT_ITEM_CHARGESTAFFINFO_PUNCTURECODE_1, LAYOUT_ITEM_CHARGESTAFFINFO_PUNCTURECODE_2, LAYOUT_ITEM_CHARGESTAFFINFO_PUNCTURENAME_1, LAYOUT_ITEM_CHARGESTAFFINFO_PUNCTURENAME_2, LAYOUT_ITEM_CHEST_DIA, LAYOUT_ITEM_CTR, LAYOUT_ITEM_CTR_BREAST_DIA, LAYOUT_ITEM_CTR_CHEST_DIA, LAYOUT_ITEM_CTR_CTR, LAYOUT_ITEM_CTR_DW, LAYOUT_ITEM_CTR_EXAM_DATE, LAYOUT_ITEM_CTR_EXAM_TIME, LAYOUT_ITEM_CTR_ORDER_CLASS, LAYOUT_ITEM_CTR_TR_WEIGHT, LAYOUT_ITEM_CTR_WEIGHT, LAYOUT_ITEM_DIFFICULTY_MAIN, LAYOUT_ITEM_DIFFICULTY_OTHER, LAYOUT_ITEM_DISEASE_CD, LAYOUT_ITEM_DISEASE_DATE, LAYOUT_ITEM_DISEASE_NAME, LAYOUT_ITEM_DW, LAYOUT_ITEM_DW_BREAST_DIA, LAYOUT_ITEM_DW_CHEST_DIA, LAYOUT_ITEM_DW_CTR, LAYOUT_ITEM_DW_DW, LAYOUT_ITEM_DW_EXAM_DATE, LAYOUT_ITEM_DW_EXAM_TIME, LAYOUT_ITEM_DW_ORDER_CLASS, LAYOUT_ITEM_DW_TR_WEIGHT, LAYOUT_ITEM_EXAM_DATE, LAYOUT_ITEM_EXAM_TIME, LAYOUT_ITEM_HEIGHT, LAYOUT_ITEM_HEIGHT_EXAM_DATE, LAYOUT_ITEM_HEIGHT_EXAM_TIME, LAYOUT_ITEM_HEIGHT_HEIGHT, LAYOUT_ITEM_IMPLANT, LAYOUT_ITEM_INDICATOR_CDCODE, LAYOUT_ITEM_INDICATOR_CDNAME, LAYOUT_ITEM_INDICATOR_START_DATE, LAYOUT_ITEM_IS_BLOOD_SUGER_EXAMCODE, LAYOUT_ITEM_IS_BLOOD_SUGER_EXAMNAME, LAYOUT_ITEM_IS_CONFIRMATION_BIOPSYCODE, LAYOUT_ITEM_IS_CONFIRMATION_BIOPSYNAME, LAYOUT_ITEM_IS_DIABETESCODE, LAYOUT_ITEM_IS_DIABETESNAME, LAYOUT_ITEM_IS_DIAGNOSEDCODE, LAYOUT_ITEM_IS_DIAGNOSEDNAME, LAYOUT_ITEM_IS_NOTICE, LAYOUT_ITEM_IS_NOTICE_2, LAYOUT_ITEM_IS_NOTICE_3, LAYOUT_ITEM_KEY_SUFFIX_CHKBOX, LAYOUT_ITEM_KEY_SUFFIX_DATEOBJECT, LAYOUT_ITEM_KEY_SUFFIX_MSTNAME, LAYOUT_ITEM_MEDICALCAREINFO_DIALYSISCOUNT, LAYOUT_ITEM_MEDICALCAREINFO_DIALYSISCOURSECODE, LAYOUT_ITEM_MEDICALCAREINFO_DIALYSISCOURSENAME, LAYOUT_ITEM_MEDICALCAREINFO_DIALYSISSTARTDATE, LAYOUT_ITEM_MEDICALCAREINFO_DYALYSISHST, LAYOUT_ITEM_MEDICALCAREINFO_FACILITYCODE, LAYOUT_ITEM_MEDICALCAREINFO_FACILITYNAME, LAYOUT_ITEM_MEDICALCAREINFO_MAINCOURSECODE, LAYOUT_ITEM_MEDICALCAREINFO_MAINCOURSENAME, LAYOUT_ITEM_MEDICALCAREINFO_PAT_DIALYSIS_COUNT, LAYOUT_ITEM_MEDICALCAREINFO_PURIFICATIONCOUNT, LAYOUT_ITEM_MEDICALCAREINFO_WARDCODE, LAYOUT_ITEM_MEDICALCAREINFO_WARDNAME, LAYOUT_ITEM_MEMO, LAYOUT_ITEM_NEGATIVE_INFECTION, LAYOUT_ITEM_ORDER_CLASSNAME, LAYOUT_ITEM_OTHERCONTACTINFO_ADDRESS, LAYOUT_ITEM_OTHERCONTACTINFO_EMAIL, LAYOUT_ITEM_OTHERCONTACTINFO_FAX, LAYOUT_ITEM_OTHERCONTACTINFO_FIRSTNAME, LAYOUT_ITEM_OTHERCONTACTINFO_LASTNAME, LAYOUT_ITEM_OTHERCONTACTINFO_MEMO1, LAYOUT_ITEM_OTHERCONTACTINFO_MEMO2, LAYOUT_ITEM_OTHERCONTACTINFO_RELATION, LAYOUT_ITEM_OTHERCONTACTINFO_RELATIONCD, LAYOUT_ITEM_OTHERCONTACTINFO_TEL1, LAYOUT_ITEM_OTHERCONTACTINFO_TEL2, LAYOUT_ITEM_OTHERCONTACTINFO_WORKNAME, LAYOUT_ITEM_OTHERCONTACTINFO_WORKTEL, LAYOUT_ITEM_OTHERCONTACTINFO_ZIPCD, LAYOUT_ITEM_OUT_COME_DATE, LAYOUT_ITEM_PATMEMOINFO_CONTENT_1, LAYOUT_ITEM_PATMEMOINFO_CONTENT_10, LAYOUT_ITEM_PATMEMOINFO_CONTENT_11, LAYOUT_ITEM_PATMEMOINFO_CONTENT_12, LAYOUT_ITEM_PATMEMOINFO_CONTENT_13, LAYOUT_ITEM_PATMEMOINFO_CONTENT_14, LAYOUT_ITEM_PATMEMOINFO_CONTENT_15, LAYOUT_ITEM_PATMEMOINFO_CONTENT_16, LAYOUT_ITEM_PATMEMOINFO_CONTENT_17, LAYOUT_ITEM_PATMEMOINFO_CONTENT_18, LAYOUT_ITEM_PATMEMOINFO_CONTENT_19, LAYOUT_ITEM_PATMEMOINFO_CONTENT_2, LAYOUT_ITEM_PATMEMOINFO_CONTENT_20, LAYOUT_ITEM_PATMEMOINFO_CONTENT_3, LAYOUT_ITEM_PATMEMOINFO_CONTENT_4, LAYOUT_ITEM_PATMEMOINFO_CONTENT_5, LAYOUT_ITEM_PATMEMOINFO_CONTENT_6, LAYOUT_ITEM_PATMEMOINFO_CONTENT_7, LAYOUT_ITEM_PATMEMOINFO_CONTENT_8, LAYOUT_ITEM_PATMEMOINFO_CONTENT_9, LAYOUT_ITEM_PATMEMOINFO_TITLE_1, LAYOUT_ITEM_PATMEMOINFO_TITLE_10, LAYOUT_ITEM_PATMEMOINFO_TITLE_11, LAYOUT_ITEM_PATMEMOINFO_TITLE_12, LAYOUT_ITEM_PATMEMOINFO_TITLE_13, LAYOUT_ITEM_PATMEMOINFO_TITLE_14, LAYOUT_ITEM_PATMEMOINFO_TITLE_15, LAYOUT_ITEM_PATMEMOINFO_TITLE_16, LAYOUT_ITEM_PATMEMOINFO_TITLE_17, LAYOUT_ITEM_PATMEMOINFO_TITLE_18, LAYOUT_ITEM_PATMEMOINFO_TITLE_19, LAYOUT_ITEM_PATMEMOINFO_TITLE_2, LAYOUT_ITEM_PATMEMOINFO_TITLE_20, LAYOUT_ITEM_PATMEMOINFO_TITLE_3, LAYOUT_ITEM_PATMEMOINFO_TITLE_4, LAYOUT_ITEM_PATMEMOINFO_TITLE_5, LAYOUT_ITEM_PATMEMOINFO_TITLE_6, LAYOUT_ITEM_PATMEMOINFO_TITLE_7, LAYOUT_ITEM_PATMEMOINFO_TITLE_8, LAYOUT_ITEM_PATMEMOINFO_TITLE_9, LAYOUT_ITEM_POSITIVE_INFECTION, LAYOUT_ITEM_PRE_SCALE_LOWER, LAYOUT_ITEM_PRE_SCALE_UPPER, LAYOUT_ITEM_SEVERITYCODE, LAYOUT_ITEM_SEVERITYNAME, LAYOUT_ITEM_TABOO, LAYOUT_ITEM_TARGET_WEIGHT, LAYOUT_ITEM_TRANSPORTCODE, LAYOUT_ITEM_TRANSPORTNAME, LAYOUT_ITEM_UNCLEAR_INFECTION, LAYOUT_ITEM_VENDORCONTACTINFO_ADDRESS, LAYOUT_ITEM_VENDORCONTACTINFO_COMPANYNAME, LAYOUT_ITEM_VENDORCONTACTINFO_COMPANYTEL, LAYOUT_ITEM_VENDORCONTACTINFO_FAX, LAYOUT_ITEM_VENDORCONTACTINFO_MEMO1, LAYOUT_ITEM_VENDORCONTACTINFO_MEMO2, LAYOUT_ITEM_VENDORCONTACTINFO_WORKEREMAIL, LAYOUT_ITEM_VENDORCONTACTINFO_WORKERFIRSTNAME, LAYOUT_ITEM_VENDORCONTACTINFO_WORKERLASTNAME, LAYOUT_ITEM_VENDORCONTACTINFO_WORKERTEL, LAYOUT_ITEM_VENDORCONTACTINFO_ZIPCD, LAYOUT_PATIENTGROUP_PATIENTGROUP, NO_UPDDATE_FIELD_SUFFIX_LIST, PSEUDO_MST_LIST } from "./Definitions.js"
+
 import {ApiHelper} from "@/apis/AxiosHelper";
 import {deserializeJsonColumn, serializeJsonColumn} from "@/functions/common/CommonFunctions";
 /*add FNSI-改修内容5237 任 start*/
 import {MASTER_DELETE_DISPLAY} from "@/constants/TreatmentRecord";
 /*add FNSI-改修内容5237 任 end*/
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
-import kendo from "@progress/kendo-ui";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
 import { addPatNameSortToList } from "@/functions/SortFunctions";
+import kendo from "@progress/kendo-ui";
 // 引数で渡されたEventBusオブジェクトを格納
 let eventBusObj = null;
+
+const toKendoTemplate = (html) => {
+  const kendo = globalThis.kendo || globalThis.$?.kendo || globalThis.jQuery?.kendo || null;
+  return kendo?.template ? kendo.template(html) : (() => html);
+};
+
+const findElementByIdWithin = (root, id) => {
+  if (!root || id === null || id === undefined || id === '') {
+    return null;
+  }
+  const textId = String(id);
+  if (root.id === textId) {
+    return root;
+  }
+  const escapedId = (() => {
+    try {
+      return typeof CSS !== "undefined" && typeof CSS.escape === "function"
+        ? CSS.escape(textId)
+        : textId.replace(/([ #$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, "\\$1");
+    } catch (_error) {
+      return textId.replace(/([ #$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, "\\$1");
+    }
+  })();
+  try {
+    const found = root.querySelector?.(`#${escapedId}`);
+    if (found) {
+      return found;
+    }
+  } catch (_error) {
+    // noop: Vue2/jquery selectors allowed field ids such as pat_unique$physical_info$exam_time.
+  }
+  return Array.from(root.querySelectorAll?.('[id]') || []).find(element => element.id === textId) || null;
+};
 
 /**
  * @description 必要なすべてのマスタを取得
@@ -117,7 +152,7 @@ export const getTodayDialysisPatNum = async (patIdList, facilityCd) => {
   const { data: todayDialysisPatIdList } = await ApiHelper.post(
     "/patInfo/getPatIdByTreatDate",
     {
-      treatDate: moment().format("YYYYMMDD"),
+      treatDate: dayjs().format("YYYYMMDD"),
       facilityCd
     }
   ).catch(error => {
@@ -474,16 +509,16 @@ const mapPatPersonalMainToKendoFields = (
     [getKendoColumnField(
       LAYOUT_CATEGORY_BASICINFO.key,
       LAYOUT_ITEM_BASICINFO_BIRTHDAY.key
-    )]: pat_birthday ? moment(pat_birthday).format("YYYY/MM/DD") : null,
+    )]: pat_birthday ? dayjs(pat_birthday).format("YYYY/MM/DD") : null,
     [getKendoColumnField(
       LAYOUT_CATEGORY_BASICINFO.key,
       LAYOUT_ITEM_BASICINFO_BIRTHDAYDATEOBJECT.key
-    )]: pat_birthday ? moment(pat_birthday).toDate() : null,
+    )]: pat_birthday ? dayjs(pat_birthday).toDate() : null,
     // add FNSI-No.223 テンプレートおよび項目の不足、特定データの編集保存に対応。身体情報は新規追加に対応 陳 start
     [getKendoColumnField(
       LAYOUT_CATEGORY_BASICINFO.key,
       LAYOUT_ITEM_BASICINFO_AGE.key
-    )]: age(pat_birthday ? moment(pat_birthday).format("YYYYMMDD") : null),
+    )]: age(pat_birthday ? dayjs(pat_birthday).format("YYYYMMDD") : null),
     // add FNSI-No.223 テンプレートおよび項目の不足、特定データの編集保存に対応。身体情報は新規追加に対応 陳 end
     [getKendoColumnField(
       LAYOUT_CATEGORY_BASICINFO.key,
@@ -713,83 +748,87 @@ const mapPatMainToKendoFields = (
   let punctureCd = '';
   let punctureName = '';
   /*add FNSI-改修内容5237 任 end*/
-  for (const staff of charge_staff_info) {
-    /*add FNSI-改修内容5237 任 start*/
-    if(staff.is_main === "1"){
-      if (mainCd) {
-        mainCd = mainCd + "\n" + staff.staff_cd;
-      } else {
-        mainCd = staff.staff_cd;
+  // mod #11718 【#11600持ち越し】データリスト画面不正② fang start
+  if(charge_staff_info && charge_staff_info.length > 0) {
+    for (const staff of charge_staff_info) {
+      /*add FNSI-改修内容5237 任 start*/
+      if(staff.is_main === "1"){
+        if (mainCd) {
+          mainCd = mainCd + "\n" + staff.staff_cd;
+        } else {
+          mainCd = staff.staff_cd;
+        }
+        let name = staff.staff_cd === null
+          ? ""
+          : mstCodeToName(mst_staff, staff.staff_cd, "userId", "userName");
+        if (mainName) {
+          mainName = mainName + "\n" + name;
+        } else {
+          mainName = name;
+        }
       }
-      let name = staff.staff_cd === null
-        ? ""
-        : mstCodeToName(mst_staff, staff.staff_cd, "userId", "userName");
-      if (mainName) {
-        mainName = mainName + "\n" + name;
-      } else {
-        mainName = name;
+      if(staff.is_charge === "1"){
+        if (chargeCd) {
+          chargeCd = chargeCd + "\n" + staff.staff_cd;
+        } else {
+          chargeCd = staff.staff_cd;
+        }
+        let name = staff.staff_cd === null
+          ? ""
+          : mstCodeToName(mst_staff, staff.staff_cd, "userId", "userName");
+        if (chargeName) {
+          chargeName = chargeName + "\n" + name;
+        } else {
+          chargeName = name;
+        }
       }
-    }
-    if(staff.is_charge === "1"){
-      if (chargeCd) {
-        chargeCd = chargeCd + "\n" + staff.staff_cd;
-      } else {
-        chargeCd = staff.staff_cd;
+      if(staff.is_puncture === "1"){
+        if (punctureCd) {
+          punctureCd = punctureCd + "\n" + staff.staff_cd;
+        } else {
+          punctureCd = staff.staff_cd;
+        }
+        let name = staff.staff_cd === null
+          ? ""
+          : mstCodeToName(mst_staff, staff.staff_cd, "userId", "userName");
+        if (punctureName) {
+          punctureName = punctureName + "\n" + name;
+        } else {
+          punctureName = name;
+        }
       }
-      let name = staff.staff_cd === null
-        ? ""
-        : mstCodeToName(mst_staff, staff.staff_cd, "userId", "userName");
-      if (chargeName) {
-        chargeName = chargeName + "\n" + name;
-      } else {
-        chargeName = name;
+      /*add FNSI-改修内容5237 任 end*/
+      if (staff.is_main === "1" && doctorFields.length < REQUIRED_NUM_DOCTOR) {
+        // 主治医追加
+        doctorFields.push(createDoctorField(staff.staff_cd, doctorFields.length));
       }
-    }
-    if(staff.is_puncture === "1"){
-      if (punctureCd) {
-        punctureCd = punctureCd + "\n" + staff.staff_cd;
-      } else {
-        punctureCd = staff.staff_cd;
-      }
-      let name = staff.staff_cd === null
-        ? ""
-        : mstCodeToName(mst_staff, staff.staff_cd, "userId", "userName");
-      if (punctureName) {
-        punctureName = punctureName + "\n" + name;
-      } else {
-        punctureName = name;
-      }
-    }
-    /*add FNSI-改修内容5237 任 end*/
-    if (staff.is_main === "1" && doctorFields.length < REQUIRED_NUM_DOCTOR) {
-      // 主治医追加
-      doctorFields.push(createDoctorField(staff.staff_cd, doctorFields.length));
-    }
 
-    if (staff.is_charge === "1" && chargeFields.length < REQUIRED_NUM_CHARGE) {
-      // 担当者追加
-      chargeFields.push(createChargeField(staff.staff_cd, chargeFields.length));
-    }
+      if (staff.is_charge === "1" && chargeFields.length < REQUIRED_NUM_CHARGE) {
+        // 担当者追加
+        chargeFields.push(createChargeField(staff.staff_cd, chargeFields.length));
+      }
 
-    if (
-      staff.is_puncture === "1" &&
-      punctureFields.length < REQUIRED_NUM_PUNCTURE
-    ) {
-      // 穿刺追加
-      punctureFields.push(
-        createPunctureField(staff.staff_cd, punctureFields.length)
-      );
-    }
+      if (
+        staff.is_puncture === "1" &&
+        punctureFields.length < REQUIRED_NUM_PUNCTURE
+      ) {
+        // 穿刺追加
+        punctureFields.push(
+          createPunctureField(staff.staff_cd, punctureFields.length)
+        );
+      }
 
-    if (
-      doctorFields.length === REQUIRED_NUM_DOCTOR &&
-      chargeFields.length === REQUIRED_NUM_CHARGE &&
-      punctureFields.length === REQUIRED_NUM_PUNCTURE
-    ) {
-      // 規定の数作り終えたら抜ける
-      break;
+      if (
+        doctorFields.length === REQUIRED_NUM_DOCTOR &&
+        chargeFields.length === REQUIRED_NUM_CHARGE &&
+        punctureFields.length === REQUIRED_NUM_PUNCTURE
+      ) {
+        // 規定の数作り終えたら抜ける
+        break;
+      }
     }
   }
+  // mod #11718 【#11600持ち越し】データリスト画面不正② fang end
 
   // 不足分を作成
   for (let i = doctorFields.length; i < REQUIRED_NUM_DOCTOR; i++) {
@@ -938,8 +977,8 @@ const mapPatMainToKendoFields = (
   /*mod FNSI-改修内容5237 任 end*/
 
   // 透析歴計算
-  const dialHstYear = moment().diff(dialysis_start_date, "years");
-  const dialHstMonth = moment().diff(dialysis_start_date, "months") % 12;
+  const dialHstYear = dayjs().diff(dialysis_start_date, "years");
+  const dialHstMonth = dayjs().diff(dialysis_start_date, "months") % 12;
   const dialHst = `${!dialHstYear ? 0 : dialHstYear}年 ${!dialHstMonth ? 0 : dialHstMonth
     }ヶ月`;
   const kendoFields = {
@@ -1216,7 +1255,7 @@ const mapPatMainToKendoFields = (
       LAYOUT_CATEGORY_MEDICALCAREINFO.key,
       LAYOUT_ITEM_MEDICALCAREINFO_DIALYSISSTARTDATE.key
     )]: dialysis_start_date
-        ? moment(dialysis_start_date).format("YYYY/MM/DD")
+        ? dayjs(dialysis_start_date).format("YYYY/MM/DD")
         : null,
     /*add FNSI-改修内容5202 任 start*/
     [getKendoColumnField(
@@ -1236,6 +1275,44 @@ const mapPatMainToKendoFields = (
   return kendoFields;
 };
 
+const ISO_EXAM_DATE_FORMAT = "YYYY-MM-DDTHH:mm:ss.SSSZ";
+const DATE_ONLY_EXAM_FORMAT = "YYYY-MM-DD";
+
+/** 身体情報(DW/CTR等): ISO 形式でパース失敗時は YYYY-MM-DD を試し、それでも無効なら空白 */
+const formatPhysicalExamDateDay = (dateValue, primaryFormat = ISO_EXAM_DATE_FORMAT) => {
+  if (dateValue == null || dateValue === "") {
+    return null;
+  }
+  const primary = dayjs(dateValue, primaryFormat);
+  if (primary.isValid()) {
+    const formatted = primary.format("YYYY/MM/DD");
+    return formatted === "Invalid Date" ? "" : formatted;
+  }
+  const fallback = dayjs(dateValue, DATE_ONLY_EXAM_FORMAT);
+  if (fallback.isValid()) {
+    const formatted = fallback.format("YYYY/MM/DD");
+    return formatted === "Invalid Date" ? "" : formatted;
+  }
+  return "";
+};
+
+const formatPhysicalExamDateTime = (dateValue, primaryFormat = ISO_EXAM_DATE_FORMAT) => {
+  if (dateValue == null || dateValue === "" || !String(dateValue).match(/T/)) {
+    return null;
+  }
+  const primary = dayjs(dateValue, primaryFormat);
+  if (primary.isValid()) {
+    const formatted = primary.format("HH:mm");
+    return formatted === "Invalid Date" ? "" : formatted;
+  }
+  const fallback = dayjs(dateValue, DATE_ONLY_EXAM_FORMAT);
+  if (fallback.isValid()) {
+    const formatted = fallback.format("HH:mm");
+    return formatted === "Invalid Date" ? "" : formatted;
+  }
+  return "";
+};
+
 const mapPatUniqueToKendoFileds = (
   //mod FNSI-6478 劉全航 start
   // { is_diabetes, is_blood_suger_exam, medical_hst_info, physical_info },
@@ -1252,102 +1329,113 @@ const mapPatUniqueToKendoFileds = (
       return b.ctl_no - a.ctl_no;
     }
   });
-  // 既往歴
-  // 原疾患レコード
-  const primaryDiseaseRecord = medical_hst_info.find(
-    record => record.is_dialysis_underlying_disease === "1"
-  );
-  // 死亡レコード
-  const dieRecord = medical_hst_info.find(record => record.out_come === "10");
-  // add 11528 【たくしん会】データリスト並び順不正 zkm start
-  let dieDate;
-  if (dieRecord) {
-    dieDate = moment(dieRecord.die_date, "YYYYMMDD").format("YYYY年MM月DD日");
-  }
-  // add 11528 【たくしん会】データリスト並び順不正 zkm end
-
-  // 治療中(主病名)レコード
-  const mainDiseaseRecords = medical_hst_info.filter(
-    record => record.out_come === "1" && record.is_main_disease === "1"
-  );
-
-  const diseaseNameList = mainDiseaseRecords.map(record => {
-    // const disease = mst_disease.find(mst => mst.code === record.disease_cd);
-    const disease = mst_disease.find(mst => mst.code == record.disease_cd);
-    return disease ? disease.name : null;
-  });
-  /*add FNSI-改修内容5237 任 start*/
-  let diseaseNewName = '';
-  diseaseNameList.forEach(item => {
-    if (diseaseNewName) {
-      diseaseNewName = diseaseNewName + "\n" + item;
-    } else {
-      diseaseNewName = item;
-    }
-  })
-  /*add FNSI-改修内容5237 任 end*/
-
-  // let primaryDiseaseName = null;
-  let primaryDisease = primaryDiseaseRecord ? primaryDiseaseRecord.disease_cd : "";
-  // let isPrimaryDiseaseSetting = primaryDiseaseRecord ? false : true;
-  let dieDisease = dieRecord ? dieRecord.disease_cd : "";
-  // let dieDiseaseName = null;
-  // let isDieDiseaseSetting = dieRecord ? false : true;
-  // for (const mst of mst_disease) {
-  //   if (
-  //     !isPrimaryDiseaseSetting &&
-  //     mst.code === primaryDiseaseRecord.disease_cd
-  //   ) {
-  //     primaryDiseaseName = mst.name;
-  //     isPrimaryDiseaseSetting = true;
-  //   }
-  //
-  //   if (!isDieDiseaseSetting && mst.code === dieRecord.disease_cd) {
-  //     dieDiseaseName = mst.name;
-  //     isDieDiseaseSetting = true;
-  //   }
-  //   if (isPrimaryDiseaseSetting && isDieDiseaseSetting) {
-  //     break;
-  //   }
-  // }
-  const PDRecord = primaryDiseaseRecord;
-  const isConfirmationBiopsy = PDRecord
-    ? PDRecord.is_confirmation_biopsy
-    : null;
-  // mod 11528 【たくしん会】データリスト並び順不正 zkm start
-  // const diseaseDate = PDRecord ? moment(PDRecord.disease_date).format("YYYY/MM/DD") : null;
-  const diseaseDate = PDRecord && null != PDRecord.disease_date ? moment(PDRecord.disease_date).format("YYYY/MM/DD") : null;
-  // mod 11528 【たくしん会】データリスト並び順不正 zkm end
-  const year = dieRecord
-    ? dieRecord.diagnosis_year
-      ? `${dieRecord.diagnosis_year}年`
-      : ""
-    : "";
-  const month = dieRecord
-    ? dieRecord.diagnosis_month
-      ? `${dieRecord.diagnosis_month}月`
-      : ""
-    : "";
-  const day = dieRecord
-    ? dieRecord.diagnosis_day
-      ? `${dieRecord.diagnosis_day}日`
-      : ""
-    : "";
-  const date = `${year}${month}${day}`;
-  const isDiagnosed = dieRecord ? dieRecord.is_diagnosed : null;
-
-  // 最新の身体情報(身長)
-  const newestPhysicalHeight = physical_info.find(item => item.height !== null);
+  // mod #11718 【#11600持ち越し】データリスト画面不正② fang start
+  let primaryDisease = null;
+  let dieDisease = null;
+  let isConfirmationBiopsy = null;
+  let diseaseDate = null;
   let physicalHeightDay = null;
   let physicalHeightTime = null;
-  if (newestPhysicalHeight) {
-    const date = newestPhysicalHeight.exam_date;
-    const format = "YYYY-MM-DDTHH:mm:ss.SSSZ";
+  let isDiagnosed = null;
+  let dieDate = null;
+  let diseaseNewName = '';
+  let diseaseNameList = null;
+  let newestPhysicalHeight = null;
+  if (medical_hst_info && medical_hst_info.length > 0) {
+    // 既往歴
+    // 原疾患レコード
+    const primaryDiseaseRecord = medical_hst_info.find(
+      record => record.is_dialysis_underlying_disease === "1"
+    );
+    // 死亡レコード
+    const dieRecord = medical_hst_info.find(record => record.out_come === "10");
+    // mod 11528 【たくしん会】データリスト並び順不正 zkm start
+    // let dieDate;
+    if (dieRecord) {
+      dieDate = dayjs(dieRecord.die_date, "YYYYMMDD").format("YYYY年MM月DD日");
+    }
+    // mod 11528 【たくしん会】データリスト並び順不正 zkm end
 
-    physicalHeightDay = date ? moment(date, format).format("YYYY/MM/DD") : null;
-    const time = date ? date.match(/T/) : null;
-    if (time) {
-      physicalHeightTime = moment(date, format).format("HH:mm");
+    // 治療中(主病名)レコード
+    const mainDiseaseRecords = medical_hst_info.filter(
+      record => record.out_come === "1" && record.is_main_disease === "1"
+    );
+
+    diseaseNameList = mainDiseaseRecords.map(record => {
+      // const disease = mst_disease.find(mst => mst.code === record.disease_cd);
+      const disease = mst_disease.find(mst => mst.code == record.disease_cd);
+      return disease ? disease.name : null;
+    });
+    /*add FNSI-改修内容5237 任 start*/
+    diseaseNameList.forEach(item => {
+      if (diseaseNewName) {
+        diseaseNewName = diseaseNewName + "\n" + item;
+      } else {
+        diseaseNewName = item;
+      }
+    })
+    /*add FNSI-改修内容5237 任 end*/
+
+    // let primaryDiseaseName = null;
+    primaryDisease = primaryDiseaseRecord ? primaryDiseaseRecord.disease_cd : "";
+    // let isPrimaryDiseaseSetting = primaryDiseaseRecord ? false : true;
+    dieDisease = dieRecord ? dieRecord.disease_cd : "";
+    // let dieDiseaseName = null;
+    // let isDieDiseaseSetting = dieRecord ? false : true;
+    // for (const mst of mst_disease) {
+    //   if (
+    //     !isPrimaryDiseaseSetting &&
+    //     mst.code === primaryDiseaseRecord.disease_cd
+    //   ) {
+    //     primaryDiseaseName = mst.name;
+    //     isPrimaryDiseaseSetting = true;
+    //   }
+    //
+    //   if (!isDieDiseaseSetting && mst.code === dieRecord.disease_cd) {
+    //     dieDiseaseName = mst.name;
+    //     isDieDiseaseSetting = true;
+    //   }
+    //   if (isPrimaryDiseaseSetting && isDieDiseaseSetting) {
+    //     break;
+    //   }
+    // }
+    const PDRecord = primaryDiseaseRecord;
+    isConfirmationBiopsy = PDRecord
+      ? PDRecord.is_confirmation_biopsy
+      : null;
+    // mod 11528 【たくしん会】データリスト並び順不正 zkm start
+    // const diseaseDate = PDRecord ? dayjs(PDRecord.disease_date).format("YYYY/MM/DD") : null;
+    diseaseDate = PDRecord && null != PDRecord.disease_date ? dayjs(PDRecord.disease_date).format("YYYY/MM/DD") : null;
+    // mod 11528 【たくしん会】データリスト並び順不正 zkm end
+    const year = dieRecord
+      ? dieRecord.diagnosis_year
+        ? `${dieRecord.diagnosis_year}年`
+        : ""
+      : "";
+    const month = dieRecord
+      ? dieRecord.diagnosis_month
+        ? `${dieRecord.diagnosis_month}月`
+        : ""
+      : "";
+    const day = dieRecord
+      ? dieRecord.diagnosis_day
+        ? `${dieRecord.diagnosis_day}日`
+        : ""
+      : "";
+    const date = `${year}${month}${day}`;
+    isDiagnosed = dieRecord ? dieRecord.is_diagnosed : null;
+
+    // 最新の身体情報(身長)
+    newestPhysicalHeight = physical_info.find(item => item.height !== null);
+    if (newestPhysicalHeight) {
+      const date = newestPhysicalHeight.exam_date;
+      const format = "YYYY-MM-DDTHH:mm:ss.SSSZ";
+
+      physicalHeightDay = date ? dayjs(date, format).format("YYYY/MM/DD") : null;
+      const time = date ? date.match(/T/) : null;
+      if (time) {
+        physicalHeightTime = dayjs(date, format).format("HH:mm");
+      }
     }
   }
   // 最新の身体情報(DW)
@@ -1358,10 +1446,10 @@ const mapPatUniqueToKendoFileds = (
     const date = newestPhysicalDw.exam_date;
     const format = "YYYY-MM-DDTHH:mm:ss.SSSZ";
 
-    physicalDwDay = date ? moment(date, format).format("YYYY/MM/DD") : null;
+    physicalDwDay = date ? dayjs(date, format).format("YYYY/MM/DD") : null;
     const time = date ? date.match(/T/) : null;
     if (time) {
-      physicalDwTime = moment(date, format).format("HH:mm");
+      physicalDwTime = dayjs(date, format).format("HH:mm");
     }
   }
   // 最新の身体情報(CTR)
@@ -1372,10 +1460,10 @@ const mapPatUniqueToKendoFileds = (
     const date = newestPhysicalCtr.exam_date;
     const format = "YYYY-MM-DDTHH:mm:ss.SSSZ";
 
-    physicalCtrDay = date ? moment(date, format).format("YYYY/MM/DD") : null;
+    physicalCtrDay = date ? dayjs(date, format).format("YYYY/MM/DD") : null;
     const time = date ? date.match(/T/) : null;
     if (time) {
-      physicalCtrTime = moment(date, format).format("HH:mm");
+      physicalCtrTime = dayjs(date, format).format("HH:mm");
     }
   }
 
@@ -1459,11 +1547,11 @@ const mapPatUniqueToKendoFileds = (
     [getKendoColumnField(
       LAYOUT_CATEGORY_MEDICAL_HST_INFO.key,
       LAYOUT_ITEM_IS_NOTICE_2.key
-    )]: diseaseNameList[1] ? diseaseNameList[1] : null,
+    )]: diseaseNameList && diseaseNameList.length > 0 && diseaseNameList[1] ? diseaseNameList[1] : null,
     [getKendoColumnField(
       LAYOUT_CATEGORY_MEDICAL_HST_INFO.key,
       LAYOUT_ITEM_IS_NOTICE_3.key
-    )]: diseaseNameList[2] ? diseaseNameList[2] : null,
+    )]: diseaseNameList && diseaseNameList.length > 1 && diseaseNameList[2] ? diseaseNameList[2] : null,
     // 身体情報(最新：身長)
     [getKendoColumnField(
       LAYOUT_CATEGORY_PHYSICAL_INFO_HEIGHT.key,
@@ -1574,6 +1662,7 @@ const mapPatUniqueToKendoFileds = (
       LAYOUT_ITEM_INDICATOR_CDNAME.key
     )]: selectDoctor ? mstCodeToName(mst_staff, selectDoctor, "userId", "userName") : ""
   };
+  // mod #11718 【#11600持ち越し】データリスト画面不正② fang end
   return kendoColumns;
 };
 
@@ -1743,10 +1832,6 @@ const editorDateInput = (categoryKey, itemKey, maxDate, minDate) => (container, 
   const required = requiredList.includes(`${options.field}`) ? "required" : "";
   // mod FNSI-改修内容 「測定日」と「目標体重指示開始日」表示IF不正 dou start
 
-
-  let moveOutFlg = false;
-  container.mouseenter(() => moveOutFlg = false);
-  container.mouseleave(() => moveOutFlg = true);
   // デスクトップ、iOSの場合は、処理で補正したHTML5のカレンダーを表示
   let nowData;
   let hasInitValue = true;
@@ -1767,23 +1852,132 @@ const editorDateInput = (categoryKey, itemKey, maxDate, minDate) => (container, 
   // $(`<input type="date" id="displayedDummyEditor" validationMessage="必須入力" ${required} class="ntss-input-date" min="1880-01-01" max="2099-12-31" value="${nowDtatString}"/><input type="date" id="hiddenDateInputEditor" name="${dateObjField}" style="display: none;"/>`)
   // #5590 2023/04/20 ×を常に表示するように修正 林峻峰 start
   //#10715：日付IF修正20240910検証NG対応：村上Start
-  $(`<span style="position:relative"><input  type="date" style="width:8em" id="displayedDummyEditor" validationMessage="必須入力" ${required} class="ntss-input-date" min="1880-01-01" max="2099-12-31" value="${nowDtatString}"/><input type="date" id="hiddenDateInputEditor" name="${dateObjField}" style="display: none;"/><span id="clear" class="k-icon k-i-close close-btn" title="clear" style="position:absolute;left:75%;top:2px;color: #212529;z-index:9999999" ></span>`)
+  const containerEl = container?.[0] || container?.get?.(0) || container;
+  const ownerDocument = containerEl?.ownerDocument || document;
+  const editorRow = ownerDocument.createElement("span");
+  editorRow.className = "ntss-grid-date-editor-row";
+  $(editorRow).appendTo(container);
+  $(`<span class="ntss-grid-date-input-host" style="position:relative"><input type="date" style="width:8em" id="displayedDummyEditor" validationMessage="必須入力" ${required} class="ntss-input-date" min="1880-01-01" max="2099-12-31" value="${nowDtatString}"/><input type="date" id="hiddenDateInputEditor" name="${dateObjField}" style="display: none;"/><span id="clear" class="k-icon k-i-close close-btn" title="clear" style="position:absolute;left:75%;top:5px;color: #212529;z-index:9999999"></span></span>`)
+    .appendTo(editorRow);
   //#10715：日付IF修正20240910検証NG対応：村上End
   // #5590 2023/04/20 ×を常に表示するように修正 林峻峰 end
-  .appendTo(container)
   //#10715：日付IF修正20240910検証NG対応：村上Start
-  const idtag = $("#displayedDummyEditor");
-  const cleartag = document.getElementById("clear");
-  cleartag.addEventListener("mousedown", function(ev) {
-    idtag.value = "";
-    if (idtag.val() !== "") {
-      options.model.set(options.field, "");
+  const displayedEditor = containerEl?.querySelector?.("#displayedDummyEditor");
+  const hiddenEditor = containerEl?.querySelector?.("#hiddenDateInputEditor");
+  const cleartag = containerEl?.querySelector?.("#clear");
+  const displayedEditorJq = displayedEditor ? $(displayedEditor) : $();
+  const hiddenEditorJq = hiddenEditor ? $(hiddenEditor) : $();
+  const editorCell = containerEl?.closest?.('td');
+  let calendarVm = null;
+
+  const resolveGridRoot = () => {
+    return containerEl?.closest?.('#kendo')
+      || ownerDocument.getElementById?.('kendo')
+      || containerEl?.closest?.('.k-grid')
+      || null;
+  };
+
+  const resolveKendoGrid = () => {
+    const gridRoot = resolveGridRoot();
+    if (!gridRoot) {
+      return null;
     }
-    idtag.trigger('change');
+    const gridHost = gridRoot.classList?.contains?.('k-grid')
+      ? gridRoot
+      : (gridRoot.querySelector?.('.k-grid') || gridRoot);
+    const gridJq = $(gridHost);
+    return gridJq.data('kendoGrid') || globalThis.kendo?.widgetInstance?.(gridJq) || null;
+  };
+
+  const resolveSaveContainerCell = () => {
+    if (editorCell?.getAttribute?.('data-field') === dateDisplayField) {
+      return editorCell;
+    }
+    const gridRoot = resolveGridRoot();
+    const grid = resolveKendoGrid();
+    const uid = options.model?.uid;
+    if (gridRoot && uid != null) {
+      const escapedField = String(dateDisplayField).replace(/"/g, '\\"');
+      const escapedUid = String(uid).replace(/"/g, '\\"');
+      const rows = gridRoot.querySelectorAll(`tr[data-uid="${escapedUid}"]`);
+      for (const row of rows) {
+        const cell = row.querySelector(`td[data-field="${escapedField}"]`);
+        if (cell) {
+          return cell;
+        }
+      }
+    }
+    return findKendoGridCellByDataItemField(grid || gridRoot, options.model, dateDisplayField)
+      || editorCell
+      || null;
+  };
+
+  // hidden の *_DateObject は isNoUpdateField のため editCell が走らず編集色が付かない。
+  // MultiPatList.triggerSave と同様に表示用 field のセルで save を発火する。
+  const triggerDisplayFieldSave = (formattedValue) => {
+    const saveValue = formattedValue === '' ? null : formattedValue;
+    const containerCell = resolveSaveContainerCell();
+    const container = asKendoJQueryElement(containerCell);
+    const grid = resolveKendoGrid();
+    if (!grid || !container) {
+      hiddenEditorJq.trigger('change');
+      return;
+    }
+    grid.trigger('save', {
+      container,
+      model: options.model,
+      values: { [dateDisplayField]: saveValue }
+    });
+    requestAnimationFrame(() => {
+      if (grid?._editContainer) {
+        grid.editable?.end?.();
+        grid.closeCell();
+      }
+    });
+  };
+
+  const commitDateValue = (rawValue) => {
+    let nextValue = rawValue || '';
+    if (!nextValue) {
+      if (hiddenEditor) { hiddenEditor.value = ''; }
+      if (displayedEditor) { displayedEditor.value = ''; }
+      options.model.set(dateDisplayField, '');
+      calendarVm?.setSilently?.('');
+      triggerDisplayFieldSave('');
+      return;
+    }
+    const normalizedDate = dayjs(nextValue);
+    if (!normalizedDate.isValid()) {
+      if (hiddenEditor) { hiddenEditor.value = ''; }
+      if (displayedEditor) { displayedEditor.value = ''; }
+      options.model.set(dateDisplayField, '');
+      calendarVm?.setSilently?.('');
+      triggerDisplayFieldSave('');
+      return;
+    }
+    let formattedValue = normalizedDate.format('YYYY/MM/DD');
+    if (maxDate && normalizedDate.unix() > dayjs().unix()) {
+      formattedValue = dayjs().format('YYYY/MM/DD');
+    } else if (minDate && normalizedDate.unix() < dayjs().unix()) {
+      formattedValue = dayjs().format('YYYY/MM/DD');
+    }
+    const isoValue = dayjs(formattedValue, 'YYYY/MM/DD', true).format('YYYY-MM-DD');
+    if (hiddenEditor) { hiddenEditor.value = formattedValue; }
+    if (displayedEditor) { displayedEditor.value = isoValue; }
+    options.model.set(dateDisplayField, formattedValue);
+    calendarVm?.setSilently?.(isoValue);
+    triggerDisplayFieldSave(formattedValue);
+  };
+
+  cleartag?.addEventListener("mousedown", function() {
+    if (displayedEditor) {
+      displayedEditor.value = "";
+    }
+    commitDateValue('');
   });
   //#10715：日付IF修正20240910検証NG対応：村上End
-  document.getElementById("displayedDummyEditor").addEventListener("blur", function (ev) {
-    if (!moveOutFlg) {
+  displayedEditor?.addEventListener("blur", function (ev) {
+    if (editorRow.contains(ev.relatedTarget)) {
       return;
     }
 
@@ -1800,82 +1994,91 @@ const editorDateInput = (categoryKey, itemKey, maxDate, minDate) => (container, 
 
     // 変更前の値と比較し、同じ値の場合は処理しない。又は、初期値がない場合、必ず処理する。
     if (!hasInitValue || nowDtatString != resultData) {
-      document.getElementById("hiddenDateInputEditor").value = resultData;
-      if (isNaN(dayData.getTime())) {
-        options.model.set(dateDisplayField, '');
-      } else {
-        if (maxDate) {
-          if (moment(resultData).unix() > moment().unix()) {
-            options.model.set(dateDisplayField, moment().format('YYYY/MM/DD'));
-          } else {
-            options.model.set(dateDisplayField, resultData);
-          }
-        } else if (minDate) {
-          if (moment(resultData).unix() < moment().unix()) {
-            options.model.set(dateDisplayField, moment().format('YYYY/MM/DD'));
-          } else {
-            options.model.set(dateDisplayField, resultData);
-          }
-        } else {
-          options.model.set(dateDisplayField, resultData);
-        }
-      }
-      // name="${data.field}" で割り当てた箇所に付与されているchangeメソッドを発火します。次いで@saveの処理が発生します。
-      $(document.getElementById("hiddenDateInputEditor")).trigger('change');
+      hasInitValue = true;
+      nowDtatString = ev.target.value || '';
+      commitDateValue(ev.target.value);
     }
     // mod FNSI-改修内容 「測定日」と「目標体重指示開始日」表示IF不正 dou end
 
   });
-  let commonCalenderPicker = new (Vue.extend(commonCalender))();
-  if (options.field === "pat_unique$physical_info$indicator_start_date") {
-    commonCalenderPicker.disableDatesBefore = options.model.pat_unique$physical_info$exam_date?.replaceAll('/', '');
-  }
-  commonCalenderPicker.$on("input", value => {
-    value = moment(value).format('YYYY/MM/DD');
-    document.getElementById("hiddenDateInputEditor").value = value;
-    // #5864 日付コントロール今日のボタンは無効です 林峻峰 start
-    const userAgent = window.navigator.userAgent;
-    if (userAgent.indexOf("Intel Mac OS") > -1) {
-      document.getElementById("displayedDummyEditor").value = moment(value).format('YYYY/MM/DD');
-    } else {
-      document.getElementById("displayedDummyEditor").value = moment(value).format('YYYY-MM-DD');
-    }
-    // #5864 日付コントロール今日のボタンは無効です 林峻峰 end
-    if (maxDate) {
-      if (moment(value).unix() > moment().unix()) {
-        options.model.set(dateDisplayField, moment().format('YYYY/MM/DD'));
-      } else {
-        options.model.set(dateDisplayField, value);
-      }
-    } else if (minDate) {
-      if (moment(value).unix() < moment().unix()) {
-        options.model.set(dateDisplayField, moment().format('YYYY/MM/DD'));
-      } else {
-        options.model.set(dateDisplayField, value);
-      }
-    } else {
-      options.model.set(dateDisplayField, value);
-    }
-    // name="${data.field}" で割り当てた箇所に付与されているchangeメソッドを発火します。次いで@saveの処理が発生します。
-    $(document.getElementById("hiddenDateInputEditor")).trigger('change');
-  });
-  commonCalenderPicker.$mount();
-  commonCalenderPicker.setSilently(nowDtatString);
-  container.append(commonCalenderPicker.$el);
 
-  //  #5590 2023/05/15 iPadでSafariを使うと、数字に×が被る。修正 張博 start
-  const userAgent = window.navigator.userAgent;
-  if (userAgent.indexOf("Intel Mac OS") > -1) {
-    document.getElementById("displayedDummyEditor").addEventListener("change", (ev) => {
-      document.getElementById("hiddenDateInputEditor").value = ev.target.value;
-      options.model.set(dateDisplayField, ev.target.value);
-      $(document.getElementById("hiddenDateInputEditor")).trigger('change');
-    });
-  } else{
-    document.getElementById("displayedDummyEditor").addEventListener("change", (ev) => {
-      commonCalenderPicker.setSilently(ev.target.value);
-    });
+  const initialCalendarValue = normalizeGridDateInputValue(nowDtatString) || '';
+  const disableDatesBefore = options.field === "pat_unique$physical_info$indicator_start_date"
+    ? String(options.model?.pat_unique$physical_info$exam_date || options.model?.get?.("pat_unique$physical_info$exam_date") || "").replace(/\//g, "")
+    : "";
+
+  const calendarMountRoot = ownerDocument.createElement("span");
+  calendarMountRoot.className = "ntss-grid-date-editor-calendar";
+  $(calendarMountRoot).appendTo(editorRow);
+
+  const GridEditorCalendarBridge = defineComponent({
+    name: "GridEditorCalendarBridge",
+    components: { commonCalender },
+    props: {
+      disableDatesBefore: {
+        type: String,
+        default: ""
+      },
+      initialValue: {
+        type: String,
+        default: ""
+      }
+    },
+    data() {
+      return {
+        currentValue: this.initialValue || ""
+      };
+    },
+    methods: {
+      handleInput(value) {
+        this.currentValue = value || "";
+        commitDateValue(value);
+      },
+      setSilently(value) {
+        this.currentValue = normalizeGridDateInputValue(value) || "";
+        this.$refs.calendar?.setSilently?.(value);
+      }
+    },
+    template: '<common-calender ref="calendar" :value="currentValue" :disable-dates-before="disableDatesBefore" @input="handleInput" />'
+  });
+
+  const calendarApp = createApp(GridEditorCalendarBridge, {
+    disableDatesBefore,
+    initialValue: initialCalendarValue
+  });
+  calendarVm = calendarApp.mount(calendarMountRoot);
+  calendarVm?.setSilently?.(initialCalendarValue);
+
+};
+
+/** Grid セル editor の container から kendoGrid インスタンスを取得する */
+const resolveKendoGridFromEditorContainer = (container) => {
+  const containerEl = container?.[0] || container?.get?.(0) || container;
+  const ownerDocument = containerEl?.ownerDocument || document;
+  const gridRoot = containerEl?.closest?.("#kendo")
+    || ownerDocument.getElementById?.("kendo")
+    || containerEl?.closest?.(".k-grid")
+    || null;
+  if (!gridRoot) {
+    return null;
   }
+  const gridHost = gridRoot.classList?.contains?.("k-grid")
+    ? gridRoot
+    : (gridRoot.querySelector?.(".k-grid") || gridRoot);
+  const gridJq = $(gridHost);
+  return gridJq.data("kendoGrid") || globalThis.kendo?.widgetInstance?.(gridJq) || null;
+};
+
+/** DropDown 等 editor 終了時に Grid のインライン編集を閉じる */
+const closeKendoGridEditorFromContainer = (container) => {
+  requestAnimationFrame(() => {
+    const grid = resolveKendoGridFromEditorContainer(container);
+    if (!grid?._editContainer) {
+      return;
+    }
+    grid.editable?.end?.();
+    grid.closeCell();
+  });
 };
 
 /**
@@ -1963,10 +2166,14 @@ const editorDropDown = (
         }
       } : false,
       select(e) {
-        // マスタ名称を取得
         const mstName = e.dataItem[dataTextField];
+        const mstCode = e.dataItem[dataValueField];
+        options.model.set(mstCodeField, mstCode);
         // マスタ名称fieldを強制変更 ※セルの変更と見做されkendo-gridのsaveが発火するので注意
         options.model.set(mstNameField, mstName);
+      },
+      close() {
+        closeKendoGridEditorFromContainer(container);
       }
     });
 };
@@ -1991,7 +2198,7 @@ const editorNumeric = (min, max, decimals = 0) => (container, options) => {
       decimals,
       step,
       spin() {
-        let value = this.value();
+        let value = getKendoWidgetValue(this);
         if (value > max) {
           value = min;
         } else if (value < min) {
@@ -2000,7 +2207,7 @@ const editorNumeric = (min, max, decimals = 0) => (container, options) => {
         options.model.set(options.field, value?.toFixed(decimals) || null);
       },
       change() {
-        let value = this.value();
+        let value = getKendoWidgetValue(this);
         if (value > max) {
           value = max;
         } else if (value < min) {
@@ -2036,6 +2243,7 @@ const editorChkNumeric = (min, max, decimals = 0) => (container, options) => {
   const chkObjField = `${options.field}${LAYOUT_ITEM_KEY_SUFFIX_CHKBOX}`;
   const flg = options.model.get(chkObjField);
   let numtext = options.model.get(options.field);
+  const step = decimals === 0 ? 1 : 1 / Math.pow(10, decimals);
   $(
     `<label class="checkbox" style="white-space: normal; margin-right: 5px;">
       <input id="numchk" type="checkbox" class="checkbox__input" value="●" name="${chkObjField}" validationMessage="必須入力" ${required} />
@@ -2049,33 +2257,46 @@ const editorChkNumeric = (min, max, decimals = 0) => (container, options) => {
     .appendTo(container)
     .kendoNumericTextBox({
       decimals,
+      step,
       placeholder: "DWと同じ",
-      spin() {
-        let value = this.value();
+      spin(event) {
+        const isChkEnabled = options.model.get(chkObjField);
+        let value = getKendoWidgetValue(this);
+        if (value == null && isChkEnabled) {
+          const nativeEvent = event?.event || event;
+          const spinButton = nativeEvent?.target?.closest?.(".k-spinner-increase, .k-spinner-decrease");
+          const isIncrease = spinButton?.classList?.contains("k-spinner-increase");
+          value = isIncrease ? min + step : min;
+        }
         if (value > max) {
           value = min;
         } else if (value < min) {
           value = max;
         }
-        if (flg && value == null) {
-          value = "DWと同じ";
+        if (typeof value === "number") {
+          value = Number(value.toFixed(decimals));
+          setKendoWidgetValue(this, value);
         }
         options.model.set(options.field, value);
       },
       change() {
-        let value = this.value();
+        const isChkEnabled = options.model.get(chkObjField);
+        let value = getKendoWidgetValue(this);
         if (value > max) {
           value = max;
         } else if (value < min) {
           value = min;
         }
-        if (flg && value == null) {
+        if (typeof value === "number") {
+          value = Number(value.toFixed(decimals));
+          setKendoWidgetValue(this, value);
+        } else if (isChkEnabled && value == null) {
           value = "DWと同じ";
         }
         options.model.set(options.field, value);
       }
     });
-  let numtextbox = $("#numtextbox").data("kendoNumericTextBox");
+  let numtextbox = $(container).find("#numtextbox").data("kendoNumericTextBox");
   if (numtext != null) {
     if (flg) {
       numtextbox.enable();
@@ -2093,7 +2314,7 @@ const editorChkNumeric = (min, max, decimals = 0) => (container, options) => {
     numtextbox.enable(false);
     numtextbox.element.get(0).parentElement.children[0].placeholder = "";
   }
-  $("#numchk").change(function () {
+  $(container).find("#numchk").change(function () {
     if (this.checked) {
       numtextbox.enable();
       numtextbox.placeholder = "DWと同じ";
@@ -2122,7 +2343,7 @@ const editorTextArea = () => (container, options) => {
   const required = requiredList.includes(`${options.field}`) ? "required" : "";
   $(
     `<textarea name="${options.field
-    }" class="k-textarea resize-obs-target" validationMessage="必須入力" ${required} style="width:${container.width()}px;height:${container.height()}px;max-height: 65vh;resize: vertical;font-size: inherit;"></textarea>`
+    }" class="k-textarea resize-obs-target" validationMessage="必須入力" ${required} style="width:${container.width()}px;height:${container.height()}px;max-height: 65vh;resize: vertical;font-size: inherit;min-height: calc(.75rem + 6em) !important;"></textarea>`
   ).appendTo(container);
   const resizeObserver = new ResizeObserver(entries => {
     // テキストエリアのリサイズに応じてkendo-gridをリサイズする
@@ -2130,27 +2351,32 @@ const editorTextArea = () => (container, options) => {
       eventBusObj.$emit("resizeToFitTextArea");
     }
   });
-  resizeObserver.observe(document.querySelector('.resize-obs-target'));
+  const resizeTarget = (container?.[0] || container?.get?.(0) || container)?.querySelector?.('.resize-obs-target');
+  if (resizeTarget) {
+    resizeObserver.observe(resizeTarget);
+  }
 };
 
 const editorTimeInput = () => (container, options) => {
   const required = requiredList.includes(`${options.field}`) ? "required" : "";
   //#10715:日付IF修正Start
   $(
-    `<span style="position:relative"><input type="time" id="${options.field}" name="${options.field}" class="time-wrapper" style="width: 7em;" value="00:00" /><span id="clear" class="k-icon k-i-close close-btn" title="clear" style="position:absolute;left:65%;top:2px;color: #212529;z-index:9999999"/></span></span>`
+    `<span style="position:relative"><input type="time" id="${options.field}" name="${options.field}" class="time-wrapper" style="width: 7em;" value="00:00" /><span id="clear" class="k-icon k-i-close close-btn" title="clear" style="position:absolute;left:65%;top:5px;color: #212529;z-index:9999999"/></span></span>`
   ).appendTo(container);
 
-  const idtag = $("#pat_unique\\$physical_info\\$exam_time");
-  const cleartag = document.getElementById("clear");
-  cleartag.addEventListener("mousedown", function(ev) {
-    idtag.value = '';
+  const containerEl = container?.[0] || container?.get?.(0) || container;
+  const idtag = findElementByIdWithin(containerEl, options.field);
+  const idtagJq = idtag ? $(idtag) : $();
+  const cleartag = findElementByIdWithin(containerEl, "clear");
+  cleartag?.addEventListener("mousedown", function() {
+    if (idtag) { idtag.value = ''; }
     options.model.set(options.field, "");
-    idtag.trigger('change');
+    idtagJq.trigger('change');
   });
-  cleartag.addEventListener("touchstart", function(ev) {
-    idtag.value = '';
+  cleartag?.addEventListener("touchstart", function() {
+    if (idtag) { idtag.value = ""; }
     options.model.set(options.field, "");
-    idtag.trigger('change');
+    idtagJq.trigger('change');
   });
   //#10715:日付IF修正End
 };
@@ -2492,7 +2718,6 @@ const getKendoDisplayProperty = (
       }
       break;
 
-
     // add FNSI-No.223 テンプレートおよび項目の不足、特定データの編集保存に対応。身体情報は新規追加に対応 陳 start
     case LAYOUT_CATEGORY_PATIENT_GROUP.key:
       switch (itemKey) {
@@ -2503,7 +2728,6 @@ const getKendoDisplayProperty = (
       }
       break;
 
-
     case LAYOUT_CATEGORY_ADDITION.key:
       switch (itemKey) {
         case LAYOUT_ADDITION_ADDITIONKIND.key:
@@ -2513,7 +2737,6 @@ const getKendoDisplayProperty = (
       }
       break;
     // add FNSI-No.223 テンプレートおよび項目の不足、特定データの編集保存に対応。身体情報は新規追加に対応 陳 end
-
 
     case LAYOUT_CATEGORY_IMPLANT_INFO.key:
       switch (itemKey) {
@@ -2643,7 +2866,7 @@ const getKendoDisplayProperty = (
         case LAYOUT_ITEM_EXAM_DATE.key: // 検査日
           if (getAuthorized("PatInfo", "default_authority")) {
             width = 280;
-            headerTemplates = kendo.template('<div style="display: flex; align-items: center;"><label>検査日</label><div id="header-exam-date-wrapper"></div><div id="header-exam-calendar-wrapper"></div></div>');
+            headerTemplates = toKendoTemplate('<div class="multi-pat-header-row"><label>検査日</label><div id="header-exam-date-wrapper"></div><div id="header-exam-calendar-wrapper"></div></div>');
           }
           // add データリストの患者情報修正 陳 start
           editor = editorDateInput(categoryKey, itemKey, false, false);
@@ -2659,8 +2882,8 @@ const getKendoDisplayProperty = (
 
         case LAYOUT_ITEM_EXAM_TIME.key: // 検査時刻
           if (getAuthorized("PatInfo", "default_authority")) {
-            width = 250;
-            headerTemplates = kendo.template('<label>検査時刻</label><div id="header-exam-time-wrapper"></div>');
+            width = 280;
+            headerTemplates = toKendoTemplate('<div class="multi-pat-header-row"><label>検査時刻</label><div id="header-exam-time-wrapper"></div></div>');
           }
           editor = editorTimeInput();
           break;
@@ -2668,7 +2891,7 @@ const getKendoDisplayProperty = (
         case LAYOUT_ITEM_ORDER_CLASSNAME.key: // 検査タイミング
           if (getAuthorized("PatInfo", "default_authority")) {
             width = 300;
-            headerTemplates = kendo.template('<div class="userCategory"><label for="header-order-classname">検査タイミング</label><div id="header-order-classname"></div></div>');
+            headerTemplates = toKendoTemplate('<div class="userCategory multi-pat-header-row"><label for="header-order-classname">検査タイミング</label><div id="header-order-classname"></div></div>');
           }
           editor = editorDropDown(
             PSEUDO_MST_LIST.orderClass,
@@ -2713,12 +2936,12 @@ const getKendoDisplayProperty = (
           editor = editorChkNumeric(0, 300, 2);
           template = numberTemplate(itemKey, 2);
           if (getAuthorized('PatInfo', 'default_authority') && getAuthorized('PatInfo', 'item_physical_info_card')) {
-            headerTemplates = kendo.template(
-              `<label class="checkbox">
+            headerTemplates = toKendoTemplate(
+              `<div class="multi-pat-header-row"><label class="checkbox">
                 <input type="checkbox" class="checkbox__input" id="target-weight-check-all" />
                 <span class="checkbox__checkmark"></span>
               </label>
-              <label for="check-all">目標体重</label>`
+              <label for="check-all">目標体重</label></div>`
             );
           }
           break;
@@ -2747,7 +2970,6 @@ const getKendoDisplayProperty = (
 
       break;
   }
-
 
   return new KendoDisplayProperty(
     width,
@@ -2778,8 +3000,8 @@ const getKendoDisplayPropertyIndUser = (
     return (dataItem.pat_unique$physical_info$target_weight_chkbox || dataItem.pat_unique$physical_info$dw) &&
       getAuthorized('PatInfo', 'default_authority') && getAuthorized('PatInfo', 'item_physical_info_card');
   };
-  let editor = undefined;
-  let headerAttributes = {};
+  let editor;
+  let headerAttributes;
   let headerTemplates;
   // グリッド内で改行許容
   const encoded = true;
@@ -2796,7 +3018,7 @@ const getKendoDisplayPropertyIndUser = (
   headerAttributes = getAuthorized('PatInfo', 'default_authority') && getAuthorized('PatInfo', 'item_physical_info_card') ? null : { class: "k-header-disabled" };
 
   if (getAuthorized('PatInfo', 'default_authority') && getAuthorized('PatInfo', 'item_physical_info_card')) {
-    headerTemplates = kendo.template("<div class='userCategory'><label for='user-category'>指示者</label><div id='user-category'/></div></div>");
+    headerTemplates = toKendoTemplate("<div class='userCategory multi-pat-header-row'><label for='user-category'>指示者</label><div id='user-category'/></div></div>");
   }
   return new KendoDisplayProperty(
     width,
@@ -2869,7 +3091,7 @@ export const convertToUpdateValue = (table, column, jsonKey, value) => {
     case "pat_personal_main":
       switch (column) {
         case LAYOUT_ITEM_BASICINFO_BIRTHDAY.key:
-          value = moment(value, "YYYY/MM/DD").format("YYYYMMDD");
+          value = dayjs(value, "YYYY/MM/DD").format("YYYYMMDD");
           break;
         case "json":
           switch (jsonKey) {
@@ -2885,7 +3107,7 @@ export const convertToUpdateValue = (table, column, jsonKey, value) => {
         case LAYOUT_CATEGORY_PHYSICAL_INFO.key:
           switch (jsonKey) {
             case LAYOUT_ITEM_INDICATOR_START_DATE.key:
-              value = moment(value, "YYYY/MM/DD").format("YYYYMMDD");
+              value = dayjs(value, "YYYY/MM/DD").format("YYYYMMDD");
               break;
           }
           break;
@@ -3007,7 +3229,7 @@ export const updatePatRecords = async patRecords => {
         serializeJsonColumn(record.pat_unique, JSON_COLUMNS_PAT_UNIQUE)
       ),
       is_changed_next_pat_info: JSON.stringify(
-        _.has(record, "is_changed_next_pat_info")
+        Object.prototype.hasOwnProperty.call(record, "is_changed_next_pat_info")
           ? record.is_changed_next_pat_info
           : false
       )
@@ -3067,7 +3289,7 @@ const mstDecimal = (value,length) => {
   if (!value) {
     return "";
   }
-  let resultFigure = value;
+  let resultFigure;
   let num = '1';
   for(let i = 0;i<length;i++){
     num += '0';
@@ -3087,13 +3309,12 @@ const mstDecimal = (value,length) => {
 };
 /*add FNSI-改修内容5237 任 end*/
 
-
 // add FNSI-No.223 テンプレートおよび項目の不足、特定データの編集保存に対応。身体情報は新規追加に対応 陳 start
 /**
  * @description 誕生日から算出した年齢
  */
 const age = (birthday) => {
-  const age = moment().diff(birthday, "years");
+  const age = dayjs().diff(birthday, "years");
   return age > 0 ? age : "不明";
 };
 // add FNSI-No.223 テンプレートおよび項目の不足、特定データの編集保存に対応。身体情報は新規追加に対応 陳 end
@@ -3179,7 +3400,7 @@ export const confirmAllowDiscardChangesInMultiPatList = async () => {
     return 1;
   }
 
-  const answer = await ons.notification.confirm({ title, message });
+  const answer = await showConfirmDialog({ title, message });
   if (answer === 1) {
     await store.dispatch("data-list/setIsDataChanged", false);  // 変更フラグ クリア
   }

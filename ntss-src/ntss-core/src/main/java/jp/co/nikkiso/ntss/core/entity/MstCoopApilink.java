@@ -11,6 +11,7 @@ import org.seasar.doma.Table;
 import org.seasar.doma.jdbc.entity.NamingType;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -153,6 +154,7 @@ public class MstCoopApilink extends BaseEntity {
   @Setter
   @Getter
   @NoArgsConstructor
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public static class AfterApiStatus {
     /** ObjectMapper */
     private static ObjectMapper objectMapper = new ObjectMapper();

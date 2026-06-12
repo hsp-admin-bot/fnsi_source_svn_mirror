@@ -43,9 +43,20 @@ public interface MstPatSearchDetailDao {
     @Select
     List<MstPatSearchDetail> selectByUserIdAndFacilityCd(Long userId, String facilityCd);
 
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+    /**
+     * 詳細患者検索コードで1件取得.
+     *
+     * @param searchCd 詳細患者検索コード
+     * @return 詳細患者検索エンティティ
+     */
+    @Select
+    MstPatSearchDetail selectBySearchCd(Long searchCd);
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
+
     /**
      * 削除.
-     * 
+     *
      * @param searchCd 詳細患者検索コード
      * @return 作成されるレコードの数
      */

@@ -5,14 +5,14 @@
     @onClose="closePatEditModal"
     class="send-condition-pat-modal-base"
   >
-    <div slot="header">
+    <template #header>
       <component :is="header"></component>
-    </div>
-    <div
-      slot="body"
-      class="send-condition-body"
-      style="margin: 10px 20px 20px 20px"
-    >
+    </template>
+    <template #body>
+      <div
+        class="send-condition-body"
+        style="margin: 10px 20px 20px 20px"
+      >
       <v-ons-row class="condition-row">
         <v-ons-col width="110px" style="display: flex; align-items: center">
           <label style="white-space: nowrap">患者ID</label>
@@ -289,49 +289,52 @@
           </div>
         </v-ons-col>
       </v-ons-row>
-    </div>
-    <div slot="footer" class="footer-class">
-      <div class="left-side">
-        <v-ons-button
-          class="button btn2-cancel denial-btn btn-cancel"
-          @click="closePatEditModal"
-        >
-          キャンセル
-        </v-ons-button>
       </div>
-      <div class="right-side">
-        <v-ons-button
-          v-if="!isCreate && (isAffiliatedFacility || shrPatInfo.deletionFlag)"
-          class="btn4-alert registration-btn delete-button"
-          @click="deleteShr"
-        >
-          削除
-        </v-ons-button>
-        <v-ons-button
-          v-if="sharedState != '9'"
-          class="button btn1-execute registration-btn btn-save"
-          :disabled="isSaveDisabled"
-          @click="handleSaveClick"
-        >
-          保存
-        </v-ons-button>
+    </template>
+    <template #footer>
+      <div class="footer-class">
+        <div class="left-side">
+          <v-ons-button
+            class="button btn2-cancel denial-btn btn-cancel"
+            @click="closePatEditModal"
+          >
+            キャンセル
+          </v-ons-button>
+        </div>
+        <div class="right-side">
+          <v-ons-button
+            v-if="!isCreate && (isAffiliatedFacility || shrPatInfo.deletionFlag)"
+            class="btn4-alert registration-btn delete-button"
+            @click="deleteShr"
+          >
+            削除
+          </v-ons-button>
+          <v-ons-button
+            v-if="sharedState != '9'"
+            class="button btn1-execute registration-btn btn-save"
+            :disabled="isSaveDisabled"
+            @click="handleSaveClick"
+          >
+            保存
+          </v-ons-button>
+        </div>
+        <message-dialog
+          v-model:visible="isEditedMessage"
+          :message-cd="20010001"
+          type="2"
+          @confirm="confirmEdit"
+        />
       </div>
-      <message-dialog
-        :visible.sync="isEditedMessage"
-        :message-cd="20010001"
-        type="2"
-        @confirm="confirmEdit"
-      />
-    </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { mapActions, mapGetters, mapMutations } from "vuex";
-import moment from "moment";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
+import moment from "@/compat/date/dayjs";
 import { calculateAge } from "@/functions/PatInfoFunctions";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 import {
   PAT_BLOOD_TYPE_ABO_OPTIONS,
@@ -800,9 +803,13 @@ export default {
      * 担当者一覧を取得する
      */
     async getStaffToList(staffCd) {
+      const params = { facility_cd: this.facilityCd };
+      if (this.patId) {
+        params.selectedPatId = this.patId;
+      }
       const mstPersonalUserResponse = await ApiHelper.get(
         "/mstInfo/mstPersonalUserIncludeDel",
-        { facility_cd: this.facilityCd }
+        params
       );
       return (
         mstPersonalUserResponse?.data
@@ -937,7 +944,7 @@ export default {
       this.sidebarWidth + "px"
     );
   },
-  beforeDestroy() {
+  beforeUnmount() {
     Object.assign(this.$data, this.$options.data());
     EventBus.$off("shrPatSearchCancelEvent");
     EventBus.$off("shrPatSearchSaveEvent");
@@ -945,7 +952,7 @@ export default {
 };
 </script>
 <style scoped>
-.send-condition-pat-modal-base ::v-deep .modal-body {
+.send-condition-pat-modal-base :deep(.modal-body) {
   overflow-x: auto;
 }
 .width-100p {
@@ -992,7 +999,7 @@ export default {
   background-color: #ebebe4 !important;
   opacity: 0.6 !important;
 }
-.send-condition-pat-modal-base ::v-deep select:disabled {
+.send-condition-pat-modal-base :deep(select:disabled) {
   border-radius: 4px !important;
 }
 .label-width {

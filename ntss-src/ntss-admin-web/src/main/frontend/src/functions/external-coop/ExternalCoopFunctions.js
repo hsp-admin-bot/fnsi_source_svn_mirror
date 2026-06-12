@@ -1,4 +1,4 @@
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 const makeDateTime = (date, time) => ({ date, time });
 const makeFromTo = (from, to) => ({ from, to });
@@ -11,7 +11,7 @@ export const makeFromToDateTime = (fromDate, fromTime, toDate, toTime) => makeFr
 );
 
 export const makeDefaultCondition = () => {
-  const sysDateTime = moment();
+  const sysDateTime = dayjs();
   const sysDate = sysDateTime.format("YYYY-MM-DD");
   const startTime = "00:00";
   return {

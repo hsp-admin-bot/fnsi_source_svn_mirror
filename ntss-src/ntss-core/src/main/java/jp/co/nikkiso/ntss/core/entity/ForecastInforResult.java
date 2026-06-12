@@ -3,8 +3,8 @@ package jp.co.nikkiso.ntss.core.entity;
 import org.seasar.doma.Entity;
 import org.seasar.doma.jdbc.entity.NamingType;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 
 import jp.co.nikkiso.ntss.core.entity.entityListener.BaseEntityListener;
 import lombok.EqualsAndHashCode;
@@ -17,7 +17,7 @@ import lombok.Setter;
 @Entity(listener = BaseEntityListener.class, naming = NamingType.SNAKE_LOWER_CASE)
 @Getter
 @Setter
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @EqualsAndHashCode(callSuper = false)
 public class ForecastInforResult extends BaseEntity {
 

@@ -8,12 +8,13 @@ import batch.processor.PassThroughProcessor;
 import batch.reader.FlatFileLineReader;
 import batch.writer.BatchCsvWriterDb;
 import batch.writer.JdbcBatchSqlItemWriter;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.file.FlatFileItemReader;
+import org.springframework.batch.infrastructure.item.ItemWriter;
+import org.springframework.batch.infrastructure.item.file.FlatFileItemReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -34,7 +35,7 @@ public class ReadSqlFileWriteDbStep extends StepStartEndListener {
     private final String STEP_NAME = "ReadSqlFileWriteDbStep";
 
     @Autowired
-    public StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
 
     /**
      * 処理件数を通知
@@ -54,10 +55,9 @@ public class ReadSqlFileWriteDbStep extends StepStartEndListener {
     @Value("${spring.batch.chunkSize}")
     private int chunkSize;
 
-    //add #12229 ord_weight_scale start
     @Autowired
     private MasterDataService masterDataService;
-    //add #12229 ord_weight_scale end
+
 
 
     /**
@@ -82,7 +82,7 @@ public class ReadSqlFileWriteDbStep extends StepStartEndListener {
 
     /**
      * processorから受け取ったSQL文字列を実行する
-     * 
+     *
      * @throws Exception
      */
     @Bean
@@ -94,19 +94,19 @@ public class ReadSqlFileWriteDbStep extends StepStartEndListener {
             BatchCsvWriterDb<String> aaa = new BatchCsvWriterDb<>(dataSource, globalContext.fileName, globalContext.facilityCd, globalContext);
             return aaa;
         } else {
-            JdbcBatchSqlItemWriter<String> writer = new JdbcBatchSqlItemWriter<String>(dataSource, globalContext.fileName, globalContext.facilityCd, globalContext,masterDataService);
+            JdbcBatchSqlItemWriter<String> writer = new JdbcBatchSqlItemWriter<String>(dataSource, globalContext.facilityCd, globalContext, masterDataService);
             return writer;
         }
     }
 
     /**
      * stepの作成
-     * 
+     *
      * @throws Exception
      */
     @Bean(name = STEP_NAME)
     public Step step() throws Exception {
-        return stepBuilderFactory.get(STEP_NAME)
+        return new StepBuilder(STEP_NAME, jobRepository)
             .listener(stepStartEndListener)
             .<String, String> chunk(chunkSize)
             .reader(reader(null))

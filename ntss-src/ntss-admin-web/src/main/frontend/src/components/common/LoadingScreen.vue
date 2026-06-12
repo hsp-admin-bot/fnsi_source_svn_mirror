@@ -12,10 +12,10 @@
  * @description 共通ロード中モーダル
  */
 
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 
 export default {
-  props: {},
+
   computed: {
     ...mapGetters("loading-screen", {
       getLoadingScreenVisible: "getLoadingScreenVisible",
@@ -30,7 +30,6 @@ export default {
       return this.getLoadingScreenMessage;
     }
   },
-  methods: {}
 };
 </script>
 

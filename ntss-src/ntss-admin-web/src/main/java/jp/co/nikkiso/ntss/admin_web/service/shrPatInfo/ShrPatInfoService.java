@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.service.shrPatInfo;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.core.dto.PatInfo.SearchPat.PatInsuranceConditionsSharing;
 import jp.co.nikkiso.ntss.core.entity.PatientInfoSharingDetails;
@@ -78,9 +78,9 @@ public interface ShrPatInfoService {
    *
    * @param facilityCd 施設コード
    * @return 患者共有情報一覧
-   * @throws JsonProcessingException JSON処理時に例外が発生した場合
+   * @throws JacksonException JSON処理時に例外が発生した場合
    */
-  List<PatientInfoSharing> patientDetailsDown(String facilityCd) throws JsonProcessingException;
+  List<PatientInfoSharing> patientDetailsDown(String facilityCd) throws JacksonException;
 
   /**
    * ダウンロード対象の施設コード一覧を取得する。
@@ -101,9 +101,9 @@ public interface ShrPatInfoService {
    *
    * @param facilityCd 施設コード
    * @return キー：種別、値：施設コード一覧のMap
-   * @throws JsonProcessingException JSON処理時に例外が発生した場合
+   * @throws JacksonException JSON処理時に例外が発生した場合
    */
-  Map<String, List<String>> correspondingFacilities(String facilityCd) throws JsonProcessingException;
+  Map<String, List<String>> correspondingFacilities(String facilityCd) throws JacksonException;
 
   /**
    * 共有イベントの添付ファイルを削除する。

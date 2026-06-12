@@ -43,7 +43,7 @@ export default {
           commit("setDstFacilities", response.data);
         });
       } catch (e) {
-        throw new Error();
+        throw new Error("共有先施設取得失敗", { cause: e });
       }
     },
     async updateDstFacilities({ commit }, payload) {
@@ -53,7 +53,7 @@ export default {
         });
         return response;
       } catch (e) {
-        throw new Error();
+        throw new Error("共有先施設更新失敗", { cause: e });
       }
     },
     setEditable({ commit }, value) {

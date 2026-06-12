@@ -49,15 +49,18 @@
 </template>
 
 <script>
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import StatusListStandardComponent from "@/components/status-list/large-display/StatusListLargeDispStandardMainComponent";
 import StatusListMultiColumnComponent from "@/components/status-list/large-display/StatusListLargeDispMultiColumnMainComponent";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { STATUS_LARGE_AUTO_SETTING, STATUS_LARGE_FORCE_SIGNOUT } from "@/constants/facilitySetting";
 import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
 import { initForceSignOutFlag } from "@/functions/common/CommonFunctions.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { getFooterMenuElement, getScopedElementsByClassName, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 
 export default {
   mixins: [NextTransitionMixin],
@@ -112,7 +115,7 @@ export default {
      * 入退室対象患者一覧をDBから取得する(取得データはストアへ格納)
      */
     loadData(autoRefreshFlag) {
-      let todayDate = moment().format("YYYYMMDD");
+      let todayDate = dayjs().format("YYYYMMDD");
       const param = {
         treatDate: todayDate,
         autoRefreshFlag
@@ -208,7 +211,7 @@ export default {
     calculateContentHeight() {
       const wh = this.windowHeight;
       const cfh = Array.prototype.slice
-        .call(document.getElementsByClassName("large-display-footer-content"))
+        .call(getScopedElementsByClassName("large-display-footer-content", this.$el || null))
         .shift().clientHeight;
 
       this.contentHeight = wh - cfh;
@@ -216,7 +219,7 @@ export default {
     // Windowの幅からナビゲーションバーのチップ領域の幅を算出し、非表示の場合件数表示
     calculateContentWidth() {
       // 非表示カウンターの制御
-      let hideCounter = document.getElementById("hide-counter");
+      let hideCounter = getScopedElementById("hide-counter", this.$el || null);
       hideCounter.style.display = "none";
 
       // 非表示チップ件数の初期化
@@ -226,7 +229,7 @@ export default {
       const iconsWidth = 96;                                                                     // 右下のアイコンの横幅(48px*2)
       const hideCounterWidth = 91;                                                               // 非表示カウンターの横幅
       const chipAreaWidth = this.windowWidth - iconsWidth;                                       // チップが表示できる領域
-      const chipElemWidth = document.getElementById("chip-area").getBoundingClientRect().width;  // チップ親要素の領域
+      const chipElemWidth = Number(getScopedElementById("chip-area", this.$el || null)?.getBoundingClientRect?.().width || 0);  // チップ親要素の領域
 
       // チップ親要素の領域がチップが表示できる領域以上のとき、非表示件数表示を行う
       if (chipElemWidth >= chipAreaWidth) {
@@ -234,7 +237,7 @@ export default {
         let displayChipsCount = 0;          // 表示中チップ数の合計
 
         // 表示中チップ数の合計を求める
-        const chips = document.getElementsByClassName("bed-alert");
+        const chips = getScopedElementsByClassName("bed-alert", this.$el || null);
         for (let i = 0; i < chips.length; i++) {
           if (displayChipsWidthTotal + chips[i].getBoundingClientRect().width < chipAreaWidth - hideCounterWidth) {
             displayChipsWidthTotal += chips[i].getBoundingClientRect().width;
@@ -280,13 +283,23 @@ export default {
           this.refreshInterval = 10000;
         }
       } else if (data.status == 400) {
-        getErrorMessage("StatusListLargeDispMainComponent.vue", "startPolling", error);
+        getErrorMessage("StatusListLargeDispMainComponent.vue", "startPolling", { response: data });
         this.refreshInterval = 10000;
       }
       /* 自動更新サインアウトフラグ取得 */
       await initForceSignOutFlag("status-list/large-display/setForceSignOutFlag", STATUS_LARGE_FORCE_SIGNOUT);
       // ポーリング開始
       this.startPolling();
+    },
+    updateFooterVisibility(isVisible) {
+      const footerMenu = getFooterMenuElement(this.$el || null);
+      if (footerMenu) {
+        footerMenu.style.display = isVisible ? "block" : "none";
+        EventBus.$emit("footerLayoutChanged", {
+          height: isVisible ? footerMenu.clientHeight : 0,
+          isExpanded: false
+        });
+      }
     },
   },
   watch: {
@@ -322,8 +335,7 @@ export default {
     this.mstBed = await this.getMstBed();
   },
   mounted() {
-    // メニュー非表示設定
-    document.getElementById("footer-menu").style = "display:none;";
+    this.updateFooterVisibility(false);
     // フロートメニューを非表示
     this.setIsDispFloatMenu(false);
     // サイドメニュー、サイドメニュー開閉ボタンを非表示
@@ -332,9 +344,10 @@ export default {
       this.calculateContentHeight();
     });
 
-    document.getElementsByClassName("content-container")[0].style.width =
+    getScopedElementsByClassName("content-container", this.$el || null)[0].style.width =
       "100%";
-    document.getElementsByClassName("content-box")[0].style.width = "100%";
+    const contentBox = getScopedElementsByClassName("content-box", this.$el || null)[0];
+    if (contentBox) contentBox.style.width = "100%";
     // 更新間隔を取得し、ポーリング開始
     this.refreshVal();
   },
@@ -343,16 +356,15 @@ export default {
       this.calculateContentHeight();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // polling用setIntervalのクリア
     this.endPolling();
     
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  destroyed() {
-    // メニュー非表示の解除
-    document.getElementById("footer-menu").style = "display:block;";
+  unmounted() {
+    this.updateFooterVisibility(true);
     // フロートメニューを表示
     this.setIsDispFloatMenu(true);
     // サイドメニュー、サイドメニュー開閉ボタンを表示

@@ -4,7 +4,7 @@
   <!-- #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng start -->
   <!-- <v-ons-popover
     v-if="popoverVisibleDisea"
-    :target="targetPositionElement"
+    :target="resolvedTargetPositionElement"
     :visible="popoverVisibleDisea"
     :direction="popoverDisplayDirection"
     :class="[fontSizeSet, 'popover-style']"
@@ -15,7 +15,7 @@
   > -->
   <v-ons-popover
     v-if="popoverVisible"
-    :target="targetPositionElement"
+    :target="resolvedTargetPositionElement"
     :visible="popoverVisible"
     :direction="popoverDisplayDirection"
     :class="[fontSizeSet, 'popover-style']"
@@ -36,7 +36,7 @@
         </v-ons-col>
         <v-ons-col>
           <input
-            v-model="popoverSearchQuery"
+            v-model="popoverSearchQueryLocal"
             class="search-style"
             type="search"
             placeholder="検索"
@@ -94,8 +94,10 @@
 import PopoverMixin from "@/components/PopoverMixin";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 import {ApiHelper} from "@/apis/AxiosHelper";
-import {mapGetters} from "vuex";
+import {mapGetters} from "@/compat/vue/vuex";
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
+import { getViewportHeight, getViewportWidth } from "@/functions/common/LayoutMeasureHelper";
+import { resolveOnsPopoverTargetElement } from "@/functions/common/OnsenFunctions";
 
 export default {
   mixins: [PopoverMixin],
@@ -191,9 +193,7 @@ export default {
      */
     targetPositionElement: {
       type: [Object, HTMLElement],
-      default() {
-        return this.$parent;
-      },
+      default: null,
     },
 
     /**
@@ -243,6 +243,7 @@ export default {
        */
       // popoverSearchQuery: "",
       // del FNSI-改修内容 保険マスタから選択する機能の改修 趙 end
+      popoverSearchQueryLocal: this.popoverSearchQuery,
 
       /**
        * @description 表示方向
@@ -252,25 +253,25 @@ export default {
       /**
        * @description 画面の高さ(レスポンシブ対応)
        */
-      windowHeight: window.innerHeight,
+      windowHeight: getViewportHeight(),
 
       /**
        * @description 画面の幅(レスポンシブ対応)
        */
-      windowWidth: window.innerWidth,
+      windowWidth: getViewportWidth(),
 
       scrollerDataList:[],
       formData: { // 分页 一页20条
         pageIndex: 1,
         pageSize: 20,
-    　},
+     },
 
       isChanged: false, // add #6512 患者情報画面-既往歴の病名の分の修正 劉
     };
   },
   directives: {
     loadMore: {
-      bind(el, binding) {
+      mounted(el, binding) {
         // 获取element-ui定义好的scroll盒子
         // console.log("loadMore.el is : ",el);
         const SELECTWRAP_DOM = el.getElementsByTagName('select')[0];
@@ -289,6 +290,12 @@ export default {
     },
   },
   computed: {
+    resolvedTargetPositionElement() {
+      return resolveOnsPopoverTargetElement(this.targetPositionElement, this);
+    },
+    resolvedTargetRectElement() {
+      return this.resolvedTargetPositionElement;
+    },
 
     ...mapGetters("user", { facilityCd: "getFacilityCd" }),
     /**
@@ -300,9 +307,9 @@ export default {
       if (!this.popoverVisible) return null;
       // #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng end
 
-      const elemPosition = this.targetPositionElement.$el
-        ? this.targetPositionElement.$el.getBoundingClientRect()
-        : this.targetPositionElement.getBoundingClientRect();
+      const targetElement = this.resolvedTargetRectElement;
+      if (!targetElement?.getBoundingClientRect) return null;
+      const elemPosition = targetElement.getBoundingClientRect();
       let direction = "right";
 
       if (this.windowHeight <= 420) {
@@ -331,9 +338,9 @@ export default {
      */
     popoverFilteredContent: {
       get() {
-        let serchQuery = this.popoverSearchQuery;
+        let serchQuery = this.popoverSearchQueryLocal;
         if(serchQuery){
-          const q = new RegExp(this.popoverSearchQuery, "gi");
+          const q = new RegExp(this.popoverSearchQueryLocal, "gi");
           return this.popoverLocalContentDataset.filter(item => {
               return item.text.search(q) > -1;
           });
@@ -364,19 +371,25 @@ export default {
         this.isChanged = value === this.popoverContentSelected.value? true : false
       },
       immediate: true
-    }
+    },
     // add #6512 患者情報画面-既往歴の病名の分の修正 劉 end
+    // 親からの popoverSearchQuery 変更をローカルに反映（Vue2 双方向 v-model 相当）
+    popoverSearchQuery(value) {
+      if (this.popoverSearchQueryLocal !== value) {
+        this.popoverSearchQueryLocal = value;
+      }
+    }
   },
 
   mounted() {
     // modify by 史 for 6119 ブラウザがOut of Memoryのエラーが発生する
-    window.addEventListener("resize", this.resize);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.resize);
   },
   methods: {
     // modify by 史 for 6119 ブラウザがOut of Memoryのエラーが発生する
     resize(){
-      this.windowHeight = window.innerHeight;
-      this.windowWidth = window.innerWidth;
+      this.windowHeight = getViewportHeight();
+      this.windowWidth = getViewportWidth();
     },
     popoverPreShow,
     popoverPostShow,
@@ -437,7 +450,7 @@ export default {
       this.formData={ // 分页 一页20条
         pageIndex: 1,
         pageSize: 20,
-    　};
+     };
       this.popoverLocalContentDataset = [];
       this.popoverFilteredContent = [];
       this.clearSearch();
@@ -463,8 +476,7 @@ export default {
 
           if (!this.isAllValues) {
             that.popoverLocalContentDataset = res.data.filter(
-              item => (item.isDisp !== "0" && item.isDel !== "1")
-            ).map(mapData);
+              item => (item.isDisp !== "0" && item.isDel !== "1")).map(mapData);
           } else {
             // 「新患/患者情報」以外の場合、すべて設定
             that.popoverLocalContentDataset = res.data.map(mapData);
@@ -478,8 +490,7 @@ export default {
               [item.popoverFilterLabel]: item.popoverFilterDataset[0].value,
             };
           });
-        }
-      ).catch(error => {
+        }).catch(error => {
         getErrorMessage('DiseaMasterSelector.vue', 'created', error);
         throw error;
       })
@@ -490,7 +501,7 @@ export default {
      * @description フリーワード入力クリア
      */
     clearSearch() {
-      this.popoverSearchQuery = "";
+      this.popoverSearchQueryLocal = "";
       this.popoverSearchDataset = [];
     },
 
@@ -524,21 +535,21 @@ export default {
       this.popoverSearchDataset = dataset;
     },
   },
-  beforeDestroy() {
-    window.removeEventListener("resize", this.resize);
+  beforeUnmount() {
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.resize);
   }
 };
 </script>
 
 <style scoped>
-.popover-style >>> .popover--top,
-.popover-style >>> .popover--right,
-.popover-style >>> .popover--left,
-.popover-style >>> .popover--bottom {
+.popover-style :deep(.popover--top),
+.popover-style :deep(.popover--right),
+.popover-style :deep(.popover--left),
+.popover-style :deep(.popover--bottom) {
   width: initial;
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 500px;
   height: 100%;
   padding: 25px;
@@ -584,14 +595,14 @@ export default {
 
 /* スマホ対応 */
 @media screen and (max-width: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: auto;
     padding: 10px;
   }
 }
 
 @media screen and (max-height: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: 350px;
     padding: 5px;
   }

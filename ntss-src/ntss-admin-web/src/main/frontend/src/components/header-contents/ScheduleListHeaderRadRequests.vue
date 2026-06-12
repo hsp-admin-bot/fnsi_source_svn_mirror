@@ -10,9 +10,9 @@
 
 <script>
 // ライブラリ
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 //日付処理用
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 export default {
   computed: {
@@ -21,7 +21,7 @@ export default {
       let list = [];
       this.getRadRequests.forEach(rad => {
         if (
-          moment(rad.regRadDate).format("YYYYMMDD") ===
+          dayjs(rad.regRadDate).format("YYYYMMDD") ===
           this.getHeaderDispInfo.treatDate
         ) {
           list = [
@@ -39,7 +39,7 @@ export default {
   },
   methods: {
     formatTime(date) {
-      return moment(date).format("HH:mm");
+      return dayjs(date).format("HH:mm");
     }
   }
 };

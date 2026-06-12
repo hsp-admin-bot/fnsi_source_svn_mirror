@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -180,9 +180,9 @@
 </template>
 
 <script>
-  import {mapActions, mapGetters} from "vuex";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   /*add FNSI-改修内容4214 任 start*/
-  import $ from "jquery";
+
   /*add FNSI-改修内容4214 任 end*/
   import {deepCopy} from "@/functions/common/CommonFunctions";
   import {KEY_NAME_PAT_VIEWER} from "@/constants/defaultSettingConstants";
@@ -190,12 +190,11 @@
   import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
   //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
   //add FNSI-5687 劉全航 start
-  import { EventBus } from "@/eventBus.js";
+  import { EventBus } from "@/compat/vue/event-bus.js";
+import { getScopedElementById, isScopedElementDisplayInline } from "@/functions/common/LayoutMeasureHelper";
   //add FNSI-5687 劉全航 end
 
 export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -411,8 +410,14 @@ export default {
         // 初期値を補正
         this.initialValue.setSelectedLayoutCd = this.editRecord.setSelectedLayoutCd;
         /*add FNSI-改修内容4214 任 start*/
-        if($("#phone-show-pat-viewer").css("display") === "inline"){
-          document.getElementById("phone-show-pat-viewer").innerText =  document.getElementById("phone-show-pat-viewer").innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+        if(isScopedElementDisplayInline("phone-show-pat-viewer", this.$el || this)){
+          const phoneShowElement = getScopedElementById("phone-show-pat-viewer", this.$el || this);
+
+          if (phoneShowElement) {
+
+            phoneShowElement.innerText = phoneShowElement.innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+
+          }
         }
         /*add FNSI-改修内容4214 任 end*/
         //add FNSI-5687 劉全航 start
@@ -426,8 +431,6 @@ export default {
       this.isExpanded = this.defaultExpanded;
     });
   },
-  mounted() {
-  }
 };
 </script>
 

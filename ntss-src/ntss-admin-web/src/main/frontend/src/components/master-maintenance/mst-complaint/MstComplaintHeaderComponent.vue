@@ -14,7 +14,7 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target=false
@@ -51,8 +51,8 @@
 </template>
 
 <script>
-import { mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 
@@ -177,7 +177,7 @@ export default {
     EventBus.$on("setSortModeComplaint", this.setSortModeComplaint);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("setSortModeComplaint", this.setSortModeComplaint);
   },
   // add 性能改善メモリ不足 shan start

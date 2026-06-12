@@ -7,5 +7,7 @@ where
 and
   A.is_del = '0'
 and
+  A.facility_cd = /*facilityCd*/null
+and
   A.is_disp = '1'
 ;

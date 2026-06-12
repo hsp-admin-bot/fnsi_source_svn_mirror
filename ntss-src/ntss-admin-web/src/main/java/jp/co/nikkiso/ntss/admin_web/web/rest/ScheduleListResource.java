@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.request.patientCapture.JournalCreateRequestPayload;
 import jp.co.nikkiso.ntss.admin_web.request.scheduleList.GetPatInfoForCheckListRequest;
@@ -43,7 +43,7 @@ import jp.co.nikkiso.ntss.core.entity.PatPersonalMain;
 import jp.co.nikkiso.ntss.core.logevent.EventLogOutputToMongoDBCommon;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -63,7 +63,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -76,6 +76,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * スケジュール表系
@@ -186,7 +187,22 @@ public class ScheduleListResource {
   @PutMapping("/updateScheduleListData")
   public ResponseEntity<List<String>> updateScheduleListData(
     @RequestBody UpdateScheduleListDataRequest request
-  ) throws URISyntaxException, RuntimeException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException, RuntimeException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain ordMain = OrdMainService.selectByOrdNo(request.getOrdNo());
+      if (ordMain != null && ordMain.getFacilityCd() != null && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + request.getOrdNo() + " " + "patId=" + request.getPatId() + " " + "facilityCd=" + request.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     /* add by yuqinlong  2023-02-02 [CodeOptimization] start  */
 //    HttpStatus status = HttpStatus.OK;
 //    List<String> listRet = new ArrayList<>();
@@ -611,7 +627,21 @@ public class ScheduleListResource {
    * @throws URISyntaxException,RuntimeException
    */
   @PutMapping("/updateScheduleListData2")
-  public ResponseEntity<UpdateScheduleListDataResponse> updateScheduleListData2(@RequestBody UpdateScheduleListDataRequestList request) throws URISyntaxException, RuntimeException {
+  public ResponseEntity<UpdateScheduleListDataResponse> updateScheduleListData2(@RequestBody UpdateScheduleListDataRequestList request,
+                                                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                                                @AuthenticationPrincipal NtssUser ntssUser
+                                                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException, RuntimeException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + request.getFacilityCd() + " " + "indUserId=" + request.getIndUserId() + " " + "updUserId=" + request.getUpdUserId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(new UpdateScheduleListDataResponse(), HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
     UpdateScheduleListDataResponse response = null;
 
@@ -1008,7 +1038,7 @@ public class ScheduleListResource {
       eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
       logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang end
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
     return new ResponseEntity<>(result, status);
   }
@@ -1150,7 +1180,20 @@ public class ScheduleListResource {
 
   //add #10601 スケジュール表動作不正 start
   @PostMapping("/selectForSearchReservedBed2")
-  public ResponseEntity<List<OrdSchedule>> selectForSearchReservedBed2(@RequestBody UpdateScheduleListDataRequestList request) {
+  public ResponseEntity<List<OrdSchedule>> selectForSearchReservedBed2(@RequestBody UpdateScheduleListDataRequestList request,
+                                                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                                       @AuthenticationPrincipal NtssUser ntssUser
+                                                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + request.getFacilityCd() + " ", "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
 
     ResponseEntity<List<OrdSchedule>> ret = scheduleListService.selectForSearchReservedBed2(request);
@@ -1245,7 +1288,11 @@ public class ScheduleListResource {
   @PostMapping("/getPatInfoForCheckList")
   public ResponseEntity<Map<String, Object>> getPatInfoForCheckListFromDB(
     @Valid @RequestBody GetPatInfoForCheckListRequest req
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
     HttpStatus status = HttpStatus.OK;
     Map<String, Object> retMap = new HashMap<String, Object>();
 
@@ -1259,6 +1306,17 @@ public class ScheduleListResource {
     //患者情報の取得
     List<Map<String, Object>> retPatInfoList =
       scheduleListService.selectPatInfoForListCheck(ordNoList);
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      for (Map<String, Object> stringObjectMap : retPatInfoList) {
+        Object facilityCd = stringObjectMap.get("facility_cd");
+        if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+          InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ", "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     retMap.put("patInfoList", retPatInfoList);
 
@@ -1269,8 +1327,12 @@ public class ScheduleListResource {
   //add クールマスタ 王 start
   @GetMapping("/getAllDummyInfo")
   public ResponseEntity<Map<String, Object>> getPatInfoForCheckFromDB2(
-    @RequestParam(name = "facilityCd", required = true) String facilityCd
+    @RequestParam(name = "facilityCd", required = true) String facilityCd,
+    @AuthenticationPrincipal NtssUser ntssUser
   ) throws URISyntaxException {
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     HttpStatus status = HttpStatus.OK;
     Map<String, Object> retMap = new HashMap<String, Object>();
     /*mod #8494 by zhangruixue 2023-03-27  GC overhead limit exceeded start*/
@@ -1304,8 +1366,12 @@ public class ScheduleListResource {
   @Transactional
   @GetMapping("/getBedAndKurInfo")
   public ResponseEntity<Map<String, Object>> getBedAndKurInfoFromDB(
-    @RequestParam(name = "facilityCd", required = true) String facilityCd
+    @RequestParam(name = "facilityCd", required = true) String facilityCd,
+    @AuthenticationPrincipal NtssUser ntssUser
   ) throws URISyntaxException {
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     HttpStatus status = HttpStatus.OK;
     Map<String, Object> retMap = new HashMap<String, Object>();
 
@@ -1447,8 +1513,12 @@ public class ScheduleListResource {
   @SuppressWarnings("unchecked")
   public ResponseEntity<List<String>> getScheduleListDataFromDB_DAO(
     @RequestParam(name = "treatDate", required = true) String treatDate,
-    @RequestParam(name = "facilityCd", required = true) String facilityCd
+    @RequestParam(name = "facilityCd", required = true) String facilityCd,
+    @AuthenticationPrincipal NtssUser ntssUser
   ) throws URISyntaxException {
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
 //    /* modify by yuqinlong  2023-02-02 [CodeOptimization] start  */
 //    //処理時間計測開始
@@ -1775,8 +1845,12 @@ public class ScheduleListResource {
   @GetMapping("/getScheduleList/Days")
   public ResponseEntity<List<String>> getScheduleListDataDaysFromDB(
     @RequestParam(name = "treatDate", required = true) String treatDate,
-    @RequestParam(name = "facilityCd", required = true) String facilityCd
+    @RequestParam(name = "facilityCd", required = true) String facilityCd,
+    @AuthenticationPrincipal NtssUser ntssUser
   ) throws URISyntaxException {
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     //処理時間計測開始
     long start = System.currentTimeMillis();
@@ -2420,12 +2494,23 @@ public class ScheduleListResource {
     message.put("set_next_pat", set_next_pat);
     message.put("device_edge_order", device_edge_order);
 
-    return new ResponseEntity<String>(message.toString(), null, status);
+    return new ResponseEntity<String>(message.toString(), (org.springframework.http.HttpHeaders) null, status);
   }
 
   @PostMapping("/callDoCancelSetNextPatInfo")
-  public ResponseEntity<String> callDoCancelSetNextPatInfo(@RequestBody Map<String, String> bodyDate) {
+  public ResponseEntity<String> callDoCancelSetNextPatInfo(@RequestBody Map<String, String> bodyDate,
+                                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                           @AuthenticationPrincipal NtssUser ntssUser
+                                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
     String facilityCd = bodyDate.get("facilityCd");
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     Long beforeBedCd = Long.parseLong(bodyDate.get("beforeBedCd"));
     Long afterBedCd = Long.parseLong(bodyDate.get("afterBedCd"));
     Long targetOrdNo = Long.parseLong(bodyDate.get("targetOrdNo"));
@@ -2467,13 +2552,24 @@ public class ScheduleListResource {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
     }
 
-    return new ResponseEntity<>(message, null, status);
+    return new ResponseEntity<>(message, (org.springframework.http.HttpHeaders) null, status);
   }
 
   /* add #10124 by zhangruixue 2023-12-28  --start */
   @PostMapping("/callDoCancel")
-  public ResponseEntity<String> callDoCancel(@RequestBody Map<String, String> bodyDate) {
+  public ResponseEntity<String> callDoCancel(@RequestBody Map<String, String> bodyDate,
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                             @AuthenticationPrincipal NtssUser ntssUser
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
     String facilityCd = bodyDate.get("facilityCd");
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     Long beforeBedCd = Long.parseLong(bodyDate.get("beforeBedCd"));
     Long afterBedCd = Long.parseLong(bodyDate.get("afterBedCd"));
     Long targetOrdNo = Long.parseLong(bodyDate.get("targetOrdNo"));
@@ -2501,7 +2597,7 @@ public class ScheduleListResource {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
     }
 
-    return new ResponseEntity<>(message, null, status);
+    return new ResponseEntity<>(message, (org.springframework.http.HttpHeaders) null, status);
   }
   /* add #10124 by zhangruixue 2023-12-20  --end */
   /* del #10124 by zhangruixue 2023-12-28  --start */
@@ -2535,7 +2631,7 @@ public class ScheduleListResource {
 //      e.printStackTrace();
 //    }
 //
-//    return new ResponseEntity<>(message, null, status);
+//    return new ResponseEntity<>(message, (org.springframework.http.HttpHeaders) null, status);
 //  }
   /* add #8582 by zhangruixue 2023-04-24  --end */
   /* del #10124 by zhangruixue 2023-12-28  --end */
@@ -2551,7 +2647,20 @@ public class ScheduleListResource {
   public ResponseEntity<Boolean> checkBatchMovePatExistance(
     @PathVariable String facilityCd,
     @RequestBody String bodydata
-  ) throws URISyntaxException, RuntimeException, JsonProcessingException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException, RuntimeException, JacksonException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+        InvestigateLogUtils.info("11205", "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ", "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     HttpStatus status = HttpStatus.OK;
     Boolean ret = false;
     ret = scheduleListService.checkBatchMovePatExistance(
@@ -2561,4 +2670,32 @@ public class ScheduleListResource {
     return new ResponseEntity<>(ret, status);
   }
   // add #11493 スケジュール表　更新不正 関 end
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    boolean hasAccess = ntssUser != null && (ntssUser.isNkkAdminUser() || facilityCd == null || facilityCd.equals(ntssUser.getFacilityCd()));
+    // #11205 mod 20260421 start
+    if (!hasAccess) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + (ntssUser != null ? ntssUser.getFacilityCd() : "null") + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+    }
+    // #11205 mod 20260421 end
+    return hasAccess;
+  }
+
+  private boolean hasOrdAccess(NtssUser ntssUser, Long ordNo) {
+    if (ntssUser == null) {
+      return false;
+    }
+    if (ntssUser.isNkkAdminUser()) {
+      return true;
+    }
+    OrdMain ordMain = OrdMainService.selectByOrdNo(ordNo);
+    boolean hasAccess = ordMain == null || ordMain.getFacilityCd() == null || ordMain.getFacilityCd().equals(ntssUser.getFacilityCd());
+    // #11205 mod 20260421 start
+    if (!hasAccess) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + (ordMain != null ? ordMain.getFacilityCd() : "null") + " " + "ordNo=" + ordNo + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+    }
+    // #11205 mod 20260421 end
+    return hasAccess;
+  }
 }

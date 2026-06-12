@@ -1,4 +1,4 @@
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import Indication from "@/apis/indication";
 import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
 import { sendRequestGetMstFacilitySettingData as getMstFacitilySettingData } from "@/apis/mst-facility-setting-maintenance";
@@ -24,7 +24,7 @@ import {
   medicine as getMstMedicine,
   medicineMix as getMstMedicineMix
 } from "@/functions/mst/MstGetters.js";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 //mod #10739 コンバート施設で指示受け(治療単位)が表示されない 20241218 zhaoqi start
 // FNSI-修正 マスタ削除の対応 chen add start
 import {CODES, MASTER_DELETE_DISPLAY} from "@/constants/TreatmentRecord";
@@ -54,7 +54,7 @@ const sortByPatName = (list) => {
 
 export default {
   namespaced: true,
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   state: {
     // del #10150 piao Start
     // // 姜
@@ -448,7 +448,7 @@ export default {
     setIndicationSearchCondition({ commit }, condition) {
       commit("setIndicationSearchCondition", condition);
     },
-     setIndicationSearchConditionNULL({ commit }, condition) {
+    setIndicationSearchConditionNULL({ commit }, condition) {
       commit("setIndicationSearchConditionNULL", condition);
     },
     setSelectedIndIndex({ commit }, selectedIndIndex) {
@@ -622,6 +622,17 @@ export default {
       state.patPersonal = patPersonal;
     },
     setTreatmentSearchCondition(state, condition) {
+      // 治療方法存在チェック
+      if (!state.mstTreatment.some(t => +t.treatmentCd === +condition.treatmentCd)) {
+        condition.treatmentCd = "0";
+      }
+      // クール存在チェック
+      const validMstKurCd = state.mstKur.map(k => k.kurCd);
+      condition.kurCds = condition.kurCds.filter(value => validMstKurCd.includes(value));
+      // 指示者存在チェック
+      if (!state.mstPersonalUser.some(t => +t.userId === +condition.instructorId)) {
+        condition.instructorId = "0";
+      }
       // ベッドグループ存在チェック
       if(!state.mstRoomBedGroup.some(rbr => +rbr.roomBedGroupCd === +condition.bedGroupCd))
       {
@@ -634,10 +645,16 @@ export default {
       };
     },
     setTreatmentSearchConditionNULL(state, condition) {
-      // ベッドグループ存在チェック
-      state.treatmentSearchCondition = condition
+      state.treatmentSearchCondition = condition;
     },
     setIndicationSearchCondition(state, condition) {
+      // クール存在チェック
+      const validMstKurCd = state.mstKur.map(k => k.kurCd);
+      condition.kurCds = condition.kurCds.filter(value => validMstKurCd.includes(value));
+      // 指示者存在チェック
+      if (!state.mstPersonalUser.some(t => +t.userId === +condition.userId)) {
+        condition.userId = "0";
+      }
       // ベッドグループ存在チェック
       if(!state.mstRoomBedGroup.some(rbr => +rbr.roomBedGroupCd === +condition.bedGroupCd))
       {
@@ -651,7 +668,6 @@ export default {
     setIndicationSearchConditionNULL(state, condition) {
       state.indicationSearchCondition = condition;
     },
-    
     setSelectedIndIndex(state, selectedIndIndex) {
       state.selectedIndIndex = selectedIndIndex;
     },
@@ -862,7 +878,7 @@ function makeTreatmentConditionParams({ treatmentSearchCondition, columnStatus }
     approver2: columnStatus.isShowApprover2 && approver2HasNotApproved,
     instructorId: +instructorId === 0 ? null : +instructorId,
     ordSearchTreatmentCondition: {
-      treatDate: moment(treatmentDate, "YYYY-MM-DD").format("YYYYMMDD"),
+      treatDate: dayjs(treatmentDate, "YYYY-MM-DD").format("YYYYMMDD"),
       treatmentCode: +treatmentCd === 0 ? null : +treatmentCd,
       kurCode: kurCds,
       bedGroup: +bedGroupCd === 0 ? null : +bedGroupCd
@@ -887,12 +903,12 @@ function makeIndicationConditionParams(state) {
 
   return {
     treatmentDateOpt: parseInt(condition.treatmentDateOpt),
-    treatmentStartDate: moment(
+    treatmentStartDate: dayjs(
       condition.treatmentStartDate,
       "YYYY-MM-DD"
     ).format("YYYYMMDD"),
     treatmentScheduledDate: condition.treatmentScheduledDate
-      ? moment(condition.treatmentScheduledDate, "YYYY-MM-DD").format(
+      ? dayjs(condition.treatmentScheduledDate, "YYYY-MM-DD").format(
         "YYYYMMDD"
       )
       : null,
@@ -1210,7 +1226,6 @@ function convertTreatCondValue(itemNo, ordDetail, mstMedicine, mstMedicineMix, m
 
     // 目標体重
     case 3:
-      value = +indValue == '-1' ? "DWと同じ" : indValue;
       // if (rstDialysisState !== "0") {
         unit = +indValue == '-1' ? null : `kg`;
         value = +indValue == '-1' ? "DWと同じ" : `${indValue}`;
@@ -1515,12 +1530,12 @@ function findIndAndUpdUserFullName(itemNo, ordDetail, mstPersonalUser) {
   };
 }
 function convertTreatCondTime(indValue) {
-  const duration = moment.duration(indValue, "m");
-  const hours = duration.hours();
-  const minutes = duration.minutes();
-  return moment()
-    .hours(hours)
-    .minutes(minutes)
+  const dur = dayjs.duration(indValue, "minutes");
+  const hours = dur.hours();
+  const minutes = dur.minutes();
+  return dayjs()
+    .hour(hours)
+    .minute(minutes)
     .format("HH:mm");
 }
 function convertTreatCondVA(indValue, mstVA, ordDetail, state) {
@@ -1712,7 +1727,7 @@ function convertTreatCondMedicineAmount(indValue, indCode, medicineType, unitTyp
   }
   // 薬剤・調製薬剤のマスタを区分に応じて変更し、対象データを取得します
   let decPoint = 0;
-  let value = "";
+  let value;
   // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
   //if(medicineType === "1"){
   if(medicineType == 1){
@@ -1769,7 +1784,7 @@ function convertKurName(ordDetail, mstKur, mstPersonalUser, mstKurDel) {
     };
   }
   const kur = mstKur.find(kur => kur.kurCd === indValue);
-  let remainingValue = "";
+  let remainingValue;
   if (!kur) {
     const kurTmp = mstKurDel.find(kur => kur.kurCd === indValue);
     if (kurTmp) {
@@ -1928,7 +1943,7 @@ function processMedicineInfo(ordDetail, subCategory, rstDialysisState, mstMedici
   ordDetail.indMediInfo.forEach(
     async ({cd, amount, unit, medicine_type, ind_user_id, upd_user_id, no}) => {
       let dispVal = amount;
-      let decimalPoint = 0;
+      let decimalPoint;
 
       // 該当する薬剤情報を取得
       let medicine = medicine_type == 1
@@ -2126,7 +2141,7 @@ function convertDw(ordDetail, selectedPat, mstPersonalUser) {
     if (physicalInfo.length > 0) {
       physicalInfo.reverse();
     }
-    const tDate = moment(ordDetail.treatDate, "YYYYMMDD").add(
+    const tDate = dayjs(ordDetail.treatDate, "YYYYMMDD").add(
       1,
       "day"
     );
@@ -2136,21 +2151,21 @@ function convertDw(ordDetail, selectedPat, mstPersonalUser) {
     let ctlNo = "";
     physicalInfo.forEach(pInfo => {
       if (
-        pInfo.exam_date && moment(pInfo.exam_date).isBefore(tDate)&&
+        pInfo.exam_date && dayjs(pInfo.exam_date).isBefore(tDate)&&
         // 治療日より未来の登録日を除外する
         pInfo.dw !== undefined && pInfo.dw !== null
       ) {
-        if (examDate === "" || moment(pInfo.exam_date).isAfter(examDate)) {
+        if (examDate === "" || dayjs(pInfo.exam_date).isAfter(examDate)) {
           examDate = pInfo.exam_date;
           indValue = pInfo.dw;
-          updater = pInfo.hasOwnProperty("changer_cd") ? pInfo.changer_cd : "";
+          updater = Object.prototype.hasOwnProperty.call(pInfo, "changer_cd") ? pInfo.changer_cd : "";
           instructor = pInfo.indicator_cd;
           ctlNo = pInfo.ctl_no;
-        }else if(moment(pInfo.exam_date).isSame(examDate)){
+        }else if(dayjs(pInfo.exam_date).isSame(examDate)){
           if (ctlNo && pInfo.ctl_no > ctlNo) {
             examDate = pInfo.exam_date;
             indValue = pInfo.dw;
-            updater = pInfo.hasOwnProperty("changer_cd") ? pInfo.changer_cd : "";
+            updater = Object.prototype.hasOwnProperty.call(pInfo, "changer_cd") ? pInfo.changer_cd : "";
             instructor = pInfo.indicator_cd;
             ctlNo = pInfo.ctl_no;
           }
@@ -2174,7 +2189,7 @@ function convertDw(ordDetail, selectedPat, mstPersonalUser) {
   }
   //mod #10739 コンバート施設で指示受け(治療単位)が表示されない 20241218 zhaoqi start
   // mod 10705 指示受け・指示承認(治療単位)/治療状況リスト・マップのDW欄がグレーアウトになってない 関  start
-  if (ordDetail.indCondInfo.hasOwnProperty("3")) {
+  if (Object.prototype.hasOwnProperty.call(ordDetail.indCondInfo, "3")) {
     return {
       itemName: "DW",
       itemNo: -1,

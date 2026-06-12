@@ -50,15 +50,16 @@
   </div>
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
-import {EventBus} from "@/eventBus";
-import vuedraggable from "vuedraggable";
+import {EventBus} from "@/compat/vue/event-bus.js";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
+import { getModalContainerElement, getScopedElement } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   name: "MstTrendGraphTemplateModal",
   components: {
-    "draggable": vuedraggable
+    "draggable": VueDraggable
   },
   data() {
     return {
@@ -128,7 +129,7 @@ export default {
     //mod マスタ詳細画面がありません破棄メッセージ
     this.initInputModel = JSON.parse(JSON.stringify(this.inputModel));
     // 端末判別 5121add 鞠 start
-    const ua = navigator.userAgent;
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
     if (ua.match(/Android/)) {
       this.androidFlg = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -185,13 +186,11 @@ export default {
      * Gridの高さを調整する
      */
     calculateGridHeight() {
-      const modal = document.getElementsByClassName("modal-container")[0];
+      const modal = getModalContainerElement(this.$el || this);
       const modalHeight = modal.clientHeight;
       const modalHeaderHeight = modal.firstElementChild.clientHeight;
       const modalFooterHeight = modal.lastElementChild.clientHeight;
-      const contentsHeight1 = document.getElementsByClassName(
-        "disp-item-area"
-      )[0].clientHeight;
+      const contentsHeight1 = getScopedElement(this.$el || this, ".disp-item-area")?.clientHeight || 0;
       this.contentsAreaHeight =
         modalHeight -
         modalHeaderHeight -

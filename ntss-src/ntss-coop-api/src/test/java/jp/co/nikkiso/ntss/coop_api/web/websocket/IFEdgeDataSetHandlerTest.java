@@ -18,8 +18,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +27,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
 
 import jp.co.nikkiso.ntss.api.service.SysDataSetService;
 import jp.co.nikkiso.ntss.api.service.SysDataSetServiceImpl.UseApplication;
@@ -40,13 +40,13 @@ import jp.co.nikkiso.ntss.core.exception.NtssException;
 @Transactional
 @Sql("classpath:resource.script/IFEdgeDataSetHandlerTest/IFEdgeDataSetHandlerTest.db5.before.sql")
 public class IFEdgeDataSetHandlerTest {
-  @SpyBean
+  @MockitoSpyBean
   private IFEdgeDataSetHandler handler;
 
-  @MockBean
+  @MockitoBean
   WebSocketSession session;
 
-  @SpyBean
+  @MockitoSpyBean
   SysDataSetService sysDataSetService;
 
   @Value("${websocket.split.size}")

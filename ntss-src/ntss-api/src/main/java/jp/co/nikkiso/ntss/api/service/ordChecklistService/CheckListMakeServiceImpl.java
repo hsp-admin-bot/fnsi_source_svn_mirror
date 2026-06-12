@@ -26,9 +26,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.entity.OrdChecklist;
 import jp.co.nikkiso.ntss.core.entity.OrdChecklist.OrdChecklistRegCheckInfo;
@@ -117,13 +117,17 @@ class CheckListMakeServiceImpl implements CheckListMakeService {
      *
      * @param value JSON文字列
      */
+    public OrdChecklistRegEquipInfo(String value) {
+      this(value, null);
+    }
+
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある mod yangxuewang start
     public OrdChecklistRegEquipInfo(String value, LogService logService) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある mod yangxuewang end
       try {
         OrdChecklistRegEquipInfo obj = objectMapper.readValue(value, OrdChecklistRegEquipInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang end
@@ -146,7 +150,7 @@ class CheckListMakeServiceImpl implements CheckListMakeService {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -222,13 +226,17 @@ class CheckListMakeServiceImpl implements CheckListMakeService {
      *
      * @param value JSON文字列
      */
+    public OrdChecklistRegMediInfo(String value) {
+      this(value, null);
+    }
+
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある mod yangxuewang start
     public OrdChecklistRegMediInfo(String value, LogService logService) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある mod yangxuewang end
       try {
         OrdChecklistRegMediInfo obj = objectMapper.readValue(value, OrdChecklistRegMediInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang end
@@ -251,7 +259,7 @@ class CheckListMakeServiceImpl implements CheckListMakeService {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -287,7 +295,7 @@ class CheckListMakeServiceImpl implements CheckListMakeService {
             // 機能種別（func_class）「0：通常リスト」「1：治療条件」「2：医療材料」「3：投与薬剤」
             String strfuncclass = list.get("func_class").asText();
             Short funcClass = null;
-            if (!strfuncclass.equals("null")) {
+            if (!strfuncclass.equals("null") && !"".equals(strfuncclass)) {
               funcClass = Short.parseShort(list.get("func_class").asText());
             }
 
@@ -320,7 +328,7 @@ class CheckListMakeServiceImpl implements CheckListMakeService {
             String classcode = list.get("class_cd").asText();
             // 患者経過総合ビューアレイアウトマスタの項目定義⇒治療条件No
             Integer classcd = null;
-            if (!classcode.equals("null")) {
+            if (!classcode.equals("null") && !"".equals(classcode)) {
               classcd = Integer.parseInt(list.get("class_cd").toString());
               checkinfo.setClassCd(Integer.parseInt(classcode));
             }
@@ -679,7 +687,7 @@ class CheckListMakeServiceImpl implements CheckListMakeService {
           JsonNode value = Objects.isNull(condinfo) || !condinfo.has("value") ? null : condinfo.get("value");
           String strval = Objects.isNull(value) ? "null" : value.asText();
           // 対象の治療条件がある場合
-          if (!Objects.isNull(condinfo) && !strval.equals("null")) {
+          if (!Objects.isNull(condinfo) && !strval.equals("null") && !"".equals(strval)) {
 // del 10310 needle _ typeの使用を削除するには gjn start
             // 穿刺針種別
 //            String ntype = "";
@@ -692,7 +700,7 @@ class CheckListMakeServiceImpl implements CheckListMakeService {
             if (condinfo.has("medicine_type")) {
               String strmtype = condinfo.get("medicine_type").asText();
               Integer mtype = null;
-              if (!strmtype.equals("null")) {
+              if (!strmtype.equals("null") && !"".equals(strmtype)) {
                 mtype = Integer.parseInt(strmtype);
                 obj.put("medicine_type", mtype);
               } else {
@@ -713,7 +721,7 @@ class CheckListMakeServiceImpl implements CheckListMakeService {
         }
       }
 
-    } catch (IOException e) {
+    } catch (JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();

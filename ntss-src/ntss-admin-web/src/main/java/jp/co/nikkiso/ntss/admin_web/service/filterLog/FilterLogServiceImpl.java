@@ -76,8 +76,8 @@ import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
@@ -108,6 +108,7 @@ import jp.co.nikkiso.ntss.admin_web.service.utils.AggregationUtils;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 
 @Service
@@ -164,6 +165,10 @@ public class FilterLogServiceImpl implements FilterLogService {
   // xietest start
   @Autowired
   private LogService logService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // xietest end
 	/**
 	 * フィルターリスト
@@ -265,6 +270,11 @@ public class FilterLogServiceImpl implements FilterLogService {
    */
   @Override
   public List<EventLogAPI> filterMongoLog(FilterConditionLogAPI api) throws Exception {
+    // add #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang start
+    if(checkIsContinue(api)) {
+      return new ArrayList<>();
+    }
+    // add #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang end
     String collection = "log_event";
     Map<String,String> columnsKey = new HashMap<String,String>();
     columnsKey.put("date","log_date");
@@ -633,7 +643,7 @@ private String changeDecrypt(String strOld) {
 // #9698 アプリケーションログの内容修正 20260328 mod yangxuewang start
             long start = System.currentTimeMillis();
             ResponseEntity<Object> response = restTemplate.exchange(request, Object.class);
-            HttpStatus status = response.getStatusCode();
+            HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
             long cost = System.currentTimeMillis() - start;
             Map<String, Object> map = new HashMap<>();
             map.put("logType", "RESTTEMPLATE-LOG");
@@ -1059,7 +1069,7 @@ private String changeDecrypt(String strOld) {
     wheres.append(" WHERE\n");
     wheres.append(" user_id = " + userId + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(mstUserDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -1396,11 +1406,11 @@ private String changeDecrypt(String strOld) {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -1766,7 +1776,7 @@ private String changeDecrypt(String strOld) {
           if (!searchFlag) {
             listPatId.add("");
           }
-            getFilterContition(conditionList, "pat_id", listPatId, operator);
+          getFilterContition(conditionList, "pat_id", listPatId, operator);
           //getFilterContitionKey(conditionList, "pat_name", pattern);
          // mod 9227 ログ参照にて検索条件でフリーワードに「3」で「終わる」を指定すると条件と合わない検索結果となる。 zhou end
           break;
@@ -1859,6 +1869,36 @@ private String changeDecrypt(String strOld) {
         }
       }
     }
+  }
+
+  /**
+   * keyWordに対応検索データがあるか
+   * @param api
+   * @return
+   */
+  private boolean checkIsContinue(FilterConditionLogAPI api) {
+    if(api != null && !CollectionUtils.isEmpty(api.getDisplayItems())) {
+      for(Map<String, Object> checkItem : api.getDisplayItems()) {
+        if(checkItem.get("key") != null) {
+          String checkKey = checkItem.get("key").toString();
+          if("user".equals(checkKey) || "patName".equals(checkKey)) {
+            if(checkItem.get("freeWord") != null && !"".equals(checkItem.get("freeWord").toString())) {
+              String checkWord = checkItem.get("freeWord").toString();
+              List<String> checkResults = null;
+              if("user".equals(checkKey)) {
+                checkResults = mstPersonalUserDao.selectByName('%'+ checkWord +'%', api.getFacilityCd(), true);
+              } else {
+                checkResults = patPersonalMainDao.selectByName('%'+ checkWord +'%', api.getFacilityCd(), true);
+              }
+              if(CollectionUtils.isEmpty(checkResults)) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+    }
+    return false;
   }
   // add #10016 ログ参照画面でフィルタ検索で追加読みで検索条件が破棄されている fang end
 }

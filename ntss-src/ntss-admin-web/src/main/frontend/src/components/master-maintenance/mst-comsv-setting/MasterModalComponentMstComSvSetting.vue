@@ -89,13 +89,13 @@
             </div>
           </div>
         </div>
-      </kendo-grid-toolbar>
-    </div>
+    </kendo-grid-toolbar>
+  </div>
   </div>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import ComsvSettingMainTab from "@/components/master-maintenance/mst-comsv-setting/sub-item/ComsvSettingMainItem";
 import ComsvSettingLcdMenuMainTab from "@/components/master-maintenance/mst-comsv-setting/sub-item/ComSvSettingLcdMenuMainItem";
 import ComsvSettingLcdNpatMainTab from "@/components/master-maintenance/mst-comsv-setting/sub-item/ComsvSettingLcdNpatMainItem";
@@ -103,9 +103,10 @@ import ComsvSettingLcdReportMainTab from "@/components/master-maintenance/mst-co
 import ComsvSettingCheckGraphMainTab from "@/components/master-maintenance/mst-comsv-setting/sub-item/ComsvSettingCheckGraphMainItem";
 import ComsvSettingLcdStaffMainTab from "@/components/master-maintenance/mst-comsv-setting/sub-item/ComsvSettingLcdStaffMainItem";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 export default {
   name: "mst-comsv-setting",
@@ -268,8 +269,9 @@ export default {
       }
     },
     calculateWidth() {
-      if (document.getElementById('tab-item-list-area') !== null) {
-        this.conWidth = document.getElementById('tab-item-list-area').scrollWidth;
+      const tabItemListArea = getScopedElementById('tab-item-list-area', this.$el || this);
+      if (tabItemListArea !== null) {
+        this.conWidth = tabItemListArea.scrollWidth;
       } else {
         this.conWidth = 0;
       }
@@ -514,7 +516,7 @@ input[name="tab_item"] {
   margin-left: 0.5em;
   min-width: 7em;
 }
-.k-grid-toolbar {
+.kendo-grid-toolbar-style {
   padding: 0.3em 0 0 0;
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);

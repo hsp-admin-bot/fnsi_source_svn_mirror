@@ -4,6 +4,7 @@ import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
 import jp.co.nikkiso.ntss.admin_web.response.exceptionPeriod.ExceptionPeriodResponse;
 import jp.co.nikkiso.ntss.admin_web.response.masterMaintenance.MasterUpdateResponse;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.master.supportSetting.MstSupportSettingService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
@@ -14,6 +15,7 @@ import jp.co.nikkiso.ntss.core.entity.MntMedicineSupport;
 import jp.co.nikkiso.ntss.core.entity.custom.CheckAvgData;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -67,7 +70,21 @@ public class MstSupportSettingResource {
    *
    */
   @GetMapping("/mst_support_setting/{facilityCd}")
-  public HttpEntity<? extends Object> getMasterData(@PathVariable String facilityCd) {
+  public HttpEntity<? extends Object> getMasterData(@PathVariable String facilityCd,
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                    @AuthenticationPrincipal NtssUser ntssUser
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to get master : mst_support_setting & sys_support_setting");
@@ -98,14 +115,20 @@ public class MstSupportSettingResource {
    *
    */
   @GetMapping("/mst_support_range_value/{cd}")
-  public HttpEntity<? extends Object> getRange(@PathVariable String cd) {
+  public HttpEntity<? extends Object> getRange(@PathVariable String cd,
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) {
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to get master : mst_range_setting & mst_range_setting");
     logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_DETAIL_FACILITIES_LIST, SERVICE_NAME.FNSI, null);
 
     try {
-      Map<String,Object> response = mstSupportSettingService.selectRange(cd);
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 start
+      Map<String,Object> response = mstSupportSettingService.selectRange(cd, ntssUser.getFacilityCd());
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 end
       return new ResponseEntity<>(response, HttpStatus.OK);
     } catch (Exception e) {
 
@@ -258,7 +281,22 @@ public class MstSupportSettingResource {
    *
    */
   @GetMapping("/mst_support_investment_value/{investmentSupportParameter}")
-  public HttpEntity<? extends Object> getInvestmentSupport(@PathVariable List<String> investmentSupportParameter) {
+  public HttpEntity<? extends Object> getInvestmentSupport(@PathVariable List<String> investmentSupportParameter,
+                                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                           @AuthenticationPrincipal NtssUser ntssUser
+                                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      String facilityCd = investmentSupportParameter.get(4);
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "cyclingCd=" + investmentSupportParameter.get(0) + " " + "esaCd=" + investmentSupportParameter.get(1) + " " + "type=" + investmentSupportParameter.get(2) + " " + "patId=" + investmentSupportParameter.get(5) + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to get master : checkAvgData & pat_exam_main");
@@ -602,7 +640,22 @@ public class MstSupportSettingResource {
    *
    */
   @PostMapping("/mst_support_save_value/{saveParameter}")
-  public ResponseEntity<?> saveRecord(@PathVariable List<String> saveParameter){
+  public ResponseEntity<?> saveRecord(@PathVariable List<String> saveParameter,
+                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                      @AuthenticationPrincipal NtssUser ntssUser
+                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      String facilityCd = saveParameter.get(0);
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to get master : checkAvgData & pat_exam_main");

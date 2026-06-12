@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.coop_api.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
 import lombok.Data;
 import lombok.NoArgsConstructor;

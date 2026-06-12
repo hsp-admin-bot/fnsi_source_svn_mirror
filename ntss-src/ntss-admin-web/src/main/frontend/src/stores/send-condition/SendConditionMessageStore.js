@@ -7,10 +7,10 @@ import {
   checkContent,
 } from "@/constants/weightDefine";
 import BigEval from "@/functions/BigEvalEx";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import { tareG2Kg, offWaterG2Kg } from "@/functions/common/WeightFunctions";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { sendRequestGetExam } from "@/apis/send-condition";
 
 // #10290 2024.03.08 add 施設設定により前体重許容範囲チェックを実施可否を決定する TDC米沢 start
@@ -150,7 +150,7 @@ const printItemType = {
 };
 
 export default {
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   namespaced: true,
   state: {
     // eval代替
@@ -219,7 +219,8 @@ export default {
     getIsListMessage: (state) => state.isListMessage,
     getCheckMessageList: (state) => state.messageList,
     //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx start
-    getPurificationWarnmessageList: (state) => state.purificationWarnmessageList,
+    getPurificationWarnmessageList: (state) =>
+      state.purificationWarnmessageList,
     getPurificationWarnmessageHasError: (state) => {
       const errMsg = state.purificationWarnmessageList.filter((msg) => {
         return !msg.isChecked;
@@ -334,7 +335,7 @@ export default {
       // }
       // 2回測定チェックが有効で変動値が0以上である場合
       if (state.doubleCheck.enable && state.doubleCheck.tolerance > 0) {
-        let doubleCheckErr = false;
+        let doubleCheckErr;
         let measureValue = null;
         const doubleCheckPastValues = [];
 
@@ -833,9 +834,9 @@ export default {
           break;
       }
       const buildNumberPrintData = (value, conf) => {
-        // add 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
-        var before_word = "";
-        var after_word = "";
+        // add 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
+        var before_word;
+        var after_word;
         if ("null" == `${conf.before_word}`) {
           before_word = "";
         } else {
@@ -846,14 +847,14 @@ export default {
         } else {
           after_word = `${conf.after_word}`;
         }
-        // add 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+        // add 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
         if (isNaN(value)) {
-          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
           // return `${conf.before_word}<計算失敗>${
           //   conf.after_word
           // }`;
           return before_word + "<計算失敗>" + after_word;
-          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
         }
         const fmt = conf.data_format.split(".");
         const int = Number(fmt[0]);
@@ -868,24 +869,24 @@ export default {
           const v = (Array(int).fill(" ").join("") + ans.split(".")[0]).substr(
             -1 * int
           );
-          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
           // return `${conf.before_word}${v}.${ans.split(".")[1]}${
           //   conf.after_word
           // }`;
           return before_word + `${v}.${ans.split(".")[1]}` + after_word;
-          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
         } else if (digit == 0 && ans.length < int) {
           // 桁数を設定値分スペースうめ
           const v = (Array(int).fill(" ").join("") + ans).substr(-1 * int);
-          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
           // return `${conf.before_word}${v}${conf.after_word}`;
           return before_word + `${v}` + after_word;
-          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
         } else {
-          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
           // return `${conf.before_word}${ans}${conf.after_word}`;
           return before_word + `${ans}` + after_word;
-          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+          // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
         }
       };
       // *****************************
@@ -949,9 +950,9 @@ export default {
             font_size: 0,
             value: null,
           };
-          // add 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
-          let before_word = "";
-          let after_word = "";
+          // add 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
+          let before_word;
+          let after_word;
           if ("null" == `${conf.before_word}`) {
             before_word = "";
           } else {
@@ -962,7 +963,7 @@ export default {
           } else {
             after_word = `${conf.after_word}`;
           }
-          // add 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+          // add 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
           if (conf.item_source == printItemSource.master) {
             // 印刷項目マスタから設定した印刷項目
             switch (conf.item_cd) {
@@ -971,38 +972,44 @@ export default {
                 break;
               case printItemCd.now: // 現在日時
                 {
-                  const value = moment().format(conf.data_format);
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  const value = dayjs().format(conf.data_format);
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}${value}${conf.after_word}`;
                   row.value = before_word + `${value}` + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 }
                 break;
               case printItemCd.bedName: // ベッド番号(ベッド名称)
                 {
-                  const value = state.printParam.bedName;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  const value = !state.printParam.bedName
+                    ? "　　　　"
+                    : state.printParam.bedName;
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}${value}${conf.after_word}`;
                   row.value = before_word + `${value}` + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 }
                 break;
               case printItemCd.hospPatId: // 患者ID（院内）
                 {
-                  const value = state.printParam.hospPatId;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  const value = !state.printParam.hospPatId
+                    ? "　　　　"
+                    : state.printParam.hospPatId;
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}${value}${conf.after_word}`;
                   row.value = before_word + `${value}` + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 }
                 break;
               case printItemCd.patName: // 患者名
                 {
-                  const value = state.printParam.patName;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  const value = !state.printParam.patName
+                    ? "　　　　"
+                    : state.printParam.patName;
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}${value}${conf.after_word}`;
                   row.value = before_word + `${value}` + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 }
                 break;
               case printItemCd.dialysisTime: // 透析時間 hh:mm
@@ -1013,10 +1020,10 @@ export default {
                   param.category != weightScaleClass.after
                 ) {
                   // 前体重でも後体重でも予定なし（前体重）でもない
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}不明${conf.after_word}`;
                   row.value = before_word + "不明" + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 } else {
                   // 前体重か後体重かで変数の値が変わる
                   let v1 = null;
@@ -1044,17 +1051,17 @@ export default {
                   // if (v1 == null || v1.value == null) {
                   if (v1 == null) {
                     // #10833 2024.08.08 mod 判定式修正 TDC米沢 end
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}不明${conf.after_word}`;
                     row.value = before_word + "不明" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else {
                     const d = new Date(0, 0, 0, 0, v1, 0);
-                    const v = moment(d).format(conf.data_format);
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    const v = dayjs(d).format(conf.data_format);
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}${v}${conf.after_word}`;
                     row.value = before_word + `${v}` + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   }
                 }
                 break;
@@ -1064,10 +1071,10 @@ export default {
                   if (dw !== null && dw.value !== null) {
                     row.value = buildNumberPrintData(dw.value, conf);
                   } else {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未設定${conf.after_word}`;
                     row.value = before_word + `未設定` + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   }
                 }
                 break;
@@ -1077,10 +1084,10 @@ export default {
                   if (v !== null && v.value !== null) {
                     row.value = buildNumberPrintData(v.value, conf);
                   } else {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未設定${conf.after_word}`;
                     row.value = before_word + `未設定` + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   }
                 }
                 break;
@@ -1090,10 +1097,10 @@ export default {
                   if (v !== null && v.value !== null) {
                     row.value = buildNumberPrintData(v.value, conf);
                   } else {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   }
                 }
                 break;
@@ -1103,10 +1110,10 @@ export default {
                   if (v !== null && v.value !== null) {
                     row.value = buildNumberPrintData(v.value, conf);
                   } else {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   }
                 }
                 break;
@@ -1116,10 +1123,10 @@ export default {
                   if (v !== null && v.value !== null) {
                     row.value = buildNumberPrintData(v.value, conf);
                   } else {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   }
                 }
                 break;
@@ -1129,10 +1136,10 @@ export default {
                   if (v !== null && v.value !== null) {
                     row.value = buildNumberPrintData(v.value, conf);
                   } else {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   }
                 }
                 break;
@@ -1141,15 +1148,15 @@ export default {
                   const v1 = state.params.find((p) => p.code === "[bw]");
                   const v2 = state.params.find((p) => p.code === "[dw]");
                   if (v1 === null || v1.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else if (v2 === null || v2.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未設定${conf.after_word}`;
                     row.value = before_word + "未設定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else {
                     const vv = new BigNumber(v1.value).div(v2.value).toNumber();
                     row.value = buildNumberPrintData(vv, conf);
@@ -1161,15 +1168,15 @@ export default {
                   const v1 = state.params.find((p) => p.code === "[aw]");
                   const v2 = state.params.find((p) => p.code === "[dw]");
                   if (v1 === null || v1.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else if (v2 === null || v2.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未設定${conf.after_word}`;
                     row.value = before_word + "未設定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else {
                     const vv = new BigNumber(v1.value).div(v2.value).toNumber();
                     row.value = buildNumberPrintData(vv, conf);
@@ -1182,15 +1189,15 @@ export default {
                   const v2 = state.params.find((p) => p.code === "[lw]");
 
                   if (v1 === null || v1.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else if (v2 === null || v2.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未設定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else {
                     const vv = new BigNumber(v1.value)
                       .minus(v2.value)
@@ -1205,15 +1212,15 @@ export default {
                   const v2 = state.params.find((p) => p.code === "[aw]");
 
                   if (v1 === null || v1.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else if (v2 === null || v2.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未設定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else {
                     const vv = new BigNumber(v1.value)
                       .minus(v2.value)
@@ -1256,10 +1263,10 @@ export default {
                   );
                   const v4 = state.params.find((p) => p.code === "[wat]");
                   if (v1 === null || v1.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else if (
                     v2 !== null &&
                     v2.value !== null &&
@@ -1276,35 +1283,35 @@ export default {
                     const n = bn < 0 ? 0 : bn;
                     row.value = buildNumberPrintData(n, conf);
                   } else {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未設定${conf.after_word}`;
                     row.value = before_word + "未設定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   }
                 } else if (param.category === weightScaleClass.after) {
                   const v1 = state.params.find((p) => p.code === "[aw]");
                   const v2 = state.params.find((p) => p.code === "[tw]");
                   if (v1 === null || v1.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else if (v2 !== null && v2.value !== null) {
                     const n = new BigNumber(v1.value)
                       .minus(v2.value)
                       .toNumber();
                     row.value = buildNumberPrintData(n, conf);
                   } else {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未設定${conf.after_word}`;
                     row.value = before_word + "未設定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   }
                 } else {
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}未設定${conf.after_word}`;
                   row.value = before_word + "未設定" + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 }
                 break;
               case printItemCd.tare: // 風袋
@@ -1313,10 +1320,10 @@ export default {
                   if (v !== null && v.value !== null) {
                     row.value = buildNumberPrintData(v.value, conf);
                   } else {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未設定${conf.after_word}`;
                     row.value = before_word + "未設定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   }
                 }
                 break;
@@ -1326,10 +1333,10 @@ export default {
                   if (v !== null && v.value !== null) {
                     row.value = buildNumberPrintData(v.value, conf);
                   } else {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未設定${conf.after_word}`;
                     row.value = before_word + "未設定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   }
                 }
                 break;
@@ -1342,10 +1349,10 @@ export default {
                   param.category != weightScaleClass.after
                 ) {
                   // 前体重でも後体重でも予定なし（前体重）でもない
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}未設定${conf.after_word}`;
                   row.value = before_word + "未設定" + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 } else {
                   // 前体重か後体重かで変数の値が変わる
                   let v1 = null;
@@ -1360,15 +1367,15 @@ export default {
                   const v2 = state.params.find((p) => p.code === "[dw]");
 
                   if (v1 === null || v1.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else if (v2 === null || v2.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未設定${conf.after_word}`;
                     row.value = before_word + "未設定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else {
                     const n = new BigNumber(v1.value)
                       .minus(v2.value)
@@ -1387,10 +1394,10 @@ export default {
                   param.category != weightScaleClass.after
                 ) {
                   // 前体重でも後体重でも予定なし（前体重）でもない
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}未設定${conf.after_word}`;
                   row.value = before_word + "未設定" + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 } else {
                   // 前体重か後体重かで変数の値が変わる
                   let v1 = null;
@@ -1405,15 +1412,15 @@ export default {
                   const v2 = state.params.find((p) => p.code === "[dw]");
 
                   if (v1 === null || v1.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else if (v2 === null || v2.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未設定${conf.after_word}`;
                     row.value = before_word + "未設定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else {
                     const n = new BigNumber(v1.value)
                       .div(new BigNumber(v2.value).div(100))
@@ -1431,10 +1438,10 @@ export default {
                   param.category != weightScaleClass.after
                 ) {
                   // 前体重でも後体重でも予定なし（前体重）でもない
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}未設定${conf.after_word}`;
                   row.value = before_word + "未設定" + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 } else {
                   // 前体重か後体重かで変数の値が変わる
                   let v1 = null;
@@ -1449,15 +1456,15 @@ export default {
                   const v2 = state.params.find((p) => p.code === "[tw]");
 
                   if (v1 === null || v1.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else if (v2 === null || v2.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未設定${conf.after_word}`;
                     row.value = before_word + "未設定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else {
                     const n = new BigNumber(v1.value)
                       .minus(v2.value)
@@ -1475,10 +1482,10 @@ export default {
                   param.category != weightScaleClass.after
                 ) {
                   // 前体重でも後体重でも予定なし（前体重）でもない
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}未設定${conf.after_word}`;
                   row.value = before_word + "未設定" + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 } else {
                   // 前体重か後体重かで変数の値が変わる
                   let v1 = null;
@@ -1493,15 +1500,15 @@ export default {
                   const v2 = state.params.find((p) => p.code === "[tw]");
 
                   if (v1 === null || v1.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else if (v2 === null || v2.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未設定${conf.after_word}`;
                     row.value = before_word + "未設定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else {
                     const n = new BigNumber(v1.value)
                       .div(new BigNumber(v2.value).div(100))
@@ -1519,10 +1526,10 @@ export default {
                   param.category != weightScaleClass.after
                 ) {
                   // 前体重でも後体重でも予定なし（前体重）でもない
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}未設定${conf.after_word}`;
                   row.value = before_word + "未設定" + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 } else {
                   // 前体重か後体重かで変数の値が変わる
                   let v1 = null;
@@ -1539,15 +1546,15 @@ export default {
                   }
 
                   if (v1 === null || v1.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else if (v2 === null || v2.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else {
                     const n = new BigNumber(v1.value)
                       .minus(v2.value)
@@ -1565,10 +1572,10 @@ export default {
                   param.category != weightScaleClass.after
                 ) {
                   // 前体重でも後体重でも予定なし（前体重）でもない
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}未設定${conf.after_word}`;
                   row.value = before_word + "未設定" + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 } else {
                   // 前体重か後体重かで変数の値が変わる
                   let v1 = null;
@@ -1585,15 +1592,15 @@ export default {
                   }
 
                   if (v1 === null || v1.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else if (v2 === null || v2.value === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else {
                     const n = new BigNumber(v1.value)
                       .div(new BigNumber(v2.value).div(100))
@@ -1609,10 +1616,10 @@ export default {
                   param.category != weightScaleClass.after
                 ) {
                   // 前体重でも後体重でも予定なし（前体重）でもない
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}未設定${conf.after_word}`;
                   row.value = before_word + "未設定" + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 } else {
                   // 前体重か後体重かで変数の値が変わる
                   let v1 = null;
@@ -1625,17 +1632,17 @@ export default {
                     v1 = state.params.find((p) => p.code === "[aw]");
                   }
                   if (state.standardCheck.patHeight === null) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}身長未設定${
                     //   conf.after_word
                     // }`;
                     row.value = before_word + "身長未設定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else if (v1 === null || Number(v1.value) <= 0) {
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                     // row.value = `${conf.before_word}未測定${conf.after_word}`;
                     row.value = before_word + "未測定" + after_word;
-                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                    // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                   } else {
                     const metre = new BigNumber(
                       state.standardCheck.patHeight
@@ -1677,19 +1684,19 @@ export default {
                 {
                   let value = "未設定";
                   if (state.printParam.nextSchedule) {
-                    value = moment(state.printParam.nextSchedule).format(
+                    value = dayjs(state.printParam.nextSchedule).format(
                       conf.data_format
                     );
                   }
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}${value}${conf.after_word}`;
                   row.value = before_word + `${value}` + after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 }
                 break;
               case printItemCd.facility: // 施設名称
                 {
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                   // row.value = `${conf.before_word}${
                   //   state.printParam.facilityName
                   // }${conf.after_word}`;
@@ -1697,7 +1704,7 @@ export default {
                     before_word +
                     `${state.printParam.facilityName}` +
                     after_word;
-                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                  // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
                 }
                 break;
               case printItemCd.cut: // 用紙カット
@@ -1750,25 +1757,25 @@ export default {
                 const n = calcAnswer.toNumber();
                 row.value = buildNumberPrintData(n, conf);
               } else {
-                // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+                // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
                 // row.value = `${conf.before_word}"計算失敗"${conf.after_word}`;
                 row.value = before_word + "計算失敗" + after_word;
-                // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+                // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
               }
             } else if (conf.data_type == 1) {
               // #11017 2024.08.22 mod データ日付ではない場合にそのまま出力する TDC米沢 start
               // // 日付の場合
-              // const d = moment(calc).format(conf.data_format);
+              // const d = dayjs(calc).format(conf.data_format);
               let d = calc;
-              if (moment(d).isValid()) {
+              if (dayjs(d).isValid()) {
                 // 日付の場合
-                d = moment(d).format(conf.data_format);
+                d = dayjs(d).format(conf.data_format);
               }
               // #11017 2024.08.22 mod データ日付ではない場合にそのまま出力する TDC米沢 end
-              // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+              // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
               // row.value = `${conf.before_word}${d}${conf.after_word}`;
               row.value = `${before_word}${d}${after_word}`;
-              // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+              // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
             } else {
               // それ以外
               row.value = calc;
@@ -1780,20 +1787,20 @@ export default {
             for (const exam of examResult) {
               if (exam.itemCd == conf.item_cd) {
                 value = exam.result;
-                d = moment(exam.resultExamDate).format(conf.data_format);
+                d = dayjs(exam.resultExamDate).format(conf.data_format);
                 break;
               }
             }
             if (conf.date_position == 0) {
-              // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+              // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
               // row.value = `${d} ${conf.before_word}${value}${conf.after_word}`;
               row.value = `${d} ${before_word}${value}${after_word}`;
-              // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+              // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
             } else {
-              // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 start
+              // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 start
               // row.value = `${conf.before_word}${value}${conf.after_word} ${d}`;
               row.value = `${before_word}${value}${after_word} ${d}`;
-              // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される　吉 end
+              // mod 10152 体重測定時に出力されるレシートに不要なｎｕｌｌが印字される 吉 end
             }
           } else {
             continue;

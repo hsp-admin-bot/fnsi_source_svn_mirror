@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.admin_web.service.master.user;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,8 +33,10 @@ import org.springframework.util.StringUtils;
 import org.springframework.context.annotation.Lazy;
 // #12625 2026.05.13 add 利用者削除時に仮想端末スタッフ一覧から対象ユーザーを削除 end
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import com.google.common.base.CaseFormat;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
@@ -44,6 +45,7 @@ import jp.co.nikkiso.ntss.admin_web.response.masterMaintenance.MasterDataRespons
 import jp.co.nikkiso.ntss.admin_web.response.masterMaintenance.MasterUpdateResponse;
 import jp.co.nikkiso.ntss.admin_web.service.master.facilitySetting.MstFacilitySettingService;
 import jp.co.nikkiso.ntss.admin_web.service.sysSignManager.SysSigninManagerService;
+import jp.co.nikkiso.ntss.admin_web.service.sysSignManager.SysSigninManagerService.ForceSignOutReason;
 import jp.co.nikkiso.ntss.admin_web.service.utils.QRCodeUtils;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.TransactionManagerName;
@@ -92,6 +94,7 @@ import static jp.co.nikkiso.ntss.core.dao.MasterMaintenanceGenericDao.MODAL;
 import static jp.co.nikkiso.ntss.core.dao.MasterMaintenanceGenericDao.OPERATION;
 import static jp.co.nikkiso.ntss.core.dao.MasterMaintenanceGenericDao.SORT_INPUT_TIME;
 import static jp.co.nikkiso.ntss.core.dao.MasterMaintenanceGenericDao.SORT_RANK;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
 @Service
@@ -227,6 +230,10 @@ public class MstUserServiceImpl implements MstUserService {
 
   @Autowired
   private LogServiceCore logServiceCore;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // DB更新ログ出力ロジック wangzuo End
 
   @Autowired
@@ -444,6 +451,18 @@ public class MstUserServiceImpl implements MstUserService {
 
     return mstUserDataList;
   }
+
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Override
+  public MstUser getByUserId(long userId) {
+    return mstUserDao.selectById(userId);
+  }
+
+  @Override
+  public MstUserAuthentication selectMstUserAuthenticationByUserId(Long userId) {
+    return mstUserAuthenticationDao.selectById(userId);
+  }
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
   /**
    * {@inheritDoc}
@@ -1047,7 +1066,7 @@ public class MstUserServiceImpl implements MstUserService {
           // ここで型が変わると突合せが壊れる。比較のみ asText() で文字列化し、
           // 書き戻し時は元 JsonNode をそのまま set() して型を保つ。
           boolean changed = false;
-          com.fasterxml.jackson.databind.node.ArrayNode newStaffList = comsvMapper.createArrayNode();
+          ArrayNode newStaffList = comsvMapper.createArrayNode();
           int newNo = 1;
           for (JsonNode staffNode : staffListNode) {
             JsonNode userIdNode = staffNode.get("user_id");
@@ -1056,7 +1075,7 @@ public class MstUserServiceImpl implements MstUserService {
               // 削除対象ユーザーのため除外
               changed = true;
             } else {
-              com.fasterxml.jackson.databind.node.ObjectNode newStaff = comsvMapper.createObjectNode();
+              ObjectNode newStaff = comsvMapper.createObjectNode();
               newStaff.put("no", newNo++);
               if (userIdNode != null) {
                 newStaff.set("user_id", userIdNode);
@@ -1065,8 +1084,8 @@ public class MstUserServiceImpl implements MstUserService {
             }
           }
           if (changed) {
-            // lcd_staff_list を更新
-            com.fasterxml.jackson.databind.node.ObjectNode newRoot = comsvMapper.createObjectNode();
+          	// lcd_staff_list を更新
+            ObjectNode newRoot = comsvMapper.createObjectNode();
             newRoot.set("staff_list", newStaffList);
             comsvSetting.setLcdStaffList(comsvMapper.writeValueAsString(newRoot));
             LogEventUtils.setOperatorId(comsvSetting,logService);
@@ -1078,7 +1097,7 @@ public class MstUserServiceImpl implements MstUserService {
               notifyDeviceEdgeNos.add(comsvSetting.getDeviceEdgeNo());
             }
           }
-        } catch (IOException e) {
+        } catch (tools.jackson.core.JacksonException e) {
           // lcd_staff_list の JSON が壊れている等で読み書きに失敗した場合は、
           // 当該1件分のみスキップして次のレコード処理へ進む。
 //        e.printStackTrace();
@@ -1096,7 +1115,8 @@ public class MstUserServiceImpl implements MstUserService {
     // 削除された利用者をタイムアウトさせる
     // mod #9386 施設設定マスタNo64で有効として権限を編集しても対象のアカウントが強制サインアウトされない dou start
     // sysSigninManagerService.signOutUser(userId);
-    sysSigninManagerService.signOutUserForMultiServer(newMstUser.getFacilityCd(), userId);
+    sysSigninManagerService.signOutUserForMultiServer(newMstUser.getFacilityCd(), userId,
+      ForceSignOutReason.USER_DELETED);
     // mod #9386 施設設定マスタNo64で有効として権限を編集しても対象のアカウントが強制サインアウトされない dou end
     // 成功レスポンス返却
     // #12625 2026.05.13 mod 利用者削除時に仮想端末スタッフ一覧から対象ユーザーを削除 start
@@ -1612,6 +1632,7 @@ public class MstUserServiceImpl implements MstUserService {
       CoreConstant.FacilitySettingNo.AUTHORITY_CHANGE_SIGN_OUT
     );
     boolean signOutFlg = false;
+    ForceSignOutReason signOutReason = ForceSignOutReason.USER_AUTHORITY_CHANGED;
     // add #9386 施設設定マスタNo64で有効として権限を編集しても対象のアカウントが強制サインアウトされない dou end
 
     if ( mstUser.getUserSettings() == null ) {
@@ -1643,7 +1664,7 @@ public class MstUserServiceImpl implements MstUserService {
         if (mstJob.get(0).getDefaultDispSettings() != null && !mstJob.get(0).getDefaultDispSettings().isEmpty()) {
           try {
             defautSetting = mapper.readTree(mstJob.get(0).getDefaultDispSettings());
-          } catch (IOException  e) {
+          } catch (tools.jackson.core.JacksonException e) {
             return new MasterUpdateResponse(AdminWebMessage.Error.DB_UPDATE_ERROR.getMessage());
           }
         }
@@ -1684,7 +1705,7 @@ public class MstUserServiceImpl implements MstUserService {
           if (mstJob.get(0).getDefaultDispSettings() != null && !mstJob.get(0).getDefaultDispSettings().isEmpty()) {
             try {
               defautSetting = mapper.readTree(mstJob.get(0).getDefaultDispSettings());
-            } catch (IOException  e) {
+            } catch (tools.jackson.core.JacksonException e) {
               return new MasterUpdateResponse(AdminWebMessage.Error.DB_UPDATE_ERROR.getMessage());
             }
           }
@@ -1715,6 +1736,8 @@ public class MstUserServiceImpl implements MstUserService {
             boolean isAddAuth = defaultAuthorizedAuthorities.containsAll(userSettings.getAuthorizedAuthorities());
             if (!isAddFunc || !isAddAuth) {
               signOutFlg = true;
+              signOutReason = !isAddFunc ? ForceSignOutReason.USE_AUTH_FUNCTION_CHANGED
+                : ForceSignOutReason.USER_AUTHORITY_CHANGED;
             }
           }
           // add #9386 施設設定マスタNo64で有効として権限を編集しても対象のアカウントが強制サインアウトされない dou end
@@ -1781,7 +1804,7 @@ public class MstUserServiceImpl implements MstUserService {
     // add #9386 施設設定マスタNo64で有効として権限を編集しても対象のアカウントが強制サインアウトされない dou start
     if (signOutFlg) {
       // 権限を変更した利用者をサインアウトさせる
-      sysSigninManagerService.signOutUserForMultiServer(mstUser.getFacilityCd(), userId);
+      sysSigninManagerService.signOutUserForMultiServer(mstUser.getFacilityCd(), userId, signOutReason);
     }
     // add #9386 施設設定マスタNo64で有効として権限を編集しても対象のアカウントが強制サインアウトされない dou end
     // 成功レスポンス返却
@@ -2113,7 +2136,7 @@ public class MstUserServiceImpl implements MstUserService {
     wheres.append(" WHERE\n");
     wheres.append(" user_id = " + userId + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(mstUserDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -2178,11 +2201,11 @@ public class MstUserServiceImpl implements MstUserService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

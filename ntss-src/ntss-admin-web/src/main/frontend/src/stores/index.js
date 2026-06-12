@@ -1,8 +1,9 @@
 /**
  * Vuex - Store 定義（Module分割取りまとめ）
+ * Vue3 / Vuex4 移行版
+ * 既存 module key・dispatch path・getter path は極力維持する
  */
-import Vue from "vue";
-import Vuex from "vuex";
+import { createStore } from "@/compat/vue/vuex";
 
 import ApplicationStore from "@/stores/ApplicationStore";
 import BreadCrumbStore from "@/stores/BreadCrumbStore";
@@ -71,11 +72,13 @@ import { APPLICATION_LIST_STORES } from "@/stores/application-list";
 import { DATA_LIST_STORE } from "@/stores/data-list";
 import { PAT_LIST_LAYOUT_STORES } from "@/stores/pat-list-layout";
 import { USER_SELECTOR_POPOVER } from "@/stores/pop-over/user-selector";
-import { SYS_FACILITY_STORE } from "@/stores/sys-facility";
 import { PAT_INFO_SHARING_STORES } from "@/stores/pat-info-sharing";
 // #11987 2026.01.11 add スケールベッド対応 スケールベッド測定用Stores追加 TDC渡辺 start
 import { SCALE_BED_STORES } from "@/stores/scale-bed";
 // #11987 2026.01.11 add スケールベッド対応 スケールベッド測定用Stores追加 TDC渡辺 edit
+
+// 共通患者情報ヘッダ用 Store（既存参照パス互換のため root modules に配置）
+import CommonPatientInformationHeaderStore from "@/stores/modules/common/CommonPatientInformationHeaderStore";
 
 // stores直下のSTORE(modules)定義
 const MODULES = {
@@ -87,7 +90,8 @@ const MODULES = {
   websocket: WebSocketStore,
   "websocket-card": WebSocketCardStore,
   report: ReportStore,
-  "loading-screen": LoadingScreenStore
+  "loading-screen": LoadingScreenStore,
+  patInfoHeader: CommonPatientInformationHeaderStore
 };
 
 // 機能別STORE定義の配列
@@ -106,7 +110,7 @@ const STORES = [
   // #11987 2026.01.11 add スケールベッド対応 スケールベッド測定用Stores追加 TDC渡辺 edit
   TREND_GRAPH_STORES,
   TREATMENT_RECORD_STORES,
-  OBSERVE_RECORD_STORES,
+  // Vue2 では OBSERVE_RECORD_STORES がここで重複していた（冪等のため実挙動は同じ）。Vue3 では重複登録を削除。
   DATA_LIST_STORE,
   //  MASTER_STORES,
   PAT_INFO_STORES,
@@ -152,100 +156,110 @@ const STORES = [
   PAT_LIST_LAYOUT_STORES,
   USER_SELECTOR_POPOVER,
   SPLIT_GRAPH,
-  SYS_FACILITY_STORE,
   PAT_INFO_SHARING_STORES,
   SCALE_BED_STORES,
 ];
 
 // MODULESに機能別のSTORE定義を追加
-STORES.forEach(store => {
-  Object.keys(store).forEach(key => {
+STORES.forEach((store) => {
+  Object.keys(store).forEach((key) => {
     MODULES[key] = store[key];
   });
 });
 
 // オブジェクト内の配列の内容を削除する
 const deleteDataItem = (state, submoduleList = []) => {
-  const keys = Object.keys(state).filter(key => !submoduleList.includes(key));
-  keys.forEach(key => {
+  const keys = Object.keys(state).filter((key) => !submoduleList.includes(key));
+  keys.forEach((key) => {
     const value = state[key];
     if (typeof value !== "object" || value === null) return;
-    if (value instanceof Array) {
+
+    if (Array.isArray(value)) {
       if (value.length > 0) {
-        value.splice(0);
+      value.splice(0);
       }
     } else {
       deleteDataItem(value);
     }
   });
 };
+
 // stateの配列内容削除用mutation関数名
-const DeleterName = "deleteAllStateData";
+const DELETER_NAME = "deleteAllStateData";
+
 // モジュールのmutationに追加するstate内の配列内容削除用関数を生成する
 const makeStateDataItemDeleter = (submoduleList, modulePath) => {
   return (state) => {
     if (state) {
       deleteDataItem(state, submoduleList);
     } else {
-      console.warn(`${DeleterName}: modulePath:${modulePath}, state:${state}.`);
+      console.warn(`${DELETER_NAME}: modulePath:${modulePath}, state:${state}.`);
     }
   };
 };
 
 // copyInitialStateで処理対象外とするモジュールパスのリスト
-const ExcludePathList = [
+const EXCLUDE_PATH_LIST = [
   "app",
   "websocket",
   "websocket-card",
 ];
+
 const modulePathList = [];
+
 // 各モジュールにstateの配列内容削除用mutation関数を追加しつつモジュールパスリストを作成する
 const modifyModules = (modules, path) => {
-  Object.keys(modules).forEach(key => {
+  Object.keys(modules).forEach((key) => {
     const modulePath = path ? `${path}/${key}` : key;
-    if (ExcludePathList.includes(modulePath)) return;
+    if (EXCLUDE_PATH_LIST.includes(modulePath)) return;
 
     const module = modules[key];
     if (module.state) {
       if (!module.mutations) {
         module.mutations = {};
       }
-      if (!module.mutations[DeleterName]) {
+
+      if (!module.mutations[DELETER_NAME]) {
         const submoduleList = [];
         if (module.modules) {
           submoduleList.push(
-            ...Object.keys(module.modules).filter(submodule => module.modules[submodule].state)
+            ...Object.keys(module.modules).filter(
+              (submodule) => module.modules[submodule].state
+            )
           );
         }
-        module.mutations[DeleterName] = makeStateDataItemDeleter(submoduleList, modulePath);
+
+        module.mutations[DELETER_NAME] = makeStateDataItemDeleter(submoduleList, modulePath);
+
         if (!modulePathList.includes(modulePath)) {
           modulePathList.push(modulePath);
         } else {
           console.warn(`modifyModules: modulePath<${modulePath}> is already exists in modulePathList.`);
         }
       } else {
-        console.warn(`modifyModules: module[${modulePath}].mutations.${DeleterName} is already exists.`);
+        console.warn(`modifyModules: module[${modulePath}].mutations.${DELETER_NAME} is already exists.`);
       }
     }
+
     if (module.modules) {
       modifyModules(module.modules, modulePath);
     }
   });
 };
+
 modifyModules(MODULES, "");
 
 // モジュール名リストを元にstateの配列内容削除用mutation関数を実行する
 export const deleteAllStateDataItem = () => {
   modulePathList.forEach((path) => {
-    vuexStore.commit(`${path}/${DeleterName}`);
+    vuexStore.commit(`${path}/${DELETER_NAME}`);
   });
 };
 
 // STORE定義
-Vue.use(Vuex);
-const vuexStore = new Vuex.Store({
+const vuexStore = createStore({
   namespaced: true,
-  modules: MODULES,
+  modules: MODULES
   /* delete by chamaojia 2022-12-06 [5958] vuexでの持続化を必要としないデータ持続化方式の変更（パフォーマンスに影響） --start */
   // plugins: [
   //   createPersistedState({
@@ -255,4 +269,5 @@ const vuexStore = new Vuex.Store({
   // ]
   /* delete by chamaojia 2022-12-06 [5958] vuexでの持続化を必要としないデータ持続化方式の変更（パフォーマンスに影響） --end */
 });
+
 export default vuexStore;

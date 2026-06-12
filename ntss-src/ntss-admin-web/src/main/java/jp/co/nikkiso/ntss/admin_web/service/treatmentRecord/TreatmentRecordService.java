@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.service.treatmentRecord;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import jp.co.nikkiso.ntss.admin_web.response.treatmentRecord.TreatmentRecordSummary;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.core.entity.MniMonitor;
@@ -149,10 +149,10 @@ public interface TreatmentRecordService {
    * @param treatmentRecordWeight 体重情報
    * @throws NotExistException オーダー番号に該当するレコードが存在しない場合
    */
-  /* modify by chamaojia 2024-07-05 [10774] Add handling of JsonProcessingException exceptions --start */
+  /* modify by chamaojia 2024-07-05 [10774] Add handling of JacksonException exceptions --start */
   void updateTreatmentRecordWeight(Long ordNo, TreatmentRecordWeight treatmentRecordWeight)
-          throws NotExistException, JsonProcessingException;
-  /* modify by chamaojia 2024-07-05 [10774] Add handling of JsonProcessingException exceptions --end */
+          throws NotExistException, JacksonException;
+  /* modify by chamaojia 2024-07-05 [10774] Add handling of JacksonException exceptions --end */
 
   /**
    * 治療記録（医療材料情報）の取得

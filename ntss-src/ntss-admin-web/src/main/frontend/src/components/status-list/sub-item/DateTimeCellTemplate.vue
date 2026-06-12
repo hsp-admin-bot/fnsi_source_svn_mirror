@@ -9,7 +9,7 @@
 </template>
 
 <script>
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 export default {
   props: {
@@ -30,22 +30,21 @@ export default {
       dateTimeStr: ""
     };
   },
-  computed: {},
   methods: {
     onClick() {
       if (this.dateTimeStr !== "") {
-        this.$set(this.dataItem, "inEdit", this.field);
+        ((this.dataItem)["inEdit"] = this.field);
         this.$emit("editStart");
       }
     },
     changeDateTime(e) {
       if (
-        moment(this.dataItem[this.field]).format("YYYY-MM-DDTHH:mm") ===
+        dayjs(this.dataItem[this.field]).format("YYYY-MM-DDTHH:mm") ===
         this.dateTimeStr
       ) {
         // 変更なし
       } else {
-        const changedValue = moment(
+        const changedValue = dayjs(
           this.dateTimeStr,
           "YYYY/MM/DDTHH:mm"
         ).toDate();
@@ -67,7 +66,7 @@ export default {
     ) {
       this.dateTimeStr = "";
     } else {
-      this.dateTimeStr = moment(this.dataItem[this.field]).format(
+      this.dateTimeStr = dayjs(this.dataItem[this.field]).format(
         "YYYY-MM-DDTHH:mm"
       );
     }

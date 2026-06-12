@@ -19,8 +19,8 @@ import org.seasar.doma.jdbc.entity.NamingType;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.entity.entityListener.BaseEntityListener;
 import lombok.Getter;
@@ -205,7 +205,7 @@ public class OrdChecklist extends BaseEntity  implements Cloneable{
       try {
         OrdChecklistRegCheckInfo obj = objectMapper.readValue(value, OrdChecklistRegCheckInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang end
@@ -228,7 +228,7 @@ public class OrdChecklist extends BaseEntity  implements Cloneable{
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -300,7 +300,7 @@ public class OrdChecklist extends BaseEntity  implements Cloneable{
       try {
         OrdChecklistRegStaffInfo obj = objectMapper.readValue(value, OrdChecklistRegStaffInfo.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 del yangxuewang end
@@ -323,7 +323,7 @@ public class OrdChecklist extends BaseEntity  implements Cloneable{
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }

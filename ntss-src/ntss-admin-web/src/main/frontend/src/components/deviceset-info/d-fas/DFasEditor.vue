@@ -370,7 +370,7 @@
               v-if="!isTreatRecord"
               class="common-style-ok-button"
               @click="saveConfirm()"
-              :disabled="!getItemAuthorized('DevicesetInfo', 'default_authority')"
+              :disabled="!getItemAuthorized('DevicesetInfo', 'default_authority') || getIsOtherFacility"
             >
             <!-- mod #10359 編集権限の動作不正 dengshen end -->
               {{ saveButtonLabel }}
@@ -380,18 +380,18 @@
       </div>
 
       <message-dialog
-        :visible.sync="isDialogVisble"
+        v-model:visible="isDialogVisble"
         v-bind="dialogProps"
         type="1"
       />
       <message-dialog
-        :visible.sync="isCancelDialogVisble"
+        v-model:visible="isCancelDialogVisble"
         v-bind="dialogProps"
         type="2"
         @confirm="cancelEdit"
       />
       <message-dialog
-        :visible.sync="isUpdateAllPatDialogVisble"
+        v-model:visible="isUpdateAllPatDialogVisble"
         v-bind="dialogProps"
         type="5"
         @confirm="setUpdateAllPatFlg"
@@ -407,9 +407,9 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 import { DEVICE_TYPE_DFAS } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
 import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoEditor.vue";
 import {getDeviceSetInfoMst} from "@/components/deviceset-info/base-modules/DeviceSetInfoFunctions";
-import {mapGetters} from "vuex";
+import {mapGetters} from "@/compat/vue/vuex";
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
 
 /**
@@ -427,7 +427,7 @@ export default {
 
   computed: {
     ...mapGetters("master-maintenance", {getFacilitySwitch: "getFacilitySwitch"}),
-    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd"]),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     /**
      * @description BV編集値
      * @returns {Array} 入力項目テキストボックスタイプNumber
@@ -483,7 +483,7 @@ export default {
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return getAuthorized(pageCd, itemCd);
+      return !this.getIsOtherFacility && getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
 
@@ -509,10 +509,10 @@ export default {
   //add FNSI修正 装置設定バッグ改修 房 end
   async created() {
     this.deviceSetInfoMst = await getDeviceSetInfoMst(
-      this.getFacilitySwitch
-    )
+      this.getFacilitySwitch,
+      this.selectedPatId)
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -529,8 +529,11 @@ export default {
   .device-info-cell-name {
     flex: 0 0 35%;
   }
-  .device-info-cell-value >>> .custom-radio {
+  .device-info-cell-value :deep(.custom-radio) {
     display: block;
   }
+}
+.device-info-cell-value :deep(.custom-common-number-input-pro) {
+  width: 6em;
 }
 </style>

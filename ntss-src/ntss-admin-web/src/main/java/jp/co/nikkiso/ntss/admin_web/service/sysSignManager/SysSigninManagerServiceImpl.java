@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.service.sysSignManager;
 
-import com.amazonaws.util.EC2MetadataUtils;
+import jp.co.nikkiso.ntss.core.utils.Ec2MetadataHelper;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.response.LoginResponse;
@@ -156,7 +156,7 @@ public class SysSigninManagerServiceImpl implements SysSigninManagerService {
       }
       logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang end
-      ip = EC2MetadataUtils.getInstanceInfo().getPrivateIp();
+      ip = Ec2MetadataHelper.getPrivateIp();
     }
     sysSigninManager.setServerIp(ip);
     // add 11587 by kangjie 20250226 end

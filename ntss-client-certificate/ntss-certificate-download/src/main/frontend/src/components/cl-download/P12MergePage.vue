@@ -137,8 +137,8 @@ export default {
     onFileChange(event, index) {
       const file = event.target.files[0];
       if (file) {
-        this.$set(this.rows[index], "file", file);
-        this.$set(this.rows[index], "fileName", file.name);
+        this.rows[index].file = file;
+        this.rows[index].fileName = file.name;
       }
     },
 
@@ -229,7 +229,7 @@ export default {
             router.push({ name: "clDownloadLogin" });
           }
         });
-      } catch (e) {
+      } catch {
         this.resetLoadingScreenVisibleCount();
         this.showAlert(
           "証明書の生成に失敗しました。パスワードまたはファイルを確認してください。"

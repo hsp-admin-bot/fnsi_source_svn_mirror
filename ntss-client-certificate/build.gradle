@@ -1,20 +1,73 @@
 allprojects {
   group = 'jp.co.nikkiso.ntss'
   version = '0.0.1-SNAPSHOT'
+  repositories {
+    mavenLocal()
+    mavenCentral()
+    maven { url = uri('https://start.spring.io/milestone') }
+    maven { url = uri('https://start.spring.io/snapshot') }
+    maven { url = uri('https://repository.jboss.org/nexus/content/repositories/releases') }
+    maven { url = uri('https://oss.sonatype.org/content/repositories/releases') }
+    maven { url = uri('https://oss.sonatype.org/content/repositories/snapshots') }
+    maven { url = uri('https://repo.maven.apache.org/maven2') }
+  }
 }
 
 subprojects {
   apply plugin: 'java'
-  apply plugin: "jacoco"
-  sourceCompatibility=17
-  targetCompatibility=17
-  def defaultEncoding = "UTF-8"
-  tasks.withType(AbstractCompile).each {
-    it.options.encoding = defaultEncoding
+  apply plugin: 'jacoco'
+
+  def javaLanguageVersion = Integer.parseInt(findProperty('java_language_version').toString())
+  def springBootBom = "org.springframework.boot:spring-boot-dependencies:${rootProject.findProperty('spring_boot_version')}"
+  def tomcatVersion = rootProject.findProperty('tomcat_version').toString()
+
+  java {
+    toolchain {
+      languageVersion = JavaLanguageVersion.of(javaLanguageVersion)
+    }
   }
-  
-  // ntss-coreへの依存関係
+
+  def defaultEncoding = 'UTF-8'
+  tasks.withType(AbstractCompile).configureEach {
+    options.encoding = defaultEncoding
+  }
+  tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-parameters', '-proc:full']
+  }
+
+  // Spring Boot 4.0.6 manages Tomcat 11.0.21; pin the patched Tomcat line for security scanners.
+  configurations.configureEach {
+    resolutionStrategy.force(
+      "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}",
+      "org.apache.tomcat.embed:tomcat-embed-el:${tomcatVersion}",
+      "org.apache.tomcat.embed:tomcat-embed-websocket:${tomcatVersion}"
+    )
+  }
+
+  pluginManager.withPlugin('io.spring.dependency-management') {
+    dependencyManagement {
+      imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:${rootProject.findProperty('spring_boot_version')}"
+        mavenBom "io.netty:netty-bom:${rootProject.findProperty('netty_version')}"
+      }
+      dependencies {
+        dependency "org.postgresql:postgresql:${rootProject.findProperty('postgresql_version')}"
+        dependency "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}"
+        dependency "org.apache.tomcat.embed:tomcat-embed-el:${tomcatVersion}"
+        dependency "org.apache.tomcat.embed:tomcat-embed-websocket:${tomcatVersion}"
+      }
+    }
+  }
+
+  dependencies {
+    implementation platform(springBootBom)
+    annotationProcessor platform(springBootBom)
+    testImplementation platform(springBootBom)
+    testAnnotationProcessor platform(springBootBom)
+  }
+
   if (project.name in ['ntss-core']) return
+
   dependencies {
     implementation project(':ntss-core')
   }

@@ -16,8 +16,9 @@ spring:
       username: nkk4
       password: nkk4
   jackson:
-    serialization:
-      WRITE_DATES_AS_TIMESTAMPS: false
+    datatype:
+      datetime:
+        WRITE_DATES_AS_TIMESTAMPS: false
 
 doma:
   dialect: postgres
@@ -37,4 +38,3 @@ ntss:
   device-edge:
     rest:
       download: http://localhost:8080/ntss-admin-web/api/motion_record/detail/gathering/download
-  

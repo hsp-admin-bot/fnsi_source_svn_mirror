@@ -1,9 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.service.statusList.dto.monitorData;
 
-import java.io.IOException;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
 
@@ -84,7 +83,7 @@ public class MonitorDataDAB implements MonitorData {
    * @param moniData モニタデータのJSON文字列
    */
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
-  public MonitorDataDAB(String moniData)  throws IOException {
+  public MonitorDataDAB(String moniData)  throws tools.jackson.core.JacksonException {
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
     if (moniData != null && !moniData.isEmpty()) {
       // 引数を展開
@@ -192,7 +191,7 @@ public class MonitorDataDAB implements MonitorData {
    * @param moniDataJsonString バイタル情報のJSON文字列
    */
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
-  private void setItems(String moniDataJsonString) throws IOException {
+  private void setItems(String moniDataJsonString) throws tools.jackson.core.JacksonException {
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
     final String CONC_UNIT = "mS/cm";
     final String TEMP_UNIT = "℃";
@@ -321,7 +320,7 @@ public class MonitorDataDAB implements MonitorData {
         this.sendingPressureAlarmPoint_Lower.value = this.getJsonValueByKey(jsonNode, "32");
         this.sendingPressureAlarmPoint_Lower.Unit = PRESSURE_UNIT;
 
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end

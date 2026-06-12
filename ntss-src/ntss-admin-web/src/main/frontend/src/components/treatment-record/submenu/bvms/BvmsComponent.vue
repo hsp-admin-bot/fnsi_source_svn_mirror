@@ -1,6 +1,7 @@
 <template>
   <submenu-base>
-    <div slot="header">
+    <template #header>
+      <div>
        <!-- mod FNSI-8360 ljx start -->
 <!--      <div class="btn-area">
         <v-ons-button
@@ -40,8 +41,10 @@
         </v-ons-select>
       </div>
       <!-- mod FNSI-8360 ljx end -->
-    </div>
-    <div slot="main" :style="{ width: '100%' }" id="bvms-component">
+      </div>
+    </template>
+    <template #main>
+      <div :style="{ width: '100%' }" id="bvms-component">
       <div class="chart-area" :style="heightStyles">
         <div class="chart-selection-area">
           <v-ons-select
@@ -138,18 +141,19 @@
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </template>
   </submenu-base>
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import SubmenuBase from "@/components/treatment-record/SubmenuBaseComponent";
 import { CODES } from "@/constants/TreatmentRecord";
 import { HISTORY_KEY_TREATMENT_RECORD_BVMS } from "@/router/treatment-record/HistoryKeyConstants.js";
 import ChartComponent from "@/components/treatment-record/submenu/bvms/BvmsGraphComponent";
 import { Graphs } from "@/models/treatment-record/bvms/Graphs";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 // add FNSI-権限関連-治療記録 孫灝 start
 /**
@@ -163,6 +167,7 @@ import { getAuthorized } from "@/functions/common/CommonFunctions";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getLayoutRootElement, getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 end
 export default {
@@ -210,6 +215,7 @@ export default {
     ]),
 
     ...mapGetters("user", ["getFacilityCd"]),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     // add FNSI-修正 共有設定 トウ end
     heightStyles() {
       return { height: `${this.componentAreaHeight}px` };
@@ -277,16 +283,14 @@ export default {
     },
     //#10359 add 編集権限の動作不正 2024-06-05 卓 end
     adjustHeight() {
-      const submenuMainHeight = document.getElementsByClassName(
-        "submenu-main"
-      )[0].clientHeight;
+      const submenuMain = this.$el?.closest?.(".submenu-main") || getScopedElementsByClassName("submenu-main", getLayoutRootElement(this.$el || this) || this.$el || this)[0];
+      const submenuMainHeight = submenuMain?.clientHeight || 0;
       this.componentAreaHeight = (submenuMainHeight - 10) / 2;
     },
     handleResizeWindow() {
-      if (document.getElementById("bvms-component")) {
-        this.currentWidthScreen = document.getElementById(
-          "bvms-component"
-        ).clientWidth;
+      const bvmsComponent = this.$el?.id === "bvms-component" ? this.$el : getScopedElementById("bvms-component", this.$el || this);
+      if (bvmsComponent) {
+        this.currentWidthScreen = bvmsComponent.clientWidth;
       }
     },
     onClickBvmsGraphCommentCreate() {
@@ -549,6 +553,7 @@ export default {
         }
       }
       result.ordNo = this.getOrdNo;
+      result.selectedPatId = this.selectedPatId;
       result.files = this.fileinput;
       result.isUpload = this.isUpload;
       return result;
@@ -597,7 +602,8 @@ export default {
     });
   },
   created() {
-    window.addEventListener("resize", this.handleResizeWindow, false);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.handleResizeWindow, false);
+    EventBus.$off("switchSidebar", this.handleResizeWindow);
     EventBus.$on("switchSidebar", this.handleResizeWindow);
     this.initGraph();
     // add FNSI-治療記錄の權限取得 孫灝 start
@@ -609,9 +615,9 @@ export default {
       this.adjustHeight();
     });
   },
-  beforeDestroy() {
-    EventBus.$off("switchSidebar");
-    window.removeEventListener("resize", this.handleResizeWindow, false);
+  beforeUnmount() {
+    EventBus.$off("switchSidebar", this.handleResizeWindow);
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.handleResizeWindow, false);
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   }

@@ -24,16 +24,16 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.apache.commons.beanutils.BeanUtils;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.seasar.doma.jdbc.SelectOptions;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlConfig;
@@ -41,7 +41,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.JavaType;
+import tools.jackson.databind.JavaType;
 import com.google.common.collect.Maps;
 
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
@@ -82,43 +82,43 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class JournalConvertReceiveResourceTest extends AbstractResourceTest {
 
-  @SpyBean
+  @MockitoSpyBean
   private MstDiseaseDao mstDiseaseDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private MstDialysisDifficultyDao mstDialysisDifficultyDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private ConvertCommonService convertCommonService;
 
-  @SpyBean
+  @MockitoSpyBean
   private SysCoopJournalDao sysCoopJournalDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatPersonalMainDao patPersonalMainDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatMainDao patMainDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatExamMainDao patExamMainDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatObsRecDao patObsRecDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatUniqueDao patUniqueDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatCoopDetailDao patCoopDetailDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatInsuranceDao patInsuranceDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private OrdMainDao ordMainDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private OrdCoopNoDao ordCoopNoDao;
 
   @Sql("classpath:resource.script/JournalConvertReceiveResourceTest/S_hosp/clean_db5.sql")

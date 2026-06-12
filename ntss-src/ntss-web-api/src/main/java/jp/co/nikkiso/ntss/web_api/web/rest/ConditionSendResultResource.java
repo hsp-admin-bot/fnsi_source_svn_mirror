@@ -2,7 +2,7 @@ package jp.co.nikkiso.ntss.web_api.web.rest;
 
 import java.util.HashMap;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 
 import jp.co.nikkiso.ntss.api.service.utils.ConditionSendResultUtil;

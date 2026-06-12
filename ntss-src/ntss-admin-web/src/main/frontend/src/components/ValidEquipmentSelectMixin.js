@@ -17,10 +17,10 @@
  * ダイアライザのコンポーネント内部展開コードはdialyzer{n}とする(例. 10 -> "dialyzer10")。</p>
  *
  */
-import { mapMutations, mapGetters } from "vuex";
+import { mapMutations, mapGetters } from "@/compat/vue/vuex";
 
 // 治療開始日の設定
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // 部材(医療材料・ダイアライザ)の医療材料区分 equipType に関する共通関数
 import { 
   encryptPersistentCodeToInternalCd, 
@@ -41,7 +41,7 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 // 定数関連(削除済み、期限切れ)
 import { MASTER_DELETE_DISPLAY, MASTER_TERM_CUT } from "@/constants/TreatmentRecord";
 // コンポーネント間イベント送信
-import { EventBus } from "@/eventBus";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //【削除済】、【期限切れ】の部材名をプルダウンのリストに追加する際に利用
 import { deepCopy } from "@/functions/common/CommonFunctions";
 
@@ -139,7 +139,7 @@ export default {
    */
   created() {
     // 部材の期限切れ判定のために、治療開始日(=マスタメンテナンス画面を開いている日)をセット
-    this.setIndStartDate(moment().format("YYYY-MM-DD"));
+    this.setIndStartDate(dayjs().format("YYYY-MM-DD"));
     // ポップオーバー画面の表示・非表示の初期化
     this.closePopover();
   },
@@ -290,9 +290,9 @@ export default {
       // 材料が未選択の場合はそれぞれのフィールドの初期値とする
       if (cd == null || this.mstEquipmentDialyzerIncludedDeleted == null) return retVal;
 
-      //#8484　医療材料選択IFのリスト不正(#9896対応)　Start 
+      //#8484 医療材料選択IFのリスト不正(#9896対応) Start 
       // TODO:医療材料区分カラムが追加されていない過去の治療方法セットマスタの考慮
-      //　医療材料区分カラムがNull又は空白の場合は医療材料とみなす（医療材料区分コード：0にてマスタの存在チェックを行う）
+      // 医療材料区分カラムがNull又は空白の場合は医療材料とみなす（医療材料区分コード：0にてマスタの存在チェックを行う）
       const chk_equipType = (equipType == null || equipType === "") ? 0 : equipType;
 
       const selectedRecord = this.mstEquipmentDialyzerIncludedDeleted.find(item => (
@@ -306,7 +306,7 @@ export default {
         name: this.setPrefixToEquipmentName(selectedRecord, chk_equipType),
         unit: selectedRecord.unit,
       };
-      //#8484　医療材料選択IFのリスト不正(#9896対応)　End
+      //#8484 医療材料選択IFのリスト不正(#9896対応) End
     },
 
     /**

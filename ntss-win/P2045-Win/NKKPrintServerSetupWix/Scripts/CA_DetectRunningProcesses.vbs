@@ -15,7 +15,7 @@ If Err.Number = 0 Then
   Set oItems = oWMI.ExecQuery("Select * from Win32_Service Where Name = 'NKKPrintServer' And State = 'Running'")
   If oItems.Count > 0 Then
     If Len(sRunning) > 0 Then sRunning = sRunning & vbCrLf
-    sRunning = sRunning & "NKKPrintServer サービス (NKKPrintServer)"
+    sRunning = sRunning & "印刷サーバーサービス (NKKPrintServer)"
   End If
 End If
 

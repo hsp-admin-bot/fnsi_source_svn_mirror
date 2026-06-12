@@ -1,24 +1,28 @@
 <template>
   <ntss-layout>
-    <header-component slot="header-content" />
+    <template #header-content>
+      <header-component />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start -->
     <!-- <bread-crumbs-component
-      slot="bread-crumbs-content"
+      #bread-crumbs-content
       :history-key="historyKey"
       :no-split="true"
       @refresh="refresh"
     /> -->
-    <bread-crumbs-component
-      slot="bread-crumbs-content"
-      :history-key="historyKey"
-      :no-split="true"
-    />
+    <template #bread-crumbs-content>
+      <bread-crumbs-component
+        :history-key="historyKey"
+        :no-split="true"
+      />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng end -->
-    <main-component
-      slot="main-content"
-      ref="mainComponent"
-      :history-key="historyKey"
-    />
+    <template #main-content>
+      <main-component
+        ref="mainComponent"
+        :history-key="historyKey"
+      />
+    </template>
   </ntss-layout>
 </template>
 
@@ -50,7 +54,7 @@ export default {
     const isDownload = this.$refs.mainComponent.$refs.fileDownloader.isDownload;
     const isUpdated = this.$refs.mainComponent.$refs.fileUploader.isUpdated;
 // add FNSI-改修内容 詳細画面で修正がない場合、キャンセルしても、内容を廃棄のメッセージが出てしまう dou start
-    const isChanged = this.$refs.mainComponent.$refs.isChanged;
+    const isChanged = this.$refs.mainComponent?.isChanged ?? this.$refs.mainComponent?.$refs?.isChanged;
 // add FNSI-改修内容 詳細画面で修正がない場合、キャンセルしても、内容を廃棄のメッセージが出てしまう dou end
 
     if (

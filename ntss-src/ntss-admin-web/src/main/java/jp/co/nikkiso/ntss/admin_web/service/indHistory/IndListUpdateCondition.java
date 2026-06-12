@@ -3,6 +3,7 @@ package jp.co.nikkiso.ntss.admin_web.service.indHistory;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -21,6 +22,7 @@ public class IndListUpdateCondition {
 	/**
 	 * _id list
 	 */
+  @JsonProperty("_ids")
 	private List<String> _ids;
   // add by zs 2023-03-06 [#6118無期限予定の中止：js foreach call journalをjava batch call journalに変更] --start
   private Boolean checkAll;

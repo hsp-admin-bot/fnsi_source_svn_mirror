@@ -15,8 +15,8 @@
 //******************************************************************************
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OpenQA.Selenium.Appium;
 using OpenQA.Selenium.Appium.Windows;
-using OpenQA.Selenium.Remote;
 using System;
 
 namespace LayoutDesignerUITest
@@ -28,7 +28,7 @@ namespace LayoutDesignerUITest
         //private const string CalculatorAppId = "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App";
         private const string CalculatorAppId = @"C:\DATA\ntss-win\P2045ReportApp\LayoutDesigner\bin\Debug\FNWSiLayoutDesigner.exe";
 
-        protected static WindowsDriver<WindowsElement> session;
+        protected static WindowsDriver session;
 
         public static void Setup(TestContext context)
         {
@@ -37,10 +37,14 @@ namespace LayoutDesignerUITest
             {
                 // Create a new session to bring up an instance of the Calculator application
                 // Note: Multiple calculator windows (instances) share the same process Id
-                DesiredCapabilities appCapabilities = new DesiredCapabilities();
-                appCapabilities.SetCapability("app", CalculatorAppId);
-                appCapabilities.SetCapability("deviceName", "WindowsPC");
-                session = new WindowsDriver<WindowsElement>(new Uri(WindowsApplicationDriverUrl), appCapabilities);
+                var appOptions = new AppiumOptions
+                {
+                    PlatformName = "Windows",
+                    AutomationName = "Windows",
+                    App = CalculatorAppId,
+                    DeviceName = "WindowsPC"
+                };
+                session = new WindowsDriver(new Uri(WindowsApplicationDriverUrl), appOptions);
                 Assert.IsNotNull(session);
 
                 // Set implicit timeout to 1.5 seconds to make element search to retry every 500 ms for at most three times

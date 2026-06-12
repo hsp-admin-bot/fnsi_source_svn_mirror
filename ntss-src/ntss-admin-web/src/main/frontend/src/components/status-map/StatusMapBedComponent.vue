@@ -132,14 +132,17 @@
 </template>
 
 <script>
+import { getAppElement } from "@/functions/common/LayoutMeasureHelper";
+
 import StatusMapMarker from "@/components/status-map/StatusMapMarkerComponent";
 import StatusMapDonutGraph from "@/components/status-map/StatusMapDonutGraph";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import PatHeaderControlMixin from "@/components/common/PatHeadControlMixin";
-import { mapGetters, mapActions, mapMutations } from "vuex";
-import { EventBus } from "@/eventBus.js";
-import moment from "moment";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import dayjs from "@/compat/date/dayjs";
 import { INDICATOR_VALUE_TREATMENT_MAP } from "@/constants/statusMapConstants";
+import nameDuplicationImg from "../../assets/name_duplication.png";
 
 export default {
   components: {
@@ -149,7 +152,7 @@ export default {
   data() {
     return {
       // add 同姓同名配布 linjunfeng start
-      image_src_same: require("../../assets/name_duplication.png"),
+      image_src_same: nameDuplicationImg,
       // add 同姓同名配布 linjunfeng end
     }
   },
@@ -238,7 +241,7 @@ export default {
     bedDivClass() {
       let ret = "bed-inner";
       if (this.isPopoverScroll) {
-        ret = ret + " " + document.getElementById("app").getAttribute("class");
+        ret = ret + " " + (getAppElement(this.$el || this)?.getAttribute("class") || "");
       } else {
         ret = ret + " bed-event";
       }
@@ -404,9 +407,9 @@ export default {
      */
     patName() {
       return this.bedData.treatment &&
-        this.bedData.treatment.hasOwnProperty("ordNo") &&
+        Object.prototype.hasOwnProperty.call(this.bedData.treatment, "ordNo") &&
         this.bedData.treatment.ordNo != null &&
-        this.bedData.treatment.hasOwnProperty("patId")
+        Object.prototype.hasOwnProperty.call(this.bedData.treatment, "patId")
         ? this.bedData.treatment.patId === null
           ? "？？？？"
           : this.bedData.treatment.patName
@@ -415,7 +418,7 @@ export default {
     // add FNSI-同姓同名患者の場合はアイコンを表示 付 start
     isSame() {
       return this.bedData.treatment
-      && this.bedData.treatment.hasOwnProperty("isSame")
+      && Object.prototype.hasOwnProperty.call(this.bedData.treatment, "isSame")
       && this.bedData.treatment.isSame != null
       ? this.bedData.treatment.isSame : "";
     },
@@ -741,7 +744,7 @@ export default {
             this.updateTreatmentPatList(this.getPatTreatmentStatusToPatList);
             // 機能コード設定、選択 ord_no を保持
             this.setOrdNoForSideBarRecord(selOrdNo);
-            this.setSrcFuncName(this.$router.currentRoute.name);
+            this.setSrcFuncName(this.$route.name);
 
             // ordNoセット
             this.sendConditionSetSelectOrdNo({
@@ -761,7 +764,7 @@ export default {
             this.updateTreatmentPatList(this.getPatTreatmentStatusToPatList);
             // 機能コード設定、選択 ord_no を保持
             this.setOrdNoForSideBarRecord(selOrdNo);
-            this.setSrcFuncName(this.$router.currentRoute.name);
+            this.setSrcFuncName(this.$route.name);
 
             // ordNoセット
             this.setSelectedPatHeader(selPatId).then(() => {
@@ -819,7 +822,7 @@ export default {
             this.updateTreatmentPatList(this.getPatTreatmentStatusToPatList);
             // 機能コード設定、選択 ord_no を保持
             this.setOrdNoForSideBarRecord(selOrdNo);
-            this.setSrcFuncName(this.$router.currentRoute.name);
+            this.setSrcFuncName(this.$route.name);
 
             // ordNoセット
             this.sendConditionSetSelectOrdNo({
@@ -836,7 +839,7 @@ export default {
             this.updateTreatmentPatList(this.getPatTreatmentStatusToPatList);
             // 機能コード設定、選択 ord_no を保持
             this.setOrdNoForSideBarRecord(selOrdNo);
-            this.setSrcFuncName(this.$router.currentRoute.name);
+            this.setSrcFuncName(this.$route.name);
 
             // ordNoセット
             this.setSelectedPatHeader(selPatId).then(() => {
@@ -943,7 +946,7 @@ export default {
       await this.setHeaderInfo(this.getSelectMachine());
 
       // 装置記録表示設定をstoreに設定
-      const today = moment().format("YYYY/MM/DD");
+      const today = dayjs().format("YYYY/MM/DD");
       const motionRecord = {
         motionRecordNo: 0, // 自己診断データの検索にはmotionRecordNoを使わないため、任意の数値を指定(nullだとエラーになる)
         dataType: 4,  // 4:自己診断 で固定
@@ -963,8 +966,7 @@ export default {
       return this.bedData.indicatorDispTreatment.includes(target);
     },
   },
-  watch: {},
-  beforeCreate() {},
+
   created() {
     // add 性能改善メモリ不足 shan start
     EventBus.$off("ScheduleAssignment", this.moveTreatmentRecord);
@@ -972,15 +974,13 @@ export default {
     // スケジュール割当後の治療記録への遷移
     EventBus.$on("ScheduleAssignment", this.moveTreatmentRecord);
   },
-  beforeMount() {},
-  mounted() {},
-  beforeUpdate() {},
-  updated() {},
-  beforeDestroy() {
+
+
+
+  beforeUnmount() {
     // スケジュール割当後の治療記録への遷移
     EventBus.$off("ScheduleAssignment", this.moveTreatmentRecord);
   },
-  destroyed() { }
 };
 </script>
 <style scoped>

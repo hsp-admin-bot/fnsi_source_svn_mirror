@@ -26,15 +26,15 @@ import jp.co.nikkiso.ntss.core.entity.SysMasterDefine;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
@@ -65,13 +65,13 @@ public class MasterMaintenanceResourceTest extends AbstractResourceTest {
   /**
    * マスタ一覧のService.
    */
-  @MockBean
+  @MockitoBean
   private MasterListService masterListService;
 
   /**
    * マスタ編集のService.
    */
-  @MockBean
+  @MockitoBean
   private MasterEditService masterEditService;
 
   /**
@@ -146,7 +146,7 @@ public class MasterMaintenanceResourceTest extends AbstractResourceTest {
     // API実行
     Integer userType = Integer.parseInt(CoreConstant.UserType.NIKKISO);
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/master_maintenance/master_list")
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(masterListService, times(1)).getMasterList(userType);
@@ -182,7 +182,7 @@ public class MasterMaintenanceResourceTest extends AbstractResourceTest {
     // API実行
     Integer userType = Integer.parseInt(CoreConstant.UserType.GENERAL);
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/master_maintenance/master_list")
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(masterListService, times(1)).getMasterList(userType);
@@ -210,7 +210,7 @@ public class MasterMaintenanceResourceTest extends AbstractResourceTest {
     // action
     final ResultActions result = mockMvc
         .perform(MockMvcRequestBuilders.get("/api/master_maintenance/{masterName}/data", masterName)
-          .contentType(MediaType.APPLICATION_JSON_UTF8));
+          .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -268,7 +268,7 @@ public class MasterMaintenanceResourceTest extends AbstractResourceTest {
     // action
     ResultActions result = mockMvc
       .perform(MockMvcRequestBuilders.get("/api/master_maintenance/{masterName}/data", masterName)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     verify(masterEditService, times(1)).getMasterData(masterName, facilityCd);
@@ -334,7 +334,7 @@ public class MasterMaintenanceResourceTest extends AbstractResourceTest {
     // API実行
     ResultActions result = mockMvc
         .perform(MockMvcRequestBuilders.put("/api/master_maintenance/{masterPhysicalName}/data", masterPhysicalName)
-            .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+            .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(masterEditService, times(1)).updateMasterData(masterPhysicalName, facilityCd, data);
@@ -385,7 +385,7 @@ public class MasterMaintenanceResourceTest extends AbstractResourceTest {
     // API実行
     ResultActions result = mockMvc
         .perform(MockMvcRequestBuilders.put("/api/master_maintenance/{masterName}/data", masterPhysicalName)
-            .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+            .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(masterEditService, times(1)).updateMasterData(masterPhysicalName, facilityCd, data);
@@ -414,7 +414,7 @@ public class MasterMaintenanceResourceTest extends AbstractResourceTest {
     // action
     final ResultActions result = mockMvc
       .perform(MockMvcRequestBuilders.get("/api/master_maintenance/{masterName}/column_info", masterName)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result
@@ -458,7 +458,7 @@ public class MasterMaintenanceResourceTest extends AbstractResourceTest {
     // action
     final ResultActions result = mockMvc
       .perform(MockMvcRequestBuilders.get("/api/master_maintenance/{masterName}/column_info", masterName)
-        .contentType(MediaType.APPLICATION_JSON_UTF8));
+        .contentType(MediaType.APPLICATION_JSON));
 
     // assert
     result

@@ -2,8 +2,8 @@ package jp.co.nikkiso.ntss.coop_api.request;
 
 import org.springframework.util.StringUtils;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 
 import jp.co.nikkiso.ntss.coop_api.utils.IfEdgeConstants.ExeType;
 import lombok.Data;
@@ -13,7 +13,7 @@ import lombok.Data;
  *
  */
 @Data
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class IfEdgeWebsocketRequest {
   /** 施設コード */
   private String facilityCd;

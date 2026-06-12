@@ -1,6 +1,6 @@
 import { ApiHelper } from "@/apis/AxiosHelper";
-import _ from "underscore";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
+import { mapObject, isUnderscoreObject } from "@/functions/common/CommonFunctions";
 
 /**
  * @description 年齢計算
@@ -9,10 +9,10 @@ import moment from "moment";
  */
 //  mod 8294 死亡患者の年齢が現時点での年齢で表示されている 関 start
 // export const calculateAge = birthday => {
-//   return moment().diff(birthday, "years");
+//   return dayjs().diff(birthday, "years");
 // };
-export const calculateAge = (birthday,date) => {
-  return moment(date).diff(birthday, "years");
+export const calculateAge = (birthday, date) => {
+  return dayjs(date).diff(birthday, "years");
 };
 // mod 8294 死亡患者の年齢が現時点での年齢で表示されている 関  end
 
@@ -41,7 +41,7 @@ export const getPatById = async (patId, facilityCd = null) => {
     );
   });
 
-  return _.mapObject(response.data, patInfoJson => JSON.parse(patInfoJson));
+  return mapObject(response.data, (patInfoJson) => JSON.parse(patInfoJson));
 };
 
 /**
@@ -49,20 +49,16 @@ export const getPatById = async (patId, facilityCd = null) => {
  * @param {object} data 変換対象データ({ key: value })
  * @return {object} 編集用オブジェクト ({ key: { initValue: value, editValue: value } })
  */
-const encodeEditableData = data => {
-  // 変換用関数
-  const mapFunc = val => ({ initValue: val, editValue: val });
+const encodeEditableData = (data) => {
+  const mapFunc = (val) => ({ initValue: val, editValue: val });
 
-  if (!_.isObject(data)) {
-    // 単一カラムの場合
+  if (!isUnderscoreObject(data)) {
     return mapFunc(data);
-  } else if (_.isArray(data)) {
-    // JSON配列カラムの場合
-    return data.map(obj => _.mapObject(obj, mapFunc));
-  } else {
-    // JSONカラムの場合
-    return _.mapObject(data, mapFunc);
   }
+  if (Array.isArray(data)) {
+    return data.map((obj) => mapObject(obj, mapFunc));
+  }
+  return mapObject(data, mapFunc);
 };
 
 /**
@@ -71,8 +67,8 @@ const encodeEditableData = data => {
  * @param {object} record 変換対象レコード
  * @return {object} 編集用オブジェクト
  */
-export const encodeEditableRecord = record => {
-  return _.mapObject(record, encodeEditableData);
+export const encodeEditableRecord = (record) => {
+  return mapObject(record, encodeEditableData);
 };
 
 /**
@@ -80,22 +76,18 @@ export const encodeEditableRecord = record => {
  * @param {object} record 変換対象レコード
  * @return {object} 編集用オブジェクト
  */
-const decodeEditableData = data => {
-  // const mapFunc = obj => obj.editValue;
-  const mapFunc = obj => obj?.editValue ?? null;
+const decodeEditableData = (data) => {
+  const mapFunc = (obj) => obj?.editValue ?? null;
 
   if (!data) return data;
 
   if (data.editValue !== undefined) {
-    // 単一カラムの場合
     return mapFunc(data);
-  } else if (_.isArray(data)) {
-    // JSON配列カラムの場合
-    return data.map(obj => _.mapObject(obj, mapFunc));
-  } else {
-    // JSONカラムの場合
-    return _.mapObject(data, mapFunc);
   }
+  if (Array.isArray(data)) {
+    return data.map((obj) => mapObject(obj, mapFunc));
+  }
+  return mapObject(data, mapFunc);
 };
 
 /**
@@ -104,8 +96,11 @@ const decodeEditableData = data => {
  * @param {object} record 変換対象レコード
  * @return {object} 編集用オブジェクト
  */
-export const decodeEditableRecord = record => {
-  return _.mapObject(record, decodeEditableData);
+export const decodeEditableRecord = (record) => {
+  if (Array.isArray(record)) {
+    return record.map((item) => decodeEditableData(item));
+  }
+  return mapObject(record, decodeEditableData);
 };
 
 /**
@@ -113,30 +108,28 @@ export const decodeEditableRecord = record => {
  * @param {object} data 変換対象レコード
  * @return {object} 編集用オブジェクト
  */
-const extractChangesData = data => {
-  const mapFunc = obj => {
+const extractChangesData = (data) => {
+  const mapFunc = (obj) => {
     if (obj && obj.editValue !== obj.initValue) {
       return obj;
     }
-  }
+  };
 
   if (data.editValue !== undefined) {
-    // 単一カラムの場合
     return mapFunc(data);
-  } else if (_.isArray(data)) {
-    // JSON配列カラムの場合
-    const mapData = data.map(obj => _.mapObject(obj, mapFunc));
+  }
+  if (Array.isArray(data)) {
+    const mapData = data.map((obj) => mapObject(obj, mapFunc));
     if (mapData.length) {
-      const filteredMapData = mapData.filter(item => {
+      const filteredMapData = mapData.filter((item) => {
         return JSON.stringify(item) !== "{}";
-      })
+      });
       if (filteredMapData.length) {
         return mapData;
       }
     }
   } else {
-    // JSONカラムの場合
-    const mapData = _.mapObject(data, mapFunc);
+    const mapData = mapObject(data, mapFunc);
     if (JSON.stringify(mapData) !== "{}") {
       return mapData;
     }
@@ -149,6 +142,6 @@ const extractChangesData = data => {
  * @param {object} record 変換対象レコード
  * @return {object} 編集用オブジェクト
  */
-export const extractChangesRecord = record => {
-  return _.mapObject(record, extractChangesData);
+export const extractChangesRecord = (record) => {
+  return mapObject(record, extractChangesData);
 };

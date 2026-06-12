@@ -29,6 +29,7 @@ import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 
 import lombok.Getter;
 import lombok.Setter;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -58,6 +59,10 @@ public class NextPatInfoUtils {
 
   @Autowired
   private LogServiceCore logServiceCore;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // DB更新ログ出力ロジック wangzuo End
 
   /**
@@ -214,7 +219,7 @@ public class NextPatInfoUtils {
         wheres.append(" trim(machine_serial) = trim('" + machineSerial + "')\n");
 
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(mntMachineStateDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -396,7 +401,7 @@ public class NextPatInfoUtils {
                   // リクエスト処理
                   RestTemplate rt = new RestTemplate();
                   ResponseEntity<String> response = rt.exchange(request, String.class);
-                  HttpStatus status = response.getStatusCode();
+                  HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
                   JSONObject ret = new JSONObject(response.getBody());
                   Long ordNo = ret.getLong("ordNo");
                   JSONObject tmpDviceSetInfo = ret.getJSONObject("tmpDeviceSetInfo");
@@ -427,7 +432,7 @@ public class NextPatInfoUtils {
         wheres.append(" trim(machine_serial) = trim('" + machineSerial + "')\n");
 
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(mntMachineStateDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -486,7 +491,7 @@ public class NextPatInfoUtils {
                     // リクエスト処理
                     RestTemplate rt = new RestTemplate();
                     ResponseEntity<String> response = rt.exchange(request, String.class);
-                    HttpStatus status = response.getStatusCode();
+                    HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
                     JSONObject ret = new JSONObject(response.getBody());
                     if (HttpStatus.OK != status) {
                       return PROC_RESULT.ERROR;
@@ -668,11 +673,11 @@ public class NextPatInfoUtils {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

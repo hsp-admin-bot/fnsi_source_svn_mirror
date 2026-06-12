@@ -84,10 +84,11 @@ export function getInitialRouterName() {
   return getRouterName(fCd, store.getters["user/getUserType"]);
 }
 
-export function getNameA(code){
-  let initFuncCd = code
+export function getNameA(code) {
+  let initFuncCd = code;
   // メニューグループの場合は配下項目のfunction_cd取得
   initFuncCd = getFunctionCdForMenuGroup(initFuncCd);
+
   const fCd =
     initFuncCd === "" || initFuncCd === null
       ? FUNC_OPERATION_VIEWER

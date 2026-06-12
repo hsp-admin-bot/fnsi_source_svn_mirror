@@ -3,7 +3,7 @@
 */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -57,12 +57,13 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
-import $ from "jquery";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import $ from "@/compat/jquery";
 import { KEY_NAME_SCALE_BED } from "@/constants/defaultSettingConstants";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import { sendRequestGetKurSelector } from "@/apis/send-condition";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   name: 'defScaleBedSet',
@@ -198,8 +199,9 @@ export default {
         }
         this.initialValue = deepCopy(this.editRecord);
       }
-      if ($("#phone-show-scale-bed").css("display") === "inline") {
-        document.getElementById("phone-show-scale-bed").innerText = document.getElementById("phone-show-scale-bed").innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+      const phoneScaleBedLabel = getScopedElementById("phone-show-scale-bed", this.$el || this);
+      if (phoneScaleBedLabel && $(phoneScaleBedLabel).css("display") === "inline") {
+        phoneScaleBedLabel.innerText += '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
       }
       // 共通ローダー表示終了
       this.finishLoadingScreen();

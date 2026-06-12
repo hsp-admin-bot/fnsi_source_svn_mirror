@@ -1,11 +1,11 @@
 /** * クールコンポーネント サイズ:縦横とも枠に合わせる設定 */
 <template>
   <div :id="divId" class="cls-kurbody">
-    <template v-for="b in bedMaxCounter">
+    <template v-for="b in bedMaxCounter" :key="'key' + b">
       <!-- modify by chamaojia 2024-07-29 [10601] add 【props-name】 start -->
       <component
         :is="compNameBed"
-        :key="'key' + b"
+       
         :props-id="propsId + '-' + b"
         :props-json="bedJsonData[b]"
         :props-name="bedNameData[b]"
@@ -18,7 +18,10 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
+import { markRaw } from "@/compat/vue/runtime";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 
 /* modify by chamaojia 2024-07-30 [10601] page changes referenced --start */
 import BedComponent from "@/components/schedule-list/KurBedComponent.vue";
@@ -126,7 +129,7 @@ export default {
       addflag: false,
       myOpacity: 0,
       changeOpaId: null,
-      compNameBed: BedComponent,
+      compNameBed: markRaw(BedComponent),
       isDispKur: true,
       addNum: DEF_DISP_STEP_NUM_1ST
     };
@@ -405,7 +408,7 @@ export default {
       }
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -418,7 +421,7 @@ export default {
   mounted() {
     //ベッド数が出るまで待つ
 
-    const globalThis = this;
+    const vm = this;
     //例)クールのベッド出力選択のやり方
     //    if(Number(this.myDay) === 8 || Number(this.myDay) === 9 || Number(this.myDay) === 10)
     //    {
@@ -426,23 +429,23 @@ export default {
     //徐々にベッドを出していくためのInterval
     const waitingBedId = setInterval(
       function() {
-        if (globalThis.getMaxBedNum > 0) {
-          globalThis.bedMax = globalThis.getMaxBedNum;
+        if (vm.getMaxBedNum > 0) {
+          vm.bedMax = vm.getMaxBedNum;
           // globalThis.debugPrint("globalThis.bedMax");
           // globalThis.debugPrint(globalThis.bedMax);
           if (
-            typeof globalThis.propsTreatDate !== "undefined" &&
-            "date" in globalThis.propsTreatDate
+            typeof vm.propsTreatDate !== "undefined" &&
+            "date" in vm.propsTreatDate
           ) {
             //this.propsTreatDateが存在して、dateプロパティが有った場合、ベッド設定処理を行う
-            globalThis.settingBedsData(globalThis.propsTreatDate.date);
+            vm.settingBedsData(vm.propsTreatDate.date);
           }
 
           //親の要素ポインタ取得&格納
-          globalThis.thisElem = document.getElementById(globalThis.divId);
+          vm.thisElem = vm.$el?.id === vm.divId ? vm.$el : getScopedElementById(vm.divId, vm.$el || vm);
 
           //ベッドの設定処理
-          globalThis.settingBeds();
+          vm.settingBeds();
 
           //インターバルのクリア
           clearInterval(waitingBedId);
@@ -630,7 +633,6 @@ export default {
         // mod #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx end
 
         //治療モードの不一致チェック
-        deviceModeFlag = true; //true:一致
 
         if (DEF_DISABLED === checkBaseJson.is_disable) {
           //使用不可なのでチェックする必要なく、不一致
@@ -670,19 +672,19 @@ export default {
      * 移動可能領域点滅処理
      */
     setOpacityChange(onoffFlag) {
-      const globalThis = this;
+      const vm = this;
       if (onoffFlag) {
         //ハイライト点滅処理設定
         clearInterval(this.changeOpaId);
         this.changeOpaId = setInterval(
           function() {
             //opacityの値を徐々に変更(0.5->1を繰り返す)
-            globalThis.myOpacity += 0.1;
-            if (globalThis.myOpacity > 1) {
-              globalThis.myOpacity = 0.5;
+            vm.myOpacity += 0.1;
+            if (vm.myOpacity > 1) {
+              vm.myOpacity = 0.5;
             }
-            globalThis.thisElem.style.opacity = globalThis.myOpacity;
-          }.bind(globalThis),
+            vm.thisElem.style.opacity = vm.myOpacity;
+          }.bind(vm),
           100
         );
       } else {
@@ -771,7 +773,7 @@ export default {
 
       //自分自身の要素が生成されているかの確認
       if (null === this.thisElem) {
-        this.thisElem = document.getElementById(this.devId);
+        this.thisElem = this.$el?.id === this.divId ? this.$el : getScopedElementById(this.devId, this.$el || this);
         if (null === this.thisElem) {
           //要素が取得できないのでなにもしない
           return;

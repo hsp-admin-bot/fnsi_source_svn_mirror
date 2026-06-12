@@ -57,13 +57,13 @@
 </template>
 
 <script>
-import ons from "onsenui";
+import { showAlertDialog } from "@/functions/common/OnsenFunctions";
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 import {AUTHORITY_CODES} from "@/constants/userAuthority";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapGetters, mapMutations } from "vuex";
+import { mapGetters, mapMutations } from "@/compat/vue/vuex";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from "@/functions/common/MessageFormat";
 // del #10359 編集権限の動作不正 dengshen start
@@ -130,7 +130,7 @@ export default {
         // title: "必須項目未入力",
         // message: "{$1}は必須入力項目です。\n必ず値を入力してください。"
         const { title, message } = DIALOG_MESSAGES[22010001];
-        ons.notification.alert({
+        showAlertDialog({
           title,
           message: messageFormat(message, "指示者"),
         });
@@ -155,6 +155,8 @@ export default {
   width: 300px;
   color: var(--ntss-base-color);
   transform: none;
+  margin: 0 auto;
+  background-color: var(--ntss-base-background-color);
 }
 .modal-header-custom {
   text-align: left;

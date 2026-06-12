@@ -4,14 +4,19 @@ import jp.co.nikkiso.ntss.core.dao.MasterDao;
 import jp.co.nikkiso.ntss.core.dto.MstListCompose.request.MstListComposeKeyMapping;
 import jp.co.nikkiso.ntss.core.dto.MstListCompose.request.MstListComposeRequest;
 import jp.co.nikkiso.ntss.core.dto.MstListCompose.request.MstListComposeSource;
+import jp.co.nikkiso.ntss.core.dto.MstListCompose.request.MstListComposeSourceType;
 import jp.co.nikkiso.ntss.core.dto.MstListCompose.request.MstListComposeSpec;
 import jp.co.nikkiso.ntss.core.dto.MstListCompose.response.MstListComposeResponse;
 import jp.co.nikkiso.ntss.core.dto.MstListCompose.response.MstListComposeWrapper;
-import org.springframework.context.ApplicationContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,16 +27,20 @@ public class MstListComposeServiceImpl implements MstListComposeService {
 
   @Override
   public MstListComposeResponse selectMstListCompose(MstListComposeRequest request) {
-    Map<String, MstListComposeWrapper> out = new LinkedHashMap<>();
-    if (request == null || request.getLists() == null) {
-      MstListComposeResponse resp = new MstListComposeResponse();
-      resp.setLists(out);
-      return resp;
-    }
+
+    MstListComposeResponse resp = new MstListComposeResponse();
+
+    List<Map<String, MstListComposeWrapper>> filterList = new ArrayList<>();
+
+    MstListComposeWrapper master = new MstListComposeWrapper();
+
+    Map<String, MstListComposeWrapper> filterMap = new LinkedHashMap<>();
 
     for (MstListComposeSpec spec : request.getLists()) {
+
       List<Map<String, Object>> rows = fetchBySpec(spec);
-      // リストレベルのキー・マッピング（各ソースごとのマッピング後に実行）
+
+      // リストレベルのキー・マッピング
       if (spec.getKeyMapping() != null && !spec.getKeyMapping().isEmpty()) {
         applyKeyMapping(rows, spec.getKeyMapping());
       }
@@ -40,14 +49,65 @@ public class MstListComposeServiceImpl implements MstListComposeService {
       w.setId(spec.getId());
       w.setName(spec.getName());
       w.setItems(rows);
-      out.put(spec.getId(), w);
-    }
+      w.setFilterKey(spec.getFilterKey());
+      w.setFilterLabel(spec.getFilterLabel());
 
-    MstListComposeResponse resp = new MstListComposeResponse();
-    resp.setLists(out);
+      String type = spec.getDisplayType();
+
+      if (type == null || type.isBlank()) {
+
+        applyMasterPagingMetaIfNeeded(w, spec, rows);
+        resp.setMaster(w);
+
+      } else {
+
+        filterMap.put(spec.getId(), w);
+      }
+    }
+    filterList.add(filterMap);
+
+    resp.setFilterList(filterList);
 
     return resp;
   }
+
+  /**
+   * sysFacilityDaoImpl の selectAllStatus など、mstSource.sqlParams に composeLimit / favoriteCsv を付与した場合に hasMore を付与する。
+   */
+  private void applyMasterPagingMetaIfNeeded(
+    MstListComposeWrapper w,
+    MstListComposeSpec spec,
+    List<Map<String, Object>> rows
+  ) {
+    if (spec.getSourceType() != MstListComposeSourceType.MST) {
+      return;
+    }
+    MstListComposeSource src = spec.getMstSource();
+    if (src == null || src.getSqlParams() == null) {
+      return;
+    }
+    Map<String, String> p = src.getSqlParams();
+    String fav = p.get("favoriteCsv");
+    if (fav != null && !fav.isEmpty()) {
+      w.setHasMore(Boolean.FALSE);
+      return;
+    }
+    String limStr = p.get("composeLimit");
+    if (limStr == null || limStr.isBlank()) {
+      return;
+    }
+    try {
+      int lim = Integer.parseInt(limStr.trim());
+      if (lim <= 0) {
+        return;
+      }
+      int n = rows == null ? 0 : rows.size();
+      w.setHasMore(n >= lim);
+    } catch (NumberFormatException e) {
+      // ignore
+    }
+  }
+
   /**
    * ListSpec に基づいてデータ行を取得する（キー・マッピングは行わない）
    */
@@ -56,7 +116,7 @@ public class MstListComposeServiceImpl implements MstListComposeService {
   ) {
     if (spec == null) return Collections.emptyList();
 
-    switch (spec.getSourceType()) {
+     switch (spec.getSourceType()) {
 
       case FIXED:
         return fetchFixed(spec);
@@ -151,7 +211,11 @@ public class MstListComposeServiceImpl implements MstListComposeService {
       }
       // per-source keyMapping
       if (src.getKeyMapping() != null && !src.getKeyMapping().isEmpty()) {
-        return applyKeyMappingDistinct(rows, src.getKeyMapping());
+        rows = applyKeyMappingDistinct(rows, src.getKeyMapping());
+      }
+      // spec に fixedItems が定義されている場合は、あわせて追加する
+      if (spec.getFixedItems() != null && !spec.getFixedItems().isEmpty()) {
+        for (Map<String,Object> f : spec.getFixedItems()) rows.add(new LinkedHashMap<>(f));
       }
       return rows;
     }
@@ -170,6 +234,10 @@ public class MstListComposeServiceImpl implements MstListComposeService {
         } else {
           acc.addAll(rows);
         }
+      }
+      // spec に fixedItems が定義されている場合は、あわせて追加する
+      if (spec.getFixedItems() != null && !spec.getFixedItems().isEmpty()) {
+        for (Map<String,Object> f : spec.getFixedItems()) acc.add(new LinkedHashMap<>(f));
       }
       // 注意：ここでは全ソースの distinct 結果を一つに統合して返却する。フロントエンド側では key（例：sourceTag / key_xxx）により分割可能。
       return acc;
@@ -195,7 +263,12 @@ public class MstListComposeServiceImpl implements MstListComposeService {
     LinkedHashMap<String, Map<String,Object>> uniq = new LinkedHashMap<>();
     for (Map<String,Object> r : rows) {
       Object v = r.get(field);
-      String k = v == null ? "__NULL__" : String.valueOf(v);
+
+      if (v == null) {
+        continue;
+      }
+      String k = String.valueOf(v);
+
       if (!uniq.containsKey(k)) uniq.put(k, new LinkedHashMap<>(r));
     }
     return new ArrayList<>(uniq.values());
@@ -238,6 +311,6 @@ public class MstListComposeServiceImpl implements MstListComposeService {
   ) {
     MasterDao bean = applicationContext.getBean(mstCode, MasterDao.class);
     if (bean == null) return Collections.emptyList();
-    return bean.selectAllStatus(sqlParams);
+    return bean.selectAllStatusForCompose(sqlParams);
   }
 }

@@ -17,9 +17,9 @@ import java.util.TreeMap;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.jdbc.Sql;
@@ -49,25 +49,25 @@ import jp.co.nikkiso.ntss.core.entity.PatUnique;
 @Transactional
 public class JournalConvertReceiveResourceLayoutAllTest extends AbstractResourceTest {
 
-  @SpyBean
+  @MockitoSpyBean
   private SysCoopJournalDao sysCoopJournalDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatPersonalMainDao patPersonalMainDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatMainDao patMainDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatUniqueDao patUniqueDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private MstDiseaseDao mstDiseaseDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private MstTabooAllergyDao mstTabooAllergyDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private MstInfectionDao mstInfectionDao;
 
   @Sql("classpath:resource.script/JournalConvertReceiveResourceLayoutAllTest/sN00/clean_db5_N00.sql")

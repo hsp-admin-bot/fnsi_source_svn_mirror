@@ -1,21 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  FNWSi Print Server インストーラー 日本語ローカライゼーション
-  WiX v4 WXL ファイル（NKKAccessCard と同様の構成）
+  NKKPrintServer(印刷サーバーアプリ) インストーラー 日本語ローカライゼーション
+  WiX v4 WXL ファイル
+
+  Package Name="FNWSi 印刷サーバーアプリ" およびデスクトップショートカット名は
+  変更せず、インストールウィザード画面の表示名のみ "FNWSi Print Server" に統一する。
 -->
 <WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl"
                  Culture="ja-JP"
                  Codepage="932">
 
-  <!-- .NET Framework 要件エラーメッセージ -->
+  <!-- .NET Framework 要件エラーメッセージ（将来 Product.wxs で !(loc.xxx) 参照用） -->
   <String Id="LaunchConditionNetFx45"
           Value=".NET Framework 4.5 以上が必要です。&#xA;&#xA;下記 URL からインストール後、再度セットアップを実行してください。&#xA;https://go.microsoft.com/fwlink/?LinkId=225704" />
 
-  <!-- ダウングレード禁止メッセージ -->
-  <String Id="LaunchConditionDowngradeBlocked"
-          Value="より新しいバージョンがインストール済みです。アンインストールしてから再度インストールしてください。" />
-
-  <!-- 各ダイアログのウィンドウタイトル（英語短名／Card と同様） -->
+  <!-- ウィザード画面名 -->
   <String Id="AdvancedWelcomeEulaDlg_Title" Value="FNWSi Print Server" />
   <String Id="BrowseDlg_Title" Value="FNWSi Print Server" />
   <String Id="CancelDlg_Title" Value="FNWSi Print Server" />
@@ -44,20 +43,14 @@
   <String Id="WaitForCostingDlg_Title" Value="FNWSi Print Server" />
   <String Id="WelcomeDlg_Title" Value="FNWSi Print Server" />
   <String Id="WelcomeEulaDlg_Title" Value="FNWSi Print Server" />
-
-  <!-- カスタムダイアログ（実行中プロセス検出） -->
   <String Id="RunningProcessesDlg_Title" Value="FNWSi Print Server" />
 
-  <!-- Prepare 画面 -->
+  <String Id="LaunchConditionDowngradeBlocked" Value="より新しいバージョンがインストール済みです。アンインストールしてから再度インストールしてください。" />
   <String Id="PrepareDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Print Server セットアップ ウィザードへようこそ" />
   <String Id="ResumeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Print Server セットアップ ウィザードの再開" />
   <String Id="PrepareDlgDescription" Value="インストールの準備をしています。しばらくお待ちください。" />
-
-  <!-- メイン文言（製品短名: FNWSi Print Server） -->
   <String Id="WelcomeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Print Server セットアップ ウィザードへようこそ。" />
   <String Id="WelcomeDlgDescription" Value="セットアップでは、FNWSi Print Server をコンピュータにインストールします。続行する場合は［次へ］を、セットアップを終了する場合は［キャンセル］をクリックしてください。" />
-
-
   <String Id="MaintenanceWelcomeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Print Server セットアップ ウィザードへようこそ。" />
   <String Id="MaintenanceWelcomeDlgDescription" Value="セットアップでは、FNWSi Print Server の機能をコンピュータから変更、修復、または削除できます。続行するには［次へ］をクリックし、終了するには［キャンセル］をクリックしてください。" />
   <String Id="WelcomeEulaDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Print Server セットアップ ウィザードへようこそ。" />
@@ -83,8 +76,5 @@
   <String Id="UserExitDescription1" Value="FNWSi Print Server のセットアップが中断されました。システムは変更されていません。このプログラムを後でインストールするには、インストールを再実行してください。セットアップ ウィザードを終了するには、［完了］ボタンをクリックします。" />
   <String Id="ExitDialogTitle" Value="{\WixUI_Font_Title}FNWSi Print Server セットアップ ウィザードが完了しました" />
   <String Id="ExitDialogDescription" Value="セットアップ ウィザードを終了するには、完了ボタンをクリックします。" />
-
-
-
 
 </WixLocalization>

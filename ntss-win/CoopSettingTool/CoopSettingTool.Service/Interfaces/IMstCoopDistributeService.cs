@@ -32,11 +32,25 @@ namespace CoopSettingTool.Service
         Task<BaseResponse<List<string>>> GetNewestMstCoopDistributeCtlNoList(string facilityCd);
 
         /// <summary>
+        /// Gets the current MST coop distribute list.
+        /// </summary>
+        /// <param name="facilityCd">The facility cd.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopDistributeEntity&gt;&gt;&gt;.</returns>
+        Task<BaseResponse<List<MstCoopDistributeEntity>>> GetCurrentMstCoopDistributeList(string facilityCd);
+
+        /// <summary>
         /// Gets the MST coop distribute by control no.
         /// </summary>
         /// <param name="ctlNo">The control no.</param>
         /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopDistributeEntity&gt;&gt;&gt;.</returns>
         Task<BaseResponse<MstCoopDistributeEntity>> GetMstCoopDistributeByCtlNo(string ctlNo);
+
+        /// <summary>
+        /// Gets the source MST coop distribute.
+        /// </summary>
+        /// <param name="condition">The condition.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopDistributeEntity&gt;&gt;&gt;.</returns>
+        Task<BaseResponse<List<MstCoopDistributeEntity>>> GetSourceMstCoopDistribute(MstCoopDistributeEntity condition);
 
         /// <summary>
         /// Creates the or update MST coop distribute.

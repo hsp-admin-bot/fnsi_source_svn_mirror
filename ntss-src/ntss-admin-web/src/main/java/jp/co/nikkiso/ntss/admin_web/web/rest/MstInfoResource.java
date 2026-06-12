@@ -1,5 +1,9 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
+import jp.co.nikkiso.ntss.admin_web.request.mstMaster.MstMasterRequest;
+import jp.co.nikkiso.ntss.admin_web.response.mstMaster.MstMasterResponse;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.ResponseKind;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
@@ -23,16 +27,25 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.statusList.TreatmentStatusListService;
 import jp.co.nikkiso.ntss.admin_web.service.statusList.dto.condInfo.CondInfoService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.admin_web.web.rest.util.PaginationUtils;
 import jp.co.nikkiso.ntss.admin_web.web.rest.validation.ApiEntityMstInfo;
 import jp.co.nikkiso.ntss.admin_web.web.service.MaterialsSharingPatientInformation.MaterialsSharingPatientInfomationService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
+import jp.co.nikkiso.ntss.core.dao.MstBedDao;
 import jp.co.nikkiso.ntss.core.dao.MstCourseDao;
+import jp.co.nikkiso.ntss.core.dao.MstDeviceEdgeDao;
 import jp.co.nikkiso.ntss.core.dao.MstEquipmentClassDao;
+import jp.co.nikkiso.ntss.core.dao.MstJobDao;
+import jp.co.nikkiso.ntss.core.dao.MstKurDao;
 import jp.co.nikkiso.ntss.core.dao.MstMedicineClassDao;
+import jp.co.nikkiso.ntss.core.dao.MstPatListLayoutDao;
+import jp.co.nikkiso.ntss.core.dao.PatMainDao;
 import jp.co.nikkiso.ntss.core.dao.PatPersonalMainDao;
+import jp.co.nikkiso.ntss.core.dao.ShrPatInfoDao;
+import jp.co.nikkiso.ntss.core.dao.SysFacilityDao;
 import jp.co.nikkiso.ntss.core.dto.mstDisease.MstDiseaseCN;
 import jp.co.nikkiso.ntss.core.dto.mstDisease.MstDiseaseCNF;
 import jp.co.nikkiso.ntss.core.entity.MstAddMonitor;
@@ -44,6 +57,7 @@ import jp.co.nikkiso.ntss.core.entity.MstBedIndex;
 import jp.co.nikkiso.ntss.core.entity.MstComFixedPhrase;
 import jp.co.nikkiso.ntss.core.entity.MstCourse;
 import jp.co.nikkiso.ntss.core.entity.MstDialysisDifficulty;
+import jp.co.nikkiso.ntss.core.entity.MstDeviceEdge;
 import jp.co.nikkiso.ntss.core.entity.MstDialyzer;
 import jp.co.nikkiso.ntss.core.entity.MstDialyzerDto;
 import jp.co.nikkiso.ntss.core.entity.MstDisease;
@@ -78,8 +92,10 @@ import jp.co.nikkiso.ntss.core.entity.MstObsKind;
 import jp.co.nikkiso.ntss.core.entity.MstPatCalendarLayout;
 import jp.co.nikkiso.ntss.core.entity.MstPatEventSubCategory;
 import jp.co.nikkiso.ntss.core.entity.MstPatListLayout;
+import jp.co.nikkiso.ntss.core.entity.PatMain;
 import jp.co.nikkiso.ntss.core.entity.MstPatMemo;
 import jp.co.nikkiso.ntss.core.entity.MstPatViewerLayout;
+import jp.co.nikkiso.ntss.core.entity.PatPersonalMain;
 import jp.co.nikkiso.ntss.core.entity.MstPersonalUser;
 import jp.co.nikkiso.ntss.core.entity.MstProcedure;
 import jp.co.nikkiso.ntss.core.entity.MstRadSet;
@@ -114,6 +130,7 @@ import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import lombok.extern.slf4j.Slf4j;
 
 import org.json.JSONObject;
+import org.seasar.doma.jdbc.SelectOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.Page;
@@ -146,6 +163,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * マスタ系のResourceクラス.
@@ -176,12 +194,34 @@ public class MstInfoResource {
   MaterialsSharingPatientInfomationService materialsSharingPatientInfomationService;
   @Autowired
   PatPersonalMainDao patPersonalMainDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Autowired
+  MstPatListLayoutDao mstPatListLayoutDao;
+  @Autowired
+  SysFacilityDao sysFacilityDao;
+  @Autowired
+  MstJobDao mstJobDao;
+  @Autowired
+  MstDeviceEdgeDao mstDeviceEdgeDao;
+  @Autowired
+  MstBedDao mstBedDao;
+  @Autowired
+  PatMainDao patMainDao;
+  @Autowired
+  private MstKurDao mstKurDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260514 start
+  @Autowired
+  private ShrPatInfoDao shrPatInfoDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260514 end
   @Autowired
   CondInfoService condInfoService;
 
   // wp アプリケーションログの適正化 Add Start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // wp アプリケーションログの適正化 Add End
 
   @Autowired
@@ -210,7 +250,11 @@ public class MstInfoResource {
       @RequestParam(value = "is_del", required = true) String is_del,
       @RequestParam(value = "page", required = false) Integer offset,
       @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstBed> page = mstInfoService.findMstBedByFacilityCd(pageable, facility_cd, is_disp, is_del);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstBed/", offset, limit);
@@ -226,7 +270,11 @@ public class MstInfoResource {
     @RequestParam(value = "facility_cd", required = true) String facility_cd,
     @RequestParam(value = "page", required = false) Integer offset,
     @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstBed> page = mstInfoService.findMstBedByFacilityCdDel(pageable, facility_cd);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstBed/", offset, limit);
@@ -238,7 +286,15 @@ public class MstInfoResource {
   /**
    *  ベッドマスター名
    */
-  public ResponseEntity<String> getMstBedNameByCd(Long bedCd) throws URISyntaxException {
+  public ResponseEntity<String> getMstBedNameByCd(Long bedCd,
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    MstBed mstBed = mstBedDao.selectByBedCd(bedCd, "1", "0");
+    if (mstBed != null && !hasFacilityAccess(ntssUser, mstBed.getFacilityCd())) {
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
     String bedName = mstInfoService.findBedNameByBedCd(bedCd);
     return new ResponseEntity<>(bedName, HttpStatus.OK);
   }
@@ -248,8 +304,16 @@ public class MstInfoResource {
    * ベッドマスタ一覧取得
    */
   public ResponseEntity<List<BedMachine>> getByFacilityCd(
-    @RequestParam(value = "facility_cd", required = true) String facility_cd
-  ) throws URISyntaxException {
+    @RequestParam(value = "facility_cd", required = true) String facility_cd,
+    @RequestParam(required = false) Long selectedPatId
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facility_cd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     List<BedMachine> list = treatmentStatusListService.getBedMachineList(facility_cd);
     return new ResponseEntity<>(list, HttpStatus.OK);
   }
@@ -260,8 +324,12 @@ public class MstInfoResource {
    * ベッドマスタ一覧取得
    */
   public ResponseEntity<List<MstBed>> getaFindByFacilityCd(
-    @RequestParam(value = "facility_cd", required = true) String facility_cd
+    @RequestParam(value = "facility_cd", required = true) String facility_cd,
+    @AuthenticationPrincipal NtssUser ntssUser
   ) throws URISyntaxException {
+    if (!facilityAccessService.hasFacilityAccess(ntssUser, facility_cd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     List<MstBed> mstBedList = mstInfoService.selectAllByFacilityCd(facility_cd);
     return new ResponseEntity<>(mstBedList, HttpStatus.OK);
   }
@@ -270,7 +338,15 @@ public class MstInfoResource {
   /**
    *  ベッドマスター名
    */
-  public ResponseEntity<String> getMstBedNameByCdIncludeDel(@RequestParam Long bedCd) throws URISyntaxException {
+  public ResponseEntity<String> getMstBedNameByCdIncludeDel(@RequestParam Long bedCd,
+                                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                            @AuthenticationPrincipal NtssUser ntssUser
+                                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    MstBed mstBed = mstBedDao.selectByBedCd(bedCd, "1", "0");
+    if (mstBed != null && !hasFacilityAccess(ntssUser, mstBed.getFacilityCd())) {
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
     String bedName = mstInfoService.findBedNameByBedCdIncludeDel(bedCd);
     return new ResponseEntity<>(bedName, HttpStatus.OK);
   }
@@ -292,7 +368,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MstBedIndex>> getSelectForSearchFreeBeds(
 // mod 7238 2023-03-29 予定コピー画面のベッドの並び順が不正 張 end
       @Validated @RequestBody ApiEntityMstInfo.ValiSearchFreeBeds bodyData ,BindingResult validationResult
-      ) throws URISyntaxException {
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     // 受信データログ出力
 
     /* del by biangang  2023-01-31 CodeOptimization  start */
@@ -344,14 +424,14 @@ public class MstInfoResource {
         logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,null);
         //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
       }
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     // 曜日パターン情報加工
     List<Integer> weeksArray = IndicationUtils.getWeekPattern(bodyData.getTreat_week_list());
     if(null == weeksArray) {
       // 曜日パターン情報加工に発生した場合はパラメータ異常扱い
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
 
     Long pat_id = Long.parseLong(bodyData.getPat_id());
@@ -374,7 +454,7 @@ public class MstInfoResource {
       logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,
       null);
       // 異常扱い
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     // 施設設定マスタより予定数しきい値を取得する。
@@ -422,7 +502,7 @@ public class MstInfoResource {
 
     if (info.size() < 0) {
       // 異常扱い
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     return new ResponseEntity<>(info, HttpStatus.OK);
@@ -467,7 +547,11 @@ public class MstInfoResource {
    * @return
    */
   /**
-  private List<Long> getLongList(String stringList) {
+  private List<Long> getLongList(String stringList,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     List<Long> longList = new ArrayList<Long>();
     try {
       // 値が入っていなければ、処理を終了して空の配列を返す
@@ -497,8 +581,13 @@ public class MstInfoResource {
   public ResponseEntity<List<MstComFixedPhrase>> getMstComFixedPhraseAll(
       MstComFixedPhrase params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      @RequestParam(required = false) Long selectedPatId
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstComFixedPhrase> page = mstInfoService.findMstComFixedPhraseAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstComFixedPhrase/", offset, limit);
@@ -514,7 +603,20 @@ public class MstInfoResource {
       @RequestParam(value = "page", required = false) Integer offset,
       @RequestParam(value = "per_page", required = false) Integer limit,
       @PathVariable String job_cd
-      ) throws URISyntaxException {
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260514 start
+    if (!ntssUser.isNkkAdminUser() && params.getFacilityCd() == null) {
+      params.setFacilityCd(ntssUser.getFacilityCd());
+    }
+    if (!hasFacilityAccess(ntssUser, params.getFacilityCd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260514 end
+
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstComFixedPhrase> page = mstInfoService.findMstComFixedPhraseByJobCd(pageable, params, job_cd);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstComFixedPhrase/" + job_cd, offset, limit);
@@ -528,7 +630,17 @@ public class MstInfoResource {
   public ResponseEntity<List<MstCourse>> getMstCourseServiceAll(
       MstCourse params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260513 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260513 end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260513 start
+    if (!hasFacilityAccess(ntssUser, params.getFacilityCd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260513 end
+
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstCourse> page = mstInfoService.findMstCourseAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstCourse/", offset, limit);
@@ -540,7 +652,11 @@ public class MstInfoResource {
   /**
    * 診療科マスタ一覧取得
    */
-  public ResponseEntity<List<MstCourse>> getMstAllCourse() {
+  public ResponseEntity<List<MstCourse>> getMstAllCourse(@RequestParam(required = false) Long selectedPatId,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, ntssUser.getFacilityCd(), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     List<MstCourse> mstCourses = mstCourseDao.selectAllCourse();
     return new ResponseEntity<>(mstCourses, HttpStatus.OK);
   }
@@ -552,7 +668,12 @@ public class MstInfoResource {
   public ResponseEntity<List<MstCourse>> getMstCourseServiceAllIncludDel(
     MstCourse params,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    @RequestParam(required = false) Long selectedPatId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstCourse> page = mstInfoService.findMstCourseAllIncludDelete(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstCourse/", offset, limit);
@@ -566,7 +687,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MstDialysisDifficulty>> getMstDialysisDifficultyAll(
       MstDialysisDifficulty params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstDialysisDifficulty> page = mstInfoService.findMstDialysisDifficultyAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstDialysisDifficulty/", offset, limit);
@@ -581,7 +706,11 @@ public class MstInfoResource {
       MstDialyzer params,
       @RequestParam(value = "page", required = false) Integer offset,
       @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstDialyzer> page = mstInfoService.findMstDialyzerAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstDialyzer/", offset, limit);
@@ -593,7 +722,11 @@ public class MstInfoResource {
   /**
    * コードでダイアライザを取得
    */
-  public ResponseEntity<MstDialyzer> getMstDialyzerByCd(String dialyzerCd) throws URISyntaxException {
+  public ResponseEntity<MstDialyzer> getMstDialyzerByCd(String dialyzerCd,
+                                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                        @AuthenticationPrincipal NtssUser ntssUser
+                                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     MstDialyzer dialyzer = mstInfoService.findMstDialyzerByCd(dialyzerCd);
     return new ResponseEntity<>(dialyzer, HttpStatus.OK);
   }
@@ -608,7 +741,11 @@ public class MstInfoResource {
     MstDialyzer params,
     @RequestParam(value = "page", required = false) Integer offset,
     @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstDialyzer> page = mstInfoService.findMstDialyzerAllNoDel(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstDialyzer/", offset, limit);
@@ -624,7 +761,11 @@ public class MstInfoResource {
       MstDialyzer params,
       @RequestParam(value = "page", required = false) Integer offset,
       @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     //#8484　医療材料選択IFのリスト不正(#9978対応)　Start
     // try catch対応追加
     try{
@@ -654,7 +795,11 @@ public class MstInfoResource {
    * ダイアライザー名を取得
    */
   public ResponseEntity<DialyzerSharingInfoResponse> getMstDialyzerSharingInfoByCd(@RequestParam(value = "dialyzerCd") String dialyzerCd,
-      @RequestParam(value = "patId") Long patId) throws URISyntaxException {
+      @RequestParam(value = "patId") Long patId,
+                                                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                                   @AuthenticationPrincipal NtssUser ntssUser
+                                                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     /* del by biangang  2023-01-31 CodeOptimization  start */
    /**
     DialyzerSharingInfoResponse result = null;
@@ -826,13 +971,12 @@ public class MstInfoResource {
       @AuthenticationPrincipal NtssUser ntssUser
       // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
   ) throws URISyntaxException {
-    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
-    if (ntssUser != null && !ntssUser.isNkkAdminUser()) {
-      if (!ntssUser.getFacilityCd().equals(params.getFacilityCd())) {
-        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
-      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260513 start
+    if (!hasFacilityAccess(ntssUser, params.getFacilityCd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
     }
-    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260513 end
+
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstDisease> page = mstInfoService.findMstDiseaseAll(pageable, params);
     List<MstDiseaseCN> mstDiseaseListTmp = new ArrayList<MstDiseaseCN>();
@@ -864,7 +1008,14 @@ public class MstInfoResource {
   public ResponseEntity<List<MstDiseaseCNF>> getMstDiseaseAllIncludeDeleted(
     MstDisease params,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) throws URISyntaxException {
+    if (!hasFacilityAccess(ntssUser, params.getFacilityCd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstDisease> page = mstInfoService.findMstDiseaseAllIncludeDeleted(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstDisease/", offset, limit);
@@ -888,8 +1039,18 @@ public class MstInfoResource {
    * @param diseaseCds 病名CD
    */
   public ResponseEntity<List<MstDisease>> getMstDiseaseByCds(
-    @RequestParam(value = "diseaseCds") Integer[] diseaseCds) throws URISyntaxException  {
+    @RequestParam(value = "diseaseCds") Integer[] diseaseCds,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException  {
     List<MstDisease> dataList = mstInfoService.getMstDiseaseByCds(diseaseCds);
+    List<String> facilityCdList = dataList.stream()
+      .map(MstDisease::getFacilityCd)
+      .collect(Collectors.toList());
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccessForFacilityCds(ntssUser, facilityCdList, null)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     return new ResponseEntity<>(dataList, HttpStatus.OK);
   }
   /* add #9482 患者情報画面/新規患者登録の表示が遅い。2023-09-21 by liumx --end */
@@ -902,7 +1063,11 @@ public class MstInfoResource {
       MstEquipmentClass params,
       @RequestParam(value = "page", required = false) Integer offset,
       @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstEquipmentClass> page = mstInfoService.findMstEquipmentClassAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstEquipmentClass/", offset, limit);
@@ -917,7 +1082,11 @@ public class MstInfoResource {
     MstEquipmentClass params,
     @RequestParam(value = "page", required = false) Integer offset,
     @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstEquipmentClass> page = mstInfoService.findMstEquipmentClassAllIncludeDeleted(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstEquipmentClassIncludeDeleted/", offset, limit);
@@ -931,8 +1100,13 @@ public class MstInfoResource {
   public ResponseEntity<List<MstEquipment>> getMstEquipmentAll(
       MstEquipment params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      @RequestParam(required = false) Long selectedPatId
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstEquipment> page = mstInfoService.findMstEquipmentAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstEquipment/", offset, limit);
@@ -944,7 +1118,11 @@ public class MstInfoResource {
   /**
    * コードで医療材料マスタを取得する
    */
-  public ResponseEntity<MstEquipment> getMstEquipmentByCd(@RequestParam(value = "equipmentCd") String equipmentCd ) throws URISyntaxException {
+  public ResponseEntity<MstEquipment> getMstEquipmentByCd(@RequestParam(value = "equipmentCd") String equipmentCd ,
+                                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                          @AuthenticationPrincipal NtssUser ntssUser
+                                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     MstEquipment equipment = mstInfoService.findMstEquipmentByCd(equipmentCd);
     return new ResponseEntity<>(equipment,HttpStatus.OK);
   }
@@ -959,7 +1137,11 @@ public class MstInfoResource {
     MstEquipment params,
     @RequestParam(value = "page", required = false) Integer offset,
     @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstEquipment> page = mstInfoService.findMstEquipmentAllNoDel(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstEquipment/", offset, limit);
@@ -978,7 +1160,11 @@ public class MstInfoResource {
       //#8484　医療材料選択IFのリスト不正(#9978対応)　Start
       @RequestParam(value = "per_page", required = false) Integer limit
       //#8484　医療材料選択IFのリスト不正(#9978対応)　End
-      ) throws URISyntaxException {
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
 
      try{
         Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
@@ -1006,7 +1192,11 @@ public class MstInfoResource {
    * コードで機器を入手する
    */
   public ResponseEntity<EquipmentSharingInfoResponse> getMstEquipmentSharingInfoByCd(@RequestParam(value = "equipmentCd") String equipmentCd,
-      @RequestParam(value = "patId") Long patId) throws URISyntaxException {
+      @RequestParam(value = "patId") Long patId,
+                                                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                                     @AuthenticationPrincipal NtssUser ntssUser
+                                                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     /* del by biangang  2023-02-01 CodeOptimization  start */
     /**
     EquipmentSharingInfoResponse result = null;
@@ -1206,7 +1396,11 @@ public class MstInfoResource {
       MstEquipmentSet params,
       @RequestParam(value = "page", required = false) Integer offset,
       @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstEquipmentSet> page = mstInfoService.findMstEquipmentSetAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstEquipmentSet/", offset, limit);
@@ -1287,7 +1481,15 @@ public class MstInfoResource {
   /**
    * 指定IDの施設マスタ取得
    */
-  public ResponseEntity<MstFacility> getMstFacilityByCd(@PathVariable String id) {
+  public ResponseEntity<MstFacility> getMstFacilityByCd(@PathVariable String id,
+                                                        @RequestParam(required = false) Long selectedPatId,
+                                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                        @AuthenticationPrincipal NtssUser ntssUser
+                                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, id, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to get MstFacility : " + id);
     logService.log(LogLevel.INFO, eventLogMessage, FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,
@@ -1319,7 +1521,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MstImplant>> getMstImplantAll(
       MstImplant params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstImplant> page = mstInfoService.findMstImplantAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstImplant/", offset, limit);
@@ -1333,7 +1539,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MstImplant>> getMstImplantDelAll(
     MstImplant params,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstImplant> page = mstInfoService.findMstImplantDelAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstImplantDel/", offset, limit);
@@ -1348,7 +1558,12 @@ public class MstInfoResource {
   public ResponseEntity<List<MstImplant>> getMstImplantAllIncludeDel(
     MstImplant params,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    @RequestParam(required = false) Long selectedPatId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstImplant> page = mstInfoService.findMstImplantAllIncludeDel(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstImplant/", offset, limit);
@@ -1360,9 +1575,20 @@ public class MstInfoResource {
    * コードでインプラントマスタを取得する
    */
   public ResponseEntity<List<MstImplant>> getImplantNameByCdList(
-      @RequestBody List<Integer> implantCdList) {
+      @RequestBody List<Integer> implantCdList,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
     try {
       List<MstImplant> implants = mstInfoService.findMstImplantNameByCdList(implantCdList);
+      List<String> facilityCdList = implants.stream()
+        .map(MstImplant::getFacilityCd)
+        .collect(Collectors.toList());
+      if (!facilityAccessService.hasFacilityOrSelectedPatShareAccessForFacilityCds(ntssUser, facilityCdList, null)) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
       return new ResponseEntity<>(implants, HttpStatus.OK);
     } catch (Exception e) {
     // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
@@ -1385,7 +1611,15 @@ public class MstInfoResource {
   public ResponseEntity<List<MstInfection>> getMstInfectionAll(
       MstInfection params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      @RequestParam(required = false) Long selectedPatId,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) throws URISyntaxException {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, params.getFacilityCd(), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstInfection> page = mstInfoService.findMstInfectionAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstInfection/", offset, limit);
@@ -1396,7 +1630,17 @@ public class MstInfoResource {
   /**
    * 感染症マスタ一覧取得（削除済み含む）
    */
-  public ResponseEntity<List<MstInfection>> getMstInfectionAllIncludeDel(MstInfection params) throws URISyntaxException {
+  public ResponseEntity<List<MstInfection>> getMstInfectionAllIncludeDel(MstInfection params,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260513 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260513 end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260513 start
+    if (!hasFacilityAccess(ntssUser, params.getFacilityCd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260513 end
+
     List<MstInfection> infections = mstInfoService.findMstInfectionAllIncludeDel(params.getFacilityCd());
     return new ResponseEntity<>(infections, HttpStatus.OK);
   }
@@ -1409,8 +1653,16 @@ public class MstInfoResource {
       @RequestParam(value = "facility_cd", required = true) String facility_cd,
       @RequestParam(value = "is_del", required = false) String is_del,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      @RequestParam(required = false) Long selectedPatId
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facility_cd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstKur> page = mstInfoService.findMstKurByFacilityCd(pageable, facility_cd, is_del);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstKur/", offset, limit);
@@ -1426,7 +1678,11 @@ public class MstInfoResource {
     @RequestParam(value = "facility_cd", required = true) String facility_cd,
     @RequestParam(value = "page", required = false) Integer offset,
     @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstKur> page = mstInfoService.findMstKurByFacilityCdDel(pageable, facility_cd);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstKur/", offset, limit);
@@ -1441,7 +1697,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MstKur>> saveMstKurByCd(
       @PathVariable String facility_cd,
       @RequestBody Map<String, List<String>> payload
-    ) {
+    ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
     try {
       List<MstKur> insertedRecode = mstInfoService.saveMstKur(facility_cd, payload);
       return new ResponseEntity<>(insertedRecode, HttpStatus.OK);
@@ -1469,7 +1729,19 @@ public class MstInfoResource {
    */
   @PutMapping("/saveDoctorMstKur")
   public ResponseEntity<List<MstKur>> saveDoctorMstKur(
-    @RequestBody List<MstKur> mstKurList) {
+    @RequestBody List<MstKur> mstKurList,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    if (mstKurList != null && ntssUser != null && !ntssUser.isNkkAdminUser()) {
+      for (MstKur kur : mstKurList) {
+        MstKur mstKur = mstKurDao.selectByKurCd(String.valueOf(kur.getKurCd()));
+        if (mstKur != null && !facilityAccessService.hasFacilityAccess(ntssUser, mstKur.getFacilityCd())) {
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
     try {
       for (MstKur kurItem: mstKurList) {
         mstInfoService.saveDoctorMstKur(kurItem);
@@ -1493,7 +1765,11 @@ public class MstInfoResource {
   /**
    * クールマスター名
    */
-  public ResponseEntity<String> getMstKurNameByCd(String kurCd) throws URISyntaxException {
+  public ResponseEntity<String> getMstKurNameByCd(String kurCd,
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     String kurName = mstInfoService.findKurNameByKurCd(kurCd);
     return new ResponseEntity<>(kurName, HttpStatus.OK);
   }
@@ -1505,7 +1781,11 @@ public class MstInfoResource {
   public ResponseEntity<Void> saveMstSelector(
       @PathVariable String facility_cd,
       @RequestBody Map<String, String> payload
-    ) {
+    ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
     try {
       mstInfoService.saveMstSelector(facility_cd, payload);
       return new ResponseEntity<>(HttpStatus.OK);
@@ -1531,7 +1811,11 @@ public class MstInfoResource {
       MstMedicateTiming params,
       @RequestParam(value = "page", required = false) Integer offset,
       @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstMedicateTiming> page = mstInfoService.findMstMedicateTimingAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstMedicateTiming/", offset, limit);
@@ -1546,7 +1830,11 @@ public class MstInfoResource {
     MstMedicateTiming params,
     @RequestParam(value = "page", required = false) Integer offset,
     @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstMedicateTiming> page = mstInfoService.findMstMedicateTimingIncludeDeleted(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstMedicateTiming/", offset, limit);
@@ -1561,8 +1849,16 @@ public class MstInfoResource {
   public ResponseEntity<List<MstMedicineClass>> getMstMedicineClassAll(
       MstMedicineClass params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      @RequestParam(required = false) Long selectedPatId
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, params.getFacilityCd(), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstMedicineClass> page = mstInfoService.findMstMedicineClassAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstMedicineClass/", offset, limit);
@@ -1578,7 +1874,11 @@ public class MstInfoResource {
     MstMedicineClass params,
     @RequestParam(value = "page", required = false) Integer offset,
     @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstMedicineClass> page = mstInfoService.findMstMedicineClassAllIncludeDeleted(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstMedicineClassIncludeDeleted/", offset, limit);
@@ -1592,7 +1892,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MstMedicine>> getMstMedicineAll(
       MstMedicine params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstMedicine> page = mstInfoService.findMstMedicineAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstMedicine", offset, limit);
@@ -1606,7 +1910,11 @@ public class MstInfoResource {
    */
   // mod 8374 2023-02-20 15:20 薬剤分類が抗凝固剤の調製薬剤で指示を発行しても分類不一致と表示される 張 start
 //  public ResponseEntity<Object> getMstMedicineByCd(@RequestParam(value = "medicineCd") String medicineCd) throws URISyntaxException {
-  public ResponseEntity<Object> getMstMedicineByCd(@RequestParam(value = "medicineCd") String medicineCd, @RequestParam(value = "medicineType",defaultValue = "1") String medicineType) throws URISyntaxException {
+  public ResponseEntity<Object> getMstMedicineByCd(@RequestParam(value = "medicineCd") String medicineCd, @RequestParam(value = "medicineType",defaultValue = "1") String medicineType,
+                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                   @AuthenticationPrincipal NtssUser ntssUser
+                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     if ("1".equals(medicineType)) {
       MstMedicine medicine = mstInfoService.findMstMedicineByCd(medicineCd);
       return new ResponseEntity<>(medicine, HttpStatus.OK);
@@ -1626,7 +1934,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MstMedicine>> getMstMedicineByCdNoDel(
     MstMedicine params,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     MstMedicine mstMedicine = mstInfoService.findMstMedicineByCd(params);
     return new ResponseEntity(mstMedicine, HttpStatus.OK);
   }
@@ -1640,7 +1952,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MstMedicineExtendsDto>> getMstMedicineAllIncludeDeleted(
       MstMedicine params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstMedicineExtendsDto> page = mstInfoService.findMstMedicineAllIncludeDeleted(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstMedicineIncludeDeleted", offset, limit);
@@ -1653,7 +1969,11 @@ public class MstInfoResource {
    * コードで薬を手に入れる
    */
   public ResponseEntity<MedicineSharingInfoResponse> getMstMedicineSharingInfoByCd(@RequestParam(value = "medicineCd") String medicineCd,
-      @RequestParam(value = "patId") Long patId) throws URISyntaxException {
+      @RequestParam(value = "patId") Long patId,
+                                                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                                   @AuthenticationPrincipal NtssUser ntssUser
+                                                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     /* del by biangang  2023-02-01 CodeOptimization  start */
     /**
     MedicineSharingInfoResponse result = null;
@@ -1811,7 +2131,11 @@ public class MstInfoResource {
       MstMedicineSet params,
       @RequestParam(value = "page", required = false) Integer offset,
       @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstMedicineSet> page = mstInfoService.findMstMedicineSetAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstMedicineSet/", offset, limit);
@@ -1860,8 +2184,16 @@ public class MstInfoResource {
   public ResponseEntity<List<MstMedicineGroup>> getMstMedicineGroupAll(
     MstMedicineGroup params,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    @RequestParam(required = false) Long selectedPatId
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, params.getFacilityCd(), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstMedicineGroup> page = mstInfoService.findMstMedicineGroupAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstMedicineGroup/", offset, limit);
@@ -1878,7 +2210,11 @@ public class MstInfoResource {
     MstMedicineGroup params,
     @RequestParam(value = "page", required = false) Integer offset,
     @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstMedicineGroup> page = mstInfoService.findMstMedicineGroupAllIncludeDeleted(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstMedicineGroupIncludeDeleted/", offset, limit);
@@ -1919,7 +2255,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MstPatCalendarLayout>> getPatCalendarLayout(
       MstPatCalendarLayout params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstPatCalendarLayout> page = mstInfoService.findMstPatCalendarLayoutAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/getPatCalendarLayout/", offset, limit);
@@ -1933,7 +2273,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MstPatListLayout>> getPatListLayout(
       MstPatListLayout params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstPatListLayout> page = mstInfoService.findMstPatListLayoutAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/getPatListLayout/", offset, limit);
@@ -1944,7 +2288,15 @@ public class MstInfoResource {
   /**
    * マルチ患者一覧レイアウト更新
    */
-  public ResponseEntity<Void> updatePatListLayoutByCd(@PathVariable long pat_list_layout_cd, @RequestBody String payload) {
+  public ResponseEntity<Void> updatePatListLayoutByCd(@PathVariable long pat_list_layout_cd, @RequestBody String payload,
+                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                      @AuthenticationPrincipal NtssUser ntssUser
+                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    MstPatListLayout mstPatListLayout = mstPatListLayoutDao.selectByCd(pat_list_layout_cd);
+    if (mstPatListLayout != null && !hasFacilityAccess(ntssUser, mstPatListLayout.getFacilityCd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     try {
       mstInfoService.updateMstPatListLayoutByCd(pat_list_layout_cd, payload);
       return new ResponseEntity<>(HttpStatus.OK);
@@ -1969,7 +2321,8 @@ public class MstInfoResource {
   public ResponseEntity<List<MstPatMemo>> getMstPatMemoAll(
       MstPatMemo params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      @RequestParam(required = false) Long selectedPatId) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstPatMemo> page = mstInfoService.findMstPatMemoAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstPatMemo/", offset, limit);
@@ -2009,7 +2362,12 @@ public class MstInfoResource {
   public ResponseEntity<List<MstPatViewerLayoutMonitorItem>> getMonitorItemForMstPatViewerLayout(
     @RequestParam(value = "facilityCd", required = true) String facilityCd,
     @RequestParam(value = "vitalMonitorClass", required = false) String vitalMonitorClass,
-    @RequestParam(value = "isAllDisp", required = false) String isAllDisp) {
+    @RequestParam(value = "isAllDisp", required = false) String isAllDisp,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("患者経過総合ビューアレイアウトマスタ：バイタル・モニタ項目取得API 開始:施設コード[" + facilityCd + "]");
@@ -2073,7 +2431,8 @@ public class MstInfoResource {
   public ResponseEntity<List<MstRelationship>> getMstRelationshipAllIncludeDel(
     MstRelationship params,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    @RequestParam(required = false) Long selectedPatId) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstRelationship> page = mstInfoService.findMstRelationshipAllIncludeDel(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstRelationship/", offset, limit);
@@ -2115,7 +2474,8 @@ public class MstInfoResource {
   public ResponseEntity<List<MstSeverity>> getMstSeverityAllIncludeDel(
     MstSeverity params,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    @RequestParam(required = false) Long selectedPatId) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstSeverity> page = mstInfoService.findMstSeverityAllIncludeDel(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstSeverity/", offset, limit);
@@ -2171,7 +2531,8 @@ public class MstInfoResource {
   public ResponseEntity<List<MstTransport>> getMstTransportAllIncludeDel(
     MstTransport params,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    @RequestParam(required = false) Long selectedPatId) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstTransport> page = mstInfoService.findMstTransportAllIncludeDel(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstTransport/", offset, limit);
@@ -2185,7 +2546,8 @@ public class MstInfoResource {
   public ResponseEntity<List<MstTreatment>> getMstTreatmentAll(
       MstTreatment params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      @RequestParam(required = false) Long selectedPatId) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstTreatment> page = mstInfoService.findMstTreatmentAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstTreatment/", offset, limit);
@@ -2252,7 +2614,12 @@ public class MstInfoResource {
   public ResponseEntity<List<MstPersonalUser>> getMstPersonalUserAll(
       @RequestParam(value = "facility_cd", required = true) String facility_cd,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      @RequestParam(required = false) Long selectedPatId,
+      @AuthenticationPrincipal NtssUser ntssUser) throws URISyntaxException {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facility_cd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstPersonalUser> page = mstInfoService.findMstPersonalUserAll(pageable, facility_cd);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstPersonalUser/", offset, limit);
@@ -2280,7 +2647,12 @@ public class MstInfoResource {
   public ResponseEntity<List<MstPersonalUser>> getMstPersonalUserAllIncludeDel(
     @RequestParam(value = "facility_cd", required = true) String facility_cd,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    @RequestParam(required = false) Long selectedPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) throws URISyntaxException {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facility_cd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstPersonalUser> page = mstInfoService.findMstPersonalUserAllIncludeDel(pageable, facility_cd);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstPersonalUser/", offset, limit);
@@ -2290,12 +2662,19 @@ public class MstInfoResource {
   @PostMapping("/mstPersonalUserByIdList")
   /**
    * Get MstPersonalUserById
-   */
+  */
   public ResponseEntity<List<MstPersonalUser>> getMstPersonalUserNameByIdList(
-      @RequestBody List<Long> listUserId) {
-
-      List<MstPersonalUser> listUser = mstInfoService.getMstPersonalUserNameByIdList(listUserId);
-      return new ResponseEntity<>(listUser, HttpStatus.OK);
+      @RequestBody List<Long> listUserId,
+      @RequestParam(required = false) Long selectedPatId,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+    List<MstPersonalUser> listUser = mstInfoService.getMstPersonalUserNameByIdList(listUserId);
+    List<String> facilityCdList = listUser.stream()
+        .map(MstPersonalUser::getFacilityCd)
+        .collect(Collectors.toList());
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccessForFacilityCds(ntssUser, facilityCdList, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    return new ResponseEntity<>(listUser, HttpStatus.OK);
   }
   @GetMapping("/mstVa")
   /**
@@ -2381,7 +2760,8 @@ public class MstInfoResource {
   public ResponseEntity<List<MstWard>> getMstWardAllIncludeDel(
     MstWard params,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    @RequestParam(required = false) Long selectedPatId) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstWard> page = mstInfoService.findMstWardAllIncludeDel(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstWard/", offset, limit);
@@ -2418,7 +2798,52 @@ public class MstInfoResource {
   /**
    * デバイスエッジマスタ登録・更新
    */
-  public ResponseEntity<Void> saveMstDeviceEdge(@RequestBody Map<String, List<String>> payload) {
+  public ResponseEntity<Void> saveMstDeviceEdge(@RequestBody Map<String, List<String>> payload,
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                @AuthenticationPrincipal NtssUser ntssUser
+                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try {
+      if (ntssUser != null && !ntssUser.isNkkAdminUser()) {
+        ObjectMapper mapper = new ObjectMapper();
+        if (payload.get("insertRecord") != null) {
+          MstDeviceEdge mstDeviceEdge = mapper.readValue(payload.get("insertRecord").get(payload.get("insertRecord").size() - 1), MstDeviceEdge.class);
+          if (!hasFacilityAccess(ntssUser, mstDeviceEdge.getFacilityCd())) {
+            EventLogMessage eventLogMessage = new EventLogMessage();
+            eventLogMessage.setLogMessage("セキュリティチェックの例外!");
+            logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,
+              null);
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+        if (payload.get("updateRecord") != null) {
+          MstDeviceEdge mstDeviceEdge = mapper.readValue(payload.get("updateRecord").get(payload.get("updateRecord").size() - 1), MstDeviceEdge.class);
+          if (!hasFacilityAccess(ntssUser, mstDeviceEdge.getFacilityCd())) {
+            EventLogMessage eventLogMessage = new EventLogMessage();
+            eventLogMessage.setLogMessage("セキュリティチェックの例外!");
+            logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,
+              null);
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+        List<String> deleteCdList = payload.get("deleteCdList");
+        for (int i = 0; deleteCdList.size() > i; i++) {
+          String serialNo = deleteCdList.get(i);
+          MstDeviceEdge mstDeviceEdge = mstDeviceEdgeDao.selectBySerialNoSN(serialNo);
+          if (mstDeviceEdge != null && !hasFacilityAccess(ntssUser, mstDeviceEdge.getFacilityCd())) {
+            EventLogMessage eventLogMessage = new EventLogMessage();
+            eventLogMessage.setLogMessage("セキュリティチェックの例外!");
+            logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,
+              null);
+              return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    } catch (JacksonException e) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     try {
       mstInfoService.saveMstDeviceEdge(payload);
       return new ResponseEntity<>(HttpStatus.OK);
@@ -2482,8 +2907,16 @@ public class MstInfoResource {
   @GetMapping("/{masterName}/mstSharingSelector")
   public ResponseEntity<List<MstSelector>> findSharingMstSelectorByMstName(
       @PathVariable String masterName,
-      @RequestParam(name = "facilityCd",required = false) String facilityCd
-  ) throws Exception{
+      @RequestParam(name = "facilityCd",required = false) String facilityCd,
+      @RequestParam(required = false) Long selectedPatId
+  ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws Exception {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
     try {
       // 選択肢マスタの取得
@@ -2517,7 +2950,7 @@ public class MstInfoResource {
   public ResponseEntity<MstSelector> findMstSelectorByMstName(
       @PathVariable String masterName,
       @RequestParam(name = "facilityCd",required = false) String facilityCd
-  ) throws Exception{
+) throws Exception{
 
     try {
       // 選択肢マスタの取得
@@ -2555,7 +2988,11 @@ public class MstInfoResource {
       MstBbsKind params,
       @RequestParam(value = "page", required = false) Integer offset,
       @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstBbsKind> page = mstInfoService.findMstBbsKindByFacilityCd(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstBbsKind/", offset, limit);
@@ -2577,7 +3014,11 @@ public class MstInfoResource {
     MstBbsKind params,
     @RequestParam(value = "page", required = false) Integer offset,
     @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     List<MstBbsKind> mstBbsKindList = mstInfoService.findMstBbsKindAll(params);
     return new ResponseEntity<>(mstBbsKindList, HttpStatus.OK);
   }
@@ -2610,7 +3051,55 @@ public class MstInfoResource {
    * 職種マスタ登録・更新
    */
   @PutMapping("/saveMstJob")
-  public ResponseEntity<Void> saveMstJob(@RequestBody Map<String, List<String>> payload) {
+  public ResponseEntity<Void> saveMstJob(@RequestBody Map<String, List<String>> payload,
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                         @AuthenticationPrincipal NtssUser ntssUser
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try {
+      if (ntssUser != null && !ntssUser.isNkkAdminUser()) {
+        ObjectMapper mapper = new ObjectMapper();
+        if (payload.get("insertRecord") != null) {
+          MstJob mstJob = mapper.readValue(payload.get("insertRecord").get(payload.get("insertRecord").size() - 1), MstJob.class);
+          if (!hasFacilityAccess(ntssUser, mstJob.getFacilityCd())) {
+            EventLogMessage eventLogMessage = new EventLogMessage();
+            eventLogMessage.setLogMessage("セキュリティチェックの例外!");
+            logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,
+              null);
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+        if (payload.get("updateRecord") != null) {
+          MstJob mstJob = mapper.readValue(payload.get("updateRecord").get(payload.get("updateRecord").size() - 1), MstJob.class);
+          if (!hasFacilityAccess(ntssUser, mstJob.getFacilityCd())) {
+            EventLogMessage eventLogMessage = new EventLogMessage();
+            eventLogMessage.setLogMessage("セキュリティチェックの例外!");
+            logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,
+              null);
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+        List<String> deleteCdList = payload.get("deleteCdList");
+        for (int i = 0; deleteCdList.size() > i; i++) {
+          String mstJobCd = deleteCdList.get(i);
+          List<MstJob> mstJobs = mstJobDao.selectByCd(Long.valueOf(mstJobCd), SelectOptions.get());
+          if (mstJobs != null && !mstJobs.isEmpty()) {
+            MstJob mstJob = mstJobs.get(0);
+            if (!hasFacilityAccess(ntssUser, mstJob.getFacilityCd())) {
+              EventLogMessage eventLogMessage = new EventLogMessage();
+              eventLogMessage.setLogMessage("セキュリティチェックの例外!");
+              logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,
+                null);
+              return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+            }
+          }
+        }
+      }
+    } catch (JacksonException e) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     try {
       mstInfoService.saveMstJob(payload);
       return new ResponseEntity<>(HttpStatus.OK);
@@ -2633,6 +3122,14 @@ public class MstInfoResource {
    */
   @PutMapping("/updMstJobAuthorities")
   public ResponseEntity<Void> updMstJobAuthorities(@RequestBody List<MstJobRequest> request, @AuthenticationPrincipal NtssUser ntssUser ) {
+    if (request != null) {
+      List<String> facilityCdList = request.stream()
+          .map(MstJobRequest::getFacilityCd)
+          .collect(Collectors.toList());
+      if (!facilityAccessService.hasFacilityOrSelectedPatShareAccessForFacilityCds(ntssUser, facilityCdList, null)) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
     try {
       mstInfoService.updMstJobAuthorities(request,ntssUser);
       return new ResponseEntity<>(HttpStatus.OK);
@@ -2661,7 +3158,11 @@ public class MstInfoResource {
       MstMedicineMix params,
       @RequestParam(value = "page", required = false) Integer offset,
       @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstMedicineMix> page = mstInfoService.findMstMedicineMixAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstMedicineMix/", offset, limit);
@@ -2677,7 +3178,11 @@ public class MstInfoResource {
     MstMedicineMix params,
     @RequestParam(value = "page", required = false) Integer offset,
     @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     MstMedicineMix mstMedicineMix = mstInfoService.findMstMedicineMixByCdNoDel(params);
     return new ResponseEntity(mstMedicineMix, HttpStatus.OK);
   }
@@ -2692,7 +3197,11 @@ public class MstInfoResource {
       MstMedicineMix params,
       @RequestParam(value = "page", required = false) Integer offset,
       @RequestParam(value = "per_page", required = false) Integer limit
-      ) throws URISyntaxException {
+      ,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstMedicineMixExtendsDto> page = mstInfoService.findMstMedicineMixAllIncludeDeleted(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstMedicineMixIncludeDeleted/", offset, limit);
@@ -2705,7 +3214,28 @@ public class MstInfoResource {
    * コードで薬を手に入れる
    */
   public ResponseEntity<MedicineMixSharingInfoResponse> getMstMedicineMixSharingInfoByCd(@RequestParam(value = "medicineMixCd") String medicineMixCd,
-      @RequestParam(value = "patId") Long patId) throws URISyntaxException {
+      @RequestParam(value = "patId") Long patId,
+                                                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                                         @AuthenticationPrincipal NtssUser ntssUser
+                                                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260514 start
+    if (!ntssUser.isNkkAdminUser()) {
+      if (!ntssUser.isNkkAdminUser()) {
+        PatPersonalMain patPersonalMain = patPersonalMainDao.selectById(patId);
+        if (patPersonalMain == null) {
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        if(!ntssUser.getFacilityCd().equals(patPersonalMain.getFacility_cd())) {
+          List<String> allowedFacilityCds = shrPatInfoDao.selectFacilityCdsByPatId(patId);
+          if (!allowedFacilityCds.contains(ntssUser.getFacilityCd())) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260514 end
+
     MedicineMixSharingInfoResponse result = mstInfoService.getMstMedicineMixSharingInfoByCd(medicineMixCd, patId);
 //    List<PatNameIdentification> patIdSrcList = materialsSharingPatientInfomationService.getListPatIdSrcFromPatDst(patId);
 //    MstMedicineMix medicineMix = mstInfoService.findMstMedicineMixByCd(medicineMixCd);
@@ -2836,7 +3366,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MstExamItem>> getMstExamItemByFacilityCd(
       MstExamItem params,
       @RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+      @RequestParam(value = "per_page", required = false) Integer limit,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstExamItem> page = mstInfoService.selectMstExamItemByFacilityCd(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstExamItem/", offset, limit);
@@ -2870,7 +3404,11 @@ public class MstInfoResource {
   @GetMapping("/mstExamItemForComsv")
   public ResponseEntity<List<MstSelector>> getMstExamItemForComsvByFacilityCd(
     @RequestParam(name = "facilityCd",required = false) String facilityCd
-  ) throws Exception {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws Exception {
     try {
       // 検査項目マスタで「仮想端末表示がONのもの」を100件まで取得
       List<MstSelector> sysMasterDefine = mstInfoService.findMstExamItemForComsvByFacilityCd(facilityCd);
@@ -2926,7 +3464,40 @@ public class MstInfoResource {
   /**
    * 全施設マスタ登録・更新
    */
-  public ResponseEntity<?> saveSysFacility(@RequestBody Map<String, List<String>> payload) {
+  public ResponseEntity<?> saveSysFacility(@RequestBody Map<String, List<String>> payload,
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                           @AuthenticationPrincipal NtssUser ntssUser
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try {
+      if (ntssUser != null && !ntssUser.isNkkAdminUser()) {
+        ObjectMapper mapper = new ObjectMapper();
+        if (payload.get("insertRecord") != null) {
+          SysFacility sysFacility = mapper.readValue(payload.get("insertRecord").get(payload.get("insertRecord").size() - 1), SysFacility.class);
+          if (!hasFacilityAccess(ntssUser, sysFacility.getFacilityCd())) {
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        if (payload.get("updateRecord") != null) {
+          SysFacility sysFacility = mapper.readValue(payload.get("updateRecord").get(payload.get("updateRecord").size() - 1), SysFacility.class);
+          if (!hasFacilityAccess(ntssUser, sysFacility.getFacilityCd())) {
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        List<String> deleteCdList = payload.get("deleteCdList");
+        for (int i = 0; deleteCdList.size() > i; i++) {
+          String medicalInstitutionCd = deleteCdList.get(i);
+          SysFacility sysFacility = sysFacilityDao.getSysFacilityByCd(medicalInstitutionCd);
+          if (sysFacility != null && !hasFacilityAccess(ntssUser, sysFacility.getFacilityCd())) {
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    } catch (JacksonException e) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     try {
       mstInfoService.saveSysFacility(payload);
 
@@ -3045,7 +3616,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MstAddMonitor>> getMstAddMonitorByVitalMonitorClass(
     @RequestParam(value = "facility_cd") String facilityCd,
     @RequestParam(value = "vital_monitor_class") String vitalMonitorClass
-  ) {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     List<MstAddMonitor> result = mstInfoService.selectMstAddMonitorByVitalMonitorClass(facilityCd, vitalMonitorClass);
     return new ResponseEntity<>(result, HttpStatus.OK);
   }
@@ -3061,7 +3636,11 @@ public class MstInfoResource {
   @GetMapping("/mstAddMonitorByFacilityCd")
   public ResponseEntity<List<MstAddMonitor>> getMstAddMonitorByFacilityCd(
     @RequestParam(value = "facility_cd") String facilityCd
-  ) {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     List<MstAddMonitor> result = mstInfoService.selectMstAddMonitorByFacilityCd(facilityCd);
     return new ResponseEntity<>(result, HttpStatus.OK);
   }
@@ -3078,7 +3657,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MedicineResponse>> getMstMedicineAllWithMix(
     String facilityCd,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     List<MedicineResponse> result = mstInfoService.selectMedicineAllWithMix(pageable, facilityCd);
     return new ResponseEntity<>(result, HttpStatus.OK);
@@ -3098,7 +3681,11 @@ public class MstInfoResource {
     String facilityCd,
     @PathVariable Long patId,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     List<MedicineResponseExtends> result = mstInfoService.selectMedicineAllTabooAllergyWithMix(pageable, facilityCd, patId, -1);
     return new ResponseEntity<>(result, HttpStatus.OK);
@@ -3118,7 +3705,11 @@ public class MstInfoResource {
     @PathVariable Long patId,
     @PathVariable Integer classType,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     List<MedicineResponseExtends> result = mstInfoService.selectMedicineAllTabooAllergyWithMix(pageable, facilityCd, patId, classType);
     return new ResponseEntity<>(result, HttpStatus.OK);
@@ -3264,7 +3855,11 @@ public class MstInfoResource {
   @GetMapping("/mstAddition")
 	public ResponseEntity<List<MstAddition>> getMstAdditionAll(MstAddition params,
 			@RequestParam(value = "page", required = false) Integer offset,
-			@RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+			@RequestParam(value = "per_page", required = false) Integer limit,
+                                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                               @AuthenticationPrincipal NtssUser ntssUser
+                                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
 		Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
 		Page<MstAddition> page = mstInfoService.findMstAdditionByFacilityCd(pageable, params);
 		HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstAddition/",
@@ -3344,7 +3939,11 @@ public class MstInfoResource {
   @GetMapping("/mstMenuGroup")
   public ResponseEntity<List<MstMenuGroup>> getAllMstMenuGroup(
     @RequestParam(name = "facilityCd", required = true) String facilityCd
-  ) {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     return new ResponseEntity<List<MstMenuGroup>>(mstInfoService.selectAllMstMenuGroup(facilityCd), HttpStatus.OK);
   }
 
@@ -3356,7 +3955,11 @@ public class MstInfoResource {
   @GetMapping("/mstJob")
   public ResponseEntity<List<MstJob>> getAllMstJob(
     @RequestParam(name = "facilityCd", required = true) String facilityCd
-  ) {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     return new ResponseEntity<List<MstJob>>(mstInfoService.selectAllMstJob(facilityCd), HttpStatus.OK);
   }
 
@@ -3367,7 +3970,11 @@ public class MstInfoResource {
    */
   @GetMapping("/mstMachine")
   public ResponseEntity<List<MstMachine>> getAllMstMachine(
-    @RequestParam(name = "facility_cd", required = true) String facilityCd) {
+    @RequestParam(name = "facility_cd", required = true) String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     return new ResponseEntity<List<MstMachine>>(mstInfoService.selectAllMstMachine(facilityCd), HttpStatus.OK);
   }
 
@@ -3378,7 +3985,11 @@ public class MstInfoResource {
    */
   @GetMapping("/mstAlarmNotification/detail")
   public ResponseEntity<MstAlarmNotification> getAlarmNotificationDetail(
-    @RequestParam(value = "alarmNotificationCd", required = true) Long alarmNotificationCd) {
+    @RequestParam(value = "alarmNotificationCd", required = true) Long alarmNotificationCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     return new ResponseEntity<>(mstInfoService.findAlarmNotificationDetail(alarmNotificationCd), HttpStatus.OK);
   }
 
@@ -3420,7 +4031,11 @@ public class MstInfoResource {
   @GetMapping("/mstCoopFacility")
   public ResponseEntity<?> getMstCoopFacility(
     @RequestParam(name = "facilityCd", required = true) String facilityCd
-  ) {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
     try {
       return new ResponseEntity<>(mstInfoService.getMstCoopFacility(facilityCd), HttpStatus.OK);
     } catch (Exception e) {
@@ -3489,7 +4104,11 @@ public class MstInfoResource {
   public ResponseEntity<List<MstExamSet>> getMstExamAll(
     MstExamSet params,
     @RequestParam(value = "page", required = false) Integer offset,
-    @RequestParam(value = "per_page", required = false) Integer limit) throws URISyntaxException {
+    @RequestParam(value = "per_page", required = false) Integer limit,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstExamSet> page = mstInfoService.findMstExamAll(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstExamSet/", offset, limit);
@@ -3505,7 +4124,11 @@ public class MstInfoResource {
    */
   @GetMapping("/mstIfEdge/{facilityCd}")
   public ResponseEntity<?> getMstIfEdgeByFacilityCd(
-      @PathVariable String facilityCd) throws URISyntaxException {
+      @PathVariable String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.MST_INFO + "/mstIfEdge/" + facilityCd;
@@ -3541,7 +4164,11 @@ public class MstInfoResource {
    * @throws URISyntaxException
    */
   @PostMapping("/mstIfEdge/submit")
-  public ResponseEntity<?> updateIfEdge(@RequestBody MstIfEdge mstIfEdge) throws URISyntaxException {
+  public ResponseEntity<?> updateIfEdge(@RequestBody MstIfEdge mstIfEdge,
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                        @AuthenticationPrincipal NtssUser ntssUser
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.MST_INFO + "/mstIfEdge/submit";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -3574,7 +4201,11 @@ public class MstInfoResource {
     MstMedicine params,
     @RequestParam(value = "page", required = false) Integer offset,
     @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstMedicine> page = mstInfoService.findMstMedicineUnit(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstMedicine/", offset, limit);
@@ -3585,7 +4216,11 @@ public class MstInfoResource {
     MstMedicineMix params,
     @RequestParam(value = "page", required = false) Integer offset,
     @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstMedicineMix> page = mstInfoService.findMstMedicineMixUnit(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstMedicineMix/", offset, limit);
@@ -3596,7 +4231,11 @@ public class MstInfoResource {
     MstEquipment params,
     @RequestParam(value = "page", required = false) Integer offset,
     @RequestParam(value = "per_page", required = false) Integer limit
-  ) throws URISyntaxException {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) throws URISyntaxException {
     Pageable pageable = PaginationUtils.generatePageRequest(offset, limit);
     Page<MstEquipment> page = mstInfoService.findMstEquipmentUnit(pageable, params);
     HttpHeaders headers = PaginationUtils.generatePaginationHttpHeaders(page, Uri.MST_INFO + "/mstEquipment/", offset, limit);
@@ -3605,13 +4244,21 @@ public class MstInfoResource {
   /*add FNSI-改修内容5204 任 end*/
   //add FutreNetWeb+SI課題管理 NO.5323 劉全航 start
   @GetMapping("/getMstMedicineTypeByClass")
-  public ResponseEntity<MstMedicineClass> getMstMedicineTypeByClass(@RequestParam(name = "classCd") Integer classCd){
+  public ResponseEntity<MstMedicineClass> getMstMedicineTypeByClass(@RequestParam(name = "classCd") Integer classCd,
+                                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                    @AuthenticationPrincipal NtssUser ntssUser
+                                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+){
     MstMedicineClass mstMedicineClass = mstMedicineClassDao.selectByCd(classCd);
     return new ResponseEntity<>(mstMedicineClass,HttpStatus.OK);
   }
 
   @GetMapping("/getMstEquipmentTypeByClass")
-  public ResponseEntity<MstEquipmentClass> getMstEquipmentTypeByClass(@RequestParam(name="classCd")Integer classCd){
+  public ResponseEntity<MstEquipmentClass> getMstEquipmentTypeByClass(@RequestParam(name="classCd")Integer classCd,
+                                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                                      @AuthenticationPrincipal NtssUser ntssUser
+                                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+){
     MstEquipmentClass mstEquipmentClass = mstEquipmentClassDao.selectByCd(classCd);
     return new ResponseEntity<>(mstEquipmentClass,HttpStatus.OK);
   }
@@ -3628,9 +4275,19 @@ public class MstInfoResource {
    * Master情報一括取得, サポートされているマスター See {@link MstInfoRequest.ReqMstName}
    * @param mstInfoRequest
    * @return
-   */
+  */
   @GetMapping("/getMstInfo")
-  public ResponseEntity<Map> getMstInfo(MstInfoRequest mstInfoRequest) {
+  public ResponseEntity<Map> getMstInfo(MstInfoRequest mstInfoRequest,
+                                        @RequestParam(required = false) Long selectedPatId,
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                        @AuthenticationPrincipal NtssUser ntssUser
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {    if (!ntssUser.isNkkAdminUser() && mstInfoRequest.getFacilityCd() == null) {
+      mstInfoRequest.setFacilityCd(ntssUser.getFacilityCd());
+    }
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, mstInfoRequest.getFacilityCd(), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     Map<String, Object> response = mstInfoService.getMstInfo(mstInfoRequest);
     return new ResponseEntity<>(response, HttpStatus.OK);
   }
@@ -3638,7 +4295,14 @@ public class MstInfoResource {
 
   /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
   @PostMapping("/getMstInfoByOrdNo")
-  public ResponseEntity<Map> getMstInfoByOrdNo(@RequestBody List<Long> ordNoList) {
+  public ResponseEntity<Map> getMstInfoByOrdNo(@RequestBody List<Long> ordNoList,
+                                               @RequestParam(required = false) Long selectedPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, ntssUser.getFacilityCd(), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
     Map<String, Object> response = mstInfoService.getMstInfoByOrdNo(ordNoList);
     return new ResponseEntity<>(response, HttpStatus.OK);
   }
@@ -3659,4 +4323,32 @@ public class MstInfoResource {
     return new ResponseEntity<>(response, HttpStatus.OK);
   }
   //add #12462 2026-04-23 共有施設マスタ取得対応 --end
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    if (ntssUser != null && ntssUser.isNkkAdminUser()) {
+      return true;
+    }
+    boolean access = ntssUser.getFacilityCd().equals(facilityCd);
+    return access;
+  }
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang start
+  @PostMapping("/getMstIndTreatInfos")
+  public ResponseEntity<List<MstMasterResponse>> getMstIndTreatInfos(@AuthenticationPrincipal NtssUser ntssUser,
+                                                                     @RequestBody MstMasterRequest req) {
+    try {
+      // 一旦調製薬剤のリストを取得後、それぞれ配下の薬剤の使用開始日、使用終了日を集計して応答に含める
+      List<MstMasterResponse> resList = mstInfoService.getMstIndTreatInfos(ntssUser.getFacilityCd(), req);
+      return new ResponseEntity<>(resList, HttpStatus.OK);
+    } catch (Exception e) {
+      EventLogMessage eventLogMessage = new EventLogMessage();
+      eventLogMessage.setLogMessage(e.getMessage());
+      logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,
+        null);
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+  }
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang end
+
 }

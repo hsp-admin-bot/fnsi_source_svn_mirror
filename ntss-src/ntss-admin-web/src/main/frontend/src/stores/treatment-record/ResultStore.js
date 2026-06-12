@@ -19,9 +19,10 @@ export default {
     // 実績情報取得
     // -----------------------------------------
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
-    getTreatmentRecordResult({ commit }, ordNo) {
-      return sendRequestGetTreatmentRecordResult(ordNo);
+    getTreatmentRecordResult({ commit }, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetTreatmentRecordResult(ordNo, selectedPatId);
     },
     //add 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 start
     getMedicalCareInfo({commit},payload){
@@ -32,7 +33,6 @@ export default {
     // 実績情報更新
     // -----------------------------------------
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     updateTreatmentRecordResult({ commit }, payload) {
       const ordNo = payload.ordNo;
       const treatmentRecordResult = payload.treatmentRecordResult;
@@ -46,7 +46,6 @@ export default {
     // ※処理区分に応じて治療条件の更新を行う.
     // -----------------------------------------
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     updateTreatmentRecordResultWithCondition({ commit }, payload) {
       const ordNo = payload.ordNo;
       const treatmentRecordResult = payload.treatmentRecordResult;
@@ -67,8 +66,10 @@ export default {
     // -----------------------------------------
     // 死活監視ステータス取得
     // -----------------------------------------
-    getmonistatus({ commit },deviceEdgeNo) {
-      return sendRequestGetmonistatus(deviceEdgeNo);
+    getmonistatus({ commit },payload) {
+      const deviceEdgeNo = payload && typeof payload === "object" ? payload.deviceEdgeNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetmonistatus(deviceEdgeNo, selectedPatId);
     },
   }
 };

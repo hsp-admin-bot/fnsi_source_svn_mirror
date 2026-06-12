@@ -53,6 +53,7 @@ export class Replacement {
     this.amount = fluidReplacementAmount.value;
     this.timing = numberToString(fluidReplacementTiming.value);
     this.useCount = fluidReplacementUseCount.value;
+    this.unit = fluidReplacement.unit;
     this.useCountUnit = fluidReplacementUseCount.unit;
     this.temperature = fluidReplacementTemperature.value;
     this.speed = fluidReplacementSpeed.value ? Number(fluidReplacementSpeed.value) : fluidReplacementSpeed.value;
@@ -216,6 +217,7 @@ export class Replacement {
     for (let key of keys) {
       if (!this.compareObjects(comparisonModel[key], actualModel[key])) {
         let unit = actualModel['useCountUnit'] ? actualModel['useCountUnit'] : null;
+        let replacementUnit = actualModel['unit'] ? actualModel['unit'] : null;
         switch (key) {
           // 補液(19)
           case "replacement":
@@ -231,7 +233,7 @@ export class Replacement {
                 rstCondInfo[item.FLUID_REPLACEMENT.cd].medicine_type = CODES.MEDICINE_TYPE.NORMAL.cd;
               }
               rstCondInfo[item.FLUID_REPLACEMENT.cd].value_name_1 = this.replacement.name;
-              rstCondInfo[item.FLUID_REPLACEMENT.cd].unit = unit;
+              rstCondInfo[item.FLUID_REPLACEMENT.cd].unit = replacementUnit;
               // 補液使用数(22)
               if (rstCondInfo[item.FLUID_REPLACEMENT_USE_COUNT.cd]) {
                 rstCondInfo[item.FLUID_REPLACEMENT_USE_COUNT.cd].unit = unit;
@@ -271,6 +273,18 @@ export class Replacement {
             rstCondInfo[item.FLUID_REPLACEMENT_SPEED.cd] = this.createEmpty();
             rstCondInfo[item.FLUID_REPLACEMENT_SPEED.cd].value = numberToString(actualModel[key]);
             rstCondInfo[item.FLUID_REPLACEMENT_SPEED.cd].unit = "L/h";
+            continue;
+          case "unit":
+            if (!rstCondInfo[item.FLUID_REPLACEMENT.cd]) {
+              rstCondInfo[item.FLUID_REPLACEMENT.cd] = this.getTemplateM();
+            }
+            rstCondInfo[item.FLUID_REPLACEMENT.cd].unit = replacementUnit;
+            continue;
+          case "useCountUnit":
+            if (!rstCondInfo[item.FLUID_REPLACEMENT_USE_COUNT.cd]) {
+              rstCondInfo[item.FLUID_REPLACEMENT_USE_COUNT.cd] = this.createEmpty();
+            }
+            rstCondInfo[item.FLUID_REPLACEMENT_USE_COUNT.cd].unit = unit;
             continue;
         }
       }

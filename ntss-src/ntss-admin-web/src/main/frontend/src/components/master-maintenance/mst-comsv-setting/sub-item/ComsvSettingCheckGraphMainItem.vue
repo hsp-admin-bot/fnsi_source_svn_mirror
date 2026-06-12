@@ -36,12 +36,16 @@
                   </td>
                   <td>
                     <kendo-dropdownlist
-                      v-model="item.code1"
+                      v-if="isExamDropdownReady"
+                      :key="'exam-ddl-g1-' + index + '-1-' + examDropdownRenderKey"
+                      :model-value="resolveExamDropdownValue(item.code1)"
+                      @update:model-value="onExamDropdownInput(item, 'code1', $event, graph1OnChange)"
+                      @select="onExamDropdownSelect(item, 'code1', $event, graph1OnChange)"
                       :data-source="mstExamItemsDataSources"
                       :data-text-field="'name'"
                       :data-value-field="'code'"
                       :filter="'contains'"
-                      @change="graph1Change(item,$event),graph1OnChange()"
+                      :auto-select-first-on-empty="false"
                       class="exam-items-select-box"
                     ></kendo-dropdownlist>
                   </td>
@@ -52,12 +56,16 @@
                   </td>
                   <td>
                     <kendo-dropdownlist
-                      v-model="item.code2"
+                      v-if="isExamDropdownReady"
+                      :key="'exam-ddl-g1-' + index + '-2-' + examDropdownRenderKey"
+                      :model-value="resolveExamDropdownValue(item.code2)"
+                      @update:model-value="onExamDropdownInput(item, 'code2', $event, graph1OnChange)"
+                      @select="onExamDropdownSelect(item, 'code2', $event, graph1OnChange)"
                       :data-source="mstExamItemsDataSources"
                       :data-text-field="'name'"
                       :data-value-field="'code'"
                       :filter="'contains'"
-                      @change="graph2Change(item,$event),graph1OnChange()"
+                      :auto-select-first-on-empty="false"
                       class="exam-items-select-box"
                     ></kendo-dropdownlist>
                   </td>
@@ -68,12 +76,16 @@
                   </td>
                   <td>
                     <kendo-dropdownlist
-                      v-model="item.code3"
+                      v-if="isExamDropdownReady"
+                      :key="'exam-ddl-g1-' + index + '-3-' + examDropdownRenderKey"
+                      :model-value="resolveExamDropdownValue(item.code3)"
+                      @update:model-value="onExamDropdownInput(item, 'code3', $event, graph1OnChange)"
+                      @select="onExamDropdownSelect(item, 'code3', $event, graph1OnChange)"
                       :data-source="mstExamItemsDataSources"
                       :data-text-field="'name'"
                       :data-value-field="'code'"
                       :filter="'contains'"
-                      @change="graph3Change(item,$event),graph1OnChange()"
+                      :auto-select-first-on-empty="false"
                       class="exam-items-select-box"
                     ></kendo-dropdownlist>
                   </td>
@@ -161,12 +173,16 @@
                         </td>
                         <td>
                           <kendo-dropdownlist
-                            v-model="item.code_bfr1"
+                            v-if="isExamDropdownReady"
+                            :key="'exam-ddl-g2-' + index + '-bfr1-' + examDropdownRenderKey"
+                            :model-value="resolveExamDropdownValue(item.code_bfr1)"
+                            @update:model-value="onExamDropdownInput(item, 'code_bfr1', $event, graph2OnChange)"
+                            @select="onExamDropdownSelect(item, 'code_bfr1', $event, graph2OnChange)"
                             :data-source="mstExamItemsDataSources"
                             :data-text-field="'name'"
                             :data-value-field="'code'"
                             :filter="'contains'"
-                            @change="graph4Change(item,$event),graph2OnChange()"
+                            :auto-select-first-on-empty="false"
                             class="exam-items-select-box"
                           ></kendo-dropdownlist>
                         </td>
@@ -177,12 +193,16 @@
                         </td>
                         <td>
                           <kendo-dropdownlist
-                            v-model="item.code_afr1"
+                            v-if="isExamDropdownReady"
+                            :key="'exam-ddl-g2-' + index + '-afr1-' + examDropdownRenderKey"
+                            :model-value="resolveExamDropdownValue(item.code_afr1)"
+                            @update:model-value="onExamDropdownInput(item, 'code_afr1', $event, graph2OnChange)"
+                            @select="onExamDropdownSelect(item, 'code_afr1', $event, graph2OnChange)"
                             :data-source="mstExamItemsDataSources"
                             :data-text-field="'name'"
                             :data-value-field="'code'"
                             :filter="'contains'"
-                            @change="graph5Change(item,$event),graph2OnChange()"
+                            :auto-select-first-on-empty="false"
                             class="exam-items-select-box"
                           ></kendo-dropdownlist>
                         </td>
@@ -199,12 +219,16 @@
                         </td>
                         <td>
                           <kendo-dropdownlist
-                            v-model="item.code_bar1"
+                            v-if="isExamDropdownReady"
+                            :key="'exam-ddl-g2-' + index + '-bar1-' + examDropdownRenderKey"
+                            :model-value="resolveExamDropdownValue(item.code_bar1)"
+                            @update:model-value="onExamDropdownInput(item, 'code_bar1', $event, graph2OnChange)"
+                            @select="onExamDropdownSelect(item, 'code_bar1', $event, graph2OnChange)"
                             :data-source="mstExamItemsDataSources"
                             :data-text-field="'name'"
                             :data-value-field="'code'"
                             :filter="'contains'"
-                            @change="graph6Change(item,$event),graph2OnChange()"
+                            :auto-select-first-on-empty="false"
                             class="exam-items-select-box"
                           ></kendo-dropdownlist>
                         </td>
@@ -245,12 +269,16 @@
                         </td>
                         <td>
                           <kendo-dropdownlist
-                            v-model="item.code_bfr2"
+                            v-if="isExamDropdownReady"
+                            :key="'exam-ddl-g2-' + index + '-bfr2-' + examDropdownRenderKey"
+                            :model-value="resolveExamDropdownValue(item.code_bfr2)"
+                            @update:model-value="onExamDropdownInput(item, 'code_bfr2', $event, graph2OnChange)"
+                            @select="onExamDropdownSelect(item, 'code_bfr2', $event, graph2OnChange)"
                             :data-source="mstExamItemsDataSources"
                             :data-text-field="'name'"
                             :data-value-field="'code'"
                             :filter="'contains'"
-                            @change="graph7Change(item,$event),graph2OnChange()"
+                            :auto-select-first-on-empty="false"
                             class="exam-items-select-box"
                           ></kendo-dropdownlist>
                         </td>
@@ -261,12 +289,16 @@
                         </td>
                         <td>
                           <kendo-dropdownlist
-                            v-model="item.code_afr2"
+                            v-if="isExamDropdownReady"
+                            :key="'exam-ddl-g2-' + index + '-afr2-' + examDropdownRenderKey"
+                            :model-value="resolveExamDropdownValue(item.code_afr2)"
+                            @update:model-value="onExamDropdownInput(item, 'code_afr2', $event, graph2OnChange)"
+                            @select="onExamDropdownSelect(item, 'code_afr2', $event, graph2OnChange)"
                             :data-source="mstExamItemsDataSources"
                             :data-text-field="'name'"
                             :data-value-field="'code'"
                             :filter="'contains'"
-                            @change="graph8Change(item,$event),graph2OnChange()"
+                            :auto-select-first-on-empty="false"
                             class="exam-items-select-box"
                           ></kendo-dropdownlist>
                         </td>
@@ -283,12 +315,16 @@
                         </td>
                         <td>
                           <kendo-dropdownlist
-                            v-model="item.code_bar2"
+                            v-if="isExamDropdownReady"
+                            :key="'exam-ddl-g2-' + index + '-bar2-' + examDropdownRenderKey"
+                            :model-value="resolveExamDropdownValue(item.code_bar2)"
+                            @update:model-value="onExamDropdownInput(item, 'code_bar2', $event, graph2OnChange)"
+                            @select="onExamDropdownSelect(item, 'code_bar2', $event, graph2OnChange)"
                             :data-source="mstExamItemsDataSources"
                             :data-text-field="'name'"
                             :data-value-field="'code'"
                             :filter="'contains'"
-                            @change="graph9Change(item,$event),graph2OnChange()"
+                            :auto-select-first-on-empty="false"
                             class="exam-items-select-box"
                           ></kendo-dropdownlist>
                         </td>
@@ -315,12 +351,16 @@
                     </td>
                     <td>
                       <kendo-dropdownlist
-                        v-model="item.code"
+                        v-if="isExamDropdownReady"
+                        :key="'exam-ddl-radar-' + index + '-' + examDropdownRenderKey"
+                        :model-value="resolveExamDropdownValue(item.code)"
+                        @update:model-value="onExamDropdownInput(item, 'code', $event, radarOnChange)"
+                        @select="onExamDropdownSelect(item, 'code', $event, radarOnChange)"
                         :data-source="mstExamItemsDataSources"
                         :data-text-field="'name'"
                         :data-value-field="'code'"
                         :filter="'contains'"
-                        @change="graph10Change(item,$event),radarOnChange()"
+                        :auto-select-first-on-empty="false"
                         class="exam-items-select-box"
                       ></kendo-dropdownlist>
                     </td>
@@ -337,48 +377,54 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import {EventBus} from "@/eventBus";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import {EventBus} from "@/compat/vue/event-bus.js";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
+// ドロップダウン内「未登録」の内部 code（保存値 "" とは区別、未選択 null とも区別）
+const EXAM_UNREGISTERED_CODE = "\u0001";
+
 export default {
   data() {
     return {
+      graphDataReady: false,
       // 検査１グラフモデル
       graph1Model: {
         graph1_item: [
           {
             no: 1,
             name: "",
-            code1: "",
-            code2: "",
-            code3: ""
+            code1: null,
+            code2: null,
+            code3: null
           },
           {
             no: 2,
             name: "",
-            code1: "",
-            code2: "",
-            code3: ""
+            code1: null,
+            code2: null,
+            code3: null
           },
           {
             no: 3,
             name: "",
-            code1: "",
-            code2: "",
-            code3: ""
+            code1: null,
+            code2: null,
+            code3: null
           },
           {
             no: 4,
             name: "",
-            code1: "",
-            code2: "",
-            code3: ""
+            code1: null,
+            code2: null,
+            code3: null
           },
           {
             no: 5,
             name: "",
-            code1: "",
-            code2: "",
-            code3: ""
+            code1: null,
+            code2: null,
+            code3: null
           }
         ]
       },
@@ -389,61 +435,61 @@ export default {
             no: 1,
             name: "",
             graph1_name: "",
-            code_bfr1: "",
-            code_afr1: "",
-            code_bar1: "",
+            code_bfr1: null,
+            code_afr1: null,
+            code_bar1: null,
             graph2_name: "",
-            code_bfr2: "",
-            code_afr2: "",
-            code_bar2: ""
+            code_bfr2: null,
+            code_afr2: null,
+            code_bar2: null
           },
           {
             no: 2,
             name: "",
             graph1_name: "",
-            code_bfr1: "",
-            code_afr1: "",
-            code_bar1: "",
+            code_bfr1: null,
+            code_afr1: null,
+            code_bar1: null,
             graph2_name: "",
-            code_bfr2: "",
-            code_afr2: "",
-            code_bar2: ""
+            code_bfr2: null,
+            code_afr2: null,
+            code_bar2: null
           },
           {
             no: 3,
             name: "",
             graph1_name: "",
-            code_bfr1: "",
-            code_afr1: "",
-            code_bar1: "",
+            code_bfr1: null,
+            code_afr1: null,
+            code_bar1: null,
             graph2_name: "",
-            code_bfr2: "",
-            code_afr2: "",
-            code_bar2: ""
+            code_bfr2: null,
+            code_afr2: null,
+            code_bar2: null
           },
           {
             no: 4,
             name: "",
             graph1_name: "",
-            code_bfr1: "",
-            code_afr1: "",
-            code_bar1: "",
+            code_bfr1: null,
+            code_afr1: null,
+            code_bar1: null,
             graph2_name: "",
-            code_bfr2: "",
-            code_afr2: "",
-            code_bar2: ""
+            code_bfr2: null,
+            code_afr2: null,
+            code_bar2: null
           },
           {
             no: 5,
             name: "",
             graph1_name: "",
-            code_bfr1: "",
-            code_afr1: "",
-            code_bar1: "",
+            code_bfr1: null,
+            code_afr1: null,
+            code_bar1: null,
             graph2_name: "",
-            code_bfr2: "",
-            code_afr2: "",
-            code_bar2: ""
+            code_bfr2: null,
+            code_afr2: null,
+            code_bar2: null
           }
         ]
       },
@@ -452,27 +498,27 @@ export default {
         radar_item: [
           {
             no: 1,
-            code: ""
+            code: null
           },
           {
             no: 2,
-            code: ""
+            code: null
           },
           {
             no: 3,
-            code: ""
+            code: null
           },
           {
             no: 4,
-            code: ""
+            code: null
           },
           {
             no: 5,
-            code: ""
+            code: null
           },
           {
             no: 6,
-            code: ""
+            code: null
           }
         ]
       },
@@ -492,87 +538,145 @@ export default {
     }),
     // 検査項目一覧データソース
     mstExamItemsDataSources() {
-      const dataSources = this.mstExamItemsList;
       const emptyItem = {
-        code: "",
+        code: EXAM_UNREGISTERED_CODE,
         name: "未登録"
       };
-      let dataSourcesLen =  dataSources.filter(e =>{
-        return e.code == "" && e.name == "未登録"
+      const list = Array.isArray(this.mstExamItemsList) ? [...this.mstExamItemsList] : [];
+      const realItems = list.filter(
+        (e) => !(e.code === "" && e.name === "未登録") && e.code !== EXAM_UNREGISTERED_CODE
+      );
+      if (realItems.length === 0) {
+        return [];
+      }
+      const hasEmptyItem = list.some(
+        (e) => (e.code === "" && e.name === "未登録") || e.code === EXAM_UNREGISTERED_CODE
+      );
+      if (!hasEmptyItem) {
+        return [emptyItem, ...realItems];
+      }
+      return list.map((e) => {
+        if (e.code === "" && e.name === "未登録") {
+          return { ...e, code: EXAM_UNREGISTERED_CODE };
+        }
+        return e;
       });
-      if (dataSourcesLen && dataSourcesLen.length <= 0)
-      dataSources.unshift(emptyItem);
-      return dataSources;
+    },
+    examDropdownRenderKey() {
+      return `${this.graphDataReady ? 1 : 0}-${this.mstExamItemsDataSources.length}`;
+    },
+    hasExamItemOptions() {
+      return this.mstExamItemsDataSources.length > 0;
+    },
+    isExamDropdownReady() {
+      return this.graphDataReady && this.hasExamItemOptions;
+    }
+  },
+  watch: {
+    mstExamItemsDataSources(items) {
+      if (items.length > 0) {
+        return;
+      }
+      this.clearUnsetExamCodesWhenNoData();
     }
   },
   methods: {
     ...mapActions("mst-check-graph", ["getMstExamItemsList", "getMstExamItemsListByFacilityCd"]),
     ...mapActions("master-maintenance", ["setEditRecord"]),
 
+    isUnsetExamCode(code) {
+      return code === null || code === undefined;
+    },
+    toStoredExamCode(value) {
+      if (value === null || value === undefined) {
+        return null;
+      }
+      if (value === EXAM_UNREGISTERED_CODE) {
+        return "";
+      }
+      return String(value);
+    },
+    resolveExamDropdownValue(code) {
+      if (!this.hasExamItemOptions) {
+        return null;
+      }
+      if (this.isUnsetExamCode(code)) {
+        return null;
+      }
+      if (code === "") {
+        return EXAM_UNREGISTERED_CODE;
+      }
+      return code;
+    },
+    resolveExamDropdownSelectValue(event) {
+      const dataItem = event?.dataItem;
+      if (dataItem && typeof dataItem === "object" && dataItem.code !== undefined && dataItem.code !== null) {
+        return dataItem.code;
+      }
+      if (event?.value !== undefined && event?.value !== null) {
+        return event.value;
+      }
+      return event?.sender?.value?.();
+    },
+    onExamDropdownSelect(item, field, event, onRecordChange) {
+      const widgetValue = this.resolveExamDropdownSelectValue(event);
+      if (widgetValue === undefined) {
+        return;
+      }
+      this.onExamDropdownInput(item, field, widgetValue, onRecordChange);
+    },
+    onExamDropdownInput(item, field, value, onRecordChange) {
+      item[field] = this.toStoredExamCode(value);
+      if (typeof onRecordChange === "function") {
+        onRecordChange.call(this);
+      }
+    },
+    clearUnsetExamCodesWhenNoData() {
+      const resetFields = (item, fields) => {
+        fields.forEach((field) => {
+          const code = item[field];
+          if (code === "" || this.isUnsetExamCode(code)) {
+            item[field] = null;
+          }
+        });
+      };
+      const graph1Fields = ["code1", "code2", "code3"];
+      const graph2Fields = ["code_bfr1", "code_afr1", "code_bar1", "code_bfr2", "code_afr2", "code_bar2"];
+      this.graph1Model.graph1_item.forEach((item) => resetFields(item, graph1Fields));
+      this.graph2Model.graph2_item.forEach((item) => resetFields(item, graph2Fields));
+      this.radarModel.radar_item.forEach((item) => resetFields(item, ["code"]));
+    },
+    normalizeLoadedGraphCodes(model, fields) {
+      if (!model) {
+        return;
+      }
+      const items = model.graph1_item || model.graph2_item || model.radar_item;
+      if (!Array.isArray(items)) {
+        return;
+      }
+      items.forEach((item) => {
+        fields.forEach((field) => {
+          if (item[field] === undefined) {
+            item[field] = null;
+          }
+        });
+      });
+    },
+
     // 編集レコードのlcdGraph1を編集した値で更新
     graph1OnChange() {
-      this.$nextTick(() => {
-        const graph1Json = JSON.stringify(this.graph1Model);
-        this.updateEditRecord("lcdGraph1", graph1Json);
-      });
+      const graph1Json = JSON.stringify(this.graph1Model);
+      this.updateEditRecord("lcdGraph1", graph1Json);
     },
-    //add #9311 v-model発効します 張博 start
-    // mod #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（装置通信・仮想端末マスタ画面）20231201 ztc start
-    graph1Change(item, event) {
-      // item.code1 = event.sender._old;
-      item.code1 = event.sender._old + '';
-    },
-    graph2Change(item, event) {
-      // item.code2 = event.sender._old;
-      item.code2 = event.sender._old + '';
-    },
-    graph3Change(item, event) {
-      // item.code3 = event.sender._old;
-      item.code3 = event.sender._old + '';
-    },
-    graph4Change(item, event) {
-      // item.code_bfr1 = event.sender._old;
-      item.code_bfr1 = event.sender._old + '';
-    },
-    graph5Change(item, event) {
-      // item.code_afr1 = event.sender._old;
-      item.code_afr1 = event.sender._old + '';
-    },
-    graph6Change(item, event) {
-      // item.code_bar1 = event.sender._old;
-      item.code_bar1 = event.sender._old + '';
-    },
-    graph7Change(item, event) {
-      // item.code_bfr2 = event.sender._old;
-      item.code_bfr2 = event.sender._old + '';
-    },
-    graph8Change(item, event) {
-      // item.code_afr2 = event.sender._old;
-      item.code_afr2 = event.sender._old + '';
-    },
-    graph9Change(item, event) {
-      // item.code_bar2 = event.sender._old;
-      item.code_bar2 = event.sender._old + '';
-    },
-    graph10Change(item, event) {
-      // item.code = event.sender._old;
-      item.code = event.sender._old + '';
-    },
-    // mod #10053：優先00：破棄確認・保存活性(複数変更含む)・削除対応#9809（装置通信・仮想端末マスタ画面）20231201 ztc end
-    //add #9311 v-model発効します 張博 end
     // 編集レコードのlcdGraph2を編集した値で更新
     graph2OnChange() {
-      this.$nextTick(() => {
-        const graph2Json = JSON.stringify(this.graph2Model);
-        this.updateEditRecord("lcdGraph2", graph2Json);
-      });
+      const graph2Json = JSON.stringify(this.graph2Model);
+      this.updateEditRecord("lcdGraph2", graph2Json);
     },
     // 編集レコードのlcdRadarを編集した値で更新
     radarOnChange() {
-      this.$nextTick(() => {
-        const radarJson = JSON.stringify(this.radarModel);
-        this.updateEditRecord("lcdRadar", radarJson);
-      });
+      const radarJson = JSON.stringify(this.radarModel);
+      this.updateEditRecord("lcdRadar", radarJson);
     },
 
     // JSONをObjectに変換
@@ -589,37 +693,25 @@ export default {
       this.editRecord[key] = value;
       this.setEditRecord(this.editRecord);
     },
+    getRadiographContents() {
+      const itemRoot = this.$el || null;
+      return [1, 2, 3, 4, 5].map(index => {
+        const id = `graph2Id${index}`;
+        return getScopedElementById(id, itemRoot) || null;
+      });
+    },
 
     // 選択中Radiographにスタイルを付ける
     onClickRadiograph(index) {
-      const content1 = document.getElementById("graph2Id1");
-      const content2 = document.getElementById("graph2Id2");
-      const content3 = document.getElementById("graph2Id3");
-      const content4 = document.getElementById("graph2Id4");
-      const content5 = document.getElementById("graph2Id5");
-      content1.style.display = "none";
-      content2.style.display = "none";
-      content3.style.display = "none";
-      content4.style.display = "none";
-      content5.style.display = "none";
-      switch (index) {
-        case 1:
-          content1.style.display = "block";
-          break;
-        case 2:
-          content2.style.display = "block";
-          break;
-        case 3:
-          content3.style.display = "block";
-          break;
-        case 4:
-          content4.style.display = "block";
-          break;
-        case 5:
-          content5.style.display = "block";
-          break;
-        default:
-          break;
+      const contents = this.getRadiographContents();
+      contents.forEach(content => {
+        if (content) {
+          content.style.display = "none";
+        }
+      });
+      const activeContent = contents[index - 1];
+      if (activeContent) {
+        activeContent.style.display = "block";
       }
     }
   },
@@ -654,12 +746,15 @@ export default {
             : this.radarModel;
         }
       }
-       this.initGraph1 = JSON.parse(JSON.stringify(this.graph1Model.graph1_item));
-       this.initGraph2 = JSON.parse(JSON.stringify(this.graph2Model.graph2_item));
-       this.initRader =  JSON.parse(JSON.stringify(this.radarModel.radar_item));
+      this.normalizeLoadedGraphCodes(this.graph1Model, ["code1", "code2", "code3"]);
+      this.normalizeLoadedGraphCodes(this.graph2Model, ["code_bfr1", "code_afr1", "code_bar1", "code_bfr2", "code_afr2", "code_bar2"]);
+      this.normalizeLoadedGraphCodes(this.radarModel, ["code"]);
+      this.clearUnsetExamCodesWhenNoData();
+      this.initGraph1 = JSON.parse(JSON.stringify(this.graph1Model.graph1_item));
+      this.initGraph2 = JSON.parse(JSON.stringify(this.graph2Model.graph2_item));
+      this.initRader = JSON.parse(JSON.stringify(this.radarModel.radar_item));
+      this.graphDataReady = true;
     });
-  },
-  watch:{
   },
 };
 </script>
@@ -876,9 +971,9 @@ input[name="tab_graph_item"] {
   text-align: right;
 }
 
-#check1_content >>> .exam-items-select-box,
-#check2_content >>> .exam-items-select-box,
-#radar_content >>> .exam-items-select-box {
+#check1_content :deep(.exam-items-select-box),
+#check2_content :deep(.exam-items-select-box),
+#radar_content :deep(.exam-items-select-box) {
   margin: 5px 10px;
   width: 250px;
   font-size: 1em;
@@ -903,7 +998,7 @@ input[name="tab_graph_item"] {
   text-overflow: ellipsis;
 }
 
-.v-ons-input.com-sv >>> .text-input {
+.v-ons-input.com-sv :deep(.text-input) {
   font-size: 1em;
 }
 .tab_content_area3 {

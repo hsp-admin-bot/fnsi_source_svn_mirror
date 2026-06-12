@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="onClickCancel">
-    <div slot="body" style="height: 100%;">
+    <template #body>
+      <div style="height: 100%;">
       <div class="expandable-content custom-expandable-content" style="height: calc(100% - 2em); display: flex; flex-flow: column;">
         <v-ons-row class="comment-no" style="height: unset;">
           <v-ons-col class="title" width="10em">
@@ -26,7 +27,7 @@
             <label>2048文字まで入力可能</label>
           </v-ons-col>
         </v-ons-row>
-        <v-ons-row class="addition-modal-com-textarea">
+        <v-ons-row class="addition-modal-com-textarea" style="height: unset;">
           <v-ons-col>
             <com-textarea
               class="com-textarea"
@@ -38,14 +39,51 @@
               rows="25"
               cols="100"
               propMaxlength="2048"
+              defaultHeight="100%"
+              :isRisize="false"
               cssClass="textarea-resize-vertical"
               @set-content-data="setContentData"
             ></com-textarea>
           </v-ons-col>
         </v-ons-row>
+        <!-- 指示に反映 -->
+        <!-- FNSI-改修内容 反映(指示) 房 start
+        <v-ons-row v-if="isNew()">
+          <v-ons-col style="margin: 1em 0;">
+            <div>
+              <v-ons-checkbox
+                input-id="ind-comment-post-chkbox"
+                @change="onIndCommentPost"
+              ></v-ons-checkbox>
+              <label
+                id="ind-comment-post-chkbox-label"
+                for="ind-comment-post-chkbox">指示に反映</label>
+            </div>
+          </v-ons-col>
+        </v-ons-row>
+        FNSI-改修内容 反映(指示) 房 end-->
+        <!-- 指示者 -->
+        <!-- FNSI-改修内容 反映(指示) 房 start
+        <v-ons-row v-if="isNew()" style="margin: 1em 0;">
+          <v-ons-col class="title" width="5em">
+            <label>指示者</label>
+          </v-ons-col>
+          <v-ons-col>
+            <kendo-dropdownlist
+              v-model="selectedIndUserId"
+              :disabled="!isIndCommentPost"
+              :data-source="doctorList"
+              :data-text-field="'fullName'"
+              :data-value-field="'user_id'">
+            </kendo-dropdownlist>
+          </v-ons-col>
+        </v-ons-row>
+        FNSI-改修内容 反映(指示) 房 end-->
       </div>
-    </div>
-    <div slot="footer" class="flex-container">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button denial-btn btn2-cancel" @click="onClickCancel">キャンセル</v-ons-button>
@@ -54,19 +92,20 @@
         <v-ons-button class="button registration-btn btn1-execute" :disabled="!isChanged" @click="onClickApply">保存</v-ons-button>
       </div>
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 import { CODES } from "@/constants/TreatmentRecord";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import CommonTextArea from "@/components/common/CommonTextArea";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
@@ -120,7 +159,6 @@ export default {
       selectedIndUserId: 0
     };
   },
-  watch: {},
   methods: {
     ...mapGetters("treatment-record/addition", [
       "isNew",
@@ -143,17 +181,6 @@ export default {
         this.hideModal();
       }
     },
-    initTextAreaSetHeight() {
-      let rtnPx = 40;
-      let obj = document.getElementsByClassName("addition-modal-com-textarea");
-      if (obj.length > 0) {
-        rtnPx = obj[0].offsetHeight;
-        let textAreaObj = obj[0].getElementsByTagName("textarea");
-        if (textAreaObj.length > 0) {
-          textAreaObj[0].style.height = rtnPx + "px";
-        }
-      }
-    },
     /**
      * 反映ボタンクリック時ハンドラ.
      */
@@ -164,6 +191,14 @@ export default {
       } else {
         // mod FNSI-改修内容 反映(指示) 房 start
         this.applyEdit(false);
+        // this.$ons.notification.confirm({
+        //   title: null,
+        //   message: "指示にも反映しますか？",
+        //   buttonLabels: ["Yes", "No"],
+        //   callback: answer => {
+        //     this.applyEdit(answer === 0);
+        //   }
+        // });
         // mod FNSI-改修内容 反映(指示) 房 start
       }
     },
@@ -189,6 +224,12 @@ export default {
       const commentJson = {
         no: this.selectedNo,
         content: this.comment,
+        // ind_user_id: indUserInfo.ind_user_id,
+        // ind_user_last_name: indUserInfo.ind_user_last_name,
+        // ind_user_first_name: indUserInfo.ind_user_first_name,
+        // upd_user_id: this.getStateUserAccountInfo().userId,
+        // upd_user_last_name: this.getStateUserAccountInfo().userLastName,
+        // upd_user_first_name: this.getStateUserAccountInfo().userFirstName,
         input_class: CODES.COMMENT_INPUT_CLASS.RST.cd,
         is_editable: CODES.IS_EDITABLE.POSSIBLE.cd,
         cop_order_no: null
@@ -254,6 +295,11 @@ export default {
 
       // 対象指示コメントのコメント、更新者情報を書き換える
       info.content = this.comment;
+      /* modify by chamaojia 2024-01-31 [10196] The database has removed this content --start */
+      // info.upd_user_id = this.getStateUserAccountInfo().userId;
+      // info.upd_user_last_name = this.getStateUserAccountInfo().userLastName;
+      // info.upd_user_first_name = this.getStateUserAccountInfo().userFirstName;
+      /* modify by chamaojia 2024-01-31 [10196] The database has removed this content --end */
 
       // 実績:指示コメント保存APIを呼びだす.
       const commentInfo = JSON.stringify(updateCommentInfo);
@@ -282,8 +328,7 @@ export default {
      */
     applyEditInd(commentFlag) {
       return this.updateIndComment(
-        this.createIndCommentParameter(commentFlag)
-      ).catch(error => {
+        this.createIndCommentParameter(commentFlag)).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
         getErrorMessage('AdditionModalComponent.vue','applyEditInd','指示の指示コメント登録に失敗しました。');
         //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
@@ -374,8 +419,7 @@ export default {
       this.getIndUserList(
         AUTHORITY_CODES.RST_EDIT,    // 治療記録-編集
         AUTHORITY_CODES.RST_PEDIT    // 治療記録-代行編集
-      )
-      .then(response => {
+      ).then(response => {
         // 初期選択利用者ID
         const iniSelectId = response.iniSelectId;
         // 指示者リスト
@@ -453,6 +497,7 @@ export default {
   computed: {
     isChanged() {
       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc start
+      // return this.initialComment !== this.comment;
       return this.initialComment !== this.comment || this.initialSelectedNo !== this.selectedNo;
       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end
     }
@@ -476,13 +521,10 @@ export default {
     // 指示者選択肢の構築
     this.setIndUser();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  mounted() {
-    this.initTextAreaSetHeight();
-  }
 };
 </script>
 
@@ -490,14 +532,26 @@ export default {
 .expandable-content {
   padding: 0 1em 1em 1em;
 }
-.custom-expandable-content >>> .k-widget.k-dropdown {
+.custom-expandable-content :deep(.k-widget.k-dropdown) {
   font-size: unset;
 }
 .comment-no {
   align-items: center;
 }
-div >>> textarea {
+.addition-modal-com-textarea {
+  flex: 1;
+  min-height: 0;
+}
+.addition-modal-com-textarea :deep(ons-col) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+div :deep(textarea) {
   width: 100%;
+  height: 100%;
+  box-sizing: border-box;
   font-size: 1em;
   resize: both;
   font-family: inherit;
@@ -511,6 +565,9 @@ ons-select {
 }
 .com-textarea {
   width: 100%;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
   box-sizing: border-box;
 }
 @media print {
@@ -518,17 +575,17 @@ ons-select {
   .modal-mask {
     text-align: center;
   }
-  div >>> .modal-wrapper {
+  div :deep(.modal-wrapper){
     display: inline-block !important;
     text-align: left;
     width: 100%;
   }
   /** テキストエリアは印刷用div表示するので非表示 */
-  div >>> .custom-textarea {
+  div :deep(.custom-textarea){
     display: none !important;
   }
   /** 印刷用divの高さ調整 */
-  div >>> .print-textarea {
+  div :deep(.print-textarea){
     min-height: 60vh;
   }
 }

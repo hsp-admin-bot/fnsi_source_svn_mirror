@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.request.creatingReport.ReportByCdRequest;
 import jp.co.nikkiso.ntss.admin_web.request.creatingReport.ReportRequest;
 import jp.co.nikkiso.ntss.admin_web.response.creatingReport.PrinterInfo;
@@ -13,9 +13,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -61,19 +61,19 @@ public class ReportResourceTest extends AbstractResourceTest {
   /**
    * 帳票作成Service.
    */
-  @MockBean
+  @MockitoBean
   private ReportService reportService;
 
   /**
    * 施設設定Service.
    */
-  @MockBean
+  @MockitoBean
   private FacilitySettingService facilitySettingService;
 
   /**
    * プリンタService.
    */
-  @MockBean
+  @MockitoBean
   private PrinterService printerService;
 
   /**
@@ -143,7 +143,7 @@ public class ReportResourceTest extends AbstractResourceTest {
     // 検証
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/report/mst-report/{funcCd}", funcCd)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
       .andExpect(jsonPath("$.mstReports", hasSize(2)))
@@ -197,7 +197,7 @@ public class ReportResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get("/api/report/mst-report/{funcCd}", funcCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(reportService, times(1)).getMstReport(funcCd, facilityCd,null);
@@ -256,7 +256,7 @@ public class ReportResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post("/api/report/creating-report")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(reportService, times(1)).getReportHtml(anyLong(), anyMap(), anyLong(), anyLong());
@@ -310,7 +310,7 @@ public class ReportResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post("/api/report/creating-report")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(reportService, times(1)).getReportHtml(anyLong(), anyMap(), anyLong(), anyLong());
@@ -358,7 +358,7 @@ public class ReportResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post("/api/report/creating-report/{reportCd}", reportCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(reportService, times(1)).getReportHtml(anyLong(), anyMap(), anyLong(), anyLong());
@@ -401,7 +401,7 @@ public class ReportResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post("/api/report/creating-report/{reportCd}", reportCd)
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(reportService, times(1)).getReportHtml(anyLong(), anyMap(), anyLong(), anyLong());

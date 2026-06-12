@@ -3,6 +3,8 @@ package jp.co.nikkiso.ntss.core.entity;
 import java.sql.Date;
 import java.sql.Timestamp;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.entity.entityListener.CommonEntityListener;
 import org.seasar.doma.Column;
 import org.seasar.doma.Entity;
@@ -60,6 +62,7 @@ public class DevMenteMain extends BaseBlankEntity {
    * 点検日
    */
   @Column(name = "mainte_date")
+  @JsonFormat(pattern = "yyyy-MM-dd", timezone = CoreConstant.DateTimeFormat.TIME_ZONE_ASIA_TOKYO)
   private Date menteDate;
   /**
    * 点検レイアウトグループコード

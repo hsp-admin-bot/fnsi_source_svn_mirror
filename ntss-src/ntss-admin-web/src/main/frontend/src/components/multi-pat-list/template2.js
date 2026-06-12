@@ -1,4 +1,4 @@
-import moment from 'moment';
+import dayjs from "@/compat/date/dayjs";
 import {
   getTimeFromMins,
   dateIntervalCodeToName,
@@ -1402,7 +1402,7 @@ import {
   RST_OFF_WATER_AFTER_ITEM5_WEIGHT_CD_KG,
   RST_OFF_WATER_AFTER_CORRECTION_TOTAL_AMOUNT_CD_KG,
 } from './TemplateConstant';
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 // add #11528 【たくしん会】データリスト並び順不正 房 start
 import {ApiHelper} from "@/apis/AxiosHelper";
 // add #11528 【たくしん会】データリスト並び順不正 房 end
@@ -1420,7 +1420,10 @@ export async function getTreatmentPlanData(that, data) {
   const mstMedicineData = mstList.mst_medicine_del.data;
   const mstMedicineMixData = mstList.mst_medicine_mix_del.data;
   const getMedicineAmount = ({amount, medicine_type, cd}) => {
-      let medicineInfo = null;
+      if (amount == null || amount === '') {
+        return amount;
+      }
+      let medicineInfo;
       if (medicine_type == 1) {
         medicineInfo = mstMedicineData.find(item => item.medicineCd == cd);
       } else {
@@ -1479,7 +1482,7 @@ export async function getTreatmentPlanData(that, data) {
     // 治療日
     complaints = that.setComplaintsDatahasDate(
       TREAT_DATA,
-      moment(x.treatDate).format('YYYY/MM/DD'),
+      dayjs(x.treatDate).format('YYYY/MM/DD'),
       hosp_pat_id,
       pat_name,
       count,
@@ -1497,7 +1500,7 @@ export async function getTreatmentPlanData(that, data) {
     // 初版確定日時
     complaints = that.setComplaintsDatahasDate(
       RST_EDITION_DATE,
-      moment(x.rstEditionDate).isValid() ? moment(x.rstEditionDate).format('YYYY/MM/DD HH:mm') : '',
+      dayjs(x.rstEditionDate).isValid() ? dayjs(x.rstEditionDate).format('YYYY/MM/DD HH:mm') : '',
       hosp_pat_id,
       pat_name,
       count,
@@ -1506,7 +1509,7 @@ export async function getTreatmentPlanData(that, data) {
     // 最新版確定日時
     complaints = that.setComplaintsDatahasDate(
       CUR_EDITION_DATE,
-      moment(x.curEditionDate).isValid() ? moment(x.curEditionDate).format('YYYY/MM/DD HH:mm') : '',
+      dayjs(x.curEditionDate).isValid() ? dayjs(x.curEditionDate).format('YYYY/MM/DD HH:mm') : '',
       hosp_pat_id,
       pat_name,
       count,
@@ -1599,7 +1602,7 @@ export async function getTreatmentPlanData(that, data) {
     //【指示】スケジュール_治療開始時刻
     complaints = that.setComplaintsDatahasDate(
       IND_TREAT_START_TIME_CD,
-      moment(x.indTreatStartTime).isValid() ? moment(x.indTreatStartTime,"HHmm").format('HH:mm') : '',
+      dayjs(x.indTreatStartTime).isValid() ? dayjs(x.indTreatStartTime,"HHmm").format('HH:mm') : '',
       hosp_pat_id,
       pat_name,
       count,
@@ -1623,8 +1626,8 @@ export async function getTreatmentPlanData(that, data) {
       complaints = that.setComplaintsDatahasDate(
         IND_TREAT_TIME,
         /* modify by zhaohan 2022-10-20 [6523] バックエンドの処理時間かかるのでエラー発生。 --start */
-        // moment(ind_cond_info[1].value).isValid() ? moment("20200101").minute(ind_cond_info[1].value).format('HH:mm') : '',
-        ind_cond_info[1] ? moment(ind_cond_info[1].value).isValid() ? moment("20200101").minute(ind_cond_info[1].value).format('HH:mm') : '' : '',
+        // dayjs(ind_cond_info[1].value).isValid() ? dayjs("20200101").minute(ind_cond_info[1].value).format('HH:mm') : '',
+        ind_cond_info[1] ? dayjs(ind_cond_info[1].value).isValid() ? dayjs("20200101").minute(ind_cond_info[1].value).format('HH:mm') : '' : '',
         /* modify by zhaohan 2022-10-20 [6523] バックエンドの処理時間かかるのでエラー発生。 --end */
         hosp_pat_id,
         pat_name,
@@ -1635,8 +1638,8 @@ export async function getTreatmentPlanData(that, data) {
       complaints = that.setComplaintsDatahasDate(
         IND_IHDF_CALC_DIALYSATE_TIME,
         /* modify by zhaohan 2022-10-20 [6523] バックエンドの処理時間かかるのでエラー発生。 --start */
-        // moment(ind_cond_info[1].value).isValid() ? moment("20200101").minute(ind_cond_info[1].value).format('HH:mm') : '',
-        ind_cond_info[1] ? moment(ind_cond_info[1].value).isValid() ? moment("20200101").minute(ind_cond_info[1].value).format('HH:mm') : '' : '',
+        // dayjs(ind_cond_info[1].value).isValid() ? dayjs("20200101").minute(ind_cond_info[1].value).format('HH:mm') : '',
+        ind_cond_info[1] ? dayjs(ind_cond_info[1].value).isValid() ? dayjs("20200101").minute(ind_cond_info[1].value).format('HH:mm') : '' : '',
         /* modify by zhaohan 2022-10-20 [6523] バックエンドの処理時間かかるのでエラー発生。 --end */
         hosp_pat_id,
         pat_name,
@@ -1647,8 +1650,8 @@ export async function getTreatmentPlanData(that, data) {
       complaints = that.setComplaintsDatahasDate(
         IND_QB_CALC_DIALYSATE_TIME,
         /* modify by zhaohan 2022-10-20 [6523] バックエンドの処理時間かかるのでエラー発生。 --start */
-        // moment(ind_cond_info[1].value).isValid() ? moment("20200101").minute(ind_cond_info[1].value).format('HH:mm') : '',
-        ind_cond_info[1] ? moment(ind_cond_info[1].value).isValid() ? moment("20200101").minute(ind_cond_info[1].value).format('HH:mm') : '' : '',
+        // dayjs(ind_cond_info[1].value).isValid() ? dayjs("20200101").minute(ind_cond_info[1].value).format('HH:mm') : '',
+        ind_cond_info[1] ? dayjs(ind_cond_info[1].value).isValid() ? dayjs("20200101").minute(ind_cond_info[1].value).format('HH:mm') : '' : '',
         /* modify by zhaohan 2022-10-20 [6523] バックエンドの処理時間かかるのでエラー発生。 --end */
         hosp_pat_id,
         pat_name,
@@ -4668,7 +4671,7 @@ export async function getTreatmentPlanData(that, data) {
     if (x.indIndCommentInfo) {
       //指示：指示コメント情報 ADD 孫洪波
       let ind_ind_comment_info = JSON.parse(x.indIndCommentInfo);
-      let commentTmp = null;
+      let commentTmp;
       //【指示】指示コメント1
       commentTmp = ind_ind_comment_info.filter(eq => eq.no === 1);
       complaints = that.setComplaintsDatahasDate(
@@ -6405,7 +6408,7 @@ export async function getTreatmentPlanData(that, data) {
         //【指示】BV-UFC_開始期間 時間
         complaints = that.setComplaintsDatahasDate(
           IND_UFC_START_PERIOD_TIME,
-          ind_device_set_info.bvufc.dev.A[199] ? (moment(ind_device_set_info.bvufc.dev.A[199]).isValid() ? moment("20200101").minute(ind_device_set_info.bvufc.dev.A[199]).format('HH:mm') : '') : "",
+          ind_device_set_info.bvufc.dev.A[199] ? (dayjs(ind_device_set_info.bvufc.dev.A[199]).isValid() ? dayjs("20200101").minute(ind_device_set_info.bvufc.dev.A[199]).format('HH:mm') : '') : "",
           hosp_pat_id,
           pat_name,
           count,
@@ -6423,7 +6426,7 @@ export async function getTreatmentPlanData(that, data) {
         //【指示】BV-UFC_固定倍率除水期間 時間
         complaints = that.setComplaintsDatahasDate(
           IND_UFC_WATER_MAG_TIME_CD,
-          ind_device_set_info.bvufc.dev.A[207] ? (moment(ind_device_set_info.bvufc.dev.A[207]).isValid() ? moment("20200101").minute(ind_device_set_info.bvufc.dev.A[207]).format('HH:mm') : '') : "",
+          ind_device_set_info.bvufc.dev.A[207] ? (dayjs(ind_device_set_info.bvufc.dev.A[207]).isValid() ? dayjs("20200101").minute(ind_device_set_info.bvufc.dev.A[207]).format('HH:mm') : '') : "",
           hosp_pat_id,
           pat_name,
           count,
@@ -6474,7 +6477,7 @@ export async function getTreatmentPlanData(that, data) {
         //【指示】BV-UFC_終了前期間 時間
         complaints = that.setComplaintsDatahasDate(
           IND_UFC_END_BEFORE_TIME_CD,
-          ind_device_set_info.bvufc.dev.A[249] ? (moment(ind_device_set_info.bvufc.dev.A[249]).isValid() ? moment("20200101").minute(ind_device_set_info.bvufc.dev.A[249]).format('HH:mm') : '') : "",
+          ind_device_set_info.bvufc.dev.A[249] ? (dayjs(ind_device_set_info.bvufc.dev.A[249]).isValid() ? dayjs("20200101").minute(ind_device_set_info.bvufc.dev.A[249]).format('HH:mm') : '') : "",
           hosp_pat_id,
           pat_name,
           count,
@@ -6558,7 +6561,7 @@ export async function getTreatmentPlanData(that, data) {
           let ordNo = dia["ord_no"];
           if (ordNo === undefined || ordNo === "") {
             // 値がないので今日の日付けを格納
-            examDate = moment(x.treatDate, "YYYYMMDD").format(
+            examDate = dayjs(x.treatDate, "YYYYMMDD").format(
               "YYYY/MM/DD"
             );
           } else {
@@ -6568,9 +6571,9 @@ export async function getTreatmentPlanData(that, data) {
             ).catch(err => {
               throw err;
             })
-            examDate = res ? moment(res.data.treatDate, "YYYYMMDD").format(
+            examDate = res ? dayjs(res.data.treatDate, "YYYYMMDD").format(
               "YYYY/MM/DD"
-            ) : moment(x.treatDate, "YYYYMMDD").format(
+            ) : dayjs(x.treatDate, "YYYYMMDD").format(
               "YYYY/MM/DD"
             );
           }
@@ -6639,11 +6642,11 @@ export async function getTreatmentPlanData(that, data) {
     );
 
     //【実績】実績情報_治療時間
-    let t1 = moment(x.rstStartDate);
-    let t2 = moment(x.rstEndDate);
+    let t1 = dayjs(x.rstStartDate);
+    let t2 = dayjs(x.rstEndDate);
     let minute = t2.diff(t1, 'minute');
-    if (moment(minute).isValid()) {
-      minute = moment("20200101").minute(minute).format('HH:mm');
+    if (dayjs(minute).isValid()) {
+      minute = dayjs("20200101").minute(minute).format('HH:mm');
     }
     complaints = that.setComplaintsDatahasDate(
       RST_INFO_TREAT_TIME_CD,
@@ -6656,7 +6659,7 @@ export async function getTreatmentPlanData(that, data) {
     //【実績】実績情報_治療開始日時
     complaints = that.setComplaintsDatahasDate(
       RST_START_DATE_CD,
-      moment(x.rstStartDate).isValid() ? moment(x.rstStartDate).format('YYYY/MM/DD HH:mm') : '',
+      dayjs(x.rstStartDate).isValid() ? dayjs(x.rstStartDate).format('YYYY/MM/DD HH:mm') : '',
       hosp_pat_id,
       pat_name,
       count,
@@ -6665,7 +6668,7 @@ export async function getTreatmentPlanData(that, data) {
     //【実績】実績情報_治療終了日時
     complaints = that.setComplaintsDatahasDate(
       RST_END_DATE_CD,
-      moment(x.rstEndDate).isValid() ? moment(x.rstEndDate).format('YYYY/MM/DD HH:mm') : '',
+      dayjs(x.rstEndDate).isValid() ? dayjs(x.rstEndDate).format('YYYY/MM/DD HH:mm') : '',
       hosp_pat_id,
       pat_name,
       count,
@@ -6731,7 +6734,7 @@ export async function getTreatmentPlanData(that, data) {
     //【実績】実績情報_透析記録確認日時
     complaints = that.setComplaintsDatahasDate(
       RST_REC_SET_DATE_CD,
-      moment(x.recSetDate).isValid() ? moment(x.recSetDate).format('YYYY/MM/DD HH:mm') : '',
+      dayjs(x.recSetDate).isValid() ? dayjs(x.recSetDate).format('YYYY/MM/DD HH:mm') : '',
       hosp_pat_id,
       pat_name,
       count,
@@ -6750,21 +6753,21 @@ export async function getTreatmentPlanData(that, data) {
     if (monitors.length > 0) {
       const minDate = Math.min.apply(
         Math,
-        monitors.map(z => moment(z.occur_date).unix())
+        monitors.map(z => dayjs(z.occur_date).unix())
       );
       const maxDate = Math.max.apply(
         Math,
-        monitors.map(z => moment(z.occur_date).unix())
+        monitors.map(z => dayjs(z.occur_date).unix())
       );
       const minMonitor = monitors.find(
         m =>
-          moment(m.occur_date).toISOString() ==
-          moment(minDate * 1000).toISOString()
+          dayjs(m.occur_date).toISOString() ==
+          dayjs(minDate * 1000).toISOString()
       );
       const maxMonitor = monitors.find(
         m =>
-          moment(m.occur_date).toISOString() ==
-          moment(maxDate * 1000).toISOString()
+          dayjs(m.occur_date).toISOString() ==
+          dayjs(maxDate * 1000).toISOString()
       );
       if (minMonitor) {
         let min_monitor_data = JSON.parse(minMonitor.monitor_data);
@@ -6842,7 +6845,7 @@ export async function getTreatmentPlanData(that, data) {
       //【実績】穿刺者_穿刺者1登録日時
       complaints = that.setComplaintsDatahasDate(
         RST_PUNCTURE_USER1_LOGIN_DATE_CD,
-        puncture_user1 && moment(rst_puncture_user_info.date_1).isValid() ? moment(rst_puncture_user_info.date_1).format('YYYY/MM/DD HH:mm') : '',
+        puncture_user1 && dayjs(rst_puncture_user_info.date_1).isValid() ? dayjs(rst_puncture_user_info.date_1).format('YYYY/MM/DD HH:mm') : '',
         hosp_pat_id,
         pat_name,
         count,
@@ -6864,7 +6867,7 @@ export async function getTreatmentPlanData(that, data) {
       //【実績】穿刺者_穿刺者2登録日時
       complaints = that.setComplaintsDatahasDate(
         RST_PUNCTURE_USER2_LOGIN_DATE_CD,
-        puncture_user2 && moment(rst_puncture_user_info.date_2).isValid() ? moment(rst_puncture_user_info.date_2).format('YYYY/MM/DD HH:mm') : '',
+        puncture_user2 && dayjs(rst_puncture_user_info.date_2).isValid() ? dayjs(rst_puncture_user_info.date_2).format('YYYY/MM/DD HH:mm') : '',
         hosp_pat_id,
         pat_name,
         count,
@@ -6872,8 +6875,8 @@ export async function getTreatmentPlanData(that, data) {
       );
       //【実績】穿刺者_穿刺日時
       if (rst_puncture_user_info.date) {
-        const isValidDate = moment(rst_puncture_user_info.date, "YYYY-MM-DDTHH:mm:ss.SSSZ", true).isValid();
-        rst_puncture_user_info.date = isValidDate ? moment(rst_puncture_user_info.date).format(
+        const isValidDate = dayjs(rst_puncture_user_info.date, "YYYY-MM-DDTHH:mm:ss.SSSZ", true).isValid();
+        rst_puncture_user_info.date = isValidDate ? dayjs(rst_puncture_user_info.date).format(
             "YYYY/MM/DD HH:mm"
           ) : rst_puncture_user_info.date;
       } else {
@@ -6908,7 +6911,7 @@ export async function getTreatmentPlanData(that, data) {
       //【実績】返血者_返血者1登録日時
       complaints = that.setComplaintsDatahasDate(
         RST_RETURN_USER1_LOGIN_DATE_CD,
-        return_user1 && moment(rst_return_user_info.date_1).isValid() ? moment(rst_return_user_info.date_1).format('YYYY/MM/DD HH:mm') : '',
+        return_user1 && dayjs(rst_return_user_info.date_1).isValid() ? dayjs(rst_return_user_info.date_1).format('YYYY/MM/DD HH:mm') : '',
         hosp_pat_id,
         pat_name,
         count,
@@ -6930,7 +6933,7 @@ export async function getTreatmentPlanData(that, data) {
       //【実績】返血者_返血者2登録日時
       complaints = that.setComplaintsDatahasDate(
         RST_RETURN_USER2_LOGIN_DATE_CD,
-        return_user2 && moment(rst_return_user_info.date_2).isValid() ? moment(rst_return_user_info.date_2).format('YYYY/MM/DD HH:mm') : '',
+        return_user2 && dayjs(rst_return_user_info.date_2).isValid() ? dayjs(rst_return_user_info.date_2).format('YYYY/MM/DD HH:mm') : '',
         hosp_pat_id,
         pat_name,
         count,
@@ -6938,8 +6941,8 @@ export async function getTreatmentPlanData(that, data) {
       );
       //【実績】返血者_返血日時
       if (rst_return_user_info.date) {
-        const isValidDate = moment(rst_return_user_info.date, "YYYY-MM-DDTHH:mm:ss.SSSZ", true).isValid();
-        rst_return_user_info.date = isValidDate ? moment(rst_return_user_info.date).format(
+        const isValidDate = dayjs(rst_return_user_info.date, "YYYY-MM-DDTHH:mm:ss.SSSZ", true).isValid();
+        rst_return_user_info.date = isValidDate ? dayjs(rst_return_user_info.date).format(
             "YYYY/MM/DD HH:mm"
           ) : rst_return_user_info.date;
       } else {
@@ -6974,7 +6977,7 @@ export async function getTreatmentPlanData(that, data) {
       //【実績】担当者_担当者1登録日時
       complaints = that.setComplaintsDatahasDate(
         RST_CHARGE_USER1_LOGIN_DATE_CD,
-        charge_user1 && moment(rst_charge_user_info.date_1).isValid() ? moment(rst_charge_user_info.date_1).format('YYYY/MM/DD HH:mm') : '',
+        charge_user1 && dayjs(rst_charge_user_info.date_1).isValid() ? dayjs(rst_charge_user_info.date_1).format('YYYY/MM/DD HH:mm') : '',
         hosp_pat_id,
         pat_name,
         count,
@@ -6996,7 +6999,7 @@ export async function getTreatmentPlanData(that, data) {
       //【実績】担当者_担当者2登録日時
       complaints = that.setComplaintsDatahasDate(
         RST_CHARGE_USER2_LOGIN_DATE_CD,
-        charge_user2 && moment(rst_charge_user_info.date_2).isValid() ? moment(rst_charge_user_info.date_2).format('YYYY/MM/DD HH:mm') : '',
+        charge_user2 && dayjs(rst_charge_user_info.date_2).isValid() ? dayjs(rst_charge_user_info.date_2).format('YYYY/MM/DD HH:mm') : '',
         hosp_pat_id,
         pat_name,
         count,
@@ -7057,7 +7060,7 @@ export async function getTreatmentPlanData(that, data) {
       //【実績】体重_前体重測定日時
       complaints = that.setComplaintsDatahasDate(
         RST_WEIGHT_BEFOR_WEIGHT_DATE_CD,
-        moment(rst_weight_info.weight_before_date).isValid() ? moment(rst_weight_info.weight_before_date).format('YYYY/MM/DD HH:mm') : '',
+        dayjs(rst_weight_info.weight_before_date).isValid() ? dayjs(rst_weight_info.weight_before_date).format('YYYY/MM/DD HH:mm') : '',
         hosp_pat_id,
         pat_name,
         count,
@@ -7084,7 +7087,7 @@ export async function getTreatmentPlanData(that, data) {
       //【実績】体重_CTR測定日時
       complaints = that.setComplaintsDatahasDate(
         RST_WEIGHT_CTR_MEASURE_DATE_CD,
-        moment(rst_weight_info.ctr_measure_date).isValid() ? moment(rst_weight_info.ctr_measure_date).format('YYYY/MM/DD HH:mm') : '',
+        dayjs(rst_weight_info.ctr_measure_date).isValid() ? dayjs(rst_weight_info.ctr_measure_date).format('YYYY/MM/DD HH:mm') : '',
         hosp_pat_id,
         pat_name,
         count,
@@ -7165,7 +7168,7 @@ export async function getTreatmentPlanData(that, data) {
       //【実績】体重_後体重測定日時
       complaints = that.setComplaintsDatahasDate(
         RST_WEIGHT_AFTER_WEIGHT_DATE_CD,
-        moment(rst_weight_info.weight_after_date).isValid() ? moment(rst_weight_info.weight_after_date).format('YYYY/MM/DD HH:mm') : '',
+        dayjs(rst_weight_info.weight_after_date).isValid() ? dayjs(rst_weight_info.weight_after_date).format('YYYY/MM/DD HH:mm') : '',
         hosp_pat_id,
         pat_name,
         count,
@@ -7263,7 +7266,7 @@ export async function getTreatmentPlanData(that, data) {
       //【実績】回診記録_回診日時
       complaints = that.setComplaintsDatahasDate(
         RST_ROUND_DATE_CD,
-        moment(rst_rounds_info.reg_date_time).isValid() ? moment(rst_rounds_info.reg_date_time).format('YYYY/MM/DD HH:mm') : '',
+        dayjs(rst_rounds_info.reg_date_time).isValid() ? dayjs(rst_rounds_info.reg_date_time).format('YYYY/MM/DD HH:mm') : '',
         hosp_pat_id,
         pat_name,
         count,
@@ -7305,7 +7308,7 @@ export async function getTreatmentPlanData(that, data) {
       //【実績】回診記録_起票日時
       complaints = that.setComplaintsDatahasDate(
         RST_ROUND_REG_DATE_CD,
-        moment(rst_rounds_info.reg_date_time).isValid() ? moment(rst_rounds_info.reg_date_time).format('YYYY/MM/DD HH:mm') : '',
+        dayjs(rst_rounds_info.reg_date_time).isValid() ? dayjs(rst_rounds_info.reg_date_time).format('YYYY/MM/DD HH:mm') : '',
         hosp_pat_id,
         pat_name,
         count,
@@ -7326,7 +7329,7 @@ export async function getTreatmentPlanData(that, data) {
       //【実績】回診記録_更新日時
       complaints = that.setComplaintsDatahasDate(
         RST_ROUND_UPDATE_DATE_CD,
-        moment(rst_rounds_info.updated_at).isValid() ? moment(rst_rounds_info.updated_at).format('YYYY/MM/DD HH:mm') : '',
+        dayjs(rst_rounds_info.updated_at).isValid() ? dayjs(rst_rounds_info.updated_at).format('YYYY/MM/DD HH:mm') : '',
         hosp_pat_id,
         pat_name,
         count,
@@ -7442,7 +7445,7 @@ export async function getTreatmentPlanData(that, data) {
       //【実績】治療条件_治療時間
       complaints = that.setComplaintsDatahasDate(
         RST_TREAT_TIME_CD,
-        moment(rst_cond_info[1].value).isValid() ? moment("20200101").minute(rst_cond_info[1].value).format('HH:mm') : '',
+        dayjs(rst_cond_info[1].value).isValid() ? dayjs("20200101").minute(rst_cond_info[1].value).format('HH:mm') : '',
         hosp_pat_id,
         pat_name,
         count,
@@ -10296,7 +10299,7 @@ export async function getTreatmentPlanData(that, data) {
     //【実績】指示コメント_指示コメント ADD 孫洪波
     if (x.rstIndCommentInfo) {
       let rst_ind_comment_info = JSON.parse(x.rstIndCommentInfo);
-      let commentTmp = null;
+      let commentTmp;
       //【実績】指示コメント_指示コメント1
       commentTmp = rst_ind_comment_info.filter(eq => eq.no === 1);
       complaints = that.setComplaintsDatahasDate(
@@ -10567,9 +10570,9 @@ export async function getTreatmentPlanData(that, data) {
       hosp_pat_id = nameList[0].hosp_pat_id;
       pat_name = nameList[0].pat_name;
     }
-    let now = moment().unix();
-    let inda = moment(x.ind_treatment_a_startdate).unix();
-    let indb = moment(x.ind_treatment_b_startdate).unix();
+    let now = dayjs().unix();
+    let inda = dayjs(x.ind_treatment_a_startdate).unix();
+    let indb = dayjs(x.ind_treatment_b_startdate).unix();
     if (Math.abs(now - inda) <= Math.abs(now - indb)) {
       //【指示】治療方法連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -11077,8 +11080,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda1 = moment(x.int_procedure1_a_startdate).unix();
-    let indb1 = moment(x.int_procedure1_b_startdate).unix();
+    let inda1 = dayjs(x.int_procedure1_a_startdate).unix();
+    let indb1 = dayjs(x.int_procedure1_b_startdate).unix();
     if (Math.abs(now - inda1) <= Math.abs(now - indb1)) {
       //【指示】手技1連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -11154,8 +11157,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda2 = moment(x.int_procedure2_a_startdate).unix();
-    let indb2 = moment(x.int_procedure2_b_startdate).unix();
+    let inda2 = dayjs(x.int_procedure2_a_startdate).unix();
+    let indb2 = dayjs(x.int_procedure2_b_startdate).unix();
     if (Math.abs(now - inda2) <= Math.abs(now - indb2)) {
       //【指示】手技2連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -11231,8 +11234,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda3 = moment(x.int_procedure3_a_startdate).unix();
-    let indb3 = moment(x.int_procedure3_b_startdate).unix();
+    let inda3 = dayjs(x.int_procedure3_a_startdate).unix();
+    let indb3 = dayjs(x.int_procedure3_b_startdate).unix();
     if (Math.abs(now - inda3) <= Math.abs(now - indb3)) {
       //【指示】手技3連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -11308,8 +11311,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda4 = moment(x.int_procedure4_a_startdate).unix();
-    let indb4 = moment(x.int_procedure4_b_startdate).unix();
+    let inda4 = dayjs(x.int_procedure4_a_startdate).unix();
+    let indb4 = dayjs(x.int_procedure4_b_startdate).unix();
     if (Math.abs(now - inda4) <= Math.abs(now - indb4)) {
       //【指示】手技4連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -11385,8 +11388,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda5 = moment(x.int_procedure5_a_startdate).unix();
-    let indb5 = moment(x.int_procedure5_b_startdate).unix();
+    let inda5 = dayjs(x.int_procedure5_a_startdate).unix();
+    let indb5 = dayjs(x.int_procedure5_b_startdate).unix();
     if (Math.abs(now - inda5) <= Math.abs(now - indb5)) {
       //【指示】手技5連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -11462,8 +11465,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda6 = moment(x.int_procedure6_a_startdate).unix();
-    let indb6 = moment(x.int_procedure6_b_startdate).unix();
+    let inda6 = dayjs(x.int_procedure6_a_startdate).unix();
+    let indb6 = dayjs(x.int_procedure6_b_startdate).unix();
     if (Math.abs(now - inda6) <= Math.abs(now - indb6)) {
       //【指示】手技6連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -11539,8 +11542,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda7 = moment(x.int_procedure7_a_startdate).unix();
-    let indb7 = moment(x.int_procedure7_b_startdate).unix();
+    let inda7 = dayjs(x.int_procedure7_a_startdate).unix();
+    let indb7 = dayjs(x.int_procedure7_b_startdate).unix();
     if (Math.abs(now - inda7) <= Math.abs(now - indb7)) {
       //【指示】手技7連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -11616,8 +11619,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda8 = moment(x.int_procedure8_a_startdate).unix();
-    let indb8 = moment(x.int_procedure8_b_startdate).unix();
+    let inda8 = dayjs(x.int_procedure8_a_startdate).unix();
+    let indb8 = dayjs(x.int_procedure8_b_startdate).unix();
     if (Math.abs(now - inda8) <= Math.abs(now - indb8)) {
       //【指示】手技8連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -11693,8 +11696,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda9 = moment(x.int_procedure9_a_startdate).unix();
-    let indb9 = moment(x.int_procedure9_b_startdate).unix();
+    let inda9 = dayjs(x.int_procedure9_a_startdate).unix();
+    let indb9 = dayjs(x.int_procedure9_b_startdate).unix();
     if (Math.abs(now - inda9) <= Math.abs(now - indb9)) {
       //【指示】手技9連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -11770,8 +11773,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda10 = moment(x.int_procedure10_a_startdate).unix();
-    let indb10 = moment(x.int_procedure10_b_startdate).unix();
+    let inda10 = dayjs(x.int_procedure10_a_startdate).unix();
+    let indb10 = dayjs(x.int_procedure10_b_startdate).unix();
     if (Math.abs(now - inda10) <= Math.abs(now - indb10)) {
       //【指示】手技10連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -11847,8 +11850,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda11 = moment(x.int_procedure11_a_startdate).unix();
-    let indb11 = moment(x.int_procedure11_b_startdate).unix();
+    let inda11 = dayjs(x.int_procedure11_a_startdate).unix();
+    let indb11 = dayjs(x.int_procedure11_b_startdate).unix();
     if (Math.abs(now - inda11) <= Math.abs(now - indb11)) {
       //【指示】手技11連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -11924,8 +11927,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda12 = moment(x.int_procedure12_a_startdate).unix();
-    let indb12 = moment(x.int_procedure12_b_startdate).unix();
+    let inda12 = dayjs(x.int_procedure12_a_startdate).unix();
+    let indb12 = dayjs(x.int_procedure12_b_startdate).unix();
     if (Math.abs(now - inda12) <= Math.abs(now - indb12)) {
       //【指示】手技12連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -12001,8 +12004,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda13 = moment(x.int_procedure13_a_startdate).unix();
-    let indb13 = moment(x.int_procedure13_b_startdate).unix();
+    let inda13 = dayjs(x.int_procedure13_a_startdate).unix();
+    let indb13 = dayjs(x.int_procedure13_b_startdate).unix();
     if (Math.abs(now - inda13) <= Math.abs(now - indb13)) {
       //【指示】手技13連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -12078,8 +12081,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda14 = moment(x.int_procedure14_a_startdate).unix();
-    let indb14 = moment(x.int_procedure14_b_startdate).unix();
+    let inda14 = dayjs(x.int_procedure14_a_startdate).unix();
+    let indb14 = dayjs(x.int_procedure14_b_startdate).unix();
     if (Math.abs(now - inda14) <= Math.abs(now - indb14)) {
       //【指示】手技14連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -12155,8 +12158,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda15 = moment(x.int_procedure15_a_startdate).unix();
-    let indb15 = moment(x.int_procedure15_b_startdate).unix();
+    let inda15 = dayjs(x.int_procedure15_a_startdate).unix();
+    let indb15 = dayjs(x.int_procedure15_b_startdate).unix();
     if (Math.abs(now - inda15) <= Math.abs(now - indb15)) {
       //【指示】手技15連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -12232,8 +12235,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda16 = moment(x.int_procedure16_a_startdate).unix();
-    let indb16 = moment(x.int_procedure16_b_startdate).unix();
+    let inda16 = dayjs(x.int_procedure16_a_startdate).unix();
+    let indb16 = dayjs(x.int_procedure16_b_startdate).unix();
     if (Math.abs(now - inda16) <= Math.abs(now - indb16)) {
       //【指示】手技16連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -12309,8 +12312,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda17 = moment(x.int_procedure17_a_startdate).unix();
-    let indb17 = moment(x.int_procedure17_b_startdate).unix();
+    let inda17 = dayjs(x.int_procedure17_a_startdate).unix();
+    let indb17 = dayjs(x.int_procedure17_b_startdate).unix();
     if (Math.abs(now - inda17) <= Math.abs(now - indb17)) {
       //【指示】手技17連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -12386,8 +12389,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda18 = moment(x.int_procedure18_a_startdate).unix();
-    let indb18 = moment(x.int_procedure18_b_startdate).unix();
+    let inda18 = dayjs(x.int_procedure18_a_startdate).unix();
+    let indb18 = dayjs(x.int_procedure18_b_startdate).unix();
     if (Math.abs(now - inda18) <= Math.abs(now - indb18)) {
       //【指示】手技18連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -12463,8 +12466,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda19 = moment(x.int_procedure19_a_startdate).unix();
-    let indb19 = moment(x.int_procedure19_b_startdate).unix();
+    let inda19 = dayjs(x.int_procedure19_a_startdate).unix();
+    let indb19 = dayjs(x.int_procedure19_b_startdate).unix();
     if (Math.abs(now - inda19) <= Math.abs(now - indb19)) {
       //【指示】手技19連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -12540,8 +12543,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let inda20 = moment(x.int_procedure20_a_startdate).unix();
-    let indb20 = moment(x.int_procedure20_b_startdate).unix();
+    let inda20 = dayjs(x.int_procedure20_a_startdate).unix();
+    let indb20 = dayjs(x.int_procedure20_b_startdate).unix();
     if (Math.abs(now - inda20) <= Math.abs(now - indb20)) {
       //【指示】手技20連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -13337,8 +13340,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta = moment(x.rst_treatment_a_startdate).unix();
-    let rstb = moment(x.rst_treatment_b_startdate).unix();
+    let rsta = dayjs(x.rst_treatment_a_startdate).unix();
+    let rstb = dayjs(x.rst_treatment_b_startdate).unix();
     if (Math.abs(now - rsta) <= Math.abs(now - rstb)) {
       //【実績】治療方法連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -14134,8 +14137,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta1 = moment(x.int_procedure1_a_startdate).unix();
-    let rstb1 = moment(x.int_procedure1_b_startdate).unix();
+    let rsta1 = dayjs(x.int_procedure1_a_startdate).unix();
+    let rstb1 = dayjs(x.int_procedure1_b_startdate).unix();
     if (Math.abs(now - rsta1) <= Math.abs(now - rstb1)) {
       //【実績】手技1連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -14211,8 +14214,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta2 = moment(x.int_procedure2_a_startdate).unix();
-    let rstb2 = moment(x.int_procedure2_b_startdate).unix();
+    let rsta2 = dayjs(x.int_procedure2_a_startdate).unix();
+    let rstb2 = dayjs(x.int_procedure2_b_startdate).unix();
     if (Math.abs(now - rsta2) <= Math.abs(now - rstb2)) {
       //【実績】手技2連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -14288,8 +14291,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta3 = moment(x.int_procedure3_a_startdate).unix();
-    let rstb3 = moment(x.int_procedure3_b_startdate).unix();
+    let rsta3 = dayjs(x.int_procedure3_a_startdate).unix();
+    let rstb3 = dayjs(x.int_procedure3_b_startdate).unix();
     if (Math.abs(now - rsta3) <= Math.abs(now - rstb3)) {
       //【実績】手技3連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -14365,8 +14368,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta4 = moment(x.int_procedure4_a_startdate).unix();
-    let rstb4 = moment(x.int_procedure4_b_startdate).unix();
+    let rsta4 = dayjs(x.int_procedure4_a_startdate).unix();
+    let rstb4 = dayjs(x.int_procedure4_b_startdate).unix();
     if (Math.abs(now - rsta4) <= Math.abs(now - rstb4)) {
       //【実績】手技4連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -14442,8 +14445,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta5 = moment(x.int_procedure5_a_startdate).unix();
-    let rstb5 = moment(x.int_procedure5_b_startdate).unix();
+    let rsta5 = dayjs(x.int_procedure5_a_startdate).unix();
+    let rstb5 = dayjs(x.int_procedure5_b_startdate).unix();
     if (Math.abs(now - rsta5) <= Math.abs(now - rstb5)) {
       //【実績】手技5連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -14519,8 +14522,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta6 = moment(x.int_procedure6_a_startdate).unix();
-    let rstb6 = moment(x.int_procedure6_b_startdate).unix();
+    let rsta6 = dayjs(x.int_procedure6_a_startdate).unix();
+    let rstb6 = dayjs(x.int_procedure6_b_startdate).unix();
     if (Math.abs(now - rsta6) <= Math.abs(now - rstb6)) {
       //【実績】手技6連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -14596,8 +14599,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta7 = moment(x.int_procedure7_a_startdate).unix();
-    let rstb7 = moment(x.int_procedure7_b_startdate).unix();
+    let rsta7 = dayjs(x.int_procedure7_a_startdate).unix();
+    let rstb7 = dayjs(x.int_procedure7_b_startdate).unix();
     if (Math.abs(now - rsta7) <= Math.abs(now - rstb7)) {
       //【実績】手技7連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -14673,8 +14676,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta8 = moment(x.int_procedure8_a_startdate).unix();
-    let rstb8 = moment(x.int_procedure8_b_startdate).unix();
+    let rsta8 = dayjs(x.int_procedure8_a_startdate).unix();
+    let rstb8 = dayjs(x.int_procedure8_b_startdate).unix();
     if (Math.abs(now - rsta8) <= Math.abs(now - rstb8)) {
       //【実績】手技8連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -14750,8 +14753,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta9 = moment(x.int_procedure9_a_startdate).unix();
-    let rstb9 = moment(x.int_procedure9_b_startdate).unix();
+    let rsta9 = dayjs(x.int_procedure9_a_startdate).unix();
+    let rstb9 = dayjs(x.int_procedure9_b_startdate).unix();
     if (Math.abs(now - rsta9) <= Math.abs(now - rstb9)) {
       //【実績】手技9連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -14827,8 +14830,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta10 = moment(x.int_procedure10_a_startdate).unix();
-    let rstb10 = moment(x.int_procedure10_b_startdate).unix();
+    let rsta10 = dayjs(x.int_procedure10_a_startdate).unix();
+    let rstb10 = dayjs(x.int_procedure10_b_startdate).unix();
     if (Math.abs(now - rsta10) <= Math.abs(now - rstb10)) {
       //【実績】手技10連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -14904,8 +14907,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta11 = moment(x.int_procedure11_a_startdate).unix();
-    let rstb11 = moment(x.int_procedure11_b_startdate).unix();
+    let rsta11 = dayjs(x.int_procedure11_a_startdate).unix();
+    let rstb11 = dayjs(x.int_procedure11_b_startdate).unix();
     if (Math.abs(now - rsta11) <= Math.abs(now - rstb11)) {
       //【実績】手技11連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -14981,8 +14984,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta12 = moment(x.int_procedure12_a_startdate).unix();
-    let rstb12 = moment(x.int_procedure12_b_startdate).unix();
+    let rsta12 = dayjs(x.int_procedure12_a_startdate).unix();
+    let rstb12 = dayjs(x.int_procedure12_b_startdate).unix();
     if (Math.abs(now - rsta12) <= Math.abs(now - rstb12)) {
       //【実績】手技12連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -15058,8 +15061,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta13 = moment(x.int_procedure13_a_startdate).unix();
-    let rstb13 = moment(x.int_procedure13_b_startdate).unix();
+    let rsta13 = dayjs(x.int_procedure13_a_startdate).unix();
+    let rstb13 = dayjs(x.int_procedure13_b_startdate).unix();
     if (Math.abs(now - rsta13) <= Math.abs(now - rstb13)) {
       //【実績】手技13連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -15135,8 +15138,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta14 = moment(x.int_procedure14_a_startdate).unix();
-    let rstb14 = moment(x.int_procedure14_b_startdate).unix();
+    let rsta14 = dayjs(x.int_procedure14_a_startdate).unix();
+    let rstb14 = dayjs(x.int_procedure14_b_startdate).unix();
     if (Math.abs(now - rsta14) <= Math.abs(now - rstb14)) {
       //【実績】手技14連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -15212,8 +15215,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta15 = moment(x.int_procedure15_a_startdate).unix();
-    let rstb15 = moment(x.int_procedure15_b_startdate).unix();
+    let rsta15 = dayjs(x.int_procedure15_a_startdate).unix();
+    let rstb15 = dayjs(x.int_procedure15_b_startdate).unix();
     if (Math.abs(now - rsta15) <= Math.abs(now - rstb15)) {
       //【実績】手技15連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -15289,8 +15292,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta16 = moment(x.int_procedure16_a_startdate).unix();
-    let rstb16 = moment(x.int_procedure16_b_startdate).unix();
+    let rsta16 = dayjs(x.int_procedure16_a_startdate).unix();
+    let rstb16 = dayjs(x.int_procedure16_b_startdate).unix();
     if (Math.abs(now - rsta16) <= Math.abs(now - rstb16)) {
       //【実績】手技16連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -15366,8 +15369,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta17 = moment(x.int_procedure17_a_startdate).unix();
-    let rstb17 = moment(x.int_procedure17_b_startdate).unix();
+    let rsta17 = dayjs(x.int_procedure17_a_startdate).unix();
+    let rstb17 = dayjs(x.int_procedure17_b_startdate).unix();
     if (Math.abs(now - rsta17) <= Math.abs(now - rstb17)) {
       //【実績】手技17連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -15443,8 +15446,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta18 = moment(x.int_procedure18_a_startdate).unix();
-    let rstb18 = moment(x.int_procedure18_b_startdate).unix();
+    let rsta18 = dayjs(x.int_procedure18_a_startdate).unix();
+    let rstb18 = dayjs(x.int_procedure18_b_startdate).unix();
     if (Math.abs(now - rsta18) <= Math.abs(now - rstb18)) {
       //【実績】手技18連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -15520,8 +15523,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta19 = moment(x.int_procedure19_a_startdate).unix();
-    let rstb19 = moment(x.int_procedure19_b_startdate).unix();
+    let rsta19 = dayjs(x.int_procedure19_a_startdate).unix();
+    let rstb19 = dayjs(x.int_procedure19_b_startdate).unix();
     if (Math.abs(now - rsta19) <= Math.abs(now - rstb19)) {
       //【実績】手技19連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -15597,8 +15600,8 @@ export async function getTreatmentPlanData(that, data) {
       count,
       complaints
     );
-    let rsta20 = moment(x.int_procedure20_a_startdate).unix();
-    let rstb20 = moment(x.int_procedure20_b_startdate).unix();
+    let rsta20 = dayjs(x.int_procedure20_a_startdate).unix();
+    let rstb20 = dayjs(x.int_procedure20_b_startdate).unix();
     if (Math.abs(now - rsta20) <= Math.abs(now - rstb20)) {
       //【実績】手技20連携コードA1
       complaints = that.setComplaintsDatahasDate(
@@ -16401,6 +16404,9 @@ export async function getTreatmentPlanData(that, data) {
 
 //add #10196 ord_mainのデータ定義から外れているデータ登録・参照処理の修正 zhaoqi 20240516 start
 export function getValueWithDecPointInMst(unitDecimalPoint, rstDialysisState, value) {
+  if (value == null || value === '') {
+    return value;
+  }
   let numbers = String(value).split('.');
   let decPoint = (numbers[1]) ? numbers[1].length : 0;
   if (rstDialysisState == "0") {

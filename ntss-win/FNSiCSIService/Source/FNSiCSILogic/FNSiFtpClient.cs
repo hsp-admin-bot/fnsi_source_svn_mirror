@@ -337,28 +337,38 @@ namespace FNSiCSILogicLib
             return files;
         }
 
-        public void deleteFile(string fileName)
+        /// <summary>
+        /// FTP上の指定ファイルを削除する
+        /// </summary>
+        /// <param name="ftpPath">FTPファイルパス</param>
+        /// <param name="ftpFileName">FTPファイル名</param>
+        /// <returns></returns>
+        public Boolean DeleteFtpFile(String ftpPath, String ftpFileName)
         {
             // Para Check
             if (String.IsNullOrEmpty(m_strIPAddress) || 0 == m_nPortNo)
             {
                 // ログ記録
                 this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.ERROR, "FTP IP/Port error.[IP:" + m_strIPAddress + " Port:" + m_nPortNo.ToString() + "]");
+                return false;
             }
 
-            // ログ送信パス存在チェック
-            if (String.IsNullOrEmpty(FNSiCSISetting.SendLogToBoxPath))
+            if (String.IsNullOrEmpty(ftpPath) || String.IsNullOrEmpty(ftpFileName))
             {
                 // ログ記録
-                this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.ERROR, "FTP Log Path error.[Path:" + FNSiCSISetting.SendLogToBoxPath + "]");
+                this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.ERROR, "FTP Path/FileName is Empty.[Path:" + ftpPath + " FileName:" + ftpFileName + "]");
+                return false;
             }
 
-            string ftpUrl = @"ftp://" + m_strIPAddress + "/" + FNSiCSISetting.SendLogToBoxPath + fileName;
-            // #8510 FNSiViewSyncServiceのログが翌日の日付になる　start
-            //bool checkFile = FTPFileCheck(ftpUrl);
-            // #8510 FNSiViewSyncServiceのログが翌日の日付になる　end
+            if (ftpPath.EndsWith("/") == false)
+            {
+                ftpPath += "/";
+            }
+
+            String ftpUrl = "ftp://" + m_strIPAddress + "/" + ftpPath + ftpFileName;
 
             FtpWebRequest reqFtp = null;
+
             try
             {
                 reqFtp = (FtpWebRequest)WebRequest.Create(new Uri(ftpUrl));
@@ -379,11 +389,12 @@ namespace FNSiCSILogicLib
             catch (Exception ex)
             {
                 // ログ記録
-                this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.ERROR, "Ftp File Upload error. Message:" + ex.Message);
+                this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.ERROR, "Ftp File Delete error. Message:" + ex.Message);
+
+                return false;
             }
-            finally
-            {
-            }
+
+            return true;
         }
 
         /// <summary>

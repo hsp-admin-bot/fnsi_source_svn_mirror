@@ -2,13 +2,13 @@ package jp.co.nikkiso.ntss.coop_api.response;
 
 import org.springframework.http.HttpStatus;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 
 import jp.co.nikkiso.ntss.core.entity.SysCoopJournal;
 import lombok.Data;
 
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Data
 public class JournalUpdateResult {
   public JournalUpdateResult(HttpStatus httpStatus, SysCoopJournal journal) {

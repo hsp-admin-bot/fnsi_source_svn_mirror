@@ -9,7 +9,7 @@
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * ベースコンポーネント
@@ -69,6 +69,7 @@ export default {
       patId: "selectedPatId",
       // facilityCd: "selectedPatFacilityCd"
     }),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     ...mapGetters("user", {facilityCd: "getFacilityCd"}),
     // mod #12462 患者情報共有->患者経過総合ビューア fang end
   },
@@ -81,7 +82,8 @@ export default {
       layout: this.layout,
       facilityCd: this.facilityCd,
       patId: this.patId,
-      weekPattern: `[{ 'text': '全', 'done': true, 'value': 0 }]`
+      weekPattern: `[{ 'text': '全', 'done': true, 'value': 0 }]`,
+      selectedPatId: this.selectedPatId
     }).then(comprehensiveDataList => {
       this.comprehensiveDataList = comprehensiveDataList;
     }).finally(() => {
@@ -89,7 +91,7 @@ export default {
     });
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -105,10 +107,10 @@ export default {
 </script>
 
 <style scoped lang="scss">
-/* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 
-div /deep/ .list-content-col {
+/* 患者経過総合ビューア共通スタイル定義 */
+div :deep(.list-content-col) {
   width: 0px;
 }
 </style>

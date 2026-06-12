@@ -13,7 +13,7 @@
     <!--  抽出ダイアログ[始]  -->
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :class="fontSizeSet"
@@ -93,10 +93,10 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { KEY_NAME_SCALE_BED } from "@/constants/defaultSettingConstants";
 import PopoverMixin from "@/components/PopoverMixin";
 import commonSearchArea from "@/components/common/CommonSearchArea";
@@ -327,7 +327,7 @@ export default {
   mounted() {
     EventBus.$emit("addLeftmostHeaderMargin");
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -390,7 +390,7 @@ input[type="checkbox"] {
 }
 /* mod FNSI-dialog表示不全 付 start */
 @media screen and (min-width: 1400px) {
-  ons-popover >>> .popover__content {
+  ons-popover :deep(.popover__content) {
     min-width: 400px;
   }
 }

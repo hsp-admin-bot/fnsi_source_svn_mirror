@@ -11,8 +11,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 // add #11309 患者グループ編集時、特定条件で保存ボタンが活性化しない ztc 20241212 start
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
 // add #11309 患者グループ編集時、特定条件で保存ボタンが活性化しない ztc 20241212 end
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.MongoService;
@@ -68,9 +68,10 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 // add #11309 患者グループ編集時、特定条件で保存ボタンが活性化しない ztc 20241212 end
 import org.springframework.web.bind.annotation.RequestBody;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.request.patGroup.PatGroupDetailRequest;
 import jp.co.nikkiso.ntss.admin_web.response.patGroup.PatGroupResponse;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -117,6 +118,10 @@ public class PatGroupServiceImpl implements PatGroupService {
 
   @Autowired
   private PatGroupDetailService patGroupDetailService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 // add by YangYongzhuang  2023-02-03 [CodeOptimization]  End /
 
 // add #11309 患者グループ編集時、特定条件で保存ボタンが活性化しない ztc 20241212 start
@@ -231,7 +236,7 @@ public class PatGroupServiceImpl implements PatGroupService {
     wheres.append(" pat_group_cd = " + patGroupId + "\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patGroupDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -372,7 +377,7 @@ public class PatGroupServiceImpl implements PatGroupService {
           }
           update.set("pat_group_info", foundGroupInfoDocuments);
           mongoTemplate.updateMulti(query, update, "pat_main_history");
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -406,7 +411,7 @@ public class PatGroupServiceImpl implements PatGroupService {
         } else {
           try {
             patGroupCustomForPgs = objectMapper.readValue(pMain.getPat_group_info(), new TypeReference<List<PatGroupCustomForPg>>() { });
-          } catch (JsonProcessingException e) {
+          } catch (JacksonException e) {
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -433,7 +438,7 @@ public class PatGroupServiceImpl implements PatGroupService {
         }
         try {
           pMain.setPat_group_info(objectMapper.writeValueAsString(patGroupCustomForPgs));
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -466,7 +471,7 @@ public class PatGroupServiceImpl implements PatGroupService {
           //#11607 患者グループを削除した時の通知メッセージが不適切 zrx end
           try {
             patGroupCustomForPgs = objectMapper.readValue(pMain.getPat_group_info(), new TypeReference<List<PatGroupCustomForPg>>() {});
-          } catch (JsonProcessingException e) {
+          } catch (JacksonException e) {
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -485,7 +490,7 @@ public class PatGroupServiceImpl implements PatGroupService {
           }
           try {
             pMain.setPat_group_info(patGroupCustomForPgs.size() > 0 ? objectMapper.writeValueAsString(patGroupCustomForPgs) : null);
-          } catch (JsonProcessingException e) {
+          } catch (JacksonException e) {
             // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -673,11 +678,11 @@ public class PatGroupServiceImpl implements PatGroupService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

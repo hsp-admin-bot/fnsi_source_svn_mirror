@@ -9,13 +9,14 @@ import org.seasar.doma.boot.ConfigAutowireable;
 import org.seasar.doma.jdbc.SelectOptions;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 利用者マスタのDaoインタフェース.
  */
 @ConfigAutowireable
 @Dao
-public interface MstJobDao {
+public interface MstJobDao extends MasterDao<Map<String, Object>> {
   /**
    * 職種コードに紐づく職種情報を取得.
    * @param jobCd 職種コード
@@ -68,6 +69,14 @@ public interface MstJobDao {
   int updateDefaultMenuSettings(MstJob mstJob);
 
   /**
+   * デフォルト権限設定を更新.
+   * @param mstJob 職種マスタEntity
+   * @return 更新件数
+   */
+  @Update(include = {"defaultAuthorizedAuthorities", "upDate"})
+  int updateDefaultAuthorizedAuthorities(MstJob mstJob);
+
+  /**
    * 削除(is_disp='0'に更新).
    * @param jobCd 職種コード
    */
@@ -80,4 +89,8 @@ public interface MstJobDao {
    */
   @Select
   List<MstJob> selectAll(String facilityCd);
+
+  @Override
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
 }

@@ -1,16 +1,21 @@
-import _debounce from 'lodash/debounce'
-let fn = null
-const debounce = {
-  inserted: function(el, binding) {
-    fn = _debounce(binding.value, 2000, {
+import debounce from "@/compat/collections/lodash/debounce";
+
+/**
+ * クリックのデバウンス（Vue3: mounted / unmounted）
+ */
+export default {
+  mounted(el, binding) {
+    const fn = debounce(binding.value, 2000, {
       leading: true,
       trailing: false
-    })
-    el.addEventListener('click', fn)
+    });
+    el.__debounceClickFn__ = fn;
+    el.addEventListener("click", fn);
   },
-  unbind: function(el) {
-    fn && el.removeEventListener('click', fn)
+  unmounted(el) {
+    if (el.__debounceClickFn__) {
+      el.removeEventListener("click", el.__debounceClickFn__);
+      el.__debounceClickFn__ = null;
+    }
   }
-}
-
-export default debounce
+};

@@ -273,8 +273,9 @@
 </template>
 
 <script>
-import vuedraggable from "vuedraggable";
-import { mapGetters, mapActions } from "vuex";
+import Vue from "@/compat/vue/runtime";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import MstPatEventTemplateTextItem from "@/components/master-maintenance/mst-pat-event-template/sub-item/MstPatEventTemplateText";
 import MstPatEventTemplateTextAreaItem from "@/components/master-maintenance/mst-pat-event-template/sub-item/MstPatEventTemplateTextArea";
@@ -287,15 +288,12 @@ import MstPatEventTemplateCheckItem from "@/components/master-maintenance/mst-pa
 import MstPatEventTemplateFileItem from "@/components/master-maintenance/mst-pat-event-template/sub-item/MstPatEventTemplateFile";
 import MstPatEventTemplateBbsItem from "@/components/master-maintenance/mst-pat-event-template/sub-item/MstPatEventTemplateBbs";
 import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
-// add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
-import Vue from 'vue';
-import CustomInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
-// 共通関数
-import { isDecimal } from "@/functions/common/NumberFunctions.js";
+
+import { queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 export default {
   name: "MstPatEventTemplateModal",
   components: {
@@ -309,7 +307,7 @@ export default {
     "mst-pat-event-template-check-item": MstPatEventTemplateCheckItem,
     "mst-pat-event-template-file-item": MstPatEventTemplateFileItem,
     "mst-pat-event-template-bbs-item": MstPatEventTemplateBbsItem,
-    draggable: vuedraggable
+    draggable: VueDraggable
   },
   data() {
     return {
@@ -664,6 +662,9 @@ export default {
       "setInputParamsDelete",
       "setInputParamsInsert",
       "setInputParamsParentUpdate",
+      "setInputParamsItemProperty",
+      "setInputParamsItemJsonCalc",
+      "setInputParamsItemJson",
       "fetchSysDataSet"
     ]),
     // #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者イベントテンプレートマスタ 20240105 linjunfeng start
@@ -717,8 +718,10 @@ export default {
     },
 
     setCss(value) {
-      if(value && document.getElementsByClassName("custom-input-invalid")[0])
-      document.getElementsByClassName("custom-input-invalid")[0].classList.remove("custom-input-invalid");
+      const invalidInput = queryScopedSelector('.custom-input-invalid', this.$el);
+      if(value && invalidInput) {
+        invalidInput.classList.remove("custom-input-invalid");
+      }
     },
     /**
      * データ項目のユニークIDを初期化するために
@@ -739,8 +742,10 @@ export default {
       }
     },
     setFieldNameCss (e){
-      if(e.target.value && document.getElementsByClassName(e.target.name)[0])
-      document.getElementsByClassName(e.target.name)[0].classList.remove("input-invalid");
+      const invalidInput = e.target?.name ? queryScopedSelector(`.${e.target.name}`, this.$el) : null;
+      if(e.target.value && invalidInput) {
+        invalidInput.classList.remove("input-invalid");
+      }
     },
     /**
      * フィールド追加ボタンクリックイベント
@@ -798,9 +803,9 @@ export default {
       
       // ドラッグ開始時に保存されていないフィールド名入力をすべて保存する
       // これにより、ドラッグ時のすべてのデータが最新の状態であり、フィールド名の異常な変化を回避することができます
-      const fieldNameInputs = document.querySelectorAll('input[name^="required"]');
+      const fieldNameInputs = queryScopedSelectorAll('input[name^="required"]', this.$el);
       fieldNameInputs.forEach((input) => {
-        if (document.activeElement === input) {
+        if (input.ownerDocument?.activeElement === input) {
           // 現在の入力ボックスが編集されている場合は、まずblurイベントをトリガしてデータを保存します
           input.blur();
         }
@@ -833,54 +838,67 @@ export default {
      *
      */
     setFieldName(value, index) {
-      /* mod 楊 start*/
-      const oldInputParams = this.getInputParams[index].field_name;
-      this.inputModel.inputParams = this.getInputParams;
-      this.inputModel.inputParams[index].field_name = value;
-      if([3,4,6].includes(this.inputModel.inputParams[index].format_class)) {
-        for (let [num, param] of this.inputModel.inputParams.entries()) {
-          if(param.format_class === 8 && oldInputParams!=="") {
-            this.inputModel.inputParams[num].item_json.calc = this.inputModel.inputParams[num].item_json.calc.replace(oldInputParams,value)
+      const oldFieldName = this.getInputParams[index].field_name;
+      const formatClass = this.getInputParams[index].format_class;
+
+      if ([3, 4, 6].includes(formatClass)) {
+        this.getInputParams.forEach((param, num) => {
+          if (param.format_class === 8 && param.item_json?.calc && oldFieldName !== "") {
+            const newCalc = param.item_json.calc.replace(oldFieldName, value);
+            if (newCalc !== param.item_json.calc) {
+              this.syncInputParamsItemJsonCalc(num, newCalc);
+            }
           }
-        }
+        });
       }
-      /* mod 楊 end*/
-      this.setInputParams(JSON.stringify(this.inputModel.inputParams));
+      this.syncInputParamProperty(index, "field_name", value);
+    },
+    syncInputParamsItemJsonCalc(index, calc) {
+      this.setInputParamsItemJsonCalc({ index, calc });
+      if (this.inputModel.inputParams[index]?.item_json) {
+        this.inputModel.inputParams[index].item_json.calc = calc;
+      }
+    },
+    /**
+     * フィールド名表示表示有無クリックイベント
+     */
+    onIsFieldDisplayChange(ev, index) {
+      const value = ev.target.checked ? "1" : "0";
+      this.syncInputParamProperty(index, "is_field_display", value);
+    },
+    /**
+     * 実績展開クリックイベント
+     */
+    onIsRstCopyChange(ev, index) {
+      const value = ev.target.value === "1" ? "1" : "0";
+      this.syncInputParamProperty(index, "is_rst_copy", value);
+    },
+    /**
+     * inputParamsの単一項目をStoreとinputModelの両方に同期する
+     */
+    syncInputParamProperty(index, field, value) {
+      if (this.inputModel.inputParams[index]) {
+        this.inputModel.inputParams[index][field] = value;
+      }
+      this.setInputParamsItemProperty({ index, field, value });
       this.updateEditRecord(
         "inputParams",
         JSON.stringify(this.getInputParams)
       );
     },
     /**
-     * フィールド名表示表示有無クリックイベント
+     * 形式変更時にStoreとinputModelの両方へ同期する
      */
-    onIsFieldDisplayChange(ev, index) {
-      this.inputModel.inputParams = this.getInputParams;
-      if (ev.target.checked) {
-        this.inputModel.inputParams[index].is_field_display = "1";
-      } else {
-        this.inputModel.inputParams[index].is_field_display = "0";
+    syncInputParamFormatChange(index, formatClass, itemJson) {
+      if (this.inputModel.inputParams[index]) {
+        this.inputModel.inputParams[index].format_class = formatClass;
+        this.inputModel.inputParams[index].item_json = itemJson;
       }
-      this.setInputParams(JSON.stringify(this.inputModel.inputParams));
+      this.setInputParamsItemProperty({ index, field: "format_class", value: formatClass });
+      this.setInputParamsItemJson({ index, itemJson });
       this.updateEditRecord(
         "inputParams",
-        JSON.stringify(this.inputModel.inputParams)
-      );
-    },
-    /**
-     * 実績展開クリックイベント
-     */
-    onIsRstCopyChange(ev, index) {
-      this.inputModel.inputParams = this.getInputParams;
-      if (ev.target.value === "1") {
-        this.inputModel.inputParams[index].is_rst_copy = "1";
-      } else {
-        this.inputModel.inputParams[index].is_rst_copy = "0";
-      }
-      this.setInputParams(JSON.stringify(this.inputModel.inputParams));
-      this.updateEditRecord(
-        "inputParams",
-        JSON.stringify(this.inputModel.inputParams)
+        JSON.stringify(this.getInputParams)
       );
     },
     /**
@@ -891,38 +909,33 @@ export default {
       // #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者イベントテンプレートマスタ 20240105 linjunfeng start
       // this.changeButton();
       // #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者イベントテンプレートマスタ 20240105 linjunfeng end
-      if([3,4,6].includes(this.inputModel.inputParams[index].format_class)){
-        this.saveInputModel.inputParams[index] = this.inputModel.inputParams[index];
+      const previousFormatClass = this.inputModel.inputParams[index]?.format_class;
+      if ([3, 4, 6].includes(previousFormatClass)) {
+        this.saveInputModel.inputParams[index] = deepCopy(this.inputModel.inputParams[index]);
       }
-      this.inputModel.inputParams = this.getInputParams;
-      this.inputModel.inputParams[index].format_class = Number(value);
+      const formatClass = Number(value);
+      let itemJson;
       switch (value) {
         case '2':
-          this.inputModel.inputParams[index].item_json = { values: [] };
+          itemJson = { values: [] };
           break;
         case '3':
         case '4':
         case '6':
-          if(this.saveInputModel.inputParams[index]){
-            this.inputModel.inputParams[index].item_json = this.saveInputModel.inputParams[index].item_json;
+          if (this.saveInputModel.inputParams[index]?.item_json) {
+            itemJson = deepCopy(this.saveInputModel.inputParams[index].item_json);
           } else {
-            this.inputModel.inputParams[index].item_json = { values: [] };
+            itemJson = { values: [] };
           }
           break;
         case '10':
-          // 掲示板
-          // フィールド名生成
-          this.inputModel.inputParams[index].item_json = {};
+          itemJson = {};
           break;
         default:
-          this.inputModel.inputParams[index].item_json = {};
+          itemJson = {};
           break;
       }
-      this.setInputParams(JSON.stringify(this.inputModel.inputParams));
-      this.updateEditRecord(
-        "inputParams",
-        JSON.stringify(this.inputModel.inputParams)
-      );
+      this.syncInputParamFormatChange(index, formatClass, itemJson);
     },
     onFormatInput(previousValue, index) {
       // 形式名の変更前の値が掲示板リンクの場合はフィールド名を空値にする
@@ -934,13 +947,15 @@ export default {
      * Gridの高さを調整する
      */
     calculateGridHeight() {
-      const modal = document.getElementsByClassName("modal-container")[0];
+      const modal = this.$el?.closest?.('.modal-container') || queryScopedSelector('.modal-container', this.$el);
+      const contentsHeightRoot = queryScopedSelector('.disp-item-area', this.$el);
+      if (!modal || !contentsHeightRoot) {
+        return;
+      }
       const modalHeight = modal.clientHeight;
-      const modalHeaderHeight = modal.firstElementChild.clientHeight;
-      const modalFooterHeight = modal.lastElementChild.clientHeight;
-      const contentsHeight1 = document.getElementsByClassName(
-        "disp-item-area"
-      )[0].clientHeight;
+      const modalHeaderHeight = modal.firstElementChild?.clientHeight || 0;
+      const modalFooterHeight = modal.lastElementChild?.clientHeight || 0;
+      const contentsHeight1 = contentsHeightRoot.clientHeight;
       this.contentsAreaHeight =
         modalHeight -
         modalHeaderHeight -
@@ -1088,7 +1103,7 @@ export default {
       }
       if (!treatmentFieldNameValid) {
         this.dataErrList.forEach(element => {
-          document.getElementsByClassName("required"+element)[0]?.classList?.add("input-invalid");
+          queryScopedSelector(`.required${element}`, this.$el)?.classList?.add("input-invalid");
         });
         this.$ons.notification.alert({
           // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
@@ -1177,7 +1192,7 @@ export default {
         return true;
       }
       if(!validationResult.nameValid) {
-        document.getElementsByClassName("custom-input-required")[0]?.classList?.add("custom-input-invalid");
+        queryScopedSelector('.custom-input-required', this.$el)?.classList?.add("custom-input-invalid");
       }
       // メッセージ組み立て
       // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
@@ -1227,49 +1242,6 @@ export default {
     }
   }
 };
-const ExtendedCustomInputNumber = Vue.extend({
-  extends: CustomInputNumber,
-  props: {
-    //マウスホイールの刻み幅
-    wheelStep: {
-      type: Number,
-      default: 0
-    }
-  },
-  methods: {
-    /**
-     * @description マウスホイールイベントハンドラ
-     * @summary マウスホイールでの入力値の増減を可能にする
-     */
-    wheelChangeValue(event) {
-      // disabledでマウスホイールを拾わない
-      if (this.$el.disabled) {
-        return;
-      }
-      // mod 装置設定外結No3対応 趙 start
-      if (this.focusflg) {
-        // マウスホイールの向き
-        const isUp = event.deltaY < 0;
-        // 変更量(小数最下位を1ずつ)
-        const stepNum = this.wheelStep * (isUp ? 1 : -1);
-
-        // 空欄 ▼（decrement）: 最小値、▲（increment）: 最小値＋step
-        if (this.inputtedString === "") {
-          const updVal = isUp ? (this.minValue + stepNum) : this.minValue;
-          this.udpateValue(updVal);
-          return;
-        }
-        // 不正値は最小値に
-        if (!isDecimal(this.inputtedString)) {
-          this.udpateValue(this.minValue);
-          return;
-        }
-        this.stepChangeValue(stepNum);
-      }
-    }
-  }
-});
-Vue.component('extended-custom-input-number', ExtendedCustomInputNumber);
 </script>
 
 <style scoped>
@@ -1375,11 +1347,11 @@ Vue.component('extended-custom-input-number', ExtendedCustomInputNumber);
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }
-.input-required >>> input{
+.input-required :deep(input){
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> input{
+.input-invalid :deep(input){
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }
@@ -1391,7 +1363,7 @@ Vue.component('extended-custom-input-number', ExtendedCustomInputNumber);
   font-size: 100%;
 }
 
-.pat-event-input >>> .text-input {
+.pat-event-input :deep(.text-input) {
   width: 99.9%;
 }
 

@@ -167,7 +167,6 @@ export default {
      * @param {*} payload 通知メッセージ情報
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     registerNotificationMessage({ commit }, payload) {
       return sendRequestRegisterNotificationMessage(payload);
     }

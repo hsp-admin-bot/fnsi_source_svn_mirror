@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.response.treatmentRecord;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -12,7 +12,7 @@ import java.time.ZonedDateTime;
  */
 @AllArgsConstructor
 @Getter
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class RecirculationRate  {
   /**
    * 生体モニタリング管理番号.

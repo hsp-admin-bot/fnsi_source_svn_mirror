@@ -336,7 +336,7 @@ export class Treatment {
       if (!obj) {
         return defaultValue;
       }
-      return obj.hasOwnProperty(prop) ? obj[prop] : defaultValue;
+      return Object.prototype.hasOwnProperty.call(obj, prop) ? obj[prop] : defaultValue;
     };
 
     return new Treatment(

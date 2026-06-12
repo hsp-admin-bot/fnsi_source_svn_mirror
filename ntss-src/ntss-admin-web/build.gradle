@@ -1,48 +1,53 @@
 import org.gradle.internal.os.OperatingSystem
+import java.net.Socket
+import java.util.concurrent.TimeUnit
 
 buildscript {
   repositories {
-//    jcenter()
     mavenLocal()
     mavenCentral()
-    maven { url "https://start.spring.io/plugins-release" }
-    maven { url "https://start.spring.io/milestone" }
-    maven { url "https://plugins.gradle.org/m2/" }
+    maven { url = uri("https://start.spring.io/plugins-release") }
+    maven { url = uri("https://start.spring.io/milestone") }
+    maven { url = uri("https://plugins.gradle.org/m2/") }
   }
   dependencies {
     classpath "org.springframework.boot:spring-boot-gradle-plugin:${spring_boot_version}"
 //    classpath 'io.spring.gradle:propdeps-plugin:0.0.10.RELEASE'
-    classpath "com.github.node-gradle:gradle-node-plugin:3.5.1"
-    classpath "io.spring.gradle:dependency-management-plugin:1.0.7.RELEASE"
-    classpath "org.flywaydb:flyway-gradle-plugin:6.0.4"
-    classpath "com.github.psxpaul:gradle-execfork-plugin:0.2.2"
+    classpath "com.github.node-gradle.node:com.github.node-gradle.node.gradle.plugin:${node_gradle_plugin_version}"
+    classpath "com.fasterxml.jackson.core:jackson-annotations:${jackson2_annotations_version}"
+    classpath "com.fasterxml.jackson.core:jackson-core:${jackson2_buildscript_version}"
+    classpath "com.fasterxml.jackson.core:jackson-databind:${jackson2_buildscript_version}"
+    classpath "org.asciidoctor:asciidoctor-gradle-jvm:${asciidoctor_plugin_version}"
+    classpath "io.spring.gradle:dependency-management-plugin:${dependency_management_plugin_version}"
   }
 }
 
-plugins {
-  id "org.asciidoctor.convert" version "1.5.3"
-  id "com.github.node-gradle.node" version "3.5.1"
-}
-
 apply plugin: 'maven-publish'
+def enableAsciidoctorPlugin = gradle.startParameter.taskNames.any { taskName ->
+  def normalizedTask = taskName.toLowerCase()
+  normalizedTask.endsWith('asciidoctor') || normalizedTask.contains('apidoc')
+}
+if (enableAsciidoctorPlugin) {
+  apply plugin: 'org.asciidoctor.jvm.convert'
+  asciidoctorj {
+    version = "${asciidoctorj_version}"
+  }
+}
 apply plugin: 'org.springframework.boot'
 apply plugin: 'war'
-apply plugin: 'org.flywaydb.flyway'
 //apply plugin: 'propdeps'
 //apply plugin: 'propdeps-eclipse'
 apply plugin: 'com.github.node-gradle.node'
 apply plugin: 'io.spring.dependency-management'
 apply plugin: 'idea'
-apply plugin: "com.github.psxpaul.execfork"
 defaultTasks 'bootRun'
 
 bootJar {
   archiveBaseName = 'ntss-admin-web'
   mainClass = 'jp.co.nikkiso.ntss.admin_web.NtssAdminWebApplication'
   manifest {
-		attributes 'Start-Class': 'jp.co.nikkiso.ntss.admin_web.NtssAdminWebApplication'
-	}
-  launchScript()
+      attributes 'Start-Class': 'jp.co.nikkiso.ntss.admin_web.NtssAdminWebApplication'
+  }
 }
 
 bootWar {
@@ -96,8 +101,8 @@ jacoco {
 
 jacocoTestReport {
   reports {
-    xml.enabled false
-    csv.enabled false
+    xml.required = false
+    csv.required = false
   }
 }
 
@@ -118,34 +123,116 @@ if (project.hasProperty('mongo')) {
   }
 }
 
-// E2Eテスト用`BootRun`タスク
-task startSpringBootApp(type: com.github.psxpaul.task.ExecFork) {
+def bootRunLogFile = file("$buildDir/bootrun.log")
+def bootRunErrorFile = file("$buildDir/bootrun-error.log")
+def bootRunPidFile = file("$buildDir/bootrun.pid")
+
+def bootRunCommand = {
   if (OperatingSystem.current().isWindows()) {
-    commandLine = "$project.rootDir/gradlew.bat"
-  } else {
-    commandLine = "$project.rootDir/gradlew"
+    return ["$project.rootDir/gradlew.bat"]
   }
-  args = [ 'bootRun', '-x', 'test', '-x', 'npm_install', '-x', 'npmRunLint' ]
-  standardOutput = file("$buildDir/bootrun.log")
-  errorOutput = file("$buildDir/bootrun-error.log")
-  waitForPort = 8080
-  waitForOutput = 'Started NtssAdminWebApplication in'
-  timeout = 300
-  // 互換維持のため残すが、現ブランチでは実行しない
-  onlyIf { false }
+  ["$project.rootDir/gradlew"]
+}
+
+def bootRunArgs = ['bootRun', '-x', 'test', '-x', 'npm_install', '-x', 'npmRunLint']
+
+def isPortOpen = { int port ->
+  try {
+    Socket socket = new Socket("127.0.0.1", port)
+    socket.close()
+    true
+  } catch (IOException ignored) {
+    false
+  }
+}
+
+def cleanupStaleBootRunPid = {
+  if (!bootRunPidFile.exists()) {
+    return
+  }
+
+  Long pid = bootRunPidFile.text.trim().isLong() ? bootRunPidFile.text.trim().toLong() : null
+  if (pid == null) {
+    bootRunPidFile.delete()
+    return
+  }
+
+  def processHandle = ProcessHandle.of(pid)
+  if (!processHandle.isPresent() || !processHandle.get().isAlive()) {
+    bootRunPidFile.delete()
+  }
+}
+
+def waitForBootRun = { int port, int timeoutSeconds, String outputMarker ->
+  long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds)
+  while (System.nanoTime() < deadline) {
+    boolean portReady = isPortOpen(port)
+    boolean outputReady = bootRunLogFile.exists() && bootRunLogFile.text.contains(outputMarker)
+    if (portReady && outputReady) {
+      return
+    }
+    Thread.sleep(1000)
+  }
+
+  throw new GradleException("Timed out waiting for NtssAdminWebApplication to start on port ${port}.")
+}
+
+// E2Eテスト用`BootRun`タスク
+task startSpringBootApp {
+  doLast {
+    cleanupStaleBootRunPid()
+
+    if (bootRunPidFile.exists() && isPortOpen(8080)) {
+      logger.lifecycle("Spring Boot app is already running on port 8080.")
+      return
+    }
+
+    bootRunLogFile.parentFile.mkdirs()
+
+    Process process = new ProcessBuilder(bootRunCommand() + bootRunArgs)
+      .directory(project.rootDir)
+      .redirectOutput(bootRunLogFile)
+      .redirectError(bootRunErrorFile)
+      .start()
+
+    bootRunPidFile.text = process.pid().toString()
+    waitForBootRun(8080, 300, 'Started NtssAdminWebApplication in')
+  }
+}
+
+task stopSpringBootApp {
+  doLast {
+    cleanupStaleBootRunPid()
+    if (!bootRunPidFile.exists()) {
+      return
+    }
+
+    Long pid = bootRunPidFile.text.trim().toLong()
+    def processHandle = ProcessHandle.of(pid)
+    if (processHandle.isPresent() && processHandle.get().isAlive()) {
+      processHandle.get().destroy()
+      Thread.sleep(1000)
+      if (processHandle.get().isAlive()) {
+        processHandle.get().destroyForcibly()
+      }
+    }
+    bootRunPidFile.delete()
+  }
 }
 
 // E2Eテスト実行タスク
 task npmRunTestE2e(type: NpmTask, dependsOn: startSpringBootApp) {
   args = [ "run", "test:e2e" ]
-  // 互換維持のため残すが、現ブランチでは実行しない
-  onlyIf { false }
+  finalizedBy stopSpringBootApp
 }
 
 test {
   outputs.dir snippetsDir
-  // CI用にテスト時のprofileを設定
-  if (project.hasProperty('ci')) {
+  // backendTestProbe keeps CI-style test wiring but overlays the local Docker test DB.
+  if (project.hasProperty('backendTestProbe')) {
+    jvmArgs = ["-Dspring.profiles.active=ci,testdb"]
+  } else if (project.hasProperty('ci')) {
+    // CI用にテスト時のprofileを設定
     jvmArgs = ["-Dspring.profiles.active=ci"]
   } else {
     npmTest.dependsOn npmRunTestE2e
@@ -158,91 +245,104 @@ description = ''
 repositories {
   mavenLocal()
   mavenCentral()
-//  jcenter()
-  maven { url 'https://start.spring.io/milestone' }
-  maven { url 'https://start.spring.io/snapshot' }
-  maven { url 'https://repository.jboss.org/nexus/content/repositories/releases' }
-  maven { url 'https://oss.sonatype.org/content/repositories/releases' }
-  maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
-  maven { url 'https://repo.maven.apache.org/maven2' }
+  maven { url = uri('https://start.spring.io/milestone') }
+  maven { url = uri('https://start.spring.io/snapshot') }
+  maven { url = uri('https://repository.jboss.org/nexus/content/repositories/releases') }
+  maven { url = uri('https://oss.sonatype.org/content/repositories/releases') }
+  maven { url = uri('https://oss.sonatype.org/content/repositories/snapshots') }
+  maven { url = uri('https://repo.maven.apache.org/maven2') }
+}
+
+configurations {
+  asciidoctorExt
 }
 
 dependencies {
   implementation "org.springframework.boot:spring-boot-autoconfigure"
   implementation "org.springframework.boot:spring-boot-starter-web"
-  providedRuntime "org.springframework.boot:spring-boot-starter-tomcat"
+  implementation "org.springframework.boot:spring-boot-starter-tomcat"
   implementation "org.springframework.boot:spring-boot-starter-security"
   implementation "org.springframework.boot:spring-boot-starter-jdbc"
   implementation "org.springframework.boot:spring-boot-starter-actuator"
-  implementation 'org.springframework.cloud:spring-cloud-aws-context:2.1.1.RELEASE'
-  implementation 'org.projectlombok:lombok:1.18.28'
-  annotationProcessor 'org.projectlombok:lombok:1.18.28'
-  implementation 'org.modelmapper:modelmapper:2.3.4'
-  implementation group: 'org.bouncycastle', name: 'bcprov-jdk18on', version: "${bouncycastle_version}"
-  implementation group: 'com.google.guava', name: 'guava', version: '27.1-jre'
+  implementation "org.projectlombok:lombok:${lombok_version}"
+  annotationProcessor "org.projectlombok:lombok:${lombok_version}"
+  implementation "org.modelmapper:modelmapper:${modelmapper_version}"
+  implementation "org.bouncycastle:bcprov-jdk18on:${bcprov_version}"
+  implementation "com.google.guava:guava:${guava_version}"
   testImplementation ("org.springframework.boot:spring-boot-starter-test") {
     exclude group: 'com.vaadin.external.google', module: 'android-json'
   }
+  testImplementation "org.springframework.boot:spring-boot-starter-webmvc-test"
   testImplementation "org.springframework.boot:spring-boot-test"
   testImplementation "junit:junit"
   testImplementation "org.mockito:mockito-core"
   annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
   testImplementation "org.springframework.security:spring-security-test"
-  asciidoctor 'org.springframework.restdocs:spring-restdocs-asciidoctor:2.0.3.RELEASE'
-  testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc:2.0.3.RELEASE'
-  implementation "com.amazonaws:aws-java-sdk-s3:1.11.563"
-  implementation "com.amazonaws:aws-java-sdk-dynamodb:1.11.563"
-  implementation "org.json:json:20180813"
-//  implementation 'org.mongodb:mongo-java-driver:3.10.1'
+  asciidoctorExt("org.springframework.restdocs:spring-restdocs-asciidoctor:${spring_restdocs_version}") {
+    exclude group: "org.asciidoctor", module: "asciidoctorj"
+    exclude group: "org.asciidoctor", module: "asciidoctorj-api"
+    exclude group: "org.jruby"
+  }
+  testImplementation "org.springframework.restdocs:spring-restdocs-mockmvc:${spring_restdocs_version}"
+  implementation platform("software.amazon.awssdk:bom:${aws_sdk_v2_version}")
+  implementation "software.amazon.awssdk:auth"
+  implementation "software.amazon.awssdk:regions"
+  implementation "software.amazon.awssdk:url-connection-client"
+  implementation("software.amazon.awssdk:dynamodb") {
+    exclude group: "software.amazon.awssdk", module: "apache-client"
+  }
+  implementation("software.amazon.awssdk:s3") {
+    exclude group: "software.amazon.awssdk", module: "apache-client"
+  }
+  implementation "org.json:json:${json_java_version}"
   implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
-  implementation 'org.jsoup:jsoup:1.12.1'
-  implementation group: 'org.apache.poi', name : 'poi', version: '4.1.0'
-  implementation group: 'org.apache.poi', name : 'poi-ooxml', version: '4.1.0'
-  implementation group: 'com.google.zxing', name: 'javase', version: '3.2.1'
+  implementation "org.jsoup:jsoup:${jsoup_version}"
+  implementation "org.apache.poi:poi:${poi_version}"
+  implementation "org.apache.poi:poi-ooxml:${poi_version}"
+  implementation "com.google.zxing:javase:${zxing_version}"
   implementation project(':ntss-api')
-  implementation group: 'org.apache.commons', name: 'commons-csv', version: '1.5'
+  implementation "org.apache.commons:commons-csv:${commons_csv_version}"
   // https://mvnrepository.com/artifact/com.google.code.gson/gson
-  implementation group: 'com.google.code.gson', name: 'gson', version: '2.8.6'
-  implementation 'javax.xml.bind:jaxb-api:2.3.1'
-  implementation 'com.sun.xml.bind:jaxb-core:2.3.0'
-  implementation 'com.sun.xml.bind:jaxb-impl:2.3.4'
+  implementation "com.google.code.gson:gson:${gson_version}"
   implementation "org.springframework.boot:spring-boot-starter-validation"
-  testCompileOnly 'org.projectlombok:lombok:1.18.28'
-  testAnnotationProcessor 'org.projectlombok:lombok:1.18.28'
-  implementation "org.springframework.boot:spring-boot-starter-aop"
+  testCompileOnly "org.projectlombok:lombok:${lombok_version}"
+  testAnnotationProcessor "org.projectlombok:lombok:${lombok_version}"
+  implementation "org.springframework.boot:spring-boot-starter-aspectj"
   implementation "org.seasar.doma.boot:doma-spring-boot-starter:${doma_spring_version}"
-  implementation "org.seasar.doma:doma:2.24.0"
-  annotationProcessor "org.seasar.doma:doma:2.24.0"
-  implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.9'
-  implementation group: 'commons-collections', name: 'commons-collections', version: '3.2.2'
+  implementation "org.seasar.doma:doma-core:${doma_core_version}"
+  annotationProcessor "org.seasar.doma:doma-processor:${doma_core_version}"
+  implementation "org.apache.commons:commons-lang3:${commons_lang3_version}"
+  implementation "org.apache.commons:commons-collections4:${commons_collections4_version}"
   implementation "org.postgresql:postgresql"
-  implementation 'io.micrometer:micrometer-core:1.9.2'
+  implementation 'io.micrometer:micrometer-core'
 
   implementation 'info.sun-june.solve:solve-calculate:0.8.4'
 
 }
 
-asciidoctor {
-  sourceDir = snippetsDir
-  outputDir = apiDocDir
-  dependsOn test
-}
-
-asciidoctor.doFirst {
-  copy {
-    from 'src/docs/asciidoc'
-    into snippetsDir
+if (enableAsciidoctorPlugin) {
+  asciidoctor {
+    configurations 'asciidoctorExt'
+    sourceDir = snippetsDir
+    outputDir = apiDocDir
+    dependsOn test
   }
-}
 
-task apiDoc(dependsOn: asciidoctor) {
+  asciidoctor.doFirst {
+    copy {
+      from 'src/docs/asciidoc'
+      into snippetsDir
+    }
+  }
+
+  task apiDoc(dependsOn: asciidoctor) {
+  }
 }
 
 clean { delete "target" }
 
 task cleanResources(type: Delete) { delete 'build/resources' }
 
-task wrapper(type: Wrapper) { gradleVersion = '7.2' }
 
 task stage(dependsOn: [bootWar, bootJar]) {
 }
@@ -253,8 +353,7 @@ node {
   version = "${node_version}"
   npmVersion = "${npm_version}"
   download = project.hasProperty('nodeInstall')
-  // Set the work directory where node_modules should be located
-  nodeModulesDir = file("${project.projectDir}/src/main/frontend")
+  nodeProjectDir = file("${project.projectDir}/src/main/frontend")
 }
 
 tasks.withType(Test) {
@@ -263,15 +362,29 @@ tasks.withType(Test) {
 
 // Doma2のSQLファイルをJavaのコンパイル前にコピーしておく
 // SQLファイルが存在するかしないとJavaのコンパイル時にSQLファイルが存在するかのチェックでエラーになるため。
-processResources.destinationDir = compileJava.destinationDir
-compileJava.dependsOn processResources
+def domaResources = ['doma.compile.config', 'META-INF/**/*.sql']
+task copyDomaResourcesJava(type: Copy) {
+  from sourceSets.main.resources.srcDirs
+  into compileJava.destinationDirectory
+  include domaResources
+}
+compileJava {
+  dependsOn copyDomaResourcesJava
+}
+processResources {
+  exclude domaResources
+}
 
 processResources.dependsOn cleanResources, bootBuildInfo
 bootBuildInfo.mustRunAfter cleanResources
-build.dependsOn asciidoctor
 
 // skip tasks
-compileTestJava.onlyIf {project.hasProperty('someProperty')}
-npm_install.onlyIf {project.hasProperty('someProperty')}
-npmRunLint.onlyIf {project.hasProperty('someProperty')}
+def enableTestCompileProbe = project.hasProperty('someProperty') || project.hasProperty('enableTestCompileProbe')
+def enableFrontendChecks = project.hasProperty('someProperty') || project.hasProperty('enableFrontendChecks')
+def enableFrontendAssets = project.hasProperty('frontend') || enableFrontendChecks
 
+compileTestJava.onlyIf { enableTestCompileProbe }
+nodeSetup.onlyIf { enableFrontendAssets || project.hasProperty('nodeInstall') }
+npmSetup.onlyIf { enableFrontendAssets || project.hasProperty('nodeInstall') }
+npm_install.onlyIf { enableFrontendChecks }
+npmRunLint.onlyIf { enableFrontendChecks }

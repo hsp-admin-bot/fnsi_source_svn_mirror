@@ -2,7 +2,7 @@ import { Master } from "@/models/common/master-selector-condition/Master";
 import { MasterAndNumber } from "@/models/common/MasterAndNumber";
 import { MstComplaint } from "@/models/treatment-record/complaint/MstComplaint";
 import { MstCompTreatment } from "@/models/treatment-record/complaint/MstCompTreatment";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 import { CODES } from "@/constants/TreatmentRecord";
 /**
  * 愁訴処置編集モーダル画面用のモデルクラス

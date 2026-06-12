@@ -3,6 +3,7 @@ package jp.co.nikkiso.ntss.device_edge.service.patEvent;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import tools.jackson.core.JacksonException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,15 +18,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import javax.xml.bind.DatatypeConverter;
-
-import io.micrometer.core.instrument.util.StringUtils;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.logevent.DataUpdateLogCommonNew;
 import jp.co.nikkiso.ntss.core.logevent.LogServiceCore;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.EventLoggerFactory;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
+import jp.co.nikkiso.ntss.core.utils.HexCodecUtils;
 import jp.co.nikkiso.ntss.device_edge.service.LogService;
 import org.seasar.doma.jdbc.Config;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,14 +33,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.dao.MstPatEventCategoryDao;
@@ -56,8 +49,17 @@ import jp.co.nikkiso.ntss.core.entity.MstPatEventSubCategory;
 import jp.co.nikkiso.ntss.core.entity.MstSelector;
 import jp.co.nikkiso.ntss.core.entity.PatEvent;
 import jp.co.nikkiso.ntss.core.entity.SysSystemDefine;
-import jp.co.nikkiso.ntss.device_edge.config.AwsConfiguration;
 import jp.co.nikkiso.ntss.device_edge.response.patEvent.PatEventMasterResponse;
+import org.apache.commons.lang3.StringUtils;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -91,11 +93,7 @@ public class PatEventServiceImpl implements PatEventService {
    * @return s3 S3オブジェクト
    */
   @Autowired
-  private AwsConfiguration awsS3;
-
-  private AmazonS3 s3() {
-    return awsS3.s3();
-  }
+  private S3Client s3;
 
   @Autowired
   private PatEventDao patEventDao;
@@ -120,6 +118,10 @@ public class PatEventServiceImpl implements PatEventService {
   private EventLoggerFactory eventLoggerFactory;
   @Autowired
   private LogServiceCore logServiceCore;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // DB更新ログ出力ロジック wangzuo End
 
   @Override
@@ -169,7 +171,7 @@ public class PatEventServiceImpl implements PatEventService {
     wheres.append(" WHERE\n");
     wheres.append(" pat_event_cd = " + m.getPatEventCd() + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patEventDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -323,15 +325,11 @@ public class PatEventServiceImpl implements PatEventService {
       byte[] content = null;
       content = Files.readAllBytes(path);
       // 16進数文字列に変換
-      String hexString = DatatypeConverter.printHexBinary(content);
+      String hexString = HexCodecUtils.printHexBinary(content);
       return hexString;
     } else {
-      S3Object object = s3().getObject(new GetObjectRequest(s3Bucket, filepath));
-
-      // レスポンス用データ生成
-      try (
-          InputStream is = object.getObjectContent();
-          ByteArrayOutputStream os = new ByteArrayOutputStream();) {
+      try (ResponseInputStream<GetObjectResponse> is = getObjectStream(s3Bucket, filepath);
+           ByteArrayOutputStream os = new ByteArrayOutputStream()) {
         byte[] buffer = new byte[1024];
         while (true) {
           int len = is.read(buffer);
@@ -342,7 +340,7 @@ public class PatEventServiceImpl implements PatEventService {
         }
         byte[] content = os.toByteArray();
         // 16進数文字列に変換
-        String hexString = DatatypeConverter.printHexBinary(content);
+        String hexString = HexCodecUtils.printHexBinary(content);
         return hexString;
       } catch (Exception e) {
         throw e;
@@ -391,16 +389,8 @@ public class PatEventServiceImpl implements PatEventService {
       }
       Files.write(filePath, bytes);
     } else {
-      try (InputStream inputStream = file.getInputStream()) {
-
-        s3().deleteObject(new DeleteObjectRequest(s3Bucket, path));
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setContentLength(file.getSize());
-        // S3アップロード
-        s3().putObject(new PutObjectRequest(s3Bucket, path, file.getInputStream(), metadata));
-      } catch (Exception e) {
-        throw e;
-      }
+      deleteObject(s3Bucket, path);
+      putMultipartObject(s3Bucket, path, file);
     }
   }
 
@@ -436,7 +426,7 @@ public class PatEventServiceImpl implements PatEventService {
       } else {
         if (!path.isEmpty()) {
           // S3ファイル削除
-          s3().deleteObject(new DeleteObjectRequest(s3Bucket, path));
+          deleteObject(s3Bucket, path);
         }
       }
     }
@@ -524,7 +514,7 @@ public class PatEventServiceImpl implements PatEventService {
       File file = new File(fileLocation);
       lastModified = file.lastModified();
     } else {
-      lastModified = s3().getObjectMetadata(s3BucketInFcd, filePath).getLastModified().getTime();
+      lastModified = getObjectLastModified(s3BucketInFcd, filePath);
     }
 
     try {
@@ -560,10 +550,10 @@ public class PatEventServiceImpl implements PatEventService {
         }
         byte[] content = Files.readAllBytes(cacheFile.toPath());
         // 16進数文字列に変換
-        String hexString = DatatypeConverter.printHexBinary(content);
+        String hexString = HexCodecUtils.printHexBinary(content);
         return hexString;
       }
-    } catch (IOException e) {
+    } catch (JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -584,17 +574,13 @@ public class PatEventServiceImpl implements PatEventService {
       byte[] content = null;
       content = Files.readAllBytes(path);
       // 16進数文字列に変換
-      String hexString = DatatypeConverter.printHexBinary(content);
+      String hexString = HexCodecUtils.printHexBinary(content);
       return hexString;
     }
     // add オンプレミスファイルパス対応 劉 end
 
-    S3Object object = s3().getObject(new GetObjectRequest(s3BucketInFcd, filePath));
-
-    // レスポンス用データ生成
-    try (
-        InputStream is = object.getObjectContent();
-        ByteArrayOutputStream os = new ByteArrayOutputStream();) {
+    try (ResponseInputStream<GetObjectResponse> is = getObjectStream(s3BucketInFcd, filePath);
+         ByteArrayOutputStream os = new ByteArrayOutputStream()) {
       byte[] buffer = new byte[1024];
       while (true) {
         int len = is.read(buffer);
@@ -606,10 +592,10 @@ public class PatEventServiceImpl implements PatEventService {
       byte[] content = os.toByteArray();
       // キャッシュにデータを保存
       Files.write(cacheFile.toPath(), os.toByteArray());
-      long lastModified2 = s3().getObjectMetadata(s3BucketInFcd, filePath).getLastModified().getTime();
+      long lastModified2 = getObjectLastModified(s3BucketInFcd, filePath);
       cacheFile.setLastModified(lastModified2);
       // 16進数文字列に変換
-      String hexString = DatatypeConverter.printHexBinary(content);
+      String hexString = HexCodecUtils.printHexBinary(content);
       return hexString;
     } catch (Exception e) {
       throw e;
@@ -622,65 +608,64 @@ public class PatEventServiceImpl implements PatEventService {
    */
   @Transactional
   public void uploadEventImageAttachment(MultipartFile file, String patEvent) throws Exception {
-    try (InputStream inputStream = file.getInputStream()) {
-      String[] event = patEvent.split("&");
-      String facility_cd = event[0];
-      long pat_id = Long.parseLong(event[1]);
-      long pat_event_cd = Long.parseLong(event[3]);
-      String field_name = event[4];
-      Integer image_no = Integer.parseInt(event[5]);
-      String path = this.PATEVNT_FOLDER + facility_cd + "/" + pat_id + "/" + pat_event_cd + "/image/" + field_name + "-"
-          + image_no + "/" + file.getOriginalFilename();
-      String baseName = path.replace("/", "_");
-      File cacheFile = getCacheFile(baseName, null);
+    String[] event = patEvent.split("&");
+    String facility_cd = event[0];
+    long pat_id = Long.parseLong(event[1]);
+    long pat_event_cd = Long.parseLong(event[3]);
+    String field_name = event[4];
+    Integer image_no = Integer.parseInt(event[5]);
+    String path = this.PATEVNT_FOLDER + facility_cd + "/" + pat_id + "/" + pat_event_cd + "/image/" + field_name + "-"
+        + image_no + "/" + file.getOriginalFilename();
+    String baseName = path.replace("/", "_");
+    File cacheFile = getCacheFile(baseName, null);
 
-      String localStore = null;
-      String status = null;
+    String localStore = null;
+    String status = null;
 
-      SysSystemDefine data = sysSystemDefineDao.selectOnPremise(CoreConstant.SysSystemDefine.CTL_NO_ON_PREMISE);
-      ObjectMapper objectMapper = new ObjectMapper();
-      HashMap<String, String> onPremise = objectMapper.readValue(data.getValue(),
-          new TypeReference<HashMap<String, String>>() {
-          });
-      localStore = onPremise.get("path");
-      status = onPremise.get("status");
-      if (status.equals("on")) {
-        String fileLocation = localStore + "/" + s3Bucket + "/" + path;
-        Path pathFile = Paths.get(fileLocation);
-        if (!Files.exists(pathFile)) {
-          Files.createDirectories(pathFile.getParent());
-          File newFile = new File(pathFile.toString());
-          newFile.createNewFile();
-        }
+    SysSystemDefine data = sysSystemDefineDao.selectOnPremise(CoreConstant.SysSystemDefine.CTL_NO_ON_PREMISE);
+    ObjectMapper objectMapper = new ObjectMapper();
+    HashMap<String, String> onPremise = objectMapper.readValue(data.getValue(),
+        new TypeReference<HashMap<String, String>>() {
+        });
+    localStore = onPremise.get("path");
+    status = onPremise.get("status");
+    if (status.equals("on")) {
+      String fileLocation = localStore + "/" + s3Bucket + "/" + path;
+      Path pathFile = Paths.get(fileLocation);
+      if (!Files.exists(pathFile)) {
+        Files.createDirectories(pathFile.getParent());
+        File newFile = new File(pathFile.toString());
+        newFile.createNewFile();
+      }
 
-        pathFile.toFile().delete();
-        Files.write(pathFile, file.getBytes());
-      } else {
-        try {
-          Path cacheDirPath = Paths.get(this.cacheDir);
-          if (Files.exists(cacheDirPath)) {
-            List<Path> files = Files.list(Paths.get(this.cacheDir)).collect(Collectors.toList());
-            List<Path> files2 = files.stream()
-                .filter(s -> s.getFileName().startsWith(cacheFile.getName()))
-                .collect(Collectors.toList());
+      pathFile.toFile().delete();
+      Files.write(pathFile, file.getBytes());
+    } else {
+      try {
+        Path cacheDirPath = Paths.get(this.cacheDir);
+        if (Files.exists(cacheDirPath)) {
+          List<Path> files = Files.list(Paths.get(this.cacheDir)).collect(Collectors.toList());
+          List<Path> files2 = files.stream()
+              .filter(s -> s.getFileName().startsWith(cacheFile.getName()))
+              .collect(Collectors.toList());
 
-            for (Path f : files2) {
-              if (f.getFileName().toString().equals(cacheFile.getName())) {
-                File ff = f.toFile();
-                if (ff.length() != file.getSize()) {
-                  ff.delete();
-                }
+          for (Path f : files2) {
+            if (f.getFileName().toString().equals(cacheFile.getName())) {
+              File ff = f.toFile();
+              if (ff.length() != file.getSize()) {
+                ff.delete();
               }
             }
-          } else {
-            // キャッシュディレクトリを作成
-            Files.createDirectories(cacheDirPath);
           }
-          // キャッシュが存在したらその内容を返す
-          if (cacheFile.exists()) {
-            return;
-          }
-        } catch (IOException e) {
+        } else {
+          // キャッシュディレクトリを作成
+          Files.createDirectories(cacheDirPath);
+        }
+        // キャッシュが存在したらその内容を返す
+        if (cacheFile.exists()) {
+          return;
+        }
+      } catch (JacksonException e) {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -689,19 +674,13 @@ public class PatEventServiceImpl implements PatEventService {
           eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
           logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang end
-        }
-        s3().deleteObject(new DeleteObjectRequest(s3Bucket, path));
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setContentLength(file.getSize());
-        // S3アップロード
-        s3().putObject(new PutObjectRequest(s3Bucket, path, file.getInputStream(), metadata));
-        // キャッシュにデータを保存
-        Files.write(cacheFile.toPath(), file.getBytes());
-        long lastModified2 = s3().getObjectMetadata(s3Bucket, path).getLastModified().getTime();
-        cacheFile.setLastModified(lastModified2);
       }
-    } catch (Exception e) {
-      throw e;
+      deleteObject(s3Bucket, path);
+      putMultipartObject(s3Bucket, path, file);
+      // キャッシュにデータを保存
+      Files.write(cacheFile.toPath(), file.getBytes());
+      long lastModified2 = getObjectLastModified(s3Bucket, path);
+      cacheFile.setLastModified(lastModified2);
     }
   }
 
@@ -755,7 +734,7 @@ public class PatEventServiceImpl implements PatEventService {
               }
             });
           }
-        } catch (IOException e) {
+        } catch (JacksonException e) {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -767,9 +746,43 @@ public class PatEventServiceImpl implements PatEventService {
         }
         if (!path.isEmpty()) {
           // S3ファイル削除
-          s3().deleteObject(new DeleteObjectRequest(s3Bucket, path));
+          deleteObject(s3Bucket, path);
         }
       }
+    }
+  }
+
+  private ResponseInputStream<GetObjectResponse> getObjectStream(String bucket, String path) {
+    return s3.getObject(GetObjectRequest.builder()
+      .bucket(bucket)
+      .key(path)
+      .build());
+  }
+
+  private long getObjectLastModified(String bucket, String path) {
+    return s3.headObject(HeadObjectRequest.builder()
+      .bucket(bucket)
+      .key(path)
+      .build())
+      .lastModified()
+      .toEpochMilli();
+  }
+
+  private void deleteObject(String bucket, String path) {
+    s3.deleteObject(DeleteObjectRequest.builder()
+      .bucket(bucket)
+      .key(path)
+      .build());
+  }
+
+  private void putMultipartObject(String bucket, String path, MultipartFile file) throws IOException {
+    try (InputStream inputStream = file.getInputStream()) {
+      s3.putObject(PutObjectRequest.builder()
+          .bucket(bucket)
+          .key(path)
+          .contentLength(file.getSize())
+          .build(),
+        RequestBody.fromInputStream(inputStream, file.getSize()));
     }
   }
 
@@ -790,11 +803,11 @@ public class PatEventServiceImpl implements PatEventService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

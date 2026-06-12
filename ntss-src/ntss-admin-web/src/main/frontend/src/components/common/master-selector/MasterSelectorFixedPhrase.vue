@@ -3,7 +3,7 @@
 <template>
   <v-ons-popover
     v-if="popoverVisible"
-    :target="targetPositionElement"
+    :target="resolvedTargetPositionElement"
     :visible="popoverVisible"
     :direction="popoverDisplayDirection"
     :class="[fontSizeSet, 'popover-style']"
@@ -98,12 +98,14 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
-import _ from "underscore";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import _ from "@/compat/collections/lodash";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { TAB_DEFINE_CD_FIXED_PHRASE } from "@/constants/PersonalSettingConstants";
 import PopoverMixin from "@/components/PopoverMixin";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
+import { getViewportHeight, getViewportWidth } from "@/functions/common/LayoutMeasureHelper";
+import { resolveOnsPopoverTargetElement } from "@/functions/common/OnsenFunctions";
 
 // URI
 const uriGetComFixedPhrase = "mstInfo/mstComFixedPhrase/";
@@ -139,9 +141,7 @@ export default {
      */
     targetPositionElement: {
       type: [Object, HTMLElement],
-      default() {
-        return this.$parent;
-      }
+      default: null
     }
   },
 
@@ -191,12 +191,12 @@ export default {
       /**
        * @description 画面の高さ(レスポンシブ対応)
        */
-      windowHeight: window.innerHeight,
+      windowHeight: getViewportHeight(),
 
       /**
        * @description 画面の幅(レスポンシブ対応)
        */
-      windowWidth: window.innerWidth,
+      windowWidth: getViewportWidth(),
 
       /**
        * @description 個人用定型文
@@ -211,6 +211,12 @@ export default {
   },
 
   computed: {
+    resolvedTargetPositionElement() {
+      return resolveOnsPopoverTargetElement(this.targetPositionElement, this);
+    },
+    resolvedTargetRectElement() {
+      return this.resolvedTargetPositionElement;
+    },
     ...mapGetters("account-edit", ["getStateUserAccountInfo"]),
 
     /**
@@ -219,9 +225,9 @@ export default {
     popoverDisplayDirection() {
       if (!this.popoverVisible) return null;
 
-      const elemPosition = this.targetPositionElement.$el
-        ? this.targetPositionElement.$el.getBoundingClientRect()
-        : this.targetPositionElement.getBoundingClientRect();
+      const targetElement = this.resolvedTargetRectElement;
+      if (!targetElement?.getBoundingClientRect) return null;
+      const elemPosition = targetElement.getBoundingClientRect();
       let direction = "right";
 
       if (this.windowHeight <= 420) {
@@ -299,7 +305,7 @@ export default {
   },
 
   async mounted() {
-    window.addEventListener("resize",this.resizeEventListener);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize",this.resizeEventListener);
     // フィルターを設定する
     const filterDataset = [
       { text: "すべて", value: "0" },
@@ -345,8 +351,8 @@ export default {
     popoverPosthide,
     // modify by 史 for 6119 ブラウザがOut of Memoryのエラーが発生する
     resizeEventListener(){
-      this.windowHeight = window.innerHeight;
-      this.windowWidth = window.innerWidth;
+      this.windowHeight = getViewportHeight();
+      this.windowWidth = getViewportWidth();
     },
     /**
      * @description ポップオーバー非表示
@@ -470,8 +476,8 @@ export default {
       this.comFixedPhraseList = comSettings;
     }
   },
-  beforeDestroy() {
-    window.removeEventListener("resize", this.resizeEventListener);
+  beforeUnmount() {
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.resizeEventListener);
     // dataの初期化
     this.popoverContentDataset = [];
     this.popoverFilter = [];
@@ -489,14 +495,14 @@ export default {
 </script>
 
 <style scoped>
-.popover-style >>> .popover--top,
-.popover-style >>> .popover--right,
-.popover-style >>> .popover--left,
-.popover-style >>> .popover--bottom {
+.popover-style :deep(.popover--top),
+.popover-style :deep(.popover--right),
+.popover-style :deep(.popover--left),
+.popover-style :deep(.popover--bottom) {
   width: initial;
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 500px;
   height: 100%;
   padding: 25px;
@@ -536,7 +542,7 @@ export default {
 
 /* スマホ対応 */
 @media screen and (max-width: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: auto;
     padding: 10px;
   }
@@ -551,7 +557,7 @@ export default {
 }
 
 @media screen and (max-height: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: 350px;
     padding: 5px;
   }

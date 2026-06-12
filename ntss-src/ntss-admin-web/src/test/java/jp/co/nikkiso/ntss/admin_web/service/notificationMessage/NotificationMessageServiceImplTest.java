@@ -15,7 +15,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.sql.Timestamp;
@@ -55,19 +55,19 @@ public class NotificationMessageServiceImplTest {
   /**
    * ユーザー設定ServiceのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private UserSettingsService userSettingsService;
 
   /**
    * 通知メッセージのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MntNotificationMessageDao mntNotificationMessageDao;
 
   /**
    * 通知状態管理のMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MntNotificationStatusDao mntNotificationStatusDao;
 
   /**

@@ -1,14 +1,10 @@
 package jp.co.nikkiso.ntss.admin_web.service;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkClientException;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jp.co.nikkiso.ntss.admin_web.config.AwsConfiguration;
+import jp.co.nikkiso.ntss.admin_web.response.mstMaster.MstMasterResponse;
+import software.amazon.awssdk.thirdparty.jackson.core.JsonProcessingException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.FlagType;
 import jp.co.nikkiso.ntss.admin_web.constant.MstToMongoEnum;
 import jp.co.nikkiso.ntss.admin_web.request.masterMaintenance.job.MstJobRequest;
@@ -256,6 +252,11 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.File;
 import java.io.IOException;
@@ -300,8 +301,9 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.admin_web.request.mstMaster.MstMasterRequest;
 
 // add redmine 4485 施設マスタの並び順が変更 宋qy start
 // add redmine 4485 施設マスタの並び順が変更 宋qy end
@@ -497,7 +499,7 @@ public class MstInfoServiceImpl implements MstInfoService {
     List<MstBed> mstBedList = mstBedDao.selectByFacilityCd(selectOptions, facility_cd, is_disp, is_del);
     // FNSI-修正 マスタ削除の対応 ベッド add start
     mstBedList.forEach(x -> {
-      if (org.apache.commons.lang3.StringUtils.equals(x.getIsDisp(), "0")) {
+      if ("0".equals(x.getIsDisp())) {
         x.setBedName(LoggingConstant.MASTER_DELETE.DELETED + x.getBedName());
       }
     });
@@ -1909,70 +1911,29 @@ public class MstInfoServiceImpl implements MstInfoService {
       }
     }
   }
+
   // add 7233  デフォルト帳票について 関 start
   /**
    * S3オブジェクト取得
    * @return s3 S3オブジェクト
    */
   @Autowired
-  private AwsConfiguration awsS3;
-
-  private AmazonS3 s3() {
-    return awsS3.s3();
-  }
+  private S3Client s3;
 
   // @Value(value = "${ntss.report.s3-bucket:#{null}}")
   // private String copyPath;
 
 
   /**
-   * s3 copy 例外が発生し、例外がキャッチされて直接スキップされ、次のファイルコピーが実行されます
-   *
-   * @param copyObjectRequestList CopyObjectRequest
-   */
-  private void copyObjectUtil(List<CopyObjectRequest> copyObjectRequestList) {
-    for (CopyObjectRequest copyObjectRequest : copyObjectRequestList) {
-      try {
-        s3().copyObject(copyObjectRequest);
-      } catch (AmazonServiceException e) {
-        // The call was transmitted successfully, but Amazon S3 couldn't process
-        // it, so it returned an error response.
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
-//      e.printStackTrace();
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang start
-        EventLogMessage eventLogMessage = new EventLogMessage();
-        eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
-        logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang end
-      } catch (SdkClientException e) {
-        // Amazon S3 couldn't be contacted for a response, or the client
-        // couldn't parse the response from Amazon S3.
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
-//      e.printStackTrace();
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang start
-        EventLogMessage eventLogMessage = new EventLogMessage();
-        eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
-        logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang end
-      }
-    }
-    copyObjectRequestList.clear();
-  }
-
-  // ADD #10637 2024/09/05 Thach Start
-
-  /**
    * s3 upload 例外が発生し、例外がキャッチされて直接スキップされ、次のファイルコピーが実行されます
    *
    * @param putObjectRequestList PutObjectRequest
    */
-  private void uploadObjectUtil(List<PutObjectRequest> putObjectRequestList) {
-    for (PutObjectRequest putObjectRequest : putObjectRequestList) {
+  private void uploadObjectUtil(List<S3PutObjectTask> putObjectRequestList) {
+    for (S3PutObjectTask putObjectRequest : putObjectRequestList) {
       try {
-        s3().putObject(putObjectRequest);
-      } catch (AmazonServiceException e) {
+        s3.putObject(putObjectRequest.request, RequestBody.fromFile(putObjectRequest.filePath));
+      } catch (S3Exception e) {
         // The call was transmitted successfully, but Amazon S3 couldn't process
         // it, so it returned an error response.
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
@@ -2001,6 +1962,16 @@ public class MstInfoServiceImpl implements MstInfoService {
   }
 
   // ADD #10637 2024/09/05 Thach End
+
+  private static final class S3PutObjectTask {
+    private final PutObjectRequest request;
+    private final Path filePath;
+
+    private S3PutObjectTask(PutObjectRequest request, Path filePath) {
+      this.request = request;
+      this.filePath = filePath;
+    }
+  }
 
   /**
    * ファイル オブジェクトとのスプライシングのためにバケットの背後にあるアドレスをインターセプトする
@@ -2064,7 +2035,7 @@ public class MstInfoServiceImpl implements MstInfoService {
   public void saveMstFacility(Map<String, List<String>> payload, NtssUser ntssUser) {
     try {
       ObjectMapper mapper = new ObjectMapper();
-      List<PutObjectRequest> putObjectRequestList = new ArrayList<>();
+      List<S3PutObjectTask> putObjectRequestList = new ArrayList<>();
       Map<String, String> saveReportMap = new HashMap<>();
       List<String> tempRpPathList = new ArrayList<String>();
 
@@ -2446,10 +2417,20 @@ public class MstInfoServiceImpl implements MstInfoService {
 
                 // xlsxZip
                 String xlsxZipNewKey = toNewFileKey + "/" + newXlsxZip;
-                putObjectRequestList.add(new PutObjectRequest(desBucket, xlsxZipNewKey, tempXlsxZipPath));
+                putObjectRequestList.add(new S3PutObjectTask(
+                  PutObjectRequest.builder()
+                    .bucket(desBucket)
+                    .key(xlsxZipNewKey)
+                    .build(),
+                  Paths.get(tempXlsxZipPath)));
                 // reportZip
                 String reportZipNewKey = toNewFileKey + "/" + newReportZip;
-                putObjectRequestList.add(new PutObjectRequest(desBucket, reportZipNewKey, tempReportZipPath));
+                putObjectRequestList.add(new S3PutObjectTask(
+                  PutObjectRequest.builder()
+                    .bucket(desBucket)
+                    .key(reportZipNewKey)
+                    .build(),
+                  Paths.get(tempReportZipPath)));
               } else { // ローカルモード
                 String toFilePath = projectRootPath + String.format(localStore + "/" + desRpPath, mstFacility.getFacilityCd()); // 例：projectRootPath + /efs + / + ntss-s3-root-service/%s/Report
                 //フォルダーを作る toFilePath
@@ -2692,7 +2673,7 @@ public class MstInfoServiceImpl implements MstInfoService {
         wheres.append(" facility_cd = '" + mstFacility.getFacilityCd() + "'" + "\n");
         // logCommon設定
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(mstFacilityDao, mmsTbN, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         //DB更新ログ出力ロジック wp end
@@ -3357,7 +3338,7 @@ public class MstInfoServiceImpl implements MstInfoService {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     if (sql != null) {
 
-      logCommon = getLogCommon(mstKurDao, mmsTbN, sql, getEventLogMessage());
+      logCommon = getLogCommon(mmsTbN, sql, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
 
@@ -3413,7 +3394,7 @@ public class MstInfoServiceImpl implements MstInfoService {
 
         // logCommon設定
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(mstKurDao, mmsTbN, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         //DB更新ログ出力ロジック wp end
@@ -3734,7 +3715,9 @@ public class MstInfoServiceImpl implements MstInfoService {
               for (String medicineCd : standardMedicineCdList) {
                 cdList.add(medicineCd);
               }
-              List<String> mstMedicineCdList = mstMedicineDao.selectByStandardMedicineCd(cdList);
+              // mod #11718 【#11600持ち越し】データリスト画面不正② fang start
+              List<String> mstMedicineCdList = mstMedicineDao.selectByStandardMedicineCd(facilityCd, cdList);
+              // mod #11718 【#11600持ち越し】データリスト画面不正② fang end
               for (String mstMedicineCd : mstMedicineCdList) {
                 lstMedicineCd.add(mstMedicineCd);
               }
@@ -4668,7 +4651,7 @@ public class MstInfoServiceImpl implements MstInfoService {
           wheres.append(" serial_no = '" + mstDeviceEdge.getSerialNo() + "'" + "\n");
           // logCommon設定
           // logCommon設定
-          DataUpdateLogCommonNew logCommon = getLogCommon(mstDeviceEdgeDao, mmsTbN, wheres, getEventLogMessage());
+          DataUpdateLogCommonNew logCommon = getLogCommon(mmsTbN, wheres, getEventLogMessage());
           // ログ出力カラム情報及び更新前データ情報取得
           boolean setResult = logCommon.setInfo();
           //DB更新ログ出力ロジック wp end
@@ -4845,7 +4828,7 @@ public class MstInfoServiceImpl implements MstInfoService {
           jobsb.append(" job_cd = '" + jobCd + "'" + "\n");
           // logCommon設定
           // logCommon設定
-          DataUpdateLogCommonNew logCommon = getLogCommon(mstJobDao, job, jobsb, getEventLogMessage());
+          DataUpdateLogCommonNew logCommon = getLogCommon(job, jobsb, getEventLogMessage());
           // ログ出力カラム情報及び更新前データ情報取得
           boolean setResult = logCommon.setInfo();
           //FNSI-修正 ログ対応 wp add end
@@ -5057,7 +5040,7 @@ public class MstInfoServiceImpl implements MstInfoService {
                   if(isChgDefDispSet) {
                     ObjectMapper mapper = new ObjectMapper();
                     JsonNode defautSetting = mapper.readTree(payload.get(i).getDefaultDispSettings());
-                    userSettings.setDefaultSetting(defautSetting);
+                    userSettings.setDefaultSetting(new tools.jackson.databind.ObjectMapper().readTree(defautSetting.toString()));
                   }
                   if(isChgDefNotifSet) {
                     List<PersonalSetting> personalSettings = userSettings.getPersonalSettings() == null ? new ArrayList<>() : new ArrayList<>(userSettings.getPersonalSettings());
@@ -6397,11 +6380,11 @@ public class MstInfoServiceImpl implements MstInfoService {
      *
      * @return logCommon ログ出力共通クラス
      */
-    private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+    private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
       DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
       logCommon.setEventLoggerFactory(eventLoggerFactory);
       logCommon.setLogServiceCore(logServiceCore);
-      logCommon.setConfig(Config.get(dao));
+      logCommon.setConfig(defaultDbConfig);
       logCommon.setTableName(tableName);
       logCommon.setWhereStr(whereStr);
       logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -6415,6 +6398,10 @@ public class MstInfoServiceImpl implements MstInfoService {
      */
     @Autowired
     private MstIfEdgeDao mstIfEdgeDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
     /**
      * 連携エッジマスタ情報を取得.
@@ -6598,7 +6585,7 @@ public class MstInfoServiceImpl implements MstInfoService {
         logService.log(LogLevel.ERROR, eventLogMessage, LoggingConstant.FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI, null);
         //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」を改修 江 end
       }
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
 
     //add #10784 空きベッドが候補に表示しない  start
@@ -6609,7 +6596,7 @@ public class MstInfoServiceImpl implements MstInfoService {
     List<Integer> weeksArray = IndicationUtils.getWeekPattern(bodyData.getTreat_week_list());
     if (null == weeksArray) {
       // 曜日パターン情報加工に発生した場合はパラメータ異常扱い
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
       // add #9274 空きベッドの検索NG dou start
     } else {
       //mod #10784 空きベッドが候補に表示しない  start
@@ -6650,7 +6637,7 @@ public class MstInfoServiceImpl implements MstInfoService {
       logService.log(LogLevel.ERROR, eventLogMessage, LoggingConstant.FUNCTION_CODE.FUNC_MASTER_MAINTENANCE, SERVICE_NAME.FNSI,
         null);
       // 異常扱い
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 
     // 施設設定マスタより予定数しきい値を取得する。
@@ -6748,7 +6735,7 @@ public class MstInfoServiceImpl implements MstInfoService {
 
     if (info.size() < 0) {
       // 異常扱い
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 
     return new ResponseEntity<>(info, HttpStatus.OK);
@@ -7339,4 +7326,751 @@ public class MstInfoServiceImpl implements MstInfoService {
     return response;
   }
   //add #12462 患者情報共有- 患者カレンダー zrx end
+
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Override
+  public MstPersonalUser selectMstPersonalUserByUserId(Long userId) {
+    return mstPersonalUserDao.selectById(userId);
+  }
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang start
+  @Override
+  public List<MstMasterResponse> getMstIndTreatInfos(String facilityCd, MstMasterRequest req) {
+    List<MstMasterResponse> result = new ArrayList<>();
+    SelectOptions selectOptions = SelectOptions.get();
+    // ダイアライザ一覧を取得
+    MstDialyzer dialyzerParam = new MstDialyzer() {
+      {
+        setFacilityCd(facilityCd);
+      }
+    };
+    List<MstDialyzer> lstMstDialyzer = mstDialyzerDao.selectIncludeDeleted(selectOptions, dialyzerParam);
+
+    // 禁忌・アレルギーリスト一覧を取得
+    MstTabooAllergy tabooAllergyParam = new MstTabooAllergy() {
+      {
+        setFacilityCd(facilityCd);
+      }
+    };
+    List<MstTabooAllergy> lstMstTabooAllergy = mstTabooAllergyDao.selectAll(selectOptions, tabooAllergyParam);
+
+    // 医療材料リスト一覧を取得
+    MstEquipment equipmentParam = new MstEquipment()
+    {
+      {
+        setFacilityCd(facilityCd);
+      }
+    };
+    List<MstEquipment> lstMstEquipment = mstEquipmentDao.selectByClassType(selectOptions, equipmentParam, new ArrayList<>());
+
+    MstEquipmentClass paramClass = new MstEquipmentClass() {
+      {
+        setFacilityCd(facilityCd);
+      }
+    };
+    List<MstEquipmentClass> mstEquipmentClassList = mstEquipmentClassDao.selectAllIncludeDeleted(selectOptions, paramClass);
+
+    // 薬剤リスト一覧を取得
+    MstMedicine medicineParam = new MstMedicine() {
+      {
+        setFacilityCd(facilityCd);
+      }
+    };
+    List<MstMedicine> lstMstMedicine = mstMedicineDao.selectAllDel(selectOptions, medicineParam);
+
+    MstMedicineClass medicineParamClass = new MstMedicineClass() {
+      {
+        setFacilityCd(facilityCd);
+      }
+    };
+    List<MstMedicineClass> mstMedicineClassList = mstMedicineClassDao.selectAllIncludeDeleted(selectOptions, medicineParamClass);
+
+    // 調製薬剤リスト一覧を取得
+    MstMedicineMix medicineMixParam = new MstMedicineMix() {
+      {
+        setFacilityCd(facilityCd);
+      }
+    };
+    List<MstMedicineMix> lstMstMedicineMix = mstMedicineMixDao.selectMstMedicineMixAllergyData(selectOptions, medicineMixParam);
+    MstSelector mstMedicineSelector = mstSelectorDao.selectByName(facilityCd, "mst_medicine_mix");
+    if(!CollectionUtils.isEmpty(req.getPatIds())) {
+      List<PatMain> patMainList = patMainDao.selectByPatIds(facilityCd, req.getPatIds());
+      MstMasterResponse mstMasterResponse = null;
+      List<MstDialyzerDto> mstDialyzerDtoList = new ArrayList<>();
+      List<MstEquipmentDto> mstEquipmentDtoList = new ArrayList<>();
+      List<MstMedicineDto> mstMedicineDtoList = new ArrayList<>();
+      List<MstMedicineMixDto> mstMedicineMixDtoList = new ArrayList<>();
+      for(Long patId : req.getPatIds()) {
+        mstMasterResponse = new MstMasterResponse();
+        mstDialyzerDtoList = new ArrayList<>();
+        mstEquipmentDtoList = new ArrayList<>();
+        mstMedicineDtoList = new ArrayList<>();
+        mstMedicineMixDtoList = new ArrayList<>();
+        mstMasterResponse.setPatId(patId);
+        if(-1 == patId){
+          // 装置
+          editUnKnowPatDialyzerInfo(facilityCd, mstMasterResponse, lstMstDialyzer, mstDialyzerDtoList);
+          // 医材
+          editUnKnowPatMstEquipment(facilityCd, mstMasterResponse, lstMstEquipment, mstEquipmentDtoList, mstEquipmentClassList);
+          // 薬剤
+          editUnKnowMstMedicine(facilityCd, mstMasterResponse, lstMstMedicine, mstMedicineDtoList, mstMedicineClassList);
+          editUnKnowMstMedicineMix(facilityCd, mstMasterResponse, lstMstMedicineMix, mstMedicineMixDtoList, mstMedicineClassList);
+          result.add(mstMasterResponse);
+          // 次の患者を処理する
+          continue;
+        }
+        try {
+          // 対象患者のアレルギー情報を取得
+          Optional<PatMain> patMainOptional = patMainList.stream().filter(el -> el.getPat_id().compareTo(patId) == 0).findFirst();
+          if(patMainOptional.isPresent()) {
+            // 装置
+            editPatDialyzerInfo(facilityCd ,mstMasterResponse, patMainOptional.get(), lstMstTabooAllergy, lstMstDialyzer, mstDialyzerDtoList);
+            // 医材
+            editPatMstEquipment(facilityCd ,mstMasterResponse, patMainOptional.get()
+              ,lstMstTabooAllergy, lstMstEquipment, mstEquipmentDtoList, mstEquipmentClassList);
+            // 薬剤
+            editPatMstMedicine(facilityCd, mstMasterResponse, lstMstMedicine, patMainOptional.get()
+              ,lstMstTabooAllergy, mstMedicineDtoList, mstMedicineClassList);
+            editPatMstMedicineMix(facilityCd, mstMasterResponse, lstMstMedicineMix, patMainOptional.get()
+              , mstMedicineMixDtoList, mstMedicineClassList, mstMedicineSelector);
+            result.add(mstMasterResponse);
+          }
+        } catch (Exception e) {
+          EventLogMessage eventLogMessage = new EventLogMessage();
+          eventLogMessage.setLogMessage(e.getMessage());
+          logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
+        }
+      }
+    }
+    return result;
+  }
+
+  private void editUnKnowPatDialyzerInfo(String facilityCd, MstMasterResponse mstMasterResponse, List<MstDialyzer> lstMstDialyzer
+    ,List<MstDialyzerDto> mstDialyzerDtoList) {
+    if (lstMstDialyzer != null && !lstMstDialyzer.isEmpty()) {
+      for (MstDialyzer element : lstMstDialyzer) {
+        MstDialyzerDto newElement = new MstDialyzerDto();
+        BeanUtils.copyProperties(element, newElement);
+        newElement.setIsTaboo(false);
+        newElement.setIsAllergy(false);
+        mstDialyzerDtoList.add(newElement);
+      }
+    }
+    List<Object> objects = new ArrayList<>(mstDialyzerDtoList.size());
+    objects.addAll(mstDialyzerDtoList);
+    objects = sortData(objects, "mst_dialyzer", facilityCd);
+    List<MstDialyzerDto> res = new ArrayList<>();
+    for (Object obj : objects) {
+      if (obj instanceof MstDialyzerDto) {
+        res.add((MstDialyzerDto) obj);
+      }
+    }
+    mstMasterResponse.setMstDialyzerDtoList(res);
+  }
+
+  private void editUnKnowPatMstEquipment(String facilityCd, MstMasterResponse mstMasterResponse, List<MstEquipment> lstMstEquipment
+    ,List<MstEquipmentDto> mstEquipmentDtoList, List<MstEquipmentClass> mstEquipmentClassList) {
+    if (lstMstEquipment != null && !lstMstEquipment.isEmpty()) {
+      for (MstEquipment element : lstMstEquipment) {
+        MstEquipmentDto newElement = new MstEquipmentDto();
+        BeanUtils.copyProperties(element, newElement);
+        mstEquipmentDtoList.add(newElement);
+      }
+      for (MstEquipmentDto mstEquipmentDto : mstEquipmentDtoList) {
+        mstEquipmentDto.setIsTaboo(false);
+        mstEquipmentDto.setIsAllergy(false);
+        Integer classCd = mstEquipmentDto.getClassCd();
+        Optional<MstEquipmentClass> found = mstEquipmentClassList.stream().filter(data -> data.getClassCd().equals(classCd)).findFirst();
+        if (found.isPresent()) {
+          MstEquipmentClass mstEquipmentClass = found.get();
+          String classType = "0";
+          if (mstEquipmentClass.getClassType() != null) {
+            classType = String.valueOf((int)mstEquipmentClass.getClassType().doubleValue());
+          }
+          mstEquipmentDto.setClassType(classType);
+        } else {
+          mstEquipmentDto.setClassType("0");
+        }
+      }
+    }
+    List<Object> equipmentObjects = new ArrayList<>(mstEquipmentDtoList.size());
+    equipmentObjects.addAll(mstEquipmentDtoList);
+    equipmentObjects = sortData(equipmentObjects, "mst_equipment", facilityCd);
+    List<MstEquipmentDto> equipmentRes = new ArrayList<>();
+    for (Object obj : equipmentObjects) {
+      if (obj instanceof MstEquipmentDto) {
+        equipmentRes.add((MstEquipmentDto) obj);
+      }
+    }
+    mstMasterResponse.setMstEquipmentDtoList(equipmentRes);
+  }
+
+  private void editUnKnowMstMedicine(String facilityCd, MstMasterResponse mstMasterResponse, List<MstMedicine> lstMstMedicine
+    ,List<MstMedicineDto> mstMedicineDtoList, List<MstMedicineClass> mstMedicineClassList) {
+    if (lstMstMedicine != null && !lstMstMedicine.isEmpty()) {
+      for (MstMedicine element : lstMstMedicine) {
+        MstMedicineDto newElement = new MstMedicineDto();
+        BeanUtils.copyProperties(element, newElement);
+        mstMedicineDtoList.add(newElement);
+      }
+      for (MstMedicineDto mstMedicineDto : mstMedicineDtoList) {
+        mstMedicineDto.setIsTaboo(false);
+        mstMedicineDto.setIsAllergy(false);
+        Integer classCd = mstMedicineDto.getClassCd();
+        Optional<MstMedicineClass> found = mstMedicineClassList.stream().filter(data -> data.getClassCd().equals(classCd)).findFirst();
+        if (found.isPresent()) {
+          MstMedicineClass mstMedicineClass = found.get();
+          String classType = "0";
+          if (mstMedicineClass.getClassType() != null) {
+            classType = String.valueOf((int)mstMedicineClass.getClassType().doubleValue());
+          }
+          mstMedicineDto.setClassType(classType);
+        } else {
+          mstMedicineDto.setClassType("0");
+        }
+      }
+    }
+    List<Object> medicineObjects = new ArrayList<>(mstMedicineDtoList.size());
+    medicineObjects.addAll(mstMedicineDtoList);
+    medicineObjects = sortData(medicineObjects, "mst_medicine", facilityCd);
+    List<MstMedicineDto> medicineRes = new ArrayList<>();
+    for (Object obj : medicineObjects) {
+      if (obj instanceof MstMedicineDto) {
+        medicineRes.add((MstMedicineDto) obj);
+      }
+    }
+    mstMasterResponse.setMstMedicineDtoList(medicineRes);
+  }
+
+  private void editUnKnowMstMedicineMix(String facilityCd, MstMasterResponse mstMasterResponse, List<MstMedicineMix> lstMstMedicineMix
+    ,List<MstMedicineMixDto> mstMedicineMixDtoList, List<MstMedicineClass> mstMedicineClassList) {
+    if (lstMstMedicineMix != null && !lstMstMedicineMix.isEmpty()) {
+      for (MstMedicineMix element : lstMstMedicineMix) {
+        MstMedicineMixDto newElement = new MstMedicineMixDto();
+        BeanUtils.copyProperties(element, newElement);
+        mstMedicineMixDtoList.add(newElement);
+      }
+
+      for (MstMedicineMixDto mstMedicineMixDto : mstMedicineMixDtoList) {
+        mstMedicineMixDto.setIsIncludeDel(false);
+        mstMedicineMixDto.setIsTaboo(false);
+        mstMedicineMixDto.setIsAllergy(false);
+        Integer classCd = mstMedicineMixDto.getClassCd();
+        Optional<MstMedicineClass> found = mstMedicineClassList.stream().filter(data -> data.getClassCd().equals(classCd)).findFirst();
+        if (found.isPresent()) {
+          MstMedicineClass mstMedicineClass = found.get();
+          String classType = "0";
+          if (mstMedicineClass.getClassType() != null) {
+            classType = String.valueOf((int)mstMedicineClass.getClassType().doubleValue());
+          }
+          mstMedicineMixDto.setClassType(classType);
+        } else {
+          mstMedicineMixDto.setClassType("0");
+        }
+
+        String mixInfo = mstMedicineMixDto.getMixInfo();
+        if (mixInfo != null) {
+          JSONArray mixInfoJsonArr = new JSONArray(mixInfo);
+          for (int i = 0; i < mixInfoJsonArr.length(); i++) {
+            JSONObject jObj = (JSONObject) mixInfoJsonArr.get(i);
+            if (jObj.has("cd")) {
+              Integer cd = jObj.getInt("cd");
+              MstMedicine mstMedicine = MasterCacheHandler.get().getMstMedicineByCd(cd);
+              if (mstMedicine != null) {
+                String isDisp = mstMedicine.getIsDisp();
+                String isDel = mstMedicine.getIsDel();
+                boolean isNot = "0".equals(isDisp) || "1".equals(isDel);
+                mstMedicineMixDto.setIsIncludeDel(isNot);
+                if(isNot){
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    setTabooAllergy(mstMedicineMixDtoList, null, facilityCd);
+    List<Object> medicineMixObjects = new ArrayList<>(mstMedicineMixDtoList.size());
+    medicineMixObjects.addAll(mstMedicineMixDtoList);
+    medicineMixObjects = sortData(medicineMixObjects, "mst_medicine_mix", facilityCd);
+    List<MstMedicineMixDto> medicineMixRes = new ArrayList<>();
+    for (Object obj : medicineMixObjects) {
+      if (obj instanceof MstMedicineMixDto) {
+        medicineMixRes.add((MstMedicineMixDto) obj);
+      }
+    }
+    mstMasterResponse.setMstMedicineMixDtoList(medicineMixRes);
+  }
+
+  private void setTabooAllergy(List<MstMedicineMixDto> data, PatMain patMain, String facilityCd) {
+    try {
+      MstTabooAllergy params = new MstTabooAllergy();
+      params.setFacilityCd(facilityCd);
+      List<MstTabooAllergy> mstTabooAllergyList = mstTabooAllergyDao.selectAllIncludeDeleted(SelectOptions.get(), params);
+      String tabooAllergyInfo = patMain.getTaboo_allergy_info();
+      if (tabooAllergyInfo != null && !tabooAllergyInfo.isEmpty()) {
+        ArrayList<PatInfoTabooAllergy> lstTabooAllergyInfo = new ObjectMapper().readValue(patMain.getTaboo_allergy_info(), new TypeReference<>() {
+        });
+        for (int i = 0; i < lstTabooAllergyInfo.size(); i++) {
+          PatInfoTabooAllergy patInfoTabooAllergy = lstTabooAllergyInfo.get(i);
+          String tabooAllergyCd = patInfoTabooAllergy.getTaboo_allergy_cd();
+          String tabooAllergyClass = patInfoTabooAllergy.getTaboo_allergy_class();
+          String categoryClass = patInfoTabooAllergy.getCategory_class();
+          if ("0".equals(categoryClass)) {//禁忌・アレルギー cd
+            Optional<MstTabooAllergy> mstTabooAllergy = mstTabooAllergyList.stream().filter(a -> a.getTabooAllergyCd().equals(tabooAllergyCd)).findFirst();
+            if (mstTabooAllergy.isPresent()) {
+              String detailInfo = mstTabooAllergy.get().getDetailInfo();
+              ArrayList<MstTabooAllergyDetailInfo> detailInfoList = new ObjectMapper().readValue(detailInfo, new TypeReference<>() {});
+              for (MstMedicineMixDto element : data) {
+                String mixInfo = element.getMixInfo();
+                if (mixInfo != null && !mixInfo.isEmpty()) {
+                  JSONArray mixInfoJsonArr = new JSONArray(mixInfo);
+                  boolean isTaboo = false;
+                  boolean isAllergy = false;
+                  for (int j = 0; j < mixInfoJsonArr.length(); j++) {
+                    JSONObject jObj = (JSONObject) mixInfoJsonArr.get(j);
+                    if (jObj.has("cd")) {
+                      Integer cd = jObj.getInt("cd");
+                      String cdStr = String.valueOf(cd);
+                      if(cdStr != null && !cdStr.isEmpty()){
+                        Optional<MstTabooAllergyDetailInfo> checkExist = detailInfoList.stream().filter(a -> cdStr.equals(a.getCd())).findFirst();
+                        if (checkExist.isPresent()) {
+                          if ("1".equals(tabooAllergyClass) && !isTaboo) {
+                            isTaboo = true;
+                          } else if ("2".equals(tabooAllergyClass) && !isAllergy) {
+                            isAllergy = true;
+                          }
+                        }
+                      }
+                    }
+                  }
+                  if(isTaboo){
+                    element.setIsTaboo(isTaboo);
+                  }
+                  if(isAllergy){
+                    element.setIsAllergy(isAllergy);
+                  }
+                }
+              }
+            }
+          } else if ("1".equals(categoryClass)) {//药剂 cd
+            for (MstMedicineMixDto element : data) {
+              String mixInfo = element.getMixInfo();
+              if (mixInfo != null) {
+                JSONArray mixInfoJsonArr = new JSONArray(mixInfo);
+                for (int j = 0; j < mixInfoJsonArr.length(); j++) {
+                  JSONObject jObj = (JSONObject) mixInfoJsonArr.get(j);
+                  if (jObj.has("cd")) {
+                    Integer cd = jObj.getInt("cd");
+                    if (Integer.valueOf(tabooAllergyCd).equals(cd)) {
+                      if ("1".equals(tabooAllergyClass)) {
+                        element.setIsTaboo(true);
+                      } else if ("2".equals(tabooAllergyClass)) {
+                        element.setIsAllergy(true);
+                      }
+                    }
+                  }
+                }
+              }
+              // mod 12359 禁忌表示不正 zkm end
+            }
+          }
+        }
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  private void editPatDialyzerInfo(String facilityCd, MstMasterResponse mstMasterResponse, PatMain patMain
+    ,List<MstTabooAllergy> lstMstTabooAllergy, List<MstDialyzer> lstMstDialyzer
+    ,List<MstDialyzerDto> mstDialyzerDtoList) throws JsonProcessingException {
+    ArrayList<PatInfoTabooAllergy> lstTabooAllergyInfo = new ObjectMapper().readValue(patMain.getTaboo_allergy_info(), new TypeReference<ArrayList<PatInfoTabooAllergy>>() {});
+    ArrayList<String> lstTabooDialyzer = new ArrayList<String>();
+    ArrayList<String> lstAllergyDialyzer = new ArrayList<String>();
+
+    // 患者の禁忌・アレルギー情報毎にチェックを行い、禁忌ダイアライザリスト・アレルギーダイアライザリストを作成する
+    for (PatInfoTabooAllergy patInfoTabooAllergy : lstTabooAllergyInfo) {
+      if (patInfoTabooAllergy.getCategory_class().equals("0")) {
+        // 対象区分が0:"禁忌・アレルギー" → taboo_allergy_cdの値から禁忌・アレルギーマスタを検索後、ダイアライザコードを取得
+        String cd = patInfoTabooAllergy.getTaboo_allergy_cd();
+        Optional<MstTabooAllergy> mstTabooAllergy = lstMstTabooAllergy.stream().filter(a -> a.getTabooAllergyCd().equals(cd)).findFirst();
+        if (mstTabooAllergy.isPresent()) {
+          ArrayList<MstTabooAllergyDetailInfo> lstTabooAllergyDetailInfo = new ObjectMapper().readValue(mstTabooAllergy.get().getDetailInfo(), new TypeReference<ArrayList<MstTabooAllergyDetailInfo>>() {});
+          List<String> lstDialyzerCd = lstTabooAllergyDetailInfo.stream().filter(a -> a.getClassCd().equals("4")).map(a -> a.getCd()).collect(Collectors.toList());
+          if (patInfoTabooAllergy.getTaboo_allergy_class().equals("1")) {
+            // 禁忌
+            lstTabooDialyzer.addAll(lstDialyzerCd);
+          } else if (patInfoTabooAllergy.getTaboo_allergy_class().equals("2")) {
+            // アレルギー
+            lstAllergyDialyzer.addAll(lstDialyzerCd);
+          }
+        }
+
+      } else if (patInfoTabooAllergy.getCategory_class().equals("4")) {
+        // 対象区分が4:ダイアライザー → taboo_allergy_cdの値がそのままダイアライザコード
+        if (patInfoTabooAllergy.getTaboo_allergy_class().equals("1")) {
+          // 禁忌
+          lstTabooDialyzer.add(patInfoTabooAllergy.getTaboo_allergy_cd());
+        } else if (patInfoTabooAllergy.getTaboo_allergy_class().equals("2")) {
+          // アレルギー
+          lstAllergyDialyzer.add(patInfoTabooAllergy.getTaboo_allergy_cd());
+        }
+      }
+    }
+
+    if (lstMstDialyzer != null && !lstMstDialyzer.isEmpty()) {
+      for (MstDialyzer element : lstMstDialyzer) {
+        MstDialyzerDto newElement = new MstDialyzerDto();
+        BeanUtils.copyProperties(element, newElement);
+        mstDialyzerDtoList.add(newElement);
+      }
+    }
+
+    // ダイアライザリストを1件ずつ確認して禁忌・アレルギー情報に一致する場合は名称の前に定冠詞をつける
+    for (int idx = mstDialyzerDtoList.size() - 1; idx >= 0; idx--) {
+      MstDialyzerDto mstDialyzer = mstDialyzerDtoList.get(idx);
+      if (lstTabooDialyzer.contains(mstDialyzer.getDialyzerCd().toString())) {
+        // 禁忌
+        mstDialyzer.setIsTaboo(true);
+      }
+      if (lstAllergyDialyzer.contains(mstDialyzer.getDialyzerCd().toString())) {
+        // アレルギー
+        mstDialyzer.setIsAllergy(true);
+      }
+    }
+
+    List<Object> objects = new ArrayList<>(mstDialyzerDtoList.size());
+    objects.addAll(mstDialyzerDtoList);
+    objects = sortData(objects, "mst_dialyzer", facilityCd);
+    List<MstDialyzerDto> res = new ArrayList<>();
+    for (Object obj : objects) {
+      if (obj instanceof MstDialyzerDto) {
+        res.add((MstDialyzerDto) obj);
+      }
+    }
+    mstMasterResponse.setMstDialyzerDtoList(res);
+  }
+
+  private void editPatMstEquipment(String facilityCd, MstMasterResponse mstMasterResponse, PatMain patMain, List<MstTabooAllergy> lstMstTabooAllergy
+    ,List<MstEquipment> lstMstEquipment, List<MstEquipmentDto> mstEquipmentDtoList, List<MstEquipmentClass> mstEquipmentClassList) throws JsonProcessingException {
+    ArrayList<PatInfoTabooAllergy> lstTabooAllergyInfo = new ObjectMapper().readValue(patMain.getTaboo_allergy_info(), new TypeReference<ArrayList<PatInfoTabooAllergy>>() {});
+    ArrayList<String> lstTabooEquipment = new ArrayList<String>();
+    ArrayList<String> lstAllergyEquipment = new ArrayList<String>();
+
+    // 患者の禁忌・アレルギー情報毎にチェックを行い、禁忌医療材料リスト・アレルギー医療材料リストを作成する
+    for (PatInfoTabooAllergy patInfoTabooAllergy : lstTabooAllergyInfo) {
+      if (patInfoTabooAllergy.getCategory_class().equals("0")) {
+        // 対象区分が0:"禁忌・アレルギー" → taboo_allergy_cdの値から禁忌・アレルギーマスタを検索後、医療材料コードを取得
+        String cd = patInfoTabooAllergy.getTaboo_allergy_cd();
+        Optional<MstTabooAllergy> mstTabooAllergy = lstMstTabooAllergy.stream().filter(a -> a.getTabooAllergyCd().equals(cd)).findFirst();
+        if (mstTabooAllergy.isPresent()) {
+          // 禁忌・アレルギーマスタの詳細項目でclassCd(禁忌対象区分)が"3"(医療材料)のデータを抽出
+          ArrayList<MstTabooAllergyDetailInfo> lstTabooAllergyDetailInfo = new ObjectMapper().readValue(mstTabooAllergy.get().getDetailInfo(), new TypeReference<ArrayList<MstTabooAllergyDetailInfo>>() {});
+          List<String> lstEquipmentCd = lstTabooAllergyDetailInfo.stream().filter(a -> a.getClassCd().equals("3")).map(a -> a.getCd()).collect(Collectors.toList());
+          if (patInfoTabooAllergy.getTaboo_allergy_class().equals("1")) {
+            // 禁忌
+            lstTabooEquipment.addAll(lstEquipmentCd);
+          } else if (patInfoTabooAllergy.getTaboo_allergy_class().equals("2")) {
+            // アレルギー
+            lstAllergyEquipment.addAll(lstEquipmentCd);
+          }
+        }
+
+      } else if (patInfoTabooAllergy.getCategory_class().equals("3")) {
+        // 対象区分が3:医療材料 → taboo_allergy_cdの値がそのまま医療材料コード
+        if (patInfoTabooAllergy.getTaboo_allergy_class().equals("1")) {
+          // 禁忌
+          lstTabooEquipment.add(patInfoTabooAllergy.getTaboo_allergy_cd());
+        } else if (patInfoTabooAllergy.getTaboo_allergy_class().equals("2")) {
+          // アレルギー
+          lstAllergyEquipment.add(patInfoTabooAllergy.getTaboo_allergy_cd());
+        }
+      }
+    }
+
+    // 禁忌・アレルギー両方に登録がある医療材料コードのリストを作成
+    if (lstMstEquipment != null && !lstMstEquipment.isEmpty()) {
+      for (MstEquipment element : lstMstEquipment) {
+        MstEquipmentDto newElement = new MstEquipmentDto();
+        BeanUtils.copyProperties(element, newElement);
+        mstEquipmentDtoList.add(newElement);
+      }
+    }
+    // 医療材料リストを1件ずつ確認して禁忌・アレルギー情報に一致する場合は名称の前に定冠詞をつける
+    for (int idx = mstEquipmentDtoList.size() - 1; idx >= 0; idx--) {
+      MstEquipmentDto mstEquipment = mstEquipmentDtoList.get(idx);
+      Integer classCd = mstEquipment.getClassCd();
+      Optional<MstEquipmentClass> found = mstEquipmentClassList.stream().filter(data -> data.getClassCd().equals(classCd)).findFirst();
+      if (found.isPresent()) {
+        MstEquipmentClass mstEquipmentClass = found.get();
+        String classType = "0";
+        if(mstEquipmentClass.getClassType() != null){
+          classType = String.valueOf((int)mstEquipmentClass.getClassType().doubleValue());
+        }
+        mstEquipment.setClassType(classType);
+      } else {
+        mstEquipment.setClassType("0");
+      }
+      if (lstTabooEquipment.contains(mstEquipment.getEquipmentCd().toString())) {
+        // 禁忌
+        mstEquipment.setIsTaboo(true);
+      }
+      if (lstAllergyEquipment.contains(mstEquipment.getEquipmentCd().toString())) {
+        // アレルギー
+        mstEquipment.setIsAllergy(true);
+      }
+    }
+    List<Object> objects = new ArrayList<>(mstEquipmentDtoList.size());
+    objects.addAll(mstEquipmentDtoList);
+    objects = sortData(objects, "mst_equipment", facilityCd);
+    List<MstEquipmentDto> res = new ArrayList<>();
+    for (Object obj : objects) {
+      if (obj instanceof MstEquipmentDto) {
+        res.add((MstEquipmentDto) obj);
+      }
+    }
+    mstMasterResponse.setMstEquipmentDtoList(res);
+  }
+
+  private void editPatMstMedicine(String facilityCd, MstMasterResponse mstMasterResponse, List<MstMedicine> lstMstMedicine, PatMain patMain
+    , List<MstTabooAllergy> lstMstTabooAllergy, List<MstMedicineDto> mstMedicineDtoList, List<MstMedicineClass> mstMedicineClassList) throws JsonProcessingException {
+    ArrayList<PatInfoTabooAllergy> lstTabooAllergyInfo = new ObjectMapper().readValue(patMain.getTaboo_allergy_info(), new TypeReference<ArrayList<PatInfoTabooAllergy>>() {});
+
+    ArrayList<String> lstTabooMedicine = new ArrayList<String>();
+    ArrayList<String> lstAllergyMedicine = new ArrayList<String>();
+
+    if (lstMstMedicine != null && !lstMstMedicine.isEmpty()) {
+      for (MstMedicine element : lstMstMedicine) {
+        MstMedicineDto newElement = new MstMedicineDto();
+        BeanUtils.copyProperties(element, newElement);
+        newElement.setIsAllergy(false);
+        newElement.setIsTaboo(false);
+        Integer classCd = element.getClassCd();
+        Optional<MstMedicineClass> found = mstMedicineClassList.stream().filter(data -> data.getClassCd().equals(classCd)).findFirst();
+        if (found.isPresent()) {
+          MstMedicineClass mstMedicineClass = found.get();
+          String classType = "0";
+          if (mstMedicineClass.getClassType() != null) {
+            classType = String.valueOf((int)mstMedicineClass.getClassType().doubleValue());
+          }
+          newElement.setClassType(classType);
+        } else {
+          newElement.setClassType("0");
+        }
+        mstMedicineDtoList.add(newElement);
+      }
+    }
+
+    // 患者の禁忌・アレルギー情報毎にチェックを行い、禁忌薬剤リスト・アレルギー薬剤リストを作成する
+    for (PatInfoTabooAllergy patInfoTabooAllergy : lstTabooAllergyInfo) {
+      if (patInfoTabooAllergy.getCategory_class().equals("0")) {
+        // 対象区分が0:"禁忌・アレルギー" → taboo_allergy_cdの値から禁忌・アレルギーマスタを検索後、薬剤コードを取得
+        String cd = patInfoTabooAllergy.getTaboo_allergy_cd();
+        Optional<MstTabooAllergy> mstTabooAllergy = lstMstTabooAllergy.stream().filter(a -> a.getTabooAllergyCd().equals(cd)).findFirst();
+        if (mstTabooAllergy.isPresent()) {
+          // 禁忌・アレルギーマスタの詳細項目でclassCd(禁忌対象区分)が"1"(薬剤)のデータを抽出
+          ArrayList<MstTabooAllergyDetailInfo> lstTabooAllergyDetailInfo = new ObjectMapper().readValue(mstTabooAllergy.get().getDetailInfo(), new TypeReference<ArrayList<MstTabooAllergyDetailInfo>>() {});
+          List<String> lstMedicineCd = lstTabooAllergyDetailInfo.stream().filter(a -> a.getClassCd().equals("1")).map(a -> a.getCd()).collect(Collectors.toList());
+          List<String> standardMedicineCdList = lstTabooAllergyDetailInfo.stream().filter(a -> a.getClassCd().equals("6")).map(a -> a.getCd()).collect(Collectors.toList());
+          if (!CollectionUtils.isEmpty(standardMedicineCdList)) {
+            List<String> cdList = new ArrayList<>();
+            cdList.addAll(standardMedicineCdList);
+            List<String> mstMedicineCdList = mstMedicineDao.selectByStandardMedicineCd(facilityCd ,cdList);
+            lstMedicineCd.addAll(mstMedicineCdList);
+          }
+          if (patInfoTabooAllergy.getTaboo_allergy_class().equals("1")) {
+            // 禁忌
+            lstTabooMedicine.addAll(lstMedicineCd);
+          } else if (patInfoTabooAllergy.getTaboo_allergy_class().equals("2")) {
+            // アレルギー
+            lstAllergyMedicine.addAll(lstMedicineCd);
+          }
+        }
+
+      } else if (patInfoTabooAllergy.getCategory_class().equals("1")) {
+        // 対象区分が1:薬剤 → taboo_allergy_cdの値がそのまま薬剤コード
+        if (patInfoTabooAllergy.getTaboo_allergy_class().equals("1")) {
+          // 禁忌
+          lstTabooMedicine.add(patInfoTabooAllergy.getTaboo_allergy_cd());
+        } else if (patInfoTabooAllergy.getTaboo_allergy_class().equals("2")) {
+          // アレルギー
+          lstAllergyMedicine.add(patInfoTabooAllergy.getTaboo_allergy_cd());
+        }
+      }
+    }
+
+    if (!CollectionUtils.isEmpty(lstTabooMedicine) || !CollectionUtils.isEmpty(lstAllergyMedicine)) {
+      // 薬剤リストを1件ずつ確認して禁忌・アレルギー情報に一致する場合は名称の前に定冠詞をつける
+      for (int idx = 0; idx < mstMedicineDtoList.size(); idx++) {
+        MstMedicineDto mstMedicine = mstMedicineDtoList.get(idx);
+        Integer classCd = mstMedicine.getClassCd();
+        Optional<MstMedicineClass> found = mstMedicineClassList.stream().filter(data -> data.getClassCd().equals(classCd)).findFirst();
+        if (found.isPresent()) {
+          MstMedicineClass mstMedicineClass = found.get();
+          String classType = "0";
+          if(mstMedicineClass.getClassType() != null){
+            classType = String.valueOf((int)mstMedicineClass.getClassType().doubleValue());
+          }
+          mstMedicine.setClassType(classType);
+        } else {
+          mstMedicine.setClassType("0");
+        }
+        if (lstTabooMedicine.contains(mstMedicine.getMedicineCd().toString())) {
+          // 禁忌
+          mstMedicine.setIsTaboo(true);
+        }
+        if(lstAllergyMedicine.contains(mstMedicine.getMedicineCd().toString())) {
+          // アレルギー
+          mstMedicine.setIsAllergy(true);
+        }
+      }
+    }
+    List<Object> objects = new ArrayList<>(mstMedicineDtoList.size());
+    objects.addAll(mstMedicineDtoList);
+    objects = sortData(objects, "mst_medicine", facilityCd);
+    List<MstMedicineDto> res = new ArrayList<>();
+    for (Object obj : objects) {
+      if (obj instanceof MstMedicineDto) {
+        res.add((MstMedicineDto) obj);
+      }
+    }
+    mstMasterResponse.setMstMedicineDtoList(res);
+  }
+
+  private void editPatMstMedicineMix(String facilityCd, MstMasterResponse mstMasterResponse, List<MstMedicineMix> lstMstMedicineMix, PatMain patMain
+    , List<MstMedicineMixDto> mstMedicineMixDtoList, List<MstMedicineClass> mstMedicineClassList, MstSelector mstMedicineSelector) throws JsonProcessingException {
+    ArrayList<PatInfoTabooAllergy> lstTabooAllergyInfo = new ObjectMapper().readValue(patMain.getTaboo_allergy_info(), new TypeReference<ArrayList<PatInfoTabooAllergy>>() {});
+    // 禁忌薬剤リスト
+    ArrayList<String> lstTabooMedicine = new ArrayList<String>();
+    // アレルギー薬剤リスト
+    ArrayList<String> lstAllergyMedicine = new ArrayList<String>();
+
+    if (lstMstMedicineMix != null && !lstMstMedicineMix.isEmpty()) {
+      for (MstMedicineMix element : lstMstMedicineMix) {
+        MstMedicineMixDto newElement = new MstMedicineMixDto();
+        BeanUtils.copyProperties(element, newElement);
+        newElement.setIsIncludeDel(false);
+        newElement.setIsAllergy(false);
+        newElement.setIsTaboo(false);
+        Integer classCd = element.getClassCd();
+        Optional<MstMedicineClass> found = mstMedicineClassList.stream().filter(data -> data.getClassCd().equals(classCd)).findFirst();
+        if (found.isPresent()) {
+          MstMedicineClass mstMedicineClass = found.get();
+          String classType = "0";
+          if (mstMedicineClass.getClassType() != null) {
+            classType = String.valueOf((int) mstMedicineClass.getClassType().doubleValue());
+          }
+          newElement.setClassType(classType);
+        } else {
+          newElement.setClassType("0");
+        }
+
+        String mixInfo = element.getMixInfo();
+        if (mixInfo != null) {
+          JSONArray mixInfoJsonArr = new JSONArray(mixInfo);
+          for (int i = 0; i < mixInfoJsonArr.length(); i++) {
+            JSONObject jObj = (JSONObject) mixInfoJsonArr.get(i);
+            if (jObj.has("cd")) {
+              Integer cd = jObj.getInt("cd");
+              MstMedicine mstMedicine = MasterCacheHandler.get().getMstMedicineByCd(cd);
+              if (mstMedicine != null) {
+                String isDisp = mstMedicine.getIsDisp();
+                String isDel = mstMedicine.getIsDel();
+                boolean isNot = "0".equals(isDisp) || "1".equals(isDel);
+                newElement.setIsIncludeDel(isNot);
+                if(isNot){
+                  break;
+                }
+              }
+            }
+          }
+        }
+        mstMedicineMixDtoList.add(newElement);
+      }
+    }
+    // 患者の禁忌・アレルギー情報毎にチェックを行い、禁忌薬剤リスト・アレルギー薬剤リストを作成する
+    for (PatInfoTabooAllergy patInfoTabooAllergy : lstTabooAllergyInfo) {
+      if (patInfoTabooAllergy.getCategory_class().equals("2")) {
+        String cd = patInfoTabooAllergy.getTaboo_allergy_cd();
+        if (patInfoTabooAllergy.getTaboo_allergy_class().equals("1")) {
+          // 禁忌
+          lstTabooMedicine.add(cd);
+        } else if (patInfoTabooAllergy.getTaboo_allergy_class().equals("2")) {
+          // アレルギー
+          lstAllergyMedicine.add(cd);
+        }
+      }
+    }
+
+    if (!CollectionUtils.isEmpty(lstTabooMedicine) || !CollectionUtils.isEmpty(lstAllergyMedicine)) {
+      // 調製薬剤リストを1件ずつ確認して禁忌・アレルギー情報に一致する場合は名称の前に定冠詞をつける
+      for (MstMedicineMixDto mstMedicineMix : mstMedicineMixDtoList) {
+        if (lstTabooMedicine.contains(mstMedicineMix.getMedicineMixCd().toString())) {
+          // 禁忌
+          mstMedicineMix.setIsTaboo(true);
+        } else if (lstAllergyMedicine.contains(mstMedicineMix.getMedicineMixCd().toString())) {
+          // アレルギー
+          mstMedicineMix.setIsAllergy(true);
+        }
+      }
+    }
+
+    List<Object> objects = new ArrayList<>(mstMedicineMixDtoList.size());
+    objects.addAll(mstMedicineMixDtoList);
+    objects = sortData(objects, mstMedicineSelector);
+    List<MstMedicineMixDto> res = new ArrayList<>();
+    for (Object obj : objects) {
+      if (obj instanceof MstMedicineMixDto) {
+        res.add((MstMedicineMixDto) obj);
+      }
+    }
+    mstMasterResponse.setMstMedicineMixDtoList(res);
+  }
+
+  private List<Object> sortData(List<Object> data, MstSelector mstSelector) {
+    if (mstSelector != null) {
+      // mstSelectorから並び順を取得
+      if (mstSelector != null) {
+        // ソート後データ
+        List<Object> sortedData = new ArrayList<>();
+        // ソートした配列
+        List<Object> deletedCode = new ArrayList<>();
+        // ソート用配列
+        List<Long> sortedCodes = mstSelector.getOrderSettings().getItems().stream().map(Item::getCode).toList();
+        // ソート用配列順にデータを並び替え
+        for (Long sortedCode : sortedCodes) {
+          data.stream().filter(obj -> {
+            if (obj instanceof MstDialyzerDto mstData) {
+              return sortedCode.compareTo(mstData.getDialyzerCd().longValue()) == 0;
+            } else if (obj instanceof MstEquipmentDto mstData) {
+              return sortedCode.compareTo(mstData.getEquipmentCd().longValue()) == 0;
+            } else if (obj instanceof MstMedicineDto mstData) {
+              return sortedCode.compareTo(mstData.getMedicineCd().longValue()) == 0;
+            } else if (obj instanceof MstMedicineExtendsDto mstData) {
+              return sortedCode.compareTo(mstData.getMedicineCd().longValue()) == 0;
+            } else if (obj instanceof MstMedicineMixDto mstData) {
+              return sortedCode.compareTo(mstData.getMedicineMixCd().longValue()) == 0;
+            } else {
+              return false;
+            }
+          }).findFirst().ifPresent(sortedData::add);
+        }
+
+        Set<Object> sortedDataSet = new HashSet<>(sortedData);
+        for (Object item : data) {
+          if (!sortedDataSet.contains(item)) {
+            deletedCode.add(item);
+          }
+        }
+
+        sortedData.addAll(deletedCode);
+        return sortedData;
+      }
+    }
+    return data;
+  }
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang end
 }

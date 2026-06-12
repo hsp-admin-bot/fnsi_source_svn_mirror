@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel" :showFooter="false">
-    <div slot="body" class="personal-settings-body">
+    <template #body>
+      <div class="personal-settings-body">
       <div v-if="isTabDefineEmpty" class="empty-message">タブの情報がありません。</div>
       <div v-if="!isTabDefineEmpty" class="tab-and-contents-wrapper">
         <!-- タブ領域 -->
@@ -16,22 +17,27 @@
         </div>
         <!-- 中身領域 -->
         <div class="tab-contents-area">
-          <main-component v-if="isCommonMode" slot="main-content" ref="mainComponent" />
-          <main-component v-else :is="main" slot="main-content" ref="mainComponent" />
+          <main-component v-if="isCommonMode" ref="mainComponent" />
+          <component v-else :is="main" ref="mainComponent" />
         </div>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-  import {mapActions, mapGetters} from "vuex";
+  import { defineAsyncComponent } from "@/compat/vue/runtime";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   import ModalBase from "@/components/modals/ModalBase";
   import MultiModalMixin from "@/components/modals/MultiModalMixin";
   import MainComponent from "@/components/modals/PersonalSettingComponent";
+  import NotificationSettingComponent from "@/components/modals/notification-setting/NotificationSettingComponent";
+  import DefaultSettingComponent from "@/components/modals/default-setting/DefaultSettingComponent";
   // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
+
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
 
   export default {
@@ -39,12 +45,10 @@ import { messageFormat } from '@/functions/common/MessageFormat';
   components: {
     "modal-base": ModalBase,
     "main-component": MainComponent,
-    "notification-setting": () =>
-      import("@/components/modals/notification-setting/NotificationSettingComponent"), // import
-    "fixed-phrase": () =>
-      import("@/components/modals/fixed-phrase/FixedPhraseComponent"), // import
-    "default-setting": () =>
-      import("@/components/modals/default-setting/DefaultSettingComponent"), // import
+    "notification-setting": NotificationSettingComponent, // import
+    "fixed-phrase": defineAsyncComponent(() =>
+      import("@/components/modals/fixed-phrase/FixedPhraseComponent")), // import
+    "default-setting": DefaultSettingComponent, // import
   },
   mixins: [MultiModalMixin],
   data() {
@@ -150,12 +154,14 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 }
 .personal-settings-body {
   height: calc(100% - 6px);
-  /*add FNSI-改修内容4503 任 start*/
+   
   overflow-y: hidden;
-  /*add FNSI-改修内容4503 任 end*/
+   
   color: var(--ntss-base-color);
 }
-.personal-settings-body >>> .list-header {
+/*add FNSI-改修内容4503 任 start*/
+/*add FNSI-改修内容4503 任 end*/
+.personal-settings-body :deep(.list-header) {
   font-size: inherit;
   display: flex;
   align-items: center;
@@ -216,7 +222,7 @@ import { messageFormat } from '@/functions/common/MessageFormat';
   background-color: #ccc;
 }
 @media print {
-  div >>> .modal-wrapper {
+  div :deep(.modal-wrapper){
     display: inline-block !important;
     width: 100%;
   }

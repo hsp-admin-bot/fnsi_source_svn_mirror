@@ -3,12 +3,13 @@
  */
  <template>
   <modal-base @onClose="closeCheckListModal">
-    <div slot="header">
+    <template #header>
       <component :is="header"></component>
-    </div>
+    </template>
     <!-- mod FNSI-redmine_#3904_グリッド表示を修正 周 start -->
     <!-- <div slot="body"> -->
-    <div slot="body" class="master-maintenance-page">
+    <template #body>
+      <div class="master-maintenance-page">
     <!-- mod FNSI-redmine_#3904_グリッド表示を修正 周 end -->
       <div id="checklist-modal-header">
         <!-- 患者情報 -->
@@ -80,7 +81,7 @@
               <!--mod #6853-チェックボックス、実施者の選択ボタンがヘッダーの前面に表示される 徐博 end-->
             </tr>
           </thead>
-          <tr
+                    <tr
             v-for="(checkData, idx) in displayCheckList"
             :key="idx"
             :class="'checklist-modal-row'"
@@ -104,58 +105,65 @@
             <!--#9226:チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 Start -->
             <td class="ntss-list-body-td">
             <!--#10715:日付IF修正Start（必須追加+param修正）-->
-            <date-input
-                class="ntss-input-date"
-                :classes="'input-area ntss-input-date ntss-custom-input ntss-input-start-date date-input-required '"
-                v-model="checkData.viewDate"
-                @handleClearInput="checkData.viewDate = null"
-                v-show="checkData.check"
-                :disabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
-                :isRequired="true"
-                @change="onChangeDate(checkData, idx)"
-            />
-            <!--#10715:日付IF修正End（必須追加+param修正+param修正）-->
-            <common-calendar
-                v-model="checkData.viewDate"
-                v-show="checkData.check"
-                :disabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
-                @input="onChangeDate(checkData, idx)"
-            />
-            <!--#10715:日付IF修正Start（必須追加+param修正）-->
-            <time-input
-                class="occurs_date_time"
-                v-model="checkData.viewtime"
-                @handleClearInput="checkData.viewtime = null"
-                v-show="checkData.check"
-                :disabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
-                :isRequired="true"
-                :classes="'time-input-required '"
-                @change="onChangeDate(checkData, idx)"
-            />
+            <div style="display: inline-flex; align-items: center">
+              <date-input
+                  class="ntss-input-date"
+                  :classes="'input-area ntss-input-date ntss-custom-input ntss-input-start-date date-input-required '"
+                  v-model="checkData.viewDate"
+                  @handleClearInput="checkData.viewDate = null"
+                  v-show="checkData.check"
+                  :disabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
+                  :isRequired="true"
+                  @change="onChangeDate(checkData, idx)"
+              />
+              <!--#10715:日付IF修正End（必須追加+param修正+param修正）-->
+              <common-calendar
+                  v-model="checkData.viewDate"
+                  v-show="checkData.check"
+                  :disabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
+                  @input="onChangeDate(checkData, idx)"
+              />
+              <!--#10715:日付IF修正Start（必須追加+param修正）-->
+              <time-input
+                  class="occurs_date_time"
+                  v-model="checkData.viewtime"
+                  @handleClearInput="checkData.viewtime = null"
+                  v-show="checkData.check"
+                  :disabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
+                  :isRequired="true"
+                  :classes="'time-input-required '"
+                  @change="onChangeDate(checkData, idx)"
+              />
+            </div>
             <!--#10715:日付IF修正End（必須追加+param修正）-->
             </td>
             <!--#9226:チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 End -->
             <td class="ntss-list-body-td">
-              <com-master-selector
+              <div
                 v-show="checkData.check"
-                :isDisabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
-                select-id="user_id"
-                name="user_id"
-                :showLabelName="false"
-                :showClassFilter="true"
-                :readMasterData="fetchPersonalUserAll"
-                :masterDefine="personalUserDefine"
-                :index="idx"
-                :value="userSelectorList[idx]"
-                @changePersonalUser="onChangeStaff($event, checkData, idx)"
-              />
+                class="checklist-practitioner-as-plain-label"
+              >
+                <common-master-selector
+                  :masterType="MasterType.PRACTITIONER_CHECK_LIST"
+                  :facilityCd="getFacilityCd"
+                  :btnDisabled="!editState || !getItemAuthorized('CheckList', 'default_authority')"
+                  :initItem="{ value: checkData.user_id }"
+                  :editItem="{ value: checkData.user_id, text: checkData.user_name }"
+                  :selectedItemClass="'selector-input'"
+                  :btnClass="'select-btn-self btn3-normal'"
+                  :btnName="'選択'"
+                  @popover-return="onPractitionerReturn($event, checkData)"
+                />
+              </div>
             </td>
           </tr>
-        </table>
+                </table>
       </div>
-    </div>
+      </div>
+    </template>
 
-    <div slot="footer" class="flex-container">
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <!-- mod FNSI-横展開 画面デザイン_チェックリスト機能分 周 start -->
         <!-- <v-ons-button class="button denial-btn" @click="closeCheckListModal">キャンセル</v-ons-button> -->
@@ -169,7 +177,8 @@
         <!-- mod FNSI-横展開 画面デザイン_チェックリスト機能分 周 end -->
         <!-- mod #11065 【03】編集権限バグ修正 関 end -->
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
@@ -177,14 +186,12 @@
 import ModalBase from "@/components/modals/ModalBase";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 // mod 5984 機能帳票でパラメータが正しく渡されていない 歴 start
-// import { mapGetters, mapActions } from "vuex";
-import { mapGetters, mapActions, mapMutations } from "vuex";
+// import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
 // mod 5984 機能帳票でパラメータが正しく渡されていない 歴 end
-import { EventBus } from "@/eventBus.js";
-import CommonMasterSelectorComponent from "@/components/common/master-selector/CommonMasterSelectorComponent";
-import { sendRequestGetMstPersonalUser, sendRequestMstGetJobs } from "@/apis/user-selector-popover";
-import { practitioner } from "@/components/common/master-selector/MasterSelectorDefinitions";
-import { Master } from "@/models/common/master-selector-condition/Master";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import CommonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 // add 5984 機能帳票でパラメータが正しく渡されていない 歴 start
 import store from "@/stores";
 import { getCurrentFunctionCd } from "@/router/routing-helper";
@@ -206,7 +213,7 @@ export default {
   name: "CheckListModal",
   components: {
     "modal-base": ModalBase,
-    "com-master-selector": CommonMasterSelectorComponent,
+    "common-master-selector": CommonMasterSelector,
     //#9226:チェックリストで画面で実施者を変更すると実施時刻がクリアされる。Start
     "common-calendar": CommonCalender,
     "date-input":DateInput,
@@ -227,8 +234,6 @@ export default {
       isAndroid: false,
 
       isIOS: false,
-      personalUserDefine: practitioner,
-      userSelectorList: [],
       // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリスト 20231115 ztc start
       ignoreWatchSelectChecklist: true,
       isChanged: false,
@@ -237,6 +242,9 @@ export default {
     };
   },
   computed: {
+    MasterType() {
+      return MasterType;
+    },
     ...mapGetters("window-size", {
       windowHeight: "getWindowHeight"
     }),
@@ -307,7 +315,7 @@ export default {
       //   this.getSelectChecklistSetting !== null &&
       //   this.getSelectChecklistSetting.dialysis_prog_cd === 1 &&
       //   this.getSelectOrdMain.rstDialysisState < "3"
-      // ) {
+      //) {
       //   // 編集不可
       //   rEdit = false;
       // }
@@ -317,7 +325,7 @@ export default {
       //   this.getSelectChecklistSetting !== null &&
       //   this.getSelectChecklistSetting.dialysis_prog_cd === 2 &&
       //   this.getSelectOrdMain.rstDialysisState < "5"
-      // ) {
+      //) {
       //   // 編集不可
       //   rEdit = false;
       // }
@@ -326,7 +334,7 @@ export default {
       // if (
       //   this.getSelectOrdMain !== null &&
       //   this.getSelectOrdMain.patId === null
-      // ) {
+      //) {
       //   // 編集不可
       //   rEdit = false;
       // }
@@ -376,18 +384,30 @@ export default {
       return `${displayAmount}${displayUnit}`;
     },
     // Windowの高さからGirdコンポーネント領域の高さを算出
+    getModalScopeElement() {
+      return this.$el?.closest?.(".modal-container, .modal-container-custom, .k-window-content, .k-dialog") || this.$el || null;
+    },
+    getModalBodyElement() {
+      return this.getModalScopeElement()?.querySelector?.(".modal-body") || this.$el?.querySelector?.(".modal-body") || null;
+    },
+    getChecklistHeaderElement() {
+      return this.getModalScopeElement()?.querySelector?.("#checklist-modal-header") || this.$el?.querySelector?.("#checklist-modal-header") || null;
+    },
+    getGridContentAreaElement() {
+      return this.getModalScopeElement()?.querySelector?.(".grid-content-area") || this.$el?.querySelector?.(".grid-content-area") || null;
+    },
     calculateGridHeight() {
       if (!this.editingFlg) {
         this.calculateGridTop();
 
         // モーダルのbodyの高さ
-        const mb = document.getElementsByClassName("modal-body")[0];
+        const mb = this.getModalBodyElement();
         // add #6853-チェックボックス、実施者の選択ボタンがヘッダーの前面に表示される 徐博 start
         mb.style.overflowY = "unset"
         // add #6853-チェックボックス、実施者の選択ボタンがヘッダーの前面に表示される 徐博 end
         const mh = mb ? mb.clientHeight : 0;
         // モーダルのヘッダの高さ
-        const hc = document.getElementById("checklist-modal-header");
+        const hc = this.getChecklistHeaderElement();
         const hh = hc ? hc.clientHeight : 0;
         this.checklistGridToolbarHeight = mh - hh;
         this.checklistGridToolbarHeight =
@@ -396,8 +416,11 @@ export default {
             : this.checklistGridToolbarHeight;
         this.checklistGridHeight = this.checklistGridToolbarHeight - 10;
         // add #6853-チェックボックス、実施者の選択ボタンがヘッダーの前面に表示される 徐博 start
-        document.getElementsByClassName("grid-content-area")[0].style.overflowY = "auto";
-        document.getElementsByClassName("grid-content-area")[0].style.height = this.checklistGridHeight + "px"
+        const gridContentArea = this.getGridContentAreaElement();
+        if (gridContentArea) {
+          gridContentArea.style.overflowY = "auto";
+          gridContentArea.style.height = this.checklistGridHeight + "px";
+        }
         // add #6853-チェックボックス、実施者の選択ボタンがヘッダーの前面に表示される 徐博 end
         if (mh + hh === 0) {
           setTimeout(this.calculateGridHeight, 10);
@@ -412,16 +435,10 @@ export default {
       this.setCheckInfoChangeData(rowData);
     },
     // #9226:チェックリストで画面で実施者を変更すると実施時刻がクリアされる。End
-    onChangeStaff(userInfo, rowData, index) {
-      if(userInfo) {
-        rowData.user_id = userInfo.id;
-        this.userSelectorList[index].cd = userInfo.id;
-        this.userSelectorList[index].name = userInfo.lastName + " " + userInfo.firstName;
-      } else {
-        rowData.user_id = -1;
-        this.userSelectorList[index].cd = null;
-        this.userSelectorList[index].name = null;
-      }
+    onPractitionerReturn(item, rowData) {
+      if (!item) return;
+      rowData.user_id = item.value ?? null;
+      rowData.user_name = item.text ?? null;
       this.setCheckInfoChangeData(rowData);
     },
     // グリッドクリックイベント
@@ -435,7 +452,9 @@ export default {
         const name = rowData.name;
         if (name !== null) {
           this.setCheckInfo(rowData);
-          this.convertUserSelectors();
+          this.$nextTick(() => {
+            this.editBackgroundColor();
+          });
         }
       }
     },
@@ -448,9 +467,7 @@ export default {
     // 背景色セット
     editBackgroundColor() {
       this.$nextTick(() => {
-        const tBodyList = document.getElementsByClassName(
-          "checklist-modal-row"
-        );
+        const tBodyList = this.getModalScopeElement()?.getElementsByClassName?.("checklist-modal-row") || this.$el?.getElementsByClassName?.("checklist-modal-row") || [];
         if (tBodyList) {
           for (let rwCount = 0; rwCount < tBodyList.length; rwCount++) {
             const currentTrc = tBodyList[rwCount].children;
@@ -491,13 +508,14 @@ export default {
         currentTrc[dateIdx].classList.remove(addClass);
       }
 
-      // 実施者
+      // 実施者（ラッパー配下の CustomDiv を querySelector で特定）
       const userIdx = 5;
-      // 変更ありの場合
+      const userCell = currentTrc[userIdx];
+      const userMarkEl = userCell?.querySelector?.(".custom-div-show-selected-item");
       if (data.chgflg_user_id) {
-        currentTrc[userIdx].children[0].children[0]?.classList?.add(addClass);
-      } else if (currentTrc[userIdx].classList.length > 0) {
-        currentTrc[userIdx].children[0].children[0].classList.remove(addClass);
+        userMarkEl?.classList?.add(addClass);
+      } else if (userMarkEl) {
+        userMarkEl.classList.remove(addClass);
       }
     },
     onSave(ev) {
@@ -512,8 +530,7 @@ export default {
     },
     // モーダルの高さからGirdコンポーネント領域のTopを算出
     calculateGridTop() {
-      this.tableTop =
-        document.getElementById("checklist-modal-header").clientHeight + 3;
+      this.tableTop = (this.getChecklistHeaderElement()?.clientHeight || 0) + 3;
     },
     // 確定ボタン
     async saveChecklist() {
@@ -560,15 +577,6 @@ export default {
         EventBus.$emit("closeModal");
       }
       // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリスト 20231115 ztc end
-    },
-    fetchPersonalUserAll() {
-      return Promise.all([sendRequestGetMstPersonalUser(this.getFacilityCd), sendRequestMstGetJobs(this.getFacilityCd)]);
-    },
-    convertUserSelectors() {
-      this.userSelectorList = this.displayCheckList.map(m => {
-        if (m.user_id === null) return new Master();
-        return new Master(m.user_id, m.user_name);
-      });
     },
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリスト 20231115 ztc start
     setSelectChecklist(){
@@ -626,6 +634,12 @@ export default {
       },
       deep: true
     },
+    displayCheckList:{
+      handler() {
+        this.editBackgroundColor();
+      },
+      deep: true
+    }
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_チェックリスト 20231115 ztc end
   },
   created() {
@@ -633,7 +647,7 @@ export default {
     this.setLoadingScreenVisible(true);
     //FNSI-修正 #5407 xugj add end
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
     if (ua.match(/Android/)) {
       this.isAndroid = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -666,14 +680,13 @@ export default {
 
     this.$nextTick(() => {
       this.calculateGridHeight();
-      this.convertUserSelectors();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  destroyed() {
+  unmounted() {
     // add 5984 機能帳票でパラメータが正しく渡されていない 歴 start
     this.setSelectOrdMain({ selectOrdMain: null });
     const funcCd = getCurrentFunctionCd();
@@ -706,6 +719,15 @@ export default {
 .state-end {
   color: white;
   background-color: #808080;
+}
+:deep(.k-grid .k-table-th),
+:deep(.k-grid .k-table-td),
+:deep(.k-grid th),
+:deep(.k-grid td) {
+  padding: 0.28125rem 0.84375rem !important;
+}
+.master-maintenance-page .k-grid td {
+  line-height: normal !important;
 }
 #column-01 {
   width: 8%;
@@ -743,7 +765,7 @@ export default {
 .checklist-modal-row {
   background-color: white;
 }
-ons-input >>> .text-input {
+ons-input :deep(.text-input) {
   font-size: 100%;
 }
 .checklist-modal-list tr:hover {
@@ -751,8 +773,8 @@ ons-input >>> .text-input {
 }
 /*#9226:チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 Start　*/
 .ntss-input-date {
-  max-width: 7.5em;
-  min-width: 7.5em;
+  max-width: 8em;
+  min-width: 8em;
 }
 .occurs_date_time {
   margin-left: 5px;
@@ -763,8 +785,9 @@ ons-input >>> .text-input {
 .occurs_date_time {
   font-size: 100%;
 }
+ 
 /*#9226:チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 End　*/
-.ntss-list-body-td >>> ons-button.select-btn {
+.ntss-list-body-td :deep(ons-button.select-btn) {
   font-size: 1em;
 }
 
@@ -779,6 +802,38 @@ ons-input >>> .text-input {
   position: inherit;
 }
 /* add FNSI-redmine_#3904_グリッド表示を修正 周 end */
+
+/* 本画面のみ：実施者は共通 CommonMasterSelector のまま、表示部を label 風（枠なしテキスト）に見せる（MedicineModal と同様） */
+.checklist-practitioner-as-plain-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.checklist-practitioner-as-plain-label :deep(.custom-div-show-selected-item) {
+  border: none !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  min-height: unset !important;
+  background-color: transparent !important;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 5px !important;
+  word-break: break-all;
+  color: #1f1f21;
+}
+.checklist-practitioner-as-plain-label :deep(.custom-div-show-selected-item-edited) {
+  border: none !important;
+  box-shadow: none !important;
+}
+.checklist-practitioner-as-plain-label :deep(.selector-input) {
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  background-color: transparent !important;
+}
+
 @media print {
   #column-01 ,#column-02,#column-03,#column-04,#column-05,#column-06{
     min-width: 0;
@@ -787,5 +842,8 @@ ons-input >>> .text-input {
   .grid-content-area{
     height:  100% !important;
   }
+}
+:deep(.grid-content-area){
+  overflow: auto;
 }
 </style>

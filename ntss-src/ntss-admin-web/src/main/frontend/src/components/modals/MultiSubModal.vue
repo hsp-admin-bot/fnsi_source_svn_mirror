@@ -3,7 +3,7 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import DeviceSetInfoSubModal from "@/components/deviceset-info/base-modules/DeviceSetInfoSubModal";
 import ComplaintCreate from "@/components/treatment-record/submenu/complaint/modal/ComplaintCreateModalComponent";
 import AddressSearch from "@/components/pat-info/address-search/AddressSearch.vue";
@@ -33,8 +33,8 @@ export default {
   components: {
     DeviceSetInfoSubModal,
     ComplaintCreate,
-    ShrPatSearch,
     AddressSearch,
+    ShrPatSearch,
     // add FNSI-水質検査結果登録で備考欄を追加する 周 start
     // 水質検査結果備考登録
     WaterResultMemoEditSubModal,

@@ -6,9 +6,9 @@ sRunning = ""
 
 Set oWMI = GetObject("winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2")
 If Err.Number = 0 Then
-  Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'BloodPurify.exe'")
+  Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'FNWSiBloodPurify.exe'")
   If oItems.Count > 0 Then
-    sRunning = "BloodPurify.exe"
+    sRunning = "FNWSiBloodPurify.exe"
   End If
 End If
 

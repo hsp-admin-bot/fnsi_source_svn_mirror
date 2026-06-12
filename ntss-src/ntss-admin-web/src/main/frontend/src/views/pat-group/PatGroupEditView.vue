@@ -1,27 +1,31 @@
 <template>
   <ntss-layout-split>
-    <header-component slot="header-content" />
+    <template #header-content>
+      <header-component />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start -->
     <!-- <bread-crumbs-component
-      slot="bread-crumbs-content"
+      #bread-crumbs-content
       :history-key="historyKey"
       @refresh="handleRefresh"
     /> -->
-    <bread-crumbs-component
-      slot="bread-crumbs-content"
-      :history-key="historyKey"
-    />
+    <template #bread-crumbs-content>
+      <bread-crumbs-component
+        :history-key="historyKey"
+      />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng end -->
-    <main-component
-      slot="main-content"
-      ref="mainComponent"
-      :history-key="historyKey"
-    />
+    <template #main-content>
+      <main-component
+        ref="mainComponent"
+        :history-key="historyKey"
+      />
+    </template>
   </ntss-layout-split>
 </template>
 
 <script>
-import _ from "underscore";
+import _ from "@/compat/collections/lodash";
 import HeaderComponent from "@/components/pat-group/PatGroupEditHeaderComponent";
 import BreadCrumbsComponent from "@/components/BreadCrumbsComponent";
 import MainComponent from "@/components/pat-group/PatGroupEditComponent";
@@ -29,7 +33,7 @@ import {
   HISTORY_KEY_PAT_GROUP_NEW,
   HISTORY_KEY_PAT_GROUP_EDIT
 } from "@/router/pat-group/HistoryKeyConstants";
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';

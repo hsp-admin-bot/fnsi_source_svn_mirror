@@ -12,6 +12,15 @@ import store from "@/stores";
  */
 const CHECK_LIST = "/check-list";
 
+/**
+ * 自動更新時のバックグラウンド呼び出し用クエリ（サインアウト設定に応じる）
+ * @returns {string} 空文字 or "?__background_call__=true"
+ */
+function getCheckListBackgroundQuery() {
+  const forceSignOutFlag = store.getters["check-list/list/getForceSignOutFlag"];
+  return forceSignOutFlag === 0 ? "?__background_call__=true" : "";
+}
+
 // add FNSI-チェックリスト仕様変更対応#401、#439_チェックリスト機能分。 周 start
 /**
  * 治療中のスケジュール情報取得
@@ -20,11 +29,10 @@ const CHECK_LIST = "/check-list";
  * @param {*} autoRefreshFlag 自動更新フラグ
  */
 export function sendRequestGetOrdMainChiryouchuu(param) {
-  // 自動更新サインアウトON/OFFチェック
-  const forceSignOutFlag = store.getters["check-list/list/getForceSignOutFlag"];
-  const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
   const baseUrl = `${CHECK_LIST}/ordermainchiryouchuu/${param.facilityCd}/${param.nextPat}`;
-  const requestUrl = param.autoRefreshFlag ? `${baseUrl}${queryParams}` : baseUrl;
+  const requestUrl = param.autoRefreshFlag
+    ? `${baseUrl}${getCheckListBackgroundQuery()}`
+    : baseUrl;
   return getWithLoader(requestUrl);
 }
 
@@ -34,11 +42,10 @@ export function sendRequestGetOrdMainChiryouchuu(param) {
  * @param {*} treatDate 治療日
  */
 export function sendRequestGetOrdMainShiteibi(param) {
-  // 自動更新サインアウトON/OFFチェック
-  const forceSignOutFlag = store.getters["check-list/list/getForceSignOutFlag"];
-  const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
   const baseUrl = `${CHECK_LIST}/ordermainshiteibi/${param.facilityCd}/${param.treatDate}`;
-  const requestUrl = param.autoRefreshFlag ? `${baseUrl}${queryParams}` : baseUrl;
+  const requestUrl = param.autoRefreshFlag
+    ? `${baseUrl}${getCheckListBackgroundQuery()}`
+    : baseUrl;
   return getWithLoader(requestUrl);
 }
 
@@ -74,13 +81,11 @@ export function sendRequestGetOrdCheckListIcou(param) {
  */
 export function sendRequestGetReloadInterval(autoRefreshFlag) {
   if (autoRefreshFlag) {
-    // 自動更新サインアウトON/OFFチェック
-    const forceSignOutFlag = store.getters["check-list/list/getForceSignOutFlag"];
-    const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
-    return ApiHelper.get(`${CHECK_LIST}/get-reload-interval${queryParams}`);
-  } else {
-    return getWithLoader(`${CHECK_LIST}/get-reload-interval`);
+    return ApiHelper.get(
+      `${CHECK_LIST}/get-reload-interval${getCheckListBackgroundQuery()}`
+    );
   }
+  return getWithLoader(`${CHECK_LIST}/get-reload-interval`);
 }
 
 /**
@@ -194,7 +199,7 @@ export function sendRequestGetMstPersonalUser(facilityCd) {
  * @param {*} 登録情報
  */
 export function sendRequestUpdateOrdMainMediInfo(param) {
-  return postWithLoader(`${CHECK_LIST}/updatemediinfo/`, param);
+  return postWithLoader(`${CHECK_LIST}/updatemediinfo`, param);
 }
 
 /**
@@ -253,10 +258,9 @@ export function sendRequestDeleteOrdChecklist(param) {
 }
 // add チェックリストマスタ 指示変更、実績変更に伴うチェックリストの反映 孔 end
 export function sendRequestGetOrdCheckListAll(params, autoRefreshFlag) {
-  // 自動更新サインアウトON/OFFチェック
-  const forceSignOutFlag = store.getters["check-list/list/getForceSignOutFlag"];
-  const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
   const baseUrl = `${CHECK_LIST}/orderchecklistallinfo`;
-  const requestUrl = autoRefreshFlag ? `${baseUrl}${queryParams}` : baseUrl;
+  const requestUrl = autoRefreshFlag
+    ? `${baseUrl}${getCheckListBackgroundQuery()}`
+    : baseUrl;
   return ApiHelper.post(requestUrl, params);
 }

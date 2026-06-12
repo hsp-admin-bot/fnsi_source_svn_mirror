@@ -1,6 +1,7 @@
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="main-content">
+    <template #body>
+      <div class="main-content">
       <div class="filter-content">
         <v-ons-icon class="icon-position" icon="fa-search" size="1.5em" style="color:gray;"></v-ons-icon>
         <input type="text" class="search-input-icon" v-model="searchParam">
@@ -88,8 +89,10 @@
           </table>
         </div>
       </div>
-    </div>
-    <div slot="footer" class="flex-container">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
       <div class="denial-btn-area" style="background:none">
         <button class="button denial-btn btn2-cancel" @click="cancel">キャンセル</button>
@@ -98,15 +101,16 @@
         <button class="button registration-btn btn3-normal" :disabled="!isSelected" @click="reflect">確定</button>
       </div>
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import {mapActions, mapGetters} from "vuex";
+import {mapActions, mapGetters} from "@/compat/vue/vuex";
 import SubModalBase from "@/components/modals/SubModalBase";
 import MultiSubModalMixin from "@/components/modals/MultiSubModalMixin";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { addPatNameSortToList, updateSort, getSortedClass, sortableCompare } from "@/functions/SortFunctions";
 
 export default {
@@ -242,12 +246,12 @@ export default {
       return PatName;
     },
     treatDateFormat(treatDate){
-      return moment(treatDate).format("YYYY/MM/DD");
+      return dayjs(treatDate).format("YYYY/MM/DD");
     },
     treatStartAndEndDate(startDate, endDate){
       if (startDate != null) {
-        let tempDate = endDate != undefined ? moment(new Date(endDate)).format("YYYY/MM/DD HH:mm") : "";
-        return moment(new Date(startDate)).format("YYYY/MM/DD HH:mm") + " ～ " + tempDate;
+        let tempDate = endDate != undefined ? dayjs(new Date(endDate)).format("YYYY/MM/DD HH:mm") : "";
+        return dayjs(new Date(startDate)).format("YYYY/MM/DD HH:mm") + " ～ " + tempDate;
       } else {
         return "";
       }
@@ -304,7 +308,7 @@ export default {
     // 初期処理
     await this.init();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -428,10 +432,11 @@ export default {
 .ntss-list-body-tr-blue {
   background-color: #007bff40 !important;
 }
+ 
 /**
  * 絞込条件エリア内のons-rowのスタイル
  */
-.filter-content >>> ons-row {
+.filter-content :deep(ons-row) {
   margin-top: 5px;
 }
 /**
@@ -479,10 +484,5 @@ tr:nth-child(2n){
   padding: 0 4px;
   box-sizing: border-box;
   overflow: hidden;
-}
-@media print {
-  .sub-modal-mask >>> .sub-modal-container {
-    width: fit-content !important;
-  }
 }
 </style>

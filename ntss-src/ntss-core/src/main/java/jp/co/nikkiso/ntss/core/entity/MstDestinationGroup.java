@@ -12,8 +12,8 @@ import org.seasar.doma.jdbc.entity.NamingType;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.entity.entityListener.BaseEntityListener;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
 import lombok.Getter;
@@ -95,7 +95,7 @@ public class MstDestinationGroup extends BaseEntity {
       try {
         DestinationTarget obj = objectMapper.readValue(value, DestinationTarget.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("送信対象の設定内容が不正です");
       }
     }
@@ -108,7 +108,7 @@ public class MstDestinationGroup extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }

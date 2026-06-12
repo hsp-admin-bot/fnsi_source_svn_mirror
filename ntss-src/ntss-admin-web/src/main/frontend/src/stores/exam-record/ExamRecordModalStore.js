@@ -59,10 +59,10 @@ export default {
     examMainCd: null,
     // 最終更新日時,
     examUpDate: null,
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 start
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 start
     // sub画面開けるフラグ
     isOpen: false
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 end
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 end
   },
   getters: {
     getSelectExamRecordSetting(state) {
@@ -116,11 +116,11 @@ export default {
     getExamUpDate(state){
       return state.examUpDate;
     },
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 start
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 start
     getIsOpenFlag(state) {
       return state.isOpen;
     }
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 end
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 end
   },
   actions: {
     /**
@@ -129,7 +129,7 @@ export default {
      */
     async insertExamrecord({state},insertData) {
       let setExamResult = [];
-      let ordNo = null;
+      let ordNo;
       // 登録用json形式への変換用配列の生成
       for(let n = 0 ; n < state.examMainData.length; n++){
         if(state.examMainData[n].result || state.examMainData[n].freememo){
@@ -402,11 +402,11 @@ export default {
         return targetFormatNum;
       };
       // mod #8144 2023/05/23 正常範囲が表示されない項目もある ztc end
-      let examMainData = [];
+      let examMainData;
       let selectSortSetData = [];
       let examDate = null;
       let examTime = null;
-      let sort = null;
+      let sort;
       let examSelectDiv = 0;
       let copOrderNo = "";
 
@@ -425,10 +425,13 @@ export default {
         await commit("setModalCondition",{ examSetCd: -1, normalRange: true, allDataFlg: false});
         // 更新画面生成時：患者検査結果テーブルより生成
         try{
-          examMainData = await sendRequestGetPatExamMainOneOrder(selectData.field.slice(1,selectData.field.length-2));
+          examMainData = await sendRequestGetPatExamMainOneOrder(
+            selectData.field.slice(1,selectData.field.length-2),
+            selectData.selectedPatId
+          );
         }catch(e){
           console.error(e);
-          throw new Error("1オーダー検査結果データ取得");
+          throw new Error("1オーダー検査結果データ取得", { cause: e });
         }
         for(let i=0;i < examMainData.data.length;i++){
           //値セット// mod #8144 2023/05/23 正常範囲が表示されない項目もある ztc start
@@ -449,10 +452,13 @@ export default {
         if(examMainData.data.length > 0){
           // 更新画面生成時：患者検査結果テーブルより生成
           try{
-            sort = await sendRequestGetMstExamItemSort(examMainData.data[0].facilityCd);
+            sort = await sendRequestGetMstExamItemSort(
+              examMainData.data[0].facilityCd,
+              selectData.selectedPatId
+            );
           }catch(e){
             console.error(e);
-            throw new Error("検査項目ソートデータ取得失敗");
+            throw new Error("検査項目ソートデータ取得失敗", { cause: e });
           }
 
           //1.データ取得時のセット情報を加える
@@ -563,7 +569,7 @@ export default {
       // 現時点の画面表示された項目値(dispData)を登録用データ値(inputData)に反映する
       let dispData = state.examMainDataSource;
       let inputData = state.examMainData;
-      let insFlg = false;
+      let insFlg;
       // 現行画面表示情報の保管
       if(dispData){
         for (var i = 0; i < dispData.length; i++) {
@@ -653,17 +659,21 @@ export default {
       let dispData = await state.examMainDataSource;
       let inputData = await state.examMainData;
 
-      let selectSetData = null;
+      let selectSetData;
       let selectSortSetData = [];
-      let sort = null;
+      let sort;
 
       // 更新画面生成時：患者検査結果テーブルより生成
       try{
-        selectSetData = await sendRequestGetMstExamItemListForItemCd(selectData.facilityCd,selectData.itemCd);
-        sort = await sendRequestGetMstExamItemSort(selectData.facilityCd);
+        selectSetData = await sendRequestGetMstExamItemListForItemCd(
+          selectData.facilityCd,
+          selectData.itemCd,
+          selectData.selectedPatId
+        );
+        sort = await sendRequestGetMstExamItemSort(selectData.facilityCd, selectData.selectedPatId);
       }catch(e){
         console.error(e);
-        throw new Error("検査項目マスタデータ取得失敗");
+        throw new Error("検査項目マスタデータ取得失敗", { cause: e });
       }
 
       //要注意：男女チェック時に施設設定マスタの性別指定なし時制御については未実装
@@ -767,15 +777,18 @@ export default {
         return targetFormatNum;
       };
       // mod #8144 2023/05/23 正常範囲が表示されない項目もある ztc end
-      let selectSetData = null;
+      let selectSetData;
       let selectSortSetData = [];
-      let sort = null;
+      let sort;
       // 更新画面生成時：患者検査結果テーブルより生成
       try{
-        selectSetData = await sendRequestGetMstExamItemListForExamClass(selectData.facilityCd);
-        sort = await sendRequestGetMstExamItemSort(selectData.facilityCd);
+        selectSetData = await sendRequestGetMstExamItemListForExamClass(
+          selectData.facilityCd,
+          selectData.selectedPatId
+        );
+        sort = await sendRequestGetMstExamItemSort(selectData.facilityCd, selectData.selectedPatId);
       }catch(e){
-        throw new Error("検査項目マスタデータ取得失敗");
+        throw new Error("検査項目マスタデータ取得失敗", { cause: e });
       }
 
       //要注意：男女チェック時に施設設定マスタの性別指定なし時制御については未実装
@@ -959,11 +972,11 @@ export default {
     setExamUpDate(state,data){
       state.examUpDate = data;
     },
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 start
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 start
     // sub画面開けるフラグ
     setIsOpenFlag(state, data){
       state.isOpen = data;
     },
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 end
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 end
   }
 };

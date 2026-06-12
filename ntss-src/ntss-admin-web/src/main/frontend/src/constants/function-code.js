@@ -1,4 +1,3 @@
-/* eslint-disable */
 // --------------------------------------
 // 機能コード
 // --------------------------------------
@@ -259,9 +258,11 @@ export const FUNC_PRESCRIPTION_LIST_JPN_NAME = '処方一覧';
 export const FUNC_PRESCRIPTION_DETAIL_JPN_NAME = '処方';
 // 紹介状
 export const FUNC_PAT_INTRO_LETTER_JPN_NAME = '紹介状';
+
 // 患者情報共有
 export const FUNC_PAT_INFO_SHARING_JPN_NAME = "患者情報共有";
 export const FUNC_PAT_INFO_SHARING_DETAIL_JPN_NAME = "患者情報共有詳細";
+
 // 帳票
 export const FUNC_REPORT_MENU_JPN_NAME = "帳票";
 // 指示受け・指示承認

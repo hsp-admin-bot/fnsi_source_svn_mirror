@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.api.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.FindIterable;
@@ -27,6 +27,9 @@ import jp.co.nikkiso.ntss.core.dao.OrdPrescriptionDao;
 import jp.co.nikkiso.ntss.core.dao.PatGroupDao;
 import jp.co.nikkiso.ntss.core.dao.SysDataSetAuthorityDao;
 import jp.co.nikkiso.ntss.core.dao.SysDataSetDao;
+import jp.co.nikkiso.ntss.core.config.AuthDb;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
+import jp.co.nikkiso.ntss.core.config.PersonalDb;
 import jp.co.nikkiso.ntss.core.dao.SysDataSetPersonalDao;
 import jp.co.nikkiso.ntss.core.dao.SysReportClassDao;
 import jp.co.nikkiso.ntss.core.entity.MstAddition;
@@ -140,6 +143,19 @@ public class SysDataSetServiceImpl implements SysDataSetService {
    */
   @Autowired
   private SysDataSetPersonalDao sysDataSetPersonalDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
+
+  @Autowired
+  @PersonalDb
+  private Config personalDbConfig;
+
+  @Autowired
+  @AuthDb
+  private Config authDbConfig;
+
   // add 6886 帳票の患者情報が過去日付時点の内容で表示できない 王永吉 start
   @Autowired
   private MstInfectionDao mstInfectionDao;
@@ -387,7 +403,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
     String sql = sysDataSet.getSql();
 
     if (SysDataSet.DB_CLASS_DB5.equals(dbClass)) {
-      Config config = Config.get(sysDataSetDao);
+      Config config = defaultDbConfig;
       SelectBuilder selectBuilder = createSelectBuilder(config, sql, paramDataKey);
       reportInfo = sysDataSetDao.executeSql(selectBuilder);
       // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
@@ -402,7 +418,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
       logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI,null);
       // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
     } else if (SysDataSet.DB_CLASS_DB6.equals(dbClass)) {
-      Config config = Config.get(sysDataSetPersonalDao);
+      Config config = personalDbConfig;
       SelectBuilder selectBuilder = createSelectBuilder(config, sql, paramDataKey);
       reportInfo = sysDataSetPersonalDao.executeSql(selectBuilder);
       // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
@@ -417,7 +433,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
       logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI,null);
       // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
     } else if (SysDataSet.DB_CLASS_DB4.equals(dbClass)) {
-      Config config = Config.get(sysDataSetAuthorityDao);
+      Config config = authDbConfig;
       SelectBuilder selectBuilder = createSelectBuilder(config, sql, paramDataKey);
       reportInfo = sysDataSetAuthorityDao.executeSql(selectBuilder);
       // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
@@ -557,7 +573,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
     // add 10708 by kangjie 20240613 start
     if (sqlCode == 228L && SysDataSet.DB_CLASS_DB5.equals(sysDataSet.getDbClass())) {
       String sql = sysDataSet.getSql();
-      Config config = Config.get(sysDataSetDao);
+      Config config = defaultDbConfig;
       SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
       List<Map<String, Object>> reportInfo = sysDataSetDao.executeSql(selectBuilder);
       // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
@@ -690,7 +706,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
           }
 
           if (SysDataSet.DB_CLASS_DB5.equals(dbClass)) {
-            Config config = Config.get(sysDataSetDao);
+            Config config = defaultDbConfig;
             SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
             if(noderedTimeOut > 0){
               selectBuilder.queryTimeout(noderedTimeOut);
@@ -708,7 +724,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
             logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI,null);
             // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
           } else if (SysDataSet.DB_CLASS_DB6.equals(dbClass)) {
-            Config config = Config.get(sysDataSetPersonalDao);
+            Config config = personalDbConfig;
             SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
             if(noderedTimeOut > 0){
               selectBuilder.queryTimeout(noderedTimeOut);
@@ -726,7 +742,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
             logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI,null);
             // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
           } else if (SysDataSet.DB_CLASS_DB4.equals(dbClass)) {
-            Config config = Config.get(sysDataSetAuthorityDao);
+            Config config = authDbConfig;
             SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
             if(noderedTimeOut > 0){
               selectBuilder.queryTimeout(noderedTimeOut);
@@ -771,7 +787,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
       } else {
         // add 2021-03-23 外部連携：定時一括送信機能の複数データの対応。 孫 end
         if (SysDataSet.DB_CLASS_DB5.equals(dbClass)) {
-          Config config = Config.get(sysDataSetDao);
+          Config config = defaultDbConfig;
           // add #7422 「ブラウザ立ち上げ直後に帳票プレビューを表示すると、内容が表示されない」について、対応する 鄧シン start
           // mod #7422 「ブラウザ立ち上げ直後に帳票プレビューを表示すると、内容が表示されない」について、再修正 鄧シン start
           // String data = dataKey.get("fromDate").toString();
@@ -828,7 +844,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
           logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI,null);
           // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
         } else if (SysDataSet.DB_CLASS_DB6.equals(dbClass)) {
-          Config config = Config.get(sysDataSetPersonalDao);
+          Config config = personalDbConfig;
           SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
           if(noderedTimeOut > 0){
             selectBuilder.queryTimeout(noderedTimeOut);
@@ -846,7 +862,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
           logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI,null);
           // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
         } else if (SysDataSet.DB_CLASS_DB4.equals(dbClass)) {
-          Config config = Config.get(sysDataSetAuthorityDao);
+          Config config = authDbConfig;
           SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
           if(noderedTimeOut > 0){
             selectBuilder.queryTimeout(noderedTimeOut);
@@ -1337,7 +1353,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
           }
 
           if (SysDataSet.DB_CLASS_DB5.equals(dbClass)) {
-            Config config = Config.get(sysDataSetDao);
+            Config config = defaultDbConfig;
             SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
             reportInfo = sysDataSetDao.executeSql(selectBuilder);
             // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
@@ -1352,7 +1368,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
             logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI,null);
             // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
           } else if (SysDataSet.DB_CLASS_DB6.equals(dbClass)) {
-            Config config = Config.get(sysDataSetPersonalDao);
+            Config config = personalDbConfig;
             SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
             reportInfo = sysDataSetPersonalDao.executeSql(selectBuilder);
             // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
@@ -1367,7 +1383,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
             logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI,null);
             // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
           } else if (SysDataSet.DB_CLASS_DB4.equals(dbClass)) {
-            Config config = Config.get(sysDataSetAuthorityDao);
+            Config config = authDbConfig;
             SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
             reportInfo = sysDataSetAuthorityDao.executeSql(selectBuilder);
             // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
@@ -1410,7 +1426,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
       } else {
         // add 2021-03-23 外部連携：定時一括送信機能の複数データの対応。 孫 end
         if (SysDataSet.DB_CLASS_DB5.equals(dbClass)) {
-          Config config = Config.get(sysDataSetDao);
+          Config config = defaultDbConfig;
           // add #7422 「ブラウザ立ち上げ直後に帳票プレビューを表示すると、内容が表示されない」について、対応する 鄧シン start
           // mod #7422 「ブラウザ立ち上げ直後に帳票プレビューを表示すると、内容が表示されない」について、再修正 鄧シン start
           // String data = dataKey.get("fromDate").toString();
@@ -1452,7 +1468,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
           logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI,null);
           // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
         } else if (SysDataSet.DB_CLASS_DB6.equals(dbClass)) {
-          Config config = Config.get(sysDataSetPersonalDao);
+          Config config = personalDbConfig;
           SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
           reportInfo = sysDataSetPersonalDao.executeSql(selectBuilder);
           // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
@@ -1467,7 +1483,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
           logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI,null);
           // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
         } else if (SysDataSet.DB_CLASS_DB4.equals(dbClass)) {
-          Config config = Config.get(sysDataSetAuthorityDao);
+          Config config = authDbConfig;
           SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
           reportInfo = sysDataSetAuthorityDao.executeSql(selectBuilder);
           // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
@@ -1666,15 +1682,15 @@ public class SysDataSetServiceImpl implements SysDataSetService {
           }
 
           if (SysDataSet.DB_CLASS_DB5.equals(dbClass)) {
-            Config config = Config.get(sysDataSetDao);
+            Config config = defaultDbConfig;
             InsertBuilder builder = createInsertBuilder(config, sql, dataKey);
             retCount = retCount + builder.execute();
           } else if (SysDataSet.DB_CLASS_DB6.equals(dbClass)) {
-            Config config = Config.get(sysDataSetPersonalDao);
+            Config config = personalDbConfig;
             InsertBuilder builder = createInsertBuilder(config, sql, dataKey);
             retCount = retCount + builder.execute();
           } else if (SysDataSet.DB_CLASS_DB4.equals(dbClass)) {
-            Config config = Config.get(sysDataSetAuthorityDao);
+            Config config = authDbConfig;
             InsertBuilder builder = createInsertBuilder(config, sql, dataKey);
             retCount = retCount + builder.execute();
           } else {
@@ -1683,15 +1699,15 @@ public class SysDataSetServiceImpl implements SysDataSetService {
         }
       } else {
         if (SysDataSet.DB_CLASS_DB5.equals(dbClass)) {
-          Config config = Config.get(sysDataSetDao);
+          Config config = defaultDbConfig;
           InsertBuilder builder = createInsertBuilder(config, sql, dataKey);
           retCount = builder.execute();
         } else if (SysDataSet.DB_CLASS_DB6.equals(dbClass)) {
-          Config config = Config.get(sysDataSetPersonalDao);
+          Config config = personalDbConfig;
           InsertBuilder builder = createInsertBuilder(config, sql, dataKey);
           retCount = builder.execute();
         } else if (SysDataSet.DB_CLASS_DB4.equals(dbClass)) {
-          Config config = Config.get(sysDataSetAuthorityDao);
+          Config config = authDbConfig;
           InsertBuilder builder = createInsertBuilder(config, sql, dataKey);
           retCount = builder.execute();
         } else {
@@ -1782,15 +1798,15 @@ public class SysDataSetServiceImpl implements SysDataSetService {
           }
 
           if (SysDataSet.DB_CLASS_DB5.equals(dbClass)) {
-            Config config = Config.get(sysDataSetDao);
+            Config config = defaultDbConfig;
             UpdateBuilder builder = createUpdateBuilder(config, sql, dataKey);
             retCount = retCount + builder.execute();
           } else if (SysDataSet.DB_CLASS_DB6.equals(dbClass)) {
-            Config config = Config.get(sysDataSetPersonalDao);
+            Config config = personalDbConfig;
             UpdateBuilder builder = createUpdateBuilder(config, sql, dataKey);
             retCount = retCount + builder.execute();
           } else if (SysDataSet.DB_CLASS_DB4.equals(dbClass)) {
-            Config config = Config.get(sysDataSetAuthorityDao);
+            Config config = authDbConfig;
             UpdateBuilder builder = createUpdateBuilder(config, sql, dataKey);
             retCount = retCount + builder.execute();
           } else {
@@ -1799,15 +1815,15 @@ public class SysDataSetServiceImpl implements SysDataSetService {
         }
       } else {
         if (SysDataSet.DB_CLASS_DB5.equals(dbClass)) {
-          Config config = Config.get(sysDataSetDao);
+          Config config = defaultDbConfig;
           UpdateBuilder builder = createUpdateBuilder(config, sql, dataKey);
           retCount = builder.execute();
         } else if (SysDataSet.DB_CLASS_DB6.equals(dbClass)) {
-          Config config = Config.get(sysDataSetPersonalDao);
+          Config config = personalDbConfig;
           UpdateBuilder builder = createUpdateBuilder(config, sql, dataKey);
           retCount = builder.execute();
         } else if (SysDataSet.DB_CLASS_DB4.equals(dbClass)) {
-          Config config = Config.get(sysDataSetAuthorityDao);
+          Config config = authDbConfig;
           UpdateBuilder builder = createUpdateBuilder(config, sql, dataKey);
           retCount = builder.execute();
         } else {
@@ -1893,15 +1909,15 @@ public class SysDataSetServiceImpl implements SysDataSetService {
           }
 
           if (SysDataSet.DB_CLASS_DB5.equals(dbClass)) {
-            Config config = Config.get(sysDataSetDao);
+            Config config = defaultDbConfig;
             DeleteBuilder builder = createDeleteBuilder(config, sql, dataKey);
             retCount = retCount + builder.execute();
           } else if (SysDataSet.DB_CLASS_DB6.equals(dbClass)) {
-            Config config = Config.get(sysDataSetPersonalDao);
+            Config config = personalDbConfig;
             DeleteBuilder builder = createDeleteBuilder(config, sql, dataKey);
             retCount = retCount + builder.execute();
           } else if (SysDataSet.DB_CLASS_DB4.equals(dbClass)) {
-            Config config = Config.get(sysDataSetAuthorityDao);
+            Config config = authDbConfig;
             DeleteBuilder builder = createDeleteBuilder(config, sql, dataKey);
             retCount = retCount + builder.execute();
           } else {
@@ -1910,15 +1926,15 @@ public class SysDataSetServiceImpl implements SysDataSetService {
         }
       } else {
         if (SysDataSet.DB_CLASS_DB5.equals(dbClass)) {
-          Config config = Config.get(sysDataSetDao);
+          Config config = defaultDbConfig;
           DeleteBuilder builder = createDeleteBuilder(config, sql, dataKey);
           retCount = builder.execute();
         } else if (SysDataSet.DB_CLASS_DB6.equals(dbClass)) {
-          Config config = Config.get(sysDataSetPersonalDao);
+          Config config = personalDbConfig;
           DeleteBuilder builder = createDeleteBuilder(config, sql, dataKey);
           retCount = builder.execute();
         } else if (SysDataSet.DB_CLASS_DB4.equals(dbClass)) {
-          Config config = Config.get(sysDataSetAuthorityDao);
+          Config config = authDbConfig;
           DeleteBuilder builder = createDeleteBuilder(config, sql, dataKey);
           retCount = builder.execute();
         } else {
@@ -2055,7 +2071,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
             String jsonResultString = objectMapper.writeValueAsString(resultList);
             // JSON文字列をdataKeyに格納
             dataKey.put(replaceVar, jsonResultString);
-          } catch (JsonProcessingException e) {
+          } catch (JacksonException e) {
             // JSON文字列への変換に失敗した場合のエラーハンドリング
             EventLogMessage eventLogMessage = new EventLogMessage();
             String logMsg = String.format("結果のJSON文字列への変換に失敗しました。sqlCode: %d, replaceVar: %s", sqlCode, replaceVar);
@@ -3389,7 +3405,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
       // 接続先に応じて SelectBuilder を作成
       if (SysDataSet.DB_CLASS_DB5.equals(dbClass)) {
         // 接続先：DB5
-        Config config = Config.get(sysDataSetDao);
+        Config config = defaultDbConfig;
         SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
         reportInfo = sysDataSetDao.executeSql(selectBuilder);
         // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
@@ -3405,7 +3421,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
         // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
       } else if (SysDataSet.DB_CLASS_DB6.equals(dbClass)) {
         // 接続先：DB6
-        Config config = Config.get(sysDataSetPersonalDao);
+        Config config = personalDbConfig;
         SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
         reportInfo = sysDataSetPersonalDao.executeSql(selectBuilder);
         // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
@@ -3421,7 +3437,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
         // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
       } else if (SysDataSet.DB_CLASS_DB4.equals(dbClass)) {
         // 接続先：DB4
-        Config config = Config.get(sysDataSetAuthorityDao);
+        Config config = authDbConfig;
         SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
         reportInfo = sysDataSetAuthorityDao.executeSql(selectBuilder);
         // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
@@ -6101,7 +6117,7 @@ public class SysDataSetServiceImpl implements SysDataSetService {
   // add #11226 患者情報系historyの取得条件見直し② limingzhe start
   @Override
   public List<Map<String, Object>> sqlDB5Search(String sql){
-    Config config = Config.get(sysDataSetDao);
+    Config config = defaultDbConfig;
     SelectBuilder builder = SelectBuilder.newInstance(config);
 
     builder.sql(sql);

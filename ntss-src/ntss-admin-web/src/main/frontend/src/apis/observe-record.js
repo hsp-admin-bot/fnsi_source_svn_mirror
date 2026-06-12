@@ -52,8 +52,7 @@ export function sendRequestGetObserveRecordListByOrdNo(
 ) {
   const URL_SUB_ORDNO = "ordno";
   return getWithLoader(
-    `${URL_BASE_PAT_OBS_REC}/${URL_SUB_ORDNO}/${params.ordNo}
-    /${patObsRecNotIsDel}/${patObsRecIsNewest}`
+    `${URL_BASE_PAT_OBS_REC}/${URL_SUB_ORDNO}/${params.ordNo}/${patObsRecNotIsDel}/${patObsRecIsNewest}`
   );
 }
 /**
@@ -100,7 +99,7 @@ export function sendRequestGetObserveRecordMasterAll(facilityCd) {
 
 /**
  * 観察記録マスタ情報取得
- * @param {*} kinnNo 観察記録種別コード
+ * @param {string|number} kindNo 観察記録種別コード
  */
 export function sendRequestGetObserveRecordMaster(kindNo) {
   return getWithLoader(`${URL_BASE_PAT_OBS_REC}/mst/kind/${kindNo}`);
@@ -109,8 +108,8 @@ export function sendRequestGetObserveRecordMaster(kindNo) {
 
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {Record<string, unknown>} [params] パラメータ
  */
 function getWithLoader(url, params = undefined) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -122,8 +121,8 @@ function getWithLoader(url, params = undefined) {
 
 /**
  * 共通ローダを実行するPUTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function putWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -135,8 +134,8 @@ function putWithLoader(url, params) {
 
 /**
  * 共通ローダを実行するPOSTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function postWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");

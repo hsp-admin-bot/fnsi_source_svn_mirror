@@ -31,7 +31,7 @@ import {
   sortSetCdList,
 } from "@/functions/exam-request/ExamRequestFunctions";
 import { getDeadlineDate } from "@/functions/common/DateTimeUtils";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 
 export default {
@@ -67,7 +67,7 @@ export default {
     // 子画面に表示する患者ID
     selectedPatId: null,
     // 患者IDの表示フラグ
-    isShowHospPatId: false,
+    isShowHospPatId: true,
     // 血糖検査の表示フラグ
     isShowBloodGlucoseExam: false,
     // 変更フラグ
@@ -330,11 +330,9 @@ export default {
               examData: setObj.data,
               examStatus: setObj.status,
               nowIsLock: setObj.isLock,
-              // add #12462 患者情報共有 Ji start
               facilityCd: Object.values(setObj.facilityCd || {})[0],
               ownPatId: Object.values(setObj.ownPatId || {})[0],
-              setInfo: setObj.setInfo
-              // add #12462 患者情報共有 Ji end
+              setInfo: setObj.setInfo,
             });
           });
         });
@@ -512,14 +510,11 @@ export default {
         // データを集計
         const selectSetCd = [];
         response.data.patExamMains.forEach(data => {
-          // mod #12462 患者情報共有 Ji start
-          // const jsonObj = JSON.parse(data.orderExamSetInfo);
           const jsonObj = JSON.parse(data.orderExamSetInfo || "[]");
           const setInfo = JSON.parse(data.examOrderInfo || "[]");
           jsonObj.forEach(set => {
             set.items = setInfo.filter(item => item && item.set_cd === set.set_cd);
           });
-          // mod #12462 患者情報共有 Ji end
           const targetObj = ListObj.find(item => item.patId == data.patId);
 
           // 日付の合計
@@ -545,27 +540,21 @@ export default {
                 data: {},
                 status: {},
                 isLock: {},
-                // add #12462 患者情報共有 Ji start
                 facilityCd: {},
                 ownPatId: {},
-                setInfo:[]
-                // add #12462 患者情報共有 Ji end
+                setInfo: [],
               };
             }
             const targetObjSetCd = targetObjOrderClass[obj.set_cd];
             // フラグを入れる
             targetObjSetCd.data[data.strExamDate] = SAVED;
             targetObjSetCd.status[data.strExamDate] = data.examStatus;
-            // add #12462 患者情報共有 Ji start
             targetObjSetCd.facilityCd[data.strExamDate] = data.facilityCd;
             targetObjSetCd.ownPatId[data.strExamDate] = data.ownPatId;
-            targetObjSetCd.setInfo = setInfo.filter(
-              item => item && item.set_cd === obj.set_cd
-            );
-            // add #12462 患者情報共有 Ji end
+            targetObjSetCd.setInfo = setInfo.filter(item => item && item.set_cd === obj.set_cd);
             // 締切フラグ
             if (state.deadlineCondition.deadlineFlg) {
-              if (moment(deadlineDate).isAfter(data.strExamDate)) {
+              if (dayjs(deadlineDate).isAfter(data.strExamDate)) {
                 // 締切を過ぎている
                 targetObjSetCd.isLock[data.strExamDate] = "1";
               } else {
@@ -602,31 +591,35 @@ export default {
       return sendRequestUpdateRecordList(obj);
     },
     // 検査セット一覧取得
-    searchExamSetNameList({ commit }, facilityCd) {
+    searchExamSetNameList({ commit }, payload) {
+      const facilityCd = typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = typeof payload === "object" ? payload.selectedPatId : undefined;
       commit("setExamSetNameList", []);
-      return sendRequestGetMstExamSetList(facilityCd).then(response => {
+      return sendRequestGetMstExamSetList(facilityCd, selectedPatId).then(response => {
         commit("setExamSetNameList", response.data);
         return Promise.resolve(response.data);
       });
     },
     // 締切設定を施設設定から取得
-    setExamDeadline({ commit }, facilityCd) {
+    setExamDeadline({ commit }, payload) {
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
       // 検査締切有無
-      sendRequestGetMstFacilitySettingValue(facilityCd, EXAM_DEADLINE).then(response => {
+      sendRequestGetMstFacilitySettingValue(facilityCd, EXAM_DEADLINE, selectedPatId).then(response => {
         commit("setDeadlineCondition", {
           code: EXAM_DEADLINE,
           data: response.data === 1,
         });
       });
       // 検査依頼変更締切り日数
-      sendRequestGetMstFacilitySettingValue(facilityCd, EXAM_DEADLINE_DATE_COUNT).then(response => {
+      sendRequestGetMstFacilitySettingValue(facilityCd, EXAM_DEADLINE_DATE_COUNT, selectedPatId).then(response => {
         commit("setDeadlineCondition", {
           code: EXAM_DEADLINE_DATE_COUNT,
           data: response.data,
         });
       });
       // 検査依頼変更締切り時間
-      sendRequestGetMstFacilitySettingValue(facilityCd, EXAM_DEADLINE_TIME_COUNT).then(response => {
+      sendRequestGetMstFacilitySettingValue(facilityCd, EXAM_DEADLINE_TIME_COUNT, selectedPatId).then(response => {
         const chkStr = "^(?:(?:[0-2][0-3])|(?:[0-1][0-9])):[0-5][0-9]$";
         const strResponse = String(response.data);
         const rtnTime = strResponse.match(chkStr) ? strResponse : "00:00";
@@ -660,23 +653,18 @@ export default {
     updateExamSetTargetList({ commit }, data) {
       commit("setExamSetTargetList", data);
     },
-    // mod #12462 患者情報共有 Ji start
-    // dayAllClear({ state }, targetDate) {
     dayAllClear({ state }, { targetDate, facilityCd }) {
-    // mod #12462 患者情報共有 Ji end
       state.editExamRequestList.forEach(pat => {
         // 透析前、透析後、その他の順に処理する
         ["1", "2", "0"].reduce((allItem, regOrderClass) => {
           allItem.push(...Object.values(pat.examItemSet[regOrderClass]));
           return allItem;
         }, []).forEach(item => {
-          // mod #12462 患者情報共有 Ji start
-          const itemFacilityCd = item.facilityCd?.[targetDate]
-          if (itemFacilityCd && itemFacilityCd !== facilityCd) return
-          // mod #12462 患者情報共有 Ji end
           const itemData = item.data;
           const status = itemData[targetDate];
           if (status == null) return;
+          const itemFacilityCd = item.facilityCd?.[targetDate];
+          if (itemFacilityCd && itemFacilityCd !== facilityCd) return;
 
           if (status === SAVED) {
             // 保存済みの場合は中止
@@ -734,8 +722,10 @@ export default {
       commit("setIsDataChanged", isDataChanged);
     },
     // 患者情報の取得
-    getPatInfoList({}, patIdList) {
-      return sendRequestGetPatInfoList(patIdList).then(response => {
+    getPatInfoList(_ctx, payload) {
+      const patIdList = Array.isArray(payload) ? payload : payload.patIdList;
+      const selectedPatId = Array.isArray(payload) ? undefined : payload.selectedPatId;
+      return sendRequestGetPatInfoList(patIdList, selectedPatId).then(response => {
         return Promise.resolve(response.data);
       });
     },

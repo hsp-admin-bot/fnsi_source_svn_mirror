@@ -3,6 +3,10 @@ import { dateFormat } from "@/functions/common/DateTimeUtils";
  * 体重画面の体重を表現するクラス
  */
 
+function parseNumber(val) {
+  return val === null || val === undefined || val === "" ? null : Number(val);
+}
+
 export class Weight {
   constructor(
     lastWeight = null,
@@ -35,25 +39,19 @@ export class Weight {
       // add FNSI-体重情報のJSONに四つカラムを追加 徐 end
     } else {
       // mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
-      //liyanze-z #9695 add start
-      // this.weightBefore = rstWeightInfo.weight_before? parseFloat(rstWeightInfo.weight_before) : null;
       this.weightBefore = parseNumber(rstWeightInfo.weight_before);
-      //liyanze-z #9695 add end
       this.weightBeforeDate = rstWeightInfo.weight_before_date;
-      this.ctr = rstWeightInfo.ctr? parseFloat(rstWeightInfo.ctr) : null;
-      this.ctrWeight = rstWeightInfo.ctr_weight? parseFloat(rstWeightInfo.ctr_weight) : null;
+      this.ctr = parseNumber(rstWeightInfo.ctr);
+      this.ctrWeight = parseNumber(rstWeightInfo.ctr_weight);
       this.ctrMeasureDate = rstWeightInfo.ctr_measure_date;
-      this.waterRemovalTarget = rstWeightInfo.water_removal_target? parseFloat(rstWeightInfo.water_removal_target) : null;
-      this.waterRemovalRst = rstWeightInfo.water_removal_rst? parseFloat(rstWeightInfo.water_removal_rst) : null;
-      this.addWaterTotal = rstWeightInfo.add_water_total? parseFloat(rstWeightInfo.add_water_total) : null;
-      //liyanze-z #9695 add start
-      // this.weightAfter = rstWeightInfo.weight_after? parseFloat(rstWeightInfo.weight_after) : null;
+      this.waterRemovalTarget = parseNumber(rstWeightInfo.water_removal_target);
+      this.waterRemovalRst = parseNumber(rstWeightInfo.water_removal_rst);
+      this.addWaterTotal = parseNumber(rstWeightInfo.add_water_total);
       this.weightAfter = parseNumber(rstWeightInfo.weight_after);
-      //liyanze-z #9695 add end
       this.weightAfterDate = rstWeightInfo.weight_after_date;
-      this.weightDecreased = rstWeightInfo.weight_decreased? parseFloat(rstWeightInfo.weight_decreased) : null;
+      this.weightDecreased = parseNumber(rstWeightInfo.weight_decreased);
       // add FNSI-体重情報のJSONに四つカラムを追加 徐 start
-      this.ihdfPll = rstWeightInfo.ihdf_pll? parseFloat(rstWeightInfo.ihdf_pll) : null;
+      this.ihdfPll = parseNumber(rstWeightInfo.ihdf_pll);
       // add FNSI-体重情報のJSONに四つカラムを追加 徐 end
       // mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue end
     }
@@ -65,36 +63,29 @@ export class Weight {
   toJson() {
     return {
       // mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
-      weight_before: this.weightBefore? parseFloat(this.weightBefore) : null,
+      weight_before: parseNumber(this.weightBefore),
       weight_before_date: this.weightBeforeDate
         ? dateFormat.utc2Jst(this.weightBeforeDate)
         : null,
-      weight_measure_before: this.modalBefore.weightResult? parseFloat(this.modalBefore.weightResult) : null,
-      ctr: this.ctr? parseFloat(this.ctr) : null,
-      ctr_weight: this.ctrWeight? parseFloat(this.ctrWeight) : null,
+      weight_measure_before: parseNumber(this.modalBefore.weightResult),
+      ctr: parseNumber(this.ctr),
+      ctr_weight: parseNumber(this.ctrWeight),
       ctr_measure_date: this.ctrMeasureDate
         ? dateFormat.utc2Jst(this.ctrMeasureDate)
         : null,
-      water_removal_target: this.waterRemovalTarget? parseFloat(this.waterRemovalTarget) : null,
-      water_removal_rst: this.waterRemovalRst? parseFloat(this.waterRemovalRst) : null,
-      add_water_total: this.addWaterTotal? parseFloat(this.addWaterTotal) : null,
-      weight_after: this.weightAfter? parseFloat(this.weightAfter) : null,
+      water_removal_target: parseNumber(this.waterRemovalTarget),
+      water_removal_rst: parseNumber(this.waterRemovalRst),
+      add_water_total: parseNumber(this.addWaterTotal),
+      weight_after: parseNumber(this.weightAfter),
       weight_after_date: this.weightAfterDate
         ? dateFormat.utc2Jst(this.weightAfterDate)
         : null,
-      weight_measure_after: this.modalAfter.weightResult? parseFloat(this.modalAfter.weightResult) : null,
-      weight_decreased: this.weightDecreased? parseFloat(this.weightDecreased) : null,
+      weight_measure_after: parseNumber(this.modalAfter.weightResult),
+      weight_decreased: parseNumber(this.weightDecreased),
       // add FNSI-体重情報のJSONに四つカラムを追加 徐 start
-      ihdf_pll: this.ihdfPll? parseFloat(this.ihdfPll) : null
+      ihdf_pll: parseNumber(this.ihdfPll)
       // add FNSI-体重情報のJSONに四つカラムを追加 徐 end
       // mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue end
     };
   }
 }
-//liyanze-z #9695 add start
-function parseNumber(val) {
-  return val === null || val === undefined || val === ""
-    ? null
-    : Number(val);
-}
-//liyanze-z #9695 add end

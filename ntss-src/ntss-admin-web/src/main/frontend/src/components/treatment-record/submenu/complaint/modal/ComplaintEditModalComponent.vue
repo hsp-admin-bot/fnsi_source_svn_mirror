@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="onClickCancel">
-    <div slot="body" class="treatment-record-modal">
+    <template #body>
+      <div class="treatment-record-modal">
       <div class="compliant-edit-list">
         <div class="scroll-table" style="width: 80%;">
           <div style="height: 4.5em; display: flex; flex-direction: column; justify-content: space-around;">
@@ -23,8 +24,8 @@
                 </tr>
               </thead>
               <tbody :class="themeBlack">
-                <template v-for="(item, index) in actualModel.items">
-                  <tr :key="index + '-1'" class="ntss-list-body-tr" :class="{'new-row': index === actualModel.items.length - 1}">
+                <template v-for="(item, index) in actualModel.items" :key="index + '-1'">
+                  <tr class="ntss-list-body-tr" :class="{'new-row': index === actualModel.items.length - 1}">
                     <td class="ntss-list-body-td delete-checkbox-col" rowspan="2">
                       <div style="display:block;">
                         <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
@@ -81,16 +82,17 @@
                         :step="item.treatMedicineStep"
                         :inputMin="0"
                         :inputMax="99999"
+                        :medicine-type="item.medicineType"
                         :readMasterData="fetchMedicineAll"
                         :masterDefine="treatMedicine"
-                        v-model="item.treatMedicine"
+                        :modelValue="item.treatMedicine"
+                        @update:modelValue="(val) => onTreatMedicineUpdate(val, index)"
                         @changeUnit="(unit) => item.treatMedicineUnit = unit"
                         @changeStep="(step) => item.treatMedicineStep = step"
                         @change="(value) => item.treatMedicine.value = parseFloat(value)"
                         @changeMedicineType="medicineObj => {item.medicineType = medicineObj.medicineType;
                         item.treatClass = medicineObj.treatClass;}"
                         :disabled="(item.treatment.name || item.treatment.cd) ? false : true"
-                        @input="(data) => handleInputTreatMedicine(data, index)"
                         :index="index"
                         :type-no="1"
                         :required="true"
@@ -99,13 +101,16 @@
                   </tr>
                   <tr v-if="!item.isDel" :key="index + '-2'" class="ntss-list-body-tr" :class="{'new-row': index === actualModel.items.length - 1}">
                     <td class="ntss-list-body-td selector-td">
-                      <com-master-selector
+                      <common-master-selector
                         class="procedure-selector"
-                        :showClassFilter="false"
-                        :readMasterData="fetchProcedureAll"
-                        :masterDefine="procedure"
-                        v-model="item.procedure"
-                        :isDisabled="(item.treatment.name || item.treatment.cd) ? false : true"
+                        :masterType="MasterType.PROCEDURE_TREATMENT_RECORD"
+                        :facilityCd="facilityCd"
+                        :initItem="procedurePickerItem(item)"
+                        :editItem="procedurePickerItem(item)"
+                        :selectedItemClass="'selector-input'"
+                        :btnClass="'btn3-normal'"
+                        :btnDisabled="(item.treatment.name || item.treatment.cd) ? false : true"
+                        @popover-return="d => onProcedureReturn(d, item)"
                       />
                     </td>
                   </tr>
@@ -142,8 +147,8 @@
                 </tr>
               </thead>
               <tbody :class="themeBlack">
-                <template v-for="(item, index) in actualModel.treatStaff">
-                  <tr :key="index + '-1'" class="ntss-list-body-tr" :id="'comp-treat-staff-' + item.userId" v-if="hasMatchedStaffName(item)">
+                <template v-for="(item, index) in actualModel.treatStaff" :key="index + '-1'">
+                  <tr class="ntss-list-body-tr" :id="'comp-treat-staff-' + item.userId" v-if="hasMatchedStaffName(item)">
                     <td td class="ntss-list-body-td">
                       <div style="display: flex; align-items: center;">
                         <div>
@@ -176,8 +181,10 @@
         :popoverTarget="treatmentSelector.target"
         @popover-close="onCloseSelectTreatment"
       />
-    </div>
-    <div slot="footer" class="flex-container" style="overflow-x: auto;">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container" style="overflow-x: auto;">
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button denial-btn btn2-cancel" @click="onClickCancel">キャンセル</v-ons-button>
@@ -187,17 +194,19 @@
         <v-ons-button class="button registration-btn btn1-execute" :disabled="!isChanged" @click="onClickApply">保存</v-ons-button>
       </div>
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
 import CommonDateTimeComponent from "@/components/treatment-record/submenu/common/CommonDateTimeComponent";
-import CommonMasterSelectorComponent from "@/components/common/master-selector/CommonMasterSelectorComponent";
+import CommonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 import CommonMasterAndNumberInputComponent from "@/components/treatment-record/submenu/common/CommonMasterAndNumberInputComponent";
 import ComplaintSelectorComponent from "@/components/treatment-record/submenu/complaint/ComplaintSelectorComponent";
 import TreatmentSelectorComponent from "@/components/treatment-record/submenu/complaint/TreatmentSelectorComponent";
@@ -214,24 +223,23 @@ import {
 } from "@/components/common/master-selector/MasterSelectorDefinitions";
 import ComplaintComponentMixin from "@/components/treatment-record/submenu/complaint/ComplaintComponentMixin";
 import { CODES } from "@/constants/TreatmentRecord";
-import { EventBus } from "@/eventBus.js";
-import BigNumber from "bignumber.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import BigNumber from "@/compat/number/bignumber";
 import CommonTextArea from "@/components/common/CommonTextArea";
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
-import { messageFormat } from '@/functions/common/MessageFormat';
-import {isNaN} from "underscore";
-// mod #6107 2023/03/23 メッセージボックス全調整 張博 end
-// add #11380 愁訴処置にて登録される薬剤の判別子が間違って登録される 房 start
-import { MstCompTreatment } from "@/models/treatment-record/complaint/MstCompTreatment";
+
 // add #11380 愁訴処置にて登録される薬剤の判別子が間違って登録される 房 end
-import cloneDeep from 'lodash/cloneDeep';
+import cloneDeep from '@/compat/collections/lodash/cloneDeep';
+import { messageFormat } from "@/functions/common/MessageFormat";
+import { isNaN } from "@/compat/collections/lodash";
+import { MstCompTreatment } from "@/models/treatment-record/complaint/MstCompTreatment";
 export default {
   mixins: [MultiModalMixin, DiscardConfirmationMixin, ComplaintComponentMixin],
   components: {
     "modal-base": ModalBase,
     "com-date-time-input": CommonDateTimeComponent,
-    "com-master-selector": CommonMasterSelectorComponent,
+    "common-master-selector": CommonMasterSelector,
     "com-master-number-input": CommonMasterAndNumberInputComponent,
     "complaint-selector": ComplaintSelectorComponent,
     "treatment-selector": TreatmentSelectorComponent,
@@ -239,6 +247,7 @@ export default {
   },
   data() {
     return {
+      MasterType,
       treatUser: treatUser,
       treatMedicine: treatMedicine,
       procedure: procedure,
@@ -302,6 +311,16 @@ export default {
       "showComplaintCreate"
     ]),
     ...mapActions("mst-user", ["mstJobList"]),
+    procedurePickerItem(item) {
+      return {
+        value: item?.procedure?.cd ?? null,
+        text: item?.procedure?.name ?? ""
+      };
+    },
+    onProcedureReturn(data, item) {
+      item.procedure.cd = data?.value ?? null;
+      item.procedure.name = data?.text ?? "";
+    },
     /**
      * キャンセルボタンクリック時ハンドラ.
      */
@@ -664,7 +683,7 @@ export default {
         // 小数点ステップ数
         // 指示単位小数部:step制御用パラメータ
         var num = parseInt(item.treatMedicine.decPoint ? item.treatMedicine.decPoint : null);
-        if(isNaN(num)){
+        if (Number.isNaN(num)) {
           num = 0;
         }
         row.treatMedicineStep = Number(BigNumber(10).exponentiatedBy(BigNumber(num).negated()).valueOf());
@@ -687,6 +706,14 @@ export default {
       this.treatmentSelector.visible = false;
     },
 
+    onTreatMedicineUpdate(val, index) {
+      const item = this.actualModel.items[index];
+      const prevCd = item.treatMedicine?.cd;
+      item.treatMedicine = val;
+      if (prevCd !== val?.cd) {
+        this.handleInputTreatMedicine(val, index);
+      }
+    },
     handleInputTreatMedicine (master, index) {
       if (!master.cd) {
         this.actualModel.items[index].treatMedicine= new MasterAndNumber();
@@ -800,7 +827,7 @@ export default {
       if (this.selectedJobCd.inUsed !== "") {
         const staffJobCd = parseInt(staff.jobCd);
         const selectJobCd = parseInt(this.selectedJobCd.inUsed);
-        if (isNaN(staffJobCd) || staffJobCd !== selectJobCd) {
+        if (Number.isNaN(staffJobCd) || staffJobCd !== selectJobCd) {
           return false;
         }
       }
@@ -816,8 +843,40 @@ export default {
         this.actualModel.items[index].treatMedicineUnit = "";
         this.actualModel.items[index].procedure = new Master();
       }
-    }
+    },
     // add 5519 愁訴処置で処置がないのに処置薬剤の保存操作が出来てしまう 房 end
+    /**
+     * 愁訴処置登録画面で確定した愁訴処置を編集画面に反映する.
+     *
+     * @param {Array} complaints 愁訴処置データの配列
+     */
+    onApplayCompTreatCreateModal(complaints) {
+      if (!Array.isArray(complaints)) {
+        return;
+      }
+      const treatments = complaints.flatMap(e => e.treatmentList);
+      const addItems = [
+          ...Array(Math.max(complaints.length, treatments.length))
+        ]
+        .map((_, i) => {
+          return new ComplaintEdit(
+            i < complaints.length ? complaints[i] : null,
+            i < treatments.length ? treatments[i] : null
+          );
+        });
+      // 新規行を追加するか否か
+      const addNewRow =
+        this.editIndex === (this.actualModel.items.length - 1) ? true : false;
+      // 登録画面で入力された愁訴処置を追加
+      if (addItems.length > 0) {
+        this.actualModel.items.splice(this.editIndex, 1, ...addItems);
+        // 最終行(新規行)で追加された場合、新規行を追加
+        // ※登録画面で入力された愁訴処置情報で上書する為、ここで新規行を追加する必要がある.
+        if (addNewRow) {
+          this.actualModel.items.push(new ComplaintEdit(null, null, true));
+        }
+      }
+    }
   },
   computed: {
     ...mapGetters("account-edit", ["getTheme"]),
@@ -850,36 +909,14 @@ export default {
       this.init();
     });
     // 登録画面で確定ボタン押下された時にイベント
-    EventBus.$on("applayCompTreatCreateModal", (complaints) => {
-      const treatments = complaints.flatMap(e => e.treatmentList);
-      const addItems = [
-          ...Array(Math.max(complaints.length, treatments.length))
-        ]
-        .map((_, i) => {
-          return new ComplaintEdit(
-            i < complaints.length ? complaints[i] : null,
-            i < treatments.length ? treatments[i] : null
-          );
-        });
-      // 新規行を追加するか否か
-      const addNewRow =
-        this.editIndex === (this.actualModel.items.length - 1) ? true : false;
-      // 登録画面で入力された愁訴処置を追加
-      if (addItems.length > 0) {
-        this.actualModel.items.splice(this.editIndex, 1, ...addItems);
-        // 最終行(新規行)で追加された場合、新規行を追加
-        // ※登録画面で入力された愁訴処置情報で上書する為、ここで新規行を追加する必要がある.
-        if (addNewRow) {
-          this.actualModel.items.push(new ComplaintEdit(null, null, true));
-        }
-      }
-    });
+    EventBus.$off("applayCompTreatCreateModal", this.onApplayCompTreatCreateModal);
+    EventBus.$on("applayCompTreatCreateModal", this.onApplayCompTreatCreateModal);
   },
   /**
    * 愁訴処置モーダル画面破棄時
    */
-  beforeDestroy() {
-    EventBus.$off("applayCompTreatCreateModal");
+  beforeUnmount() {
+    EventBus.$off("applayCompTreatCreateModal", this.onApplayCompTreatCreateModal);
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   }
@@ -887,6 +924,10 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+ons-checkbox.checkbox {
+  margin-top: 0;
+}
+@import "../../../../../assets/styles/modal.css";
 .ntss-list-header-th-sticky {
   z-index: 1;
 }
@@ -894,7 +935,7 @@ export default {
   height: inherit;
   display: flex;
 }
-.compliant-edit-list >>> ons-col {
+.compliant-edit-list :deep(ons-col) {
   display: flex;
   align-items: center;
 }
@@ -907,10 +948,10 @@ export default {
     height: 1em;
   }
 }
-.ntss-style-date-time >>> .date-time {
+.ntss-style-date-time :deep(.date-time) {
   padding: unset;
 }
-.ntss-style-date-time >>> .title {
+.ntss-style-date-time :deep(.title) {
   min-width: unset;
 }
 .scroll-table {
@@ -924,10 +965,10 @@ export default {
   min-width: 57em;
   height: 100%;
 }
-.treatment-record-modal >>> ons-col.title {
+.treatment-record-modal :deep(ons-col.title) {
   flex: 0 0 6em;
 }
-.treatment-record-modal >>> ons-col.unit {
+.treatment-record-modal :deep(ons-col.unit) {
   flex: 0 0 3em;
 }
 .delete-checkbox-col {
@@ -939,12 +980,12 @@ td.delete-checkbox-col {
 .ntss-list-body-td {
   vertical-align: top;
 }
-div >>> .com-textarea {
+div :deep(.com-textarea) {
   width: 98%;
   height: 4.5em;
   box-sizing: border-box;
 }
-div >>> textarea {
+div :deep(textarea) {
   resize: both;
   width: 96%;
   height: 100%;
@@ -955,36 +996,39 @@ div >>> textarea {
   padding: 2px 4px;
   vertical-align: middle;
 }
-.selector-td >>> ons-row {
+.selector-td :deep(ons-row) {
   height: inherit;
 }
-.selector-td >>> .text-input,
-.selector-td >>> label,
-.selector-td >>> .select-btn {
+.selector-td :deep(label),
+.selector-td :deep(.select-btn) {
+  font-size: 1em;
+}
+
+.selector-td :deep(.text-input) {
   font-size: 1em;
 }
 .complaint-td,
 .treatment-td {
   padding: 4px;
 }
-.selector-td >>> ons-input {
+.selector-td :deep(ons-input) {
   width: 100%;
 }
-.selector-td >>> ons-col.num-value {
+.selector-td :deep(ons-col.num-value) {
   flex: 0 0 3em;
 }
-.selector-td >>> ons-col.unit {
+.selector-td :deep(ons-col.unit) {
   padding-left: 4px;
 }
-.selector-td >>> ons-col.select-button {
+.selector-td :deep(ons-col.select-button) {
   flex: 0 0 3em;
   align-items: center;
 }
-.treat-medicine-selector >>> ons-col.title {
+.treat-medicine-selector :deep(ons-col.title) {
   flex: 1;
 }
-.procedure-selector >>> ons-col.title,
-.treat-staff-selector >>> ons-col.title {
+.procedure-selector :deep(ons-col.title),
+.treat-staff-selector :deep(ons-col.title) {
   display: none;
 }
 .edit-button {
@@ -1010,7 +1054,7 @@ div >>> textarea {
 .ntss-list-body-td {
   border: solid 1px #cccccc;
 }
-.treatment-record-modal >>> .comp-treat-button {
+.treatment-record-modal :deep(.comp-treat-button) {
   width: 3.0em;
   height: 2.0em;
   margin: 5px 0px;
@@ -1021,16 +1065,51 @@ div >>> textarea {
   color: #fafafa;
 }
 
-div >>> .modal-container,
-div >>> .modal-search,
-div >>> .modal-body,
-div >>> .modal-footer,
-div >>> .modal-footer .bottom-bar {
+div :deep(.modal-container),
+div :deep(.modal-search),
+div :deep(.modal-body),
+div :deep(.modal-footer),
+div :deep(.modal-footer .bottom-bar) {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }
-.procedure-selector >>> ons-col.text-value {
+.procedure-selector :deep(ons-col.text-value) {
   color: var(--ntss-base-color);
+}
+
+.procedure-selector :deep(.custom-div-show-selected-item) {
+  border: none !important;
+  border-radius: 0 !important;
+  border-style: none !important;
+  background-color: transparent !important;
+  padding: 0 !important;
+  min-height: auto !important;
+  color: inherit;
+  flex: 1 1 auto;
+}
+
+.procedure-selector :deep(.custom-div-show-selected-item-edited) {
+  border: none !important;
+  outline: 0 !important;
+}
+
+.procedure-selector :deep(ons-col) {
+  align-items: center;
+}
+
+.procedure-selector :deep(.common-style-select-button) {
+  margin-left: auto;
+  width: 5em;
+  min-width: 5em;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.treat-medicine-selector :deep(.common-style-select-button.com-basic-sub-btn) {
+  width: 5em;
+  min-width: 5em;
+  padding-left: 0;
+  padding-right: 0;
 }
 /* モバイル縦画面にてフッター部のボタンが収まりきらないので幅を調整 */
 @media only screen and (max-width: 480px) {
@@ -1054,11 +1133,11 @@ div >>> .modal-footer .bottom-bar {
     text-align: center;
     
   }
-  .modal-mask /deep/ .modal-wrapper {
+  .modal-mask :deep(.modal-wrapper) {
     display: inline-block !important;
     text-align: left;
   }
-  .modal-mask /deep/ .modal-container {
+  .modal-mask :deep(.modal-container) {
     width: 98% !important;
   }
   #new-comp-treat-staff-area {

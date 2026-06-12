@@ -57,6 +57,7 @@ import jp.co.nikkiso.ntss.admin_web.web.rest.util.WebApiCallCommonUtil;
 import jp.co.nikkiso.ntss.core.entity.custom.OrdMainForNotAssignedSchedule;
 import jp.co.nikkiso.ntss.core.entity.custom.TreatmentStatusMap;
 import org.springframework.util.StringUtils;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 @Service
 public class TreatmentStatusMapServiceImpl implements TreatmentStatusMapService {
@@ -95,6 +96,9 @@ public class TreatmentStatusMapServiceImpl implements TreatmentStatusMapService 
   private SelectHistoryUtils selectHistoryUtils;
   // add FNSI-改修内容追加OrdMain履歴 付 end
 
+  @Autowired
+  LogService logService;
+  
   // DB更新ログ出力ロジック wangzuo Start
   @Autowired
   private EventLoggerFactory eventLoggerFactory;
@@ -120,10 +124,11 @@ public class TreatmentStatusMapServiceImpl implements TreatmentStatusMapService 
 
   @Autowired
   private PatEventService patEventRecService;
-  //add FNSI redmine5436 fang end
 
   @Autowired
-  private LogService logService;
+  @DefaultDb
+  private Config defaultDbConfig;
+  //add FNSI redmine5436 fang end
 
   /**
    * 工程、入外区分、シャント不一致、感染症不一致、治療方法不一致を返す
@@ -526,7 +531,7 @@ public class TreatmentStatusMapServiceImpl implements TreatmentStatusMapService 
       wheres.append(" is_dummy = '0'\n");
 
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(scheduleListDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -569,7 +574,7 @@ public class TreatmentStatusMapServiceImpl implements TreatmentStatusMapService 
       wheresPat.append("AND setting.facility_setting_no = '1022'" + "\n");
       wheresPat.append("AND value = '1')" + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommonPat = getLogCommon(patIndApproveDao, tableNamePat, wheresPat, getEventLogMessage());
+      DataUpdateLogCommonNew logCommonPat = getLogCommon(tableNamePat, wheresPat, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResultPat = logCommonPat.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -666,11 +671,11 @@ public class TreatmentStatusMapServiceImpl implements TreatmentStatusMapService 
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

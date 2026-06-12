@@ -48,7 +48,7 @@
        :disabled="!getItemAuthorized('MotionRecord', 'default_authority')" 
                 @click='updateIsCorrection(motionRecordDetail.motionRecordNo, motionRecordDetail.isCorrection
                 )' 
-               >対処済</button>
+              >対処済</button>
         <button v-show="motionRecordDetail.isCorrection == 2" class="correction-button deal-not button"
         :disabled="!getItemAuthorized('MotionRecord', 'default_authority')" 
                 @click='updateIsCorrection(motionRecordDetail.motionRecordNo, motionRecordDetail.isCorrection)'
@@ -119,33 +119,28 @@
             <label for="hemodilutionTest" class="filterLabel" style="width:5.3em;">{{ selfDiagnosisItem.hemodilution.name }}</label>
           </div>
           <div style="position:relative;overflow-y:auto;height:calc(100% - 25px);">
-            <table class="table-self-diagnosis" style="position:absolute;top:0;left:0;border-collapse:collapse;z-index:200;" area-hidden="true">
-              <thead style="display:table-caption;">
-                <tr class='ntss-list-header-tr'>
-                  <th id="eventRegTimeHeader" class="ntss-list-header-th" rowspan="2" style="height:54px;padding-left:8px;padding-right:8px;visibility:visible">{{ ufrcItem.dataTime.name }}</th>
-                </tr>
-              </thead>
-            </table>
-            <div v-if="!isDab" :id="dataTypeItem.testResults.tableId" :onscroll="setOnScroll(dataTypeItem.testResults.tableId)"
+            <div v-if="!isDab" :id="dataTypeItem.testResults.tableId" @scroll="handleMotionRecordScroll(dataTypeItem.testResults.tableId, $event)"
                 style="height:100%;overflow-y:auto;width:fit-content;max-width:100%;">
               <!-- testType=1(配管)のレイアウト -->
               <!-- // add/ #9291 自己診断判定の対象でない項目の値が表示される tianqidong start -->
               <table v-if="testType === selfDiagnosisItem.ufrc.testType" class="table-self-diagnosis" style="position:inherit;">
-                <thead class="header-sticky" style="display:block;z-index:100;">
-                  <tr class='ntss-list-header-tr' style="display:block;">
-                    <th v-for='(column, ufrcItemKey) in ufrcItem' :key='ufrcItemKey'
-                        v-if="!column.jsonAddress || isSelfMeasureItemVisible(column.jsonAddress)"
-                        :class="setDataTimeClass(ufrcItemKey)" class="ntss-list-header-th"
-                        :id="ufrcItemKey"
-                        style="padding-left:8px;padding-right:8px;">{{ column.name }}<br />{{ column.unit }}</th>
+                <thead class="header-sticky" style="z-index:100;">
+                  <tr class='ntss-list-header-tr'>
+                    <template v-for="(column, idx) in objectToList(ufrcItem)" :key="idx">
+                      <th v-if="isSelfMeasureColumnVisible(column)"
+                      :class="idx === 0 ? 'event-reg-time-header-sticky' : ''"
+                      class="ntss-list-header-th"
+                      :id="idx === 0 ? 'dataTime' : (idx === 1 ? 'result' : (idx === 2 ? 'negativePipeLeakage' : (idx === 3 ? 'positivePipeLeakage' : (idx === 4 ? 'cfLeakage' : (idx === 5 ? 'cf2Leakage' : (idx === 6 ? 'removal' : 'balance'))))))"
+                      style="padding-left:8px;padding-right:8px;">{{ column.name }}<br />{{ column.unit }}</th>
+                    </template>
                   </tr>
                 </thead>
-                <tbody style="display:block;word-break:break-word;">
+                <tbody style="word-break:break-word;">
                   <tr v-for='(content, ufrcKey) in ufrc' :key='ufrcKey'
                       class="ntss-list-body-tr">
                     <td class='ntss-list-body-td col-sticky' :class="ufrcItem.dataTime.className"
                         style="text-align:center" :style="{ width:ufrcItem.dataTime.bodyWidth + 'px'}"
-                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[ufrcItem.result.jsonAddress], arguments[0])'>
+                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[ufrcItem.result.jsonAddress], $event)'>
                         {{ convertDateFormat(content.eventRegDate) }}<br />{{ convertDateFormat(content.eventRegTime) }}</td>
                     <!-- mod 7801【デグレ】自己診断結果の集計が不正_再発 関 start -->
                     <!-- <td class='ntss-list-body-td' :class="chkSelfMeasureResultInfo(ufrcItem.result.className, ufrcItem.result.jsonAddress, convertSelfDiagnosisResult(testType, content.result[ufrcItem.result.jsonAddress]))"
@@ -173,7 +168,7 @@
                     <!-- mod #9241 by zhangruixue 2023-08-01 --start  -->
                     <td v-if="isSelfMeasureItemVisible(ufrcItem.result.jsonAddress)" class='ntss-list-body-td' :class="chkSelfMeasureResultInfo(ufrcKey,ufrcItem.result.className, ufrcItem.result.jsonAddress, convertSelfDiagnosisResult(testType, content.result[ufrcItem.result.jsonAddress]), content.recordNo, content.testResultData)"
                         style="text-align:right" :style="{ width:ufrcItem.result.bodyWidth + 'px'}"
-                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[ufrcItem.result.jsonAddress], arguments[0])'>
+                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[ufrcItem.result.jsonAddress], $event)'>
                         {{ convertSelfDiagnosisResult(testType, content.result[ufrcItem.result.jsonAddress]) }}</td>
                     <td v-if="isSelfMeasureItemVisible(ufrcItem.negativePipeLeakage.jsonAddress)" class='ntss-list-body-td' :class="chkSelfMeasureResultInfo(ufrcKey,ufrcItem.negativePipeLeakage.className, ufrcItem.negativePipeLeakage.jsonAddress, content.result[ufrcItem.negativePipeLeakage.jsonAddress], content.recordNo, content.testResultData)"
                         style="text-align:right" :style="{ width:ufrcItem.negativePipeLeakage.bodyWidth + 'px'}">
@@ -200,21 +195,23 @@
               </table>
               <!-- testType=2(漏血)のレイアウト -->
               <table class="table-self-diagnosis" v-if="testType === selfDiagnosisItem.bloodLeakage.testType" style="position:inherit;">
-                <thead class="header-sticky" style="display:block;z-index:100;">
-                  <tr class='ntss-list-header-tr' style="display:block;">
-                    <th v-for='(column, bloodLeakageItemKey) in bloodLeakageItem' :key='bloodLeakageItemKey'
-                        v-if="!column.jsonAddress || isSelfMeasureItemVisible(column.jsonAddress)"
-                        :class="setDataTimeClass(bloodLeakageItemKey)" class="ntss-list-header-th"
-                        :id="bloodLeakageItemKey"
-                        style="padding-left:8px;padding-right:8px;">{{ column.name }}{{ column.space }}{{ column.unit }}</th>
-                  </tr>
+                <thead class="header-sticky" style="z-index:100;">
+                  <tr class='ntss-list-header-tr'>
+                    <template v-for="(column, idx) in objectToList(bloodLeakageItem)" :key="idx">
+                      <th v-if="isSelfMeasureColumnVisible(column)"
+                      :class="idx === 0 ? 'event-reg-time-header-sticky' : ''"
+                      class="ntss-list-header-th"
+                      :id="idx === 0 ? 'dataTime' : (idx === 1 ? 'voltageRed' : 'voltageGreen')"
+                      style="padding-left:8px;padding-right:8px;">{{ column.name }}{{ column.space }}{{ column.unit }}</th>
+                    </template>
+                  </tr> 
                 </thead>
-                <tbody style="display:block;word-break:break-word;">
+                <tbody style="word-break:break-word;">
                   <tr v-for='(content, bloodLeakageKey) in bloodLeakage' :key='bloodLeakageKey'
                       class="ntss-list-body-tr">
                     <td class='ntss-list-body-td col-sticky' :class="bloodLeakageItem.dataTime.className"
                         style="text-align:center" :style="{ width:bloodLeakageItem.dataTime.bodyWidth + 'px'}"
-                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, "", arguments[0])'>
+                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, "", $event)'>
                         {{ convertDateFormat(content.eventRegDate) }}<br />{{ convertDateFormat(content.eventRegTime) }}</td>
                         <!-- mod 7801【デグレ】自己診断結果の集計が不正_再発 関 start -->
                      <!-- <td class='ntss-list-body-td' :class="chkSelfMeasureResultInfo(bloodLeakageItem.voltageRed.className, bloodLeakageItem.voltageRed.jsonAddress, content.result[bloodLeakageItem.voltageRed.jsonAddress])"
@@ -237,21 +234,23 @@
               </table>
               <!-- testType=3(透析液流量)のレイアウト -->
               <table class="table-self-diagnosis" v-if="testType === selfDiagnosisItem.dialysateFlowRate.testType" style="position:inherit;">
-                <thead class="header-sticky" style="display:block;z-index:100;">
-                  <tr class='ntss-list-header-tr' style="display:block;">
-                    <th v-for='(column, dialysateFlowRateItemKey) in dialysateFlowRateItem' :key='dialysateFlowRateItemKey'
-                        v-if="!column.jsonAddress || isSelfMeasureItemVisible(column.jsonAddress)"
-                        :class="setDataTimeClass(dialysateFlowRateItemKey)" class="ntss-list-header-th"
-                        :id="dialysateFlowRateItemKey"
+                <thead class="header-sticky" style="z-index:100;">
+                  <tr class='ntss-list-header-tr'>
+                    <template v-for="(column, idx) in objectToList(dialysateFlowRateItem)" :key="idx">
+                      <th v-if="isSelfMeasureColumnVisible(column)"
+                        :class="idx === 0 ? 'event-reg-time-header-sticky' : ''"
+                        class="ntss-list-header-th"
+                        :id="idx === 0 ? 'dataTime' : 'dialysateFlowRate'"
                         style="padding-left:8px;padding-right:8px;">{{ column.name }}{{ column.space }}{{ column.unit }}</th>
+                    </template>
                   </tr>
                 </thead>
-                <tbody style="display:block;word-break:break-word;">
+                <tbody style="word-break:break-word;">
                   <tr v-for='(content, dialysateFlowRateKey) in dialysateFlowRate' :key='dialysateFlowRateKey'
                       class="ntss-list-body-tr">
                     <td class='ntss-list-body-td col-sticky' :class="dialysateFlowRateItem.dataTime.className"
                         style="text-align:center" :style="{ width:dialysateFlowRateItem.dataTime.bodyWidth + 'px'}"
-                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, "", arguments[0])'>
+                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, "", $event)'>
                         {{ convertDateFormat(content.eventRegDate) }}<br />{{ convertDateFormat(content.eventRegTime) }}</td>
                         <!-- mod 7801【デグレ】自己診断結果の集計が不正_再発 関 start -->
                      <!-- <td class='ntss-list-body-td' :class="chkSelfMeasureResultInfo(dialysateFlowRateItem.dialysateFlowRate.className, dialysateFlowRateItem.dialysateFlowRate.jsonAddress, content.result[dialysateFlowRateItem.dialysateFlowRate.jsonAddress])"
@@ -268,21 +267,23 @@
               </table>
               <!-- testType=4(濃度)のレイアウト -->
               <table class="table-self-diagnosis" v-if="testType === selfDiagnosisItem.concentration.testType" style="position:inherit;">
-                <thead class="header-sticky" style="display:block;z-index:100;">
-                  <tr class='ntss-list-header-tr' style="display:block;">
-                    <th v-for='(column, concentrationItemKey) in concentrationItem' :key='concentrationItemKey'
-                        v-if="!column.jsonAddress || isSelfMeasureItemVisible(column.jsonAddress)"
-                        :class="setDataTimeClass(concentrationItemKey)" class="ntss-list-header-th"
-                        :id="concentrationItemKey"
+                <thead class="header-sticky" style="z-index:100;">
+                  <tr class='ntss-list-header-tr'>
+                    <template v-for="(column, idx) in objectToList(concentrationItem)" :key="idx">
+                      <th v-if="isSelfMeasureColumnVisible(column)"
+                        :class="idx === 0 ? 'event-reg-time-header-sticky' : ''"
+                        class="ntss-list-header-th"
+                        :id="idx === 0 ? 'dataTime' : (idx === 1 ? 'result' : (idx === 2 ? 'dialysateB' : 'dialysateA'))"
                         style="padding-left:8px;padding-right:8px;">{{ column.name }}{{ column.space }}{{ column.unit }}</th>
+                    </template>
                   </tr>
                 </thead>
-                <tbody style="display:block;word-break:break-word;">
+                <tbody style="word-break:break-word;">
                   <tr v-for='(content, concentrationKey) in concentration' :key='concentrationKey'
                       class="ntss-list-body-tr">
                     <td class='ntss-list-body-td col-sticky' :class="concentrationItem.dataTime.className"
                         style="text-align:center" :style="{ width:concentrationItem.dataTime.bodyWidth + 'px'}"
-                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[concentrationItem.result.jsonAddress], arguments[0])'>
+                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[concentrationItem.result.jsonAddress], $event)'>
                         {{ convertDateFormat(content.eventRegDate) }}<br />{{ convertDateFormat(content.eventRegTime) }}</td>
                         <!-- mod 7801【デグレ】自己診断結果の集計が不正_再発 関 start -->
                         <!-- <td class='ntss-list-body-td' :class="chkSelfMeasureResultInfo(concentrationItem.result.className, concentrationItem.result.jsonAddress, convertSelfDiagnosisResult(testType, content.result[concentrationItem.result.jsonAddress]))"
@@ -298,7 +299,7 @@
                     <!-- mod #9241 by zhangruixue 2023-08-01 --start  -->
                     <td v-if="isSelfMeasureItemVisible(concentrationItem.result.jsonAddress)" class='ntss-list-body-td' :class="chkSelfMeasureResultInfo(concentrationKey,concentrationItem.result.className, concentrationItem.result.jsonAddress, convertSelfDiagnosisResult(testType, content.result[concentrationItem.result.jsonAddress]), content.recordNo)"
                         style="text-align:right" :style="{ width:concentrationItem.result.bodyWidth + 'px'}"
-                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[concentrationItem.result.jsonAddress], arguments[0])'>
+                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[concentrationItem.result.jsonAddress], $event)'>
                         {{ convertSelfDiagnosisResult(testType, content.result[concentrationItem.result.jsonAddress]) }}</td>
                     <td v-if="isSelfMeasureItemVisible(concentrationItem.dialysateB.jsonAddress)" class='ntss-list-body-td' :class="chkSelfMeasureResultInfo(concentrationKey,concentrationItem.dialysateB.className, concentrationItem.dialysateB.jsonAddress, content.result[concentrationItem.dialysateB.jsonAddress], content.recordNo)"
                         style="text-align:right" :style="{ width:concentrationItem.dialysateB.bodyWidth + 'px'}">
@@ -312,29 +313,31 @@
                 </tbody>
               </table>
             </div>
-            <div v-else :id="dataTypeItem.testResults.tableId" :onscroll="setOnScroll(dataTypeItem.testResults.tableId)"
+            <div v-else :id="dataTypeItem.testResults.tableId" @scroll="handleMotionRecordScroll(dataTypeItem.testResults.tableId, $event)"
                  style="height:100%;overflow-y:auto;width:fit-content;max-width:100%;">
               <!-- testType=5(配管テスト)のレイアウト -->
               <table class="table-self-diagnosis" v-if="testType === selfDiagnosisItem.piping.testType" style="position:inherit;">
-                <thead class="header-sticky" style="display:block;z-index:100;">
-                  <tr class='ntss-list-header-tr' style="display:block;">
-                    <th v-for='(column, pipingTestItemKey) in pipingTestItem' :key='pipingTestItemKey'
-                        v-if="!column.jsonAddress || isSelfMeasureItemVisible(column.jsonAddress)"
-                        :class="setDataTimeClass(pipingTestItemKey)" class="ntss-list-header-th"
-                        :id="pipingTestItemKey"
-                        style="padding-left:8px;padding-right:8px;">{{ column.name }}<br />{{ column.unit }}</th>
+                <thead class="header-sticky" style="z-index:100;">
+                  <tr class='ntss-list-header-tr'>
+                    <template v-for="(column, idx) in objectToList(pipingTestItem)" :key="idx">
+                      <th v-if="isSelfMeasureColumnVisible(column)"
+                      :class="idx === 0 ? 'event-reg-time-header-sticky' : ''"
+                      class="ntss-list-header-th"
+                      :id="idx === 0 ? 'dataTime' : (idx === 1 ? 'result' : (idx === 2 ? 'supplyPressure' : (idx === 3 ? 'dialysateFlowPressureLow' : (idx === 4 ? 'dialysateFlowPressureHigh' : (idx === 5 ? 'concentrationCell3' : (idx === 6 ? 'concentrationCell4' : (idx === 7 ? 'judgementTermInjection' : 'judgementTermDrainage')))))))"
+                      style="padding-left:8px;padding-right:8px;">{{ column.name }}<br />{{ column.unit }}</th>
+                    </template>
                   </tr>
                 </thead>
-                <tbody style="display:block;word-break:break-word;">
+                <tbody style="word-break:break-word;">
                   <tr v-for='(content, pipingKey) in piping' :key='pipingKey'
                       class="ntss-list-body-tr">
                     <td class='ntss-list-body-td col-sticky' :class="pipingTestItem.dataTime.className"
                         style="text-align:center" :style="{ width:pipingTestItem.dataTime.bodyWidth + 'px'}"
-                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[pipingTestItem.result.jsonAddress], arguments[0])'>
+                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[pipingTestItem.result.jsonAddress], $event)'>
                         {{ convertDateFormat(content.eventRegDate) }}<br />{{ convertDateFormat(content.eventRegTime) }}</td>
                     <td v-if="isSelfMeasureItemVisible(pipingTestItem.result.jsonAddress)" class='ntss-list-body-td' :class="pipingTestItem.result.className"
                         style="text-align:right" :style="{ width:pipingTestItem.result.bodyWidth + 'px'}"
-                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[pipingTestItem.result.jsonAddress], arguments[0])'>
+                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[pipingTestItem.result.jsonAddress], $event)'>
                         {{ convertSelfDiagnosisResult(testType, content.result[pipingTestItem.result.jsonAddress]) }}</td>
                     <td v-if="isSelfMeasureItemVisible(pipingTestItem.supplyPressure.jsonAddress)" class='ntss-list-body-td' :class="pipingTestItem.supplyPressure.className"
                         style="text-align:right" :style="{ width:pipingTestItem.supplyPressure.bodyWidth + 'px'}">
@@ -362,25 +365,27 @@
               </table>
               <!-- testType=6(希釈テスト)のレイアウト -->
               <table class="table-self-diagnosis" v-if="testType === selfDiagnosisItem.hemodilution.testType" style="position:inherit;">
-                <thead class="header-sticky" style="display:block;z-index:100;">
-                  <tr class='ntss-list-header-tr' style="display:block;">
-                    <th v-for='(column, hemodilutionTestItemKey) in hemodilutionTestItem' :key='hemodilutionTestItemKey'
-                        v-if="!column.jsonAddress || isSelfMeasureItemVisible(column.jsonAddress)"
-                        :class="setDataTimeClass(hemodilutionTestItemKey)" class="ntss-list-header-th"
-                        :id="hemodilutionTestItemKey"
-                        style="padding-left:8px;padding-right:8px;">{{ column.name }}<br />{{ column.unit }}</th>
+                <thead class="header-sticky" style="z-index:100;">
+                  <tr class='ntss-list-header-tr'>
+                    <template v-for="(column, idx) in objectToList(hemodilutionTestItem)" :key="idx">
+                      <th v-if="isSelfMeasureColumnVisible(column)"
+                      :class="idx === 0 ? 'event-reg-time-header-sticky' : ''"
+                      class="ntss-list-header-th"
+                      :id="idx === 0 ? 'dataTime' : (idx === 1 ? 'result' : (idx === 2 ? 'concentrationB' : 'concentrationDialysate'))"
+                      style="padding-left:8px;padding-right:8px;">{{ column.name }}<br />{{ column.unit }}</th>
+                    </template>
                   </tr>
                 </thead>
-                <tbody style="display:block;word-break:break-word;">
+                <tbody style="word-break:break-word;">
                   <tr v-for='(content, hemodilutionKey) in hemodilution' :key='hemodilutionKey'
                       class="ntss-list-body-tr">
                     <td class='ntss-list-body-td col-sticky' :class="hemodilutionTestItem.dataTime.className"
                         style="text-align:center" :style="{ width:hemodilutionTestItem.dataTime.bodyWidth + 'px'}"
-                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[hemodilutionTestItem.result.jsonAddress], arguments[0])'>
+                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[hemodilutionTestItem.result.jsonAddress], $event)'>
                         {{ convertDateFormat(content.eventRegDate) }}<br />{{ convertDateFormat(content.eventRegTime) }}</td>
                     <td v-if="isSelfMeasureItemVisible(hemodilutionTestItem.result.jsonAddress)" class='ntss-list-body-td' :class="hemodilutionTestItem.result.className"
                         style="text-align:right" :style="{ width:hemodilutionTestItem.result.bodyWidth + 'px'}"
-                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[hemodilutionTestItem.result.jsonAddress], arguments[0])'>
+                        @click='clickResultCol(testType, content.eventRegDate, content.eventRegTime, content.result[hemodilutionTestItem.result.jsonAddress], $event)'>
                         {{ convertSelfDiagnosisResult(testType, content.result[hemodilutionTestItem.result.jsonAddress]) }}</td>
                     <td v-if="isSelfMeasureItemVisible(hemodilutionTestItem.concentrationB.jsonAddress)" class='ntss-list-body-td' :class="hemodilutionTestItem.concentrationB.className"
                         style="text-align:right" :style="{ width:hemodilutionTestItem.concentrationB.bodyWidth + 'px'}">
@@ -503,7 +508,7 @@
         <div v-if="isTable" style="height:calc(100% - 2.3em);">
           <div style="position:relative;height:100%;width:100%;">
             <div :id="dataTypeItem.dissolutions.tableId" class='main-content-area' style="-webkit-overflow-scrolling:touch;width:fit-content;max-width:100%;"
-                 @scroll="setOnScroll(dataTypeItem.dissolutions.tableId)">
+                 @scroll="handleMotionRecordScroll(dataTypeItem.dissolutions.tableId, $event)">
               <table class="table-self-diagnosis" style="position:static;">
                 <thead>
                   <tr id="sticky-position-base">
@@ -623,7 +628,7 @@
         <div v-if="isTable" style="height:calc(100% - 2.3em);">
           <div style="position:relative;height:100%;width:100%;">
             <div :id="dataTypeItem.dissolutions.tableId" class='main-content-area' style="-webkit-overflow-scrolling:touch;width:fit-content;max-width:100%;"
-                 @scroll="setOnScroll(dataTypeItem.dissolutions.tableId)">
+                 @scroll="handleMotionRecordScroll(dataTypeItem.dissolutions.tableId, $event)">
               <table class="table-self-diagnosis" style="position:static;">
                 <thead>
                   <tr id="sticky-position-base">
@@ -705,7 +710,7 @@
       </div>
     </div>
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target="false"
@@ -722,18 +727,16 @@
 </template>
 
 <script>
-import Vue from "vue";
-import VueHighcharts from "vue-highcharts";
-import VueTouch from "vue-touch";
-import Highcharts from "highcharts";
-import Boost from "highcharts/modules/boost";
-import { mapGetters, mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
-import moment from "moment";
+import { Chart } from "@/compat/charts/highcharts";
+
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import dayjs from "@/compat/date/dayjs";
 import {
   SERVICE_SUPPORT
 } from "@/constants/operationViewerCommon";
 import PopoverMixin from "@/components/PopoverMixin";
+import VTouch from "@/components/common/VTouch.vue";
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
@@ -741,18 +744,17 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #11065 【03】編集権限バグ修正 関 end
 
-Vue.use(VueHighcharts);
-Vue.use(VueTouch);
-Boost(Highcharts);
-
 // jQureyを宣言（'$'はvue.jsで使用されているため、'$$'で宣言）
-const $$ = require("jquery");
+
+import $$ from "@/compat/jquery";
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, triggerScopedDownload,
+  getScopedJQuery as createScopedJQuery} from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   mixins: [PopoverMixin],
   components: {
-    VueHighcharts,
-    VueTouch
+    highcharts: Chart,
+    VTouch
   },
   title: "装置記録詳細",
   data() {
@@ -1463,16 +1465,24 @@ export default {
       return this.getPartsRunningResult.comType === 2 && this.getPartsRunningResult.comFormatCd === 'I';
     },
     dry50AGraphData() {
-      return this.getDry50AGraphData;
-      }
+    return this.getDry50AGraphData;
     },
+    objectToList() {
+      return (obj) => {
+        if (!obj) return [];
+        return Object.values(obj)
+          .filter(item => item && typeof item === 'object' && item.name);
+      };
+    }
+  },
   watch: {
     getFontSize() {
       // フォントサイズ変更に合わせて調整処理を発火
       this.setTableBodyWidth();
       // 表のTopサイズの補正
-      if (document.getElementById("sticky-position-base") != null) {
-        this.stickyPositionSize.top = document.getElementById("sticky-position-base").offsetHeight + "px";
+      const stickyBaseElement = this.getMotionRecordStickyBaseElement();
+      if (stickyBaseElement != null) {
+        this.stickyPositionSize.top = stickyBaseElement.offsetHeight + "px";
       }
       // 明細部の高さを調整する.
       this.setDetailHeight();
@@ -1495,6 +1505,58 @@ export default {
     }
   },
   methods: {
+    scopedJQuery() {
+      return createScopedJQuery(this.$el || this, $$) || $$;
+    },
+
+    getMotionRecordDocument() {
+      return this.$el?.ownerDocument || document;
+    },
+    getMotionRecordScopeRoot() {
+      return this.$el || null;
+    },
+    getMotionRecordSearchRoots() {
+      return [this.getMotionRecordScrollTableRoot(), this.getMotionRecordScopeRoot(), this.$el].filter(Boolean);
+    },
+    getMotionRecordScopedElement(selector, roots = this.getMotionRecordSearchRoots()) {
+      for (const root of roots) {
+        const directElement = root?.querySelector?.(selector);
+        if (directElement) {
+          return directElement;
+        }
+        const scopedElement = queryScopedSelector(selector, root);
+        if (scopedElement) {
+          return scopedElement;
+        }
+      }
+      return null;
+    },
+    getMotionRecordStickyBaseElement() {
+      return this.getMotionRecordScopedElement('#sticky-position-base', [this.getMotionRecordScopeRoot(), this.$el].filter(Boolean)) || getScopedElementById("sticky-position-base", this.getMotionRecordScopeRoot()) || this.getMotionRecordDocument().getElementById("sticky-position-base");
+    },
+    getMotionRecordHeaderElement() {
+      return this.getMotionRecordScopedElement('#eventRegTimeHeader', [this.getMotionRecordScopeRoot(), this.$el].filter(Boolean)) || getScopedElementById("eventRegTimeHeader", this.getMotionRecordScopeRoot()) || this.getMotionRecordDocument().getElementById("eventRegTimeHeader");
+    },
+    getMotionRecordScrollTableRoot() {
+      return this.getMotionRecordScopeRoot() || this.$el || null;
+    },
+    getMotionRecordScrollTableElement(tableId) {
+      return this.getMotionRecordScopedElement(`#${tableId}`, [this.getMotionRecordScrollTableRoot(), this.getMotionRecordScopeRoot()].filter(Boolean)) || getScopedElementById(tableId, this.getMotionRecordScrollTableRoot()) || this.getMotionRecordDocument().getElementById(tableId);
+    },
+    getMotionRecordMessageElement() {
+      return this.getMotionRecordScopedElement('.machine-record-detail-message') || this.getMotionRecordDocument().getElementsByClassName("machine-record-detail-message")[0] || null;
+    },
+    getMotionRecordGraphScrollElement() {
+      return this.getMotionRecordScopedElement('.div-scroll') || this.getMotionRecordDocument().getElementsByClassName("div-scroll")[0] || null;
+    },
+    getMotionRecordCorrectionButtonElements() {
+      const scopedElements = getScopedElementsByClassName("correction-button-area", this.getMotionRecordScopeRoot());
+      return scopedElements.length > 0 ? scopedElements : Array.from(this.getMotionRecordDocument().getElementsByClassName("correction-button-area"));
+    },
+    getMotionRecordMetricTarget(selector) {
+      const element = this.getMotionRecordScopedElement(selector, [this.getMotionRecordScrollTableRoot(), this.getMotionRecordScopeRoot()].filter(Boolean)) || this.getMotionRecordDocument().querySelector(selector);
+      return element ? $$(element) : $$();
+    },
     ...mapGetters("user", ["getUserType"]),
     ...mapGetters("operation-viewer/motion-record-detail", ["getDownloadData"]),
     ...mapActions("operation-viewer/motion-record-detail", [
@@ -1570,11 +1632,11 @@ export default {
       if (!targetDate) {
         return;
       }
-      return moment(targetDate).format(this.DATE_LONG_TIME_FORMAT);
+      return dayjs(targetDate).format(this.DATE_LONG_TIME_FORMAT);
     },
     // パンくずリストをクリックされた場合に呼び出される関数
     refresh(isMainContent, autoRefreshFlag) {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       // 共通ローダー:表示開始
@@ -1822,6 +1884,28 @@ export default {
       }
       return targetInfo.judge === "1" || targetInfo.judge === 1 || targetInfo.judge === true;
     },
+    isSelfMeasureColumnVisible(column) {
+      if (!column || !column.jsonAddress) {
+        return true;
+      }
+      return this.isSelfMeasureItemVisible(column.jsonAddress);
+    },
+    setTableHeaderColumnWidth(targetColumn, headerId) {
+      if (!targetColumn) {
+        return;
+      }
+      if (targetColumn.jsonAddress && !this.isSelfMeasureItemVisible(targetColumn.jsonAddress)) {
+        return;
+      }
+      const element = this.scopedJQuery()(`#${headerId}`);
+      if (!element.length) {
+        return;
+      }
+      const width = element.width();
+      if (width) {
+        targetColumn.bodyWidth = width;
+      }
+    },
     // add/ #9291 自己診断判定の対象でない項目の値が表示される tianqidong end
     // 溶解記録のヘッダー名を編集して返す
     displayDissolutionHeaderName(dissolution) {
@@ -2006,18 +2090,11 @@ export default {
       const blob = new Blob([this.hexStringToArrayBuffer(downloadData)], {
         type: "application/zip"
       });
-      if (window.navigator.msSaveBlob) {
-        window.navigator.msSaveBlob(blob, fileName);
-      } else {
-        const downloadUrl = (window.URL || window.webkitURL).createObjectURL(
-          blob
-        );
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = fileName;
-        link.click();
-        (window.URL || window.webkitURL).revokeObjectURL(blob);
-      }
+      triggerScopedDownload({
+        blob,
+        filename: fileName,
+        root: this.$el || null
+      });
     },
     // 16進文字列をバイト配列に変換
     hexStringToArrayBuffer(hexStr) {
@@ -2075,11 +2152,11 @@ export default {
       this.popoverTestType = testType;
       this.popoverEventDate = `${eventRegDate} ${eventRegTime}`;
       this.popoverResultCd = resultCd;
-      this.showPopover(event);
+      this.showPopover(event.currentTarget);
     },
     // ポップアップメニューを表示
-    showPopover(event) {
-      this.popoverTarget = event;
+    showPopover(target) {
+      this.popoverTarget = target;
       this.popoverVisible = true;
     },
     // 結果コードから、メッセージを取得
@@ -2116,101 +2193,87 @@ export default {
     // tableのbodyサイズをヘッダーのサイズに揃える
     setTableBodyWidth() {
       // 日時ヘッダのサイズを再計算
-      $$("#eventRegTimeHeader").height($$("#dataTime").height());
+      const dataTimeElement = this.scopedJQuery()("#dataTime");
+      const eventRegTimeHeaderElement = this.scopedJQuery()("#eventRegTimeHeader");
+      if (dataTimeElement.length && eventRegTimeHeaderElement.length) {
+        eventRegTimeHeaderElement.height(dataTimeElement.height());
+      }
       // 自己診断画面-配管のtableBodyのサイズを再計算
-      this.ufrcItem.dataTime.bodyWidth = $$("#dataTime").width();
-      this.ufrcItem.result.bodyWidth = $$("#result").width();
-      this.ufrcItem.negativePipeLeakage.bodyWidth = $$(
-        "#negativePipeLeakage"
-      ).width();
-      this.ufrcItem.positivePipeLeakage.bodyWidth = $$(
-        "#positivePipeLeakage"
-      ).width();
-      this.ufrcItem.cfLeakage.bodyWidth = $$("#cfLeakage").width();
-      this.ufrcItem.cf2Leakage.bodyWidth = $$("#cf2Leakage").width();
-      this.ufrcItem.removal.bodyWidth = $$("#removal").width();
-      this.ufrcItem.balance.bodyWidth = $$("#balance").width();
+      this.setTableHeaderColumnWidth(this.ufrcItem.dataTime, "dataTime");
+      this.setTableHeaderColumnWidth(this.ufrcItem.result, "result");
+      this.setTableHeaderColumnWidth(this.ufrcItem.negativePipeLeakage, "negativePipeLeakage");
+      this.setTableHeaderColumnWidth(this.ufrcItem.positivePipeLeakage, "positivePipeLeakage");
+      this.setTableHeaderColumnWidth(this.ufrcItem.cfLeakage, "cfLeakage");
+      this.setTableHeaderColumnWidth(this.ufrcItem.cf2Leakage, "cf2Leakage");
+      this.setTableHeaderColumnWidth(this.ufrcItem.removal, "removal");
+      this.setTableHeaderColumnWidth(this.ufrcItem.balance, "balance");
       // 自己診断画面-漏血のtableBodyのサイズを再計算
-      this.bloodLeakageItem.dataTime.bodyWidth = $$("#dataTime").width();
-      this.bloodLeakageItem.voltageRed.bodyWidth = $$("#voltageRed").width();
-      this.bloodLeakageItem.voltageGreen.bodyWidth = $$(
-        "#voltageGreen"
-      ).width();
+      this.setTableHeaderColumnWidth(this.bloodLeakageItem.dataTime, "dataTime");
+      this.setTableHeaderColumnWidth(this.bloodLeakageItem.voltageRed, "voltageRed");
+      this.setTableHeaderColumnWidth(this.bloodLeakageItem.voltageGreen, "voltageGreen");
       // 自己診断画面-透析液流量のtableBodyのサイズを再計算
-      this.dialysateFlowRateItem.dataTime.bodyWidth = $$("#dataTime").width();
-      this.dialysateFlowRateItem.dialysateFlowRate.bodyWidth = $$(
-        "#dialysateFlowRate"
-      ).width();
+      this.setTableHeaderColumnWidth(this.dialysateFlowRateItem.dataTime, "dataTime");
+      this.setTableHeaderColumnWidth(this.dialysateFlowRateItem.dialysateFlowRate, "dialysateFlowRate");
       // 自己診断画面-濃度のtableBodyのサイズを再計算
-      this.concentrationItem.dataTime.bodyWidth = $$("#dataTime").width();
-      this.concentrationItem.result.bodyWidth = $$("#result").width();
-      this.concentrationItem.dialysateB.bodyWidth = $$("#dialysateB").width();
-      this.concentrationItem.dialysateA.bodyWidth = $$("#dialysateA").width();
+      this.setTableHeaderColumnWidth(this.concentrationItem.dataTime, "dataTime");
+      this.setTableHeaderColumnWidth(this.concentrationItem.result, "result");
+      this.setTableHeaderColumnWidth(this.concentrationItem.dialysateB, "dialysateB");
+      this.setTableHeaderColumnWidth(this.concentrationItem.dialysateA, "dialysateA");
       // 自己診断画面-配管テストのtableBodyのサイズを再計算
-      this.pipingTestItem.dataTime.bodyWidth = $$("#dataTime").width();
-      this.pipingTestItem.result.bodyWidth = $$("#result").width();
-      this.pipingTestItem.supplyPressure.bodyWidth = $$(
-        "#supplyPressure"
-      ).width();
-      this.pipingTestItem.dialysateFlowPressureLow.bodyWidth = $$(
-        "#dialysateFlowPressureLow"
-      ).width();
-      this.pipingTestItem.dialysateFlowPressureHigh.bodyWidth = $$(
-        "#dialysateFlowPressureHigh"
-      ).width();
-      this.pipingTestItem.concentrationCell3.bodyWidth = $$(
-        "#concentrationCell3"
-      ).width();
-      this.pipingTestItem.concentrationCell4.bodyWidth = $$(
-        "#concentrationCell4"
-      ).width();
-      this.pipingTestItem.judgementTermInjection.bodyWidth = $$(
-        "#judgementTermInjection"
-      ).width();
-      this.pipingTestItem.judgementTermDrainage.bodyWidth = $$(
-        "#judgementTermDrainage"
-      ).width();
+      this.setTableHeaderColumnWidth(this.pipingTestItem.dataTime, "dataTime");
+      this.setTableHeaderColumnWidth(this.pipingTestItem.result, "result");
+      this.setTableHeaderColumnWidth(this.pipingTestItem.supplyPressure, "supplyPressure");
+      this.setTableHeaderColumnWidth(this.pipingTestItem.dialysateFlowPressureLow, "dialysateFlowPressureLow");
+      this.setTableHeaderColumnWidth(this.pipingTestItem.dialysateFlowPressureHigh, "dialysateFlowPressureHigh");
+      this.setTableHeaderColumnWidth(this.pipingTestItem.concentrationCell3, "concentrationCell3");
+      this.setTableHeaderColumnWidth(this.pipingTestItem.concentrationCell4, "concentrationCell4");
+      this.setTableHeaderColumnWidth(this.pipingTestItem.judgementTermInjection, "judgementTermInjection");
+      this.setTableHeaderColumnWidth(this.pipingTestItem.judgementTermDrainage, "judgementTermDrainage");
       // 自己診断画面-希釈テストのtableBodyのサイズを再計算
-      this.hemodilutionTestItem.dataTime.bodyWidth = $$("#dataTime").width();
-      this.hemodilutionTestItem.result.bodyWidth = $$("#result").width();
-      this.hemodilutionTestItem.concentrationB.bodyWidth = $$(
-        "#concentrationB"
-      ).width();
-      this.hemodilutionTestItem.concentrationDialysate.bodyWidth = $$(
-        "#concentrationDialysate"
-      ).width();
+      this.setTableHeaderColumnWidth(this.hemodilutionTestItem.dataTime, "dataTime");
+      this.setTableHeaderColumnWidth(this.hemodilutionTestItem.result, "result");
+      this.setTableHeaderColumnWidth(this.hemodilutionTestItem.concentrationB, "concentrationB");
+      this.setTableHeaderColumnWidth(this.hemodilutionTestItem.concentrationDialysate, "concentrationDialysate");
     },
     // スクロール時の動作設定
-    setOnScroll(tableId) {
-      const scrollArea = $$(`#${tableId}`);
+    handleMotionRecordScroll(tableId, event) {
+      const scrollAreaElement = event?.currentTarget || this.getMotionRecordScrollTableElement(tableId);
 
-      scrollArea.on("scroll", () => {
-        const scrollAreaHeight = scrollArea.get(0).clientHeight;
-        const scrollHeight = scrollArea.get(0).scrollHeight;
-        const bottom = scrollHeight - scrollAreaHeight;
+      if (!scrollAreaElement) {
+        return;
+      }
 
-        // スクロール位置がマイナスになった場合に「日付」ヘッダを非表示にする
-        if (scrollArea.scrollTop() < 0 || scrollArea.scrollLeft() < 0) {
-          $$("#eventRegTimeHeader").css("visibility", "hidden");
-        } else {
-          $$("#eventRegTimeHeader").css("visibility", "visible");
+      const scrollAreaHeight = scrollAreaElement.clientHeight;
+      const scrollHeight = scrollAreaElement.scrollHeight;
+      const bottom = scrollHeight - scrollAreaHeight;
+      const eventRegTimeHeader = this.getMotionRecordHeaderElement();
+
+      // スクロール位置がマイナスになった場合に「日付」ヘッダを非表示にする
+      if (scrollAreaElement.scrollTop < 0 || scrollAreaElement.scrollLeft < 0) {
+        if (eventRegTimeHeader) {
+          eventRegTimeHeader.style.visibility = "hidden";
         }
+      } else if (eventRegTimeHeader) {
+        eventRegTimeHeader.style.visibility = "visible";
+      }
 
-        // スクロールが最後尾に達した時に追加読み込みを行う
-        if (bottom <= scrollArea.scrollTop()) {
-          if (!this.isUpdating) {
-            this.isUpdating = true;
-            if (
-              tableId === this.dataTypeItem.testResults.tableId ||
-              tableId === this.dataTypeItem.dissolutions.tableId
-            ) {
-              this.updateMotionRecordsDetail();
-            } else {
-              this.isUpdating = false;
-            }
+      // スクロールが最後尾に達した時に追加読み込みを行う
+      if (bottom <= scrollAreaElement.scrollTop) {
+        if (!this.isUpdating) {
+          this.isUpdating = true;
+          if (
+            tableId === this.dataTypeItem.testResults.tableId ||
+            tableId === this.dataTypeItem.dissolutions.tableId
+          ) {
+            this.updateMotionRecordsDetail();
+          } else {
+            this.isUpdating = false;
           }
         }
-      });
+      }
+    },
+    setOnScroll(tableId, event) {
+      this.handleMotionRecordScroll(tableId, event);
     },
     /**
      * 明細表示部の高さを設定する.
@@ -2227,11 +2290,11 @@ export default {
           this.getMotionRecord.dataType === this.dataTypeItem.preventive.dataType
       ) {
         // 高さ調整する要素
-        const elements = document.getElementsByClassName("machine-record-detail-message");
-        if (elements.length <= 0) {
+        const messageElement = this.getMotionRecordMessageElement();
+        if (!messageElement) {
           return;
         }
-        const buttonAreaElments = document.getElementsByClassName("correction-button-area");
+        const buttonAreaElments = this.getMotionRecordCorrectionButtonElements();
         let offset = 0;
         // 日機装施設の場合、ボタンが2個ある為、マージ分を考慮し、初期値を5とする.
         if (buttonAreaElments && buttonAreaElments.length > 1) {
@@ -2240,7 +2303,7 @@ export default {
         Array.prototype.forEach.call(buttonAreaElments, function(element){
           offset += element.clientHeight;
         });
-        elements[0].style.height = `calc(100% - ${offset}px)`;
+        messageElement.style.height = `calc(100% - ${offset}px)`;
       }
     },
 
@@ -2291,6 +2354,9 @@ export default {
     //   }
     // }
     chkSelfMeasureResultInfo(index,addClassName, jsonAddress, value, recordNo, testResultData) {
+      if (!jsonAddress) {
+        return addClassName;
+      }
       // JSONキーアドレスで自己診断判定マスタを検索
       const existFlg = testResultData ? true : false;
 
@@ -2393,34 +2459,26 @@ export default {
             if (!Number.isNaN(numValue)) {
               if (
                 !Number.isNaN(
-                  parseFloat(selfMeasureResultInfoList[0]?.failure_low)
-                ) &&
-                numValue <= Number(selfMeasureResultInfoList[0]?.failure_low)
-              ) {
+                  parseFloat(selfMeasureResultInfoList[0]?.failure_low)) &&
+                numValue <= Number(selfMeasureResultInfoList[0]?.failure_low)) {
                 // 不合格下限以下
                 return addClassName + " td-result-failure";
               } else if (
                 !Number.isNaN(
-                  parseFloat(selfMeasureResultInfoList[0]?.failure_up)
-                ) &&
-                Number(selfMeasureResultInfoList[0]?.failure_up) <= numValue
-              ) {
+                  parseFloat(selfMeasureResultInfoList[0]?.failure_up)) &&
+                Number(selfMeasureResultInfoList[0]?.failure_up) <= numValue) {
                 // 不合格上限以上
                 return addClassName + " td-result-failure";
               } else if (
                 !Number.isNaN(
-                  parseFloat(selfMeasureResultInfoList[0]?.caution_low)
-                ) &&
-                numValue <= Number(selfMeasureResultInfoList[0]?.caution_low)
-              ) {
+                  parseFloat(selfMeasureResultInfoList[0]?.caution_low)) &&
+                numValue <= Number(selfMeasureResultInfoList[0]?.caution_low)) {
                 // 注意点下限以下
                 return addClassName + " td-result-caution";
               } else if (
                 !Number.isNaN(
-                  parseFloat(selfMeasureResultInfoList[0]?.caution_up)
-                ) &&
-                Number(selfMeasureResultInfoList[0]?.caution_up) <= numValue
-              ) {
+                  parseFloat(selfMeasureResultInfoList[0]?.caution_up)) &&
+                Number(selfMeasureResultInfoList[0]?.caution_up) <= numValue) {
                 // 注意点上限以上
                 return addClassName + " td-result-caution";
               } else {
@@ -2452,10 +2510,10 @@ export default {
 
       if (isMachineRecord || isMNotice || isPreventive) {
         // 装置記録、予防保守/故障予知、緊急発報 表示時の要素
-        element = document.getElementsByClassName('machine-record-detail-message')[0];
+        element = this.getMotionRecordMessageElement();
       } else if (isTestResults || isDissolutions) {
         // 自己診断（グラフ）、溶解記録（グラフ） 表示時の要素
-        element = document.getElementsByClassName('div-scroll')[0];
+        element = this.getMotionRecordGraphScrollElement();
       }
 
       if (element) {
@@ -2478,10 +2536,10 @@ export default {
 
         if (isMachineRecord || isMNotice || isPreventive) {
           // 装置記録、予防保守/故障予知、緊急発報 表示時の要素
-          element = document.getElementsByClassName('machine-record-detail-message')[0];
+          element = this.getMotionRecordMessageElement();
         } else if (isTestResults || isDissolutions) {
           // 自己診断（グラフ）、溶解記録（グラフ） 表示時の要素
-          element = document.getElementsByClassName('div-scroll')[0];
+          element = this.getMotionRecordGraphScrollElement();
         }
 
         if (element) {
@@ -2523,7 +2581,7 @@ export default {
   },
   created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("処理中・・・");
     // 共通ローダー:表示開始
@@ -2539,7 +2597,6 @@ export default {
     /* del by chamaojia 2023-07-06 遠隔監視画面：装置中でUFRC自己診断結果を送信し、遠隔監視画面に2回結果を表示する  --start */
     // this.fetchMotionRecordsDetail();
     /* del by chamaojia 2023-07-06 遠隔監視画面：装置中でUFRC自己診断結果を送信し、遠隔監視画面に2回結果を表示する  --end */
-
 
     // 自己診断と溶解記録の場合のみ実行する
     const dataType = this.getMotionRecord.dataType;
@@ -2589,12 +2646,13 @@ export default {
     // ※mountedで行ったが、期待通りのタイミングで処理が行われなった.
     this.setDetailHeight();
     // 表の2列目の高さの補正
-    if (document.getElementById("sticky-position-base") != null) {
-      this.stickyPositionSize.top = (document.getElementById("sticky-position-base").offsetHeight -1) + "px";
+    const stickyBaseElement = this.getMotionRecordStickyBaseElement();
+    if (stickyBaseElement != null) {
+      this.stickyPositionSize.top = (stickyBaseElement.offsetHeight -1) + "px";
     }
     this.restoreScrollTop();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
   }
 };
@@ -2731,6 +2789,13 @@ input[type="radio"]:checked + label {
   text-align: center;
 }
 
+/* 日時列ヘッダ：ntss.css の単色 background-color を無効化し、tr と同じグラデーションに揃える */
+.table-self-diagnosis :deep(th.event-reg-time-header-sticky) {
+  background-color: transparent !important;
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%) !important;
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%) !important;
+}
+
 /* vue highcharts確認用 */
 .cont {
   margin: 0 auto;
@@ -2767,10 +2832,10 @@ input[type="radio"]:checked + label {
 }
 
 /* 自己診断結果表の結果吹き出しに関するスタイル */
-.mrd-self-measure-result-popover >>> .popover--bottom {
+.mrd-self-measure-result-popover :deep(.popover--bottom) {
   width: 300px;
 }
-.mrd-self-measure-result-popover >>> .popover--bottom__content {
+.mrd-self-measure-result-popover :deep(.popover--bottom__content) {
   width: 100%;
 }
 /* 溶解記録の1列目と2列目の間の横線 */

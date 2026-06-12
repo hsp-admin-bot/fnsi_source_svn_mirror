@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.service.observeRecord;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.utils.DateTimeUtils;
@@ -405,7 +405,7 @@ public class ObserveRecordServiceImpl implements ObserveRecordService{
         // json分解
         ObjectMapper map = new ObjectMapper();
         JsonNode root = map.readTree(info);
-        Iterator<String> fieldNames = root.fieldNames();
+        Iterator<String> fieldNames = root.propertyNames().iterator();
 
         while (fieldNames.hasNext()) {
           String fieldName = fieldNames.next();

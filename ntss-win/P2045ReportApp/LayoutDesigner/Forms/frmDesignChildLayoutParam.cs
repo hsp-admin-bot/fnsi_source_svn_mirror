@@ -153,6 +153,13 @@ namespace LayoutDesigner
         /// </summary>
         private Boolean IsRollbacking { get; set; } = false;
 
+        // add #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+        /// <summary>
+        /// ProcessAtomicAddresses 実行中フラグ（ListChanged との Excel COM 再入を防ぐ）
+        /// </summary>
+        private static Boolean IsSyncingAtomicAddresses { get; set; } = false;
+        // add #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
+
         #endregion
 
         #region メンバ関数定義(override...)
@@ -3476,8 +3483,20 @@ namespace LayoutDesigner
                 isShrinkParam = true;
             }
             bool reCalc = (isShrink != isShrinkParam);
-            RldLib.CurrentLayoutData.SetDesignParamDataList(i, isShrink, format, reCalc);
 
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+            if (reCalc == false)
+            {
+                string length = RldLib.CurrentLayoutData.DesignParamList[i].Length;
+                RldLib.CurrentLayoutData.DesignParamList[i].IsShrink = isShrink ? RldConst.ParamData.VAL_ISSHRINK_DONE : RldConst.ParamData.VAL_ISSHRINK_NONE;
+                RldLib.CurrentLayoutData.DesignParamList[i].Length = length;
+            }
+            else
+            {
+                RldLib.CurrentLayoutData.DesignParamList[i].IsShrink = isShrink ? RldConst.ParamData.VAL_ISSHRINK_DONE : RldConst.ParamData.VAL_ISSHRINK_NONE;
+            }
+            //RldLib.CurrentLayoutData.SetDesignParamDataList(i, isShrink, format, reCalc);
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
         }
 
         private static void UpdateParamDataList_s(string wCellAddr)
@@ -4034,12 +4053,15 @@ namespace LayoutDesigner
                 this.IsCancelRowEnter = true;
 
                 // add #12616 データ項目の縮小表示が機能しないことがある 高 start
-                if (string.IsNullOrEmpty(RldLib.CurrentLayoutData.lastSelectAddr) == false)
-                {
-                    ProcessAtomicAddresses(RldLib.CurrentLayoutData.lastSelectAddr);
-                }
+                // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+                //if (string.IsNullOrEmpty(RldLib.CurrentLayoutData.lastSelectAddr) == false)
+                //{
+                //    ProcessAtomicAddresses(RldLib.CurrentLayoutData.lastSelectAddr);
+                //}
 
-                RldLib.CurrentLayoutData.lastSelectAddr = e.DroppedCellAddress;
+                //RldLib.CurrentLayoutData.lastSelectAddr = e.DroppedCellAddress;
+                this.CommitLastSelectAddress(e.DroppedCellAddress);
+                // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
                 // add #12616 データ項目の縮小表示が機能しないことがある 高 end
 
                 // パラメータリストの選択位置を変更する
@@ -4190,6 +4212,10 @@ namespace LayoutDesigner
                         wXlRange.SelectEx();
                     }
                 }
+
+                // add #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+                this.CommitLastSelectAddress(wData.CellAddress);
+                // add #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
 
                 // 明細表示用グリッドの表示を更新
                 this.UpdateParamDetailGrid(wData, true);
@@ -4405,20 +4431,22 @@ namespace LayoutDesigner
                 return;
             }
 
-            // add #12616 データ項目の縮小表示が機能しないことがある 高 start
-            if (string.IsNullOrEmpty(RldLib.CurrentLayoutData.lastSelectAddr) == false)
-            {
-                ProcessAtomicAddresses(RldLib.CurrentLayoutData.lastSelectAddr);
-            }
-
-            RldLib.CurrentLayoutData.lastSelectAddr = e.Text;
-            // add #12616 データ項目の縮小表示が機能しないことがある 高 end
-
             // 選択位置を更新中の場合は抜ける
             if (this.IsSelectionChanging)
             {
                 return;
             }
+
+            // add #12616 データ項目の縮小表示が機能しないことがある 高 start
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+            //if (string.IsNullOrEmpty(RldLib.CurrentLayoutData.lastSelectAddr) == false)
+            //{
+            //    ProcessAtomicAddresses(RldLib.CurrentLayoutData.lastSelectAddr);
+            //}
+            //RldLib.CurrentLayoutData.lastSelectAddr = e.Text;
+            this.CommitLastSelectAddress(e.Text);
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
+            // add #12616 データ項目の縮小表示が機能しないことがある 高 end
 
             //ADD #8394 NG2 董 START
             var currentCell = e.Text.Split(':');
@@ -4514,6 +4542,13 @@ namespace LayoutDesigner
 
             try
             {
+                // add #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+                if (IsSyncingAtomicAddresses)
+                {
+                    return;
+                }
+                // add #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
+
                 // add #12482 Excelのダイアログを開いたままアプリ操作で致命的エラー 高 start
                 if (RldLib.chkExeclDialog(3) == false)
                     return;
@@ -5050,14 +5085,46 @@ namespace LayoutDesigner
             return null;
         }
 
+        // add #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+        /// <summary>
+        /// Excel 選択が変わったとき、直前の選択セルに対する縮小設定を DesignParamList に反映し、lastSelectAddr を更新します。
+        /// </summary>
+        /// <param name="newAddress">新しい Excel 選択アドレス</param>
+        private void CommitLastSelectAddress(String newAddress)
+        {
+            if (String.IsNullOrEmpty(newAddress))
+            {
+                return;
+            }
+
+            String wPrevious = RldLib.CurrentLayoutData.lastSelectAddr;
+            if (!String.IsNullOrEmpty(wPrevious)
+                && !String.Equals(wPrevious, newAddress, StringComparison.OrdinalIgnoreCase))
+            {
+                ProcessAtomicAddresses(wPrevious);
+            }
+
+            RldLib.CurrentLayoutData.lastSelectAddr = newAddress;
+        }
+        // add #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
+
         /// <summary>
         /// Processes a selection address by parsing it into atomic units and updating the parameter data list for each unit
         /// </summary>
         /// <param name="address">The selection address string (e.g., "A1,B2,C3" or "A1:B5" or "A1,A3:C5,E7")</param>
         public static void ProcessAtomicAddresses(string address)
         {
+            // add #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+            if (IsSyncingAtomicAddresses)
+            {
+                return;
+            }
+
             try
             {
+                IsSyncingAtomicAddresses = true;
+                // add #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
+
                 if (string.IsNullOrEmpty(address)) return;
 
                 // Check if the address is a row or column selection
@@ -5088,6 +5155,12 @@ namespace LayoutDesigner
             }
             catch (Exception)
             { }
+            finally
+            {
+                // add #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+                IsSyncingAtomicAddresses = false;
+                // add #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
+            }
         }
 
         /// <summary>

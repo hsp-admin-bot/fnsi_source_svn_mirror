@@ -1,0 +1,59 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Fragment>
+    <UI>
+
+      <RadioButtonGroup Property="PROP_USE_CERT">
+        <RadioButton Value="1" X="0" Y="0" Width="72" Height="17" Text="使用する" />
+        <RadioButton Value="0" X="82" Y="0" Width="80" Height="17" Text="使用しない" />
+      </RadioButtonGroup>
+
+      <Dialog Id="ConfigEditDlg" Width="480" Height="300" Title="FNSICloudConvertClient セットアップ">
+
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="480" Height="58" TabSkip="yes" Text="WixUI_Bmp_Banner" />
+
+        <Control Id="Title" Type="Text" X="18" Y="8" Width="380" Height="32" TabSkip="yes">
+          <Text Value="{\WixUI_Font_Bigger}構成ファイルを変更します" />
+        </Control>
+
+        <Control Id="BannerLine" Type="Line" X="0" Y="58" Width="480" Height="0" TabSkip="yes" />
+
+        <Control Id="LabelBaseUri" Type="Text" X="26" Y="78" Width="110" Height="14" TabSkip="yes">
+          <Text Value="サインイン URL" />
+        </Control>
+
+        <Control Id="EditBaseUri" Type="Edit" X="144" Y="75" Width="310" Height="18" Property="PROP_BASE_URI" Text="{512}" />
+
+        <Control Id="LabelConverterUri" Type="Text" X="26" Y="106" Width="110" Height="14" TabSkip="yes">
+          <Text Value="コンバーター URL" />
+        </Control>
+
+        <Control Id="EditConverterUri" Type="Edit" X="144" Y="103" Width="310" Height="18" Property="PROP_CONVERTER_URI" Text="{512}" />
+
+        <Control Id="LabelCert" Type="Text" X="26" Y="138" Width="110" Height="14" TabSkip="yes">
+          <Text Value="クライアント証明書" />
+        </Control>
+
+        <Control Id="RadioCert" Type="RadioButtonGroup" X="144" Y="135" Width="200" Height="17" Property="PROP_USE_CERT" />
+
+        <Control Id="BottomLine" Type="Line" X="0" Y="258" Width="480" Height="0" TabSkip="yes" />
+
+        <Control Id="Next" Type="PushButton" X="400" Y="267" Width="68" Height="17" Default="yes" Text="保存" />
+
+        <Control Id="SkipButton" Type="PushButton" X="320" Y="267" Width="72" Height="17" Text="変更しない">
+          <Publish Property="SKIP_CONFIG" Value="1" Order="1" />
+        </Control>
+
+        <Control Id="Back" Type="PushButton" X="240" Y="267" Width="68" Height="17" Text="&lt; 戻る">
+          <Publish Event="NewDialog" Value="InstallDirDlg" />
+        </Control>
+
+        <Control Id="Cancel" Type="PushButton" X="10" Y="267" Width="68" Height="17" Cancel="yes" Text="キャンセル">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+
+      </Dialog>
+    </UI>
+  </Fragment>
+
+</Wix>

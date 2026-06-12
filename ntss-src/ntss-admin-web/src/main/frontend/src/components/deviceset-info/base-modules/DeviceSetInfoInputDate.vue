@@ -6,15 +6,14 @@
       v-bind="deviceInfo"
       :is-required="required"
       :disabled="disabled"
-      v-on="$listeners"
+      v-bind="$attrs"
     /> -->
     <custom-input-date
       ref="el"
-      v-bind="deviceInfo"
+      v-bind="{ ...deviceInfo, ...$attrs }"
       :is-required="required"
       :disabled="disabled"
       :callBackFunc="callBackFunc"
-      v-on="$listeners"
     />
     <!--mod FNSI-検査日入力不可変更 楊 end -->
     {{ deviceInfo.unitName }}
@@ -32,6 +31,7 @@ import baseForm from "@/components/deviceset-info/base-modules/BaseDeviceSetInfo
  *     ・required(任意): 入力必須フラグ ※必須ではない場合のみfalseを与えること
  */
 export default {
+  inheritAttrs: false,
   components: {
     "custom-input-date": customInputDate
   },

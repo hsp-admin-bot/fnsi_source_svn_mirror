@@ -9,7 +9,7 @@ import java.util.List;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils;
 import org.springframework.aop.framework.AopProxyUtils;
@@ -203,7 +203,7 @@ public class WebSocketNotifyServiceImpl implements WebSocketNotifyService {
       long start = System.currentTimeMillis();
       // リクエスト処理
       ResponseEntity<HttpStatus> response = rt.exchange(request, HttpStatus.class);
-      HttpStatus status = response.getStatusCode();
+      HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
       // log start
       long cost = System.currentTimeMillis() - start;
       Map<String, Object> map = new HashMap<>();

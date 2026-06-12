@@ -39,6 +39,7 @@
 import { ApiHelper } from "@/apis/AxiosHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
 
 export default {
@@ -78,13 +79,14 @@ export default {
     //リスナーの登録
     //console.log('Listener');
     // add 性能改善メモリ不足 shan start
-    this.$parent.$off("ntss-loggerCompornent", this.getLogInfo);
+    // Vue3 では親インスタンスに $on/$off が存在しないため、EventBus 経由で同等のイベント購読を行う
+    EventBus.$off("ntss-loggerCompornent", this.getLogInfo);
     // add 性能改善メモリ不足 shan end
-    this.$parent.$on("ntss-loggerCompornent", this.getLogInfo);
+    EventBus.$on("ntss-loggerCompornent", this.getLogInfo);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy(){
-    this.$parent.$off("ntss-loggerCompornent", this.getLogInfo);
+  beforeUnmount(){
+    EventBus.$off("ntss-loggerCompornent", this.getLogInfo);
   },
   // add 性能改善メモリ不足 shan end
   watch: {
@@ -104,7 +106,6 @@ export default {
       }
     }
   },
-  computed: {},
   methods: {
     /**
      *ログ送信処理(WebAPIへ送信)  非同期処理

@@ -35,6 +35,13 @@ import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import jp.co.nikkiso.ntss.core.entity.PatIndApprove;
+import tools.jackson.core.type.TypeReference;
 
 /**
  * 指示受け・承認画面のResourceクラス.
@@ -63,7 +70,22 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/check/{ord_no}")
-	public ResponseEntity<Void> updateChecker(@PathVariable Long ord_no, @RequestBody Map<String, String> payload) {
+	public ResponseEntity<Void> updateChecker(@PathVariable Long ord_no, @RequestBody Map<String, String> payload,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                            @AuthenticationPrincipal NtssUser ntssUser
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(ord_no);
+      if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + ord_no + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
 		try {
 			patIndApproveService.updateChecker(ord_no, payload);
 			return new ResponseEntity<>(HttpStatus.OK);
@@ -88,7 +110,22 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/approve/{ord_no}")
-	public ResponseEntity<Void> updateApprover(@PathVariable Long ord_no, @RequestBody Map<String, String> payload) {
+	public ResponseEntity<Void> updateApprover(@PathVariable Long ord_no, @RequestBody Map<String, String> payload,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                             @AuthenticationPrincipal NtssUser ntssUser
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(ord_no);
+      if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + ord_no + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
 		try {
 			patIndApproveService.updateApprover(ord_no, payload);
 			return new ResponseEntity<>(HttpStatus.OK);
@@ -240,7 +277,27 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/check1")
-	public ResponseEntity<Void> updateCheck1(@RequestBody Map<String, String> payload) {
+	public ResponseEntity<Void> updateCheck1(@RequestBody Map<String, String> payload,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                           @AuthenticationPrincipal NtssUser ntssUser
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    try {
+      if(!ntssUser.isNkkAdminUser()) {
+        ObjectMapper mapper = new ObjectMapper();
+        PatIndApprove readValue = mapper.readValue(payload.get("pat_ind_approve"), PatIndApprove.class);
+        Long ord_no = readValue.getOrd_no();
+        PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(ord_no);
+        if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + ord_no + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    } catch (tools.jackson.core.JacksonException e) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
 		try {
 			patIndApproveService.updateCheck1(payload);
 			return new ResponseEntity<>(HttpStatus.OK);
@@ -265,7 +322,27 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/check2")
-	public ResponseEntity<Void> updateCheck2(@RequestBody Map<String, String> payload) {
+	public ResponseEntity<Void> updateCheck2(@RequestBody Map<String, String> payload,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                           @AuthenticationPrincipal NtssUser ntssUser
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    try {
+      if(!ntssUser.isNkkAdminUser()) {
+        ObjectMapper mapper = new ObjectMapper();
+        PatIndApprove readValue = mapper.readValue(payload.get("pat_ind_approve"), PatIndApprove.class);
+        Long ord_no = readValue.getOrd_no();
+        PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(ord_no);
+        if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + ord_no + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    } catch (tools.jackson.core.JacksonException e) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
 		try {
 			patIndApproveService.updateCheck2(payload);
 			return new ResponseEntity<>(HttpStatus.OK);
@@ -290,7 +367,28 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/approve1")
-	public ResponseEntity<Void> updateApprove1(@RequestBody Map<String, String> payload) {
+	public ResponseEntity<Void> updateApprove1(@RequestBody Map<String, String> payload,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                             @AuthenticationPrincipal NtssUser ntssUser
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    try {
+      if(!ntssUser.isNkkAdminUser()) {
+        ObjectMapper mapper = new ObjectMapper();
+        PatIndApprove approve = mapper.readValue(payload.get("pat_ind_approve"), PatIndApprove.class);
+        if (approve != null && approve.getOrd_no() != null) {
+          PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(approve.getOrd_no());
+          if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + approve.getOrd_no() + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    } catch (tools.jackson.core.JacksonException e) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
 		try {
 			patIndApproveService.updateApprove1(payload);
 			return new ResponseEntity<>(HttpStatus.OK);
@@ -315,7 +413,28 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/bulkCheck1")
-	public ResponseEntity<Void> updateCheck1List(@RequestBody Map<String, String> payload) {
+	public ResponseEntity<Void> updateCheck1List(@RequestBody Map<String, String> payload,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    try {
+      if(!ntssUser.isNkkAdminUser()) {
+        ObjectMapper mapper = new ObjectMapper();
+        List<PatIndApprove> patIndApproves = mapper.readValue(payload.get("pat_ind_approve_list"), new TypeReference<List<PatIndApprove>>() {});
+        for (PatIndApprove approve : patIndApproves) {
+            PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(approve.getOrd_no());
+            if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+              String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + approve.getOrd_no() + " ";
+              InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+              return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+            }
+        }
+      }
+    } catch (Exception e) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
 		try {
 			patIndApproveService.updateCheck1List(payload);
       // add by zs 2023-03-06 [#6118無期限予定の中止：js foreach call journalをjava batch call journalに変更] --start
@@ -382,7 +501,29 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/bulkCheck2")
-	public ResponseEntity<Void> updateCheck2List(@RequestBody Map<String, String> payload) {
+	public ResponseEntity<Void> updateCheck2List(@RequestBody Map<String, String> payload,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    try {
+      if(!ntssUser.isNkkAdminUser()) {
+        ObjectMapper mapper = new ObjectMapper();
+        List<PatIndApprove> patIndApproves = mapper.readValue(payload.get("pat_ind_approve_list"), new TypeReference<List<PatIndApprove>>() {
+        });
+        for (PatIndApprove approve : patIndApproves) {
+          PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(approve.getOrd_no());
+          if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + approve.getOrd_no() + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    } catch (tools.jackson.core.JacksonException e) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
 		try {
 			patIndApproveService.updateCheck2List(payload);
       // add by zs 2023-03-06 [#6118無期限予定の中止：js foreach call journalをjava batch call journalに変更] --start
@@ -449,7 +590,29 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/bulkApprove1")
-	public ResponseEntity<Void> updateApprove1List(@RequestBody Map<String, String> payload) {
+	public ResponseEntity<Void> updateApprove1List(@RequestBody Map<String, String> payload,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                                 @AuthenticationPrincipal NtssUser ntssUser
+                                                 // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    try {
+      if(!ntssUser.isNkkAdminUser()) {
+        ObjectMapper mapper = new ObjectMapper();
+        List<PatIndApprove> patIndApproves = mapper.readValue(payload.get("pat_ind_approve_list"), new TypeReference<List<PatIndApprove>>() {
+        });
+        for (PatIndApprove approve : patIndApproves) {
+          PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(approve.getOrd_no());
+          if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + approve.getOrd_no() + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    } catch (tools.jackson.core.JacksonException e) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
 		try {
 			patIndApproveService.updateApprove1List(payload);
 			return new ResponseEntity<>(HttpStatus.OK);
@@ -474,7 +637,29 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/bulkApprove2")
-	public ResponseEntity<Void> updateApprove2List(@RequestBody Map<String, String> payload) {
+	public ResponseEntity<Void> updateApprove2List(@RequestBody Map<String, String> payload,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                                 @AuthenticationPrincipal NtssUser ntssUser
+                                                 // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    try {
+      if(!ntssUser.isNkkAdminUser()) {
+        ObjectMapper mapper = new ObjectMapper();
+        List<PatIndApprove> patIndApproves = mapper.readValue(payload.get("pat_ind_approve_list"), new TypeReference<List<PatIndApprove>>() {
+        });
+        for (PatIndApprove approve : patIndApproves) {
+          PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(approve.getOrd_no());
+          if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + approve.getOrd_no() + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    } catch (tools.jackson.core.JacksonException e) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
 		try {
 			patIndApproveService.updateApprove2List(payload);
 			return new ResponseEntity<>(HttpStatus.OK);
@@ -499,7 +684,28 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/approve2")
-	public ResponseEntity<Void> updateApprove2(@RequestBody Map<String, String> payload) {
+	public ResponseEntity<Void> updateApprove2(@RequestBody Map<String, String> payload,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                             @AuthenticationPrincipal NtssUser ntssUser
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    try {
+      if(!ntssUser.isNkkAdminUser()) {
+        ObjectMapper mapper = new ObjectMapper();
+        PatIndApprove approve = mapper.readValue(payload.get("pat_ind_approve"), PatIndApprove.class);
+        if (approve != null && approve.getOrd_no() != null) {
+          PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(approve.getOrd_no());
+          if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + approve.getOrd_no() + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    } catch (tools.jackson.core.JacksonException e) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
 		try {
 			patIndApproveService.updateApprove2(payload);
 			return new ResponseEntity<>(HttpStatus.OK);
@@ -523,7 +729,22 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/uncheck1/{ord_no}")
-	public ResponseEntity<Void> updateUncheck1(@PathVariable Long ord_no) {
+	public ResponseEntity<Void> updateUncheck1(@PathVariable Long ord_no,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                             @AuthenticationPrincipal NtssUser ntssUser
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(ord_no);
+      if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + ord_no + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
 		try {
 			patIndApproveService.updateUncheck1(ord_no);
 			return new ResponseEntity<>(HttpStatus.OK);
@@ -547,7 +768,22 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/uncheck2/{ord_no}")
-	public ResponseEntity<Void> updateUncheck2(@PathVariable Long ord_no) {
+	public ResponseEntity<Void> updateUncheck2(@PathVariable Long ord_no,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                             @AuthenticationPrincipal NtssUser ntssUser
+                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(ord_no);
+      if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + ord_no + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
 		try {
 			patIndApproveService.updateUncheck2(ord_no);
 			return new ResponseEntity<>(HttpStatus.OK);
@@ -571,7 +807,22 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/unapprove1/{ord_no}")
-	public ResponseEntity<Void> updateUnapprove1(@PathVariable Long ord_no) {
+	public ResponseEntity<Void> updateUnapprove1(@PathVariable Long ord_no,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(ord_no);
+      if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + ord_no + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
 		try {
 			patIndApproveService.updateUnapprove1(ord_no);
 			return new ResponseEntity<>(HttpStatus.OK);
@@ -595,7 +846,22 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@PutMapping("/unapprove2/{ord_no}")
-	public ResponseEntity<Void> updateUnapprove2(@PathVariable Long ord_no) {
+	public ResponseEntity<Void> updateUnapprove2(@PathVariable Long ord_no,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(ord_no);
+      if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + ord_no + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
 		try {
 			patIndApproveService.updateUnapprove2(ord_no);
 			return new ResponseEntity<>(HttpStatus.OK);
@@ -619,10 +885,19 @@ public class PatIndApproveResource {
 	 * @return
 	 */
 	@GetMapping("/{ord_no}")
-	public ResponseEntity<Map<String, String>> getPatIndApproveByOrdNo(@PathVariable Long ord_no) {
+	public ResponseEntity<Map<String, String>> getPatIndApproveByOrdNo(@PathVariable Long ord_no,
+                                                                      @AuthenticationPrincipal NtssUser ntssUser) {
 		//#10407:変更なしでも画面を表示させる Start
 		Map<String, String> patIndApproveJson = new HashMap<String, String>();
 		//#10407:変更なしでも画面を表示させる End
+    if(!ntssUser.isNkkAdminUser()) {
+      PatIndApprove patIndApprove = patIndApproveService.selectByOrdNoLast(ord_no);
+      if (patIndApprove != null && !patIndApprove.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patIndApprove.getFacility_cd() + " " + "ord_no=" + ord_no + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
 		try {
 			patIndApproveJson = patIndApproveService.selectPatIndApproveByOrdNo(ord_no);
 		} catch (Exception e) {

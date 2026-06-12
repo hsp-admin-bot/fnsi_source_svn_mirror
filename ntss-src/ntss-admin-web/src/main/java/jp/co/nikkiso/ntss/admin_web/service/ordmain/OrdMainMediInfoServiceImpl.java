@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.service.ordmain;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.response.ordMain.OrdMainResponse;
 import jp.co.nikkiso.ntss.admin_web.service.OrdMainService;
@@ -47,7 +47,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.net.URISyntaxException;
 import java.sql.Timestamp;
 import java.time.LocalDate;

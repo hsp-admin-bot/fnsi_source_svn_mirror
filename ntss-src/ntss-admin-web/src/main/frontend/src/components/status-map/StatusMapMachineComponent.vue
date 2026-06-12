@@ -43,10 +43,11 @@
       <!-- mod FNSI-警報・報知追加 付 end -->
       <!-- ツールチップ -->
       <v-ons-dialog
+        ref="machinePopoverDialog"
         v-if="popoverVisible"
         cancelable
         animation="none"
-        :visible.sync="popoverVisible"
+        v-model:visible="popoverVisible"
         :target="'#machine-' + machineData.bedLayout.machine_no"
         :direction="popoverDirection"
         @postshow="popoverAdjustment"
@@ -83,8 +84,10 @@ import StatusMapMachineRoom from "@/components/status-map/StatusMapMachineRoomCo
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import PatHeaderControlMixin from "@/components/common/PatHeadControlMixin";
 import { MACHINE_MODEL } from "@/constants/machineModel";
-import { mapGetters, mapActions, mapMutations } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import allViewImg from "../../assets/all_view.png";
+import { getOnsDialogScopedElementsByClassName } from "@/functions/common/OnsenFunctions.js";
 
 export default {
   data() {
@@ -96,7 +99,7 @@ export default {
       popoverVisible: false,
       popoverTarget: null,
       popoverDirection: "right down up left",
-      image_src_all_view: require("../../assets/all_view.png")
+      image_src_all_view: allViewImg
     };
   },
   components: {
@@ -159,6 +162,15 @@ export default {
   },
   props: ["machineData", "historyKey"],
   methods: {
+    getMachinePopoverElements(className) {
+      return getOnsDialogScopedElementsByClassName(
+        this.$refs.machinePopoverDialog,
+        className,
+        this.$refs["machine-container"] || this.$el || null,
+        "tool-tip"
+      );
+    },
+
     ...mapActions("send-condition/scale", {
       sendConditionSetSelectOrdNo: "setSelectOrdNo"
     }),
@@ -190,7 +202,7 @@ export default {
           this.updateTreatmentPatList(this.getPatTreatmentStatusToPatList);
           // 機能コード設定、選択 ord_no を保持
           this.setOrdNoForSideBarRecord(machineData.treatment.ordNo);
-          this.setSrcFuncName(this.$router.currentRoute.name);
+          this.setSrcFuncName(this.$route.name);
 
           //
           this.sendConditionSetSelectOrdNo({
@@ -209,7 +221,7 @@ export default {
           this.updateTreatmentPatList(this.getPatTreatmentStatusToPatList);
           // 機能コード設定、選択 ord_no を保持
           this.setOrdNoForSideBarRecord(machineData.treatment.ordNo);
-          this.setSrcFuncName(this.$router.currentRoute.name);
+          this.setSrcFuncName(this.$route.name);
 
           //
           this.setSelectedPatHeader(machineData.treatment.patId).then(() => {
@@ -246,8 +258,8 @@ export default {
      */
     popoverAdjustment() {
       // 右表示の位置調整(在宅アイコン)
-      if (document.getElementsByClassName("popover--left") != null) {
-        let leftPopOver = document.getElementsByClassName("popover--left");
+      if (this.getMachinePopoverElements("popover--left") != null) {
+        let leftPopOver = this.getMachinePopoverElements("popover--left");
         this.$nextTick(() => {
           let arrayLeftPopOver = Array.from(leftPopOver);
           arrayLeftPopOver.forEach(pop => {
@@ -258,8 +270,8 @@ export default {
         });
       }
       // 左表示の位置調整(在宅アイコン)
-      if (document.getElementsByClassName("popover--right") != null) {
-        let rightPopOver = document.getElementsByClassName("popover--right");
+      if (this.getMachinePopoverElements("popover--right") != null) {
+        let rightPopOver = this.getMachinePopoverElements("popover--right");
         this.$nextTick(() => {
           let arrayRightPopOver = Array.from(rightPopOver);
           arrayRightPopOver.forEach(pop => {
@@ -270,8 +282,8 @@ export default {
         });
       }
       // 上表示の位置調整(在宅アイコン)
-      if (document.getElementsByClassName("popover--top") != null) {
-        let topPopOver = document.getElementsByClassName("popover--top");
+      if (this.getMachinePopoverElements("popover--top") != null) {
+        let topPopOver = this.getMachinePopoverElements("popover--top");
         this.$nextTick(() => {
           let arrayTopPopOver = Array.from(topPopOver);
           arrayTopPopOver.forEach(pop => {
@@ -282,8 +294,8 @@ export default {
         });
       }
       // 下表示の位置調整(在宅アイコン)
-      if (document.getElementsByClassName("popover--bottom") != null) {
-        let bottomPopOver = document.getElementsByClassName("popover--bottom");
+      if (this.getMachinePopoverElements("popover--bottom") != null) {
+        let bottomPopOver = this.getMachinePopoverElements("popover--bottom");
         this.$nextTick(() => {
           let arrayBottomPopOver = Array.from(bottomPopOver);
           arrayBottomPopOver.forEach(pop => {
@@ -339,8 +351,7 @@ export default {
       this.isListenerStarted = false;
     }
   },
-  watch: {},
-  beforeCreate() {},
+
   created() {
     // add 性能改善メモリ不足 shan start
     EventBus.$off("closeDialog", this.closeDialog);
@@ -349,7 +360,7 @@ export default {
     EventBus.$on("closeDialog", this.closeDialog);
     // add FNSI-popup close 付 end
   },
-  beforeMount() {},
+
   mounted() {
     this.observer = new IntersectionObserver((entries, observer) => {
       entries.forEach(entry => {
@@ -361,13 +372,12 @@ export default {
     });
     this.observer.observe(this.$refs["machine-container"]);
   },
-  beforeUpdate() {},
-  updated() {},
-  beforeDestroy() {
+
+
+  beforeUnmount() {
     this.observer?.disconnect();
     EventBus.$off("closeDialog", this.closeDialog);
   },
-  destroyed() { }
 };
 </script>
 <style scoped>

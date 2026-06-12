@@ -1,17 +1,44 @@
 package jp.co.nikkiso.ntss.device_edge_updater_front.aspect;
 
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
+import jp.co.nikkiso.ntss.core.logevent.DataUpdateLogInfoUtil;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.logger.LogObjectUtils;
 import jp.co.nikkiso.ntss.device_edge_updater_front.service.LogService;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.Signature;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.AfterThrowing;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Pointcut;
+import org.aspectj.lang.reflect.MethodSignature;
+import org.seasar.doma.Delete;
+import org.seasar.doma.Insert;
+import org.seasar.doma.Select;
+import org.seasar.doma.Update;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
+import jakarta.servlet.http.HttpServletRequest;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+
+import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.getRequest;
+import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.resolveHttpType;
+import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.summarize;
+import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
 
 @Aspect
 @Component("LogAspectorDeviceEdgeUpdaterFront")
@@ -47,7 +74,7 @@ public class LogAspector {
     } catch (Throwable e) {
       EventLogMessage eventLogMessage = new EventLogMessage();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
-      eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
+      eventLogMessage.setLogMessage(stackTraceToString(e.getClass().getName(), e.getMessage(), e.getStackTrace()));
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
       logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
     }
@@ -58,10 +85,10 @@ public class LogAspector {
     for (int i = 0; i < parameters.length; i++) {
       try {
         paramMap.put(parameters[i].getName(),mapper.writeValueAsString(args[i]));
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         EventLogMessage eventLogMessage = new EventLogMessage();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
-        eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
+        eventLogMessage.setLogMessage(stackTraceToString(e.getClass().getName(), e.getMessage(), e.getStackTrace()));
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
         logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
       }
@@ -224,7 +251,7 @@ public class LogAspector {
     } catch (Throwable throwable) {
       EventLogMessage eventLogMessage = new EventLogMessage();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
-      eventLogMessage.setLogMessage(ExcetionStackTraceToString(throwable);
+      eventLogMessage.setLogMessage(stackTraceToString(throwable.getClass().getName(), throwable.getMessage(), throwable.getStackTrace()));
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
       logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
     }

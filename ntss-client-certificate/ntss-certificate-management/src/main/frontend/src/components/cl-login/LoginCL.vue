@@ -7,6 +7,7 @@
         <!-- ログインタイトル -->
         <p id="login-title">ログイン</p>
         <div class="panel">
+          <form @submit.prevent>
           <!-- ID フィールド -->
           <v-ons-row>
             <v-ons-col class="input-row">
@@ -48,6 +49,7 @@
                 input-id="pwd"
                 name="pwd"
                 type="password"
+                autocomplete="current-password"
                 maxlength="40"
                 v-model="pwd"
                 ref="pwd"
@@ -105,6 +107,7 @@
               </v-ons-col>
             </div>
           </v-ons-row>
+          </form>
         </div>
         <!-- ローディング画面 -->
         <loading-screen />
@@ -336,7 +339,7 @@ ons-input {
   flex: 0 0 80%;
   max-width: 80%;
 }
-ons-input >>> .text-input {
+ons-input :deep(.text-input) {
   font-size: 1.7em;
   width: 100%;
 }
@@ -385,7 +388,7 @@ ons-input >>> .text-input {
   .login-page{
     font-size: 1.4em;
   }
-  ons-input >>> .text-input {
+  ons-input :deep(.text-input) {
     font-size: 1em;
   }
   .login-page .panel {

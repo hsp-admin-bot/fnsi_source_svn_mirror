@@ -76,11 +76,11 @@
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 import { ApiHelper } from "@/apis/AxiosHelper";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import CustomSelect from "@/components/common/custom-form-tags/CustomSelect";
 import CustomInputTime from "@/components/common/custom-form-tags/CustomInputTime";
-import { EventBus } from "@/eventBus.js";
-import { mapActions, mapGetters } from "vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import PatHeaderControlMixin from "@/components/common/PatHeadControlMixin";
@@ -92,13 +92,14 @@ import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.j
 // add FNSI-障害票一覧_患者経過総合ビューア.xlsxのNo.79(外結)対応 韓 end
 // add #6107 2023/03/27 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
+import IndicationOwnerMixin from '@/components/indication/IndicationOwnerMixin';
 // add #6107 2023/03/27 メッセージボックス全調整 林峻峰 end
 export default {
   components: {
     "custom-select": CustomSelect,
     "custom-input-time": CustomInputTime
   },
-mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
+mixins: [IndicationOwnerMixin, NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
   props: {
     /**
      * 施設コード
@@ -275,16 +276,16 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
     }
 
     // IndEditBaseでクール選択の最大選択数を1に設定
-    this.$parent.$parent.kurMaxSelectedItems = 1;
+    this._indicationDialogOwner().kurMaxSelectedItems = 1;
 
     // IndEditBaseの変更イベント発火フラグをtrueに設定
-    this.$parent.$parent.isWatchParent = true;
+    this._indicationDialogOwner().isWatchParent = true;
 
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
-    this.$parent.$parent.isDialogType9 = true;
+    this._indicationDialogOwner().isDialogType9 = true;
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add end
     //FNSI-修正 #5525 横展開対応、xugj add start
-    this.$parent.$parent.isSendNextPatInfoFlg = true;
+    this._indicationResultOwner().isSendNextPatInfoFlg = true;
     //FNSI-修正 #5525 横展開対応、xugj add end
   },
 
@@ -339,7 +340,7 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
       // 除去対象ベッドリストを初期化
       this.targetRemoveBedCdList = new Array();
       // 1日限定でない場合処理終了
-      if (!this.$parent.$parent.weekEdit) {
+      if (!this._indicationFlowOwner().weekEdit) {
         return;
       }
       // 選択クール初期値
@@ -352,10 +353,10 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
       editKur = null === editKur ? initKur : editKur;
 
       const paramJson = {};
-      paramJson.facility_cd = this.$parent.$parent.structData.facilityCd;
-      paramJson.pat_id = this.$parent.$parent.structData.patId;
-      paramJson.ind_start_date = this.$parent.$parent.structData.indStartDate;
-      paramJson.ind_end_date = this.$parent.$parent.structData.indStartDate;
+      paramJson.facility_cd = this._indicationFlowOwner().structData.facilityCd;
+      paramJson.pat_id = this._indicationFlowOwner().structData.patId;
+      paramJson.ind_start_date = this._indicationFlowOwner().structData.indStartDate;
+      paramJson.ind_end_date = this._indicationFlowOwner().structData.indStartDate;
       paramJson.week_pattern = "[{'text': '全','done': false,'value': 0}]";
 
       const response = await ApiHelper.post(
@@ -415,7 +416,7 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
               // クール標準時刻リスト格納
               standardDataObj.kurCd = response.data[i].kurCd;
               // フォーマットの変更
-              standardDataObj.kurStandardStartTime = moment(
+              standardDataObj.kurStandardStartTime = dayjs(
                 response.data[i].kurStandardStartTime,
                 "HHmmss"
               ).format("HH:mm");
@@ -467,31 +468,31 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
       // 画面集計情報検索条件
       const searchCondition = {
         // 治療日FROM
-        'treat_date_from': this.$parent.$parent.structData.indStartDate.replace(/-/g, ''),
+        'treat_date_from': this._indicationFlowOwner().structData.indStartDate.replace(/-/g, ''),
         // 治療日TO
         //upd 設定が終了してから削除すると、ベッドが表示されなくなります 修正 20230705 ztc start
         // 'treat_date_to': this.$parent.$parent.structData.indEndDate ==="" ?'99991231':this.$parent.$parent.structData.indEndDate
-        'treat_date_to': !this.$parent.$parent.structData.indEndDate ? '99991231' : this.$parent.$parent.structData.indEndDate
+        'treat_date_to': !this._indicationFlowOwner().structData.indEndDate ? '99991231' : this._indicationFlowOwner().structData.indEndDate
         //upd 設定が終了してから削除すると、ベッドが表示されなくなります 修正 20230705 ztc end
       };
-      const patViewResponsesData = await this.getIndicationResultList({patId:this.$parent.$parent.structData.patId, condition: searchCondition});
+      const patViewResponsesData = await this.getIndicationResultList({patId:this._indicationFlowOwner().structData.patId, condition: searchCondition});
       //add 8085 【デグレ】患者経過総合ビューア>スケジュール編集にてベッドが登録されているのに未登録となる。 周安寧 end
       // リスト情報取得
       const params = {
         facility_cd: this.searchData.facilityCd,
-        pat_id: this.$parent.$parent.structData.patId,
+        pat_id: this._indicationFlowOwner().structData.patId,
         kur_cd: this.structData.selectedKur.editValue,
         treat_week_list: JSON.stringify(
-          this.$parent.$parent.structData.indWeeks
+          this._indicationFlowOwner().structData.indWeeks
         ),
-        ind_start_date: this.$parent.$parent.structData.indStartDate,
-        ind_end_date: this.$parent.$parent.structData.indEndDate,
+        ind_start_date: this._indicationFlowOwner().structData.indStartDate,
+        ind_end_date: this._indicationFlowOwner().structData.indEndDate,
         is_all: 0 === this.structData.selectedKur.editValue,
         init_bed_cd: initBedCd,
         // 変更対象クールコード
-        ind_kur_cd: JSON.stringify(this.$parent.$parent.structData.selectedKur),
+        ind_kur_cd: JSON.stringify(this._indicationFlowOwner().structData.selectedKur),
         // 変更対象治療方法コード
-        ind_treatment_cd: JSON.stringify(this.$parent.$parent.structData.selectedTreat),
+        ind_treatment_cd: JSON.stringify(this._indicationFlowOwner().structData.selectedTreat),
       };
       // add #10196 スキジュール行ヘッター、クリア開始日の年、管制所エラーです yangqingzhe start
       if(params.ind_start_date == "") return
@@ -644,7 +645,7 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
       }
       // 治療開始時刻
       if (null !== this.structData.indTreatStartTime.editValue) {
-        this.structData.indTreatStartTime.editValue = moment(
+        this.structData.indTreatStartTime.editValue = dayjs(
           this.structData.indTreatStartTime.editValue,
           "HHmm"
         ).format("HH:mm");
@@ -780,8 +781,8 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
       if (hasState2 || hasState4) {
      // 【指示変更前に警告】
           if (!await this.showChangeConfirmDialog(rstState,patSwitchFlg)) {
-            this.$parent.$parent.isUpdating = false;
-            this.$parent.$parent.updateDisable = false;
+            this._indicationDialogOwner().isUpdating = false;
+            this._indicationDialogOwner().updateDisable = false;
             console.log("IndSchEdit.vue updateIndInfo return; this.finishLoadingScreen();");
             this.finishLoadingScreen();
             return;
@@ -923,9 +924,9 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
 
         // add #10712 日次スケジュール自動延長処理の除外考慮修正 zkm start
         if (22020004 === response.data.msgCd) {
-          this.$parent.$parent.messageDialogInfo.messageCd = response.data.msgCd;
-          this.$parent.$parent.messageDialogInfo.type = "1";
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.messageCd = response.data.msgCd;
+          this._indicationDialogOwner().messageDialogInfo.type = "1";
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
           console.log("IndSchEdit.vue updateIndSchedule return; this.finishLoadingScreen();");
           this.finishLoadingScreen();
           return;
@@ -1077,7 +1078,7 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
       console.log("IndSchEdit.vue updateIndInfo hide-modal this.finishLoadingScreen();");
       this.finishLoadingScreen();
       // モーダルを閉じる
-      this.$parent.$parent.$emit("hide-modal");
+      this._hideIndicationModal();
     },
 
     // add FNSI-【1006】最新の改修対象一覧のIES89対応 韓 start
@@ -1242,8 +1243,8 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
             if (resOk === 1) {
               rtn = true;
             } else {
-              this.$parent.$parent.isUpdating = false;
-              this.$parent.$parent.updateDisable = false;
+              this._indicationDialogOwner().isUpdating = false;
+              this._indicationDialogOwner().updateDisable = false;
               rtn = false;
             }
             this.showDialogMessage=true;
@@ -1354,8 +1355,8 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
       } else {
         // データセルクリック時以外は以下の処理は行わない
         if (
-          !this.$parent.$parent.settingData.startDateEdit ||
-          !this.$parent.$parent.settingData.endDateEdit
+          !this._indicationFlowOwner().settingData.startDateEdit ||
+          !this._indicationFlowOwner().settingData.endDateEdit
         ) {
           return;
         }
@@ -1437,13 +1438,16 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
 
         case 20010003:
 // add FNSI-障害票一覧_患者経過総合ビューア.xlsxのNo.79(外結)対応 韓 start
+          /* falls through */
         case 12000061:
 // add FNSI-障害票一覧_患者経過総合ビューア.xlsxのNo.79(外結)対応 韓 end
+          /* falls through */
           // del #10748 患者経過総合ビューアで治療終了と実績確定をベッド，クールが未登録で移動可能 linjunfeng start
           // messageType = "1";
           // stringParams = [""];
           // break;
           // del #10748 患者経過総合ビューアで治療終了と実績確定をベッド，クールが未登録で移動可能 linjunfeng end
+          /* falls through */
 
         case 22010001:
           messageType = "1";
@@ -1478,10 +1482,10 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
         default:
           break;
       }
-      this.$parent.$parent.messageDialogInfo.messageCd = parseInt(msgCd);
-      this.$parent.$parent.messageDialogInfo.type = messageType;
-      this.$parent.$parent.messageDialogInfo.stringParams = stringParams;
-      this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+      this._indicationDialogOwner().messageDialogInfo.messageCd = parseInt(msgCd);
+      this._indicationDialogOwner().messageDialogInfo.type = messageType;
+      this._indicationDialogOwner().messageDialogInfo.stringParams = stringParams;
+      this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
     },
 
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
@@ -1491,13 +1495,13 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
       Object.keys(treatCondItems).forEach(key => {
         // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20240227 ztc start
         if(key === 'time'){
-          if(!!treatCondItems[key]){
+          if(treatCondItems[key]){
             let initTimeValue = JSON.parse(JSON.stringify(treatCondItems[key].value.initValue));
             let editTimeValue = JSON.parse(JSON.stringify(treatCondItems[key].value.editValue));
-            if(!!initTimeValue && initTimeValue.indexOf(":") === -1){
+            if(initTimeValue && initTimeValue.indexOf(":") === -1){
               initTimeValue = `${initTimeValue.substr(0, 2)}:${initTimeValue.substr(2, 2)}`;
             }
-            if(!!editTimeValue && editTimeValue.indexOf(":") === -1){
+            if(editTimeValue && editTimeValue.indexOf(":") === -1){
               editTimeValue = `${editTimeValue.substr(0, 2)}:${editTimeValue.substr(2, 2)}`;
             }
             if(initTimeValue != editTimeValue){
@@ -1524,14 +1528,14 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
     async resetComponentIndData(structData){
       if (this.isEdit()) {
-        this.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+        this._indicationDialogOwner().messageDialogInfo.messageCd = 70000028;
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-        this.$parent.$parent.messageDialogInfo.type = "9";
+        this._indicationDialogOwner().messageDialogInfo.type = "9";
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         return;
       } else {
-        this.getComponentData(structData,2);
+        return this.getComponentData(structData, 2);
       }
     },
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add end
@@ -1673,19 +1677,19 @@ mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
         // #10266 スケジュール親/子ヘッダー押下　NG linjunfeng start
         const params = {
           facility_cd: this.searchData.facilityCd,
-          pat_id: this.$parent.$parent.structData.patId,
+          pat_id: this._indicationFlowOwner().structData.patId,
           kur_cd: this.structData.selectedKur.editValue,
           treat_week_list: JSON.stringify(
-            this.$parent.$parent.structData.indWeeks
+            this._indicationFlowOwner().structData.indWeeks
           ),
-          ind_start_date: this.$parent.$parent.structData.indStartDate,
-          ind_end_date: this.$parent.$parent.structData.indEndDate,
+          ind_start_date: this._indicationFlowOwner().structData.indStartDate,
+          ind_end_date: this._indicationFlowOwner().structData.indEndDate,
           is_all: 0 === this.structData.selectedKur.editValue,
           init_bed_cd: ordMainData.indBedCd,
           // 変更対象クールコード
-          ind_kur_cd: JSON.stringify(this.$parent.$parent.structData.selectedKur),
+          ind_kur_cd: JSON.stringify(this._indicationFlowOwner().structData.selectedKur),
           // 変更対象治療方法コード
-          ind_treatment_cd: JSON.stringify(this.$parent.$parent.structData.selectedTreat),
+          ind_treatment_cd: JSON.stringify(this._indicationFlowOwner().structData.selectedTreat),
         };
         if(params.ind_start_date == "") return
         const response = await ApiHelper.post("/mstInfo/getSelectForSearchFreeBeds", params)

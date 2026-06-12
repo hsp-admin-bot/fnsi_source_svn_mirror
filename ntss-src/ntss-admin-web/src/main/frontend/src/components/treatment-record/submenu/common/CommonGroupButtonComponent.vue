@@ -9,19 +9,32 @@
       </label>
     </v-ons-col>
     <v-ons-col class="button-items">
-      <v-on-toolbar>
-        <v-ons-segment :index.sync="currentValue" style="width: 4em" class="treatment-record-common-group-button">
-          <v-ons-button class="more-width" :data-non-authorize="nonAuthorize" v-for="radioItem in radioItems" :key="radioItem.cd" :disabled="disabled">
-            {{ radioItem.text}}
-          </v-ons-button>
-        </v-ons-segment>
-      </v-on-toolbar>
+      <v-ons-segment
+        ref="segment"
+        v-model:index="currentValue"
+        style="width: 4em"
+        class="treatment-record-common-group-button"
+      >
+        <button
+          v-for="radioItem in unitOptions"
+          :key="radioItem.cd"
+          :value="radioItem.cd"
+          class="more-width"
+          :data-non-authorize="nonAuthorize"
+          :disabled="disabled"
+          @click="onSelectUnit(radioItem.cd)"
+        >
+          {{ radioItem.text }}
+        </button>
+      </v-ons-segment>
     </v-ons-col>
   </v-ons-row>
 </template>
 
 <script>
 export default {
+  // Vue3 default v-model は modelValue / update:modelValue を使用する。
+  // Vue2 時代の value/input を modelValue/update:modelValue に置換する。
   props: {
     name: {
       type: String
@@ -32,7 +45,7 @@ export default {
     radioItems: {
       type: Object
     },
-    value: {
+    modelValue: {
       type: Number
     },
     disabled: {
@@ -44,16 +57,43 @@ export default {
       default: false
     }
   },
+  emits: ["update:modelValue"],
   computed: {
+    unitOptions() {
+      return Object.values(this.radioItems || {}).sort((a, b) => a.cd - b.cd);
+    },
     currentValue: {
       get() {
-        return this.value;
+        return this.modelValue;
       },
       set(newVal) {
-        if (this.value !== newVal) {
-          this.$emit("input", newVal);
+        if (this.modelValue !== newVal) {
+          this.$emit("update:modelValue", newVal);
         }
       }
+    }
+  },
+  watch: {
+    modelValue() {
+      this.syncSegmentIndex();
+    }
+  },
+  mounted() {
+    this.syncSegmentIndex();
+  },
+  methods: {
+    onSelectUnit(cd) {
+      this.currentValue = cd;
+      this.syncSegmentIndex();
+    },
+    /** vue-onsenui 3.x で segment の選択表示を同期する */
+    syncSegmentIndex() {
+      this.$nextTick(() => {
+        const seg = this.$refs.segment?.$el;
+        if (seg?.setActiveButton && this.modelValue != null) {
+          seg.setActiveButton(this.modelValue, { reject: false });
+        }
+      });
     }
   }
 };
@@ -69,7 +109,7 @@ export default {
   box-shadow: unset;
   background-image: linear-gradient(#72a8de, #72a8de) !important;
 }
-.more-width >>> .segment__button {
+.more-width :deep(.segment__button) {
   border: 0;
   height: inherit;
   color: inherit;

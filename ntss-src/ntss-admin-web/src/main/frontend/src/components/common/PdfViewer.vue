@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import * as pdfjsLib from "pdfjs-dist/webpack";
+import * as pdfjsLib from "@/compat/pdf/pdfjs";
 
 export default {
   name: "PdfViewer",
@@ -34,8 +34,7 @@ export default {
     async loadPdf() {
       if (!this.src) return;
 
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        require("pdfjs-dist/build/pdf.worker.js");
+      // PDF.js の worker 登録は compat/pdf 側で一元管理する
 
       const loadingTask = pdfjsLib.getDocument(this.src);
       this.pdf = await loadingTask.promise;

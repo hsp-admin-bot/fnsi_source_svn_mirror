@@ -1,4 +1,4 @@
-<!--
+﻿<!--
 /**
 * スケジュール表
 */
@@ -110,14 +110,15 @@
                 <!-- mod #10359 編集権限について、対応する。 zhangyue start -->
               <kendo-dropdownlist
                 id="sijisya"
+                ref="sijisyaDropdown"
                 v-model="indUser"
                 :disabled="!getItemAuthorized('ScheduleList', 'item_schedule')"
                 :data-source="userOptions"
                 :data-text-field="'fullName'"
                 :data-value-field="'user_id'"
-                style="width: 96%; height: 2em; margin-left: 2px; font-size: 1em;"
+                style="width: 96%; height: 2em; margin-left: 2px;"
                 class="select-indicator input-style-required"
-                @open="addMaxContentStyle"
+                @open="addMaxContentStyle($event)"
               />
               <!-- mod #10359 編集権限について、対応する。 zhangyue end -->
               <!-- mod FutreNetWeb+SI課題管理No4981対応 呉 end -->
@@ -125,17 +126,17 @@
           </div>
           <!-- Left title of the schedule -->
           <div id="area2_4_header" style="overflow: auto;"
-            @wheel="syncScrollFromFixed"
+            @wheel.passive="syncScrollFromFixed"
             @scroll="syncScrollFromFixed"
-            @touchmove="handleTouchMove"
-            @touchstart="handleTouchStart">
+            @touchmove.passive="handleTouchMove"
+            @touchstart.passive="handleTouchStart">
             <!-- Beds -->
             <div id="id_area2" class="cls-area2">
               <!-- ベッドタイトル -->
-              <template v-for="i in titleNum">
+              <template v-for="i in titleNum" :key="i + '_bedtitle'">
                 <component
                   :is="cmpNameBed"
-                  :key="i + '_bedtitle'"
+                 
                   :props-id="'title_' + i"
                   :props-json="propsJ[i]"
                   style="border-right: 0;"
@@ -159,7 +160,7 @@
           @mousemove="moveEvent"
           @mouseleave="moveLeaveEvent"
           @click="clickEvent"
-          @mousewheel="mouseWheelEvent"
+          @mousewheel.passive="mouseWheelEvent"
         >
           <div id="id_area5_cover" class="cls-area5-cover">
           <!-- ドラッグ&ドロップエリア -->
@@ -168,28 +169,28 @@
               <!-- TODO:ヘッダー移動開放 -->
               <!-- ヘッダー -->
               <!-- 日付ヘッダー -->
-              <template v-for="d in dayHeaderNum1st">
+              <template v-for="d in dayHeaderNum1st" :key="d + '_dayhead'">
                 <component
                   :is="cmpNameDayHeader"
-                  :key="d + '_dayhead'"
+                 
                   :props-id="'-' + d"
                   :props-json="propsJDayHeader[d]"
                   :props-holiday="getDayDispIndex[d - 1]"
                 />
               </template>
-              <template v-for="d in dayHeaderNum2nd">
+              <template v-for="d in dayHeaderNum2nd" :key="d + 7 + '_dayhead'">
                 <component
                   :is="cmpNameDayHeader"
-                  :key="d + 7 + '_dayhead'"
+                 
                   :props-id="'-' + (d + 7)"
                   :props-json="propsJDayHeader[d + 7]"
                   :props-holiday="getDayDispIndex[d + 6]"
                 />
               </template>
-              <template v-for="d in dayHeaderNum3rd">
+              <template v-for="d in dayHeaderNum3rd" :key="d + 14 + '_dayhead'">
                 <component
                   :is="cmpNameDayHeader"
-                  :key="d + 14 + '_dayhead'"
+                 
                   :props-id="'-' + (d + 14)"
                   :props-json="propsJDayHeader[d + 14]"
                   :props-holiday="getDayDispIndex[d + 13]"
@@ -209,32 +210,32 @@
                   style="border-left: 0; border-top-color: silver;"
                   @columnresize="onColumnResizeDay"
                 >
-                  <template v-for="d in dayHeaderNum1st">
+                  <template v-for="d in dayHeaderNum1st" :key="d">
                     <kendo-grid-column
-                      :key="d"
+                     
                       :field="'ProductName' + d"
                       :title="'index_' + d"
-                      :width="dayWidth"
+                      :width="getDayColumnWidth(d)"
                       :height="40"
                       :header-attributes="{ class: 'cls-kendo-grid-head' }"
                     />
                   </template>
-                  <template v-for="d in dayHeaderNum2nd">
+                  <template v-for="d in dayHeaderNum2nd" :key="d + 7">
                     <kendo-grid-column
-                      :key="d + 7"
+                     
                       :field="'ProductName' + (d + 7)"
                       :title="'index_' + (d + 7)"
-                      :width="dayWidth"
+                      :width="getDayColumnWidth(d + 7)"
                       :height="40"
                       :header-attributes="{ class: 'cls-kendo-grid-head' }"
                     />
                   </template>
-                  <template v-for="d in dayHeaderNum2nd">
+                  <template v-for="d in dayHeaderNum2nd" :key="d + 14">
                     <kendo-grid-column
-                      :key="d + 14"
+                     
                       :field="'ProductName' + (d + 14)"
                       :title="'index_' + (d + 14)"
-                      :width="dayWidth"
+                      :width="getDayColumnWidth(d + 14)"
                       :height="40"
                       :header-attributes="{ class: 'cls-kendo-grid-head' }"
                     />
@@ -242,33 +243,30 @@
                 </kendo-grid>
               </div>
               <!-- クールヘッダー -->
-              <template v-for="d in dayHeaderNum1st">
-                <template v-for="x in kurNum">
+              <template v-for="d in dayHeaderNum1st" :key="`kurhead-row1-${d}`">
+                <template v-for="x in kurNum" :key="`kurhead-cell1-${d}-${x}`">
                   <component
                     :is="cmpNameKurHeader"
-                    :key="d + '-' + x + '_kurhead'"
-                    :props-id="d + '-' + x"
+                                        :props-id="d + '-' + x"
                     :props-json="propsJKurHeader[d][x]"
                     :props-treat-date="propsJDayHeader[d]"
                   />
                 </template>
               </template>
-              <template v-for="d in dayHeaderNum2nd">
-                <template v-for="x in kurNum">
+              <template v-for="d in dayHeaderNum2nd" :key="`kurhead-row2-${d}`">
+                <template v-for="x in kurNum" :key="`kurhead-cell2-${d}-${x}`">
                   <component
                     :is="cmpNameKurHeader"
-                    :key="d + 7 + '-' + x + '_kurhead'"
-                    :props-id="d + 7 + '-' + x"
+                                        :props-id="d + 7 + '-' + x"
                     :props-json="propsJKurHeader[d + 7][x]"
                     :props-treat-date="propsJDayHeader[d + 7]"
                   />
                 </template>
               </template>
-              <template v-for="d in dayHeaderNum3rd">
-                <template v-for="x in kurNum">
+              <template v-for="d in dayHeaderNum3rd" :key="`kurhead-row3-${d}`">
+                <template v-for="x in kurNum" :key="`kurhead-cell3-${d}-${x}`">
                   <component
                     :is="cmpNameKurHeader"
-                    :key="d + 14 + '-' + x + '_kurhead'"
                     :props-id="d + 14 + '-' + x"
                     :props-json="propsJKurHeader[d + 14][x]"
                     :props-treat-date="propsJDayHeader[d + 14]"
@@ -286,40 +284,37 @@
                     ref="ref_kendoKur"
                     :resizable="true"
                     :height="0"
-                    style="border-left: 0; border-bottom: 0;"
+                    style="border-left: 0; border-bottom: 0;border-top-width: 1px; border-top-color: white;"
                     @columnresize="onColumnResize"
                   >
-                    <template v-for="d in dayHeaderNum1st">
-                      <template v-for="x in kurNum">
+                    <template v-for="d in dayHeaderNum1st" :key="`day1-${d}`">
+                      <template v-for="x in kurNum" :key="`kur-${d}-${x}`">
                         <kendo-grid-column
-                          :key="d + '-' + x"
                           :field="'ProductName' + d + '-' + x"
                           :title="'index_' + d + '-' + x"
-                          :width="100"
+                          :width="getKurColumnWidth(d, x)"
                           :height="40"
                           :header-attributes="{ class: 'cls-kendo-grid-head sub-header' }"
                         />
                       </template>
                     </template>
-                    <template v-for="d in dayHeaderNum2nd">
-                      <template v-for="x in kurNum">
+                    <template v-for="d in dayHeaderNum2nd" :key="`day2-${d}`">
+                      <template v-for="x in kurNum" :key="`kur-${d}-${x}`">
                         <kendo-grid-column
-                          :key="d + 7 + '-' + x"
                           :field="'ProductName' + (d + 7) + '-' + x"
                           :title="'index_' + (d + 7) + '-' + x"
-                          :width="100"
+                          :width="getKurColumnWidth(d + 7, x)"
                           :height="40"
                           :header-attributes="{ class: 'cls-kendo-grid-head sub-header' }"
                         />
                       </template>
                     </template>
-                    <template v-for="d in dayHeaderNum2nd">
-                      <template v-for="x in kurNum">
+                    <template v-for="d in dayHeaderNum2nd" :key="`day3-${d}`">
+                      <template v-for="x in kurNum" :key="`kur3-${d}-${x}`">
                         <kendo-grid-column
-                          :key="d + 14 + '-' + x"
                           :field="'ProductName' + (d + 14) + '-' + x"
                           :title="'index_' + (d + 14) + '-' + x"
-                          :width="100"
+                          :width="getKurColumnWidth(d + 14, x)"
                           :height="40"
                           :header-attributes="{ class: 'cls-kendo-grid-head sub-header' }"
                         />
@@ -347,13 +342,13 @@
                   class="cls-table"
                   :width="area6Width + 'px'"
                 >
+                  <tbody>
                   <!-- FNSI-mod 現行改善対応425 徐天宇 end -->
                   <tr style="border:none;">
-                    <template v-for="d in tmp_dayMax">
-                      <template v-for="x in tmp_kurNum">
+                    <template v-for="d in tmp_dayMax" :key="`tmpday-${d}`">
+                      <template v-for="x in tmp_kurNum" :key="`tmpkur-${d}-${x}`">
                         <td
                           :id="'id_td_' + d + '_' + x"
-                          :key="'key_' + d + '_' + x"
                           :style="
                             'width:' +
                               kurDayWidth[d][x] +
@@ -366,7 +361,6 @@
                           <keep-alive>
                             <component
                               :is="cmpNameKur"
-                              :key="'kur-' + d + '-' + x"
                               :props-id="d + '-' + x"
                               :props-move-data="propsJMoveData[d][x]"
                               :props-dummy-data="propsJDummyData[d][x]"
@@ -378,6 +372,8 @@
                       </template>
                     </template>
                   </tr>
+                
+                  </tbody>
                 </table>
               </div>
 
@@ -393,13 +389,13 @@
                   class="cls-table"
                   :width="area6Width + 'px'"
                 >
+                  <tbody>
                   <!-- FNSI-mod 現行改善対応425 徐天宇 end -->
                   <tr style="border:none;">
-                    <template v-for="d in tmp_dayMax">
-                      <template v-for="x in tmp_kurNum">
+                    <template v-for="d in tmp_dayMax" :key="`tmpday-${d}`">
+                      <template v-for="x in tmp_kurNum" :key="`tmpkur-${d}-${x}`">
                         <td
                           :id="'id_tdbednotyet_' + d + '_' + x"
-                          :key="'key_' + d + '_' + x"
                           :style="
                             'width:' +
                               kurDayWidth[d][x] +
@@ -410,10 +406,9 @@
                               ';'
                           "
                         >
-                          <template v-for="y in dispNumNotYetBed">
+                          <template v-for="y in dispNumNotYetBed" :key="`bednotyet-y-${d}-${x}-${y}`">
                             <component
                               :is="cmpNameBed"
-                              :key="'bednotyet' + d + '-' + x + '-' + y"
                               :props-id="'BednotYet' + d + '-' + x + '-' + y"
                               :props-json="propsJBedNotYet[d][x][y]"
                               :props-treat-date="propsJDayHeader[d]"
@@ -424,6 +419,8 @@
                       </template>
                     </template>
                   </tr>
+                
+                  </tbody>
                 </table>
               </div>
 
@@ -436,13 +433,13 @@
               <div :style="'width:' + area6Width + 'px;'">
                 <!-- FNSI-mod 現行改善対応425 徐天宇 start -->
                 <table class="cls-table" :width="area6Width + 'px'">
+                  <tbody>
                   <!-- FNSI-mod 現行改善対応425 徐天宇 end -->
                   <tr style="border:none;">
-                    <template v-for="d in tmp_dayMax">
-                      <template v-for="x in tmp_kurNum">
+                    <template v-for="d in tmp_dayMax" :key="`tmpday-${d}`">
+                      <template v-for="x in tmp_kurNum" :key="`tmpkur-${d}-${x}`">
                         <td
                           :id="'id_tdkurnotyet_' + d + '_' + x"
-                          :key="'key_' + d + '_' + x"
                           :style="
                             'width:' +
                               kurDayWidth[d][x] +
@@ -453,10 +450,9 @@
                               ';'
                           "
                         >
-                          <template v-for="y in dispNumNotYetKur">
+                          <template v-for="y in dispNumNotYetKur" :key="`kurnotyet-y-${d}-${x}-${y}`">
                             <component
                               :is="cmpNameBed"
-                              :key="'kurY_' + d + '-' + x + '-' + y"
                               :props-id="'KurnotYet' + d + '-' + x + '-' + y"
                               :props-json="propsJKurNotYet[d][x][y]"
                               :props-treat-date="propsJDayHeader[d]"
@@ -467,11 +463,14 @@
                       </template>
                     </template>
                   </tr>
+                
+                  </tbody>
                 </table>
               </div>
               <div id="id_vlineArea8" class="cls-vline"></div>
               <div v-show="false" id="id_template_block">
                 <table>
+                  <tbody>
                   <tr>
                     <td colspan="3"></td>
                   </tr>
@@ -480,6 +479,8 @@
                     <td></td>
                     <td></td>
                   </tr>
+                
+                  </tbody>
                 </table>
               </div>
             </div>
@@ -577,7 +578,7 @@
 
     <!-- メニューエリア -->
     <v-ons-popover cancelable
-                   :visible.sync="menuPopoverShowFlag"
+                   v-model:visible="menuPopoverShowFlag"
                    :target="menuPopoverTarget"
                    direction="down up"
                    :cover-target="false"
@@ -652,7 +653,7 @@
     <!-- mod 5901  赵 start -->
     <div v-if="messageDialogInfo.isDialogVisible">
       <message-dialog
-        :visible.sync="messageDialogInfo.isDialogVisible"
+        v-model:visible="messageDialogInfo.isDialogVisible"
         :message-cd="messageDialogInfo.messageCd"
         :type="messageDialogInfo.type"
         :string-params="messageDialogInfo.stringParams"
@@ -662,7 +663,7 @@
     </div>
     <div v-if="cancelSendCondVisible">
       <message-dialog
-        :visible.sync="cancelSendCondVisible"
+        v-model:visible="cancelSendCondVisible"
         class="cancel-send-message"
         :message-cd="cancelSendCondCd"
         :type="cancelSendCondType"
@@ -676,11 +677,12 @@
 
 <script>
   //kendo-uiテーブル自動幅合わせ抑制処理用(ダブルクリックの無効化)
-  const $$ = require("jquery");
-  import _ from "underscore";
+  import $$ from "@/compat/jquery";
+
+  import _ from "@/compat/collections/lodash";
   //日付処理用
-  import moment from "moment";
-  import { mapGetters, mapActions, mapMutations } from "vuex";
+  import dayjs from "@/compat/date/dayjs";
+  import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
   //ベッドコンポーネント
   import BedComponent from "@/components/schedule-list/BedComponent";
   //日付ヘッダーコンポーネント
@@ -693,25 +695,33 @@
   import SchedulePopover from "@/components/schedule-list/SchedulePopover";
   //指示者取得&組み立て用
   import { ApiHelper } from "@/apis/AxiosHelper";
+  import axios from "@/compat/http/axios";
   //メッセージダイアログ
   import messageDialog from "@/components/common/message-dialog/MessageDialog";
   //定義
-  import { AREA_BED, AREA_BEDNOTYET, AREA_KURNOTYET, DEF_BEDTITLE_WIDTH, DEF_BED_NOT_YET_NUM, DEF_CELL_HEIGHT, DEF_CELL_HEIGHT_FONT_SIZE_EXTRA_LARGE, DEF_CELL_HEIGHT_FONT_SIZE_LARGE, DEF_CELL_HEIGHT_FONT_SIZE_MEDIUM, DEF_CELL_HEIGHT_FONT_SIZE_SMALL, DEF_DAY, DEF_DAYMAX, DEF_DIALOG_CANNOTMOVE, DEF_DIALOG_FACILITY_SETTING_1007_4, DEF_DIALOG_FACILITY_SETTING_1007_4_2, DEF_DIALOG_FACILITY_SETTING_1008_4, DEF_DIALOG_FACILITY_SETTING_1008_4_2, DEF_DIALOG_FACILITY_SETTING_2007_4, DEF_DIALOG_FACILITY_SETTING_2008_4, DEF_DIALOG_FACILITY_SETTING_3005_4, DEF_DIALOG_FACILITY_SETTING_3005_4_2, DEF_DIALOG_MSG_1, DEF_DIALOG_MSG_11, DEF_DIALOG_MSG_12, DEF_DIALOG_MSG_16, DEF_DIALOG_MSG_17, DEF_DIALOG_MSG_18, DEF_DIALOG_MSG_19, DEF_DIALOG_MSG_2, DEF_DIALOG_MSG_20, DEF_DIALOG_MSG_29, DEF_DIALOG_MSG_3, DEF_DIALOG_MSG_33, DEF_DIALOG_MSG_4, DEF_DIALOG_MSG_8, DEF_DIALOG_NODATA, DEF_DIALOG_NOUSE, DEF_DIALOG_REPLACE, DEF_DIALOG_REPLACEUNMATCH, DEF_DIALOG_SAMECOND, DEF_DIALOG_UNMATCH, DEF_DISP_WEEK, DEF_ELEMNUM, DEF_HEADER_HEIGHT, DEF_KUR, DEF_KUR_MAX, DEF_KUR_NOT_YET_NUM, DEF_KUR_WIDTH, DEF_LIST_WIDTH_MIN, DEF_MAX_DAY_HEADER, DEF_MSGTYPE_OK, DEF_MSGTYPE_OK_CANCEL, DEF_NOTASSIGNED, DEF_NUM_NOTYETAREA, DEF_OPA_IN_USE, DEF_RET_NG, DEF_RET_NG_RELOAD, DEF_SCROLLBAR_WIDTH, DEF_UNDEFINED, OPE_DEC, OPE_INC } from "@/components/schedule-list/Definitions.js";
+  import { AREA_BED, AREA_BEDNOTYET, AREA_KURNOTYET, DEF_BEDTITLE_WIDTH, DEF_BED_NOT_YET_NUM, DEF_CELL_HEIGHT, DEF_CELL_HEIGHT_FONT_SIZE_EXTRA_LARGE, DEF_CELL_HEIGHT_FONT_SIZE_LARGE, DEF_CELL_HEIGHT_FONT_SIZE_MEDIUM, DEF_CELL_HEIGHT_FONT_SIZE_SMALL, DEF_DAY, DEF_DAYMAX, DEF_DIALOG_CANNOTMOVE, DEF_DIALOG_FACILITY_SETTING_1007_4, DEF_DIALOG_FACILITY_SETTING_1007_4_2, DEF_DIALOG_FACILITY_SETTING_1008_4, DEF_DIALOG_FACILITY_SETTING_1008_4_2, DEF_DIALOG_FACILITY_SETTING_2007_4, DEF_DIALOG_FACILITY_SETTING_2008_4, DEF_DIALOG_FACILITY_SETTING_3005_4, DEF_DIALOG_FACILITY_SETTING_3005_4_2, DEF_DIALOG_MSG_1, DEF_DIALOG_MSG_11, DEF_DIALOG_MSG_12, DEF_DIALOG_MSG_16, DEF_DIALOG_MSG_17, DEF_DIALOG_MSG_18, DEF_DIALOG_MSG_19, DEF_DIALOG_MSG_2, DEF_DIALOG_MSG_20, DEF_DIALOG_MSG_29, DEF_DIALOG_MSG_3, DEF_DIALOG_MSG_33, DEF_DIALOG_MSG_4, DEF_DIALOG_MSG_8, DEF_DIALOG_NODATA, DEF_DIALOG_NOUSE, DEF_DIALOG_REPLACE, DEF_DIALOG_REPLACEUNMATCH, DEF_DIALOG_SAMECOND, DEF_DIALOG_UNMATCH, DEF_DISP_WEEK, DEF_ELEMNUM, DEF_HEADER_HEIGHT, DEF_KUR, DEF_KUR_MAX, DEF_KUR_NOT_YET_NUM, DEF_KUR_WIDTH, DEF_LIST_WIDTH_MIN, DEF_MAX_DAY_HEADER, DEF_MSGTYPE_OK, DEF_MSGTYPE_OK_CANCEL, DEF_NOTASSIGNED, DEF_NUM_NOTYETAREA, DEF_OPA_IN_USE, DEF_RET_NG, DEF_RET_NG_RELOAD, DEF_SCROLLBAR_WIDTH, DEF_UNDEFINED, OPE_DEC, OPE_INC } from "@/components/schedule-list/Definitions.js"
+
   //指示者リスト取得
   import { AUTHORITY_CODES } from "@/constants/userAuthority";
   import { KEY_NAME_SCHEDULE_LIST } from "@/constants/defaultSettingConstants";
   import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
-  import { EventBus } from "@/eventBus.js";
-  import { deepCopy } from "@/functions/common/CommonFunctions";
+  import { EventBus } from "@/compat/vue/event-bus.js";
+  import { deepCopy, getAuthorized } from "@/functions/common/CommonFunctions";
   import { getCurrentFunctionCd, getFunctionCd } from "@/router/routing-helper";
-  import PopoverMixin from "@/components/PopoverMixin";
-  import UserAuthorityMixin from "@/components/common/UserAuthorityMixin";
-  import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
-  import { messageFormat } from '@/functions/common/MessageFormat';
-  import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
-  import { getAuthorized } from "@/functions/common/CommonFunctions.js";
-  import axios from "axios";
-  import PrintMixin from "@/components/PrintMixin";
+
+import PopoverMixin from "@/components/PopoverMixin";
+import UserAuthorityMixin from "@/components/common/UserAuthorityMixin";
+import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import PrintMixin from "@/components/PrintMixin";
+
+import { getMainContentAreaElement, getScopedElementById, getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import { detachKendoPopupEventHandlers, findKendoGridHeaderCells, findKendoGridHeaderColElements, findKendoGridBodyColElements, getKendoGridColumnDomParts, syncKendoGridHeaderBodyTableWidth } from "@/functions/common/KendoFunctions";
+
+import { publicAssetPath } from "@/compat/assets/public-path";
+import { getOnsAlertDialogFooterItems, getOnsAlertDialogFromEvent } from "@/functions/common/OnsenFunctions";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
 
   export default {
     components: {
@@ -812,6 +822,10 @@
         dayHeaderNum1st: 7, //日付ヘッダー1週目のカウンタ(v-for)
         dayHeaderNum2nd: 7, //日付ヘッダー2週目のカウンタ(v-for)
         dayHeaderNum3rd: 0, //日付ヘッダー3週目のカウンタ(v-for)
+        dayHeaderLayoutRafId: 0,
+        dayHeaderLayoutTimerId: 0,
+        scheduleHeaderResizeRafId: 0,
+        scheduleHeaderResizeEndListening: false,
 
         //幅変更用チップ
         elemsChangeWidthChip: [],
@@ -988,10 +1002,10 @@
         isCreateJournal: false,
         // 予定移動時の移動先チェック用に、治療時間の最大(3日)分の予定を余分に取得する
         overFlowDayNum: 3,
-        imagePatInfo: require("@/../public/img/pat-info/pat-info.png"),
-        imagePatViewer: require("@/../public/img/pat-viewer/pat-viewer.png"),
-        imageWeight: require("@/../public/img/weight/weight.png"),
-        imageTreatmentRecord: require("@/../public/img/treatment-record/treatment-record.png"),
+        imagePatInfo: publicAssetPath("img/pat-info/pat-info.png"),
+        imagePatViewer: publicAssetPath("img/pat-viewer/pat-viewer.png"),
+        imageWeight: publicAssetPath("img/weight/weight.png"),
+        imageTreatmentRecord: publicAssetPath("img/treatment-record/treatment-record.png"),
         // FNSI-add 現行改善対応425 孫灝 20201118 start
         // 施設設定マスタにNo７の「検査依頼」に選択肢「４」を選択したら、ダイアログが出る
         underElem: '',
@@ -1057,9 +1071,7 @@
       };
     },
     computed: {
-      // 施舍切替store start
       ...mapGetters("app", ["getRefresh"]),
-      // 施舍切替store end
       ...mapGetters("bread-crumb", ["getKeepHistory"]),
       ...mapGetters("schedule-list", [
         "getStatus", //データ読み込み状態の取得用
@@ -1249,11 +1261,9 @@
 
         //縦スクロール高さの設定
         const setHeight = dispCount * DEF_CELL_HEIGHT * this.elemResizeValue;
-        document.getElementById(
-          "id_sidebar_content10"
-        ).style.height = `${setHeight}px`;
-        const event = new Event("resize");
-        window.dispatchEvent(event);
+        this.getScopedElementById(
+          "id_sidebar_content10").style.height = `${setHeight}px`;
+        this.dispatchScheduleResizeEvent();
       },
       /**
        * 表データ読み込み済みフラグ監視
@@ -1363,7 +1373,7 @@
                   //幅の変更
                   this.setDayDisplay(this.dispWeek);
 
-                  const targetTHElems = document.getElementsByTagName("th");
+                  const targetTHElems = this.$el?.querySelectorAll?.("th[data-field]") || [];
 
                   for (let i = 0; i < targetTHElems.length; i++) {
                     let attr = targetTHElems[i].getAttribute("data-field");
@@ -1382,17 +1392,14 @@
                   }
 
                   //kendo-grid部分のヘッダーの縦スクロールバーの領域を削る(強制削除)
-                  const headElems = document.getElementsByClassName(
-                    "k-grid-header"
-                  );
+                  const headElems = this.getScheduleGridHeaderEls();
                   for (let i1 = 0; i1 < headElems.length; i1++) {
                     headElems[i1].style.paddingRight = "0px";
                   }
 
                   clearInterval(this.kurHeadWaitId);
                   // データ読み込みが終わったら最終リサイズを発火する
-                  const event = new Event("resize");
-                  window.dispatchEvent(event);
+                  this.dispatchScheduleResizeEvent();
                 }
               }.bind(this),
               100
@@ -1409,10 +1416,10 @@
                 // add #9725 特定の操作を行うとスケジュール表の予定が重なる/内容保持がされていない dou start
                 //開始日付設定
                 //mod #10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない 張玲 start
-                if(this.$route.params.function_cd == "009" || this.getKeepHistory.length == 1){
-                  this.dispStartDateForSetting = moment().format("YYYY-MM-DD");
+                if((this.$route.query.function_cd ?? this.$route.params.function_cd) == "009" || this.getKeepHistory.length == 1){
+                  this.dispStartDateForSetting = dayjs().format("YYYY-MM-DD");
                 } else{
-                  this.dispStartDateForSetting = this.$route.params.startDate ? moment(this.$route.params.startDate).format("YYYY-MM-DD") :this.dispUserTime ? moment(this.dispUserTime).format("YYYY-MM-DD") : saveData.settingJsonAfter.startDate;
+                  this.dispStartDateForSetting = this.$route.params.startDate ? dayjs(this.$route.params.startDate).format("YYYY-MM-DD") :this.dispUserTime ? dayjs(this.dispUserTime).format("YYYY-MM-DD") : saveData.settingJsonAfter.startDate;
                 }
                 //mod #10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない 張玲 end
                 //del #10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない 張玲 start
@@ -1445,7 +1452,7 @@
                   this.bedAreaHeight = this.calBedAreaHeight(bedDispCount);
                 }
                 /* modify by chamaojia 2024-07-11 [10806] Change judgment parameters --end */
-              } else if (moment().format("YYYY-MM-DD") !== moment(this.dispStartDateForSetting).format("YYYY-MM-DD")) {
+              } else if (dayjs().format("YYYY-MM-DD") !== dayjs(this.dispStartDateForSetting).format("YYYY-MM-DD")) {
                 // saveDataがなく、デフォルト設定もない時に日時指定で遷移したときにapplyStatusを実行
 
                 let initData = this.createInitData();
@@ -1476,7 +1483,7 @@
       getBedInfo(newJson) {
         this.bedInfoWaitTimerReleaseFlag = true;
 
-        if ( typeof newJson !== DEF_UNDEFINED && newJson ) {
+        if ( typeof newJson !== DEF_UNDEFINED && newJson) {
           //現在の選択ベッド情報として記録
           this.nowSelectedBedInfo = newJson;
           let patLastName = "";
@@ -1499,8 +1506,7 @@
       },
       // サイドバー開閉時
       sidebarWidth() {
-        const event = new Event("resize");
-        window.dispatchEvent(event);
+        this.dispatchScheduleResizeEvent();
       },
       /**
        * メニューバー表示／非表示変更時
@@ -1512,7 +1518,7 @@
     },
     async created() {
       // 画面名称取得
-      this.selfScreenName = this.$router.currentRoute.name;
+      this.selfScreenName = this.$route.name;
       // FNSI-add スケジュール - 移動の追加 徐 end
       // 共通ローダー:表示名設定
       this.setLoadingScreenMessage("処理中・・・");
@@ -1520,7 +1526,7 @@
       this.setLoadingScreenVisible(true);
 
       // 端末判別
-      const ua = navigator.userAgent;
+      const ua = this.getScheduleOwnerWindow()?.navigator?.userAgent || "";
       if (ua.match(/Android/)) {
         this.androidFlg = true;
       } else if (ua.match(/iPhone|iPad/)) {
@@ -1529,11 +1535,11 @@
 
       this.setDataLoadFlag(false);
 
-      this.todayStr = this.formatMomentDateYYYYMMDD(moment()); //本日の日付 yyyymmdd
+      this.todayStr = this.formatMomentDateYYYYMMDD(dayjs()); //本日の日付 yyyymmdd
 
       //------------------------------------------------------
       //Windowリサイズ用のイベント登録
-      window.addEventListener("resize", this.loadResizeMethod, false);
+      this.getScheduleOwnerWindow().addEventListener("resize", this.loadResizeMethod, false);
 
       //--------------------------------------------------------------
       //各フラグの初期化
@@ -1573,8 +1579,7 @@
       } else {
         this.getIndUserList(
           AUTHORITY_CODES.IND_EDIT,
-          AUTHORITY_CODES.IND_PEDIT
-        ).then(response => {
+          AUTHORITY_CODES.IND_PEDIT).then(response => {
           this.userOptions = response.doctorList;
           this.$nextTick(() => {
             this.indUser = response.iniSelectId;
@@ -1601,11 +1606,32 @@
       // add #11093 スケジュール表動作不正 zhangyue end
     },
     mounted() {
+
+      this.$nextTick(() => {
+        const inputs = document.querySelectorAll('.k-input-value-text.k-input');
+        inputs.forEach(el => {
+          el.style.height = 'auto';
+          el.style.setProperty('height', 'auto', 'important');
+          el.style.fontSize = 'inherit';
+        });
+      });
+
+      const styleId = 'schedule-list-dialog-style';
+      if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+          .alert-dialog-footer {
+            display: flex !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
       //--------------------------------------------------------------
       //一番はじめの表幅調整(ベッド表示域の横幅の決定)
       // 基本的にはWindow幅一杯に表を表示します
       // ただし、ベッド表示域の幅には最小値があり、それ以上、幅は狭くしません
-      const mainWidth = document.getElementById("main-content-area").clientWidth;
+      const mainWidth = this.getScheduleMainContentEl()?.clientWidth || 0;
       if (mainWidth > DEF_LIST_WIDTH_MIN + DEF_BEDTITLE_WIDTH) {
         //Window幅が最小の表全体幅より大きい場合
         // ベッド表示領域幅 = Window幅 - タイトル領域幅
@@ -1645,24 +1671,35 @@
       //シャッター各要素への位置＆サイズの設定処理
       this.setInitShutterElem();
 
-      this.scrollAreaDes = document.getElementById("scroll_area");
+      this.scrollAreaDes = this.getScopedElementById("scroll_area");
       this.scrollAreaDes.addEventListener(
         "scroll",
         this.handleScroll,
         false
       );
-      window.addEventListener("orientationchange", this.orientationchange);
-      document.addEventListener('preshow', this.preShowCallBack);
+      this.getScheduleOwnerWindow().addEventListener("orientationchange", this.orientationchange);
+      this.getScheduleOwnerDocument().addEventListener('preshow', this.preShowCallBack);
     },
-    beforeDestroy() {
-      //liyanze-z 施舍切替 互換性がある
-      if(this.getRefresh&&this.getRefresh.status == true){
-        this.setSaveFilterData([])
+    beforeUnmount() {
+      if (this.getRefresh && this.getRefresh.status === true) {
+        this.setSaveFilterData([]);
         this.changeKey();
       }
-
+      if (this.dayHeaderLayoutRafId) {
+        cancelAnimationFrame(this.dayHeaderLayoutRafId);
+        this.dayHeaderLayoutRafId = 0;
+      }
+      if (this.dayHeaderLayoutTimerId) {
+        clearTimeout(this.dayHeaderLayoutTimerId);
+        this.dayHeaderLayoutTimerId = 0;
+      }
+      this.detachScheduleHeaderResizeEndListener();
+      if (this.scheduleHeaderResizeRafId) {
+        cancelAnimationFrame(this.scheduleHeaderResizeRafId);
+        this.scheduleHeaderResizeRafId = 0;
+      }
       this.clearHolidays(); // storeの休日マスタをクリア
-      $$(".k-animation-container").off();
+      detachKendoPopupEventHandlers(this.$el?.ownerDocument || null);
       // mod #10601 スケジュール表動作不正 start
       // #8844 スケジュール表画面表示後の画面遷移でスクリプトエラーが大量に発生する 林峻峰 start
       if (this.setArea6Width && this.setArea6Width !== 0) {
@@ -1701,8 +1738,8 @@
       // #8844 スケジュール表画面表示後の画面遷移でスクリプトエラーが大量に発生する 林峻峰 end
       // 次回標示時のWatch発火の為、表示ベッド数の初期化を行う
       this.resetBedDispCount();
-      window.removeEventListener("resize", this.loadResizeMethod, false);
-      window.removeEventListener("orientationchange", this.orientationchange);
+      this.getScheduleOwnerWindow().removeEventListener("resize", this.loadResizeMethod, false);
+      this.getScheduleOwnerWindow().removeEventListener("orientationchange", this.orientationchange);
       // FNSI-add 性能を最適化する 徐 start
       this.scrollAreaDes.removeEventListener(
         "scroll",
@@ -1718,7 +1755,7 @@
       this.dayHeaderElems = null;
       this.kurHeaderElems = null;
       this.resizeElems = null;
-      document.removeEventListener('preshow', this.preShowCallBack);
+      this.getScheduleOwnerDocument().removeEventListener('preshow', this.preShowCallBack);
       // dataの初期化
       Object.assign(this.$data, this.$options.data());
       this.setIsPatientEnabled(false)
@@ -1726,9 +1763,89 @@
     },
 
     methods: {
+    requestViewForceUpdate() {
+      if (this.$?.isMounted) {
+        this.$forceUpdate();
+      }
+    },
+    getScopedElementById(id) {
+      return getScopedElementById(id, this);
+    },
+    getScopedElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this);
+    },
+    getScopedQuery(selector) {
+      return queryScopedSelector(selector, this);
+    },
+    getScopedQueryAll(selector) {
+      return queryScopedSelectorAll(selector, this);
+    },
+    getScheduleOwnerDocument() {
+      return this.$el?.ownerDocument || (typeof document !== "undefined" ? document : null);
+    },
+    getScheduleOwnerWindow() {
+      return this.getScheduleOwnerDocument()?.defaultView || (typeof window !== "undefined" ? window : null);
+    },
+    dispatchScheduleResizeEvent() {
+      const ownerWindow = this.getScheduleOwnerWindow();
+      ownerWindow.dispatchEvent(new ownerWindow.Event("resize"));
+    },
+    getScheduleOrientation() {
+      return this.getScheduleOwnerWindow()?.orientation;
+    },
+    createScheduleElement(tagName) {
+      return this.getScheduleOwnerDocument().createElement(tagName);
+    },
+    getScheduleElementFromPoint(clientX, clientY) {
+      return this.getScheduleOwnerDocument().elementFromPoint?.(clientX, clientY) || null;
+    },
+
+      getDayGridRef() {
+        return this.$refs.ref_kendoDay || null;
+      },
+      getKurGridRef() {
+        return this.$refs.ref_kendoKur || null;
+      },
+      getDayGridWidget() {
+        return this.getDayGridRef()?.gridWidget?.() || this.getDayGridRef()?.kendoWidget?.() || null;
+      },
+      getKurGridWidget() {
+        return this.getKurGridRef()?.gridWidget?.() || this.getKurGridRef()?.kendoWidget?.() || null;
+      },
+      getDayGridHeaderEl() {
+        return this.getDayGridRef()?.gridHeaderEl?.() || this.getDayGridWidget()?.wrapper?.find?.('.k-grid-header')?.[0] || null;
+      },
+      getKurGridHeaderEl() {
+        return this.getKurGridRef()?.gridHeaderEl?.() || this.getKurGridWidget()?.wrapper?.find?.('.k-grid-header')?.[0] || null;
+      },
+      getDayGridContentEl() {
+        return this.getDayGridRef()?.gridContentEl?.() || this.getDayGridWidget()?.content?.[0] || null;
+      },
+      getKurGridContentEl() {
+        return this.getKurGridRef()?.gridContentEl?.() || this.getKurGridWidget()?.content?.[0] || null;
+      },
+      getScheduleGridHeaderEls() {
+        return [this.getDayGridHeaderEl(), this.getKurGridHeaderEl()].filter(Boolean);
+      },
+      getScheduleGridContentEls() {
+        return [this.getDayGridContentEl(), this.getKurGridContentEl()].filter(Boolean);
+      },
+      resetScheduleGridContentHeight() {
+        this.getScheduleGridContentEls().forEach((element) => {
+          element.style.height = "0px";
+        });
+      },
+      getScheduleGridContentExpanders() {
+        return [this.getDayGridRef(), this.getKurGridRef()].flatMap((gridRef) => gridRef?.gridContentExpanderEls?.() || []);
+      },
+      getScheduleMainContentEl() {
+        return this.$el?.querySelector?.('#main-content-area')
+          || getMainContentAreaElement(this.$el || this.getScheduleOwnerDocument())
+          || null;
+      },
       handleScroll: function(e) {
-        document.getElementById("id_area5").scrollLeft = e.target.scrollLeft;
-        document.getElementById("area2_4_header").scrollTop =
+        this.getScopedElementById("id_area5").scrollLeft = e.target.scrollLeft;
+        this.getScopedElementById("area2_4_header").scrollTop =
           e.target.scrollTop;
       },
       //add FutreNetWeb+SI課題管理No4221対応 呉 start
@@ -1839,9 +1956,9 @@
         "clearHolidays"
       ]),
       preShowCallBack(event) {
-        if (event.target.localName === 'ons-alert-dialog') {
-          const dialog = event.target;
-          const buttons = dialog.getElementsByClassName('alert-dialog-footer');
+        const dialog = getOnsAlertDialogFromEvent(event);
+        const buttons = getOnsAlertDialogFooterItems(dialog);
+        if (buttons[0]) {
           buttons[0].style.display = 'flex';
         }
       },
@@ -1863,8 +1980,14 @@
             editData.dispHolidayFlag = defaultCondition[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_CHK_HOLIDAY];
           }
           // クール
+          const selectedKurCds = defaultCondition[KEY_NAME_SCHEDULE_LIST.KEY_NAME_SELECTED_KUR_LIST];
+          // デフォルト値：kurCd -> 表示用：indexに変換する
+          const convertSelectedKurIndex = selectedKurCds
+            .map(cd => this.getSelectKurCds.findIndex(item => item === cd) + 1)
+            .filter(v => v !== 0);
+          // 表示用変数へ設定する
           let tmpKurList = "";
-          defaultCondition[KEY_NAME_SCHEDULE_LIST.KEY_NAME_SELECTED_KUR_LIST].forEach((kurNo) => {
+          convertSelectedKurIndex.forEach((kurNo) => {
             tmpKurList = tmpKurList + String(kurNo) + ":";
           });
           editData.dispKurDimStr = tmpKurList.slice(0, -1);
@@ -1917,36 +2040,43 @@
         }, 100);
       },
       // add by shiyw for 6119
+      getSijisyaDropdownRef() {
+        return this.$refs?.sijisyaDropdown || null;
+      },
+      hasSijisyaPopupScroller() {
+        return this.getSijisyaDropdownRef()?.hasPopupScroller?.() || false;
+      },
+      applySijisyaPopupHeight(height) {
+        this.getSijisyaDropdownRef()?.applyPopupHeight?.(height);
+      },
       orientationchange(){
-        if($$("#sijisya-list").length && $$("#sijisya-list .k-list-scroller").length){
-          if(window.orientation == 180 || window.orientation == 0){
-            $$("#sijisya-list").css("height","200px");
-            $$("#sijisya-list .k-list-scroller").css("height","200px");
-          }else if(window.orientation == 90 || window.orientation == -90){
-            $$("#sijisya-list").css("height","150px");
-            $$("#sijisya-list .k-list-scroller").css("height","150px");
+        if (this.hasSijisyaPopupScroller()) {
+          const orientation = this.getScheduleOrientation();
+          if(orientation == 180 || orientation == 0){
+            this.applySijisyaPopupHeight("200px");
+          }else if(orientation == 90 || orientation == -90){
+            this.applySijisyaPopupHeight("150px");
           }
         }
       },
       // dropDownを開いた時にデータに応じて表示枠を広げる
-      addMaxContentStyle() {
-        this.$nextTick(() => {
-          const objList = Array.from(
-            document.getElementsByClassName("k-animation-container")
-          );
-          objList.forEach(obj => {
-            obj.firstElementChild.style.width = "max-content";
-          });
-          //add FutreNetWeb+SI課題管理No4981対応 呉 start
-          if(window.orientation == 180 || window.orientation == 0){
-            $$("#sijisya-list").css("height","200px");
-            $$("#sijisya-list .k-list-scroller").css("height","200px");
-          }else if(window.orientation == 90 || window.orientation == -90){
-            $$("#sijisya-list").css("height","150px");
-            $$("#sijisya-list .k-list-scroller").css("height","150px");
+      addMaxContentStyle(event) {
+        setTimeout(() => {
+          const popups = document.querySelectorAll('.k-list-container.k-popup');
+          for (let popup of popups) {
+            if (window.getComputedStyle(popup).display !== 'none') {
+              popup.style.setProperty('width', 'max-content', 'important');
+              popup.style.setProperty('min-width', '96%', 'important');
+              break;
+            }
           }
-          //add FutreNetWeb+SI課題管理No4981対応 呉 end
-        });
+        }, 50);
+        const orientation = this.getScheduleOrientation();
+        if(orientation == 180 || orientation == 0){
+          this.applySijisyaPopupHeight("200px");
+        }else if(orientation == 90 || orientation == -90){
+          this.applySijisyaPopupHeight("150px");
+        }
       },
       //治療患者リスト登録用
       ...mapMutations("pat-info", ["updateTreatmentPatList", "setSrcFuncName"]),
@@ -1966,8 +2096,7 @@
         // 高さの調整
         this.resizeListHeight();
 
-        const mainWidth = document.getElementById("main-content-area")
-          .clientWidth;
+        const mainWidth = this.getScheduleMainContentEl()?.clientWidth || 0;
         if (mainWidth > DEF_LIST_WIDTH_MIN + DEF_BEDTITLE_WIDTH) {
           this.listWidth =
             mainWidth - DEF_BEDTITLE_WIDTH * this.elemResizeValue - 2;
@@ -1984,8 +2113,8 @@
         // モバイル環境の場合、又は横幅に余裕がある場合は、縦スクロールバーが出ていても除外する
         // -1は、スクロールバー表示から非表示になる時に、-17しないための補正
         if (
-          document.getElementById("scroll_area").clientHeight <
-          document.getElementById("area2_4_header").scrollHeight - 1 &&
+          this.getScopedElementById("scroll_area").clientHeight <
+          this.getScopedElementById("area2_4_header").scrollHeight - 1 &&
           this.listWidth !== this.totalWidth &&
           !(this.androidFlg || this.iosFlg)
         ) {
@@ -2007,7 +2136,9 @@
         );
         //各要素への位置＆サイズの設定処理
         this.setElem();
+
       },
+
       /**
        * DBデータ取得処理
        *  画面初期呼び出し時に以下のデータを読み込みます
@@ -2020,7 +2151,7 @@
         // add #11093 スケジュール表動作不正 zhangyue end
         let baseDate = null;
         if (this.scheduleListDayView !== null) {
-          baseDate = moment(this.scheduleListDayView).format("YYYYMMDD")
+          baseDate = dayjs(this.scheduleListDayView).format("YYYYMMDD")
         }
         //ベッド、クール、ベッドグループの取得
         await this.getBaseDataFromDB(event);
@@ -2058,7 +2189,7 @@
        * @param flagValue 設定値 true/false
        */
       setFlagOnCheckBox(id, flagValue) {
-        const elem = document.getElementById(id);
+        const elem = this.getScopedElementById(id);
         elem.checked = flagValue;
       },
 
@@ -2123,7 +2254,7 @@
         // mod #10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない 張玲 start
         if(!changeFlg && !flagJson.startDate){
           dispRangeChangeFlg = true;
-          this.dispStartDateForSetting = moment(this.$route.params.startDate).format("YYYY-MM-DD");
+          this.dispStartDateForSetting = dayjs(this.$route.params.startDate).format("YYYY-MM-DD");
           await this.changeStartDate();
         } else if(changeFlg && !flagJson.startDate){
           dispRangeChangeFlg = true;
@@ -2197,32 +2328,59 @@
        *
        */
       openShutter() {
-        const globalThis = this;
+        const scheduleItemThis = this;
         this.setShutterOpacityVal = 0;
         clearInterval(this.shutterIntervalId);
         this.shutterIntervalId = setInterval(
           function() {
-            globalThis.setShutterOpacityVal -= 0.25;
-            if (globalThis.setShutterOpacityVal < 0) {
+            scheduleItemThis.setShutterOpacityVal -= 0.25;
+            if (scheduleItemThis.setShutterOpacityVal < 0) {
               //完全に開いたので終了
-              globalThis.setShutterOpacityVal = 0;
-              clearInterval(globalThis.shutterIntervalId);
+              scheduleItemThis.setShutterOpacityVal = 0;
+              clearInterval(scheduleItemThis.shutterIntervalId);
             }
             for (let i = 0; i < DEF_ELEMNUM; i++) {
               const idStr = `id_coverarea${i + 1}`;
-              const elem = document.getElementById(idStr);
+              const elem = this.getScopedElementById(idStr);
 
               if (null !== elem) {
-                elem.style.opacity = globalThis.setShutterOpacityVal;
-                if (globalThis.setShutterOpacityVal === 0) {
+                elem.style.opacity = scheduleItemThis.setShutterOpacityVal;
+                if (scheduleItemThis.setShutterOpacityVal === 0) {
                   //シャッターの役割を終えたので背後に下がらせます
                   elem.style.zIndex = -1;
                 }
               }
             }
-          }.bind(globalThis),
-          10
-        );
+          }.bind(scheduleItemThis),
+          10);
+      },
+
+      /**
+       * メッセージダイアログを閉じた後に後続処理を実行
+       * Vue3 ではダイアログ close と同 tick の click 再実行が重なると、
+       * close 完了前に背後のスケジュール click が再入してダイアログが残ったように見えるため、
+       * close 完了後に続きの処理を流す。
+       * @param {Function|null} action 実行する後続処理
+       * @param {Object} options オプション
+       * @param {boolean} options.holdFacilityDialogOpenFlg facilitySettingDialogOpenFlg を callback 実行中だけ立てるか
+       */
+      runAfterMessageDialogClose(action = null, options = {}) {
+        const { holdFacilityDialogOpenFlg = false } = options;
+        this.messageDialogInfo.isDialogVisible = false;
+        this.$nextTick(async () => {
+          if (holdFacilityDialogOpenFlg) {
+            this.facilitySettingDialogOpenFlg = true;
+          }
+          try {
+            if (typeof action === "function") {
+              await action();
+            }
+          } finally {
+            if (holdFacilityDialogOpenFlg) {
+              this.facilitySettingDialogOpenFlg = false;
+            }
+          }
+        });
       },
 
       /**
@@ -2233,253 +2391,192 @@
         if (this.messageDialogInfo.dialogNo === DEF_DIALOG_UNMATCH) {
           //不一致の移動確認の結果
           if (e === "OK") {
-            // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao start
-            this.facilitySettingDialogOpenFlg = true;
-            // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao end
             //OKボタンが押された
             //  チップの移動終了処理
-            // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao start
-            if(this.isReplaceSchedulePreProcessing=="1"){
-              this.replaceSchedulePreProcessing();
-              this.isReplaceSchedulePreProcessing="0"
-            }else{
-              // mod #9273 施設設定マスタのNo105の設定どおり動かない。 dou start
-              let ele = null;
-              if (this.headerFlg) {
-                ele = document.getElementById('kendo_day');
+            this.runAfterMessageDialogClose(async () => {
+              if (this.isReplaceSchedulePreProcessing === "1") {
+                await this.replaceSchedulePreProcessing();
+                this.isReplaceSchedulePreProcessing = "0";
               } else {
-                ele = document.getElementById('id_maindiv');
+                let ele;
+                if (this.headerFlg) {
+                  ele = this.getScopedElementById("kendo_day");
+                } else {
+                  ele = this.getScopedElementById("id_maindiv");
+                }
+                ele?.click?.();
               }
-              // mod #9273 施設設定マスタのNo105の設定どおり動かない。 dou end
-              ele.click();
-            }
-
-            // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao end
-            this.facilitySettingDialogOpenFlg = false;
+            }, { holdFacilityDialogOpenFlg: true });
           } else {
             this.restFacilitySettingDialogsOpenedFlg();
-            //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 start
             EventBus.$emit("changeMismatchVa", false);
-            //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 end
-            //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx start
             EventBus.$emit("changeMismatchInfection", false);
             EventBus.$emit("changeMismatchTreatment", false);
-            //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx end
           }
           this.clickEventNowFlag = false;
         } else if (this.messageDialogInfo.dialogNo === DEF_DIALOG_REPLACE) {
-          // スケジュール入れ替え処理
           if (e === "OK") {
-            // OKボタンが押された
-            // スケジュール入替事前処理
-            this.replaceSchedulePreProcessing();
+            this.runAfterMessageDialogClose(async () => {
+              await this.replaceSchedulePreProcessing();
+            });
           }
         } else if (this.messageDialogInfo.dialogNo === DEF_DIALOG_REPLACEUNMATCH) {
-          //不一致の移動確認の結果
           if (e === "OK") {
-            //OKボタンが押された
-
-            // スケジュール入替処理
-            this.replaceSchedule();
+            this.runAfterMessageDialogClose(async () => {
+              await this.replaceSchedule();
+            });
           } else {
             this.restFacilitySettingDialogsOpenedFlg();
           }
           this.clickEventNowFlag = false;
-          // FNSI-add 現行改善対応425 孫灝 20201117 start
         } else if (this.messageDialogInfo.dialogNo === DEF_DIALOG_FACILITY_SETTING_1007_4 && !this.headerFlg) {
-		  // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao start
-          this.isOneOrSed=e;
-		  // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao end
-          this.facilitySettingDialogOpenFlg = true;
+          this.isOneOrSed = e;
           switch(e) {
             case 1:
             case 2:
-            case 3:
+            case 3: {
               this.setFacilitySetting1007_4SelectedVal(e);
-              // eslint-disable-next-line no-case-declarations
-              let ele = document.getElementById('id_maindiv');
-              ele.click();
+              const ele = this.getScopedElementById("id_maindiv");
+              this.runAfterMessageDialogClose(() => ele?.click?.(), { holdFacilityDialogOpenFlg: true });
               break;
+            }
             default:
               break;
           }
-
-          this.facilitySettingDialogOpenFlg = false;
-          
         } else if (this.messageDialogInfo.dialogNo === DEF_DIALOG_FACILITY_SETTING_1008_4 && !this.headerFlg) {
-		  // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao start
-           this.isOneOrSed=e;
-		  // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao end
-          this.facilitySettingDialogOpenFlg = true;
+          this.isOneOrSed = e;
           switch(e) {
             case 1:
             case 2:
-            case 3:
+            case 3: {
               this.setFacilitySetting1008_4SelectedVal(e);
-              // eslint-disable-next-line no-case-declarations
-              let ele = document.getElementById('id_maindiv');
-              ele.click();
+              const ele = this.getScopedElementById("id_maindiv");
+              this.runAfterMessageDialogClose(() => ele?.click?.(), { holdFacilityDialogOpenFlg: true });
               break;
+            }
             default:
               break;
           }
-          this.facilitySettingDialogOpenFlg = false
-          // FNSI-add 現行改善対応425 孫灝 20201117 end
-
-          // add FNSI 1006 No.426 start --孙灏 20201216
-		  // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao start
         } else if (this.messageDialogInfo.dialogNo === DEF_DIALOG_FACILITY_SETTING_2007_4 && !this.headerFlg) {
-            if (e === "OK") {
-            this.facilitySettingDialogOpenFlg = true;
-            let ele = document.getElementById('id_maindiv');
-            ele.click();
-            this.facilitySettingDialogOpenFlg = false;
+          if (e === "OK") {
+            this.runAfterMessageDialogClose(() => {
+              const ele = this.getScopedElementById("id_maindiv");
+              ele?.click?.();
+            }, { holdFacilityDialogOpenFlg: true });
           } else {
             this.restFacilitySettingDialogsOpenedFlg();
           }
-          // FNSI-add 現行改善対応425 孫灝 20201117 end
-
-          // add FNSI 1006 No.426 start --孙灏 20201216
         } else if (this.messageDialogInfo.dialogNo === DEF_DIALOG_FACILITY_SETTING_2008_4 && !this.headerFlg) {
           if (e === "OK") {
-            this.facilitySettingDialogOpenFlg = true;
-            let ele = document.getElementById('id_maindiv');
-            ele.click();
-            this.facilitySettingDialogOpenFlg = false;
+            this.runAfterMessageDialogClose(() => {
+              const ele = this.getScopedElementById("id_maindiv");
+              ele?.click?.();
+            }, { holdFacilityDialogOpenFlg: true });
           } else {
             this.restFacilitySettingDialogsOpenedFlg();
           }
-		  // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao end
         } else if (this.messageDialogInfo.dialogNo === DEF_DIALOG_FACILITY_SETTING_3005_4 && !this.headerFlg) {
-          this.facilitySettingDialogOpenFlg = true;
           switch(e) {
             case 1:
             case 2:
-            case 3:
+            case 3: {
               this.setFacilitySetting3005_4SelectedVal(e);
-              // eslint-disable-next-line no-case-declarations kendo_day
-              var ele = document.getElementById('id_maindiv');
-              ele.click();
+              const ele = this.getScopedElementById("id_maindiv");
+              this.runAfterMessageDialogClose(() => ele?.click?.(), { holdFacilityDialogOpenFlg: true });
               break;
+            }
             default:
               break;
           }
-          this.facilitySettingDialogOpenFlg = false;
-          // add FNSI 1006 No.426 end --孙灏 20201216
-
-          // FNSI-add 現行改善対応425 徐 start
         } else if (this.messageDialogInfo.dialogNo === DEF_DIALOG_FACILITY_SETTING_1007_4 && this.headerFlg) {
-          // add #9273 施設設定マスタのNo105の設定どおり動かない。 dou start
           this.isOneOrSed = e;
-          // add #9273 施設設定マスタのNo105の設定どおり動かない。 dou end
-          this.facilitySettingDialogOpenFlg = true;
           switch(e) {
             case 1:
             case 2:
-            case 3:
+            case 3: {
               this.setFacilitySetting1007_4SelectedVal(e);
-              // eslint-disable-next-line no-case-declarations
-              let ele = document.getElementById('kendo_day');
-              ele.click();
+              const ele = this.getScopedElementById("kendo_day");
+              this.runAfterMessageDialogClose(() => ele?.click?.(), { holdFacilityDialogOpenFlg: true });
               break;
+            }
             default:
               break;
           }
-
-          this.facilitySettingDialogOpenFlg = false;
-
         } else if (this.messageDialogInfo.dialogNo === DEF_DIALOG_FACILITY_SETTING_1008_4 && this.headerFlg) {
-          // add #9273 施設設定マスタのNo105の設定どおり動かない。 dou start
           this.isOneOrSed = e;
-          // add #9273 施設設定マスタのNo105の設定どおり動かない。 dou end
-          this.facilitySettingDialogOpenFlg = true;
           switch(e) {
             case 1:
             case 2:
-            case 3:
+            case 3: {
               this.setFacilitySetting1008_4SelectedVal(e);
-              // eslint-disable-next-line no-case-declarations
-              let ele = document.getElementById('kendo_day');
-              ele.click();
+              const ele = this.getScopedElementById("kendo_day");
+              this.runAfterMessageDialogClose(() => ele?.click?.(), { holdFacilityDialogOpenFlg: true });
               break;
+            }
             default:
               break;
           }
-          this.facilitySettingDialogOpenFlg = false
         } else if (this.messageDialogInfo.dialogNo === DEF_DIALOG_FACILITY_SETTING_3005_4 && this.headerFlg) {
-          this.facilitySettingDialogOpenFlg = true;
           switch(e) {
             case 1:
             case 2:
-            case 3:
+            case 3: {
               this.setFacilitySetting3005_4SelectedVal(e);
-              // eslint-disable-next-line no-case-declarations kendo_day
-              var ele = document.getElementById('kendo_day');
-              ele.click();
+              const ele = this.getScopedElementById("kendo_day");
+              this.runAfterMessageDialogClose(() => ele?.click?.(), { holdFacilityDialogOpenFlg: true });
               break;
+            }
             default:
               break;
           }
-          this.facilitySettingDialogOpenFlg = false;
         } else if (this.messageDialogInfo.dialogNo === DEF_DIALOG_FACILITY_SETTING_1007_4_2) {
-		  // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao start
-          this.isOneOrSed=e;
-		  // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao end
-          this.facilitySettingDialogOpenFlg = true;
+          this.isOneOrSed = e;
           switch(e) {
             case 1:
             case 2:
             case 3:
               this.setFacilitySetting1007_4SelectedVal(e);
-              this.replaceSchedulePreProcessing();
+              this.runAfterMessageDialogClose(async () => {
+                await this.replaceSchedulePreProcessing();
+              }, { holdFacilityDialogOpenFlg: true });
               break;
             default:
               break;
           }
-
-          this.facilitySettingDialogOpenFlg = false;
-
         } else if (this.messageDialogInfo.dialogNo === DEF_DIALOG_FACILITY_SETTING_1008_4_2) {
-		  // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao start
-          this.isOneOrSed=e;
-		  // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao end
-          this.facilitySettingDialogOpenFlg = true;
+          this.isOneOrSed = e;
           switch(e) {
             case 1:
             case 2:
             case 3:
               this.setFacilitySetting1008_4SelectedVal(e);
-              this.replaceSchedulePreProcessing();
+              this.runAfterMessageDialogClose(async () => {
+                await this.replaceSchedulePreProcessing();
+              }, { holdFacilityDialogOpenFlg: true });
               break;
             default:
               break;
           }
-          this.facilitySettingDialogOpenFlg = false
         } else if (this.messageDialogInfo.dialogNo === DEF_DIALOG_FACILITY_SETTING_3005_4_2) {
-          this.facilitySettingDialogOpenFlg = true;
           switch(e) {
             case 1:
             case 2:
             case 3:
               this.setFacilitySetting3005_4SelectedVal(e);
-              this.replaceSchedulePreProcessing();
+              this.runAfterMessageDialogClose(async () => {
+                await this.replaceSchedulePreProcessing();
+              }, { holdFacilityDialogOpenFlg: true });
               break;
             default:
               break;
           }
-          this.facilitySettingDialogOpenFlg = false;
         }
-        // FNSI-add 現行改善対応425 徐 end
-        //add #10601 スケジュール表動作不正 start
-        // eslint-disable-next-line no-cond-assign
         if (this.messageDialogInfo.messageCd === DEF_DIALOG_MSG_33) {
-          //不一致の移動確認の結果
           if (e === "OK") {
             this.examDeadlineSelectedVal = "OK";
             this.radDeadlineSelectedVal = "OK";
           }
         }
-        //add #10601 スケジュール表動作不正 end
       },
 
       /**
@@ -2830,27 +2927,27 @@
        * 指定日スクロール移動の設定監視
        * */
       watchScrollSet() {
-        const globalThis = this;
+        const scheduleItemThis = this;
         clearInterval(this.intervalId);
         // add 10601 スケジュール表動作不正 関  start
         const startTime = Date.now();
         // add 10601 スケジュール表動作不正 関  end
         this.intervalId = setInterval(
           function() {
-            const elem = document.getElementById("scroll_area");
+            const elem = this.getScopedElementById("scroll_area");
             // mod 6049 修正 chen start
-            let daysTmp = 0
+            let daysTmp = 0;
             let dateList = [];
             // add #10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない 張玲 start
             let flg = false;
             // add #10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない 張玲 end
-            globalThis.dayHeaderElems.forEach((item, index) => {
+            scheduleItemThis.dayHeaderElems.forEach((item, index) => {
               if (item) {
                 // mod bug #7928 修正 chen start
-                let col = document.getElementById(item.id);
-                if (col.style.display !== "none") {
+                const col = this.getScopedElementById(item.id);
+                if (col && col.style.display !== "none") {
                 // mod bug #7928 修正 chen end
-                  dateList.push(Object.keys(globalThis.dispdata)[index - 1]);
+                  dateList.push(Object.keys(scheduleItemThis.dispdata)[index - 1]);
                   // add #10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない 張玲 start
                   flg = true
                   // add #10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない 張玲 end
@@ -2866,47 +2963,47 @@
               daysTmp = this.getScrollDayNum();
             }
 
-            if (flg && daysTmp === -1 && (!this.holidayFlag && moment(globalThis.dispStartDate).day() === 0)) {
-              clearInterval(globalThis.intervalId);
+            if (flg && daysTmp === -1 && (!this.holidayFlag && dayjs(scheduleItemThis.dispStartDate).day() === 0)) {
+              clearInterval(scheduleItemThis.intervalId);
             }
             // add #10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない 張玲 end
             // mod 7928 修正 chen start
-            let kurNum = globalThis.kurNumCount === 0 ? globalThis.kurNum : globalThis.kurNumCount;
-            globalThis.scrollStartPosX = Math.floor(
+            let kurNum = scheduleItemThis.kurNumCount === 0 ? scheduleItemThis.kurNum : scheduleItemThis.kurNumCount;
+            scheduleItemThis.scrollStartPosX = Math.floor(
               daysTmp *
               kurNum *
               // mod 10601 スケジュール表動作不正 関  start
               this.elemKurValue
               // mod 10601 スケジュール表動作不正 関  end
-            );
+              );
 
             // スクロール位置を設定(指定位置がスクロール可能幅を超える場合、scrollLeftプロパティの仕様で設定可能な最大値(右端)に調整される)
-            elem.scrollLeft = globalThis.scrollStartPosX;
+            elem.scrollLeft = scheduleItemThis.scrollStartPosX;
 
             // スクロール位置が指定位置(scrollStartPosX)または右端に到達したか判定
-            if (globalThis.scrollStartPosX >= 0 &&
-                 (Math.abs(elem.scrollLeft - globalThis.scrollStartPosX) < 2 || this.isScrolledToRight(elem))) {
+            if (scheduleItemThis.scrollStartPosX >= 0 &&
+                 (Math.abs(elem.scrollLeft - scheduleItemThis.scrollStartPosX) < 2 || this.isScrolledToRight(elem))) {
               if (this.getScrollTopWitch) {
                 elem.scrollTop = this.getScrollTopWitch;
               }
               // スクロール位置が指定位置に到達した為、インターバル終了
-              clearInterval(globalThis.intervalId);
+              clearInterval(scheduleItemThis.intervalId);
             }
             // add 10601 スケジュール表動作不正 関  start
             let currentTime = Date.now();
             let elapsedTime = (currentTime - startTime) / 1000;
             if (elapsedTime >= 10) {
-              clearInterval(globalThis.intervalId);
+              clearInterval(scheduleItemThis.intervalId);
             }
             // add 10601 スケジュール表動作不正 関  end
-          }.bind(globalThis),
+          }.bind(scheduleItemThis),
           10
         );
       },
 
       /**
        * 右端までスクロールされているかを判定する
-       * @param {HTMLElement} elem - スクロール対象の要素(例: document.getElementById('scroll_area'))
+       * @param {HTMLElement} elem - スクロール対象の要素(例: this.getScopedElementById('scroll_area'))
        * @param {number} tolerance - スクロールの許容誤差(px)
        * @returns {boolean}
        */
@@ -2991,9 +3088,260 @@
         let dispStartDate = this.dispStartDateForSetting.replace(/-/g, "");
         if (dispStartDate === "") {
           //日付がありえない場合、this.dispStartDateが""になるので、代わりに当日を設定
-          dispStartDate = this.formatMomentDateYYYYMMDD(moment());
+          dispStartDate = this.formatMomentDateYYYYMMDD(dayjs());
         }
         return dispStartDate;
+      },
+
+      /**
+       * クール列幅（日付×クール単位）
+       */
+      getKurColumnWidth(dayIndex, kurIndex) {
+        const width = Number(this.kurDayWidth?.[dayIndex]?.[kurIndex]);
+        return width > 0 ? width : DEF_KUR_WIDTH;
+      },
+
+      /**
+       * 日付ヘッダー列幅（配下クール列幅の合計）
+       */
+      getDayColumnWidth(dayIndex) {
+        if (!dayIndex || dayIndex > this.dayMax) {
+          return 0;
+        }
+        let sum = 0;
+        for (let k = 1; k <= this.kurNum; k++) {
+          if (this.kurDayVisibility?.[dayIndex]?.[k] === "visible") {
+            sum += this.getKurColumnWidth(dayIndex, k);
+          }
+        }
+        return sum > 0 ? sum : this.dayWidth;
+      },
+
+      /**
+       * 状態管理値からスケジュール表全体幅を算出
+       */
+      getScheduleTotalWidthFromState() {
+        let total = 0;
+        for (let d = 1; d <= this.dayMax; d++) {
+          const dayVisible = this.holidayFlag || this.getDayDispIndex[d - 1];
+          if (!dayVisible) {
+            continue;
+          }
+          total += this.getDayColumnWidth(d);
+        }
+        return Math.round(total);
+      },
+
+      /**
+       * 状態管理値からヘッダー・明細の列幅を再適用（リサイズ列の左側は幅を変えない）
+       */
+      syncScheduleHeaderWidthsFromState() {
+        for (let dayIndex = 1; dayIndex <= this.dayHeaderNum; dayIndex++) {
+          const dayVisible =
+            dayIndex <= this.dayMax &&
+            (this.holidayFlag || this.getDayDispIndex[dayIndex - 1]);
+
+          for (let kurIndex = 1; kurIndex <= this.kurNum; kurIndex++) {
+            const columnIndex = (dayIndex - 1) * this.kurNum + (kurIndex - 1);
+            const kurVisible =
+              dayVisible &&
+              this.kurDayVisibility?.[dayIndex]?.[kurIndex] === "visible";
+            const kurWidth = kurVisible
+              ? this.getKurColumnWidth(dayIndex, kurIndex)
+              : 0;
+            this.setKurHeaderColumnDisplay(columnIndex, kurVisible, kurWidth);
+            if (kurVisible) {
+              this.applyScheduleBodyColumnWidth(dayIndex, kurIndex, kurWidth);
+            }
+          }
+
+          const dayWidth = dayVisible ? this.getDayColumnWidth(dayIndex) : 0;
+          this.setDayHeaderColumnDisplay(
+            dayIndex - 1,
+            dayVisible && dayWidth > 0,
+            dayWidth
+          );
+        }
+      },
+
+      /**
+       * 横スクロール位置を維持（列幅変更で左側がずれないようにする）
+       */
+      restoreScheduleHorizontalScroll(scrollLeft) {
+        const left = Math.max(0, Math.round(Number(scrollLeft) || 0));
+        const scrollArea = this.getScopedElementById("scroll_area");
+        if (scrollArea) {
+          scrollArea.scrollLeft = left;
+        }
+        this.syncHeaderScrollLeft(left);
+        if (this.areaElems) {
+          [5, 6, 7, 8, 9].forEach((index) => {
+            if (this.areaElems[index]) {
+              this.areaElems[index].scrollLeft = left;
+            }
+          });
+        }
+        this.setScrollLeftWitch(left);
+      },
+
+      /**
+       * Kendo ヘッダー表をコンテンツ総幅で展開（ビューポート幅に押し潰さない）
+       */
+      applyScheduleKendoGridContainerWidth(root, totalWidth) {
+        if (!root) {
+          return;
+        }
+        const widthText = `${Math.max(0, Math.round(Number(totalWidth) || 0))}px`;
+        root.style.width = widthText;
+        root.style.removeProperty("min-width");
+        const grid = root.querySelector(".k-grid");
+        if (grid) {
+          grid.style.width = widthText;
+          grid.style.removeProperty("min-width");
+        }
+      },
+
+      /**
+       * 列要素の幅を設定（min/max で固定しない＝Kendo リサイズを阻害しない）
+       */
+      applyScheduleColumnElementWidth(element, widthText, visible) {
+        if (!element) {
+          return;
+        }
+        element.style.display = visible ? "" : "none";
+        if (visible && widthText) {
+          element.style.width = widthText;
+          element.style.removeProperty("min-width");
+          element.style.removeProperty("max-width");
+        } else if (!visible) {
+          element.style.width = "0px";
+          element.style.removeProperty("min-width");
+          element.style.removeProperty("max-width");
+        }
+      },
+
+      /**
+       * 列幅変更後のスクロール領域・ヘッダー表幅同期
+       */
+      updateScheduleScrollWidth(totalWidth, options = {}) {
+        const scrollArea = this.getScopedElementById("scroll_area");
+        const savedScrollLeft = scrollArea?.scrollLeft || 0;
+
+        const normalizedWidth = Math.max(
+          0,
+          Math.round(Number(totalWidth) || 0)
+        );
+        this.totalWidth = normalizedWidth;
+        this.area6Width = normalizedWidth;
+
+        // 各列幅を状態から固定してから表幅を合わせる（左端固定・右端のみ伸縮）
+        this.syncScheduleHeaderWidthsFromState();
+
+        const dayRoot = this.getScopedElementById("kendo_day");
+        const kurRoot = this.getScopedElementById("kendo_kur");
+        if (dayRoot) {
+          this.applyScheduleKendoGridContainerWidth(dayRoot, normalizedWidth);
+          this.syncHeaderGridTables(dayRoot, normalizedWidth);
+        }
+        if (kurRoot) {
+          this.applyScheduleKendoGridContainerWidth(kurRoot, normalizedWidth);
+          this.syncHeaderGridTables(kurRoot, normalizedWidth);
+        }
+
+        const area5ScrollArea = this.getScopedElementById("id_area5_scrollarea");
+        if (area5ScrollArea) {
+          area5ScrollArea.style.width = `${normalizedWidth + 2}px`;
+          area5ScrollArea.style.removeProperty("min-width");
+        }
+        const area6Table = this.getScopedElementById("id_area6_tbl");
+        if (area6Table) {
+          area6Table.style.width = `${normalizedWidth}px`;
+          area6Table.setAttribute("width", `${normalizedWidth}px`);
+        }
+        const area6Inner = this.getScopedElementById("id_area6")?.firstElementChild;
+        if (area6Inner) {
+          area6Inner.style.width = `${normalizedWidth}px`;
+        }
+        const underbar = this.getScopedElementById("id_underbar_content9");
+        if (underbar) {
+          underbar.style.width = `${normalizedWidth}px`;
+        }
+
+        const targetElems = this.getScheduleGridContentEls();
+        const contentExpanders = this.getScheduleGridContentExpanders();
+        if (contentExpanders[0] && targetElems?.[1]) {
+          contentExpanders[0].style.width = `${targetElems[1].scrollWidth || normalizedWidth}px`;
+        }
+
+        this.restoreScheduleHorizontalScroll(savedScrollLeft);
+        if (options.resizeMode) {
+          this.syncDayHeaderWidthWithKur();
+        } else {
+          this.queueDayHeaderLayoutSync();
+        }
+      },
+
+      detachScheduleHeaderResizeEndListener() {
+        if (!this.scheduleHeaderResizeEndListening) {
+          return;
+        }
+        const doc = this.getScheduleOwnerDocument();
+        doc.removeEventListener("mouseup", this.flushScheduleHeaderWidthSync, true);
+        doc.removeEventListener("touchend", this.flushScheduleHeaderWidthSync, true);
+        this.scheduleHeaderResizeEndListening = false;
+      },
+
+      flushScheduleHeaderWidthSync() {
+        this.detachScheduleHeaderResizeEndListener();
+        if (this.scheduleHeaderResizeRafId) {
+          cancelAnimationFrame(this.scheduleHeaderResizeRafId);
+          this.scheduleHeaderResizeRafId = 0;
+        }
+        // Kendo 側の列幅確定後に最終同期する
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            this.updateScheduleScrollWidth(this.getScheduleTotalWidthFromState());
+          });
+        });
+      },
+
+      /**
+       * 列幅ドラッグ中は rAF で同期、操作終了時に完全同期する
+       */
+      requestScheduleHeaderWidthSync() {
+        if (!this.scheduleHeaderResizeEndListening) {
+          this.scheduleHeaderResizeEndListening = true;
+          const doc = this.getScheduleOwnerDocument();
+          doc.addEventListener("mouseup", this.flushScheduleHeaderWidthSync, true);
+          doc.addEventListener("touchend", this.flushScheduleHeaderWidthSync, true);
+        }
+        if (this.scheduleHeaderResizeRafId) {
+          return;
+        }
+        this.scheduleHeaderResizeRafId = requestAnimationFrame(() => {
+          this.scheduleHeaderResizeRafId = 0;
+          this.updateScheduleScrollWidth(this.getScheduleTotalWidthFromState(), {
+            resizeMode: true
+          });
+        });
+      },
+
+      /**
+       * ベッド系テーブルセルの列幅を更新
+       */
+      applyScheduleBodyColumnWidth(dayIndex, kurIndex, width) {
+        const widthText = `${Math.max(0, Math.round(Number(width) || 0))}px`;
+        [
+          `id_td_${dayIndex}_${kurIndex}`,
+          `id_tdbednotyet_${dayIndex}_${kurIndex}`,
+          `id_tdkurnotyet_${dayIndex}_${kurIndex}`
+        ].forEach((id) => {
+          this.applyScheduleColumnElementWidth(
+            this.getScopedElementById(id),
+            widthText,
+            true
+          );
+        });
       },
       /**
        * チェックの値の取得
@@ -3002,7 +3350,7 @@
        */
       getCheckBoxValue(elemId) {
         let ret = false;
-        const elem = document.getElementById(elemId);
+        const elem = this.getScopedElementById(elemId);
         ret = elem !== null ? elem.checked : false;
         return ret;
       },
@@ -3019,7 +3367,7 @@
         //表示の基準日
         const baseDate = payload.baseDate;
 
-        const dt = null === baseDate ? moment() : moment(baseDate);
+        let dt = null === baseDate ? dayjs() : dayjs(baseDate);
 
         // 帳票受け渡し用のstore設定
         this.setReportParam({
@@ -3030,7 +3378,7 @@
         //指定日を真ん中にする補正
         //例)14日出す場合、基準日の前が7日、後ろは基準日を含めて7日
         const minusDayNum = -1 * Math.floor(dayNum / 2);
-        dt.add(minusDayNum, "days");
+        dt = dt.add(minusDayNum, "days");
 
         //-----------------------------------------------
         //日付列の作成
@@ -3044,7 +3392,7 @@
           treatDateList.push(this.treatDateDim[d - 1] = this.formatMomentDateYYYYMMDD(dt));
           // mod 10601 スケジュール表動作不正 関  end
           //1日進める
-          dt.add(1, "days");
+          dt = dt.add(1, "days");
         }
 
         //----------------------------------------------
@@ -3380,7 +3728,7 @@
           this.movingBlockElem.style.display = "none";
           // mod FNSI 1006 No.426 start -- Sanjingye Sun 20201224
           if(!this.facilitySettingDialogOpenFlg){
-            this.underElem = document.elementFromPoint(e.clientX, e.clientY);
+            this.underElem = this.getScheduleElementFromPoint(e.clientX, e.clientY);
           }
           // mod FNSI 1006 No.426 end -- Sanjingye Sun 20201224
 
@@ -3497,7 +3845,7 @@
             //------------------------------------------
             //移動可能確認処理
 
-            let moveEnable = true; //移動可否フラグ true:移動可能
+            let moveEnable; //移動可否フラグ true:移動可能
 
             this.msgNo = DEF_DIALOG_MSG_4; //禁止メッセージ出力の準備(メッセージ番号の初期値の設定)
 
@@ -3898,7 +4246,7 @@
         this.setHeaderDispDefaultMode();
 
         //移動ブロックの大元(divブロック)の作成初期化
-        this.movingBlockElem = document.createElement("div");
+        this.movingBlockElem = this.createScheduleElement("div");
 
         // クリックした場所によって参照する要素が異なる
         let referenceNode = null;
@@ -3971,10 +4319,12 @@
 
           //クールヘッダーのクローン
           const cloneKurHeader = referenceNode.parentNode.cloneNode(true);
+          cloneKurHeader.style.removeProperty("min-width");
+          cloneKurHeader.style.removeProperty("max-width");
           cloneKurHeader.style.width = elemCloneWidth;
 
           //クールのクローン
-          const cloneKur = document.getElementById(kurId).cloneNode(true);
+          const cloneKur = this.getScopedElementById(kurId).cloneNode(true);
           cloneKur.style.width = elemCloneWidth;
 
           //ダミーの表示(名前)加工
@@ -4001,7 +4351,7 @@
 
           //ベッド未登録領域のクローン
           const tdElemName = `id_tdbednotyet_${kurNum}`.replace("-", "_");
-          const cloneTd = document.getElementById(tdElemName);
+          const cloneTd = this.getScopedElementById(tdElemName);
           const children = cloneTd.getElementsByTagName("div");
 
           //組み立て
@@ -4012,7 +4362,7 @@
           // cloneKur内のすべてのdivを取得する
           const childDivs = cloneKur.getElementsByTagName("div");
           // 新しいdivをコンテナとして作成
-          const newContainerDiv = document.createElement("div");
+          const newContainerDiv = this.createScheduleElement("div");
           newContainerDiv.style.width = elemCloneWidth;
           for (let childDiv of childDivs) {
             let backgroundColor = childDiv.style.backgroundColor;
@@ -4027,7 +4377,7 @@
           this.movingBlockElem.appendChild(newContainerDiv);
           // mod 11459 スケジュール表で条件送信済実績をクール一括移動させるとフリーズ発生 関 end
 
-          const elemBedNotYet = document.createElement("div");
+          const elemBedNotYet = this.createScheduleElement("div");
           elemBedNotYet.style.width = elemCloneWidth;
           //ベッド未登録領域の追加
           for (let i = 0; i < children.length; i++) {
@@ -4037,8 +4387,7 @@
           this.movingBlockElem.appendChild(elemBedNotYet);
 
           //画面への追加
-          document
-            .getElementsByClassName("main-content-area")[0]
+          getMainContentAreaElement(this.$el || this.getScheduleOwnerDocument())
             .appendChild(this.movingBlockElem);
 
           //位置決め
@@ -4068,17 +4417,6 @@
         } else {
           //この場合日付が選択される
           //ベッド確定領域+ベッド未確定領域+クール未登録領域が移動対象です
-          //日付ヘッダーの幅取得
-          // FNSI-add redmine 4019 start
-          let rectWidth = DEF_KUR_WIDTH;
-          if (this.kurNumIndex) {
-            const KurNumTotal = this.kurNumIndex.split(":").length;
-            rectWidth = rectWidth * this.elemResizeValue * KurNumTotal;
-          } else {
-            rectWidth = rectWidth * this.elemResizeValue * this.kurNum;
-          }
-
-          // FNSI-add redmine 4019 end
 
           //Idの組み立て
           const dayId = referenceNode.id;
@@ -4138,8 +4476,10 @@
 
           //日付ヘッダーのクローン(1個)
           const cloneDayHeader = referenceNode.cloneNode(true);
-          cloneDayHeader.style.width = `${parseInt(rectWidth)}px`;
-
+          cloneDayHeader.style.removeProperty("min-width");
+          cloneDayHeader.style.removeProperty("max-width");
+          cloneDayHeader.style.removeProperty("width");
+          cloneDayHeader.style.boxSizing = "border-box";
 
           //クールヘッダー&クールのクローン(複数個)
           const dimCloneKurHeader = new Array(this.kurNum);
@@ -4153,10 +4493,13 @@
               continue;
             }
 
-            dimCloneKurHeader[k] = document
-              .getElementById(dimKurHeaderId[k])
-              .cloneNode(true);
-            dimCloneKur[k] = document.getElementById(dimKurId[k]).cloneNode(true);
+            const kurHeaderElement = this.getScopedElementById(dimKurHeaderId[k]);
+            const kurElement = this.getScopedElementById(dimKurId[k]);
+            if (!kurHeaderElement || !kurElement) {
+              continue;
+            }
+            dimCloneKurHeader[k] = kurHeaderElement.cloneNode(true);
+            dimCloneKur[k] = kurElement.cloneNode(true);
 
             const bedChildren = dimCloneKur[k].getElementsByTagName("div");
             for (
@@ -4181,11 +4524,11 @@
             }
 
             //ベッド未登録領域のセル取得
-            const cloneTdBed = document.getElementById(dimNotYetBedId[k]);
+            const cloneTdBed = this.getScopedElementById(dimNotYetBedId[k]);
             dimCloneNotYetBed[k] = cloneTdBed.getElementsByTagName("div");
 
             //クール未登録領域のセル取得
-            const cloneTdKur = document.getElementById(dimNotYetKurId[k]);
+            const cloneTdKur = this.getScopedElementById(dimNotYetKurId[k]);
             dimCloneNotYetKur[k] = cloneTdKur.getElementsByTagName("div");
           }
 
@@ -4198,8 +4541,7 @@
           //        </div>
 
           //ベースのテーブル
-          const nodeTable = document.createElement("table");
-          nodeTable.setAttribute("style", "border-spacing:0px;");
+          const nodeTable = this.createScheduleElement("table");
 
           //上段のTR(日付)
           //構造:
@@ -4208,11 +4550,12 @@
           //  日付ヘッダー領域
           // </td>
           //</tr>
-          const nodeDayTd = document.createElement("td");
+          const nodeDayTd = this.createScheduleElement("td");
           nodeDayTd.setAttribute("colspan", this.kurNum);
+          nodeDayTd.style.padding = "0px";
           //日付ヘッダー領域の追加
           nodeDayTd.appendChild(cloneDayHeader);
-          const nodeTr1 = document.createElement("tr");
+          const nodeTr1 = this.createScheduleElement("tr");
           nodeTr1.appendChild(nodeDayTd);
 
           //下段のTR(クール)
@@ -4226,7 +4569,7 @@
           // </td>
           //</tr>
 
-          const nodeTr2 = document.createElement("tr");
+          const nodeTr2 = this.createScheduleElement("tr");
           for (let k = 0; k < this.kurNum; k++) {
             if (this.kurDayWidth[dayNum][k + 1] === 0) {
               //非表示の時は処理しない
@@ -4236,9 +4579,11 @@
             this.elemResizeValue}px`;
             const elemCloneWidth2 = `${DEF_KUR_WIDTH *
             this.elemResizeValue - 1}px`;
-            const nodeKurTd = document.createElement("td");
+            const nodeKurTd = this.createScheduleElement("td");
             nodeKurTd.style.padding = "0px";
             nodeKurTd.style.width = elemCloneWidth;
+            dimCloneKurHeader[k].style.removeProperty("min-width");
+            dimCloneKurHeader[k].style.removeProperty("max-width");
             //クールヘッダー領域の追加
             dimCloneKurHeader[k].style.width = (k === this.kurNum - 1) ? elemCloneWidth : elemCloneWidth2;
             if (k === 0) {
@@ -4250,7 +4595,7 @@
             // mod 11459 スケジュール表で条件送信済実績をクール一括移動させるとフリーズ発生 関 start
             const childDivs = dimCloneKur[k].getElementsByTagName("div");
             // 新しいdivをコンテナとして作成
-            const newContainerDiv = document.createElement("div");
+            const newContainerDiv = this.createScheduleElement("div");
             newContainerDiv.style.width = elemCloneWidth;
             for (let childDiv of childDivs) {
               let backgroundColor = childDiv.style.backgroundColor;
@@ -4289,8 +4634,7 @@
           this.movingBlockElem.appendChild(nodeTable);
 
           //画面への追加
-          document
-            .getElementsByClassName("main-content-area")[0]
+          getMainContentAreaElement(this.$el || this.getScheduleOwnerDocument())
             .appendChild(this.movingBlockElem);
 
           // //位置決め
@@ -4575,7 +4919,6 @@
             //移動元に患者がいる場合は、個別の移動処理
             if (this.checkBedStatus(fromData)) {
 
-
               this.beforeMoveDataList.push(fromData)
               this.afterMoveDataList.push(this.afterScheduleInfoConvert(fromData,toData.treatDate,toData.kur_cd,toData.bed_cd))
 
@@ -4739,11 +5082,11 @@
         const wheelDirection = -Math.sign(e.wheelDelta);
 
         //ベッド確定エリア
-        const elemArea10 = document.getElementById("id_area10");
+        const elemArea10 = this.getScopedElementById("id_area10");
         //ベッド未登録エリア
-        const elemArea11 = document.getElementById("id_area11");
+        const elemArea11 = this.getScopedElementById("id_area11");
         //クール未登録エリア
-        const elemArea12 = document.getElementById("id_area12");
+        const elemArea12 = this.getScopedElementById("id_area12");
 
         //--------------------------------------------
         // スクロール対象エリアを取得
@@ -4792,12 +5135,12 @@
         //日付ヘッダー&クールヘッダーの設定
 
         //表示の基準日をmoment化
-        const dt = null === startDate ? moment() : moment(startDate); //指定日付の取得
+        let dt = null === startDate ? dayjs() : dayjs(startDate); //指定日付の取得
 
         //指定日を真ん中にする補正
         //例)14日出す場合、基準日の前が7日、後ろは基準日を含めて7日
         const minusDayNum = -1 * Math.floor(this.dayMax / 2);
-        dt.add(minusDayNum, "days");
+        dt = dt.add(minusDayNum, "days");
 
         //スクロール表示開始位置の計算
         this.scrollStartPosX = Math.floor(
@@ -4822,10 +5165,10 @@
 
           //日付(yyyymmdd)格納
           this.propsJDayHeader[d].date = result;
-          this.propsJDayHeader[d].startDate = null === startDate ? moment().format("YYYY/MM/DD") : startDate; //指定日付の取得
+          this.propsJDayHeader[d].startDate = null === startDate ? dayjs().format("YYYY/MM/DD") : startDate; //指定日付の取得
 
           //1日進める
-          dt.add(1, "days");
+          dt = dt.add(1, "days");
 
           //ストアから当該日のデータ取得(引数:yyyymmdd)
           const treatDataFromStore = this.getBedsData(result);
@@ -4987,7 +5330,7 @@
         this.checkNotYetAreaMax();
 
         //強制書き換えイベント
-        this.$forceUpdate();
+        this.requestViewForceUpdate();
       },
 
       /**
@@ -4996,11 +5339,6 @@
        */
       async changeDispTerm(num) {
         //選択期間の取得
-        if (num > 3) {
-          //大きかったら2週(通常はありえない)
-          num = 2;
-        }
-
         //3週が選ばれた場合で、まだカラム作成がされていなかった場合は、カラム作成し、kendoヘッダー領域へコンポーネント紐付けも行います(1回だけの処理)
         this.dayHeaderNum3rd = 7;
 
@@ -5011,7 +5349,7 @@
         clearInterval(this.relocateId);
         this.relocateId = setInterval(
           function() {
-            const elem = document.getElementById("id_dayheader-21");
+            const elem = this.getScopedElementById("id_dayheader-21");
             if (elem !== null) {
               //kendo-gridへのコンポーネントの紐付け
               this.relocateKendoHeaders("both", 14);
@@ -5051,7 +5389,7 @@
           await this.changeHolidayDispState();
         }
         // add FNSI-休日表示の修正 徐 end
-        this.$forceUpdate();
+        this.requestViewForceUpdate();
       },
       /**
        スクロール位置の変更
@@ -5112,47 +5450,33 @@
         this.totalWidth = setWidthTotal;
 
         //最下スクロールバーのスクロールの幅を強制設定
-        document.getElementById(
-          "id_underbar_content9"
-        ).style.width = `${setWidthTotal}px`;
+        this.getScopedElementById(
+          "id_underbar_content9").style.width = `${setWidthTotal}px`;
 
         //日付ヘッダ(kendo grid)の表示非表示化
-        const targetGrid = this.$refs.ref_kendoDay.kendoWidget();
-        //columsのベースindexは、0
-
+        // Vue3 + Kendo Native bridge では、非表示列の DOM col が既に存在しない場合があり、
+        // jQuery Kendo の hideColumn が内部で style を参照して落ちることがある。
+        // Vue2 と同じ「表示日数に応じて日付列を表示/非表示にする」語義は維持しつつ、
+        // 日付ヘッダは runtime 側で安全に可視状態を同期する。
         for (let d1 = 0; d1 < this.dayHeaderNum; d1++) {
-          if (d1 < this.dayMax) {
-            targetGrid.showColumn(targetGrid.columns[d1]);
-          } else {
-            targetGrid.hideColumn(targetGrid.columns[d1]);
-          }
+          this.setDayHeaderColumnDisplay(d1, d1 < this.dayMax, this.dayWidth);
         }
 
         //クールヘッダ(kendo grid)の表示非表示化
-        if ("ref_kendoKur" in this.$refs) {
-          const targetGrid_Kur = this.$refs.ref_kendoKur.kendoWidget();
-          //columsのベースindexは、0
-
-          for (let dd = 0; dd < this.dayHeaderNum; dd++) {
-            for (let kk = 0; kk < this.kurNum; kk++) {
-              const columnIndex = dd * this.kurNum + kk;
-              if (this.kurWidth[kk + 1] === 0 || dd >= this.dayMax) {
-                //隠す場合はhideColumnを使用
-                targetGrid_Kur.hideColumn(targetGrid_Kur.columns[columnIndex]);
-              } else {
-                //隠していた場合を考慮してshowColumnを使用
-                targetGrid_Kur.showColumn(targetGrid_Kur.columns[columnIndex]);
-                //リサイズresizeColumn
-                targetGrid_Kur.resizeColumn(
-                  targetGrid_Kur.columns[columnIndex],
-                  this.kurWidth[kk + 1]
-                );
-              }
-            }
+        // Vue3 の jQuery Kendo Grid では、列DOMの再生成タイミングにより hideColumn が
+        // 内部で存在しない col.style を参照することがあるため、Vue2 の表示語義を
+        // ページ側のクール幅・表示状態からDOMへ同期する。
+        for (let dd = 0; dd < this.dayHeaderNum; dd++) {
+          for (let kk = 0; kk < this.kurNum; kk++) {
+            const columnIndex = dd * this.kurNum + kk;
+            const visible = !(this.kurWidth[kk + 1] === 0 || dd >= this.dayMax);
+            this.setKurHeaderColumnDisplay(columnIndex, visible, visible ? this.kurWidth[kk + 1] : 0);
           }
         }
+        this.queueDayHeaderLayoutSync();
+
         //強制書き換えイベント
-        this.$forceUpdate();
+        this.requestViewForceUpdate();
       },
       /**
        * 表示開始日付の変更
@@ -5209,23 +5533,17 @@
         //kendo grid はバインドせずに地道にメソッドで設定していく
 
         //クールヘッダーの幅設定
-        const targetGridKur = this.$refs.ref_kendoKur.kendoWidget();
-        //columsのベースindexは、0
-
+        // Vue2 と同じ日付非表示語義を、Vue3 では列DOMへ直接同期する。
         for (let k2 = 0; k2 < this.kurNum; k2++) {
           const columnIndex = d * this.kurNum + k2;
-          //隠す場合はhideColumnを使用
-          targetGridKur.hideColumn(targetGridKur.columns[columnIndex]);
+          this.setKurHeaderColumnDisplay(columnIndex, false, 0);
         }
 
         //日付ヘッダーの幅の設定
-        const targetGridDay = this.$refs.ref_kendoDay.kendoWidget();
-        //columsのベースindexは、0
-
-        targetGridDay.hideColumn(targetGridDay.columns[d]);
+        this.setDayHeaderColumnDisplay(d, false, 0);
 
         //全体の更新
-        this.$forceUpdate();
+        this.requestViewForceUpdate();
       },
 
       /**
@@ -5320,9 +5638,8 @@
 
         //--------------------------------------------
         //最下スクロールバーのスクロールの幅を強制設定
-        document.getElementById(
-          "id_underbar_content9"
-        ).style.width = `${setWidthTotal}px`;
+        this.getScopedElementById(
+          "id_underbar_content9").style.width = `${setWidthTotal}px`;
 
         //--------------------------------------------
         //日付ヘッダー幅の計算
@@ -5335,7 +5652,6 @@
         //クールヘッダーの幅設定
         //kendo grid はバインドせずに地道にメソッドで設定していく
 
-        const targetGridKur = this.$refs.ref_kendoKur.kendoWidget();
         //※columsのベースindexは、0
 
         for (let d3 = 0; d3 < this.dayMax; d3++) {
@@ -5345,18 +5661,8 @@
           }
           for (let k3 = 0; k3 < this.kurNum; k3++) {
             const columnIndex = d3 * this.kurNum + k3;
-            if (this.kurWidth[k3 + 1] === 0 || d3 >= this.dayMax) {
-              //隠す場合はhideColumnを使用
-              targetGridKur.hideColumn(targetGridKur.columns[columnIndex]);
-            } else {
-              //隠していた場合を考慮してshowColumnを使用
-              targetGridKur.showColumn(targetGridKur.columns[columnIndex]);
-              //リサイズresizeColumn
-              targetGridKur.resizeColumn(
-                targetGridKur.columns[columnIndex],
-                this.kurWidth[k3 + 1]
-              );
-            }
+            const visible = !(this.kurWidth[k3 + 1] === 0 || d3 >= this.dayMax);
+            this.setKurHeaderColumnDisplay(columnIndex, visible, visible ? this.kurWidth[k3 + 1] : 0);
           }
         }
 
@@ -5364,30 +5670,22 @@
         //日付ヘッダーの幅の設定
         //kendo grid はバインドせずに地道にメソッドで設定していく
 
-        const targetGridDay = this.$refs.ref_kendoDay.kendoWidget();
         //※columsのベースindexは、0
 
-        for (let d4 = 0; d4 < this.dayMax; d4++) {
-          if (!this.holidayFlag && !this.getDayDispIndex[d4]) {
-            //休日非表示で、該当する日は、スキップ
-            continue;
-          }
-          if (d4 < this.dayMax) {
-            targetGridDay.showColumn(targetGridDay.columns[d4]);
-            targetGridDay.resizeColumn(targetGridDay.columns[d4], setDayWidth);
-          } else {
-            targetGridDay.hideColumn(targetGridDay.columns[d4]);
-          }
+        for (let d4 = 0; d4 < this.dayHeaderNum; d4++) {
+          const dayVisible = d4 < this.dayMax && (this.holidayFlag || this.getDayDispIndex[d4]);
+          this.setDayHeaderColumnDisplay(d4, dayVisible, dayVisible ? setDayWidth : 0);
         }
 
         //-----------------------------------------
         //リスト全体横幅の表示変更
 
         this.resizeList();
+        this.queueDayHeaderLayoutSync();
 
         //-----------------------------------------
         //全体の更新
-        this.$forceUpdate();
+        this.requestViewForceUpdate();
       },
       /**
        * ベッド未登録データの再配置処理
@@ -5432,7 +5730,7 @@
         //各未登録領域の最大セル数の確認
         this.checkNotYetAreaMax();
 
-        this.$forceUpdate();
+        this.requestViewForceUpdate();
       },
       /**
        * クール未登録データの再配置処理
@@ -5490,7 +5788,7 @@
           }
         }
 
-        this.$forceUpdate();
+        this.requestViewForceUpdate();
       },
       /**
        * 表示条件設定:予定あり表示の更新
@@ -5527,14 +5825,19 @@
           }
         }
         // mod FNSI-改修内容フィルタ条件設定 房 end
-        const kendoElems = document
-          .getElementById("kendo_day")
-          .getElementsByTagName("table");
+        const kendoDayElement = this.getScopedElementById("kendo_day");
+        const kendoElems = kendoDayElement?.getElementsByTagName("table") || [];
+        const kendoTable = kendoElems[0];
+        if (!kendoTable) {
+          return;
+        }
 
-        const style = getComputedStyle(kendoElems[0]);
-
-        //最下スクロールバーのスクロールの幅を強制設定
-        document.getElementById("id_underbar_content9").style.width = style.width;
+        const style = this.getScheduleOwnerWindow().getComputedStyle(kendoTable);
+        const underbarContent = this.getScopedElementById("id_underbar_content9");
+        if (underbarContent) {
+          //最下スクロールバーのスクロールの幅を強制設定
+          underbarContent.style.width = style.width;
+        }
       },
 
       /**
@@ -5585,7 +5888,7 @@
        * SELECTBOXの選択値の取得
        */
       getSelectBoxIntValue(elemId) {
-        return parseInt(document.getElementById(elemId).value);
+        return parseInt(this.getScopedElementById(elemId).value);
       },
       closePopOver() {
         this.popoverVisible = false;
@@ -5652,7 +5955,7 @@
         targetElem.style.left = `${e.clientX - this.sidebarWidth}px`;
 
         //スクロール判定
-        const areaElem = document.getElementById("id_area6");
+        const areaElem = this.getScopedElementById("id_area6");
         const areaRect = areaElem.getBoundingClientRect();
 
         const posX = e.clientX - areaRect.left;
@@ -5697,7 +6000,7 @@
           clearInterval(this.scrollIntervalId);
           this.scrollIntervalId = setInterval(
             function() {
-              const areaElem = document.getElementById("id_area6");
+              const areaElem = this.getScopedElementById("id_area6");
               areaElem.scrollTop += this.autoScrollY;
               areaElem.scrollLeft += this.autoScrollX;
               this.autoScrollY *= 1.3;
@@ -6213,11 +6516,11 @@
           // mod FNSI 1006 No.426 start --Sanjingye Sun 20201216
           if(!this.facilitySettingDialogOpenFlg) {
             // mod FNSI 1006 No.426 end --Sanjingye Sun 20201216
-            this.underElem = document.elementFromPoint(e.clientX, e.clientY);
+            this.underElem = this.getScheduleElementFromPoint(e.clientX, e.clientY);
           }
           // FNSI-add 現行改善対応425 孫灝 20201119 end
           let initBedCd = null;
-          if (_.has(this.moveFromData, "bed_cd")) {
+          if (Object.prototype.hasOwnProperty.call(this.moveFromData, "bed_cd")) {
             initBedCd = this.moveFromData.bed_cd;
           }
 
@@ -6354,7 +6657,7 @@
           //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 zrx start
           if (!(kurNotYetFlag || bedNotYetFlag)) {
             //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 zrx end
-            if (mvTo.hasOwnProperty("ordNo")) {
+            if (Object.prototype.hasOwnProperty.call(mvTo, "ordNo")) {
               let ret = false;
               await this.checkPatExistance(mvTo)
                 .then(
@@ -7038,7 +7341,6 @@
             }
             // mod 10601 スケジュール表動作不正 関  end
 
-
             // add FNSI 1006 No.426 end --Sanjingye Sun 20201216
             //----------------------------------------------------------
             //ダミースケジュールチェック ※ダミーが必要かどうかの確認(どの治療日のどのクールまで使用するか)
@@ -7162,7 +7464,7 @@
           throw(error);
         });
         const data = response?.data;
-        if (data?.proc_RESULT === "SUCCESS") {
+        if (isProcSuccess(data)) {
           // mod 10601 スケジュール表動作不正 関  start
           this.msgCd = data.msgCd;
           this.msgCdList = data.msgCdList;
@@ -7549,6 +7851,7 @@
 
             //ダイアログを出力
             const dispStr = outMsg;
+            this.facilitySettingDialog1000OpenedFlg = true;
             this.messageDialogInfo.stringParams = [dispStr];
             // add 5091 赵 start
             this.messageDialogInfo.title = "ベッド条件不一致";
@@ -7945,7 +8248,7 @@
         // FNSI-画面更新(データの再取得) 徐 start
         // FNSI-画面更新(データの再取得) 徐 end
 
-        this.$forceUpdate();
+        this.requestViewForceUpdate();
         this.$nextTick(() => {
           this.setSelectedColumn(true);
         });
@@ -8091,102 +8394,37 @@
         //------------------------------------------------------
         //kendo-gridのダブルクリックの無効化
 
-        const handleElems = document.getElementsByClassName("k-resize-handle");
+        const handleElems = this.getScopedElementsByClassName("k-resize-handle");
 
         for (let i = 0; i < handleElems.length; i++) {
-          $$(handleElems[i]).off("dblclick.kendoGrid");
+          const handleElem = handleElems[i];
+          if (handleElem.__ntssDblclickDisabled) {
+            continue;
+          }
+          $$(handleElem).off("dblclick.kendoGrid");
+          handleElem.__ntssDblclickDisabled = true;
         }
       },
       /**
        *クールの幅リサイズ処理
        */
       onColumnResize(e) {
-        //どのクールの幅が動いたかの特定
-        const indexStr = e.column.field.replace("ProductName", "");
+        const indexStr = (e.column?.field || "").replace("ProductName", "");
         const indexDim = indexStr.split("-");
-
-        let indexTdId = "";
-        let elemTd = null;
-
-        //--------------------------------------------------
-        //<td>の幅を変更
-        //--------------------------------------------------
-
-        //ベッドメイン部
-        //幅が変わった<TD>のID
-        indexTdId = `id_td_${indexDim[0]}_${indexDim[1]}`;
-        //幅が変わった<TD>の要素ポインタ
-        elemTd = document.getElementById(indexTdId);
-        elemTd.style.width = `${e.newWidth}px`;
-
-        //ベッド未登録部
-        //幅が変わった<TD>のID
-        indexTdId = `id_tdbednotyet_${indexDim[0]}_${indexDim[1]}`;
-        //幅が変わった<TD>の要素ポインタ
-        elemTd = document.getElementById(indexTdId);
-        elemTd.style.width = `${e.newWidth}px`;
-
-        //クール未登録部
-        //幅が変わった<TD>のID
-        indexTdId = `id_tdkurnotyet_${indexDim[0]}_${indexDim[1]}`;
-        //幅が変わった<TD>の要素ポインタ
-        elemTd = document.getElementById(indexTdId);
-        elemTd.style.width = `${e.newWidth}px`;
-
-        //--------------------------------------------------
-        //日付ヘッダーの調整(クール幅が動くと親の日付幅も同期させる)
-        //--------------------------------------------------
-        // FNSI-add redmine、No.3924 徐 start
-        //日付ヘッダーの幅の計算
-        let setWidth = 0;
-        let afterKurDimStr = null;
-        if (this.kurNumIndex) {
-          afterKurDimStr = this.kurNumIndex.split(':');
+        const dayIndex = Number(indexDim[0]);
+        const kurIndex = Number(indexDim[1]);
+        if (!dayIndex || !kurIndex) {
+          return;
         }
-        if (afterKurDimStr) {
-          for (let j = 0; j < afterKurDimStr.length; j++) {
-            const kurWidth = this.kurHeaderElems[indexDim[0]][afterKurDimStr[j]].getBoundingClientRect().width;
-            setWidth += kurWidth;
-          }
-        } else {
-          for (let i = 1; i <= this.kurNum; i++) {
-            const kurWidth = this.kurHeaderElems[indexDim[0]][i].getBoundingClientRect().width;
-            setWidth += kurWidth;
-          }
+
+        const newWidth = Math.max(20, Math.round(Number(e.newWidth) || 0));
+        if (!this.kurDayWidth[dayIndex]) {
+          this.kurDayWidth[dayIndex] = [];
         }
-        // FNSI-add redmine、No.3924 徐 end
-        //日付ヘッダーの幅の設定
-        const targetGrid = this.$refs.ref_kendoDay.kendoWidget();
-        //columsのベースindexは、0
-        targetGrid.resizeColumn(targetGrid.columns[indexDim[0] - 1], setWidth);
-
-        //スクロール領域全体の幅の同期
-        //各ヘッダの領域の要素ポインタの取得(クラス名をキーに)
-        const targetElems = document.getElementsByClassName(
-          "k-grid-content k-auto-scrollable"
-        );
-
-        //配下のテーブルタグを検索
-        const childElems = targetElems[1].getElementsByTagName("table");
-        const chengedWidth = childElems[0].style.width;
-        //最下スクロールバーのスクロールの幅を強制設定
-        document.getElementById(
-          "id_underbar_content9"
-        ).style.width = chengedWidth;
-
-        //可動領域の横幅を更新
-        this.totalWidth = parseInt(chengedWidth);
-
-        //kndo-uiの管理DIVを強制書き換え
-        //クラス名で検索
-        const contentElems = document.getElementsByClassName(
-          "k-grid-content-expander"
-        );
-        //設定
-        contentElems[0].style.width = `${targetElems[1].scrollWidth}px`;
-
-        // 表の縦横幅調整処理を実行
-        this.resizeList();
+        // 状態は変更列のみ更新。DOM/Kendo は requestScheduleHeaderWidthSync 内で全列を状態から再適用し、
+        // Kendo が一時的に縮めた左側列を元に戻す（左端固定・右端のみ変化）
+        this.kurDayWidth[dayIndex][kurIndex] = newWidth;
+        this.requestScheduleHeaderWidthSync();
       },
       /**
        * 日付ヘッダーの幅リサイズ後処理
@@ -8195,19 +8433,14 @@
         //#9505 スケジュール表のクール列幅を狭くした際に、ヘッダーと内容の表示がずれる不具合を修正しました Ji upd start
         // FNSI-add redmine、No.3924 徐 start
         let afterKurDimStr = null;
-        let kurNumCount = 0;
         if (this.kurNumIndex) {
           afterKurDimStr = this.kurNumIndex.split(':');
-          kurNumCount = Math.abs(afterKurDimStr.length - this.kurNum);
         }
         // FNSI-add redmine、No.3924 徐 end
         this.resizingNowFlag = true;
         //どの日付ヘッダーが動いたのかの確認
         const indexNum = e.column.field.replace("ProductName", "");
 
-        const targetElem = this.dayHeaderElems[indexNum];
-        const style = getComputedStyle(targetElem);
-        // const setWidth = new Array(this.kurNum + 1);
         // 日付ヘッダー（大表頭）の最小幅
         const DAY_MIN_WIDTH = 40;
 
@@ -8217,142 +8450,36 @@
           ? afterKurDimStr.length
           : this.kurNum;
 
-        // 現在の日付ヘッダー幅から、クール1列あたりの幅を逆算
-        const rawDividedWidth =
-          parseFloat(style.width) / (this.kurNum - kurNumCount);
-
-        // クール列合計
-        const rawTotalWidth = rawDividedWidth * childCount;
-        // 日付ヘッダーは最小幅を下回らないように制御
-        const finalTotalWidth = Math.max(rawTotalWidth, DAY_MIN_WIDTH);
+        // Kendo の newWidth を優先（getComputedStyle だと他列連動時に左端がずれる）
+        const kendoDayWidth = Math.round(Number(e.newWidth) || 0);
+        const finalTotalWidth = Math.max(
+          kendoDayWidth > 0 ? kendoDayWidth : this.getDayColumnWidth(indexNum),
+          DAY_MIN_WIDTH
+        );
 
         // const dividedWidth = parseFloat(style.width) / (this.kurNum - kurNumCount);
         // 最終的な日付ヘッダー幅をクール数で均等分割
         const dividedWidth = finalTotalWidth / childCount;
 
-        const setWidth = new Array(this.kurNum + 1);
-        // FNSI-add redmine、No.3924 徐 start
-        //const dividedWidth = parseFloat(style.width) / (this.kurNum - kurNumCount);
-        // FNSI-add redmine、No.3924 徐 end
-
-        for (let k = 1; k <= this.kurNum; k++) {
-          setWidth[k] = dividedWidth;
-        }
-
-        //クール幅の設定
-
-        const targetGrid = this.$refs.ref_kendoKur.kendoWidget();
-
-        const indexBase = (indexNum - 1) * this.kurNum;
-
-        for (let k1 = 1; k1 <= this.kurNum; k1++) {
-          targetGrid.resizeColumn(
-            targetGrid.columns[indexBase + (k1 - 1)],
-            // setWidth[k1]
-            dividedWidth
-          );
-        }
-
-        //幅の微調整(resizeColumnで設定される値が縮小されるため)
-        // 現在クールに設定されている値をもとに日付ヘッダーの幅を調整します
-        // 日付ヘッダーの幅の計算
-        // let setWidthDay = 0.0;
-        // FNSI-add redmine、No.3924 徐 start
-        // if (afterKurDimStr) {
-        //   for (let j = 0; j < afterKurDimStr.length; j++) {
-        //     const targetElemKur = this.kurHeaderElems[indexNum][afterKurDimStr[j]];
-        //     const styleKur = getComputedStyle(targetElemKur);
-        //     setWidthDay += parseFloat(styleKur.width);
-        //   }
-        // } else {
-        //   for (let k2 = 1; k2 <= this.kurNum; k2++) {
-        //     const targetElemKur = this.kurHeaderElems[indexNum][k2];
-        //     const styleKur = getComputedStyle(targetElemKur);
-        //     setWidthDay += parseFloat(styleKur.width);
-        //   }
-        // }
-        // FNSI-add redmine、No.3924 徐 end
-	const setWidthDay = finalTotalWidth;
-        // 日付ヘッダーの幅の設定
-        const targetGridDay = this.$refs.ref_kendoDay.kendoWidget();
-        // 注:columsのベースindexは、0
-        targetGridDay.resizeColumn(
-          targetGridDay.columns[indexNum - 1],
-          setWidthDay
-        );
-        //#9505 スケジュール表のクール列幅を狭くした際に、ヘッダーと内容の表示がずれる不具合を修正しました Ji upd end
-        //配下要素の幅調整
-        let indexTdId = "";
-        let elemTd = null;
-        //クール列の幅調整
-        // FNSI-add redmine、No.3924 徐 start
         if (afterKurDimStr) {
           for (let k4 = 0; k4 < afterKurDimStr.length; k4++) {
-            const index = Number(afterKurDimStr[k4]);
-            //ベッド列の幅調整
-            indexTdId = `id_td_${indexNum}_${index}`;
-            elemTd = document.getElementById(indexTdId);
-            elemTd.style.width = `${setWidth[index]}px`;
-
-            //ベッド未登録列の幅調整
-            indexTdId = `id_tdbednotyet_${indexNum}_${index}`;
-            elemTd = document.getElementById(indexTdId);
-            elemTd.style.width = `${setWidth[index]}px`;
-
-            //クール未登録列の幅調整
-            indexTdId = `id_tdkurnotyet_${indexNum}_${index}`;
-            elemTd = document.getElementById(indexTdId);
-            elemTd.style.width = `${setWidth[index]}px`;
+            const kurIndex = Number(afterKurDimStr[k4]);
+            if (!this.kurDayWidth[indexNum]) {
+              this.kurDayWidth[indexNum] = [];
+            }
+            this.kurDayWidth[indexNum][kurIndex] = dividedWidth;
           }
         } else {
           for (let k3 = 1; k3 <= this.kurNum; k3++) {
-            //ベッド列の幅調整
-            indexTdId = `id_td_${indexNum}_${k3}`;
-            elemTd = document.getElementById(indexTdId);
-            elemTd.style.width = `${setWidth[k3]}px`;
-
-            //ベッド未登録列の幅調整
-            indexTdId = `id_tdbednotyet_${indexNum}_${k3}`;
-            elemTd = document.getElementById(indexTdId);
-            elemTd.style.width = `${setWidth[k3]}px`;
-
-            //クール未登録列の幅調整
-            indexTdId = `id_tdkurnotyet_${indexNum}_${k3}`;
-            elemTd = document.getElementById(indexTdId);
-            elemTd.style.width = `${setWidth[k3]}px`;
+            if (!this.kurDayWidth[indexNum]) {
+              this.kurDayWidth[indexNum] = [];
+            }
+            this.kurDayWidth[indexNum][k3] = dividedWidth;
           }
         }
-        // FNSI-add redmine、No.3924 徐 end
 
-        //--------------------------------------------------------
-        //スクロール領域の同期
-
-        const targetElems = document.getElementsByClassName(
-          "k-grid-content k-auto-scrollable"
-        );
-
-        const childElems = targetElems[1].getElementsByTagName("table");
-        const chengedWidth = childElems[0].style.width;
-        //最下スクロールバーのスクロールの幅を強制設定
-        document.getElementById(
-          "id_underbar_content9"
-        ).style.width = chengedWidth;
-
-        //kndo-uiの管理DIVを強制書き換え
-        const contentElems = document.getElementsByClassName(
-          "k-grid-content-expander"
-        );
-
-        contentElems[0].style.width = `${targetElems[0].scrollWidth}px`;
-
-        //可動領域の横幅を更新
-        //#9505 スケジュール表のクール列幅を狭くした際に、ヘッダーと内容の表示がずれる不具合を修正しました Ji upd start
-        // this.totalWidth = parseInt(chengedWidth);
-        this.totalWidth = parseInt(chengedWidth, 10);
-        //#9505 スケジュール表のクール列幅を狭くした際に、ヘッダーと内容の表示がずれる不具合を修正しました Ji upd end
-
-        // 表の縦横幅調整処理を実行
-        this.resizeList();
+        this.requestScheduleHeaderWidthSync();
+        this.resizingNowFlag = false;
       },
 
       /**
@@ -8397,7 +8524,7 @@
       setElem() {
         for (let i = 0; i < DEF_ELEMNUM; i++) {
           const idStr = `id_area${i + 1}`;
-          const elem = document.getElementById(idStr);
+          const elem = this.getScopedElementById(idStr);
 
           if (null !== elem) {
             elem.style.left = `${this.dimX[i]}px`;
@@ -8413,7 +8540,7 @@
       setInitShutterElem() {
         for (let i = 0; i < DEF_ELEMNUM; i++) {
           const idStr = `id_coverarea${i + 1}`;
-          const elem = document.getElementById(idStr);
+          const elem = this.getScopedElementById(idStr);
 
           if (null !== elem) {
             elem.style.left = `${this.dimX[i]}px`;
@@ -8429,7 +8556,7 @@
       resetShutterElem() {
         for (let i = 0; i < DEF_ELEMNUM; i++) {
           const idStr = `id_coverarea${i + 1}`;
-          const elem = document.getElementById(idStr);
+          const elem = this.getScopedElementById(idStr);
 
           if (null !== elem) {
             elem.style.left = "0px";
@@ -8524,9 +8651,8 @@
 
         //area5 7の横サイズ(内容)を設定します
         //+2は、スクロール時にずれるための補正(経験値)
-        document.getElementById(
-          "id_area5_scrollarea"
-        ).style.width = `${setWidth_tbl + 2}px`;
+        this.getScopedElementById(
+          "id_area5_scrollarea").style.width = `${setWidth_tbl + 2}px`;
         // add #6050 スケジュール表の表示条件を変更した時の画面更新に時間がかかる 付 start
         this.area6Width = this.totalWidth;
         // add #6050 スケジュール表の表示条件を変更した時の画面更新に時間がかかる 付 end
@@ -8547,7 +8673,7 @@
 
         // スクロールバーの高さを取得
         // 定数を設定すると画面倍率変更時スクロールバー表示不当になるための補正
-        let scrollbarHeight = document.getElementById("scroll_area").offsetHeight - document.getElementById("scroll_area").clientHeight;
+        let scrollbarHeight = this.getScopedElementById("scroll_area").offsetHeight - this.getScopedElementById("scroll_area").clientHeight;
 
         let totalHeight = 0;
         // ベッドエリアの高さ設定
@@ -8565,8 +8691,7 @@
         totalHeight += scrollbarHeight;
 
         // 表示領域の高さから、area1(ヘッダ)の高さを除いた高さを算出
-        let mainHeight = document.getElementById("main-content-area")
-          .clientHeight;
+        let mainHeight = this.getScheduleMainContentEl()?.clientHeight || 0;
         mainHeight -= this.dimH[0] * this.elemResizeValue;
         if (totalHeight > mainHeight) {
           totalHeight = mainHeight;
@@ -8579,7 +8704,7 @@
 
         // 凡例の高さを計算
         let usageGuideHeight = 0;
-        const guideAreaObj = document.getElementById("area_usage_guide");
+        const guideAreaObj = this.getScopedElementById("area_usage_guide");
         if (this.isShowUsageGuide && guideAreaObj !== null) {
           usageGuideHeight = guideAreaObj.offsetHeight + 5;
           // 画面内に収まる高さの場合は補正を行わない
@@ -8592,16 +8717,23 @@
         }
 
         // 縦スクロールバーの設定
-        document.getElementById("scroll_area").style.height = `${totalHeight - usageGuideHeight}px`;
-        document.getElementById("area2_4_header").style.height = `${totalHeight - scrollbarHeight - usageGuideHeight}px`;
+        this.getScopedElementById("scroll_area").style.height = `${totalHeight - usageGuideHeight}px`;
+        this.getScopedElementById("area2_4_header").style.height = `${totalHeight - scrollbarHeight - usageGuideHeight}px`;
+        this.queueDayHeaderLayoutSync();
       },
       /**
        *スクロール同期処理
        */
       //add 6441 スケジュール表のベッドグループ，スクロール位置がデフォルト設定の位置に戻る zhao start
       scrollWatch(event) {
-        this.setScrollLeftWitch(document.getElementById("scroll_area").scrollLeft);
-        this.setScrollTopWitch(document.getElementById("scroll_area").scrollTop);
+        const scrollArea = this.getScopedElementById("scroll_area");
+        if (!scrollArea) {
+          return;
+        }
+
+        this.setScrollLeftWitch(scrollArea.scrollLeft);
+        this.setScrollTopWitch(scrollArea.scrollTop);
+        this.syncHeaderScrollLeft(scrollArea.scrollLeft);
       },
       //add 6441 スケジュール表のベッドグループ，スクロール位置がデフォルト設定の位置に戻る zhao end
       scrollEvent(event) {
@@ -8644,29 +8776,41 @@
             this.areaElems[5].scrollLeft = this.areaElems[index].scrollLeft;
             this.areaElems[6].scrollLeft = this.areaElems[index].scrollLeft;
 
-            const globalThis = this;
+            const vm = this;
 
             if (this.areaElems[6].scrollLeft !== this.areaElems[9].scrollLeft) {
               clearInterval(this.setArea6Id);
               this.setArea6Id = setInterval(
                 function() {
-                  globalThis.areaElems[6].scrollLeft =
-                    globalThis.areaElems[9].scrollLeft;
+                  vm.areaElems[6].scrollLeft =
+                    vm.areaElems[9].scrollLeft;
 
                   if (
-                    globalThis.areaElems[6].scrollLeft ===
-                    globalThis.areaElems[9].scrollLeft
-                  ) {
-                    clearInterval(globalThis.setArea6Id);
+                    vm.areaElems[6].scrollLeft ===
+                    vm.areaElems[9].scrollLeft) {
+                    clearInterval(vm.setArea6Id);
                   }
-                }.bind(globalThis),
-                4
-              );
+                }.bind(vm),
+                4);
             }
 
             this.areaElems[7].scrollLeft = this.areaElems[index].scrollLeft;
             this.areaElems[8].scrollLeft = this.areaElems[index].scrollLeft;
+            this.syncHeaderScrollLeft(this.areaElems[index].scrollLeft);
           }
+        }
+      },
+      /**
+       * 明細横スクロールに合わせてヘッダー領域を同期します。
+       *  {number} scrollLeft 横スクロール位置
+       */
+      syncHeaderScrollLeft(scrollLeft) {
+        const headerArea = this.getScopedElementById("id_area5");
+        if (!headerArea) {
+          return;
+        }
+        if (headerArea.scrollLeft !== scrollLeft) {
+          headerArea.scrollLeft = scrollLeft;
         }
       },
       /**
@@ -8712,13 +8856,7 @@
         //------------------------------------------------------
         //kendo uiのコンテント部分の高さの調整(不要なため、隠すので0pxを設定)
 
-        const targetElems = document.getElementsByClassName(
-          "k-grid-content k-auto-scrollable"
-        );
-
-        for (let i = 0; i < targetElems.length; i++) {
-          targetElems[i].style.height = "0px";
-        }
+        this.resetScheduleGridContentHeight();
 
         //情報収集
         //日付ヘッダーの情報&クールヘッダーの情報の格納先初期化(領域確保))
@@ -8730,13 +8868,13 @@
 
         //エリア要素の準備(各エリアの要素を事前取得しておく)
         for (let i = 1; i < DEF_ELEMNUM + 1; i++) {
-          this.areaElems[i] = document.getElementById(`id_area${i}`);
+          this.areaElems[i] = this.getScopedElementById(`id_area${i}`);
         }
 
         //-------------------------------------------------
         //kendo ui gridのダブルクリック自動調整の無効化
 
-        const handleElems = document.getElementsByClassName("k-resize-handle");
+        const handleElems = this.getScopedElementsByClassName("k-resize-handle");
 
         for (let i = 0; i < handleElems.length; i++) {
           handleElems[i].off("dblclick.kendoGrid");
@@ -8746,10 +8884,10 @@
         this.relocateKendoHeaders("day", 0);
 
         //ベッド移動処理の初期化(親要素の取得)
-        this.parentElem = document.getElementById("id_maindiv");
+        this.parentElem = this.getScopedElementById("id_maindiv");
 
         //日付の初期化(表示開始日の初期化)
-        const today = moment();
+        const today = dayjs();
 
         const yyyy = today.year();
         const mm = `0${today.month() + 1}`.slice(-2);
@@ -8757,18 +8895,18 @@
 
         // mod 7936 掲示板に連携通知がコンバートされていない 関 start
         if (this.$route.params.startDate != undefined) {
-          this.dispStartDate = moment(this.$route.params.startDate).format("YYYY/MM/DD");
+          this.dispStartDate = dayjs(this.$route.params.startDate).format("YYYY/MM/DD");
 
-          this.dispStartDateForSetting = moment(this.$route.params.startDate).format("YYYY-MM-DD");
+          this.dispStartDateForSetting = dayjs(this.$route.params.startDate).format("YYYY-MM-DD");
           // mod #10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない 張玲 start
-          this.dispStartYear = moment(this.$route.params.startDate).year();
+          this.dispStartYear = dayjs(this.$route.params.startDate).year();
           // mod #10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない 張玲 end
         } else {
           this.dispStartDate = `${yyyy}/${mm}/${dd}`;
 
           this.dispStartDateForSetting = `${yyyy}-${mm}-${dd}`;
           // mod #10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない 張玲 start
-          this.dispStartYear = moment().year();
+          this.dispStartYear = dayjs().year();
           // mod #10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない 張玲 end
         }
         // mod 7936 掲示板に連携通知がコンバートされていない 関  end
@@ -8777,7 +8915,7 @@
 
         // 日付が指定されて画面遷移した場合、リスト内から対象イベントを表示
         if (queryParameters.DATE) {
-          const date = moment(queryParameters.DATE);
+          const date = dayjs(queryParameters.DATE);
           if (date.isValid()) {
             this.dispStartDate = date.format("YYYY/MM/DD");
             this.dispStartDateForSetting = date.format("YYYY-MM-DD");
@@ -8789,12 +8927,255 @@
 
         //表示設定ポップアップの未選択エリアデフォルト選択
         // TODO: popoverで一旦コメントアウト
-        // document.getElementById("id_notyetsetting").options[
+        // this.getScopedElementById("id_notyetsetting").options[
         //   this.dispCellNumNotYetArea
         // ].selected = true;
       },
+      getDayHeaderColumnParts(index) {
+        const dayRoot = this.getScopedElementById("kendo_day");
+        if (!dayRoot || index < 0) {
+          return { dayRoot: null, headerTable: null, bodyTable: null, headerCell: null, headerCol: null, bodyCol: null };
+        }
+        return {
+          dayRoot,
+          ...getKendoGridColumnDomParts(dayRoot, {
+            field: `ProductName${index + 1}`,
+            index
+          })
+        };
+      },
+
+      setDayHeaderColumnDisplay(index, visible, width = null) {
+        const dayGrid = this.getDayGridWidget();
+        const column = dayGrid?.columns?.[index] || null;
+        if (column) {
+          column.hidden = !visible;
+          if (width != null) {
+            column.width = width;
+          }
+        }
+
+        const { headerCell, headerCol, bodyCol } = this.getDayHeaderColumnParts(index);
+        const numericWidth = width == null ? null : Math.max(0, Math.round(Number(width) || 0));
+        const widthText = numericWidth == null ? null : `${numericWidth}px`;
+
+        this.applyScheduleColumnElementWidth(headerCell, widthText, visible);
+        [headerCol, bodyCol].forEach((col) => {
+          this.applyScheduleColumnElementWidth(col, widthText, visible);
+        });
+      },
+
+      getKurHeaderColumnParts(index) {
+        const kurRoot = this.getScopedElementById("kendo_kur");
+        if (!kurRoot || index < 0) {
+          return { kurRoot: null, headerTable: null, bodyTable: null, headerCell: null, headerCol: null, bodyCol: null };
+        }
+        const kurNum = Math.max(1, Number(this.kurNum) || 1);
+        const dayIndex = Math.floor(index / kurNum) + 1;
+        const kurIndex = (index % kurNum) + 1;
+        return {
+          kurRoot,
+          ...getKendoGridColumnDomParts(kurRoot, {
+            field: `ProductName${dayIndex}-${kurIndex}`,
+            index
+          })
+        };
+      },
+
+      setKurHeaderColumnDisplay(index, visible, width = null) {
+        const kurGrid = this.getKurGridWidget();
+        const column = kurGrid?.columns?.[index] || null;
+        if (column) {
+          column.hidden = !visible;
+          if (width != null) {
+            column.width = width;
+          }
+        }
+
+        const { headerCell, headerCol, bodyCol } = this.getKurHeaderColumnParts(index);
+        const numericWidth = width == null ? null : Math.max(0, Math.round(Number(width) || 0));
+        const widthText = numericWidth == null ? null : `${numericWidth}px`;
+
+        this.applyScheduleColumnElementWidth(headerCell, widthText, visible);
+        [headerCol, bodyCol].forEach((col) => {
+          this.applyScheduleColumnElementWidth(col, widthText, visible);
+        });
+      },
+
+      resizeDayHeaderColumn(index, width) {
+        this.setDayHeaderColumnDisplay(index, true, width);
+        this.queueDayHeaderLayoutSync();
+      },
+
+      queueDayHeaderLayoutSync(retryCount = 0) {
+        if (this.dayHeaderLayoutRafId) {
+          cancelAnimationFrame(this.dayHeaderLayoutRafId);
+        }
+        if (this.dayHeaderLayoutTimerId) {
+          clearTimeout(this.dayHeaderLayoutTimerId);
+          this.dayHeaderLayoutTimerId = 0;
+        }
+        this.dayHeaderLayoutRafId = requestAnimationFrame(() => {
+          this.dayHeaderLayoutRafId = 0;
+          const synced = this.syncDayHeaderWidthWithKur();
+          if ((!synced && retryCount < 40) || (synced && retryCount < 4)) {
+            this.dayHeaderLayoutTimerId = setTimeout(() => {
+              this.dayHeaderLayoutTimerId = 0;
+              this.queueDayHeaderLayoutSync(retryCount + 1);
+            }, synced ? 16 : 75);
+          }
+        });
+      },
+
+      syncHeaderGridTables(root, totalWidth) {
+        syncKendoGridHeaderBodyTableWidth(root, totalWidth, {
+          includeContentExpander: true,
+          hideHorizontalOverflow: false,
+          removeHeaderRightPadding: true
+        });
+      },
+
+      parseElementWidth(element) {
+        if (!element) {
+          return 0;
+        }
+        const styleWidth = parseFloat(element.style?.width || "");
+        if (!Number.isNaN(styleWidth) && styleWidth > 0) {
+          return styleWidth;
+        }
+        const attrWidth = parseFloat(element.getAttribute?.("width") || "");
+        if (!Number.isNaN(attrWidth) && attrWidth > 0) {
+          return attrWidth;
+        }
+        const rectWidth = element.getBoundingClientRect?.().width || 0;
+        if (rectWidth > 0) {
+          return rectWidth;
+        }
+        return 0;
+      },
+
+      getScheduleBodyColumnWidth(dayIndex, kurIndex) {
+        const bodyCell = this.getScopedElementById(`id_td_${dayIndex}_${kurIndex}`);
+        const bodyWidth = this.parseElementWidth(bodyCell);
+        if (bodyWidth > 0) {
+          return bodyWidth;
+        }
+        const stateWidth = Number(this.kurDayWidth?.[dayIndex]?.[kurIndex]) || 0;
+        if (stateWidth > 0) {
+          return stateWidth;
+        }
+        const kurWidth = Number(this.kurWidth?.[kurIndex]) || 0;
+        return kurWidth > 0 ? kurWidth : DEF_KUR_WIDTH;
+      },
+
+      applyScheduleColumnWidth(elements, visible, width) {
+        const numericWidth = visible ? Math.max(0, Math.round(Number(width) || 0)) : 0;
+        const widthText = `${numericWidth}px`;
+        elements.forEach((element) => {
+          if (!element) {
+            return;
+          }
+          element.style.display = visible && numericWidth > 0 ? "" : "none";
+          element.style.width = widthText;
+          element.style.removeProperty("min-width");
+          element.style.removeProperty("max-width");
+        });
+      },
+
+      syncDayHeaderWidthWithKur() {
+        const dayRoot = this.getScopedElementById("kendo_day");
+        const kurRoot = this.getScopedElementById("kendo_kur");
+        const bodyTable = this.getScopedElementById("id_area6_tbl");
+        if (!dayRoot || !kurRoot || !bodyTable) {
+          return false;
+        }
+
+        const dayHeaderCols = findKendoGridHeaderColElements(dayRoot);
+        const dayBodyCols = findKendoGridBodyColElements(dayRoot);
+        const kurHeaderCols = findKendoGridHeaderColElements(kurRoot);
+        const kurBodyCols = findKendoGridBodyColElements(kurRoot);
+        const dayHeaders = findKendoGridHeaderCells(dayRoot).filter((cell) => cell.classList?.contains("cls-kendo-grid-head"));
+        const kurHeaders = findKendoGridHeaderCells(kurRoot).filter((cell) => cell.classList?.contains("cls-kendo-grid-head") && cell.classList?.contains("sub-header"));
+
+        if (!dayHeaders.length || !kurHeaders.length) {
+          return false;
+        }
+
+        let totalWidth = 0;
+        for (let dayIndex = 1; dayIndex <= this.dayHeaderNum; dayIndex++) {
+          const dayHeader = dayHeaders[dayIndex - 1];
+          if (!dayHeader) {
+            continue;
+          }
+
+          const dayVisible =
+            dayIndex <= this.dayMax &&
+            (this.holidayFlag || this.getDayDispIndex[dayIndex - 1]);
+
+          let dayWidth = 0;
+          for (let kurIndex = 1; kurIndex <= this.kurNum; kurIndex++) {
+            const headerIndex = (dayIndex - 1) * this.kurNum + kurIndex - 1;
+            const kurHeader = kurHeaders[headerIndex];
+            const headerCol = kurHeaderCols[headerIndex] || null;
+            const bodyCol = kurBodyCols[headerIndex] || null;
+            const bodyCell = this.getScopedElementById(`id_td_${dayIndex}_${kurIndex}`);
+            const kurHeaderComponent = this.getScopedElementById(`id_kurheader${dayIndex}-${kurIndex}`);
+            const kurVisible = dayVisible && this.kurDayVisibility?.[dayIndex]?.[kurIndex] === "visible";
+            const kurWidth = kurVisible ? this.getScheduleBodyColumnWidth(dayIndex, kurIndex) : 0;
+
+            this.applyScheduleColumnWidth(
+              [kurHeader, headerCol, bodyCol, kurHeaderComponent],
+              kurVisible,
+              kurWidth
+            );
+            if (bodyCell) {
+              this.applyScheduleColumnWidth([bodyCell], kurVisible, kurWidth);
+            }
+            dayWidth += kurVisible ? kurWidth : 0;
+          }
+
+          const targetWidth = Math.round(dayVisible ? dayWidth : 0);
+          const headerCol = dayHeaderCols[dayIndex - 1] || null;
+          const bodyCol = dayBodyCols[dayIndex - 1] || null;
+          const dayHeaderComponent = this.getScopedElementById(`id_dayheader-${dayIndex}`);
+
+          this.applyScheduleColumnWidth(
+            [dayHeader, headerCol, bodyCol, dayHeaderComponent],
+            dayVisible && targetWidth > 0,
+            targetWidth
+          );
+          if (dayVisible && targetWidth > 0) {
+            totalWidth += targetWidth;
+          }
+        }
+
+        const normalizedWidth = Math.round(totalWidth || this.totalWidth || this.area6Width || 0);
+        this.totalWidth = normalizedWidth;
+        this.area6Width = normalizedWidth;
+        this.resetScheduleGridContentHeight();
+        this.syncHeaderGridTables(dayRoot, normalizedWidth);
+        this.syncHeaderGridTables(kurRoot, normalizedWidth);
+        this.resetScheduleGridContentHeight();
+        const scrollArea = this.getScopedElementById("id_area5_scrollarea");
+        if (scrollArea) {
+          scrollArea.style.width = `${normalizedWidth + 2}px`;
+          scrollArea.style.minWidth = `${normalizedWidth + 2}px`;
+        }
+        const area6Table = this.getScopedElementById("id_area6_tbl");
+        if (area6Table) {
+          area6Table.style.width = `${normalizedWidth}px`;
+          area6Table.setAttribute("width", `${normalizedWidth}px`);
+        }
+        const area6Inner = this.getScopedElementById("id_area6")?.firstElementChild;
+        if (area6Inner) {
+          area6Inner.style.width = `${normalizedWidth}px`;
+        }
+        return true;
+      },
+
       /**
        * kendo-gridへコンポーネントを貼り付ける処理
+
        * @param setOption "day""kur""both"
        * @param startIndex(0～)
        * */
@@ -8802,41 +9183,40 @@
         //ヘッダーテーブルへの日付ヘッダーコンポーネントの配置
 
         if (setOption === "day" || setOption === "both") {
-          const dayElem = document.getElementById("kendo_day");
+          const dayElem = this.getScopedElementById("kendo_day");
           const daysE = dayElem.getElementsByTagName("TH");
           for (let d = startIndex; d < daysE.length; d++) {
             const index = daysE[d].dataset.field.replace("ProductName", "");
             const targetId = `id_dayheader-${index}`;
-            const targetElem = document.getElementById(targetId);
+            const targetElem = this.getScopedElementById(targetId);
             if (targetElem !== null) {
               daysE[d].textContent = null;
               daysE[d].appendChild(targetElem);
             }
           }
+          this.queueDayHeaderLayoutSync();
         }
         //ヘッダーテーブルへのクールヘッダーコンポーネントの配置
 
         if (
           (setOption === "kur" || setOption === "both") &&
           "ref_kendoKur" in this.$refs &&
-          typeof this.$refs.ref_kendoKur !== DEF_UNDEFINED
-        ) {
-          const targetGrid_Kur = this.$refs.ref_kendoKur.kendoWidget();
+          typeof this.$refs.ref_kendoKur !== DEF_UNDEFINED) {
           //columsのベースindexは、0
           let columnIndex = 0;
 
-          const kurElem = document.getElementById("kendo_kur");
+          const kurElem = this.getScopedElementById("kendo_kur");
           const kursE = kurElem.getElementsByTagName("TH");
           for (let k = startIndex; k < kursE.length; k++) {
             const index = kursE[k].dataset.field.replace("ProductName", "");
             const targetId = `id_kurheader${index}`;
-            const targetElem = document.getElementById(targetId);
+            const targetElem = this.getScopedElementById(targetId);
             if (null !== targetElem) {
               kursE[k].textContent = null;
               kursE[k].appendChild(targetElem);
             } else {
               //未使用のカラムなので、閉じておきます。
-              targetGrid_Kur.hideColumn(targetGrid_Kur.columns[columnIndex]);
+              this.setKurHeaderColumnDisplay(columnIndex, false, 0);
             }
             columnIndex++;
           }
@@ -8851,7 +9231,7 @@
        */
       async getBaseDataFromDB() {
         //ベッドおよびクールの情報取得処理
-        const globalThis = this;
+        const scheduleItemThis = this;
         const facilityCd = this.getFacilityCd;
         await ApiHelper.get("/scheduleList/getBedAndKurInfo", {
           // ここにクエリパラメータを指定する
@@ -8863,36 +9243,36 @@
             this.setBedAndKurInfo(response);
 
             //クール数の設定
-            globalThis.kurNum = globalThis.getMaxKurNum;
+            scheduleItemThis.kurNum = scheduleItemThis.getMaxKurNum;
 
-            globalThis.titleNum = globalThis.getMaxBedNum;
+            scheduleItemThis.titleNum = scheduleItemThis.getMaxBedNum;
 
             //表示条件設定:ベッドグループオプションの取得
-            globalThis.roomBedGroupNamesForOption =
-              globalThis.getRoomBedGroupMap;
-            globalThis.roomBedGroupNum = globalThis.getRoomBedGroupMap.length;
+            scheduleItemThis.roomBedGroupNamesForOption =
+              scheduleItemThis.getRoomBedGroupMap;
+            scheduleItemThis.roomBedGroupNum = scheduleItemThis.getRoomBedGroupMap.length;
 
             //表示条件設定:クールオプションの取得
-            globalThis.kurNamesForOption = globalThis.getKurNames;
+            scheduleItemThis.kurNamesForOption = scheduleItemThis.getKurNames;
 
             //表示幅の計算
-            globalThis.totalWidth =
-              globalThis.kurNum * DEF_KUR_WIDTH * globalThis.dispWeek * 7;
+            scheduleItemThis.totalWidth =
+              scheduleItemThis.kurNum * DEF_KUR_WIDTH * scheduleItemThis.dispWeek * 7;
 
             //ベッドタイトル列の設定(バインド変数)
-            globalThis.propsJ = new Array(globalThis.titleNum + 1);
-            for (let b = 1; b <= globalThis.titleNum; b++) {
-              globalThis.propsJ[b] = { title: "bedtitle" };
+            scheduleItemThis.propsJ = new Array(scheduleItemThis.titleNum + 1);
+            for (let b = 1; b <= scheduleItemThis.titleNum; b++) {
+              scheduleItemThis.propsJ[b] = { title: "bedtitle" };
             }
 
             //クール幅の設定
-            globalThis.dayWidth = 0;
-            globalThis.kurWidth = new Array(globalThis.kurNum + 1);
-            globalThis.kurWidth[0] = 0; //使わない要素ですが0初期化しておく
-            for (let i = 1; i <= globalThis.kurNum; i++) {
-              const setWidth = i > globalThis.kurNum ? 0 : DEF_KUR_WIDTH;
-              globalThis.kurWidth[i] = setWidth;
-              globalThis.dayWidth += globalThis.kurWidth[i];
+            scheduleItemThis.dayWidth = 0;
+            scheduleItemThis.kurWidth = new Array(scheduleItemThis.kurNum + 1);
+            scheduleItemThis.kurWidth[0] = 0; //使わない要素ですが0初期化しておく
+            for (let i = 1; i <= scheduleItemThis.kurNum; i++) {
+              const setWidth = i > scheduleItemThis.kurNum ? 0 : DEF_KUR_WIDTH;
+              scheduleItemThis.kurWidth[i] = setWidth;
+              scheduleItemThis.dayWidth += scheduleItemThis.kurWidth[i];
             }
           })
           .catch(error => {
@@ -8961,19 +9341,21 @@
        * フォントサイズ変更に応じて要素の幅を調整
        */
       adjustElemSize() {
-        const dayHeader = this.$refs.ref_kendoDay.kendoWidget();
-        const kurHeader = this.$refs.ref_kendoKur.kendoWidget();
+        const dayHeader = this.getDayGridWidget();
+        const kurHeader = this.getKurGridWidget();
         // 文字サイズおよび画面サイズ倍率に対応するため1桁目の値を必ず0になるように切り上げ
         const newWidth = Math.ceil(DEF_KUR_WIDTH * this.elemResizeValue / 10) * 10;
         // 初回表示時は全クール表示、選択されたものがあればそちらの件数に合わせる
         const selectedKurCount = this.selectedKurIndexList.length || this.kurNum;
         this.totalWidth = 0;
 
-        dayHeader.columns.forEach(col => {
-          if (!col.hidden) {
-            dayHeader.resizeColumn(col, newWidth * selectedKurCount);
-          }
-        });
+        if (dayHeader && dayHeader.columns && dayHeader.columns.length) {
+          dayHeader.columns.forEach(col => {
+            if (!col.hidden) {
+              dayHeader.resizeColumn(col, newWidth * selectedKurCount);
+            }
+          });
+        }
 
         kurHeader.columns.forEach(col => {
           if (!col.hidden) {
@@ -8991,17 +9373,17 @@
               this.totalWidth += this.kurDayWidth[d][k];
               //ベッド列の幅調整
               indexTdId = `id_td_${d}_${k}`;
-              elemTd = document.getElementById(indexTdId);
+              elemTd = this.getScopedElementById(indexTdId);
               elemTd.style.width = `${newWidth}px`;
 
               //ベッド未登録列の幅調整
               indexTdId = `id_tdbednotyet_${d}_${k}`;
-              elemTd = document.getElementById(indexTdId);
+              elemTd = this.getScopedElementById(indexTdId);
               elemTd.style.width = `${newWidth}px`;
 
               //クール未登録列の幅調整
               indexTdId = `id_tdkurnotyet_${d}_${k}`;
-              elemTd = document.getElementById(indexTdId);
+              elemTd = this.getScopedElementById(indexTdId);
               elemTd.style.width = `${newWidth}px`;
             }
           }
@@ -9010,7 +9392,7 @@
 
         this.setElem();
         this.resizeList();
-        this.$forceUpdate();
+        this.requestViewForceUpdate();
       },
 
       cancelSendCondConfirm(e) {
@@ -9073,13 +9455,13 @@
         if (menuFlg) {
           // 選択 ord_no を保持
           this.setOrdNoForSideBarRecord(this.getHeaderDispInfo.ordNo);
-          this.setSrcFuncName(this.$router.currentRoute.name);
+          this.setSrcFuncName(this.$route.name);
         }
         this.$router.push({ name: toName });
       },
 
       async refreshData() {
-        if (this.selfScreenName !== this.$router.currentRoute.name) {
+        if (this.selfScreenName !== this.$route.name) {
           return;
         }
         try {
@@ -9195,6 +9577,16 @@
         }
 
         return kurNames;
+      },
+      changeKey() {
+        this.dispWeek = 2;
+        this.holidayFlag = true;
+        this.setNameSetting(false);
+        this.changeNotYetAreaCellNum = 2;
+        this.setUnmatchSetting(false);
+        this.setPlanSetting(false);
+        this.setPlanSettingMainteWater(false);
+        this.isShowUsageGuide = false;
       },
       // add #11285 機能帳票の印刷情報対応② 高 end
       getToDateMeth () {
@@ -9342,8 +9734,8 @@
       async getOtherScheduleData() {
         // その他の予定データリスト取得
         const paramB = {
-          startDate: moment(this.treatDateDim[0], "YYYYMMDD").format("YYYY/MM/DD"),
-          endDate: moment(this.treatDateDim[this.treatDateDim.length - 1], "YYYYMMDD").format("YYYY/MM/DD"),
+          startDate: dayjs(this.treatDateDim[0], "YYYYMMDD").format("YYYY/MM/DD"),
+          endDate: dayjs(this.treatDateDim[this.treatDateDim.length - 1], "YYYYMMDD").format("YYYY/MM/DD"),
         };
         await ApiHelper.get("/scheduleList/getOtherScheduleList", paramB)
           //成功した場合の処理
@@ -9414,8 +9806,7 @@
               const response = await this.checkSamePatDayKurMode(
                 [fromDimData[b].ordNo],
                 [toDimData[b].treatDate],
-                [toDimData[b].kur_cd]
-              ).catch(error => {
+                [toDimData[b].kur_cd]).catch(error => {
                 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
                 getErrorMessage('ScheduleListMainItem.vue', 'compareEachBeds', error);
                 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
@@ -9500,7 +9891,7 @@
        */
       removeCheckClass() {
         // 全ての要素を取得
-        const elements = document.querySelectorAll('.item-row-checked');
+        const elements = this.getScopedQueryAll('.item-row-checked');
         // 要素から当該クラスの除去
         elements.forEach(element => {
           element.classList.remove('item-row-checked');
@@ -9512,7 +9903,7 @@
        * @param {Event} event - スクロール関連のイベントオブジェクト
        */
       syncScrollFromFixed(event) {
-        const movableArea = document.getElementById("scroll_area");
+        const movableArea = this.getScopedElementById("scroll_area");
         if (!movableArea) return;
 
         switch (event.type) {
@@ -9539,7 +9930,7 @@
       handleTouchMove(event) {
         const touchY = event.touches[0].clientY;
         const deltaY = this.touchStartY - touchY;
-        const movableArea = document.getElementById("scroll_area");
+        const movableArea = this.getScopedElementById("scroll_area");
         if (movableArea) {
           movableArea.scrollTop += deltaY;
         }
@@ -9555,7 +9946,7 @@
           .join(":");
 
         const initData = {
-          startDate: moment(this.dispStartDateForSetting).format("YYYY-MM-DD"),
+          startDate: dayjs(this.dispStartDateForSetting).format("YYYY-MM-DD"),
           dispTermNum: String(this.dispWeek),
           dispHolidayFlag: this.holidayFlag,
           dispKurDimStr: tmpIndexlist,
@@ -9569,16 +9960,6 @@
         };
 
         return initData;
-      },
-      changeKey(){
-        this.dispWeek = 2;
-        this.holidayFlag = true;
-        this.setNameSetting(false);
-        this.changeNotYetAreaCellNum = 2;
-        this.setUnmatchSetting(false)
-        this.setPlanSetting(false)
-        this.setPlanSettingMainteWater(false);
-        this.isShowUsageGuide = false;
       },
       beforePrint(){
         // 選択状態を解除
@@ -9654,6 +10035,14 @@
     opacity: 1;
     background-color: white;
     pointer-events: none;
+  }
+  .cls_move_block table {
+    border-collapse: separate;
+    border-spacing: 2px;
+  }
+  .cls_move_block .cls-cmp-dayheader {
+    box-sizing: border-box !important;
+    width: 100% !important;
   }
   #area2_4_header {
     overflow-y: scroll;
@@ -9879,7 +10268,7 @@
     margin: 0 5px 0 5px;
   }
 
-  .schedule-list-header >>> .popover--top {
+  .schedule-list-header :deep(.popover--top) {
     width: auto;
   }
 
@@ -9929,6 +10318,18 @@
     z-index: 6;
   }
 
+  :deep(.cls-cmp-dayheader),
+  :deep(.cls-cmp-kurheader) {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+
+    display: block;
+    box-sizing: content-box;
+  }
+  .cls_move_block :deep(.cls-cmp-dayheader) {
+    box-sizing: border-box !important;
+  }
   /** popover設定 **/
 
   .cls-popovertable {
@@ -9946,6 +10347,38 @@
   .popover-leave-to {
     opacity: 0;
   }
+
+  /* Vue3/Kendo: flex ヘッダーだと1列リサイズで行全体が連動するため table レイアウトに戻す */
+  #kendo_kur .k-grid-header,
+  #kendo_day .k-grid-header {
+    display: block !important;
+  }
+
+  #kendo_kur :deep(.k-grid-header-wrap table),
+  #kendo_kur :deep(.k-grid-header-table),
+  #kendo_day :deep(.k-grid-header-wrap table),
+  #kendo_day :deep(.k-grid-header-table) {
+    table-layout: fixed !important;
+  }
+
+  /* 列幅は JS で総幅(px)指定。min-width:100% だとビューポートに合わせて他列が再分配され左端がずれる */
+  #kendo_kur,
+  #kendo_day {
+    width: auto;
+    min-width: 0;
+  }
+
+  #kendo_kur :deep(.k-grid),
+  #kendo_day :deep(.k-grid) {
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  #kendo_kur .k-widget {
+    line-height: 18px;
+    line-height: normal;
+  }
+
 
   .loader {
     margin: 100px auto;
@@ -10137,7 +10570,7 @@
 
   /* kendoスクロールデフォルト：有効(hidden)
 ・不要(全体スクロールとクールスクロールが同期しない)のため初期化 */
-  .cls-kurheader >>> .k-grid-header-wrap {
+  .cls-kurheader :deep(.k-grid-header-wrap) {
     overflow: initial;
   }
 
@@ -10145,10 +10578,14 @@
     font-size: 30px;
   }
 
-  #kendo_day >>> th.cls-kendo-grid-head {
+  .schedule-list-main :deep(.k-grid .k-table-th) {
+    border-color: white !important;
+  }
+
+  #kendo_day :deep(th.cls-kendo-grid-head) {
     padding: 0 !important;
   }
-  #kendo_kur >>> th.cls-kendo-grid-head {
+  #kendo_kur :deep(th.cls-kendo-grid-head) {
     padding: 0 !important;
   }
   div[id*="id_bedtitle"] {
@@ -10160,7 +10597,7 @@
   }
   /* FNSI 印刷プレビューの文字が重なっているの対応 xie start */
   @media print {
-    div >>> .cls-bed2 {
+    div :deep(.cls-bed2){
       overflow: hidden !important;
     }
     #scroll_area{

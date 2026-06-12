@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.service.statusList.dto;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.statusList.Util;
 import jp.co.nikkiso.ntss.admin_web.service.statusList.dto.condInfo.CondInfo;
@@ -31,7 +31,6 @@ import lombok.Setter;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
@@ -1256,7 +1255,7 @@ public class StatusListDTO {
    * @return
    */
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
-  public String getNowBloodPressure() throws IOException {
+  public String getNowBloodPressure() throws tools.jackson.core.JacksonException {
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
     // モニタデータ取得
     if (mniMonitorNowBloodPressure != null) {

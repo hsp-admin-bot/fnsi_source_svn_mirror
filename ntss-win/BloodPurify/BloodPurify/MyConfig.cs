@@ -149,13 +149,18 @@ namespace NKK.BloodPurify
 
             set
             {
-                Ssi.SetValue(RootNodeName, GetOwnPropertyName(), value);
-                Ssi.Save();
+                // del #11660 単体アプリの自己アップデート修正 高 start
+                //Ssi.SetValue(RootNodeName, GetOwnPropertyName(), value);
+                //Ssi.Save();
+                // del #11660 単体アプリの自己アップデート修正 高 end
             }
 
-            get => Ssi.GetValue(RootNodeName, GetOwnPropertyName(), "");
-        }		
-		/// <summary>
+            // mod #11660 単体アプリの自己アップデート修正 高 start
+            //get => Ssi.GetValue(RootNodeName, GetOwnPropertyName(), "");
+            get => "";
+            // mod #11660 単体アプリの自己アップデート修正 高 end
+        }
+        /// <summary>
         /// クライアント証明書検索キー値1
         /// </summary>
         static public string ClientCertificateSearchValue1
@@ -204,13 +209,18 @@ namespace NKK.BloodPurify
             set
             {
                 // 指定ノードへ設定値を書き込む
-                Ssi.SetValue(RootNodeName, GetOwnPropertyName(), value);
+                // del #11660 単体アプリの自己アップデート修正 高 start
+                //Ssi.SetValue(RootNodeName, GetOwnPropertyName(), value);
 
-                // XMLファイルへ保存する
-                Ssi.Save();
+                //// XMLファイルへ保存する
+                //Ssi.Save();
+                // del #11660 単体アプリの自己アップデート修正 高 end
             }
 
-            get => Ssi.GetValue(RootNodeName, GetOwnPropertyName(), "BloodPurify.zip");
+            // mod #11660 単体アプリの自己アップデート修正 高 start
+            //get => Ssi.GetValue(RootNodeName, GetOwnPropertyName(), "BloodPurify.zip");
+            get => "";
+            // mod #11660 単体アプリの自己アップデート修正 高 end
 
         }
         // add オンプレでの自己アップデートに対応 孫 end

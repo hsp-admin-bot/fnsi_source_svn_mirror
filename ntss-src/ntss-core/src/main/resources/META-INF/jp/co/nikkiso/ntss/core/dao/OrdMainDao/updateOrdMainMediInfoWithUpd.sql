@@ -12,7 +12,6 @@ WITH raw_data as (
         -'class_type'
         -'name'
         -'short_name'
-        -'unit'
         -'timing_name'
         -'procedure_name'
       AS elem
@@ -21,6 +20,7 @@ WITH raw_data as (
 ,base_ord as (
   SELECT
     ord_no
+    ,pat_id
     ,treat_date
     ,treat_week
     ,ind_medi_info
@@ -43,12 +43,75 @@ WITH raw_data as (
      END AS dual_flg
   FROM base_ord
 )
-,mst_data AS (
+,PAT_INFO AS (
   SELECT
+    pat_main.pat_id,
+    elem ->> 'category_class' AS category_class,
+    elem ->> 'taboo_allergy_class' AS taboo_allergy_class,
+    (elem ->> 'taboo_allergy_cd')::int AS taboo_allergy_cd
+  FROM pat_main
+  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(pat_main.taboo_allergy_info, '[]'::jsonb)) elem
+  WHERE pat_main.pat_id IN (SELECT DISTINCT bo.pat_id FROM base_ord bo WHERE bo.pat_id IS NOT NULL)
+)
+,TABOO_ALLERGY AS (
+  SELECT
+    pd.pat_id,
+    elem ->> 'classCd' AS category_class,
+    pd.taboo_allergy_class,
+    (elem ->> 'cd')::int AS cd
+  FROM PAT_INFO pd
+  INNER JOIN mst_taboo_allergy mta
+    ON pd.taboo_allergy_cd = mta.taboo_allergy_cd
+    AND pd.category_class = '0'
+  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(mta.detail_info, '[]'::jsonb)) elem
+  WHERE elem ->> 'classCd' IN ('1', '2', '3', '4')
+)
+,TABOO_ALLERGY_TMP AS (
+  SELECT * FROM TABOO_ALLERGY
+  UNION
+  SELECT pat_id, category_class, taboo_allergy_class, taboo_allergy_cd AS cd
+  FROM PAT_INFO
+  WHERE category_class IN ('1', '2', '3', '4')
+)
+,TABOO_ALLERGY_medicine_mix_tmp AS (
+  SELECT
+    tat.pat_id,
+    '2' AS category_class,
+    tat.taboo_allergy_class,
+    mmm.medicine_mix_cd AS cd
+  FROM TABOO_ALLERGY_TMP tat
+  INNER JOIN mst_medicine_mix mmm
+    ON mmm.mix_info @> jsonb_build_array(jsonb_build_object('cd', tat.cd))
+  WHERE tat.category_class = '1'
+)
+,TABOO_ALLERGY_data_pat AS (
+  SELECT
+    pat_id,
+    category_class,
+    cd,
+    BOOL_OR(taboo_allergy_class = '1') AS is_taboo,
+    BOOL_OR(taboo_allergy_class = '2') AS is_allergy
+  FROM (
+    SELECT * FROM TABOO_ALLERGY_medicine_mix_tmp
+    UNION
+    SELECT * FROM TABOO_ALLERGY_TMP
+  ) t
+  GROUP BY pat_id, category_class, cd
+)
+,mst_enriched AS (
+  SELECT
+    b.ord_no,
     r.cd,
     mm.class_cd,
-    mm.medicine_name AS name,
-    mm.medicine_name AS short_name,
+    (
+      CASE
+        WHEN COALESCE(tat.is_taboo, false) AND COALESCE(tat.is_allergy, false) THEN '【禁忌・ｱﾚﾙｷﾞｰ】'
+        WHEN COALESCE(tat.is_taboo, false) THEN '【禁忌】'
+        WHEN COALESCE(tat.is_allergy, false) THEN '【ｱﾚﾙｷﾞｰ】'
+        ELSE ''
+      END
+    ) || mm.medicine_name AS name,
+    mm.medicine_short_name AS short_name,
     mm.unit,
     mm.is_medicated,
     mc.class_name,
@@ -56,10 +119,15 @@ WITH raw_data as (
     mt.medicate_timing_name AS timing_name,
     mp.pricedure_name AS procedure_name
   FROM raw_data r
+    JOIN base_ord b ON true
     JOIN mst_medicine mm
       ON r.cd = mm.medicine_cd
       AND r.medicine_type = '1'
       AND mm.is_del = '0'
+    LEFT JOIN TABOO_ALLERGY_data_pat tat
+      ON tat.pat_id = b.pat_id
+      AND tat.category_class = '1'
+      AND tat.cd = mm.medicine_cd
     LEFT JOIN mst_medicine_class mc
       ON mm.class_cd IS NOT NULL
       AND mc.class_cd = mm.class_cd
@@ -74,9 +142,17 @@ WITH raw_data as (
       AND mp.is_del = '0'
   UNION ALL
   SELECT
+    b.ord_no,
     r.cd,
     mmm.class_cd,
-    mmm.medicine_mix_name AS name,
+    (
+      CASE
+        WHEN COALESCE(tat.is_taboo, false) AND COALESCE(tat.is_allergy, false) THEN '【禁忌・ｱﾚﾙｷﾞｰ】'
+        WHEN COALESCE(tat.is_taboo, false) THEN '【禁忌】'
+        WHEN COALESCE(tat.is_allergy, false) THEN '【ｱﾚﾙｷﾞｰ】'
+        ELSE ''
+      END
+    ) || mmm.medicine_mix_name AS name,
     mmm.medicine_mix_short_name AS short_name,
     mmm.unit,
     mmm.is_medicated,
@@ -85,11 +161,16 @@ WITH raw_data as (
     mt.medicate_timing_name AS timing_name,
     mp.pricedure_name AS procedure_name
   FROM raw_data r
+    JOIN base_ord b ON true
     JOIN mst_medicine_mix mmm
       ON r.cd = mmm.medicine_mix_cd
       AND r.medicine_type = '2'
       AND mmm.is_del = '0'
       AND mmm.is_disp = '1'
+    LEFT JOIN TABOO_ALLERGY_data_pat tat
+      ON tat.pat_id = b.pat_id
+      AND tat.category_class = '2'
+      AND tat.cd = mmm.medicine_mix_cd
     LEFT JOIN mst_medicine_class mc
       ON mmm.class_cd IS NOT NULL
       AND mc.class_cd = mmm.class_cd
@@ -112,7 +193,7 @@ WITH raw_data as (
           THEN
             jsonb_build_object(
               'class_cd', m.class_cd,
-              'name', m.name,
+              'name', m.name,                    -- 带禁忌前缀
               'short_name', m.short_name,
               'unit', m.unit,
               'class_name', m.class_name,
@@ -135,7 +216,9 @@ WITH raw_data as (
         END || r.elem AS final_elem
   FROM raw_data r
     JOIN base_ord b ON true
-    LEFT JOIN mst_data m on true
+    LEFT JOIN mst_enriched m 
+      ON b.ord_no = m.ord_no 
+     AND r.cd = m.cd
 )
 ,final_ord_append_data_agg as (
   SELECT
@@ -213,6 +296,7 @@ SELECT
           SELECT jsonb_agg(CASE WHEN elem->>'no' = /*oldMediNo*/'124' AND elem->>'is_editable' = '1'
             THEN elem || jsonb_build_object(
                      'amount', COALESCE(ar.resolved_amount, elem->>'amount'),
+                     'unit', COALESCE(f.final_elem->>'unit', elem->>'unit'),
                      'ind_user_id', (f.final_elem->>'ind_user_id')::numeric,
                      'ind_user_first_name', (f.final_elem->>'ind_user_first_name'),
                      'ind_user_last_name',  (f.final_elem->>'ind_user_last_name')
@@ -308,10 +392,16 @@ SELECT
           THEN (
             SELECT jsonb_agg(CASE WHEN elem->>'no' = /*oldMediNo*/'124'
               THEN jsonb_set(
-                elem,
-                '{amount}',
+                jsonb_set(
+                  elem,
+                  '{amount}',
+                  to_jsonb(
+                    COALESCE(ar.resolved_amount, elem->>'amount')
+                  )
+                ),
+                '{unit}',
                 to_jsonb(
-                  COALESCE(ar.resolved_amount, elem->>'amount')
+                  COALESCE(f.final_elem->>'unit', elem->>'unit')
                 )
               )
               ELSE elem

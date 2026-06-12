@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.device_edge.service;
 
-import com.amazonaws.util.StringUtils;
 import com.google.common.base.Strings;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
@@ -1785,7 +1784,7 @@ public class DatabasePusherCommFail {
     }
     rcd.setLogType(nClass);
     // mod FNSI-バグ 通信サーバ 高 start
-    if(StringUtils.isNullOrEmpty(machineRecordCd)) {
+    if(Strings.isNullOrEmpty(machineRecordCd)) {
       rcd.setMachineRecordMessage(items.getItemValue(TelegramKey.KEY_MSG));
     }
     // mod FNSI-バグ 通信サーバ 高 end

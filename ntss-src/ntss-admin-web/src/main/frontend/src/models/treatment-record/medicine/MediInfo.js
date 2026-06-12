@@ -4,7 +4,7 @@ import {
   dateFormat,
   parseDate
 } from "@/functions/common/DateTimeUtils.js";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 投与薬剤情報（rst_medi_info）の1件分の投与薬剤を表現するクラス
@@ -184,7 +184,7 @@ export class MediInfo {
   //setOnlyEffectDate(index = 0, effectDate = null, isCalendar = false) {
   //del 治療記録バッグ修正 改修2 end
   setOnlyEffectDate(effectDate = null, isCalendar = false) {
-    let effectTime = moment().format('HH:mm');
+    let effectTime = dayjs().format('HH:mm');
     let calcDate;
     //del 治療記録バッグ修正 改修2 start
     // let isNew = false;
@@ -193,7 +193,7 @@ export class MediInfo {
       effectTime = this.effect_time;
     }
     if (this.effect_date) {
-      effectDate = moment(this.effect_date).format('YYYYMMDD');
+      effectDate = dayjs(this.effect_date).format('YYYYMMDD');
     }
     calcDate = new Date(
       Number(effectDate.substr(0, 4)),
@@ -265,7 +265,6 @@ export class MediInfo {
   /**
    * ord_main.rst_medi_infoに設定される文字列表現を返す。
    */
-  /* eslint-disable*/
   toString() {
     const ignoreFields = [
       'be_deleted',

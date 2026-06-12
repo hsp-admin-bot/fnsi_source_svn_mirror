@@ -3,12 +3,13 @@ package batch.step;
 import batch.ApplicationConst;
 import batch.entity.InOutVisitHistoryInfoEntity;
 import batch.mapper.PatIoVisitHistoryRowMapper;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.Step;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -36,7 +37,7 @@ public class InOutVisitHistoryStep implements Tasklet {
     @Autowired
     Utils utils;
     @Autowired
-    private StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
     @Autowired
     private EventLoggerUtil eventLoggerUtil;
     @Autowired
@@ -84,8 +85,27 @@ public class InOutVisitHistoryStep implements Tasklet {
         // today を LocalDate オブジェクトに変換して比較できるようにする
         LocalDate todayDate = LocalDate.parse(today, DATE_FORMATTER);
 
-        // period_start < today の条件で、period_start と ctl_no に基づいてデータを取得する
-        Optional<InOutVisitHistoryInfoEntity> beforeTodayMaxCtlNo = list.stream()
+        Optional<InOutVisitHistoryInfoEntity> beforeTodayMaxCtlNo = findBeforeTodayMaxCtlNo(list, todayDate);
+        Optional<InOutVisitHistoryInfoEntity> todayEnabledCtlNo = findTodayEnabledMaxCtlNo(list, todayDate);
+        Optional<InOutVisitHistoryInfoEntity> todayMaxCtlNo = findTodayMaxCtlNo(list, todayDate);
+        Optional<InOutVisitHistoryInfoEntity> afterTodayMinCtlNo = findAfterTodayMinCtlNo(list, todayDate);
+
+        StateHolder stateHolder = createInitialStateHolder();
+
+        applyBeforeTodayEntityToState(beforeTodayMaxCtlNo, stateHolder);
+        applyTodayEnabledEntityToState(todayEnabledCtlNo, stateHolder);
+        applyTodayMaxEntityToState(todayMaxCtlNo, stateHolder);
+        applyAfterTodayEntityToState(afterTodayMinCtlNo, stateHolder);
+
+        updatePatInfo(facilityCd, patId, stateHolder);
+    }
+
+    /**
+     * 当日より前の期間開始日を持つ履歴のうち、期間開始日・ctl_no が最大のエンティティを取得する
+     */
+    private Optional<InOutVisitHistoryInfoEntity> findBeforeTodayMaxCtlNo(
+            List<InOutVisitHistoryInfoEntity> list, LocalDate todayDate) {
+        return list.stream()
                 .filter(e -> {
                     LocalDate periodStartDate = e.getPeriodStartDate();
                     return periodStartDate != null && periodStartDate.isBefore(todayDate);
@@ -108,9 +128,14 @@ public class InOutVisitHistoryStep implements Tasklet {
                         return ctlNoComparator.compare(a, b) > 0 ? a : b;
                     }
                 });
+    }
 
-        // period_start = today の条件で、period_start と ctl_no に基づいてデータを取得する
-        Optional<InOutVisitHistoryInfoEntity> todayEnabledCtlNo = list.stream()
+    /**
+     * 当日の期間開始日かつ有効な移動区分を持つ履歴のうち、ctl_no が最大のエンティティを取得する
+     */
+    private Optional<InOutVisitHistoryInfoEntity> findTodayEnabledMaxCtlNo(
+            List<InOutVisitHistoryInfoEntity> list, LocalDate todayDate) {
+        return list.stream()
                 .filter(e -> {
                     LocalDate periodStartDate = e.getPeriodStartDate();
                     String moveInOut = e.getMove_in_out();
@@ -134,9 +159,14 @@ public class InOutVisitHistoryStep implements Tasklet {
 
                     return ctlNoComparator.compare(a, b) > 0 ? a : b;
                 });
+    }
 
-        // period_start = today の条件で、period_start と ctl_no に基づいてデータを取得する
-        Optional<InOutVisitHistoryInfoEntity> todayMaxCtlNo = list.stream()
+    /**
+     * 当日の期間開始日を持つ履歴のうち、ctl_no が最大のエンティティを取得する
+     */
+    private Optional<InOutVisitHistoryInfoEntity> findTodayMaxCtlNo(
+            List<InOutVisitHistoryInfoEntity> list, LocalDate todayDate) {
+        return list.stream()
                 .filter(e -> {
                     LocalDate periodStartDate = e.getPeriodStartDate();
                     return periodStartDate != null && periodStartDate.isEqual(todayDate);
@@ -150,9 +180,14 @@ public class InOutVisitHistoryStep implements Tasklet {
 
                     return ctlNoComparator.compare(a, b) > 0 ? a : b;
                 });
+    }
 
-        // period_start > today の条件で、period_start と ctl_no に基づいてデータを取得する
-        Optional<InOutVisitHistoryInfoEntity> afterTodayMinCtlNo = list.stream()
+    /**
+     * 当日より後の期間開始日を持つ履歴のうち、期間開始日・ctl_no が最小のエンティティを取得する
+     */
+    private Optional<InOutVisitHistoryInfoEntity> findAfterTodayMinCtlNo(
+            List<InOutVisitHistoryInfoEntity> list, LocalDate todayDate) {
+        return list.stream()
                 .filter(e -> {
                     LocalDate periodStartDate = e.getPeriodStartDate();
                     return periodStartDate != null && periodStartDate.isAfter(todayDate);
@@ -176,12 +211,24 @@ public class InOutVisitHistoryStep implements Tasklet {
                         return ctlNoComparator.compare(a, b) < 0 ? a : b;
                     }
                 });
+    }
 
+    /**
+     * 入外状態を保持するオブジェクトを初期化して返す
+     */
+    private StateHolder createInitialStateHolder() {
         StateHolder stateHolder = new StateHolder();
         stateHolder.inOutCurrentState = null;
         stateHolder.inOutPlanState = null;
         stateHolder.inOutPlanDate = null;
+        return stateHolder;
+    }
 
+    /**
+     * 当日より前の履歴エンティティから入外現状態を設定する
+     */
+    private void applyBeforeTodayEntityToState(
+            Optional<InOutVisitHistoryInfoEntity> beforeTodayMaxCtlNo, StateHolder stateHolder) {
         beforeTodayMaxCtlNo.ifPresent(entity -> {
             if (CommonConstants.STRING_THREE.equals(entity.getMove_in_out())
                     || CommonConstants.STRING_SEVEN.equals(entity.getMove_in_out())
@@ -193,7 +240,13 @@ public class InOutVisitHistoryStep implements Tasklet {
                 stateHolder.inOutCurrentState = CommonConstants.STRING_ZERO;
             }
         });
+    }
 
+    /**
+     * 当日有効な履歴エンティティから入外現状態・予定状態を設定する
+     */
+    private void applyTodayEnabledEntityToState(
+            Optional<InOutVisitHistoryInfoEntity> todayEnabledCtlNo, StateHolder stateHolder) {
         todayEnabledCtlNo.ifPresent(entity -> {
             if (CommonConstants.STRING_THREE.equals(entity.getMove_in_out())
                     || CommonConstants.STRING_SEVEN.equals(entity.getMove_in_out())
@@ -207,7 +260,13 @@ public class InOutVisitHistoryStep implements Tasklet {
                 stateHolder.inOutCurrentState = CommonConstants.STRING_ZERO;
             }
         });
+    }
 
+    /**
+     * 当日最大 ctl_no の履歴エンティティから入外現状態・予定状態を設定する
+     */
+    private void applyTodayMaxEntityToState(
+            Optional<InOutVisitHistoryInfoEntity> todayMaxCtlNo, StateHolder stateHolder) {
         todayMaxCtlNo.ifPresent(entity -> {
             if (CommonConstants.STRING_THREE.equals(entity.getMove_in_out())
                     || CommonConstants.STRING_SEVEN.equals(entity.getMove_in_out())
@@ -221,7 +280,13 @@ public class InOutVisitHistoryStep implements Tasklet {
                 stateHolder.inOutCurrentState = CommonConstants.STRING_ZERO;
             }
         });
+    }
 
+    /**
+     * 当日より後の履歴エンティティから入外現状態・予定状態・予定日を設定する
+     */
+    private void applyAfterTodayEntityToState(
+            Optional<InOutVisitHistoryInfoEntity> afterTodayMinCtlNo, StateHolder stateHolder) {
         afterTodayMinCtlNo.ifPresent(entity -> {
             if (CommonConstants.STRING_ONE.equals(entity.getMove_in_out())
                     || CommonConstants.STRING_TWO.equals(entity.getMove_in_out()))  {
@@ -249,8 +314,6 @@ public class InOutVisitHistoryStep implements Tasklet {
                     stateHolder.inOutPlanDate,
                     LocalDate.parse(entity.getPeriod_start_date(), DATE_FORMATTER));
         });
-
-        updatePatInfo(facilityCd, patId, stateHolder);
     }
 
     private void updatePatInfo(String facilityCd, String patIdStr, StateHolder stateHolder) {
@@ -300,7 +363,7 @@ public class InOutVisitHistoryStep implements Tasklet {
 
  @Bean(name = STEP_NAME)
    public Step step(){
-     return stepBuilderFactory.get(STEP_NAME).tasklet(this).build();
+     return new StepBuilder(STEP_NAME, jobRepository).tasklet(this).build();
  }
 }
 // add #11357 【たくしん会】患者の入外区分が「－」でコンバートされる houyulong end

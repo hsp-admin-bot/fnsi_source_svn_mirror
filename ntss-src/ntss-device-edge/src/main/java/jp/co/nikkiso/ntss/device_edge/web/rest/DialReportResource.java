@@ -3,7 +3,7 @@ package jp.co.nikkiso.ntss.device_edge.web.rest;
 
 import java.util.Enumeration;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import jp.co.nikkiso.ntss.device_edge.service.LogEventUtils;
 import org.springframework.beans.factory.annotation.Autowired;

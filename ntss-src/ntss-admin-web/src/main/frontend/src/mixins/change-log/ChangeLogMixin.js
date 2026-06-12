@@ -1,9 +1,7 @@
 // fix 2026/03/12 変更ログ mixin lichaolong start
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { CHANGE_LOG_ACTION_TYPE } from './ChangeLogSymbols';
-import { EventBus } from "@/eventBus.js";
-
-const unWatchers = [];
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 export default {
   data() {
@@ -19,16 +17,18 @@ export default {
     }
   },
   created() {
+    this._changeLogUnWatchers = [];
     // 変更ログイベントのバインドは mounted フックで行う（DOM が利用可能な状態で初期スナップショットを取得するため）
-    EventBus.$on('apiSuccess',() => {
+    this._changeLogApiSuccessHandler = () => {
       if (this.useMixinChangeLogGetActionType() === 'UPDATE' && !this.flag) {
         console.log('API success event received in ChangeLogMixin');
         this.flag = true
-        setTimeout(() => {
+        this._changeLogSetInitialTimer = setTimeout(() => {
           this.useMixinChangeLogSetInitial()      
         }, 1000);
       }
-    })
+    };
+    EventBus.$on('apiSuccess', this._changeLogApiSuccessHandler);
   },
   mounted() {
     // 共通の mounted ロジック：component のスナップ取得と saveRecord 包装
@@ -43,13 +43,13 @@ export default {
             handler.call(this, value);
             callback && callback();
           }, { deep: true });
-          unWatchers.push(unWatcher);
+          this._changeLogUnWatchers.push(unWatcher);
         } else if (typeof getter === 'string') {
           const unWatcher = this.$watch(getter, (value) => {
             handler.call(this, value);
             callback && callback();
           }, { deep: true });
-          unWatchers.push(unWatcher);
+          this._changeLogUnWatchers.push(unWatcher);
         }
       };
 
@@ -113,9 +113,10 @@ export default {
         this._changeLog_initialSnapshot = this.useMixinChangeLogCaptureMainSnapshot(this);
         console.log('Initial snapshot for change log:', this._changeLog_initialSnapshot);
       };
-      if (this.useMixinChangeLogGetEventName()) {
+      const eventName = this.useMixinChangeLogGetEventName();
+      if (eventName) {
         const self = this;
-        this.$on(this.useMixinChangeLogGetEventName(), async function () {
+        const handler = async function () {
           const type = self.useMixinChangeLogGetActionType();
           const before = type === 'UPDATE' ? self._changeLog_initialSnapshot : {};
           const after = self.useMixinChangeLogCaptureMainSnapshot(self);
@@ -132,8 +133,35 @@ export default {
           } catch (e) {
             // noop
           }
-        });
+        };
+        this._changeLogEventName = eventName;
+        this._changeLogEventHandler = handler;
+        EventBus.$on(eventName, handler);
       }
+    },
+    useMixinChangeLogCleanup() {
+      if (this._changeLogSetInitialTimer) {
+        clearTimeout(this._changeLogSetInitialTimer);
+        this._changeLogSetInitialTimer = null;
+      }
+      if (Array.isArray(this._changeLogUnWatchers)) {
+        this._changeLogUnWatchers.forEach(unwatch => {
+          if (typeof unwatch === 'function') {
+            unwatch();
+          }
+        });
+        this._changeLogUnWatchers = [];
+      }
+      if (this._changeLogApiSuccessHandler) {
+        EventBus.$off('apiSuccess', this._changeLogApiSuccessHandler);
+        this._changeLogApiSuccessHandler = null;
+      }
+      if (this._changeLogEventName && this._changeLogEventHandler) {
+        EventBus.$off(this._changeLogEventName, this._changeLogEventHandler);
+        this._changeLogEventName = null;
+        this._changeLogEventHandler = null;
+      }
+      this.flag = false;
     },
     // 値をトリムする
     useMixinChangeLogTrimValue(found, val) {
@@ -259,8 +287,8 @@ export default {
       afterMap = afterMap || {};
       const keys = new Set([...Object.keys(beforeMap), ...Object.keys(afterMap)]);
       keys.forEach(k => {
-        const b = beforeMap.hasOwnProperty(k) ? beforeMap[k] : null;
-        const a = afterMap.hasOwnProperty(k) ? afterMap[k] : null;
+        const b = Object.prototype.hasOwnProperty.call(beforeMap, k) ? beforeMap[k] : null;
+        const a = Object.prototype.hasOwnProperty.call(afterMap, k) ? afterMap[k] : null;
         
         // ここで b と a を文字列化して比較する。
         // 追加: 両方とも配列の場合は交差要素を取り除いてから比較する。
@@ -370,11 +398,8 @@ export default {
       }
     }
   },
-  beforeDestroy() {
-    // 注意：ウォッチャーはコンポーネントが破棄されるときに解除する必要があります。ここでは簡略化のために実装していませんが、実際には beforeDestroy フックなどで
-    unWatchers.forEach(unwatch => unwatch());
-    EventBus.$off('apiSuccess');
-    this.flag = false;
+  beforeUnmount() {
+    this.useMixinChangeLogCleanup();
   }
 };
 // fix 2026/03/12 変更ログ mixin lichaolong end

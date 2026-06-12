@@ -45,7 +45,7 @@ public class MstPatViewerLayoutDaoTest {
     // 事前準備
     String facilityCd = "0001";
     // 実行
-    List<MstPatViewerLayoutMonitorItem> result = mstPatViewerLayoutDao.selectMonitorItem(facilityCd,null);
+    List<MstPatViewerLayoutMonitorItem> result = mstPatViewerLayoutDao.selectMonitorItem(facilityCd, null, null);
     // 検証
     assertTrue(result.isEmpty());
   }
@@ -64,7 +64,7 @@ public class MstPatViewerLayoutDaoTest {
     // 事前準備
     String facilityCd = "1001";
     // 実行
-    List<MstPatViewerLayoutMonitorItem> result = mstPatViewerLayoutDao.selectMonitorItem(facilityCd,null);
+    List<MstPatViewerLayoutMonitorItem> result = mstPatViewerLayoutDao.selectMonitorItem(facilityCd, null, null);
     // 検証
     assertThat(result.size(), is(233 - 6)); // is_dispが初期値0のもの6件
     // sys_monitor_item の件数チェック
@@ -138,7 +138,7 @@ public class MstPatViewerLayoutDaoTest {
     // 事前準備
     String facilityCd = "1001";
     // 実行
-    List<MstPatViewerLayoutMonitorItem> result = mstPatViewerLayoutDao.selectMonitorItem(facilityCd,null);
+    List<MstPatViewerLayoutMonitorItem> result = mstPatViewerLayoutDao.selectMonitorItem(facilityCd, null, null);
     // 検証
     assertThat(result.size(), is(230 - 6)); // is_dispが初期値0のもの6件
     // テーブル種別に2のデータが含まれていない事を確認
@@ -164,7 +164,7 @@ public class MstPatViewerLayoutDaoTest {
     // 事前準備
     String facilityCd = "1001";
     // 実行
-    List<MstPatViewerLayoutMonitorItem> result = mstPatViewerLayoutDao.selectMonitorItem(facilityCd,null);
+    List<MstPatViewerLayoutMonitorItem> result = mstPatViewerLayoutDao.selectMonitorItem(facilityCd, null, null);
     // 検証
     assertThat(result.size(), is(235 - 6)); // is_dispが初期値0のもの6件
     // sys_monitor_item の件数チェック
@@ -208,7 +208,7 @@ public class MstPatViewerLayoutDaoTest {
     // 事前準備
     String facilityCd = "1001";
     // 実行
-    List<MstPatViewerLayoutMonitorItem> result = mstPatViewerLayoutDao.selectMonitorItem(facilityCd,null);
+    List<MstPatViewerLayoutMonitorItem> result = mstPatViewerLayoutDao.selectMonitorItem(facilityCd, null, null);
     // 検証
     assertThat(result.size(), is(233 - 6)); // is_dispが初期値0のもの6件
     // sys_monitor_item の件数チェック

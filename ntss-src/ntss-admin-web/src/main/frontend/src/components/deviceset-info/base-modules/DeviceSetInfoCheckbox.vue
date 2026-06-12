@@ -2,9 +2,8 @@
   <span>
     <custom-checkbox
       ref="el"
-      v-bind="deviceInfo"
+      v-bind="{ ...deviceInfo, ...$attrs }"
       :disabled="disabled"
-      v-on="$listeners"
     >
       {{ deviceInfo.displayString }}
     </custom-checkbox>
@@ -22,6 +21,7 @@ import baseForm from "@/components/deviceset-info/base-modules/BaseDeviceSetInfo
  *     ・deviceInfo(必須): DeviceSetInfoFunctions.js encodeDeviceSetInfoXXX()によって作成した各装置設定のオブジェクト
  */
 export default {
+  inheritAttrs: false,
   components: {
     "custom-checkbox": customCheckbox
   },

@@ -1,3 +1,5 @@
+import { publicAssetPath } from "@/compat/assets/public-path";
+import { getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 /**
  * @description 患者情報・新規患者登録画面のカード一覧用のMixin
  * @summary
@@ -23,22 +25,22 @@ export default {
     this.direction = "left";
     this.cardListScrollPos = this.getCardListScrollPos(this.cardListName);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.updateCardListScrollPos();
   },
   watch: {
     getTheme(val) {
       if (val === 0) {
         if (this.direction === "left") {
-          this.imgUrl = "img/pat-info/left_w.png";
+          this.imgUrl = publicAssetPath("img/pat-info/left_w.png");
         } else if (this.direction === "right") {
-          this.imgUrl = "img/pat-info/right_w.png";
+          this.imgUrl = publicAssetPath("img/pat-info/right_w.png");
         }
       } else if (val === 1) {
         if (this.direction === "left") {
-          this.imgUrl = "img/pat-info/left_b.png";
+          this.imgUrl = publicAssetPath("img/pat-info/left_b.png");
         } else if (this.direction === "right") {
-          this.imgUrl = "img/pat-info/right_b.png";
+          this.imgUrl = publicAssetPath("img/pat-info/right_b.png");
         }
       }
     },
@@ -46,15 +48,15 @@ export default {
     direction(val) {
       if (val === "left") {
         if (this.getTheme === 0) {
-          this.imgUrl = "img/pat-info/left_w.png";
+          this.imgUrl = publicAssetPath("img/pat-info/left_w.png");
         } else if (this.getTheme === 1) {
-          this.imgUrl = "img/pat-info/left_b.png";
+          this.imgUrl = publicAssetPath("img/pat-info/left_b.png");
         }
       } else if (val === "right") {
         if (this.getTheme === 0) {
-          this.imgUrl = "img/pat-info/right_w.png";
+          this.imgUrl = publicAssetPath("img/pat-info/right_w.png");
         } else if (this.getTheme === 1) {
-          this.imgUrl = "img/pat-info/right_b.png";
+          this.imgUrl = publicAssetPath("img/pat-info/right_b.png");
         }
       }
     },
@@ -77,9 +79,34 @@ export default {
     }
   },
   methods: {
+    getPatInfoLayoutRoot() {
+      return typeof this.getNtssLayoutRootElement === "function"
+        ? this.getNtssLayoutRootElement()
+        : (this.$el || null);
+    },
+    getPatInfoOwnerBody() {
+      return this.getPatInfoLayoutRoot()?.ownerDocument?.body || globalThis?.document?.body || null;
+    },
+    getPatInfoElementById(id) {
+      return getScopedElementById(id, this.getPatInfoLayoutRoot());
+    },
+    getPatInfoFirstByClassName(className) {
+      return getScopedElementsByClassName(className, this.getPatInfoLayoutRoot())[0]
+        || null;
+    },
+    isPatInfoSidebarHidden() {
+      const sidebarEl = this.getPatInfoElementById("patientSearchSidebarArea");
+      if (!sidebarEl) {
+        return true;
+      }
+      return sidebarEl.style.cssText.toString().indexOf("transform:") === -1;
+    },
     // 患者情報カード一覧メニューバーの開閉
     menuDisplay() {
-      const elMenuBar = document.getElementById("menu-bar-id");
+      const elMenuBar = this.getPatInfoElementById("menu-bar-id");
+      if (!elMenuBar) {
+        return;
+      }
       if (elMenuBar.classList.contains("block")) {
         this.closeMenuBar();
         this.isMenuBarShowing = false;
@@ -90,33 +117,61 @@ export default {
     },
     // 患者情報カード一覧メニューバーを開く
     openMenuBar() {
+      const SideBarIsHidden = this.isPatInfoSidebarHidden();
+      const width = this.getPatInfoOwnerBody().clientWidth;
+      let nwidth = width - 143;
       this.direction = "left";
+      nwidth = SideBarIsHidden ? nwidth - 300 : nwidth;
+      this.setCardListStyle({ width: nwidth + "px", marginLeft: "143px"});
       this.setMenuBtnMarginLeft("-13px");
       this.setMenuBarClass("block");
       this.setMenuBarLeft();
     },
     // 患者情報カード一覧メニューバーを閉じる
     closeMenuBar() {
+      const SideBarIsHidden = this.isPatInfoSidebarHidden();
+      let width = this.getPatInfoOwnerBody().clientWidth;
       this.direction = "right";
+      width = SideBarIsHidden ? width - 300 : width;
+      this.setCardListStyle({ width: width + "px", marginLeft: "0px"});
       this.setMenuBtnMarginLeft("-143px");
       this.setMenuBarClass("none");
       this.setMenuBarLeft();
     },
     // 患者情報カード一覧メニューバー開閉ボタンのcss設定
     setMenuBtnMarginLeft(marginLeft) {
-      this.$refs.menuBtn.style.marginLeft = marginLeft;
+      if (this.$refs.menuBtn) {
+        this.$refs.menuBtn.style.marginLeft = marginLeft;
+      }
     },
     /**
      * 患者情報カード一覧メニューバーのcss設定
      * @param {String} attrName 
      */
     setMenuBarClass(attrName) {
-      const elMenuBar = document.getElementById("menu-bar-id");
-      elMenuBar.setAttribute("class", `menu-bar-contents button-size ${attrName}`);
+      const elMenuBar = this.getPatInfoElementById("menu-bar-id");
+      if (elMenuBar) {
+        elMenuBar.setAttribute("class", `menu-bar-contents button-size ${attrName}`);
+      }
+    },
+    /**
+     * 患者情報カード一覧のcss設定
+     * @param {Object} styles 
+     */
+    setCardListStyle(styles) {
+      const elCardList = this.$refs.cardListDiv;
+      if (!elCardList) {
+        return;
+      }
+      elCardList.style.width = styles.width;
+      elCardList.style.marginLeft = styles.marginLeft;
     },
     // 患者情報カード一覧メニューバーのcss設定
     setMenuBarLeft() {
-      const elMenuBarOuter = document.getElementsByClassName("menu-bar")[0];
+      const elMenuBarOuter = this.getPatInfoFirstByClassName("menu-bar");
+      if (!elMenuBarOuter) {
+        return;
+      }
       if (!elMenuBarOuter.style.cssText) {
         elMenuBarOuter.style.left = "143px";
       } else {
@@ -131,7 +186,7 @@ export default {
     scrollHandler() {
       // 患者情報カード一覧のスクロール位置の更新
       const el = this.$refs.cardListDiv;
-      this.cardListScrollPos = el.scrollTop;
+      this.cardListScrollPos = el ? el.scrollTop : 0;
     },
     // 患者情報カード一覧の表示完了通知・イベントハンドラー
     cardListMountedHandler() {

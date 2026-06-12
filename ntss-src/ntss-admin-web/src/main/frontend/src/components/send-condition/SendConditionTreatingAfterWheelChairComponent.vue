@@ -26,7 +26,7 @@
           <!-- add FNSI-体重計モードテンキーの追加 徐 end -->
         </div>
         <!-- add FNSI-体重計モードテンキーの追加 徐 start -->
-        <v-ons-popover cancelable :visible.sync="cavisible" :target="popoverTarget" direction="down" class="popoverClass">
+        <v-ons-popover cancelable v-model:visible="cavisible" :target="popoverTarget" direction="down" class="popoverClass">
           <vue-touch-keyboard :options="options" :layout="layout" :cancel="hide" :accept="accept" :input="input"  />
         </v-ons-popover>
         <!-- add FNSI-体重計モードテンキーの追加 徐 end -->
@@ -36,17 +36,18 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import TouchKeyboard from "@/compat/keyboard/TouchKeyboard.vue";
+import { publicAssetPath } from "@/compat/assets/public-path";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 // add FNSI-体重計モードテンキーの追加 徐 start
-import VueTouchKeyboard from "vue-touch-keyboard/dist/vue-touch-keyboard";
-import "./../../../public/css/vue-touch-keyboard.css";
 // add FNSI-体重計モードテンキーの追加 徐 end
 
 export default {
-  props: {},
+
   // add FNSI-体重計モードテンキーの追加 徐 start
   components: {
-    "vue-touch-keyboard":VueTouchKeyboard.component
+    "vue-touch-keyboard": TouchKeyboard
   },
   // add FNSI-体重計モードテンキーの追加 徐 end
   data() {
@@ -60,7 +61,7 @@ export default {
         useKbEvents: false,
         preventClickEvent: false
       },
-      image_src: require("@/../public/img/keyboard/keyboard.png"),
+      image_src: publicAssetPath("img/keyboard/keyboard.png"),
       popoverTarget: null
       // add FNSI-体重計モードテンキーの追加 徐 end
     };
@@ -147,11 +148,14 @@ export default {
             b = false;
           }
 
-          if ( b === false ) {
-            document.getElementById("cewehightID").value = null;
+          if ( b === false) {
+            const weightInput = getScopedElementById("cewehightID", this.$el || this);
+            if (weightInput) {
+              weightInput.value = null;
+            }
             this.editMeasuredValue = null;
           }
-        }, 300 );
+        }, 300);
       // add FNSI-体重計モードテンキーの追加 徐 end
     },
     // add FNSI-体重計モードテンキーの追加 徐 start
@@ -160,10 +164,10 @@ export default {
     },
     show() {
       if (this.getWeightMode.isWeightMode) {
-        this.input = document.getElementById("cewehightID").firstElementChild;
-        this.input.focus();
-        this.input.setSelectionRange(0, this.input.value.length);
-        this.popoverTarget = document.getElementById("cewehightID");
+        this.input = getScopedElementById("cewehightID", this.$el || this)?.firstElementChild || null;
+        this.input?.focus?.();
+        this.input?.setSelectionRange?.(0, this.input.value.length);
+        this.popoverTarget = getScopedElementById("cewehightID", this.$el || this);
         this.cavisible = !this.cavisible;
         let name = ["7 8 9", "4 5 6", "1 2 3", "{zero} . {accept}"];
         let meta = { "zero": { key: "0"}, "accept": { func: "accept", text: "CLR"} }
@@ -172,7 +176,10 @@ export default {
       }
     },
     hide() {
-      document.getElementById("cewehightID").value = null;
+      const weightInput = getScopedElementById("cewehightID", this.$el || this);
+      if (weightInput) {
+        weightInput.value = null;
+      }
       this.changeWheelChairWeightValue(null).then(() => {
         // 体重値計算
         this.calcWeightValue();
@@ -180,7 +187,7 @@ export default {
     }
     // add FNSI-体重計モードテンキーの追加 徐 end
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -211,11 +218,12 @@ export default {
   flex-direction: column;
   align-content: flex-start;
 }
+ 
 /* add FNSI-体重計モードテンキーの追加 徐 start */
-ons-input >>> .text-input {
+ons-input :deep(.text-input) {
   text-align: right;
 }
-.popoverClass >>> .popover--top {
+.popoverClass :deep(.popover--top) {
   width: auto;
 }
 /* add FNSI-体重計モードテンキーの追加 徐 end */

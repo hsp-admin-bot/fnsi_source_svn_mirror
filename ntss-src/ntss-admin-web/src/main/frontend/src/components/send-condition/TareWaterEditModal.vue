@@ -3,16 +3,19 @@
  */
  <template>
   <modal-base @onClose="closeTareWaterEditModal">
-    <div slot="header">
+    <template #header>
+      <div>
       <component :is="header"></component>
     </div>
-    <div slot="body" style="height: calc(100% - 1em); overflow: auto;">
+    </template>
+    <template #body>
+      <div style="height: calc(100% - 1em); overflow: auto;">
       <div>
         <v-ons-row>
           <v-ons-segment
             ref="segment"
             class="send-condition-tare-water-edit-modal-mode-segment"
-            :index.sync="nowMode"
+            v-model:index="nowMode"
           >
             <!-- gボタン -->
             <button @click="changeUnit(0)">g</button>
@@ -73,7 +76,7 @@
         </v-ons-row>
         <!-- add FNSI-体重計モードテンキーの追加 徐 start -->
         <div>
-          <v-ons-popover cancelable id="tareWaterIDPopOver_1" :visible.sync="cavisible_1" :target="popoverTarget" direction="down" class="popoverClass" @posthide="tenkeyClose">
+          <v-ons-popover cancelable id="tareWaterIDPopOver_1" v-model:visible="cavisible_1" :target="popoverTarget" direction="down" class="popoverClass" @posthide="tenkeyClose">
             <vue-touch-keyboard :options="options" :layout="layout" :next="next" :cancel="cancel" :accept="accept" :input="input" :change="change" style="float:right"  />
           </v-ons-popover>
         </div>
@@ -131,7 +134,7 @@
         </v-ons-row>
         <!-- add FNSI-体重計モードテンキーの追加 徐 start -->
         <div>
-          <v-ons-popover cancelable id="tareWaterIDPopOver_2" :visible.sync="cavisible_2" :target="popoverTarget" direction="down" class="popoverClass" @posthide="tenkeyClose">
+          <v-ons-popover cancelable id="tareWaterIDPopOver_2" v-model:visible="cavisible_2" :target="popoverTarget" direction="down" class="popoverClass" @posthide="tenkeyClose">
             <vue-touch-keyboard :options="options" :layout="layout" :next="next" :cancel="cancel" :accept="accept" :input="input" :change="change" style="float:right"  />
           </v-ons-popover>
         </div>
@@ -189,7 +192,7 @@
         </v-ons-row>
         <!-- add FNSI-体重計モードテンキーの追加 徐 start -->
         <div>
-          <v-ons-popover cancelable id="tareWaterIDPopOver_3" :visible.sync="cavisible_3" :target="popoverTarget" direction="down" class="popoverClass" @posthide="tenkeyClose">
+          <v-ons-popover cancelable id="tareWaterIDPopOver_3" v-model:visible="cavisible_3" :target="popoverTarget" direction="down" class="popoverClass" @posthide="tenkeyClose">
             <vue-touch-keyboard :options="options" :layout="layout" :next="next" :cancel="cancel" :accept="accept" :input="input" :change="change" style="float:right"  />
           </v-ons-popover>
         </div>
@@ -247,7 +250,7 @@
         </v-ons-row>
         <!-- add FNSI-体重計モードテンキーの追加 徐 start -->
         <div>
-          <v-ons-popover cancelable id="tareWaterIDPopOver_4" :visible.sync="cavisible_4" :target="popoverTarget" direction="down" class="popoverClass" @posthide="tenkeyClose">
+          <v-ons-popover cancelable id="tareWaterIDPopOver_4" v-model:visible="cavisible_4" :target="popoverTarget" direction="down" class="popoverClass" @posthide="tenkeyClose">
             <vue-touch-keyboard :options="options" :layout="layout" :next="next" :cancel="cancel" :accept="accept" :input="input" :change="change" style="float:right"  />
           </v-ons-popover>
         </div>
@@ -305,15 +308,17 @@
         </v-ons-row>
         <!-- add FNSI-体重計モードテンキーの追加 徐 start -->
         <div>
-          <v-ons-popover cancelable id="tareWaterIDPopOver_5" :visible.sync="cavisible_5" :target="popoverTarget" direction="down" class="popoverClass" @posthide="tenkeyClose">
+          <v-ons-popover cancelable id="tareWaterIDPopOver_5" v-model:visible="cavisible_5" :target="popoverTarget" direction="down" class="popoverClass" @posthide="tenkeyClose">
             <vue-touch-keyboard :options="options" :layout="layout" :next="next" :cancel="cancel" :accept="accept" :input="input" :change="change" style="float:right"  />
           </v-ons-popover>
         </div>
         <!-- add FNSI-体重計モードテンキーの追加 徐 end -->
       </div>
     </div>
+    </template>
 
-    <div slot="footer" class="flex-container">
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <!-- FNSI-add 画面スタイル(ボタン)対応 徐 start -->
         <!-- <v-ons-button class="button denial-btn" @click="closeTareWaterEditModal">キャンセル</v-ons-button> -->
@@ -340,22 +345,24 @@
         <!-- FNSI-add 画面スタイル(ボタン)対応 徐 end -->
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll, getScopedUserAgent } from "@/functions/common/LayoutMeasureHelper";
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
 import CustomSimpleTextareaTypeB from "@/components/common/custom-form-tags/CustomSimpleTextareaTypeB";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 import { weightScaleClass, dialysisState } from "@/constants/weightDefine";
 // add FNSI-体重計モードテンキーの追加 徐 start
-import VueTouchKeyboard from "vue-touch-keyboard/dist/vue-touch-keyboard";
-import "./../../../public/css/vue-touch-keyboard.css";
 // add #10054 破棄確認・保存活性(複数変更含む)・削除対応_測定 20231219 ztc start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import {messageFormat} from "@/functions/common/MessageFormat";
+import TouchKeyboard from "@/compat/keyboard/TouchKeyboard.vue";
+import { publicAssetPath } from "@/compat/assets/public-path";
 // add #10054 破棄確認・保存活性(複数変更含む)・削除対応_測定 20231219 ztc end
 // add FNSI-体重計モードテンキーの追加 徐 end
 
@@ -367,7 +374,7 @@ export default {
     "modal-base": ModalBase,
     "custom-input-number": customInputNumber,
     // add FNSI-体重計モードテンキーの追加 徐 start
-    "vue-touch-keyboard":VueTouchKeyboard.component,
+    "vue-touch-keyboard": TouchKeyboard,
     // add FNSI-体重計モードテンキーの追加 徐 end
     "custom-simple-textarea-b": CustomSimpleTextareaTypeB
   },
@@ -398,7 +405,7 @@ export default {
         useKbEvents: false,
         preventClickEvent: false
       },
-      image_src: require("@/../public/img/keyboard/keyboard.png"),
+      image_src: publicAssetPath("img/keyboard/keyboard.png"),
       popoverTarget: null,
       // add FNSI-体重計モードテンキーの追加 徐 end
       doClearTwice: false,
@@ -646,7 +653,7 @@ export default {
       this.changeUnit(this.getWeightScaleConfigInfo.waterUnitClass);
     }
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = getScopedUserAgent(this.$el || null);
     if (ua.match(/Android/)) {
       this.isAndroid = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -677,11 +684,24 @@ export default {
       this.addWheelEvent();
     }, 1000);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
   methods: {
+    getScopedElementById(id) {
+      return getScopedElementById(id, this);
+    },
+    getScopedElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this);
+    },
+    getScopedQuery(selector) {
+      return queryScopedSelector(selector, this);
+    },
+    getScopedQueryAll(selector) {
+      return queryScopedSelectorAll(selector, this);
+    },
+
     ...mapActions("multi-modal", ["hideModal"]),
     ...mapActions("send-condition/scale", ["setRegistEditModalData"]),
     // 単位変更ボタン
@@ -1016,23 +1036,23 @@ export default {
 
     // 入力欄のマウスホイールイベント設定
     addWheelEvent() {
-      let tareWaterID1 = document.getElementById("tareWaterID_1");
+      let tareWaterID1 = this.getScopedElementById("tareWaterID_1");
       if (tareWaterID1) {
         tareWaterID1.addEventListener('wheel', () => {});
       }
-      let tareWaterID2 = document.getElementById("tareWaterID_2");
+      let tareWaterID2 = this.getScopedElementById("tareWaterID_2");
       if (tareWaterID2) {
         tareWaterID2.addEventListener('wheel', () => {});
       }
-      let tareWaterID3 = document.getElementById("tareWaterID_3");
+      let tareWaterID3 = this.getScopedElementById("tareWaterID_3");
       if (tareWaterID3) {
         tareWaterID3.addEventListener('wheel', () => {});
       }
-      let tareWaterID4 = document.getElementById("tareWaterID_4");
+      let tareWaterID4 = this.getScopedElementById("tareWaterID_4");
       if (tareWaterID4) {
         tareWaterID4.addEventListener('wheel', () => {});
       }
-      let tareWaterID5 = document.getElementById("tareWaterID_5");
+      let tareWaterID5 = this.getScopedElementById("tareWaterID_5");
       if (tareWaterID5) {
         tareWaterID5.addEventListener('wheel', () => {});
       }
@@ -1076,7 +1096,7 @@ export default {
     // add FNSI-体重計モードテンキーの追加 徐 start
     show(e) {
       if (e === 1) {
-        let tareWaterID1 = document.getElementById("tareWaterID_1");
+        let tareWaterID1 = this.getScopedElementById("tareWaterID_1");
         tareWaterID1.setAttribute("type", "text");
         this.input = tareWaterID1.firstElementChild;
         this.popoverTarget = tareWaterID1;
@@ -1095,7 +1115,7 @@ export default {
           this.cavisible_5 = false;
         }
       } else if (e === 2) {
-        let tareWaterID2 = document.getElementById("tareWaterID_2");
+        let tareWaterID2 = this.getScopedElementById("tareWaterID_2");
         tareWaterID2.setAttribute("type", "text");
         this.input = tareWaterID2.firstElementChild;
         this.popoverTarget = tareWaterID2;
@@ -1114,7 +1134,7 @@ export default {
           this.cavisible_5 = false;
         }
       } else if (e === 3) {
-        let tareWaterID3 = document.getElementById("tareWaterID_3");
+        let tareWaterID3 = this.getScopedElementById("tareWaterID_3");
         tareWaterID3.setAttribute("type", "text");
         this.input = tareWaterID3.firstElementChild;
         this.popoverTarget = tareWaterID3;
@@ -1133,7 +1153,7 @@ export default {
           this.cavisible_5 = false;
         }
       } else if (e === 4) {
-        let tareWaterID4 = document.getElementById("tareWaterID_4");
+        let tareWaterID4 = this.getScopedElementById("tareWaterID_4");
         tareWaterID4.setAttribute("type", "text");
         this.input = tareWaterID4.firstElementChild;
         this.popoverTarget = tareWaterID4;
@@ -1152,7 +1172,7 @@ export default {
           this.cavisible_5 = false;
         }
       } else if (e === 5) {
-        let tareWaterID5 = document.getElementById("tareWaterID_5");
+        let tareWaterID5 = this.getScopedElementById("tareWaterID_5");
         tareWaterID5.setAttribute("type", "text");
         this.input = tareWaterID5.firstElementChild;
         this.popoverTarget = tareWaterID5;
@@ -1188,7 +1208,7 @@ export default {
     // テンキー用関数 accept: 全文字クリア
     accept() {
       const targetId = "tareWaterID_" + this.clearFlg;
-      const clearTargetValue = document.getElementById(targetId).value;
+      const clearTargetValue = this.getScopedElementById(targetId).value;
       // 入力前の値が"0.00"以外の場合、全文字クリア処理を2回行う
       if (clearTargetValue !== "0.00") this.doClearTwice = true;
 
@@ -1201,23 +1221,23 @@ export default {
       this.isPostHide = true;
 
       if (this.cavisible_1) {
-        document.getElementById("tareWaterIDPopOver_1").hide();
+        this.getScopedElementById("tareWaterIDPopOver_1").hide();
         this.cavisible_1 = false;
       }
       if (this.cavisible_2) {
-        document.getElementById("tareWaterIDPopOver_2").hide();
+        this.getScopedElementById("tareWaterIDPopOver_2").hide();
         this.cavisible_2 = false;
       }
       if (this.cavisible_3) {
-        document.getElementById("tareWaterIDPopOver_3").hide();
+        this.getScopedElementById("tareWaterIDPopOver_3").hide();
         this.cavisible_3 = false;
       }
       if (this.cavisible_4) {
-        document.getElementById("tareWaterIDPopOver_4").hide();
+        this.getScopedElementById("tareWaterIDPopOver_4").hide();
         this.cavisible_4 = false;
       }
       if (this.cavisible_5) {
-        document.getElementById("tareWaterIDPopOver_5").hide();
+        this.getScopedElementById("tareWaterIDPopOver_5").hide();
         this.cavisible_5 = false;
       }
     },
@@ -1230,24 +1250,24 @@ export default {
       // del #10054 破棄確認・保存活性(複数変更含む)・削除対応_測定 20231219 ztc end
 
       if (this.clearFlg === 1) {
-        reverseVal = this.getReverseVal(document.getElementById("tareWaterID_1").value);
-        document.getElementById("tareWaterID_1").value = reverseVal;
+        reverseVal = this.getReverseVal(this.getScopedElementById("tareWaterID_1").value);
+        this.getScopedElementById("tareWaterID_1").value = reverseVal;
         this.editData.weight_1 = reverseVal;
       } else if (this.clearFlg === 2) {
-        reverseVal = this.getReverseVal(document.getElementById("tareWaterID_2").value);
-        document.getElementById("tareWaterID_2").value = reverseVal;
+        reverseVal = this.getReverseVal(this.getScopedElementById("tareWaterID_2").value);
+        this.getScopedElementById("tareWaterID_2").value = reverseVal;
         this.editData.weight_2 = reverseVal;
       } else if (this.clearFlg === 3) {
-        reverseVal = this.getReverseVal(document.getElementById("tareWaterID_3").value);
-        document.getElementById("tareWaterID_3").value = reverseVal;
+        reverseVal = this.getReverseVal(this.getScopedElementById("tareWaterID_3").value);
+        this.getScopedElementById("tareWaterID_3").value = reverseVal;
         this.editData.weight_3 = reverseVal;
       } else if (this.clearFlg === 4) {
-        reverseVal = this.getReverseVal(document.getElementById("tareWaterID_4").value);
-        document.getElementById("tareWaterID_4").value = reverseVal;
+        reverseVal = this.getReverseVal(this.getScopedElementById("tareWaterID_4").value);
+        this.getScopedElementById("tareWaterID_4").value = reverseVal;
         this.editData.weight_4 = reverseVal;
       } else if (this.clearFlg === 5) {
-        reverseVal = this.getReverseVal(document.getElementById("tareWaterID_5").value);
-        document.getElementById("tareWaterID_5").value = reverseVal;
+        reverseVal = this.getReverseVal(this.getScopedElementById("tareWaterID_5").value);
+        this.getScopedElementById("tareWaterID_5").value = reverseVal;
         this.editData.weight_5 = reverseVal;
       }
 
@@ -1264,29 +1284,29 @@ export default {
 
       if (this.clearFlg === 1) {
         // 入力を番号に戻す
-        document.getElementById("tareWaterID_1").setAttribute("type", "number");
+        this.getScopedElementById("tareWaterID_1").setAttribute("type", "number");
         // 異常データの場合の初期化
-        this.checkWeight(this.clearFlg, this.editData.weight_1, {target: document.getElementById("tareWaterID_1")});
+        this.checkWeight(this.clearFlg, this.editData.weight_1, {target: this.getScopedElementById("tareWaterID_1")});
       } else if (this.clearFlg === 2) {
         // 入力を番号に戻す
-        document.getElementById("tareWaterID_2").setAttribute("type", "number");
+        this.getScopedElementById("tareWaterID_2").setAttribute("type", "number");
         // 異常データの場合の初期化
-        this.checkWeight(this.clearFlg, this.editData.weight_2, {target: document.getElementById("tareWaterID_2")});
+        this.checkWeight(this.clearFlg, this.editData.weight_2, {target: this.getScopedElementById("tareWaterID_2")});
       } else if (this.clearFlg === 3) {
         // 入力を番号に戻す
-        document.getElementById("tareWaterID_3").setAttribute("type", "number");
+        this.getScopedElementById("tareWaterID_3").setAttribute("type", "number");
         // 異常データの場合の初期化
-        this.checkWeight(this.clearFlg, this.editData.weight_3, {target: document.getElementById("tareWaterID_3")});
+        this.checkWeight(this.clearFlg, this.editData.weight_3, {target: this.getScopedElementById("tareWaterID_3")});
       } else if (this.clearFlg === 4) {
         // 入力を番号に戻す
-        document.getElementById("tareWaterID_4").setAttribute("type", "number");
+        this.getScopedElementById("tareWaterID_4").setAttribute("type", "number");
         // 異常データの場合の初期化
-        this.checkWeight(this.clearFlg, this.editData.weight_4, {target: document.getElementById("tareWaterID_4")});
+        this.checkWeight(this.clearFlg, this.editData.weight_4, {target: this.getScopedElementById("tareWaterID_4")});
       } else if (this.clearFlg === 5) {
         // 入力を番号に戻す
-        document.getElementById("tareWaterID_5").setAttribute("type", "number");
+        this.getScopedElementById("tareWaterID_5").setAttribute("type", "number");
         // 異常データの場合の初期化
-        this.checkWeight(this.clearFlg, this.editData.weight_5, {target: document.getElementById("tareWaterID_5")});
+        this.checkWeight(this.clearFlg, this.editData.weight_5, {target: this.getScopedElementById("tareWaterID_5")});
       }
 
       this.input = null;
@@ -1320,19 +1340,19 @@ export default {
       // this.isChanged = true;
       // del #10054 破棄確認・保存活性(複数変更含む)・削除対応_測定 20231219 ztc end
       if (this.clearFlg === 1) {
-        document.getElementById("tareWaterID_1").value = null;
+        this.getScopedElementById("tareWaterID_1").value = null;
         this.editData.weight_1 = null;
       } else if (this.clearFlg === 2) {
-        document.getElementById("tareWaterID_2").value = null;
+        this.getScopedElementById("tareWaterID_2").value = null;
         this.editData.weight_2 = null;
       } else if (this.clearFlg === 3) {
-        document.getElementById("tareWaterID_3").value = null;
+        this.getScopedElementById("tareWaterID_3").value = null;
         this.editData.weight_3 = null;
       } else if (this.clearFlg === 4) {
-        document.getElementById("tareWaterID_4").value = null;
+        this.getScopedElementById("tareWaterID_4").value = null;
         this.editData.weight_4 = null;
       } else if (this.clearFlg === 5) {
-        document.getElementById("tareWaterID_5").value = null;
+        this.getScopedElementById("tareWaterID_5").value = null;
         this.editData.weight_5 = null;
       }
     }
@@ -1343,23 +1363,23 @@ export default {
 
 <style scoped>
 /* add FNSI-体重計モードテンキーの追加 徐 start */
-.send-condition-tare-water-edit-modal-input-area-name >>> .text-input {
+.send-condition-tare-water-edit-modal-input-area-name :deep(.text-input) {
   text-align: left;
 }
-.send-condition-tare-water-edit-modal-input-area-value >>> .text-input {
+.send-condition-tare-water-edit-modal-input-area-value :deep(.text-input) {
   text-align: right;
   color: var(--send-cond-font-color) !important;
   background-color: var(--ntss-base-background-color) !important;
   opacity: 1 !important;
   height: 1.6em !important;
 }
-.send-condition-tare-water-edit-modal-input-area-value >>> input[type="text"] {
+.send-condition-tare-water-edit-modal-input-area-value :deep(input[type="text"]) {
   padding-right: 15px;
 }
-.input-mobile >>> input[type="text"] {
+.input-mobile :deep(input[type="text"]) {
   padding-right: 0px !important;
 }
-.popoverClass >>> .popover--top {
+.popoverClass :deep(.popover--top) {
   width: auto;
 }
 /* add FNSI-体重計モードテンキーの追加 徐 end */

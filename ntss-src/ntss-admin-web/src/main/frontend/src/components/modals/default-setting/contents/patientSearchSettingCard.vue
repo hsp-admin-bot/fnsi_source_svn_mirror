@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -195,9 +195,9 @@
 </template>
 
  <script>
-   import {mapGetters, mapMutations, mapActions} from "vuex";
+   import {mapGetters, mapMutations, mapActions} from "@/compat/vue/vuex";
    /*add FNSI-改修内容4214 任 start*/
-   import $ from "jquery";
+
    /*add FNSI-改修内容4214 任 end*/
    import {PATIENT_SEARCH,SORT_OPTIONS} from "@/constants/defaultSettingConstants";
    import {deepCopy} from "@/functions/common/CommonFunctions";
@@ -207,12 +207,11 @@
    import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
    //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
    //add FNSI-5687 劉全航 start
-   import { EventBus } from "@/eventBus.js";
+   import { EventBus } from "@/compat/vue/event-bus.js";
+import { getScopedElementById, isScopedElementDisplayInline } from "@/functions/common/LayoutMeasureHelper";
    //add FNSI-5687 劉全航 end
 
 export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -388,16 +387,16 @@ export default {
       }
 
       if (this.editRecord[PATIENT_SEARCH.KEY_NAME_BED_GROUP_LIST] == null) {
-        this.$set(this.editRecord, PATIENT_SEARCH.KEY_NAME_BED_GROUP_LIST, this.initialValue[PATIENT_SEARCH.KEY_NAME_BED_GROUP_LIST]);
+        ((this.editRecord)[PATIENT_SEARCH.KEY_NAME_BED_GROUP_LIST] = this.initialValue[PATIENT_SEARCH.KEY_NAME_BED_GROUP_LIST]);
       }
       if (this.editRecord[PATIENT_SEARCH.KEY_NAME_SELECTED_PAT_GROUPS] == null) {
-        this.$set(this.editRecord, PATIENT_SEARCH.KEY_NAME_SELECTED_PAT_GROUPS, this.initialValue[PATIENT_SEARCH.KEY_NAME_SELECTED_PAT_GROUPS]);
+        ((this.editRecord)[PATIENT_SEARCH.KEY_NAME_SELECTED_PAT_GROUPS] = this.initialValue[PATIENT_SEARCH.KEY_NAME_SELECTED_PAT_GROUPS]);
       }
       if (this.editRecord[PATIENT_SEARCH.KEY_NAME_QUERY_PAT_GROUPS_METHOD] == null) {
-        this.$set(this.editRecord, PATIENT_SEARCH.KEY_NAME_QUERY_PAT_GROUPS_METHOD, this.initialValue[PATIENT_SEARCH.KEY_NAME_QUERY_PAT_GROUPS_METHOD]);
+        ((this.editRecord)[PATIENT_SEARCH.KEY_NAME_QUERY_PAT_GROUPS_METHOD] = this.initialValue[PATIENT_SEARCH.KEY_NAME_QUERY_PAT_GROUPS_METHOD]);
       }
       if (this.editRecord[PATIENT_SEARCH.KEY_NAME_SORT_CONDITIONS] == null) {
-        this.$set(this.editRecord, PATIENT_SEARCH.KEY_NAME_SORT_CONDITIONS, this.initialValue[PATIENT_SEARCH.KEY_NAME_SORT_CONDITIONS]);
+        ((this.editRecord)[PATIENT_SEARCH.KEY_NAME_SORT_CONDITIONS] = this.initialValue[PATIENT_SEARCH.KEY_NAME_SORT_CONDITIONS]);
       }
       
       // ベッドグループがマスタから削除されている場合は初期値にする
@@ -413,8 +412,14 @@ export default {
       Object.assign(this.initialValue, deepCopy(this.editRecord));
 
       /*add FNSI-改修内容4214 任 start*/
-      if($("#phone-show-patient-search").css("display") === "inline"){
-        document.getElementById("phone-show-patient-search").innerText =  document.getElementById("phone-show-patient-search").innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+      if(isScopedElementDisplayInline("phone-show-patient-search", this.$el || this)){
+        const phoneShowElement = getScopedElementById("phone-show-patient-search", this.$el || this);
+
+        if (phoneShowElement) {
+
+          phoneShowElement.innerText = phoneShowElement.innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+
+        }
       }
       /*add FNSI-改修内容4214 任 end*/
       // 共通ローダー表示終了

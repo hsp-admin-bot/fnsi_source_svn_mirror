@@ -3,7 +3,7 @@
 <template>
   <v-ons-popover
     v-if="popoverVisible"
-    :target="targetPositionElement"
+    :target="resolvedTargetPositionElement"
     :visible="popoverVisible"
     :direction="popoverDisplayDirection"
     :class="[fontSizeSet, 'popover-style']"
@@ -108,7 +108,9 @@ import PopoverMixin from "@/components/PopoverMixin";
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
 import {popoverPosthide, popoverPostShow, popoverPreShow} from "@/functions/common/CommonPopoverFunctions";
-import {mapGetters} from "vuex";
+import {mapGetters} from "@/compat/vue/vuex";
+import { getViewportHeight, getViewportWidth } from "@/functions/common/LayoutMeasureHelper";
+import { resolveOnsPopoverTargetElement } from "@/functions/common/OnsenFunctions";
 
 const PrefectureFilterLabel = "都道府県";
 const FavoritePrefecturesValue = "9999";
@@ -175,8 +177,7 @@ const toFacilityListItem = (aSysFacility) => ({
 const toFacilityList = (sysFacilities) => sysFacilities.map(toFacilityListItem);
 const isNotFavoriteFacilityDeleted = (aFavoriteFacility) => (
   (!aFavoriteFacility.isFavDel || aFavoriteFacility.isFavDel === "0")
-  && (!aFavoriteFacility.isSysDel || aFavoriteFacility.isSysDel === "0")
-);
+  && (!aFavoriteFacility.isSysDel || aFavoriteFacility.isSysDel === "0"));
 const toFavoriteFacilityListItem = (aFavoriteFacility) => ({
   value: aFavoriteFacility.medicalInstitutionCd,
   text: aFavoriteFacility.name,
@@ -242,9 +243,7 @@ export default {
      */
     targetPositionElement: {
       type: [Object, HTMLElement],
-      default() {
-        return this.$parent;
-      }
+      default: null
     },
 
     /**
@@ -291,12 +290,12 @@ export default {
       /**
        * @description 画面の高さ(レスポンシブ対応)
        */
-      windowHeight: window.innerHeight,
+      windowHeight: getViewportHeight(),
 
       /**
        * @description 画面の幅(レスポンシブ対応)
        */
-      windowWidth: window.innerWidth,
+      windowWidth: getViewportWidth(),
 
       /**
        * @description よく使う施設リスト
@@ -369,7 +368,7 @@ export default {
   /* add by guanhao 20221020[7177] 紹介状画面を開くとメモリオーバーフローにてブラウザが落ちる --start*/
   directives: {
     loadMore: {
-      bind(el, binding) {
+      mounted(el, binding) {
         const SELECTWRAP_DOM = el.getElementsByTagName('select')[0];
         SELECTWRAP_DOM.addEventListener("scroll", function () {
           const CONDITION =
@@ -383,6 +382,12 @@ export default {
   },
   /* add by guanhao 20221020[7177] 紹介状画面を開くとメモリオーバーフローにてブラウザが落ちる --end*/
   computed: {
+    resolvedTargetPositionElement() {
+      return resolveOnsPopoverTargetElement(this.targetPositionElement, this);
+    },
+    resolvedTargetRectElement() {
+      return this.resolvedTargetPositionElement;
+    },
 
     ...mapGetters("user", ["getFacilityCd"]),
     /**
@@ -391,9 +396,9 @@ export default {
     popoverDisplayDirection() {
       if (!this.popoverVisible) return null;
 
-      const elemPosition = this.targetPositionElement.$el
-        ? this.targetPositionElement.$el.getBoundingClientRect()
-        : this.targetPositionElement.getBoundingClientRect();
+      const targetElement = this.resolvedTargetRectElement;
+      if (!targetElement?.getBoundingClientRect) return null;
+      const elemPosition = targetElement.getBoundingClientRect();
       let direction = "right";
 
       if (this.windowHeight <= 420) {
@@ -438,7 +443,7 @@ export default {
   },
 
   async mounted() {
-    window.addEventListener("resize", this.resize);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.resize);
 
     // フィルターを設定する
     this.popoverFilter = [
@@ -451,8 +456,8 @@ export default {
   methods: {
     // modify by 史 for 6119 ブラウザがOut of Memoryのエラーが発生する
     resize() {
-      this.windowHeight = window.innerHeight;
-      this.windowWidth = window.innerWidth;
+      this.windowHeight = getViewportHeight();
+      this.windowWidth = getViewportWidth();
     },
     popoverPreShow,
     popoverPostShow,
@@ -505,7 +510,7 @@ export default {
         params.keyword = this.popoverSearchQuery;
       }
       try {
-        const response = await ApiHelper.get("mstInfo/getSysFacilityBySearchConditions/", params);
+        const response = await ApiHelper.get("mstInfo/getSysFacilityBySearchConditions", params);
         return response;
       } catch (error) {
         this.facilitiesData.loading = false;
@@ -605,8 +610,7 @@ export default {
       if (
         this.hasUnregisteredOption
         && newList.length > 0
-        && newList[0].text !== UnregisteredOption.text
-      ) {
+        && newList[0].text !== UnregisteredOption.text) {
         // 「未登録」の選択肢を追加
         newList.unshift(UnregisteredOption);
       }
@@ -655,7 +659,7 @@ export default {
       /* add by chamaojia 2025-05-21 [11871]  --start */
       // iPhoneアクセスプログラム、画面メモリオーバーフロー改造
       // 根据当前施设cd获取都道府県コード
-      const response = await ApiHelper.get('/sysFacility/getSysFacilityByCd/'+this.popoverContentSelected.value );
+      const response = await ApiHelper.get('/sysFacility/getSysFacilityByCd/'+this.popoverContentSelected.value);
       if(response.data) {
         this.popoverContentSelected.prefecturesCd = response.data.prefecturesCd;
       }
@@ -671,14 +675,11 @@ export default {
         && this.popoverContentSelected.value
         && this.favoriteFacilities
         && this.favoriteFacilities.findIndex(
-          item => item.value === this.popoverContentSelected.value
-        ) < 0
+          item => item.value === this.popoverContentSelected.value) < 0
         && this.popoverContentSelected.prefecturesCd
         && this.prefectureFilterData
         && this.prefectureFilterData.popoverFilterDataset.findIndex(
-          item => item.value === this.popoverContentSelected.prefecturesCd
-        ) > -1
-      ) {
+          item => item.value === this.popoverContentSelected.prefecturesCd) > -1) {
         initialPrefectureFilterValue = this.popoverContentSelected.prefecturesCd;
         this.clearFavoriteFacilities();
       }
@@ -786,21 +787,21 @@ export default {
     },
     // add #6512 患者情報画面の分の修正のため、施設POP画面を修正 劉 end
   },
-  beforeDestroy() {
-    window.removeEventListener("resize", this.resize);
+  beforeUnmount() {
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.resize);
   }
 };
 </script>
 
 <style scoped>
-.popover-style >>> .popover--top,
-.popover-style >>> .popover--right,
-.popover-style >>> .popover--left,
-.popover-style >>> .popover--bottom {
+.popover-style :deep(.popover--top),
+.popover-style :deep(.popover--right),
+.popover-style :deep(.popover--left),
+.popover-style :deep(.popover--bottom) {
   width: initial;
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 500px;
   height: 100%;
   padding: 25px;
@@ -858,7 +859,7 @@ export default {
 
 /* スマホ対応 */
 @media screen and (max-width: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: auto;
     padding: 10px;
   }
@@ -873,7 +874,7 @@ export default {
 }
 
 @media screen and (max-height: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: 350px;
     padding: 5px;
   }

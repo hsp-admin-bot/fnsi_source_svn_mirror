@@ -56,10 +56,7 @@
         >
           <!-- mod #10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 end -->
         <!--- add FNSI-共有設定の追加 周雨晴 2020/09/21 end -->
-            <option
-              v-if="!isTreatmentCdExist"
-              :value="inputModel.rst_treatment_cd"
-            >
+            <option v-if="!isTreatmentCdExist" :value="inputModel.rst_treatment_cd">
               {{ inputModel.rst_treatment_name }}
             </option>
             <option
@@ -162,7 +159,7 @@
                 v-model="inputModel.rst_dialysis_start_date"
                 @blur="recalcDialysisTime"
                 name="dialysis-start-date"
-                v-validate="'date_format:yyyy-MM-dd'"
+                v-rules="'date_format:yyyy-MM-dd'"
                 :disabled="!isShared"
               /> -->
               <!-- mod FNSI修正 redmine3913 房 start -->
@@ -177,7 +174,7 @@
                 @blur="recalcDialysisTime"
                 name="dialysis-start-date"
                 max="9999-12-31"
-                v-validate="'date_format:yyyy-MM-dd'"
+                v-rules="'date_format:yyyy-MM-dd'"
                 :disabled="!isShared"
                 @keyup="showStartMsg"
                 @change="changeStartFlag()"
@@ -192,7 +189,7 @@
                 :disabled="!isShared"
                 model-event="change"
                 max="9999-12-31"
-                v-validate="'date_format:yyyy-MM-dd'"
+                v-rules="'date_format:yyyy-MM-dd'"
                 @keyup="showStartMsg"
                 @blur="recalcDialysisTime"
                 @change="changeStartFlag()"
@@ -207,7 +204,7 @@
               <!--   :disabled="!isShared" -->
               <!--   model-event="change" -->
               <!--   max="9999-12-31" -->
-              <!--   v-validate="'date_format:yyyy-MM-dd'" -->
+              <!--   v-rules="'date_format:yyyy-MM-dd'" -->
               <!--   @keyup="showStartMsg" -->
               <!--   @blur="recalcDialysisTime" -->
               <!--   @change="changeStartFlag()" -->
@@ -221,7 +218,7 @@
                 :disabled="!isShared || !getItemAuthorized('TreatmentRecord', 'default_authority')"
                 model-event="change"
                 max="9999-12-31"
-                v-validate="'date_format:yyyy-MM-dd'"
+                v-rules="'date_format:yyyy-MM-dd'"
                 @keyup="showStartMsg"
                 @blur="recalcDialysisTime"
                 @change="changeStartFlag()"
@@ -233,9 +230,9 @@
               <!-- mod FNSI修正 redmine3913 房 end -->
               <!--- add FNSI-共有設定の追加 周雨晴 2020/09/21 end -->
               <!-- <p
-                v-show="errors.has('dialysis-start-date')"
+                v-show="hasValidationError('dialysis-start-date')"
                 class="error-message"
-              >{{ errors.first('dialysis-start-date') }}</p> -->
+              >{{ getValidationError('dialysis-start-date') }}</p> -->
               <!-- add FNSI-横展開 日付のチェックの追加 徐 end -->
             <!--- add FNSI-共有設定の追加 周雨晴 2020/09/21 start -->
               <!-- mod #10359 編集権限の動作不正 dengshen start -->
@@ -258,7 +255,7 @@
                 v-model="inputModel.rst_dialysis_start_time"
                 @blur="recalcDialysisTime"
                 name="dialysis-start-time"
-                v-validate="'date_format:HH:mm'"
+                v-rules="'date_format:HH:mm'"
                 :disabled="!isShared"
                 @change="changeStartFlag()"
               /> -->
@@ -290,9 +287,9 @@
             <!--- add FNSI-共有設定の追加 周雨晴 2020/09/21 end -->
             <!-- #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end -->
               <p
-                v-show="errors.has('dialysis-start-time')"
+                v-show="hasValidationError('dialysis-start-time')"
                 class="error-message"
-              >{{ errors.first('dialysis-start-time') }}</p>
+              >{{ getValidationError('dialysis-start-time') }}</p>
             </div>
             <!-- add FNSI-横展開 日付のチェックの追加 徐 start -->
             <span v-if="showErrorStartDate" class="error-message">{{ this.msgDiaLog }}</span>
@@ -322,7 +319,7 @@
                 v-model="inputModel.rst_dialysis_end_date"
                 @blur="recalcDialysisTime"
                 name="dialysis-end-date"
-                v-validate="'date_format:yyyy-MM-dd'"
+                v-rules="'date_format:yyyy-MM-dd'"
                 :disabled="!isShared"
               /> -->
               <!-- mod FNSI修正 redmine3913 房 start -->
@@ -336,7 +333,7 @@
                 v-model="inputModel.rst_dialysis_end_date"
                 @blur="recalcDialysisTime"
                 name="dialysis-end-date"
-                v-validate="'date_format:yyyy-MM-dd'"
+                v-rules="'date_format:yyyy-MM-dd'"
                 max="9999-12-31"
                 :disabled="!isShared"
                 @keyup="showEndMsg"
@@ -351,7 +348,7 @@
                 v-model="inputModel.rst_dialysis_end_date"
                 @blur="recalcDialysisTime"
                 name="dialysis-end-date"
-                v-validate="'date_format:yyyy-MM-dd'"
+                v-rules="'date_format:yyyy-MM-dd'"
                 :disabled="!isShared"
                 @keyup="showEndMsg"
                 @change="changeEndFlag()"
@@ -365,7 +362,7 @@
               <!--   v-model="inputModel.rst_dialysis_end_date" -->
               <!--   @blur="recalcDialysisTime" -->
               <!--   name="dialysis-end-date" -->
-              <!--   v-validate="'date_format:yyyy-MM-dd'" -->
+              <!--   v-rules="'date_format:yyyy-MM-dd'" -->
               <!--   :disabled="!isShared" -->
               <!--   @keyup="showEndMsg" -->
               <!--   @change="changeEndFlag()" -->
@@ -378,7 +375,7 @@
                 v-model="inputModel.rst_dialysis_end_date"
                 @blur="recalcDialysisTime"
                 name="dialysis-end-date"
-                v-validate="'date_format:yyyy-MM-dd'"
+                v-rules="'date_format:yyyy-MM-dd'"
                 :disabled="!isShared || !getItemAuthorized('TreatmentRecord', 'default_authority')"
                 @keyup="showEndMsg"
                 @change="changeEndFlag()"
@@ -390,9 +387,9 @@
               <!-- mod FNSI修正 redmine3913 房 end -->
              <!--- add FNSI-共有設定の追加 周雨晴 2020/09/21 end -->
               <!-- <p
-                v-show="errors.has('dialysis-end-date')"
+                v-show="hasValidationError('dialysis-end-date')"
                 class="error-message"
-              >{{ errors.first('dialysis-end-date') }}</p> -->
+              >{{ getValidationError('dialysis-end-date') }}</p> -->
               <!-- add FNSI-横展開 日付のチェックの追加 徐 end -->
              <!--- add FNSI-共有設定の追加 周雨晴 2020/09/21 start -->
               <!-- mod #10359 編集権限の動作不正 dengshen start -->
@@ -414,7 +411,7 @@
                 v-model="inputModel.rst_dialysis_end_time"
                 @blur="recalcDialysisTime"
                 name="dialysis-end-time"
-                v-validate="'date_format:HH:mm'"
+                v-rules="'date_format:HH:mm'"
                 :disabled="!isShared"
                 @change="changeEndFlag()"
               /> -->
@@ -426,7 +423,7 @@
               <!--   v-model="inputModel.rst_dialysis_end_time" -->
               <!--   @blur="recalcDialysisTime" -->
               <!--   name="dialysis-end-time" -->
-              <!--   v-validate="'date_format:HH:mm'" -->
+              <!--   v-rules="'date_format:HH:mm'" -->
               <!--   :disabled="!isShared" -->
               <!--   @change="changeEndFlag()" -->
               <!--   @handleClearInput="inputModel.rst_dialysis_end_time = null" -->
@@ -438,7 +435,7 @@
                 v-model="inputModel.rst_dialysis_end_time"
                 @blur="recalcDialysisTime"
                 name="dialysis-end-time"
-                v-validate="'date_format:HH:mm'"
+                v-rules="'date_format:HH:mm'"
                 :disabled="!isShared || !getItemAuthorized('TreatmentRecord', 'default_authority')"
                 @change="changeEndFlag()"
                 @handleClearInput="inputModel.rst_dialysis_end_time = null"
@@ -447,9 +444,9 @@
               <!-- //#5590 2023/04/20 ×を常に表示するように修正 張博 end -->
              <!--- add FNSI-共有設定の追加 周雨晴 2020/09/21 end -->
               <p
-                v-show="errors.has('dialysis-end-time')"
+                v-show="hasValidationError('dialysis-end-time')"
                 class="error-message"
-              >{{ errors.first('dialysis-end-time') }}</p>
+              >{{ getValidationError('dialysis-end-time') }}</p>
             </div>
             <!-- add FNSI-横展開 日付のチェックの追加 徐 start -->
             <span v-if="showErrorEndDate" class="error-message">{{ this.msgDiaLog }}</span>
@@ -488,13 +485,6 @@
           >
           <!-- mod #10359 編集権限の動作不正 dengshen end -->
          <!--- add FNSI-共有設定の追加 周雨晴 2020/09/21 end -->
-            <!-- <option
-              v-for="(item, index) in comboList.kur"
-              :key="index"
-              :value="item.cd"
-              :hidden="item.hidden"
-              :disabled="item.hidden"
-            >{{ item.text }}</option> -->
             <option
               v-for="(item, index) in kurOptions"
               :key="index"
@@ -503,7 +493,7 @@
               :disabled="item.hidden"
             >{{ item.text }}</option>
           </v-ons-select>
-          <p v-show="errors.has('kur-cd')" class="error-message">{{ errors.first('kur-cd') }}</p>
+          <p v-show="hasValidationError('kur-cd')" class="error-message">{{ getValidationError('kur-cd') }}</p>
         </v-ons-col>
       </v-ons-row>
 
@@ -537,13 +527,6 @@
           >
           <!-- mod #10359 編集権限の動作不正 dengshen end -->
          <!--- add FNSI-共有設定の追加 周雨晴 2020/09/21 end -->
-            <!-- <option
-              v-for="(item, index) in comboList.bed"
-              :key="index"
-              :value="item.cd"
-              :hidden="item.hidden"
-              :disabled="item.hidden"
-            >{{ item.text }}</option> -->
             <option
               v-for="(item, index) in bedOptions"
               :key="index"
@@ -552,7 +535,7 @@
               :disabled="item.hidden"
             >{{ item.text }}</option>
           </v-ons-select>
-          <p v-show="errors.has('bed-cd')" class="error-message">{{ errors.first('bed-cd') }}</p>
+          <p v-show="hasValidationError('bed-cd')" class="error-message">{{ getValidationError('bed-cd') }}</p>
         </v-ons-col>
       </v-ons-row>
 
@@ -582,13 +565,6 @@
           >
           <!-- mod #10359 編集権限の動作不正 dengshen end -->
          <!--- add FNSI-共有設定の追加 周雨晴 2020/09/21 end -->
-            <!-- <option
-              v-for="(item, index) in comboList.ward"
-              :key="index"
-              :value="item.cd"
-              :hidden="item.hidden"
-              :disabled="item.hidden"
-            >{{ item.text }}</option> -->
             <option
               v-for="(item, index) in wardOptions"
               :key="index"
@@ -626,13 +602,6 @@
           >
           <!-- mod #10359 編集権限の動作不正 dengshen end -->
          <!--- add FNSI-共有設定の追加 周雨晴 2020/09/21 end -->
-            <!-- <option
-              v-for="(item, index) in comboList.course"
-              :key="index"
-              :value="item.cd"
-              :hidden="item.hidden"
-              :disabled="item.hidden"
-            >{{ item.text }}</option> -->
             <option
               v-for="(item, index) in courseOptions"
               :key="index"
@@ -648,6 +617,7 @@
 </template>
 
 <script>
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
@@ -658,13 +628,12 @@ import {
   parseDate
 } from "@/functions/common/DateTimeUtils.js";
 // add FNSI-8347 ljx start
-import _ from "underscore";
 // add FNSI-8347 ljx end
 import { MSG_DIALYSIS_DATE_OPPOSITE } from "@/components/treatment-record/constants/messages";
 import { CODES } from "@/constants/TreatmentRecord.js";
 //mod 6832 【デグレ】治療記録における特殊血液浄化回数が不正 周安寧　start
-//import { mapGetters} from "vuex";
-import { mapGetters ,mapActions} from "vuex";
+//import { mapGetters} from "@/compat/vue/vuex";
+import { mapGetters ,mapActions} from "@/compat/vue/vuex";
 //mod 6832 【デグレ】治療記録における特殊血液浄化回数が不正 周安寧　end
 // del #10359 編集権限の動作不正 dengshen start
 // 権限コード定数
@@ -690,6 +659,9 @@ export default {
     DateInput,
     TimeInput
   },
+  // 親 ResultComponent が `:value` / `@input` の明示バインディングで使用しているため
+  // Vue2 と同じ props/event 形式を維持する。
+  emits: ["input"],
   props: ["value", "comboData", "isPurification" ,
   //add 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 start
   "initDeviceMode" , "newDeviceMode"
@@ -891,7 +863,7 @@ export default {
     // 透析開始・終了日時の監視
     dialysisDate(value) {
       // 透析開始・終了日時の変更をトリガとして、大小バリデーション実施
-      this.$validator.validate("dialysisDate", value);
+      this.validateField("dialysisDate", value);
     },
     //del 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 start
     // isPurification(value,old) {
@@ -990,43 +962,25 @@ export default {
     isShared() {
       return this.getFacilityCd === this.getSharedFacilityCd;
     },
-     // add FNSI-共有設定の追加 周雨晴 end
-    // add #12462 患者情報共有 Ji start
     isTreatmentCdExist() {
-      if (!this.inputModel.rst_treatment_cd) return true;
-      return (this.comboList.treatment || []).some(
-        item => item.cd === this.inputModel.rst_treatment_cd
-      );
+      if (!this.inputModel.rst_treatment_cd) {
+        return true;
+      }
+      return (this.comboList.treatment || []).some(item => item.cd === this.inputModel.rst_treatment_cd);
     },
-    kurOptions(){
-      return this.buildOptions(
-        this.comboList.kur,
-        this.inputModel.rst_kur_cd,
-        this.inputModel.rst_kur_name
-      );
+    kurOptions() {
+      return this.buildOptions(this.comboList.kur, this.inputModel.rst_kur_cd, this.inputModel.rst_kur_name);
     },
-    bedOptions(){
-      return this.buildOptions(
-        this.comboList.bed,
-        this.inputModel.rst_bed_cd,
-        this.inputModel.rst_bed_name
-      );
+    bedOptions() {
+      return this.buildOptions(this.comboList.bed, this.inputModel.rst_bed_cd, this.inputModel.rst_bed_name);
     },
-    wardOptions(){
-      return this.buildOptions(
-        this.comboList.ward,
-        this.inputModel.rst_ward_cd,
-        this.inputModel.rst_ward_name
-      );
+    wardOptions() {
+      return this.buildOptions(this.comboList.ward, this.inputModel.rst_ward_cd, this.inputModel.rst_ward_name);
     },
-    courseOptions(){
-      return this.buildOptions(
-        this.comboList.course,
-        this.inputModel.rst_course_cd,
-        this.inputModel.rst_course_name
-      );
+    courseOptions() {
+      return this.buildOptions(this.comboList.course, this.inputModel.rst_course_cd, this.inputModel.rst_course_name);
     }
-    // add #12462 患者情報共有 Ji end
+     // add FNSI-共有設定の追加 周雨晴 end
   },
   methods: {
      //add 6832 【デグレ】治療記録における特殊血液浄化回数が不正 周安寧　start
@@ -1041,6 +995,13 @@ export default {
     getItemAuthorized(pageCd, itemCd) {
       return getAuthorized(pageCd, itemCd);
     },
+    buildOptions(list, cd, name) {
+      const options = list || [];
+      if (cd && !options.some(item => item.cd === cd)) {
+        return [{ cd, text: name, hidden: false }, ...options];
+      }
+      return options;
+    },
     // add #10359 編集権限の動作不正 dengshen end
     //add FNSI-redmine8347 ljx start
     //マスタのベット名が変更された場合、新名を使う
@@ -1048,7 +1009,7 @@ export default {
       let options = e._vOptions;
       let selectedOption = options.filter(x => x == cd);
       let bedNames = e.innerText.split("\n");
-      let index  = _.lastIndexOf(options, cd);
+      let index  = options.lastIndexOf(cd);
       let selectedBadName = bedNames[index];
       this.inputModel.rst_bed_name = selectedBadName
       if (selectedOption.length > 1) {
@@ -1059,9 +1020,8 @@ export default {
     },
     // 透析開始・終了時間の大小逆エラー情報取得
     getDialysisDateError() {
-      const errors = this.$validator.errors.items.filter(
-        value => value.field === "dialysisDate"
-      );
+      const errors = this.validationErrors.filter(
+        value => value.field === "dialysisDate");
       return errors.length > 0 ? errors[0] : null;
     },
     // 透析開始日時
@@ -1136,12 +1096,12 @@ export default {
           id: "rst_dialysis_start_date",
           scope: "rst_dialysis_start_date"
         };
-    if (this.inputModel.rst_dialysis_start_date && document.getElementById("dialysis-start-date").validationMessage) {
+    if (this.inputModel.rst_dialysis_start_date && getScopedElementById("dialysis-start-date", this.$el || null)?.validationMessage) {
       this.showErrorStartDate = true;
-      this.$validator.errors.items.push(saveButtonErrorFlg);
+      this.pushValidationError(saveButtonErrorFlg);
     } else {
       this.showErrorStartDate = false;
-      this.$validator.errors.removeById("rst_dialysis_start_date");
+      this.removeValidationErrorById("rst_dialysis_start_date");
     }
   },
   showEndMsg() {
@@ -1150,12 +1110,12 @@ export default {
           id: "rst_dialysis_end_date",
           scope: "rst_dialysis_end_date"
         };
-    if (this.inputModel.rst_dialysis_end_date && document.getElementById("dialysis-end-date").validationMessage) {
+    if (this.inputModel.rst_dialysis_end_date && getScopedElementById("dialysis-end-date", this.$el || null)?.validationMessage) {
       this.showErrorEndDate = true;
-      this.$validator.errors.items.push(saveButtonErrorFlg);
+      this.pushValidationError(saveButtonErrorFlg);
     } else {
       this.showErrorEndDate = false;
-      this.$validator.errors.removeById("rst_dialysis_end_date");
+      this.removeValidationErrorById("rst_dialysis_end_date");
     }
   },
   // add FNSI-横展開 日付のチェックの追加 徐 end
@@ -1236,18 +1196,9 @@ export default {
         })
       }
       // mod 11454 時間外加算自動処理が機能していない zkm end
-    },
+    }
     //add 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 end
     //add FNSI-redmine5858 fang end
-    // add #12462 患者情報共有 Ji start
-    buildOptions(list, cd, name) {
-      list = list || [];
-      if (cd && !list.some(item => item.cd === cd)) {
-        return [{ cd, text: name, hidden: false }, ...list];
-      }
-      return list;
-    }
-    // add #12462 患者情報共有 Ji end
   },
   //add 6832 【デグレ】治療記録における特殊血液浄化回数が不正 周安寧　start
   async created() {
@@ -1289,19 +1240,17 @@ export default {
     // this.onSwitchPurificationCountValue = purificationCount + 1;
     //del 6832 【デグレ】治療記録における特殊血液浄化回数が不正 周安寧　end
     // 透析開始・終了日時の大小カスタムバリデーション
-    this.$validator.extend("dialysisDate", {
-      getMessage() {
-        return MSG_DIALYSIS_DATE_OPPOSITE;
-      },
-      validate(value) {
-        if (value && value.start && value.end) {
-          return value.end.getTime() - value.start.getTime() >= 0;
-        }
-        return true;
+    this.registerValidationRule("dialysisDate", (value) => {
+      if (value && value.start && value.end) {
+        return value.end.getTime() - value.start.getTime() >= 0 || MSG_DIALYSIS_DATE_OPPOSITE;
       }
+      return true;
     });
-    this.$validator.attach({
-      name: "dialysisDate",
+    this.registerValidationField({
+      id: "dialysisDate",
+      fieldName: "dialysisDate",
+      fullName: "dialysisDate",
+      label: "透析日時",
       rules: "dialysisDate",
       getter: () => this.dialysisDate
     });
@@ -1342,12 +1291,12 @@ ons-select {
 .treatment-record-selectbox {
   width: 10em;
 }
-.custom-input-edited >>> select {
+.custom-input-edited :deep(select) {
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;
 }
-.custom-input-edited >>> input {
+.custom-input-edited :deep(input) {
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;

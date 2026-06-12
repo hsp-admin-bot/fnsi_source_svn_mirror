@@ -42,7 +42,8 @@
 import IndValidEquimentSelect from  "@/components/indication/IndValidEquipmentSelect";
 //#8484　医療材料選択IFのリスト不正　End
 import IndEquipmentEdit from "@/components/indication/IndEquipmentEdit";
-import { EventBus } from "@/eventBus.js";
+import { mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { dateFormat, fitTermCheckForUpdate } from "@/functions/common/DateTimeUtils";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -50,12 +51,14 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { ApiHelper } from "@/apis/AxiosHelper";
 // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
-import { messageFormat } from '@/functions/common/MessageFormat';
-import {mapActions} from "vuex";
+
+import IndicationOwnerMixin from '@/components/indication/IndicationOwnerMixin';
+import { messageFormat } from "@/functions/common/MessageFormat";
 // mod #6107 2023/03/22 メッセージボックス全調整 張博 end
 import {deepCopy} from "@/functions/common/CommonFunctions.js";
 
 export default {
+  mixins: [IndicationOwnerMixin],
   components: {
     //#8484　医療材料選択IFのリスト不正　Start
     "ind-valid-equip-select": IndValidEquimentSelect,
@@ -97,7 +100,7 @@ export default {
   computed: {
     //変更対象の条件(期間、曜日、治療方法、クールなどの条件を保持する親コンポーネント)
     indEditBaseComponent() {
-      return this.$parent.$parent;
+      return this._indicationFlowOwner();
     },
   },
   //#8484　医療材料選択IFのリスト不正　End
@@ -107,6 +110,13 @@ export default {
       "startLoadingScreen",
       "finishLoadingScreen"
     ]),
+    getEquipEditComponent() {
+      return this.$refs?.equipEdit || null;
+    },
+    getEquipEditRefs() {
+      const equipEdit = this.getEquipEditComponent();
+      return equipEdit?.$refs || null;
+    },
     /**
      * @description 「編集対象」選択のコールバック関数
      */
@@ -133,10 +143,10 @@ export default {
 
       // メッセージ置換文字が入っていればメッセージ表示
       if (null !== stringParam) {
-        this.$parent.$parent.messageDialogInfo.messageCd = 22010001;
-        this.$parent.$parent.messageDialogInfo.type = "1";
-        this.$parent.$parent.messageDialogInfo.stringParams = [stringParam];
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.messageCd = 22010001;
+        this._indicationDialogOwner().messageDialogInfo.type = "1";
+        this._indicationDialogOwner().messageDialogInfo.stringParams = [stringParam];
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         console.log("IndEquipmentEditBase.vue updateIndInfo return; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         return;
@@ -161,9 +171,9 @@ export default {
             throw error;
           });
         if (null != response && 200 === response.status && 22020004 === response.data.msgCd) {
-          this.$parent.$parent.messageDialogInfo.messageCd = response.data.msgCd;
-          this.$parent.$parent.messageDialogInfo.type = "1";
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.messageCd = response.data.msgCd;
+          this._indicationDialogOwner().messageDialogInfo.type = "1";
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
           console.log("IndEquipmentEdit.vue updateIndInfo return; this.finishLoadingScreen();");
           this.finishLoadingScreen();
           return;
@@ -172,7 +182,7 @@ export default {
         console.log("IndEquipmentEditBase.vue updateIndInfo hide-modal this.finishLoadingScreen();");
         this.finishLoadingScreen();
         // モーダルを閉じる
-        this.$parent.$parent.$emit("hide-modal");
+        this._hideIndicationModal();
       }
     },
 
@@ -190,9 +200,9 @@ export default {
       // キャンセル時チェック処理
       if (1 === num) {
         if (this.$refs.equipEdit.checkEdit()) {
-          this.$parent.$parent.messageDialogInfo.messageCd = 20010001;
-          this.$parent.$parent.messageDialogInfo.type = "2";
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.messageCd = 20010001;
+          this._indicationDialogOwner().messageDialogInfo.type = "2";
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         }
       }
       return this.$refs.equipEdit.checkEdit();
@@ -229,9 +239,9 @@ export default {
       }
       if (msg) {
         let rtn = false;
-        const parentObj = this.$parent.$parent;
+        const parentObj = this._indicationDialogOwner();
         // 処理中スクリーンを一旦解除
-        this.$parent.$parent.isUpdating = false;
+        this._indicationDialogOwner().isUpdating = false;
         await this.$ons.notification.confirm({
           // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
           // title: "",
@@ -259,11 +269,15 @@ export default {
 
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
     isEdit() {
-      const treatCondItems = this.$refs.equipEdit.$refs;
+      const treatCondItems = this.getEquipEditRefs();
+      if (!treatCondItems) {
+        return false;
+      }
       let editCount = 0;
       Object.keys(treatCondItems).forEach(key => {
-        if ((treatCondItems[key] && treatCondItems[key].isEdited)
-          || (treatCondItems[key][0] && treatCondItems[key][0].isEdited)) {
+        const treatCondItem = treatCondItems[key];
+        if ((treatCondItem && treatCondItem.isEdited)
+          || (Array.isArray(treatCondItem) && treatCondItem[0] && treatCondItem[0].isEdited)) {
 
           // 変更箇所数格納
           editCount += 1;
@@ -279,14 +293,14 @@ export default {
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
     async resetComponentIndData(structData){
       if (this.isEdit()) {
-        this.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+        this._indicationDialogOwner().messageDialogInfo.messageCd = 70000028;
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-        this.$parent.$parent.messageDialogInfo.type = "9";
+        this._indicationDialogOwner().messageDialogInfo.type = "9";
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         return;
       } else {
-        this.getComponentData(structData,2);
+        return this.getComponentData(structData,2);
       }
     },
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add end
@@ -388,7 +402,7 @@ export default {
       for(let data of dataObject) {
         // #10196 カレンダーをクリックします 操作卓エラー修正です linjunfeng start
         // if(data.cd === this.$refs.equipEdit.popoverData.popoverContentSelected.value) {
-        if(data.cd === this.$refs.equipEdit.popoverData?.popoverContentSelected.value) {
+        if(data.cd === this.$refs.equipEdit?.popoverData?.popoverContentSelected?.value) {
         // #10196 カレンダーをクリックします 操作卓エラー修正です linjunfeng end
           indEquipInfo = data;
         }
@@ -414,30 +428,48 @@ export default {
         this.$refs.equipEdit.amountInputValue.initValue = Number(indEquipInfo.amount);
 
         if (answer === 3) {
-          if (this.$refs.equipEdit.popoverData.popoverContentSelected.value != this.initValueModel.equipmentInputEditValue) {
-            indEquipInfo.cd = this.$refs.equipEdit.popoverData.popoverContentSelected.value;
+          const selectedValue = this.$refs.equipEdit?.popoverData?.popoverContentSelected?.value;
+          if (selectedValue != null && selectedValue != this.initValueModel.equipmentInputEditValue) {
+            indEquipInfo.cd = selectedValue;
           }
-          if (this.$refs.equipEdit.amountInputValue.editValue != this.initValueModel.amountInputEditValue) {
-            indEquipInfo.amount = this.$refs.equipEdit.amountInputValue.editValue;
+          const amountValue = this.$refs.equipEdit?.amountInputValue?.editValue;
+          if (amountValue != null && amountValue != this.initValueModel.amountInputEditValue) {
+            indEquipInfo.amount = amountValue;
           }
         }
+        const listDataset =
+          this.$refs.equipEdit?.popoverData?.popoverContentDataset ??
+          this.$refs.equipEdit?.EquipmentList ??
+          [];
         //add FutreNetWeb+SI課題管理 no.5485 劉全航 start
         // #10196 カレンダーをクリックします 操作卓エラー修正です linjunfeng start
         // let selectedItem = this.$refs.equipEdit.EquipmentList.filter(function (item) {
-        let selectedItem = this.$refs.equipEdit.EquipmentList?.filter(function (item) {
+        let selectedItem = listDataset?.filter(function (item) {
         // #10196 カレンダーをクリックします 操作卓エラー修正です linjunfeng end  
-          return indEquipInfo.cd === item.value;
+          return String(indEquipInfo.cd) === String(item.value);
         });
         // add #10196 カレンダーをクリックします 操作卓エラー修正です linjunfeng start
-        if (!selectedItem) {
+        if (!selectedItem || selectedItem.length === 0) {
           return;
         }
         // add #10196 カレンダーをクリックします 操作卓エラー修正です linjunfeng end
-        this.$refs.equipEdit.cdTest = selectedItem[0].value;
-        this.$refs.equipEdit.unitLabelValue = selectedItem[0].unit;
-        this.$refs.equipEdit.equipmentInputValue.editValue = selectedItem[0].text;
-        this.$refs.equipEdit.popoverData.popoverContentSelected = selectedItem[0];
-        this.$refs.equipEdit.amountInputValue.editValue = indEquipInfo.amount;
+        const picked = selectedItem[0];
+        if (!picked) {
+          return;
+        }
+        if (this.$refs.equipEdit) {
+          this.$refs.equipEdit.cdTest = picked.value;
+          this.$refs.equipEdit.unitLabelValue = picked.unit;
+          if (this.$refs.equipEdit.equipmentInputValue) {
+            this.$refs.equipEdit.equipmentInputValue.editValue = picked.text;
+          }
+          if (this.$refs.equipEdit.popoverData) {
+            this.$refs.equipEdit.popoverData.popoverContentSelected = picked;
+          }
+          if (this.$refs.equipEdit.amountInputValue) {
+            this.$refs.equipEdit.amountInputValue.editValue = indEquipInfo.amount;
+          }
+        }
 
       this.initValueModel = {
         equipmentInputEditValue: initData.cd,
@@ -449,9 +481,9 @@ export default {
 
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
   async created() {
-    this.$parent.$parent.isDialogType9 = true;
+    this._indicationDialogOwner().isDialogType9 = true;
     //FNSI-修正 #5525 横展開対応、xugj add start
-    this.$parent.$parent.isSendNextPatInfoFlg = true;
+    this._indicationResultOwner().isSendNextPatInfoFlg = true;
     //FNSI-修正 #5525 横展開対応、xugj add end
   }
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add end

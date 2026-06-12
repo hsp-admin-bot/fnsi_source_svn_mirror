@@ -216,5 +216,5 @@ export function sendRequestAllReportUpdateByPatId(params) {
     `${DEVICE_EDGE_ORDER}/send_all_report_update_by_pat_id`,
     params
   );
-  // #10518 2024.04.19 add 対象患者が現患者のベッドに対して「実績確定・削除時装置レポート画像更新」通知を行うREST-APIリクエストを追加 TDC米沢 end
 }
+// #10518 2024.04.19 add 対象患者が現患者のベッドに対して「実績確定・削除時装置レポート画像更新」通知を行うREST-APIリクエストを追加 TDC米沢 end

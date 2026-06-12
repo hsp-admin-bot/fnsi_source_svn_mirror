@@ -129,6 +129,12 @@ ons-row {
   height: 100%;
 }
 
+/* Vue3ではmixin元のscopedスタイルが継承されないため、治療条件行の余白を共通化する */
+ons-row:not(.row-style):has(> ons-col.action-condition-column) {
+  border: 1px solid var(--ntss-border-color);
+  padding: 10px;
+}
+
 ons-button {
   height: 2.4em;
   width: 100%;
@@ -283,7 +289,17 @@ body {
   text-align: left;
 }
 
+.k-legacy-multiselect .k-chip.k-button .k-chip-content,
+.k-legacy-multiselect .k-chip.k-button .k-chip-label {
+  word-break: break-word;
+  text-align: left;
+}
+
 .k-multiselect-wrap li.k-button {
+  font-size: 1em;
+}
+
+.k-legacy-multiselect .k-chip.k-button {
   font-size: 1em;
 }
 
@@ -664,6 +680,7 @@ ons-popover.popoverProvisional .popover__content {
   /* 一覧のボーダーライン */
   border: solid 1px var(--ntss-list-border-color);
   padding: 8px;
+  line-height: normal;
   color: var(--ntss-list-body-color);
 }
 
@@ -770,6 +787,14 @@ ons-popover.popoverProvisional .popover__content {
   width: 300px;
 }
 
+/***#9846 start*/
+.status-list-condition-popover .popover--top {
+  min-width: 300px!important;
+}
+/*** #9846 end*/
+
+
+
 .popover--top__content {
   width: 100%;
 }
@@ -778,6 +803,12 @@ ons-popover.popoverProvisional .popover__content {
 .popover-style .popover__arrow {
   border: none !important;
 }
+
+/* マスタ選択ポップオーバー：100%表示・モーダル内でも矢印が本体に隠れないよう調整 */
+ons-popover.popover-style .popover .popover__arrow {
+  z-index: 0;
+}
+
 .popover-style label.label-style {
   line-height: 1.7;
 }
@@ -1282,10 +1313,28 @@ ons-popover.popoverProvisional .popover__content {
   background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%) !important;
   background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%) !important;
 }
-.status-list-page .k-grid th a {
+
+.status-list-page .k-grid .k-table-th {
+  color: #fff;
+  background-color: var(--master-maintenance-kgrid-header-background-color);
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%) !important;
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%) !important;
+}
+.status-list-page .k-grid th a,
+.status-list-page .k-grid .k-link {
+  color: #fff;
+}
+
+.status-list-page .k-grid .k-column-title {
   color: #fff;
 }
 .status-list-page .k-grid td {
+  vertical-align: middle !important;
+  border-color: var(--master-maintenance-kgrid-border-color);
+  border-bottom-width: 1px;
+}
+
+.status-list-page .k-grid .k-table-td {
   vertical-align: middle !important;
   border-color: var(--master-maintenance-kgrid-border-color);
   border-bottom-width: 1px;
@@ -1310,9 +1359,16 @@ ons-popover.popoverProvisional .popover__content {
   background-color: var(--master-maintenance-kgrid-selected-background-color);
 }
 
+.status-list-page .k-grid .k-table-th.k-state-selected,
+.status-list-page .k-grid .k-table-td.k-state-selected,
+.status-list-page .k-grid .k-table-row.k-state-selected>.k-table-td {
+  color: var(--master-maintenance-kgrid-selected-color);
+  background-color: var(--master-maintenance-kgrid-selected-background-color);
+}
+
 /* 列ヘッダ */
 .status-list-page .k-header {
-  border: solid 1px var(--ntss-list-border-color);
+  border: solid 1px var(--ntss-list-border-color) !important;
   color: #fff;
   background-color: var(--ntss-list-header-background-color) !important;
 }
@@ -2658,6 +2714,13 @@ body > ons-popover.zoom-popover > div.popover.popover--top > div.popover__conten
   width: 100px;
 }
 
+/** #9846 start*/
+.disp_target_popover__content .common-style-cancel-button {
+  min-width: 100px;
+  width:auto;
+}
+/** #9846 end*/
+
 /* inputタグ */
 .common-style-input {
   font-size: 1em;
@@ -2706,8 +2769,15 @@ body > ons-popover.zoom-popover > div.popover.popover--top > div.popover__conten
   text-align: left;
   white-space: nowrap;
   overflow-y: overlay;
-  overflow-x: hidden;
+  /* hidden だとポップオーバー矢印が 100% 表示時にクリップされる */
+  overflow-x: visible;
   max-height: 100%;
+}
+
+/* 指示編集モーダル：ポップオーバー矢印が横方向にクリップされないよう調整 */
+.custom-modal .modal-body,
+.custom-modal .modal-body-no-footer {
+  overflow-x: visible;
 }
 
 .indInfo-style-modal-container .segment__item {
@@ -2860,7 +2930,7 @@ th.deviceSetInfo-header-row-name {
   background-color: var(--ntss-header-background-color);
   color: var(--ntss-header-color);
   text-align: center;
-  border-bottom: solid 0.1px var(--ntss-list-border-color);
+  border-bottom: solid 2px var(--ntss-list-border-color) !important;
 }
 
 /* フッター行名 */
@@ -2884,7 +2954,7 @@ td.deviceSetInfo-footer-content {
 td.deviceSetInfo-row-name {
   background-color: var(--ntss-header-background-color);
   color: var(--ntss-header-color);
-  border-bottom: solid 0.1px var(--ntss-list-border-color);
+  border-bottom: solid 0.1px var(--ntss-list-border-color) !important;
   text-align: center;
 }
 
@@ -2893,8 +2963,8 @@ th.deviceSetInfo-header-first-name {
   background-color: var(--ntss-header-background-color);
   color: var(--ntss-header-color);
   text-align: center;
-  border-left: solid 0.1px var(--ntss-list-border-color);
-  border-bottom: solid 0.1px var(--ntss-list-border-color);
+  border-left: solid 0.1px var(--ntss-list-border-color) !important;
+  border-bottom: solid 0.1px var(--ntss-list-border-color) !important;
 }
 
 /* ヘッダー二段目タイトル */
@@ -2902,7 +2972,7 @@ th.deviceSetInfo-header-secound-name {
   background-color: var(--ntss-header-background-color);
   color: var(--ntss-header-color);
   text-align: center;
-  border-left: solid 0.1px var(--ntss-list-border-color);
+  border-left: solid 0.1px var(--ntss-list-border-color) !important;
 }
 
 /* 名称列 */
@@ -2910,8 +2980,8 @@ td.deviceSetInfo-name-content {
   text-align: left;
   background-color: var(--ntss-base-background-color);
   color: var(--row-1-color);
-  border-left: solid 0.1px var(--ntss-list-border-color);
-  border-bottom: solid 0.1px var(--ntss-list-border-color);
+  border-left: solid 0.1px var(--ntss-list-border-color) !important;
+  border-bottom: solid 0.1px var(--ntss-list-border-color) !important;
   max-width: 100px;
 }
 
@@ -2946,59 +3016,217 @@ td.deviceSetInfo-weight-content {
 /******************************************/
 /* マスタメンテナンス用スタイル           */
 /******************************************/
-.master-maintenance-page .kendo-grid-toolbar-style {
+.kendo-grid-toolbar-style {
   background-color: var(--main-background-color);
 }
-.master-maintenance-page .k-grid {
+/* Kendo 2019 の toolbar が付与していた、ボタン領域後のグリッド左余白を維持する */
+.k-grid-toolbar > * + .k-grid {
+  margin-inline-start: 0.375rem;
+}
+/* Kendo Grid visual baseline shared by legacy/native grids. */
+.k-grid {
   background-color: var(--main-background-color);
 }
-.master-maintenance-page .k-grid tr {
+.k-grid .k-grid-content,
+.k-grid .k-grid-content table,
+.k-grid .k-grid-content tbody,
+.k-grid .k-grid-content-locked,
+.k-grid .k-grid-content-locked table,
+.k-grid .k-grid-content-locked tbody,
+.k-grid .k-table,
+.k-grid .k-table-tbody {
+  background-color: var(--master-maintenance-kgrid-item-background-color);
+}
+.k-grid tr,
+.k-grid .k-table-row {
   height: 2em;
   border-color: var(--master-maintenance-kgrid-border-color);
   color: var(--master-maintenance-kgrid-body-color);
   background-color: var(--master-maintenance-kgrid-item-background-color);
 }
-.master-maintenance-page .k-grid tr:nth-child(2n) {
+.k-grid tr:nth-child(2n),
+.k-grid tr.k-alt,
+.k-grid .k-table-row:nth-child(even),
+.k-grid .k-table-row.k-alt,
+.k-grid .k-table-row.k-table-alt-row {
   background-color: var(--ntss-list-content-2nd-background-color);
 }
-.master-maintenance-page .k-grid a {
+.k-grid a {
   color: var(--master-maintenance-kgrid-item-color);
 }
-.master-maintenance-page .k-grid tr:hover {
-  background-color: var(--master-maintenance-kgrid-item-hover-background-color);
-  color: var(--master-maintenance-kgrid-body-color);
-}
-.master-maintenance-page .k-grid th {
+.k-grid th {
   color: #fff;
   background-color: var(--master-maintenance-kgrid-header-background-color);
-}
-.master-maintenance-page .k-grid th a {
-  color: #fff;
-}
-.master-maintenance-page .k-grid td {
   border-width: 0 0 1px 1px !important;
   vertical-align: middle !important;
   border-color: var(--master-maintenance-kgrid-border-color);
 }
-.master-maintenance-page .k-widget,
-.master-maintenance-page .k-button,
-.master-maintenance-page .k-dropdown {
+.k-grid .k-table-th {
+  color: #fff;
+  background-color: var(--master-maintenance-kgrid-header-background-color);
+  border-width: 0 1px 1px 0px !important;
+  vertical-align: middle !important;
+  border-color: var(--master-maintenance-kgrid-border-color);
+}
+.k-grid .k-grid-header th,
+.k-grid .k-grid-header .k-table-th,
+.k-grid .k-grid-header-wrap th,
+.k-grid .k-grid-header-wrap .k-table-th,
+.k-grid .k-grid-header-locked th,
+.k-grid .k-grid-header-locked .k-table-th,
+.ntss-kendo-grid-legacy .k-grid-header th,
+.ntss-kendo-grid-legacy .k-grid-header .k-table-th,
+.ntss-kendo-grid-legacy .k-grid-header-wrap th,
+.ntss-kendo-grid-legacy .k-grid-header-wrap .k-table-th,
+.ntss-kendo-grid-legacy .k-grid-header-locked th,
+.ntss-kendo-grid-legacy .k-grid-header-locked .k-table-th {
+  border-color: var(--master-maintenance-kgrid-border-color, var(--ntss-list-border-color)) !important;
+  border-right-color: var(--master-maintenance-kgrid-border-color, var(--ntss-list-border-color)) !important;
+  border-inline-end-color: var(--master-maintenance-kgrid-border-color, var(--ntss-list-border-color)) !important;
+}
+.k-grid .k-column-resizer {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.k-grid .k-column-resizer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background-color: var(--master-maintenance-kgrid-border-color, var(--ntss-list-border-color));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+/* Vue3 Kendo applies hover colors to cells. Keep the old row theme and let cells inherit it. */
+.k-grid .k-grid-content tr:not(.master-edited-row):not(.master-deleted-row):not(.edited-bg):not(.deleted-bg):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]):hover,
+.k-grid .k-grid-content-locked tr:not(.master-edited-row):not(.master-deleted-row):not(.edited-bg):not(.deleted-bg):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]):hover,
+.k-grid tr.k-hover:not(.master-edited-row):not(.master-deleted-row):not(.edited-bg):not(.deleted-bg):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]),
+.k-grid .k-table-row:not(.master-edited-row):not(.master-deleted-row):not(.edited-bg):not(.deleted-bg):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]):hover,
+.k-grid .k-table-row.k-hover:not(.master-edited-row):not(.master-deleted-row):not(.edited-bg):not(.deleted-bg):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]) {
+  background-color: var(--master-maintenance-kgrid-item-hover-background-color, var(--ntss-list-body-background-color)) !important;
+  color: var(--master-maintenance-kgrid-body-color, var(--ntss-list-body-color)) !important;
+}
+.k-grid .k-grid-content tr:not(.master-edited-row):not(.master-deleted-row):not(.edited-bg):not(.deleted-bg):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]):hover > td:not(.k-state-selected):not(.k-selected):not(.master-edited-row):not(.master-deleted-row):not(.master-sort-edited),
+.k-grid .k-grid-content-locked tr:not(.master-edited-row):not(.master-deleted-row):not(.edited-bg):not(.deleted-bg):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]):hover > td:not(.k-state-selected):not(.k-selected):not(.master-edited-row):not(.master-deleted-row):not(.master-sort-edited),
+.k-grid tr.k-hover:not(.master-edited-row):not(.master-deleted-row):not(.edited-bg):not(.deleted-bg):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]) > td:not(.k-state-selected):not(.k-selected):not(.master-edited-row):not(.master-deleted-row):not(.master-sort-edited),
+.k-grid .k-table-row:not(.master-edited-row):not(.master-deleted-row):not(.edited-bg):not(.deleted-bg):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]):hover > td:not(.k-state-selected):not(.k-selected):not(.master-edited-row):not(.master-deleted-row):not(.master-sort-edited),
+.k-grid .k-table-row:not(.master-edited-row):not(.master-deleted-row):not(.edited-bg):not(.deleted-bg):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]):hover > .k-table-td:not(.k-state-selected):not(.k-selected):not(.master-edited-row):not(.master-deleted-row):not(.master-sort-edited),
+.k-grid .k-table-row.k-hover:not(.master-edited-row):not(.master-deleted-row):not(.edited-bg):not(.deleted-bg):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]) > .k-table-td:not(.k-state-selected):not(.k-selected):not(.master-edited-row):not(.master-deleted-row):not(.master-sort-edited) {
+  background-color: inherit !important;
+  color: inherit !important;
+}
+.k-grid th a,
+.k-grid .k-link {
+  color: #fff;
+}
+
+.k-grid .k-column-title {
+  color: #fff;
+}
+.k-grid td {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color: var(--master-maintenance-kgrid-border-color);
+  color: inherit;
+  background-color: inherit;
+}
+
+.k-grid .k-table-td {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color: var(--master-maintenance-kgrid-border-color);
+  color: inherit;
+  background-color: inherit;
+}
+.k-grid .k-widget,
+.k-grid .k-button,
+.k-grid .k-dropdown {
   font-size: 1.0em;
 }
-.master-maintenance-page .k-input {
+.k-grid .k-input {
   font-size: 1.0em;
   color: var(--kendo-input-color);
   background-color: var(--kendo-input-background-color);
 }
-.master-maintenance-page .k-grid th.k-state-selected,
-.master-maintenance-page .k-grid td.k-state-selected,
-.master-maintenance-page .k-grid tr.k-state-selected>td {
+.k-grid th.k-state-selected,
+.k-grid td.k-state-selected:not(.master-sort-edited),
+.k-grid tr.k-state-selected>td:not(.master-sort-edited) {
   color: var(--master-maintenance-kgrid-selected-color);
   background-color: var(--master-maintenance-kgrid-selected-background-color);
 }
 
+.k-grid .k-table-th.k-state-selected,
+.k-grid .k-table-td.k-state-selected:not(.master-sort-edited),
+.k-grid .k-table-row.k-state-selected>.k-table-td:not(.master-sort-edited) {
+  color: var(--master-maintenance-kgrid-selected-color);
+  background-color: var(--master-maintenance-kgrid-selected-background-color);
+}
+
+.k-grid th.k-selected,
+.k-grid td.k-selected:not(.master-sort-edited),
+.k-grid tr.k-selected>td:not(.master-sort-edited),
+.k-grid tr[aria-selected="true"]>td:not(.master-sort-edited),
+.k-grid .k-table-th.k-selected,
+.k-grid .k-table-td.k-selected:not(.master-sort-edited),
+.k-grid .k-table-row.k-selected>.k-table-td:not(.master-sort-edited),
+.k-grid .k-table-row[aria-selected="true"]>.k-table-td:not(.master-sort-edited) {
+  color: var(--master-maintenance-kgrid-selected-color) !important;
+  background-color: var(--master-maintenance-kgrid-selected-background-color) !important;
+}
+
+/* State priority: edited > selected > hover. */
+.k-grid tr.k-state-selected:hover > td:not(.master-edited-row):not(.master-sort-edited),
+.k-grid tr.k-state-selected.k-hover > td:not(.master-edited-row):not(.master-sort-edited),
+.k-grid tr.k-state-selected > td.k-hover:not(.master-edited-row):not(.master-sort-edited),
+.k-grid tr.k-selected:hover > td:not(.master-edited-row):not(.master-sort-edited),
+.k-grid tr.k-selected.k-hover > td:not(.master-edited-row):not(.master-sort-edited),
+.k-grid tr.k-selected > td.k-hover:not(.master-edited-row):not(.master-sort-edited),
+.k-grid tr[aria-selected="true"]:hover > td:not(.master-edited-row):not(.master-sort-edited),
+.k-grid tr[aria-selected="true"].k-hover > td:not(.master-edited-row):not(.master-sort-edited),
+.k-grid tr[aria-selected="true"] > td.k-hover:not(.master-edited-row):not(.master-sort-edited),
+.k-grid .k-table-row.k-state-selected:hover > .k-table-td:not(.master-edited-row):not(.master-sort-edited),
+.k-grid .k-table-row.k-state-selected.k-hover > .k-table-td:not(.master-edited-row):not(.master-sort-edited),
+.k-grid .k-table-row.k-state-selected > .k-table-td.k-hover:not(.master-edited-row):not(.master-sort-edited),
+.k-grid .k-table-row.k-selected:hover > .k-table-td:not(.master-edited-row):not(.master-sort-edited),
+.k-grid .k-table-row.k-selected.k-hover > .k-table-td:not(.master-edited-row):not(.master-sort-edited),
+.k-grid .k-table-row.k-selected > .k-table-td.k-hover:not(.master-edited-row):not(.master-sort-edited),
+.k-grid .k-table-row[aria-selected="true"]:hover > .k-table-td:not(.master-edited-row):not(.master-sort-edited),
+.k-grid .k-table-row[aria-selected="true"].k-hover > .k-table-td:not(.master-edited-row):not(.master-sort-edited),
+.k-grid .k-table-row[aria-selected="true"] > .k-table-td.k-hover:not(.master-edited-row):not(.master-sort-edited) {
+  color: var(--master-maintenance-kgrid-selected-color) !important;
+  background-color: var(--master-maintenance-kgrid-selected-background-color) !important;
+}
+
+.k-grid .k-edit-cell .k-input-inner,
+.k-grid .k-grid-edit-row td.k-edit-cell .k-input-inner {
+  color: var(--master-maintenance-kgrid-item-color) !important;
+  caret-color: var(--master-maintenance-kgrid-item-color) !important;
+}
+
+.k-grid .k-edit-cell > span.k-input,
+.k-grid .k-edit-cell .k-input-value-text,
+.k-grid .k-grid-edit-row td.k-edit-cell > span.k-input,
+.k-grid .k-grid-edit-row td.k-edit-cell .k-input-value-text {
+  color: var(--master-maintenance-kgrid-item-color) !important;
+  caret-color: var(--master-maintenance-kgrid-item-color) !important;
+}
+
 .master-edited-row {
   color: #003300 !important;
+  background: #ccffcc !important;
+  background-color: #ccffcc !important;
+}
+.k-grid :is(tr.master-edited-row, .k-table-row.master-edited-row),
+.k-grid :is(tr.master-edited-row, .k-table-row.master-edited-row):is(:hover, .k-hover, .k-state-selected, .k-selected, [aria-selected="true"]),
+.k-grid :is(tr.master-edited-row, .k-table-row.master-edited-row) > :is(td, .k-table-td),
+.k-grid :is(tr.master-edited-row, .k-table-row.master-edited-row):is(:hover, .k-hover, .k-state-selected, .k-selected, [aria-selected="true"]) > :is(td, .k-table-td),
+.k-grid :is(tr, .k-table-row):is(:hover, .k-hover, .k-state-selected, .k-selected, [aria-selected="true"], .k-grid-edit-row) > :is(td.master-edited-row, .k-table-td.master-edited-row, td.master-edited-cell, .k-table-td.master-edited-cell),
+.k-grid :is(td.master-edited-row, .k-table-td.master-edited-row, td.master-edited-cell, .k-table-td.master-edited-cell) {
+  color: #003300 !important;
+  background: #ccffcc !important;
   background-color: #ccffcc !important;
 }
 .master-edited-cell {
@@ -3006,9 +3234,72 @@ td.deviceSetInfo-weight-content {
   font-weight: bold !important;
 }
 .master-deleted-row {
+  color: #333333 !important;
   background-color: #aaaaaa !important;
 }
+.k-grid :is(tr.master-deleted-row, .k-table-row.master-deleted-row):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]),
+.k-grid :is(tr.master-deleted-row, .k-table-row.master-deleted-row):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]):is(:hover, .k-hover),
+.k-grid :is(tr.master-deleted-row, .k-table-row.master-deleted-row):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]) > :is(td, .k-table-td),
+.k-grid :is(tr.master-deleted-row, .k-table-row.master-deleted-row):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]):is(:hover, .k-hover) > :is(td, .k-table-td),
+.k-grid :is(tr, .k-table-row):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]):is(:hover, .k-hover) > :is(td.master-deleted-row, .k-table-td.master-deleted-row),
+.k-grid :is(tr, .k-table-row):not(.k-state-selected):not(.k-selected):not([aria-selected="true"]) > :is(td.master-deleted-row, .k-table-td.master-deleted-row) {
+  color: #333333 !important;
+  background: #aaaaaa !important;
+  background-color: #aaaaaa !important;
+  border-color: var(--master-maintenance-kgrid-border-color, var(--ntss-list-border-color)) !important;
+}
 .master-sort-edited {
+  color: #000000 !important;
+  background: #ffff66 !important;
+  background-color: #ffff66 !important;
+}
+.k-grid :is(tr.master-sort-edited, .k-table-row.master-sort-edited),
+.k-grid :is(tr.master-sort-edited, .k-table-row.master-sort-edited) > :is(td, .k-table-td),
+.k-grid :is(tr, .k-table-row):is(:hover, .k-hover, .k-state-selected, .k-selected, [aria-selected="true"], .master-edited-row, .k-grid-edit-row) > :is(td.master-sort-edited, .k-table-td.master-sort-edited),
+.k-grid :is(tr, .k-table-row) > :is(td.master-sort-edited:hover, .k-table-td.master-sort-edited:hover, td.master-sort-edited.k-hover, .k-table-td.master-sort-edited.k-hover),
+.k-grid :is(td.master-sort-edited, .k-table-td.master-sort-edited) {
+  color: #000000 !important;
+  background: #ffff66 !important;
+  background-color: #ffff66 !important;
+}
+
+/* 並び順変更セルは、選択色・hover 色より優先する。 */
+html body .k-grid :is(td.master-sort-edited, .k-table-td.master-sort-edited),
+html body .k-grid :is(td.master-sort-edited, .k-table-td.master-sort-edited):is(:hover, .k-hover, .k-selected, .k-state-selected),
+html body .k-grid :is(tr, .k-table-row):is(:hover, .k-hover, .k-selected, .k-state-selected, [aria-selected="true"], .k-grid-edit-row) > :is(td.master-sort-edited, .k-table-td.master-sort-edited),
+html body .master-maintenance-page .k-grid :is(td.master-sort-edited, .k-table-td.master-sort-edited),
+html body .master-maintenance-page .k-grid :is(td.master-sort-edited, .k-table-td.master-sort-edited):is(:hover, .k-hover, .k-selected, .k-state-selected),
+html body .master-maintenance-page .k-grid :is(tr, .k-table-row):is(:hover, .k-hover, .k-selected, .k-state-selected, [aria-selected="true"], .k-grid-edit-row) > :is(td.master-sort-edited, .k-table-td.master-sort-edited) {
+  color: #000000 !important;
+  background: #ffff66 !important;
+  background-color: #ffff66 !important;
+}
+
+/* Colored master states must not be overwritten by Kendo hover/selected cell colors. */
+html body .k-grid :is(tr.master-edited-row, .k-table-row.master-edited-row, tr.edited-bg, .k-table-row.edited-bg),
+html body .k-grid :is(tr.master-edited-row, .k-table-row.master-edited-row, tr.edited-bg, .k-table-row.edited-bg):is(:hover, .k-hover, .k-selected, .k-state-selected, [aria-selected="true"], .k-grid-edit-row),
+html body .k-grid :is(tr.master-edited-row, .k-table-row.master-edited-row, tr.edited-bg, .k-table-row.edited-bg) > :is(td, .k-table-td),
+html body .k-grid :is(tr.master-edited-row, .k-table-row.master-edited-row, tr.edited-bg, .k-table-row.edited-bg):is(:hover, .k-hover, .k-selected, .k-state-selected, [aria-selected="true"], .k-grid-edit-row) > :is(td, .k-table-td) {
+  color: #003300 !important;
+  background: #ccffcc !important;
+  background-color: #ccffcc !important;
+}
+
+html body .k-grid :is(tr.master-deleted-row, .k-table-row.master-deleted-row, tr.deleted-bg, .k-table-row.deleted-bg):not(.k-selected):not(.k-state-selected):not([aria-selected="true"]),
+html body .k-grid :is(tr.master-deleted-row, .k-table-row.master-deleted-row, tr.deleted-bg, .k-table-row.deleted-bg):not(.k-selected):not(.k-state-selected):not([aria-selected="true"]):is(:hover, .k-hover),
+html body .k-grid :is(tr.master-deleted-row, .k-table-row.master-deleted-row, tr.deleted-bg, .k-table-row.deleted-bg):not(.k-selected):not(.k-state-selected):not([aria-selected="true"]) > :is(td, .k-table-td),
+html body .k-grid :is(tr.master-deleted-row, .k-table-row.master-deleted-row, tr.deleted-bg, .k-table-row.deleted-bg):not(.k-selected):not(.k-state-selected):not([aria-selected="true"]):is(:hover, .k-hover) > :is(td, .k-table-td) {
+  color: #333333 !important;
+  background: #aaaaaa !important;
+  background-color: #aaaaaa !important;
+  border-color: var(--master-maintenance-kgrid-border-color, var(--ntss-list-border-color)) !important;
+}
+
+html body .k-grid :is(td.master-sort-edited, .k-table-td.master-sort-edited),
+html body .k-grid :is(td.master-sort-edited, .k-table-td.master-sort-edited):is(:hover, .k-hover, .k-selected, .k-state-selected),
+html body .k-grid :is(tr, .k-table-row):is(:hover, .k-hover, .k-selected, .k-state-selected, [aria-selected="true"], .master-edited-row, .edited-bg, .master-deleted-row, .deleted-bg, .k-grid-edit-row) > :is(td.master-sort-edited, .k-table-td.master-sort-edited) {
+  color: #000000 !important;
+  background: #ffff66 !important;
   background-color: #ffff66 !important;
 }
 .master-deleted-combo {
@@ -3070,7 +3361,22 @@ td.deviceSetInfo-weight-content {
   border-color: var(--ntss-list-border-color);
   padding: 1px 1px 1px 4px !important;
 }
+
+.pat-list-grid-area .k-grid .k-table-th {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color: var(--ntss-list-border-color);
+  padding: 1px 1px 1px 4px !important;
+}
 .pat-list-grid-area .k-grid td {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color: var(--ntss-list-border-color);
+  padding: 1px 1px 1px 1px !important;
+  cursor: pointer;
+}
+
+.pat-list-grid-area .k-grid .k-table-td {
   border-width: 0 0 1px 1px !important;
   vertical-align: middle !important;
   border-color: var(--ntss-list-border-color);
@@ -3557,11 +3863,20 @@ ons-button.nik-btn {
 .kendo-grid-style-page .k-grid {
   background-color: var(--main-background-color);
 }
-.kendo-grid-style-page .k-grid-header-locked th{
+.kendo-grid-style-page .k-grid-header-locked th {
   padding: 1px 3px 3px 3px;
   border-color:var(--master-maintenance-kgrid-header-background-color);
 }
-.kendo-grid-style-page .k-grid-header-wrap th{
+
+.kendo-grid-style-page .k-grid-header-locked .k-table-th {
+  padding: 1px 3px 3px 3px;
+  border-color:var(--master-maintenance-kgrid-header-background-color);
+}
+.kendo-grid-style-page .k-grid-header-wrap th {
+  padding: 1px 3px 3px 3px;
+}
+
+.kendo-grid-style-page .k-grid-header-wrap .k-table-th {
   padding: 1px 3px 3px 3px;
 }
 .kendo-grid-style-page .k-grid tr {
@@ -3580,6 +3895,13 @@ ons-button.nik-btn {
   white-space: normal;
   background-color: var(--master-maintenance-kgrid-header-background-color);
 }
+
+.kendo-grid-style-page .k-grid .k-table-th {
+  color: #fff;
+  word-wrap: break-word;
+  white-space: normal;
+  background-color: var(--master-maintenance-kgrid-header-background-color);
+}
 .kendo-grid-style-page .k-grid tr:nth-child(odd) td {
   border-width: 0 0 1px 1px !important;
   vertical-align: middle !important;
@@ -3587,7 +3909,23 @@ ons-button.nik-btn {
   background-color: var(--master-maintenance-kgrid-item-background-color);
   word-wrap: break-word;
 }
+
+.kendo-grid-style-page .k-grid .k-table-row:nth-child(odd) .k-table-td {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color: var(--master-maintenance-kgrid-border-color);
+  background-color: var(--master-maintenance-kgrid-item-background-color);
+  word-wrap: break-word;
+}
 .kendo-grid-style-page .k-grid tr:nth-child(even) td {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color: var(--master-maintenance-kgrid-border-color);
+  background-color: var(--ntss-list-content-2nd-background-color);
+  word-wrap: break-word;
+}
+
+.kendo-grid-style-page .k-grid .k-table-row:nth-child(even) .k-table-td {
   border-width: 0 0 1px 1px !important;
   vertical-align: middle !important;
   border-color: var(--master-maintenance-kgrid-border-color);
@@ -3607,6 +3945,13 @@ ons-button.nik-btn {
 .kendo-grid-style-page .k-grid th.k-state-selected,
 .kendo-grid-style-page .k-grid td.k-state-selected,
 .kendo-grid-style-page .k-grid tr.k-state-selected>td {
+  color: var(--master-maintenance-kgrid-selected-color);
+  /*background-color: var(--master-maintenance-kgrid-selected-background-color);*/
+}
+
+.kendo-grid-style-page .k-grid .k-table-th.k-state-selected,
+.kendo-grid-style-page .k-grid .k-table-td.k-state-selected,
+.kendo-grid-style-page .k-grid .k-table-row.k-state-selected>.k-table-td {
   color: var(--master-maintenance-kgrid-selected-color);
   /*background-color: var(--master-maintenance-kgrid-selected-background-color);*/
 }
@@ -3663,13 +4008,35 @@ ons-button.nik-btn {
   white-space: normal;
   background-color: #333333;
 }
+
+.kendo-grid-style-page-modal .k-grid .k-table-th {
+  color: #fff;
+  word-wrap: break-word;
+  white-space: normal;
+  background-color: #333333;
+}
 .kendo-grid-style-page-modal .k-grid tr:nth-child(odd) td {
   border-width: 0 0 1px 1px !important;
   vertical-align: middle !important;
   border-color:  #cccccc;
   word-wrap: break-word;
 }
+
+.kendo-grid-style-page-modal .k-grid .k-table-row:nth-child(odd) .k-table-td {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color:  #cccccc;
+  word-wrap: break-word;
+}
 .kendo-grid-style-page-modal .k-grid tr:nth-child(even) td {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color:  #cccccc;
+  background-color:rgba(33,37,41,0.03);
+  word-wrap: break-word;
+}
+
+.kendo-grid-style-page-modal .k-grid .k-table-row:nth-child(even) .k-table-td {
   border-width: 0 0 1px 1px !important;
   vertical-align: middle !important;
   border-color:  #cccccc;
@@ -3687,6 +4054,13 @@ ons-button.nik-btn {
   background-color: rgba(0,123,255,0.25)!important;
 }
 
+.kendo-grid-style-page-modal .k-grid .k-table-th.k-state-selected,
+.kendo-grid-style-page-modal .k-grid .k-table-td.k-state-selected,
+.kendo-grid-style-page-modal .k-grid .k-table-row.k-state-selected>.k-table-td {
+  color: #212529;
+  background-color: rgba(0,123,255,0.25)!important;
+}
+
 /******************************************/
 /* スケジュール表用スタイル               */
 /******************************************/
@@ -3695,13 +4069,23 @@ ons-button.nik-btn {
   width: 200px;
 }
 
-.schedule-kur-multiselect > .k-widget > .k-multiselect-wrap.k-floatwrap {
+.schedule-kur-multiselect .k-multiselect-wrap.k-floatwrap,
+.schedule-kur-multiselect .k-input-values.k-multiselect-wrap.k-floatwrap,
+.schedule-kur-multiselect > .k-widget > .k-multiselect-wrap.k-floatwrap,
+.schedule-kur-multiselect > .k-widget > .k-input-values.k-multiselect-wrap.k-floatwrap {
   max-height: 5em;
   overflow-y: auto;
 }
 
 .select-indicator > .k-dropdown-wrap.k-state-default,
 .show-row-num-switch > .k-dropdown-wrap.k-state-default {
+  align-items: center;
+}
+
+.select-indicator > .k-picker.k-state-default,
+.select-indicator > .k-picker,
+.show-row-num-switch > .k-picker.k-state-default,
+.show-row-num-switch > .k-picker {
   align-items: center;
 }
 
@@ -3832,6 +4216,14 @@ input[type="date"]{
   height: 2em !important;
 }
 
+.k-multiselect.k-input {
+  height: auto !important;
+}
+
+.k-legacy-multiselect.k-input {
+  height: auto !important;
+}
+
 /* コンテンツを揃える */
 table th,
 .list-header-col,
@@ -3872,6 +4264,13 @@ select.ntss-form-control,
   font-size: 1em;
 }
 
+.k-dropdown .k-picker,
+.k-dropdown.k-picker {
+  border-radius: 5px;
+  background-color:  #F7F7F7;
+  font-size: 1em;
+}
+
 textarea.text-input,
 textarea.ntss-form-control,
 .content-textarea,
@@ -3879,7 +4278,15 @@ textarea.ntss-form-control,
 .k-dropdown .k-dropdown-wrap,
 .k-dropdown,
 .k-multiselect,
-.select-input{
+.select-input {
+  /* mod 7952 必須項目にも関わらず背景色が黄色になっていない 張 start */
+  /* background-color:  #F7F7F7 !important; */
+  background-color:  #F7F7F7;
+  /* mod 7952 必須項目にも関わらず背景色が黄色になっていない 張 end */
+}
+
+.k-dropdown .k-picker,
+.k-dropdown.k-picker {
   /* mod 7952 必須項目にも関わらず背景色が黄色になっていない 張 start */
   /* background-color:  #F7F7F7 !important; */
   background-color:  #F7F7F7;
@@ -3887,6 +4294,11 @@ textarea.ntss-form-control,
 }
 
 .k-dropdown .k-dropdown-wrap {
+  border: none;
+}
+
+.k-dropdown .k-picker,
+.k-dropdown.k-picker {
   border: none;
 }
 
@@ -4030,6 +4442,23 @@ span.k-dropdown:has(> span.k-dropdown-wrap.k-state-disabled) {
   border-radius: 5px;
 }
 
+span.k-dropdown:has(> span.k-picker.k-disabled),
+span.k-dropdown.k-picker.k-disabled,
+.k-dropdown.k-disabled {
+  color: -internal-light-dark-color(rgb(84, 84, 84), rgb(170, 170, 170));
+  cursor: default;
+  /* FNSI-add redmine4824 徐 start */
+  background-color: #ebebe4;
+  /* background-color: #ebebe4 !important; */
+  /* FNSI-add redmine4824 徐 end */
+  border-width: 2px;
+  border-style: inset;
+  border-image-repeat: stretch;
+  border-color: unset;
+  height: 2em;
+  border-radius: 5px;
+}
+
 /*mod FNSI-画面部品デザイン じょはく start*/
 ons-input[disabled] {
   opacity: 1 !important;
@@ -4061,7 +4490,18 @@ ons-input[disabled] {
   padding: 0.25rem 0.75rem !important;
   height: 2em;
 }
+
+.k-grid .k-table-th,
+.k-grid .k-table-td {
+  padding: 0.25rem 0.75rem !important;
+  height: 2em;
+}
 .k-grid th {
+  vertical-align: middle !important;
+  border-width: 0 1px 1px 0;
+}
+
+.k-grid .k-table-th {
   vertical-align: middle !important;
   border-width: 0 1px 1px 0;
 }
@@ -4082,8 +4522,15 @@ ons-radio.radio-button {
   vertical-align: middle;
   line-height: 0;
 }
+
+/* Vue3では連続するcustom-radio間のテンプレート空白が保持されないため、文字後の間隔を明示する */
+.custom-radio:has(+ .custom-radio) > span {
+  margin-right: 0.3em;
+}
+
 ons-checkbox.checkbox {
   margin-right: 5px;
+  margin-top: -1px;
 }
 
 /*add FNSI-画面部品デザイン じょはく start*/
@@ -4505,10 +4952,20 @@ input[type="date"].input-style-required,
 .input-style-required .k-dropdown-wrap {
   background-color: #ffff99 !important;
 }
+
+.input-style-required .k-picker,
+.input-style-required .k-input-inner {
+  background-color: #ffff99 !important;
+}
 .input-style-invalid > input,
 .input-style-invalid > input.text-input:invalid,
 input[type="date"].input-style-invalid,
 .input-style-invalid .k-dropdown-wrap {
+  background-color: rgba(255, 0, 0, 0.5);
+}
+
+.input-style-invalid .k-picker,
+.input-style-invalid .k-input-inner {
   background-color: rgba(255, 0, 0, 0.5);
 }
 
@@ -4587,6 +5044,12 @@ ons-input .text-input:focus{
 /* #8745 表示内容が画面上半分にしか表示されない。 林峻峰 end */
 
 /* カレンダスタイル統合制御 */
+.ntss-theme-screen.vc-container,
+.ntss-theme-screen .vc-container {
+  background-color: transparent !important;
+  color: var(--ntss-list-body-color) !important;
+}
+
 .vc-pane {
   border: solid 1px rgb(190, 190, 190) !important;
   border-radius: 10px;
@@ -4594,6 +5057,12 @@ ons-input .text-input:focus{
   margin-right: 15px;
   margin-bottom: 20px;
 }
+
+.ntss-theme-screen .vc-pane {
+  background-color: var(--ntss-base-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+
 .vc-header {
   background-color: #4781ed !important;
   border-top-left-radius: 9px;
@@ -4603,6 +5072,29 @@ ons-input .text-input:focus{
 .vc-weekday {
   background-color: #77a0ed !important;
   color: white !important;
+}
+
+.ntss-theme-screen .vc-day-content:not(.vc-disabled):not([disabled]):not(.vc-highlight-content-solid):not(.vc-highlight-content-light):not(.vc-highlight-content-outline) {
+  color: var(--ntss-list-body-color) !important;
+}
+
+.ntss-theme-screen .vc-day.weekday-1 .vc-day-content:not(.vc-disabled):not([disabled]):not(.vc-highlight-content-solid):not(.vc-highlight-content-light):not(.vc-highlight-content-outline) {
+  color: red !important;
+}
+
+.ntss-theme-screen .vc-day.weekday-7 .vc-day-content:not(.vc-disabled):not([disabled]):not(.vc-highlight-content-solid):not(.vc-highlight-content-light):not(.vc-highlight-content-outline) {
+  color: blue !important;
+}
+
+.ntss-theme-screen .vc-day-content.vc-highlight-content-solid,
+.ntss-theme-screen .vc-highlight-content-solid.vc-day-content {
+  color: #fff !important;
+}
+
+.ntss-theme-screen .vc-day.is-disabled .vc-day-content,
+.ntss-theme-screen .vc-day-content.vc-disabled,
+.ntss-theme-screen .vc-day-content[disabled] {
+  color: #999 !important;
 }
 /* #9171 start */
 .k-column-resizer {
@@ -4629,6 +5121,12 @@ span.k-dropdown span.k-dropdown-wrap.k-state-disabled {
   filter: grayscale(0);                /* ライブラリのスタイル打消し */
 }
 
+span.k-dropdown span.k-picker.k-disabled,
+span.k-dropdown.k-picker.k-disabled {
+  background-color: transparent;       /* 子要素背景色を透明化し、透明度適用により親子背景色が重なり濃くなる事象を回避 */
+  filter: grayscale(0);                /* ライブラリのスタイル打消し */
+}
+
 /******************************************/
 /* kendo-multiselect用スタイル            */
 /******************************************/
@@ -4641,6 +5139,11 @@ div.k-multiselect.k-state-disabled {
 
 /* 子要素に対するスタイル定義(非活性用) */
 div.k-multiselect.k-state-disabled div.k-multiselect-wrap {
+  background-color: transparent;       /* 子要素背景色を透明化し、親要素背景色を生かす */
+  color: rgba(33, 37, 41, 0.65);       /* ライブラリ指定の文字色に透明度を指定し、文字色を薄める */
+}
+
+div.k-multiselect.k-state-disabled div.k-input-values.k-multiselect-wrap {
   background-color: transparent;       /* 子要素背景色を透明化し、親要素背景色を生かす */
   color: rgba(33, 37, 41, 0.65);       /* ライブラリ指定の文字色に透明度を指定し、文字色を薄める */
 }
@@ -4669,4 +5172,18 @@ div.k-multiselect.k-state-disabled div.k-multiselect-wrap {
 
 .password-wrapper .password-eyeicon:hover {
   opacity: 0.7;
+}
+
+.important-i {
+  font-style: normal;
+}
+
+
+.identification1 + .tab-label {
+  background-color: var(--btn1-execute-color)!important;
+  border-bottom: solid 3px var(--btn-common-border-color)!important;
+}
+.identification2Not+ .tab-label {
+    background-color: #72a8de!important;;
+  border-bottom: solid 3px #72a8de!important;;
 }

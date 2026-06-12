@@ -3,7 +3,7 @@ import { ApiHelper } from "@/apis/AxiosHelper";
 
 export default {
   namespaced: true,
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
 
   state: {
     insuranceList: [],
@@ -11,7 +11,6 @@ export default {
     selectedInsuranceIndex: 0,
     mstInsurance: [],
     popOverInsuranceInfo: [],
-    // モーダルで保存、削除のときに親をreloadするかのフラグ
     reloadRequired: false,
     isCreate: true
   },

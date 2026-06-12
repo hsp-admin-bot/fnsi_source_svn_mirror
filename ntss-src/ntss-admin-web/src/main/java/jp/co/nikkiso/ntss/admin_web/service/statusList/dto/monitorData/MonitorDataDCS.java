@@ -1,9 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.service.statusList.dto.monitorData;
 
-import java.io.IOException;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
 
@@ -225,7 +224,7 @@ public class MonitorDataDCS implements MonitorData {
    * @param moniData モニタデータのJSON文字列
    */
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
-  public MonitorDataDCS(String moniData) throws IOException{
+  public MonitorDataDCS(String moniData) throws tools.jackson.core.JacksonException{
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
     if (moniData != null && !moniData.equals("")) {
       // 引数を展開
@@ -556,7 +555,7 @@ public class MonitorDataDCS implements MonitorData {
    * @param moniDataJsonString バイタル情報のJSON文字列
    */
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
-  private void setItems(String moniDataJsonString)throws IOException{
+  private void setItems(String moniDataJsonString)throws tools.jackson.core.JacksonException{
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
 
     if (moniDataJsonString != null) {
@@ -1083,7 +1082,7 @@ public class MonitorDataDCS implements MonitorData {
         this.ldqb.value = this.getJsonValueByKey(jsonNode, "102");
         this.ldqb.Unit = "mL/min";
 
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end

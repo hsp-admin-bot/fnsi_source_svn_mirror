@@ -13,25 +13,28 @@
       <!-- エリア2: 中央 測定値など -->
       <div id="measure-value-row" style="width: 100%;">
         <table id="value-block">
+          <tbody>
           <!-- 1行目: 測定値 -->
           <tr>
             <td>
               <label class="send-condition-title-label">{{MeasuredValueLabel}}</label>
             </td>
             <td>
-              <v-ons-input
-                      id="numericID"
-                      data-layout="numeric"
-                      class="send-condition-measure-value-simple"
-                      type="number"
-                      :step="numberStep"
-                      v-model.number="editMeasuredValue"
-                      @blur="changeMeasureVal(editMeasuredValue, $event, false)"
-                      @keydown.enter="moveFocus($event)"
-                      @keydown="onKeyDown"
-                      @input="checkLoop"
-                      readonly="readonly"
-              ></v-ons-input>
+              <CustomInputNumberPro
+                ref="numericInput"
+                id="numericID"
+                data-layout="numeric"
+                class="send-condition-measure-value-simple"
+                :empty-val="null"
+                :value-modifiers="{ lazy: true }"
+                :value="editMeasuredValue"
+                :min="numberMin"
+                :max="numberMax"
+                :step="numberStep"
+                :roll-flag="true"
+                @handler-input="onNumericHandlerInput"
+                @blur="onNumericBlur"
+              />
             </td>
             <td>
               <label class="send-condition-unit">
@@ -51,6 +54,8 @@
               <label class="send-condition-unit">kg</label>
             </td>
           </tr>
+        
+          </tbody>
         </table>
       </div>
 
@@ -59,7 +64,8 @@
         <!-- エリア3-1: 電卓ボタン -->
         <div style="width: 100%;">
           <table id="value-block" style="font-size: 2em; width: 60px;">
-            <!-- 1行目: 測定値行の電卓ボタン -->
+            <tbody>
+              <!-- 1行目: 測定値行の電卓ボタン -->
             <tr>
               <td>
                 <img height="60px" style="margin-top: 0.7em;" :src="image_src" @click="show"/>
@@ -67,7 +73,9 @@
             </tr>
             <!-- 2行目: 体重値行（定義のみ） -->
             <tr></tr>
-          </table>
+            
+              </tbody>
+            </table>
         </div>
         <!-- エリア3-2: 風袋・除水補正 -->
         <div id="command-button-row-1" style="width: 100%; display: flex;">
@@ -116,9 +124,10 @@
 
     <!-- 電卓のUIボタン -->
     <v-ons-popover
+      ref="numericPopover"
       cancelable
       id="numericPopOver"
-      :visible.sync="cavisible"
+      v-model:visible="cavisible"
       :target="popoverTarget"
       direction="down"
       class="popoverClass"
@@ -130,21 +139,23 @@
 </template>
 
 <script>
-  import { mapGetters, mapActions } from "vuex";
+  import { mapGetters, mapActions } from "@/compat/vue/vuex";
   import {
     weightScaleClass,
     weightScaleMode,
     dialysisState
   } from "@/constants/weightDefine";
-  import { EventBus } from "@/eventBus.js";
+  import { EventBus } from "@/compat/vue/event-bus.js";
   import MasterSelector from "@/components/common/master-selector/MasterSelector";
   //           mod FNSI-改修内容体重計モードの場合体重計表示機はキーボードなし liang start
-  import VueTouchKeyboard from "vue-touch-keyboard/dist/vue-touch-keyboard";
-  import "./../../../public/css/vue-touch-keyboard.css";
-  //           mod FNSI-改修内容体重計モードの場合体重計表示機はキーボードなし liang end
+      //           mod FNSI-改修内容体重計モードの場合体重計表示機はキーボードなし liang end
   // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
   import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
   import { messageFormat } from '@/functions/common/MessageFormat';
+import TouchKeyboard from "@/compat/keyboard/TouchKeyboard.vue";
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro.vue";
+import { publicAssetPath } from "@/compat/assets/public-path";
+import { getScopedUserAgent } from "@/functions/common/LayoutMeasureHelper";
   // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
 
   export default {
@@ -155,7 +166,8 @@
     components: {
       "pop-over": MasterSelector,
                   // mod FNSI-改修内容体重計モードの場合体重計表示機はキーボードなし liang start
-      "vue-touch-keyboard":VueTouchKeyboard.component
+      "vue-touch-keyboard": TouchKeyboard,
+      CustomInputNumberPro
                   // mod FNSI-改修内容体重計モードの場合体重計表示機はキーボードなし liang end
     },
     data() {
@@ -180,7 +192,7 @@
         },
                   // mod FNSI-改修内容体重計モードの場合体重計表示機はキーボードなし liang end
         // add FNSI-体重計モードテンキーの追加 徐 start
-        image_src: require("@/../public/img/keyboard/keyboard.png"),
+        image_src: publicAssetPath("img/keyboard/keyboard.png"),
         popoverTarget: null,
         // add FNSI-体重計モードテンキーの追加 徐 end
         // add FNSI-田中衡機の追加 徐 start
@@ -245,7 +257,6 @@
         //    mod FNSI-改修内容体重計モードの場合体重計表示機はキーボードなし liang end
 
           get() {
-              // eslint-disable-next-line vue/no-side-effects-in-computed-properties
               this.cavisible = false;
               return this.getScaleMode === weightScaleMode.wheelChair;
           }
@@ -372,17 +383,64 @@
         if (calibrationCheck) {
           return [
             "send-condition-simple-wheelchair-button",
-            "btn3-normal"
+            "btn3-normal",
+            "button"
           ];
         } else {
           return [
             "send-condition-simple-wheelchair-button",
-            "btn4-alert"
+            "btn4-alert",
+            "button"
           ];
         }
       },
     },
     methods: {
+      getSendConditionOwnerDocument() {
+        return this.$el?.ownerDocument || document;
+      },
+      getSendConditionScopeRoot() {
+        return this.$el?.closest?.('.sub-content-area, .send-condition-main-content-area, .main-content-area, #app')
+          || this.$el
+          || this.getSendConditionOwnerDocument();
+      },
+      getNumericHostElement() {
+        return this.$refs.numericInput?.$el
+          || this.$el?.querySelector?.("#numericID")
+          || this.getSendConditionScopeRoot()?.querySelector?.("#numericID")
+          || this.getSendConditionOwnerDocument()?.getElementById?.("numericID")
+          || null;
+      },
+      getNumericInputElement() {
+        const fromRef = this.$refs.numericInput?.$refs?.input;
+        if (fromRef) {
+          return fromRef;
+        }
+        const numericHostElement = this.getNumericHostElement();
+        if (!numericHostElement) {
+          return null;
+        }
+        const tagName = numericHostElement.tagName?.toUpperCase?.() || "";
+        if (tagName === "INPUT" || tagName === "TEXTAREA") {
+          return numericHostElement;
+        }
+        return numericHostElement.querySelector?.("input, textarea")
+          || numericHostElement.firstElementChild
+          || numericHostElement;
+      },
+      onNumericHandlerInput(val) {
+        this.editMeasuredValue = val;
+      },
+      onNumericBlur(event) {
+        this.changeMeasureVal(this.editMeasuredValue, event, false);
+      },
+      getNumericPopoverElement() {
+        return this.$refs.numericPopover?.$el
+          || this.$el?.querySelector?.("#numericPopOver")
+          || this.getSendConditionScopeRoot()?.querySelector?.("#numericPopOver")
+          || this.getSendConditionOwnerDocument()?.getElementById?.("numericPopOver")
+          || null;
+      },
       ...mapActions("multi-modal", ["showTareWaterEdit"]),
       ...mapActions("send-condition/scale", [
         "setMeasuredValue",
@@ -495,11 +553,14 @@
             b = false;
           }
 
-          if ( b === false ) {
-            document.getElementById("numericID").value = null;
+          if ( b === false) {
+            const numericInputElement = this.getNumericInputElement();
+            if (numericInputElement) {
+              numericInputElement.value = null;
+            }
             this.editMeasuredValue = null;
           }
-        }, 300 );
+        }, 300);
         //add FNSI-修正 keyboard 房 end
       },
       showTareAndWaterEditModal(mode) {
@@ -599,9 +660,12 @@
           // }
           // // add FNSI-改修内容体重計モードの場合体重計表示機はキーボードなし liang end
           // this.input = e.target.firstElementChild;
-          let numericIDElem = document.getElementById("numericID");
-          numericIDElem.setAttribute("type", "text");
-          this.input = numericIDElem.firstElementChild;
+          const numericInputElement = this.getNumericInputElement();
+          if (!numericInputElement) {
+            return;
+          }
+          numericInputElement.setAttribute("type", "text");
+          this.input = numericInputElement;
           this.input.setAttribute("readonly", "readonly");
 
           this.selectAllInput(this.input);
@@ -643,7 +707,7 @@
         // }
         // this.cavisible = false;
         // 入力前の値が"0.00"以外の場合、全文字クリア処理を2回行う
-        if (document.getElementById("numericID").value !== "0.00") this.doClearTwice = true;
+        if (this.getNumericInputElement()?.value !== "0.00") this.doClearTwice = true;
 
         this.clearValue();
         this.moveCursor();
@@ -653,16 +717,18 @@
 
       // テンキー用関数 cancel: 画面テンキーを閉じる
       cancel() {
-        document.getElementById("numericPopOver").hide();
+        this.getNumericPopoverElement()?.hide?.();
         this.cavisible = false;
       },
 
       // テンキー用関数 next: 正負反転
       next() {
+        const numericInputElement = this.getNumericInputElement();
+        const reverseVal = Number(numericInputElement?.value) * (-1);
 
-        const reverseVal = Number(document.getElementById("numericID").value) * (-1);
-
-        document.getElementById("numericID").value = reverseVal.toFixed(2);
+        if (numericInputElement) {
+          numericInputElement.value = reverseVal.toFixed(2);
+        }
         this.editMeasuredValue = reverseVal.toFixed(2);
         this.moveCursor();
       },
@@ -671,9 +737,10 @@
       tenkeyClose() {
         const isPostHide = true;
         // 入力を番号に戻す
-        document.getElementById("numericID").setAttribute("type", "number");
+        const numericInputElement = this.getNumericInputElement();
+        numericInputElement?.setAttribute("type", "number");
         // 異常データの場合の初期化
-        this.changeMeasureVal(this.editMeasuredValue, {target: document.getElementById("numericID")}, isPostHide);
+        this.changeMeasureVal(this.editMeasuredValue, {target: numericInputElement}, isPostHide);
 
         this.input = null;
       },
@@ -706,7 +773,6 @@
         }
       },
     },
-    watch: {},
     created() {
       // del FNSI-テンキー順番の変更 徐 start
       // this.hide();
@@ -730,7 +796,7 @@
       // mod FNSI-体重計画面 徐 end
 
       // 端末判別
-      const ua = navigator.userAgent;
+      const ua = getScopedUserAgent(this.$el || null);
       if (ua.match(/Android/)) {
         this.isAndroid = true;
       } else if (ua.match(/iPhone|iPad/)) {
@@ -742,7 +808,7 @@
       this.calcWeightValue();
 
       setTimeout(() => {
-        let numericIdElem = document.getElementById("numericID");
+        let numericIdElem = this.getNumericInputElement();
         if (numericIdElem) {
           // 数値入力欄に'wheel'のイベントリスナーを設定することで
           // ホイールを使ったマウスホイールによる数値変更が可能。
@@ -755,14 +821,11 @@
         }
       }, 1000);
     },
-    beforeDestroy() {
+    beforeUnmount() {
       // dataの初期化
       Object.assign(this.$data, this.$options.data());
     },
-    destroyed() {
-
-    }
-  };
+};
 </script>
 <style scoped>
   .sub-content-area {
@@ -784,23 +847,26 @@
     display: flex;
     justify-content: center;
   }
-           /*mod FNSI-改修内容体重計モードの場合体重計表示機はキーボードなし。 liang start*/
-  ons-input >>> .text-input {
+            
+  /*mod FNSI-改修内容体重計モードの場合体重計表示機はキーボードなし。 liang start*/
+  ons-input :deep(.text-input) {
     text-align: right;
     color: var(--send-cond-font-color) !important;
     background-color: var(--ntss-base-background-color) !important;
     opacity: 1 !important;
     height: 1.6em !important;
   }
-  ons-input >>> input[type="text"] {
+  ons-input :deep(input[type="text"]) {
     padding-right: 15px;
   }
-  .input-mobile >>> input[type="number"] {
+  .input-mobile :deep(input[type="number"]) {
     padding-right: 15px;
   }
-           /*mod FNSI-改修内容体重計モードの場合体重計表示機はキーボードなし。 liang end*/
+            
+   
+  /*mod FNSI-改修内容体重計モードの場合体重計表示機はキーボードなし。 liang end*/
   /* add FNSI-体重計モードテンキーの追加 徐 start */
-  .popoverClass >>> .popover--top {
+  .popoverClass :deep(.popover--top) {
     width: auto;
   }
   /* add FNSI-体重計モードテンキーの追加 徐 end */

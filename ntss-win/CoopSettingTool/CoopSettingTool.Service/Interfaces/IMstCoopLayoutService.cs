@@ -32,11 +32,25 @@ namespace CoopSettingTool.Service
         Task<BaseResponse<List<string>>> GetNewestMstCoopLayoutCtlNoList(string facilityCd);
 
         /// <summary>
+        /// Gets the current MST coop layout list.
+        /// </summary>
+        /// <param name="facilityCd">The facility cd.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopLayoutEntity&gt;&gt;&gt;.</returns>
+        Task<BaseResponse<List<MstCoopLayoutEntity>>> GetCurrentMstCoopLayoutList(string facilityCd);
+
+        /// <summary>
         /// Gets the MST coop layou by control no.
         /// </summary>
         /// <param name="ctlNo">The control no.</param>
         /// <returns>Task&lt;BaseResponse&lt;MstCoopLayoutEntity&gt;&gt;.</returns>
         Task<BaseResponse<MstCoopLayoutEntity>> GetMstCoopLayoutByCtlNo(string ctlNo);
+
+        /// <summary>
+        /// Gets the source MST coop layout.
+        /// </summary>
+        /// <param name="condition">The condition.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopLayoutEntity&gt;&gt;&gt;.</returns>
+        Task<BaseResponse<List<MstCoopLayoutEntity>>> GetSourceMstCoopLayout(MstCoopLayoutEntity condition);
 
         /// <summary>
         /// Creates the or update MST coop layout detail.
@@ -53,11 +67,25 @@ namespace CoopSettingTool.Service
         Task<BaseResponse<List<string>>> GetNewestMstCoopLayoutDetailCtlNoList(string facilityCd);
 
         /// <summary>
+        /// Gets the current MST coop layout detail list.
+        /// </summary>
+        /// <param name="facilityCd">The facility cd.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopLayoutDetailEntity&gt;&gt;&gt;.</returns>
+        Task<BaseResponse<List<MstCoopLayoutDetailEntity>>> GetCurrentMstCoopLayoutDetailList(string facilityCd);
+
+        /// <summary>
         /// Gets the MST coop layou detail by control no.
         /// </summary>
         /// <param name="ctlNo">The control no.</param>
         /// <returns>Task&lt;BaseResponse&lt;MstCoopLayoutDetailEntity&gt;&gt;.</returns>
         Task<BaseResponse<MstCoopLayoutDetailEntity>> GetMstCoopLayoutDetailByCtlNo(string ctlNo);
+
+        /// <summary>
+        /// Gets the source MST coop layout detail.
+        /// </summary>
+        /// <param name="condition">The condition.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopLayoutDetailEntity&gt;&gt;&gt;.</returns>
+        Task<BaseResponse<List<MstCoopLayoutDetailEntity>>> GetSourceMstCoopLayoutDetail(MstCoopLayoutDetailEntity condition);
 
         /// <summary>
         /// Creates the or update MST coop layout detail.

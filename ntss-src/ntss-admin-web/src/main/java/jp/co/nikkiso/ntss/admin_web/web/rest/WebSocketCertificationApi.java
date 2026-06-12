@@ -3,12 +3,13 @@ package jp.co.nikkiso.ntss.admin_web.web.rest;
 import java.net.URISyntaxException;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import jp.co.nikkiso.ntss.core.dao.MstFacilityDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,11 +24,13 @@ import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 import jp.co.nikkiso.ntss.core.dao.MstFacilityHashDao;
 import jp.co.nikkiso.ntss.admin_web.request.webSocketCertification.WSCertificationDTO;
 import jp.co.nikkiso.ntss.admin_web.response.masterMaintenance.MasterUpdateResponse;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.webSocketCertification.MntWebsocketCertificationService;
 import jp.co.nikkiso.ntss.admin_web.service.webSocketNotify.WebSocketNotifyService;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 
 
@@ -65,7 +68,16 @@ public class WebSocketCertificationApi {
   @GetMapping("/target_url")
   //Mod VPN_URL対応 解 Start
   //public ResponseEntity<?> getWSConnectTargetUrl() {
-  public ResponseEntity<?> getWSConnectTargetUrl(HttpServletRequest request, @RequestParam(name = "facilityCd", required = true) String facilityCd) {
+  public ResponseEntity<?> getWSConnectTargetUrl(HttpServletRequest request,
+      @RequestParam(name = "facilityCd", required = true) String facilityCd,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 mod 20260421 start
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "remoteAddr=" + request.getRemoteAddr() + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
     //return new ResponseEntity<>(webSocketNotifyProperties.getAppConnectUrl(), HttpStatus.OK);
 
     /* del by renxiaohao  2023-02-01 CodeOptimization  start */
@@ -100,7 +112,15 @@ public class WebSocketCertificationApi {
 
   @PostMapping("")
   public ResponseEntity<String> getWSCertification (
-      HttpServletRequest request,@RequestBody WSCertificationDTO WSCertification) throws URISyntaxException {
+      HttpServletRequest request,@RequestBody WSCertificationDTO WSCertification,
+      @AuthenticationPrincipal NtssUser ntssUser) throws URISyntaxException {
+    // #11205 mod 20260421 start
+    if (!hasFacilityAccess(ntssUser, WSCertification == null ? null : WSCertification.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + WSCertification.getFacilityCd() + " " + "remoteAddr=" + request.getRemoteAddr() + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
     /* del by renxiaohao  2023-02-01 CodeOptimization  start */
     // 施設コード取得
     //    String facilityCd = WSCertification.getFacilityCd();
@@ -212,6 +232,10 @@ public class WebSocketCertificationApi {
     }
   }
 
-
-
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    return ntssUser == null
+      || ntssUser.isNkkAdminUser()
+      || facilityCd == null
+      || facilityCd.equals(ntssUser.getFacilityCd());
+  }
 }

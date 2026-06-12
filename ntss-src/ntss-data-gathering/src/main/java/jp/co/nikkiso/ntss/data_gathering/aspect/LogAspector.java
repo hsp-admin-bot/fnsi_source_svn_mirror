@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.data_gathering.aspect;
 
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
 import jp.co.nikkiso.ntss.core.logevent.DataUpdateLogInfoUtil;
 import jp.co.nikkiso.ntss.data_gathering.service.LogService;

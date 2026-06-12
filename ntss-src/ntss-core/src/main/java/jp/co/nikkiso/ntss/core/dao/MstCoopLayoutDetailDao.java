@@ -55,6 +55,12 @@ public interface MstCoopLayoutDetailDao {
   @Select
   List<MstCoopLayoutDetail> selectList(String facilityCd, String coopCd, String coopVersion, String direction,
                                        String coopCdDetail, String coopCdDetailSub);
+
+  @Select
+  List<MstCoopLayoutDetail> selectSource(String coopVersion, String coopCd, String direction);
+
+  @Select
+  List<MstCoopLayoutDetail> selectCurrentByFacilityCd(String facilityCd);
 // add 2023-03-20 bug #8422 有効なレイアウトが複数存在したときのメッセージ不備 孫 end
 
   /**

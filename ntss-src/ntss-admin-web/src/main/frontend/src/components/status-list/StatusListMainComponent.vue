@@ -1,4 +1,4 @@
-   /** * 治療状況リスト（治療状況リスト画面） MainContent */
+/** * 治療状況リスト（治療状況リスト画面） MainContent */
 <template>
   <div class="conf-body status-list-page">
     <div id="flex-area">
@@ -6,24 +6,22 @@
         id="device-grid-area"
         v-show="RODeviceStatus || DADDeviceStatus || DABDeviceStatus"
       >
-        <!-- RO -->
         <div
           id="dro-device-grid"
           class="device-list-grid"
           v-show="RODeviceStatus"
         >
-          <kendo-grid-native
+          <Grid
             ref="gridDro"
             class="list_dro"
             :class="fontSizeSet"
             :data-items="nativeDataSourceDro"
-            :editable="false"
             :reorderable="true"
             :resizable="true"
             :sortable="sortable"
             :sort="sortDro"
-            @columnreorder="columnReorderDro"
             :columns="nativeDroColumns"
+            @columnreorder="columnReorderDro"
             @sortchange="sortDroChangeHandler"
             @rowclick="onClickDevice"
             @warn-click="warnClick"
@@ -31,27 +29,25 @@
             @blank-click="blankClick"
             @columnresize="columnResizeEventDro"
           >
-            <grid-norecords />
-          </kendo-grid-native>
+            <GridNoRecords />
+          </Grid>
         </div>
-        <!-- 溶解 -->
         <div
           id="dad-device-grid"
           class="device-list-grid"
           v-show="DADDeviceStatus"
         >
-          <kendo-grid-native
+          <Grid
             ref="gridDad"
             class="list_dad"
             :class="fontSizeSet"
             :data-items="nativeDataSourceDad"
-            :editable="false"
             :reorderable="true"
             :resizable="true"
             :sortable="sortable"
             :sort="sortDad"
-            @columnreorder="columnReorderDad"
             :columns="nativeDadColumns"
+            @columnreorder="columnReorderDad"
             @sortchange="sortDadChangeHandler"
             @rowclick="onClickDevice"
             @warn-click="warnClick"
@@ -59,27 +55,25 @@
             @blank-click="blankClick"
             @columnresize="columnResizeEventDad"
           >
-            <grid-norecords />
-          </kendo-grid-native>
+            <GridNoRecords />
+          </Grid>
         </div>
-        <!-- 供給 -->
         <div
           id="dab-device-grid"
           class="device-list-grid"
           v-show="DABDeviceStatus"
         >
-          <kendo-grid-native
+          <Grid
             ref="gridDab"
             class="list_dab"
             :class="fontSizeSet"
             :data-items="nativeDataSourceDab"
-            :editable="false"
             :reorderable="true"
             :resizable="true"
             :sortable="sortable"
             :sort="sortDab"
-            @columnreorder="columnReorderDab"
             :columns="nativeDabColumns"
+            @columnreorder="columnReorderDab"
             @sortchange="sortDabChangeHandler"
             @rowclick="onClickDevice"
             @warn-click="warnClick"
@@ -87,8 +81,8 @@
             @blank-click="blankClick"
             @columnresize="columnResizeEventDab"
           >
-            <grid-norecords />
-          </kendo-grid-native>
+            <GridNoRecords />
+          </Grid>
         </div>
       </div>
       <div id="status-grid-header">
@@ -111,8 +105,9 @@
           <!-- mod #10359 編集権限の動作不正 dengshen end -->
         </div>
         <table class="dialysis-adjusting-device">
-          <tr>
-            <td style="text-align: center">
+          <tbody>
+            <tr>
+              <td style="text-align: center">
               <v-ons-button
                 class="td-button button-font"
                 style="width: 6em; margin-right: 0.5em"
@@ -161,31 +156,34 @@
                 @click="moveAlarmNoticeList"
                 >警報報知一覧</v-ons-button
               >
-            </td>
-          </tr>
+                        </td>
+            </tr>
+        
+          </tbody>
         </table>
       </div>
-      <!-- 透析装置 -->
       <div id="main-list-grid-box" class="status-scale-area">
-        <kendo-grid-native
+        <Grid
+          :key="totalCount"
           ref="grid"
           class="list_dcs"
           :class="mainGridClasses"
-          :style="{width: gridWidth, height: '100%'}"
+          :style="{ width: gridWidth, height: '100%' }"
           :take="take"
           :skip="skip"
           :scrollable="'virtual'"
-          :column-virtualization="true"
-          :total="nativeDataSourceDcs.length"
-          @pagechange="pageChange"
+          :column-virtualization="false"
+          :total="totalCount"
           :row-height="40"
-          :data-items="gridDataItem"
-          :edit-field="'inEdit'"
+          :data-items="nativeDataSourceDcs"
+          edit-field="inEdit"
           :reorderable="true"
           :resizable="true"
           :sortable="sortable"
           :sort="sortDcs"
           :columns="nativeDcsColumns"
+          :has-unregistered-option="false"
+          @pagechange="pageChange"
           @columnreorder="columnReorderDcs"
           @sortchange="sortDcsChangeHandler"
           @clickBedName="onClickBedName"
@@ -203,11 +201,10 @@
           @warn-click="warnClick"
           @info-click="infoClick"
           @blank-click="blankClick"
-          :hasUnregisteredOption="false"
           @columnresize="columnResizeEvent"
         >
-          <grid-norecords />
-        </kendo-grid-native>
+          <GridNoRecords />
+        </Grid>
       </div>
       <div id="area_usage_guide" v-if="!isNotUsageGuide">
         <div class="usage-guide-div">
@@ -268,10 +265,10 @@
         :visible="diaView"
         :style="(height = '100px')"
       >
-        <span slot="title"
-          >未実施の投与薬剤が含まれていますがよろしいですか？</span
+        <template #title><span
+          >未実施の投与薬剤が含まれていますがよろしいですか？</span></template
         >
-        <template slot="footer">
+        <template #footer>
           <v-ons-alert-dialog-button @click="diaView = false"
             >キャンセル</v-ons-alert-dialog-button
           >
@@ -323,10 +320,10 @@
         :visible="diaView"
         :style="(height = '100px')"
       >
-        <span slot="title"
-          >確定する治療実績に、投与薬剤が未実施の治療が含まれていますがよろしいですか？</span
+        <template #title><span
+          >確定する治療実績に、投与薬剤が未実施の治療が含まれていますがよろしいですか？</span></template
         >
-        <template slot="footer">
+        <template #footer>
           <v-ons-alert-dialog-button @click="diaView = false"
             >キャンセル</v-ons-alert-dialog-button
           >
@@ -378,15 +375,15 @@
 </template>
 
 <script>
-import moment from "moment";
-import { mapState, mapActions, mapGetters, mapMutations } from "vuex";
+import dayjs from "@/compat/date/dayjs";
+import { mapState, mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import commonFunctions from "@/components/status-list/StatusCommonFunction";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import PatHeaderControlMixin from "@/components/common/PatHeadControlMixin";
 import { KEY_NAME_STATUS_LIST } from "@/constants/defaultSettingConstants";
-import { EventBus } from "@/eventBus.js";
-import { orderBy } from "@progress/kendo-data-query";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { orderBy } from "@/functions/common/KendoFunctions";
 // #10338 2024.03.29 del 外部連携をREST API側に構築 TDC片口 start
 // import { createJournal } from "@/apis/journal";
 // #10338 2024.03.29 del 外部連携をREST API側に構築 TDC片口 start
@@ -422,23 +419,92 @@ import {
 } from "@/constants/mstTreatmentStatusDispItemConstants";
 import { MACHINE_MODEL } from "@/constants/machineModel";
 import { multiSortableCompare } from "@/functions/SortFunctions";
-import PrintMixin from "@/components/PrintMixin";
+import { getScopedDocument, getScopedElementById, getScopedElementsByClassName, getScopedSessionStorage, getScopedWindow, setScopedCookie } from "@/functions/common/LayoutMeasureHelper";
+import {
+  captureKendoGridScrollPosition,
+  findKendoGridContent,
+  findKendoGridHeaderCells,
+  findKendoGridHeaderWrap,
+  findKendoGridMasterRows,
+  findKendoGridRoot,
+  findKendoGridRowCells,
+  restoreKendoGridScrollPosition,
+  repairKendoGridLockedColumnLayout
+} from "@/functions/common/KendoFunctions";
+import { getOnsAlertDialogScopedElementsByClassName } from "@/functions/common/OnsenFunctions";
+import { Grid, GridNoRecords } from "@progress/kendo-vue-grid";
 
 const dummyColumnProps = {
   field: "dummyColumn",
   title: "",
   width: "0px",
-  hidden: false,
+  hidden: true,
   locked: false,
   reorderable: false,
   orderIndex: 0,
 };
 
+function normalizeDeviceGridColumns(columns) {
+  if (!Array.isArray(columns)) {
+    return [];
+  }
+  return columns.map((column) => {
+    if (column?.field !== "dummyColumn") {
+      return column;
+    }
+    return {
+      ...column,
+      title: "",
+      hidden: true,
+      width: column.width || "0px",
+    };
+  });
+}
+
+function formatGridColumnWidth(width) {
+  if (width == null || width === "") {
+    return width;
+  }
+  const numeric = parseFloat(width.toString());
+  if (!Number.isFinite(numeric)) {
+    return width;
+  }
+  return `${Math.floor(numeric)}px`;
+}
+
+/**
+ * 列リサイズ／並べ替え後の列定義を Kendo 向けに正規化する。
+ * - resize 列は newWidth を width に反映（left は書かない）
+ * - locked 列の left/right を除去し、width から Kendo が left を再計算する
+ */
+function normalizeGridColumnsForKendo(columns, resizeIndex = -1, newWidth = null) {
+  if (!Array.isArray(columns)) {
+    return [];
+  }
+  return columns.map((column, index) => {
+    const next = { ...column };
+    if (resizeIndex >= 0 && index === resizeIndex && newWidth != null) {
+      next.width = formatGridColumnWidth(newWidth);
+    } else if (next.width != null) {
+      next.width = formatGridColumnWidth(next.width);
+    }
+    if (next.locked) {
+      delete next.left;
+      delete next.right;
+    }
+    return next;
+  });
+}
+
 export default {
   // mod #10359、#10331 編集権限について、対応する。 dengshen start
   // mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin],
-  mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin, ComponentGuardMixin, PrintMixin],
+  mixins: [NextTransitionMixin, MasterMaintenanceMixin, PatHeaderControlMixin, ComponentGuardMixin],
   // mod #10359、#10331 編集権限について、対応する。 dengshen end
+  components: {
+    Grid,
+    GridNoRecords,
+  },
   props: {
     // NOTE: コンソールエラー対策
     historyKey: null,
@@ -509,6 +575,10 @@ export default {
         result.push("no-scrollbar-area-header");
       }
       return result;
+    },
+    mainGridColumnVirtualization() {
+      return Array.isArray(this.nativeDcsColumns)
+        && this.nativeDcsColumns.some(column => column?.field !== "dummyColumn" && column?.hidden !== true);
     },
     // -----------------------------------------
     // grid:column情報取得
@@ -619,10 +689,10 @@ export default {
       // mod FNSI-ソート順の修正 付 start
       let paramData = {
         fieldNameObj: this.sortDcs,
-        /* modify by chamaojia 2024-03-28 [10303、10304] data processing has been completed in the backend --start */
+        /* modify by chamaojia 2024-03-28 [10303、10304] データ処理はバックエンド側で完了済み --start */
         // datalist: filterBy(this.dcsDataSource, this.gridFilterResult).filter(ele => ele.bedName != null || ele.kurName != null)
         datalist: this.dcsDataSource,
-        /* modify by chamaojia 2024-03-28 [10303、10304] data processing has been completed in the backend --end */
+        /* modify by chamaojia 2024-03-28 [10303、10304] データ処理はバックエンド側で完了済み --end */
         datalistType: MACHINE_MODEL.DCS
       }
       return this.sortNullData(paramData);
@@ -700,6 +770,7 @@ export default {
       return {
         allowUnsort: true,
         mode: "multiple",
+        showIndexes: true,
       };
     },
     isNotUsageGuide() {
@@ -789,6 +860,9 @@ export default {
       // add #7947 2022-09-15 【デグレ】????患者の削除後にしばらくすると復活する dou end
       scrollPositionTop: 0,
       scrollPositionLeft: 0,
+      shouldRestoreMainGridScroll: false,
+      savedMainGridSkip: 0,
+      savedMainGridTake: 30,
       lastScrollTop: 0,
       lastScrollLeft: 0,
       // 現在の画面名
@@ -894,13 +968,77 @@ export default {
       skip: 0,
       take: 30,
       gridDataItem: [],
+      printRestoreMainGridPage: null,
+      printRestoreGridDom: null,
+      /** beforeprint の遅延 apply と afterprint の競合を防ぐ */
+      printLayoutFixToken: 0,
       // add #11285 機能帳票の印刷情報対応② 高 start
       bedCdListString: "",
       kurGroupName: "",
       // add #11285 機能帳票の印刷情報対応② 高 end
+      totalCount: 0,
     };
   },
   methods: {
+    getScopedOwnerDocument() {
+      return getScopedDocument(this.$el || null);
+    },
+    getScopedElementByIdSafe(id) {
+      return getScopedElementById(id, this.$el || null) || this.getScopedOwnerDocument()?.getElementById?.(id) || null;
+    },
+    getScopedClassElementsSafe(className) {
+      const scoped = getScopedElementsByClassName(className, this.$el || null);
+      return scoped.length ? scoped : Array.from(this.getScopedOwnerDocument()?.getElementsByClassName?.(className) || []);
+    },
+    getAlertDialogElementsSafe(className) {
+      return getOnsAlertDialogScopedElementsByClassName(this.$el || null, className, this.getScopedOwnerDocument());
+    },
+    applyFirstDialogLayout() {
+      const applyLayout = () => {
+        const alertDialog = this.getAlertDialogElementsSafe("alert-dialog");
+        if (this.buttonConfig == 1) {
+          alertDialog[0].classList?.add("button_config_1");
+        } else {
+          alertDialog[0].classList?.add("button_config_2");
+          const listContent = this.getAlertDialogElementsSafe(
+            "alert-dialog-content.alert-dialog-content--rowfooter"
+          );
+          if(listContent) {
+            const listContentDiv = listContent[0]?.firstElementChild
+              || listContent[0]?.childNodes?.[0];
+            if(listContentDiv) {
+              listContentDiv.classList?.add("alert-list-content");
+            }
+          }
+        }
+        
+        const element = this.getAlertDialogElementsSafe("alert-dialog-content");
+        const contentBody = element[0]?.childNodes?.[0]
+          || element[0]?.firstElementChild
+          || element[0];
+        if (contentBody?.style) {
+          contentBody.style.maxHeight = "240px";
+          contentBody.style.overflowY = "auto";
+          contentBody.style.overflowX = "hidden";
+        }
+
+        if (this.buttonConfig == 2) {
+          const buttonElem = this.getAlertDialogElementsSafe(
+            "alert-dialog-button");
+          buttonElem[3]?.classList?.add("alert-dialog-button--rowfooter");
+          buttonElem[3]?.classList?.add(
+            "alert-dialog-button--rowfooter--rowfooter"
+          );
+        }
+      };
+
+      this.$nextTick(() => {
+        applyLayout();
+        const ownerWindow = this.getScopedOwnerDocument()?.defaultView || window;
+        ownerWindow?.requestAnimationFrame?.(applyLayout);
+        setTimeout(applyLayout, 32);
+      });
+    },
     ...mapActions("multi-modal", ["showSchedule", "showIndicationsDiffModal"]),
     ...mapActions("status-map/ind", {
       setIndOrdNo: "setOrdNo",
@@ -1012,61 +1150,153 @@ export default {
     ...mapActions("operation-viewer/motion-record", ["setHeaderInfo"]),
     ...mapActions("operation-viewer/machine", ["getMachine"]),
     ...mapGetters("operation-viewer/machine", ["getSelectMachine"]),
-    
-    /** 画面印刷前の制御 */
+    syncMainGridPage() {
+      const list = Array.isArray(this.nativeDataSourceDcs) ? this.nativeDataSourceDcs : [];
+      const take = Number.isFinite(Number(this.take)) && Number(this.take) > 0 ? Number(this.take) : 30;
+      let start = Number.isFinite(Number(this.skip)) ? Number(this.skip) : 0;
+      if (start >= list.length) {
+        start = 0;
+        this.skip = 0;
+      }
+      this.gridDataItem = list.slice(start, start + take);
+    },
+    syncMainGridPageAfterDomUpdate() {
+      this.$nextTick(() => {
+        this.syncMainGridPage();
+      });
+    },
+    applyMainGridPrintLayoutFixes() {
+      const gridRoot = this.getMainGridScrollTarget();
+      if (!gridRoot) {
+        return;
+      }
+      const fixes = [];
+      const remember = (el, snapshot) => {
+        if (!el) {
+          return;
+        }
+        fixes.push({ el, snapshot });
+      };
+      const setAutoHeight = (el, keys = ["height", "minHeight", "maxHeight", "overflow"]) => {
+        if (!el) {
+          return;
+        }
+        const snapshot = {};
+        keys.forEach(key => {
+          snapshot[key] = el.style[key];
+        });
+        remember(el, snapshot);
+        el.style.setProperty("height", "auto", "important");
+        el.style.setProperty("min-height", "0", "important");
+        el.style.setProperty("max-height", "none", "important");
+        if (keys.includes("overflow")) {
+          el.style.setProperty("overflow", "visible", "important");
+        }
+      };
+      const gridEl = gridRoot.classList?.contains?.("k-grid")
+        ? gridRoot
+        : gridRoot.querySelector?.(".k-grid");
+      setAutoHeight(gridEl);
+      const gridContainer = gridRoot.querySelector?.(".k-grid-container");
+      setAutoHeight(gridContainer);
+      const headerWrap = findKendoGridHeaderWrap(gridRoot);
+      setAutoHeight(headerWrap);
+      const content = findKendoGridContent(gridRoot);
+      if (content) {
+        remember(content, {
+          height: content.style.height,
+          minHeight: content.style.minHeight,
+          maxHeight: content.style.maxHeight,
+          overflow: content.style.overflow,
+          scrollTop: content.scrollTop,
+        });
+        content.style.setProperty("height", "auto", "important");
+        content.style.setProperty("min-height", "0", "important");
+        content.style.setProperty("max-height", "none", "important");
+        content.style.setProperty("overflow", "visible", "important");
+        content.scrollTop = 0;
+      }
+      const heightContainer = content?.querySelector?.(".k-height-container");
+      setAutoHeight(heightContainer);
+      const tableWrap = content?.querySelector?.(".k-grid-table-wrap");
+      if (tableWrap) {
+        remember(tableWrap, { height: tableWrap.style.height, minHeight: tableWrap.style.minHeight });
+        tableWrap.style.setProperty("height", "auto", "important");
+        tableWrap.style.setProperty("min-height", "0", "important");
+      }
+      const scrollHeightEl = content?.querySelector?.(".k-height-container > div");
+      if (scrollHeightEl) {
+        remember(scrollHeightEl, { height: scrollHeightEl.style.height });
+        scrollHeightEl.style.setProperty("height", "0", "important");
+      }
+      content?.querySelectorAll?.("table")?.forEach(table => {
+        remember(table, { transform: table.style.transform });
+        table.style.setProperty("transform", "none", "important");
+      });
+      this.printRestoreGridDom = fixes;
+    },
+    restoreMainGridPrintLayoutFixes() {
+      const fixes = this.printRestoreGridDom;
+      const printOverrideProps = ["height", "min-height", "max-height", "overflow", "transform"];
+      if (!Array.isArray(fixes)) {
+        return false;
+      }
+      fixes.forEach(({ el, snapshot }) => {
+        if (!el || !snapshot) {
+          return;
+        }
+        printOverrideProps.forEach(prop => {
+          el.style.removeProperty(prop);
+        });
+        Object.entries(snapshot).forEach(([key, value]) => {
+          if (key === "scrollTop") {
+            el.scrollTop = value;
+            return;
+          }
+          const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+          if (value) {
+            el.style.setProperty(cssKey, value);
+          }
+        });
+      });
+      this.printRestoreGridDom = null;
+      return true;
+    },
     handleBeforePrint() {
-      // 共通mixinで横スクロール位置が全体の99%を超えている場合は対象に右端時用クラスを付与
-      [
-        'dro', // RO
-        'dad', // 溶解
-        'dab', // 供給
-        'dcs'  // 透析装置
-      ].forEach(type => {
-        this.addScrollClass(
-          `.list_${type} .k-grid-content`,
-          [`.list_${type} table`]
-        );
+      const applyToken = ++this.printLayoutFixToken;
+      const total = Array.isArray(this.nativeDataSourceDcs) ? this.nativeDataSourceDcs.length : 0;
+      if (total > 0 && !this.printRestoreMainGridPage) {
+        this.printRestoreMainGridPage = {
+          skip: Number.isFinite(Number(this.skip)) ? Number(this.skip) : 0,
+          take: Number.isFinite(Number(this.take)) && Number(this.take) > 0 ? Number(this.take) : 30,
+        };
+        this.skip = 0;
+        this.take = total;
+        this.syncMainGridPage();
+      }
+      this.$nextTick(() => {
+        this.$nextTick(() => {
+          if (applyToken !== this.printLayoutFixToken) {
+            return;
+          }
+          this.applyMainGridPrintLayoutFixes();
+        });
       });
-      
-      // 透析装置のレイアウト位置リセット
-      // 仮想スクロールで見えてる範囲のみ印刷
-      const content = document.querySelector('.list_dcs .k-grid-content');
-      const vc = document.querySelector('.list_dcs .k-virtual-content');
-      const table = vc?.querySelector('table');
-      // スクロール位置保存
-      this._savedScrollTop = content.scrollTop;
-      // transform対象特定
-      const target = [table, vc].find(
-        el => el && getComputedStyle(el).transform !== 'none'
-      );          
-      // 元のtransformも保存
-      this._savedTransform = target.style.transform;
-      // 仮想スクロール無効化
-      target.style.transform = 'none';
     },
-    /** 画面印刷後の制御 */
     handleAfterPrint() {
-      // 共通mixinで付与した右端時用クラスを削除
-      [
-        'dro', // RO
-        'dad', // 溶解
-        'dab', // 供給
-        'dcs'  // 透析装置
-      ].forEach(type => {
-        this.removeScrollClass( [`.list_${type} table`] );
+      this.printLayoutFixToken += 1;
+      this.restoreMainGridPrintLayoutFixes();
+      if (this.printRestoreMainGridPage) {
+        const { skip, take } = this.printRestoreMainGridPage;
+        this.printRestoreMainGridPage = null;
+        this.skip = skip;
+        this.take = take;
+        this.syncMainGridPage();
+      }
+      this.$nextTick(() => {
+        this.syncMainGridLayoutAfterDisplayChange();
       });
-      
-      // 透析装置のスクロール位置を元に戻す
-      const content = document.querySelector('.list_dcs .k-grid-content');
-      const vc = document.querySelector('.list_dcs .k-virtual-content');
-      const table = vc?.querySelector('table');
-      const target = [table, vc].find(el => el);
-      // transformを元に戻す
-      target.style.transform = this._savedTransform || '';  
-      // スクロール位置復元
-      content.scrollTop = this._savedScrollTop || 0;
     },
-    
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
       return getAuthorized(pageCd, itemCd);
@@ -1075,27 +1305,32 @@ export default {
     pageChange (event) {
       this.skip = event.page.skip;
       this.take = event.page.take;
-      this.gridDataItem = this.nativeDataSourceDcs.slice(event.page.skip, event.page.skip + event.page.take);
+      this.syncMainGridPage();
     },
     // add FNSI-redmine#5747 高 start
     columnResizeEventDro(event) {
+      if (event.end === false) {
+        return;
+      }
+      if (Array.isArray(event.columns)) {
+        this.nativeDroColumns = normalizeDeviceGridColumns(event.columns);
+      }
       let index = event.index;
       let newWidth = event.newWidth;
-      let fieldName = event.columns[index].field;
-      this.droColumnsize.push({
-        time: Date.now(),
-        width: newWidth,
-        field: fieldName,
-      });
-      if (
-        this.getDroColumnResizeData != null &&
-        this.getDroColumnResizeData != []
-      ) {
+      if(Array.isArray(event.columns) && event.columns[index]) {
+        let fieldName = event.columns[index].field;
+        this.droColumnsize.push({
+          time: Date.now(),
+          width: newWidth,
+          field: fieldName,
+        });
+      }
+      if (Array.isArray(this.getDroColumnResizeData) && this.getDroColumnResizeData.length > 0) {
         this.getDroColumnResizeData.forEach((index) => {
           this.droColumnsize.push(index);
         });
       }
-      if (this.droColumnsize != null && this.droColumnsize != []) {
+      if (Array.isArray(this.droColumnsize) && this.droColumnsize.length > 0) {
         const groupBy = (array, f) => {
           let groups = {};
           array.forEach((o) => {
@@ -1122,25 +1357,31 @@ export default {
         this.droColChangeSize = data;
       }
       this.droIsBool = true;
+      this.scheduleDeviceGridStickyOffsetSync(this.$refs.gridDro, "dro-device-grid");
     },
     columnResizeEventDad(event) {
+      if (event.end === false) {
+        return;
+      }
+      if (Array.isArray(event.columns)) {
+        this.nativeDadColumns = normalizeDeviceGridColumns(event.columns);
+      }
       let index = event.index;
       let newWidth = event.newWidth;
-      let fieldName = event.columns[index].field;
-      this.dadColumnsize.push({
-        time: Date.now(),
-        width: newWidth,
-        field: fieldName,
-      });
-      if (
-        this.getDadColumnResizeData != null &&
-        this.getDadColumnResizeData != []
-      ) {
+      if (Array.isArray(event.columns) && event.columns[index]) {
+        let fieldName = event.columns[index].field;
+        this.dadColumnsize.push({
+          time: Date.now(),
+          width: newWidth,
+          field: fieldName,
+        });
+      }
+      if (Array.isArray(this.getDadColumnResizeData) && this.getDadColumnResizeData.length > 0) {
         this.getDadColumnResizeData.forEach((index) => {
           this.dadColumnsize.push(index);
         });
       }
-      if (this.dadColumnsize != null && this.dadColumnsize != []) {
+      if (Array.isArray(this.dadColumnsize) && this.dadColumnsize.length > 0) {
         const groupBy = (array, f) => {
           let groups = {};
           array.forEach((o) => {
@@ -1167,25 +1408,31 @@ export default {
         this.dadColChangeSize = data;
       }
       this.dadIsBool = true;
+      this.scheduleDeviceGridStickyOffsetSync(this.$refs.gridDad, "dad-device-grid");
     },
     columnResizeEventDab(event) {
+      if (event.end === false) {
+        return;
+      }
+      if (Array.isArray(event.columns)) {
+        this.nativeDabColumns = normalizeDeviceGridColumns(event.columns);
+      }
       let index = event.index;
       let newWidth = event.newWidth;
-      let fieldName = event.columns[index].field;
-      this.dabColumnsize.push({
-        time: Date.now(),
-        width: newWidth,
-        field: fieldName,
-      });
-      if (
-        this.getDabColumnResizeData != null &&
-        this.getDabColumnResizeData != []
-      ) {
+      if (Array.isArray(event.columns) && event.columns[index]) {
+        let fieldName = event.columns[index].field;
+        this.dabColumnsize.push({
+          time: Date.now(),
+          width: newWidth,
+          field: fieldName,
+        });
+      }
+      if (Array.isArray(this.getDabColumnResizeData) && this.getDabColumnResizeData.length > 0) {
         this.getDabColumnResizeData.forEach((index) => {
           this.dabColumnsize.push(index);
         });
       }
-      if (this.dabColumnsize != null && this.dabColumnsize != []) {
+      if (Array.isArray(this.dabColumnsize) && this.dabColumnsize.length > 0) {
         const groupBy = (array, f) => {
           let groups = {};
           array.forEach((o) => {
@@ -1212,25 +1459,35 @@ export default {
         this.dabColChangeSize = data;
       }
       this.dabIsBool = true;
+      this.scheduleDeviceGridStickyOffsetSync(this.$refs.gridDab, "dab-device-grid");
     },
     // add FNSI-redmine#5747 高 end
     columnResizeEvent(event) {
-      this.nativeDcsColumns = event.columns;
+      if (event.end === false) {
+        return;
+      }
+      this.nativeDcsColumns = normalizeGridColumnsForKendo(
+        event.columns,
+        event.index,
+        event.newWidth
+      );
 
       let index = event.index;
       let newWidth = event.newWidth;
-      let fieldName = event.columns[index].field;
-      this.columnsize.push({
-        time: Date.now(),
-        width: newWidth,
-        field: fieldName,
-      });
-      if (this.getColumnResizeData != null && this.getColumnResizeData != []) {
+      if (Array.isArray(event.columns) && event.columns[index]) {
+        let fieldName = event.columns[index].field;
+        this.columnsize.push({
+          time: Date.now(),
+          width: newWidth,
+          field: fieldName,
+        });
+      }
+      if (Array.isArray(this.getColumnResizeData) && this.getColumnResizeData.length > 0) {
         this.getColumnResizeData.forEach((index) => {
           this.columnsize.push(index);
         });
       }
-      if (this.columnsize != null && this.columnsize != []) {
+      if (Array.isArray(this.columnsize) && this.columnsize.length > 0) {
         const groupBy = (array, f) => {
           let groups = {};
           array.forEach((o) => {
@@ -1257,6 +1514,7 @@ export default {
         this.colChangeSize = data;
       }
       this.isBool = true;
+      this.scheduleKendoGridStickyOffsetSync(this.$refs.grid, "main-list-grid-box");
     },
     // add FNSI-redmine#4252 付 end
     columnReorderDcs(options) {
@@ -1285,40 +1543,23 @@ export default {
         options.columns[cnt].locked = false;
         options.columns[cnt].className = "";
       }
-      this.nativeDcsColumns = options.columns;
+      this.nativeDcsColumns = normalizeGridColumnsForKendo(options.columns);
+      this.scheduleKendoGridStickyOffsetSync(this.$refs.grid, "main-list-grid-box");
     },
     columnReorderDro(options) {
       const info = this.changedLockedDeviceColumnsInfo(options.columns);
-      this.nativeDroColumns = info.columns;
-
-      this.$nextTick(() => {
-        this.columnStyleReset(
-          this.$refs.gridDro,
-          info.maxLockableIndex + 1
-        );
-      });
+      this.nativeDroColumns = normalizeDeviceGridColumns(info.columns);
+      this.scheduleDeviceGridStickyOffsetSync(this.$refs.gridDro, "dro-device-grid");
     },
     columnReorderDab(options) {
       const info = this.changedLockedDeviceColumnsInfo(options.columns);
-      this.nativeDabColumns = info.columns;
-
-      this.$nextTick(() => {
-        this.columnStyleReset(
-          this.$refs.gridDab,
-          info.maxLockableIndex + 1
-        );
-      });
+      this.nativeDabColumns = normalizeDeviceGridColumns(info.columns);
+      this.scheduleDeviceGridStickyOffsetSync(this.$refs.gridDab, "dab-device-grid");
     },
     columnReorderDad(options) {
       const info = this.changedLockedDeviceColumnsInfo(options.columns);
-      this.nativeDadColumns = info.columns;
-
-      this.$nextTick(() => {
-        this.columnStyleReset(
-          this.$refs.gridDad,
-          info.maxLockableIndex + 1
-        );
-      });
+      this.nativeDadColumns = normalizeDeviceGridColumns(info.columns);
+      this.scheduleDeviceGridStickyOffsetSync(this.$refs.gridDad, "dad-device-grid");
     },
     // mod FNSI-画面で外部連携APIを呼び出すさい-538 付 start
     // insertCoopJournal(coopCd, patId, ordNo) {
@@ -1403,16 +1644,32 @@ export default {
     },
     // #10338 2024.03.29 mod 外部連携パラメータを構築 TDC片口 end
     /**
+     * 装置グリッドの列ロック定義を再適用（非表示中のソート変更後に固定列が消える対策）
+     */
+    reapplyDeviceGridLockedColumns(columns) {
+      if (!Array.isArray(columns) || columns.length === 0) {
+        return [];
+      }
+      const cloned = columns.map((column) => ({ ...column }));
+      const info = this.changedLockedDeviceColumnsInfo(cloned);
+      return normalizeDeviceGridColumns(info.columns);
+    },
+    reapplyAllDeviceGridLockedColumns() {
+      this.nativeDroColumns = this.reapplyDeviceGridLockedColumns(this.nativeDroColumns);
+      this.nativeDabColumns = this.reapplyDeviceGridLockedColumns(this.nativeDabColumns);
+      this.nativeDadColumns = this.reapplyDeviceGridLockedColumns(this.nativeDadColumns);
+    },
+    /**
      * 列ロック情報を再設定（装置グリッド）
      */
     changedLockedDeviceColumnsInfo(columns) {
-      let maxLockableIndex = 0;
       columns = columns.sort((a, b) => a.orderIndex - b.orderIndex);
-      for (let cnt = 0; cnt < columns.length; cnt++) {
-        if (columns[cnt].locked && !columns[cnt].reorderable) {
-          maxLockableIndex = cnt;
-        }
-      }
+      const dummyIndex = columns.findIndex(({ field }) => field === "dummyColumn");
+      const maxLockableIndex = dummyIndex > 0
+        ? dummyIndex - 1
+        : columns.reduce((maxIndex, column, index) => {
+          return column.locked ? index : maxIndex;
+        }, 0);
       for (let cnt = 0; cnt < maxLockableIndex + 1; cnt++) {
         columns[cnt].locked = true;
         columns[cnt].className = "locked-td";
@@ -1427,80 +1684,244 @@ export default {
         columns: columns,
       };
     },
+    resolveStatusGridRoot(gridComponent) {
+      const host = gridComponent?.$el
+        || gridComponent?.element
+        || gridComponent?.element?.[0]
+        || gridComponent;
+      return findKendoGridRoot(host) || findKendoGridRoot(gridComponent) || (host && typeof host.querySelectorAll === "function" ? host : null);
+    },
+    resolveGridRootInWrapper(gridComponent, wrapperId) {
+      const wrapper = this.getScopedElementByIdSafe(wrapperId);
+      return findKendoGridRoot(wrapper) || this.resolveStatusGridRoot(gridComponent);
+    },
+    resolveDeviceGridRoot(gridComponent, wrapperId) {
+      return this.resolveGridRootInWrapper(gridComponent, wrapperId);
+    },
+    resolveMainGridRoot() {
+      return this.resolveGridRootInWrapper(this.$refs.grid, "main-list-grid-box");
+    },
+    setStickyColumnOffset(element, offset, isRtl) {
+      if (!element?.style || !Number.isFinite(offset)) {
+        return;
+      }
+      const offsetText = `${Math.max(0, Math.round(offset))}px`;
+      setStyle(element, isRtl
+        ? { right: offsetText, left: "" }
+        : { left: offsetText, right: "" });
+    },
+    getStatusListLockedCellBackground(element) {
+      if (!element) {
+        return "";
+      }
+      const ownerWindow = element.ownerDocument?.defaultView || window;
+      return ownerWindow
+        .getComputedStyle(element)
+        .getPropertyValue("--status-list-locked-bg-color")
+        .trim();
+    },
+    getStatusListLockedCellColor(element) {
+      if (!element?.style) {
+        return "";
+      }
+      if (!element.dataset.statusListLockedColor) {
+        const ownerWindow = element.ownerDocument?.defaultView || window;
+        const color = ownerWindow.getComputedStyle(element).color;
+        if (color) {
+          element.dataset.statusListLockedColor = color;
+        }
+      }
+      return element.dataset.statusListLockedColor || "";
+    },
+    applyStatusListLockedCellBackground(element) {
+      if (!element?.style) {
+        return;
+      }
+      const statusBackground = this.getStatusListLockedCellBackground(element);
+      if (statusBackground) {
+        const statusColor = this.getStatusListLockedCellColor(element);
+        element.style.setProperty("background-color", statusBackground, "important");
+        element.style.setProperty("background-image", "none", "important");
+        if (statusColor) {
+          element.style.setProperty("color", statusColor, "important");
+          element.style.setProperty("-webkit-text-fill-color", statusColor, "important");
+        }
+        return;
+      }
+      const row = element.closest?.("tr, .k-table-row");
+      const background = row?.classList?.contains("k-table-alt-row")
+        ? "var(--ntss-list-content-2nd-background-color)"
+        : "var(--master-maintenance-kgrid-item-background-color)";
+      element.style.setProperty("background-color", background, "important");
+      element.style.setProperty("background-image", "none", "important");
+      element.style.removeProperty("color");
+      element.style.removeProperty("-webkit-text-fill-color");
+    },
+    /**
+     * Kendo Vue Grid の列リサイズ後、固定列の sticky offset を実測幅から再同期する
+     */
+    syncKendoVueGridStickyOffsets(gridComponent, wrapperId) {
+      const gridRoot = wrapperId
+        ? this.resolveGridRootInWrapper(gridComponent, wrapperId)
+        : this.resolveStatusGridRoot(gridComponent);
+      if (!gridRoot || typeof gridRoot.querySelectorAll !== "function") {
+        return;
+      }
+      const headerCells = Array.from(gridRoot.querySelectorAll(
+        ".k-grid-header th.k-grid-header-sticky"
+      ));
+      
+      if (headerCells.length === 0) {
+        return;
+      }
+      const isRtl = gridRoot.ownerDocument?.defaultView
+        ?.getComputedStyle?.(gridRoot)?.direction === "rtl";
+      const offsets = [];
+      let offset = 0;
+      headerCells.forEach((cell, index) => {
+        offsets[index] = offset;
+        this.setStickyColumnOffset(cell, offset, isRtl);
+        offset += cell.getBoundingClientRect?.().width || cell.offsetWidth || 0;
+      });
+      findKendoGridMasterRows(gridRoot).forEach((row) => {
+        Array.from(row.querySelectorAll("td.k-grid-content-sticky")).forEach((cell, index) => {
+          cell.classList?.add("status-list-locked-cell");
+          this.applyStatusListLockedCellBackground(cell);
+          this.setStickyColumnOffset(cell, offsets[index], isRtl);
+        });
+      });
+      Array.from(gridRoot.querySelectorAll(".k-grid-footer-sticky")).forEach((cell, index) => {
+        this.setStickyColumnOffset(cell, offsets[index], isRtl);
+      });
+    },
+    scheduleKendoGridStickyOffsetSync(gridComponent, wrapperId) {
+      this.$nextTick(() => {
+        const apply = () => {
+          const gridRoot = this.resolveGridRootInWrapper(gridComponent, wrapperId);
+          if (!gridRoot) {
+            return;
+          }
+          repairKendoGridLockedColumnLayout(gridRoot);
+          this.syncKendoVueGridStickyOffsets(gridComponent, wrapperId);
+        };
+        apply();
+        requestAnimationFrame(() => apply());
+      });
+    },
+    scheduleDeviceGridStickyOffsetSync(gridComponent, wrapperId) {
+      this.scheduleKendoGridStickyOffsetSync(gridComponent, wrapperId);
+    },
     /**
      * 非固定列のスタイルを初期化
      */
     columnStyleReset(gridComponent, startIndex) {
-      // add 2022/9/15  dou start
-      if (gridComponent) {
-        // add 2022/9/15  dou end
-        const headers = gridComponent.$el.querySelectorAll("th.k-header");
-        // add #7190 2022/8/19 【デグレ】治療状況リストを開くまでが遅くなった。 dou start
-        if (!!headers && headers.length > 0) {
-          // add #7190 2022/8/19 【デグレ】治療状況リストを開くまでが遅くなった。 dou end
-          for (let cnt = 0; cnt < startIndex; cnt++) {
-            headers[cnt].style.position = "sticky";
-            headers[cnt].style.zIndex = "1";
-          }
-          for (let cnt = startIndex; cnt < headers.length; cnt++) {
-            headers[cnt].style = null;
-          }
-          const rows = gridComponent.$el.querySelectorAll(
-            ".k-grid-container .k-grid-table tr.k-master-row"
-          );
-          for (const row of rows) {
-            const tds = row.querySelectorAll("td");
-            for (let cnt = startIndex; cnt < tds.length; cnt++) {
-              tds[cnt].style = undefined;
-            }
-          }
-          // add #7190 2022/8/19 【デグレ】治療状況リストを開くまでが遅くなった。 dou start
+      const gridRoot = this.resolveStatusGridRoot(gridComponent);
+      if (!gridRoot || typeof gridRoot.querySelectorAll !== "function") {
+        return;
+      }
+      const headers = findKendoGridHeaderCells(gridRoot);
+      if (!!headers && headers.length > 0) {
+        for (let cnt = 0; cnt < startIndex; cnt++) {
+          headers[cnt].style.position = "sticky";
+          headers[cnt].style.zIndex = "1";
         }
-        // add #7190 2022/8/19 【デグレ】治療状況リストを開くまでが遅くなった。 dou end
+        for (let cnt = startIndex; cnt < headers.length; cnt++) {
+          headers[cnt].style = null;
+        }
+        const rows = findKendoGridMasterRows(gridRoot);
+        for (const row of rows) {
+          const tds = findKendoGridRowCells(row);
+          for (let cnt = startIndex; cnt < tds.length; cnt++) {
+            tds[cnt].style = undefined;
+          }
+        }
       }
     },
     /**
-     * 治療状況リストグリッドのセルのスタイルを必要に応じて再設定
+     * main-list-grid-box の実幅から gridWidth を再計算（windowWidth / splittedWidth 変更時と同じ）
+     * @returns {boolean} 幅を反映できたか
      */
-    columnStyleResetDcs() {
-      const gridElement = this.$refs.grid?.$el;
-      if (!gridElement) return;
-      const headers = Array.from(gridElement.querySelectorAll("th.k-header"));
-      if (!headers?.length) return;
-
-      // 列定義内のダミー列の位置から非固定列の先頭位置を求める
-      const startIndex = this.nativeDcsColumns.findIndex(({ field }) => field === "dummyColumn") + 1;
-
-      const setFixedStyle = element => setStyle(element, { position: "sticky", zIndex: "1" });
-      const setNormalStyle = element => setStyle(element, { position: "", zIndex: "", left: "", right: "", background: "" });
-
-      // ヘッダー行のstyle設定
-      // 固定列と非固定列に分けてstyleを設定
-      const fixedHeaders = headers.splice(0, startIndex);
-      fixedHeaders.forEach(element => setFixedStyle(element));
-      headers.forEach(element => {
-        if (element.style) {
-          setNormalStyle(element);
+    applyMainListGridWidthFromContainer() {
+      const ele = this.getScopedElementByIdSafe("main-list-grid-box");
+      if (!ele) {
+        return false;
+      }
+      const clientWidth = ele.clientWidth;
+      if (clientWidth <= 0) {
+        return false;
+      }
+      this.gridWidth = `${clientWidth - 1}px`;
+      return true;
+    },
+    /**
+     * 表示領域のサイズ確定後に Kendo Vue Grid の公開 API でレイアウトを再計算する
+     */
+    syncMainGridLayoutAfterDisplayChange() {
+      const applyLayout = () => {
+        if (this.splittedWidth != null) {
+          this.setClientWidth(this.splittedWidth);
         }
+        if (!this.applyMainListGridWidthFromContainer()) {
+          return false;
+        }
+        const grid = this.$refs.grid;
+        const gridRoot = this.resolveMainGridRoot();
+        if (typeof grid?.fitColumns === "function") {
+          grid.fitColumns();
+        } else if (grid?.resizeGrid) {
+          grid.resizeGrid();
+        } else if (grid?.resize) {
+          grid.resize();
+        }
+        if (gridRoot) {
+          repairKendoGridLockedColumnLayout(gridRoot);
+          this.syncKendoVueGridStickyOffsets(grid, "main-list-grid-box");
+        }
+        this.columnStyleResetDcs();
+        this.syncMainGridPage();
+        this.syncDeviceGridLayout();
+        return true;
+      };
+      this.$nextTick(() => {
+        if (!applyLayout()) {
+          this.$nextTick(() => applyLayout());
+          return;
+        }
+        requestAnimationFrame(() => {
+          applyLayout();
+        });
       });
-
-      // 非ヘッダー行のstyle設定
-      Array.from(gridElement.querySelectorAll(
-        ".k-grid-container .k-grid-table tr.k-master-row"
-      )).forEach(row => {
-        // 非固定列のstyleを設定
-        // （固定列から非固定列に移動した際に
-        // 　kgirdによって設定されるstyleのずれによる問題が起きるため）
-        let colCount = 0;
-        Array.from(row.querySelectorAll("td")).forEach(element => {
-          // 非ヘッダー行のtd要素はスクロールアウトした部分が
-          // colSpanが2以上のダミーtd要素に置き換えられるようなので
-          // それを考慮して非固定列の処理対象判定を行う
-          const colSpan = (typeof element.colSpan === "number") ? element.colSpan : 1;
-          if (colSpan === 1 && colCount >= startIndex && element.style) {
-            setNormalStyle(element);
+    },
+    /**
+     * 機械室装置グリッドを表示状態に応じて Kendo Vue Grid の公開 API で再計算する
+     */
+    syncDeviceGridLayout() {
+      const applyLayout = () => {
+        const deviceGrids = [
+          { grid: this.$refs.gridDro, visible: this.RODeviceStatus, wrapperId: "dro-device-grid" },
+          { grid: this.$refs.gridDab, visible: this.DABDeviceStatus, wrapperId: "dab-device-grid" },
+          { grid: this.$refs.gridDad, visible: this.DADDeviceStatus, wrapperId: "dad-device-grid" },
+        ];
+        deviceGrids.forEach(({ grid, visible, wrapperId }) => {
+          if (!visible || !grid) {
+            return;
           }
-          colCount += colSpan;
+          const gridRoot = this.resolveDeviceGridRoot(grid, wrapperId);
+          if (typeof grid.fitColumns === "function") {
+            grid.fitColumns();
+          } else if (grid.resizeGrid) {
+            grid.resizeGrid();
+          } else if (grid.resize) {
+            grid.resize();
+          }
+          repairKendoGridLockedColumnLayout(gridRoot);
+          this.syncKendoVueGridStickyOffsets(grid, wrapperId);
+        });
+      };
+      this.$nextTick(() => {
+        applyLayout();
+        requestAnimationFrame(() => {
+          applyLayout();
         });
       });
     },
@@ -1510,11 +1931,12 @@ export default {
     modifySortIndicator() {
       // 処理対象のグリッド内のソート表示の矢印部分のspan要素を抽出
       const targetSpanList = [
-        this.$refs.grid?.$el,
-        this.$refs.gridDro?.$el,
-        this.$refs.gridDad?.$el,
-        this.$refs.gridDab?.$el,
-      ].reduce((list, gridElement) => {
+        this.$refs.grid,
+        this.$refs.gridDro,
+        this.$refs.gridDad,
+        this.$refs.gridDab,
+      ].reduce((list, gridRef) => {
+        const gridElement = this.resolveStatusGridRoot(gridRef);
         if (!gridElement?.querySelectorAll) return list;
         const ascSpanList = Array.from(gridElement.querySelectorAll("span.k-i-sort-asc-sm"));
         const descSpanList = Array.from(gridElement.querySelectorAll("span.k-i-sort-desc-sm"));
@@ -1558,6 +1980,55 @@ export default {
         }
       });
     },
+    /**
+     * 治療状況リストグリッドのセルのスタイルを必要に応じて再設定
+     */
+    columnStyleResetDcs() {
+      const gridElement = this.resolveMainGridRoot();
+      if (!gridElement || typeof gridElement.querySelectorAll !== "function") return;
+      const headers = findKendoGridHeaderCells(gridElement);
+      if (!headers?.length) return;
+
+      // 列定義内のダミー列の位置から非固定列の先頭位置を求める
+      const startIndex = this.nativeDcsColumns.findIndex(({ field }) => field === "dummyColumn") + 1;
+
+      const setFixedStyle = element => setStyle(element, { position: "sticky", zIndex: "1" });
+      const setNormalStyle = element => setStyle(element, { position: "", zIndex: "", left: "", right: "", background: "" });
+
+      // ヘッダー行のstyle設定
+      // 固定列と非固定列に分けてstyleを設定
+      const fixedHeaders = headers.splice(0, startIndex);
+      fixedHeaders.forEach(element => setFixedStyle(element));
+      headers.forEach(element => {
+        if (element.style) {
+          setNormalStyle(element);
+        }
+      });
+
+      // 非ヘッダー行のstyle設定
+      findKendoGridMasterRows(gridElement).forEach(row => {
+        // 非固定列のstyleを設定
+        // （固定列から非固定列に移動した際に
+        // 　kgirdによって設定されるstyleのずれによる問題が起きるため）
+        let colCount = 0;
+        findKendoGridRowCells(row).forEach(element => {
+          // 非ヘッダー行のtd要素はスクロールアウトした部分が
+          // colSpanが2以上のダミーtd要素に置き換えられるようなので
+          // それを考慮して非固定列の処理対象判定を行う
+          const colSpan = (typeof element.colSpan === "number") ? element.colSpan : 1;
+          if (colSpan === 1 && colCount < startIndex) {
+            element.classList?.add("status-list-locked-cell");
+            this.applyStatusListLockedCellBackground(element);
+          } else {
+            element.classList?.remove("status-list-locked-cell");
+          }
+          if (colSpan === 1 && colCount >= startIndex && element.style) {
+            setNormalStyle(element);
+          }
+          colCount += colSpan;
+        });
+      });
+    },
     sortDcsChangeHandler(e) {
       this.sortDcs = e.sort;
     },
@@ -1573,9 +2044,9 @@ export default {
     fetchTreatDeviceSet(isCreateColumn) {
       const color = { color: "white", background: "gray" };
       // 初期化
-      let droTarget = document.getElementById("dro-device");
-      let dadTarget = document.getElementById("dad-device");
-      let dabTarget = document.getElementById("dab-device");
+      let droTarget = this.getScopedElementByIdSafe("dro-device");
+      let dadTarget = this.getScopedElementByIdSafe("dad-device");
+      let dabTarget = this.getScopedElementByIdSafe("dab-device");
       let dadDataArray = this.getDeviceDataSource.dad;
       let dabDataArray = this.getDeviceDataSource.dab;
       let droDataArray = this.getDeviceDataSource.dro;
@@ -1586,7 +2057,7 @@ export default {
 
       if (dadDataArray.length <= 0) {
         this.dadColorStyle = color;
-        dadTarget.disabled = true;
+        if (dadTarget != null) dadTarget.disabled = true;
         // del #6389 透析液調製装置を隠しても再描画のタイミングで再表示される dou start
         // } else if (this.dispDad) {
         //   this.DADDeviceStatus = true;
@@ -1594,7 +2065,7 @@ export default {
       }
       if (dabDataArray.length <= 0) {
         this.dabColorStyle = color;
-        dabTarget.disabled = true;
+        if (dabTarget != null) dabTarget.disabled = true;
         // del #6389 透析液調製装置を隠しても再描画のタイミングで再表示される dou start
         // } else if (this.dispDab) {
         //   this.DABDeviceStatus = true;
@@ -1602,7 +2073,7 @@ export default {
       }
       if (droDataArray.length <= 0) {
         this.roColorStyle = color;
-        droTarget.disabled = true;
+        if (droTarget != null) droTarget.disabled = true;
         // del #6389 透析液調製装置を隠しても再描画のタイミングで再表示される dou start
         // } else if (this.dispDro) {
         //   this.RODeviceStatus = true;
@@ -1610,6 +2081,7 @@ export default {
       }
       this.$nextTick(() => {
         this.deviceColorStyle();
+        this.syncDeviceGridLayout();
       });
       // add #6389 透析液調製装置を隠しても再描画のタイミングで再表示される dou start
       // mod #8458「透析液調製装置を隠しても再表示される」について、対応する。 dengshen start
@@ -1698,6 +2170,9 @@ export default {
       this.sortDro = [];
       this.sortDab = [];
       this.sortDad = [];
+      // 非表示中にデータ再描画すると固定列レイアウトが壊れるため列定義を再適用
+      this.reapplyAllDeviceGridLockedColumns();
+      this.$nextTick(() => this.syncDeviceGridLayout());
     },    
     deviceColorStyle() {
       const colorAlarmEnabled = { color: "black", background: "#f5a4a4" };
@@ -1842,12 +2317,14 @@ export default {
     addInputAssist() {
       // iOS/PWA環境でスピナーをタップすると編集が終了してしまう現象の対策
       if (this.isIOS) {
-        if (document.getElementsByClassName("k-numerictextbox").length !== 0) {
-          let spinnerObj = document
-            .getElementsByClassName("k-numerictextbox")[0]
-            .getElementsByClassName("k-select")[0];
+        const numericTextboxes = this.getScopedClassElementsSafe("k-numerictextbox");
+        if (numericTextboxes.length !== 0) {
+          let spinnerObj = numericTextboxes[0]
+            ?.getElementsByClassName?.("k-select")?.[0];
           // 編集が終了するとオブジェクトが削除されるため、removeEvent処理は不要
-          spinnerObj.ontouchend = (event) => event.stopPropagation();
+          if (spinnerObj) {
+            spinnerObj.ontouchend = (event) => event.stopPropagation();
+          }
         }
       }
     },
@@ -1873,7 +2350,7 @@ export default {
         this.updateTreatmentPatList(this.StatusListToPatList);
         // 機能コード設定、選択 ord_no を保持
         this.setOrdNoForSideBarRecord(selOrdNo);
-        this.setSrcFuncName(this.$router.currentRoute.name);
+        this.setSrcFuncName(this.$route.name);
 
         // ordNoセット
         this.sendConditionSetSelectOrdNo({
@@ -1888,7 +2365,7 @@ export default {
         this.updateTreatmentPatList(this.StatusListToPatList);
         // 機能コード設定、選択 ord_no を保持
         this.setOrdNoForSideBarRecord(selOrdNo);
-        this.setSrcFuncName(this.$router.currentRoute.name);
+        this.setSrcFuncName(this.$route.name);
 
         // 治療中以降の患者の場合
         this.setSelectedPatHeader(selPatId).then(() => {
@@ -1903,8 +2380,9 @@ export default {
             // 治療記録画面へ遷移
             this.$router.push({ name: "treatment-record" });
             //add FNSI修正-7967 遷移すると、患者一覧で使われるbeforeSelectPatIdを状況リスト画面でクリックされる患者で設定する ljx start
-            this.$parent.$parent.$parent.$parent.$parent.$parent.$children[0].$children[1].$children[0].$data.beforeSelectPatId =
-              selPatId;
+            // Vue2 では 6 段の $parent + $children を辿って PatientSearchSidebar の
+            // beforeSelectPatId を直接書き換えていたが、Vue3 では EventBus 経由で同期する。
+            EventBus.$emit("setPatientSearchSidebarBeforeSelectPatId", selPatId);
             //add FNSI修正-7967 遷移すると、患者一覧で使われるbeforeSelectPatIdを状況リスト画面でクリックされる患者で設定する ljx end
           });
         });
@@ -1923,7 +2401,7 @@ export default {
 
       if (selPatId === null && selOrdNo !== null) {
         // add FNSI-外部連携api呼び出対応 陳 start
-        window.document.cookie = "flg@@list; path=/";
+        setScopedCookie("flg@@list; path=/", this.$el || this);
         // add FNSI-外部連携api呼び出対応 陳 end
         // ？？？患者の場合
         // 名前割り当て画面へ遷移
@@ -1948,7 +2426,7 @@ export default {
         this.updateTreatmentPatList(this.StatusListToPatList);
         // 機能コード設定、選択 ord_no を保持
         this.setOrdNoForSideBarRecord(selOrdNo);
-        this.setSrcFuncName(this.$router.currentRoute.name);
+        this.setSrcFuncName(this.$route.name);
 
         // ordNoセット
         this.sendConditionSetSelectOrdNo({
@@ -1969,7 +2447,7 @@ export default {
         this.updateTreatmentPatList(this.StatusListToPatList);
         // 機能コード設定、選択 ord_no を保持
         this.setOrdNoForSideBarRecord(selOrdNo);
-        this.setSrcFuncName(this.$router.currentRoute.name);
+        this.setSrcFuncName(this.$route.name);
 
         this.setSelectedPatHeader(selPatId).then(() => {
           // ordNoセット
@@ -1983,8 +2461,9 @@ export default {
             // 治療記録画面へ遷移
             this.$router.push({ name: "treatment-record" });
             //add FNSI修正-7967 遷移すると、患者一覧で使われるbeforeSelectPatIdを状況リスト画面でクリックされる患者で設定する ljx start
-            this.$parent.$parent.$parent.$parent.$parent.$parent.$children[0].$children[1].$children[0].$data.beforeSelectPatId =
-              selPatId;
+            // Vue2 では 6 段の $parent + $children を辿って PatientSearchSidebar の
+            // beforeSelectPatId を直接書き換えていたが、Vue3 では EventBus 経由で同期する。
+            EventBus.$emit("setPatientSearchSidebarBeforeSelectPatId", selPatId);
             //add FNSI修正-7967 遷移すると、患者一覧で使われるbeforeSelectPatIdを状況リスト画面でクリックされる患者で設定する ljx end
           });
         });
@@ -2008,8 +2487,7 @@ export default {
       this.setStatusList(rowItem);
       // add #9371 治療状況リストにおける警報・報知の動作不良 dou start
       this.changeOccurDate(
-        moment(this.getStatusList.treatDate).format("YYYY-MM-DD")
-      );
+        dayjs(this.getStatusList.treatDate).format("YYYY-MM-DD"));
       // add #9371 治療状況リストにおける警報・報知の動作不良 dou end
       this.setIsGoAlarmPage(true);
     },
@@ -2024,8 +2502,7 @@ export default {
       this.setStatusList(rowItem);
       // add #9371 治療状況リストにおける警報・報知の動作不良 dou start
       this.changeOccurDate(
-        moment(this.getStatusList.treatDate).format("YYYY-MM-DD")
-      );
+        dayjs(this.getStatusList.treatDate).format("YYYY-MM-DD"));
       // add #9371 治療状況リストにおける警報・報知の動作不良 dou end
       this.setIsGoAlarmPage(true);
     },
@@ -2040,8 +2517,7 @@ export default {
       this.setStatusList(rowItem);
       // add #9371 治療状況リストにおける警報・報知の動作不良 dou start
       this.changeOccurDate(
-        moment(this.getStatusList.treatDate).format("YYYY-MM-DD")
-      );
+        dayjs(this.getStatusList.treatDate).format("YYYY-MM-DD"));
       // add #9371 治療状況リストにおける警報・報知の動作不良 dou end
       this.setIsGoAlarmPage(true);
     },
@@ -2078,7 +2554,7 @@ export default {
       await this.setHeaderInfo(this.getSelectMachine());
 
       // 装置記録表示設定をstoreに設定
-      const today = moment().format("YYYY/MM/DD");
+      const today = dayjs().format("YYYY/MM/DD");
       const motionRecord = {
         motionRecordNo: 0, // 自己診断データの検索にはmotionRecordNoを使わないため、任意の数値を指定(nullだとエラーになる)
         dataType: 4, // 4:自己診断 で固定
@@ -2092,12 +2568,12 @@ export default {
       this.dcsDataSource.forEach((d) => {
         if (d.inEdit) {
           if (e.dataItem !== d) {
-            this.$set(d, "inEdit", undefined);
+            ((d)["inEdit"] = undefined);
           }
         }
       });
       this.setEditingField(undefined);
-      this.dcsDataSource = this.dcsDataSource;
+      this.dcsDataSource = [...this.dcsDataSource];
     },
     cellClick: function (e) {
       if (e.dataItem.inEdit && e.field === this.getEditingField) {
@@ -2105,11 +2581,12 @@ export default {
       }
       this.setEditingField(e.field);
 
-      this.$set(e.dataItem, "inEdit", e.field);
-      this.dcsDataSource = this.dcsDataSource;
+      ((e.dataItem)["inEdit"] = e.field);
+      this.dcsDataSource = [...this.dcsDataSource];
     },
 
     async onSaveChanged(e, dataItem, field, newValue) {
+      this.captureMainGridScrollPosition();
       if (e) {
         e.preventDefault(); // これ以上イベント伝播しない
       }
@@ -2119,34 +2596,34 @@ export default {
         key: field,
         newValue: newValue,
       });
-      // apiをコールして値を保存
-      await this.updateTreatmentStatus(param)
-        .then((response) => {
-          this.updateResponse = response.data;
-          this.isSorted = false;
-        })
-        .catch((error) => {
-          //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
-          getErrorMessage(
-            "StatusListMainComponent.vue",
-            "onSaveChanged",
-            error
-          );
-          //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
-          if (error.response.status === 400) {
-            this.$ons.notification.alert({
-              // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-              // title: "更新失敗",
-              title: DIALOG_MESSAGES["00300005"].title,
-              // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
-              message: error.response.data.errorMessage,
-            });
-          }
+      try {
+        const response = await this.updateTreatmentStatus(param);
+        this.updateResponse = response.data;
+        this.isSorted = false;
+        // 保存後は一覧を再取得して反映（ローディング表示は共通ローダーで統一）
+        await this.executeWithLoadingScreen(async () => {
+          await this.setGridData(0);
         });
-      this.editEnd();
-      /* modify by chamaojia 2022-11-26 [6746] loadingが必要  --start */
-      this.setGridData(1);
-      /* modify by chamaojia 2022-11-26 [6746] loadingが必要  --end */
+      } catch (error) {
+        //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
+        getErrorMessage(
+          "StatusListMainComponent.vue",
+          "onSaveChanged",
+          error
+        );
+        //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
+        if (error.response?.status === 400) {
+          this.$ons.notification.alert({
+            // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
+            // title: "更新失敗",
+            title: DIALOG_MESSAGES["00300005"].title,
+            // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
+            message: error.response.data.errorMessage,
+          });
+        }
+      } finally {
+        this.editEnd();
+      }
     },
 
     // 透析液調製装置一覧グリッド内セルクリック時
@@ -2214,10 +2691,12 @@ export default {
     },
     moveAlarmNoticeList() {
       // add #7955 2022/11/26 恐らく画面更新の問題で、画面遷移したときは、警報装置一覧ボタンが無効状態だが、放置すると押せるようになっている。 dou start
-      if (this.$router.currentRoute.name == "status-list-alarm") {
-        this.$router.push({ name: "status-list" });
+      if (this.$route.name == "status-list-alarm") {
         this.setIsAlarmDisplay(false);
-        this.deviceColorStyle();
+        this.$router.push({ name: "status-list" }).then(() => {
+          this.deviceColorStyle();
+          this.syncMainGridLayoutAfterDisplayChange();
+        });
         return;
       }
       // add #7955 2022/11/26 恐らく画面更新の問題で、画面遷移したときは、警報装置一覧ボタンが無効状態だが、放置すると押せるようになっている。 dou end
@@ -2228,7 +2707,7 @@ export default {
       this.setStatusFlg(0);
       // add FNSI-警報・報知追加 徐 end
       // add #9371 治療状況リストにおける警報・報知の動作不良 dou start
-      this.changeOccurDate(moment().format("YYYY-MM-DD"));
+      this.changeOccurDate(dayjs().format("YYYY-MM-DD"));
       // add #9371 治療状況リストにおける警報・報知の動作不良 dou end
       this.deviceColorStyle();
       this.popoverVisible = false;
@@ -2277,11 +2756,82 @@ export default {
           }
         });
     },
+    getStatusScaleGridContentEl() {
+      const statusScaleArea = this.$el?.querySelector?.(".status-scale-area") || null;
+      return findKendoGridContent(this.$refs.grid?.element || statusScaleArea || this.resolveStatusGridRoot(this.$refs.grid) || this.$el);
+    },
+    getMainGridScrollTarget() {
+      return (
+        this.resolveMainGridRoot()
+        || this.resolveStatusGridRoot(this.$refs.grid)
+        || this.$refs.grid?.element
+        || null
+      );
+    },
+    captureMainGridScrollPosition() {
+      const gridRoot = this.getMainGridScrollTarget();
+      if (!gridRoot) {
+        return;
+      }
+      const position = captureKendoGridScrollPosition(gridRoot, { virtual: true });
+      this.scrollPositionTop = position.top;
+      this.scrollPositionLeft = position.left;
+      this.lastScrollTop = position.top;
+      this.lastScrollLeft = position.left;
+      this.savedMainGridSkip = Number.isFinite(Number(this.skip)) ? Number(this.skip) : 0;
+      this.savedMainGridTake = Number.isFinite(Number(this.take)) && Number(this.take) > 0
+        ? Number(this.take)
+        : 30;
+      this.shouldRestoreMainGridScroll = true;
+    },
+    restoreMainGridScrollPosition() {
+      if (!this.shouldRestoreMainGridScroll) {
+        return;
+      }
+      const gridRoot = this.getMainGridScrollTarget();
+      if (!gridRoot) {
+        this.shouldRestoreMainGridScroll = false;
+        return;
+      }
+      const position = {
+        top: this.scrollPositionTop,
+        left: this.scrollPositionLeft
+      };
+      const apply = () => {
+        if (Number.isFinite(this.savedMainGridSkip)) {
+          this.skip = this.savedMainGridSkip;
+        }
+        if (Number.isFinite(this.savedMainGridTake) && this.savedMainGridTake > 0) {
+          this.take = this.savedMainGridTake;
+        }
+        restoreKendoGridScrollPosition(gridRoot, position, { virtual: true });
+        const headerWrap = findKendoGridHeaderWrap(gridRoot);
+        if (headerWrap && Number.isFinite(position.left)) {
+          headerWrap.scrollLeft = position.left;
+        }
+      };
+      const finishRestore = () => {
+        this.shouldRestoreMainGridScroll = false;
+        this.lastScrollTop = 0;
+        this.lastScrollLeft = 0;
+      };
+      this.$nextTick(() => {
+        apply();
+        requestAnimationFrame(() => {
+          apply();
+          requestAnimationFrame(() => {
+            apply();
+            setTimeout(() => {
+              apply();
+              finishRestore();
+            }, 100);
+          });
+        });
+      });
+    },
     /* modify by chamaojia 2022-11-26 [6746] 自動更新ロード判定の追加  --start */
     statusUpdate(autoRefreshFlag = false) {
-      const grid = document.querySelector(".status-scale-area .k-grid-content");
-      this.scrollPositionTop = grid ? grid.scrollTop : 0;
-      this.scrollPositionLeft = grid ? grid.scrollLeft : 0;
+      this.captureMainGridScrollPosition();
       if (autoRefreshFlag) {
         this.setGridData(0);
       } else {
@@ -2291,9 +2841,7 @@ export default {
     /* modify by chamaojia 2022-11-26 [6746] 自動更新ロード判定の追加  --end */
     // #10337 2024.04.12 add 終了を待機可能な画面リロード処理 TDC片口 start
     async statusUpdateAsync() {
-      const grid = document.querySelector(".status-scale-area .k-grid-content");
-      this.scrollPositionTop = grid ? grid.scrollTop : 0;
-      this.scrollPositionLeft = grid ? grid.scrollLeft : 0;
+      this.captureMainGridScrollPosition();
       await this.setGridData(0);
     },
     // #10337 2024.04.12 add 終了を待機可能な画面リロード処理 TDC片口 end
@@ -2392,8 +2940,9 @@ export default {
       this.setCreateColumn(createColumn);
       // add FNSI-実績確定修正 徐 end
 
+      try {
       // 抽出日付（本日）
-      let todayDate = moment().format("YYYYMMDD");
+      let todayDate = dayjs().format("YYYYMMDD");
       let layoutNo = conditionFilterValue.colItemLayoutNo;
       let layoutInfo = this.defaultColumns;
       if (layoutNo == "") {
@@ -2438,16 +2987,17 @@ export default {
                 error
               );
               //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
-              if (error.response.status === 400) {
+              if (error.response?.status === 400) {
                 // this.$ons.notification.alert({
                 //   title: "取得失敗",
                 //   message: "治療状況リストデータ取得失敗"
                 // });
               }
+              return null;
             }
           );
           // 複数回のリクエストは最後のレスポンスのみを取得します
-          if (key == this.keys) {
+          if (key == this.keys && response?.data) {
             let colItemCd = layoutNo;
             if (colItemCd === "") {
               colItemCd = -1;
@@ -2460,18 +3010,19 @@ export default {
             // grid列dataSource作成（治療状況リストDCS、機械室DAB、DAD、DOR）
             let dataSet = response.data;
             // 治療状況一覧情報をセットする
-            this.setTreatSettingList({ dataSet: dataSet }).then(() => {
-              // グリッドのフィルタ設定
-              this.setGridFilter();
-              // データソース構築
-              this.buildDcsDataSource(isCreateColumn);
-              // 機械室の表示
-              this.fetchTreatDeviceSet(isCreateColumn);
+            await this.setTreatSettingList({ dataSet: dataSet });
+            // グリッドのフィルタ設定
+            this.setGridFilter();
+            // データソース構築
+            this.buildDcsDataSource(isCreateColumn);
+            // 機械室の表示
+            this.fetchTreatDeviceSet(isCreateColumn);
 
-              this.setDataSource(dataSet);
+            this.setDataSource(dataSet);
 
-              this.deviceColorStyle();
-            });
+            this.deviceColorStyle();
+            await this.$nextTick();
+            await new Promise((resolve) => requestAnimationFrame(resolve));
           }
           // mod #7947 2022-09-15 【デグレ】????患者の削除後にしばらくすると復活する dou end
         } else {
@@ -2494,19 +3045,20 @@ export default {
         };
 
         // 治療状況一覧情報をセットする
-        this.setTreatSettingList({ dataSet: dataSet }).then(() => {
-          // グリッドのフィルタ設定
-          this.setGridFilter();
-          // データソース構築
-          this.buildDcsDataSource(isCreateColumn);
+        await this.setTreatSettingList({ dataSet: dataSet });
+        // グリッドのフィルタ設定
+        this.setGridFilter();
+        // データソース構築
+        this.buildDcsDataSource(isCreateColumn);
 
-          // 機械室の表示
-          this.fetchTreatDeviceSet(isCreateColumn);
-        });
+        // 機械室の表示
+        this.fetchTreatDeviceSet(isCreateColumn);
       }
-      // No.6746 After the Api callback, reset to get the time of calling the Api ztc start
-      this.startPolling();
-      // No.6746 After the Api callback, reset to get the time of calling the Api ztc end
+      } finally {
+        // No.6746 APIコールバック後に、API呼び出し時刻の取得処理を再設定する ztc start
+        this.startPolling();
+        // No.6746 APIコールバック後に、API呼び出し時刻の取得処理を再設定する ztc end
+      }
     },
     // #10338 2024.03.29 mod 共通ローダー表示タイミング修正 TDC片口 start
     /**
@@ -2547,13 +3099,13 @@ export default {
         for (let j = 0; j < mediArray.length; j++) {
           let tempList = resData.filter((e) => e.ordNo == mediArray[j].ordNo);
           if (tempList.length > 0) {
-            /* modify by chamaojia 2024-04-02 [10196] add null judgment processing  --start */
+            /* modify by chamaojia 2024-04-02 [10196] null判定処理を追加 --start */
             // let mediInfos = JSON.parse(tempList[0].rstMediInfo);
             let mediInfos =
               tempList[0].rstMediInfo == null
                 ? null
                 : JSON.parse(tempList[0].rstMediInfo);
-            /* modify by chamaojia 2024-04-02 [10196] add null judgment processing  --end */
+            /* modify by chamaojia 2024-04-02 [10196] null判定処理を追加 --end */
             if (mediInfos != null) {
               let tempMediInfos = mediInfos.filter((el) => el.effect_flg == 0);
               if (tempMediInfos.length > 0) {
@@ -2665,25 +3217,7 @@ export default {
         }
         if (isTrue > 0) {
           this.diaView = true;
-          let alertDialog = document.getElementsByClassName("alert-dialog");
-          alertDialog[0].style.width = "auto";
-          alertDialog[0].style.maxWidth = "750px";
-          let element = document.getElementsByClassName("alert-dialog-content");
-          element[0].childNodes[0].style.maxHeight = "240px";
-          element[0].childNodes[0].style.overflowY = "auto";
-          element[0].childNodes[0].style.overflowX = "hidden";
-          if (this.buttonConfig == 1) {
-            alertDialog[0].style.width = "28em";
-          }
-          if (this.buttonConfig == 2) {
-            let buttonElem = document.getElementsByClassName(
-              "alert-dialog-button"
-            );
-            buttonElem[3]?.classList?.add("alert-dialog-button--rowfooter");
-            buttonElem[3]?.classList?.add(
-              "alert-dialog-button--rowfooter--rowfooter"
-            );
-          }
+          this.applyFirstDialogLayout();
         }
       }
     },
@@ -3096,7 +3630,7 @@ export default {
         }
       } else if (data.status == 400) {
         //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
-        getErrorMessage("StatusListMainComponent.vue", "startPolling", error);
+        getErrorMessage("StatusListMainComponent.vue", "startPolling", { response: data });
         //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
         this.refreshInterval = 20000;
       }
@@ -3245,7 +3779,7 @@ export default {
     },
     refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
-      if (this.selfScreenName === this.$router.currentRoute.name) {
+      if (this.selfScreenName === this.$route.name) {
         // FNSI-add redmine5168 徐 start
         this.setLoadingScreenVisible(true);
         // FNSI-add redmine5168 徐 end
@@ -3286,10 +3820,11 @@ export default {
     buildDcsDataSource(isCreateColumn) {
       let dataList = [];
 
-      /* modify by chamaojia 2024-03-28 [10303、10304] data processing has been completed in the backend --start */
+      /* modify by chamaojia 2024-03-28 [10303、10304] データ処理はバックエンド側で完了済み --start */
       if (this.getDeviceDataSource && this.getDeviceDataSource.dcs) {
         dataList = this.getDeviceDataSource.dcs;
       }
+      /* modify by chamaojia 2024-03-28 [10303、10304] データ処理はバックエンド側で完了済み --end */
 
       // null情報除去
       let dSrc = dataList.filter((data) => data !== null);
@@ -3330,14 +3865,16 @@ export default {
       }
 
       this.dcsDataSource = dSrc;
-      
+      this.totalCount = dSrc.length;
       // ソート用field設定
       // sys_monitor_item ソート用field設定
       commonFunctions.setSortFieldSysMonitorItem(this.treatAllColumn.dcsTreatSetCol, this.dcsDataSource, this.getSysMonitorItem);
       // mst_treatment_status_disp_itemの個別ソート対応必要な項目のソート用field設定
       commonFunctions.setSortFieldMstDispItem(this.dcsDataSource, this.treatAllColumn, this.mstPersonalUser);
+      this.syncMainGridPageAfterDomUpdate();
 
       this.setEditingField(undefined);
+      this.restoreMainGridScrollPosition();
     },
     changeView(mode) {
       // ポーリング停止
@@ -3352,7 +3889,7 @@ export default {
     },
     initData(){
       // 画面名称取得
-      this.selfScreenName = this.$router.currentRoute.name;
+      this.selfScreenName = this.$route.name;
 
       // スタッフマスタ情報取得
       this.getMstPersonalUser();
@@ -3404,10 +3941,8 @@ export default {
         } else {
           patGroups = "すべて";
         }
-        // eslint-disable-next-line vue/no-side-effects-in-computed-properties
-        this.bedCdListString = JSON.parse(sessionStorage.getItem('roomBedGroupNameStatusList')) || [];
-        // eslint-disable-next-line vue/no-side-effects-in-computed-properties
-        this.kurGroupName = JSON.parse(sessionStorage.getItem('kurGroupNameStatusList')) || [];
+        this.bedCdListString = JSON.parse(getScopedSessionStorage(this.$el || this).getItem('roomBedGroupNameStatusList')) || [];
+        this.kurGroupName = JSON.parse(getScopedSessionStorage(this.$el || this).getItem('kurGroupNameStatusList')) || [];
         // add #11285 機能帳票の印刷情報対応② 高 end
         // 機能一致
 
@@ -3424,9 +3959,9 @@ export default {
           //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
           functionCd:"01101",
           //add 5984 機能帳票でパラメータが正しく渡されていない 吉 end
-          date: moment(Date.now()).format("YYYY/MM/DD"),
-          fromDate: moment(Date.now()).format("YYYY/MM/DD"),
-          toDate: moment(Date.now()).format("YYYY/MM/DD"),
+          date: dayjs(Date.now()).format("YYYY/MM/DD"),
+          fromDate: dayjs(Date.now()).format("YYYY/MM/DD"),
+          toDate: dayjs(Date.now()).format("YYYY/MM/DD"),
           //add FNSI redmine 5984 劉祥霖 start
           machineNos: this.nativeDataSourceDcs.map(
             ({ machineNo }) => machineNo
@@ -3447,6 +3982,8 @@ export default {
     // add FNSI-ソート順の修正 付 start
     sortNullData(paramData) {
       const isDcs = paramData.datalistType === MACHINE_MODEL.DCS;
+      paramData.datalist = Array.isArray(paramData.datalist) ? paramData.datalist : [];
+      paramData.fieldNameObj = Array.isArray(paramData.fieldNameObj) ? paramData.fieldNameObj : [];
       
       // ソートキー変換必要な可変fieldを取得
       const hospPatIdField = this.treatAllColumn.dcsTreatSetCol.find(item => item.data_class === TREATMENT_ITEM_CD.HOSP_PAT_ID)?.field; // 2: 患者ID
@@ -3485,7 +4022,7 @@ export default {
         const sortFieldNameObj = paramData.fieldNameObj.map(({ field, dir }) => {
           // newDataListの1行目を参照
           const firstRow = newDataList[0] || {};
-          const finalField = firstRow.hasOwnProperty(`${field}_sort`)
+          const finalField = Object.prototype.hasOwnProperty.call(firstRow, `${field}_sort`)
             ? `${field}_sort` // "_sort" フィールドが存在する場合はそれを使用
             : (SORT_KEY_MAP.get(field) || field); // "_sort" フィールドが存在しない場合はマップで変換後のソートキーを使用
           return { field: finalField, dir };
@@ -3559,7 +4096,7 @@ export default {
       if (fieldAlarm) {
         // 警報・報知の場合、その値をmachine_statusのビット値を元に取得した優先度で書き換える
         newDataList.forEach(item => {
-          if (item.hasOwnProperty(fieldAlarm)) {
+          if (Object.prototype.hasOwnProperty.call(item, fieldAlarm)) {
             item[fieldAlarm] = getPriority(item);
           }
         });
@@ -3591,14 +4128,14 @@ export default {
     },
     setBlinkAlarm(blinkColor) {
       const bgColor = blinkColor === "dark" ? "#FF6666" : "#FFDDDD";
-      const targetElems = document.getElementsByClassName("blink-alarm");
+      const targetElems = this.getScopedClassElementsSafe("blink-alarm");
       for (let elem of targetElems) {
         elem.style.backgroundColor = bgColor;
       }
     },
     setBlinkCaution(blinkColor) {
       const bgColor = blinkColor === "dark" ? "#FFF682" : "#FFFDDD";
-      const targetElems = document.getElementsByClassName("blink-caution");
+      const targetElems = this.getScopedClassElementsSafe("blink-caution");
       for (let elem of targetElems) {
         elem.style.backgroundColor = bgColor;
       }
@@ -3606,45 +4143,78 @@ export default {
   },
   watch: {
     showSidebarFlg() {
-      const clientWidth = document.getElementById("main-list-grid-box").clientWidth;
-      this.gridWidth = clientWidth - 1 + 'px';
+      this.applyMainListGridWidthFromContainer();
     },
     windowWidth: {
       handler() {
-        this.$nextTick(() => {
-          const ele = document.getElementById("main-list-grid-box");
-          if (ele) {
-            const clientWidth = ele.clientWidth;
-            this.gridWidth = clientWidth - 1 + 'px';
-          }
-        });
+        this.syncMainGridLayoutAfterDisplayChange();
       },
       immediate: true
     },
-    nativeDataSourceDcs(val) {
-      this.gridDataItem = val.slice(this.skip, this.skip + this.take);
+    nativeDataSourceDcs: {
+      handler() {
+        this.syncMainGridPage();
+      },
+      immediate: true
     },
     getIsShowMain() {
       this.setGridFilter();
       this.changeView(2);
     },
-    splittedWidth(value) {
-      // 表示幅設定
-      this.setClientWidth(value);
-      const clientWidth = document.getElementById("main-list-grid-box").clientWidth;
-      this.gridWidth = clientWidth - 1 + 'px';
+    splittedWidth() {
+      this.syncMainGridLayoutAfterDisplayChange();
     },
-    dcsColumns(value) {
-      this.nativeDcsColumns = value;
+    dcsColumns: {
+      handler(value) {
+        this.nativeDcsColumns = Array.isArray(value) && value.length ? value : [dummyColumnProps];
+        this.$nextTick(() => this.syncMainGridPage());
+      },
+      immediate: true
     },
-    droColumns(value) {
-      this.nativeDroColumns = value;
+    droColumns: {
+      handler(value) {
+        this.nativeDroColumns = normalizeDeviceGridColumns(value);
+        if (this.RODeviceStatus) {
+          this.syncDeviceGridLayout();
+        }
+      },
+      immediate: true
     },
-    dabColumns(value) {
-      this.nativeDabColumns = value;
+    dabColumns: {
+      handler(value) {
+        this.nativeDabColumns = normalizeDeviceGridColumns(value);
+        if (this.DABDeviceStatus) {
+          this.syncDeviceGridLayout();
+        }
+      },
+      immediate: true
     },
-    dadColumns(value) {
-      this.nativeDadColumns = value;
+    dadColumns: {
+      handler(value) {
+        this.nativeDadColumns = normalizeDeviceGridColumns(value);
+        if (this.DADDeviceStatus) {
+          this.syncDeviceGridLayout();
+        }
+      },
+      immediate: true
+    },
+    RODeviceStatus(visible) {
+      if (visible) {
+        this.nativeDroColumns = this.reapplyDeviceGridLockedColumns(this.nativeDroColumns);
+      }
+      this.$nextTick(() => this.syncMainGridLayoutAfterDisplayChange());
+    },
+    DABDeviceStatus(visible) {
+      if (visible) {
+        this.nativeDabColumns = this.reapplyDeviceGridLockedColumns(this.nativeDabColumns);
+      }
+      this.$nextTick(() => this.syncMainGridLayoutAfterDisplayChange());
+    },
+    DADDeviceStatus(visible) {
+      if (visible) {
+        this.nativeDadColumns = this.reapplyDeviceGridLockedColumns(this.nativeDadColumns);
+      }
+      this.$nextTick(() => this.syncMainGridLayoutAfterDisplayChange());
     },
     // add FNSI-画面リロードの修正 徐 start
     /**
@@ -3701,16 +4271,14 @@ export default {
     },
     "$route.path": {
       handler() {
-        let href = window.location.href.split("/");
+        const scopedLocation = getScopedWindow(this.$el || this)?.location || { href: "" };
+        let href = scopedLocation.href.split("/");
         if (href.slice(-1) == "alarm") {
           this.setIsAlarmDisplay(true);
         } else if (href.slice(-1) == "main") {
           this.setIsAlarmDisplay(false);
-          // 透析装置エリアの横幅設定
-          const clientWidth = document.getElementById("main-list-grid-box").clientWidth;
-          this.gridWidth = clientWidth - 1 + 'px';
-          // ボタンのスタイル設定
           this.deviceColorStyle();
+          this.syncMainGridLayoutAfterDisplayChange();
         }
       },
     },
@@ -3776,7 +4344,7 @@ export default {
     EventBus.$on("deviceColorStyle", this.deviceColorStyle);
 
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
     if (ua.match(/Android/)) {
       this.isAndroid = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -3810,17 +4378,21 @@ export default {
         this.showIndicationsDiffModal();
       });
     }
-    
-    window.addEventListener("beforeprint", this.handleBeforePrint);
-    window.addEventListener("afterprint", this.handleAfterPrint);
+    this.syncMainGridPageAfterDomUpdate();
+    const scopedWindow = getScopedWindow(this.$el || this);
+    scopedWindow?.addEventListener?.("beforeprint", this.handleBeforePrint);
+    scopedWindow?.addEventListener?.("afterprint", this.handleAfterPrint);
   },
   updated() {
-    // 治療状況リストのkendo-grid-native内で作り直されたセルのDOM要素のstyleを再設定する
+    // 治療状況リストの Kendo Vue Grid 内で再生成されたセル DOM の style を再設定する
     this.columnStyleResetDcs();
     // kendo-girdの列ヘッダセルのソート表示を列名の左に移動する
     this.modifySortIndicator();
   },
-  beforeDestroy() {
+  beforeUnmount() {
+    const scopedWindow = getScopedWindow(this.$el || this);
+    scopedWindow?.removeEventListener?.("beforeprint", this.handleBeforePrint);
+    scopedWindow?.removeEventListener?.("afterprint", this.handleAfterPrint);
     // add FNSI-画面リロードの修正 徐 start
     this.removeWatchTopics(this.notifyTopic);
     // add FNSI-画面リロードの修正 徐 end
@@ -3854,9 +4426,6 @@ export default {
     EventBus.$off("deviceColorStyle", this.deviceColorStyle);
     // add FNSI-画面パフォーマンス対応 付 end
     EventBus.$off("initSignal", this.initData);
-    
-    window.removeEventListener("beforeprint", this.handleBeforePrint);
-    window.removeEventListener("afterprint", this.handleAfterPrint);
 
     // polling用setIntervalのクリア
     this.endPolling();
@@ -3955,28 +4524,42 @@ const isSpanNode = node => (
 );
 </script>
 <style scoped>
-::v-deep .k-grid-header .k-grid-header-sticky,
-::v-deep .k-grid-header .k-grid-header-sticky.k-sorted {
+.status-list-page :deep(.k-grid-header-sticky),
+.status-list-page :deep(.k-grid-header-sticky.k-sorted),
+.status-list-page :deep(.k-grid-header-locked),
+.status-list-page :deep(.k-grid-header-locked .k-header),
+.status-list-page :deep(.k-grid-header-wrap .k-header.k-sorted) {
   color: #fff !important;
 }
-/** 機械室装置の行ヘッダ */
-.status-list-page >>> .locked-machine-td {
-  border-color: var(--master-maintenance-kgrid-border-color);
-  color: var(--master-maintenance-kgrid-body-color);
-  background-color: var(
-    --master-maintenance-kgrid-item-background-color
-  ) !important;
+.status-list-page :deep(.k-grid-header-wrap .k-header.k-sorted .k-sort-icon),
+.status-list-page :deep(.k-grid-header-wrap .k-header.k-sorted .k-sort-order),
+.status-list-page :deep(.k-grid-header-locked .k-header.k-sorted .k-sort-icon),
+.status-list-page :deep(.k-grid-header-locked .k-header.k-sorted .k-sort-order) {
+  color: #00b0f0 !important;
 }
-.status-list-page .k-alt >>> .locked-machine-td {
-  border-color: var(--master-maintenance-kgrid-border-color);
-  color: var(--master-maintenance-kgrid-body-color);
-  background-color: var(
-    --master-maintenance-kgrid-item-background-color
-  ) !important;
+.status-list-page :deep(.k-grid-header-wrap .k-header.k-sorted .k-sort-icon svg),
+.status-list-page :deep(.k-grid-header-locked .k-header.k-sorted .k-sort-icon svg) {
+  fill: #00b0f0 !important;
 }
-
-.k-grid-content {
+.status-list-page :deep(.k-grid-content) {
   width: 100%;
+}
+.status-list-page :deep(.k-grid-header-wrap),
+.status-list-page :deep(.k-grid-content),
+.status-list-page :deep(.k-grid-container) {
+  width: 100%;
+}
+.status-list-page :deep(.k-grid-content table),
+.status-list-page :deep(.k-grid-header table) {
+  table-layout: fixed;
+}
+/** 機械室装置の行ヘッダ（工程状態色 process-state-td-* は下記の状態セル定義を優先） */
+.status-list-page :deep(.locked-machine-td:not([class*="process-state-td-"])) {
+  border-color: var(--master-maintenance-kgrid-border-color);
+  color: var(--master-maintenance-kgrid-body-color);
+  background-color: var(
+    --master-maintenance-kgrid-item-background-color
+  ) !important;
 }
 .grid-title {
   margin: 0px;
@@ -3986,17 +4569,21 @@ const isSpanNode = node => (
   color: var(--treatment-status-font-color);
 }
 #main-list-grid-box {
-  flex-grow: 1;
-  height: 100%;
+  flex: 1 1 0;
+  min-height: 0;
   width: 100%;
   overflow: hidden;
   display: block;
   box-sizing: border-box;
 }
-#main-list-grid-box >>> .k-grid {
+#main-list-grid-box :deep(.k-grid),
+#main-list-grid-box :deep(.k-grid-container) {
   height: 100% !important;
 }
-.no-scrollbar-area-header >>> .k-grid-header {
+#main-list-grid-box :deep(.k-grid-content) {
+  overflow-y: auto;
+}
+.no-scrollbar-area-header :deep(.k-grid-header) {
   padding: 0 !important;
 }
 .device-list-grid {
@@ -4021,14 +4608,26 @@ const isSpanNode = node => (
   overflow-y: scroll;
   margin-bottom: 3px;
 }
-#device-grid-area >>> .k-grid {
+#device-grid-area :deep(.k-grid) {
   height: auto !important;
 }
-#device-grid-area >>> .k-grid-header {
+#device-grid-area :deep(.k-grid-header) {
   padding: 0 !important;
 }
-#device-grid-area >>> .k-grid-content {
+#device-grid-area :deep(.k-grid-content) {
   overflow-y: visible;
+}
+#device-grid-area :deep(.k-grid-container),
+#device-grid-area :deep(.k-grid-content) {
+  height: auto !important;
+}
+#device-grid-area :deep(.k-grid-content) {
+  overflow-y: visible !important;
+}
+#device-grid-area :deep(.k-grid-content-locked) {
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
 }
 .button-font {
   font-size: 1em;
@@ -4106,108 +4705,115 @@ const isSpanNode = node => (
 }
 /** 状態セル */
 /** 透析準備 */
-.status-list-page >>> .dialysis-state-td-0,
-.status-list-page >>> .process-state-td-01,
-.status-list-page >>> .process-state-td-07,
-.status-list-page >>> .process-state-td-08,
-.status-list-page >>> .process-state-td-09,
-.status-list-page >>> .process-state-td-20,
-.status-list-page >>> .process-state-td-29,
-.status-list-page >>> .process-state-td-40,
-.status-list-page >>> .process-state-td-45,
-.status-list-page >>> .process-state-td-61,
-.status-list-page >>> .process-state-td-A0,
-.status-list-page >>> .process-state-td-A5,
-.status-list-page >>> .process-state-td-A6,
-.status-list-page >>> .process-state-td-A7,
-.status-list-page >>> .process-state-td-AE,
-.status-list-page >>> .process-state-td-B0,
-.status-list-page >>> .process-state-td-B8,
-.status-list-page >>> .process-state-td-BC {
+.status-list-page :deep(.dialysis-state-td-0),
+.status-list-page :deep(.process-state-td-01),
+.status-list-page :deep(.process-state-td-07),
+.status-list-page :deep(.process-state-td-08),
+.status-list-page :deep(.process-state-td-09),
+.status-list-page :deep(.process-state-td-20),
+.status-list-page :deep(.process-state-td-29),
+.status-list-page :deep(.process-state-td-40),
+.status-list-page :deep(.process-state-td-45),
+.status-list-page :deep(.process-state-td-61),
+.status-list-page :deep(.process-state-td-A0),
+.status-list-page :deep(.process-state-td-A5),
+.status-list-page :deep(.process-state-td-A6),
+.status-list-page :deep(.process-state-td-A7),
+.status-list-page :deep(.process-state-td-AE),
+.status-list-page :deep(.process-state-td-B0),
+.status-list-page :deep(.process-state-td-B8),
+.status-list-page :deep(.process-state-td-BC) {
+  --status-list-locked-bg-color: #FFFFFF;
   background-color: #FFFFFF !important;
   color: black;
 }
 
 /** 洗浄・消毒 */
-.status-list-page >>> .process-state-td-02,
-.status-list-page >>> .process-state-td-03,
-.status-list-page >>> .process-state-td-04,
-.status-list-page >>> .process-state-td-05,
-.status-list-page >>> .process-state-td-06,
-.status-list-page >>> .process-state-td-23,
-.status-list-page >>> .process-state-td-24,
-.status-list-page >>> .process-state-td-25,
-.status-list-page >>> .process-state-td-26,
-.status-list-page >>> .process-state-td-27,
-.status-list-page >>> .process-state-td-28,
-.status-list-page >>> .process-state-td-46,
-.status-list-page >>> .process-state-td-47,
-.status-list-page >>> .process-state-td-62,
-.status-list-page >>> .process-state-td-63,
-.status-list-page >>> .process-state-td-64,
-.status-list-page >>> .process-state-td-65,
-.status-list-page >>> .process-state-td-A8,
-.status-list-page >>> .process-state-td-A9,
-.status-list-page >>> .process-state-td-AA,
-.status-list-page >>> .process-state-td-AB,
-.status-list-page >>> .process-state-td-AC,
-.status-list-page >>> .process-state-td-AD,
-.status-list-page >>> .process-state-td-B1,
-.status-list-page >>> .process-state-td-B2,
-.status-list-page >>> .process-state-td-B6,
-.status-list-page >>> .process-state-td-B7,
-.status-list-page >>> .process-state-td-B9,
-.status-list-page >>> .process-state-td-BA,
-.status-list-page >>> .process-state-td-BB  {
+.status-list-page :deep(.process-state-td-02),
+.status-list-page :deep(.process-state-td-03),
+.status-list-page :deep(.process-state-td-04),
+.status-list-page :deep(.process-state-td-05),
+.status-list-page :deep(.process-state-td-06),
+.status-list-page :deep(.process-state-td-23),
+.status-list-page :deep(.process-state-td-24),
+.status-list-page :deep(.process-state-td-25),
+.status-list-page :deep(.process-state-td-26),
+.status-list-page :deep(.process-state-td-27),
+.status-list-page :deep(.process-state-td-28),
+.status-list-page :deep(.process-state-td-46),
+.status-list-page :deep(.process-state-td-47),
+.status-list-page :deep(.process-state-td-62),
+.status-list-page :deep(.process-state-td-63),
+.status-list-page :deep(.process-state-td-64),
+.status-list-page :deep(.process-state-td-65),
+.status-list-page :deep(.process-state-td-A8),
+.status-list-page :deep(.process-state-td-A9),
+.status-list-page :deep(.process-state-td-AA),
+.status-list-page :deep(.process-state-td-AB),
+.status-list-page :deep(.process-state-td-AC),
+.status-list-page :deep(.process-state-td-AD),
+.status-list-page :deep(.process-state-td-B1),
+.status-list-page :deep(.process-state-td-B2),
+.status-list-page :deep(.process-state-td-B6),
+.status-list-page :deep(.process-state-td-B7),
+.status-list-page :deep(.process-state-td-B9),
+.status-list-page :deep(.process-state-td-BA),
+.status-list-page :deep(.process-state-td-BB)  {
+  --status-list-locked-bg-color: #00B0F0;
   background-color: #00B0F0 !important;
   color: black;
 }
 /** 条件送信済み */
-.status-list-page >>> .dialysis-state-td-1,
-.status-list-page >>> .dialysis-state-td-2 {
+.status-list-page :deep(.dialysis-state-td-1),
+.status-list-page :deep(.dialysis-state-td-2) {
+  --status-list-locked-bg-color: #42CB92;
   background-color: #42CB92 !important;
 }
 /** 治療中 */
-.status-list-page >>> .dialysis-state-td-3,
-.status-list-page >>> .process-state-td-10,
-.status-list-page >>> .process-state-td-11,
-.status-list-page >>> .process-state-td-21,
-.status-list-page >>> .process-state-td-22,
-.status-list-page >>> .process-state-td-41,
-.status-list-page >>> .process-state-td-42,
-.status-list-page >>> .process-state-td-43,
-.status-list-page >>> .process-state-td-44,
-.status-list-page >>> .process-state-td-60,
-.status-list-page >>> .process-state-td-A1,
-.status-list-page >>> .process-state-td-A2,
-.status-list-page >>> .process-state-td-A3,
-.status-list-page >>> .process-state-td-A4,
-.status-list-page >>> .process-state-td-B3,
-.status-list-page >>> .process-state-td-B4,
-.status-list-page >>> .process-state-td-B5 {
+.status-list-page :deep(.dialysis-state-td-3),
+.status-list-page :deep(.process-state-td-10),
+.status-list-page :deep(.process-state-td-11),
+.status-list-page :deep(.process-state-td-21),
+.status-list-page :deep(.process-state-td-22),
+.status-list-page :deep(.process-state-td-41),
+.status-list-page :deep(.process-state-td-42),
+.status-list-page :deep(.process-state-td-43),
+.status-list-page :deep(.process-state-td-44),
+.status-list-page :deep(.process-state-td-60),
+.status-list-page :deep(.process-state-td-A1),
+.status-list-page :deep(.process-state-td-A2),
+.status-list-page :deep(.process-state-td-A3),
+.status-list-page :deep(.process-state-td-A4),
+.status-list-page :deep(.process-state-td-B3),
+.status-list-page :deep(.process-state-td-B4),
+.status-list-page :deep(.process-state-td-B5) {
+  --status-list-locked-bg-color: #2CA06F;
   background-color: #2CA06F !important;
   color: #fff !important;
 }
 
 /** 通信エラー */
-.status-list-page >>> .process-state-td-99 {
+.status-list-page :deep(.process-state-td-99) {
+  --status-list-locked-bg-color: #FF6699;
   background-color: #FF6699 !important;
   color: black;
 }
 
 /** 治療終了 */
-.status-list-page >>> .dialysis-state-td-4,
-.status-list-page >>> .dialysis-state-td-5 {
+.status-list-page :deep(.dialysis-state-td-4),
+.status-list-page :deep(.dialysis-state-td-5) {
+  --status-list-locked-bg-color: #557769;
   color: #fff !important;
   background-color: #557769 !important;
 }
 /** 実績確定 */
-.status-list-page >>> .dialysis-state-td-6 {
+.status-list-page :deep(.dialysis-state-td-6) {
+  --status-list-locked-bg-color: rgb(0, 26, 0);
   color: #fff !important;
   background-color: rgb(0, 26, 0) !important;
 }
 /** 最新愁訴/処置 */
-.status-list-page >>> .comp-treat-td {
+.status-list-page :deep(.comp-treat-td) {
   white-space: pre-wrap;
 }
 
@@ -4245,101 +4851,206 @@ const isSpanNode = node => (
   margin-top: 0.2em;
 }
 
-.status-list-page >>> .change-fontcolor-td-1 {
+.status-list-page :deep(.change-fontcolor-td-1) {
   color: #FFA500 !important;
 }
 /* add FNSI-項目表示制御の修正 徐 start */
-.status-list-page >>> .un-use {
+.status-list-page :deep(.un-use) {
   background-color: rgb(174, 170, 170) !important;
 }
 /* add FNSI-項目表示制御の修正 徐 start */
 
-.status-list-page >>> .k-grid-header {
-  /* padding: 0 !important; */
-  background: var(--ntss-list-header-background-color);
-  background-image: linear-gradient(
-    rgba(255, 255, 255, 0.3) 0%,
-    transparent 50%,
-    transparent 50%,
-    rgba(0, 0, 0, 0.1) 100%
-  );
-  /* add #6716 横スクロールするとレイアウトが崩れる xiaosonglei start*/
-  padding-right: 1.5rem;
-  /* add #6716 横スクロールするとレイアウトが崩れる xiaosonglei end*/
-}
-
-.status-list-page >>> .k-header {
-  border: solid var(--ntss-list-border-color);
-  border-width: 0 1px 1px 0;
-}
-
 /* 回診状態_強調表示：オレンジ */
-.status-list-page >>> .round-state-td-highlighting-1 {
+.status-list-page :deep(.round-state-td-highlighting-1) {
   color: #FFA500 !important;
 }
 
 /* 回診状態_強調表示：赤 */
-.status-list-page >>> .round-state-td-highlighting-2 {
+.status-list-page :deep(.round-state-td-highlighting-2) {
   color: #FF3366 !important;
 }
 
-/* 印刷用の警報報知アイコン非表示 */
-.status-list-page >>> .static-icon {
+ons-alert-dialog :deep(.button_config_1) {
+  width: 28em !important;
+}
+
+ons-alert-dialog :deep(.button_config_2) {
+  width: auto !important;
+  max-width: 750px !important;
+}
+
+ons-alert-dialog :deep(.alert-list-content) {
+  overflow: hidden auto !important;
+  max-height: 240px !important;
+}
+
+/* 画面表示では静的アイコンを非表示（印刷時のみ static を使用） */
+.status-list-page :deep(.static-icon) {
   display: none;
 }
+
+:deep(.k-grid-norecords-template) {
+  display: none;
+}
+
+#device-grid-area :deep(.k-grid-header-wrap th.k-table-th.k-header:not(.k-grid-header-sticky)) {
+  position: relative !important;
+  z-index: 0 !important;
+}
+
+#main-list-grid-box :deep(.k-grid-container td) {
+  white-space: pre-wrap !important;
+}
+
+/* ソートアイコン（SVG・順序番号）を列タイトル（例: 患者名）の前に表示 */
+.status-list-page :deep(.k-grid-header .k-link) {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.15em;
+}
+.status-list-page :deep(.k-grid-header .k-link > .k-column-title) {
+  order: 2;
+  margin-left: 5px !important;
+}
+.status-list-page :deep(.k-grid-header .k-link > .k-sort-icon) {
+  order: 1;
+  vertical-align: text-top !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+:deep(.k-grid-container){
+  margin-left: -1px !important;
+}
+
+:deep(.k-sort-order) {
+  margin-top: 4px !important;
+}
+
 @media print {
-  /** スクロールコンテナ */
-  #device-grid-area >>> .k-grid-header-wrap,
-  #device-grid-area >>> .k-grid-content,
-  #main-list-grid-box >>> .k-grid-header-wrap,
-  #main-list-grid-box >>> .k-grid-content {
-    overflow: hidden !important;
+  .status-list-page.conf-body,
+  .status-list-page #flex-area,
+  .status-list-page #device-grid-area,
+  .status-list-page #main-list-grid-box {
     height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    flex: none !important;
+  }
+
+  /** スクロールコンテナ */
+  #device-grid-area :deep(.k-grid-header-wrap),
+  #device-grid-area :deep(.k-grid-content),
+  #main-list-grid-box :deep(.k-grid-header-wrap),
+  #main-list-grid-box :deep(.k-grid-content),
+  #main-list-grid-box :deep(.k-grid-content-locked) {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+  #device-grid-area :deep(.k-grid),
+  #main-list-grid-box :deep(.k-grid),
+  #device-grid-area :deep(.k-grid-container),
+  #main-list-grid-box :deep(.k-grid-container) {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
   }
   /** ヘッダのズレ原因を除去 */
-  #device-grid-area >>> .k-grid-header,
-  #main-list-grid-box >>> .k-grid-header {
+  #device-grid-area :deep(.k-grid-header),
+  #main-list-grid-box :deep(.k-grid-header) {
     padding-right: 0 !important;
     position: relative;
   }
   /** スクロール要素の幅 */
-  #device-grid-area >>> .k-grid,
-  #main-list-grid-box >>> .k-grid {
-    width: 100vw !important;
+  #device-grid-area :deep(.k-grid-container),
+  #main-list-grid-box :deep(.k-grid-container) {
+    width: 100% !important;
     display: block !important;
   }
-  #device-grid-area >>> table,
-  #main-list-grid-box >>> table {
-    display: inline-table;
+  #device-grid-area :deep(.k-grid-header),
+  #device-grid-area :deep(.k-grid-content),
+  #main-list-grid-box :deep(.k-grid-header),
+  #main-list-grid-box :deep(.k-grid-content) {
+    display: block !important;
+    width: 100% !important;
+  }
+  #device-grid-area :deep(table),
+  #main-list-grid-box :deep(table) {
+    display: table !important;
+    width: 100% !important;
   }
   /** 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
-  #device-grid-area >>> table.scroll-rightmost,
-  #main-list-grid-box >>> table.scroll-rightmost {
+  #device-grid-area :deep(table.scroll-rightmost),
+  #main-list-grid-box :deep(table.scroll-rightmost) {
     position: relative !important;
     float: right;
   }
-  
-  /** 透析装置 凡例 位置調整 */
-  #main-list-grid-box >>> .k-grid-content > .k-height-container > div  {
+
+  /** 仮想スクロール占位のみ除去（行は table-wrap 側で高さを持つ） */
+  #main-list-grid-box :deep(.k-grid-content > .k-height-container) {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  #main-list-grid-box :deep(.k-grid-content > .k-height-container > div) {
     height: 0 !important;
+    min-height: 0 !important;
   }
+  #main-list-grid-box :deep(.k-grid-table-wrap) {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /** 凡例は表の後に自然配置 */
   #area_usage_guide {
-    position: relative;
-    top: 3.2rem;
+    position: static !important;
+    top: auto !important;
+    page-break-before: avoid;
   }
-  
+
   /** 警報報知アイコンを静的画像に差替え */
-  .status-list-page >>> .gif-icon {
+  .status-list-page :deep(.gif-icon) {
     display: none;
   }
-  .status-list-page >>> .static-icon {
+  .status-list-page :deep(.static-icon) {
     display: inline-block;
   }
 }
-/* 横向き印刷 */
-@media print and (orientation: landscape) {
-  #area_usage_guide {
-    top: 2.5rem;
+:deep(.k-grid-header){
+  background-image: linear-gradient(rgba(255, 255, 255, .3) 0%, transparent 50%, transparent 50%, rgba(0, 0, 0, .1) 100%);
+  background-color: #333333;
+}
+:deep(.k-grid-header-wrap){
+  border-right: 1px solid #fff;
+}
+.status-list-page :deep(.k-grid .k-table-th){
+  border-right: 0px !important;
+}
+
+/***#9846 start */
+.status-list-page :deep(.k-grid .k-table-th){
+  border-right: 1px solid var(--ntss-list-border-color)!important;
+}
+:deep(.k-grid .k-column-resizer::before){
+  background-color:transparent!important;
+}
+/***#9846 start */
+
+</style>
+
+<style>
+@media print {
+  /** 治療状況リスト：パンくず以上（画面ヘッダ）は印刷に含める。table レイアウト崩れ回避のみ */
+  body:has(.status-list-page) #main-id {
+    display: inline-block !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+  body:has(.status-list-page) .content-box > .header {
+    display: block !important;
   }
 }
 </style>

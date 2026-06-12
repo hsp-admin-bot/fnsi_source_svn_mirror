@@ -147,6 +147,14 @@ public class LinkageDefinitionCreaetionServiceImpl implements LinkageDefinitionC
     return msLayouts;
   }
 
+  @Override
+  public List<MstCoopLayout> selectSourceMstCoopLayouts(MstCoopLayout mstCoopLayout) throws Exception {
+    String coopVersion = StringUtils.isEmpty(mstCoopLayout.getCoopVersion()) ? "" : mstCoopLayout.getCoopVersion();
+    String coopCd = StringUtils.isEmpty(mstCoopLayout.getCoopCd()) ? "" : mstCoopLayout.getCoopCd();
+    String direction = StringUtils.isEmpty(mstCoopLayout.getDirection()) ? "" : mstCoopLayout.getDirection();
+    return mstCoopLayoutDao.selectSource(coopVersion, coopCd, direction);
+  }
+
   /**
    * MstCoopLayoutをCoopNameで選択します
    */
@@ -165,6 +173,11 @@ public class LinkageDefinitionCreaetionServiceImpl implements LinkageDefinitionC
    */
   public List<String> selectNewestMstCoopLayoutCtlNoByFacilityCd(String facilityCd){
     return mstCoopLayoutDao.selectNewestCtlNoByFacilityCd(facilityCd);
+  }
+
+  @Override
+  public List<MstCoopLayout> selectCurrentMstCoopLayoutsByFacilityCd(String facilityCd) {
+    return mstCoopLayoutDao.selectCurrentByFacilityCd(facilityCd);
   }
 
   /**
@@ -226,6 +239,11 @@ public class LinkageDefinitionCreaetionServiceImpl implements LinkageDefinitionC
     return mstCoopLayoutDetailDao.selectNewestCtlNoByFacilityCd(facilityCd);
   }
 
+  @Override
+  public List<MstCoopLayoutDetail> selectCurrentMstCoopLayoutDetailsByFacilityCd(String facilityCd) {
+    return mstCoopLayoutDetailDao.selectCurrentByFacilityCd(facilityCd);
+  }
+
   /**
    * 管理番号による変換レイアウト詳細マスタ情報を取得.
    * @param ctlNo 管理番号
@@ -233,6 +251,14 @@ public class LinkageDefinitionCreaetionServiceImpl implements LinkageDefinitionC
    */
   public MstCoopLayoutDetail selectMstCoopLayoutDetailByCtlNo(Long ctlNo){
     return mstCoopLayoutDetailDao.selectMstCoopLayoutDetailByCtlNo(ctlNo);
+  }
+
+  @Override
+  public List<MstCoopLayoutDetail> selectSourceMstCoopLayoutDetails(MstCoopLayoutDetail mstCoopLayoutDetail) throws Exception {
+    String coopVersion = StringUtils.isEmpty(mstCoopLayoutDetail.getCoopVersion()) ? "" : mstCoopLayoutDetail.getCoopVersion();
+    String coopCd = StringUtils.isEmpty(mstCoopLayoutDetail.getCoopCd()) ? "" : mstCoopLayoutDetail.getCoopCd();
+    String direction = StringUtils.isEmpty(mstCoopLayoutDetail.getDirection()) ? "" : mstCoopLayoutDetail.getDirection();
+    return mstCoopLayoutDetailDao.selectSource(coopVersion, coopCd, direction);
   }
 
   /**
@@ -279,6 +305,11 @@ public class LinkageDefinitionCreaetionServiceImpl implements LinkageDefinitionC
     return mstCoopFilenameDao.selectNewestCtlNoByFacilityCd(facilityCd);
   }
 
+  @Override
+  public List<MstCoopFilename> selectCurrentMstCoopFilenamesByFacilityCd(String facilityCd) {
+    return mstCoopFilenameDao.selectCurrentByFacilityCd(facilityCd);
+  }
+
   /**
    * 管理番号による連携ファイル名を取得.
    * @param ctlNo 管理番号
@@ -286,6 +317,13 @@ public class LinkageDefinitionCreaetionServiceImpl implements LinkageDefinitionC
    */
   public MstCoopFilename selectMstCoopFilenameByCtlNo(Long ctlNo){
     return mstCoopFilenameDao.selectMstCoopFilenameByCtlNo(ctlNo);
+  }
+
+  @Override
+  public List<MstCoopFilename> selectSourceMstCoopFilenames(MstCoopFilename mstCoopFilename) throws Exception {
+    String coopVersion = StringUtils.isEmpty(mstCoopFilename.getCoopVersion()) ? "" : mstCoopFilename.getCoopVersion();
+    String coopCd = StringUtils.isEmpty(mstCoopFilename.getCoopCd()) ? "" : mstCoopFilename.getCoopCd();
+    return mstCoopFilenameDao.selectSource(coopVersion, coopCd);
   }
 
   /**
@@ -362,6 +400,19 @@ public class LinkageDefinitionCreaetionServiceImpl implements LinkageDefinitionC
    */
   public List<String> selectNewestMstCoopDistributeCtlNoByFacilityCd(String facilityCd){
     return mstCoopDistributeDao.selectNewestCtlNoByFacilityCd(facilityCd);
+  }
+
+  @Override
+  public List<MstCoopDistribute> selectCurrentMstCoopDistributesByFacilityCd(String facilityCd) {
+    return mstCoopDistributeDao.selectCurrentByFacilityCd(facilityCd);
+  }
+
+  @Override
+  public List<MstCoopDistribute> selectSourceMstCoopDistributes(MstCoopDistribute mstCoopDistribute) throws Exception {
+    String coopVersion = StringUtils.isEmpty(mstCoopDistribute.getCoopVersion()) ? "" : mstCoopDistribute.getCoopVersion();
+    String coopCd = StringUtils.isEmpty(mstCoopDistribute.getCoopCd()) ? "" : mstCoopDistribute.getCoopCd();
+    String direction = StringUtils.isEmpty(mstCoopDistribute.getDirection()) ? "" : mstCoopDistribute.getDirection();
+    return mstCoopDistributeDao.selectSource(coopVersion, coopCd, direction);
   }
 
   /**
@@ -1012,6 +1063,13 @@ public class LinkageDefinitionCreaetionServiceImpl implements LinkageDefinitionC
     return mstCoopApilinkDao.selectByFacility(facilityCd);
   }
 
+  @Override
+  public List<MstCoopApilink> selectSourceMstCoopApilinks(MstCoopApilink mstCoopApilink) throws Exception{
+    String coopVersion = StringUtils.isEmpty(mstCoopApilink.getCoopVersion()) ? "" : mstCoopApilink.getCoopVersion();
+    String coopCd = StringUtils.isEmpty(mstCoopApilink.getCoopCd()) ? "" : mstCoopApilink.getCoopCd();
+    return mstCoopApilinkDao.selectSource(coopVersion, coopCd);
+  }
+
   /**
    * 連携API関連付けマスタEntityを保存する
    * @param mstCoopApilink 連携API関連付けマスタEntity
@@ -1023,9 +1081,11 @@ public class LinkageDefinitionCreaetionServiceImpl implements LinkageDefinitionC
     Boolean ret = true;
 // add 2023-01-04 bug #7304 異なる連携の機能を組み合わせて使用する方法 孫 start
     String coopVersion = StringUtils.isEmpty(mstCoopApilink.getCoopVersion())?"":mstCoopApilink.getCoopVersion();
+    String isDel = StringUtils.isEmpty(mstCoopApilink.getIsDel()) ? FlagType.FLAG_OFF : mstCoopApilink.getIsDel();
 // add 2023-01-04 bug #7304 異なる連携の機能を組み合わせて使用する方法 孫 end
     if (mstCoopApilinkCheck == null) {
       mstCoopApilink.setUserId(userId.toString());
+      mstCoopApilink.setIsDel(isDel);
       mstCoopApilinkDao.insert(mstCoopApilink);
     } else {
 // add 2023-01-04 bug #7304 異なる連携の機能を組み合わせて使用する方法 孫 start
@@ -1038,7 +1098,7 @@ public class LinkageDefinitionCreaetionServiceImpl implements LinkageDefinitionC
       mstCoopApilinkCheck.setAfterApiStatus(mstCoopApilink.getAfterApiStatus());
       mstCoopApilinkCheck.setApiType(mstCoopApilink.getApiType());
       mstCoopApilinkCheck.setSqlSetting(mstCoopApilink.getSqlSetting());
-      mstCoopApilinkCheck.setIsDel(FlagType.FLAG_OFF);
+      mstCoopApilinkCheck.setIsDel(isDel);
 
       mstCoopApilinkDao.update(mstCoopApilinkCheck);
     }

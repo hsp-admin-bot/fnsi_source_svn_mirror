@@ -23,6 +23,7 @@ import {
 } from "@/constants/deviceEdgeManageDefine";
 // @ts-ignore
 import { sendRequestFetchDetailGatheringDownload } from "@/apis/operation-viewer.js";
+import { getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
 
 /**
  * デバイスエッジアップデータ操作画面のStore
@@ -61,7 +62,6 @@ export default {
     },
     /**
      * デバイスエッジ状態取得、主にバージョン情報のため
-     * @param {Object} param0
      */
     fetchDeviceEdgeState({ state }) {
       const request = {
@@ -70,12 +70,11 @@ export default {
       };
       return sendRequestDeviceEdgeState(request);
     },
-    /** 施設内全デバイスエッジ状態取得
-    * @param {Object} param0
-    * バケット情報取得
-    */
+    /**
+     * 施設内全デバイスエッジ状態取得
+     */
     fetchDeviceEdgeStateAll() {
-     return sendRequestDeviceEdgeStateAll();
+      return sendRequestDeviceEdgeStateAll();
     },
     /**
      * バケット情報取得
@@ -272,7 +271,8 @@ export default {
       // ファイルアップロード
       const params = new FormData();
       params.append("file", payload.confFile);
-      params.append("filePath", window.btoa(payload.filePath));
+      const scopedWindow = getScopedWindow();
+      params.append("filePath", scopedWindow?.btoa ? scopedWindow.btoa(payload.filePath) : (typeof btoa === "function" ? btoa(payload.filePath) : payload.filePath));
       return sendRequestFileUpload(params);
     },
     /**

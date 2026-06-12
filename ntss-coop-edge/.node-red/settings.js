@@ -75,7 +75,7 @@ module.exports = {
  ******************************************************************************/
 
     /** To password protect the Node-RED editor and admin API, the following
-     * property can be used. See http://nodered.org/docs/security.html for details.
+     * property can be used. See https://nodered.org/docs/security.html for details.
      */
     /** up to node-red 3.0.2 20230203 piao **/
     adminAuth: {
@@ -126,7 +126,7 @@ module.exports = {
      * including node-red-dashboard, or the static content (httpStatic), the
      * following properties can be used.
      * The `pass` field is a bcrypt hash of the password.
-     * See http://nodered.org/docs/security.html#generating-the-password-hash
+     * See https://nodered.org/docs/security.html#generating-the-password-hash
      */
     //httpNodeAuth: {user:"user",pass:"$2a$08$zZWtXTja0fB1pzD4sHCMyOCMYz2Z6dNbM6tl8sJogENOMcxWV9DN."},
     //httpStaticAuth: {user:"user",pass:"$2a$08$zZWtXTja0fB1pzD4sHCMyOCMYz2Z6dNbM6tl8sJogENOMcxWV9DN."},
@@ -139,11 +139,13 @@ module.exports = {
  *  - httpServerOptions
  *  - httpAdminRoot
  *  - httpAdminMiddleware
+ *  - httpAdminCookieOptions
  *  - httpNodeRoot
  *  - httpNodeCors
  *  - httpNodeMiddleware
  *  - httpStatic
  *  - httpStaticRoot
+ *  - httpStaticCors
  ******************************************************************************/
 
     /** the tcp port that the Node-RED web server is listening on */
@@ -184,10 +186,15 @@ module.exports = {
     //    next();
     // },
 
+    /** The following property can be used to set addition options on the session
+     * cookie used as part of adminAuth authentication system
+     * Available options are documented here: https://www.npmjs.com/package/express-session#cookie
+     */
+    // httpAdminCookieOptions: { },
 
     /** Some nodes, such as HTTP In, can be used to listen for incoming http requests.
      * By default, these are served relative to '/'. The following property
-     * can be used to specifiy a different root path. If set to false, this is
+     * can be used to specify a different root path. If set to false, this is
      * disabled.
      */
     //httpNodeRoot: '/red-nodes',
@@ -225,17 +232,25 @@ module.exports = {
     /** When httpAdminRoot is used to move the UI to a different root path, the
      * following property can be used to identify a directory of static content
      * that should be served at http://localhost:1880/.
-     * When httpStaticRoot is set differently to httpAdminRoot, there is no need 
+     * When httpStaticRoot is set differently to httpAdminRoot, there is no need
      * to move httpAdminRoot
      */
     //httpStatic: '/home/nol/node-red-static/', //single static source
-    /* OR multiple static sources can be created using an array of objects... */
+    /**
+     *  OR multiple static sources can be created using an array of objects...
+     *  Each object can also contain an options object for further configuration.
+     *  See https://expressjs.com/en/api.html#express.static for available options.
+     *  They can also contain an option `cors` object to set specific Cross-Origin
+     *  Resource Sharing rules for the source. `httpStaticCors` can be used to
+     *  set a default cors policy across all static routes.
+     */
     //httpStatic: [
-    //    {path: '/home/nol/pics/',    root: "/img/"}, 
-    //    {path: '/home/nol/reports/', root: "/doc/"}, 
+    //    {path: '/home/nol/pics/',    root: "/img/"},
+    //    {path: '/home/nol/reports/', root: "/doc/"},
+    //    {path: '/home/nol/videos/',  root: "/vid/", options: {maxAge: '1d'}}
     //],
 
-    /**  
+    /**
      * All static routes will be appended to httpStaticRoot
      * e.g. if httpStatic = "/home/nol/docs" and  httpStaticRoot = "/static/"
      *      then "/home/nol/docs" will be served at "/static/"
@@ -245,10 +260,26 @@ module.exports = {
      */
     //httpStaticRoot: '/static/',
 
+    /** The following property can be used to configure cross-origin resource sharing
+     * in the http static routes.
+     * See https://github.com/troygoode/node-cors#configuration-options for
+     * details on its contents. The following is a basic permissive set of options:
+     */
+    //httpStaticCors: {
+    //    origin: "*",
+    //    methods: "GET,PUT,POST,DELETE"
+    //},
+
+    /** The following property can be used to modify proxy options */
+    // proxyOptions: {
+    //     mode: "legacy", // legacy mode is for non-strict previous proxy determination logic (node-red < v4 compatible)
+    // },
+
 /*******************************************************************************
  * Runtime Settings
  *  - lang
  *  - runtimeState
+ *  - telemetry
  *  - diagnostics
  *  - logging
  *  - contextStorage
@@ -262,11 +293,11 @@ module.exports = {
      */
     // lang: "de",
 
-    /** Configure diagnostics options 
+    /** Configure diagnostics options
      * - enabled:  When `enabled` is `true` (or unset), diagnostics data will
-     *   be available at http://localhost:1880/diagnostics  
-     * - ui: When `ui` is `true` (or unset), the action `show-system-info` will 
-     *   be available to logged in users of node-red editor  
+     *   be available at http://localhost:1880/diagnostics
+     * - ui: When `ui` is `true` (or unset), the action `show-system-info` will
+     *   be available to logged in users of node-red editor
     */
     diagnostics: {
         /** enable or disable diagnostics endpoint. Must be set to `false` to disable */
@@ -274,10 +305,10 @@ module.exports = {
         /** enable or disable diagnostics display in the node-red editor. Must be set to `false` to disable */
         ui: true,
     },
-    /** Configure runtimeState options 
-     * - enabled:  When `enabled` is `true` flows runtime can be Started/Stoped 
-     *   by POSTing to available at http://localhost:1880/flows/state  
-     * - ui: When `ui` is `true`, the action `core:start-flows` and 
+    /** Configure runtimeState options
+     * - enabled:  When `enabled` is `true` flows runtime can be Started/Stopped
+     *   by POSTing to available at http://localhost:1880/flows/state
+     * - ui: When `ui` is `true`, the action `core:start-flows` and
      *   `core:stop-flows` will be available to logged in users of node-red editor
      *   Also, the deploy menu (when set to default) will show a stop or start button
      */
@@ -286,6 +317,22 @@ module.exports = {
         enabled: false,
         /** show or hide runtime stop/start options in the node-red editor. Must be set to `false` to hide */
         ui: false,
+    },
+    telemetry: {
+        /**
+         * By default, telemetry is disabled until the user provides consent the first
+         * time they open the editor.
+         *
+         * The following property can be uncommented and set to true/false to enable/disable
+         * telemetry without seeking further consent in the editor.
+         * The user can override this setting via the user settings dialog within the editor
+         */
+        // enabled: true,
+        /**
+         * If telemetry is enabled, the editor will notify the user if a new version of Node-RED
+         * is available. Set the following property to false to disable this notification.
+         */
+        // updateNotification: true
     },
     /** Configure the logging output */
     logging: {
@@ -422,13 +469,26 @@ module.exports = {
                  */
                 // theme: "vs",
                 /** other overrides can be set e.g. fontSize, fontFamily, fontLigatures etc.
-                 * for the full list, see https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.IStandaloneEditorConstructionOptions.html
+                 * for the full list, see https://microsoft.github.io/monaco-editor/docs.html#interfaces/editor.IStandaloneEditorConstructionOptions.html
                  */
                 //fontSize: 14,
                 //fontFamily: "Cascadia Code, Fira Code, Consolas, 'Courier New', monospace",
                 //fontLigatures: true,
             }
-        }
+        },
+
+        markdownEditor: {
+            mermaid: {
+                /** enable or disable mermaid diagram in markdown document
+                 */
+                enabled: true
+            }
+        },
+
+        multiplayer: {
+            /** To enable the Multiplayer feature, set this value to true */
+            enabled: false
+        },
     },
 
 /*******************************************************************************
@@ -436,10 +496,13 @@ module.exports = {
  *  - fileWorkingDirectory
  *  - functionGlobalContext
  *  - functionExternalModules
+ *  - globalFunctionTimeout
+ *  - functionTimeout
  *  - nodeMessageBufferMaxLength
  *  - ui (for use with Node-RED Dashboard)
  *  - debugUseColors
  *  - debugMaxLength
+ *  - debugStatusLength
  *  - execMaxBufferSize
  *  - httpRequestTimeout
  *  - mqttReconnectTime
@@ -460,6 +523,21 @@ module.exports = {
     /** Allow the Function node to load additional npm modules directly */
     functionExternalModules: true,
 
+
+    /**
+     * The default timeout (in seconds) for all Function nodes.
+     * Individual nodes can set their own timeout value within their configuration.
+     */
+    globalFunctionTimeout: 0,
+
+    /**
+      * Default timeout, in seconds, for the Function node. 0 means no timeout is applied
+      * This value is applied when the node is first added to the workspace - any changes
+      * must then be made with the individual node configurations.
+      * To set a global timeout value, use `globalFunctionTimeout`
+     */
+    functionTimeout: 0,
+
     /** The following property can be used to set predefined values in Global Context.
      * This allows extra node modules to be made available with in Function node.
      * For example, the following:
@@ -476,7 +554,7 @@ module.exports = {
         , process: require('child_process')
         , path: require('path')
         , ws: require('ws')
-        , xmldom: require('xmldom')
+        , xmldom: require('@xmldom/xmldom')
         , commonLib: require('/home/ntss/.node-red/lib/lib/CommonLib.js')
         , socket_common: require('/home/ntss/.node-red/lib/lib/socket_common.js')
         , report_xml: require('/home/ntss/.node-red/lib/lib/report_xml.js')
@@ -513,6 +591,9 @@ module.exports = {
     /** The maximum length, in characters, of any message sent to the debug sidebar tab */
     debugMaxLength: 1000,
 
+    /** The maximum length, in characters, of status messages under the debug node */
+    //debugStatusLength: 32,
+
     /** Maximum buffer size for the exec node. Defaults to 10Mb */
     //execMaxBufferSize: 10000000,
 
@@ -546,7 +627,7 @@ module.exports = {
      */
     //tlsConfigDisableLocalFiles: true,
 
-    /** The following property can be used to verify websocket connection attempts.
+    /** The following property can be used to verify WebSocket connection attempts.
      * This allows, for example, the HTTP request headers to be checked to ensure
      * they include valid authentication information.
      */
@@ -566,4 +647,23 @@ module.exports = {
     //    *   - reason: if result is false, the HTTP reason string to return
     //    */
     //},
+
+/*******************************************************************************
+ * Node Default Overrides
+ * 
+ * This allows the user to override default values of a node. These are the values
+ * that are applied when a node is added to the workspace. They do not affect
+ * nodes that have already been deployed.
+ * 
+ * The available properties of a node type can be found in the Information sidebar when
+ * selecting a node of that type.
+ * 
+ * 
+ *******************************************************************************/
+
+    // nodeDefaults: {
+    //     "debug": {
+    //         "complete": true // set the debug node to show complete msg by default
+    //     }
+    // }
 }

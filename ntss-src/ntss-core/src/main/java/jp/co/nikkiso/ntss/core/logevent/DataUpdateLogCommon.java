@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 /**
@@ -39,6 +40,10 @@ public class DataUpdateLogCommon {
 
   @Autowired
   private EventLoggerFactory eventLoggerFactory;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   /**
    * ログサーブす
@@ -159,7 +164,7 @@ public class DataUpdateLogCommon {
         // 変更前データを取得
         DataUpdateLogInfoUtil.setBeforeFieldValue(listResult, logOutputInfoMap);
         // データ更新済みフラグ設定
-        DataUpdateLogInfoUtil.setUpdated(Config.get(dao), logOutputInfoMap);
+        DataUpdateLogInfoUtil.setUpdated(defaultDbConfig, logOutputInfoMap);
         Iterator<String> iter = logOutputInfoMap.keySet().iterator();
         while (iter.hasNext()) {
           eventLogMessage = new EventLogMessage();
@@ -243,7 +248,7 @@ public class DataUpdateLogCommon {
    * @return 更新前データ情報
    */
   private List<Map<String, Object>> getUpdateData() {
-    SelectBuilder selectBuilder = SelectBuilder.newInstance(Config.get(dao));
+    SelectBuilder selectBuilder = SelectBuilder.newInstance(defaultDbConfig);
     selectBuilder.sql(executeSQL);
     return selectBuilder.getMapResultList(MapKeyNamingType.NONE);
   }
@@ -262,7 +267,7 @@ public class DataUpdateLogCommon {
    * @return カラム情報
    */
   private Map<String, UpdateLogInfo> getFieldInfo() {
-    List<TableCommentInfo> fieldCommentList = DataUpdateLogInfoUtil.getAllFieldComment(Config.get(dao), tableName);
+    List<TableCommentInfo> fieldCommentList = DataUpdateLogInfoUtil.getAllFieldComment(defaultDbConfig, tableName);
     if (fieldCommentList == null || fieldCommentList.size() == 0) {
       return null;
     }

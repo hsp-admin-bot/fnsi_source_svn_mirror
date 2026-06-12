@@ -127,7 +127,7 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import customCheckbox from "@/components/common/custom-form-tags/CustomCheckbox.vue";
 import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
 export default {
@@ -192,64 +192,12 @@ export default {
   },
   created() {
     // 端末判別
-    if (navigator.userAgent.match(/Android/)) {
+    if (((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").match(/Android/)) {
       this.androidFlg = true;
     }
   },
   mounted() {
-    // 親画面から配色設定JSONデータ取得
-    this.audioSetting = JSON.parse(this.editRecord.audioSetting);
-    this.patOkEnabled.initValue = this.audioSetting.pat_ok === "1" ? "1" : "0";
-    this.patOkEnabled.editValue = this.patOkEnabled.initValue;
-    this.measureEnabled.initValue =
-      this.audioSetting.receive_weight === "1" ? "1" : "0";
-    this.measureEnabled.editValue = this.measureEnabled.initValue;
-    this.sendOkEnabled.initValue =
-      this.audioSetting.send_ok === "1" ? "1" : "0";
-    this.sendOkEnabled.editValue = this.sendOkEnabled.initValue;
-    this.sendNgEnabled.initValue =
-      this.audioSetting.send_ng === "1" ? "1" : "0";
-    this.sendNgEnabled.editValue = this.sendNgEnabled.initValue;
-    // 患者認識再生遅延時間
-    if (
-      this.audioSetting.pat_ok_delay === undefined ||
-      this.audioSetting.pat_ok_delay === null
-    ) {
-      this.patOkDelay.initValue = 0;
-    } else {
-      this.patOkDelay.initValue = this.audioSetting.pat_ok_delay;
-    }
-    this.patOkDelay.editValue = this.patOkDelay.initValue;
-    // 体重読み込み時再生遅延時間
-    if (
-      this.audioSetting.receive_weight_delay === undefined ||
-      this.audioSetting.receive_weight_delay === null
-    ) {
-      this.receiveWeightDelay.initValue = 0;
-    } else {
-      this.receiveWeightDelay.initValue = this.audioSetting.receive_weight_delay;
-    }
-    this.receiveWeightDelay.editValue = this.receiveWeightDelay.initValue;
-    // 送信完了再生遅延時間
-    if (
-      this.audioSetting.send_ok_delay === undefined ||
-      this.audioSetting.send_ok_delay === null
-    ) {
-      this.sendOkDelay.initValue = 0;
-    } else {
-      this.sendOkDelay.initValue = this.audioSetting.send_ok_delay;
-    }
-    this.sendOkDelay.editValue = this.sendOkDelay.initValue;
-    // 送信失敗再生遅延時間
-    if (
-      this.audioSetting.send_ng_delay === undefined ||
-      this.audioSetting.send_ng_delay === null
-    ) {
-      this.sendNgDelay.initValue = 0;
-    } else {
-      this.sendNgDelay.initValue = this.audioSetting.send_ng_delay;
-    }
-    this.sendNgDelay.editValue = this.sendNgDelay.initValue;
+    this.initAudioSettingFromEditRecord();
   },
   methods: {
     ...mapActions("master-maintenance", [
@@ -271,6 +219,64 @@ export default {
     ...mapActions("mst-weight", {
       setIsGridEditing: "setIsGridEditing"
     }),
+    initAudioSettingFromEditRecord() {
+      if (!this.editRecord?.audioSetting) {
+        return;
+      }
+      // 親画面から配色設定JSONデータ取得
+      this.audioSetting = JSON.parse(this.editRecord.audioSetting);
+      this.patOkEnabled.initValue = this.audioSetting.pat_ok === "1" ? "1" : "0";
+      this.patOkEnabled.editValue = this.patOkEnabled.initValue;
+      this.measureEnabled.initValue =
+        this.audioSetting.receive_weight === "1" ? "1" : "0";
+      this.measureEnabled.editValue = this.measureEnabled.initValue;
+      this.sendOkEnabled.initValue =
+        this.audioSetting.send_ok === "1" ? "1" : "0";
+      this.sendOkEnabled.editValue = this.sendOkEnabled.initValue;
+      this.sendNgEnabled.initValue =
+        this.audioSetting.send_ng === "1" ? "1" : "0";
+      this.sendNgEnabled.editValue = this.sendNgEnabled.initValue;
+      // 患者認識再生遅延時間
+      if (
+        this.audioSetting.pat_ok_delay === undefined ||
+        this.audioSetting.pat_ok_delay === null
+      ) {
+        this.patOkDelay.initValue = 0;
+      } else {
+        this.patOkDelay.initValue = this.audioSetting.pat_ok_delay;
+      }
+      this.patOkDelay.editValue = this.patOkDelay.initValue;
+      // 体重読み込み時再生遅延時間
+      if (
+        this.audioSetting.receive_weight_delay === undefined ||
+        this.audioSetting.receive_weight_delay === null
+      ) {
+        this.receiveWeightDelay.initValue = 0;
+      } else {
+        this.receiveWeightDelay.initValue = this.audioSetting.receive_weight_delay;
+      }
+      this.receiveWeightDelay.editValue = this.receiveWeightDelay.initValue;
+      // 送信完了再生遅延時間
+      if (
+        this.audioSetting.send_ok_delay === undefined ||
+        this.audioSetting.send_ok_delay === null
+      ) {
+        this.sendOkDelay.initValue = 0;
+      } else {
+        this.sendOkDelay.initValue = this.audioSetting.send_ok_delay;
+      }
+      this.sendOkDelay.editValue = this.sendOkDelay.initValue;
+      // 送信失敗再生遅延時間
+      if (
+        this.audioSetting.send_ng_delay === undefined ||
+        this.audioSetting.send_ng_delay === null
+      ) {
+        this.sendNgDelay.initValue = 0;
+      } else {
+        this.sendNgDelay.initValue = this.audioSetting.send_ng_delay;
+      }
+      this.sendNgDelay.editValue = this.sendNgDelay.initValue;
+    },
     async editStart() {
       if (this.androidFlg) {
         await this.setIsGridEditing(true);
@@ -308,6 +314,10 @@ export default {
 
       this.updateEditRecord("audioSetting", JSON.stringify(this.audioSetting));
     },
+    syncEditRecord() {
+      // ローカル保持している音声設定を、親画面の確定処理前にstoreへ同期する。
+      this.changeCheckBox();
+    },
     updateEditRecord(key, value) {
       this.editRecord[key] = value;
       this.setEditRecord(this.editRecord);
@@ -333,11 +343,19 @@ export default {
       }, this.sendNgDelay.editValue * 1000);
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     clearTimeout(this.audioStartId);
     clearTimeout(this.audioMeasureId);
     clearTimeout(this.audioSendOkId);
     clearTimeout(this.audioErrId);
+  },
+  watch: {
+    "editRecord.code"() {
+      this.initAudioSettingFromEditRecord();
+    },
+    "editRecord.audioSetting"() {
+      this.initAudioSettingFromEditRecord();
+    }
   }
 };
 </script>

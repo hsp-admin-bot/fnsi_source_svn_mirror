@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   LayoutDesigner WiX v4 インストーラー
-  製品名   : LayoutDesigner（帳票レイアウトデザイナーアプリ）
+  製品名   : LayoutDesigner(帳票レイアウトデザイナーアプリ)
   バージョン: 2.0.0
-  メーカー : Nikkiso
+  メーカー : NIKKISO
   インストール先: C:\FNWSiTools\FNWSiLayoutDesigner
 
   画面フロー:
@@ -13,7 +13,7 @@
     - 日本語 UI
     - サイレントインストール(/quiet): 既存 config を使用、なければデフォルト値
     - バージョンダウングレード警告（サイレント時は中止）
-    - 実行中の LayoutDesigner プロセスを自動終了（アップグレード/アンインストール時）
+    - 実行中プロセスを自動終了（アップグレード/アンインストール時）
 -->
 <?include GeneratedProductCode.wxi?>
 
@@ -33,14 +33,14 @@
     Compressed="yes"
     Scope="perMachine">
 
-    <SummaryInformation Description="帳票レイアウトデザイナー インストーラー" Keywords="インストーラー" />
+    <SummaryInformation Description="帳票レイアウトデザイナーアプリ インストーラー" Keywords="インストーラー" />
     <MediaTemplate EmbedCab="yes" />
 
     <!-- ============================== アイコン ============================== -->
     <Icon Id="LayoutDesignerIcon" SourceFile="$(var.SrcDesigner)Properties\LayoutDesigner.ico" />
 
     <Property Id="ARPPRODUCTICON" Value="LayoutDesignerIcon" />
-    <Property Id="ARPCONTACT"     Value="Nikkiso" />
+    <Property Id="ARPCONTACT"     Value="NIKKISO" />
     <Property Id="ARPCOMMENTS"    Value="帳票レイアウトデザイナーアプリ" />
     <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
 
@@ -67,6 +67,7 @@
 
     <!-- ============================== バージョン管理 ============================== -->
     <Upgrade Id="{29F50B52-E763-4F77-AA5E-DFE362DD19EB}">
+      <!-- 旧バージョンをアップグレード対象として検出（現バージョン未満） -->
       <UpgradeVersion
         Minimum="0.0.0"
         Maximum="$(var.ProductVersion)"
@@ -74,16 +75,21 @@
         IncludeMaximum="no"
         Property="OLDERVERSIONBEINGUPGRADED"
         MigrateFeatures="yes" />
+      <!-- 新バージョンが既インストールの場合（ダウングレード検出） -->
       <UpgradeVersion
         Minimum="$(var.ProductVersion)"
         IncludeMinimum="no"
         Property="NEWERVERSIONALREADYINSTALLED" />
     </Upgrade>
 
+    <!-- ダウングレード禁止 -->
     <Launch Condition="NOT NEWERVERSIONALREADYINSTALLED"
             Message="より新しいバージョンがインストール済みです。アンインストールしてから再度インストールしてください。" />
 
     <!-- ============================== ディレクトリ構成 ============================== -->
+    <!--
+      デフォルト: C:\FNWSiTools\FNWSiLayoutDesigner
+    -->
     <StandardDirectory Id="TARGETDIR">
       <Directory Id="FNWSITOOLS" Name="FNWSiTools">
         <Directory Id="INSTALLFOLDER" Name="FNWSiLayoutDesigner" />
@@ -102,12 +108,23 @@
             Source="$(var.SrcBin)FNWSiLayoutDesigner.exe"
             KeyPath="yes" />
       <RemoveFile Id="RF_InstallState"
-                  Name="LayoutDesigner.InstallState"
+                  Name="FNWSiLayoutDesigner.InstallState"
                   On="uninstall" />
     </Component>
 
-    <!-- (2) FNWSiLayoutDesigner.exe.config -->
+    <!-- (2) アプリ設定ファイル（アンインストール時にユーザー設定を保持） -->
     <Component Id="C_LayoutDesignerConfig"
+               Guid="{E5A2B3C4-D5E6-4F78-9012-3456789ABCD5}"
+               Directory="INSTALLFOLDER"
+               NeverOverwrite="yes"
+               Permanent="yes">
+      <File Id="F_ReportDesignerConfig"
+            Source="$(var.SrcBin)ReportLayoutDesigner.config"
+            KeyPath="yes" />
+    </Component>
+    
+    <!-- (3) FNWSiLayoutDesigner.exe.config -->
+    <Component Id="C_LayoutDesignerExeConfig"
                Guid="{E2A2B3C4-D5E6-4F78-9012-3456789ABCD2}"
                Directory="INSTALLFOLDER">
       <File Id="F_LayoutDesignerExeConfig"
@@ -115,7 +132,7 @@
             KeyPath="yes" />
     </Component>
 
-    <!-- (3) データファイル（ソースディレクトリから） -->
+    <!-- (4) データファイル（ソースディレクトリから） -->
     <Component Id="C_DataVersionXml"
                Guid="{E3A2B3C4-D5E6-4F78-9012-3456789ABCD3}"
                Directory="INSTALLFOLDER">
@@ -132,17 +149,6 @@
             KeyPath="yes" />
     </Component>
 
-    <!-- (4) アプリ設定ファイル（既存設定を上書きしない・削除もしない） -->
-    <Component Id="C_ReportConfig"
-               Guid="{E5A2B3C4-D5E6-4F78-9012-3456789ABCD5}"
-               Directory="INSTALLFOLDER"
-               NeverOverwrite="yes"
-               Permanent="yes">
-      <File Id="F_ReportConfig"
-            Source="$(var.SrcBin)ReportLayoutDesigner.config"
-            KeyPath="yes" />
-    </Component>
-
     <!-- (5) 共有 DLL 群 -->
     <ComponentGroup Id="CG_SharedDlls" Directory="INSTALLFOLDER">
       <Component Guid="{F1A2B3C4-D5E6-4F78-9012-3456789ABCD1}"><File Source="$(var.SrcBin)NKKCommon.dll" /></Component>
@@ -150,9 +156,7 @@
       <Component Guid="{F3A2B3C4-D5E6-4F78-9012-3456789ABCD3}"><File Source="$(var.SrcBin)SignInLib.dll" /></Component>
       <Component Guid="{F4A2B3C4-D5E6-4F78-9012-3456789ABCD4}"><File Source="$(var.SrcBin)LayoutDesignerUtilityLib.dll" /></Component>
       <Component Guid="{F5A2B3C4-D5E6-4F78-9012-3456789ABCD5}"><File Source="$(var.SrcBin)Newtonsoft.Json.dll" /></Component>
-      <Component Guid="{F6A2B3C4-D5E6-4F78-9012-3456789ABCD6}"><File Source="$(var.SrcBin)System.ValueTuple.dll" /></Component>
       <Component Guid="{F7A2B3C4-D5E6-4F78-9012-3456789ABCD7}"><File Source="$(var.SrcBin)Ionic.Zip.dll" /></Component>
-
     </ComponentGroup>
 
     <!-- (5) デスクトップショートカット -->
@@ -185,7 +189,7 @@
       <ComponentRef Id="C_LayoutDesignerConfig" />
       <ComponentRef Id="C_DataVersionXml" />
       <ComponentRef Id="C_DataListBaseXml" />
-      <ComponentRef Id="C_ReportConfig" />
+      <ComponentRef Id="C_LayoutDesignerExeConfig" />
       <ComponentGroupRef Id="CG_SharedDlls" />
       <ComponentGroupRef Id="CG_SampleFiles" />
       <ComponentRef Id="C_DesktopShortcut" />
@@ -193,7 +197,7 @@
 
     <!-- ============================== カスタムアクション ============================== -->
 
-    <!-- 実行中の LayoutDesigner プロセスを強制終了（ファイルロック解放） -->
+    <!-- 実行中プロセスを強制終了（ファイルロック解放） -->
     <CustomAction Id="KillRunningInstances"
                   Directory="SystemFolder"
                   ExeCommand="cmd.exe /c taskkill /F /IM FNWSiLayoutDesigner.exe &gt; nul 2&gt;&amp;1"
@@ -223,7 +227,6 @@
                   Property="InstallServiceWithInstaller"
                   Value="/silent=1 &quot;[INSTALLFOLDER]FNWSiLayoutDesigner.exe&quot;" />
 
-    <!-- InstallUtil.exe で ProjectInstaller を実行（OnAfterInstall で設定画面表示） -->
     <CustomAction Id="InstallServiceWithInstaller"
                   Directory="WindowsFolder"
                   ExeCommand="Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe /LogToConsole=false /LogFile= [InstallServiceWithInstaller]"
@@ -234,6 +237,7 @@
     <!-- ============================== シーケンス ============================== -->
 
     <InstallExecuteSequence>
+      <!-- 旧バージョンを早期削除（InstallInitialize 直後） -->
       <RemoveExistingProducts After="InstallInitialize" />
 
       <!-- 実行中プロセスを終了してからファイル操作（アップグレード/修復/アンインストール共通） -->

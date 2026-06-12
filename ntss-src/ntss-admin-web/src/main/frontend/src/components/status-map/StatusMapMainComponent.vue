@@ -21,10 +21,10 @@
         @touchmove="listenerMove"
         :class="fontSizeSet"
       >
-        <template v-for="machineData in machineDataList">
+        <template v-for="machineData in machineDataList" :key="machineData.bedLayout.disp_order_no">
           <StatusMapMachine
             v-if="isTreatStateMode && machineData.isInBedGroup"
-            :key="machineData.bedLayout.disp_order_no"
+           
             :machineData="machineData"
           ></StatusMapMachine>
           <ScheduleMapMachine
@@ -62,11 +62,11 @@
     <v-ons-popover
       v-if="popoverVisible"
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       animation="none"
-      :class="fontSizeSet"
+      :class="[fontSizeSet, 'status-map-info-popover']"
       @preshow="popoverPreShow"
       @postshow="popoverPostShow"
       @posthide="popoverPosthide"
@@ -78,11 +78,11 @@
 </template>
 
 <script>
-import { mapGetters, mapActions, mapMutations, mapState } from "vuex";
+import { mapGetters, mapActions, mapMutations, mapState } from "@/compat/vue/vuex";
 import StatusMapMachine from "@/components/status-map/StatusMapMachineComponent";
 import ScheduleMapMachine from "@/components/status-map/schedule/ScheduleMapMachineComponent";
-import { EventBus } from "@/eventBus.js";
-import moment from "moment";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import dayjs from "@/compat/date/dayjs";
 import { getCurrentFunctionCd } from "@/router/routing-helper";
 import PopoverMixin from "@/components/PopoverMixin";
 // add FNSI-画面リロードの修正 付 start
@@ -102,8 +102,15 @@ import {
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
 import { initForceSignOutFlag } from "@/functions/common/CommonFunctions.js";
+import { parseStoredArray } from "@/functions/common/CommonFunctions";
+import statusMapFullScreenImg from "../../assets/status-map-full-screen.png";
+import statusMapNormalScreenImg from "../../assets/status-map-normal-screen.png";
+import infoIconImg from "../../assets/info_icon.png";
+import infoImgTreatmentStatusImg from "../../assets/info_img_treatmentStatus.png";
+import infoImgScheduleImg from "../../assets/info_img_schedule.png";
+import { getLatestHeaderElement, getHeaderHeight, getFooterMenuClientHeight, getScopedElementById, getScopedElementsByClassName, getScopedSessionStorage, getScopedDocument, appendScopedChild, removeScopedChild } from "@/functions/common/LayoutMeasureHelper";
 
 const TOUCHSTART = "touchstart";
 const TOUCHMOVE = "touchmove";
@@ -271,14 +278,14 @@ export default {
           y: 0
         }
       },
-      target: document.getElementById("target"),
-      body: document.body,
+      target: null,
+      body: null,
       timerId: 0,
-      image_src_full_screen: require("../../assets/status-map-full-screen.png"),
-      image_src_normal_screen: require("../../assets/status-map-normal-screen.png"),
-      image_src_info_icon: require("../../assets/info_icon.png"),
-      image_src_info_treatmentStatus: require("../../assets/info_img_treatmentStatus.png"),
-      image_src_info_schedule: require("../../assets/info_img_schedule.png"),
+      image_src_full_screen: statusMapFullScreenImg,
+      image_src_normal_screen: statusMapNormalScreenImg,
+      image_src_info_icon: infoIconImg,
+      image_src_info_treatmentStatus: infoImgTreatmentStatusImg,
+      image_src_info_schedule: infoImgScheduleImg,
       popoverVisible: false,
       popoverTarget: null,
       popoverDirection: "left",
@@ -306,6 +313,16 @@ export default {
     };
   },
   methods: {
+    appendMovingChipElement(parent, chip) {
+      return appendScopedChild(parent, chip);
+    },
+    removeMovingChipElement() {
+      const removed = removeScopedChild(this.movingChipElem);
+      if (removed) {
+        this.movingChipElem = null;
+      }
+      return removed;
+    },
     ...mapActions("status-map/map", {
       setColItemGroupList: "setColItemGroupList",
       reFetchTreatmentStatus: "reFetchTreatmentStatus",
@@ -331,16 +348,14 @@ export default {
     calculateHeight() {
       this.$nextTick(() => {
         const wh = this.getWindowHeight;
-        const hh = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .shift().clientHeight;
+        const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
         const fmh =
           (this.isDispMenu === 1
-            ? document.getElementById("footer-menu").clientHeight
+            ? getFooterMenuClientHeight(this.$el || null)
             : 0) + 5;
         const height = wh - hh - fmh;
         //
-        //this.setSize( this.getWindowWidth, height );
+        //this.setSize( this.getWindowWidth, height);
         // console.log(
         //   "caluHeight clientH:" +
         //     wh +
@@ -350,7 +365,7 @@ export default {
         //     fmh +
         //     " / contentH:" +
         //     height
-        // );
+        //);
         this.mapContentHeight = "height:" + height + "px;";
       });
     },
@@ -400,12 +415,13 @@ export default {
     },
     // ベッドレイアウト表示位置調整
     adjustBedLayourtAreaPosition() {
-      const displayArea = document
-        .getElementById("bedroom")
-        .getBoundingClientRect();
-      const targetArea = document
-        .getElementById("target")
-        .getBoundingClientRect();
+      const displayAreaElement = getScopedElementById("bedroom", this.$el || null);
+      const targetElement = getScopedElementById("target", this.$el || null);
+      if (!displayAreaElement || !targetElement) {
+        return;
+      }
+      const displayArea = displayAreaElement.getBoundingClientRect();
+      const targetArea = targetElement.getBoundingClientRect();
       const areaX = displayArea.width / 2;
       const areaY = displayArea.height / 2;
 
@@ -597,9 +613,7 @@ export default {
                 // ズームする場所(ターゲット要素内座標)
                 const zoomPosX = Math.floor((newP1.x + newP2.x) / 2);
                 const zoomPosY = Math.floor((newP1.y + newP2.y) / 2);
-                const displayArea = document
-                  .getElementById("bedroom")
-                  .getBoundingClientRect();
+                const displayArea = getScopedElementById("bedroom", this.$el || null).getBoundingClientRect();
 
                 if (this.mouseListenerInf.zoomPos === null) {
                   this.mouseListenerInf.zoomPos = {
@@ -663,7 +677,10 @@ export default {
       targetElem.style.left = `${event.clientX - this.sidebarWidth}px`;
 
       //スクロール判定
-      const areaElem = document.getElementById("target");
+      const areaElem = getScopedElementById("target", this.$el || null);
+      if (!areaElem) {
+        return;
+      }
       const areaRect = areaElem.getBoundingClientRect();
 
       const posX = event.clientX - areaRect.left;
@@ -707,7 +724,10 @@ export default {
       if (!(this.autoScrollX === 0 && this.autoScrollY === 0)) {
         this.scrollIntervalId = setInterval(
           function() {
-            const areaElem = document.getElementById("target");
+            const areaElem = getScopedElementById("target", this.$el || null);
+            if (!areaElem) {
+              return;
+            }
             areaElem.scrollTop += this.autoScrollY;
             areaElem.scrollLeft += this.autoScrollX;
             this.autoScrollY *= 1.3;
@@ -759,8 +779,11 @@ export default {
 
       //親要素に追加
       //ベッド移動処理の初期化(親要素の取得)
-      this.parentElem = document.getElementById("bedroom");
-      this.parentElem.appendChild(this.movingChipElem);
+      this.parentElem = getScopedElementById("bedroom", this.$el || null);
+      if (!this.parentElem) {
+        return;
+      }
+      this.appendMovingChipElement(this.parentElem, this.movingChipElem);
 
       this.movingChipElem.style.top = `${parseInt(rect.top) - 100}px`;
       this.movingChipElem.style.left = `${parseInt(rect.left) -
@@ -776,16 +799,21 @@ export default {
         this.clickEventNowFlag = false;
       } else {
         this.movingChipElem.style.display = "none";
-        const underElem = document.elementFromPoint(
+        const scopedDocument = getScopedDocument(this.$el || this);
+        const underElem = scopedDocument?.elementFromPoint?.(
           event.clientX,
           event.clientY
-        );
+        ) || null;
 
         //チップをだす
         this.movingChipElem.style.display = "inline";
+        if (!underElem) {
+          this.clickEventNowFlag = false;
+          return;
+        }
         //下のセルのチェック
-        const nowId = underElem.id;
-        const parent = underElem.parentNode.id;
+        const nowId = underElem.id || "";
+        const parent = underElem.parentNode?.id || "";
 
         if (
           !(0 === nowId.indexOf("machine")) &&
@@ -810,11 +838,13 @@ export default {
           return;
         }
         //チップを削除
-        this.movingChipElem.parentNode.removeChild(this.movingChipElem);
+        this.removeMovingChipElement();
         //もう移動が終わったのでポインタを初期化
-        this.movingChipElem = null;
         this.clickEventNowFlag = false;
-        document.getElementsByClassName("selected-map-style")[0].classList.remove("selected-map-style");
+        const selectedMapStyle = getScopedElementsByClassName("selected-map-style", this.$el || null)[0];
+        if (selectedMapStyle) {
+          selectedMapStyle.classList.remove("selected-map-style");
+        }
         // ポーリング再開
         this.startPolling();
       }
@@ -827,11 +857,11 @@ export default {
         //チップをだす
         this.movingChipElem.style.display = "inline";
         //チップを削除
-        this.movingChipElem.parentNode.removeChild(this.movingChipElem);
+        this.removeMovingChipElement();
         //もう移動が終わったのでポインタを初期化
-        this.movingChipElem = null;
-        if (document.getElementsByClassName("selected-map-style")[0]) {
-          document.getElementsByClassName("selected-map-style")[0].classList.remove("selected-map-style");
+        const selectedMapStyle = getScopedElementsByClassName("selected-map-style", this.$el || null)[0];
+        if (selectedMapStyle) {
+          selectedMapStyle.classList.remove("selected-map-style");
         }
         if (!isBeforeDestroy) {
           // ポーリング再開
@@ -861,7 +891,7 @@ export default {
           //   this.sliderVal,
           //   moveScale,
           //   NOTCH
-          // );
+          //);
         }
       } else {
         this.sliderVal = 0;
@@ -889,9 +919,11 @@ export default {
       // X軸方向への動き
       const canvasWidth =
         this.selectedBedLayout.bedLayout.canvas_size.width * this.targetScale;
-      const displayArea = document
-        .getElementById("bedroom")
-        .getBoundingClientRect();
+      const displayAreaElement = getScopedElementById("bedroom", this.$el || null);
+      if (!displayAreaElement) {
+        return;
+      }
+      const displayArea = displayAreaElement.getBoundingClientRect();
       this.targetTransForm.x = this.getTransform(
         canvasWidth,
         displayArea.width,
@@ -973,7 +1005,7 @@ export default {
         }
       } else if (data.status == 400) {
         //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
-        getErrorMessage('StatusMapMainComponent.vue','startPolling',error);
+        getErrorMessage('StatusMapMainComponent.vue','startPolling',{ response: data });
         //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
         this.refreshInterval = 20000;
       }
@@ -1002,7 +1034,7 @@ export default {
     },
     refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
-      if (this.selfScreenName === this.$router.currentRoute.name) {
+      if (this.selfScreenName === this.$route.name) {
         // ポーリング停止
         this.endPolling();
         // インジケータ表示設定取得
@@ -1022,7 +1054,7 @@ export default {
     },
     requestrReportParams(param) {
       // mod #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
-      let treatmentStatusListTemp = null
+      let treatmentStatusListTemp = null;
       if (this.isTreatStateMode) {
         // const treatmentStatusListTemp = cloneDeep(this.treatmentStatusList);
         treatmentStatusListTemp = cloneDeep(this.treatmentStatusList);
@@ -1060,11 +1092,10 @@ export default {
         } else {
           patGroups = "すべて";
         }
-        // eslint-disable-next-line vue/no-side-effects-in-computed-properties
-        this.bedCdListString = JSON.parse(sessionStorage.getItem('roomBedGroupNameStatusMap')) || [];
+        this.bedCdListString = JSON.parse(getScopedSessionStorage(this.$el || this).getItem('roomBedGroupNameStatusMap')) || [];
         // add #11285 機能帳票の印刷情報対応② 高 end
         // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
-        kurNames = JSON.parse(sessionStorage.getItem('kurGroupNameStatusList'));
+        kurNames = JSON.parse(getScopedSessionStorage(this.$el || this).getItem('kurGroupNameStatusList'));
         // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy end
         // 機能一致
         //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
@@ -1120,15 +1151,15 @@ export default {
           ordNos:orderON,
           // add 機能帳票パラメータ確認 陳 end
           facilityCd: this.getFacilityCd,
-          date: moment(this.currentDate).format("YYYY/MM/DD"),
-          fromDate: moment(this.currentDate).format("YYYY/MM/DD"),
+          date: dayjs(this.currentDate).format("YYYY/MM/DD"),
+          fromDate: dayjs(this.currentDate).format("YYYY/MM/DD"),
           //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
           functionCd:"01201",
           //add 5984 機能帳票でパラメータが正しく渡されていない 吉 end
           //add FNSI redmine 5984 劉祥霖 start
           machineNos: machineNos,
           //add FNSI redmine 5984 劉祥霖 end
-          toDate: moment(this.currentDate).format("YYYY/MM/DD"),
+          toDate: dayjs(this.currentDate).format("YYYY/MM/DD"),
           // add #11285 機能帳票の印刷情報対応② 高 start
           treatDate:this.getStorSimlpSearchQurey.treatDate,
           bedCdListString:this.bedCdListString,
@@ -1169,8 +1200,8 @@ export default {
       ];
       await getMstFacilitySettingValueMap(this.getFacilityCd, settingNos)
        .then((response) => {
-          this.indicatorDispTreatment = response.data[STATUS_MAP_TREATMENT_INDICATOR] ? eval(response.data[STATUS_MAP_TREATMENT_INDICATOR]) : [];
-          this.indicatorDispSchedule = response.data[STATUS_MAP_SCHEDULE_INDICATOR] ? eval(response.data[STATUS_MAP_SCHEDULE_INDICATOR]) : [];
+          this.indicatorDispTreatment = response.data[STATUS_MAP_TREATMENT_INDICATOR] ? parseStoredArray(response.data[STATUS_MAP_TREATMENT_INDICATOR]) : [];
+          this.indicatorDispSchedule = response.data[STATUS_MAP_SCHEDULE_INDICATOR] ? parseStoredArray(response.data[STATUS_MAP_SCHEDULE_INDICATOR]) : [];
         })
         .catch((error) => {
           getErrorMessage(
@@ -1182,18 +1213,16 @@ export default {
     },
     /** 画面印刷時の処理 */
     handleBeforePrint() {
-      // レイアウト位置を左上端固定にする
-      const el = document.querySelector('#target');
+      const el = getScopedElementById("target", this.$el || null);
       if (el) {
         this.originalTransform = el.style.transform;
-        el.style.transform = el.style.transform.replace(/translate\([^)]*\)\s*/g, '');
+        el.style.transform = el.style.transform.replace(/translate\([^)]*\)\s*/g, "");
       }
     },
     handleAfterPrint() {
-      // レイアウト位置を元に戻す
-      const el = document.querySelector('#target');
+      const el = getScopedElementById("target", this.$el || null);
       if (el) {
-        el.style.transform = this.originalTransform ?? '';
+        el.style.transform = this.originalTransform ?? "";
         this.originalTransform = null;
       }
     },
@@ -1229,9 +1258,11 @@ export default {
      */
     targetScale(newScale, oldScale) {
       if (false === this.sliderWatchOff) {
-        const displayArea = document
-          .getElementById("bedroom")
-          .getBoundingClientRect();
+        const displayAreaElement = getScopedElementById("bedroom", this.$el || null);
+        if (!displayAreaElement) {
+          return;
+        }
+        const displayArea = displayAreaElement.getBoundingClientRect();
         const bedRoomCenter = {
           x: displayArea.width / 2,
           y: displayArea.height / 2
@@ -1303,7 +1334,7 @@ export default {
     }
     // add FNSI-警報報知修正 付 end
   },
-  beforeCreate() {},
+
   created() {
     // add 性能改善メモリ不足 shan start
     EventBus.$off("dataUpdate", this.reFetchTreatmentStatus);
@@ -1334,7 +1365,7 @@ export default {
     EventBus.$on("requestReportParams", this.requestrReportParams);
 
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
 
     // add FNSI-警報報知修正 付 start
     this.$nextTick(() => {
@@ -1346,8 +1377,10 @@ export default {
     });
     // add FNSI-警報報知修正 付 end
   },
-  beforeMount() {},
+
   mounted() {
+    this.target = getScopedElementById("target", this.$el || null);
+    this.body = getScopedDocument(this.$el || this)?.body || null;
     // インジケータ表示設定取得
     this.getindicatorDispValues();
 
@@ -1364,13 +1397,13 @@ export default {
         this.targetTransForm.y = this.getLayoutState.targetTransForm.y;
       });
     }
-    
-    window.addEventListener("beforeprint", this.handleBeforePrint);
-    window.addEventListener("afterprint", this.handleAfterPrint);
+    const scopedWindow = this.$el?.ownerDocument?.defaultView || window;
+    scopedWindow.addEventListener("beforeprint", this.handleBeforePrint);
+    scopedWindow.addEventListener("afterprint", this.handleAfterPrint);
   },
-  beforeUpdate() {},
-  updated() {},
-  beforeDestroy() {
+
+
+  beforeUnmount() {
     // add FNSI-画面リロードの修正 徐 start
     this.removeWatchTopics(this.notifyTopic);
     // add FNSI-画面リロードの修正 徐 end
@@ -1390,9 +1423,9 @@ export default {
     EventBus.$off("removeShowChip", this.removeShowChip);
     // 印刷パラメータ要求
     EventBus.$off("requestReportParams", this.requestrReportParams);
-    
-    window.removeEventListener("beforeprint", this.handleBeforePrint);
-    window.removeEventListener("afterprint", this.handleAfterPrint);
+    const scopedWindow = this.$el?.ownerDocument?.defaultView || window;
+    scopedWindow.removeEventListener("beforeprint", this.handleBeforePrint);
+    scopedWindow.removeEventListener("afterprint", this.handleAfterPrint);
 
     // ポーリングクリア
     this.endPolling();
@@ -1505,17 +1538,32 @@ img.show-info {
   width: 100%;
 }
 
-ons-popover >>> .popover--right__content {
+ons-popover :deep(.popover--right__content) {
   width: 440px;
   text-align: center;
   padding: 2px;
 }
 
-ons-popover >>> .button {
+.status-map-info-popover :deep(.popover--right__content) {
+  width: 440px;
+  text-align: center;
+  padding: 2px;
+}
+
+ons-popover :deep(.button) {
   cursor: pointer;
 }
 
-ons-popover >>> .popover__arrow {
+.status-map-info-popover :deep(.button) {
+  cursor: pointer;
+}
+
+ons-popover :deep(.popover__arrow) {
+  width: 15px;
+  height: 15px;
+}
+
+.status-map-info-popover :deep(.popover__arrow) {
   width: 15px;
   height: 15px;
 }
@@ -1532,7 +1580,7 @@ ons-popover >>> .popover__arrow {
   border: none;
 }
 
-::v-deep .selected-map-style .bed-inner {
+:deep(.selected-map-style .bed-inner) {
   border: 4px solid #f77903;
   background-color: #fedf;
 }

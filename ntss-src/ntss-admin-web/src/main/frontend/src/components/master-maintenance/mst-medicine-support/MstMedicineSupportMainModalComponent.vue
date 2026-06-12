@@ -647,27 +647,27 @@
 </template>
 
 <script>
-import {mapGetters, mapActions} from "vuex";
+import {mapGetters, mapActions} from "@/compat/vue/vuex";
 import { medicine, medicineClass, medicineMix } from "@/functions/mst/MstGetters.js";
 import baseDeviceSetInfoList from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoList.vue";
 import MasterSelector from "@/components/common/master-selector/MasterSelector";
 import MasterSelectorMultiple from "@/components/common/master-selector/MasterSelectorMultiple";
 import {ApiHelper} from "@/apis/AxiosHelper";
 import {deepCopy} from "@/functions/common/CommonFunctions";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
 // FNSI-修正 マスタ削除の対応 楊 add start
 import { MASTER_DELETE_DISPLAY } from "@/constants/TreatmentRecord";
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 // FNSI-修正 マスタ削除の対応 楊 add end
-import { isEqual } from 'lodash';
-
-import vuedraggable from "vuedraggable";
+import isEqual from "@/compat/collections/lodash/isEqual";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 
 export default {
   components: {
     "pop-over": MasterSelector,
     "pop-over-multiple": MasterSelectorMultiple,
-    draggable: vuedraggable
+    draggable: VueDraggable
   },
   mixins: [baseDeviceSetInfoList],
 
@@ -932,7 +932,7 @@ export default {
     //mod マスタ詳細画面がありません破棄メッセージ 张博 start
     if (this.getEditRecord && this.getEditRecord.detailInfo) {
       const detailInfo = JSON.parse(this.getEditRecord.detailInfo)
-        const respExamItem = await ApiHelper.get("mstInfo/mstExamItem/", {
+        const respExamItem = await ApiHelper.get("mstInfo/mstExamItem", {
         facilityCd: this.getFacilitySwitch,
       }).catch((error) => {
         throw error;
@@ -1073,7 +1073,7 @@ export default {
               : medicineItem[key];
         }
       };
-   
+
       this.medicineAverage.forEach(changemedicineItemName)
       this.medicineESA.forEach(changemedicineItemName)
       // add 投薬支援マスタ 削除されたデータの処理 孔 end
@@ -1253,8 +1253,9 @@ export default {
     },
 
     setCss(value) {
-      if(value && document.getElementsByClassName("input-invalid")[0]) {
-        document.getElementsByClassName("input-invalid")[0].classList.remove("input-invalid");
+      const invalidInput = getScopedElementsByClassName("input-invalid", this.$el || this)[0];
+      if(value && invalidInput) {
+        invalidInput.classList.remove("input-invalid");
       }
     },
 
@@ -1315,7 +1316,7 @@ export default {
      */
     validateOnRegistration() {
       if (this.getEditRecord.name === null || this.getEditRecord.name === "") {
-        document.getElementsByClassName("input-required")[0]?.classList?.add("input-invalid");
+        getScopedElementsByClassName("input-required", this.$el || this)[0]?.classList?.add("input-invalid");
         this.$ons.notification.alert({
           // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
           // title: "チェックエラー",
@@ -1494,7 +1495,7 @@ export default {
       // 検査項目一覧を取得
       // add マスタ一覧 施設切替を可能とする 王 start
       // const respExamItem = await ApiHelper.get("mstInfo/mstExamItem/", {facilityCd: this.facilityCd})
-      const respExamItem = await ApiHelper.get("mstInfo/mstExamItem/", {facilityCd: this.getFacilitySwitch})
+      const respExamItem = await ApiHelper.get("mstInfo/mstExamItem", {facilityCd: this.getFacilitySwitch})
       // add マスタ一覧 施設切替を可能とする 王 end
         .catch(error => {
           throw error;
@@ -1529,7 +1530,7 @@ export default {
       // 検査項目一覧を取得
       // add マスタ一覧 施設切替を可能とする 王 start
       // const respExamItem = await ApiHelper.get("mstInfo/mstExamItem/", {facilityCd: this.facilityCd})
-      const respExamItem = await ApiHelper.get("mstInfo/mstExamItem/", {facilityCd: this.getFacilitySwitch})
+      const respExamItem = await ApiHelper.get("mstInfo/mstExamItem", {facilityCd: this.getFacilitySwitch})
       // add マスタ一覧 施設切替を可能とする 王 end
         .catch(error => {
           throw error;
@@ -1830,7 +1831,7 @@ export default {
 }
 
 /*add redmine 4999 プルダウンリストスタイル不正 孔 start*/
-.k-textbox >>> select {
+.k-textbox :deep(select) {
   height: 100%;
 }
 /*add redmine 4999 プルダウンリストスタイル不正 孔 end*/
@@ -1886,7 +1887,7 @@ export default {
   height: 100%;
 }
 
-.cond-disabled * {
+.cond-disabled > * {
   opacity: 0.5;
   pointer-events: none;
 }
@@ -1924,7 +1925,7 @@ export default {
   width: 70%;
   margin: 0px 5px 0px 0px;
 }
-.equipment-input-style >>> input {
+.equipment-input-style :deep(input) {
   background-color: #ebebe4;
 }
 

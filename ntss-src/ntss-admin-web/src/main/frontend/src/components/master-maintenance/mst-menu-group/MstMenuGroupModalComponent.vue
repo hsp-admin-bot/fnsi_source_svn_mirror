@@ -72,19 +72,21 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { FUNC_DEVICE_EDGE_OPERATION } from "@/constants/function-code";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { getMstUrlLinkRegister } from "@/functions/mst/MstGetters";
-import { messageFormat } from '@/functions/common/MessageFormat'
+
 import { createItemListData } from "@/functions/for-componet/ListSelector";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import customInput from "@/components/common/custom-form-tags/CustomInput";
 import listSelectorNoPopover from "@/components/common/list-selector/ListSelectorNoPopover.vue";
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 import { MST_DEFAULT_VALUE } from "@/constants/masterDefineDetail";
-import { EventBus } from "@/eventBus";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { getModalBodyElement, queryScopedSelector } from '@/functions/common/LayoutMeasureHelper';
+import { messageFormat } from "@/functions/common/MessageFormat";
 
 const uriFunctionAll = "/mstInfo/sysFunction";
 const uriFunctionFacility = "/mstInfo/mstFacility/";
@@ -164,12 +166,12 @@ export default {
     this.setLoadingScreenVisible(false);
   },
   mounted() {
-    window.addEventListener("resize", this.calculateGridHeight, false);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.calculateGridHeight, false);
     this.previewImages();
     this.emitNotChangedState(true);
   },
-  beforeDestroy() {
-    window.removeEventListener("resize", this.calculateGridHeight, false);
+  beforeUnmount() {
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.calculateGridHeight, false);
   },
   watch: {
     textIcon() {
@@ -183,6 +185,12 @@ export default {
     },
   },
   methods: {
+    getCurrentModalBody() {
+      return getModalBodyElement(this.$el) || null;
+    },
+    getMenuGroupElement(selector) {
+      return this.getCurrentModalBody()?.querySelector?.(selector) || this.$el?.querySelector?.(selector) || queryScopedSelector(selector, this.$el);
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("loading-screen", ["setLoadingScreenVisible"]),
     
@@ -215,8 +223,7 @@ export default {
       
         // 「デバイスエッジ稼働監視」機能（FUNC_DEVICE_EDGE_OPERATION）の表示は、管理者のみ
         itemList.splice(0, itemList.length, ...itemList.filter(i =>
-          i.code !== FUNC_DEVICE_EDGE_OPERATION || this.getIsNkkAdmin
-        ));
+          i.code !== FUNC_DEVICE_EDGE_OPERATION || this.getIsNkkAdmin));
       
         // 外部リンク登録マスタの取得
         const mstUrlLink = await getMstUrlLinkRegister(this.getFacilitySwitch);
@@ -272,8 +279,8 @@ export default {
      * モーダル画面の高さ調整
      */
     calculateGridHeight(){
-      const newHeight = document.getElementsByClassName("modal-body")[0].clientHeight - document.getElementsByClassName("upper")[0].clientHeight - 45;
-      document.getElementsByClassName("select-area")[0].style.height = newHeight + "px"
+      const newHeight = (this.getCurrentModalBody()?.clientHeight || 0) - (this.getMenuGroupElement('.upper')?.clientHeight || 0) - 45;
+      this.getMenuGroupElement('.select-area')?.style && (this.getMenuGroupElement('.select-area').style.height = newHeight + 'px')
     },
 
     // 未編集状態を送信する
@@ -349,7 +356,7 @@ export default {
         `;
 
       if(!validationResult.nameValid) {
-        document.getElementsByClassName("custom-input-required")[0]?.classList?.add("custom-input-invalid");
+        this.getMenuGroupElement('.custom-input-required')?.classList?.add('custom-input-invalid');
       }
       // ダイアログ表示
       this.$ons.notification.alert({
@@ -360,7 +367,7 @@ export default {
     },
     // メニューグループ名称のエラースタイルを解除する
     warningCancel() {
-      document.getElementsByClassName("custom-input-required")[0].classList.remove("custom-input-invalid");
+      this.getMenuGroupElement('.custom-input-required')?.classList?.remove('custom-input-invalid');
     },
     /**
      * @description 選択されたメニューを編集レコードに設定する
@@ -534,7 +541,7 @@ export default {
   min-width: 200px !important;
   max-width: 100% !important;
 }
-.item-row >>> .multi-select-list {
+.item-row :deep(.multi-select-list) {
   height: 45vh;  
 }
 </style>

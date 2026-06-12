@@ -9,9 +9,9 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,7 +27,7 @@ public class AlertResourceTest {
   @Autowired
   private MockMvc mvc;
 
-  @SpyBean
+  @MockitoSpyBean
   private MNotice mNotice;
 
   @Test
@@ -38,7 +38,7 @@ public class AlertResourceTest {
     
     // 実行
     mvc.perform(post("/api/alerts")
-        .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE)
+        .contentType(MediaType.APPLICATION_JSON_VALUE)
         .content("{\"content\": \"YWJjZA==\"}"))
     .andExpect(status().isOk());
     

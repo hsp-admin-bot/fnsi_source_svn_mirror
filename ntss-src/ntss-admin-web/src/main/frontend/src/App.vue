@@ -4,15 +4,13 @@
     <!-- <notification-message/> -->
     <notification-message id="notified-message"/>
     <!-- FNSI-redming #3831「通知トーストがユーザーフロートメニューに被っている」の不具合修正 江 end -->
-    <!--liyanze-z replace  :key="$route.fullPath"--->
-    <!--施舍切替互換性がある v-if="showView"-->
     <router-view v-if="showView" />
-    <iframe id = "consoleFrame" style="display: none;" src="devtools.html" ></iframe>
+    <iframe id="consoleFrame" style="display: none;" src="devtools.html"></iframe>
   </div>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 import { deleteAllStateDataItem } from "@/stores";
 import NotificationMessage from "@/components/common/notification-message/NotificationMessageComponent";
@@ -24,6 +22,22 @@ import {SESSION_STORAGE_KEY} from "@/constants/sessionStorageConstants";
 /* add by chamaojia 2022-12-06 [5958] 定数ファイル参照の追加 --end */
 /* add by chamaojia 2023-04-26 [5958] 欠落した参照の補充  --start */
 import { deleteSignin } from "@/functions/SigninFunction";
+import { ensureStylesheetLink } from "@/compat/assets/head";
+import {
+  getAlertDialogFooterButtonElements,
+  getAppElement,
+  getBreadcrumbContentElements,
+  getScopedDocument,
+  getScopedWindow,
+  getShellOverlayElements,
+  getViewportHeight,
+  getViewportWidth
+} from "@/functions/common/LayoutMeasureHelper";
+import {
+  getOnsAlertDialogElement,
+  getOnsAlertDialogFooterElement,
+  isOnsAlertDialogElement
+} from "@/functions/common/OnsenFunctions";
 /* add by chamaojia 2023-04-26 [5958] 欠落した参照の補充  --end */
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
 import { ApiHelper } from "@/apis/AxiosHelper";
@@ -45,14 +59,17 @@ export default {
       // countConsoleLog: 0,
       /* delete by yangzhaokai 2022-11-01 #7755 ブラウザのメニューからデベロッパーツールを起動すると、起動を検知して強制サインアウト --end */
       observer: null,
-      showView:true,
+      alertDialogObserverRoot: null,
+      alertDialogObserverOptions: null,
+      alertDialogObserverPaused: false,
+      watchConsoleId: null,
+      appResizeTimerId: null,
+      showView: true,
     };
   },
   computed: {
     ...mapGetters("account-edit", ["getTheme", "getFontSize"]),
-    //liyanze-z 施舍切替互換性がある -- [getRefresh] start
-    ...mapGetters("app", ["getUrl","getRefresh"]),
-    //liyanze-z 施舍切替互換性がある -- [getRefresh] end
+    ...mapGetters("app", ["getUrl", "getRefresh"]),
     /* delete by shiyw 2022-11-08 #7755 ブラウザのメニューからデベロッパーツールを起動すると、起動を検知して強制サインアウト --start */
     //...mapGetters("toggle-dev-tool", ["isLockDevTool"]),
     /* modify by yangzhaokai 2022-11-01 #7755 ブラウザのメニューからデベロッパーツールを起動すると、起動を検知して強制サインアウト --start */
@@ -72,33 +89,30 @@ export default {
     getTheme() {
       this.readThemeCss();
     },
-
-    //liyanze-z 施舍切替互換性がある  watch refresh
-    getRefresh(val,old) {
-      if(val.status == true){
-        this.showView = false
+    getRefresh(val) {
+      if (val?.status === true) {
+        this.showView = false;
         this.$nextTick(() => {
           setTimeout(() => {
             this.showView = true;
-            //false
-            let newObj = {
-                status:false,
-                date:val.date
-            }
-            this.refreshFunction(newObj)
-          },20)
-        })
-
+            this.refreshFunction({
+              status: false,
+              date: val.date
+            });
+          }, 20);
+        });
       }
     },
-    gethisData(newVal,oldVal){
-      let params = {
-        // srcPageName:oldVal,
-        destPageName:newVal
+    gethisData(newVal, oldVal) {
+      const params = {
+        destPageName: newVal
+      };
+      if (oldVal) {
+        ApiHelper.put("/logs/event/pageRouterLog", params);
       }
-      if(oldVal){
-        ApiHelper.put("/logs/event/pageRouterLog", params)
-      }
+    },
+    fontSizeSet() {
+      this.syncAppShell();
     },
     /* delete by shiyw 2022-11-08 #7755 ブラウザのメニューからデベロッパーツールを起動すると、起動を検知して強制サインアウト --start */
     // isLockDevTool() {
@@ -116,9 +130,6 @@ export default {
       "setPressedKey",
       "removePressedKey"
     ]),
-    //liyanze-z 施舍切替互換性がある start
-    ...mapActions("app", ["refreshFunction"]),
-    //liyanze-z 施舍切替互換性がある end
     /* add by shiyw 2022-11-08 #7755 ブラウザのメニューからデベロッパーツールを起動すると、起動を検知して強制サインアウト --start */
     ...mapGetters("toggle-dev-tool", ["isLockDevTool"]),
     // modify 10718 by kangjie 20240724 start
@@ -135,94 +146,215 @@ export default {
     // ...mapActions("user", ["signOut", "setIsDisableDevtool"]),
     ...mapActions("user", ["signOut"]),
     // modify 10718 by kangjie 20240724 end
+    ...mapActions("app", ["refreshFunction"]),
+    getAppScopedDocument() {
+      return getScopedDocument(this.$el || this);
+    },
+    getAppScopedWindow() {
+      return getScopedWindow(this.$el || this);
+    },
+    getAppViewportSize(extraHeight = 0, extraWidth = 0) {
+      return {
+        windowHeight: getViewportHeight(this.$el || this) + Number(extraHeight || 0),
+        windowWidth: getViewportWidth(this.$el || this) + Number(extraWidth || 0)
+      };
+    },
     /* modify by yangzhaokai 2022-11-01 #7755 ブラウザのメニューからデベロッパーツールを起動すると、起動を検知して強制サインアウト --end */
     ...mapActions("account-edit", ["clearUserAccountInfo"]),
     ...mapActions("operation-viewer/machine", ["clearFacilityCd"]),
     /* add by chamaojia 2023-04-26 [5958] 欠落した参照の補充  --start */
     ...mapGetters("user", ["isSignIn", "isSignOut"]),
     /* add by chamaojia 2023-04-26 [5958] 欠落した参照の補充  --end */
-
     // Windowリサイズイベントハンドラ
     handleResizeWindow() {
       // Windowリサイズ時、幅をStoreに格納
-      this.setSize({
-        windowHeight: document.documentElement.clientHeight,
-        windowWidth: document.documentElement.clientWidth
-      });
+      this.setSize(this.getAppViewportSize());
 
       // Windowリサイズ時、パンくずリストを右に寄せる
       this.$nextTick(() => {
-        document.querySelectorAll(".breadcrumb-content").forEach(e => {
+        getBreadcrumbContentElements(this.$el || this).forEach(e => {
           e.scrollLeft = 1000;
         });
       });
     },
 
+    syncAppShell() {
+      const fontSizeClasses = [
+        "font-size-set-small",
+        "font-size-set-medium",
+        "font-size-set-large",
+        "font-size-set-x-large"
+      ];
+      const scopedDocument = this.$el?.ownerDocument || document;
+      const htmlRoot = scopedDocument.documentElement;
+      const bodyRoot = scopedDocument.body;
+      const preferredShellRoot = getAppElement(this.$el || this);
+      const mountRoot = preferredShellRoot?.parentElement?.matches?.("#app[data-v-app]")
+        ? preferredShellRoot.parentElement
+        : preferredShellRoot;
+      const legacyAppRoot = preferredShellRoot && preferredShellRoot !== mountRoot ? preferredShellRoot : null;
+      // Keep Vue2-equivalent sizing semantics: apply font-size class to only one app shell root.
+      const shellRoots = Array.from(new Set([mountRoot, legacyAppRoot].filter(Boolean)));
+      const syncTarget = (target) => {
+        if (!target) {
+          return;
+        }
+        target.classList.remove(...fontSizeClasses);
+        target.classList.add(this.fontSizeSet);
+      };
+
+      shellRoots.forEach((target) => {
+        target.classList.remove(...fontSizeClasses);
+      });
+      syncTarget(preferredShellRoot);
+
+      shellRoots.forEach((target) => {
+        target.classList.remove("ntss-app-shell");
+        ["overflowY", "width", "height", "minHeight", "display"].forEach((key) => {
+          target.style[key] = "";
+        });
+      });
+
+      [htmlRoot, bodyRoot].filter(Boolean).forEach((target) => {
+        target.classList.remove(...fontSizeClasses);
+      });
+      if (htmlRoot) {
+        ["width", "height", "minHeight"].forEach((key) => {
+          htmlRoot.style[key] = "";
+        });
+      }
+      if (bodyRoot) {
+        ["width", "height", "minHeight", "margin"].forEach((key) => {
+          bodyRoot.style[key] = "";
+        });
+      }
+
+      getShellOverlayElements(this.$el || this).forEach((element) => {
+        element.classList.remove(...fontSizeClasses);
+        element.classList.add(this.fontSizeSet);
+      });
+    },
+
+    getLegacyCssCandidates(fileName) {
+      const normalized = fileName.replace(/^\/+/, "");
+      const baseUrl = import.meta.env.BASE_URL || "/";
+      const cleanedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+      return [
+        `${cleanedBase}css/${normalized}`,
+        `./css/${normalized}`,
+        `/css/${normalized}`,
+        `${cleanedBase}${normalized}`
+      ].filter((value, index, array) => array.indexOf(value) === index);
+    },
+
+    ensureStylesheetLink(id, hrefOrCandidates, media = null) {
+      ensureStylesheetLink(id, hrefOrCandidates, media, this.$el || this);
+    },
+
     // cssファイル読み込み
     readCss() {
-      let ntssCss = document.createElement("link");
-      ntssCss.rel = "stylesheet";
-      ntssCss.href = "./css/ntss.css";
-      document.head.appendChild(ntssCss);
+      this.ensureStylesheetLink("ntss-base-css", this.getLegacyCssCandidates("ntss.css"));
     },
 
     // 印刷用cssファイル読み込み
     readPrintCss() {
-      let ntssCss = document.createElement("link");
-      ntssCss.rel = "stylesheet";
-      ntssCss.media = "print";
-      ntssCss.href = "./css/ntss_print.css";
-      document.head.appendChild(ntssCss);
+      this.ensureStylesheetLink(
+        "ntss-print-css",
+        this.getLegacyCssCandidates("ntss_print.css"),
+        "print"
+      );
     },
 
     // themeのcssファイル読み込み
     readThemeCss() {
       const names = ["ntss_variables_w", "ntss_variables_b"];
-      let themeCss = document.createElement("link");
-      themeCss.rel = "stylesheet";
-      themeCss.href = "./css/" + names[this.getTheme] + ".css";
-      document.head.appendChild(themeCss);
+      this.ensureStylesheetLink(
+        "ntss-theme-css",
+        this.getLegacyCssCandidates(`${names[this.getTheme]}.css`)
+      );
     },
 
     // fix 2026/03/26 kendoエディタ用カスタムCSSをグローバルに読み込む lcl start
     // kendoCustomStyle.css をアプリ全体で利用するために head に追加します。
     readKendoCustomCss() {
-      let kendoCss = document.createElement("link");
-      kendoCss.rel = "stylesheet";
-      kendoCss.href = "./css/kendoCustomStyle.css";
-      document.head.appendChild(kendoCss);
+      // Vue2 と同じく ntss/theme CSS 読み込み後に kendoCustomStyle.css を読み込む。
+      // Vite base / host document の違いだけ compat helper に寄せ、重複 link は作らない。
+      this.ensureStylesheetLink(
+        "ntss-kendo-custom-css",
+        this.getLegacyCssCandidates("kendoCustomStyle.css")
+      );
     },
     // fix 2026/03/26 kendoエディタ用カスタムCSSをグローバルに読み込む lcl end
 
     // 各input要素にreadonly属性を設定
     setInputReadOnly(elem, flag) {
-      const isInput = elem.tagName === "INPUT";
+      const targetElement = elem?.nodeType === 1 ? elem : null;
+      if (!targetElement) return;
+
+      const isInput = targetElement.tagName === "INPUT";
       // #8791 患者イベントの時計アイコンが異常 林峻峰 start
       // const isInputTypeValid = ["date", "time", "number", "datetime-local"].includes(elem.type);
-      const isInputTypeValid = ["date", "number", "datetime-local"].includes(elem.type);
+      const isInputTypeValid = ["date", "number", "datetime-local"].includes(targetElement.type);
       // #8791 患者イベントの時計アイコンが異常 林峻峰 end
 
       if (!isInput || !isInputTypeValid) return;
 
-      const arrInput = [...document.getElementsByTagName("input")];
-      const arrText = [...document.getElementsByTagName("textarea")];
+      const scopedDocument = targetElement.ownerDocument || this.$el?.ownerDocument || document;
+      const arrInput = [...scopedDocument.getElementsByTagName("input")];
+      const arrText = [...scopedDocument.getElementsByTagName("textarea")];
 
-      arrInput.map(item => (item.readOnly = item !== elem ? flag : false));
+      arrInput.map(item => (item.readOnly = item !== targetElement ? flag : false));
       arrText.map(item => (item.readOnly = flag));
     },
 
+    getPhysicalKeyCode(ev) {
+      return ev.keyCode ?? ev.which ?? 0;
+    },
+
     handleKeyDown(ev) {
-      this.setPressedKey(`${ev.keyCode}${ev.location || ""}`);
+      this.setPressedKey(`${this.getPhysicalKeyCode(ev)}${ev.location || ""}`);
     },
 
     handleKeyUp(ev) {
-      this.removePressedKey(`${ev.keyCode}${ev.location || ""}`);
+      this.removePressedKey(`${this.getPhysicalKeyCode(ev)}${ev.location || ""}`);
+    },
+
+    handleWindowFocus(ev) {
+      this.setInputReadOnly(ev.target, true);
+    },
+
+    handleWindowBlur(ev) {
+      this.setInputReadOnly(ev.target, false);
+    },
+
+    getNavigationType() {
+      const performance = this.getAppScopedWindow()?.performance || globalThis?.performance;
+      const navigationEntry = performance?.getEntriesByType?.("navigation")?.[0];
+      if (navigationEntry?.type) {
+        return navigationEntry.type;
+      }
+
+      if (performance?.navigation?.type === performance?.navigation?.TYPE_RELOAD) {
+        return "reload";
+      }
+
+      return "navigate";
+    },
+
+    clearWatchConsole() {
+      if (this.watchConsoleId) {
+        clearInterval(this.watchConsoleId);
+        this.watchConsoleId = null;
+      }
     },
 
     /* modify by shiyw 2022-11-08 #7755 ブラウザのメニューからデベロッパーツールを起動すると、起動を検知して強制サインアウト --start */
     setWatchConsole() {
+      this.clearWatchConsole();
       const $this = this;
-      setInterval(function() {
+      const ownerWindow = this.getAppScopedWindow() || globalThis;
+      const scopedSessionStorage = ownerWindow?.sessionStorage || globalThis?.sessionStorage;
+      this.watchConsoleId = ownerWindow.setInterval(function() {
         if(!$this.isLockDevTool()){
           return;
         }
@@ -236,12 +368,12 @@ export default {
         // console.clear();
         //del 10718 by kangjie 20240709 end
         //add 10718 by kangjie 20240709 start
-        let consoleStatus = window.consoleStatus;
+        let consoleStatus = ownerWindow.consoleStatus;
         if ("on" == consoleStatus ) {
-          sessionStorage.setItem("consoleStatus","on");
+          scopedSessionStorage?.setItem("consoleStatus","on");
           $this.devToolsOpenCallback();
         } else {
-          sessionStorage.setItem("consoleStatus","off");
+          scopedSessionStorage?.setItem("consoleStatus","off");
         }
         //add 10718 by kangjie 20240709 end
       }, 1000);
@@ -342,7 +474,8 @@ export default {
       // ユーザーフロートボタン：青状態、デベロッパーツールの起動状態：起動
       if ($this.isLockDevTool) {
         // 現在表示している画面がサインイン画面ではない場合にダイアログを表示
-        const strUrl = window.location.href.split(window.location.pathname);
+        const ownerLocation = (this.getAppScopedWindow() || globalThis)?.location || {};
+        const strUrl = String(ownerLocation.href || "").split(ownerLocation.pathname || "");
         // ログイン画面以外の場合
         if ($this.getFacilityCd !== null && (!(strUrl[1] === "#/" || strUrl[1].indexOf("#/?key") === 0))) {
           // 起動すると、強制サインアウト
@@ -361,7 +494,7 @@ export default {
           // ログイン画面へ遷移
           // ※URLにパラメータが含まれている場合に書き変わらない為、
           // window.locationで遷移するように変更
-          window.location.href = $this.getUrl;
+          (this.getAppScopedWindow() || globalThis).location.href = $this.getUrl;
           // パンくずリストをクリア
           $this.resetKeepHistory();
           // 施設コードをクリア
@@ -371,11 +504,49 @@ export default {
     },
     /* add by shiyw 2022-11-08 #7755 ブラウザのメニューからデベロッパーツールを起動すると、起動を検知して強制サインアウト --end */
 
+    pauseAlertDialogObserverForDailyHistoryGrid() {
+      if (!this.observer || this.alertDialogObserverPaused) {
+        return;
+      }
+      try {
+        this.observer.disconnect();
+        this.alertDialogObserverPaused = true;
+        // 点検履歴 Kendo Grid locked 初期化中は body 全体の MutationObserver を止める。
+        // locked grid は大量の style/childList mutation を発生させるため、alert-dialog 用監視を巻き込まない。
+        console.time?.("[DailyHistoryObserver] paused");
+      } catch (error) {
+        this.alertDialogObserverPaused = false;
+        getErrorMessage('App.vue', 'pauseAlertDialogObserverForDailyHistoryGrid', error);
+      }
+    },
+    resumeAlertDialogObserverForDailyHistoryGrid() {
+      if (!this.observer || !this.alertDialogObserverPaused) {
+        return;
+      }
+      const scopedDocument = this.$el?.ownerDocument || document;
+      const observeRoot = this.alertDialogObserverRoot || scopedDocument.body || scopedDocument.documentElement;
+      const options = this.alertDialogObserverOptions || {
+        attributes: true,
+        attributeFilter: ["style"],
+        subtree: true,
+        childList: true
+      };
+      if (!observeRoot) {
+        return;
+      }
+      try {
+        this.observer.observe(observeRoot, options);
+        this.alertDialogObserverPaused = false;
+        console.timeEnd?.("[DailyHistoryObserver] paused");
+      } catch (error) {
+        getErrorMessage('App.vue', 'resumeAlertDialogObserverForDailyHistoryGrid', error);
+      }
+    },
     observeAlertDialog() {
       const MutationObserver =
-        window.MutationObserver ||
-        window.WebKitMutationObserver ||
-        window.MozMutationObserver;
+        (this.getAppScopedWindow() || globalThis).MutationObserver ||
+        (this.getAppScopedWindow() || globalThis).WebKitMutationObserver ||
+        (this.getAppScopedWindow() || globalThis).MozMutationObserver;
 
       const options = {
         attributes: true,
@@ -387,7 +558,7 @@ export default {
       /* 十字キーでボタンのフォーカスを移動する関数 */
       const moveFocus = (currentButton, direction) => {
         // .alert-dialog-footer内のすべてのボタンを取得し、配列に変換
-        const buttons = Array.from(document.querySelectorAll('.alert-dialog-footer a'));
+        const buttons = Array.from(getAlertDialogFooterButtonElements(currentButton?.closest?.('.alert-dialog-footer') || currentButton));
         // 現在のボタンのインデックスを取得
         const currentIndex = buttons.indexOf(currentButton);
         let newIndex;
@@ -471,8 +642,20 @@ export default {
         });
       };
 
-      /* ons-alert-dialog要素を処理する関数 */
-      const handleAlertDialog = (alertDialog) => {
+      /* v-ons-alert-dialog 要素を処理する関数 */
+      const handleAlertDialog = (target) => {
+        const alertDialog = getOnsAlertDialogElement(target);
+        if (!alertDialog) {
+          return;
+        }
+        // Vuex 共通ダイアログ（GlobalOnsAlertDialog）は v-ons-alert-dialog-button で閉じる。
+        // class 付与前に MutationObserver が走ると footer が <a> に差し替わり OK が効かなくなる。
+        if (
+          alertDialog.classList?.contains("ntss-global-ons-dialog")
+          || alertDialog.closest?.("#ons-alert-dialog-global-root")
+        ) {
+          return;
+        }
         // alertDialogのクラスリストをループして、'font-size-set-'を含むクラスを削除
         alertDialog.classList.forEach(item => {
           if (item.includes('font-size-set-')) {
@@ -484,15 +667,19 @@ export default {
         // フッターのタイプを取得
         const typeFooter = alertDialog.className.split("-")[1];
         // alert-dialog-footer要素を取得
-        const footer = alertDialog.querySelector(".alert-dialog-footer");
+        const footer = getOnsAlertDialogFooterElement(alertDialog);
+        if (!footer) {
+          return;
+        }
         // フッター内のボタン要素を取得
         const buttonFooter = footer.children;
         // 新しいボタン要素を作成
-        const buttonFirst = document.createElement("a");
+        const alertOwnerDocument = alertDialog.ownerDocument || document;
+        const buttonFirst = alertOwnerDocument.createElement("a");
         buttonFirst.href = "#";
-        const buttonSecond = document.createElement("a");
+        const buttonSecond = alertOwnerDocument.createElement("a");
         buttonSecond.href = "#";
-        const buttonLast = document.createElement("a");
+        const buttonLast = alertOwnerDocument.createElement("a");
         buttonLast.href = "#";
 
         // ボタンの数に応じてイベントを追加
@@ -530,15 +717,15 @@ export default {
       const callback = mutations => {
         // すべてのmutationをループ
         mutations.forEach(mutation => {
-          // attributesの変更をチェックし、対象がons-alert-dialogの場合
-          if (mutation.type === 'attributes' && mutation.target.nodeName.toLowerCase() === "ons-alert-dialog") {
+          // attributes の変更をチェックし、対象が v-ons-alert-dialog の場合
+          if (mutation.type === 'attributes' && isOnsAlertDialogElement(mutation.target)) {
             handleAlertDialog(mutation.target);
           }
           // 子ノードの追加をチェック
           else if (mutation.type === 'childList') {
             mutation.addedNodes.forEach(node => {
-              // 追加されたノードがons-alert-dialogの場合
-              if (node.nodeName.toLowerCase() === "ons-alert-dialog") {
+              // 追加されたノードが v-ons-alert-dialog の場合
+              if (isOnsAlertDialogElement(node)) {
                 handleAlertDialog(node);
               }
             });
@@ -546,35 +733,43 @@ export default {
         });
       };
 
+      const scopedDocument = this.$el?.ownerDocument || document;
+      const observeRoot = scopedDocument.body || scopedDocument.documentElement;
+      if (!observeRoot) {
+        return;
+      }
+
+      this.alertDialogObserverRoot = observeRoot;
+      this.alertDialogObserverOptions = options;
+      this.alertDialogObserverPaused = false;
       this.observer = new MutationObserver(callback);
-      this.observer.observe(document.body, options);
+      this.observer.observe(observeRoot, options);
     },
+
     beforePrintSize(){
       //印刷前-kendo-grid表示のために一旦width値を書き換え
-      this.setSize({
-        windowHeight: document.documentElement.clientHeight,
-        windowWidth: document.documentElement.clientWidth -1
-      });
+      this.setSize(this.getAppViewportSize(0, -1));
     },
     /* add by chamaojia 2022-12-06 リフレッシュイベントsessionStorageへのデータ持続化の追加 --start */
     beforeUnload() {
-      if (this.$router.currentRoute.name === "signin") {
+      if (this.$route.name === "signin") {
         // サインインしている状態でタブ若しくはブラウザが閉じられた場合
         this.$nextTick(() => {
           // サインインしている場合
           // ※サインアウトしないでタブやブラウザを閉じた場合がある.
           if (!this.isSignOut() && this.isSignIn()) {
-            const signInCount = localStorage.getItem(LOCAL_STORAGE_KEY.SIGN_IN_COUNT) - 1;
+            const scopedLocalStorage = this.getAppScopedWindow()?.localStorage || globalThis?.localStorage;
+            const signInCount = (scopedLocalStorage?.getItem(LOCAL_STORAGE_KEY.SIGN_IN_COUNT) || 0) - 1;
             if (signInCount <= 0) {
-              localStorage.removeItem(LOCAL_STORAGE_KEY.FACILITY_HASH);
-              localStorage.removeItem(LOCAL_STORAGE_KEY.SIGN_IN_COUNT);
+              scopedLocalStorage?.removeItem(LOCAL_STORAGE_KEY.FACILITY_HASH);
+              scopedLocalStorage?.removeItem(LOCAL_STORAGE_KEY.SIGN_IN_COUNT);
             } else {
-              localStorage.setItem(LOCAL_STORAGE_KEY.SIGN_IN_COUNT, signInCount);
+              scopedLocalStorage?.setItem(LOCAL_STORAGE_KEY.SIGN_IN_COUNT, signInCount);
             }
           }
           this.$nextTick(() => {
             // unload イベントは発火しない為、beforeunload の後続処理で実行する
-            deleteSignin();
+            deleteSignin(this.$el);
           });
         });
       } else {
@@ -589,6 +784,7 @@ export default {
       deleteAllStateDataItem();
     },
     setSessionStorage() {
+      const scopedSessionStorage = this.getAppScopedWindow()?.sessionStorage || globalThis?.sessionStorage;
       for (const storePath of persistStorePaths) {
         const storeNameArr = storePath.split(".");
         let value = this.$store.state;
@@ -596,23 +792,23 @@ export default {
           value = value[storeNameArr[i]]
         }
 
-        sessionStorage.setItem(storePath, JSON.stringify(value))
+        scopedSessionStorage?.setItem(storePath, JSON.stringify(value))
       }
 
-      sessionStorage.setItem(SESSION_STORAGE_KEY.REFRESH_FLAG, "1")
+      scopedSessionStorage?.setItem(SESSION_STORAGE_KEY.REFRESH_FLAG, "1")
     },
     /* add by chamaojia 2022-12-06 [5958] リフレッシュイベントsessionStorageへのデータ持続化の追加 --end */
   },
   created() {
     this.lockDevTool();
     // Windowリサイズ検知
-    window.addEventListener("resize", this.handleResizeWindow, false);
-    window.addEventListener("beforeprint", this.beforePrintSize, false);
+    this.getAppScopedWindow().addEventListener("resize", this.handleResizeWindow, false);
+    this.getAppScopedWindow().addEventListener("beforeprint", this.beforePrintSize, false);
     // add #8043 2022/10/26 【デグレ】ブラウザバックするとパンくずリストに追加される dou start
-    window.addEventListener("popstate", this.setPopstate, false);
+    this.getAppScopedWindow().addEventListener("popstate", this.setPopstate, false);
     // add #8043 2022/10/26 【デグレ】ブラウザバックするとパンくずリストに追加される dou end
-    document.addEventListener("keydown", this.handleKeyDown);
-    document.addEventListener("keyup", this.handleKeyUp);
+    this.getAppScopedDocument().addEventListener("keydown", this.handleKeyDown);
+    this.getAppScopedDocument().addEventListener("keyup", this.handleKeyUp);
     // cssファイルを読み込む
     this.readCss();
     this.readPrintCss();
@@ -654,48 +850,38 @@ export default {
     /* modify by yangzhaokai 2022-11-01 #7755 ブラウザのメニューからデベロッパーツールを起動すると、起動を検知して強制サインアウト --end */
   },
   mounted() {
+    this.syncAppShell();
     // 初期Windowサイズ(幅)設定
     this.$nextTick(() => {
-      if (
-        window.performance.navigation.type ===
-        window.performance.navigation.TYPE_RELOAD
-      ) {
+      this.syncAppShell();
+      if (this.getNavigationType() === "reload") {
         // リロード対策：DOM生成やCSSロードより後に高さの調整を遅延させる。
-        this.setSize({
-          windowHeight: document.documentElement.clientHeight - 100,
-          windowWidth: document.documentElement.clientWidth
-        });
+        this.setSize(this.getAppViewportSize(-100));
       }
-      setTimeout(() => {
+      this.appResizeTimerId = this.getAppScopedWindow().setTimeout(() => {
+        this.appResizeTimerId = null;
+        this.syncAppShell();
         this.handleResizeWindow();
       }, 200);
     });
 
     // 入力フォカスアウト対策:onFocus時に編集対象以外の各input要素のreadonly属性をONにする
-    window.addEventListener(
-      "focus",
-      e => {
-        this.setInputReadOnly(e.target, true);
-      },
-      true
-    );
+    this.getAppScopedWindow().addEventListener("focus", this.handleWindowFocus, true);
 
     // 入力フォカスアウト対策:onBlur時に各input要素のreadonly属性をOFFにする
-    window.addEventListener(
-      "blur",
-      e => {
-        this.setInputReadOnly(e.target, false);
-      },
-      true
-    );
+    this.getAppScopedWindow().addEventListener("blur", this.handleWindowBlur, true);
     /* add by chamaojia 2022-12-06 LoginView.vueから移行されたイベントリスナーの追加 --start */
-    // window.addEventListener("beforeunload", this.beforeUnload);
     /* add by chamaojia 2022-12-06 LoginView.vueから移行されたイベントリスナーの追加 --end */
     /* fix #10961 by lcl 2026-2-14  --start */
-    window.addEventListener("pagehide", this.beforeUnload, false);
+    this.getAppScopedWindow().addEventListener("pagehide", this.beforeUnload, false);
     /* fix #10961 by lcl 2026-2-14  --end */
 
     this.observeAlertDialog();
+    const scopedWindowForDailyHistoryObserver = this.getAppScopedWindow() || globalThis;
+    this.pauseDailyHistoryAlertObserver = () => this.pauseAlertDialogObserverForDailyHistoryGrid();
+    this.resumeDailyHistoryAlertObserver = () => this.resumeAlertDialogObserverForDailyHistoryGrid();
+    scopedWindowForDailyHistoryObserver.__ntssPauseAlertDialogObserverForDailyHistoryGrid = this.pauseDailyHistoryAlertObserver;
+    scopedWindowForDailyHistoryObserver.__ntssResumeAlertDialogObserverForDailyHistoryGrid = this.resumeDailyHistoryAlertObserver;
     // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
     this.keydownHandler = (e) => {
       // 判断 Ctrl+P 或 Command+P
@@ -712,29 +898,42 @@ export default {
           });
       }
     };
-    window.addEventListener('keydown', this.keydownHandler);
+    this.getAppScopedWindow().addEventListener('keydown', this.keydownHandler);
     // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
   },
   // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
   beforeDestroy() {
-    window.removeEventListener('keydown', this.keydownHandler);
+    this.getAppScopedWindow().removeEventListener('keydown', this.keydownHandler);
   },
-  // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
-  destroyed() {
-    window.removeEventListener("resize", this.handleResizeWindow, false);
-    window.removeEventListener("beforeprint", this.beforePrintSize, false);
-    /* fix #10961 by lcl 2026-2-14  --start */
-    try {
-      window.removeEventListener("pagehide", this.beforeUnload, false);
-    } catch (e) {
-      // ignore
+  beforeUnmount() {
+    const scopedWindow = this.getAppScopedWindow();
+    if (this.appResizeTimerId) {
+      scopedWindow.clearTimeout?.(this.appResizeTimerId);
+      this.appResizeTimerId = null;
     }
-    /* fix #10961 by lcl 2026-2-14  --end */
+    scopedWindow.removeEventListener('keydown', this.keydownHandler);
+    scopedWindow.removeEventListener("pagehide", this.beforeUnload, false);
+  },
+  unmounted() {
+    this.getAppScopedWindow().removeEventListener("resize", this.handleResizeWindow, false);
+    this.getAppScopedWindow().removeEventListener("beforeprint", this.beforePrintSize, false);
+    this.getAppScopedWindow().removeEventListener("focus", this.handleWindowFocus, true);
+    this.getAppScopedWindow().removeEventListener("blur", this.handleWindowBlur, true);
     // add #8043 2022/10/26 【デグレ】ブラウザバックするとパンくずリストに追加される dou start
-    window.removeEventListener('popstate', this.setPopstate, false);
+    this.getAppScopedWindow().removeEventListener('popstate', this.setPopstate, false);
     // add #8043 2022/10/26 【デグレ】ブラウザバックするとパンくずリストに追加される dou end
-    document.removeEventListener("keydown", this.handleKeyDown);
-    document.removeEventListener("keyup", this.handleKeyUp);
+    this.getAppScopedDocument().removeEventListener("keydown", this.handleKeyDown);
+    this.getAppScopedDocument().removeEventListener("keyup", this.handleKeyUp);
+    this.getAppScopedWindow().removeEventListener('keydown', this.keydownHandler);
+    this.getAppScopedWindow().removeEventListener("pagehide", this.beforeUnload, false);
+    this.clearWatchConsole();
+    const scopedWindowForDailyHistoryObserver = this.getAppScopedWindow() || globalThis;
+    if (scopedWindowForDailyHistoryObserver.__ntssPauseAlertDialogObserverForDailyHistoryGrid === this.pauseDailyHistoryAlertObserver) {
+      delete scopedWindowForDailyHistoryObserver.__ntssPauseAlertDialogObserverForDailyHistoryGrid;
+    }
+    if (scopedWindowForDailyHistoryObserver.__ntssResumeAlertDialogObserverForDailyHistoryGrid === this.resumeDailyHistoryAlertObserver) {
+      delete scopedWindowForDailyHistoryObserver.__ntssResumeAlertDialogObserverForDailyHistoryGrid;
+    }
     if (this.observer) {
       this.observer.disconnect();
     }

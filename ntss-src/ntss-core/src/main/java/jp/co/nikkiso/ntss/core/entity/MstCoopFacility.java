@@ -206,6 +206,10 @@ public class MstCoopFacility extends BaseEntity {
     /** CRUD変更 */
     @JsonProperty("change_crud")
     private String changeCrud;
+
+    /** ベンダー名 */
+    @JsonProperty("coop_vender")
+    private String coopVender;
   }
 
   /**

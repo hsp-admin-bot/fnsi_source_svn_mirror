@@ -11,11 +11,14 @@
   "author": "fossamagna <m-murakami@esm.co.jp>",
   "license": "UNLICENSED",
   "devDependencies": {
-    "body-parser": "^1.18.2",
-    "eslint": "^4.10.0",
-    "express": "^4.16.2"
+    "@eslint/js": "^10.0.1",
+    "body-parser": "^2.2.2",
+    "eslint": "^10.3.0",
+    "express": "^5.2.1"
   },
-  "dependencies": {
-    "request": "^2.83.0"
+  "dependencies": {},
+  "engines": {
+    "node": "24.x"
   }
+
 }

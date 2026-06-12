@@ -15,11 +15,11 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
-      :class="fontSizeSet"
+      :class="[fontSizeSet, 'measure-history-header-popover']"
       @preshow="popoverPreShow"
       @postshow="popoverPostShow"
       @posthide="popoverPosthide"
@@ -45,7 +45,7 @@
                 id="measureDate"
                 type="date"
                 max="9999-12-31"
-                v-validate="'date_format:yyyy-MM-dd'"
+                v-rules="'date_format:yyyy-MM-dd'"
                 v-model="editingCondition.measureDate"
                 @keydown="onTimeKeyDown($event)"
                 @keyup="showMsg()"
@@ -144,8 +144,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { EventBus } from "@/eventBus.js";
-import { mapGetters, mapActions } from "vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 import commonSearchArea from "@/components/common/CommonSearchArea";
@@ -157,6 +157,7 @@ import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.j
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 //#5590 2023/04/20 ×を常に表示するように修正 張博 start
 import DateInput from "@/components/common/DateInput.vue";
+import { getScopedElementById, getScopedSessionStorage } from "@/functions/common/LayoutMeasureHelper";
 //#5590 2023/04/20 ×を常に表示するように修正 張博 end
 
 export default {
@@ -259,7 +260,10 @@ export default {
       // 検索条件クリアして画面を更新
       // add FNSI-横展開 日付のチェックの追加 徐 start
       this.showError = false;
-      document.getElementById("measureDate").value = "";
+      const measureDateElement = getScopedElementById("measureDate", this.$el || this);
+      if (measureDateElement) {
+        measureDateElement.value = "";
+      }
       // add FNSI-横展開 日付のチェックの追加 徐 end
       this.condition.measureDate = "";
       this.condition.clearflag = true;
@@ -288,7 +292,8 @@ export default {
     },
     // add FNSI-横展開 日付のチェックの追加 徐 start
     showMsg() {
-      if (this.editingCondition.measureDate && document.getElementById("measureDate").validationMessage) {
+      const measureDateElement = getScopedElementById("measureDate", this.$el || this);
+      if (this.editingCondition.measureDate && measureDateElement?.validationMessage) {
         this.showError = true;
       } else {
         this.showError = false;
@@ -318,7 +323,12 @@ export default {
       // クール
       if (`${condObj.kurCd}` !== "-1") {
         const kur = this.findKurSelectorByCode(condObj.kurCd);
-        condList.push({ name:"クール", text: kur ? kur.name : "" });
+        if (kur) {
+          condList.push({ name:"クール", text: kur.name });
+        } else {
+          condList.push({ name:"クール", text: "すべて" });
+          this.condition.kurCd = -1;  // NOTE: クールマスタに存在しないコードだった場合、デフォルト値を設定
+        }
       }
       // add FNSI-redmine4254、4282 徐 start
       else if (condObj.kurCd == -1) {
@@ -347,8 +357,9 @@ export default {
         condList.push({ name:"フリーワード", text:condObj.freeWord });
       }
       // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy start
-      sessionStorage.setItem('roomBedGroupNameStatusList', JSON.stringify(condList.find(item => item.name === "ベッドグループ").text));
-      sessionStorage.setItem('kurGroupNameStatusList', JSON.stringify(condList.find(item => item.name === "クール").text));
+      const scopedSessionStorage = getScopedSessionStorage(this.$el);
+      scopedSessionStorage.setItem('roomBedGroupNameStatusList', JSON.stringify(condList.find(item => item.name === "ベッドグループ").text));
+      scopedSessionStorage.setItem('kurGroupNameStatusList', JSON.stringify(condList.find(item => item.name === "クール").text));
       // add #12280 クールやベッドグループ等が「全部」であるときの表現が画面と違う sunsy end
       // 条件送信結果
       if (condObj.weightScaleStatus > -1) {
@@ -362,7 +373,7 @@ export default {
       this.conditionList = condList;
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -419,7 +430,11 @@ export default {
 };
 </script>
 <style scoped>
-ons-popover >>> .popover {
+ons-popover :deep(.popover) {
+  min-width: 380px;
+}
+
+.measure-history-header-popover :deep(.popover) {
   min-width: 380px;
 }
 </style>

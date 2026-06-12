@@ -20,11 +20,11 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       target="#periodic-inspection-condition-list"
       direction="down"
       :cover-target="false"
-      :class="fontSizeSet"
+      :class="[fontSizeSet, 'periodic-inspection-header-popover']"
       style="width: 400px;"
       @preshow="popoverPreShow"
       @postshow="popoverPostShow"
@@ -36,12 +36,12 @@
             <v-ons-col vertical-align="top" class="pop-title">
               <label>表示期間</label>
             </v-ons-col>
-            <v-ons-col vertical-align="top">
+            <v-ons-col vertical-align="top" class="periodic-inspection-date-col">
               <date-input
                 id="start-date"
                 v-model="localCondition.startDate"
-                :classes="'input-area ntss-input-date ntss-custom-input'"
-                style="width: 75%;"
+                :classes="'ntss-input-date input-area ntss-custom-input'"
+                max="9999-12-31"
                 @handleClearInput="localCondition.startDate = ''"
               />
               <common-calendar
@@ -52,12 +52,12 @@
           </v-ons-row>
           <v-ons-row class="condition-row">
             <v-ons-col vertical-align="top" class="pop-title" />
-            <v-ons-col vertical-align="top">
+            <v-ons-col vertical-align="top" class="periodic-inspection-date-col">
               <date-input
                 id="end-date"
                 v-model="localCondition.endDate"
-                :classes="'input-area ntss-input-date ntss-custom-input'"
-                style="width: 75%;"
+                :classes="'ntss-input-date input-area ntss-custom-input'"
+                max="9999-12-31"
                 @handleClearInput="localCondition.endDate = ''"
               />
               <common-calendar
@@ -70,7 +70,11 @@
             <v-ons-col vertical-align="top" class="pop-title">
               <label>型式</label>
             </v-ons-col>
-            <v-ons-col width="50%" vertical-align="top">
+            <v-ons-col
+              width="50%"
+              vertical-align="top"
+              class="periodic-inspection-machine-type-ms"
+            >
               <kendo-multiselect
                 :data-source="machineInspection"
                 :data-text-field="'machineType'"
@@ -115,9 +119,9 @@
 </template>
 
 <script>
-import { mapGetters, mapActions, mapMutations } from "vuex";
-import moment from "moment";
-import { EventBus } from "@/eventBus";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { sendRequestGetResultByDateSpan } from "@/apis/periodic-inspection";
 import { deepCopy } from "@/functions/common/CommonFunctions";
@@ -139,6 +143,7 @@ import { alertByKey } from "@/functions/common/OnsenFunctions";
 import { calcTargetDate } from "@/functions/modals/default-setting/defaultSettingUtils";
 import DateInput from "@/components/common/DateInput";
 import { makeDefaultCondition } from "@/functions/PeriodicInspectionFunction";
+import { getScopedSessionStorage } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   mixins: [ComponentGuardMixin, PopoverMixin],
@@ -181,8 +186,8 @@ export default {
       roomBedGroupName: "すべて",
     });
     // add #11285 機能帳票の印刷情報対応② 高 start
-    sessionStorage.setItem('machineInspection', JSON.stringify(responseMachineTypeList.data));
-    sessionStorage.setItem('bedGroupList', JSON.stringify(responseBedGroupList.data));
+    getScopedSessionStorage(this.$el || this).setItem('machineInspection', JSON.stringify(responseMachineTypeList.data));
+    getScopedSessionStorage(this.$el || this).setItem('bedGroupList', JSON.stringify(responseBedGroupList.data));
     // add #11285 機能帳票の印刷情報対応② 高 end
     // 検索条件の初期設定を行う前にリストのDOMに反映されるのを待つ
     await this.$nextTick();
@@ -202,8 +207,8 @@ export default {
   mounted() {
     EventBus.$emit("addLeftmostHeaderMargin");
   },
-  beforeDestroy() {
-    EventBus.$off("searchByParam");
+  beforeUnmount() {
+    EventBus.$off("searchByParam", this.search);
     // 印刷パラメータ要求
     EventBus.$off("requestReportParams", this.requestrReportParams);
 
@@ -245,14 +250,11 @@ export default {
       }
       // 型式
       // add #11285 機能帳票の印刷情報対応② 高 start
-      // eslint-disable-next-line vue/no-side-effects-in-computed-properties
-      this.bedGroupList = JSON.parse(sessionStorage.getItem('bedGroupList')) || [];
-      // eslint-disable-next-line vue/no-side-effects-in-computed-properties
-      this.machineInspection = JSON.parse(sessionStorage.getItem('machineInspection')) || [];
+      this.bedGroupList = JSON.parse(getScopedSessionStorage(this.$el || this).getItem('bedGroupList')) || [];
+      this.machineInspection = JSON.parse(getScopedSessionStorage(this.$el || this).getItem('machineInspection')) || [];
       // add #11285 機能帳票の印刷情報対応② 高 end
       const selectedMachine = this.machineInspection.filter(machineInspection => (
-        machineTypeList.includes(machineInspection.machineTypeCd)
-      ));
+        machineTypeList.includes(machineInspection.machineTypeCd)));
       conditionList.push({
         name: "型式",
         text: selectedMachine.length
@@ -270,8 +272,8 @@ export default {
         });
       }
       // add #11285 機能帳票の印刷情報対応② 高 start
-      sessionStorage.setItem('bedGroupListPeriodic', JSON.stringify(conditionList.find(item => item.name === "ベッドグループ").text));
-      sessionStorage.setItem('machineInspectionPeriodic', JSON.stringify(conditionList.find(item => item.name === "型式").text));
+      getScopedSessionStorage(this.$el || this).setItem('bedGroupListPeriodic', JSON.stringify(conditionList.find(item => item.name === "ベッドグループ").text));
+      getScopedSessionStorage(this.$el || this).setItem('machineInspectionPeriodic', JSON.stringify(conditionList.find(item => item.name === "型式").text));
       // add #11285 機能帳票の印刷情報対応② 高 end
 
       return conditionList;
@@ -315,16 +317,12 @@ export default {
         item => item.machine.selected
       ).map(item => item.machine.machineNo);
       if (!listMachineSelect.length) {
-        // title: "装置未選択",
-        // message: "装置を選択してください。",
         alertByKey("00200121");
         return;
       }
 
       this.setParamsCalendar({
-        date: moment().format("YYYY-MM-DD"),
-        // ここで存在しないレイアウトグループコードを指定することで
-        // 予定日選択画面でレイアウトグループが未選択の状態になる
+        date: dayjs().format("YYYY-MM-DD"),
         layoutGroupCd: InvalidLayoutGroupCd,
         isModify: false,
       });
@@ -368,8 +366,6 @@ export default {
         machineTypeList: this.formattedMachineTypeList(machineTypeList),
         bedGroupCd,
       };
-      // 表示期間に対応する点検結果リストと
-      // 型式、ベッドグループに対応する装置リストを検索する
       const [resultRes] = await Promise.all([
         sendRequestGetResultByDateSpan(startDate || "", endDate || ""),
         this.setSearchedList(selectedCondition),
@@ -380,7 +376,7 @@ export default {
     formattedDate(date) {
       return date === null || date === ""
         ? null
-        : moment(date).format("YYYYMMDD");
+        : dayjs(date).format("YYYYMMDD");
     },
     formattedMachineTypeList(list) {
       if (!list.length) {
@@ -411,7 +407,8 @@ export default {
       // 型式
       const machineTypeListDefault = defaults[PERIODIC_INSPECTION.KEY_NAME_MACHINE_TYPE_LIST];
       if (machineTypeListDefault != null) {
-        condition.machineTypeList = machineTypeListDefault;
+        const validMachineTypeCds = this.machineInspection.map(m => m.machineTypeCd);
+        condition.machineTypeList = machineTypeListDefault.filter(value => validMachineTypeCds.includes(value));
       }
       // ベッドグループ
       const bedGroupCdDefault = defaults[PERIODIC_INSPECTION.KEY_NAME_BED_GROUP_CD];
@@ -433,7 +430,7 @@ export default {
 
       if (this.$route.params.fromFacilityCalendar) {
         // 施設カレンダーから日付が渡された場合
-        const dayViewMoment = moment(this.$route.params.fromFacilityCalendar.date);
+        const dayViewMoment = dayjs(this.$route.params.fromFacilityCalendar.date);
         if (dayViewMoment.isValid()) {
           condition.endDate = condition.startDate = dayViewMoment.format("YYYY-MM-DD");
         }
@@ -481,8 +478,32 @@ export default {
 .input-area.ntss-input-date {
   padding-right: 2px;
 }
-.input-area {
-  width: 75%;
+
+/* 表示期間：日付手入力 + カレンダーボタン（連携検索ポップと同様の横並び） */
+.periodic-inspection-header-popover .periodic-inspection-date-col {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+.periodic-inspection-header-popover .periodic-inspection-date-col .date-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto !important;
+}
+.periodic-inspection-header-popover .periodic-inspection-date-col .date-input :deep(input[type="date"]) {
+  width: 100%;
+  box-sizing: border-box;
+}
+.periodic-inspection-header-popover .periodic-inspection-date-col .input-area::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+.periodic-inspection-header-popover .periodic-inspection-date-col .ntss-custom-calendar-host {
+  flex: 0 0 auto;
+}
+.periodic-inspection-header-popover .periodic-inspection-date-col :deep(.dp__main) {
+  width: auto !important;
 }
 .condition-button-area {
   height: 30px;
@@ -499,7 +520,15 @@ export default {
 ons-popover {
   width: 450px;
 }
-ons-popover >>> .date-time {
+
+.periodic-inspection-header-popover {
+  width: 450px;
+}
+ons-popover :deep(.date-time) {
+  margin-bottom: 3px;
+}
+
+.periodic-inspection-header-popover :deep(.date-time) {
   margin-bottom: 3px;
 }
 .condition-search-col {
@@ -514,5 +543,36 @@ ons-popover >>> .date-time {
   .pop-area {
     max-height: 60vh;
   }
+}
+
+/* 型式 MultiSelect：入力枠は白、タグ内×は常時、右端一括クリア×はホバー/フォーカス時のみ */
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms :deep(.k-legacy-multiselect.k-multiselect),
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms :deep(.k-widget.k-multiselect.k-legacy-multiselect) {
+  background-color: #fff !important;
+}
+
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms :deep(.k-chip-remove-action.k-select),
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms :deep(.k-multiselect-wrap > ul.k-reset > li.k-button > .k-select) {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms :deep(.k-legacy-multiselect .k-clear-value),
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms :deep(.k-widget.k-multiselect .k-clear-value) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.12s ease;
+}
+
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms:hover :deep(.k-legacy-multiselect .k-clear-value),
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms:focus-within :deep(.k-legacy-multiselect .k-clear-value),
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms :deep(.k-legacy-multiselect.k-multiselect:hover .k-clear-value),
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms :deep(.k-legacy-multiselect.k-multiselect:focus-within .k-clear-value),
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms:hover :deep(.k-widget.k-multiselect .k-clear-value),
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms:focus-within :deep(.k-widget.k-multiselect .k-clear-value),
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms :deep(.k-widget.k-multiselect.k-legacy-multiselect:hover .k-clear-value),
+.periodic-inspection-header-popover .periodic-inspection-machine-type-ms :deep(.k-widget.k-multiselect.k-legacy-multiselect:focus-within .k-clear-value) {
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 </style>

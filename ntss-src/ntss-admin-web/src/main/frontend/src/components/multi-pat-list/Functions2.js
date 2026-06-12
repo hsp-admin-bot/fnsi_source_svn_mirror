@@ -1,7 +1,7 @@
 import { bedSelector, dialyzerSelector, equipmentSelector, kurSelector, medicateTiming, medicineMixSelector, medicineSelector, procedure, treatmentSelector, vaSelector } from "@/functions/mst/MstGetters.js";
 import {ApiHelper} from "@/apis/AxiosHelper";
 import {MASTER_DELETE_DISPLAY} from "@/constants/TreatmentRecord";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * @description 必要なすべてのマスタを取得
@@ -378,7 +378,7 @@ export const medicineCodeToName = (rstDialysisState, medicine, medicine_del, med
  * @returns {String} マスタ名称 ※コードがnull: '未登録'、コードがマスタに存在しない: ''
  */
 export const dateIntervalCodeToName = (code) => {
-  let strName = "";
+  let strName;
   if (!code) {
     return "未登録";
   }
@@ -452,7 +452,9 @@ export const getDwFromMst = (rstDialysisState,code,patUniques,nameList,treatDate
       if (physical_info != null){
         physical_info.forEach(item => {
           var reg = new RegExp("-","g");
-          var a = item.exam_date.replace(reg,"");
+          // mod #11718 【#11600持ち越し】データリスト画面不正② fang start
+          var a = item?.exam_date?.replace(reg,"");
+          // mod #11718 【#11600持ち越し】データリスト画面不正② fang end
           if (a === treatDate){
             arrTemp.push(item.dw)
           }
@@ -463,18 +465,18 @@ export const getDwFromMst = (rstDialysisState,code,patUniques,nameList,treatDate
         return item.dw !== null && item.dw != undefined
       })
       if(arrTemp.length  === 0){
-        let treatDateMoment = new Date(moment(treatDate).format("YYYY-MM-DD")).getTime();
+        let treatDateMoment = new Date(dayjs(treatDate).format("YYYY-MM-DD")).getTime();
         physical_info.sort((a, b) => {
-          let aExamDate = new Date(moment(a.exam_date).format("YYYY-MM-DD")).getTime();
-          let bExamDate = new Date(moment(b.exam_date).format("YYYY-MM-DD")).getTime();
+          let aExamDate = new Date(dayjs(a.exam_date).format("YYYY-MM-DD")).getTime();
+          let bExamDate = new Date(dayjs(b.exam_date).format("YYYY-MM-DD")).getTime();
           return aExamDate - bExamDate;
         });
         for(const item of physical_info){
           if(b == null){
-            b = new Date(moment(item.exam_date).format("YYYY-MM-DD")).getTime();
+            b = new Date(dayjs(item.exam_date).format("YYYY-MM-DD")).getTime();
             arrTemp.push(item.dw)
           }else{
-            const a  = new Date(moment(item.exam_date).format("YYYY-MM-DD")).getTime();
+            const a  = new Date(dayjs(item.exam_date).format("YYYY-MM-DD")).getTime();
             if(a > b){
               if( a < treatDateMoment || a == treatDateMoment){
                 b = a
@@ -533,6 +535,6 @@ export const getTimeFromMins = (mins) => {
   }
   let h = mins / 60 | 0;
   let m = mins % 60 | 0;
-  return moment().hours(h).minutes(m).format("HH:mm");
+  return dayjs().hours(h).minutes(m).format("HH:mm");
 }
 // add #6523 DWが登録されているのにも関わらず、DWの欄に「未登録」と表示される dou end

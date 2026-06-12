@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.coop_api.web.websocket;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
 import jp.co.nikkiso.ntss.coop_api.config.IfEdgeConfigulation;
 import jp.co.nikkiso.ntss.coop_api.mapping.HealthmonFacility;
@@ -233,7 +233,7 @@ public class IfEdgeMntSessionManager {
   public IfEdgeMntSessionManager() {
     HttpComponentsClientHttpRequestFactory clientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory();
     clientHttpRequestFactory.setReadTimeout(0);
-    clientHttpRequestFactory.setConnectTimeout(0);
+    clientHttpRequestFactory.setConnectionRequestTimeout(0);
     restTemplate = new RestTemplate(clientHttpRequestFactory);
   }
   //#10453 mod 死活監視が動作していない 2024-04-30 卓 start

@@ -2,14 +2,14 @@
 <template>
   <v-ons-popover
     v-if="popoverVisible"
-    :target="targetPositionElement"
+    :target="resolvedTargetPositionElement"
     :visible="loadCompletedFlg"
     animation="none"
     :direction="popoverDisplayDirection"
     :class="[fontSizeSet, 'popover-style']"
     cancelable
     @preshow="popoverPreShow"
-    @postshow="popoverPostShow"
+    @postshow="onPopoverPostShow"
     @posthide="
       popoverPosthide();
       closePopover();
@@ -20,6 +20,7 @@
         <v-ons-col>
           <div class="prescription-list-frame">
             <table class="list-wrapper detail-cell" style="margin-left: 0;">
+              <tbody>
               <tr>
                 <td>{{prescriptionInfoData.checkHos === "1" ? "院外" : "院内"}}</td>
                 <td></td>
@@ -31,12 +32,14 @@
               <tr>
                 <td style="padding: 0 10px 0 0;white-space: nowrap;">保険：{{prescriptionInfoData.patInsurance.substring(prescriptionInfoData.patInsurance.indexOf("&") + 1)}}</td>
                 <td style="white-space: nowrap;">保険医：{{insuranceDoctorName}}</td>
-              </tr>
+                </tr>
+            
+              </tbody>
             </table>
           </div>
         </v-ons-col>
       </v-ons-row>
-      </br>
+      <br />
       <v-ons-row>
         <v-ons-col>
           <div class="prescription-list-frame">
@@ -56,14 +59,14 @@
                   <td style="text-align: center; width: 30px;">
                     <v-ons-checkbox
                       v-show="prescriptionDetail.unchg === 'x'"
-                      v-model="prescriptionDetail.unchg === 'x' ? true:false"
+                      :model-value="prescriptionDetail.unchg === 'x'"
                       @click.stop.prevent
                     ></v-ons-checkbox>
                   </td>
                   <td style="text-align: center; width: 30px;">
                     <v-ons-checkbox
                       v-show="prescriptionDetail.pat_req === 'x'"
-                      v-model="prescriptionDetail.pat_req === 'x' ? true:false"                      
+                      :model-value="prescriptionDetail.pat_req === 'x'"  
                       @click.stop.prevent
                     ></v-ons-checkbox>
                   </td>
@@ -99,6 +102,8 @@ import PopoverMixin from "@/components/PopoverMixin";
 import {popoverPreShow, popoverPostShow, popoverPosthide} from "@/functions/common/CommonPopoverFunctions";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
+import { getViewportHeight, getViewportWidth, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
+import { getOnsPopoverParts, getOnsPopoverPartsFromEvent, resolveOnsPopoverTargetElement } from "@/functions/common/OnsenFunctions";
 
 export default {
   mixins: [PopoverMixin, IndUserSelectMixin],
@@ -143,9 +148,15 @@ export default {
      */
     targetPositionElement: {
       type: [Object, HTMLElement],
-      default() {
-        return this.$parent;
-      }
+      default: null
+    },
+
+    /**
+     * @description ポップオーバーの呼び出し元の位置
+     */
+    targetPositionRect: {
+      type: Object,
+      default: null
     }
   },
 
@@ -159,12 +170,12 @@ export default {
       /**
        * @description 画面の高さ
        */
-      windowHeight: window.innerHeight,
+      windowHeight: getViewportHeight(),
 
       /**
        * @description 画面の幅
        */
-      windowWidth: window.innerWidth,
+      windowWidth: getViewportWidth(),
       
       /**
        * @description 保険医のフルネーム
@@ -179,27 +190,39 @@ export default {
       /**
        * @description ポップオーバー再表示フラグ
        */
-      redrawFlg: false
+      redrawFlg: false,
+      resizeListener: null
     };
   },
 
   computed: {
+    resolvedTargetPositionElement() {
+      return resolveOnsPopoverTargetElement(this.targetPositionElement, this);
+    },
+    resolvedTargetRectElement() {
+      return this.resolvedTargetPositionElement;
+    },
+    resolvedTargetRect() {
+      if (this.targetPositionRect && (this.targetPositionRect.width > 0 || this.targetPositionRect.height > 0)) {
+        return this.targetPositionRect;
+      }
+      return this.resolvedTargetRectElement?.getBoundingClientRect?.() || null;
+    },
     /**
      * @description ポップオーバーの表示方向
      */
     popoverDisplayDirection() {
       if (!this.popoverVisible) return null;
-      let popoverElement = document.getElementsByClassName("disp_target_popover__content")[0];
+      const popoverElement = this.getPopoverContentElement();
       if(popoverElement && this.windowHeight >= 450){
         popoverElement.style.cssText = "height: 450px !important;";
       } else if(popoverElement && this.windowHeight < 450){
         popoverElement.style.cssText = "height: " + this.windowHeight + "px !important;";
       }
-      const elemPosition = this.targetPositionElement.$el
-        ? this.targetPositionElement.$el.getBoundingClientRect()
-        : this.targetPositionElement.getBoundingClientRect();
+      const elemPosition = this.resolvedTargetRect;
+      if (!elemPosition) return null;
       let direction = "right";
-      let defaultHeight = 450;
+      const defaultHeight = 450;
       if (this.windowHeight <= defaultHeight && elemPosition.top >= 260) {
         if (elemPosition.right < this.windowWidth / 2) {
           direction = "right";
@@ -212,8 +235,10 @@ export default {
         } else {
           direction = "up";
         }
-      } else if (elemPosition.top < 260){
+      } else if (elemPosition.top < 260) {
         direction = "down";
+      } else if (this.windowHeight - elemPosition.bottom < defaultHeight + 14) {
+        direction = "up";
       }
       this.setPopoverDirection(direction);
       return direction;
@@ -234,16 +259,31 @@ export default {
     });
     this.loadCompletedFlg = true;
     //リサイズのイベントリスナー登録
-    window.addEventListener("resize", (ev) => {
+    this.resizeListener = () => {
       this.resizeEventListener();
       this.popoverDisplayDirection;
-    });
+    };
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.resizeListener);
   },
-  
+
   methods: {
+    getPopoverContentElement() {
+      return getOnsPopoverParts(this.$el).content
+        || queryScopedSelector(".disp_target_popover__content", this.$el || this);
+    },
     popoverPreShow,
-    popoverPostShow,
     popoverPosthide,
+    onPopoverPostShow(event) {
+      popoverPostShow(event);
+      const state = getOnsPopoverPartsFromEvent(event);
+      if (!state?.popover) {
+        return;
+      }
+      state.popover.style.visibility = "visible";
+      if (state.arrow && state.arrow.style.display === "none") {
+        state.arrow.style.display = "";
+      }
+    },
     /**
      * @description 保険医のフルネームの取得
      */
@@ -264,8 +304,8 @@ export default {
      * @description リサイズ発生時のイベント
      */
     resizeEventListener(){
-      this.windowHeight = window.innerHeight;
-      this.windowWidth = window.innerWidth;
+      this.windowHeight = getViewportHeight();
+      this.windowWidth = getViewportWidth();
     },
     /**
      * @description ポップオーバー非表示
@@ -294,22 +334,22 @@ export default {
       });
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.resizeListener || this.resizeEventListener);
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
-    window.removeEventListener("resize",this.resizeEventListener);
   }
 };
 </script>
 
 <style scoped>
-.popover-style >>> .popover--top,
-.popover-style >>> .popover--right,
-.popover-style >>> .popover--left,
-.popover-style >>> .popover--bottom {
+.popover-style :deep(.popover--top),
+.popover-style :deep(.popover--right),
+.popover-style :deep(.popover--left),
+.popover-style :deep(.popover--bottom) {
   width: initial;
 }
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 600px;
   height: 450px;
   max-height: none !important; /* NOTE: windowSizeを変更すると[Onsen UI]の制御が走り、縮むため[Onsen UI]の制御を無効化 */
@@ -324,21 +364,21 @@ export default {
   border: none;
 }
 @media screen and (max-width: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: auto;
     padding: 10px;
   }
 }
 @media screen and (max-height: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: 350px;
     padding: 5px;
   }
 }
-.popover-style >>> .popover-mask {
+.popover-style :deep(.popover-mask) {
   z-index: 1999 !important;
 }
-.popover-style >>> .popover {
+.popover-style :deep(.popover) {
   z-index: 10001 !important;
 }
 .list-wrapper {

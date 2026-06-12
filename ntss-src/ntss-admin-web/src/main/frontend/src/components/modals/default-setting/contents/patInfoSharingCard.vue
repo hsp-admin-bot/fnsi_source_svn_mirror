@@ -5,7 +5,7 @@
       modifier="nodivider"
       class="ntss-theme-screen"
       expandable
-      :expanded.sync="isExpanded"
+      v-model:expanded="isExpanded"
     >
       <div class="top">
         <div class="center card-header color-header">
@@ -160,10 +160,10 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { PAT_INFO_SHARING } from "@/constants/defaultSettingConstants";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import {
   PAT_BLOOD_TYPE_ABO_OPTIONS,
   PAT_PERSONAL_MAIN_COL_PAT_SEX_OPTIONS,

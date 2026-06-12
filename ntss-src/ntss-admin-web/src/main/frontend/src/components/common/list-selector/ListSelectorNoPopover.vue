@@ -54,9 +54,9 @@
       </v-ons-col>
       <!-- 並び替えボタン -->
       <v-ons-col v-show="sort" class="select-item">
-        <div class="select-item-button-area d-flex flex-column">
+        <div class="select-item-button-area d-flex flex-column list-selector-sort-buttons">
           <button
-            class="k-button k-button-icon"
+            class="k-button k-button-icon list-selector-sort-btn"
             @click="sortTopItem"
             :disabled="isSortDisable"
           >
@@ -64,7 +64,7 @@
           </button>
 
           <button
-            class="k-button k-button-icon"
+            class="k-button k-button-icon list-selector-sort-btn"
             @click="sortUpItem"
             :disabled="isSortDisable"
           >
@@ -72,7 +72,7 @@
           </button>
 
           <button
-            class="k-button k-button-icon"
+            class="k-button k-button-icon list-selector-sort-btn"
             @click="sortDownItem"
             :disabled="isSortDisable"
           >
@@ -80,7 +80,7 @@
           </button>
 
           <button
-            class="k-button k-button-icon"
+            class="k-button k-button-icon list-selector-sort-btn"
             @click="sortBottomItem"
             :disabled="isSortDisable"
           >
@@ -120,7 +120,6 @@
  *       イベントハンドラ引数: {Array} 選択済み項目のオブジェクト配列 [{ cd, name }, ...]
  * @example
  */
-import _ from "underscore";
 import selectionList from "@/components/common/list-selector/SelectionList.vue";
 
 export default {
@@ -156,10 +155,6 @@ export default {
       // 表示項目リスト
       selectionItemList: [],
       /**
-       * 並び替えボタンの活性、非活性フラグ
-       */
-      isSortDisable: true,
-      /**
        * 選択項目リスト
        * ※画面右側に表示する項目リスト
        */
@@ -173,6 +168,25 @@ export default {
      */
     unselectedItemList() {
       return this.selectionItemList.filter(item => !item.isSelected);
+    },
+
+    /**
+     * 選択済リストで行がチェックされているか（並び替えの対象があるか）
+     * ※ここで .some まで書いておかないと、computed から methods 経由だと
+     *   isChecked の依存が取れず disabled が更新されない場合がある
+     */
+    hasCheckedSelectedRow() {
+      return this.selectedItemList.some(item => !!item.isChecked);
+    },
+
+    /**
+     * 選択済で行チェックが無い、またはソート無効時は並び替えボタンを無効化
+     */
+    isSortDisable() {
+      if (!this.sort) {
+        return true;
+      }
+      return !this.hasCheckedSelectedRow;
     }
   },
 
@@ -181,7 +195,7 @@ export default {
     this.selectionItemList = this.itemList.map(item => {
       // 初期選択状態判定
       const defaultSelection = this.defaultSelection.map(info => {
-        if (_.has(info, "cdType")) {
+        if (Object.prototype.hasOwnProperty.call(info, "cdType")) {
           return info.cdType === item.cdType ? info.cd : null;
         } else {
           return info;
@@ -233,8 +247,6 @@ export default {
      */
     toggleCheckSelectedList({ checkedIndex, isChecked }) {
       this.selectedItemList[checkedIndex].isChecked = isChecked;
-      // 選択項目リストでチェックされている場合、並び替えボタンを活性化
-      this.isSortDisable = !this.hasCheckedItem();
     },
 
     /**
@@ -246,8 +258,6 @@ export default {
       if (this.sort) {
         // 非選択項目リストに表示されている全項目を選択項目リストへ追加
         this.selectedItemList.push(...this.unselectedItemList.filter(item => !item.isSelected));
-      } else {
-        this.selectedItemList = this.selectedItemList;
       }
       // 非選択項目リスト内の全項目の選択フラグを更新
       this.unselectedItemList.forEach(item => {
@@ -293,8 +303,6 @@ export default {
           item.isChecked = false;
           item.isSelected = false;
         });
-      // ソートボタンの活性、非活性の制御
-      this.isSortDisable = !this.hasCheckedItem();
     },
 
     /**
@@ -309,14 +317,15 @@ export default {
         item.isChecked = false;
         item.isSelected = false;
       });
-      // ソートボタンの活性、非活性の制御
-      this.isSortDisable = !this.hasCheckedItem();
     },
 
     /**
      * 選択されている項目を一番上に移動する.
      */
     sortTopItem() {
+      if (this.isSortDisable) {
+        return;
+      }
       // 行選択されている項目を取得
       const checkedItems = this.selectedItemList.filter(item => item.isChecked);
       // 取得した行選択リストに行未選択の項目を追加
@@ -328,6 +337,9 @@ export default {
      * 選択されている項目を一つ上に移動する.
      */
     sortUpItem() {
+      if (this.isSortDisable) {
+        return;
+      }
       this.selectedItemList = this.sortItem(this.selectedItemList);
     },
 
@@ -335,6 +347,9 @@ export default {
      * 選択されている項目を一つ下に移動する.
      */
     sortDownItem() {
+      if (this.isSortDisable) {
+        return;
+      }
       this.selectedItemList = this.sortItem(this.selectedItemList.reverse());
       // 逆順を元に戻す
       this.selectedItemList.reverse();
@@ -361,19 +376,14 @@ export default {
      * 選択されている項目を一番下に移動する.
      */
     sortBottomItem() {
+      if (this.isSortDisable) {
+        return;
+      }
       // 未選択の項目の取得
       const unCheckedItems = this.selectedItemList.filter(item => !item.isChecked);
       // 取得した未選択項目リストに行選択されている項目を追加
       unCheckedItems.push(...this.selectedItemList.filter(item => item.isChecked));
       this.selectedItemList = unCheckedItems;
-    },
-
-    /**
-     * 選択済リストで行選択されている項目があるか否か
-     * @returns 行選択されている場合はtrue、それ以外はfalse
-     */
-    hasCheckedItem() {
-      return this.selectedItemList.filter(item => item.isChecked).length > 0;
     },
   }
 };
@@ -393,6 +403,13 @@ export default {
   display: flex;
   align-items: center;
   text-align: center;
+}
+
+/* 無効時もグローバルスタイル等でクリックが貫通するのを防ぐ */
+.list-selector-sort-buttons .list-selector-sort-btn:disabled {
+  pointer-events: none;
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 </style>

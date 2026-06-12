@@ -596,13 +596,13 @@
       </div>
 
       <message-dialog
-        :visible.sync="isDialogVisble"
+        v-model:visible="isDialogVisble"
         v-bind="dialogProps"
         type="1"
         @confirm="saveEdit"
       />
       <message-dialog
-        :visible.sync="isCancelDialogVisble"
+        v-model:visible="isCancelDialogVisble"
         v-bind="dialogProps"
         type="2"
         @confirm="cancelEdit"
@@ -615,7 +615,7 @@
 // add #10359 編集権限の動作不正 dengshen start
 import {deepCopy, getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import {
   DEVICE_TYPE_DC,
   DATA_SOURCE_TYPE_ORD
@@ -623,11 +623,12 @@ import {
 import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoEditor.vue";
 import DcProgramChart from "@/components/deviceset-info/dc-program/DcProgramChart.vue";
 // mod FNSI-濃度プログラムチェックの追加 楊 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // mod FNSI-濃度プログラムチェックの追加 楊 end
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 
+import DeviceSetOwnerMixin from '@/components/deviceset-info/base-modules/DeviceSetOwnerMixin';
 /**
  * @description 透析液濃度プログラム設定値編集画面
  */
@@ -637,7 +638,7 @@ export default {
     "dc-program-chart": DcProgramChart
   },
 
-  mixins: [baseEditor],
+  mixins: [DeviceSetOwnerMixin, baseEditor],
 
   props: {
     // add #10359 編集権限の動作不正 dengshen start
@@ -872,8 +873,8 @@ export default {
 
     // 患者経過総合ビューアから表示されている場合はclassを付与する
     isUnderIndModal() {
-      let indObj = document.getElementsByClassName("indInfo-style-modal-container");
-      if (indObj.length > 0) {
+      const indObj = this._deviceSetClosestOrScopedElement(".indInfo-style-modal-container");
+      if (indObj) {
         return "ind-style-media-query";
       }
       return "";
@@ -881,8 +882,8 @@ export default {
 
     // SubModal上で表示されていた場合にclassを付与する
     isUnderSubModal() {
-      let subModalObj = document.getElementsByClassName("sub-modal-body");
-      if (subModalObj.length > 0) {
+      const subModalObj = this._deviceSetClosestOrScopedElement(".sub-modal-body");
+      if (subModalObj) {
         return "is-under-sub-modal";
       }
       return "";
@@ -891,17 +892,17 @@ export default {
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、yuqizheng add start
   created() {
     this.setLoadingScreenVisible(true);
-    this.$parent.$parent.isDialogType9 = true;
+    this._deviceSetDialogOwner().isDialogType9 = true;
   },
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、yuqizheng add end
   watch: {
     deviceSetInfo() {
       if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
         // 親のスタイル修正
-        if (window.innerWidth <= 1255) {
-          this.$parent.styleObj = { "max-width": "665px", width: "100%" };
+        if ((this.$el?.ownerDocument?.defaultView || window).innerWidth <= 1255) {
+          this._deviceSetDialogOwner().styleObj = { "max-width": "665px", width: "100%" };
         } else {
-          this.$parent.styleObj = { "max-width": "1270px", width: "100%" };
+          this._deviceSetDialogOwner().styleObj = { "max-width": "1270px", width: "100%" };
         }
       }
       //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、yuqizheng add start
@@ -928,25 +929,26 @@ export default {
 
   // add FNSI-濃度プログラムチェックの追加 楊 start
   mounted() {
-    // add 性能改善メモリ不足 shan start
-    EventBus.$off("afbf-modal")
-    // add 性能改善メモリ不足 shan end
-    EventBus.$on("afbf-modal", data => {
+    this.onAfbfModal = (data) => {
       if (this.getIsShowDialysateProgramModal && data) {
         // 切りに設定する
         this.setEditValue();
         // disabledを設定する
-        const contentTreat = document.getElementsByTagName("select");
+        const contentTreat = this._deviceSetQuerySelectorAll("select");
         for (let i = 0; i < contentTreat.length; i++) {
           let attr = contentTreat[i].innerText;
           if (null !== attr) {
-            if (attr.startsWith("切り") ) {
+            if (attr.startsWith("切り")) {
               contentTreat[i].setAttribute("disabled", "true");
             }
           }
         }
       }
-    });
+    };
+    // add 性能改善メモリ不足 shan start
+    EventBus.$off("afbf-modal", this.onAfbfModal)
+    // add 性能改善メモリ不足 shan end
+    EventBus.$on("afbf-modal", this.onAfbfModal);
     setTimeout(() => {
       this.decimalModi();
     },500);
@@ -958,23 +960,8 @@ export default {
   // add FNSI-濃度プログラムチェックの追加 楊 end
 
   // add FNSI-性能を最適化する 李 start
-  beforeDestroy() {
-    EventBus.$off("afbf-modal", data => {
-      if (this.getIsShowDialysateProgramModal && data) {
-        // 切りに設定する
-        this.setEditValue();
-        // disabledを設定する
-        const contentTreat = document.getElementsByTagName("select");
-        for (let i = 0; i < contentTreat.length; i++) {
-          let attr = contentTreat[i].innerText;
-          if (null !== attr) {
-            if (attr.startsWith("切り") ) {
-              contentTreat[i].setAttribute("disabled", "true");
-            }
-          }
-        }
-      }
-    })
+  beforeUnmount() {
+    EventBus.$off("afbf-modal", this.onAfbfModal);
   },
   // add FNSI-性能を最適化する 李 end
 
@@ -986,7 +973,15 @@ export default {
     ]),
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd));
+      return this.isMst || (this.isMst != true && !this.isOtherFacilityRow() && getAuthorized(pageCd, itemCd));
+    },
+    /**
+     * @description 該当行が他院情報かどうかを判定
+     * @returns {Boolean} true = 他施設のデータは参照のみ
+     */
+    isOtherFacilityRow() {
+      const facilityCd = this.getSettingIndChildData?.facilityCd;
+      return facilityCd ? facilityCd !== this.getFacilityCd : false;
     },
     // add #10359 編集権限の動作不正 dengshen end
     /**
@@ -1050,21 +1045,21 @@ export default {
      */
     saveEdit() {
       if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
-        this.$parent.$parent.updateDisable = false;
+        this._deviceSetDialogOwner().updateDisable = false;
       }
     },
 
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、yuqizheng add start
     async resetComponentIndData(structData){
       if (this.isEdit()) {
-        this.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+        this._deviceSetDialogOwner().messageDialogInfo.messageCd = 70000028;
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-        this.$parent.$parent.messageDialogInfo.type = "9";
+        this._deviceSetDialogOwner().messageDialogInfo.type = "9";
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._deviceSetDialogOwner().messageDialogInfo.isDialogVisible = true;
         return;
       } else {
-        this.getComponentData(structData, 2);
+        return this.getComponentData(structData, 2);
       }
     },
     isEdit() {
@@ -1150,8 +1145,7 @@ export default {
       // 対象日時の治療情報取得(開始日付・治療方法・クールで絞り込み)
       let response = await ApiHelper.post(
         "/mainData/getOrdMainDataInfo",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         getErrorMessage('IndActionChart.vue', 'resetComponentData', error);
         throw error;
       });
@@ -1190,7 +1184,7 @@ export default {
     },
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、yuqizheng add end
     decimalModi() {
-      let textInputs = document.getElementsByClassName("text-input");
+      const textInputs = this._deviceSetElementsByClassName("text-input");
       for (let i = 0; i < textInputs.length; i++) {
         if (textInputs[i].value !== "" && textInputs[i].value !== null && textInputs[i].type === "number") {
           let temp = textInputs[i].value + "";
@@ -1215,18 +1209,7 @@ export default {
       // }
       EventBus.$emit("deviceSetChanged", !val);
       // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng end
-      
-    },
-    /**
-   * @description 該当行が他院情報かどうかを判定
-   * @returns {Boolean} true = 他施設のデータは参照のみ
-   */
-    isOtherFacilityRow() {
-      if (!this.getSettingIndChildData) {
-        return false
-      }
-      return this.getSettingIndChildData.facilityCd ? this.getSettingIndChildData.facilityCd !== this.getFacilityCd : false
-    },
+    }
   }
 };
 </script>
@@ -1266,7 +1249,7 @@ export default {
   font-size: 1em;
 }
 
-.is-under-sub-modal >>> * {
+.is-under-sub-modal :deep(*) {
   font-size: inherit !important;
 }
 
@@ -1279,7 +1262,7 @@ export default {
   margin: 4px;
 }
 
-.device-input-charts >>> .custom-input-number {
+.device-input-charts :deep(.custom-input-number) {
   width: 100%;
   padding: 0;
   margin: 0;

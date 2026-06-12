@@ -1,16 +1,18 @@
-/* eslint-disable no-console */
 
-import { register } from "register-service-worker";
+import { register } from "@/compat/pwa/register-service-worker";
 
-if (process.env.NODE_ENV === "production") {
-  register(`${process.env.BASE_URL}service-worker.js`, {
+const baseUrl = import.meta.env.BASE_URL ?? "/";
+const isProduction = import.meta.env.PROD;
+
+if (isProduction) {
+  register(`${baseUrl}service-worker.js`, {
     ready() {
       console.log(
         "App is being served from cache by a service worker.\n" +
           "For more details, visit https://goo.gl/AFskqB"
       );
       // 初回通信で失敗する為、先に下記通信をダミー処理として行い、失敗させておく(正常なJSESSIONID取得の為)
-      var xmlhttp = new XMLHttpRequest();
+      const xmlhttp = new XMLHttpRequest();
       xmlhttp.open("GET", "/ntss-admin-web/api/sign-in/check/sessiontimeout");
       xmlhttp.send();
     },

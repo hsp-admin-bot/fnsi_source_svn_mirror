@@ -18,8 +18,8 @@ import {
   sendRequestDeleteOrderPrescription,
   sendRequestGetInsuInfoByCd
 } from "@/apis/pat-prescription";
-import BigNumber from "bignumber.js";
-import { isEqual } from 'lodash';
+import BigNumber from "@/compat/number/bignumber";
+import { isEqual } from "@/compat/collections/lodash";
 import { MEDICINE_TYPE } from "@/constants/patPrescriptionConstants";
 
 const initialSearchCondition = {
@@ -257,8 +257,8 @@ export default {
       dataList[data.index].buttonItems[6].dataList = data.dataList;
       dataList[data.index].buttonItems[6].itemValue = "";
       dataList[data.index].buttonItems[5].unitDecimalPoint = data.unitDecimalPoint;
-      if (data.hasOwnProperty("unitDecimalPoint")) {
-        let returnVal = 0;
+      if (Object.prototype.hasOwnProperty.call(data, "unitDecimalPoint")) {
+        let returnVal;
         let decPoint = data.unitDecimalPoint;
         let num = dataList[data.index].buttonItems[5].itemValue;
         let decStep = BigNumber(10).exponentiatedBy(BigNumber(decPoint)).valueOf();
@@ -274,9 +274,11 @@ export default {
     },
 
     // 用法・用語マスタを取得
-    async setTakeMedicine({ commit }, facilityCd) {
+    async setTakeMedicine({ commit }, payload) {
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
       commit("setListTakeMedicine", []);
-      const response = await sendRequestGetTakeMedicine(facilityCd)
+      const response = await sendRequestGetTakeMedicine(facilityCd, selectedPatId)
       commit("setListTakeMedicine", response.data);
     },
 
@@ -315,8 +317,10 @@ export default {
      * 指定された処方箋詳細を取得する。
      * @param {*} ordPrescriptionNo
      */
-    async sendRequestGetOrderPrescriptionDetail({ commit }, ordPrescriptionNo) {
-      const response = await sendRequestGetOrderPrescriptionDetail(ordPrescriptionNo);
+    async sendRequestGetOrderPrescriptionDetail({ commit }, payload) {
+      const ordPrescriptionNo = payload && typeof payload === "object" ? payload.ordPrescriptionNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      const response = await sendRequestGetOrderPrescriptionDetail(ordPrescriptionNo, selectedPatId);
       let data = {
         startDate: response.data.ordPrescription.issueDate,
         endDate: response.data.ordPrescription.expirationDate,
@@ -333,9 +337,7 @@ export default {
         remarksFree: response.data.ordPersonalPrescription.remarksFree,
         isRefill: response.data.ordPersonalPrescription.isRefill == "1" ? true : false,
         refillNum: response.data.ordPersonalPrescription.refillNum,
-        // add #12462 患者情報共有 Ji start
-        facilityCd: response.data.ordPersonalPrescription.facilityCd,
-        // add #12462 患者情報共有 Ji end
+        facilityCd: response.data.ordPersonalPrescription.facilityCd
       }
       commit("setOrdPrescriptionNo", response.data.ordPrescription.ordPrescriptionNo);
       // add FutreNetWeb+SI課題管理No5520 趙 start
@@ -378,8 +380,10 @@ export default {
      * 指定された処方オーダー番号に対する処方情報を検索し、stateにセットする
      * @param {*} ordPrescriptionNo
      */
-    async findOrderPrescription({ commit }, ordPrescriptionNo) {
-      const response = await sendRequestGetOrderPrescriptionDetail(ordPrescriptionNo);
+    async findOrderPrescription({ commit }, payload) {
+      const ordPrescriptionNo = payload && typeof payload === "object" ? payload.ordPrescriptionNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      const response = await sendRequestGetOrderPrescriptionDetail(ordPrescriptionNo, selectedPatId);
       if (response.data.ordPrescription !== null) {
         commit("setOrdPrescriptionNo", response.data.ordPrescription.ordPrescriptionNo);
         commit("setOrdPrescriptionPatId", response.data.ordPrescription.patId)
@@ -403,16 +407,19 @@ export default {
      * @param {*} facilityCd
      * @param {*} ordPrescriptionNo
      */
-    getDoctorsAtFacility(context, facilityCd, ordPrescriptionNo) {
-      return sendRequestGetDoctorsAtFacility(facilityCd, !ordPrescriptionNo ? this.ordPrescriptionNo : ordPrescriptionNo);
+    getDoctorsAtFacility(context, payload) {
+      const facilityCd = payload?.facilityCd ?? payload;
+      return sendRequestGetDoctorsAtFacility(facilityCd, payload?.selectedPatId);
     },
 
     /**
      * 指定された保険コードから保険情報を取得する。
      * @param {*} insuranceCd
      */
-    sendRequestGetInsuInfoByCd(context, insuranceCd) {
-      let response = sendRequestGetInsuInfoByCd(insuranceCd);
+    sendRequestGetInsuInfoByCd(context, payload) {
+      const insuranceCd = payload && typeof payload === "object" ? payload.insuranceCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      let response = sendRequestGetInsuInfoByCd(insuranceCd, selectedPatId);
       return response
     },
 
@@ -421,8 +428,10 @@ export default {
      * 施設名取得
      * @param {*} facilityCd
      */
-    sendRequestGetFacilityNameByCd(context, facilityCd) {
-      let response = sendRequestGetFacilityNameByCd(facilityCd);
+    sendRequestGetFacilityNameByCd(context, payload) {
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      let response = sendRequestGetFacilityNameByCd(facilityCd, selectedPatId);
       return response
     },
     // add FNSI-改修内容 イベント一覧の日付直下に、施設名を表示する dou end

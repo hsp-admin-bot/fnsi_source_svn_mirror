@@ -5,6 +5,7 @@ import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
 import jp.co.nikkiso.ntss.admin_web.request.facility.SetStaffFacilityRequest;
 import jp.co.nikkiso.ntss.admin_web.response.StaffFacilitySettingsResponse;
 import jp.co.nikkiso.ntss.admin_web.response.facilities.FacilitiesResponse;
+import jp.co.nikkiso.ntss.admin_web.response.facilities.StaffFacility;
 import jp.co.nikkiso.ntss.admin_web.response.facilities.StaffFacilityResponse;
 import jp.co.nikkiso.ntss.admin_web.response.masterMaintenance.MasterUpdateResponse;
 import jp.co.nikkiso.ntss.admin_web.response.personalUser.UserIdAndUserName;
@@ -13,11 +14,14 @@ import jp.co.nikkiso.ntss.admin_web.service.MstFacilityService;
 import jp.co.nikkiso.ntss.admin_web.service.PersonalTabDefineService;
 import jp.co.nikkiso.ntss.admin_web.service.PersonalUserService;
 import jp.co.nikkiso.ntss.admin_web.service.facilities.FacilitiesService;
+import jp.co.nikkiso.ntss.admin_web.service.master.user.MstUserService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.web.rest.util.WebApiCallFacilityCancelManage;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
+import jp.co.nikkiso.ntss.core.dao.MstFacilityHashDao;
 import jp.co.nikkiso.ntss.core.entity.MstFacility;
 import jp.co.nikkiso.ntss.core.entity.MstFacilityHash;
+import jp.co.nikkiso.ntss.core.entity.MstUser;
 import jp.co.nikkiso.ntss.core.entity.TabDisplayNameAndContentsId;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
 import jp.co.nikkiso.ntss.core.entity.MntFacilityCancelManage;
@@ -37,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
@@ -52,6 +57,7 @@ import org.springframework.web.bind.annotation.RestController;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 施設系のResourceクラス.
@@ -75,6 +81,9 @@ public class FacilityResource {
   // add FNSi5712アプリケーションログが出力しない 周 start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // add FNSi5712アプリケーションログが出力しない 周 end
 
   /**
@@ -94,6 +103,12 @@ public class FacilityResource {
    */
   @Autowired
   private MstFacilityService mstFacilityService;
+
+  @Autowired
+  private MstUserService mstUserService;
+
+  @Autowired
+  private MstFacilityHashDao mstFacilityHashDao;
 
   /**
    * 施設解約API処理インタフェース
@@ -119,7 +134,27 @@ public class FacilityResource {
   @GetMapping("/{userId}")
   public ResponseEntity<?> getFacilities(
       @PathVariable Long userId,
-      @RequestParam(name = "isNkkFacility") boolean isNkkFacility) {
+      @RequestParam(name = "isNkkFacility") boolean isNkkFacility,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstUser mstUser = mstUserService.getByUserId(userId);
+        if (mstUser != null) {
+          String facilityCd = mstUser.getFacilityCd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                    "mstUser.getFacilityCd()=" + mstUser.getFacilityCd() + " ";
+            InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
     // ログ出力
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "";
@@ -147,7 +182,19 @@ public class FacilityResource {
    * @return 担当施設取得のResponse
    */
   @GetMapping("/staff_facility/{userId}")
-  public ResponseEntity<?> getStaffFacility(@PathVariable Long userId) {
+  public ResponseEntity<?> getStaffFacility(@PathVariable Long userId,
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                            @AuthenticationPrincipal NtssUser ntssUser
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+                                            ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    StaffFacilityResponse staffFacility = facilityService.getStaffFacility(userId);
+    for (StaffFacility facility : staffFacility.staffFacilities) {
+      if (facility.facilityCd != null && !facility.facilityCd.equals(ntssUser.getFacilityCd())) {
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // ログ出力
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/staff_facility/";
@@ -171,7 +218,27 @@ public class FacilityResource {
   }
 
   @GetMapping("/staff_facility_sharing/{userId}")
-  public ResponseEntity<?> getStaffFSharingacility(@PathVariable Long userId) {
+  public ResponseEntity<?> getStaffFSharingacility(@PathVariable Long userId,
+                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                   @AuthenticationPrincipal NtssUser ntssUser
+                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstUser mstUser = mstUserService.getByUserId(userId);
+        if (mstUser != null) {
+          String facilityCd = mstUser.getFacilityCd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                    "mstUser.getFacilityCd()=" + mstUser.getFacilityCd() + " ";
+            InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
     // ログ出力
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/staff_facility_sharing/";
@@ -202,7 +269,27 @@ public class FacilityResource {
    * @return response
    */
   @PutMapping("/staff_facility/{userId}")
-  public ResponseEntity<?> setStaffFacility(@PathVariable Long userId, @RequestBody SetStaffFacilityRequest request) {
+  public ResponseEntity<?> setStaffFacility(@PathVariable Long userId, @RequestBody SetStaffFacilityRequest request,
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                            @AuthenticationPrincipal NtssUser ntssUser
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if(!ntssUser.isNkkAdminUser()) {
+      MstUser mstUser = mstUserService.getByUserId(userId);
+      if (mstUser != null) {
+        String facilityCd = mstUser.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                  "mstUser.getFacilityCd()=" + mstUser.getFacilityCd() + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
     // ログ出力
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/staff_facility/";
@@ -239,7 +326,23 @@ public class FacilityResource {
    * @return 使用可能機能リスト
    */
   @GetMapping("/{facilityCd}/use-functions")
-  public ResponseEntity<List<String>> getUseFunctions(@PathVariable String facilityCd) {
+  public ResponseEntity<List<String>> getUseFunctions(@PathVariable String facilityCd,
+                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                      @AuthenticationPrincipal NtssUser ntssUser
+                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()" + ntssUser.getFacilityCd() + " " +
+                  "@PathVariable String facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // ログ出力
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/use-functions";
@@ -270,6 +373,18 @@ public class FacilityResource {
   public ResponseEntity<?> getDisplayNameAndContentsIdByFacilityCd(
       @PathVariable String facilityCd,
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()" + ntssUser.getFacilityCd() + " " +
+                  "@PathVariable String facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // ログ出力
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/personal-setting/tab/define";
@@ -300,7 +415,23 @@ public class FacilityResource {
    */
   @GetMapping("/{facilityCd}/personal-user/job/doctor/prescription")
   public ResponseEntity<?> getDoctorsPrescriptionByFacilityCd(@PathVariable String facilityCd,
-      @RequestParam(name = "ordPrescriptionNo", required = false) Long ordPrescriptionNo) {
+      @RequestParam(name = "ordPrescriptionNo", required = false) Long ordPrescriptionNo,
+                                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                              @AuthenticationPrincipal NtssUser ntssUser
+                                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()" + ntssUser.getFacilityCd() + " " +
+                  "@PathVariable String facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/personal-user/job/doctor/prescription";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(),
@@ -337,9 +468,18 @@ public class FacilityResource {
    *
    * @param facilityCd 施設コード
    * @return 医師リスト
-   */
+  */
   @GetMapping("/{facilityCd}/personal-user/job/doctor")
-  public ResponseEntity<?> getDoctorsByFacilityCd(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getDoctorsByFacilityCd(@PathVariable String facilityCd,
+                                                  @RequestParam(required = false) Long selectedPatId,
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
     // ログ出力
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/personal-user/job/doctor";
@@ -368,7 +508,23 @@ public class FacilityResource {
    * @return 医師リスト
    */
   @GetMapping("/{facilityCd}/personal-user/job/doctorIncludeDel")
-  public ResponseEntity<?> getDoctorsByFacilityCdIncludeDel(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getDoctorsByFacilityCdIncludeDel(@PathVariable String facilityCd,
+                                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                            @AuthenticationPrincipal NtssUser ntssUser
+                                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()" + ntssUser.getFacilityCd() + " " +
+                  "@PathVariable String facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     String mappingUrl = Uri.FACILITIES + "/personal-user/job/doctorIncludeDel";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(),
       LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_FACILITIES_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -440,7 +596,27 @@ public class FacilityResource {
   */
   @GetMapping("/MstFacilityHash/getUrlSignin")
   public ResponseEntity<?> getUrlSignin(
-      @RequestParam String hashValue) {
+      @RequestParam String hashValue,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+      if(ntssUser != null && !ntssUser.isNkkAdminUser()) {
+        MstFacilityHash mstFacilityHash = mstFacilityHashDao.findByHashValue(hashValue);
+        if (mstFacilityHash != null) {
+          String facilityCd = mstFacilityHash.getFacilityCd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
+                    "mstFacilityHash.getFacilityCd()=" + mstFacilityHash.getFacilityCd() + " ";
+            InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/MstFacilityHash/getUrlSignin";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(),
@@ -515,7 +691,23 @@ public class FacilityResource {
   *
   */
   @GetMapping("/MstFacilityHash/{facilityCd}")
-  public ResponseEntity<?> getMstFacilityHashByFacilityCd(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getMstFacilityHashByFacilityCd(@PathVariable String facilityCd,
+                                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                          @AuthenticationPrincipal NtssUser ntssUser
+                                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()" + ntssUser.getFacilityCd() + " " +
+                  "@PathVariable String facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // ログ出力
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/MstFacilityHash/";
@@ -640,7 +832,24 @@ public class FacilityResource {
    * @return ResponseEntity
    */
   @PostMapping("/completeDelete")
-  public ResponseEntity<String> completeDelete(@RequestBody Map<String, String> payload) {
+  public ResponseEntity<String> completeDelete(@RequestBody Map<String, String> payload,
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = payload.get("facilityCd");
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()" + ntssUser.getFacilityCd() + " " +
+                  "payload.get(\"facilityCd\")=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/MntFacilityCancelManage/SelectAll";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(),
@@ -691,7 +900,24 @@ public class FacilityResource {
    * @return ResponseEntity
    */
   @PostMapping("/dataDelete")
-  public ResponseEntity<String> dataDelete(@RequestBody Map<String, String> payload) {
+  public ResponseEntity<String> dataDelete(@RequestBody Map<String, String> payload,
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                           @AuthenticationPrincipal NtssUser ntssUser
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = payload.get("facilityCd");
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()" + ntssUser.getFacilityCd() + " " +
+                  "payload.get(\"facilityCd\")=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/dataDelete";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(),
@@ -742,7 +968,24 @@ public class FacilityResource {
    * @return ResponseEntity
    */
   @PostMapping("/downloadBackup")
-  public ResponseEntity<?> downloadBackup(@RequestBody Map<String, String> payload) {
+  public ResponseEntity<?> downloadBackup(@RequestBody Map<String, String> payload,
+                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                          @AuthenticationPrincipal NtssUser ntssUser
+                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = payload.get("facilityCd");
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()" + ntssUser.getFacilityCd() + " " +
+                  "payload.get(\"facilityCd\")=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/downloadBackup";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(),
@@ -815,7 +1058,7 @@ public class FacilityResource {
         LoggingConstant.FUNCTION_CODE.FUNC_DETAIL_FACILITIES_LIST, AFTER_LOG_FLG_INFO, mappingUrl, null,
         Arrays.asList(payload));
       // add FNSi5712アプリケーションログが出力しない 周 end
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 
     } catch (Exception e) {
       EventLogMessage eventLogMessage = new EventLogMessage();
@@ -841,7 +1084,8 @@ public class FacilityResource {
   *
   */
   @GetMapping("MstFacilityHash/OtpFailureCnt/hash")
-  public ResponseEntity<?> getSystemOtpFailureCntByHashValue(@RequestParam Map<String, Object> req) {
+  public ResponseEntity<?> getSystemOtpFailureCntByHashValue(@RequestParam Map<String, Object> req
+) {
     // ログ出力
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/MstFacilityHash/OtpFailureCnt/hash";
@@ -884,9 +1128,18 @@ public class FacilityResource {
    * @param facilityCd 取得対象の施設コード
    * @return 対象施設のmst facilityテーブルのResponse
    *
-   */
+  */
   @GetMapping("/getFacilityInfoByCd/{facilityCd}")
-  public ResponseEntity<?> getFacilityInfoByCd(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getFacilityInfoByCd(@PathVariable String facilityCd,
+                                               @RequestParam(required = false) Long selectedPatId,
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                               @AuthenticationPrincipal NtssUser ntssUser
+                                               // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
     // ログ出力
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/getFacilityInfoByCd/";

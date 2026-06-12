@@ -28,6 +28,7 @@ import jp.co.nikkiso.ntss.admin_web.service.utils.StrUtils;
 import jp.co.nikkiso.ntss.core.dao.MstPersonalUserDao;
 import jp.co.nikkiso.ntss.core.dao.MstSelectorDao;
 import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
+import jp.co.nikkiso.ntss.core.dao.PatPersonalMainDao;
 import jp.co.nikkiso.ntss.core.entity.MstObsKind;
 import jp.co.nikkiso.ntss.core.entity.PatObsRec;
 import jp.co.nikkiso.ntss.core.entity.custom.OrdMainPatObsRecCombo;
@@ -42,6 +43,10 @@ import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
+import tools.jackson.databind.ObjectMapper;
+import jp.co.nikkiso.ntss.core.entity.OrdMain;
+import jp.co.nikkiso.ntss.core.entity.PatPersonalMain;
 
 
 /**
@@ -82,6 +87,11 @@ public class ObserveRecordResource {
   @Autowired
   ObserveRecordService observeRecordService;
   /* add by lvzongheng  2023-02-01  end */
+
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Autowired
+  PatPersonalMainDao patPersonalMainDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
   /**
    * コンボボックス用治療情報データ取得
@@ -161,12 +171,25 @@ public class ObserveRecordResource {
       @PathVariable(name = "patId", required = true) String patId,
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
       //@PathVariable(name = "ctlNo", required = true) String ctlNo) {
-      @PathVariable(name = "ctlNo", required = true) Long ctlNo) {
+      @PathVariable(name = "ctlNo", required = true) Long ctlNo,
+      @AuthenticationPrincipal NtssUser ntssUser) {
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_OBS_REC + "/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_OBSERVE_RECORD,
       BEFORE_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(patId, ctlNo));
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (patId != null && StrUtils.isNumber(patId)) {
+        PatPersonalMain userInf = patPersonalMainDao.selectById(Long.parseLong(patId));
+        if (userInf != null && userInf.getFacility_cd() != null && !userInf.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + userInf.getFacility_cd() + " " + "pat_id=" + patId + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // add FNSi5712アプリケーションログが出力しない 周 end
     List<PatObsRecView> res = new ArrayList<PatObsRecView>();
 
@@ -271,11 +294,24 @@ public class ObserveRecordResource {
       @PathVariable(name = "startDate", required = true) String startDate,
       @PathVariable(name = "endDate", required = true) String endDate,
       @PathVariable(name = "isDel", required = true) String isDel,
-      @PathVariable(name = "isNewest", required = true) String isNewest) {
+      @PathVariable(name = "isNewest", required = true) String isNewest,
+      @AuthenticationPrincipal NtssUser ntssUser) {
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_OBS_REC + "/{patId}/{startDate}/{endDate}/{isDel}/{isNewest}";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_OBSERVE_RECORD,
       BEFORE_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(patId, startDate, endDate, isDel, isNewest));
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (patId != null && StrUtils.isNumber(patId)) {
+        PatPersonalMain userInf = patPersonalMainDao.selectById(Long.parseLong(patId));
+        if (userInf != null && userInf.getFacility_cd() != null && !userInf.getFacility_cd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + userInf.getFacility_cd() + " " + "pat_id=" + patId + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // add FNSi5712アプリケーションログが出力しない 周 end
     List<PatObsRecView> res = new ArrayList<PatObsRecView>();
 
@@ -375,7 +411,8 @@ public class ObserveRecordResource {
   public ResponseEntity<?> getPatObsRecAll(
       @PathVariable(name = "ordNo", required = true) Long ordNo,
       @PathVariable(name = "isDel", required = true) String isDel,
-      @PathVariable(name = "isNewest", required = true) String isNewest) {
+      @PathVariable(name = "isNewest", required = true) String isNewest,
+      @AuthenticationPrincipal NtssUser ntssUser) {
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_OBS_REC + "/ordno/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_OBSERVE_RECORD,
@@ -391,6 +428,18 @@ public class ObserveRecordResource {
     }
 
     if (ordNo != null) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+        boolean hasAccess = ordMain == null || ordMain.getFacilityCd() == null
+                || ordMain.getFacilityCd().equals(ntssUser.getFacilityCd());
+        if (!hasAccess) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "ordMain.getFacilityCd()=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
       /* modify by lvzongheng  2023-02-01 [CodeOptimization]  start */
       res = observeRecordService.getPatObsRecAll(ordNo,isDel,isNewest);
 //      //オーダ番号で検索
@@ -541,7 +590,7 @@ public class ObserveRecordResource {
 //        // json分解
 //        ObjectMapper map = new ObjectMapper();
 //        JsonNode root = map.readTree(info);
-//        Iterator<String> fieldNames = root.fieldNames();
+//        Iterator<String> fieldNames = root.propertyNames().iterator();
 //
 //        while (fieldNames.hasNext()) {
 //          String fieldName = fieldNames.next();
@@ -621,7 +670,22 @@ public class ObserveRecordResource {
    */
   @PostMapping({ "/renew" })
   public ResponseEntity<Void> renewPatObsRec(
-      @RequestBody PatObsRec patObsRec) throws URISyntaxException {
+      @RequestBody PatObsRec patObsRec,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      boolean hasAccess = ntssUser.isNkkAdminUser() || patObsRec.getFacilityCd() == null
+              || patObsRec.getFacilityCd().equals(ntssUser.getFacilityCd());
+      if (!hasAccess) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patObsRec.getFacilityCd()=" + patObsRec.getFacilityCd();
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_OBS_REC + "/renew";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_OBSERVE_RECORD,
@@ -651,7 +715,24 @@ public class ObserveRecordResource {
   */
   @PutMapping("/{ctlNo}")
   public ResponseEntity<Void> updatePatObsRec(
-      @RequestBody PatObsRec patObsRec) {
+      @RequestBody PatObsRec patObsRec,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      PatObsRec checkPatObsRec = patObsRecService.selectByObsRecNo(patObsRec.getObsRecNo());
+      if (checkPatObsRec != null) {
+        if (checkPatObsRec.getFacilityCd() != null && !checkPatObsRec.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "checkPatObsRec.getFacilityCd()=" + checkPatObsRec.getFacilityCd() + " " + "patObsRec.getObsRecNo()=" + patObsRec.getObsRecNo() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_OBS_REC + "/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_OBSERVE_RECORD,
@@ -688,7 +769,8 @@ public class ObserveRecordResource {
    */
   @GetMapping("/mst/kind-all/{facilityCd}")
   public ResponseEntity<?> getMstObsKindAll(
-      @PathVariable(name = "facilityCd", required = true) String facilityCd) {
+      @PathVariable(name = "facilityCd", required = true) String facilityCd,
+      @AuthenticationPrincipal NtssUser ntssUser) {
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_OBS_REC + "/mst/kind-all/{facilityCd}";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_OBSERVE_RECORD,
@@ -697,6 +779,17 @@ public class ObserveRecordResource {
     List<MstObsKind> res = new ArrayList<MstObsKind>();
 
     if (facilityCd != null) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        boolean hasAccess = ntssUser.isNkkAdminUser() || facilityCd == null
+                || facilityCd.equals(ntssUser.getFacilityCd());
+        if (!hasAccess) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd;
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
       /* modify by lvzongheng  2023-02-01 [CodeOptimization]  start */
       res = observeRecordService.getMstObsKindAll(facilityCd);
 //      EventLogMessage eventLogMessage = new EventLogMessage();
@@ -750,7 +843,9 @@ public class ObserveRecordResource {
    */
   @GetMapping("/mst/kind/{kindNo}")
   public ResponseEntity<?> getMstObsKind(
-      @PathVariable(name = "kindNo", required = true) String kindNo) {
+      @PathVariable(name = "kindNo", required = true) String kindNo,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_OBS_REC + "/mst/kind/{kindNo}";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_OBSERVE_RECORD,
@@ -765,6 +860,17 @@ public class ObserveRecordResource {
       logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_OBSERVE_RECORD, SERVICE_NAME.FNSI,
       null);
       res = mstObsKindService.selectByKindNo(Long.parseLong(kindNo));
+      if (!ntssUser.isNkkAdminUser()) {
+        for (MstObsKind mstObsKind : res) {
+          if (mstObsKind.getFacilityCd() != null && !mstObsKind.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+            // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstObsKind.getFacilityCd() + " " + "kindNo=" + kindNo + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+            // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+          }
+        }
+      }
     } else {
       // add FNSi5712アプリケーションログが出力しない 周 start
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_OBSERVE_RECORD,
@@ -788,7 +894,22 @@ public class ObserveRecordResource {
    */
   @PostMapping({ "/mst/insert" })
   public ResponseEntity<Void> insertMstObsKind(
-      @RequestBody MstObsKind mstObsKind) throws URISyntaxException {
+      @RequestBody MstObsKind mstObsKind,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      boolean hasAccess = ntssUser.isNkkAdminUser() || mstObsKind.getFacilityCd() == null
+              || mstObsKind.getFacilityCd().equals(ntssUser.getFacilityCd());
+      if (!hasAccess) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "mstObsKind.getFacilityCd()=" + mstObsKind.getFacilityCd();
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_OBS_REC + "/mst/insert";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_OBSERVE_RECORD,
@@ -819,7 +940,21 @@ public class ObserveRecordResource {
   */
   @PostMapping("/mst/update")
   public ResponseEntity<Void> updateMstObsKind(
-      @RequestBody MstObsKind mstObsKind) {
+      @RequestBody MstObsKind mstObsKind,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (mstObsKind.getFacilityCd() != null && !mstObsKind.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstObsKind.getFacilityCd() + " " + "kindNo=" + mstObsKind.getKindNo() + " " + "kindName=" + mstObsKind.getKindName() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_OBS_REC + "/mst/update";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_OBSERVE_RECORD,
@@ -851,7 +986,21 @@ public class ObserveRecordResource {
   */
   @PostMapping("/mst/delete")
   public ResponseEntity<Void> deleteMstObsKind(
-      @RequestBody MstObsKind mstObsKind) {
+      @RequestBody MstObsKind mstObsKind,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (mstObsKind.getFacilityCd() != null && !mstObsKind.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstObsKind.getFacilityCd() + " " + "kindNo=" + mstObsKind.getKindNo() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_OBS_REC + "/mst/delete";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_OBSERVE_RECORD,
@@ -883,7 +1032,9 @@ public class ObserveRecordResource {
    */
   @GetMapping("/getObsRecByBbsCtlNo/{bbsCtlNo}")
   public ResponseEntity<?> getObsRecByBbsCtlNo(
-      @PathVariable(name = "bbsCtlNo", required = true) long bbsCtlNo) {
+      @PathVariable(name = "bbsCtlNo", required = true) long bbsCtlNo,
+      @AuthenticationPrincipal NtssUser ntssUser) {
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_OBS_REC + "/getObsRecByBbsCtlNo/{bbsCtlNo}";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_OBSERVE_RECORD,
@@ -891,6 +1042,17 @@ public class ObserveRecordResource {
     // add FNSi5712アプリケーションログが出力しない 周 end
 
     List<PatObsRec> res = patObsRecService.getObsRecByBbsCtlNo(bbsCtlNo);
+    if (!ntssUser.isNkkAdminUser()) {
+      for (PatObsRec patObsRec : res) {
+        if (patObsRec.getFacilityCd() != null && !patObsRec.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patObsRec.getFacilityCd() + " " + "bbsCtlNo=" + bbsCtlNo + " " + "obsRecNo=" + patObsRec.getObsRecNo() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+        }
+      }
+    }
 
     // add FNSi5712アプリケーションログが出力しない 周 start
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_OBSERVE_RECORD,

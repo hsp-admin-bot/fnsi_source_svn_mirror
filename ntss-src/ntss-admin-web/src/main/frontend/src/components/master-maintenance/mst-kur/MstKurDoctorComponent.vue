@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" style="height: 100%;">
+        <template #body>
+<div style="height: 100%;">
       <div class="scroll-container" style="height: 100%;">
         <table class="doctor-table">
           <thead>
@@ -55,7 +56,9 @@
         </table>
       </div>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+        <template #footer>
+<div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button denial-btn btn2-cancel" @click="cancel">
           キャンセル
@@ -65,6 +68,7 @@
         <v-ons-button class="button registration-btn btn1-execute" :disabled="!isEdited" @click="registration">保存</v-ons-button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
@@ -72,11 +76,11 @@
 
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import {mapActions, mapGetters} from "vuex";
+import {mapActions, mapGetters} from "@/compat/vue/vuex";
 import PopoverMixin from "@/components/PopoverMixin";
-import $ from "jquery";
+
 import {deepCopy} from "@/functions/common/CommonFunctions";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import {sendRequestGetMstFacilitySettingData as getMstFacitilySettingData} from "@/apis/mst-facility-setting-maintenance";
 import {ApiHelper} from "@/apis/AxiosHelper";
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
@@ -84,6 +88,7 @@ import {sendRequestGetMstPersonalUserData} from "@/apis/mst-user-maintenance"
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
+import { getScopedJQuery } from "@/functions/common/LayoutMeasureHelper";
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
 
 export default {
@@ -397,16 +402,17 @@ export default {
      */
     addClickEvent() {
 
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
       // 初期チェック状態を設定
       if (this.chkAllEditFlg) {
-        $("#chkAllEdit").prop('checked', true);
+        scoped$("#chkAllEdit").prop('checked', true);
       } else {
-        $("#chkAllEdit").prop('checked', false);
+        scoped$("#chkAllEdit").prop('checked', false);
       }
 
       // CheckBox チェック時のイベントを一旦削除してから付与する(再描画の度にイベントが外れる為、都度設定する)
-      $("#chkAllEdit").off('click');
-      $("#chkAllEdit").on("click", (e) => {
+      scoped$("#chkAllEdit").off('click');
+      scoped$("#chkAllEdit").on("click", (e) => {
         if (e.target.checked) {
 
           // それらすべてをキャンセルします
@@ -415,8 +421,8 @@ export default {
           // 全体項目の無効色を解除する
           for (let i = 0; i < 1; i++) {
             const itemName ="user";
-            $(`.${itemName}All-item`).each((index, elment) => {
-              $(elment).removeClass("grid-column-disabled-color");
+            scoped$(`.${itemName}All-item`).each((index, elment) => {
+              scoped$(elment).removeClass("grid-column-disabled-color");
             });
           }
 
@@ -424,8 +430,8 @@ export default {
           for (let weekNo = 0; weekNo <= 7; weekNo++) {
             for (let i = 0; i < 1; i++) {
               const itemName ="user";
-              $(`.${itemName}_${weekNo}_item`).each((index, elment) => {
-                $(elment).removeClass("grid-edited-cell");
+              scoped$(`.${itemName}_${weekNo}_item`).each((index, elment) => {
+                scoped$(elment).removeClass("grid-edited-cell");
               });
             }
           }
@@ -437,8 +443,8 @@ export default {
           // 全体項目の編集済み色を解除する
           for (let i = 0; i < 1; i++) {
             const itemName ="user";
-            $(`.${itemName}All-item`).each((index, elment) => {
-              $(elment).removeClass("grid-edited-cell");
+            scoped$(`.${itemName}All-item`).each((index, elment) => {
+              scoped$(elment).removeClass("grid-edited-cell");
             });
           }
 
@@ -446,8 +452,8 @@ export default {
           for (let weekNo = 0; weekNo <= 7; weekNo++) {
             for (let i = 0; i < 1; i++) {
               const itemName ="user";
-              $(`.${itemName}_${weekNo}_item`).each((index, elment) => {
-                $(elment).removeClass("grid-column-disabled-color");
+              scoped$(`.${itemName}_${weekNo}_item`).each((index, elment) => {
+                scoped$(elment).removeClass("grid-column-disabled-color");
               });
             }
           }
@@ -647,11 +653,11 @@ export default {
   width: 100%;
   box-sizing: border-box;
 }
-::v-deep ons-select {
+:deep(ons-select) {
   display: revert;
   vertical-align: middle;
 }
-::v-deep .custom-input-edited>select{
+:deep(.custom-input-edited>select){
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;

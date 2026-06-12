@@ -2,10 +2,10 @@ package jp.co.nikkiso.ntss.certificate_management.security;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jp.co.nikkiso.ntss.certificate_management.service.log.LogService;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
@@ -15,7 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.WebAttributes;
@@ -33,8 +33,9 @@ public class NtssAuthenticationSuccessHandler implements AuthenticationSuccessHa
   private final static String LOG_MESSAGE = "ユーザー(%s)が(ID=%s)に正常にサインインしました。";
   // mod FNSI-【1006】最新の改修対象一覧.NO45を追加 周安寧 end
 
+  /** Boot 4 向け JSON 変換（旧 MappingJackson2HttpMessageConverter と同等）. */
   @Autowired
-  MappingJackson2HttpMessageConverter httpMessageConverter;
+  JacksonJsonHttpMessageConverter httpMessageConverter;
 
   @Autowired
   private LogService logService;
@@ -59,7 +60,7 @@ public class NtssAuthenticationSuccessHandler implements AuthenticationSuccessHa
     LoginResponse loginResponse = new LoginResponse(ntssUser.getUsername(), ntssUser.getUserRole(),
         ntssUser.getUserFullname(), signInRestriction);
     HttpOutputMessage outputMessage = new ServletServerHttpResponse(response);
-    httpMessageConverter.write(loginResponse, MediaType.APPLICATION_JSON_UTF8, outputMessage);
+    httpMessageConverter.write(loginResponse, MediaType.APPLICATION_JSON, outputMessage);
     request.getSession().setMaxInactiveInterval(30 * 60);
 
     // mod FNSI-【1006】最新の改修対象一覧.NO45を追加 周安寧 start

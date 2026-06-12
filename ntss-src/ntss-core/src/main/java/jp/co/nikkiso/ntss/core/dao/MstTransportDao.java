@@ -1,6 +1,7 @@
 package jp.co.nikkiso.ntss.core.dao;
 
 import java.util.List;
+import java.util.Map;
 import org.seasar.doma.Dao;
 import org.seasar.doma.Select;
 import org.seasar.doma.boot.ConfigAutowireable;
@@ -10,7 +11,7 @@ import jp.co.nikkiso.ntss.core.entity.MstTransport;
 
 @ConfigAutowireable
 @Dao
-public interface MstTransportDao {
+public interface MstTransportDao extends MasterDao<Map<String, Object>> {
   @Select
   List<MstTransport> selectAll(SelectOptions options, MstTransport params);
 
@@ -29,5 +30,11 @@ public interface MstTransportDao {
   @Select
   List<MstTransport> selectAllName(List<Integer> transportCds);
   // add #9823 mongoDBの患者情報履歴情報にマスタの名称などが記録されていない。 dengshen end
+
+  /**
+   * mst-list-compose 用：搬送区分マスタ（削除済み含む、init を含める）
+   */
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
 
 }

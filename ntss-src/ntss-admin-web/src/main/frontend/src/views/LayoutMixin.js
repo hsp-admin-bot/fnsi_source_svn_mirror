@@ -1,8 +1,9 @@
 /**
  * レイアウト用Viewコンポーネント用共通処理
  */
-import { mapGetters } from "vuex";
-
+import { mapGetters } from "@/compat/vue/vuex";
+import { getFooterMenuElement, getViewportHeight } from "@/functions/common/LayoutMeasureHelper";
+import { EventBus } from "@/compat/vue/event-bus.js";
 export default {
   data() {
     return {
@@ -13,7 +14,7 @@ export default {
   methods: {
     // フッターメニューの高さから子コンポーネント領域の高さを算出
     calculateMainHeight() {
-      const wh = this.windowHeight;
+      const wh = Number(this.windowHeight) || getViewportHeight(this.$el || this);
       // mod bug 5555 修正 chen start
       // mod #10225 処方薬剤選択に一般名処方が表示しない。yqz start
       const hh = this.$refs.header?.clientHeight;
@@ -40,7 +41,6 @@ export default {
 
       } else {
         // 通常モード時のヘッダーの高さ
-
         if (this.getFontSize + "" === "0") {
           hhTmp = 85;
         } else if (this.getFontSize + "" === "1") {
@@ -54,10 +54,11 @@ export default {
 
       const fh =
         this.isDispMenu === 1
-          ? document.getElementById("footer-menu").clientHeight
+          ? (getFooterMenuElement(this.$el || this)?.clientHeight || 0)
           : 0;
       if (hh !== 0) {
-        this.mainHeight = wh - hhTmp - fh;
+        // 実際のヘッダー高さを優先し、取得できない場合のみ従来の推定値を利用
+        this.mainHeight = wh - (Number(hh) || hhTmp) - fh;
       } else {
         this.mainHeight = wh - fh;
       }
@@ -95,8 +96,12 @@ export default {
     }
   },
   mounted() {
+    EventBus.$on("calculateMainHeight", this.calculateMainHeight);
     this.$nextTick(() => {
       this.calculateMainHeight();
     });
+  },
+  beforeDestroy() {
+    EventBus.$off("calculateMainHeight", this.calculateMainHeight);
   }
 };

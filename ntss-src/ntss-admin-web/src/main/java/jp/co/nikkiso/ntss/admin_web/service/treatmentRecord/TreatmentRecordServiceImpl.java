@@ -1,11 +1,11 @@
 package jp.co.nikkiso.ntss.admin_web.service.treatmentRecord;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import com.google.common.base.Strings;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.FlagType;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Treatment;
@@ -143,6 +143,7 @@ import static jp.co.nikkiso.ntss.admin_web.service.master.ReferenceComboTargetDe
 import static jp.co.nikkiso.ntss.admin_web.service.master.ReferenceComboTargetDefinition.TREATMENT;
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 /**
  * 治療記録画面のService実装クラス.
@@ -398,6 +399,10 @@ public class TreatmentRecordServiceImpl implements TreatmentRecordService {
   // add #9845 愁訴処置に入力した薬剤がord_material_saveに登録されない start
   @Autowired
   private OrdMaterialSaveService ordMaterialSaveService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // add #9845 愁訴処置に入力した薬剤がord_material_saveに登録されない end
   /**
    * {@inheritDoc}
@@ -878,7 +883,7 @@ public class TreatmentRecordServiceImpl implements TreatmentRecordService {
       eventLogMessage = new EventLogMessage();
       eventLogMessage.setLogMessage("治療記録[実績情報保存]:治療方法の変更に伴い、治療条件の保存完了");
       logService.log(LogLevel.INFO, eventLogMessage,FUNCTION_CODE.FUNC_TREATMENT_RECORD,SERVICE_NAME.REMS, null);
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       eventLogMessage = new EventLogMessage();
       eventLogMessage.setLogMessage("治療記録[実績情報保存]:治療条件の更新に失敗しました。" + e.getMessage());
       logService.log(LogLevel.ERROR, eventLogMessage,FUNCTION_CODE.FUNC_TREATMENT_RECORD,SERVICE_NAME.REMS, null);
@@ -949,7 +954,7 @@ public class TreatmentRecordServiceImpl implements TreatmentRecordService {
         map.put((String) key, info);
       }
       return map;
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       EventLogMessage eventLogMessage = new EventLogMessage();
       eventLogMessage.setLogMessage("治療条件のJSON文字列->Mapへの変換に失敗" + e);
       logService.log(LogLevel.ERROR, eventLogMessage,FUNCTION_CODE.FUNC_TREATMENT_RECORD,SERVICE_NAME.REMS, null);
@@ -1086,7 +1091,7 @@ public class TreatmentRecordServiceImpl implements TreatmentRecordService {
         try {
           MstTreatmentCondInfo info =objectMapper.readValue(item.toString(), MstTreatmentCondInfo.class);
           map.put(info.ctl_no, info.is_use);
-        } catch (IOException e) {
+        } catch (tools.jackson.core.JacksonException e) {
           EventLogMessage eventLogMessage = new EventLogMessage();
           eventLogMessage.setLogMessage("治療方法マスタから治療条件設定の取得に失敗しました。");
           logService.log(LogLevel.ERROR, eventLogMessage,FUNCTION_CODE.FUNC_TREATMENT_RECORD,SERVICE_NAME.REMS, null);
@@ -1304,7 +1309,7 @@ public class TreatmentRecordServiceImpl implements TreatmentRecordService {
   @Override
   @Transactional
   public void updateTreatmentRecordWeight(Long ordNo, TreatmentRecordWeight treatmentRecordWeight)
-    throws NotExistException, JsonProcessingException {
+    throws NotExistException, JacksonException {
 
     // add FNSI-改修内容追加OrdMain履歴 付 start
     selectHistoryUtils.insertMangoDbHistory(10, ordNo, null, new ArrayList<>(), new ArrayList<>(), null, null,
@@ -1569,7 +1574,7 @@ public class TreatmentRecordServiceImpl implements TreatmentRecordService {
         wheres.append(" bio_moni_ctl_no = " + monitor.getBioMoniCtlNo() + "\n");
 
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(mniMonitorDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -1691,7 +1696,7 @@ public class TreatmentRecordServiceImpl implements TreatmentRecordService {
       wheres.append(" WHERE\n");
       wheres.append(" ord_no = '" + ordNo + "'\n");
       // logCommon設定
-      logCommon = getLogCommon(recordDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch(Exception e) {
@@ -2304,7 +2309,7 @@ public class TreatmentRecordServiceImpl implements TreatmentRecordService {
     if (!ObjectUtils.isEmpty(treatmentRecordEquipInfo.getRstEquipInfo()) && !("[]").equals(treatmentRecordEquipInfo.getRstEquipInfo())) {
       OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
       ObjectMapper mapper = new ObjectMapper();
-      mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+      mapper = mapper.rebuild().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build();
       long equipInfoNo = 1;
       List<ReceiveRstEquipInfoDto> tempRstEquipInfoDtos = mapper.readValue(treatmentRecordEquipInfo.getRstEquipInfo(), new TypeReference<List<ReceiveRstEquipInfoDto>>(){});
       for (ReceiveRstEquipInfoDto element : tempRstEquipInfoDtos) {
@@ -2391,7 +2396,7 @@ public class TreatmentRecordServiceImpl implements TreatmentRecordService {
       OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
       /* modify by chamaojia 2024-01-31 [10196] Data object replacement, database storage to remove unnecessary content --start */
       ObjectMapper mapper = new ObjectMapper();
-      mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+      mapper = mapper.rebuild().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build();
       long mediInfoNo = 1;
       List<RstMediInfoDto> tempRstMediInfoDtos = mapper.readValue(treatmentRecordMediInfo.getRstMediInfo(), new TypeReference<List<RstMediInfoDto>>(){});
       for (RstMediInfoDto element : tempRstMediInfoDtos) {
@@ -3084,11 +3089,11 @@ public class TreatmentRecordServiceImpl implements TreatmentRecordService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -3336,7 +3341,7 @@ public class TreatmentRecordServiceImpl implements TreatmentRecordService {
 //        if (!Strings.isNullOrEmpty(pat.getMedical_care_info())) {
 //          medicalCareInfo = mapper1.readValue(pat.getMedical_care_info(), MedicalCareInfo.class);
 //        }
-//      } catch (IOException e) {
+//      } catch (tools.jackson.core.JacksonException e) {
 //        e.printStackTrace();
 //      }
 //      medicalCareInfo.purification_count = request.getRstPurificationCnt().toString();
@@ -3350,7 +3355,7 @@ public class TreatmentRecordServiceImpl implements TreatmentRecordService {
     //add 6832 デグレ】治療記録における特殊血液浄化回数が不正 赵 end
     //del 6832 【デグレ】治療記録における特殊血液浄化回数が不正 周安寧　end
     // レスポンス生成
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   /* add by songqingyang  2023-02-01 [CodeOptimization]  end */

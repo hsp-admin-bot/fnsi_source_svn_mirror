@@ -28,15 +28,15 @@
  *   });
  *
  *   <!-- kendo-dropdownlist に取得データを指定 -->
- *   <kendo-dropdownlist
+ *   <ntss-dropdown-list
  *     v-model="selectDoctor"
  *     :data-source="doctorList"
  *     :data-text-field="'fullName'"
  *     :data-value-field="'user_id'">
- *   </kendo-dropdownlist>
+ *   </ntss-dropdown-list>
  *
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import {
   sendRequestGetDoctorsAtFacility,
@@ -46,31 +46,86 @@ import {
 } from "@/apis/facility";
 import { sendRequestGetMstFacilitySettingValue } from "@/apis/facility-setting";
 
+/**
+ * selectedPatId を解決する（引数 > コンポーネント > store）
+ * @param {object} context Vueコンポーネントインスタンス
+ * @param {number|string|undefined} selectedPatId 明示指定の患者ID
+ * @returns {number|string|undefined}
+ */
+function resolveSelectedPatId(context, selectedPatId) {
+  if (selectedPatId !== null && selectedPatId !== undefined && selectedPatId !== "") {
+    return selectedPatId;
+  }
+  if (context.selectedPatId !== null && context.selectedPatId !== undefined && context.selectedPatId !== "") {
+    return context.selectedPatId;
+  }
+  const fromStore = context.$store?.getters?.["pat-info/selectedPatId"];
+  if (fromStore !== null && fromStore !== undefined && fromStore !== "") {
+    return fromStore;
+  }
+  return undefined;
+}
+
 export default {
   methods: {
+    /**
+     * 指示者 kendo-dropdownlist popup の位置補正。
+     * Kendo Vue Native では popup 向上展開時に popup.bottom が anchor.top を超えて選択框を覆うため、
+     * 実測差分を transform で上方シフトする。
+     */
+    onIndUserDropdownOpen(e) {
+      const anchorEl = e?.sender?.wrapper?.[0];
+      if (!anchorEl) {
+        return;
+      }
+      const ownerDocument = this.$el?.ownerDocument || document;
+      let attempts = 0;
+      const adjust = () => {
+        const popupEl = Array.from(ownerDocument.querySelectorAll(".k-animation-container"))
+          .filter(el => {
+            const cs = ownerDocument.defaultView?.getComputedStyle(el);
+            return cs && cs.display !== "none" && cs.visibility !== "hidden";
+          })
+          .pop();
+        if (!popupEl?.offsetHeight) {
+          if (++attempts < 15) {
+            requestAnimationFrame(adjust);
+          }
+          return;
+        }
+        const overlap = popupEl.getBoundingClientRect().bottom - anchorEl.getBoundingClientRect().top;
+        if (overlap > 0) {
+          popupEl.style.setProperty("transform", `translateY(-${overlap}px)`, "important");
+        }
+      };
+      adjust();
+    },
+
     /**
      * kendo-dropdownlist用の指示者リスト、初期選択指示者を返します.
      * @param authEditCd 表示画面の編集権限
      * @param authPEditCd 表示画面の代行編集権限
+     * @param selectFacilityCd 取得対象施設コード（省略時はログイン施設）
+     * @param selectedPatId 患者情報共有時の対象患者ID
      * @returns {} 医師のリスト、初期選択指示者
      */
-    async getIndUserList(authEditCd, authPEditCd, selectFacilityCd) {
-      // const facilityCd = this.$store.getters["user/getFacilityCd"];
+    async getIndUserList(authEditCd, authPEditCd, selectFacilityCd, selectedPatId) {
       const facilityCd = selectFacilityCd ? selectFacilityCd : this.$store.getters["user/getFacilityCd"];
+      const resolvedSelectedPatId = resolveSelectedPatId(this, selectedPatId);
       const userAuthorityCds = this.$store.getters["user/getUserAuthorityCds"];
       const userId = this.$store.getters["account-edit/getStateUserAccountInfo"].userId;
       let doctorFlg = false;
       let defaultDoctorId = null;
-      let inUserId = null;
+      let inUserId;
       let doctorList = [{ user_id: undefined, fullName: "" }];
       
       const [doctorResponse, defaultDoctor, shiftDoctorId] = await Promise.all([
         // 職種が医師の利用者一覧を取得
-        sendRequestGetDoctorsAtFacility(facilityCd),
+        sendRequestGetDoctorsAtFacility(facilityCd, resolvedSelectedPatId),
         // デフォルト指示者取得
-        sendRequestGetMstFacilitySettingValue(facilityCd, "1025"),
+        sendRequestGetMstFacilitySettingValue(facilityCd, "1025", resolvedSelectedPatId),
         // シフト医師取得
-        getShiftDoctor(facilityCd),
+        getShiftDoctor(facilityCd, resolvedSelectedPatId),
       ]);
       
       // 医師のリストを作成
@@ -111,23 +166,24 @@ export default {
     },
 
     // add #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
-    async getIndUserListIncludeDel(authEditCd, authPEditCd) {
+    async getIndUserListIncludeDel(authEditCd, authPEditCd, selectedPatId) {
       const facilityCd = this.$store.getters["user/getFacilityCd"];
+      const resolvedSelectedPatId = resolveSelectedPatId(this, selectedPatId);
       const userAuthorityCds = this.$store.getters["user/getUserAuthorityCds"];
       const userId = this.$store.getters["account-edit/getStateUserAccountInfo"].userId;
       let doctorFlg = false;
       let defaultDoctorId = null;
-      let inUserId = null;
+      let inUserId;
       // 空項目を追加
       let doctorList = [{user_id: undefined, fullName: ""}];
       
       const [doctorResponse, defaultDoctor, shiftDoctorId] = await Promise.all([
         // 職種が医師の利用者一覧を取得
-        sendRequestGetDoctorsAtFacilityIncludeDel(facilityCd),
+        sendRequestGetDoctorsAtFacilityIncludeDel(facilityCd, resolvedSelectedPatId),
         // デフォルト指示者取得
-        sendRequestGetMstFacilitySettingValue(facilityCd, "1025"),
+        sendRequestGetMstFacilitySettingValue(facilityCd, "1025", resolvedSelectedPatId),
         // シフト医師取得
-        getShiftDoctor(facilityCd),
+        getShiftDoctor(facilityCd, resolvedSelectedPatId),
       ]);
 
       // 医師のリストを作成
@@ -168,19 +224,20 @@ export default {
      * スケジュール表用の指示者リスト、初期選択指示者を返します.（スケジュール移動編集権限の場合）
      * @returns {} 医師のリスト、初期選択指示者
      */
-    async getIndUserListSchedule() {
+    async getIndUserListSchedule(selectedPatId) {
       const facilityCd = this.$store.getters["user/getFacilityCd"];
+      const resolvedSelectedPatId = resolveSelectedPatId(this, selectedPatId);
       let defaultDoctorId = null;
       // 空項目を追加
       let doctorList = [{user_id: undefined, fullName: ""}];
       
       const [doctorResponse, defaultDoctor, shiftDoctorId] = await Promise.all([
         // 職種が医師の利用者一覧を取得
-        sendRequestGetDoctorsAtFacility(facilityCd),
+        sendRequestGetDoctorsAtFacility(facilityCd, resolvedSelectedPatId),
         // デフォルト指示者取得
-        sendRequestGetMstFacilitySettingValue(facilityCd, "1025"),
+        sendRequestGetMstFacilitySettingValue(facilityCd, "1025", resolvedSelectedPatId),
         // シフト医師取得
-        getShiftDoctor(facilityCd),
+        getShiftDoctor(facilityCd, resolvedSelectedPatId),
       ]);
       
       // 医師のリストを作成
@@ -212,16 +269,21 @@ export default {
 /**
  * クールマスタ：医師シフト設定の今日の曜日の現在時間の医師のuser_idを返します
  * @param {string} facilityCd 施設コード
+ * @param {number|string|undefined} selectedPatId 患者情報共有時の対象患者ID
  * @returns {Promise<number|null>} 医師のuser_id
  */
-export async function getShiftDoctor(facilityCd) {
-  // 現在時間のクールマスタ取得
-  const response = await ApiHelper.get("/mstInfo/mstKur", {
+export async function getShiftDoctor(facilityCd, selectedPatId) {
+  const params = {
     facility_cd: facilityCd,
     is_del: "0"
-  });
+  };
+  if (selectedPatId !== null && selectedPatId !== undefined && selectedPatId !== "") {
+    params.selectedPatId = selectedPatId;
+  }
+  // 現在時間のクールマスタ取得
+  const response = await ApiHelper.get("/mstInfo/mstKur", params);
   const mstKurList = response.data || [];
-  const currentTime = moment().format("HHmmss");
+  const currentTime = dayjs().format("HHmmss");
 
   const mstKur = mstKurList.find(
     ({ kurStartTime, kurEndTime }) =>

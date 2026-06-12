@@ -4,6 +4,7 @@
   <div class="pat-list-area" ref="mianScroll" v-if="srcFuncName === '' || srcFuncName === 'indication'">
     <!-- mod 9266 患者情報を編集して保存すると患者検索の並び順が変化する 関 end -->
     <table class="pat-area" v-if="srcFuncName === ''">
+      <tbody>
       <tr @click="showPopover">
         <th class="color-header">患者ID</th>
         <th class="color-header">
@@ -37,11 +38,13 @@
           <!-- mod 9251 NKK連携 profile（標準）（拡張） 姓名を分割して保存していたデータが、姓の欄に結合して更新されてしまう。 zhou end  -->
         </td>
       </tr>
-    </table>
+    
+      </tbody></table>
 
     <!-- 各機能からの患者リストを表示している場合に表示する -->
     <!-- 指示受け・指示承認の場合 -->
     <table class="pat-area" v-else>
+      <tbody>
       <tr>
         <th v-if="!isIndicationUnitScreen" class="color-header" style="width: 25%;">クール</th>
         <th v-if="!isIndicationUnitScreen" class="color-header" style="width: 25%;">ベッド</th>
@@ -91,12 +94,13 @@
         <!--mod FNSI-入外区分が入院の場合、患者名は紫色にする dou end -->
         </td>
       </tr>
-    </table>
+    
+      </tbody></table>
 
     <v-ons-popover
       cancelable
       :class="[fontSizeSet, 'sort-popover']"
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :cover-target="false"
       @preshow="popoverPreShow"
@@ -245,39 +249,22 @@
   </div>
   <!-- 上記以外の場合 -->
   <div v-else class="pat-list-grid-area" :style="{'height': kendoGridHeight + 'px'}">
-    <kendo-grid
-                id="kendo"
-                ref="grid"
-                :data-source="listDataSource"
-                :data-bound="gridSetting"
-                :resizable="true"
-                :selectable='"row"'
-                :sortable="{ compare: compareByField }"
-                :height="kendoGridHeight"
-                :sort="sortHandler"
-                :columnResize="columnResizeEvevt"
-                :change="onRowClick"
-                class="grid-area"
-                >
-      <kendo-grid-column v-for="column in getPatListGridColumn" :key="column.field"
-                        :headerAttributes="{ class: 'color-header' }"
-                        :headerTemplate='column.headerTemplate'
-                        :hidden="column.hidden"
-                        :field="column.field"
-                        :template="column.template"
-                        :title="$sanitize(column.title)"
-                        :width="column.width[selectedFontSize]"
-                        :attributes="column.field === 'pat_id' ? { class: 'pat-id-body' } : {}"
-                        >
-      </kendo-grid-column>
-    </kendo-grid>
+    <div
+      id="kendo"
+      ref="grid"
+      class="grid-area"
+    ></div>
   </div>
 </template>
 
 <script>
   // ライブラリ
-  import {EventBus} from "@/eventBus.js";
-  import {mapActions, mapGetters, mapMutations} from "vuex";
+  import {EventBus} from "@/compat/vue/event-bus.js";
+  import $$ from "@/compat/jquery";
+  import kendo from "@progress/kendo-ui";
+  import { markRaw } from "@/compat/vue/runtime";
+  import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
+  import nameDuplicationImg from "@/assets/name_duplication.png";
   import PopoverMixin from "@/components/PopoverMixin";
   // del 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 start
   // import UserAuthorityMixin from "@/components/common/UserAuthorityMixin";
@@ -292,11 +279,11 @@
   import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
   import { messageFormat } from '@/functions/common/MessageFormat';
   // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
-  import moment from "moment";
+  import dayjs from "@/compat/date/dayjs";
   import { ApiHelper } from "@/apis/AxiosHelper";
-  import Kendo from "@progress/kendo-ui";
   import { sortableCompare, addPatNameSortToList } from "@/functions/SortFunctions";
-  import $$ from "jquery";
+
+import { getLatestHeaderElement, getHeaderHeight, getFooterMenuClientHeight, getScopedElementsByClassName, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
 
   // ソートキー変換用のマップ
   const SORT_KEY_MAP = {
@@ -309,6 +296,11 @@
     endTime: "endTimeForSort", // 終了時刻 ※endTimeは"hh:mm" 形式のためendTimeForSortでソートする
     roundState: "roundStateForSort", // 回診 ※roundStateは文字列のためroundStateForSortでソートする
   };
+
+
+  function createPatListDataSource(options = {}) {
+    return markRaw(new kendo.data.DataSource(options));
+  }
 
   export default {
   // mod 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 start
@@ -390,16 +382,19 @@
         { isAsc: 0, displayValue: "降順" }
       ],
       //同姓同名アイコン
-      image_src_same: require('../../assets/name_duplication.png'),
+      image_src_same: nameDuplicationImg,
       // getDataList: []
       // del 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 start
       // trueFlag: false,
       // authorityCd072and073: false
       // del 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 end
-      treatDate: moment().format("YYYY-MM-DD"),
-      listDataSource: [],
+      treatDate: dayjs().format("YYYY-MM-DD"),
+      listDataSource: createPatListDataSource({ data: [] }),
       currentSort: null,
       kendoGridHeight: 400,
+      directGridWidget: null,
+      directGridColumnSignature: "",
+      directGridLayoutRafId: null,
     };
   },
 
@@ -533,42 +528,46 @@
     },
     // add #11315 【たくしん会】患者検索の患者リストのソートが正しく動作しない　V1.0B zkm end
     windowHeight() {
-      if(this.srcFuncName !== 'indication' && this.srcFuncName !== '' ){
+      if(this.srcFuncName !== 'indication' && this.srcFuncName !== ''){
         this.calculateGridHeight();
       }
     },
     windowWidth() {
-      if(this.srcFuncName !== 'indication' && this.srcFuncName !== '' ){
+      if(this.srcFuncName !== 'indication' && this.srcFuncName !== ''){
         this.calculateGridHeight();
       }
     },
     isDispMenu() {
-      if(this.srcFuncName !== 'indication' && this.srcFuncName !== '' ){
+      if(this.srcFuncName !== 'indication' && this.srcFuncName !== ''){
         this.calculateGridHeight();
       }
     },
     getFontSize() {
-      if(this.srcFuncName !== 'indication' && this.srcFuncName !== '' ){
+      if(this.srcFuncName !== 'indication' && this.srcFuncName !== ''){
         // スクロール位置保持
         // ※画面全体のリサイズによりスクロール位置が0に戻されるため個別に保持する
-        const gridContent = document.getElementsByClassName("k-grid-content")[0];
-        const currentScrollTop = gridContent.scrollTop;
-        const currentScrollLeft = gridContent.scrollLeft;
+        const gridContent = this.getGridContentElement();
+        const currentScrollTop = gridContent?.scrollTop || 0;
+        const currentScrollLeft = gridContent?.scrollLeft || 0;
 
         // 画面全体の項目リサイズを待ってから高さ変更
         setTimeout(() => {
+          this.initDirectGridIfReady();
           this.calculateGridHeight();
         }, 300);
 
         // スクロール位置復元
         this.$nextTick(() => {
-        document.getElementsByClassName("k-grid-content")[0].scrollTop = currentScrollTop;
-        document.getElementsByClassName("k-grid-content")[0].scrollLeft = currentScrollLeft;
+        const restoredGridContent = this.getGridContentElement();
+        if (restoredGridContent) {
+          restoredGridContent.scrollTop = currentScrollTop;
+          restoredGridContent.scrollLeft = currentScrollLeft;
+        }
         });
       }
     },
     getOrdNoForSideBarRecord() {
-      if(this.srcFuncName !== 'indication' && this.srcFuncName !== '' ){
+      if(this.srcFuncName !== 'indication' && this.srcFuncName !== ''){
         this.$nextTick(() => {
           this.addCustomClass();
         });
@@ -578,7 +577,7 @@
     // 同じ初期化処理が2回動く場合があるため1つにまとめる
     funcNameAndTreatmentPatListForWatch :{
       async handler([a,b]) {
-        if(this.srcFuncName !== 'indication' && this.srcFuncName !== '' ){
+        if(this.srcFuncName !== 'indication' && this.srcFuncName !== ''){
           // 機能別患者リスト作成
           await this.setGridData();
         }
@@ -586,6 +585,22 @@
     },
   },
   methods: {
+    getGridRef() {
+      return this.$refs.grid || null;
+    },
+    getGridRootEl() {
+      const gridRef = this.getGridRef();
+      if (gridRef?.nodeType === 1) {
+        return gridRef;
+      }
+      return gridRef?.gridRootEl?.() || gridRef?.$el || null;
+    },
+    getGridWidget() {
+      return this.directGridWidget || this.getGridRef()?.gridWidget?.() || this.getGridRef()?.kendoWidget?.() || null;
+    },
+    getGridTbodyEl() {
+      return this.getGridRef()?.gridTbodyEl?.() || this.getGridWidget()?.tbody?.[0] || null;
+    },
     // del 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 start
     // // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 start
     // refreshData () {
@@ -630,6 +645,157 @@
     popoverPreShow,
     popoverPostShow,
     popoverPosthide,
+
+    getGridContentElement() {
+      const gridRef = this.getGridRef();
+      return gridRef?.gridContentEl?.() || queryScopedSelector('.k-grid-content', this.getGridRootEl() || this.$el || null);
+    },
+    getGridAutoScrollableElement() {
+      const gridRef = this.getGridRef();
+      return gridRef?.gridAutoScrollableEl?.()
+        || queryScopedSelector('.k-auto-scrollable, .k-virtual-scrollable-wrap, .k-grid-content', this.getGridRootEl() || this.$el || null)
+        || this.getGridContentElement();
+    },
+    getDirectGridDataSourceOption() {
+      const source = this.listDataSource || createPatListDataSource({ data: [] });
+      return source;
+    },
+    getDirectGridColumnSignature() {
+      return JSON.stringify((this.getPatListGridColumn || []).map(column => ({
+        field: column.field,
+        hidden: !!column.hidden,
+        title: column.title || "",
+        width: column.width?.[this.selectedFontSize] || "",
+        headerTemplate: !!column.headerTemplate,
+        template: !!column.template
+      })));
+    },
+    buildDirectGridColumns() {
+      return (this.getPatListGridColumn || []).map(column => ({
+        headerAttributes: { class: 'color-header' },
+        headerTemplate: column.headerTemplate,
+        hidden: !!column.hidden,
+        field: column.field,
+        template: column.template,
+        title: this.$sanitize ? this.$sanitize(column.title) : column.title,
+        width: column.width?.[this.selectedFontSize],
+        attributes: column.field === 'pat_id' ? { class: 'pat-id-body' } : {}
+      }));
+    },
+    installDirectGridFacade() {
+      const root = this.getGridRef();
+      if (!root || root.nodeType !== 1) {
+        return;
+      }
+      root.kendoWidget = () => this.directGridWidget;
+      root.gridWidget = () => this.directGridWidget;
+      root.gridDataSource = () => this.directGridWidget?.dataSource || null;
+      root.gridRootEl = () => root;
+      root.gridTbodyEl = () => this.directGridWidget?.tbody?.[0] || null;
+      root.gridContentEl = () => queryScopedSelector('.k-grid-content', root);
+      root.gridAutoScrollableEl = () => queryScopedSelector('.k-auto-scrollable, .k-virtual-scrollable-wrap, .k-grid-content', root);
+      root.resizeGrid = () => this.resizeDirectGrid();
+    },
+    initDirectGridIfReady() {
+      const root = this.getGridRootEl();
+      const columns = this.buildDirectGridColumns();
+      if (!root || columns.length === 0 || this.srcFuncName === 'indication' || this.srcFuncName === '') {
+        return;
+      }
+      const nextSignature = this.getDirectGridColumnSignature();
+      if (this.directGridWidget) {
+        if (this.directGridColumnSignature !== nextSignature) {
+          this.directGridWidget.setOptions({ columns });
+          this.directGridColumnSignature = nextSignature;
+        }
+        this.applyDirectGridDataSourceContract();
+        this.installDirectGridFacade();
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+      const $root = $$(root);
+      $root.kendoGrid({
+        dataSource: this.getDirectGridDataSourceOption(),
+        columns,
+        resizable: true,
+        selectable: 'row',
+        sortable: { compare: this.compareByField },
+        height: this.kendoGridHeight,
+        sort: event => this.sortHandler(event),
+        columnResize: event => this.columnResizeEvevt(event),
+        change: event => this.onRowClick(event),
+        dataBound: () => this.gridSetting()
+      });
+      this.directGridWidget = markRaw($root.data('kendoGrid'));
+      this.directGridColumnSignature = nextSignature;
+      this.installDirectGridFacade();
+      this.applyDirectGridStyleContract();
+    },
+    applyDirectGridDataSourceContract() {
+      const grid = this.getGridWidget();
+      if (!grid || !this.listDataSource) {
+        return;
+      }
+      if (grid.dataSource !== this.listDataSource) {
+        grid.setDataSource(this.listDataSource);
+      }
+      if (this.currentSort) {
+        grid.dataSource.sort(this.currentSort);
+      }
+    },
+    applyDirectGridStyleContract() {
+      const root = this.getGridRootEl();
+      if (!root) {
+        return;
+      }
+      root.classList.add('ntss-kendo-grid-legacy', 'k-widget', 'k-grid', 'k-display-block');
+      root.querySelectorAll('.k-grid-header th, .k-grid-header .k-table-th').forEach(th => th.classList.add('k-header'));
+      root.querySelectorAll('.k-grid-content tbody tr').forEach((tr, index) => {
+        tr.classList.add('k-master-row');
+        tr.classList.toggle('k-alt', index % 2 === 1);
+      });
+      root.querySelectorAll('.k-grid-content tbody td').forEach(td => td.classList.add('k-td', 'k-table-td'));
+    },
+    resizeDirectGrid() {
+      const grid = this.getGridWidget();
+      if (!grid) {
+        return;
+      }
+      try {
+        grid.setOptions({ height: this.kendoGridHeight });
+        grid.resize(true);
+      } catch (_error) {
+        // direct jq grid should not rebuild on resize failure.
+      }
+    },
+    scheduleDirectGridLayoutContract() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+      }
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.directGridLayoutRafId = null;
+        this.resizeDirectGrid();
+        this.applyDirectGridStyleContract();
+      });
+    },
+    destroyDirectGrid() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+        this.directGridLayoutRafId = null;
+      }
+      try {
+        this.directGridWidget?.destroy?.();
+      } catch (_error) {
+        // noop
+      }
+      this.directGridWidget = null;
+      this.directGridColumnSignature = "";
+      const root = this.getGridRef();
+      if (root?.nodeType === 1) {
+        root.innerHTML = "";
+      }
+    },
+
     // add/ #10239【デグレ】スケジュール表表示時の患者検索、患者リストでの患者切替不可 tianqidong start
     findScheduleListDispdataCellByPatId(patId) {
       const st = this.$store.state["schedule-list"];
@@ -641,8 +807,8 @@
         return null;
       }
       for (let di = 0; di < st.treatDateDim.length; di++) {
-       const treatKey = st.treatDateDim[di];       
-	   const dayBlock = st.dispdata[treatKey];
+        const treatKey = st.treatDateDim[di];
+        const dayBlock = st.dispdata[treatKey];
         if (!dayBlock || !Array.isArray(dayBlock)) {
           continue;
         }
@@ -694,7 +860,10 @@
     async syncScheduleListHeaderFromPatList(selectedPatId, selectedOrdNo, selectedHospitalPatId, patRecord) {
       this.setDefaultSelectedPatId(selectedPatId);
       this.setOrdNo(null);
-      const treatDateStr = this.getBaseDate==null ? moment().format("YYYYMMDD") : moment(this.getBaseDate).format("YYYYMMDD");      if (this.srcFuncName !== "") {
+      const treatDateStr = this.getBaseDate == null
+        ? dayjs().format("YYYYMMDD")
+        : dayjs(this.getBaseDate).format("YYYYMMDD");
+      if (this.srcFuncName !== "") {
         this.setOrdNoForSideBarRecord(selectedOrdNo);
       }
       try {
@@ -717,9 +886,9 @@
           });
           return;
         }
-		  const cell = this.findScheduleListDispdataCellByPatId(selectedPatId);
+        const cell = this.findScheduleListDispdataCellByPatId(selectedPatId);
         if (cell) {
-          cell.treatDate =  treatDateStr
+          cell.treatDate = treatDateStr;
           this.setHeaderInfo(cell);
           return;
         }
@@ -739,6 +908,7 @@
       }
     },
     // add/ #10239【デグレ】スケジュール表表示時の患者検索、患者リストでの患者切替不可 tianqidong end
+
     /**
      * @description 患者選択
      * @summary 選択した患者の患者情報レコードをストアに格納する
@@ -746,15 +916,15 @@
     // add/ #10239【デグレ】スケジュール表表示時の患者検索、患者リストでの患者切替不可 tianqidong start
     async setSelectedPat(selectedPatId, selectedOrdNo, selectedHospitalPatId, patRecord = null) {
       if (this.$route.name === "pat-info-sharing-detail") {
-        return
+        return;
       }
-      
+
       this.closeMenu();
       
       // 预定画面の患者切替禁止
-      const isScheduleListView = this.$router.currentRoute.name == "schedule-list" ? true : false;
-      if(isScheduleListView && this.getIsPatientEnabled) return;
-      this.setIsScheduleEnabled(true)
+      const isScheduleListView = this.$route.name == "schedule-list" ? true : false;
+      if (isScheduleListView && this.getIsPatientEnabled) return;
+      this.setIsScheduleEnabled(true);
       if (isScheduleListView) {
         if (patRecord) {
           await this.syncScheduleListHeaderFromPatList(
@@ -801,7 +971,7 @@
         this.setIsNullPat(true);
         this.setIsLoadingPat(false);
         // 現在の表示画面が治療状況リストの場合、治療状況を再読み込みさせる
-        if (this.$router.currentRoute.name.indexOf("treatment-record") === 0) {
+        if (this.$route.name.indexOf("treatment-record") === 0) {
           EventBus.$emit("refresh");
           // delete start 馬 #9559
           //   EventBus.$emit("initOrdNoList");
@@ -810,7 +980,7 @@
         return;
       }
       // 現在の表示画面が体重計の場合、患者カードを置いた際と同じ挙動をさせる
-      if (this.$router.currentRoute.name.indexOf("weight-mode") === 0) {
+      if (this.$route.name.indexOf("weight-mode") === 0) {
         this.setIsLoadingPat(false);
         EventBus.$emit("searchHospPatIdSchedule", {
           hospPatId: selectedHospitalPatId
@@ -818,7 +988,7 @@
         return;
       }
       this.setIsNullPat(false);
-      let patInfoViewFlg = this.$router.currentRoute.name == "pat-info" ? true : false;
+      let patInfoViewFlg = this.$route.name == "pat-info" ? true : false;
       if (patInfoViewFlg){
         // console.log("patInfo view……");
         this.setLoadingScreenMessage("処理中・・・");
@@ -830,22 +1000,22 @@
       //     this.$parent.$parent.$data.beforeSelectPatId = selectedPatId
       if((this.$route.name !== "pat-info" && this.$route.name !== "pat-prescription") || this.selectedPatId === null){
       // mod #9231 this.$parent.$parent.$data.beforeSelectPatId を this.selectedPatId に変更 朴 end
-          let patInfoViewFlg = this.$router.currentRoute.name == "pat-info" ||  this.$router.currentRoute.name == "pat-prescription" ? true : false;
+          let patInfoViewFlg = this.$route.name == "pat-info" ||  this.$route.name == "pat-prescription" ? true : false;
           /*add FNSI-改修内容redmain6647 任 end*/
-	  //add #12462 患者情報共有 Ji start
+          //add #12462 患者情報共有 Ji start
           let selectedFacility = null;
-          if (this.$router.currentRoute.name === "pat-info") {
+          if (this.$route.name === "pat-info") {
             selectedFacility =
               this.getPatientShareMode === 1
                 ? this.facilityCd
                 : this.getOtherFacilityCd;
-          } else if (this.$router.currentRoute.name === "pat-calendar") {
+          } else if (this.$route.name === "pat-calendar") {
             selectedFacility =
               this.getPatientShareMode === 1
                 ? this.facilityCd
                 : (this.getOtherFacilityCd == null ? null : this.facilityCd);
           }
-	  //mod #12462 患者情報共有 Ji end
+          //mod #12462 患者情報共有 Ji end
           await this.selectPat({selectedPatId, selectedFacility}).catch(() => {
             //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
             getErrorMessage('PatList.vue', 'setSelectedPat', "[PatList.vue]setSelectedPat(): 患者選択失敗");
@@ -855,14 +1025,14 @@
           }).finally(() =>{
             if (patInfoViewFlg){
               this.setLoadingScreenVisible(false);
-              let btn = document.getElementsByClassName("right-exe-btn")[0];
+              const btn = getScopedElementsByClassName("right-exe-btn", this.$el || null)[0];
               if (!btn) {
                 return;
               }
-              let headerHeight = document.getElementsByClassName("header")[0].offsetHeight;
+              let headerHeight = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
               let windowHeight = this.windowHeight;
-              const footHeight = document.getElementById("footer-menu").clientHeight;
-              let cardListDOM = document.getElementsByClassName("card-list")[0];
+              const footHeight = getFooterMenuClientHeight(this.$el || null);
+              const cardListDOM = getScopedElementsByClassName("card-list", this.$el || null)[0];
               let btnHeight = btn.clientHeight;
               if (undefined === cardListDOM || null === cardListDOM) {
                 return;
@@ -964,8 +1134,10 @@
           let scrollEl = this.$refs.mianScroll;
           if (scrollToFlg) {
             // 患者情報編集の場合は、スクロールを編集した患者に設定する
-            const child = document.querySelector(`.pat-list-area .pat-area .selected-pat`);
-            scrollEl.scrollTo({ top: child.offsetTop-38, behavior: 'smooth' });
+            const child = queryScopedSelector(`.pat-list-area .pat-area .selected-pat`, this.$el || null);
+            if (child) {
+              scrollEl.scrollTo({ top: child.offsetTop - 38, behavior: 'smooth' });
+            }
           } else {
             // 新規患者の場合は、スクロールを一番下に設定する
             scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
@@ -993,7 +1165,7 @@
      */
     async setGridData(){
       // 表示用のリストを初期化
-      this.listDataSource = new Kendo.data.DataSource({
+      this.listDataSource = createPatListDataSource({
         data: []
       });
 
@@ -1003,13 +1175,12 @@
       let newTreatmentPatList = [];
 
       // 表示対象のオーダー番号の治療情報部分を取得
-      if(!!this.treatmentPatList.length){
+      if (this.treatmentPatList.length) {
         this.setLoadingScreenMessage("処理中・・・");
         this.setLoadingScreenVisible(true);
         const ordNos = this.treatmentPatList.map(item => item.ord_no).join(",");
         const response = await ApiHelper.get(
-          `/mainData/getOrdInfoListForPatListByOrdNo/${this.facilityCd}/${ordNos}`
-        ).catch(error => {
+          `/mainData/getOrdInfoListForPatListByOrdNo/${this.facilityCd}/${ordNos}`).catch(error => {
           this.setLoadingScreenVisible(false);
           getErrorMessage('PatList.vue', 'setGridData', error);
           throw new Error("[PatList.vue]setGridData(): 機能別患者リスト用治療情報取得失敗");
@@ -1024,11 +1195,13 @@
       }
 
       // 最終的な表示用のリストをgridにセット
-      this.listDataSource = new Kendo.data.DataSource({
+      this.listDataSource = createPatListDataSource({
         data: newTreatmentPatList
       });
 
       this.$nextTick(() => {
+        this.initDirectGridIfReady();
+        this.applyDirectGridDataSourceContract();
         // 高さ計算
         this.calculateGridHeight();
       });
@@ -1045,38 +1218,39 @@
      * クラス設定
      */
     addCustomClass() {
-      const ordNoForSideBarRecord = this.getOrdNoForSideBarRecord
-      const $grid = this.$refs.grid.kendoWidget();
-      this.$refs.grid.kendoWidget().tbody.find("tr").each(function() {
-        const row = document.querySelectorAll(`[data-uid="${this.getAttribute("data-uid")}"]`);
-        if (row.length > 0) {
-          const cells = row[0].querySelectorAll("td");
-          const rowData = $grid.dataItem(row);
-          cells.forEach((cell, cellIndex) => {
-            const field = $grid.columns[cellIndex].field
-
-            // 患者名追加クラス設定
-            if (field == 'patName' && rowData['inOutClass'] == 1) {
-              cell?.classList?.add("in_class");
-              return;
-            }
-
-            // 回診強調表示クラス設定
-            if (field == 'roundState') {
-              switch (rowData['roundHighlighting']) {
-                case "1":
-                  cell?.classList?.add("round-state-td-highlighting-1");
-                  break;
-                case "2":
-                  cell?.classList?.add("round-state-td-highlighting-2");
-                  break;
-              }
-              return;
-            }
-          });
-          // 選択行クラス設定
-          $$(this).toggleClass("selected-pat", $grid.dataItem(row)['ord_no'] == ordNoForSideBarRecord);
+      const ordNoForSideBarRecord = this.getOrdNoForSideBarRecord;
+      const grid = this.getGridWidget();
+      const visibleColumns = (grid?.columns || []).filter(column => !column.hidden);
+      Array.from(this.getGridTbodyEl()?.querySelectorAll?.("tr") || []).forEach(rowEl => {
+        const rowData = grid?.dataItem?.(rowEl);
+        if (!rowData) {
+          return;
         }
+        const cells = rowEl.querySelectorAll("td");
+        cells.forEach((cell, cellIndex) => {
+          const field = visibleColumns[cellIndex]?.field;
+
+          // 患者名追加クラス設定
+          if (field == 'patName' && rowData['inOutClass'] == 1) {
+            cell?.classList?.add("in_class");
+            return;
+          }
+
+          // 回診強調表示クラス設定
+          if (field == 'roundState') {
+            switch (rowData['roundHighlighting']) {
+              case "1":
+                cell?.classList?.add("round-state-td-highlighting-1");
+                break;
+              case "2":
+                cell?.classList?.add("round-state-td-highlighting-2");
+                break;
+            }
+            return;
+          }
+        });
+        // 選択行クラス設定
+        $$(rowEl).toggleClass("selected-pat", rowData?.['ord_no'] == ordNoForSideBarRecord);
       });
     },
     /**
@@ -1084,11 +1258,14 @@
      * @param {*} e
      */
     async onRowClick(e) {
-      e.preventDefault();
+      e?.preventDefault?.();
       await this.executeWithLoadingScreen(async () => {
-        const $grid = this.$refs.grid.kendoWidget();
-        const selectedRow = $grid.select().closest("tr");
-        const selectedRowData = $grid.dataItem(selectedRow);
+        const grid = this.getGridWidget();
+        const selectedRow = grid?.select?.();
+        const selectedRowData = grid?.dataItem?.(selectedRow);
+        if (!selectedRowData) {
+          return;
+        }
         await this.setSelectedPat(selectedRowData.pat_id, selectedRowData.ord_no, selectedRowData.hosp_pat_id)
       });
     },
@@ -1136,26 +1313,27 @@
      */
     calculateGridHeight() {
       // スクロール位置保持
-      const gridContent = document.getElementsByClassName("k-grid-content")[0];
-      const currentScrollTop = gridContent.scrollTop;
-      const currentScrollLeft = gridContent.scrollLeft;
+      const gridContent = this.getGridContentElement();
+      const currentScrollTop = gridContent?.scrollTop || 0;
+      const currentScrollLeft = gridContent?.scrollLeft || 0;
 
       // リサイズ
       const wh = this.windowHeight;
-      const tableTop = document.getElementsByClassName("grid-area")[0].getBoundingClientRect().top;
+      const tableTop = getScopedElementsByClassName("grid-area", this.$el || null)[0]?.getBoundingClientRect?.().top || 0;
       const fmh =
         (this.isDispMenu === 1
-          ? document.getElementById("footer-menu").clientHeight
+          ? getFooterMenuClientHeight(this.$el || null)
           : 0);
       this.kendoGridHeight = wh - tableTop - fmh - 8;
-      const gridWidget = $$('#kendo').data('kendoGrid');
-      gridWidget.resize($$('.k-grid-header'));
-      gridWidget.resize($$('.k-grid-content'));
+      this.resizeDirectGrid();
 
       // スクロール位置復元
       this.$nextTick(() => {
-        document.getElementsByClassName("k-grid-content")[0].scrollTop = currentScrollTop;
-        document.getElementsByClassName("k-grid-content")[0].scrollLeft = currentScrollLeft;
+        const restoredGridContent = this.getGridContentElement();
+        if (restoredGridContent) {
+          restoredGridContent.scrollTop = currentScrollTop;
+          restoredGridContent.scrollLeft = currentScrollLeft;
+        }
       });
     },
   },
@@ -1184,10 +1362,11 @@
     this.setDefaultCondition();
   },
   // add 10436 同姓同名フラグの更新時に対になる患者のpat_main_historyがinsertされていない 関 start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("scrollBottom", this.scrollBottom);
     EventBus.$off("scrollTop", this.scrollTop);
     EventBus.$off("calculatePatListGridHeight", this.calculateGridHeight);
+    this.destroyDirectGrid();
   },
   // add 10436 同姓同名フラグの更新時に対になる患者のpat_main_historyがinsertされていない 関 end
   // del 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 start
@@ -1288,7 +1467,7 @@ a:focus {
   margin: 2px 0 2px 2px;
 }
 
-.sort-popover >>> .popover__content {
+.sort-popover :deep(.popover__content) {
   width: auto;
   min-width: 17em;
   padding: 10px;

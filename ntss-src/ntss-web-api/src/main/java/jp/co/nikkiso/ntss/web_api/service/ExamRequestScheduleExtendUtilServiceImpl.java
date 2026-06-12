@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.web_api.service;
 
-import com.amazonaws.util.StringUtils;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
@@ -36,9 +36,8 @@ import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Nonnull;
+import org.springframework.lang.NonNull;
 import javax.sql.DataSource;
-import java.io.IOException;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -56,8 +55,8 @@ import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 
+import org.springframework.util.ObjectUtils;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
-
 /**
  * 検査依頼スケジュール更新処理のService実装クラス.
  */
@@ -184,7 +183,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
             String orderExamSetInfoJson = patExamMain.getOrderExamSetInfo();
             try {
               List<PatExamMainOrderExamSetInfo> orderExamSetInfo =
-                StringUtils.isNullOrEmpty(orderExamSetInfoJson)
+                ObjectUtils.isEmpty(orderExamSetInfoJson)
                   ? new ArrayList<>()
                   : new ObjectMapper().readValue(
                     orderExamSetInfoJson,
@@ -197,7 +196,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
                   break;
                 }
               }
-            } catch (IOException e) {
+              } catch (JacksonException e) {
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -273,7 +272,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
             Integer intNo = 0;  // 通し番号
             try {
               List<PatExamMainOrderExamSetInfo> orderExamSetInfo =
-                StringUtils.isNullOrEmpty(targetExamMain.getOrderExamSetInfo())
+                ObjectUtils.isEmpty(targetExamMain.getOrderExamSetInfo())
                   ? new ArrayList<>()
                   : new ObjectMapper().readValue(
                     targetExamMain.getOrderExamSetInfo(),
@@ -315,7 +314,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
               sbExamSetInfo.insert(0, "[");
               sbExamSetInfo.append("]");
 
-            } catch (IOException e) {
+              } catch (JacksonException e) {
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -334,7 +333,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
             try {
               // 既存レコードのデータを取得する
               List<PatExamMainExamOrderInfo> examOrderInfo =
-                StringUtils.isNullOrEmpty(targetExamMain.getExamOrderInfo())
+                ObjectUtils.isEmpty(targetExamMain.getExamOrderInfo())
                   ? new ArrayList<>()
                   : new ObjectMapper().readValue(
                     targetExamMain.getExamOrderInfo(),
@@ -353,7 +352,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
 
               // パターンの元データを取得する
               List<PatExamPatternExamOrderInfo> patternExamOrderInfo =
-                StringUtils.isNullOrEmpty(patExamPattern.getExamOrderInfo())
+                ObjectUtils.isEmpty(patExamPattern.getExamOrderInfo())
                   ? new ArrayList<>()
                   : new ObjectMapper().readValue(patExamPattern.getExamOrderInfo(), new TypeReference<List<PatExamPatternExamOrderInfo>>() {});
 
@@ -393,7 +392,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
               sbExamOrderInfo.insert(0, "[");
               sbExamOrderInfo.append("]");
 
-            } catch (IOException e) {
+              } catch (JacksonException e) {
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -413,7 +412,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
             try {
               // 既存レコードのデータを取得する
               List<PatExamMainOrderLabelInfo> orderLabelInfo =
-                StringUtils.isNullOrEmpty(targetExamMain.getOrderLabelInfo())
+                ObjectUtils.isEmpty(targetExamMain.getOrderLabelInfo())
                   ? new ArrayList<>()
                   : new ObjectMapper().readValue(
                     targetExamMain.getOrderLabelInfo(),
@@ -422,7 +421,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
 
               // パターンの元データを取得する
               List<PatExamPatternOrderLabelInfo> patternOrderLabelInfo =
-                StringUtils.isNullOrEmpty(patExamPattern.getOrderLabelInfo())
+                ObjectUtils.isEmpty(patExamPattern.getOrderLabelInfo())
                   ? new ArrayList<>()
                   : new ObjectMapper().readValue(patExamPattern.getOrderLabelInfo(), new TypeReference<List<PatExamPatternOrderLabelInfo>>() {});
 
@@ -461,7 +460,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
               sbOrderLabelInfo.insert(0, "[");
               sbOrderLabelInfo.append("]");
 
-            } catch (IOException e) {
+              } catch (JacksonException e) {
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -576,7 +575,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
             try {
               // 元データを取得する
               List<PatExamPatternExamOrderInfo> patternExamOrderInfo =
-                StringUtils.isNullOrEmpty(patExamPattern.getExamOrderInfo())
+                ObjectUtils.isEmpty(patExamPattern.getExamOrderInfo())
                   ? new ArrayList<>()
                   : new ObjectMapper().readValue(patExamPattern.getExamOrderInfo(), new TypeReference<List<PatExamPatternExamOrderInfo>>() {});
 
@@ -604,7 +603,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
               sbExamOrderInfo.insert(0, "[");
               sbExamOrderInfo.append("]");
 
-            } catch (IOException e) {
+              } catch (JacksonException e) {
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -639,7 +638,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
                 setDataGenClass("0");
                 // パフォーマンスなどを考慮してとりあえず依頼変更可否フラグは固定値"0"で入力する
                 setIsLock("0");
-                setIndUserId(StringUtils.isNullOrEmpty(defaultDoctor) ? null : Long.parseLong(defaultDoctor));
+                setIndUserId(ObjectUtils.isEmpty(defaultDoctor) ? null : Long.parseLong(defaultDoctor));
                 setIsDel("0");
                 setUpDate(getCurrentDate());
                 setRegDate(getCurrentDate());
@@ -710,7 +709,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
         "                           is_order, phy_ord_class)" +
         "values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", new BatchPreparedStatementSetter() {
         @Override
-        public void setValues(@Nonnull PreparedStatement ps, int i) throws SQLException {
+        public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
           PatExamMain patExamMain = toInsertPatExamMains.get(i);
           set(ps, 1, patExamMain.getPatId());
           set(ps, 2, patExamMain.getFacilityCd());
@@ -750,7 +749,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
         " is_lock = ?, ind_user_id = ?, is_del = ?, up_date = ?, up_staff = ? " +
         " where exam_main_cd = ?", new BatchPreparedStatementSetter() {
         @Override
-        public void setValues(@Nonnull PreparedStatement ps, int i) throws SQLException {
+        public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
           PatExamMain patExamMain = toUpdatePatExamMains.get(i);
           set(ps, 1, patExamMain.getOrderExamSetInfo());
           set(ps, 2, patExamMain.getExamOrderInfo());
@@ -836,7 +835,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
           // 登録時刻の設定
           SimpleDateFormat sdfymd = new SimpleDateFormat("yyyy-MM-dd");
           SimpleDateFormat sdfhms = new SimpleDateFormat("HH:mm:ss");
-          String strhms = StringUtils.isNullOrEmpty(sdfhms.format(patRadPattern.getRegRadDate())) ? "00:00:00" : sdfhms.format(patRadPattern.getRegRadDate());
+          String strhms = ObjectUtils.isEmpty(sdfhms.format(patRadPattern.getRegRadDate())) ? "00:00:00" : sdfhms.format(patRadPattern.getRegRadDate());
           Timestamp regRadDateFormat = Timestamp.valueOf(sdfymd.format(regRadDate) + " " + strhms);
 
           // 追加対象の検査セットがあるか検索する関数
@@ -845,7 +844,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
             String orderRadSetInfoJson = patRadMain.getOrderRadSetInfo();
             try {
               List<PatRadMainOrderRadSetInfo> orderRadSetInfo =
-                StringUtils.isNullOrEmpty(orderRadSetInfoJson)
+                ObjectUtils.isEmpty(orderRadSetInfoJson)
                   ? new ArrayList<>()
                   : new ObjectMapper().readValue(
                     orderRadSetInfoJson,
@@ -858,7 +857,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
                   break;
                 }
               }
-            } catch (IOException e) {
+              } catch (JacksonException e) {
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -925,7 +924,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
             StringBuilder sbRadSetInfo = new StringBuilder();
             try {
               List<PatRadMainOrderRadSetInfo> orderRadSetInfo =
-                StringUtils.isNullOrEmpty(targetRadMain.getOrderRadSetInfo())
+                ObjectUtils.isEmpty(targetRadMain.getOrderRadSetInfo())
                   ? new ArrayList<>()
                   : new ObjectMapper().readValue(
                     targetRadMain.getOrderRadSetInfo(),
@@ -966,7 +965,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
               sbRadSetInfo.insert(0, "[");
               sbRadSetInfo.append("]");
 
-            } catch (IOException e) {
+              } catch (JacksonException e) {
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -1069,7 +1068,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
                 setOrderRadSetInfo(sbRadSetInfo.toString());
                 // パフォーマンスなどを考慮してとりあえず依頼変更可否フラグは固定値"0"で入力する
                 setIsLock("0");
-                setIndUserId(StringUtils.isNullOrEmpty(defaultDoctor) ? null : Long.parseLong(defaultDoctor));
+                setIndUserId(ObjectUtils.isEmpty(defaultDoctor) ? null : Long.parseLong(defaultDoctor));
                 setIsDel("0");
                 setUpDate(getCurrentDate());
                 setRegDate(getCurrentDate());
@@ -1127,7 +1126,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
         "values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", new BatchPreparedStatementSetter() {
 
         @Override
-        public void setValues(@Nonnull PreparedStatement ps, int i) throws SQLException {
+        public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
           PatRadMain patRadMain = toInsertPatRadMains.get(i);
           set(ps, 1, patRadMain.getPatId());
           set(ps, 2, patRadMain.getFacilityCd());
@@ -1156,7 +1155,7 @@ public class ExamRequestScheduleExtendUtilServiceImpl implements ExamRequestSche
         " is_del = ?, up_date = ? where rad_result_cd = ? ", new BatchPreparedStatementSetter() {
 
         @Override
-        public void setValues(@Nonnull PreparedStatement ps, int i) throws SQLException {
+        public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
           PatRadMain patRadMain = toUpdatePatRadMains.get(i);
           set(ps, 1, patRadMain.getRegRadDate());
           set(ps, 2, patRadMain.getOrderRadSetInfo());

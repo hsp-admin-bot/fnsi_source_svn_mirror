@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.jdbc.Sql;
@@ -22,7 +22,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.entity.MstBioMoniFramePattern;
 
@@ -75,7 +75,7 @@ public class BioMoniFramePatternResourceTest {
     
     mockMvc.perform(get("/api/bio_moni_frame_pattern/{facilityCd}/{ctl_no}", faciltiyCd, ctl_no))
       .andExpect(status().isOk())
-      .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+      .andExpect(content().contentType(MediaType.APPLICATION_JSON))
       .andExpect(jsonPath("$", hasSize(1)))
       .andExpect(jsonPath("$.[0].templateName", is("test")))
       .andExpect(jsonPath("$.[0].frameNo", equalTo(1)))
@@ -106,7 +106,7 @@ public class BioMoniFramePatternResourceTest {
     pat.setDefineInfo("{\"aa\":\"aaa\"}");
     
     mockMvc.perform(post("/api/bio_moni_frame_pattern/")
-        .contentType(MediaType.APPLICATION_JSON_UTF8)
+        .contentType(MediaType.APPLICATION_JSON)
         .content(new ObjectMapper().writeValueAsString(pat)))
       .andExpect(status().is2xxSuccessful());
   }
@@ -122,7 +122,7 @@ public class BioMoniFramePatternResourceTest {
     pat.setDefineInfo("{\"aa\":\"aaa\"}");
     
     mockMvc.perform(post("/api/bio_moni_frame_pattern/")
-        .contentType(MediaType.APPLICATION_JSON_UTF8)
+        .contentType(MediaType.APPLICATION_JSON)
         .content(new ObjectMapper().writeValueAsString(pat)))
       .andExpect(status().is5xxServerError());
   }
@@ -139,7 +139,7 @@ public class BioMoniFramePatternResourceTest {
     pat.setDefineInfo("{\"aa\":\"aaa\"}");
     
     mockMvc.perform(put("/api/bio_moni_frame_pattern/{facilityCd}/{ctl_no}", facilityCd, ctl_no.toString())
-        .contentType(MediaType.APPLICATION_JSON_UTF8)
+        .contentType(MediaType.APPLICATION_JSON)
         .content(new ObjectMapper().writeValueAsString(pat)))
       .andExpect(status().isOk());
     }

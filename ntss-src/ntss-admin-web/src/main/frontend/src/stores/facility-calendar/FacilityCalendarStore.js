@@ -1,4 +1,4 @@
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 施設カレンダー用ストア
@@ -13,9 +13,9 @@ export default {
       // フリーワード
       freeWord: "", // 初期値設定:未入力
       // 掲載開始日
-      noticeStartDate: moment().format("YYYY-MM-DD"), // 初期値設定:本日
+      noticeStartDate: dayjs().format("YYYY-MM-DD"), // 初期値設定:本日
       // 掲載終了日
-      noticeEndDate: moment().format("YYYY-MM-DD"), // 初期値設定:本日,
+      noticeEndDate: dayjs().format("YYYY-MM-DD"), // 初期値設定:本日,
       // 透析日
       dialysisDate: null, // 初期値設定:未入力
       // クール

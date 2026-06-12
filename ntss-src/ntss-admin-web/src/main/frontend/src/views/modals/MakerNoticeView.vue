@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot='body' :class="['maker-notice', modalMessageSize]">
+    <template #body>
+      <div :class="['maker-notice', modalMessageSize]">
       <div>
         <div class="maker-notice-input">
           <label class="title">通知内容</label>
@@ -30,8 +31,10 @@
           />
         </div>
       </div>
-    </div>
-    <div slot="footer" class="flex-container">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <!-- mod FNSI-コードをマージ 江 start -->
         <!-- <v-ons-button class="button denial-btn" @click="cancel">キャンセル</v-ons-button> -->
@@ -52,24 +55,26 @@
           </p>
         </v-ons-modal> -->
         <!-- del FNSI-コードをマージ 江 end -->
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import { mapActions } from "vuex";
+import { mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import CommonTextArea from "@/components/common/CommonTextArea";
-import { mapGetters } from "vuex";
-import $ from "jquery";
+import { mapGetters } from "@/compat/vue/vuex";
+
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import $ from "@/compat/jquery";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 
 const uriGetUser = `/notification-message/getUser`;
@@ -161,8 +166,7 @@ export default {
 
       let userList = [];
       // システムに登録している全ユーザーを取得
-      const responseUser = await ApiHelper.get(`${uriGetUser}`
-      ).catch(error => {
+      const responseUser = await ApiHelper.get(`${uriGetUser}`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
         getErrorMessage('MakerNoticeView.vue','registration',error);
         //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
@@ -284,12 +288,12 @@ export default {
   display: inline-block;
   vertical-align: top;
 }
-div >>> .subject-col {
+div :deep(.subject-col) {
   font-size: 1em;
   border: solid 1px #ccc;
   font-family: inherit;
 }
-div >>> .body-col {
+div :deep(.body-col) {
   font-size: 1em;
   border: solid 1px #ccc;
   font-family: inherit;
@@ -352,7 +356,7 @@ div >>> .body-col {
     text-align: center;
     height: auto !important;
   }
-  div >>> .modal-wrapper {
+  div :deep(.modal-wrapper){
     display: inline-block !important;
     width: 96%;
     margin-bottom: 3vh !important;
@@ -360,7 +364,7 @@ div >>> .body-col {
 }
 /* 横向き印刷 */
 @media print and (orientation: landscape) {
-  div >>> .custom-textarea.body-col {
+  div :deep(.custom-textarea.body-col){
     height: 16rem !important;
   }
 }

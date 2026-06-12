@@ -1,68 +1,46 @@
 <template>
-<!-- 集計 -->
-  <div id="multi-pat-list-template5" class="multi-pat-list" style="width: 100%; height: 100%">
-    <div class="scroll-table">
-      <table class="grid-record-list" style="width: max-content;">
-        <col />
-        <thead>
-          <tr id="first-row">
-            <th rowspan="2" v-if="isDis" class="ntss-list-header-th-sticky headcol frezee-column-name text-center manual-width">
-              <span @click="sortBy('layout_category_name')" class="clickable-header-label" :class="sortedClass('layout_category_name')"> </span>
-            </th>
-            <th rowspan="2" class="ntss-list-header-th-sticky headcol frezee-column-name text-center manual-width">
-              <span @click="sortBy('layout_name')" class="clickable-header-label" :class="sortedClass('layout_name')"> </span>
-            </th>
-            <template v-for="(dayObj, index) in dateTitle">
-              <th
-                class="ntss-list-header-th-sticky headcol text-center manual-width"
-                :colspan="countGroup"
-                :key="index"
-              >{{ dayObj }}</th>
-            </template>
-          </tr>
-          <tr>
-            <th
-              v-for="(data, id) in dataTitle"
-              :key="id"
-              class="ntss-list-header-th-sticky headcol text-center th-sticky-day manual-width"
-            >
-              <span @click="sortBy('title:' + id)" class="clickable-header-label" :class="sortedClass('title:' + id)">{{ data }}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-        <tr v-for="(layout, id) in sortedLayoutData" :key="id">
-          <td v-if="isDis" class="frezee-column-name sticky-body-items">{{ layout.layout_category_name }}</td>
-          <td class="frezee-column-name sticky-body-items">{{ layout.layout_name }}</td>
-            <template v-for="(item, d) in layout.items">
-              <td :key="d">{{ item.value }}</td>
-            </template>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+  <!-- 集計 -->
+  <div
+    id="multi-pat-list-template5"
+    ref="gridContainer"
+    class="multi-pat-list"
+    style="width: 100%; height: 100%"
+  >
+    <KendoGridView
+      ref="grid"
+      :columns="kendoColumns"
+      :options="gridDataSourceOptions"
+      :height="gridHeight"
+      :scrollable="gridScrollable"
+      :sortable="false"
+      :resizable="true"
+      :reorderable="true"
+      :data-bound="onGridDataBound"
+    />
   </div>
 </template>
 
 <script>
-
-import {EventBus} from "@/eventBus";
-import {ApiHelper} from "@/apis/AxiosHelper";
-import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
-import {mapActions, mapGetters} from "vuex";
-import moment from "moment";
-// import { saveExcel } from "@progress/kendo-vue-excel-export";
-var workbook_1 = require("@progress/kendo-vue-excel-export");
-var kendo_file_saver_1 = require("@progress/kendo-file-saver");
-import encoding from "encoding-japanese";
-import _ from "underscore";
-//add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
-import { getCurrentFunctionCd } from '@/router/routing-helper';
-//add 5984 機能帳票でパラメータが正しく渡されていない 吉 end
+import { triggerScopedDownload } from "@/functions/common/LayoutMeasureHelper";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { ApiHelper } from "@/apis/AxiosHelper";
+import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
+import * as workbook_1 from "@/functions/common/KendoFunctions";
+import * as kendo_file_saver_1 from "@/functions/common/KendoFunctions";
+import encoding from "@/compat/encoding/encoding-japanese";
+import { getCurrentFunctionCd } from "@/router/routing-helper";
 import { updateSort, getSortedClass, sortableCompare } from "@/functions/SortFunctions";
 import PrintMixin from "@/components/PrintMixin";
+import KendoGridView from "@/components/kendo-ui/KendoGridView.vue";
+
+const GRID_PAGE_SIZE = 30;
 
 export default {
+  components: {
+    KendoGridView,
+  },
   mixins: [PrintMixin],
   data() {
     return {
@@ -86,10 +64,13 @@ export default {
       mecSchName: "",
       sort: {
         key: "",
-        isAsc: true
+        isAsc: true,
       },
-      scrollQuerySelector: ".scroll-table", // スクロールコンテナ
-      addClassTargetQuerySelector: ["table.grid-record-list"], // scroll-rightmostクラスを付与する対象のクエリセレクタ 
+      gridHeight: 400,
+      isPrintMode: false,
+      gridResizeObserver: null,
+      scrollQuerySelector: "#multi-pat-list-template5 .k-virtual-scrollable-wrap",
+      addClassTargetQuerySelector: ["#multi-pat-list-template5 .k-grid table"],
     };
   },
 
@@ -147,7 +128,7 @@ export default {
       return sorted;
     },
     countGroup() {
-      let iCount = 0
+      let iCount = 0;
       if (this.hasMecPass) {
         iCount = iCount + 1;
       }
@@ -159,22 +140,32 @@ export default {
       }
       return iCount;
     },
+
+    gridFlatRows() {
+      return this.buildFlatRows(this.sortedLayoutData, false);
+    },
+
+    gridDataSourceOptions() {
+      return {
+        data: this.gridFlatRows,
+        serverPaging: false,
+        pageSize: GRID_PAGE_SIZE,
+      };
+    },
+
+    gridScrollable() {
+      if (this.isPrintMode) {
+        return true;
+      }
+      return { virtual: true };
+    },
+
+    kendoColumns() {
+      return this.buildKendoColumns();
+    },
   },
 
   watch: {
-    getRangeDate(value) {
-      if (value) {
-        this.getPositionHeader();
-      }
-    },
-
-    getFontSize: {
-      immediate: true,
-      handler() {
-        this.getPositionHeader();
-      },
-    },
-
     getRequestExportExcel() {
       this.onCreateTemplateToExcel();
     },
@@ -182,6 +173,30 @@ export default {
     getRequestExportCSV() {
       this.exportToCSV();
     },
+
+    getFontSize() {
+      this.$nextTick(() => {
+        this.updateGridHeight();
+        this.$refs.grid?.resize();
+      });
+    },
+
+    sort: {
+      deep: true,
+      handler() {
+        this.$nextTick(() => {
+          this.$refs.grid?.refreshData(this.gridFlatRows);
+          this.updateSortHeaderClasses();
+        });
+      },
+    },
+  },
+
+  mounted() {
+    this.setupGridHeightObserver();
+    window.addEventListener("beforeprint", this._preparePrintGrid, true);
+    window.addEventListener("afterprint", this._restorePrintGrid, true);
+    this.$nextTick(() => this.updateGridHeight());
   },
 
   methods: {
@@ -189,22 +204,253 @@ export default {
       'setLoadingScreenVisible',
       'setLoadingScreenMessage',
     ]),
-    // 昇順/降順のclassを作成
+    gridColumn(def, locked = false) {
+      const col = {
+        ...def,
+        lockable: false,
+        headerTemplate: () =>
+          this.makeSortableHeader(def.title, def.sortKey || def.field),
+      };
+      if (locked) {
+        col.locked = true;
+      }
+      return col;
+    },
+
+    escapeHtml(text) {
+      if (text == null) {
+        return "";
+      }
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    },
+
+    makeSortableHeader(title, sortKey) {
+      const displayTitle = title == null ? "" : String(title);
+      return `<span class="clickable-header-label" data-sort-key="${this.escapeHtml(sortKey)}">${this.escapeHtml(displayTitle)}</span>`;
+    },
+
+    updateSortHeaderClasses() {
+      const root = this.$refs.gridContainer?.querySelector(".k-grid");
+      if (!root) {
+        return;
+      }
+      root.querySelectorAll("[data-sort-key]").forEach(el => {
+        el.classList.remove("sorted-asc", "sorted-desc");
+        const sortKey = el.getAttribute("data-sort-key");
+        if (!sortKey) {
+          return;
+        }
+        const sortClass = getSortedClass(sortKey, this.sort);
+        if (sortClass) {
+          el.classList.add(sortClass);
+        }
+      });
+    },
+
+    buildKendoColumns() {
+      const isLocked = this.dateTitle != null && this.dateTitle.length > 0;
+      const columns = [];
+
+      if (this.isDis) {
+        columns.push(
+          this.gridColumn({
+            field: "layout_category_name",
+            title: " ",
+            sortKey: "layout_category_name",
+            width: 120,
+          }, isLocked)
+        );
+      }
+
+      columns.push(
+        this.gridColumn({
+          field: "layout_name",
+          title: " ",
+          sortKey: "layout_name",
+          width: 150,
+        }, isLocked)
+      );
+
+      this.dateTitle.forEach((date, dateIndex) => {
+        const subColumns = [];
+        let subIndex = 0;
+
+        if (this.hasMecSch) {
+          const flatIndex = dateIndex * this.countGroup + subIndex;
+          const title = this.dataTitle[flatIndex] || "装置台数";
+          subColumns.push({
+            field: `${date} mecSch`,
+            title,
+            width: 100,
+            headerTemplate: () =>
+              this.makeSortableHeader(title, `title:${flatIndex}`),
+          });
+          subIndex += 1;
+        }
+        if (this.hasMecPass) {
+          const flatIndex = dateIndex * this.countGroup + subIndex;
+          const title = this.dataTitle[flatIndex] || "合格台数";
+          subColumns.push({
+            field: `${date} mecPass`,
+            title,
+            width: 100,
+            headerTemplate: () =>
+              this.makeSortableHeader(title, `title:${flatIndex}`),
+          });
+          subIndex += 1;
+        }
+        if (this.hasMecNg) {
+          const flatIndex = dateIndex * this.countGroup + subIndex;
+          const title = this.dataTitle[flatIndex] || "不合格台数";
+          subColumns.push({
+            field: `${date} mecNg`,
+            title,
+            width: 100,
+            headerTemplate: () =>
+              this.makeSortableHeader(title, `title:${flatIndex}`),
+          });
+        }
+
+        if (subColumns.length > 0) {
+          columns.push({
+            title: date,
+            headerAttributes: { class: "text-center" },
+            columns: subColumns,
+          });
+        }
+      });
+
+      return columns;
+    },
+
+    flattenExportColumns(kendoCols) {
+      const flat = [];
+      kendoCols.forEach(col => {
+        if (col.columns) {
+          col.columns.forEach(sub => {
+            flat.push({
+              field: sub.field,
+              title: `${col.title} ${sub.title}`,
+            });
+          });
+        } else if (col.field) {
+          flat.push({
+            field: col.field,
+            title: col.title,
+          });
+        }
+      });
+      return flat;
+    },
+
+    buildFlatRows(layoutData, forExport) {
+      if (!layoutData || !layoutData.length) {
+        return [];
+      }
+      return layoutData.map(row => {
+        const flat = {};
+        if (this.isDis) {
+          flat.layout_category_name = row.layout_category_name;
+        }
+        flat.layout_name = row.layout_name;
+        row.items.forEach((item, index) => {
+          const indexDate = Math.floor(index / this.countGroup);
+          flat[this.dateTitle[indexDate] + item.key] = item.value;
+        });
+        if (forExport) {
+          flat.cellOptions = { wrap: true, format: "@" };
+        }
+        return flat;
+      });
+    },
+
+    setupGridHeightObserver() {
+      const container = this.$refs.gridContainer;
+      if (!container || typeof ResizeObserver === "undefined") {
+        return;
+      }
+      this.gridResizeObserver = new ResizeObserver(() => {
+        this.updateGridHeight();
+      });
+      this.gridResizeObserver.observe(container);
+    },
+
+    updateGridHeight() {
+      const container = this.$refs.gridContainer;
+      if (!container) {
+        return;
+      }
+      const height = container.clientHeight;
+      if (height > 0 && height !== this.gridHeight) {
+        this.gridHeight = height;
+        this.$nextTick(() => this.$refs.grid?.resize());
+      }
+    },
+
+    onGridDataBound() {
+      const root = this.$refs.gridContainer;
+      if (!root) {
+        return;
+      }
+      const $root = root.querySelector(".k-grid");
+      if (!$root) {
+        return;
+      }
+      const handler = event => {
+        const target = event.target.closest("[data-sort-key]");
+        if (!target) {
+          return;
+        }
+        const sortKey = target.getAttribute("data-sort-key");
+        if (sortKey) {
+          this.sortBy(sortKey);
+        }
+      };
+      $root.removeEventListener("click", this._gridSortClickHandler);
+      this._gridSortClickHandler = handler;
+      $root.addEventListener("click", handler);
+      this.updateSortHeaderClasses();
+      this.$nextTick(() => this.$refs.grid?.resize());
+    },
+
+    _preparePrintGrid() {
+      this.isPrintMode = true;
+      this.scrollQuerySelector = "#multi-pat-list-template5 .k-grid-content";
+      this.$nextTick(() => {
+        this.$refs.grid?.setScrollable(true);
+        this.$refs.grid?.resize();
+      });
+    },
+
+    _restorePrintGrid() {
+      this.isPrintMode = false;
+      this.scrollQuerySelector = "#multi-pat-list-template5 .k-virtual-scrollable-wrap";
+      this.$nextTick(() => {
+        this.$refs.grid?.setScrollable({ virtual: true });
+        this.$refs.grid?.resize();
+      });
+    },
+
     sortedClass(key) {
       return getSortedClass(key, this.sort);
     },
-    // ソートするキーを設定する
+
     sortBy(key) {
       updateSort(key, this.sort);
     },
-    getPositionHeader() {
-      const elm = document.getElementById('first-row');
-      if (elm) {
-        const height = elm.getBoundingClientRect().height;
-        document.documentElement.style.setProperty('--multi-pat-list-template5-top',`${height}px`);
-      }
+
+    refreshGrid() {
+      this.$nextTick(() => {
+        this.$refs.grid?.refreshColumns(this.kendoColumns);
+        this.$refs.grid?.refreshData(this.gridFlatRows);
+        this.$refs.grid?.resize();
+      });
     },
-    //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
+
     requestrReportParams(param) {
       // 機能コード判定
 
@@ -229,11 +475,11 @@ export default {
         const param = {
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
           //patId: this.selectedPatId,
-          date: moment(Date.now()).format("YYYYMMDD"),
-          fromDate: moment(Date.now()).format("YYYYMMDD"),
-          toDate: moment(Date.now()).format("YYYYMMDD"),
+          date: dayjs(Date.now()).format("YYYYMMDD"),
+          fromDate: dayjs(Date.now()).format("YYYYMMDD"),
+          toDate: dayjs(Date.now()).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: moment(Date.now()).format("YYYYMMDD"),
+          //dialysisDate: dayjs(Date.now()).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
           // mod #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
@@ -378,6 +624,8 @@ export default {
 
       if (flag == 1 && this.hasDetail) {
         this.getListData();
+      } else {
+        this.refreshGrid();
       }
     },
 
@@ -501,7 +749,7 @@ export default {
           let itemTmp = layoutTmp[devMenteMain.menteLayoutGroupCd];
           itemTmp["mecNg"] = devMenteMain.detail;
         });
-        dateTitleTmp = _.uniq(dateTitleTmp);
+        dateTitleTmp = Array.from(new Set(dateTitleTmp));
         dateTitleTmp = dateTitleTmp.sort(
           (a, b) => a.replace(/\//g, '') - b.replace(/\//g, '')
         );
@@ -627,9 +875,7 @@ export default {
           });
         });
         // add bug 5866 修正 chen end
-        this.$nextTick(() => {
-          this.getPositionHeader();
-        });
+        this.refreshGrid();
       }
     },
 
@@ -640,7 +886,7 @@ export default {
       const data = this.getData();
       this.saveExcel({
         data: data.length === 0 ? null : data,
-        fileName: `データリスト_${moment().format('YYYYMMDDHHmmss')}`,
+        fileName: `データリスト_${dayjs().format('YYYYMMDDHHmmss')}`,
         columns: columns,
       });
     },
@@ -678,65 +924,14 @@ export default {
     },
 
     getColumns() {
-      let columns = [];
-      if (this.sortedLayoutData && this.sortedLayoutData.length > 0) {
-        if (this.isDis) {
-          columns.push({
-            field: 'layout_category_name',
-            title: ' ',
-          });
-        }
-        columns.push({
-          field: 'layout_name',
-          title: ' ',
-        });
-        this.dateTitle.forEach(x => {
-          if (this.hasMecSch) {
-            columns.push({
-              field: x + ' mecSch',
-              title: x + " 装置台数",
-            });
-          }
-          if (this.hasMecPass) {
-            columns.push({
-              field: x + ' mecPass',
-              title: x + " 合格台数",
-            });
-          }
-          if (this.hasMecNg) {
-            columns.push({
-              field: x + ' mecNg',
-              title: x + " 不合格台数",
-            });
-          }
-        });
+      if (!this.sortedLayoutData || !this.sortedLayoutData.length) {
+        return [];
       }
-      return columns;
+      return this.flattenExportColumns(this.buildKendoColumns());
     },
 
     getData() {
-      let data = [];
-      if (this.sortedLayoutData && this.sortedLayoutData.length > 0) {
-        data = this.sortedLayoutData.map(x => {
-          let dataTmp = {};
-          if (this.isDis) {
-            dataTmp["layout_category_name"] = x.layout_category_name;
-          }
-          dataTmp["layout_name"] = x.layout_name;
-          x.items.forEach((y, index) => {
-            let indexDate = Math.floor(index / this.countGroup);
-            dataTmp[this.dateTitle[indexDate] + y.key] = y.value;
-          });
-          return dataTmp;
-        });
-      }
-      data = data.map(obj => {
-        return {
-          ...obj,
-          cellOptions: { wrap: true, format: "@" },
-        };
-      });
-      return data;
+      return this.buildFlatRows(this.sortedLayoutData, true);
     },
 
     exportToCSV() {
@@ -791,11 +986,11 @@ export default {
       const sjisCodes = encoding.convert(charCodes, 'sjis', 'unicode');
       const uint8s = new Uint8Array(sjisCodes);
       const blob = new Blob([uint8s], { type: 'test/csv' });
-
-      let link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `データリスト_${moment().format('YYYYMMDDHHmmss')}.csv`;
-      link.click();
+      triggerScopedDownload({
+        blob,
+        filename: `データリスト_${dayjs().format('YYYYMMDDHHmmss')}.csv`,
+        root: this.$el
+      });
     },
   },
 
@@ -806,12 +1001,22 @@ export default {
     EventBus.$on('requestReportParams', this.requestrReportParams);
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     /* modify by chamaojia 2023-06-08 [8610] EventBusイベントの結合解除は結合と一致する（イベントコールバック関数を指定）  --start */
     EventBus.$off('onInitLayout', this.initLayout);
     EventBus.$off('refresh', this.refreshHandler);
     EventBus.$off('requestReportParams', this.requestrReportParams);
     /* modify by chamaojia 2023-06-08 [8610] EventBusイベントの結合解除は結合と一致する（イベントコールバック関数を指定）  --end */
+    window.removeEventListener("beforeprint", this._preparePrintGrid, true);
+    window.removeEventListener("afterprint", this._restorePrintGrid, true);
+    if (this.gridResizeObserver) {
+      this.gridResizeObserver.disconnect();
+      this.gridResizeObserver = null;
+    }
+    const root = this.$refs.gridContainer;
+    if (root && this._gridSortClickHandler) {
+      root.querySelector(".k-grid")?.removeEventListener("click", this._gridSortClickHandler);
+    }
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -820,6 +1025,10 @@ export default {
 
 <style>
 @media print {
+  /** tableレイアウト崩れ回避 */
+  body:has(#multi-pat-list-template5) #main-id {
+    display: inline-block;
+  }
   /** ヘッダレイアウト崩れ回避 */
   body:has(#multi-pat-list-template5) #bbs-search-area {
     width: 60%;
@@ -827,112 +1036,220 @@ export default {
   body:has(#multi-pat-list-template5) .file-button {
     margin-left: 10%;
   }
-  /** 右端スクロール時はみ出し回避 */
-  body:has(#multi-pat-list-template5) #main-id {
-    margin-left: -1px;
-  }
 }
 </style>
 
-<style scoped lang="scss">
-:root {
-  --multi-pat-list-template5-top: 32px;
+<style scoped>
+.multi-pat-list {
+  max-height: 97%;
+  background-color: var(--main-background-color);
+  color: var(--ntss-list-body-color);
 }
 
-.scroll-table {
-  overflow: auto;
-  height: 100%;
-  overflow-x:scroll;
-
-  .grid-record-list {
-    border-collapse: collapse;
-    background-color: var(--ntss-list-background-color);
-
-    .text-center {
-      text-align: center;
-      min-width: 80px;
-      box-shadow: 0 0 0 0.5px var(--ntss-list-border-color);
-      z-index: 9;
-    }
-
-    .th-sticky-day {
-      top: var(--multi-pat-list-template5-top);
-    }
-
-    .frezee-column-name {
-      box-shadow: 0 0 0 0.5px var(--ntss-list-border-color);
-      left: 0px;
-      z-index: 10;
-      position: sticky;
-    }
-
-    .sticky-body-items {
-      z-index: 8;
-      background-color: var(--body-background-color);
-    }
-
-    thead {
-      tr {
-        height: 2em;
-      }
-    }
-    tbody {
-      tr {
-        td {
-          border: solid 1px var(--ntss-list-border-color);
-          padding: 4px;
-          height: 23px;
-          white-space: nowrap;
-          color: var(--ntss-base-color);
-          max-width: 20em;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          word-break: break-all;
-          .align-loading {
-            display: flex;
-            justify-content: center;
-            z-index: -1;
-          }
-        }
-        &:nth-child(even) {
-          background-color: var(
-              --ntss-list-content-2nd-background-color
-          ) !important;
-          td {
-            background-color: var(
-                --ntss-list-content-2nd-background-color
-            ) !important;
-          }
-        }
-      }
-    }
-  }
+.multi-pat-list :deep(.k-grid) {
+  background-color: var(--ntss-list-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
 }
-.manual-width {
-  resize: horizontal;
-  overflow-x: auto;
-}.clickable-header-label {
+
+.multi-pat-list :deep(.k-widget) {
+  font-size: 1em;
+}
+
+.multi-pat-list :deep(.k-grid tr),
+.multi-pat-list :deep(.k-grid td),
+.multi-pat-list :deep(.k-grid th),
+.multi-pat-list :deep(.k-grid .k-table-td),
+.multi-pat-list :deep(.k-grid .k-table-th),
+.multi-pat-list :deep(.k-grid-header-locked th),
+.multi-pat-list :deep(.k-grid-header-locked .k-table-th) {
+  border-color: var(--master-maintenance-kgrid-border-color) !important;
+}
+
+.multi-pat-list :deep(.k-grid tr:hover) {
+  background-color: var(--ntss-list-body-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+
+.multi-pat-list :deep(.k-header) {
+  vertical-align: middle !important;
+  background-color: var(--ntss-list-header-background-color);
+  color: #ffffff;
+}
+.multi-pat-list :deep(.k-header[data-role='columnsorter']) {
+  vertical-align: middle !important;
+  background-color: #333333;
+  background-image: none;
+}
+
+.multi-pat-list :deep(.k-header-disabled) {
+  background-color: #808080 !important;
+  background-image: none;
+}
+
+.multi-pat-list :deep(.k-alt) {
+  background-color: var(--ntss-list-content-2nd-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+
+.multi-pat-list :deep(.k-textbox),
+.multi-pat-list :deep(.k-dropdown-wrap),
+.multi-pat-list :deep(.k-numeric),
+.multi-pat-list :deep(.k-select),
+.multi-pat-list :deep(.k-popup),
+:global(.multi-pat-list.k-popup),
+:global(.multi-pat-list .k-popup) {
+  background-color: var(--main-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+
+.multi-pat-list :deep(.k-picker),
+.multi-pat-list :deep(.k-input-inner) {
+  background-color: var(--main-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+
+.multi-pat-list :deep(.k-popup),
+:global(.multi-pat-list.k-popup),
+:global(.multi-pat-list .k-popup) {
+  border-color: var(--ntss-list-body-background-color) !important;
+}
+
+.multi-pat-list :deep(.k-popup li:hover),
+:global(.multi-pat-list.k-popup li:hover),
+:global(.multi-pat-list .k-popup li:hover) {
+  background-color: var(--ntss-list-body-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+.multi-pat-list :deep(.k-i-sort-asc-sm::before) {
+  content: "▲" !important;
+  color: #ffffff;
+}
+.multi-pat-list :deep(.k-i-sort-desc-sm::before) {
+  content: "▼" !important;
+  color: #ffffff;
+}
+
+.multi-pat-list :deep(.k-grid td) {
+  white-space: pre-line !important;
+}
+
+.multi-pat-list :deep(.k-grid .k-table-td) {
+  white-space: pre-line !important;
+}
+
+:deep(.multi-pat-list .k-grid td) {
+  width: 150px !important;
+}
+
+:deep(.multi-pat-list .k-grid .k-table-td) {
+  width: 150px !important;
+}
+
+:deep(.k-grid td) {
+  word-wrap: break-word;
+}
+
+:deep(.k-grid .k-table-td) {
+  word-wrap: break-word;
+}
+:deep(.k-grid th) {
+  word-wrap: break-word;
+}
+
+:deep(.k-grid .k-table-th) {
+  word-wrap: break-word;
+}
+
+#multi-pat-list-template5 :deep(.k-grid-container td) {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.multi-pat-list :deep(.clickable-header-label) {
   display: block;
   width: 100%;
   height: 100%;
   padding: 0 4px;
   box-sizing: border-box;
   overflow: hidden;
-  align-content: center;
+  cursor: pointer;
 }
+
+.multi-pat-list :deep(.k-grid-header th.text-center) {
+  text-align: center;
+}
+
 @media print {
-  /** ヘッダ固定 */
-  .ntss-list-header-th-sticky {
-    position: sticky !important;
+  .multi-pat-list {
+    position: absolute;
   }
-  /** スクロールコンテナ */
-  .scroll-table {
+  .multi-pat-list :deep(.k-grid-header-wrap),
+  .multi-pat-list :deep(.k-grid-content) {
     overflow: hidden !important;
     height: auto !important;
   }
-  .scroll-rightmost {
-    position: relative;
-    float: right;
+  .multi-pat-list :deep(.k-grid-content-locked) {
+    height: auto !important;
   }
+  .multi-pat-list :deep(.k-grid-header-locked::after) {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1px;
+    height: 100%;
+    background: var(--master-maintenance-kgrid-header-background-color);
+    pointer-events: none;
+  }
+  .multi-pat-list :deep(.k-grid-content-locked::after) {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1px;
+    height: 100%;
+    background: var(--master-maintenance-kgrid-border-color);
+    pointer-events: none;
+  }
+  .multi-pat-list :deep(.k-grid-header) {
+    padding-right: 0 !important;
+  }
+  .multi-pat-list :deep(.k-grid) {
+    width: 100vw;
+    height: auto !important;
+  }
+  .multi-pat-list:has(table.scroll-rightmost) :deep(.k-grid-content-locked),
+  .multi-pat-list:has(table.scroll-rightmost) :deep(.k-grid-header-locked) {
+    z-index: 1;
+    background-color: inherit;
+  }
+  .multi-pat-list:has(table.scroll-rightmost) {
+    margin-left: -1px !important;
+  }
+  .multi-pat-list :deep(.k-grid-header-wrap:has(table.scroll-rightmost)),
+  .multi-pat-list :deep(.k-grid-content:has(table.scroll-rightmost)) {
+    position: static;
+  }
+}
+
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+}
+
+:deep(.k-grid-content) {
+  height: 100% !important;
+}
+
+:deep(.k-grid-header) {
+  background: var(--ntss-list-header-background-color);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,0.1) 100%);
+}
+
+:deep(.k-grid-header-locked th) {
+  background-image: none;
 }
 </style>

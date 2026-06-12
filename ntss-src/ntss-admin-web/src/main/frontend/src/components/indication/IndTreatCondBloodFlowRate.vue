@@ -81,6 +81,7 @@
         class="action-condition-input ntss-custom-input-cond"
         style="width: 60px"
         :disabled="getIsUseFlagBloodFlow || !getItemAuthorized('Indication', 'default_authority')"
+        ref="bloodFlowInput"
         @handlerInput="(val) =>{ displayInputValue.editValue = val }"
       />
       <!-- #10196 数値IFのスタイル全不正 linjunfeng end -->
@@ -101,11 +102,11 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 import IndTreatCondBase from "@/components/indication/IndTreatCondBase";
 // mod 8204 周安寧 start
 // add FNSI-【1006】最新の改修対象一覧の412対応 韓 start
-// import {mapMutations } from "vuex";
-import {mapMutations,mapGetters } from "vuex";
+// import {mapMutations } from "@/compat/vue/vuex";
+import {mapMutations,mapGetters } from "@/compat/vue/vuex";
 // add FNSI-【1006】最新の改修対象一覧の412対応 韓 end
 // mod 8204 周安寧 end
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 export default {
   mixins: [IndTreatCondBase],
   // add 8204 周安寧 start
@@ -127,6 +128,7 @@ export default {
   mounted() {
     this.treatItemCd = "14";
     this.unit = "mL/min";
+    this.syncBloodFlowInputEditedStyle();
   },
   // add FNSI-【1006】最新の改修対象一覧の412対応 韓 start
   methods: {
@@ -135,6 +137,16 @@ export default {
       return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd));
     },
     // add #10359 編集権限の動作不正 dengshen end
+    syncBloodFlowInputEditedStyle() {
+      if (this.checkEditCount() === 0) {
+        this.displayInputValue.initValue = this.displayInputValue.editValue;
+      }
+      this.$nextTick(() => {
+        if (this.$refs.bloodFlowInput) {
+          this.$refs.bloodFlowInput.isEdited = this.checkEditCount() !== 0;
+        }
+      });
+    },
    //[確認]ボタンの状態の変更をトリガーします   
     changeButton() {
       EventBus.$emit("mstHolidayRegistered", false);

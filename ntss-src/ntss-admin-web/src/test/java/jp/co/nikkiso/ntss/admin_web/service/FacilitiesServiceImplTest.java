@@ -21,7 +21,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.Arrays;
@@ -57,31 +57,31 @@ public class FacilitiesServiceImplTest {
   /**
    * 担当施設マスタDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstStaffFacilityDao mstStaffFacilityDao;
 
   /**
    * 装置状態管理DaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MntMachineStateDao mntMachineStateDao;
 
   /**
    * 利用者マスタDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstUserDao mstUserDao;
 
   /**
    * 施設マスタDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstFacilityDao mstFacilityDao;
 
   /**
    * 施設マスタ（ユーザメニュー系）DaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private FacilityDao facilityDao;
 
   /**

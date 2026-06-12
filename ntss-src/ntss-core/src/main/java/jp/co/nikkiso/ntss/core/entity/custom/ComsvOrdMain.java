@@ -218,7 +218,7 @@ public class ComsvOrdMain extends BaseEntity {
   /**
    * 実績：Kt/V測定値（体重情報）
    */
-  private String KtvMeasure;
+  private String ktvMeasure;
 
   /**
    * 実績：URR（体重情報）

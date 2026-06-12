@@ -2,30 +2,29 @@
  * Rootページ（親コンポーネント）
  */
 <template>
-  <div class='route-view-frame-style'>
-    <patient-search-sidebar id='patientSearchSidebarArea' class='sidebar-transition' :style='sidebarWidth' v-show='getStateUserAccountInfo.patId === null && isDispSidebarBtn'/>
+  <div ref='layoutRoot' class='route-view-frame-style'>
+    <patient-search-sidebar ref='patientSearchSidebar' id='patientSearchSidebarArea' class='sidebar-transition' :style='sidebarWidth' v-show='getStateUserAccountInfo?.patId === null && isDispSidebarBtn'/>
     <!-- 患者検索サイドバー表示ボタン -->
     <!-- mod FNSI-画面部品デザイン じょはく start-->
-    <!-- <div id="showPatientSearchSidebarBtn" class='sidebar-transition sidebar-show-button' :style='showSidebarButtonLeft' @click='switchSidebar' v-show='getStateUserAccountInfo.patId === null && isDispSidebarBtn && !isReMS'></div>-->
+    <!-- <div id="showPatientSearchSidebarBtn" class='sidebar-transition sidebar-show-button' :style='showSidebarButtonLeft' @click='switchSidebar' v-show='getStateUserAccountInfo?.patId === null && isDispSidebarBtn && !isReMS'></div>-->
     <!--mod  4658 サイドコンテンツエリア表示状態で体重測定に遷移すると、サイドコンテンツ展開用の◀の表示が現在と逆転する 吉 start-->
-    <!--<div id="showPatientSearchSidebarBtn" class='sidebar-transition sidebar-show-button' :style='showSidebarButtonLeft' @click='switchSidebar' v-show='getStateUserAccountInfo.patId === null && isDispSidebarBtn && !isReMS'>-->
-    <div id="showPatientSearchSidebarBtn" class='sidebar-transition sidebar-show-button' :style="[showSidebarButtonLeft,{'background-color': this.colorCode ? this.colorCode : '#404040'}]" @click='switchSidebar' v-if='getStateUserAccountInfo.patId === null && isDispSidebarBtn && !isReMS'>
+    <!--<div id="showPatientSearchSidebarBtn" class='sidebar-transition sidebar-show-button' :style='showSidebarButtonLeft' @click='switchSidebar' v-show='getStateUserAccountInfo?.patId === null && isDispSidebarBtn && !isReMS'>-->
+    <div ref="sidebarToggleButton" id="showPatientSearchSidebarBtn" class='sidebar-transition sidebar-show-button' :style="[showSidebarButtonLeft,{'background-color': this.colorCode ? this.colorCode : '#404040'}]" @click='switchSidebar' v-if='getStateUserAccountInfo?.patId === null && isDispSidebarBtn && !isReMS'>
       <!--mod  4658 サイドコンテンツエリア表示状態で体重測定に遷移すると、サイドコンテンツ展開用の◀の表示が現在と逆転する 吉 end-->
-      <span class="arrow">▶</span>
+      <span :class="sidebarToggleArrowClass">{{ sidebarToggleArrowText }}</span>
     </div>
     <!-- mod FNSI-画面部品デザイン じょはく end-->
     <router-view :style='routerViewWidth'/>
-    <fab-component v-show='getStateUserAccountInfo.patId === null'/>
+    <fab-component v-show='getStateUserAccountInfo?.patId === null'/>
     <loading-screen />
-    <ntss-footer-menu id='footer-menu' v-show='isShowFooter' />
+    <ntss-footer-menu ref='footerMenu' id='footer-menu' v-show='isShowFooter' />
     <multi-modal-view />
     <multi-sub-modal-view />
   </div>
 </template>
 
 <script>
-import axios from "axios";
-import router from "@/router";
+import { router } from "@/compat/vue/router-facade.js";
 import store from "@/stores";
 import FabComponent from "@/components/FabComponent";
 import PatientSearchSidebar from "@/components/common/PatientSearchSidebar";
@@ -35,14 +34,17 @@ import MultiModal from "@/components/modals/MultiModal";
 import MultiSubModal from "@/components/modals/MultiSubModal";
 import { TITLE } from "@/constants/sysUseConstants";
 import { LOCAL_STORAGE_KEY } from "@/constants/localStorageConstants";
-import { mapActions, mapGetters, mapMutations } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
 import { updateFavicons } from "@/functions/SigninFunction";
 import { SESSION_STORAGE_KEY } from "@/constants/sessionStorageConstants";
+import { getHeaderElements, getViewportHeight, getViewportWidth,
+  getScopedWindow} from "@/functions/common/LayoutMeasureHelper";
+import axios from "@/compat/http/axios";
 
 const SESSION_TIMEOUT_CHECK_INTERVAL = 15000;
 
@@ -54,6 +56,12 @@ export default {
     "ntss-footer-menu": FooterMenu,
     "multi-modal-view": MultiModal,
     "multi-sub-modal-view": MultiSubModal
+  },
+  provide() {
+    return {
+      getNtssLayoutRootElement: () => this.getLayoutRootElement(),
+      getNtssFooterMenuElement: () => this.getFooterMenuElement()
+    };
   },
   data() {
     return {
@@ -72,10 +80,9 @@ export default {
       // add 8074 隠しボタンを押してもイベントが出てこないことを傍受していないlogインタフェースが出てこない 付 end
       //背景色のカラーコード
       colorCode: "",
-      tmpFontSize: null,
-      tmpTheme: null,
-      sessionTimeoutCheckProc: null,
-      sessionTimeoutChecking: false
+      // ヘッダー余白再計算の予約ID
+      leftmostHeaderMarginRafId: null
+
     };
   },
   computed: {
@@ -127,6 +134,12 @@ export default {
         return false;
       }
       return this.isDispMenu === 1;
+    },
+    sidebarToggleArrowText() {
+      return this.showSidebarFlg ? "◀" : "▶";
+    },
+    sidebarToggleArrowClass() {
+      return this.showSidebarFlg ? "arrow-click" : "arrow";
     }
   },
   watch: {
@@ -167,6 +180,59 @@ export default {
     // add #9595 #9542、#9304、#10151仮想スクロールテーブルの再構築 end
   },
   methods: {
+    getLayoutRootElement() {
+      return this.$refs.layoutRoot || this.$el || null;
+    },
+    getFooterMenuElement() {
+      return this.$refs.footerMenu?.$el || this.$refs.footerMenu || null;
+    },
+    getSidebarToggleButtonElement() {
+      return this.$refs.sidebarToggleButton || this.$el?.querySelector?.("#showPatientSearchSidebarBtn") || null;
+    },
+    getSidebarElement() {
+      return this.$refs.patientSearchSidebar?.$el || this.$refs.patientSearchSidebar || null;
+    },
+    getViewDocument() {
+      return this.getLayoutRootElement()?.ownerDocument || document;
+    },
+    getViewWindow() {
+      return this.getViewDocument()?.defaultView || getScopedWindow(this.getLayoutRootElement() || this.$el || this);
+    },
+    getViewDocumentElement() {
+      return this.getViewDocument()?.documentElement || null;
+    },
+    getViewBodyElement() {
+      return this.getViewDocument()?.body || null;
+    },
+    getViewportSize() {
+      return {
+        windowHeight: getViewportHeight(),
+        windowWidth: getViewportWidth()
+      };
+    },
+    queryLayout(selector, root = this.getLayoutRootElement()) {
+      return root?.querySelector?.(selector) || null;
+    },
+    queryLayoutAll(selector, root = this.getLayoutRootElement()) {
+      return Array.from(root?.querySelectorAll?.(selector) || []);
+    },
+    getConditionSearchAreas() {
+      return this.queryLayoutAll('.condition-search-area, .condition-search-icon-area, .condition-items-area');
+    },
+    getBreadcrumbArea() {
+      return this.queryLayout('#BreadCrumbsComponent_breadcrumb_content_area');
+    },
+    getScopedModalContainers(root = this.getLayoutRootElement()) {
+      return getScopedPortalElements(root, '.modal-container, .modal-container-custom');
+    },
+    getScopedPopoverElements(root = this.getLayoutRootElement()) {
+      return getScopedPortalElements(root, 'ons-popover');
+    },
+    scrollBreadcrumbsToEnd() {
+      this.queryLayoutAll('.breadcrumb-content').forEach((element) => {
+        element.scrollLeft = 1000;
+      });
+    },
     // mod #9606 2023/08/30 ログイン時setFacilitySwitchを設定する 朴 start
     ...mapActions("master-maintenance", ["setFacilitySwitch"]),
     // add #9595 #9542、#9304、#10151仮想スクロールテーブルの再構築 start
@@ -176,10 +242,10 @@ export default {
     // mod #9606 2023/08/30 ログイン時setFacilitySwitchを設定する 朴 end
     // add 8074 隠しボタンを押してもイベントが出てこないことを傍受していないlogインタフェースが出てこない 付 start
     handleClick (e) {
-      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'ONS-BUTTON') {
-        let subPageName = '', pageName = '', functionName = ''
-        document.querySelectorAll('.modal-container, .modal-container-custom').forEach(modalElement => {
-          modalElement.querySelectorAll("ONS-BUTTON, BUTTON").forEach(element => {
+      if (["BUTTON", "ONS-BUTTON", "A", "ONS-TOOLBAR-BUTTON"].includes(e.target.tagName)) {
+        let subPageName = '';
+        this.getScopedModalContainers(e?.target || this.getLayoutRootElement()).forEach(modalElement => {
+          modalElement.querySelectorAll("ONS-BUTTON, BUTTON, A, ONS-TOOLBAR-BUTTON").forEach(element => {
             if (element == e.target) {
               modalElement.querySelectorAll('div').forEach(subDiv => {
                 if (subDiv.classList.contains('toolbar__title') && subDiv.classList.contains('toolbar__left')) {
@@ -192,12 +258,8 @@ export default {
             }
           });
         });
-        if (subPageName === '') {
-          pageName = getPageName()
-        } else {
-          pageName = getPageName() + "の" + subPageName
-        }
-        functionName = getPageName()
+        const functionName = getPageName(e?.target || this.getLayoutRootElement());
+        const pageName = subPageName === '' ? functionName : functionName + "の" + subPageName;
         var btnName = e.target.innerText;
         // add 8074 画像はbuttonタグに包まれボタンはありません 関 start
         if (!btnName && e.target.alt && e.target.alt.includes('icon')) {
@@ -247,26 +309,10 @@ export default {
       }
       // サイドバーの開閉時、画面のリサイズを発火させる (App.vueでwindowsサイズ変更に割り当てられている処理)
       this.$nextTick(() => {
-        this.setSize({
-          windowHeight: document.documentElement.clientHeight,
-          windowWidth: document.documentElement.clientWidth
-        });
+        this.setSize(this.getViewportSize());
         // リサイズ時、パンくずリストを右に寄せる
         this.$nextTick(() => {
-          // add FNSI-画面部品デザイン じょはく start
-          let arrowCount = document.getElementsByClassName("arrow").length;
-          let arrowClickCount = document.getElementsByClassName("arrow-click").length;
-          if ( arrowCount > 0 ) {
-            document.getElementsByClassName("arrow")[0].textContent = "◀";
-            document.getElementsByClassName("arrow")[0].setAttribute("class","arrow-click");
-          } else if ( arrowClickCount > 0 ) {
-            document.getElementsByClassName("arrow-click")[0].textContent = "▶";
-            document.getElementsByClassName("arrow-click")[0].setAttribute("class","arrow");
-          }
-          // add FNSI-画面部品デザイン じょはく end
-          document.querySelectorAll(".breadcrumb-content").forEach(e => {
-            e.scrollLeft = 1000;
-          });
+          this.scrollBreadcrumbsToEnd();
           EventBus.$emit("switchSidebar");
         });
       });
@@ -290,55 +336,60 @@ export default {
       if (this.showSidebarFlg) {
         // min-widh が設定されている .content-box が存在しない場合がある為、初期値を設定
         let contentBoxWidth = 200;
-        if (document.querySelector('.content-box') != null) {
+        const contentBox = this.getLayoutRootElement()?.querySelector?.('.content-box') || null;
+        if (contentBox != null) {
           //.content-box の min-widh を取得
-          contentBoxWidth = Number(window.getComputedStyle(document.querySelector('.content-box')).minWidth.replace('px',''));
+          contentBoxWidth = Number((contentBox.ownerDocument?.defaultView || this.$el?.ownerDocument?.defaultView || window).getComputedStyle(contentBox).minWidth.replace('px',''));
         }
         // サイドバーの横幅 を取得
-        const sideBarWidth = document.getElementById("patientSearchSidebarArea").offsetWidth;
-        if (document.documentElement.clientWidth < (contentBoxWidth + sideBarWidth) ) {
+        const sideBarWidth = this.getSidebarElement()?.offsetWidth || 0;
+        if (getViewportWidth() < (contentBoxWidth + sideBarWidth) ) {
           this.switchSidebar();
         }
       }
     },
     // ヘッダーが最左にある場合、サイドバーボタン用のマージンを付与
     addLeftmostHeaderMargin() {
-      // サイドバーボタンの最右位置を取得
-      let btnRightPoint = document.getElementById("showPatientSearchSidebarBtn")
-        ? document.getElementById("showPatientSearchSidebarBtn").clientWidth / 2 : 0;
-      if (this.showSidebarFlg) {
-        btnRightPoint += this.sidebarBasicWidth;
+      const scopedWindow = this.getViewDocument()?.defaultView || window;
+      if (this.leftmostHeaderMarginRafId) {
+        scopedWindow.cancelAnimationFrame?.(this.leftmostHeaderMarginRafId);
       }
+      this.leftmostHeaderMarginRafId = scopedWindow.requestAnimationFrame?.(() => {
+        this.leftmostHeaderMarginRafId = null;
 
-      // ヘッダー部品のリストを取得
-      let objList = document.getElementsByClassName("header");
-      // 先に leftmost-header クラスを持つものを削除
-      let removeClassList = document.getElementsByClassName("leftmost-header");
-      while (removeClassList.length !== 0) {
-        removeClassList[0].classList.remove("leftmost-header");
-      }
-      // サイドバーボタンと位置が重なっているヘッダー部品にクラスを付与する
-      for (let count = 0; count < objList.length; count++) {
-        if (btnRightPoint > objList[count].getBoundingClientRect().left) {
-          // class：mark-leftmost-header を事前にマージンを付けたい場所に設定しておく
-          if (objList[count].getElementsByClassName("mark-leftmost-header").length != 0) {
-            objList[count].getElementsByClassName("mark-leftmost-header")[0]?.classList?.add("leftmost-header");
-          }
+        const root = this.getLayoutRootElement() || this.getViewBodyElement() || null;
+        const sidebarBtn = this.getSidebarToggleButtonElement();
+        let btnRightPoint = sidebarBtn ? sidebarBtn.clientWidth / 2 : 0;
+        if (this.showSidebarFlg) {
+          btnRightPoint += this.sidebarBasicWidth;
         }
-      }
+
+        const objList = getHeaderElements(root);
+        const removeClassList = Array.from(root?.querySelectorAll?.('.leftmost-header') || []);
+        removeClassList.forEach(el => el.classList.remove("leftmost-header"));
+
+        const targets = objList
+          .map(obj => ({
+            obj,
+            marker: obj.getElementsByClassName("mark-leftmost-header")[0],
+            left: obj.getBoundingClientRect().left
+          }))
+          .filter(item => item.marker);
+
+        targets.forEach(({ marker, left }) => {
+          if (btnRightPoint > left) {
+            marker.classList.add("leftmost-header");
+          }
+        });
+      }) || null;
     },
     forceCloseSideBar() {
       this.showSidebarFlg = false;
       this.$nextTick(() => {
-        this.setSize({
-          windowHeight: document.documentElement.clientHeight,
-          windowWidth: document.documentElement.clientWidth
-        });
+        this.setSize(this.getViewportSize());
         // リサイズ時、パンくずリストを右に寄せる
         this.$nextTick(() => {
-          document.querySelectorAll(".breadcrumb-content").forEach(e => {
-            e.scrollLeft = 1000;
-          });
+          this.scrollBreadcrumbsToEnd();
         });
       });
     },
@@ -364,7 +415,7 @@ export default {
     initLoad() {
        try {
          // ボタンのクリックイベントを追加
-         document.querySelectorAll("ONS-BUTTON, BUTTON").forEach(buttonObj => {
+         this.queryLayoutAll("ONS-BUTTON, BUTTON").forEach(buttonObj => {
            if (isPC()) {
                 // PC側
                 buttonObj.onmouseup = function(e) {
@@ -380,11 +431,10 @@ export default {
             }
          });
 
-        var searchAreas = document.querySelectorAll(".condition-search-area, .condition-search-icon-area, .condition-items-area");
+        let searchAreas = this.getConditionSearchAreas();
         searchAreas.forEach(element => {
             //element.removeEventListener("click", popoverHandle, false);
             element.addEventListener("click", popoverHandle, false);
-            element = null;
         });
         searchAreas = null;
       } catch (error) {
@@ -394,7 +444,7 @@ export default {
     },
 
     getPageNameBySubPage() {
-        var linkDivObj = document.getElementById('BreadCrumbsComponent_breadcrumb_content_area');
+        const linkDivObj = this.getBreadcrumbArea();
         if (linkDivObj) {
             var links = linkDivObj.getElementsByTagName('a');
             if (links) {
@@ -406,7 +456,6 @@ export default {
                }
             }
         }
-        linkDivObj = null;
         return '';
     },
     //FNSI-修正 ログ対応 xiebzh add end
@@ -480,12 +529,12 @@ export default {
     },
 
     clearInit() {
-      var searchAreas = document.querySelectorAll(".condition-search-area, .condition-search-icon-area, .condition-items-area");
+      const searchAreas = this.getConditionSearchAreas();
        searchAreas.forEach(element => {
          element.removeEventListener("click", popoverHandle, false);
        });
 
-       document.querySelectorAll("ons-popover").forEach(element => {
+       this.getScopedPopoverElements().forEach(element => {
          element.querySelectorAll('div').forEach(elementDiv => {
            if (elementDiv.classList.contains("popover__content")) {
              elementDiv.divParam = elementDiv;
@@ -517,9 +566,12 @@ export default {
     }
   },
   created() {
-    window.addEventListener('storage', this.autoSignOut);
+    this.getViewWindow().addEventListener('storage', this.autoSignOut);
+    const viewDocument = this.getViewDocument();
     // 画面タイトル(サインイン後初回設定用)
-    document.title = TITLE[this.systemUseSetting != null ? this.systemUseSetting : 0];
+    if (viewDocument) {
+      viewDocument.title = TITLE[this.systemUseSetting != null ? this.systemUseSetting : 0];
+    }
     // favicon設定
     updateFavicons(this.systemUseSetting != null ? this.systemUseSetting : 0);
     // 他の画面のヘッダーの mounted() 時に実行する
@@ -530,7 +582,7 @@ export default {
     EventBus.$on("print-start", this.printStart);
     EventBus.$on("print-end", this.printEnd);
     // add 8074 隠しボタンを押してもイベントが出てこないことを傍受していないlogインタフェースが出てこない 付 start
-    document.body.addEventListener('click', this.handleClick)
+    this.getViewBodyElement()?.addEventListener('click', this.handleClick)
     // const targetNode = document.querySelector('body');
     // const config = { attributes: true, childList: true, subtree: true };
     // const callback = (mutationRecords, observer) => {
@@ -553,16 +605,21 @@ export default {
     this.colorCode = sessionStorage.getItem(SESSION_STORAGE_KEY.BACKGROUND_COLOR_CODE);
     this.startSessionTimeoutCheck();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // add 8074 隠しボタンを押してもイベントが出てこないことを傍受していないlogインタフェースが出てこない 付 start
     this.observer && this.observer.disconnect();
+    if (this.leftmostHeaderMarginRafId) {
+      (this.getViewDocument()?.defaultView || window).cancelAnimationFrame?.(this.leftmostHeaderMarginRafId);
+      this.leftmostHeaderMarginRafId = null;
+    }
     // add 8074 隠しボタンを押してもイベントが出てこないことを傍受していないlogインタフェースが出てこない 付 end
-    window.removeEventListener("storage", this.autoSignOut);
-    EventBus.$off("addLeftmostHeaderMargin");
-    EventBus.$off("sidebarCloseByWidth");
-    EventBus.$off("forceCloseSideBar");
-    EventBus.$off("print-start");
-    EventBus.$off("print-end");
+    this.getViewWindow().removeEventListener("storage", this.autoSignOut);
+    this.getViewBodyElement()?.removeEventListener('click', this.handleClick);
+    EventBus.$off("addLeftmostHeaderMargin", this.addLeftmostHeaderMargin);
+    EventBus.$off("sidebarCloseByWidth", this.sidebarCloseByWidth);
+    EventBus.$off("forceCloseSideBar", this.forceCloseSideBar);
+    EventBus.$off("print-start", this.printStart);
+    EventBus.$off("print-end", this.printEnd);
     // ログアウト時にサイドバーが開いていたら閉じておく
     if (this.showSidebarFlg) {
       this.switchSidebar();
@@ -574,9 +631,102 @@ export default {
 };
 
 //FNSI-修正 ログ対応 xiebzh add start
+function collectScopedTargets(...candidates) {
+  const result = [];
+  candidates.flat(Infinity).forEach((candidate) => {
+    if (candidate && !result.includes(candidate)) {
+      result.push(candidate);
+    }
+  });
+  return result;
+}
+
+function escapeScopedId(id) {
+  if (!id) {
+    return null;
+  }
+  try {
+    if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+      return CSS.escape(id);
+    }
+  } catch (_error) {
+    return null;
+  }
+  return null;
+}
+
 // パンくずリストによって、画面の日本語名を取得する
-function getPageName() {
-    var linkDivObj = document.getElementById('BreadCrumbsComponent_breadcrumb_content_area');
+function getLayoutScope(root = null) {
+    const scopeRoot = root?.$el || root || null;
+    const scopeDocument = scopeRoot?.ownerDocument || (typeof document !== 'undefined' ? document : null);
+    const scopeBody = scopeDocument?.body || null;
+    return scopeRoot?.closest?.('.route-view-frame-style')
+      || (scopeRoot?.matches?.('.route-view-frame-style') ? scopeRoot : null)
+      || Array.from(scopeBody?.children || []).find((element) => element?.matches?.('.route-view-frame-style'))
+      || scopeBody?.querySelector?.('.route-view-frame-style')
+      || scopeRoot
+      || scopeBody
+      || null;
+}
+
+function getScopedPortalElements(root = null, selector = '') {
+    if (!selector) {
+      return [];
+    }
+    const layoutScope = getLayoutScope(root);
+    const scopeBody = layoutScope?.ownerDocument?.body || null;
+    const result = [];
+    collectScopedTargets(layoutScope).forEach((target) => {
+      Array.from(target?.querySelectorAll?.(selector) || []).forEach((element) => {
+        if (!result.includes(element)) {
+          result.push(element);
+        }
+      });
+    });
+    Array.from(scopeBody?.children || []).forEach((element) => {
+      if (element?.matches?.(selector) && !result.includes(element)) {
+        result.push(element);
+      }
+    });
+    return result;
+}
+
+
+function queryScopedPortalElements(root = null, selector = '') {
+    return getScopedPortalElements(root, selector);
+}
+
+function queryScopedElementById(root = null, id = '') {
+    if (!id) {
+      return null;
+    }
+    const escapedId = escapeScopedId(id);
+    const localScope = root?.closest?.('.popover__content, .modal-container, .modal-container-custom, ons-popover, ons-dialog, ons-alert-dialog') || null;
+    const scopeBody = root?.ownerDocument?.body || null;
+    const roots = collectScopedTargets(root, localScope, getLayoutScope(root), scopeBody);
+    for (const target of roots) {
+      if (!target) {
+        continue;
+      }
+      if (typeof target.getElementById === 'function') {
+        const byId = target.getElementById(id);
+        if (byId) {
+          return byId;
+        }
+      }
+      const bySelector = (escapedId && target.querySelector?.(`#${escapedId}`))
+        || target.querySelector?.(`[id="${id}"]`)
+        || null;
+      if (bySelector) {
+        return bySelector;
+      }
+    }
+    return null;
+}
+
+function getPageName(root = null) {
+    const layoutScope = getLayoutScope(root);
+    var linkDivObj = layoutScope?.querySelector?.('#BreadCrumbsComponent_breadcrumb_content_area') || null;
     if (linkDivObj) {
         var links = linkDivObj.getElementsByTagName('a');
         if (links) {
@@ -588,7 +738,6 @@ function getPageName() {
            }
         }
     }
-    linkDivObj = null;
     return '';
 }
 
@@ -609,27 +758,28 @@ function isPC() {
 }
 
 function btnEvent(e) {
+  const scopeRoot = e?.target || null;
   var subPageName = '';
   //var parentDivParam = e.target.closest("div");
-  document.querySelectorAll('.modal-container, .modal-container-custom').forEach(modalElement => {
-    modalElement.querySelectorAll("ONS-BUTTON, BUTTON").forEach(element => {
+  getScopedPortalElements(scopeRoot, '.modal-container, .modal-container-custom').forEach(modalElement => {
+    modalElement.querySelectorAll("ONS-BUTTON, BUTTON, A, ONS-TOOLBAR-BUTTON").forEach(element => {
       if (element == e.target) {
         modalElement.querySelectorAll('div').forEach(subDiv => {
           if (subDiv.classList.contains('toolbar__title') && subDiv.classList.contains('toolbar__left')) {
-            subPageName = subDiv.querySelector('span').innerText;
+            subPageName = subDiv.querySelector('span') ? subDiv.querySelector('span').innerText : "";
           }
         });
       }
     });
   });
-  var pageName = '';
-  var functionName = '';
+  var pageName;
+  var functionName;
   if (subPageName === '') {
-    pageName = getPageName();
+    pageName = getPageName(scopeRoot);
   } else {
-    pageName = getPageName() + "の" + subPageName;
+    pageName = getPageName(scopeRoot) + "の" + subPageName;
   }
-  functionName = getPageName();
+  functionName = getPageName(scopeRoot);
   var btnName = e.target.innerText;
   // add 8074 画像はbuttonタグに包まれボタンはありません 関 start
   if (!btnName && e.target.alt && e.target.alt.includes('icon')) {
@@ -648,31 +798,36 @@ function btnEvent(e) {
   });
 }
 
-var popoverHandle = function () {
-    popoverClick();
+var popoverHandle = function (event) {
+    popoverClick(event?.currentTarget || event?.target || null);
 }
 
 function btnHandle(e) {
-    if (event.type === 'keypress') {
-      if(event.keyCode == 13) {
+    if (e?.type === 'keypress') {
+      if(e.keyCode == 13) {
         if (e.target.tagName === 'INPUT' && e.target.type === 'text') {
           var parentDivParam = e.target.closest('div');
-          for (var i = 0; i < 20; i++) {
+          for (var i = 0; i < 20 && parentDivParam; i++) {
             if (parentDivParam.classList.contains('condition-search-area') || parentDivParam.classList.contains('condition-search-icon-area')) {
               break;
             } else {
               parentDivParam = parentDivParam.closest('div');
             }
           }
-          btnClick(parentDivParam);
+          if (parentDivParam) {
+            btnClick(parentDivParam);
+          }
         }
       }
-    } else {
+    } else if (e?.target?.divParam) {
       btnClick(e.target.divParam);
     }
 }
 
 function btnClick(obj) {
+    if (!obj) {
+      return;
+    }
     // マスタ一覧が555で検索しました。
     var conditionMessage = '';
     var elements = obj.getElementsByTagName('*');
@@ -707,7 +862,7 @@ function btnClick(obj) {
         case 'LABEL':
           var forValue = item.getAttribute("for");
           if (forValue) {
-            var checkValue = document.getElementById(forValue);
+            var checkValue = queryScopedElementById(obj, forValue);
             if (checkValue && checkValue.checked) {
                 conditionMessage += item.innerText + '、';
             }
@@ -727,7 +882,7 @@ function btnClick(obj) {
           if (item.type === 'checkbox' && item.checked) {
             var rowObj = item.closest('ONS-ROW');
             if (rowObj) {
-              var colRow = rowObj.getElementsByTagName('ons-col')[0];
+              var colRow = rowObj.querySelector('.ons-col');
               var labelObj = colRow.getElementsByTagName('label')[0];
               if (labelObj) {
                 conditionMessage += labelObj.innerText + '、';
@@ -757,8 +912,8 @@ function btnClick(obj) {
         conditionMessage = conditionMessage.substr(0,conditionMessage.length-1);
       }
 
-      var msg = getPageName() + "が[" + conditionMessage + "]で検索しました。";
-      let paramObj = {'message': msg, 'functionName': getPageName()};
+      var msg = getPageName(obj) + "が[" + conditionMessage + "]で検索しました。";
+      let paramObj = {'message': msg, 'functionName': getPageName(obj)};
       ApiHelper.put("/logs/event/conditionlog", paramObj)
         .catch(error => {
           //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
@@ -769,8 +924,8 @@ function btnClick(obj) {
 
 }
 
-function popoverClick() {
-  document.querySelectorAll("ons-popover").forEach(element => {
+function popoverClick(root = null) {
+  getScopedPortalElements(root, "ons-popover").forEach(element => {
         element.querySelectorAll('div').forEach(elementDiv => {
           if (elementDiv.classList.contains("popover__content") && elementDiv.classList.contains("popover--top__content")) {
             elementDiv.divParam = elementDiv;

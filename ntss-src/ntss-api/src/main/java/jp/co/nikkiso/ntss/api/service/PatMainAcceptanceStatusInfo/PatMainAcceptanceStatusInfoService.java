@@ -33,5 +33,8 @@ public interface PatMainAcceptanceStatusInfoService {
    * @param patId   患者ID
    * @return 再構築したJSONオブジェクト文字列
    */
-  public String rebuild(Long patId);
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 start
+  // public String rebuild(Long patId);
+  String rebuild(Long patId, String facilityCd);
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 end
 }

@@ -1,9 +1,15 @@
 <!-- 処方箋 -->
 <template>
   <ntss-layout>
-    <header-component slot='header-content' />
-    <bread-crumbs-component slot='bread-crumbs-content' :history-key="historyKey" :no-split="true" @refresh='refresh' />
-    <main-component slot='main-content' ref='mainComponent' :history-key="historyKey" />
+    <template #header-content>
+      <header-component />
+    </template>
+    <template #bread-crumbs-content>
+      <bread-crumbs-component :history-key="historyKey" :no-split="true" @refresh='refresh' />
+    </template>
+    <template #main-content>
+      <main-component ref='mainComponent' :history-key="historyKey" />
+    </template>
   </ntss-layout>
 </template>
 
@@ -15,7 +21,7 @@ import ViewHelper from "@/views/ViewHelperMixin";
 import { HISTORY_KEY_PRESCRIPTION_DETAIL } from "@/router/prescription/HistoryKeyConstants";
 // //FNSI-横展開管理台帳_日機装FNSI NO.15 劉全航 start
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc start
-import {mapActions, mapGetters, mapMutations} from "vuex";
+import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc end
 // //FNSI-横展開管理台帳_日機装FNSI NO.15 劉全航 end
 // // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
@@ -44,6 +50,7 @@ export default {
           title: DIALOG_MESSAGES[13000004].title,
           // message: "編集内容が破棄されます。</br>よろしいですか？",
           message: messageFormat(DIALOG_MESSAGES[13000004].message),
+          buttonLabels: ["Cancel", "OK"],
           // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
           callback: answer => {
             //FNSI-横展開管理台帳_日機装FNSI NO.15 劉全航 start
@@ -57,6 +64,8 @@ export default {
               this.setIsPatInfoChaned(false);
               // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc end
               next()
+            } else {
+              next(false);
             }
             //FNSI-横展開管理台帳_日機装FNSI NO.15 劉全航 end
           }

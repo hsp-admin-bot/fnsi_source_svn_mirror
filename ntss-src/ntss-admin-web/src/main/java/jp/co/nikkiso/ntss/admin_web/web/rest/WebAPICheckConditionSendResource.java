@@ -3,14 +3,18 @@ package jp.co.nikkiso.ntss.admin_web.web.rest;
 import java.util.Map;
 import java.util.MissingFormatArgumentException;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
+import jp.co.nikkiso.ntss.admin_web.service.OrdMainService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
+import jp.co.nikkiso.ntss.core.entity.OrdMain;
 import org.json.JSONObject;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,6 +28,7 @@ import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 
 /**
@@ -41,6 +46,8 @@ public class WebAPICheckConditionSendResource {
 
   @Autowired
   LogService logService;
+  @Autowired
+  OrdMainService ordMainService;
 
   // wp アプリケーションログの適正化 Add Start
   @Autowired
@@ -61,7 +68,8 @@ public class WebAPICheckConditionSendResource {
    */
   @PostMapping("/CheckCondition")
   public ResponseEntity<String> postCheck(
-      @Valid @RequestBody String bodydata
+      @Valid @RequestBody String bodydata,
+      @AuthenticationPrincipal NtssUser ntssUser
   )
   {
 
@@ -85,10 +93,20 @@ public class WebAPICheckConditionSendResource {
 //    //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」の改修 江 end
 
     JSONObject json = new JSONObject(bodydata) ;
+    Long ordNo = Long.valueOf(json.getString("ordNo"));
+    OrdMain ordMain = ordMainService.selectByOrdNo(ordNo);
+    if (ntssUser == null || (ordMain != null && ordMain.getFacilityCd() != null
+      && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd()))) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "patId=" + ordMain.getPatId() + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>("security check error", HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
 
     //メソッド呼び出し
-    Map<String,Object> retVal = webAPICheckConditionSend.checkSendCond(Long.valueOf(json.getString("ordNo"))) ;
+    Map<String,Object> retVal = webAPICheckConditionSend.checkSendCond(ordNo) ;
 
     if(!(Boolean)retVal.get("ret"))
     {

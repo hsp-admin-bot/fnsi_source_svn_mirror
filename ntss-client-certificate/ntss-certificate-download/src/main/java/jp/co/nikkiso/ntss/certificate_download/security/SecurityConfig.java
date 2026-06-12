@@ -3,20 +3,23 @@ package jp.co.nikkiso.ntss.certificate_download.security;
 import jp.co.nikkiso.ntss.certificate_download.constant.ClientCertificateConstant.Uri;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -28,6 +31,7 @@ import org.springframework.security.web.authentication.session.RegisterSessionAu
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionFixationProtectionStrategy;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 import java.util.ArrayList;
@@ -38,8 +42,8 @@ import java.util.List;
  */
 @Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
+@EnableMethodSecurity(prePostEnabled = true)
+public class SecurityConfig {
 
   /**
    * サインイン後勝ち有効設定
@@ -48,73 +52,97 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   private Boolean signInRestriction;
 
   /**
-   * {@inheritDoc}
+   * Boot 4 では MappingJackson2HttpMessageConverter が削除されたため、
+   * 認証ハンドラが注入する JSON 変換用 Bean を明示登録する（応答 JSON の挙動は従来と同じ）.
    */
-  @Override
-  public void configure(WebSecurity web) throws Exception {
-    // 以下のリクエストについてはセキュリティ設定を無視する
-    web.ignoring().antMatchers("/css/**", "/fonts/**", "/img/**", "/js/**", "/local/**", "/manifest.json",
-        "/service-worker.js", "/precache-manifest**", "/index.html");
+  @Bean
+  @ConditionalOnMissingBean
+  JacksonJsonHttpMessageConverter jacksonJsonHttpMessageConverter() {
+    return new JacksonJsonHttpMessageConverter();
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  protected void configure(HttpSecurity http) throws Exception {
-
-    // 認可の設定
-    http.authorizeRequests()
-         //mod FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 start
-         //.antMatchers("/", "/index", "/error", Uri.LOGIN, Uri.LOGOUT, Uri.CLUSERSETTING, Uri.CLFACILITYSETTING).permitAll()
-        .antMatchers("/", "/index", "/error", Uri.LOGIN, Uri.LOGOUT, Uri.CLUSERSETTING, Uri.CLFACILITYSETTING,
-          Uri.CLPROVISIONAL,Uri.CLMATCHCURRENTPASSWORD,Uri.CLUPDATEPROVISIONAL).permitAll()
-         //mod FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 start
-        .antMatchers(Uri.CLDOWNLOAD + "/mergeP12").hasRole(NtssAuthenticationConstants.Authority.CL_FACILITY_ROLE)
-
-        .antMatchers(Uri.CLDOWNLOAD + "/**", Uri.CLDETAILS + "/updateCurDownload")
-        .hasRole(NtssAuthenticationConstants.Authority.CL_FACILITY_ROLE)
-
-        .antMatchers(Uri.CLDOWNLOAD + "/**", Uri.CLDETAILS + "/getFacilityName")
-        .hasRole(NtssAuthenticationConstants.Authority.CL_FACILITY_ROLE)
-
-      .antMatchers(Uri.CLDETAILS + "/selectByFacilityCdWithNameOnly")
-        .hasAnyRole(NtssAuthenticationConstants.Authority.CL_GENERAL_ROLE,
-            NtssAuthenticationConstants.Authority.CL_ADMIN_ROLE, NtssAuthenticationConstants.Authority.CL_FACILITY_ROLE)
-
-        .antMatchers(Uri.CLDETAILS + "/selectByFacilityCdWithNameMany")
-        .hasAnyRole(NtssAuthenticationConstants.Authority.CL_GENERAL_ROLE,
-          NtssAuthenticationConstants.Authority.CL_ADMIN_ROLE, NtssAuthenticationConstants.Authority.CL_FACILITY_ROLE)
-
-        .antMatchers(Uri.CLDETAILS + "/**", Uri.CLFACILITY + "/getAllFacilities", Uri.CLFACILITY + "/getFacilitiesByCd",
-        Uri.CLFACILITY + "/updateFacility", Uri.CLFACILITY + "/insertFacility", Uri.CLFACILITY + "/getFacilityByLikeName")
-        .hasAnyRole(NtssAuthenticationConstants.Authority.CL_GENERAL_ROLE,
-            NtssAuthenticationConstants.Authority.CL_ADMIN_ROLE)
-
-        .antMatchers(Uri.CLUSER + "/**", Uri.CLFACILITY + "/**")
-        .hasRole(NtssAuthenticationConstants.Authority.CL_ADMIN_ROLE)
-
-        .anyRequest().authenticated().and().exceptionHandling().authenticationEntryPoint(authenticationEntryPoint());
-
-    // ログアウト設定
-    http.logout().logoutUrl(Uri.LOGOUT).invalidateHttpSession(true).clearAuthentication(true)
-        .deleteCookies(NtssAuthenticationConstants.COOKIE_NAME).logoutSuccessHandler(logoutSuccessHandler())
-        .permitAll();
-
-    // 認証フィルター設定
-    http.addFilterAt(authenticationFilter(), UsernamePasswordAuthenticationFilter.class);
-
-    // CSRF設定
-    http.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-        .ignoringAntMatchers(Uri.LOGIN, Uri.CLDOWNLOAD + "/mergeP12");
+  @Bean
+  WebSecurityCustomizer webSecurityCustomizer() {
+    return web -> web.ignoring().requestMatchers(publicPaths(
+        "/assets/**", "/css/**", "/fonts/**", "/img/**", "/js/**", "/local/**", "/manifest.json",
+        "/service-worker.js", "/precache-manifest**", "/index.html"));
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-    auth.authenticationProvider(authenticationProvider());
+  @Bean
+  SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
+    http
+        .authenticationManager(authenticationManager)
+        // Spring Security 6 以降は SecurityContext の HttpSession への自動保存がデフォルトで無効。
+        // ログイン直後は Vuex のみ成功し、要認証 API が 401 になるため、従来（SS5）と同じ挙動に戻す。
+        .securityContext(securityContext -> securityContext.requireExplicitSave(false))
+        .headers(headers -> headers
+            .frameOptions(frame -> frame.sameOrigin())
+            .contentSecurityPolicy(csp -> csp.policyDirectives("frame-ancestors 'self'")))
+        .authorizeHttpRequests(authorize -> authorize
+            .requestMatchers(publicPaths(
+                "/",
+                "/index",
+                "/error",
+                Uri.LOGIN,
+                Uri.LOGOUT,
+                Uri.CLUSERSETTING,
+                Uri.CLFACILITYSETTING,
+                Uri.CLPROVISIONAL,
+                Uri.CLMATCHCURRENTPASSWORD,
+                Uri.CLUPDATEPROVISIONAL))
+            .permitAll()
+            .requestMatchers(publicPaths(Uri.CLDOWNLOAD + "/mergeP12"))
+            .hasRole(NtssAuthenticationConstants.Authority.CL_FACILITY_ROLE)
+            .requestMatchers(publicPaths(Uri.CLDOWNLOAD + "/**", Uri.CLDETAILS + "/updateCurDownload"))
+            .hasRole(NtssAuthenticationConstants.Authority.CL_FACILITY_ROLE)
+            .requestMatchers(publicPaths(Uri.CLDOWNLOAD + "/**", Uri.CLDETAILS + "/getFacilityName"))
+            .hasRole(NtssAuthenticationConstants.Authority.CL_FACILITY_ROLE)
+            .requestMatchers(publicPaths(Uri.CLDETAILS + "/selectByFacilityCdWithNameOnly"))
+            .hasAnyRole(
+                NtssAuthenticationConstants.Authority.CL_GENERAL_ROLE,
+                NtssAuthenticationConstants.Authority.CL_ADMIN_ROLE,
+                NtssAuthenticationConstants.Authority.CL_FACILITY_ROLE)
+            .requestMatchers(publicPaths(Uri.CLDETAILS + "/selectByFacilityCdWithNameMany"))
+            .hasAnyRole(
+                NtssAuthenticationConstants.Authority.CL_GENERAL_ROLE,
+                NtssAuthenticationConstants.Authority.CL_ADMIN_ROLE,
+                NtssAuthenticationConstants.Authority.CL_FACILITY_ROLE)
+            .requestMatchers(publicPaths(
+                Uri.CLDETAILS + "/**",
+                Uri.CLFACILITY + "/getAllFacilities",
+                Uri.CLFACILITY + "/getFacilitiesByCd",
+                Uri.CLFACILITY + "/updateFacility",
+                Uri.CLFACILITY + "/insertFacility",
+                Uri.CLFACILITY + "/getFacilityByLikeName"))
+            .hasAnyRole(
+                NtssAuthenticationConstants.Authority.CL_GENERAL_ROLE,
+                NtssAuthenticationConstants.Authority.CL_ADMIN_ROLE)
+            .requestMatchers(publicPaths(Uri.CLUSER + "/**", Uri.CLFACILITY + "/**"))
+            .hasRole(NtssAuthenticationConstants.Authority.CL_ADMIN_ROLE)
+            .anyRequest()
+            .authenticated())
+        .exceptionHandling(exceptionHandling -> exceptionHandling
+            .authenticationEntryPoint(authenticationEntryPoint()))
+        .logout(logout -> logout
+            .logoutUrl(Uri.LOGOUT)
+            .invalidateHttpSession(true)
+            .clearAuthentication(true)
+            .deleteCookies(NtssAuthenticationConstants.COOKIE_NAME)
+            .logoutSuccessHandler(logoutSuccessHandler())
+            .permitAll())
+        .csrf(csrf -> csrf
+            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+            // SS6 既定の Xor 検証は Cookie 平文トークン（Boot2 時の挙動）と不一致になるため、ヘッダー検証のみ従来どおりに戻す
+            .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+            .ignoringRequestMatchers(Uri.LOGIN, Uri.CLDOWNLOAD + "/mergeP12"));
+
+    http.addFilterAt(authenticationFilter(authenticationManager), UsernamePasswordAuthenticationFilter.class);
+    return http.build();
+  }
+
+  @Bean
+  AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+    return authenticationConfiguration.getAuthenticationManager();
   }
 
   /**
@@ -159,13 +187,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
   /**
    * 認証フィルターを返す.
-   *
-   * @throws Exception
    */
   @Bean
-  UsernamePasswordAuthenticationFilter authenticationFilter() throws Exception {
+  UsernamePasswordAuthenticationFilter authenticationFilter(AuthenticationManager authenticationManager) {
     NtssAuthenticationFilter filter = new NtssAuthenticationFilter();
-    filter.setAuthenticationManager(authenticationManager());
+    filter.setAuthenticationManager(authenticationManager);
     filter.setFilterProcessesUrl(Uri.LOGIN);
     filter.setAuthenticationSuccessHandler(authenticationSuccessHandler());
     filter.setAuthenticationFailureHandler(authenticationFailureHandler());
@@ -231,5 +257,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   @ConditionalOnExpression("${ntss.certificate.sign-in.restriction}")
   public NtssSessionFilter ntssSessionFilter() {
     return new NtssSessionFilter(sessionRegistry());
+  }
+
+  private String[] publicPaths(String... patterns) {
+    return patterns;
   }
 }

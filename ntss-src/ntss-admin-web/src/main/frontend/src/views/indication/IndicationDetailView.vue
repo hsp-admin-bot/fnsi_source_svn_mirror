@@ -1,8 +1,14 @@
 <template>
   <ntss-layout>
-    <header-component slot="header-content" />
-    <bread-crumbs-component slot="bread-crumbs-content" :history-key="historyKey" :no-split="true" />
-    <main-component slot="main-content" ref="mainComponent" />
+    <template #header-content>
+      <header-component />
+    </template>
+    <template #bread-crumbs-content>
+      <bread-crumbs-component :history-key="historyKey" :no-split="true" />
+    </template>
+    <template #main-content>
+      <main-component ref="mainComponent" />
+    </template>
   </ntss-layout>
 </template>
 
@@ -13,7 +19,7 @@ import BreadCrumbsComponent from "@/components/BreadCrumbsComponent";
 import { HISTORY_KEY_INDICATION_DETAIL } from "@/router/indication/HistoryKeyConstants";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc start
-import {mapGetters, mapMutations} from "vuex";
+import {mapGetters, mapMutations} from "@/compat/vue/vuex";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc end
 
 export default {
@@ -40,6 +46,9 @@ export default {
             this.setIsPatInfoChaned(false);
             // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc end
             next();
+          } else {
+            // キャンセル時は遷移を明示的に中断しないと、次回の beforeRouteLeave が発火しなくなる
+            next(false);
           }
         }
       });
@@ -66,7 +75,7 @@ export default {
 
 <style scoped>
 /* 患者共通ヘッダーにも適用されてしまうので、範囲を限定する */
-.content-container >>> #main-id * {
+.content-container :deep(#main-id *) {
   box-sizing: border-box;
 }
 </style>

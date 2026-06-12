@@ -1,4 +1,4 @@
-FROM amazoncorretto:17
+FROM amazoncorretto:25.0.3
 
 ENV SPRING_OUTPUT_ANSI_ENABLED=ALWAYS \
     SLEEP=0 \

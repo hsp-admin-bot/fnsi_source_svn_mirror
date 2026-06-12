@@ -60,5 +60,7 @@ public interface MntMotionRecordService {
    * @return
    */
   int insertLogMotionMessageAndOrdNo(MntMotionRecord param);
-
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  MntMotionRecord findByManageNo(Long motionRecordNo);
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 }

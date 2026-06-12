@@ -10,12 +10,14 @@
       感染症患者として扱う
     </custom-checkbox>
     <table>
-      <tr>
-        <th class="item-area">項目</th>
-        <th class="infect-area">結果</th>
-        <th class="date-area">検査日</th>
-        <th class="update-area">更新日</th>
-      </tr>
+      <thead>
+        <tr>
+          <th class="item-area">項目</th>
+          <th class="infect-area">結果</th>
+          <th class="date-area">検査日</th>
+          <th class="update-area">更新日</th>
+        </tr>
+      </thead>
       <template v-if="mstInfection !== null">
         <infection-item
           v-for="(json, index) in infectInfo"
@@ -46,13 +48,11 @@
 import { getAuthorized, deepCopy } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 import { ApiHelper } from "@/apis/AxiosHelper";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
 import infectionItem from "@/components/pat-info/infection-card/InfectionItem.vue";
-import { mapGetters, mapActions } from "vuex"; //施設コード取得のために追加
-// add 編集権限の適用 じょはく start
-// del #10359 編集権限の動作不正 dengshen start
-// import { AUTHORITY_CODES } from "@/constants/userAuthority";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+
 // import { FUNC_PAT_INFO, FUNC_PAT_INFO_CREATE } from "@/constants/function-code";
 // del #10359 編集権限の動作不正 dengshen end
 // add 編集権限の適用 じょはく end
@@ -111,11 +111,9 @@ export default {
       "selectedFacilityCd",
       //#【EOL対応】6835 zhou add start
       "selectedPatId",
-       //#【EOL対応】6835 zhou add end
-       // add #12462 患者情報共有 Ji start
       "getIsOtherFacility",
       "getOtherFacilityCd"
-      // add #12462 患者情報共有 Ji end
+       //#【EOL対応】6835 zhou add end
     ]),
     // add FNSI-修復施設切換Bug 関 end
     /**
@@ -149,11 +147,9 @@ export default {
         this.switchingSelectedPatFlg = false;
       });
     },
-    // add #12462 患者情報共有 Ji start
     getOtherFacilityCd() {
       this.refreshData();
-    },
-    // add #12462 患者情報共有 Ji end
+    }
   },
   //#【EOL対応】6835 zhou add end
   async created() {
@@ -192,7 +188,7 @@ export default {
     // 更新日をセット
     // ※保存時に呼び出す
     setRegDate() {
-      const regdate = moment().format("YYYYMMDD");
+      const regdate = dayjs().format("YYYYMMDD");
       // 全ての感染症情報をループ
       this.infectInfo.forEach(infection => {
         if (
@@ -212,11 +208,9 @@ export default {
         const requestParam = {
           // mod FNSI-修復施設切換Bug 関 start
           // facilityCd: this.getFacilityCd
-	  // mod #12462 患者情報共有 Ji start
-          // facilityCd: this.selectedFacilityCd == "" ? this.getFacilityCd : this.selectedFacilityCd
+          facilityCd: this.getIsOtherFacility ? (this.getOtherFacilityCd ?? this.getFacilityCd) : this.getFacilityCd,
+          selectedPatId: this.selectedPatId
           // mod FNSI-修復施設切換Bug 関 end
-          facilityCd: this.getIsOtherFacility ? (this.getOtherFacilityCd ?? this.getFacilityCd) : this.getFacilityCd
-	  // add #12462 患者情報共有 Ji end
         };
         const response = await ApiHelper.get(
           "/mstInfo/mstInfection",
@@ -275,7 +269,7 @@ export default {
     // add bug #7125 修正 chen end
 
     formatDate(date) {
-      return date === null ? null : moment(date).format("YYYY/MM/DD");
+      return date === null ? null : dayjs(date).format("YYYY/MM/DD");
     }
   }
 };
@@ -305,5 +299,9 @@ table td {
 
 .date-area {
   width: 25%;
+}
+
+:deep(ons-checkbox.checkbox) {
+  margin-top: 0;
 }
 </style>

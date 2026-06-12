@@ -17,9 +17,17 @@ import {
   sendRequestGetWebsocketUrl
 // @ts-ignore
 } from "@/apis/websocket-cert";
-import Vue from "vue";
+import Vue from "@/compat/vue/runtime";
 import { LOCAL_STORAGE_KEY } from "@/constants/localStorageConstants";
 import { READYSTATE } from "@/constants/websocketConstants";
+import { getScopedLocalStorage, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
+
+const isSocketOpen = socket => socket?.readyState === READYSTATE.OPEN;
+const closeSocket = socket => {
+  if (socket && socket.readyState !== READYSTATE.CLOSING && socket.readyState !== READYSTATE.CLOSED) {
+    socket.close();
+  }
+};
 
 export default {
   strict: true,
@@ -113,7 +121,9 @@ export default {
      */
     connect({ state, commit }) {
       if (state.socket === null) {
-        const socket = new WebSocket(state.url);
+        const scopedWindow = getScopedWindow();
+        const WebSocketCtor = scopedWindow?.WebSocket || WebSocket;
+        const socket = new WebSocketCtor(state.url);
         socket.onopen = event => {
           commit("SOCKET_ONOPEN", { socket: socket, event: event });
         };
@@ -135,7 +145,7 @@ export default {
      */
     close({ state }) {
       if (state.socketInfo.isConnected) {
-        state.socket.close();
+        closeSocket(state.socket);
       }
     },
     /**
@@ -212,25 +222,34 @@ export default {
       if (payload.socket.readyState !== READYSTATE.OPEN) {
         return;
       }
+      const socket = payload.socket;
       state.socketInfo.isConnected = true;
       state.socketInfo.isError = false;
       state.socketInfo.eventInfo = payload.event;
-      state.socket = payload.socket;
+      state.socket = socket;
       state.dtLastReceived = new Date();
       // console.log("socket isConnected");
 
       // セキュリティ認証キーの取得と登録
       sendRequestGetWebsocketCert({ facilityCd: state.facilityCd }).then(r => {
         // console.log("WebSocket認証キー取得 %o", `NTSS@${r.data}BROWSER${localStorage.getItem(LOCAL_STORAGE_KEY.TERMINAL_UNIQUE_STRING)}`);
-        state.socket.send(`NTSS@${r.data}BROWSER${localStorage.getItem(LOCAL_STORAGE_KEY.TERMINAL_UNIQUE_STRING)}`);
+        if (!isSocketOpen(socket)) {
+          return;
+        }
+        socket.send(`NTSS@${r.data}BROWSER${getScopedLocalStorage().getItem(LOCAL_STORAGE_KEY.TERMINAL_UNIQUE_STRING)}`);
 
         // 30秒ごとに死活監視用の空文字を通知する
-        state.timerAction = setInterval(() => {
+        const scopedWindow = getScopedWindow();
+        state.timerAction = (scopedWindow?.setInterval || setInterval)(() => {
           try {
             // 接続確認確認実施
-            state.socket.send(" ");
+            if (!isSocketOpen(socket)) {
+              closeSocket(socket);
+              return;
+            }
+            socket.send(" ");
           } catch (e) {
-            state.socket.close();
+            closeSocket(socket);
           }
           // 現在日時取得
           /** @type {Date} */
@@ -243,16 +262,17 @@ export default {
             // エラーと判断してWebSocketを切断する
 
             // タイマー終了
-            clearInterval(state.timerAction);
+            const scopedWindow = getScopedWindow();
+            (scopedWindow?.clearInterval || clearInterval)(state.timerAction);
 
             // 切断実施
-            state.socket.close();
+            closeSocket(socket);
           }
         }, 30000);
       })
       .catch(() => {
         // 認証キー取得に失敗した場合はWebScoket接続をcloseする
-        state.socket.close();
+        closeSocket(socket);
       });
     },
     SOCKET_ONCLOSE(state, event) {
@@ -261,7 +281,8 @@ export default {
       state.socketInfo.eventInfo = event;
       state.socket = null;
       // タイマー終了
-      clearInterval(state.timerAction);
+      const scopedWindow = getScopedWindow();
+      (scopedWindow?.clearInterval || clearInterval)(state.timerAction);
     },
     SOCKET_ONERROR(state, event) {
       // WebSocket接続が、データの一部が送信できなかったなどのエラーのために「閉じた」場合に呼ばれる

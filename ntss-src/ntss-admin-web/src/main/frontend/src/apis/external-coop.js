@@ -1,37 +1,34 @@
 /**
- * API
+ * 外部連携・IFエッジ稼働ビューア系 API
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
 
 const URL_BASE = "/external_coop_oper_viewer";
 
 /**
- *
- * @param {*} param
+ * @param {Record<string, unknown>} param リクエストボディ
  */
 export function sendRequestIconStartStop(param) {
   return ApiHelper.post(`${URL_BASE}/coop`, param);
 }
 
 /**
- *
- * @param {*} param
- * @param {*} facilityCd
+ * @param {string} facilityCd 施設コード
+ * @param {Record<string, unknown>} param リクエストボディ
  */
 export function sendRequestGetExternalCoop(facilityCd, param) {
   return ApiHelper.post(`${URL_BASE}/sys_coop_journal/${facilityCd}`, param);
 }
 // add 5615 IFエッジコマンド実行 関 start
 /**
- *
- * @param {*} param
+ * @param {Record<string, unknown>} param リクエストボディ
  */
 export function sendRequestGetEdgeCommandState(param) {
   return ApiHelper.post(`${URL_BASE}/if_edge_command`, param);
 }
+
 /**
- *
- * @param {*} param
+ * @param {Record<string, unknown>} param リクエストボディ
  */
 export function sendRequestCommandKeyCoop(param) {
   return ApiHelper.post(`${URL_BASE}/commandKey/coop`, param);
@@ -39,8 +36,7 @@ export function sendRequestCommandKeyCoop(param) {
 // add 5615 IFエッジコマンド実行 関 end
 
 /**
- *
- * @param {*} facilityCd
+ * @param {string} facilityCd 施設コード
  */
 export function sendRequestGetEdgeState(facilityCd) {
   return ApiHelper.get(`${URL_BASE}/if_edge_healmon/${facilityCd}`);
@@ -50,14 +46,15 @@ export function sendRequestGetIfEdgeConn(facilityCd) {
   return ApiHelper.get(`${URL_BASE}/if_edge_client_connect/${facilityCd}`);
 }
 
-export function getRequestGetIfEdgeConnCount(facilityCd) {
+export function sendRequestGetIfEdgeConnCount(facilityCd) {
   return ApiHelper.get(`${URL_BASE}/if_edge_client_connect_count/${facilityCd}`);
 }
+
+export { sendRequestGetIfEdgeConnCount as getRequestGetIfEdgeConnCount };
 // add 7348 IFエッジ→AWSへの死活監視電文が送信されなくなった 吉 end
 
 /**
- *
- * @param {*} param
+ * @param {Record<string, unknown>} param リクエストボディ
  */
 export function sendRequestResetEdgeStatus(param) {
   return ApiHelper.post(`${URL_BASE}/reset_edge_status`, param);
@@ -65,10 +62,9 @@ export function sendRequestResetEdgeStatus(param) {
 
 // add FNSI-連携情報を追加 李 start
 /**
- *
- * @param {*} facilityCd
- * @param {*} coopVersion
- * @param {*} selectedPatId
+ * @param {string} facilityCd 施設コード
+ * @param {string|number} coopVersion 連携バージョン
+ * @param {string|number} selectedPatId 患者ID
  */
 // mod 2023-01-04 bug #7304 異なる連携の機能を組み合わせて使用する方法 孫 start
 // export function searchConIntelligenceState(facilityCd, selectedPatId) {
@@ -81,25 +77,23 @@ export function searchConIntelligenceState(facilityCd, coopVersion, selectedPatI
 // add FNSI-連携情報を追加 李 end
 
 /**
- *
- * @param {*} facilityCd
+ * IFエッジ死活（sendRequestGetEdgeState と同一エンドポイント）
+ * @param {string} facilityCd 施設コード
  */
 export function getSysCoopJournal(facilityCd) {
   return ApiHelper.get(`${URL_BASE}/if_edge_healmon/${facilityCd}`);
 }
 
 /**
- *
- * @param {*} params
+ * @param {Record<string, unknown>} params 更新内容
  */
 export function updateSysCoopJournal(params) {
-  return ApiHelper.put(`${URL_BASE}/update_sys_coop_journal/`, params);
+  return ApiHelper.put(`${URL_BASE}/update_sys_coop_journal`, params);
 }
 // add FNSI-6085 ljx start
 /**
  * 該当施設がIFエッジある施設であるかの判断
- * @param facilityCd
- * @returns {*}
+ * @param {string} facilityCd 施設コード
  */
 export function sendRequestGetHasIfEdge(facilityCd) {
   return ApiHelper.get(`${URL_BASE}/has_if_edge/${facilityCd}`);

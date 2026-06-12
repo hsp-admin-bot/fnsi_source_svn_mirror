@@ -36,7 +36,7 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import MasterSelectorMixin from "@/components/common/master-selector/MasterSelectorMixin";
 import { Master } from "@/models/common/master-selector-condition/Master";
 // add #10359 編集権限の動作不正 start
@@ -45,6 +45,12 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 
 export default {
   mixins: [MasterSelectorMixin],
+  emits: [
+    "update:modelValue",
+    "input",
+    "changeUnit",
+    "changePersonalUser"
+  ],
   props: {
     index: {
       type: Number,
@@ -64,7 +70,9 @@ export default {
       type: Boolean,
       default: true
     },
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    // 親側で @input リスナも併用しているため input も emit する。
+    modelValue: {
       type: Object
     }
   },
@@ -72,13 +80,14 @@ export default {
     ...mapGetters("pat-event/detail", ["getViewMode"]),
     nameValue: {
       get() {
-        return this.value ? this.value.name : "";
+        return this.modelValue ? this.modelValue.name : "";
       },
       set(value) {
         const master = new Master(null, value);
         if (value.needle) {
           master.needle = value.needle;
         }
+        this.$emit("update:modelValue", master, this.index);
         this.$emit("input", master, this.index);
       }
     },
@@ -110,6 +119,7 @@ export default {
       }
 
       this.popoverData.popoverContentSelected = data;
+      this.$emit("update:modelValue", master, this.index);
       this.$emit("input", master, this.index);
       this.$emit("changeUnit", data.unit, this.index);
       this.$emit("changePersonalUser", data.personalUserInfo, this.index);
@@ -118,7 +128,7 @@ export default {
       this.popoverData.popoverContentDataset.length === 0
         // #11389 患者イベントの編集での不正　V1.1A linjunfeng start
         // ? this.createPopoverData()
-        ? this.createPopoverData(this.value.cd)
+        ? this.createPopoverData(this.modelValue.cd)
         // #11389 患者イベントの編集での不正　V1.1A linjunfeng end
         : this.showPopover();
     }
@@ -146,7 +156,10 @@ export default {
 .text-view {
   font-size: 1.2em;
 }
-.text >>> .text-input {
+.text {
+  font-family: -apple-system, 'Helvetica Neue', 'Helvetica', 'Arial', 'Lucida Grande', sans-serif;
+}
+.text :deep(.text-input) {
 /*mod FNSI-改修内容5348 。fan start*/
 height: 2.0em;
 /*mod FNSI-改修内容5348 。fan end*/

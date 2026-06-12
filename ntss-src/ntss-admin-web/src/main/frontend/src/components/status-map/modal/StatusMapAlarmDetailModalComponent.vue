@@ -3,17 +3,19 @@
     <!-- <div slot="header">
       <component :is="header"></component>
     </div> -->
-    <div slot="body">
+    <template #body>
       <div class="modal-content d-flex flex-column" :style="{ 'height': '747px' }">
         <!-- Grid -->
         <div id="history-list" class="main-content-area" style="-webkit-overflow-scrolling:touch;">
           <table class="ntss-list">
             <thead>
-              <th class="alarm-list-color ntss-list-header-th-sticky" scope="col">&nbsp;</th>
-              <th class="ntss-list-header-th-sticky" scope="col">日付</th>
-              <th class="ntss-list-header-th-sticky" scope="col">ベッド名</th>
-              <th class="ntss-list-header-th-sticky" scope="col">患者名</th>
-              <th class="ntss-list-header-th-sticky" scope="col">内容</th>
+              <tr>
+                <th class="alarm-list-color ntss-list-header-th-sticky" scope="col">&nbsp;</th>
+                <th class="ntss-list-header-th-sticky" scope="col">日付</th>
+                <th class="ntss-list-header-th-sticky" scope="col">ベッド名</th>
+                <th class="ntss-list-header-th-sticky" scope="col">患者名</th>
+                <th class="ntss-list-header-th-sticky" scope="col">内容</th>
+              </tr>
             </thead>
             <tbody>
               <tr v-for="(dispItem,no) in customers1()" :key="no" class="ntss-list-body-tr">
@@ -34,24 +36,25 @@
         <!-- / Grid -->
 
       </div>
-    </div>
+    </template>
 
-    <div slot="footer" class="flex-container">
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <!-- mod FNSI-画面スタイル(ボタン)対応 付 start -->
         <button class="button denial-btn btn2-cancel" @click="closeAlarmModal">キャンセル</button>
         <!-- mod FNSI-画面スタイル(ボタン)対応 付 end -->
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions, mapMutations } from "vuex";
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
-import "moment/locale/ja";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import { dateFormat } from "@/functions/common/DateTimeUtils.js";
@@ -194,10 +197,10 @@ export default {
 
       if (changeOccurDate == "") {
         // 日付指定がない時は今日？
-        let todayDate = moment(new Date()).format("YYYYMMDD");
+        let todayDate = dayjs(new Date()).format("YYYYMMDD");
         changeOccurDate = todayDate;
       } else {
-        changeOccurDate = moment(changeOccurDate).format("YYYYMMDD");
+        changeOccurDate = dayjs(changeOccurDate).format("YYYYMMDD");
       }
       const info = {
         facilityCd: this.getFacilityCd,
@@ -225,7 +228,7 @@ export default {
     // grid情報取得:初期
     this.loadData();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // add #9211 by zhangruixue 2023-08-02 --start
     this.getCondition.deviceEdgeEmergency = false;
     this.getCondition.deviceEdgeDefect = false;
@@ -316,7 +319,7 @@ export default {
   border-radius: 4px;
   line-height: 20px;
 }
-.icon >>> img {
+.icon :deep(img) {
   width: 1.5em;
 }
 .statusListAlarm {

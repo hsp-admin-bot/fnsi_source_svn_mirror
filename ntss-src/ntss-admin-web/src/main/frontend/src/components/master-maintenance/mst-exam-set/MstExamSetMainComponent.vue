@@ -272,7 +272,7 @@
 
       <div v-if="messageDialogInfo.isDialogVisible">
         <message-dialog
-          :visible.sync="messageDialogInfo.isDialogVisible"
+          v-model:visible="messageDialogInfo.isDialogVisible"
           :message-cd="messageDialogInfo.messageCd"
           :type="messageDialogInfo.type"
           :string-params="messageDialogInfo.stringParams"
@@ -284,19 +284,21 @@
 </template>
 
 <script>
-import _ from 'lodash';
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+
 import { ApiHelper } from "@/apis/AxiosHelper";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import {deepCopy} from "@/functions/common/CommonFunctions";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
+import { getScopedElementById, getScopedElementsByClassName, getScopedElementsByTagName, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import _ from "@/compat/collections/lodash";
 
 //URI
-const uriGetExamItem = "mstInfo/mstExamItem/";
-const uriGetSpitz = "mstInfo/mstSpitz/";
+const uriGetExamItem = "mstInfo/mstExamItem";
+const uriGetSpitz = "mstInfo/mstSpitz";
 const uriSelectorExamItem = "/mstInfo/mst_exam_item/mstSelector";
 const uriSelectorSpitz = "/mstInfo/mst_spitz/mstSelector";
 
@@ -371,7 +373,7 @@ export default {
         // add #10027 検査セットマスタ・検査項目マスタの院外院内設定について dengshen end
       },
       checkedFlag:false,
-      loadingFlag: "visibility:hidden",
+      loadingFlag: { visibility: "hidden" },
       setIntervalObj: null,
       // 【EOL対応内部】#6994 zhou add start
       addFlag: false,
@@ -436,6 +438,7 @@ export default {
       this.facility_type = r.data;});
    //8104   心電図展示       ljg end
     this.setLoadingScreenVisible(true);
+    try {
     // 初期値設定ここから ----------
     this.inputModel.exam_set_class = this.getSelectByField("examsetclass");
     this.inputModel.can_emergency = this.getSelectByField("emergencyflg");
@@ -476,14 +479,15 @@ export default {
 
     // 検査項目一覧を作成（表示順つき）
     let dispOrder = 999; // 表示順(初期値999)
+    const examItemOrderItems = respExamItemSelector.data?.orderSettings?.items || [];
     for (let i = 0; i < respExamItem.data.length; i++) {
       for (
         let j = 0;
-        j < respExamItemSelector.data.orderSettings.items.length;
+        j < examItemOrderItems.length;
         j++
       ) {
         if (
-          respExamItemSelector.data.orderSettings.items[j].code ===
+          examItemOrderItems[j].code ===
           respExamItem.data[i].examItemCd
         ) {
           dispOrder = j;
@@ -548,14 +552,15 @@ export default {
 
     // 採血管一覧を作成（表示順つき）
     dispOrder = 999; // 表示順(初期値999)
+    const spitzOrderItems = respSpitzSelector.data?.orderSettings?.items || [];
     for (let k = 0; k < respSpitz.data.length; k++) {
       for (
         let l = 0;
-        l < respSpitzSelector.data.orderSettings.items.length;
+        l < spitzOrderItems.length;
         l++
       ) {
         if (
-          respSpitzSelector.data.orderSettings.items[l].code ==
+          spitzOrderItems[l].code ==
           respSpitz.data[k].spitzCd
         ) {
           dispOrder = l;
@@ -626,28 +631,32 @@ export default {
       this.createLabelInfo();
     });
 
-    // セレクトボックス関係ここまで ----------
-    this.loadingFlag = "";
-    if (this.editRecord.graphset =='1'){
+    } finally {
+      this.loadingFlag = null;
+      if (this.editRecord.graphset == '1') {
         this.checkedFlag = true;
       }
-
-    this.$nextTick(() => {
-      this.keepCheckBoxStyle();
-    })
-
-
-    this.setIntervalObj = window.setInterval(() => {
-      setTimeout(this.keepCheckBoxStyle(), 0)
-    }, 100)
-    /* 画面表示用に検査区分を設定 */
-    this.examTypeListLocal = this.editRecord.orderClass ? JSON.parse(this.editRecord.orderClass) : [];
-    // 初期表示値
-    this.editRecord.graphset = this.editRecord.graphset || "0";
-    this.initRecord = JSON.parse(JSON.stringify(this.editRecord));
+      this.$nextTick(() => {
+        this.calculateInfoAndListHeight();
+        this.keepCheckBoxStyle();
+      });
+      const ownerWindow = this.getScopedOwnerWindow();
+      this.setIntervalObj = ownerWindow.setInterval(() => {
+        ownerWindow.setTimeout(this.keepCheckBoxStyle(), 0);
+      }, 100);
+      try {
+        this.examTypeListLocal = this.editRecord.orderClass
+          ? JSON.parse(this.editRecord.orderClass)
+          : [];
+      } catch {
+        this.examTypeListLocal = [];
+      }
+      this.editRecord.graphset = this.editRecord.graphset || "0";
+      this.initRecord = JSON.parse(JSON.stringify(this.editRecord));
+    }
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.setIntervalObj) {
       clearInterval(this.setIntervalObj);
     }
@@ -698,14 +707,18 @@ export default {
     getFontSize() {
       this.calculateInfoAndListHeight();
     },
-    calcLabelInfo(){
-      this.calculateInfoAndListHeight();
+    calcLabelInfo: {
+      handler() {
+        this.calculateInfoAndListHeight();
+      },
+      deep: true
     },
     selectingExamItemCd (){
      if (this.selectingExamItemCd.length && this.selectingExamItemCd.length > 5) {
         this.checkedFlag = false;
         this.editRecord["graphset"] = "0"
-         document.getElementsByName("graphsetCheckbox")[0].checked = false;
+         const graphsetCheckbox = this.getScopedElementsByNameSafe("graphsetCheckbox")[0];
+         if (graphsetCheckbox) graphsetCheckbox.checked = false;
         this.setEditRecord(this.editRecord);
      }
     },
@@ -741,7 +754,7 @@ export default {
         const deepDiff = (obj1, obj2, path = '') => {
           if (_.isEqual(obj1, obj2)) return;
 
-          if (_.isArray(obj1) && _.isArray(obj2)) {
+          if (Array.isArray(obj1) && Array.isArray(obj2)) {
             const sorted1 = _.sortBy(obj1, JSON.stringify);
             const sorted2 = _.sortBy(obj2, JSON.stringify);
             if (!_.isEqual(sorted1, sorted2)) {
@@ -772,25 +785,17 @@ export default {
 
   async mounted() {
     // スクロールイベントを追加する
-    let modalObj = document.getElementsByClassName("modal-body");
+    let modalObj = this.getScopedElementsByClassNameSafe("modal-body");
     modalObj[0].addEventListener('scroll', this.scrollHandler);
 
     // フラグ系セレクトボックスのフォントサイズ変更
-    document.getElementsByTagName(
+    this.getScopedElementsByTagNameSafe(
       "ons-select"
     )[0].firstElementChild.style.fontSize = "1em";
-    document.getElementsByTagName(
+    this.getScopedElementsByTagNameSafe(
       "ons-select"
     )[1].firstElementChild.style.fontSize = "1em";
     this.calculateInfoAndListHeight();
-    const itemSetinfoHeightStr = this.itemSetinfoHeight.toString() + "px";
-    const spitzSetHeightStr = this.SpitzListHeight.toString() + "px";
-    document.getElementsByClassName(
-      "exam-item-set-wrapper"
-    )[0].style.minHeight = itemSetinfoHeightStr;
-    document.getElementById(
-      "spitz-list-wrapper"
-    ).style.height = spitzSetHeightStr;
     this.$nextTick(() => {
       this.keepCheckBoxStyle();
     })
@@ -801,6 +806,28 @@ export default {
   },
 
   methods: {
+    getScopedElementByIdSafe(id) {
+      return getScopedElementById(id, this.$el || null);
+    },
+    getScopedElementsByClassNameSafe(className) {
+      const scoped = getScopedElementsByClassName(className, this.$el || null);
+      return scoped;
+    },
+    getScopedElementsByTagNameSafe(tagName) {
+      return getScopedElementsByTagName(tagName, this.$el || null);
+    },
+    getScopedElementsByNameSafe(name) {
+      return queryScopedSelectorAll(`[name="${name}"]`, this.$el || null);
+    },
+    getScopedOwnerWindow(element = null) {
+      return element?.ownerDocument?.defaultView || this.$el?.ownerDocument?.defaultView || window;
+    },
+    getScopedComputedStyle(element) {
+      if (!element) {
+        return null;
+      }
+      return this.getScopedOwnerWindow(element).getComputedStyle(element);
+    },
     ...mapActions("loading-screen", {
       setLoadingScreenVisible: "setLoadingScreenVisible"
     }),
@@ -808,7 +835,7 @@ export default {
 
     // モーダルの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
-      const modal = document.getElementsByClassName("modal-container")[0];
+      const modal = this.getScopedElementsByClassNameSafe("modal-container")[0];
       const modalHeight = modal.clientHeight;
       const modalHeaderHeight = modal.firstElementChild.clientHeight;
       const modalFooterHeight = modal.lastElementChild.clientHeight;
@@ -827,29 +854,31 @@ export default {
           : gridHeight;
     },
     calculateInfoAndListHeight() {
-      let fontSize = parseInt(window.getComputedStyle(document.getElementById("spitz-list-wrapper")).fontSize, 10);
+      const spitzListWrapper = this.getScopedElementByIdSafe("spitz-list-wrapper");
+      if (!spitzListWrapper) return;
+      let fontSize = parseInt(this.getScopedComputedStyle(spitzListWrapper)?.fontSize || 0, 10);
 
       // 採血管名の高さを計算
       if(this.calcLabelInfo.length == 0){
-          document.getElementById("spitz-list-wrapper").style.height = (3*fontSize) + 4 + "px";
+          spitzListWrapper.style.height = (3*fontSize) + 4 + "px";
       }else if(this.calcLabelInfo.length <= 5){
-          document.getElementById("spitz-list-wrapper").style.height = ((this.calcLabelInfo.length*3 + 3)*fontSize) + 4 +"px" ;
+          spitzListWrapper.style.height = ((this.calcLabelInfo.length*3 + 3)*fontSize) + 4 +"px" ;
       }
       else
       {
-        document.getElementById("spitz-list-wrapper").style.height = (18*fontSize) + 4 +"px" ;
+        spitzListWrapper.style.height = (18*fontSize) + 4 +"px" ;
       }
 
       // モーダル内部の高さを取得
-      const modalBody = document.getElementsByClassName("modal-body")[0];
+      const modalBody = this.getScopedElementsByClassNameSafe("modal-body")[0];
       const modalBodyHeight = modalBody.clientHeight;
       // 付帯情報部分の高さを取得
-      const examInfoWrapper = document.getElementById("exam-info-form-wrapper");
+      const examInfoWrapper = this.getScopedElementByIdSafe("exam-info-form-wrapper");
       const examInfoWrapperHeight = examInfoWrapper.clientHeight;
-      const remainHeight =modalBodyHeight - examInfoWrapperHeight - 3;
-      document.getElementsByClassName("exam-item-set-wrapper")[0].style.minHeight = remainHeight + "px";
+      const remainHeight = Math.max(modalBodyHeight - examInfoWrapperHeight - 3, 120);
+      this.getScopedElementsByClassNameSafe("exam-item-set-wrapper")[0].style.minHeight = remainHeight + "px";
       // 縦スクロールバー表示
-      let modalObj = document.getElementsByClassName("modal-body");
+      let modalObj = this.getScopedElementsByClassNameSafe("modal-body");
       if (modalObj.length >= 1){
         modalObj[0].classList.remove("modal-overflow-hidden");
         modalObj[0]?.classList?.add("modal-scroll");
@@ -992,7 +1021,7 @@ export default {
 
       // 最後までスクロールする
       this.$nextTick(() => {
-        const ele = document.getElementsByClassName("modal-body")[0];
+        const ele = this.getScopedElementsByClassNameSafe("modal-body")[0];
         if (ele) {
           ele.scrollTop = ele.scrollHeight;
         }
@@ -1179,7 +1208,7 @@ export default {
       this.setEditRecord(this.editRecord);
     },
     keepCheckBoxStyle() {
-      let list = document.getElementsByClassName("checkbox__checkmark checkbox--material__checkmark");
+      let list = this.getScopedElementsByClassNameSafe("checkbox__checkmark checkbox--material__checkmark");
       if (list.length > 0) {
         for (let i = 0; i < list.length; i++) {
           list[0].classList.remove("checkbox--material__checkmark");
@@ -1193,10 +1222,10 @@ export default {
      * スクロール時に要素を調整する
      */
     scrollHandler() {
-      const body = document.getElementsByClassName('modal-body')[0];
-      const examItemList  = document.getElementsByClassName('exam-item-list')[0];
-      const examItemListThead  = document.getElementsByClassName('exam-item-list-thead')[0];
-      const examItemTitle  = document.getElementsByClassName('exam-item-title')[0];
+      const body = this.getScopedElementsByClassNameSafe('modal-body')[0];
+      const examItemList  = this.getScopedElementsByClassNameSafe('exam-item-list')[0];
+      const examItemListThead  = this.getScopedElementsByClassNameSafe('exam-item-list-thead')[0];
+      const examItemTitle  = this.getScopedElementsByClassNameSafe('exam-item-title')[0];
 
       let targetTop = examItemList.getBoundingClientRect().top;
       let bodyTop = body.getBoundingClientRect().top;
@@ -1214,6 +1243,8 @@ export default {
         this.$refs.examDummyItem?.classList?.add('non-display');
         examItemListThead.classList.remove('scroll');
         examItemTitle.classList.remove('scroll');
+        examItemTitle.style.left = '';
+        examItemTitle.style.clip = '';
       }
     }
   }

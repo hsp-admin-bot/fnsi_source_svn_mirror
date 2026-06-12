@@ -11,7 +11,7 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import CommonTextArea from "@/components/common/CommonTextArea";
 
 /**
@@ -65,7 +65,7 @@ export default {
 </script>
 
 <style scoped>
-div >>> textarea {
+div :deep(textarea) {
   box-sizing: border-box;
   width: 100%;
   /*// add マスタ障害対応 No279 王 start*/

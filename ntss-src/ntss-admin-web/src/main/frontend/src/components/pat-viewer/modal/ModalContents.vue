@@ -276,13 +276,13 @@
   /**
    * Vue関連
    */
-  import { mapActions, mapGetters } from "vuex";
+  import { mapActions, mapGetters } from "@/compat/vue/vuex";
   import store from "@/stores";
   import { DATA_SOURCE_TYPE_ORD } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
   import MultiModalMixin from "@/components/modals/MultiModalMixin";
   import UserAuthorityMixin from "@/components/common/UserAuthorityMixin";
-  import { EventBus } from "@/eventBus.js";
-  import { AUTHORITY_CODES } from "@/constants/userAuthority";
+  import { EventBus } from "@/compat/vue/event-bus.js";
+
   import { ApiHelper } from "@/apis/AxiosHelper";
 
   /**
@@ -343,6 +343,8 @@
   import DwEditor from "@/components/indication/indRstDw";
   //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
   import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+  import { getScopedElementsByClassName, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+  import { findAncestorWithMethod } from "@/functions/common/ComponentOwnerResolver";
   //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
 
   export default {
@@ -591,7 +593,7 @@
        */
       adjustHeight() {
         // フッターの高さを取得
-        let footerObj = document.getElementsByClassName("modal-footer");
+        const footerObj = getScopedElementsByClassName("modal-footer", this.$el || null);
         let footerHeight = 0;
         if (footerObj.length > 0) {
           // 高さのない要素も取得される為、高さのある要素の値のみ取得する
@@ -600,7 +602,7 @@
           }
         }
         if (footerHeight !== 0) {
-          let bodyObj = document.getElementsByClassName("modal-body");
+          const bodyObj = getScopedElementsByClassName("modal-body", this.$el || null);
           if (bodyObj.length > 0) {
             // modal-body の height:100% 指定した時に -50px するとフッターの高さになる
             footerHeight = footerHeight + 50;
@@ -610,6 +612,9 @@
             }
           }
         }
+      },
+      resolveModalContentsOwner() {
+        return findAncestorWithMethod(this, ["getPageNameBySubPage"], { maxDepth: 24 });
       }
     },
 
@@ -620,8 +625,8 @@
       //FNSI-修正 ログ対応 xiebzh add start
       this.$nextTick(() => {
         // ボタンのクリックイベントを追加
-        var buttonObj = document.getElementsByTagName("ons-button");
-        var parentName = this.$parent.$parent.getPageNameBySubPage();
+        var buttonObj = queryScopedSelectorAll("ons-button", this.$el || null);
+        var parentName = this.resolveModalContentsOwner()?.getPageNameBySubPage?.() || "";
         for (var i = 0; i < buttonObj.length; i++) {
           if (isPC()) {
             // PC側
@@ -638,7 +643,7 @@
               ApiHelper.put("/logs/event/accesslog", param)
                 .catch(error => {
                   //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
-                  getErrorMessage('ModalContents.vue', 'mounted', err);
+                  getErrorMessage('ModalContents.vue', 'mounted', error);
                   //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
                 });
             };
@@ -666,7 +671,7 @@
       });
       //FNSI-修正 ログ対応 xiebzh add end
     },
-    beforeDestroy() {
+    beforeUnmount() {
       // 各モーダルの表示/非表示フラグの初期化
       this.beforeDestroyHideModal();
     }
@@ -674,12 +679,12 @@
 
   function getPageName(btnObj) {
     var pageName = '';
-    var parentDivParam = btnObj.parentNode;
-    for (var i = 0; i < 40; i++) {
-      if (parentDivParam.className.indexOf('modal-mask') >= 0) {
-        parentDivParam.querySelectorAll('div').forEach(elementDiv => {
+    var parentDivParam = btnObj?.parentNode || null;
+    for (var i = 0; i < 40 && parentDivParam; i++) {
+      if (String(parentDivParam.className || '').indexOf('modal-mask') >= 0) {
+        parentDivParam.querySelectorAll?.('div').forEach(elementDiv => {
           if (elementDiv.classList.contains("toolbar__title") && elementDiv.classList.contains("toolbar__left")) {
-            pageName = elementDiv.querySelector('span').innerText;
+            pageName = elementDiv.querySelector('span')?.innerText || '';
           }
         });
         break;
@@ -691,7 +696,7 @@
   }
 
   function isPC() {
-    var userAgentInfo = navigator.userAgent;
+    var userAgentInfo = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
     var Agents = ["Android", "iPhone",
       "SymbianOS", "Windows Phone",
       "iPad", "iPod"];
@@ -707,64 +712,64 @@
 </script>
 
 <style scoped>
-  .ind-modal-style >>> .device-info-container {
+  .ind-modal-style :deep(.device-info-container) {
     margin: auto;
     display: unset;
   }
 
-  div >>> .device-info-content {
+  div :deep(.device-info-content) {
     font-size: 1em;
   }
 
   /* TODO: 共通スタイル(modal.css)に定義 */
-  div >>> .modal-header .toolbar {
+  div :deep(.modal-header .toolbar) {
     background-color: var(--ntss-header-background-color);
   }
 
-  div >>> .modal-header .toolbar__title.toolbar__left {
+  div :deep(.modal-header .toolbar__title.toolbar__left) {
     color: var(--ntss-header-color) !important;
   }
 
-  div >>> .modal-body{
+  div :deep(.modal-body){
     height: calc(100% - 4em - 73px);
   }
 
-  div >>> .modal-search,
-  div >>> .modal-body,
-  div >>> .modal-footer,
-  div >>> .modal-footer .bottom-bar {
+  div :deep(.modal-search),
+  div :deep(.modal-body),
+  div :deep(.modal-footer),
+  div :deep(.modal-footer .bottom-bar) {
     background-color: var(--ntss-base-background-color);
     color: var(--ntss-base-color);
   }
   @media print {
-    body:has(.ind-plan-create) div >>> .modal-wrapper,
-    body:has(.change-day-of-Week-pattern) div >>> .modal-wrapper {
+    body:has(.ind-plan-create) div :deep(.modal-wrapper),
+    body:has(.change-day-of-Week-pattern) div :deep(.modal-wrapper){
       display: inline-block !important;
       text-align: center !important;
       width: 100%  !important;
     }
 
-    body:has(.ind-plan-create) div >>> .modal-container,
-    body:has(.change-day-of-Week-pattern) div >>> .modal-container {
+    body:has(.ind-plan-create) div :deep(.modal-container),
+    body:has(.change-day-of-Week-pattern) div :deep(.modal-container){
       display: inline-block !important;
     }
 
-    body:has(.dc-program) div >>> .modal-wrapper,
-    body:has(.i-hdf) div >>> .modal-wrapper {
+    body:has(.dc-program) div :deep(.modal-wrapper),
+    body:has(.i-hdf) div :deep(.modal-wrapper){
       display: inline-block !important;
       text-align: center !important
     }
-    
-    body:has(.indInfo-style-modal-container) div >>> .modal-wrapper {
+
+    body:has(.indInfo-style-modal-container) div :deep(.modal-wrapper) {
       display: inline-block !important;
       width: 100%;
     }
 
-    body:has(.dc-program) div >>> .modal-container,
-    body:has(.i-hdf) div >>> .modal-container {
+    body:has(.dc-program) div :deep(.modal-container),
+    body:has(.i-hdf) div :deep(.modal-container){
       display: inline-block !important;
     }
-    body:has(.i-hdf) div >>> .modal-container {
+    body:has(.i-hdf) div :deep(.modal-container) {
       width: 99% !important;
     }
   }

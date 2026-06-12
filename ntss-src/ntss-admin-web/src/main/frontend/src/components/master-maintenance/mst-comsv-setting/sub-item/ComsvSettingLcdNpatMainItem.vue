@@ -42,11 +42,11 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import vuedraggable from "vuedraggable";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 // #10161 2023.12.27 del 未使用importに気づいたので削除(※#10161内容は直接の関係なし) TDC山崎 start
-// import {EventBus} from "@/eventBus";
+// import {EventBus} from "@/compat/vue/event-bus.js";
 // // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 // import { messageFormat } from '@/functions/common/MessageFormat';
 // import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
@@ -57,7 +57,7 @@ import vuedraggable from "vuedraggable";
 export default {
   name: "comsvSettingLcdNpat",
   components: {
-    "draggable": vuedraggable
+    "draggable": VueDraggable
   },
   data() {
     return {
@@ -687,12 +687,8 @@ export default {
       });
     }
   },
-  watch: {
-  },
-  updated() {
-  },
-  created() {
-  },
+
+
   mounted() {
     // 描画系の処理がすべて完了した後に実行される処理
     for (const num in this.columnDefinition) {

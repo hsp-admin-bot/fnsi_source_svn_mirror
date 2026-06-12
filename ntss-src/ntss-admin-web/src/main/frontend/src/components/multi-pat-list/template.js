@@ -14,7 +14,7 @@ import {
   MONITOR_1_CD,
   MONITOR_2_CD,
 } from './TemplateConstant';
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 export function getVitalMonitorsData(that, data) {
   // バイタル・モニタ・愁訴処置のコード
@@ -86,7 +86,7 @@ export function getVitalMonitorsData(that, data) {
         }
         // 処置
         if (y.treat_class) {
-          let text = '';
+          let text;
           // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
           //if (y.treat_class + '' == '3') {
           if (y.treat_class == 3) {
@@ -180,7 +180,7 @@ export function getVitalMonitorsData(that, data) {
         }
         // 処置薬剤分類
         if (y.treat_medicine_cd) {
-          let list = [];
+          let list;
           let text = '';
           // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
           //if (y.medicine_type + '' == '1') {
@@ -312,7 +312,6 @@ export function getVitalMonitorsData(that, data) {
       });
     }
   });
-  templateOrdMains = _.flatten(templateOrdMains);
   templateMachines.forEach(x => {
     let nameList = patInfo.filter(y => y.pat_id == x.pat_id);
     let hosp_pat_id = '';
@@ -408,10 +407,10 @@ export function getVitalMonitorsData(that, data) {
 function sortModel(list) {
   return list.length <= 1 ? list : list
     .sort((a, b) => {
-      if (moment(a.datetime).format('YYYY/MM/DD HH:mm') < moment(b.datetime).format('YYYY/MM/DD HH:mm')) {
+      if (dayjs(a.datetime).format('YYYY/MM/DD HH:mm') < dayjs(b.datetime).format('YYYY/MM/DD HH:mm')) {
         return -1;
       }
-      if (moment(a.datetime).format('YYYY/MM/DD HH:mm') > moment(b.datetime).format('YYYY/MM/DD HH:mm')) {
+      if (dayjs(a.datetime).format('YYYY/MM/DD HH:mm') > dayjs(b.datetime).format('YYYY/MM/DD HH:mm')) {
         return 1;
       }
       if (a.ctl_no < b.ctl_no) {

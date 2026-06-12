@@ -3,11 +3,14 @@
  */
  <template>
   <modal-base @onClose="closeScheduleAssignmentModal">
-    <div slot="header">
-      <component :is="header"></component>
-    </div>
-    <div slot="body">
-      <div id="schedulemodal-header">
+    <template #header>
+      <div>
+        <component :is="header"></component>
+      </div>
+    </template>
+    <template #body>
+      <div>
+        <div id="schedulemodal-header">
         <v-ons-row>
           <v-ons-col>
             <!-- ベッド名 -->
@@ -48,9 +51,11 @@
         <!--#9899:スケジュール割り当てで患者IDの列と同姓同名アイコンが表示されていない(警告対応) End-->
         <!--#9899:スケジュール割り当てで患者IDの列と同姓同名アイコンが表示されていない End-->
       </div>
-    </div>
+      </div>
+    </template>
 
-    <div slot="footer" class="flex-container">
+    <template #footer>
+      <div class="flex-container">
       <!-- mod FNSI-画面スタイル(ボタン)対応 付 start -->
       <div class="denial-btn-area">
         <button class="button denial-btn btn2-cancel" @click="closeScheduleAssignmentModal">キャンセル</button>
@@ -65,7 +70,8 @@
         <!-- mod #10359 編集権限の動作不正 dengshen end -->
       </div>
       <!-- mod FNSI-画面スタイル(ボタン)対応 付 end -->
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
@@ -73,10 +79,12 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import Kendo from "@progress/kendo-ui";
+import { createDataSource } from "@/functions/common/KendoFunctions";
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import nameDuplicationImg from "../../../assets/name_duplication.png";
+import { getModalBodyElement, getScopedElementById, resolveRefElement } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   name: "NotAssignedScheduleModal",
@@ -91,7 +99,7 @@ export default {
       header: "",
       //#9899:スケジュール割り当てで患者IDの列と同姓同名アイコンが表示されていない Start
       selectedOrdNo: 0,
-      image_src_same: require("../../../assets/name_duplication.png"),
+      image_src_same: nameDuplicationImg,
       //#9899:スケジュール割り当てで患者IDの列と同姓同名アイコンが表示されていない End
     };
   },
@@ -119,8 +127,9 @@ export default {
             element.image_src_same= this.$data.image_src_same;
         });
       }
+      console.log(this.getNotAssignedOrdMainList);
       //#9899:スケジュール割り当てで患者IDの列と同姓同名アイコンが表示されていない End
-      return new Kendo.data.DataSource({
+      return createDataSource({
         data: this.getNotAssignedOrdMainList
       });
     //#9899:スケジュール割り当てで患者IDの列と同姓同名アイコンが表示されていない Start 
@@ -189,6 +198,12 @@ export default {
     //#9899:スケジュール割り当てで患者IDの列と同姓同名アイコンが表示されていない End
   },
   methods: {
+    getScheduleGridRef() {
+      return this.$refs.scheduleGrid || null;
+    },
+    getScheduleGridWidget() {
+      return this.getScheduleGridRef()?.gridWidget?.() || this.getScheduleGridRef()?.kendoWidget?.() || null;
+    },
     ...mapActions("multi-modal", ["hideModal"]),
     ...mapActions("status-map/modal", ["getOrderMainList", "setSelectOrdNo"]),
     // add #10359 編集権限の動作不正 dengshen start
@@ -199,10 +214,10 @@ export default {
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       // モーダルのbodyの高さ
-      const mb = document.getElementsByClassName("modal-body")[0];
+      const mb = getModalBodyElement(this.$el || this);
       const mh = mb ? mb.clientHeight : 0;
       // モーダルのヘッダの高さ
-      const hElm = document.getElementById("schedulemodal-header");
+      const hElm = getScopedElementById("schedulemodal-header", this.$el || this);
       const hh = hElm ? hElm.clientHeight : 50;
       this.scheduleGridToolbarHeight = mh - hh;
       this.scheduleGridToolbarHeight =
@@ -223,7 +238,7 @@ export default {
       // console.log(
       //   "saveCheckList/this.scheduleList.select is %o.",
       //   this.scheduleList.select
-      // );
+      //);
 
       this.setSelectOrdNo(this.selectedOrdNo);
 
@@ -245,21 +260,20 @@ export default {
      */
     onChangeGrid() {
       // 選択行取得
-      const selRow = this.$refs.scheduleGrid
-        .kendoWidget()
-        .select()
-        .closest("tr");
+      const scheduleGrid = this.getScheduleGridWidget();
+      const selRow = scheduleGrid?.select?.().closest("tr");
       // 選択行のデータ
-      const rowData = this.$refs.scheduleGrid.kendoWidget().dataItem(selRow);
+      const rowData = scheduleGrid?.dataItem?.(selRow);
       this.selectedOrdNo = rowData.ordNo;
     },
     // 背景色セット
     editBackgroundColor() {
       this.$nextTick(() => {
-        if (this.$refs.scheduleGrid) {
-          let gridHeader = this.$refs.scheduleGrid.$el.firstChild;
-          if (gridHeader.classList === undefined) {
-            gridHeader = this.$refs.scheduleGrid.$el.firstElementChild;
+        const scheduleGridRoot = resolveRefElement(this, "scheduleGrid");
+        if (scheduleGridRoot) {
+          let gridHeader = scheduleGridRoot.firstChild;
+          if (gridHeader?.classList === undefined) {
+            gridHeader = scheduleGridRoot.firstElementChild;
           }
           gridHeader?.classList?.add("master-grid-header");
         }
@@ -277,7 +291,7 @@ export default {
       this.calculateGridHeight();
     }
   },
-  created() {},
+
   updated() {
     // Storeの更新等で画面が再描画された場合に背景色を変更
     this.editBackgroundColor();
@@ -300,7 +314,7 @@ export default {
     });
     EventBus.$emit("showNotAssignedScheduleModal");
   },
-  destroyed() {
+  unmounted() {
     EventBus.$emit("hideNotAssignedScheduleModal");
   }
 };
@@ -319,22 +333,35 @@ div.denial-btn-area {
 div.registration-btn-area {
   background: none;
 }
-#schedule-grid >>> .k-widget {
+#schedule-grid :deep(.k-widget) {
   font-size: unset;
 }
-#schedule-grid >>> .k-grid .k-grid-content tr {
+#schedule-grid :deep(.k-grid-content tr) {
   border-color: var(--master-maintenance-kgrid-border-color);
   color: var(--master-maintenance-kgrid-body-color);
   background-color: var(--master-maintenance-kgrid-item-background-color);
 }
-#schedule-grid >>> .k-grid .k-grid-content tr:nth-child(2n) {
+#schedule-grid :deep(.k-grid-content tr:nth-child(2n)) {
   background-color: var(--ntss-list-content-2nd-background-color);
 }
-#schedule-grid >>> .k-grid tr.k-state-selected > td {
+#schedule-grid :deep(.k-grid tr.k-state-selected > td) {
   color: unset;
 }
-#schedule-grid >>> .k-grid-content {
+#schedule-grid :deep(.k-grid-content) {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
+}
+#schedule-grid :deep(.k-grid-header) {
+  background-color: var(--master-maintenance-kgrid-header-background-color);
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%) !important;
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%) !important;
+  border: solid 1px var(--ntss-list-border-color);
+}
+#schedule-grid :deep(.k-grid .k-table-th){
+  border-color: #fff !important;
+}
+#schedule-grid :deep(.k-grid-header){
+  background-image: linear-gradient(rgba(255, 255, 255, .3) 0%, transparent 50%, transparent 50%, rgba(0, 0, 0, .1) 100%);
+  background-color: #333333;
 }
 </style>

@@ -1,3 +1,5 @@
+import { getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
+
 /**
  * @description setTimeout制御用オブジェクトを生成する
  * コンポーネント内でwindow.setTimeoutを直接使用した場合に
@@ -11,12 +13,13 @@
  *   destroy: () => void,
  * }} setTimeout制御用オブジェクト
  */
-export const createTimerManager = () => {
+export const createTimerManager = (root = null) => {
+  const timerWindow = getScopedWindow(root) || (typeof globalThis !== "undefined" ? globalThis : null);
   let timerIdMap = {};
   let manager = {};
   let setTimeout = (task, delayMs) => {
-    if (!timerIdMap) return 0;
-    const timerId = window.setTimeout(() => {
+    if (!timerIdMap || !timerWindow?.setTimeout) return 0;
+    const timerId = timerWindow.setTimeout(() => {
       delete timerIdMap[timerId];
       task();
     }, delayMs);
@@ -25,7 +28,7 @@ export const createTimerManager = () => {
   };
   let destroy = () => {
     if (!timerIdMap) return;
-    Object.values(timerIdMap).forEach(timerId => window.clearTimeout(timerId));
+    Object.values(timerIdMap).forEach(timerId => timerWindow?.clearTimeout?.(timerId));
     timerIdMap = null;
     delete manager.setTimeout;
     delete manager.destroy;

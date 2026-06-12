@@ -20,6 +20,8 @@
       </custom-checkbox>
     </div>
     <table class="table-area">
+      <tbody>
+      
       <tr>
         <td class="item-title">透析導入原疾患</td>
         <td>
@@ -52,13 +54,15 @@
                   selectedDiseaseList,
                   getPatData('die_cd').editValue,
                   'diseaseCd',
-                  'diseaseName'
-                )"
+                  'diseaseName')"
             :disabled="true"
           />
         </td>
         <td class="item-data choice-button-area"></td>
       </tr>
+      
+    
+      </tbody>
     </table>
 
     <div
@@ -67,7 +71,10 @@
       :class="classObjectItem(json)"
     >
       <table class="card-table">
-        {{
+        <tbody>
+        <tr class="card-index-row">
+          <td colspan="3" class="item-data">
+            {{
           index + 1
         }}
         <button
@@ -88,8 +95,10 @@
         <!--  />-->
         <!-- del FutreNetWeb+SI課題管理No6117 趙 end -->
         <br />
+          </td>
+        </tr>
 
-        <tr>
+          <tr>
           <td class="item-title">発症日</td>
           <!--#10715:日付IF修正Start-->
           <td colspan="2" class="item-data-period">
@@ -283,146 +292,107 @@
         <tr>
           <td class="item-title">診断施設</td>
           <td class="item-data">
-            <!-- <custom-simple-textarea-a
-              class="input-style"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
-              :value="getPatDataJsonArray(json, 'diagnosis_facility_cd')"
-              :display-string="dispFacilityName(json)"
-              style="vertical-align: middle;"
-            /> -->
             <custom-simple-textarea-a
               class="input-style"
               :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
               :value="getFieldValue(json, 'diagnosis_facility_cd', 'diagnosis_facility_name')"
-              :display-string="getNameDisplay(json, dispFacilityName)"
+              :display-string="getNameDisplay(json, dispFacilityName, 'diagnosis_facility_name')"
               style="vertical-align: middle;"
             />
           </td>
           <td class="item-data choice-button-area">
-            <v-ons-button
-              :ref="'btnSelectFacility' + index"
-              class="common-style-select-button btn3-normal"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
-              @click="showPopoverFacilityCd(json, index)"
-            >
-              選択
-            </v-ons-button>
+            <common-master-selector
+              :masterType="MasterType.FACILITY_PAT_INFO"
+              :facilityCd="facilityCd"
+              :initItem="{ value: getPatDataJsonArray(json, 'diagnosis_facility_cd').initValue }"
+              :editItem="{ value: getPatDataJsonArray(json, 'diagnosis_facility_cd').editValue }"
+              :btnName="'選択'"
+              :isVisible="false"
+              :btnClass="'common-style-select-button btn3-normal'"
+              :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
+              @popover-return="onMedicalFacilityReturn($event, json, index)"
+            />
           </td>
         </tr>
 
         <tr>
           <td class="item-title">診療科</td>
           <td class="item-data">
-            <!-- <custom-simple-textarea-a
-              class="input-style"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
-              :value="getPatDataJsonArray(json, 'course_cd')"
-              :display-string="dispCourseName(json)"
-              style="vertical-align: middle;"
-            /> -->
             <custom-simple-textarea-a
               class="input-style"
               :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
               :value="getFieldValue(json, 'course_cd', 'course_name')"
-              :display-string="getNameDisplay(json, dispCourseName)"
+              :display-string="getNameDisplay(json, dispCourseName, 'course_name')"
               style="vertical-align: middle;"
             />
             <!-- mod #10359 編集権限の動作不正 dengshen end -->
           </td>
           <td class="item-data choice-button-area">
-            <!-- mod #10359 編集権限の動作不正 dengshen start -->
-            <!-- <v-ons-button -->
-            <!--   :ref="'btnSelectCourseCd' + index" -->
-            <!--   class="common-style-select-button btn3-normal" -->
-            <!--   :disabled="editFlag" -->
-            <!--   @click="showPopoverCourseCd(json, index)" -->
-            <!-- > -->
-            <v-ons-button
-              :ref="'btnSelectCourseCd' + index"
-              class="common-style-select-button btn3-normal"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
-              @click="showPopoverCourseCd(json, index)"
-            >
-            <!-- mod #10359 編集権限の動作不正 dengshen end -->
-              選択
-            </v-ons-button>
+            <common-master-selector
+              :masterType="MasterType.COURSE_PAT_INFO"
+              :facilityCd="facilityCd"
+              :initItem="{ value: getPatDataJsonArray(json, 'course_cd').initValue }"
+              :editItem="{ value: getPatDataJsonArray(json, 'course_cd').editValue }"
+              :btnName="'選択'"
+              :isVisible="false"
+              :btnClass="'common-style-select-button btn3-normal'"
+              :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
+              @popover-return="onMedicalCourseReturn($event, json, index)"
+            />
           </td>
         </tr>
 
         <tr>
           <td class="item-title">診断医</td>
           <td class="item-data">
-            <!-- <custom-simple-textarea-a
-              class="input-style"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
-              :value="getPatDataJsonArray(json, 'diagnostician_cd')"
-              :display-string="diagnosticianName(json)"
-              style="vertical-align: middle;"
-            /> -->
             <custom-simple-textarea-a
               class="input-style"
               :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
               :value="getFieldValue(json, 'diagnostician_cd', 'diagnostician_name')"
-              :display-string="getNameDisplay(json, diagnosticianName)"
+              :display-string="getNameDisplay(json, diagnosticianName, 'diagnostician_name')"
               style="vertical-align: middle;"
             />
             <!-- mod #10359 編集権限の動作不正 dengshen end -->
           </td>
           <td class="item-data choice-button-area">
-            <!-- mod #10359 編集権限の動作不正 dengshen start -->
-            <!-- <v-ons-button -->
-            <!--   :ref="'btnSelectUserId' + index" -->
-            <!--   class="common-style-select-button btn3-normal" -->
-            <!--   :disabled="editFlag" -->
-            <!--   @click="showPopoverUserId(json, index)" -->
-            <!-- > -->
-            <v-ons-button
-              :ref="'btnSelectUserId' + index"
-              class="common-style-select-button btn3-normal"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
-              @click="showPopoverUserId(json, index)"
-            >
-            <!-- mod #10359 編集権限の動作不正 dengshen end -->
-              選択
-            </v-ons-button>
+            <common-master-selector
+              :masterType="MasterType.DOCTOR_PAT_INFO"
+              :facilityCd="facilityCd"
+              :initItem="doctorPatInfoInitItem(json)"
+              :editItem="{ value: getPatDataJsonArray(json, 'diagnostician_cd').editValue }"
+              :extraParams="doctorPatInfoExtraParams(json)"
+              :btnName="'選択'"
+              :isVisible="false"
+              :btnClass="'common-style-select-button btn3-normal'"
+              :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
+              @popover-return="onMedicalDoctorReturn($event, json, index)"
+            />
           </td>
         </tr>
         <tr>
           <td class="item-title">病名</td>
           <td class="item-data">
-            <!-- <custom-simple-textarea-a
-              class="input-style"
-              :value="getPatDataJsonArray(json, 'disease_cd')"
-              :display-string="dispDiseaseName(json)"
-              :disabled="true"
-              style="vertical-align: middle;"
-            /> -->
             <custom-simple-textarea-a
               class="input-style"
               :value="getFieldValue(json, 'disease_cd', 'disease_name')"
-              :display-string="getNameDisplay(json, dispDiseaseName)"
+              :display-string="getNameDisplay(json, dispDiseaseName, 'disease_name')"
               :disabled="true"
               style="vertical-align: middle;"
             />
             <!-- mod 9482 患者情報画面/新規患者登録の表示が遅い。 関  end -->
           </td>
           <td class="item-data choice-button-area">
-            <!-- mod #10359 編集権限の動作不正 dengshen start -->
-            <!-- <v-ons-button -->
-            <!--   :ref="'btnSelectDiseaseCd' + index" -->
-            <!--   class="common-style-select-button btn3-normal" -->
-            <!--   :disabled="editFlag" -->
-            <!--   @click="showPopoverDiseaseCd(json, index)" -->
-            <!-- > -->
-            <v-ons-button
-              :ref="'btnSelectDiseaseCd' + index"
-              class="common-style-select-button btn3-normal"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
-              @click="showPopoverDiseaseCd(json, index)"
-            >
-            <!-- mod #10359 編集権限の動作不正 dengshen end -->
-              選択
-            </v-ons-button>
+            <common-master-selector
+              :masterType="MasterType.DISEASE_PAT_INFO"
+              :facilityCd="facilityCd"
+              :initItem="{ value: getPatDataJsonArray(json, 'disease_cd').initValue }"
+              :editItem="{ value: getPatDataJsonArray(json, 'disease_cd').editValue }"
+              :btnName="'選択'"
+              :isVisible="false"
+              :btnClass="'common-style-select-button btn3-normal'"
+              :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
+              @popover-return="onMedicalDiseaseReturn($event, json, index)"
+            />
           </td>
         </tr>
         <!--mod FNSI じょはく start-->
@@ -576,36 +546,14 @@
             />
           </td>
         </tr>
+        
+      
+        </tbody>
       </table>
     </div>
       <div>
-        <pop-over-facility
-          v-bind="popoverDataFacilityCd"
-          :target-position-element="popoverTargetElement('btnSelectFacility')"
-          @popover-close="closePopover()"
-          @popover-return="updateInput($event, 'diagnosis_facility_cd')"
-        />
-        <pop-over
-          v-bind="popoverDataCourseCd"
-          :target-position-element="popoverTargetElement('btnSelectCourseCd')"
-          @popover-close="closePopover()"
-          @popover-return="updateInput($event, 'course_cd')"
-        />
-        <pop-over
-          v-bind="popoverDataUserId"
-          :target-position-element="popoverTargetElement('btnSelectUserId')"
-          @popover-close="closePopover()"
-          @popover-return="updateInput($event, 'diagnostician_cd')"
-        />
-        <pop-over-disea
-          v-bind="popoverDataDiseaseCd"
-          :target-position-element="popoverTargetElement('btnSelectDiseaseCd')"
-          @popover-close="closePopover()"
-          @popver-search-condition="setPopoverSearchCondition"
-          @popover-return="updateInput($event, 'disease_cd')"
-        />
         <message-dialog
-          :visible.sync="isWarningDialogVisible"
+          v-model:visible="isWarningDialogVisible"
           :message-cd="40000001"
           type="1"
           :string-params="stringParams"
@@ -619,8 +567,8 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized, deepCopy } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import moment from "moment";
-import { mapGetters, mapActions } from "vuex";
+import dayjs from "@/compat/date/dayjs";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
 import { getMaxDay } from "@/functions/common/DateTimeUtils";
@@ -633,9 +581,14 @@ import { getMaxDay } from "@/functions/common/DateTimeUtils";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 
 export default {
   name: "MedicalHstCard",
+  components: {
+    "common-master-selector": commonMasterSelector
+  },
   mixins: [baseCardContent],
 
   data() {
@@ -651,6 +604,7 @@ export default {
       // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
       isInitFinished: false,
       // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
+      MasterType,
       arrayColName: "medical_hst_info",
       outComeList: [
         { value: "1", displayValue: "治療中" },
@@ -664,56 +618,6 @@ export default {
         { value: "9", displayValue: "転医" },
         { value: "10", displayValue: "死亡" }
       ],
-
-      popoverDataFacilityCd: {
-        popoverVisible: false,
-        popoverDisplayDirection: "right",
-        popoverTitleHeader: "施設",
-        popoverFilterLabel: "",
-        popoverFilterDataset: [],
-        popoverFilterDisabled: "",
-        popoverContentLabel: "施設名",
-        popoverContentDataset: []
-      },
-
-      popoverDataCourseCd: {
-        popoverVisible: false,
-        popoverDisplayDirection: "right",
-        popoverTitleHeader: "診療科",
-        popoverFilterLabel: "",
-        popoverFilterDataset: [],
-        popoverFilterDisabled: "",
-        popoverContentLabel: "診察科名",
-        popoverContentDataset: [],
-        popoverContentSelected: {}
-      },
-
-      popoverDataUserId: {
-        popoverVisible: false,
-        popoverDisplayDirection: "right",
-        popoverTitleHeader: "診断医",
-        popoverFilterLabel: "",
-        popoverFilterDataset: [],
-        popoverFilterDisabled: "",
-        popoverContentLabel: "診断医名",
-        popoverContentDataset: [],
-        popoverContentSelected: {}
-      },
-
-      popoverDataDiseaseCd: {
-        // #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng start
-        // popoverVisibleDisea: false,
-        popoverVisible: false,
-        // #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng end
-        popoverDisplayDirection: "right",
-        popoverTitleHeader: "病名",
-        popoverFilterLabel: "",
-        popoverFilterDataset: [],
-        popoverFilterDisabled: "",
-        popoverContentLabel: "病名",
-        popoverContentDataset: [],
-        popoverContentSelected: {}
-      },
 
       /* del by chamaojia 2025-05-21 [11871]  --start */
       // iPhoneアクセスプログラム、画面メモリオーバーフロー改造
@@ -741,9 +645,12 @@ export default {
       userData: [],
 
       // #9482 病名翻訳用の容器
-      selectedDiseaseList: []
+      selectedDiseaseList: [],
       /* add by chamaojia 2025-05-21 [11871]  --start */
-      ,facilityNameList: []
+      facilityNameList: [],
+      // マスタ選択ポップアップの data.text エコー用（施設リストとコード空間が異なる項目は分離）
+      courseEchoList: [],
+      doctorEchoList: []
       /* add by chamaojia 2025-05-21 [11871]  --end */
     };
   },
@@ -762,16 +669,25 @@ export default {
     // add 編集権限の適用 じょはく start
     // mod #10359、#10331 編集権限について、対応する。 dengshen start
     // ...mapGetters("account-edit", ["getStateUserAccountInfo", "getUseFunctions"]),
-    ...mapGetters("account-edit", ["getStateUserAccountInfo", "getAuthorizedFunctions", "getPatientShareMode", "getPatientShareFacilityCdMode"]),
+    ...mapGetters("account-edit", [
+      "getStateUserAccountInfo",
+      "getAuthorizedFunctions",
+      "getPatientShareMode",
+      "getPatientShareFacilityCdMode"
+    ]),
     // mod #10359、#10331 編集権限について、対応する。 dengshen end
     // add 編集権限の適用 じょはく end
     ...mapGetters("user", { facilityCd: "getFacilityCd" }),
-    ...mapGetters("user-selector-popover", ["mstJob"]),
     /* del by chamaojia 2025-05-21 [11871]  --start */
     // iPhoneアクセスプログラム、画面メモリオーバーフロー改造
     /*...mapGetters("sys-facility", ["getSysFacilities", "getSysFacilitiesForName"]),*/
     /* del by chamaojia 2025-05-21 [11871]  --end */
-    ...mapGetters("pat-info", ["selectedPatId", "selectedPat", "getIsOtherFacility", "getOtherFacilityCd"]),
+    ...mapGetters("pat-info", [
+      "selectedPatId",
+      "selectedPat",
+      "getIsOtherFacility",
+      "getOtherFacilityCd"
+    ]),
     ...mapGetters("pat-info", ["selectedPatId"]),
     jsonArray: {
       get() {
@@ -868,7 +784,6 @@ export default {
         if (
           this.getPatDataJsonArray(json, "is_dialysis_underlying_disease")
             .editValue === "1" &&
-	  // add #12462 患者情報共有 Ji start  
           (
             this.getPatDataJsonArray(json, "facility_cd").initValue === this.facilityCd ||
             (
@@ -876,7 +791,6 @@ export default {
               this.getPatientShareMode == 0
             )
           ) &&
-	  // add #12462 患者情報共有 Ji end
           json.ctl_no.editValue >= 0
         ) {
           primaryDiseaseCd = this.getPatDataJsonArray(json, "disease_cd")
@@ -884,14 +798,12 @@ export default {
           break;
         }
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc start
-	// mod #12462 患者情報共有 Ji start
         else if(
           this.getPatDataJsonArray(json, "is_dialysis_underlying_disease")
             .editValue === "0" &&
           this.getPatDataJsonArray(json, "facility_cd")
             .initValue === this.facilityCd
-          ){
-	  // mod #12462 患者情報共有 Ji end
+        ){
           primaryDiseaseCd = null;
         }
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc end
@@ -913,10 +825,10 @@ export default {
       if (die !== undefined) {
         // add FutreNetWeb+SI課題管理No6115 趙 start
         if(die.die_date.editValue == null || die.die_date.editValue == ''){
-          die.die_date.editValue = moment(new Date()).format("YYYYMMDD");
+          die.die_date.editValue = dayjs(new Date()).format("YYYYMMDD");
         }
         // add FutreNetWeb+SI課題管理No6115 趙 end
-        const dieDate = moment(die.die_date.editValue, "YYYYMMDD");
+        const dieDate = dayjs(die.die_date.editValue, "YYYYMMDD");
         if (dieDate.isValid()) {
           return dieDate.format("YYYY-MM-DD HH:mm:ss");
         }
@@ -925,7 +837,7 @@ export default {
     },
 
     getDisableDatesAfter() {
-      return moment(new Date()).format("YYYYMMDD");
+      return dayjs(new Date()).format("YYYYMMDD");
     },
 
     selectedDate: () => {
@@ -956,7 +868,7 @@ export default {
       this.setPatData("primary_disease_cd", this.primaryDiseaseCd);
       // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc start
       this.$nextTick(()=>{
-        this.$forceUpdate();
+        this.requestViewForceUpdate();
       })
       // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc end
     },
@@ -998,19 +910,84 @@ export default {
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
   },
   // add bug #7125 修正 chen start
-  beforeDestroy() {
-    // dataの初期化
-    Object.assign(this.$data, this.$options.data());
+  beforeUnmount() {
   },
   // add bug #7125 修正 chen end
 
   methods: {
+    onMedicalFacilityReturn(row, json, index) {
+      this.selectedJson = json;
+      this.selectedIndex = index;
+      this.updateInput(row, "diagnosis_facility_cd");
+    },
+
+    onMedicalCourseReturn(row, json, index) {
+      this.selectedJson = json;
+      this.selectedIndex = index;
+      this.updateInput(row, "course_cd");
+    },
+
+    onMedicalDoctorReturn(row, json, index) {
+      this.selectedJson = json;
+      this.selectedIndex = index;
+      this.updateInput(row, "diagnostician_cd");
+    },
+
+    /**
+     * mod 11872 診断医POP：編集値が空のとき init を載せず extraParams でログインユーザに寄せる（旧 pop と同様に edit を基準にする）
+     */
+    doctorPatInfoInitItem(json) {
+      const diag = this.getPatDataJsonArray(json, "diagnostician_cd");
+      if (!diag) return {};
+      const editVal = diag.editValue;
+      if (
+        editVal == null ||
+        editVal === "" ||
+        String(editVal).trim() === ""
+      ) {
+        return { value: null };
+      }
+      return { value: diag.initValue };
+    },
+
+    /**
+     * mod 11872 診断医マスタPOP：未選択時はログインユーザを初期フォーカス（resolveInitCd の extraParams.initValue）
+     */
+    doctorPatInfoExtraParams(json) {
+      const diag = this.getPatDataJsonArray(json, "diagnostician_cd");
+      const editVal = diag && diag.editValue;
+      if (
+        editVal != null &&
+        editVal !== "" &&
+        String(editVal).trim() !== ""
+      ) {
+        return {};
+      }
+      const uid =
+        this.getStateUserAccountInfo &&
+        this.getStateUserAccountInfo.userId != null &&
+        this.getStateUserAccountInfo.userId !== ""
+          ? String(this.getStateUserAccountInfo.userId).trim()
+          : "";
+      if (!uid) return {};
+      return { initValue: uid };
+    },
+
+    onMedicalDiseaseReturn(row, json, index) {
+      this.selectedJson = json;
+      this.selectedIndex = index;
+      this.updateInput(row, "disease_cd");
+    },
+
+    requestViewForceUpdate() {
+      if (this.$?.isMounted) {
+        this.$forceUpdate();
+      }
+    },
     ...mapActions("loading-screen", ["setLoadingScreenMessage", "setLoadingScreenVisible"]),
     ...mapActions("mst-facility-setting", [
-      "getDoctorsAtFacility",
       "getDoctorsAtFacilityIncludeDel",
     ]),
-    ...mapActions("user-selector-popover", ["getMstJobData"]),
     // ...mapActions("user-selector-popover", ["getMst"]),modify by maxueqiang
     /* del by chamaojia 2025-05-21 [11871]  --start */
     // iPhoneアクセスプログラム、画面メモリオーバーフロー改造
@@ -1086,9 +1063,11 @@ export default {
     async refreshData() {
       this.setLoadingScreenVisible(true);
       try {
+        this.courseEchoList = [];
+        this.doctorEchoList = [];
         // mod #6634 既往歴に登録した診療科と病名のマスタを削除すると診療科がコードで表示される。 付 start
         // const responseCourse = await ApiHelper.get("/mstInfo/mstCourse").catch(
-        const responseCourse = await ApiHelper.get("/mstInfo/mstAllCourse").catch(
+        const responseCourse = await ApiHelper.get("/mstInfo/mstAllCourse", { selectedPatId: this.selectedPatId }).catch(
         // mod #6634 既往歴に登録した診療科と病名のマスタを削除すると診療科がコードで表示される。 付 end
           error => {
             getErrorMessage('MedicalHstCardContent.vue', 'created', error);
@@ -1099,7 +1078,10 @@ export default {
 
         // 登録済みの診断医を取得
         const facility_cd = this.facilityCd;
-        const responseUser = await this.getDoctorsAtFacilityIncludeDel(facility_cd)
+        const responseUser = await this.getDoctorsAtFacilityIncludeDel({
+          facilityCd: facility_cd,
+          selectedPatId: this.selectedPatId
+        })
           .catch(error => {
             getErrorMessage('MedicalHstCardContent.vue', 'created', error);
             throw error;
@@ -1127,7 +1109,7 @@ export default {
           /* add by chamaojia 2025-05-21 [11871]  --end */
         });
         /* add by chamaojia 2025-05-21 [11871]  --start */
-        if(cdList.length > 0 ) {
+        if(cdList.length > 0) {
           await ApiHelper.post("/sysFacility/getSysFacilityByCdList", cdList)
               .then(
                   (rest) =>{
@@ -1145,7 +1127,9 @@ export default {
         /* add by chamaojia 2025-05-21 [11871]  --end */
         params = params.filter(e => e !== null);
         if (params.length > 0) {
-          await ApiHelper.post("/mstInfo/mstPersonalUserByIdList", params).then(res => {
+          await ApiHelper.configPost("/mstInfo/mstPersonalUserByIdList", params, {
+            params: { selectedPatId: this.selectedPatId }
+          }).then(res => {
             let item = [];
             for (let i = 0; i < res.data.length; i++) {
               const userInfo = {
@@ -1157,8 +1141,6 @@ export default {
             this.userData = this.userData.concat(item);
           });
         }
-        this.getMstJobData();
-
         // #9482 Stripping translation fields from the original structure
         this.selectedDiseaseList = [];
         let diseaseList = this.selectedDiseaseList;
@@ -1225,6 +1207,7 @@ export default {
         course_cd: null, // 診療科 診療科マスタ.診療科コード
         course_is_free: "0", // 診療科がフリーワードで入力されているか '0':選択、 '1':フリーワード
         diagnostician_cd: null, // 診断医 利用者マスタ.利用者ＩＤ
+        diagnostician_name: null, // 診断医表示名（保存後の表示・非数値 user_id 対応）
         diagnostician_is_free: "0", // 診断医がフリーワードで入力されているか '0':選択、 '1':フリーワード
         disease_cd: null, // 病名 病名マスタ.病名コード,
         is_main_disease: "0", // 主病 '0':主病以外、'1':主病
@@ -1282,265 +1265,20 @@ export default {
       this.setPatData("die_date", dieDate);
     },
 
-    // ---- ---- ---- ---- ---- ----
-    // 施設選択ポップアップ
-    // ---- ---- ---- ---- ---- ----
-    showPopoverFacilityCd(json, index) {
-      this.selectedJson = json;
-      this.selectedIndex = index;
-
-      // ポップオーバのコンテンツデータを取りまとめる
-      this.popoverDataFacilityCd.popoverVisible = true;
-      this.popoverDataFacilityCd.popoverFilterLabel = "都道府県";
-
-      const diagnosisFacilityCd = this.getPatDataJsonArray(json, "diagnosis_facility_cd").editValue;
-      /* del by chamaojia 2025-05-21 [11871]  --start */
-      // iPhoneアクセスプログラム、画面メモリオーバーフロー改造
-      // const popoverDataFacility = this.createPopoverDataFacility(
-      //   this.popoverDataFacilityCd.popoverTitleHeader,
-      //   this.popoverDataFacilityCd.popoverContentLabel,
-      //   this.mstFacility,
-      //   diagnosisFacilityCd
-      // );
-      /* del by chamaojia 2025-05-21 [11871]  --end */
-      /* modify by chamaojia 2025-05-21 [11871]  --start */
-      // this.popoverDataFacilityCd.popoverContentDataset = popoverDataFacility.popoverContentDataset;
-      // this.popoverDataFacilityCd.popoverContentSelected = popoverDataFacility.popoverContentSelected;
-      this.popoverDataFacilityCd.popoverContentDataset = [];
-      this.popoverDataFacilityCd.popoverContentSelected = {
-        "value": diagnosisFacilityCd,
-        "text": "",
-        "prefecturesCd": "",
-        "medicalInstitutionCd": diagnosisFacilityCd
-      };
-      /* modify by chamaojia 2025-05-21 [11871]  --end */
-    },
-
-    // ---- ---- ---- ---- ---- ----
-    // 診療科選択ポップアップ
-    // ---- ---- ---- ---- ---- ----
-    showPopoverCourseCd(json, index) {
-      this.selectedJson = json;
-      this.selectedIndex = index;
-
-      const diagnosis_facility_cd = this.facilityCd
-
-      // ポップオーバのコンテンツデータ(フィルタしたデータ)を取りまとめる
-      const sortedMstCourse = this.mstCourse.sort((a, b) => a.standardCourseCd - b.standardCourseCd);
-      const contentArr = sortedMstCourse.map(item => {
-        return {
-          value: item.courseCd,
-          fnValue: item.facilityCd,
-          text: item.courseName,
-          isDisp: item.isDisp,
-          isDel: item.isDel,
-        };
-      }).filter(item => (item.isDisp !== "0" && item.isDel !== "1"));
-
-      const shavedContentArr = this.shavedFacility(
-        contentArr,
-        diagnosis_facility_cd
-      );
-
-      this.popoverDataCourseCd.popoverContentSelected.value = json.course_cd.editValue;
-      this.popoverDataCourseCd.popoverVisible = true;
-      this.popoverDataCourseCd.popoverFilterLabel = "施設";
-      this.popoverDataCourseCd.popoverContentDataset = shavedContentArr;
-    },
-
-    // ---- ---- ---- ---- ---- ----
-    // 診断医選択ポップアップ
-    // ---- ---- ---- ---- ---- ----
-    async showPopoverUserId(json, index) {
-      const diagnosis_facility_cd = this.facilityCd;
-      const responseUser= await this.getDoctorsAtFacility(diagnosis_facility_cd)
-        .catch(error => {
-          //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
-          getErrorMessage('MedicalHstCardContent.vue', 'showPopoverUserId', error);
-          //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
-          throw error;
-        });
-
-      this.selectedJson = json;
-      this.selectedIndex = index;
-
-      // ポップオーバのフィルタデータを取りまとめる
-      /* modify by chamaojia 2025-05-21 [11871]  --start */
-      // iPhoneアクセスプログラム、画面メモリオーバーフロー改造
-      // const filterArr = [
-      //   {
-      //     text: this.mstCdToName(
-      //       this.mstFacility,
-      //       diagnosis_facility_cd,
-      //       "facilityCd",
-      //       "facilityNameKana"
-      //     ),
-      //     value: diagnosis_facility_cd
-      //   }
-      // ];
-      const filterArr = [
-        {
-          text: "削除済み",
-          value: diagnosis_facility_cd
-        }
-      ];
-      /* modify by chamaojia 2025-05-21 [11871]  --end */
-
-      // ポップオーバのコンテンツデータ(フィルタしたデータ)を取りまとめる
-      const contentArr = responseUser.data.map(item => {
-        return {
-          value: item.user_id,
-          fnValue: diagnosis_facility_cd,
-          text: `${item.user_last_name} ${item.user_first_name}`,
-          // add start 馬 #10097
-          jobCd: item.job_cd
-          // add end 馬 #10097
-        };
-      });
-
-      const shavedContentArr = this.shavedFacility(
-        contentArr,
-        diagnosis_facility_cd
-      );
-      // ポップオーバのフィルタデータを取りまとめる
-      const all = { text: "すべて", value: 0 };
-      // modify start 馬 #10097
-      const filterJobCdArr = [
-        all,
-        ...this.mstJob?.filter((item) => {
-          return item.isDoctor === '1';
-        })?.map(item => ({
-          text: item.jobName,
-          value: String(item.jobCd)
-        }))
-      ];
-      // modify end 馬 #10097
-
-      // ドロップダウン選択肢設定
-      this.popoverDataUserId.popoverFilter = [
-        {
-          popoverFilterLabel: "職種",
-          popoverFilterDataset: filterJobCdArr
-        }
-      ];
-
-      // mod 11872 利用者指定IFのデフォルト選択状態 zrx start  新規患者登録-既往歴-診断医
-      // this.popoverDataUserId.popoverContentSelected.value = json.diagnostician_cd.editValue;
-      this.popoverDataUserId.popoverContentSelected.value = json.diagnostician_cd.editValue ? json.diagnostician_cd.editValue :
-        this.getStateUserAccountInfo.userId;
-
-      // mod 11872 利用者指定IFのデフォルト選択状態 zrx start
-
-      // mod 11872 利用者指定IFのデフォルト選択状態 liyanze-z add  ログインID  補充する start 
-      let isUsedUserInfoID = false;
-      isUsedUserInfoID = json.diagnostician_cd.editValue?false:true
-      this.popoverDataUserId.isUsedUserInfoID = isUsedUserInfoID;
-      // mod 11872 利用者指定IFのデフォルト選択状態 liyanze-z add  ログインID  補充する end 
-      
-      this.popoverDataUserId.popoverVisible = true;
-      this.popoverDataUserId.popoverFilterLabel = "施設";
-      this.popoverDataUserId.popoverFilterDataset = filterArr;
-      // modify start 馬 #10097
-      this.popoverDataUserId.popoverFilterDisabled = false;
-      // modify end 馬 #10097
-      this.popoverDataUserId.popoverContentDataset = shavedContentArr;
-
-      // 取得したマスタユーザーを表示ようにマスタへ格納
-      const isFacilityCd = this.mstUser.find(item => {
-        return item.facilityCd === diagnosis_facility_cd;
-      });
-      if (isFacilityCd === undefined) {
-        this.mstUser.push(...responseUser.data);
-      }
-    },
-
-    // ---- ---- ---- ---- ---- ----
-    // 病名選択ポップアップ
-    // ---- ---- ---- ---- ---- ----
-    showPopoverDiseaseCd(json, index) {
-      this.selectedJson = json;
-      this.selectedIndex = index;
-
-      const diagnosis_facility_cd = this.facilityCd;
-
-      // ポップオーバのフィルタデータを取りまとめる
-      /* modify by chamaojia 2025-05-21 [11871]  --start */
-      // iPhoneアクセスプログラム、画面メモリオーバーフロー改造
-      // const filterArr = [
-      //   {
-      //     text: this.mstCdToName(
-      //       this.mstFacility,
-      //       diagnosis_facility_cd,
-      //       "facilityCd",
-      //       "facilityNameKana"
-      //     ),
-      //     value: diagnosis_facility_cd
-      //   }
-      // ];
-      const filterArr = [
-        {
-          text: "削除済み",
-          value: diagnosis_facility_cd
-        }
-      ];
-      /* modify by chamaojia 2025-05-21 [11871]  --end */
-      
-
-      // ポップオーバのコンテンツデータ(フィルタしたデータ)を取りまとめる
-      // const contentArr = this.mstDisease.map(item => {
-      //   // mod 9482 患者情報画面/新規患者登録の表示が遅い。 関  start
-      //   // return {
-      //   //   value: item.diseaseCd,
-      //   //   fnValue: item.facilityCd,
-      //   //   text: item.diseaseName
-      //   // };
-      //   return {
-      //     value: item.cd,
-      //     fnValue: this.facilityCd,
-      //     text: item.nm
-      //   };
-      //   // mod 9482 患者情報画面/新規患者登録の表示が遅い。 関  end
-      // });
-
-      // const shavedContentArr = this.shavedFacility(
-      //   contentArr,
-      //   diagnosis_facility_cd
-      // );
-
-      this.popoverDataDiseaseCd.popoverContentSelected.value = json.disease_cd.editValue;
-      // #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng start
-      // this.popoverDataDiseaseCd.popoverVisibleDisea = true;
-      this.popoverDataDiseaseCd.popoverVisible = true;
-      // #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng end
-      this.popoverDataDiseaseCd.popoverFilterLabel = "施設";
-      this.popoverDataDiseaseCd.popoverFilterDataset = filterArr;
-      this.popoverDataDiseaseCd.popoverFilterDisabled = true;
-      // this.popoverDataDiseaseCd.popoverContentDataset = shavedContentArr;
-      this.popoverDataDiseaseCd.isAllValues = false;
-    },
-
     /**
-     * @description 施設から診療科・診断医・病名を絞り込み
-     * @param {Object} facility 施設コード
-     * @param {Object} mstData マスタデータ
-     * @returns {Object}
+     * @description マスタ選択の code / 表示名をエコー用リストへ格納（同一 code は上書き）
      */
-    shavedFacility(mstData, diagnosis_facility_cd) {
-      return mstData.filter(mst => mst.fnValue === diagnosis_facility_cd);
-    },
-
-    // ---- ---- ---- ---- ---- ----
-    // ポップアップ終了
-    // ---- ---- ---- ---- ---- ----
-    closePopover() {
-      this.selectedJson = null;
-      this.popoverDataFacilityCd.popoverVisible = false;
-      this.popoverDataCourseCd.popoverVisible = false;
-      this.popoverDataUserId.popoverVisible = false;
-      // #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng start
-      // this.popoverDataDiseaseCd.popoverVisibleDisea = false;
-      this.popoverDataDiseaseCd.popoverVisible = false;
-      // #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng end
+    upsertMasterEcho(list, cd, name) {
+      if (cd == null || cd === "") return;
+      const text = name != null && name !== "" ? name : null;
+      if (!text) return;
+      const idx = list.findIndex(item => item.cd == cd);
+      const row = { cd, name: text };
+      if (idx >= 0) {
+        list.splice(idx, 1, row);
+      } else {
+        list.push(row);
+      }
     },
 
     /**
@@ -1551,13 +1289,14 @@ export default {
     updateInput(data, jsonKey) {
       if (data !== null) {
         /* add by chamaojia 2025-05-21 [11871]  --start */
-        // iPhoneアクセスプログラム、画面メモリオーバーフロー改造
-        // バウンディングボックスで選択したデータは、エコー用の配列に格納されます。
-        let obj = {
-          cd:data.value,
-          name:data.text
-        };
-        this.facilityNameList.push(obj);
+        // 診断施設は既存の facilityNameList。診療科・診断医は別リスト（コード空間が異なり誤マッチさせない）
+        if (jsonKey === "diagnosis_facility_cd") {
+          this.upsertMasterEcho(this.facilityNameList, data.value, data.text);
+        } else if (jsonKey === "course_cd") {
+          this.upsertMasterEcho(this.courseEchoList, data.value, data.text);
+        } else if (jsonKey === "diagnostician_cd") {
+          this.upsertMasterEcho(this.doctorEchoList, data.value, data.text);
+        }
         /* add by chamaojia 2025-05-21 [11871]  --end */
         // 施設を選択したらフリーワードフラグを0にする
         if (jsonKey === "diagnosis_facility_cd") {
@@ -1570,14 +1309,19 @@ export default {
         // 診断医を選択したらフリーワードフラグを0にする
         if (jsonKey === "diagnostician_cd") {
           this.setPatDataJsonArray(this.selectedJson, "diagnostician_is_free", "0");
+          const diagnosticianName = data.text;
+          if (diagnosticianName != null && String(diagnosticianName).trim() !== "") {
+            this.setPatDataJsonArray(this.selectedJson, "diagnostician_name", diagnosticianName);
+          }
         }
         if (jsonKey === "disease_cd") {
           const index = this.selectedDiseaseList.findIndex((item) => {
             return item.diseaseCd === data.value;
           })
+          const fc = data.fnValue != null ? data.fnValue : data.facilityCd;
           index < 0 && this.selectedDiseaseList.push({
             diseaseCd: data.value,
-            facilityCd: data.fnValue,
+            facilityCd: fc,
             diseaseName: data.text
           })
         }
@@ -1592,7 +1336,27 @@ export default {
     clearCourseDoctor(json) {
       this.setPatDataJsonArray(json, "course_cd", null);
       this.setPatDataJsonArray(json, "diagnostician_cd", null);
+      this.setPatDataJsonArray(json, "diagnostician_name", null);
       this.setPatDataJsonArray(json, "disease_cd", null);
+    },
+
+    diagnosticianDisplayFromMstUser(doctorCd) {
+      if (
+        doctorCd == null ||
+        doctorCd === "" ||
+        !this.mstUser ||
+        !this.mstUser.length
+      ) {
+        return null;
+      }
+      const record = this.mstUser.find(user => user.user_id == doctorCd);
+      if (!record) return null;
+      const last =
+        record.user_last_name != null ? String(record.user_last_name) : "";
+      const first =
+        record.user_first_name != null ? String(record.user_first_name) : "";
+      const joined = `${last} ${first}`.trim();
+      return joined || null;
     },
 
     // ---- ---- ---- ---- ---- ----
@@ -1639,19 +1403,18 @@ export default {
     focusOutCome(data, json) {
       this.previousOutCome = this.getPatDataJsonArray(
         json,
-        "out_come"
-      ).editValue;
+        "out_come").editValue;
     },
     changeOutCome(data, json) {
 
       // 転帰変更時、転帰変更日に当日日付を設定する
-      this.setPatDataJsonArray(json, "out_come_date", moment(new Date).format("YYYYMMDD"));
+      this.setPatDataJsonArray(json, "out_come_date", dayjs(new Date).format("YYYYMMDD"));
 
       if (data === "10") {
         // 死亡の場合
         // add FutreNetWeb+SI課題管理No6115 start
         // 死亡の場合、死亡日に当日日付を設定する
-        this.setPatDataJsonArray(json, "die_date", moment(new Date).format("YYYYMMDD"));
+        this.setPatDataJsonArray(json, "die_date", dayjs(new Date).format("YYYYMMDD"));
         // add FutreNetWeb+SI課題管理No6115 end
         if (this.duplicationChecker("out_come", "10") > 1) {
           this.setPatDataJsonArray(json, "out_come", this.previousOutCome);
@@ -1690,28 +1453,33 @@ export default {
      * @returns {String}
      */
     diagnosticianName(json) {
-      if (this.isGotMstUser) {
-        const diagnostician = this.getPatDataJsonArray(json, "diagnostician_cd")
-          .editValue;
-        if (!diagnostician || !this.mstUser) return "";
-        const lastName = this.mstCdToNameFreeWord(
-          this.mstUser,
-          diagnostician,
-          "user_id",
-          "user_last_name"
-        );
-        const firstName = this.mstCdToNameFreeWord(
-          this.mstUser,
-          diagnostician,
-          "user_id",
-          "user_first_name"
-        );
-        if (!lastName || !firstName) {
-          this.setPatDataJsonArray(json, "diagnostician_is_free", "1");
-          return `${diagnostician}`;
-        }
-        return `${lastName} ${firstName}`;
+      const diagnostician = this.getPatDataJsonArray(json, "diagnostician_cd")
+        .editValue;
+      if (!diagnostician) return "";
+
+      const echoDoctor = this.doctorEchoList.find(item => item.cd == diagnostician);
+      if (echoDoctor && echoDoctor.name) {
+        this.setPatDataJsonArray(json, "diagnostician_is_free", "0");
+        return echoDoctor.name;
       }
+
+      const nameRow = this.getPatDataJsonArray(json, "diagnostician_name");
+      const stored = nameRow && nameRow.editValue;
+      if (stored != null && String(stored).trim() !== "") {
+        this.setPatDataJsonArray(json, "diagnostician_is_free", "0");
+        return String(stored).trim();
+      }
+
+      if (!this.isGotMstUser || !this.mstUser) return "";
+
+      const fromMst = this.diagnosticianDisplayFromMstUser(diagnostician);
+      if (fromMst) {
+        this.setPatDataJsonArray(json, "diagnostician_is_free", "0");
+        return fromMst;
+      }
+
+      this.setPatDataJsonArray(json, "diagnostician_is_free", "1");
+      return `${diagnostician}`;
     },
 
     // ※保存時、死亡選択時trueを返す
@@ -1887,13 +1655,13 @@ export default {
 
 
         // 発症日が変更された場合disease_dateを更新
-        if (key === "disease_year" || key === "disease_month" || key === "disease_day" ) {
+        if (key === "disease_year" || key === "disease_month" || key === "disease_day") {
           const year = this.getPatDataJsonArray(json, "disease_year").editValue;
           const month = this.getPatDataJsonArray(json, "disease_month").editValue;
           const day = this.getPatDataJsonArray(json, "disease_day").editValue;
 
           if (year && month && day) {
-            const diseaseDate = moment(`${year}${month}${day}`)
+            const diseaseDate = dayjs(`${year}${month}${day}`)
             // 入力された日付が正しい日付の場合のみセット
             if (diseaseDate.isValid()) {
               this.setPatDataJsonArray(json, "disease_date", diseaseDate.format("YYYYMMDD"));
@@ -1905,13 +1673,13 @@ export default {
           }
         }
         // 診断日が変更された場合diagnosis_dateを更新
-        if (key === "diagnosis_year" || key === "diagnosis_month" || key === "diagnosis_day" ) {
+        if (key === "diagnosis_year" || key === "diagnosis_month" || key === "diagnosis_day") {
           const year = this.getPatDataJsonArray(json, "diagnosis_year").editValue;
           const month = this.getPatDataJsonArray(json, "diagnosis_month").editValue;
           const day = this.getPatDataJsonArray(json, "diagnosis_day").editValue;
 
           if (year && month && day) {
-            const diagnosisDate = moment(`${year}${month}${day}`)
+            const diagnosisDate = dayjs(`${year}${month}${day}`)
             // 入力された日付が正しい日付の場合のみセット
             if (diagnosisDate.isValid()) {
               this.setPatDataJsonArray(json, "diagnosis_date", diagnosisDate.format("YYYYMMDD"));
@@ -1947,14 +1715,6 @@ export default {
         // 正当な日付じゃない場合、nullをセットする
         this.setPatDataJsonArray(json, key, null);
       }
-    },
-
-    // マスタ選択ポップオーバーの表示位置とする対象コンポーネント
-    popoverTargetElement(btnSelect) {
-      // 初期表示時は未選択なのでnull
-      return this.selectedIndex === null
-        ? null
-        : this.$refs[`${btnSelect}${this.selectedIndex}`][0];
     },
 
     /**
@@ -2013,9 +1773,7 @@ export default {
     deleteDeathItem(deleteJson) {
       if (
         this.jsonArray.find(
-          json => json.out_come.editValue === this.outComeList[9].value
-        )
-      ) {
+          json => json.out_come.editValue === this.outComeList[9].value)) {
         const die_date = deleteJson.die_date.editValue;
         const diagnosis_facility_cd = deleteJson.from_facility.editValue;
         const course_cd = deleteJson.from_course.editValue;
@@ -2085,7 +1843,15 @@ export default {
      */
     dispCourseName(json) {
       const courseCd = this.getPatDataJsonArray(json, "course_cd").editValue;
-      if (!courseCd || !this.mstCourse) return "";
+      if (!courseCd) return "";
+
+      const echoCourse = this.courseEchoList.find(item => item.cd == courseCd);
+      if (echoCourse && echoCourse.name) {
+        this.setPatDataJsonArray(json, "course_is_free", "0");
+        return echoCourse.name;
+      }
+
+      if (!this.mstCourse) return "";
       const courseName = this.mstCdToNameFreeWord(
         this.mstCourse,
         courseCd,
@@ -2135,7 +1901,7 @@ export default {
      */
     setDateEach: function(value,params) {
       if (params.fromData && params.fromData === "disease_date") {
-        const diseaseDate = moment(value);
+        const diseaseDate = dayjs(value);
         // 入力された日付が正しい日付の場合のみセット
         if (diseaseDate.isValid() && params.json) {
           this.setPatDataJsonArray(params.json, "disease_year", diseaseDate.format("YYYY"));
@@ -2148,7 +1914,7 @@ export default {
         }
       }
       else if (params.fromData && params.fromData === "diagnosis_date") {
-        const diagnosisDate = moment(value);
+        const diagnosisDate = dayjs(value);
         // 入力された日付が正しい日付の場合のみセット
         if (diagnosisDate.isValid() && params.json) {
           this.setPatDataJsonArray(params.json, "diagnosis_year", diagnosisDate.format("YYYY"));
@@ -2164,11 +1930,6 @@ export default {
 
     setContentDataMemo(newValue, index) {
       this.setPatDataJsonArray(this.jsonArray[index], "memo", newValue);
-    },
-
-    // #9482 Add method to fixed performance issues
-    setPopoverSearchCondition (searchCondition) {
-      this.popoverDataDiseaseCd.popoverSearchQuery = searchCondition;
     },
 
     /**
@@ -2188,42 +1949,23 @@ export default {
       return diseaseNameReplace;
     },
 
-  // add #12462 患者情報共有 Ji start
-  /**
-   * @description 該当行が他院情報かどうかを判定
-   * @param {Object} json - 患者情報
-   * @returns {Boolean} true = 他施設のデータは参照のみ
-   */
     isOtherFacilityRow(json) {
-      return (json.facility_cd?.initValue !== this.facilityCd || this.getIsOtherFacility);
+      return json.facility_cd?.initValue !== this.facilityCd || this.getIsOtherFacility;
     },
-    /**
-     *
-     * @param json - 患者情報
-     * @param cdKey - code(自施設)
-     * @param nameKey - name(他施設)
-     */
+
     getFieldValue(json, cdKey, nameKey) {
       const isOtherFacility = json.facility_cd?.initValue !== this.facilityCd;
-      return this.getPatDataJsonArray(
-        json,
-        isOtherFacility ? nameKey : cdKey
-      );
+      return this.getPatDataJsonArray(json, isOtherFacility ? nameKey : cdKey);
     },
-    /**
-     *
-     * @param json - 患者情報
-     * @param displayFunc - 変換Function
-     */
+
     getNameDisplay(json, displayFunc, nameKey) {
       if (json.facility_cd?.initValue !== this.facilityCd) {
         const nameObj = this.getPatDataJsonArray(json, nameKey);
-        return nameObj.editValue;
+        return nameObj?.editValue ?? "";
       }
       return displayFunc(json);
-    }
+    },
   }
-  // add #12462 患者情報共有 Ji end
 };
 </script>
 
@@ -2245,14 +1987,20 @@ export default {
 .diagnosis-date {
   width: 20%;
 }
-.input-date >>> .custom-input-date {
+.input-date :deep(.custom-input-date) {
   width: auto;
 }
-.card-table >>> textarea.custom-textarea {
+.card-table :deep(textarea.custom-textarea) {
   color: black !important;
 }
 /* ntss.css の .custom-textarea:disabled と競合する為、個別定義 */
 td .custom-textarea-edited {
   border: 2px green solid;
+}
+:deep(ons-checkbox.checkbox) {
+  margin-top: 0;
+}
+.card-table .card-index-row td {
+  padding: 0;
 }
 </style>

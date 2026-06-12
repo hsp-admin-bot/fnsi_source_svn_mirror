@@ -3,9 +3,15 @@ package jp.co.nikkiso.ntss.admin_web.web.rest;
 import java.util.List;
 import java.util.Map;
 
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
+import jp.co.nikkiso.ntss.core.entity.MstFacilitySetting;
+import jp.co.nikkiso.ntss.core.entity.MstGraphSetting;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -22,6 +28,7 @@ import jp.co.nikkiso.ntss.admin_web.service.master.facilitySetting.MstFacilitySe
 import lombok.extern.slf4j.Slf4j;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
@@ -56,7 +63,21 @@ public class MstFacilitySettingResource {
     *
     */
     @GetMapping("/mst_facility_setting/{facilityCd}")
-    public ResponseEntity<?> getMasterData(@PathVariable String facilityCd) {
+    public ResponseEntity<?> getMasterData(@PathVariable String facilityCd,
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                           @AuthenticationPrincipal NtssUser ntssUser
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+    ) {
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+            if(!ntssUser.isNkkAdminUser()) {
+                if (facilityCd != null && !facilityCd.isEmpty() &&
+                    !facilityCd.equals(ntssUser.getFacilityCd())) {
+                    String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+                    InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                    return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+                }
+            }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
 
       // ログ出力
       EventLogMessage eventLogMessage = new EventLogMessage();
@@ -116,7 +137,39 @@ public class MstFacilitySettingResource {
     /**
      * 施設設定マスタ登録・更新
      */
-    public ResponseEntity<Void> saveMstFacilitySetting(@RequestBody Map<String, List<String>> payload) {
+    public ResponseEntity<Void> saveMstFacilitySetting(@RequestBody Map<String, List<String>> payload,
+                                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                       @AuthenticationPrincipal NtssUser ntssUser
+                                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+    ) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      try {
+        if(!ntssUser.isNkkAdminUser()) {
+          if (payload.get("insertRecord") != null && !payload.get("insertRecord").isEmpty()) {
+            ObjectMapper mapper = new ObjectMapper();
+            List<String> insertRecord = payload.get("insertRecord");
+            for (String json : insertRecord) {
+              MstFacilitySetting mstFacilitySetting = mapper.readValue(json, MstFacilitySetting.class);
+              if (mstFacilitySetting != null && mstFacilitySetting.getFacilityCd() != null &&
+                !mstFacilitySetting.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+                String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstFacilitySetting.getFacilityCd() + " " + "facilitySettingNo=" + mstFacilitySetting.getFacilitySettingNo() + " " + "value=" + mstFacilitySetting.getValue() + " ";
+                InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                EventLogMessage eventLogMessage = new EventLogMessage();
+                eventLogMessage.setLogMessage("セキュリティチェックの例外!");
+                logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_DETAIL_FACILITIES_LIST, SERVICE_NAME.FNSI, null);
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+              }
+            }
+          }
+        }
+      } catch (JacksonException e) {
+        if (!ntssUser.isNkkAdminUser()) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " JsonProcessingException during security check ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
       try {
         mstFacilitySettingService.saveMstFacilitySetting(payload);
         return new ResponseEntity<>(HttpStatus.OK);
@@ -134,7 +187,21 @@ public class MstFacilitySettingResource {
     }
 
     @GetMapping("mst_facility_setting/get_value_signin/{facilityCd}")
-    public ResponseEntity<?> getValueSignInByFacilityCd(@PathVariable String facilityCd) {
+    public ResponseEntity<?> getValueSignInByFacilityCd(@PathVariable String facilityCd,
+                                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                        @AuthenticationPrincipal NtssUser ntssUser
+                                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+    ) {
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+        if(!ntssUser.isNkkAdminUser()) {
+            if (facilityCd != null && !facilityCd.isEmpty() &&
+                !facilityCd.equals(ntssUser.getFacilityCd())) {
+                String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+                InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+            }
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
       try {
         return new ResponseEntity<>(mstFacilitySettingService.getValueSignInByFacilityCd(facilityCd), HttpStatus.OK);
       } catch (Exception e) {

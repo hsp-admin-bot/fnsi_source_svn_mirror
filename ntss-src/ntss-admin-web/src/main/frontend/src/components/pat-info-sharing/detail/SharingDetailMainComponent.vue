@@ -73,9 +73,9 @@
 
 <script>
 import NextTransitionMixin from "@/components/NextTransitionMixin";
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import $ from "jquery";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 import { CONSENT_OPTIONS, SHR_STATUS_OPTIONS } from "@/constants/PatShrInfo.js";
 
@@ -262,7 +262,7 @@ export default {
       return option ? option.text : "";
     },
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
     clearTimeout(this.timerObj);
     Object.assign(this.$data, this.$options.data());
@@ -284,71 +284,71 @@ export default {
   min-height: 0;
   overflow: hidden;
 }
-.shr-list-main-content >>> .k-grid {
+.shr-list-main-content :deep(.k-grid) {
   flex: 1;
   display: flex;
   flex-direction: column;
   height: 100% !important;
   min-height: 0;
 }
-.shr-list-main-content >>> .k-grid-content {
+.shr-list-main-content :deep(.k-grid-content) {
   flex: 1;
   overflow-y: scroll !important;
   height: calc(100% - 55px) !important;
   min-height: 0;
 }
-.shr-list-main-content >>> .k-grid-header {
+.shr-list-main-content :deep(.k-grid-header) {
   flex: 0 0 auto;
 }
-.shr-list-main-content >>> .k-grid-header-wrap > table,
-.shr-list-main-content >>> .k-grid-content > table {
+.shr-list-main-content :deep(.k-grid-header-wrap > table),
+.shr-list-main-content :deep(.k-grid-content > table) {
   width: 100% !important;
   table-layout: fixed !important;
 }
 .shr-list-main-content kendo-grid {
   height: auto !important;
 }
-.shr-list-main-content >>> .k-i-sort-asc-sm::before {
+.shr-list-main-content :deep(.k-i-sort-asc-sm::before) {
   content: "▲" !important;
   color: #ffffff;
 }
-.shr-list-main-content >>> .k-i-sort-desc-sm::before {
+.shr-list-main-content :deep(.k-i-sort-desc-sm::before) {
   content: "▼" !important;
   color: #ffffff;
 }
-.shr-list-main-content >>> .k-grid-content-locked {
+.shr-list-main-content :deep(.k-grid-content-locked) {
   touch-action: auto;
   -webkit-overflow-scrolling: touch;
   overflow-y: scroll;
   scrollbar-width: none;
 }
-.shr-list-main-content >>> .k-grid-content-locked::-webkit-scrollbar {
+.shr-list-main-content :deep(.k-grid-content-locked)::-webkit-scrollbar {
   display: none;
 }
-::v-deep .k-grid table {
+:deep(.k-grid table) {
   table-layout: fixed !important;
   width: 100% !important;
 }
-::v-deep .k-grid colgroup col:first-child {
+:deep(.k-grid colgroup col:first-child) {
   width: auto !important;
   min-width: 150px !important;
 }
-::v-deep .k-grid td {
+:deep(.k-grid td) {
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
 }
-::v-deep .k-grid-header-wrap > table {
+:deep(.k-grid-header-wrap > table) {
   width: 100% !important;
 }
-::v-deep .null-pat-id-row td {
+:deep(.null-pat-id-row td) {
   background-color: #fff3a0 !important;
 }
-::v-deep .null-pat-id-row:hover td {
+:deep(.null-pat-id-row:hover td) {
   background-color: #f7e671 !important;
   transition: background-color 0.2s ease;
 }
-::v-deep .k-grid tbody tr:hover td {
+:deep(.k-grid tbody tr:hover td) {
   background-color: #eef6ff;
 }
 .custom-grid-header {
@@ -389,14 +389,14 @@ export default {
   transition: background 0.2s;
   user-select: none;
 }
-::v-deep .k-grid td:last-child,
-::v-deep .k-grid th.k-header:last-child {
+:deep(.k-grid td:last-child),
+:deep(.k-grid th.k-header:last-child) {
   text-align: center !important;
 }
-::v-deep .k-grid th.k-header:last-child {
+:deep(.k-grid th.k-header:last-child) {
   text-align: center !important;
 }
-::v-deep .btn-detail-row {
+:deep(.btn-detail-row) {
   border: none !important;
   line-height: 20px;
   height: 28px;

@@ -1,40 +1,44 @@
 package jp.co.nikkiso.ntss.admin_web.service.scaleBed;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import jp.co.nikkiso.ntss.admin_web.service.scaleBed.dto.CheckSendableConditionResult;
+import jp.co.nikkiso.ntss.admin_web.service.scaleBed.dto.CheckingParameter;
+import jp.co.nikkiso.ntss.admin_web.service.scaleBed.dto.ScaleBedListViewDTO;
+import jp.co.nikkiso.ntss.admin_web.service.scaleBed.dto.ScaleBedWeightAndBedKey;
+import jp.co.nikkiso.ntss.core.dao.MntMachineStateDao;
+import jp.co.nikkiso.ntss.core.dao.MntScaleBedStateDao;
+import jp.co.nikkiso.ntss.core.dao.MstWeightDao;
+import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
+import jp.co.nikkiso.ntss.core.dao.OrdWeightScaleDao;
+import jp.co.nikkiso.ntss.core.dao.PatPersonalMainDao;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import info.sunjune.solve.calculation.calculator.NumberCalculator;
+import io.micrometer.core.instrument.util.StringUtils;
 import jp.co.nikkiso.ntss.admin_web.request.weight.PatExamPrintRequest;
 import jp.co.nikkiso.ntss.admin_web.request.weight.SendConditionRequest;
-import jp.co.nikkiso.ntss.admin_web.response.weight.WeightOrderResponse;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.FacilitySettingService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.scaleBed.constant.CheckingParameterCode;
-import jp.co.nikkiso.ntss.admin_web.service.scaleBed.dto.*;
-import jp.co.nikkiso.ntss.admin_web.service.webSocketNotify.WebSocketNotifyService;
 import jp.co.nikkiso.ntss.admin_web.service.weight.WeightService;
 import jp.co.nikkiso.ntss.admin_web.service.weight.state.ScaleBedStateService;
 import jp.co.nikkiso.ntss.admin_web.web.rest.WeightResource;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
-import jp.co.nikkiso.ntss.core.dao.*;
 import jp.co.nikkiso.ntss.core.dto.mstWeight.ScaleBedSettingBedCd;
 import jp.co.nikkiso.ntss.core.entity.MstWeight;
 import jp.co.nikkiso.ntss.core.entity.OrdMain;
 import jp.co.nikkiso.ntss.core.entity.PatPersonalMain;
 import jp.co.nikkiso.ntss.core.entity.custom.PatExamMainWeightPrint;
 import jp.co.nikkiso.ntss.core.entity.custom.PatExamPrint;
-import jp.co.nikkiso.ntss.core.entity.custom.PatUniquePhysicalInfo;
 import jp.co.nikkiso.ntss.core.entity.custom.ScaleBedAllState;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import org.apache.commons.lang3.ObjectUtils;
-import org.checkerframework.checker.nullness.qual.Nullable;
-import org.json.JSONObject;
+import org.springframework.lang.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,14 +48,16 @@ import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
-
-import jp.co.nikkiso.ntss.admin_web.service.utils.DateIsoUtils;
-
-import static java.math.BigDecimal.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
-import com.fasterxml.jackson.databind.JsonNode;
 
 @Service
 public class ScaleBedServiceImpl implements ScaleBedService{
@@ -441,7 +447,7 @@ public class ScaleBedServiceImpl implements ScaleBedService{
     // 治療名セット
     sendConditionRequest.setTreatmentName(ordParameters.ord.getIndTreatmentName());
     // 測定日時セット
-    sendConditionRequest.setMeasureDate(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(measureDate.toInstant().atZone(java.time.ZoneId.systemDefault())));
+    sendConditionRequest.setMeasureDate(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX").format(measureDate.toInstant().atZone(java.time.ZoneId.systemDefault())));
 
     // DWセット
     sendConditionRequest.setDw(checkScaleParam.getByCode(CheckingParameterCode.DW));
@@ -596,7 +602,7 @@ public class ScaleBedServiceImpl implements ScaleBedService{
     sendConditionRequest.setScaleMode((short)0); // 車いすなしの体重のみ:0
     sendConditionRequest.setIsPrint(mstWeight.getIsDefaultPrintAfter());
     // 測定日時セット
-    sendConditionRequest.setMeasureDate(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(measureDate.toInstant().atZone(java.time.ZoneId.systemDefault())));
+    sendConditionRequest.setMeasureDate(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX").format(measureDate.toInstant().atZone(java.time.ZoneId.systemDefault())));
     // 後体重セット
     sendConditionRequest.setWeightValue(checkScaleParam.getAfterWeight());
 
@@ -841,14 +847,23 @@ public class ScaleBedServiceImpl implements ScaleBedService{
             break;
           case 2: // ベッド名
             mainContent = cp.getPrintParameter().getBedName();
+            // #11146 2026.06.08 mod データがない場合は全角スペース４文字を出力する TDC米沢 start
+            mainContent = (StringUtils.isNotEmpty(mainContent) ? mainContent: "　　　　");
+            // #11146 2026.06.08 mod データがない場合は全角スペース４文字を出力する TDC米沢 end
             row.put("value", before_word + (mainContent == null ? "" : mainContent) + after_word);
             break;
           case 3: // 患者ID(院内)
             mainContent = cp.getPrintParameter().getHospPatId();
+            // #11146 2026.06.08 mod データがない場合は全角スペース４文字を出力する TDC米沢 start
+            mainContent = (StringUtils.isNotEmpty(mainContent) ? mainContent: "　　　　");
+            // #11146 2026.06.08 mod データがない場合は全角スペース４文字を出力する TDC米沢 end
             row.put("value", before_word + (mainContent == null ? "" : mainContent) + after_word);
             break;
           case 4: // 患者名
             mainContent = cp.getPrintParameter().getPatName();
+            // #11146 2026.06.08 mod データがない場合は全角スペース４文字を出力する TDC米沢 start
+            mainContent = (StringUtils.isNotEmpty(mainContent) ? mainContent: "　　　　");
+            // #11146 2026.06.08 mod データがない場合は全角スペース４文字を出力する TDC米沢 end
             row.put("value", before_word + mainContent + after_word);
             break;
           case 5: // 透析時間

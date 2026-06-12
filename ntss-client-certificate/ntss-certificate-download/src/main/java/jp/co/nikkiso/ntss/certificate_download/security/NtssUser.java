@@ -17,7 +17,7 @@ public class NtssUser extends User {
   /**
    * serialVersionUID
    */
-  private static final long serialVersionUID = SpringSecurityCoreVersion.SERIAL_VERSION_UID;
+//  private static final long serialVersionUID = SpringSecurityCoreVersion.SERIAL_VERSION_UID;
 
   /**
    * ユーザータイプ.

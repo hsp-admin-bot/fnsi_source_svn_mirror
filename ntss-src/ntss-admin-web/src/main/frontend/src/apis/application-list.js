@@ -43,8 +43,8 @@ export function sendRequestGetAll(condition, page = null, perPage = null) {
  * @param {Object} subscriptionNo 申込番号
  */
 export function sendUpdateReception(subscriptionNo) {
-  let subscriptionStatus = {
-    "subscriptionStatus": "1"
+  const subscriptionStatus = {
+    subscriptionStatus: "1"
   };
   return putWithLoader(`${functionName}/updateReception/${subscriptionNo}`, subscriptionStatus);
 }
@@ -54,8 +54,8 @@ export function sendUpdateReception(subscriptionNo) {
  * @param {Object} subscriptionNo 申込番号
  */
 export function sendUpdateCompletion(subscriptionNo) {
-  let subscriptionStatus = {
-    "subscriptionStatus": "2"
+  const subscriptionStatus = {
+    subscriptionStatus: "2"
   };
   return putWithLoader(`${functionName}/updateCompletion/${subscriptionNo}`, subscriptionStatus);
 }
@@ -65,8 +65,8 @@ export function sendUpdateCompletion(subscriptionNo) {
  * @param {Object} subscriptionNo 申込番号
  */
 export function sendUpdateCancel(subscriptionNo) {
-  let subscriptionStatus = {
-    "subscriptionStatus": "9"
+  const subscriptionStatus = {
+    subscriptionStatus: "9"
   };
   return putWithLoader(`${functionName}/updateCancel/${subscriptionNo}`, subscriptionStatus);
 }

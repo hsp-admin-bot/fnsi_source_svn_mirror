@@ -2,10 +2,10 @@ package batch.listener;
 
 import batch.part.PsqlCopyUtils;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.StepExecutionListener;
-import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.core.listener.StepExecutionListener;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

@@ -15,8 +15,8 @@ import { MstPrinter } from "@/models/report/MstPrinter";
 import store from "@/stores";
 import ReportParameterDefs from "@/stores/report-parameter-defs.json";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
-import ons from "onsenui";
-// add #10633 【たくしん会】【因島】帳票のフォント問題 高　start
+import { showAlertDialog } from "@/functions/common/OnsenFunctions";
+// add #10633 【たくしん会】【因島】帳票のフォント問題 高 start
 import {ApiHelper} from "@/apis/AxiosHelper";
 import {
   extractFontsFromSVG,
@@ -24,7 +24,7 @@ import {
   replaceUnavailableFonts,
   findFirstAvailableFont
 } from "@/stores/fontUtils";
-// add #10633 【たくしん会】【因島】帳票のフォント問題 高　end
+// add #10633 【たくしん会】【因島】帳票のフォント問題 高 end
 const REPORT_PARAMETER_ITEMS =
   ReportParameterDefs.report_parameter_defs.report_parameter_items;
 const PRINT_ERROR_MESSAGE = "帳票の出力に失敗しました。";
@@ -154,12 +154,11 @@ export default {
      * @param {*} reportParam 帳票パラメータオブジェクト
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     getReportHTML({ commit }, reportParam) {
       return sendRequestCreatingReport(reportParam)
         .catch(error => {
           if (error.response.status === 400) {
-            ons.notification.alert({
+            showAlertDialog({
               title: null,
               message: PRINT_ERROR_MESSAGE
             });
@@ -175,32 +174,36 @@ export default {
      * @param {Boolean} previewFlg プレビューフラグ
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
-    getReportHTMLByReportCd({ commit, state }, previewFlg) {
+    getReportHTMLByReportCd({ commit, state, rootGetters }, previewFlg) {
       const reportParam = {
         ...state.createReportParam.reportParam,
         isPreview: previewFlg
       };
+      const dataKey = state.createReportParam?.reportParam?.dataKey;
+      const selectedPatId =
+        (dataKey && (dataKey.patId ?? dataKey.pat_id)) ??
+        rootGetters["pat-info/selectedPatId"];
       return sendRequestCreatingReportByCd(
         state.createReportParam.reportCd,
-        reportParam
+        reportParam,
+        selectedPatId
       )
         // add #9558 機能帳票で正しく変数が引き渡されていない 高 start
-        // mod #10633 【たくしん会】【因島】帳票のフォント問題 高　start
+        // mod #10633 【たくしん会】【因島】帳票のフォント問題 高 start
         // .then(response => {
         .then(async response => {
           // mod #10633 【たくしん会】【因島】帳票のフォント問題 高 end
           // Check if response status is 200 and data is 'レイアウトがありません'
           if (response.status === 200 && response.data === 'レイアウトがありません') {
             store.dispatch("multi-modal/hideModal");
-            ons.notification.alert({
+            showAlertDialog({
               title: "エラー",
               message: response.data
             });
           }
           else if (response.status === 200 && response.data === '選択中のレイアウト用ではありません') {
             store.dispatch("multi-modal/hideModal");
-            ons.notification.alert({
+            showAlertDialog({
               title: "帳票選択エラー",
               message: response.data
             });
@@ -217,7 +220,7 @@ export default {
             if (commaIndex !== -1) {
               substringAfterComma = mes.substring(commaIndex + 1).trim();
             }
-            ons.notification.alert({
+            showAlertDialog({
               title: "エラー",
               message: "指定の条件では帳票の最大出力ページ数を超えるため出力できません（"+ substringAfterComma +"／100 ページ）"
             });
@@ -226,12 +229,12 @@ export default {
           // add #11100 【総合検証NG】装置帳票＞定期点検（日常点検記録簿、定期点検記録簿）のプレビューができない。 limingzhe start
           if (response.status === 200 && response.data === 'テンプレートがない') {
             store.dispatch("multi-modal/hideModal");
-            ons.notification.alert({
+            showAlertDialog({
               title: "エラー",
               message: "テンプレートが見つかりません、ご確認ください。"
             });
           }
-          // add #10633 【たくしん会】【因島】帳票のフォント問題 高　start
+          // add #10633 【たくしん会】【因島】帳票のフォント問題 高 start
           let responseFonts = await ApiHelper.post("/report_menu/getSysFontsConfig");
           const fontFallbackRules = responseFonts.data;
           const fonts = extractFontsFromSVG(response.data?.reportHtml)
@@ -247,7 +250,7 @@ export default {
           if(response.data && response.data.reportHtml){
             response.data.reportHtml = replaceUnavailableFonts(response.data.reportHtml, fallbackMap);
           }
-          // add #10633 【たくしん会】【因島】帳票のフォント問題 高　end
+          // add #10633 【たくしん会】【因島】帳票のフォント問題 高 end
           // add #11100 【総合検証NG】装置帳票＞定期点検（日常点検記録簿、定期点検記録簿）のプレビューができない。 limingzhe end
           return response; // Ensure the response is returned for further processing if needed
         })
@@ -255,13 +258,13 @@ export default {
         .catch(error => {
           if (error.response.status === 400) {
             //del FSNI修正外結バッグ35 房 start
-            // ons.notification.alert({
+            // showAlertDialog({
             //   title: null,
             //   message: PRINT_ERROR_MESSAGE
             // });
             //del FSNI修正外結バッグ35 房 end
             // add #12107 帳票印刷失敗通知が行われない limingzhe start
-            ons.notification.alert({
+            showAlertDialog({
               title: DIALOG_MESSAGES[12000207].title,
               message: DIALOG_MESSAGES[12000207].message
             });
@@ -270,7 +273,7 @@ export default {
           }
           // add #12107 帳票印刷失敗通知が行われない limingzhe 20251114 start
           else if (error.response.status === 500 && reportParam.dataKey.functionCd != null) {
-            ons.notification.alert({
+            showAlertDialog({
               title: DIALOG_MESSAGES["00200002"].title,
               message: DIALOG_MESSAGES["00200002"].message
             });
@@ -280,7 +283,7 @@ export default {
           //add #9113 【IES起票】データ画面にて機能帳票でブレビューを押下するとエラーがでる liuc start
           else if (error.response.status === 501) {
             store.dispatch("multi-modal/hideModal");
-            ons.notification.alert({
+            showAlertDialog({
               title: "帳票選択エラー",
               message: error.response.data
             });
@@ -327,7 +330,7 @@ export default {
             ...reportParam
           }).catch(error => {
             if (error.response.status === 400) {
-              ons.notification.alert({
+              showAlertDialog({
                 title: null,
                 message: PRINT_ERROR_MESSAGE
               });
@@ -342,7 +345,7 @@ export default {
             ...reportParam
           }).catch(error => {
             if (error.response.status === 400) {
-              ons.notification.alert({
+              showAlertDialog({
                 title: null,
                 message: PRINT_ERROR_MESSAGE
               });
@@ -360,7 +363,7 @@ export default {
     // mod FNSI-#522、IES364 選択された機能により、対象の帳票を表示する。 夏 start
     //getMstReport({ commit }, funcCd) {
       //return sendRequestGetMstReport(funcCd).then(response => {
-    getMstReport({ commit }, {funcCd, printFlag, autoRefreshFlag}) {
+    getMstReport({ commit }, {funcCd, printFlag, autoRefreshFlag, selectedPatId}) {
       // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 start
       if(funcCd!="01301") {
         if(funcCd == "02301"){
@@ -371,7 +374,7 @@ export default {
            funcCd = "02303"
         }
      // add #10697 機能帳票マスタで画面に必要な帳票種別が設定できない＆画面の機能帳票リストに出てこない 杜天成 end
-      return sendRequestGetMstReport(funcCd, printFlag, autoRefreshFlag).then(response => {
+      return sendRequestGetMstReport(funcCd, printFlag, autoRefreshFlag, selectedPatId).then(response => {
     // mod FNSI-#522、IES364 選択された機能により、対象の帳票を表示する。 夏 end
         commit(
           "setMstReports",
@@ -446,7 +449,6 @@ export default {
      * @param {*} params.extractionCondition 抽出条件
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     getDataKey: state => params => {
       let dataKey = {};
       // dataKeyの設定 設定できる項目はすべて設定

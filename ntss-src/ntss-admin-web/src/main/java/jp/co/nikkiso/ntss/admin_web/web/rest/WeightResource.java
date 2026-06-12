@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Treatment;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
@@ -58,6 +58,7 @@ import jp.co.nikkiso.ntss.core.dao.MstMachineDao;
 import jp.co.nikkiso.ntss.core.dao.MstReportDao;
 import jp.co.nikkiso.ntss.core.dao.MstTreatmentDao;
 import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
+import jp.co.nikkiso.ntss.core.dao.OrdWeightScaleDao;
 import jp.co.nikkiso.ntss.core.dao.PatPersonalMainDao;
 import jp.co.nikkiso.ntss.core.entity.MntMachineState;
 import jp.co.nikkiso.ntss.core.entity.MstBed;
@@ -118,6 +119,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 
 @RestController
@@ -142,6 +144,8 @@ public class WeightResource {
   // add 2020-11/10 FNSI-改修内容:カード作成場合、カードIDの変更（pat_id⇒hosp_pat_id） 孫 end
   @Autowired
   private OrdMainDao ordMainDao;
+  @Autowired
+  private OrdWeightScaleDao ordWeightScaleDao;
 
   // #10833 2024.08.08 del static変数削除 TDC米沢 start
   // // add #7189 【デグレ】条件送信時、サーマルプリンターで印字されない 王永吉 start
@@ -301,6 +305,12 @@ public class WeightResource {
       eventLogMessage.setLogMessage("getKur : not facilityCd param, use ntssUser facilityCd");
       logService.log(LogLevel.INFO, eventLogMessage, "", SERVICE_NAME.FNSI, null);
       facilityCd = ntssUser.getFacilityCd();
+    } else if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "excludeDialysisRoom=" + excludeDialysisRoom + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
     }
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/kur-bed-list/" + excludeDialysisRoom;
@@ -425,7 +435,18 @@ public class WeightResource {
    */
   @GetMapping("order/{ordNo}")
   public ResponseEntity<?> getOrder(
-    @PathVariable Long ordNo) {
+    @PathVariable Long ordNo,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasOrdAccess(ntssUser, ordNo)) {
+      // #11205 mod 20260421 start
+      OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+      if (ordMain != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "patId=" + ordMain.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
     // NOTE: ord_mainをord_noで取得する
     // 後体重の場合や透析中でも条件送信画面で表示できるので、指示だけや実績だけを返したりしない
 
@@ -452,7 +473,22 @@ public class WeightResource {
    * @return
    */
   @GetMapping("order/check/{ordNo}/{ordNos}")
-  public ResponseEntity<?> getChkIndCondInfoData(@PathVariable Long ordNo, @PathVariable Long ordNos) {
+  public ResponseEntity<?> getChkIndCondInfoData(@PathVariable Long ordNo, @PathVariable Long ordNos,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasOrdAccess(ntssUser, ordNo) || !hasOrdAccess(ntssUser, ordNos)) {
+      // #11205 mod 20260421 start
+      OrdMain ordMain1 = ordMainDao.selectByOrdNo(ordNo);
+      OrdMain ordMain2 = ordMainDao.selectByOrdNo(ordNos);
+      if (ordMain1 != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain1.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "patId=" + ordMain1.getPatId() + " " + "ordNos=" + ordNos + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      } else if (ordMain2 != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain2.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "ordNos=" + ordNos + " " + "patId=" + ordMain2.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/order/check";
@@ -514,6 +550,13 @@ public class WeightResource {
   public ResponseEntity<?> getNoOrder(
     @AuthenticationPrincipal NtssUser ntssUser,
     @PathVariable Long patId) {
+    if (!hasPatAccess(ntssUser, patId)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + patId + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
     // NOTE: ord_mainをpat_idで取得する
     // 後体重の場合や透析中でも条件送信画面で表示できるので、指示だけや実績だけを返したりしない
 
@@ -549,7 +592,20 @@ public class WeightResource {
   }
 
   @GetMapping("last/history/{ordNo}/{scaleClass}")
-  public ResponseEntity<?> lastWeightScale(@PathVariable Long ordNo, @PathVariable Short scaleClass) {
+  public ResponseEntity<?> lastWeightScale(
+    @PathVariable Long ordNo,
+    @PathVariable Short scaleClass,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasOrdAccess(ntssUser, ordNo)) {
+      // #11205 mod 20260421 start
+      OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+      if (ordMain != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "patId=" + ordMain.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/last/history";
@@ -565,7 +621,16 @@ public class WeightResource {
   }
 
   @GetMapping("last/history/no_schedule/{patId}")
-  public ResponseEntity<?> lastScaleNoSchedule(@PathVariable Long patId) {
+  public ResponseEntity<?> lastScaleNoSchedule(
+    @PathVariable Long patId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasPatAccess(ntssUser, patId)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + patId + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/last/history/no_schedule";
@@ -581,7 +646,19 @@ public class WeightResource {
   }
 
   @GetMapping("target/history/{weightScaleNo}")
-  public ResponseEntity<?> targetWeightScale(@PathVariable Long weightScaleNo) {
+  public ResponseEntity<?> targetWeightScale(
+    @PathVariable Long weightScaleNo,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasWeightScaleAccess(ntssUser, weightScaleNo)) {
+      // #11205 mod 20260421 start
+      OrdWeightScale ordWeightScale = ordWeightScaleDao.selectByCd(weightScaleNo);
+      if (ordWeightScale != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordWeightScale.getFacilityCd() + " " + "weightScaleNo=" + weightScaleNo + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/target/history";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -606,7 +683,18 @@ public class WeightResource {
   @GetMapping("get_last_rst_weight/{ordNo}/{previousWeightSourceClass}")
   public ResponseEntity<?> getLastRstWeight(
     @PathVariable Long ordNo,
-    @PathVariable Integer previousWeightSourceClass) {
+    @PathVariable Integer previousWeightSourceClass,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasOrdAccess(ntssUser, ordNo)) {
+      // #11205 mod 20260421 start
+      OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+      if (ordMain != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "patId=" + ordMain.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/get_last_rst_weight";
@@ -646,7 +734,15 @@ public class WeightResource {
   @GetMapping("get_last_rst_weight_pat/{patId}/{previousWeightSourceClass}")
   public ResponseEntity<?> getLastRstWeightPat(
     @PathVariable Long patId,
-    @PathVariable Integer previousWeightSourceClass) {
+    @PathVariable Integer previousWeightSourceClass,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasPatAccess(ntssUser, patId)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + patId + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/get_last_rst_weight_pat";
@@ -687,7 +783,15 @@ public class WeightResource {
   public ResponseEntity<?> getWeightByTreatDate(
     @PathVariable Long patId,
     @PathVariable Integer previousWeightSourceClass,
-    @PathVariable String treatDate) {
+    @PathVariable String treatDate,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasPatAccess(ntssUser, patId)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + patId + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/get_weight_by_treatdate";
@@ -732,8 +836,16 @@ public class WeightResource {
       @PathVariable Long patId,
       @PathVariable String ordClass,
       @PathVariable String treatDate,
-      @PathVariable String treatTime
+      @PathVariable String treatTime,
+      @AuthenticationPrincipal NtssUser ntssUser
     ){
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "patId=" + patId + " " + "ordClass=" + ordClass + " " + "treatDate=" + treatDate + " " + "treatTime=" + treatTime + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     String mappingUrl = Uri.WEIGHT + "/getWeightByTreatDateAndOrdClass";
     logEventUtils.resourceLogOutput(
@@ -762,8 +874,16 @@ public class WeightResource {
   @GetMapping("/getWeightByPatIds/{facilityCd}/{patIds}")
   public ResponseEntity<?> getWeightByPatIds(
     @PathVariable String facilityCd,
-    @PathVariable String patIds
+    @PathVariable String patIds,
+    @AuthenticationPrincipal NtssUser ntssUser
   ){
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "patIds=" + patIds + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
     String ordClass = "2"; // 検査タイミング「2：透析後」
     String treatDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
     String mappingUrl = Uri.WEIGHT + "/getWeightByPatIds";
@@ -793,6 +913,20 @@ public class WeightResource {
     , @AuthenticationPrincipal NtssUser user
     // add #10553 ④装置設定＞風袋・除水補正にて指示への展開保存をした場合には、変更された治療予定毎の連携イベントが必要 piao end
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!user.isNkkAdminUser()) {
+      OrdMain checkOrdMain = ordMainDao.selectByOrdNo(request.getOrdNo());
+      if (checkOrdMain != null && !user.getFacilityCd().equals(checkOrdMain.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + user.getFacilityCd() + " " + "facilityCd=" + checkOrdMain.getFacilityCd() + " " + "ordNo=" + request.getOrdNo() + " " + "patId=" + checkOrdMain.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        SendConditionResponse res = new SendConditionResponse();
+        res.errorMessage = "セキュリティチェックの例外!";
+        return new ResponseEntity<>(res, HttpStatus.FORBIDDEN);
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/order/update/tare";
@@ -865,6 +999,20 @@ public class WeightResource {
     , @AuthenticationPrincipal NtssUser user
     // add #10553 ④装置設定＞風袋・除水補正にて指示への展開保存をした場合には、変更された治療予定毎の連携イベントが必要 piao end
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!user.isNkkAdminUser()) {
+      OrdMain checkOrdMain = ordMainDao.selectByOrdNo(request.getOrdNo());
+      if (checkOrdMain != null && !user.getFacilityCd().equals(checkOrdMain.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + user.getFacilityCd() + " " + "facilityCd=" + checkOrdMain.getFacilityCd() + " " + "ordNo=" + request.getOrdNo() + " " + "patId=" + checkOrdMain.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        SendConditionResponse res = new SendConditionResponse();
+        res.errorMessage = "セキュリティチェックの例外!";
+        return new ResponseEntity<>(res, HttpStatus.FORBIDDEN);
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/order/update/off_water";
@@ -934,6 +1082,22 @@ public class WeightResource {
   @PostMapping("/save_weight_and_chair")
   public ResponseEntity<?> postSaveWeightAndChair(@RequestBody SendConditionRequest request,
                                                   @AuthenticationPrincipal NtssUser ntssUser) {
+    if ((request.getOrdNo() != null && !hasOrdAccess(ntssUser, request.getOrdNo()))
+      || (request.getPatId() != null && !hasPatAccess(ntssUser, request.getPatId()))) {
+      // #11205 mod 20260421 start
+      if (request.getOrdNo() != null) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(request.getOrdNo());
+        if (ordMain != null) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + request.getOrdNo() + " " + "patId=" + ordMain.getPatId() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        }
+      } else if (request.getPatId() != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + request.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/save_weight_and_chair";
@@ -996,6 +1160,22 @@ public class WeightResource {
   @PostMapping("/save_chair")
   public ResponseEntity<?> postChair(@RequestBody SendConditionRequest request,
                                      @AuthenticationPrincipal NtssUser ntssUser) {
+    if ((request.getOrdNo() != null && !hasOrdAccess(ntssUser, request.getOrdNo()))
+      || (request.getPatId() != null && !hasPatAccess(ntssUser, request.getPatId()))) {
+      // #11205 mod 20260421 start
+      if (request.getOrdNo() != null) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(request.getOrdNo());
+        if (ordMain != null) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + request.getOrdNo() + " " + "patId=" + ordMain.getPatId() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        }
+      } else if (request.getPatId() != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + request.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/save_chair";
@@ -1060,6 +1240,22 @@ public class WeightResource {
   public ResponseEntity<?> postSendCondition(
     @RequestBody SendConditionRequest request,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    if ((request.getOrdNo() != null && !hasOrdAccess(ntssUser, request.getOrdNo()))
+      || (request.getPatId() != null && !hasPatAccess(ntssUser, request.getPatId()))) {
+      // #11205 mod 20260421 start
+      if (request.getOrdNo() != null) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(request.getOrdNo());
+        if (ordMain != null) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + request.getOrdNo() + " " + "patId=" + ordMain.getPatId() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        }
+      } else if (request.getPatId() != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + request.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("条件送信処理開始 facilityCd:[" + ntssUser.getFacilityCd() + "] patId:[" + request.getPatId() + "] ordNo[" + request.getOrdNo() + "]");
@@ -1966,6 +2162,22 @@ public class WeightResource {
   public ResponseEntity<?> postNoSendCondition(
     @RequestBody SendConditionRequest request,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    if ((request.getOrdNo() != null && !hasOrdAccess(ntssUser, request.getOrdNo()))
+      || (request.getPatId() != null && !hasPatAccess(ntssUser, request.getPatId()))) {
+      // #11205 mod 20260421 start
+      if (request.getOrdNo() != null) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(request.getOrdNo());
+        if (ordMain != null) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + request.getOrdNo() + " " + "patId=" + ordMain.getPatId() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        }
+      } else if (request.getPatId() != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + request.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/no_send_condition";
@@ -2051,6 +2263,22 @@ public class WeightResource {
   public ResponseEntity<?> postSaveMeasure(
     @RequestBody SendConditionRequest request,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    if ((request.getOrdNo() != null && !hasOrdAccess(ntssUser, request.getOrdNo()))
+      || (request.getPatId() != null && !hasPatAccess(ntssUser, request.getPatId()))) {
+      // #11205 mod 20260421 start
+      if (request.getOrdNo() != null) {
+        OrdMain ordMain = ordMainDao.selectByOrdNo(request.getOrdNo());
+        if (ordMain != null) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + request.getOrdNo() + " " + "patId=" + ordMain.getPatId() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        }
+      } else if (request.getPatId() != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + request.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/save_measure";
@@ -2170,7 +2398,18 @@ public class WeightResource {
   public ResponseEntity<?> postSendAfterWEight(
     @RequestBody SendConditionRequest request,
     @AuthenticationPrincipal NtssUser ntssUser) {
-
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain ordMain = ordMainDao.selectRstDialysisState(request.getOrdNo());
+      if (ordMain.getFacilityCd() != null && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        // #11205 mod 20260421 start
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + request.getOrdNo() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        // #11205 mod 20260421 end
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/send_afterweight";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -2416,6 +2655,16 @@ public class WeightResource {
   public ResponseEntity<?> puSavedAfterWEight(
     @RequestBody SendConditionRequest request,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      OrdMain ordMain = ordMainDao.selectByOrdNo(request.getOrdNo());
+      if (ordMain != null && !ntssUser.getFacilityCd().equals(ordMain.getFacilityCd())) {
+        SendConditionResponse res = new SendConditionResponse();
+        res.errorMessage = "セキュリティチェックの例外!";
+        return new ResponseEntity<>(res, HttpStatus.BAD_REQUEST);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/saved-after-weight";
@@ -2581,7 +2830,15 @@ public class WeightResource {
     @PathVariable String facilityCd,
     @PathVariable Long patId,
     @PathVariable String treatDate,
-    @PathVariable Integer previousWeightSourceClass) {
+    @PathVariable Integer previousWeightSourceClass,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasFacilityAccess(ntssUser, facilityCd) || !hasPatAccess(ntssUser, patId)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "patId=" + patId + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/history";
@@ -2628,6 +2885,13 @@ public class WeightResource {
   public ResponseEntity<?> fetchExamInfoForPrinter(
     @RequestBody PatExamPrintRequest request,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    if (request.getPatId() != null && !hasPatAccess(ntssUser, request.getPatId())) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + request.getPatId() + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
     // FNSI-add redmine4656 徐 end
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/pat-exam/print";
@@ -2678,7 +2942,17 @@ public class WeightResource {
    * @return
    */
   @GetMapping("/card_idm/{facilityCd}/{hospPatId}")
-  public ResponseEntity<?> getCardIdm(@PathVariable String facilityCd, @PathVariable String hospPatId) {
+  public ResponseEntity<?> getCardIdm(
+    @PathVariable String facilityCd,
+    @PathVariable String hospPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.WEIGHT + "/card_idm";
@@ -2768,7 +3042,19 @@ public class WeightResource {
    * @return
    */
   @GetMapping("order/hasSameOrd/{ordNo}")
-  public ResponseEntity<?> hasSameOrd(@PathVariable Long ordNo) {
+  public ResponseEntity<?> hasSameOrd(
+    @PathVariable Long ordNo,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasOrdAccess(ntssUser, ordNo)) {
+      // #11205 mod 20260421 start
+      OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+      if (ordMain != null) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + ordNo + " " + "patId=" + ordMain.getPatId() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      }
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
     // 同患者，同日，同クールでの治療は，透析＋特殊浄化または特殊浄化＋特殊浄化のみ許可している。透析＋透析は許可していない。
     String mappingUrl = Uri.WEIGHT + "/order/hasSameOrd";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -2871,4 +3157,34 @@ public class WeightResource {
     saveNotiMessage(jsonBody);
   }
   // add #9616 帳票印刷失敗通知がされない 高 2024/01/25　end
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    return ntssUser != null && ntssUser.getFacilityCd() != null && ntssUser.getFacilityCd().equals(facilityCd);
+  }
+
+  private boolean hasPatAccess(NtssUser ntssUser, Long patId) {
+    if (ntssUser == null || patId == null) {
+      return false;
+    }
+    PatPersonalMain patPersonalMain = patPersonalMainDao.selectById(patId);
+    return patPersonalMain == null || patPersonalMain.getFacility_cd() == null
+      || patPersonalMain.getFacility_cd().equals(ntssUser.getFacilityCd());
+  }
+
+  private boolean hasWeightScaleAccess(NtssUser ntssUser, Long weightScaleNo) {
+    if (ntssUser == null || weightScaleNo == null) {
+      return false;
+    }
+    OrdWeightScale ordWeightScale = ordWeightScaleDao.selectByCd(weightScaleNo);
+    return ordWeightScale == null || ordWeightScale.getFacilityCd() == null
+      || ordWeightScale.getFacilityCd().equals(ntssUser.getFacilityCd());
+  }
+
+  private boolean hasOrdAccess(NtssUser ntssUser, Long ordNo) {
+    if (ntssUser == null) {
+      return false;
+    }
+    OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
+    return ordMain == null || ordMain.getFacilityCd() == null || ordMain.getFacilityCd().equals(ntssUser.getFacilityCd());
+  }
+
 }

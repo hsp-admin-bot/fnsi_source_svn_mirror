@@ -34,9 +34,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.PropertyNamingStrategies;
 import com.google.common.base.Strings;
 import com.mongodb.client.result.UpdateResult;
 
@@ -125,10 +125,14 @@ public class IndHistoryServiceImpl implements IndHistoryService {
      * 以下はEntityの非nullフィールドをクエリ条件として処理する
      */
     Iterator<Map.Entry<String, JsonNode>> iter = new ObjectMapper()
-      .setSerializationInclusion(Include.NON_NULL)
-      .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE)
+      .rebuild()
+      .changeDefaultPropertyInclusion(inclusion ->
+        com.fasterxml.jackson.annotation.JsonInclude.Value.construct(Include.NON_NULL, Include.NON_NULL))
+      .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+      .build()
       .valueToTree(params)
-      .fields();
+      .properties()
+      .iterator();
     Map.Entry<String, JsonNode> curr = null;
 
     while (iter.hasNext()) {
@@ -164,9 +168,12 @@ public class IndHistoryServiceImpl implements IndHistoryService {
      */
     if(!StringUtils.isEmpty(options.getSearchString())) {
       iter = new ObjectMapper()
-        .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE)
+        .rebuild()
+        .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+        .build()
         .valueToTree(params)
-        .fields();
+        .properties()
+        .iterator();
       curr = null;
 
       while (iter.hasNext()) {
@@ -861,6 +868,13 @@ public class IndHistoryServiceImpl implements IndHistoryService {
 	@Override
   @Transactional
 	public boolean updateIndHistoryInDetailScreen(List<IndDetailUpdateCondition> params) {
+		return updateIndHistoryInDetailScreen(params, null);
+	}
+
+	// #11205 -ペンテスト2－4認可制御の不備  add 20260427 start
+	@Override
+  @Transactional
+	public boolean updateIndHistoryInDetailScreen(List<IndDetailUpdateCondition> params, String facilityCd) {
 		Update update;
 		Query query;
 		boolean result = true;
@@ -894,6 +908,9 @@ public class IndHistoryServiceImpl implements IndHistoryService {
 //			query.addCriteria(Criteria.where("_id").is(item.get_id()));
 			// 元のクエリー方式ではデータをクエリーできず、新しい方法に変更されました
 			query.addCriteria(Criteria.where("_id").in(new ObjectId(item.get_id())));
+			if (!Strings.isNullOrEmpty(facilityCd)) {
+				query.addCriteria(Criteria.where("facility_cd").is(facilityCd));
+			}
 			//query.addCriteria(Criteria.where(keyColumn).in(null, EMPTY));
 			/*del #9506 横展開対応、dengjunyi end*/
 			/* modify by chamaojia 2023-07-08 指示受け画面：指示単位表示の場合、指示受け画面内容は表示されません  --end */
@@ -921,4 +938,5 @@ public class IndHistoryServiceImpl implements IndHistoryService {
 		/* upd EOL対応内部 #7010 by ztc 2023-07-10 --start */
 		return result;
 	}
+	// #11205 -ペンテスト2－4認可制御の不備  add 20260427 end
 }

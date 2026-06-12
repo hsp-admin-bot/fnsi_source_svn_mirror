@@ -1,6 +1,6 @@
 module.exports = function (RED) {
   "use strict";
-  var chokidar = require("chokidar");
+  var chokidarModule = import("chokidar");
   var fs = require("fs");
   var path = require("path");
 
@@ -15,14 +15,23 @@ module.exports = function (RED) {
     var excludeList = JSON.parse(fs.readFileSync(__dirname + '/exclude.json', 'utf8'));
 
     // ノードからmessageを受け取ったとき
-    this.on("input", function (msg) {
+    this.on("input", async function (msg) {
       // 
+      var chokidar = await chokidarModule;
       var files = (node.files || msg.files || "");
-      var filenames = files.split(',');
+      var filenames = files.split(',').map(function (file) {
+        return file.trim();
+      }).filter(function (file) {
+        return file !== "";
+      });
 
       node.log("[watch process start]" + " [ " + msg.datatype + " : " + msg.ope_cd + " ]");
       for (let i = 0; i < filenames.length; i++) {
         node.log("[target name] : [ " + filenames[i] + " ]");
+      }
+
+      if (watcher !== null) {
+        await watcher.close();
       }
 
       watcher = chokidar.watch(filenames, {
@@ -41,15 +50,23 @@ module.exports = function (RED) {
           node.log("added file [" + path.basename(chokipath) + "] was ignored because it matched the exclusion list");
         }
       });
+    });
 
-      this.on('close', function () {
-        // コネクションの切断など、全ての非同期コードの後片付けをここで行う
-        watcher.close();
+    this.on('close', function (done) {
+      var finish = typeof done === "function" ? done : function () {};
+      // コネクションの切断など、全ての非同期コードの後片付けをここで行う
+      if (watcher === null) {
+        finish();
+        return;
+      }
+      watcher.close().then(function () {
+        watcher = null;
+        finish();
+      }).catch(function (err) {
+        finish(err);
       });
-
     });
   }
 
   RED.nodes.registerType("custom-file-watch", CustomFileWatch);
 }
-

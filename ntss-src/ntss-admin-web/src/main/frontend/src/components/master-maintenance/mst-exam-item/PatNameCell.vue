@@ -6,12 +6,13 @@
 </template>
 
 <script>
+import nameDuplicationImg from "@/assets/name_duplication.png";
 export default {
   name: "PatNameCell",
   data() {
     return {
       templateArgs: {},
-      imgSrc: require("@/assets/name_duplication.png"),
+      imgSrc: nameDuplicationImg,
     };
   },
 };

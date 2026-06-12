@@ -12,13 +12,15 @@ End Sub
 
 If Err.Number = 0 Then
   Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'FNWSiAccessCardTool.exe'")
-  If oItems.Count = 0 Then
-    Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'NKKAccessCardTool.exe'")
-  End If
   For Each oProc In oItems
     uRet = oProc.Terminate(0)
   Next
   ForceKillProcess "FNWSiAccessCardTool.exe"
+
+  Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'NKKAccessCardTool.exe'")
+  For Each oProc In oItems
+    uRet = oProc.Terminate(0)
+  Next
   ForceKillProcess "NKKAccessCardTool.exe"
 
   Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'NKKAccessCardApp.exe'")

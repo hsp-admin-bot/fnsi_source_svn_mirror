@@ -1,9 +1,9 @@
 package jp.co.nikkiso.ntss.api.service.PatMainDeviceSetInfo;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.api.response.wheelChair.WheelChairWithNameResponse;
 import jp.co.nikkiso.ntss.api.service.LogService;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
@@ -71,7 +71,7 @@ import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.EventLoggerFactory;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.utils.MongoHealthCheckService;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.seasar.doma.jdbc.Config;
@@ -101,6 +101,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 // add #11309 患者グループ編集時、特定条件で保存ボタンが活性化しない ztc 20241212 end
 import java.util.stream.Collectors;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -202,6 +203,10 @@ public class PatMainDeviceSetInfoServiceImpl implements PatMainDeviceSetInfoServ
     // add #10245 マスタ変更時点で患者情報履歴テーブルの追加や更新をしていないため正しいデータを出力できない ztc 20240712 start
     @Autowired
     private PatGroupDao patGroupDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
     // add #10245 マスタ変更時点で患者情報履歴テーブルの追加や更新をしていないため正しいデータを出力できない ztc 20240712 end
 
     /**
@@ -350,7 +355,7 @@ public class PatMainDeviceSetInfoServiceImpl implements PatMainDeviceSetInfoServ
             wheres.append(" pat_id = '" + patId + "' and \n");
             wheres.append(" facility_cd = '" + facilityCd + "' \n");
             // logCommon設定
-            logCommon = getLogCommon(patMainDao, tableName, wheres, getEventLogMessage(userAuthInfo));
+            logCommon = getLogCommon(tableName, wheres, getEventLogMessage(userAuthInfo));
             // ログ出力カラム情報及び更新前データ情報取得
             setResult = logCommon.setInfo();
         } catch(Exception e) {
@@ -381,11 +386,11 @@ public class PatMainDeviceSetInfoServiceImpl implements PatMainDeviceSetInfoServ
      * ログ出力共通クラス設定、取得
      * @return logCommon ログ出力共通クラス
      */
-    private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+    private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
         DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
         logCommon.setEventLoggerFactory(eventLoggerFactory);
         logCommon.setLogServiceCore(logServiceCore);
-        logCommon.setConfig(Config.get(dao));
+        logCommon.setConfig(defaultDbConfig);
         logCommon.setTableName(tableName);
         logCommon.setWhereStr(whereStr);
         logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -459,7 +464,9 @@ public class PatMainDeviceSetInfoServiceImpl implements PatMainDeviceSetInfoServ
                     ObjectMapper mapper = new ObjectMapper();
                     // mod #10245 マスタ変更時点で患者情報履歴テーブルの追加や更新をしていないため正しいデータを出力できない ztc 20240712 end
                     // add #11159 特定の患者だけ患者情報編集時にエラーが発生する ztc 20241003 start
-                    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+                    mapper = mapper.rebuild()
+                            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                            .build();
                     // add #11159 特定の患者だけ患者情報編集時にエラーが発生する ztc 20241003 end
                     String patIdStr = patId.toString();
                     List<PatMain> patMainList = patMainDao.selectByFacilityCdPatId(facilityCd, patId);

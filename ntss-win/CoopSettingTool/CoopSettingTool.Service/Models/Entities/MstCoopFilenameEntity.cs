@@ -68,6 +68,15 @@ namespace CoopSettingTool.Service.Models
         public string FacilityCd { get; set; }
 
         /// <summary>
+        /// Gets or sets the coop version.
+        /// </summary>
+        /// <value>The coop version.</value>
+        [JsonProperty("coopVersion")]
+        [ReadOnly(true)]
+        [DisplayName("連携名")]
+        public string CoopVersion { get; set; }
+
+        /// <summary>
         /// Gets or sets the coop cd.
         /// </summary>
         /// <value>The coop cd.</value>
@@ -143,6 +152,19 @@ namespace CoopSettingTool.Service.Models
         public override int GetHashCode()
         {
             return (this.PdfName + this.DumpName + this.CompressionName + this.IsDel).GetHashCode();
+        }
+
+        /// <summary>
+        /// Determines whether the specified filename is similar.
+        /// </summary>
+        /// <param name="filename">The filename.</param>
+        /// <returns><c>true</c> if the specified filename is similar; otherwise, <c>false</c>.</returns>
+        public bool IsSimilar(MstCoopFilenameEntity filename)
+        {
+            return filename != null
+                && string.Equals(this.CoopCd, filename.CoopCd, StringComparison.Ordinal)
+                && string.Equals(this.CoopCdIndex, filename.CoopCdIndex, StringComparison.Ordinal)
+                && string.Equals(this.CoopVersion, filename.CoopVersion, StringComparison.Ordinal);
         }
     }
 }

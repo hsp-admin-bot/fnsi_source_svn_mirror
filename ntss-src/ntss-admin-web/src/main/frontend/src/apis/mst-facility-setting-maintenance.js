@@ -3,14 +3,11 @@
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
 
-/**
- * 参照先URL
- */
 const URL_BASE = "/master_maintenance/mst_facility_setting";
 
 /**
  * 施設設定一覧の取得
- * @param {*} facilityCd
+ * @param {string} facilityCd 施設コード
  */
 export function sendRequestGetMstFacilitySettingData(facilityCd) {
   return ApiHelper.get(`${URL_BASE}/${facilityCd}`);
@@ -24,11 +21,9 @@ export function sendRequestGetMstFacility() {
 }
 
 /**
- * sendRequestGetValueSignInByFacilityCd
- * @param {*} facilityCd 
+ * 施設別サインイン用設定値取得
+ * @param {string} facilityCd 施設コード
  */
 export function sendRequestGetValueSignInByFacilityCd(facilityCd) {
   return ApiHelper.get(`${URL_BASE}/get_value_signin/${facilityCd}`);
 }
-
-

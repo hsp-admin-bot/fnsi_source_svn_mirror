@@ -37,15 +37,15 @@
                     autocapitalize="off"
                     v-model="dispUserId"
                     ref="dispUserId"
-                    data-vv-as="ユーザーID"
-                    v-validate="'required|max: 12|alpha_num_symbol'"
+                    data-validation-label="ユーザーID"
+                    v-rules="'required|max: 12|alpha_num_symbol'"
                     @blur="checkDuplicated"
                     class="form-input"
                   />
                   <p
-                    v-show="errors.has('dispUserId')"
+                    v-show="hasValidationError('dispUserId')"
                     class="error-message"
-                  >{{ errors.first('dispUserId') }}</p>
+                  >{{ getValidationError('dispUserId') }}</p>
                   <!-- #10977 インジェクション対応 linjunfeng start -->
                   <!-- <p v-show="isDuplication" class="error-message" v-html="getStateMessage"></p> -->
                   <div v-show="isDuplication" class="error-message" v-for="(item, index) in getStateMessage.split('<br/>')" :key="index" >
@@ -70,8 +70,8 @@
                       @blur="checkMatchCurrentPassword"
                       float
                       v-model="userPasswordCurrent"
-                      data-vv-as="現在のパスワード"
-                      v-validate="'required|alpha_num_symbol|max:40'"
+                      data-validation-label="現在のパスワード"
+                      v-rules="'required|alpha_num_symbol|max:40'"
                       ref="current-password"
                       class="form-input"
                     />
@@ -98,17 +98,17 @@
                       @keyup.enter="setFocus('confirm-password')"
                       float
                       v-model="userPassword"
-                      data-vv-as="パスワード"
-                      v-validate="'required|alpha_num_symbol|max:40'"
+                      data-validation-label="パスワード"
+                      v-rules="'required|alpha_num_symbol|max:40'"
                       ref="password"
                       class="form-input"
                     />
                     <v-ons-icon icon="fa-eye" size="18px" class="password-eyeicon" @click="clickEyeIcon($event)"/>
                   </div>
                   <p
-                    v-show="errors.has('password')"
+                    v-show="hasValidationError('password')"
                     class="error-message"
-                  >{{ errors.first('password') }}</p>
+                  >{{ getValidationError('password') }}</p>
                 </td>
               </tr>
               <tr>
@@ -124,17 +124,17 @@
                       @keyup.enter="registration"
                       float
                       v-model="userPasswordConfirm"
-                      data-vv-as="確認パスワード"
-                      v-validate="'required|alpha_num_symbol|max:40|confirmed:password'"
+                      data-validation-label="確認パスワード"
+                      v-rules="'required|alpha_num_symbol|max:40|confirmed:password'"
                       ref="confirm-password"
                       class="form-input"
                     />
                     <v-ons-icon icon="fa-eye" size="18px" class="password-eyeicon" @click="clickEyeIcon($event)"/>
                   </div>
                   <p
-                    v-show="errors.has('confirm-password')"
+                    v-show="hasValidationError('confirm-password')"
                     class="error-message"
-                  >{{ errors.first('confirm-password') }}</p>
+                  >{{ getValidationError('confirm-password') }}</p>
                 </td>
               </tr>
 
@@ -153,8 +153,8 @@
                     autocapitalize="off"
                     v-model="dispUserLastName"
                     ref="dispUserLastName"
-                    data-vv-as="姓"
-                    v-validate="'required'"
+                    data-validation-label="姓"
+                    v-rules="'required'"
                     @blur="checkDuplicated"
                     class="form-input"
                   />
@@ -170,8 +170,8 @@
                     autocapitalize="off"
                     v-model="dispUserFirstName"
                     ref="dispUserFirstName"
-                    data-vv-as="姓"
-                    v-validate="'required'"
+                    data-validation-label="姓"
+                    v-rules="'required'"
                     @blur="checkDuplicated"
                     class="form-input"
                   />
@@ -182,13 +182,13 @@
                 </td>
                 <td valign="bottom" colspan="10">
                   <p
-                    v-show="errors.has('dispUserLastName')"
+                    v-show="hasValidationError('dispUserLastName')"
                     class="error-message"
-                  >{{ errors.first('dispUserLastName') }}</p>
+                  >{{ getValidationError('dispUserLastName') }}</p>
                   <p
-                    v-show="!errors.has('dispUserLastName') && errors.has('dispUserFirstName')"
+                    v-show="!hasValidationError('dispUserLastName') && hasValidationError('dispUserFirstName')"
                     class="error-message"
-                  >{{ errors.first('dispUserFirstName') }}</p>
+                  >{{ getValidationError('dispUserFirstName') }}</p>
                   <!-- #10977 インジェクション対応 linjunfeng start -->
                   <!-- <p v-show="isDuplication" class="error-message" v-html="getStateMessage"></p> -->
                   <div v-show="isDuplication" class="error-message" v-for="(item, index) in getStateMessage.split('<br/>')" :key="index" >
@@ -226,7 +226,7 @@
               name="personalInfoCheck"
               v-model="personalInfoCheck"
               ref="personalInfoCheck"
-              v-validate="'required:invalidateFalse'"
+              v-rules="'required:invalidateFalse'"
             />上記の個人情報取扱い規約について同意する
           </label>
           <br><br>
@@ -236,7 +236,7 @@
           <button
             class="button btn1-execute registration-btn form-input"
             @click="registration"
-            :disabled="errors.any() || !isComplete || isDuplication"
+            :disabled="hasAnyValidationError || !isComplete || isDuplication"
             ref="registrationButton"
           >確定</button>
         </div>
@@ -253,13 +253,13 @@ import FabComponent from "@/components/FabComponent";
 import MultiModal from "@/components/modals/MultiModal";
 import { ApiHelper } from "@/apis/AxiosHelper";
 
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import loadingScreen from "@/components/common/LoadingScreen";
 import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
 import { sendRequestCheckMatchCurrentPassword, sendRequestIsAvailablePassword } from "@/apis/User";
 import { PASSWORD_POLICY, NUM_OF_PASSWORD, pwdLvLow, pwdLvNormal, pwdLvHigh, PASSWORD_VALIDITY_PERIOD } from "@/constants/facilitySetting";
 import { SYS_USE_TYPE } from "@/constants/sysUseConstants";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
@@ -268,6 +268,7 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 import {changeShowPassword} from "@/functions/common/CommonFunctions";
+import { focusComponentInput } from "@/functions/common/LayoutMeasureHelper";
 export default {
   name: "provisionalAccountEdit",
   components: {
@@ -284,12 +285,11 @@ export default {
       dispUserLastName: "",
       dispUserFirstName: "",
       personalInfoCheck: null,
-      mainHeight: 100,
       personalInfoMsg:"",
       //Enterキー押下回数
       confirmEnterCount : 0,
       passwordValidityPeriod: 999,
-      isCorrectCurrentPassword: false
+      isCorrectCurrentPassword: false,
     };
   },
   computed: {
@@ -303,8 +303,9 @@ export default {
     ...mapGetters("mst-facility-setting",{getValueSignIn: "getValueSignIn"}),
     ...mapGetters("mst-user",{getUserOTP: "getUserOTP"}),
     heightProvisionalStyles() {
-      // main部の高さをCSS変数を利用して書き換え
-      return { "--height": `${this.mainHeight}%` };
+      // 本画面は router の単体ルートで親に高さがなく、% 指定だと ntss.css の .main{height:var(--height)} が
+      // 解決できず 0 になり、.main-content-area(position:absolute) ごと見えなくなる。ビューポート基準のみ本画面で使用する。
+      return { "--height": "100vh" };
     },
     /**
      * ユーザ情報取得.
@@ -359,9 +360,9 @@ export default {
         return true;
       }
       // 現在日時
-      const nowDate = moment(new Date());
+      const nowDate = dayjs(new Date());
       // パスワード変更日時
-      const regPasswordDate = moment(this.userAccountInfo.regPasswordDate);
+      const regPasswordDate = dayjs(this.userAccountInfo.regPasswordDate);
       // 差分
       const monthDiff = nowDate.diff(regPasswordDate, 'months');
       return monthDiff >= this.passwordValidityPeriod;
@@ -418,7 +419,7 @@ export default {
                               "sendRequestUpdateSecretKey"]),
     // フォーカスを移動する
     setFocus(ref) {
-      this.$refs[ref].$el._input.focus();
+      focusComponentInput(this.$refs[ref]);
     },
     /**
      * 処理：入力された現在のパスワードをチェック
@@ -451,8 +452,8 @@ export default {
       
       if (this.isProvisional) { // パスワード有効期限切れ画面の場合は項目非表示のため実施しない
         // 氏名の必須入力チェック
-        const isLastNameValid = await this.$validator.validate("dispUserLastName");
-        const isFirstNameValid = await this.$validator.validate("dispUserFirstName");
+        const isLastNameValid = await this.validateField("dispUserLastName");
+        const isFirstNameValid = await this.validateField("dispUserFirstName");
         if (!isLastNameValid || !isFirstNameValid) {
           //再度実行できるためEnterキー押下回数を初期化する
           this.confirmEnterCount = 0;
@@ -551,7 +552,7 @@ export default {
      * TODO validatorをextendして共通的に使えるようにしたい
      */
     checkDuplicated() {
-      const errors = this.$validator.errors.items.filter(
+      const errors = this.validationErrors.filter(
         item => item.field === "dispUserId"
       );
       if (errors.length === 0) {

@@ -417,8 +417,8 @@ function buildMasterOptions({
     };
   };
   // 医薬品オプションの生成
-  let contentMedicine = null
-  let contentMedicineMix = null
+  let contentMedicine;
+  let contentMedicineMix;
   if(context.allowedFields.showMedicineFieldOnly){
     contentMedicine = filteredMedicineList
       //.filter(item => context.isMedicament==1? filterByClass(item, "medicineCd"): true)

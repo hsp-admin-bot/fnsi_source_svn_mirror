@@ -2,10 +2,10 @@
  * MainComponent用次画面遷移機能共通コンポーネント
  * (※パンくずComponentに依存します)
  */
-import { mapGetters, mapActions } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { getRouterItemsByFunctionCd } from "@/router/routing-helper";
 import { FUNC_OPERATION_VIEWER } from "@/constants/function-code";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 // 稼働ビューアの画面遷移情報
 const ROUTE_NAMES = getRouterItemsByFunctionCd(FUNC_OPERATION_VIEWER).map(
@@ -13,6 +13,12 @@ const ROUTE_NAMES = getRouterItemsByFunctionCd(FUNC_OPERATION_VIEWER).map(
 );
 
 export default {
+  data() {
+    return {
+      nextTransitionPromise: null,
+      nextTransitionKey: null
+    };
+  },
   props: {
     historyKey: {
       type: String,
@@ -79,10 +85,25 @@ export default {
         // 遷移先のルートへ遷移させる。
         // ※ 遷移元の画面へ一旦ルーティングを戻した後（非同期処理の完了後）に遷移先のルートに遷移する
 
-        this.$router.push({ name: currentRouteName }).then(() => {
-          // ルート変更の完了後（非同期処理の完了後）に指定画面へ遷移する
-          this.$router.push({ name: routerName });
-        });
+        const transitionKey = `${currentRouteName}->${routerName}`;
+        if (this.nextTransitionPromise && this.nextTransitionKey === transitionKey) {
+          return this.nextTransitionPromise;
+        }
+
+        this.nextTransitionKey = transitionKey;
+        this.nextTransitionPromise = this.$router.push({ name: currentRouteName })
+          .then(() => {
+            // ルート変更の完了後（非同期処理の完了後）に指定画面へ遷移する
+            return this.$router.push({ name: routerName });
+          })
+          .finally(() => {
+            if (this.nextTransitionKey === transitionKey) {
+              this.nextTransitionPromise = null;
+              this.nextTransitionKey = null;
+            }
+          });
+
+        return this.nextTransitionPromise;
       }
     }
   }

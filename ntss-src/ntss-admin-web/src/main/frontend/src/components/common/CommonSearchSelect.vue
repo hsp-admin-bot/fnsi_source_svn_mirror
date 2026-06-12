@@ -1,30 +1,17 @@
 <template>
   <div class="ons-select-like">
-    <kendo-combobox
-      :data-source="items"
-      :data-text-field="textField"
-      :data-value-field="valueField"
-      v-model="innerValue"
-      :filter="'contains'"
-      :suggest="false"
-      :disabled="disabled"
-      :placeholder="placeholder"
-      :popup="popupSettings"
-      @open="onPopupOpen"
-    />
+    <input ref="input" />
   </div>
 </template>
 
 <script>
-import { ComboBox } from "@progress/kendo-dropdowns-vue-wrapper";
+import $ from "@/compat/jquery";
 
 export default {
   name: "CommonSearchSelect",
-  components: {
-    "kendo-combobox": ComboBox,
-  },
 
   props: {
+    modelValue: null,
     value: null,
     items: {
       type: Array,
@@ -57,7 +44,146 @@ export default {
     },
   },
 
+  data() {
+    return {
+      widget: null,
+      syncingValue: false,
+    };
+  },
+
+  computed: {
+    currentValue() {
+      return this.modelValue !== undefined ? this.modelValue : this.value;
+    },
+    popupSettings() {
+      return {
+        addClass: this.isEdited ? "green-popup-style" : "",
+        origin: "bottom left",
+      };
+    },
+  },
+
+  watch: {
+    currentValue(value) {
+      this.syncWidgetValue(value);
+    },
+    items: {
+      handler(value) {
+        this.widget?.setDataSource?.(value);
+      },
+      deep: true,
+    },
+    disabled(value) {
+      this.widget?.enable?.(!value);
+    },
+  },
+
+  mounted() {
+    this.createWidget();
+  },
+
+  beforeUnmount() {
+    this.widget?._clear?.off?.("click.ntssClearFix touchend.ntssClearFix");
+    if (this.widget) {
+      try {
+        this.widget.destroy();
+      } catch (_error) {
+        // noop
+      }
+      this.widget = null;
+    }
+  },
+
   methods: {
+    createWidget() {
+      const $element = $(this.$refs.input);
+      $element.kendoComboBox({
+        dataSource: this.items,
+        dataTextField: this.textField,
+        dataValueField: this.valueField,
+        filter: "contains",
+        suggest: false,
+        clearButton: true,
+        prefixOptions: { separator: false },
+        suffixOptions: { separator: false },
+        placeholder: this.placeholder,
+        valuePrimitive: true,
+        animation: false,
+        popup: this.popupSettings,
+        value: this.currentValue,
+        change: () => {
+          this.emitWidgetValue();
+        },
+        open: (e) => this.onPopupOpen(e),
+      });
+      this.widget = $element.data("kendoComboBox");
+      this.widget?.wrapper?.addClass?.("select-input");
+      this.widget?.enable?.(!this.disabled);
+      this.$nextTick(() => {
+        this.dedupeClearButton();
+        this.dedupeDropdownButton();
+        this.bindClearButton();
+      });
+    },
+    normalizeEmittedValue(value) {
+      return value === "" || value === undefined ? null : value;
+    },
+    emitWidgetValue() {
+      if (this.syncingValue || !this.widget) {
+        return;
+      }
+      const nextValue = this.normalizeEmittedValue(this.widget.value());
+      this.$emit("update:modelValue", nextValue);
+      this.$emit("input", nextValue);
+    },
+    dedupeClearButton() {
+      const wrapper = this.widget?.wrapper;
+      if (!wrapper) {
+        return;
+      }
+      const clears = wrapper.find(".k-clear-value");
+      if (clears.length > 1) {
+        clears.slice(1).remove();
+      }
+    },
+    dedupeDropdownButton() {
+      const wrapper = this.widget?.wrapper;
+      if (!wrapper) {
+        return;
+      }
+      const buttons = wrapper.find(".k-input-button, .k-select").filter(
+        (_, element) => !element.classList.contains("k-clear-value")
+      );
+      if (buttons.length > 1) {
+        buttons.slice(0, -1).remove();
+      }
+    },
+    bindClearButton() {
+      const clear = this.widget?._clear;
+      if (!clear?.on) {
+        return;
+      }
+      clear.off("click.ntssClearFix touchend.ntssClearFix")
+        .on("click.ntssClearFix touchend.ntssClearFix", () => {
+          window.setTimeout(() => this.emitWidgetValue(), 0);
+        });
+    },
+    syncWidgetValue(value) {
+      if (!this.widget) {
+        return;
+      }
+      const normalizedValue = value === undefined ? null : value;
+      const current = this.widget.value();
+      if (String(current ?? "") === String(normalizedValue ?? "")) {
+        return;
+      }
+      this.syncingValue = true;
+      try {
+        this.widget.value(normalizedValue ?? "");
+      } finally {
+        this.syncingValue = false;
+      }
+    },
     onPopupOpen(e) {
       const widget = e.sender;
 
@@ -68,87 +194,165 @@ export default {
       }
     },
   },
-
-  computed: {
-    innerValue: {
-      get() {
-        return this.value;
-      },
-      set(val) {
-        this.$emit("input", val);
-      },
-    },
-    popupSettings() {
-      const currentStatus = this.isEdited;
-      return {
-        addClass: currentStatus ? "green-popup-style" : "",
-        origin: "bottom left",
-      };
-    },
-  },
 };
 </script>
 
 <style>
-.ons-select-like .k-combobox {
+/* 外框は ntss.css の .select-input（v-ons-select 同款）を使用 */
+.ons-select-like > .k-combobox.k-input.select-input,
+.ons-select-like .k-combobox.select-input .k-dropdown-wrap,
+.ons-select-like .k-dropdown-wrap {
+  align-items: center !important;
   width: 100%;
-  font-size: 15px;
+  display: inline-flex !important;
+  vertical-align: middle;
+  position: relative;
+  padding: 0 !important;
+  overflow: hidden;
+  outline: none !important;
+  box-shadow: none !important;
+  border: unset !important;
+  border-width: 2px !important;
+  border-style: inset !important;
+  border-image-repeat: stretch !important;
+  border-color: unset !important;
+  height: 2em !important;
+  min-height: 2em !important;
+  border-radius: 5px !important;
+  box-sizing: border-box !important;
+  background-color: #f7f7f7 !important;
+  font-size: 1em !important;
+  line-height: unset !important;
 }
-.ons-select-like .k-dropdown-wrap::before,
-.ons-select-like .k-dropdown-wrap::after {
-  border: 1.3px solid #90a4ae !important;
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 5px;
-  pointer-events: none;
+
+/* ons-select > .select-input と同じ左余白（背景矢印は Kendo ボタンで表示するため無効化） */
+.ons-select-like > .k-combobox.k-input.select-input {
+  padding-left: 4px !important;
+  background-image: none !important;
 }
-.ons-select-like .k-dropdown-wrap:hover::before,
-.ons-select-like .k-dropdown-wrap:hover::after {
-  border-color: #b0bec5 !important;
+
+.ons-select-like > .k-combobox.k-input.select-input.k-focus,
+.ons-select-like > .k-combobox.k-input.select-input:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
 }
-.ons-select-like .k-dropdown-wrap.k-state-focused::before,
-.ons-select-like .k-dropdown-wrap.k-state-focused::after {
-  border-color: #2196f3 !important;
-}
-.ons-select-like .k-input {
-  font-family: inherit !important;
-  font-size: 15px !important;
-  line-height: 30px !important;
-  height: 30px !important;
-  padding-left: 8px !important;
+
+.ons-select-like > .k-combobox.k-input.select-input .k-input-inner,
+.ons-select-like .k-dropdown-wrap input.k-input,
+.ons-select-like .k-dropdown-wrap .k-input {
+  font-size: 1em !important;
+  line-height: unset !important;
+  height: 100% !important;
+  padding: 0 42px 0 0 !important;
   background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
   box-sizing: border-box;
-  max-width: calc(100% - 25px);
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: auto !important;
-  display: flex !important;
-  font-family: -apple-system, "Helvetica Neue", "Segoe UI", sans-serif !important;
-  align-items: center !important;
 }
-.ons-select-like .k-select {
-  width: 28px;
+
+.ons-select-like > .k-combobox.k-input > .k-clear-value,
+.ons-select-like .k-dropdown-wrap > .k-clear-value {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  right: 22px !important;
+  transform: none !important;
+  width: 20px !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  margin: auto 0 !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  z-index: 3;
+  cursor: pointer;
+  color: #666;
+}
+
+.ons-select-like > .k-combobox.k-input > .k-clear-value.k-hidden {
+  display: none !important;
+}
+
+.ons-select-like > .k-combobox.k-input > .k-clear-value::before {
+  display: none !important;
+  content: none !important;
+}
+
+.ons-select-like > .k-combobox.k-input > .k-clear-value .k-svg-icon,
+.ons-select-like > .k-combobox.k-input > .k-clear-value .k-icon {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.ons-select-like > .k-combobox.k-input > .k-clear-value .k-svg-icon svg {
+  display: block !important;
+}
+
+.ons-select-like > .k-combobox.k-input > .k-input-button,
+.ons-select-like .k-select {
+  width: 28px !important;
+  min-width: 28px !important;
+  background: transparent !important;
+  border: none !important;
   border-left: none !important;
   height: 100% !important;
-  display: flex !important;
+  display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   position: absolute;
   right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  box-shadow: none !important;
+  color: #666;
 }
+
+.ons-select-like > .k-combobox.k-input > .k-input-button::before,
+.ons-select-like > .k-combobox.k-input > .k-select::before {
+  display: none !important;
+  content: none !important;
+}
+
+.ons-select-like > .k-combobox.k-input > .k-input-button .k-svg-icon,
+.ons-select-like > .k-combobox.k-input > .k-input-button .k-icon,
 .ons-select-like .k-i-arrow-60-down {
   color: #666;
 }
+
+.ons-select-like > .k-combobox.k-input > input:not(.k-input-inner) {
+  display: none !important;
+}
+
+.k-combobox-popup .k-list-container,
 .k-list-container {
   border-radius: 5px !important;
   width: auto !important;
   min-width: 100%;
   max-width: 500px;
 }
+
+.k-combobox-popup .k-list,
+.k-list {
+  width: auto !important;
+}
+
+.k-combobox-popup .k-list-item,
+.k-combobox-popup .k-item,
+.k-list .k-list-item,
 .k-list .k-item {
   font-size: 15px !important;
   padding: 4px 20px !important;
@@ -156,12 +360,22 @@ export default {
   white-space: nowrap !important;
   overflow: visible !important;
   text-overflow: clip !important;
+  box-shadow: none !important;
 }
+
+.k-combobox-popup .k-list-item:hover,
+.k-combobox-popup .k-item:hover,
+.k-list .k-list-item:hover,
 .k-list .k-item:hover {
   background: #2196f3 !important;
   border: none !important;
   box-shadow: none !important;
+  color: #000 !important;
 }
+
+.k-combobox-popup .k-list-item.k-selected,
+.k-combobox-popup .k-item.k-state-selected,
+.k-list .k-list-item.k-selected,
 .k-list .k-state-selected {
   border: none !important;
   box-shadow: none !important;
@@ -169,143 +383,63 @@ export default {
   background: #2196f3 !important;
   color: #000 !important;
 }
-.k-dropdown-wrap .k-clear-value {
-  position: absolute !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  right: 28px !important;
-  line-height: 2 !important;
-  cursor: pointer;
-}
+
+.k-combobox-popup .k-list-item.k-focus,
+.k-combobox-popup .k-item.k-state-focused,
+.k-list .k-list-item.k-focus,
 .k-list .k-item.k-state-focused {
   outline: none !important;
   box-shadow: none !important;
   border: none !important;
 }
-.ons-select-like .k-dropdown-wrap.k-state-disabled:hover::before,
-.ons-select-like .k-dropdown-wrap.k-state-disabled:hover::after {
-  border-color: #d1d9dd !important;
-}
-.ons-select-like .k-state-disabled,
-.ons-select-like .k-state-disabled .k-dropdown-wrap,
-.ons-select-like .k-state-disabled.k-state-focused .k-dropdown-wrap {
-  border: none !important;
-  box-shadow: none !important;
-}
-.ons-select-like .k-state-disabled::before,
-.ons-select-like .k-state-disabled::after {
-  display: none !important;
-}
-.ons-select-like .k-state-disabled {
-  filter: none !important;
-  opacity: 1 !important;
-  background-color: #f5f5f5 !important;
-  cursor: default !important;
-  border: none !important;
-  pointer-events: none;
-}
-.ons-select-like .k-state-disabled .k-dropdown-wrap::before,
-.ons-select-like .k-state-disabled .k-dropdown-wrap::after {
-  display: block !important;
-  border-color: rgba(144, 164, 174, 0.5) !important;
-}
-.ons-select-like .k-state-disabled:hover .k-dropdown-wrap::before,
-.ons-select-like .k-state-disabled.k-state-focused .k-dropdown-wrap::before {
-  border-color: rgba(144, 164, 174, 0.5) !important;
-}
-.ons-select-like .k-state-disabled .k-i-arrow-60-down {
-  color: #666 !important;
-}
-.ons-select-like .k-state-disabled .k-dropdown-wrap {
-  display: flex !important;
-  align-items: center;
-  height: 32px !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-.k-list {
-  width: auto !important;
-}
-.ons-select-like .k-state-disabled,
-.ons-select-like .k-state-disabled .k-select,
-.ons-select-like .k-state-disabled .k-i-arrow-60-down {
-  opacity: 1 !important;
-  filter: none !important;
-}
-.ons-select-like .k-state-disabled .k-select {
-  display: flex !important;
-  width: 28px !important;
-  background: transparent !important;
-  border-left: none !important;
-}
-.ons-select-like .k-dropdown-wrap {
-  align-items: center !important;
-  border-style: inset;
-  border-width: 1.5px;
-  border-image-repeat: stretch;
-  border-color: unset;
-  height: 2em;
-  border-radius: 5px;
-  -webkit-box-sizing: border-box;
-  box-sizing: border-box;
-  background: #f7f7f7 !important;
-  -webkit-box-shadow: none !important;
-  box-shadow: none !important;
-  position: relative;
-  height: 32px;
-  padding-right: 0px !important;
-}
-.k-dropdown-wrap.k-state-disabled {
-  border: 1px solid #dcdcdc !important;
-  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.08) !important;
-  background: #f7f7f7 !important;
-  height: 2em;
-  border-radius: 5px;
-  box-sizing: border-box;
-  border-style: solid !important;
-}
-.ons-select-like .k-dropdown-wrap.k-state-disabled .k-i-arrow-60-down {
-  color: #b0bec5 !important;
-}
-div.ons-select-like .k-dropdown-wrap input.k-input {
-  padding: 0 20px 0 6px !important;
-}
+
+body .k-combobox-popup .k-list-container .k-list .k-list-item,
 body .k-list-container .k-list .k-item {
   padding: 3px 8px !important;
 }
-.ons-select-like .k-state-disabled,
-.ons-select-like .k-state-disabled .k-dropdown-wrap,
-.k-dropdown-wrap.k-state-disabled {
+
+.ons-select-like > .k-combobox.k-input.select-input.k-disabled,
+.ons-select-like > .k-combobox.k-disabled.select-input,
+.ons-select-like .k-state-disabled.select-input,
+.ons-select-like .k-state-disabled .k-dropdown-wrap {
+  color: -internal-light-dark-color(rgb(84, 84, 84), rgb(170, 170, 170));
+  cursor: default;
   background-color: #ebebe4 !important;
-  opacity: 0.6 !important;
+  border: unset !important;
+  border-width: 2px !important;
+  border-style: inset !important;
+  border-image-repeat: stretch !important;
+  border-color: unset !important;
+  opacity: 1 !important;
+  filter: none !important;
+  pointer-events: none;
 }
+
+.ons-select-like > .k-combobox.k-input.select-input.k-disabled .k-input-inner,
+.ons-select-like > .k-combobox.k-disabled.select-input .k-input-inner,
 .ons-select-like .k-state-disabled .k-input {
   border: none !important;
-  color: #ccc !important;
-  -webkit-text-fill-color: #ccc !important;
   background-color: transparent !important;
 }
-.ons-select-like.custom-select-edited .k-dropdown-wrap,
-.ons-select-like.custom-select-edited .k-dropdown-wrap.k-state-focused,
-.ons-select-like.custom-select-edited .k-dropdown-wrap:hover {
-  border-color: transparent !important;
-  box-shadow: none !important;
-  outline: none !important;
-}
-.ons-select-like.custom-select-edited .k-dropdown-wrap::before,
-.ons-select-like.custom-select-edited .k-dropdown-wrap::after {
-  border: 2px solid green !important;
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 5px;
-  pointer-events: none;
+
+.ons-select-like > .k-combobox.k-input.k-disabled > .k-input-button,
+.ons-select-like > .k-combobox.k-disabled > .k-input-button,
+.ons-select-like .k-state-disabled .k-select {
+  display: inline-flex !important;
   opacity: 1 !important;
+  filter: none !important;
+  color: #b0bec5 !important;
 }
-.ons-select-like.custom-select-edited .k-dropdown-wrap.k-state-focused::before,
-.ons-select-like.custom-select-edited .k-dropdown-wrap.k-state-focused::after {
-  border-color: green !important;
+
+.ons-select-like.custom-select-edited > .k-combobox.k-input.select-input,
+.ons-select-like.custom-select-edited .k-dropdown-wrap {
+  color: green;
+  border: 2px green solid !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
+
+.ons-select-like.custom-select-edited > .k-combobox.k-input.select-input .k-input-inner,
 .ons-select-like.custom-select-edited .k-input {
   outline: none !important;
   box-shadow: none !important;
@@ -313,11 +447,15 @@ body .k-list-container .k-list .k-item {
   font-weight: bold !important;
   -webkit-text-fill-color: green;
 }
+
+.ons-select-like.custom-select-edited.k-disabled > .k-combobox .k-input-inner,
 .ons-select-like.k-state-disabled.custom-select-edited .k-input {
   color: #ccc !important;
   font-weight: normal !important;
   -webkit-text-fill-color: #ccc;
 }
+
+body .green-popup-style .k-list-item,
 body .green-popup-style .k-list .k-item {
   color: green !important;
 }

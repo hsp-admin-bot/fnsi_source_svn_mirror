@@ -68,6 +68,15 @@ namespace CoopSettingTool.Service.Models
         public string FacilityCd { get; set; }
 
         /// <summary>
+        /// Gets or sets the coop version.
+        /// </summary>
+        /// <value>The coop version.</value>
+        [JsonProperty("coopVersion")]
+        [ReadOnly(true)]
+        [DisplayName("連携名")]
+        public string CoopVersion { get; set; }
+
+        /// <summary>
         /// Gets or sets the coop cd.
         /// </summary>
         /// <value>The coop cd.</value>
@@ -212,6 +221,23 @@ namespace CoopSettingTool.Service.Models
         public override int GetHashCode()
         {
             return (this.CoopSetting + this.CoopExtSetting + this.IsDel).GetHashCode();
+        }
+
+        /// <summary>
+        /// Determines whether the specified layout detail is similar.
+        /// </summary>
+        /// <param name="layoutDetail">The layout detail.</param>
+        /// <returns><c>true</c> if the specified layout detail is similar; otherwise, <c>false</c>.</returns>
+        public bool IsSimilar(MstCoopLayoutDetailEntity layoutDetail)
+        {
+            return layoutDetail != null
+                && string.Equals(this.CoopCd, layoutDetail.CoopCd, StringComparison.Ordinal)
+                && string.Equals(this.CoopCdDetail, layoutDetail.CoopCdDetail, StringComparison.Ordinal)
+                && string.Equals(this.CoopCdDetailSub, layoutDetail.CoopCdDetailSub, StringComparison.Ordinal)
+                && string.Equals(this.CoopName, layoutDetail.CoopName, StringComparison.Ordinal)
+                && string.Equals(this.CoopVersion, layoutDetail.CoopVersion, StringComparison.Ordinal)
+                && string.Equals(this.Direction, layoutDetail.Direction, StringComparison.Ordinal)
+                && string.Equals(this.Description, layoutDetail.Description, StringComparison.Ordinal);
         }
     }
 }

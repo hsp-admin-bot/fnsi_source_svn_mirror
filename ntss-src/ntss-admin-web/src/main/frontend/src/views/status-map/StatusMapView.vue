@@ -3,12 +3,18 @@
  */
 <template>
   <ntss-layout-split>
-    <header-component slot='header-content' :history-key="historyKey" v-show="!isDisplayFullMode"/>
+    <template #header-content>
+      <header-component :history-key="historyKey" v-show="!isDisplayFullMode" />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start -->
     <!-- <bread-crumbs-component slot='bread-crumbs-content' :history-key="historyKey" @refresh='refresh' v-show="!isDisplayFullMode"/> -->
-    <bread-crumbs-component slot='bread-crumbs-content' :history-key="historyKey" v-show="!isDisplayFullMode"/>
+    <template #bread-crumbs-content>
+      <bread-crumbs-component :history-key="historyKey" v-show="!isDisplayFullMode" />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng end -->
-    <main-component slot='main-content' ref='mainComponent' :history-key="historyKey" />
+    <template #main-content>
+      <main-component ref="mainComponent" :history-key="historyKey" />
+    </template>
   </ntss-layout-split>
 </template>
 
@@ -18,7 +24,7 @@ import HeaderComponent from "@/components/status-map/StatusMapHeaderComponent";
 import BreadCrumbsComponent from "@/components/BreadCrumbsComponent";
 import ViewHelper from "@/views/ViewHelperMixin";
 import { HISTORY_KEY_STATUS_MAP } from "@/router/status-map/HistoryKeyConstants";
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 
 export default {
   name: "StatusMapView",

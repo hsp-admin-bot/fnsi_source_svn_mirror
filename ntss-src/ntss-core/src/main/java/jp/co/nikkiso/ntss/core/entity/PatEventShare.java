@@ -2,8 +2,8 @@ package jp.co.nikkiso.ntss.core.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.entity.entityListener.BaseEntityListener;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
 import lombok.Getter;
@@ -81,7 +81,7 @@ public class PatEventShare extends BaseEntity {
 			try {
 				LetterInfo obj = objectMapper.readValue(value, LetterInfo.class);
 				modelMapper.map(obj, this);
-			} catch (IOException e) {
+			} catch (JacksonException e) {
 				throw new NtssException("帳票マスタのファイルパス情報設定内容が不正です") {
 				};
 			}
@@ -96,7 +96,7 @@ public class PatEventShare extends BaseEntity {
 		public String getValue() {
 			try {
 				return objectMapper.writeValueAsString(this);
-			} catch (JsonProcessingException e) {
+			} catch (JacksonException e) {
 				return null;
 			}
 		}

@@ -1,17 +1,17 @@
 package jp.co.nikkiso.ntss.admin_web.service.weight.state;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import jp.co.nikkiso.ntss.core.dao.MntScaleBedStateDao;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.weight.WeightService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
-import jp.co.nikkiso.ntss.core.dao.*;
 import jp.co.nikkiso.ntss.core.entity.MntScaleBedState;
 import jp.co.nikkiso.ntss.core.entity.OrdWeightScale;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.springframework.lang.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

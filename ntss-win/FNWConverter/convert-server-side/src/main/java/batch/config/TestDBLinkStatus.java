@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.sql.Connection;
 import java.sql.DriverManager;
 

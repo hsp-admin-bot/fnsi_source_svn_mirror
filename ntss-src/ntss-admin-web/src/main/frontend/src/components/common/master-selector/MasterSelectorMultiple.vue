@@ -3,7 +3,7 @@
 <template>
   <v-ons-popover
     v-if="popoverVisible"
-    :target="targetPositionElement"
+    :target="resolvedTargetPositionElement"
     :visible="popoverVisible"
     :direction="popoverDisplayDirection"
     :class="[fontSizeSet, 'popover-style']"
@@ -65,7 +65,7 @@
             class="select-content-style select-has-size select-font-inherit"
             size="10"
             @dblclick="saveChanges"
-            @onmousedown.native="onMouseDown"
+            @onmousedown="onMouseDown"
             @click="onClick"
             multiple="multiple"
           >
@@ -151,6 +151,8 @@
 <script>
 import PopoverMixin from "@/components/PopoverMixin";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
+import { getViewportHeight, getViewportWidth } from "@/functions/common/LayoutMeasureHelper";
+import { resolveOnsPopoverTargetElement } from "@/functions/common/OnsenFunctions";
 
 export default {
   mixins: [PopoverMixin],
@@ -253,9 +255,7 @@ export default {
      */
     targetPositionElement: {
       type: [Object, HTMLElement],
-      default() {
-        return this.$parent;
-      }
+      default: null
     },
 
     /**
@@ -333,25 +333,31 @@ export default {
       /**
        * @description 画面の高さ(レスポンシブ対応)
        */
-      windowHeight: window.innerHeight,
+      windowHeight: getViewportHeight(),
 
       /**
        * @description 画面の幅(レスポンシブ対応)
        */
-      windowWidth: window.innerWidth
+      windowWidth: getViewportWidth()
     };
   },
 
   computed: {
+    resolvedTargetPositionElement() {
+      return resolveOnsPopoverTargetElement(this.targetPositionElement, this);
+    },
+    resolvedTargetRectElement() {
+      return this.resolvedTargetPositionElement;
+    },
     /**
      * @description 表示方向
      */
     popoverDisplayDirection() {
       if (!this.popoverVisible) return null;
 
-      const elemPosition = this.targetPositionElement.$el
-        ? this.targetPositionElement.$el.getBoundingClientRect()
-        : this.targetPositionElement.getBoundingClientRect();
+      const targetElement = this.resolvedTargetRectElement;
+      if (!targetElement?.getBoundingClientRect) return null;
+      const elemPosition = targetElement.getBoundingClientRect();
       let direction = "right";
 
       if (this.windowHeight <= 420) {
@@ -453,12 +459,12 @@ export default {
   },
 
   mounted() {
-    window.addEventListener("resize", this.onResize);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.onResize);
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // 画面を閉じたときにイベントを除去
-    window.removeEventListener("resize", this.onResize);
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.onResize);
   },
 
   methods: {
@@ -469,16 +475,21 @@ export default {
     /**
      * @description 投薬支援マスタ 薬効換算の場合,薬剤分類なし
      */
-    checkMachineSupport(filter) {
-      if (this.mstMachineSupportFlg &&
-        filter === "薬剤分類" &&
-        this.popoverFilterSelectedItem["薬剤区分"] === 3
-      ) {
-        this.popoverFilterSelectedItem["薬剤分類"] = 0
-        return true
-      } else {
-        return false
+    isMachineSupportMedicineClassDisabled() {
+      return this.mstMachineSupportFlg &&
+        this.popoverFilterSelectedItem["薬剤区分"] === 3;
+    },
+    normalizeMachineSupportFilter() {
+      if (this.isMachineSupportMedicineClassDisabled() &&
+        this.popoverFilterSelectedItem["薬剤分類"] !== 0) {
+        this.popoverFilterSelectedItem = {
+          ...this.popoverFilterSelectedItem,
+          "薬剤分類": 0
+        };
       }
+    },
+    checkMachineSupport(filter) {
+      return filter === "薬剤分類" && this.isMachineSupportMedicineClassDisabled();
     },
     /* add 投薬支援マスタ 薬効換算の場合,薬剤分類なし 孔 end */
 
@@ -542,6 +553,7 @@ export default {
         };
       });
 
+      this.normalizeMachineSupportFilter();
       this.checkNeedleOptionDisplay();
     },
 
@@ -574,10 +586,8 @@ export default {
             /* add スタッフ追加の複数追加と空欄追加 楊 end */
               temp.push(
                 this.popoverContentDataset.find(item2 => {
-                return item2.value === item})
-              )
-          }
-        )
+                return item2.value === item}))
+          })
         this.popoverContentSelectedItem=temp
       }
       let retVal = this.popoverContentSelectedItem;
@@ -698,26 +708,27 @@ export default {
      */
     filterChange() {
       this.clearSearch();
+      this.normalizeMachineSupportFilter();
       this.checkNeedleOptionDisplay();
     },
 
     onResize() {
-      this.windowHeight = window.innerHeight;
-      this.windowWidth = window.innerWidth;
+      this.windowHeight = getViewportHeight();
+      this.windowWidth = getViewportWidth();
     }
   }
 };
 </script>
 
 <style scoped>
-.popover-style >>> .popover--top,
-.popover-style >>> .popover--right,
-.popover-style >>> .popover--left,
-.popover-style >>> .popover--bottom {
+.popover-style :deep(.popover--top),
+.popover-style :deep(.popover--right),
+.popover-style :deep(.popover--left),
+.popover-style :deep(.popover--bottom) {
   width: initial;
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 500px;
   height: 100%;
   padding: 25px;
@@ -764,14 +775,14 @@ export default {
 
 /* スマホ対応 */
 @media screen and (max-width: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: auto;
     padding: 10px;
   }
 }
 
 @media screen and (max-height: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: 350px;
     padding: 5px;
   }

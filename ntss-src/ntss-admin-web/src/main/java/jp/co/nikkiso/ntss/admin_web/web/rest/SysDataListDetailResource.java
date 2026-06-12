@@ -1,11 +1,13 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
+import jp.co.nikkiso.ntss.admin_web.request.sysDataListDetail.GetTemplateValueRequest;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.sysDataListDetail.SysDataListDetailService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
+import jp.co.nikkiso.ntss.core.entity.DataListAggregationParam;
 import jp.co.nikkiso.ntss.core.entity.MstExamItem;
 import jp.co.nikkiso.ntss.core.entity.MstWaterSurveyPointType;
 import jp.co.nikkiso.ntss.core.entity.SysDataListCategory;
@@ -13,12 +15,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +34,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * データリストカテゴリ詳細のResourceクラス.
@@ -91,7 +98,16 @@ public class SysDataListDetailResource {
   @GetMapping("/getByTemplate/{templateCd}/temp/{facilityCd}")
   public ResponseEntity<?> getItemForMasterDisplayByFacilityCd(
     @PathVariable Integer templateCd,
-    @PathVariable(name = "facilityCd", required = true) String facilityCd) {
+    @PathVariable(name = "facilityCd", required = true) String facilityCd,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.SEND_PUSH + "/getByTemplate";
@@ -270,7 +286,16 @@ public class SysDataListDetailResource {
   }
 
   @GetMapping("/getInitData/{templateCd}/{facilityCd}")
-  public ResponseEntity<?> getInitData(@PathVariable Integer templateCd, @PathVariable String facilityCd) {
+  public ResponseEntity<?> getInitData(@PathVariable Integer templateCd, @PathVariable String facilityCd,
+                                       @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.SEND_PUSH + "/getInitData";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_MULTI_PAT_LIST , BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -292,7 +317,16 @@ public class SysDataListDetailResource {
   }
 
   @GetMapping("/getListData/{templateCd}/{facilityCd}/{startDate}/{endDate}")
-  public ResponseEntity<?> getListData(@PathVariable Integer templateCd, @PathVariable String facilityCd,  @PathVariable String startDate,  @PathVariable String endDate) {
+  public ResponseEntity<?> getListData(@PathVariable Integer templateCd, @PathVariable String facilityCd,  @PathVariable String startDate,  @PathVariable String endDate,
+                                       @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.SEND_PUSH + "/getListData";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_MULTI_PAT_LIST , BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -462,7 +496,16 @@ public class SysDataListDetailResource {
   }
   /*add FNSI-改修内容5237 任 start*/
   @GetMapping("/getFigureValue/{facilityCd}")
-  public ResponseEntity<?> getFigureValue( @PathVariable String facilityCd){
+  public ResponseEntity<?> getFigureValue( @PathVariable String facilityCd,
+                                           @AuthenticationPrincipal NtssUser ntssUser){
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.SEND_PUSH + "/getFigureValue/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_MULTI_PAT_LIST ,
@@ -484,7 +527,16 @@ public class SysDataListDetailResource {
     }
   }
   @GetMapping("/getDecimalValue/{facilityCd}")
-  public ResponseEntity<?> getDecimalValue( @PathVariable String facilityCd){
+  public ResponseEntity<?> getDecimalValue( @PathVariable String facilityCd,
+                                            @AuthenticationPrincipal NtssUser ntssUser){
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
+      // #11205 mod 20260421 start
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      // #11205 mod 20260421 end
+    }
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.SEND_PUSH + "/getDecimalValue/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_MULTI_PAT_LIST ,
@@ -506,4 +558,89 @@ public class SysDataListDetailResource {
     }
   }
   /*add FNSI-改修内容5237 任 end*/
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    return ntssUser != null && (ntssUser.isNkkAdminUser() || facilityCd == null || facilityCd.equals(ntssUser.getFacilityCd()));
+  }
+
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang start
+  /**
+   * 各行に表示するデータを取得
+   * @param dataListDetailCd --データリスト詳細コード
+   * @param type データキー
+   * @param itemId
+   * @return
+   */
+  @PostMapping("/rowResult")
+  public ResponseEntity<?> getRowSysDataSetResultNew(
+    @RequestBody List<DataListAggregationParam> params,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+
+    String mappingUrl = Uri.SEND_PUSH + "/rowResult";
+    logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_MULTI_PAT_LIST , BEFORE_LOG_FLG_INFO, mappingUrl, null,
+      params);
+
+    // sys_data_listリストのレスポンス生成
+    try {
+      List<Object> resultList = new ArrayList<>();
+      if(!CollectionUtils.isEmpty(params)) {
+        Map<String, List<DataListAggregationParam>> groupMap = new HashMap<>();
+        for(DataListAggregationParam paramInfo : params) {
+          String mapKey = paramInfo.getDataListDetailCd().toString()
+            + (paramInfo.getType() != null ? paramInfo.getType() : "")
+            + (paramInfo.getKubun() != null ? paramInfo.getKubun() : "");
+          if(groupMap.containsKey(mapKey)) {
+            groupMap.get(mapKey).add(paramInfo);
+          } else {
+            List<DataListAggregationParam> tempList = new ArrayList<>();
+            tempList.add(paramInfo);
+            groupMap.put(mapKey, tempList);
+          }
+        }
+        resultList = sysDataListDetailService.getRowDataNew(ntssUser.getFacilityCd(), groupMap);
+      }
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_MULTI_PAT_LIST, AFTER_LOG_FLG_INFO, mappingUrl, null,
+        params);
+
+      // レスポンス作成
+      return new ResponseEntity<>(resultList, HttpStatus.OK);
+    } catch (Exception e) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(),  FUNCTION_CODE.FUNC_MULTI_PAT_LIST, AFTER_LOG_FLG_ERROR, mappingUrl, null, e.getMessage());
+      return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+  }
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang end
+
+  // add #11895 データリスト「治療予定・実績」テンプレート恒久対応 fang start
+  /**
+   * 該当機能に表示用のデータリストカテゴリ詳細項目を取得（POST、患者IDリストをボディで受け取る）
+   */
+  @PostMapping("/getTemplateValueForTreatmentRecord")
+  public ResponseEntity<?> getTemplateValuePost(
+    @RequestBody GetTemplateValueRequest request,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+
+    String mappingUrl = Uri.SEND_PUSH + "/getTemplateValueForTreatmentRecord";
+    logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_MULTI_PAT_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
+      Arrays.asList(request.getStartDate(), request.getEndDate(), request.getTemplateCd()));
+
+    try {
+      Map<String, Object> map;
+      if (request.getOffset() != null) {
+        map = sysDataListDetailService.getTemplateValue(request.getPatIdList(), ntssUser.getFacilityCd(), request.getStartDate(),
+          request.getEndDate(), request.getTemplateCd(), request.getOffset(), request.getIsOnlyRst());
+      } else {
+        map = sysDataListDetailService.getTemplateValue(request.getPatIdList(), ntssUser.getFacilityCd(), request.getStartDate(),
+          request.getEndDate(), request.getTemplateCd());
+      }
+
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_MULTI_PAT_LIST, AFTER_LOG_FLG_INFO, mappingUrl, null,
+        Arrays.asList(request.getStartDate(), request.getEndDate(), request.getTemplateCd()));
+      return new ResponseEntity<>(map, HttpStatus.OK);
+    } catch (Exception e) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_MULTI_PAT_LIST, AFTER_LOG_FLG_ERROR, mappingUrl, null, e.getMessage());
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+  }
+  // add #11895 データリスト「治療予定・実績」テンプレート恒久対応 fang end
+
 }

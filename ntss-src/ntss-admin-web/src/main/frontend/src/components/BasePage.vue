@@ -22,7 +22,7 @@
 </template>
 
 <script>
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 export default {
   data() {

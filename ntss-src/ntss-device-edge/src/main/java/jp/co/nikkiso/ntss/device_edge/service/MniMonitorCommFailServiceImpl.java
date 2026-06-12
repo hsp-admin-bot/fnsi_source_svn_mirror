@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.device_edge.service;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -15,7 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.dao.MniMonitorDao;
 import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
@@ -148,7 +147,7 @@ public class MniMonitorCommFailServiceImpl implements MniMonitorCommFailService 
         triggerUtil.updateTriggerOrdMain(Collections.singletonList(oldOrdMain),
           Collections.singletonList(newOrdMain));
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();

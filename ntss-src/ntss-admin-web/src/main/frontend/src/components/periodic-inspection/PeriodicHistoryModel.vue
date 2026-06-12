@@ -1,13 +1,16 @@
 <template>
   <modal-base @onClose="closeHistory" class="custom-modal">
-    <div slot="header">
+    <template #header>
       <component :is="header"></component>
-            </div>
-    <div slot="body" style="font-size: 1.5em">
+    </template>
+
+    <template #body>
+      <div style="font-size: 1.5em">
       <v-ons-row class="title-padding" >
         <div class="scroll-area-modal" id="scrollCondModal">
           <div class="sub_title">
             <table class="ntss-list-detail">
+              <tbody>
               <tr>
                 <th class="list-header-th-center list-header-th-bed-name">ベッド</th>
                 <th class="list-header-th-center list-header-th-machine-type">型式</th>
@@ -24,6 +27,8 @@
                   <img v-else-if="this.getTheme === 1" src="img/periodic-inspection/stop-watch-dark.png" id="stop-watch-icon" @click="ShowSomeThing(editData.machineInfor.machineTypeCd, editData.machineInfor.machineSerial)" />
                 </td>
               </tr>
+            
+              </tbody>
             </table>
           </div>
           <div class="custom-ons-col-flex-end">
@@ -123,19 +128,23 @@
         </div>
       </v-ons-row>
     </div>
-    <div slot="footer" class="flex-container justify-content-flex-end">
+    </template>
+    <template #footer>
+      <div class="flex-container justify-content-flex-end">
       <div class="denial-btn-area custom-close-btn" style="background:none">
         <v-ons-button class="btn2-cancel button denial-btn" @click="closeHistory">閉じる</v-ons-button>
     </div>
-  </div>
+        </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
+import { getScopedElementsByClassName, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
-import {mapGetters, mapActions, mapMutations} from "vuex";
-import { EventBus } from "@/eventBus.js";
-import moment from "moment";
+import {mapGetters, mapActions, mapMutations} from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import dayjs from "@/compat/date/dayjs";
 import {
   sendRequestGetHistory
 } from "@/apis/periodic-inspection";
@@ -148,6 +157,10 @@ import DateInput from "@/components/common/DateInput.vue";
 import CommonCalender from "@/components/common/custom-calendar/CustomCalendar";
 //#11059:定期点検履歴画面の日付IF修正End
 import { getHolidayStyle } from "@/functions/common/CommonFunctions";
+import {
+  formatMenteDateHeader,
+  normalizeMenteDate,
+} from "@/functions/periodic-inspection/PeriodicInspectionDateUtil";
 
 export default {
   name: "PeriodicHistoryModel",
@@ -164,7 +177,7 @@ export default {
       header: "点検履歴",
       lisData: [],
       condition: {
-        date: moment(new Date()).format("YYYY-MM-DD"),
+        date: dayjs(new Date()).format("YYYY-MM-DD"),
         menteClass: 2,
         machineNo: 0,
         numOfYear: 5,
@@ -175,7 +188,7 @@ export default {
       },
       msgDiaLog: DIALOG_MESSAGES["99999995"].message,
       showErrorStartDate: false,
-      searchDate:moment(new Date()).format("YYYY-MM-DD"),
+      searchDate:dayjs(new Date()).format("YYYY-MM-DD"),
       min:0,
       max:99,
       blurFlg:false,
@@ -294,10 +307,10 @@ export default {
       return statusText.find(x => x.key === status).value;
     },
     showStartMsg(){
-      this.showErrorStartDate = document.getElementsByClassName("start-date")[0].validationMessage !== "";
+      this.showErrorStartDate = (getScopedElementsByClassName("start-date", this.$el || null)[0]?.validationMessage || "") !== "";
     },
     getStartDate(){
-      this.showErrorStartDate = document.getElementsByClassName("start-date")[0].validationMessage !== "";
+      this.showErrorStartDate = (getScopedElementsByClassName("start-date", this.$el || null)[0]?.validationMessage || "") !== "";
     },
     closeHistory() {
       EventBus.$emit("closeHistory");
@@ -371,9 +384,9 @@ export default {
         const checker2 = this.getAllUser.find(
           x => x.user_id === item.checkerId2
         );
-        const layoutGroupName = this.getLayoutGroupList.find(
-          x =>x.menteLayoutGroupCd === item.menteLayoutGroupCd
-        ).groupName;
+        const layoutGroup = this.getLayoutGroupList.find(
+          x =>x.menteLayoutGroupCd === item.menteLayoutGroupCd);
+        const layoutGroupName = layoutGroup ? layoutGroup.groupName : "";
         this.lisData.push({
           recNo: item.recNo,
           menteComment1 : item.menteComment1,
@@ -382,8 +395,8 @@ export default {
           checker2: checker2 ? checker2.checkerFullName : "",
           menteAns1: item.menteAns1 != null ? item.menteAns1 : "",
           menteAns2: item.menteAns2 != null ? item.menteAns2 : "",
-          menteDate: moment(item.menteDate).format("YYYY/MM/DD"),
-          upDate: moment(item.upDate).format("YYYY/MM/DD HH:mm"),
+          menteDate: dayjs(normalizeMenteDate(item.menteDate)).format("YYYY/MM/DD"),
+          upDate: dayjs(item.upDate).format("YYYY/MM/DD HH:mm"),
           facilityCd: item.facilityCd,
           menteLayoutGroupCd: item.menteLayoutGroupCd,
           machineTypeCd: item.machineTypeCd,
@@ -404,6 +417,8 @@ export default {
         });
         // add #12262 定期点検画面の機能帳票で装置毎の点検一覧と記録簿が出せない limingzhe end
       });
+      await this.$nextTick();
+      this.setDisplayAreaSize();
     },
     async openPeriodicHistoryDetail(item) {
       if(null != this.lisData && this.lisData.length>0){
@@ -433,7 +448,7 @@ export default {
       EventBus.$emit("closesMachineModal", {name: 'PeriodicInspectionModal'});
     },
     hideArrowDate() {
-      const getInputDateID = document.getElementById("input-search-date");
+      const getInputDateID = getScopedElementById("input-search-date", this.$el || null);
       getInputDateID.addEventListener('keydown', (event) => {
         if (event.key == "ArrowDown") {
           event.preventDefault();
@@ -448,28 +463,32 @@ export default {
     // スクロールエリアサイズの設定
     setScrollAreaSize() {
       // -----height-----
+      const scrollAreaModal = getScopedElementById("scrollAreaModal", this.$el || null);
+      // 再計測前に固定高を外す（前回の高さのままだとテーブル実高が取れずスクロールだけ増える）
+      if (scrollAreaModal) {
+        scrollAreaModal.style.height = "auto";
+      }
+
       // ヘッダー高の取得
-      const headerHeight = document.getElementsByClassName("modal-header")[0].offsetHeight;
+      const headerHeight = Number(getScopedElementsByClassName("modal-header", this.$el || null)[0]?.offsetHeight || 0);
       // フッター高の取得
-      const footerHeight = document.getElementsByClassName("modal-footer")[0].clientHeight;
+      const footerHeight = Number(getScopedElementsByClassName("modal-footer", this.$el || null)[0]?.clientHeight || 0);
       // 条件高の取得
-      const scrollCondModalHeight = document.getElementById("scrollCondModal").clientHeight;
+      const scrollCondModalHeight = Number(getScopedElementById("scrollCondModal", this.$el || null)?.clientHeight || 0);
 
       // スクロールエリア高の計算
-      const scrollAreaHeight = document.getElementById("scrollbody").clientHeight - headerHeight - footerHeight - scrollCondModalHeight - 10; 
+      const scrollAreaHeight = Number(getScopedElementById("scrollbody", this.$el || null)?.clientHeight || 0) - headerHeight - footerHeight - scrollCondModalHeight - 10; 
       // スクロールテーブル高の取得
-      const scrollTableHeight = document.getElementById("scrollTableModal").clientHeight;
+      const scrollTableHeight = Number(getScopedElementById("scrollTableModal", this.$el || null)?.clientHeight || 0);
       // スクロールエリア高 > スクロールテーブル高
       if (scrollAreaHeight > scrollTableHeight) {
         // スクロールエリア高 + 調整高
         const val = scrollTableHeight + 18;
-        // スクロールエリア高の設定
-        document.getElementById("scrollAreaModal").style.height = val + "px";
+        if (scrollAreaModal) scrollAreaModal.style.height = `${val}px`;
       } else {
         // スクロールエリア高 - 調整高
         const val = scrollAreaHeight + (20 - 8);
-        // スクロールエリア高の設定
-        document.getElementById("scrollAreaModal").style.height = val + "px";
+        if (scrollAreaModal) scrollAreaModal.style.height = `${val}px`;
       }
     },
     ShowSomeThing(machineTypeCd, machineSerial) {
@@ -496,12 +515,11 @@ export default {
       callModalFunction(arg);
     },
     formattedUpDate(dateStr){
-      const date = moment(dateStr);
+      const date = dayjs(dateStr);
       return date.format("YYYY/MM/DD(dd) HH:mm");
     },
-    formattedMenteDate(dateStr){
-      const date = moment(dateStr);
-      return date.format("YYYY/MM/DD(dd)");
+    formattedMenteDate(dateStr) {
+      return formatMenteDateHeader(normalizeMenteDate(dateStr));
     },
      /**
      * 休日のスタイル取得
@@ -523,7 +541,7 @@ export default {
     this.setLoadingScreenVisible(false);
   },
   // add #12262 定期点検画面の機能帳票で装置毎の点検一覧と記録簿が出せない limingzhe start
-  beforeDestroy() {
+  beforeUnmount() {
     store.dispatch("report/getMstReport", { funcCd: "03301", printFlag: 0 });
     this.setIsOpenByHistoryView(false);
   },
@@ -670,7 +688,7 @@ export default {
   z-index: 10000;
 }
 
-.periodic-history-modal >>> .modal-container {
+.periodic-history-modal :deep(.modal-container) {
   margin: 0;
   width: 100%;
   height: 100%;
@@ -770,23 +788,23 @@ export default {
   width: 10em;
 }
 
-div >>> .modal-header .toolbar {
+div :deep(.modal-header .toolbar) {
   background-color: var(--ntss-header-background-color);
 }
 
-div >>> .modal-header .toolbar__title.toolbar__left {
+div :deep(.modal-header .toolbar__title.toolbar__left) {
   color: var(--ntss-header-color) !important;
 }
 
-div >>> .modal-search,
-div >>> .modal-body,
-div >>> .modal-footer,
-div >>> .modal-footer .bottom-bar {
+div :deep(.modal-search),
+div :deep(.modal-body),
+div :deep(.modal-footer),
+div :deep(.modal-footer .bottom-bar) {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }
 
-div >>> .modal-footer ons-bottom-toolbar {
+div :deep(.modal-footer ons-bottom-toolbar) {
   height: auto;
 }
 
@@ -854,14 +872,14 @@ div >>> .modal-footer ons-bottom-toolbar {
 }
 
 @media print {
-  .modal-mask >>> .modal-container {
+  .modal-mask :deep(.modal-container) {
     width: 95%;
   }
   /* ヘッダ */
   .ntss-list-detail .ntss-list-body-td {
     white-space: normal;
   }
-  
+
   /* テーブル全体を印刷幅に収める */
   #scrollAreaModal {
     height: auto !important;
@@ -879,7 +897,7 @@ div >>> .modal-footer ons-bottom-toolbar {
     white-space: normal !important;
     overflow-wrap: break-word !important;
   }
-  
+
   /* 点検実施日 */
   .ntss-list-table .list-header-th-1 { width: 7em !important; min-width: 7em !important; }
   /* 記録番号 */

@@ -5,12 +5,14 @@ import java.util.Map;
 
 import jp.co.nikkiso.ntss.admin_web.response.masterMaintenance.MasterDataResponse;
 import jp.co.nikkiso.ntss.admin_web.response.masterMaintenance.MasterUpdateResponse;
-import jp.co.nikkiso.ntss.core.entity.MstFacility;
 // add FNSI-メニューに共有ON／共有OFFを追加する 江 start
-import jp.co.nikkiso.ntss.core.entity.MstPersonalUser;
 // add FNSI-メニューに共有ON／共有OFFを追加する 江 end
-import jp.co.nikkiso.ntss.core.entity.custom.MstUserData;
+import jp.co.nikkiso.ntss.core.entity.MstFacility;
+import jp.co.nikkiso.ntss.core.entity.MstPersonalUser;
+import jp.co.nikkiso.ntss.core.entity.MstUser;
+import jp.co.nikkiso.ntss.core.entity.MstUserAuthentication;
 import jp.co.nikkiso.ntss.core.entity.MstUserOTP;
+import jp.co.nikkiso.ntss.core.entity.custom.MstUserData;
 
 
 public interface MstUserService {
@@ -265,8 +267,8 @@ public interface MstUserService {
   *
   */
   MasterUpdateResponse updateSigninDate(long userId);
-  
-  
+
+
   /**
    *利用者マスタデータ取得
    *
@@ -276,4 +278,9 @@ public interface MstUserService {
    *
    */
   List<Map<String, Object>> selectUserDataByFacilityCd(String facilityCd, boolean equals);
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  MstUser getByUserId(long userId);
+
+  MstUserAuthentication selectMstUserAuthenticationByUserId(Long userId);
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 }

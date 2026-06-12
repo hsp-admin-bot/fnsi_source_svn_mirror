@@ -70,6 +70,7 @@ import static com.mongodb.client.model.Filters.in;
 import static com.mongodb.client.model.Filters.lt;
 import static com.mongodb.client.model.Sorts.descending;
 import static java.util.stream.Collectors.toList;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
 @Service
@@ -118,6 +119,10 @@ public class ReportMenuDataKeySortCommonServiceImpl implements ReportMenuDataKey
 
   @Autowired
   private MstMachineDao mstMachineDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 add yangxuewang start
   @Autowired
@@ -587,7 +592,7 @@ public class ReportMenuDataKeySortCommonServiceImpl implements ReportMenuDataKey
           if (item.keySet().contains(CoreConstant.ReportMenu.DIALYSIS_DAY)) {
             if ("dialysis_date".equals(String.valueOf(dataKey.get("dateKind")))) {
               // 透析日データを取得 ( 透析日は、開始日～終了日で検索し、開始日に近いほうのデータを使用してソートを行う )
-              Config config = Config.get(baseEntityDao);
+              Config config = defaultDbConfig;
               SelectBuilder builder = SelectBuilder.newInstance(config);
               builder.sql("select pat_id, min(treat_date) as treat_date from ord_main where pat_id in (");
               for (Long patId : patIdList) {
@@ -1399,7 +1404,7 @@ public class ReportMenuDataKeySortCommonServiceImpl implements ReportMenuDataKey
 
         if (item.keySet().contains(CoreConstant.ReportMenu.DIALYSIS_DAY)) {
 
-          Config config = Config.get(baseEntityDao);
+          Config config = defaultDbConfig;
           SelectBuilder builder = SelectBuilder.newInstance(config);
           if (listPatId.size() != 0) {
             builder.sql("select pat_id, min(treat_date) as treat_date from ord_main where pat_id in (");

@@ -31,7 +31,9 @@ public interface MstSupportDao {
   List<Map<String,Object>> selectExceptionPeriod(String facilityCd, String patId);
 
   @Select
-  Map<String,Object> selectRange(String cd);
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 start
+  Map<String,Object> selectRange(String cd, String facilityCd);
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 end
 
   @Select
   List<Map<String,Object>> selectDrugData(String facilityCd, String patId, String baseDate, String cd);
@@ -64,4 +66,9 @@ public interface MstSupportDao {
 
   @Delete(sqlFile = true)
   int deleteMaterial(String baseDate, String facilityCd, long patId);
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @Select
+    MntMedicineSupport selectMntMedicineSupportByCd(String cd);
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
 }

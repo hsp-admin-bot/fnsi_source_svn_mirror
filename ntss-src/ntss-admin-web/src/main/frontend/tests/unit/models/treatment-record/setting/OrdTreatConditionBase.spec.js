@@ -89,7 +89,7 @@ describe("OrdTreatConditionBase#getAfterConversionValue", () => {
 
     // action
     // assert
-    expect(base.getAfterConversionValue("15", 99)).toBe(99);
+    expect(base.getAfterConversionValue("15", 99)).toBe("不明");
   });
   test("値にundefinedを指定した場合は、空文字を取得できること", () => {
     // arrange

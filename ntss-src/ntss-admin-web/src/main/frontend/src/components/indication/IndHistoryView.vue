@@ -2,7 +2,8 @@
 
 <template>
   <modal-base @onClose="hideModal">
-    <div slot="search-area" class="not-height-auto">
+        <template #search-area>
+<div class="not-height-auto">
       <v-card>
         <div class='dialog-header-item'>
           <v-ons-row class="condition-search-row">
@@ -43,7 +44,7 @@
                       type="date"
                       min='1880-01-01'
                       max='2099-12-31'
-                      v-validate="'date_format:yyyy-MM-dd'"
+                      v-rules="'date_format:yyyy-MM-dd'"
                       onkeydown="(function(event){if(event.altKey && event.key=='ArrowDown'){event.preventDefault();}})(event)"
                     /> -->
                     <div class="d-flex flex-column">
@@ -57,8 +58,8 @@
                           min='1880-01-01'
                           max='2099-12-31'
                           v-model="condition.inProgress.logDateStart"
-                          data-vv-scope="inProgressLogDateStart"
-                          v-validate="'required|date_format:yyyy-MM-dd'"
+                          data-validation-scope="inProgressLogDateStart"
+                          v-rules="'required|date_format:yyyy-MM-dd'"
                         /> -->
                         <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 start -->
                         <!-- <input
@@ -69,8 +70,8 @@
                           min='1880-01-01'
                           max='2099-12-31'
                           v-model="condition.inProgress.logDateStart"
-                          data-vv-scope="inProgressLogDateStart"
-                          v-validate="'required|date_format:yyyy-MM-dd'"
+                          data-validation-scope="inProgressLogDateStart"
+                          v-rules="'required|date_format:yyyy-MM-dd'"
                           @keyup="showStartMsg"
                           @blur="getStartDate"
                         /> -->
@@ -82,7 +83,7 @@
                           max='2099-12-31'
                           v-model="condition.inProgress.logDateStart"
                           @handleClearInput="condition.inProgress.logDateStart = null; showErrorStartDate = false;"
-                          data-vv-scope="inProgressLogDateStart"
+                          data-validation-scope="inProgressLogDateStart"
                           @keyup="showStartMsg"
                           @blur="getStartDate"
                         />
@@ -99,10 +100,10 @@
                       </div>
                       <!-- mod FNSI-横展開-日付検索メッセージ 関 start -->
                       <!-- <span class="error-message">{{
-                        errors.first("inProgressLogDateStart.logDateStart")
+                        getValidationError("inProgressLogDateStart.logDateStart")
                       }}</span> -->
                       <span class="error-message" v-if="showErrorStartDate">{{
-                        errors.first("inProgressLogDateStart.logDateStart")||this.msgDiaLog
+                        getValidationError("inProgressLogDateStart.logDateStart")||this.msgDiaLog
                       }}</span>
                        <!-- mod FNSI-横展開-日付検索メッセージ 関 end -->
                     </div>
@@ -131,7 +132,7 @@
                       type="date"
                       min='1880-01-01'
                       max='2099-12-31'
-                      v-validate="'date_format:yyyy-MM-dd'"
+                      v-rules="'date_format:yyyy-MM-dd'"
                       onkeydown="(function(event){if(event.altKey && event.key=='ArrowDown'){event.preventDefault();}})(event)"
                     /> -->
                     <div class="d-flex flex-column">
@@ -145,8 +146,8 @@
                           min='1880-01-01'
                           max='2099-12-31'
                           v-model="condition.inProgress.logDateEnd"
-                          data-vv-scope="inProgressLogDateEnd"
-                          v-validate="'required|date_format:yyyy-MM-dd'"
+                          data-validation-scope="inProgressLogDateEnd"
+                          v-rules="'required|date_format:yyyy-MM-dd'"
                         /> -->
                         <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 start -->
                         <!-- <input
@@ -157,8 +158,8 @@
                           min='1880-01-01'
                           max='2099-12-31'
                           v-model="condition.inProgress.logDateEnd"
-                          data-vv-scope="inProgressLogDateEnd"
-                          v-validate="'required|date_format:yyyy-MM-dd'"
+                          data-validation-scope="inProgressLogDateEnd"
+                          v-rules="'required|date_format:yyyy-MM-dd'"
                           @keyup="showEndMsg"
                           @blur="getEndDate"
                         /> -->
@@ -170,7 +171,7 @@
                           max='2099-12-31'
                           v-model="condition.inProgress.logDateEnd"
                           @handleClearInput="condition.inProgress.logDateEnd = null; showErrorEndDate = false;"
-                          data-vv-scope="inProgressLogDateEnd"
+                          data-validation-scope="inProgressLogDateEnd"
                           @keyup="showEndMsg"
                           @blur="getEndDate"
                         />
@@ -186,10 +187,10 @@
                       </div>
                       <!-- mod FNSI-横展開-日付検索メッセージ 関 start -->
                       <!-- <span class="error-message">{{
-                        errors.first("inProgressLogDateEnd.logDateEnd")
+                        getValidationError("inProgressLogDateEnd.logDateEnd")
                       }}</span> -->
                       <span class="error-message" v-if="showErrorEndDate">{{
-                        errors.first("inProgressLogDateEnd.logDateEnd")|| this.msgDiaLog
+                        getValidationError("inProgressLogDateEnd.logDateEnd")|| this.msgDiaLog
                     }}</span>
                       <!-- mod FNSI-横展開-日付検索メッセージ 関 end -->
                     </div>
@@ -217,7 +218,7 @@
                   type="date"
                   min='1880-01-01'
                   max='2099-12-31'
-                  v-validate="'date_format:yyyy-MM-dd'"
+                  v-rules="'date_format:yyyy-MM-dd'"
                   onkeydown="(function(event){if(event.altKey && event.key=='ArrowDown'){event.preventDefault();}})(event)"
                 /> -->
                 <div class="d-flex flex-column">
@@ -231,8 +232,8 @@
                       min='1880-01-01'
                       max='2099-12-31'
                       v-model="condition.inProgress.treatmentStartDate"
-                      data-vv-scope="inProgressTreatmentStartDate"
-                      v-validate="'required|date_format:yyyy-MM-dd'"
+                      data-validation-scope="inProgressTreatmentStartDate"
+                      v-rules="'required|date_format:yyyy-MM-dd'"
                     /> -->
                     <!-- #5590 2023/04/20 ×を常に表示するように修正 張博 start -->
                     <!-- <input
@@ -243,8 +244,8 @@
                       min='1880-01-01'
                       max='2099-12-31'
                       v-model="condition.inProgress.treatmentStartDate"
-                      data-vv-scope="inProgressTreatmentStartDate"
-                      v-validate="'required|date_format:yyyy-MM-dd'"
+                      data-validation-scope="inProgressTreatmentStartDate"
+                      v-rules="'required|date_format:yyyy-MM-dd'"
                       @keyup="showtreatmentMsg"
                       @blur="gettreatmentDate"
                     /> -->
@@ -256,7 +257,7 @@
                       max='2099-12-31'
                       v-model="condition.inProgress.treatmentStartDate"
                       @handleClearInput="condition.inProgress.treatmentStartDate = null; showErrortreatmentDate = false;"
-                      data-vv-scope="inProgressTreatmentStartDate"
+                      data-validation-scope="inProgressTreatmentStartDate"
                       @keyup="showtreatmentMsg"
                       @blur="gettreatmentDate"
                     />
@@ -271,10 +272,10 @@
                   </div>
                   <!-- mod FNSI-横展開-日付検索メッセージ 関 start -->
                   <!-- <span class="error-message">{{
-                    errors.first("inProgressTreatmentStartDate.treatmentStartDate")
+                    getValidationError("inProgressTreatmentStartDate.treatmentStartDate")
                   }}</span> -->
                   <span class="error-message" v-if="showErrortreatmentDate">{{
-                    errors.first("inProgressTreatmentStartDate.treatmentStartDate")|| this.msgDiaLog
+                    getValidationError("inProgressTreatmentStartDate.treatmentStartDate")|| this.msgDiaLog
                   }}</span>
                   <!-- mod FNSI-横展開-日付検索メッセージ 関 end -->
                 </div>
@@ -450,7 +451,9 @@
         </v-ons-popover>
       </v-card>
     </div>
-    <div slot="body" class="modal-container-custom" id="modal-indHistory">
+    </template>
+        <template #body>
+<div class="modal-container-custom" id="modal-indHistory">
       <!-- mod FNSI-FutreNetWeb+SI課題管理No.5635 李 start -->
       <div class="modal-contents master-maintenance-page">
         <v-ons-row>
@@ -515,7 +518,7 @@
       <!-- add FNSI-障害票一覧_指示履歴#1。 周 start -->
       <div v-if="messageDialogInfo.isDialogVisible">
         <message-dialog
-          :visible.sync="messageDialogInfo.isDialogVisible"
+          v-model:visible="messageDialogInfo.isDialogVisible"
           :message-cd="messageDialogInfo.messageCd"
           :type="messageDialogInfo.type"
           :string-params="messageDialogInfo.stringParams"
@@ -523,7 +526,9 @@
       </div>
       <!-- add FNSI-障害票一覧_指示履歴#1。 周 end -->
     </div>
-    <div slot="footer" class="modal-footer-custom">
+    </template>
+        <template #footer>
+<div class="modal-footer-custom">
       <v-ons-row>
         <v-ons-col>
           <v-ons-button class="btn2-cancel width-padding" @click="hideModal">
@@ -532,25 +537,26 @@
         </v-ons-col>
       </v-ons-row>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 // mod FNSI-横展開-日付検索条件 関 start
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 // mod FNSI-横展開-日付検索条件 関 end
 import { ApiHelper } from "@/apis/AxiosHelper.js";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import { treatment } from "@/functions/mst/MstGetters.js";
-import moment from "moment";
-import kendo from "@progress/kendo-ui";
+import dayjs from "@/compat/date/dayjs";
+import { createDataSource, readKendoDataSource, setKendoProgress } from "@/functions/common/KendoFunctions";
 import ModalBase from "@/components/modals/ModalBase";
 import CustomCalendar from "@/components/common/custom-calendar/CustomCalendar";
 // add FNSI-障害票一覧_指示履歴#1。 周 start
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 // add FNSI-障害票一覧_指示履歴#1。 周 end
 import commonSearchArea from "@/components/common/CommonSearchArea";
-import elementResizeDetectorMaker from "element-resize-detector";
+import elementResizeDetectorMaker from "@/compat/resize/element-resize-detector";
 import { mstPatViewerLayoutDefine } from "@/constants/mstPatViewerLayoutDefine";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import { sendRequestGetMstFacilitySettingData as getMstFacitilySettingData } from "@/apis/mst-facility-setting-maintenance";
@@ -574,8 +580,9 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 //#5590 2023/04/20 ×を常に表示するように修正 張博 start
 import DateInput from "@/components/common/DateInput.vue";
+import { getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 //#5590 2023/04/20 ×を常に表示するように修正 張博 end
-
+import { queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
 export default {
   components: {
     "custom-calendar": CustomCalendar,
@@ -647,7 +654,6 @@ export default {
       logTargetOptions: [],
       createdByOptions: [],
       updatedByOptions: [],
-      isGridInitialLoad: true,
       gridHeight: 0,
       columnStatus: {},
       indicationUnit: false,
@@ -674,7 +680,7 @@ export default {
      * OKボタンがクリックできるかどうか.
      */
     canSave() {
-      return this.$validator.errors.items.length === 0;
+      return this.validationErrors.length === 0;
     },
     // add FNSI-横展開 日付のチェックの追加対応_患者経過総合ビューア「指示履歴」機能分 周 end
     gridHeightValue() {
@@ -686,17 +692,42 @@ export default {
     this.mstUser = await this.getUser();
     this.updateGridData();
     erd.listenTo(this.$el, () => {
-      this.$refs.grid.kendoWidget().refresh();
+      this.relayoutGrid();
     });
     this.$nextTick(async () => {
-      window.addEventListener("resize", this.onResize);
+      (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.onResize);
     });
-    
-    window.addEventListener("beforeprint", this.handleBeforePrint);
-    window.addEventListener("afterprint", this.handleAfterPrint);    
+    const scopedWindow = this.$el?.ownerDocument?.defaultView || window;
+    scopedWindow.addEventListener("beforeprint", this.handleBeforePrint);
+    scopedWindow.addEventListener("afterprint", this.handleAfterPrint);
   },
 
   methods: {
+    getScopedElementByIdSafe(id) {
+      return getScopedElementById(id, this.$el || null);
+    },
+    getScopedClassElementSafe(className) {
+      return getScopedElementsByClassName(className, this.$el || null)[0] || null;
+    },
+    getGridRef() {
+      return this.$refs.grid || null;
+    },
+    getGridWidget() {
+      return this.getGridRef()?.gridWidget?.() || this.getGridRef()?.kendoWidget?.() || null;
+    },
+    getGridElement() {
+      return this.getGridRef()?.gridElement?.() || this.getGridWidget()?.element || null;
+    },
+    relayoutGrid() {
+      return this.getGridRef()?.requestGridResize?.()
+        || this.getGridWidget()?.resize?.()
+        || this.getGridRef()?.refreshGrid?.()
+        || this.getGridWidget()?.refresh?.()
+        || null;
+    },
+    getGridContentElement() {
+      return this.$refs.grid?.gridContentEl?.() || this.$el.querySelector('.k-grid-content');
+    },
     // mod FNSI-横展開-日付検索条件 関 start
     ...mapActions("pat-viewer",["setCondition"]),
     // mod FNSI-横展開-日付検索条件 関 end
@@ -716,17 +747,15 @@ export default {
     popoverPreShow,
     popoverPostShow,
     popoverPosthide,
-    
     /**
      * 画面印刷前処理
      * 印刷時、全列の幅を収める。列移動可能なため、移動後の位置を取得して動的にスタイル生成
      */
     handleBeforePrint() {
-      const grid = this.$refs.grid.kendoWidget();
-      // 表示列のみ
+      const grid = this.getGridWidget();
+      if (!grid?.columns) return;
+
       const visibleColumns = grid.columns.filter(col => !col.hidden);
-  
-      // field毎の印刷幅定義
       const styleMap = {
         logDate: { minWidth: "6.4em", width: "13%" },
         treatmentStartDate: { minWidth: "6.4em", width: "7%" },
@@ -738,18 +767,18 @@ export default {
         logClass: { width: "4%" },
         logContent: { minWidth: "9em", width: "16%" },
         createdBy: { minWidth: "2.5em", width: "9%" },
-        updatedBy: { minWidth: "2.5em",width: "9%" },
-        receiver1: { minWidth: "2.5em",width: "9%" },
-        receiver2: { minWidth: "2.5em",width: "9%" },
-        approver1: { minWidth: "2.5em",width: "9%" },
-        approver2: { minWidth: "2.5em",width: "9%" }
+        updatedBy: { minWidth: "2.5em", width: "9%" },
+        receiver1: { minWidth: "2.5em", width: "9%" },
+        receiver2: { minWidth: "2.5em", width: "9%" },
+        approver1: { minWidth: "2.5em", width: "9%" },
+        approver2: { minWidth: "2.5em", width: "9%" },
       };
-  
+
       let dynamicCss = "";
       visibleColumns.forEach((col, index) => {
         const style = styleMap[col.field];
         if (!style) return;
-  
+
         const cssProps = [];
         if (style.minWidth) {
           cssProps.push(`min-width: ${style.minWidth} !important;`);
@@ -764,15 +793,14 @@ export default {
         `;
       });
 
-      // styleタグ取得 or 生成
-      let styleEl = document.getElementById("dynamic-print-style");
+      const scopedDocument = this.$el?.ownerDocument || document;
+      let styleEl = scopedDocument.getElementById("dynamic-print-style");
       if (!styleEl) {
-        styleEl = document.createElement("style");
+        styleEl = scopedDocument.createElement("style");
         styleEl.id = "dynamic-print-style";
-        document.head.appendChild(styleEl);
+        scopedDocument.head.appendChild(styleEl);
       }
 
-      // 印刷用CSS適用
       styleEl.innerHTML = `
         @media print {
           ${dynamicCss}
@@ -783,28 +811,24 @@ export default {
      * 画面印刷後処理
      */
     handleAfterPrint() {
-      // 印刷用の動的style削除
       this.removeDynamicPrintStyle();
     },
     /**
      * 動的style削除
      */
     removeDynamicPrintStyle() {
-      const styleEl = document.getElementById("dynamic-print-style");
+      const scopedDocument = this.$el?.ownerDocument || document;
+      const styleEl = scopedDocument.getElementById("dynamic-print-style");
       if (styleEl) {
         styleEl.remove();
       }
     },
-    
     async updateGridData() {
-      let total;
       const that = this;
-      that.isGridInitialLoad = true;
       that.gridColumns = that.saveGridColumns;
 
       // TODO: APIの実行方法をApiHelperに変更すること
-      /* eslint-disable-next-line no-undef */
-      that.gridData = new kendo.data.DataSource({
+      that.gridData = createDataSource({
         transport: {
           read: {
             url: "api/indHistory",
@@ -819,8 +843,8 @@ export default {
               treatmentMethod: that.condition.inUsed.treatmentMethod,
               treatmentCourse: that.condition.inUsed.treatmentCourse,
               logTarget: that.condition.inUsed.logTarget,
-              createdUserId: that.condition.inUsed.createdUserId,
-              updatedUserId: that.condition.inUsed.updatedUserId,
+              createdBy: that.condition.inUsed.createdBy,
+              updatedBy: that.condition.inUsed.updatedBy,
               searchString: that.condition.inUsed.searchQuery,
               page: data.page - 1, // APIのページは0オリジン
               size: data.pageSize,
@@ -832,10 +856,9 @@ export default {
 
             // 値がないフィールドを抜く
             Object.keys(params).forEach(
-              key => !params[key] && delete params[key]
-            );
+              key => !params[key] && delete params[key]);
             // add 8126 指示履歴の処理中が共通ローダーでは無い 関 start
-            kendo.ui.progress(that.$refs.grid.kendoWidget().element, false);
+            setKendoProgress(that.getGridElement(), false);
             // add 8126 指示履歴の処理中が共通ローダーでは無い 関  end
             return params;
           }
@@ -852,17 +875,15 @@ export default {
           data(response) {
             const responseData = response.content;
             responseData.forEach(item => {
-              item.logDate = moment(item.logDate, "YYYYMMDDHHmmssSSS").format(
-                "YYYY/MM/DD HH:mm"
-              );
+              item.logDate = dayjs(item.logDate, "YYYYMMDDHHmmssSSS").format(
+                "YYYY/MM/DD HH:mm");
               item.treatmentStartDate =
                 item.treatmentStartDate &&
-                moment(item.treatmentStartDate, "YYYYMMDD").format(
-                  "YYYY/MM/DD"
-                );
+                dayjs(item.treatmentStartDate, "YYYYMMDD").format(
+                  "YYYY/MM/DD");
               item.treatmentEndDate =
                 item.treatmentEndDate &&
-                moment(item.treatmentEndDate, "YYYYMMDD").format("YYYY/MM/DD");
+                dayjs(item.treatmentEndDate, "YYYYMMDD").format("YYYY/MM/DD");
               // del FNSI-指示履歴指示者、更新者修正 李 start
               // item.createdBy = that.getUserName(that.mstUser, item.createdUserId);
               // item.updatedBy = that.getUserName(that.mstUser, item.updatedUserId);
@@ -879,28 +900,18 @@ export default {
           },
           // データ総数
           total(response) {
-            total = total || response.totalElements;
-            return total;
+            return response.totalElements;
           }
         },
         requestStart(e) {
           // 患者IDがないとリクエストを処理しない
-          // 初期ロード時にkendoが2回リクエストをしてるから、2重化しないために1回目のリクエストを処理しない
-          if (!that.patId || that.isGridInitialLoad) {
+          if (!that.patId) {
             e.preventDefault();
-            if (that.isGridInitialLoad) that.isGridInitialLoad = false;
-          }
-
-          // mod #11555 指示履歴への記録の残り方が仕様と異なる linjunfeng start
-          // ロードアイコンを表示
-          // kendo.ui.progress(that.$refs.grid.kendoWidget().element, true);
-          if (that.patId) {
-            kendo.ui.progress(that.$refs.grid.kendoWidget().element, true);
-          } else {
             that.setLoadingScreenVisible(false);
-            kendo.ui.progress(that.$refs.grid.kendoWidget().element, false);
+            setKendoProgress(that.getGridElement(), false);
+            return;
           }
-          // mod #11555 指示履歴への記録の残り方が仕様と異なる linjunfeng end
+          setKendoProgress(that.getGridElement(), true);
         },
         requestEnd() {
           // add 8126 指示履歴の処理中が共通ローダーでは無い 関 start
@@ -910,7 +921,7 @@ export default {
           //add 9864 患者経過総合ビューアの指示編集画面で翌年を指示開始日に設定すると、終了日が自動でセットされ無期限指示変更ができない。zy start
           if(that.$refs.grid) {
           //add 9864 患者経過総合ビューアの指示編集画面で翌年を指示開始日に設定すると、終了日が自動でセットされ無期限指示変更ができない。zy end
-            kendo.ui.progress(that.$refs.grid.kendoWidget().element, false);
+            setKendoProgress(that.getGridElement(), false);
           //add 9864 患者経過総合ビューアの指示編集画面で翌年を指示開始日に設定すると、終了日が自動でセットされ無期限指示変更ができない。zy start
           }
           //add 9864 患者経過総合ビューアの指示編集画面で翌年を指示開始日に設定すると、終了日が自動でセットされ無期限指示変更ができない。zy en
@@ -918,8 +929,8 @@ export default {
       });
       // add 8126 指示履歴の処理中が共通ローダーでは無い 関 start
         const intervalId = setInterval(() => {
-         const elem =  document.querySelectorAll("tr.k-alt");
-            if (elem.length > 0 ) {
+         const elem =  queryScopedSelectorAll("tr.k-alt", this.$el || this);
+            if (elem.length > 0) {
               this.setLoadingScreenVisible(false);
               clearInterval(intervalId);
             }
@@ -982,9 +993,9 @@ export default {
       // 共通検索エリア部品に表示するデータのリストを初期化
       this.conditionList = [];
       // add FNSI-横展開 日付のチェックの追加対応_患者経過総合ビューア「指示履歴」機能分 周 start
-      this.$validator.reset("inProgressLogDateStart");
-      this.$validator.reset("inProgressLogDateEnd");
-      this.$validator.reset("inProgressTreatmentStartDate");
+      this.resetValidation("inProgressLogDateStart");
+      this.resetValidation("inProgressLogDateEnd");
+      this.resetValidation("inProgressTreatmentStartDate");
       // add FNSI-横展開 日付のチェックの追加対応_患者経過総合ビューア「指示履歴」機能分 周 end
 
     },
@@ -1010,11 +1021,9 @@ export default {
         }
       }
       // add FNSI-障害票一覧_指示履歴#1。 周 end
-      if (JSON.stringify(this.condition.inUsed) !== inProgressStr) {
-        this.condition.inUsed = JSON.parse(inProgressStr);
-        this.condition.inUsed.createdBy = this.getUserName(this.mstUser, this.condition.inUsed.createdUserId);
-        this.condition.inUsed.updatedBy = this.getUserName(this.mstUser, this.condition.inUsed.updatedUserId);
-      }
+      this.condition.inUsed = JSON.parse(inProgressStr);
+      this.condition.inUsed.createdBy = this.getUserName(this.mstUser, this.condition.inUsed.createdUserId);
+      this.condition.inUsed.updatedBy = this.getUserName(this.mstUser, this.condition.inUsed.updatedUserId);
       // mod FNSI-障害票一覧_指示履歴#1。 周 start
 
       if ("" !== stringParams) {
@@ -1025,6 +1034,9 @@ export default {
         // add/ #12521 指示履歴を表示→検索条件を指定して閉じた後に再度開くを繰り返すとフリーズ tianqidong start
         this.setLoadingScreenVisible(false);
         // add/ #12521 指示履歴を表示→検索条件を指定して閉じた後に再度開くを繰り返すとフリーズ tianqidong end
+      } else if (this.gridData?.read) {
+        this.gridData.page(1);
+        readKendoDataSource(this.gridData);
       } else {
         this.updateGridData();
       }
@@ -1057,8 +1069,7 @@ export default {
           getErrorMessage('IndHistoryView.vue', 'treatmentMethodOptions', err);
           //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
           throw err;
-        }
-      );
+        });
       // TODO: MstGettersを使用
       // this.treatmentCourseOptions = await kur(this.facilityCd).catch(err => {
       //   throw err;
@@ -1109,8 +1120,7 @@ export default {
         }).then(
           response => {
             mstPersonalUser = response.data;
-          }
-        )
+          })
       }
       //add shan  end
       // const responseUser = await ApiHelper.get("/mstInfo/mstPersonalUser", {
@@ -1149,8 +1159,7 @@ export default {
         }).then(
           response => {
             mstPersonalUser = response.data;
-          }
-        )
+          })
       }
       return mstPersonalUser;
       //add shan  end
@@ -1167,12 +1176,15 @@ export default {
     },
 
     getUserName(userList, userId) {
-      const userInfo = userList.find(user => user.userId === userId);
+      if (userId == null || userId === "" || !Array.isArray(userList)) {
+        return null;
+      }
+      const userInfo = userList.find(user => user.userId == userId);
       return userInfo ? userInfo.userName : null;
     },
 
     onResize() {
-      const ele = document.getElementById("modal-indHistory");
+      const ele = this.getScopedElementByIdSafe("modal-indHistory");
       this.gridHeight = ele ? ele.offsetHeight - 20 : 0;
     },
 
@@ -1181,22 +1193,17 @@ export default {
       const facilityData = facilityDataRes.data.localDataSource.data;
       this.columnStatus = {
         isShowChecker1: !!+facilityData.find(
-          e => e.facilitySettingNo === INDICATION_RECEIVE_1
-        ).value,
+          e => e.facilitySettingNo === INDICATION_RECEIVE_1).value,
         isShowChecker2: !!+facilityData.find(
-          e => e.facilitySettingNo === INDICATION_RECEIVE_2
-        ).value,
+          e => e.facilitySettingNo === INDICATION_RECEIVE_2).value,
         isShowApprover1: !!+facilityData.find(
-          e => e.facilitySettingNo === INDICATION_APPROVE_1
-        ).value,
+          e => e.facilitySettingNo === INDICATION_APPROVE_1).value,
         isShowApprover2: !!+facilityData.find(
-          e => e.facilitySettingNo === INDICATION_APPROVE_2
-        ).value
+          e => e.facilitySettingNo === INDICATION_APPROVE_2).value
       };
       this.indicationUnit =
         +facilityData.find(
-          e => e.facilitySettingNo === INDICATION_RECEIVE_APPROVE_UNIT
-        ).value === this.FACILITY_TYPES.INDICATION_UNIT;
+          e => e.facilitySettingNo === INDICATION_RECEIVE_APPROVE_UNIT).value === this.FACILITY_TYPES.INDICATION_UNIT;
       this.gridColumns =  [
         { field: "logDate", title: "発行日", width: 150 },
         { field: "treatmentStartDate", title: "開始日", width: 100 },
@@ -1300,22 +1307,22 @@ export default {
     },
     // add FNSI-横展開-日付検索メッセージ 関 start
     showStartMsg(){
-      this.showErrorStartDate = this.condition.inProgress.logDateStart ? document.getElementsByClassName("start-date")[0].validationMessage !== "" : false;
+      this.showErrorStartDate = this.condition.inProgress.logDateStart ? this.getScopedClassElementSafe("start-date")?.validationMessage !== "" : false;
     },
     showEndMsg(){
-      this.showErrorEndDate = this.condition.inProgress.logDateEnd ? document.getElementsByClassName("end-date")[0].validationMessage !== "" : false;
+      this.showErrorEndDate = this.condition.inProgress.logDateEnd ? this.getScopedClassElementSafe("end-date")?.validationMessage !== "" : false;
     },
     getStartDate(){
-      this.showErrorStartDate = this.condition.inProgress.logDateStart ? document.getElementsByClassName("start-date")[0].validationMessage !== "" : false;
+      this.showErrorStartDate = this.condition.inProgress.logDateStart ? this.getScopedClassElementSafe("start-date")?.validationMessage !== "" : false;
     },
     getEndDate(){
-      this.showErrorEndDate = this.condition.inProgress.logDateEnd ? document.getElementsByClassName("end-date")[0].validationMessage !== "" : false;
+      this.showErrorEndDate = this.condition.inProgress.logDateEnd ? this.getScopedClassElementSafe("end-date")?.validationMessage !== "" : false;
     },
     showtreatmentMsg(){
-      this.showErrortreatmentDate = this.condition.inProgress.treatmentStartDate ? document.getElementsByClassName("treatment-date")[0].validationMessage !== "" : false;
+      this.showErrortreatmentDate = this.condition.inProgress.treatmentStartDate ? this.getScopedClassElementSafe("treatment-date")?.validationMessage !== "" : false;
     },
     gettreatmentDate(){
-      this.showErrortreatmentDate = this.condition.inProgress.treatmentStartDate ? document.getElementsByClassName("treatment-date")[0].validationMessage !== "" : false;
+      this.showErrortreatmentDate = this.condition.inProgress.treatmentStartDate ? this.getScopedClassElementSafe("treatment-date")?.validationMessage !== "" : false;
     }
     // add FNSI-横展開-日付検索メッセージ 関
   },
@@ -1326,10 +1333,10 @@ export default {
       handler() {
         // mod FNSI-性能を最適化する 李 start
         this.$nextTick(() => {
-          this.$validator.validate("inProgressLogDateStart.logDateStart");
+          this.validateField("inProgressLogDateStart.logDateStart");
         });
         // setTimeout(() => {
-        //   this.$validator.validate("inProgressLogDateStart.logDateStart");
+        //   this.validateField("inProgressLogDateStart.logDateStart");
         // }, 0);
         // mod FNSI-性能を最適化する 李 end
       }
@@ -1338,10 +1345,10 @@ export default {
       handler() {
         // mod FNSI-性能を最適化する 李 start
         this.$nextTick(() => {
-          this.$validator.validate("inProgressLogDateEnd.logDateEnd");
+          this.validateField("inProgressLogDateEnd.logDateEnd");
         });
         // setTimeout(() => {
-        //   this.$validator.validate("inProgressLogDateEnd.logDateEnd");
+        //   this.validateField("inProgressLogDateEnd.logDateEnd");
         // }, 0);
         // mod FNSI-性能を最適化する 李 end
       }
@@ -1350,10 +1357,10 @@ export default {
       handler() {
         // mod FNSI-性能を最適化する 李 start
         this.$nextTick(() => {
-          this.$validator.validate("inProgressTreatmentStartDate.treatmentStartDate");
+          this.validateField("inProgressTreatmentStartDate.treatmentStartDate");
         });
         // setTimeout(() => {
-        //   this.$validator.validate("inProgressTreatmentStartDate.treatmentStartDate");
+        //   this.validateField("inProgressTreatmentStartDate.treatmentStartDate");
         // }, 0);
         // mod FNSI-性能を最適化する 李 end
       }
@@ -1361,29 +1368,29 @@ export default {
     // add 8126 指示履歴の処理中が共通ローダーでは無い 関 start
     gridData: {
        handler(newValue) {
-        // mod/ #12521 指示履歴を表示→検索条件を指定して閉じた後に再度開くを繰り返すとフリーズ tianqidong start
-        const elem =  document.querySelectorAll("tr.k-alt");
-        const elem1 =  document.getElementsByClassName("k-grid-content");
-        if (!elem1[0]) return;
-        const grid = elem1[0]
-        const hasScroll = grid.scrollHeight > grid.clientHeight
-        const elem2 =  elem1[0].scrollHeight-elem1[0].scrollTop-elem1[0].clientHeight;
-        //const elem3 = newValue;
+        const gridRoot = this.$refs.grid?.gridRootEl?.() || this.$el.querySelector('.k-grid');
+        const elem =  Array.from(gridRoot?.querySelectorAll("tr.k-alt") || []);
+        const gridContent = this.getGridContentElement();
+        if (!gridContent) {
+          return;
+        }
+        const hasScroll = gridContent.scrollHeight > gridContent.clientHeight;
+        const elem2 =  gridContent.scrollHeight-gridContent.scrollTop-gridContent.clientHeight;
+        const elem3 = newValue;
         // mod 6458 2023-3-20 指示履歴の発行日の情報が正しく表示されない時がある。張 start
         // if (elem2 < 1 && elem.length > 0 ) {
-        //if (elem2 < 1 && elem.length > 1 ) {
         if (elem2 <= 10 && hasScroll && elem.length > 1) {
         // mod 6458 2023-3-20 指示履歴の発行日の情報が正しく表示されない時がある。張 end
               this.setLoadingScreenMessage("処理中...");
               this.setLoadingScreenVisible(true);
               this.scroll = 2;
-        }
+            }
         if (
-          (elem2 > 10 && elem.length > 0 && elem1[0].scrollTop !== 0 && this.scroll === 2) ||
+          (elem2 > 10 && elem.length > 0 && gridContent.scrollTop !== 0 && this.scroll === 2) ||
           ((newValue._page * newValue._pageSize >= newValue._pristineTotal) &&
-          elem1[0].scrollTop !== 0 &&
-          this.scroll === 2)){
-          if ((elem2 > 1 && elem.length > 0 && elem1[0].scrollTop != 0 && this.scroll === 2) || ((newValue._page * newValue._pageSize >= newValue._pristineTotal) && elem1[0].scrollTop != 0 && this.scroll === 2)) {
+          gridContent.scrollTop !== 0 &&
+          this.scroll === 2)) {
+          if ((elem2 > 1 && elem.length > 0 && gridContent.scrollTop != 0 && this.scroll === 2) || ((newValue._page * newValue._pageSize >= newValue._pristineTotal) && gridContent.scrollTop != 0 && this.scroll === 2)) {
             this.setLoadingScreenVisible(false);
           }
         }
@@ -1422,11 +1429,11 @@ export default {
     // mod FNSI-横展開-日付検索条件 関 end
   },
 
-  beforeDestroy() {
-    window.removeEventListener("resize", this.onResize);
-    window.removeEventListener("beforeprint", this.handleBeforePrint);
-    window.removeEventListener("afterprint", this.handleAfterPrint);
-  
+  beforeUnmount() {
+    const scopedWindow = this.$el?.ownerDocument?.defaultView || window;
+    scopedWindow.removeEventListener("resize", this.onResize);
+    scopedWindow.removeEventListener("beforeprint", this.handleBeforePrint);
+    scopedWindow.removeEventListener("afterprint", this.handleAfterPrint);
     this.removeDynamicPrintStyle();
   }
 };
@@ -1434,16 +1441,17 @@ export default {
 
 <style scoped>
 /* モーダル内がくずれるのでdisplay:hiddenではなくnoneにする */
-div >>> .erd_scroll_detection_container {
+div :deep(.erd_scroll_detection_container) {
   display: none !important;
 }
 
-.modal-container-custom >>> .k-grid {
+.modal-container-custom :deep(.k-grid) {
   width: 100%;
   font-size: 1em;
 }
+ 
 /*mod FNSI-画面部品デザイン じょはく start*/
-.modal-container-custom >>> .k-grid-content {
+.modal-container-custom :deep(.k-grid-content) {
   height: 50vh;
   background-color: var(--grid-background-color);
 }
@@ -1479,17 +1487,17 @@ div >>> .erd_scroll_detection_container {
   cursor: pointer;
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 25em;
   height: 100%;
   padding: 15px;
 }
 
-.popover-style >>> .popover-mask {
+.popover-style :deep(.popover-mask) {
   z-index: 10005;
 }
 
-.popover-style >>> .popover {
+.popover-style :deep(.popover) {
   width: auto;
 }
 
@@ -1520,21 +1528,23 @@ input[type="date"].ntss-input-date:invalid {
   width: 100%;
 }
 
+ 
 /* TODO: 共通スタイル(modal.css)に定義 */
-div >>> .modal-header .toolbar {
+div :deep(.modal-header .toolbar) {
   background-color: var(--ntss-header-background-color);
 }
 
-div >>> .modal-header .toolbar__title.toolbar__left {
+div :deep(.modal-header .toolbar__title.toolbar__left) {
   color: var(--ntss-header-color) !important;
 }
 
+ 
 /*mod FNSI-画面部品デザイン じょはく start*/
-div >>> .modal-search,
-div >>> .modal-body,
-div >>> .modal-footer,
-div >>> .modal-footer .bottom-bar,
-div >>> .k-grid .k-grid-pager {
+div :deep(.modal-search),
+div :deep(.modal-body),
+div :deep(.modal-footer),
+div :deep(.modal-footer .bottom-bar),
+div :deep(.k-grid .k-grid-pager) {
   /* TODO モーダルのテーマ切り替え制御によって記載を要修正 */
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
@@ -1572,17 +1582,19 @@ div >>> .k-grid .k-grid-pager {
   margin-bottom: 15px;
   width: 100%;
 }
-.modal-mask >>> .modal-search {
+.modal-mask :deep(.modal-search) {
   top: 43px;
   height: 7.5em;
 }
 
+ 
+ 
 /* mod FNSI-FutreNetWeb+SI課題管理No.5635 李 start */
-/* .modal-mask >>> .modal-body-search {
+/* .modal-mask :deep(.modal-body-search){
   top: calc(43px + 3.2em);
   height: calc(100% - 70px - 5.2em);
 } */
-.modal-mask >>> .modal-body-search {
+.modal-mask :deep(.modal-body-search) {
   top: calc(43px + 3.2em);
   height: calc(100% - 70px - 5.2em);
   overflow-y: hidden;
@@ -1605,11 +1617,11 @@ div >>> .k-grid .k-grid-pager {
 
 @media print {
   /** 抽出条件 */
-  .modal-mask >>> .modal-search {
+  .modal-mask :deep(.modal-search) {
     top: 3px;
   }
   /** 印刷時、全列の幅を収める */
-  .modal-mask >>> .modal-container {
+  .modal-mask :deep(.modal-container) {
     width: 100%;
   }
   .modal-contents,
@@ -1617,26 +1629,26 @@ div >>> .k-grid .k-grid-pager {
     padding: 0;
   }
   /* ヘッダ、ボディ */
-  #modal-indHistory >>> .k-grid-header {
+  #modal-indHistory :deep(.k-grid-header) {
     padding-right: 0 !important;
   }
   /* Grid本体を紙幅に収める */
-  #modal-indHistory >>> .k-grid,
-  #modal-indHistory >>> .k-grid table {
+  #modal-indHistory :deep(.k-grid),
+  #modal-indHistory :deep(.k-grid table) {
     width: 100% !important;
     table-layout: fixed !important;
   }
   /* KendoがJSで設定した幅を無効化 */
-  #modal-indHistory >>> .k-grid th,
-  #modal-indHistory >>> .k-grid td {
+  #modal-indHistory :deep(.k-grid th),
+  #modal-indHistory :deep(.k-grid td) {
     width: auto !important;
     max-width: none !important;
   }
-  #modal-indHistory >>> .k-grid colgroup col {
+  #modal-indHistory :deep(.k-grid colgroup col) {
     max-width: none !important;
   }
-  #modal-indHistory >>> .k-grid th,
-  #modal-indHistory >>> .k-grid td {
+  #modal-indHistory :deep(.k-grid th),
+  #modal-indHistory :deep(.k-grid td) {
     white-space: normal !important;
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -1644,9 +1656,9 @@ div >>> .k-grid .k-grid-pager {
     padding: 2px 1px !important;
   }
   /* Kendoのellipsis解除 */
-  #modal-indHistory >>> .k-grid .k-link,
-  #modal-indHistory >>> .k-grid .k-column-title,
-  #modal-indHistory >>> .k-grid .k-cell-inner {
+  #modal-indHistory :deep(.k-grid .k-link),
+  #modal-indHistory :deep(.k-grid .k-column-title),
+  #modal-indHistory :deep(.k-grid .k-cell-inner) {
     white-space: normal !important;
     text-overflow: unset !important;
     overflow: visible !important;

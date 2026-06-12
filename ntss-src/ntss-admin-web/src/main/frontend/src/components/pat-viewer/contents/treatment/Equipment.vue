@@ -26,7 +26,8 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 /**
  * ベースコンポーネント
@@ -37,12 +38,12 @@ import baseContent from "@/components/pat-viewer/contents/base/BaseContent";
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 共通操作
  */
-import { deepCopy } from "@/functions/common/CommonFunctions";
+import { deepCopy, parseStoredArray } from "@/functions/common/CommonFunctions";
 
 /**
  * コンポーネント共通操作
@@ -64,7 +65,6 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
-import { EventBus } from "@/eventBus.js";
 
 export default {
   components: {
@@ -123,6 +123,7 @@ export default {
     ...mapGetters("pat-viewer", ["getDataListKeepEquipment", "getPatIdKeep", "getDateList", "getSelectedPeriod", "getPatIdKeepChgFlg",
       "getTreatmentDataTmp"]),
     ...mapGetters("pat-info", { patId: "selectedPatId" }),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     // add 1006-398 指示の切り替わりポイントを赤くする 陳 end
     ...mapGetters("pat-viewer-modal", ["getDefaultSettingIndEquipmentData"]),
     /**
@@ -163,7 +164,8 @@ export default {
     this.flagAuthority = this.getTreatmentRecordAuthority();
     // 表示用に医療材料情報を加工
     this.convertEquipmentData({
-      listIndex: this.rowIndex
+      listIndex: this.rowIndex,
+      selectedPatId: this.selectedPatId
     }).then(async equipmentDataListLet => {
       if (equipmentDataListLet) {
         // RestAPI実行
@@ -171,11 +173,11 @@ export default {
         const response = await ApiHelper.get(
           "/mainData/displayOrder",
           //mod FNSI-7270 劉全航 start
-          {facility_cd}
+          { facility_cd, selectedPatId: this.selectedPatId }
           //mod FNSI-7270 劉全航 end
         ).catch(err => {
           //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
-          getErrorMessage('Equipment.vue', 'created', error);
+          getErrorMessage('Equipment.vue', 'created', err);
           //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
           throw err;
         });
@@ -183,38 +185,39 @@ export default {
         if (response.data) {
           let medOrderNo = response.data.find(item => item.facilitySettingNo == '3006');
           //#11397 医材の表示順の修正 false start
-          // if (medOrderNo) {
-          //     //FNSI-修正 #5879 医材の表示順の修正　ljx start
-          //     let medOrderNoValueArray = eval(medOrderNo.value);
-          //     let sortKeyObj = [];
-          //     for(let i=0;i<medOrderNoValueArray.length;i++){
-          //           switch (medOrderNoValueArray[i]){
-          //               // 医療材料分類マスタ表示順
-          //               case '1':
-          //                 // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
-          //                 //sortKeyObj['classCd'] = "ascending";
-          //                 sortKeyObj['classCdIndex'] = "ascending";
-          //                 // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 end
-          //                 break;
-          //               // 医療材料マスタ表示順
-          //               case '2':
-          //                 sortKeyObj['index'] = "ascending";
-          //                 break;
-          //           }
-          //     }
-          //   equipmentDataListLet.sort((frontValue, nextValue) => this.sortByProps(frontValue,nextValue,sortKeyObj));
-          //   //switch (medOrderNo.value) {
-          //     // 医療材料分類名称コード
-          //     //case '1':
-          //       //equipmentDataListLet.sort((frontValue, nextValue) => frontValue.classCd - nextValue.classCd);
-          //       //break;
-          //     // 医療材料マスタ表示順
-          //     //case '2':
-          //       //equipmentDataListLet.sort((frontValue, nextValue) => frontValue.index - nextValue.index);
-          //      // break;
-          //   //}
-          //   //FNSI-修正 #5879 医材の表示順の修正　ljx end
-          // }
+          // #11397: Vue2 disables display-order sorting in this revision.
+          if (false && medOrderNo) {
+              //FNSI-修正 #5879 医材の表示順の修正　ljx start
+              let medOrderNoValueArray = parseStoredArray(medOrderNo.value);
+              let sortKeyObj = [];
+              for(let i=0;i<medOrderNoValueArray.length;i++){
+                    switch (medOrderNoValueArray[i]){
+                        // 医療材料分類マスタ表示順
+                        case '1':
+                          // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
+                          //sortKeyObj['classCd'] = "ascending";
+                          sortKeyObj['classCdIndex'] = "ascending";
+                          // mod 7886 施設設定マスタ＞No.106, 107の表示・動作不備 end
+                          break;
+                        // 医療材料マスタ表示順
+                        case '2':
+                          sortKeyObj['index'] = "ascending";
+                          break;
+                    }
+              }
+            equipmentDataListLet.sort((frontValue, nextValue) => this.sortByProps(frontValue,nextValue,sortKeyObj));
+            //switch (medOrderNo.value) {
+              // 医療材料分類名称コード
+              //case '1':
+                //equipmentDataListLet.sort((frontValue, nextValue) => frontValue.classCd - nextValue.classCd);
+                //break;
+              // 医療材料マスタ表示順
+              //case '2':
+                //equipmentDataListLet.sort((frontValue, nextValue) => frontValue.index - nextValue.index);
+               // break;
+            //}
+            //FNSI-修正 #5879 医材の表示順の修正　ljx end
+          }
           //#11397 医材の表示順の修正 false end
         }
       }
@@ -242,7 +245,7 @@ export default {
     });
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -292,7 +295,7 @@ export default {
       // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng end
       // 治療日
       // mod 2023/09/06 #9585 条件送信後に医療材料の指示を出す際の開始日が当日のまま by liumx start
-      // const treatDate = moment(this.baseDate).format("YYYY-MM-DD");
+      // const treatDate = dayjs(this.baseDate).format("YYYY-MM-DD");
       // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng start
       // const treatDate = this.getRecentBaseDate() || this.baseDate;
       const treatDate = this.getRecentBaseDate();
@@ -345,11 +348,9 @@ export default {
      * @param itemIndex 「医療材料」行番号
      */
     onSubTitleClick(event, rowInfo, itemInfo, itemIndex) {
-      /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --start */
       if (rowInfo.readOnly) {
         return;
       }
-      /* add by chamaojia 2026-03-12 [12462] 患者情報共有->患者経過総合ビューア --end */
       // #10196 患者経過総合ビューア指示変更関係_最新版[質問sheet]  開始日表示が不正です。 linjunfeng start
       // すべて過去日の場合、操作不可メッセージを表示
       // if (this.getIsPastDate) {
@@ -439,12 +440,9 @@ export default {
       }
       // add #11255 FNWで指示無し実績をコンバートしたデータを患者経過総合ビューアで表示するとフリーズする。 20241203 ztc end
 
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --start */
-      // if (cellInfo.isNotClickable) {
       if (isIndClick && cellInfo.isNotClickable) {
         return;
       }
-      /* upd by chamaojia 2026-03-31 [12462] 患者情報共有->患者経過総合ビューア --end */
 
       // 指示項目がクリックされた場合以下の処理を実行
       if (isIndClick) {
@@ -513,7 +511,7 @@ export default {
       // 施設コード
       settingData.facilityCd = this.facilityCd;
       // 治療日のフォーマットを調整
-      treatDate = moment(treatDate).format("YYYY-MM-DD");
+      treatDate = dayjs(treatDate).format("YYYY-MM-DD");
       // 治療開始日
       settingData.startDate = treatDate;
       // 治療終了日
@@ -537,7 +535,7 @@ export default {
         // 選択された曜日以外をfalseへ変更
         for (let i = 0; i < 7; i++) {
           settingData[this.changeWeekStr(i)] =
-            i !== moment(treatDate, "YYYYMMDD").day() ? false : true;
+            i !== dayjs(treatDate, "YYYYMMDD").day() ? false : true;
         }
       }
 
@@ -548,7 +546,7 @@ export default {
           settingIndData: settingData
         });
       } else {
-        const date = moment(treatDate).format("YYYYMMDD");
+        const date = dayjs(treatDate).format("YYYYMMDD");
         // 子コンポーネントにわたす情報を格納
         const settingChildData = {
           fieldsData: this.setDefaultData(date, itemIndex)
@@ -712,5 +710,5 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 </style>

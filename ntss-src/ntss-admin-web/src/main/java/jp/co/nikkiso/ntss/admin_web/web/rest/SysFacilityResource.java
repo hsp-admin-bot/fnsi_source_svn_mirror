@@ -1,13 +1,16 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.sysFacility.SysFacilityService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
+import jp.co.nikkiso.ntss.core.entity.PatMain;
 import jp.co.nikkiso.ntss.core.entity.SysFacility;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +23,7 @@ import java.util.List;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  *@ClassName： SysFacilityResource
@@ -97,7 +101,15 @@ public class SysFacilityResource {
    * @date:  2025/05/21
    */
   @GetMapping("/getSysFacilityByFacilityCd/{facilityCd}")
-  public ResponseEntity<?> getSysFacilityByFacilityCd(@PathVariable String facilityCd){
+  public ResponseEntity<?> getSysFacilityByFacilityCd(@PathVariable String facilityCd,
+                                                      @AuthenticationPrincipal NtssUser ntssUser){
+    // #11205 mod 20260421 start
+    if (ntssUser != null && !ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 mod 20260421 end
     String mappingUrl = AdminWebConstant.Uri.SYS_FACILITY + "/getSysFacilityByFacilityCd";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), LoggingConstant.FUNCTION_CODE.FUNC_MULTI_PAT_LIST ,
       BEFORE_LOG_FLG_INFO, mappingUrl, null,facilityCd);

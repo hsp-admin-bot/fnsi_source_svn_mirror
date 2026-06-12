@@ -1,10 +1,14 @@
 <template>
   <!-- モーダルの中身はモーダルと一緒に描画しないとCSSが正常に適用されないのでv-if -->
   <modal-base @onClose="closeModal">
-    <div id="visible-area-detailed-search" slot="body" class="visible-area">
+        <template #body>
+<div id="visible-area-detailed-search" ref="visibleArea" class="visible-area">
       <table class="search-area">
+        <tbody>
         <tr class="detailed-search-data">
+              <td>
           <table>
+        <tbody>
             <tr>
               <td class="d-flex align-items-center flex-wrap">
                 ｶｽﾀﾑ検索選択
@@ -45,6 +49,7 @@
               </td>
             </tr>
             <tr class="query-area">
+              <td>
               ｶｽﾀﾑ検索名<v-ons-input type="text" v-model="queryName" />
               <v-ons-button
                 :disabled="queryName === ''"
@@ -56,10 +61,13 @@
               >
                 追加
               </v-ons-button>
-            </tr>
+
+              </td></tr>
             <tr class="search-data">
+              <td>
               <table class="search-treat-area">
-                <tr class="treat-area-title">
+        <tbody>
+                                <tr class="treat-area-title">
                   <th class="search-treat-title color-header" colspan="2">
                     患者情報
                   </th>
@@ -529,8 +537,7 @@
                         class="labelRMargin"
                         v-for="inOutState in inOutStates.slice(
                           0,
-                          Number(inOutStates.length / 2)
-                        )"
+                          Number(inOutStates.length / 2))"
                         :key="`在院状態${inOutState.value}`"
                       >
                         <v-ons-checkbox
@@ -545,8 +552,7 @@
                       <label
                         class="labelRMargin"
                         v-for="inOutState in inOutStates.slice(
-                          Number(inOutStates.length / 2)
-                        )"
+                          Number(inOutStates.length / 2))"
                         :key="`在院状態${inOutState.value}`"
                       >
                         <v-ons-checkbox
@@ -600,20 +606,19 @@
                       disabled
                       class="input rp-input disabled-input"
                     />
-                    <v-ons-button
-                      ref="btnSelectTransport"
-                      class="common-style-select-button leftbtn"
-                      @click="showPopoverTabooTransport()"
-                    >
-                      選択
-                    </v-ons-button>
-                    <mst-popover
-                      v-bind="popoverDataTabooTransport"
-                      :target-position-element="$refs.btnSelectTransport"
+                    <common-master-selector
+                      :masterType="MasterType.TRANSPORT_PAT_INFO"
+                      :facilityCd="facilityCd"
+                      :initItem="{ value: searchQuery.transportCd }"
+                      :editItem="{ value: searchQuery.transportCd, text: searchQuery.transportName }"
+                      :extraParams="{ hideDeletedPrefix: true }"
+                      :hasUnregisteredOption="true"
+                      :btnName="'選択'"
+                      :isVisible="false"
+                      :btnClass="'common-style-select-button leftbtn'"
                       @popover-return="
                         setTabooTransport($event.value, $event.text)
                       "
-                      @popover-close="closePopover(popoverDataTabooTransport)"
                     />
                   </td>
                 </tr>
@@ -626,20 +631,19 @@
                       disabled
                       class="input rp-input disabled-input"
                     />
-                    <v-ons-button
-                      ref="btnSelectSeverity"
-                      class="common-style-select-button leftbtn"
-                      @click="showPopoverTabooSeverity()"
-                    >
-                      選択
-                    </v-ons-button>
-                    <mst-popover
-                      v-bind="popoverDataTabooSeverity"
-                      :target-position-element="$refs.btnSelectSeverity"
+                    <common-master-selector
+                      :masterType="MasterType.SEVERITY_PAT_INFO"
+                      :facilityCd="facilityCd"
+                      :initItem="{ value: searchQuery.severityCd }"
+                      :editItem="{ value: searchQuery.severityCd, text: searchQuery.severityName }"
+                      :extraParams="{ hideDeletedPrefix: true }"
+                      :hasUnregisteredOption="true"
+                      :btnName="'選択'"
+                      :isVisible="false"
+                      :btnClass="'common-style-select-button leftbtn'"
                       @popover-return="
                         setTabooSeverity($event.value, $event.text)
                       "
-                      @popover-close="closePopover(popoverDataTabooSeverity)"
                     />
                   </td>
                 </tr>
@@ -652,13 +656,18 @@
                       disabled
                       class="input rp-input disabled-input"
                     />
-                    <v-ons-button
-                      ref="btnSelectDoctor"
-                      class="common-style-select-button leftbtn"
-                      @click="showPopoverStaff('Doctor')"
-                    >
-                      選択
-                    </v-ons-button>
+                    <common-master-selector
+                      :masterType="MasterType.STAFF_INFO"
+                      :facilityCd="facilityCd"
+                      :initItem="{ value: searchQuery.staffCdDoctor }"
+                      :editItem="{ value: searchQuery.staffCdDoctor, text: searchQuery.staffNameDoctor }"
+                      :extraParams="staffDoctorMasterExtraParams"
+                      :hasUnregisteredOption="true"
+                      :btnName="'選択'"
+                      :isVisible="false"
+                      :btnClass="'common-style-select-button leftbtn'"
+                      @popover-return="onDoctorReturn"
+                    />
                   </td>
                 </tr>
                 <tr class="td_box">
@@ -670,13 +679,18 @@
                       disabled
                       class="input rp-input disabled-input"
                     />
-                    <v-ons-button
-                      ref="btnSelectPrimaryDisease"
-                      class="common-style-select-button leftbtn"
-                      @click="showPopoverPrimaryDisease"
-                    >
-                      選択
-                    </v-ons-button>
+                    <common-master-selector
+                      :masterType="MasterType.DISEASE_PAT_INFO"
+                      :facilityCd="facilityCd"
+                      :initItem="{ value: searchQuery.primary_disease_cd }"
+                      :editItem="{ value: searchQuery.primary_disease_cd, text: searchQuery.primary_disease_name }"
+                      :extraParams="{ hideDeletedPrefix: true }"
+                      :hasUnregisteredOption="true"
+                      :btnName="'選択'"
+                      :isVisible="false"
+                      :btnClass="'common-style-select-button leftbtn'"
+                      @popover-return="onPrimaryDiseaseReturn"
+                    />
                   </td>
                 </tr>
                 <tr class="td_box">
@@ -688,13 +702,18 @@
                       disabled
                       class="input rp-input disabled-input"
                     />
-                    <v-ons-button
-                      ref="btnSelectCharge"
-                      class="common-style-select-button leftbtn"
-                      @click="showPopoverStaff('Charge')"
-                    >
-                      選択
-                    </v-ons-button>
+                    <common-master-selector
+                      :masterType="MasterType.STAFF_INFO"
+                      :facilityCd="facilityCd"
+                      :initItem="{ value: searchQuery.staffCdCharge }"
+                      :editItem="{ value: searchQuery.staffCdCharge, text: searchQuery.staffNameCharge }"
+                      :extraParams="staffChargeMasterExtraParams"
+                      :hasUnregisteredOption="true"
+                      :btnName="'選択'"
+                      :isVisible="false"
+                      :btnClass="'common-style-select-button leftbtn'"
+                      @popover-return="onChargeReturn"
+                    />
                   </td>
                 </tr>
                 <tr class="td_box">
@@ -706,13 +725,18 @@
                       disabled
                       class="input rp-input disabled-input"
                     />
-                    <v-ons-button
-                      ref="btnSelectPuncture"
-                      class="common-style-select-button leftbtn"
-                      @click="showPopoverStaff('Puncture')"
-                    >
-                      選択
-                    </v-ons-button>
+                    <common-master-selector
+                      :masterType="MasterType.STAFF_INFO"
+                      :facilityCd="facilityCd"
+                      :initItem="{ value: searchQuery.staffCdPucture }"
+                      :editItem="{ value: searchQuery.staffCdPucture, text: searchQuery.staffNamePuncture }"
+                      :extraParams="staffPunctureMasterExtraParams"
+                      :hasUnregisteredOption="true"
+                      :btnName="'選択'"
+                      :isVisible="false"
+                      :btnClass="'common-style-select-button leftbtn'"
+                      @popover-return="onPunctureReturn"
+                    />
                   </td>
                 </tr>
                 <tr class="td_box">
@@ -732,13 +756,18 @@
                       disabled
                       class="input rp-input disabled-input my-input"
                     />
-                    <v-ons-button
-                      ref="btnSelectTaboo"
-                      class="common-style-select-button leftbtn"
-                      @click="showPopoverTabooAllergy('Taboo')"
-                    >
-                      選択
-                    </v-ons-button>
+                    <common-master-selector
+                      :masterType="MasterType.TABOO_ALLERGY_PAT_INFO"
+                      :facilityCd="facilityCd"
+                      :initItem="{ value: searchQuery.tabooCd }"
+                      :editItem="{ value: searchQuery.tabooCd, text: searchQuery.tabooContent }"
+                      :extraParams="{ hideDeletedPrefix: true }"
+                      :hasUnregisteredOption="true"
+                      :btnName="'選択'"
+                      :isVisible="false"
+                      :btnClass="'common-style-select-button leftbtn'"
+                      @popover-return="onTabooReturn"
+                    />
                   </td>
                 </tr>
                 <tr class="td_box">
@@ -758,13 +787,18 @@
                       disabled
                       class="input rp-input disabled-input my-input"
                     />
-                    <v-ons-button
-                      ref="btnSelectAllergy"
-                      class="common-style-select-button leftbtn"
-                      @click="showPopoverTabooAllergy('Allergy')"
-                    >
-                      選択
-                    </v-ons-button>
+                    <common-master-selector
+                      :masterType="MasterType.TABOO_ALLERGY_PAT_INFO"
+                      :facilityCd="facilityCd"
+                      :initItem="{ value: searchQuery.allergyCd }"
+                      :editItem="{ value: searchQuery.allergyCd, text: searchQuery.allergyContent }"
+                      :extraParams="{ hideDeletedPrefix: true }"
+                      :hasUnregisteredOption="true"
+                      :btnName="'選択'"
+                      :isVisible="false"
+                      :btnClass="'common-style-select-button leftbtn'"
+                      @popover-return="onAllergyReturn"
+                    />
                   </td>
                 </tr>
                 <tr class="td_box">
@@ -776,13 +810,18 @@
                       :disabled="true"
                       class="input rp-input disabled-input"
                     />
-                    <v-ons-button
-                      ref="btnSelectCourse"
-                      class="common-style-select-button leftbtn"
-                      @click="showPopoverCourse('Course')"
-                    >
-                      選択
-                    </v-ons-button>
+                    <common-master-selector
+                      :masterType="MasterType.COURSE_PAT_INFO"
+                      :facilityCd="facilityCd"
+                      :initItem="{ value: searchQuery.mainCourseCd }"
+                      :editItem="{ value: searchQuery.mainCourseCd, text: searchQuery.courseName }"
+                      :extraParams="{ hideDeletedPrefix: true }"
+                      :hasUnregisteredOption="true"
+                      :btnName="'選択'"
+                      :isVisible="false"
+                      :btnClass="'common-style-select-button leftbtn'"
+                      @popover-return="setCourse($event.value, $event.text)"
+                    />
                   </td>
                 </tr>
                 <tr class="td_box">
@@ -794,13 +833,18 @@
                       :disabled="true"
                       class="input rp-input disabled-input"
                     />
-                    <v-ons-button
-                      ref="btnSelectDialCourse"
-                      class="common-style-select-button leftbtn"
-                      @click="showPopoverDialCourse('DialCourse')"
-                    >
-                      選択
-                    </v-ons-button>
+                    <common-master-selector
+                      :masterType="MasterType.DIALYSIS_COURSE_PAT_INFO"
+                      :facilityCd="facilityCd"
+                      :initItem="{ value: searchQuery.dialysisCourseCd }"
+                      :editItem="{ value: searchQuery.dialysisCourseCd, text: searchQuery.dialCourseName }"
+                      :extraParams="{ hideDeletedPrefix: true }"
+                      :hasUnregisteredOption="true"
+                      :btnName="'選択'"
+                      :isVisible="false"
+                      :btnClass="'common-style-select-button leftbtn'"
+                      @popover-return="setDialysisCourse($event.value, $event.text)"
+                    />
                   </td>
                 </tr>
                 <tr class="td_box">
@@ -812,13 +856,18 @@
                       :disabled="true"
                       class="input rp-input disabled-input"
                     />
-                    <v-ons-button
-                      ref="btnSelectWard"
-                      class="common-style-select-button leftbtn"
-                      @click="showPopoverWard('Ward')"
-                    >
-                      選択
-                    </v-ons-button>
+                    <common-master-selector
+                      :masterType="MasterType.WARD_PAT_INFO"
+                      :facilityCd="facilityCd"
+                      :initItem="{ value: searchQuery.wardCd }"
+                      :editItem="{ value: searchQuery.wardCd, text: searchQuery.wardName }"
+                      :extraParams="{ hideDeletedPrefix: true }"
+                      :hasUnregisteredOption="true"
+                      :btnName="'選択'"
+                      :isVisible="false"
+                      :btnClass="'common-style-select-button leftbtn'"
+                      @popover-return="setWard($event.value, $event.text)"
+                    />
                   </td>
                 </tr>
                 <tr class="td_box">
@@ -897,8 +946,7 @@
                         class="labelRMargin"
                         v-for="outCome in outComeClasses.slice(
                           0,
-                          Number(outComeClasses.length / 2)
-                        )"
+                          Number(outComeClasses.length / 2))"
                         :key="`転帰${outCome.class}`"
                       >
                         <v-ons-checkbox
@@ -913,8 +961,7 @@
                       <label
                         class="labelRMargin"
                         v-for="outCome in outComeClasses.slice(
-                          Number(outComeClasses.length / 2)
-                        )"
+                          Number(outComeClasses.length / 2))"
                         :key="`転帰${outCome.class}`"
                       >
                         <v-ons-checkbox
@@ -940,13 +987,18 @@
                       disabled
                       class="input rp-input disabled-input"
                     />
-                    <v-ons-button
-                      ref="btnSelectDisease"
-                      class="common-style-select-button leftbtn"
-                      @click="showPopoverDisease"
-                    >
-                      選択
-                    </v-ons-button>
+                    <common-master-selector
+                      :masterType="MasterType.DISEASE_PAT_INFO"
+                      :facilityCd="facilityCd"
+                      :initItem="{ value: searchQuery.diseaseCd }"
+                      :editItem="{ value: searchQuery.diseaseCd, text: searchQuery.diseaseName }"
+                      :extraParams="{ hideDeletedPrefix: true }"
+                      :hasUnregisteredOption="true"
+                      :btnName="'選択'"
+                      :isVisible="false"
+                      :btnClass="'common-style-select-button leftbtn'"
+                      @popover-return="setDisease($event.value, $event.text)"
+                    />
                   </td>
                 </tr>
                 <tr class="td_box" v-show="isShowPatGroup">
@@ -1042,13 +1094,18 @@
                       disabled
                       class="input rp-input disabled-input"
                     />
-                    <v-ons-button
-                      ref="btnSelectRelationship"
-                      class="common-style-select-button leftbtn"
-                      @click="showPopoverRelationship"
-                    >
-                      選択
-                    </v-ons-button>
+                    <common-master-selector
+                      :masterType="MasterType.RELATIONSHIP_PAT_INFO"
+                      :facilityCd="facilityCd"
+                      :initItem="{ value: searchQuery.relationCd }"
+                      :editItem="{ value: searchQuery.relationCd, text: searchQuery.relationName }"
+                      :extraParams="{ hideDeletedPrefix: true }"
+                      :hasUnregisteredOption="true"
+                      :btnName="'選択'"
+                      :isVisible="false"
+                      :btnClass="'common-style-select-button leftbtn'"
+                      @popover-return="setRelationship($event.value, $event.text)"
+                    />
                   </td>
                 </tr>
                 <tr class="td_box">
@@ -1088,13 +1145,18 @@
                         disabled
                         class="input rp-input disabled-input"
                       />
-                      <v-ons-button
-                        ref="btnSelectAddtion"
-                        class="common-style-select-button leftbtn"
-                        @click="showPopoverAddition()"
-                      >
-                        選択
-                      </v-ons-button>
+                      <common-master-selector
+                        :masterType="MasterType.ADDITION_PAT_INFO"
+                        :facilityCd="facilityCd"
+                        :initItem="{ value: searchQuery.additionCd }"
+                        :editItem="{ value: searchQuery.additionCd, text: searchQuery.additionName }"
+                        :extraParams="{ hideDeletedPrefix: true }"
+                        :hasUnregisteredOption="true"
+                        :btnName="'選択'"
+                        :isVisible="false"
+                        :btnClass="'common-style-select-button leftbtn'"
+                        @popover-return="setAddition($event.value, $event.text)"
+                      />
                     </div>
                     <div>
                       <label>
@@ -1118,18 +1180,14 @@
                         >なし
                       </label>
                     </div>
-                    <mst-popover
-                      v-bind="popoverDataAddition"
-                      :target-position-element="$refs.btnSelectAddtion"
-                      @popover-return="setAddition($event.value, $event.text)"
-                      @popover-close="closePopover(popoverDataAddition)"
-                    />
                   </td>
                 </tr>
-              </table>
+
+        </tbody></table>
 
               <table class="search-treat-area">
-                <tr class="treat-area-title">
+        <tbody>
+                                <tr class="treat-area-title">
                   <th class="search-treat-title color-header" colspan="2">
                     治療予定
                   </th>
@@ -1173,7 +1231,7 @@
                 <tr class="td_box">
                   <td class="td_left"></td>
                   <td class="td_right">
-                    <label>
+                    <label style="display: inline-flex; align-items: center;">
                       <v-ons-radio
                         value="specifiedPeriod"
                         v-model="searchQuery.dialysisDateArgs"
@@ -1291,7 +1349,6 @@
                             class="week-checkbox"
                             type="checkbox"
                             :value="week.value"
-                            :checked="week.done"
                             :id="'dtWeekCheck-' + index"
                             style="display: none"
                             @change="changeValue(week, $event.target.checked)"
@@ -1325,6 +1382,7 @@
                         {{ item.name }}
                       </option>
                     </v-ons-select>
+                    <div v-if="searchQuery.dialysisConditionList[i] != null">
                     <!-- リスト選択 -->
                     <div
                       class="class_td"
@@ -1335,12 +1393,7 @@
                       <v-ons-input
                         type="text"
                         contenteditable="true"
-                        :value="
-                          selectedListNames(
-                            searchQuery.dialysisConditionList[i]
-                              .selectedItemList
-                          )
-                        "
+                        :value="selectedListNames(dialysisConditionSelectedItemList(i))"
                         disabled
                         class="input rp-input disabled-input my-input"
                       />
@@ -1497,6 +1550,7 @@
                         />
                       </label>
                     </div>
+                    </div>
                   </td>
                 </tr>
                 <tr v-for="i in 5" :key="`投薬指示${i}`" class="td_box">
@@ -1617,9 +1671,11 @@
                     </div>
                   </td>
                 </tr>
-              </table>
+
+        </tbody></table>
               <table class="search-treat-area">
-                <tr class="treat-area-title">
+        <tbody>
+                                <tr class="treat-area-title">
                   <th class="search-treat-title color-header" colspan="2">
                     検査予定
                   </th>
@@ -1654,7 +1710,6 @@
                             class="week-checkbox"
                             type="checkbox"
                             :value="week.value"
-                            :checked="week.done"
                             :id="'dtWeekCheck2-' + index"
                             style="display: none"
                             @change="
@@ -1712,8 +1767,8 @@
                 <tr class="td_box">
                   <td class="td_left">指示期間</td>
                   <td class="td_right">
-                    <label>
-                      <date-input style="float: left"
+                    <label style="display: inline-flex; align-items: center;">
+                      <date-input
                         :classes="'ntss-input-date custom-ntss-input-date exam_pattern_start_date'"
                         max='2099-12-31'
                         v-model='searchQuery.exam_pattern_start_date'
@@ -1722,47 +1777,38 @@
                         @handleClearInput="searchQuery.exam_pattern_start_date = null"
                       />
                       <common-calendar
-                        style="float: left"
                         class="calender exam_pattern_start_date-comment"
                         v-model="searchQuery.exam_pattern_start_date"
                       />
-                      <span
-                        class="error-message"
-                        style="float: left; margin-top: 6px"
-                        v-if="showExamPatternStartDate"
-                        >{{ this.msgDiaLog }}</span
-                      >
-                      <div
-                        style="float: left"
-                        v-if="searchQuery.exam_pattern !== 1"
-                      >
-                        <label style="float: left">&nbsp; ～ &nbsp;</label>
-                       <date-input style="float: left"
-                         :classes="'ntss-input-date custom-ntss-input-date exam_pattern_end_date'"
-                         max='2099-12-31'
-                         v-model='searchQuery.exam_pattern_end_date'
-                         @keyup="showDialysisEndDateMsg(1)"
-                         @blur="showDialysisEndDateMsg(1)"
-                         @handleClearInput="searchQuery.exam_pattern_end_date = null"
+                      <span class="error-message" v-if="showExamPatternStartDate">{{
+                        this.msgDiaLog
+                      }}</span>
+                      <label>&nbsp; ～ &nbsp;</label>
+                      <template v-if="searchQuery.exam_pattern !== 1">
+                        <date-input
+                          :classes="'ntss-input-date custom-ntss-input-date exam_pattern_end_date'"
+                          max='2099-12-31'
+                          v-model='searchQuery.exam_pattern_end_date'
+                          @keyup="showDialysisEndDateMsg(1)"
+                          @blur="showDialysisEndDateMsg(1)"
+                          @handleClearInput="searchQuery.exam_pattern_end_date = null"
                         />
                         <common-calendar
-                          style="float: left"
                           class="calender exam_pattern_end_date-comment"
                           v-model="searchQuery.exam_pattern_end_date"
                         />
-                        <span
-                          class="error-message"
-                          style="float: left; margin-top: 6px"
-                          v-if="showExamPatternEndDate"
-                          >{{ this.msgDiaLog }}</span
-                        >
-                      </div>
+                        <span class="error-message" v-if="showExamPatternEndDate">{{
+                          this.msgDiaLog
+                        }}</span>
+                      </template>
                     </label>
                   </td>
                 </tr>
-              </table>
+
+        </tbody></table>
               <table class="search-treat-area">
-                <tr class="treat-area-title">
+        <tbody>
+                                <tr class="treat-area-title">
                   <th class="search-treat-title color-header" colspan="2">
                     一般撮影検査予定
                   </th>
@@ -1781,7 +1827,6 @@
                             class="week-checkbox"
                             type="checkbox"
                             :value="week.value"
-                            :checked="week.done"
                             :id="'dtWeekCheck3-' + index"
                             style="display: none"
                             @change="
@@ -1807,9 +1852,8 @@
                 <tr class="td_box">
                   <td class="td_left">指示期間</td>
                   <td class="td_right">
-                    <label>
+                    <label style="display: inline-flex; align-items: center;">
                       <date-input
-                        style="float: left"
                         :classes="'ntss-input-date custom-ntss-input-date radPattern_exam_pattern_start_date'"
                         @keyup="showDialysisStartDateMsg(2)"
                         @blur="getDialysisStartDateMsg(2)"
@@ -1818,52 +1862,38 @@
                         @handleClearInput="searchQuery.radPattern_exam_pattern_start_date = null"
                       />
                       <common-calendar
-                        style="float: left"
-                        class="
-                          calender
-                          radPattern_exam_pattern_start_date-comment
-                        "
+                        class="calender radPattern_exam_pattern_start_date-comment"
                         v-model="searchQuery.radPattern_exam_pattern_start_date"
                       />
-                      <span
-                        class="error-message"
-                        style="float: left; margin-top: 6px"
-                        v-if="radPatternExamPatternStartDate"
-                        >{{ this.msgDiaLog }}</span
-                      >
-                      <div
-                        style="float: left"
-                        v-if="searchQuery.radPattern_exam_pattern !== 1"
-                      >
-                        <label style="float: left">&nbsp; ～ &nbsp;</label>
-                        <date-input style="float: left"
+                      <span class="error-message" v-if="radPatternExamPatternStartDate">{{
+                        this.msgDiaLog
+                      }}</span>
+                      <label>&nbsp; ～ &nbsp;</label>
+                      <template v-if="searchQuery.radPattern_exam_pattern !== 1">
+                        <date-input
                           :classes="'ntss-input-date custom-ntss-input-date radPattern_exam_pattern_end_date'"
                           @keyup="showDialysisEndDateMsg(2)"
                           @blur="getDialysisEndDateMsg(2)"
-                          max='2099-12-31' v-model='searchQuery.radPattern_exam_pattern_end_date'
+                          max='2099-12-31'
+                          v-model='searchQuery.radPattern_exam_pattern_end_date'
                           @handleClearInput="searchQuery.radPattern_exam_pattern_end_date = null"
                         />
                         <common-calendar
-                          style="float: left"
-                          class="
-                            calender
-                            radPattern_exam_pattern_end_date-comment
-                          "
+                          class="calender radPattern_exam_pattern_end_date-comment"
                           v-model="searchQuery.radPattern_exam_pattern_end_date"
                         />
-                        <span
-                          class="error-message"
-                          style="float: left; margin-top: 6px"
-                          v-if="radPatternExamPatternEndDate"
-                          >{{ this.msgDiaLog }}</span
-                        >
-                      </div>
+                        <span class="error-message" v-if="radPatternExamPatternEndDate">{{
+                          this.msgDiaLog
+                        }}</span>
+                      </template>
                     </label>
                   </td>
                 </tr>
-              </table>
+
+        </tbody></table>
               <table class="search-treat-area">
-                <tr class="treat-area-title">
+        <tbody>
+                                <tr class="treat-area-title">
                   <th class="search-treat-title color-header" colspan="2">
                     患者イベント
                   </th>
@@ -1884,119 +1914,52 @@
                 <tr class="td_box">
                   <td class="td_left">イベント日</td>
                   <td class="td_right">
-                    <date-input
-                      :classes="'ntss-input-date custom-ntss-input-date eventStartDate'"
-                      @keyup="showDialysisStartDateMsg(3)" @blur="getDialysisStartDateMsg(3)"
-                      v-model="searchQuery.eventStartDate"
-                      @handleClearInput="searchQuery.eventStartDate = null"
-                    />
-                    <common-calendar
-                      v-model="searchQuery.eventStartDate"
-                      class="calender eventStartDate-comment"
-                    />
-                    <span class="error-message" v-if="showeventStartDate">{{
-                      this.msgDiaLog
-                    }}</span>
-                    ～
-                    <date-input
-                      :classes="'ntss-input-date custom-ntss-input-date eventEndDate'"
-                      @keyup="showDialysisEndDateMsg(3)" @blur="getDialysisEndDateMsg(3)"
-                      v-model="searchQuery.eventEndDate"
-                      @handleClearInput="searchQuery.eventEndDate = null"
-                    />
-                    <common-calendar
-                      v-model="searchQuery.eventEndDate"
-                      class="calender eventEndDate-comment"
-                    />
-                    <span class="error-message" v-if="showeventEndDate">{{
-                      this.msgDiaLog
-                    }}</span>
+                    <span style="display: inline-flex; align-items: center;">
+                      <date-input
+                        :classes="'ntss-input-date custom-ntss-input-date eventStartDate'"
+                        @keyup="showDialysisStartDateMsg(3)" @blur="getDialysisStartDateMsg(3)"
+                        v-model="searchQuery.eventStartDate"
+                        @handleClearInput="searchQuery.eventStartDate = null"
+                      />
+                      <common-calendar
+                        v-model="searchQuery.eventStartDate"
+                        class="calender eventStartDate-comment"
+                      />
+                      <span class="error-message" v-if="showeventStartDate">{{
+                        this.msgDiaLog
+                      }}</span>
+                      ～
+                      <date-input
+                        :classes="'ntss-input-date custom-ntss-input-date eventEndDate'"
+                        @keyup="showDialysisEndDateMsg(3)" @blur="getDialysisEndDateMsg(3)"
+                        v-model="searchQuery.eventEndDate"
+                        @handleClearInput="searchQuery.eventEndDate = null"
+                      />
+                      <common-calendar
+                        v-model="searchQuery.eventEndDate"
+                        class="calender eventEndDate-comment"
+                      />
+                      <span class="error-message" v-if="showeventEndDate">{{
+                        this.msgDiaLog
+                      }}</span>
+                    </span>
                   </td>
                 </tr>
-              </table>
-            </tr>
-          </table>
-        </tr>
-      </table>
 
-      <!-- スタッフ選択ポップオーバー -->
-      <mst-popover
-        v-bind="popoverDataStaff"
-        :target-position-element="targetElementStaff"
-        @popover-return="setStaff($event.value, $event.text)"
-        @popover-close="closePopover(popoverDataStaff)"
-      />
-      <!-- 禁忌・アレルギー選択ポップオーバー -->
-      <mst-popover
-        v-bind="popoverDataTabooAllergy"
-        :target-position-element="targetElementTabooAllergy"
-        @popover-return="setTabooAllergy($event.value, $event.text)"
-        @popover-close="closePopover(popoverDataTabooAllergy)"
-      />
-      <!-- 診療科選択ポップオーバー -->
-      <mst-popover
-        v-bind="popoverDataCourse"
-        :target-position-element="targetElementCourse"
-        @popover-return="setCourse($event.value, $event.text)"
-        @popover-close="closePopover(popoverDataCourse)"
-      />
-      <!-- 透析実施科選択ポップオーバー -->
-      <mst-popover
-        v-bind="popoverDataDialysisCourse"
-        :target-position-element="targetElementDialCourse"
-        @popover-return="setDialysisCourse($event.value, $event.text)"
-        @popover-close="closePopover(popoverDataDialysisCourse)"
-      />
-      <!-- 病棟選択ポップオーバー -->
-      <mst-popover
-        v-bind="popoverDataWard"
-        :target-position-element="targetElementWard"
-        @popover-return="setWard($event.value, $event.text)"
-        @popover-close="closePopover(popoverDataWard)"
-      />
-      <!-- 病名選択ポップオーバー -->
-      <!-- #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng start -->
-      <!-- <mst-popover
-        v-bind="popoverDataDisease"
-        :target-position-element="$refs.btnSelectDisease"
-        @popover-return="setDisease($event.value, $event.text)"
-        @popover-close="closePopover(popoverDataDisease)"
-      /> -->
-      <pop-over-disea
-        v-bind="popoverDataDisease"
-        :target-position-element="$refs.btnSelectDisease"
-        @popver-search-condition="setDiseaPopoverSearchCondition"
-        @popover-return="setDisease($event.value, $event.text)"
-        @popover-close="closePopover(popoverDataDisease)"
-      />
-      <!-- #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng end -->
-      <!-- add 主病選択ポップオーバー  周ウェイ博-->
-      <!-- #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng start -->
-      <!-- <mst-popover
-        v-bind="popoverDataPrimaryDisease"
-        :target-position-element="$refs.btnSelectPrimaryDisease"
-        @popover-return="setPrimaryDisease($event.value, $event.text)"
-        @popover-close="closePopover(popoverDataPrimaryDisease)"
-      /> -->
-      <pop-over-disea
-        v-bind="popoverDataPrimaryDisease"
-        :target-position-element="$refs.btnSelectPrimaryDisease"
-        @popver-search-condition="setPopoverSearchCondition"
-        @popover-return="setPrimaryDisease($event.value, $event.text)"
-        @popover-close="closePopover(popoverDataPrimaryDisease)"
-      />
-      <!-- #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng end -->
-      <!-- 続柄選択ポップオーバー   -->
-      <mst-popover
-        v-bind="popoverDataRelationship"
-        :target-position-element="$refs.btnSelectRelationship"
-        @popover-return="setRelationship($event.value, $event.text)"
-        @popover-close="closePopover(popoverDataRelationship)"
-      />
+        </tbody></table>
+
+              </td></tr>
+
+        </tbody></table>
+
+              </td></tr>
+
+        </tbody></table>
+
       <!-- 透析条件選択 -->
       <list-selector
         :key="componentKey('透析条件')"
-        :visible.sync="isDialCondSelectorVisible"
+        v-model:visible="isDialCondSelectorVisible"
         v-bind="dialCondSelectorData"
         :target="
           selectorTarget('dialysisConditionSelector', selectingDialCondIndex)
@@ -2006,7 +1969,7 @@
       <!-- 投薬指示選択 -->
       <list-selector
         :key="componentKey('投薬')"
-        :visible.sync="isMedicationSelectorVisible"
+        v-model:visible="isMedicationSelectorVisible"
         v-bind="medicationSelectorData"
         :target="selectorTarget('medicationSelector', selectingMedicationIndex)"
         @commit="commitMedication($event)"
@@ -2014,20 +1977,22 @@
       <!-- 医材指示選択 -->
       <list-selector
         :key="componentKey('医材')"
-        :visible.sync="isEquipmentSelectorVisible"
+        v-model:visible="isEquipmentSelectorVisible"
         v-bind="equipmentSelectorData"
         :target="selectorTarget('equipmentSelector', selectingEquipmentIndex)"
         @commit="commitEquipment($event)"
       />
       <message-dialog
         v-if="messageDialogInfo.isDialogVisible"
-        :visible.sync="messageDialogInfo.isDialogVisible"
+        v-model:visible="messageDialogInfo.isDialogVisible"
         :message-cd="messageDialogInfo.messageCd"
         :type="messageDialogInfo.type"
       />
     </div>
+    </template>
 
-    <div id="button-area-detailed-search" slot="footer" class="button-area">
+        <template #footer>
+<div id="button-area-detailed-search" ref="buttonArea" class="button-area">
       <div style="margin-bottom: 5px">
         <v-ons-button
           class="common-style-cancel-button btn2-cancel widthClass"
@@ -2104,28 +2069,29 @@
         </v-ons-button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
+import $$ from "@/compat/jquery";
+import {getScopedElementById, getScopedJQuery as createScopedJQuery} from "@/functions/common/LayoutMeasureHelper";
 // ライブラリ
-import $$ from "jquery";
-import _ from "underscore";
-import moment from "moment";
-import { mapActions, mapGetters, mapMutations } from "vuex";
+
+import _ from "@/compat/collections/lodash";
+import dayjs from "@/compat/date/dayjs";
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 // コンポーネント
 import mstPopover from "@/components/common/master-selector/MasterSelector.vue";
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 import listSelector from "@/components/common/list-selector/ListSelector.vue";
 // 共通関数
 import { ApiHelper } from "@/apis/AxiosHelper.js";
-import { course, dialyzer, disease, equipment, equipmentClass, medicine, medicineClass, medicineMix, roomBedGroup, tabooAllergy, treatment, va, ward } from "@/functions/mst/MstGetters.js";
+import { dialyzer, disease, equipment, equipmentClass, medicine, medicineClass, medicineMix, roomBedGroup, treatment, va } from "@/functions/mst/MstGetters.js";
 import {
   closePopover,
-  createPopoverData,
-  createPopoverDataAddition,
-  createPopoverDataSeverity,
-  createPopoverDataTransport,
   showPopover,
 } from "@/functions/PopoverFunctions";
 import {
@@ -2134,7 +2100,8 @@ import {
 } from "@/functions/for-componet/ListSelector.js";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { closeKendoPopups } from "@/functions/common/KendoFunctions";
 import { deduplicateObjectsGroup } from "@/functions/common/CommonFunctions.js";
 import {
   COMPARISON_TYPE,
@@ -2161,9 +2128,6 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
-// #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng start
-import DiseaMasterSelector from "@/components/common/master-selector/DiseaMasterSelector.vue"
-// #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng end
 import DateInput from "@/components/common/DateInput.vue";
 // add #11047 数値IF修正 張玲 start
 import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro'
@@ -2183,13 +2147,11 @@ export default {
   components: {
     "list-selector": listSelector,
     "mst-popover": mstPopover,
+    "common-master-selector": commonMasterSelector,
     "common-calendar": commonCalender,
     "com-textarea": CommonTextArea,
     ModalBase,
     "message-dialog": messageDialog,
-    // #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng start
-    "pop-over-disea": DiseaMasterSelector,
-    // #9482 患者情報画面/新規患者登録の表示が遅い。linjunfeng end
     DateInput,
     // add #11047 数値IF修正 張玲 start
     "custom-input-number-pro":CustomInputNumberPro,
@@ -2201,6 +2163,7 @@ export default {
 
   data() {
     return {
+      MasterType,
       showDialogVisible: false,
       messageDialogInfo: {
         isDialogVisible: false,
@@ -2269,40 +2232,8 @@ export default {
       /* ドロップダウンボックスを表示するかどうか */
       isSelectedDialysis: false,
       itemSelectorData: null,
-      /* 担当者 */
-      // マスタデータ
-      mstStaff: null,
-      // ポップオーバー用データ
-      popoverDataStaff: {},
-      // どの担当者ポップオーバーを表示しているかを表す文字列
-      showingPopoverStaffClass: "",
-
-      /* 禁忌・アレルギー */
-      // マスタデータ
-      mstTabooAllergy: null,
-      // ポップオーバー用データ
-      popoverDataTabooAllergy: {},
-      // 禁忌・アレルギーどちらのポップオーバーを表示しているかを表す文字列
-      showingPopoverTabooAllergy: "",
-      popoverDataTabooSeverity: {},
-      popoverDataTabooTransport: {},
-      popoverDataAddition: {},
-      //診療科
-      popoverDataCourse: {},
-      mstCourse: null,
-      showingPopoverCourse: "",
-      //透析実施科
-      popoverDataDialysisCourse: {},
-      showingPopoverDialysisCourse: "",
-      //病棟
-      popoverDataWard: {},
-      mstWard: null,
-      showingPopoverWard: "",
-      popoverDataRelationship: {},
 
       /* 既往歴用 */
-      popoverDataDisease: {},
-      popoverDataPrimaryDisease: {},
       mstDisease: null,
 
       /* 透析予定用 */
@@ -2490,8 +2421,6 @@ export default {
       isEquipmentSelectorVisible: false,
       selectingEquipmentIndex: null,
       equipmentSelectorData: null,
-      /**続柄 */
-      relationshipData: null,
       DiaysisSelectorData: null,
       queryName: "",
       selectingQueryIndex: null,
@@ -2501,10 +2430,7 @@ export default {
         query: new SearchQuery(),
       },
       isDialDiff: null,
-      severity: [],
-      transport: [],
       category: [],
-      mstAdditionList: [],
       isAdditionShow: false,
       additionSettingCode: "",
       advancedSettings: [],
@@ -2546,6 +2472,18 @@ export default {
       return this.selectingQuery.query;
     },
 
+    staffDoctorMasterExtraParams() {
+      return this.buildStaffExtraParamsWithLoginDefault(this.searchQuery.staffCdDoctor);
+    },
+
+    staffChargeMasterExtraParams() {
+      return this.buildStaffExtraParamsWithLoginDefault(this.searchQuery.staffCdCharge);
+    },
+
+    staffPunctureMasterExtraParams() {
+      return this.buildStaffExtraParamsWithLoginDefault(this.searchQuery.staffCdPucture);
+    },
+
     /**
      * @description 年齢下限
      */
@@ -2570,45 +2508,6 @@ export default {
       },
     },
 
-    /**
-     * @description 主治医選択用医師リスト
-     */
-    staffListDoctor() {
-      return this.mstStaff.filter((staff) => staff.job_cd === "1");
-    },
-
-    /**
-     * @description 担当者選択ポップオーバーの表示起点要素
-     */
-    targetElementStaff() {
-      return this.$refs[`btnSelect${this.showingPopoverStaffClass}`];
-    },
-
-    /**
-     * @description 禁忌・アレルギー選択ポップオーバーの表示起点要素
-     */
-    targetElementTabooAllergy() {
-      return this.$refs[`btnSelect${this.showingPopoverTabooAllergy}`];
-    },
-    /**
-     * @description 診療科選択ポップオーバーの表示起点要素
-     */
-    targetElementCourse() {
-      return this.$refs[`btnSelect${this.showingPopoverCourse}`];
-    },
-    /**
-     * @description 透析実施科選択ポップオーバーの表示起点要素
-     */
-    targetElementDialCourse() {
-      return this.$refs[`btnSelect${this.showingPopoverDialysisCourse}`];
-    },
-    /**
-     * @description 病棟選択ポップオーバーの表示起点要素
-     */
-    targetElementWard() {
-      return this.$refs[`btnSelect${this.showingPopoverWard}`];
-    },
-
     isShowPatGroup() {
       return this.useFunction.includes(FUNC_PAT_GROUP);
     },
@@ -2626,148 +2525,48 @@ export default {
     },
     "searchQuery.dialysisStartDate": {
       handler: function () {
-        if (
-          document.getElementsByClassName("dialysisStartDate")[0]
-            .validationMessage !== ""
-        ) {
-          this.showDialysisStartDate = !(
-            document.getElementsByClassName("dialysisStartDate")[0].value ===
-              "" &&
-            document.getElementsByClassName("dialysisStartDate-comment")[0]
-              .value !== ""
-          );
-        } else {
-          this.showDialysisStartDate = false;
-        }
+        this.syncDateValidationFlag("showDialysisStartDate", "dialysisStartDate");
       },
     },
     "searchQuery.dialysisEndDate": {
       handler: function () {
-        if (
-          document.getElementsByClassName("dialysisEndDate")[0]
-            .validationMessage !== ""
-        ) {
-          this.showDialysisEndDate = !(
-            document.getElementsByClassName("dialysisEndDate")[0].value ===
-              "" &&
-            document.getElementsByClassName("dialysisEndDate-comment")[0]
-              .value !== ""
-          );
-        } else {
-          this.showDialysisEndDate = false;
-        }
+        this.syncDateValidationFlag("showDialysisEndDate", "dialysisEndDate");
       },
     },
     "searchQuery.exam_pattern_start_date": {
       handler: function () {
-        if (
-          document.getElementsByClassName("exam_pattern_start_date")[0]
-            .validationMessage !== ""
-        ) {
-          this.showExamPatternStartDate = !(
-            document.getElementsByClassName("exam_pattern_start_date")[0]
-              .value === "" &&
-            document.getElementsByClassName(
-              "exam_pattern_start_date-comment"
-            )[0].value !== ""
-          );
-        } else {
-          this.showExamPatternStartDate = false;
-        }
+        this.syncDateValidationFlag("showExamPatternStartDate", "exam_pattern_start_date");
       },
     },
     "searchQuery.exam_pattern_end_date": {
       handler: function () {
-        if (
-          document.getElementsByClassName("exam_pattern_end_date")[0]
-            .validationMessage !== ""
-        ) {
-          this.showExamPatternEndDate = !(
-            document.getElementsByClassName("exam_pattern_end_date")[0]
-              .value === "" &&
-            document.getElementsByClassName("exam_pattern_end_date-comment")[0]
-              .value !== ""
-          );
-        } else {
-          this.showExamPatternEndDate = false;
-        }
+        this.syncDateValidationFlag("showExamPatternEndDate", "exam_pattern_end_date");
       },
     },
     "searchQuery.radPattern_exam_pattern_start_date": {
       handler: function () {
-        if (
-          document.getElementsByClassName(
-            "radPattern_exam_pattern_start_date"
-          )[0].validationMessage !== ""
-        ) {
-          this.radPatternExamPatternStartDate = !(
-            document.getElementsByClassName(
-              "radPattern_exam_pattern_start_date"
-            )[0].value === "" &&
-            document.getElementsByClassName(
-              "radPattern_exam_pattern_start_date-comment"
-            )[0].value !== ""
-          );
-        } else {
-          this.radPatternExamPatternStartDate = false;
-        }
+        this.syncDateValidationFlag("radPatternExamPatternStartDate", "radPattern_exam_pattern_start_date");
       },
     },
     "searchQuery.radPattern_exam_pattern_end_date": {
       handler: function () {
-        if (
-          document.getElementsByClassName("radPattern_exam_pattern_end_date")[0]
-            .validationMessage !== ""
-        ) {
-          this.radPatternExamPatternEndDate = !(
-            document.getElementsByClassName(
-              "radPattern_exam_pattern_end_date"
-            )[0].value === "" &&
-            document.getElementsByClassName(
-              "radPattern_exam_pattern_end_date-comment"
-            )[0].value !== ""
-          );
-        } else {
-          this.radPatternExamPatternEndDate = false;
-        }
+        this.syncDateValidationFlag("radPatternExamPatternEndDate", "radPattern_exam_pattern_end_date");
       },
     },
     "searchQuery.eventStartDate": {
       handler: function () {
-        if (
-          document.getElementsByClassName("eventStartDate")[0]
-            .validationMessage !== ""
-        ) {
-          this.showeventStartDate = !(
-            document.getElementsByClassName("eventStartDate")[0].value === "" &&
-            document.getElementsByClassName("eventStartDate-comment")[0]
-              .value !== ""
-          );
-        } else {
-          this.showeventStartDate = false;
-        }
+        this.syncDateValidationFlag("showeventStartDate", "eventStartDate");
       },
     },
     "searchQuery.eventEndDate": {
       handler: function () {
-        if (
-          document.getElementsByClassName("eventEndDate")[0]
-            .validationMessage !== ""
-        ) {
-          this.showeventEndDate = !(
-            document.getElementsByClassName("eventEndDate")[0].value === "" &&
-            document.getElementsByClassName("eventEndDate-comment")[0].value !==
-              ""
-          );
-        } else {
-          this.showeventEndDate = false;
-        }
+        this.syncDateValidationFlag("showeventEndDate", "eventEndDate");
       },
     },
   },
 
   async created() {
-    let resKur, resUser, resPatSearchDetails;
+    let resKur, resPatSearchDetails;
     let patGroups;
     [
       this.mstTreatmentInfo,
@@ -2780,17 +2579,9 @@ export default {
       this.mstMedicineMix,
       this.mstMedicineClass,
       this.mstRoomBedGroup,
-      this.mstTabooAllergy,
-      this.severity,
-      this.transport,
-      this.mstAdditionList,
-      this.mstCourse,
-      this.mstWard,
-      resUser,
       this.mstVa,
       patGroups,
       resPatSearchDetails,
-      this.relationshipData,
       this.mstExamSetInfo,
     ] = await Promise.all([
       treatment(this.facilityCd),
@@ -2806,20 +2597,9 @@ export default {
       medicineMix(this.facilityCd),
       medicineClass(this.facilityCd),
       roomBedGroup(this.facilityCd),
-      tabooAllergy(this.facilityCd),
-      ApiHelper.get("/mstInfo/mstSeverity", { facilityCd: this.facilityCd }),
-      ApiHelper.get("/mstInfo/mstTransport", { facilityCd: this.facilityCd }),
-      ApiHelper.get("/mstInfo/mstAddition", { facilityCd: this.facilityCd }),
-      course(this.facilityCd),
-      ward(this.facilityCd),
-      ApiHelper.get(`/mstInfo/mstPersonalUser`, {
-        facility_cd: this.facilityCd,
-      }),
-
       va(this.facilityCd),
       ApiHelper.get("/pat_group", { facility_cd: this.facilityCd }),
       ApiHelper.get("/pat_search_detail"),
-      ApiHelper.get("/master_maintenance/mst_relationship/data"),
       ApiHelper.get("/mstInfo/mstExamSet", { facilityCd: this.facilityCd }),
     ]).catch((error) => {
       getErrorMessage("DetailedSearch2.vue", "created", error);
@@ -2840,7 +2620,6 @@ export default {
       this.equipmentClassTypePair[equipClass.classCd] = equipClass.classType;
     }
     this.mstKur = resKur.data;
-    this.mstStaff = resUser.data;
     // 詳細患者検索をリセットする
     this.setPatSearchDetails([]);
     resPatSearchDetails.data.forEach((detail) => {
@@ -2850,122 +2629,6 @@ export default {
         query: JSON.parse(detail.searchCondition),
       });
     });
-    // ポップオーバーデータ作成
-    this.popoverDataStaff = createPopoverData(
-      "スタッフ",
-      null,
-      null,
-      "スタッフ名",
-      this.mstStaff,
-      "userId",
-      "userLastName",
-      null,
-      "userFirstName"
-    );
-
-    this.popoverDataTabooAllergy = createPopoverData(
-      "禁忌・アレルギー",
-      null,
-      null,
-      "禁忌・アレルギー名",
-      this.mstTabooAllergy,
-      "tabooAllergyCd",
-      "content",
-      null
-    );
-    this.popoverDataCourse = createPopoverData(
-      "診療科",
-      null,
-      null,
-      "診療科名",
-      this.mstCourse,
-      "courseCd",
-      "courseName",
-      null
-    );
-    this.popoverDataDialysisCourse = createPopoverData(
-      "透析実施科",
-      null,
-      null,
-      "透析実施科名",
-      this.mstCourse,
-      "courseCd",
-      "courseName",
-      null
-    );
-    this.popoverDataWard = createPopoverData(
-      "病棟",
-      null,
-      null,
-      "病棟名",
-      this.mstWard,
-      "wardCd",
-      "wardName",
-      null
-    );
-    this.popoverDataPrimaryDisease = createPopoverData(
-      "病名",
-      null,
-      null,
-      "病名",
-      this.mstDisease,
-      // mod 9482 患者情報画面/新規患者登録の表示が遅い。 関  start
-      // "diseaseCd",
-      // "diseaseName",
-      "cd",
-      "nm",
-      // mod 9482 患者情報画面/新規患者登録の表示が遅い。 関  end
-      null
-    );
-    this.popoverDataTabooSeverity = createPopoverDataSeverity(
-      "重症度",
-      null,
-      null,
-      "重症度名",
-      this.severity,
-      null
-    );
-    this.popoverDataTabooTransport = createPopoverDataTransport(
-      "搬送",
-      null,
-      null,
-      "搬送",
-      this.transport,
-      null
-    );
-
-    this.popoverDataDisease = createPopoverData(
-      "病名",
-      null,
-      null,
-      "病名",
-      this.mstDisease,
-      // mod 9482 患者情報画面/新規患者登録の表示が遅い。 関  start
-      // "diseaseCd",
-      // "diseaseName",
-      "cd",
-      "nm",
-      // mod 9482 患者情報画面/新規患者登録の表示が遅い。 関  end
-      null
-    );
-    this.popoverDataRelationship = createPopoverData(
-      "続柄",
-      null,
-      null,
-      "続柄",
-      this.relationshipData.data.localDataSource.data,
-      "code",
-      "name",
-      null
-    );
-    this.popoverDataAddition = createPopoverDataAddition(
-      "加算・管理料",
-      null,
-      null,
-      "加算・管理料",
-      this.mstAdditionList,
-      null
-    );
     this.patGroups = patGroups.data.patGroupInfo;
     EventBus.$emit("detailedSearchUserSearchQuery", this.patSearchDetails);
     this.AdvancedSettings.func_advcds.forEach((a) =>
@@ -2983,6 +2646,42 @@ export default {
   },
 
   methods: {
+
+    scopedJQuery() {
+
+      return createScopedJQuery(this.$el || this, $$) || $$;
+
+    },
+    getScopedRoot() {
+      return this.$refs.visibleArea || this.$el || null;
+    },
+    getScopedElementById(id) {
+      if (!id) {
+        return null;
+      }
+      const root = this.getScopedRoot();
+      const ownerDocument = root?.ownerDocument || document;
+      const candidate = ownerDocument.getElementById(id);
+      if (candidate && (!root || root.contains(candidate) || candidate === this.$refs.buttonArea)) {
+        return candidate;
+      }
+      return null;
+    },
+    getScopedClassElement(className) {
+      if (!className) {
+        return null;
+      }
+      return this.getScopedRoot()?.getElementsByClassName?.(className)?.[0] || null;
+    },
+    syncDateValidationFlag(targetKey, className, commentClassName = `${className}-comment`) {
+      const input = this.getScopedClassElement(className);
+      const comment = this.getScopedClassElement(commentClassName);
+      if (input?.validationMessage !== "") {
+        this[targetKey] = !(input?.value === "" && comment?.value !== "");
+      } else {
+        this[targetKey] = false;
+      }
+    },
     ...mapActions("multi-modal", ["showDetailedSearchModal"]),
     ...mapActions("pat-info", ["clearSearchedPatList","sortPatList", "clearSearchedPatListGroup"]),
     ...mapActions("pat-info", ["clearSearchedPatList","sortPatList"]),
@@ -2997,12 +2696,6 @@ export default {
     ]),
     ...mapActions("loading-screen", ["startLoadingScreen", "finishLoadingScreen"]),
     ...importedFunctions,
-    setPopoverSearchCondition (searchCondition) {
-      this.popoverDataPrimaryDisease.popoverSearchQuery = searchCondition;
-    },
-    setDiseaPopoverSearchCondition (searchCondition) {
-      this.popoverDataDisease.popoverSearchQuery = searchCondition;
-    },
     diseaseValueMapperFunc (options) {
       const indexArr = [];
       this.mstDisease.forEach((item, index) => {
@@ -3012,6 +2705,7 @@ export default {
       });
       options.success(indexArr);
     },
+    // add end #9482
     canUsedSetting(param) {
       try {
         let SettingsList = this.AdvancedSettings.func_advcds;
@@ -3278,21 +2972,17 @@ export default {
       let class1 = null;
       const class2 = null;
       // 既に選択済みならデフォルト選択リストを設定
-      const defaultSelection = _.isEmpty(
-        this.searchQuery.dialysisConditionList[index]
-      )
-        ? []
-        : this.searchQuery.selectingDialCondId[index] ===
-          DIAL_COND_ID.ANTICOAGULANT
-        ? this.searchQuery.dialysisConditionList[index].selectedItemList.map(
-            (item) => ({
+      const dialCond = this.searchQuery.dialysisConditionList[index];
+      const selectedItems = Array.isArray(dialCond?.selectedItemList)
+        ? dialCond.selectedItemList
+        : [];
+      const defaultSelection =
+        this.searchQuery.selectingDialCondId[index] === DIAL_COND_ID.ANTICOAGULANT
+          ? selectedItems.map((item) => ({
               cd: item.cd,
               cdType: item.cdType,
-            })
-          )
-        : this.searchQuery.dialysisConditionList[index].selectedItemList.map(
-            (item) => item.cd
-          );
+            }))
+          : selectedItems.map((item) => item.cd);
 
       // 透析条件の種類に応じてデータ作成
       switch (this.searchQuery.selectingDialCondId[index]) {
@@ -3487,34 +3177,42 @@ export default {
      * @description 透析条件選択確定
      */
     commitDialCondListSelect(selectedList) {
-      // 選択されたコードと名称を格納
-      this.searchQuery.dialysisConditionList[
-        this.selectingDialCondIndex
-      ].selectedItemList = selectedList;
+      const cond =
+        this.searchQuery.dialysisConditionList[this.selectingDialCondIndex];
+      if (!cond) {
+        return;
+      }
+      cond.selectedItemList = selectedList;
     },
 
     /**
      * @description 透析条件値範囲初期化
      */
     initRangeValue(index) {
-      this.searchQuery.dialysisConditionList[index].value1String = "";
-      this.searchQuery.dialysisConditionList[index].value2String = "";
+      const cond = this.searchQuery.dialysisConditionList[index];
+      if (!cond) {
+        return;
+      }
+      cond.value1String = "";
+      cond.value2String = "";
       // 不等号を「≦」に
-      this.searchQuery.dialysisConditionList[index].inequalitySign1 =
-        INEQUALITY_SIGN.LESS_OR_EQUAL;
-      this.searchQuery.dialysisConditionList[index].inequalitySign2 =
-        INEQUALITY_SIGN.LESS_OR_EQUAL;
+      cond.inequalitySign1 = INEQUALITY_SIGN.LESS_OR_EQUAL;
+      cond.inequalitySign2 = INEQUALITY_SIGN.LESS_OR_EQUAL;
     },
 
     /**
      * @description 透析条件値一致初期化
      */
     initEqualValue(index) {
-      this.searchQuery.dialysisConditionList[index].value1String = "";
-      this.searchQuery.dialysisConditionList[index].value2String = "";
+      const cond = this.searchQuery.dialysisConditionList[index];
+      if (!cond) {
+        return;
+      }
+      cond.value1String = "";
+      cond.value2String = "";
       // 不等号をクリア
-      this.searchQuery.dialysisConditionList[index].inequalitySign1 = null;
-      this.searchQuery.dialysisConditionList[index].inequalitySign2 = null;
+      cond.inequalitySign1 = null;
+      cond.inequalitySign2 = null;
     },
 
     /**
@@ -3649,7 +3347,21 @@ export default {
      * @description リスト選択項目名称一覧
      */
     selectedListNames(selectedList) {
-      return selectedList.map((item) => item.name).join(",");
+      if (!Array.isArray(selectedList)) {
+        return "";
+      }
+      return selectedList
+        .map((item) => item?.name)
+        .filter((name) => name != null && name !== "")
+        .join(",");
+    },
+
+    dialysisConditionSelectedItemList(index) {
+      const cond = this.searchQuery.dialysisConditionList?.[index];
+      if (!cond || !Array.isArray(cond.selectedItemList)) {
+        return [];
+      }
+      return cond.selectedItemList;
     },
 
     /**
@@ -3677,6 +3389,18 @@ export default {
         );
       }
       this.selectingQuery = { queryId, queryName, query };
+      this.ensureDialysisConditionObjects();
+    },
+
+    ensureDialysisConditionObjects() {
+      for (let i = 1; i <= 5; i++) {
+        if (
+          this.searchQuery.selectingDialCondId[i] != null &&
+          this.searchQuery.dialysisConditionList[i] == null
+        ) {
+          this.initDialysisCondition(i);
+        }
+      }
     },
 
     /**
@@ -3689,7 +3413,7 @@ export default {
         query: new SearchQuery(this.searchQuery),
       };
       // TODO: クエリ更新API実装待ち
-      ApiHelper.put("/pat_search_detail/", {
+      ApiHelper.put("/pat_search_detail", {
         searchCd: queryObj.queryId,
         searchName: queryObj.queryName,
         searchCondition: JSON.stringify(queryObj.query),
@@ -3797,201 +3521,73 @@ export default {
      * @returns {String} YYYYMMDDHHmmssSSS
      */
     componentKey(str) {
-      return `${moment().format("YYYYMMDDHHmmssSSS")}${str}`;
+      return `${dayjs().format("YYYYMMDDHHmmssSSS")}${str}`;
     },
 
-    /**
-     * @description スタッフ選択ポップオーバー表示
-     */
-    async showPopoverStaff(staffClass) {
-      // if (staffClass === "Doctor") {
-      //   this.popoverDataStaff.popoverContentSelected.value =
-      //     this.searchQuery.staffCdDoctor;
-      // } else if (staffClass === "Charge") {
-      //   this.popoverDataStaff.popoverContentSelected.value =
-      //     this.searchQuery.staffCdCharge;
-      // } else {
-      //   this.popoverDataStaff.popoverContentSelected.value =
-      //     this.searchQuery.staffCdPucture;
-      // }
-
-      //#11872 liyanze-z add flag is used userID  
-      let isUsedUserInfoID = false;
-      if (staffClass === "Doctor") {
-        this.popoverDataStaff.popoverContentSelected.value =
-          this.searchQuery.staffCdDoctor ? this.searchQuery.staffCdDoctor : this.getStateUserAccountInfo.userId;
-          //liyanze-z add flag
-          if(!this.searchQuery.staffCdDoctor) isUsedUserInfoID = true;
-      } else if (staffClass === "Charge") {
-        this.popoverDataStaff.popoverContentSelected.value =
-          this.searchQuery.staffCdCharge ? this.searchQuery.staffCdCharge : this.getStateUserAccountInfo.userId;
-          //liyanze-z add flag
-          if(!this.searchQuery.staffCdCharge) isUsedUserInfoID = true;
-      } else {
-        this.popoverDataStaff.popoverContentSelected.value =
-          this.searchQuery.staffCdPucture ? this.searchQuery.staffCdPucture : this.getStateUserAccountInfo.userId;
-          //liyanze-z add flag
-          if(!this.searchQuery.staffCdPucture) isUsedUserInfoID = true;
-      }
-
-      // mod 11872 利用者指定IFのデフォルト選択状態 liyanze-z add  ログインID  start 
-      this.popoverDataStaff.isUsedUserInfoID = isUsedUserInfoID;
-      // mod 11872 利用者指定IFのデフォルト選択状態 liyanze-z add  ログインID  end 
-
-      this.showingPopoverStaffClass = staffClass;
-      this.showPopover(this.popoverDataStaff);
+    buildStaffExtraParamsWithLoginDefault(staffCd) {
+      const base = { hideDeletedPrefix: true };
+      if (!this.isStaffCdUnsetForDefaultInit(staffCd)) return base;
+      const account = this.getStateUserAccountInfo;
+      const uid = account && account.userId;
+      if (uid == null || String(uid).trim() === "") return base;
+      return { ...base, initValue: uid };
+    },
+    isStaffCdUnsetForDefaultInit(value) {
+      return (
+        value == null ||
+        value === "" ||
+        String(value).trim() === "" ||
+        String(value).trim() === "undefined"
+      );
     },
 
-    /**
-     * @description 禁忌・アレルギー選択ポップオーバー表示
-     */
-    showPopoverTabooAllergy(tabooAllergyString) {
-      if (tabooAllergyString === "Taboo") {
-        this.popoverDataTabooAllergy.popoverContentSelected.value =
-          this.searchQuery.tabooCd;
-      } else {
-        this.popoverDataTabooAllergy.popoverContentSelected.value =
-          this.searchQuery.allergyCd;
-      }
-      this.showingPopoverTabooAllergy = tabooAllergyString;
-      this.showPopover(this.popoverDataTabooAllergy);
+    onDoctorReturn(data) {
+      this.searchQuery.staffCdDoctor = data?.value ?? null;
+      this.searchQuery.staffNameDoctor = this.normalizeUnregistered(data?.text);
     },
-    /**
-     * @description 診療科選択ポップオーバー表示
-     */
-    showPopoverCourse(courseString) {
-      if (courseString === "Course") {
-        this.popoverDataCourse.popoverContentSelected.value =
-          this.searchQuery.courseCd;
-      }
-      this.showingPopoverCourse = courseString;
-      this.showPopover(this.popoverDataCourse);
+    onChargeReturn(data) {
+      this.searchQuery.staffCdCharge = data?.value ?? null;
+      this.searchQuery.staffNameCharge = this.normalizeUnregistered(data?.text);
     },
-    /**
-     * @description 透析実施科選択ポップオーバー表示
-     */
-    showPopoverDialCourse(DialysisCourseString) {
-      if (DialysisCourseString === "DialCourse") {
-        this.popoverDataDialysisCourse.popoverContentSelected.value =
-          this.searchQuery.dialCourseCd;
-      }
-      this.showingPopoverDialysisCourse = DialysisCourseString;
-      this.showPopover(this.popoverDataDialysisCourse);
+    onPunctureReturn(data) {
+      this.searchQuery.staffCdPucture = data?.value ?? null;
+      this.searchQuery.staffNamePuncture = this.normalizeUnregistered(data?.text);
     },
-    /**
-     * @description 病棟選択ポップオーバー表示
-     */
-    showPopoverWard(WardString) {
-      if (WardString === "Ward") {
-        this.popoverDataWard.popoverContentSelected.value =
-          this.searchQuery.wardCd;
-      }
-      this.showingPopoverWard = WardString;
-      this.showPopover(this.popoverDataWard);
+    onPrimaryDiseaseReturn(data) {
+      this.searchQuery.primary_disease_cd = data?.value ?? null;
+      this.searchQuery.primary_disease_name = this.normalizeUnregistered(data?.text);
     },
-    showPopoverPrimaryDisease() {
-      this.popoverDataPrimaryDisease.popoverContentSelected.value =
-        this.searchQuery.primary_disease_cd;
-      showPopover(this.popoverDataPrimaryDisease);
+    onTabooReturn(data) {
+      this.searchQuery.tabooCd = data?.value ?? null;
+      this.searchQuery.tabooContent = this.normalizeUnregistered(data?.text);
     },
-    showPopoverDisease() {
-      this.popoverDataDisease.popoverContentSelected.value =
-        this.searchQuery.diseaseCd;
-      showPopover(this.popoverDataDisease);
-    },
-    showPopoverTabooSeverity() {
-      this.popoverDataTabooSeverity.popoverContentSelected.value =
-        this.searchQuery.severityCd;
-      this.showPopover(this.popoverDataTabooSeverity);
-    },
-    showPopoverTabooTransport() {
-      this.popoverDataTabooTransport.popoverContentSelected.value =
-        this.searchQuery.transportCd;
-      this.showPopover(this.popoverDataTabooTransport);
-    },
-    /**
-     * @description 続柄選択ポップオーバー表示
-     */
-    showPopoverRelationship() {
-      this.popoverDataRelationship.popoverContentSelected.value =
-        this.searchQuery.relationCd;
-      this.showPopover(this.popoverDataRelationship);
-    },
-    /**
-     * @description スタッフ条件セット
-     * @params {Number} cd ユーザマスタコード
-     * @params {String} name ユーザマスタ名称
-     */
-    setStaff(cd, name) {
-      if (this.showingPopoverStaffClass === "Doctor") {
-        // 主治医で選択された場合
-        this.searchQuery.staffCdDoctor = cd;
-        this.searchQuery.staffNameDoctor = name;
-      } else if (this.showingPopoverStaffClass === "Charge") {
-        // 担当で選択された場合
-        this.searchQuery.staffCdCharge = cd;
-        this.searchQuery.staffNameCharge = name;
-      } else {
-        // 穿刺で選択された場合
-        this.searchQuery.staffCdPucture = cd;
-        this.searchQuery.staffNamePuncture = name;
-      }
-    },
-    showPopoverAddition() {
-      this.popoverDataAddition.popoverContentSelected.value =
-        this.searchQuery.additionCd;
-      this.showPopover(this.popoverDataAddition);
-    },
-
-    /**
-     * @description 禁忌・アレルギー条件セット
-     * @summary 禁忌・アレルギー選択ポップオーバーで指定されたコードと名称をどちらか一方にセットする
-     * @params {Number} cd 禁忌・アレルギーマスタコード
-     * @params {String} name 禁忌・アレルギーマスタ名称
-     */
-    setTabooAllergy(cd, name) {
-      if (this.showingPopoverTabooAllergy === "Taboo") {
-        // 禁忌で選択された場合
-        this.searchQuery.tabooCd = cd;
-        this.searchQuery.tabooContent = name;
-      } else {
-        // アレルギーで選択された場合
-        this.searchQuery.allergyCd = cd;
-        this.searchQuery.allergyContent = name;
-      }
+    onAllergyReturn(data) {
+      this.searchQuery.allergyCd = data?.value ?? null;
+      this.searchQuery.allergyContent = this.normalizeUnregistered(data?.text);
     },
     setCourse(cd, name) {
-      if (this.showingPopoverCourse === "Course") {
-        // 診療科禁忌で選択された場合
-        this.searchQuery.mainCourseCd = cd;
-        this.searchQuery.courseName = name;
-      }
+      this.searchQuery.mainCourseCd = cd;
+      this.searchQuery.courseName = this.normalizeUnregistered(name);
     },
     setDialysisCourse(cd, name) {
-      if (this.showingPopoverDialysisCourse === "DialCourse") {
-        // 透析実施科で選択された場合
-        this.searchQuery.dialysisCourseCd = cd;
-        this.searchQuery.dialCourseName = name;
-      }
+      this.searchQuery.dialysisCourseCd = cd;
+      this.searchQuery.dialCourseName = this.normalizeUnregistered(name);
     },
     setWard(cd, name) {
-      if (this.showingPopoverWard === "Ward") {
-        // 病棟で選択された場合
-        this.searchQuery.wardCd = cd;
-        this.searchQuery.wardName = name;
-      }
+      this.searchQuery.wardCd = cd;
+      this.searchQuery.wardName = this.normalizeUnregistered(name);
     },
     setTabooSeverity(cd, name) {
       this.searchQuery.severityCd = cd;
-      this.searchQuery.severityName = name;
+      this.searchQuery.severityName = this.normalizeUnregistered(name);
     },
     setTabooTransport(cd, name) {
       this.searchQuery.transportCd = cd;
-      this.searchQuery.transportName = name;
+      this.searchQuery.transportName = this.normalizeUnregistered(name);
     },
     setAddition(cd, name) {
       this.searchQuery.additionCd = cd;
-      this.searchQuery.additionName = name;
+      this.searchQuery.additionName = this.normalizeUnregistered(name);
     },
 
     /**
@@ -4001,15 +3597,18 @@ export default {
      */
     setDisease(cd, name) {
       this.searchQuery.diseaseCd = cd;
-      this.searchQuery.diseaseName = name;
+      this.searchQuery.diseaseName = this.normalizeUnregistered(name);
     },
     setPrimaryDisease(cd, name) {
       this.searchQuery.primary_disease_cd = cd;
-      this.searchQuery.primary_disease_name = name;
+      this.searchQuery.primary_disease_name = this.normalizeUnregistered(name);
     },
     setRelationship(cd, name) {
       this.searchQuery.relationCd = cd;
-      this.searchQuery.relationName = name;
+      this.searchQuery.relationName = this.normalizeUnregistered(name);
+    },
+    normalizeUnregistered(value) {
+      return value === "未登録" ? "" : value;
     },
     /**
      * @description 患者追加検索
@@ -4124,16 +3723,16 @@ export default {
      */
     clearConditon() {
       // クエリ初期化
-      this.searchQuery.dialysisStartDate = moment().format("YYYY-MM-DD");
-      this.searchQuery.dialysisEndDate = moment().format("YYYY-MM-DD");
-      this.searchQuery.exam_pattern_start_date = moment().format("YYYY-MM-DD");
-      this.searchQuery.exam_pattern_end_date = moment().format("YYYY-MM-DD");
+      this.searchQuery.dialysisStartDate = dayjs().format("YYYY-MM-DD");
+      this.searchQuery.dialysisEndDate = dayjs().format("YYYY-MM-DD");
+      this.searchQuery.exam_pattern_start_date = dayjs().format("YYYY-MM-DD");
+      this.searchQuery.exam_pattern_end_date = dayjs().format("YYYY-MM-DD");
       this.searchQuery.radPattern_exam_pattern_start_date =
-        moment().format("YYYY-MM-DD");
+        dayjs().format("YYYY-MM-DD");
       this.searchQuery.radPattern_exam_pattern_end_date =
-        moment().format("YYYY-MM-DD");
-      this.searchQuery.eventStartDate = moment().format("YYYY-MM-DD");
-      this.searchQuery.eventEndDate = moment().format("YYYY-MM-DD");
+        dayjs().format("YYYY-MM-DD");
+      this.searchQuery.eventStartDate = dayjs().format("YYYY-MM-DD");
+      this.searchQuery.eventEndDate = dayjs().format("YYYY-MM-DD");
       this.$nextTick(() => {
         this.selectingQuery.query = new SearchQuery();
       });
@@ -4250,8 +3849,8 @@ export default {
      */
     setClosePopup() {
       // TODO: 一時的に保留:スクロール毎に動作しているがpopupが閉じたら関数を終了させるか検討
-      $$(".search-data").scroll(() => {
-        $$(document).find("[data-role=popup]").kendoPopup("close");
+      this.scopedJQuery()(".search-data").scroll(() => {
+        closeKendoPopups(this.$el || this.$refs?.visibleArea || null);
       });
     },
 
@@ -4259,12 +3858,11 @@ export default {
      * @description 各エリアの高さを再設定する
      */
     setAreaHeight() {
-      const body = document.getElementById(
-        "visible-area-detailed-search"
-      ).parentElement;
-      const footer = document.getElementById("button-area-detailed-search")
-        .parentElement.parentElement;
-      body.style.height = `calc(100% - ${footer.offsetHeight}px - 50px)`;
+      const body = this.$refs.visibleArea?.parentElement || null;
+      const footer = this.$refs.buttonArea?.parentElement?.parentElement || null;
+      if (body && footer) {
+        body.style.height = `calc(100% - ${footer.offsetHeight}px - 50px)`;
+      }
     },
     setContentData(newValue, index) {
       this.searchQuery.indCommentList[index] = newValue;
@@ -4272,102 +3870,83 @@ export default {
     showDialysisStartDateMsg(msg) {
       if (msg == 0) {
         this.showDialysisStartDate =
-          document.getElementsByClassName("dialysisStartDate")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("dialysisStartDate")?.validationMessage !== "";
       }
       if (msg == 1) {
         this.showExamPatternStartDate =
-          document.getElementsByClassName("exam_pattern_start_date")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("exam_pattern_start_date")?.validationMessage !== "";
       }
       if (msg == 2) {
         this.radPatternExamPatternStartDate =
-          document.getElementsByClassName(
-            "radPattern_exam_pattern_start_date"
-          )[0].validationMessage !== "";
+          this.getScopedClassElement("radPattern_exam_pattern_start_date")?.validationMessage !== "";
       }
       if (msg == 3) {
         this.showeventStartDate =
-          document.getElementsByClassName("eventStartDate")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("eventStartDate")?.validationMessage !== "";
       }
     },
 
     getDialysisStartDateMsg(msg) {
       if (msg == 0) {
         this.showDialysisStartDate =
-          document.getElementsByClassName("dialysisStartDate")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("dialysisStartDate")?.validationMessage !== "";
       }
       if (msg == 1) {
         this.showExamPatternStartDate =
-          document.getElementsByClassName("exam_pattern_start_date")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("exam_pattern_start_date")?.validationMessage !== "";
       }
       if (msg == 2) {
         this.radPatternExamPatternStartDate =
-          document.getElementsByClassName(
-            "radPattern_exam_pattern_start_date"
-          )[0].validationMessage !== "";
+          this.getScopedClassElement("radPattern_exam_pattern_start_date")?.validationMessage !== "";
       }
       if (msg == 3) {
         this.showeventStartDate =
-          document.getElementsByClassName("eventStartDate")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("eventStartDate")?.validationMessage !== "";
       }
     },
 
     showDialysisEndDateMsg(msg) {
       if (msg == 0) {
         this.showDialysisEndDate =
-          document.getElementsByClassName("dialysisEndDate")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("dialysisEndDate")?.validationMessage !== "";
       }
       if (msg == 1) {
         this.showExamPatternEndDate =
-          document.getElementsByClassName("exam_pattern_end_date")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("exam_pattern_end_date")?.validationMessage !== "";
       }
       if (msg == 2) {
         this.radPatternExamPatternEndDate =
-          document.getElementsByClassName("radPattern_exam_pattern_end_date")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("radPattern_exam_pattern_end_date")?.validationMessage !== "";
       }
       if (msg == 3) {
         this.showeventEndDate =
-          document.getElementsByClassName("eventEndDate")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("eventEndDate")?.validationMessage !== "";
       }
     },
 
     getDialysisEndDateMsg(msg) {
       if (msg == 0) {
         this.showDialysisEndDate =
-          document.getElementsByClassName("dialysisEndDate")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("dialysisEndDate")?.validationMessage !== "";
       }
       if (msg == 1) {
         this.showExamPatternEndDate =
-          document.getElementsByClassName("exam_pattern_end_date")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("exam_pattern_end_date")?.validationMessage !== "";
       }
       if (msg == 2) {
         this.radPatternExamPatternEndDate =
-          document.getElementsByClassName("radPattern_exam_pattern_end_date")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("radPattern_exam_pattern_end_date")?.validationMessage !== "";
       }
       if (msg == 3) {
         this.showeventEndDate =
-          document.getElementsByClassName("eventEndDate")[0]
-            .validationMessage !== "";
+          this.getScopedClassElement("eventEndDate")?.validationMessage !== "";
       }
     },
     logEventFun() {
       var conditionMessage = "";
 
-      var elements = document
-        .getElementById("visible-area-detailed-search")
-        .getElementsByTagName("*");
+      const scopedVisibleArea = this.$refs.visibleArea || this.getScopedRoot();
+      var elements = scopedVisibleArea?.getElementsByTagName("*") || [];
       var elementIdx;
       for (elementIdx in elements) {
         var item = elements[elementIdx];
@@ -4392,7 +3971,7 @@ export default {
           case "LABEL":
             var forValue = item.getAttribute("for");
             if (forValue) {
-              var checkValue = document.getElementById(forValue);
+              var checkValue = this.getScopedElementById(forValue);
               if (checkValue && checkValue.checked) {
                 conditionMessage += item.innerText + "、";
               }
@@ -4428,7 +4007,7 @@ export default {
             if (item.type === "checkbox" && item.checked) {
               var rowObj = item.closest("ONS-ROW");
               if (rowObj) {
-                var colRow = rowObj.getElementsByTagName("ons-col")[0];
+                var colRow = rowObj.querySelector(".ons-col");
                 var labelObj = colRow.getElementsByTagName("label")[0];
                 if (labelObj) {
                   conditionMessage += labelObj.innerText + "、";
@@ -4487,7 +4066,7 @@ export default {
   margin: 4px;
 }
 
-.button-area >>> .button {
+.button-area :deep(.button) {
   width: fit-content;
 }
 
@@ -4522,19 +4101,48 @@ export default {
 
 .search-area {
   position: relative;
-  display: inline-block;
+  display: table;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border-spacing: 0;
   text-align: left;
   white-space: initial;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-.search-area >>> .select-input {
+.search-area > tbody > tr.detailed-search-data {
+  display: table-row;
+}
+
+.search-area > tbody > tr.detailed-search-data > td {
+  display: table-cell;
+  width: 100%;
+  padding: 0;
+  vertical-align: top;
+  box-sizing: border-box;
+}
+
+.search-area :deep(.select-input) {
   font-size: 1em;
   line-height: 1em;
 }
 
 .search-area table {
   width: calc(100% - 4px);
+  box-sizing: border-box;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.search-area td,
+.search-area th,
+.search-treat-area td,
+.search-treat-area th {
+  padding: 0;
 }
 
 .search-area tr th {
@@ -4544,6 +4152,7 @@ export default {
 
 .searching-toast {
   text-align: center;
+  width: 100%;
 }
 
 .button-area {
@@ -4563,7 +4172,6 @@ export default {
 /* その他 */
 .search-title,
 .query-area,
-.detailed-search-data,
 .search-data,
 .detailede-search-title,
 .search-pat-info-area,
@@ -4576,6 +4184,23 @@ export default {
 .search-treat-title,
 .search-check-title,
 .footer-area {
+  display: block;
+}
+
+.search-area .query-area > td,
+.search-area tr.search-data > td {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+}
+
+.search-data > td,
+.search-treat-area > tbody {
+  width: 100%;
+}
+
+.search-treat-area > tbody {
   display: block;
 }
 
@@ -4596,24 +4221,90 @@ label {
 .search-check-area,
 .search-treat-area {
   border: 1px solid;
+  box-sizing: border-box;
 }
+
+.search-treat-area > tbody > tr.treat-area-title {
+  display: block;
+  width: 100%;
+}
+
+.search-treat-area > tbody > tr.treat-area-title > .search-treat-title {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.search-treat-area > tbody > tr.td_box {
+  width: 100%;
+}
+
 .week-checkbox:checked + label {
   background-color: #9acd32;
   color: #050505;
 }
 .age-input {
   vertical-align: middle;
-  /*mod #11047 数値IF修正【最優先】 張玲 start*/
-  /* width: 50px; */
   width: 5em;
-  /*mod #11047 数値IF修正【最優先】 張玲 end*/
 }
-/*add #11047 数値IF修正【最優先】 張玲 start*/
-.age-input-blur >>> input{
-  border: 2px solid !important;
-  border-style: inset !important;
+
+/* #11047 数値IF：Pro のみ（年齢の v-ons-input には適用しない） */
+.search-treat-area .age-input.custom-number-input-shell {
+  height: 2em;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: stretch;
 }
-/*add #11047 数値IF修正【最優先】 張玲 end*/
+
+.search-treat-area .age-input.custom-number-input-shell :deep(.custom-number-input-body) {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: 5px;
+  overflow: hidden;
+  border-width: 2px;
+  border-style: inset;
+  border-color: unset;
+  outline: 0;
+}
+
+.search-treat-area .age-input.custom-number-input-shell :deep(.custom-number-input-control) {
+  width: 100% !important;
+  min-width: 100%;
+  height: 100% !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.search-treat-area .age-input.custom-number-input-shell :deep(input),
+.search-treat-area .age-input.custom-number-input-shell :deep(.text-input) {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
+  box-sizing: border-box;
+  border-radius: 0;
+  border: none !important;
+  box-shadow: none !important;
+  background-color: #f7f7f7;
+}
+
+/* フォーカス中は緑枠（未変更でも表示） */
+.search-treat-area .age-input.custom-number-input-shell :deep(.custom-number-input-body:focus-within) {
+  border: 2px green solid;
+  outline: 0;
+}
+
+/* 値変更後はフォーカスアウト後も緑枠を維持 */
+.search-treat-area .age-input.custom-number-input-shell :deep(.custom-number-input-body:has(.custom-input-number-edited)) {
+  border: 2px green solid;
+  outline: 0;
+}
+
+.search-treat-area .age-input.custom-number-input-shell :deep(.custom-input-number-edited input),
+.search-treat-area .age-input.custom-number-input-shell :deep(.custom-input-number-edited .text-input) {
+  outline: 0;
+}
 .pat-groups .method {
   height: 2em;
   display: flex;
@@ -4649,22 +4340,28 @@ label {
 .width-button-header {
   width: 95px;
 }
-div >>> .modal-header .toolbar {
+div :deep(.modal-header .toolbar) {
   background-color: var(--ntss-header-background-color);
 }
 
-div >>> .modal-header .toolbar__title.toolbar__left {
+div :deep(.modal-header .toolbar__title.toolbar__left) {
   color: var(--ntss-header-color) !important;
 }
 
-div >>> .modal-search,
-div >>> .modal-body,
-div >>> .modal-footer,
-div >>> .modal-footer .bottom-bar {
+div :deep(.modal-search),
+div :deep(.modal-body),
+div :deep(.modal-footer),
+div :deep(.modal-footer .bottom-bar) {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }
-.treatment-select >>> .k-multiselect-wrap {
+.treatment-select :deep(.k-multiselect-wrap) {
+  max-height: 78px;
+  overflow-y: auto;
+}
+
+.treatment-select :deep(.k-input-values.k-multiselect-wrap),
+.treatment-select :deep(.k-input-values) {
   max-height: 78px;
   overflow-y: auto;
 }
@@ -4680,15 +4377,24 @@ div >>> .modal-footer .bottom-bar {
   font-size: inherit;
 }
 
-.custom-treatment-select >>> .k-widget,
-.custom-treatment-select >>> .k-button,
+.custom-treatment-select :deep(.k-widget),
+.custom-treatment-select :deep(.k-button),
 .custom-input-time input,
-.custom-pat-groups >>> .k-widget,
-.custom-pat-groups >>> .k-button {
+.custom-pat-groups :deep(.k-widget),
+.custom-pat-groups :deep(.k-button) {
   font-size: unset;
 }
 
-.custom-com-textarea >>> textarea {
+.custom-treatment-select :deep(.k-chip),
+.custom-treatment-select :deep(.k-chip-label),
+.custom-treatment-select :deep(.k-input-inner),
+.custom-pat-groups :deep(.k-chip),
+.custom-pat-groups :deep(.k-chip-label),
+.custom-pat-groups :deep(.k-input-inner) {
+  font-size: unset;
+}
+
+.custom-com-textarea :deep(textarea) {
   font-size: inherit;
   font-family: inherit;
 }
@@ -4705,23 +4411,23 @@ div >>> .modal-footer .bottom-bar {
 .rad-date-input {
   width: 5rem;
 }
-.rp-input >>> input {
+.rp-input :deep(input) {
   background-color: #ddd;
 }
 
-.disabled-input >>> .text-input:disabled {
+.disabled-input :deep(.text-input:disabled) {
   opacity: 1;
 }
 .input {
   vertical-align: middle;
   background-color: white;
 }
-.input >>> .text-input {
+.input :deep(.text-input) {
   width: 19em;
   height: 2em;
   line-height: 2em;
 }
-.input >>> .text-input:disabled {
+.input :deep(.text-input:disabled) {
   opacity: 1;
 }
 .leftbtn {
@@ -4778,7 +4484,51 @@ div >>> .modal-footer .bottom-bar {
 .my-input {
   width: 19em !important;
 }
-::v-deep .text-input:disabled {
+:deep(.text-input:disabled) {
   width: 19em !important;
+}
+</style>
+
+<style>
+#visible-area-detailed-search td.td_right:has(> ons-col),
+#visible-area-detailed-search td.td_right1:has(> ons-col),
+#visible-area-detailed-search td.td_right2:has(> ons-col) {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+}
+
+#visible-area-detailed-search td.td_right > ons-col,
+#visible-area-detailed-search td.td_right1 > ons-col,
+#visible-area-detailed-search td.td_right2 > ons-col {
+  display: inline-flex !important;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+#visible-area-detailed-search td.td_right.patient_box > div:has(ons-col),
+#visible-area-detailed-search td.td_right1.patient_box > div:has(ons-col),
+#visible-area-detailed-search td.td_right2.patient_box > div:has(ons-col) {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+}
+
+#visible-area-detailed-search td.td_right.patient_box > div > ons-col,
+#visible-area-detailed-search td.td_right1.patient_box > div > ons-col,
+#visible-area-detailed-search td.td_right2.patient_box > div > ons-col {
+  display: inline-flex !important;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 </style>

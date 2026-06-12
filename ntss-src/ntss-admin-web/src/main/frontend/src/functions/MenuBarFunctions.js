@@ -2,8 +2,10 @@
  * メニューバー表示機能設定 共通関数
  */
 import { getMstUrlLinkRegister, getMstMenuGroup } from "@/functions/mst/MstGetters";
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { showAlertDialog } from "@/functions/common/OnsenFunctions";
+import { messageFormat } from "@/functions/common/MessageFormat";
 
 /**
  * 外部リンクメニューマスタ、メニューグループマスタ 取得
@@ -48,7 +50,7 @@ const validateData = (inputModel) => {
 /**
  * 確定or保存ボタン押下時 バリデーション
  */
-export const validateOnRegistration = (inputModel, ons) => {
+export const validateOnRegistration = (inputModel) => {
   const validationResult = validateData(inputModel);
   if (Object.values(validationResult).every(v => v === true)) {
     // 全てチェックOK
@@ -62,7 +64,7 @@ export const validateOnRegistration = (inputModel, ons) => {
     }
   `;
   // ダイアログ表示
-  ons.notification.alert({
+  showAlertDialog({
     title: DIALOG_MESSAGES["00200163"].title,
     message: message
   });

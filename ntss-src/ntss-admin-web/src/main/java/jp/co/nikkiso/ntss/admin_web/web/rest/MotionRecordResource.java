@@ -2,13 +2,11 @@ package jp.co.nikkiso.ntss.admin_web.web.rest;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
 import jp.co.nikkiso.ntss.admin_web.DataGatheringProperties;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.request.motionRecord.DownloadGatheringRequest;
@@ -19,23 +17,18 @@ import jp.co.nikkiso.ntss.admin_web.request.motionRecord.UpdateServiceSupportAll
 import jp.co.nikkiso.ntss.admin_web.request.motionRecord.UpdateServiceSupportRequest;
 import jp.co.nikkiso.ntss.admin_web.response.GatheringStatusResponse;
 import jp.co.nikkiso.ntss.admin_web.response.MotionRecordsResponse;
-import jp.co.nikkiso.ntss.admin_web.response.details.graph.DabGraphResponse;
 import jp.co.nikkiso.ntss.admin_web.response.details.graph.DissolutionGraphResponse;
-import jp.co.nikkiso.ntss.admin_web.response.details.graph.MachineGraphResponse;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.motionRecords.MotionRecordsService;
-import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.dao.MntMotionRecordDao;
 import jp.co.nikkiso.ntss.core.dao.SysSystemDefineDao;
 import jp.co.nikkiso.ntss.core.entity.MntMotionRecord;
-import jp.co.nikkiso.ntss.core.entity.PatMain;
 import jp.co.nikkiso.ntss.core.entity.SysSystemDefine;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -51,28 +44,32 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
-import javax.validation.Valid;
-import javax.xml.bind.DatatypeConverter;
+import jakarta.validation.Valid;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-// #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
-import java.util.Map;
-// #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-// #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
+import jp.co.nikkiso.ntss.core.utils.HexCodecUtils;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
-// #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
+import jp.co.nikkiso.ntss.admin_web.response.details.graph.DabGraphResponse;
+import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
+import jp.co.nikkiso.ntss.admin_web.response.details.graph.MachineGraphResponse;
 
 
 /**
@@ -103,7 +100,7 @@ public class MotionRecordResource {
    * Amazon S3.
    */
   @Autowired
-  private AmazonS3 s3;
+  private S3Client s3;
 
   /**
    * データ収集Properties.
@@ -116,6 +113,11 @@ public class MotionRecordResource {
    */
   @Autowired
   private SysSystemDefineDao sysSystemDefineDao;
+
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Autowired
+  private MntMotionRecordDao mntMotionRecordDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
   /**
    * 装置動作記録一覧取得.
@@ -130,7 +132,22 @@ public class MotionRecordResource {
   @GetMapping("/{facilityCd}/{machineTypeCd}/{machineSerial}/{userTypeCd}/{baseDate}")
   public ResponseEntity<?> getMotionRecords(@PathVariable String facilityCd,
       @PathVariable String machineTypeCd, @PathVariable String machineSerial, @PathVariable String userTypeCd,
-      @PathVariable String baseDate) {
+      @PathVariable String baseDate,
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                            @AuthenticationPrincipal NtssUser ntssUser
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "machineTypeCd=" + machineTypeCd + " " + "machineSerial=" + machineSerial + " " + "userTypeCd=" + userTypeCd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -161,7 +178,22 @@ public class MotionRecordResource {
   @GetMapping("/{facilityCd}/{machineTypeCd}/{machineSerial}/{userTypeCd}/{fromDate}/{toDate}")
   public ResponseEntity<?> getMotionRecords(@PathVariable String facilityCd,
       @PathVariable String machineTypeCd, @PathVariable String machineSerial, @PathVariable String userTypeCd,
-      @PathVariable String fromDate, @PathVariable String toDate) {
+      @PathVariable String fromDate, @PathVariable String toDate,
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                            @AuthenticationPrincipal NtssUser ntssUser
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "machineTypeCd=" + machineTypeCd + " " + "machineSerial=" + machineSerial + " " + "userTypeCd=" + userTypeCd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -195,7 +227,22 @@ public class MotionRecordResource {
   @GetMapping("/{facilityCd}/{machineTypeCd}/{machineSerial}/{userTypeCd}/{fromDate}/{toDate}/{offset}")
   public ResponseEntity<?> getMotionRecords(@PathVariable String facilityCd,
       @PathVariable String machineTypeCd, @PathVariable String machineSerial, @PathVariable String userTypeCd,
-      @PathVariable String fromDate, @PathVariable String toDate, @PathVariable Integer offset) {
+      @PathVariable String fromDate, @PathVariable String toDate, @PathVariable Integer offset,
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                            @AuthenticationPrincipal NtssUser ntssUser
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "machineTypeCd=" + machineTypeCd + " " + "machineSerial=" + machineSerial + " " + "userTypeCd=" + userTypeCd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     Integer limit = 1000;
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -228,7 +275,22 @@ public class MotionRecordResource {
   @GetMapping("/period/{facilityCd}/{machineTypeCd}/{machineSerial}/{userTypeCd}/{fromDate}/{toDate}")
   public ResponseEntity<?> getMotionRecordsInPeriod(@PathVariable String facilityCd,
       @PathVariable String machineTypeCd, @PathVariable String machineSerial, @PathVariable String userTypeCd,
-      @PathVariable String fromDate, @PathVariable String toDate) {
+      @PathVariable String fromDate, @PathVariable String toDate,
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                    @AuthenticationPrincipal NtssUser ntssUser
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "machineTypeCd=" + machineTypeCd + " " + "machineSerial=" + machineSerial + " " + "userTypeCd=" + userTypeCd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -265,7 +327,22 @@ public class MotionRecordResource {
   public ResponseEntity<?> getMotionRecordsInPeriod(@PathVariable String facilityCd,
                                                     @PathVariable String machineTypeCd, @PathVariable String machineSerial, @PathVariable String userTypeCd,
                                                     @PathVariable String fromDate, @PathVariable String toDate, @PathVariable Integer offset,
-                                                    @RequestParam(name = "dataType", defaultValue = "") List<Integer> dataType, @RequestParam(name = "freeWord", defaultValue = "") String freeWord) {
+                                                    @RequestParam(name = "dataType", defaultValue = "") List<Integer> dataType, @RequestParam(name = "freeWord", defaultValue = "") String freeWord,
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                    @AuthenticationPrincipal NtssUser ntssUser
+                                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "machineTypeCd=" + machineTypeCd + " " + "machineSerial=" + machineSerial + " " + "userTypeCd=" + userTypeCd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     Integer limit = 1000;
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -300,7 +377,22 @@ public class MotionRecordResource {
   public ResponseEntity<?> getMotionRecordsTotal(@PathVariable String facilityCd,
       @PathVariable String machineTypeCd, @PathVariable String machineSerial, @PathVariable String userTypeCd,
       @PathVariable String fromDate, @PathVariable String toDate, @RequestParam(name = "dataType", defaultValue = "") List<Integer> dataType,
-      @RequestParam(name = "freeWord", defaultValue = "") String freeWord) {
+      @RequestParam(name = "freeWord", defaultValue = "") String freeWord,
+                                                 // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                 @AuthenticationPrincipal NtssUser ntssUser
+                                                 // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "machineTypeCd=" + machineTypeCd + " " + "machineSerial=" + machineSerial + " " + "userTypeCd=" + userTypeCd + " ";
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to get getMotionRecordsTotal : "+ facilityCd+ machineTypeCd+ machineSerial+ userTypeCd+
@@ -335,7 +427,22 @@ public class MotionRecordResource {
       @PathVariable String machineTypeCd,
       @PathVariable String machineSerial,
       @PathVariable String baseDate,
-      @PathVariable Integer offset) {
+      @PathVariable Integer offset,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd;
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -380,7 +487,22 @@ public class MotionRecordResource {
   @GetMapping("/detail/graphs/{facilityCd}/{machineTypeCd}/{machineSerial}/{testType}/{baseDate}/{weeks}")
   public ResponseEntity<?> getGraphData(@PathVariable String facilityCd,
       @PathVariable String machineTypeCd, @PathVariable String machineSerial,
-      @PathVariable String testType, @PathVariable String baseDate, @PathVariable String weeks) {
+      @PathVariable String testType, @PathVariable String baseDate, @PathVariable String weeks,
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                        @AuthenticationPrincipal NtssUser ntssUser
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd;
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -443,7 +565,22 @@ public class MotionRecordResource {
   @GetMapping("/detail/graphs/dissolution/{facilityCd}/{machineTypeCd}/{machineSerial}/{baseDate}/{weeks}")
   public ResponseEntity<?> getDissolutionGraphData(@PathVariable String facilityCd,
       @PathVariable String machineTypeCd, @PathVariable String machineSerial,
-      @PathVariable String baseDate, @PathVariable String weeks) {
+      @PathVariable String baseDate, @PathVariable String weeks,
+                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                   @AuthenticationPrincipal NtssUser ntssUser
+                                                   // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "machineTypeCd=" + machineTypeCd + " " + "machineSerial=" + machineSerial;
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -478,10 +615,29 @@ public class MotionRecordResource {
   //mod #12659 securify SQLインジェクション(High) まとめ zrx start
   @PutMapping("/detail/correction")
   public ResponseEntity<?> updateCorrection(@Valid @RequestBody UpdateCorrectionRequest request,
-                                            BindingResult validationResult) {
+                                            BindingResult validationResult,
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                            @AuthenticationPrincipal NtssUser ntssUser
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
     if (validationResult.hasErrors()) {
       return ResponseEntity.badRequest().build();
     }
+    //mod #12659 securify SQLインジェクション(High) まとめ zrx end
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request.getMotionRecordNo() != null && !request.getMotionRecordNo().isEmpty()) {
+        MntMotionRecord mntMotionRecord = mntMotionRecordDao.selectAllByMotionRecordNo(Long.valueOf(request.getMotionRecordNo()));
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+        if (mntMotionRecord != null && mntMotionRecord.getFacilityCd() != null && !mntMotionRecord.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mntMotionRecord.getFacilityCd() + " " + "motionRecordNo=" + request.getMotionRecordNo() + " " + "userId=" + request.getUserId() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -507,9 +663,21 @@ public class MotionRecordResource {
    * @param request リクエスト
    * @return レスポンス
    */
-  @PutMapping("/detail/all_target_corrections/")
-  public ResponseEntity<?> updateAllTargetCorrections(@Valid @RequestBody UpdateAllCorrectionsRequest request) {
-
+  @PutMapping("/detail/all_target_corrections")
+  public ResponseEntity<?> updateAllTargetCorrections(@Valid @RequestBody UpdateAllCorrectionsRequest request,
+                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                      @AuthenticationPrincipal NtssUser ntssUser
+                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + request.getFacilityCd() + " " + "machineTypeCd=" + request.getMachineTypeCd() + " " + "machineSerial=" + request.getMachineSerial() + " " + "dataType=" + request.getDataType() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     boolean isSuccess = motionRecordsService.updateAllTargetCorrectinos(
         request.getFacilityCd(), request.getMachineTypeCd(), request.getMachineSerial(), request.getUserId(),
         Integer.valueOf(request.getDataType()));
@@ -528,9 +696,6 @@ public class MotionRecordResource {
    */
   @PostMapping("/detail/gathering/download")
   public ResponseEntity<?> downloadGathering(@Valid @RequestBody DownloadGatheringRequest request) {
-
-    InputStream is = null;
-    ByteArrayOutputStream os = null;
 
     String localStore = null;
     String status = null;
@@ -568,31 +733,30 @@ public class MotionRecordResource {
         Path path = Paths.get(fileLocation);
         byte[] bytes = Files.readAllBytes(path);
         // 16進数文字列に変換
-        String hexString = DatatypeConverter.printHexBinary(bytes);
+        String hexString = HexCodecUtils.printHexBinary(bytes);
         return new ResponseEntity<>(hexString, HttpStatus.OK);
       } else {
-
-        // S3オブジェクト取得
-        S3Object object = s3.getObject(new GetObjectRequest(bucket, filename));
-        if (object == null) {
-          return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
-
         // レスポンス用データ生成
-        is = object.getObjectContent();
-        os = new ByteArrayOutputStream();
-        byte[] buffer = new byte[1024];
-        while (true) {
-          int len = is.read(buffer);
-          if (len < 0) {
-            break;
+        try (
+          ResponseInputStream<GetObjectResponse> is = s3.getObject(GetObjectRequest.builder()
+              .bucket(bucket)
+              .key(filename)
+              .build());
+          ByteArrayOutputStream os = new ByteArrayOutputStream();
+        ) {
+          byte[] buffer = new byte[1024];
+          while (true) {
+            int len = is.read(buffer);
+            if (len < 0) {
+              break;
+            }
+            os.write(buffer, 0, len);
           }
-          os.write(buffer, 0, len);
+          byte[] content = os.toByteArray();
+          // 16進数文字列に変換
+          String hexString = HexCodecUtils.printHexBinary(content);
+          return new ResponseEntity<>(hexString, HttpStatus.OK);
         }
-        byte[] content = os.toByteArray();
-        // 16進数文字列に変換
-        String hexString = DatatypeConverter.printHexBinary(content);
-        return new ResponseEntity<>(hexString, HttpStatus.OK);
       }
     } catch (Exception e) {
       // エラーメッセージをログ出力
@@ -602,20 +766,6 @@ public class MotionRecordResource {
     	logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_DETAIL, SERVICE_NAME.FNSI,
     	null);
       return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-
-    } finally {
-      if (status.equals("off")) {
-        try {
-          is.close();
-          os.close();
-        } catch (IOException e) {
-          // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
-      eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
-          logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_DETAIL_MOTION_RECORD_DETAIL, SERVICE_NAME.FNSI,
-          null);
-        }
-      }
     }
   }
 
@@ -627,7 +777,22 @@ public class MotionRecordResource {
    * @return データ収集ステータスのResponse
    */
   @GetMapping("/gathering_status/{userId}/{facilityCd}")
-  public ResponseEntity<?> getGetheringStatus(@PathVariable Long userId, @PathVariable String facilityCd) {
+  public ResponseEntity<?> getGetheringStatus(@PathVariable Long userId, @PathVariable String facilityCd,
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                              @AuthenticationPrincipal NtssUser ntssUser
+                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd;
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -671,7 +836,7 @@ public class MotionRecordResource {
         .body(request);
 
       RestTemplate restTemplate = new RestTemplate();
-	  // #9698 アプリケーションログの内容修正 20260328 mod yangxuewang start
+      // #9698 アプリケーションログの内容修正 20260328 mod yangxuewang start
       long start = System.currentTimeMillis();
       // API呼び出し
       ResponseEntity<String> result = restTemplate.exchange(requestEntity, String.class);
@@ -684,12 +849,12 @@ public class MotionRecordResource {
       map.put("url", requestEntity.getUrl());
       map.put("headers", requestEntity.getHeaders().toSingleValueMap());
       map.put("requestParameter", requestEntity.getBody());
-      map.put("status",result.getStatusCode());
+      map.put("status", result.getStatusCode());
       map.put("cost", cost);
-      map.put("result",result.getBody());
+      map.put("result", result.getBody());
       EventLogMessage restTemplateEventLogMessage = new EventLogMessage();
       restTemplateEventLogMessage.setLogMessage(toJson(map));
-      logService.log(LogLevel.INFO, restTemplateEventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI, null);
+      logService.log(LogLevel.INFO, restTemplateEventLogMessage, null, SERVICE_NAME.FNSI, null);
       // #9698 アプリケーションログの内容修正 20260328 mod yangxuewang end
       return result;
 
@@ -711,6 +876,19 @@ public class MotionRecordResource {
     @Valid @RequestBody UpdateServiceSupportRequest request,
     @AuthenticationPrincipal NtssUser ntssUser
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request.getMotionRecordNo() != null) {
+        MntMotionRecord mntMotionRecord = mntMotionRecordDao.selectAllByMotionRecordNo(request.getMotionRecordNo());
+        if (mntMotionRecord != null && mntMotionRecord.getFacilityCd() != null && !mntMotionRecord.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " facilityCd=" + mntMotionRecord.getFacilityCd() + " motionRecordNo=" + request.getMotionRecordNo() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -742,6 +920,16 @@ public class MotionRecordResource {
   public ResponseEntity<?> updateAllServiceSupport(
     @Valid @RequestBody UpdateServiceSupportAllRequest request,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (request.getFacilityCd() != null && !request.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + request.getFacilityCd() + " " + "machineTypeCd=" + request.getMachineTypeCd() + " " + "machineSerial=" + request.getMachineSerial() + " " + "dataType=" + request.getDataType() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+// #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -777,7 +965,22 @@ public class MotionRecordResource {
    */
   @GetMapping("/getByMachineAndMotionRecordNo/{facilityCd}/{machineTypeCd}/{machineSerial}/{motionRecordNo}")
   public ResponseEntity<?> getByMachineAndMotionRecordNo(@PathVariable String facilityCd,
-      @PathVariable String machineTypeCd, @PathVariable String machineSerial, @PathVariable Long motionRecordNo) {
+      @PathVariable String machineTypeCd, @PathVariable String machineSerial, @PathVariable Long motionRecordNo,
+                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                         @AuthenticationPrincipal NtssUser ntssUser
+                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+          if(!ntssUser.isNkkAdminUser()) {
+              if (facilityCd != null && !facilityCd.isEmpty() &&
+                  !facilityCd.equals(ntssUser.getFacilityCd())) {
+                  String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "machineTypeCd=" + machineTypeCd + " " + "machineSerial=" + machineSerial;
+                  InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+                  return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+              }
+          }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();

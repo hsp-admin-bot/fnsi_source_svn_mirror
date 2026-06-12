@@ -7,48 +7,49 @@ import jp.co.nikkiso.ntss.admin_web.request.scaleBedState.ScaleBedConnectRequest
 import jp.co.nikkiso.ntss.admin_web.request.scaleBedState.ScaleBedConnectResetRequest;
 import jp.co.nikkiso.ntss.admin_web.request.scaleBedState.ScaleBedSendConditionRequest;
 import jp.co.nikkiso.ntss.admin_web.request.scaleBedState.ScaleValueRequest;
-import jp.co.nikkiso.ntss.admin_web.request.weight.WeightPrintRequest;
-import jp.co.nikkiso.ntss.admin_web.request.weight.WeightStateRequest;
 import jp.co.nikkiso.ntss.admin_web.response.weight.SendConditionResponse;
-import jp.co.nikkiso.ntss.admin_web.response.weight.WeightPrintResponse;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.FacilitySettingService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
-import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
-import jp.co.nikkiso.ntss.admin_web.service.scaleBed.ScaleBedService;
-import jp.co.nikkiso.ntss.admin_web.service.scaleBed.dto.ScaleBedListViewDTO;
 import jp.co.nikkiso.ntss.admin_web.service.webSocketNotify.PayloadBuilder;
 import jp.co.nikkiso.ntss.admin_web.service.webSocketNotify.WebSocketNotifyService;
 import jp.co.nikkiso.ntss.admin_web.service.webSocketNotify.WebSocketNotifyService.SendTarget;
-import jp.co.nikkiso.ntss.admin_web.service.weight.WeightScalePrintThread;
 import jp.co.nikkiso.ntss.admin_web.service.weight.state.MntWeightStateService;
 import jp.co.nikkiso.ntss.admin_web.service.weight.state.ScaleBedStateService;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
-import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
-import jp.co.nikkiso.ntss.core.dao.*;
+import jp.co.nikkiso.ntss.core.dao.MntMachineStateDao;
+import jp.co.nikkiso.ntss.core.dao.MstWeightDao;
+import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
+import jp.co.nikkiso.ntss.core.dao.OrdWeightScaleDao;
+import jp.co.nikkiso.ntss.core.dao.SysFacilitySettingDao;
 import jp.co.nikkiso.ntss.core.entity.OrdMain;
 import jp.co.nikkiso.ntss.core.entity.OrdWeightScale;
-import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
-import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.concurrent.DelegatingSecurityContextRunnable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
-import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.*;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 
 @RestController
 @Slf4j

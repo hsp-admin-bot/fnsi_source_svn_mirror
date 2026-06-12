@@ -1,26 +1,31 @@
 <template>
   <modal-base @onClose="close">
-    <div slot="header">
+    <template #header>
       <component :is="header"></component>
-    </div>
+    </template>
 
-    <div slot="body" :class="['modal-message', modalMessageSize]">
-      {{ detaiMessage }}
-    </div>
+    <template #body>
+      <div :class="['modal-message', modalMessageSize]">
+        {{ detaiMessage }}
+      </div>
+    </template>
 
-    <div slot="footer" class="flex-container">
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <button class="button btn2-cancel" @click="close">
           閉じる
         </button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   name: "external-coop-modal",
@@ -62,8 +67,10 @@ export default {
     }
   },
   mounted() {
-    const detailMessage = document.querySelector(".modal-message");
-    detailMessage.innerHTML = detailMessage.innerHTML.replace(/^\s+/, "");
+    const detailMessage = queryScopedSelector(".modal-message", this.$el || this);
+    if (detailMessage) {
+      detailMessage.innerHTML = detailMessage.innerHTML.replace(/^\s+/, "");
+    }
   },
   created() {
     this.detaiMessage = this.getEditRecord.message;

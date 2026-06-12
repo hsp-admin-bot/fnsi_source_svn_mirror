@@ -551,31 +551,29 @@
           class="item-area box_flex_w"
           id="textarea"
         >
-          <template>
-            <com-textarea
-              v-show="!isRegFuncClass"
-              class="com-textarea"
-              :content="bbsDetailedInfo.content"
-              :disabled="!isRegFuncClass"
-              idTextarea="textarea-content"
-              @set-content-data="setContentData($event)"
-            />
-            <com-textarea
-              v-show="isRegFuncClass"
-              :key="KeyRefresh"
-              :class="keyJudgment == 1 ? 'com-textarea display_none' : 'com-textarea'"
-              :content="bbsDetailedInfo.html_content"
-              :disabled="!isRegFuncClass"
-              idTextarea="editor-input"
-              @set-content-data="setContentData($event)"
-            />
-            <pop-over-fixed-phrase
-              v-bind="popoverData"
-              :target-position-element="popoverTargetElement()"
-              @popover-close="closePopover"
-              @popover-return="selectPhrase"
-            />
-          </template>
+          <com-textarea
+            v-show="!isRegFuncClass"
+            class="com-textarea"
+            :content="bbsDetailedInfo.content"
+            :disabled="!isRegFuncClass"
+            idTextarea="textarea-content"
+            @set-content-data="setContentData($event)"
+          />
+          <com-textarea
+            v-show="isRegFuncClass"
+            :key="KeyRefresh"
+            :class="keyJudgment == 1 ? 'com-textarea display_none' : 'com-textarea'"
+            :content="bbsDetailedInfo.html_content"
+            :disabled="!isRegFuncClass"
+            idTextarea="editor-input"
+            @set-content-data="setContentData($event)"
+          />
+          <pop-over-fixed-phrase
+            v-bind="popoverData"
+            :target-position-element="popoverTargetElement()"
+            @popover-close="closePopover"
+            @popover-return="selectPhrase"
+          />
         </div>
         <div class="item-area">
           <span>ファイル添付</span>
@@ -584,7 +582,7 @@
               style="width: 18em"
               ref="fileUploader"
               v-model="bbsDetailedInfo.file_info"
-              :is-loading-bbs.sync="isLoadingBbs"
+              v-model:is-loading-bbs="isLoadingBbs"
               @deleteFile="deleteFile"
               @search="search"
             />
@@ -757,7 +755,7 @@
     <!--add FNSI-改修内容日付のチェックの追加対応。 任 start-->
     <message-dialog
       v-if="messageDateInfo.isCheckDialogVisible"
-      :visible.sync="messageDateInfo.isCheckDialogVisible"
+      v-model:visible="messageDateInfo.isCheckDialogVisible"
       :title="messageDateInfo.title"
       :message-cd="messageDateInfo.messageCd"
       :string-params="messageDateInfo.stringParams"
@@ -766,7 +764,7 @@
     <!--add FNSI-改修内容日付のチェックの追加対応。 任 end-->
     <message-dialog
       v-if="messageFileInfo.isCheckDialogVisible"
-      :visible.sync="messageFileInfo.isCheckDialogVisible"
+      v-model:visible="messageFileInfo.isCheckDialogVisible"
       :title="messageFileInfo.title"
       :message-cd="messageFileInfo.messageCd"
       :string-params="messageFileInfo.stringParams"
@@ -775,7 +773,7 @@
     <!-- スタッフ選択 -->
     <list-selector
       :key="componentKey('スタッフ')"
-      :visible.sync="isStaffSelectorVisible"
+      v-model:visible="isStaffSelectorVisible"
       v-bind="staffSelectorData"
       :target="selectorTarget('staffSelector')"
       @commit="commitStaffListSelect($event)"
@@ -783,21 +781,21 @@
     <!-- 患者選択 -->
     <list-selector
       :key="componentKey('患者')"
-      :visible.sync="isPatSelectorVisible"
+      v-model:visible="isPatSelectorVisible"
       v-bind="patSelectorData"
       :target="selectorTarget('patSelector')"
       @commit="commitPatListSelect($event)"
     />
 
     <message-dialog
-      :visible.sync="isDialogVisble"
+      v-model:visible="isDialogVisble"
       v-bind="dialogProps"
       type="1"
       @confirm="confirm"
     />
 
     <message-dialog
-      :visible.sync="isEditedMessage"
+      v-model:visible="isEditedMessage"
       :message-cd="20010001"
       type="2"
       @confirm="confirmEdite"
@@ -806,7 +804,7 @@
     <!-- 既読未読状態一覧吹き出し -->
     <v-ons-popover
       cancelable
-      :visible.sync="isReadStatePopoverVisible"
+      v-model:visible="isReadStatePopoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -871,10 +869,11 @@
 </template>
 
 <script>
-  import _ from "underscore";
-  import moment from "moment";
-  import { mapActions, mapGetters } from "vuex";
-  import {EventBus} from "@/eventBus.js";
+  import _ from "@/compat/collections/lodash";
+  import lodash from "@/compat/collections/lodash";
+  import dayjs from "@/compat/date/dayjs";
+  import { mapActions, mapGetters } from "@/compat/vue/vuex";
+  import {EventBus} from "@/compat/vue/event-bus.js";
   import {ApiHelper} from "@/apis/AxiosHelper";
   import {replaceLtGt,customComparator} from "@/utils/util.js";
   import {deepCopy, formatDatetime, serializeJsonColumn,isJsonChanged} from "@/functions/common/CommonFunctions";
@@ -903,7 +902,18 @@
   import {AUTHORITY_CODES} from "@/constants/userAuthority";
   import CommonTextArea from "@/components/common/CommonTextArea";
   /*add FNSI-改修内容掲示板で文字色やサイズを変更したい 任 start*/
-  import $$ from "jquery";
+  import $$ from "@/compat/jquery";
+  import {
+  mountEditor,
+  getEditorWidget as getNativeEditorWidget,
+  isInsideKendoEditorInteraction,
+  getKendoEditorToolbarClearButtons,
+  getKendoEditorOwnerDocument,
+  getKendoEditorDocumentElement,
+  getKendoEditorBody,
+  createKendoEditorRange,
+  createKendoEditorElement
+} from "@/functions/common/KendoFunctions";
   /*add FNSI-改修内容掲示板で文字色やサイズを変更したい 任 end*/
   /*add FNSI-改修内容 掲示板内容を長押して、共通定形文のポップアップが出てこない。 dou start*/
   import MasterSelectorFixedPhrase from "@/components/common/master-selector/MasterSelectorFixedPhrase";
@@ -921,7 +931,8 @@
   //#5590 2023/04/19 ×を常に表示するように修正 張博 end
   import DateInput from "@/components/common/DateInput";
   import { addPatNameSortToList, sortableCompare } from "@/functions/SortFunctions";
-  import lodash from 'lodash';
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, getScopedElementsByTagName, getScopedWindow, getScopedUserAgent,
+  getScopedJQuery as createScopedJQuery} from "@/functions/common/LayoutMeasureHelper";
 
   const uriPersonalUser = `/mstInfo/mstPersonalUser`;
   const uriPat = `/patInfo/getPatByIdList`;
@@ -1056,6 +1067,8 @@
         "#D0CECE"
       ];
       return {
+        // Vue3では$refsへの任意プロパティ追加がreadonlyになるため、編集状態はdataで保持する
+        isChanged: false,
         /*add FNSI-改修内容 掲示板内容を長押して、共通定形文のポップアップが出てこない。 dou start*/
         /**
          * @description 「共通定型文」マスタ選択用タイマー(長押し機能)
@@ -1293,8 +1306,7 @@
         // 各スタッフから既読件数を取得
         const readList = this.selectedStaffList.filter(
           // 既読状態: "1"
-          item => item.readState === "1"
-        ).length;
+          item => item.readState === "1").length;
         return `${readList}/${staffList}`;
       },
 
@@ -1360,12 +1372,10 @@
         /*mod FNSI-改修内容日付のチェックの追加対応。 任 start*/
         /*return (
           this.bbsDetailedInfo.notice_fac_cal_start_date === null ||
-          this.bbsDetailedInfo.notice_fac_cal_start_date === ""
-        );*/
+          this.bbsDetailedInfo.notice_fac_cal_start_date === "");*/
         return (
-          (this.bbsDetailedInfo.notice_fac_cal_start_date === null && document.getElementsByClassName("ntss-input-start-date")[0].validationMessage === "") ||
-          (this.bbsDetailedInfo.notice_fac_cal_start_date === "" && document.getElementsByClassName("ntss-input-start-date")[0].validationMessage === "")
-        );
+          (this.bbsDetailedInfo.notice_fac_cal_start_date === null && this.getScopedClassElementSafe("ntss-input-start-date").validationMessage === "") ||
+          (this.bbsDetailedInfo.notice_fac_cal_start_date === "" && this.getScopedClassElementSafe("ntss-input-start-date").validationMessage === ""));
         /*mod FNSI-改修内容日付のチェックの追加対応。 任 end*/
 
       },
@@ -1378,8 +1388,7 @@
         /*mod FNSI-改修内容掲示板で文字色やサイズを変更したい 任 start*/
         /*return (
           this.bbsDetailedInfo.content === null ||
-          !this.bbsDetailedInfo.content.trim()
-        );*/
+          !this.bbsDetailedInfo.content.trim());*/
         return (
           this.bbsDetailedInfo.content === null ||
           !this.bbsDetailedInfo.content.trim()||this.bbsDetailedInfo.html_content === null ||
@@ -1387,7 +1396,6 @@
         );
         /*mod FNSI-改修内容掲示板で文字色やサイズを変更したい 任 end*/
       },
-
 
       isValidDate() {
         /*mod FNSI-改修内容時刻が指定しなくてもイベントが登録できるようにする 王 start */
@@ -1397,15 +1405,13 @@
           !this.notice_fac_cal_start_time ||
           !this.notice_fac_cal_end_time ||
           !this.bbsDetailedInfo.notice_start_date ||
-          !this.bbsDetailedInfo.notice_end_date
-        ) {*/
+          !this.bbsDetailedInfo.notice_end_date) {*/
         /*mod FNSI-改修内容掲載の終了日が指定しなくてもイベントが登録できるようにする 王敏 start */
         /*if (
          !this.bbsDetailedInfo.notice_fac_cal_start_date ||
          !this.bbsDetailedInfo.notice_fac_cal_end_date ||
          !this.bbsDetailedInfo.notice_start_date ||
-         !this.bbsDetailedInfo.notice_end_date
-       ) {*/
+         !this.bbsDetailedInfo.notice_end_date) {*/
         // if (
         //      !this.bbsDetailedInfo.notice_fac_cal_start_date ||
         //      !this.bbsDetailedInfo.notice_fac_cal_end_date ||
@@ -1417,26 +1423,24 @@
         // }
         // 日時
         /*mod FNSI-改修内容時刻が指定しなくてもイベントが登録できるようにする 王 start */
-        /*let facStartDate = moment(
-          `${this.bbsDetailedInfo.notice_fac_cal_start_date} ${this.notice_fac_cal_start_time}`
-        );
-        let facEndDate = moment(
-          `${this.bbsDetailedInfo.notice_fac_cal_end_date} ${this.notice_fac_cal_end_time}`
-        );*/
+        /*let facStartDate = dayjs(
+          `${this.bbsDetailedInfo.notice_fac_cal_start_date} ${this.notice_fac_cal_start_time}`);
+        let facEndDate = dayjs(
+          `${this.bbsDetailedInfo.notice_fac_cal_end_date} ${this.notice_fac_cal_end_time}`);*/
         // del FNSI-434 改修内容 掲示板のみに表示施設カレンダのみに表示 趙立強 start
         // let facStartDate = null;
         // let facEndDate = null;
         // if (this.notice_fac_cal_start_time === null ||this.notice_fac_cal_start_time === ""){
-        //   facStartDate = moment(this.bbsDetailedInfo.notice_fac_cal_start_date);
+        //   facStartDate = dayjs(this.bbsDetailedInfo.notice_fac_cal_start_date);
         // }else{
-        //   facStartDate = moment(
+        //   facStartDate = dayjs(
         //   `${this.bbsDetailedInfo.notice_fac_cal_start_date} ${this.notice_fac_cal_start_time}`
         //   );
         // }
         // if (this.notice_fac_cal_end_time === null ||this.notice_fac_cal_end_time === "") {
-        //   facEndDate = moment(this.bbsDetailedInfo.notice_fac_cal_end_date);
+        //   facEndDate = dayjs(this.bbsDetailedInfo.notice_fac_cal_end_date);
         // }else{
-        //     facEndDate = moment(
+        //     facEndDate = dayjs(
         //     `${this.bbsDetailedInfo.notice_fac_cal_end_date} ${this.notice_fac_cal_end_time}`
         //     );
         // }
@@ -1445,8 +1449,8 @@
         //   return false;
         // }
         // 掲示板掲載
-        // let noticeStartDate = moment(this.bbsDetailedInfo.notice_start_date);
-        // let noticeEndDate = moment(this.bbsDetailedInfo.notice_end_date);
+        // let noticeStartDate = dayjs(this.bbsDetailedInfo.notice_start_date);
+        // let noticeEndDate = dayjs(this.bbsDetailedInfo.notice_end_date);
         // if (noticeStartDate.isAfter(noticeEndDate)) {
         //   return false;
         // }
@@ -1643,7 +1647,7 @@
           // this.staffRadioValue === target && isNotEditStaffInfo && isUserRead
           //mod 掲示板：クリックして詳細ページページに入ると、既読ボタンが不正表示される 関　end
           // mod 掲示板で登録済みの内容を表示した後キャンセルで元の画面に戻ろうとすると内容破棄のメッセージが表示される 6185  関 end
-        );
+          );
       },
 
       /**
@@ -1718,20 +1722,20 @@
         let editedEndDate = this.bbsDetailedInfo.notice_end_date;
 
         if (startDate !== null) {
-          startDate = moment(startDate).format("YYYY-MM-DD");
+          startDate = dayjs(startDate).format("YYYY-MM-DD");
         }
         if (endDate !== null) {
-          endDate = moment(endDate).format("YYYY-MM-DD");
+          endDate = dayjs(endDate).format("YYYY-MM-DD");
         }
 
         editedStartDate = editedStartDate === "" ? null : editedStartDate;
         editedEndDate = editedEndDate === "" ? null : editedEndDate;
 
         if (editedStartDate !== null) {
-          editedStartDate = moment(editedStartDate).format("YYYY-MM-DD");
+          editedStartDate = dayjs(editedStartDate).format("YYYY-MM-DD");
         }
         if (editedEndDate !== null) {
-          editedEndDate = moment(editedEndDate).format("YYYY-MM-DD");
+          editedEndDate = dayjs(editedEndDate).format("YYYY-MM-DD");
         }
         return startDate === editedStartDate && endDate === editedEndDate;
       },
@@ -1752,17 +1756,17 @@
         let editedEndTime = this.bbsDetailedInfo.notice_fac_cal_end_time;
         // add 掲示板で登録済みの内容を表示した後キャンセルで元の画面に戻ろうとすると内容破棄のメッセージが表示される 6185  関 end
         if (startDate !== null) {
-          startDate = moment(startDate).format("YYYY-MM-DD");
+          startDate = dayjs(startDate).format("YYYY-MM-DD");
         }
         if (endDate !== null) {
-          endDate = moment(endDate).format("YYYY-MM-DD");
+          endDate = dayjs(endDate).format("YYYY-MM-DD");
         }
         // add 掲示板で登録済みの内容を表示した後キャンセルで元の画面に戻ろうとすると内容破棄のメッセージが表示される 6185  関 start
         if (startTime !== null) {
-          startTime = moment(startTime,"HHmm").format("HH:mm");
+          startTime = dayjs(startTime,"HHmm").format("HH:mm");
         }
         if (endTime !== null) {
-          endTime = moment(endTime,"HHmm").format("HH:mm");
+          endTime = dayjs(endTime,"HHmm").format("HH:mm");
         }
         // add 掲示板で登録済みの内容を表示した後キャンセルで元の画面に戻ろうとすると内容破棄のメッセージが表示される 6185  関 end
         editedStartDate = editedStartDate === "" ? null : editedStartDate;
@@ -1772,17 +1776,17 @@
         editedEndTime = editedEndTime === "" ? null : editedEndTime;
         // add 掲示板で登録済みの内容を表示した後キャンセルで元の画面に戻ろうとすると内容破棄のメッセージが表示される 6185  関 end
         if (editedStartDate !== null) {
-          editedStartDate = moment(editedStartDate).format("YYYY-MM-DD");
+          editedStartDate = dayjs(editedStartDate).format("YYYY-MM-DD");
         }
         if (editedEndDate !== null) {
-          editedEndDate = moment(editedEndDate).format("YYYY-MM-DD");
+          editedEndDate = dayjs(editedEndDate).format("YYYY-MM-DD");
         }
         // add 掲示板で登録済みの内容を表示した後キャンセルで元の画面に戻ろうとすると内容破棄のメッセージが表示される 6185  関 start
         if (editedStartTime !== null) {
-          editedStartTime = moment(editedStartTime,"HHmm").format("HH:mm");
+          editedStartTime = dayjs(editedStartTime,"HHmm").format("HH:mm");
         }
         if (editedEndTime !== null) {
-          editedEndTime = moment(editedEndTime,"HHmm").format("HH:mm");
+          editedEndTime = dayjs(editedEndTime,"HHmm").format("HH:mm");
         }
         // add 掲示板で登録済みの内容を表示した後キャンセルで元の画面に戻ろうとすると内容破棄のメッセージが表示される 6185  関 end
         // mod 掲示板で登録済みの内容を表示した後キャンセルで元の画面に戻ろうとすると内容破棄のメッセージが表示される 6185  関 start
@@ -1812,7 +1816,7 @@
         }else{
           editedBbsNotice = 1;
         }
-        if (this.bbsDetailedInfo.is_disp_bbs != 1 ){
+        if (this.bbsDetailedInfo.is_disp_bbs != 1){
           editedBbsDetailedNotice = false;
         }else{
           editedBbsDetailedNotice = true;
@@ -1900,11 +1904,10 @@
       /**
        * @description 掲示板詳細情報設定
        */
-// add FNSI-改修内容 詳細画面で修正がない場合、キャンセルしても、内容を廃棄のメッセージが出てしまう dou start
+      // add FNSI-改修内容 詳細画面で修正がない場合、キャンセルしても、内容を廃棄のメッセージが出てしまう dou start
       bbsDetailedInfo: {
         handler() {
-          // this.$refs.isChanged = true;
-		  this.isTrueChange();
+          this.isTrueChange();
         },
         deep: true
       },
@@ -1914,7 +1917,7 @@
       isNotification() {
         this.isTrueChange();
       },
-// add FNSI-改修内容 詳細画面で修正がない場合、キャンセルしても、内容を廃棄のメッセージが出てしまう dou end
+      // add FNSI-改修内容 詳細画面で修正がない場合、キャンセルしても、内容を廃棄のメッセージが出てしまう dou end
       selectedBbs() {
         // スワイプ等で掲示板を変更したら詳細情報を設定
         if (this.isCreated) {
@@ -1929,7 +1932,7 @@
           // 登録元機能 = "掲示板"の場合
           if (this.isRegFuncClass) {
             // "editor-input"の取得
-            let editor = $$("#editor-input").data("kendoEditor");
+            let editor = this.getRichTextEditor();
             // "editor-input"取得可の場合
             if (editor) {
               // HTMLの初期化
@@ -1950,7 +1953,7 @@
       isNotEdited: {
         handler() {
           // FacilityCalendarDetailView
-          this.$refs.isChanged = this.showBtnChanged
+          this.isChanged = this.showBtnChanged;
           // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 start
           EventBus.$emit("isNotEdited", this.isNotEdited);
           // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 end
@@ -1969,25 +1972,40 @@
             this.bbsDetailedInfo.notice_end_date = this.bbsDetailedInfo.notice_start_date;
           }
         }
-		this.isTrueChange();
+		    this.isTrueChange();
+      },
+      'bbsDetailedInfo.kind_no'(newVal, oldVal) {
+        const newKind = this.mstBbsKind.find(item => item.kindNo === newVal);
+        if (!newKind) {
+          this.setCategoryInfo(newVal);
+        }
       }
     },
 
-    beforeDestroy () {
+    beforeUnmount () {
+      this.clearManagedRuntimeHandlers();
+      const editor = this.getRichTextEditor();
+      $$(editor?.window || []).off(".ntssBbsDetailEditor");
+      $$(getKendoEditorOwnerDocument(editor, null, this.$el) || []).off(".ntssBbsDetailEditor");
       // 掲示板詳細内容の編集有無をクリアへ
-      EventBus.$off("abanDoning");
-      EventBus.$off("routerName");
+      EventBus.$off("abanDoning", this.onAbanDoning);
+      EventBus.$off("routerName", this.onRouterName);
       // #9271 他の画面への切り替え時のパンくずクリックは有効になりません。 linjunfeng start
       // EventBus.$off("refresh");
       EventBus.$off("refresh", this.refresh);
       EventBus.$off("initTitle", this.initTitle);
       // #9271 他の画面への切り替え時のパンくずクリックは有効になりません。 linjunfeng end
       EventBus.$emit("isNotEdited", true);
-      window.checkCommentLongPress = null;
-      window.onDblTap = null;
-      window.endLongTouch = null;
-      window.iframeChange = null;
-      window.showPopover1 = null;
+      const ownerWindow = this.getBbsOwnerWindow();
+      ownerWindow.checkCommentLongPress = null;
+      ownerWindow.onDblTap = null;
+      ownerWindow.endLongTouch = null;
+      ownerWindow.iframeChange = null;
+      ownerWindow.showPopover1 = null;
+      if (ownerWindow.setShowPopover) {
+        ownerWindow.clearTimeout(ownerWindow.setShowPopover);
+        ownerWindow.setShowPopover = null;
+      }
       const bbsInfo = {
         bbs_ctl_no: null,
         facility_cd: null,
@@ -2013,24 +2031,25 @@
       };
       // storeに空を設定
       this.setSelectedBbs(bbsInfo);
-      clearInterval(this.setLoopId);
+      ownerWindow.clearInterval(this.setLoopId);
       Object.assign(this.$data, this.$options.data.call(this))
     },
 // add FNSI-改修内容 掲示板内容を長押して、共通定形文のポップアップが出てこない。 dou start
     mounted(){
-      window.checkCommentLongPress = this.checkCommentLongPress;
-      window.onDblTap = this.onDblTap;
-      window.endLongTouch = this.endLongTouch;
+      const ownerWindow = this.getBbsOwnerWindow();
+      ownerWindow.checkCommentLongPress = this.checkCommentLongPress.bind(this);
+      ownerWindow.onDblTap = this.onDblTap.bind(this);
+      ownerWindow.endLongTouch = this.endLongTouch.bind(this);
       // add FNSI-改修内容3790bug修正 chen start
-      window.iframeChange = this.iframeChange;
+      ownerWindow.iframeChange = this.iframeChange.bind(this);
       // add FNSI-改修内容5274bug修正 chen end
-      window.showPopover1 = this.showPopover1;
+      ownerWindow.showPopover1 = this.showPopover1.bind(this);
       // mod FutreNetWeb+SI課題管理No4416対応 趙 start
       // setTimeout(() => {
-      clearInterval(this.setLoopId);
-      this.setLoopId  = setInterval(() => {
+      ownerWindow.clearInterval(this.setLoopId);
+      this.setLoopId  = ownerWindow.setInterval(() => {
       // mod FutreNetWeb+SI課題管理No4416対応 趙 end
-        let iframe =  document.getElementsByTagName("iframe");
+        let iframe =  this.getScopedIframes();
         let iframeDocument = null;
         if (iframe.length > 0 && iframe[0] && iframe[0].contentDocument){
           /*add FNSI-改修内容3790 任 start*/
@@ -2038,42 +2057,42 @@
           /*add FNSI-改修内容3790 任 end*/
           iframeDocument = iframe[0].contentDocument;
           iframeDocument.onmousedown = function(){
-            window.checkCommentLongPress(1);
+            ownerWindow.checkCommentLongPress(1);
           }
           iframeDocument.onmouseup = function(){
-            window.checkCommentLongPress(0);
+            ownerWindow.checkCommentLongPress(0);
           }
           iframeDocument.onmousemove = function(){
             // ドラッグ処理が長押し処理と競合する対策
-            window.checkCommentLongPress(0);
+            ownerWindow.checkCommentLongPress(0);
           }
           iframeDocument.onmouseout = function(){
             // ドラッグ処理が長押し処理と競合する対策
-            window.checkCommentLongPress(0);
+            ownerWindow.checkCommentLongPress(0);
           }
           // ダブルクリック処理
           iframeDocument.ondblclick = function(){
             // iOS/Androidでダブルタップのテキスト選択処理の度に発火してしまう為、該当端末の場合は処理をしない
-            const ua = navigator.userAgent;
+            const ua = getScopedUserAgent(iframeDocument?.documentElement || this.$el);
             if (ua.match(/Android/) || ua.match(/iPhone|iPad/)) {
               return;
             }
-            window.showPopover1();
+            ownerWindow.showPopover1();
           }
           // タップ長押し/ダブルタップ処理
-          iframeDocument.addEventListener('touchstart', window.onDblTap, {passive: false});
-          iframeDocument.addEventListener('touchend', window.endLongTouch);
+          this.addManagedEventListener(iframeDocument, 'touchstart', ownerWindow.onDblTap, { passive: false });
+          this.addManagedEventListener(iframeDocument, 'touchend', ownerWindow.endLongTouch);
         // add FutreNetWeb+SI課題管理No4416対応 趙 start
         // add FNSI-改修内容3790bug修正 chen start
-          iframeDocument.addEventListener("keyup",  window.iframeChange);
-          iframeDocument.addEventListener("keydown",  window.iframeChange);
+          this.addManagedEventListener(iframeDocument, "keyup", ownerWindow.iframeChange);
+          this.addManagedEventListener(iframeDocument, "keydown", ownerWindow.iframeChange);
           iframeDocument.body.style.overflowY = "hidden";
         // add FNSI-改修内容5274bug修正 chen end
-        clearInterval(this.setLoopId);
+        ownerWindow.clearInterval(this.setLoopId);
         // add FutreNetWeb+SI課題管理No4416対応 趙 end
         }
 // add FNSI-改修内容 詳細画面で修正がない場合、キャンセルしても、内容を廃棄のメッセージが出てしまう。 dou start
-        this.$refs.isChanged = false;
+        this.isChanged = false;
 // add FNSI-改修内容 詳細画面で修正がない場合、キャンセルしても、内容を廃棄のメッセージが出てしまう。 dou end
        });
       // 登録元 = "0"(掲示板)の場合
@@ -2082,27 +2101,29 @@
         this.setInputHtmlText(this.htmlContent);
       }
       // スクロール位置の初期化
-      document.getElementsByClassName("bbs-detail-main")[0].scrollTop = 0;
+      this.getScopedClassElementSafe("bbs-detail-main").scrollTop = 0;
     },
 // add FNSI-改修内容 掲示板内容を長押して、共通定形文のポップアップが出てこない。 dou end
     async created() {
       // 共通ローダーの表示開始
       this.startLoadingScreen();
       // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 start
-      EventBus.$on("routerName", data => (this.routerName = data));
-      EventBus.$on("abanDoning", data => (this.abanDoning = data));
+      EventBus.$off("routerName", this.onRouterName);
+      EventBus.$off("abanDoning", this.onAbanDoning);
+      EventBus.$on("routerName", this.onRouterName);
+      EventBus.$on("abanDoning", this.onAbanDoning);
       // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 end
       EventBus.$on("refresh", this.refresh);
       EventBus.$on("initTitle", this.initTitle);
       await this.initCreated();
-      this.$refs.isChanged = false;
+      this.isChanged = false;
       // 登録元 = "1"(観察記録)の場合
       if (this.regFuncClass === 1) {
         // HTMLTextInputの設定
         this.setInputHtmlText(this.htmlContent);
       }
       // 端末判別
-      if (navigator.userAgent.match(/Android/)) {
+      if (getScopedUserAgent(this.$el).match(/Android/)) {
         this.androidFlg = true;
       }
       // 共通ローダーの表示終了
@@ -2110,24 +2131,74 @@
     },
 
     methods: {
-      updateScrollbarWidth() {
-        const el = document.querySelector('.disp_target_popover .table-body');
-        if (!el) return;
-        // 一覧データのスクロールバーの幅の取得
-　　　　const scrollbarWidth = el.offsetWidth - el.clientWidth;
-        document.documentElement.style.setProperty(
-          '--scrollbar-width',
-          scrollbarWidth + 'px'
-        );
+
+      onRouterName(data) {
+        this.routerName = data;
       },
-      onPopoverShow() {
-        // 一覧データのスクロールバーの幅の更新
-        this.updateScrollbarWidth();
-        window.addEventListener('resize', this.updateScrollbarWidth);
+      onAbanDoning(data) {
+        this.abanDoning = data;
       },
-      onPopoverHide() {
-        window.removeEventListener('resize', this.updateScrollbarWidth);
+      clearManagedRuntimeHandlers() {
+        if (Array.isArray(this._managedEventDisposers)) {
+          while (this._managedEventDisposers.length) {
+            try {
+              this._managedEventDisposers.pop()?.();
+            } catch (_error) {
+              // noop
+            }
+          }
+        }
+        if (Array.isArray(this._managedTimeouts)) {
+          const ownerWindow = this.getBbsOwnerWindow();
+          this._managedTimeouts.forEach((timerId) => ownerWindow.clearTimeout?.(timerId));
+          this._managedTimeouts = [];
+        }
       },
+      addManagedEventListener(target, eventName, handler, options) {
+        if (!target?.addEventListener || typeof handler !== "function") {
+          return handler;
+        }
+        this._managedEventDisposers = this._managedEventDisposers || [];
+        target.addEventListener(eventName, handler, options);
+        this._managedEventDisposers.push(() => target.removeEventListener?.(eventName, handler, options));
+        return handler;
+      },
+      setManagedTimeout(handler, delay = 0) {
+        const ownerWindow = this.getBbsOwnerWindow();
+        this._managedTimeouts = this._managedTimeouts || [];
+        const timerId = ownerWindow.setTimeout?.(() => {
+          this._managedTimeouts = (this._managedTimeouts || []).filter((id) => id !== timerId);
+          handler?.();
+        }, delay);
+        if (timerId !== undefined && timerId !== null) {
+          this._managedTimeouts.push(timerId);
+        }
+        return timerId;
+      },
+      scopedJQuery() {
+
+        return createScopedJQuery(this.$el || this, $$) || $$;
+
+      },
+      getBbsOwnerWindow() {
+        return getScopedWindow(this.$el) || window;
+      },
+      getScopedElementByIdSafe(id) {
+        return getScopedElementById(id, this.$el || null);
+      },
+      getScopedClassElementSafe(className) {
+        return getScopedElementsByClassName(className, this.$el || null)[0] || null;
+      },
+      getScopedIframes() {
+        return getScopedElementsByTagName("iframe", this.$el || null);
+      },
+      getScopedSelectorSafe(selector) {
+        return queryScopedSelector(selector, this.$el || null);
+      },
+      getRichTextEditor() {
+        return getNativeEditorWidget(this.scopedJQuery()("#editor-input"));
+      },
+
       isEdited(dateField) {
         // selectedBbs: 編集前、bbsDetailedInfo: 編集後
         let beforeVal = this.selectedBbs[dateField];
@@ -2185,7 +2256,8 @@
           if (answer === 1) {
             EventBus.$emit("answer", answer);
             EventBus.$emit("initTitle", this.initTitle);
-            EventBus.$on("abanDoning", data => (this.abanDoning = data));
+            EventBus.$off("abanDoning", this.onAbanDoning);
+            EventBus.$on("abanDoning", this.onAbanDoning);
             this.keyJudgment = 1
             this.KeyRefresh++
             this.abanDoning++
@@ -2205,7 +2277,7 @@
       // タイトルの初期化
       initTitle() {
         // "input-title"の取得
-        const inputTitle = document.getElementById("input-title");
+        const inputTitle = this.getScopedElementByIdSafe("input-title");
         // class = "content-change"を含む場合
         if (inputTitle.classList.contains("content-change")) {
           // class = "content-change"の削除
@@ -2245,6 +2317,28 @@
       popoverPreShow,
       popoverPostShow,
       popoverPosthide,
+      updateScrollbarWidth() {
+        const tableBody = queryScopedSelector(
+          ".disp_target_popover .table-body",
+          this.$el || null
+        );
+        if (!tableBody) {
+          return;
+        }
+        const scrollbarWidth = tableBody.offsetWidth - tableBody.clientWidth;
+        const ownerDocument = tableBody.ownerDocument || document;
+        ownerDocument.documentElement.style.setProperty(
+          "--scrollbar-width",
+          `${scrollbarWidth}px`
+        );
+      },
+      onPopoverShow() {
+        this.updateScrollbarWidth();
+        this.getBbsOwnerWindow().addEventListener("resize", this.updateScrollbarWidth);
+      },
+      onPopoverHide() {
+        this.getBbsOwnerWindow().removeEventListener("resize", this.updateScrollbarWidth);
+      },
 
       /*add FNSI-改修内容 掲示板内容を長押して、共通定形文のポップアップが出てこない。 dou start*/
       /**
@@ -2263,11 +2357,24 @@
         // 利用者、患者、掲示板種別マスタ取得
         const [
           responseBbsKind,
+          responsePersonalUser,
+          responseJobName,
+          ,
           responseUser
         ] = await Promise.all([
           ApiHelper.get(uriBbsKind, {
             facilityCd: this.facilityCd
           }),
+          ApiHelper.get(uriPersonalUser, {
+            facility_cd: this.facilityCd
+          }),
+          /*add FNSI-改修内容掲示板外结No.10 任 start*/
+          ApiHelper.get(uriJobName).catch(() => ({ data: [] })),
+          // mod 8220 施設イベント詳細画面の表示が遅い 関 start
+          // ApiHelper.get(uriIsSame),
+          ApiHelper.post(uriIsSame, [this.facilityCd]),
+          // mod 8220 施設イベント詳細画面の表示が遅い 関  end
+          /*add FNSI-改修内容掲示板外结No.10 任 end*/
           // mod FNSI7321-スタッフカードでのサインイン時、施設イベント詳細画面が編集できる状態とならない。 周 start
           ApiHelper.get(`${uriUser}/${accountUserId}`)
           // mod FNSI7321-スタッフカードでのサインイン時、施設イベント詳細画面が編集できる状態とならない。 周 end
@@ -2280,15 +2387,25 @@
           // console.log(error);
         });
 
-        let mstPersonalUser;
+        const mstPersonalUser = Array.isArray(responsePersonalUser?.data) ? responsePersonalUser.data : [];
         // スタッフ選択肢
-        await ApiHelper.get(uriPersonalUser, {
-          facility_cd: this.facilityCd
-        }).then(
-          responsePersonalUser => {
-            mstPersonalUser = responsePersonalUser.data;
-          }
-        );
+        //const mstPersonalUser = responsePersonalUser.data;
+        // xie add メモリにて利用者マスタ一覧取得 End
+        /*add FNSI-改修内容掲示板外结No.10 任 start*/
+        const jobNameList = Array.isArray(responseJobName?.data) ? responseJobName.data : [];
+        mstPersonalUser.forEach(item => {
+          jobNameList.forEach(name => {
+            if(Number(item.jobCd) === name.jobCd){
+              item.jobName = name.jobName;
+            }
+          })
+        })
+        /*add FNSI-改修内容掲示板外结No.10 任 end*/
+        this.jobList = jobNameList;
+        this.jobList.unshift({
+          jobCd: null,
+          jobName: ""
+        })
         // 選択肢から自身を除外、個人設定では常に選択状態へ
         this.mstPersonalUser = mstPersonalUser.filter(
           mst => mst.userId !== this.userId
@@ -2317,9 +2434,8 @@
         await this.setSelectedBbsInfo();
 
         if (
-          _.has(userSettings, "personal_settings") &&
-          userSettings.personal_settings.length !== 0
-        ) {
+          Object.prototype.hasOwnProperty.call(userSettings, "personal_settings") &&
+          userSettings.personal_settings.length !== 0) {
           // 掲示板の個人設定があれば参照
           const settings = userSettings.personal_settings;
           const settingBbsItem = [
@@ -2368,9 +2484,8 @@
         this.oldTitle = this.bbsDetailedInfo.title;
         this.checkedAuthority = this.getStateUserAccountInfo.userSettings.authorized_authorities;
         this.isCreated = true;
-		this.oldValue = {};
+		    this.oldValue = {};
         this.oldValue = JSON.parse(JSON.stringify(this.bbsDetailedInfo));
-        console.log(this.oldValue);
         this.isTrueChange();
         /*add FNSI-改修内容掲示板で文字色やサイズを変更したい 任 start*/
         this.setDataHtmlText();
@@ -2392,7 +2507,7 @@
        * 定型文の挿入
        */
       selectPhrase(data) {
-        let editor = $$("#editor-input").data("kendoEditor");
+        let editor = this.getRichTextEditor();
         editor.exec("insertHTML", {
           value:
             "<span style='font-family: Meiryo; font-size: 14pt;'>" +
@@ -2416,11 +2531,11 @@
       },
       changeFormFontColor() {
         // this.fontColorSetting = this.fontColor;
-		this.isTrueChange();
+        this.isTrueChange();
       },
       // add FNSI-436 改修内容 色選択の選択されているものがわかりにくい 趙立強 end
       popoverTargetElement() {
-        let editor = $$("#editor-input");
+        let editor = this.scopedJQuery()("#editor-input");
         if (editor.length > 0) {
           return editor[0].previousSibling;
         }
@@ -2429,12 +2544,13 @@
        * @description 「コメント」テキストエリアの長押しウォッチャー
        */
       checkCommentLongPress(isMouseDown) {
+        const ownerWindow = this.getBbsOwnerWindow();
         if (isMouseDown) {
-          this.commentTimer = setTimeout(() => {
-            window.showPopover1();
+          this.commentTimer = this.setManagedTimeout(() => {
+            ownerWindow.showPopover1();
           }, 500);
         } else {
-          clearTimeout(this.commentTimer);
+          ownerWindow.clearTimeout(this.commentTimer);
         }
       },
       /*add FNSI-改修内容 掲示板内容を長押して、共通定形文のポップアップが出てこない。 dou end*/
@@ -2442,29 +2558,30 @@
        * @description 「コメント」テキストエリアのダブルタップ/長押しタップウォッチャー
        */
       onDblTap(event) {
+        const ownerWindow = this.getBbsOwnerWindow();
         if (event.touches.length > 1) {
           // 2本以上同時にタップされた場合の処理(長押し処理を発火)
-          window.setShowPopover = setTimeout(function() {
-            window.showPopover1();
+          ownerWindow.setShowPopover = this.setManagedTimeout(() => {
+            ownerWindow.showPopover1();
           }, 500);
         }
         if(!this.tapedTwice) {
           this.tapedTwice = true;
-          setTimeout( () => { this.tapedTwice = false; }, 300 );
+          this.setManagedTimeout(() => { this.tapedTwice = false; }, 300);
           return false;
         }
         event.preventDefault();
-        window.showPopover1();
+        ownerWindow.showPopover1();
       },
       endLongTouch(event) {
         if (event.touches.length < 1) {
           // 全ての指が離れたら長押し処理を解除
-          clearTimeout(window.setShowPopover);
+          this.getBbsOwnerWindow().clearTimeout(this.getBbsOwnerWindow().setShowPopover);
         }
       },
       // add FNSI-改修内容3790bug修正 chen start
       iframeChange() {
-        let iframe =  document.getElementsByTagName("iframe");
+        let iframe =  this.getScopedIframes();
         iframe[0].style.height = "150px";
         this.$nextTick(() => {
           if (iframe[0].contentDocument.scrollingElement.scrollHeight > 150) {
@@ -2712,9 +2829,9 @@
       //   }        // add FNSI-436 改修内容 色選択の選択されているものがわかりにくい 趙立強 end
         this.$nextTick(() => {
           // 前に表示していた高さを継承するため高さをリセット
-          if (document.getElementById("textarea-content")) {
-            document.getElementById("textarea-content").style.height = "auto";
-            const el = document.getElementById("textarea-content");
+          if (this.getScopedElementByIdSafe("textarea-content")) {
+            this.getScopedElementByIdSafe("textarea-content").style.height = "auto";
+            const el = this.getScopedElementByIdSafe("textarea-content");
             this.resizeTextarea(el);
           }
         });
@@ -2755,14 +2872,14 @@
       //  * @description input内部データへフォーマットを変更
       //  */
       // formatTime(date) {
-      //   return date === null ? null : moment(date).format("HH:mm");
+      //   return date === null ? null : dayjs(date).format("HH:mm");
       // },
       /*  del FNSI-434 改修内容 掲示板のみに表示施設カレンダのみに表示 趙立強 end*/
       /**
        * @description input内部データへフォーマットを変更
        */
       formatDate(date) {
-        return date === null ? null : moment(date).format("YYYY-MM-DD");
+        return date === null ? null : dayjs(date).format("YYYY-MM-DD");
       },
 
       /**
@@ -2772,7 +2889,7 @@
        * @returns {String} YYYYMMDDHHmmssSSS
        */
       componentKey(str) {
-        return `${moment().format("YYYYMMDDHHmmssSSS")}${str}`;
+        return `${dayjs().format("YYYYMMDDHHmmssSSS")}${str}`;
       },
 
       /**
@@ -2807,47 +2924,9 @@
       /*const itemList = createItemListData(
           this.mstPersonalUser,
           "userId",
-          "userName"
-        );*/
-        // #11205 -ペンテスト2－4認可制御の不備  mod 20260317 shiyw start
-        //const jobResp = await ApiHelper.get(`${uriJobName}/${this.facilityCd}`)
-        const jobResp = await ApiHelper.get(`${uriJobName}`)
-            // #11205 -ペンテスト2－4認可制御の不備  mod 20260317 shiyw end
-            .catch(() => {
-              getErrorMessage("BbsDetailInfoContent.vue", uriJobName, "DB取得失敗");
-            });
-
-        const jobList = jobResp.data;
-
-        let mstPersonalUser;
-        // スタッフ選択肢
-        await ApiHelper.get(uriPersonalUser, {
-          facility_cd: this.facilityCd
-        }).then(
-          responsePersonalUser => {
-            mstPersonalUser = responsePersonalUser.data;
-          }
-        );
-
-        mstPersonalUser = mstPersonalUser.filter(
-          mst => mst.userId !== this.userId
-        );
-
-        mstPersonalUser.forEach(item => {
-          jobList.forEach(name => {
-            if(Number(item.jobCd) === name.jobCd){
-              item.jobName = name.jobName;
-            }
-          })
-        })
-
-        jobList.unshift({
-          jobCd: null,
-          jobName: ""
-        })
-
+          "userName");*/
         const itemList = createItemListDataBbs(
-          mstPersonalUser,
+          this.mstPersonalUser,
           "userId",
           "",
           "userName",
@@ -2865,6 +2944,7 @@
         /*mod FNSI-改修内容掲示板外结No.10 任 end*/
 
         // const jobList = this.jobList;
+        const jobList = this.jobList;
 
         return { title, itemList, class1, class2, defaultSelection, jobList };
       },
@@ -2967,28 +3047,28 @@
           }
         }
         /*add FNSI-改修内容日付のチェックの追加対応。 任 start*/
-        if(document.getElementsByClassName("ntss-input-start-date")[0].validationMessage !== ""){
+        if(this.getScopedClassElementSafe("ntss-input-start-date").validationMessage !== ""){
           this.messageDateInfo.isCheckDialogVisible = true;
           this.messageDateInfo.title = DIALOG_MESSAGES[99999996].title;
           this.messageDateInfo.messageCd = 99999996;
           this.messageDateInfo.stringParams = ["イベント開始日時"];
           return;
         }
-        if(document.getElementsByClassName("ntss-input-end-date")[0].validationMessage !== ""){
+        if(this.getScopedClassElementSafe("ntss-input-end-date").validationMessage !== ""){
           this.messageDateInfo.isCheckDialogVisible = true;
           this.messageDateInfo.title = DIALOG_MESSAGES[99999996].title;
           this.messageDateInfo.messageCd = 99999996;
           this.messageDateInfo.stringParams = ["イベント終了日時"];
           return;
         }
-        if(document.getElementsByClassName("notice_input_start_date")[0].validationMessage !== ""){
+        if(this.getScopedClassElementSafe("notice_input_start_date").validationMessage !== ""){
           this.messageDateInfo.isCheckDialogVisible = true;
           this.messageDateInfo.title = DIALOG_MESSAGES[99999996].title;
           this.messageDateInfo.messageCd = 99999996;
           this.messageDateInfo.stringParams = ["掲示板掲載開始日時"];
           return;
         }
-        if(document.getElementsByClassName("notice_input_end_date")[0].validationMessage !== ""){
+        if(this.getScopedClassElementSafe("notice_input_end_date").validationMessage !== ""){
           this.messageDateInfo.isCheckDialogVisible = true;
           this.messageDateInfo.title = DIALOG_MESSAGES[99999996].title;
           this.messageDateInfo.messageCd = 99999996;
@@ -3009,7 +3089,7 @@
         /*add FNSI-改修内容日付のチェックの追加対応。 任 start*/
         this.isLoadingBbs = true;
         // 更新日時
-        const nowDate = moment().format();
+        const nowDate = dayjs().format();
 
         // 編集した値をレコードに設定
         let editedRecord = { ...this.bbsDetailedInfo };
@@ -3057,8 +3137,7 @@
           `${editedRecord.notice_fac_cal_start_date} ${this.notice_fac_cal_start_time}:00`
         );
         editedRecord.notice_fac_cal_end_date = this.formattedSaveDate(
-          `${editedRecord.notice_fac_cal_end_date} ${this.notice_fac_cal_end_time}:00`
-        );*/
+          `${editedRecord.notice_fac_cal_end_date} ${this.notice_fac_cal_end_time}:00`);*/
         /*  mod FNSI-434 改修内容 掲示板のみに表示施設カレンダのみに表示 趙立強 start*/
         // if (this.notice_fac_cal_start_time === null ||this.notice_fac_cal_start_time === ""){
         //   editedRecord.notice_fac_cal_start_date = this.formattedSaveDate(
@@ -3243,7 +3322,7 @@
           }
         }
         // add 保存の時データ廃棄の提示が出てしまう 陳 start
-        this.$refs.isChanged = false;
+        this.isChanged = false;
         // add 保存の時データ廃棄の提示が出てしまう 陳 end
       },
 
@@ -3280,11 +3359,7 @@
       cancel() {
         this.$router.go(-1);
       // add FNSI-改修内容6185修正 関 start
-          if(this.isNotEdited === true)
-        {this.$refs.isChanged = false;
-        }else{
-          this.$refs.isChanged = true;
-        }
+        this.isChanged = this.showBtnChanged;
       // add FNSI-改修内容6185修正 関　end
       },
 
@@ -3320,7 +3395,7 @@
           }
 
           // 更新日時
-          const nowDate = moment().format();
+          const nowDate = dayjs().format();
           // DB更新
           updateBbsList(
             [{bbs_ctl_no: this.bbsDetailedInfo.bbs_ctl_no, staff_info: staffInfo}],
@@ -3378,8 +3453,8 @@
           return null;
         }
         /*  mod FNSI-434 改修内容 掲示板のみに表示施設カレンダのみに表示 趙立強 start*/
-        // return moment(value).format();
-        return moment(value).format("YYYYMMDD");
+        // return dayjs(value).format();
+        return dayjs(value).format("YYYYMMDD");
         /*  mod FNSI-434 改修内容 掲示板のみに表示施設カレンダのみに表示 趙立強 end*/
       },
       /*  add FNSI-434 改修内容 掲示板のみに表示施設カレンダのみに表示 趙立強 start*/
@@ -3417,7 +3492,7 @@
               this.bbsDetailedInfo.content = bbsKind.defaultContents;
               // add/ #12473 掲示板画面で複数バグ tianqidong start
               this.$nextTick(() => {
-              const editor = $$("#editor-input").data("kendoEditor");
+              const editor = this.getRichTextEditor();
                 if (editor) {
                   editor.body.innerHTML = "";
                   let defaultContents = bbsKind.defaultContents != null ? bbsKind.defaultContents : ''
@@ -3428,15 +3503,14 @@
               this.bbsDetailedInfo.title = bbsKind.defaultTitle;
               // add 障害票一覧_掲示板 修正 chen start
               this.bbsDetailedInfo.html_content = bbsKind.defaultContents;
-              let iframe =  document.getElementsByTagName("iframe");
+              let iframe =  this.getScopedIframes();
               //if (iframe.length > 0 && iframe[0] && iframe[0].contentDocument){
               if (
                 iframe.length > 0 &&
                 iframe[0].contentDocument &&
                 iframe[0].contentDocument.children[0] &&
                 iframe[0].contentDocument.children[0].children[1] &&
-                iframe[0].contentDocument.children[0].children[1].children[0]
-              ){
+                iframe[0].contentDocument.children[0].children[1].children[0]){
                 // add/ #12473 掲示板画面で複数バグ tianqidong end
                 let parent = iframe[0].contentDocument.children[0].children[1];
                 parent.children[0].innerText = bbsKind.defaultContents;
@@ -3445,7 +3519,7 @@
                   parent.removeChild(pObjs[i]);
                 }
                 // add #9498 新規登録時に内容欄のフォント、フォントサイズが表示内容と異なる。linjunfeng start
-                let editor = $$("#editor-input").data("kendoEditor");
+                let editor = this.getRichTextEditor();
                 if (editor) {
                   editor.body.innerHTML = "";
                   editor.exec("insertHTML", {value: "<p style='font-size: 14pt; font-family: メイリオ;'></p>"});
@@ -3521,7 +3595,7 @@
         // this.setSelectedBbs(bbsInfo);
         //del FNSI 施設イベント詳細内容无变化的情况下，点击保存，キャンセル，削除出现 内容破棄的窗口 趙立強 end
         // add 保存の時データ廃棄の提示が出てしまう 陳 start
-        this.$refs.isChanged = false;
+        this.isChanged = false;
         // add 保存の時データ廃棄の提示が出てしまう 陳 end
         this.search();
       },
@@ -3538,6 +3612,7 @@
         };
 
         this.selectedStaffList = [userInfo];
+        this.isTrueChange();
       },
 
       /**
@@ -3575,7 +3650,7 @@
         });
 
         this.selectedStaffList = staffInfo;
-		this.isTrueChange();
+		    this.isTrueChange();
       },
 
       /**
@@ -3725,7 +3800,7 @@
       setInputHtmlText(htmlContent) {
         let self = this;
         const tools = TOOLS;
-        $$("#editor-input").kendoEditor({
+        mountEditor(this.scopedJQuery()("#editor-input"), {
           /**
            * @description テキストエリアのPasteイベント
            */
@@ -3741,14 +3816,18 @@
             fontSizeInherit:"(デフォルト)"
           },
           execute: function(e) {
-	          self.$nextTick(() => {
-	            let editor = $$("#editor-input").data("kendoEditor");
-	            self.bbsDetailedInfo.html_content =
-	              editor.document.documentElement.lastElementChild.innerHTML;
-	          });
+            self.$nextTick(() => {
+              let editor = $$("#editor-input").data("kendoEditor");
+              const docEl = editor && editor.document && editor.document.documentElement && editor.document.documentElement.lastElementChild;
+              if (docEl) {
+                self.bbsDetailedInfo.html_content = docEl.innerHTML;
+              } else if (editor && editor.body) {
+                self.bbsDetailedInfo.html_content = editor.body.innerHTML;
+              }
+            });
 	        }
         });
-        let editor = $$("#editor-input").data("kendoEditor");
+        let editor = this.getRichTextEditor();
         if (editor) {
           editor.body.innerHTML = "";
           if (htmlContent !== "スタッフ") {
@@ -3769,25 +3848,28 @@
       },
       /*add FNSI-改修内容掲示板で文字色やサイズを変更したい 任 start*/
       setDataHtmlText() {
-        let editor = $$("#editor-input").data("kendoEditor");
+        let editor = this.getRichTextEditor();
         let styleTabBeforeCaret = "";
         if (editor) {
           let self = this;
           /**
            * @description テキストエリアのフォーカスアウト発生時のイベント
           */
-          $$(editor.window).on("input", function(ev) {
+          const editorEventNamespace = ".ntssBbsDetailEditor";
+          $$(editor.window).off(`input${editorEventNamespace}`).on(`input${editorEventNamespace}`, function(ev) {
             self.editContent(
-              ev.currentTarget.document.documentElement.lastElementChild
+              getKendoEditorDocumentElement(editor, ev, self.$el)?.lastElementChild
             );
             /**
              * @description テキストエリアのクリックイベント
             */
-            $$(document).click(function(event) {
-              if(!($$(event.target).closest(".k-editor").length || $$(event.target).closest(".k-state-selected").length || $$(event.target).closest(".popover__content").length)) {
+            $$(getKendoEditorOwnerDocument(editor, ev, self.$el))
+              .off(`click${editorEventNamespace}`)
+              .on(`click${editorEventNamespace}`, function(event) {
+              if(!isInsideKendoEditorInteraction(event.target)) {
                 if(editor.window.getSelection()) {
-                  let range = document.createRange();
-                  range.selectNodeContents(self.findLastTextNode(ev.currentTarget.document.body));
+                  let range = createKendoEditorRange(editor, ev, self.$el);
+                  range.selectNodeContents(self.findLastTextNode(getKendoEditorBody(editor, ev, self.$el)));
                   editor.window.getSelection().removeAllRanges();
                   editor.window.getSelection().addRange(range);
                   editor.window.getSelection().collapseToEnd();
@@ -3797,10 +3879,12 @@
             /**
              * @description カレンダーのフォーカス発生時のイベント
             */
-            $$(document).on("focus", ".calendar", function() {
+            $$(getKendoEditorOwnerDocument(editor, ev, self.$el))
+              .off(`focus${editorEventNamespace}`, ".calendar")
+              .on(`focus${editorEventNamespace}`, ".calendar", function() {
               if(editor.window.getSelection()) {
-                let range = document.createRange();
-                range.selectNodeContents(self.findLastTextNode(ev.currentTarget.document.body));
+                let range = createKendoEditorRange(editor, ev, self.$el);
+                range.selectNodeContents(self.findLastTextNode(getKendoEditorBody(editor, ev, self.$el)));
                 editor.window.getSelection().removeAllRanges();
                 editor.window.getSelection().addRange(range);
                 editor.window.getSelection().collapseToEnd();
@@ -3810,7 +3894,7 @@
           /**
            * @description テキストエリアのkeydownイベント
           */
-          editor.window.addEventListener('keydown',  (ev) => {
+          this.addManagedEventListener(editor.window, 'keydown', (ev) => {
             if(ev.key === "Enter"){
               let beforeRange = editor.window.getSelection();
               let focusNode = beforeRange.focusNode;
@@ -3818,9 +3902,9 @@
               //Enterキー押下前にカーソルの位置にフォーカス可能な要素が存在しない場合
               if(focusNode.nodeName === "BODY") {
                 ev.stopPropagation();
-                setTimeout(() => {
+                this.setManagedTimeout(() => {
                   //Enterキー押下後にカーソルが置かれた行のHTMLデータが<p><br></p>の場合、<p>&#xFEFF</p>に置き換える
-                  const newChild = document.createElement("p");
+                  const newChild = createKendoEditorElement("p", editor, ev, self.$el);
                   newChild.textContent = "\ufeff";
                   const targetChild = focusNode.childNodes[focusOffset];
                   focusNode.replaceChild(newChild,targetChild);
@@ -3842,7 +3926,7 @@
                   }
                   currentNode = currentNode.parentElement;
                 }
-                setTimeout(() => {
+                this.setManagedTimeout(() => {
                   let postChangedSelection = editor.window.getSelection();
                   let postChangedAnchorNode = postChangedSelection.anchorNode;
                   let offset = -1;
@@ -3859,30 +3943,34 @@
                   postChangedSelection.collapse(postChangedAnchorNode, offset);
                 }, 0);
               }
-              setTimeout(() => {
-                self.bbsDetailedInfo.content = editor.document.documentElement.lastElementChild.innerText.replace(
-                  /\ufeff/g,
-                  ""
-                );
-                self.bbsDetailedInfo.html_content =
-                  editor.document.documentElement.lastElementChild.innerHTML;
+              this.setManagedTimeout(() => {
+                const docEl = editor && editor.document && editor.document.documentElement && editor.document.documentElement.lastElementChild;
+                if (docEl) {
+                  self.bbsDetailedInfo.content = docEl.innerText.replace(/\ufeff/g, "");
+                  self.bbsDetailedInfo.html_content = docEl.innerHTML;
+                } else if (editor && editor.body) {
+                  self.bbsDetailedInfo.content = editor.body.innerText.replace(/\ufeff/g, "");
+                  self.bbsDetailedInfo.html_content = editor.body.innerHTML;
+                }
               }, 0);
               // mod 認証方式の変更 20260205 huanshuai end
             }
             // mod 認証方式の変更 20260205 huanshuai start
             else if (ev.keyCode === 90 || ev.keyCode === 89) {
-              setTimeout(() => {
-                self.bbsDetailedInfo.content = editor.document.documentElement.lastElementChild.innerText.replace(
-                  /\ufeff/g,
-                  ""
-                );
+              this.setManagedTimeout(() => {
+                const docEl = editor && editor.document && editor.document.documentElement && editor.document.documentElement.lastElementChild;
+                if (docEl) {
+                  self.bbsDetailedInfo.content = docEl.innerText.replace(/\ufeff/g, "");
+                } else if (editor && editor.body) {
+                  self.bbsDetailedInfo.content = editor.body.innerText.replace(/\ufeff/g, "");
+                }
               }, 0);
             }            
-          },true);
+          }, true);
           /**
            * @description テキストエリアのkeydownイベント
           */
-          $$(editor.window).keydown(function(ev) {
+          $$(editor.window).off(`keydown${editorEventNamespace}`).on(`keydown${editorEventNamespace}`, function(ev) {
             if(ev.key === "Backspace" || ev.key === "Delete"){
               let beforeRange = editor.window.getSelection();
               let focusNode = beforeRange.focusNode;
@@ -3897,7 +3985,7 @@
           /**
            * @description テキストエリアのkeyupイベント
           */
-          $$(editor.window).keyup(function(ev) {
+          $$(editor.window).off(`keyup${editorEventNamespace}`).on(`keyup${editorEventNamespace}`, function(ev) {
             let selection = editor.window.getSelection();
             let anchorNode = selection.anchorNode;
             let anchorOffset = selection.anchorOffset;
@@ -3952,18 +4040,18 @@
           /**
            * @description テキストエリアのIMEの変換終了時のイベント
           */
-          editor.window.addEventListener('compositionend',  (ev) => {
+          this.addManagedEventListener(editor.window, 'compositionend', (ev) => {
             ev.currentTarget.dispatchEvent(new Event('input'));
           });
           /**
            * @description テキストエリアの入力イベント発生前のイベント
           */
-          editor.window.addEventListener('beforeinput',  (ev) => {
+          this.addManagedEventListener(editor.window, 'beforeinput', (ev) => {
             if(ev.inputType === "deleteByCut"){
               let selection = editor.window.getSelection();
               const range = selection.getRangeAt(0);
               const cloneContents = range.cloneContents();
-              const container = document.createElement('div');
+              const container = createKendoEditorElement('div', editor, ev, self.$el);
               container.appendChild(cloneContents);
               self.copyFontSize = null;
               if(container.querySelectorAll('span').length <= 1){
@@ -3982,8 +4070,8 @@
                 currentNode = currentNode.parentElement;
               }
               if(container.innerHTML.match(/^<p>(.*?)<\/p>/i)){
-                setTimeout(() => {
-                  const newChildNode = document.createElement("p");
+                this.setManagedTimeout(() => {
+                  const newChildNode = createKendoEditorElement("p", editor, ev, self.$el);
                   newChildNode.textContent = "\ufeff";
                   currentNode.parentNode.replaceChild(newChildNode,currentNode);
                 }, 0);
@@ -3994,14 +4082,14 @@
                   && currentNode.textContent === container.innerHTML){
                   currentNode.textContent = "\ufeff";
                 } else if(currentNode.nodeName === "BODY" && currentNode.textContent === container.innerHTML){
-                  setTimeout(() => {
+                  this.setManagedTimeout(() => {
                     if(currentNode.childNodes.length === 1 && currentNode.childNodes[0].nodeName === "BR"){
                       currentNode.childNodes[0].remove();
                     }
                   }, 0);
                 }
                 if(selection.anchorOffset === 0){
-                  setTimeout(() => {
+                  this.setManagedTimeout(() => {
                     let postChangedSelection = editor.window.getSelection();
                     let postChangedAnchorNode = postChangedSelection.anchorNode;
                     let offset = previousNodeExistsFlg ? postChangedAnchorNode.length : 0;
@@ -4014,7 +4102,7 @@
           /**
            * @description テキストエリアの入力イベント
           */
-          editor.window.addEventListener('input',  (ev) => {
+          this.addManagedEventListener(editor.window, 'input', (ev) => {
             if(!ev.inputType || ev.inputType === "insertText"){
               let selection = editor.window.getSelection();
               let anchorNode = selection.anchorNode;
@@ -4036,12 +4124,12 @@
           /**
            * @description テキストエリアのcopyイベント
           */
-          editor.window.addEventListener('copy',  (ev) => {
+          this.addManagedEventListener(editor.window, 'copy', (ev) => {
             self.copyFontSize = null;
             let selection = editor.window.getSelection();
             const range = selection.getRangeAt(0);
             const cloneContents = range.cloneContents();
-            const container = document.createElement('div');
+            const container = createKendoEditorElement('div', editor, ev, self.$el);
             container.appendChild(cloneContents);
             if(container.querySelectorAll('span').length <= 1){
               self.copyFontSize = ev.target.style.fontSize;
@@ -4054,25 +4142,30 @@
         //書式設定可能なテキストエリア上部のツールバーの要素を取得する
         // add/ #12473 掲示板画面で複数バグ tianqidong start
         this.$nextTick(() => {
-          let editorToolbarElement = document.querySelector("ul[aria-controls='editor-input']");
-          if(editorToolbarElement){
-            //テキストエリア上部のツールバーのフォント名のクリアボタンの要素の取得
-            let editorToolbarClearFontFamily = editorToolbarElement.children[1].children[0].children[0].firstChild.nextElementSibling;
-            //テキストエリア上部のツールバーのフォントサイズのクリアボタンの要素の取得
-            let editorToolbarClearFontSize = editorToolbarElement.children[3].children[0].children[0].firstChild.nextElementSibling;
+          const {
+            fontFamilyClearButton: editorToolbarClearFontFamily,
+            fontSizeClearButton: editorToolbarClearFontSize
+          } = getKendoEditorToolbarClearButtons(this.$el, "editor-input");
+          if(editorToolbarClearFontFamily){
             //テキストエリア上部のツールバーのフォント名のクリアボタンのクリックイベントを登録する
-            editorToolbarClearFontFamily.addEventListener('click',  (ev) => {
+            this.addManagedEventListener(editorToolbarClearFontFamily, 'click', (ev) => {
               ev.currentTarget.previousElementSibling.value = "(デフォルト)";
               //フォント名のドロップダウンリストのクリックイベントを呼び出す
-              ev.currentTarget.previousElementSibling.parentElement.parentElement.dispatchEvent(new Event('click'));
+              ev.currentTarget.previousElementSibling.focus();
+              ev.currentTarget.previousElementSibling.dispatchEvent(new Event('click'));
+              editor.exec("fontName", { value: "Meiryo" });
               //子コンポーネントのクリアボタンのクリックイベントをキャンセルする
               ev.stopPropagation();
             }, true);
+          }
+          if(editorToolbarClearFontSize){
             //テキストエリア上部のツールバーのフォントサイズのクリアボタンのクリックイベントを登録する
-            editorToolbarClearFontSize.addEventListener('click',  (ev) => {
+            this.addManagedEventListener(editorToolbarClearFontSize, 'click', (ev) => {
               ev.currentTarget.previousElementSibling.value = "(デフォルト)";
               //フォントサイズのドロップダウンリストのクリックイベントを呼び出す
-              ev.currentTarget.previousElementSibling.parentElement.parentElement.dispatchEvent(new Event('click'));
+              ev.currentTarget.previousElementSibling.focus();
+              ev.currentTarget.previousElementSibling.dispatchEvent(new Event('click'));
+              editor.exec("fontSize", { value: "14pt" });
               //子コンポーネントのクリアボタンのクリックイベントをキャンセルする
               ev.stopPropagation();
             }, true);
@@ -4273,9 +4366,7 @@
         // if(this.bbsDetailedInfo.content!==null){
         if(this.bbsDetailedInfo.html_content!==null){
           // mod #9818、「患者イベント」と「観察記録」画面で作成した観察記録は掲示板に編集したい時、コンソールエラーが発生の修正 limf end
-          let editor = $$("#editor-input").data(
-            "kendoEditor"
-          );
+          let editor = this.getRichTextEditor();
           //add FutreNetWeb+SI課題管理No4103対応 于 start
           if(!this.allowEdit){
             $$(editor.body).attr("contenteditable", false);
@@ -4389,7 +4480,7 @@
       },
       removeBeforeOffset(node, offset) {
         let remeiningText = node.textContent.substring(offset);
-        let newTextNode = document.createTextNode(remeiningText);
+        let newTextNode = (node.ownerDocument || getScopedWindow(this.$el)?.document || document).createTextNode(remeiningText);
         let parentNode = node.parentNode;
         parentNode.replaceChild(newTextNode, node);
         return newTextNode;
@@ -4509,7 +4600,7 @@
           JSON.stringify(oldValue)
         );
         this.showBtnChanged = start;
-        this.$refs.isChanged = start;
+        this.isChanged = start;
       }
     },
   };
@@ -4521,7 +4612,7 @@
   font-size: 30px;
 }
 
-.bbs-staff-popover >>> .popover__content {
+.bbs-staff-popover :deep(.popover__content) {
   display: flex;
   flex-direction: column;
   max-height: 80vh;
@@ -4730,8 +4821,9 @@
   width: 99%;
 }
 
+ 
 /*add FNSI-改修内容掲示板で文字色やサイズを変更したい 任 start*/
-div >>> .content-textarea {
+div :deep(.content-textarea) {
   width: 100%;
   font-family: inherit;
   font-size: 1.5em;
@@ -4755,10 +4847,11 @@ div >>> .content-textarea {
 }
 .d-inline-margin{
   margin-left: 10px;
+  margin-right: 5px;
 }
 /*add 施設イベント詳細画面のスマホ表示崩れ #4136 shan end*/
 @media screen and (min-height:700px) {
-  .bbs-staff-popover >>> .popover__content {
+  .bbs-staff-popover :deep(.popover__content) {
     max-height: 600px !important;
   }
 }
@@ -4768,7 +4861,7 @@ div >>> .content-textarea {
 }
 /* #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 end */
 @media print {
-  .item-area /deep/ .k-editor .k-content {
+  .item-area :deep(.k-editor .k-content){
     height: 30vh !important;
   }
   /** ボタン非表示 */
@@ -4778,8 +4871,14 @@ div >>> .content-textarea {
 }
 /* 横向き印刷 */
 @media print and (orientation: landscape) {
-  .item-area /deep/ .k-editor .k-content {
+  .item-area :deep(.k-editor .k-content){
     height: 28vh !important;
   }
 }
+
+:deep(.select-input){
+  font-family: -apple-system, 'Helvetica Neue', 'Helvetica', 'Arial', 'Lucida Grande', sans-serif !important;
+}
+
+
 </style>

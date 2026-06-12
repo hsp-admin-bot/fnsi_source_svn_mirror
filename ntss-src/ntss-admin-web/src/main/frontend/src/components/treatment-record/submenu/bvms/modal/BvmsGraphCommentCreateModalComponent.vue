@@ -1,6 +1,7 @@
 <template>
   <modal-base @onClose="onClickClose">
-    <div slot="body" class="main-content">
+    <template #body>
+      <div class="main-content">
       <div class="expandable-content">
         <table class="ntss-list">
           <thead>
@@ -33,15 +34,18 @@
           </tr>
         </table>
       </div>
-    </div>
-    <div slot="footer" class="flex-container">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button denial-btn btn2-cancel" @click="onClickClose">キャンセル</v-ons-button>
       </div>
       <div class="registration-btn-area" style="background:none">
         <v-ons-button class="button registration-btn btn1-execute" :disabled="!isChanged" @click="onClickReflect">確認</v-ons-button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
@@ -49,7 +53,7 @@
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
-import { mapActions } from "vuex";
+import { mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import {
   DATE_TIME_FORMAT,
@@ -78,8 +82,7 @@ export default {
   async created() {
     if (this.getOrdNo) {
       const response = await ApiHelper.get(
-        `/re-loop-rate-main-comments/${this.getOrdNo}`
-      ).catch(error => {
+        `/re-loop-rate-main-comments/${this.getOrdNo}`).catch(error => {
         // console.log(error);
         //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
         getErrorMessage('BvmsGraphCommentCreateModalComponent.vue','created',error);
@@ -104,7 +107,7 @@ export default {
       this.re_loop_info = this.newDatas.weightInfo.reloop_info;
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -233,16 +236,16 @@ export default {
 .ntss-list-body-td {
   background-color: var(--ntss-base-background-color);
 }
-div >>> .modal-header .toolbar {
+div :deep(.modal-header .toolbar) {
   background-color: var(--ntss-header-background-color);
 }
-div >>> .modal-header .toolbar__title.toolbar__left {
+div :deep(.modal-header .toolbar__title.toolbar__left) {
   color: var(--ntss-header-color) !important;
 }
-div >>> .modal-search,
-div >>> .modal-body,
-div >>> .modal-footer,
-div >>> .modal-footer .bottom-bar {
+div :deep(.modal-search),
+div :deep(.modal-body),
+div :deep(.modal-footer),
+div :deep(.modal-footer .bottom-bar) {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }

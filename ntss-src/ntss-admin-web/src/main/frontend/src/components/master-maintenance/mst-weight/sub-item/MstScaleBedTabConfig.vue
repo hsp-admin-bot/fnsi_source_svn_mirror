@@ -144,12 +144,13 @@
   </div>
 </template>
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import customInput from "@/components/common/custom-form-tags/CustomInput";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
 import customSelect from "@/components/common/custom-form-tags/CustomSelect";
 import { messageFormat } from "@/functions/common/MessageFormat";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { getHeaderHeight, getFooterMenuClientHeight, getLatestHeaderElement, getScopedElementById, getScopedUserAgent, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
 // 後で消す どこかで呼び出せるようにクラスをexport defaultする 渡辺
 export default {
   props: {},
@@ -339,12 +340,10 @@ export default {
     calculateGridHeight() {
       if (!this.getIsGridEditing) {
         const wh = this.windowHeight;
-        const hh = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .pop().offsetHeight;
+        const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
         const th = Array.prototype.slice
-          .call(document.getElementsByClassName("tab_item"))
-          .shift().offsetHeight;
+          .call(queryScopedSelectorAll(".tab_item", this.$el || this))
+          .shift()?.offsetHeight || 0;
         const segmentBtnAreaEl = this.$refs.segmentBtnArea;
         const segmentBtnAreaHeight = segmentBtnAreaEl
           ? segmentBtnAreaEl.offsetHeight
@@ -353,21 +352,21 @@ export default {
         const headerBtnAreaHeight = headerBtnAreaEl
           ? headerBtnAreaEl.offsetHeight
           : 0;
-        const gfh = document.getElementById("detail-footer").offsetHeight;
+        const gfh = getScopedElementById("detail-footer", this.$el || this)?.offsetHeight || 0;
         const fmh =
           this.isDispMenu === 1
-            ? document.getElementById("footer-menu").offsetHeight
+            ? getFooterMenuClientHeight(this.$el || null)
             : 0;
         // ntssListの高さ設定(ウィンドウ高さ－ヘッダー高さ－タブ高さ－セグメントボタンエリア高さ－追加ボタンエリア高さ－メニューバー高さ－確定/キャンセルボタンエリア高さ)
         this.gridHeight =
           wh - hh - th - segmentBtnAreaHeight - headerBtnAreaHeight - gfh - fmh;
         // ntssListのheader行高とbody行高を取得(ただし、body行高が行毎に可変の場合は対応できない。あくまで目安高。)
         const firstTh = this.$el.querySelector(
-          ".ntss-list-mst-weight-print thead tr"
+          ".ntss-list-mst-weight-scale thead tr"
         );
         const thHeight = firstTh ? firstTh.offsetHeight : 0;
         const firstTd = this.$el.querySelector(
-          ".ntss-list-mst-weight-print tbody tr"
+          ".ntss-list-mst-weight-scale tbody tr"
         );
         const tdHeight = firstTd ? firstTd.offsetHeight : 0;
         // ntssList最低5行分の高さ＝header高さ＋5行分の高さ＋横スクロールの高さ目安17px
@@ -793,7 +792,7 @@ export default {
     //体重計セットデータそのものからJSONを取り出し
     this.setDispSettingData(this.editRecord);
 
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = getScopedUserAgent(this.$el || null).toLowerCase();
     if (/android/.test(ua)) {
       this.androidFlg = true;
     } else if (/iphone|ipad|mac|os/.test(ua)) {
@@ -812,7 +811,7 @@ export default {
     });
     this.oldDispDataList = JSON.stringify(this.dispDataList);
   },
-  destroyed() {
+  beforeUnmount() {
     this.clearData();
   },
 };

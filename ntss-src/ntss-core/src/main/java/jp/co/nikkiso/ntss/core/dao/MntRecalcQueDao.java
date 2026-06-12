@@ -49,4 +49,7 @@ public interface MntRecalcQueDao {
    */
   @Update(sqlFile = true)
   int update(MntRecalcQue params);
+
+  @Select
+  MntRecalcQue selectById(long recalcQueCd);
 }

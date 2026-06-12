@@ -1,17 +1,24 @@
-/** * 装置プログラムーチャート */
+/** * 患者カレンダー用バイタル・モニタグラフ */
 
 <template>
-  <highcharts :options="chartOptions" :ref="dispDataItem" />
+  <div class="pat-calendar-chart">
+    <highcharts :options="chartOptions" :ref="dispDataItem" />
+  </div>
 </template>
 
 <script>
+import { Chart } from "@/compat/charts/highcharts";
+import Highcharts from "@/compat/charts/highcharts";
+import { Boost } from "@/compat/charts/highcharts";
+import dayjs from "@/compat/date/dayjs";
+import { mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import graphDataMixins from "@/components/pat-viewer/contents/treatment/graphDataMixins";
 
-import { Chart } from "highcharts-vue";
-import Highcharts from "highcharts";
-import Boost from "highcharts/modules/boost";
-import moment from "moment";
-import { mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+/** 改修前（図1）相当のコンパクトレイアウト */
+const PAT_CALENDAR_CHART_HEIGHT = 150;
+const PAT_CALENDAR_CHART_MARGIN = [0, -1, 20, 0];
+const PAT_CALENDAR_X_LABELS_Y = 12;
 
 Boost(Highcharts);
 
@@ -22,29 +29,34 @@ Highcharts.setOptions({
   },
   global: {
     useUTC: false
+  },
+  accessibility: {
+    enabled: false
   }
 });
-
-const CHART_SERIES_COLORS = ["#7cb5ec", "#434348", "#90ed7d", "#f7a35c", "#8085e9", "#f15c80", "#e4d354", "#2b908f", "#f45b5b", "#91e8e1"];
 
 export default {
   components: {
     highcharts: Chart
   },
+  mixins: [graphDataMixins],
 
   data() {
     return {
       isMounted: false,
       chartOptions: {
         chart: {
-          height: 150,
-          margin: [0, -1, 20, 0],
+          height: PAT_CALENDAR_CHART_HEIGHT,
+          margin: [...PAT_CALENDAR_CHART_MARGIN],
+          spacingTop: 0,
+          spacingBottom: 0,
+          spacingLeft: 0,
+          spacingRight: 0,
           events: {
             load() {
-              // 初期ロード時にスクロールバー有無によってチャートがちゃんと描画されてないことがあるため
-              // 描画された直後、3秒待機をして強制的リサイズをする
               setTimeout(() => {
-                EventBus.$emit('reflowPatViewerCharts', this);
+                this.reflow();
+                EventBus.$emit("reflowPatViewerCharts", this);
               }, 3000);
             }
           }
@@ -56,112 +68,64 @@ export default {
           enabled: false
         },
         xAxis: {
-          min: this.xAxisMin,
-          max: this.xAxisMax,
           title: {
             enabled: false
           },
           type: "datetime",
+          tickLength: 3,
+          gridLineWidth: 1,
           labels: {
             enabled: true,
+            y: PAT_CALENDAR_X_LABELS_Y,
+            autoRotation: false,
+            style: {
+              fontSize: "10px"
+            },
             formatter() {
-              const date = moment(this.value);
-              return date.format("HH:mm");
+              return dayjs(this.value).format("HH:mm");
             }
-          },
-
-          // 目盛り配置の計算(highchartの自動計算を使用しない)
-          tickPositioner() {
-            let tickAmount = 12;
-            const ticks = [];
-            // 目盛りを均等に配置する
-            for (let i = 1; i < tickAmount; i++) {
-              const val = this.min + ((this.max - this.min) / tickAmount) * i;
-              ticks.push(val);
-            }
-
-            return [this.min, ...ticks, this.max];
           }
         },
         yAxis: [],
         legend: {
-          backgroundColor: "rgba(255, 255, 255, 0.75)",
-          floating: true,
-          layout: "vertical",
-          align: "left",
-          verticalAlign: "top",
-          x: 40,
-          enabled: false,
-          y: -10,
-          shadow: true
+          enabled: false
         },
         navigation: {
           buttonOptions: {
             enabled: false
           }
         },
-        series: this.seriesData,
+        series: [],
         tooltip: {
-          // 例: 1970年1月1日(木) 00:00
           xDateFormat: "%Y年%b月%e(%a) %H:%M",
-          // プロット点をフォーカスアウト後に100ミリ待機してツールチップを非表示
           hideDelay: 100,
-          // plotOptions.series.stickyTrackingと一緒
           snap: 0,
-          // 患者カレンダー ダ-イア-イザ-ー入口圧/差圧警報点(上/下限)画面に表示がありません。 林峻峰 start
           useHTML: true
-          // 患者カレンダー ダ-イア-イザ-ー入口圧/差圧警報点(上/下限)画面に表示がありません。 林峻峰 end
         }
       }
-    }
+    };
   },
   props: {
-    /**
-     * @description チャートデータ
-     *    例:
-     *    [
-     *      {
-     *        "項目名1": [
-     *          [検査日時, 結果値],
-     *          [検査日時, 結果値]
-     *        ],
-     *        "項目名2": [
-     *          [検査日時, 結果値],
-     *          [検査日時, 結果値]
-     *        ],
-     *      }
-     *    ]
-     */
     chartData: {
       type: Array,
       default() {
         return [];
       }
     },
-
     yAxis: {
       type: Array,
       default() {
         return [];
       }
     },
-
-    /**
-     * @description x軸の下限値(ミリ秒)
-     */
     xAxisMin: {
       type: Number,
       default: undefined
     },
-
-    /**
-     * @description x軸の上限値(ミリ秒)
-     */
     xAxisMax: {
       type: Number,
       default: undefined
     },
-
     dispDataItem: {
       type: String,
       default: undefined
@@ -172,20 +136,7 @@ export default {
     ...mapGetters("window-size", {
       windowHeight: "getWindowHeight",
       splittedWidth: "getSplittedWidth"
-    }),
-    yAxisPositions() {
-      if (!this.isMounted) return;
-      if (!this.$refs[this.dispDataItem]) return;
-      const chart = this.$refs[this.dispDataItem].chart;
-      const len = chart.yAxis.length;
-      const tmpTick = [];
-      for (let i = 0; i < len; i++) {
-        tmpTick.push({
-          tickArr: chart.yAxis[i].tickPositions
-        });
-      }
-      return tmpTick;
-    }
+    })
   },
 
   created() {
@@ -194,6 +145,10 @@ export default {
 
   mounted() {
     this.isMounted = true;
+    this.$nextTick(() => {
+      this.applyCalendarChartLayout();
+      this.resizeChart();
+    });
   },
 
   watch: {
@@ -207,82 +162,108 @@ export default {
 
   methods: {
     init() {
+      this.chartOptions.xAxis.min = this.xAxisMin;
+      this.chartOptions.xAxis.max = this.xAxisMax;
+      this.chartOptions.yAxis = this.buildYAxisWithGrid(this.yAxis);
+      const tickPositions = this.tickPositioner();
+      this.chartOptions.xAxis.tickPositions = tickPositions;
       this.chartOptions.series = this.seriesData();
-      this.chartOptions.yAxis = this.yAxis;
-      this.chartOptions.xAxis.tickPositions = this.tickPositioner();
+    },
+    applyCalendarChartLayout() {
+      const chart = this.$refs[this.dispDataItem]?.chart;
+      if (!chart) {
+        return;
+      }
+      chart.update(
+        {
+          chart: {
+            height: PAT_CALENDAR_CHART_HEIGHT,
+            margin: [...PAT_CALENDAR_CHART_MARGIN],
+            spacingTop: 0,
+            spacingBottom: 0,
+            spacingLeft: 0,
+            spacingRight: 0
+          }
+        },
+        false
+      );
+      const tickPositions = this.chartOptions.xAxis.tickPositions;
+      this.syncPatViewerChartAxis(chart, {
+        tickPositions,
+        breaks: [],
+        plotLines: [],
+        isDatetime: true,
+        xAxisMin: this.xAxisMin,
+        xAxisMax: this.xAxisMax
+      });
+      chart.reflow();
     },
     resizeChart() {
       const chart = this.$refs[this.dispDataItem]?.chart;
-      chart?.reflow();
-    },
-    legendEnableChanged() {
-      this.$refs[this.dispDataItem].chart.legend.update({
-        enabled: !this.$refs[this.dispDataItem].chart.legend.display
-      });
+      if (!chart) {
+        return;
+      }
+      this.applyCalendarChartLayout();
     },
     seriesData() {
       const seriesArr = [];
-      // 凡例用ID格納(同じ項目は同じ凡例を使用)
       const legendIdArr = [];
-      // シリーズ線の色(同じ項目は同じ色をつける)
       const seriesColors = {};
 
-      // 各ordMainレコードが1つのシリーズとして処理する
       this.chartData.forEach(item => {
-        // 各レコードの項目を処理していく
-        const isLegendIdExists = legendIdArr.find(i => {
-          return i === item.name;
-        });
+        const isLegendIdExists = legendIdArr.includes(item.name);
 
         if (!isLegendIdExists) {
-          // legendIdArrの要素数はCHART_SERIES_COLORSの要素番号として
-          /* modify by chamaojia 2023-09-25 [9624] カラー設定の変更  --start */
-          // seriesColors[item.name] = CHART_SERIES_COLORS[legendIdArr.length];
           seriesColors[item.name] = item.color;
-          /* modify by chamaojia 2023-09-25 [9624] カラー設定の変更  --end */
-          // IDが存在しない場合、そのIDを格納
           legendIdArr.push(item.name);
         }
 
-        const series = {
-          // IDが存在する場合、重複しないように定義はしない
+        seriesArr.push({
           id: isLegendIdExists ? undefined : item.no,
-          // 凡例名
           name: item.name,
           yAxis: item.yAxis,
-          // IDが存在する場合、そのIDを使用
           linkedTo: isLegendIdExists ? item.name : undefined,
-          // シリーズ線の色
           color: seriesColors[item.name],
-          // プロットデータ
-          data: item.data.map(i => {
-            // 各項目のx値をISO8601日付からミリ秒形式に変換
-            const x = moment(i[1]).valueOf();
+          data: (item.data || []).map(i => {
+            const x = dayjs(i[1]).valueOf();
             const y = i[2];
             return [x, y];
           }),
-          /* add by chamaojia 2023-09-25 [9624] アイコンコンテンツ設定の追加  --start */
           marker: item.marker ? item.marker : {},
-          /* add by chamaojia 2023-09-25 [9624] アイコンコンテンツ設定の追加  --end */
           animation: false
-        };
-        seriesArr.push(series);
+        });
       });
 
-      // データがない時にシリーズが空になって目盛りが描画されない
-      // そのためにシリーズに何か入れないといけない
-      return seriesArr[0] === undefined ? [{ showInLegend: false }] : seriesArr;
+      return seriesArr.length === 0 ? [{ showInLegend: false, data: [] }] : seriesArr;
     },
     tickPositioner() {
-      let tickAmount = 3; // 目盛りの数 デフォルト: 3
+      if (
+        this.xAxisMin == null ||
+        this.xAxisMax == null ||
+        !Number.isFinite(this.xAxisMin) ||
+        !Number.isFinite(this.xAxisMax)
+      ) {
+        return undefined;
+      }
+      const tickAmount = 3;
       const ticks = [];
-      // 目盛りを均等に配置する
       for (let i = 1; i < tickAmount; i++) {
         const val = this.xAxisMin + ((this.xAxisMax - this.xAxisMin) / tickAmount) * i;
         ticks.push(val);
       }
       return [this.xAxisMin, ...ticks, this.xAxisMax];
-    },
+    }
   }
 };
 </script>
+
+<style scoped>
+.pat-calendar-chart {
+  width: 100%;
+  overflow: hidden;
+  line-height: 0;
+}
+.pat-calendar-chart :deep(.highcharts-container) {
+  margin: 0 !important;
+}
+</style>

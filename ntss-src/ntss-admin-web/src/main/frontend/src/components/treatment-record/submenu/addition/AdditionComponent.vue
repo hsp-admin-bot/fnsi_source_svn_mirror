@@ -3,7 +3,8 @@
  */
 <template>
   <submenu-base v-if="hasOrdNo">
-    <div slot="header">
+    <template #header>
+      <div>
       <div class="new-btn-area">
         <!-- mod FNSI-権限関連 王 20200927 start -->
         <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
@@ -17,8 +18,10 @@
         <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
         <!-- mod FNSI-権限関連 王 20200927 end -->
       </div>
-    </div>
-    <div slot="main" id="addition-component">
+      </div>
+    </template>
+    <template #main>
+      <div id="addition-component">
       <div>
         <table class="treatment-record-list">
           <thead>
@@ -30,8 +33,8 @@
             </tr>
           </thead>
           <tbody>
-            <template v-for="(data, index) in commentList">
-              <tr :key="index" class="ntss-list-body-tr">
+            <template v-for="(data, index) in commentList" :key="index">
+              <tr class="ntss-list-body-tr">
                 <td class="align-center ntss-list-body-td">{{ data.no }}</td>
                 <td class="ntss-list-body-td comment-td">{{ data.comment }}</td>
                 <td class="align-center ntss-list-body-td">
@@ -54,19 +57,22 @@
           </tbody>
         </table>
       </div>
-    </div>
-    <div slot="footer" class="flex-container" />
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container" />
+    </template>
   </submenu-base>
 </template>
 
 <script>
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 start
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import SubmenuBase from "@/components/treatment-record/SubmenuBaseComponent";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
 //import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
 import { IndComment } from "@/models/treatment-record/addition/IndComment";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { CODES } from "@/constants/TreatmentRecord";
 // import { AUTHORITY_CODES } from "@/constants/userAuthority";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
@@ -377,7 +383,7 @@ export default {
     refresh() {
       // 子機能ボタンエリアの更新
       this.$emit("update");
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       this.init();
@@ -388,7 +394,7 @@ export default {
     EventBus.$on("applyAdditionModal", this.init);
     EventBus.$on("update", this.update);
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // イベント登録
     EventBus.$on("refresh", this.refresh);
     // add FNSI-権限関連 王 20200927 start
@@ -398,9 +404,9 @@ export default {
     // del #10359 編集権限の動作不正 end
     // add FNSI-権限関連 王 20200927 end
   },
-  beforeDestroy() {
-    EventBus.$off("applyAdditionModal");
-    EventBus.$off("update");
+  beforeUnmount() {
+    EventBus.$off("applyAdditionModal", this.init);
+    EventBus.$off("update", this.update);
     // イベント解除
     // del refresh方法処理不正について、対応する。 dengshen start
     // EventBus.$off("refresh");

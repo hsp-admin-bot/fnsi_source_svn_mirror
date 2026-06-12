@@ -9,27 +9,27 @@
   </div>
   -->
   <div class="highcharts-config">
-    <highcharts :options="chartOptions" class="monitorGraphView"></highcharts>
+    <highcharts ref="monitorChart" :options="chartOptions" class="monitorGraphView"></highcharts>
   </div>
   <!-- mod FNSI-改修内容 monitorグラフ修正 房 end -->
 </template>
 
 <script>
-  import Vue from "vue";
-  import moment from "moment";
-  import {mapGetters} from "vuex";
-  import VueHighcharts from "vue-highcharts";
-  import Highcharts from "highcharts";
-  import Boost from "highcharts/modules/boost";
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+  import dayjs from "@/compat/date/dayjs";
+  import {mapGetters} from "@/compat/vue/vuex";
+  import Highcharts from "@/compat/charts/highcharts";
+  import { Boost } from "@/compat/charts/highcharts";
   import {CODES} from "@/constants/TreatmentRecord";
   import {MonitorGraphDefine} from "@/models/treatment-record/monitor/MonitorGraphDefine";
   // add #10398 文字型の検査項目に対して検査値の桁合わせ処理が行われる zy start
   import {convertToHalfWidth} from "@/functions/common/CommonFunctions";
   // add #10398 文字型の検査項目に対して検査値の桁合わせ処理が行われる zy start
   import {Monitor} from "@/models/treatment-record/monitor/Monitor";
-
-  Vue.use(VueHighcharts);
   Boost(Highcharts);
+  // Highcharts v9 相当: X軸の基準線と目盛り線を同色にする（v12 既定値では色がずれる）
+  const X_AXIS_STROKE_COLOR = "#ccd6eb";
+  const DEFAULT_GRAPH_RANGE_MS = 360 * 60 * 1000;
 
   // グラフデータのテンプレート
   const CHART_OPTIONS_TEMPLATE = {
@@ -56,16 +56,27 @@
       min: null,
       max: null,
       //add 6004 バイタル、モニタ画面のグラフの緑線不正、グラフ生成不正 赵 end
+      // Highcharts v12: 中間の目盛り・縦グリッドを表示（v9 相当）
+      gridLineWidth: 1,
+      gridLineColor: "#e6e6e6",
+      lineColor: X_AXIS_STROKE_COLOR,
+      lineWidth: 1,
+      tickColor: X_AXIS_STROKE_COLOR,
+      tickWidth: 1,
+      tickLength: 5,
+      tickPixelInterval: 0,
       labels: {
+        step: 1,
+        allowOverlap: true,
         formatter: function () {
           //alert("3startBef"+this.axis.startBef)
           //alert("3min"+this.axis.min)
-          const currentDate = moment(this.value);
+          const currentDate = dayjs(this.value);
           if (this.axis.options.occurStartDate) {
             // 時系列での表示
             //mod 6004 バイタル、モニタ画面のグラフの緑線不正、グラフ生成不正 赵 start
-            let startDate = moment(this.axis.options.occurStartDate);
-            //const startDate = moment(this.axis.options.occurStartDate+30*60*1000);
+            let startDate = dayjs(this.axis.options.occurStartDate);
+            //const startDate = dayjs(this.axis.options.occurStartDate+30*60*1000);
             //mod 6004 バイタル、モニタ画面のグラフの緑線不正、グラフ生成不正 赵 end
             if (!currentDate.isBefore(startDate)) {
               //add 6004 バイタル、モニタ画面のグラフの緑線不正、グラフ生成不正 赵 start
@@ -79,15 +90,15 @@
                 .subtract(startDate.second(), "seconds")
                 .format("H:mm");
             } else {
-              startDate = moment(this.axis.options.occurStartDate);
+              startDate = dayjs(this.axis.options.occurStartDate);
               // let c= new Date();
-              // moment(c.getTime());
+              // dayjs(c.getTime());
               // let d=c.getTime()-15*60*1000*5;
-              // moment(d);
-              // moment(c.getTime())
-              // .subtract(moment(d).hour(), "hours")
-              // .subtract(moment(d).minute(), "minutes")
-              // .subtract(moment(d).second(), "seconds").format("H:mm")
+              // dayjs(d);
+              // dayjs(c.getTime())
+              // .subtract(dayjs(d).hour(), "hours")
+              // .subtract(dayjs(d).minute(), "minutes")
+              // .subtract(dayjs(d).second(), "seconds").format("H:mm")
 
               let fz = 2360 - currentDate
                 .subtract(startDate.hour(), "hours")
@@ -106,7 +117,7 @@
                 }
                 return "-" + (fz.substr(0, 1) / 1 + 1) + ":00";
               }
-
+              return currentDate.format("H:mm");
             }
           } else {
             //add 6004 バイタル、モニタ画面のグラフの緑線不正、グラフ生成不正 赵 start
@@ -202,7 +213,9 @@
         monitorData: [],
         chartOptions: CHART_OPTIONS_TEMPLATE,
         startBef: null,
-        endAft: null
+        endAft: null,
+        chartDataScheduled: false,
+        pendingChartFrameId: null
       };
     },
     computed: {
@@ -218,10 +231,112 @@
       }
     },
     methods: {
+      scheduleCreateChartData() {
+        if (this.chartDataScheduled) {
+          return;
+        }
+        this.chartDataScheduled = true;
+        this.$nextTick(() => {
+          const win = typeof window !== "undefined" ? window : null;
+          const run = () => {
+            this.chartDataScheduled = false;
+            this.pendingChartFrameId = null;
+            this.createChartData();
+          };
+          if (win?.requestAnimationFrame) {
+            this.pendingChartFrameId = win.requestAnimationFrame(run);
+          } else {
+            setTimeout(run, 0);
+          }
+        });
+      },
+      isSameAxisDate(dateA, dateB) {
+        if (!dateA || !dateB) {
+          return false;
+        }
+        return dayjs(dateA).format("YYYYMMDD") === dayjs(dateB).format("YYYYMMDD");
+      },
+      shouldExtendAxisToCurrentDate(baseDate, currentDate) {
+        return this.isSameAxisDate(baseDate, currentDate);
+      },
+      setMonitorDataFromValue() {
+        // gridデータに影響がないように深いコピーを行う
+        this.monitorData = (Array.isArray(this.value) ? this.value : [])
+          .filter(e => !e.isNew)
+          .map(e => {
+            const monitor = new Monitor();
+            Object.assign(monitor, e);
+            return monitor;
+          });
+        // 経過時間はオブジェクト{initValue, editValue}のため、monitorDataをDBのデータ形式に変換する
+        this.monitorData.forEach(item => {
+          item.monitorData = item.convertMonitorDataForDb(item.monitorData, "editValue");
+        });
+      },
+      /**
+       * 透析開始/終了の縦線（Highcharts v12 は軸範囲外で非表示になるため force が必要）
+       */
+      applyDialysisPlotLines() {
+        const baseLine = {
+          color: 'green',
+          width: 2,
+          zIndex: 99,
+          force: true
+        };
+        const plotLines = [];
+        if (this.startDate != null) {
+          plotLines.push({
+            ...baseLine,
+            id: 'dialysis-start',
+            value: this.startDate.getTime()
+          });
+        }
+        if (this.endDate != null) {
+          plotLines.push({
+            ...baseLine,
+            id: 'dialysis-end',
+            value: this.endDate.getTime()
+          });
+        }
+        this.chartOptions.xAxis.plotLines = plotLines;
+      },
+      /**
+       * X軸の目盛り・縦グリッド・緑線を Highcharts v12 で確実に反映する
+       */
+      syncChartAxis(xShowArrs) {
+        this.$nextTick(() => {
+          const chart = this.$refs.monitorChart?.chart;
+          const xAxis = chart?.xAxis?.[0];
+          if (!xAxis || !xShowArrs?.length) {
+            return;
+          }
+          xAxis.update({
+            tickPositions: xShowArrs,
+            min: xShowArrs[0],
+            max: xShowArrs[xShowArrs.length - 1],
+            tickPixelInterval: 0,
+            gridLineWidth: 1,
+            gridLineColor: "#e6e6e6",
+            lineColor: X_AXIS_STROKE_COLOR,
+            lineWidth: 1,
+            tickColor: X_AXIS_STROKE_COLOR,
+            tickWidth: 1
+          }, false);
+          xAxis.removePlotLine('dialysis-start');
+          xAxis.removePlotLine('dialysis-end');
+          (this.chartOptions.xAxis.plotLines || []).forEach((plotLine) => {
+            xAxis.addPlotLine(plotLine, false);
+          });
+          chart.redraw(false);
+        });
+      },
       /**
        * グラフ用データ生成
        */
       createChartData() {
+        if (!this.graphDefine) {
+          return;
+        }
         const yAxis = [];
         const series = [];
 
@@ -469,7 +584,7 @@
         //     this.chartOptions.xAxis.tickPositions = xShowArrs;
         //   }
         // } else {
-        //   const beginDate = moment(new Date().getTime()).utc().valueOf();
+        //   const beginDate = dayjs(new Date().getTime()).utc().valueOf();
         //   if (this.isTimeSeries) {
         //     this.startDate = beginDate;
         //     xShowArrs[0] = beginDate;
@@ -546,8 +661,8 @@
         let tmpStartDate = this.startDate;
         let tmpEndDate = this.endDate;
         if ((this.rstDialysisState == 1 || this.rstDialysisState == 2) && this.monitorData.length <= 0) {
-          tmpStartDate = currentDate;
-          tmpEndDate = new Date(tmpStartDate.getTime() + 360 * 60 * 1000);
+          tmpStartDate = this.startDate || currentDate;
+          tmpEndDate = new Date(tmpStartDate.getTime() + DEFAULT_GRAPH_RANGE_MS);
           this.startBef = 0;
           if (tmpEndDate < this.endDate) {
             tmpEndDate = this.endDate;
@@ -557,15 +672,15 @@
         if ((this.rstDialysisState == 1 || this.rstDialysisState == 2) && this.monitorData.length > 0) {
           tmpStartDate = new Date(this.monitorData[0].occurDateUTC);
           if (this.monitorData.length == 1) {
-            tmpEndDate = new Date(tmpStartDate.getTime() + 360 * 60 * 1000);
+            tmpEndDate = new Date(tmpStartDate.getTime() + DEFAULT_GRAPH_RANGE_MS);
           } else if (this.monitorData.length > 1) {
-            if (this.monitorData[this.monitorData.length - 1].occurDateUTC < (tmpStartDate.getTime() + 360 * 60 * 1000)) {
-              tmpEndDate = new Date(tmpStartDate.getTime() + 360 * 60 * 1000);
+            if (this.monitorData[this.monitorData.length - 1].occurDateUTC < (tmpStartDate.getTime() + DEFAULT_GRAPH_RANGE_MS)) {
+              tmpEndDate = new Date(tmpStartDate.getTime() + DEFAULT_GRAPH_RANGE_MS);
             } else {
               tmpEndDate = new Date(this.monitorData[this.monitorData.length - 1].occurDateUTC);
             }
           }
-          if (tmpEndDate < currentDate) {
+          if (tmpEndDate < currentDate && this.shouldExtendAxisToCurrentDate(tmpStartDate, currentDate)) {
             tmpEndDate = currentDate;
           }
           if (tmpEndDate < this.endDate) {
@@ -586,7 +701,7 @@
                 this.startBef = 15;
               }
             }
-            initEndDateNum = (moment(tmpStartDate).utc().valueOf() - this.startBef * 60 * 1000) + 360 * 60 * 1000;
+            initEndDateNum = (dayjs(tmpStartDate).utc().valueOf() - this.startBef * 60 * 1000) + DEFAULT_GRAPH_RANGE_MS;
             if (this.monitorData[this.monitorData.length - 1].occurDateUTC < initEndDateNum) {
               tmpEndDate = new Date(initEndDateNum);
               this.endAft = 0;
@@ -594,7 +709,7 @@
               tmpEndDate = new Date(this.monitorData[this.monitorData.length - 1].occurDateUTC);
               this.endAft = 0;
             }
-            if (tmpEndDate < currentDate) {
+            if (tmpEndDate < currentDate && this.shouldExtendAxisToCurrentDate(tmpStartDate, currentDate)) {
               tmpEndDate = currentDate;
               this.endAft = 0;
             }
@@ -606,7 +721,7 @@
             if (this.startDate == null) {
               this.startBef = 0;
               tmpStartDate = currentDate;
-              initEndDateNum = tmpStartDate.getTime() + 360 * 60 * 1000;
+              initEndDateNum = tmpStartDate.getTime() + DEFAULT_GRAPH_RANGE_MS;
               tmpEndDate = new Date(initEndDateNum);
               this.endAft = 0;
               if (tmpEndDate < this.endDate) {
@@ -615,10 +730,10 @@
               }
             } else {
               this.startBef = 15;
-              initEndDateNum = (moment(tmpStartDate).utc().valueOf() - this.startBef * 60 * 1000) + 360 * 60 * 1000;
+              initEndDateNum = (dayjs(tmpStartDate).utc().valueOf() - this.startBef * 60 * 1000) + DEFAULT_GRAPH_RANGE_MS;
               tmpEndDate = new Date(initEndDateNum);
               this.endAft = 0;
-              if (tmpEndDate < currentDate) {
+              if (tmpEndDate < currentDate && this.shouldExtendAxisToCurrentDate(tmpStartDate, currentDate)) {
                 tmpEndDate = currentDate;
                 this.endAft = 0;
               }
@@ -641,7 +756,7 @@
                 this.startBef = 15;
               }
             }
-            initEndDateNum = (moment(tmpStartDate).utc().valueOf() - this.startBef * 60 * 1000) + 360 * 60 * 1000;
+            initEndDateNum = (dayjs(tmpStartDate).utc().valueOf() - this.startBef * 60 * 1000) + DEFAULT_GRAPH_RANGE_MS;
             if (this.monitorData[this.monitorData.length - 1].occurDateUTC < initEndDateNum) {
               tmpEndDate = new Date(initEndDateNum);
               this.endAft = 0;
@@ -657,12 +772,12 @@
             if (this.startDate == null) {
               this.startBef = 0;
               tmpStartDate = currentDate;
-              initEndDateNum = tmpStartDate.getTime() + 360 * 60 * 1000;
+              initEndDateNum = tmpStartDate.getTime() + DEFAULT_GRAPH_RANGE_MS;
               tmpEndDate = new Date(initEndDateNum);
               this.endAft = 0;
             } else {
               this.startBef = 15;
-              initEndDateNum = (moment(tmpStartDate).utc().valueOf() - this.startBef * 60 * 1000) + 360 * 60 * 1000;
+              initEndDateNum = (dayjs(tmpStartDate).utc().valueOf() - this.startBef * 60 * 1000) + DEFAULT_GRAPH_RANGE_MS;
               tmpEndDate = new Date(initEndDateNum);
               this.endAft = 0;
             }
@@ -685,7 +800,7 @@
               this.endAft = 0;
             }
             if((initEndDateNum - (tmpStartDate.getTime() - (this.startBef * 60 * 1000))) <= 345 * 60 * 1000){
-              initEndDateNum = tmpStartDate.getTime() - (this.startBef * 60 * 1000) + 360 * 60 * 1000;
+              initEndDateNum = tmpStartDate.getTime() - (this.startBef * 60 * 1000) + DEFAULT_GRAPH_RANGE_MS;
               tmpEndDate = new Date(initEndDateNum);
               this.endAft = 15;
               if (initEndDateNum > this.monitorData[this.monitorData.length - 1].occurDateUTC){
@@ -706,10 +821,10 @@
           }
         }
         // mod 2024-06-10 #10515 治療記録のバイタル/モニタに登録されているデータによってサーバーが高負荷となる shiyw start
-        // const beginDate = moment(tmpStartDate).utc().valueOf() - this.startBef * 60 * 1000;
-        // const lastDate = moment(tmpEndDate).utc().valueOf() + this.endAft * 60 * 1000;
-        const millisecondsOfBeginDate = moment(tmpStartDate).utc().valueOf();
-        const millisecondsOfEndDate = moment(tmpEndDate).utc().valueOf();
+        // const beginDate = dayjs(tmpStartDate).utc().valueOf() - this.startBef * 60 * 1000;
+        // const lastDate = dayjs(tmpEndDate).utc().valueOf() + this.endAft * 60 * 1000;
+        const millisecondsOfBeginDate = dayjs(tmpStartDate).utc().valueOf();
+        const millisecondsOfEndDate = dayjs(tmpEndDate).utc().valueOf();
         const beginDate = millisecondsOfBeginDate - this.startBef * 60 * 1000;
         let lastDate = millisecondsOfEndDate + this.endAft * 60 * 1000;
         // Highchartsタイムライン（X軸）最大240時間表示
@@ -751,6 +866,10 @@
           // xShowArrs[xShowArrs.length] = lastDate;
         }
         this.chartOptions.xAxis.tickPositions = xShowArrs;
+        this.chartOptions.xAxis.tickPixelInterval = 0;
+        this.chartOptions.xAxis.gridLineWidth = 1;
+        this.chartOptions.xAxis.labels.step = 1;
+        this.chartOptions.xAxis.labels.allowOverlap = true;
         // x軸の最小最大を設定
         if (this.chartOptions.series[0]) {
           this.chartOptions.series[0].data.unshift([xShowArrs[0], null]);
@@ -764,34 +883,13 @@
           ? tmpStartDate + this.startBef * 60 * 1000
           : null;
         // add FNSI-改修内容 monitorグラフ修正 房 end
-        if (this.startDate != null && this.endDate != null) {
-          this.chartOptions.xAxis.plotLines = [{
-            color: 'green',
-            value: this.startDate.getTime(),
-            width: 2
-          }, {
-            color: 'green',
-            value: this.endDate.getTime(),
-            width: 2
-          }];
-        } else if (this.startDate != null) {
-          this.chartOptions.xAxis.plotLines = [{
-            color: 'green',
-            value: this.startDate.getTime(),
-            width: 2
-          }];
-        } else if(this.endDate != null) {
-          this.chartOptions.xAxis.plotLines = [{
-            color: 'green',
-            value: this.endDate.getTime(),
-            width: 2
-          }];
+        if (this.startDate != null || this.endDate != null) {
+          this.applyDialysisPlotLines();
         }
+        this.syncChartAxis(xShowArrs);
 
         //mod 6004 バイタル、モニタ画面のグラフの緑線不正、グラフ生成不正 赵 end
-        const submenuMainHeight = document.getElementsByClassName(
-          "submenu-main"
-        )[0].clientHeight;
+        const submenuMainHeight = Number(getScopedElementsByClassName("submenu-main", this.$el || null)[0]?.clientHeight || 0);
 
         const chartHeight = (submenuMainHeight - 20) / 2 - 40;
         this.chartOptions.chart.height = chartHeight >= 250 ? chartHeight : 250;
@@ -800,7 +898,7 @@
         // const submenuMainWidth = document.getElementsByClassName(
         //   "highcharts-config"
         // )[0].clientWidth;
-        // const element = document.getElementsByClassName("monitorGraphView");
+        // const element = getScopedElementsByClassName("monitorGraphView", this.$el || null);
         // if (loopCnt > 13) {
         //   element[0].style.width = submenuMainWidth / 13 * loopCnt + 'px';
         // } else {
@@ -810,10 +908,8 @@
         //     element[0].style.width = (submenuMainWidth-1) + 'px';
         //   }
         // }
-        const submenuMainWidth = document.getElementsByClassName(
-          "highcharts-config"
-        )[0].clientWidth;
-        const element = document.getElementsByClassName("monitorGraphView");
+        const submenuMainWidth = Number(getScopedElementsByClassName("highcharts-config", this.$el || null)[0]?.clientWidth || 0);
+        const element = getScopedElementsByClassName("monitorGraphView", this.$el || null);
         if (loopCnt > (6*4)) {
           element[0].style.width = submenuMainWidth / 24 * loopCnt + 'px';
         } else {
@@ -832,7 +928,7 @@
         //del 6004 バイタル、モニタ画面のグラフの緑線不正、グラフ生成不正  赵 start
         //add FNSI-修正 redmine4844 房 start
         setTimeout(()=>{
-          let scrollRight = document.getElementsByClassName("highcharts-config");
+          let scrollRight = getScopedElementsByClassName("highcharts-config", this.$el || null);
           // mod 12409 治療状況リストから治療記録に遷移しサイドメニューから画面を開きパンくずリストの治療状況リストを押下すると画面遷移せずパンくずリストが消える zkm start
           // if (this.rstDialysisState <= 5) {
           if (this.rstDialysisState <= 5 && scrollRight.length > 0) {
@@ -871,47 +967,46 @@
        * グラフエリアのリサイズ
        */
       graphResize() {
-        this.createChartData();
+        this.scheduleCreateChartData();
       }
     },
     watch: {
-      value() {
-        // gridデータに影響がないように深いコピーを行う
-        this.monitorData = this.value
-          .filter(e => !e.isNew)
-          .map(e => {
-            const monitor = new Monitor();
-            Object.assign(monitor, e);
-            return monitor;
-          });
-        // 経過時間はオブジェクト{initValue, editValue}のため、monitorDataをDBのデータ形式に変換する
-        this.monitorData.forEach(item => {
-          item.monitorData = item.convertMonitorDataForDb(item.monitorData, "editValue");
-        });
-        this.createChartData();
+      value: {
+        handler() {
+          this.setMonitorDataFromValue();
+          this.scheduleCreateChartData();
+        },
+        immediate: true,
+        deep: true
       },
       chartScale() {
-        this.createChartData();
+        this.scheduleCreateChartData();
       },
       graphDefine() {
-        this.createChartData();
+        this.scheduleCreateChartData();
       },
       windowHeight() {
-        this.$nextTick(() => {
-          this.createChartData();
-        });
+        this.scheduleCreateChartData();
       },
       windowWidth() {
-        this.$nextTick(() => {
-          this.createChartData();
-        });
+        this.scheduleCreateChartData();
       }
     },
-    beforeDestroy() {
+    mounted() {
+      // this.setMonitorDataFromValue();
+      this.$nextTick(() => {
+        this.scheduleCreateChartData();
+      });
+    },
+    beforeUnmount() {
+      const win = typeof window !== "undefined" ? window : null;
+      if (this.pendingChartFrameId != null && win?.cancelAnimationFrame) {
+        win.cancelAnimationFrame(this.pendingChartFrameId);
+      }
       // dataの初期化
       Object.assign(this.$data, this.$options.data());
     },
-    destroyed() {
+    unmounted() {
       // グラフデータをクリア
       this.chartOptions.series.forEach(e => (e.data = []));
       // グラフ横軸緑線のクリア
@@ -923,5 +1018,9 @@
 <style scoped>
   .highcharts-config {
     overflow: auto;
+  }
+  :deep(.highcharts-axis.highcharts-xaxis .highcharts-axis-line),
+  :deep(.highcharts-axis.highcharts-xaxis .highcharts-tick) {
+    stroke: #ccd6eb;
   }
 </style>

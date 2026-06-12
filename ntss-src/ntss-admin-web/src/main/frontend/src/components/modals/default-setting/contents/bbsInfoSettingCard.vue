@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -98,12 +98,12 @@
 </template>
 
  <script>
-   import {mapGetters, mapActions} from "vuex";
+   import {mapGetters, mapActions} from "@/compat/vue/vuex";
    import {BBS_INFO, DATE_CHOICES} from "@/constants/defaultSettingConstants";
    import {deepCopy} from "@/functions/common/CommonFunctions";
    import {ApiHelper} from "@/apis/AxiosHelper";
    //add FNSI-5687 劉全航 start
-   import { EventBus } from "@/eventBus.js";
+   import { EventBus } from "@/compat/vue/event-bus.js";
    //add FNSI-5687 劉全航 end
 
    // 掲載日の選択肢
@@ -118,8 +118,6 @@ const uriRoomBedGroup = "/mstInfo/mstRoomBedGroup";
 const uriBbsKind = "/mstInfo/mstBbsKind";
 
 export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -361,9 +359,15 @@ export default {
         }
         if (this.editRecord[BBS_INFO.KEY_NAME_KUR] == null) {
           this.editRecord[BBS_INFO.KEY_NAME_KUR] = this.initialValue[BBS_INFO.KEY_NAME_KUR];
+        } else if (!this.mstKur.some(kur => kur.code === +this.editRecord[BBS_INFO.KEY_NAME_KUR])) {
+          // NOTE: マスタ削除された場合、「"" : すべて」を再設定
+          this.editRecord[BBS_INFO.KEY_NAME_KUR] = "";
         }
         if (this.editRecord[BBS_INFO.KEY_NAME_BED_GROUP_CD] == null) {
           this.editRecord[BBS_INFO.KEY_NAME_BED_GROUP_CD] = this.initialValue[BBS_INFO.KEY_NAME_BED_GROUP_CD];
+        } else if (!this.mstRoomBedGroup.some(rbg => +rbg.roomBedGroupCd === +this.editRecord[BBS_INFO.KEY_NAME_BED_GROUP_CD])) {
+          // NOTE: マスタ削除された場合、「"" : すべて」を再設定
+          this.editRecord[BBS_INFO.KEY_NAME_BED_GROUP_CD] = "";
         }
         if (this.editRecord[BBS_INFO.KEY_NAME_SHOW_ONLY_UNREAD] == null) {
           this.editRecord[BBS_INFO.KEY_NAME_SHOW_ONLY_UNREAD] = this.initialValue[BBS_INFO.KEY_NAME_SHOW_ONLY_UNREAD];
@@ -375,8 +379,6 @@ export default {
       this.isExpanded = this.defaultExpanded;
     });
   },
-  mounted() {
-  }
 };
 </script>
 

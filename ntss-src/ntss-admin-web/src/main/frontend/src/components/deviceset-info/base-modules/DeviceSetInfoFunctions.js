@@ -1,15 +1,22 @@
-import _ from "underscore";
+import _ from "@/compat/collections/lodash";
 import { ApiHelper } from "@/apis/AxiosHelper.js";
 import { DEVICE_TYPE_BP, DEVICE_TYPE_BV, DEVICE_TYPE_BVUFC, DEVICE_TYPE_CPRO, DEVICE_TYPE_DC, DEVICE_TYPE_DFAS, DEVICE_TYPE_DIA, DEVICE_TYPE_ECUM, DEVICE_TYPE_IAP, DEVICE_TYPE_IHDF, DEVICE_TYPE_NA, DEVICE_TYPE_OPE, DEVICE_TYPE_PRI, DEVICE_TYPE_QBQD, DEVICE_TYPE_UFR, DEVICE_TYPE_WAR, defaultDeviceInfo, valueInfoBp, valueInfoBv, valueInfoBvufc, valueInfoCpro, valueInfoDc, valueInfoDfas, valueInfoDia, valueInfoEcum, valueInfoIap, valueInfoIhdf, valueInfoNa, valueInfoOpe, valueInfoPri, valueInfoQbqd, valueInfoUfr, valueInfoWar } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
+
+function selectedPatIdParams(selectedPatId) {
+  return selectedPatId === null || selectedPatId === undefined || selectedPatId === ""
+    ? undefined
+    : { selectedPatId };
+}
 
 /**
  * @description 装置設定値(マスタ)取得
  * @param {String} facilityCd 施設コード
  * @returns {Object} 装置設定値オブジェクト
  */
-export const getDeviceSetInfoMst = async facilityCd => {
+export const getDeviceSetInfoMst = async (facilityCd, selectedPatId) => {
   const response = await ApiHelper.get(
-    `/deviceSetInfo/getDeviceSetInfoMst/${facilityCd}`
+    `/deviceSetInfo/getDeviceSetInfoMst/${facilityCd}`,
+    selectedPatIdParams(selectedPatId)
   ).catch(error => {
     throw new Error(error);
   });
@@ -22,31 +29,25 @@ export const getDeviceSetInfoMst = async facilityCd => {
  * @param {String} facilityCd 施設コード
  * @returns {Object} 装置設定値オブジェクト
  */
-// mod #12462 患者情報共有 Ji start
 export const getDeviceSetInfoPat = async (patId, facilityCd) => {
   const url = facilityCd
     ? `/deviceSetInfo/getDeviceSetInfoPat/${patId}/${facilityCd}`
     : `/deviceSetInfo/getDeviceSetInfoPat/${patId}`;
-  // const response = await ApiHelper.get(
-  //   `/deviceSetInfo/getDeviceSetInfoPat/${patId}/${facilityCd}`
-  // ).catch(error => {
-  //   throw new Error(error);
-  // });
   const response = await ApiHelper.get(url).catch(error => {
     throw new Error(error);
   });
   return response.data;
 };
-// mod #12462 患者情報共有 Ji end
 
 /**
  * @description 装置設定値(指示)取得
  * @param {Number} ordNo
  * @returns {Object} 装置設定値オブジェクト
  */
-export const getDeviceSetInfoOrd = async ordNo => {
+export const getDeviceSetInfoOrd = async (ordNo, selectedPatId) => {
   const response = await ApiHelper.get(
-    `/deviceSetInfo/getDeviceSetInfoOrd/${ordNo}`
+    `/deviceSetInfo/getDeviceSetInfoOrd/${ordNo}`,
+    selectedPatIdParams(selectedPatId)
   ).catch(error => {
     throw new Error(error);
   });
@@ -141,7 +142,7 @@ export const updateDeviceSetInfoOrd = async devInfo => {
      //}
    //);
 
-  const response  =await ApiHelper.post(`/deviceSetInfo/updateDeviceSetInfoOrd/`, devInfo).catch(
+  const response  =await ApiHelper.post(`/deviceSetInfo/updateDeviceSetInfoOrd`, devInfo).catch(
     error => {
       throw new Error(error);
     }
@@ -163,7 +164,7 @@ const mapEditable = (devInfo, devInfoDef, key1, ...key2List) => {
   for (const key2 of key2List) {
     // key1.key2.整数キーの値を定義に従って全て変換
     key2Objects[key2] = {
-      ..._.mapObject(devInfo[key1][key2], (value, key3) => {
+      ..._.mapValues(devInfo[key1][key2], (value, key3) => {
         const initValue =
           // DB値が存在しない場合は定義された初期値を設定
           value === null ? devInfoDef[key1][key2][key3].initValue : value;
@@ -359,9 +360,9 @@ const mapOrigin = (devInfo, key1, ...key2List) => {
     // key1.key2.整数キーの値を編集値のみにする
     key2Objects[key2] = {
       //mod #11120 I-HDF設定内の破棄確認メッセージ不正 張玲 start
-      // ..._.mapObject(devInfo[key1][key2], key3Obj => key3Obj.value.editValue)
-      ..._.mapObject(devInfo[key1][key2], key3Obj => {
-        if (key3Obj.hasOwnProperty("step")){
+      // ..._.mapValues(devInfo[key1][key2], key3Obj => key3Obj.value.editValue)
+      ..._.mapValues(devInfo[key1][key2], key3Obj => {
+        if (Object.prototype.hasOwnProperty.call(key3Obj, "step")){
           return Number(key3Obj.value.editValue);
         } else {
           return key3Obj.value.editValue;
@@ -510,7 +511,7 @@ export const mapDeviceSetInfoOrigin = (devInfo, devType, isEditedOnly) => {
  */
 const getDeviceSetInfoEdited = (devInfoEditable, devInfoOrigin) => {
   // 階層化JSONの取得
-  const devInfo = _.mapObject(devInfoOrigin, (editValue, key) =>
+  const devInfo = _.mapValues(devInfoOrigin, (editValue, key) =>
     typeof editValue === "object"
       ? getDeviceSetInfoEdited(devInfoEditable[key], editValue)
       : editValue

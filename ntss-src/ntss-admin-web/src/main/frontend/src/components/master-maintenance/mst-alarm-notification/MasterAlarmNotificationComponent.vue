@@ -213,8 +213,12 @@
             <td>{{ machineRecord.logClassName }}</td>
             <td>{{ machineRecord.targetModelName }}</td>
           </tr>
-          <tr></tr>
-          <tr></tr>
+          <tr>
+            <td colspan="5" style="padding: 0; border: none;"></td>
+          </tr>
+          <tr>
+            <td colspan="5" style="padding: 0; border: none;"></td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -222,8 +226,8 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import {EventBus} from "@/eventBus";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import MachineRecordSearchComponent from "@/components/master-maintenance/mst-alarm-notification/MachineRecordSearchComponent";
 import Schedule from "@/models/master-maintenance/mst-alarm-notification/Schedule";
@@ -235,7 +239,8 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 import TimeInput from "@/components/common/TimeInput.vue";
 //#5590 2023/04/18 ×を常に表示するように修正 張博 end
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_警報通知マスタ 張玲 2024/01/05 start
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import { getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_警報通知マスタ 張玲 2024/01/05 end
 export default {
   name: "MstAlarmNotification",
@@ -373,7 +378,7 @@ export default {
      * Stickyな一覧のヘッダのtop位置を計算する
      */
     calculateStickyTop() {
-      const height = document.getElementById("machine-record-search-area").clientHeight;
+      const height = getScopedElementById("machine-record-search-area", this.$el || this)?.clientHeight || 0;
       this.stickeyTop = height - 1;
     },
     // 「全選択」チェックボックス押下時の処理
@@ -456,8 +461,9 @@ export default {
       }
     },
     setSmsTel (value) {
-      if(value === "" || !isNaN(Number(value)) && document.getElementsByClassName("custom-input-invalid")[0])
-      document.getElementsByClassName("custom-input-invalid")[0].classList.remove("custom-input-invalid");
+      const invalidInput = getScopedElementsByClassName("custom-input-invalid", this.$el || this)[0];
+      if(value === "" || !isNaN(Number(value)) && invalidInput)
+      invalidInput.classList.remove("custom-input-invalid");
     },
     mappingToSendMachine() {
       const notification = this.convertToDestinationJson();
@@ -577,7 +583,7 @@ export default {
         return true;
       }
       if (!validationResult.smsTelValid) {
-        document.getElementsByClassName("custom-input-required")[0]?.classList?.add("custom-input-invalid");
+        getScopedElementsByClassName("custom-input-required", this.$el || this)[0]?.classList?.add("custom-input-invalid");
       }
       // メッセージ組み立て
       // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
@@ -824,7 +830,7 @@ export default {
     }, 200);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("setMachineRecordList", this.setMachineRecordList);
     this.conditionsClear();
   }
@@ -845,7 +851,7 @@ export default {
 .header-input {
   width: 57%;
 }
-.header-input-alarm-name-wrapper >>> ons-input .text-input {
+.header-input-alarm-name-wrapper :deep(ons-input .text-input) {
   font-size: 1.0em;
   height: 2em;
   min-height: 25px;
@@ -927,7 +933,7 @@ tr {
   display: flex;
   align-items: center;
 }
-.selectbox >>> .select-input {
+.selectbox :deep(.select-input) {
   font-size: 1.0em;
   line-height: unset;
 }

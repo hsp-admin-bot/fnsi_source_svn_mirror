@@ -2,11 +2,12 @@ package utils;
 
 import batch.ApplicationConst;
 import batch.listener.JobStartEndLIstener;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -57,10 +58,11 @@ public class BbsInfoService {
    *
    * @return s3 S3オブジェクト
    */
-  @Autowired
-  private AwsConfiguration awsS3;
-  private AmazonS3 s3() {
-    return awsS3.s3();
+    @Autowired
+  private S3Client s3Client;
+
+  private S3Client s3() {
+    return s3Client;
   }
 
   /**
@@ -321,7 +323,7 @@ public class BbsInfoService {
 
 
         // S3アップロード
-        s3().putObject(new PutObjectRequest(s3Bucket, s3Path, uploadFile));
+        s3().putObject(PutObjectRequest.builder().bucket(s3Bucket).key(s3Path).build(), RequestBody.fromFile(uploadFile));
       }
     } catch (Exception ex) {
 
@@ -430,7 +432,7 @@ public class BbsInfoService {
         }
       } else {
         try {
-          s3().deleteObject(new DeleteObjectRequest(s3BucketInFcd, path));
+          s3().deleteObject(DeleteObjectRequest.builder().bucket(s3BucketInFcd).key(path).build());
         } catch (Exception e) {
           e.printStackTrace();
           String info = String.format("deleteObject無効。Status[%s],localStore[%s],S3Bucket[%s],S3ファイル[%s]"

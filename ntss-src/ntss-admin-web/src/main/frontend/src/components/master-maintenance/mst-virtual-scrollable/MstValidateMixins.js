@@ -1,11 +1,17 @@
 import { isEmpty } from "@/utils/util.js";
-import { mapActions, mapState } from "vuex";
+import { mapActions, mapState } from "@/compat/vue/vuex";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
 import { messageFormat } from "@/functions/common/MessageFormat";
 import { MSG_SETTING_REFLECTION } from "@/constants/masterMaintenanceConstants";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
-import cloneDeep from 'lodash/cloneDeep';
+import cloneDeep from '@/compat/collections/lodash/cloneDeep';
+import {
+  getKendoDataSourceCollection,
+  getKendoDataSourceItems,
+  removeKendoDataSourceItem,
+  toKendoDataSourcePlainItems,
+} from "@/functions/common/KendoFunctions";
 export default {
   computed: {
     ...mapState("mst-job", ["isEditAuthority", "isMenuSettings", "isDefaultDispSettings", "isDefaultNotificationSettings"]),
@@ -19,7 +25,7 @@ export default {
   ...mapActions("account-edit", ["getUserAccountInfo"]),
    async handleValidate (callback) {
       const fieldMapping = this.requiredFields.map(field => this.fieldsMap.get(field));
-      const data = this.gridData.data();
+      const data = getKendoDataSourceItems(this.gridData);
       const validateRequired = [];
       const fieldSet = new Set();
       data.forEach((item) => {
@@ -43,8 +49,8 @@ export default {
       }
       if (callback) {
         let classiFicationFlg = false;
-        const data = cloneDeep(this.gridData.data());
-        const dataForIsDisp = data.toJSON().filter((item) => {
+        const data = cloneDeep(getKendoDataSourceCollection(this.gridData));
+        const dataForIsDisp = toKendoDataSourcePlainItems(data).filter((item) => {
           return item.isDisp === "1";
         });
         let examItemFalg = true;
@@ -52,12 +58,12 @@ export default {
         for(let i = data.length - 1; i >= 0; i--) {
           const item = data.at(i);
           if (item.isNew() && item.sortRank === 0) { // 未編集の空白行の削除
-            this.gridData.remove(item);
+            removeKendoDataSourceItem(this.gridData, item);
           }
           if (item.dirty && !item.isNew() && !item.isImport) {
             hasEditedRow = true;
             if (['mst_medicine_class', 'mst_equipment_class', 'mst_equipment', 'mst_medicine', 'mst_medicine_mix'].includes(this.masterPhysicalName) &&
-            (item.dirtyFields.hasOwnProperty("classCd") || item.dirtyFields.hasOwnProperty("classType"))) {
+            (Object.prototype.hasOwnProperty.call(item.dirtyFields, "classCd") || Object.prototype.hasOwnProperty.call(item.dirtyFields, "classType"))) {
               classiFicationFlg = true;
             }
           }
@@ -96,7 +102,7 @@ export default {
                     defaultNotificationSettings: item.defaultNotificationSettings
                   };
                 });
-                const initData = this.originalDataSource.toJSON().map((item) => {
+                const initData = toKendoDataSourcePlainItems(this.originalDataSource).map((item) => {
                   return {
                     jobCd: item.code,
                     defaultAuthorizedAuthorities: item.defaultAuthorizedAuthorities?.split(",") || [],
@@ -113,7 +119,7 @@ export default {
                 let notHasDelAuthFlg = initData.every((item) => {
                   const defaultAuthorizedAuthorities = item.defaultAuthorizedAuthorities;
                   const defaultMenuFunctions = item.defaultMenuSettings.default_menu_functions;
-                  if (requestObject.hasOwnProperty(item.jobCd)) {
+                  if (Object.prototype.hasOwnProperty.call(requestObject, item.jobCd)) {
                     let requestItem = requestObject[item.jobCd];
                     const includeAllAuth = defaultAuthorizedAuthorities.every(auth => requestItem.defaultAuthorizedAuthorities?.includes(auth));
                     const includeAllFunc = defaultMenuFunctions.every(func => requestItem.defaultMenuFunctions?.includes(func));
@@ -121,32 +127,6 @@ export default {
                   }
                   return true;
                 });
-                // add #9386 施設設定マスタNo64で有効として権限を編集しても対象のアカウントが強制サインアウトされない dengshen start
-                // if (this.PERMISSION_CHANGE_SIGNOUT && !notHasDelAuthFlg) {
-                //   await this.$ons.notification.confirm({
-                //     title: DIALOG_MESSAGES[13000157].title,
-                //     message: MSG_SETTING_REFLECTION,
-                //     callback: async (answer) => {
-                //       if (answer === 1) {
-                //         await ApiHelper.put("/mstInfo/updMstJobAuthorities", requestArr)
-                //         .catch(error => {
-                //           getErrorMessage('MstJobMainComponent.vue', 'saveRecord', error);
-                //           this.$ons.notification.alert({
-                //             title: DIALOG_MESSAGES["00300005"].title,
-                //             message: error.response.data.errorMessage
-                //           });
-                //         });
-                //         callback();
-                //       } else {
-                //         this.setIsEditAuthority(this.isEditAuthorityBak);
-                //         this.setIsMenuSettings(this.isMenuSettingsBak);
-                //         return;
-                //       }
-                //     }
-                //   });
-                // } else {
-                //   callback();
-                // }
                 let changeFlg = true;
                 if (this.PERMISSION_CHANGE_SIGNOUT && !notHasDelAuthFlg) {
                   await this.$ons.notification.confirm({
@@ -159,7 +139,7 @@ export default {
                         this.setIsDefaultDispSettings(false);
                         this.setIsDefaultNotificationSettings(false);
                         changeFlg = false;
-                        this.$refs.grid.kendoWidget().cancelChanges();
+                        this.$refs.grid?.gridWidget?.()?.cancelChanges?.() || this.$refs.grid?.kendoWidget?.()?.cancelChanges?.();
                         this.isNotChanged = true;
                       }
                     }
@@ -171,7 +151,7 @@ export default {
                       this.getUserAccountInfo(); // 更新されたアカウント情報取得
                     })
                     .catch(error => {
-                      getErrorMessage('MstJobMainComponent.vue', 'saveRecord', error);
+                      getErrorMessage('MstValidateMixins.js', 'saveRecord', error);
                       this.$ons.notification.alert({
                         title: DIALOG_MESSAGES["00300005"].title,
                         message: error.response.data.errorMessage

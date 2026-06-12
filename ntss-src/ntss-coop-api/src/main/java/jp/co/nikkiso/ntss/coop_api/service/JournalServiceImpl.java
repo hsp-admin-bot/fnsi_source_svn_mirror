@@ -65,7 +65,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.core.type.TypeReference;
 
 import jp.co.nikkiso.ntss.api.constant.ReportConstant;
 import jp.co.nikkiso.ntss.api.constant.ReportConstant.ReportDataKey;
@@ -158,6 +158,7 @@ import lombok.Setter;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 @Service
@@ -358,6 +359,10 @@ public class JournalServiceImpl implements JournalService {
   @Autowired
   private MstReportDao mstReportDao;
 
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
+
   // add #9348 治療方法マスタに紐づけられているレポートレイアウトが削除されていると帳票作成に失敗する end
   /**
    * レポート管理用内部クラス
@@ -388,7 +393,7 @@ public class JournalServiceImpl implements JournalService {
   public JournalServiceImpl() {
     HttpComponentsClientHttpRequestFactory clientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory();
     clientHttpRequestFactory.setReadTimeout(0);
-    clientHttpRequestFactory.setConnectTimeout(0);
+    clientHttpRequestFactory.setConnectionRequestTimeout(0);
     restTemplate = new RestTemplate(clientHttpRequestFactory);
   }
 
@@ -2688,7 +2693,7 @@ public class JournalServiceImpl implements JournalService {
 //        wheresSys.append(" ctl_no = " + curSysCoopNoCtlNo + "\n");
 //
 //        // logCommon設定
-//        DataUpdateLogCommonNew logCommonSys = getLogCommon(sysCoopNoDao, tableNameSys, wheresSys, getEventLogMessage());
+//        DataUpdateLogCommonNew logCommonSys = getLogCommon(tableNameSys, wheresSys, getEventLogMessage());
 //        // ログ出力カラム情報及び更新前データ情報取得
 //        boolean setResultSys = logCommonSys.setInfo();
 //        // DB更新ログ出力ロジック wangzuo End
@@ -2704,9 +2709,7 @@ public class JournalServiceImpl implements JournalService {
 //          logCommonSys.updateLog();
 //        }
 //        // DB更新ログ出力ロジック wangzuo End
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260401 del yangxuewang end
-
-        // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260401 del yangxuewang start
+//
 //        // DB更新ログ出力ロジック wangzuo Start
 //        String tableNameOrd = "ord_coop_no";
 //        // SQL検索条件
@@ -2727,7 +2730,7 @@ public class JournalServiceImpl implements JournalService {
 //        wheresOrd.append(" coop_ord_no = '" + coopOrdNo + "'\n");
 //
 //        // logCommon設定
-//        DataUpdateLogCommonNew logCommonOrd = getLogCommon(ordCoopNoDao, tableNameOrd, wheresOrd, getEventLogMessage());
+//        DataUpdateLogCommonNew logCommonOrd = getLogCommon(tableNameOrd, wheresOrd, getEventLogMessage());
 //        // ログ出力カラム情報及び更新前データ情報取得
 //        boolean setResultOrd = logCommonOrd.setInfo();
 //        // DB更新ログ出力ロジック wangzuo End
@@ -3919,11 +3922,11 @@ public class JournalServiceImpl implements JournalService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

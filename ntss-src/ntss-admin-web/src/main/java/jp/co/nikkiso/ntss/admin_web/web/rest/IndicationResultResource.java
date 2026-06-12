@@ -4,8 +4,10 @@ import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.indicationResult.IndicationResultService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
+import jp.co.nikkiso.ntss.core.dao.MstExamSetDao;
 import jp.co.nikkiso.ntss.core.entity.IndicationResult;
 import jp.co.nikkiso.ntss.core.entity.ForecastInforResult;
+import jp.co.nikkiso.ntss.core.entity.MstExamSet;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -31,6 +33,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 
 /**
@@ -53,6 +56,10 @@ public class IndicationResultResource {
   @Autowired
   LogEventUtils logEventUtils;
   // wp アプリケーションログの適正化 Add End
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Autowired
+  MstExamSetDao mstExamSetDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
   /**
    * 予実リスト取得.
@@ -121,7 +128,24 @@ public class IndicationResultResource {
    */
   @GetMapping("/{examSetCd}")
   public ResponseEntity<?> getObtainedInspectionItems(
-    @PathVariable List<String> examSetCd) {
+    @PathVariable List<String> examSetCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    // 与患者共有冲突，暂时注释掉
+    /*if(!ntssUser.isNkkAdminUser()) {
+      for (String examSetCdValue : examSetCd) {
+        MstExamSet mstExamSet = mstExamSetDao.selectExamSetByCd(Long.valueOf(examSetCdValue));
+        String facilityCd = mstExamSet.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }*/
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = AdminWebConstant.Uri.INDICATION_RESULT;
@@ -236,7 +260,34 @@ public class IndicationResultResource {
 
   // add FNSI-改修内容 治療単位の治療方法マスタの有効項目に応じた表示 dou start
   @GetMapping("/getTreatmentConditionSetting/{facilityCd}/{treatmentName}")
-  public ResponseEntity<?> getTreatmentConditionSetting(@PathVariable String facilityCd, @PathVariable String treatmentName) {
+  public ResponseEntity<?> getTreatmentConditionSetting(@PathVariable String facilityCd,
+                                                        @PathVariable String treatmentName,
+                                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                        @AuthenticationPrincipal NtssUser ntssUser
+                                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "treatmentName=" + treatmentName + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    try{
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }catch (Exception ignored) {
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = AdminWebConstant.Uri.INDICATION_RESULT + "/getTreatmentConditionSetting";

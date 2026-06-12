@@ -36,7 +36,7 @@
           <div class="col-2 col-text">
             <span>
               {{ modalDetailsCondition.curDownload }} /
-              {{ this.getPreviousMaxDownload }}</span
+              {{ getPreviousMaxDownload }}</span
             >
           </div>
         </v-ons-col>
@@ -99,7 +99,7 @@
                 type="date"
                 ref="afterTarget"
                 v-if="false"
-                v-model="this.now"
+                v-model="now"
                 float
               ></v-ons-input>
             </div>
@@ -147,9 +147,9 @@
               input-id="cl-pwd"
               name="facilityPassword"
               maxlength="40"
-              v-model="modalDetailsCondition.facilityPassword"
+              v-model="Passwordfacility"
               ref="Passwordfacility"
-              v-validate="this.clPasswordCondition"
+              v-validate="clPasswordCondition"
               float
             ></v-ons-input>
           </div>
@@ -165,7 +165,7 @@
         </div>
       </v-ons-row>
       <!-- 証明書のパスワード -->
-      <v-ons-row v-show="this.getIsUpdate === false">
+      <v-ons-row v-show="getIsUpdate === false">
         <v-ons-col>
           <div class="col-1">
             <label id="cl-pwd-label" for="cl-pwd">証明書PW</label>
@@ -175,10 +175,10 @@
               input-id="cl-pwd"
               name="passwordCl"
               maxlength="40"
-              v-model="modalDetailsCondition.passwordCl"
+              v-model="Clpassword"
               ref="Clpassword"
               @keydown.enter="addCL"
-              v-validate="this.clPasswordCondition"
+              v-validate="clPasswordCondition"
               float
             ></v-ons-input>
           </div>
@@ -212,7 +212,7 @@
               v-model="clPassword"
               ref="passwordCl"
               @keydown.enter="setFocus('pwd-confirm')"
-              v-validate="this.clPasswordCondition"
+              v-validate="clPasswordCondition"
               float
             ></v-ons-input>
           </div>

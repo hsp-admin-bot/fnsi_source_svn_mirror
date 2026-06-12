@@ -20,6 +20,7 @@ import jp.co.nikkiso.ntss.core.utils.NtssUtils;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -68,7 +69,7 @@ public class WebApiCallCommonUtil {
    */
   final class NoProcResponseErrorHandler extends DefaultResponseErrorHandler {
     @Override
-    public void handleError(ClientHttpResponse response) throws IOException {
+    public void handleError(URI url, HttpMethod method, ClientHttpResponse response) throws IOException {
       // なにもしない→HttpStatusが異常値でも例外を発生させない
     }
   }
@@ -124,7 +125,7 @@ public class WebApiCallCommonUtil {
       long start = System.currentTimeMillis();
       // リクエスト処理
       ResponseEntity<String> response = rt.exchange(request, String.class);
-      status = response.getStatusCode();
+      status = HttpStatus.valueOf(response.getStatusCode().value());
       // log start
       long cost = System.currentTimeMillis() - start;
       Map<String, Object> map = new HashMap<>();
@@ -180,7 +181,7 @@ public class WebApiCallCommonUtil {
       throws URISyntaxException, RuntimeException {
     if (notificationNo == null || replaceData == null) {
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      return new ResponseEntity<>("通知メッセージ情報が不正な値です。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("通知メッセージ情報が不正な値です。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     String addUri = "/notificationReciever";
     JSONObject jsonBody = new JSONObject();
@@ -212,7 +213,7 @@ public class WebApiCallCommonUtil {
 //   */
 //  public ResponseEntity<String>  calculationAddition(AdditionCalculationRequest request) throws URISyntaxException,RuntimeException {
 //    if (request == null) {
-//      return new ResponseEntity<>("リクエストパラメータが不正な値です。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//      return new ResponseEntity<>("リクエストパラメータが不正な値です。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //    }
 //    String addUri = "/calculation";
 //    JSONObject jsonBody = new JSONObject();
@@ -269,7 +270,7 @@ public class WebApiCallCommonUtil {
   public ResponseEntity<String>  updateExamResultCalc(List<Long> examMainCd) throws URISyntaxException,RuntimeException {
     if (examMainCd == null) {
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      return new ResponseEntity<>("検査結果コードが不正な値です。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("検査結果コードが不正な値です。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     String addUri = "/updateExamResultCalc";
     JSONObject jsonBody = new JSONObject();

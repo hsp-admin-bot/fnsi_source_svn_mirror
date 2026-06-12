@@ -1,6 +1,7 @@
 <template>
   <div class="main-area">
     <table class="machine-area">
+      <tbody>
       <tr>
         <td class="bed-name-area">
           ベッド名
@@ -173,12 +174,13 @@
         </td>
       </tr>
 
+      </tbody>
     </table>
   </div>
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper.js";
 import { mstPrinterSelector } from "@/functions/mst/MstGetters.js";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
@@ -212,9 +214,7 @@ export default {
      * @description 他のベッドマスタに設定されている装置のコードリスト
      */
     selectedMachineNoList() {
-      // add #12696 ベッドマスタ画面で不正2件 tianqidong start
       return this.getMasterRecordList.data.map(machine => this.normalizeMachineNoOptionValue(machine.machineNo));
-      // add #12696 ベッドマスタ画面で不正2件 tianqidong end
     },
     /**
      * @description 選択可能な装置のリスト
@@ -252,7 +252,7 @@ export default {
           !this.selectedMachineNoList.includes(machine.value) ||
           machine.value === this.selectingMachineNo
       );
-      const isNull = filteredList.find(item => item.value === null);
+      const isNull = filteredList.find(item => item.value === "");
       if (!isNull) {
         filteredList = [{ value: "", text: "未登録" }, ...filteredList];
       }
@@ -306,12 +306,8 @@ export default {
     }
   },
   async created() {
-    // async created は await 前に mounted・初回描画が走るため、clone を先に同期しておかないと
-    // getEditRecord_clone が {} のまま handleJudgeEdited が全項目を「変更済み」とみなし緑枠が一瞬付く
     this.getEditRecord_clone = JSON.parse(JSON.stringify(this.getEditRecord || {}));
-    // add #12696 ベッドマスタ画面で不正2件 tianqidong start
     this.selectingMachineNo = this.normalizeMachineNoOptionValue(this.getEditRecord.machineNo);
-    // add #12696 ベッドマスタ画面で不正2件 tianqidong end
     const [mstMachine, mstPrinter] = await Promise.all([
       // mod マスタ一覧 1･施設切替を可能とする 孔s start
       // ApiHelper.get(`/bed_layout/mst_machine/${this.facilityCd}`),
@@ -328,7 +324,6 @@ export default {
     this.mstMachine = mstMachine.data;
     this.mstPrinter = mstPrinter;
     this.hasMstData = true;
-    // add #12696 ベッドマスタ画面で不正2件 tianqidong start
     const isNewRecord =
       this.getEditRecord.operation === 1 ||
       !this.getMasterRecordList.data.some(record => record.code === this.getEditRecord.code);
@@ -354,12 +349,10 @@ export default {
         this.setBedInHospitalCd2(null);
       }
     }
-    // 新規行のデフォルト適用後に clone を再同期（既存行は先頭の clone で十分）
     this.getEditRecord_clone = JSON.parse(JSON.stringify(this.getEditRecord));
   },
   methods: {
     ...mapActions("master-maintenance", ["setEditRecord"]),
-    // add #12696 ベッドマスタ画面で不正2件 tianqidong start
     normalizeMachineNoStoreValue(value) {
       if (value === null || value === undefined || value === "" || value === "null") {
         return "";
@@ -372,18 +365,15 @@ export default {
         ? ""
         : `${value}`;
     },
-    // add #12696 ベッドマスタ画面で不正2件 tianqidong end
 
     /**
      * @description ドロップダウン値設定
      */
     setDropValue(key, value) {
-      // add #12696 ベッドマスタ画面で不正2件 tianqidong start
       const editValue =
         key === "machineNo"
           ? this.normalizeMachineNoStoreValue(value)
           : (value === "" ? null : value);
-      // add #12696 ベッドマスタ画面で不正2件 tianqidong end
       // 編集中マスタを更新
       this.setEditRecord({ ...this.getEditRecord, [key]: editValue });
     },
@@ -414,7 +404,6 @@ export default {
       this.setEditRecord({ ...this.getEditRecord, inHospitalCd2 });
     },
     setEditValue(value, key = null) {
-      // add #12696 ベッドマスタ画面で不正2件 tianqidong start
       if (key === "machineNo") {
         return this.normalizeMachineNoOptionValue(value);
       }
@@ -422,7 +411,6 @@ export default {
         value === null || value === undefined || value === "null"
           ? ""
           : value;
-      // add #12696 ベッドマスタ画面で不正2件 tianqidong end
       return editValue;
     },
     handleJudgeEdited (val, key) {
@@ -493,9 +481,15 @@ export default {
   text-align: left;
 }
 
-::v-deep .custom-input-edited{
+:deep(.custom-input-edited){
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;
+}
+:deep(.k-textbox){
+  width: 99%;
+  height: 2.15em;
+  border: 1px solid #dededf;
+  border-radius: 4px;
 }
 </style>

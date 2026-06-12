@@ -1,3 +1,14 @@
+function isSameHistoryEntry(left, right) {
+  return String(left?.depth ?? "") === String(right?.depth ?? "")
+    && String(left?.title ?? "") === String(right?.title ?? "")
+    && String(left?.routerName ?? "") === String(right?.routerName ?? "")
+    && String(left?.historyKey ?? "") === String(right?.historyKey ?? "");
+}
+
+function cloneHistoryList(historyList) {
+  return Array.isArray(historyList) ? historyList.map((item) => ({ ...item })) : [];
+}
+
 /**
  * パンくずリスト制御情報Store
  */
@@ -13,7 +24,7 @@ export default {
     popstate: false,
     // add #8043 2022/10/26 【デグレ】ブラウザバックするとパンくずリストに追加される dou end
     fromName: '',
-	hisData:[]
+    hisData: []
   },
   mutations: {
     // add #8043 2022/10/26 【デグレ】ブラウザバックするとパンくずリストに追加される dou start
@@ -38,36 +49,54 @@ export default {
 
     // アクセス履歴追加
     addHistory(state, { depth, title, routerName, historyKey }) {
-      // パラメータで指定された階層(depth)以降を履歴より削除
-      state.accessHistory.some((v, i) => {
-        if (v.depth >= depth)
-          state.accessHistory.splice(i, state.accessHistory.length - i);
-      });
-      // アクセス履歴追加
-      state.accessHistory.push({
+      const nextHistory = {
         depth,
         title,
         routerName,
         historyKey
-      });
+      };
+
+      // パラメータで指定された階層(depth)以降を履歴より削除
+      const replaceIndex = state.accessHistory.findIndex((v) => v.depth >= depth);
+      if (replaceIndex >= 0) {
+        const existing = state.accessHistory[replaceIndex];
+        if (replaceIndex === state.accessHistory.length - 1 && isSameHistoryEntry(existing, nextHistory)) {
+          return;
+        }
+        state.accessHistory.splice(replaceIndex, state.accessHistory.length - replaceIndex);
+      }
+
+      const lastHistory = state.accessHistory[state.accessHistory.length - 1];
+      if (isSameHistoryEntry(lastHistory, nextHistory)) {
+        return;
+      }
+
+      // アクセス履歴追加
+      state.accessHistory.push(nextHistory);
     },
 
     // アクセス保持履歴追加(フッター以外から遷移)
     addKeepHistory(state, { depth, title, routerName, historyKey }) {
-      // アクセス履歴追加
-      state.accessKeepHistory.push({
+      const nextHistory = {
         depth,
         title,
         routerName,
         historyKey
-      });
+      };
+      const lastHistory = state.accessKeepHistory[state.accessKeepHistory.length - 1];
+      if (isSameHistoryEntry(lastHistory, nextHistory)) {
+        return;
+      }
+      // アクセス履歴追加
+      state.accessKeepHistory.push(nextHistory);
     },
-    sethisData(state,history){
-      state.hisData = history
+
+    sethisData(state, history) {
+      state.hisData = history;
     },
 
     setKeepHistory(state, keepHistory) {
-      state.accessKeepHistory = keepHistory;
+      state.accessKeepHistory = cloneHistoryList(keepHistory);
     },
 
     // タイトルをリセットする
@@ -95,9 +124,7 @@ export default {
     getKeepHistory(state) {
       return state.accessKeepHistory;
     },
-	gethisData(state){
-      return state.hisData
-    },
+
     // 指定された階層のタイトルを取得
     getTitle: state => depth => {
       const e = state.accessHistory.find(e => {
@@ -107,6 +134,9 @@ export default {
     },
     getFromName(state) {
       return state.fromName;
+    },
+    gethisData(state) {
+      return state.hisData;
     },
   },
   actions: {
@@ -172,6 +202,7 @@ export default {
     setKeepHistory({ commit }, keepHistory) {
       commit("setKeepHistory", keepHistory);
     },
+
     sethisData({ commit }, history) {
       commit("sethisData", history);
     },

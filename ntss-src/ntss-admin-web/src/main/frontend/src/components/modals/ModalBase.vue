@@ -35,8 +35,9 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from "vuex";
+import { mapState, mapGetters } from "@/compat/vue/vuex";
 import UserAuthorityMixin from "@/components/common/UserAuthorityMixin";
+import { getContentContainerElement, getScopedElementById, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   mixins: [UserAuthorityMixin],
@@ -61,37 +62,59 @@ export default {
     },
     //  add #6449 アカウント情報で、2要素認証未登録の状態で秘密鍵作成ボタンを押下した際、画面最下部へとスクロールさせる 付 start
     scrollToBottom () {
-      const div = document.getElementById('scrollbody')
-      div.scrollTo(0, div.scrollHeight - div.clientHeight)
-    }
+      const div = getScopedElementById('scrollbody', this.$el || null);
+      if (div) {
+        div.scrollTo(0, div.scrollHeight - div.clientHeight);
+      }
+    },
+    getPrintContentContainer() {
+      return getContentContainerElement(this.$el || null);
+    },
     //  add #6449 アカウント情報で、2要素認証未登録の状態で秘密鍵作成ボタンを押下した際、画面最下部へとスクロールさせる 付 end
   },
   mounted() {
     // 利用権限がない場合入力部品を操作不可にする
     this.authorityCds = this.getAuthorityCds();
     this.disableElement(this.$el);
-    
-    // ハンドラをインスタンスに保持（remove用）
-    // window.onbeforeprint、window.onafterprintは処理を上書きしてしまうので使用しない
-    this._handleBeforePrintModal = () => {
-      // 印刷不要な要素を非表示にする
-      document.getElementsByClassName("content-container")[0].style.display = "none";
+    const ownerWindow = getScopedWindow(this.$el || null);
+    this._printOwnerWindow = ownerWindow;
+    this._previousOnBeforePrint = ownerWindow?.onbeforeprint || null;
+    this._previousOnAfterPrint = ownerWindow?.onafterprint || null;
+    if (!ownerWindow) {
+      return;
+    }
+    ownerWindow.onbeforeprint = () => {
+      this._previousOnBeforePrint?.();
+      //印刷不要な要素を非表示にする
+      const contentContainer = this.getPrintContentContainer();
+      if (contentContainer) {
+        contentContainer.style.display = 'none';
+      }
     };
-    this._handleAfterPrintModal = () => {
-      // 元に戻す
-      document.getElementsByClassName("content-container")[0].style.display = "";
+    ownerWindow.onafterprint = () => {
+      //隠し要素を放す
+      const contentContainer = this.getPrintContentContainer();
+      if (contentContainer) {
+        contentContainer.style.display = 'block';
+      }
+      this._previousOnAfterPrint?.();
     };
     window.addEventListener("beforeprint", this._handleBeforePrintModal);
     window.addEventListener("afterprint", this._handleAfterPrintModal);
   },
-  beforeDestroy () {
-    window.removeEventListener("beforeprint", this._handleBeforePrintModal);
-    window.removeEventListener("afterprint", this._handleAfterPrintModal);
+  beforeUnmount () {
+    const ownerWindow = this._printOwnerWindow || getScopedWindow(this.$el || null);
+    if (ownerWindow) {
+      ownerWindow.onbeforeprint = this._previousOnBeforePrint || null;
+      ownerWindow.onafterprint = this._previousOnAfterPrint || null;
+    }
+    this._printOwnerWindow = null;
   }
 };
 </script>
 
 <style scoped>
+@import "../../assets/styles/modal.css";
 /*
  * TODO 以下のように、cssのパスをエイリアスで設定できるようにしたい。
  * @import "@/assets/styles/modal.css";
@@ -99,5 +122,4 @@ export default {
  * webpackでエイリアスを設定すればできそう。
  * https://vue-loader-v14.vuejs.org/ja/configurations/asset-url.html
  */
-@import "../../assets/styles/modal.css";
 </style>

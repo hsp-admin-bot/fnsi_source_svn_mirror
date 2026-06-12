@@ -15,7 +15,7 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target=false
@@ -63,14 +63,14 @@
       </div>
     </v-ons-popover>
     <message-dialog
-      :visible.sync="checkDialogVisible"
+      v-model:visible="checkDialogVisible"
       :message-cd="15010003"
       type="2"
       :string-params="checkDialogParams"
       @confirm="confirm"
     />
     <message-dialog
-      :visible.sync="resultDialogVisible"
+      v-model:visible="resultDialogVisible"
       :message-cd="15010003"
       type="1"
       :string-params="resultDialogParams"
@@ -80,8 +80,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -299,7 +299,7 @@ export default {
     this.setLoadingScreenMessage("処理中・・・");
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("setSortMode", this.setSortMode);
   },
   // add 性能改善メモリ不足 shan end

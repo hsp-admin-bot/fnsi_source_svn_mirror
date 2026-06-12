@@ -7,10 +7,11 @@ import org.seasar.doma.boot.ConfigAutowireable;
 import org.seasar.doma.jdbc.SelectOptions;
 
 import java.util.List;
+import java.util.Map;
 
 @ConfigAutowireable
 @Dao
-public interface MstDiseaseDao {
+public interface MstDiseaseDao extends MasterDao<Map<String, Object>> {
 
   // add #7390 コンバート後、病名マスタを開くと処理中のまま終わらない 徐博 start
   @Select
@@ -59,4 +60,10 @@ public interface MstDiseaseDao {
   @Select
   List<MstDisease> selectByCds(List<Integer> diseaseCds);
   // add 10626 データリストのCTR・DW一括登録修正 房 end
+
+  /**
+   * mst-list-compose 用：病名マスタ（削除済み含む、init を含める）
+   */
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
 }

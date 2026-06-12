@@ -43,7 +43,8 @@ const defaultColumns = [
     hidden: false,
     editable: () => false,
     values: null,
-    width: "80px"
+    //#9411: 詳細ボタンが狭幅で縦に積まれる／重複見えを避けるために幅を確保
+    width: "104px"
   },
   {
     field: "before_word",
@@ -291,7 +292,7 @@ const defaultSettings = {
 import { deepCopy } from "@/functions/common/CommonFunctions";
 
 export default {
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   namespaced: true,
   state: {
     columns: defaultColumns,

@@ -1,0 +1,113 @@
+# ============================================================
+# ローカル開発環境設定 (dev profile)
+# ============================================================
+
+# ================================================================
+# Spring データソース — Primary (convert_db / 管理テーブル用)
+# ================================================================
+spring:
+  datasource:
+    jdbc-url: jdbc:postgresql://localhost:5433/convert_db?currentSchema=public
+    driver-class-name: org.postgresql.Driver
+    username: nkk
+    password: nkk
+
+# ================================================================
+# 中転庫 (Transit)
+# ================================================================
+transit:
+  # --- MongoDB ---
+  data:
+    mongodb:
+      connection-string: mongodb://nkk:nkk@localhost:27018/ntss?authSource=ntss
+
+  # --- PostgreSQL ---
+  datasource:
+    db1:                                                  # ntss_db4
+      jdbc-url: jdbc:postgresql://localhost:5433/ntss_db4?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk4
+      password: nkk4
+    db2:                                                  # ntss_db5
+      jdbc-url: jdbc:postgresql://localhost:5433/ntss_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk5
+      password: nkk5
+    db3:                                                  # ntss_db6
+      jdbc-url: jdbc:postgresql://localhost:5433/ntss_db6?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk6
+      password: nkk6
+
+# ================================================================
+# 在線本番 (Online Production)
+# ================================================================
+online:
+  # --- MongoDB ---
+  data:
+    mongodb:
+      host: localhost
+      port: 27017  # mongo コンテナ（在線本番）
+      database: ntss
+      username: nkk
+      password: nkk
+
+  # --- PostgreSQL ---
+  datasource:
+    default:                                              # ntss_db5 — 業務メイン
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk5
+      password: nkk5
+    personal:                                             # ntss_db6 — 個人データ
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db6?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk6
+      password: nkk6
+    auth:                                                 # ntss_db4 — 認証・権限
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db4?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk4
+      password: nkk4
+
+# ================================================================
+# マイグレーション設定 (Windows 開発環境)
+# ================================================================
+migration:
+  storage:
+    base-path: C:/tmp/migration
+    efs-path:  C:/tmp/efs/ntss-s3-root-service
+  pg:
+    dump-path:    C:/Program Files/PostgreSQL/17/bin/pg_dump.exe
+    restore-path: C:/Program Files/PostgreSQL/17/bin/pg_restore.exe
+    psql-path:    C:/Program Files/PostgreSQL/17/bin/psql.exe
+  mongo:
+    dump-path:    C:/Program Files/MongoDB/Tools/100/bin/mongodump.exe
+    restore-path: C:/Program Files/MongoDB/Tools/100/bin/mongorestore.exe
+    docdb4:
+      dump-path:    C:/Program Files/MongoDB/Tools/100/bin/mongodump.exe
+      restore-path: C:/Program Files/MongoDB/Tools/100/bin/mongorestore.exe
+
+client-log:
+  upload:
+    storage:
+      path: C:/tmp/efs/system/{1}/オンプレクラウドコンバートアプリ/
+
+server-log:
+  storage:
+    path: C:/tmp/efs/system/{1}/オンプレクラウドコンバートサーバ/
+
+# ================================================================
+# JWT — 開発用シークレット
+# ================================================================
+security:
+  jwt:
+    secret: dev-secret-key-fnsi-cloud-converter-minimum-256-bits-for-hs256
+
+# ================================================================
+# ログ
+# ================================================================
+logging:
+  level:
+    com.fnsi.cloudconverter: DEBUG
+    org.springframework.security: DEBUG

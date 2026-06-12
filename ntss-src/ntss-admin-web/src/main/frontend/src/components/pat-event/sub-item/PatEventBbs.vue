@@ -6,7 +6,6 @@
             >掲載有無&emsp;</label
           >
           <span class="switch-area">
-          <!-- mod #12462 患者情報共有 20260312 start -->
           <v-ons-switch
             v-model="inputModel.publishedState"
             @change="changePublishedState($event.value)"
@@ -19,7 +18,6 @@
               getIsOtherFacilitys
             "
           />
-          <!-- mod #12462 患者情報共有 20260312 end -->
         </span>
       </div>
     </div>
@@ -27,7 +25,6 @@
       <div class="disp-item-area">
         <label class="title ntss-pat-event-label">掲載期間&emsp;</label>
         <div>
-          <!-- mod #12462 患者情報共有 20260312 start -->
           <input-datatemp
             :dateMax="'9999-12-31'"
             :data="inputModel.noticeStartDate"
@@ -43,7 +40,6 @@
             "
             :tempName="'bbsTempnoticeStartDate'"
           >
-          <!-- mod #12462 患者情報共有 20260312 end -->
             <!-- mod #10359 編集権限の動作不正 end -->
             <!--mod FNSI-改修内容6186 任 end-->
           </input-datatemp>
@@ -54,7 +50,6 @@
           <label class="title ntss-pat-event-label">～</label>
         </div>
         <div>
-          <!-- mod #12462 患者情報共有 20260312 start -->
           <input-datatemp
             :dateMax="'9999-12-31'"
             :data="inputModel.noticeEndDate"
@@ -70,7 +65,6 @@
             "
             :tempName="'bbsTempnoticeEndDate'"
           >
-          <!-- mod #12462 患者情報共有 20260312 end -->
             <!-- mod #10359 編集権限の動作不正 end -->
             <!--mod FNSI-改修内容6186 任 end-->
           </input-datatemp>
@@ -83,7 +77,6 @@
           <div class="d-flex checkbox-group">
             <label class="title ntss-pat-event-label">スタッフ&emsp;</label>
             <div class="d-flex align-items-center">
-              <!-- mod #12462 患者情報共有 20260312 start -->
               <v-ons-checkbox
                 input-id="all-user"
                 :checked="staffRadioValue === ALL_USER"
@@ -144,14 +137,13 @@
             >
               選択
             </button>
-            <!-- mod #12462 患者情報共有 20260312 end -->
           </div>
         </div>
       </div>
     </div>
     <list-selector
       :key="componentKey('スタッフ')"
-      :visible.sync="isStaffSelectorVisible"
+      v-model:visible="isStaffSelectorVisible"
       v-bind="staffSelectorData"
       :disabled="
         !getItemAuthorized('PatEvent', 'default_authority')
@@ -163,9 +155,11 @@
 </template>
 
 <script>
-  import _ from "underscore";
-  import moment from "moment";
-  import {mapActions, mapGetters} from "vuex";
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import $$ from "@/compat/jquery";
+  import _ from "@/compat/collections/lodash";
+  import dayjs from "@/compat/date/dayjs";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   import {ApiHelper} from "@/apis/AxiosHelper";
   /*mod FNSI-改修内容患者eventbug 任 start*/
   /*import listSelector from "@/components/common/list-selector/ListSelector.vue";*/
@@ -181,6 +175,7 @@
   import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
   // add FNSI-権限関連 王 20200927 start
   import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
+import PatEventOwnerMixin from "@/components/pat-event/PatEventOwnerMixin";
   // add FNSI-権限関連 王 20200927 end
   import {deepCopy, serializeJsonColumn,} from "@/functions/common/CommonFunctions";
   import {createBbs, deleteBbs, updateBbs, updateBbsFileInfo,} from "@/functions/BbsInfoFunctions.js";
@@ -191,15 +186,16 @@
   import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
   //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
   // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-  import { messageFormat } from '@/functions/common/MessageFormat';
+
   import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
   // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 // add #10359 編集権限の動作不正 start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
+import { messageFormat } from "@/functions/common/MessageFormat";
 // add #10359 編集権限の動作不正 end
 
 // jQureyを宣言（'$'はvue.jsで使用されているため、'$$'で宣言）
-const $$ = require("jquery");
+
 // TODO:SOAP区切り文字
 const DELIMITER = "\n";
 // ラジオボタン選択肢
@@ -209,7 +205,7 @@ const NOT_USER = "2";
 
 export default {
   // add FNSI-権限関連 王 20200927 start
-  mixins: [ComponentGuardMixin],
+  mixins: [ComponentGuardMixin, PatEventOwnerMixin],
   // add FNSI-権限関連 王 20200927 end
   name: "PatEventBbs",
   props: ["propsIndex"],
@@ -224,8 +220,8 @@ export default {
     return {
       inputModel: {
         publishedState: true,
-        noticeStartDate: moment().format("YYYY-MM-DD"),
-        noticeEndDate: moment().format("YYYY-MM-DD"),
+        noticeStartDate: null,
+        noticeEndDate: null,
         staffInfo: {
           target: null,
           detail: [],
@@ -285,9 +281,7 @@ export default {
       // add 8337 【デグレ】掲示板リンクを含んだ患者イベントの編集→保存ができない 関  end
     ]),
     ...mapGetters("pat-event/list", ["getUpdateMode"]),
-    // add #12462 患者情報共有 20260312 start
     ...mapGetters("observe-record/list", ["getIsOtherFacilitys"]),
-    // add #12462 患者情報共有 20260312 end
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
@@ -342,34 +336,33 @@ export default {
       editedEndDate = editedEndDate === "" ? null : editedEndDate;
 
       if (editedStartDate !== null) {
-        editedStartDate = moment(editedStartDate).format("YYYY-MM-DD");
+        editedStartDate = dayjs(editedStartDate).format("YYYY-MM-DD");
       }
       if (editedEndDate !== null) {
-        editedEndDate = moment(editedEndDate).format("YYYY-MM-DD");
+        editedEndDate = dayjs(editedEndDate).format("YYYY-MM-DD");
       }
       return (
-        moment().format("YYYY-MM-DD") === editedStartDate &&
-        moment().format("YYYY-MM-DD") === editedEndDate
+        dayjs().format("YYYY-MM-DD") === editedStartDate &&
+        dayjs().format("YYYY-MM-DD") === editedEndDate
       );
     },
   },
 
-  watch: {},
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  destroyed() { },
+
   async created() {
     // add #10228 掲載期間 開始日連動～開始日連動 linjunfeng start
     const result = this.getPatEventResultParams[this.propsIndex].result_value;
     if (!result) {
-      this.inputModel.noticeStartDate = this.$parent.computedCreatedDate;
-      this.inputModel.noticeEndDate = this.$parent.computedCreatedDate;
+      this.inputModel.noticeStartDate = this._patEventDetailOwner().computedCreatedDate;
+      this.inputModel.noticeEndDate = this._patEventDetailOwner().computedCreatedDate;
     }
     // add #10228 掲載期間 開始日連動～開始日連動 linjunfeng end
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     /*add FNSI-改修内容患者イベントbug 任 start*/
     this.checkedAuthority =
       this.getStateUserAccountInfo.userSettings.authorized_authorities;
@@ -417,6 +410,7 @@ export default {
       // スタッフ選択肢
       await ApiHelper.get(uriPersonalUser, {
         facility_cd: this.facilityCd,
+        selectedPatId: this.selectedPatId,
       }).then((responsePersonalUser) => {
         mstPersonalUser = responsePersonalUser.data;
       });
@@ -464,7 +458,7 @@ export default {
     // add FNSI-権限関連 王 20200927 end
 
     if (
-      _.has(userSettings, "personal_settings") &&
+      Object.prototype.hasOwnProperty.call(userSettings, "personal_settings") &&
       userSettings.personal_settings.length !== 0
     ) {
       // 掲示板の個人設定があれば参照
@@ -494,8 +488,21 @@ export default {
       }
     }
   },
-  mounted() {},
+
   methods: {
+    getScopedElementById(id) {
+      return getScopedElementById(id, this);
+    },
+    getScopedElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this);
+    },
+    getScopedQuery(selector) {
+      return queryScopedSelector(selector, this);
+    },
+    getScopedQueryAll(selector) {
+      return queryScopedSelectorAll(selector, this);
+    },
+
     ...mapActions("bbs-info", ["setSelectedBbsInfo", "setSelectedBbs"]),
     /*mod FNSI-改修内容患者イベント画面で作成された掲示板データのイベント開始、終了日が設定されない。任 start*/
     /*...mapActions("pat-event/detail", ["setPatEventResultParamsUpdate"]),*/
@@ -557,7 +564,10 @@ export default {
       //BBSINFOよりスタッフ情報を設定
       let bbsRecRead = [];
       if (this.getPatEventRecord.bbsCtlNo !== 0) {
-       await this.setSelectedBbsInfo(this.getPatEventRecord.bbsCtlNo);
+       await this.setSelectedBbsInfo({
+         bbsCtlNo: this.getPatEventRecord.bbsCtlNo,
+         selectedPatId: this.selectedPatId
+       });
        let bbsRec = deepCopy(this.selectedBbs);
        bbsRecRead = bbsRec.staff_info.read;
       }
@@ -731,8 +741,8 @@ export default {
      */
     changePublishedState(value) {
       if (value) {
-        this.inputModel.noticeStartDate = moment().format("YYYY-MM-DD");
-        this.inputModel.noticeEndDate = moment().format("YYYY-MM-DD");
+        this.inputModel.noticeStartDate = dayjs().format("YYYY-MM-DD");
+        this.inputModel.noticeEndDate = dayjs().format("YYYY-MM-DD");
       } else {
         this.inputModel.noticeStartDate = null;
         this.inputModel.noticeEndDate = null;
@@ -804,8 +814,8 @@ export default {
     invalidchk(){
       let startdate =  new Date(this.inputModel.noticeStartDate);
       let enddate = new Date(this.inputModel.noticeEndDate);
-      let startclassnm = document.getElementsByClassName("notice-start-date");
-      let endclassnm = document.getElementsByClassName("notice-end-date");
+      let startclassnm = this.getScopedElementsByClassName("notice-start-date");
+      let endclassnm = this.getScopedElementsByClassName("notice-end-date");
       if (startdate <= enddate) {
         startclassnm[0].classList.remove("custom-input-date-invalid");
         endclassnm[0].classList.remove("custom-input-date-invalid");
@@ -849,17 +859,17 @@ export default {
      * @returns {String} YYYYMMDDHHmmssSSS
      */
     componentKey(str) {
-      return `${moment().format("YYYYMMDDHHmmssSSS")}${str}`;
+      return `${dayjs().format("YYYYMMDDHHmmssSSS")}${str}`;
     },
     /**
      * @description input内部データへフォーマットを変更
      */
     formatDate(date) {
-      return date === null ? null : moment(date).format("YYYY-MM-DD");
+      return date === null ? null : dayjs(date).format("YYYY-MM-DD");
     },
     /*add FNSI-改修内容患者イベント画面で作成された掲示板データのイベント開始、終了日が設定されない。任 start*/
     formatTime(date) {
-      return date === null ? null : moment(date).format("YYYY-MM-DD HH:mm");
+      return date === null ? null : dayjs(date).format("YYYY-MM-DD HH:mm");
     },
     /*add FNSI-改修内容患者イベント画面で作成された掲示板データのイベント開始、終了日が設定されない。任 end*/
     /**
@@ -869,7 +879,7 @@ export default {
       if (value === null || value === "") {
         return null;
       }
-      return moment(value).format();
+      return dayjs(value).format();
     },
     /**
      * @description JSONの書込み処理
@@ -965,11 +975,14 @@ export default {
      */
     async saveRecord() {
       if (this.getPatEventRecord.bbsCtlNo !== 0) {
-        await this.setSelectedBbsInfo(this.getPatEventRecord.bbsCtlNo);
+        await this.setSelectedBbsInfo({
+          bbsCtlNo: this.getPatEventRecord.bbsCtlNo,
+          selectedPatId: this.selectedPatId
+        });
       }
       let bbsRec = deepCopy(this.selectedBbs);
       // 更新日時
-      const nowDate = moment().format();
+      const nowDate = dayjs().format();
 
       // 編集した値をレコードに設定
 
@@ -986,14 +999,14 @@ export default {
       if (this.inputModel.noticeStartDate === null) {
         bbsRec.notice_start_date = null;
       } else {
-        bbsRec.notice_start_date = moment(
+        bbsRec.notice_start_date = dayjs(
           this.inputModel.noticeStartDate
         ).format("YYYYMMDD");
       }
       if (this.inputModel.noticeEndDate === null) {
         bbsRec.notice_end_date = null;
       } else {
-        bbsRec.notice_end_date = moment(this.inputModel.noticeEndDate).format(
+        bbsRec.notice_end_date = dayjs(this.inputModel.noticeEndDate).format(
           "YYYYMMDD"
         );
       }
@@ -1074,7 +1087,7 @@ export default {
         bbsRec.reg_date = nowDate;
       }
       bbsRec.is_disp = "1";
-      if (this.$parent.isObserveDetail) {
+      if (this._patEventDetailOwner().isObserveDetail) {
         bbsRec.transition_router_path = "observe-record";
       } else {
         bbsRec.transition_router_path = "pat-event";
@@ -1255,7 +1268,10 @@ export default {
      * @description レコード削除
      */
     async deleteRecord() {
-      await this.setSelectedBbsInfo(this.getPatEventRecord.bbsCtlNo);
+      await this.setSelectedBbsInfo({
+        bbsCtlNo: this.getPatEventRecord.bbsCtlNo,
+        selectedPatId: this.selectedPatId
+      });
       // 削除
       await deleteBbs(this.selectedBbs.bbs_ctl_no);
 
@@ -1272,7 +1288,10 @@ export default {
       /*add FNSI-改修内容一括で複数イベントを登録された時、一括登録された２番目からのデータが削除できない。任 start*/
       for (let i = 0; i < this.getPatEventRecord.bbsCtlNoList.length; i++) {
         /*add FNSI-改修内容一括で複数イベントを登録された時、一括登録された２番目からのデータが削除できない。任 end*/
-        await this.setSelectedBbsInfo(this.getPatEventRecord.bbsCtlNoList[i]);
+        await this.setSelectedBbsInfo({
+          bbsCtlNo: this.getPatEventRecord.bbsCtlNoList[i],
+          selectedPatId: this.selectedPatId
+        });
         const bbsRec = deepCopy(this.selectedBbs);
         // ファイル情報設定
         let fileInfo = [];
@@ -1304,8 +1323,8 @@ export default {
       let sdt = null;
       let edt = null;
       //#10715:日付IF修正Start
-      let startclassnm = document.getElementsByClassName("notice-start-date");
-      let endclassnm = document.getElementsByClassName("notice-end-date");
+      let startclassnm = this.getScopedElementsByClassName("notice-start-date");
+      let endclassnm = this.getScopedElementsByClassName("notice-end-date");
       //#10715:日付IF修正End
       if (
         this.formattedSaveDate(this.inputModel.noticeStartDate) &&

@@ -34,6 +34,7 @@ import jp.co.nikkiso.ntss.core.dao.PatPersonalMainDao;
 import jp.co.nikkiso.ntss.core.dao.PatUniqueDao;
 import jp.co.nikkiso.ntss.core.entity.custom.PatInOutUpdateInfo;
 import org.springframework.transaction.annotation.Transactional;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -76,6 +77,10 @@ public class InOutInfoUtilServiceImpl implements InOutInfoUtilService {
   // add by guanyingshuai 2023-01-31 [Transaction] --start /
   @Autowired
   private LogService logService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // add by guanyingshuai 2023-01-31 [Transaction] --end /
 
 
@@ -151,7 +156,7 @@ public class InOutInfoUtilServiceImpl implements InOutInfoUtilService {
       wheres.append(" WHERE\n");
       wheres.append(inStr + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patPersonalMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -180,7 +185,7 @@ public class InOutInfoUtilServiceImpl implements InOutInfoUtilService {
       wheres.append(" WHERE\n");
       wheres.append(inStr + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patPersonalMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -209,7 +214,7 @@ public class InOutInfoUtilServiceImpl implements InOutInfoUtilService {
       wheres.append(" WHERE\n");
       wheres.append(inStr + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patPersonalMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -345,11 +350,11 @@ public class InOutInfoUtilServiceImpl implements InOutInfoUtilService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

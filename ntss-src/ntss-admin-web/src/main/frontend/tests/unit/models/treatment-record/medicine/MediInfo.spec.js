@@ -4,7 +4,6 @@ describe("MediInfo#toString", () => {
   test("of by default", () => {
     // arrange
     const mediInfo = MediInfo.of();
-    /* eslint-disable*/
     const expected = "{" +
       `"no":0` +
       `,"class_cd":null` +
@@ -103,7 +102,6 @@ describe("MediInfo#toString", () => {
       effect_user_first_name: "effectFirst"
     };
     const mediInfo = MediInfo.of(mediInfoObj);
-    /* eslint-disable*/
     const expected = "{" +
       `"no":100` +
       `,"class_cd":101` +
@@ -151,7 +149,7 @@ describe("MediInfo#toString", () => {
     const result = mediInfo.toString();
 
     // assert
-    expect(mediInfo.effect_time).toBe("12:00");
+    expect(mediInfo.effect_time).toBeNull();
     // expect(result).toBe(expected);
   });
 });

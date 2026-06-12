@@ -1,4 +1,4 @@
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 export default class Schedule {
   constructor(
@@ -33,8 +33,8 @@ export default class Schedule {
       return true;
     }
 
-    const startTime = moment(this._startTime, "HH:mm");
-    const endTime = moment(this._endTime, "HH:mm");
+    const startTime = dayjs(this._startTime, "HH:mm");
+    const endTime = dayjs(this._endTime, "HH:mm");
     return startTime.isSameOrBefore(endTime);
   }
 

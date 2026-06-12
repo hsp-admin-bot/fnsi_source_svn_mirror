@@ -19,6 +19,7 @@ import { SYNC_SIGN_IN } from "@/constants/facilitySetting";
 // xie add メモリにて利用者マスタ一覧取得 Start
 import { ApiHelper } from "@/apis/AxiosHelper";
 import router from "@/router";
+import { getConsoleFrameElement, getScopedLocalStorage } from "@/functions/common/LayoutMeasureHelper";
 // xie add メモリにて利用者マスタ一覧取得 End
 
 /* ユーザタイプ定義 */
@@ -257,7 +258,8 @@ export default {
       commit("setIsSignOut", false);
       /* add by yangzhaokai 2022-11-01 #7755 サインイン画面にてデベロッパーツールを起動状態でサインイン実行不可 --start */
       // modify 10718 by kangjie 20240711 start
-      var consoleStatus = document.getElementById("consoleFrame").contentWindow.isOpenConsole();
+      const consoleFrame = getConsoleFrameElement();
+      var consoleStatus = consoleFrame?.contentWindow?.isOpenConsole?.() === true;
       // if (state.isDisableDevtool) {
       if (consoleStatus) {
         // modify 10718 by kangjie 20240711 end
@@ -330,7 +332,7 @@ export default {
           // サインイン時刻の設定
           const sTime = new Date().getTime();
           commit("setSignInTimestamp", sTime);
-          localStorage.setItem(LOCAL_STORAGE_KEY.SIGN_IN_TIME, sTime);
+          getScopedLocalStorage().setItem(LOCAL_STORAGE_KEY.SIGN_IN_TIME, sTime);
 
           // 施設拡張設定を取得
           const responseFacility = await sendRequestGetMstFacilityByCd(response.data.facilityCd)
@@ -370,10 +372,10 @@ export default {
     signOut({ commit }) {
 
       // サインアウトの場合はタブ内全てがサインアウトされる為、明示的にLocalStorageから情報を削除する
-      localStorage.removeItem(LOCAL_STORAGE_KEY.FACILITY_HASH);
-      localStorage.removeItem(LOCAL_STORAGE_KEY.SIGN_IN_COUNT);
+      getScopedLocalStorage().removeItem(LOCAL_STORAGE_KEY.FACILITY_HASH);
+      getScopedLocalStorage().removeItem(LOCAL_STORAGE_KEY.SIGN_IN_COUNT);
       // サインイン管理情報を削除する.
-      const terminalUniqueString = localStorage.getItem(LOCAL_STORAGE_KEY.TERMINAL_UNIQUE_STRING);
+      const terminalUniqueString = getScopedLocalStorage().getItem(LOCAL_STORAGE_KEY.TERMINAL_UNIQUE_STRING);
       sendRequestDeleteSignin(terminalUniqueString);
       // サインアウト処理
       return sendRequestLogout().then(() => {
@@ -386,13 +388,13 @@ export default {
         commit("setAdvancedSettings", null);
         commit("setIsSignOut", true);
         // 他のタブのサインアウト処理を発火
-        localStorage.setItem(LOCAL_STORAGE_KEY.SIGN_OUT_TRIGGER, new Date());
+        getScopedLocalStorage().setItem(LOCAL_STORAGE_KEY.SIGN_OUT_TRIGGER, new Date());
       });
     },
     // add #9703 強制サインアウト時に多重に破棄確認メッセージがでる。 dou start
     signOutForAuthFailed({ commit }) {
-      localStorage.removeItem(LOCAL_STORAGE_KEY.FACILITY_HASH);
-      localStorage.removeItem(LOCAL_STORAGE_KEY.SIGN_IN_COUNT);
+      getScopedLocalStorage().removeItem(LOCAL_STORAGE_KEY.FACILITY_HASH);
+      getScopedLocalStorage().removeItem(LOCAL_STORAGE_KEY.SIGN_IN_COUNT);
       commit("setUserId", null);
       commit("setDispUserId", null);
       commit("setUserType", null);
@@ -436,7 +438,6 @@ export default {
      * @param {String} facilityCd 施設コード
      * @returns {boolean} 同時サインイン許可の場合はtrueを返します.
      */
-    /* eslint-disable no-unused-vars */
     async isSyncSignIn({ commit }, facilityCd) {
       return await sendRequestGetMstFacilitySettingValue(facilityCd, SYNC_SIGN_IN)
         .then(response => {

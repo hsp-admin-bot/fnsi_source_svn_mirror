@@ -12,7 +12,6 @@ import {
 import {sendRequestGetAllMedicineClassIncludeDeleted } from "@/apis/pat-prescription";
 // ADD チェックリストマスタ データ種別に「投与薬剤」を「医療材料」の下の選択肢に追加する。 孔s end
 // ADD チェックリストマスタ 工程、リスト名を一覧で修正可能とする 孔s START
-import Vue from "vue";
 // ADD チェックリストマスタ 工程、リスト名を一覧で修正可能とする 孔s END
 // ADD チェックリストマスタ 指示変更、実績変更に伴うチェックリストの反映 孔 START
 import { sendRequestDeleteOrdChecklist } from "@/apis/check-list";
@@ -964,7 +963,7 @@ export default {
       if (isSortMode) {
         foundData.sortInputTime = Date.now();
       }
-      Vue.set(state.checklistSetting.checklistSettings, index, foundData);
+      state.checklistSetting.checklistSettings.splice(index, 1, foundData);
     },
     //ADD チェックリストマスタ 工程、リスト名を一覧で修正可能とする 孔s END
     // チェックリスト設定

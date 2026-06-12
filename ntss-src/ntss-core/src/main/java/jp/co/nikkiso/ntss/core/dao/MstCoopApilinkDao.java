@@ -37,6 +37,15 @@ public interface MstCoopApilinkDao {
   List<MstCoopApilink> selectByFacility(String facilityCd);
 
   /**
+   * コピー元の連携API関連付けデータを取得する。
+   *
+   * @param mstCoopApilink 連携API関連付けマスタエンティティ
+   * @return 連携API関連付けマスタエンティティ
+   */
+  @Select
+  List<MstCoopApilink> selectSource(String coopVersion, String coopCd);
+
+  /**
    * 管理番号よる連携API関連付けデータを取得する。
    *
    * @param ctlNo 管理番号

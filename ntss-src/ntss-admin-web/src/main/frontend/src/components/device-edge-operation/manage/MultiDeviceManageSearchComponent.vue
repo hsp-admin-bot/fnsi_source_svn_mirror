@@ -12,7 +12,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -27,7 +27,7 @@
             <label class="search-label-font" for="isDefaultCtrl">部署符号</label>
           </v-ons-col>
           <v-ons-col width="50%" vertical-align="center">
-            <v-ons-select float v-model="condition.inProgress.departmentCd">
+            <v-ons-select v-model="condition.inProgress.departmentCd">
               <option>-</option>
               <option
                 v-for="(departmentCd, idxDepartmentCd) in departmentCds"
@@ -41,7 +41,7 @@
             <label class="search-label-font">都道府県</label>
           </v-ons-col>
           <v-ons-col width="50%" vertical-align="center">
-            <v-ons-select float v-model="condition.inProgress.prefName" style="display:">
+            <v-ons-select v-model="condition.inProgress.prefName" style="display:">
               <option>-</option>
               <option v-for="prefecture in prefectures" :key="prefecture[0]">{{ prefecture[1] }}</option>
             </v-ons-select>
@@ -116,8 +116,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapGetters, mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
@@ -331,7 +331,7 @@ export default {
 .button-row > .right {
   float: right;
 }
-.button-row >>> .button {
+.button-row :deep(.button) {
   width: auto;
   min-width: 80px;
 }

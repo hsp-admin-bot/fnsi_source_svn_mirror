@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import jp.co.nikkiso.ntss.api.service.utils.ConditionSendResultUtil;
 import org.json.JSONArray;
@@ -78,7 +78,7 @@ public class ScheduleInfoResource {
           if (false == receiveData.has("facility_cd")) {
               eventLogMessage.setLogMessage("例外発生：" + "空きベッド検索のパラメータ(facility_cd=null)が異常なため空きベッド検索処理を中断しました");
               logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-              return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+              return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
           }
           facilityCd = receiveData.get("facility_cd").toString();
           // オーダ番号リスト取得
@@ -87,7 +87,7 @@ public class ScheduleInfoResource {
             eventLogMessage.setLogMessage("例外発生：" + "空きベッド検索のパラメータ(ord_no_list=null)が異常なため空きベッド検索処理を中断しました");
             eventLogMessage.setFacilityCd(facilityCd);
             logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
           }
           else
           {
@@ -98,7 +98,7 @@ public class ScheduleInfoResource {
               eventLogMessage.setLogMessage("例外発生：" +  "空きベッド検索のパラメータ(ord_no_list=" + receiveData.get("ord_no_list").toString() + ")が異常なため空きベッド検索処理を中断しました");
               eventLogMessage.setFacilityCd(facilityCd);
               logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-              return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+              return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
             }
             ordNoList = new ArrayList<Long>();
             if (0 < list.length()) {
@@ -107,7 +107,7 @@ public class ScheduleInfoResource {
                     eventLogMessage.setLogMessage("例外発生：" +  "空きベッド検索のパラメータ(ord_no_list=" + receiveData.get("ord_no_list").toString() + ")が異常なため空きベッド検索処理を中断しました");
                     eventLogMessage.setFacilityCd(facilityCd);
                     logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-                    return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+                    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
                 }
                 ordNoList.add(Long.parseLong(list.get(i).toString()));
               }
@@ -120,7 +120,7 @@ public class ScheduleInfoResource {
               eventLogMessage.setLogMessage("例外発生：" +  "空きベッド検索のパラメータ(pat_id=" + strParam + ")が異常なため空きベッド検索処理を中断しました");
               eventLogMessage.setFacilityCd(facilityCd);
               logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-              return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+              return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
           }
           patId = Long.parseLong (receiveData.get("pat_id").toString());
           // ベッドコード取得
@@ -130,7 +130,7 @@ public class ScheduleInfoResource {
                   eventLogMessage.setLogMessage("例外発生：" +  "空きベッド検索のパラメータ(bed_cd=" + strParam + ")が異常なため空きベッド検索処理を中断しました");
                   eventLogMessage.setFacilityCd(facilityCd);
                   logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-                  return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+                  return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
               }
               bedCd = Long.parseLong (receiveData.get("bed_cd").toString());
           // 検索開始日取得
@@ -139,7 +139,7 @@ public class ScheduleInfoResource {
             eventLogMessage.setLogMessage("例外発生：" +  "空きベッド検索のパラメータ(search_start_date=null)が異常なため空きベッド検索処理を中断しました");
             eventLogMessage.setFacilityCd(facilityCd);
             logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
           }
           searchStartDate = receiveData.get("search_start_date").toString();
           // 検索開始クール取得
@@ -149,7 +149,7 @@ public class ScheduleInfoResource {
               eventLogMessage.setLogMessage("例外発生：" +  "空きベッド検索のパラメータ(search_start_kur_cd=" + strParam + ")が異常なため空きベッド検索処理を中断しました");
               eventLogMessage.setFacilityCd(facilityCd);
               logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-              return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+              return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
           }
           searchStartKurCd = Long.parseLong(receiveData.get("search_start_kur_cd").toString());
           // 治療日移動フラグ取得
@@ -163,7 +163,7 @@ public class ScheduleInfoResource {
           // 戻り値チェック
           if (null == listRet) {
               // エラー処理(ログはサブ関数で出力済み)
-              return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+              return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
           }
       }
       catch(Exception e)
@@ -172,7 +172,7 @@ public class ScheduleInfoResource {
           EventLogMessage eventLogMessage = new EventLogMessage();
           eventLogMessage.setLogMessage("例外発生：" +  e.getMessage());
           logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI,null);
-          return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+          return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
       }
 
       return new ResponseEntity<>(listRet, HttpStatus.OK);

@@ -5,8 +5,8 @@ import jp.co.nikkiso.ntss.admin_web.request.validator.NtssFlexibleDateTimeParseM
 import lombok.Data;
 
 import java.util.List;
-import javax.validation.constraints.Digits;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * 検査依頼APIのRequestクラス.

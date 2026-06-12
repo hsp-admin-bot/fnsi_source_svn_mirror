@@ -6,9 +6,9 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
 import jp.co.nikkiso.ntss.coop_api.mapping.HealthmonFacility;
@@ -21,7 +21,7 @@ import lombok.Data;
  *
  */
 @Data
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class HealthUpdateResult {
   public HealthUpdateResult(HttpStatus httpStatus, MntIfEdgeHealthmon ifEdgeHealthmon) {
     this.status = httpStatus.value();

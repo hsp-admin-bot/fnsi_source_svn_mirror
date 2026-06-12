@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.device_edge.util.MedicalCareInfo;
 
-import java.io.IOException;
 
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
@@ -9,8 +8,8 @@ import jp.co.nikkiso.ntss.device_edge.service.LogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.dao.MstCourseDao;
 import jp.co.nikkiso.ntss.core.dao.MstWardDao;
@@ -43,7 +42,7 @@ public class MedicalCareInfoServiceImpl implements MedicalCareInfoService {
       JsonNode jsonNode_parent = mapper.readTree(mediCareInfoJsonString);
       mediCareInfo = this.setItems(jsonNode_parent);
 
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang start

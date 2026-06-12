@@ -60,16 +60,16 @@
 </template>
 
  <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import CommonNumberInputComponent from "@/components/treatment-record/submenu/common/CommonNumberInputComponent";
 
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
-// add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 
 export default {
   components: {
@@ -124,7 +124,6 @@ export default {
     /**
      * 保存ボタンクリックイベント処理.
      */
-    /* eslint-disable no-unused-vars */
     save() {
       // 必須（required=true）かつ値が入力されていなければ、ダイアログを表示する
       const identifiers = Object.entries(this.personalSettings)
@@ -148,8 +147,7 @@ export default {
           // )}</div>`
           title: DIALOG_MESSAGES['00200111'].title,
           message: `<div style="text-align:left;">${messageFormat(DIALOG_MESSAGES['00200111'].message)}${itemNames.join(
-            ""
-          )}</div>`
+            "")}</div>`
           // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
         });
       }
@@ -285,8 +283,8 @@ export default {
      * 数値項目に対する小数点のstepを返す.
      */
     getNumberStep(item) {
-      if (item.hasOwnProperty("validation")) {
-        if (item.validation.hasOwnProperty("digit")) {
+      if (Object.prototype.hasOwnProperty.call(item, "validation")) {
+        if (Object.prototype.hasOwnProperty.call(item.validation, "digit")) {
           return 1 / Math.pow(10, item.validation.digit);
         }
       }
@@ -296,12 +294,9 @@ export default {
      * Gridの高さを調整する
      */
     calculateGridHeight() {
-      const contentsHeight = document.getElementsByClassName(
-        "tab-contents-area"
-      )[0].clientHeight;
-      const footerHeight = document.getElementsByClassName(
-        "common-tab-footer"
-      )[0].clientHeight;
+      const root = this.$el || null;
+      const contentsHeight = getScopedElementsByClassName("tab-contents-area", root)[0]?.clientHeight || 0;
+      const footerHeight = getScopedElementsByClassName("common-tab-footer", root)[0]?.clientHeight || 0;
       this.contentsAreaHeight = contentsHeight - footerHeight - 10;
     }
   },
@@ -378,25 +373,28 @@ export default {
 .right {
   text-align: right;
 }
-.common-tab-content >>> .text-input,
-.common-tab-content >>> select {
+.common-tab-content :deep(select) {
   font-size: 1em;
 }
-.common-tab-content >>> ons-row {
+
+.common-tab-content :deep(.text-input) {
+  font-size: 1em;
+}
+.common-tab-content :deep(ons-row) {
   height: auto;
 }
-.common-tab-content >>> .tab-item {
+.common-tab-content :deep(.tab-item) {
   margin-bottom: 5px;
 }
 .item-input {
   width: 95%;
 }
 .item-title,
-.tab-item >>> ons-col.title {
+.tab-item :deep(ons-col.title) {
   flex: 0 0 33%;
   max-width: 33%;
 }
-.common-tab-content >>> select {
+.common-tab-content :deep(select) {
   border: solid 1px var(--personal-setting-select-border-color);
 }
 </style>

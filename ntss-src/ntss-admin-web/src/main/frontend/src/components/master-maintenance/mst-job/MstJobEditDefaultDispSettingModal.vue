@@ -3,11 +3,14 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="personal-settings-body tab-contents-area">
+        <template #body>
+<div class="personal-settings-body tab-contents-area">
       <!-- すでにある個人設定タブ - デフォルト設定タブのコンポーネントを流用 -->
       <DefaultSettingComponent ref="defaultSettingComponentRef"  :showFooter="false"/>
     </div>
-    <div slot="footer" class="flex-container common-tab-footer">
+    </template>
+        <template #footer>
+<div class="flex-container common-tab-footer">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="btn2-cancel button denial-btn" @click="cancel">キャンセル</v-ons-button>
       </div>
@@ -15,18 +18,19 @@
         <v-ons-button class="common-style-select-button button registration-btn" :disabled="!isDefaultSettingChanged" @click="registration">確定</v-ons-button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import PopoverMixin from "@/components/PopoverMixin";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
 import DefaultSettingComponent from "@/components/modals/default-setting/DefaultSettingComponent";
 
 export default {
@@ -140,7 +144,9 @@ export default {
       // 既存データでnullの場合があるため初期値を設定
       saveDefaultDispSettings = "{}"
     }
-    this.setDefaultSetting(JSON.parse(saveDefaultDispSettings));
+    if(saveDefaultDispSettings){
+      this.setDefaultSetting(JSON.parse(saveDefaultDispSettings));
+    }
     // 施設に対して許可された機能を取得して設定
     // - アカウント情報の使用可能施設設定を施設マスタの設定で書き換えるので、画面を閉じる直前で戻す必要あり
     this.setAuthorizedFunctions(this.getFacilitySwitchUseFunction);
@@ -161,13 +167,13 @@ export default {
     });
     // 破棄時イベント設定
     // - 確実に一時保存情報を戻すためリロードやタブごと閉じた場合でも情報を戻す
-    window.addEventListener('beforeunload', this.closedModal);
+    (this.$el?.ownerDocument?.defaultView || globalThis).addEventListener('beforeunload', this.closedModal);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // 一時保存した設定を戻す
     this.closedModal();
     // コンポーネント破棄時にイベント解除
-    window.removeEventListener('beforeunload', this.closedModal);
+    (this.$el?.ownerDocument?.defaultView || globalThis).removeEventListener('beforeunload', this.closedModal);
   }
 };
 </script>

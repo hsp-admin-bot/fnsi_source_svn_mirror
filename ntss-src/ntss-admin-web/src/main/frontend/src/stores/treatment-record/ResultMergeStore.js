@@ -40,9 +40,10 @@ export default {
      * @param {*} ordNo オーダ番号
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
-    getTreatmentRecordResultMergeList({ commit }, ordNo) {
-      return sendRequestGetResultMergeList(ordNo);
+    getTreatmentRecordResultMergeList({ commit }, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetResultMergeList(ordNo, selectedPatId);
     },
     /**
      * マージ後実績情報更新.
@@ -52,7 +53,6 @@ export default {
      * @param {*} payload マージ後実績情報
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     updateTreatmentRecordResultMerge({ commit }, { ordNo, payload }) {
       return sendRequestUpdateResultMerge(ordNo, payload);
     },
@@ -75,7 +75,6 @@ export default {
      * @param {*} ordNo オーダ番号
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     getResultMergeList({ commit }, params) {
       return sendRequestGetResultMergeListForSelect(params.ord_no, params.start_date, params.end_date, params.is_unknown);
     },

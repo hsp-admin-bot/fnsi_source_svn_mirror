@@ -39,7 +39,7 @@ public class SysReleaseInfoResource {
   * リリース一覧情報取得
   * @return リリース一覧情報
   */
-  @GetMapping("/getSysReleaseInfoAll/")
+  @GetMapping("/getSysReleaseInfoAll")
   public ResponseEntity<?> getSysReleaseInfoAll() {
 
     // debugログ出力

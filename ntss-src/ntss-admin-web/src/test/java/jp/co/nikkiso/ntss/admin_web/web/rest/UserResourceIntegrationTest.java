@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage;
 import jp.co.nikkiso.ntss.admin_web.constant.RestDocMessage;
 import jp.co.nikkiso.ntss.admin_web.request.userAccount.AlterProvisionalInfoRequest;
@@ -18,7 +18,7 @@ import org.assertj.core.util.Arrays;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -128,7 +128,7 @@ public class UserResourceIntegrationTest extends AbstractResourceIntegrationTest
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user/provisional")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isOk())
@@ -183,7 +183,7 @@ public class UserResourceIntegrationTest extends AbstractResourceIntegrationTest
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user/provisional")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isInternalServerError())
@@ -219,7 +219,7 @@ public class UserResourceIntegrationTest extends AbstractResourceIntegrationTest
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user/provisional")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isBadRequest())
@@ -263,7 +263,7 @@ public class UserResourceIntegrationTest extends AbstractResourceIntegrationTest
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user/provisional")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isInternalServerError())
@@ -312,7 +312,7 @@ public class UserResourceIntegrationTest extends AbstractResourceIntegrationTest
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isOk())
@@ -398,7 +398,7 @@ public class UserResourceIntegrationTest extends AbstractResourceIntegrationTest
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isOk())
@@ -465,7 +465,7 @@ public class UserResourceIntegrationTest extends AbstractResourceIntegrationTest
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isInternalServerError())
@@ -523,7 +523,7 @@ public class UserResourceIntegrationTest extends AbstractResourceIntegrationTest
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isInternalServerError())
@@ -588,7 +588,7 @@ public class UserResourceIntegrationTest extends AbstractResourceIntegrationTest
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isInternalServerError())
@@ -631,7 +631,7 @@ public class UserResourceIntegrationTest extends AbstractResourceIntegrationTest
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/user")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody));
 
     // 検証
     result.andExpect(status().isInternalServerError())

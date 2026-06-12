@@ -28,10 +28,12 @@ import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 import jp.co.nikkiso.ntss.core.entity.MstBioMoniFramePattern;
 import jp.co.nikkiso.ntss.core.entity.custom.MstBioMoniFramePatternWithDefine;
 import jp.co.nikkiso.ntss.monitoring.service.MstBioMoniFramePatternService;
-import jp.co.nikkiso.ntss.monitoring.util.Utilities;
 
 import jp.co.nikkiso.ntss.monitoring.service.logger.LogService;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
+
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
+import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 @CrossOrigin(origins = "*") // 別ドメインからのテスト用にアクセスすることを許可
 @RestController
 @RequestMapping("/api/bio_moni_frame_pattern")
@@ -99,14 +101,7 @@ public class BioMoniFramePatternResource {
     //FNSI-修正 ログ対応 xiebzh add end
     logService.log(LogLevel.DEBUG, eventLogMessage, null, SERVICE_NAME.REMS, null);
     List<MstBioMoniFramePatternWithDefine> res = new ArrayList<>();
-    int ctlNo = -1;
-    try {
-      if (ctl_no != null && Utilities.isNumber(ctl_no)) {
-        ctlNo = Integer.parseInt(ctl_no);
-      }
-    } catch (Exception e) {
-      ctlNo = -1;
-    }
+    Long ctlNo = ctl_no != null ? ctl_no : -1L;
 
     res = mstBioMoniFramePatternService.selectWithDefine(facility_cd, ctlNo);
     return new ResponseEntity<>(res, HttpStatus.OK);
@@ -191,12 +186,10 @@ public class BioMoniFramePatternResource {
     eventLogMessage.setInvokeClass(this.getClass().getName());
     //FNSI-修正 ログ対応 xiebzh add end
     logService.log(LogLevel.DEBUG, eventLogMessage, null, SERVICE_NAME.REMS, null);
-    if (Utilities.isNumber(ctl_no)) {
-      // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
-      //mstBioMoniFramePatternService.delete(facility_cd, Integer.parseInt(ctl_no));
-      mstBioMoniFramePatternService.delete(facility_cd, ctl_no);
-      // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
-    }
+    // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
+    //mstBioMoniFramePatternService.delete(facility_cd, Integer.parseInt(ctl_no));
+    mstBioMoniFramePatternService.delete(facility_cd, ctl_no);
+    // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
     return ResponseEntity.ok().build();
   }
 

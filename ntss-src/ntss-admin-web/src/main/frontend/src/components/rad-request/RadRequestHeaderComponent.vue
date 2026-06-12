@@ -65,7 +65,7 @@
     <v-ons-popover
       cancelable
       v-if="zoomPopoverVisible"
-      :visible.sync="zoomPopoverVisible"
+      v-model:visible="zoomPopoverVisible"
       :target="zoomPopoverTarget"
       :class="[fontSizeSet, radSetListPop]"
       @preshow="popoverPreShow"
@@ -109,7 +109,7 @@
     </v-ons-popover>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -187,13 +187,14 @@
           <v-ons-col width="70%" vertical-align="center" style="white-space: nowrap;">
             <!-- 検査間隔 ≠ 年間複数日 -->
             <span v-if="!inProgressIntervalState.isMultiDays">
-              <input
-                type="date"
+              <date-input
                 style="width: auto;"
                 class="ntss-input-date ntss-custom-input"
+                classes="date-input-unjust-size"
                 @blur="checkInputDate('startDate')"
                 :max="maxDate"
                 v-model="condition.inProgress.startDate"
+                isRequired
               />
               <common-calendar
                 v-model="condition.inProgress.startDate"
@@ -263,9 +264,12 @@
 
 <!-- スクリプト処理 -->
 <script>
-import moment from "moment";
-import { EventBus } from "@/eventBus";
-import { mapGetters, mapActions } from "vuex";
+import { getScopedElementsByClassName, getScopedUserAgent } from "@/functions/common/LayoutMeasureHelper";
+
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { findAncestorWithAnyKey } from "@/functions/common/ComponentOwnerResolver";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import {
   CANCEL,
@@ -292,6 +296,8 @@ import { HISTORY_KEY_RAD_REQUEST_DETAIL } from "@/router/rad-request/HistoryKeyC
 import { messageFormat } from "@/functions/common/MessageFormat";
 import TimeInput from "@/components/common/TimeInput";
 import DateInput from "@/components/common/DateInput";
+import statusMapFullScreenImg from "../../assets/status-map-full-screen.png";
+
 import {
   formatToYyyymmdd,
   formatToInputDate,
@@ -326,7 +332,7 @@ export default {
       setTime: "",
     };
     return {
-      image_src_full_screen: require("../../assets/status-map-full-screen.png"),
+      image_src_full_screen: statusMapFullScreenImg,
       showRadioButtonFlg: false,
       popoverVisible: false,
       popoverTarget: null,
@@ -385,6 +391,16 @@ export default {
     ...mapGetters("pat-info", ["searchedPatList", "selectedPatId"]),
     ...mapGetters("account-edit", ["getStateUserAccountInfo"]),
 
+    // 表示領域の幅をCSS変数を利用して書き換える
+    areaWidthStyle() {
+      // モバイル端末とで幅を分ける
+      const ua = getScopedUserAgent(this.$el);
+      if (ua.match(/Android/) || ua.match(/iPhone|iPad/)) {
+        return { "width": "6rem" };
+      } else {
+        return { "width": "15rem" };
+      }
+    },
     inProgressIntervalState() {
       return checkIntervalState(this.condition.inProgress.setInterval);
     },
@@ -395,8 +411,7 @@ export default {
       // 必須：曜日
       if (
         this.inProgressIntervalState.isWeekRepeat
-        && inProgress.selectedDayOfWeek === null
-      ) {
+        && inProgress.selectedDayOfWeek === null) {
         rtn = false;
       }
       // 必須：指示期間(開始)
@@ -427,8 +442,7 @@ export default {
       // 検査間隔
       if (setInterval != null) {
         const text = this.setIntervalList.find(
-          item => item.value === setInterval
-        )?.name || "";
+          item => item.value === setInterval)?.name || "";
         condList.push({ name: "検査間隔", text });
       }
       // 時刻
@@ -438,8 +452,7 @@ export default {
       // 曜日
       if (selectedDayOfWeek != null) {
         const text = this.indWeeks.find(
-          item => item.value === selectedDayOfWeek
-        )?.text || "";
+          item => item.value === selectedDayOfWeek)?.text || "";
         condList.push({ name: "曜日", text });
       }
       // 指示期間
@@ -455,10 +468,15 @@ export default {
     },
   },
   methods: {
+    requestViewForceUpdate() {
+      if (this.$?.isMounted) {
+        this.$forceUpdate();
+      }
+    },
     // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 start
     goBack() {
       this.$emit("goBack");
-      this.$forceUpdate();
+      this.requestViewForceUpdate();
     },
     // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 end
     ...mapActions("rad-request/list", [
@@ -538,12 +556,12 @@ export default {
       // 印刷パラメータを応答
       // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 杜天成 start
       const { startDate, endDate } = this.condition.inUsed;
-      const fromDate = moment(startDate).format("YYYY/MM/DD");
-      const toDate = endDate ? moment(endDate).format("YYYY/MM/DD") : fromDate;
+      const fromDate = dayjs(startDate).format("YYYY/MM/DD");
+      const toDate = endDate ? dayjs(endDate).format("YYYY/MM/DD") : fromDate;
       // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 杜天成 end
-      // add #9558 機能帳票で正しく変数が引き渡されていない 杜天成　start
+      // add #9558 機能帳票で正しく変数が引き渡されていない 杜天成 start
       const patId = this.$route.path === "/rad-request/" ? null : this.selectedPatId;
-      // add #9558 機能帳票で正しく変数が引き渡されていない 杜天成　end
+      // add #9558 機能帳票で正しく変数が引き渡されていない 杜天成 end
       // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
       // const reportParams = {
       //   facilityCd: this.getFacilityCd,
@@ -637,15 +655,14 @@ export default {
       // 年間複数日 でない場合は年間カレンダーでの選択結果をクリアする
       if (
         this.selectedCalendarInProgress.length
-        && !this.inProgressIntervalState.isMultiDays
-      ) {
+        && !this.inProgressIntervalState.isMultiDays) {
         this.selectedCalendarInProgress = [];
       }
 
       // 指示期間開始日と終了日が逆転していないこと
       if (inProgress.startDate && inProgress.endDate) {
-        const startDate = moment(inProgress.startDate);
-        const endDate = moment(inProgress.endDate);
+        const startDate = dayjs(inProgress.startDate);
+        const endDate = dayjs(inProgress.endDate);
         if (endDate.isBefore(startDate)) {
           this.showAfterStartDateDialog();
           return;
@@ -666,8 +683,7 @@ export default {
       const inProgressStr = JSON.stringify(inProgress);
       if (
         JSON.stringify(this.condition.inUsed) !== inProgressStr
-        || this.selectedCalendarInUsed != this.selectedCalendarInProgress
-      ) {
+        || this.selectedCalendarInUsed != this.selectedCalendarInProgress) {
         this.condition.inUsed = JSON.parse(inProgressStr);
         this.selectedCalendarInUsed = this.selectedCalendarInProgress;
       }
@@ -694,13 +710,15 @@ export default {
     },
     async getTargetDateList(
       conditionInUsed = { ...this.condition.inUsed },
-      isPopoverCheck = false
-    ) {
+      isPopoverCheck = false) {
       let targetDateList = [];
       this.setOutsideSchExtPatList([]);
       let patInfoList = null;
       if (!isPopoverCheck) {
-        patInfoList = await this.getPatInfoList(this.getRadSetTargetList);
+        patInfoList = await this.getPatInfoList({
+          patIdList: this.getRadSetTargetList,
+          selectedPatId: this.selectedPatId
+        });
       }
       // 検査間隔に応じて対象日付を取得する処理を実施
       switch (conditionInUsed.setInterval) {
@@ -795,7 +813,7 @@ export default {
         return;
       }
       await this.addSchedule(radSetCd);
-      
+
       // 検査セット追加イベント発火
       EventBus.$emit("addSchedule");
     },
@@ -822,17 +840,16 @@ export default {
         // 指定日1回分 か 年間複数日 の場合は検査セットパターンに登録しない
         if (
           condition.endDate
-          || !checkIntervalState(condition.setInterval).isWeekRepeat
-        ) return;
+          || !checkIntervalState(condition.setInterval).isWeekRepeat) return;
 
         // reg_rad_date には、最初の対象日（初回の検査日時）を格納
         const strRadTime = condition.setTime || "00:00";
         const targetDate = targetDateList[0];
         const regRadDate = targetDate
-          ? moment(`${targetDate} ${strRadTime}`, "YYYYMMDD HH:mm").toDate()
+          ? dayjs(`${targetDate} ${strRadTime}`, "YYYYMMDD HH:mm").toDate()
           : null;
-        const radFromDate = moment(condition.startDate).toDate();
-        const radToDate = moment("2099/12/31").toDate();
+        const radFromDate = dayjs(condition.startDate).toDate();
+        const radToDate = dayjs("2099/12/31").toDate();
 
         // セット対象の患者ID毎に登録データを作成
         this.getRadSetTargetList.forEach(targetId => {
@@ -849,11 +866,11 @@ export default {
             strRadTime,
             status: ADD,
             isDel: 0,
+            facilityCd: this.getFacilityCd,
           };
           // 同じパターンが登録予定リストに存在するか確認
           const addFlg = this.getSavePatRadPattern.some(patternObj => (
-            JSON.stringify(patternObj) === JSON.stringify(addPtObj)
-          ));
+            JSON.stringify(patternObj) === JSON.stringify(addPtObj)));
           // 同じパターンがDB保存済みであるか確認
           const savedFlg = this.getPatRadPatternList.some(item => (
             item.status === SAVED
@@ -862,8 +879,7 @@ export default {
             && String(item.regOrderClass) === String(addPtObj.regOrderClass)
             && item.strRadTime === addPtObj.strRadTime
             && item.radPattern === addPtObj.radPattern
-            && item.radWeek === addPtObj.radWeek
-          ));
+            && item.radWeek === addPtObj.radWeek));
           if (!addFlg && !savedFlg) {
             this.getSavePatRadPattern.push(addPtObj);
             this.setPatRadPatternList([...this.getPatRadPatternList, addPtObj]);
@@ -878,8 +894,7 @@ export default {
         };
         const isExist = this.getRadPatternColumnList.some(item => (
           item.radPattern === addPtCol.radPattern
-          && item.radWeek === addPtCol.radWeek
-        ));
+          && item.radWeek === addPtCol.radWeek));
         if (!isExist) {
           this.setRadPatternColumnList([...this.getRadPatternColumnList, addPtCol]);
         }
@@ -894,8 +909,7 @@ export default {
         const isDtlExist = this.getRadPatternDetailColumnList.some(itemDetail => (
           itemDetail.radPattern === addPtDtlCol.radPattern
           && itemDetail.radWeek === addPtDtlCol.radWeek
-          && itemDetail.radTime === addPtDtlCol.radTime
-        ));
+          && itemDetail.radTime === addPtDtlCol.radTime));
         if (!isDtlExist) {
           this.setRadPatternDetailColumnList([...this.getRadPatternDetailColumnList, addPtDtlCol]);
         }
@@ -909,12 +923,10 @@ export default {
       // 無期限の場合は追加対象患者の最大スケジュール延長最終日までの日付に絞る
       const endlessRepeat = (
         checkIntervalState(condition.setInterval).isWeekRepeat
-        && !condition.endDate
-      );
+        && !condition.endDate);
       if (endlessRepeat) {
         const maxSchExtEndDate = "" + Math.max(...(
-          Object.values(this.getPatExtInfoList).map(info => info.schExtEndDate)
-        ));
+          Object.values(this.getPatExtInfoList).map(info => info.schExtEndDate)));
         targetDateList = targetDateList.filter(targetDate => targetDate <= maxSchExtEndDate);
       }
       // 日付データに追加する
@@ -962,8 +974,7 @@ export default {
           const treatDateObj = this.getOrdMainTreatDateList.find(item => item.pat_id === targetObj.patId);
           const flg = (
             treatDateObj == null
-            || !treatDateObj.treat_date.includes(targetDate)
-          ) ? ADD_WARNING : ADD;
+            || !treatDateObj.treat_date.includes(targetDate)) ? ADD_WARNING : ADD;
 
           // 一般撮影検査依頼には検査区分の指定はないため、常に 0 を設定する
           this.addCalendar(targetObj, "0", radSetCd, radSetName, targetDate, flg, targetTime);
@@ -988,8 +999,7 @@ export default {
       // 締切フラグの設定
       const deadlineFlg = (
         this.getDeadlineCondition.deadlineFlg
-        && moment(getDeadlineDate(this.getDeadlineCondition)).isAfter(addDate)
-      ) ? "1" : "0";
+        && dayjs(getDeadlineDate(this.getDeadlineCondition)).isAfter(addDate)) ? "1" : "0";
 
       if (dataDetail[addDateTime] == null) {
         dataDetail[addDateTime] = 0;
@@ -1006,9 +1016,7 @@ export default {
           status: {},
           statusDetail: {},
           isLock: {},
-	  // add #12462 患者情報共有 Ji start
-          facilityCd: {}
-	  // add #12462 患者情報共有 Ji end
+          facilityCd: {},
         };
       }
       if (data[addDate] == null) {
@@ -1054,8 +1062,7 @@ export default {
             if (detailValue !== ADD && detailValue !== ADD_WARNING) return;
             if (totalState === ADD && detailValue !== ADD_WARNING) return;
             totalState = detailValue;
-          }
-        );
+          });
         return totalState;
       };
       switch (radItemSetWithSetCd.data[addDate]) {
@@ -1070,8 +1077,7 @@ export default {
                 radItemSetWithSetCd.dataDetail[detailKey] = SAVED;
                 detailCount++;
               }
-            }
-          );
+            });
 
           // 同日の日時単位データに合わせてフラグを再設定する
           radItemSetWithSetCd.data[addDate] = getTotalState(radItemSetWithSetCd.dataDetail);
@@ -1105,9 +1111,7 @@ export default {
         }
       });
       radItemSetWithSetCd.time[addDate] = radTime;
-      // add #12462 患者情報共有 Ji start
       radItemSetWithSetCd.facilityCd[addDate] = this.getFacilityCd;
-      // add #12462 患者情報共有 Ji end
 
       // 前回検査日の追加
       this.getLastRadDateList.forEach(item => {
@@ -1116,10 +1120,13 @@ export default {
         }
       });
     },
+    resolveHistoryOwner() {
+      return findAncestorWithAnyKey(this, ["historyKey"], { maxDepth: 10 }) || this;
+    },
     // RadSetTargetListを登録対象の患者に更新する
     refreshRadSetTargetList() {
       const patIdList = [];
-      if (this.$parent.historyKey === HISTORY_KEY_RAD_REQUEST_DETAIL) {
+      if (this.resolveHistoryOwner().historyKey === HISTORY_KEY_RAD_REQUEST_DETAIL) {
         // 一般撮影検査依頼詳細画面では現在開いている患者を対象にする
         if (this.selectedPatId) {
           patIdList.push(this.selectedPatId);
@@ -1127,7 +1134,7 @@ export default {
       } else {
         // 一般撮影検査依頼一覧画面では現在チェックされている患者を対象にする
         // 患者のチェックボックス取得
-        const patCheckbox = Array.from(document.getElementsByClassName("pat-list-item"));
+        const patCheckbox = Array.from(getScopedElementsByClassName("pat-list-item", this.$el || this));
         patCheckbox.forEach(checkbox => {
           if (checkbox.checked) {
             patIdList.push(checkbox.value);
@@ -1142,7 +1149,7 @@ export default {
       // 追加対象患者が選択されていない場合は処理しない
       if (!this.getRadSetTargetList.length) return;
 
-      const checkboxValue = document.getElementsByClassName("rad-set-list-item");
+      const checkboxValue = getScopedElementsByClassName("rad-set-list-item", this.$el || this);
       for (let count = 0; count < checkboxValue.length; count++) {
         if (checkboxValue[count].checked) {
           await this.addSchedule(this.getRadSetNameList[count].radSetCd);
@@ -1150,7 +1157,7 @@ export default {
         // スケジュール作成期間外の患者が存在する場合は処理終了
         if (this.getOutsideSchExtPatList.length) break;
       }
-      
+
       // 検査セット追加イベント発火
       EventBus.$emit("addSchedule");
     },
@@ -1161,7 +1168,7 @@ export default {
       // 未入力なら処理しない
       if (!inputValue) return;
 
-      const inputDate = moment(inputValue, "YYYY-MM-DD", true);
+      const inputDate = dayjs(inputValue, "YYYY-MM-DD", true);
       if (!inputDate.isValid()) {
         // 無効な日付なら空白にする
         inProgress[targetName] = "";
@@ -1212,10 +1219,14 @@ export default {
   async created() {
     await this.executeWithLoadingScreen(async () => {
       // 検査セットのデータ取得とstoreへの登録
-      const nameList = await this.searchRadSetNameList(this.getFacilityCd);
+      const nameList = await this.searchRadSetNameList({
+        facilityCd: this.getFacilityCd,
+        selectedPatId: this.selectedPatId
+      });
       // 検査セットソート順データ取得
-      const sort = await ApiHelper.get("/mstInfo/mst_rad_set/mstSelector/", {
-        facilityCd: this.getFacilityCd
+      const sort = await ApiHelper.get("/mstInfo/mst_rad_set/mstSelector", {
+        facilityCd: this.getFacilityCd,
+        selectedPatId: this.selectedPatId
       }).catch(error => {
         getErrorMessage("RadRequestHeaderComponent.vue", "created", error);
         throw error;
@@ -1233,7 +1244,7 @@ export default {
       await this.setRadSetNameList(sortNameList);
 
       // 本日の日付をセット
-      this.condition.inUsed.startDate = this.minDate = moment().format("YYYY-MM-DD");
+      this.condition.inUsed.startDate = this.minDate = dayjs().format("YYYY-MM-DD");
       this.$nextTick(() => {
         if (this.getCommonConditionList) {
           // Storeに保存された依頼条件情報がある場合はその内容から入力値を復元する
@@ -1257,7 +1268,7 @@ export default {
       EventBus.$on("requestReportParams", this.requestrReportParams);
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("requestReportParams", this.requestrReportParams);
     EventBus.$off("goBack", this.goBack);
     EventBus.$off("emptyRadSet", this.emptyRadSet);
@@ -1411,16 +1422,22 @@ export default {
   padding-left: 6px;
 }
 
-.rad-set-list-pop >>> .popover,
-.rad-set-list-pop-detail >>> .popover {
+.rad-set-list-pop :deep(.popover),
+.rad-set-list-pop-detail :deep(.popover) {
   width: auto;
 }
-.rad-set-list-pop >>> .popover__content,
-.rad-set-list-pop-detail >>> .popover__content {
+.rad-set-list-pop :deep(.popover__content),
+.rad-set-list-pop-detail :deep(.popover__content) {
   width: 450px;
 }
+ons-popover :deep(.popover__content) {
+    min-width: 17.0rem;
+  }
+
 @media screen and (max-width: 640px) {
-  ons-popover >>> .popover__content {
+  .exam-request-header :deep(.popover__content),
+  .rad-set-list-pop :deep(.popover__content),
+  .rad-set-list-pop-detail :deep(.popover__content) {
     min-width: 17.0rem;
   }
 }

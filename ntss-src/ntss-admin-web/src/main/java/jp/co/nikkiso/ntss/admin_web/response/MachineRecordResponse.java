@@ -2,8 +2,8 @@ package jp.co.nikkiso.ntss.admin_web.response;
 
 import java.util.List;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -16,7 +16,7 @@ public class MachineRecordResponse {
 
   @Getter
   @AllArgsConstructor
-  @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public static class MachineRecord {
     /**
      * 装置記録コード.

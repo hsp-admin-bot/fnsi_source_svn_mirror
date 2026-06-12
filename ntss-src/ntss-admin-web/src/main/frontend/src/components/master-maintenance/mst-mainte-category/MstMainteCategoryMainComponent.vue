@@ -35,6 +35,7 @@
       <v-ons-col class="item-title">装置型式</v-ons-col>
       <v-ons-col class="item-data list-input">
         <kendo-multiselect
+          v-if="isMachineDataReady"
           :data-source="listMachineData"
           data-text-field="textMachine"
           data-value-field="valueMachine"
@@ -87,10 +88,10 @@
               handle=".column-handle"
               @change="isCheckAll"
             >
-              <template v-for="(item, index) in detailList">
+              <template v-for="(item, index) in detailList" :key="index">
                 <tr
                   v-if="item.mainteClass === mainteClass"
-                  :key="index"
+                 
                   class="layout-item"
                 >
                   <td class="ntss-list-body-td td-select">
@@ -124,18 +125,19 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
-import vuedraggable from "vuedraggable";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 import { sendRequestFindRecordListByFacilityCd } from "@/apis/master-maintenance";
 import { sendRequestGetLayoutWithCategoryCd } from "@/apis/daily-check";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { alertByKey } from "@/functions/common/OnsenFunctions";
-import { EventBus } from "@/eventBus";
-import { cloneDeep, isEqual } from "lodash";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { cloneDeep, isEqual } from "@/compat/collections/lodash";
 import {
   MainteClass,
   MainteClassList,
 } from "@/constants/mainteConstants";
+import { getModalBodyElement, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 
 // isDispの値
 const IsDisp = Object.freeze({
@@ -145,7 +147,7 @@ const IsDisp = Object.freeze({
 
 export default {
   components: {
-    draggable: vuedraggable,
+    draggable: VueDraggable,
   },
   data() {
     return {
@@ -157,6 +159,7 @@ export default {
       mainteClass: MainteClass.Daily,
       mainteClassOrg: MainteClass.Daily,
       listMachineData: [],
+      isMachineDataReady: false,
       typeInfo: [],
       typeInfoOrg: [],
       checkAll: false,
@@ -229,8 +232,8 @@ export default {
       const mainArea = this.$refs.mainArea;
       if (mainArea) {
         // 画面の高さ
-        const bodyElements = document.getElementsByClassName("modal-body");
-        const bodyHeight = bodyElements[0].clientHeight;
+        const modalBody = getModalBodyElement(this.$el || this);
+        const bodyHeight = modalBody?.clientHeight || 0;
         // ヘッダーの高さ
         const headerElements = mainArea.getElementsByClassName("item-head");
         const headHeight = Array.from(headerElements).reduce(
@@ -244,8 +247,14 @@ export default {
       }
 
       if (this.androidFlg) {
-        document.getElementsByClassName("ntss-list-header-th-sticky")[0].style.width = "15%";
-        document.getElementsByClassName("select")[2].style.width = "59%";
+        const stickyHeaders = getScopedElementsByClassName("ntss-list-header-th-sticky", this.$el || this);
+        const selectElements = getScopedElementsByClassName("select", this.$el || this);
+        if (stickyHeaders[0]) {
+          stickyHeaders[0].style.width = "15%";
+        }
+        if (selectElements[2]) {
+          selectElements[2].style.width = "59%";
+        }
       }
     },
     isDispOn(isDisp) {
@@ -279,8 +288,7 @@ export default {
         this.detailListForDaily,
         this.detailListForPeriodic
       ].map(detailList => detailList.every(
-        item => this.isDispOn(item.isDisp)
-      ));
+        item => this.isDispOn(item.isDisp)));
 
       // 変更有無判定
       const allFlag = (
@@ -289,9 +297,7 @@ export default {
         && isEqual(this.detailListOrg, this.detailListForMainteClass)
         && (
           this.isMainteClassPeriodic
-          || isEqual(this.typeInfoOrg, this.makeTypeInfo())
-        )
-      );
+          || isEqual(this.typeInfoOrg, this.makeTypeInfo())));
       EventBus.$emit("mstHolidayRegistered", allFlag);
     },
     isTypeOverlapped() {
@@ -320,9 +326,7 @@ export default {
           const otherCategory = this.getMasterRecordList.data.find(
             record => (
               record.code === cd
-              && record.mainteClass === MainteClass.Daily
-            )
-          );
+              && record.mainteClass === MainteClass.Daily));
           if (!otherCategory?.detail) return false;
           const detailObject = JSON.parse(otherCategory.detail);
           // グループの detail に type_info がない、もしくは
@@ -470,7 +474,7 @@ export default {
     this.setLoadingScreenVisible(true);
 
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
     if (ua.match(/Android/)) {
       this.androidFlg = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -494,10 +498,11 @@ export default {
     const detailMstData = response.data?.localDataSource.data.filter(
       mstItem => this.isDispOn(mstItem.isDisp)
     );
-    this.getMachineTypeList.forEach(item => this.listMachineData.push({
+    this.listMachineData = this.getMachineTypeList.map(item => ({
       textMachine: item.machineType,
       valueMachine: item.machineTypeCd,
     }));
+    this.isMachineDataReady = true;
 
     // #9451対応時のメモ：
     // kendo-multiselect の data-source に指定している
@@ -602,7 +607,7 @@ table {
   display: block;
   overflow-x: auto;
 }
-.data-table >>> ons-row >>> ons-col {
+.data-table :deep(ons-row ons-col) {
   white-space: normal;
 }
 .drug-group-name {

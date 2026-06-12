@@ -9,7 +9,7 @@ import {
   sendRequestGetShortNameList,
   sendRequestGetPatAddInfo
 } from "@/apis/ord-addition";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 export default {
   strict: true,
@@ -74,7 +74,8 @@ export default {
       let params = {
         facilityCd: payload.facilityCd,
         patId: payload.patId,
-        ordNo: payload.ordNo
+        ordNo: payload.ordNo,
+        ownFacility: payload.ownFacility
       };
       let response = null;
       switch (state.mode) {
@@ -100,9 +101,9 @@ export default {
         payload.updateList.forEach(item => {
           let temp = {
             cd: item.additionCd, // 加算コード
-            name: item.orditem_name ? item.orditem_name : item.additionName,
+            name: item.additionName,
             is_enable: "1",
-            start_date: item.start_date ? moment(item.start_date).format("YYYYMMDD") : ""
+            start_date: item.start_date ? dayjs(item.start_date).format("YYYYMMDD") : ""
           };
           list.push(temp);
         });
@@ -147,9 +148,7 @@ export default {
         facilityCd: payload.facilityCd,
         patId: payload.patId,
         ordNo: payload.ordNo,
-        // add #12462 患者情報共有 Ji start
         ownFacility: payload.ownFacility
-        // add #12462 患者情報共有 Ji end
       };
 
       let ordAdditionList = [];
@@ -171,10 +170,8 @@ export default {
       }
 
       let mstAdditionList = [];
-      // mod #12462 患者情報共有 Ji start
-      const facilityCd = payload.facilityCd
+      const facilityCd = payload.facilityCd;
       await sendRequestGetMstAddition(facilityCd).then(response => {
-      // mod #12462 患者情報共有 Ji end
         mstAdditionList = response.data;
       });
 
@@ -185,10 +182,8 @@ export default {
           "ordNo": payload.ordNo,
           "patId": payload.patId,
           "treatDate": payload.treatDate,
-          // add #12462 患者情報共有 Ji start
           "facilityCd": payload.facilityCd,
           "ownFacility": payload.ownFacility
-          // add #12462 患者情報共有 Ji end
         };
         calculationDateList = await sendRequestGetAdditionDateList(params)
           .catch(error => {
@@ -211,7 +206,7 @@ export default {
               mstItem.sort_order_ord = j;
               mstItem.orditem_name = ordItem.name;
               mstItem.is_enable = true;
-              mstItem.start_date = ordItem.start_date ? moment(ordItem.start_date).format("YYYY-MM-DD") : "";
+              mstItem.start_date = ordItem.start_date ? dayjs(ordItem.start_date).format("YYYY-MM-DD") : "";
               pushedOrdAdditionList.push(ordItem.cd);
             }
           }

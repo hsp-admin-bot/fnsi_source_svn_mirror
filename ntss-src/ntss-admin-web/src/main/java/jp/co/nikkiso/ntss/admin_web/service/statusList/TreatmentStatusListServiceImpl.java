@@ -1,11 +1,11 @@
 package jp.co.nikkiso.ntss.admin_web.service.statusList;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import com.google.gson.Gson;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.FlagType;
@@ -119,7 +119,7 @@ import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.service.ordMaterialSaveService.OrdMaterialSaveService;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -140,7 +140,6 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -173,6 +172,7 @@ import java.util.TimeZone;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -2465,7 +2465,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
     wheres.append(" WHERE\n");
     wheres.append(" ord_no = " + ordNo + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -2647,7 +2647,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
       for (int lop = 0; lop < jsonNode_array.size(); lop++) {
         JsonNode jsonNode = jsonNode_array.get(lop);
         // jsonNodeは読み取り専用のため、ObjectNodeに変換
-        ObjectNode objectNode = jsonNode.deepCopy();
+        ObjectNode objectNode = jsonNode.deepCopy().asObject();
 
         if (objectNode.get("effect_flg").asInt() != 1) {
           // 値の変更
@@ -2669,7 +2669,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
           rtnBuilder.append(",");
         }
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -2717,7 +2717,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
       try {
         response.setIsMediDone(ordMain.getRstMediInfo());
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         EventLogMessage eventLogMessage = new EventLogMessage();
         eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
         logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
@@ -2746,6 +2746,10 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
   private SysMonitorItemService sysMonitorItemService;
   @Autowired
   private MstAddMonitorDao mstAddMonitorDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   @Override
   public List<DispItemListResponse> getTreatmentStatusListDispItems(String facilityCd) {
@@ -3446,7 +3450,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
       strRstPuncture = nowInfo.get(0).getRstPunctureUserInfo();
       strwork = strRstPuncture == null ? "{}" : strRstPuncture;
       nodePuncture = mapper.readTree(strwork);
-      nodeRstPuncture = nodePuncture.deepCopy();
+      nodeRstPuncture = nodePuncture.deepCopy().asObject();
 
       // 穿刺者1
       if (!nodeRstPuncture.hasNonNull("user_id_1")
@@ -3477,7 +3481,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
         || !StringUtils.hasText(nodeRstPuncture.get("date").asText())) {
         nodeRstPuncture.put("date", "");
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -3497,7 +3501,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
       strRstReturn = nowInfo.get(0).getRstReturnUserInfo();
       strwork = strRstReturn == null ? "{}" : strRstReturn;
       nodeReturn = mapper.readTree(strwork);
-      nodeRstReturn = nodeReturn.deepCopy();
+      nodeRstReturn = nodeReturn.deepCopy().asObject();
 
       // 返血者1
       if (!nodeRstReturn.hasNonNull("user_id_1")
@@ -3528,7 +3532,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
           || StringUtils.hasText(nodeRstReturn.get("date").asText())) {
         nodeRstReturn.put("date", "");
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -3548,7 +3552,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
       strRstCharge = nowInfo.get(0).getRstChargeUserInfo();
       strwork = strRstCharge == null ? "{}" : strRstCharge;
       nodeCharge = mapper.readTree(strwork);
-      nodeRstCharge = nodeCharge.deepCopy();
+      nodeRstCharge = nodeCharge.deepCopy().asObject();
 
       // 担当者1
       if (!nodeRstCharge.hasNonNull("user_id_1")
@@ -3574,7 +3578,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
           || !StringUtils.hasText(nodeRstCharge.get("date_2").asText())) {
         nodeRstCharge.put("date_2", "");
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -3803,7 +3807,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
       case 36:// 返血者2登録日時
         break;
       }
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -3832,7 +3836,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
       wheres.append(" WHERE\n");
       wheres.append(" ord_no = " + ordNo + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(treatmentStatusListDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -4322,7 +4326,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
       if(null != mrbg && StringUtils.hasText(mrbg.getBedList())){
         bedCdList.addAll(mapper.readValue(mrbg.getBedList(), new TypeReference<List<Long>>(){}));
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -5657,7 +5661,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
 //                        }
 //                        // add #8557 「治療状況リストの項目が空欄」について、対応する。 dengshen end
 //                        JsonNode node = mapper.readTree(mon.getMonitorData());
-//                        Iterator<String> fldNames = node.fieldNames();
+//                        Iterator<String> fldNames = node.propertyNames().iterator();
 //                        while (fldNames.hasNext()) {
 //                          String fldName = fldNames.next();
 //                          if (!node.get(fldName).isNull()) {
@@ -7047,11 +7051,11 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -7251,7 +7255,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
 //            allConfirmResponse.autoPrintResults.add(printR);
 //            // add FNSI-実績確定時自動印刷の修正 徐 start
 //            // if (!printR.autoPrintErrorMessage.isEmpty()) {
-//            if (!com.amazonaws.util.StringUtils.isNullOrEmpty(printR.autoPrintErrorMessage)) {
+//            if (!ObjectUtils.isEmpty(printR.autoPrintErrorMessage)) {
 //              // add FNSI-実績確定時自動印刷の修正 徐 end
 //              EventLogMessage eventLogMessage = new EventLogMessage();
 //              eventLogMessage.setLogMessage(printR.autoPrintErrorMessage);
@@ -7478,7 +7482,7 @@ public class TreatmentStatusListServiceImpl<pubulic> implements TreatmentStatusL
     wheresCheck.append(" WHERE\n");
     wheresCheck.append(" ord_no = ").append(ordNo).append("\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommonCheck = getLogCommon(ordMainDao, tableNameCheck, wheresCheck, eventLogMessage);
+    DataUpdateLogCommonNew logCommonCheck = getLogCommon(tableNameCheck, wheresCheck, eventLogMessage);
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResultCheck = logCommonCheck.setInfo();
     // DB更新ログ出力ロジック wangzuo End

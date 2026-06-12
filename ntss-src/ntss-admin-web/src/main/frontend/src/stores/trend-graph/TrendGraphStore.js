@@ -11,9 +11,9 @@ import {
 import {
   sendRequestGetSysMonitorItem
 } from "@/apis/treatment-record";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import BigNumber from "bignumber.js";
-import Vue from "vue";
+import Vue from "@/compat/vue/runtime";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import { MACHINE_MODEL, NX_MACHINE_ID } from "@/constants/machineModel";
 
@@ -49,9 +49,9 @@ export default {
     // トレンドグラフ画面抽出条件
     condition: {
       // 表示期間：開始日
-      startDate: moment().format("YYYY-MM-DD"),
+      startDate: dayjs().format("YYYY-MM-DD"),
       // 表示期間：終了日
-      endDate: moment().format("YYYY-MM-DD"),
+      endDate: dayjs().format("YYYY-MM-DD"),
       // 横軸目盛
       axisScaleIndex: 0,
       // 横軸目盛
@@ -117,10 +117,10 @@ export default {
      */
     fetchTrendGraphList({ state }, condition) {
       const startDate = condition.startDate
-        ? moment(condition.startDate).format("YYYYMMDD")
+        ? dayjs(condition.startDate).format("YYYYMMDD")
         : "0";
       const endDate = condition.endDate
-        ? moment(condition.endDate).format("YYYYMMDD")
+        ? dayjs(condition.endDate).format("YYYYMMDD")
         : "0";
       const typeCd = state.machineInfo.machineTypeCd;
       const serial = state.machineInfo.machineSerial;

@@ -2,6 +2,7 @@
  * Windowサイズ管理用Store
  */
 import store from "@/stores";
+import { getPatientSearchSidebarElement } from "@/functions/common/LayoutMeasureHelper";
 
 // 分割画面の最大幅
 const MAX_SPLIT_FRAME_WIDTH = 760;
@@ -24,7 +25,7 @@ export default {
       state.windowWidth = windowWidth;
 
       //サイドバーのサイズ補正
-      const sidebarObj = document.getElementById("patientSearchSidebarArea");
+      const sidebarObj = getPatientSearchSidebarElement();
       if (sidebarObj !== null && sidebarObj.style.position !== "absolute") {
         state.sidebarWidth = sidebarObj.offsetWidth;
       } else {

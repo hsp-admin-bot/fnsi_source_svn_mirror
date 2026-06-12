@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -64,19 +64,19 @@
 </template>
 
  <script>
-   import {mapActions, mapGetters} from "vuex";
+   import {mapActions, mapGetters} from "@/compat/vue/vuex";
    /*add FNSI-改修内容4214 任 start*/
-   import $ from "jquery";
+
    /*add FNSI-改修内容4214 任 end*/
    import {DATE_CHOICES, PAT_INTRO_LETTER} from "@/constants/defaultSettingConstants";
    import {deepCopy} from "@/functions/common/CommonFunctions";
+   import { isValidDefaultCategory } from "@/functions/modals/default-setting/defaultSettingUtils";
    //add FNSI-5687 劉全航 start
-   import { EventBus } from "@/eventBus.js";
+   import { EventBus } from "@/compat/vue/event-bus.js";
+import { getScopedElementById, isScopedElementDisplayInline } from "@/functions/common/LayoutMeasureHelper";
    //add FNSI-5687 劉全航 end
 
    export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -276,6 +276,9 @@
       } else {
         if (this.editRecord[PAT_INTRO_LETTER.KEY_NAME_RELATION_CATEGORY_CD] == null) {
           this.editRecord[PAT_INTRO_LETTER.KEY_NAME_RELATION_CATEGORY_CD] = this.initialValue[PAT_INTRO_LETTER.KEY_NAME_RELATION_CATEGORY_CD];
+        } else if (!isValidDefaultCategory(this.editRecord[PAT_INTRO_LETTER.KEY_NAME_RELATION_CATEGORY_CD], this.getMstCategoryRecords, this.mstSubCategoryRecordsPatIntroLetter)) {
+          // NOTE: マスタ削除された場合、「0-0 : 全カテゴリ」を再設定
+          this.editRecord[PAT_INTRO_LETTER.KEY_NAME_RELATION_CATEGORY_CD] = "0-0";
         }
         if (this.editRecord[PAT_INTRO_LETTER.KEY_NAME_START_DATE] == null) {
           this.editRecord[PAT_INTRO_LETTER.KEY_NAME_START_DATE] = this.initialValue[PAT_INTRO_LETTER.KEY_NAME_START_DATE];
@@ -286,8 +289,14 @@
         this.initialValue = deepCopy(this.editRecord);
       }
       /*add FNSI-改修内容4214 任 start*/
-      if($("#phone-show-pat-introletter").css("display") === "inline"){
-        document.getElementById("phone-show-pat-introletter").innerText =  document.getElementById("phone-show-pat-introletter").innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+      if(isScopedElementDisplayInline("phone-show-pat-introletter", this.$el || this)){
+        const phoneShowElement = getScopedElementById("phone-show-pat-introletter", this.$el || this);
+
+        if (phoneShowElement) {
+
+          phoneShowElement.innerText = phoneShowElement.innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+
+        }
       }
       /*add FNSI-改修内容4214 任 end*/
       // 共通ローダー表示終了
@@ -295,8 +304,6 @@
       this.isExpanded = this.defaultExpanded;
     });
   },
-  mounted() {
-  }
 };
 </script>
 

@@ -139,7 +139,10 @@ namespace LayoutDesigner
         public async Task<RldRestResultData<List<FilterEquipData>>> GetFilterEquipmentData()
         {
             // 取得に成功した結果をキャッシュしている場合はキャッシュを返す
-            if( this.m_FilterEquipmentData != null && this.m_FilterEquipmentData.IsSuccess ) return this.m_FilterEquipmentData;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+            //if ( this.m_FilterEquipmentData != null && this.m_FilterEquipmentData.IsSuccess ) return this.m_FilterEquipmentData;
+            this.m_FilterEquipmentData = null;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
 
             this.m_FilterEquipmentData = new RldRestResultData<List<FilterEquipData>>();
 
@@ -217,7 +220,10 @@ namespace LayoutDesigner
         public async Task<RldRestResultData<List<FilterExamItemData>>> GetFilterExamItemData()
         {
             // 取得に成功した結果をキャッシュしている場合はキャッシュを返す
-            if( this.m_FilterExamItemData != null && this.m_FilterExamItemData.IsSuccess ) return this.m_FilterExamItemData;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+            //if ( this.m_FilterExamItemData != null && this.m_FilterExamItemData.IsSuccess ) return this.m_FilterExamItemData;
+            this.m_FilterExamItemData = null;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
 
             this.m_FilterExamItemData = new RldRestResultData<List<FilterExamItemData>>();
 
@@ -255,11 +261,15 @@ namespace LayoutDesigner
 
             this.m_FilterCategoryData = new RldRestResultData<List<FilterCategoryData>>();
 
-            String wUri = String.Format("{0}{1}{2}/{3}",
+            //String wUri = String.Format("{0}{1}{2}/{3}",
+            //    NKKWebAccess.BaseUri,
+            //    RldConst.Uri.WEB_APP,
+            //    RldConst.Uri.GET_MST_PAT_EVENT_SUB_CATEGORY,
+            //    String.Empty);
+            String wUri = String.Format("{0}{1}{2}",
                 NKKWebAccess.BaseUri,
                 RldConst.Uri.WEB_APP,
-                RldConst.Uri.GET_MST_PAT_EVENT_SUB_CATEGORY,
-                String.Empty);
+                RldConst.Uri.GET_MST_PAT_EVENT_SUB_CATEGORY);
 
             var wRestRet = await NKKWebAccess.Get("検査項目一覧取得", wUri, NKKWebAccess.SKIP_OTP);
 
@@ -282,7 +292,10 @@ namespace LayoutDesigner
         public async Task<RldRestResultData<List<FilterExamSetData>>> GetFilterExamSetData()
         {
             // 取得に成功した結果をキャッシュしている場合はキャッシュを返す
-            if( this.m_FilterExamSetData != null && this.m_FilterExamSetData.IsSuccess ) return this.m_FilterExamSetData;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+            //if ( this.m_FilterExamSetData != null && this.m_FilterExamSetData.IsSuccess ) return this.m_FilterExamSetData;
+            this.m_FilterExamSetData = null;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
 
             this.m_FilterExamSetData = new RldRestResultData<List<FilterExamSetData>>();
 
@@ -410,7 +423,10 @@ namespace LayoutDesigner
         public async Task<RldRestResultData<List<FilterPatEventData>>> GetFilterPatEventData()
         {
             // 取得に成功した結果をキャッシュしている場合はキャッシュを返す
-            if( this.m_FilterPatEventData != null && this.m_FilterPatEventData.IsSuccess ) return this.m_FilterPatEventData;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+            //if ( this.m_FilterPatEventData != null && this.m_FilterPatEventData.IsSuccess ) return this.m_FilterPatEventData;
+            this.m_FilterPatEventData = null;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
 
             this.m_FilterPatEventData = new RldRestResultData<List<FilterPatEventData>>();
 
@@ -524,7 +540,10 @@ namespace LayoutDesigner
         public async Task<RldRestResultData<List<FilterDistributionData>>> GetFilterDistributionData()
         {
             // 取得に成功した結果をキャッシュしている場合はキャッシュを返す
-            if (this.m_FilterDistributionData != null && this.m_FilterDistributionData.IsSuccess) return this.m_FilterDistributionData;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+            //if (this.m_FilterDistributionData != null && this.m_FilterDistributionData.IsSuccess) return this.m_FilterDistributionData;
+            this.m_FilterDistributionData = null;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
 
             this.m_FilterDistributionData = new RldRestResultData<List<FilterDistributionData>>();
 
@@ -602,7 +621,10 @@ namespace LayoutDesigner
         public async Task<RldRestResultData<List<FilterReceiptData>>> GetFilterReceiptData()
         {
             // 取得に成功した結果をキャッシュしている場合はキャッシュを返す
-            if (this.m_FilterReceiptData != null && this.m_FilterReceiptData.IsSuccess) return this.m_FilterReceiptData;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+            //if (this.m_FilterReceiptData != null && this.m_FilterReceiptData.IsSuccess) return this.m_FilterReceiptData;
+            this.m_FilterReceiptData = null;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
 
             this.m_FilterReceiptData = new RldRestResultData<List<FilterReceiptData>>();
 
@@ -642,7 +664,10 @@ namespace LayoutDesigner
         public async Task<RldRestResultData<List<FilterAdditionData>>> GetFilterInfectionData()
         {
             // 取得に成功した結果をキャッシュしている場合はキャッシュを返す
-            if (this.m_FilterInfectionData != null && this.m_FilterInfectionData.IsSuccess) return this.m_FilterInfectionData;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+            //if (this.m_FilterInfectionData != null && this.m_FilterInfectionData.IsSuccess) return this.m_FilterInfectionData;
+            this.m_FilterInfectionData = null;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
 
             this.m_FilterInfectionData = new RldRestResultData<List<FilterAdditionData>>();
 
@@ -720,7 +745,10 @@ namespace LayoutDesigner
         public async Task<RldRestResultData<List<FilterAdditionData>>> GetFilterWQTestTypeData()
         {
             // 取得に成功した結果をキャッシュしている場合はキャッシュを返す
-            if (this.m_FilterWQTestTypeData != null && this.m_FilterWQTestTypeData.IsSuccess) return this.m_FilterWQTestTypeData;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 start
+            //if (this.m_FilterWQTestTypeData != null && this.m_FilterWQTestTypeData.IsSuccess) return this.m_FilterWQTestTypeData;
+            this.m_FilterWQTestTypeData = null;
+            // mod #12416 帳票移植時にフィルタ設定が無効化する（横展開） 高 end
 
             this.m_FilterWQTestTypeData = new RldRestResultData<List<FilterAdditionData>>();
 

@@ -24,7 +24,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.alive_moni_auto.entity.MstFacilityCustom;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
@@ -284,7 +284,7 @@ public class AliveMoniAutoService {
         long start = System.currentTimeMillis();
         // リクエスト処理
         ResponseEntity<HttpStatus> response = rt.exchange(request, HttpStatus.class);
-        HttpStatus status = response.getStatusCode();
+        HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
         long cost = System.currentTimeMillis() - start;
         Map<String, Object> map = new HashMap<>();
         map.put("logType", "RESTTEMPLATE-LOG");
@@ -422,7 +422,7 @@ public class AliveMoniAutoService {
       long start = System.currentTimeMillis();
       // リクエスト処理
       ResponseEntity<HttpStatus> response = rt.exchange(request, HttpStatus.class);
-      HttpStatus status = response.getStatusCode();
+      HttpStatus status = HttpStatus.valueOf(response.getStatusCode().value());
       long cost = System.currentTimeMillis() - start;
       Map<String, Object> map = new HashMap<>();
       map.put("logType", "RESTTEMPLATE-LOG");

@@ -18,7 +18,7 @@ public class NtssAuthenticationToken extends UsernamePasswordAuthenticationToken
   /**
    * SerialVersionID.
    */
-  private static final long serialVersionUID = SpringSecurityCoreVersion.SERIAL_VERSION_UID;
+//  private static final long serialVersionUID = SpringSecurityCoreVersion.SERIAL_VERSION_UID;
 
   @Getter
   private final boolean userLogin;

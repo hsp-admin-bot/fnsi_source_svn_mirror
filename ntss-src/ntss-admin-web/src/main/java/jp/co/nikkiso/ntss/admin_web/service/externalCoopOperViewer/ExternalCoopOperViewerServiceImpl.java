@@ -11,7 +11,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 import jp.co.nikkiso.ntss.admin_web.constant.CoopCdConstant;
 import jp.co.nikkiso.ntss.admin_web.request.patientCapture.JournalCreateRequestPayload;

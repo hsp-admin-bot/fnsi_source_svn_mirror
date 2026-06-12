@@ -10,18 +10,18 @@
     </v-ons-col>
     <v-ons-col class="text-value d-flex align-items-center">
       <label class="theme">
-        {{ value ? value.name : "" }}
+        {{ externalValue ? externalValue.name : "" }}
       </label>
     </v-ons-col>
     <v-ons-col class="select-button-col d-flex align-items-center">
       <!-- mod FNSI-redmine3855 徐 start -->
       <!-- <v-ons-button
         class="button select-btn btn3-normal"
-        @click="createPopoverData(value ? value.cd : null)"
+        @click="createPopoverData(externalValue ? externalValue.cd : null)"
         :disabled="isDisabled">選択</v-ons-button> -->
       <v-ons-button
         class="button select-btn-self btn3-normal"
-        @click="createPopoverData(value ? value.cd : null)"
+        @click="createPopoverData(externalValue ? externalValue.cd : null)"
         :class="isClass"
         :disabled="isDisabled">選択</v-ons-button>
       <!-- mod FNSI-redmine3855 徐 end -->
@@ -36,6 +36,13 @@ import { Master } from "@/models/common/master-selector-condition/Master";
 
 export default {
   mixins: [MasterSelectorMixin],
+  emits: [
+    "update:modelValue",
+    "input",
+    "changeUnit",
+    "changeDecPoint",
+    "changePersonalUser"
+  ],
   props: {
     index: {
       type: Number,
@@ -55,8 +62,14 @@ export default {
       type: Boolean,
       default: true
     },
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
+      type: Object,
+      default: undefined
+    },
     value: {
-      type: Object
+      type: Object,
+      default: undefined
     },
     isDisabled: {
       type: Boolean,
@@ -73,6 +86,11 @@ export default {
       default: "OK"
     }
   },
+  computed: {
+    externalValue() {
+      return this.modelValue !== undefined ? this.modelValue : this.value;
+    }
+  },
   methods: {
     updateInput(data) {
       const master = new Master(data.value, data.text);
@@ -80,6 +98,7 @@ export default {
         master.needle = data.needle;
       }
       this.popoverData.popoverContentSelected = data;
+      this.$emit("update:modelValue", master, this.index);
       this.$emit("input", master, this.index);
       this.$emit("changeUnit", data.unit, this.index);
       this.$emit("changeDecPoint",data.decPoint, this.index);

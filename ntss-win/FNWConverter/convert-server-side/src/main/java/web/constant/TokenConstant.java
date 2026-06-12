@@ -8,7 +8,7 @@ public class TokenConstant {
     //token签名密钥（キャッシュ）
     public static String SECRET_KEY = "";
     //鍵の長さ
-    public static final Integer SECRET_LENGTH = 256;
+    public static final Integer SECRET_LENGTH = 512;
     public static final String MESSAGE_FORBIDDEN = "アクセス権なし";
     public static final String MESSAGE_UNAUTHORIZED = "アクセスが拒否されました";
     public static final String LOGIN_ERROR = "認証に失敗しました。認証情報を確認してください。";

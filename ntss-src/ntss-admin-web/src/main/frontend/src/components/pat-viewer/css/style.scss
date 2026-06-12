@@ -3,7 +3,8 @@
  */
 
 /* _mixin.scssの読み込み */
-@import 'mixin.scss';
+@forward 'mixin';
+@use 'mixin' as *;
 
 /* 一覧全体のdiv */
 .list-content {
@@ -203,22 +204,22 @@
  */
 
  /* onsen-ui で定義されている定義を上書き(本CSSを上書きしないと横幅が変更出来ない) */
-.popover-content /deep/ .popover--top,
-.popover-content /deep/ .popover--right,
-.popover-content /deep/ .popover--left,
-.popover-content /deep/ .popover--bottom {
+.popover-content :deep(.popover--top),
+.popover-content :deep(.popover--right),
+.popover-content :deep(.popover--left),
+.popover-content :deep(.popover--bottom) {
   width: initial;
 }
 
 /* 表示条件設定の大枠 */
-.popover-content-condition /deep/ .popover__content {
+.popover-content-condition :deep(.popover__content) {
   max-width: 410px;
   height: 100%;
   padding: 7.5px 7.5px 0px 7.5px;
 }
 
 /* 治療予定メニューの大枠 */
-.popover-content-treatplan-menu /deep/ .popover__content {
+.popover-content-treatplan-menu :deep(.popover__content) {
   width: 200px;
   min-height: auto;
 }
@@ -285,8 +286,8 @@
 }
 
 /* テキストボックス、セレクトボックス */
-ons-input /deep/ .text-input,
-ons-select /deep/ .select-input {
+ons-input :deep(.text-input),
+ons-select :deep(.select-input) {
   font-size: inherit;
   height: auto;
 }

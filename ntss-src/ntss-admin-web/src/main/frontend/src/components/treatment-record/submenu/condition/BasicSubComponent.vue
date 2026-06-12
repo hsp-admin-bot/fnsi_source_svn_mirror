@@ -67,23 +67,30 @@
           </label>
         </v-ons-col>
         <v-ons-col class="value d-flex align-items-center">
-          <show-selected-item
-            :propInitValue="initModel.va.name"
-            :propEditValue="inputModel.va.name"
-            propBackgroundColor="#f7f7f7"
-            class="basic-sub-input"
-          />
           <!-- mod #9342 start ljx -->
           <!--<com-master-selector :readMasterData="requestApis.va" :masterDefine="masterDefs.va" v-model="inputModel.va" :isDisabled="!isShared || styleFlg.flag1"/>-->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
-          <com-master-selector :readMasterData="requestApis.va" :masterDefine="masterDefs.va" v-model="inputModel.va" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') ||!isShared"/>
+          <!-- <com-master-selector :readMasterData="requestApis.va" :masterDefine="masterDefs.va" v-model="inputModel.va" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') ||!isShared"/> -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
           <!-- mod #9342 end ljx -->
+          <common-master-selector
+            :masterType="MasterType.VA_TREATMENT_RECORD"
+            :initItem="initItemMap.va"
+            :editItem="initItemMap.va"
+            :facilityCd="getFacilityCd"
+            :dialysisState="getDialysisState"
+            :selectedItemClass="'com-basic-sub-input'"
+            :hasChangedOption="true"
+            :backgroundColor="'#f7f7f7'"
+            :btnClass="'com-basic-sub-btn'"
+            :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
+            @popover-return="updateInput('va', $event)"
+          />
         </v-ons-col>
       </v-ons-row>
       <!-- <com-master-selector labelName="VA" :readMasterData="requestApis.va" :masterDefine="masterDefs.va" v-model="inputModel.va" :disabled="!isShared" v-show="!isMobileBrowser" :class="['isClass', styleFlg.flag1?'column-ground-color':null]"/>
       <com-master-selector labelName="VA" :readMasterData="requestApis.va" :masterDefine="masterDefs.va" v-model="inputModel.va" :disabled="!isShared" v-show="isMobileBrowser" :class="[styleFlg.flag1?'column-ground-color':null]"/> -->
-      <com-number-display class="basic-sub-com-display-dw" labelName="DW" unitName="kg" :digits="2" v-model="inputModel.dw" :class="styleFlg.flag14?'column-ground-color':null" :required="false"/>
+      <com-number-display class="basic-sub-com-display-dw" labelName="DW" unitName="kg" :digits="2" :value="inputModel.dw" :class="styleFlg.flag14?'column-ground-color':null" :required="false"/>
       <!-- mod #5589 2023/03/30 数値IFのスタイル全不正 張博 start -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
       <com-number-input
@@ -119,18 +126,27 @@
           </label>
         </v-ons-col>
         <v-ons-col class="value d-flex align-items-center">
-          <show-selected-item
-            :propInitValue="initModel.dialyzer.name"
-            :propEditValue="inputModel.dialyzer.name"
-            propBackgroundColor="#f7f7f7"
-            class="basic-sub-input"
-          />
           <!-- mod #9342 start ljx -->
           <!--<com-master-selector labelName="ダイアライザ" :readMasterData="requestApis.dialyzer" :masterDefine="masterDefs.dialyzer" v-model="inputModel.dialyzer" :isDisabled="styleFlg.flag4" />-->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
-          <com-master-selector labelName="ダイアライザ" :readMasterData="requestApis.dialyzer" :masterDefine="masterDefs.dialyzer" v-model="inputModel.dialyzer" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"/>
+          <!-- <com-master-selector labelName="ダイアライザ" :readMasterData="requestApis.dialyzer" :masterDefine="masterDefs.dialyzer" v-model="inputModel.dialyzer" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"/> -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
           <!-- mod #9342 end ljx -->
+          <common-master-selector
+            :masterType="MasterType.DIALYZER_TREATMENT_RECORD"
+            :initItem="initItemMap.dialyzer"
+            :editItem="initItemMap.dialyzer"
+            :patientId="selectedPatId"
+            :facilityCd="getFacilityCd"
+            :dialysisState="getDialysisState"
+            :extraParams="{treatDate: getTreatDate, actualName: (initModel && initModel.dialyzer && initModel.dialyzer.name) || (inputModel && inputModel.dialyzer && inputModel.dialyzer.name) || ''}"
+            :hasChangedOption="true"
+            :selectedItemClass="'com-basic-sub-input'"
+            :backgroundColor="'#f7f7f7'"
+            :btnClass="'com-basic-sub-btn'"
+            :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
+            @popover-return="updateInput('dialyzer', $event)"
+          />
         </v-ons-col>
       </v-ons-row>
       <!-- <com-master-selector labelName="ダイアライザ" :readMasterData="requestApis.dialyzer" :masterDefine="masterDefs.dialyzer" v-model="inputModel.dialyzer" v-show="!isMobileBrowser" :class="['isClass', styleFlg.flag4?'column-ground-color':null]"/> -->
@@ -142,18 +158,37 @@
           </label>
         </v-ons-col>
         <v-ons-col class="value d-flex align-items-center">
-          <show-selected-item
-            :propInitValue="initModel.adsorptionColumn.name"
-            :propEditValue="inputModel.adsorptionColumn.name"
-            propBackgroundColor="#f7f7f7"
-            class="basic-sub-input"
-          />
           <!-- mod #9342 start ljx -->
           <!--<com-master-selector :readMasterData="requestApis.equipmentAdsorptionColumn" :masterDefine="masterDefs.equipmentAdsorptionColumn" v-model="inputModel.adsorptionColumn" v-show="!isMobileBrowser" :isDisabled="styleFlg.flag5" />-->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
-          <com-master-selector :readMasterData="requestApis.equipmentAdsorptionColumn" :masterDefine="masterDefs.equipmentAdsorptionColumn" v-model="inputModel.adsorptionColumn" v-show="!isMobileBrowser" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared" />
+          <!-- <com-master-selector :readMasterData="requestApis.equipmentAdsorptionColumn" :masterDefine="masterDefs.equipmentAdsorptionColumn" v-model="inputModel.adsorptionColumn" v-show="!isMobileBrowser" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared" /> -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
           <!-- mod #9342 end ljx -->
+          <common-master-selector
+            :masterType="MasterType.EQUIPMENT_TREATMENT_CLASSTYPE_RECORD"
+            :initItem="{
+              text: (initItemMap.adsorptionColumn && initItemMap.adsorptionColumn.text) ? initItemMap.adsorptionColumn.text : '',
+              value: (initItemMap.adsorptionColumn && initItemMap.adsorptionColumn.value != null) ? initItemMap.adsorptionColumn.value : null,
+              unit: (initModel && initModel.adsorptionColumn && initModel.adsorptionColumn.unit != null) ? initModel.adsorptionColumn.unit : null
+            }"
+            :editItem="{
+              text: (inputModel && inputModel.adsorptionColumn && inputModel.adsorptionColumn.name) ? inputModel.adsorptionColumn.name : '',
+              value: (inputModel && inputModel.adsorptionColumn && inputModel.adsorptionColumn.cd != null) ? inputModel.adsorptionColumn.cd : null,
+              unit: (inputModel && inputModel.adsorptionColumn && inputModel.adsorptionColumn.unit != null) ? inputModel.adsorptionColumn.unit : null
+            }"
+            :patientId="selectedPatId"
+            :facilityCd="getFacilityCd"
+            :dialysisState="getDialysisState"
+            :extraParams="{treatDate: getTreatDate, classType: 4, actualName: (initModel && initModel.adsorptionColumn && initModel.adsorptionColumn.name) || (inputModel && inputModel.adsorptionColumn && inputModel.adsorptionColumn.name) || ''}"
+            :hasChangedOption="true"
+            :changeOptionMode="'nameAndUnit'"
+            :selectedItemClass="'com-basic-sub-input'"
+            :backgroundColor="'#f7f7f7'"
+            :btnClass="'com-basic-sub-btn'"
+            :btnVisible="!isMobileBrowser"
+            :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
+            @popover-return="updateInput('adsorptionColumn', $event)"
+          />
         </v-ons-col>
       </v-ons-row>
       <!-- <com-master-selector labelName="吸着カラム" :readMasterData="requestApis.equipmentAdsorptionColumn" :masterDefine="masterDefs.equipmentAdsorptionColumn" v-model="inputModel.adsorptionColumn" v-show="!isMobileBrowser" :class="['isClass', styleFlg.flag5?'column-ground-color':null]"/> -->
@@ -164,21 +199,31 @@
           </label>
         </v-ons-col>
         <v-ons-col class="value d-flex align-items-center">
-          <show-selected-item
-            :propInitValue="initModel.primaryFilm.name"
-            :propEditValue="inputModel.primaryFilm.name"
-            propBackgroundColor="#f7f7f7"
-            class="basic-sub-input"
-          />
           <!-- mod #9342 start ljx -->
           <!--<com-master-selector :readMasterData="requestApis.equipmentFilm" :masterDefine="masterDefs.equipmentFilm" v-model="inputModel.primaryFilm" v-show="!isMobileBrowser" :isDisabled="styleFlg.flag6" />-->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
           <!-- #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start -->
           <!-- <com-master-selector :readMasterData="requestApis.equipmentFilm" :masterDefine="masterDefs.equipmentFilm" v-model="inputModel.primaryFilm" v-show="!isMobileBrowser" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority')"/> -->
-          <com-master-selector :readMasterData="requestApis.equipmentFilmFirst" :masterDefine="masterDefs.equipmentFilm" v-model="inputModel.primaryFilm" v-show="!isMobileBrowser" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"/>
+          <!-- <com-master-selector :readMasterData="requestApis.equipmentFilmFirst" :masterDefine="masterDefs.equipmentFilm" v-model="inputModel.primaryFilm" v-show="!isMobileBrowser" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"/> -->
           <!-- #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
           <!-- mod #9342 end ljx -->
+          <common-master-selector
+            :masterType="MasterType.EQUIPMENT_TREATMENT_CLASSTYPE_RECORD"
+            :initItem="initItemMap.primaryFilm"
+            :editItem="initItemMap.primaryFilm"
+            :patientId="selectedPatId"
+            :facilityCd="getFacilityCd"
+            :dialysisState="getDialysisState"
+            :extraParams="{treatDate: getTreatDate, classType: '5,6', actualName: (initModel && initModel.primaryFilm && initModel.primaryFilm.name) || (inputModel && inputModel.primaryFilm && inputModel.primaryFilm.name) || ''}"
+            :hasChangedOption="true"
+            :selectedItemClass="'com-basic-sub-input'"
+            :backgroundColor="'#f7f7f7'"
+            :btnClass="'com-basic-sub-btn'"
+            :btnVisible="!isMobileBrowser"
+            :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
+            @popover-return="updateInput('primaryFilm', $event)"
+          />
         </v-ons-col>
       </v-ons-row>
       <!-- <com-master-selector labelName="1次膜" :readMasterData="requestApis.equipmentFilm" :masterDefine="masterDefs.equipmentFilm" v-model="inputModel.primaryFilm" v-show="!isMobileBrowser" :class="['isClass', styleFlg.flag6?'column-ground-color':null]"/> -->
@@ -190,21 +235,30 @@
           </label>
         </v-ons-col>
         <v-ons-col class="value d-flex align-items-center">
-          <show-selected-item
-            :propInitValue="initModel.secondaryFilm.name"
-            :propEditValue="inputModel.secondaryFilm.name"
-            propBackgroundColor="#f7f7f7"
-            class="basic-sub-input"
-          />
           <!-- mod #9342 start ljx -->
           <!--<com-master-selector :readMasterData="requestApis.equipmentFilm" :masterDefine="masterDefs.equipmentFilm" v-model="inputModel.secondaryFilm" :class="[styleFlg.flag7?'column-ground-color':null]" :isDisabled="styleFlg.flag7" />-->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
           <!-- #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start -->
           <!-- <com-master-selector :readMasterData="requestApis.equipmentFilm" :masterDefine="masterDefs.equipmentFilm" v-model="inputModel.secondaryFilm" :class="[styleFlg.flag7?'column-ground-color':null]" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority')"/> -->
-          <com-master-selector :readMasterData="requestApis.equipmentFilmSecond" :masterDefine="masterDefs.equipmentFilm" v-model="inputModel.secondaryFilm" :class="[styleFlg.flag7?'column-ground-color':null]" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"/>
+          <!-- <com-master-selector :readMasterData="requestApis.equipmentFilmSecond" :masterDefine="masterDefs.equipmentFilm" v-model="inputModel.secondaryFilm" :class="[styleFlg.flag7?'column-ground-color':null]" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"/> -->
           <!-- #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
           <!-- mod #9342 end ljx -->
+          <common-master-selector
+            :masterType="MasterType.EQUIPMENT_TREATMENT_CLASSTYPE_RECORD"
+            :initItem="initItemMap.secondaryFilm"
+            :editItem="initItemMap.secondaryFilm"
+            :patientId="selectedPatId"
+            :facilityCd="getFacilityCd"
+            :dialysisState="getDialysisState"
+            :extraParams="{treatDate: getTreatDate, classType: '5,6', actualName: (initModel && initModel.secondaryFilm && initModel.secondaryFilm.name) || (inputModel && inputModel.secondaryFilm && inputModel.secondaryFilm.name) || ''}"
+            :hasChangedOption="true"
+            :selectedItemClass="'com-basic-sub-input'"
+            :backgroundColor="'#f7f7f7'"
+            :btnClass="['com-basic-sub-btn', styleFlg.flag7 ? 'column-ground-color' : null]"
+            :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
+            @popover-return="updateInput('secondaryFilm', $event)"
+          />
         </v-ons-col>
       </v-ons-row>
       <!-- <com-master-selector labelName="2次膜" :readMasterData="requestApis.equipmentFilm" :masterDefine="masterDefs.equipmentFilm" v-model="inputModel.secondaryFilm" v-show="!isMobileBrowser" :class="['isClass', styleFlg.flag7?'column-ground-color':null]"/> -->
@@ -222,21 +276,30 @@
           </label>
         </v-ons-col>
         <v-ons-col class="value d-flex align-items-center">
-          <show-selected-item
-            :propInitValue="initModel.punctureNeedleA.name"
-            :propEditValue="inputModel.punctureNeedleA.name"
-            propBackgroundColor="#f7f7f7"
-            class="basic-sub-input"
-          />
           <!-- mod #9342 start ljx -->
           <!--<com-master-selector :readMasterData="requestApis.equipmentPunctureNeedle" :masterDefine="masterDefs.equipmentPunctureNeedle" v-model="inputModel.punctureNeedleA" :isDisabled="styleFlg.flag9" />-->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
           <!-- #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start -->
           <!-- <com-master-selector :readMasterData="requestApis.equipmentPunctureNeedle" :masterDefine="masterDefs.equipmentPunctureNeedle" v-model="inputModel.punctureNeedleA"  :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority')" /> -->
-          <com-master-selector :readMasterData="requestApis.equipmentPunctureNeedleA" :masterDefine="masterDefs.equipmentPunctureNeedle" v-model="inputModel.punctureNeedleA"  :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared" />
+          <!-- <com-master-selector :readMasterData="requestApis.equipmentPunctureNeedleA" :masterDefine="masterDefs.equipmentPunctureNeedle" v-model="inputModel.punctureNeedleA"  :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared" /> -->
           <!-- #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
           <!-- mod #9342 end ljx -->
+          <common-master-selector
+            :masterType="MasterType.EQUIPMENT_TREATMENT_CLASSTYPE_RECORD"
+            :initItem="initItemMap.punctureNeedleA"
+            :editItem="initItemMap.punctureNeedleA"
+            :facilityCd="getFacilityCd"
+            :patientId="selectedPatId"
+            :dialysisState="getDialysisState"
+            :extraParams="{treatDate: getTreatDate, classType: 2, actualName: (initModel && initModel.punctureNeedleA && initModel.punctureNeedleA.name) || (inputModel && inputModel.punctureNeedleA && inputModel.punctureNeedleA.name) || ''}"
+            :hasChangedOption="true"
+            :selectedItemClass="'com-basic-sub-input'"
+            :backgroundColor="'#f7f7f7'"
+            :btnClass="'com-basic-sub-btn'"
+            :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
+            @popover-return="updateInput('punctureNeedleA', $event)"
+          />
         </v-ons-col>
       </v-ons-row>
       <!-- <com-master-selector labelName="穿刺針(A針)" :readMasterData="requestApis.equipmentPunctureNeedle" :masterDefine="masterDefs.equipmentPunctureNeedle" v-model="inputModel.punctureNeedleA" v-show="!isMobileBrowser" :class="['isClass', !isUseSingleNeedle ? null : 'display-none', styleFlg.flag9?'column-ground-color':null]" />
@@ -248,21 +311,30 @@
           </label>
         </v-ons-col>
         <v-ons-col class="value d-flex align-items-center">
-          <show-selected-item
-            :propInitValue="initModel.punctureNeedleV.name"
-            :propEditValue="inputModel.punctureNeedleV.name"
-            propBackgroundColor="#f7f7f7"
-            class="basic-sub-input"
-          />
           <!-- mod #9342 start ljx -->
           <!--<com-master-selector  :readMasterData="requestApis.equipmentPunctureNeedle" :masterDefine="masterDefs.equipmentPunctureNeedle" v-model="inputModel.punctureNeedleV" :class="[ isAVDisplay ? null : 'display-none',styleFlg.flag10?'column-ground-color':null]" :isDisabled="styleFlg.flag9" />-->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
           <!-- #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start -->
           <!-- <com-master-selector  :readMasterData="requestApis.equipmentPunctureNeedle" :masterDefine="masterDefs.equipmentPunctureNeedle" v-model="inputModel.punctureNeedleV" :class="[ isAVDisplay ? null : 'display-none',styleFlg.flag10?'column-ground-color':null]" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority')"/> -->
-          <com-master-selector  :readMasterData="requestApis.equipmentPunctureNeedleV" :masterDefine="masterDefs.equipmentPunctureNeedle" v-model="inputModel.punctureNeedleV" :class="[ isAVDisplay ? null : 'display-none',styleFlg.flag10?'column-ground-color':null]" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"/>
+          <!-- <com-master-selector  :readMasterData="requestApis.equipmentPunctureNeedleV" :masterDefine="masterDefs.equipmentPunctureNeedle" v-model="inputModel.punctureNeedleV" :class="[ isAVDisplay ? null : 'display-none',styleFlg.flag10?'column-ground-color':null]" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"/> -->
           <!-- #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
           <!-- mod #9342 end ljx -->
+          <common-master-selector
+            :masterType="MasterType.EQUIPMENT_TREATMENT_CLASSTYPE_RECORD"
+            :initItem="initItemMap.punctureNeedleV"
+            :editItem="initItemMap.punctureNeedleV"
+            :facilityCd="getFacilityCd"
+            :patientId="selectedPatId"
+            :dialysisState="getDialysisState"
+            :extraParams="{treatDate: getTreatDate, classType: 2, actualName: (initModel && initModel.punctureNeedleV && initModel.punctureNeedleV.name) || (inputModel && inputModel.punctureNeedleV && inputModel.punctureNeedleV.name) || ''}"
+            :hasChangedOption="true"
+            :selectedItemClass="'com-basic-sub-input'"
+            :backgroundColor="'#f7f7f7'"
+            :btnClass="['com-basic-sub-btn', isAVDisplay ? null : 'display-none', styleFlg.flag10 ? 'column-ground-color' : null]"
+            :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
+            @popover-return="updateInput('punctureNeedleV', $event)"
+          />
         </v-ons-col>
       </v-ons-row>
       <!-- <com-master-selector labelName="穿刺針(V針)" :readMasterData="requestApis.equipmentPunctureNeedle" :masterDefine="masterDefs.equipmentPunctureNeedle" v-model="inputModel.punctureNeedleV" v-show="!isMobileBrowser" :class="['isClass', !isUseSingleNeedle ? null : 'display-none',styleFlg.flag10?'column-ground-color':null]" />
@@ -274,18 +346,27 @@
           </label>
         </v-ons-col>
         <v-ons-col class="value d-flex align-items-center">
-          <show-selected-item
-            :propInitValue="initModel.punctureNeedleSn.name"
-            :propEditValue="inputModel.punctureNeedleSn.name"
-            propBackgroundColor="#f7f7f7"
-            class="basic-sub-input"
-          />
           <!-- mod #9342 start ljx -->
           <!--<com-master-selector labelName="穿刺針(SN)" :readMasterData="requestApis.equipmentPunctureNeedleSN" :masterDefine="masterDefs.equipmentPunctureNeedleSN" v-model="inputModel.punctureNeedleSn" :isDisabled="styleFlg.flag9" />-->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
-          <com-master-selector labelName="穿刺針(SN)" :readMasterData="requestApis.equipmentPunctureNeedleSN" :masterDefine="masterDefs.equipmentPunctureNeedleSN" v-model="inputModel.punctureNeedleSn" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"/>
+          <!-- <com-master-selector labelName="穿刺針(SN)" :readMasterData="requestApis.equipmentPunctureNeedleSN" :masterDefine="masterDefs.equipmentPunctureNeedleSN" v-model="inputModel.punctureNeedleSn" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"/> -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
           <!-- mod #9342 end ljx -->
+          <common-master-selector
+            :masterType="MasterType.EQUIPMENT_TREATMENT_CLASSTYPE_RECORD"
+            :initItem="initItemMap.punctureNeedleSn"
+            :editItem="initItemMap.punctureNeedleSn"
+            :facilityCd="getFacilityCd"
+            :patientId="selectedPatId"
+            :dialysisState="getDialysisState"
+            :extraParams="{treatDate: getTreatDate, classType: 3, actualName: (initModel && initModel.punctureNeedleSn && initModel.punctureNeedleSn.name) || (inputModel && inputModel.punctureNeedleSn && inputModel.punctureNeedleSn.name) || ''}"
+            :hasChangedOption="true"
+            :selectedItemClass="'com-basic-sub-input'"
+            :backgroundColor="'#f7f7f7'"
+            :btnClass="'com-basic-sub-btn'"
+            :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
+            @popover-return="updateInput('punctureNeedleSn', $event)"
+          />
         </v-ons-col>
       </v-ons-row>
       <!-- <com-master-selector labelName="穿刺針(SN)" :readMasterData="requestApis.equipmentPunctureNeedleSN" :masterDefine="masterDefs.equipmentPunctureNeedleSN" v-model="inputModel.punctureNeedleSn" v-show="!isMobileBrowser" :class="['isClass', isUseSingleNeedle ? null : 'display-none', styleFlg.flag11?'column-ground-color':null]" />
@@ -297,18 +378,27 @@
           </label>
         </v-ons-col>
         <v-ons-col class="value d-flex align-items-center">
-          <show-selected-item
-            :propInitValue="initModel.bloodCircuit.name"
-            :propEditValue="inputModel.bloodCircuit.name"
-            propBackgroundColor="#f7f7f7"
-            class="basic-sub-input"
-          />
           <!-- mod #9342 start ljx -->
           <!--<com-master-selector :readMasterData="requestApis.equipmentBloodCircuit" :masterDefine="masterDefs.equipmentBloodCircuit" v-model="inputModel.bloodCircuit" :isDisabled="styleFlg.flag12" />-->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
-          <com-master-selector :readMasterData="requestApis.equipmentBloodCircuit" :masterDefine="masterDefs.equipmentBloodCircuit" v-model="inputModel.bloodCircuit" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared" />
+          <!-- <com-master-selector :readMasterData="requestApis.equipmentBloodCircuit" :masterDefine="masterDefs.equipmentBloodCircuit" v-model="inputModel.bloodCircuit" :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared" /> -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
           <!-- mod #9342 end ljx -->
+          <common-master-selector
+            :masterType="MasterType.EQUIPMENT_TREATMENT_CLASSTYPE_RECORD"
+            :initItem="initItemMap.bloodCircuit"
+            :editItem="initItemMap.bloodCircuit"
+            :facilityCd="getFacilityCd"
+            :patientId="selectedPatId"
+            :dialysisState="getDialysisState"
+            :extraParams="{treatDate: getTreatDate, classType: 1, actualName: (initModel && initModel.bloodCircuit && initModel.bloodCircuit.name) || (inputModel && inputModel.bloodCircuit && inputModel.bloodCircuit.name) || ''}"
+            :hasChangedOption="true"
+            :selectedItemClass="'com-basic-sub-input'"
+            :backgroundColor="'#f7f7f7'"
+            :btnClass="'com-basic-sub-btn'"
+            :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
+            @popover-return="updateInput('bloodCircuit', $event)"
+          />
         </v-ons-col>
       </v-ons-row>
       <!-- <com-master-selector labelName="血液回路" :readMasterData="requestApis.equipmentBloodCircuit" :masterDefine="masterDefs.equipmentBloodCircuit" v-model="inputModel.bloodCircuit" v-show="isMobileBrowser" :class="[styleFlg.flag12?'column-ground-color':null]"/>
@@ -355,7 +445,7 @@
 </template>
 
 <script>
-import {mapGetters} from "vuex";
+import {mapGetters} from "@/compat/vue/vuex";
 import CommonNumberInputComponent from "@/components/treatment-record/submenu/common/CommonNumberInputComponent";
 //mod FutreNetWeb+SI課題管理 no.5531 劉全航 start
 // import CommonMasterSelectorComponent from "@/components/common/master-selector/CommonMasterSelectorComponent";
@@ -370,6 +460,7 @@ import CommonRadio from "@/components/treatment-record/submenu/common/CommonRadi
 //mod FNSI-redmine5848 fang end
 // add 6668 治療時間が72時間まで入力できない 房 start
 import customInputTimeSpecial from "@/components/common/custom-form-tags/CustomInputTimeSpecial";
+import { Master } from "@/models/common/master-selector-condition/Master";
 // add 6668 治療時間が72時間まで入力できない 房 end
 import {
   sendRequestGetMstVa,
@@ -388,7 +479,6 @@ import {
   equipmentPunctureNeedleSN,
   equipmentBloodCircuit
 } from "@/components/common/master-selector/MasterSelectorDefinitions";
-import { Promise } from "q";
 import { Basic } from "@/models/treatment-record/condition/Basic";
 import { CODES } from "@/constants/TreatmentRecord";
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 start
@@ -399,11 +489,14 @@ import { getAuthorized, getPrefix } from "@/functions/common/CommonFunctions.js"
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 end
 // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
 import { dialyzerTabooAllergyDeleted, equipmentAllergy } from "@/functions/mst/MstGetters.js";
+import * as MasterType from "@/components/common/master-selector/MasterType";
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
 // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
 export default {
   components: {
     "com-number-input": CommonNumberInputComponent,
     "com-master-selector": CommonMasterSelectorComponent,
+    "common-master-selector": commonMasterSelector,
     "com-radio": CommonRadio,
     "com-number-display": CommonNumberDisplayComponent,
     "show-selected-item": CustomDivShowSelectedItem,
@@ -411,8 +504,10 @@ export default {
     "custom-input-time-special":customInputTimeSpecial,
     // add 6668 治療時間が72時間まで入力できない 房 end
   },
+  emits: ["update:modelValue"],
   props: {
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: Basic
     },
     comboList: {
@@ -436,6 +531,7 @@ export default {
   },
   data() {
     return {
+      MasterType,
       inputModel: new Basic(),
       // ラジオボタンアイテム
       radioItems: {
@@ -489,15 +585,20 @@ export default {
       //mod FNSI-改修内容背景色 房 end
       initModel: new Basic(),
       initFlag: 1,
+      initItemMap: {},
     };
   },
   watch: {
-    value(val) {
-      this.inputModel = this.value;
+    modelValue(val) {
+      if (!val) {
+        return;
+      }
+      this.inputModel = val;
       //mod 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 start
-      Object.assign(this.initModel, this.value);
+      Object.assign(this.initModel, val);
+      this.setInitItemMap(this.initModel);
       // if (this.initFlag == 1) {
-      //   Object.assign(this.initModel, this.value);
+      //   Object.assign(this.initModel, this.modelValue);
       //   this.initFlag = 2;
       // }
       //mod 10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 end
@@ -610,36 +711,61 @@ export default {
       return getAuthorized(pageCd, itemCd);
     },
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 end
+    buildSelectorItem(master = {}) {
+      return {
+        value: master?.cd ?? null,
+        text: master?.name ?? "",
+        unit: master?.unit != null ? master.unit : null,
+      };
+    },
+    setInitItemMap(model = {}) {
+      this.initItemMap = {
+        va: this.buildSelectorItem(model.va),
+        dialyzer: this.buildSelectorItem(model.dialyzer),
+        adsorptionColumn: this.buildSelectorItem(model.adsorptionColumn),
+        primaryFilm: this.buildSelectorItem(model.primaryFilm),
+        secondaryFilm: this.buildSelectorItem(model.secondaryFilm),
+        punctureNeedleA: this.buildSelectorItem(model.punctureNeedleA),
+        punctureNeedleV: this.buildSelectorItem(model.punctureNeedleV),
+        punctureNeedleSn: this.buildSelectorItem(model.punctureNeedleSn),
+        bloodCircuit: this.buildSelectorItem(model.bloodCircuit),
+      };
+    },
+    updateInput(fieldKey, data = {}) {
+      if (!data) {
+        return;
+      }
+      const master = new Master(data.value ?? null, data.text ?? "");
+      if (data.unit != null) {
+        master.unit = data.unit;
+      }
+      if (data.needle) {
+        master.needle = data.needle;
+      }
+      this.inputModel[fieldKey] = master;
+      this.initItemMap = {
+        ...this.initItemMap,
+        [fieldKey]: this.buildSelectorItem(master),
+      };
+    },
     /**
      * 医療材料マスタ 吸着カラム 取得API.
      */
     // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
     async getEquipmentMasterAdsorptionColumn() {
-      // return Promise.all([
-      //   //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
-      //   sendRequestGetMstEquipmentTabooAllergyByClassNoexpire(
-      //     this.selectedPatId,
-      //     [CODES.EQUIPMENT_CLASS.ADSORPTION_COLUMN.classType],
-      //     this.getTreatDate
-      //   //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
-      //   ),
-      //   sendRequestGetMstEquipmentClass()
-      // ]);
-      let equipmentList = Promise.all([
-        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
+      const equipmentList = await Promise.all([
+        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 Start
         sendRequestGetMstEquipmentTabooAllergyByClassNoexpire(
           this.selectedPatId,
           [CODES.EQUIPMENT_CLASS.ADSORPTION_COLUMN.classType],
           this.getTreatDate
-        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
         ),
+        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 End
         sendRequestGetMstEquipmentClass()
       ]);
-      let cd = this.initModel.adsorptionColumn.cd;
-      let name = this.initModel.adsorptionColumn.name;
-      await equipmentList.then(async (response)=>{
-        return await this.getEquipmentPopover(response[0].data, cd, name);
-      })
+      const cd = this.initModel.adsorptionColumn.cd;
+      const name = this.initModel.adsorptionColumn.name;
+      await this.getEquipmentPopover(equipmentList[0].data, cd, name);
       return equipmentList;
       // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
     },
@@ -648,31 +774,19 @@ export default {
      */
     // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
     async getEquipmentMasterFilm(num) {
-      // return Promise.all([
-      //   //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
-      //   sendRequestGetMstEquipmentTabooAllergyByClassNoexpire(
-      //     this.selectedPatId,
-      //     [CODES.EQUIPMENT_CLASS.ADSORBER.classType, CODES.EQUIPMENT_CLASS.SEPARATOR.classType],
-      //     this.getTreatDate
-      //   //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
-      //   ),
-      //   sendRequestGetMstEquipmentClass()
-      // ]);
-      let equipmentList = Promise.all([
-        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
+      const equipmentList = await Promise.all([
+        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 Start
         sendRequestGetMstEquipmentTabooAllergyByClassNoexpire(
           this.selectedPatId,
           [CODES.EQUIPMENT_CLASS.ADSORBER.classType, CODES.EQUIPMENT_CLASS.SEPARATOR.classType],
           this.getTreatDate
-        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
         ),
+        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 End
         sendRequestGetMstEquipmentClass()
       ]);
-      let cd = num == 1 ? this.initModel.primaryFilm.cd : this.initModel.secondaryFilm.cd;
-      let name = num == 1 ? this.initModel.primaryFilm.name : this.initModel.secondaryFilm.name;
-      await equipmentList.then(async (response)=>{
-        return await this.getEquipmentPopover(response[0].data, cd, name);
-      })
+      const cd = num == 1 ? this.initModel.primaryFilm.cd : this.initModel.secondaryFilm.cd;
+      const name = num == 1 ? this.initModel.primaryFilm.name : this.initModel.secondaryFilm.name;
+      await this.getEquipmentPopover(equipmentList[0].data, cd, name);
       return equipmentList;
     },
     getEquipmentMasterFilmFirst() {
@@ -687,31 +801,19 @@ export default {
      */
     // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
     async getEquipmentMasterNeedle(type) {
-      // return Promise.all([
-      //   //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
-      //   sendRequestGetMstEquipmentTabooAllergyByClassNoexpire(
-      //     this.selectedPatId,
-      //     [CODES.EQUIPMENT_CLASS.PUNCTURE_NEEDLE.classType],
-      //     this.getTreatDate
-      //   //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
-      //   ),
-      //   sendRequestGetMstEquipmentClass()
-      // ]);
-      let equipmentList = Promise.all([
-        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
+      const equipmentList = await Promise.all([
+        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 Start
         sendRequestGetMstEquipmentTabooAllergyByClassNoexpire(
           this.selectedPatId,
           [CODES.EQUIPMENT_CLASS.PUNCTURE_NEEDLE.classType],
           this.getTreatDate
-        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
         ),
+        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 End
         sendRequestGetMstEquipmentClass()
       ]);
-      let cd = type == "A" ? this.initModel.punctureNeedleA.cd : this.initModel.punctureNeedleV.cd;
-      let name = type == "A" ? this.initModel.punctureNeedleA.name : this.initModel.punctureNeedleV.name;
-      await equipmentList.then(async (response)=>{
-        return await this.getEquipmentPopover(response[0].data, cd, name);
-      })
+      const cd = type == "A" ? this.initModel.punctureNeedleA.cd : this.initModel.punctureNeedleV.cd;
+      const name = type == "A" ? this.initModel.punctureNeedleA.name : this.initModel.punctureNeedleV.name;
+      await this.getEquipmentPopover(equipmentList[0].data, cd, name);
       return equipmentList;
     },
     getEquipmentMasterNeedleA() {
@@ -726,31 +828,18 @@ export default {
      */
     // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
     async getEquipmentMasterNeedleSN() {
-      // return Promise.all([
-      // //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
-      // sendRequestGetMstEquipmentTabooAllergyByClassNoexpire(
-      //     this.selectedPatId,
-      //     [CODES.EQUIPMENT_CLASS.PUNCTURE_NEEDLE_SN.classType],
-      //     this.getTreatDate
-      //   //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
-      //   ),
-      //   sendRequestGetMstEquipmentClass()
-      // ]);
-      let equipmentList = Promise.all([
-      //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
+      const equipmentList = await Promise.all([
+      //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 Start
       sendRequestGetMstEquipmentTabooAllergyByClassNoexpire(
           this.selectedPatId,
           [CODES.EQUIPMENT_CLASS.PUNCTURE_NEEDLE_SN.classType],
           this.getTreatDate
-        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
-        ),
+        ), // #8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 End
         sendRequestGetMstEquipmentClass()
       ]);
-      let cd = this.initModel.punctureNeedleSn.cd;
-      let name = this.initModel.punctureNeedleSn.name;
-      await equipmentList.then(async (response)=>{
-        return await this.getEquipmentPopover(response[0].data, cd, name);
-      })
+      const cd = this.initModel.punctureNeedleSn.cd;
+      const name = this.initModel.punctureNeedleSn.name;
+      await this.getEquipmentPopover(equipmentList[0].data, cd, name);
       return equipmentList;
     },
     // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
@@ -760,44 +849,36 @@ export default {
     //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
     // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
     async getDialyzerTabooAllergyNoexpire() {
-      // return Promise.resolve(
-      //   sendRequestGetMstDialyzerTabooAllergyNoexpire(this.selectedPatId, this.getTreatDate)
-      // );
-      let dialyzerList = Promise.resolve(
-        sendRequestGetMstDialyzerTabooAllergyNoexpire(this.selectedPatId, this.getTreatDate)
-      );
-      await dialyzerList.then(async (response)=>{
-        let dialyzerPopover = response.data;
+      const response = await sendRequestGetMstDialyzerTabooAllergyNoexpire(this.selectedPatId, this.getTreatDate);
+      const dialyzerPopover = response.data;
+      dialyzerPopover.forEach((item) => {
+        item.modelNumber = getPrefix(item) + item.modelNumber;
+      });
+      const dialyzerPopoverCd = dialyzerPopover.map(item => item.dialyzerCd);
+      if (!this.initModel.dialyzer.cd) {
+        return response;
+      }
+      if (!dialyzerPopoverCd.includes(Number(this.initModel.dialyzer.cd))) {
+        const dialyzerAll = await dialyzerTabooAllergyDeleted(this.selectedPatId);
+        const dialyzerAllObj = dialyzerAll.find(item => item.dialyzerCd == this.initModel.dialyzer.cd);
+        const obj = {
+          isDisp: "1",
+          dialyzerCd: this.initModel.dialyzer.cd,
+          modelNumber: this.initModel.dialyzer.name,
+          maker: dialyzerAllObj.maker,
+          dialyzerType: dialyzerAllObj.dialyzerType,
+          functionClass: dialyzerAllObj.functionClass,
+        };
+        dialyzerPopover.push(obj);
+      } else {
         dialyzerPopover.forEach((item) => {
-          item.modelNumber = getPrefix(item) + item.modelNumber;
-        })
-        let dialyzerPopoverCd = dialyzerPopover.map(item => item.dialyzerCd)
-        if (!this.initModel.dialyzer.cd) {
-          return dialyzerPopover;
-        }
-        if (!dialyzerPopoverCd.includes(Number(this.initModel.dialyzer.cd))) {
-          let dialyzerAll = await dialyzerTabooAllergyDeleted(this.selectedPatId);
-          let dialyzerAllObj = dialyzerAll.find(item => item.dialyzerCd == this.initModel.dialyzer.cd);
-          let obj = {
-            isDisp: "1",
-            dialyzerCd: this.initModel.dialyzer.cd,
-            modelNumber: this.initModel.dialyzer.name,
-            maker: dialyzerAllObj.maker,
-            dialyzerType: dialyzerAllObj.dialyzerType,
-            functionClass: dialyzerAllObj.functionClass,
+          if (item.dialyzerCd == this.initModel.dialyzer.cd) {
+            item.modelNumber = this.initModel.dialyzer.name;
+            item.dialyzerCd = this.initModel.dialyzer.cd;
           }
-          dialyzerPopover.push(obj)
-        } else {
-          dialyzerPopover.forEach((item) => {
-            if (item.dialyzerCd == this.initModel.dialyzer.cd) {
-              item.modelNumber = this.initModel.dialyzer.name;
-              item.dialyzerCd = this.initModel.dialyzer.cd;
-            }
-          })
-        }
-        return dialyzerPopover;
-      })
-      return dialyzerList;
+        });
+      }
+      return response;
       // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
     },
     //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
@@ -806,31 +887,19 @@ export default {
      */
     // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
     async getEquipmentMasterBloodCircuit() {
-      // return Promise.all([
-      //   //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
-      //   sendRequestGetMstEquipmentTabooAllergyByClassNoexpire(
-      //     this.selectedPatId,
-      //     [CODES.EQUIPMENT_CLASS.BLOOD_CIRCUIT.classType],
-      //     this.getTreatDate
-      //     //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
-      //   ),
-      //   sendRequestGetMstEquipmentClass()
-      // ]);
-      let equipmentList = Promise.all([
-        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
+      const equipmentList = await Promise.all([
+        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 Start
         sendRequestGetMstEquipmentTabooAllergyByClassNoexpire(
           this.selectedPatId,
           [CODES.EQUIPMENT_CLASS.BLOOD_CIRCUIT.classType],
           this.getTreatDate
-          //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
         ),
+        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応 End
         sendRequestGetMstEquipmentClass()
       ]);
-      let cd = this.initModel.bloodCircuit.cd;
-      let name = this.initModel.bloodCircuit.name;
-      await equipmentList.then(async (response)=>{
-        return await this.getEquipmentPopover(response[0].data, cd, name);
-      })
+      const cd = this.initModel.bloodCircuit.cd;
+      const name = this.initModel.bloodCircuit.name;
+      await this.getEquipmentPopover(equipmentList[0].data, cd, name);
       return equipmentList;
     },
     // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
@@ -874,6 +943,13 @@ export default {
     },
     // add 6668 治療時間が72時間まで入力できない 房 end
   },
+  created() {
+    if (this.modelValue) {
+      this.inputModel = this.modelValue;
+      Object.assign(this.initModel, this.modelValue);
+    }
+    this.setInitItemMap(this.initModel);
+  },
   computed: {
     ...mapGetters("pat-info", ["selectedPatId"]),
     // add FNSI-共有を追加 王 20200921 start
@@ -881,7 +957,8 @@ export default {
     ...mapGetters("treatment-record/common", [
       "getSharedFacilityCd",
        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　Start
-       "getTreatDate"
+       "getTreatDate",
+       "getDialysisState"
        //#8484:医療材料選択IFのリスト不正(再修正) 期限切れ非表示対応　End
     ]),
     isShared() {
@@ -889,7 +966,7 @@ export default {
     },
     // add FNSI-redmine3855 徐 start
     isMobileBrowser() {
-      return /android|iphone|ipad/i.test(navigator.userAgent);
+      return /android|iphone|ipad/i.test(((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || ""));
     },
     // add FNSI-redmine3855 徐 end
     // add FNSI-共有を追加 王 20200921 end
@@ -916,21 +993,26 @@ ons-select {
 .display-none {
   display:none;
 }
-.column-ground-color {
+:deep(.column-ground-color) {
   background-color: #D3D3D3;
   min-width: fit-content;
 }
+ 
+ 
+ 
+ 
 /* mod FutreNetWeb+SI課題管理 no.5531 劉全航 start */
 /* add FNSI-redmine3855 徐 start */
-/* .isClass >>> ons-button {
+/* .isClass :deep(ons-button){
   margin-right:30em
 } */
 /* column-ground-color をあてた場合、黒背景だと文字が見えなくなる為、文字色(白)を解除する */
-.column-ground-color >>> label {
+:deep(.column-ground-color label) {
   color: unset !important;
 }
+ 
 /* add FNSI-redmine3855 徐 end */
-.basic-sub-com-display-dw >>> .title {
+.basic-sub-com-display-dw :deep(.title) {
   height: 1.6em;
 }
 .text-color {
@@ -941,8 +1023,18 @@ ons-select {
   width: 100%;
   max-width: 13em;
 }
+:deep(.com-basic-sub-btn) {
+  margin-left: 5px;
+}
+:deep(.com-basic-sub-input) {
+  min-width: 11em;
+  width: 100%;
+  max-width: 13em;
+  background-color: #f7f7f7;
+}
+ 
 /* mod FutreNetWeb+SI課題管理 no.5531 劉全航 end */
-.custom-input-edited >>> input {
+.custom-input-edited :deep(input) {
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;
@@ -976,12 +1068,12 @@ ons-select {
   padding: 2px;
 }
 
-.action-condition-data-column >>> input[type="number"] {
+.action-condition-data-column :deep(input[type="number"]) {
   min-width: 1.4em;
   height: fit-content !important;
 }
 
-.action-condition-data-column >>> .time-span {
+.action-condition-data-column :deep(.time-span) {
   min-width: fit-content;
   height: 2em;
   box-sizing: border-box;

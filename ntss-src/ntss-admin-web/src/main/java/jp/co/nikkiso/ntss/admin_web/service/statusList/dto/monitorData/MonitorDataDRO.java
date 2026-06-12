@@ -1,9 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.service.statusList.dto.monitorData;
 
-import java.io.IOException;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
 
@@ -184,7 +183,7 @@ public class MonitorDataDRO implements MonitorData {
    * @param moniData モニタデータのJSON文字列
    */
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
-  public MonitorDataDRO(String moniData)  throws IOException {
+  public MonitorDataDRO(String moniData)  throws tools.jackson.core.JacksonException {
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
     if (moniData != null && !moniData.isEmpty()) {
       // 引数を展開
@@ -455,7 +454,7 @@ public class MonitorDataDRO implements MonitorData {
    * @param moniDataJsonString バイタル情報のJSON文字列
    */
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
-  private void setItems(String moniDataJsonString)  throws IOException {
+  private void setItems(String moniDataJsonString)  throws tools.jackson.core.JacksonException {
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
     final String RATE_UNIT = "%";
     final String TEMP_UNIT = "℃";
@@ -881,7 +880,7 @@ public class MonitorDataDRO implements MonitorData {
         this.roDrainingReturnFlowMVPositionNo2.value = this.getJsonValueByKey(jsonNode, "82");
         this.roDrainingReturnFlowMVPositionNo2.Unit = RATE_UNIT;
 
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end

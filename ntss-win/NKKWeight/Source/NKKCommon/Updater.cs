@@ -91,8 +91,15 @@ namespace NKKCommon
         /// <summary>
         /// S3からのファイルダウンロートURI /api/motion_record/detail/gathering/download
         /// </summary>
-        public static string GET_FILE_DOWNLOAD_URI { get; set; } = "/api/motion_record/detail/gathering/download";
+        // mod #11660 単体アプリの自己アップデート修正 高 start
+        //public static string GET_FILE_DOWNLOAD_URI { get; set; } = "/api/motion_record/detail/gathering/download";
+        public static string GET_FILE_DOWNLOAD_URI { get; set; } = "/api/application/self_update";
+        // mod #11660 単体アプリの自己アップデート修正 高 end
 
+        // add #11660 単体アプリの自己アップデート修正 高 start
+        private static string TEMP_DOWNLOADFILENAME { get; set; } = "temp_dn_fileName";
+        private static string TEMP_MODELFILENAME { get; set; } = "temp_model_fileName";
+        // add #11660 単体アプリの自己アップデート修正 高 end
 
         /// <summary>
         /// ログ記録メソッド
@@ -199,8 +206,22 @@ namespace NKKCommon
                 if (deserializedData.Count > 0)
                 {
                     // valueをデシリアライズする
-                    value = deserializedData[0].Value;
-
+                    // mod #11660 単体アプリの自己アップデート修正 高 start
+                    //value = deserializedData[0].Value;
+                    Dictionary<String, String> json = NKKWebAccessLib.NKKWebAccess.GetJsonData(deserializedData[0].Value);
+                    if (json.Count() > 0)
+                    {
+                        // 帳票種別
+                        if (json.ContainsKey("version") == true)
+                        {
+                            StringBuilder sb = new StringBuilder();
+                            sb.Append("{")
+                                .AppendFormat("\"version\": \"{0}\"", json["version"])
+                            .Append("}");
+                            value = sb.ToString();
+                        }
+                    }
+                    // mod #11660 単体アプリの自己アップデート修正 高 end
                 }
 
             }
@@ -262,39 +283,99 @@ namespace NKKCommon
                 LoggingMethod(NKKLoggingLib.NKKLogging.LOGGING_CLASS.ERROR, $"PendingFileRenameOperations 削除失敗: {ex.Message}");
             }
 
-            // msiexec でサイレントインストール実行
+            // msiexec の引数
             // /quiet     : UILevel=2（設定ダイアログをスキップ）
             // /norestart : インストール後の自動再起動を抑制
             // /l*v       : 詳細ログを出力
-            var app = new System.Diagnostics.ProcessStartInfo
-            {
-                Verb = "RunAs",
-                FileName = "msiexec.exe",
-                Arguments = $"/i \"{msiPath}\" /quiet /norestart /l*v \"{msiLogPath}\"",
-                CreateNoWindow = false,
-                UseShellExecute = true
-            };
+            string msiArgs = $"/i \"{msiPath}\" /quiet /norestart /l*v \"{msiLogPath}\"";
 
-            // ログ記録：msiexec 起動前
-            LoggingMethod(NKKLoggingLib.NKKLogging.LOGGING_CLASS.INFO,
-                $"msiexec 起動開始, MSIパス:{msiPath}, ログパス:{msiLogPath}");
-            try
+            if (ProcType == 0)
             {
-                System.Diagnostics.Process.Start(app);
-                // ログ記録：msiexec 起動成功
-                LoggingMethod(NKKLoggingLib.NKKLogging.LOGGING_CLASS.INFO, "msiexec 起動成功");
+                // サービスの場合：従来どおり msiexec を直接起動して自プロセスを終了する。
+                // サービスの停止・再起動は MSI のカスタムアクションが担当するため、ここでは再起動しない。
+                var app = new System.Diagnostics.ProcessStartInfo
+                {
+                    Verb = "RunAs",
+                    FileName = "msiexec.exe",
+                    Arguments = msiArgs,
+                    CreateNoWindow = false,
+                    UseShellExecute = true
+                };
+
+                // ログ記録：msiexec 起動前
+                LoggingMethod(NKKLoggingLib.NKKLogging.LOGGING_CLASS.INFO,
+                    $"msiexec 起動開始（サービス）, MSIパス:{msiPath}, ログパス:{msiLogPath}");
+                try
+                {
+                    System.Diagnostics.Process.Start(app);
+                    // ログ記録：msiexec 起動成功
+                    LoggingMethod(NKKLoggingLib.NKKLogging.LOGGING_CLASS.INFO, "msiexec 起動成功");
+                }
+                catch (Exception ex)
+                {
+                    // ログ記録：msiexec 起動失敗
+                    LoggingMethod(NKKLoggingLib.NKKLogging.LOGGING_CLASS.ERROR,
+                        $"msiexec 起動失敗, エラー:{ex.Message}");
+                }
             }
-            catch (Exception ex)
+            else
             {
-                // ログ記録：msiexec 起動失敗
-                LoggingMethod(NKKLoggingLib.NKKLogging.LOGGING_CLASS.ERROR,
-                    $"msiexec 起動失敗, エラー:{ex.Message}");
+                // 実行ファイル（帳票ツール等）の場合：
+                // 稼働中の EXE はファイルロックされているため、本プロセスを終了してからでないと
+                // MSI が EXE を上書きできない。そのため別プロセス（PowerShell）で以下を順番に行う。
+                //   1. 本プロセスの終了を待つ（ファイルロック解放）
+                //   2. msiexec を昇格実行し、インストール完了まで待機する
+                //   3. 更新後の EXE を再起動する
+                string exePath = pro.MainModule.FileName;
+                string exeDir = System.IO.Path.GetDirectoryName(exePath);
+                int selfPid = pro.Id;
+
+                // PowerShell スクリプトを組み立てる
+                // パスに空白や日本語が含まれてもエンコードして渡すため、エスケープ崩れが起きない。
+                string psScript = string.Join(" ; ", new[]
+                {
+                    "$ErrorActionPreference='SilentlyContinue'",
+                    $"try {{ Wait-Process -Id {selfPid} -Timeout 60 }} catch {{}}",
+                    "Start-Sleep -Seconds 1",
+                    $"Start-Process -FilePath 'msiexec.exe' -ArgumentList '{msiArgs}' -Verb RunAs -Wait",
+                    $"Start-Sleep -Seconds 1",
+                    $"Start-Process -FilePath '{exePath}' -WorkingDirectory '{exeDir}'"
+                });
+
+                // UTF-16LE → Base64 で EncodedCommand として渡す
+                string encodedCommand = Convert.ToBase64String(Encoding.Unicode.GetBytes(psScript));
+
+                var restarter = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand {encodedCommand}",
+                    CreateNoWindow = true,
+                    UseShellExecute = false
+                };
+
+                // ログ記録：再起動用プロセス起動前
+                LoggingMethod(NKKLoggingLib.NKKLogging.LOGGING_CLASS.INFO,
+                    $"アップデート＆再起動プロセス起動開始, MSIパス:{msiPath}, ログパス:{msiLogPath}, 再起動EXE:{exePath}, 自プロセスID:{selfPid}");
+                try
+                {
+                    System.Diagnostics.Process.Start(restarter);
+                    // ログ記録：再起動用プロセス起動成功
+                    LoggingMethod(NKKLoggingLib.NKKLogging.LOGGING_CLASS.INFO, "アップデート＆再起動プロセス起動成功");
+                }
+                catch (Exception ex)
+                {
+                    // ログ記録：再起動用プロセス起動失敗
+                    LoggingMethod(NKKLoggingLib.NKKLogging.LOGGING_CLASS.ERROR,
+                        $"アップデート＆再起動プロセス起動失敗, エラー:{ex.Message}");
+                }
             }
 
             // ログスレッドがキューを書き出す時間を確保してから終了する
             System.Threading.Thread.Sleep(2000);
 
             // 自プロセスを終了（先に Exit することでファイルロックを解放する）
+            // 実行ファイルの場合は、上で起動した PowerShell が本プロセスの終了を検知し、
+            // msiexec によるインストール完了後に EXE を自動で再起動する。
             Environment.Exit(0);
         }
 
@@ -346,13 +427,20 @@ namespace NKKCommon
 
             }
 
+            // add #11660 単体アプリの自己アップデート修正 高 start
+            DownloadFileName = TEMP_DOWNLOADFILENAME;
+            // add #11660 単体アプリの自己アップデート修正 高 end
+
             // 最新zipファイルをダウンロード
             string strdldata = string.Empty;
             string strUri = $"{NKKWebAccessLib.NKKWebAccess.BaseUri}{WEB_APP_URI}{GET_FILE_DOWNLOAD_URI}?_={DateTime.Now.Ticks}";
             var sbPostData = new StringBuilder();
             sbPostData.Append("{")
-                     .AppendFormat("\"filename\": \"{0}\",", DownloadFileName)
-                     .AppendFormat("\"bucket\": \"{0}\"", Bucket)
+                     // mod #11660 単体アプリの自己アップデート修正 高 start
+                     //.AppendFormat("\"filename\": \"{0}\",", DownloadFileName)
+                     //.AppendFormat("\"bucket\": \"{0}\"", Bucket)
+                     .AppendFormat("\"ctl_no\": \"{0}\"", this.SystemDefineVersionNo)
+                     // mod #11660 単体アプリの自己アップデート修正 高 end
                      .Append("}");
             NKKWebAccessLib.NKKWebAccessResponse res = NKKWebAccessLib.NKKWebAccess.Post("最新バージョンダウンロード", strUri, sbPostData.ToString()).Result;
             if (res.response.IsSuccessStatusCode == true)
@@ -507,13 +595,21 @@ namespace NKKCommon
                 // ログ記録：ダウンロード先フォルダ内のファイル、フォルダをすべて削除失敗
                 LoggingMethod(NKKLoggingLib.NKKLogging.LOGGING_CLASS.ERROR, "削除失敗");
             }
+
+            // add #11660 単体アプリの自己アップデート修正 高 start
+            ModelFileName = TEMP_MODELFILENAME;
+            // add #11660 単体アプリの自己アップデート修正 高 end
+
             // 最新zipファイルをダウンロード
             string strdldata = string.Empty;
             string strUri = $"{NKKWebAccessLib.NKKWebAccess.BaseUri}{WEB_APP_URI}{GET_FILE_DOWNLOAD_URI}?_={DateTime.Now.Ticks}";
             var sbPostData = new StringBuilder();
             sbPostData.Append("{")
-                     .AppendFormat("\"filename\": \"{0}\",", ModelFileName)
-                     .AppendFormat("\"bucket\": \"{0}\"", BucketModel)
+                     // mod #11660 単体アプリの自己アップデート修正 高 start
+                     //.AppendFormat("\"filename\": \"{0}\",", ModelFileName)
+                     //.AppendFormat("\"bucket\": \"{0}\"", BucketModel)
+                     .AppendFormat("\"ctl_no\": \"{0}\"", 36)
+                     // mod #11660 単体アプリの自己アップデート修正 高 end
                      .Append("}");
             NKKWebAccessLib.NKKWebAccessResponse res = NKKWebAccessLib.NKKWebAccess.Post("最新サンプルレイアウトダウンロード", strUri, sbPostData.ToString()).Result;
             if (res.response.IsSuccessStatusCode == true)

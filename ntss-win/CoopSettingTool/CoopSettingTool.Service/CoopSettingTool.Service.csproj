@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CoopSettingTool.Service</RootNamespace>
     <AssemblyName>CoopSettingTool.Service</AssemblyName>
-    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
@@ -31,12 +31,13 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="JsonSubTypes, Version=1.8.0.0, Culture=neutral, PublicKeyToken=ee75fc290dbc1176, processorArchitecture=MSIL">
-      <HintPath>..\packages\JsonSubTypes.1.8.0\lib\net46\JsonSubTypes.dll</HintPath>
+    <Reference Include="JsonSubTypes, Version=2.0.1.0, Culture=neutral, PublicKeyToken=ee75fc290dbc1176">
+      <HintPath>..\packages\JsonSubTypes.2.0.1\lib\net47\JsonSubTypes.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

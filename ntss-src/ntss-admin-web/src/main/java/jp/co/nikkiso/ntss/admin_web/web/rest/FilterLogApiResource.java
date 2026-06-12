@@ -7,7 +7,15 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
+import jp.co.nikkiso.ntss.admin_web.service.OrdMainService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
+import jp.co.nikkiso.ntss.admin_web.service.master.user.MstUserService;
+import jp.co.nikkiso.ntss.core.dao.MstUserDao;
+import jp.co.nikkiso.ntss.core.dao.SysSystemDefineDao;
+import jp.co.nikkiso.ntss.core.entity.MstUser;
+import jp.co.nikkiso.ntss.core.entity.OrdMain;
+import jp.co.nikkiso.ntss.core.entity.PatMain;
 import jp.co.nikkiso.ntss.core.logger.ChangeConditionLogAPI;
 import jp.co.nikkiso.ntss.core.logger.ChangeEventLogAPI;
 import jp.co.nikkiso.ntss.core.logger.EventLogAPI;
@@ -22,6 +30,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -39,6 +48,8 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
+import jp.co.nikkiso.ntss.core.entity.SysSystemDefine;
 
 
 @RestController
@@ -55,6 +66,14 @@ public class FilterLogApiResource {
 
 	@Autowired
 	FilterLogService filterLogService;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  @Autowired
+  MstUserService mstUserService;
+  @Autowired
+  OrdMainService ordMainService;
+  @Autowired
+  SysSystemDefineDao sysSystemDefineDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
 	@PutMapping("/readLog/{folderName}/{fileName}")
 	public ResponseEntity<?> readLog(@PathVariable String folderName, @PathVariable String fileName){
@@ -99,7 +118,7 @@ public class FilterLogApiResource {
 	  String resultStr = filterLogService.loggerSetFlgUpdate();
 	  logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_VIEW_LOG,
 	    AFTER_LOG_FLG_INFO, mappingUrl, null, null);
-	  return new ResponseEntity<String>(resultStr, null, HttpStatus.OK);
+	  return new ResponseEntity<String>(resultStr, (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 	}
 
 	/**
@@ -150,7 +169,25 @@ public class FilterLogApiResource {
    * @return リストフィルター
    */
   @PutMapping("/getChangeLog/{folderName}")
-  public ResponseEntity<?> getChangeLog(@RequestBody ChangeConditionLogAPI searchCondition) {
+  public ResponseEntity<?> getChangeLog(@RequestBody ChangeConditionLogAPI searchCondition,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                        @AuthenticationPrincipal NtssUser ntssUser
+                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (searchCondition.getOrdNo() != null) {
+        OrdMain ordMain = ordMainService.selectByOrdNo(Long.valueOf(searchCondition.getOrdNo()));
+        if (ordMain != null && ordMain.getFacilityCd() != null &&
+          !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "ordNo=" + searchCondition.getOrdNo() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.LOGS + "/getChangeLog/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_VIEW_LOG,
@@ -188,7 +225,28 @@ public class FilterLogApiResource {
 	 * @return 検索条件が保存されました
 	 */
 	@GetMapping("/searchCondition/{userId}")
-	public ResponseEntity<?> searchCondition(@PathVariable long userId) {
+	public ResponseEntity<?> searchCondition(@PathVariable long userId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                           @AuthenticationPrincipal NtssUser ntssUser
+                                           // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+        MstUser mstUserForCheck = mstUserService.getByUserId(userId);
+        if (mstUserForCheck != null) {
+          String facilityCd = mstUserForCheck.getFacilityCd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "userId=" + userId + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.LOGS + "/searchCondition/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_VIEW_LOG,
@@ -226,7 +284,24 @@ public class FilterLogApiResource {
 	 * @return
 	 */
 	@PutMapping("/updateSearchCondition/{userId}")
-	public ResponseEntity<?> saveCondition(@PathVariable long userId, @RequestBody String conditions) {
+	public ResponseEntity<?> saveCondition(@PathVariable long userId,
+                                         @RequestBody String conditions,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                         @AuthenticationPrincipal NtssUser ntssUser
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if(!ntssUser.isNkkAdminUser()) {
+        MstUser mstUser = mstUserService.getByUserId(userId);
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+        if (mstUser != null && mstUser.getFacilityCd() != null && !mstUser.getFacilityCd().isEmpty() && !mstUser.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstUser.getFacilityCd() + " " + "userId=" + userId + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.LOGS + "/updateSearchCondition/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_VIEW_LOG,
@@ -260,7 +335,27 @@ public class FilterLogApiResource {
 	public ResponseEntity<?> getDirectory(
 			@RequestParam(value = "path", required = false) String path,
 			@RequestParam(value = "filter", required = false) String filter
-	) {
+	,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        SysSystemDefine systemDefine = sysSystemDefineDao.selectByCtlNoAndServiceCd(1000, "003");
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+        if (systemDefine != null) {
+          String facilityCd = systemDefine.getFacilityCd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.LOGS + "/get-directory";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_VIEW_LOG,
@@ -293,7 +388,27 @@ public class FilterLogApiResource {
 	@GetMapping("/get-directory/download-log")
 	public ResponseEntity<?> downloadFile(
 		@RequestParam(value = "path", required = true) String path
-	) {
+	,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        SysSystemDefine systemDefine = sysSystemDefineDao.selectByCtlNoAndServiceCd(1000, "003");
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+        if (systemDefine != null) {
+          String facilityCd = systemDefine.getFacilityCd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.LOGS + "/get-directory/download-log";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_VIEW_LOG,

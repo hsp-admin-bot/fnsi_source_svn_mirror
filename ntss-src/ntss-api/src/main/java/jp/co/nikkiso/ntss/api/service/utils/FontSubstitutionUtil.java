@@ -3,8 +3,8 @@ package jp.co.nikkiso.ntss.api.service.utils;
 
 import com.aspose.cells.Font;
 import com.aspose.cells.Workbook;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.dao.SysSystemDefineDao;
 import jp.co.nikkiso.ntss.core.entity.SysSystemDefine;
 import org.springframework.context.ApplicationContext;

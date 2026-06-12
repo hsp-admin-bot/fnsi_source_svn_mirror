@@ -1,35 +1,33 @@
 /**
- * 装置マスタ系API
+ * 通信サーバー設定マスタ同期など（装置マスタ／device_edge_order 連携）
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
 
-/**
- * 参照先URL
- */
-const URL_BASE = "/master_maintenance/mst_machine";
-
-const URL_BASE1 = "/device_edge_order";
+const URL_MST_MACHINE = "/master_maintenance/mst_machine";
+const URL_DEVICE_EDGE_ORDER = "/device_edge_order";
 
 /**
  * 装置型式、デバイスエッジマスタ情報取得
  */
 export function sendRequestGetMstMachineComboList() {
-  return ApiHelper.get(`${URL_BASE}/combos`);
+  return ApiHelper.get(`${URL_MST_MACHINE}/combos`);
 }
 
 /**
  * 装置型式、デバイスエッジマスタ情報取得(施設コード指定)
+ * @param {string} facilityCd 施設コード
  */
 export function sendRequestGetMstMachineComboListFacility(facilityCd) {
-  return ApiHelper.get(`${URL_BASE}/combos/${facilityCd}`);
+  return ApiHelper.get(`${URL_MST_MACHINE}/combos/${facilityCd}`);
 }
 
 /**
  * 通信サーバー設定マスタ同期
+ * @param {string} facilityCd 施設コード
+ * @param {string|number} deviceEdgeNo デバイスエッジ番号
  */
 export function sendRequestSynchroMstComSvSetting(facilityCd, deviceEdgeNo) {
-  const URL_SUB_RELOAD_COMSV_SETTING = "reload_comsv_setting";
-  return ApiHelper.post(`${URL_BASE1}/${URL_SUB_RELOAD_COMSV_SETTING}`, {
+  return ApiHelper.post(`${URL_DEVICE_EDGE_ORDER}/reload_comsv_setting`, {
     facilityCd,
     deviceEdgeNo
   });

@@ -11,16 +11,16 @@ import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import jp.co.nikkiso.ntss.core.dao.MstFacilityHashDao;
 import jp.co.nikkiso.ntss.core.entity.MstFacilityHash;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 import static jp.co.nikkiso.ntss.admin_web.constant.AdminWebMessage.Error.DB_INCONSISTENCY;
@@ -40,7 +40,7 @@ public class NtssAuthenticationFailureHandler implements AuthenticationFailureHa
    * Response内容にJSONを書き込む.
    */
   @Autowired
-  private MappingJackson2HttpMessageConverter httpMessageConverter;
+  private JacksonJsonHttpMessageConverter httpMessageConverter;
 
   /**
    * ロガー生成コンポーネント
@@ -133,7 +133,7 @@ public class NtssAuthenticationFailureHandler implements AuthenticationFailureHa
       // ReponseにJSON書込
       httpMessageConverter.write(
         new ErrorResponse(DB_INCONSISTENCY.getMessage()),
-        MediaType.APPLICATION_JSON_UTF8,
+        MediaType.APPLICATION_JSON,
         new ServletServerHttpResponse(response));
     }
     else {
@@ -141,7 +141,7 @@ public class NtssAuthenticationFailureHandler implements AuthenticationFailureHa
       response.setStatus(HttpStatus.FORBIDDEN.value());
       httpMessageConverter.write(
               new ErrorResponse(exception.getMessage()),
-              MediaType.APPLICATION_JSON_UTF8,
+              MediaType.APPLICATION_JSON,
               new ServletServerHttpResponse(response));
 
 //      response.sendError(HttpStatus.FORBIDDEN.value(), exception.getMessage());

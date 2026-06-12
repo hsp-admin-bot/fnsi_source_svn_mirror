@@ -34,8 +34,8 @@ export default {
     // footerメニューの表示変数を初期化
     this.showSubmenuFooter = true;
     // 装置設定の場合、footerメニューを非表示にする.
-    if (this.$router.currentRoute.name === "treatment-record-setting" || 
-        this.$router.currentRoute.name === "treatment-record-complaint") {
+    if (this.$route.name === "treatment-record-setting" || 
+        this.$route.name === "treatment-record-complaint") {
       this.showSubmenuFooter = false;
     }
   }
@@ -50,10 +50,11 @@ export default {
 }
 
 .submenu-main {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   z-index: 1;
   width: 100%;
-  height: 100%;
 }
 .submenu-main
   > div:not(#weight-component):not(#result-component):not(#condition-component):not(#setting-component):not(#round-component):not(#vital-component):not(#monitor-component) {

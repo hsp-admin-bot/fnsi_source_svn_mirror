@@ -1,86 +1,55 @@
 <template>
-  <div id="multi-pat-list-template2" class="multi-pat-list" style="width: 100%; height: 100%">
-    <div class="scroll-table">
-      <table class="grid-record-list" style="width: max-content;">
-        <col />
-        <thead>
-          <tr id="first-row">
-            <th rowspan="2" class="ntss-list-header-th-sticky headcol frezee-column-name manual-width">
-              <span @click="sortBy('machine_name')" class="clickable-header-label" :class="sortedClass('machine_name')">装置名</span>
-            </th>
-            <th rowspan="2" class="ntss-list-header-th-sticky headcol manual-width">
-              <span @click="sortBy('machine_serial')" class="clickable-header-label" :class="sortedClass('machine_serial')">製造番号</span>
-            </th>
-            <th
-              v-for="(data, id) in fixedTitle"
-              :key="'fixedtitle-' + id"
-              rowspan="2"
-              class="ntss-list-header-th-sticky headcol manual-width"
-            >
-              <span @click="sortBy(getSortKey(data))" class="clickable-header-label" :class="sortedClass(getSortKey(data))">{{ data.name }}</span>
-            </th>
-            <th rowspan="2" class="ntss-list-header-th-sticky headcol manual-width">
-              <span @click="sortBy('survey_type_name')" class="clickable-header-label" :class="sortedClass('survey_type_name')">検査種別</span>
-            </th>
-            <th rowspan="2" class="ntss-list-header-th-sticky headcol manual-width">
-              <span @click="sortBy('point_name')" class="clickable-header-label" :class="sortedClass('point_name')">検査箇所</span>
-            </th>
-            <template v-for="(dayObj, index) in dateList">
-              <th
-                class="ntss-list-header-th-sticky headcol text-center manual-width"
-                :colspan="countGroup"
-                :key="'day-' + index"
-              >{{ dayObj }}</th>
-            </template>
-          </tr>
-          <tr>
-            <th
-              v-for="(data, id) in loopTitle"
-              :key="'looptitle-' + id"
-              class="ntss-list-header-th-sticky headcol text-center th-sticky-day manual-width"
-            >
-              <span @click="sortBy(getSortKey(data))" class="clickable-header-label" :class="sortedClass(getSortKey(data))">{{ data.name }}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(item, machineTypeCd) in sortedLayoutData" :key="machineTypeCd">
-            <td class="frezee-column-name sticky-body-items">{{ item.machine_name }}</td>
-            <td class="sticky-body-items">{{ item.machine_serial }}</td>
-            <td class="sticky-body-items" v-show="hasMachineType">{{ item.machine_type }}</td>
-            <td class="sticky-body-items" v-show="hasBedName">{{ item.bed_name }}</td>
-            <td class="sticky-body-items" v-show="hasSettingDate">{{ item.setting_date }}</td>
-            <td class="sticky-body-items">{{ item.survey_type_name }}</td>
-            <td class="sticky-body-items">{{ item.point_name }}</td>
-            <template v-for="(dayObj, d) in item.daylist">
-              <td v-show="hasTime" :key="'time-' + d">{{ dayObj.time }}</td>
-              <td v-show="hasValue" :key="'value-' + d">{{ dayObj.value }}</td>
-              <td v-show="hasPicker" :key="'picker-' + d">{{ dayObj.picker }}</td>
-              <td v-show="hasInspector" :key="'inspector-' + d">{{ dayObj.inspector }}</td>
-            </template>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+  <div
+    id="multi-pat-list-template2"
+    ref="gridContainer"
+    class="multi-pat-list template2-kendo-grid"
+    style="width: 100%; height: 100%"
+  >
+    <KendoGridView
+      ref="grid"
+      :columns="kendoColumns"
+      :options="gridDataSourceOptions"
+      :height="gridHeight"
+      :scrollable="gridScrollable"
+      :sortable="false"
+      :resizable="true"
+      :reorderable="true"
+      :data-bound="onGridDataBound"
+    />
   </div>
 </template>
 
 <script>
-  import _ from 'underscore';
-  import moment from 'moment';
-  import {EventBus} from '@/eventBus.js';
-  import encoding from 'encoding-japanese';
-  import {mapActions, mapGetters} from 'vuex';
-  import {ApiHelper} from '@/apis/AxiosHelper';
-  // import { saveExcel } from "@progress/kendo-vue-excel-export";
-  var workbook_1 = require("@progress/kendo-vue-excel-export");
-  var kendo_file_saver_1 = require("@progress/kendo-file-saver");
-  import {getCurrentFunctionCd} from '@/router/routing-helper';
-  import {getErrorMessage} from '@/functions/common/AppLogMessageFormat';
-  import { updateSort, getSortedClass, sortableCompare } from "@/functions/SortFunctions";
-  import PrintMixin from "@/components/PrintMixin";
+import { triggerScopedDownload } from "@/functions/common/LayoutMeasureHelper";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import encoding from "@/compat/encoding/encoding-japanese";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import * as workbook_1 from "@/functions/common/KendoFunctions";
+import * as kendo_file_saver_1 from "@/functions/common/KendoFunctions";
+import { getCurrentFunctionCd } from "@/router/routing-helper";
+import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+import { updateSort, getSortedClass, sortableCompare } from "@/functions/SortFunctions";
+import PrintMixin from "@/components/PrintMixin";
+import dayjs from "@/compat/date/dayjs";
+import { ApiHelper } from "@/apis/AxiosHelper";
+import KendoGridView from "@/components/kendo-ui/KendoGridView.vue";
 
-  export default {
+const GRID_PAGE_SIZE = 30;
+const DATE_FIELD_SUFFIX = {
+  1362: "time",
+  1363: "value",
+  1364: "picker",
+  1365: "inspector",
+};
+
+function getDateFieldSuffix(id) {
+  return DATE_FIELD_SUFFIX[id] ?? DATE_FIELD_SUFFIX[Number(id)];
+}
+
+export default {
+  components: {
+    KendoGridView,
+  },
   mixins: [PrintMixin],
   data() {
     return {
@@ -99,43 +68,43 @@
       // add #11528 【たくしん会】データリスト並び順不正 房 end
       sort: {
         key: "",
-        isAsc: true
+        isAsc: true,
       },
-      scrollQuerySelector: ".scroll-table", // スクロールコンテナ
-      addClassTargetQuerySelector: ["table.grid-record-list"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
+      gridHeight: 400,
+      isPrintMode: false,
+      gridResizeObserver: null,
+      scrollQuerySelector: "#multi-pat-list-template2 .k-virtual-scrollable-wrap",
+      addClassTargetQuerySelector: ["#multi-pat-list-template2 .k-grid table"],
     };
   },
 
   computed: {
-    ...mapGetters('data-list', [
-      'getSelectedDynamicLayout',
-      'getRangeDate',
-      'getRequestExportExcel',
-      'getRequestExportCSV',
+    ...mapGetters("data-list", [
+      "getSelectedDynamicLayout",
+      "getRangeDate",
+      "getRequestExportExcel",
+      "getRequestExportCSV",
     ]),
-    ...mapGetters('user', ['getFacilityCd']),
-    ...mapGetters('account-edit', ['getFontSize']),
-
-    ...mapGetters('pat-info', ['searchedPatList', 'selectedPatId']),
-    ...mapGetters('exam-record/list', ['getCondition']),
+    ...mapGetters("user", ["getFacilityCd"]),
+    ...mapGetters("account-edit", ["getFontSize"]),
+    ...mapGetters("pat-info", ["searchedPatList", "selectedPatId"]),
+    ...mapGetters("exam-record/list", ["getCondition"]),
 
     sortedLayoutData() {
       const sortField = this.sort.key;
       const isAsc = this.sort.isAsc;
-      // ソートなしは元のリストをそのままreturn
       if (!sortField) return this.layoutData;
-  
+
       let sorted = [];
-      // 採取時刻、結果、採取者、検査者の場合はデータの持ち方が異なるため個別でソート
       if (sortField.includes(":")) {
         const [date, field] = sortField.split(":");
-  
+
         sorted = [...this.layoutData].sort((a, b) => {
           const aDay = a.daylist.find(day => day.d === date);
           const bDay = b.daylist.find(day => day.d === date);
           const aVal = aDay ? aDay[field] : null;
           const bVal = bDay ? bDay[field] : null;
-  
+
           const aIsEmpty = aVal === null || aVal === undefined || aVal === "";
           const bIsEmpty = bVal === null || bVal === undefined || bVal === "";
           if (aIsEmpty && !bIsEmpty) return isAsc ? 1 : -1;
@@ -146,12 +115,11 @@
           return 0;
         });
       } else {
-        // 共通関数でソート
         sorted = [...this.layoutData].sort((a, b) => {
           return sortableCompare(a, b, sortField, isAsc);
         });
       }
-  
+
       return sorted;
     },
 
@@ -174,38 +142,48 @@
           .map(x => ({
             id: x.id,
             name: x.name,
-            date
+            date,
           }))
       );
     },
     hasTime() {
-      return this.loopTitle.some(x => x.name == '採取時刻');
+      return this.loopTitle.some(x => x.name == "採取時刻");
     },
     hasValue() {
-      return this.loopTitle.some(x => x.name == '結果');
+      return this.loopTitle.some(x => x.name == "結果");
     },
     hasPicker() {
-      return this.loopTitle.some(x => x.name == '採取者');
+      return this.loopTitle.some(x => x.name == "採取者");
     },
     hasInspector() {
-      return this.loopTitle.some(x => x.name == '検査者');
+      return this.loopTitle.some(x => x.name == "検査者");
+    },
+
+    gridFlatRows() {
+      return this.buildFlatRows(this.sortedLayoutData, false);
+    },
+
+    gridDataSourceOptions() {
+      return {
+        data: this.gridFlatRows,
+        serverPaging: false,
+        pageSize: GRID_PAGE_SIZE,
+      };
+    },
+
+    gridScrollable() {
+      if (this.isPrintMode) {
+        return true;
+      }
+      return { virtual: true };
+    },
+
+    kendoColumns() {
+      return this.buildKendoColumns();
     },
   },
 
   watch: {
-    getRangeDate(value) {
-      if (value) {
-        this.getPositionHeader();
-      }
-    },
-
-    getFontSize: {
-      immediate: true,
-      handler() {
-        this.getPositionHeader();
-      },
-    },
-
     getRequestExportExcel() {
       this.onCreateTemplateToExcel();
     },
@@ -219,46 +197,319 @@
       this.hasBedName = this.fixedTitle.some(x => x.id == 1359);
       this.hasSettingDate = this.fixedTitle.some(x => x.id == 1360);
     },
+
+    getFontSize() {
+      this.$nextTick(() => {
+        this.updateGridHeight();
+        this.$refs.grid?.resize();
+      });
+    },
+
+    sort: {
+      deep: true,
+      handler() {
+        this.$nextTick(() => {
+          this.$refs.grid?.refreshData(this.gridFlatRows);
+          this.updateSortHeaderClasses();
+        });
+      },
+    },
+  },
+
+  mounted() {
+    this.setupGridHeightObserver();
+    window.addEventListener("beforeprint", this._preparePrintGrid, true);
+    window.addEventListener("afterprint", this._restorePrintGrid, true);
+    this.$nextTick(() => this.updateGridHeight());
   },
 
   methods: {
-    // 共通ローダー設定
-    ...mapActions('loading-screen', [
-      'setLoadingScreenVisible',
-      'setLoadingScreenMessage',
+    ...mapActions("loading-screen", [
+      "setLoadingScreenVisible",
+      "setLoadingScreenMessage",
     ]),
-    // 昇順/降順のclassを作成
+
+    gridColumn(def, locked = false) {
+      const col = {
+        ...def,
+        lockable: false,
+        headerTemplate: () =>
+          this.makeSortableHeader(def.title, def.sortKey || def.field),
+      };
+      if (locked) {
+        col.locked = true;
+      }
+      return col;
+    },
+
+    escapeHtml(text) {
+      if (text == null) {
+        return "";
+      }
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    },
+
+    makeSortableHeader(title, sortKey) {
+      return `<span class="clickable-header-label" data-sort-key="${this.escapeHtml(sortKey)}">${this.escapeHtml(title)}</span>`;
+    },
+
+    updateSortHeaderClasses() {
+      const root = this.$refs.gridContainer?.querySelector(".k-grid");
+      if (!root) {
+        return;
+      }
+      root.querySelectorAll("[data-sort-key]").forEach(el => {
+        el.classList.remove("sorted-asc", "sorted-desc");
+        const sortKey = el.getAttribute("data-sort-key");
+        if (!sortKey) {
+          return;
+        }
+        const sortClass = getSortedClass(sortKey, this.sort);
+        if (sortClass) {
+          el.classList.add(sortClass);
+        }
+      });
+    },
+
+    buildKendoColumns() {
+      const isLocked = this.dateList != null && this.dateList.length > 0;
+      const columns = [
+        this.gridColumn({
+          field: "machine_name",
+          title: "装置名",
+          sortKey: "machine_name",
+          width: 150,
+        }, isLocked),
+        this.gridColumn({
+          field: "machine_serial",
+          title: "製造番号",
+          sortKey: "machine_serial",
+          width: 150,
+        }, isLocked),
+      ];
+
+      this.fixedTitle.forEach(x => {
+        if (x.id == 1358 && this.hasMachineType) {
+          columns.push(
+            this.gridColumn({
+              field: "machine_type",
+              title: x.name,
+              sortKey: "machine_type",
+              width: 120,
+            }, isLocked)
+          );
+        } else if (x.id == 1359 && this.hasBedName) {
+          columns.push(
+            this.gridColumn({
+              field: "bed_name",
+              title: x.name,
+              sortKey: "bed_name",
+              width: 120,
+            }, isLocked)
+          );
+        } else if (x.id == 1360 && this.hasSettingDate) {
+          columns.push(
+            this.gridColumn({
+              field: "setting_date",
+              title: x.name,
+              sortKey: "setting_date",
+              width: 120,
+            }, isLocked)
+          );
+        }
+      });
+
+      columns.push(
+        this.gridColumn({
+          field: "survey_type_name",
+          title: "検査種別",
+          sortKey: "survey_type_name",
+          width: 120,
+        }, isLocked),
+        this.gridColumn({
+          field: "point_name",
+          title: "検査箇所",
+          sortKey: "point_name",
+          width: 120,
+        }, isLocked)
+      );
+
+      this.dateList.forEach(date => {
+        const subColumns = this.showTitle
+          .map(item => {
+            const suffix = getDateFieldSuffix(item.id);
+            if (!suffix) {
+              return null;
+            }
+            return {
+              field: `${date}${suffix}`,
+              title: item.name,
+              width: 100,
+              headerTemplate: () =>
+                this.makeSortableHeader(item.name, `${date}:${suffix}`),
+            };
+          })
+          .filter(Boolean);
+
+        if (subColumns.length > 0) {
+          columns.push({
+            title: date,
+            headerAttributes: { class: "text-center" },
+            columns: subColumns,
+          });
+        }
+      });
+
+      return columns;
+    },
+
+    flattenExportColumns(kendoCols) {
+      const flat = [];
+      kendoCols.forEach(col => {
+        if (col.columns) {
+          col.columns.forEach(sub => {
+            flat.push({
+              field: sub.field,
+              title: `${col.title}${sub.title}`,
+            });
+          });
+        } else if (col.field) {
+          flat.push({
+            field: col.field,
+            title: col.title,
+          });
+        }
+      });
+      return flat;
+    },
+
+    buildFlatRows(layoutData, forExport) {
+      if (!layoutData || !layoutData.length) {
+        return [];
+      }
+      const hasTime = this.hasTime;
+      const hasValue = this.hasValue;
+      const hasPicker = this.hasPicker;
+      const hasInspector = this.hasInspector;
+
+      return layoutData.map(row => {
+        const flat = { ...row };
+        row.daylist.forEach(y => {
+          if (hasTime) {
+            flat[y.d + "time"] = y.time;
+          }
+          if (hasValue) {
+            flat[y.d + "value"] = y.value;
+          }
+          if (hasPicker) {
+            flat[y.d + "picker"] = y.picker;
+          }
+          if (hasInspector) {
+            flat[y.d + "inspector"] = y.inspector;
+          }
+        });
+        if (forExport) {
+          flat.cellOptions = { wrap: true, format: "@" };
+        }
+        return flat;
+      });
+    },
+
+    setupGridHeightObserver() {
+      const container = this.$refs.gridContainer;
+      if (!container || typeof ResizeObserver === "undefined") {
+        return;
+      }
+      this.gridResizeObserver = new ResizeObserver(() => {
+        this.updateGridHeight();
+      });
+      this.gridResizeObserver.observe(container);
+    },
+
+    updateGridHeight() {
+      const container = this.$refs.gridContainer;
+      if (!container) {
+        return;
+      }
+      const height = container.clientHeight;
+      if (height > 0 && height !== this.gridHeight) {
+        this.gridHeight = height;
+        this.$nextTick(() => this.$refs.grid?.resize());
+      }
+    },
+
+    onGridDataBound() {
+      const root = this.$refs.gridContainer;
+      if (!root) {
+        return;
+      }
+      const $root = root.querySelector(".k-grid");
+      if (!$root) {
+        return;
+      }
+      const handler = event => {
+        const target = event.target.closest("[data-sort-key]");
+        if (!target) {
+          return;
+        }
+        const sortKey = target.getAttribute("data-sort-key");
+        if (sortKey) {
+          this.sortBy(sortKey);
+        }
+      };
+      $root.removeEventListener("click", this._gridSortClickHandler);
+      this._gridSortClickHandler = handler;
+      $root.addEventListener("click", handler);
+      this.updateSortHeaderClasses();
+      this.$nextTick(() => this.$refs.grid?.resize());
+    },
+
+    _preparePrintGrid() {
+      this.isPrintMode = true;
+      this.scrollQuerySelector = "#multi-pat-list-template2 .k-grid-content";
+      this.$nextTick(() => {
+        this.$refs.grid?.setScrollable(true);
+        this.$refs.grid?.resize();
+      });
+    },
+
+    _restorePrintGrid() {
+      this.isPrintMode = false;
+      this.scrollQuerySelector = "#multi-pat-list-template2 .k-virtual-scrollable-wrap";
+      this.$nextTick(() => {
+        this.$refs.grid?.setScrollable({ virtual: true });
+        this.$refs.grid?.resize();
+      });
+    },
+
     sortedClass(key) {
       return getSortedClass(key, this.sort);
     },
-    // ソートするキーを設定する
+
     sortBy(key) {
       updateSort(key, this.sort);
     },
-    // 固定項目からソートキーを取得
+
     getSortKey(data) {
       const sortKeyMap = {
-        1358: "machine_type", // 型式
-        1359: "bed_name",     // ベッド名
-        1360: "setting_date", // 設置日
-        1362: "time",         // 採取時刻
-        1363: "value",        // 結果
-        1364: "picker",       // 採取者
-        1365: "inspector",    // 検査者  
+        1358: "machine_type",
+        1359: "bed_name",
+        1360: "setting_date",
+        1362: "time",
+        1363: "value",
+        1364: "picker",
+        1365: "inspector",
       };
-      
+
       let sortKey = sortKeyMap[data.id] || "";
       if ([1362, 1363, 1364, 1365].includes(data.id)) {
         sortKey = `${data.date}:${sortKey}`;
       }
       return sortKey;
-    },
-    getPositionHeader() {
-      const elm = document.getElementById('first-row');
-      if (elm) {
-        const height = elm.getBoundingClientRect().height;
-        document.documentElement.style.setProperty('--multi-pat-list-template2-top',`${height}px`);
-      }
     },
 
     async initLayout(flag) {
@@ -269,7 +520,7 @@
         response = await ApiHelper.get(url);
         this.setLoadingScreenVisible(false);
       } catch (error) {
-        getErrorMessage('TemplateComponent2.vue', 'initLayout', error);
+        getErrorMessage("TemplateComponent2.vue", "initLayout", error);
         this.setLoadingScreenVisible(false);
         console.log(error);
       } finally {
@@ -277,22 +528,20 @@
         const data = response.data;
         if (data && data.length) {
           data.forEach(x => {
-            let id = '';
-            let name = '';
+            let id = "";
+            let name = "";
             let isShow = false;
             if (x.categoryCd == 141) {
               isShow = true;
             }
             if (x.dataListDetailCd && x.items[0]) {
               id = x.dataListDetailCd;
-              if (x.dataListDetailCd == '1361') {
+              if (x.dataListDetailCd == "1361") {
                 this.condition = [];
                 x.items.forEach(y => this.condition.push(y.name));
-              } else if (x.dataListDetailCd == '1384') {
+              } else if (x.dataListDetailCd == "1384") {
                 this.condition2 = [];
-                // add #11528 【たくしん会】データリスト並び順不正 房 start
                 this.itemCds = x.itemCds;
-                // add #11528 【たくしん会】データリスト並び順不正 房 end
                 x.items.forEach(y => this.condition2.push(y.name));
               } else {
                 name = x.items[0].name;
@@ -317,7 +566,7 @@
         response = await ApiHelper.get(url);
         this.setLoadingScreenVisible(false);
       } catch (error) {
-        getErrorMessage('TemplateComponent2.vue', 'initData', error);
+        getErrorMessage("TemplateComponent2.vue", "initData", error);
         this.setLoadingScreenVisible(false);
         console.log(error);
       } finally {
@@ -335,7 +584,7 @@
         }
         initData = initData.map(x => {
           if (x.setting_date) {
-            x.setting_date = moment(x.setting_date).format('YYYY/MM/DD');
+            x.setting_date = dayjs(x.setting_date).format("YYYY/MM/DD");
           }
           return x;
         });
@@ -400,13 +649,11 @@
           });
         });
         this.layoutDataTmp = initData;
-        // add #11528 【たくしん会】データリスト並び順不正 房 start
         this.layoutDataTmp.sort((a, b) => {
           let aIndex = this.itemCds.findIndex(itemCode => itemCode == a.survey_point_cd);
           let bIndex = this.itemCds.findIndex(itemCode => itemCode == b.survey_point_cd);
           return aIndex - bIndex;
         });
-        // add #11528 【たくしん会】データリスト並び順不正 房 end
         if (flag == 1) {
           this.getListData();
         }
@@ -423,36 +670,28 @@
       let startDate = rangeDate.dayObj.startDate;
       let endDate = rangeDate.dayObj.endDate;
       const url = `sysDataListDetail/getListData/${this.getSelectedDynamicLayout.templateCd}/${this.getFacilityCd}/${startDate}/${endDate}`;
-      /*add FNSI-改修内容5237 任 start*/
       const urlDecimal = `sysDataListDetail/getDecimalValue/${this.getFacilityCd}`;
-      /*add FNSI-改修内容5237 任 end*/
       let response;
-      /*add FNSI-改修内容5237 任 start*/
       let responseDecimal;
-      /*add FNSI-改修内容5237 任 end*/
       try {
         response = await ApiHelper.get(url);
-        /*add FNSI-改修内容5237 任 start*/
         responseDecimal = await ApiHelper.get(urlDecimal);
-        /*add FNSI-改修内容5237 任 end*/
         this.setLoadingScreenVisible(false);
       } catch (error) {
-        getErrorMessage('TemplateComponent2.vue', 'getListData', error);
+        getErrorMessage("TemplateComponent2.vue", "getListData", error);
         this.setLoadingScreenVisible(false);
         console.log(error);
       } finally {
         const colData = response.data.mstMachineDatalists;
         const userList = response.data.mstPersonalUsers;
-        /*add FNSI-改修内容5237 任 start*/
         const decimalValue = responseDecimal.data;
-        /*add FNSI-改修内容5237 任 end*/
         let date_list = [];
         colData.forEach(x =>
-          date_list.push(x.inspection_date.substring(0, 10).replace(/-/g, '/'))
+          date_list.push(x.inspection_date.substring(0, 10).replace(/-/g, "/"))
         );
-        date_list = _.uniq(date_list);
+        date_list = Array.from(new Set(date_list));
         date_list = date_list.sort(
-          (a, b) => a.replace(/\//g, '') - b.replace(/\//g, '')
+          (a, b) => a.replace(/\//g, "") - b.replace(/\//g, "")
         );
         this.dateList = date_list;
         let rowData = this.layoutDataTmp;
@@ -461,10 +700,10 @@
           date_list.forEach(x => {
             daylist.push({
               d: x,
-              time: ' ',
-              value: ' ',
-              picker: ' ',
-              inspector: ' ',
+              time: " ",
+              value: " ",
+              picker: " ",
+              inspector: " ",
             });
           });
           row.daylist = daylist;
@@ -472,56 +711,51 @@
           colData.forEach(col => {
             let colDate = col.inspection_date
               .substring(0, 10)
-              .replace(/-/g, '/');
+              .replace(/-/g, "/");
             if (col.survey_point_cd == row.survey_point_cd) {
               let daylistFilter = row.daylist.filter(x => x.d == colDate);
-              let index = _.indexOf(row.daylist, daylistFilter[0]);
-              let value = '';
+              let index = row.daylist.indexOf(daylistFilter[0]);
+              let value = "";
               if (col.value) {
-                /*add FNSI-改修内容5237 任 start*/
-                let resultFigure = col.value
-                if(decimalValue.length>0){
-                  for(let de = 0;de<decimalValue.length;de++){
-                    if(de.surveyPointCd === Number(col.survey_point_cd)){
-                      let num = '1';
-                      for(let i = 0;i<de.decimalDigits;i++){
-                        num += '0';
+                let resultFigure = col.value;
+                if (decimalValue.length > 0) {
+                  for (let de = 0; de < decimalValue.length; de++) {
+                    if (de.surveyPointCd === Number(col.survey_point_cd)) {
+                      let num = "1";
+                      for (let i = 0; i < de.decimalDigits; i++) {
+                        num += "0";
                       }
                       let f_x = Math.round(Number(col.value) * parseInt(num)) / parseInt(num);
                       let s_x = f_x.toString();
-                      let pos_decimal = s_x.indexOf('.');
+                      let pos_decimal = s_x.indexOf(".");
                       if (pos_decimal < 0) {
                         pos_decimal = s_x.length;
-                        s_x += '.';
+                        s_x += ".";
                       }
                       while (s_x.length <= pos_decimal + de.decimalDigits) {
-                        s_x += '0';
+                        s_x += "0";
                       }
                       resultFigure = s_x;
                     }
                   }
                 }
                 value = resultFigure + col.unit;
-                /*add FNSI-改修内容5237 任 end*/
               }
               let initial_string = JSON.parse(col.initial_string);
               let text = Number(col.text) - 1;
-              // mod #11528 【たくしん会】データリスト並び順不正 関 start
-              // if (text > -1 && initial_string.length > col.text) {
               if (text > -1 && text < initial_string.length) {
-                // mod #11528 【たくしん会】データリスト並び順不正 関 end
                 value = value + initial_string[text].text;
               }
-              let picker = '';
+              let picker = "";
               let pUser = userList.filter(u => u.userId == col.picker);
               if (pUser.length > 0) {
-                picker = pUser[0].userLastName + ' ' + pUser[0].userFirstName;
+                picker = pUser[0].userLastName + " " + pUser[0].userFirstName;
               }
-              let inspector = '';
+              let inspector = "";
               let iUser = userList.filter(u => u.userId == col.inspector);
               if (iUser.length > 0) {
                 inspector =
-                  iUser[0].userLastName + ' ' + iUser[0].userFirstName;
+                  iUser[0].userLastName + " " + iUser[0].userFirstName;
               }
 
               if (!value && (col.time || picker || inspector)) {
@@ -543,8 +777,15 @@
         let rowDataTmp = [];
         let rowTmp = [];
         rowData.forEach(item => {
-          let key = item.machineTypeCd + item.machine_name + item.machine_serial + item.machine_type + item.bed_name
-            + item.setting_date + item.survey_type_name + item.point_name;
+          let key =
+            item.machineTypeCd +
+            item.machine_name +
+            item.machine_serial +
+            item.machine_type +
+            item.bed_name +
+            item.setting_date +
+            item.survey_type_name +
+            item.point_name;
           if (rowTmp.indexOf(key) === -1) {
             rowDataTmp.push(item);
             rowTmp.push(key);
@@ -552,15 +793,15 @@
         });
         this.layoutData = rowDataTmp;
         this.$nextTick(() => {
-          this.getPositionHeader();
+          this.$refs.grid?.refreshColumns(this.kendoColumns);
+          this.$refs.grid?.refreshData(this.gridFlatRows);
+          this.$refs.grid?.resize();
         });
       }
     },
 
     requestrReportParams(param) {
-      // 機能コード判定
       if (param.substring(0, 3) === getCurrentFunctionCd().substring(0, 3)) {
-        //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
         let rowTmp = [];
         this.layoutData.forEach(item => {
           if (item.machine_no) {
@@ -573,35 +814,16 @@
           d => d.layoutCd === patListLayoutCd
         );
         if (!rangeDate) return;
-        let startDate = moment(rangeDate.dayObj.startDate).format('YYYY-MM-DD');
-        let endDate = moment(rangeDate.dayObj.endDate).format('YYYY-MM-DD');
-        //add 5984 機能帳票でパラメータが正しく渡されていない 吉 end
         const param = {
-          // del #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
-          //patId: this.selectedPatId,
-          // del #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
-          // mod #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //patIds: this.searchedPatList.map(({ pat_id }) => pat_id),
           patIds: [],
-          // mod #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           facilityCd: this.getFacilityCd,
-          //mod 5984 機能帳票でパラメータが正しく渡されていない 吉 start
-          // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
-          // date:moment(startDate).format('YYYY/MM/DD'),
-          // fromDate: moment(startDate).format('YYYY/MM/DD'),
-          // toDate: moment(endDate).format('YYYY/MM/DD'),
-          date: moment(Date.now()).format("YYYYMMDD"),
-          fromDate: moment(Date.now()).format("YYYYMMDD"),
-          toDate: moment(Date.now()).format("YYYYMMDD"),
-          // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: moment(Date.now()).format("YYYYMMDD"),
-          // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
-          // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
-          functionCd:"00801",
-          machineNos:rowTmp
-          //mod 5984 機能帳票でパラメータが正しく渡されていない 吉 end
+          date: dayjs(Date.now()).format("YYYYMMDD"),
+          fromDate: dayjs(Date.now()).format("YYYYMMDD"),
+          toDate: dayjs(Date.now()).format("YYYYMMDD"),
+          functionCd: "00801",
+          machineNos: rowTmp,
         };
-        EventBus.$emit('sendReportParams', param);
+        EventBus.$emit("sendReportParams", param);
       }
     },
 
@@ -612,28 +834,29 @@
       const data = this.getData(this.sortedLayoutData);
       this.saveExcel({
         data: data.length === 0 ? null : data,
-        fileName: `データリスト_${moment().format('YYYYMMDDHHmmss')}`,
+        fileName: `データリスト_${dayjs().format("YYYYMMDDHHmmss")}`,
         columns: columns,
       });
     },
+
     saveExcel(exportOptions) {
       let saveFn = function (dataURL) {
         kendo_file_saver_1.saveAs(dataURL, exportOptions.fileName, {
           forceProxy: exportOptions.forceProxy,
-          proxyURL: exportOptions.proxyURL
+          proxyURL: exportOptions.proxyURL,
         });
       };
       let options = workbook_1.workbookOptions(exportOptions);
       options.sheets.forEach(item => {
         item.rows.forEach(row => {
-          if (row.type === 'data') {
+          if (row.type === "data") {
             let height = 15;
             row.cells.forEach(cell => {
               let vals = 1;
               if (cell.value) {
-                vals = (cell.value + "").split('\n').length;
+                vals = (cell.value + "").split("\n").length;
               }
-              if (vals * 15 > height){
+              if (vals * 15 > height) {
                 height = vals * 15;
               }
               if (height > 15) {
@@ -650,128 +873,31 @@
     },
 
     getColumns(layoutData) {
-      let columns = [];
-      if (layoutData && layoutData.length) {
-        let hasTime = this.hasTime;
-        let hasValue = this.hasValue;
-        let hasPicker = this.hasPicker;
-        let hasInspector = this.hasInspector;
-        columns = [
-          {
-            field: 'machine_name',
-            title: '装置名',
-          },
-          {
-            field: 'machine_serial',
-            title: '製造番号',
-          },
-        ];
-
-        this.fixedTitle.forEach(x => {
-          if (x.id == 1358) {
-            columns.push({
-              field: 'machine_type',
-              title: x.name,
-            });
-          } else if (x.id == 1359) {
-            columns.push({
-              field: 'bed_name',
-              title: x.name,
-            });
-          } else if (x.id == 1360) {
-            columns.push({
-              field: 'setting_date',
-              title: x.name,
-            });
-          }
-        });
-        columns.push({
-          field: 'survey_type_name',
-          title: '検査種別',
-        });
-        columns.push({
-          field: 'point_name',
-          title: '検査箇所',
-        });
-        this.dateList.forEach(x => {
-          if (hasTime) {
-            columns.push({
-              field: x + 'time',
-              title: x + '採取時刻',
-            });
-          }
-          if (hasValue) {
-            columns.push({
-              field: x + 'value',
-              title: x + '結果',
-            });
-          }
-          if (hasPicker) {
-            columns.push({
-              field: x + 'picker',
-              title: x + '採取者',
-            });
-          }
-          if (hasInspector) {
-            columns.push({
-              field: x + 'inspector',
-              title: x + '検査者',
-            });
-          }
-        });
+      if (!layoutData || !layoutData.length) {
+        return [];
       }
-      return columns;
+      return this.flattenExportColumns(this.buildKendoColumns());
     },
 
     getData(layoutData) {
-      let data = [];
-      if (layoutData && layoutData.length) {
-        let hasTime = this.hasTime;
-        let hasValue = this.hasValue;
-        let hasPicker = this.hasPicker;
-        let hasInspector = this.hasInspector;
-        data = layoutData.map(x => {
-          x.daylist.forEach(y => {
-            if (hasTime) {
-              x[y.d + 'time'] = y.time;
-            }
-            if (hasValue) {
-              x[y.d + 'value'] = y.value;
-            }
-            if (hasPicker) {
-              x[y.d + 'picker'] = y.picker;
-            }
-            if (hasInspector) {
-              x[y.d + 'inspector'] = y.inspector;
-            }
-          });
-          return x;
-        });
-      }
-      data = data.map(obj => {
-        return {
-          ...obj,
-          cellOptions: { wrap: true, format: "@" },
-        };
-      });
-      return data;
+      return this.buildFlatRows(layoutData, true);
     },
 
     exportToCSV() {
       const columns = this.getColumns(this.sortedLayoutData);
       const data = this.getData(this.sortedLayoutData);
 
-      let physicalNames = '';
+      let physicalNames = "";
       const arrayFields = [];
 
       columns.forEach((field, index) => {
         physicalNames += field.title;
         arrayFields.push(field.field);
         if (index <= columns.length - 1) {
-          physicalNames += ',';
+          physicalNames += ",";
         }
       });
-      physicalNames += '\n';
+      physicalNames += "\n";
       let addNewData = [];
       data.forEach(data => {
         const tempData = [];
@@ -789,8 +915,7 @@
         Object.values(t).forEach(k => {
           Object.values(k).forEach(r => {
             let temp = String(r);
-            if (temp.indexOf(',') > -1)
-              r = temp.replace(temp, '"' + temp + '"');
+            if (temp.indexOf(",") > -1) r = temp.replace(temp, '"' + temp + '"');
             else {
               if (r !== null) r = temp.replace(temp, '"' + temp + '"');
               else r = temp.replace(temp, '""');
@@ -806,39 +931,55 @@
         charCodes.push(physicalNames.charCodeAt(i));
       }
 
-      const sjisCodes = encoding.convert(charCodes, 'sjis', 'unicode');
+      const sjisCodes = encoding.convert(charCodes, "sjis", "unicode");
       const uint8s = new Uint8Array(sjisCodes);
-      const blob = new Blob([uint8s], { type: 'test/csv' });
-
-      let link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `データリスト_${moment().format('YYYYMMDDHHmmss')}.csv`;
-      link.click();
+      const blob = new Blob([uint8s], { type: "test/csv" });
+      triggerScopedDownload({
+        blob,
+        filename: `データリスト_${dayjs().format("YYYYMMDDHHmmss")}.csv`,
+        root: this.$el,
+      });
     },
   },
 
   async created() {
-    EventBus.$on('onInitLayout', this.initLayout);
-    EventBus.$on('refresh', this.initLayout);
-    // 印刷パラメータ要求
-    EventBus.$on('requestReportParams', this.requestrReportParams);
+    EventBus.$on("onInitLayout", this.initLayout);
+    EventBus.$on("refresh", this.initLayout);
+    EventBus.$on("requestReportParams", this.requestrReportParams);
   },
-  // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
-    /* modify by chamaojia 2023-06-08 [8610] EventBusイベントの結合解除は結合と一致する（イベントコールバック関数を指定）  --start */
-    EventBus.$off('onInitLayout', this.initLayout);
-    EventBus.$off('refresh', this.initLayout);
-    EventBus.$off('requestReportParams', this.requestrReportParams);
-    /* modify by chamaojia 2023-06-08 [8610] EventBusイベントの結合解除は結合と一致する（イベントコールバック関数を指定）  --end */
-    // dataの初期化
+
+  beforeUnmount() {
+    EventBus.$off("onInitLayout", this.initLayout);
+    EventBus.$off("refresh", this.initLayout);
+    EventBus.$off("requestReportParams", this.requestrReportParams);
+
+    window.removeEventListener("beforeprint", this._preparePrintGrid, true);
+    window.removeEventListener("afterprint", this._restorePrintGrid, true);
+
+    if (this.gridResizeObserver) {
+      this.gridResizeObserver.disconnect();
+      this.gridResizeObserver = null;
+    }
+
+    const root = this.$refs.gridContainer;
+    if (root && this._gridSortClickHandler) {
+      const grid = root.querySelector(".k-grid");
+      if (grid) {
+        grid.removeEventListener("click", this._gridSortClickHandler);
+      }
+    }
+
     Object.assign(this.$data, this.$options.data());
   },
-  // add 性能改善メモリ不足 shan end
 };
 </script>
 
 <style>
 @media print {
+  /** tableレイアウト崩れ回避 */
+  body:has(#multi-pat-list-template2) #main-id {
+    display: inline-block;
+  }
   /** ヘッダレイアウト崩れ回避 */
   body:has(#multi-pat-list-template2) #bbs-search-area {
     width: 60%;
@@ -846,114 +987,263 @@
   body:has(#multi-pat-list-template2) .file-button {
     margin-left: 10%;
   }
-  /** 右端スクロール時はみ出し回避 */
-  body:has(#multi-pat-list-template2) #main-id {
-    margin-left: -1px;
-  }
 }
 </style>
 
-<style scoped lang="scss">
-:root {
-  --multi-pat-list-template2-top: 32px;
+<style scoped>
+.multi-pat-list {
+  max-height: 97%;
+  background-color: var(--main-background-color);
+  color: var(--ntss-list-body-color);
 }
 
-.scroll-table {
-  overflow: auto;
-  height: 100%;
-  overflow-x:scroll;
-
-  .grid-record-list {
-    border-collapse: collapse;
-    background-color: var(--ntss-list-background-color);
-
-    .text-center {
-      text-align: center;
-      min-width: 80px;
-      box-shadow: 0 0 0 0.5px var(--ntss-list-border-color);
-      z-index: 9;
-    }
-
-    .th-sticky-day {
-      height: 38.4px;
-      top: var(--multi-pat-list-template2-top);
-    }
-
-    .frezee-column-name {
-      box-shadow: 0 0 0 0.5px var(--ntss-list-border-color);
-      left: 0px;
-      z-index: 10;
-      position: sticky;
-    }
-
-    .sticky-body-items {
-      z-index: 8;
-      background-color: var(--body-background-color);
-    }
-
-    thead {
-      tr {
-        height: 2em;
-      }
-    }
-    tbody {
-      tr {
-        td {
-          border: solid 1px var(--ntss-list-border-color);
-          padding: 4px;
-          height: 23px;
-          white-space: nowrap;
-          color: var(--ntss-base-color);
-          max-width: 20em;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          word-break: break-all;
-          .align-loading {
-            display: flex;
-            justify-content: center;
-            z-index: -1;
-          }
-        }
-        &:nth-child(even) {
-          background-color: var(
-            --ntss-list-content-2nd-background-color
-          ) !important;
-          td {
-            background-color: var(
-              --ntss-list-content-2nd-background-color
-            ) !important;
-          }
-        }
-      }
-    }
-  }
+/* kendo-grid用style */
+/* 全体の色 */
+.multi-pat-list :deep(.k-grid) {
+  background-color: var(--ntss-list-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
 }
-.manual-width {
-  resize: horizontal;
-  overflow-x: auto;
-}.clickable-header-label {
+
+.multi-pat-list :deep(.k-widget) {
+  font-size: 1em;
+}
+
+/* セルの枠線(なぜか縦線にしか色がつかない) */
+.multi-pat-list :deep(.k-grid tr),
+.multi-pat-list :deep(.k-grid td),
+.multi-pat-list :deep(.k-grid th),
+.multi-pat-list :deep(.k-grid .k-table-td),
+.multi-pat-list :deep(.k-grid .k-table-th),
+.multi-pat-list :deep(.k-grid-header-locked th),
+.multi-pat-list :deep(.k-grid-header-locked .k-table-th) {
+  border-color: var(--master-maintenance-kgrid-border-color) !important;
+}
+
+/* 行マウスオーバー */
+.multi-pat-list :deep(.k-grid tr:hover) {
+  background-color: var(--ntss-list-body-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+
+/* 列ヘッダ */
+.multi-pat-list :deep(.k-header) {
+  vertical-align: middle !important;
+  background-color: var(--ntss-list-header-background-color);
+  color: #ffffff;
+}
+.multi-pat-list :deep(.k-header[data-role='columnsorter']) {
+  vertical-align: middle !important;
+  background-color: #333333;
+  background-image: none;
+}
+
+/* 入力不可列のヘッダ */
+.multi-pat-list :deep(.k-header-disabled) {
+  background-color: #808080 !important;
+  background-image: none;
+}
+
+/* 偶数行 */
+.multi-pat-list :deep(.k-alt) {
+  background-color: var(--ntss-list-content-2nd-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+
+/* 入力UI */
+.multi-pat-list :deep(.k-textbox),
+.multi-pat-list :deep(.k-dropdown-wrap),
+.multi-pat-list :deep(.k-numeric),
+.multi-pat-list :deep(.k-select),
+.multi-pat-list :deep(.k-popup),
+:global(.multi-pat-list.k-popup),
+:global(.multi-pat-list .k-popup) {
+  background-color: var(--main-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+
+.multi-pat-list :deep(.k-picker),
+.multi-pat-list :deep(.k-input-inner) {
+  background-color: var(--main-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+
+/* kendoDropDownListの選択肢 */
+.multi-pat-list :deep(.k-popup),
+:global(.multi-pat-list.k-popup),
+:global(.multi-pat-list .k-popup) {
+  border-color: var(--ntss-list-body-background-color) !important;
+}
+
+/* kendoDropDownListの選択肢のマウスオーバー */
+.multi-pat-list :deep(.k-popup li:hover),
+:global(.multi-pat-list.k-popup li:hover),
+:global(.multi-pat-list .k-popup li:hover) {
+  background-color: var(--ntss-list-body-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+.multi-pat-list :deep(.k-i-sort-asc-sm::before) {
+  content: "▲" !important;
+  color: #ffffff;
+}
+.multi-pat-list :deep(.k-i-sort-desc-sm::before) {
+  content: "▼" !important;
+  color: #ffffff;
+}
+
+.multi-pat-list :deep(.k-grid td) {
+  white-space: pre-line !important;
+}
+
+.multi-pat-list :deep(.k-grid .k-table-td) {
+  white-space: pre-line !important;
+}
+
+/* 編集セルは折り返さない（上記 pre-line より優先） */
+.multi-pat-list :deep(.k-grid td.k-edit-cell),
+.multi-pat-list :deep(.k-grid .k-table-td.k-edit-cell) {
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+}
+
+.multi-pat-list :deep(.k-grid td.k-edit-cell > *:not(input):not(textarea):not(select)),
+.multi-pat-list :deep(.k-grid .k-table-td.k-edit-cell > *:not(input):not(textarea):not(select)) {
+  display: inline-flex !important;
+  flex-flow: row nowrap !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+  width: auto !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+}
+
+:deep(.multi-pat-list .k-grid td) {
+  width: 150px !important;
+}
+
+:deep(.multi-pat-list .k-grid .k-table-td) {
+  width: 150px !important;
+}
+
+@media screen and (max-width: 600px) {
+}
+
+:deep(.k-grid td) {
+  word-wrap: break-word;
+}
+
+:deep(.k-grid .k-table-td) {
+  word-wrap: break-word;
+}
+:deep(.k-grid th) {
+  word-wrap: break-word;
+}
+
+:deep(.k-grid .k-table-th) {
+  word-wrap: break-word;
+}
+
+#multi-pat-list-template2 :deep(.k-grid-container td) {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Template2 ソート用カスタムヘッダ */
+.multi-pat-list :deep(.clickable-header-label) {
   display: block;
   width: 100%;
   height: 100%;
   padding: 0 4px;
   box-sizing: border-box;
   overflow: hidden;
-  align-content: center;
+  cursor: pointer;
+}
+
+.multi-pat-list :deep(.k-grid-header th.text-center) {
+  text-align: center;
 }
 
 @media print {
-  /** ヘッダ固定 */
-  .ntss-list-header-th-sticky {
-    position: sticky !important;
+  .multi-pat-list {
+    position: absolute;
   }
   /** スクロールコンテナ */
-  .scroll-table {
+  .multi-pat-list :deep(.k-grid-header-wrap),
+  .multi-pat-list :deep(.k-grid-content) {
     overflow: hidden !important;
     height: auto !important;
   }
-  .scroll-rightmost {
-    position: relative;
-    float: right;
+  /** 固定列調整 */
+  .multi-pat-list :deep(.k-grid-content-locked) {
+    height: auto !important;
   }
+  /** 固定列枠線 */
+  .multi-pat-list :deep(.k-grid-header-locked::after) {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1px;
+    height: 100%;
+    background: var(--master-maintenance-kgrid-header-background-color);
+    pointer-events: none;
+  }
+  .multi-pat-list :deep(.k-grid-content-locked::after) {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1px;
+    height: 100%;
+    background: var(--master-maintenance-kgrid-border-color);
+    pointer-events: none;
+  }
+  /** ヘッダのズレ原因を除去 */
+  .multi-pat-list :deep(.k-grid-header) {
+    padding-right: 0 !important;
+  }
+  /** gridの幅 */
+  .multi-pat-list :deep(.k-grid) {
+    width: 100vw;
+    height: auto !important;
+  }
+  /** 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
+  /* 右端時固定列最前面表示*/
+  .multi-pat-list:has(table.scroll-rightmost) :deep(.k-grid-content-locked),
+  .multi-pat-list:has(table.scroll-rightmost) :deep(.k-grid-header-locked) {
+    z-index: 1;
+    background-color: inherit;
+  }
+  .multi-pat-list:has(table.scroll-rightmost) {
+    margin-left: -1px !important;
+  }
+  .multi-pat-list :deep(.k-grid-header-wrap:has(table.scroll-rightmost)),
+  .multi-pat-list :deep(.k-grid-content:has(table.scroll-rightmost)) {
+    position: static;
+  }
+}
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+}
+
+:deep(.k-grid-content) {
+  height: 100% !important;
+}
+
+:deep(.k-grid-header) {
+  background: var(--ntss-list-header-background-color) !important;
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,0.1) 100%) !important;
+}
+
+:deep(.k-grid-header-locked th) {
+  background-image: none;
 }
 </style>

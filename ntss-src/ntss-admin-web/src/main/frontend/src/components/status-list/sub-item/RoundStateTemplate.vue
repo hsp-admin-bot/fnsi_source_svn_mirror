@@ -23,7 +23,7 @@ export default {
   computed: {
     roundStateClassName() {
       const roundStateHighlighting = this.dataItem["roundStateHighlighting"];
-      if (!!roundStateHighlighting) {
+      if (roundStateHighlighting) {
         return "round-state-td-highlighting-" + roundStateHighlighting;
       } else {
         return "";

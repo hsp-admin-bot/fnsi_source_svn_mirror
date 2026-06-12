@@ -2,13 +2,12 @@
   <span class="device-input-time">
     <custom-input-time
       ref="el"
-      v-bind="deviceInfo"
+      v-bind="{ ...deviceInfo, ...$attrs }"
       :is-required="required"
       :minutes-mode="true"
       :disabled="disabled"
       :default-time="defaultTime"
       max-value="09:59"
-      v-on="$listeners"
     />
     {{ deviceInfo.unitName }}
   </span>
@@ -25,6 +24,7 @@ import baseForm from "@/components/deviceset-info/base-modules/BaseDeviceSetInfo
  *     ・required(任意): 入力必須フラグ ※必須ではない場合のみfalseを与えること
  */
 export default {
+  inheritAttrs: false,
   components: {
     "custom-input-time": customInputTime
   },

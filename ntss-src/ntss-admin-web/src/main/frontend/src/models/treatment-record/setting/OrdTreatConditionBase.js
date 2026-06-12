@@ -1,4 +1,4 @@
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { TREAT_CLASS } from "@/constants/TreatClass";
 import { ORD_TREAT_CONDITION } from "@/constants/OrdTreatCondition";
 
@@ -18,7 +18,7 @@ export class OrdTreatConditionBase {
    * @returns {string} 条件取得日時（ISO8601形式）の"MM/DD HH:mm"形式
    */
   getFormattedReceiveDate() {
-    const receiveDateMoment = moment(this.receiveDate);
+    const receiveDateMoment = dayjs(this.receiveDate);
     return receiveDateMoment.format("MM/DD HH:mm");
   }
 
@@ -42,7 +42,7 @@ export class OrdTreatConditionBase {
    */
   getAfterConversionValue(category, value) {
     if (value === undefined || value === null) return "";
-    if (!ORD_TREAT_CONDITION.hasOwnProperty(category)) return "";
+    if (!Object.prototype.hasOwnProperty.call(ORD_TREAT_CONDITION, category)) return "";
 
     const conversion = ORD_TREAT_CONDITION[category].conversion;
     //mod FNSI修正内容 不明追加 房 start

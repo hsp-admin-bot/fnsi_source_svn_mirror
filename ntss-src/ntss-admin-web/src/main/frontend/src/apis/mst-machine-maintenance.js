@@ -3,6 +3,16 @@
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
 
+function withSelectedPatId(params = undefined, selectedPatId) {
+  if (selectedPatId === null || selectedPatId === undefined || selectedPatId === "") {
+    return params;
+  }
+  return {
+    ...(params || {}),
+    selectedPatId
+  };
+}
+
 /**
  * 参照先URL
  */
@@ -97,7 +107,10 @@ export function sendRequestUpdateChangeMachine(
  * ΔSO2を使用する装置件数取得
  * @param {String} facilityCd
  */
-export function getMachineSo2OptCount(facilityCd) {
-  return ApiHelper.get(`${URL_BASE}/So2OptCount/${facilityCd}`);
+export function getMachineSo2OptCount(facilityCd, selectedPatId) {
+  return ApiHelper.get(
+    `${URL_BASE}/So2OptCount/${facilityCd}`,
+    withSelectedPatId(undefined, selectedPatId)
+  );
 }
 // #11124 2025.08.26 add 酸素飽和度対応 TDC高村 end

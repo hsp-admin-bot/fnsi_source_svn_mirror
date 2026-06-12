@@ -18,7 +18,7 @@ import org.junit.runner.RunWith;
 import org.seasar.doma.jdbc.SelectOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import jp.co.nikkiso.ntss.core.dao.IndicationResultDao;
@@ -46,37 +46,37 @@ public class IndicationResultServiceImplTest {
   /**
    * 予実リストDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private IndicationResultDao indicationResultDao;
 
   /**
    * 利用者マスタのDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstUserDao mstUserDao;
 
   /**
    * クールマスタのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstKurDao mstKurDao;
 
   /**
    * ベッドマスタのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstBedDao mstBedDao;
 
   /**
    * 治療方法マスタのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstTreatmentDao mstTreatmentDao;
 
   /**
    * 患者基本情報のMockBean.
    */
-  @MockBean
+  @MockitoBean
   private PatMainDao patMainDao;
 
   /**

@@ -78,7 +78,7 @@ public class SysDailyNo extends BaseEntity {
 //    public String getValue() {
 //      try {
 //        return objectMapper.writeValueAsString(this);
-//      } catch (JsonProcessingException e) {
+//      } catch (JacksonException e) {
 //        return null;
 //      }
 //    }

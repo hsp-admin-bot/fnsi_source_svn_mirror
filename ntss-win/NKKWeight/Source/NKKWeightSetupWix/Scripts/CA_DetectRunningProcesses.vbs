@@ -33,9 +33,12 @@ Sub DetectByWmi(ByRef runningText, ByRef serviceWasRunning)
   Set oWMI = GetObject("winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2")
   If Err.Number <> 0 Then Exit Sub
 
-  Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'NKKWeightTool.exe'")
+  Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'FNWSiScaleTool.exe'")
+  If oItems.Count = 0 Then
+    Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'NKKWeightTool.exe'")
+  End If
   If oItems.Count > 0 Then
-    AppendRunningItem runningText, "体重計アプリ (NKKWeightTool.exe)"
+    AppendRunningItem runningText, "体重計保守ツール (FNWSiScaleTool.exe)"
   End If
 
   Set oItems = oWMI.ExecQuery("Select * from Win32_Process Where Name = 'NKKWeightScaleApp.exe'")
@@ -45,7 +48,7 @@ Sub DetectByWmi(ByRef runningText, ByRef serviceWasRunning)
 
   Set oItems = oWMI.ExecQuery("Select * from Win32_Service Where Name = 'NKKWeightService' And State = 'Running'")
   If oItems.Count > 0 Then
-    AppendRunningItem runningText, "NKKWeight サービス (NKKWeightService)"
+    AppendRunningItem runningText, "体重計サービス (NKKWeightService)"
     serviceWasRunning = True
   End If
 End Sub
@@ -57,9 +60,15 @@ Sub DetectByShellFallback(ByRef runningText, ByRef serviceWasRunning)
   Set oShell = CreateObject("WScript.Shell")
 
   Err.Clear
-  toolRes = oShell.Run("cmd /c tasklist /FI ""IMAGENAME eq NKKWeightTool.exe"" | find /I ""NKKWeightTool.exe"" >nul", 0, True)
+  toolRes = oShell.Run("cmd /c tasklist /FI ""IMAGENAME eq FNWSiScaleTool.exe"" | find /I ""FNWSiScaleTool.exe"" >nul", 0, True)
   If Err.Number = 0 And toolRes = 0 Then
-    AppendRunningItem runningText, "体重計アプリ (NKKWeightTool.exe)"
+    AppendRunningItem runningText, "体重計保守ツール (FNWSiScaleTool.exe)"
+  Else
+    Err.Clear
+    toolRes = oShell.Run("cmd /c tasklist /FI ""IMAGENAME eq NKKWeightTool.exe"" | find /I ""NKKWeightTool.exe"" >nul", 0, True)
+    If Err.Number = 0 And toolRes = 0 Then
+      AppendRunningItem runningText, "体重計保守ツール (FNWSiScaleTool.exe)"
+    End If
   End If
 
   Err.Clear
@@ -71,7 +80,7 @@ Sub DetectByShellFallback(ByRef runningText, ByRef serviceWasRunning)
   Err.Clear
   serviceRes = oShell.Run("cmd /c sc query NKKWeightService | find /I ""STATE"" | find /I ""RUNNING"" >nul", 0, True)
   If Err.Number = 0 And serviceRes = 0 Then
-    AppendRunningItem runningText, "NKKWeight サービス (NKKWeightService)"
+    AppendRunningItem runningText, "体重計サービス (NKKWeightService)"
     serviceWasRunning = True
   End If
 End Sub

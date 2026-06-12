@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="facility-body" id="destination-group-modal-content">
+        <template #body>
+<div class="facility-body" id="destination-group-modal-content">
       <!-- 全施設検索 -->
       <div id="sys-facility-search-wrapper">
         <!-- mod #8372 よく使うマスタの施設選択表示までが遅い。フリーズする。ローダーも表示しない。 付 start -->
@@ -83,7 +84,9 @@
         </table>
       </div>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+        <template #footer>
+<div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <button class="btn2-cancel button denial-btn" @click="cancel">キャンセル</button>
       </div>
@@ -91,16 +94,17 @@
         <button class="common-style-select-button button registration-btn" :disabled="registeredFlag" @click="onConfirm">確定</button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
-import { mapActions, mapGetters, mapMutations, mapState } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters, mapMutations, mapState } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import SysFacilitySearchComponent from "@/components/master-maintenance/mst-favorite-facility/SysFacilitySearchComponent";
-import _ from "underscore";
+import _ from "@/compat/collections/lodash";
 // add #8372 よく使うマスタの施設選択表示までが遅い。フリーズする。ローダーも表示しない。 付 start
 import { ApiHelper } from '../../../apis/AxiosHelper';
 // add #8372 よく使うマスタの施設選択表示までが遅い。フリーズする。ローダーも表示しない。 付 end
@@ -108,8 +112,9 @@ import { ApiHelper } from '../../../apis/AxiosHelper';
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from '@/functions/common/MessageFormat';
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
-import cloneDeep from "lodash/cloneDeep";
-import isEqual from "lodash/isEqual";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import isEqual from "@/compat/collections/lodash/isEqual";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   name: "MstFavoriteFacilityEditModal",
@@ -241,9 +246,9 @@ export default {
     //mod #8372 よく使うマスタの施設選択表示までが遅い。フリーズする。ローダーも表示しない。 付 end
     calculateListHeight() {
       // 画面の高さ
-      const fullHeight = document.getElementById("destination-group-modal-content").clientHeight;
+      const fullHeight = getScopedElementById("destination-group-modal-content", this.$el || this)?.clientHeight || 0;
       // ヘッダーの高さ
-      const headHeight = document.getElementById("sys-facility-search-wrapper").clientHeight
+      const headHeight = getScopedElementById("sys-facility-search-wrapper", this.$el || this)?.clientHeight || 0
       // リストの高さを設定
       this.listHeight = fullHeight - (headHeight + 10);
     },
@@ -478,7 +483,10 @@ export default {
     },
     //add #8372 よく使うマスタの施設選択表示までが遅い。フリーズする。ローダーも表示しない。 付 start
     handleScroll () {
-      const dom = document.getElementById('staff-list-wrapper')
+      const dom = getScopedElementById('staff-list-wrapper', this.$el || this)
+      if (!dom) {
+        return;
+      }
       const clientHeight = dom.clientHeight
       const scrollTop = dom.scrollTop
       const scrollHeight = dom.scrollHeight
@@ -494,39 +502,45 @@ export default {
     },
     async getList(condition) {
       this.setLoadingScreenVisible(true)
-      const arr = this.gridData.map(item => item.medicalInstitutionCd)
-      // mod #9497 よく使う施設マスタの施設選択画面で最下部の追加読み込みが動かない zhangbo start
-      const getAllFacility = await ApiHelper.post(`/master_maintenance/mst_favorite_facility/getSysFacility/${this.offset}?selectedInsCd=${arr.toString()}`,condition)
-      // if (getAllFacility.data.length < 100) {
-      //   this.scrollFlag = false
-      // }
-      // mod #9497 よく使う施設マスタの施設選択画面で最下部の追加読み込みが動かない zhangbo end
-      for (let i = 0; i < getAllFacility.data.length; i++) {
-        this.facilityList.push({
-          "facilityCd": getAllFacility.data[i].facilityCd || '',
-          "prefCd": getAllFacility.data[i].prefCd,
-          "medicalInstitutionCd": getAllFacility.data[i].medicalInstitutionCd,
-          "facilityName": getAllFacility.data[i].facilityName,
-          "address": getAllFacility.data[i].address,
-          "phoneNo": getAllFacility.data[i].phoneNo,
-          "faxNo": getAllFacility.data[i].faxNo,
-          "prefName": getAllFacility.data[i].prefName
-        })
+      try {
+        const arr = this.gridData.map(item => item.medicalInstitutionCd)
+        // mod #9497 よく使う施設マスタの施設選択画面で最下部の追加読み込みが動かない zhangbo start
+        const getAllFacility = await ApiHelper.post(`/master_maintenance/mst_favorite_facility/getSysFacility/${this.offset}?selectedInsCd=${arr.toString()}`,condition)
+        // if (getAllFacility.data.length < 100) {
+        //   this.scrollFlag = false
+        // }
+        // mod #9497 よく使う施設マスタの施設選択画面で最下部の追加読み込みが動かない zhangbo end
+        for (let i = 0; i < getAllFacility.data.length; i++) {
+          this.facilityList.push({
+            "facilityCd": getAllFacility.data[i].facilityCd || '',
+            "prefCd": getAllFacility.data[i].prefCd,
+            "medicalInstitutionCd": getAllFacility.data[i].medicalInstitutionCd,
+            "facilityName": getAllFacility.data[i].facilityName,
+            "address": getAllFacility.data[i].address,
+            "phoneNo": getAllFacility.data[i].phoneNo,
+            "faxNo": getAllFacility.data[i].faxNo,
+            "prefName": getAllFacility.data[i].prefName
+          })
+        }
+        
+        // 全施設マスタ取得時のoffsetカウントアップ 
+        // ** よく使う施設マスタ登録済（画面上部に固定表示）のデータ件数はoffsetに含めない **
+        this.offset += getAllFacility.data.length;
+        
+        this.scrollFlag = true
+      } finally {
+        this.setLoadingScreenVisible(false)
       }
-      
-      // 全施設マスタ取得時のoffsetカウントアップ 
-      // ** よく使う施設マスタ登録済（画面上部に固定表示）のデータ件数はoffsetに含めない **
-      this.offset += getAllFacility.data.length;
-      
-      this.scrollFlag = true
-      this.setLoadingScreenVisible(false)
     },
     GetFilterData(data) {
        // mod #9497 よく使う施設マスタの施設選択画面で最下部の追加読み込みが動かない zhangbo start
       // this.limit = 0
       // this.scrollFlag = false
        // mod #9497 よく使う施設マスタの施設選択画面で最下部の追加読み込みが動かない zhangbo end
-      document.getElementById('staff-list-wrapper').scrollTop = 0;
+      const staffListWrapper = getScopedElementById('staff-list-wrapper', this.$el || this);
+      if (staffListWrapper) {
+        staffListWrapper.scrollTop = 0;
+      }
       // 値クリア
       this.facilityList = [];
       this.offset = 0;
@@ -551,14 +565,12 @@ export default {
       const arr = this.gridData.filter((facility) => {
         let searchBool = true
         if (_freeWord) {
-          // add/ #12699 よく使う施設マスタの追加ウィンドウでフリーワード検索が不正 tianqidong start
           const facilityName = (facility.name || '').toLowerCase()
           const phoneNo = (facility.phoneNo || '').toLowerCase()
           const faxNo = (facility.faxNo || '').toLowerCase()
           const address = (facility.address || '').toLowerCase()
           if (facilityName.indexOf(_freeWord) >= 0 || phoneNo.indexOf(_freeWord) >= 0 || faxNo.indexOf(_freeWord) >= 0 || address.indexOf(_freeWord) >= 0) {
-          // add/ #12699 よく使う施設マスタの追加ウィンドウでフリーワード検索が不正 tianqidong end  
-            searchBool = true;
+              searchBool = true;
           }else{
             return false;
           }
@@ -613,19 +625,19 @@ export default {
   },
   mounted() {
     //add #8372 よく使うマスタの施設選択表示までが遅い。フリーズする。ローダーも表示しない。 付 start
-    window.addEventListener("scroll", this.handleScroll, true)
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("scroll", this.handleScroll, true)
      // mod #9497 よく使う施設マスタの施設選択画面で最下部の追加読み込みが動かない zhangbo start
-    this.lastScrollTop = document.getElementById('staff-list-wrapper').scrollTop;
+    this.lastScrollTop = getScopedElementById('staff-list-wrapper', this.$el || this)?.scrollTop || 0;
      // mod #9497 よく使う施設マスタの施設選択画面で最下部の追加読み込みが動かない zhangbo end
     //add #8372 よく使うマスタの施設選択表示までが遅い。フリーズする。ローダーも表示しない。 付 end
     this.$nextTick(() => {
       this.calculateListHeight();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.conditionsClear();
     //add #8372 よく使うマスタの施設選択表示までが遅い。フリーズする。ローダーも表示しない。 付 start
-    window.removeEventListener("scroll", this.handleScroll, true)
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("scroll", this.handleScroll, true)
     //add #8372 よく使うマスタの施設選択表示までが遅い。フリーズする。ローダーも表示しない。 付 end
     EventBus.$off("setFacilityList", this.setFacilityList);
   }

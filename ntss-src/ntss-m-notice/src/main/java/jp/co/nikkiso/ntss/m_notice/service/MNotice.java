@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.m_notice.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.MotionRecordDataType;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.UserType;
@@ -58,8 +58,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import tools.jackson.core.JacksonException;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -1046,8 +1045,8 @@ public class MNotice {
       ObjectMapper mapper = new ObjectMapper();
       JsonNode root = mapper.readTree(json);
       mailTemplate = root.get("mail_template").asText();
-    } catch (IOException ioe) {
-      throw new UncheckedIOException(ioe);
+    } catch (JacksonException ioe) {
+      throw new IllegalStateException(ioe);
     }
 
     return mailTemplate;
@@ -1067,8 +1066,8 @@ public class MNotice {
       ObjectMapper mapper = new ObjectMapper();
       JsonNode root = mapper.readTree(json);
       mailTemplate = root.get("mail_alive_template").asText();
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
+    } catch (JacksonException e) {
+      throw new IllegalStateException(e);
     }
 
     return mailTemplate;

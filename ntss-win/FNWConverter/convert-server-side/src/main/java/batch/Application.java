@@ -2,14 +2,14 @@ package batch;
 
 import java.time.LocalDateTime;
 
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.JobParametersInvalidException;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParametersBuilder;
+import org.springframework.batch.core.job.parameters.InvalidJobParametersException;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
-import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.batch.core.launch.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.launch.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.launch.JobRestartException;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -28,7 +28,7 @@ import batch.ApplicationConst.JobParameterKeys;
 public class Application {
 
 	public static void main(String[] args) throws JobExecutionAlreadyRunningException, JobRestartException,
-			JobInstanceAlreadyCompleteException, JobParametersInvalidException {
+			JobInstanceAlreadyCompleteException, InvalidJobParametersException {
 
         SpringApplication app = new SpringApplication(Application.class);
         app.setWebApplicationType(WebApplicationType.NONE);

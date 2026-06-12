@@ -2,8 +2,7 @@
  * 職種マスタモーダル
  */
 <template>
-  <div>
-    <div slot="body" class="custom-ons-list-header">
+  <div class="custom-ons-list-header">
       <v-ons-list modifier="inset">
         <v-ons-list-header>メニューバー表示機能設定</v-ons-list-header>
         <v-ons-list-item class="ntss-theme-screen print-height-auto">
@@ -66,21 +65,21 @@
           </draggable>
         </v-ons-list-item>
       </v-ons-list>
-    </div>
   </div>
 </template>
 
 <script>
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { mapActions, mapGetters } from "vuex";
-import {EventBus} from "@/eventBus";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import { FUNC_DEVICE_EDGE_OPERATION } from "@/constants/function-code";
-import vuedraggable from "vuedraggable";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
-import cloneDeep from "lodash/cloneDeep";
-import isEqualWith from "lodash/isEqualWith";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import { getModalContainerElement, getModalToolbarElement, getModalFooterElement, queryScopedSelector } from '@/functions/common/LayoutMeasureHelper';
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
 import { customComparator } from "@/utils/util.js";
 import { fetchMenuData , validateOnRegistration } from "@/functions/MenuBarFunctions";
 
@@ -93,7 +92,7 @@ const defaultFunction = "005";
 export default {
   name: "jobMainModal",
   components: {
-    "draggable": vuedraggable
+    "draggable": VueDraggable
   },
   data() {
     return {
@@ -214,6 +213,18 @@ export default {
     }, 200);
 },
   methods: {
+    getCurrentModalContainer() {
+      return getModalContainerElement(this.$el) || null;
+    },
+    getCurrentModalToolbar() {
+      return getModalToolbarElement(this.$el) || null;
+    },
+    getCurrentModalFooter() {
+      return getModalFooterElement(this.$el) || null;
+    },
+    getJobModalElement(selector) {
+      return this.getCurrentModalContainer()?.querySelector?.(selector) || this.$el?.querySelector?.(selector) || queryScopedSelector(selector, this.$el);
+    },
     ...mapActions("account-edit", ["updateMenuBar", "setMenuBar"]),
     // ...mapActions("master-maintenance", ["setEditRecord"]),
     createMenuSettingCompareRecord(record) {
@@ -388,7 +399,7 @@ export default {
         throw error;
       });
 
-    const ua = navigator.userAgent;
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
     if (ua.match(/Android/)) {
       this.isAndroid = true;
     }
@@ -471,19 +482,26 @@ export default {
         this.menuList.sort((a, b) => a.order - b.order);
 
         // スタイルの調整
-        document.getElementsByClassName("list-item")[0].style.paddingLeft = "0px"
-        const dialogheigth = document.getElementsByClassName("modal-container")[0].offsetHeight;
-        const dialogHeaderheigth = document.getElementsByClassName("toolbar")[0].offsetHeight;
-        const dialogFooterheigth = document.getElementsByClassName("modal-footer")[0].offsetHeight;
+        const listItem = this.getJobModalElement('.list-item');
+        if (listItem) {
+          listItem.style.paddingLeft = '0px';
+        }
+        const dialogheigth = this.getCurrentModalContainer()?.offsetHeight || 0;
+        const dialogHeaderheigth = this.getCurrentModalToolbar()?.offsetHeight || 0;
+        const dialogFooterheigth = this.getCurrentModalFooter()?.offsetHeight || 0;
         // ヘッダー、フッター以外のマージン等の調整
         let adjustHeigth = 0;
-        if (navigator.userAgent.match(/Android/)) {
+        if (((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").match(/Android/)) {
           adjustHeigth = 82;
         } else {
           adjustHeigth = 47;
         }
-        document.getElementsByClassName("list-item")[0].style.height = (dialogheigth - dialogHeaderheigth - dialogFooterheigth - adjustHeigth) + "px";
-        document.getElementsByClassName("list-item")[0].firstElementChild.style.display = "unset";
+        if (listItem) {
+          listItem.style.height = (dialogheigth - dialogHeaderheigth - dialogFooterheigth - adjustHeigth) + 'px';
+          if (listItem.firstElementChild) {
+            listItem.firstElementChild.style.display = 'unset';
+          }
+        }
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_職種マスタ 20240105 mrx start
         this.menuListClone = cloneDeep(this.menuList);
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_職種マスタ 20240105 mrx end
@@ -556,7 +574,7 @@ ons-switch {
 .th-font-weight {
   font-weight: unset;
 }
-.custom-ons-list-header >>> .list-header {
+.custom-ons-list-header :deep(.list-header) {
   font-size: inherit;
   display: flex;
   align-items: center;

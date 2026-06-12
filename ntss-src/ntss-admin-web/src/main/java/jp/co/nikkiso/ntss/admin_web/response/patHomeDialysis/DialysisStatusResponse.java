@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.response.patHomeDialysis;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -12,7 +12,7 @@ import lombok.Getter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class DialysisStatusResponse {
   
   /**

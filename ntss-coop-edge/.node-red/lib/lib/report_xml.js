@@ -34,7 +34,7 @@ function writeXmlFile(fileName, data) {
  * @param {String} newFile 新規ファイルパス
  */
 function makePatientInfo(originalFile, newFile) {
-    var xmldom = require('xmldom');
+    var xmldom = require('@xmldom/xmldom');
     var path = require('path');
     var parser = xmldom.DOMParser;
     var serializer = xmldom.XMLSerializer;
@@ -158,7 +158,7 @@ function makePatientInfo(originalFile, newFile) {
  * @param {String} newFile 新規ファイルパス
  */
 function makePdfServerInfo(originalFile, newFile) {
-    var xmldom = require('xmldom');
+    var xmldom = require('@xmldom/xmldom');
     var path = require('path');
     var commonLib = require('./CommonLib.js');
     var parser = xmldom.DOMParser;

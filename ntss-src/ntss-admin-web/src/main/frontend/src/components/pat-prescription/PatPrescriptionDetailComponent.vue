@@ -152,8 +152,8 @@
                   @change="isDoctorEmpty('insurance')"
                 >
                 <!-- mod #10359 編集権限の動作不正 dengshen end -->
-                  <template v-for="item in listPatInsurance">
-                    <option :key="item.insuranceCd" :value="item.insuranceCd">{{ item.insuName }}</option>
+                  <template v-for="item in listPatInsurance" :key="item.insuranceCd">
+                    <option :value="item.insuranceCd">{{ item.insuName }}</option>
                   </template>
                 </v-ons-select>
                 <!-- <kendo-dropdownlist
@@ -191,8 +191,8 @@
                     @change="isDoctorEmpty('insuranceDoctor')"
                 >
                 <!-- mod #10359 編集権限の動作不正 dengshen end -->
-                  <template v-for="item in listDoctor">
-                    <option :key="item.user_id" :value="item.user_id">{{ item.fullName }}</option>
+                  <template v-for="item in listDoctor" :key="item.user_id">
+                    <option :value="item.user_id">{{ item.fullName }}</option>
                   </template>
                 </v-ons-select>
                 <!-- <kendo-dropdownlist
@@ -278,48 +278,26 @@
                 <v-ons-row class="custom-button-figure">
                   <v-ons-col class="row-buttons">
                     <!-- Rp1の場合はボタン非表示 -->
-                    <span class="row-buttons-span" :style="{ display: (item.dataButtonNo === 1 && item.index === 0) ? 'none' : '' }">
+                    <span class="row-buttons-span row-buttons-icons" :style="{ display: (item.dataButtonNo === 1 && item.index === 0) ? 'none' : '' }">
                       <ons-toolbar-button
                         class="close-btn manual-close-btn"
-                        style="line-height: 1.875em";
-                        :disabled="
-                          inputModel.issued ||
-                          !getItemAuthorized(
-                            'PatPrescription',
-                            'default_authority'
-                          ) ||
-                          isOtherFacility(inputModel.facilityCd)
-                        "
+                        style="line-height: 1.875em;"
+                        :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
                         @click="deleteCols(index)"
                       >
                         <ons-icon icon="fa-times"></ons-icon>
                       </ons-toolbar-button>
-                      <ons-toolbar-button
-                        class="close-btn manual-close-btn"
-                        :class="{ 'moved-row': isMoved(item.uniqueId) }"
-                        :disabled="
-                          inputModel.issued ||
-                          !getItemAuthorized(
-                            'PatPrescription',
-                            'default_authority'
-                          )||
-                          isOtherFacility(inputModel.facilityCd)
-                        "
-                      >
+                      <ons-toolbar-button 
+                        class="close-btn manual-close-btn btnSpecial" 
+                        :class="{ 'moved-row': isMoved(item.uniqueId) }" 
+                        :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)">
                         <ons-icon icon="fa-sort" class="dragg"></ons-icon>
                       </ons-toolbar-button>
                     </span>
                     <v-ons-col>
                       <v-ons-button
                         class="btn3-normal common-style-select-button"
-                        :disabled="
-                          inputModel.issued ||
-                          !getItemAuthorized(
-                            'PatPrescription',
-                            'default_authority'
-                          )||
-                          isOtherFacility(inputModel.facilityCd)
-                        "
+                        :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
                         :style="{ display: (item.dataButtonNo === 1 && item.index === 0) ? 'none' : '' }"
                         @click="showPopoverToChange($event,item.dataButtonName,index)"
                       >{{ item.dataButtonName }}
@@ -346,15 +324,7 @@
                   >
                     <v-ons-checkbox
                       v-model="itemChild.itemValue"
-                      :disabled="
-                        inputModel.issued ||
-                        !getItemAuthorized(
-                          'PatPrescription',
-                          'default_authority'
-                        ) ||
-                        isOtherFacility(inputModel.facilityCd)
-                      "
-                    >
+                      :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)">
                     </v-ons-checkbox>
                   </v-ons-col>
                   <v-ons-col
@@ -363,15 +333,7 @@
                   >
                     <v-ons-checkbox
                       v-model="itemChild.itemValue"
-                      :disabled="
-                        inputModel.issued ||
-                        !getItemAuthorized(
-                          'PatPrescription',
-                          'default_authority'
-                        ) ||
-                        isOtherFacility(inputModel.facilityCd)
-                      "
-                    >
+                      :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)">
                     </v-ons-checkbox>
                   </v-ons-col>
                   <v-ons-col class="custom-element-input-area-inner" v-else-if="itemChild.type == 'text' && itemChild.hidden == false">
@@ -380,15 +342,7 @@
                       class="input disabled-input"
                       :class="isEditedDataList(item, itemChild.itemName, 'ons')" 
                       style="width: 100%"
-                      :disabled="
-                        (itemChild.disabled ? true : false) ||
-                        inputModel.issued ||
-                        !getItemAuthorized(
-                          'PatPrescription',
-                          'default_authority'
-                        ) ||
-                        isOtherFacility(inputModel.facilityCd)
-                      "
+                      :disabled="(itemChild.disabled ? true : false) || inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
                       v-model="itemChild.itemValue"
                     ></v-ons-input>
                   </v-ons-col>
@@ -399,29 +353,14 @@
                     <v-ons-input
                       type="text"
                       class="input rp-input disabled-input"
-                      :disabled="
-                        (itemChild.disabled ? true : false) ||
-                        inputModel.issued ||
-                        !getItemAuthorized(
-                          'PatPrescription',
-                          'default_authority'
-                        ) ||
-                        isOtherFacility(inputModel.facilityCd)
-                      "
-                      :value="'Rp' + itemChild.itemValue"
+                      :disabled="(itemChild.disabled ? true : false) || inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
+                      :value="'Rp'+itemChild.itemValue"
                     ></v-ons-input>
                   </v-ons-col>
                   <v-ons-col v-else-if="itemChild.type == 'button' && itemChild.hidden == false" class="custom-element-input-area-inner">
                     <v-ons-button
                       class="btn3-normal common-style-select-button"
-                      :disabled="
-                        inputModel.issued ||
-                        !getItemAuthorized(
-                          'PatPrescription',
-                          'default_authority'
-                        ) ||
-                        isOtherFacility(inputModel.facilityCd)
-                      "
+                      :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
                       @click="showModal(index)"
                     >選択</v-ons-button>
                   </v-ons-col>
@@ -434,18 +373,11 @@
                       v-model="itemChild.itemValue"
                       data-non-authorize="true"
                       style="width:-webkit-fill-available;"
-                      :disabled="
-                        inputModel.issued ||
-                        !getItemAuthorized(
-                          'PatPrescription',
-                          'default_authority'
-                        ) ||
-                        isOtherFacility(inputModel.facilityCd)
-                      "
+                      :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
                       @change="onOpen(index)"
                       :class="isEditedDataList(item, itemChild.itemName, 'ons')">
-                      <template v-for="item in timeList">
-                        <option :key="item" :value="item">{{ item }}</option>
+                      <template v-for="item in timeList" :key="item">
+                        <option :value="item">{{ item }}</option>
                       </template>
                     </v-ons-select>
                   </v-ons-col>
@@ -461,14 +393,7 @@
                         v-model="itemChild.itemValue"
                         style="width:-webkit-fill-available;"
                         :class="[!itemChild.showSelectFlagdouble ? '' : 'select-inputcolor', isEditedDataList(item, itemChild.itemName)]"
-                        :disabled="
-                          inputModel.issued ||
-                          !getItemAuthorized(
-                            'PatPrescription',
-                            'default_authority'
-                          ) ||
-                        isOtherFacility(inputModel.facilityCd)
-                        "
+                        :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
                         @focus="changeListInput(index, i, 'focus')"
                         @blur="listBlur(itemChild.itemValue, index, i)"
                         @input="inputChange(itemChild.itemValue, listDetailMedicine(itemChild.listClass))">
@@ -478,8 +403,7 @@
                         @mousedown="
                           (getItemAuthorized('PatPrescription', 'default_authority') && !inputModel.issued) ? (
                             changeListInput(index, i, 'mousedown'),
-                            itemChild.showSelectFlag = (itemChild.showSelectFlag ? false : true)
-                          ) : ''
+                            itemChild.showSelectFlag = (itemChild.showSelectFlag ? false : true)) : ''
                         "
                       ></span>
                     </div>
@@ -505,19 +429,12 @@
                         v-model="itemChild.itemValue"
                         data-non-authorize="true"
                         style="width:-webkit-fill-available;"
-                        :disabled="
-                        inputModel.issued ||
-                        !getItemAuthorized(
-                          'PatPrescription',
-                          'default_authority'
-                        ) ||
-                        isOtherFacility(inputModel.facilityCd)
-                      "
+                        :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
                         :class="isEditedDataList(item, itemChild.itemName, 'ons')"
                         @change="onOpen(index)"
                     >
-                      <template v-for="item in getUnit(itemChild.dataList)">
-                        <option :key="item" :value="item">{{ item }}</option>
+                      <template v-for="item in getUnit(itemChild.dataList)" :key="item">
+                        <option :value="item">{{ item }}</option>
                       </template>
                     </v-ons-select>
                   </v-ons-col>
@@ -529,18 +446,11 @@
                       :class="isEditedDataList(item, itemChild.itemName, 'ons')"
                       style="width:100%"
                       :step="unitStep(itemChild.unitDecimalPoint)"
-                      :disabled="
-                        (itemChild.disabled ? true : false) ||
-                        inputModel.issued ||
-                        !getItemAuthorized(
-                          'PatPrescription',
-                          'default_authority'
-                        ) ||
-                        isOtherFacility(inputModel.facilityCd)
-                      "
+                      :disabled="(itemChild.disabled ? true : false) || inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
                       v-model="itemChild.itemValue"
                       @change="changeValuePoint(itemChild.unitDecimalPoint,index, i, $event)"
-                      @mousewheel.prevent="stopScrollFun(index, i, $event)"
+                      @mousewheel="stopScrollFun(index, i, $event)"
+                      @wheel="stopScrollFun(index, i, $event)"
                       @blur="formatValue(index, i, $event)"
                       @focus="handleFocus(i)"
                     ></v-ons-input>
@@ -558,23 +468,16 @@
                   <v-ons-col>
                     <v-ons-button
                       class="btn3-normal common-style-select-button"
-                      :disabled="
-                        inputModel.issued ||
-                        !getItemAuthorized(
-                          'PatPrescription',
-                          'default_authority'
-                        ) ||
-                        isOtherFacility(inputModel.facilityCd)
-                      "
+                      :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
                       @click="showPopoverToAdd($event)"
                     >追加</v-ons-button>
                     <v-ons-popover
                       cancelable
-                      :visible.sync="popoverVisible"
+                      v-model:visible="popoverVisible"
                       :target="popoverTarget"
                       :direction="popoverDirection"
                       :cover-target="false"
-                      :class="[fontSizeSet, 'grid']"
+                      :class="[fontSizeSet, 'grid', 'prescription-add-popover']"
                       @preshow="popoverPreShow"
                       @postshow="popoverPostShow"
                       @posthide="popoverPosthide"
@@ -617,15 +520,7 @@
                 <label :class="['label-title', 'refill-label', isEdited('isRefill')]" @click="!inputModel.issued ? (inputModel.isRefill = !inputModel.isRefill) : ''">
                   リフィル可
                 </label>
-                <v-ons-checkbox
-                  v-model="inputModel.isRefill"
-                  class="refill-checkbox"
-                  :disabled="
-                    inputModel.issued ||
-                    !getItemAuthorized('PatPrescription', 'default_authority') ||
-                    isOtherFacility(inputModel.facilityCd)
-                  "
-                ></v-ons-checkbox>
+                <v-ons-checkbox v-model="inputModel.isRefill" class="refill-checkbox" :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"></v-ons-checkbox>
                 <label class="refill-paren">（</label>
                 <v-ons-input
                   id="refillNum"
@@ -633,11 +528,7 @@
                   :class="['input', 'number-input', 'refill-number', isEdited('refillNum')]"
                   min="1"
                   max="3"
-                  :disabled="
-                    inputModel.issued ||
-                    !getItemAuthorized('PatPrescription', 'default_authority') ||
-                    isOtherFacility(inputModel.facilityCd)
-                  "
+                  :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
                   v-model="inputModel.refillNum"
                   @mousewheel.prevent="onRefillWheel"
                   @blur="onRefillBlur"
@@ -666,11 +557,7 @@
               <!-- <v-ons-checkbox :disabled="inputModel.issued" v-model="inputModel.isDoubt"></v-ons-checkbox> -->
               <v-ons-checkbox
                 v-model="inputModel.isDoubt"
-                :disabled="
-                  inputModel.issued ||
-                  !getItemAuthorized('PatPrescription', 'default_authority') ||
-                    isOtherFacility(inputModel.facilityCd)
-                "
+                :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
               ></v-ons-checkbox>
               <!-- mod #10359 編集権限の動作不正 dengshen end -->
               <label :class="['label-title', isEdited('isDoubt')]" @click="!inputModel.issued ? inputModel.isDoubt = !inputModel.isDoubt : ''">保険医療機関へ疑義照会の上で調剤</label>
@@ -683,11 +570,7 @@
               <!-- <v-ons-checkbox :disabled="inputModel.issued" v-model="inputModel.isInformation"></v-ons-checkbox> -->
               <v-ons-checkbox
                 v-model="inputModel.isInformation"
-                :disabled="
-                  inputModel.issued ||
-                  !getItemAuthorized('PatPrescription', 'default_authority') ||
-                    isOtherFacility(inputModel.facilityCd)
-                "
+                :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
               ></v-ons-checkbox>
               <!-- mod #10359 編集権限の動作不正 dengshen end -->
               <label :class="['label-title', isEdited('isInformation')]" @click="!inputModel.issued ? inputModel.isInformation = !inputModel.isInformation : ''">保険医療機関へ情報提供</label>
@@ -702,11 +585,7 @@
                   <!-- <v-ons-checkbox :disabled="inputModel.issued" v-model="inputModel.isElderly"></v-ons-checkbox> -->
                   <v-ons-checkbox
                     v-model="inputModel.isElderly"
-                    :disabled="
-                      inputModel.issued ||
-                      !getItemAuthorized('PatPrescription', 'default_authority') ||
-                      isOtherFacility(inputModel.facilityCd)
-                    "
+                    :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
                   ></v-ons-checkbox>
                   <!-- mod #10359 編集権限の動作不正 dengshen end -->
                   <label :class="['label-title', isEdited('isElderly')]" @click="!inputModel.issued ? inputModel.isElderly = !inputModel.isElderly : ''">高一</label>
@@ -716,11 +595,7 @@
                   <!-- <v-ons-checkbox :disabled="inputModel.issued" v-model="inputModel.isElderly7"></v-ons-checkbox> -->
                   <v-ons-checkbox
                     v-model="inputModel.isElderly7"
-                    :disabled="
-                      inputModel.issued ||
-                      !getItemAuthorized('PatPrescription', 'default_authority') ||
-                      isOtherFacility(inputModel.facilityCd)
-                    "
+                    :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
                   ></v-ons-checkbox>
                   <!-- mod #10359 編集権限の動作不正 dengshen end -->
                   <label :class="['label-title', isEdited('isElderly7')]" @click="!inputModel.issued ? inputModel.isElderly7 = !inputModel.isElderly7 : ''">高７</label>
@@ -730,11 +605,7 @@
                   <!-- <v-ons-checkbox :disabled="inputModel.issued" v-model="inputModel.isChild"></v-ons-checkbox> -->
                   <v-ons-checkbox
                     v-model="inputModel.isChild"
-                    :disabled="
-                      inputModel.issued ||
-                      !getItemAuthorized('PatPrescription', 'default_authority') ||
-                      isOtherFacility(inputModel.facilityCd)
-                    "
+                    :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
                   ></v-ons-checkbox>
                   <!-- mod #10359 編集権限の動作不正 dengshen end -->
                   <label :class="['label-title', isEdited('isChild')]" @click="!inputModel.issued ? inputModel.isChild = !inputModel.isChild : ''">６歳未満</label>
@@ -749,11 +620,7 @@
               <!-- <v-ons-checkbox :disabled="inputModel.issued" v-model="inputModel.isAnesthesia"></v-ons-checkbox> -->
               <v-ons-checkbox
                 v-model="inputModel.isAnesthesia"
-                :disabled="
-                  inputModel.issued ||
-                  !getItemAuthorized('PatPrescription', 'default_authority') ||
-                  isOtherFacility(inputModel.facilityCd)
-                "
+                :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
               ></v-ons-checkbox>
               <!-- mod #10359 編集権限の動作不正 dengshen end -->
               <!-- <label class="label-title" @click="inputModel.isAnesthesia = !inputModel.isAnesthesia">麻酔薬含む</label> -->
@@ -780,11 +647,7 @@
                   idTextarea="com-textarea-remark-free"
                   :cssClass="['com-textarea', 'textarea-custom-text-font', 'textarea-resize-vertical', isEdited('remarksFree')]"
                   @set-content-data="setContentData"
-                :disabled="
-                  inputModel.issued ||
-                  !getItemAuthorized('PatPrescription', 'default_authority') ||
-                  isOtherFacility(inputModel.facilityCd)
-                "
+                :disabled="inputModel.issued || !getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"
               />
               <!-- mod #10359 編集権限の動作不正 dengshen end -->
             </v-ons-col>
@@ -816,18 +679,10 @@
         <!--   @click="deleteOrder">削除</v-ons-button> -->
         <v-ons-button
           v-if="getIsEdit"
-          :style="{
-            opacity:
-              !getItemAuthorized('PatPrescription', 'item_delete_btn') ||
-              isOtherFacility(inputModel.facilityCd)
-                ? 0.6
-                : 1
-          }"
+          :style="{ 'opacity': this.getItemAuthorized('PatPrescription', 'item_delete_btn') ? 1 : 0.6}"
           class="btn4-alert common-style-cancel-button"
-          @click="deleteOrder"
           :disabled="isOtherFacility(inputModel.facilityCd)"
-          >削除</v-ons-button
-        >
+          @click="deleteOrder">削除</v-ons-button>
         <!-- mod #10359_NG対応 編集権限の動作不正 dengshen end -->
         <!-- mod #10359 編集権限の動作不正 dengshen end -->
         <v-ons-button
@@ -842,13 +697,7 @@
         <div class="custom-checkbox">
           <!-- mod #10359 編集権限の動作不正 dengshen start -->
           <!--<v-ons-checkbox v-model="inputModel.issued"></v-ons-checkbox> -->
-          <v-ons-checkbox
-            v-model="inputModel.issued"
-            :disabled="
-              !getItemAuthorized('PatPrescription', 'default_authority') ||
-              isOtherFacility(inputModel.facilityCd)
-            "
-          ></v-ons-checkbox>
+          <v-ons-checkbox v-model="inputModel.issued" :disabled="!getItemAuthorized('PatPrescription', 'default_authority') || isOtherFacility(inputModel.facilityCd)"></v-ons-checkbox>
           <!-- mod #10359 編集権限の動作不正 dengshen end -->
           <label :class="['label-title', isEdited('issued')]" @click="!inputModel.issued ? inputModel.issued = !inputModel.issued : ''">交付済み</label>
         </div>
@@ -862,17 +711,18 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
-import moment from "moment";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
-import vuedraggable from "vuedraggable";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 import { AUTHORITY_CODES } from "@/constants/userAuthority";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // mod #10359 編集権限の動作不正 dengshen start
 // import { deepCopy } from "@/functions/common/CommonFunctions";
 import { deepCopy, getAuthorized } from "@/functions/common/CommonFunctions";
+import { findAncestorWithAnyKey, findAncestorWithMethod } from "@/functions/common/ComponentOwnerResolver";
 // mod #10359 編集権限の動作不正 dengshen end
-import { isEqual } from 'lodash';
+import { isEqual } from '@/compat/collections/lodash';
 import PopoverMixin from "@/components/PopoverMixin";
 import PatPrescriptionMixin from "./PatPrescriptionMixin";
 import CommonTextArea from "@/components/common/CommonTextArea";
@@ -895,13 +745,15 @@ import DateInput from "@/components/common/DateInput.vue";
 import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 import { sendRequestFindRecordListByFacilityCd } from "@/apis/master-maintenance";
 import { confirmIsOkByKey } from "@/functions/common/OnsenFunctions";
+import { getLatestHeaderElement, getHeaderHeight, getFooterMenuClientHeight, getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+
 import { 
   TABOO_CLASS_PREFIX,
   ALLERGY_CLASS_PREFIX,
   TABOO_ALLERGY_CLASS_PREFIX
 } from "@/constants/patPrescriptionConstants";
 
-const toDateInputValue = (dateString) => !dateString ? "" : moment(dateString).format("YYYY-MM-DD");
+const toDateInputValue = (dateString) => !dateString ? "" : dayjs(dateString).format("YYYY-MM-DD");
 
 export default {
   mixins: [PopoverMixin, IndUserSelectMixin, PatPrescriptionMixin],
@@ -909,7 +761,7 @@ export default {
   props: ["propsIsHideMainList"],
   components: {
     "common-calendar": commonCalender,
-    "draggable": vuedraggable,
+    "draggable": VueDraggable,
     "com-textarea": CommonTextArea,
     "date-input": DateInput,
     "pop-over": MasterSelector,
@@ -1014,8 +866,8 @@ export default {
     ]),
 
     rp1Width(){
-      var dom = document.getElementsByClassName("custom-input-area");
-      let width = dom.style.width;
+      const dom = getScopedElementsByClassName("custom-input-area", this.$el || null)[0];
+      const width = dom?.style?.width || "";
       return `width:${width};`;
     },
     /**
@@ -1109,7 +961,8 @@ export default {
       const [mstTabooAllergyRes, patMainRes] = await Promise.all([
         sendRequestFindRecordListByFacilityCd(
           "mst_taboo_allergy",
-          this.getFacilityCd
+          this.getFacilityCd,
+          this.selectedPatId
         ),
         ApiHelper.post("/patInfo/getPatMainByIdList", {
           patIdList: [this.selectedPatId]
@@ -1209,8 +1062,10 @@ export default {
     // add FNSI-改修内容 カテゴリ選択の上に施設名を表示する dou start
     async getShared(){
       await ApiHelper.get(
-          `/pat_event/getPublicFlag/` + this.getUserId
-      ).then(res => {
+          `/pat_event/getPublicFlag/` + this.getUserId,
+          {
+            selectedPatId: this.selectedPatId
+          }).then(res => {
         if(res.data.msg == 1) {
           this.sharedFlag = true;
         } else {
@@ -1227,32 +1082,31 @@ export default {
 
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return getAuthorized(pageCd, itemCd);
+      return !this.isOtherFacility(this.inputModel.facilityCd) && getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       const wh = this.windowHeight;
-      const hc = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .shift();
-      const hh = hc ? hc.clientHeight : 0;
+      const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
 
-      const preHeader = Array.prototype.slice
-          .call(document.getElementsByClassName("color-header"))
-          .shift();
+      const preHeader = getScopedElementsByClassName("color-header", this.$el || null)[0];
       const preHeaderHeight = preHeader ? preHeader.clientHeight : 0;
-      const footerMenu = document.getElementById("footer-menu").scrollHeight;
-      let preFooter = document.getElementById("prescription-footer")
-          .scrollHeight;
+      const footerMenu = getFooterMenuClientHeight(this.$el || null);
+      const preFooter = getScopedElementById("prescription-footer", this.$el || null)?.scrollHeight || 0;
       this.contentsAreaHeight =
           wh - hh - preHeaderHeight - footerMenu - preFooter + 15;
     },
 
+    getPatPrescriptionOwner() {
+      return findAncestorWithMethod(this, ["confirmAllowDiscardChanges", "init"], { maxDepth: 12 }) ||
+        findAncestorWithAnyKey(this, ["newLogin"], { maxDepth: 12 }) ||
+        this;
+    },
     //キャンセルボタンエベント
     async cancel() {
       // upd #10053 破棄確認・保存活性(複数変更含む)・削除対応_処方 20231124 ztc start
-      const cancelled = await this.$parent?.confirmAllowDiscardChanges();
+      const cancelled = await this.getPatPrescriptionOwner()?.confirmAllowDiscardChanges?.();
       if (cancelled) {
         this.$emit('openPatPrescription');
       }
@@ -1345,10 +1199,10 @@ export default {
           facilityCd: this.getFacilityCd,
           patId: this.selectedPatId,
           prescriptionType: this.inputModel.checkHos,
-          issueDate: this.inputModel.startDate ?  moment(this.inputModel.startDate, "YYYY-MM-DD").format(
+          issueDate: this.inputModel.startDate ?  dayjs(this.inputModel.startDate, "YYYY-MM-DD").format(
               "YYYY/MM/DD") : null ,
           issueState: this.inputModel.issued == true ? "1" : "0",
-          expirationDate: this.inputModel.endDate ? moment(this.inputModel.endDate, "YYYY-MM-DD").format(
+          expirationDate: this.inputModel.endDate ? dayjs(this.inputModel.endDate, "YYYY-MM-DD").format(
               "YYYY/MM/DD") : null,
           prescriptionDetail: JSON.stringify(this.convertData(true)),
           isDisp: "1",
@@ -1460,41 +1314,48 @@ export default {
         return;
       }
       // add #10359_NG対応 編集権限の動作不正 dengshen end
-      let deleteFlg = false;
-      let dialogDispFlg = false;
-      await this.$ons.notification.confirm({
-        modifier: "warn",
-        // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
-        // title: "処方削除警告",
-        title: DIALOG_MESSAGES[13000113].title,
-        // message: "処方を削除します。<br>削除すると二度と元に戻せません。削除してもよろしいですか？",
-        message: messageFormat(DIALOG_MESSAGES[13000113].message),
-        // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
-        callback: answer => {
-          if (answer == 1) {
-            deleteFlg = true;
-            dialogDispFlg = true;
-          }
+
+      // 1回目確認ダイアログ用 class 付与
+      setTimeout(() => {
+        const dialog = document.querySelector("ons-alert-dialog");
+
+        if (dialog) {
+          dialog.classList.add("warn-dialog");
         }
+      }, 0);
+
+      // 1回目確認
+      const firstResult = await this.$ons.notification.confirm({
+        modifier: "warn",
+        title: DIALOG_MESSAGES[13000113].title,
+        message: messageFormat(DIALOG_MESSAGES[13000113].message),
+        buttonLabels: ["Cancel", "OK"]
       });
-      if (dialogDispFlg) {
-        await this.$ons.notification.confirm({
-          modifier: "warn",
-          // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
-          // title: "処方削除最終確認",
-          title: DIALOG_MESSAGES[13000114].title,
-          // message: "処方を削除します。本当によろしいですか？",
-          message: messageFormat(DIALOG_MESSAGES[13000114].message),
-          // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
-          callback: answer => {
-            if (answer == 0) {
-              deleteFlg = false;
-            }
-          }
-        });
+
+      // キャンセル
+      if (firstResult !== 1) {
+        return;
       }
-      if (!deleteFlg) {
-        // キャンセルされた場合は処理を中断
+
+      // 2回目確認ダイアログ用 class 付与
+      setTimeout(() => {
+        const dialog = document.querySelector("ons-alert-dialog");
+
+        if (dialog) {
+          dialog.classList.add("warn-dialog");
+        }
+      }, 0);
+
+      // 最終確認
+      const secondResult = await this.$ons.notification.confirm({
+        modifier: "warn",
+        title: DIALOG_MESSAGES[13000114].title,
+        message: messageFormat(DIALOG_MESSAGES[13000114].message),
+        buttonLabels: ["Cancel", "OK"]
+      });
+
+      // キャンセル
+      if (secondResult !== 1) {
         return;
       }
       // 共通ローダー:表示開始
@@ -1515,7 +1376,7 @@ export default {
     // デフォルト日付を取得
     getDate(){
       let today = new Date();
-      this.inputModel.startDate = moment().format("YYYY-MM-DD")
+      this.inputModel.startDate = dayjs().format("YYYY-MM-DD")
       let date = new Date(today);
       date.setDate(date.getDate() + 3);
       let endDate = date.getFullYear() +
@@ -1523,7 +1384,7 @@ export default {
           (date.getMonth() + 1) +
           "/" +
           date.getDate();
-      this.inputModel.endDate = moment(endDate).format("YYYY-MM-DD")
+      this.inputModel.endDate = dayjs(endDate).format("YYYY-MM-DD")
     },
 
     // 処方の備考値を取得
@@ -1550,9 +1411,10 @@ export default {
         }
 
         const insuranceData = this.inputModel.patInsurance.split('&');
-        let response = await this.sendRequestGetInsuInfoByCd(
-          insuranceData[0]
-        );
+        let response = await this.sendRequestGetInsuInfoByCd({
+          insuranceCd: insuranceData[0],
+          selectedPatId: this.selectedPatId
+        });
         this.inputModel.isElderly = response.data.kkiClass == 1 ? true : false;
         this.inputModel.isElderly7 = response.data.kkiClass == 2 ? true : false;
         this.inputModel.isChild = response.data.undSix == 0 ? false : true;
@@ -1569,17 +1431,15 @@ export default {
       this.$watch('inputModel', () => {
         let inputModelConvert = deepCopy(this.inputModel);
         /* modify by chamaojia 2022-11-18 [6876] nullが空の文字列に変更され、データの整合性が保証されます  --start */
-        inputModelConvert.startDate = this.inputModel.startDate == "" ? "" : moment(this.inputModel.startDate, "YYYY-MM-DD").format(
-            "YYYY/MM/DD"
-        );
-        inputModelConvert.endDate = this.inputModel.endDate == "" ? "" : moment(this.inputModel.endDate, "YYYY-MM-DD").format(
-            "YYYY/MM/DD"
-        );
+        inputModelConvert.startDate = this.inputModel.startDate == "" ? "" : dayjs(this.inputModel.startDate, "YYYY-MM-DD").format(
+            "YYYY/MM/DD");
+        inputModelConvert.endDate = this.inputModel.endDate == "" ? "" : dayjs(this.inputModel.endDate, "YYYY-MM-DD").format(
+            "YYYY/MM/DD");
         /* modify by chamaojia 2022-11-18 [6876] nullが空の文字列に変更され、データの整合性が保証されます  --end */
         this.setIsInputModalChanged(!isEqual(inputModelConvert, this.getInputModal));
       }, { deep: true, immediate: true});
       this.$nextTick(() => {
-        const element = document.getElementById("com-textarea-remark-free");
+        const element = getScopedElementById("com-textarea-remark-free", this.$el || null);
         this.resizeTextarea(element);
       });
     },
@@ -1676,9 +1536,10 @@ export default {
     // 患者切り替え、更新の動作不正  6553  shan  end
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_処方 20231124 ztc start
     async refresh() {
-      if(await this.$parent?.confirmAllowDiscardChanges()) {
+      const owner = this.getPatPrescriptionOwner();
+      if(await owner?.confirmAllowDiscardChanges?.()) {
         await this.init();
-        await this.$parent?.init();
+        await owner?.init?.();
       }
     },
     async init() {
@@ -1695,7 +1556,10 @@ export default {
       const [ medicineRes, genericMedicineRes ] = await Promise.all([
         ApiHelper.get("/mstInfo/mstMedicineIncludeDeleted", { facilityCd: this.getFacilityCd }),
         ApiHelper.get("/mstInfo/sysGenericMedicineIncludeDeleted"),
-        this.setTakeMedicine(this.getFacilityCd)
+        this.setTakeMedicine({
+          facilityCd: this.getFacilityCd,
+          selectedPatId: this.selectedPatId
+        })
       ]);
       
       this.mstMedicine = medicineRes.data;
@@ -1749,7 +1613,12 @@ export default {
 
       this.listPatInsurance = [ ...this.patInsurance.data, ...listPatInsuranceMod, ...listPatInsuranceSelected].filter(e => e !== null);
       //医師一覧を取得
-      this.getIndUserList(AUTHORITY_CODES.PRESCRIPTION_EDIT, AUTHORITY_CODES.PRESCRIPTION_PEDIT, this.getInputModal.facilityCd)
+      this.getIndUserList(
+        AUTHORITY_CODES.PRESCRIPTION_EDIT,
+        AUTHORITY_CODES.PRESCRIPTION_PEDIT,
+        this.getInputModal.facilityCd,
+        this.selectedPatId
+      )
           .then(response => {
             this.listDoctor = response.doctorList;
             this.$nextTick(() => {
@@ -1795,9 +1664,7 @@ export default {
           remarksFree: this.getInputModal.remarksFree,
           isRefill: this.getInputModal.isRefill, 
           refillNum: this.getInputModal.refillNum,
-	  // add #12462 患者情報共有 Ji start
           facilityCd: this.getInputModal.facilityCd,
-	  // add #12462 患者情報共有 Ji end
         };
         this.changeFormatData(1, true);
         await this.refacterDataList();
@@ -1807,7 +1674,7 @@ export default {
         this.originalInsurance = this.selectInsurance;
         //add FNSI-横展開管理台帳_日機装FNSI NO.15 劉全航 end
       }
-      if(!this.$parent.newLogin){
+      if(!this.getPatPrescriptionOwner().newLogin){
         this.setOriginalEditRecord(deepCopy(this.dataList));
       }
 
@@ -1825,7 +1692,7 @@ export default {
               //add FNSI-7151 処方画面への遷移、ボタン押下等の操作を行うとTypeErrorが発生する 劉全航 start
               && mainInsurance != undefined
               //add FNSI-7151 処方画面への遷移、ボタン押下等の操作を行うとTypeErrorが発生する 劉全航 end
-          ) {
+              ) {
             let insuInfo = JSON.parse(mainInsurance.insu_info);
             let undSix = insuInfo.und_six;
             let kkiClass = insuInfo.kki_class;
@@ -1852,8 +1719,8 @@ export default {
             }
           }
         }else{
-          let birthYear = moment(this.getPatBirthday).year();
-          let year = moment().year() - birthYear;
+          let birthYear = dayjs(this.getPatBirthday).year();
+          let year = dayjs().year() - birthYear;
           if(year> 6){
             this.inputModel.isChild = false;
           }
@@ -1922,8 +1789,8 @@ export default {
       
       // 日付項目で値が設定されている場合は"YYYY/MM/DD"形式に変換して判定する
       if (dateField.includes("Date")) {
-        beforeVal = beforeVal ? moment(beforeVal, "YYYY-MM-DD").format("YYYY/MM/DD") : null;
-        afterVal = afterVal ? moment(afterVal, "YYYY-MM-DD").format("YYYY/MM/DD") : null;
+        beforeVal = beforeVal ? dayjs(beforeVal, "YYYY-MM-DD").format("YYYY/MM/DD") : null;
+        afterVal = afterVal ? dayjs(afterVal, "YYYY-MM-DD").format("YYYY/MM/DD") : null;
       }
       if (dateField === "insurance") {
         beforeVal = this.getIsEdit ? this.originalInsurance : "0&"; // 新規作成の場合はリストの空行に設定
@@ -1959,12 +1826,10 @@ export default {
      */
     updateInputModal() {
       let inputModelConvert = deepCopy(this.inputModel);
-      inputModelConvert.startDate = this.inputModel.startDate == "" ? null : moment(this.inputModel.startDate, "YYYY-MM-DD").format(
-          "YYYY/MM/DD"
-      );
-      inputModelConvert.endDate = this.inputModel.endDate == "" ? null : moment(this.inputModel.endDate, "YYYY-MM-DD").format(
-          "YYYY/MM/DD"
-      );
+      inputModelConvert.startDate = this.inputModel.startDate == "" ? null : dayjs(this.inputModel.startDate, "YYYY-MM-DD").format(
+          "YYYY/MM/DD");
+      inputModelConvert.endDate = this.inputModel.endDate == "" ? null : dayjs(this.inputModel.endDate, "YYYY-MM-DD").format(
+          "YYYY/MM/DD");
       this.setInputModal(inputModelConvert);
     },
     /* リフィル回数のフォーカス制御 */
@@ -2009,12 +1874,10 @@ export default {
       // NOTE: min: 1, max: 3
       this.inputModel.refillNum = Math.min(3, Math.max(1, v));
     },
-    // add #12462 患者情報共有 Ji start
-    isOtherFacility(facilityCd){
-      if (!facilityCd) return false
-      return facilityCd !== this.getFacilityCd
-    }
-    // add #12462 患者情報共有 Ji end
+    isOtherFacility(facilityCd) {
+      if (!facilityCd) return false;
+      return facilityCd !== this.getFacilityCd;
+    },
   },
 
   watch: {
@@ -2056,22 +1919,22 @@ export default {
     // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_処方 20231124 ztc end
   },
   mounted() {
-    document.addEventListener('mousedown', this.handleMousedown)
+    (this.$el?.ownerDocument || document).addEventListener('mousedown', this.handleMousedown)
     this.clearStateEdit();
     this.$nextTick(() => {
       this.calculateGridHeight();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.startDateClassCtrl.destroy();
     this.endDateClassCtrl.destroy();
     this.doctorClassCtrl.destroy();
-    document.removeEventListener("mousedown", this.handleMousedown);
+    (this.$el?.ownerDocument || document).removeEventListener("mousedown", this.handleMousedown);
     
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  destroyed() {
+  unmounted() {
     this.setViewMode(false);
     this.setIsEdit(false);
   },
@@ -2083,6 +1946,12 @@ export default {
 <style>
 /* #8575 処方の各種入力ボックスが、キーボード入力＋検索つきプルダウンでなくなっている。訾浩 start */
 .k-dropdown-wrap .k-input {
+  padding: 3px 0.1em !important;
+}
+
+.k-dropdown .k-input-inner,
+.k-dropdown.k-picker .k-input-inner,
+.k-picker .k-input-inner {
   padding: 3px 0.1em !important;
 }
 .k-list .k-item {
@@ -2097,13 +1966,42 @@ export default {
 .popover__content hr {
   width: 100%;
 }
+
+.popover-style .popover__content hr {
+  width: 100%;
+}
+
+.prescription-add-popover .popover__content hr {
+  width: 100%;
+}
 .popover__content ons-row {
   height: auto;
 }
+
+.popover-style .popover__content ons-row {
+  height: auto;
+}
+
+.prescription-add-popover .popover__content ons-row {
+  height: auto;
+}
 /* #8575 処方の各種入力ボックスが、キーボード入力＋検索つきプルダウンでなくなっている。訾浩 end */
+.warn-dialog .alert-dialog {
+  background-color: #FF3366;
+}
+.warn-dialog .alert-dialog-title {
+  color:#fafafa;
+}
+.warn-dialog .alert-dialog-content {
+  color:#fafafa;
+}
+
 </style>
 <style scoped>
 @media print {
+  #prescription{
+    transform: scale(0.96);
+  }
   .content {
     height: auto !important;
     margin-left: 0 !important;
@@ -2161,11 +2059,11 @@ ons-row {
   vertical-align: middle;
   background-color: white;
 }
-.input >>> .text-input {
+.input :deep(.text-input) {
   height: 2em;
   line-height: 2em;
 }
-.input >>> .text-input:disabled {
+.input :deep(.text-input:disabled) {
   opacity: 1;
 }
 .scroll {
@@ -2173,17 +2071,26 @@ ons-row {
   border-bottom: 1px solid rgb(138,138,138);
   padding: 5px;
 }
-ons-input#add >>> input {
+ons-input#add :deep(input) {
   text-align: center;
 }
-ons-popover >>> div {
+ons-popover :deep(div) {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 5px;
+}
+
+.grid :deep(div) {
   display: flex;
   flex-wrap: wrap;
   padding: 5px;
 }
 .grid-item {
   flex-grow: 1;
-  min-width: 45%;
+  /**#9846 start*/
+  /**min-width: 45%;*/
+  width:45%;
+  /**#9846 end*/
 }
 .footer {
   width: 100%;
@@ -2195,20 +2102,20 @@ ons-popover >>> div {
 label {
   color: var(--ntss-base-color);
 }
-.rp-input >>> input {
+.rp-input :deep(input) {
   background-color: #ddd;
 }
-.add-btn >>> input {
+.add-btn :deep(input) {
   background-color: #ddd;
 }
 .select-style {
   width: 100%;
 }
-.select-style >>> .select-input {
+.select-style :deep(.select-input) {
   height: 2em;
   line-height: 2em;
 }
-.select-style >>> .select-input:disabled{
+.select-style :deep(.select-input:disabled){
   opacity: 0.5;
   border: 1px solid rgb(204, 204, 204);
   background-color: white;
@@ -2222,9 +2129,15 @@ label {
   float: left;
   -webkit-appearance: none;
 }
-.unstyled-date >>> .text-input::-webkit-calendar-picker-indicator {
+.unstyled-date :deep(.text-input::-webkit-calendar-picker-indicator) {
   -webkit-appearance: none;
   display: none;
+}
+.calendar :deep(.ntss-btn-outset.calendar) {
+  height: 2em;
+  min-height: 2em;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 .condition-row {
   width: 100%;
@@ -2268,7 +2181,7 @@ label {
 .calendar {
   display: flex;
 }
-.calendar >>> button {
+.calendar :deep(button) {
   height: 100%;
 }
 .input-header{
@@ -2282,7 +2195,7 @@ label {
 .footer-btn {
   padding: 0 1em;
 }
-.disabled-input >>> .text-input:disabled {
+.disabled-input :deep(.text-input:disabled) {
   opacity: 1;
   border: 0.5px solid rgb(169,169,169);
 }
@@ -2299,20 +2212,21 @@ label {
     width: 4.0em;
   }
 }
+ 
 /* mod FutreNetWeb+SI課題管理 NO.3882 劉全航 end */
-.datalist >>> input::-webkit-calendar-picker-indicator {
+.datalist :deep(input::-webkit-calendar-picker-indicator) {
   display: none;
 }
-.datalist >>> input {
+.datalist :deep(input) {
   background-color: #F7F7F7
 }
 .datalist {
-  /* height: 3em; */
   display: flex;
   justify-content: center;
   align-items: center;
 }
-.number-input >>> input{
+/* height: 3em; */
+.number-input :deep(input) {
   /* border: 1px solid rgb(204,204,204); */
   background-color: #F7F7F7;
 }
@@ -2343,7 +2257,10 @@ label {
   flex: 1;
 }
 .row-buttons-span {
-  width: 4em;
+  /***#9846 start */
+  /***width: 4em;*/
+  width: 50%;
+  /***#9846 end */
   text-align: center;
 }
 @media screen and (max-width: 1200px) {
@@ -2401,12 +2318,18 @@ label {
 }
 .custom-btn-area {
   max-width: 8em;
+  /***#9846 start */
+  min-width: 120px;
+  /***#9846 end */
   display: flex;
   justify-content: center;
   align-items: center;
 }
 .custom-input-area {
-  height: 3.0rem;
+   /***#9846 add  start*/
+  /*height: 3.0rem;*/
+  min-height: 3.0rem;
+  /***#9846 add  end*/
   display: flex;
   justify-content: flex-start;
 }
@@ -2419,7 +2342,7 @@ label {
   align-items: center;
   justify-content: center;
 }
-div >>> .com-textarea {
+div :deep(.com-textarea) {
   width: 97%;
   height: 100px;
   font-family: inherit;
@@ -2441,7 +2364,7 @@ div >>> .com-textarea {
 .custom-border-top {
   border-bottom: 1px solid rgb(138,138,138);
 }
-.condition-input >>> .custom-dropdownlist {
+.condition-input :deep(.custom-dropdownlist) {
   width: 100%;
 }
 .copy-button {
@@ -2475,7 +2398,7 @@ div >>> .com-textarea {
   padding: unset;
 }
 /* #8575 処方の各種入力ボックスが、キーボード入力＋検索つきプルダウンでなくなっている。 訾浩 start */
-::v-deep .k-button {
+:deep(.k-button) {
   background: #fff;
   border: none;
   box-shadow: none;
@@ -2564,8 +2487,8 @@ li {
 .prescription-detail-row {
   display: flex;
   flex-wrap: nowrap;
-  align-items: center;
   width: 100%;
+  height: 48px;
 }
 /* 左：処方列（削除/並び替え/追加ボタンのエリア）を固定幅に */
 .prescription-detail-row > .custom-btn-area {
@@ -2611,9 +2534,41 @@ li {
   flex: 0 0 auto;
   width: 3em;
 }
+ 
 /* アラートダイアログを前面に表示するため吹き出し表示位置調整 */
-.popover-style >>> .popover-mask,
-.popover-style >>> .popover {
+.popover-style :deep(.popover-mask),
+.popover-style :deep(.popover) {
   z-index: 10000 !important;
+}
+
+.row-buttons-icons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: 100%;
+}
+
+.row-buttons-icons .manual-close-btn {
+  margin: 5px;
+  padding: 0 3px;
+  min-width: auto;
+  flex-shrink: 0;
+}
+
+/***#9846 start */
+.row-buttons-icons .btnSpecial {
+  margin-right:0!important;
+}
+/***#9846 end */
+
+
+*{
+  font-family: Helvetica Neue, Helvetica, Arial, Osaka, Meiryo, sans-serif;
+}
+:deep(.select-input){
+  font-family: 'Microsoft YaHei';
+}
+.btn2-cancel{
+  font-family: 'Microsoft YaHei' !important;
 }
 </style>

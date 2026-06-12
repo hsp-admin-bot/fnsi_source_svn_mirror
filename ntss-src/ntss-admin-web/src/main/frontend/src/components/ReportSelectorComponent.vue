@@ -50,9 +50,9 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { getCurrentFunctionCd } from "@/router/routing-helper";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { HISTORY_KEY_TREATMENT_RECORD_BVMS } from "@/router/treatment-record/HistoryKeyConstants";
 import PopoverMixin from "@/components/PopoverMixin";
 // import {formatDatetime} from "@/functions/common/CommonFunctions.js";
@@ -278,7 +278,7 @@ export default {
       // del #12107 帳票印刷失敗通知が行われない limingzhe start
       // const mstPrinter = this.getMstPrinters.find(
       //   e => e.printerCd === mstReport.defaultPrinter
-      // );
+      //);
       // del #12107 帳票印刷失敗通知が行われない limingzhe end
 
       this.selectedReport = mstReport.reportCd;
@@ -350,7 +350,7 @@ export default {
       //     const resDetailed =await ApiHelper.get(
       //       uriDetailed,
       //       sendData
-      //     ).catch(() => {
+      //).catch(() => {
       //     });
       //     if(resDetailed.data == 0){
       //       flag =false;
@@ -395,7 +395,7 @@ export default {
     // // mod #12326 【因島】帳票マスタの「非表示」設定が意図せぬ動作をしている sunsy end
     // const defaultReport = mstReport.data.find(
     //     e => e.reportCd === defaultReportID
-    // );
+    //);
     // if (defaultReport && defaultReport.defaultPrinter !== "" && defaultReport.defaultPrinter !== null) {
     //   this.defaultPrinter = defaultReport.defaultPrinter;
     // } else {
@@ -405,7 +405,7 @@ export default {
     // }
     // del #12107 帳票印刷失敗通知が行われない limingzhe end
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // 印刷パラメータ受信して印刷を解除
     EventBus.$off("sendReportParams", this.outputReport2);
   }
@@ -413,7 +413,7 @@ export default {
 </script>
 
 <style scoped>
-.report-list-popover >>> .popover__content {
+.report-list-popover :deep(.popover__content) {
   width: 300px;
   min-height: 50px;
 }
@@ -437,7 +437,7 @@ export default {
   width: 280px;
   margin-left: 8px;
 }
-.report-list-popover >>> .select-input {
+.report-list-popover :deep(.select-input) {
   margin: 0px 2px;
 }
 .button-area {

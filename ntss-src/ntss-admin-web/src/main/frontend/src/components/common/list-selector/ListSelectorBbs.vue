@@ -194,7 +194,7 @@
    *       イベントハンドラ引数: {Array} 選択済み項目のオブジェクト配列 [{ cd, name }, ...]
    * @example
    */
-  import _ from "underscore";
+
   import selectionList from "@/components/common/list-selector/SelectionListBbs.vue";
   // add  FNSI redmine 5672 修正 gcl start
   import selectionListPat from "@/components/common/list-selector/SelectionListPat.vue";
@@ -311,26 +311,22 @@
       let filteredList = this.selectionItemList;
       if (this.class1 !== null && this.class1Cd !== "") {
         filteredList = filteredList.filter(
-          item => item.class1 === this.class1Cd
-        );
+          item => item.class1 === this.class1Cd);
       }
       // 区分2でフィルタリング
       if (this.class2 !== null && this.class2Cd !== "") {
         filteredList = filteredList.filter(
-          item => item.class2 === this.class2Cd
-        );
+          item => item.class2 === this.class2Cd);
       }
       // 職種でフィルタリング
       if (this.selectedJobCd !== null) {
         filteredList = filteredList.filter(item =>
-          item.jobCd === this.selectedJobCd.toString()
-        );
+          item.jobCd === this.selectedJobCd.toString());
       }
       // フリーワードでフィルタリング
       if (this.freeWord !== "") {
         filteredList = filteredList.filter(item =>
-          item.name.includes(this.freeWord)
-        );
+          item.name.includes(this.freeWord));
       }
       return filteredList;
     },
@@ -348,7 +344,7 @@
     this.selectionItemList = this.itemList.map(item => {
       // 初期選択状態判定
       const defaultSelection = this.defaultSelection.map(info => {
-        if (_.has(info, "cdType")) {
+        if (Object.prototype.hasOwnProperty.call(info, "cdType")) {
           return info.cdType === item.cdType ? info.cd : null;
         } else {
           return info;
@@ -375,7 +371,7 @@
 
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -570,7 +566,7 @@
 
 <style scoped>
 /* ntss.css の width:300px の打ち消しが必要 */
-.popover-style >>> .popover--top {
+.popover-style :deep(.popover--top) {
   width: unset;
 }
 
@@ -610,7 +606,7 @@
 }
 
 /* 配置位置 */
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 550px;
   padding: 10px;
   margin: 3px;
@@ -631,16 +627,16 @@
 .mb-1 {
   margin-bottom: 0.25em;
 }
-/* ::v-deep .popover__content{
+/* :deep .popover__content{
   padding: 6px;
 }
-::v-deep .popover{
+:deep .popover{
   left: 1.5rem !important;
 } */
 /* FNSI-改修内容5013bug修正 関 start */
  @media screen and (max-width: 600px) {
-  .popover-style >>> .popover,
-  .popover-style >>> .popover--right{
+  .popover-style :deep(.popover),
+  .popover-style :deep(.popover--right){
     overflow-x: auto;
     width: 300px !important;
     left: 30px !important;
@@ -649,4 +645,8 @@
   }
 }
 /* FNSI-改修内容5013bug修正 関 end */
+
+.k-button-icon {
+  width: calc(2px + 0.75rem + 1.5em);
+}
 </style>

@@ -12,7 +12,7 @@
       ProductCode は UpgradeCodeGuid + ProductVersion から自動生成される（UUID v5）
       UpgradeCodeGuid は絶対に変えない
     -->
-    <ProductVersion>1.0.4</ProductVersion>
+    <ProductVersion>1.0.5</ProductVersion>
     <UpgradeCodeGuid>2BBD7E5E-4D8A-4C01-8B8B-11D976CAFA2B</UpgradeCodeGuid>
     <DefineConstants>
       SrcBin=$(MSBuildProjectDirectory)\..\CoopExtractTool\bin\$(Configuration)\;

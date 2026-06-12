@@ -6,13 +6,13 @@ import java.math.RoundingMode;
 import java.util.Arrays;
 import java.util.List;
 
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.job.flow.FlowExecutionStatus;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
-import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -73,13 +73,35 @@ public class ProcessingSqlFileDecider implements JobExecutionDecider {
 
         // すべてファイルのサイズを作成する
         //mod zc 7339 start
+        calculateAllFileSize(sqlFileList);
+        String allleng = readAllLengthFromFile(stepExecution, facilityCd);
+        //mod zc  7339 end
+        if(index <=  limitIndex){
+            updateProgressForCurrentFile(context, sqlFileList, allleng);
+        } else {
+            updateProgressForCompletion(context, allleng);
+        }
+
+        return resolveFlowExecutionStatus(context, sqlFileList, limitIndex);
+    }
+
+    /**
+     * SQLファイルリストから全ファイルサイズの合計を算出する
+     */
+    private void calculateAllFileSize(List<String> sqlFileList) {
         allFileSize=0;
         for (String filePath : sqlFileList) {
             File file = new File(filePath);
             allFileSize = new BigDecimal(allFileSize).add(new BigDecimal(file.length())).longValue();
         }
+    }
+
+    /**
+     * Filelength.txtから全長情報を読み込む
+     */
+    private String readAllLengthFromFile(StepExecution stepExecution, String facilityCd) {
         String   allleng="0";
-        String   sinputePath=  String.valueOf(stepExecution.getJobExecution().getJobParameters().getParameters().get("inputFilePath"));
+        String   sinputePath = stepExecution.getJobExecution().getJobParameters().getString(ApplicationConst.JobParameterKeys.INPUT_FILE_PATH);
         File fileProductionDbToConvertDb = new File(sinputePath + "/Filelength.txt");
         if (fileProductionDbToConvertDb != null && 0 != fileProductionDbToConvertDb.length()){
             List<String> sqlFilelength = null;
@@ -96,8 +118,13 @@ public class ProcessingSqlFileDecider implements JobExecutionDecider {
                     LogLevel.ERROR);
             }
         }
-        //mod zc  7339 end
-        if(index <=  limitIndex){
+        return allleng;
+    }
+
+    /**
+     * 処理中のSQLファイルに対する進捗情報を更新する
+     */
+    private void updateProgressForCurrentFile(ExecutionContext context, List<String> sqlFileList, String allleng) {
             // 成功ファイルのサイズの追加
             File successFile = new File(sqlFileList.get(index));
             fileSize = new BigDecimal(fileSize).add(new BigDecimal(successFile.length())).longValue();
@@ -111,6 +138,21 @@ public class ProcessingSqlFileDecider implements JobExecutionDecider {
             String basename = successFile.getName();
             String tableName = basename.substring(0, basename.lastIndexOf('_'));
 
+        updateCurrentTableNumber(tableName);
+        lastTable = tableName;
+        String string = context.getString(ApplicationConst.PromotionKeys.SQL_FILE_TABLE_COUNT_LIST);
+        List<String> sqlFileCount = Arrays.asList(string.split(","));
+        String s = sqlFileCount.get(index).replace(sqlFileList.get(index),"");
+        BigDecimal bigDecimal1 = BigDecimal.valueOf(currentTableNumber*100);
+        BigDecimal bigDecimal = BigDecimal.valueOf(Integer.parseInt(s));
+        context.putString(ApplicationConst.PromotionKeys.TABLE_PROGRESS, bigDecimal1.divide(bigDecimal, 2, RoundingMode.HALF_UP)+"%");
+        // add #10859-6 djy end
+    }
+
+    /**
+     * テーブル名に基づいて現在のテーブル番号を更新する
+     */
+    private void updateCurrentTableNumber(String tableName) {
             if(tableName.equals("mni_monitor")){
                 currentTableNumber= currentTableNumber_min++;
             }else if(tableName.equals("ord_coop_no")){
@@ -130,15 +172,12 @@ public class ProcessingSqlFileDecider implements JobExecutionDecider {
             } else {
                 currentTableNumber = 1;
             }
-            lastTable = tableName;
-            String string = context.getString(ApplicationConst.PromotionKeys.SQL_FILE_TABLE_COUNT_LIST);
-            List<String> sqlFileCount = Arrays.asList(string.split(","));
-            String s = sqlFileCount.get(index).replace(sqlFileList.get(index),"");
-            BigDecimal bigDecimal1 = BigDecimal.valueOf(currentTableNumber*100);
-            BigDecimal bigDecimal = BigDecimal.valueOf(Integer.parseInt(s));
-            context.putString(ApplicationConst.PromotionKeys.TABLE_PROGRESS, bigDecimal1.divide(bigDecimal, 2, RoundingMode.HALF_UP)+"%");
-            // add #10859-6 djy end
-        } else {
+    }
+
+    /**
+     * 全SQLファイル処理完了時の進捗情報を更新する
+     */
+    private void updateProgressForCompletion(ExecutionContext context, String allleng) {
             //mod zc 7339 start
             Long surplus = Long.parseLong(allleng)-Long.parseLong(String.valueOf(allFileSize));
             //mod zc 7339 end
@@ -149,6 +188,10 @@ public class ProcessingSqlFileDecider implements JobExecutionDecider {
             // add #10859-6 djy end
         }
 
+    /**
+     * 次に処理するSQLファイルの有無に応じてフロー実行ステータスを決定する
+     */
+    private FlowExecutionStatus resolveFlowExecutionStatus(ExecutionContext context, List<String> sqlFileList, int limitIndex) {
         if(index <=  limitIndex){
             // 処理対象SQLファイルあり
             String sqlFilePath = sqlFileList.get(index);

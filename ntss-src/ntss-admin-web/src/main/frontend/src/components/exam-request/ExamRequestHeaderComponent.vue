@@ -11,7 +11,7 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import ExamRequestDailyHeaderComponent from "@/components/exam-request/ExamRequestDailyHeaderComponent.vue";
 import ExamRequestPeriodHeaderComponent from "@/components/exam-request/ExamRequestPeriodHeaderComponent.vue";
 

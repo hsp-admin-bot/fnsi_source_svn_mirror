@@ -1,6 +1,6 @@
 package batch.processor;
 
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 /**
  * readerで読み取ったデータをwriterへ加工せず渡すprocessor

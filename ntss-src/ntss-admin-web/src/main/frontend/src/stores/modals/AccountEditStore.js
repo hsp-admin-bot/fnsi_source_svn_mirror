@@ -16,7 +16,7 @@ import {
   sendRequestUpdatePatShareMode
 } from "@/apis/User";
 import { ApiHelper } from "@/apis/AxiosHelper";
-import _ from 'underscore';
+import _ from "@/compat/collections/lodash";
 import { PATIENT_SEARCH } from "@/constants/defaultSettingConstants";
 import { getKurCds } from "@/functions/modals/default-setting/defaultSettingUtils";
 
@@ -257,11 +257,13 @@ export default {
           state.initialFunction = userAccountInfo.userSettings.initial_function;
         } else {
           // サインイン時に初期表示機能が許可状態でない場合、外部リンクメニューを除いた許可範囲上のメニュー設定の表示順最上部の項目に設定する
-          let intersection = _.intersection(
-            userAccountInfo.userSettings.use_functions,
+          const authorizedSet = new Set(
             userAccountInfo.userSettings.authorized_functions
-          ).filter(item => !item.startsWith("url"));
-          state.initialFunction = _.find(userAccountInfo.userSettings.use_functions, x => intersection.includes(x));
+          );
+          const intersection = userAccountInfo.userSettings.use_functions.filter(
+            (fn) => authorizedSet.has(fn) && !fn.startsWith("url")
+          );
+          state.initialFunction = intersection[0];
         }
         // mod #10136 サインイン時に初期表示機能が許可状態でない場合、許可範囲上のメニュー設定の表示順最上部の項目に遷移する dou end
         state.authorizedFunctions =
@@ -715,7 +717,7 @@ export default {
         }
         commit("setUserAccountInfo", userAccountInfo);
       } catch (error) {
-        console.error(e);
+        console.error(error);
         throw error;
       }
     },
@@ -733,9 +735,9 @@ export default {
           userAccountInfo.mstKur = mstKurResponse.data;
         }
         commit("setUserAccountInfo", userAccountInfo);
-        return userAccountInfo
+        return userAccountInfo;
       } catch (error) {
-        console.error(e);
+        console.error(error);
         throw error;
       }
     },

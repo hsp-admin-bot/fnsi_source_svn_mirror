@@ -3,13 +3,11 @@ package jp.co.nikkiso.ntss.m_notice;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import com.amazonaws.regions.Regions;
-
 import lombok.Data;
 import org.springframework.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -76,15 +74,7 @@ public class NtssMNoticeProperties {
     /**
      * AmazonSESを利用するリージョン
      */
-    private Regions sesRegion = Regions.US_WEST_2;
-
-    public void setSesRegion(String regionName) {
-      this.sesRegion = Regions.fromName(regionName);
-    }
-
-    public String getSesRegion() {
-      return this.sesRegion.getName();
-    }
+    private String sesRegion = "us-west-2";
   }
 
   /**

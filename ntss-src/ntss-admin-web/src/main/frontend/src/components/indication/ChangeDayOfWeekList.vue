@@ -3,6 +3,7 @@
   <div class="flex-overflow-auto">
     <div class="left-title">
       <table border="0" cellspacing="0" cellpadding="0" style="width: 4.5em">
+        <tbody>
         <tr>
           <td class="div-style left-title-td"></td>
         </tr>
@@ -12,10 +13,13 @@
         <tr v-if="changeFlg">
           <td class="div-style left-title-td">変更後</td>
         </tr>
+      
+        </tbody>
       </table>
     </div>
     <div class="main">
-      <table border="0" cellspacing="0" cellpadding="0" width="100%" class="table-main">
+      <table border="0" cellspacing="0" cellpadding="0" width="100%">
+        <tbody>
         <tr>
           <td
             class="div-style height-1-94"
@@ -68,6 +72,8 @@
             </div>
           </td>
         </tr>
+      
+        </tbody>
       </table>
     </div>
   </div>
@@ -75,12 +81,13 @@
 
 <script>
 // 日付操作
-import moment from "moment";
-import { mapGetters } from "vuex";
+import dayjs from "@/compat/date/dayjs";
+import { mapGetters } from "@/compat/vue/vuex";
 //内部remine 5840  ljx add start
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 //内部remine 5840  ljx add end
 import { getHolidayStyle } from "@/functions/common/CommonFunctions";
+import { getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 import PrintMixin from "@/components/PrintMixin";
 
 export default {
@@ -118,9 +125,6 @@ export default {
       scrollQuerySelector: ".flex-overflow-auto",
       addClassTargetQuerySelector: [".table-main"],
     };
-  },
-
-  mounted() {
   },
 
   computed: {
@@ -168,9 +172,16 @@ export default {
   },
 
   methods: {
+    getScopedElementByIdSafe(id) {
+      return getScopedElementById(id, this.$el || null);
+    },
+    getScopedElementsByClassNameSafe(className) {
+      const scoped = getScopedElementsByClassName(className, this.$el || null);
+      return scoped;
+    },
     dateFormat(date) {
       if (!date) return null;
-      return moment(date).format("M/D");
+      return dayjs(date, "YYYYMMDD").format("M/D");
     },
     dataFormatFir(date) {
       // 治療予定のデータがなしの場合、処理中止
@@ -207,13 +218,12 @@ export default {
       //  変更後の日付の場合、〇を表示する
       const findDate = this.getAfterToChangeList.find(itemDate => itemDate == date);
       //add #6829 ljg start
-      let enddate=this._props.maxdate;
-      enddate = enddate.replace(/-/g,"");
+      let enddate = this.maxdate ? String(this.maxdate).replace(/-/g, "") : "";
       //add #6829 ljg end
       if(findDate){
       //add #6829 ljg start
       //mod #9273 施設設定マスタのNo105の設定どおり動かない。張玲 start
-      if(findDate <= enddate && date >= moment(this.indTreatStartDateParent).format('YYYYMMDD')) return '〇';
+      if(findDate <= enddate && date >= dayjs(this.indTreatStartDateParent).format('YYYYMMDD')) return '〇';
       //mod #9273 施設設定マスタのNo105の設定どおり動かない。張玲 end
       //add #6829 ljg end
       else null;
@@ -273,14 +283,14 @@ export default {
     addClickClass(flag,indexArray){
       const addClass = "background-color-clicked";
       indexArray.forEach(index => {
-        const tdDiv = document.getElementById(
+        const tdDiv = this.getScopedElementByIdSafe(
           flag+index
         );
         tdDiv?.classList?.add(addClass);
       });
     },
     clearClickClass(){
-      Array.from(document.getElementsByClassName("background-color-clicked")).forEach(element => {
+      this.getScopedElementsByClassNameSafe("background-color-clicked").forEach(element => {
         element.classList.remove("background-color-clicked");
       });
     },
@@ -293,7 +303,7 @@ export default {
     }
   },
 
-  destroyed() {
+  unmounted() {
     this.treatmentData = null;
   }
 };

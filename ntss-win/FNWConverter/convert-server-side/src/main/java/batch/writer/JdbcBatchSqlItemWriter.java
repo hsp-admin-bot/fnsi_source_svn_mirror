@@ -15,8 +15,6 @@ import batch.part.InfomationSchemaControl;
 import batch.part.PsqlCopyUtils;
 import batch.part.StreamThread;
 import batch.part.TableNameToDbType;
-import com.amazonaws.util.CollectionUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -48,7 +46,8 @@ import javax.sql.DataSource;
 import lombok.Getter;
 import lombok.Setter;
 import org.json.JSONObject;
-import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.infrastructure.item.Chunk;
+import org.springframework.batch.infrastructure.item.ItemWriter;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -70,8 +69,10 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSourceUtils;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import org.thymeleaf.util.StringUtils;
+import tools.jackson.databind.ObjectMapper;
 import utils.BbsInfoService;
 import utils.GlobalContext;
 import utils.MasterDataService;
@@ -130,7 +131,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
     /**
      * コンストラクタでデータソースを設定
      */
-    public JdbcBatchSqlItemWriter(DataSource dataSource, String fileName, String facilityCd, GlobalContext globalContext, MasterDataService masterDataService) {
+    public JdbcBatchSqlItemWriter(DataSource dataSource, String facilityCd, GlobalContext globalContext, MasterDataService masterDataService) {
         this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
         this.facilityCd = facilityCd;
         this.globalContext = globalContext;
@@ -213,15 +214,19 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 			process.getInputStream().close();
 			process.getOutputStream().close();
 			process.getErrorStream().close();
+			int exitCode = process.waitFor(); // 子プロセスの終了コードを取得
 			process.destroy(); // 子プロセスを明示的に終了
 			if (!org.springframework.util.ObjectUtils.isEmpty(et.getOutputString())) {
+				EventLogMessage elm = eventLoggerUtil.getEventLogMessage(et.getOutputString(),
+						facilityCd, "processCmdSql(String[] cmd, boolean status)");
+				eventLoggerUtil.recordLog(facilityCd, elm, LogLevel.WARN);
+			}
+			if (exitCode != 0) {
 				exSuccess = false;
-				System.err.println("出力文字：" + et.getOutputString());
 				EventLogMessage elm = eventLoggerUtil.getEventLogMessage(et.getOutputString(),
 						facilityCd, "processCmdSql(String[] cmd, boolean status)");
 				eventLoggerUtil.recordLog(facilityCd, elm, LogLevel.ERROR);
 			}
-			System.out.println("psqlコマンドの実行が完了しました！");
 		} catch (IOException | InterruptedException e) {
 			// TODO Auto-generated catch block
 			eventLoggerUtil.recordLog(
@@ -256,6 +261,33 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 			if (item.toString().contains("INSERT")) {
 				//pat _mainテーブル、特殊な処理をして、改行を置換する必要があります
 				if (tableName.contains("bbs_info") && itemStr.contains(oldStr)) {
+					itemStr = transformMakeSqlInsertBbsInfoItem(item, itemStr, oldStr, newtStr);
+				}
+
+				if (objectIndex == 0) {
+					StringBuilder stringBuilder = new StringBuilder(itemStr);
+					stringBuilder.replace(stringBuilder.lastIndexOf(";"),stringBuilder.lastIndexOf(";")+1,",");
+					sb.append(stringBuilder.toString());
+					objectIndex++;
+					continue;
+				}
+				sb.append(buildMakeSqlInsertFragment(itemStr, objectIndex, items.size()));
+				objectIndex++;
+			} else if (itemStr.contains("UPDATE")) {
+				sb.append(item);
+			}
+		}
+		String finalStr = sb.toString();
+		if (finalStr.indexOf(hzstr) > 0) {
+			finalStr = finalStr.replace(hzstr,"");
+		}
+		return finalStr;
+	}
+
+	/**
+	 * makeSqlInsert用のbbs_infoアイテム文字列を変換する
+	 */
+	private String transformMakeSqlInsertBbsInfoItem(T item, String itemStr, String oldStr, String newtStr) {
 					String[] sql = new String[0];
 					if(itemStr.contains("ON CONFLICT ON CONSTRAINT")){
 						sql = itemStr.split("ON CONFLICT ON CONSTRAINT");
@@ -322,24 +354,18 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 						replaceStr.append("P：");
 						replaceStr.append(strArr1[6]);
 					}
-					itemStr = replaceStr.toString();
+		return replaceStr.toString();
 				}
 
-				if (objectIndex == 0) {
-					//最初の全保持（最後の;置換、）
-					// mod #10153,#10191,#10249 djy start
-					StringBuilder stringBuilder = new StringBuilder(itemStr);
-					stringBuilder.replace(stringBuilder.lastIndexOf(";"),stringBuilder.lastIndexOf(";")+1,",");
-					sb.append(stringBuilder.toString());
-					//String firstSql = itemStr.replace(";", ",");
-					objectIndex++;
-					continue;
-				}
+	/**
+	 * makeSqlInsert用のmulti-insert SQL断片を構築する
+	 */
+	private String buildMakeSqlInsertFragment(String itemStr, int objectIndex, int itemsSize) {
 				int index = itemStr.indexOf("(");
 				int index2 = itemStr.indexOf("(", index + 1);
-				String sql = "";
+		String sql;
 				//最後のsqlかどうかを判断する（最後のsqlは置換する必要はありません；）
-				if (objectIndex == items.size()-1) {
+		if (objectIndex == itemsSize-1) {
 					sql = itemStr.substring(index2);
 					StringBuilder b = new StringBuilder(sql);
 					b.replace(b.lastIndexOf(";"), b.lastIndexOf(";") + 1, DONOTHING);
@@ -350,20 +376,8 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 					StringBuilder stringBuilder = new StringBuilder(itemStr.substring(index2));
 					stringBuilder.replace(stringBuilder.lastIndexOf(";"),stringBuilder.lastIndexOf(";")+1,",");
 					sql=stringBuilder.toString();
-					//sql = itemStr.substring(index2).replace(";", ",");
-				}
-				sb.append(sql);
-				objectIndex++;
-			} else if (itemStr.contains("UPDATE")) {
-				sb.append(item);
-			}
 		}
-		String finalStr = sb.toString();
-		// ファイル実行に失敗したときにファイルに書き込まれた/***/文字を分割SQL削除
-		if (finalStr.indexOf(hzstr) > 0) {
-			finalStr = finalStr.replace(hzstr,"");
-		}
-		return finalStr;
+		return sql;
 	}
 
 
@@ -466,6 +480,15 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 		// mst_personal_userの列を取得
 		InfomationSchemaControl isc = new InfomationSchemaControl(appContext);
 		for(String userTbl : userTblList) {
+			updateSingleUserTable(userTbl, fnwUserId, fnsiUserId, rltList, jdbcTemplate, isc);
+		}
+	}
+
+	/**
+	 * 単一ユーザーテーブルのコンバートDB・本番DB更新を実行する
+	 */
+	private void updateSingleUserTable(String userTbl, String fnwUserId, String fnsiUserId, List<String> rltList,
+			JdbcTemplate jdbcTemplate, InfomationSchemaControl isc) throws Exception {
 			List<String> columnNameList = isc.getColumnNamesExclusiveSeqColumn(userTbl);
 			// mst_personal_user、user_id列を削除
 			if ("mst_personal_user".equals(userTbl)) {
@@ -527,7 +550,6 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				jdbcTemplate.execute(updStr.toString());
 				// 本番DBに削除
 				assJdbcTemplate.execute(updStr.toString());
-			}
 		}
 	}
 	// add 7406 ReMS利用施設をコンバートすると送信先グループマスタや警報通知マスタなどのデータが消えている 楊 end
@@ -763,6 +785,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 
 	/**
 	 * add 11667 日常点検コンバート修正  start
+	 * @param pkeyList	本番のキー (更新レコード)
 	 */
 	private void deletePatIndApproveHistoryInConvertDB(List<String> pkeyList) {
 		String updateKeys = "";
@@ -891,10 +914,21 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 	 * Writerによって実行される処理
 	 */
 	@Override
-	public void write(final List<? extends T> items) throws Exception {
+	public void write(final Chunk<? extends T> chunk) throws Exception {
+		List<? extends T> items = chunk.getItems();
 		if (items.isEmpty()) {
 			return;
 		}
+		String tableName = initializeWrite(items);
+		List<? extends T> itemsNew = prepareWriteItems(items);
+		if (exitWriteIfEarlySpecialTableHandlers(items, itemsNew, tableName)) {
+			return;
+		}
+		processWriteItemsLoop(items, itemsNew);
+		executeWritePostProcessing(items, itemsNew);
+	}
+
+	private String initializeWrite(List<? extends T> items) throws Exception {
 		globalContext.sqlKeys =  "";
 		globalContext.plan = "";
 		//ログ
@@ -929,11 +963,10 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 		//mod 6886 zc end
 		// mod 7853-差分コンバートで更新/削除ができない 楊 end
 		// mod FNSI-指示履歴の最新patIdに修正 楊 end
+		return TableName;
+	}
 
-		//一括実行と単一ピック実行の一括実行trueを区別する、シングルピック実行false
-		boolean importFlg = true;
-
-
+	private List<? extends T> prepareWriteItems(List<? extends T> items) {
 		/**
 		 * 	mnt_motion_recordとord _personal_prescriptionテーブルの特殊処理
 		 */
@@ -942,54 +975,53 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
         globalContext.insFnDisKey = "";
         globalContext.sqlDisNoKeys = "";
         //add 11576 pat_coop_detailのsave_1がGX固定でコンバートされる end
+		return itemsNew;
+	}
+
+	private boolean exitWriteIfEarlySpecialTableHandlers(List<? extends T> items,
+														 List<? extends T> itemsNew,
+														 String tableName) throws Exception {
 		if (globalContext.fileName.contains("diff")) {
-			boolean isReturnCallerMethod = processDiff(itemsNew,TableName);
+			boolean isReturnCallerMethod = processDiff(itemsNew, tableName);
 			if (isReturnCallerMethod) {
-				return;
+				return true;
 			}
 		}
 
 		// 実績履歴はmongodbに直接書き込む
-		if(TableName.equals("rst_history")) { // cyc:1
-			boolean isReturnCallerMethod = convertValueRsrHistory(items,globalContext.fileName);
+		if (tableName.equals("rst_history")) { // cyc:1
+			boolean isReturnCallerMethod = convertValueRsrHistory(items, globalContext.fileName);
 			if (isReturnCallerMethod) {
-				return;
+				return true;
 			}
 		}
 
 		// 指示履歴はmongodbに直接書き込む
-		if(TableName.equals("ind_history")) { // cyc:1
-			convertValHistory(globalContext.fileName,items);
-			return;
+		if (tableName.equals("ind_history")) { // cyc:1
+			convertValHistory(globalContext.fileName, items);
+			return true;
 		}
 
         //add #12229  ord_weight_scale start
-        if(TableName.equals("ord_weight_scale") && !globalContext.fileName.contains("diff")){
-            convertValOrdWeightScale(items,globalContext);
-            return;
-        }
+		if (tableName.equals("ord_weight_scale") && !globalContext.fileName.contains("diff")) {
+			convertValOrdWeightScale(items, globalContext);
+			return true;
+		}
         //add #12229  ord_weight_scale end
+		return false;
+	}
 
-		for (T item : itemsNew)
-		{
+	private void processWriteItemsLoop(List<? extends T> items, List<? extends T> itemsNew) throws Exception {
+		//一括実行と単一ピック実行の一括実行trueを区別する、シングルピック実行false
+		boolean[] importFlgRef = new boolean[]{true};
+
+
+		for (T item : itemsNew) {
 			// Insertが空かどうかを判断する
 			if (item.toString().trim().equals("")) {
 				continue;
 			}
-			//Insertコメントと削除機能 う　2020-12-29
-			//非注釈文はフラグを削除する う　2020-12-29
-			//mod 鄭 7834 start
-			//語句が注釈されているかどうかを判断する う　2020-12-29
-			String itemBeforeStr = item.toString().length() < 2 ? item.toString() : item.toString().substring(0, 2);
-			if (itemBeforeStr.equals("--")) {
-				// コメントアウトされた SQL ステートメントは処理されません。
-				return;
-			}
-
-			//mod 鄭 7834 end
-			String firstChar = item.toString().trim().substring(0,1);
-			if (firstChar.equals("{")) {
-				// JSON形式が処理されません
+			if (shouldReturnFromWriteForItem(item)) {
 				return;
 			}
 
@@ -1000,72 +1032,113 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 			}
 			// add FNSI-差分コンバート対応 李 end
 
-			String tableName = "";
 			ProcessSQLAnnotationResult processSQLAnnotationResult = processSQLAnnotation(globalContext.fileName,item);
 			boolean isContinue = processSQLAnnotationResult.isContinue();
 			if (isContinue) { // cyc:1
 				continue;
 			}
 			boolean boolState = processSQLAnnotationResult.isBoolState();
-			tableName = processSQLAnnotationResult.getTableName();
+			String tableName = processSQLAnnotationResult.getTableName();
 
-			if (boolState) // cyc:1
-			{
+			if (boolState) { // cyc:1
 				try {
+					boolean breakLoop;
+					if (globalContext.fileName.contains("pat_main")) { // cyc:5
+						breakLoop = executePatMainWriteItem(item, items, tableName, importFlgRef);
+					} else { // cyc:12
+						breakLoop = executeNonPatMainWriteItem(item, items, tableName, importFlgRef);
+					}
+					if (breakLoop) {
+						break;
+					}
+				} catch (Exception e) {  // cyc:4
+					handleWriteSqlExecutionException(e, importFlgRef[0], item, items, tableName);
+				}
+				//update実行 // 以下 cyc:10
+				if (item.toString().startsWith("UPDATE")) {
+					WriteSQLAnnotation wqa = new WriteSQLAnnotation();
+					wqa.DeleteWriteSQLFile(globalContext.fileName, item.toString());
+				}
+			}
+		}
+	}
 
-
-					if (globalContext.fileName.contains("pat_main")) // cyc:5
-					{
+	private boolean shouldReturnFromWriteForItem(T item) {
+		//Insertコメントと削除機能 う　2020-12-29
+		//非注釈文はフラグを削除する う　2020-12-29
+		//mod 鄭 7834 start
+		//語句が注釈されているかどうかを判断する う　2020-12-29
+		String itemBeforeStr = item.toString().length() < 2 ? item.toString() : item.toString().substring(0, 2);
+		if (itemBeforeStr.equals("--")) {
+			// コメントアウトされた SQL ステートメントは処理されません。
+			return true;
+		}
+		//mod 鄭 7834 end
+		String firstChar = item.toString().trim().substring(0, 1);
+		if (firstChar.equals("{")) {
+			// JSON形式が処理されません
+			return true;
+		}
+		return false;
+	}
+	private boolean tryBatchInsertOnFirstItem(T item, List<? extends T> items, String tableName, boolean useBatchUpdate) {
 						//itemsの最初のオブジェクト実行かどうかを判断する
 						if (items.indexOf(item) == 0) {
 							if (!"--".equals(items.get(items.size()-1))) {
 								if (item.toString().trim().startsWith("INSERT")) {
 									if (checkSqlIsExecute(items, tableName)) {
 										String sqlStr = this.makeSqlInsert(items, tableName);
-                                        // eg : INSERT INTO pat_main ( ... pat_id ...) values (... (select pat_id from pat_personal_main where facility_cd='CONV50' AND fn_pat_id::character varying='000000000001') ....)
+										if (useBatchUpdate) {
 										namedParameterJdbcTemplate.getJdbcOperations().batchUpdate(sqlStr);
-                                        break; // break for (T item : itemsNew)
+										} else {
+											namedParameterJdbcTemplate.getJdbcOperations().execute(sqlStr);
+										}
+										return true;
 									}
 								}
 							}
 						}
-						importFlg = false;
+		return false;
+	}
+
+	private boolean executePatMainWriteItem(T item, List<? extends T> items, String tableName, boolean[] importFlgRef) {
+		if (tryBatchInsertOnFirstItem(item, items, tableName, true)) {
+			return true;
+		}
+		importFlgRef[0] = false;
 						// mod 7853 差分コンバートで更新/削除ができない 楊 start
-						if (item.toString().contains("ON CONFLICT"))
-						{
+		if (item.toString().contains("ON CONFLICT")) {
 							namedParameterJdbcTemplate.getJdbcOperations().execute(item.toString());
-						}
-						else
-						{
+		} else {
 							String sql = item.toString();
 							StringBuilder b = new StringBuilder(sql);
 							b.replace(b.lastIndexOf(";"), b.lastIndexOf(";") + 1, DONOTHING);
 							namedParameterJdbcTemplate.getJdbcOperations().execute(b.toString());
 						}
 						// mod 7853 差分コンバートで更新/削除ができない 楊 end
-					}
-					else // cyc:12
-					{
-						//itemsの最初のオブジェクト実行かどうかを判断する
-						if (items.indexOf(item) == 0) {
-							//sqlファイルの最後の行が--一括実行されており、エラーが発生しているファイルを示している場合は、一括実行を行っていないと判断し、次のシングルピック実行に進みます。
-							if (!"--".equals(items.get(items.size()-1))) {
-								if (item.toString().trim().startsWith("INSERT")) {
-									if (checkSqlIsExecute(items, tableName)) {
-										String sqlStr = this.makeSqlInsert(items, tableName);
-										namedParameterJdbcTemplate.getJdbcOperations().execute(sqlStr);
-										break;
+		return false;
 									}
+
+	private boolean executeNonPatMainWriteItem(T item, List<? extends T> items, String tableName, boolean[] importFlgRef) throws Exception {
+		if (tryBatchInsertOnFirstItem(item, items, tableName, false)) {
+			return true;
 								}
-							}
-						}
-						importFlg = false;
+		importFlgRef[0] = false;
 						if (tableName.equals("mst_selector")) {
 							namedParameterJdbcTemplate.getJdbcOperations().execute(item.toString());
 						}
 						// add 7406 ReMS利用施設をコンバートすると送信先グループマスタや警報通知マスタなどのデータが消えている 楊 start
-						else if (tableName.equals("mst_user_authentication"))
-						{
+						else if (tableName.equals("mst_user_authentication")) {
+							executeMstUserAuthenticationWriteItem(item);
+							// add 7406 ReMS利用施設をコンバートすると送信先グループマスタや警報通知マスタなどのデータが消えている 楊 end
+						} else {
+							item = transformBbsInfoItemIfNeeded(item, tableName);
+							executeGenericTableWriteItem(item, tableName);
+						}
+		return false;
+	}
+
+	private void executeMstUserAuthenticationWriteItem(T item) throws Exception {
 							List<String> rlt = namedParameterJdbcTemplate.getJdbcOperations().execute(item.toString(), new PreparedStatementCallback<List<String>>() {
 								public List<String> doInPreparedStatement(PreparedStatement ps) throws SQLException, DataAccessException {
 									ResultSet rs = ps.executeQuery();
@@ -1079,14 +1152,14 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 							});
 							// 関連テープルを更新する
 							updUserTab(facilityCd, rlt, jdbcTemplateConvert);
-							// add 7406 ReMS利用施設をコンバートすると送信先グループマスタや警報通知マスタなどのデータが消えている 楊 end
 						}
-						else {
+
+	@SuppressWarnings("unchecked")
+	private T transformBbsInfoItemIfNeeded(T item, String tableName) {
 							String oldStr = "\u001C\u001B\u001D";
 							String newtStr = "\n";
 							String itemStr = item.toString();
-							if (tableName.contains("bbs_info") && itemStr.contains(oldStr))
-							{
+		if (tableName.contains("bbs_info") && itemStr.contains(oldStr)) {
 								String[] sql = new String[0];
 								if(itemStr.contains("ON CONFLICT ON CONSTRAINT")){
 									sql = itemStr.split("ON CONFLICT ON CONSTRAINT");
@@ -1155,13 +1228,15 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 								}
 								item = (T)replaceStr.toString();
 							}
-							// mod 7853 差分コンバートで更新/削除ができない 楊 start
-							if (item.toString().contains("ON CONFLICT"))
-							{
+		return item;
+	}
+
+	private void executeGenericTableWriteItem(T item, String tableName) {
+
+		// mod 7853 差分コンバートで更新/削除ができない 楊 start
+		if (item.toString().contains("ON CONFLICT")) {
 								namedParameterJdbcTemplate.getJdbcOperations().execute(item.toString());
-							}
-							else
-							{
+		} else {
 								StringBuilder b = new StringBuilder(item.toString());
 								// mod #8992-13 mst_comsv_setting zs start
                                 if (!globalContext.fileName.contains("mst_comsv_setting")) {
@@ -1172,11 +1247,9 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 							}
 							// mod 7853 差分コンバートで更新/削除ができない 楊 end
 						}
-					}
-					// mod FNSI-装置記録マスタ追加 楊 end
-				} catch (Exception e)  // cyc:4
-				{
-					if (importFlg) {  //一括実行例外
+	private void handleWriteSqlExecutionException(Exception e, boolean importFlg, T item, List<? extends T> items, String tableName) {
+
+		if (importFlg) {  //一括実行例外
 						//ログ出力
                         EventLogMessage eventLogMessageBatch = eventLoggerUtil.getEventLogMessage("一括実行SQL文にエラーが発生しました。一括実行を停止します！" + "\n 誤ったSQLファイル：" + globalContext.fileName,
 								facilityCd, "JdbcBatchSqlItemWriter.write(final List<? extends T> items)");
@@ -1219,17 +1292,9 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 						}
 					}
 				}
-				//update実行 // 以下 cyc:10
-				if (item.toString().startsWith("UPDATE")) {
-					WriteSQLAnnotation wqa = new WriteSQLAnnotation();
-                    wqa.DeleteWriteSQLFile(globalContext.fileName, item.toString());
-				}
-			}
-		}
-
+	private void executeWritePostProcessing(List<? extends T> items, List<? extends T> itemsNew) throws Exception {
 		// add #11399 djy start
-		if(globalContext.fileName.contains("mst_comsv_setting")&& !itemsNew.isEmpty())
-		{
+		if (globalContext.fileName.contains("mst_comsv_setting") && !itemsNew.isEmpty()) {
             // mod #12230 差分コンバートにより元に戻ってしまう項目がある limingzhe start
 			updateMstComsvSettingDeviceEdgeNo(globalContext.fileName.contains("diff"));
 			// mod #12230 差分コンバートにより元に戻ってしまう項目がある limingzhe end
@@ -1300,56 +1365,85 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
         GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
         if (!item.toString().trim().contains("UPDATE") && !item.toString().trim().contains("INSERT"))
 		{
-            String realTableName = PsqlCopyUtils.getTableName(globalContext.fileName);
-			String realData = "";
-			String[] names = getTableConvertKey(realTableName);
-			if (names.length > 2){
-				for (int i = 2 ;i < names.length;i++)
-				{
-					realData = realData + names[i].substring(0, names[i].length() - 2) + ",";
-				}
-				if (!realData.isEmpty()){
-					realData = realData.substring(0, realData.length() - 1);
-				}
-				realData = " concat_ws(''," + realData + ")";
-			}
-			TableNameToDbType tableNameToDbType = new TableNameToDbType(appContext);
-			WriteSQLAnnotation wqa5 = new WriteSQLAnnotation();
-			// db5から、pKey
-			String keys = firstItem.toString();
-			List<String> realKeysList =  new ArrayList<>();
-			// mod 7853-差分コンバートで更新/削除ができない 楊  start
-			// List<String> keyList = Arrays.asList(keys.split(","));
-			List<String> keyList = new ArrayList<String>(Arrays.asList(keys.split(",")));
-			// 複数レコード削除
-			keyList = keyList.stream().distinct().collect(Collectors.toList());
-			// mod 7853-差分コンバートで更新/削除ができない 楊  end
-			for (String key:keyList)
-			{
-				realKeysList.add(key);
-			}
+			return executeProcessFnsiDiffNonSqlRow(globalContext, firstItem);
+		}
+		return false;
+	}
 
-			String associationTableName = names[0];
-			String pKey = names[1];
-			String sql = "";
-			// mod 7853-差分コンバートで更新/削除ができない 楊 start
-			globalContext.sqlNewKeys =  "";
-			globalContext.insFnKey = "";
-			globalContext.sqlKeys =  "";
-			// add 12420 FNWの「転入/導入」が全て「導入」でコンバートされる hyl start
-			globalContext.sqlDisNoKeys = "";
-			//add 12420 FNWの「転入/導入」が全て「導入」でコンバートされる hyl end
-			// 本番のキー (更新レコード)
-			List<String> rs5 = new ArrayList<String>();
-			// 本番のキー (更新レコード、sql検索用)
-			String values = "";
-			// sqlファイルの一行目fnキーリスト(新規レコード)
-			List<String> keyInsList= keyList;
-			// fnのキー(更新レコード、 keyconvert-key[2]から)
-			List<String> keyUpdList= new ArrayList<String>();
-			// 本番dbのキーを取得
-			// mod #8992-4 pat_event zs start
-			HikariDataSource associationds = null;
+	/**
+	 * FNSI差分コンバートの非SQL行（キー行）を処理する
+	 */
+	private boolean executeProcessFnsiDiffNonSqlRow(GlobalContext globalContext, T firstItem) throws Exception {
+		String realTableName = PsqlCopyUtils.getTableName(globalContext.fileName);
+		String realData = buildProcessFnsiDiffRealData(realTableName);
+		String[] names = getTableConvertKey(realTableName);
+		TableNameToDbType tableNameToDbType = new TableNameToDbType(appContext);
+		WriteSQLAnnotation wqa5 = new WriteSQLAnnotation();
+		String keys = firstItem.toString();
+		List<String> realKeysList =  new ArrayList<>();
+		List<String> keyList = new ArrayList<String>(Arrays.asList(keys.split(",")));
+		keyList = keyList.stream().distinct().collect(Collectors.toList());
+		for (String key:keyList)
+		{
+			realKeysList.add(key);
+		}
+
+		String associationTableName = names[0];
+		String pKey = names[1];
+		globalContext.sqlNewKeys =  "";
+		globalContext.insFnKey = "";
+		globalContext.sqlKeys =  "";
+		globalContext.sqlDisNoKeys = "";
+		List<String> rs5 = new ArrayList<String>();
+		String values = "";
+		List<String> keyInsList= keyList;
+		List<String> keyUpdList= new ArrayList<String>();
+		HikariDataSource associationds = resolveProcessFnsiDiffAssociationDataSource(realTableName, associationTableName, tableNameToDbType);
+		NamedParameterJdbcTemplate associationNamedJdbcTemplate = new NamedParameterJdbcTemplate(associationds);
+		List fieldsList = queryProcessFnsiDiffFieldsList(realTableName, associationTableName, pKey, realData,
+				associationNamedJdbcTemplate, keyList, realKeysList);
+		values = populateProcessFnsiDiffKeyLists(fieldsList, rs5, keyUpdList);
+		if ( "A".equals(globalContext.plan) )
+		{
+			keyInsList.removeAll(keyUpdList);
+		}
+		values = values.replaceFirst(".$","");
+		updateProcessFnsiDiffGlobalKeepKeys(globalContext, realTableName, rs5);
+		Integer maxPrimaryForConvert = getMaxPrimaryOfAllDeleteAllInsertTables(realTableName);
+		if (maxPrimaryForConvert != null) {
+			globalContext.maxPrimaryForConvert = maxPrimaryForConvert;
+		}
+		if ( "B".equals(globalContext.plan) ) {
+			return finishProcessFnsiDiffPlanB(globalContext, firstItem, wqa5, realTableName, realData, pKey, values, rs5);
+		}
+		return finishProcessFnsiDiffPlanA(globalContext, firstItem, wqa5, realTableName, realData, values, rs5, keyInsList);
+	}
+
+	/**
+	 * FNSI差分コンバート用のrealData（concat_ws式）を構築する
+	 */
+	private String buildProcessFnsiDiffRealData(String realTableName) {
+		String realData = "";
+		String[] names = getTableConvertKey(realTableName);
+		if (names.length > 2){
+			for (int i = 2 ;i < names.length;i++)
+			{
+				realData = realData + names[i].substring(0, names[i].length() - 2) + ",";
+			}
+			if (!realData.isEmpty()){
+				realData = realData.substring(0, realData.length() - 1);
+			}
+			realData = " concat_ws(''," + realData + ")";
+		}
+		return realData;
+	}
+
+	/**
+	 * FNSI差分コンバート用の関連DBデータソースを解決する
+	 */
+	private HikariDataSource resolveProcessFnsiDiffAssociationDataSource(String realTableName, String associationTableName,
+			TableNameToDbType tableNameToDbType) throws Exception {
+		HikariDataSource associationds;
 			if (Set.of(
 					"pat_event",
 					"mst_user",
@@ -1362,9 +1456,15 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				String associationType =tableNameToDbType.getDbTypeByTableName(associationTableName);
 				associationds = (HikariDataSource) appContext.getBean(associationType);
 			}
+		return associationds;
+	}
 			// mod #8992-4 pat_event zs end
-			NamedParameterJdbcTemplate associationNamedJdbcTemplate = new NamedParameterJdbcTemplate(associationds);
-			// mod #11588 差分コンバートで投与薬剤の変更でサーバー処理が進まなくなる limingyang start
+	/**
+	 * FNSI差分コンバート用の本番DBキー一覧を取得する
+	 */
+	private List queryProcessFnsiDiffFieldsList(String realTableName, String associationTableName, String pKey,
+			String realData, NamedParameterJdbcTemplate associationNamedJdbcTemplate, List<String> keyList,
+			List<String> realKeysList) {
 			List fieldsList = new ArrayList(){};
 			if (("medicine_latest_no").equals(realTableName)){
 				HikariDataSource associationds6 = (HikariDataSource) appContext.getBean(ApplicationConst.DbType.NKK6);
@@ -1380,6 +1480,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				NamedParameterJdbcTemplate namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(associationJdbcTemplate6);
 				fieldsList = namedParameterJdbcTemplate.queryForList(sqlForMLN, params);
 			}else{
+			String sql;
 				if (utils.byFacilityCdList.contains(realTableName)) {
 					Map<String, Object> params = new HashMap<>();
 					params.put("facilityCd", facilityCd);
@@ -1396,7 +1497,14 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 					fieldsList = associationNamedJdbcTemplate.queryForList(sql, params);
 				}
 			}
-			// mod #11588 差分コンバートで投与薬剤の変更でサーバー処理が進まなくなる limingyang end
+		return fieldsList;
+	}
+
+	/**
+	 * FNSI差分コンバート用の本番キー・FNキーリストを構築する
+	 */
+	private String populateProcessFnsiDiffKeyLists(List fieldsList, List<String> rs5, List<String> keyUpdList) {
+		String values = "";
 			if (!fieldsList.isEmpty()) {
 				Iterator it = fieldsList.iterator();
 				while (it.hasNext()) {
@@ -1413,12 +1521,13 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 					keyUpdList.add(realDate);
 				}
 			}
-			if ( "A".equals(globalContext.plan) )
-			{
-				keyInsList.removeAll(keyUpdList);
+		return values;
 			}
-			values = values.replaceFirst(".$","");
-			// mod 7853-差分コンバートで更新/削除ができない 楊 end
+
+	/**
+	 * FNSI差分コンバート用のグローバル保持キーを更新する
+	 */
+	private void updateProcessFnsiDiffGlobalKeepKeys(GlobalContext globalContext, String realTableName, List<String> rs5) {
 			if (ObjectUtils.isEmpty(globalContext.keepTableName) || globalContext.keepTableName.equals(realTableName)){
 				// mod 7853-差分コンバートで更新/削除ができない 楊 start
 				globalContext.keepOldKeys = globalContext.keepKeys;
@@ -1431,17 +1540,13 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				globalContext.keepKeys = rs5;
 			}
 			globalContext.keepTableName = realTableName;
-
-			// add zl start
-			Integer maxPrimaryForConvert = getMaxPrimaryOfAllDeleteAllInsertTables(realTableName);
-			if (maxPrimaryForConvert != null) {
-				globalContext.maxPrimaryForConvert = maxPrimaryForConvert;
 			}
-			// add zl end
 
-			if ( "B".equals(globalContext.plan) ) {
-				// mod 7853-差分コンバートで更新/削除ができない 楊 start
-				// utils.sqlKeys =  values;
+	/**
+	 * FNSI差分コンバートのPlan B処理を完了する
+	 */
+	private boolean finishProcessFnsiDiffPlanB(GlobalContext globalContext, T firstItem, WriteSQLAnnotation wqa5,
+			String realTableName, String realData, String pKey, String values, List<String> rs5) throws Exception {
 				this.setPlanB(values, realTableName, rs5, pKey);
 				globalContext.insFnKey = realData;
 				// mod 7853-差分コンバートで更新/削除ができない 楊 end
@@ -1454,7 +1559,12 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				// add zl end
 				return true; // continue outter for (T item : itemsNew)
 			}
-			else {
+
+	/**
+	 * FNSI差分コンバートのPlan A処理を完了する
+	 */
+	private boolean finishProcessFnsiDiffPlanA(GlobalContext globalContext, T firstItem, WriteSQLAnnotation wqa5,
+			String realTableName, String realData, String values, List<String> rs5, List<String> keyInsList) throws Exception {
 				globalContext.sqlKeys =  values;
 				// mod 7853-差分コンバートで更新/削除ができない 楊 start
 				String newValues = "";
@@ -1492,9 +1602,6 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				// continue;
 				return true; // continue outter for (T item : itemsNew)
 				// add #8400 LL　end
-			}
-		}
-		return false;
 	}
 	// add FNSI-差分コンバート対応 李 end
 
@@ -1580,6 +1687,26 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 		for (T item : items) {
 			// 一行目（差分キー）
 			if (row == 0) {
+				processOrdMainDiffKeyRow(item, globalContext, normalMap, manualActualMap, dialysisNoList, treatDateList);
+			} else {
+				String[] newKeys = processOrdMainDiffDataRow(item, row, normalMap, manualActualMap, dialysisNoList, treatDateList, sqlNewKeys, sqlNewKeys2);
+				sqlNewKeys = newKeys[0];
+				sqlNewKeys2 = newKeys[1];
+			}
+			WriteSQLAnnotation wqa5 = new WriteSQLAnnotation();
+			wqa5.DeleteWriteSQLFile(globalContext.fileName, items.get(row).toString());
+			row++;
+		}
+		finalizeOrdMainDiffNewKeys(globalContext, sqlNewKeys, sqlNewKeys2);
+		applyOrdMainDiffIvAmountAndSpeed(globalContext);
+		updateOrdMain();
+	}
+
+	/**
+	 * ord_main差分コンバートのキー行（1行目）を処理する
+	 */
+	private void processOrdMainDiffKeyRow(T item, GlobalContext globalContext, Map<Integer, String> normalMap,
+			Map manualActualMap, List<String> dialysisNoList, List<String> treatDateList) {
 				String keys = item.toString();
 				List<String> keyList = new ArrayList<String>(Arrays.asList(keys.split(",")));
 				// キー総数
@@ -1625,7 +1752,8 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 									"  AND rst_fn_dialysis_no IN (:keyList)";
 					List<Map<String, Object>> maMap = namedParameterJdbcTemplateConvert.queryForList(manualActualSql, params);
 					if (!maMap.isEmpty()) {
-						dialysisNoList = maMap.stream().map(m-> m.get("rst_fn_dialysis_no").toString()).collect(Collectors.toList());
+				dialysisNoList.clear();
+				dialysisNoList.addAll(maMap.stream().map(m-> m.get("rst_fn_dialysis_no").toString()).collect(Collectors.toList()));
 						ordNoList = maMap.stream().map(m-> m.get("ord_no").toString()).collect(Collectors.toList());
 					}
 				}
@@ -1633,7 +1761,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				// SQLインジェクション対策：パラメータ化クエリを使用
 				// 正常の場合、concat_ws('',fn_plural,fn_pat_id,treat_date) を取得
 				if (!normalKeyList.isEmpty()) {
-					String normalSql = """ 
+					String normalSql = """
 										select concat_ws('',fn_plural,fn_pat_id,treat_date) as key,ord_no 
 										from ord_main 
 										where facility_cd = :facilityCd 
@@ -1644,7 +1772,8 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 					params.put("normalKeyList", normalKeyList);
 					List<Map<String, Object>> noMap = namedParameterJdbcTemplateConvert.queryForList(normalSql, params);
 					if (!noMap.isEmpty()) {
-						treatDateList = noMap.stream().map(m-> m.get("key").toString()).collect(Collectors.toList());
+				treatDateList.clear();
+				treatDateList.addAll(noMap.stream().map(m-> m.get("key").toString()).collect(Collectors.toList()));
 						ordNoList.addAll(noMap.stream().map(m-> m.get("ord_no").toString()).collect(Collectors.toList()));
 					}
 				}
@@ -1654,8 +1783,13 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				if (!ordNoList.isEmpty()) {
 					globalContext.sqlKeys = String.join(", ", ordNoList);
 				}
-			} else {
-				// SQL再作成
+	}
+
+	/**
+	 * ord_main差分コンバートのデータ行を処理する
+	 */
+	private String[] processOrdMainDiffDataRow(T item, int row, Map<Integer, String> normalMap, Map manualActualMap,
+			List<String> dialysisNoList, List<String> treatDateList, String sqlNewKeys, String sqlNewKeys2) {
 				if (item.toString().contains(" @@@@@ ")) {
 					// SQL：INSERT @@@@@ UPDATE
 					String[] sql = item.toString().split(" @@@@@ ");
@@ -1690,12 +1824,13 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 					}
 					namedParameterJdbcTemplate.update(item.toString(), parameters);
 				}
-			}
-			WriteSQLAnnotation wqa5 = new WriteSQLAnnotation();
-			wqa5.DeleteWriteSQLFile(globalContext.fileName, items.get(row).toString());
-			row++;
-		}
-		// 新規キー（fn_plural,fn_pat_id,treat_date）
+		return new String[]{sqlNewKeys, sqlNewKeys2};
+	}
+
+	/**
+	 * ord_main差分コンバートの新規キーをグローバルコンテキストに設定する
+	 */
+	private void finalizeOrdMainDiffNewKeys(GlobalContext globalContext, String sqlNewKeys, String sqlNewKeys2) {
 		if (!sqlNewKeys.isEmpty()) {
 			if (StringUtils.isEmptyOrWhitespace(sqlNewKeys) == false){
 				sqlNewKeys = sqlNewKeys.substring(0, sqlNewKeys.length() - 1);
@@ -1711,7 +1846,12 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 			globalContext.sqlDisNoKeys = sqlNewKeys2;
 			globalContext.insFnDisKey = "rst_fn_dialysis_no";
 		}
-		// add 12380 コンバートされたデータで治療記録-治療条件-補液量が0で登録されることがある zkm start
+	}
+
+	/**
+	 * ord_main差分コンバート後の補液量・補液速度を更新する
+	 */
+	private void applyOrdMainDiffIvAmountAndSpeed(GlobalContext globalContext) {
 		String sql = "select pat_id, ord_no, rst_dialysis_state, ind_treatment_cd, ind_cond_info," +
 				" rst_treatment_cd, rst_cond_info, rst_bed_cd, rst_off_water_info, rst_weight_info,convert_id " +
 				"from ord_main " +
@@ -1730,55 +1870,49 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 		}
 		// ind_cond_info
 		ordMainList = ordMainList.stream().filter(o -> Objects.nonNull(o.getIndTreatmentCd())).collect(Collectors.toList());
-
-		//add #12229->12380 start
-		String getPatSql = "SELECT pat_id, device_set_info FROM pat_main WHERE pat_id in(:patId)  AND facility_cd = :facilityCd";
-
 		List<Long> patIdList = ordMainList.stream()
 				.map(OrdMain::getPatId)
 				.filter(Objects::nonNull)
 				.distinct()
 				.collect(Collectors.toList());
-		Map<String, Object> params1 = Map.of(
-				"patId", patIdList,
-				"facilityCd", facilityCd
-		);
-		if(patIdList.isEmpty()){
-			return;
-		}
-		List<PatMain> patMainList = namedParameterJdbcTemplateConvert.query(
-				getPatSql,
-				params1,
-				new BeanPropertyRowMapper<>(PatMain.class)
-		);
-		Map<Long, String> patDeviceMap = patMainList.stream()
-				.collect(Collectors.toMap(
-						PatMain::getPat_id,
-						PatMain::getDevice_set_info,
-						(a, b) -> a
-				));
-		//add #12229->12380 end
-
-		if (!CollectionUtils.isNullOrEmpty(ordMainList)) {
+		Map<Long, String> patDeviceMap = new HashMap<>();
+		if (!patIdList.isEmpty()) {
 			//add #12229->12380 start
-			updateOrdMainIvAmountAndIvSpeed(namedParameterJdbcTemplateConvert, ordMainList, false,patDeviceMap);
+			String getPatSql = "SELECT pat_id, device_set_info FROM pat_main WHERE pat_id in(:patId) AND facility_cd = :facilityCd";
+			Map<String, Object> patParams = Map.of(
+					"patId", patIdList,
+					"facilityCd", facilityCd
+			);
+			List<PatMain> patMainList = namedParameterJdbcTemplateConvert.query(
+					getPatSql,
+					patParams,
+					new BeanPropertyRowMapper<>(PatMain.class)
+			);
+			patDeviceMap = patMainList.stream()
+					.collect(Collectors.toMap(
+							PatMain::getPat_id,
+							PatMain::getDevice_set_info,
+							(a, b) -> a
+					));
+			//add #12229->12380 end
+		}
+
+		if (!CollectionUtils.isEmpty(ordMainList)) {
+			//add #12229->12380 start
+			updateOrdMainIvAmountAndIvSpeed(namedParameterJdbcTemplateConvert, ordMainList, false, patDeviceMap);
 			//add #12229->12380 end
 		}
 		// rst_ind_info
 		List<OrdMain> rstOrdMains = ordMainList.stream().filter(o -> "6".equals(o.getRstDialysisState())).toList();
-		if (!CollectionUtils.isNullOrEmpty(rstOrdMains)) {
+		if (!CollectionUtils.isEmpty(rstOrdMains)) {
 			rstOrdMains.forEach(o -> {
 				o.setIndTreatmentCd(o.getRstTreatmentCd());
 				o.setIndCondInfo(o.getRstCondInfo());
 			});
 			//add #12229->12380 start
-			updateOrdMainIvAmountAndIvSpeed(namedParameterJdbcTemplateConvert, rstOrdMains, true,patDeviceMap);
+			updateOrdMainIvAmountAndIvSpeed(namedParameterJdbcTemplateConvert, rstOrdMains, true, patDeviceMap);
 			//add #12229->12380 end
 		}
-		// add 12380 コンバートされたデータで治療記録-治療条件-補液量が0で登録されることがある zkm end
-		//add #12309  【因島】「指示変更内容」の画面が表示できない　hyl start
-		updateOrdMain();
-		//add #12309  【因島】「指示変更内容」の画面が表示できない　hyl start
 	}
 
 	private void processPatCoopDetailDiff(List<? extends T> items) {
@@ -1796,9 +1930,26 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 		String convertProcId = jdbcTemplateConvert.queryForObject(
 				sqlM, new Object[] {  facilityCd }, String.class);
 		for (T item : items) {
-			String keys = item.toString();
-			// 一行目（差分キー）
 			if (row == 0) {
+				processPatCoopDetailDiffKeyRow(item, resultMap, listKey, map);
+			} else {
+				sqlNewKeys = processPatCoopDetailDiffDataRow(item, row, resultMap, map, sqlNewKeys);
+			}
+			WriteSQLAnnotation wqa5 = new WriteSQLAnnotation();
+            wqa5.DeleteWriteSQLFile(globalContext.fileName, items.get(row).toString());
+			row++;
+		}
+		if (!sqlNewKeys.isEmpty()) {
+            globalContext.sqlNewKeys = convertProcId;
+            globalContext.insFnKey = "coop_save_no";
+		}
+	}
+
+	/**
+	 * pat_coop_detail差分コンバートのキー行（1行目）を処理する
+	 */
+	private void processPatCoopDetailDiffKeyRow(T item, Map<String, Long> resultMap, List<String> listKey, Map map) {
+		String keys = item.toString();
 				List<String> keyList = new ArrayList<String>(Arrays.asList(keys.split(",")));
 				int count = 1;
 				for (String key : keyList) {
@@ -1824,20 +1975,25 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				params.put("fnPatIds", fnPatIds);
 				List<Map<String, Object>> maMap = namedParameterJdbcTemplateConvert.queryForList(sql,params);
 				if (!maMap.isEmpty()) {
-                    //mod 11576 pat_coop_detailのsave_1がGX固定でコンバートされる start
-					resultMap =  maMap.stream()
+			resultMap.clear();
+			resultMap.putAll(maMap.stream()
 							.collect(Collectors.toMap(
 									m -> m.get("ord_no").toString() + m.get("fn_pat_id").toString(),
                                     m -> ((Number) m.get("coop_save_no")).longValue(),
 									(existing, replacement) -> existing
-							));
-                    //mod 11576 pat_coop_detailのsave_1がGX固定でコンバートされる end
-					listKey = maMap.stream().map(m-> m.get("coop_save_no").toString()).collect(Collectors.toList());
+					)));
+			listKey.clear();
+			listKey.addAll(maMap.stream().map(m-> m.get("coop_save_no").toString()).collect(Collectors.toList()));
 				}
 				if (!listKey.isEmpty()) {
 					globalContext.sqlKeys = String.join(", ", listKey);
 				}
-			} else {
+	}
+
+	/**
+	 * pat_coop_detail差分コンバートのデータ行を処理する
+	 */
+	private String processPatCoopDetailDiffDataRow(T item, int row, Map<String, Long> resultMap, Map map, String sqlNewKeys) {
 				if (item.toString().contains(" @@@@@ ")) {
 					// SQL：INSERT @@@@@ UPDATE
 					String[] sql = item.toString().split(" @@@@@ ");
@@ -1855,19 +2011,10 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 							sqlNewKeys += map.get(row).toString() + ",";
                             MapSqlParameterSource parameters = new MapSqlParameterSource().addValue("facility_cd", facilityCd);
 							namedParameterJdbcTemplate.update(item.toString(), parameters);
-						}
-					}
 				}
 			}
-			WriteSQLAnnotation wqa5 = new WriteSQLAnnotation();
-            wqa5.DeleteWriteSQLFile(globalContext.fileName, items.get(row).toString());
-			row++;
 		}
-		// 新規キー
-		if (!sqlNewKeys.isEmpty()) {
-            globalContext.sqlNewKeys = convertProcId;
-            globalContext.insFnKey = "coop_save_no";
-		}
+		return sqlNewKeys;
 	}
 
 	private void processMstKurDiff(List<? extends T> items) {
@@ -2082,45 +2229,40 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 		//dw
         this.addDwInfo(facilityCd, ordMainList);
 		// add 12380 コンバートされたデータで治療記録-治療条件-補液量が0で登録されることがある zkm start
-
-		//mod #12229->12380 start
-		// pat_main情報の取得
-		String getPatSql = "SELECT pat_id, device_set_info FROM pat_main WHERE pat_id = :patId AND facility_cd = :facilityCd";
-		Map<String, Object> params = Map.of(
-				"patId", ordMainList.get(0).getPatId(),
-				"facilityCd", facilityCd
-		);
-
-		PatMain patMain = namedParameterJdbcTemplateConvert.queryForObject(getPatSql, params, new BeanPropertyRowMapper<>(PatMain.class));
 		Map<Long, String> patDeviceMap = new HashMap<>();
-
-		if (patMain != null) {
-			patDeviceMap.put(
-					patMain.getPat_id(),
-					patMain.getDevice_set_info()
+		if (!ordMainList.isEmpty()) {
+			//mod #12229->12380 start
+			// pat_main情報の取得
+			String getPatSql = "SELECT pat_id, device_set_info FROM pat_main WHERE pat_id = :patId AND facility_cd = :facilityCd";
+			Map<String, Object> params = Map.of(
+					"patId", ordMainList.get(0).getPatId(),
+					"facilityCd", facilityCd
 			);
+			PatMain patMain = namedParameterJdbcTemplateConvert.queryForObject(getPatSql, params, new BeanPropertyRowMapper<>(PatMain.class));
+			if (patMain != null) {
+				patDeviceMap.put(patMain.getPat_id(), patMain.getDevice_set_info());
+			}
+			//mod #12229->12380 end
 		}
-		//mod #12229->12380 end
-
 		List<OrdMain> updOrdMainIvAmountAndIvSpeedList = ordMainList.stream().filter(o ->
 				("0".equals(o.getRstDialysisState()) || "6".equals(o.getRstDialysisState()))
 						&& Objects.nonNull(o.getIndTreatmentCd())).toList();
-		if (!CollectionUtils.isNullOrEmpty(updOrdMainIvAmountAndIvSpeedList)) {
+		if (!CollectionUtils.isEmpty(updOrdMainIvAmountAndIvSpeedList)) {
 			//mod #12229->12380 start
-			updateOrdMainIvAmountAndIvSpeed(namedParameterJdbcTemplateConvert, updOrdMainIvAmountAndIvSpeedList, false,patDeviceMap);
+			updateOrdMainIvAmountAndIvSpeed(namedParameterJdbcTemplateConvert, updOrdMainIvAmountAndIvSpeedList, false, patDeviceMap);
 			//mod #12229->12380 end
 		}
 
 		List<OrdMain> rstIvAmountAndIvSpeedList = ordMainList.stream().filter(o -> "6".equals(o.getRstDialysisState())
 				&& Objects.nonNull(o.getRstTreatmentCd())).toList();
-		if (!CollectionUtils.isNullOrEmpty(rstIvAmountAndIvSpeedList)) {
-			if (!CollectionUtils.isNullOrEmpty(rstIvAmountAndIvSpeedList)) {
+		if (!CollectionUtils.isEmpty(rstIvAmountAndIvSpeedList)) {
+			if (!CollectionUtils.isEmpty(rstIvAmountAndIvSpeedList)) {
 				rstIvAmountAndIvSpeedList.forEach(o -> {
 					o.setIndTreatmentCd(o.getRstTreatmentCd());
 					o.setIndCondInfo(o.getRstCondInfo());
 				});
 				//mod #12229->12380 start
-				updateOrdMainIvAmountAndIvSpeed(namedParameterJdbcTemplateConvert, rstIvAmountAndIvSpeedList, true,patDeviceMap);
+				updateOrdMainIvAmountAndIvSpeed(namedParameterJdbcTemplateConvert, rstIvAmountAndIvSpeedList, true, patDeviceMap);
 				//mod #12229->12380 end
 			}
 		}
@@ -2144,7 +2286,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				"where pat_id = (select pat_id from pat_personal_main where facility_cd = ? and fn_pat_id = ?) " +
 				"and facility_cd = ?";
 		List<PatTreatmentPatternPatMain> patTreatmentPatterns = namedParameterJdbcTemplateConvert.getJdbcOperations().query(sql, new Object[]{facilityCd, patId, facilityCd}, new BeanPropertyRowMapper<>(PatTreatmentPatternPatMain.class));
-		if (!CollectionUtils.isNullOrEmpty(patTreatmentPatterns)) {
+		if (!CollectionUtils.isEmpty(patTreatmentPatterns)) {
 			updatePatTreatmentPatternIvAmountAndIvSpeed(namedParameterJdbcTemplateConvert, patTreatmentPatterns);
 		}
 		//add #12309  【因島】「指示変更内容」の画面が表示できない　hyl start
@@ -2251,83 +2393,77 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 	}
 
     //add #12229  ord_weight_scale start
-    private boolean  convertValOrdWeightScale(List<? extends T> items,GlobalContext globalContext){
+	private boolean convertValOrdWeightScale(List<? extends T> items, GlobalContext globalContext) {
+		boolean isReturnCallerMethod = false;
+		ObjectMapper objectMapper = new ObjectMapper();
+		List<OrdWeightScale> ordWeightScaleList = items.stream()
+				.map(item -> {
+					try {
+						if (item instanceof String) {
+							return objectMapper.readValue((String) item, OrdWeightScale.class);
+						} else {
+							return objectMapper.convertValue(item, OrdWeightScale.class);
+						}
+					} catch (Exception e) {
+						throw new RuntimeException("JSON変換に失敗しました: " + item, e);
+					}
+				})
+				.collect(Collectors.toList());
 
-        boolean isReturnCallerMethod = false;
-        ObjectMapper objectMapper = new ObjectMapper();
-        List<OrdWeightScale> ordWeightScaleList = items.stream()
-                .map(item -> {
-                    try {
-                        if (item instanceof String) {
-                            return objectMapper.readValue((String) item, OrdWeightScale.class);
-                        } else {
-                            return objectMapper.convertValue(item, OrdWeightScale.class);
-                        }
-                    } catch (Exception e) {
-                        throw new RuntimeException("JSON変換に失敗しました: " + item, e);
-                    }
-                })
-                .collect(Collectors.toList());
+		if (ordWeightScaleList.isEmpty()) {
+			isReturnCallerMethod = true;
+			return isReturnCallerMethod;
+		}
+		masterDataService.loadIfNeeded(facilityCd, globalContext);
 
-        if (ordWeightScaleList.isEmpty()) {
-            isReturnCallerMethod = true;
-            return isReturnCallerMethod;
-        }
-        masterDataService.loadIfNeeded(facilityCd,globalContext);
+		try {
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+			String sql = "INSERT INTO ord_weight_scale (facility_cd,weight_cd,weight_name,measure_date,pat_id,scale_class,bed_cd,bed_name,kur_cd,"
+					+ "kur_name,machine_no,machine_name,treatment_cd,treatment_name,device_mode,weight_scale_status,scale_mode,target_weight_value,"
+					+ "scale_value,weight_value,off_water_limit,wheel_chair_weight,ord_no,wheel_chair_cd,wheel_chair_name,user_id,reg_date,up_date,"
+					+ "rst_off_water_info,rst_tare_info) "
+					+ "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try {
-            DateTimeFormatter formatter =
-                    DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
-
-            String sql = "INSERT INTO ord_weight_scale (facility_cd,weight_cd,weight_name,measure_date,pat_id,scale_class,bed_cd,bed_name,kur_cd," +
-                    "kur_name,machine_no,machine_name,treatment_cd,treatment_name,device_mode,weight_scale_status,scale_mode,target_weight_value," +
-                    "scale_value,weight_value,off_water_limit,wheel_chair_weight,ord_no,wheel_chair_cd,wheel_chair_name,user_id,reg_date,up_date," +
-                    "rst_off_water_info,rst_tare_info) " +
-                    "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-            jdbcTemplateConvert.batchUpdate(sql, ordWeightScaleList, 1000, (ps, entity) -> {
-                ps.setObject(1, entity.getFacilityCd());
-                ps.setObject(2, masterDataService.getWeightCd(entity.getWeightCd(),globalContext.weightCdMap));
-                ps.setObject(3, entity.getWeightName());
-                ps.setObject(4, LocalDateTime.parse(entity.getMeasureDate(), formatter));
-                ps.setObject(5, masterDataService.getPatId(entity.getPatId(),globalContext.patIdMap));
-                ps.setObject(6, entity.getScaleClass());
-                ps.setObject(7, masterDataService.getBedCd(entity.getBedCd(),globalContext.bedCdMap));
-                ps.setObject(8, entity.getBedName());
-                ps.setObject(9, masterDataService.getKurCd(entity.getKurCd(),globalContext.kurCdMap));
-                ps.setObject(10, entity.getKurName());
-                ps.setObject(11, masterDataService.getMachineNo(entity.getMachineNo(),globalContext.machineNoMap));
-                ps.setObject(12, entity.getMachineName());
-                ps.setObject(13, masterDataService.getTreatmentCd(entity.getTreatmentCd(),globalContext.treatmentCdMap));
-                ps.setObject(14, entity.getTreatmentName());
-                ps.setObject(15, MasterDataService.parseToInteger(entity.getPatId(), entity.getDeviceMode()));
-                ps.setObject(16, entity.getWeightScaleStatus());
-                ps.setObject(17, entity.getScaleMode());
-                ps.setObject(18, entity.getTargetWeightValue());
-                ps.setObject(19, entity.getScaleValue());
-                ps.setObject(20, entity.getWeightValue());
-                ps.setObject(21, entity.getOffWaterLimit());
-                ps.setObject(22, entity.getWheelChairWeight());
-                ps.setObject(23, masterDataService.getOrdNo(entity.getOrdNo(),globalContext.ordNoMap));
-                ps.setObject(24, masterDataService.getWheelChairCd(entity.getWheelChairCd(),globalContext.wheelChairCdMap));
-                ps.setObject(25, entity.getWheelChairName());
-                ps.setObject(26, masterDataService.getUserId(entity.getUserId(),globalContext.userIdMap));
-                ps.setObject(27, LocalDateTime.parse(entity.getRegDate(), formatter));
-                ps.setObject(28, LocalDateTime.parse(entity.getUpDate(), formatter));
-                ps.setObject(29, entity.getRstOffWaterInfo() == null ? null : masterDataService.createJsonb(entity.getRstOffWaterInfo().toString()));
-                ps.setObject(30, entity.getRstTareInfo() == null ? null : masterDataService.createJsonb(entity.getRstTareInfo().toString()));
-            });
-
-        } catch (Exception er) {
-            //ログ
-            EventLogMessage eventLogMessage10 = eventLoggerUtil.getEventLogMessage("「SQL失敗」:" + er.getMessage(),
-                    facilityCd, "convertValOrdWeightScale");
-            eventLoggerUtil.recordLog(facilityCd, eventLogMessage10, LogLevel.ERROR);
-        }
-        return isReturnCallerMethod;
-    }
+			jdbcTemplateConvert.batchUpdate(sql, ordWeightScaleList, 1000, (ps, entity) -> {
+				ps.setObject(1, entity.getFacilityCd());
+				ps.setObject(2, masterDataService.getWeightCd(entity.getWeightCd(), globalContext.weightCdMap));
+				ps.setObject(3, entity.getWeightName());
+				ps.setObject(4, LocalDateTime.parse(entity.getMeasureDate(), formatter));
+				ps.setObject(5, masterDataService.getPatId(entity.getPatId(), globalContext.patIdMap));
+				ps.setObject(6, entity.getScaleClass());
+				ps.setObject(7, masterDataService.getBedCd(entity.getBedCd(), globalContext.bedCdMap));
+				ps.setObject(8, entity.getBedName());
+				ps.setObject(9, masterDataService.getKurCd(entity.getKurCd(), globalContext.kurCdMap));
+				ps.setObject(10, entity.getKurName());
+				ps.setObject(11, masterDataService.getMachineNo(entity.getMachineNo(), globalContext.machineNoMap));
+				ps.setObject(12, entity.getMachineName());
+				ps.setObject(13, masterDataService.getTreatmentCd(entity.getTreatmentCd(), globalContext.treatmentCdMap));
+				ps.setObject(14, entity.getTreatmentName());
+				ps.setObject(15, MasterDataService.parseToInteger(entity.getPatId(), entity.getDeviceMode()));
+				ps.setObject(16, entity.getWeightScaleStatus());
+				ps.setObject(17, entity.getScaleMode());
+				ps.setObject(18, entity.getTargetWeightValue());
+				ps.setObject(19, entity.getScaleValue());
+				ps.setObject(20, entity.getWeightValue());
+				ps.setObject(21, entity.getOffWaterLimit());
+				ps.setObject(22, entity.getWheelChairWeight());
+				ps.setObject(23, masterDataService.getOrdNo(entity.getOrdNo(), globalContext.ordNoMap));
+				ps.setObject(24, masterDataService.getWheelChairCd(entity.getWheelChairCd(), globalContext.wheelChairCdMap));
+				ps.setObject(25, entity.getWheelChairName());
+				ps.setObject(26, masterDataService.getUserId(entity.getUserId(), globalContext.userIdMap));
+				ps.setObject(27, LocalDateTime.parse(entity.getRegDate(), formatter));
+				ps.setObject(28, LocalDateTime.parse(entity.getUpDate(), formatter));
+				ps.setObject(29, entity.getRstOffWaterInfo() == null ? null : masterDataService.createJsonb(entity.getRstOffWaterInfo().toString()));
+				ps.setObject(30, entity.getRstTareInfo() == null ? null : masterDataService.createJsonb(entity.getRstTareInfo().toString()));
+			});
+		} catch (Exception er) {
+			EventLogMessage eventLogMessage10 = eventLoggerUtil.getEventLogMessage("「SQL失敗」:" + er.getMessage(),
+					facilityCd, "convertValOrdWeightScale");
+			eventLoggerUtil.recordLog(facilityCd, eventLogMessage10, LogLevel.ERROR);
+		}
+		return isReturnCallerMethod;
+	}
     //add #12229  ord_weight_scale end
-
 
 	/**
 	 * add #12229 start
@@ -2336,7 +2472,31 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 	private boolean convertValHistory(String fileName,List<? extends T> items){
 		boolean isReturnCallerMethod =  false;
 		ObjectMapper objectMapper = new ObjectMapper();
-		List<IndHistoryEntity> indHistoryEntityList = items.stream()
+		List<IndHistoryEntity> indHistoryEntityList = parseIndHistoryItems(items, objectMapper);
+		if(indHistoryEntityList.isEmpty()){
+			isReturnCallerMethod = true;
+			return isReturnCallerMethod;
+		}
+		try {
+			Map<String, Object> patIdToOrdNoMap = loadIndHistoryPatIdMap(indHistoryEntityList);
+			Map<String, Object> userIdToMap = loadIndHistoryUserIdMap();
+			convertIndHistoryEntities(indHistoryEntityList, patIdToOrdNoMap, userIdToMap);
+			persistIndHistoryToMongo(fileName, indHistoryEntityList);
+		} catch (Exception er) {
+			EventLogMessage eventLogMessage10 = eventLoggerUtil.getEventLogMessage("「SQL文ミス」" + indHistoryEntityList.toString(),
+					facilityCd, "JdbcBatchSqlItemWriter.write(final List<? extends T> items)");
+			eventLoggerUtil.recordLog(facilityCd, eventLogMessage10, LogLevel.DEBUG);
+		}
+		WriteSQLAnnotation wqa = new WriteSQLAnnotation();
+		wqa.fileNioWrite(fileName, "", false);
+		return isReturnCallerMethod;
+	}
+
+	/**
+	 * 指示履歴コンバート用のアイテムをIndHistoryEntityリストに変換する
+	 */
+	private List<IndHistoryEntity> parseIndHistoryItems(List<? extends T> items, ObjectMapper objectMapper) {
+		return items.stream()
 				.map(item -> {
 					try {
 						if (item instanceof String) {
@@ -2349,12 +2509,12 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 					}
 				})
 				.collect(Collectors.toList());
-		if(indHistoryEntityList.isEmpty()){
-			isReturnCallerMethod = true;
-			return isReturnCallerMethod;
 		}
-		// mod #9944 FNWで指示確認の確認をチェックしても、FNSiに反映されない 肖 start
-		try {
+
+	/**
+	 * 指示履歴コンバート用の患者IDマップを取得する
+	 */
+	private Map<String, Object> loadIndHistoryPatIdMap(List<IndHistoryEntity> indHistoryEntityList) {
 			List<String> distinctPatIds = indHistoryEntityList.stream()
 					.map(IndHistoryEntity::getPatId)
 					.filter(patId -> patId != null && !patId.trim().isEmpty())
@@ -2362,8 +2522,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 					.collect(Collectors.toList());
 
 
-			Map<String, Object> patIdToOrdNoMap;
-			if (!distinctPatIds.isEmpty()) {
+        if (!distinctPatIds.isEmpty()) {
 
 				String placeholders = distinctPatIds.stream()
 						.map(ordNo -> "?")
@@ -2373,25 +2532,37 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				params.add(facilityCd);
 				params.addAll(distinctPatIds);
 				List<Map<String, Object>> resultList = jdbcTemplateNkk6.queryForList(sql, params.toArray());
-				patIdToOrdNoMap = resultList.stream()
+			return resultList.stream()
 						.collect(Collectors.toMap(
 								row -> (String) row.get("fn_pat_id"),
 								row -> row.get("pat_id"),
 								(existing, replacement) -> existing
 						));
-			} else {
-				patIdToOrdNoMap = new HashMap<>();
-			}
+		}
+		return new HashMap<>();
+	}
+
+	/**
+	 * 指示履歴コンバート用のユーザーIDマップを取得する
+	 */
+	private Map<String, Object> loadIndHistoryUserIdMap() {
 			String sql = "select fn_staff_cd,user_id from mst_personal_user where facility_cd = ? ";
 			List<Object> params = new ArrayList<>();
 			params.add(facilityCd);
 			List<Map<String, Object>> userIdresultList = jdbcTemplateNkk6.queryForList(sql, params.toArray());
-			Map<String, Object> userIdToMap = userIdresultList.stream()
+		return userIdresultList.stream()
 					.collect(Collectors.toMap(
 							row -> (String) row.get("fn_staff_cd"),
 							row -> row.get("user_id"),
 							(existing, replacement) -> existing
 					));
+	}
+
+	/**
+	 * 指示履歴エンティティの変換値を設定する
+	 */
+	private void convertIndHistoryEntities(List<IndHistoryEntity> indHistoryEntityList,
+			Map<String, Object> patIdToOrdNoMap, Map<String, Object> userIdToMap) {
 			for (IndHistoryEntity entity : indHistoryEntityList) {
 
 				String patId = entity.getPatId();
@@ -2414,11 +2585,14 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				Object receiverUserIdObj = (receiverUserId != null) ? userIdToMap.get(receiverUserId) : null;
 				entity.setReceiver1((receiverUserIdObj != null) ? receiverUserIdObj.toString() : "");
 				entity.setFacilityCd(facilityCd);
-
+		}
 
 			}
 
-
+	/**
+	 * 指示履歴をMongoDBに保存する
+	 */
+	private void persistIndHistoryToMongo(String fileName, List<IndHistoryEntity> indHistoryEntityList) {
 			if (fileName.contains("diff")) {
 				for (IndHistoryEntity entity : indHistoryEntityList) {
 					ExecutableUpdateOperation.ExecutableUpdate<IndHistoryEntity> executableUpdate = mongoTemplate.update(IndHistoryEntity.class);
@@ -2460,17 +2634,6 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 			}else {
 				mongoTemplate.insertAll(indHistoryEntityList);
 			}
-			// mod #9944 FNWで指示確認の確認をチェックしても、FNSiに反映されない 肖 end
-		} catch (Exception er) {
-			//ログ
-			EventLogMessage eventLogMessage10 = eventLoggerUtil.getEventLogMessage("「SQL文ミス」" + indHistoryEntityList.toString(),
-					facilityCd, "JdbcBatchSqlItemWriter.write(final List<? extends T> items)");
-			eventLoggerUtil.recordLog(facilityCd, eventLogMessage10, LogLevel.DEBUG);
-		}
-		// 一括插入mongodbの実行に成功したらsqlファイルを一括クリア
-		WriteSQLAnnotation wqa = new WriteSQLAnnotation();
-		wqa.fileNioWrite(fileName, "", false);
-		return isReturnCallerMethod;
 	}
 
 	/**
@@ -2479,7 +2642,33 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 	private boolean convertValueRsrHistory(List<? extends T> items,String fileName ){
 		boolean isReturnCallerMethod =  false;
 		ObjectMapper objectMapper = new ObjectMapper();
-		List<RstHistoryEntity> rstHistoryEntityList = items.stream()
+		List<RstHistoryEntity> rstHistoryEntityList = parseRstHistoryItems(items, objectMapper);
+		if(rstHistoryEntityList.isEmpty()){
+			isReturnCallerMethod =  true;
+			return isReturnCallerMethod;
+		}
+		try {
+			Map<Object, Object> rstNoToOrdNoMap = loadRstHistoryOrdNoMap(rstHistoryEntityList);
+			Map<String, Object> userIdToOrdNoMap = loadRstHistoryUserIdMap(rstHistoryEntityList);
+			Map<String, String> userNamesMap = loadRstHistoryDecryptedUserNamesMap(rstHistoryEntityList);
+			convertRstHistoryEntities(rstHistoryEntityList, rstNoToOrdNoMap, userIdToOrdNoMap, userNamesMap);
+			mongoTemplate.insertAll(rstHistoryEntityList);
+		} catch (Exception er) {
+			EventLogMessage eventLogMessage10 = eventLoggerUtil.getEventLogMessage("「SQL文ミス」" + rstHistoryEntityList.toString()+er.getMessage(),
+					facilityCd, "JdbcBatchSqlItemWriter.write(convertValueRsrHistory)");
+			eventLoggerUtil.recordLog(facilityCd, eventLogMessage10, LogLevel.ERROR);
+		}
+		// 一括插入mongodbの実行に成功したらsqlファイルを一括クリア
+		WriteSQLAnnotation wqa = new WriteSQLAnnotation();
+		wqa.fileNioWrite(fileName, "", false);
+		return isReturnCallerMethod;
+	}
+
+	/**
+	 * 実績履歴コンバート用のアイテムをRstHistoryEntityリストに変換する
+	 */
+	private List<RstHistoryEntity> parseRstHistoryItems(List<? extends T> items, ObjectMapper objectMapper) {
+		return items.stream()
 				.map(item -> {
 					try {
 						if (item instanceof String) {
@@ -2492,12 +2681,12 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 					}
 				})
 				.collect(Collectors.toList());
-		if(rstHistoryEntityList.isEmpty()){
-			isReturnCallerMethod =  true;
-			return isReturnCallerMethod;
-		}
-		try {
-			//add #12229 start
+	}
+
+	/**
+	 * 実績履歴コンバート用のord_noマップを取得する
+	 */
+	private Map<Object, Object> loadRstHistoryOrdNoMap(List<RstHistoryEntity> rstHistoryEntityList) {
 			List<Integer> distinctOrdNos = rstHistoryEntityList.stream()
 					.map(RstHistoryEntity::getOrd_no)
 					.filter(ordNo -> ordNo != null && !ordNo.trim().isEmpty())
@@ -2522,7 +2711,13 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 								(existing, replacement) -> existing
 						));
 			}
+		return rstNoToOrdNoMap;
+	}
 
+	/**
+	 * 実績履歴コンバート用のユーザーIDマップを取得する
+	 */
+	private Map<String, Object> loadRstHistoryUserIdMap(List<RstHistoryEntity> rstHistoryEntityList) {
 			Map<String, Object> userIdToOrdNoMap=new HashMap<>();
 			List<String> distinctuserIds = rstHistoryEntityList.stream()
 					.map(RstHistoryEntity::getUp_user_id)
@@ -2548,7 +2743,13 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 								(existing, replacement) -> existing
 						));
 			}
+		return userIdToOrdNoMap;
+	}
 
+	/**
+	 * 実績履歴コンバート用の復号化ユーザー名マップを取得する
+	 */
+	private Map<String, String> loadRstHistoryDecryptedUserNamesMap(List<RstHistoryEntity> rstHistoryEntityList) {
 			List<String> userNames  = rstHistoryEntityList.stream()
 					.map(RstHistoryEntity::getUp_user_name)
 					.filter(userName -> userName != null && !userName.trim().isEmpty())
@@ -2559,7 +2760,14 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 
 				userNamesMap=batchDecryptWithValues(userNames,jdbcTemplateNkk6);
 			}
+		return userNamesMap;
+	}
 
+	/**
+	 * 実績履歴エンティティの変換値を設定する
+	 */
+	private void convertRstHistoryEntities(List<RstHistoryEntity> rstHistoryEntityList, Map<Object, Object> rstNoToOrdNoMap,
+			Map<String, Object> userIdToOrdNoMap, Map<String, String> userNamesMap) {
 			for (RstHistoryEntity entity : rstHistoryEntityList) {
 				//  ord_no
 				String rstNo = entity.getOrd_no();
@@ -2586,19 +2794,8 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				String rstEditionValue = entity.getRst_edition();
 				entity.setRst_edition((rstEditionValue != null && !rstEditionValue.isEmpty()) ? rstEditionValue : "0");
 				entity.setFacilityCd(facilityCd);
-			}
 			//add #12229 end
-			mongoTemplate.insertAll(rstHistoryEntityList);
-		} catch (Exception er) {
-			//ログ
-			EventLogMessage eventLogMessage10 = eventLoggerUtil.getEventLogMessage("「SQL文ミス」" + rstHistoryEntityList.toString()+er.getMessage(),
-					facilityCd, "JdbcBatchSqlItemWriter.write(convertValueRsrHistory)");
-			eventLoggerUtil.recordLog(facilityCd, eventLogMessage10, LogLevel.ERROR);
 		}
-		//一括挿入mongodbの実行に成功したらsqlファイルを一括クリア
-		WriteSQLAnnotation wqa = new WriteSQLAnnotation();
-		wqa.fileNioWrite(fileName, "", false);
-		return isReturnCallerMethod;
 	}
 
 	public Map<String, String> batchDecryptWithValues(List<String> encryptedUserNames,JdbcTemplate jdbcTemplate6 ) {
@@ -2697,7 +2894,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				}
 			});
 		}
-		if (!CollectionUtils.isNullOrEmpty(updPatTreatmentPatterns)) {
+		if (!CollectionUtils.isEmpty(updPatTreatmentPatterns)) {
 			String updateOrdMainIvAmountAndIvSpeedSql =
 					"update pat_treatment_pattern set ind_cond_info = CAST(:indCondInfo AS jsonb) where ctl_no = :ctlNo and pat_id = :patId";
 			convertJdbcTemplate.batchUpdate(updateOrdMainIvAmountAndIvSpeedSql, SqlParameterSourceUtils.createBatch(updPatTreatmentPatterns));
@@ -2707,14 +2904,13 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 	private List<Integer> getOnLineMstTreatmentCds(NamedParameterJdbcTemplate convertJdbcTemplate, List<Integer> indTreatmentCds) {
 
 		//mod #12229->12380 start
-		if(globalContext.mstTreatmentSet.isEmpty()){
-
+		if (globalContext.mstTreatmentSet.isEmpty()) {
 			String getTreatmentsql = """
-			SELECT treatment_cd
-			FROM mst_treatment
-			WHERE facility_cd = :facilityCd
-			  AND device_mode IN (7, 8)
-        """;
+				SELECT treatment_cd
+				FROM mst_treatment
+				WHERE facility_cd = :facilityCd
+				  AND device_mode IN (7, 8)
+			""";
 			Map<String, Object> params = new HashMap<>();
 			params.put("facilityCd", facilityCd);
 			List<MstTreatment> mstTreatments = convertJdbcTemplate.query(getTreatmentsql, params, new BeanPropertyRowMapper<>(MstTreatment.class));
@@ -2729,7 +2925,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 		//mod #12229->12380 end
 	}
 
-	private void updateOrdMainIvAmountAndIvSpeed(NamedParameterJdbcTemplate convertJdbcTemplate, List<OrdMain> ordMains, boolean isRst,Map<Long, String> patDeviceMap) {
+	private void updateOrdMainIvAmountAndIvSpeed(NamedParameterJdbcTemplate convertJdbcTemplate, List<OrdMain> ordMains, boolean isRst, Map<Long, String> patDeviceMap) {
 		List<Integer> indTreatmentCds = ordMains.stream().map(OrdMain::getIndTreatmentCd).distinct().toList();
 		List<Integer> treatmentCds = getOnLineMstTreatmentCds(convertJdbcTemplate, indTreatmentCds);
 
@@ -2742,8 +2938,20 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 		}
 		if (groupByTreatment.isEmpty()) return;
 
+		Map<Integer, String> bedComTypeMap = buildOrdMainRstBedComTypeMap(convertJdbcTemplate, ordMains, isRst);
+		List<OrdMain> updOrdMains = collectOrdMainIvAmountUpdates(groupByTreatment, isRst, patDeviceMap, bedComTypeMap);
+		if (!CollectionUtils.isEmpty(updOrdMains)) {
+			String updateOrdMainIvAmountAndIvSpeedSql =
+                    isRst ? "update ord_main set rst_cond_info = CAST(:indCondInfo AS jsonb) where convert_id = :convertId"
+                            : "update ord_main set ind_cond_info = CAST(:indCondInfo AS jsonb) where convert_id = :convertId";
+			convertJdbcTemplate.batchUpdate(updateOrdMainIvAmountAndIvSpeedSql, SqlParameterSourceUtils.createBatch(updOrdMains));
+		}
+	}
 
-		Map<Integer, String> bedComTypeMap;
+	/**
+	 * ord_main実績用のベッド通信タイプマップを構築する
+	 */
+	private Map<Integer, String> buildOrdMainRstBedComTypeMap(NamedParameterJdbcTemplate convertJdbcTemplate, List<OrdMain> ordMains, boolean isRst) {
 		if (isRst) {
 			Map<String, Object> getMachineParams = new HashMap<>();
 			getMachineParams.put("facilityCd", facilityCd);
@@ -2752,7 +2960,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 			String getMachineSql = "select distinct MB.bed_cd, com_type from mst_bed MB inner join mst_machine MM" +
 					" ON MB.machine_no = MM.machine_no and MM.facility_cd = MB.facility_cd" +
 					" where MM.is_del = '0' and MB.bed_cd in (:bedCds) and MM.facility_cd = :facilityCd";
-			bedComTypeMap = convertJdbcTemplate.query(getMachineSql,getMachineParams, rs -> {
+			return convertJdbcTemplate.query(getMachineSql,getMachineParams, rs -> {
 				Map<Integer, String> map = new HashMap<>();
 				while (rs.next()) {
 					Integer bed = Integer.valueOf(rs.getString("bed_cd"));
@@ -2761,9 +2969,15 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				}
 				return map;
 			});
-		} else {
-			bedComTypeMap = new HashMap<>();
 		}
+		return new HashMap<>();
+	}
+
+	/**
+	 * ord_mainの補液量・補液速度更新対象を収集する
+	 */
+	private List<OrdMain> collectOrdMainIvAmountUpdates(Map<Integer, List<OrdMain>> groupByTreatment, boolean isRst,
+			Map<Long, String> patDeviceMap, Map<Integer, String> bedComTypeMap) {
 		List<OrdMain> updOrdMains = new ArrayList<>();
 
 		//add #12229->12380 start
@@ -2772,15 +2986,15 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 					.collect(Collectors.groupingBy(OrdMain::getIndCondInfo));
 			groupByIndCondInfo.forEach((indCondInfo, subList2) -> {
 				boolean calFlag = false;
-				JSONObject checkJson  = new JSONObject(indCondInfo);
-				if (checkJson.has(TreatmentItemsDef.T_I_IV_AMOUNT.getItemCode())) {
-					String amountStr = checkJson.getJSONObject(TreatmentItemsDef.T_I_IV_AMOUNT.getItemCode()).get("value").toString();
+				JSONObject condInfoJson = new JSONObject(indCondInfo);
+				if (condInfoJson.has(TreatmentItemsDef.T_I_IV_AMOUNT.getItemCode())) {
+					String amountStr = condInfoJson.getJSONObject(TreatmentItemsDef.T_I_IV_AMOUNT.getItemCode()).get("value").toString();
 					if ("0.0".equals(amountStr)) {
 						calFlag = true;
 					}
 				}
-				if (!calFlag && checkJson.has(TreatmentItemsDef.T_I_IV_FLOW_RATE.getItemCode())) {
-					String speedStr = checkJson.getJSONObject(TreatmentItemsDef.T_I_IV_FLOW_RATE.getItemCode()).get("value").toString();
+				if (!calFlag && condInfoJson.has(TreatmentItemsDef.T_I_IV_FLOW_RATE.getItemCode())) {
+					String speedStr = condInfoJson.getJSONObject(TreatmentItemsDef.T_I_IV_FLOW_RATE.getItemCode()).get("value").toString();
 					if ("0.00".equals(speedStr)) {
 						calFlag = true;
 					}
@@ -2789,40 +3003,35 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 
 				if (calFlag) {
 					subList2.forEach(o -> {
+						String deviceSetInfo = patDeviceMap.get(o.getPatId());
+						if (ObjectUtils.isEmpty(deviceSetInfo)) return;
 
-					Long patId = o.getPatId();
-					String deviceSetInfo = patDeviceMap.get(patId);
-					if (ObjectUtils.isEmpty(deviceSetInfo)) return;
-
-					JSONObject condInfoJson = new JSONObject(indCondInfo);
-
-					JSONObject patDeviceSetInfoJSON = new JSONObject(deviceSetInfo);
-					Map<String, String> ivAmountAndSpeedMap = calIvAmountAndIvSpeed(condInfoJson, patDeviceSetInfoJSON);
+						JSONObject targetCondInfoJson = new JSONObject(indCondInfo);
+						JSONObject patDeviceSetInfoJSON = new JSONObject(deviceSetInfo);
+						Map<String, String> ivAmountAndSpeedMap = calIvAmountAndIvSpeed(targetCondInfoJson, patDeviceSetInfoJSON);
 						// 実績の場合、補液計算優先項目を「濾過率から算出」に設定した時の補液速度と補液量を算出する
 						if (isRst
 								&& ivAmountAndSpeedMap != null
 								&& "-1".equals(ivAmountAndSpeedMap.get(TreatmentItemsDef.T_I_IV_AMOUNT.getItemCode()))
-								&& "-1".equals(ivAmountAndSpeedMap.get(TreatmentItemsDef.T_I_IV_FLOW_RATE.getItemCode()))
-						) {
-
+								&& "-1".equals(ivAmountAndSpeedMap.get(TreatmentItemsDef.T_I_IV_FLOW_RATE.getItemCode()))) {
 							Map<String, String> rstIvAmountAndSpeedMap = calByRstIvFlowSetting(patDeviceSetInfoJSON, o,
 									null == bedComTypeMap || bedComTypeMap.containsKey(o.getRstBedCd()) ? null : bedComTypeMap.get(o.getRstBedCd()));
 							if (!ObjectUtils.isEmpty(rstIvAmountAndSpeedMap)) {
 								rstIvAmountAndSpeedMap.forEach((key, value) -> {
-									JSONObject ivAmountAndSpeedJSON = condInfoJson.getJSONObject(key);
+									JSONObject ivAmountAndSpeedJSON = targetCondInfoJson.getJSONObject(key);
 									if (!ObjectUtils.isEmpty(ivAmountAndSpeedJSON)) {
 										ivAmountAndSpeedJSON.put("value", value);
 									}
 								});
 								OrdMain omToUpd = new OrdMain();
 								omToUpd.setConvertId(o.getConvertId());
-								omToUpd.setIndCondInfo(condInfoJson.toString());
+								omToUpd.setIndCondInfo(targetCondInfoJson.toString());
 								updOrdMains.add(omToUpd);
 							}
 						} else {
-						if (!ObjectUtils.isEmpty(ivAmountAndSpeedMap)) {
+							if (!ObjectUtils.isEmpty(ivAmountAndSpeedMap)) {
 							ivAmountAndSpeedMap.forEach((key, value) -> {
-								JSONObject ivAmountAndSpeedJSON = condInfoJson.getJSONObject(key);
+								JSONObject ivAmountAndSpeedJSON = targetCondInfoJson.getJSONObject(key);
 								if (!ObjectUtils.isEmpty(ivAmountAndSpeedJSON)) {
 									ivAmountAndSpeedJSON.put("value", value);
 								}
@@ -2830,7 +3039,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 
 								OrdMain omToUpd = new OrdMain();
 								omToUpd.setConvertId(o.getConvertId());
-								omToUpd.setIndCondInfo(condInfoJson.toString());
+								omToUpd.setIndCondInfo(targetCondInfoJson.toString());
 								updOrdMains.add(omToUpd);
 							}
 						}
@@ -2838,13 +3047,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				}
 			});
 		}
-		//add #12229->12380 end
-		if (!CollectionUtils.isNullOrEmpty(updOrdMains)) {
-			String updateOrdMainIvAmountAndIvSpeedSql =
-                    isRst ? "update ord_main set rst_cond_info = CAST(:indCondInfo AS jsonb) where convert_id = :convertId"
-                            : "update ord_main set ind_cond_info = CAST(:indCondInfo AS jsonb) where convert_id = :convertId";
-			convertJdbcTemplate.batchUpdate(updateOrdMainIvAmountAndIvSpeedSql, SqlParameterSourceUtils.createBatch(updOrdMains));
-		}
+		return updOrdMains;
 	}
 
 	/**
@@ -3048,59 +3251,110 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				.getJSONObject("A").get("398"));
 		JSONObject condInfo = null == ordMain.getIndCondInfo() ? new JSONObject() :
 				new JSONObject(ordMain.getIndCondInfo());
-		double QB = 0d;
-		double FF;
-		double QUF;
 		double DT = Double.parseDouble(delayTimeStr);
-
 		String beforeIv = condInfo.getJSONObject(TreatmentItemsDef.T_I_IV_SELECTION.getItemCode()).get("value").toString();
-		if ("1".equals(beforeIv)) {
-			// "前補液"
-			FF = Double.parseDouble(deviceSetInfo.getJSONObject("ope")
-					.getJSONObject("dev")
-					.getJSONObject("A").get("90").toString());
-		} else {
-			// "後補液"
-			FF = Double.parseDouble(deviceSetInfo.getJSONObject("ope")
-					.getJSONObject("dev")
-					.getJSONObject("B").get("40").toString());
-		}
+		double FF = extractRstIvFlowFfValue(deviceSetInfo, beforeIv);
 		double Ht = Double.parseDouble(deviceSetInfo.getJSONObject("ope")
 				.getJSONObject("dev")
 				.getJSONObject("A").get("91").toString());
 		double TP = Double.parseDouble(deviceSetInfo.getJSONObject("ope")
 				.getJSONObject("dev")
 				.getJSONObject("A").get("92").toString());
+		double QB = extractRstIvFlowBloodFlow(condInfo);
+		double weigheBefore = extractRstIvFlowWeightBefore(ordMain);
+		double targetWeight = extractRstIvFlowTargetWeight(condInfo);
+		double condTime = extractRstIvFlowCondTime(condInfo);
+		double dd = extractRstIvFlowFilterLimit(condInfo);
+		double QUF = calculateRstIvFlowQuf(ordMain, weigheBefore, targetWeight, condTime, dd);
+		double QPW = calculateRstIvFlowQpw(Ht, TP, QB);
 
+		if ("3".equals(comType)) {
+			return new HashMap<>() {
+				{
+					put(TreatmentItemsDef.T_I_IV_AMOUNT.getItemCode(), "0");
+					put(TreatmentItemsDef.T_I_IV_FLOW_RATE.getItemCode(), "0");
+				}
+			};
+		}
+		return buildRstIvFlowSettingResult(beforeIv, FF, QUF, QPW, condInfo, condTime, DT, weigheBefore);
+	}
+
+	/**
+	 * 実績濾過率算出用のFF（濾過率）を取得する
+	 */
+	private double extractRstIvFlowFfValue(JSONObject deviceSetInfo, String beforeIv) {
+		if ("1".equals(beforeIv)) {
+			return Double.parseDouble(deviceSetInfo.getJSONObject("ope")
+					.getJSONObject("dev")
+					.getJSONObject("A").get("90").toString());
+		}
+		return Double.parseDouble(deviceSetInfo.getJSONObject("ope")
+				.getJSONObject("dev")
+				.getJSONObject("B").get("40").toString());
+	}
+
+	/**
+	 * 実績濾過率算出用のQB（血流量）を取得する
+	 */
+	private double extractRstIvFlowBloodFlow(JSONObject condInfo) {
+		double QB = 0d;
 		if (condInfo.has(TreatmentItemsDef.T_I_BLOOD_FLOW.getItemCode()) && !condInfo.isNull(TreatmentItemsDef.T_I_BLOOD_FLOW.getItemCode())) {
 			JSONObject condTimeJson = (JSONObject) condInfo.get(TreatmentItemsDef.T_I_BLOOD_FLOW.getItemCode());
 			QB = condTimeJson.getDouble("value");
 		}
+		return QB;
+	}
 
-		// 前体重
+	/**
+	 * 実績濾過率算出用の前体重を取得する
+	 */
+	private double extractRstIvFlowWeightBefore(OrdMain ordMain) {
 		String rstWeight = ordMain.getRstWeightInfo();
 		rstWeight = null == rstWeight ? "{}" : rstWeight;
 		JSONObject rstWeightInfoJson = new JSONObject(rstWeight);
-		double weigheBefore = rstWeightInfoJson.isNull("weight_before") ? 0d : rstWeightInfoJson.optDouble("weight_before", 0d);
+		return rstWeightInfoJson.isNull("weight_before") ? 0d : rstWeightInfoJson.optDouble("weight_before", 0d);
+	}
 
-		// 目標体重
+	/**
+	 * 実績濾過率算出用の目標体重を取得する
+	 */
+	private double extractRstIvFlowTargetWeight(JSONObject condInfo) {
 		double targetWeight = 0d;
 		if (condInfo.has(TreatmentItemsDef.T_I_WEIGHT.getItemCode()) && !condInfo.isNull(TreatmentItemsDef.T_I_WEIGHT.getItemCode())) {
 			JSONObject condTimeJson = (JSONObject) condInfo.get(TreatmentItemsDef.T_I_WEIGHT.getItemCode());
 			targetWeight = condTimeJson.getDouble("value");
 		}
+		return targetWeight;
+	}
 
-		// 透析時間
+	/**
+	 * 実績濾過率算出用の透析時間を取得する
+	 */
+	private double extractRstIvFlowCondTime(JSONObject condInfo) {
 		double condTime = 0d;
 		if (condInfo.has(TreatmentItemsDef.T_I_START_DATE.getItemCode()) && !condInfo.isNull(TreatmentItemsDef.T_I_START_DATE.getItemCode())) {
 			JSONObject condTimeJson = (JSONObject) condInfo.get(TreatmentItemsDef.T_I_START_DATE.getItemCode());
 			condTime = condTimeJson.getDouble("value");
 		}
+		return condTime;
+	}
+
+	/**
+	 * 実績濾過率算出用のフィルター上限を取得する
+	 */
+	private double extractRstIvFlowFilterLimit(JSONObject condInfo) {
 		double dd = 0d;
 		if (condInfo.has(TreatmentItemsDef.T_I_FILTER_LIMIT.getItemCode()) && !condInfo.isNull(TreatmentItemsDef.T_I_FILTER_LIMIT.getItemCode())) {
 			JSONObject condTimeJson = (JSONObject) condInfo.get(TreatmentItemsDef.T_I_FILTER_LIMIT.getItemCode());
 			dd = condTimeJson.getDouble("value");
 		}
+		return dd;
+	}
+
+	/**
+	 * 実績濾過率算出用のQUF（除水速度）を計算する
+	 */
+	private double calculateRstIvFlowQuf(OrdMain ordMain, double weigheBefore, double targetWeight, double condTime, double dd) {
 		JSONObject offWaterInfo = new JSONObject(ordMain.getRstOffWaterInfo());
 		Integer offWaterInfoWeight1 = toWeight(offWaterInfo.get("weight_1").toString());
 		Integer offWaterInfoWeight2 = toWeight(offWaterInfo.get("weight_2").toString());
@@ -3111,26 +3365,28 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 
 		// 除水速度
 		double ddRel = weigheBefore + Double.parseDouble(Integer.toString(offWaterInfoWeightAmount)) / 1000 - targetWeight;
+		double QUF;
 		if (ddRel > dd) {
 			QUF = dd / (condTime / 60);
 		} else {
 			QUF = ddRel / (condTime / 60);
 		}
-		QUF = Double.parseDouble(new BigDecimal(QUF).setScale(4, BigDecimal.ROUND_UP).toString());
+		return Double.parseDouble(new BigDecimal(QUF).setScale(4, BigDecimal.ROUND_UP).toString());
+	}
 
+	/**
+	 * 実績濾過率算出用のQPW（血漿流量）を計算する
+	 */
+	private double calculateRstIvFlowQpw(double Ht, double TP, double QB) {
 		double QPW = ((100 - Ht) / 100) * (1 - (0.0107 * TP)) * QB;
-		QPW = Double.parseDouble(new BigDecimal(QPW).setScale(1, BigDecimal.ROUND_DOWN).toString());
+		return Double.parseDouble(new BigDecimal(QPW).setScale(1, BigDecimal.ROUND_DOWN).toString());
+	}
 
-		// 医器工V3、V4：補液速度、補液量ともに0を展開する。
-		if ("3".equals(comType)) {
-			return new HashMap<>() {
-				{
-					put(TreatmentItemsDef.T_I_IV_AMOUNT.getItemCode(), "0");
-					put(TreatmentItemsDef.T_I_IV_FLOW_RATE.getItemCode(), "0");
-				}
-			};
-		} else {
-			// 新通信、オフライン
+	/**
+	 * 実績濾過率算出結果の補液量・補液速度マップを構築する
+	 */
+	private Map<String, String> buildRstIvFlowSettingResult(String beforeIv, double FF, double QUF, double QPW,
+			JSONObject condInfo, double condTime, double DT, double weigheBefore) {
 			double value;
 			String valueString = "0";
 			String valueSaveString = "0";
@@ -3163,7 +3419,6 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 					put(TreatmentItemsDef.T_I_IV_FLOW_RATE.getItemCode(), finalValueSaveString);
 				}
 			};
-		}
 	}
 	private Integer toWeight(String weigh) {
 		if ("null".equals(weigh)) {
@@ -3289,7 +3544,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 		// 重複レコードの詳細情報が同じの原因で、FNW+で管理する施設内の一意なコードの中で、一つのみ取得して結構です。
 		mainteCategoryList.forEach(category -> category.setFnMainteCategoryCd(category.getFnMainteCategoryCd().split(",")[0]));
 
-		if (!CollectionUtils.isNullOrEmpty(mainteCategoryList)) {
+		if (!CollectionUtils.isEmpty(mainteCategoryList)) {
 			// 日常・定期点検項目マスタの定期点検情報を取得する
 			String detailSql = "select mainte_detail_cd, fn_mainte_detail_cd, fn_mainte_type, mainte_content_1 as mainteContent1 from mst_mainte_detail where facility_cd = ? and mainte_class = '2' order by mainte_detail_cd";
 			List<MstMainteDetail> mainteDetailList = jdbcTemplateConvert.query(detailSql, new BeanPropertyRowMapper<>(MstMainteDetail.class), facilityCd);
@@ -3299,7 +3554,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				d.setFnMainteDetailCdList(fnDetailCds);
 			});
 
-			if (!CollectionUtils.isNullOrEmpty(mainteDetailList)) {
+			if (!CollectionUtils.isEmpty(mainteDetailList)) {
 				List<String> sortContents = Stream.of("任意付属品", "タイプ別装備").toList();
 				record DetailJson(Long code, String isDisp, Long sortKey1, Long sortKey2) {}
 				mainteCategoryList.forEach(category -> {
@@ -3350,7 +3605,14 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
         String sql = "select convert_id, mainte_no, mainte_layout_cd, up_date from mnt_mainte_main where facility_cd = ? and mainte_class = '2' and detail = '[[],[]]'";
         List<MntMainteMain> mainteMainList = jdbcTemplateConvert.query(sql, new BeanPropertyRowMapper<>(MntMainteMain.class), facilityCd);
 		List<String> sortContents = Stream.of("任意付属品", "タイプ別装備").toList();
-		mainteMainList.forEach(main -> {
+		mainteMainList.forEach(main -> updateSingleMainteMainDetailRecord(main, sortContents));
+
+	}
+
+	/**
+	 * mnt_mainte_mainの単一レコード詳細を再設定する
+	 */
+	private void updateSingleMainteMainDetailRecord(MntMainteMain main, List<String> sortContents) {
 			// 日常・定期点検項目マスタの定期点検情報を取得する
 			String detailSql = """
 					SELECT
@@ -3452,7 +3714,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 						.collect(Collectors.joining(", "));
 				return "[%s]".formatted(jsonObjStr);
 			}).toList());
-			if (!CollectionUtils.isNullOrEmpty(jsonStrList)) {
+			if (!CollectionUtils.isEmpty(jsonStrList)) {
 				if (jsonStrList.size() == 1) {
 					if (detailMap.containsKey(1)) {
 						jsonStrList.add("[]");
@@ -3465,19 +3727,31 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
                 String updSql = "UPDATE mnt_mainte_main a SET detail = ?::jsonb where a.facility_cd = ? AND convert_id = ?";
                 jdbcTemplateConvert.update(updSql, jsonArray, facilityCd, main.getConvertId());
 			}
-		});
-
 	}
 	// add #10870 mnt_mainte_main.detail再設定 zkm end
 
 	// add #10969 zc start
 	private void updateOrdPersonalPrescription() {
 		EventLogMessage eventLogMessage = new EventLogMessage();
+		try {
+			int count = executeOrdPersonalPrescriptionInsuUpdate();
+			eventLogMessage = eventLoggerUtil.getEventLogMessage(String.format("ord_personal_prescription.insu_set_info更新成功%d件", count),
+					facilityCd, "updatePatInsuranceHistory()");
+			eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.INFO);
+		}catch (Exception e){
+			eventLogMessage = eventLoggerUtil.getEventLogMessage("ord_personal_prescription.insu_set_info更新に失敗しました！ " + e.getMessage(),
+					facilityCd, "updatePatInsuranceHistory()");
+			eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.ERROR);
+		}
+	}
+
+	/**
+	 * ord_personal_prescriptionの保険セット情報を更新する
+	 */
+	private int executeOrdPersonalPrescriptionInsuUpdate() {
 		MapSqlParameterSource parameters = new MapSqlParameterSource()
 				.addValue("facility_cd", facilityCd);
-		try {
-			// SQL
-			String update_ord_personal_prescription = """
+		String update_ord_personal_prescription = """
                 WITH A AS (
                      SELECT
                         pat_id,
@@ -3598,17 +3872,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
                     ord_personal_prescription.pat_id = E.pat_id
                     AND  ord_personal_prescription.facility_cd = :facility_cd
                 """;
-			int count = namedParameterJdbcTemplateConvert.update(update_ord_personal_prescription, parameters);
-			//ログ
-			eventLogMessage = eventLoggerUtil.getEventLogMessage(String.format("ord_personal_prescription.insu_set_info更新成功%d件", count),
-					facilityCd, "updatePatInsuranceHistory()");
-			eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.INFO);
-		}catch (Exception e){
-			//ログ
-			eventLogMessage = eventLoggerUtil.getEventLogMessage("ord_personal_prescription.insu_set_info更新に失敗しました！ " + e.getMessage(),
-					facilityCd, "updatePatInsuranceHistory()");
-			eventLoggerUtil.recordLog(facilityCd, eventLogMessage, LogLevel.ERROR);
-		}
+		return namedParameterJdbcTemplateConvert.update(update_ord_personal_prescription, parameters);
 	}
 	// add #10969 zc end
 
@@ -3621,7 +3885,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 	 */
 	private void addDwInfo(String facilityCd, List<OrdMain> ordMainList) throws Exception {
 		List<Long> patIdList = ordMainList.stream().map(OrdMain::getPatId).distinct().collect(Collectors.toList());
-		if (CollectionUtils.isNullOrEmpty(patIdList)) {
+		if (CollectionUtils.isEmpty(patIdList)) {
 			return;
 		}
 		HikariDataSource convert_ds = (HikariDataSource) appContext.getBean(ApplicationConst.DbType.CONVERT);
@@ -3637,7 +3901,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				" set ind_dw = :indDw" +
                 " where convert_id = :convertId";
 		List<OrdMain> ordMainToUpdate = new LinkedList<>();
-		if (!CollectionUtils.isNullOrEmpty(ordMainPartList)) {
+		if (!CollectionUtils.isEmpty(ordMainPartList)) {
 			String queryDw = "SELECT info->>'dw' FROM pat_unique CROSS JOIN LATERAL json_array_elements (physical_info :: json) info "
 					+ "where info->>'inspect_date' <= :treatDate "
 					+ "and pat_id = :patId "
@@ -3650,7 +3914,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				dwCond.put("patId", ordMainPart.get("pat_id"));
 				dwCond.put("treatDate", ordMainPart.get("treat_date"));
 				List<String> dwList = jdbcTemplate_convert.queryForList(queryDw, dwCond, String.class);
-				if (!CollectionUtils.isNullOrEmpty(dwList)
+				if (!CollectionUtils.isEmpty(dwList)
 						&& !org.springframework.util.ObjectUtils.isEmpty(dwList.get(0))) {
 					OrdMain omToUpd = new OrdMain();
                     omToUpd.setConvertId(Long.getLong(String.valueOf(ordMainPart.get("convert_id"))));
@@ -3658,7 +3922,7 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 					ordMainToUpdate.add(omToUpd);
 				}
 			}
-			if (!CollectionUtils.isNullOrEmpty(ordMainToUpdate)) {
+			if (!CollectionUtils.isEmpty(ordMainToUpdate)) {
 				jdbcTemplate_convert.batchUpdate(updOmDw, SqlParameterSourceUtils.createBatch(ordMainToUpdate));
 			}
 		}

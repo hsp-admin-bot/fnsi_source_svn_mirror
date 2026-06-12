@@ -52,86 +52,141 @@ GROUP BY pat_id, category_class, cd
 SELECT DISTINCT *
 from TABOO_ALLERGY_data_pat
 where category_class = '1'
-  )
-SELECT
-    A.medicine_cd                   AS "medicineCd",
-    A.facility_cd                   AS "facilityCd",
-    A.fn_medicine_cd                AS "fnMedicineCd",
-    A.standard_medicine_cd          AS "standardMedicineCd",
-    A.is_trial                      AS "isTrial",
-    A.medicine_name                 AS "medicineName",
-    A.medicine_short_name           AS "medicineShortName",
-    A.unit                          AS "unit",
-    A.unit_second                   AS "unitSecond",
-    A.class_cd                      AS "classCd",
-    A.is_shot                       AS "isShot",
-    A.use_start_date                AS "useStartDate",
-    A.use_end_date                  AS "useEndDate",
-    A.is_medicated                  AS "isMedicated",
-    A.unit_converted_amount         AS "unitConvertedAmount",
-    A.unit_converted_amount_second  AS "unitConvertedAmountSecond",
-    A.anticoagulant_original_quantity AS "anticoagulantOriginalQuantity",
-    A.after_anticoagulant_quantity  AS "afterAnticoagulantQuantity",
-    A.in_hospital_cd_1              AS "inHospitalCd1",
-    A.in_hospital_cd_2              AS "inHospitalCd2",
-    A.in_hospital_cd_3              AS "inHospitalCd3",
-    A.in_hospital_cd_4              AS "inHospitalCd4",
-    A.is_disp                       AS "isDisp",
-    A.is_del                        AS "isDel",
-    A.reg_date                      AS "regDate",
-    A.up_date                       AS "upDate",
-    A.is_exchange                   AS "isExchange",
-    A.medicate_timing_cd            AS "medicateTimingCd",
-    A.procedure_cd                  AS "procedureCd",
-    A.unit_decimal_point            AS "unitDecimalPoint",
-    A.unit_decimal_point_second     AS "unitDecimalPointSecond",
+  ),
+BASE AS (
+  SELECT
+      A.medicine_cd                   AS "medicineCd",
+      A.facility_cd                   AS "facilityCd",
+      A.fn_medicine_cd                AS "fnMedicineCd",
+      A.standard_medicine_cd          AS "standardMedicineCd",
+      A.is_trial                      AS "isTrial",
+      A.medicine_name                 AS "medicineName",
+      A.medicine_short_name           AS "medicineShortName",
+      A.unit                          AS "unit",
+      A.unit_second                   AS "unitSecond",
+      A.class_cd                      AS "classCd",
+      A.is_shot                       AS "isShot",
+      A.use_start_date                AS "useStartDate",
+      A.use_end_date                  AS "useEndDate",
+      A.is_medicated                  AS "isMedicated",
+      A.unit_converted_amount         AS "unitConvertedAmount",
+      A.unit_converted_amount_second  AS "unitConvertedAmountSecond",
+      A.anticoagulant_original_quantity AS "anticoagulantOriginalQuantity",
+      A.after_anticoagulant_quantity  AS "afterAnticoagulantQuantity",
+      A.in_hospital_cd_1              AS "inHospitalCd1",
+      A.in_hospital_cd_2              AS "inHospitalCd2",
+      A.in_hospital_cd_3              AS "inHospitalCd3",
+      A.in_hospital_cd_4              AS "inHospitalCd4",
+      A.is_disp                       AS "isDisp",
+      A.is_del                        AS "isDel",
+      A.reg_date                      AS "regDate",
+      A.up_date                       AS "upDate",
+      A.is_exchange                   AS "isExchange",
+      A.medicate_timing_cd            AS "medicateTimingCd",
+      A.procedure_cd                  AS "procedureCd",
+      A.unit_decimal_point            AS "unitDecimalPoint",
+      A.unit_decimal_point_second     AS "unitDecimalPointSecond",
+      CASE
+          WHEN ms.code IS NOT NULL THEN 0 ELSE 1
+      END                             AS "sortGroup",
+      ms.selector_index               AS "medicineSelectorIndex",
+      CASE
+        WHEN TATM.is_taboo AND TATM.is_allergy THEN '【禁忌・ｱﾚﾙｷﾞｰ】'
+        WHEN TATM.is_taboo THEN '【禁忌】'
+        WHEN TATM.is_allergy THEN '【ｱﾚﾙｷﾞｰ】'
+        ELSE ''
+      END                      AS "tabooAllergy",
+      CASE
+        WHEN
+          (A.use_start_date IS NOT NULL AND A.use_start_date >
+            /*%if params.get("treatDate") != null && !params.get("treatDate").trim().isEmpty() */
+              /* params.get("treatDate") */'20000101'
+            /*%else */
+              TO_CHAR(CURRENT_DATE, 'YYYYMMDD')
+            /*%end */
+          )
+            OR
+          (A.use_end_date   IS NOT NULL AND A.use_end_date   <
+            /*%if params.get("treatDate") != null && !params.get("treatDate").trim().isEmpty() */
+              /* params.get("treatDate") */'20000101'
+            /*%else */
+              TO_CHAR(CURRENT_DATE, 'YYYYMMDD')
+            /*%end */
+          )
+          THEN '【期限切れ】'
+        ELSE ''
+      END                      AS "expired",
+      CASE
+        WHEN /* params.get("classType") */'' <> ''
+             AND MMC.class_type IS DISTINCT FROM /* params.get("classType") */'0'
+          THEN '【分類不一致】'
+        ELSE ''
+      END                      AS "classInconsistent"
+  FROM
+      mst_medicine A
+      LEFT JOIN mst_medicine_class MMC
+        ON MMC.class_cd = A.class_cd
+      LEFT JOIN TABOO_ALLERGY_TO_MST TATM ON A.medicine_cd = TATM.cd
+      LEFT JOIN LATERAL (
+          SELECT
+              mss.facility_cd      AS facility_cd,
+              ms.code              AS code,
+              ms.name              AS name,
+              ROW_NUMBER() OVER () AS selector_index
+          FROM
+              mst_selector mss
+              CROSS JOIN LATERAL jsonb_to_recordset(
+                  mss.order_settings -> 'items'
+              ) AS ms(code BIGINT, name TEXT)
+          WHERE
+              mss.master_physical_name = 'mst_medicine'
+      ) ms
+          ON A.facility_cd = ms.facility_cd
+         AND A.medicine_cd = ms.code
+  WHERE
+      A.facility_cd = /* params.get("facilityCd") */'0'
+),
+MAIN AS (
+  SELECT
+    B.*,
+    '' AS "deleted",
+    '' AS "includeDeleted"
+  FROM BASE B
+  WHERE
+    B."isDisp" = '1'
+    AND B."isDel" = '0'
+    /*%if params.get("classType") != null && !params.get("classType").trim().isEmpty()*/
+    AND B."classInconsistent" = ''
+    /*%end*/
+),
+INIT AS (
+  SELECT
+    B.*,
     CASE
-        WHEN ms.code IS NOT NULL THEN 0 ELSE 1
-    END                             AS "sortGroup",
-    ms.selector_index               AS "medicineSelectorIndex",
-    CASE
-      WHEN TATM.is_taboo AND TATM.is_allergy THEN '【禁忌・ｱﾚﾙｷﾞｰ】'
-      WHEN TATM.is_taboo THEN '【禁忌】'
-      WHEN TATM.is_allergy THEN '【ｱﾚﾙｷﾞｰ】'
-      ELSE ''
-    END                      AS "tabooAllergy",
-    CASE
-      WHEN
-        (A.use_start_date IS NOT NULL AND A.use_start_date > TO_CHAR(CURRENT_DATE, 'YYYYMMDD'))
-          OR
-        (A.use_end_date   IS NOT NULL AND A.use_end_date   < TO_CHAR(CURRENT_DATE, 'YYYYMMDD'))
-        THEN '【期限切れ】'
-      ELSE ''
-    END                      AS "expired",
-    CASE
-      WHEN
-        A.is_disp = '0' OR A.is_del = '1'
+      WHEN B."isDisp" = '0' OR B."isDel" = '1'
         THEN '【削除済み】'
       ELSE ''
-    END                      AS "deleted",
+    END AS "deleted",
     '' AS "includeDeleted"
-FROM
-    mst_medicine A
-    LEFT JOIN TABOO_ALLERGY_TO_MST TATM ON A.medicine_cd = TATM.cd
-    LEFT JOIN LATERAL (
-        SELECT
-            mss.facility_cd      AS facility_cd,
-            ms.code              AS code,
-            ms.name              AS name,
-            ROW_NUMBER() OVER () AS selector_index
-        FROM
-            mst_selector mss
-            CROSS JOIN LATERAL jsonb_to_recordset(
-                mss.order_settings -> 'items'
-            ) AS ms(code BIGINT, name TEXT)
-        WHERE
-            mss.master_physical_name = 'mst_medicine'
-    ) ms
-        ON A.facility_cd = ms.facility_cd
-       AND A.medicine_cd = ms.code
-WHERE
-    A.facility_cd = /* params.get("facilityCd") */'0'
+  FROM BASE B
+  WHERE
+    /*%if params.get("initMedicineCd") != null && !params.get("initMedicineCd").trim().isEmpty() */
+    B."medicineCd" = (/* params.get("initMedicineCd") */0)::int
+    /*%else */
+    1 = 0
+    /*%end */
+)
+SELECT *
+FROM MAIN
+UNION ALL
+SELECT I.*
+FROM INIT I
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM MAIN M
+  WHERE M."medicineCd" = I."medicineCd"
+)
 ORDER BY
     "sortGroup" ASC,
-    ms.selector_index NULLS LAST,
-    A.medicine_cd;
+    "medicineSelectorIndex" NULLS LAST,
+    "medicineCd";

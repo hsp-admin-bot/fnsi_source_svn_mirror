@@ -11,7 +11,7 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-                    :visible.sync='popoverVisible'
+                    v-model:visible='popoverVisible'
                     :target='popoverTarget'
                     :direction='popoverDirection'
                     :cover-target="false"
@@ -98,8 +98,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { LogClass } from "@/models/master-maintenance/mst-alarm-notification/LogClass";
 import { TargetModel } from "@/models/master-maintenance/mst-alarm-notification/TargetModel";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
@@ -299,7 +299,7 @@ export default {
 .button-row > .right {
   float: right;
 }
-.button-row >>> .button {
+.button-row :deep(.button) {
   width: auto;
   min-width: 80px;
 }

@@ -18,13 +18,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+
+import org.springframework.batch.core.step.Step;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
@@ -53,7 +55,7 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
     private ApplicationContext appContext;
 
     @Autowired
-    private StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
 
     @Autowired
 	ProgressManagement progressManagement;
@@ -105,14 +107,38 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
         String nextProcessingFile = chunkContext.getStepContext().getJobExecutionContext().get(ApplicationConst.PromotionKeys.NEXT_PROCESSING_FILE).toString();
         String inputFilePath = chunkContext.getStepContext().getJobParameters().get(JobParameterKeys.INPUT_FILE_PATH).toString();
         //7341 mni _monitorテーブルとmnt_motion_recordテーブ
+        RepeatStatus earlyExitStatus = executeCheckEarlyExit(nextProcessingFile);
+        if (earlyExitStatus != null) {
+            return earlyExitStatus;
+        }
+        // add 7853-差分コンバートで更新/削除ができない 楊 start
+        int diff = nextProcessingFile.indexOf("[diff]");
+
+        executeUploadBbsInfoIfNeeded(nextProcessingFile, inputFilePath, facilityCd, chunkContext, globalContext);
+
+        //mod 2022-04-01   判断条件の修正  鄭  start
+        int indexFile = nextProcessingFile.indexOf("indicatorShoe");
+        //mod 2022-04-01   判断条件の修正  鄭  end
+        if (indexFile != -1) {
+            return RepeatStatus.FINISHED;
+        } else {
+            return executeMainTableConvert(se, nextProcessingFile, inputFilePath, facilityCd, chunkContext, diff);
+        }
+    }
+
+    // mnt_motion_record等の早期終了判定
+    private RepeatStatus executeCheckEarlyExit(String nextProcessingFile) {
         if (!ObjectUtils.isEmpty(nextProcessingFile)) {
             if (nextProcessingFile.contains("mnt_motion_record")) {
                 return RepeatStatus.FINISHED;
             }
         }
-        // add 7853-差分コンバートで更新/削除ができない 楊 start
-        int diff = nextProcessingFile.indexOf("[diff]");
+        return null;
+    }
 
+    // bbs_infoテーブルのS3ファイルアップロード処理
+    private void executeUploadBbsInfoIfNeeded(String nextProcessingFile, String inputFilePath, String facilityCd,
+                                              ChunkContext chunkContext, GlobalContext globalContext) {
         //add #9801 zl start
         if ("bbs_info".equals(psqlCopyUtils.getTableName(nextProcessingFile))) {
             //ログ
@@ -135,12 +161,11 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
         }
         //add #9801 zl end
 
-        //mod 2022-04-01   判断条件の修正  鄭  start
-        int indexFile = nextProcessingFile.indexOf("indicatorShoe");
-        //mod 2022-04-01   判断条件の修正  鄭  end
-        if (indexFile != -1) {
-            return RepeatStatus.FINISHED;
-        } else {
+    }
+
+    // テーブル毎の初回/差分コンバート本処理
+    private RepeatStatus executeMainTableConvert(StepExecution se, String nextProcessingFile, String inputFilePath,
+                                                 String facilityCd, ChunkContext chunkContext, int diff) throws Exception {
             // mod 7853-差分コンバートで更新/削除ができない 楊 start
             String tableName = PsqlCopyUtils.getTableName(nextProcessingFile);
             // mod 10378-24-4 PatTreatmentPattern再構築対応 zkm start
@@ -173,7 +198,6 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
             progressManagement.createConvertTableStatus(se, "Copyコマンド正常終了：処理テーブル：" + tableName);
             return RepeatStatus.FINISHED;
         }
-    }
 
     /**
      * 初回コンバートの場合
@@ -185,8 +209,27 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
      */
     private RepeatStatus firstConvert(String tableName, String facilityCd, ChunkContext chunkContext) throws Exception {
         GlobalContext globalContext = JobStartEndLIstener.getGlobalContext();
+        RepeatStatus skipStatus = firstConvertCheckSkip(tableName, globalContext);
+        if (skipStatus != null) {
+            return skipStatus;
+        }
         String inputePath = chunkContext.getStepContext().getJobParameters().get(ApplicationConst.JobParameterKeys.INPUT_FILE_PATH)
                 .toString();
+        // sqlファイルから、コピーsqlを取得する
+        File fileProductionDbToConvertDb = new File(inputePath + "/ProductionDbToConvertDbStep.txt");
+        // 本番DBからコンバートDBにcopyCommandファイルを削除 一行目：テープル、二～四行目：sqlCommand
+        if (fileProductionDbToConvertDb.exists() && 0 != fileProductionDbToConvertDb.length()) {
+            firstConvertRunCopyCommands(fileProductionDbToConvertDb, chunkContext, tableName, facilityCd);
+            firstConvertUpdateComsvSetting(globalContext, facilityCd);
+
+        } else {
+            return RepeatStatus.FINISHED;
+        }
+        return null;
+    }
+
+    // 初回コンバートのスキップ条件判定
+    private RepeatStatus firstConvertCheckSkip(String tableName, GlobalContext globalContext) {
         String cols = convertKeyConfig.getConvertKey(tableName);
         if (cols == null || cols.trim().isEmpty()) {
             cols = convertKeyConfig.getConvertbKey(tableName);
@@ -200,10 +243,12 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
         if (globalContext.insFnValue.isEmpty() && globalContext.seqRegist == -1) {
             return RepeatStatus.FINISHED;
         }
-        // sqlファイルから、コピーsqlを取得する
-        File fileProductionDbToConvertDb = new File(inputePath + "/ProductionDbToConvertDbStep.txt");
-        // 本番DBからコンバートDBにcopyCommandファイルを削除 一行目：テープル、二～四行目：sqlCommand
-        if (fileProductionDbToConvertDb.exists() && 0 != fileProductionDbToConvertDb.length()) {
+        return null;
+    }
+
+    // 初回コンバートのコピーコマンド実行
+    private void firstConvertRunCopyCommands(File fileProductionDbToConvertDb, ChunkContext chunkContext,
+                                             String tableName, String facilityCd) throws Exception {
             List<String> sqlProductionDbToConvertDb = utils.readFile(fileProductionDbToConvertDb);
             String[] command = new String[3];
             if( "\\".equals(System.getProperty("file.separator")) ) {
@@ -219,6 +264,10 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
             }
             // copyCommandファイルを削除
             fileProductionDbToConvertDb.delete();
+    }
+
+    // 初回コンバート後のmst_comsv_setting更新
+    private void firstConvertUpdateComsvSetting(GlobalContext globalContext, String facilityCd) {
             // add #12230 差分コンバートにより元に戻ってしまう項目がある limingzhe start
             if (!globalContext.convertComsvList.isEmpty()) {
                 String comsv_setting_sql = "select convert_id,device_edge_no from mst_comsv_setting where facility_cd= ? order by device_edge_no";
@@ -264,10 +313,6 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
                 }
             }
             // add #12230 差分コンバートにより元に戻ってしまう項目がある limingzhe end
-        } else {
-            return RepeatStatus.FINISHED;
-        }
-        return null;
     }
 
     /**
@@ -289,12 +334,35 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
             cols = convertKeyConfig.getConvertbKey(tableName);
         }
         String[] names = cols.split(",");
+        RepeatStatus skipStatus = diffConvertCheckSkipTable(tableName);
+        if (skipStatus != null) {
+            return skipStatus;
+        }
+        diffConvertCopyNewKeys(inputFilePath, tableName, facilityCd, chunkContext, productionDbType, columnNameList, names, globalContext);
+        diffConvertCopyDisNoKeys(inputFilePath, tableName, facilityCd, chunkContext, productionDbType, columnNameList, globalContext);
+        RepeatStatus updateSkipStatus = diffConvertCopyUpdateKeys(inputFilePath, tableName, facilityCd, chunkContext, productionDbType, columnNameList, names, globalContext);
+        if (updateSkipStatus != null) {
+            return updateSkipStatus;
+        }
+        diffConvertAllDeleteAllInsert(inputFilePath, tableName, facilityCd, chunkContext, productionDbType, columnNameList, globalContext);
+        return null;
+    }
+
+    // 差分コンバート対象外テーブルの判定
+    private RepeatStatus diffConvertCheckSkipTable(String tableName) {
         if("mst_user_authentication".equals(tableName)){
             return RepeatStatus.FINISHED;
         }
         if("mst_user".equals(tableName)){
             return RepeatStatus.FINISHED;
         }
+        return null;
+    }
+
+    // 差分コンバートの新規キー（sqlNewKeys）コピー処理
+    private void diffConvertCopyNewKeys(String inputFilePath, String tableName, String facilityCd,
+                                        ChunkContext chunkContext, String productionDbType, List<String> columnNameList, String[] names,
+                                        GlobalContext globalContext) throws Exception {
         if (!globalContext.sqlNewKeys.isEmpty()) {
             String key = "";
             if ("B".equals(globalContext.plan)) {
@@ -333,6 +401,12 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
                 this.runCommand(command, chunkContext, tableName, facilityCd);
             }
         }
+    }
+
+    // 差分コンバートの透析番号キー（sqlDisNoKeys）コピー処理
+    private void diffConvertCopyDisNoKeys(String inputFilePath, String tableName, String facilityCd,
+                                          ChunkContext chunkContext, String productionDbType, List<String> columnNameList,
+                                          GlobalContext globalContext) throws Exception {
         if (!globalContext.sqlDisNoKeys.isEmpty()) {
             // 新規レコードを削除
             String condSql = " rst_fn_dialysis_no in (" + globalContext.sqlDisNoKeys + ") "; // #11998 mod
@@ -360,6 +434,12 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
                 this.runCommand(command, chunkContext, tableName, facilityCd);
             }
         }
+    }
+
+    // 差分コンバートの更新キー（sqlKeys）コピー処理
+    private RepeatStatus diffConvertCopyUpdateKeys(String inputFilePath, String tableName, String facilityCd,
+                                                   ChunkContext chunkContext, String productionDbType, List<String> columnNameList, String[] names,
+                                                   GlobalContext globalContext) throws Exception {
         // mod zl start
         // 更新レコードを削除
         if (!globalContext.sqlKeys.isEmpty() && !utils.allDeleteAllInsertList.contains(tableName)) {
@@ -398,7 +478,13 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
                 return RepeatStatus.FINISHED;
             }
         }
+        return null;
+    }
 
+    // 差分コンバートの全削除全挿入リスト対象テーブル処理
+    private void diffConvertAllDeleteAllInsert(String inputFilePath, String tableName, String facilityCd,
+                                               ChunkContext chunkContext, String productionDbType, List<String> columnNameList,
+                                               GlobalContext globalContext) throws Exception {
         // add zl start
         if (utils.allDeleteAllInsertList.contains(tableName)) {
             String tableKey = convertKeyConfig.getTableKey(tableName); // #11998 add
@@ -413,7 +499,6 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
         }
 
         // add zl end
-        return null;
     }
 
     // add 7853-差分コンバートで更新/削除ができない 楊 start
@@ -469,7 +554,7 @@ public class ProductionDbToConvertDbStep extends StepStartEndListener implements
 
     @Bean(name=STEP_NAME)
     public Step step() {
-        return stepBuilderFactory.get(STEP_NAME)
+        return new StepBuilder(STEP_NAME, jobRepository)
             .tasklet(this)
             .listener(new PromotionListener())
             .build();

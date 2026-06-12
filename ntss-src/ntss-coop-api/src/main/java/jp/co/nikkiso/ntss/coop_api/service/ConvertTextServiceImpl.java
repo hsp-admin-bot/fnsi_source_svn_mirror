@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.coop_api.service;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,12 +11,13 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.collections.MapUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import com.fasterxml.jackson.databind.SerializationFeature;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.SerializationFeature;
 
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
 import jp.co.nikkiso.ntss.coop_api.response.JournalConvertResult.ResultMap;
@@ -775,23 +775,26 @@ public class ConvertTextServiceImpl implements ConvertByFormatService {
           colResult.putAppendAll(rr);
 
           try {
-            ObjectMapperUtil.getObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-            eventLogMessage.setLogMessage(facilityCd + ":collectJsonMapByKey before=" + ObjectMapperUtil.write(cr));
+            String beforeJson = ObjectMapperUtil.getObjectMapper()
+                .writer(SerializationFeature.INDENT_OUTPUT)
+                .writeValueAsString(cr);
+            eventLogMessage.setLogMessage(facilityCd + ":collectJsonMapByKey before=" + beforeJson);
             eventLogMessage.setFacilityCd(facilityCd);
             // add 2020-12-08 No.718：各APIのログ出力→共通ログ 孫 start
             eventLogMessage.setInvokeClass(this.getClass().getName());
             // add 2020-12-08 No.718：各APIのログ出力→共通ログ 孫 end
             logService.log(LogLevel.DEBUG, eventLogMessage, null, SERVICE_NAME.FNSI, null);
 
-            eventLogMessage.setLogMessage(facilityCd + ":collectJsonMapByKey after =" + ObjectMapperUtil.write(rr));
+            String afterJson = ObjectMapperUtil.getObjectMapper()
+                .writer(SerializationFeature.INDENT_OUTPUT)
+                .writeValueAsString(rr);
+            eventLogMessage.setLogMessage(facilityCd + ":collectJsonMapByKey after =" + afterJson);
             eventLogMessage.setFacilityCd(facilityCd);
             // add 2020-12-08 No.718：各APIのログ出力→共通ログ 孫 start
             eventLogMessage.setInvokeClass(this.getClass().getName());
             // add 2020-12-08 No.718：各APIのログ出力→共通ログ 孫 end
             logService.log(LogLevel.DEBUG, eventLogMessage, null, SERVICE_NAME.FNSI, null);
-          } catch (IOException e) {
-          } finally {
-            ObjectMapperUtil.getObjectMapper().disable(SerializationFeature.INDENT_OUTPUT);
+          } catch (JacksonException e) {
           }
         }
 

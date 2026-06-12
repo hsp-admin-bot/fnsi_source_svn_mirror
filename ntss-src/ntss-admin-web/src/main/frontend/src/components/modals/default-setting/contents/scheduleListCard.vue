@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -73,7 +73,7 @@
                   v-model="selectedKurIndexList"
                   :data-source="kurNamesForOption"
                   data-text-field="kurName"
-                  data-value-field="index"
+                  data-value-field="kurCd"
                   placeholder="クール">
                 </kendo-multiselect>
               </td>
@@ -164,21 +164,20 @@
 </template>
 
  <script>
-   import {mapGetters, mapActions} from "vuex";
+   import {mapGetters, mapActions} from "@/compat/vue/vuex";
    /*add FNSI-改修内容4214 任 start*/
-   import $ from "jquery";
+
    /*add FNSI-改修内容4214 任 end*/
    import {ApiHelper} from "@/apis/AxiosHelper";
    import {DEF_DISP_WEEK, DEF_KUR_MAX} from "@/components/schedule-list/Definitions.js";
    import {KEY_NAME_SCHEDULE_LIST} from "@/constants/defaultSettingConstants";
    import {deepCopy} from "@/functions/common/CommonFunctions";
    //add FNSI-5687 劉全航 start
-   import { EventBus } from "@/eventBus.js";
+   import { EventBus } from "@/compat/vue/event-bus.js";
+import { getScopedElementById, isScopedElementDisplayInline } from "@/functions/common/LayoutMeasureHelper";
    //add FNSI-5687 劉全航 end
 
    export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -334,28 +333,24 @@
     this.startLoadingScreen();
     // クール、ベッドの取得
     const facilityCd = this.facilityCd;
-    let kurNames = [];
     await ApiHelper.get("/scheduleList/getBedAndKurInfo", {
       facilityCd
     }).then(response => {
       this.kurNum = response.data.kur.length;
-      response.data.kur.forEach(kur => {
-        kurNames.push(kur.kurName);
-      });
       this.roomBedGroupNum = response.data.roombedgroup.length;
 
       this.roomBedGroupNamesForOption = response.data.roombedgroup.map((rbr) => {
         return {bedCd: rbr.roomBedGroupCd, bedName: rbr.roomBedGroupName}
       });
-    });
-    this.kurNamesForOption = kurNames.map((kur, i) => {
-      return { index: i + 1, kurName: kur };
+      this.kurNamesForOption = response.data.kur.map((kur) => {
+        return { kurCd: kur.kurCd, kurName: kur.kurName };
+      });
     });
 
     // 初期値未設定の場合のデフォルト値を設定
     this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_DISP_WEEK_DURATION] = String(DEF_DISP_WEEK);
     this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_CHK_HOLIDAY] = true;
-    this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_SELECTED_KUR_LIST] = kurNames.map((kur, index) => index + 1);
+    this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_SELECTED_KUR_LIST] = this.kurNamesForOption.map((kur) => kur.kurCd);
     this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_BED_GROUP_CD] = 0;
     this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_CHK_NAME] = false;
     this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_CHK_UNMATCH] = false;
@@ -377,9 +372,19 @@
         }
         if (this.editRecord[KEY_NAME_SCHEDULE_LIST.KEY_NAME_SELECTED_KUR_LIST] == null) {
           this.editRecord[KEY_NAME_SCHEDULE_LIST.KEY_NAME_SELECTED_KUR_LIST] = this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_SELECTED_KUR_LIST];
+        } else {
+          const validMstKurCd = this.kurNamesForOption.map(k => k.kurCd);
+          const condKurCdsFilter = this.editRecord[KEY_NAME_SCHEDULE_LIST.KEY_NAME_SELECTED_KUR_LIST].filter(value => validMstKurCd.includes(value));
+          if (condKurCdsFilter.length === 0) {
+            // NOTE: マスタ削除しか設定しておらず、有効な選択肢が存在しない場合、初期値を再設定
+            this.editRecord[KEY_NAME_SCHEDULE_LIST.KEY_NAME_SELECTED_KUR_LIST] = this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_SELECTED_KUR_LIST];
+          }
         }
         if (this.editRecord[KEY_NAME_SCHEDULE_LIST.KEY_NAME_BED_GROUP_CD] == null) {
           this.editRecord[KEY_NAME_SCHEDULE_LIST.KEY_NAME_BED_GROUP_CD] = this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_BED_GROUP_CD];
+        } else if (!this.roomBedGroupNamesForOption.some(rbg => +rbg.roomBedGroupCd === +this.editRecord[KEY_NAME_SCHEDULE_LIST.KEY_NAME_BED_GROUP_CD])) {
+          // NOTE: マスタ削除された場合、「0 : すべて」を再設定
+          this.editRecord[KEY_NAME_SCHEDULE_LIST.KEY_NAME_BED_GROUP_CD] = 0;
         }
         if (this.editRecord[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_CHK_NAME] == null) {
           this.editRecord[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_CHK_NAME] = this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_CHK_NAME];
@@ -392,7 +397,7 @@
         }
         if (this.editRecord[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_CHK_PLAN_MAINTE_WATER] == null) {
           // #12368でキーを後から追加したので、変更をwatchで検知出来るようにリアクティブにするため$setを使用
-          this.$set(this.editRecord, KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_CHK_PLAN_MAINTE_WATER, this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_CHK_PLAN_MAINTE_WATER]);
+          ((this.editRecord)[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_CHK_PLAN_MAINTE_WATER] = this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_CHK_PLAN_MAINTE_WATER]);
         }
         if (this.editRecord[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_SHOW_GUIDE] == null) {
           this.editRecord[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_SHOW_GUIDE] = this.initialValue[KEY_NAME_SCHEDULE_LIST.KEY_NAME_IS_SHOW_GUIDE];
@@ -400,8 +405,14 @@
         this.initialValue = deepCopy(this.editRecord);
       }
       /*add FNSI-改修内容4214 任 start*/
-      if($("#phone-show-schedule-list").css("display") === "inline"){
-        document.getElementById("phone-show-schedule-list").innerText =  document.getElementById("phone-show-schedule-list").innerText + '\xa0\xa0';
+      if(isScopedElementDisplayInline("phone-show-schedule-list", this.$el || this)){
+        const phoneShowElement = getScopedElementById("phone-show-schedule-list", this.$el || this);
+
+        if (phoneShowElement) {
+
+          phoneShowElement.innerText = phoneShowElement.innerText + '\xa0\xa0';
+
+        }
       }
       /*add FNSI-改修内容4214 任 end*/
       // 共通ローダー表示終了
@@ -409,7 +420,6 @@
       this.isExpanded = this.defaultExpanded;
     });
   },
-  mounted() {}
 };
 </script>
 

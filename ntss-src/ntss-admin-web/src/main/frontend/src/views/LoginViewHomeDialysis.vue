@@ -45,7 +45,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { getRouterName, getInitialRouterName } from "@/router/routing-helper";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import NotificationMessageMixin from "@/components/common/notification-message/NotificationMessageMixin";
@@ -56,6 +56,8 @@ import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { focusComponentInput,
+  getScopedWindow} from "@/functions/common/LayoutMeasureHelper";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 
 export default {
@@ -102,6 +104,9 @@ export default {
     }
   },
   methods: {
+    getLoginWindow() {
+      return getScopedWindow(this.$el || this);
+    },
     ...mapActions("account-edit", ["getUserAccountInfo"]),
     ...mapActions("user", {
       userSignIn: "signIn"
@@ -121,7 +126,7 @@ export default {
 
     // フォーカスを移動する
     setFocus(ref) {
-      this.$refs[ref].$el._input.focus();
+      focusComponentInput(this.$refs[ref]);
     },
     // サインインボタン押下時イベント
     async signIn() {
@@ -292,7 +297,7 @@ export default {
   created() {
     this.created();
 
-    window.addEventListener('popstate', this.popstateEventListener);
+    this.getLoginWindow().addEventListener('popstate', this.popstateEventListener);
 
     if (this.$route.query.USERID && this.$route.query.FUNC) {
       this.userId = this.$route.query.USERID;
@@ -310,8 +315,8 @@ export default {
       this.alert();
     }
   },
-  beforeDestroy() {
-    window.removeEventListener('popstate', this.popstateEventListener);
+  beforeUnmount() {
+    this.getLoginWindow().removeEventListener('popstate', this.popstateEventListener);
   }
 };
 </script>

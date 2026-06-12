@@ -1,6 +1,7 @@
 package jp.co.nikkiso.ntss.core.dao;
 
 import java.util.List;
+import java.util.Map;
 
 import org.seasar.doma.Dao;
 import org.seasar.doma.Insert;
@@ -12,7 +13,10 @@ import jp.co.nikkiso.ntss.core.entity.MstImplant;
 
 @ConfigAutowireable
 @Dao
-public interface MstImplantDao {
+public interface MstImplantDao extends MasterDao<Map<String, Object>> {
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
+
   @Select
   List<MstImplant> selectAll(SelectOptions options, MstImplant params);
   /*add FNSI-改修内容5237 任 start*/

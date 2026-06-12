@@ -15,11 +15,11 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
-      :class="fontSizeSet"
+      :class="[fontSizeSet, 'exam-record-header-popover']"
       @preshow="popoverPreShow"
       @postshow="popoverPostShow"
       @posthide="handlePopoverPosthide"
@@ -66,7 +66,7 @@
               model-event="change"
               class="ntss-input-date ntss-custom-input"
               v-model='localCondition.examDateSt'
-              v-validate="'date_format:yyyy-MM-dd'"/>
+              v-rules="'date_format:yyyy-MM-dd'"/>
               <common-calendar v-model="localCondition.examDateSt" /> -->
               <!--#9621:文字サイズを変更すると文字が見切れる Start-->
             <date-input
@@ -97,7 +97,7 @@
               model-event="change"
               class="ntss-input-date ntss-custom-input"
               v-model='localCondition.examDateEd'
-              v-validate="'date_format:yyyy-MM-dd'" /> -->
+              v-rules="'date_format:yyyy-MM-dd'" /> -->
             <!--#9621:文字サイズを変更すると文字が見切れる Start-->
             <date-input
               input-id="examDateEd"
@@ -157,8 +157,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { EventBus } from "@/eventBus.js";
-import { mapGetters, mapActions } from "vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -166,7 +166,7 @@ import { EXAM_RECORD } from "@/constants/defaultSettingConstants";
 import { calcTargetDate } from "@/functions/modals/default-setting/defaultSettingUtils";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 import { makeDefaultCondition, findExamSet } from "@/functions/exam-record/ExamRecordFunctions";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 //#5590 2023/04/19 ×を常に表示するように修正 張博 start
 import DateInput from "@/components/common/DateInput.vue";
 //#5590 2023/04/19 ×を常に表示するように修正 張博 end
@@ -201,6 +201,7 @@ export default {
   },
   computed: {
     ...mapGetters("user", ["getFacilityCd"]),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     ...mapGetters("exam-record/list", [
       "getComponentInitialized",
       "getCondition",
@@ -214,7 +215,7 @@ export default {
      * OKボタンがクリックできるかどうか.
      */
     canSave() {
-      return this.$validator.errors.items.length === 0;
+      return this.validationErrors.length === 0;
     },
     /** 表示条件の状態 */
     isShow() {
@@ -289,8 +290,7 @@ export default {
       const chgFlg = (
         (this.localCondition.examDateSt != this.getCondition.examDateSt)
         || (this.localCondition.examDateEd != this.getCondition.examDateEd)
-        || (this.localCondition.viewDayType != this.getCondition.viewDayType)
-      );
+        || (this.localCondition.viewDayType != this.getCondition.viewDayType));
 
       // 抽出条件登録
       this.setCondition(this.localCondition);
@@ -389,13 +389,13 @@ export default {
       if (this.$route.params.startDate !== undefined) {
         // 掲示板から検査結果一覧に遷移した場合
         if (this.$route.params.startDate != null) {
-          const startDateMoment = moment(this.$route.params.startDate);
+          const startDateMoment = dayjs(this.$route.params.startDate);
           this.localCondition.examDateSt = startDateMoment.format("YYYY-MM-DD");
           this.localCondition.examDateEd = (this.$route.params.endDate != null)
-            ? moment(this.$route.params.endDate).format("YYYY-MM-DD")
+            ? dayjs(this.$route.params.endDate).format("YYYY-MM-DD")
             : startDateMoment.add(3, "month").format("YYYY-MM-DD");
         } else if (this.$route.params.endDate === null) {
-          const todayMoment = moment();
+          const todayMoment = dayjs();
           this.localCondition.examDateEd = todayMoment.format("YYYY-MM-DD");
           this.localCondition.examDateSt = todayMoment.subtract(3, "month").format("YYYY-MM-DD");
         }
@@ -420,7 +420,7 @@ export default {
       this.localCondition.viewDayType = dayType;
     },
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -436,9 +436,15 @@ export default {
     this.setLoadingScreenVisible(true);
 
     // 検査セットデータ生成処理：
-    await this.examSetNameList(this.getFacilityCd);
+    await this.examSetNameList({
+      facilityCd: this.getFacilityCd,
+      selectedPatId: this.selectedPatId
+    });
     // 検査セットソート順データセット処理
-    await this.setSortNameList(this.getFacilityCd);
+    await this.setSortNameList({
+      facilityCd: this.getFacilityCd,
+      selectedPatId: this.selectedPatId
+    });
 
     // 検索条件の初期設定
     this.initCondition();
@@ -487,7 +493,11 @@ input[type="radio"] {
   border-radius: 0 10px 10px 0;
   margin: 2px 5px 2px 0px;
 }
-ons-popover >>> .popover {
+ons-popover :deep(.popover) {
+  width: 400px;
+}
+
+.exam-record-header-popover :deep(.popover) {
   width: 400px;
 }
 </style>

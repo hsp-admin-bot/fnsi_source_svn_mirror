@@ -65,12 +65,10 @@
 </template>
 
 <script>
-/* eslint-disable */
-import Vue from 'vue';
 import {
   mapState,
   mapActions
-} from 'vuex';
+} from "@/compat/vue/vuex";
 
 const components = {};
 
@@ -104,8 +102,10 @@ const watch = {};
 
 export default {
   components,
+  // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+  emits: ["update:modelValue"],
   props: {
-    value: {
+    modelValue: {
       patId: {
         type: String,
         required: true,
@@ -153,8 +153,8 @@ export default {
     },
     methods: {
       update(key, value) {
-        this.value[key] = value;
-        this.$emit('input', this.value);
+        this.modelValue[key] = value;
+        this.$emit('update:modelValue', this.modelValue);
       },
     },
     computed,

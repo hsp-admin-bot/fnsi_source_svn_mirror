@@ -3,10 +3,19 @@ package jp.co.nikkiso.ntss.admin_web.web.rest;
 import java.util.List;
 import java.util.Map;
 
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 // add #7390 コンバート後、病名マスタを開くと処理中のまま終わらない 徐博 start
+import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.entity.MstDisease;
 // add #7390 コンバート後、病名マスタを開くと処理中のまま終わらない 徐博 end
+import jp.co.nikkiso.ntss.core.entity.MstFacilitySetting;
+import jp.co.nikkiso.ntss.core.entity.MstMachineRecordControl;
+import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
+import jp.co.nikkiso.ntss.core.logger.LogLevel;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +25,7 @@ import jp.co.nikkiso.ntss.admin_web.service.master.machineRecord.MasterMachineRe
 import lombok.extern.slf4j.Slf4j;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -56,7 +66,21 @@ public class MstMachineRecordResource {
    * 病名マスタを件数取得する
    */
   @GetMapping("/getTotal/{facilityCd}")
-  public ResponseEntity<?> getTotal(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getTotal(@PathVariable String facilityCd,
+                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                    @AuthenticationPrincipal NtssUser ntssUser
+                                    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+              !facilityCd.equals(ntssUser.getFacilityCd())) {
+              String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+              InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+              return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
     String Total = masterMachineRecordService.getTotal(facilityCd);
     return new ResponseEntity<>(Total, HttpStatus.OK);
   }
@@ -65,7 +89,22 @@ public class MstMachineRecordResource {
    * 病名マスタを全件取得する.分頁
    */
   @GetMapping("/getMstDiseaseByLimitAndOffset/{facilityCd}/{offset}")
-  public ResponseEntity<?> getMstDiseaseByLimitAndOffset(@PathVariable String facilityCd, @PathVariable Integer offset) {
+  public ResponseEntity<?> getMstDiseaseByLimitAndOffset(@PathVariable String facilityCd,
+                                                         @PathVariable Integer offset,
+                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+                                                         @AuthenticationPrincipal NtssUser ntssUser
+                                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+  ) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+              !facilityCd.equals(ntssUser.getFacilityCd())) {
+              String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+              InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+              return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
     Integer limit = 100;
     List<MstDisease> response = masterMachineRecordService.getMstDiseaseByLimitAndOffset(limit, facilityCd, offset);
     return new ResponseEntity<>(response, HttpStatus.OK);
@@ -81,7 +120,41 @@ public class MstMachineRecordResource {
    */
   @PutMapping("/saveMachineRecord/{facilityCd}")
   public ResponseEntity<?> updateMasterData(@PathVariable String facilityCd,
-                                            @RequestBody Map<String, List<String>> request) {
+                                            @RequestBody Map<String, List<String>> request,
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                            @AuthenticationPrincipal NtssUser ntssUser
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+
+    try {
+      if(!ntssUser.isNkkAdminUser()) {
+        if (request.get("insertRecord") != null && !request.get("insertRecord").isEmpty()) {
+          ObjectMapper mapper = new ObjectMapper();
+          MstMachineRecordControl mstMachineRecordControl = mapper.readValue(request.get("insertRecord").get(request.get("insertRecord").size() - 1),
+            MstMachineRecordControl.class);
+          if (mstMachineRecordControl != null && mstMachineRecordControl.getFacilityCd() != null &&
+            !mstMachineRecordControl.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstMachineRecordControl.getFacilityCd() + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            EventLogMessage eventLogMessage = new EventLogMessage();
+            eventLogMessage.setLogMessage("セキュリティチェックの例外!");
+            logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_DETAIL_FACILITIES_LIST, LoggingConstant.SERVICE_NAME.FNSI, null);
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    } catch (JacksonException e) {
+      if (!ntssUser.isNkkAdminUser()) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " JsonProcessingException during security check ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        EventLogMessage eventLogMessage = new EventLogMessage();
+        eventLogMessage.setLogMessage("セキュリティチェックの例外!");
+        logService.log(LogLevel.ERROR, eventLogMessage, FUNCTION_CODE.FUNC_DETAIL_FACILITIES_LIST, LoggingConstant.SERVICE_NAME.FNSI, null);
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.MASTER_MAINTENANCE + "/saveMachineRecord";

@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.core.entity;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import lombok.Getter;
 import lombok.Setter;
 import org.seasar.doma.Entity;
@@ -16,7 +16,7 @@ import java.sql.Timestamp;
 @Entity(naming = NamingType.SNAKE_LOWER_CASE)
 @Getter
 @Setter
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class MniMonitorCalendr extends BaseEntity {
   /**
    * 生体モニタリング管理番号
@@ -89,5 +89,5 @@ public class MniMonitorCalendr extends BaseEntity {
    */
   private Long updStaffId;
 
-  private Date TreatDate;
+  private Date treatDate;
 }

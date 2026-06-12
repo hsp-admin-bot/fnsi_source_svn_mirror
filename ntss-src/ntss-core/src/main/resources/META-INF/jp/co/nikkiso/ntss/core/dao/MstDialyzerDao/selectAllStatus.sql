@@ -52,13 +52,15 @@ GROUP BY pat_id, category_class, cd
 SELECT DISTINCT *
 from TABOO_ALLERGY_data_pat
 where category_class = '4'
-)
+),
+BASE AS (
 SELECT
     A.dialyzer_cd              AS "dialyzerCd",
     A.facility_cd              AS "facilityCd",
     A.fn_dialyzer_cd           AS "fnDialyzerCd",
     A.maker                    AS "maker",
     A.model_number             AS "modelNumber",
+    '本'                       AS "unit",
     A.dialyzer_type            AS "dialyzerType",
     A.function_class           AS "functionClass",
     A.area                     AS "area",
@@ -99,19 +101,24 @@ SELECT
     END                      AS "tabooAllergy",
     CASE
       WHEN
-        (A.use_start_date IS NOT NULL AND A.use_start_date > TO_CHAR(CURRENT_DATE, 'YYYYMMDD'))
+        (A.use_start_date IS NOT NULL AND A.use_start_date >
+          /*%if params.get("treatDate") != null && !params.get("treatDate").trim().isEmpty() */
+            /* params.get("treatDate") */'20000101'
+          /*%else */
+            TO_CHAR(CURRENT_DATE, 'YYYYMMDD')
+          /*%end */
+        )
           OR
-        (A.use_end_date   IS NOT NULL AND A.use_end_date   < TO_CHAR(CURRENT_DATE, 'YYYYMMDD'))
+        (A.use_end_date   IS NOT NULL AND A.use_end_date   <
+          /*%if params.get("treatDate") != null && !params.get("treatDate").trim().isEmpty() */
+            /* params.get("treatDate") */'20000101'
+          /*%else */
+            TO_CHAR(CURRENT_DATE, 'YYYYMMDD')
+          /*%end */
+        )
         THEN '【期限切れ】'
       ELSE ''
-    END                      AS "expired",
-    CASE
-      WHEN
-        A.is_disp = '0' OR A.is_del = '1'
-        THEN '【削除済み】'
-      ELSE ''
-    END                      AS "deleted",
-    '' AS "includeDeleted"
+    END                      AS "expired"
 FROM
     mst_dialyzer A
     LEFT JOIN TABOO_ALLERGY_TO_MST TATM ON A.dialyzer_cd = TATM.cd
@@ -133,7 +140,50 @@ FROM
        AND A.dialyzer_cd = ms.code
 WHERE
     A.facility_cd = /* params.get("facilityCd") */'0'
+),
+MAIN AS (
+  SELECT
+    B.*,
+    '' AS "deleted",
+    '' AS "includeDeleted"
+  FROM BASE B
+  WHERE
+    B."isDisp" = '1'
+    AND B."isDel" = '0'
+    /*%if params.get("excludeDialyzerCdList") != null && !params.get("excludeDialyzerCdList").trim().isEmpty()*/
+    AND NOT (
+      B."dialyzerCd" = ANY(string_to_array(/* params.get("excludeDialyzerCdList") */'0', ',')::int[])
+    )
+    /*%end*/
+),
+INIT AS (
+  SELECT
+    B.*,
+    CASE
+      WHEN B."isDisp" = '0' OR B."isDel" = '1'
+        THEN '【削除済み】'
+      ELSE ''
+    END AS "deleted",
+    '' AS "includeDeleted"
+  FROM BASE B
+  WHERE
+    /*%if params.get("initDialyzerCd") != null && !params.get("initDialyzerCd").trim().isEmpty() */
+    B."dialyzerCd" = (/* params.get("initDialyzerCd") */0)::int
+    /*%else */
+    1 = 0
+    /*%end */
+)
+SELECT *
+FROM MAIN
+UNION ALL
+SELECT I.*
+FROM INIT I
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM MAIN M
+  WHERE M."dialyzerCd" = I."dialyzerCd"
+)
 ORDER BY
     "sortGroup" ASC,
-    ms.selector_index NULLS LAST,
-    A.dialyzer_cd;
+    "medicineMixSelectorIndex" NULLS LAST,
+    "dialyzerCd";

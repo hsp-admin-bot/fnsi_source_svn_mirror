@@ -19,7 +19,7 @@
     </table>
 
     <message-dialog
-      :visible.sync="isDialogVisble"
+      v-model:visible="isDialogVisble"
       :message-cd="50000006"
       type="1"
     />
@@ -27,16 +27,16 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import messageDialog from "@/components/common/message-dialog/MessageDialog.vue";
 import baseDeviceSetInfoList from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoList.vue";
 import { DATA_SOURCE_TYPE_PAT } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
 // add #7233 デフォルト帳票について 日本指摘対応 商 start
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // add #7233 デフォルト帳票について 日本指摘対応 商 end
 // add 画面印刷プレビューと印刷の実現 陳 start
 import { getCurrentFunctionCd } from "@/router/routing-helper";
-import {EventBus} from "@/eventBus.js";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add 画面印刷プレビューと印刷の実現 陳 end
 
 class Device {
@@ -98,7 +98,7 @@ export default {
     ];
   },
   // add 画面印刷プレビューと印刷の実現 陳 start
-  beforeDestroy() {
+  beforeUnmount() {
     // 印刷パラメータ要求
     EventBus.$off("requestReportParams", this.requestrReportParams);
     
@@ -123,16 +123,16 @@ export default {
         const param = {
           // add #7233 デフォルト帳票について 日本指摘対応 商 start
           functionCd:"01001",
-          date: moment(Date.now()).format("YYYYMMDD"),
+          date: dayjs(Date.now()).format("YYYYMMDD"),
           // add #7233 デフォルト帳票について 日本指摘対応 商 end
           patId: this.selectedPatId,
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
           //patIds: this.searchedPatList.map(({ pat_id }) => pat_id),
           facilityCd: this.getFacilityCd,
-          fromDate: moment(Date.now()).format("YYYYMMDD"),
-          toDate: moment(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYYMMDD"),
+          fromDate: dayjs(Date.now()).format("YYYYMMDD"),
+          toDate: dayjs(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: moment(Date.now()).format("YYYYMMDD"),
+          //dialysisDate: dayjs(Date.now()).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
         };

@@ -11,8 +11,10 @@
 </template>
 
 <script>
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
 //日付扱い用
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 //定義
 import { BACKGROUND_HEADER_PAST_DAY, BACKGROUND_HEADER_TODAY } from "@/components/schedule-list/Definitions.js";
 export default {
@@ -95,15 +97,15 @@ export default {
       }
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  created() {},
+
   mounted() {
-    this.thisElem = document.getElementById(this.divId);
+    this.thisElem = this.$el?.id === this.divId ? this.$el : getScopedElementById(this.divId, this.$el || this);
   },
-  updated() {},
+
   methods: {
     /**
      *   表示データ組み立て処理
@@ -112,7 +114,7 @@ export default {
      */
     buildDispDate(targetDate) {
 
-      const selectedDate = moment(targetDate);
+      const selectedDate = dayjs(targetDate);
       this.thisElem.style.background = "";
 
       //月、日、曜日を取得
@@ -131,19 +133,19 @@ export default {
       } else if (weekday === 6) {
         this.titlecolor = "var(--ntss-saturday-color)";
       }
-      if (selectedDate.isSame(moment(this.propsJson.startDate), "day")) {
+      if (selectedDate.isSame(dayjs(this.propsJson.startDate), "day")) {
         this.thisElem.style.border = 'solid';
         this.thisElem.style.borderColor = '#1a71cc';
         this.thisElem.style.borderWidth = '3px';
         this.thisElem.style.padding = "0px";
       } else {
-        if (selectedDate.isBefore(moment(), "day")){
+        if (selectedDate.isBefore(dayjs(), "day")){
           this.thisElem.style.background = BACKGROUND_HEADER_PAST_DAY;
         }
         this.thisElem.style.border = 'none';
         this.thisElem.style.padding = '3px';
       }
-      if (selectedDate.isSame(moment(), "day")){
+      if (selectedDate.isSame(dayjs(), "day")){
         this.thisElem.style.background = BACKGROUND_HEADER_TODAY;
       }
 
@@ -166,6 +168,7 @@ export default {
   height: 80%;
   /* FNSI-add redmine 4018 end */
 }
+
 
 .cls_move_block .cls-cmp-dayheader {
   background-image: linear-gradient(

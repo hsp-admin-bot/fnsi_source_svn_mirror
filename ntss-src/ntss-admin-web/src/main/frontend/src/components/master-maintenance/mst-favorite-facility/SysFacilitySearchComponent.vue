@@ -11,12 +11,12 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-                    :visible.sync='popoverVisible'
+                    v-model:visible='popoverVisible'
                     :target='popoverTarget'
                     :direction='popoverDirection'
                     :cover-target=false
                     :class="['master-search', fontSizeSet]"
-                    @keyup.enter.native="closeDialog">
+                    @keyup.enter="closeDialog">
        <div style='margin:10px;'>
         <v-ons-row class='condition-row'>
           <v-ons-col width='40%'>
@@ -63,8 +63,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapGetters, mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import { prefectures } from "@/components/master-maintenance/mst-device-edge/Prefectures.js";
 import commonSearchArea from "@/components/common/CommonSearchArea";
@@ -216,7 +216,7 @@ export default {
 .search-label-font {
   font-size: 1.7em;
 }
-.condition-row >>> .text-input {
+.condition-row :deep(.text-input) {
   font-size: 1.7em;
 }
 .button-row {
@@ -229,12 +229,12 @@ export default {
 .button-row > .right {
   float: right;
 }
-.button-row >>> .button {
+.button-row :deep(.button) {
   font-size: 1.7em;
   width: auto;
   min-width: 80px;
 }
-.master-search >>> .popover__content {
+.master-search :deep(.popover__content) {
   min-width: 320px;
 }
 </style>

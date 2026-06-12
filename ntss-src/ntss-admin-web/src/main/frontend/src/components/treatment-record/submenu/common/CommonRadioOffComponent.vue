@@ -26,6 +26,7 @@
 
 <script>
 export default {
+  emits: ["update:modelValue"],
   props: {
     name: {
       type: String
@@ -36,7 +37,8 @@ export default {
     radioItems: {
       type: Object
     },
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: String
     },
     disabled: {
@@ -52,11 +54,11 @@ export default {
   computed: {
     currentValue: {
       get() {
-        return this.value;
+        return this.modelValue;
       },
       set(newVal) {
-        if (this.value !== newVal) {
-          this.$emit("input", newVal);
+        if (this.modelValue !== newVal) {
+          this.$emit("update:modelValue", newVal);
         }
       }
     },

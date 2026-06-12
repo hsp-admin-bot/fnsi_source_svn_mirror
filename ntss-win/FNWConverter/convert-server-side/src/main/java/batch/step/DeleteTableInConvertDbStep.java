@@ -13,13 +13,14 @@ import batch.part.PsqlCopyUtils;
 import batch.part.StreamThread;
 import batch.part.TableNameToDbType;
 import com.zaxxer.hikari.HikariDataSource;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.Step;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
@@ -42,7 +43,7 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
     public static final String STEP_NAME = "DeleteTableInConvertDbStep";
 
     @Autowired
-    StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
 
     @Autowired
     ConvertPriorityConfig convertPriorityConfig;
@@ -78,11 +79,7 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
         // 削除対象の施設コードの取得
         String facilityCd = chunkContext.getStepContext().getJobParameters().get(JobParameterKeys.FACILITY_CD).toString();
         // 削除対象のテーブル名の取得
-        List<String> deleteTableNameList = convertPriorityConfig.getTableNames();
-        // 追加処理テーブル
-        if (!deleteTableNameList.contains("mst_pat_event_data_template")) {
-            deleteTableNameList.add("mst_pat_event_data_template");
-		}
+        List<String> deleteTableNameList = buildDeleteTableNameList();
         // add FNSI_複数施設修正 楊 start
         InfomationSchemaControl isc = new InfomationSchemaControl(appContext);
         // add FNSI_複数施設修正 楊 end
@@ -91,6 +88,32 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
         String job = chunkContext.getStepContext().getJobName();
         // 本番dbから或は、コンバートdb削除の場合
         if (job.equals("DeleteTableJob") || job.equals("DeleteConvertTableJob")) {
+            addDeleteJobExtraTables(deleteTableNameList);
+            deleteConvertDbTables(deleteTableNameList, facilityCd, chunkContext, isc);
+            deleteMstFacilityIfPresent(deleteTableNameList, facilityCd);
+            // add #7339 AWS側アプリが起動しない途中から開始されない yangmj end
+        } else {
+            handleProductionToConvertCopy(deleteTableNameList, facilityCd, chunkContext);
+        }
+        return RepeatStatus.FINISHED;
+    }
+
+    /**
+     * 削除対象テーブル名リストを構築する
+     */
+    private List<String> buildDeleteTableNameList() {
+        List<String> deleteTableNameList = convertPriorityConfig.getTableNames();
+        // 追加処理テーブル
+        if (!deleteTableNameList.contains("mst_pat_event_data_template")) {
+            deleteTableNameList.add("mst_pat_event_data_template");
+        }
+        return deleteTableNameList;
+    }
+
+    /**
+     * 削除ジョブ用の追加テーブルをリストに登録する
+     */
+    private void addDeleteJobExtraTables(List<String> deleteTableNameList) {
             // mst_device_edgeを追加
             if (!deleteTableNameList.contains("mst_device_edge")) {
                 deleteTableNameList.add("mst_device_edge");
@@ -125,7 +148,13 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
                 deleteTableNameList.add("batch_convert_table_status");
             }
             // add #10859-6 djy end
-            // add #7339 AWS側アプリが起動しない途中から開始されない yangmj end
+    }
+
+    /**
+     * コンバートDBの対象テーブルを削除する
+     */
+    private void deleteConvertDbTables(List<String> deleteTableNameList, String facilityCd,
+                                       ChunkContext chunkContext, InfomationSchemaControl isc) throws Exception {
             for (String deleteTableName : deleteTableNameList) {
                 // mod FNSI_複数施設修正 楊 start
                 // 施設マスタを削除対象から外す
@@ -152,6 +181,12 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
                         facilityCd, "execute(StepContribution contribution, ChunkContext chunkContext)");
                 eventLoggerUtil.recordLog(facilityCd, eventLogMessage5, LogLevel.INFO);
             }
+    }
+
+    /**
+     * mst_facilityテーブルを削除する
+     */
+    private void deleteMstFacilityIfPresent(List<String> deleteTableNameList, String facilityCd) {
             // add FNSI_複数施設修正 楊 start
             // mod #10418 SQL注入対策：パラメータバインディング start
             if (deleteTableNameList.contains("mst_facility")) {
@@ -164,8 +199,13 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
             }
             // mod #10418 SQL注入対策：パラメータバインディング end
             // add FNSI_複数施設修正 楊 end
-            // add #7339 AWS側アプリが起動しない途中から開始されない yangmj start
-        } else {
+    }
+
+    /**
+     * 本番DBからコンバートDBへのコピー処理を実行する
+     */
+    private void handleProductionToConvertCopy(List<String> deleteTableNameList, String facilityCd,
+                                               ChunkContext chunkContext) throws Exception {
             // 本番dbから、コンバートdbに変換用テーブルデータとコンバートテーブルをコピー
             // 施設コードより、mst_facilityからレコードを取得
             // mod #10418 SQL注入対策：パラメータバインディング start
@@ -182,13 +222,11 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
                 this.CopyMstToConvertDb(facilityCd, chunkContext);
             }
             // add #11399 djy end
-        }
-        return RepeatStatus.FINISHED;
     }
 
     @Bean(name=STEP_NAME)
     public Step step() {
-        return stepBuilderFactory.get(STEP_NAME)
+        return new StepBuilder(STEP_NAME, jobRepository)
                 .tasklet(this)
                 .build();
     }
@@ -202,15 +240,7 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
     private void productionDbToConvertDb(List<String> deleteTableNameList, String facilityCd, ChunkContext chunkContext) throws Exception {
         // 初回削除要テーブルリスト
         List<String> deleteTableList = Arrays.asList("mni_monitor", "mnt_motion_record");
-        // mst_device_edgeを追加
-        if (!deleteTableNameList.contains("mst_device_edge")) {
-            deleteTableNameList.add("mst_device_edge");
-        }
-
-        // add #11302 コンバートの削除処理で処理が進まなくなることがある limingyang start
-        deleteTableNameList.remove(ApplicationConst.TableName.MNT_NOTIFICATION_STATUS);
-        deleteTableNameList.remove(ApplicationConst.TableName.MNT_NOTIFICATION_MESSAGE);
-        // add #11302 コンバートの削除処理で処理が進まなくなることがある limingyang end
+        prepareProductionDbCopyTableList(deleteTableNameList);
         for (String tableName : deleteTableNameList) {
             StepExecution se = chunkContext.getStepContext().getStepExecution();
             // 本番DBのDBTypeの取得（テーブルが存在するDBを検索して取得）
@@ -221,6 +251,32 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
             // 取得テーブルの列を取得
             InfomationSchemaControl isc = new InfomationSchemaControl(appContext);
             List<String> columnNameList = isc.getColumnNamesForCodeConversion(tableName);
+            deleteFromProductionDbIfRequired(tableName, facilityCd, columnNameList, deleteTableList, productionDbType, productionDs);
+            executeProductionDbCopyCommand(tableName, facilityCd, chunkContext, productionDbType, columnNameList, se);
+        }
+    }
+
+    /**
+     * 本番DBコピー用テーブルリストを準備する
+     */
+    private void prepareProductionDbCopyTableList(List<String> deleteTableNameList) {
+        // mst_device_edgeを追加
+        if (!deleteTableNameList.contains("mst_device_edge")) {
+            deleteTableNameList.add("mst_device_edge");
+        }
+
+        // add #11302 コンバートの削除処理で処理が進まなくなることがある limingyang start
+        deleteTableNameList.remove(ApplicationConst.TableName.MNT_NOTIFICATION_STATUS);
+        deleteTableNameList.remove(ApplicationConst.TableName.MNT_NOTIFICATION_MESSAGE);
+        // add #11302 コンバートの削除処理で処理が進まなくなることがある limingyang end
+    }
+
+    /**
+     * 初回削除対象テーブルを本番DBから削除する
+     */
+    private void deleteFromProductionDbIfRequired(String tableName, String facilityCd, List<String> columnNameList,
+                                                  List<String> deleteTableList, String productionDbType,
+                                                  HikariDataSource productionDs) {
             // mni_monitorとmnt_motion_recordの場合、本番DBに該当テープルを削除
             // mod #10418 SQL注入対策：パラメータバインディング start
             if (deleteTableList.contains(tableName)) {
@@ -241,6 +297,14 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
             }
             // #11998 add 新たに発見された問題の対応: fn_comsv_noフィールドはconvert_dbにのみ存在するため、copy from prod_db to convert_dbの際には、このフィールドの情報を削除する必要があります。 end
             // mod #10418 SQL注入対策：パラメータバインディング end
+    }
+
+    /**
+     * 本番DBからコンバートDBへの初回コピーコマンドを実行する
+     */
+    private void executeProductionDbCopyCommand(String tableName, String facilityCd, ChunkContext chunkContext,
+                                                String productionDbType, List<String> columnNameList,
+                                                StepExecution se) throws Exception {
             // 実行するコピーコマンドの組み立て
             String inputFilePath = chunkContext.getStepContext().getJobParameters().get(JobParameterKeys.INPUT_FILE_PATH).toString();
             String[] command = psqlCopyUtils.createCopyCommand(inputFilePath,tableName, columnNameList, facilityCd, productionDbType, 1);
@@ -272,7 +336,6 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
                         facilityCd, "DeleteTableInConvertDbStep->ProductionDbToConvertDb");
                 eventLoggerUtil.recordLog(facilityCd, eventLogMessageErr, LogLevel.ERROR);
                 throw new RuntimeException(errorMsg);
-            }
         }
     }
 
@@ -290,6 +353,15 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
             // 取得テーブルの列を取得
             InfomationSchemaControl isc = new InfomationSchemaControl(appContext);
             List<String> columnNameList = isc.getColumnNamesForCodeConversion(tableName);
+            String delsql = buildMstDeleteSql(tableName, facilityCd, columnNameList);
+            executeMstCopyCommand(tableName, facilityCd, inputFilePath, productionDbType, isc, delsql, se);
+        }
+    }
+
+    /**
+     * MSTテーブル削除用SQLを構築する
+     */
+    private String buildMstDeleteSql(String tableName, String facilityCd, List<String> columnNameList) {
             String userName = environment.getProperty("datasource." + ApplicationConst.DbType.CONVERT + ".username");
             String table_prefix = environment.getProperty(userName+ "_prefix");
             String delsql = " delete from " + table_prefix + tableName;
@@ -298,8 +370,15 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
                 String safeFacilityCd = facilityCd.replace("'", "''");
                 delsql += " where facility_cd = '" + safeFacilityCd + "'";
             }
+        return delsql;
+    }
 
-
+    /**
+     * MSTテーブルのコピーコマンドを実行する
+     */
+    private void executeMstCopyCommand(String tableName, String facilityCd, String inputFilePath,
+                                       String productionDbType, InfomationSchemaControl isc, String delsql,
+                                       StepExecution se) throws Exception {
             String[] command = psqlCopyUtils.createDelCopyCommandByCond(inputFilePath, tableName, productionDbType,
                     ApplicationConst.DbType.CONVERT, isc.getColumnNamesForCodeConversion(tableName), facilityCd, "", delsql);
 
@@ -334,6 +413,5 @@ public class DeleteTableInConvertDbStep extends StepStartEndListener implements 
                 throw new RuntimeException(errorMsg);
             }
         }
-    }
     // add #11399 djy end
 }

@@ -10,14 +10,16 @@ import org.seasar.doma.Update;
 import org.seasar.doma.boot.ConfigAutowireable;
 import org.seasar.doma.jdbc.SelectOptions;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 全施設マスタのDaoインタフェース.
  */
 @ConfigAutowireable
 @Dao
-public interface SysFacilityDao {
+public interface SysFacilityDao extends MasterDao<Map<String, Object>>{
 
   //add by ztc 2023-03-01 [Optimize runtime No.8372] --start /
   @Select
@@ -74,4 +76,36 @@ public interface SysFacilityDao {
   @Select
   List<SysFacility> getSysFacilityByCdList(List<String> cdList);
   /* add by chamaojia 2025-05-21 [11871] --end */
+
+  /**
+   * mst-list-compose 用：施設マスタ（全件・既定）
+   */
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
+
+  /**
+   * mst-list-compose：よく使う施設のみ（mst_favorite_facility と JOIN、favoriteOwnerFacilityCd）
+   */
+  @Select
+  List<Map<String, Object>> selectAllStatusFavorite(Map<String, String> params);
+
+  /**
+   * mst-list-compose：施設一覧ページング
+   */
+  @Select
+  List<Map<String, Object>> selectAllStatusPaged(Map<String, String> params);
+
+  @Override
+  default List<Map<String, Object>> selectAllStatusForCompose(Map<String, String> params) {
+    Map<String, String> p = params == null ? Collections.emptyMap() : params;
+    String favOwner = p.get("favoriteOwnerFacilityCd");
+    if (favOwner != null && !favOwner.isBlank()) {
+      return selectAllStatusFavorite(p);
+    }
+    String limStr = p.get("composeLimit");
+    if (limStr != null && !limStr.isBlank()) {
+      return selectAllStatusPaged(p);
+    }
+    return selectAllStatus(p);
+  }
 }

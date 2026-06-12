@@ -1,7 +1,8 @@
 package jp.co.nikkiso.ntss.api.service.additionInfo;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.api.request.AdditionCalculationRequest;
 import jp.co.nikkiso.ntss.api.service.LogService;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.FacilitySettingNo;
@@ -35,7 +36,6 @@ import org.springframework.data.annotation.Transient;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
@@ -1293,7 +1293,7 @@ public class AdditionCalculationServiceImpl implements AdditionCalculationServic
     };
     try {
       changedList = mapper.readValue(strJson, type);
-    } catch (IOException e) {
+    } catch (JacksonException e) {
       System.err.println(e.getMessage());
     }
 

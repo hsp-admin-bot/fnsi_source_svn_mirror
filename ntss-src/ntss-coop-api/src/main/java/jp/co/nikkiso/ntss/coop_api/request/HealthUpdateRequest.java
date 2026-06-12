@@ -4,8 +4,8 @@ import java.util.Map;
 
 import org.springframework.util.StringUtils;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 
 import jp.co.nikkiso.ntss.coop_api.mapping.HealthmonFacility;
 import jp.co.nikkiso.ntss.coop_api.mapping.HealthmonServer;
@@ -16,7 +16,7 @@ import lombok.Data;
  *
  */
 @Data
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class HealthUpdateRequest {
   /** 施設コード */
   private String facilityCd;

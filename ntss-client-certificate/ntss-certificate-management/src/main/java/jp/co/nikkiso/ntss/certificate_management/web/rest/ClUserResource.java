@@ -188,7 +188,7 @@ public class ClUserResource {
     public ResponseEntity<String> updateLoginAttempt(@RequestBody ClUser clUser) {
         try {
             clUserService.updateAttemptFail(clUser.getUserId(), clUser.getNumLoginAttempt());
-            return new ResponseEntity<>(null, HttpStatus.OK);
+            return ResponseEntity.ok().build();
         } catch (Exception e) {
             EventLogMessage eventLogMessage = new EventLogMessage();
             String errMsg = e.getMessage();

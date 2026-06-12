@@ -299,7 +299,6 @@
           </div>
         </div>
 
-
         <div class="d-flex align-items-center" v-if="!isReceive" v-show="columnStatus.isShowApprover1">
           <!-- mod #10359 編集権限の動作不正 dengshen start -->
           <!-- <v-ons-checkbox -->
@@ -470,246 +469,113 @@
         </div>
       </div>
     </div>
-    <!-- mod 指示受け・指示承認不具合対応 陳 start -->
-    <!--    <kendo-grid-->
-    <!--      :class="fontSizeSet"-->
-    <!--      v-if="isModeIndicationDetails"-->
-    <!--      id="indication-details-id"-->
-    <!--      ref="grid"-->
-    <!--      :data-source="dataSources"-->
-    <!--      :editable="true"-->
-    <!--      :reorderable="true"-->
-    <!--      :resizable="true"-->
-    <!--      :selectable="'row'"-->
-    <!--      :scrollable="true"-->
-    <!--      :sortable="true"-->
-    <!--      :height="gridHeightValue"-->
-    <!--      :groupable-messages-empty="groupableMessageEmpty"-->
-    <!--    >-->
-    <!-- #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start -->
-    <!-- <kendo-grid
-      :class="fontSizeSet"
-      v-if="isModeIndicationDetails"
-      id="indication-details-id"
-      ref="grid"
-      style="font-size: inherit;"
-      :data-source="dataSources"
-      :editable="true"
-      :reorderable="true"
-      :resizable="true"
-      :selectable="'row'"
-      :scrollable="true"
-      :sortable="true"
-      :height="gridHeightValue"
-      :groupable-messages-empty="groupableMessageEmpty"
-      @save="editCell"
-      @databound="onDataBoundKendoGrid">
-    > -->
-    <kendo-grid
-      :class="fontSizeSet"
-      v-if="isModeIndicationDetails"
-      id="indication-details-id"
-      ref="grid"
-      style="font-size: inherit;"
-      :data-source="dataSources"
-      :editable="true"
-      :reorderable="true"
-      :resizable="true"
-      :selectable="'row'"
-      :scrollable-virtual="true"
-      :sortable="true"
-      :height="gridHeightValue"
-      :groupable-messages-empty="groupableMessageEmpty"
-      @save="editCell"
-      @databound="onDataBoundKendoGrid">
-    >
-    <!-- #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end -->
-      <!-- mod 指示受け・指示承認不具合対応 陳 end -->
-      <template v-for="(column, index) in gridIndicationColumns">
-        <kendo-grid-column
-          v-if="column.field === 'receiver1' && isReceive && columnStatus.isShowChecker1"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :values="receiverDataSources"
-          @editor="editorDropDown"
-          :editable="column.editable"
-          :template="getReceiver1Template"
-          :groupable="column.groupable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'receiver2' && isReceive && columnStatus.isShowChecker2"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :values="receiverDataSources"
-          @editor="editorDropDown"
-          :editable="column.editable"
-          :template="getReceiver2Template"
-          :groupable="column.groupable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'approver1' && !isReceive && columnStatus.isShowApprover1"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :values="receiverDataSources"
-          @editor="editorDropDown"
-          :editable="column.editable"
-          :template="isShowBtnOK && getApprover1Template"
-          :groupable="column.groupable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'approver2' && !isReceive && columnStatus.isShowApprover2"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :values="receiverDataSources"
-          @editor="editorDropDown"
-          :editable="column.editable"
-          :template="isShowBtnOK && getApprover2Template"
-          :groupable="column.groupable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'logTarget'"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :template="column.template"
-          :groupable="column.groupable"
-          :editable="column.editable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'logContent'"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :template="column.template"
-          :groupable="column.groupable"
-          :editable="column.editable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'logDateFormat'"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :template="column.template"
-          :groupable="column.groupable"
-          :editable="column.editable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'logTimeFormat'"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :template="column.template"
-          :groupable="column.groupable"
-          :editable="column.editable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'treatmentStartDate'"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :template="column.template"
-          :groupable="column.groupable"
-          :editable="column.editable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'treatmentStartDate'"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :template="column.template"
-          :groupable="column.groupable"
-          :editable="column.editable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'treatmentEndDate'"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :template="column.template"
-          :groupable="column.groupable"
-          :editable="column.editable"
-        ></kendo-grid-column>
-        <!-- add FNSI-改修内容「指示者」、「入力者」の欄を追加 付 start -->
-        <kendo-grid-column
-          v-else-if="column.field === 'createdBy'"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :template="column.template"
-          :groupable="column.groupable"
-          :editable="column.editable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'updatedBy'"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :template="column.template"
-          :groupable="column.groupable"
-          :editable="column.editable"
-        ></kendo-grid-column>
-        <!-- add FNSI-改修内容「指示者」、「入力者」の欄を追加 付 end -->
-        <kendo-grid-column
-          v-else-if="column.field === 'logClass'"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :template="column.template"
-          :groupable="column.groupable"
-          :editable="column.editable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'treatmentWeekday'"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :template="column.template"
-          :groupable="column.groupable"
-          :editable="column.editable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'treatmentMethod'"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :template="column.template"
-          :groupable="column.groupable"
-          :editable="column.editable"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else-if="column.field === 'treatmentCourse'"
-          :key="index"
-          :title="column.title"
-          :width="column.width"
-          :field="column.field"
-          :template="column.template"
-          :groupable="column.groupable"
-          :editable="column.editable"
-        ></kendo-grid-column>
-      </template>
-    </kendo-grid>
-    <!-- /Indication Details -->
-
+    <LocalizationProvider :language="japanese ? 'es-JP' : 'en-EN'">
+      <IntlProvider :locale="japanese ? 'jp' : 'en'">
+        <Grid
+          ref="grid"
+          v-if="isModeIndicationDetails"
+          :cell-render="cellTemplate"
+          :dataItemKey="'refreshKey' + refreshKey"
+          :style="{ height: gridHeightValue + 'px' }"
+          :data-items="gridData"
+          :all-grouped-items="allGroupedData"
+          :unique-field="'_id'"
+          :sortable="sortable"
+          :sort="gridSort"
+          :groupable="true"
+          :take="gridPageSize"
+          :skip="gridSkip"
+          :group="gridGroup"
+          :resizable="true"
+          :reorderable="true"
+          :expand-field="'expanded'"
+          :columns="displayColumns"
+          :row-height="45"
+          :scrollable="'virtual'"
+          :total="totalCnt"
+          :collapsedGroups="collapsedGroups"
+          @datastatechange="onDataStateChange"
+          @groupchange="groupchange"
+          @sortchange="sortChangeHandler"
+          @columnreorder="columnReorder"
+        >
+          <template #groupHeader="{ props }">
+            <td v-if="props.field !== undefined && props.rowType !== 'groupHeader'" :class="props.className">
+              <div class="omit-content"
+                          @mouseenter="handleMouseEnter($event, props.dataItem, props.columnIndex, props.columnsCount)"
+                          @mouseleave="handleMouseLeave(props.dataItem, props.columnIndex)">
+                <b>{{ getNestedValue(props.field, props.dataItem) }}</b>
+              </div>
+              <div 
+                :style="toolTipStyle"
+                class="omit-tip"
+                v-if="props.dataItem._id === tipShow.id && props.columnIndex === tipShow.columnIndex"
+              >
+                {{ getNestedValue(props.field, props.dataItem) }}
+              </div>
+            </td>
+            <td
+              v-else-if="(props.columnIndex === undefined ||
+                          props.level === undefined ||
+                          props.columnIndex < props.level ||
+                          props.columnsCount === undefined ||
+                          props.rowType !== 'groupHeader' ||
+                          props.dataItem[props.field] === undefined) && props.columnIndex < props.level"
+              key="'g' + columnIndex"
+              class="k-table-td"
+            ></td>
+            <td
+              v-else-if="props.columnIndex <= props.level"
+              key="g-colspan"
+              :role="'gridcell'"
+              :colSpan="props.columnsCount - props.columnIndex"
+              class="k-table-td k-group-cell"
+              style="left: 0px; right: 0px"
+            >
+              <p class="k-reset">
+                <a
+                  href="#"
+                  tabIndex="-1"
+                  @click.prevent="clickHandler(props)"
+                >
+                  <SvgIcon v-if="props.expanded" :icon="caretAltDownIcon" />
+                  <SvgIcon v-if="!props.expanded" :icon="caretAltRightIcon" />
+                </a>
+                {{ columnsMap[props.dataItem.field] }}: {{ props.dataItem[props.field] }}
+              </p>
+            </td>
+          </template>
+          <template #editTemplate="{ props }">
+            <td v-if="props.field !== undefined && props.rowType !== 'groupHeader'" :class="props.dataItem[props.field.replace('Name', 'IsEdited')] ? 'grid-edited-cell' : ''">
+              <div v-if="!(props.dataItem._id === staffEdit.id && props.columnIndex === staffEdit.columnIndex)" :key="editRefreshKey" class="indication-detail-type">
+                <div style="width: 120px;" @click="triggerToEdit(props.dataItem, props.columnIndex)">
+                  <div style="width: 120px;">
+                    {{ props.dataItem[props.field] ? props.dataItem[props.field] : '未登録' }}
+                  </div>
+                </div>
+                <div style="width: 60px;">
+                  <button v-if="hasIndReceiveAuthority" class="button btn1-execute" @click="onClickUpdateDetails(props.dataItem, props.field, undefined, undefined)" :disabled="!getItemAuthorized('IndicationList', 'default_authority')">
+                    <img :src="okIcon" class="ok-icon" alt="ok icon" />
+                  </button>
+                </div>
+              </div>
+              <div v-else class="select-box">
+                <kendo-dropdownlist
+                  ref="dropList"
+                  :data-source="mstPersonalUser"
+                  :auto-select-first-on-empty="false"
+                  v-model="props.dataItem[props.field.replace(/Name$/, '')]"
+                  data-text-field="userFullName"
+                  data-value-field="userId"
+                  @close="closeDropdown"
+                  @select="userSelect($event, props.dataItem, props.field)"
+                />
+              </div> 
+            </td>
+          </template>
+        </Grid>
+      </IntlProvider>
+    </LocalizationProvider>
     <!-- Actions -->
     <div class="actions d-flex" style="justify-content: space-between;">
       <v-ons-button v-show="!isPrint" class="btn2-cancel common-style-cancel-button" @click="cancel"
@@ -746,25 +612,17 @@
 </template>
 
 <script>
-  import {mapActions, mapGetters} from "vuex";
-  import moment from "moment";
-  import _ from "underscore";
-  import "moment/locale/ja";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
+  import dayjs from "@/compat/date/dayjs";
+  import _ from "@/compat/collections/lodash";
   import Indication from "@/apis/indication";
-  import {ApiHelper} from "@/apis/AxiosHelper";
-  import Kendo from "@progress/kendo-ui";
-  import $ from "jquery";
+
   import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
-  import ButtonsTemplate from "./IndicationDetailButtonsComponent";
-  import Vue from "vue";
-  // add FNSI-改修内容 治療単位の治療方法マスタの有効項目に応じた表示 dou start
-  import {DIAL_COND_ITEMS} from "@/components/side-contents/SearchDefinitions.js";
-  import {EventBus} from "@/eventBus.js";
+  import {EventBus} from "@/compat/vue/event-bus.js";
   // mod #10359 編集権限の動作不正 dengshen start
   // import { deepCopy } from "@/functions/common/CommonFunctions";
   import { deepCopy, getAuthorized, getHolidayStyle } from "@/functions/common/CommonFunctions.js";
   // mod #10359 編集権限の動作不正 dengshen end
-  // add FNSI-改修内容 治療単位の治療方法マスタの有効項目に応じた表示 dou end
   // add  FNSI-権限 陳 start
   import {AUTHORITY_CODES} from "@/constants/userAuthority";
   import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
@@ -780,21 +638,46 @@
   // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
   import { messageFormat } from '@/functions/common/MessageFormat';
   import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
-  import BigNumber from "bignumber.js";
+  import BigNumber from "@/compat/number/bignumber";
+  import okImg from "../../assets/ok.png";
+  import { getScopedElementsByClassName, getScopedElementById, getScopedUserAgent, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
+  import { process } from '@progress/kendo-data-query';
+  import { Grid } from "@progress/kendo-vue-grid";
+  import { LocalizationProvider, IntlProvider, loadMessages } from '@progress/kendo-vue-intl';
+  import { SvgIcon } from '@progress/kendo-vue-common';
+  import { caretAltDownIcon, caretAltRightIcon } from '@progress/kendo-svg-icons';
   import PrintMixin from "@/components/PrintMixin";
-  
+  // add #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao start
+  // del #11004 連携イベント発生部分不正 piao start
+  // import { sendRequestGetCoopIniSchModifySendClass } from "@/apis/treatment-record";
+  // del #11004 連携イベント発生部分不正 piao end
+  // add #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao end
+  const esMessages = {
+    grid: {
+        groupPanelEmpty: '列名をここにドラッグしてください',
+        noRecords: ''
+    },
+  };
+
+  loadMessages(esMessages, 'es-JP');
   export default {
 // mod  FNSI-権限 陳 start
     mixins: [MasterMaintenanceMixin, ComponentGuardMixin, PrintMixin],
     // mixins: [MasterMaintenanceMixin],
 // mod  FNSI-権限 陳 end
     name: "IndicationDetailComponent",
+    components: {
+      Grid,
+      LocalizationProvider,
+      IntlProvider,
+      SvgIcon
+    },
     data() {
       return {
 // add FNSI redmain_3937 指示受け・指示承認で画面印刷を行うとレイアウトが崩れる dou start
         isPrint: false,
 // add FNSI redmain_3937 指示受け・指示承認で画面印刷を行うとレイアウトが崩れる dou end
-        okIcon: require("../../assets/ok.png"),
+        okIcon: okImg,
 // add  FNSI-権限 陳 start
         hasIndReceiveAuthority: false,
         // add FNSI 1006 No.538 外部連携APIを呼び出 陳 start
@@ -828,6 +711,7 @@
         chgDataSources: [],
 // add FNSI redmain_3947 「未チェックのみ表示」の欄にチェックを入れると未保存の内容が表示から消える dou end
         gridIndicationColumns: [],
+        isIndicationDetailsGridReady: false,
         INDICATIONTYPE: {
           RECEIVER1: "receiver1",
           RECEIVER2: "receiver2",
@@ -876,8 +760,39 @@
         // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
         initDataSourcesMap: {},
         // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end
-        scrollQuerySelector: ".k-virtual-scrollable-wrap", // スクロールコンテナ
-        addClassTargetQuerySelector: [".k-auto-scrollable table"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
+        gridGroup: [{ field: 'logTarget' }],
+        gridSort: [],
+        gridPageSize: 20,
+        gridSkip: 0,
+        totalCnt: 0,
+        allGroupedData: null,
+        collapsedItems: [],
+        refreshKey: 0,
+        editRefreshKey: 0,
+        japanese: true,
+        gridData: [],
+        gridDataRaw: [],
+        displayGridData: [],
+        sortable: {
+          mode: 'multiple'
+        },
+        displayColumns: [],
+        cellTemplate: 'groupHeader',
+        collapsedGroups: [[]],
+        displayIndex: 0,
+        gridSortedList: [],
+        tipShow: {
+          id: '',
+          columnIndex: -1
+        },
+        staffEdit: {
+          id: '',
+          columnIndex: -1
+        },
+        toolTipStyle: {},
+        columnsMap: new Map(),
+        scrollQuerySelector: ".k-virtual-scrollable-wrap",
+        addClassTargetQuerySelector: [".k-auto-scrollable table"],
       };
     },
     computed: {
@@ -902,7 +817,7 @@
         "facilityInsApp"
       ]),
       ...mapGetters("user", { facilityCd: "getFacilityCd" }),
-      ...mapGetters("pat-info", ["selectedPat", "selectedPatId"]),
+      ...mapGetters("pat-info", ["selectedPat", "selectedPatId", "inSelectPatAtPatHeaderCreated"]),
       ...mapGetters("treatment-record/common", ["getOrdNoForSideBarRecord"]),
       // add FNSI 1006 No.538 外部連携APIを呼び出 陳 start
       ...mapGetters("account-edit", ["getUserId", "getUserName", "getDefaultSetting", {getFontSize: "getFontSize"}]),
@@ -943,12 +858,15 @@
       isModeIndicationDetails() {
         return this.$route.params.patId ? true : false;
       },
+      shouldRenderIndicationDetailsGrid() {
+        return this.isModeIndicationDetails && this.isIndicationDetailsGridReady;
+      },
       gridHeightValue() {
-        return this.gridHeight;
+        return this.gridHeight - 10;
       },
       receiverDataSources() {
         const list = [];
-        this.mstPersonalUser.forEach(user => {
+        this.mstPersonalUser?.forEach(user => {
           const item = {
             value: user.userId,
             text: user.userFullName
@@ -959,7 +877,7 @@
       },
       docterDataSources() {
         const list = [];
-        this.doctorsAtFacility.forEach(user => {
+        this.doctorsAtFacility?.forEach(user => {
           const item = {
             value: user.userId,
             text: user.userFullName
@@ -994,36 +912,31 @@
           this.isDoctor ||
           this.facilityInsApp === this.FACILITY_INS_APPTYPE.ALL_USER ||
           (this.facilityInsApp === this.FACILITY_INS_APPTYPE.DOCTOR_LIST &&
-            !this.isDoctor)
-        );
+            !this.isDoctor));
       },
       isDisabled() {
         return (
           this.isApproving &&
           !this.isDoctor &&
-          this.facilityInsApp === this.FACILITY_INS_APPTYPE.ONLY_DOCTOR_OPERATION
-        );
+          this.facilityInsApp === this.FACILITY_INS_APPTYPE.ONLY_DOCTOR_OPERATION);
       },
       isDisabledCheckbox1() {
         return (
           this.isApproving &&
           !this.isDoctor &&
-          this.facilityInsApp === this.FACILITY_INS_APPTYPE.ONLY_DOCTOR_OPERATION
-        );
+          this.facilityInsApp === this.FACILITY_INS_APPTYPE.ONLY_DOCTOR_OPERATION);
       },
       isDisabledCheckbox2() {
         return (
           this.isApproving &&
           !this.isDoctor &&
-          this.facilityInsApp === this.FACILITY_INS_APPTYPE.ONLY_DOCTOR_OPERATION
-        );
+          this.facilityInsApp === this.FACILITY_INS_APPTYPE.ONLY_DOCTOR_OPERATION);
       },
       isDisabledDropdown() {
         return (
           this.isApproving &&
           !this.isDoctor &&
-          this.facilityInsApp === this.FACILITY_INS_APPTYPE.ONLY_DOCTOR_OPERATION
-        );
+          this.facilityInsApp === this.FACILITY_INS_APPTYPE.ONLY_DOCTOR_OPERATION);
       },
       // mod FNSI-7570 劉全航 start
       rstDialysisState(){
@@ -1040,7 +953,7 @@
       },
       // mod FNSI-7570 劉全航 end
       formattedTreatDate(){
-        const date = moment(this.ordDetail.treatDate, "YYYYMMDD");
+        const date = dayjs(this.ordDetail.treatDate, "YYYYMMDD");
         return date.format("YYYY/MM/DD(dd)");   
       },
       isDirtyChecked1() {
@@ -1058,7 +971,13 @@
       isDirtyApproved2() {
         // 指示承認者2(初期値)と指示承認者2(現在値)の値を比較して、チェックボックス又はプルダウンの値に差がある場合trueを返却
         return this.initIsCheckbox2HasValue != this.isCheckbox2HasValue || this.initSelectedStaffCd2 != this.selectedStaffCd2;
-      }
+      },
+      caretAltDownIcon() {
+        return caretAltDownIcon;
+      },
+      caretAltRightIcon() {
+        return caretAltRightIcon;
+      },
     },
     watch: {
       async $route() {
@@ -1072,6 +991,7 @@
         // this.selectedStaffCd2 = "";
         this.selectedStaffCd1 = '0';
         this.selectedStaffCd2 = '0';
+        this.isIndicationDetailsGridReady = false;
         // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc end
 
         if (this.isTreatmentUnit) {
@@ -1080,16 +1000,17 @@
         } else {
           await this.getIndicationDetails();
           this.setIndicationDetailsColumn();
-          this.sortedIndicationDetails();
+          await this.renderIndicationDetailsGrid();
         }
       },
       getFontSize() {
         // 初期表示時に処理が実施された場合、レイアウトが崩れる為、判定を追加
         if (!(this.dataSources !== null && typeof(this.dataSources) === 'object' && this.dataSources.constructor === Object)) {
-          const ua = navigator.userAgent;
+          const ownerWindow = getScopedWindow(this.$el) || window;
+          const ua = getScopedUserAgent(this.$el);
           if (ua.match(/iPhone|iPad/)) {
             // モバイル環境ではサイズ変更が適用されるまで時間がかかる為の対応
-            setTimeout(() => {
+            ownerWindow.setTimeout(() => {
               this.onResize();
             }, 500);
           } else {
@@ -1099,6 +1020,7 @@
       },
       indicationsUnchecked: {
         handler() {
+          if (!this.shouldRenderIndicationDetailsGrid) return;
           this.sortedIndicationDetails();
         },
         deep: true
@@ -1107,14 +1029,16 @@
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc start
         if (this.ignoreWatchSelectedPatId) return;
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc end
-        const method = this.$route.params.method;
-        const patId = +this.$route.params.patId;
+        const method = this.getCurrentDetailMethod();
+        const patId = this.getCurrentDetailPatId();
+        const selectedPatId = this.selectedPatId;
         let _id = null;
+        if (this.isSelectingCurrentPatAtPatHeaderCreated()) return;
         // indication screen
         if (!this.isTreatmentUnit) {
-          if (this.selectedPatId !== null && this.selectedPatId !== patId) {
-            this.sortedIndicationsList.forEach(item => {
-              if (+item.patId === this.selectedPatId) {
+          if (selectedPatId !== null && String(selectedPatId) !== String(patId)) {
+            this.sortedIndicationsList?.forEach(item => {
+              if (String(item.patId) === String(selectedPatId)) {
                 _id = item._id;
               }
             });
@@ -1126,7 +1050,7 @@
               // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc end
                   name: `indication-${method}-details`,
                   params: {
-                    patId: this.selectedPatId,
+                    patId: selectedPatId,
                     _id: _id,
                     method: method
                   }
@@ -1142,7 +1066,8 @@
           }
         } else {
           // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc start
-          if (this.getOrdNoForSideBarRecord !== this.$route.params.ordNo && await this.confirmContentChanged()) {
+          const currentOrdNo = this.$route.params.ordNo;
+          if (this.getOrdNoForSideBarRecord !== currentOrdNo && await this.confirmContentChanged()) {
             await this.$router.replace({
           // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc end
               name: `indication-${method}-detail`,
@@ -1155,63 +1080,493 @@
           } else {
             this.ignoreWatchSelectedPatId = true;
             await this.setSelectedPatHeader(this.ordDetail.patId);
-            await this.setOrdNoForSideBarRecord(this.$route.params.ordNo);
+            await this.setOrdNoForSideBarRecord(currentOrdNo);
             this.ignoreWatchSelectedPatId = false;
             await this.getPatPersonal(this.ordDetail.patId)
           }
           // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc end
         }
       },
-    },
-    filters: {
-      date(val) {
-        return moment(val)
-          .locale("ja")
-          .format("YYYY/MM/DD(ddd)");
-      }
+      gridGroup: {
+        handler() {
+          this.collapsedItems = [];
+          this.allGroupedData = process(this.displayGridData, {
+            group: this.gridGroup,
+            sort: this.gridSort
+          });
+          this.gridSortedList = this.expandedArr(this.allGroupedData.data);
+        }
+      },
+      gridSort: {
+        handler() {
+          this.allGroupedData = process(this.displayGridData, {
+            group: this.gridGroup,
+            sort: this.gridSort
+          });
+          this.gridSortedList = this.expandedArr(this.allGroupedData.data);
+        }
+      },
     },
     methods: {
       ...mapActions("mst-holiday", [
         "fetchHolidays",
         "clearHolidays"
       ]),
-      
       /** 画面印刷の処理 */
       handleBeforePrint() {
         if (!this.isModeIndicationDetails) return;
-        
-        // 指示単位の場合はkendoの仮想スクロール使用しているので表示範囲を切り取る
-        const grid = this.$refs.grid.kendoWidget();
-        const wrap = grid.element.find('.k-virtual-scrollable-wrap');
-        const scrollTop = wrap.scrollTop();
-        const height = wrap.height();
-      
-        // overflowではなくclip-pathで表示範囲を切り取る
-        wrap.css({
-          'overflow': 'visible',
-          'clip-path': `inset(${scrollTop}px 0 0 0)`,
-          'margin-top': `-${scrollTop}px`,  // 上の空白を詰める
-          'height': `${height}px`
-        });
+
+        const wrap = (this.$el || document).querySelector(".k-virtual-scrollable-wrap");
+        if (!wrap) return;
+
+        const scrollTop = wrap.scrollTop;
+        const height = wrap.clientHeight || wrap.offsetHeight;
+        wrap.style.overflow = "visible";
+        wrap.style.clipPath = `inset(${scrollTop}px 0 0 0)`;
+        wrap.style.marginTop = `-${scrollTop}px`;
+        wrap.style.height = `${height}px`;
       },
       handleAfterPrint() {
         if (!this.isModeIndicationDetails) return;
-        
-        // 指示単位の場合はkendoの仮想スクロール使用しているので表示範囲を切り取る
-        const grid = this.$refs.grid.kendoWidget();
-        grid.element.find('.k-virtual-scrollable-wrap').css({
-          'overflow': '',
-          'clip-path': '',
-          'margin-top': '',
-          'height': ''
+
+        const wrap = (this.$el || document).querySelector(".k-virtual-scrollable-wrap");
+        if (!wrap) return;
+
+        wrap.style.overflow = "";
+        wrap.style.clipPath = "";
+        wrap.style.marginTop = "";
+        wrap.style.height = "";
+      },
+      userSelect(e, item, indicationType) {
+        this.onClickUpdateDetails(item, indicationType, e.dataItem.userId, e.dataItem.userFullName);
+      },
+      closeDropdown() {
+        this.staffEdit = {
+          id: '',
+          columnIndex: -1
+        }
+        this.editRefreshKey++;
+      },
+      triggerToEdit(dataItem, columnIndex) {
+        if(!this.hasIndReceiveAuthority) {
+          // 編集不可
+          return;
+        }
+        if(dataItem._id) {
+          this.staffEdit = {
+            id: dataItem._id,
+            columnIndex: columnIndex
+          };
+          // Vue3 compat: kendo-dropdownlist は KendoDropDownList.open() で開く（旧 .k-dropdown クリックは効かない）
+          this.$nextTick(() => {
+            const dropListRef = this.$refs.dropList;
+            const dropList = Array.isArray(dropListRef)
+              ? dropListRef[dropListRef.length - 1]
+              : dropListRef;
+            if (dropList?.open) {
+              dropList.open();
+              return;
+            }
+            const selectBox = this.$el?.querySelector?.(".select-box");
+            const legacyTrigger = selectBox?.querySelector?.(
+              ".k-dropdown .k-select, .k-dropdownlist .k-input-button, .k-input-button"
+            );
+            legacyTrigger?.click?.();
+          });
+        }
+      },
+      clearTipShow() {
+        this.tipShow = {
+          id: '',
+          columnIndex: -1
+        };
+        this.toolTipStyle = {};
+      },
+      isTipShowCell(dataItem, columnIndex) {
+        return (
+          dataItem?._id != null &&
+          String(this.tipShow.id) === String(dataItem._id) &&
+          this.tipShow.columnIndex === columnIndex
+        );
+      },
+      handleMouseEnter(event, dataItem, columnIndex, columnsCount) {
+        const element = event.currentTarget;
+        if (!dataItem?._id || !element) {
+          return;
+        }
+        if (element.scrollWidth <= element.clientWidth) {
+          if (this.isTipShowCell(dataItem, columnIndex)) {
+            this.clearTipShow();
+          }
+          return;
+        }
+        this.tipShow = {
+          id: dataItem._id,
+          columnIndex: columnIndex
+        };
+        const cellId = dataItem._id;
+        const cellColumnIndex = columnIndex;
+        this.$nextTick(() => {
+          if (
+            String(this.tipShow.id) !== String(cellId) ||
+            this.tipShow.columnIndex !== cellColumnIndex
+          ) {
+            return;
+          }
+          const tooltip = this.$el?.querySelector('.omit-tip');
+          if (!tooltip) {
+            return;
+          }
+          const tooltipRect = tooltip.getBoundingClientRect();
+          const leftWidth = (tooltipRect.width * -1) + 'px';
+          const firstId = this.gridSortedList?.[0]?._id ?? '';
+          if (String(dataItem._id) === String(firstId)) {
+            if (columnIndex === columnsCount - 1) {
+              this.toolTipStyle = {
+                'margin-left': leftWidth
+              };
+            } else {
+              this.toolTipStyle = {};
+            }
+          } else if (columnIndex === columnsCount - 1) {
+            this.toolTipStyle = {
+              'margin-top': '-60px',
+              'margin-left': leftWidth
+            };
+          } else {
+            this.toolTipStyle = {
+              'margin-top': '-60px'
+            };
+          }
         });
-      },      
-      
+      },
+      handleMouseLeave(dataItem, columnIndex) {
+        if (this.isTipShowCell(dataItem, columnIndex)) {
+          this.clearTipShow();
+        }
+      },
+      getNestedValue(fieldName, dataItem) {
+        const path = fieldName.split('.');
+        let data = dataItem;
+        path?.forEach((p) => {
+            data = data ? data[p] : undefined;
+        });
+        return data;
+      },
+      clickHandler(props) {
+        props.dataItem.expanded = props.dataItem.expanded === undefined ? false : !props.dataItem.expanded;
+        this.handleExpandedItems(props.dataItem.field, props.dataItem.value, props.dataItem.items, props.dataItem.expanded);
+        this.initGridData(this.allGroupedData.data);
+        this.refreshExpanded(this.allGroupedData.data);
+        props.value = props.dataItem.expanded;
+        props.expanded = props.dataItem.expanded;
+        // this.collapsedGroups = this.$refs.grid.updateGroupCollapsed(props);
+        this.processGridData(1);
+        // ここで refreshKey++ すると :dataItemKey が全行一括で変わり Grid が実質フル再マウントする。
+        // 展開/畳みは processGridData + collapsedGroups で足りるため付けない。
+      },
+      columnReorder(options) {
+        this.displayColumns = options.columns;
+        this.refreshKey++;
+      },
+      sortChangeHandler(e) {
+        this.gridSort = e.sort;
+        this.processGridData(0);
+      },
+      onDataStateChange(event) {
+        this.gridGroup = event.data.group || [];
+        this.gridSort = event.data.sort || [];
+        this.gridSkip = event.data.skip || 0;
+        this.processGridData(0);
+      },
+      computedDisplaySize(items, totalCnt) {
+        if(items) {
+          for(let i = 0; i < items.length; i++) {
+            const detailInfo = items[i];
+            if (!detailInfo.items) {
+              totalCnt++;
+            } else if(!detailInfo.items[0].items) {
+              totalCnt = totalCnt + detailInfo.items.length;
+            } else if(detailInfo.expanded !== false) {
+              totalCnt = this.computedDisplaySize(detailInfo.items, totalCnt);
+            } else {
+              totalCnt = totalCnt + 1;
+            }
+          }
+        }
+        return totalCnt;
+      },
+      handleGroupData(skip, to) {
+        const keyMap = new Map();
+        this.displayIndex = 0;
+        this.handleGroupDataDetails(this.allGroupedData.data, keyMap, '');
+        return this.queryGroupDataResult(this.allGroupedData.data, keyMap, skip, to);
+      },
+      queryGroupDataResult(items, keyMap, skip, to) {
+        if(!items || items.length === 0) {
+          return -1;
+        }
+        let endIndex = skip + to - 1;
+        if(endIndex >= keyMap.size) {
+          endIndex = keyMap.size - 1;
+        }
+        const lastItem = keyMap.get(endIndex);
+        const tempArr = lastItem.split('-');
+        let tempItems = items;
+        let uniqueId = '';
+        for(let i = 0; i < tempArr.length; i++) {
+          const tempKey = tempArr[i] + '';
+          if(tempItems[tempKey].items) {
+            tempItems = tempItems[tempKey].items;
+          } else {
+            uniqueId = tempItems[tempKey]._id;
+          }
+        }
+        if(uniqueId === '') {
+          let subItem = tempItems[0];
+          while(subItem.items) {
+            subItem = subItem.items[0];
+          }
+          uniqueId = subItem._id;
+        }
+        if(uniqueId) {
+          return this.gridSortedList.findIndex(el => el._id === uniqueId)
+        }
+        return -1;
+      },
+      initGridData(items) {
+        if(items) {
+          for(let i = 0; i < items.length; i++) {
+            if(items[i].items) {
+              items[i].expanded = true;
+              this.initGridData(items[i].items);
+            }
+          }
+        }
+      },
+      expandedArr(items) {
+        let tempArr = [];
+        for(let i = 0; i < items.length; i++) {
+          if(items[i].items && !items[i].items[0].items) {
+            tempArr = tempArr.concat(items[i].items);
+          } else {
+            if(items[i].items) {
+              const resultArr = this.expandedArr(items[i].items);
+              tempArr = tempArr.concat(resultArr);
+            }
+          }
+        }
+        return tempArr;
+      },
+      handleGroupDataDetails(items, keyMap, keyValue) {
+        for(let i = 0; i < items.length; i++) {
+          const saveValue = keyValue !== '' ? keyValue + '-' + i : '' + i;
+          const detailInfo = items[i];
+          if(detailInfo.items) {
+            if(detailInfo.expanded === false) {
+              keyMap.set(this.displayIndex, saveValue);
+              this.displayIndex++;
+            } else {
+              this.handleGroupDataDetails(detailInfo.items, keyMap, saveValue);
+            }
+          } else {
+            keyMap.set(this.displayIndex, saveValue);
+            this.displayIndex++;
+          }
+        }
+      },
+      processGridData(expandFlag) {
+        if(expandFlag !== 1) {
+          this.refreshExpanded(this.allGroupedData.data);
+        }
+        // 分组 + 仮想スクロール時、Kendo Grid は virtualPageChange で pagechange を出さず
+        // 内部 _virtualSkipRef のみ更新するため、親の gridSkip が動かず skip/take 切片が常に先頭のままになる。
+        // kendo-data-query の process に skip/take を渡さないと全件のグループ木が返り、Grid 側の仮想化でスクロールできる。
+        const hasGroup =
+          Array.isArray(this.gridGroup) && this.gridGroup.length > 0;
+        let result;
+        if (hasGroup) {
+          this.gridSkip = 0;
+          result = process(this.displayGridData, {
+            group: this.gridGroup,
+            sort: this.gridSort
+          });
+        } else {
+          let tempTake = this.handleGroupData(this.gridSkip, this.gridPageSize);
+          if (tempTake !== -1) {
+            tempTake = tempTake - this.gridSkip + 1;
+          } else {
+            tempTake = this.gridPageSize;
+          }
+          result = process(this.displayGridData, {
+            group: this.gridGroup,
+            sort: this.gridSort,
+            skip: this.gridSkip,
+            take: tempTake
+          });
+        }
+        this.gridData = result.data;
+        this.totalCnt = result.total;
+
+        this.refreshExpanded(this.gridData);
+      },
+      refreshExpanded(handleExpandGrid) {
+        if(this.collapsedItems) {
+          for(let i = 0; i < this.collapsedItems.length; i++) {
+            const handleItem = this.collapsedItems[i];
+            if(handleItem) {
+              let indexItem = null;
+              for(let subIndex = 0; subIndex < handleItem.length; subIndex++) {
+                const itemInfo = handleItem[subIndex];
+                if(subIndex === 0) {
+                  indexItem = this.handleRefreshExpandedDetail(itemInfo, handleExpandGrid);
+                } else if(indexItem) {
+                  indexItem = this.handleRefreshExpandedDetail(itemInfo, indexItem.items);
+                }
+                if(indexItem && subIndex === handleItem.length - 1) {
+                  indexItem.expanded = false;
+                }
+                if(!indexItem) {
+                  break;
+                }
+              }
+            }
+          }
+        }
+      },
+      handleRefreshExpandedDetail(itemInfo, items) {
+        let index = items.findIndex(el => el.field === itemInfo.field && el.value === itemInfo.value);
+        if(index === -1) {
+          return null;
+        } else {
+          return items[index];
+        }
+      },
+      handleExpandedItems(field, value, items, flag) {
+        const item = this.findFirstItem(items);
+        const handleIndex = this.gridGroup.findIndex(el => el.field === field);
+        const preFields = this.gridGroup.slice(0, handleIndex);
+        let saveFields = [];
+        if(preFields) {
+          preFields?.forEach(el => {
+            saveFields.push({
+              field: el.field,
+              value: item[el.field]
+            });
+          });
+        }
+        saveFields.push({
+          field: field,
+          value: value
+        });
+        if(!flag) {
+          // 畳む
+          this.collapsedItems.push(saveFields);
+        } else {
+          let tmepCollapsedItems = []; 
+          let index = this.collapsedItems?.forEach(el => {
+            if(el.length === saveFields.length) {
+              let isEqual = true;
+              for(let i = 0; i < el.length; i++) {
+                if(el[i].value !== saveFields[i].value) {
+                  isEqual = false;
+                  break;
+                }
+              }
+              if(!isEqual) {
+                tmepCollapsedItems.push(el);
+              }
+            } else {
+              tmepCollapsedItems.push(el);
+            }
+          });
+          this.collapsedItems = tmepCollapsedItems;
+        }
+      },
+      findFirstItem(items) {
+        if(items[0].hasOwnProperty('items')) {
+          return this.findFirstItem(items[0].items);
+        } else {
+          return items[0];
+        }
+      },
+      groupchange(event) {
+        let isExistFlag = false;
+        const stringSet = new Set();
+        event.group?.forEach(el => {
+          if(!stringSet.has(el.field)) {
+            stringSet.add(el.field);
+          } else {
+            isExistFlag = true;
+          }
+        })
+        if(!isExistFlag) {
+          this.gridGroup = event.group;
+          this.processGridData(0);
+        }
+        this.collapsedGroups = Array.from({ length: this.gridGroup.length }, () => []);
+      },
       // add #10359 編集権限の動作不正 dengshen start
       getItemAuthorized(pageCd, itemCd) {
         return getAuthorized(pageCd, itemCd);
       },
       // add #10359 編集権限の動作不正 dengshen end
+
+      getCurrentDetailMethod() {
+        const paramsMethod = this.$route.params?.method;
+        if (paramsMethod) {
+          return paramsMethod;
+        }
+        const routeName = String(this.$route.name || "");
+        if (routeName.includes("approve")) {
+          return this.APPROVE;
+        }
+        if (routeName.includes("receive")) {
+          return this.RECEIVE;
+        }
+        const routePath = String(this.$route.path || "");
+        if (routePath.includes("/detail/approve/")) {
+          return this.APPROVE;
+        }
+        if (routePath.includes("/detail/receive/")) {
+          return this.RECEIVE;
+        }
+        return "";
+      },
+      getCurrentDetailPatId() {
+        if (this.$route.params?.patId != null) {
+          return this.$route.params.patId;
+        }
+        return null;
+      },
+      isSelectingCurrentPatAtPatHeaderCreated() {
+        if (!this.inSelectPatAtPatHeaderCreated || this.selectedPatId == null) {
+          return false;
+        }
+        const currentPatId = this.getCurrentDetailPatId();
+        return currentPatId != null && String(this.selectedPatId) === String(currentPatId);
+      },
+      hasIndicationDetailIds(paramsId) {
+        if (Array.isArray(paramsId)) {
+          return paramsId.length > 0;
+        }
+        return paramsId !== null && paramsId !== undefined && paramsId !== "";
+      },
+      resolveIndicationDetailIds() {
+        let paramsId = this.$route.params._id;
+        const routePatId = this.$route.params.patId;
+        const sortedIndicationsDetailInfo = this.sortedIndications.find(item => String(item.patId) === String(routePatId));
+        if (sortedIndicationsDetailInfo) {
+          paramsId = sortedIndicationsDetailInfo._id;
+        }
+        return paramsId;
+      },
+
+      async renderIndicationDetailsGrid() {
+        this.isIndicationDetailsGridReady = true;
+        await this.$nextTick();
+        await this.sortedIndicationDetails();
+      },
 
       //add #10739 コンバート施設で指示受け(治療単位)が表示されない 20241218 zhaoqi start
       getTreatMethod(subCategory) {
@@ -1293,151 +1648,6 @@
         return res;
       },
       //mod #10739 コンバート施設で指示受け(治療単位)が表示されない 20241218 zhaoqi end
-      // add #12137 指示受け・指示承認詳細(指示単位)で追加読込で全データ表示しない。 fang start
-      measureAndCacheGroupComp(grid, vs) {
-        if (!grid || !vs) return;
-        const $gRows = grid.tbody && grid.tbody.find('tr.k-grouping-row');
-        const gCount = $gRows ? $gRows.length : 0;
-        if (!gCount) {
-          vs.__groupComp = null;
-          return;
-        }
-        const firstRow = grid.tbody.find('tr[role="row"]').not('.k-grouping-row').get(0);
-        const realRowHeight = (firstRow && firstRow.offsetHeight) || vs.itemHeight || 36;
-        vs.__groupComp = {
-          gCount: gCount,
-          realRowHeight: realRowHeight,
-          extra: gCount * realRowHeight,
-        };
-      },
-      applyGroupCompensationForVirtualScroll() {
-        const grid = this.$refs.grid && this.$refs.grid.kendoWidget && this.$refs.grid.kendoWidget();
-        if (!grid || !grid.virtualScrollable) return;
-        const vs = grid.virtualScrollable;
-        const wrap = vs.wrapper && vs.wrapper[0];
-        if (!wrap) return;
-
-        // 事前キャッシュされた測定値を優先（scroll 毎の DOM 取得を回避）。
-        // 初回 scroll が databound より先に到達した場合のみ即測し fallback。
-        let comp = vs.__groupComp;
-        if (comp === undefined) {
-          this.measureAndCacheGroupComp(grid, vs);
-          comp = vs.__groupComp;
-        }
-        if (!comp || !comp.gCount) return;
-        const extra = comp.extra;
-
-        const realMax = wrap.scrollHeight - wrap.offsetHeight;
-        if (realMax <= 0) return;
-
-        // Kendo 想定の wrap 最大 scrollTop（group 行を含まない）
-        const kendoMax = Math.max(0, realMax - extra);
-        const kendoTop = typeof vs._scrollTop === 'number' ? vs._scrollTop : wrap.scrollTop;
-
-        let target;
-        // Kendo 自身の判定を流用（parseInt 丸めまで含め同挙動）
-        if (typeof vs._isScrolledToBottom === 'function' && vs._isScrolledToBottom()) {
-          target = realMax;
-        } else if (kendoMax <= 0) {
-          target = Math.min(realMax, Math.max(0, kendoTop));
-        } else {
-          // ページ内進捗で group 行分を線形補間
-          const progress = Math.min(1, Math.max(0, kendoTop / kendoMax));
-          target = Math.min(realMax, Math.max(0, kendoTop + extra * progress));
-        }
-
-        if (Math.abs(wrap.scrollTop - target) > 0.5) {
-          wrap.scrollTop = target;
-        }
-        // Kendo の後続 repaintScrollbar が上書きしないよう _scrollTop も同期
-        if (Math.abs((vs._scrollTop || 0) - target) > 0.5) {
-          vs._scrollTop = target;
-        }
-      },
-      adjustVirtualScrollHeightForGroups() {
-        const grid = this.$refs.grid && this.$refs.grid.kendoWidget && this.$refs.grid.kendoWidget();
-        if (!grid || !grid.virtualScrollable) return;
-        const vs = grid.virtualScrollable;
-
-        if (!vs.__groupScrollPatched) {
-          // Kendo の scroll ハンドラ（.kendoVirtualScrollable 名前空間）と並列に
-          // 別名前空間で購読し、Kendo が _scrollTop を確定した後に補正を実行する。
-          // jQuery のイベントハンドラは登録順に実行されるため、Kendo のほうが先に動く。
-          const $sb = vs.verticalScrollbar;
-          if ($sb && $sb.on) {
-            let rafPending = false;
-            $sb.on('scroll.groupFix', () => {
-              if (rafPending) return;
-              rafPending = true;
-              const rafFn = typeof requestAnimationFrame === 'function'
-                ? requestAnimationFrame
-                : (cb) => setTimeout(cb, 16);
-              rafFn(() => {
-                rafPending = false;
-                this.applyGroupCompensationForVirtualScroll();
-              });
-            });
-          }
-          vs.__groupScrollPatched = true;
-        }
-
-        // databound ごとに group 行数と実行高さを再キャッシュ
-        this.measureAndCacheGroupComp(grid, vs);
-
-        // databound 直後はブラウザが wrap の新レイアウトを計算し終える次フレームで
-        // 1 度だけ補正（以前の「即時 + rAF」二段から rAF 1 回に削減、strict 同期
-        // layout を削って翻頁時のカクツキを軽減）。
-        if (typeof requestAnimationFrame === 'function') {
-          requestAnimationFrame(() => {
-            this.applyGroupCompensationForVirtualScroll();
-          });
-        } else {
-          this.applyGroupCompensationForVirtualScroll();
-        }
-      },
-      // add #12137 指示受け・指示承認詳細(指示単位)で追加読込で全データ表示しない。 fang end
-      // #6433 ALL(OK)ボタンを押下して設定された指示受け（指示承認）者の表示色が保存済のものとなっている 訾浩 start
-      onDataBoundKendoGrid () {
-        this.updateDataColor()
-        // add #12137 指示受け・指示承認詳細(指示単位)で追加読込で全データ表示しない。 fang start
-        this.adjustVirtualScrollHeightForGroups()
-        // add #12137 指示受け・指示承認詳細(指示単位)で追加読込で全データ表示しない。 fang end
-        const grid = this.$refs.grid?.kendoWidget?.();
-        if (!grid || !grid.virtualScrollable) return;
-        const wrapper = grid.wrapper?.[0];
-        if (!wrapper) return;
-
-        let startY = 0;
-        let scrollStart = 0;
-        let isVerticalScroll = false;
-
-        wrapper.addEventListener('touchstart', (e) => {
-          if (e.touches.length === 1) {
-            startY = e.touches[0].clientY;
-            scrollStart = grid.virtualScrollable.verticalScrollbar[0].scrollTop;
-            isVerticalScroll = false;
-          }
-        }, { passive: true });
-
-        wrapper.addEventListener('touchmove', (e) => {
-          if (e.touches.length === 1) {
-            const currentY = e.touches[0].clientY;
-            const deltaY = startY - currentY;
-
-            if (!isVerticalScroll && Math.abs(deltaY) > 10) {
-              isVerticalScroll = true;
-            }
-            if (isVerticalScroll) {
-              const newScrollTop = scrollStart + deltaY;
-              requestAnimationFrame(() => {
-                grid.virtualScrollable.verticalScrollbar[0].scrollTop = newScrollTop;
-              });
-              e.preventDefault(); // iOSでスクロールを有効にするために必要
-            }
-          }
-        }, { passive: false });
-      },
-      // #6433 ALL(OK)ボタンを押下して設定された指示受け（指示承認）者の表示色が保存済のものとなっている 訾浩 end
       // 共通ローダー設定
       // #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
       // ...mapActions("loading-screen", {
@@ -1465,15 +1675,15 @@
         // if (param.substring(0, 3) === getCurrentFunctionCd().substring(0, 3)) {
         // del #9558機能帳票でパラメータが正しく渡されていない 杜天成 end
         // add #11256 機能帳票の印刷情報対応① limingzhe start
-        let dateTodate = moment(Date.now()).format('YYYYMMDD');
+        let dateTodate = dayjs(Date.now()).format('YYYYMMDD');
         if(this._data.treatDate != null && this._data.treatDate != ''){
-          dateTodate = moment(this._data.treatDate).format('YYYYMMDD');
+          dateTodate = dayjs(this._data.treatDate).format('YYYYMMDD');
         }else if(this.treatmentIndications[0] != undefined){
-          // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない 高　start
-          // if(this.initDataSources[0].logDate != null && this.initDataSources[0].logDate != "") dateTodate = moment(this.initDataSources[0].logDate).format('YYYYMMDD');
-          if(this.initDataSources[0].logDate != null && this.initDataSources[0].logDate != "") dateTodate = moment(this.initDataSources[0].logDate.substring(0,8)).format('YYYYMMDD');
-          // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない 高　end
-          else if(this.initDataSources[0].treatmentStartDate != null && this.initDataSources[0].treatmentStartDate != "") dateTodate = moment(this.initDataSources[0].treatmentStartDate).format('YYYYMMDD');
+          // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない 高 start
+          // if(this.initDataSources[0].logDate != null && this.initDataSources[0].logDate != "") dateTodate = dayjs(this.initDataSources[0].logDate).format('YYYYMMDD');
+          if(this.initDataSources[0].logDate != null && this.initDataSources[0].logDate != "") dateTodate = dayjs(this.initDataSources[0].logDate.substring(0,8)).format('YYYYMMDD');
+          // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない 高 end
+          else if(this.initDataSources[0].treatmentStartDate != null && this.initDataSources[0].treatmentStartDate != "") dateTodate = dayjs(this.initDataSources[0].treatmentStartDate).format('YYYYMMDD');
         }
         // add #11256 機能帳票の印刷情報対応① limingzhe end
           const param1 = {
@@ -1487,15 +1697,15 @@
             // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
             functionCd:'02801',
 // mod #9558 fromDate、toDate が当日ではなく治療日が使われている 杜 start
-            //date:null != this.ordDetail ? moment(this.ordDetail.treatDate).format('YYYY/MM/DD') : moment(Date.now()).format('YYYY/MM/DD'),
-            //fromDate:null != this.ordDetail ? moment(this.ordDetail.treatDate).format('YYYY/MM/DD')  : moment(Date.now()).format('YYYY/MM/DD'),
-            //toDate: null != this.ordDetail ? moment(this.ordDetail.treatDate).format('YYYY/MM/DD') : moment(Date.now()).format('YYYY/MM/DD'),
+            //date:null != this.ordDetail ? dayjs(this.ordDetail.treatDate).format('YYYY/MM/DD') : dayjs(Date.now()).format('YYYY/MM/DD'),
+            //fromDate:null != this.ordDetail ? dayjs(this.ordDetail.treatDate).format('YYYY/MM/DD')  : dayjs(Date.now()).format('YYYY/MM/DD'),
+            //toDate: null != this.ordDetail ? dayjs(this.ordDetail.treatDate).format('YYYY/MM/DD') : dayjs(Date.now()).format('YYYY/MM/DD'),
             // mod #11256 機能帳票の印刷情報対応① limingzhe start
-            //date: this._data.treatDate == '' ? moment(this.initDataSources[0].treatmentStartDate).format('YYYY/MM/DD') : moment(this._data.treatDate).format('YYYY/MM/DD'),
+            //date: this._data.treatDate == '' ? dayjs(this.initDataSources[0].treatmentStartDate).format('YYYY/MM/DD') : dayjs(this._data.treatDate).format('YYYY/MM/DD'),
             date: dateTodate,
             // mod #11256 機能帳票の印刷情報対応① limingzhe end
-            fromDate: moment(Date.now()).format('YYYY/MM/DD'),
-            toDate: moment(Date.now()).add(1, 'months').format('YYYY/MM/DD'),
+            fromDate: dayjs(Date.now()).format('YYYY/MM/DD'),
+            toDate: dayjs(Date.now()).add(1, 'months').format('YYYY/MM/DD'),
 // mod #9558 fromDate、toDate が当日ではなく治療日が使われている 杜 end
           };
           EventBus.$emit("sendReportParams", param1);
@@ -1508,61 +1718,6 @@
         return this.hasAuthorityByCd(AUTHORITY_CODES.IND_RECEIVE_PEDIT) || this.hasAuthorityByCd(AUTHORITY_CODES.IND_RECEIVE_EDIT);
       },
 // add  FNSI-権限 陳 end
-      /**
-       * @description 透析条件項目オブジェクト
-       */
-      selectingDialCondItem(ctlNo) {
-        const dialCondItem = DIAL_COND_ITEMS.find(item => item.id === ctlNo);
-        return dialCondItem === undefined ? null : dialCondItem;
-      },
-      /**
-       * @description 透析条件項目名称
-       */
-      selectingDialCondName(ctlNo) {
-        const dialCondItem = this.selectingDialCondItem(ctlNo);
-        return dialCondItem === null ? null : dialCondItem.name;
-      },
-      // add FNSI-改修内容 治療単位の治療方法マスタの有効項目に応じた表示 dou end
-      getReceiver1Template: function(e) {
-        return {
-          template: Vue.component(ButtonsTemplate.name, ButtonsTemplate),
-          templateArgs: {
-            parentComponent: this,
-            item: e,
-            indicationType: this.INDICATIONTYPE.RECEIVER1
-          }
-        };
-      },
-      getReceiver2Template: function(e) {
-        return {
-          template: Vue.component(ButtonsTemplate.name, ButtonsTemplate),
-          templateArgs: {
-            parentComponent: this,
-            item: e,
-            indicationType: this.INDICATIONTYPE.RECEIVER2
-          }
-        };
-      },
-      getApprover1Template: function(e) {
-        return {
-          template: Vue.component(ButtonsTemplate.name, ButtonsTemplate),
-          templateArgs: {
-            parentComponent: this,
-            item: e,
-            indicationType: this.INDICATIONTYPE.APPROVER1
-          }
-        };
-      },
-      getApprover2Template: function(e) {
-        return {
-          template: Vue.component(ButtonsTemplate.name, ButtonsTemplate),
-          templateArgs: {
-            parentComponent: this,
-            item: e,
-            indicationType: this.INDICATIONTYPE.APPROVER2
-          }
-        };
-      },
       ...mapActions("bread-crumb", ["resetTitle"]),
       ...mapActions("indication", [
         "getPatPersonal", "setIndicationsUnchecked", "setIndContent"
@@ -1603,12 +1758,11 @@
             ordDetail.indEquipInfo = JSON.parse(ordDetail.indEquipInfo);
             ordDetail.indIndCommentInfo = JSON.parse(ordDetail.indIndCommentInfo);
             ordDetail.indScheduleUserInfo = JSON.parse(
-              ordDetail.indScheduleUserInfo
-            );
+              ordDetail.indScheduleUserInfo);
             this.ordDetail = ordDetail;
 
-            patIndApprove.check_content = JSON.parse(patIndApprove.check_content);
-            patIndApprove.approve_content = JSON.parse(patIndApprove.approve_content);
+            patIndApprove.check_content = this.parsePatIndApproveContent(patIndApprove.check_content);
+            patIndApprove.approve_content = this.parsePatIndApproveContent(patIndApprove.approve_content);
             this.patIndApprove = patIndApprove;
 
             await this.getPatPersonal(this.ordDetail.patId);
@@ -1627,14 +1781,6 @@
 
         this.stopLoading();
       },
-      async getMstBed() {
-        const res = await ApiHelper.get("/mstInfo/mstBed", {
-          facility_cd: this.facilityCd,
-          is_disp: 1,
-          is_del: 0
-        });
-        return res.data;
-      },
       async convertIndData() {
         if (!this.ordDetail) {
           return;
@@ -1643,43 +1789,73 @@
         this.startLoading("レイアウトを表示しています。");
         await this.setIndContent({ordDetail: this.ordDetail});
         this.layout = this.indContent;
-        this.isApproving ? this.mergeCancelledData('approve_content'): this.mergeCancelledData('check_content');
-        this.isApproving ? this.convertCheckedData('approve_content'): this.convertCheckedData('check_content');
+        if (this.patIndApprove) {
+          const contentKey = this.isApproving ? 'approve_content' : 'check_content';
+          this.mergeCancelledData(contentKey);
+          this.convertCheckedData(contentKey);
+        }
         this.stopLoading();
       },
+      parsePatIndApproveContent(rawContent) {
+        if (rawContent == null || rawContent === '') {
+          return [];
+        }
+        try {
+          const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      },
+      getPatIndApproveContentList(content) {
+        if (!this.patIndApprove) {
+          return null;
+        }
+        const contentList = this.patIndApprove[content];
+        return Array.isArray(contentList) ? contentList : null;
+      },
       convertCheckedData(content) {
-        if (_.isEmpty(this.patIndApprove[content])) return;
-        this.patIndApprove[content].forEach(
+        const contentList = this.getPatIndApproveContentList(content);
+        if (!contentList?.length) {
+          return;
+        }
+        contentList?.forEach(
           ({itemInfo, subCategoryItem, subCategoryNo}) => {
             if (subCategoryNo === 2) {
               this.checkedData[`${subCategoryNo}0`] = itemInfo;
             } else if (subCategoryNo === 6) {
-              subCategoryItem.forEach((e) => {
+              subCategoryItem?.forEach((e) => {
                 e.itemInfo.itemNo = e.itemInfo.itemCd;
                 this.checkedData[`${subCategoryNo}${e.itemInfo.itemCd}`] = e.itemInfo;
               });
             } else {
-              subCategoryItem.forEach((e) => {
+              subCategoryItem?.forEach((e) => {
                 let itemNo = e.itemInfo.itemNo;
                 this.checkedData[`${subCategoryNo}${itemNo}`] = e.itemInfo;
               });
             }
-          }
-        );
+          });
       },
       mergeCancelledData(content) {
-        if (_.isEmpty(this.patIndApprove[content])) return;
+        const contentList = this.getPatIndApproveContentList(content);
+        if (!contentList?.length || !Array.isArray(this.layout)) {
+          return;
+        }
         // 中止した投与薬剤/医療材料/指示コメントをlayoutにマージする
         // this.patIndApprove: pat_ind_approve(指示受け承認情報) -> 中止前のデータ
         // this.layout       : ord_main(治療情報)                -> 中止後のデータ（画面表示内容）
-        this.layout.forEach((subCategory) => {
+        this.layout?.forEach((subCategory) => {
           if ([5, 6, 7].includes(subCategory.subCategoryNo)) {
-            const currentSubCategory = this.patIndApprove[content]?.filter(item => item.subCategoryNo === subCategory.subCategoryNo) || [];
-            const itemNoSet = new Set(subCategory.subCategoryItem.map(item => item.itemInfo.itemNo));//O(n) → O(1)
-            if (currentSubCategory[0].subCategoryItem && currentSubCategory[0].subCategoryItem.length > 0) {
-              currentSubCategory[0].subCategoryItem.forEach((e) => {
+            const currentSubCategory = contentList.filter(item => item.subCategoryNo === subCategory.subCategoryNo) || [];
+            const itemNoSet = new Set((subCategory.subCategoryItem ?? []).map(item => item.itemInfo.itemNo));//O(n) → O(1)
+            const cancelledItems = currentSubCategory[0]?.subCategoryItem;
+            if (cancelledItems?.length > 0) {
+              cancelledItems?.forEach((e) => {
                 const itemIdx = 6 === subCategory.subCategoryNo ? e.itemInfo.itemCd : e.itemInfo.itemNo;
                 if (!itemNoSet.has(itemIdx)) {
+                  if (!Array.isArray(subCategory.subCategoryItem)) {
+                    subCategory.subCategoryItem = [];
+                  }
                   subCategory.subCategoryItem.push({
                     itemInfo: {
                       itemName: e.itemInfo.itemName,
@@ -1706,15 +1882,15 @@
           // add 11763 指示受け・指示承認画面（指示単位）の動作不正① zkm end
           let rstDialysisState = this.ordDetail.rstDialysisState;
           // 医療材料
-          this.layout.forEach(item => {
+          this.layout?.forEach(item => {
             if (6 === item.subCategoryNo) {
-              item.subCategoryItem.forEach(subCategory => {
+              item.subCategoryItem?.forEach(subCategory => {
                 subCategory.itemInfo.itemNo = null;
               })
             }
           });
           if (rstDialysisState === "0") {
-            this.layout.forEach((item) => {
+            this.layout?.forEach((item) => {
               if (2 === item.subCategoryNo) {
                 item.itemInfo.data.value.unit = null;
                 item.itemInfo.data.value.prefix = null;
@@ -1722,7 +1898,7 @@
               }
               // スケジュール
               else if (3 === item.subCategoryNo) {
-                item.subCategoryItem.forEach(subCategory => {
+                item.subCategoryItem?.forEach(subCategory => {
                   // 1: クール
                   // 3: ベッド
                   if ([1,3].includes(subCategory.itemInfo.itemNo)) {
@@ -1734,7 +1910,7 @@
               }
               // 治療条件
               else if (4 === item.subCategoryNo) {
-                item.subCategoryItem.forEach(subCategory => {
+                item.subCategoryItem?.forEach(subCategory => {
                   subCategory.itemInfo.data.value.unit = null;
                   // 2:  VA
                   // 5:  ダイアライザ
@@ -1756,7 +1932,7 @@
               }
               // 投与薬剤、医療材料
               else if ([5, 6].includes(item.subCategoryNo)) {
-                item.subCategoryItem.forEach(subCategory => {
+                item.subCategoryItem?.forEach(subCategory => {
                   subCategory.itemInfo.data.value.unit = null;
                   subCategory.itemInfo.data.value.prefix = null;
                 })
@@ -1773,13 +1949,12 @@
         //add 吉 end
         if (this.layout) {
           this.startLoading(
-            this.isApproving ? "承認しています。" : "指示を確認しています。"
-          );
+            this.isApproving ? "承認しています。" : "指示を確認しています。");
 
           // layoutにmergeCancelledData()でマージした投与薬剤/医療材料/指示コメントの中止データを取り除く
-          this.layout.forEach((subCategory) => {
+          this.layout?.forEach((subCategory) => {
             if ([5, 6, 7].includes(subCategory.subCategoryNo)) {
-              subCategory.subCategoryItem = subCategory.subCategoryItem.filter((item) => {
+              subCategory.subCategoryItem = (subCategory.subCategoryItem ?? []).filter((item) => {
                 return item.itemInfo.status !== 2;
               });
             }
@@ -1806,8 +1981,7 @@
                   this.INDICATIONTYPEVALUE.APPROVER1,
                   approveAftId,
                   this.selectedStaffCd1,
-                  signType ,
-                )
+                  signType ,)
               }
               if (this.isDirtyApproved2) {
                 this.saveHistoryIndication(
@@ -1816,8 +1990,7 @@
                   this.INDICATIONTYPEVALUE.APPROVER2,
                   approveAftId,
                   this.selectedStaffCd2,
-                  signType ,
-                )
+                  signType ,)
               }
 
             } else {
@@ -1833,8 +2006,7 @@
                   this.INDICATIONTYPEVALUE.RECEIVER1,
                   approveAftId,
                   this.selectedStaffCd1,
-                  signType ,
-                )
+                  signType ,)
               }
               if (this.isDirtyChecked2) {
                 this.saveHistoryIndication(
@@ -1843,8 +2015,7 @@
                   this.INDICATIONTYPEVALUE.RECEIVER2,
                   approveAftId,
                   this.selectedStaffCd2,
-                  signType ,
-                )
+                  signType ,)
               }
             }
             await this.insertIndApproveHistory(
@@ -1852,8 +2023,7 @@
               this.userId,
               approveKind,
               approveAftId,
-              signType
-            );
+              signType);
             // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc start
             this.skipRoute = true;
             // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc end
@@ -1872,12 +2042,11 @@
           flag = !this.isReceive;
           //add 吉 end
           this.startLoading(
-            this.isReceive ? "指示を確認しています。" : "承認しています。"
-          );
+            this.isReceive ? "指示を確認しています。" : "承認しています。");
           // mod #10413 指示受け画面にて特定の操作を実施するとコンソールエラーが出て保存することができない linjunfeng start
           // await Indication.updIndHistoryDetail(this.editDataSources);
           let editNewData = [];
-          this.editDataSources.forEach((item)=>{
+          this.editDataSources?.forEach((item)=>{
             // #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
             // const initDataSources = this.chgDataSources.find(ele => ele._id == item._id);
             const initDataSources = this.initDataSources.find(ele => ele._id == item._id);
@@ -1945,7 +2114,7 @@
             // del #11004 連携イベント発生部分不正 piao end
             let crudTmp = "U";
             // del #11004 連携イベント発生部分不正 piao start
-            // if ( modSendClass == 2 ) {
+            // if ( modSendClass == 2) {
             //   const params = {
             //     ope_cd: ope_cd,
             //     crud: "D",
@@ -2148,7 +2317,7 @@
       //mod #10739 コンバート施設で指示受け(治療単位)が表示されない 20241218 zhaoqi end
 
       isNumber(value) {
-        const regex = /^\-?\d+(\.\d+)?$/;
+        const regex = /^-?\d+(\.\d+)?$/;
         return regex.test(value);
       },
       //add #10196 ord_mainのデータ定義から外れているデータ登録・参照処理の修正 zhaoqi 20240529 end
@@ -2197,26 +2366,31 @@
           this.startLoading("指示情報を取得しています");
         }
         // mod #9791 未チェックのみ表示が保持されている fang end
-        const params = this.$route.params;
+        try {
         // #9791 子パンくずリスト押下で画面更新しているが、最新のデータを取得していない。 linjufeng start
         // let res = await Indication.searchDetail(params._id);
-        let paramsId = params._id;
-        const sortedIndicationsDetailInfo = this.sortedIndications.find(item => item.patId == this.$route.params.patId);
-        if (sortedIndicationsDetailInfo) {
-          paramsId = sortedIndicationsDetailInfo._id;
+        let paramsId = this.resolveIndicationDetailIds();
+        if (!this.hasIndicationDetailIds(paramsId)) {
+          await this.getIndications();
+          paramsId = this.resolveIndicationDetailIds();
+        }
+        if (!this.hasIndicationDetailIds(paramsId)) {
+          throw new Error(`[IndicationDetailComponent.vue]getIndicationDetails(): indication detail ids not found. patId=${this.$route.params.patId}`);
         }
         let res = await Indication.searchDetail(paramsId);
+        if (!Array.isArray(res)) {
+          res = [];
+        }
         // #9791 子パンくずリスト押下で画面更新しているが、最新のデータを取得していない。 linjufeng end
         // mod 7570 ind_dial連携で送信する項目情報部  赵 start
         // this.ordNoInit=res[0].ordNo;
         // mod 7570 ind_dial連携で送信する項目情報部  赵 end
         const typeRes = await getMstFacilitySettingValue(
           this.facilityCd,
-          "1022"
-        );
+          "1022");
         let resTmp = [];
         if (typeRes.data === 0) {
-          res.forEach(pat => {
+          res?.forEach(pat => {
             if (pat.logTarget === "ベッド" || pat.logTarget === "クール") {
               if (pat.logClass === "新規") {
                 resTmp.push(pat);
@@ -2228,7 +2402,7 @@
           res = resTmp;
         }
         // mod bug #4624 修正 chen end
-        res.forEach(pat => {
+        res?.forEach(pat => {
           pat.logDateFormat =
             pat.logDate.substr(0, 4) +
             "/" +
@@ -2297,36 +2471,67 @@
           }
           /* #8333 HTMLの<BR>がそのまま内容欄に表示されている sichengbo end */
         });
+        this.gridDataRaw = res.map(item => ({
+          ...item,
+          inEdit: true,
+          receiver1IsEdited: false,
+          receiver2IsEdited: false,
+          approver1IsEdited: false,
+          approver2IsEdited: false,
+          selected: false
+        }));
+        this.initGridDataRaw();
+        this.sortedIndicationDetails();
         // #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
         // this.initDataSources = res;
         this.initDataSources = deepCopy(res);
-        this.initDataSources.forEach((item)=>{
+        this.initDataSources?.forEach((item)=>{
           this.initDataSourcesMap[item._id] = item;
         });
         // #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end
         this.chgDataSources = deepCopy(res);
-// add FNSI redmain_3947 「未チェックのみ表示」の欄にチェックを入れると未保存の内容が表示から消える dou end
-        this.dataSources = new Kendo.data.DataSource({
-          // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
-          pageSize: 30,
-          // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end
-          data: res,
-          group: {
-            field: "logTarget"
-          },
-          sort: [
-            {
-              field: "logDate"
-            },
-            {
-              field: "treatmentStartDate"
-            }
-          ]
-        });
+        // add FNSI redmain_3947 「未チェックのみ表示」の欄にチェックを入れると未保存の内容が表示から消える dou end
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc start
         await this.initDataValue();
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc end
-        this.stopLoading();
+        } finally {
+          this.stopLoading();
+        }
+      },
+      initGridDataRaw() {
+        if(this.gridDataRaw) {
+          this.gridDataRaw?.forEach(el => {
+            for(let i = 0; i < this.mstPersonalUser.length; i++) {
+              let userInfo = this.mstPersonalUser[i];
+              if(userInfo.userId == el.receiver1) {
+                el.receiver1Name = userInfo.userFullName;
+              }
+              if(userInfo.userId == el.receiver2) {
+                el.receiver2Name = userInfo.userFullName;
+              }
+              if(userInfo.userId == el.approver1) {
+                el.approver1Name = userInfo.userFullName;
+              }
+              if(userInfo.userId == el.approver2) {
+                el.approver2Name = userInfo.userFullName;
+              }
+              if(i === this.mstPersonalUser.length - 1) {
+                if(!el.receiver1Name) {
+                  el.receiver1Name = '未登録';
+                }
+                if(!el.receiver2Name) {
+                  el.receiver2Name = '未登録';
+                }
+                if(!el.approver1Name) {
+                  el.approver1Name = '未登録';
+                }
+                if(!el.approver2Name) {
+                  el.approver2Name = '未登録';
+                }
+              }
+            }
+          });
+        }
       },
       onChangeFilter() {
         this.setIndicationsUnchecked(this.indicationsUncheckedValue);
@@ -2334,62 +2539,6 @@
 
       initIndicationsUncheckedValue() {
         this.indicationsUncheckedValue = { ...this.indicationsUnchecked };
-      },
-      editorDropDown(container, data) {
-        const fieldName = data.field;
-        const indicationType = this.getIndicationType(fieldName);
-        const ret = this.getIndicationStaffList(fieldName);
-        let dataSource = ret.dataSource;
-
-        if (data.model[fieldName] || data.model[fieldName] === 0) {
-          const temp = this.editDataSources;
-          $(`<input class="k-textbox" name="${data.field}"/>`)
-            .appendTo(container)
-            .kendoDropDownList({
-              dataSource: dataSource,
-              dataTextField: "userFullName",
-              dataValueField: "userId",
-              filter: "contains",
-              change: () => {
-                // del FNSI-改修内容 指示受けで受けた後に、受けキャンセルができない。未登録が保存できない。 dou start
-                // if (data.model[fieldName] && +data.model[fieldName] != 0) {
-                // del FNSI-改修内容 指示受けで受けた後に、受けキャンセルができない。未登録が保存できない。 dou end
-                const param = {
-                  indicationType: indicationType,
-                  userId: data.model[fieldName],
-                  _id: data.model._id
-                };
-                // add FNSI-改修内容 指示受けで受けた後に、受けキャンセルができない。未登録が保存できない。 dou start
-                if (param.userId == "0") {
-                  param.userId = ""
-                }
-                // add FNSI-改修内容 指示受けで受けた後に、受けキャンセルができない。未登録が保存できない。 dou end
-                /*add #9506 横展開対応、dengjunyi start*/
-                // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc start
-                const pat = temp.find(pat => pat._id === data.model._id && pat.indicationType === indicationType);
-                // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc end
-                if (pat) {
-                  temp.splice(temp.indexOf(pat), 1);
-                }
-                /*add #9506 横展開対応、dengjunyi end*/
-                temp.push(param);
-                // del FNSI-改修内容 指示受けで受けた後に、受けキャンセルができない。未登録が保存できない。 dou start
-                // } else if (
-                //   data.model[fieldName] &&
-                //   +data.model[fieldName] === 0
-                // ) {
-                //   const pat = temp.find(pat => pat._id === data.model._id);
-                //   if (pat) {
-                //     temp.splice(this.editDataSources.indexOf(pat), 1);
-                //   }
-                // }
-                // del FNSI-改修内容 指示受けで受けた後に、受けキャンセルができない。未登録が保存できない。 dou end
-                this.editDataSources = temp;
-              }
-            });
-        } else {
-          $(`<label>${data.model[fieldName]}</label>`).appendTo(container);
-        }
       },
       getIndicationType(fieldName) {
         switch (fieldName) {
@@ -2421,111 +2570,85 @@
         }
       },
       // add #10413 指示受け画面にて特定の操作を実施するとコンソールエラーが出て保存することができない linjunfeng end
-      async onClickUpdateDetails(detail, indicationType) {
-        await this.updateDataSources(detail._id, indicationType);
-        this.$refs.grid.kendoWidget().refresh();
-        // del #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
-        // add 指示受け・指示承認不具合対応 陳 start
-        // await this.updateDataColor();
-        // add 指示受け・指示承認不具合対応 陳 end
-        // del #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end
+      async onClickUpdateDetails(item, indicationType, staffCd, fullName) {
+        indicationType = indicationType.replace('Name', '');
+        await this.updateDataSources(item._id, indicationType, staffCd, fullName);
+        this.processGridData(0);
+        this.editRefreshKey++;
       },
-      // add 指示受け・指示承認不具合対応 陳 start
-      async updateDataColor() {
-        // #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
-        // #6433 ALL(OK)ボタンを押下して設定された指示受け（指示承認）者の表示色が保存済のものとなっている 訾浩 start
-        // #10022 特定の操作でシステムエラーとなる linjunfeng start
-        // this.$refs.grid.dataSource._data && this.$refs.grid.dataSource._data.forEach(pat => {
-        // this.$refs.grid && this.$refs.grid.dataSource && this.$refs.grid.dataSource._data && this.$refs.grid.dataSource._data.forEach(pat => {
-        // #10022 特定の操作でシステムエラーとなる linjunfeng end
-          // #6433 ALL(OK)ボタンを押下して設定された指示受け（指示承認）者の表示色が保存済のものとなっている 訾浩 end
-        //   const item = this.initDataSources.find(
-        //     i => i._id === pat._id
-        //   );
-        //   if (document.querySelectorAll(`[data-uid="${pat.uid}"]`).length > 0) {
-        //     const row = document.querySelectorAll(`[data-uid="${pat.uid}"]`)[0];
-        //     let indexC = 0;
-        //     if (row.children[indexC].classList.contains("k-group-cell")) {
-        //       indexC = 1;
-        //     }
-        //     if (String(pat.approver1) !== String(item.approver1) ||
-        //       String(pat.receiver1) !== String(item.receiver1)) {
-        //       row.children[indexC]?.classList?.add("grid-edited-cell");
-        //     }
-        //     if (String(pat.approver2) !== String(item.approver2) ||
-        //       String(pat.receiver2) !== String(item.receiver2)) {
-        //       row.children[indexC + 1]?.classList?.add("grid-edited-cell");
-        //     }
-        //   }
-        // });
-        // #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
-        const allRowEl = this.$refs.grid.$el?.querySelector(".k-selectable").getElementsByTagName('tr');
-        let allRowElMap = {};
-        for(let item of allRowEl) {
-          if (item.dataset?.uid) {
-            allRowElMap[item.dataset.uid] = item
+      handleGridUpdate(items, _id, fieldName, staffCd, fullName) {
+        if(items[0].items) {
+          for(let i = 0; i < items.length; i++) {
+            this.handleGridUpdate(items[i].items, _id, fieldName, staffCd, fullName);
+          }
+        } else {
+          for(let i = 0; i < items.length; i++) {
+            let isEditFlag = false;
+            const pat = items[i];
+            
+            if (pat._id === _id) {
+              // 個別処理
+              isEditFlag = true;
+            } else if(!_id) {
+              // 一括処理
+              isEditFlag = true;
+            }
+            if(isEditFlag) {
+              const initItem = this.initDataSourcesMap[pat._id];
+              let initFieldValue = null;
+              if(initItem) {
+                initFieldValue = initItem[fieldName];
+              }
+              pat[fieldName] = staffCd;
+              let nameField = fieldName + "Name";
+              let editField = fieldName + "IsEdited";
+              pat[editField] = false;
+              if(!fullName || fullName === '未登録') {
+                pat[nameField] = '未登録';
+              } else if(fullName !== '未登録') {
+                pat[nameField] = fullName;
+                // 編集カラー
+                if(initFieldValue != staffCd) {
+                  pat[editField] = true;
+                }
+              }
+              const param = {
+                indicationType: this.getIndicationType(fieldName),
+                userId: pat[fieldName],
+                _id: pat._id
+              };
+              const editData = this.editDataSources.find(eds => eds._id === pat._id
+                  && eds.indicationType === this.getIndicationType(fieldName));
+              if (editData) {
+                this.editDataSources.splice(this.editDataSources.indexOf(editData), 1);
+              }
+              this.editDataSources.push(param);
+            }
           }
         }
-        const gridDataSource = this.$refs.grid?.dataSource._data;
-        gridDataSource && gridDataSource.forEach(pat => {
-          const item = this.initDataSourcesMap[pat._id];
-            let indexC = 0;
-          let groups = this.dataSources._group;
-          if (groups) {
-            indexC = groups.length;
-            }
-          const el = allRowElMap[pat.uid];
-          if (el) {
-            const row = el;
-            if (String(pat.approver1) !== String(item.approver1) ||
-              String(pat.receiver1) !== String(item.receiver1)) {
-              row.children[indexC]?.classList?.add("grid-edited-cell");
-            }
-            if (String(pat.approver2) !== String(item.approver2) ||
-              String(pat.receiver2) !== String(item.receiver2)) {
-              row.children[indexC + 1]?.classList?.add("grid-edited-cell");
-            }
-          }
-        });
-        // #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end
       },
-      // add 指示受け・指示承認不具合対応 陳 end
-      async updateDataSources(_id, fieldName) {
+      async updateDataSources(_id, fieldName, staffCd, fullName) {
         // スタッフリスト取得
         const ret = this.getIndicationStaffList(fieldName);
         const dataSource = ret.dataSource;
         // スタッフリストから設定すべきCD取得
-        const staffCd = this.getStaffCd(dataSource, ret.retFieldName);
-
-        this.dataSources._data.forEach(pat => {
-          if (pat._id === _id) {
-            pat[fieldName] = staffCd;
-            const param = {
-              indicationType: this.getIndicationType(fieldName),
-              userId: pat[fieldName],
-              _id: pat._id
-            };
-            // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231128 ztc start
-            const editData = this.editDataSources.find(eds => eds._id === pat._id
-                && eds.indicationType === this.getIndicationType(fieldName));
-            if (editData) {
-              this.editDataSources.splice(this.editDataSources.indexOf(editData), 1);
-            }
-            // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231128 ztc end
-            this.editDataSources.push(param);
-          }
-        });
+        if(!staffCd) {
+          const staffInfo = this.getStaffCd(dataSource, ret.retFieldName);
+          staffCd = staffInfo.staffCd;
+          fullName = staffInfo.fullName;
+        }
+        this.handleGridUpdate(this.displayGridData, _id, fieldName, staffCd, fullName);
       },
       onResize() {
         // 印刷中はスキップ
         if (this.isPrint) return;
-        
-        const headObj = document.getElementsByClassName("indication-detail-filter");
+
+        const headObj = getScopedElementsByClassName("indication-detail-filter", this.$el || this);
         let hHeight = 0;
         if (headObj.length > 0) {
           hHeight = headObj[0].offsetHeight;
         }
-        const footerObj = document.getElementsByClassName("actions d-flex");
+        const footerObj = getScopedElementsByClassName("actions d-flex", this.$el || this);
         let fHeight = 0;
         if (footerObj.length > 0) {
           fHeight = footerObj[0].offsetHeight;
@@ -2542,256 +2665,221 @@
             hosei = 1.5;
             break;
         }
-        const mainObj = document.getElementById("main-id");
+        const mainObj = getScopedElementById("main-id", this.$el || this);
         const mainHeight = mainObj ? mainObj.offsetHeight : 0;
         this.gridHeight = mainHeight - fHeight - hHeight - (20 * hosei);
       },
 
-      refreshDataSources() {
-        this.editDataSources = [];
-        this.$refs.grid.kendoWidget().refresh();
-        this.indicationsUncheckedValue = {
-          receive1: false,
-          receive2: false,
-          approver1: false,
-          approver2: false
-        };
-      },
-      isEditableReceiver1(data) {
-        const selectedItem = this.initDataSources.find(
-          pat => pat._id === data._id
-        );
-        return +selectedItem.receiver1 != 0 ? false : true;
-      },
-      isEditableReceiver2(data) {
-        const selectedItem = this.initDataSources.find(
-          pat => pat._id === data._id
-        );
-        return +selectedItem.receiver2 != 0 ? false : true;
-      },
-      isEditableApprover1(data) {
-        const selectedItem = this.initDataSources.find(
-          pat => pat._id === data._id
-        );
-        return +selectedItem.approver1 != 0 ? false : true;
-      },
-      isEditableApprover2(data) {
-        const selectedItem = this.initDataSources.find(
-          pat => pat._id === data._id
-        );
-        return +selectedItem.approver2 != 0 ? false : true;
-      },
       async clickSelectAll(fieldName) {
         this.startLoading(
           this.isReceive ? "指示を確認しています。" : "承認しています。"
         );
-        // #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
-        // this.initDataSources.forEach(pat => {
-        //   if (!pat[fieldName] || +pat[fieldName] === 0) {
-        //     this.updateDataSources(pat._id, fieldName);
-        //   }
-        // });
-        // #6433-ALL(OK)ボタンを押下して設定された指示受け（指示承認）者の表示色が保存済のものとなっている 周 add start
-        // this.updateDataColor();
-        // #6433-ALL(OK)ボタンを押下して設定された指示受け（指示承認）者の表示色が保存済のものとなっている 周 add end
-        // this.stopLoading();
         // スタッフリスト取得
         const ret = this.getIndicationStaffList(fieldName);
         const dataSource = ret.dataSource;
         // スタッフリストから設定すべきCD取得
-        const staffCd = this.getStaffCd(dataSource, ret.retFieldName);
-
-        setTimeout(()=>{
-          this.dataSources._data.forEach(pat => {
-          if (!pat[fieldName] || +pat[fieldName] === 0) {
-              pat[fieldName] = staffCd;
-              const param = {
-                indicationType: this.getIndicationType(fieldName),
-                userId: pat[fieldName],
-                _id: pat._id
-              };
-              this.editDataSources.push(param);
-          }
-        });
-        this.$refs.grid.kendoWidget().refresh();
+        const staffInfo = this.getStaffCd(dataSource, ret.retFieldName);
+        const staffCd = staffInfo.staffCd;
+        const fullName = staffInfo.fullName;
+        this.handleGridUpdate(this.gridDataRaw, null, fieldName, staffCd, fullName);
+        this.processGridData(0);
         this.stopLoading();
-        })
-        // #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end
       },
       setIndicationDetailsColumn() {
         this.gridIndicationColumns = [
-          // mod FNSI-改修内容「指示受け」画面に存在する下記項目にソート 付 start
           {
-            field: "receiver1",
+            field: "receiver1Name",
             title: "指示受け1",
+            cell: "editTemplate",
             values: this.checkerValues,
             hidden: !this.isReceive,
-            // groupable: false,
             groupable: true,
             width: 200,
-// add FNSI-権限 陳 start
+            minResizableWidth: '200',
             editable: () => this.hasIndReceiveAuthority
-// add FNSI-権限 陳 end
           },
           {
-            field: "receiver2",
+            field: "receiver2Name",
             title: "指示受け2",
+            cell: "editTemplate",
             values: this.checkerValues,
             hidden: !this.isReceive,
-            // groupable: false,
             groupable: true,
             width: 200,
-// add FNSI-権限 陳 start
+            minResizableWidth: '200',
             editable: () => this.hasIndReceiveAuthority
-// add FNSI-権限 陳 end
           },
           {
-            field: "approver1",
+            field: "approver1Name",
             title: "指示承認1",
+            cell: "editTemplate",
             values: this.doctorValues,
             hidden: !this.isReceive,
-            // groupable: false,
             groupable: true,
             width: 200,
-// mod FNSI-権限 陳 start
+            minResizableWidth: '200',
             editable: () => this.isShowBtnOK && this.hasIndReceiveAuthority
-            // editable: () => this.isShowBtnOK
-// mod FNSI-権限 陳 end
           },
           {
-            field: "approver2",
+            field: "approver2Name",
             title: "指示承認2",
+            cell: "editTemplate",
             values: this.doctorValues,
             hidden: !this.isReceive,
-            // groupable: false,
             groupable: true,
             width: 200,
-// mod FNSI-権限 陳 start
+            minResizableWidth: '200',
             editable: () => this.isShowBtnOK && this.hasIndReceiveAuthority
-            // editable: () => this.isShowBtnOK
-// mod FNSI-権限 陳 end
           },
-          // mod FNSI-改修内容「指示受け」画面に存在する下記項目にソート 付 end
           {
             field: "logTarget",
             title: "対象",
-            width: "7em",
+            width: 300,
+            minResizableWidth: '100',
             groupable: true,
             editable: () => false,
-            // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
             template: (e) => {
               let name = e && e.logTarget ? e.logTarget : "";
-              return `<div>${name}</div>`
+              return `${name}`
             }
-            // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end
           },
-          // mod FNSI-改修内容「指示受け」画面に存在する下記項目にソート 付 start
           {
             field: "logContent",
             title: "内容",
-            width: "9em",
-            // groupable: false,
+            width: 300,
+            minResizableWidth: '100',
             groupable: true,
             editable: () => false,
-            // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
             template: (e) => {
               let name = e && e.logContent ? e.logContent : "";
-              return `<div>${name}</div>`
+              return `${name}`
             }
-            // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end
           },
-          // mod FNSI-改修内容「指示受け」画面に存在する下記項目にソート 付 end
           {
             field: "logDateFormat",
             title: "発行日",
             groupable: true,
             editable: () => false,
-            width: "7.5em"
+            width: 120
           },
           {
             field: "logTimeFormat",
             title: "時刻",
             groupable: true,
             editable: () => false,
-            width: "6em"
+            width: 96,
+            minResizableWidth: '100',
           },
           {
             field: "treatmentStartDate",
             title: "開始日",
             groupable: true,
             editable: () => false,
-            width: "7.5em"
+            width: 120
           },
           {
             field: "treatmentEndDate",
             title: "終了日",
             groupable: true,
             editable: () => false,
-            width: "7.5em"
+            width: 120,
+            minResizableWidth: '100',
           },
-          // add FNSI-改修内容「指示者」、「入力者」の欄を追加 付 start
           {
             field: "createdBy",
             title: "指示者",
-            width: "9em",
+            width: 144,
+            minResizableWidth: '100',
             groupable: true,
             editable: () => false
           },
           {
             field: "updatedBy",
             title: "入力者",
-            width: "9em",
+            width: 144,
+            minResizableWidth: '100',
             groupable: true,
             editable: () => false
           },
-          // add FNSI-改修内容「指示者」、「入力者」の欄を追加 付 end
-          // mod FNSI-改修内容「指示受け」画面に存在する下記項目にソート 付 start
           {
             field: "logClass",
             title: "操作区分",
             width: 120,
-            // groupable: false,
+            minResizableWidth: '100',
             groupable: true,
             editable: () => false
           },
           {
             field: "treatmentWeekday",
             title: "曜日",
-            // groupable: false,
+            minResizableWidth: '100',
             groupable: true,
             editable: () => false,
-            width: "5em",
-            // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
+            width: 100,
             template: (e) => {
               let name = e && e.treatmentWeekday ? e.treatmentWeekday : "";
-              return `<div>${name}</div>`
+              return `${name}`
             }
-            // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end
           },
           {
             field: "treatmentMethod",
             title: "治療方法",
-            width: "8em",
-            // groupable: false,
+            width: 150,
+            minResizableWidth: '100',
             groupable: true,
             editable: () => false,
-            // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
             template: (e) => {
               let name = e && e.treatmentMethod ? e.treatmentMethod : "";
-              return `<div>${name}</div>`
+              return `${name}`
             }
-            // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end
           },
           {
             field: "treatmentCourse",
             title: "クール",
-            width: "6em",
-            // groupable: false,
+            width: 96,
+            minResizableWidth: '100',
             groupable: true,
             editable: () => false
           }
-          // mod FNSI-改修内容「指示受け」画面に存在する下記項目にソート 付 end
         ];
+        this.initDisplayColumns();
+      },
+      initDisplayColumns() {
+        this.displayColumns = [];
+        this.gridIndicationColumns?.forEach(column => {
+          const field = column.field;
+          const colDef = {
+            field: field,
+            title: column.title,
+            width: column.width + 'px',
+            groupable: column.groupable !== false,
+            editable: false,
+            cell: column.cell,
+            minResizableWidth: column.minResizableWidth
+          };
+          if(column.field === 'receiver1Name') {
+            if(this.isReceive && this.columnStatus.isShowChecker1) {
+              this.displayColumns.push(colDef);
+            }
+          } else if(column.field === 'receiver2Name') {
+            if(this.isReceive && this.columnStatus.isShowChecker2) {
+              this.displayColumns.push(colDef);
+            }
+          } else if(column.field === 'approver1Name') {
+            if(!this.isReceive && this.columnStatus.isShowApprover1) {
+              this.displayColumns.push(colDef);
+            }
+          } else if(column.field === 'approver2Name') {
+            if(!this.isReceive && this.columnStatus.isShowApprover2) {
+              this.displayColumns.push(colDef);
+            }
+          } else {
+            this.displayColumns.push(colDef);
+          }
+        });
+        this.columnsMap = Object.fromEntries(
+          this.displayColumns.map(col => [col.field, col.title])
+        );
       },
       async sortedIndicationDetails() {
         this.startLoading("指示情報を取得しています");
@@ -2800,71 +2888,53 @@
         const receiver2 = this.indicationsUncheckedValue.receiver2;
         const approver1 = this.indicationsUncheckedValue.approver1;
         const approver2 = this.indicationsUncheckedValue.approver2;
-// mod FNSI redmain_3947 「未チェックのみ表示」の欄にチェックを入れると未保存の内容が表示から消える dou start
-//      this.$refs.grid.kendoWidget().dataSource.data(this.initDataSources);
-        let that = this;
-        // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
         let chgDataSourcesMap = {};
-        that.chgDataSources.forEach((item) => {
+        this.gridDataRaw?.forEach((item) => {
           chgDataSourcesMap[item._id] = item;
         })
-        // add #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end
-        this.dataSources._data.forEach(item => {
-          // #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
-          // let chgDataSource = that.chgDataSources.find(i => i._id === item._id);
+        this.gridDataRaw?.forEach(item => {
           let chgDataSource = chgDataSourcesMap[item._id];
-          // #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
           chgDataSource.receiver1 = item.receiver1;
           chgDataSource.receiver2 = item.receiver2;
           chgDataSource.approver1 = item.approver1;
           chgDataSource.approver2 = item.approver2;
         });
-        this.$refs.grid.kendoWidget().dataSource.data(this.chgDataSources);
-// mod FNSI redmain_3947 「未チェックのみ表示」の欄にチェックを入れると未保存の内容が表示から消える dou end
+        let result = this.gridDataRaw;
         if (receiver1 && !receiver2) {
-          const result = this.dataSources._data.filter(
+          result = this.gridDataRaw.filter(
             pat => pat.receiver1 == 0
           );
-          this.$refs.grid.kendoWidget().dataSource.data(result);
         } else if (receiver1 && receiver2) {
-          const result = this.dataSources._data.filter(
+          result = this.gridDataRaw.filter(
             pat => pat.receiver1 == 0 && pat.receiver2 == 0
           );
-          this.$refs.grid.kendoWidget().dataSource.data(result);
         } else if (!receiver1 && receiver2) {
-          const result = this.dataSources._data.filter(
+          result = this.gridDataRaw.filter(
             pat => pat.receiver2 == 0
           );
-          this.$refs.grid.kendoWidget().dataSource.data(result);
         }
 
         if (approver1 && !approver2) {
-          const result = this.dataSources._data.filter(
+          result = this.gridDataRaw.filter(
             pat => pat.approver1 == 0
           );
-          this.$refs.grid.kendoWidget().dataSource.data(result);
         } else if (approver1 && approver2) {
-          const result = this.dataSources._data.filter(
+          result = this.gridDataRaw.filter(
             pat => pat.approver1 == 0 && pat.approver2 == 0
           );
-          this.$refs.grid.kendoWidget().dataSource.data(result);
         } else if (!approver1 && approver2) {
-          const result = this.dataSources._data.filter(
+          result = this.gridDataRaw.filter(
             pat => pat.approver2 == 0
           );
-          this.$refs.grid.kendoWidget().dataSource.data(result);
         }
-        this.$refs.grid.kendoWidget().refresh();
+        this.displayGridData = result;
+        this.allGroupedData = process(this.displayGridData, {
+          group: this.gridGroup,
+          sort: this.gridSort
+        });
+        this.gridSortedList = this.expandedArr(this.allGroupedData.data);
+        this.processGridData(0);
         this.stopLoading();
-// add FNSI redmain_3947 「未チェックのみ表示」の欄にチェックを入れると未保存の内容が表示から消える dou start
-        // del #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start
-        // this.$nextTick(() => {
-        //   setTimeout(() => {
-        //     this.updateDataColor();
-        //   }, 1000)
-        // });
-        // del #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end
-// add FNSI redmain_3947 「未チェックのみ表示」の欄にチェックを入れると未保存の内容が表示から消える dou end
       },
       async insertIndApproveHistory(ordNo, userId,  approveKind, approveAftId, signType){
         await Indication.insertPatIndApproveHistory({
@@ -2905,21 +2975,33 @@
         for (let i = 0; i < lst.length; i += 1) {
           const r = lst[i];
           if (r[fieldName] === usrId) {
-            return r[fieldName];
+            return {
+              staffCd: r[fieldName],
+              fullName: r['userFullName']
+            };
           }
         }
         // デフォルト医師IDの要素がある場合カウントIDの次に優先して選択
         for (let i = 0; i < lst.length; i += 1) {
           const r = lst[i];
           if (r[fieldName] === docId) {
-            return r[fieldName];
+            return {
+              staffCd: r[fieldName],
+              fullName: r['userFullName']
+            };
           }
         }
         // アカウントIDもデフォルト医師IDの要素もない場合は"未登録の次の要素を選択
         if (lst.length >= 2) {
-          return lst[1][fieldName];
+          return {
+            staffCd: lst[1][fieldName],
+            fullName: lst[1]['userFullName']
+          };
         } else {
-          return 0;
+          return {
+            staffCd: 0,
+            fullName: null
+          };
         }
       },
       /**
@@ -2928,14 +3010,14 @@
        */
       selectStaffByCheckBox1(bln) {
         if (bln) {
-          this.selectedStaffCd1 = this.getStaffCd(this.userTreatmentList1, "userId");
+          this.selectedStaffCd1 = this.getStaffCd(this.userTreatmentList1, "userId").staffCd;
         } else {
           this.selectedStaffCd1 = "0";
         }
       },
       selectStaffByCheckBox2(bln) {
         if (bln) {
-          this.selectedStaffCd2 = this.getStaffCd(this.userTreatmentList2, "userId");
+          this.selectedStaffCd2 = this.getStaffCd(this.userTreatmentList2, "userId").staffCd;
         } else {
           this.selectedStaffCd2 = "0";
         }
@@ -2976,8 +3058,7 @@
         if (
           indicationType === this.INDICATIONTYPEVALUE.RECEIVER1 ||
           indicationType === this.INDICATIONTYPEVALUE.RECEIVER2 ||
-          this.facilityInsApp === this.FACILITY_INS_APPTYPE.ALL_USER
-        ) {
+          this.facilityInsApp === this.FACILITY_INS_APPTYPE.ALL_USER) {
           dataSource = this.mstPersonalUser;
           retFieldName = "userId";
         } else {
@@ -3039,30 +3120,6 @@
           }
         }
       },
-      // add 指示受け・指示承認不具合対応 陳 start
-      editCell(e) {
-        // 編集field取得
-        const editedField = Object.keys(e.values)[0];
-        // 編集値取得
-        let editedValue = e.values[editedField];
-        if (editedValue === "") {
-          editedValue = null;
-        }
-        const editedPatId = e.model._id;
-        const targetPatIndex = this.initDataSources.findIndex(
-          el => el._id === editedPatId
-        );
-        const initialValue = this.initDataSources[targetPatIndex][editedField];
-        const encodeInitialValue =
-          initialValue === undefined ? null : initialValue;
-        const editedElement = e.container[0];
-        if (String(editedValue) !== String(encodeInitialValue)) {
-          editedElement?.classList?.add("grid-edited-cell");
-        } else {
-          editedElement.classList.remove("grid-edited-cell");
-        }
-      },
-      // add 指示受け・指示承認不具合対応 陳 end
       // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_指示承認 20231123 ztc start
       async confirmContentChanged() {
         let cancelled = false;
@@ -3116,9 +3173,9 @@
       },
       statisChangedElem(){
         let changedCount = 0;
-        this.editDataSources && this.editDataSources.forEach(elem => {
+        this.editDataSources?.forEach(elem => {
           let matchedObjects = this.initDataSources.filter(initData => initData._id === elem._id);
-          if(!!matchedObjects){
+          if(matchedObjects.length > 0){
             if(elem.indicationType === this.INDICATIONTYPEVALUE.RECEIVER1){
               if(matchedObjects[0]?.receiver1 != elem.userId){
                 changedCount++;
@@ -3185,7 +3242,7 @@
       if (this.$route.params.patId) {
         await this.getIndicationDetails();
         this.setIndicationDetailsColumn();
-        this.sortedIndicationDetails();
+        await this.renderIndicationDetailsGrid();
       }
       this.$nextTick(async () => {
         // mod bug #4407 修正 chen start
@@ -3214,17 +3271,18 @@
         this.onResize();
         // mod bug #4407 修正 chen end
         // モバイル端末の場合、サイズの適用が遅い為対応を追加する
-        const ua = navigator.userAgent;
+        const ownerWindow = getScopedWindow(this.$el) || window;
+        const ua = getScopedUserAgent(this.$el);
         if (ua.match(/iPhone|iPad/)) {
-          this.delayObjIosResize = setInterval(() => {
-            const headObj = document.getElementsByClassName("indication-detail-filter");
+          this.delayObjIosResize = ownerWindow.setInterval(() => {
+            const headObj = getScopedElementsByClassName("indication-detail-filter", this.$el || this);
             let hHeight = 0;
             if (headObj.length > 0) {
               hHeight = headObj[0].offsetHeight;
             }
             if (hHeight > 0) {
               this.onResize();
-              clearInterval(this.delayObjIosResize);
+              ownerWindow.clearInterval(this.delayObjIosResize);
             }
           }, 200);
         }
@@ -3236,19 +3294,21 @@
     },
     mounted() {
       this.$nextTick(async () => {
-        window.addEventListener("resize", this.onResize);
-        window.addEventListener("beforeprint", this.handleBeforePrint);
-        window.addEventListener("afterprint", this.handleAfterPrint);
+        const scopedWindow = getScopedWindow(this.$el) || window;
+        scopedWindow.addEventListener("resize", this.onResize);
+        scopedWindow.addEventListener("beforeprint", this.handleBeforePrint);
+        scopedWindow.addEventListener("afterprint", this.handleAfterPrint);
       });
     },
-    beforeDestroy() {
+    beforeUnmount() {
       this.clearHolidays(); // storeの休日マスタをクリア
       //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
       EventBus.$off("requestReportParams", this.requestrReportParams);
       //add 5984 機能帳票でパラメータが正しく渡されていない 吉 end
-      window.removeEventListener("resize", this.onResize);
-      window.removeEventListener("beforeprint", this.handleBeforePrint);
-      window.removeEventListener("afterprint", this.handleAfterPrint);
+      const scopedWindow = getScopedWindow(this.$el) || window;
+      scopedWindow.removeEventListener("resize", this.onResize);
+      scopedWindow.removeEventListener("beforeprint", this.handleBeforePrint);
+      scopedWindow.removeEventListener("afterprint", this.handleAfterPrint);
       // add 10022 特定の操作でシステムエラーとなる 関  start
       EventBus.$off("goBack", this.goBack);
       // add 10022 特定の操作でシステムエラーとなる 関  end
@@ -3275,6 +3335,7 @@
       this.initDataSources = null;
       this.chgDataSources = null;
       this.gridIndicationColumns = null;
+      this.isIndicationDetailsGridReady = null;
       this.INDICATIONTYPE = null;
       this.INDICATIONTYPEVALUE = null;
       this.RECEIVE = null;
@@ -3288,7 +3349,7 @@
       this.isOpenDropdown2 = null;
       // add 画面パフォーマンス対応 chen end
       if (!this.delayObjIosResize) {
-        clearInterval(this.delayObjIosResize);
+        (getScopedWindow(this.$el) || window).clearInterval(this.delayObjIosResize);
       }
       // dataの初期化
       Object.assign(this.$data, this.$options.data());
@@ -3311,14 +3372,20 @@
 
 <style scoped>
   /* #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start */
-  ::v-deep .k-widget .k-icon.k-i-expand, ::v-deep.k-widget .k-icon.k-i-collapse {
+  :deep(.k-widget .k-icon.k-i-expand),
+  :deep(.k-widget .k-icon.k-i-collapse) {
     display: none;
   }
   /* #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end */
-  .main-content-area >>> :disabled + .checkbox__checkmark {
+  .main-content-area :deep(:disabled + .checkbox__checkmark) {
     opacity: 1;
   }
-  .main-content-area >>> .k-dropdown .k-dropdown-wrap:not(.k-state-disabled) {
+  .main-content-area :deep(.k-dropdown .k-dropdown-wrap:not(.k-state-disabled)) {
+    background-color: #fff;
+  }
+
+  .main-content-area :deep(.k-dropdown .k-picker:not(.k-disabled)),
+  .main-content-area :deep(.k-dropdown.k-picker:not(.k-disabled)) {
     background-color: #fff;
   }
   .loading-modal {
@@ -3534,51 +3601,69 @@
   .base-color {
     color: var(--ntss-base-color);
   }
-  .main-content-area >>> .k-grid {
+  .main-content-area :deep(.k-grid) {
     background-color: var(--main-background-color);
   }
-  .main-content-area >>> .k-grid tr {
-    height: 2em;
+  .main-content-area :deep(.k-grid tr) {
+    height: 2em !important;
     border-color: var(--master-maintenance-kgrid-border-color);
     color: var(--master-maintenance-kgrid-body-color);
     background-color: var(--master-maintenance-kgrid-item-background-color);
   }
-  .main-content-area >>> .k-grid tr.k-alt {
+  .main-content-area :deep(.k-grid:not(:has(tr.k-grouping-row)) tr.k-table-alt-row) {
     background-color: var(--ntss-list-content-2nd-background-color);
   }
-  .main-content-area >>> .k-grid a {
+  .main-content-area :deep(.k-grid a) {
     color: var(--master-maintenance-kgrid-item-color);
   }
+   
   /* add 指示受け・指示承認不具合対応 陳 start */
-  .main-content-area >>> .k-grouping-row a {
+  .main-content-area :deep(.k-grouping-row a) {
     color: var(--master-maintenance-kgrid-item-a-color);
   }
-  .main-content-area >>> .k-grid div.k-grouping-header {
+  .main-content-area :deep(.k-grid div.k-grouping-header) {
     color: var(--master-maintenance-kgrid-item-a-color);
     background-color: var(--master-maintenance-kgrid-item-background-color);
   }
-  .main-content-area >>> .k-grid td.k-group-cell {
+  .main-content-area :deep(.k-grid td.k-group-cell) {
     text-overflow: clip;
     color: var(--master-maintenance-kgrid-item-a-color);
     background-color: var(--master-maintenance-kgrid-item-background-color);
   }
-  .main-content-area >>> .k-grid tr.k-state-selected>td {
+  .main-content-area :deep(.k-grid tr.k-state-selected>td) {
     color: var(--master-maintenance-kgrid-body-color);
     background-color: rgba(0,123,255,0.25);
   }
+
+.main-content-area :deep(.k-grid .k-table-row.k-selected>.k-table-td),
+.main-content-area :deep(.k-grid .k-table-row.k-state-selected>.k-table-td) {
+    color: var(--master-maintenance-kgrid-body-color);
+    background-color: rgba(0,123,255,0.25);
+  }
+   
   /* add 指示受け・指示承認不具合対応 陳 end */
-  .main-content-area >>> .k-grid tr:hover {
+  .main-content-area :deep(.k-grid tr:hover) {
     background-color: var(--master-maintenance-kgrid-item-hover-background-color);
     color: var(--master-maintenance-kgrid-body-color);
   }
-  .main-content-area >>> .k-grid th {
+  .main-content-area :deep(.k-grid th) {
     color: #fff;
     background-color: var(--master-maintenance-kgrid-header-background-color);
   }
-  .main-content-area >>> .k-grid th a {
+
+.main-content-area :deep(.k-grid .k-table-th) {
+    color: #fff;
+    background-color: var(--master-maintenance-kgrid-header-background-color);
+  }
+  .main-content-area :deep(.k-grid th a) {
     color: #fff;
   }
-  .main-content-area >>> .k-grid td {
+
+.main-content-area :deep(.k-grid .k-table-th .k-link),
+.main-content-area :deep(.k-grid .k-column-title) {
+    color: #fff;
+  }
+  .main-content-area :deep(.k-grid td) {
     border-width: 0 0 1px 1px !important;
     vertical-align: middle !important;
     /*mod FutreNetWeb+SI課題管理 3944 修正 chen start*/
@@ -3594,15 +3679,31 @@
     /* #8333 HTMLの<BR>がそのまま内容欄に表示されている sichengbo end */
     /* del #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end */
   }
-  .main-content-area >>> .k-grid table {
+
+.main-content-area :deep(.k-grid .k-table-td) {
+    border-width: 0 0 1px 1px !important;
+    vertical-align: middle !important;
+    /*mod FutreNetWeb+SI課題管理 3944 修正 chen start*/
+    /*border-color: var(--master-maintenance-kgrid-border-color);*/
+    border-color: var(--main-content-area-border-color);
+    /*mod FutreNetWeb+SI課題管理 3944 修正 chen end*/
+    /* del #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng start */
+    /* 文字サイズを変更した後に指示受け（指示承認）画面を開くと、レイアウトが崩れる  6483  shan  start */
+    /* word-break: break-word; */
+    /* 文字サイズを変更した後に指示受け（指示承認）画面を開くと、レイアウトが崩れる  6483  shan  end */
+    /* #8333 HTMLの<BR>がそのまま内容欄に表示されている sichengbo start */
+    /* white-space: pre-wrap ! important; */
+    /* #8333 HTMLの<BR>がそのまま内容欄に表示されている sichengbo end */
+    /* del #10410 指示単位の指示受け・指示承認から指示受けor指示承認へ画面が開かない linjunfeng end */
+  }
+  .main-content-area :deep(.k-grid table) {
     border-right: 1px solid #fafafa;
   }
   label.selected-item {
     color: green;
   }
-  .main-content-area >>> .selected-item .k-input {
+  .main-content-area :deep(.selected-item .k-input) {
     font-weight: bold;
-    color: green;
   }
   .receiver-title {
     min-width: fit-content;
@@ -3617,7 +3718,7 @@
     line-height: 20px;
     min-width: 4em;
   }
-  .icon >>> img {
+  .icon :deep(img) {
     width: 1.5em;
   }
   .isDisabled {
@@ -3650,31 +3751,100 @@
     margin-right: 0.2em;
   }
   /*add bug #5040 修正 shan end*/
-  ::v-deep .k-grid-content,
-  ::v-deep .k-grid-content-locked {
+  :deep(.k-grid-content),
+  :deep(.k-grid-content-locked) {
     touch-action: manipulation !important;
     -webkit-overflow-scrolling: touch !important;
   }
-  
+  :deep(.k-chip-list) {
+    display: flex !important;
+    padding: 0.375rem 0.375rem;
+    border-width: 0.5px 0.5px 0.5px 0.5px;
+    border-style: solid;
+    border-color: #e4e7eb;
+  }
+
+  .main-content-area :deep(.k-chip) {
+    border-color: #e4e7eb;
+    color: #212529;
+    background-color: #e4e7eb;
+    margin-right: 0.375rem;
+    border-radius: 0.25rem;
+    padding: 0.375rem;
+  }
+
+  :deep(.k-grid-container b) {
+    font-weight: normal;
+  }
+  .omit-tip {
+    position: fixed;
+    z-index: 9999;
+    max-width: 300px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    word-break: break-all;
+    white-space: normal;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  .omit-content{
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .indication-detail-type {
+    width: 100%;
+    background: none;
+    border-right: none !important;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .indication-detail-type .button {
+    padding: 5px;
+    float: right;
+    height: 2.2em;
+  }
+  .ok-icon {
+    width: 1.5em;
+  }
+
+  :deep(.k-grid-norecords-template) {
+    display: none;
+  }
+
+  :deep(.k-grid-table-wrap td) {
+    border-style: solid !important;
+  }
+  :deep(.k-grid .k-column-resizer) {
+    height: 100% !important;
+  }
+  :deep(.k-grid .k-column-resizer::before) {
+    background-color: transparent !important;
+  }
 @media print {
   /* Grid全体 */
-  #indication-details-id >>> .k-grid {
+  #indication-details-id :deep(.k-grid) {
     width: 100vw !important;
   }
   /* ヘッダ */
-  #indication-details-id >>> .k-grid-header {
+  #indication-details-id :deep(.k-grid-header) {
     padding-right: 0 !important;
   }
-  #indication-details-id >>> .k-grid-header-wrap {
+  #indication-details-id :deep(.k-grid-header-wrap) {
     overflow: hidden !important;
   }
   /* ボディ */
-  #indication-details-id >>> .k-grid-content {
+  #indication-details-id :deep(.k-grid-content) {
     padding-right: 0 !important;
   }
   /* Virtual Scroll */
   /** スクロール位置右端 */
-  #indication-details-id >>> .k-virtual-scrollable-wrap:has(table.scroll-rightmost) {
+  #indication-details-id :deep(.k-virtual-scrollable-wrap:has(table.scroll-rightmost)) {
     overflow-y: visible !important;
     overflow-x: visible !important;
     height: auto !important;
@@ -3682,46 +3852,46 @@
     justify-content: flex-end;
   }
   /** スクロール位置右端以外 */
-  #indication-details-id >>> .k-virtual-scrollable-wrap:not(:has(table.scroll-rightmost)) {
+  #indication-details-id :deep(.k-virtual-scrollable-wrap:not(:has(table.scroll-rightmost))) {
     overflow-y: visible !important;
     overflow-x: hidden !important;
     height: auto !important;
   }
   /* 仮想高さ領域 */
-  #indication-details-id >>> .k-height-container,
-  #indication-details-id >>> .k-scrollbar,
-  #indication-details-id >>> .k-scrollbar-vertical {
+  #indication-details-id :deep(.k-height-container),
+  #indication-details-id :deep(.k-scrollbar),
+  #indication-details-id :deep(.k-scrollbar-vertical) {
     display: none !important;
   }
   /* table */
-  #indication-details-id >>> table {
+  #indication-details-id :deep(table) {
     table-layout: fixed !important;
   }
   /* col */
-  #indication-details-id >>> col {
+  #indication-details-id :deep(col) {
     min-width: 0 !important;
   }
   /* セル */
-  #indication-details-id >>> th,
-  #indication-details-id >>> td {
+  #indication-details-id :deep(th),
+  #indication-details-id :deep(td) {
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
-  
+
   /** 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
-  #indication-details-id >>> .k-grid-header:has(table.scroll-rightmost) {
+  #indication-details-id :deep(.k-grid-header:has(table.scroll-rightmost)) {
     position: absolute;
     right: -2.5px;
     z-index: 1;
   }
-  #indication-details-id >>> .k-grid-header-wrap table.scroll-rightmost {
+  #indication-details-id :deep(.k-grid-header-wrap table.scroll-rightmost) {
     position: static;
   }
-  #indication-details-id >>> .k-virtual-scrollable-wrap table.scroll-rightmost {
+  #indication-details-id :deep(.k-virtual-scrollable-wrap table.scroll-rightmost) {
     position: relative;
   }
-  
+
   /* ボタン非表示 */
   .actions {
     display: none !important;

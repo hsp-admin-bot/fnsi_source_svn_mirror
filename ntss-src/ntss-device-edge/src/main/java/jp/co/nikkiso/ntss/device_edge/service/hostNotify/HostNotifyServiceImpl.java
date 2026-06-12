@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.device_edge.service.hostNotify;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -10,8 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.FlagType;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.MniMonitorDataType;
@@ -653,7 +652,7 @@ public class HostNotifyServiceImpl implements HostNotifyService {
         if (node.has(notificationInfoKey)) {
           return node.get(notificationInfoKey).intValue();
         }
-      } catch (IOException e1) {
+      } catch (tools.jackson.core.JacksonException e1) {
         eventLogMessage.setLogMessage("報知状態の解析に失敗:" + alarmList);
         logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI, null);
       }

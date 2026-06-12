@@ -1,85 +1,75 @@
 <template>
   <ntss-layout>
     <!--mod #6256 背景色が変わらない 徐博 start-->
-    <!--<header-component slot="header-content" />-->
-    <header-component slot="header-content" :getInfo="getInfo" @changeLayout="onLayoutChange" @onSearch="onSearch" />
+    <!--<header-component #header-content />-->
+    <template #header-content>
+      <header-component :getInfo="getInfo" @changeLayout="onLayoutChange" @onSearch="onSearch" />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start -->
     <!--mod #6256 背景色が変わらない 徐博 end-->
     <!-- <bread-crumbs-component
-      slot="bread-crumbs-content"
+      #bread-crumbs-content
       :history-key="historyKey"
       @refresh="refresh"
     /> -->
-    <bread-crumbs-component
-      slot="bread-crumbs-content"
-      :history-key="historyKey"
-    />
+    <template #bread-crumbs-content>
+      <bread-crumbs-component
+        :history-key="historyKey"
+      />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng end -->
-    <dynamic-multi-pat-list
-      v-if="handleShowNewLayout"
-      slot="main-content"
-      ref="mainComponent"
-      :history-key="historyKey"
-    />
+    <template #main-content>
+      <dynamic-multi-pat-list ref="mainComponent"
+        v-if="handleShowNewLayout"
+        :history-key="historyKey"
+      />
     <!-- mod FNSI-No.223 テンプレートおよび項目の不足、特定データの編集保存に対応。身体情報は新規追加に対応 dou start -->
     <!-- <main-component
       v-else
-      slot="main-content"
-      ref="mainComponent"
+      #main-content
       :history-key="historyKey"
     /> -->
     <!--add #6256 背景色が変わらない 徐博 start-->
     <!--mod #11708 データリスト患者情報1の身体情報系データを含むレイアウトが画面表示しない。 fang start -->
     <!-- NOTE: 患者情報１ -->
-    <main-component
-      v-else-if="handleShowNewLayout2 && loadFlag"
-      slot="main-content"
-      ref="mainComponent"
-      :patIdListToDisplay="patIdListToDisplay"
-      :patRecords="patRecords"
-      :history-key="historyKey"
-      :ord-arr="ordArr"
-      @refresh="getData"
-    />
+      <main-component ref="mainComponent"
+        v-else-if="handleShowNewLayout2 && loadFlag"
+        :patIdListToDisplay="patIdListToDisplay"
+        :patRecords="patRecords"
+        :history-key="historyKey"
+        :ord-arr="ordArr"
+        @refresh="getData"
+      />
     <!--mod #11708 データリスト患者情報1の身体情報系データを含むレイアウトが画面表示しない。 fang end -->
     <!-- NOTE: 患者情報２、装置設定、治療予定・治療記録、バイタル・モニタ・愁訴処置、検査結果 -->
-    <template-component
-      v-else-if="handleShowNewLayout3"
-      slot="main-content"
-      ref="mainComponent"
-      :history-key="historyKey"
-      :ord-arr="ordArr"
-    />
+      <template-component ref="mainComponent"
+        v-else-if="handleShowNewLayout3"
+        :history-key="historyKey"
+        :ord-arr="ordArr"
+      />
     <!--add #6256 背景色が変わらない 徐博 end-->
     <!-- NOTE: 装置情報（水質検査） -->
-    <template-component2
-      v-else-if="handleShowNewLayout4"
-      slot="main-content"
-      ref="mainComponent"
-      :history-key="historyKey"
-    />
+      <template-component2 ref="mainComponent"
+        v-else-if="handleShowNewLayout4"
+        :history-key="historyKey"
+      />
     <!-- NOTE: 装置情報（自己診断） -->
-    <template-component3
-      v-else-if="handleShowNewLayout5"
-      slot="main-content"
-      ref="mainComponent"
-      :history-key="historyKey"
-    />
+      <template-component3 ref="mainComponent"
+        v-else-if="handleShowNewLayout5"
+        :history-key="historyKey"
+      />
     <!-- NOTE: 装置情報（日常点検・定期点検） -->
-    <template-component4
-      v-else-if="handleShowNewLayout6"
-      slot="main-content"
-      ref="mainComponent"
-      :history-key="historyKey"
-    />
+      <template-component4 ref="mainComponent"
+        v-else-if="handleShowNewLayout6"
+        :history-key="historyKey"
+      />
     <!-- NOTE: 集計（日常点検・定期点検） -->
-    <template-component5
-      v-else-if="handleShowNewLayout7"
-      slot="main-content"
-      ref="mainComponent"
-      :history-key="historyKey"
-    />
+      <template-component5 ref="mainComponent"
+        v-else-if="handleShowNewLayout7"
+        :history-key="historyKey"
+      />
     <!-- mod FNSI-No.223 テンプレートおよび項目の不足、特定データの編集保存に対応。身体情報は新規追加に対応 dou end -->
+    </template>
   </ntss-layout>
 </template>
 
@@ -89,7 +79,7 @@ import MainComponent from "@/components/multi-pat-list/MultiPatList.vue";
 import BreadCrumbsComponent from "@/components/BreadCrumbsComponent";
 import ViewHelper from "@/views/ViewHelperMixin";
 import { HISTORY_KEY_MULTI_PAT_LIST } from "@/router/multi-pat-list/HistoryKeyConstants";
-import { mapActions, mapGetters} from "vuex";
+import { mapActions, mapGetters} from "@/compat/vue/vuex";
 import DynamicTemplateComponent from "@/components/multi-pat-list/DynamicTemplateComponent";
 // mod FNSI-No.223 テンプレートおよび項目の不足、特定データの編集保存に対応。身体情報は新規追加に対応 dou start
 // import { PAT_INFO_TEMPLATE_CD } from "@/constants/dataListConstant";
@@ -103,7 +93,7 @@ import { DATE_TEMPLATE_CD, MONTH_TEMPLATE_CD, PAT_INFO_TEMPLATE_CD, PAT_INFO_TWO
   EQUIPMENT_INFORMATION_WATER_QUALITY_SURVEY, EQUIPMENT_INFORMATION_SELF_DIAGNOSIS, COLLECTIVE_DAILY_REGULAR } from "@/constants/dataListConstant";
 // add #6256 背景色が変わらない 徐博 start
 import { getPatRecords, confirmAllowDiscardChangesInMultiPatList } from "@/components/multi-pat-list/Functions";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add #6256 背景色が変わらない 徐博 end
 // mod FNSI-No.223 テンプレートおよび項目の不足、特定データの編集保存に対応。身体情報は新規追加に対応 dou end
 
@@ -204,19 +194,20 @@ export default {
   },
   created() {
     // メニュー遷移時はフラグOFF、パンくずリスト押下、ブラウザバックの時はON
-    this.isSearch = !this.$route.params.function_cd;
-    this.setLoadFlag(!this.$route.params.function_cd);
+    const functionCd = this.$route.query.function_cd ?? this.$route.params.function_cd;
+    this.isSearch = !functionCd;
+    this.setLoadFlag(!functionCd);
     // ファイル出力ボタン活性or非活性
     this.$nextTick(() => {
       EventBus.$emit("allowEditTrue", !this.isSearch);
     });
     
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     EventBus.$on("refresh", this.getInfo);
     this.getInfo();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // add #11708 データリスト患者情報1の身体情報系データを含むレイアウトが画面表示しない。 fang start
     this.setLoadFlag(false);
     // add #11708 データリスト患者情報1の身体情報系データを含むレイアウトが画面表示しない。 fang end
@@ -232,7 +223,7 @@ export default {
       return ([...new Set(arr)])
     },
     async getInfo() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
 

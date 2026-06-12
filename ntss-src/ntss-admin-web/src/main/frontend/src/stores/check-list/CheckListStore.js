@@ -23,9 +23,9 @@ import {
   DIALISYS_STATE,
   MACHINE_ENTRY_STATE
 } from "@/constants/statusMapConstants";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // チェックリスト画面に患者の横の画像が表示されません。linjunfeng start
-import imgDuplication from "@/assets/name_duplication.png"
+import imgDuplication from "@/assets/name_duplication.png";
 // チェックリスト画面に患者の横の画像が表示されません。linjunfeng end
 
 export default {
@@ -38,9 +38,9 @@ export default {
     // クール詳細一覧情報
     mstKurList: [],
     // クール一覧情報
-    mstKurSelector: null,
+    mstKurSelector: [],
     // ベッドグループ一覧情報
-    mstBedGroupList: null,
+    mstBedGroupList: [],
     // チェックリストマスタ設定情報
     checklistSetting: null,
     // 表示切替フラグ true:治療中、false:指定日
@@ -55,7 +55,7 @@ export default {
     // condition: {
     //   bedGroupCd: -1,
     //   nextPat: 0,
-    //   treatDate: moment(new Date()).format("YYYY-MM-DD"),
+    //   treatDate: dayjs(new Date()).format("YYYY-MM-DD"),
     //   kurCd: -1,
     //   viewTreatDate: false,
     //   isAutoReload: false,
@@ -304,7 +304,7 @@ export default {
           // isSame: "isSame",
           // mod チェックリスト画面に患者の横の画像が表示されません。linjunfeng start
           // template: "#if (isSame === \"1\") {# #: patName # <img src=\"/ntss-admin-web/img/name_duplication.9baeef13.png\" class=\"pat-name-same-icon\"></img> #} else {# #: patName # #} #",
-          template: `#if (isSame === \"1\") {# #: patName # <img src=\"${imgDuplication}\" class=\"pat-name-same-icon\"> #} else {# #: patName # #} #`,
+          template: `#if (isSame === "1") {# #: patName # <img src="${imgDuplication}" class="pat-name-same-icon"> #} else {# #: patName # #} #`,
           // mod チェックリスト画面に患者の横の画像が表示されません。linjunfeng end
           // mod FNSI-入院患者名の配布表示を修正 周 end
           // add FNSI-横展開 入院患者名の配布_チェックリスト機能分 周 end
@@ -610,7 +610,6 @@ export default {
         const chgRecord = listChgRecord[index];
         let ordChecklist = checklistResponse;
 
-
         // チェックリスト
         let checkSettings = state.checklistSetting.checklistSettings;
         for (let checkSetting of checkSettings) {
@@ -819,7 +818,7 @@ export default {
             } else if (funcItem.func_class === 2) {
               // 医療材料の場合
 
-              let count = 0;
+              let count;
               // ダイアライザの場合
               if (funcItem.class_cd === 0) {
                 count = checkEquipDialyzerInfo(array[index].equipInfo);
@@ -1021,7 +1020,7 @@ export default {
                 chkCount += count;
               } else if (funcItem.func_class === 2) {
                 // 医療材料の場合
-                let count = 0;
+                let count;
                 // ダイアライザの場合
                 if (funcItem.class_cd === 0) {
                   count = checkEquipDialyzerInfo(array[index].equipInfo);
@@ -1283,10 +1282,10 @@ export default {
 
 /********** function **********/
 function getCurrentDate() {
-  return moment(new Date()).format("YYYYMMDD");
+  return dayjs(new Date()).format("YYYYMMDD");
 }
 function getCurrentTime() {
-  return moment(new Date()).format("HHmmss");
+  return dayjs(new Date()).format("HHmmss");
 }
 /**
  * 現在クール
@@ -1329,7 +1328,7 @@ function getNextKurStartDateTime(kurList) {
   let ret = "";
   // 現在日付取得
   const now = new Date();
-  let checkDate = moment(now).format("YYYYMMDD");
+  let checkDate = dayjs(now).format("YYYYMMDD");
 
   // 現クール開始時刻を取得
   const currentKurStartDateTime = getCurrentKurStartDateTime(kurList);
@@ -1354,7 +1353,7 @@ function getNextKurStartDateTime(kurList) {
     // 翌日判定
     now.setDate(now.getDate() + 1);
     ret =
-      moment(now).format("YYYYMMDD") +
+      dayjs(now).format("YYYYMMDD") +
       getKurStartTime(kurList, kurList[0].kurCd);
   }
 

@@ -12,11 +12,9 @@
       <!-- mod 10228 【因島データ】差分コンバートでVA管理の造設日が正しく反映されていない 関 end -->
       <!--mod FNSI-改修内容日付のチェックの追加対応。 任 end-->
     </div>
-    <!-- mod #12462 患者情報共有 20260326 start -->
     <div class="input-date flex-align-center" v-if="getViewMode || getIsOtherFacility || getIsOtherFacilitys">
       <label class="ntss-pat-event-label">{{ showDate }}</label>
     </div>
-    <!-- <div class="input-date flex-align-center" v-if="!getViewMode"> -->
     <div class="input-date flex-align-center" v-else>
       <!-- mod FNSI-共有を追加 王 20200921 start -->
       <!--mod FNSI-改修内容日付のチェックの追加対応。 任 start-->
@@ -67,8 +65,8 @@
           !isShared || 
 	  dateClassTheDay ||
           !getItemAuthorized('PatEvent', 'default_authority') ||
-        getIsOtherFacility ||
-        getIsOtherFacilitys
+          getIsOtherFacility ||
+          getIsOtherFacilitys
         "
         class="input ntss-input-date input-model-date"
         @blur="changeDate()"
@@ -88,28 +86,27 @@
           !isShared  ||
 	  dateClassTheDay ||
           !getItemAuthorized('PatEvent', 'default_authority') ||
-        getIsOtherFacility ||
-        getIsOtherFacilitys
+          getIsOtherFacility ||
+          getIsOtherFacilitys
         "
         @input="changeDate()"
       />
       <!-- mod #10359 編集権限の動作不正 end -->
       <!-- mod FNSI-共有を追加 王 20200921 end -->
-      <!-- mod #12462 患者情報共有 20260312 end -->
     </div>
   </div>
 </template>
 
 <script>
-  import {mapActions, mapGetters} from "vuex";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   import {DATE_FORMAT, dateFormat} from "@/functions/common/DateTimeUtils.js";
-  import moment from "moment";
+  import dayjs from "@/compat/date/dayjs";
   import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
   // add No.18 付 20210127 start
   import BaseCustomInputStatus from '@/components/common/custom-form-tags/BaseCustomInputStatus'
   // add No.18 付 20210127 end
   // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-  import { messageFormat } from '@/functions/common/MessageFormat';
+
   import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
   // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
   // add 10228 【因島データ】差分コンバートでVA管理の造設日が正しく反映されていない 関 start
@@ -117,6 +114,8 @@
   // add 10228 【因島データ】差分コンバートでVA管理の造設日が正しく反映されていない 関 end
 // add #10359 編集権限の動作不正 start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
 // add #10359 編集権限の動作不正 end
 export default {
   name: "PatEventDate",
@@ -161,10 +160,8 @@ export default {
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
-    // add #12462 患者情報共有 20260312 start
     ...mapGetters("pat-event/list", ["getIsOtherFacility"]),
     ...mapGetters("observe-record/list", ["getIsOtherFacilitys"]),
-    // add #12462 患者情報共有 20260312 end
     isShared() {
       if(this.getPatEventRecord.isComRec){
         return this.getFacilityCd === this.getSharedFacilityCd;
@@ -189,8 +186,8 @@ export default {
     },
     showDate() {
       // add 10228 【因島データ】差分コンバートでVA管理の造設日が正しく反映されていない 関 start
-      // return moment(this.valueInput).format("YYYY/MM/DD");
-      return this.valueInput? moment(this.valueInput).format("YYYY/MM/DD") : "";
+      // return dayjs(this.valueInput).format("YYYY/MM/DD");
+      return this.valueInput? dayjs(this.valueInput).format("YYYY/MM/DD") : "";
       // add 10228 【因島データ】差分コンバートでVA管理の造設日が正しく反映されていない 関 end
     },
     dateClassTheDay() {
@@ -208,27 +205,24 @@ export default {
       if (classdate === "1") {
         this.inputModel.date = this.getPatPlansParams.startDate;
       }
+    },
+    'inputModel.date'(value) {
+      this.valueInput = value;
     }
     // add 8147 デフォルト値：当日 の日付の項目が、患者イベント開始日を変更しても更新されない 関  end
   },
   
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-
-  destroyed() { },
+  unmounted() { },
 
   created() {},
 
   mounted() {
-    // mod 10228 【因島データ】差分コンバートでVA管理の造設日が正しく反映されていない 関 start
-    // if (this.getResultDate === "") {
-    //   let today = new Date();
-    //   if (this.propsIniDate) {
-    //     today = new Date(this.propsIniDate.replace(/-/g, "/"));
-    //   }
-    //   // 日付初期値設定
+
+//   // 日付初期値設定
     //   const classdate = this.getInputDateClass;
     //   // mod 8125 【デグレ】患者イベント＞スコア計算、日付の不正 関 start
     //   // if (classdate !== "0") {
@@ -297,6 +291,8 @@ export default {
       );
     }
     // mod 10228 【因島データ】差分コンバートでVA管理の造設日が正しく反映されていない 関 end
+    // 日付の初期値セット
+    this.initValue = this.editValue = this.inputModel.date;
   },
 
   methods: {
@@ -360,7 +356,7 @@ export default {
     //   let dateValid = true;
     //   const result = this.getPatEventResultParams[this.propsIndex];
     //   if (result.result_value !== "") {
-    //     if (!moment(result.result_value, "YYYY-MM-DD", true).isValid()) {
+    //     if (!dayjs(result.result_value, "YYYY-MM-DD", true).isValid()) {
     //       dateValid = false;
     //     }
     //   }
@@ -403,10 +399,13 @@ export default {
       // return false;
       let dateValid = true;
       let message = null;
-      for (let index = 0; index < document.getElementsByClassName("input-model-date").length; index++) {
-        if (document.getElementsByClassName("input-model-date")[index].children.DateInput.validationMessage) {
+      const scopeRoot = this.$el?.parentElement || this.$el || null;
+      const inputModelDates = getScopedElementsByClassName("input-model-date", scopeRoot);
+      const patEventDates = getScopedElementsByClassName("pat-event-date", scopeRoot);
+      for (let index = 0; index < inputModelDates.length; index++) {
+        if (inputModelDates[index]?.children?.DateInput?.validationMessage) {
           dateValid = false;
-          const dateName = document.getElementsByClassName("pat-event-date")[index].innerText;
+          const dateName = patEventDates[index]?.innerText || "";
           message = `${dateName+messageFormat(DIALOG_MESSAGES[12000189].message)}`+'\n'+(message ? message : "");
         }
       }

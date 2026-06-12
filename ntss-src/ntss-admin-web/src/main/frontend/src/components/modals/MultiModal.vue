@@ -3,7 +3,7 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import AccountEdit from "@/views/modals/AccountEditView";
 import MenuBarEdit from "@/views/modals/MenuBarEditView";
 import StaffFacility from "@/views/modals/StaffFacilityView";

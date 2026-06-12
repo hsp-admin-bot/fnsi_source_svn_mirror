@@ -14,7 +14,7 @@
     <!-- 抽出ダイアログ[始] -->
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :class="[fontSizeSet, 'trend-graph-header-popover']"
@@ -38,7 +38,7 @@
                 type="date"
                 model-event="change"
                 v-model="trendCondition.startDate"
-                v-validate="'required|date_format:yyyy-MM-dd'"
+                v-rules="'required|date_format:yyyy-MM-dd'"
                 @handleClearInput="trendCondition.startDate = null"
               />
               <!--#10715:日付IF修正End（トレンドグラフ対応）-->
@@ -61,7 +61,7 @@
                 type="date"
                 model-event="change"
                 v-model="trendCondition.endDate"
-                v-validate="'required|date_format:yyyy-MM-dd'"
+                v-rules="'required|date_format:yyyy-MM-dd'"
                 @handleClearInput="trendCondition.endDate = null"
               />
               <!--#10715:日付IF修正End（トレンドグラフ対応）-->
@@ -127,8 +127,9 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import moment from "moment";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
 import commonSearchArea from "@/components/common/CommonSearchArea";
@@ -303,8 +304,8 @@ export default {
     // -----------------------------------------
     loadStateCondition() {
       //#10715:日付IF修正Start（トレンドグラフ対応）
-      const startDate = moment().startOf('month').add('month', -3).format("YYYY-MM-DD");
-      const endDate = moment().format("YYYY-MM-DD");
+      const startDate = dayjs().startOf('month').add(-3, 'month').format("YYYY-MM-DD");
+      const endDate = dayjs().format("YYYY-MM-DD");
       //#10715:日付IF修正End（トレンドグラフ対応）
       // 表示期間
       // 開始日
@@ -374,6 +375,8 @@ export default {
             // データリロード
             this.fetchTrendGraphList(this.fixTrendCondition).then(res => {
               this.setTrendGraphList(res.data.monitorInfo);
+              // モニタ一覧の画面表示用データの配列の生成
+              EventBus.$emit("createVisibleMonitorDataList");
             });
           }
         });
@@ -385,8 +388,8 @@ export default {
      */
     dialogClear() {
       //#10715:日付IF修正Start（トレンドグラフ対応）
-      const startDate = moment().startOf('month').add('month', -3).format("YYYY-MM-DD");
-      const endDate = moment().format("YYYY-MM-DD");
+      const startDate = dayjs().startOf('month').add('month', -3).format("YYYY-MM-DD");
+      const endDate = dayjs().format("YYYY-MM-DD");
       //#10715:日付IF修正End（トレンドグラフ対応）
       this.trendCondition = {
         //#10715:日付IF修正Start（トレンドグラフ対応）
@@ -428,7 +431,6 @@ export default {
     // 情報取得
     this.loadData();
   },
-  mounted() {}
 };
 </script>
 
@@ -440,10 +442,10 @@ export default {
 #popover label {
   font-size: 1.5em;
 }
-.trend-graph-header-popover >>> .popover {
+.trend-graph-header-popover :deep(.popover) {
   width: auto;
 }
-.trend-graph-header-popover >>> .popover__content {
+.trend-graph-header-popover :deep(.popover__content) {
   width: 21em;
 }
 /* add FNSI-redmine#3968 付 start */

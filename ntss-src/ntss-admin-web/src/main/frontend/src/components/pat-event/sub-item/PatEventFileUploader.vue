@@ -1,9 +1,7 @@
 <template>
   <div>
     <!--mod FNSI-画面部品デザイン じょはく start-->
-    <!-- mod #12462 患者情報共有 20260326 start -->
     <template v-if="this.getViewMode || !this.isShared || getIsOtherFacility || getIsOtherFacilitys">
-    <!-- mod #12462 患者情報共有 20260326 end -->
       <div class="dropzone-container-disiabled" @click="dropzoneClick">
         <label class="dropzone-custom-title ntss-pat-event-label">ここにファイルをドロップ</label>
         <label class="dropzone-custom-subtitle ntss-pat-event-label">またはクリックしてファイルを選択</label>
@@ -25,7 +23,7 @@
     />
     <div v-if="isDialogVisible">
       <message-dialog
-        :visible.sync="isDialogVisible"
+        v-model:visible="isDialogVisible"
         :message-cd="messageCd"
         :type="dialogType"
         :title="title"
@@ -36,25 +34,28 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 // 共通カレンダーコンポーネント
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { sendRequestPostUpload } from "@/apis/pat-event";
-import $$ from "jquery";
+
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
 // add #10359 編集権限の動作不正 start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 import { dateFormat } from "@/functions/common/DateTimeUtils.js";
+import { getScopedDocument } from "@/functions/common/LayoutMeasureHelper";
 // add #10359 編集権限の動作不正 end
 export default {
   components: {
     "message-dialog": messageDialog
   },
+  emits: ["update:modelValue", "deleteFile"],
   props: {
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: Array,
       required: true,
       default() {
@@ -109,7 +110,8 @@ export default {
       isConfirm: true,
       deleteFileList: [],
       payload: [],
-      fileList: []
+      fileList: [],
+      dropzoneStyleTag: null
     };
   },
 
@@ -125,10 +127,8 @@ export default {
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
-    // add #12462 患者情報共有 20260326 start
     ...mapGetters("pat-event/list", ["getIsOtherFacility"]),
     ...mapGetters("observe-record/list", ["getIsOtherFacilitys"]),
-    // add #12462 患者情報共有 20260326 end
     isShared() {
       if(this.getPatEventRecord.isComRec){
         return this.getFacilityCd === this.getSharedFacilityCd;
@@ -138,22 +138,28 @@ export default {
     // add FNSI-共有を追加 王 20200921 end
     fileInfo() {
       const deleteNameList = this.deleteFileList.map(file => file.file_name);
-      const file = this.value.filter(
+      const file = this.modelValue.filter(
         file => !deleteNameList.includes(file.file_name)
       );
 
       return file;
     }
   },
-  watch: {},
-  beforeDestroy() {
+  beforeUnmount() {
+    this.dropzoneStyleTag?.parentNode?.removeChild?.(this.dropzoneStyleTag);
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
   created() {
     this.kendoUploadOptions.dropZone = ".dropzone-container" + this.index;
+  },
+  mounted() {
     // <style>タグを生成
-    const styleTag = document.createElement('style');
+    const scopedDocument = getScopedDocument(this);
+    const styleTag = scopedDocument?.createElement?.('style');
+    if (!styleTag) {
+      return;
+    }
     styleTag.textContent = `
       .dropzone-container`+ this.index + `{
         border: 2px dashed var(--ntss-border-color);
@@ -163,9 +169,10 @@ export default {
         flex-flow: column;
       }
     `;
-    document.head.appendChild(styleTag);
+    scopedDocument.head?.appendChild?.(styleTag);
+    this.dropzoneStyleTag = styleTag;
   },
-  mounted() {},
+
   methods: {
     ...mapActions("pat-event/detail", [
       "setPatEventResultParamsUpdate",
@@ -176,7 +183,7 @@ export default {
      * @summary 呼び出してからファイル選択ダイアログを表示
      */
     dropzoneClick() {
-      this.$refs.upload.kendoWidget().element.click();
+      this.$refs.upload?.browse?.();
     },
     // add #10359 編集権限の動作不正 start
     getItemAuthorized(pageCd, itemCd) {
@@ -222,7 +229,7 @@ export default {
           file_modified_time: dateFormat.format(new Date(), "yyyyMMddhhmmss")
         }))
       ];
-      this.$emit("input", fileInfos);
+      this.$emit("update:modelValue", fileInfos);
       this.deleteFileList = [];
       this.fileList = fileInfos;
       for (const file of e.files) {
@@ -267,8 +274,8 @@ export default {
      */
     removeFile(e) {
       const files = e.files.map(i => i.name);
-      const fileInfos = this.value.filter(i => !files.includes(i.name));
-      this.$emit("input", fileInfos);
+      const fileInfos = this.modelValue.filter(i => !files.includes(i.name));
+      this.$emit("update:modelValue", fileInfos);
     },
     /**
      * @description アップロード対象ファイルの存在チェック
@@ -462,7 +469,7 @@ export default {
     // del #10977 インジェクション対応 linjunfeng end
 
     hasSameRecord(addfileList) {
-      const fileList = this.value.map(file => file.file_name);
+      const fileList = this.modelValue.map(file => file.file_name);
       const addfileNameList = addfileList.map(file => file.name);
       const fileNameList = [...fileList, ...addfileNameList];
 
@@ -494,7 +501,7 @@ export default {
 
     async override(addFileList) {
       const addfileNameList = addFileList.map(file => file.name);
-      const overrideFileList = this.value.filter(file =>
+      const overrideFileList = this.modelValue.filter(file =>
         addfileNameList.includes(file.file_name)
       );
       this.deleteFileList = overrideFileList;
@@ -502,14 +509,10 @@ export default {
     },
 
     isUploadDisable() {
-      $$("#upload").kendoUpload();
-      var upload = $$("#upload").data("kendoUpload");
       if (this.getViewMode) {
-        // Disables the Upload
-        upload.disable();
+        this.$refs.upload?.disable?.();
       } else {
-        // Disables the Upload
-        upload();
+        this.$refs.upload?.enable?.();
       }
     }
   }
@@ -536,7 +539,8 @@ export default {
 
 .k-upload .k-upload-button,
 .k-upload .k-upload-selected,
-.k-upload .k-clear-selected {
+.k-upload .k-clear-selected,
+.k-upload .k-actions {
   display: none;
 }
 

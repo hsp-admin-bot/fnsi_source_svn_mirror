@@ -1,3 +1,4 @@
+import { normalizeMenteDate } from "@/functions/periodic-inspection/PeriodicInspectionDateUtil";
 import {
   sendRequestGetMachineSearchResult,
   sendRequestCreateMentePlan,
@@ -136,24 +137,21 @@ export default {
         commit("setReadyToSearchByParamState", true);
       }
     },
-    waitReadyToSearchByParam({ state }) {
-      return new Promise(async (resolve, reject) => {
-        const IntervalMs = 50;
-        const WaitLimitMs = 1000;
-        const RetryLimit = WaitLimitMs / IntervalMs;
+    async waitReadyToSearchByParam({ state }) {
+      const IntervalMs = 50;
+      const WaitLimitMs = 1000;
+      const RetryLimit = WaitLimitMs / IntervalMs;
 
-        let retryCount = 0;
-        while (!state.isReadyToSearchByParam) {
-          retryCount++;
-          if (RetryLimit <= retryCount) {
-            reject();
-          }
-          await new Promise(resolve => {
-            setTimeout(resolve, IntervalMs);
-          });
+      let retryCount = 0;
+      while (!state.isReadyToSearchByParam) {
+        retryCount++;
+        if (RetryLimit <= retryCount) {
+          throw new Error("waitReadyToSearchByParam timeout");
         }
-        resolve();
-      });
+        await new Promise(resolve => {
+          setTimeout(resolve, IntervalMs);
+        });
+      }
     },
 
     async sendRequestGetAllLayoutGroup({ commit }) {
@@ -184,49 +182,39 @@ export default {
       await sendRequestCreateMenteTemp(params).then(res => {
         const fomatData = Array.from(res.data).map(item => ({
           machineNo: item.machineNo,
-          menteDate: item.menteDate,
+          menteDate: normalizeMenteDate(item.menteDate),
           menteLayoutGroupCd: item.menteLayoutGroupCd,
           menteLayoutCd: item.menteLayoutCd
         }));
         commit("setDataTemp", fomatData);
-        // #11961対応時のメモ：
         // 既存データとの重複がない場合は res.data は "" になっているので
         // Array.from("") の結果として [] になり、 fomatData も [] となる
       });
     },
 
     async sendRequestGetDetail({ commit }, params) {
-      let paramforGet = {
-        menteLayoutGroupCd: params.menteLayoutGroupCd,
-        machineTypeCd: params.machineTypeCd
-      };
-      let listUser = [];
-      let resultMaster = null;
-      let resultDetail = null;
-      if (params.devMenteNo) {
-        paramforGet = {
+      let paramforGet = params.devMenteNo
+        ? {
           devMenteNo: params.devMenteNo
-        };
-      } else {
-        paramforGet = {
+        }
+        : {
           menteLayoutGroupCd: params.menteLayoutGroupCd,
           machineTypeCd: params.machineTypeCd
         };
-      }
+      let listUser = [];
+      let resultMaster = null;
+      let resultDetail = null;
       await sendRequestGetDetailForMaster(paramforGet).then(res => {
         resultMaster = res.data;
       });
-      paramforGet = { machineNo: params.machineNo };
-      if (params.devMenteNo) {
-        paramforGet = {
+      paramforGet = params.devMenteNo
+        ? {
           devMenteNo: params.devMenteNo
-        };
-      } else {
-        paramforGet = {
+        }
+        : {
           menteLayoutGroupCd: params.menteLayoutGroupCd,
           machineNo: params.machineNo
         };
-      }
       await sendRequestGetDetailGetDetailResult(paramforGet).then(res => {
         resultDetail = res.data;
         commit("setPeriodicResultDetail", res.data);
@@ -240,7 +228,6 @@ export default {
       });
       let dataFomat = {
         inspectInfor: null,
-        machineInfor: null,
         layoutName: resultDetail.layoutName,
         table1: [],
         table2: [],
@@ -263,7 +250,9 @@ export default {
           devMenteNo: resultDetail.result.devMenteNo,
           checkerId1: resultDetail.result.checkerId1,
           checkerId2: resultDetail.result.checkerId2,
-          menteDate: resultDetail.result.menteDate ? resultDetail.result.menteDate : params.menteDate,
+          menteDate: normalizeMenteDate(
+            resultDetail.result.menteDate ? resultDetail.result.menteDate : params.menteDate
+          ),
           menteComment1: resultDetail.result.menteComment1,
           menteComment2: "",
           menteAns2: "",
@@ -280,7 +269,7 @@ export default {
           devMenteNo: "",
           checkerId1: "",
           checkerId2: "",
-          menteDate: params.menteDate,
+          menteDate: normalizeMenteDate(params.menteDate),
           menteComment1: "",
           menteComment2: "",
           menteAns2: "",
@@ -297,25 +286,25 @@ export default {
             let detailOfResultItem = detailOfResult.find(
               x => x.detail_cd === ceteDetail.menteDetailCd && x.tableIndex == 1  && ceteDetail.menteCategoryCd == x.cate_cd
             );
-            let detailInfor = {};
-            if (detailOfResultItem) {
-              let checker = listUser.find(
-                user => user.user_id === detailOfResultItem.user_id
-              );
-              detailInfor = {
-                ...ceteDetail,
-                edition: ceteDetail.editionNo,
-                cate_cd:ceteDetail.menteCategoryCd,
-                cate_edi:ceteDetail.cate_edi,
-                isCmt:ceteDetail.isCmt,
-                detail_cd: ceteDetail.menteDetailCd,
-                comment: detailOfResultItem.comment,
-                judge: detailOfResultItem.judge,
-                date: detailOfResultItem.regDate,
-                ...checker
-              };
-            } else {
-              detailInfor = {
+            const detailInfor = detailOfResultItem
+              ? (() => {
+                let checker = listUser.find(
+                  user => user.user_id === detailOfResultItem.user_id
+                );
+                return {
+                  ...ceteDetail,
+                  edition: ceteDetail.editionNo,
+                  cate_cd:ceteDetail.menteCategoryCd,
+                  cate_edi:ceteDetail.cate_edi,
+                  isCmt:ceteDetail.isCmt,
+                  detail_cd: ceteDetail.menteDetailCd,
+                  comment: detailOfResultItem.comment,
+                  judge: detailOfResultItem.judge,
+                  date: detailOfResultItem.regDate,
+                  ...checker
+                };
+              })()
+              : {
                 ...ceteDetail,
                 edition: ceteDetail.editionNo,
                 cate_cd:ceteDetail.menteCategoryCd,
@@ -328,7 +317,6 @@ export default {
                 user_id: 0,
                 checkerFullName: ""
               };
-            }
             delete detailInfor.menteDetailCd;
             delete detailInfor.editionNo;
             detailItems.push(detailInfor);
@@ -348,26 +336,26 @@ export default {
             let detailOfResultItem = detailOfResult.find(
               x => x.detail_cd === ceteDetail.menteDetailCd && x.tableIndex == 2 && ceteDetail.menteCategoryCd == x.cate_cd
             );
-            let detailInfor = {};
-            if (detailOfResultItem) {
-              let checker = listUser.find(
-                user => user.user_id === detailOfResultItem.user_id
-              );
-              detailInfor = {
-                ...ceteDetail,
-                edition: ceteDetail.editionNo,
-                cate_cd:ceteDetail.menteCategoryCd,
-                cate_edi:ceteDetail.cate_edi,
-                detail_edi: ceteDetail.detail_edi,
-                isCmt:ceteDetail.isCmt,
-                detail_cd: ceteDetail.menteDetailCd,
-                comment: detailOfResultItem.comment,
-                judge: detailOfResultItem.judge == '1'? true : false,
-                date: detailOfResultItem.regDate,
-                ...checker
-              };
-            } else {
-              detailInfor = {
+            const detailInfor = detailOfResultItem
+              ? (() => {
+                let checker = listUser.find(
+                  user => user.user_id === detailOfResultItem.user_id
+                );
+                return {
+                  ...ceteDetail,
+                  edition: ceteDetail.editionNo,
+                  cate_cd:ceteDetail.menteCategoryCd,
+                  cate_edi:ceteDetail.cate_edi,
+                  detail_edi: ceteDetail.detail_edi,
+                  isCmt:ceteDetail.isCmt,
+                  detail_cd: ceteDetail.menteDetailCd,
+                  comment: detailOfResultItem.comment,
+                  judge: detailOfResultItem.judge == '1'? true : false,
+                  date: detailOfResultItem.regDate,
+                  ...checker
+                };
+              })()
+              : {
                 ...ceteDetail,
                 edition: ceteDetail.editionNo,
                 cate_cd:ceteDetail.menteCategoryCd,
@@ -380,7 +368,6 @@ export default {
                 user_id: 0,
                 checkerFullName: ""
               };
-            }
             delete detailInfor.menteDetailCd;
             delete detailInfor.editionNo;
             detailItems.push(detailInfor);
@@ -394,10 +381,10 @@ export default {
       }
       commit("setDetailData", dataFomat);
     },
-    sendRequestCreateMentePlan({}, body) {
+    sendRequestCreateMentePlan(_ctx, body) {
       return sendRequestCreateMentePlan(body);
     },
-    sendRequestUpdateMente({}, body) {
+    sendRequestUpdateMente(_ctx, body) {
       return sendRequestUpdateMente(body);
     },
     setMachine({ commit }, params) {
@@ -411,7 +398,6 @@ export default {
      */
     async setSearchedList({ commit }, condition) {
       const response = await sendRequestGetMachineSearchResult(condition);
-      // 必要なカラムのみ取り出す
       const searchedMachineList = response.data.map(machine => ({
         machineNo: machine.machineNo,
         machineName: machine.machineName,

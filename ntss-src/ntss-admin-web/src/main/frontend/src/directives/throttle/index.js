@@ -1,32 +1,29 @@
-// import _throttle from 'lodash/debounce'
-// let fn = null
-const throttle = {
-  // inserted: function(el, binding) {
-  //   fn = _throttle(binding.value, 2000, {
-  //     leading: true,
-  //     trailing: false
-  //   })
-  //   el.addEventListener('click', fn)
-  // },
-  // unbind: function(el) {
-  //   fn && el.removeEventListener('click', fn)
-  // }
-  bind: function (el, binding) {
+/**
+ * クリックのスロットル（Vue2 throttle ディレクティブと同等の挙動）
+ */
+export default {
+  mounted(el, binding) {
     let throttleTime = binding.value;
     if (!throttleTime) {
       throttleTime = 2000;
     }
     let cbFun;
-    el.addEventListener('click', event => {
+    const handler = (event) => {
       if (!cbFun) {
         cbFun = setTimeout(() => {
           cbFun = null;
         }, throttleTime);
-      } else {
-        event && event.stopImmediatePropagation();
+      } else if (event) {
+        event.stopImmediatePropagation();
       }
-    }, true);
+    };
+    el.__throttleClickHandler__ = handler;
+    el.addEventListener("click", handler, true);
+  },
+  unmounted(el) {
+    if (el.__throttleClickHandler__) {
+      el.removeEventListener("click", el.__throttleClickHandler__, true);
+      el.__throttleClickHandler__ = null;
+    }
   }
-}
-
-export default throttle
+};

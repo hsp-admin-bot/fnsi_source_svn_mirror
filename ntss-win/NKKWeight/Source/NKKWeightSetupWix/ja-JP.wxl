@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   NKKWeight（体重計）インストーラー 日本語ローカライゼーション
-  WiX v4 WXL（NKKAccessCardSetupWix と同構成）
+  WiX v4 WXL ファイル
 
-  目的:
     Package Name="FNWSi 体重計アプリ" およびデスクトップショートカット名は
     変更せず、インストールウィザード画面の表示名のみ "FNWSi Scale" に統一する。
 -->
@@ -11,9 +10,11 @@
                  Culture="ja-JP"
                  Codepage="932">
 
+  <!-- .NET Framework 要件エラーメッセージ（将来 Product.wxs で !(loc.xxx) 参照用） -->
   <String Id="LaunchConditionNetFx45"
           Value=".NET Framework 4.5 以上が必要です。&#xA;&#xA;下記 URL からインストール後、再度セットアップを実行してください。&#xA;https://go.microsoft.com/fwlink/?LinkId=225704" />
 
+  <!-- ウィザード画面名 -->
   <String Id="AdvancedWelcomeEulaDlg_Title" Value="FNWSi Scale" />
   <String Id="BrowseDlg_Title" Value="FNWSi Scale" />
   <String Id="CancelDlg_Title" Value="FNWSi Scale" />
@@ -45,7 +46,6 @@
 
   <String Id="WelcomeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Scale セットアップ ウィザードへようこそ。" />
   <String Id="WelcomeDlgDescription" Value="セットアップでは、FNWSi Scale をコンピュータにインストールします。続行する場合は［次へ］を、セットアップを終了する場合は［キャンセル］をクリックしてください。" />
-  <!-- PrepareDlg は本文とは別に PrepareDlgTitle が [ProductName] を参照する -->
   <String Id="PrepareDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Scale セットアップ ウィザードへようこそ。" />
   <String Id="ResumeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Scale セットアップ ウィザードの再開" />
   <String Id="MaintenanceWelcomeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Scale セットアップ ウィザードへようこそ。" />

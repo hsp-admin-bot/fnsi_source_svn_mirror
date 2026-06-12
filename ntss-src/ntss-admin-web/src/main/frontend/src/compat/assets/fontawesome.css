@@ -1,0 +1,37 @@
+@import "@fortawesome/fontawesome-free/css/all.min.css";
+
+/*
+ * Font Awesome 4 class compatibility.
+ * Vue2 used @fortawesome/fontawesome-free-webfonts, and Onsen icons/pages still pass
+ * old class names such as fa-folder-o / fa-file-archive-o.  FA7 no longer exposes
+ * these legacy names directly, so keep the page code unchanged and map them here.
+ */
+.ons-icon.fa,
+.ons-icon.fas,
+.ons-icon.far,
+.ons-icon.fab {
+  width: auto;
+}
+
+.fa-folder-o::before {
+  content: "\f07b";
+}
+
+.fa-file-archive-o::before,
+.fa-file-zip-o::before {
+  content: "\f1c6";
+}
+
+.fa-sort-asc::before,
+.fa-sort-up::before {
+  content: "\f0de";
+}
+
+.fa-sort-desc::before,
+.fa-sort-down::before {
+  content: "\f0dd";
+}
+
+.fa-level-up::before {
+  content: "\f148";
+}

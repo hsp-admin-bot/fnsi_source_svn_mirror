@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.web_api.request;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 
 import lombok.Data;
 
@@ -9,7 +9,7 @@ import lombok.Data;
  * ジャーナル更新APIリクエスト
  *
  */
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Data
 public class JournalCreateRequestPayload {
   /** 施設コード */

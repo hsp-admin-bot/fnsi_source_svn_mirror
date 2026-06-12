@@ -485,7 +485,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="userMenuPopoverVisible"
+      v-model:visible="userMenuPopoverVisible"
       :target="userMenuPopoverTarget"
       :cover-target="false"
       :direction="userMenuPopoverDirection"
@@ -502,15 +502,16 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import PopoverMixin from "@/components/PopoverMixin";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.js";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-// add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
-import { EventBus } from "@/eventBus.js";
+
 import TimeInput from "@/components/common/TimeInput.vue";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
 
 export default {
   mixins: [PopoverMixin],
@@ -1452,7 +1453,7 @@ export default {
      * 吹き出し表示処理
      */
     showPopOver(event, message) {
-      var pop = document.getElementById("pop-over-message");
+      var pop = getScopedElementById("pop-over-message", this.$el || this);
       pop.innerText = message;
       this.userMenuPopoverTarget = event;
       this.userMenuPopoverVisible = true;
@@ -1782,19 +1783,24 @@ div.main-content-area-main {
 .input-time {
   font-size: 1em;
 }
-.selectbox >>> .select-input {
+.selectbox :deep(.select-input) {
   font-size: 1em;
   line-height: inherit;
 }
-.textbox >>> .text-input {
+.textbox :deep(.text-input) {
   font-size: 1em;
   background-color: #ffff99 !important;
 }
-.textbox >>> .text-input:disabled {
+.textbox :deep(.text-input:disabled) {
   color: #999;
 }
-.time-input-edited >>> .text-input,
-.time-input-edited >>> .select-input {
+.time-input-edited :deep(.select-input) {
+  border: 2px green solid;
+  outline: 0;
+  border-radius: 5px;
+}
+
+.time-input-edited :deep(.text-input) {
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;

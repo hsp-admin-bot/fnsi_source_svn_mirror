@@ -61,7 +61,7 @@ this.$refs.refCalendarInput.buildDispDate(targetDate) で実行する。
 
 <script>
 import CustomCalendar from "@/components/common/custom-calendar/CustomCalendar";
-import moment from "moment"; //日付扱い用
+import dayjs from "@/compat/date/dayjs"; //日付扱い用
 
 export default {
   components: {
@@ -276,7 +276,7 @@ export default {
      */
     buildDispDate(targetDate) {
       //const selectedDate = new Date(targetDate);
-      const selectedDate = moment(targetDate);
+      const selectedDate = dayjs(targetDate);
 
       //console.log("selectedDate:" + selectedDate) ;
 

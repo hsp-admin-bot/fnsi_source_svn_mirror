@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import jp.co.nikkiso.ntss.admin_web.service.userAccount.UserAccountServiceImpl;
 import jp.co.nikkiso.ntss.core.dao.MstFacilityHashDao;

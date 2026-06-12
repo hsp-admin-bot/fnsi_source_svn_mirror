@@ -155,7 +155,7 @@ namespace NKKAccessCardLib
         /// カードAPPのポート更新URI
         /// </summary>
         //----------------------------------------------------------------------------------------------------
-        private readonly String CARD_APP_PORT_UPDATE_URL = "/api/card_state/update_card_app_port/";
+        private readonly String CARD_APP_PORT_UPDATE_URL = "/api/card_state/update_card_app_port";
         //----------------------------------------------------------------------------------------------------
         // add FNSI-4200ポートを使用している 孫 end
 
@@ -573,14 +573,19 @@ namespace NKKAccessCardLib
                 // add 2021-03-25 クライアント証明書検索キーを追加 孫 start
 
                 // 最新ファイルダウンロード先フォルダ
-                NKKAccessCardInfo.DownloadSourceFolder = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFolder", String.Empty).Trim();
+                // del #11660 単体アプリの自己アップデート修正 高 start
+                //NKKAccessCardInfo.DownloadSourceFolder = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFolder", String.Empty).Trim();
+                // del #11660 単体アプリの自己アップデート修正 高 end
                 NKKWebAppSocketConfig.WS_URL = sys.GetSingleLineValue(CONFIG_WEBSOCKET_SECTION, "WEB_APP_URI", string.Empty);
                 int.TryParse(
                 sys.GetSingleLineValue(CONFIG_WEBSOCKET_SECTION, "WEB_APP_PORT", default(int).ToString()), out NKKWebAppSocketConfig.WS_PORT);
 
                 // add オンプレでの自己アップデートに対応 孫 start
                 // 最新ファイル取得先ファイル名
-                NKKAccessCardInfo.DownloadFileName = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFileName", "NKKAccessCard.zip").Trim();
+                // del #11660 単体アプリの自己アップデート修正 高 start
+                //NKKAccessCardInfo.DownloadFileName = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFileName", "NKKAccessCard.zip").Trim();
+                //NKKAccessCardInfo.DownloadFileName = "NKKAccessCardUpdate.zip";
+                // del #11660 単体アプリの自己アップデート修正 高 end
                 // add オンプレでの自己アップデートに対応 孫 end
 
                 // add FNSI-4200ポートを使用している 孫 start

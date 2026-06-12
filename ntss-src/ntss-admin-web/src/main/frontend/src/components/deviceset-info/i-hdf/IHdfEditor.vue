@@ -396,19 +396,19 @@
     </v-ons-row>
 
     <message-dialog
-      :visible.sync="isDialogVisble"
+      v-model:visible="isDialogVisble"
       v-bind="dialogProps"
       type="1"
       @confirm="saveEdit"
     />
     <message-dialog
-      :visible.sync="isCancelDialogVisble"
+      v-model:visible="isCancelDialogVisble"
       v-bind="dialogProps"
       type="2"
       @confirm="cancelEdit"
     />
     <message-dialog
-      :visible.sync="isChangeDisplayDialogVisble"
+      v-model:visible="isChangeDisplayDialogVisble"
       v-bind="dialogProps"
       type="2"
       @confirm="changeDisplayEdit"
@@ -420,8 +420,8 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapActions, mapGetters } from "vuex";
-import moment from "moment";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
 import {
   DATA_SOURCE_TYPE_MST,
   // add #11166 I-HDFが保存できない zhangyue start
@@ -432,7 +432,7 @@ import {
   DEVICE_TYPE_IHDF
 } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
 import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoEditor.vue";
-import iHdfImg from "@/../public/img/deviceset-info/ProgramReplenish.png";
+const iHdfImg = "img/deviceset-info/ProgramReplenish.png";
 import {
   DEVICE_TYPE_OPE,
   DEVICE_TYPE_WAR,
@@ -441,16 +441,17 @@ import {
 } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 import TimeInput from "@/components/common/TimeInput.vue";
 
+import DeviceSetOwnerMixin from '@/components/deviceset-info/base-modules/DeviceSetOwnerMixin';
 /** * I-HDFメイン */
 export default {
   components: {
     TimeInput
   },
 
-  mixins: [baseEditor],
+  mixins: [DeviceSetOwnerMixin, baseEditor],
 
   props: {
     // add #10359 編集権限の動作不正 dengshen start
@@ -743,7 +744,7 @@ export default {
       if (this.dialysisDate === null) {
         return `透析時間参照なし`;
       }
-      const day = moment(this.dialysisDate, "YYYYMMDD").format("MM/DD");
+      const day = dayjs(this.dialysisDate, "YYYYMMDD").format("MM/DD");
       return `(${day}の透析時間参照)`;
     },
 
@@ -755,8 +756,7 @@ export default {
     countReplenisher() {
       if (
         this.isCountReplenisherData ||
-        this.replenisherRemovalWaterSpeed === "-.--"
-      ) {
+        this.replenisherRemovalWaterSpeed === "-.--") {
         // 計算対象項目が未入力の場合、「-(ハイフン)」表示とする(透析時間・補液開始時間・補液周期)
         return "-";
       }
@@ -803,10 +803,9 @@ export default {
     normalCountReplenisher() {
       // TMPゼロ補正なしの場合:補液回数 = (透析時間(min) - 補液開始時間(min)) / 補液周期(min)
       /* modify by chamaojia 2023-07-11 ページエラー訂正  --start */
-      let countReplenisher;
-      countReplenisher = (countReplenisher =
+      let countReplenisher =
         (this.dialysisTime - this.replenisherStartTime.value.editValue) /
-        this.replenisherCycle.value.editValue);
+        this.replenisherCycle.value.editValue;
       /* modify by chamaojia 2023-07-11 ページエラー訂正  --end */
       if (this.enabledCalculationTMP == "true") {
         // del #11166 I-HDFが保存できない zhangyue start
@@ -871,7 +870,7 @@ export default {
         this.dialysisTime === null ||
         this.dialysisTime === ''
         // mod #11166 I-HDFが保存できない zhangyue end
-      );
+        );
     },
 
     /**
@@ -882,8 +881,7 @@ export default {
     prospectReplenisher() {
       if (
         this.isProspectReplenisherData ||
-        this.replenisherRemovalWaterSpeed === "-.--"
-      ) {
+        this.replenisherRemovalWaterSpeed === "-.--") {
         // 計算対象項目が未入力の場合、「-.-- (ハイフン)」表示とする。
         return "-.--";
       }
@@ -944,7 +942,7 @@ export default {
       // if (
       //   this.isCountReplenisherData ||
       //   this.replenisherRemovalWaterSpeed === "-.--"
-      // ) {
+      //) {
       //   // 計算対象項目が未入力の場合、「-(ハイフン)」表示とする(透析時間・補液開始時間・補液周期)
       //   return "-";
       // }
@@ -953,7 +951,7 @@ export default {
       //   this.replenisherStartTime.value.editValue +
       //   (this.countReplenisher *
       //     this.replenisherCycle.value.editValue)
-      // );
+      //);
       // mod FNSI-FutreNetWeb+SI課題管理No.5255 李 end
     },
     // add FNSI-I-HDF時間の追加 楊 end
@@ -968,8 +966,7 @@ export default {
       return (
         (this.normalCountReplenisher *
           this.replenisherAmountSetting.value.editValue) /
-        1000
-      );
+        1000);
     },
 
     /**
@@ -980,8 +977,7 @@ export default {
     isMaxProspectReplenisher() {
       return (
         this.normalProspectReplenisher >
-        this.totalReplenisherUpperLimit.value.editValue
-      );
+        this.totalReplenisherUpperLimit.value.editValue);
     },
 
     /**
@@ -993,8 +989,7 @@ export default {
         // 補液回数
         this.countReplenisher === "-" ||
         // 補液量
-        this.replenisherAmountSetting.value.editValue === null
-      );
+        this.replenisherAmountSetting.value.editValue === null);
     },
 
     /**
@@ -1010,7 +1005,7 @@ export default {
       // 補液量
       const replenisher = this.replenisherAmountSetting.value.editValue;
 
-      // 補液分除水速度(L/h) = ( 補液量(mL) × 3.6 ) / 除水時間(sec)
+      // 補液分除水速度(L/h) = ( 補液量(mL) × 3.6) / 除水時間(sec)
       let replenisherRemovalWaterSpeed =
         (replenisher * 3.6) / this.removalWaterTime;
 
@@ -1055,8 +1050,7 @@ export default {
       const replenisherCycle = this.replenisherCycle.value.editValue;
       // 除水時間(sec) = (補液周期(min) ×60) - 補液時間(sec) - (除水再開時間(min) × 60)
       return (
-        replenisherCycle * 60 - this.replenisherTime - removalWaterTime * 60
-      );
+        replenisherCycle * 60 - this.replenisherTime - removalWaterTime * 60);
     },
 
     /**
@@ -1072,8 +1066,7 @@ export default {
         // 補液周期
         this.replenisherCycle.value.editValue === null ||
         // 除水再開時間
-        this.removalWaterRestartTime.value.editValue === null
-      );
+        this.removalWaterRestartTime.value.editValue === null);
     }
   },
 
@@ -1088,15 +1081,14 @@ export default {
         // 使用選択:"0"使用しない
         this.$emit(
           "update:isIhdfMain",
-          this.programUse.value.editValue === "0"
-        );
+          this.programUse.value.editValue === "0");
         // 親画面の状態を初期化
         const isUseProgram = !(this.programUse.value.editValue === "0");
         this.$emit("init-radio", {
           initVal: isUseProgram,
           editVal: isUseProgram,
           isTreatRecord: this.isTreatRecord
-        } );
+        });
         // 選択状態確認フラグ
         this.$emit("update:isProgramUseChacked", true);
       }
@@ -1126,9 +1118,11 @@ export default {
             break;
           case DATA_SOURCE_TYPE_MST_EDIT_RECORD:
             devInfo = this.deviceSetInfoMst?.pat;
-            let devInfoOrd = this.deviceSetInfoMst?.ord;
-            this.tmpStartTimeObj.value.editValue = devInfoOrd?.ihdf?.dev?.A[1001];
-            this.tmpTimeObj.value.editValue = devInfoOrd?.ihdf?.dev?.A[1002];
+            {
+              const devInfoOrd = this.deviceSetInfoMst?.ord;
+              this.tmpStartTimeObj.value.editValue = devInfoOrd?.ihdf?.dev?.A[1001];
+              this.tmpTimeObj.value.editValue = devInfoOrd?.ihdf?.dev?.A[1002];
+            }
             break;
           case DATA_SOURCE_TYPE_TREAT:
             devInfo = JSON.parse(this.deviceSetInfoRaw);
@@ -1140,15 +1134,13 @@ export default {
         if (
           devInfo &&
           devInfo[DEVICE_TYPE_WAR] &&
-          devInfo[DEVICE_TYPE_WAR].dev.A[240]
-        ) {
+          devInfo[DEVICE_TYPE_WAR].dev.A[240]) {
           warTMPMonitoring = devInfo[DEVICE_TYPE_WAR].dev.A[240];
         }
         if (
           devInfo &&
           devInfo[DEVICE_TYPE_OPE] &&
-          devInfo[DEVICE_TYPE_OPE].dev.A[241]
-        ) {
+          devInfo[DEVICE_TYPE_OPE].dev.A[241]) {
           opeTMPZeroCorrection = devInfo[DEVICE_TYPE_OPE].dev.A[241];
         }
       // }
@@ -1182,17 +1174,17 @@ export default {
       // 初期状態：指示装置設定画面のみ透析予定・透析時間は参照する。
       if (this.dataSourceType === DATA_SOURCE_TYPE_ORD) {
         // 保存した再検索時の計算用透析時間を取得
-        const dialysisTimeData = this.getDialysisTimeData
-        if(dialysisTimeData){
-            // 選択された日付に透析時間が設定されている場合
-            this.dialysisDate = dialysisTimeData.dialysisDate;
-            // 透析時間(分)設定
-            this.dialysisTime = dialysisTimeData.dialysisTime;
-            // 透析時間："HH:mm"設定
-            this.dialysisDisplayTime = dialysisTimeData.dialysisDisplayTime;
-            // 透析日表示フラグ
-            this.isDialysisDay = true;
-        }else{
+        const dialysisTimeData = this.getDialysisTimeData;
+        if (dialysisTimeData) {
+          // 選択された日付に透析時間が設定されている場合
+          this.dialysisDate = dialysisTimeData.dialysisDate;
+          // 透析時間(分)設定
+          this.dialysisTime = dialysisTimeData.dialysisTime;
+          // 透析時間："HH:mm"設定
+          this.dialysisDisplayTime = dialysisTimeData.dialysisDisplayTime;
+          // 透析日表示フラグ
+          this.isDialysisDay = true;
+        } else {
           // 選択した日付
           const selectedDate = this.getSettingIndChildData.treatDate;
 
@@ -1218,10 +1210,9 @@ export default {
             const time = String(Math.floor(this.dialysisTime / 60));
             const minutes = String(this.dialysisTime % 60);
             // 透析時間："HH:mm"設定
-            this.dialysisDisplayTime = moment(
+            this.dialysisDisplayTime = dayjs(
               `${time}:${minutes}`,
-              "HH:mm"
-            ).format("HH:mm");
+              "HH:mm").format("HH:mm");
 
             // 透析日表示フラグ
             this.isDialysisDay = true;
@@ -1247,7 +1238,7 @@ export default {
               // 透析時間(分)の算出
               const minutes = String(this.dialysisTime % 60);
               // 透析時間(HH:mm)の作成
-              this.dialysisDisplayTime = moment(`${time}:${minutes}`, "HH:mm").format("HH:mm");
+              this.dialysisDisplayTime = dayjs(`${time}:${minutes}`, "HH:mm").format("HH:mm");
               // 透析日表示フラグ
               this.isDialysisDay = true;
             }
@@ -1279,7 +1270,15 @@ export default {
     // add #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng end
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd));
+      return this.isMst || (this.isMst != true && !this.isOtherFacilityRow() && getAuthorized(pageCd, itemCd));
+    },
+    /**
+     * @description 該当行が他院情報かどうかを判定
+     * @returns {Boolean} true = 他施設のデータは参照のみ
+     */
+    isOtherFacilityRow() {
+      const facilityCd = this.getSettingIndChildData?.facilityCd;
+      return facilityCd ? facilityCd !== this.getFacilityCd : false;
     },
     // add #10359 編集権限の動作不正 dengshen end
     /**
@@ -1292,8 +1291,8 @@ export default {
         this.dialysisTime = null;
       } else {
         // 空欄でなければ時間を分に変換
-        const time = moment(value, "HH:mm").format("HH");
-        const minutes = moment(value, "HH:mm").format("mm");
+        const time = dayjs(value, "HH:mm").format("HH");
+        const minutes = dayjs(value, "HH:mm").format("mm");
         this.dialysisTime = Number(time) * 60 + Number(minutes);
       }
       // 表示変更の為、値設定
@@ -1404,14 +1403,14 @@ export default {
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
     async resetComponentIndData(structData){
       if (this.isEdit()) {
-        this.$parent.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+        this._deviceSetRootOwner().messageDialogInfo.messageCd = 70000028;
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-        this.$parent.$parent.$parent.messageDialogInfo.type = "9";
+        this._deviceSetRootOwner().messageDialogInfo.type = "9";
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-        this.$parent.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._deviceSetRootOwner().messageDialogInfo.isDialogVisible = true;
         return;
       } else {
-        this.getComponentData(structData,2);
+        return this.getComponentData(structData,2);
       }
 
     },
@@ -1484,8 +1483,7 @@ export default {
       // 対象日時の治療情報取得(開始日付・治療方法・クールで絞り込み)
       let response = await ApiHelper.post(
         "/mainData/getOrdMainDataInfo",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         getErrorMessage('IHdfEditor.vue', 'getComponentData', error);
         throw error;
       });
@@ -1508,7 +1506,7 @@ export default {
           }
           for (let key in this.devA) {
             // mod #11166 I-HDFが保存できない zhangyue start
-            if (this.devA[key].hasOwnProperty('step') && this.devA[key].hasOwnProperty('decimalDigits')) {
+            if (Object.prototype.hasOwnProperty.call(this.devA[key], 'step') && Object.prototype.hasOwnProperty.call(this.devA[key], 'decimalDigits')) {
               // #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng start
               // this.devA[key].value.editValue = tempData.ihdf.dev.A[key]?.toFixed(this.devA[key].decimalDigits);
               this.devA[key].value.editValue = tempData.ihdf.dev.A[key] != null ? Number(tempData.ihdf.dev.A[key])?.toFixed(this.devA[key].decimalDigits) : null;
@@ -1554,10 +1552,9 @@ export default {
           const time = String(Math.floor(this.dialysisTime / 60));
           const minutes = String(this.dialysisTime % 60);
           // 透析時間："HH:mm"設定
-          this.dialysisDisplayTime = moment(
+          this.dialysisDisplayTime = dayjs(
             `${time}:${minutes}`,
-            "HH:mm"
-          ).format("HH:mm");
+            "HH:mm").format("HH:mm");
 
           // 透析日表示フラグ
           this.isDialysisDay = true;
@@ -1601,7 +1598,7 @@ export default {
       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア_I-HDF設定 20240123 ztc start
       // EventBus.$emit( "mstTreatmentSetRegistered", val);
       EventBus.$emit("mstTreatmentSetRegistered", !this.isEdit());
-      this.$parent.$parent.$parent.ihdfChangeFlag = this.isEdit();
+      this._deviceSetRootOwner().ihdfChangeFlag = this.isEdit();
       // if(false === val) {
       //   EventBus.$emit("deviceSetChanged");
       // }
@@ -1617,25 +1614,13 @@ export default {
         return this.MAX_DIALYSIS_TIME;
       }
       return dialysisTime;
-    },
-   // add #12462 患者情報共有 Ji start
-  /**
-   * @description 該当行が他院情報かどうかを判定
-   * @returns {Boolean} true = 他施設のデータは参照のみ
-   */
-    isOtherFacilityRow() {
-      if (!this.getSettingIndChildData) {
-        return false
-      }
-      return this.getSettingIndChildData.facilityCd ? this.getSettingIndChildData.facilityCd !== this.getFacilityCd : false
     }
-    // add #12462 患者情報共有 Ji end
   },
 
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
   async created() {
     this.setLoadingScreenVisible(true);
-    this.$parent.$parent.$parent.isDialogType9_ihdf = true;
+    this._deviceSetRootOwner().isDialogType9_ihdf = true;
   },
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add end
   // add redmine 6190 I-HDFプログラム使用選択の使用する／しないを切り替えると画面が崩れる 宋qy start
@@ -1775,14 +1760,14 @@ export default {
 /** Device Width:360-480           */
 /** ボックス要素-スクロール制御 */
 @media only screen and (min-device-width:360px) and (max-device-width:480px) {
-  .device-info-img-content >>> .custom-input-number {
+  .device-info-img-content :deep(.custom-input-number) {
   height: 1.0em !important;
   font-size: 0.92em !important;
   width: 10vw !important;
   }
 }
 
-.device-input-number >>> .custom-input-number {
+.device-input-number :deep(.custom-input-number) {
   width: 5.5em;
 }
 
@@ -1790,19 +1775,22 @@ export default {
   .device-info-img-content {
     height: fit-content !important;
   }
+
   .i-hdf-img{
     width: 100% !important;
   }
+
   .device4{
     left: 44% !important;
   }
 }
+
 /* 縦向き印刷時のみ */
 @media print and (orientation: portrait) {
-  .device-info-img-content >>> .custom-input-number {
+  .device-info-img-content :deep(.custom-input-number) {
     width: 3.5em !important;
   }
-  .device-info-img-content >>> .custom-input-number input[type="number"] {
+  .device-info-img-content :deep(.custom-input-number input[type="number"]) {
     height: 1.3em !important;
   }
 }

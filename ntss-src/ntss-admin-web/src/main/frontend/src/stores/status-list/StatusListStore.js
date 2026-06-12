@@ -24,29 +24,45 @@ import {
   sendRequestGetSysMonitorItem
 } from "@/apis/treatment-record";
 import { sendRequestGetKurSelector } from "@/apis/send-condition";
-import { EventBus } from "@/eventBus.js";
-import moment from "moment";
-import patNameCellTemplate from "@/components/status-list/sub-item/PatNameCellTemplate";
-import bedNameCellTemplate from "@/components/status-list/sub-item/BedNameCellTemplate";
-import dialysisStateCellTemplate from "@/components/status-list/sub-item/DialysisStateCellTemplate";
-import selectorStaffCellTemplate from "@/components/status-list/sub-item/SelectorStaffCellTemplate";
-import changeInstructionTemplate from "@/components/status-list/sub-item/ChangeInstructionTemplate";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import dayjs from "@/compat/date/dayjs";
+import { markRaw } from "@/compat/vue/runtime";
+import { getViewportWidth } from "@/functions/common/LayoutMeasureHelper";
+import patNameCellTemplateSource from "@/components/status-list/sub-item/PatNameCellTemplate.vue";
+import bedNameCellTemplateSource from "@/components/status-list/sub-item/BedNameCellTemplate.vue";
+import dialysisStateCellTemplateSource from "@/components/status-list/sub-item/DialysisStateCellTemplate.vue";
+import selectorStaffCellTemplateSource from "@/components/status-list/sub-item/SelectorStaffCellTemplate.vue";
+import changeInstructionTemplateSource from "@/components/status-list/sub-item/ChangeInstructionTemplate.vue";
 // add FNSI-装置自己診断の追加 徐 start
-import machineRecordCdTemplate from "@/components/status-list/sub-item/MachineRecordCdTemplate";
+import machineRecordCdTemplateSource from "@/components/status-list/sub-item/MachineRecordCdTemplate.vue";
 // add FNSI-装置自己診断の追加 徐 end
 // add FNSI-警報・報知の追加 徐 start
-import machineRecordValueTemplate from "@/components/status-list/sub-item/MachineRecordValueTemplate";
+import machineRecordValueTemplateSource from "@/components/status-list/sub-item/MachineRecordValueTemplate.vue";
 // add FNSI-警報・報知の追加 徐 end
 // add FNSI-患者名の追加 付 start
-import PatIdCellTemplate from "@/components/status-list/sub-item/PatIdCellTemplate";
+import PatIdCellTemplateSource from "@/components/status-list/sub-item/PatIdCellTemplate.vue";
 // add FNSI-患者名の追加 徐 end
 // add FNSI-項目表示制御の修正 徐 start
-import useCheckTemplate from "@/components/status-list/sub-item/useCheckTemplate";
+import useCheckTemplateSource from "@/components/status-list/sub-item/useCheckTemplate.vue";
 // add FNSI-項目表示制御の修正 徐 end
-import MachineNameCellTemplate from "@/components/status-list/sub-item/MachineNameCellTemplate";
+import MachineNameCellTemplateSource from "@/components/status-list/sub-item/MachineNameCellTemplate.vue";
 import { isDisp } from "@/components/status-list/list-map-common/listMapCommonFunction";
 import { addPatNameSortToList } from "@/functions/SortFunctions";
-import roundStateTemplate from "@/components/status-list/sub-item/RoundStateTemplate.vue"
+import roundStateTemplateSource from "@/components/status-list/sub-item/RoundStateTemplate.vue"
+import { getAppComputedStyle } from "@/functions/common/LayoutMeasureHelper";
+
+const markNativeGridCell = (component) => markRaw(component?.default || component);
+const patNameCellTemplate = markNativeGridCell(patNameCellTemplateSource);
+const bedNameCellTemplate = markNativeGridCell(bedNameCellTemplateSource);
+const dialysisStateCellTemplate = markNativeGridCell(dialysisStateCellTemplateSource);
+const selectorStaffCellTemplate = markNativeGridCell(selectorStaffCellTemplateSource);
+const changeInstructionTemplate = markNativeGridCell(changeInstructionTemplateSource);
+const machineRecordCdTemplate = markNativeGridCell(machineRecordCdTemplateSource);
+const machineRecordValueTemplate = markNativeGridCell(machineRecordValueTemplateSource);
+const PatIdCellTemplate = markNativeGridCell(PatIdCellTemplateSource);
+const useCheckTemplate = markNativeGridCell(useCheckTemplateSource);
+const MachineNameCellTemplate = markNativeGridCell(MachineNameCellTemplateSource);
+const roundStateTemplate = markNativeGridCell(roundStateTemplateSource);
 const state = {
   // add #8458「透析液調製装置を隠しても再表示される」について、対応する。 dengshen start
   firstInit: true,
@@ -173,7 +189,7 @@ const state = {
   filterSignal: false,
 
   // 画面横幅
-  clientWidth: window.innerWidth,
+  clientWidth: getViewportWidth(),
 
   // 編集中フィールド
   editingField: null,
@@ -283,7 +299,7 @@ const actions = {
 
     // getters(computed)のキャッシュを更新するために値を参照する
     // （stateに持っている値とgettersのキャッシュで
-    // 　別個のオブジェクトを保持している状態を解消する）
+    //  別個のオブジェクトを保持している状態を解消する）
     getters.getBedMachineList;
     getters.getKurGroupList;
     getters.getKurListData;
@@ -306,11 +322,9 @@ const actions = {
    */
   // fetchTreatSettingList(context, info) {
   fetchTreatSettingList({ state }, info) {
-    //liyanze-z判断info.isShowMain 为 undefined 或null start
-    if(info.isShowMain === null||info.isShowMain===undefined ){
-      info.isShowMain = false
+    if (info.isShowMain === null || info.isShowMain === undefined) {
+      info.isShowMain = false;
     }
-    //liyanze-z判断info.isShowMain 为 undefined 或null end
     return sendRequestGetTreatmentStatusList(info, state.createColumnCount);
   },
   // mod FNSI-実績確定修正 徐 end
@@ -324,9 +338,7 @@ const actions = {
   setStatusGridColumn({ state, commit }, colItemCd) {
     // ベース要素のフォントサイズを取得
     let fontSize = parseFloat(
-      window
-        .getComputedStyle(document.getElementById("app"), null)
-        .getPropertyValue("font-size")
+      getAppComputedStyle()?.getPropertyValue("font-size")
     );
 
     // 表示画面横幅が500px以下の場合は患者名以降の固定化を解除する
@@ -357,7 +369,7 @@ const actions = {
         width: fontSize * 9 + "px",
         minResizableWidth: fontSize * 9,
         className: "dialysis-state-td-",
-        reorderable: false,
+        reorderable: true,
         orderIndex: 0
         // add FNSI-redmine#4252 付 start
         ,resizable: false,
@@ -426,7 +438,7 @@ const actions = {
         lockable: false,
         hidden: false,
         className: "locked-machine-td",
-        reorderable: false,
+        reorderable: true,
         orderIndex: 0
       },
       {
@@ -437,7 +449,7 @@ const actions = {
         lockable: false,
         hidden: false,
         className: "locked-machine-td",
-        reorderable: false,
+        reorderable: true,
         orderIndex: 1
       },
       {
@@ -462,7 +474,7 @@ const actions = {
         lockable: false,
         hidden: false,
         className: "locked-machine-td",
-        reorderable: false,
+        reorderable: true,
         orderIndex: 0
       },
       {
@@ -473,7 +485,7 @@ const actions = {
         lockable: false,
         hidden: false,
         className: "locked-machine-td",
-        reorderable: false,
+        reorderable: true,
         orderIndex: 1
       },
       {
@@ -498,7 +510,7 @@ const actions = {
         lockable: false,
         hidden: false,
         className: "locked-machine-td",
-        reorderable: false,
+        reorderable: true,
         orderIndex: 0
       },
       {
@@ -509,7 +521,7 @@ const actions = {
         lockable: false,
         hidden: false,
         className: "locked-machine-td",
-        reorderable: false,
+        reorderable: true,
         orderIndex: 1
       },
       {
@@ -583,9 +595,9 @@ const actions = {
               editable: false,
               format: null,
               hidden: false,
+              locked: false,
               reorderable: true,
               orderIndex: ++orderIdx,
-              locked: false,
               keyName: dcsColumn.key_name
             };
             switch (addColumn.data_class) {
@@ -801,6 +813,7 @@ const actions = {
               // width: dabColumns[i].width + "em"
               width: fontSize * dabColumn.width + "px",
               hidden: false,
+              locked: false,
               reorderable: true,
               orderIndex: ++orderIdx,
               data_class: dabColumn.data_class,
@@ -830,6 +843,7 @@ const actions = {
               // width: dadColumns[i].width + "em"
               width: fontSize * dadColumn.width + "px",
               hidden: false,
+              locked: false,
               reorderable: true,
               orderIndex: ++orderIdx,
               data_class: dadColumn.data_class,
@@ -859,6 +873,7 @@ const actions = {
               // width: droColumns[i].width + "em"
               width: fontSize * droColumn.width + "px",
               hidden: false,
+              locked: false,
               reorderable: true,
               orderIndex: ++orderIdx,
               data_class: droColumn.data_class,
@@ -893,7 +908,7 @@ const actions = {
       const dataList = response.data;
       let alarmSettings = [];
       dataList.forEach((value, index, array) => {
-        let selectDate = moment(array[index].occurDate).format(
+        let selectDate = dayjs(array[index].occurDate).format(
           "YYYY/MM/DD HH:mm:ss"
         );
         let alarmCol = {
@@ -1161,7 +1176,7 @@ const actions = {
         // 抽出条件対象フラグ
         let isFilter = true;
         if (targetOccurDate && targetOccurDate !== "") {
-          let selectDate = moment(dataSource[idx].occurDate).format(
+          let selectDate = dayjs(dataSource[idx].occurDate).format(
             "YYYY-MM-DD"
           );
           if (selectDate === targetOccurDate) {
@@ -1274,9 +1289,7 @@ const actions = {
    * @param {*} commit COMMITオブジェクト
    * @param {*} ordNo オーダ番号
    */
-  /* eslint-disable no-unused-vars */
   getMstMachineByOrdNoRst({ commit }, ordNo) {
-    /* eslint-enable no-unused-vars */
     return sendRequestGetMstMachineByOrdNoRst(ordNo);
   },
   // add FNSI-redmine#4252 付 start
@@ -1327,6 +1340,23 @@ const mutations = {
 //add 6011 個人設定>デフォルト設定>治療状況マップで設定したレイアウトを表示しない 関俊楠 start
   clearConditionTreatList(state) {
     state.conditionTreatList = null;
+  },
+  clearConditionAll(state, condition) {
+    state.conditionTreatList.bedGroupCd = 0;
+    state.conditionTreatList.colItemGroupIndex = 0;
+    state.conditionTreatList.colItemGroupName = "";
+    state.conditionTreatList.colItemLayoutNo = "";
+    state.conditionTreatList.deviceColIndex = 0;
+    state.conditionTreatList.kurCd = [];
+    state.conditionTreatList.kurGroupName = [];
+    state.conditionTreatList.kurGroupList = [];
+    state.conditionTreatList.nextPatGroupIndex = 0;
+    state.conditionTreatList.deviceNextIndex = 2;
+    state.conditionTreatList.colListChange = false;
+    state.conditionTreatList.isClear = condition.isClear;
+    state.conditionTreatList.notUsageGuide = false;
+    state.conditionTreatList.isInitialized = false;
+    state.conditionTreatList.bedGroupIndex = 0;
   },
 //add 6011 個人設定>デフォルト設定>治療状況マップで設定したレイアウトを表示しない 関俊楠 end
   // 表示切替フラグ変更
@@ -1409,23 +1439,6 @@ const mutations = {
     state.conditionTreatList.deviceNextValue = 2;
     state.conditionTreatList.isClear = condition.isClear;
   },
-  clearConditionAll(state, condition) {
-    state.conditionTreatList.bedGroupCd = 0;
-    state.conditionTreatList.colItemGroupIndex = 0;
-    state.conditionTreatList.colItemGroupName = "";
-    state.conditionTreatList.colItemLayoutNo = "";
-    state.conditionTreatList.deviceColIndex = 0;
-    state.conditionTreatList.kurCd = [];
-    state.conditionTreatList.kurGroupName = [];
-    state.conditionTreatList.kurGroupList = [];
-    state.conditionTreatList.nextPatGroupIndex = 0;
-    state.conditionTreatList.deviceNextIndex = 2;
-    state.conditionTreatList.colListChange = false;
-    state.conditionTreatList.isClear = condition.isClear;
-    state.conditionTreatList.notUsageGuide = false;
-    state.conditionTreatList.isInitialized = false;
-    state.conditionTreatList.bedGroupIndex = 0;
-  },
 
   // -----------------------------------------
   // ソート設定
@@ -1488,16 +1501,12 @@ const mutations = {
     if (isChangeLayoutItem) {
       state.comboLayoutItemList = payload.comboLayoutItemList;
       // 表示項目設定に合わせて、治療状況リスト抽出条件も更新
-      if (state.conditionTreatList != null) {
-        if (state.comboLayoutItemList.length > 0) {
-          const currentLayoutNo = state.conditionTreatList.colItemLayoutNo;
-          const layoutExists = state.comboLayoutItemList.some(
-            item => `${item.colItemLayoutNo}` === `${currentLayoutNo}`
-          );
-          if (!layoutExists) {
-            state.conditionTreatList.colItemLayoutNo =
-              state.comboLayoutItemList[0].colItemLayoutNo;
-          }
+      if (state.conditionTreatList != null && state.comboLayoutItemList.length !== 0) {
+        const selectedLayout = state.comboLayoutItemList.find(
+          item => `${item.colItemLayoutNo}` === `${state.conditionTreatList.colItemLayoutNo}`
+        );
+        if (!selectedLayout) {
+          state.conditionTreatList.colItemLayoutNo = state.comboLayoutItemList[0].colItemLayoutNo;
         }
       }
     }
@@ -1784,8 +1793,8 @@ const getters = {
         // 変更対象が穿刺日付、返血日付の場合
         if (ret.dataClass == 27 || ret.dataClass == 32) {
           // 日付をISO8601形式に変換
-          ret.new = moment(new Date(ret.new)).format();
-          ret.old = moment(new Date(ret.old)).format();
+          ret.new = dayjs(new Date(ret.new)).format();
+          ret.old = dayjs(new Date(ret.old)).format();
         }
         break;
       }
@@ -1990,10 +1999,10 @@ export default {
 };
 // del #7138 【デグレ】治療状況リスト、マップの表示条件と対象実績表示内容の不正 dou start
 // function getCurrentDate() {
-//   return moment(new Date()).format("YYYYMMDD");
+//   return dayjs(new Date()).format("YYYYMMDD");
 // }
 // function getCurrentTime() {
-//   return moment(new Date()).format("HHmmss");
+//   return dayjs(new Date()).format("HHmmss");
 // }
 // /**
 //  * 現在クール
@@ -2036,7 +2045,7 @@ export default {
 //   let ret = "";
 //   // 現在日付取得
 //   const now = new Date();
-//   let checkDate = moment(now).format("YYYYMMDD");
+//   let checkDate = dayjs(now).format("YYYYMMDD");
 //
 //   // 現クール開始時刻を取得
 //   const currentKurStartDateTime = getCurrentKurStartDateTime(kurList);
@@ -2061,7 +2070,7 @@ export default {
 //     // 翌日判定
 //     now.setDate(now.getDate() + 1);
 //     ret =
-//       moment(now).format("YYYYMMDD") +
+//       dayjs(now).format("YYYYMMDD") +
 //       getKurStartTime(kurList, kurList[0].kurCd);
 //   }
 //

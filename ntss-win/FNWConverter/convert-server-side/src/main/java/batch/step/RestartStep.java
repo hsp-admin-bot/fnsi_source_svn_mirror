@@ -6,13 +6,14 @@ import batch.part.InfomationSchemaControl;
 import batch.part.ProgressManagement;
 import batch.part.StreamThread;
 import com.zaxxer.hikari.HikariDataSource;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.Step;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -42,7 +43,7 @@ public class RestartStep extends StepStartEndListener implements Tasklet {
     private static final Logger logger = LoggerFactory.getLogger(StepStartEndListener.class);
 
     @Autowired
-    private StepBuilderFactory stepBuilderFactory;
+    private JobRepository jobRepository;
 
     @Autowired
     ProgressManagement progressManagement;
@@ -86,6 +87,18 @@ public class RestartStep extends StepStartEndListener implements Tasklet {
             && (!fileProductionDbToConvertDbStep.exists() || fileProductionDbToConvertDbStep == null || 0 == fileProductionDbToConvertDbStep.length())) {
             return RepeatStatus.FINISHED;
         } else {
+            processConvertDbToProductionDbFile(fileConvertDbToProductionDbStep, chunkContext, facilityCd);
+            processTruncateTableStepFile(fileTruncateTableStep, facilityCd);
+            processProductionDbToConvertDbFile(fileProductionDbToConvertDbStep, chunkContext, facilityCd);
+        }
+        return RepeatStatus.FINISHED;
+    }
+
+    /**
+     * コンバートDBから本番DBへの登録ファイルを処理する
+     */
+    private void processConvertDbToProductionDbFile(File fileConvertDbToProductionDbStep, ChunkContext chunkContext,
+                                                    String facilityCd) throws Exception {
             // コンバートDBから本番DBにテーブルデータを登録ファイルを行う
             // コンバートDBから本番DBにテーブルデータを登録ファイル 一行目：テープル、二～四行目：sqlCommand
             if (fileConvertDbToProductionDbStep != null && 0 != fileConvertDbToProductionDbStep.length()) {
@@ -106,7 +119,12 @@ public class RestartStep extends StepStartEndListener implements Tasklet {
                 // ファイル削除
                 fileConvertDbToProductionDbStep.delete();
             }
+    }
 
+    /**
+     * TruncateTableStepファイルを処理する
+     */
+    private void processTruncateTableStepFile(File fileTruncateTableStep, String facilityCd) throws Exception {
             // コンバートDBから本番DBにテーブルデータを登録ファイルを行う
             // コンバートDBから本番DBにテーブルデータを登録ファイル 一行目：削除sql
             if (fileTruncateTableStep != null && 0 != fileTruncateTableStep.length()) {
@@ -122,7 +140,13 @@ public class RestartStep extends StepStartEndListener implements Tasklet {
                 // ファイル削除
                 fileTruncateTableStep.delete();
             }
+    }
 
+    /**
+     * 本番DBからコンバートDBへの登録ファイルを処理する
+     */
+    private void processProductionDbToConvertDbFile(File fileProductionDbToConvertDbStep, ChunkContext chunkContext,
+                                                    String facilityCd) throws Exception {
             // コンバートDBから本番DBにテーブルデータを登録ファイルを行う
             // 本番DBからコンバートDBにテーブルデータを登録ファイル 一行目：テープル、二～四行目：sqlCommand
             if (fileProductionDbToConvertDbStep != null && 0 != fileProductionDbToConvertDbStep.length()) {
@@ -140,6 +164,16 @@ public class RestartStep extends StepStartEndListener implements Tasklet {
                     command[2] = sqlProductionDbToConvertDbStep.get(i);
                     this.runCommand(command, chunkContext, tableName, facilityCd);
                 }
+            resetSequenceForTable(tableName);
+            // ファイル削除
+            fileProductionDbToConvertDbStep.delete();
+        }
+    }
+
+    /**
+     * テーブルのシーケンスをリセットする
+     */
+    private void resetSequenceForTable(String tableName) throws Exception {
                 // コンバートDBに対応するデータソースの取得
                 HikariDataSource convertDs = (HikariDataSource) appContext.getBean(ApplicationConst.DbType.CONVERT);
                 // 取得テーブルの列を取得
@@ -191,13 +225,8 @@ public class RestartStep extends StepStartEndListener implements Tasklet {
                         // 注意：シーケンス名は?でパラメータ化できないため連結が必要だが、安全性は検証済み
                         sql = "alter sequence " + seq_name + " restart with " + (seq_list.get(0).longValue() + 1);
                         jdbcTemplate.execute(sql);
-                    }
-                }
-                // ファイル削除
-                fileProductionDbToConvertDbStep.delete();
             }
         }
-        return RepeatStatus.FINISHED;
     }
 
     /**
@@ -253,7 +282,7 @@ public class RestartStep extends StepStartEndListener implements Tasklet {
     }
     @Bean(name=STEP_NAME)
     public Step step() {
-        return stepBuilderFactory.get(STEP_NAME)
+        return new StepBuilder(STEP_NAME, jobRepository)
             .tasklet(this)
             .build();
     }

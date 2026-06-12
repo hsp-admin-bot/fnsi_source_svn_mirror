@@ -24,8 +24,8 @@ import org.seasar.doma.jdbc.entity.NamingType;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 職種マスタのEntity.
@@ -80,7 +80,7 @@ public class MstJob extends BaseEntity{
       try {
         DefaultMenuSettings obj = objectMapper.readValue(value, DefaultMenuSettings.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
       }
     }
 
@@ -92,7 +92,7 @@ public class MstJob extends BaseEntity{
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -138,7 +138,7 @@ public class MstJob extends BaseEntity{
       try {
         NotificationSettingsValue obj = objectMapper.readValue(value, NotificationSettingsValue.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("デフォルト通知設定の設定内容が不正です", e);
       }
     }
@@ -151,7 +151,7 @@ public class MstJob extends BaseEntity{
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -203,7 +203,7 @@ public class MstJob extends BaseEntity{
       try {
         NotificationSettings obj = objectMapper.readValue(value, NotificationSettings.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("デフォルト通知設定の設定内容が不正です", e);
       }
     }
@@ -216,7 +216,7 @@ public class MstJob extends BaseEntity{
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }

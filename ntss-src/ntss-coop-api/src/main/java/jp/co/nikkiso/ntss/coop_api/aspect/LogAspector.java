@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.coop_api.aspect;
 
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang start
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 // #9698 アプリケーションログの内容修正 20260327 add yangxuewang end
 import jp.co.nikkiso.ntss.coop_api.config.LogAspectorFacilityClearInterceptor;
 import jp.co.nikkiso.ntss.coop_api.config.WebMvcConfiguration;

@@ -2,6 +2,7 @@
  * 治療記録 オフライン実績情報マージストア
  */
 import { sendOfflineTreatResultMerge } from "@/apis/treatment-record";
+import { getScopedDocument, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   strict: true,
@@ -19,7 +20,11 @@ export default {
     selectOfflineResult() {
       // ファイル選択
       return new Promise(resolve =>{
-        const input = document.createElement("input");
+        const input = getScopedDocument()?.createElement("input");
+        if (!input) {
+          resolve(null);
+          return;
+        }
         input.type = "file";
         input.accept = ".bptxt";
         input.onchange = event => { resolve(event.target.files[0]);};
@@ -33,7 +38,9 @@ export default {
       if( file ) {
         return new Promise( (resolve, reject) =>{
           // オフライン実績ファイル取得
-          const reader = new FileReader();
+          const scopedWindow = getScopedWindow();
+          const FileReaderCtor = scopedWindow?.FileReader || FileReader;
+          const reader = new FileReaderCtor();
           reader.readAsText(file);
 
           // 読み込み完了

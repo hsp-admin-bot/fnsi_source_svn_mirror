@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.request.patEvent.PatEventRequest;
 import jp.co.nikkiso.ntss.admin_web.response.patEvent.PatEventMasterResponse;
@@ -11,7 +11,9 @@ import jp.co.nikkiso.ntss.admin_web.service.ScheduleListService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.patEvent.PatEventService;
+import jp.co.nikkiso.ntss.core.dao.PatMainDao;
 import jp.co.nikkiso.ntss.admin_web.service.utils.StrUtils;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.admin_web.web.service.MaterialsSharingPatientInformation.MaterialsSharingPatientInfomationService;
 import jp.co.nikkiso.ntss.api.service.SysDataSetService;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
@@ -45,7 +47,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -64,6 +65,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
+import java.util.Collections;
 
 
 /**
@@ -85,6 +88,9 @@ public class PatEventResource {
   // add FNSi5712アプリケーションログが出力しない 周 start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // add FNSi5712アプリケーションログが出力しない 周 end
 
   @Autowired
@@ -92,6 +98,10 @@ public class PatEventResource {
 
   @Autowired
   private SysDataSetService sysDataSetService;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+  @Autowired
+  PatMainDao patMainDao;
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
   /**
    * データ取得
    * @param patId
@@ -185,7 +195,12 @@ public class PatEventResource {
    */
   @GetMapping("/{patEventCd}")
   public ResponseEntity<?> getPatEventRec(
-      @PathVariable(name = "patEventCd", required = true) String patEventCd) {
+      @PathVariable(name = "patEventCd", required = true) String patEventCd,
+      @RequestParam(required = false) Long selectedPatId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) {
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
@@ -195,6 +210,10 @@ public class PatEventResource {
     if (patEventCd != null && StrUtils.isNumber(patEventCd)) {
       //患者ID、起票日時で検索
       res = patEventRecService.selectByCd(Long.parseLong(patEventCd));
+      if (!res.isEmpty() && !facilityAccessService.hasFacilityOrSelectedPatShareAccess(
+          ntssUser, res.get(0).getFacilityCd(), selectedPatId)) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
     } else {
       // add FNSi5712アプリケーションログが出力しない 周 start
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
@@ -223,11 +242,26 @@ public class PatEventResource {
     @PathVariable long pat_id,
     @PathVariable String date_from,
     @PathVariable String date_to
-  ) throws Exception {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) throws Exception {
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/PatEventList";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
       BEFORE_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(pat_id, date_from, date_to));
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser()) {
+      long count = patMainDao.countByPatIdAndFacilityCd(pat_id, ntssUser.getFacilityCd());
+      if (count == 0) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "pat_id=" + pat_id + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
     // add FNSi5712アプリケーションログが出力しない 周 end
     List<PatEvent> res = new ArrayList<PatEvent>();
     String dateFrom = ((null != date_from) && (false == "".equals(date_from))) ? date_from.replaceAll("-", "") : null;
@@ -371,7 +405,7 @@ public class PatEventResource {
 
           String resultJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
           request.getPatEventParam().setLetterInfo(resultJson);
-        } catch (IOException e) {
+        } catch (tools.jackson.core.JacksonException e) {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -807,7 +841,12 @@ public class PatEventResource {
    */
   @PutMapping("/update")
   public ResponseEntity<Void> updatePatEventRec(
-      @RequestBody PatEventRequest request) {
+      @RequestBody PatEventRequest request,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) {
+
 
     // add #11394 【たくしん会】紹介状のフリー入力の拡張　V1.0B 高　start
     if (request.getPatEventParam() != null) {
@@ -821,7 +860,7 @@ public class PatEventResource {
 
           String resultJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
           request.getPatEventParam().setLetterInfo(resultJson);
-        } catch (IOException e) {
+        } catch (tools.jackson.core.JacksonException e) {
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -840,6 +879,19 @@ public class PatEventResource {
     String mappingUrl = Uri.PAT_EVENT + "/update";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
       BEFORE_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(patObsRec));
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && patObsRec != null && patObsRec.getPatEventCd() != null) {
+      List<PatEvent> checkEvents = patEventRecService.selectByCd(patObsRec.getPatEventCd());
+      if (!checkEvents.isEmpty()) {
+        String eventFacilityCd = checkEvents.get(0).getFacilityCd();
+        if (eventFacilityCd != null && !eventFacilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + eventFacilityCd + " " + "patEventCd=" + patObsRec.getPatEventCd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
     // add FNSi5712アプリケーションログが出力しない 周 end
     try {
       /*add FNSI-改修内容転入転出の患者情報連動 任 start*/
@@ -886,7 +938,24 @@ public class PatEventResource {
    */
   @PutMapping("/updateResultParams")
   public ResponseEntity<Void> updatePatEventResultParams(
-      @RequestBody PatEvent patObsRec) {
+      @RequestBody PatEvent patObsRec,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      List<PatEvent> patEvents = patEventRecService.selectByCd(patObsRec.getPatEventCd());
+      for (PatEvent patEvent : patEvents) {
+        if (patEvent.getFacilityCd() != null && !patEvent.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patEvent.getFacilityCd() + " " + "patEventCd=" + patObsRec.getPatEventCd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/updateResultParams";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
@@ -915,7 +984,24 @@ public class PatEventResource {
    */
   @PutMapping("/updateBbsCtlNo")
   public ResponseEntity<Void> updatPatEventeBbsCtlNo(
-      @RequestBody PatEvent patObsRec) {
+      @RequestBody PatEvent patObsRec,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      List<PatEvent> patEvents = patEventRecService.selectByCd(patObsRec.getPatEventCd());
+      for (PatEvent patEvent : patEvents) {
+        if (patEvent.getFacilityCd() != null && !patEvent.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + patEvent.getFacilityCd() + " " + "patEventCd=" + patObsRec.getPatEventCd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/updateBbsCtlNo";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
@@ -942,11 +1028,29 @@ public class PatEventResource {
    */
   @PostMapping("/delete/{patEventCd}")
   public ResponseEntity<Void> deletePatEventRec(
-      @PathVariable(name = "patEventCd", required = true) String patEventCd) {
+      @PathVariable(name = "patEventCd", required = true) String patEventCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) {
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/delete/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
       BEFORE_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(patEventCd));
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && patEventCd != null && StrUtils.isNumber(patEventCd)) {
+      List<PatEvent> checkEvents = patEventRecService.selectByCd(Long.parseLong(patEventCd));
+      if (!checkEvents.isEmpty()) {
+        String eventFacilityCd = checkEvents.get(0).getFacilityCd();
+        if (eventFacilityCd != null && !eventFacilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + eventFacilityCd + " " + "patEventCd=" + patEventCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
     // add FNSi5712アプリケーションログが出力しない 周 end
     try {
       patEventRecService.delete(Long.parseLong(patEventCd));
@@ -970,7 +1074,9 @@ public class PatEventResource {
   @GetMapping("/collect-master")
   public ResponseEntity<?> patEventMasterData(
       @AuthenticationPrincipal NtssUser ntssUser,
-      @RequestParam(value = "facilityCd", required = false) String facilityCd) {
+      @RequestParam(value = "facilityCd", required = false) String facilityCd,
+      @RequestParam(required = false) Long selectedPatId) {
+
     // 施設コードの指定なしの場合はユーザーの施設コードを使用
     // ※既存の動きに影響を与えないための保護措置
     if(org.apache.commons.lang3.StringUtils.isEmpty(facilityCd)) {
@@ -978,6 +1084,9 @@ public class PatEventResource {
       eventLogMessage.setLogMessage("patEventMasterData : not facilityCd param, use ntssUser facilityCd");
       logService.log(LogLevel.INFO, eventLogMessage, FUNCTION_CODE.FUNC_PAT_EVENT, SERVICE_NAME.FNSI, null);
       facilityCd = ntssUser.getFacilityCd();
+    }
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, facilityCd, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
     }
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/collect-master";
@@ -1049,7 +1158,14 @@ public class PatEventResource {
   @GetMapping("/ordno/{ordNo}")
   public ResponseEntity<?> getPatEventRecByOrdNo(
       @RequestParam(name = "facilityCd")  String facilityCd,
-      @PathVariable(name = "ordNo", required = true) String ordNo) {
+      @PathVariable(name = "ordNo", required = true) String ordNo,
+      @RequestParam(required = false) Long selectedPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityAndOrdOrSelectedPatShareAccess(ntssUser, facilityCd, Long.parseLong(ordNo), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/ordno/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
@@ -1731,10 +1847,21 @@ public class PatEventResource {
       @PathVariable(name = "patId", required = true) Long patId,
       @PathVariable(name = "ordNo", required = true) Long ordNo,
       @AuthenticationPrincipal NtssUser ntssUser) {
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/ord_main/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
       BEFORE_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(patId, ordNo, ntssUser));
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser()) {
+      long count = patMainDao.countByPatIdAndFacilityCd(patId, ntssUser.getFacilityCd());
+      if (count == 0) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + patId + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
     // add FNSi5712アプリケーションログが出力しない 周 end
     OrdMainPatEventRecCombo res;
     try {
@@ -1784,7 +1911,13 @@ public class PatEventResource {
    */
   @GetMapping("/text-stamp/collection")
   public ResponseEntity<?> getStampTextCollection(
+      @RequestParam(required = false) Long selectedPatId,
       @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, ntssUser.getFacilityCd(), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/text-stamp/collection";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
@@ -1815,7 +1948,8 @@ public class PatEventResource {
 
   /*add FNSI-改修内容患者イベント患者情報共有より改修 任 start*/
   @GetMapping("/getPublicFlag/{userId}")
-  public ResponseEntity<?> getPublicFlag( @PathVariable(name = "userId", required = true) Long userId) {
+  public ResponseEntity<?> getPublicFlag( @PathVariable(name = "userId", required = true) Long userId,
+                                          @RequestParam(required = false) Long selectedPatId) {
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/getPublicFlag/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
@@ -1921,11 +2055,29 @@ public class PatEventResource {
   // add 9273 end
   @PostMapping("/mainData/deletePaEventRec/{patEventCd}")
   public ResponseEntity<Void> deletePaEventRec(
-    @PathVariable(name = "patEventCd", required = true) String patEventCd) {
+    @PathVariable(name = "patEventCd", required = true) String patEventCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) {
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/mainData/deletePaEventRec/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
       BEFORE_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(patEventCd));
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && patEventCd != null && StrUtils.isNumber(patEventCd)) {
+      List<PatEvent> checkEvents = patEventRecService.selectByCd(Long.parseLong(patEventCd));
+      if (!checkEvents.isEmpty()) {
+        String eventFacilityCd = checkEvents.get(0).getFacilityCd();
+        if (eventFacilityCd != null && !eventFacilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + eventFacilityCd + " " + "patEventCd=" + patEventCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
     // add FNSi5712アプリケーションログが出力しない 周 end
     try {
       patEventRecService.deleteDateByCd(patEventCd);
@@ -1949,11 +2101,33 @@ public class PatEventResource {
     @PathVariable(name = "patEventCd", required = true) ArrayList<String> patEventCd,
     // mod FNSI-FutreNetWeb+SI課題管理No.4710 李 end
     @PathVariable(name = "dataNumber", required = true) int dataNumber
-  ) {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) {
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/mainData/updateDateByCd/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
       BEFORE_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(patEventCd, dataNumber));
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && patEventCd != null) {
+      for (String cdStr : patEventCd) {
+        if (cdStr != null && StrUtils.isNumber(cdStr)) {
+          List<PatEvent> checkEvents = patEventRecService.selectByCd(Long.parseLong(cdStr));
+          if (!checkEvents.isEmpty()) {
+            String eventFacilityCd = checkEvents.get(0).getFacilityCd();
+            if (eventFacilityCd != null && !eventFacilityCd.equals(ntssUser.getFacilityCd())) {
+              String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + eventFacilityCd + " " + "patEventCd=" + cdStr + " ";
+              InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+              return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+            }
+          }
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
     // add FNSi5712アプリケーションログが出力しない 周 end
     try {
       patEventRecService.updateDateByCd(patEventCd, dataNumber);
@@ -1977,7 +2151,14 @@ public class PatEventResource {
 
   /*add FNSI-改修内容538 連携イベントの登録適正化 任 start*/
   @GetMapping("/getPatEventTreatDate/{ordNo}")
-  public ResponseEntity<?> getPatEventTreatDate( @PathVariable(name = "ordNo", required = true) Long ordNo) {
+  public ResponseEntity<?> getPatEventTreatDate( @PathVariable(name = "ordNo", required = true) Long ordNo,
+                                                 @RequestParam(required = false) Long selectedPatId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    if (!facilityAccessService.hasOrdOrSelectedPatShareAccess(ntssUser, ordNo, selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/getPatEventTreatDate/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
@@ -2130,7 +2311,12 @@ public class PatEventResource {
    */
   @GetMapping("/getObserveRecordByCd/{patEventCd}")
   public ResponseEntity<?> getObserveRecordByCd(
-      @PathVariable(name = "patEventCd", required = true) String patEventCd) {
+      @PathVariable(name = "patEventCd", required = true) String patEventCd,
+      @RequestParam(required = false) Long selectedPatId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) {
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/getObserveRecordByCd/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
@@ -2139,6 +2325,10 @@ public class PatEventResource {
     List<PatEvent> res = new ArrayList<PatEvent>();
     if (patEventCd != null && StrUtils.isNumber(patEventCd)) {
       res = patEventRecService.selectObserveRecordByCd(Long.parseLong(patEventCd));
+      if (!res.isEmpty() && !facilityAccessService.hasFacilityOrSelectedPatShareAccess(
+          ntssUser, res.get(0).getFacilityCd(), selectedPatId)) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
     } else {
       // add FNSi5712アプリケーションログが出力しない 周 start
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
@@ -2160,7 +2350,12 @@ public class PatEventResource {
    */
   @GetMapping("/getPatIntroLetterByCd/{patEventCd}")
   public ResponseEntity<?> getPatIntroLetterByCd(
-      @PathVariable(name = "patEventCd", required = true) String patEventCd) {
+      @PathVariable(name = "patEventCd", required = true) String patEventCd,
+      @RequestParam(required = false) Long selectedPatId,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) {
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.PAT_EVENT + "/getPatIntroLetterByCd/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
@@ -2169,6 +2364,10 @@ public class PatEventResource {
     List<PatEvent> res = new ArrayList<PatEvent>();
     if (patEventCd != null && StrUtils.isNumber(patEventCd)) {
       res = patEventRecService.selectPatIntroLetterByCd(Long.parseLong(patEventCd));
+      if (!res.isEmpty() && !facilityAccessService.hasFacilityOrSelectedPatShareAccess(
+          ntssUser, res.get(0).getFacilityCd(), selectedPatId)) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
     } else {
       // add FNSi5712アプリケーションログが出力しない 周 start
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
@@ -2197,10 +2396,25 @@ public class PatEventResource {
       @RequestParam(name = "patShareMode", required = false) String patShareMode,
       @RequestParam(name = "otherFacilityCd", required = false) String otherFacilityCd
       // add #12462 患者情報共有 zhao end
-  ) {
+  ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+) {
+
     String mappingUrl = Uri.PAT_EVENT + "/getObserveRecords/";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PAT_EVENT,
       BEFORE_LOG_FLG_INFO, mappingUrl, null, Arrays.asList(patId, startDate, endDate));
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && patId != null && StrUtils.isNumber(patId)) {
+      long count = patMainDao.countByPatIdAndFacilityCd(Long.parseLong(patId), ntssUser.getFacilityCd());
+      if (count == 0) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "patId=" + patId + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
 
     List<PatEventShare> res = new ArrayList<PatEventShare>();
 
@@ -2302,7 +2516,7 @@ public class PatEventResource {
 
   // add #11394 【たくしん会】紹介状のフリー入力の拡張　V1.0B 高　start
   private static void removeEmptyValues(ObjectNode objectNode) {
-    Iterator<Map.Entry<String, JsonNode>> fields = objectNode.fields();
+    Iterator<Map.Entry<String, JsonNode>> fields = objectNode.properties().iterator();
 
     while (fields.hasNext()) {
       Map.Entry<String, JsonNode> field = fields.next();
@@ -2327,7 +2541,7 @@ public class PatEventResource {
           fields.remove();
         }
       } else if (value.isArray()) {
-        Iterator<JsonNode> elements = value.elements();
+        Iterator<JsonNode> elements = value.values().iterator();
         while (elements.hasNext()) {
           JsonNode element = elements.next();
           if (element.isObject()) {
@@ -2378,4 +2592,18 @@ public class PatEventResource {
     return resfacilityCd;
   }
   // add #12462 患者情報共有 zhao end
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    if (ntssUser == null || ntssUser.isNkkAdminUser()) {
+      return true;
+    }
+    boolean hasAccess = facilityCd != null && !facilityCd.isEmpty() && facilityCd.equals(ntssUser.getFacilityCd());
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if (!hasAccess) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+    return hasAccess;
+  }
+
 }

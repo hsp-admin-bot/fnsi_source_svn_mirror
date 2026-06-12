@@ -3,10 +3,13 @@
  */
  <template>
   <modal-base @onClose="closeDeviceEdgeManageModal">
-    <div slot="header">
+    <template #header>
+      <div>
       <component :is="header"></component>
     </div>
-    <div slot="body">
+    </template>
+    <template #body>
+      <div>
       <div id="de-manage-modal-header">
         <!-- 共通IF -->
         <v-ons-row>
@@ -175,8 +178,10 @@
         </div>
       </div>
     </div>
+    </template>
 
-    <div slot="footer" class="flex-container" style="overflow-x: auto;">
+    <template #footer>
+      <div class="flex-container" style="overflow-x: auto;">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button btn2-cancel denial-btn" @click="closeDeviceEdgeManageModal">キャンセル</v-ons-button>
         <v-ons-button
@@ -191,26 +196,29 @@
       </div>
       <v-ons-popover
         cancelable
-        :visible.sync="userMenuPopoverVisible"
+        v-model:visible="userMenuPopoverVisible"
         :target="userMenuPopoverTarget"
         :cover-target="false"
         :direction="userMenuPopoverDirection"
         :class="fontSizeSet"
       >
         <div class="help-area">
-          <label id="pop-over-de-message">テスト</label>
+          <label id="pop-over-de-message" ref="popOverMessage">テスト</label>
         </div>
       </v-ons-popover>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
+import { getScopedElementById, getViewportWidth } from "@/functions/common/LayoutMeasureHelper";
 import ModalBase from "@/components/modals/ModalBase";
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import MultiDeviceManageSearchComponent from "@/components/device-edge-operation/manage/MultiDeviceManageSearchComponent";
-import moment from 'moment';
+import dayjs from "@/compat/date/dayjs";
 import PopoverMixin from "@/components/PopoverMixin";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -371,15 +379,24 @@ export default {
       }
       this.deviceEdgeVersionKeys = mainKeys.concat(verKeys).concat(updKeys);
     },
+    getDeviceEdgeOwnerWindow() {
+      return getScopedWindow(this.$el || this);
+    },
+    getScopedElementById(id) {
+      return this.$el?.querySelector?.(`#${id}`) || this.$el?.ownerDocument?.getElementById?.(id) || null;
+    },
+    getScopedClassElement(className) {
+      return this.$el?.getElementsByClassName?.(className)?.[0] || null;
+    },
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       // モーダルのbodyの高さ
-      const mb = document.getElementsByClassName("modal-body")[0];
+      const mb = this.getScopedClassElement("modal-body");
       const mh = mb ? mb.clientHeight : 0;
       const mw = mb ? mb.clientWidth : 0;
       // モーダルのヘッダの高さ
-      const hElm = document.getElementById("de-manage-modal-header");
-      const hElm2 = document.getElementById("de-manage-search-area");
+      const hElm = this.getScopedElementById("de-manage-modal-header");
+      const hElm2 = this.getScopedElementById("de-manage-search-area");
       const hh = hElm ? hElm.clientHeight : 0;
       const hh2 = hElm2 ? hElm2.clientHeight : 0;
       this.gridToolbarHeight = mh - hh - hh2;
@@ -393,7 +410,7 @@ export default {
     },
     closeDeviceEdgeManageModal() {
       // #12003 2025.12.24 add 指示後のデータ再取得時に未応答ならば専用表示 TDC片口 start
-      window.clearTimeout(this.autoReloadTimer);
+      this.getDeviceEdgeOwnerWindow()?.clearTimeout?.(this.autoReloadTimer);
       // #12003 2025.12.24 add 指示後のデータ再取得時に未応答ならば専用表示 TDC片口 end
       // モーダルを非表示に
       this.hideModal();
@@ -411,7 +428,7 @@ export default {
     planInfo(deviceEdge) {
       // 予約があれば「予約あり + 時刻」を表示
       if (deviceEdge.manageNo) {
-        const planDate = moment(deviceEdge.managePlanDate);
+        const planDate = dayjs(deviceEdge.managePlanDate);
         if (deviceEdge.responseStatus === 3) {
           return {
             cd: deviceEdge.responseStatus,
@@ -490,11 +507,11 @@ export default {
         return false;
       } else {
         // #12003 2025.12.19 mod 個別実行日時/ファイルのチェック修正 TDC片口 start
-        // let scheduleDate = moment(this.planDayStartTime);
-        // let nowDate = moment(new Date());
+        // let scheduleDate = dayjs(this.planDayStartTime);
+        // let nowDate = dayjs(new Date());
         // let hasBefore = scheduleDate.isBefore(nowDate);
-        const scheduleDate = this.planDayStartTime ? moment(this.planDayStartTime) : null;
-        const nowDate = moment(new Date());
+        const scheduleDate = this.planDayStartTime ? dayjs(this.planDayStartTime) : null;
+        const nowDate = dayjs(new Date());
         let hasBefore = scheduleDate ? scheduleDate.isBefore(nowDate) : false;
         // #12003 2025.12.19 mod 個別実行日時/ファイルのチェック修正 TDC片口 end
         let preMsg = "";
@@ -502,7 +519,7 @@ export default {
           for (const target of targetEdge) {
             if (target.sendDateTime) {
               // 個別日付チェック
-              const dt = moment(target.sendDateTime);
+              const dt = dayjs(target.sendDateTime);
               hasBefore = dt.isBefore(nowDate);
               if (hasBefore) {
                 preMsg = "一部の";
@@ -586,7 +603,7 @@ export default {
       }
       let count = targetEdge.length;
       // #12003 2025.12.19 mod 個別実行日時/ファイルのチェック修正 TDC片口 start
-      // let scheduleDate = moment(this.planDayStartTime);
+      // let scheduleDate = dayjs(this.planDayStartTime);
 
       // const resOk = await this.$ons.notification.confirm({
       //   // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
@@ -600,7 +617,7 @@ export default {
       //   this.sendPlanOrderDeviceEdge(scheduleDate.format("YYYYMMDDHHmmss"), targetEdge);
       // }
 
-      const scheduleDate = this.planDayStartTime ? moment(this.planDayStartTime) : null;
+      const scheduleDate = this.planDayStartTime ? dayjs(this.planDayStartTime) : null;
 
       const resOk = await this.$ons.notification.confirm({
         // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
@@ -637,7 +654,7 @@ export default {
         };
         if (target.sendDateTime) {
           // 個別日付に差し替え
-          const dt = moment(target.sendDateTime);
+          const dt = dayjs(target.sendDateTime);
           payload.planDate = dt.format("YYYYMMDDHHmmss");
         }
         if (target.targetPath && target.targetFile) {
@@ -875,18 +892,18 @@ export default {
     autoReload() {
       if (this.autoReloadCount >= 5) {
         // 最大5回まで
-        window.clearTimeout(this.autoReloadTimer);
+        this.getDeviceEdgeOwnerWindow()?.clearTimeout?.(this.autoReloadTimer);
         this.autoReloadTimer = null;
         return;
       }
       if (this.orderedTargetEdges.length === 0 && this.cancelOrderedTargetEdges.length === 0) {
         // 指示済みデバイスエッジが無ければ終了
-        window.clearTimeout(this.autoReloadTimer);
+        this.getDeviceEdgeOwnerWindow()?.clearTimeout?.(this.autoReloadTimer);
         this.autoReloadTimer = null;
         this.autoReloadCount = 0;
         return;
       }
-      this.autoReloadTimer = window.setTimeout(() => {
+      this.autoReloadTimer = this.getDeviceEdgeOwnerWindow()?.setTimeout?.(() => {
         this.refreshDeviceEdges();
         this.autoReloadCount++;
       }, 2000);
@@ -979,7 +996,7 @@ export default {
      * 吹き出し表示処理
      */
     showPopOver(event, message) {
-      var pop = document.getElementById("pop-over-de-message");
+      var pop = this.$refs.popOverMessage || this.getScopedElementById("pop-over-de-message");
       pop.innerText = message;
       this.userMenuPopoverTarget = event;
       this.userMenuPopoverVisible = true;
@@ -988,7 +1005,7 @@ export default {
      * 吹き出しの表示方向を判定
      */
     setPopoverDirection() {
-      if (window.innerWidth <= 420) {
+      if (getViewportWidth() <= 420) {
         this.userMenuPopoverDirection = "up down";
       } else {
         this.userMenuPopoverDirection = "left right";
@@ -1033,7 +1050,7 @@ export default {
     EventBus.$on("setFilterCondition", this.setFilterCondition);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("setFilterCondition", this.setFilterCondition);
   }
   // add 性能改善メモリ不足 shan end
@@ -1054,7 +1071,7 @@ tr {
   padding: 0 0.75rem;
 }
 
-.ntss-list-body-td >>> ons-button.select-btn {
+.ntss-list-body-td :deep(ons-button.select-btn) {
   font-size: 1em;
 }
 .custom-de-manage-modal-list {
@@ -1142,7 +1159,7 @@ table.ntss-list thead tr.de-manage-list-header th {
 }
 @media print {
   /** 折り返して幅を収める */
-  div >>> .modal-container {
+  div :deep(.modal-container){
     width: 100%
   }
   .de-manage-list-wrapper {
@@ -1172,7 +1189,7 @@ table.ntss-list thead tr.de-manage-list-header th {
   .column-11 {
     min-width: unset !important;
   }
-  #de-manage-list >>> input[type="datetime-local"] {
+  #de-manage-list :deep(input[type="datetime-local"]){
     width: 9em;
     -webkit-appearance: none;
     appearance: none;
@@ -1180,10 +1197,10 @@ table.ntss-list thead tr.de-manage-list-header th {
   input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     display: none;
   }
-  #de-manage-list >>> input[type="text"] {
+  #de-manage-list :deep(input[type="text"]){
     max-width: 11em;
   }
-  #de-manage-list >>> .denial-btn {
+  #de-manage-list :deep(.denial-btn){
     writing-mode: vertical-rl;
     text-orientation: upright;
     min-width: 0.6em;

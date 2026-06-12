@@ -30,7 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import jp.co.nikkiso.ntss.core.dao.MniMonitorDao;
 import jp.co.nikkiso.ntss.core.dao.MstMachineDao;
 import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
@@ -53,7 +53,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -81,31 +81,31 @@ public class TreatmentRecordServiceImplTest {
   /**
    * 参照型コンボのServiceのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private ReferenceComboService referenceComboService;
 
   /**
    * 治療情報のMockBean.
    */
-  @MockBean
+  @MockitoBean
   private TreatmentRecordDao treatmentRecordDao;
 
   /**
    * オーダメインのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private OrdMainDao ordMainDao;
 
   /**
    * 装置マスタのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstMachineDao mstMachineDao;
 
   /**
    * 装置モニタデータのMockBean
    */
-  @MockBean
+  @MockitoBean
   private MniMonitorDao mniMonitorDao;
 
   /**
@@ -129,9 +129,7 @@ public class TreatmentRecordServiceImplTest {
     } catch (InvocationTargetException e) {
       throw e.getCause();
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang start
-//      e.printStackTrace();
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang end
+      e.printStackTrace();
     }
     return null;
   }
@@ -195,9 +193,7 @@ public class TreatmentRecordServiceImplTest {
     } catch (InvocationTargetException e) {
       throw e.getCause();
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang start
-//      e.printStackTrace();
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang end
+      e.printStackTrace();
     }
     return null;
   }
@@ -312,9 +308,7 @@ public class TreatmentRecordServiceImplTest {
     } catch (InvocationTargetException e) {
       throw e.getCause();
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang start
-//      e.printStackTrace();
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang end
+      e.printStackTrace();
     }
     return null;
   }
@@ -416,9 +410,7 @@ public class TreatmentRecordServiceImplTest {
     } catch (InvocationTargetException e) {
       throw e.getCause();
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang start
-//      e.printStackTrace();
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang end
+      e.printStackTrace();
     }
     return null;
   }
@@ -517,9 +509,7 @@ public class TreatmentRecordServiceImplTest {
     } catch (InvocationTargetException e) {
       throw e.getCause();
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang start
-//      e.printStackTrace();
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang end
+      e.printStackTrace();
     }
     return null;
   }
@@ -1241,7 +1231,7 @@ public class TreatmentRecordServiceImplTest {
    * 結果：体重情報の更新ができること
    */
   @Test
-  public void test_updateTreatmentRecordWeight_成功_体重情報の更新ができること() throws JsonProcessingException {
+  public void test_updateTreatmentRecordWeight_成功_体重情報の更新ができること() throws JacksonException {
     // arrange
     final Long ordNo = 10L;
     final TreatmentRecordWeight beUpdatedTreatmentRecordWeight = getWeightDummyData();
@@ -1271,7 +1261,7 @@ public class TreatmentRecordServiceImplTest {
    * 結果：NotExistExceptionがThrowされること
    */
   @Test
-  public void test_updateTreatmentRecordWeight_失敗_コードに一致する治療記録がない場合は例外が発生すること() throws JsonProcessingException {
+  public void test_updateTreatmentRecordWeight_失敗_コードに一致する治療記録がない場合は例外が発生すること() throws JacksonException {
     // arrange
     final Long ordNo = 12L;
     final TreatmentRecordWeight beUpdatedTreatmentRecordWeight = getWeightDummyData();
@@ -1300,7 +1290,7 @@ public class TreatmentRecordServiceImplTest {
    */
   @Test
   @Ignore
-  public void test_updateTreatmentRecordWeight_失敗_必須項目weight_before_dateが設定されていない場合例外が発生すること() throws JsonProcessingException {
+  public void test_updateTreatmentRecordWeight_失敗_必須項目weight_before_dateが設定されていない場合例外が発生すること() throws JacksonException {
     // arrange
     final Long ordNo = 13L;
     final TreatmentRecordWeight beUpdatedTreatmentRecordWeight = getWeightDummyData();
@@ -1327,7 +1317,7 @@ public class TreatmentRecordServiceImplTest {
    * 結果：例外が発生しないこと
    */
   @Test
-  public void test_updateTreatmentRecordWeight_成功_weight_before_dateが設定されていない場合_例外が発生しないこと() throws JsonProcessingException {
+  public void test_updateTreatmentRecordWeight_成功_weight_before_dateが設定されていない場合_例外が発生しないこと() throws JacksonException {
     // arrange
     final Long ordNo = 13L;
     final TreatmentRecordWeight beUpdatedTreatmentRecordWeight = getWeightDummyData();
@@ -1353,7 +1343,7 @@ public class TreatmentRecordServiceImplTest {
    */
   @Test
   @Ignore
-  public void test_updateTreatmentRecordWeight_失敗_必須項目weight_after_dateが設定されていない場合例外が発生すること() throws JsonProcessingException {
+  public void test_updateTreatmentRecordWeight_失敗_必須項目weight_after_dateが設定されていない場合例外が発生すること() throws JacksonException {
     // arrange
     final Long ordNo = 13L;
     final TreatmentRecordWeight beUpdatedTreatmentRecordWeight = getWeightDummyData();
@@ -1380,7 +1370,7 @@ public class TreatmentRecordServiceImplTest {
    * 結果：例外が発生しないこと
    */
   @Test
-  public void test_updateTreatmentRecordWeight_成功_weight_after_dateが設定されていない場合_例外が発生しないこと() throws JsonProcessingException {
+  public void test_updateTreatmentRecordWeight_成功_weight_after_dateが設定されていない場合_例外が発生しないこと() throws JacksonException {
     // arrange
     final Long ordNo = 13L;
     final TreatmentRecordWeight beUpdatedTreatmentRecordWeight = getWeightDummyData();
@@ -1406,7 +1396,7 @@ public class TreatmentRecordServiceImplTest {
    */
   @Test
   @Ignore
-  public void test_updateTreatmentRecordWeight_失敗_必須項目の２つとも設定されていない場合例外が発生すること() throws JsonProcessingException {
+  public void test_updateTreatmentRecordWeight_失敗_必須項目の２つとも設定されていない場合例外が発生すること() throws JacksonException {
     // arrange
     final Long ordNo = 13L;
     final TreatmentRecordWeight beUpdatedTreatmentRecordWeight = getWeightDummyData();
@@ -1433,7 +1423,7 @@ public class TreatmentRecordServiceImplTest {
    * 結果：例外が発生しないこと
    */
   @Test
-  public void test_updateTreatmentRecordWeight_成功_前体重測定日_後体重測定日が設定されていない場合_例外が発生しないこと() throws JsonProcessingException {
+  public void test_updateTreatmentRecordWeight_成功_前体重測定日_後体重測定日が設定されていない場合_例外が発生しないこと() throws JacksonException {
     // arrange
     final Long ordNo = 13L;
     final TreatmentRecordWeight beUpdatedTreatmentRecordWeight = getWeightDummyData();

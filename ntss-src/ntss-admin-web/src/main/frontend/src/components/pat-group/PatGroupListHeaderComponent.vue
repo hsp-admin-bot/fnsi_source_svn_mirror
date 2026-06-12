@@ -11,11 +11,11 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target=false
-                   :class="[fontSizeSet, 'master-search']"
+                   :class="[fontSizeSet, 'master-search', 'pat-group-search-popover']"
                    >
       <div style='margin:10px;'>
         <v-ons-row class='condition-row'>
@@ -62,7 +62,7 @@
 </template>
 
 <script>
-  import {EventBus} from "@/eventBus.js";
+  import {EventBus} from "@/compat/vue/event-bus.js";
   import PopoverMixin from "@/components/PopoverMixin";
   import commonSearchArea from "@/components/common/CommonSearchArea";
 
@@ -153,14 +153,18 @@
     EventBus.$emit("addLeftmostHeaderMargin");
   },
   // Vueインスタンス破棄前
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("setSortMode", this.setSortMode);
     EventBus.$off("clearCondition", this.clearCondition);
   }
 };
 </script>
 <style scoped>
-ons-popover >>> .popover__content {
+ons-popover :deep(.popover__content) {
+  min-width: 350px;
+}
+
+.pat-group-search-popover :deep(.popover__content) {
   min-width: 350px;
 }
 </style>

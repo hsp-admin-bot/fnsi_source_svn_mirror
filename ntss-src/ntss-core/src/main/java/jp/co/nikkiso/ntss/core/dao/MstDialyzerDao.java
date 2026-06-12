@@ -13,7 +13,7 @@ import jp.co.nikkiso.ntss.core.entity.MstDialyzer;
 
 @ConfigAutowireable
 @Dao
-public interface MstDialyzerDao extends MasterDao<Map<String,Object>>{
+public interface MstDialyzerDao extends MasterDao<Map<String,Object>>, UnifiedByCodeListDao {
   @Select
   List<MstDialyzer> selectAll(SelectOptions options, MstDialyzer params);
 
@@ -60,4 +60,8 @@ public interface MstDialyzerDao extends MasterDao<Map<String,Object>>{
   @Override
   @Select
   List<Map<String,Object>> selectAllStatus(Map<String,String> params);
+
+  @Override
+  @Select
+  List<Map<String, Object>> selectAllStatusByCodeList(List<Integer> codeList);
 }

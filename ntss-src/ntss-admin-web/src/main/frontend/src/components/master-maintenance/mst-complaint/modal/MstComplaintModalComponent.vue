@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body">
+        <template #body>
+<div>
       <div class="expandable-content">
         <v-ons-row class="col-width">
           <v-ons-col width="30%">
@@ -49,7 +50,9 @@
         </v-ons-row>
       </div>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+        <template #footer>
+<div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button btn2-cancel denial-btn" @click="cancel">
           キャンセル
@@ -65,11 +68,12 @@
         </v-ons-button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
 import { MstComplaint } from "@/models/master-maintenance/mst-complaint/MstComplaint";
@@ -165,7 +169,7 @@ export default {
   font-family: inherit;
   padding: 1em;
 }
-.expandable-content >>> ons-row {
+.expandable-content :deep(ons-row) {
   margin-top: 5px;
 }
 .name-style {

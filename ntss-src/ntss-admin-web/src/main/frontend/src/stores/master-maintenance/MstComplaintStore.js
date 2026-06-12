@@ -17,7 +17,6 @@ import { MstComplaint } from "@/models/master-maintenance/mst-complaint/MstCompl
 import { MstCompTreatment } from "@/models/master-maintenance/mst-complaint/MstCompTreatment";
 // add #9176 愁訴処置マスタが正しくコンバートできていない dengshen end
 
-import Vue from "vue";
 
 export default {
   strict: true,
@@ -163,7 +162,7 @@ export default {
       })
       const index = state.dataSource.mstComplaints.indexOf(foundData);
       if (index >=0 && model.code > 0 && model.initData.is_disp == '0') model.up_date = null;
-      Vue.set(state.dataSource.mstComplaints, index, model);
+      state.dataSource.mstComplaints.splice(index, 1, model);
     },
     /**
      * DataSoruceの処置
@@ -179,7 +178,7 @@ export default {
       })
       const index = state.dataSource.mstCompTreatments.indexOf(foundData);
       if (index >=0 && model.code > 0 && model.initData.is_disp == '0') model.up_date = null;
-      Vue.set(state.dataSource.mstCompTreatments, index, model);
+      state.dataSource.mstCompTreatments.splice(index, 1, model);
     },
   },
   actions: {
@@ -187,7 +186,6 @@ export default {
      * 愁訴マスタ取得.
      * @param {*} commit commitオブジェクト
      */
-    /* eslint-disable no-unused-vars */
     getMstComplaint({ commit }) {
       // マスタ取得前に古いデータを消す
       commit("setMstComplaints", []);
@@ -206,7 +204,6 @@ export default {
      * 愁訴マスタ取得.
      * @param {*} commit commitオブジェクト
      */
-    /* eslint-disable no-unused-vars */
     getMstComplaintByFacilityCd({ commit }, facilityCd) {
       // マスタ取得前に古いデータを消す
       commit("setMstComplaints", []);
@@ -219,7 +216,6 @@ export default {
      * @param {*} payload 愁訴マスタ
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     updateMstComplaint({ commit }, payload) {
       return sendRequestUpdateMstComplaint(payload);
     },
@@ -272,7 +268,6 @@ export default {
      * 処置マスタ取得.
      * @param {*} commit commitオブジェクト
      */
-    /* eslint-disable no-unused-vars */
     getMstCompTreatment({ commit }) {
       // マスタ取得前に古いデータを消す
       commit("setMstCompTreatments", []);
@@ -285,7 +280,6 @@ export default {
      * @param {*} payload 処置マスタ
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     updateMstCompTreatment({ commit }, payload) {
       return sendRequestUpdateMstCompTreatment(payload);
     },

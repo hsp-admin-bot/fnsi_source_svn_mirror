@@ -30,9 +30,10 @@ export default {
     // 医療材料情報報取得
     // -----------------------------------------
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
-    getTreatmentRecordEquipInfo({ commit }, ordNo) {
-      return sendRequestGetTreatmentRecordEquipInfo(ordNo).then(response => {
+    getTreatmentRecordEquipInfo({ commit }, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetTreatmentRecordEquipInfo(ordNo, selectedPatId).then(response => {
         commit("setUpDate", response.data.up_date);
         return response;
       });

@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest.validation;
 
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
 
 import jp.co.nikkiso.ntss.admin_web.request.validator.NtssFlexibleDateTime;
 import jp.co.nikkiso.ntss.admin_web.request.validator.NtssFlexibleDateTimeParseMode;
@@ -15,7 +15,7 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 
 import lombok.Data;
 import lombok.Getter;

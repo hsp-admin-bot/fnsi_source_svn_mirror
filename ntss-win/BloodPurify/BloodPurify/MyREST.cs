@@ -22,7 +22,8 @@ namespace NKK.BloodPurify
 
             try
             {
-                var restRes = await NKKWebAccess.Get(MethodBase.GetCurrentMethod().Name, MyRestBaseUri + $"ord_main/bp_device/{NKKWebAccess.FacilityCd}/{argStartYyyyMmDd}/", NKKWebAccess.SKIP_OTP);
+                //var restRes = await NKKWebAccess.Get(MethodBase.GetCurrentMethod().Name, MyRestBaseUri + $"ord_main/bp_device/{NKKWebAccess.FacilityCd}/{argStartYyyyMmDd}/", NKKWebAccess.SKIP_OTP);
+                var restRes = await NKKWebAccess.Get(MethodBase.GetCurrentMethod().Name, MyRestBaseUri + $"ord_main/bp_device/{NKKWebAccess.FacilityCd}/{argStartYyyyMmDd}", NKKWebAccess.SKIP_OTP);
 
                 ret.isSuccess = restRes.response.IsSuccessStatusCode;
                 ret.errorReasonPhrase
@@ -50,7 +51,8 @@ namespace NKK.BloodPurify
 
             try
             {
-                var restRes = await NKKWebAccess.Get(MethodBase.GetCurrentMethod().Name, MyRestBaseUri + $"mst_kur/{NKKWebAccess.FacilityCd}/", NKKWebAccess.SKIP_OTP);
+                //var restRes = await NKKWebAccess.Get(MethodBase.GetCurrentMethod().Name, MyRestBaseUri + $"mst_kur/{NKKWebAccess.FacilityCd}/", NKKWebAccess.SKIP_OTP);
+                var restRes = await NKKWebAccess.Get(MethodBase.GetCurrentMethod().Name, MyRestBaseUri + $"mst_kur/{NKKWebAccess.FacilityCd}", NKKWebAccess.SKIP_OTP);
 
                 ret.isSuccess = restRes.response.IsSuccessStatusCode;
                 ret.errorReasonPhrase
@@ -79,7 +81,8 @@ namespace NKK.BloodPurify
 
             try
             {
-                var restRes = await NKKWebAccess.Get(MethodBase.GetCurrentMethod().Name, MyRestBaseUri + $"ord_main/nkk_device/{NKKWebAccess.FacilityCd}/{argStartYyyyMmDd}/", NKKWebAccess.SKIP_OTP);
+                //var restRes = await NKKWebAccess.Get(MethodBase.GetCurrentMethod().Name, MyRestBaseUri + $"ord_main/nkk_device/{NKKWebAccess.FacilityCd}/{argStartYyyyMmDd}/", NKKWebAccess.SKIP_OTP);
+                var restRes = await NKKWebAccess.Get(MethodBase.GetCurrentMethod().Name, MyRestBaseUri + $"ord_main/nkk_device/{NKKWebAccess.FacilityCd}/{argStartYyyyMmDd}", NKKWebAccess.SKIP_OTP);
 
                 ret.isSuccess = restRes.response.IsSuccessStatusCode;
                 ret.errorReasonPhrase
@@ -109,7 +112,8 @@ namespace NKK.BloodPurify
 
             try
             {
-                var restRes = await NKKWebAccess.Post(MethodBase.GetCurrentMethod().Name, MyRestBaseUri + $"post_data/{argOrdNo}/", AccessorBptxtFile.Read(argBptxtFilePath), NKKWebAccess.SKIP_OTP);
+                //var restRes = await NKKWebAccess.Post(MethodBase.GetCurrentMethod().Name, MyRestBaseUri + $"post_data/{argOrdNo}/", AccessorBptxtFile.Read(argBptxtFilePath), NKKWebAccess.SKIP_OTP);
+                var restRes = await NKKWebAccess.Post(MethodBase.GetCurrentMethod().Name, MyRestBaseUri + $"post_data/{argOrdNo}", AccessorBptxtFile.Read(argBptxtFilePath), NKKWebAccess.SKIP_OTP);
 
                 ret.isSuccess = restRes.response.IsSuccessStatusCode;
                 ret.errorReasonPhrase
@@ -135,8 +139,10 @@ namespace NKK.BloodPurify
 
             try
             {
+                //var restRes = await NKKWebAccess.Get(MethodBase.GetCurrentMethod().Name,
+                //    MyRestBaseUri + $"mst_getdialysisdevice/{NKKWebAccess.FacilityCd}/");
                 var restRes = await NKKWebAccess.Get(MethodBase.GetCurrentMethod().Name,
-                    MyRestBaseUri + $"mst_getdialysisdevice/{NKKWebAccess.FacilityCd}/");
+                   MyRestBaseUri + $"mst_getdialysisdevice/{NKKWebAccess.FacilityCd}");
                 ret.isSuccess = restRes.isLogin & restRes.response.IsSuccessStatusCode;
                 ret.status = (true == restRes.isLogin ? $"{(int)restRes.response.StatusCode}:{restRes.response.StatusCode}" : "サーバに接続できませんでした");
                 ret.getData = restRes.strContent;

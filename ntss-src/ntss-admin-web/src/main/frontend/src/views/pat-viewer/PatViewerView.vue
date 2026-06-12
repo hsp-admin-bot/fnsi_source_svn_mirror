@@ -1,24 +1,27 @@
 <template>
   <ntss-layout>
-    <header-component slot="header-content" />
+    <template #header-content>
+      <header-component />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start -->
     <!-- <bread-crumbs-component
-      slot="bread-crumbs-content"
+      #bread-crumbs-content
       :history-key="historyKey"
       :no-split="true"
       @refresh="refresh"
     /> -->
-    <bread-crumbs-component
-      slot="bread-crumbs-content"
-      :history-key="historyKey"
-      :no-split="true"
-    />
+    <template #bread-crumbs-content>
+      <bread-crumbs-component
+        :history-key="historyKey"
+        :no-split="true"
+      />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng end -->
-    <main-component
-      slot="main-content"
-      ref="mainComponent"
-      :history-key="historyKey"
-    />
+    <template #main-content>
+      <main-component ref="mainComponent"
+        :history-key="historyKey"
+      />
+    </template>
   </ntss-layout>
 </template>
 
@@ -29,7 +32,7 @@ import BreadCrumbsComponent from "@/components/BreadCrumbsComponent";
 import ViewHelper from "@/views/ViewHelperMixin";
 import { HISTORY_KEY_PAT_VIEWER } from "@/router/pat-viewer/HistoryKeyConstants";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc start
-import {mapGetters, mapMutations} from "vuex";
+import {mapGetters, mapMutations} from "@/compat/vue/vuex";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import {messageFormat} from "@/functions/common/MessageFormat";
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";

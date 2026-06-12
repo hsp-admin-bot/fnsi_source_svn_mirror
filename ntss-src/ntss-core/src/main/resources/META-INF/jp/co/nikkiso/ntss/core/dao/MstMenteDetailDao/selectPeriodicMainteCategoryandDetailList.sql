@@ -18,6 +18,8 @@ AND
 AND
     c.is_del = '0'
 AND
+    d.mainte_detail_cd is not null
+AND
     detail_info ->> 'code' is not null
 AND
     detail_info ->> 'isDisp' = '1'

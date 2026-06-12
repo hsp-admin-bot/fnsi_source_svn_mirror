@@ -9,7 +9,6 @@ import {
   sendRequestGetMstGraphSettingData
 } from "@/apis/mst-graph-setting-maintenance";
 import { sendRequestGetDoctorsAtFacility } from "@/apis/facility";
-import Vue from "vue";
 
 export default {
   strict: true,
@@ -72,7 +71,7 @@ export default {
         editRecord.sortInputTime = Date.now();
       }
 
-      Vue.set(state.masterRecordList.data, index, editRecord);
+      state.masterRecordList.data.splice(index, 1, editRecord);
     },
 
     setCondition(state, condition) {

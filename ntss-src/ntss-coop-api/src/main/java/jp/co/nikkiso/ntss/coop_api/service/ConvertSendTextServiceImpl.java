@@ -34,7 +34,7 @@ import jp.co.nikkiso.ntss.core.entity.MstCoopLayoutDetail;
 import jp.co.nikkiso.ntss.core.entity.OrdMainRestore;
 import jp.co.nikkiso.ntss.core.entity.SysCoopJournal;
 import jp.co.nikkiso.ntss.core.entity.json.LayoutExtSetting;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;

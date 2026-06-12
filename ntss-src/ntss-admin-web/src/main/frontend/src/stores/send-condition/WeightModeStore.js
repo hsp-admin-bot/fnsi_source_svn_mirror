@@ -7,7 +7,7 @@ import { sendRequestFindMstWeightList } from "@/apis/mst-weight-maintenance";
 import { sendRequestGetEnableWeightSelect } from "@/apis/send-condition";
 
 export default {
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   namespaced: true,
   state: {
     mstWeightSelectorResource: [],
@@ -133,12 +133,11 @@ export default {
     setIsHospPatId (state,isHospPatId){
       state.isHospPatId=isHospPatId
     },
-
-    // add 8449【デグレ】体重測定画面を開くと患者名欄が緑枠（変更状態）になる zhao end
+  // add 8449【デグレ】体重測定画面を開くと患者名欄が緑枠（変更状態）になる zhao end
     setMstWeightList(state, payload) {
       state.mstWeightList = payload.weightList.filter(
         // #11987 2026.02.01 mod スケールベッド対応 体重種別が体重計のみ表示させる TDC渡辺 start
-        //     elm => elm.isDel !== "1" && elm.isDisp === "1"
+        // elm => elm.isDel !== "1" && elm.isDisp === "1"
         elm => elm.isDel !== "1" && elm.isDisp === "1" && elm.weightType == 0
         // #11987 2026.02.01 mod スケールベッド対応 体重種別が体重計のみ表示させる end
       );

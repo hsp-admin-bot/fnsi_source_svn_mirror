@@ -28,10 +28,9 @@ import batch.entity.mongo.MedicalHstInfo;
 import batch.entity.mongo.PhysicalInfo;
 import batch.part.InfomationSchemaControl;
 import batch.part.StreamThread;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import de.siegmar.fastcsv.reader.CsvContainer;
+import tools.jackson.databind.ObjectMapper;
 import de.siegmar.fastcsv.reader.CsvReader;
-import de.siegmar.fastcsv.reader.CsvRow;
+import de.siegmar.fastcsv.reader.NamedCsvRecord;
 import de.siegmar.fastcsv.writer.CsvWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -67,7 +66,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.infrastructure.item.Chunk;
+import org.springframework.batch.infrastructure.item.ItemWriter;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -173,6 +173,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
         this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
         this.facilityCd = facilityCd;
         this.globalContext = globalContext;
+        this.globalContext.fileName = fileName;
     }
 
     /**
@@ -231,15 +232,19 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             process.getInputStream().close();
             process.getOutputStream().close();
             process.getErrorStream().close();
+            int exitCode = process.waitFor(); // 子プロセスの終了コードを取得
             process.destroy(); // 子プロセスを明示的に終了
             if (!org.springframework.util.ObjectUtils.isEmpty(et.getOutputString())) {
+                EventLogMessage elm = eventLoggerUtil.getEventLogMessage(et.getOutputString(),
+                        facilityCd, "processCmdSql(String[] cmd, boolean status)");
+                eventLoggerUtil.recordLog(facilityCd, elm, LogLevel.WARN);
+            }
+            if (exitCode != 0) {
                 exSuccess = false;
-                System.err.println("出力文字：" + et.getOutputString());
                 EventLogMessage elm = eventLoggerUtil.getEventLogMessage(et.getOutputString(),
                         facilityCd, "processCmdSql(String[] cmd, boolean status)");
                 eventLoggerUtil.recordLog(facilityCd, elm, LogLevel.ERROR);
             }
-            System.out.println("psqlコマンドの実行が完了しました！");
         } catch (IOException | InterruptedException e) {
             // TODO Auto-generated catch block
             eventLoggerUtil.recordLog(
@@ -371,8 +376,28 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
     }
 
     private void processMntMotionRecord(Collection<String[]> resultDataList,
-                                        List<CsvRow> rowList) throws IOException {
+                                        List<NamedCsvRecord> rowList) throws IOException {
         String tableName = "mnt_motion_record";
+        initMntMotionRecordOrdDeviceMap();
+        globalContext.seq = 0;
+        try {
+            addMntMotionRecordHeaderIfEmpty(resultDataList, tableName);
+            loadMntMotionRecordDeviceEdgeNo();
+            Map<String, String> machineTypeCdTrastMap = getMachineTypeCdTrastMap(rowList);
+            Map<String, String> machineSerialTrastMap = getMachineSerialTrastMap(rowList);
+            Map<String, String> comFormatCdTrastMap = getComFormatCdTrastMap(rowList);
+            Integer finalDeviceEdgeNo = globalContext.deviceEdgeNo;
+            appendMntMotionRecordRows(resultDataList, rowList, machineTypeCdTrastMap, machineSerialTrastMap,
+                    comFormatCdTrastMap, finalDeviceEdgeNo);
+        } catch (Exception e) {
+            handleMntMotionRecordException(e);
+        }
+    }
+
+    /**
+     * mnt_motion_record用ordDeviceMapを初期化する
+     */
+    private void initMntMotionRecordOrdDeviceMap() {
         // add #11162 mnt_motion_recordのパフォーマンス最適化 djy start
         if (globalContext.ordDeviceMap == null) {
             StringBuilder stringBuilder = new StringBuilder();
@@ -388,23 +413,23 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             globalContext.ordDeviceMap = ordDeviceList.stream().collect(Collectors.groupingBy(OrdDevice::getRstFnDialysisNo));
         }
         // add #11162 mnt_motion_recordのパフォーマンス最適化 djy end
-        //convertテーブルの最大番号を取る
-        globalContext.seq = 0;
-        try {
+    }
 
-            String finalTableName = tableName;
-
+    /**
+     * resultDataListが空の場合にヘッダ行を追加する
+     */
+    private void addMntMotionRecordHeaderIfEmpty(Collection<String[]> resultDataList, String tableName) {
             if (resultDataList.isEmpty()) {
                 // 取得テーブルの列を取得
                 InfomationSchemaControl isc = new InfomationSchemaControl(appContext);
                 List<String> columnNameList = null;
                 try {
-                    columnNameList = isc.getColumnNamesForCodeConversion(finalTableName);
+                columnNameList = isc.getColumnNamesForCodeConversion(tableName);
                 } catch (Exception exception) {
                     eventLoggerUtil.recordLog(
                             facilityCd,
                             eventLoggerUtil.getEventLogMessage(
-                                    "processMntMotionRecord(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(exception),
+                                    "processMntMotionRecord(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(exception),
                                     facilityCd,
                                     exception.getClass().getName() + ".processMntMotionRecord()"),
                             LogLevel.ERROR);
@@ -415,7 +440,12 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 registColumnNames = registColumnNames.substring(registColumnNames.indexOf(",") + 1);
                 resultDataList.add(registColumnNames.split(","));
             }
-            //外部キー取得mst _device_edgeテーブルのdevice _edge_no値は、1回だけ取ればいい   CONV30
+    }
+
+    /**
+     * mst_device_edgeのdevice_edge_noを読み込む
+     */
+    private void loadMntMotionRecordDeviceEdgeNo() {
             //mod #12229 start
             if (ObjectUtils.isEmpty(globalContext.deviceEdgeNo)) {
                 String exSql = "SELECT MIN(device_edge_no) AS deviceEdgeNo FROM mst_device_edge WHERE facility_cd = ?";
@@ -425,30 +455,16 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 }
             }
             //mod #12229 end
-            /**
-             * csvはmachine _type_cdとdevice _typeパケット（machine _ type _ cdとdevice _ typeは並列条件として検索するため、
-             * この2つのフィールドで同時にグループ化するしかない）
-             */
-            //重複クエリDBの役割を比較するためのMapの宣言
-            Map<String, String> machineTypeCdTrastMap = getMachineTypeCdTrastMap(rowList);
+    }
 
-            /**
-             * CSVの各行データを **`machine_serial + device_type`** でグループ化し、
-             * マスタデータである **`utils.MstMachineList`** から一意に一致する機器を検索し、
-             * **key = machine_serial-device_type、value = 機器の machineSerial（存在しない場合は null）**
-             * という形式の Map を生成します。
-             */
-            Map<String, String> machineSerialTrastMap = getMachineSerialTrastMap(rowList);
-
-            /**
-             * 各行の **`com_format_cd` と `device_type` を組み合わせてグループ化**し、
-             * その組み合わせ条件をもとに、機器マスタデータ（`MstMachineList`）から **一意に一致する機器情報** を検索します。
-             */
-            Map<String, String> comFormatCdTrastMap = getComFormatCdTrastMap(rowList);
-            //mod #12229 start
-            Integer finalDeviceEdgeNo = globalContext.deviceEdgeNo;
-            //mod #12229 end
-
+    /**
+     * CSV各行をmnt_motion_recordとしてresultDataListに追加する
+     */
+    private void appendMntMotionRecordRows(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList,
+                                           Map<String, String> machineTypeCdTrastMap,
+                                           Map<String, String> machineSerialTrastMap,
+                                           Map<String, String> comFormatCdTrastMap,
+                                           Integer finalDeviceEdgeNo) {
             rowList.forEach(row -> {
 
                 //取得した各行をMntMotionRecordオブジェクトに入れる
@@ -592,14 +608,17 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 // ループで使うオブジェクトをnullにして、ガベージコレクションの対象にする
                 mntMotionRecord = null;
             });
-        } catch (Exception e) {
-            //ログ
+    }
+
+    /**
+     * mnt_motion_record処理の例外をログ出力する
+     */
+    private void handleMntMotionRecordException(Exception e) throws IOException {
             eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("CSVファイルの処理に失敗しました：" + globalContext.fileName,
                     facilityCd, "BatchCsvWriterDb.write()"), LogLevel.ERROR);
             eventLoggerUtil.recordLog(facilityCd, eventLoggerUtil.getEventLogMessage("詳細なエラー情報：" + e.toString(),
                     facilityCd, "BatchCsvWriterDb.write()"), LogLevel.ERROR);
             this.errorfile(globalContext.fileName);
-        }
     }
 
     /**
@@ -607,9 +626,9 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
      * @param rowList data
      * @return
      */
-    private Map<String, String> getMachineTypeCdTrastMap(List<CsvRow> rowList){
+    private Map<String, String> getMachineTypeCdTrastMap(List<NamedCsvRecord> rowList){
         Map<String, String> machineTypeCdTrastMap = new HashMap<>();
-        Map<Object, List<CsvRow>> machine_type_cd_group = rowList.stream().collect(Collectors.groupingBy(r -> {
+        Map<Object, List<NamedCsvRecord>> machine_type_cd_group = rowList.stream().collect(Collectors.groupingBy(r -> {
             return r.getField("machine_type_cd") + "-" + r.getField("device_type");
         }));
         //machine _type_cd_groupのkey（key値はcsvのmachine _ type _ cdの値）、DB検索に使用される
@@ -638,15 +657,15 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
 
     /**
      * CSVの各行データを **`machine_serial + device_type`** でグループ化し、
-     * マスタデータである **`utils.MstMachineList`** から一意に一致する機器を検索し、
+     * マスタデータである **`globalContext.MstMachineList`** から一意に一致する機器を検索し、
      * **key = machine_serial-device_type、value = 機器の machineSerial（存在しない場合は null）**
      * という形式の Map を生成します。
      * @param rowList
      * @return
      */
-    private Map<String, String> getMachineSerialTrastMap(List<CsvRow> rowList) {
+    private Map<String, String> getMachineSerialTrastMap(List<NamedCsvRecord> rowList) {
         Map<String, String> machineSerialTrastMap = new HashMap<>();
-        Map<Object, List<CsvRow>> machine_serial_group = rowList.stream().collect(Collectors.groupingBy(r -> {
+        Map<Object, List<NamedCsvRecord>> machine_serial_group = rowList.stream().collect(Collectors.groupingBy(r -> {
             return r.getField("machine_serial") + "-" + r.getField("device_type");
         }));
         Set<Object> machine_serial_key = machine_serial_group.keySet();
@@ -678,9 +697,9 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
      * @param rowList
      * @return
      */
-    private Map<String, String> getComFormatCdTrastMap(List<CsvRow> rowList) {
+    private Map<String, String> getComFormatCdTrastMap(List<NamedCsvRecord> rowList) {
         Map<String, String> comFormatCdTrastMap = new HashMap<>();
-        Map<Object, List<CsvRow>> com_format_cd_group = rowList.stream()
+        Map<Object, List<NamedCsvRecord>> com_format_cd_group = rowList.stream()
                 .collect(Collectors.groupingBy(r -> {
                     return r.getField("com_format_cd") + "-" + r.getField("device_type");
                 }));
@@ -776,32 +795,59 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
     //add #12173 end
 
     private void processMstFavoriteFacility(Collection<String[]> resultDataList,
-                                            List<CsvRow> rowList) throws Exception {
+                                            List<NamedCsvRecord> rowList) throws Exception {
         String tableName="mst_favorite_facility";
-        //convertテーブルの最大番号を取る
+        List<SysFacility> resultList = loadMstFavoriteFacilitySysFacilityList();
+        initMstFavoriteFacilityColumnFlags(tableName);
+        List<String> facilityCdList = loadMstFavoriteFacilityDiffCdList();
+        List<MstFavoriteFacility> mstFavoriteFacilitys = new ArrayList<>();
+        rowList.forEach(row -> processMstFavoriteFacilityRow(resultDataList, row, resultList, facilityCdList, mstFavoriteFacilitys));
+        appendMstFavoriteFacilityResultRows(resultDataList, mstFavoriteFacilitys);
+    }
 
+    /**
+     * sys_facilityから表示対象施設一覧を取得する
+     */
+    private List<SysFacility> loadMstFavoriteFacilitySysFacilityList() {
         String miCdSql = "SELECT facility_name, prefectures_cd, medical_institution_cd " +
                 " FROM sys_facility WHERE is_disp = '1'";
-        List<SysFacility> resultList = namedParameterJdbcTemplateNkk5.getJdbcOperations().query(miCdSql, new Object[]{}, new BeanPropertyRowMapper<>(SysFacility.class));
+        return namedParameterJdbcTemplateNkk5.getJdbcOperations().query(miCdSql, new Object[]{}, new BeanPropertyRowMapper<>(SysFacility.class));
+    }
+
+    /**
+     * mst_favorite_facilityの列情報からfacility_cd有無フラグを設定する
+     */
+    private void initMstFavoriteFacilityColumnFlags(String tableName) throws Exception {
         InfomationSchemaControl isc = new InfomationSchemaControl(appContext);
         List<String> columnNameList = isc.getColumnNamesForCodeConversion(tableName);
         globalContext.hasFacilityCd = columnNameList.stream().anyMatch(x -> x.equals("facility_cd"));
-        //差分処理時には、追加のみが発生し、削除は発生しない。
-        List<String> facilityCdList;
+    }
+
+    /**
+     * 差分処理時の既存medical_institution_cd一覧を取得する
+     */
+    private List<String> loadMstFavoriteFacilityDiffCdList() {
         if (globalContext.fileName.contains("[diff]")) {
             globalContext.sqlKeys = "";
             globalContext.sqlNewKeys = "";
             String cdSql = "select medical_institution_cd from  mst_favorite_facility where  facility_cd= ? ";
-            facilityCdList = namedParameterJdbcTemplateNkk5.getJdbcOperations().queryForList(
+            return namedParameterJdbcTemplateNkk5.getJdbcOperations().queryForList(
                     cdSql,
                     new Object[]{facilityCd},
                     String.class
             );
-        } else {
-            facilityCdList = new ArrayList<>();
         }
-        List<MstFavoriteFacility> mstFavoriteFacilitys= new ArrayList<MstFavoriteFacility>();
-        rowList.forEach(row -> {
+        return new ArrayList<>();
+    }
+
+    /**
+     * mst_favorite_facilityのCSV1行を処理する
+     */
+    private void processMstFavoriteFacilityRow(Collection<String[]> resultDataList,
+                                               NamedCsvRecord row,
+                                                 List<SysFacility> resultList,
+                                                 List<String> facilityCdList,
+                                                 List<MstFavoriteFacility> mstFavoriteFacilitys) {
             if (resultDataList.isEmpty()) {
                 resultDataList.add(mstFavoriteFacilityColumnNames);
             }
@@ -817,6 +863,24 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
 
             //県コード+名称　ヒットの施設全部追加
             if(!ObjectUtils.isEmpty(prefectures_cd)){
+            collectMstFavoriteFacilityCdListWithPrefecture(facility_name, prefectures_cd, resultList, mstFavoriteFacilitys, cdList);
+        } else {
+            collectMstFavoriteFacilityCdListWithoutPrefecture(facility_name, resultList, mstFavoriteFacilitys, cdList);
+        }
+        if (cdList.size() == 0) {
+            return;
+        }
+        addMstFavoriteFacilityRowsFromCdList(row, mstFavoriteFacility, cdList, facilityCdList, mstFavoriteFacilitys);
+    }
+
+    /**
+     * 県コード指定時の施設名マッチングでmedical_institution_cdを収集する
+     */
+    private void collectMstFavoriteFacilityCdListWithPrefecture(String facility_name,
+                                                                String prefectures_cd,
+                                                                List<SysFacility> resultList,
+                                                                List<MstFavoriteFacility> mstFavoriteFacilitys,
+                                                                List<String> cdList) {
                 String s1 = removeAllSpacesFast(facility_name);
                 List<SysFacility> filteredList =
                         resultList.stream()
@@ -832,8 +896,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     //①完全一致
                     if (facility_name.equals(facility.getFacilityName())) {
                         matched = true;
-                    }
-                    else{
+            } else {
                         String s2 = removeAllSpacesFast(facility.getFacilityName());
                         //②スペース抜きで完全一致
                         if(s1.equals(s2)){
@@ -864,8 +927,15 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                         }
                     }
                 }
-            }else{
-                //sys_facilityで名前を検索し
+    }
+
+    /**
+     * 県コード未指定時の施設名マッチングでmedical_institution_cdを収集する
+     */
+    private void collectMstFavoriteFacilityCdListWithoutPrefecture(String facility_name,
+                                                                   List<SysFacility> resultList,
+                                                                   List<MstFavoriteFacility> mstFavoriteFacilitys,
+                                                                   List<String> cdList) {
                 String s1NoCd = removeAllSpacesFast(facility_name);
                 List<SysFacility> filteredList =
                         resultList.stream()
@@ -913,9 +983,15 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 }
 
             }
-            if (cdList.size()==0) {
-                return;
-            } else {
+
+    /**
+     * 収集したmedical_institution_cdからMstFavoriteFacility行を生成する
+     */
+    private void addMstFavoriteFacilityRowsFromCdList(NamedCsvRecord row,
+                                                      MstFavoriteFacility mstFavoriteFacility,
+                                                      List<String> cdList,
+                                                      List<String> facilityCdList,
+                                                      List<MstFavoriteFacility> mstFavoriteFacilitys) {
                 if (globalContext.fileName.contains("[diff]")) {
                     cdList.removeAll(facilityCdList);
                 }
@@ -929,7 +1005,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                             eventLoggerUtil.recordLog(
                                     facilityCd,
                                     eventLoggerUtil.getEventLogMessage(
-                                            "processMstFavoriteFacility(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                                            "processMstFavoriteFacility(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(e),
                                             facilityCd,
                                             e.getClass().getName() + ".processMstFavoriteFacility()"),
                                     LogLevel.ERROR);
@@ -943,7 +1019,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                             eventLoggerUtil.recordLog(
                                     facilityCd,
                                     eventLoggerUtil.getEventLogMessage(
-                                            "processMstFavoriteFacility(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                                            "processMstFavoriteFacility(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(e),
                                             facilityCd,
                                             e.getClass().getName() + ".processMstFavoriteFacility()"),
                                     LogLevel.ERROR);
@@ -953,8 +1029,11 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 }
             }
 
-
-        });
+    /**
+     * 生成したMstFavoriteFacility一覧をresultDataListに追加する
+     */
+    private void appendMstFavoriteFacilityResultRows(Collection<String[]> resultDataList,
+                                                     List<MstFavoriteFacility> mstFavoriteFacilitys) {
         for (MstFavoriteFacility mstFavorite : mstFavoriteFacilitys){
             String[] rdl = mstFavorite.toString().split(",");
             resultDataList.add(rdl);
@@ -962,7 +1041,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
     }
 
     private void processMniMonitor(Collection<String[]> resultDataList,
-                                   List<CsvRow> rowList) throws IOException {
+                                   List<NamedCsvRecord> rowList) throws IOException {
         String tableName = "mni_monitor";
         String csvfileName = globalContext.fileName;
         //convertテーブルの最大番号を取る
@@ -973,7 +1052,23 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             Map<String, String> machineTypeCdTrastMap_mni = new HashMap<>();
             Map<String, String> machineSerialTrastMap_mni = new HashMap<>();
             Map<String, String> patIdTrastMap_mni = new HashMap<>();
-            //resultDataListが空の場合は、Headセクションを先に挿入する必要があります
+            addMniMonitorHeaderIfEmpty(resultDataList, tableName);
+            loadMniMonitorMachineSerialMap(rowList, machineSerialTrastMap_mni);
+            loadMniMonitorOrdNoMap(rowList, ordNoTrastMap_mni);
+            loadMniMonitorPatIdMap(rowList, patIdTrastMap_mni);
+            List<String> ordNoList = new ArrayList<String>();
+            appendMniMonitorRows(resultDataList, rowList, machineTypeCdTrastMap_mni, machineSerialTrastMap_mni,
+                    ordNoTrastMap_mni, patIdTrastMap_mni);
+            updateMniMonitorDiffSqlKeys(ordNoList);
+        } catch (Exception ex) {
+            handleProcessMniMonitorException(ex, csvfileName);
+        }
+    }
+
+    /**
+     * resultDataListが空の場合にmni_monitorヘッダ行を追加する
+     */
+    private void addMniMonitorHeaderIfEmpty(Collection<String[]> resultDataList, String tableName) throws Exception {
             if (resultDataList.isEmpty()) {
                 // 取得テーブルの列を取得
                 InfomationSchemaControl isc = new InfomationSchemaControl(appContext);
@@ -984,14 +1079,14 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 registColumnNames = registColumnNames.substring(registColumnNames.indexOf(",") + 1);
                 resultDataList.add(registColumnNames.split(","));
             }
+    }
 
-           //mod #12229 start
-            /**
-             * 外部キー列に基づいてcsvのすべての行をグループ化し、グループ化後の外部キーは1回だけ検索すればよく、後続の行のDBへのアクセスを減らす
-             */
-
+    /**
+     * machine_serial外部キーの変換Mapを読み込む
+     */
+    private void loadMniMonitorMachineSerialMap(List<NamedCsvRecord> rowList, Map<String, String> machineSerialTrastMap_mni) {
             //machine_serial group
-            Map<Object, List<CsvRow>> machine_serial_group = rowList.stream()
+            Map<Object, List<NamedCsvRecord>> machine_serial_group = rowList.stream()
                     .filter(f -> !ObjectUtils.isEmpty(f.getField("machine_serial")))
                     .collect(Collectors.groupingBy(r -> {
                         return r.getField("machine_serial");
@@ -1018,9 +1113,13 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                         String.valueOf(item.getMachineSerial())
                 );
             }
+    }
 
-            //ord_no group
-            Map<Object, List<CsvRow>> ord_no_group = rowList.stream()
+    /**
+     * ord_no外部キーの変換Mapを読み込む
+     */
+    private void loadMniMonitorOrdNoMap(List<NamedCsvRecord> rowList, Map<String, String> ordNoTrastMap_mni) {
+            Map<Object, List<NamedCsvRecord>> ord_no_group = rowList.stream()
                     .filter(f -> !ObjectUtils.isEmpty(f.getField("ord_no")))
                     .collect(Collectors.groupingBy(r -> {
                         return r.getField("ord_no");
@@ -1054,9 +1153,13 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     );
                 }
             }
+    }
 
-            //pat_id group
-            Map<Object, List<CsvRow>> pat_id_group = rowList.stream()
+    /**
+     * pat_id外部キーの変換Mapを読み込む
+     */
+    private void loadMniMonitorPatIdMap(List<NamedCsvRecord> rowList, Map<String, String> patIdTrastMap_mni) {
+            Map<Object, List<NamedCsvRecord>> pat_id_group = rowList.stream()
                     .filter(f -> !ObjectUtils.isEmpty(f.getField("pat_id")))
                     .collect(Collectors.groupingBy(r -> {
                         return r.getField("pat_id");
@@ -1083,13 +1186,31 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                         String.valueOf(item.getPat_id())
                 );
             }
-            //mod #12229 end
+    }
 
-            List<String>  ordNoList=new ArrayList<String>();
+    /**
+     * CSV各行をMniMonitorとしてresultDataListに追加する
+     */
+    private void appendMniMonitorRows(Collection<String[]> resultDataList,
+                                      List<NamedCsvRecord> rowList,
+                                      Map<String, String> machineTypeCdTrastMap_mni,
+                                      Map<String, String> machineSerialTrastMap_mni,
+                                      Map<String, String> ordNoTrastMap_mni,
+                                      Map<String, String> patIdTrastMap_mni) {
             rowList.forEach(row -> {
                 //取得した各行をMntMotionRecordオブジェクトに入れる
                 MniMonitor mniMonitor = new MniMonitor();
-                //machine_type_cd ,machine_serial ,ord_no ,pat_id外部キーであるため、以下の処理
+            applyMniMonitorBasicFields(mniMonitor, row);
+            applyMniMonitorForeignKeys(mniMonitor, row, machineTypeCdTrastMap_mni, machineSerialTrastMap_mni,
+                    ordNoTrastMap_mni, patIdTrastMap_mni);
+            addMniMonitorRowToResultDataList(resultDataList, mniMonitor);
+        });
+    }
+
+    /**
+     * MniMonitorの基本フィールドをCSV行から設定する
+     */
+    private void applyMniMonitorBasicFields(MniMonitor mniMonitor, NamedCsvRecord row) {
                 String facility_cd = row.getField("facility_cd");
                 if (!ObjectUtils.isEmpty(facility_cd)) {
                     mniMonitor.setFacilityCd(facility_cd);
@@ -1115,7 +1236,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                         eventLoggerUtil.recordLog(
                                 facilityCd,
                                 eventLoggerUtil.getEventLogMessage(
-                                        "processMniMonitor(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                                        "processMniMonitor(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(e),
                                         facilityCd,
                                         e.getClass().getName() + ".processMniMonitor()"),
                                 LogLevel.ERROR);
@@ -1129,7 +1250,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                         eventLoggerUtil.recordLog(
                                 facilityCd,
                                 eventLoggerUtil.getEventLogMessage(
-                                        "processMniMonitor(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                                        "processMniMonitor(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(e),
                                         facilityCd,
                                         e.getClass().getName() + ".processMniMonitor()"),
                                 LogLevel.ERROR);
@@ -1143,16 +1264,23 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                         eventLoggerUtil.recordLog(
                                 facilityCd,
                                 eventLoggerUtil.getEventLogMessage(
-                                        "processMniMonitor(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                                        "processMniMonitor(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(e),
                                         facilityCd,
                                         e.getClass().getName() + ".processMniMonitor()"),
                                 LogLevel.ERROR);
                     }
                 }
-                /**
-                 * ヘッダから対応する属性値を取得し、依存テーブルの新しい番号を置換する
-                 */
-                //外部キー machine_type_cd
+    }
+
+    /**
+     * MniMonitorの外部キーフィールドを変換Mapから設定する
+     */
+    private void applyMniMonitorForeignKeys(MniMonitor mniMonitor,
+                                            NamedCsvRecord row,
+                                            Map<String, String> machineTypeCdTrastMap_mni,
+                                            Map<String, String> machineSerialTrastMap_mni,
+                                            Map<String, String> ordNoTrastMap_mni,
+                                            Map<String, String> patIdTrastMap_mni) {
                 String machine_type_cd = row.getField("machine_type_cd");
                 if (!ObjectUtils.isEmpty(machine_type_cd)) {
                     mniMonitor.setMachineTypeCd(machineTypeCdTrastMap_mni.getOrDefault(machine_type_cd, null));
@@ -1192,16 +1320,23 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 } else {
                     mniMonitor.setPatId(null);
                 }
+    }
 
-                //mniのjson列の置換｜は、（index=6、7番目の要素として知られている）、rdlのnullフィールドがすべて「」に置換されている場合
-                String[] rdl = mniMonitor.toString().split(",");
-                if (rdl[6].contains("|")) {
-                    rdl[6] = rdl[6].replace("|", ",");
-                }
-                //各行置換後の最終結果データセットの書き込み
-                resultDataList.add(rdl);
-            });
-            //add #12229 start
+    /**
+     * MniMonitor行をresultDataListに追加する
+     */
+    private void addMniMonitorRowToResultDataList(Collection<String[]> resultDataList, MniMonitor mniMonitor) {
+        String[] rdl = mniMonitor.toString().split(",");
+        if (rdl[6].contains("|")) {
+            rdl[6] = rdl[6].replace("|", ",");
+        }
+        resultDataList.add(rdl);
+    }
+
+    /**
+     * 差分処理時のsqlKeysを更新する
+     */
+    private void updateMniMonitorDiffSqlKeys(List<String> ordNoList) {
             if (globalContext.fileName.contains("[diff]") && !ordNoList.isEmpty()) {
                 globalContext.sqlNewKeys = "";
                 List<String> distinctList = ordNoList.stream()
@@ -1209,8 +1344,12 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                         .collect(Collectors.toList());
                 globalContext.sqlKeys = String.join(",", distinctList);
             }
-            //add #12229 end
-        } catch (Exception ex) {
+    }
+
+    /**
+     * mni_monitor処理の例外をログ出力する
+     */
+    private void handleProcessMniMonitorException(Exception ex, String csvfileName) throws IOException {
             System.err.println("実行" + csvfileName + "ファイル中にエラーが発生しました！\n");
             //出力詳細エラー情報
 
@@ -1226,19 +1365,18 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             eventLoggerUtil.recordLog(
                     facilityCd,
                     eventLoggerUtil.getEventLogMessage(
-                            "processMniMonitor(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(ex),
+                            "processMniMonitor(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(ex),
                             facilityCd,
                             ex.getClass().getName() + ".processMniMonitor()"),
                     LogLevel.ERROR);
             this.errorfile(csvfileName);
-        }
     }
 
     private void processOrdChecklist(Collection<String[]> resultDataList,
-                                     List<CsvRow> rowList) throws IOException {
+                                     List<NamedCsvRecord> rowList) throws IOException {
         String csvfileName = globalContext.fileName;
         //convertテーブルの最大番号を取る
-        globalContext.seq = 0;
+        globalContext.seq=0;
 
         try {
 
@@ -1246,8 +1384,25 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             if (resultDataList.isEmpty()) {
                 resultDataList.add(ordCheckListColumnNames);
             }
+            List<OrdMain> ordMainList = loadOrdChecklistOrdMainList(rowList);
+            deleteOrdChecklistForDiff(ordMainList);
+            rowList = rowList.stream().filter(row -> !EMPTY.equals(row.getField("list_cd"))).toList();
+            Map<String, Map<String, String>> userIdTrastMap = new HashMap<>();
+            ResultOfMstCdToMstDto resultOfMstCdToMstDto = mstCdToMstDto(rowList, userIdTrastMap);
+            ensureOrdChecklistCdCached();
+            appendOrdChecklistRows(resultDataList, rowList, ordMainList, userIdTrastMap,
+                    resultOfMstCdToMstDto.getMstEquipmentList(),
+                    resultOfMstCdToMstDto.getMstEquipmentClassList(),
+                    resultOfMstCdToMstDto.getMstDialyzerList());
+        } catch (Exception ex) {
+            handleProcessOrdChecklistException(ex, csvfileName);
+        }
+    }
 
-            // ord_no_keyが予定と実際二つあるので、実際の場合、実際番号(12桁)である、予定の場合、IND_ID(FNW.患者ID+治療日+FNW.同日複数回)である。
+    /**
+     * ord_checklist用のord_main一覧を読み込む
+     */
+    private List<OrdMain> loadOrdChecklistOrdMainList(List<NamedCsvRecord> rowList) {
             Map<Boolean, List<String>> ordNoKeyMap = rowList.stream().map(row -> row.getField("ord_no"))
                     .filter(Objects::nonNull).distinct().collect(Collectors.groupingBy(r -> r.length() > 12));
             List<String> indIdList = ordNoKeyMap.get(true);
@@ -1296,7 +1451,13 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     ordMainList.addAll(namedParameterJdbcTemplateConvert.getJdbcOperations().query(ordNoSql, params.toArray(), new BeanPropertyRowMapper<>(OrdMain.class)));
                 });
             }
+        return ordMainList;
+    }
 
+    /**
+     * 差分処理時にord_checklistの既存レコードを削除する
+     */
+    private void deleteOrdChecklistForDiff(List<OrdMain> ordMainList) {
             if (globalContext.fileName.contains("[diff]") && !ordMainList.isEmpty()) {
                 List<String> ordNoList = ordMainList.stream().map(OrdMain::getOrdNo).map(String::valueOf).toList();
                 globalContext.sqlKeys = String.join(",", ordNoList);
@@ -1313,41 +1474,37 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     jdbcTemplatec.update(delSql, params.toArray());
                 });
             }
+    }
 
-            // 治療日単位にすべてチェックアウトになるレコードを除外する
-            rowList = rowList.stream().filter(row -> !EMPTY.equals(row.getField("list_cd"))).toList();
-
-            /*
-             * 取得されたrst _checklist_infoはjsonタイプであり、外部キーを置換する必要がある
-             * 従って、1つずつ取り出してコレクションに入れる必要があります（重複クエリDBを回避）
-             */
-            //重複クエリDBの役割を比較するためのMapの宣言
-            Map<String, Map<String, String>> userIdTrastMap = new HashMap<>();
-            ResultOfMstCdToMstDto resultOfMstCdToMstDto = mstCdToMstDto(rowList,userIdTrastMap);
-            List<MstEquipment> mstEquipmentList = resultOfMstCdToMstDto.getMstEquipmentList();
-            List<MstEquipmentClass> mstEquipmentClassList = resultOfMstCdToMstDto.getMstEquipmentClassList();
-            List<MstDialyzer> mstDialyzerList = resultOfMstCdToMstDto.getMstDialyzerList();
-
-            /*
-             * checklist_cdはfacility _cdは条件として外部キーを検索する、つまりすべてのデータ外部キーが一致するので、DBを1回検索するだけで、同じ施しの下で使用できます
-             */
-            if (!checklistCdMap.containsKey(facilityCd)) {
-                String checklistCdSql;
-                checklistCdSql = "SELECT checklist_cd, checklist_settings FROM mst_checklist WHERE facility_cd = ? ORDER BY up_date DESC LIMIT 1";
+    /**
+     * mst_checklistのchecklist_cdをキャッシュする
+     */
+    private void ensureOrdChecklistCdCached() {
+        if (!checklistCdMap.containsKey(facilityCd)) {
+            String checklistCdSql = "SELECT checklist_cd, checklist_settings FROM mst_checklist WHERE facility_cd = ? ORDER BY up_date DESC LIMIT 1";
                 List<MstChecklist> checklistCdList = namedParameterJdbcTemplateConvert.getJdbcOperations().query(checklistCdSql, new Object[]{facilityCd}, new BeanPropertyRowMapper<>(MstChecklist.class));
                 if (checklistCdList.size() == 1) {
                     checklistCdMap.put(facilityCd, checklistCdList.get(0));
                 }
             }
+    }
 
-            // csvの再構築
-            Map<String, List<CsvRow>> csvRowByOrdNoMap = rowList.stream().collect(Collectors.groupingBy(r -> r.getField("ord_no")));
+    /**
+     * ord_checklistのCSV行を再構築してresultDataListに追加する
+     */
+    private void appendOrdChecklistRows(Collection<String[]> resultDataList,
+                                        List<NamedCsvRecord> rowList,
+                                        List<OrdMain> ordMainList,
+                                        Map<String, Map<String, String>> userIdTrastMap,
+                                        List<MstEquipment> mstEquipmentList,
+                                        List<MstEquipmentClass> mstEquipmentClassList,
+                                        List<MstDialyzer> mstDialyzerList) {
+            Map<String, List<NamedCsvRecord>> csvRowByOrdNoMap = rowList.stream().collect(Collectors.groupingBy(r -> r.getField("ord_no")));
             csvRowByOrdNoMap.forEach((ordNoKey, csvRows) -> {
-
-                OrdMain ordMain;
                 // ord_no
                 List<OrdMain> targetOrdMainList = ordMainList.stream().filter(ord -> ordNoKey.equals(ord.getFnOrdNo())).toList();
                 Long ordNo;
+            OrdMain ordMain;
                 if (!targetOrdMainList.isEmpty()) {
                     ordMain = targetOrdMainList.get(0);
                     ordNo = ordMain.getOrdNo();
@@ -1355,14 +1512,32 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     return;
                 }
 
-                Map<String, List<CsvRow>> csvRowByListCdMap = csvRows.stream().collect(Collectors.groupingBy(r -> r.getField("list_cd")));
+                Map<String, List<NamedCsvRecord>> csvRowByListCdMap = csvRows.stream().collect(Collectors.groupingBy(r -> r.getField("list_cd")));
                 OrdMain finalOrdMain = ordMain;
                 csvRowByListCdMap.forEach((listCd, rows) -> {
                     // 医材が治療条件に移動するレコードを格納する(穿刺針、血液回路)
                     List<String> equipToCondClassCdList = new ArrayList<>();
                     // 穿刺針重複を防ぐ
                     List<Integer> needleList = new ArrayList<>();
-                    rows.forEach(r -> {
+                rows.forEach(r -> processOrdChecklistCsvRow(resultDataList, r, ordNo, finalOrdMain, userIdTrastMap,
+                        mstEquipmentList, mstEquipmentClassList, mstDialyzerList, equipToCondClassCdList, needleList));
+            });
+        });
+    }
+
+    /**
+     * ord_checklistのCSV1行をOrdChecklistに変換してresultDataListに追加する
+     */
+    private void processOrdChecklistCsvRow(Collection<String[]> resultDataList,
+                                           NamedCsvRecord r,
+                                           Long ordNo,
+                                           OrdMain finalOrdMain,
+                                           Map<String, Map<String, String>> userIdTrastMap,
+                                           List<MstEquipment> mstEquipmentList,
+                                           List<MstEquipmentClass> mstEquipmentClassList,
+                                           List<MstDialyzer> mstDialyzerList,
+                                           List<String> equipToCondClassCdList,
+                                           List<Integer> needleList) {
                         OrdChecklist ordChecklist = new OrdChecklist();
                         // facility_cd
                         ordChecklist.setFacilityCd(r.getField("facility_cd"));
@@ -1388,9 +1563,28 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                         } else {
                             ordChecklist.setRstChecklistInfo(null);
                         }
-                        /**
-                         * reg_staff_info
-                         */
+        applyOrdChecklistRegStaffInfo(ordChecklist, r, userIdTrastMap);
+        applyOrdChecklistDates(ordChecklist, r);
+        String[] ordChecklistArray = ordChecklist.toString().split(",");
+        if (ordChecklistArray.length > 0) {
+            int staffInfo = ordChecklistArray.length - 1;
+            int checklistInfo = ordChecklistArray.length - 2;
+            if (ordChecklistArray[checklistInfo].contains("|")) {
+                ordChecklistArray[checklistInfo] = ordChecklistArray[checklistInfo].replace("|", ",");
+            }
+            if (ordChecklistArray[staffInfo].contains("|")) {
+                ordChecklistArray[staffInfo] = ordChecklistArray[staffInfo].replace("|", ",");
+            }
+        }
+        resultDataList.add(ordChecklistArray);
+    }
+
+    /**
+     * ord_checklistのreg_staff_infoを外部キー置換する
+     */
+    private void applyOrdChecklistRegStaffInfo(OrdChecklist ordChecklist,
+                                               NamedCsvRecord r,
+                                               Map<String, Map<String, String>> userIdTrastMap) {
                         String regStaffInfoStr = r.getField("reg_staff_info");
                         if (!ObjectUtils.isEmpty(regStaffInfoStr)) {
                             JSONObject regStaffInfoStrJson = new JSONObject(regStaffInfoStr);
@@ -1415,14 +1609,19 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                         } else {
                             ordChecklist.setRegStaffInfo(null);
                         }
+    }
                         //occur_date
+    /**
+     * ord_checklistの日付列を設定する
+     */
+    private void applyOrdChecklistDates(OrdChecklist ordChecklist, NamedCsvRecord r) {
                         try {
                             ordChecklist.setOccurDate(ObjectUtils.isEmpty(r.getField("occur_date")) ? null : this.checkDate(r.getField("occur_date")));
                         } catch (ParseException e) {
                             eventLoggerUtil.recordLog(
                                     facilityCd,
                                     eventLoggerUtil.getEventLogMessage(
-                                            "processOrdChecklist(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                                            "processOrdChecklist(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(e),
                                             facilityCd,
                                             e.getClass().getName() + ".processOrdChecklist()"),
                                     LogLevel.ERROR);
@@ -1434,7 +1633,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                             eventLoggerUtil.recordLog(
                                     facilityCd,
                                     eventLoggerUtil.getEventLogMessage(
-                                            "processOrdChecklist(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                                            "processOrdChecklist(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(e),
                                             facilityCd,
                                             e.getClass().getName() + ".processOrdChecklist()"),
                                     LogLevel.ERROR);
@@ -1446,31 +1645,17 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                             eventLoggerUtil.recordLog(
                                     facilityCd,
                                     eventLoggerUtil.getEventLogMessage(
-                                            "processOrdChecklist(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                                            "processOrdChecklist(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(e),
                                             facilityCd,
                                             e.getClass().getName() + ".processOrdChecklist()"),
                                     LogLevel.ERROR);
                         }
-                        //文字列配列への変換（ToStringメソッド内でカンマが｜に置換されており、配列への切断後に正しいjsonフォーマットを保証するために、｜をカンマに置換する必要があります）
-                        String[] ordChecklistArray = ordChecklist.toString().split(",");
-                        if (ordChecklistArray.length > 0) {
-                            int staffInfo = ordChecklistArray.length - 1;
-                            int checklistInfo = ordChecklistArray.length - 2;
-                            //データグループの最後の2つの要素、つまり最後の2つのjsonを取ります
-                            if (ordChecklistArray[checklistInfo].contains("|")) {
-                                ordChecklistArray[checklistInfo] = ordChecklistArray[checklistInfo].replace("|", ",");
-                            }
-                            if (ordChecklistArray[staffInfo].contains("|")) {
-                                ordChecklistArray[staffInfo] = ordChecklistArray[staffInfo].replace("|", ",");
-                            }
-                        }
-                        //各行置換後の最終結果データセットの書き込み
-                        resultDataList.add(ordChecklistArray);
-                    });
-                });
-            });
+    }
 
-        } catch (Exception ex) {
+    /**
+     * ord_checklist処理の例外をログ出力する
+     */
+    private void handleProcessOrdChecklistException(Exception ex, String csvfileName) throws IOException {
             System.err.println("実行" + csvfileName + "ファイル中にエラーが発生しました！\n");
             //出力詳細エラー情報
             //ログ
@@ -1485,28 +1670,14 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             eventLoggerUtil.recordLog(
                     facilityCd,
                     eventLoggerUtil.getEventLogMessage(
-                            "processOrdChecklist(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(ex),
+                            "processOrdChecklist(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(ex),
                             facilityCd,
                             ex.getClass().getName() + ".processOrdChecklist()"),
                     LogLevel.ERROR);
             this.errorfile(csvfileName);
         }
-    }
 
-    /**
-     *
-     * @param r
-     * @param ordChecklist
-     * @param finalOrdMain
-     * @param mstEquipmentList
-     * @param mstEquipmentClassList
-     * @param mstDialyzerList
-     * @param equipToCondClassCdList
-     * @param needleList
-     * @param rstChecklistInfo
-     * @return isSkip outter rows.forEach
-     */
-    private boolean processRstChecklistInfo(CsvRow r,OrdChecklist ordChecklist,OrdMain finalOrdMain,List<MstEquipment> mstEquipmentList,List<MstEquipmentClass> mstEquipmentClassList,List<MstDialyzer> mstDialyzerList,
+    private boolean processRstChecklistInfo(NamedCsvRecord r,OrdChecklist ordChecklist,OrdMain finalOrdMain,List<MstEquipment> mstEquipmentList,List<MstEquipmentClass> mstEquipmentClassList,List<MstDialyzer> mstDialyzerList,
                                             List<String> equipToCondClassCdList,List<Integer> needleList,JSONObject rstChecklistInfo) {
         //checklist _cd対応のvalue（1回調べて、固定値を取ればよい）
         MstChecklist ac = checklistCdMap.getOrDefault(facilityCd, null);
@@ -1525,8 +1696,38 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
         }
         // key自身がnullであれば、コレクションから値を取る必要はないと判断し、次の書き込みをスキップしてjson値に戻す
         if (!(ObjectUtils.isEmpty(classCdKey) || "null".equals(classCdKey))) {
-            if ("2".equals(funcClass)) // 「2：医療材料」
-            {
+            if ("2".equals(funcClass)) {
+                if (processRstChecklistInfoFuncClass2(ordChecklist, finalOrdMain, mstEquipmentClassList,
+                        equipToCondClassCdList, needleList, rstChecklistInfo, classCdKey, mstEquipmentOpt, mstEquipment)) {
+                    return true;
+                }
+            } else if ("1".equals(funcClass)) {
+                if (processRstChecklistInfoFuncClass1(ordChecklist, finalOrdMain, mstDialyzerList, rstChecklistInfo,
+                        classCdKey, codeKey, mstEquipmentOpt, mstEquipment)) {
+                    return true;
+                }
+            } else {
+                rstChecklistInfo.put("code", JSONObject.NULL);
+            }
+        }
+        applyRstChecklistInfoItemNumber(ordChecklist, rstChecklistInfo, ac, funcClass);
+        rstChecklistInfo.remove("join_item_number");
+        ordChecklist.setRstChecklistInfo(rstChecklistInfo);
+        return false;
+    }
+
+    /**
+     * rst_checklist_infoのfunc_class=2（医療材料）を処理する
+     */
+    private boolean processRstChecklistInfoFuncClass2(OrdChecklist ordChecklist,
+                                                      OrdMain finalOrdMain,
+                                                      List<MstEquipmentClass> mstEquipmentClassList,
+                                                      List<String> equipToCondClassCdList,
+                                                      List<Integer> needleList,
+                                                      JSONObject rstChecklistInfo,
+                                                      String classCdKey,
+                                                      Optional<MstEquipment> mstEquipmentOpt,
+                                                      MstEquipment mstEquipment) {
                 setNullToJsonObject(rstChecklistInfo, "name", null, "String");
                 rstChecklistInfo.put("equip_type", 0);
                 JSONObject condInfoJson;
@@ -1588,9 +1789,20 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 if (equipFlg) {
                     processFuncClass2(finalOrdMain,mstEquipmentClassList,needleList,rstChecklistInfo,mstEquipment);
                 }
+        return false;
             }
-            else if ("1".equals(funcClass)) //「1：治療条件」处理
-            {
+
+    /**
+     * rst_checklist_infoのfunc_class=1（治療条件）を処理する
+     */
+    private boolean processRstChecklistInfoFuncClass1(OrdChecklist ordChecklist,
+                                                      OrdMain finalOrdMain,
+                                                      List<MstDialyzer> mstDialyzerList,
+                                                      JSONObject rstChecklistInfo,
+                                                      String classCdKey,
+                                                      String codeKey,
+                                                      Optional<MstEquipment> mstEquipmentOpt,
+                                                      MstEquipment mstEquipment) {
                 if ("5".equals(classCdKey)) { // ダイアライザ
                     rstChecklistInfo.put("class_cd", Integer.parseInt(classCdKey));
                     rstChecklistInfo.put("amount", "1");
@@ -1644,11 +1856,16 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     // 「1：治療条件」处理
                     processFuncClass1(finalOrdMain,rstChecklistInfo,mstEquipment);
                 }
+        return false;
             }
-            else {
-                rstChecklistInfo.put("code", JSONObject.NULL);
-            }
-        }
+
+    /**
+     * rst_checklist_infoのitem_numberをマスタ設定から取得する
+     */
+    private void applyRstChecklistInfoItemNumber(OrdChecklist ordChecklist,
+                                                 JSONObject rstChecklistInfo,
+                                                 MstChecklist ac,
+                                                 String funcClass) {
         // 治療条件の場合、医材転換を発生するかもしれないので、item_numberがマスタから取得する
         if ("1".equals(funcClass) && rstChecklistInfo.get("join_item_number").toString().contains(",")) {
             int classCd = rstChecklistInfo.optInt("class_cd");
@@ -1671,10 +1888,6 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 }
             });
         }
-        rstChecklistInfo.remove("join_item_number");
-        //置換後のjson列をOrdChecklist DTOに戻す
-        ordChecklist.setRstChecklistInfo(rstChecklistInfo);
-        return false;
     }
 
     private String getNeedleClassCdKey(String classCdKey,boolean needleConvertFlg,JSONObject condInfoJson,JSONObject needleJson,List<String> equipToCondClassCdList,MstEquipment mstEquipment){
@@ -1792,13 +2005,29 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
      * 取得されたrst _checklist_infoはjsonタイプであり、外部キーを置換する必要がある
      * 従って、1つずつ取り出してコレクションに入れる必要があります（重複クエリDBを回避）
      */
-    private ResultOfMstCdToMstDto mstCdToMstDto(List<CsvRow> rowList,Map<String, Map<String, String>> userIdTrastMap) {
+    private ResultOfMstCdToMstDto mstCdToMstDto(List<NamedCsvRecord> rowList,Map<String, Map<String, String>> userIdTrastMap) {
         ResultOfMstCdToMstDto resultOfMstCdToMstDto = new ResultOfMstCdToMstDto();
         //setデデューティ機能を利用する
         Set<String> setCode = new HashSet<>();
         Set<String> setClassCode = new HashSet<>();
         Set<String> setDialyzerCode = new HashSet<>();
         Set<String> setRegStaffCd = new HashSet<>();
+        collectMstCdToMstDtoKeys(rowList, setCode, setClassCode, setDialyzerCode, setRegStaffCd);
+        resultOfMstCdToMstDto.setMstEquipmentList(loadMstEquipmentListByFnCodes(setCode));
+        resultOfMstCdToMstDto.setMstEquipmentClassList(loadMstEquipmentClassListByFnCodes(setClassCode));
+        resultOfMstCdToMstDto.setMstDialyzerList(loadMstDialyzerListByFnCodes(setDialyzerCode));
+        loadMstCdToMstDtoUserIdTrastMap(setRegStaffCd, userIdTrastMap);
+        return resultOfMstCdToMstDto;
+    }
+
+    /**
+     * mstCdToMstDto用の外部キーコード集合をCSV行から収集する
+     */
+    private void collectMstCdToMstDtoKeys(List<NamedCsvRecord> rowList,
+                                          Set<String> setCode,
+                                          Set<String> setClassCode,
+                                          Set<String> setDialyzerCode,
+                                          Set<String> setRegStaffCd) {
         rowList.forEach(r -> {
             String funcClass = r.getField("func_class");
             // 医療材料
@@ -1833,12 +2062,12 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 setRegStaffCd.add(regStaffCdValue);
             }
         });
+    }
 
-        /**
-         * 重複除外されたセット集合条件に基づいて対応する外部キー値を検索し、外部キーキャッシュ集合を入れ、sqlはunion allでクエリする
-         * equipment_cd（ソースはmst _ equipmentとmst _ dialyzerである可能性があり、まずmst _ equipment中性子クエリに行き、見つからなければmst _ dialyzer検索に行き、どちらも検索できなければnullを割り当て、
-         * mst _equipmentは、mst _dialyzerで検索）
-         */
+    /**
+     * fn_equipment_cd集合からmst_equipment一覧を読み込む
+     */
+    private List<MstEquipment> loadMstEquipmentListByFnCodes(Set<String> setCode) {
         StringBuilder codeSql = new StringBuilder(EMPTY);
         Iterator<String> equipmentIterator = setCode.iterator();
         String DELIMITER_SEMICOLON = ";";
@@ -1862,23 +2091,19 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             equipmentParams.add(facilityCd);
             equipmentParams.add(text);
         }
-        List<MstEquipment> mstEquipmentList = null;
         if (!ObjectUtils.isEmpty(codeSql.toString())) {
-            mstEquipmentList = namedParameterJdbcTemplateConvert.getJdbcOperations().query(codeSql.toString(), equipmentParams.toArray(), new BeanPropertyRowMapper<>(MstEquipment.class));
-        } else {
-            mstEquipmentList = new ArrayList<>();
+            return namedParameterJdbcTemplateConvert.getJdbcOperations().query(codeSql.toString(), equipmentParams.toArray(), new BeanPropertyRowMapper<>(MstEquipment.class));
         }
-        resultOfMstCdToMstDto.setMstEquipmentList(mstEquipmentList);
+        return new ArrayList<>();
+    }
 
-        /**
-         * 重複除外されたセット集合条件に基づいて対応する外部キー値を検索し、外部キーキャッシュ集合を入れ、sqlはunion allでクエリする
-         */
-        /**
-         * equipment_cd（ソースはmst _ equipmentとmst _ dialyzerである可能性があり、まずmst _ equipment中性子クエリに行き、見つからなければmst _ dialyzer検索に行き、どちらも検索できなければnullを割り当て、
-         * mst _equipmentは、mst _dialyzerで検索）
-         */
+    /**
+     * fn_class_cd集合からmst_equipment_class一覧を読み込む
+     */
+    private List<MstEquipmentClass> loadMstEquipmentClassListByFnCodes(Set<String> setClassCode) {
         StringBuilder classCodeSql = new StringBuilder(EMPTY);
         Iterator<String> equipmentClassIterator = setClassCode.iterator();
+        String DELIMITER_SEMICOLON = ";";
         List<Object> equipmentClassParams = new ArrayList<>();
         while (equipmentClassIterator.hasNext()) {
             String text = equipmentClassIterator.next();
@@ -1896,17 +2121,19 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             equipmentClassParams.add(facilityCd);
             equipmentClassParams.add(text);
         }
-        List<MstEquipmentClass> mstEquipmentClassList = null;
         if (!ObjectUtils.isEmpty(classCodeSql.toString())) {
-            mstEquipmentClassList = namedParameterJdbcTemplateConvert.getJdbcOperations().query(classCodeSql.toString(), equipmentClassParams.toArray(), new BeanPropertyRowMapper<>(MstEquipmentClass.class));
-        } else {
-            mstEquipmentClassList = new ArrayList<>();
+            return namedParameterJdbcTemplateConvert.getJdbcOperations().query(classCodeSql.toString(), equipmentClassParams.toArray(), new BeanPropertyRowMapper<>(MstEquipmentClass.class));
         }
-        resultOfMstCdToMstDto.setMstEquipmentClassList(mstEquipmentClassList);
+        return new ArrayList<>();
+    }
 
-        //mst_dialyzer検索
+    /**
+     * fn_dialyzer_cd集合からmst_dialyzer一覧を読み込む
+     */
+    private List<MstDialyzer> loadMstDialyzerListByFnCodes(Set<String> setDialyzerCode) {
         StringBuilder codeSqlDialyzer = new StringBuilder(EMPTY);
         Iterator<String> dialyzerIterator = setDialyzerCode.iterator();
+        String DELIMITER_SEMICOLON = ";";
         List<Object> dialyzerParams = new ArrayList<>();
         while (dialyzerIterator.hasNext()) {
             String text = dialyzerIterator.next();
@@ -1925,19 +2152,20 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             dialyzerParams.add(facilityCd);
             dialyzerParams.add(text);
         }
-        List<MstDialyzer> mstDialyzerList = null;
         if (!ObjectUtils.isEmpty(codeSqlDialyzer.toString())) {
-            mstDialyzerList = namedParameterJdbcTemplateConvert.getJdbcOperations().query(codeSqlDialyzer.toString(), dialyzerParams.toArray(), new BeanPropertyRowMapper<>(MstDialyzer.class));
-        } else {
-            mstDialyzerList = new ArrayList<>();
+            return namedParameterJdbcTemplateConvert.getJdbcOperations().query(codeSqlDialyzer.toString(), dialyzerParams.toArray(), new BeanPropertyRowMapper<>(MstDialyzer.class));
         }
-        resultOfMstCdToMstDto.setMstDialyzerList(mstDialyzerList);
+        return new ArrayList<>();
+    }
 
-        /*
-         * user_id
-         */
+    /**
+     * fn_staff_cd集合からuserIdTrastMapを読み込む
+     */
+    private void loadMstCdToMstDtoUserIdTrastMap(Set<String> setRegStaffCd,
+                                                 Map<String, Map<String, String>> userIdTrastMap) {
         StringBuilder userIdSql = new StringBuilder(EMPTY);
         Iterator<String> userIdIterator = setRegStaffCd.iterator();
+        String DELIMITER_SEMICOLON = ";";
         List<Object> userIdParams = new ArrayList<>();
         while (userIdIterator.hasNext()) {
             String text = userIdIterator.next();
@@ -1968,14 +2196,13 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                             "upDate", String.valueOf(user.getUpDate()),
                             "regStaffName", user.getUserLastName() + user.getUserFirstName())));
         }
-        return resultOfMstCdToMstDto;
     }
 
     private void processOrdTreatCondition(Collection<String[]> resultDataList,
-                                          List<CsvRow> rowList) throws IOException {
+                                          List<NamedCsvRecord> rowList) throws IOException {
         String csvfileName = globalContext.fileName;
         //convertテーブルの最大番号を取る
-        globalContext.seq = 0;
+        globalContext.seq=0;
         try {
             //重複クエリDBの役割を比較するためのMapの宣言
             Map<String, String> machineNoTrastMap_otc = new HashMap<>();
@@ -1985,11 +2212,19 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 //最初の番号を削除し、最初のデータ、以降のデータを切り取る
                 resultDataList.add(ordTreatConditionListColumnNames);
             }
-            /**
-             * グループフィルタリング重複する外部キー条件をフィルタリングした後、キャッシュMapに外部キー値をクエリーします
-             */
-            //machine_no group
-            Map<Object, List<CsvRow>> machine_no_group = rowList.stream()
+            loadOrdTreatConditionMachineNoMap(rowList, machineNoTrastMap_otc);
+            loadOrdTreatConditionOrdNoMap(rowList, ordNoTrastMap_otc);
+            appendOrdTreatConditionRows(resultDataList, rowList, machineNoTrastMap_otc, ordNoTrastMap_otc);
+        } catch (Exception ex) {
+            handleProcessOrdTreatConditionException(ex, csvfileName);
+        }
+    }
+
+    /**
+     * machine_no外部キーの変換Mapを読み込む
+     */
+    private void loadOrdTreatConditionMachineNoMap(List<NamedCsvRecord> rowList, Map<String, String> machineNoTrastMap_otc) {
+            Map<Object, List<NamedCsvRecord>> machine_no_group = rowList.stream()
                     .filter(f -> !ObjectUtils.isEmpty(f.getField("machine_no")))
                     .collect(Collectors.groupingBy(r -> {
                         return r.getField("machine_no");
@@ -2009,9 +2244,13 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     machineNoTrastMap_otc.put(mac.toString(), null);
                 }
             });
-
+    }
             //ord_no group
-            Map<Object, List<CsvRow>> ord_no_group = rowList.stream()
+    /**
+     * ord_no外部キーの変換Mapを読み込む
+     */
+    private void loadOrdTreatConditionOrdNoMap(List<NamedCsvRecord> rowList, Map<String, String> ordNoTrastMap_otc) {
+            Map<Object, List<NamedCsvRecord>> ord_no_group = rowList.stream()
                     .filter(f -> !ObjectUtils.isEmpty(f.getField("ord_no")))
                     .collect(Collectors.groupingBy(r -> {
                         return r.getField("ord_no");
@@ -2031,10 +2270,26 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     ordNoTrastMap_otc.put(ord.toString(), null);
                 }
             });
-            /**
-             * CSVの再ロード
-             */
-            rowList.forEach(r -> {
+    }
+    /**
+     * CSV各行をOrdTreatConditionとしてresultDataListに追加する
+     */
+    private void appendOrdTreatConditionRows(Collection<String[]> resultDataList,
+                                             List<NamedCsvRecord> rowList,
+                                             Map<String, String> machineNoTrastMap_otc,
+                                             Map<String, String> ordNoTrastMap_otc) {
+        rowList.forEach(r -> {
+            OrdTreatCondition ordTreatCondition = buildOrdTreatConditionFromCsvRow(r, machineNoTrastMap_otc, ordNoTrastMap_otc);
+            resultDataList.add(convertOrdTreatConditionToResultArray(ordTreatCondition));
+        });
+    }
+
+    /**
+     * ord_treat_conditionのCSV1行からOrdTreatConditionを構築する
+     */
+    private OrdTreatCondition buildOrdTreatConditionFromCsvRow(NamedCsvRecord r,
+                                                               Map<String, String> machineNoTrastMap_otc,
+                                                               Map<String, String> ordNoTrastMap_otc) {
                 OrdTreatCondition ordTreatCondition = new OrdTreatCondition();
                 //facility_cd
                 ordTreatCondition.setFacilityCd(ObjectUtils.isEmpty(r.getField("facility_cd")) ? null : r.getField("facility_cd"));
@@ -2045,7 +2300,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     eventLoggerUtil.recordLog(
                             facilityCd,
                             eventLoggerUtil.getEventLogMessage(
-                                    "processOrdTreatCondition(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                                    "processOrdTreatCondition(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(e),
                                     facilityCd,
                                     e.getClass().getName() + ".processOrdTreatCondition()"),
                             LogLevel.ERROR);
@@ -2057,7 +2312,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     eventLoggerUtil.recordLog(
                             facilityCd,
                             eventLoggerUtil.getEventLogMessage(
-                                    "processOrdTreatCondition(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                                    "processOrdTreatCondition(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(e),
                                     facilityCd,
                                     e.getClass().getName() + ".processOrdTreatCondition()"),
                             LogLevel.ERROR);
@@ -2075,7 +2330,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     eventLoggerUtil.recordLog(
                             facilityCd,
                             eventLoggerUtil.getEventLogMessage(
-                                    "processOrdTreatCondition(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                                    "processOrdTreatCondition(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(e),
                                     facilityCd,
                                     e.getClass().getName() + ".processOrdTreatCondition()"),
                             LogLevel.ERROR);
@@ -2110,7 +2365,10 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 } else {
                     ordTreatCondition.setTreatCondition(null);
                 }
+        return ordTreatCondition;
+    }
                 //文字列配列への変換（ToStringメソッド内でカンマが｜に置換されており、配列への切断後に正しいjsonフォーマットを保証するために、｜をカンマに置換する必要があります）
+    private String[] convertOrdTreatConditionToResultArray(OrdTreatCondition ordTreatCondition) {
                 String[] ordTreatConditionArray = ordTreatCondition.toString().split(",");
                 if (ordTreatConditionArray.length > 0) {
                     int treatConditionJson = ordTreatConditionArray.length - 1;
@@ -2120,9 +2378,13 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     }
                 }
                 //各行置換後の最終結果データセットの書き込み
-                resultDataList.add(ordTreatConditionArray);
-            });
-        } catch (Exception ex) {
+        return ordTreatConditionArray;
+    }
+
+    /**
+     * ord_treat_condition処理の例外をログ出力する
+     */
+    private void handleProcessOrdTreatConditionException(Exception ex, String csvfileName) throws IOException {
             System.err.println("実行" + csvfileName + "ファイル中にエラーが発生しました！\n");
             //出力詳細エラー情報
             //ログ
@@ -2138,20 +2400,19 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             eventLoggerUtil.recordLog(
                     facilityCd,
                     eventLoggerUtil.getEventLogMessage(
-                            "processOrdTreatCondition(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(ex),
+                            "processOrdTreatCondition(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(ex),
                             facilityCd,
                             ex.getClass().getName() + ".processOrdTreatCondition()"),
                     LogLevel.ERROR);
             this.errorfile(csvfileName);
-        }
     }
 
 
     private void processOrdCoopNo(Collection<String[]> resultDataList,
-                                  List<CsvRow> rowList) throws IOException {
+                                  List<NamedCsvRecord> rowList) throws IOException {
         String csvfileName = globalContext.fileName;
         //convertテーブルの最大番号を取る
-        globalContext.seq = 0;
+        globalContext.seq=0;
         try {
             //重複クエリDBの役割を比較するためのMapの宣言
             Map<String, String> patIdMap = new HashMap<>();
@@ -2165,11 +2426,33 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 // 取得テーブルの列を取得
                 resultDataList.add(ordCoopNoListColumnNames);
             }
+            loadOrdCoopNoPatIdCache(rowList, patIdMap, hospPatIdMap);
+            loadOrdCoopNoOrdNoCache(rowList, ordNoMap, userIdMap);
             /**
-             * グループフィルタリング重複する外部キー条件をフィルタリングした後、キャッシュMapに外部キー値をクエリーします
+             * CSVを巡回する行、データのパッケージング、CSVファイルの再編成
              */
-            //pat_id groupとhosp _pat_idの出所は一致しており、いずれも古いシステムの患者idであるため、同じsql文として検索された
-            Map<Object, List<CsvRow>> pat_id_group = rowList.stream()
+            rowList.forEach(r -> {
+                OrdCoopNo ordCoopNo = buildOrdCoopNoFromCsvRow(r, patIdMap, hospPatIdMap, ordNoMap, userIdMap);
+                //DTOトランス文字列配列
+                String[] ordCoopNoArray = ordCoopNo.toString().split(",");
+
+                //各行置換後の最終結果データセットの書き込み
+                resultDataList.add(ordCoopNoArray);
+            });
+        } catch (Exception exception) {
+            handleProcessOrdCoopNoException(exception, csvfileName);
+        }
+
+    }
+
+    /**
+     * グループフィルタリング重複する外部キー条件をフィルタリングした後、キャッシュMapに外部キー値をクエリーします
+     * pat_id groupとhosp _pat_idの出所は一致しており、いずれも古いシステムの患者idであるため、同じsql文として検索された
+     */
+    private void loadOrdCoopNoPatIdCache(List<NamedCsvRecord> rowList,
+                                         Map<String, String> patIdMap,
+                                         Map<String, String> hospPatIdMap) {
+            Map<Object, List<NamedCsvRecord>> pat_id_group = rowList.stream()
                     .filter(f -> !ObjectUtils.isEmpty(f.getField("pat_id")))
                     .collect(Collectors.groupingBy(r -> {
                         return r.getField("pat_id");
@@ -2190,15 +2473,24 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     hospPatIdMap.put(String.valueOf(pk), null);
                 }
             });
+    }
 
-            //ord_no group
-            Map<Object, List<CsvRow>> ord_no_group = rowList.stream()
+    private void loadOrdCoopNoOrdNoCache(List<NamedCsvRecord> rowList,
+                                         Map<String, String> ordNoMap,
+                                         Map<String, String> userIdMap) {
+        //ord_no group
+            Map<Object, List<NamedCsvRecord>> ord_no_group = rowList.stream()
                     .filter(f -> !ObjectUtils.isEmpty(f.getField("ord_no")))
                     .collect(Collectors.groupingBy(r -> {
                         return r.getField("ord_no") + "&" + r.getField("coop_cd");
                     }));
             Set<Object> ord_no_key = ord_no_group.keySet();
-            ord_no_key.stream().forEach(onk -> {
+        ord_no_key.stream().forEach(onk -> putOrdCoopNoOrdNoCacheEntry(onk, ordNoMap, userIdMap));
+    }
+
+    private void putOrdCoopNoOrdNoCacheEntry(Object onk,
+                                             Map<String, String> ordNoMap,
+                                             Map<String, String> userIdMap) {
                 if (String.valueOf(onk).contains("&")) {
                     String[] ord_coop = onk.toString().split("&");
                     //add 8321
@@ -2245,11 +2537,13 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     ordNoMap.put(String.valueOf(onk), null);
                     userIdMap.put(String.valueOf(onk), null);
                 }
-            });
-            /**
-             * CSVを巡回する行、データのパッケージング、CSVファイルの再編成
-             */
-            rowList.forEach(r -> {
+    }
+
+    private OrdCoopNo buildOrdCoopNoFromCsvRow(NamedCsvRecord r,
+                                               Map<String, String> patIdMap,
+                                               Map<String, String> hospPatIdMap,
+                                               Map<String, String> ordNoMap,
+                                               Map<String, String> userIdMap) {
                 OrdCoopNo ordCoopNo = new OrdCoopNo();
                 //facility_cd
                 ordCoopNo.setFacilityCd(ObjectUtils.isEmpty(r.getField("facility_cd")) || "null".equals(r.getField("facility_cd")) ? "" : r.getField("facility_cd"));
@@ -2309,6 +2603,17 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 //is_disp
                 String is_disp = ObjectUtils.isEmpty(r.getField("is_disp")) || "null".equals(r.getField("is_disp")) ? "" : r.getField("is_disp");
                 ordCoopNo.setIsDisp(is_disp);
+        applyOrdCoopNoRegDate(ordCoopNo, r);
+        applyOrdCoopNoUpDate(ordCoopNo, r);
+        //add 11806 ord_coop_no.coop_versionが空欄でコンバートされる hyl  start
+        //coop_version
+        String coop_version = ObjectUtils.isEmpty(r.getField("coop_version")) || "null".equals(r.getField("coop_version")) ? "" : r.getField("coop_version");
+        ordCoopNo.setCoopVersion(coop_version);
+        //add 11806 ord_coop_no.coop_versionが空欄でコンバートされる hyl  end
+        return ordCoopNo;
+    }
+
+    private void applyOrdCoopNoRegDate(OrdCoopNo ordCoopNo, NamedCsvRecord r) {
                 //reg_date
                 try {
                     ordCoopNo.setRegDate(this.checkDate(r.getField("reg_date")));
@@ -2316,11 +2621,14 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     eventLoggerUtil.recordLog(
                             facilityCd,
                             eventLoggerUtil.getEventLogMessage(
-                                    "processOrdCoopNo(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                                    "processOrdCoopNo(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(e),
                                     facilityCd,
                                     e.getClass().getName() + ".processOrdCoopNo()"),
                             LogLevel.ERROR);
                 }
+    }
+
+    private void applyOrdCoopNoUpDate(OrdCoopNo ordCoopNo, NamedCsvRecord r) {
                 //up_date
                 try {
                     ordCoopNo.setUpDate(this.checkDate(r.getField("up_date")));
@@ -2328,23 +2636,14 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     eventLoggerUtil.recordLog(
                             facilityCd,
                             eventLoggerUtil.getEventLogMessage(
-                                    "processOrdCoopNo(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                                    "processOrdCoopNo(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(e),
                                     facilityCd,
                                     e.getClass().getName() + ".processOrdCoopNo()"),
                             LogLevel.ERROR);
                 }
-                //add 11806 ord_coop_no.coop_versionが空欄でコンバートされる hyl  start
-                //coop_version
-                String coop_version = ObjectUtils.isEmpty(r.getField("coop_version")) || "null".equals(r.getField("coop_version")) ? "" : r.getField("coop_version");
-                ordCoopNo.setCoopVersion(coop_version);
-                //add 11806 ord_coop_no.coop_versionが空欄でコンバートされる hyl  end
-                //DTOトランス文字列配列
-                String[] ordCoopNoArray = ordCoopNo.toString().split(",");
+    }
 
-                //各行置換後の最終結果データセットの書き込み
-                resultDataList.add(ordCoopNoArray);
-            });
-        } catch (Exception exception) {
+    private void handleProcessOrdCoopNoException(Exception exception, String csvfileName) {
             System.err.println("実行" + csvfileName + "ファイル中にエラーが発生しました！\n");
             //出力詳細エラー情報
             //ログ
@@ -2355,29 +2654,16 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             eventLoggerUtil.recordLog(
                     facilityCd,
                     eventLoggerUtil.getEventLogMessage(
-                            "processOrdCoopNo(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(exception),
+                            "processOrdCoopNo(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(exception),
                             facilityCd,
                             exception.getClass().getName() + ".processOrdCoopNo()"),
                     LogLevel.ERROR);
-        }
-
     }
 
-    private void processPatUniqueHistory(List<CsvRow> rowList) throws IOException {
+    private void processPatUniqueHistory(List<NamedCsvRecord> rowList) throws IOException {
         String csvfileName = globalContext.fileName;
-        //convertテーブルの最大番号を取る
-        /**
-         * CSVファイルデータを取り出し、外部キー関連データをトラバースし、キャッシュに入れ、その後キャッシュから取り出し、取れなくなったらDBに取り出します
-         * 外部キーを置換したデータをパッケージされたDTOに1本ずつ入れる
-         * 最後に全体データをmongodbに一括挿入する
-         * 次のstepではpat _unique_historyテーブルの直接スキップ
-         */
         try {
-            String Fsql = "select facility_name from mst_facility where facility_cd = ?";
-            if (globalContext.facilityName == null || globalContext.facilityName.isEmpty()) {
-                globalContext.facilityName = namedParameterJdbcTemplateConvert.getJdbcOperations().queryForObject(Fsql, new Object[]{facilityCd}, String.class);
-            }
-            //重複クエリDBの役割を比較するためのMapの宣言
+            loadPatUniqueHistoryFacilityName();
             Map<String, String> patIdHistoryMap = new HashMap<>();
             // mod #10735 djy start
             Map<String, Integer> diseaseCdHistoryMap = new HashMap<>();
@@ -2387,11 +2673,66 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             String date = dateTime.format(formatter);
             List<PatUniqueHistoryEntity> patUniqueHistoryEntityList = new ArrayList<>();
-            rowList.forEach(rl -> {
+            rowList.forEach(rl -> patUniqueHistoryEntityList.add(
+                    buildPatUniqueHistoryEntityFromRow(rl, patIdHistoryMap, diseaseCdHistoryMap, indicatorCdHistoryMap, date)));
+            insertPatUniqueHistoryToMongoWithLatestFlags(patIdHistoryMap, patUniqueHistoryEntityList);
+        } catch (Exception exception) {
+            handleProcessPatUniqueHistoryException(exception);
+        } finally {
+            Path path = Paths.get(csvfileName);
+            Files.deleteIfExists(path);
+        }
+    }
+
+    /**
+     * pat_unique_history処理用の施設名を読み込む
+     */
+    private void loadPatUniqueHistoryFacilityName() {
+        String Fsql = "select facility_name from mst_facility where facility_cd = ?";
+        if (globalContext.facilityName == null || globalContext.facilityName.isEmpty()) {
+            globalContext.facilityName = namedParameterJdbcTemplateConvert.getJdbcOperations().queryForObject(Fsql, new Object[]{facilityCd}, String.class);
+        }
+    }
+
+    /**
+     * pat_unique_historyのCSV1行からEntityを生成する
+     */
+    private PatUniqueHistoryEntity buildPatUniqueHistoryEntityFromRow(NamedCsvRecord rl,
+                                                                      Map<String, String> patIdHistoryMap,
+                                                                      Map<String, Integer> diseaseCdHistoryMap,
+                                                                      Map<String, String> indicatorCdHistoryMap,
+                                                                      String date) {
                 PatUniqueHistoryEntity patUniqueHistoryEntity = new PatUniqueHistoryEntity();
                 //facility_cd
                 patUniqueHistoryEntity.setFacilityCd(rl.getField("facility_cd"));
-                //pat_id
+        applyPatUniqueHistoryPatId(patUniqueHistoryEntity, rl, patIdHistoryMap);
+        patUniqueHistoryEntity.setUpDate(ObjectUtils.isEmpty(rl.getField("up_date")) ? null : rl.getField("up_date").toString());
+        patUniqueHistoryEntity.setRegDate(ObjectUtils.isEmpty(rl.getField("reg_date")) ? null : rl.getField("reg_date").toString());
+        try {
+            patUniqueHistoryEntity.setInsDate(this.checkDate(date));
+        } catch (ParseException e) {
+            eventLoggerUtil.recordLog(
+                    facilityCd,
+                    eventLoggerUtil.getEventLogMessage(
+                            "processOrdCoopNo(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
+                            facilityCd,
+                            e.getClass().getName() + ".processOrdCoopNo()"),
+                    LogLevel.ERROR);
+        }
+        patUniqueHistoryEntity.setIsDel("0");
+        ObjectMapper objectMapper = new ObjectMapper();
+        applyPatUniqueHistoryMedicalHstInfo(patUniqueHistoryEntity, rl, diseaseCdHistoryMap, objectMapper);
+        applyPatUniqueHistoryInOutVisitInfo(patUniqueHistoryEntity, rl, objectMapper);
+        applyPatUniqueHistoryPhysicalInfo(patUniqueHistoryEntity, rl, indicatorCdHistoryMap, objectMapper);
+        return patUniqueHistoryEntity;
+    }
+
+    /**
+     * pat_unique_historyのpat_id外部キーを置換する
+     */
+    private void applyPatUniqueHistoryPatId(PatUniqueHistoryEntity patUniqueHistoryEntity,
+                                            NamedCsvRecord rl,
+                                            Map<String, String> patIdHistoryMap) {
                 String patId = rl.getField("pat_id");
                 if (!ObjectUtils.isEmpty(patId) && !"null".equals(patId)) {
                     if (patIdHistoryMap.containsKey(patId)) {
@@ -2414,28 +2755,15 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 } else {
                     patUniqueHistoryEntity.setPatId(null);
                 }
-                //up_date
-                patUniqueHistoryEntity.setUpDate(ObjectUtils.isEmpty(rl.getField("up_date")) ? null : rl.getField("up_date").toString());
-                //reg_date
-                patUniqueHistoryEntity.setRegDate(ObjectUtils.isEmpty(rl.getField("reg_date")) ? null : rl.getField("reg_date").toString());
-                //ins_data
-                try {
-                    patUniqueHistoryEntity.setInsDate(this.checkDate(date));
-                } catch (ParseException e) {
-                    eventLoggerUtil.recordLog(
-                            facilityCd,
-                            eventLoggerUtil.getEventLogMessage(
-                                    "processOrdCoopNo(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(e),
-                                    facilityCd,
-                                    e.getClass().getName() + ".processOrdCoopNo()"),
-                            LogLevel.ERROR);
-                }
-                //is_del
-                patUniqueHistoryEntity.setIsDel("0");
-                // add #11268 limingyang start
-                ObjectMapper objectMapper = new ObjectMapper();
-                // add #11268 limingyang end
-                //medical_hst_info
+    }
+
+    /**
+     * pat_unique_historyのmedical_hst_infoを外部キー置換する
+     */
+    private void applyPatUniqueHistoryMedicalHstInfo(PatUniqueHistoryEntity patUniqueHistoryEntity,
+                                                     NamedCsvRecord rl,
+                                                     Map<String, Integer> diseaseCdHistoryMap,
+                                                     ObjectMapper objectMapper) {
                 String mhi = ObjectUtils.isEmpty(rl.getField("medical_hst_info")) || "null".equals(rl.getField("medical_hst_info")) ? "" : rl.getField("medical_hst_info");
                 if (!"".equals(mhi)) {
                     JSONArray jsonArray = new JSONArray(mhi);
@@ -2473,7 +2801,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     List<MedicalHstInfo> medicalHstInfo = null;
                     try {
                         medicalHstInfo = objectMapper.readValue(jsonArray.toString(), objectMapper.getTypeFactory().constructCollectionType(List.class, MedicalHstInfo.class));
-                    } catch (IOException e) {
+                    } catch (tools.jackson.core.JacksonException e) {
                         eventLoggerUtil.recordLog(facilityCd,
                                 eventLoggerUtil.getEventLogMessage("「ERROR」" + jsonArray.toString(),
                                         facilityCd, "mongo List<T> convert error"), LogLevel.ERROR);
@@ -2483,9 +2811,15 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 } else {
                     // mod #11268 limingyang start
                     patUniqueHistoryEntity.setMedicalHstInfo(null);
-                    // mod #11268 limingyang end
+        }
                 }
                 //in_out_visit_history_info
+    /**
+     * pat_unique_historyのin_out_visit_history_infoを設定する
+     */
+    private void applyPatUniqueHistoryInOutVisitInfo(PatUniqueHistoryEntity patUniqueHistoryEntity,
+                                                     NamedCsvRecord rl,
+                                                     ObjectMapper objectMapper) {
                 String inout = ObjectUtils.isEmpty(rl.getField("in_out_visit_history_info")) || "null".equals(rl.getField("in_out_visit_history_info")) ? "" : rl.getField("in_out_visit_history_info");
                 if (!"".equals(inout)) {
                     JSONArray js = new JSONArray(inout);
@@ -2498,7 +2832,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     List<InOutVisitHistoryInfo> inOutVisitHistoryInfo = null;
                     try {
                         inOutVisitHistoryInfo = objectMapper.readValue(js.toString(), objectMapper.getTypeFactory().constructCollectionType(List.class, InOutVisitHistoryInfo.class));
-                    } catch (IOException e) {
+                    } catch (tools.jackson.core.JacksonException e) {
                         eventLoggerUtil.recordLog(facilityCd,
                                 eventLoggerUtil.getEventLogMessage("「ERROR」" + js.toString(),
                                         facilityCd, "mongo List<T> convert error"), LogLevel.ERROR);
@@ -2508,9 +2842,16 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 } else {
                     // mod #11268 limingyang start
                     patUniqueHistoryEntity.setInOutVisitHistoryInfo(null);
-                    // mod #11268 limingyang end
+        }
                 }
                 //physical_info
+    /**
+     * pat_unique_historyのphysical_infoを外部キー置換する
+     */
+    private void applyPatUniqueHistoryPhysicalInfo(PatUniqueHistoryEntity patUniqueHistoryEntity,
+                NamedCsvRecord rl,
+                                                   Map<String, String> indicatorCdHistoryMap,
+                                                   ObjectMapper objectMapper) {
                 String pi = ObjectUtils.isEmpty(rl.getField("physical_info")) || "null".equals(rl.getField("physical_info")) ? "" : rl.getField("physical_info");
                 if (!"".equals(pi)) {
                     JSONArray jsonArraypi = new JSONArray(pi);
@@ -2571,7 +2912,7 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     List<PhysicalInfo> physicalInfo = null;
                     try {
                         physicalInfo = objectMapper.readValue(jsonArraypi.toString(), objectMapper.getTypeFactory().constructCollectionType(List.class, PhysicalInfo.class));
-                    } catch (IOException e) {
+                    } catch (tools.jackson.core.JacksonException e) {
                         eventLoggerUtil.recordLog(facilityCd,
                                 eventLoggerUtil.getEventLogMessage("「ERROR」" + jsonArraypi.toString(),
                                         facilityCd, "mongo List<T> convert error"), LogLevel.ERROR);
@@ -2583,10 +2924,13 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     patUniqueHistoryEntity.setPhysicalInfo(null);
                     // mod #11268 limingyang end
                 }
-                patUniqueHistoryEntityList.add(patUniqueHistoryEntity);
-            });
+    }
 
-            // add #10534 pat_main_history, pat_unique_history, pat_personal_main_historyのcollectionにlatest_flagを追加する。 zkm start
+    /**
+     * pat_unique_historyをlatest_flag設定後にMongoDBへ一括挿入する
+     */
+    private void insertPatUniqueHistoryToMongoWithLatestFlags(Map<String, String> patIdHistoryMap,
+                                                              List<PatUniqueHistoryEntity> patUniqueHistoryEntityList) {
             List<String> fnsiPatIds = patIdHistoryMap.values().stream().toList();
             // 指定患者id範囲の履歴データを全て「latest_flag=off」を設定する
             Query query = new Query();
@@ -2616,8 +2960,12 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             // add #10534 pat_main_history, pat_unique_history, pat_personal_main_historyのcollectionにlatest_flagを追加する。 zkm end
             //INSERT mongoDB
             mongoTemplate.insertAll(finalPatUniqueHistoryEntityList);
-        } catch (Exception exception) {
-            //ログ
+    }
+
+    /**
+     * pat_unique_history処理の例外をログ出力する
+     */
+    private void handleProcessPatUniqueHistoryException(Exception exception) {
             EventLogMessage eventLogMessage9 = eventLoggerUtil.getEventLogMessage("pat_unique_history一括mongodb挿入に失敗しました！",
                     facilityCd, "");
             eventLoggerUtil.recordLog(facilityCd, eventLogMessage9, LogLevel.ERROR);
@@ -2625,24 +2973,32 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             eventLoggerUtil.recordLog(
                     facilityCd,
                     eventLoggerUtil.getEventLogMessage(
-                            "processOrdCoopNo(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(exception),
+                            "processOrdCoopNo(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(exception),
                             facilityCd,
                             exception.getClass().getName() + ".processOrdCoopNo()"),
                     LogLevel.ERROR);
-        } finally {
-            //delete CSV file
-            Path path = Paths.get(csvfileName); //ソースファイル
-            //CSVファイルの削除
-            Files.deleteIfExists(path);
-        }
-
     }
 
     private void processPatExamMain(Collection<String[]> resultDataList,
-                                    List<CsvRow> rowList) throws IOException {
+                                    List<NamedCsvRecord> rowList) throws IOException {
         String csvfileName = globalContext.fileName;
         try {
-            //resultDataListが空の場合は、Headセクションを先に挿入する必要があります
+            initPatExamMainHeaderIfEmpty(resultDataList, rowList);
+            Map<String, Map<String, String>> examSetMap = new HashMap<>();
+            Map<String, Map<String, String>> examItemMap = new HashMap<>();
+            Map<String, Long> userIdMap = new HashMap<>();
+            Map<String, String> patPersonalMainMap = new HashMap<>();
+            mstToCacheMapForPatExamMain(rowList, examSetMap, examItemMap, userIdMap, patPersonalMainMap);
+            appendPatExamMainRows(resultDataList, rowList, examSetMap, examItemMap, userIdMap, patPersonalMainMap);
+        } catch (Exception ex) {
+            handleProcessPatExamMainException(ex, csvfileName);
+        }
+    }
+
+    /**
+     * resultDataListが空の場合にpat_exam_mainヘッダ行を追加する
+     */
+    private void initPatExamMainHeaderIfEmpty(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList) {
             if (resultDataList.isEmpty()) {
                 if (!rowList.isEmpty() && !ObjectUtils.isEmpty(rowList.get(0).getField("exam_status"))) {
                     if("0".equals(rowList.get(0).getField("exam_status"))) {
@@ -2658,19 +3014,30 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             } else {
                 isPatExamMainSch = null;
             }
-
+    }
             /*
              * 取得されたrst _checklist_infoはjsonタイプであり、外部キーを置換する必要がある
              * 従って、1つずつ取り出してコレクションに入れる必要があります（重複クエリDBを回避）
              */
-            Map<String, Map<String, String>> examSetMap = new HashMap<>();
-            Map<String, Map<String, String>> examItemMap = new HashMap<>();
-            Map<String, Long> userIdMap = new HashMap<>();
-            Map<String, String> patPersonalMainMap = new HashMap<>();
-            mstToCacheMapForPatExamMain(rowList,examSetMap,examItemMap,userIdMap,patPersonalMainMap);
-
-            // csvの再構築
+    private void appendPatExamMainRows(Collection<String[]> resultDataList,
+                                       List<NamedCsvRecord> rowList,
+                                       Map<String, Map<String, String>> examSetMap,
+                                       Map<String, Map<String, String>> examItemMap,
+                                       Map<String, Long> userIdMap,
+                                       Map<String, String> patPersonalMainMap) {
             rowList.forEach(r -> {
+            PatExamMain main = buildPatExamMainFromCsvRow(r, userIdMap, patPersonalMainMap);
+            applyPatExamMainJsonInfoFields(main, r, examSetMap, examItemMap);
+            resultDataList.add(convertPatExamMainToResultArray(main));
+        });
+    }
+
+    /**
+     * pat_exam_mainのCSV1行からPatExamMain基本フィールドを構築する
+     */
+    private PatExamMain buildPatExamMainFromCsvRow(NamedCsvRecord r,
+                                                   Map<String, Long> userIdMap,
+                                                   Map<String, String> patPersonalMainMap) {
                 PatExamMain main = new PatExamMain();
                 main.setFacility_cd(r.getField("facility_cd"));
                 if (patPersonalMainMap.containsKey(r.getField("pat_id")) && !ObjectUtils.isEmpty(patPersonalMainMap.get(r.getField("pat_id")))) {
@@ -2714,7 +3081,16 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 } catch (ParseException e) {
                     throw new RuntimeException(e);
                 }
-                // order_exam_set_info
+        return main;
+    }
+
+    /**
+     * pat_exam_mainのJSON情報列を外部キー置換する
+     */
+    private void applyPatExamMainJsonInfoFields(PatExamMain main,
+                NamedCsvRecord r,
+                                                Map<String, Map<String, String>> examSetMap,
+                                                Map<String, Map<String, String>> examItemMap) {
                 String orderExamSetInfoStr = r.getField("order_exam_set_info");
                 if (!ObjectUtils.isEmpty(orderExamSetInfoStr) && !"null".equals(orderExamSetInfoStr)) {
                     JSONArray orderExamSetInfo = new JSONArray(orderExamSetInfoStr);
@@ -2784,8 +3160,12 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                 } else {
                     main.setOrder_label_info(null);
                 }
+    }
 
-                //文字列配列への変換（ToStringメソッド内でカンマが｜に置換されており、配列への切断後に正しいjsonフォーマットを保証するために、｜をカンマに置換する必要があります）
+    /**
+     * PatExamMainを文字列配列に変換する
+     */
+    private String[] convertPatExamMainToResultArray(PatExamMain main) {
                 String[] mainArray;
                 if (isPatExamMainSch) {
                     mainArray = main.schToString().split(",");
@@ -2810,9 +3190,13 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     }
                 }
                 //各行置換後の最終結果データセットの書き込み
-                resultDataList.add(mainArray);
-            });
-        } catch (Exception ex) {
+        return mainArray;
+    }
+
+    /**
+     * pat_exam_main処理の例外をログ出力する
+     */
+    private void handleProcessPatExamMainException(Exception ex, String csvfileName) throws IOException {
             System.err.println("実行" + csvfileName + "ファイル中にエラーが発生しました！\n");
             //出力詳細エラー情報
             //ログ
@@ -2827,15 +3211,14 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
             eventLoggerUtil.recordLog(
                     facilityCd,
                     eventLoggerUtil.getEventLogMessage(
-                            "processPatExamMain(Collection<String[]> resultDataList, List<CsvRow> rowList)：" + EventLoggerUtil.excetionStackTraceToString(ex),
+                            "processPatExamMain(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList)："  + EventLoggerUtil.excetionStackTraceToString(ex),
                             facilityCd,
                             ex.getClass().getName() + ".processPatExamMain()"),
                     LogLevel.ERROR);
             this.errorfile(csvfileName);
-        }
     }
 
-    private void mstToCacheMapForPatExamMain(List<CsvRow> rowList,
+    private void mstToCacheMapForPatExamMain(List<NamedCsvRecord> rowList,
                                              Map<String, Map<String, String>> examSetMap,
                                              Map<String, Map<String, String>> examItemMap,
                                              Map<String, Long> userIdMap,
@@ -2984,12 +3367,15 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
      * Writerによって実行される処理
      */
     @Override
-    public void write(final List<? extends T> items) throws Exception {
+    public void write(final Chunk<? extends T> chunk) throws Exception {
+        List<? extends T> items = chunk.getItems();
         //グローバル変数を空にする
         globalContext.befKeyList = "";
         //最終結果データセット
         Collection<String[]> resultDataList = new ArrayList<String[]>(Collections.EMPTY_LIST);
-        String tableName = "";
+        if (!globalContext.fileName.contains(".csv") || items.isEmpty()) {
+            return;
+        }
         String convertJdbcUrl = environment.getProperty("datasource." + ApplicationConst.DbType.CONVERT + ".jdbc-url");
         String convertUserName = environment.getProperty("datasource." + ApplicationConst.DbType.CONVERT + ".username");
         String to_Db_table_prefix = environment.getProperty("datasource." + ApplicationConst.DbType.CONVERT + ".table_prefix");
@@ -2997,100 +3383,99 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
         String fromHostIp = convertJdbcUrl.split("/")[2].split(":")[0];
         String fromDbUser = convertUserName;
         String fromDbName = convertJdbcUrl.split("/")[3];
-        //ファイルがcsvであるかどうかを確認し、内容が空ではない（現在のcsv差分は追加部分と初回導入のみで、変更は含まれていない）
-        if (globalContext.fileName.contains(".csv") && !items.isEmpty()) {
-            // 登録元csv接続情報を取得
-            String csvfileName = globalContext.fileName;
-            CsvReader csvReader = new CsvReader();
-            File file = new File(csvfileName);
-            csvReader.setContainsHeader(true);
-            //csvファイルを読み込む
-            CsvContainer csv = csvReader.read(file, StandardCharsets.UTF_8);
 
+            String csvfileName = globalContext.fileName;
+        List<NamedCsvRecord> rowList = readCsvRowsForWrite(csvfileName);
+        String tableName = dispatchCsvTableProcessing(resultDataList, rowList);
+        if (tableName == null) {
+            return;
+        }
+        if (!globalContext.fileName.contains("pat_unique_history")) {
+            rewriteCsvAndExecuteCopy(resultDataList, tableName, csvfileName, fromHostIp, fromDbUser, fromDbName, to_Db_table_prefix);
+        }
+    }
+
+    /**
+     * write用にCSV行リストを読み込む
+     */
+    private List<NamedCsvRecord> readCsvRowsForWrite(String csvfileName) throws IOException {
+            File file = new File(csvfileName);
+            //csvファイルを読み込む
+            List<NamedCsvRecord> rowList;
+            try (CsvReader<NamedCsvRecord> csvReader = CsvReader.builder().ofNamedCsvRecord(file.toPath(), StandardCharsets.UTF_8)) {
+                //csvのすべての行を取得
+                rowList = csvReader.stream().collect(Collectors.toList());
+            }
             // #9132 Add by 肖　Start　
             String mstMachineSql = "SELECT machine_type_cd, machine_serial, com_format_cd, fn_device_no, fn_class_cd FROM mst_machine WHERE facility_cd = ?";
-            if (globalContext.MstMachineList == null || globalContext.MstMachineList.isEmpty()) {
+            if(globalContext.MstMachineList.isEmpty()){
                 globalContext.MstMachineList = namedParameterJdbcTemplateConvert.getJdbcOperations().query(mstMachineSql, new Object[]{facilityCd}, new BeanPropertyRowMapper<>(MstMachine.class));
             }
             // #9132 Add by 肖　End　
             //csvのすべての行を取得
-            List<CsvRow> rowList = csv != null ? csv.getRows() : new ArrayList<>();
+        return rowList;
+    }
+    /**
+     * ファイル名に応じてテーブル別処理を振り分ける（nullは早期return）
+     */
+    private String dispatchCsvTableProcessing(Collection<String[]> resultDataList, List<NamedCsvRecord> rowList) throws Exception {
             if (globalContext.fileName.contains("mnt_motion_record")) {
                 globalContext.seqKey = "motion_record_no";
-                tableName = "mnt_motion_record";
                 processMntMotionRecord(resultDataList, rowList);
-            } else if (globalContext.fileName.contains("mst_favorite_facility")) {//#12173  mst_favorite_facility
+            return "mnt_motion_record";
+        }
+        if (globalContext.fileName.contains("mst_favorite_facility")) {
                 globalContext.seqKey = "master_cd";
-                tableName = "mst_favorite_facility";
                 processMstFavoriteFacility(resultDataList, rowList);
                 if (resultDataList.size() <= 1) {
-                    return;
+                return null;
                 }
-            } else if (globalContext.fileName.contains("mni_monitor")) { //mni_monitorテーブルの処理
+            return "mst_favorite_facility";
+        }
+        if (globalContext.fileName.contains("mni_monitor")) {
                 globalContext.seqKey = "bio_moni_ctl_no";
-                tableName = "mni_monitor";
                 processMniMonitor(resultDataList, rowList);
-            } else if (globalContext.fileName.contains("ord_checklist")) { //ord_checklistテーブルの処理
+            return "mni_monitor";
+        }
+        if (globalContext.fileName.contains("ord_checklist")) {
                 globalContext.seqKey = "checklist_ctl_no";
-                tableName = "ord_checklist";
-                processOrdChecklist(resultDataList,rowList);
+            processOrdChecklist(resultDataList,rowList);
+            return "ord_checklist";
+        }
+        if (globalContext.fileName.contains("ord_treat_condition")) {
+            globalContext.seqKey = "condition_cd";
+            processOrdTreatCondition(resultDataList,rowList);
+            return "ord_treat_condition";
+        }
+        if (globalContext.fileName.contains("ord_coop_no")) {
+            globalContext.seqKey = "ctl_no";
+            processOrdCoopNo(resultDataList, rowList);
+            return "ord_coop_no";
+        }
+        if (globalContext.fileName.contains("pat_unique_history")) {
+            processPatUniqueHistory(rowList);
+            return "pat_unique_history";
+        }
+        if (globalContext.fileName.contains("pat_exam_main")) {
+            globalContext.seqKey = "exam_main_cd";
+            processPatExamMain(resultDataList,rowList);
+            return "pat_exam_main";
+        }
+        return "";
+    }
 
-            } else if (globalContext.fileName.contains("ord_treat_condition")) { //ord_treat_conditionテーブルの処理
-                globalContext.seqKey = "condition_cd";
-                tableName = "ord_treat_condition";
-                processOrdTreatCondition(resultDataList,rowList);
-
-            } else if (globalContext.fileName.contains("ord_coop_no")) { //ord_coop_noテーブルの処理
-                globalContext.seqKey = "ctl_no";
-                tableName = "ord_coop_no";
-                processOrdCoopNo(resultDataList, rowList);
-
-            } else if (globalContext.fileName.contains("pat_unique_history")) { //pat_unique_historyテーブルの処理
-                tableName = "pat_unique_history";
-                processPatUniqueHistory(rowList);
-
-                // add #10930 sql -> csv zkm start
-            } else if (globalContext.fileName.contains("pat_exam_main")) { //pat_exam_mainテーブルの処理
-                globalContext.seqKey = "exam_main_cd";
-                tableName = "pat_exam_main";
-                processPatExamMain(resultDataList,rowList);
-                // add #10930 sql -> csv zkm end
-            }
-            //pat_unique_history次の論理を実行せずに、他のCSVファイルは次の論理を実行します。
-            if (!globalContext.fileName.contains("pat_unique_history")) {
-                /**
-                 * 既存のcsvファイルをクリアし、修正した内容をファイルに書き戻し、copyを実行する
-                 */
+    /**
+     * CSVを書き戻しpsql copyを実行する
+     */
+    private void rewriteCsvAndExecuteCopy(Collection<String[]> resultDataList, String tableName, String csvfileName,
+                                          String fromHostIp, String fromDbUser, String fromDbName, String to_Db_table_prefix) throws Exception {
                 try {
                     WriteSQLAnnotation wqa = new WriteSQLAnnotation();
                     wqa.fileNioWrite(csvfileName, "", false); //ファイルの内容をクリア
                     //csvでクリアされたファイルを書き込みます
                     File fileNew = new File(csvfileName);
-                    CsvWriter cw = new CsvWriter();
-                    cw.write(fileNew, StandardCharsets.UTF_8, resultDataList);
-                    // 取得テーブルの列を取得
-                    InfomationSchemaControl isc = new InfomationSchemaControl(appContext);
-                    List<String> columnNameList = isc.getColumnNamesForCodeConversion(tableName);
-                    // 登録列名リストをカンマ区切りに変換
-                    String registColumnNames = String.join(",", columnNameList);
-                    if ("mni_monitor".equals(tableName)) {
-                        //最初の列番号とupd _staff_id列（mni）
-                        registColumnNames = registColumnNames.substring(registColumnNames.indexOf(",") + 1, registColumnNames.lastIndexOf(","));
-                    } else if ("mnt_motion_record".equals(tableName)) {
-                        registColumnNames = String.join(",", columnNameList);
-                    } else if ("ord_checklist".equals(tableName)) {
-                        registColumnNames = String.join(",", ordCheckListColumnNames);
-                    } else if ("ord_treat_condition".equals(tableName)) {
-                        registColumnNames = String.join(",", ordTreatConditionListColumnNames);
-                    } else if ("ord_coop_no".equals(tableName)) {
-                        registColumnNames = String.join(",", ordCoopNoListColumnNames);
-                        // add #10930 sql -> csv zkm start
-                    } else if ("pat_exam_main".equals(tableName)) {
-                        registColumnNames = String.join(",", isPatExamMainSch ? patExamMainSchColumnNames : patExamMainColumnNames);
-                    }else if ("mst_favorite_facility".equals(tableName)) {
-                        registColumnNames = String.join(",", mstFavoriteFacilityColumnNames);
-                    }
-                    // add #10930 sql -> csv zkm end
+                    writeCsv(fileNew.toPath(), resultDataList);
+            String registColumnNames = resolveWriteRegistColumnNames(tableName);
                     //csvインポートコマンドのスプライス（スーパー管理者専用、パフォーマンスが優れている）
                     String copyCommand = "psql"
                             + " -h "
@@ -3139,7 +3524,30 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
                     this.errorfile(csvfileName);
                 }
             }
+
+    /**
+     * write時の登録列名をテーブル別に解決する
+     */
+    private String resolveWriteRegistColumnNames(String tableName) throws Exception {
+        InfomationSchemaControl isc = new InfomationSchemaControl(appContext);
+        List<String> columnNameList = isc.getColumnNamesForCodeConversion(tableName);
+        String registColumnNames = String.join(",", columnNameList);
+        if ("mni_monitor".equals(tableName)) {
+            registColumnNames = registColumnNames.substring(registColumnNames.indexOf(",") + 1, registColumnNames.lastIndexOf(","));
+        } else if ("mnt_motion_record".equals(tableName)) {
+            registColumnNames = String.join(",", columnNameList);
+        } else if ("ord_checklist".equals(tableName)) {
+            registColumnNames = String.join(",", ordCheckListColumnNames);
+        } else if ("ord_treat_condition".equals(tableName)) {
+            registColumnNames = String.join(",", ordTreatConditionListColumnNames);
+        } else if ("ord_coop_no".equals(tableName)) {
+            registColumnNames = String.join(",", ordCoopNoListColumnNames);
+        } else if ("pat_exam_main".equals(tableName)) {
+            registColumnNames = String.join(",", isPatExamMainSch ? patExamMainSchColumnNames : patExamMainColumnNames);
+        }else if ("mst_favorite_facility".equals(tableName)) {
+            registColumnNames = String.join(",", mstFavoriteFacilityColumnNames);
         }
+        return registColumnNames;
     }
 
     /**
@@ -3186,5 +3594,13 @@ public class BatchCsvWriterDb<T> implements ItemWriter<T>, InitializingBean {
 
     private String stringValueOfOrNull(Object value) {
         return ObjectUtils.isEmpty(value) ? null : String.valueOf(value);
+    }
+
+    private void writeCsv(Path path, Collection<String[]> rows) throws IOException {
+        try (CsvWriter csvWriter = CsvWriter.builder().build(path, StandardCharsets.UTF_8)) {
+            for (String[] row : rows) {
+                csvWriter.writeRecord(row);
+            }
+        }
     }
 }

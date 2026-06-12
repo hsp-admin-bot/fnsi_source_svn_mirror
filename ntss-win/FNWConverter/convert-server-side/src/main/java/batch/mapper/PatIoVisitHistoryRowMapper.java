@@ -1,7 +1,7 @@
 package batch.mapper;
 
 import batch.entity.InOutVisitHistoryInfoEntity;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.core.RowMapper;
 
 import java.sql.ResultSet;

@@ -1,11 +1,9 @@
 package jp.co.nikkiso.ntss.admin_web.service.weight;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.FlagType;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.OrdMainConst;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.OrdMainConst.DialysisState;
@@ -64,6 +62,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.ResolverStyle;
 import java.util.*;
 import java.util.stream.Collectors;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -161,6 +160,10 @@ public class WeightServiceImpl implements WeightService {
 
   @Autowired
   private TriggerUtil triggerUtil;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   /**
    * {@inheritDoc}
@@ -448,7 +451,7 @@ public class WeightServiceImpl implements WeightService {
     wheres.append(" trim(machine_serial) = trim('" + machine.getMachineSerial() + "')" + "\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(mntMachineStateDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     //FNSI-修正 ログ対応 wp add end
@@ -505,7 +508,7 @@ public class WeightServiceImpl implements WeightService {
         wheres.append("/*%end*/" + "\n");
         wheres.append("weight_scale_status = 1" + "\n");
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(ordWeightScaleDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -745,12 +748,12 @@ public class WeightServiceImpl implements WeightService {
    *
    * @param request
    * @throws IOException
-   * @throws JsonParseException
+   * @throws JacksonException
    * @throws JsonMappingException
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   private void saveOrdMainBeforeWeight(SendConditionRequest request)
-    throws IOException, JsonParseException, JsonMappingException, JsonProcessingException {
+    throws IOException, JacksonException {
     // 対象オーダーの取得
     OrdMainForWeightInd ord = ordMainDao.selectForWeightIndByOrdNo(request.getOrdNo());
     String weight = ordMainDao.selectWeightInfo(request.getOrdNo());
@@ -841,7 +844,7 @@ public class WeightServiceImpl implements WeightService {
       wheres.append(" trim(machine_serial) = trim('" + machine.getMachineSerial() + "')" + "\n");
       // logCommon設定
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(mntMachineStateDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       //FNSI-修正 ログ対応 wp add end
@@ -868,7 +871,7 @@ public class WeightServiceImpl implements WeightService {
     wheres.append(" WHERE\n");
     wheres.append(" ord_no = " + request.getOrdNo() + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -955,7 +958,7 @@ public class WeightServiceImpl implements WeightService {
         wheres.append(" WHERE\n");
         wheres.append(" ord_no = " + request.getOrdNo() + "\n");
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -1039,7 +1042,7 @@ public class WeightServiceImpl implements WeightService {
         wheres.append(" WHERE\n");
         wheres.append(" ord_no = " + request.getOrdNo() + "\n");
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -1110,7 +1113,7 @@ public class WeightServiceImpl implements WeightService {
         rstWheelChair.wheel_chair_name = null;
         rstWheelChair.wheel_chair_weight = null;
         rstWheelChairStrAfter = mapper.writeValueAsString(rstWheelChair);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -1133,7 +1136,7 @@ public class WeightServiceImpl implements WeightService {
       String categoryName = category == rstTareCategory.BAFORE ? keyBefore : keyAfter;
       try {
         rstWheelChairStr = mapper.writeValueAsString(rstWheelChair);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -1189,7 +1192,7 @@ public class WeightServiceImpl implements WeightService {
         rstWheelChair.setWheelChairName(null);
         rstWheelChair.setWheelChairWeight(null);
         rstWheelChairStrAfter = mapper.writeValueAsString(rstWheelChair);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -1212,7 +1215,7 @@ public class WeightServiceImpl implements WeightService {
       String categoryName = category == rstTareCategory.BAFORE ? keyBefore : keyAfter;
       try {
         rstWheelChairStr = mapper.writeValueAsString(rstWheelChair);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
           // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -1467,7 +1470,7 @@ public class WeightServiceImpl implements WeightService {
         wheres.append(" trim(machine_serial) = trim('" + machine.getMachineSerial() + "')" + "\n");
 
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(mntMachineStateDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         //FNSI-修正 ログ対応 wp add end
@@ -1517,7 +1520,7 @@ public class WeightServiceImpl implements WeightService {
       wheres.append(" WHERE\n");
       wheres.append(" ord_no = " + request.getOrdNo() + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon1 = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon1 = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon1.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -1592,7 +1595,7 @@ public class WeightServiceImpl implements WeightService {
 
         // DB更新ログ出力ロジック wangzuo Start
         // logCommon設定
-        DataUpdateLogCommonNew logCommon2 = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon2 = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         setResult = logCommon2.setInfo();
         // DB更新ログ出力ロジック wangzuo End
@@ -1621,7 +1624,7 @@ public class WeightServiceImpl implements WeightService {
 
       // DB更新ログ出力ロジック wangzuo Start
       // logCommon設定
-      DataUpdateLogCommonNew logCommon3 = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon3 = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon3.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -1740,7 +1743,7 @@ public class WeightServiceImpl implements WeightService {
         wheres.append(" trim(machine_serial) = trim('" + machine.getMachineSerial() + "')" + "\n");
         // logCommon設定
         // logCommon設定
-        DataUpdateLogCommonNew logCommon = getLogCommon(mntMachineStateDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
         // ログ出力カラム情報及び更新前データ情報取得
         boolean setResult = logCommon.setInfo();
         //FNSI-修正 ログ対応 wp add end
@@ -1768,7 +1771,7 @@ public class WeightServiceImpl implements WeightService {
       wheres.append(" WHERE\n");
       wheres.append(" ord_no = " + ordNo + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -2153,7 +2156,7 @@ public class WeightServiceImpl implements WeightService {
       wheres.append(" WHERE\n");
       wheres.append(" ord_no = " + ordNo + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -2198,7 +2201,7 @@ public class WeightServiceImpl implements WeightService {
       wheres.append(" WHERE\n");
       wheres.append(" ord_no = " + ordNo + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -2592,7 +2595,7 @@ public class WeightServiceImpl implements WeightService {
         response.setWeightBefore(dto.getWeightBefore());
         // 透析後体重
         response.setWeightAfter(dto.getWeightAfter());
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // TODO 自動生成された catch ブロック
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
@@ -3240,7 +3243,7 @@ public class WeightServiceImpl implements WeightService {
               for (int j = 0; j < jsonNodeIndMedi.size(); j++) {
                 JsonNode jsonNode = jsonNodeIndMedi.get(j);
                 // jsonNodeIndMediは読み取り専用のため、ObjectNodeに変換
-                ObjectNode objectNode = jsonNode.deepCopy();
+                ObjectNode objectNode = jsonNode.deepCopy().asObject();
 
                 tmp = objectNode.get("cd").asText();
                 if (tmp != null) {
@@ -3279,7 +3282,7 @@ public class WeightServiceImpl implements WeightService {
               for (int j = 0; j < jsonNodeIndEquip.size(); j++) {
                 JsonNode jsonNode = jsonNodeIndEquip.get(j);
                 // jsonNodeIndMediは読み取り専用のため、ObjectNodeに変換
-                ObjectNode objectNode = jsonNode.deepCopy();
+                ObjectNode objectNode = jsonNode.deepCopy().asObject();
 
                 tmp = objectNode.get("cd").asText();
                 if (tmp != null) {
@@ -3541,7 +3544,7 @@ public class WeightServiceImpl implements WeightService {
               for (int j = 0; j < jsonNodeIndMedi.size(); j++) {
                 JsonNode jsonNode = jsonNodeIndMedi.get(j);
                 // jsonNodeIndMediは読み取り専用のため、ObjectNodeに変換
-                ObjectNode objectNode = jsonNode.deepCopy();
+                ObjectNode objectNode = jsonNode.deepCopy().asObject();
 
                 tmp = objectNode.get("cd").asText();
                 if (tmp != null) {
@@ -3577,7 +3580,7 @@ public class WeightServiceImpl implements WeightService {
               for (int j = 0; j < jsonNodeIndEquip.size(); j++) {
                 JsonNode jsonNode = jsonNodeIndEquip.get(j);
                 // jsonNodeIndMediは読み取り専用のため、ObjectNodeに変換
-                ObjectNode objectNode = jsonNode.deepCopy();
+                ObjectNode objectNode = jsonNode.deepCopy().asObject();
 
                 tmp = objectNode.get("cd").asText();
                 if (tmp != null) {
@@ -5052,11 +5055,11 @@ public class WeightServiceImpl implements WeightService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

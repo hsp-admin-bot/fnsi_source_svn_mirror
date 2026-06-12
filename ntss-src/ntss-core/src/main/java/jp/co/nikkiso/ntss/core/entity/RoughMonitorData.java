@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.core.entity;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.utils.BeanBuilderUtils;
 import lombok.Getter;
 import lombok.Setter;
@@ -113,7 +113,7 @@ public class RoughMonitorData {
         try {
           this.roughMonitorDataItems =
             MAPPER.readValue(mniMonitor.getMonitorData(), new TypeReference<>() {});
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
           this.roughMonitorDataItems = new ArrayList<>();
         }
       }
@@ -357,7 +357,7 @@ public class RoughMonitorData {
     }
     try {
       return MAPPER.writeValueAsString(monitorData);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       return null;
     }
   }

@@ -288,22 +288,25 @@
 
 <script>
 // import { ApiHelper } from "@/apis/AxiosHelper";
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import { deepCopy, getHolidayStyle } from "@/functions/common/CommonFunctions";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
+import $ from "@/compat/jquery";
+import { getScopedJQuery } from "@/functions/common/LayoutMeasureHelper";
 /**
  * オブジェクト、配列操作
  */
-import _ from "underscore";
 /**
  * jQuery
  */
-import $ from "jquery";
+
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
+import IndicationOwnerMixin from '@/components/indication/IndicationOwnerMixin';
 export default {
+  mixins: [IndicationOwnerMixin],
   props: {
     /**
      * 表示する情報
@@ -546,6 +549,10 @@ export default {
   },
 
   methods: {
+    scopedJQuery(selector, context) {
+      const jq = getScopedJQuery(this.$el || this, $);
+      return (jq || $)(selector, context);
+    },
     /**
      * 詳細情報作成操作
      * @description 親から変数を呼ばれて、引数が渡されてきた場合は作り直す
@@ -626,18 +633,18 @@ export default {
      */
     setTreatmentAndKurHeight(itemName) {
       // 最大高さの初期値として大項目の高さを格納
-      let maxH = $(`.${this.addClass}${itemName}-category`).height();
+      let maxH = this.scopedJQuery(`.${this.addClass}${itemName}-category`).height();
       this.dispTreatmentMethod.forEach((item, index) => {
         // データセルの高さ取得
-        const dataCellH = $(`.${this.addClass}${itemName}_${index}`).height();
+        const dataCellH = this.scopedJQuery(`.${this.addClass}${itemName}_${index}`).height();
         // 現在格納されている最大高さより大きい場合、高さを格納
         maxH = dataCellH > maxH ? dataCellH : maxH;
       });
       // 大項目に最大高さを設定
-      $(`.${this.addClass}${itemName}-category`).height(maxH);
+      this.scopedJQuery(`.${this.addClass}${itemName}-category`).height(maxH);
       this.dispTreatmentMethod.forEach((item, index) => {
         // データセルに最大高さを設定
-        $(`.${this.addClass}${itemName}_${index}`).height(maxH);
+        this.scopedJQuery(`.${this.addClass}${itemName}_${index}`).height(maxH);
       });
     },
 
@@ -654,7 +661,7 @@ export default {
      */
     setIndRowHeight(categoryClass, subCategoryClass, dataCellClass, dispItem) {
       // 大項目高さ
-      const categoryH = $(`.${this.addClass}${categoryClass}`).outerHeight(
+      const categoryH = this.scopedJQuery(`.${this.addClass}${categoryClass}`).outerHeight(
         true
       );
       const sumSubCategoryH = new Array();
@@ -666,12 +673,12 @@ export default {
         const eleSumDataCellH = new Array();
         for (let i = 0; i < item.length; i++) {
           // サブカテゴリーの高さを格納
-          const subCategoryH = $(
+          const subCategoryH = this.scopedJQuery(
             `.${this.addClass}${subCategoryClass}${i}`
           ).outerHeight();
           eleSumSubCategoryH.push(subCategoryH);
           // データセルの高さを格納
-          const dataCellH = $(
+          const dataCellH = this.scopedJQuery(
             `.${this.addClass}${dataCellClass}${index}_${i}`
           ).outerHeight();
           eleSumDataCellH.push(dataCellH);
@@ -684,12 +691,12 @@ export default {
       // サブカテゴリの最大高さリストを作成
       sumSubCategoryH.forEach(heightlist => {
         heightlist.forEach((height, index) => {
-          if (!_.has(maxSubHObj, String(index))) {
-            this.$set(maxSubHObj, String(index), height);
+          if (!Object.prototype.hasOwnProperty.call(maxSubHObj, String(index))) {
+            ((maxSubHObj)[String(index)] = height);
           }
           // 現在格納されている高さより高い場合、オブジェクトに格納
           if (height > maxSubHObj[String(index)]) {
-            this.$set(maxSubHObj, String(index), height);
+            ((maxSubHObj)[String(index)] = height);
           }
         });
       });
@@ -698,11 +705,11 @@ export default {
       // データセル内の最大高さリストを作成
       sumDataCellH.forEach(heightlist => {
         heightlist.forEach((height, index) => {
-          if (!_.has(maxCellHObj, String(index))) {
-            this.$set(maxCellHObj, String(index), height);
+          if (!Object.prototype.hasOwnProperty.call(maxCellHObj, String(index))) {
+            ((maxCellHObj)[String(index)] = height);
           }
           if (height > maxCellHObj[String(index)]) {
-            this.$set(maxCellHObj, String(index), height);
+            ((maxCellHObj)[String(index)] = height);
           }
         });
       });
@@ -731,11 +738,11 @@ export default {
       dispItem.forEach((item, index) => {
         for (let i = 0; i < item.length; i++) {
           // 中項目行に設定
-          $(`.${this.addClass}${subCategoryClass}${i}`).outerHeight(
+          this.scopedJQuery(`.${this.addClass}${subCategoryClass}${i}`).outerHeight(
             applyHList[i]
           );
           // データセル行に設定
-          $(`.${this.addClass}${dataCellClass}${index}_${i}`).outerHeight(
+          this.scopedJQuery(`.${this.addClass}${dataCellClass}${index}_${i}`).outerHeight(
             applyHList[i]
           );
         }
@@ -762,10 +769,10 @@ export default {
           // サブカテゴリーの高さを設定する
           dispItem.forEach((item, index) => {
             for (let i = 0; i < item.length; i++) {
-              const height = $(
+              const height = this.scopedJQuery(
                 `.${this.addClass}${subCategoryClass}${i}`
               ).height();
-              $(`.${this.addClass}${dataCellClass}${index}_${i}`).height(height);
+              this.scopedJQuery(`.${this.addClass}${dataCellClass}${index}_${i}`).height(height);
             }
           });
         } else {
@@ -798,11 +805,11 @@ export default {
         for (let j = 0; j < itemInfo[i].length; j++) {
           for (let k = 0; k < itemInfo[i][j].label.length; k++) {
             // データセルの高さ
-            const dataCellH = $(
+            const dataCellH = this.scopedJQuery(
               `.${this.addClass}${dataCellName}${i}_${j}_${k}`
             ).height();
             // 項目セルの高さ
-            const itemCellH = $(
+            const itemCellH = this.scopedJQuery(
               `.${this.addClass}${itemCellName}${j}_${k}`
             ).height();
             // データセルと項目セルで高い方を採用
@@ -813,15 +820,15 @@ export default {
               height = itemCellH;
             }
             // 格納されていない場合、オブジェクトを追加
-            if (!_.has(o, String(j))) {
-              this.$set(o, String(j), new Object());
+            if (!Object.prototype.hasOwnProperty.call(o, String(j))) {
+              ((o)[String(j)] = new Object());
             }
             // 現在格納されている高さの最大値より大きいまたは、まだ格納されていない場合、高さを格納
             if (
               undefined === o[String(j)][String(k)] ||
               height > o[String(j)][String(k)]
             ) {
-              this.$set(o[String(j)], String(k), height);
+              ((o[String(j)])[String(k)] = height);
             }
           }
         }
@@ -831,10 +838,10 @@ export default {
       for (let i = 0; i < itemInfo.length; i++) {
         for (let j = 0; j < itemInfo[i].length; j++) {
           for (let k = 0; k < itemInfo[i][j].label.length; k++) {
-            $(`.${this.addClass}${dataCellName}${i}_${j}_${k}`).height(
+            this.scopedJQuery(`.${this.addClass}${dataCellName}${i}_${j}_${k}`).height(
               o[String(j)][String(k)]
             );
-            $(`.${this.addClass}${itemCellName}${j}_${k}`).height(
+            this.scopedJQuery(`.${this.addClass}${itemCellName}${j}_${k}`).height(
               o[String(j)][String(k)]
             );
           }
@@ -1013,7 +1020,7 @@ export default {
     //   }
     //   // 治療開始時刻
     //   const treatStartTime = schData.ind_treat_start_time
-    //     ? moment(schData.ind_treat_start_time, "HHmm").format("HH:mm")
+    //     ? dayjs(schData.ind_treat_start_time, "HHmm").format("HH:mm")
     //     : "未登録";
     //
     //   data[0].value = kurName;
@@ -1027,7 +1034,7 @@ export default {
       const findKur = this.mstInfo.mstKurInfo.find(item => {
         return (
           item.kurCd === kurCd &&
-          this.$parent.$parent.facilityCd === item.facilityCd &&
+          this._indicationFlowOwner().facilityCd === item.facilityCd &&
           "0" === item.isDel
         );
       });
@@ -1043,7 +1050,7 @@ export default {
       const findBed = this.mstInfo.mstBedInfo.find(item => {
         return (
           item.bedCd === bedCd &&
-          this.$parent.$parent.facilityCd === item.facilityCd &&
+          this._indicationFlowOwner().facilityCd === item.facilityCd &&
           "0" === item.isDel
         );
       });
@@ -1054,7 +1061,7 @@ export default {
       }
       // 治療開始時刻
       const treatStartTime = startTime
-        ? moment(startTime, "HHmm").format("HH:mm")
+        ? dayjs(startTime, "HHmm").format("HH:mm")
         : "未登録";
 
       data[0].value = kurName;
@@ -1087,7 +1094,7 @@ export default {
         }
 
         let medicineType = null;
-        if (_.has(o[cd], "medicine_type")) {
+        if (Object.prototype.hasOwnProperty.call(o[cd], "medicine_type")) {
           medicineType = o[cd].medicine_type;
         }
 
@@ -1098,18 +1105,18 @@ export default {
 
       // add 10443 身体情報・DW・目標体重バグ 関  start
       // 目標日最近の日付DW取得
-      const tDate = moment(this.selectDate, "YYYYMMDD").add(1,"day");
+      const tDate = dayjs(this.selectDate, "YYYYMMDD").add(1,"day");
       let examDate = "";
       let ctlNo = "";
       let indValue = "";
       this.getPhysicalInfo.forEach(pInfo => {
-        if (pInfo.exam_date && moment(pInfo.exam_date).isBefore(moment(tDate).format("YYYY-MM-DD"))
+        if (pInfo.exam_date && dayjs(pInfo.exam_date).isBefore(dayjs(tDate).format("YYYY-MM-DD"))
           &&pInfo.dw !== undefined && pInfo.dw !== null) {
-          if (examDate === "" || moment(pInfo.exam_date).isAfter(examDate)) {
+          if (examDate === "" || dayjs(pInfo.exam_date).isAfter(examDate)) {
             examDate = pInfo.exam_date;
             indValue = pInfo.dw;
             ctlNo = pInfo.ctl_no;
-          }else if(moment(pInfo.exam_date).isSame(examDate)){
+          }else if(dayjs(pInfo.exam_date).isSame(examDate)){
             if (ctlNo && pInfo.ctl_no > ctlNo) {
               examDate = pInfo.exam_date;
               indValue = pInfo.dw;
@@ -1377,7 +1384,6 @@ export default {
             // 調製薬剤なら
             mstDataInfo = "mstMedicineMixInfo";
             mstCd = "medicineMixCd";
-            mstName = "medicineMixName";
           }
 
           // 薬剤マスタから検索 ※透析液薬剤の単位を付与
@@ -1420,7 +1426,7 @@ export default {
         // 補液使用数
         case 22:
           if (
-            _.has(indCondInfo["19"], "medicine_type") &&
+            Object.prototype.hasOwnProperty.call(indCondInfo["19"], "medicine_type") &&
             // mod #9973 shiyw start
             //indCondInfo["19"].medicine_type === "2"
             indCondInfo["19"].medicine_type == 2
@@ -1429,7 +1435,6 @@ export default {
             // 調製薬剤なら
             mstDataInfo = "mstMedicineMixInfo";
             mstCd = "medicineMixCd";
-            mstName = "medicineMixName";
           }
 
           // 補液の薬剤の単位を付与
@@ -1470,7 +1475,7 @@ export default {
         case 27:
         case 28:
           if (
-            _.has(indCondInfo["25"], "medicine_type") &&
+            Object.prototype.hasOwnProperty.call(indCondInfo["25"], "medicine_type") &&
             // mod #9973 shiyw start
             //indCondInfo["25"].medicine_type === "2"
             indCondInfo["25"].medicine_type == 2
@@ -1479,7 +1484,6 @@ export default {
             // 調製薬剤なら
             mstDataInfo = "mstMedicineMixInfo";
             mstCd = "medicineMixCd";
-            mstName = "medicineMixName";
           }
 
           // 抗凝固剤の薬剤の単位を付与
@@ -1571,12 +1575,8 @@ export default {
       // 指示コメントが1つも格納されていない場合が「指示コメント」を返す
       if (0 === itemInfoList.length && 0 === tagetInfo.length && isEnd) {
         const o = new Object();
-        this.$set(
-          o,
-          "label",
-          3 === parseInt(itemClass) ? itemName : [itemName]
-        );
-        this.$set(o, keyCd, 0);
+        ((o)["label"] = 3 === parseInt(itemClass) ? itemName : [itemName]);
+        ((o)[keyCd] = 0);
         return [o];
       }
       let arr = deepCopy(tagetInfo);
@@ -1588,7 +1588,7 @@ export default {
         if (!findO) {
           const o = new Object();
           // シーケンス番号格納
-          this.$set(o, keyCd, item[keyCd]);
+          ((o)[keyCd] = item[keyCd]);
           // 項目名格納用
           let label = null;
           switch (parseInt(itemClass)) {
@@ -1610,7 +1610,7 @@ export default {
             default:
               break;
           }
-          this.$set(o, "label", label);
+          ((o)["label"] = label);
           arr.push(o);
         }
       });
@@ -1666,11 +1666,11 @@ export default {
             default:
               break;
           }
-          this.$set(o, "value", value);
-          this.$set(o, "isTabooAllergy", isTabooAllergy);
+          ((o)["value"] = value);
+          ((o)["isTabooAllergy"] = isTabooAllergy);
         } else {
-          this.$set(o, "value", null);
-          this.$set(o, "isTabooAllergy", false);
+          ((o)["value"] = null);
+          ((o)["isTabooAllergy"] = false);
         }
         arr.push(o);
       });

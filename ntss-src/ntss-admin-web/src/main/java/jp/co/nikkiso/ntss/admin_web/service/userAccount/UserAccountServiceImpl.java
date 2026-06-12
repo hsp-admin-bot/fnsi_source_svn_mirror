@@ -151,7 +151,7 @@ public class UserAccountServiceImpl implements UserAccountService {
   // }
   // // add #6587 利用者マスタで使用許可機能を編集した時にメッセージが出る場合とでない場合がある 王永吉 end
   /* del by chamaojia 2026-05-13 [10959] システム内でstatic変数を使っている箇所の洗い出し --end */
-  
+
   // add #12587 スタッフ切替 start
   @Override
   public List<UserAuthentication> getCanLoginFacilities(Long userId) {
@@ -161,7 +161,7 @@ public class UserAccountServiceImpl implements UserAccountService {
 
   @Autowired
   private SessionRegistry sessionRegistry;
-  
+
   /**
    * {@inheritDoc}
    */
@@ -303,7 +303,7 @@ public class UserAccountServiceImpl implements UserAccountService {
     // mod #10245 マスタ変更時点で患者情報履歴テーブルの追加や更新をしていないため正しいデータを出力できない ztc 20240712 end
     // add #10245 帳票用患者情報履歴mongoDBのマスタ変更影響問題 dengshen end
   }
-  
+
   // add #12587 スタッフ切替 start
   private void executionRelationshipMethod(UpdateUserAccountInfoRequest request, String groupId, List<MstUserSwitchMapping> mappingList) {
     long updateUserId = getCurrentUserId();
@@ -446,7 +446,9 @@ public class UserAccountServiceImpl implements UserAccountService {
       }
       String userId = mstUserAuthenticationDao.selectUserId(userAuthenticationRequest.getUsername(), mstFacilityHash.getFacilityCd());
       mapping.setUserId(Long.parseLong(userId));
-      mapping.setSwitchId(userAuthenticationRequest.getSwitchId());
+      if (userAuthenticationRequest.getSwitchId() != null) {
+        mapping.setSwitchId(userAuthenticationRequest.getSwitchId());
+      }
       mapping.setOptStatus(userAuthenticationRequest.getOptStatus());
       mapping.setFacilityCd(mstFacilityHash.getFacilityCd());
       mappingList.add(mapping);

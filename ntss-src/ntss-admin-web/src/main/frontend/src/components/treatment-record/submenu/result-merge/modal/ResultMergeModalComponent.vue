@@ -3,7 +3,8 @@
 */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body" class="result-merge-base">
+    <template #body>
+      <div class="result-merge-base">
       <div class="title-merge-base">
         <div class="title-contain-h1">
           <div class="title-h1-contain">
@@ -157,9 +158,9 @@
         <div class="merge-to">
           <table class="treatment-record-list">
             <tbody>
-            <template v-for="(data, index) in baseDatalist" >
+            <template v-for="(data, index) in baseDatalist"  :key="index">
 <!--              <tr :key="index"  :class="'ntss-list-body-tr'" style="height: 3em;">-->
-              <tr :key="index"
+              <tr
                   :class="{'ntss-list-body-tr': true, 'tr-unavailable': data.available}"
                   style="height: 3em;">
 
@@ -220,10 +221,10 @@
                 <td class="align-left ntss-list-body-td" v-if="!data.isGroupOrDetail" style="width: 45%;">
 <!--                  {{getBaseValue(index)}}-->
                   <div v-if="data.type === MERGE_ITEM_TYPES.WEIGHT_INFO_RECRCL_DETAIL"
-                       style="height: 13em;"
+                       style="height: 13em"
                        ref="base-weight-info-recrcls"
-                       v-html="getBaseValue(index)"></div>
-                  <div v-else v-html="getBaseValue(index)"></div>
+                       v-safe-html="getBaseValue(index)"></div>
+                  <div v-else v-safe-html="getBaseValue(index)"></div>
                 </td>
               </tr>
             </template>
@@ -238,8 +239,8 @@
         <div class="merge-from">
           <table class="treatment-record-list">
             <tbody>
-            <template v-for="(data, index) in mergeDatalist" >
-              <tr :key="index"
+            <template v-for="(data, index) in mergeDatalist"  :key="index">
+              <tr
                   :class="{'ntss-list-body-tr': true, 'tr-unavailable': data.available}"
                   style="height: 3em;">
 
@@ -308,11 +309,11 @@
                 <td class="align-left ntss-list-body-td" v-if="!data.isGroupOrDetail" style="width: 45%;">
 <!--                  {{data.value}}-->
                   <div v-if="data.type === MERGE_ITEM_TYPES.WEIGHT_INFO_RECRCL_DETAIL"
-                       style="height: 13em;"
+                       style="height: 13em"
                        ref="merge-weight-info-recrcls"
-                       v-html="data.value"
+                       v-safe-html="data.value"
                   ></div>
-                  <div v-else v-html="data.value"></div>
+                  <div v-else v-safe-html="data.value"></div>
                 </td>
               </tr>
             </template>
@@ -320,8 +321,10 @@
           </table>
         </div>
       </div>
-    </div>
-    <div slot="footer" class="flex-container">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button denial-btn btn2-cancel" :disabled="!isShared" data-non-authorize="true" @click="cancel">キャンセル</v-ons-button>
@@ -343,12 +346,13 @@
         <!-- mod #10359 編集権限の動作不正 end -->
       </div>
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 <script>
   // mod FNSI-修正 redmine-8041「？？？？患者の実績マージ後、治療記録の患者名が？？？？患者のまま」 房 start
-  import {mapActions, mapGetters, mapMutations} from "vuex";
+  import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
   // mod FNSI-修正 redmine-8041「？？？？患者の実績マージ後、治療記録の患者名が？？？？患者のまま」 房 end
   import ModalBase from "@/components/modals/ModalBase";
   import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
@@ -362,7 +366,7 @@
   // import { AUTHORITY_CODES } from "@/constants/userAuthority";
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 end
   // add 8304 【デグレ】実績マージを実行すると診療情報の一部が削除済みとなる start
-  import { EventBus } from "@/eventBus.js";
+  import { EventBus } from "@/compat/vue/event-bus.js";
   // add 8304 【デグレ】実績マージを実行すると診療情報の一部が削除済みとなる end
   import {
     // 治療方法マスタ取得API
@@ -377,7 +381,7 @@
   // mod #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao start
   import {CODES, TREATMENT_MESSAGES} from "@/constants/TreatmentRecord.js";
   // mod #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao end
-  import moment from "moment";
+  import dayjs from "@/compat/date/dayjs";
   // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
   import { messageFormat } from '@/functions/common/MessageFormat';
   import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
@@ -387,6 +391,8 @@
   // add #9709 愁訴処置の実績マージで余分なデータが登録されている。 dengshen end
   // add #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao start
   import {createJournal} from "@/apis/journal";
+  import nameDuplicationImg from "@/assets/name_duplication.png";
+
   // add #10553 ①10125のsys_coop_iniのEXAMIN_INFO IND_SEND_MODE設定に応じた動作切替が画面がで実現 #10125 piao end
 
   export default {
@@ -457,12 +463,12 @@
         delDisabled: false,
         displayFlag: false,
         replaceFlag: false,
-        replaceMarkIconB: require("@/../public/img/treatment-record/round_autorenew_black.png"),
-        replaceMarkIconW: require("@/../public/img/treatment-record/round_autorenew_white.png"),
-        leftArrowIconB: require("@/../public/img/treatment-record/round_arrow_back_ios_new_black.png"),
-        leftArrowIconW: require("@/../public/img/treatment-record/round_arrow_back_ios_new_white.png"),
+        replaceMarkIconB: "img/treatment-record/round_autorenew_black.png",
+        replaceMarkIconW: "img/treatment-record/round_autorenew_white.png",
+        leftArrowIconB: "img/treatment-record/round_arrow_back_ios_new_black.png",
+        leftArrowIconW: "img/treatment-record/round_arrow_back_ios_new_white.png",
         // 同姓同名アイコン
-        image_src_same: require('@/../src/assets/name_duplication.png'),
+        image_src_same: nameDuplicationImg,
         inHospital: 0,
         isSame: "0",
 
@@ -724,12 +730,12 @@
             let baseConditionInfo = JSON.parse(base.rst_cond_info);
             let mergeConditionInfo = JSON.parse(merge.rst_cond_info);
             if (mergeConditionInfo == null) {
-              if (baseConditionInfo != null && baseConditionInfo.hasOwnProperty(item.type.property)) {
+              if (baseConditionInfo != null && Object.prototype.hasOwnProperty.call(baseConditionInfo, item.type.property)) {
                 delete baseConditionInfo[item.type.property];
               }
             } else {
               if (mergeConditionInfo[item.type.property] == undefined || mergeConditionInfo[item.type.property] == null) {
-                if (baseConditionInfo != null && baseConditionInfo.hasOwnProperty(item.type.property)) {
+                if (baseConditionInfo != null && Object.prototype.hasOwnProperty.call(baseConditionInfo, item.type.property)) {
                   delete baseConditionInfo[item.type.property];
                 }
               } else {
@@ -796,7 +802,7 @@
         }
 
         if (commentInfoItems.length > 0) {
-          let baseJson,mergeJson,baseIndJson = [];
+          let baseJson, mergeJson, baseIndJson;
           /* modify by chamaojia 2024-04-02 [10196] add null judgment processing  --start */
           // baseJson = JSON.parse(base.rst_ind_comment_info);
           // mergeJson = JSON.parse(merge.rst_ind_comment_info);
@@ -901,7 +907,7 @@
           let basicWeight = JSON.parse(base.rst_weight_info);
 
           // 再循環率情報のvalid_no設定
-          let inputNodes = document.getElementsByName("rt-valid-chk");
+          let inputNodes = this.$el?.querySelectorAll?.('[name="rt-valid-chk"]') || [];
           let validNo = 1;
           for (const inputNode of inputNodes) {
             if (inputNode.checked) {
@@ -1219,7 +1225,10 @@
         await this.getMstDialyzer();
 
         // 実績マージ対象データを取得する
-        await this.getTreatmentRecordResultMergeList(this.getOrdNo).then(response => {
+        await this.getTreatmentRecordResultMergeList({
+          ordNo: this.getOrdNo,
+          selectedPatId: this.selectedPatId
+        }).then(response => {
           this.mergeCandidates = response.data.map(e => new ResultMerge(e, this.mstMedicine, this.mstEquipment, this.mstDialyzer));
           this.baseDataCreate();
         });
@@ -1236,7 +1245,7 @@
        * 取得した治療方法マスタはmstTreatmentに格納する.
        */
       async getMstTreatment() {
-        const response =  await sendRequestGetMstTreatment();
+        const response =  await sendRequestGetMstTreatment(undefined, this.selectedPatId);
         this.mstTreatment = response.data;
       },
 
@@ -1462,7 +1471,7 @@
           }
         } else if (paramInfo.startDate != null && paramInfo.endDate == null) {
           searchStartDate = paramInfo.startDate;
-          searchEndDate = moment(new Date()).format("YYYYMMDD");
+          searchEndDate = dayjs(new Date()).format("YYYYMMDD");
         } else {
           searchStartDate = paramInfo.ordMain.treat_date;
           searchEndDate = paramInfo.ordMain.treat_date;
@@ -1571,7 +1580,7 @@
       setTreatmentInfoDate(treatmentInfo, startDateStr, endDateStr) {
         const formatDate = (dateStr) => {
           if (!dateStr) return { date: "", time: "" };
-          const date = moment(dateStr, "YYYY/MM/DD HH:mm");
+          const date = dayjs(dateStr, "YYYY/MM/DD HH:mm");
           return { date: date.format("YYYY/MM/DD(dd)"), time: date.format(" HH:mm") };
         };
         const { date: startDate, time: startTime } = formatDate(startDateStr);
@@ -1593,7 +1602,7 @@
         return getHolidayStyle(date);
       }
     },
-    beforeDestroy() {
+    beforeUnmount() {
       // dataの初期化
       Object.assign(this.$data, this.$options.data());
     },

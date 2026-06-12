@@ -1,8 +1,7 @@
 <template>
   <div>
-    <v-ons-row v-for="(file, index) in value" :key="index" style="line-height: 1.5em; flex-wrap: nowrap;">
+    <v-ons-row v-for="(file, index) in modelValue" :key="index" style="line-height: 1.5em; flex-wrap: nowrap;">
       <v-ons-icon class="attachment-icon" icon="fa-paperclip" />
-      <!-- mod #12462 患者情報共有 20260324 start -->
       <div class="download-link" @click="downloadFile(file)">{{ file.file_name }}</div>
       <v-ons-icon
         v-if="!getIsOtherFacilitys"
@@ -13,13 +12,12 @@
         @click="checkForDeletedFiles(file)"
       />
       <div v-else></div>
-      <!-- mod #12462 患者情報共有 20260324 end -->
     </v-ons-row>
   </div>
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import {
   sendRequestGetDownload,
   sendRequestPostDelete
@@ -29,11 +27,14 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
 // add #10359 編集権限の動作不正 start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
+import { triggerScopedDownload } from "@/functions/common/LayoutMeasureHelper";
 // add #10359 編集権限の動作不正 end
 
 export default {
+  emits: ["update:modelValue"],
   props: {
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: Array,
       required: true,
       default() {
@@ -64,10 +65,8 @@ export default {
       "getPatEventRecord",
       "getViewMode"
     ]),
-    // add #12462 患者情報共有 20260317 start
-      ...mapGetters("pat-event/list", ["getIsOtherFacility"]),
-      ...mapGetters("observe-record/list", ["getIsOtherFacilitys"]),
-    // add #12462 患者情報共有 20260317 end
+    ...mapGetters("pat-event/list", ["getIsOtherFacility"]),
+    ...mapGetters("observe-record/list", ["getIsOtherFacilitys"]),
     getEvents() {
       if (this.getViewMode) {
         return "none";
@@ -75,7 +74,7 @@ export default {
       return "auto";
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -101,18 +100,11 @@ export default {
       const blob = new Blob([this.hexStringToArrayBuffer(downloadData)], {
         type: "application/zip"
       });
-      if (window.navigator.msSaveBlob) {
-        window.navigator.msSaveBlob(blob, filename);
-      } else {
-        const downloadUrl = (window.URL || window.webkitURL).createObjectURL(
-          blob
-        );
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = filename;
-        link.click();
-        (window.URL || window.webkitURL).revokeObjectURL(blob);
-      }
+      triggerScopedDownload({
+        blob,
+        filename,
+        root: this.$el
+      });
     },
     // add #10359 編集権限の動作不正 start
     getItemAuthorized(pageCd, itemCd) {
@@ -128,13 +120,13 @@ export default {
       const filepath = file.file_path;
       const filename = file.file_name;
       const result = this.getPatEventResultParams[this.index].result_value;
-      const fileInfo = this.value.filter(i => i !== file);
+      const fileInfo = this.modelValue.filter(i => i !== file);
       const formatClass = this.getPatEventResultParams[this.index].format_class;
       const values = {
         format_class: formatClass,
         result_value: fileInfo
       };
-      this.$emit("input", fileInfo);
+      this.$emit("update:modelValue", fileInfo);
       const deletefile = JSON.stringify({
         file_name: filename,
         file_path: filepath

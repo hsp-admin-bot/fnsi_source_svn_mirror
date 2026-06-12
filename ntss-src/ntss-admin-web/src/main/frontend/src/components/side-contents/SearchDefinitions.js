@@ -1,5 +1,5 @@
-import _ from "underscore";
-import moment from "moment";
+import _ from "@/compat/collections/lodash";
+import dayjs from "@/compat/date/dayjs";
 import { formatDatetime } from "@/functions/common/CommonFunctions.js";
 
 /**
@@ -480,6 +480,81 @@ export class DiaysisConditionTime extends DiaysisCondition {
   }
 }
 
+const EMPTY_INDEXED_ARRAY_SLOTS = () => ({
+  1: [],
+  2: [],
+  3: [],
+  4: [],
+  5: [],
+});
+
+const normalizeIndexedArraySlots = (source) => {
+  const normalized = EMPTY_INDEXED_ARRAY_SLOTS();
+  if (!source || typeof source !== "object") {
+    return normalized;
+  }
+  for (let i = 1; i <= 5; i++) {
+    if (Array.isArray(source[i])) {
+      normalized[i] = source[i];
+    }
+  }
+  return normalized;
+};
+
+const EMPTY_DIALYSIS_CONDITION_SLOTS = () => ({
+  1: null,
+  2: null,
+  3: null,
+  4: null,
+  5: null,
+});
+
+const createDialysisConditionObject = (dialCondId, selectorType) => {
+  if (dialCondId == null || selectorType == null) {
+    return null;
+  }
+  if (selectorType === DIAL_COND_TYPE.LIST_SELECT) {
+    return new DiaysisConditionListSelect(dialCondId, selectorType);
+  }
+  if (selectorType === DIAL_COND_TYPE.RANGE_VALUE) {
+    return new DiaysisConditionRangeValue(dialCondId, selectorType);
+  }
+  if (selectorType === DIAL_COND_TYPE.RADIO) {
+    return new DiaysisConditionRadio(dialCondId, selectorType);
+  }
+  if (selectorType === DIAL_COND_TYPE.TIME) {
+    return new DiaysisConditionTime(dialCondId, selectorType);
+  }
+  return null;
+};
+
+/** selectingDialCondId のみ保存されている旧データ向けに dialysisConditionList を補完 */
+const syncDialysisConditionListWithSelectors = (
+  selectingDialCondId,
+  dialysisConditionList
+) => {
+  for (let i = 1; i <= 5; i++) {
+    const dialCondId = selectingDialCondId?.[i] ?? null;
+    if (dialCondId == null) {
+      dialysisConditionList[i] = null;
+      continue;
+    }
+    if (dialysisConditionList[i] != null) {
+      continue;
+    }
+    const dialCondItem = DIAL_COND_ITEMS.find((item) => item.id === dialCondId);
+    if (dialCondItem == null) {
+      dialysisConditionList[i] = null;
+      selectingDialCondId[i] = null;
+      continue;
+    }
+    dialysisConditionList[i] = createDialysisConditionObject(
+      dialCondId,
+      dialCondItem.selectorType
+    );
+  }
+};
+
 export class SearchQuery {
   constructor(queryObj = null) {
     if (queryObj === null) {
@@ -757,7 +832,8 @@ export class SearchQuery {
       // add FutreNetWeb+SI課題管理No4770対応 趙 end
       this.treatDayOfWeekList = queryObj.treatDayOfWeekList;
       this.indCommentList = queryObj.indCommentList;
-      this.dialysisConditionList = queryObj.dialysisConditionList;
+      this.dialysisConditionList =
+        queryObj.dialysisConditionList ?? EMPTY_DIALYSIS_CONDITION_SLOTS();
       this.treatmentCdList = queryObj.treatmentCdList;
       this.dialyzerCdList = queryObj.dialyzerCdList;
       //add 患者透析困難情報を検索する 劉全航 start
@@ -805,7 +881,7 @@ export class SearchQuery {
           tmpCondObj = new DiaysisConditionListSelect(
             cond.conditionId,
             cond.selectorType,
-            cond.selectedItemList
+            Array.isArray(cond.selectedItemList) ? cond.selectedItemList : []
           );
         } else if (cond.selectorType === DIAL_COND_TYPE.RANGE_VALUE) {
           tmpCondObj = new DiaysisConditionRangeValue(
@@ -834,11 +910,18 @@ export class SearchQuery {
         this.dialysisConditionList[i] = tmpCondObj;
       }
 
-      this.selectingDialCondId = queryObj.selectingDialCondId;
-      this.medicationList = queryObj.medicationList;
-      this.medicationSelectorClass = queryObj.medicationSelectorClass;
-      this.equipmentList = queryObj.equipmentList;
-      this.equipmentSelectorClass = queryObj.equipmentSelectorClass;
+      this.selectingDialCondId =
+        queryObj.selectingDialCondId ?? EMPTY_DIALYSIS_CONDITION_SLOTS();
+      syncDialysisConditionListWithSelectors(
+        this.selectingDialCondId,
+        this.dialysisConditionList
+      );
+      this.medicationList = normalizeIndexedArraySlots(queryObj.medicationList);
+      this.medicationSelectorClass =
+        queryObj.medicationSelectorClass ?? EMPTY_DIALYSIS_CONDITION_SLOTS();
+      this.equipmentList = normalizeIndexedArraySlots(queryObj.equipmentList);
+      this.equipmentSelectorClass =
+        queryObj.equipmentSelectorClass ?? EMPTY_DIALYSIS_CONDITION_SLOTS();
       this.patGroups = queryObj.patGroups;
       this.patGroupsMethod = queryObj.patGroupsMethod;
       // add 11315 【たくしん会】患者検索の患者リストのソートが正しく動作しない 関 start
@@ -1201,21 +1284,17 @@ export class SearchQuery {
       // 透析歴(下限) ⇒ 透析導入日(上限)
       let dialysisStartDateUpper = "";
       if (dialHstLowerTmp.year || dialHstLowerTmp.month) {
-        const duration = moment.duration({
-          years: dialHstLowerTmp.year,
-          months: dialHstLowerTmp.month,
-        });
-        dialysisStartDateUpper = moment().subtract(duration).format("YYYYMMDD");
+        dialysisStartDateUpper = dayjs()
+          .subtract(Number(dialHstLowerTmp.year) || 0, "years")
+          .subtract(Number(dialHstLowerTmp.month) || 0, "months")
+          .format("YYYYMMDD");
       }
       // 透析歴(上限) ⇒ 透析導入日(下限)
       let dialysisStartDateLower = "";
       if (dialHstUpperTmp.year || dialHstUpperTmp.month) {
-        const duration = moment.duration({
-          years: dialHstUpperTmp.year,
-          months: Number(dialHstUpperTmp.month) + 1,
-        });
-        dialysisStartDateLower = moment()
-          .subtract(duration)
+        dialysisStartDateLower = dayjs()
+          .subtract(Number(dialHstUpperTmp.year) || 0, "years")
+          .subtract((Number(dialHstUpperTmp.month) || 0) + 1, "months")
           .add(1, "days")
           .format("YYYYMMDD");
       }
@@ -1269,8 +1348,10 @@ export class SearchQuery {
         //add NO338 加算情報検索 劉全航 start
         additionCd: this.additionCd,
         additionName: this.additionName,
+        // additionCd が無いとき JSON の null は PatMainDetailedConditions の primitive boolean にバインドできず 400 になるため false を送る。
+        // SQL は /*%if conditions.additionCd != null && ...*/ のため加算サブクエリは生成されない。
         additionSearchCondition:
-          this.additionCd === null ? null : this.additionSearchCondition,
+          this.additionCd === null ? false : this.additionSearchCondition,
         //add NO338 加算情報検索 劉全航 end
         conditionIsEmpty: false,
       };
@@ -1447,8 +1528,8 @@ export class SearchQuery {
     ) {
       patEvent = {
         categoryCdList: this.categoryList,
-        eventStartDate: this.eventStartDate !== "" ? moment(this.eventStartDate).format("YYYYMMDD") : "",
-        eventEndDate: this.eventEndDate !== "" ? moment(this.eventEndDate).format("YYYYMMDD") : ""
+        eventStartDate: this.eventStartDate !== "" ? dayjs(this.eventStartDate).format("YYYYMMDD") : "",
+        eventEndDate: this.eventEndDate !== "" ? dayjs(this.eventEndDate).format("YYYYMMDD") : ""
       }
     }
     //add 患者イベントで検索 劉全航 end
@@ -1485,45 +1566,45 @@ export class SearchQuery {
     let Spacetime = "";
     switch (this.dialysisDateArgs) {
       case "today":
-        start = end = moment(nowDate).format("YYYYMMDD");
+        start = end = dayjs(nowDate).format("YYYYMMDD");
         break;
       case "yesterday":
-        Spacetime = moment(time - 24 * 60 * 60 * 1000);
+        Spacetime = dayjs(time - 24 * 60 * 60 * 1000);
         start = end = Spacetime.format("YYYYMMDD");
         break;
       case "tomorrow":
-        Spacetime = moment(time + 24 * 60 * 60 * 1000);
+        Spacetime = dayjs(time + 24 * 60 * 60 * 1000);
         start = end = Spacetime.format("YYYYMMDD");
         break;
       case "thisWeek":
-        Spacetime = moment(time - 24 * 60 * 60 * 1000 * (week - 1));
+        Spacetime = dayjs(time - 24 * 60 * 60 * 1000 * (week - 1));
         start = Spacetime.format("YYYYMMDD");
-        Spacetime = moment(time + 24 * 60 * 60 * 1000 * (7 - week));
+        Spacetime = dayjs(time + 24 * 60 * 60 * 1000 * (7 - week));
         end = Spacetime.format("YYYYMMDD");
         break;
       case "lastWeek":
-        Spacetime = moment(nowDate.getTime() - 24 * 60 * 60 * 1000 * week);
+        Spacetime = dayjs(nowDate.getTime() - 24 * 60 * 60 * 1000 * week);
         end = Spacetime.format("YYYYMMDD");
-        Spacetime = moment(nowDate.getTime() - 24 * 60 * 60 * 1000 * (week + 6));
+        Spacetime = dayjs(nowDate.getTime() - 24 * 60 * 60 * 1000 * (week + 6));
         start = Spacetime.format("YYYYMMDD");
         break;
       case "nextWeek":
-        Spacetime = moment(nowDate.getTime() + 24 * 60 * 60 * 1000 * (8 - week));
+        Spacetime = dayjs(nowDate.getTime() + 24 * 60 * 60 * 1000 * (8 - week));
         start = Spacetime.format("YYYYMMDD");
-        Spacetime = moment(nowDate.getTime() + 24 * 60 * 60 * 1000 * (14 - week));
+        Spacetime = dayjs(nowDate.getTime() + 24 * 60 * 60 * 1000 * (14 - week));
         end = Spacetime.format("YYYYMMDD");
         break;
       case "thisMonth":
-        start = moment(nowDate).startOf('month').format("YYYYMMDD");
-        end = moment(nowDate).endOf('month').format("YYYYMMDD");
+        start = dayjs(nowDate).startOf('month').format("YYYYMMDD");
+        end = dayjs(nowDate).endOf('month').format("YYYYMMDD");
         break;
       case "lastMonth":
-        start = moment(nowDate).subtract(1, 'months').startOf('month').format("YYYYMMDD");
-        end = moment(nowDate).subtract(1, 'months').endOf('month').format("YYYYMMDD");
+        start = dayjs(nowDate).subtract(1, 'months').startOf('month').format("YYYYMMDD");
+        end = dayjs(nowDate).subtract(1, 'months').endOf('month').format("YYYYMMDD");
         break;
       case "nextMonth":
-        start = moment(nowDate).add(1, 'months').startOf('month').format("YYYYMMDD");
-        end = moment(nowDate).add(1, 'months').endOf('month').format("YYYYMMDD");
+        start = dayjs(nowDate).add(1, 'months').startOf('month').format("YYYYMMDD");
+        end = dayjs(nowDate).add(1, 'months').endOf('month').format("YYYYMMDD");
         break;
       default:
         start = formatDatetime(start, "YYYYMMDD");

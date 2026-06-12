@@ -33,9 +33,10 @@ export default {
     // 投与薬剤情報取得
     // -----------------------------------------
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
-    getTreatmentRecordMediInfo({ commit }, ordNo) {
-      return sendRequestGetTreatmentRecordMediInfo(ordNo).then(response => {
+    getTreatmentRecordMediInfo({ commit }, payload) {
+      const ordNo = payload && typeof payload === "object" ? payload.ordNo : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
+      return sendRequestGetTreatmentRecordMediInfo(ordNo, selectedPatId).then(response => {
         commit("setUpDate", response.data.up_date);
         return response;
       });

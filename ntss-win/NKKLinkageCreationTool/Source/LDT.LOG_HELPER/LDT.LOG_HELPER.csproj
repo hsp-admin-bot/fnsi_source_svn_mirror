@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>LDT.LOG_HELPER</RootNamespace>
     <AssemblyName>LDT.LOG_HELPER</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
@@ -37,8 +37,9 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="log4net, Version=2.0.17.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
-      <HintPath>..\packages\log4net.2.0.17\lib\\net45\\log4net.dll</HintPath>
+    <Reference Include="log4net, Version=3.3.1.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a">
+      <HintPath>..\packages\log4net.3.3.1\lib\net462\log4net.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

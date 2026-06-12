@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.core.entity.custom;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,7 +37,7 @@ public class PatExamPatternExamOrderInfo {
   public String getValue() {
     try {
       return objectMapper.writeValueAsString(this);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       return null;
     }
   }

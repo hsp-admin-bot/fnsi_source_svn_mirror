@@ -12,7 +12,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -38,13 +38,14 @@
               @input="setStartDateValue($event.target.value)"
             /> -->
             <input
+              ref="startDateInput"
               input-id="startDate"
               id="startDate"
               class="input-area ntss-custom-input"
               type="date"
               float
               max="9999-12-31"
-              v-validate="'date_format:yyyy-MM-dd'"
+              v-rules="'date_format:yyyy-MM-dd'"
               v-model="condition.inProgress.startDate"
               @input="setStartDateValue($event.target.value)"
               @keyup="showMsg(1)"
@@ -52,7 +53,7 @@
             <!-- add FNSI-横展開 日付のチェックの追加 徐 end -->
             <common-calendar v-model="condition.inProgress.startDate" class="calender" />
             <!-- add FNSI-横展開 日付のチェックの追加 徐 start -->
-            <span class="error-message" v-if="showStartError">{{ this.msgDiaLog }}</span>
+            <span class="error-message" v-if="showStartError">{{ msgDiaLog }}</span>
             <!-- add FNSI-横展開 日付のチェックの追加 徐 end -->
           </v-ons-col>
         </v-ons-row>
@@ -72,6 +73,7 @@
               @input="setEndDateValue($event.target.value)"
             /> -->
             <input
+              ref="endDateInput"
               input-id="endDate"
               class="input-area ntss-custom-input"
               type="date"
@@ -79,14 +81,14 @@
               id="endDate"
               v-model="condition.inProgress.endDate"
               max="9999-12-31"
-              v-validate="'date_format:yyyy-MM-dd'"
+              v-rules="'date_format:yyyy-MM-dd'"
               @input="setEndDateValue($event.target.value)"
               @keyup="showMsg(2)"
             />
             <!-- add FNSI-横展開 日付のチェックの追加 徐 end -->
             <common-calendar v-model="condition.inProgress.endDate" class="calender" />
             <!-- add FNSI-横展開 日付のチェックの追加 徐 start -->
-            <span class="error-message" v-if="showEndError">{{ this.msgDiaLog }}</span>
+            <span class="error-message" v-if="showEndError">{{ msgDiaLog }}</span>
             <!-- add FNSI-横展開 日付のチェックの追加 徐 end -->
           </v-ons-col>
         </v-ons-row>
@@ -96,7 +98,7 @@
             <label style="font-size:initial;">都道府県</label>
           </v-ons-col>
           <v-ons-col width="60%" vertical-align="center">
-            <v-ons-select float v-model="condition.inProgress.prefecturesCd" style="display:">
+            <v-ons-select v-model="condition.inProgress.prefecturesCd" style="display:">
               <option>すべて</option>
               <option
                 v-for="prefecture in prefectures"
@@ -112,7 +114,7 @@
             <label style="font-size:initial;">部署符号</label>
           </v-ons-col>
           <v-ons-col width="60%" vertical-align="center">
-            <v-ons-select float v-model="condition.inProgress.departmentCd" style="display:">
+            <v-ons-select v-model="condition.inProgress.departmentCd" style="display:">
               <option>すべて</option>
               <option
                 v-for="(departmentCd, idxDepartmentCd) in departmentCds"
@@ -204,9 +206,9 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -217,6 +219,7 @@ import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages.j
 import { prefectures } from "@/components/master-maintenance/mst-device-edge/Prefectures.js";
 // add FNSI-redmine#4244 付 end
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   mixins: [PopoverMixin],
@@ -301,7 +304,6 @@ export default {
       // mod FNSI-redmine#4244 付 end
     }
   },
-  watch: {},
   async created() {
     this.fetchFacilities(this.getStateUserAccountInfo.userId);
     // add FNSI-横展開No.7追加 徐 start
@@ -456,18 +458,12 @@ export default {
     // add FNSI-横展開 日付のチェックの追加 徐 start
     showMsg(e) {
       if (e === 1) {
-        if (document.getElementById("startDate").validationMessage) {
-          this.showStartError = true;
-        } else {
-          this.showStartError = false;
-        }
+        const startDateInput = this.$refs.startDateInput || getScopedElementById("startDate", this.$el || this);
+        this.showStartError = !!startDateInput?.validationMessage;
       }
       if (e === 2) {
-        if (document.getElementById("endDate").validationMessage) {
-          this.showEndError = true;
-        } else {
-          this.showEndError = false;
-        }
+        const endDateInput = this.$refs.endDateInput || getScopedElementById("endDate", this.$el || this);
+        this.showEndError = !!endDateInput?.validationMessage;
       }
     }
     // add FNSI-横展開 日付のチェックの追加 徐 end
@@ -481,10 +477,10 @@ export default {
 .input-area::-webkit-calendar-picker-indicator {
   display: none;
 }
-.popover-area >>> .popover-mask {
+.popover-area :deep(.popover-mask) {
   z-index: 100 !important;
 }
-.popover-area >>> .popover {
+.popover-area :deep(.popover) {
   z-index: 200 !important;
   min-width: 355px;
 }

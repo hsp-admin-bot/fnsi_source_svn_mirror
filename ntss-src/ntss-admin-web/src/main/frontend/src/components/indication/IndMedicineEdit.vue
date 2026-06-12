@@ -8,12 +8,12 @@
     <v-ons-row class="row-style">
       <v-ons-col class="medicine-column"> 薬剤 </v-ons-col>
       <v-ons-col class="medicine-data-column" style="display: flex;">
-        <show-selected-item
+        <!--<show-selected-item
           :propInitValue="medicineInputValue.initValue"
           :propEditValue="medicineInputValue.editValue"
           propBackgroundColor="#ebebe4"
           class="medicine-input-style"
-        />
+        />-->
         <!-- #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240108 linjunfeng start -->
         <!-- <v-ons-button
           ref="popoverButton"
@@ -35,7 +35,7 @@
         <!--     showMedicinePopover(); -->
         <!--   " -->
         <!-- > -->
-        <v-ons-button
+        <!--<v-ons-button
           ref="popoverButton"
           :disabled="fieldsDisabled || !getItemAuthorized('Indication', 'default_authority')"
           class="common-style-select-button"
@@ -43,11 +43,38 @@
             createMedicinePopoverData();
             showMedicinePopover();
           "
-        >
+        >-->
         <!-- mod #10359 編集権限の動作不正 dengshen end -->
         <!-- #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240108 linjunfeng end -->
-          選択
-        </v-ons-button>
+          <!-- 選択
+        </v-ons-button>-->
+        <common-master-selector
+          :masterType="MasterType.MEDICATION_TREATMENT_RECORD"
+          :initItem="medicineSelectorInitItem"
+          :editItem="{
+            text: medicineInputValue.editValue,
+            value: medicineInputValue.editCd,
+            unit: rstUnitForCd,
+            procedureCd: procedureSelectValue.editValue,
+            medicateTimingCd: timingSelectValue.editValue,
+            compareProcedure: true,
+            compareTiming: true
+          }"
+          :extraParams="medicineSelectorExtraParams"
+          :patientId="selectedPatId"
+          :facilityCd="facilityCd"
+          :dialysisState="Number(rstDialysisState||0)"
+          :allowedFields='allowedFields'
+          :hasUnregisteredOption="false"
+          :hasChangedOption="!showMedicineFieldOnly"
+          :changeOptionMode="'nameAndUnit'"
+          :selectedItemClass="'com-basic-sub-input'"
+          :backgroundColor="'#f7f7f7'"
+          :btnClass="'com-basic-sub-btn'"
+          :btnDisabled="fieldsDisabled || !getItemAuthorized('Indication', 'default_authority')"
+          :beforeCreatePopover="prepareMedicineSelectorPopover"
+          @popover-return="masterUpdateInput($event);"
+        />
       </v-ons-col>
       <!-- #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240108 linjunfeng start -->
       <!-- <pop-over
@@ -234,22 +261,23 @@
 // add #10359 編集権限の動作不正 dengshen start
 // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
 // import { getAuthorized } from "@/functions/common/CommonFunctions.js";
-import { getAuthorized, getPrefix } from "@/functions/common/CommonFunctions.js";
+import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
 // add #10359 編集権限の動作不正 dengshen end
 import { ApiHelper } from "@/apis/AxiosHelper";
-import {EventBus} from "@/eventBus";
-import { mapGetters, mapActions } from "vuex";
-import * as Mst from "@/functions/mst/MstGetters.js";
+import {EventBus} from "@/compat/vue/event-bus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import IndicationOwnerMixin from "@/components/indication/IndicationOwnerMixin";
+import { medicineClass } from "@/functions/mst/MstGetters.js";
 import MasterSelector from "@/components/common/master-selector/MasterSelector";
 import customInput from "@/components/common/custom-form-tags/CustomInput";
 import customDivShowSelectedItem from "@/components/common/custom-form-tags/CustomDivShowSelectedItem";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
 import customSelect from "@/components/common/custom-form-tags/CustomSelect";
 import { MASTER_MAINTENANCE_CURRENT_ROUTE_NAME } from "@/constants/masterMaintenanceConstants";
 import { PATVIEWER_CURRENT_ROUTE_NAME } from "@/constants/PatViewerConstants";
 import { fitTermCheck } from "@/functions/common/DateTimeUtils";
-import { createJournal } from "@/apis/journal";
 import CommonTextArea from "@/components/common/CommonTextArea";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -259,13 +287,25 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 // mod 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy start
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
+import BigNumber from "@/compat/number/bignumber";
 // add #9848+9849 数値IFのスタイル全不正 linjunfeng start
-import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro'
-import BigNumber from "bignumber.js";
+
 // add #9848+9849 数値IFのスタイル全不正 linjunfeng end
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
+
+import { getMstListCompose } from "@/apis/pat-prescription"
+import { getMasterConfig } from "@/components/common/master-selector/builder/masterPopoverConfig";
+
+import $ from "@/compat/jquery";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
+const CLASS_MISMATCH_LABEL = "【分類不一致】";
 export default {
+  mixins: [IndicationOwnerMixin],
   components: {
+    "common-master-selector": commonMasterSelector,
     "pop-over": MasterSelector,
     "custom-input": customInput,
     "custom-input-number": customInputNumber,
@@ -276,6 +316,9 @@ export default {
     "custom-input-number-pro":CustomInputNumberPro,
     // add #9848+9849 数値IFのスタイル全不正 linjunfeng end
   },
+
+  // 親が @input リスナで使用するため input を明示宣言する。
+  emits: ["input"],
 
   props: {
     // add #10359 編集権限の動作不正 dengshen start
@@ -305,6 +348,7 @@ export default {
         timingCd: null,
         procedureCd: null,
         medicineType: null,
+        rstDialysisState:0,
         comment: "",
         decPoint: 0
       })
@@ -329,6 +373,8 @@ export default {
 
   data() {
     return {
+      treatDate:'',
+      MasterType,
       /**
        * @description 「投薬」マスタデータ
        */
@@ -355,8 +401,18 @@ export default {
        */
       medicineInputValue: {
         initValue: null,
-        editValue: null
+        editValue: null,
+        text:'',
+        editCd:'',
+        initCd:'',
       },
+      masterLabelForCd: null,
+      masterUnitForCd: null,
+      rstNameForCd: null,
+      rstUnitForCd: null,
+      rstUnitBaselineForCd: null,
+      localSelectedCd: null,
+      medicineInitSnapshot: null,
 
       /**
        * @description 「数量」入力値
@@ -418,7 +474,6 @@ export default {
        */
       decPoint: this.fieldsData.decPoint,
 
-
       /**
        * @description 「共通定型文」マスタデータ
        */
@@ -448,6 +503,8 @@ export default {
       // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
       initValue : this.fieldsData.cd,
       currentOrdMainData: {},
+      /** 中止 popup 白名单（getPatIndMmdicine） */
+      allowedIndMedicineList: [],
       // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
     };
   },
@@ -527,10 +584,92 @@ export default {
       //return this.medicineType === "2";
       return this.medicineType == 2;
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
+    },
+    isActualRst() {
+      return Number(this.rstDialysisState || 0) !== 0;
+    },
+    medicineSelectorInitItem() {
+      return {
+        text: this.isActualRst
+          ? (this.rstNameForCd != null && this.rstNameForCd !== "" ? this.rstNameForCd : this.medicineInputValue.editValue)
+          : this.medicineInputValue.initValue,
+        value: this.medicineInputValue.initCd,
+        unit: this.isActualRst && this.rstUnitBaselineForCd != null && this.rstUnitBaselineForCd !== ""
+          ? this.rstUnitBaselineForCd
+          : this.masterUnitForCd
+      };
+    },
+    indMedicineProcedureTimingChanged() {
+      return (
+        String(this.initValueModel?.procedure ?? "") !==
+          String(this.procedureSelectValue.editValue ?? "") ||
+        String(this.initValueModel?.timing ?? "") !==
+          String(this.timingSelectValue.editValue ?? "")
+      );
+    },
+    medicineNameOrUnitChangedForMasterSelector() {
+      const cdChanged =
+        this.medicineInputValue.initCd != null &&
+        this.medicineInputValue.editCd != null &&
+        String(this.medicineInputValue.initCd) !== String(this.medicineInputValue.editCd);
+      const nameChanged =
+        this.medicineInputValue.initValue != null &&
+        this.medicineInputValue.editValue != null &&
+        String(this.medicineInputValue.initValue) !== String(this.medicineInputValue.editValue);
+      const unitChanged =
+        this.masterUnitForCd != null &&
+        this.rstUnitForCd != null &&
+        String(this.masterUnitForCd) !== String(this.rstUnitForCd);
+
+      return cdChanged || nameChanged || unitChanged;
+    },
+    medicineSelectorExtraParams() {
+      return {
+        treatDate: this.treatDate,
+        rstInfo: {
+          rstName: this.isActualRst
+            ? (this.rstNameForCd != null && this.rstNameForCd !== "" ? this.rstNameForCd : (this.medicineInputValue?.initValue || ""))
+            : (this.medicineInputValue?.initValue || ""),
+          rstUnit: this.fieldsData.unit
+        },
+        actualName: this.isActualRst ? (this.rstNameForCd != null && this.rstNameForCd !== "" ? this.rstNameForCd : "") : "",
+        medicineType: this.fieldsData.medicineType,
+        baseProcedureCd: this.initValueModel?.procedure ?? null,
+        baseTimingCd: this.initValueModel?.timing ?? null,
+        procedureCd: this.procedureSelectValue?.editValue ?? null,
+        timingCd: this.timingSelectValue?.editValue ?? null,
+        compareProcedure: true,
+        compareTiming: true,
+        currentOrdMainData: this.currentOrdMainData,
+      };
+    },
+    // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
+    allowedFields() {
+      return {
+        data: this.allowedIndMedicineList,
+        showMedicineFieldOnly: this.showMedicineFieldOnly,
+      };
     }
+    // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
   },
 
   watch: {
+    "fieldsData.cd": {
+      immediate: true,
+      handler(val) {
+        this.localSelectedCd = val;
+        this.medicineInitSnapshot = null;
+      },
+    },
+    "fieldsData.unit": {
+      immediate: true,
+      handler(val) {
+        this.rstUnitForCd = val != null && val !== "" ? String(val) : this.rstUnitForCd;
+        if (this.isActualRst && val != null && val !== "") {
+          this.rstUnitBaselineForCd = String(val);
+        }
+      },
+    },
     fieldsComputed(data) {
       this.$emit("input", data);
     },
@@ -544,19 +683,25 @@ export default {
           this.medicinePopoverData.popoverContentSelected.value = value;
         } else if (
           typeof this.medicinePopoverData.popoverContentSelected.value ===
-          "string"
-        ) {
+          "string") {
           // 吹き出し非表示:コードを String → Number
           const value = this.medicinePopoverData.popoverContentSelected.value;
           this.medicinePopoverData.popoverContentSelected.value = Number(
-            value.split("$")[0]
-          );
+            value.split("$")[0]);
         }
       }
     }
   },
 
   mounted() {
+    this.localSelectedCd = this.fieldsData?.cd;
+    this.rstUnitForCd =
+      this.fieldsData?.unit != null && this.fieldsData?.unit !== ""
+        ? String(this.fieldsData.unit)
+        : null;
+    if (this.isActualRst && this.rstUnitForCd) {
+      this.rstUnitBaselineForCd = this.rstUnitForCd;
+    }
     this.retrieveMstData();
   },
 
@@ -565,6 +710,33 @@ export default {
       "startLoadingScreen",
       "finishLoadingScreen"
     ]),
+    masterUpdateInput(val){
+      this.medicineInputValue.editValue = val.text
+      this.medicineInputValue.text = val.text
+      this.medicineInputValue.editCd = val.value
+      // common-master-selector（MEDICATION_TREATMENT_RECORD）は option に kbnValue が無い場合があるため、
+      // key_type(=1/2) 等から薬剤区分を必ず補完する
+      const resolvedType =
+        val?.kbnValue ?? val?.type ?? val?.key_type ?? val?.keyType ?? this.medicineType ?? this.fieldsData?.medicineType ?? null;
+      const item = {
+        ...val,
+        isDisp: val.isDisp,
+        text: val.text,
+        value: val.value,
+        type: resolvedType
+      };
+      this.updateMedicineInput(item)
+    },
+
+    mstClick(item) {
+      const val = (item.data?.master?.items ?? []).filter(i => i.key_type == 1);
+      return val
+
+    },
+    mstMixClick(item) {
+      const val = (item.data?.master?.items ?? []).filter(i => i.key_type == 2);
+      return val
+    },
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
       return this.isMst || (this.isMst != true && getAuthorized(pageCd, itemCd));
@@ -619,14 +791,6 @@ export default {
     }),
     //mod FNSI-5800 劉全航 end
     ...mapActions("treatment-record/common", ["getMstMachineByOrdNoRst", "sendGetNoticeMedi"]),
-    //add FutreNetWeb+SI課題管理 no.6422 劉全航 start
-    // 治療方法セットマスタ 手技&投与タイミング没有值 zhao start
-    // ...mapActions("pat-viewer",["setTabooMedicine"]),
-    // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-    // ...mapActions("pat-viewer",["setTabooMedicine","getMstProcedure","getMstMedicateTiming"]),
-    ...mapActions("pat-viewer",["setTabooMedicine"]),
-    // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end    // 治療方法セットマスタ 手技&投与タイミング没有值 zhao end
-    //add FutreNetWeb+SI課題管理 no.6422 劉全航 end
     //add FNSI内容修正 バグ284、286  姜 end
     // add #10266 薬剤編集と投薬、編集画面で薬剤に変化が生じ、操作を中止した場合、薬剤はリセットされません。 linjunfeng start
     /**
@@ -638,6 +802,63 @@ export default {
       this.medicineInputValue.editValue = this.medicineInputValue.initValue;
     },
     // add #10266 薬剤編集と投薬、編集画面で薬剤に変化が生じ、操作を中止した場合、薬剤はリセットされません。 linjunfeng end
+    /** 中止 popup 打开前：先加载白名单与 currentOrdMainData，避免列表为空或实绩名为空 */
+    async prepareMedicineSelectorPopover() {
+      if (!this.showMedicineFieldOnly) return;
+
+      await this.loadAllowedIndMedicineList();
+      if (this.settingIndData?.ordNo) {
+        this.currentOrdMainData = await ApiHelper.get(
+          `/mainData/getOrdMainByOrdNo/${this.settingIndData.ordNo}`
+        );
+      }
+    },
+    resolveMedicineEditBase() {
+      const owner =
+        typeof this._indicationFlowOwner === "function"
+          ? this._indicationFlowOwner()
+          : null;
+      if (owner?.settingData != null && owner?.structData != null) {
+        return owner;
+      }
+
+      let parent = this.$parent;
+      for (let depth = 0; depth < 6 && parent; depth += 1) {
+        if (parent.settingData != null && parent.structData != null) {
+          return parent;
+        }
+        parent = parent.$parent;
+      }
+      return null;
+    },
+    /** 中止 popup：指示範囲内の薬剤白名单（getPatIndMmdicine） */
+    async loadAllowedIndMedicineList() {
+      if (!this.showMedicineFieldOnly) {
+        this.allowedIndMedicineList = [];
+        return;
+      }
+      const base = this.resolveMedicineEditBase();
+      if (!base?.structData) {
+        this.allowedIndMedicineList = [];
+        return;
+      }
+      const paramJson = {
+        patId: base.structData.patId,
+        facilityCd: base.structData.facilityCd,
+        dialysisDateFrom: dayjs(base.structData.indStartDate).format("YYYYMMDD"),
+        dialysisDateTo: base.structData.indEndDate
+          ? dayjs(base.structData.indEndDate).format("YYYYMMDD")
+          : null,
+      };
+      try {
+        const res = await ApiHelper.post("/mainData/getPatIndMmdicine", paramJson);
+        this.allowedIndMedicineList = res.data || [];
+      } catch (error) {
+        getErrorMessage("IndMedicineEdit.vue", "loadAllowedIndMedicineList", error);
+        this.allowedIndMedicineList = [];
+        throw error;
+      }
+    },
     async retrieveMstData() {
       //mod FNSI-5906 劉全航 end
       this.procedureDataset = this.getMstProcedureData;
@@ -647,21 +868,21 @@ export default {
       //   this.timingDataset,
       //   this.commentDataset
       // ] = await Promise.all([
-      //   Mst.procedure(this.facilityCd).catch(error => {
+      //   procedure(this.facilityCd).catch(error => {
       //     //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
-      //     getErrorMessage('IndMedicineEdit.vue', 'Mst.procedure', error);
+      //     getErrorMessage('IndMedicineEdit.vue', 'procedure', error);
       //     //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
       //     throw error;
       //   }),
-      //   Mst.medicateTiming(this.facilityCd).catch(error => {
+      //   medicateTiming(this.facilityCd).catch(error => {
       //     //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
-      //     getErrorMessage('IndMedicineEdit.vue', 'Mst.medicateTiming', error);
+      //     getErrorMessage('IndMedicineEdit.vue', 'medicateTiming', error);
       //     //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
       //     throw error;
       //   }),
-      //   Mst.mstComFixedPhrase(this.facilityCd).catch(error => {
+      //   mstComFixedPhrase(this.facilityCd).catch(error => {
       //     //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
-      //     getErrorMessage('IndMedicineEdit.vue', 'Mst.mstComFixedPhrase', error);
+      //     getErrorMessage('IndMedicineEdit.vue', 'mstComFixedPhrase', error);
       //     //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
       //     throw error;
       //   })
@@ -691,9 +912,10 @@ export default {
       })
       // add #9848+9849 手技、投与タイミング 空選択肢あり linjunfeng end
       // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-      if (this.settingIndData.ordNo) {
+      if (this.settingIndData && this.settingIndData.ordNo) {
         this.currentOrdMainData = await ApiHelper.get(`/mainData/getOrdMainByOrdNo/${this.settingIndData.ordNo}`)
       }
+      await this.loadAllowedIndMedicineList();
       // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
       await this.createMedicinePopoverData();
       const selectedMst = this.medicinePopoverData.popoverContentDataset.find(
@@ -701,15 +923,17 @@ export default {
           let medicineCd = this.fieldsData.cd;
           if (this.isMedicineMix) {
             // 調製薬剤なら
-            medicineCd = `${medicineCd}$`;
+            medicineCd = `${medicineCd}`;
           }
 
           return item.value === medicineCd;
-        }
-      );
+        });
       if (selectedMst) {
         this.medicineInputValue.initValue = selectedMst.text;
         this.medicineInputValue.editValue = selectedMst.text;
+        this.medicineInputValue.text = selectedMst.text;
+        this.medicineInputValue.editCd = selectedMst.value;
+        this.medicineInputValue.initCd = selectedMst.value;
         if (this.isMedicineMix) {
           selectedMst.value = Number(selectedMst.value.split("$")[0]);
         }
@@ -719,7 +943,7 @@ export default {
       } else {
         //mod FNSI no.6663 調整薬剤内の薬剤が削除されても【削除済み】と表示されない 劉全航 start
         //削除済み調製薬剤の場合
-        var resMedicine;
+        /*var resMedicine;
          if (this.isMedicineMix){
            resMedicine = this.medicineMixDataset.find(o=>{
              return o.medicineMixCd === this.fieldsData.cd;
@@ -742,7 +966,7 @@ export default {
               this.medicineInputValue.initValue = null;
               this.medicineInputValue.editValue = null;
           }
-         }
+         }*/
         // 削除済み薬剤の場合
         // const resMedicine = this.getMstMedicineAllergyData.find(item => {
         //   return item.medicineCd == this.fieldsData.cd;
@@ -771,6 +995,25 @@ export default {
         med = this.medicineMixDataset.find(item => {
           return item.medicineMixCd === this.fieldsComputed.cd;});
       }
+      this.masterUnitForCd =
+        med && med.unit != null && med.unit !== ""
+          ? String(med.unit)
+          : this.masterUnitForCd;
+
+      const initText = this.isActualRst && this.rstNameForCd != null && this.rstNameForCd !== ""
+        ? this.rstNameForCd
+        : (this.masterLabelForCd != null && this.masterLabelForCd !== ""
+            ? this.masterLabelForCd
+            : (this.medicineInputValue.initValue || ""));
+      const initUnit = this.isActualRst && this.rstUnitForCd != null && this.rstUnitForCd !== ""
+        ? this.rstUnitForCd
+        : (this.masterUnitForCd || "");
+
+      this.medicineInitSnapshot = {
+        text: initText,
+        value: this.medicineInputValue.initCd,
+        unit: initUnit
+      };
 
       // mod FNSI-小数点の修正 楊 start
       // this.decPoint = med && med.unitDecimalPoint;
@@ -812,18 +1055,34 @@ export default {
      * @description  ポップオーバーを表示する前に、必要なデータを取得して、
      *               ポップオーバー用フォーマットをコンバートする
      */
+    /**
+     * 指示が無い・予定日未設定の場合でもマスタ取得・表示が空にならないよう治療日を補完する
+     */
+    resolveTreatDateForExtraParams() {
+      const struct = this._indicationFlowOwner()?.structData ?? this.$parent?.$parent?.structData;
+      if (struct?.indStartDate) {
+        return dayjs(struct.indStartDate).format("YYYYMMDD");
+      }
+      if (this.getIndStartDate) {
+        return dayjs(this.getIndStartDate).format("YYYYMMDD");
+      }
+      return dayjs().format("YYYYMMDD");
+    },
+
     async createMedicinePopoverData() {
+      this.treatDate = this.resolveTreatDateForExtraParams();
+
       // 選択中薬剤のIDを取得
       let selectedMediCd = null;
       let selectedMediMixCd = null;
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
       //if (this.fieldsData.medicineType === "1") {
-      if (this.fieldsData.medicineType == 1) {
+      if (this.medicineType == 1) {
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
         selectedMediCd = this.fieldsData.cd;
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
       //} else if (this.fieldsData.medicineType === "2") {
-      } else if (this.fieldsData.medicineType == 2) {
+      } else if (this.medicineType == 2) {
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
         selectedMediMixCd = this.fieldsData.cd;
       }
@@ -832,37 +1091,67 @@ export default {
       //mod FNSI-5906 劉全航 start
       // const [medicineData, medicineMixData, classData] = await Promise.all([
       //   // マスタ系画面以外では患者のタブー・アレルギー情報込みで取得する
-      //   this.$router.currentRoute.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? Mst.medicine(this.facilityCd) : Mst.medicineTabooAllergy(this.selectedPatId),
+      //   this.$route.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? medicine(this.facilityCd) : medicineTabooAllergy(this.selectedPatId),
       //   //mod FNSI no.6663 調整薬剤内の薬剤が削除されても【削除済み】と表示されない 劉全航 start
-      //   // this.$router.currentRoute.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? Mst.medicineMix(this.facilityCd) : Mst.medicineMixTabooAllergy(this.selectedPatId),
-      //   this.$router.currentRoute.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? Mst.medicineMix(this.facilityCd) : Mst.medicineMixAllergy(this.selectedPatId,true),
+      //   // this.$route.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? medicineMix(this.facilityCd) : medicineMixTabooAllergy(this.selectedPatId),
+      //   this.$route.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? medicineMix(this.facilityCd) : medicineMixAllergy(this.selectedPatId,true),
       //   //mod FNSI no.6663 調整薬剤内の薬剤が削除されても【削除済み】と表示されない 劉全航 end
-      //   // Mst.medicineClass(this.facilityCd)
+      //   // medicineClass(this.facilityCd)
       // ]).catch(error => {
       //   //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
       //   getErrorMessage('IndMedicineEdit.vue', 'createMedicinePopoverData', error);
       //   //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
       //   throw error;
       // });
-      var medicineData = this.$router.currentRoute.name ===
+      /*var medicineData = this.$route.name ===
         // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
         // MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? this.getMstMedicineData : this.getMstMedicineTabooAllergyData;
         MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? this.getMstMedicineIncludeDeletedData : this.getMstMedicineAllergyData;
         // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
-      var medicineMixData = this.$router.currentRoute.name ===
+      var medicineMixData = this.$route.name ===
         // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
         // MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? this.getMstMedicineMixData : this.getMstMedicineMixAllergyData;
         MASTER_MAINTENANCE_CURRENT_ROUTE_NAME ? this.getMstMedicineMixIncludeDeletedData : this.getMstMedicineMixAllergyData;
         // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
-      var classData = this.getMstMedicineClassData;
+      var classData = this.getMstMedicineClassData;*/
+      const initCd = this.fieldsData?.cd;
+      const extraParams = {
+        treatDate: this.treatDate,
+        rstInfo: {
+          rstName: this.medicineInputValue?.initValue || "",
+          rstUnit: this.fieldsData?.unit || ""
+        },
+        medicineType: this.medicineType || null,
+        initValue: initCd
+      };
+      const context = {
+        facilityCd: this.facilityCd,
+        patientId: this.selectedPatId,
+        extraParams,
+        initItem: { value: initCd },
+        selectedItem: { value: initCd },
+        dialysisState: Number(this.rstDialysisState || 0),
+        allowedFields: this.allowedFields
+      };
+
+      const item = getMasterConfig(MasterType.MEDICATION_TREATMENT_RECORD, context);
+      const res = await getMstListCompose(item).catch(error => {
+        //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
+        getErrorMessage('IndTreatCondAntiCoagulant.vue', 'createPopoverData', error);
+        //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
+        throw error;
+      });
+      const medicineData = this.mstClick(res)
+      const medicineMixData = this.mstMixClick(res)
+      let classData = res.data?.filterList?.[0]?.list2?.items ?? [];
+
       // add 薬剤分類の初期値が空 商 start
-      if (classData.length === 0) {
-        classData = await Mst.medicineClass(this.facilityCd).catch(
+      if (!classData || classData.length === 0) {
+        classData = await medicineClass(this.facilityCd).catch(
           error => {
             getErrorMessage('IndMedicineEdit.vue', 'async', error);
             throw error;
-          }
-        );
+          });
       }
       // add 薬剤分類の初期値が空 商 end
       //mod FNSI-5906 劉全航 end
@@ -872,19 +1161,18 @@ export default {
       let treatDate = null;
       // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
       // 患者経過総合ビューア(予定)表示時は、予定範囲と薬剤の使用期限を見て表示内容を補正する
-      if (this.$router.currentRoute.name === PATVIEWER_CURRENT_ROUTE_NAME) {
+      if (this.$route.name === PATVIEWER_CURRENT_ROUTE_NAME) {
         let indMmdicine =null;
-        if(this.$parent.$parent.settingData!=undefined&&this.$parent.$parent.edit == 1){
+        if(this._indicationFlowOwner().settingData!=undefined&&this._indicationFlowOwner().edit == 1){
           const paramJson = {
-            patId: this.$parent.$parent.structData.patId,
-            facilityCd: this.$parent.$parent.structData.facilityCd,
-            dialysisDateFrom: moment(this.$parent.$parent.structData.indStartDate).format("YYYYMMDD"),
-            dialysisDateTo: this.$parent.$parent.structData.indEndDate?moment(this.$parent.$parent.structData.indEndDate).format("YYYYMMDD"):null
+            patId: this._indicationFlowOwner().structData.patId,
+            facilityCd: this._indicationFlowOwner().structData.facilityCd,
+            dialysisDateFrom: dayjs(this._indicationFlowOwner().structData.indStartDate).format("YYYYMMDD"),
+            dialysisDateTo: this._indicationFlowOwner().structData.indEndDate?dayjs(this._indicationFlowOwner().structData.indEndDate).format("YYYYMMDD"):null
           }
           indMmdicine = await ApiHelper.post(
             "/mainData/getPatIndMmdicine",
-            paramJson
-          ).catch(error => {
+            paramJson).catch(error => {
             //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
             getErrorMessage('IndMedicineEdit.vue', 'updateIndInfo', error);
             //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
@@ -914,10 +1202,10 @@ export default {
           }
           // mod 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy end
         });
-        // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start  
-        treatDate = this.$parent?.$parent?.structData?.indStartDate;
-      } else if (this.$router.currentRoute.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME) {
-        treatDate = moment().format("YYYYMMDD");
+        // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
+        treatDate = this._indicationFlowOwner()?.structData?.indStartDate;
+      } else if (this.$route.name === MASTER_MAINTENANCE_CURRENT_ROUTE_NAME) {
+        treatDate = dayjs().format("YYYYMMDD");
         // 薬剤
         filteredMedicineData = medicineData.filter(medi => {
           return fitTermCheck(medi.useStartDate, medi.useEndDate, treatDate) || (this.fieldsData.cd != null && medi.medicineCd == this.fieldsData.cd);
@@ -925,7 +1213,7 @@ export default {
         // 調製薬剤
         filteredMedicineMixData = medicineMixData.filter(medi => {
           return fitTermCheck(medi.maxUseStartDate, medi.minUseEndDate, treatDate) || (this.fieldsData.cd != null && medi.medicineMixCd == this.fieldsData.cd);
-        }); 
+        });
       }
       // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
 
@@ -957,40 +1245,96 @@ export default {
       };
       // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
       let rstName = "";
+      let rstUnit = "";
       if (
-        this.$router.currentRoute.name === PATVIEWER_CURRENT_ROUTE_NAME &&
-        this.currentOrdMainData && 
-        this.currentOrdMainData.data && 
-        this.currentOrdMainData.data.rstDialysisState != 0
-      ) {
-        const rstMediInfo = this.currentOrdMainData.data.indMediInfo;
-        const rstMediInfoArr = rstMediInfo ? JSON.parse(rstMediInfo) : [];
-        const rstMediInfoArrInfo = rstMediInfoArr.find(item => item.cd == this.initValue);
-        rstName = rstMediInfoArrInfo && rstMediInfoArrInfo.name ? rstMediInfoArrInfo.name : "";
+        this.currentOrdMainData &&
+        this.currentOrdMainData.data &&
+        this.currentOrdMainData.data.rstDialysisState != 0) {
+        const cd = this.initValue;
+        const type = this.fieldsData?.medicineType;
+        const indRaw = this.currentOrdMainData?.data?.indMediInfo;
+        const rstRaw = this.currentOrdMainData?.data?.rstMediInfo;
+        const indArr = indRaw ? JSON.parse(indRaw) : [];
+        const rstArr = rstRaw ? JSON.parse(rstRaw) : [];
+        const match = (arr) =>
+          Array.isArray(arr)
+            ? arr.find((it) =>
+                String(it?.cd) === String(cd) &&
+                (type == null || type === "" || String(it?.medicine_type) === String(type))
+              )
+            : null;
+        const indRow = match(indArr);
+        const rstRow = match(rstArr);
+        const picked = indRow || rstRow;
+        rstName = picked && picked.name ? String(picked.name) : "";
+        rstUnit = picked && picked.unit ? String(picked.unit) : "";
       }
+      this.rstNameForCd = rstName;
       // add #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
       const contentMapping = (item, cdKey, nameKey, category) => {
+        const baseText =
+          (item.classInconsistent || '') +
+          item.tabooAllergy +
+          item.expired +
+          item.deleted +
+          item.includeDeleted +
+          item[nameKey];
         return {
-          value: category == 1 ? item[cdKey] : `${item[cdKey]}$`,
+          //value: category == 1 ? item[cdKey] : `${item[cdKey]}$`,
+          value: category == 1 ? item[cdKey] : `${item[cdKey]}`,
           // value: category === "1" ? item[cdKey] : `${item[cdKey]}$`,
           fnValue: {
             薬剤区分: category,
             薬剤分類: item.classCd
           },
+          unit: item.unit,
           // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
           // text: item[nameKey]
-          text: rstName && item[cdKey] == this.initValue ? rstName : getPrefix({treatDate, ...item}) + item[nameKey],
+          //text: rstName && item[cdKey] == this.initValue ? rstName : getPrefix({treatDate, ...item}) + item[nameKey],
+          text: rstName && item[cdKey] == this.initValue ? rstName : baseText,
           isDisp: item.isDisp,
           // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
         };
       };
+
+      const mstRow =
+        filteredMedicineData.find(o => String(o.medicineCd) == String(this.localSelectedCd)) ||
+        filteredMedicineMixData.find(o => String(o.medicineMixCd) == String(this.localSelectedCd));
+      if (mstRow) {
+        const mstName = mstRow.medicineName || mstRow.medicineMixName || "";
+        const mstBaseText =
+          (mstRow.classInconsistent || "") +
+          mstRow.tabooAllergy +
+          mstRow.expired +
+          mstRow.deleted +
+          mstRow.includeDeleted +
+          mstName;
+        this.masterLabelForCd = mstBaseText;
+        this.masterUnitForCd =
+          mstRow.unit != null && mstRow.unit !== ""
+            ? String(mstRow.unit)
+            : this.masterUnitForCd;
+      }
+      this.rstUnitForCd =
+        rstUnit != null && rstUnit !== "" ? String(rstUnit) : this.rstUnitForCd;
+      this.rstUnitBaselineForCd =
+        rstUnit != null && rstUnit !== "" ? String(rstUnit) : null;
+
+      if (
+        this.isActualRst &&
+        this.rstUnitForCd != null &&
+        this.rstUnitForCd !== ""
+      ) {
+        this.unit = this.rstUnitForCd;
+        this.unitLabelValue = this.rstUnitForCd;
+      }
 
       contentArr = filteredMedicineData
       // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
         .filter(item => contentParamIsDisp(item, 'medicineCd'))
         // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
           //.map(item => contentMapping(item, "medicineCd", "medicineName", "1"));
-          .map(item => contentMapping(item, "medicineCd", "medicineName", 1));   
+          .map(item => contentMapping(item, "medicineCd", "medicineName", 1));
       const mixArr = filteredMedicineMixData
         .filter(item => contentParamIsDisp(item, 'medicineMixCd'))
         .map(item =>
@@ -1063,7 +1407,11 @@ export default {
         return;
       }
       // add #10266 投与薬剤編集モーダル選択ボタンを押下しOK押下　NGエラー発生 linjunfeng end
-      const medicineType = data.value ? data.fnValue.薬剤区分 : null;
+      //const medicineType = data.value ? data.fnValue.薬剤区分 : null;
+      const medicineType =
+        data.value
+          ? (data.type ?? data.kbnValue ?? data.key_type ?? data.keyType ?? this.medicineType ?? this.fieldsData?.medicineType ?? null)
+          : null;
       const selectedData = data;
 
       let med = null;
@@ -1080,7 +1428,12 @@ export default {
       } else if (medicineType == 2) {
       // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
         // 調製薬剤マスタ
-        selectedData.value = Number(selectedData.value.split("$")[0]);
+        const rawVal = selectedData.value;
+        // common-master-selector 経由では number が来る場合がある
+        selectedData.value =
+          rawVal == null
+            ? rawVal
+            : Number(String(rawVal).split("$")[0]);
         med = this.medicineMixDataset.find(item => {
           return item.medicineMixCd === selectedData.value;
         });
@@ -1088,18 +1441,32 @@ export default {
 
       this.medicinePopoverData.popoverContentSelected = selectedData;
       this.medicineInputValue.editValue = selectedData.text || null;
-      this.unitLabelValue = med && med.unit;
+      const chosenUnit =
+        selectedData && selectedData.unit != null && selectedData.unit !== ""
+          ? selectedData.unit
+          : (med && med.unit != null && med.unit !== "" ? med.unit : null);
+      this.unitLabelValue = chosenUnit != null && chosenUnit !== "" ? chosenUnit : this.unitLabelValue;
+      this.rstUnitForCd =
+        chosenUnit != null && chosenUnit !== ""
+          ? String(chosenUnit)
+          : this.rstUnitForCd;
       this.medicineType = medicineType;
       this.decPoint = med && med.unitDecimalPoint;
-      //add FutreNetWeb+SI課題管理 no.6422 劉全航 start
-      this.chkTaboo();
-      //add FutreNetWeb+SI課題管理 no.6422 劉全航 end
       // #9848+9849 薬剤変更時,薬剤マスタ依存＋薬剤マスタで未指定の場合変更しない linjunfeng start
-      if (med?.procedureCd) {
-        this.procedureSelectValue.editValue = med.procedureCd;
-      }
-      if (med?.medicateTimingCd) {
-        this.timingSelectValue.editValue = med.medicateTimingCd;
+      if (selectedData?.__isMasterChangedRow) {
+        if (selectedData.__procedureCd !== undefined) {
+          this.procedureSelectValue.editValue = selectedData.__procedureCd;
+        }
+        if (selectedData.__timingCd !== undefined) {
+          this.timingSelectValue.editValue = selectedData.__timingCd;
+        }
+      } else {
+        if (med?.procedureCd) {
+          this.procedureSelectValue.editValue = med.procedureCd;
+        }
+        if (med?.medicateTimingCd) {
+          this.timingSelectValue.editValue = med.medicateTimingCd;
+        }
       }
       // #9848+9849 薬剤変更時,薬剤マスタ依存＋薬剤マスタで未指定の場合変更しない linjunfeng end
     },
@@ -1133,12 +1500,15 @@ export default {
       // add FNSI-FutreNetWeb+SI課題管理No.4718 李 end
 
       /* modify by chamaojia 2024-01-22 [10196] Default value setting error correction  --start */
+      const resolvedMedicineType =
+        this.medicineType ?? this.fieldsData?.medicineType ?? this.fieldsComputed?.medicineType ?? null;
+
       const indInfo = {
         no: this.fieldsData.seqNo,
         // class_cd: null,
         // class_name: null,
         // class_type: null,
-        medicine_type: Number(this.medicineType),
+        medicine_type: resolvedMedicineType != null ? Number(resolvedMedicineType) : null,
         // mod FNSI-FutreNetWeb+SI課題管理No.4718 李 start
         // cd: this.fieldsComputed.cd,
         cd: cdValue,
@@ -1146,6 +1516,7 @@ export default {
         // name: this.medicineInputValue.editValue,
         // short_name: null,
         // unit: this.unitLabelValue,
+        unit: this.rstUnitForCd != null && this.rstUnitForCd !== "" ? String(this.rstUnitForCd) : (this.unitLabelValue != null ? String(this.unitLabelValue) : null),
         // mod #11311 編集箇所のみ保存の再精査 zkm start
         // amount: this.fieldsComputed.amount,
         ...(1 !== structData.flag && structData.editOnly && this.fieldsComputed.amount == this.amountInputValue.initValue ? {} : { amount: this.fieldsComputed.amount }),
@@ -1191,7 +1562,10 @@ export default {
       // mod 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy start
       let isEdit = false;
       if (structData.flag!==1) {
-         isEdit = this.$parent.$parent.initStructData.indWeeks !== structData.indWeeks ? true :false;
+        // mod #12471 ord_main.ind_medi_infoに不正データが登録される zkm start
+         // isEdit = this.$parent.$parent.initStructData.indWeeks !== structData.indWeeks ? true :false;
+         isEdit = JSON.stringify(this._indicationFlowOwner().initStructData.indWeeks) !== JSON.stringify(structData.indWeeks);
+        // mod #12471 ord_main.ind_medi_infoに不正データが登録される zkm end
       }
       const sendJson = {
         pat_id: structData.patId,
@@ -1236,12 +1610,10 @@ export default {
       const startDate = structData.indStartDate.replace(/-/g, '');
       const endDate = structData.indEndDate == null ? null : structData.indEndDate.replace(/-/g, '');
       const searchData = await ApiHelper.get(
-        `/mainData/getByPatIdAndTreatDate/${structData.facilityCd}/${structData.patId}/${startDate}/${endDate}`
-      ).catch(error => {
+        `/mainData/getByPatIdAndTreatDate/${structData.facilityCd}/${structData.patId}/${startDate}/${endDate}`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
         getErrorMessage('IndMedicineEdit.vue', 'updateIndInfo', error);
         //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
-        console.log("IndMedicineEdit.vue updateIndInfo throw error; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         throw error;
       });
@@ -1257,7 +1629,7 @@ export default {
         // 実績があるフラグ
         let isRstHave = false;
 
-        if (structData.flag === 1 && this.$parent.$parent.$parent.$parent.$parent.$parent.isRstUpdateFlg === true) {
+        if (structData.flag === 1 && this._indicationResultOwner().isRstUpdateFlg === true) {
           // 複数の薬剤が追加された場合、且つ 実績の変更をする確認した場合
           sendJson.is_rst_update = true;
         }else {
@@ -1271,7 +1643,7 @@ export default {
           });
             //mod 7114 治療中の透析指示の投与薬剤、医療材料、指示コメント削除を実施した場合の注意メッセージがない 張 start
           // if (isRstHave && (structData.flag === 1 || structData.flag === 2) && !this.$parent.$parent.$parent.$parent.$parent.$parent.isShowedMessage) {
-            if (isRstHave && (structData.flag === 1 || structData.flag === 2|| structData.flag === 3) && !this.$parent.$parent.$parent.$parent.$parent.$parent.isShowedMessage) {
+            if (isRstHave && (structData.flag === 1 || structData.flag === 2|| structData.flag === 3) && !this._indicationResultOwner().isShowedMessage) {
             //mod 7114 治療中の透析指示の投与薬剤、医療材料、指示コメント削除を実施した場合の注意メッセージがない 張 end
 
               //mod #10266  start
@@ -1332,7 +1704,7 @@ export default {
               //add FNSI内容修正 バグ284、286 姜 end
               sendJson.is_rst_update = true;
               if (structData.flag === 1) {
-                this.$parent.$parent.$parent.$parent.$parent.$parent.isRstUpdateFlg = true;
+                this._indicationResultOwner().isRstUpdateFlg = true;
               }
               // add キャンセル（実績に反映しない）を選択　⇒　実績に反映される修正  xmj 2022-08-11 start
             }else {
@@ -1366,7 +1738,6 @@ export default {
           //   //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
           //   throw error;
           // });
-          console.log("IndMedicineEdit.vue updateIndInfo return sendJson; this.finishLoadingScreen();");
           this.finishLoadingScreen();
           return sendJson;
           /* add by shiyw 2022-08-26 [FNSI-6961] --> Performance Optimization: change "One medicine one Ajax call" to "All medicine in one Ajax call"  ---end */
@@ -1375,47 +1746,70 @@ export default {
           // add FNSI-連携イベントの登録適正化 楊 end
           //break;
         case 2:
-          // 投与薬剤修正時、amountが未送信の場合は追加
-          const indInfoObj = JSON.parse(sendJson.ind_info);
-          if (!indInfoObj.hasOwnProperty('amount') || indInfoObj.amount === null || indInfoObj.amount === '') {
+          // 投与薬剤修正時、amountが未変更の場合は追加
+          var indInfoObj = JSON.parse(sendJson.ind_info);
+          if (!Object.prototype.hasOwnProperty.call(indInfoObj, 'amount') || indInfoObj.amount === null || indInfoObj.amount === '') {
             indInfoObj.amount = this.fieldsComputed.amount;
             sendJson.ind_info = JSON.stringify(indInfoObj);
           }
-          response = await ApiHelper.post(
-            "/mainData/updateOrdMainMediInfo/",
-            sendJson
-          ).catch(error => {
-            //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
-            getErrorMessage('IndMedicineEdit.vue', 'updateIndInfo', error);
-            //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
-            console.log("IndMedicineEdit.vue updateIndInfo throw error; this.finishLoadingScreen();");
-            this.finishLoadingScreen();
-            throw error;
-          });
+          // add #12471 ord_main.ind_medi_infoに不正データが登録される zkm start
+          if (structData.type && 'upd' === structData.type) {
+            response = await ApiHelper.post(
+              "/patients/medications/update",
+              sendJson).catch(error => {
+              //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
+              getErrorMessage('IndMedicineEdit.vue', 'updateIndInfo', error);
+              //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
+              this.finishLoadingScreen();
+              throw error;
+            });
+          } else {
+            // add #12471 ord_main.ind_medi_infoに不正データが登録される zkm end
+            response = await ApiHelper.post(
+              "/mainData/updateOrdMainMediInfo",
+              sendJson).catch(error => {
+              //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
+              getErrorMessage('IndMedicineEdit.vue', 'updateIndInfo', error);
+              //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
+              this.finishLoadingScreen();
+              throw error;
+            });
+          }
           // add FNSI-連携イベントの登録適正化 楊 start
           if (this.procedureSelectValue.initValue !== this.procedureSelectValue.editValue ||
             // mod FNSI-小数点の修正 楊 start
             // this.amountInputValue.initValue !== this.amountInputValue.editValue ||
             this.amountInputValue.initValue != this.amountInputValue.editValue ||
             // mod FNSI-小数点の修正 楊 end
-            this.medicineInputValue.initValue !== this.medicineInputValue.editValue
-          ) {
+            this.medicineInputValue.initValue !== this.medicineInputValue.editValue) {
             // opeCd = "004024";
           }
           // add FNSI-連携イベントの登録適正化 楊 end
           break;
         case 3:
-          response = await ApiHelper.post(
-            "/mainData/deleteOrdMainMediInfo/",
-            sendJson
-          ).catch(error => {
-            //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
-            getErrorMessage('IndMedicineEdit.vue', 'updateIndInfo', error);
-            //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
-            console.log("IndMedicineEdit.vue updateIndInfo throw error; this.finishLoadingScreen();");
-            this.finishLoadingScreen();
-            throw error;
-          });
+          // add #12471 ord_main.ind_medi_infoに不正データが登録される zkm start
+          if (structData.type && 'del' === structData.type) {
+            response = await ApiHelper.post(
+              "/patients/medications/delete",
+              sendJson).catch(error => {
+              //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
+              getErrorMessage('IndMedicineEdit.vue', 'updateIndInfo', error);
+              //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
+              this.finishLoadingScreen();
+              throw error;
+            });
+          } else {
+            // add #12471 ord_main.ind_medi_infoに不正データが登録される zkm end
+            response = await ApiHelper.post(
+              "/mainData/deleteOrdMainMediInfo",
+              sendJson).catch(error => {
+              //FNSI-修正 VUEのエラー場合のログ対応 liumx add start
+              getErrorMessage('IndMedicineEdit.vue', 'updateIndInfo', error);
+              //FNSI-修正 VUEのエラー場合のログ対応 liumx add end
+              this.finishLoadingScreen();
+              throw error;
+            });
+          }
           // add FNSI-連携イベントの登録適正化 楊 start
           // opeCd = "004025";
           // add FNSI-連携イベントの登録適正化 楊 end
@@ -1552,30 +1946,9 @@ export default {
       // }
       // mod FNSI-連携イベントの登録適正化 楊 end
 
-      console.log("IndMedicineEdit.vue updateIndInfo return response; this.finishLoadingScreen();");
       this.finishLoadingScreen();
       return response;
     },
-
-    //add FutreNetWeb+SI課題管理 no.6422 劉全航 start
-    /**
-     * 禁忌及びアレルギーのチェック処理
-     */
-    chkTaboo() {
-      let rtn = false;
-        let medicineName = this.medicineInputValue.editValue;
-        // add #10266 投与薬剤編集モーダル選択ボタンを押下しOK押下　NGエラー発生 linjunfeng start
-        if (!medicineName) {
-          return;
-        }
-        // add #10266 投与薬剤編集モーダル選択ボタンを押下しOK押下　NGエラー発生 linjunfeng end
-        rtn = medicineName.includes("【禁忌】") || medicineName.includes("【ｱﾚﾙｷﾞｰ】");
-        if(rtn){
-          this.setTabooMedicine(true);
-        }
-    },
-    //add FutreNetWeb+SI課題管理 no.6422 劉全航 end
-
     // add FNSI-【1006】最新の改修対象一覧のIES475対応 韓 start
     // 条件送信以降の場合、実績の変更をするか確認する。
     async showUpdateCheckDialog(flag) {
@@ -1600,7 +1973,7 @@ export default {
         });
         if (flag ===1) {
           // 薬剤を追加した場合
-          this.$parent.$parent.$parent.$parent.$parent.$parent.isShowedMessage = true;
+          this._indicationResultOwner().isShowedMessage = true;
         }
 
         return rtn;
@@ -1613,8 +1986,7 @@ export default {
     checkEdit() {
       let changeCount = 0;
       if (
-        this.medicineInputValue.initValue !== this.medicineInputValue.editValue
-      ) {
+        this.medicineInputValue.initValue !== this.medicineInputValue.editValue) {
         changeCount++;
       }
       // mod FNSI-小数点の修正 楊 start
@@ -1625,18 +1997,15 @@ export default {
       }
       if (
         this.procedureSelectValue.initValue !==
-        this.procedureSelectValue.editValue
-      ) {
+        this.procedureSelectValue.editValue) {
         changeCount++;
       }
       if (
-        this.timingSelectValue.initValue !== this.timingSelectValue.editValue
-      ) {
+        this.timingSelectValue.initValue !== this.timingSelectValue.editValue) {
         changeCount++;
       }
       if (
-        this.commentInputValue.initValue !== this.commentInputValue.editValue
-      ) {
+        this.commentInputValue.initValue !== this.commentInputValue.editValue) {
         changeCount++;
       }
       return 0 !== changeCount ? true : false;
@@ -1674,12 +2043,11 @@ export default {
       return isEdit;
     },
 
+    getScopedElementByIdSafe(id) {
+      return getScopedElementById(id, this.$el || null);
+    },
     getNextIndex() {
-      const element = document.getElementById("com-textarea-ind-medicine" + this.textAreaIdIndex);
-      if (element) {
-        this.textAreaIdIndex = this.textAreaIdIndex + 1;
-      }
-      return this.textAreaIdIndex;
+      return (this.$ && this.$.uid) || 0;
     },
 
     setContentData(newValue) {
@@ -1718,14 +2086,14 @@ export default {
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
     async resetComponentIndData(structData){
       if (this.isEdit()) {
-        this.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+        this._indicationDialogOwner().messageDialogInfo.messageCd = 70000028;
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-        this.$parent.$parent.messageDialogInfo.type = "9";
+        this._indicationDialogOwner().messageDialogInfo.type = "9";
         /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         return;
       } else {
-        this.getComponentData(structData,2);
+        return this.getComponentData(structData,2);
       }
     },
     //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add end
@@ -1798,8 +2166,7 @@ export default {
       // 対象日時の治療情報取得(開始日付・治療方法・クールで絞り込み)
       let response = await ApiHelper.post(
         "/mainData/getOrdMainDataInfo",
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         getErrorMessage('IndEquipmentEditBase.vue', 'getComponentData', error);
         throw error;
       });
@@ -1812,8 +2179,7 @@ export default {
           item.indMediInfo != null &&
           item.indMediInfo !== "[]" &&
           JSON.parse(item.indMediInfo).some(info => info.cd === this.fieldsData.cd) &&
-          item.rstDialysisState === "0"
-        );
+          item.rstDialysisState === "0");
         if (!ordMainData) {
           return;
         }
@@ -1895,9 +2261,9 @@ export default {
 
   //FNSI-修正【患者経過総合ビューア】#4859 横展開対応、xugj add start
   async created() {
-    this.$parent.$parent.isDialogType9 = true;
+    this._indicationDialogOwner().isDialogType9 = true;
     //FNSI-修正 #5525 横展開対応、xugj add start
-    this.$parent.$parent.isSendNextPatInfoFlg = true;
+    this._indicationResultOwner().isSendNextPatInfoFlg = true;
     //FNSI-修正 #5525 横展開対応、xugj add end
     // 治療方法セットマスタ 手技&投与タイミング没有值 zhao start
     // del #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
@@ -1929,7 +2295,7 @@ export default {
   width: 100%;
 }
 
-div >>> .comment-textarea-style {
+div :deep(.comment-textarea-style) {
   height: 2.5em;
   box-sizing: border-box;
 }
@@ -1952,5 +2318,15 @@ div >>> .comment-textarea-style {
 .medicine-custom-input {
   display: inline-flex;
 }
-
+/*// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start*/
+:deep(.com-basic-sub-btn) {
+  margin-left: 5px
+}
+:deep(.com-basic-sub-input) {
+  min-width: 13em;
+  width: 100%;
+  max-width: 28em;
+  background-color: #f7f7f7;
+}
+/* // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end*/
 </style>

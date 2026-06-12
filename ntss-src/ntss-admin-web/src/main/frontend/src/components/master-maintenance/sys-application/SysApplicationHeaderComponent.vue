@@ -11,7 +11,7 @@
     </div>
     <v-ons-popover 
       cancelable
-      :visible.sync='popoverVisible'
+      v-model:visible='popoverVisible'
       :target='popoverTarget'
       direction='down'
       :cover-target='false'
@@ -42,8 +42,8 @@
 </template>
 
 <script>
-import { mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 import PopoverMixin from "@/components/PopoverMixin";
 

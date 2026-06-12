@@ -13,7 +13,7 @@ import java.util.List;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.util.StringUtils;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils;

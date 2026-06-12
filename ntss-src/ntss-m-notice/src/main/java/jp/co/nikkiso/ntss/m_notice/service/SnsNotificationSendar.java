@@ -1,22 +1,32 @@
 package jp.co.nikkiso.ntss.m_notice.service;
 
-import com.amazonaws.services.sns.AmazonSNS;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.aws.messaging.core.NotificationMessagingTemplate;
 import org.springframework.stereotype.Component;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.model.CreateTopicRequest;
+import software.amazon.awssdk.services.sns.model.CreateTopicResponse;
+import software.amazon.awssdk.services.sns.model.PublishRequest;
 
 @Component
 public class SnsNotificationSendar {
 
-  private final NotificationMessagingTemplate notificationMessagingTemplate;
+  private static final String TOPIC_NAME = "M_NOTICE_SNS";
+
+  private final SnsClient amazonSns;
 
   @Autowired
-    public SnsNotificationSendar(AmazonSNS amazonSns) {
-        this.notificationMessagingTemplate = new
-NotificationMessagingTemplate(amazonSns);
-    }
+  public SnsNotificationSendar(SnsClient amazonSns) {
+    this.amazonSns = amazonSns;
+  }
 
   public void send(String subject, String message) {
-    this.notificationMessagingTemplate.sendNotification("M_NOTICE_SNS", message, subject);
+    CreateTopicResponse topic = amazonSns.createTopic(CreateTopicRequest.builder()
+        .name(TOPIC_NAME)
+        .build());
+    amazonSns.publish(PublishRequest.builder()
+        .topicArn(topic.topicArn())
+        .message(message)
+        .subject(subject)
+        .build());
   }
 }

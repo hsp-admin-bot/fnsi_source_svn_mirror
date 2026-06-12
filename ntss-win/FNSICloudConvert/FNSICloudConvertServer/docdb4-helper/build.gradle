@@ -1,0 +1,42 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.fnsi'
+version = '1.0.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+        vendor = JvmVendorSpec.AMAZON
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.mongodb:mongodb-driver-sync:5.7.0'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.21'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.21.3'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.21.3'
+    runtimeOnly 'org.slf4j:slf4j-nop:2.0.18'
+}
+
+tasks.register('fatJar', Jar) {
+    group = 'build'
+    description = 'Builds the standalone DocDB4 helper jar.'
+    archiveFileName = 'fnsi-cloud-convert-docdb4-helper.jar'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes 'Main-Class': 'com.fnsi.cloudconverter.docdb4helper.DocDb4HelperApplication'
+    }
+
+    from(sourceSets.main.output)
+    dependsOn(configurations.runtimeClasspath)
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}

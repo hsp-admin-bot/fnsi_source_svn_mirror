@@ -14,17 +14,16 @@
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 /**
  * 日付操作
  */
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * 共通操作
  */
-import { deepCopy } from "@/functions/common/CommonFunctions";
 
 /**
  * ベースコンポーネント
@@ -129,7 +128,7 @@ export default {
     // add FNSI-性能を最適化する 李 end
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -171,7 +170,7 @@ export default {
       }
 
       // 基準日
-      let setDate = moment(this.baseDate);
+      let setDate = dayjs(this.baseDate);
       this.sendTreatDate.showStartDate = setDate.format("YYYY-MM-DD");
       this.sendTreatDate.showEndDate = setDate.add(3, 'months').format("YYYY-MM-DD");
 
@@ -208,7 +207,7 @@ export default {
         // add FNSI-放射線検査の表示の修正 楊 start
         // クリックした日
         // mod #10036 患者経過総合ビューアの一般撮影検査依頼の表示不正 zhangbo start
-          let setDate = moment(cellInfo.treatDate);
+          let setDate = dayjs(cellInfo.treatDate);
           if (!this.getDefaultSetting[RAD_REQUEST.KEY_NAME]) {
             this.sendTreatDate.showStartDate = setDate.format("YYYY-MM-DD");
             this.sendTreatDate.showEndDate = setDate.add(3, 'months').format("YYYY-MM-DD");
@@ -248,7 +247,7 @@ export default {
 
 <style scoped lang="scss">
 /* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 
 /* ○と●が英文フォントだと小さく表示されるため、日本語フォント限定にする */
 .rad-info-font {

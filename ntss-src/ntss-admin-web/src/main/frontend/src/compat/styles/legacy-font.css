@@ -1,0 +1,238 @@
+/*
+ * Vue2 font-chain compatibility bridge.
+ *
+ * This file is not a Vue2 source file.  Vue2 already gets the base font from
+ * public/css/ntss.css body { font-family: Helvetica Neue, Helvetica, Arial,
+ * Osaka, Meiryo, sans-serif; } and body { font-size: 16px; }.
+ *
+ * Keep this layer narrow:
+ *   - preserve the same body/#app baseline as ntss.css;
+ *   - do not blanket-apply font-family to every descendant;
+ *   - do not touch icon glyph hosts such as ons-icon / .fa / .k-icon;
+ *   - only bridge Vue3-generated, teleported, or native-control roots that can
+ *     otherwise fall back to the browser or library default font.
+ */
+@font-face {
+  font-family: NtssHelveticaNeueAlias;
+  src: local("Helvetica Neue"), local("HelveticaNeue");
+}
+
+@font-face {
+  font-family: NtssHelveticaAlias;
+  src: local("Helvetica");
+}
+
+@font-face {
+  font-family: NtssArialAlias;
+  src: local("Arial");
+}
+
+@font-face {
+  font-family: NtssOsakaAlias;
+  src: local("Osaka");
+}
+
+@font-face {
+  font-family: NtssMeiryoAlias;
+  src: local("Meiryo"), local("メイリオ");
+}
+
+@font-face {
+  font-family: NtssYuGothicAlias;
+  src: local("Yu Gothic UI"), local("Yu Gothic"), local("游ゴシック");
+}
+
+@font-face {
+  font-family: NtssMSPGothicAlias;
+  src: local("ＭＳ Ｐゴシック"), local("MS PGothic");
+}
+
+:root {
+  --ntss-legacy-font-family: NtssHelveticaNeueAlias, NtssHelveticaAlias, NtssArialAlias, NtssOsakaAlias, NtssMeiryoAlias, NtssYuGothicAlias, NtssMSPGothicAlias, sans-serif;
+}
+
+/* Vue2 public/css/ntss.css pins body to 10px.  Kendo 2026 / Vue3-generated
+   nodes can otherwise inherit the browser's customized default before or
+   outside the Vue2 body chain.  Keep the root baseline equivalent, but leave
+   the App font-size-set-* class on #app in control of in-app scaling. */
+/* Vue2 only pinned body.  Vue3 libraries such as Kendo 2026 use rem based
+   sizing internally, so pin html as the rem base too.  This keeps browser font
+   size / custom minimum-size settings from replacing Vue2's 10px baseline. */
+html {
+  font-size: 16px !important;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html body {
+  font-size: 10px !important;
+  font-family: var(--ntss-legacy-font-family) !important;
+}
+
+body #app,
+body #app[data-v-app] {
+  font-family: inherit;
+}
+
+/* Equivalent to Vue2 body 10px × ntss.css font-size-set-* em values, but
+   explicit on the Vue3 app shell so browser default font-size changes do not
+   change the app baseline. */
+body #app.font-size-set-small,
+body #app[data-v-app].font-size-set-small {
+  font-size: 8px !important;
+}
+body #app.font-size-set-medium,
+body #app[data-v-app].font-size-set-medium {
+  font-size: 10px !important;
+}
+body #app.font-size-set-large,
+body #app[data-v-app].font-size-set-large {
+  font-size: 11px !important;
+}
+body #app.font-size-set-x-large,
+body #app[data-v-app].font-size-set-x-large {
+  font-size: 13px !important;
+}
+
+/* Kendo Vue 2026 is rem/CSS-variable based, while Vue2 pages scale by the
+   font-size-set-* class on #app.  Keep Kendo variables relative to the current
+   app scope so the in-app size switch works and browser defaults do not leak in. */
+:where(#app, #app[data-v-app], .ntss-app-shell) {
+  --kendo-font-family: var(--ntss-legacy-font-family);
+  --kendo-font-size: 1em;
+  --kendo-font-size-xs: 0.75em;
+  --kendo-font-size-sm: 0.875em;
+  --kendo-font-size-md: 1em;
+  --kendo-font-size-lg: 1.125em;
+  --kendo-font-size-xl: 1.25em;
+  --kendo-line-height: 1.5em;
+  --kendo-line-height-xs: 1.2em;
+  --kendo-line-height-sm: 1.3em;
+  --kendo-line-height-md: 1.5em;
+  --kendo-line-height-lg: 1.5em;
+}
+
+/* Native controls do not reliably inherit body font in Chrome/Windows.  Vue2's
+   pages expected form controls to follow the surrounding NTSS font chain. */
+:where(body, #app) :where(input, textarea, select, optgroup, option, button) {
+  font-family: inherit !important;
+}
+
+/* Teleported common calendar menu (@vuepic/vue-datepicker).  CustomCalendar is
+   the Pikaday replacement, so only the custom calendar owner/menu receives the
+   Vue2 font chain. */
+:where(.ntss-custom-calendar-menu, .dp__menu.ntss-custom-calendar-panel, .ntss-custom-calendar-panel) {
+  font-family: var(--ntss-legacy-font-family) !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) :where(
+  input,
+  textarea,
+  select,
+  optgroup,
+  option,
+  button,
+  .dp__calendar_header_item,
+  .dp__cell_inner,
+  .ntss-calendar-day,
+  .ntss-calendar-month-year,
+  .ntss-calendar-month-year-label,
+  .ntss-calendar-today-btn
+) {
+  font-family: inherit !important;
+}
+
+:where(.ntss-custom-calendar-menu, .ntss-custom-calendar-panel) :where(
+  .ntss-calendar-today-btn
+) {
+  font-family: Helvetica Neue,Helvetica,Arial,sans-serif !important;
+}
+
+
+
+/* v-calendar 3 popovers can be moved outside the page component tree.  Keep the
+   bridge on compat-marked v-calendar roots only. */
+:where(.ntss-vcalendar-legacy, .vc-popover-content) {
+  font-family: var(--ntss-legacy-font-family) !important;
+}
+
+:where(.ntss-vcalendar-legacy, .vc-popover-content) :where(input, textarea, select, optgroup, option, button) {
+  font-family: inherit !important;
+}
+
+/* Onsen Vue3 dialog/popover/action-sheet/modal roots can be mounted under body,
+   bypassing the local #app inheritance chain.  Do not include ons-icon. */
+:where(ons-dialog, ons-alert-dialog, ons-popover, ons-action-sheet, ons-modal, ons-toast) {
+  font-family: var(--ntss-legacy-font-family) !important;
+}
+
+:where(
+  ons-page,
+  ons-toolbar,
+  ons-toolbar-button,
+  ons-button,
+  ons-list,
+  ons-list-header,
+  ons-list-item,
+  ons-card,
+  ons-dialog,
+  ons-alert-dialog,
+  ons-popover,
+  ons-action-sheet,
+  ons-modal,
+  ons-toast,
+  ons-input,
+  ons-search-input,
+  ons-select,
+  ons-radio,
+  ons-checkbox,
+  ons-switch,
+  ons-tab,
+  ons-tabbar,
+  ons-segment,
+  ons-speed-dial,
+  ons-speed-dial-item
+) :where(
+  input,
+  textarea,
+  select,
+  optgroup,
+  option,
+  button,
+  .toolbar__title,
+  .list-header,
+  .list-item__center,
+  .list-item__left,
+  .list-item__right,
+  .button,
+  .segment__button,
+  .text-input,
+  .search-input,
+  .select-input
+) {
+  font-family: inherit !important;
+}
+
+/* Kendo Window is teleported under body, outside #app.font-size-set-*.
+   Vue2 modals resolved font-size-set-medium (1em) to ~16px (html baseline).
+   Vue3 body is 10px, so the same class resolves to 10px. Pin the legacy modal
+   baseline on .k-window so inner 1em matches pre-upgrade computed sizes. */
+.k-window.font-size-set-small {
+  font-size: 12.8px !important;
+}
+.k-window.font-size-set-medium {
+  font-size: 16px !important;
+}
+.k-window.font-size-set-large {
+  font-size: 17.6px !important;
+}
+.k-window.font-size-set-x-large {
+  font-size: 20.8px !important;
+}
+
+/* Vue3 修正: ons-modal は本来 ons-page (position:fixed) 内で使用される前提で
+   position:absolute が設定されている。Vue3 では ons-page コンテキストが保証されない
+   ため position:fixed に上書きしてビューポート基準の全画面表示を保証する。 */
+ons-modal.modal {
+  position: fixed !important;
+}

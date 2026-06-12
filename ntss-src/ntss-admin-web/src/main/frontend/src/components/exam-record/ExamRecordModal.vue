@@ -3,10 +3,13 @@
  */
  <template>
   <modal-base @onClose="closeExamRecordModal">
-    <div slot="header">
-      <component :is="header"></component>
-    </div>
-    <div slot="body" class='kendo-grid-style-page-modal'>
+    <template #header>
+      <div>
+        <component :is="header"></component>
+      </div>
+    </template>
+    <template #body>
+      <div class='kendo-grid-style-page-modal'>
       <!-- mod FNSI-Fixed header 関 start -->
       <!-- <div id="examrecordmodal-header"> -->
       <div id="examrecordmodal-header" style="margin-bottom: 5px;">
@@ -31,7 +34,7 @@
               min='1880-01-01'
               model-event="change"
               v-model='examDate'
-              v-validate="'required|date_format:yyyy-MM-dd'"
+              v-rules="'required|date_format:yyyy-MM-dd'"
               :max="calendarToday"
               class ='modalInput ntss-input-date'/> -->
               <!-- <common-calendar v-model="examDate"/> -->
@@ -111,7 +114,7 @@
           </v-ons-col>
           <v-ons-col vertical-align='center'>
             <!--mod 編集権限の適用 劉全航 start-->
-            <!-- <v-ons-select input-id='examDivList' v-model="examSelectDiv" class = 'modalInput'  name="examDivList" v-validate="'required|min:0'">
+            <!-- <v-ons-select input-id='examDivList' v-model="examSelectDiv" class = 'modalInput'  name="examDivList" v-rules="'required|min:0'">
               <option :value="defaultSelect"></option>
               <option v-for='(option) in getExamDivList' :key=option.examOrderCode :value=option.examOrderCode >
                 {{ option.examOrderName }}
@@ -123,7 +126,7 @@
             <!-- v-model="examSelectDiv" -->
             <!-- class = 'modalInput' -->
             <!-- name="examDivList" -->
-            <!-- v-validate="'required|min:0'" -->
+            <!-- v-rules="'required|min:0'" -->
             <!-- @change="setDataChanged" -->
             <!-- :disabled="!editAuthority"> -->
             <v-ons-select
@@ -131,7 +134,7 @@
               v-model="examSelectDiv"
               class = 'modalInput'
               name="examDivList"
-              v-validate="'required|min:0'"
+              v-rules="'required|min:0'"
               @change="setDataChanged"
               :disabled="!getItemAuthorized('ExamRecord', 'default_authority')">
             <!-- mod #10359 編集権限の動作不正 dengshen end -->
@@ -157,7 +160,7 @@
                   {{ option.examSetName }}
                 </option> -->
                 <template  v-for='option in getExamSetNameList'>
-                  <option v-if='option.isDisp == 1' :value="option.examSetCd" :key="option.length">
+                  <option v-if='option.isDisp == 1' :value="option.examSetCd"  :key="option.length">
                     {{ option.examSetName }}
                   </option>
                 </template>
@@ -168,11 +171,11 @@
         <v-ons-row style="height: auto;" v-show="isExamCondVisible">
           <div style="display: flex; justify-content: start; align-items: center; min-width: 11em; width: 18em;">
             <label class='label-text' style="margin-right: 0.5em;">結果なし行表示</label>
-            <v-ons-switch input-id="allDataFlg" v-model="localCondition.allDataFlg" @change='checkAll'></v-ons-switch>
+            <v-ons-switch input-id="allDataFlg" :checked="localCondition.allDataFlg ? true : null" v-model="localCondition.allDataFlg" @change='checkAll'></v-ons-switch>
           </div>
           <div style="display: flex; justify-content: start; align-items: center; min-width: 11em;">
             <label class='label-text' style="margin-right: 1.5em;">正常範囲表示</label>
-            <v-ons-switch input-id="switchPatId" v-model="localCondition.normalRange" @change='changeNormalRange'></v-ons-switch>
+            <v-ons-switch input-id="switchPatId" :checked="localCondition.normalRange ? true : null" v-model="localCondition.normalRange" @change='changeNormalRange'></v-ons-switch>
           </div>
         </v-ons-row>
       </div>
@@ -246,7 +249,7 @@
                 <template v-for="(value) in ExamMainColumns">
                   <!-- add FNSI-Fixed header 関 start -->
                   <!-- <th v-if="value.hidden == null || value.hidden != true" class="ntss-list-header-th-sticky" :key="value.title"> -->
-                  <th v-if="value.hidden == null || value.hidden != true" class="top-fix" :key="value.title">
+                  <th v-if="value.hidden == null || value.hidden != true" class="top-fix"  :key="value.title">
                   <!-- add FNSI-Fixed header 関 end -->
                     {{value.title}}
                   </th>
@@ -256,7 +259,7 @@
             <tbody>
               <tr v-for="(value,index) in allTableData._data" :key="value.itemCd">
                 <template v-for="col in ExamMainColumns">
-                  <td v-if="(col.hidden == null || col.hidden != true) && (localCondition.allDataFlg || changeDataArray[value.itemCd])" :key="col.title" class="exam-table-td">
+                  <td v-if="(col.hidden == null || col.hidden != true) && (localCondition.allDataFlg || isOverlayCellVisible(value))" class="exam-table-td" :key="col.title">
                     <template v-if="col.title == '検査データ'">
 <!--                      #10398 文字型の検査項目に対して検査値の桁合わせ処理が行われる zy start-->
 <!--                      <input-->
@@ -303,8 +306,7 @@
                         :disabled="value.examClass!=0 || !getItemAuthorized('ExamRecord', 'default_authority')"
                         class="exam-table-input"
                         @focus="handleFocus(index)"
-                        @click="setDataChanged(value.itemCd)"
-                        @mousewheel.prevent="wheelChangeValue($event,value.itemCd, value.examClass!=0 || !getItemAuthorized('ExamRecord', 'default_authority'), index)"
+                        @wheel="wheelChangeValue($event,value.itemCd, value.examClass!=0 || !getItemAuthorized('ExamRecord', 'default_authority'), index)"
                         @change="setDataChanged(value.itemCd)"
                         @blur="handleBlur($event, value.itemCd,index)"
                         @keydown="preventPlusSymbol"
@@ -336,9 +338,9 @@
                       <!-- :class="is_edit(value.itemCd)" -->
                       <!-- > -->
                       <input
+                        type="text"
                         v-else-if="value.type == 0"
                         :key="refreshFlag"
-                        type="text"
                         v-model="dataArray[value.itemCd]"
                         :disabled="value.examClass!=0 || !getItemAuthorized('ExamRecord', 'default_authority')"
                         class="exam-table-input exam-table-input-right"
@@ -379,11 +381,14 @@
                       <!-- :disabled="!editAuthority" -->
                       <!-- /> -->
                       <com-textarea
-                        class="exam-commentTextarea"
+                        ref="commentTextareas"
+                        :class="['exam-commentTextarea', is_comment_edit(value.itemCd)]"
                         cssClass="textarea textarea--transparent textarea-resize-vertical"
+                        :resizeHeightMargin="0"
                         propMaxlength="256"
                         :idTextarea="'com-textarea-taboo-allergy-memo'+value.itemCd"
                         :content="commentArray[value.itemCd]"
+                        :isRisize="commentTextareaResizeEnabled"
                         @change="setDataChanged"
                         @set-content-data="setContentData($event,value.itemCd)"
                         :disabled="!getItemAuthorized('ExamRecord', 'default_authority')"
@@ -403,9 +408,11 @@
         </div>
         <!-- mod FNSI-入力欄右側にスピナー表示 関 end -->
       </div>
-    </div>
+      </div>
+    </template>
 
-    <div slot="footer" class="flex-container">
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button denial-btn btn2-cancel" style="min-width: 4em;" @click="cancelModal" data-non-authorize="true">キャンセル</v-ons-button>
         <!--mod 編集権限の適用 劉全航 start-->
@@ -473,38 +480,40 @@
       </div>
       <!-- キャンセル確認ダイアログ -->
       <message-dialog
-        :visible.sync="dialogVisible"
+        v-model:visible="dialogVisible"
         :message-cd="20010001"
         type="2"
         @confirm="confirmCancel"
       />
       <!-- マージ確認ダイアログ -->
       <message-dialog
-        :visible.sync="mergeDialogVisible"
+        v-model:visible="mergeDialogVisible"
         :message-cd="74000004"
         type="2"
         @confirm="confirmMerge"
       />
       <message-dialog
         v-if="isCheckDialogVisible"
-        :visible.sync="isCheckDialogVisible"
+        v-model:visible="isCheckDialogVisible"
         :message-cd="messageCd"
         :string-params="stringParams"
         type="1"
       />
 
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-  import Kendo from "@progress/kendo-ui";
+import { mountNumericTextBox, createDataSource, findKendoGridBodyRows, findKendoGridHeader, getKendoGridDataItem } from "@/functions/common/KendoFunctions";
   import ModalBase from "@/components/modals/ModalBase";
-  import {mapActions, mapGetters, mapMutations} from "vuex";
-  import {EventBus} from "@/eventBus.js";
-  import moment from "moment";
+  import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
+  import {EventBus} from "@/compat/vue/event-bus.js";
+  import $$ from "@/compat/jquery";
+  import dayjs from "@/compat/date/dayjs";
   import messageDialog from "@/components/common/message-dialog/MessageDialog";
-  import $$ from "jquery";
+
   // mod #10359 編集権限の動作不正 dengshen start
   // import {deepCopy} from "@/functions/common/CommonFunctions";
   import { deepCopy, getAuthorized } from "@/functions/common/CommonFunctions.js";
@@ -548,6 +557,7 @@
   import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
   // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
   import {DISP_ORDER_LEFT_PAST} from "@/constants/examRecordConstants";
+import { getModalBodyElement, getScopedElementById, getScopedWindow, resolveRefElement } from "@/functions/common/LayoutMeasureHelper";
   import DateInput from "@/components/common/DateInput";
   import TimeInput from "@/components/common/TimeInput";
   import { findExamSet, getNormalValueKeys } from "@/functions/exam-record/ExamRecordFunctions";
@@ -636,6 +646,8 @@ export default {
       inputIntegerFigureArray: {},
       // add FNSI-整数ビットと小数ビットの検証 関 end
       commentArray: {},
+      oldCommentArray: {},
+      commentEditVersion: 0,
       dataArrayMax: {},
       dataArrayMin: {},
       openPageExamDate:null,
@@ -658,8 +670,10 @@ export default {
       refreshFlag: 0,
       // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc start
       ignoreCompareData: false,
-      initexamSetCd: -1
+      initexamSetCd: -1,
       // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc end
+      commentTextareaResizeEnabled: false,
+      commentResizeFrameId: null
     };
   },
   computed: {
@@ -713,71 +727,87 @@ export default {
     },
     // グリッドの編集状態
     editState() {
+      this.commentEditVersion;
+      Object.keys(this.dataArray).forEach(k => {
+        this.dataArray[k] 
+      })
+      Object.keys(this.commentArray).forEach(k => {
+        this.commentArray[k]
+      })
       //一つでも項目が編集されていると入力可能
       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc start
       // let rEdit =
-      //   this.$validator.errors.items.length === 0
+      //   this.validationErrors.length === 0
       //   && this.examDate !== null
       //   && this.examTime !== null
       //   && this.examSelectDiv >= 0
       //   && this.authorized
       // return rEdit;
       let examMainData = [];
-      if (!!this.ExamMainDataSource._data) {
-        let copyExamMainData = JSON.parse(JSON.stringify(this.ExamMainDataSource._data));
-        for (const key in copyExamMainData) {
-          if (copyExamMainData.hasOwnProperty(key)) {
-            const currentObject = copyExamMainData[key];
-            if (currentObject.result !== '' && currentObject.result !== null || currentObject.freememo !== '' && currentObject.freememo !== null) {
-              examMainData.push(currentObject);
-            }
-          }
-        }
+      if (this.ExamMainDataSource._data) {
+        examMainData = JSON.parse(JSON.stringify(this.ExamMainDataSource._data));
       }
       let comparisonModelData = [];
-      if (!!this.comparisonModel) {
-        comparisonModelData = JSON.parse(this.comparisonModel).filter(item => {
-          return item.result !== '' && item.result !== null || item.freememo !== '' && item.freememo !== null;
-        });
+      if (this.comparisonModel) {
+        comparisonModelData = JSON.parse(this.comparisonModel);
       }
+
+      const examDataChanged = this.isExamRecordDataChanged(examMainData, comparisonModelData);
+
+      const commentChanged = Object.keys({ ...this.oldCommentArray, ...this.commentArray }).some(k =>
+        this.normalizeCommentValue(this.commentArray[k]) !== this.normalizeCommentValue(this.oldCommentArray[k])
+      );
+
       let rEdit =
           // mod #10359 編集権限の動作不正 dengshen start
-          // this.$validator.errors.items.length === 0 && this.authorized && (
-          this.$validator.errors.items.length === 0 && this.getItemAuthorized('ExamRecord', 'default_authority') && (
+          // this.validationErrors.length === 0 && this.authorized && (
+          this.validationErrors.length === 0 && this.getItemAuthorized('ExamRecord', 'default_authority') && (
           // mod #10359 編集権限の動作不正 dengshen end
-              examMainData && comparisonModelData && JSON.stringify(examMainData) != JSON.stringify(comparisonModelData)
+              examDataChanged
+              || commentChanged
               || this.openPageExamDate != this.examDate || this.openPageExamTime != this.examTime
-              || this.openPageExamSelectDiv != this.examSelectDiv || this.initexamSetCd != JSON.stringify(this.localCondition.examSetCd)
-          )
+              || this.openPageExamSelectDiv != this.examSelectDiv || this.initexamSetCd != JSON.stringify(this.localCondition.examSetCd))
       return rEdit;
       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc end
     },
     // グリッド表示用検査結果データ
+    // ExamMainDataSource() {
+    //   // mod FNSI-fix Bug 関 start
+    //   // let dataSource = this.getModalState === 0 ? this.getExamMainDataSource.filter(e => e.facilityCd === this.getFacilityCd) : this.getExamMainDataSource;
+    //   let dataSource = [];
+    //   if (this.getModalState === 0) {
+    //     if (this.getExamMainDataSource) {
+    //       dataSource = this.getExamMainDataSource.filter(e => e.facilityCd === this.getFacilityCd);
+    //     }
+    //   } else {
+    //     dataSource = this.getExamMainDataSource;
+    //   }
+    //   // let dataSource = this.getModalState === 0 && this.getExamMainDataSource ? this.getExamMainDataSource.filter(e => e.facilityCd === this.getFacilityCd) : this.getExamMainDataSource.filter(e => e.facilityCd === this.getFacilityCd);
+    //   // mod FNSI-fix Bug 関 end
+    //   // storeからデータを取得
+    //   // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc start
+    //   dataSource.forEach(item => {
+    //     if (!Object.prototype.hasOwnProperty.call(item, 'result')) {
+    //       item.result = '';
+    //     }
+    //     if (!Object.prototype.hasOwnProperty.call(item, 'freememo')) {
+    //       item.freememo = '';
+    //     }
+    //   });
+    //   // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc end
+    //   return createDataSource({
+    //     data: dataSource
+    //   });
+    // },
+
     ExamMainDataSource() {
-      // mod FNSI-fix Bug 関 start
-      // let dataSource = this.getModalState === 0 ? this.getExamMainDataSource.filter(e => e.facilityCd === this.getFacilityCd) : this.getExamMainDataSource;
-      let dataSource = [];
+      let dataSource = this.getExamMainDataSource || [];
+
       if (this.getModalState === 0) {
-        if (this.getExamMainDataSource) {
-          dataSource = this.getExamMainDataSource.filter(e => e.facilityCd === this.getFacilityCd);
-        }
-      } else {
-        dataSource = this.getExamMainDataSource;
+        dataSource = dataSource.filter(e => e.facilityCd === this.getFacilityCd);
       }
-      // let dataSource = this.getModalState === 0 && this.getExamMainDataSource ? this.getExamMainDataSource.filter(e => e.facilityCd === this.getFacilityCd) : this.getExamMainDataSource.filter(e => e.facilityCd === this.getFacilityCd);
-      // mod FNSI-fix Bug 関 end
-      // storeからデータを取得
-      // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc start
-      dataSource.forEach(item => {
-        if (!item.hasOwnProperty('result')) {
-          item.result = '';
-        }
-        if (!item.hasOwnProperty('freememo')) {
-          item.freememo = '';
-        }
-      });
-      // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc end
-      return new Kendo.data.DataSource({
+
+      return createDataSource({
         data: dataSource
       });
     },
@@ -804,8 +834,7 @@ export default {
     isConditionChanged() {
       return !(
         JSON.stringify(this.localCondition) ===
-        JSON.stringify(this.getModalCondition)
-      );
+        JSON.stringify(this.getModalCondition));
     },
 
     /**
@@ -828,11 +857,247 @@ export default {
     // canDelete() {
     //   return (
     //     this.getUserAuthorityCds().includes(AUTHORITY_CODES.DEL_EXAM)
-    //   );
+    //);
     // }
     // del #10359 編集権限の動作不正 dengshen end
   },
   methods: {
+    requestViewForceUpdate() {
+      if (this.$?.isMounted) {
+        this.$forceUpdate();
+      }
+    },
+    setInitialExamDateTime() {
+      const today = dayjs(new Date());
+      this.today = today.format("YYYY-MM-DD");
+      if (this.getModalState === 1) {
+        this.examDate = this.getExamDate;
+        this.examTime = this.getExamTime;
+        this.examSelectDiv = this.getExamSelectDiv;
+      } else {
+        this.examDate = today.format("YYYY-MM-DD");
+        this.examTime = today.format("HH:mm");
+        this.examSelectDiv = -1;
+      }
+      this.openPageExamDate = this.examDate;
+      this.openPageExamTime = this.examTime;
+      this.openPageExamSelectDiv = this.examSelectDiv;
+    },
+    getExamItemKey(item) {
+      return item?.examItemCd ?? item?.itemCd ?? item?.exam_item_cd;
+    },
+    createExamItemMapFromRows(rows = []) {
+      return rows.reduce((examItemMap, item) => {
+        const itemCd = this.getExamItemKey(item);
+        if (itemCd === undefined || itemCd === null || itemCd === "") {
+          return examItemMap;
+        }
+        examItemMap[itemCd] = {
+          ...item,
+          examItemCd: item.examItemCd ?? item.itemCd ?? itemCd,
+          itemCd: item.itemCd ?? item.examItemCd ?? itemCd,
+          dataType: item.dataType ?? item.type
+        };
+        return examItemMap;
+      }, {});
+    },
+    getExamItemMapFromCurrentDataSource() {
+      const sourceRows = this.getExamMainDataSource || this.ExamMainDataSource?._data || [];
+      return this.createExamItemMapFromRows(sourceRows);
+    },
+    getExamItemData(examItemMap, row) {
+      const rowData = row || {};
+      const mapData = examItemMap?.[rowData.itemCd] || examItemMap?.[parseInt(rowData.itemCd)] || {};
+      const mergedData = {
+        ...mapData,
+        ...rowData
+      };
+      mergedData.dataType = mapData.dataType ?? rowData.dataType ?? mapData.type ?? rowData.type;
+      mergedData.type = mapData.type ?? rowData.type ?? mapData.dataType ?? rowData.dataType;
+      mergedData.normalValueClass = mapData.normalValueClass ?? rowData.normalValueClass;
+      mergedData.lower = mapData.lower ?? rowData.lower;
+      mergedData.upper = mapData.upper ?? rowData.upper;
+      mergedData.normalValueLowerW = mapData.normalValueLowerW ?? rowData.normalValueLowerW;
+      mergedData.normalValueUpperW = mapData.normalValueUpperW ?? rowData.normalValueUpperW;
+      mergedData.normalValueLowerM = mapData.normalValueLowerM ?? rowData.normalValueLowerM;
+      mergedData.normalValueUpperM = mapData.normalValueUpperM ?? rowData.normalValueUpperM;
+      mergedData.examClass = rowData.examClass ?? mapData.examClass;
+      return mergedData;
+    },
+    normalizeNormalRangeValue(value) {
+      if (value === null || value === undefined) {
+        return null;
+      }
+      const normalized = typeof value === "string" ? value.trim() : value;
+      if (typeof normalized === "number" && Number.isNaN(normalized)) {
+        return null;
+      }
+      if (normalized === "") {
+        return null;
+      }
+      if (typeof normalized === "string") {
+        const lowerValue = normalized.toLowerCase();
+        if (
+          lowerValue === "nan" ||
+          lowerValue === "null" ||
+          lowerValue === "undefined" ||
+          lowerValue.includes("null～") ||
+          lowerValue.includes("～null") ||
+          lowerValue.includes("null〜") ||
+          lowerValue.includes("〜null") ||
+          lowerValue.includes("undefined～") ||
+          lowerValue.includes("～undefined") ||
+          lowerValue.includes("undefined〜") ||
+          lowerValue.includes("〜undefined")
+        ) {
+          return null;
+        }
+      }
+      return normalized;
+    },
+    hasNormalRangeValue(value) {
+      return this.normalizeNormalRangeValue(value) !== null;
+    },
+    firstNormalRangeValue(...values) {
+      for (const value of values) {
+        const normalized = this.normalizeNormalRangeValue(value);
+        if (normalized !== null) {
+          return normalized;
+        }
+      }
+      return null;
+    },
+    buildNormalRangeText(lowerValue, upperValue, fallbackValue) {
+      const normalizedLower = this.normalizeNormalRangeValue(lowerValue);
+      const normalizedUpper = this.normalizeNormalRangeValue(upperValue);
+      const normalizedFallback = this.normalizeNormalRangeValue(fallbackValue);
+      const hasLower = normalizedLower !== null;
+      const hasUpper = normalizedUpper !== null;
+
+      if (!hasLower && !hasUpper) {
+        return normalizedFallback !== null ? normalizedFallback : "";
+      }
+      if (!hasLower) {
+        return '～' + this.formatNumber(normalizedUpper);
+      }
+      if (!hasUpper) {
+        return this.formatNumber(normalizedLower) + '～';
+      }
+      return this.formatNumber(normalizedLower) + '～' + this.formatNumber(normalizedUpper);
+    },
+    getNormalRangeValues(examItemData, row, lowerKey, upperKey) {
+      const lowerValue = this.firstNormalRangeValue(
+        examItemData?.[lowerKey],
+        row?.[lowerKey],
+        examItemData?.lower,
+        row?.lower
+      );
+      const upperValue = this.firstNormalRangeValue(
+        examItemData?.[upperKey],
+        row?.[upperKey],
+        examItemData?.upper,
+        row?.upper
+      );
+
+      return {
+        lower: lowerValue,
+        upper: upperValue
+      };
+    },
+    loadExamPatListLater() {
+      const ownerWindow = getScopedWindow(this.$el || this) || (typeof window !== "undefined" ? window : null);
+      const setTimeoutFn = ownerWindow?.setTimeout?.bind(ownerWindow) || setTimeout;
+      const scheduleFrame = ownerWindow?.requestAnimationFrame?.bind(ownerWindow) || ((callback) => setTimeoutFn(callback, 0));
+      scheduleFrame(() => {
+        setTimeoutFn(() => {
+          this.setExamPatList({patId:this.selectedPatId, facilityCd:this.getFacilityCd}).catch(error => {
+            getErrorMessage('ExamRecordModal.vue', 'loadExamPatListLater', error);
+          });
+        }, 0);
+      });
+    },
+    enableCommentTextareaResizeAfterInitialLoad() {
+      this.commentTextareaResizeEnabled = true;
+      this.$nextTick(() => {
+        const refs = this.$refs.commentTextareas
+          ? (Array.isArray(this.$refs.commentTextareas) ? this.$refs.commentTextareas : [this.$refs.commentTextareas])
+          : [];
+        if (refs.length === 0) {
+          return;
+        }
+
+        const ownerWindow = getScopedWindow(this.$el || this) || (typeof window !== "undefined" ? window : null);
+        const requestFrame = ownerWindow?.requestAnimationFrame?.bind(ownerWindow) || ((callback) => setTimeout(callback, 0));
+        const batchSize = 20;
+        let index = 0;
+        const resizeBatch = () => {
+          const limit = Math.min(index + batchSize, refs.length);
+          for (; index < limit; index++) {
+            const textarea = refs[index]?.getTextareaElement?.();
+            if (textarea && textarea.value !== "") {
+              refs[index]?.resizeTextarea?.();
+            }
+          }
+          if (index < refs.length) {
+            this.commentResizeFrameId = requestFrame(resizeBatch);
+          } else {
+            this.commentResizeFrameId = null;
+          }
+        };
+        this.commentResizeFrameId = requestFrame(resizeBatch);
+      });
+    },
+    normalizeCommentValue(value) {
+      return value === '' || value === undefined || value === null ? null : value;
+    },
+    normalizeExamResultValue(result) {
+      if (result === '' || result === null || result === undefined) {
+        return null;
+      }
+      if (typeof result === "number" && Number.isNaN(result)) {
+        return null;
+      }
+      if (typeof result === "string" && result.trim().toLowerCase() === "nan") {
+        return null;
+      }
+      return result;
+    },
+    hasExamRecordValue(item) {
+      return this.normalizeExamResultValue(item?.result) !== null
+        || this.normalizeCommentValue(item?.freememo) !== null;
+    },
+    buildExamRecordCompareMap(items) {
+      const map = {};
+      (items || []).forEach(item => {
+        if (!this.hasExamRecordValue(item)) {
+          return;
+        }
+        map[item.itemCd] = {
+          result: this.normalizeExamResultValue(item.result),
+          freememo: this.normalizeCommentValue(item.freememo),
+        };
+      });
+      return map;
+    },
+    isExamRecordDataChanged(currentItems, baselineItems) {
+      const currentMap = this.buildExamRecordCompareMap(currentItems);
+      const baseMap = this.buildExamRecordCompareMap(baselineItems);
+      const allKeys = new Set([...Object.keys(currentMap), ...Object.keys(baseMap)]);
+      for (const key of allKeys) {
+        const cur = currentMap[key];
+        const base = baseMap[key];
+        if (!cur && !base) {
+          continue;
+        }
+        if (!cur || !base) {
+          return true;
+        }
+        if (cur.result !== base.result || cur.freememo !== base.freememo) {
+          return true;
+        }
+      }
+      return false;
+    },
     // 内部 テスト検査結果Abl入力内容を記録する時、問題が発生しました。start
     preventPlusSymbol(event) {
       let key = event.key;
@@ -866,9 +1131,9 @@ export default {
       "setExamPatList"
     ]),
     ...mapActions("pat-info", ["selectPat"]),
-    // mod 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 start
+    // mod 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 start
     ...mapMutations("exam-record/modal", ["setModalState", "setIsOpenFlag"]),
-    // mod 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 end
+    // mod 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 end
     // 共通ローダー設定
     ...mapActions("loading-screen", {
       setLoadingScreenVisible: "setLoadingScreenVisible",
@@ -951,14 +1216,14 @@ export default {
           //patIds: this.searchedPatList != undefined ? this.searchedPatList.map(({ pat_id }) => pat_id) : null,
           //mod #9558 機能帳票でパラメータが正しく渡されていない 房 end
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: moment(this.examDate).format("YYYYMMDD"),
+          //dialysisDate: dayjs(this.examDate).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
           facilityCd: this.getFacilityCd,
-          date: moment(this.examDate).format("YYYY/MM/DD"),
+          date: dayjs(this.examDate).format("YYYY/MM/DD"),
           //mod #9558 機能帳票でパラメータが正しく渡されていない 房 start
-          fromDate: moment(this.examDate).format("YYYY/MM/DD"),
-          toDate: moment(this.examDate).format("YYYY/MM/DD"),
+          fromDate: dayjs(this.examDate).format("YYYY/MM/DD"),
+          toDate: dayjs(this.examDate).format("YYYY/MM/DD"),
           functionCd:"01801",
           //mod #9558 機能帳票でパラメータが正しく渡されていない 房 end
           // add #11285 機能帳票の印刷情報対応② 高 start
@@ -980,14 +1245,17 @@ export default {
     // add 画面印刷プレビューと印刷の実現 吉 end
     setContentData(newValue,index) {
       if (newValue != undefined) {
+        const memoValue = newValue !== '' ? newValue : null;
         for (let examIndex = 0; examIndex < this.ExamMainDataSource._data.length; examIndex++) {
           if (this.ExamMainDataSource._data[examIndex].itemCd == index) {
             // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc start
             // this.ExamMainDataSource._data[examIndex].freememo = newValue;
-            this.ExamMainDataSource._data[examIndex].freememo = newValue !== '' ? newValue : null;
+            this.ExamMainDataSource._data[examIndex].freememo = memoValue;
             // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc end
           }
         }
+        this.commentArray = { ...this.commentArray, [index]: memoValue };
+        this.commentEditVersion++;
       }
     },
 
@@ -1043,6 +1311,14 @@ export default {
         return "";
       }
     },
+    is_comment_edit(item_cd) {
+      if (this.normalizeCommentValue(this.commentArray[item_cd]) != this.normalizeCommentValue(this.oldCommentArray[item_cd])) {
+        return "is-input-edit";
+      }
+      else {
+        return "";
+      }
+    },
     // add FNSI-Add Edit Style 関 end
     // -----------------------------------------
     // 透析実績連携スイッチ押下時イベント
@@ -1054,7 +1330,7 @@ export default {
         this.examTime = null;
       }else{
         //連携スイッチ:OFF
-      let today = moment(new Date());
+      let today = dayjs(new Date());
       this.examDate = today.format("YYYY-MM-DD");
       this.examTime = today.format("HH:mm");
       this.examSelectPat = -1;
@@ -1065,9 +1341,10 @@ export default {
       // del #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc start
       // this.isDataChanged = true;
       // del #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc end
-      if (!this.focusFlg[index]) {
+      if (isLock || !this.focusFlg[index]) {
         return;
       }
+      e.preventDefault();
       var max = 0;
       var min = 0;
       let inputUpper = this.examItemMap[itemCd].inputUpper;
@@ -1111,16 +1388,16 @@ export default {
         // 下
         value -= parameterStep
       }
-      this.dataArray[itemCd] = value.toFixed(decimalFigure);
+      this.$set(this.dataArray, itemCd, value.toFixed(decimalFigure))
       if (max!=0 || min!=0) {
         if (value > max) {
-          this.dataArray[itemCd] = Number(min).toFixed(decimalFigure);
+          this.$set(this.dataArray, itemCd, Number(min).toFixed(decimalFigure))
         }
         if(value < min) {
-          this.dataArray[itemCd] = Number(max).toFixed(decimalFigure);
+          this.$set(this.dataArray, itemCd, Number(max).toFixed(decimalFigure))
         }
       }
-      this.$forceUpdate();
+      this.requestViewForceUpdate();
     },
     // 入力内容チェック処理
     checkValue(itemCd) {
@@ -1128,8 +1405,8 @@ export default {
       if (this.dataArray[itemCd] === null || this.dataArray[itemCd] === undefined) {
         return;
       }
-      var max = 0;
-      var min = 0;
+      var max;
+      var min;
       const regexp = /^-?([1-9]\d*|0)(\.\d+)?$/;
       let inputUpper = this.examItemMap[itemCd].inputUpper;
       let inputLower = this.examItemMap[itemCd].inputLower;
@@ -1159,45 +1436,50 @@ export default {
         // 入力範囲(下限)
         min = inputLower;
       }
+      const inputNumberValue = Number(this.dataArray[itemCd]);
+      const isNumericInput = this.dataArray[itemCd] !== '' && Number.isFinite(inputNumberValue);
       if(this.dataArray[itemCd] !== ''){
         // 入力内容 ≠ 数値の場合
-        if (!regexp.test(this.dataArray[itemCd])) {
+        if (!regexp.test(this.dataArray[itemCd]) && !isNumericInput) {
           if (max >= 0 && min <= 0) {
-            this.dataArray[itemCd] = "";
+            this.$set(this.dataArray, itemCd, '')
           } else {
-            this.dataArray[itemCd] = Number(min).toFixed(decimalFigure);
+            this.$set(this.dataArray, itemCd, Number(min).toFixed(decimalFigure))
           }
-          this.$forceUpdate();
+          this.requestViewForceUpdate();
           return;
         }
         // -----入力内容の補正処理-----
-        if (this.dataArray[itemCd] > max) {
+        if (inputNumberValue > max) {
           // 入力内容 > 最大値の場合
-          this.dataArray[itemCd] = Number(min).toFixed(decimalFigure);
+          this.$set(this.dataArray, itemCd, Number(min).toFixed(decimalFigure))
           this.blurFlg = true;
-        } else if(this.dataArray[itemCd] < min) {
+        } else if(inputNumberValue < min) {
           // 入力内容 < 最小値の場合
-          this.dataArray[itemCd] = Number(max).toFixed(decimalFigure);
+          this.$set(this.dataArray, itemCd, Number(max).toFixed(decimalFigure))
           this.blurFlg = true;
         } else {
           // 入力内容 = 入力範囲内の場合
-          if (this.dataArray[itemCd].includes('.')) {
-            const decimalIndex = this.dataArray[itemCd].indexOf('.');
-            const decimalSplit = this.dataArray[itemCd].split('.');
+          const inputValue = regexp.test(String(this.dataArray[itemCd]))
+            ? String(this.dataArray[itemCd])
+            : String(inputNumberValue);
+          if (inputValue.includes('.')) {
+            const decimalIndex = inputValue.indexOf('.');
+            const decimalSplit = inputValue.split('.');
             const inputIntegerFigure = decimalSplit[0];
             const inputDecimalFigure = decimalSplit[1];
             const inputDecimalFigureLength = inputDecimalFigure.length;
             if (decimalFigure == 0) {
-              this.dataArray[itemCd] = inputIntegerFigure;
+              this.$set(this.dataArray, itemCd, inputIntegerFigure)
             } else {
               if (inputDecimalFigureLength < decimalFigure) {
-                this.dataArray[itemCd] = Number(this.dataArray[itemCd]).toFixed(decimalFigure);
+                this.$set(this.dataArray, itemCd, Number(inputValue).toFixed(decimalFigure))
               } else {
-                this.dataArray[itemCd] = this.dataArray[itemCd].substring(0, decimalIndex + decimalFigure + 1);
+                this.$set(this.dataArray, itemCd, inputValue.substring(0, decimalIndex + decimalFigure + 1))
               }
             }
           } else {
-            this.dataArray[itemCd] = Number(this.dataArray[itemCd]).toFixed(decimalFigure);
+            this.$set(this.dataArray, itemCd, Number(inputValue).toFixed(decimalFigure))
           }
           this.blurFlg = false;
         }
@@ -1207,7 +1489,7 @@ export default {
           this.ExamMainDataSource._data[examIndex].result = this.dataArray[itemCd];
         }
       }
-      this.$forceUpdate();
+      this.requestViewForceUpdate();
     },
 
     // add 検査結果入力文字列、保存後は表示されない 商 start
@@ -1221,7 +1503,7 @@ export default {
           this.ExamMainDataSource._data[examIndex].result = this.dataArray[itemCd];
         }
       }
-      this.$forceUpdate();
+      this.requestViewForceUpdate();
     },
     // add 検査結果入力文字列、保存後は表示されない 商 end
 
@@ -1234,11 +1516,13 @@ export default {
     },
     // ブラーイベント処理
     handleBlur(event, itemCd, index){
+      this.focusFlg[index] = false;
       this.$nextTick(() => {
         if (this.dataArray[itemCd] == '1') {
           this.refreshFlag++;
           this.dataArray[itemCd] = '1';
-          this.$forceUpdate();
+          this.$set(this.dataArray, itemCd, "1")
+          this.requestViewForceUpdate();
         }
       });
       // 入力内容 = "NULL" もしくは、入力内容 = "undefined"の場合
@@ -1277,22 +1561,22 @@ export default {
         min = inputLower;
       }
       if (this.dataArray[itemCd] == max && this.blurFlg) {
-        this.dataArray[itemCd] = Number(min).toFixed(decimalFigure);
+        this.$set(this.dataArray, itemCd, Number(min).toFixed(decimalFigure))
         this.blurFlg = false
       }else if (this.dataArray[itemCd] == min && this.blurFlg) {
-        this.dataArray[itemCd] = Number(max).toFixed(decimalFigure);
+        this.$set(this.dataArray, itemCd, Number(max).toFixed(decimalFigure))
         this.blurFlg = false
       }
       this.focusFlg[index] = false;
       if (!regexp.test(this.dataArray[itemCd])) {
         if(this.dataArray[itemCd] !== ''){
-          this.dataArray[itemCd] = this.oldDataArray[itemCd];
+          this.$set(this.dataArray, itemCd, this.oldDataArray[itemCd])
         }else{
           delete this.dataArray[itemCd];
         }
         event.target.value =  this.oldDataArray[itemCd] ? this.oldDataArray[itemCd] : '';
       }
-      this.$forceUpdate();
+      this.requestViewForceUpdate();
     },
      // add #5589 2023/04/11 数値IFのスタイル全不正 林峻峰 end
     //add FNSI-5933 フォーカスを失うイベントを削除 高 end
@@ -1349,15 +1633,40 @@ export default {
     // -----------------------------------------
     // 結果なし行表示チェックイベント
     // -----------------------------------------
-    checkAll(e){
+    async checkAll(e){
       this.localCondition.allDataFlg = e.target.checked;
       // add #7697 【デグレ】検査データをdelキーで削除すると項目が非表示になる 鄭爽 start
       if (!this.localCondition.allDataFlg) {
         this.changeDataArray = JSON.parse(JSON.stringify(this.dataArray));
       }
       // add #7697 【デグレ】検査データをdelキーで削除すると項目が非表示になる 鄭爽 end
-      // 一覧項目表示制御イベント呼び出し
-      this.dialogOk();
+      // 抽出条件登録（dialogOkは変更せず、本スイッチ専用の軽量更新）
+      this.setModalCondition(deepCopy(this.localCondition));
+      let colsetting = this.getExamMainColumn;
+      colsetting[4].hidden = !this.localCondition.normalRange;
+      this.setExamMainDataSource(deepCopy(this.ExamMainDataSource._data));
+      await this.selectExamData(this.getExamSetNameList);
+      await this.copyTableDataFromExamMainDataSource(true, true);
+    },
+
+    // overlay入力欄表示判定（既存 changeDataArray 判定を維持しつつ不足ケースを補完）
+    isOverlayCellVisible(value) {
+      const itemCd = value.itemCd;
+      const cd = this.changeDataArray[itemCd];
+      // 既存：truthy なら表示（#7697 Del削除後もスナップショット値で維持）
+      if (cd) {
+        return true;
+      }
+      // 補完：数値 0
+      if (cd === 0 || cd === '0') {
+        return true;
+      }
+      // 補完：検査データなし・コメントのみ
+      const freememo = this.commentArray[itemCd] ?? value.freememo;
+      if (freememo != null && freememo !== '') {
+        return true;
+      }
+      return false;
     },
 
     // ------------------------------------------------------------------
@@ -1367,12 +1676,10 @@ export default {
     calculateGridHeight(dispFlg) {
       if (!this.editingFlg) {
         // モーダルのbodyの高さ
-        const mh = document.getElementsByClassName("modal-body")[0]
-          .clientHeight;
+        const mh = getModalBodyElement(this.$el || this)?.clientHeight || 0;
 
         // モーダルのヘッダの高さ
-        const hh = document.getElementById("examrecordmodal-header")
-          .clientHeight;
+        const hh = getScopedElementById("examrecordmodal-header", this.$el || this)?.clientHeight || 0;
         this.examrecordGridToolbarHeight = mh - hh;
         this.examrecordGridToolbarHeight =
           this.examrecordGridToolbarHeight < 300
@@ -1388,13 +1695,16 @@ export default {
     },
     // add FNSI-入力欄右側にスピナー表示 関 start
     initDataArrayFromExamResult() {
-      this.ExamMainDataSource._data.forEach(everyItem => {
+      const dataSource = this.ExamMainDataSource;
+      dataSource._data.forEach(everyItem => {
         // add FNSI-整数ビットと小数ビットの検証 関 start
         this.classArray[everyItem.itemCd] = everyItem.examClass;
         this.inputDecimalFigureArray[everyItem.itemCd] = everyItem.inputDecimalFigure;
         this.inputIntegerFigureArray[everyItem.itemCd] = everyItem.inputIntegerFigure;
         // add FNSI-整数ビットと小数ビットの検証 関 end
-        this.dataArray[everyItem.itemCd] = everyItem.result;
+        const normalizedResult = this.normalizeExamResultValue(everyItem.result);
+        this.dataArray[everyItem.itemCd] = normalizedResult;
+        everyItem.result = normalizedResult;
         // mod FNSI-デフォルトで9桁の整数を入力します 関 start
         // var conMin = -99999;
         // var conMax = 99999;
@@ -1417,24 +1727,74 @@ export default {
       // add FNSI-Add Edit Style 関 end
     },
     initCommentArrayFromExamResult() {
-      this.ExamMainDataSource._data.forEach(everyItem => {
-        this.commentArray[everyItem.itemCd] = everyItem.freememo;
+      const dataSource = this.ExamMainDataSource;
+      dataSource._data.forEach(everyItem => {
+        this.commentArray[everyItem.itemCd] = everyItem.freememo ?? null;
       });
     },
     // mod FNSI-NO504-冗長なjsonデータを削除する 関 start
     // copyTableDataFromExamMainDataSource() {
     //   this.allTableData = this.ExamMainDataSource;
-    async copyTableDataFromExamMainDataSource() {
+    async copyTableDataFromExamMainDataSource(useCachedExamItemMap = false, skipCommentInit = false) {
       this.allTableData = this.ExamMainDataSource;
-      var examItems = await sendRequestGetMstExamItemList(this.getFacilityCd);
-      let examItemMap = new Object;
-      examItems.data.forEach(everyItem => {
-        if (everyItem.isDisp == 1 && everyItem.facilityCd == this.getFacilityCd) {
-          examItemMap[everyItem.examItemCd] = everyItem;
+      let examItemMap;
+      if (useCachedExamItemMap && Object.keys(this.examItemMap).length > 0) {
+        examItemMap = this.examItemMap;
+      } else {
+        const currentExamItemMap = this.getExamItemMapFromCurrentDataSource();
+        const currentRows = this.ExamMainDataSource?._data || [];
+        const needsMasterExamItemMap =
+          this.getModalState === 1 ||
+          Object.keys(currentExamItemMap).length === 0 ||
+          currentRows.some(row => {
+            const examItemData = this.getExamItemData(currentExamItemMap, row);
+            return (examItemData.dataType == null && examItemData.type == null) ||
+              examItemData.inputDecimalFigure === undefined ||
+              examItemData.inputDecimalFigure === null ||
+              examItemData.inputDecimalFigure === "";
+          });
+
+        if (!needsMasterExamItemMap) {
+          examItemMap = currentExamItemMap;
+          this.examItemMap = { ...this.examItemMap, ...examItemMap };
+        } else {
+          var examItems = await sendRequestGetMstExamItemList(this.getFacilityCd, this.selectedPatId);
+          const masterExamItemMap = new Object;
+          examItems.data.forEach(everyItem => {
+            if (everyItem.isDisp == 1 && everyItem.facilityCd == this.getFacilityCd) {
+              masterExamItemMap[everyItem.examItemCd] = everyItem;
+            }
+          });
+          examItemMap = { ...masterExamItemMap };
+          Object.keys(currentExamItemMap).forEach(itemCd => {
+            const currentExamItem = currentExamItemMap[itemCd] || {};
+            const masterExamItem = masterExamItemMap[itemCd] || masterExamItemMap[parseInt(itemCd)] || {};
+            examItemMap[itemCd] = {
+              ...masterExamItem,
+              ...currentExamItem,
+              dataType: masterExamItem.dataType ?? currentExamItem.dataType ?? masterExamItem.type ?? currentExamItem.type,
+              type: masterExamItem.type ?? currentExamItem.type ?? masterExamItem.dataType ?? currentExamItem.dataType,
+              normalValueClass: masterExamItem.normalValueClass ?? currentExamItem.normalValueClass,
+              lower: masterExamItem.lower ?? currentExamItem.lower,
+              upper: masterExamItem.upper ?? currentExamItem.upper,
+              normalValueLowerW: masterExamItem.normalValueLowerW ?? currentExamItem.normalValueLowerW,
+              normalValueUpperW: masterExamItem.normalValueUpperW ?? currentExamItem.normalValueUpperW,
+              normalValueLowerM: masterExamItem.normalValueLowerM ?? currentExamItem.normalValueLowerM,
+              normalValueUpperM: masterExamItem.normalValueUpperM ?? currentExamItem.normalValueUpperM,
+              inputDecimalFigure: masterExamItem.inputDecimalFigure ?? currentExamItem.inputDecimalFigure,
+              inputIntegerFigure: masterExamItem.inputIntegerFigure ?? currentExamItem.inputIntegerFigure,
+              inputUpper: masterExamItem.inputUpper ?? currentExamItem.inputUpper,
+              inputLower: masterExamItem.inputLower ?? currentExamItem.inputLower,
+              examClass: currentExamItem.examClass ?? masterExamItem.examClass
+            };
+          });
+          this.examItemMap = { ...this.examItemMap, ...examItemMap };
         }
-      });
+      }
       //add #8000 検査結果を保存できない gaoey start
-      this.initCommentArrayFromExamResult()
+      if (!skipCommentInit) {
+        this.initCommentArrayFromExamResult();
+      }
       //add #8000 検査結果を保存できない gaoey end
       let n = 0;
       this.allTableData._data.forEach((everyTableData,index) => {
@@ -1443,30 +1803,26 @@ export default {
         //   if (examItemMap[parseInt(everyTableData.itemCd)].normalValueLower != null && examItemMap[parseInt(everyTableData.itemCd)].normalValueUpper != null) {
         let checkValueUpper = null;
         let checkValueLower = null;
+        const examItemData = this.getExamItemData(examItemMap, everyTableData);
         
         // 正常範囲のkey取得
         const { normalValueUpper: upper, normalValueLower: lower } =
-          getNormalValueKeys(examItemMap[parseInt(everyTableData.itemCd)]["normalValueClass"], this.selectedPatSex, this.getExamDefaultSex);
+          getNormalValueKeys(examItemData.normalValueClass, this.selectedPatSex, this.getExamDefaultSex);
 
-        if(!examItemMap[everyTableData.itemCd][lower] && !examItemMap[everyTableData.itemCd][upper]
-            && examItemMap[everyTableData.itemCd][lower] !== 0  && examItemMap[everyTableData.itemCd][upper] !== 0) {
-          this.allTableData._data[n].normalValue = "";
-        }else if(!examItemMap[everyTableData.itemCd][lower] && examItemMap[everyTableData.itemCd][lower] !== 0){
-          checkValueUpper = this.formatNumber(examItemMap[everyTableData.itemCd][upper]);
-          this.allTableData._data[n].normalValue = '～' + this.formatNumber(examItemMap[everyTableData.itemCd][upper]);
-        }else if(!examItemMap[everyTableData.itemCd][upper] && examItemMap[everyTableData.itemCd][upper] !== 0){
-          checkValueLower = this.formatNumber(examItemMap[everyTableData.itemCd][lower]) ;
-          this.allTableData._data[n].normalValue = this.formatNumber(examItemMap[everyTableData.itemCd][lower]) + '～';
-        }else{
-          checkValueUpper = this.formatNumber(examItemMap[everyTableData.itemCd][upper]);
-          checkValueLower = this.formatNumber(examItemMap[everyTableData.itemCd][lower]);
-          this.allTableData._data[n].normalValue = this.formatNumber(examItemMap[everyTableData.itemCd][lower]) + '～' + this.formatNumber(examItemMap[everyTableData.itemCd][upper]);
-        }
+        const normalRangeValues = this.getNormalRangeValues(examItemData, everyTableData, lower, upper);
+        checkValueLower = normalRangeValues.lower;
+        checkValueUpper = normalRangeValues.upper;
+        this.allTableData._data[n].normalValue = this.buildNormalRangeText(
+          checkValueLower,
+          checkValueUpper,
+          everyTableData.normalValue ?? examItemData.normalValue
+        );
 
         this.allTableData._data[n].lower = checkValueLower;
         this.allTableData._data[n].upper = checkValueUpper;
       // }
-      this.allTableData._data[n].type = examItemMap[parseInt(everyTableData.itemCd)].dataType;
+      this.allTableData._data[n].type = examItemData.dataType ?? examItemData.type;
+      this.allTableData._data[n].examClass = examItemData.examClass;
     // }
     n++;
     // add #5589 2023/04/25 数値IFのスタイル全不正 林峻峰 start
@@ -1501,9 +1857,8 @@ export default {
         $$(`<input type="text" class="k-input k-textbox" name="${data.field}"/>`).appendTo(container)
       }else if(data.model.examClass == "0" && data.model.type =="1"){
         // 数値入力
-        $$(`<input class="k-numerictextbox" inputmode="numeric" name="${data.field}"/>`)
-          .appendTo(container)
-          .kendoNumericTextBox({
+        mountNumericTextBox($(`<input class="k-numerictextbox" inputmode="numeric" name="${data.field}"/>`)
+          .appendTo(container)[0], {
           });
       }else{
         if(!data.model.result){
@@ -1560,27 +1915,29 @@ export default {
     // 背景色セット
     editBackgroundColor() {
       this.$nextTick(() => {
-        let gridHeader = this.$refs.examrecordgrid.$el.firstChild;
-        if (gridHeader.classList === undefined) {
-          gridHeader = this.$refs.examrecordgrid.$el.firstElementChild;
+        const examRecordGridRoot = resolveRefElement(this, "examrecordgrid");
+        let gridHeader = examRecordGridRoot?.firstChild;
+        if (gridHeader?.classList === undefined) {
+          gridHeader = examRecordGridRoot?.firstElementChild;
         }
         gridHeader?.classList?.add("master-grid-header");
       });
     },
     setFontColor(e){
-      const lockrows = e.sender.content.find("tr");
+      const lockrows = findKendoGridBodyRows(e.sender);
       // 検査データセル
-      const examresult = e.sender.wrapper
-        .find(".k-grid-header [data-field=" + "result" + "]")
-        .index();
+      const gridHeader = this.$refs.examrecordgrid?.gridHeaderEl?.() || findKendoGridHeader(e.sender) || null;
+      const examresult = gridHeader
+        ? $(gridHeader).find('[data-field=' + "result" + ']').index()
+        : -1;
       // add 9403 検査結果グラフのレンジが正しく表示されていない zhou start
-      if (examresult == -1 ){
+      if (examresult == -1){
         return;
       }
       // add 9403 検査結果グラフのレンジが正しく表示されていない zhou end
       // 検査データの文字色を設定
-      lockrows.each(function(index, row) {
-        const dataItem = e.sender.dataItem(row);
+      lockrows.forEach((row) => {
+        const dataItem = getKendoGridDataItem(e.sender, row);
         // 検査データの文字色指定：データタイプが「数値」の時のみ
         if(dataItem.type == "1"){
           if (parseFloat(dataItem.result) > parseFloat(dataItem.upper)) {
@@ -1622,7 +1979,7 @@ export default {
       // まず編集中のexamMainCdからpatExamMainを取得
       let patExamMain = null;
       try{
-        patExamMain = await sendRequestGetPatExamMainByExamMainCd(examMainCd);
+        patExamMain = await sendRequestGetPatExamMainByExamMainCd(examMainCd, this.selectedPatId);
       }catch(e){
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('ExamRecordModal.vue', 'moveSourceDelete', e);
@@ -1691,8 +2048,7 @@ export default {
         this.selectedPatId,
         strExamSelectDiv,
         this.examDate + " " + this.examTime + ":00",
-        this.getExamMainCd
-      ).then(response => {
+        this.getExamMainCd).then(response => {
         existResultData = response.data;
       });
       // await sendRequestGetExistOrder(
@@ -1701,7 +2057,7 @@ export default {
       //   this.examDate,
       //   this.examDate + " " + this.examTime + ":00",
       //   this.getExamMainCd
-      // ).then(response => {
+      //).then(response => {
       //   existResultData = response.data;
       // });
 
@@ -1747,8 +2103,7 @@ export default {
         strExamSelectDiv,
         this.examDate,
         this.examDate + " " + this.examTime + ":00",
-        this.getExamMainCd
-      ).then(response => {
+        this.getExamMainCd).then(response => {
         existOrderData = response.data;
       });
 
@@ -2040,7 +2395,7 @@ export default {
       await sendRequestGetPatExamMainDetailList(this.selectedPatId, this.examDate,this.examDate).then(
         (response) => {
           response.data.forEach(e => {
-            if(this.examDate + " " +  this.examTime + ":00" == moment(e.resultExamDate).format("YYYY-MM-DD HH:mm:ss")){
+            if(this.examDate + " " +  this.examTime + ":00" == dayjs(e.resultExamDate).format("YYYY-MM-DD HH:mm:ss")){
               if(this.getExamMainCd !== e.examMainCd && this.examSelectDiv != e.regOrderClass){
                 // add 透析前後合併問題 5950 gaoey start
                 let existOrderDatacopy = {}
@@ -2056,11 +2411,10 @@ export default {
               }
             }
           })
-        }
-      )
-      for(let n = 0; n < patExamMainDetailList.length;n++ ){
+        })
+      for(let n = 0; n < patExamMainDetailList.length;n++){
         this.setModalState(1);
-        await this.setExamModalDataSource({field:"M"+patExamMainDetailList[n].examMainCd+"Cd",facilityCd:this.getFacilityCd,patId:this.selectedPatId,patSex:this.selectedPatSex,defaultSex:this.getExamDefaultSex}).then(async () => {
+        await this.setExamModalDataSource({field:"M"+patExamMainDetailList[n].examMainCd+"Cd",facilityCd:this.getFacilityCd,patId:this.selectedPatId,selectedPatId:this.selectedPatId,patSex:this.selectedPatSex,defaultSex:this.getExamDefaultSex}).then(async () => {
           // add gaoey 5950 数据重复修改 start
           if(patExamMainDetailList.length - 1 == n){
             await this.updateExamRecord(mergeFlg,"isLast",patExamMainDetailList[n].regOrderClass,patExamMainDetailList[n].examMainCd);
@@ -2073,7 +2427,11 @@ export default {
       this.mergeBaseExamResultlist = []
       /*add FNSI-改修内容6326 任 start*/
       const examDateOrder = this.getExamResultDispOrder === DISP_ORDER_LEFT_PAST ? "asc" : "desc";
-      await this.setExamDetailSelectData({facilityCd: this.getFacilityCd, examDateOrder: examDateOrder});
+      await this.setExamDetailSelectData({
+        facilityCd: this.getFacilityCd,
+        examDateOrder: examDateOrder,
+        selectedPatId: this.selectedPatId
+      });
       EventBus.$emit("flashData");
       /*add FNSI-改修内容6326 任 end*/
       // if(executeUpdateFlg !== true) {
@@ -2149,7 +2507,7 @@ export default {
     isFilledRequired() {
 
       //01.明細行が0件の場合は検査項目0件エラー
-      if(this.getExamMainData.length == 0 ){
+      if(this.getExamMainData.length == 0){
         this.isCheckDialogVisible = true;
         this.messageCd = 74000002;
         this.stringParams = [""];
@@ -2216,7 +2574,7 @@ export default {
           }
           //2.入力値：入力範囲内チェック
           if(Number(checkData[n].result) > Number(checkData[n].inputUpper)
-            || Number(checkData[n].result) < Number(checkData[n].inputLower) ){
+            || Number(checkData[n].result) < Number(checkData[n].inputLower)){
               //upperを超えるかlowerより低い場合
               return false;
           }
@@ -2481,7 +2839,8 @@ export default {
             }
           }
         }
-      }
+      },
+      deep: true
     },
     // add FNSI-入力欄右側にスピナー表示 関 end
     windowHeight() {
@@ -2495,15 +2854,15 @@ export default {
     }
   },
   async created() {
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 start
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 start
     this.setIsOpenFlag(true);
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 end
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 end
     //add #7851 exam_rst連携で受信した検査データの編集後保存ができない 20220727 zhaoqi start
     store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
     store.dispatch("loading-screen/setLoadingScreenVisible", true);
     //add #7851 exam_rst連携で受信した検査データの編集後保存ができない 20220727 zhaoqi end
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = getScopedWindow(this.$el || this)?.navigator?.userAgent || "";
     if (ua.match(/Android/)) {
       this.androidFlg = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -2511,6 +2870,7 @@ export default {
     }
     // 利用権限がない場合入力部品を操作不可にする
     this.authorityCds = this.getAuthorityCds();
+    this.setInitialExamDateTime();
 
     // 抽出条件セット
     //this.setModalCondition(deepCopy(this.localCondition));
@@ -2518,8 +2878,10 @@ export default {
 
     // 明細情報Columnセット
     this.setExamModalColumn();
-    // 透析実績リスト作成
-    await this.setExamPatList({patId:this.selectedPatId, facilityCd:this.getFacilityCd});
+    const dataSourceExamItemMap = this.getExamItemMapFromCurrentDataSource();
+    this.examItemMap = { ...this.examItemMap, ...dataSourceExamItemMap };
+    // 透析実績リストは初期表示を待たせない
+    this.loadExamPatListLater();
     // add 性能改善メモリ不足 shan end
     EventBus.$on("filterExamMain", this.setFilterCondition);
     // 共通ローダー:表示名設定
@@ -2529,14 +2891,7 @@ export default {
     //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
     EventBus.$on("requestReportParams", this.requestrReportParams);
     //add 5984 機能帳票でパラメータが正しく渡されていない 吉 end
-    // add FNDI-FIXBUG 最新の小数点以下の桁数を使用 関 start
-    var examItems = await sendRequestGetMstExamItemList(this.getFacilityCd);
-    examItems.data.forEach(everyItem => {
-      if (everyItem.isDisp == 1 && everyItem.facilityCd == this.getFacilityCd) {
-        this.examItemMap[everyItem.examItemCd] = everyItem;
-      }
-    });
-    // add FNDI-FIXBUG 最新の小数点以下の桁数を使用 関 end
+    // 検査項目情報はモーダル表示前にStoreへ設定済みのため、ここで再取得しない
     // del #10359 編集権限の動作不正 dengshen start
     // //mod 編集権限の適用 劉全航 start
     // this.editAuthority = this.getStateUserAccountInfo
@@ -2560,6 +2915,15 @@ export default {
     this.editBackgroundColor();
   },
   async mounted() {
+    //mod FNSI-障害票一覧_検査結果 NO.19 劉全航 start
+    var nodeList = this.$el?.querySelectorAll?.('[name="examDivList"]') || [];
+    // if (nodeList[1]) {
+    //   nodeList[1].style.backgroundColor = "#ffff99";
+    // }
+    if (nodeList[0]) {
+      nodeList[0].style.backgroundColor = "#ffff99";
+    }
+    
     // ログインアカウントセット
     this.setUserAccountInfo(this.getStateUserAccountInfo);
     // add FNSI-入力欄右側にスピナー表示 関 start
@@ -2571,7 +2935,7 @@ export default {
     // ExamMainDataSource();
     let dataSource = this.getModalState === 0 ? this.getExamMainDataSource.filter(e => e.facilityCd === this.getFacilityCd) : this.getExamMainDataSource;
     // storeからデータを取得
-    new Kendo.data.DataSource({
+    createDataSource({
       data: dataSource
     })
     // add FNSI-入力欄右側にスピナー表示 関 end
@@ -2580,37 +2944,7 @@ export default {
     // });
 
     this.comparisonModel = JSON.stringify(this.ExamMainDataSource._data);
-    let today = moment(new Date());
-    this.today =  today.format("YYYY-MM-DD");
-    if (this.getModalState === 1) {
-      this.examDate = this.getExamDate;
-      this.examTime = this.getExamTime;
-      this.examSelectDiv = this.getExamSelectDiv;
-      // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc start
-      // this.openPageExamDate = this.examDate;
-      // this.openPageExamTime = this.examTime;
-      // this.openPageExamSelectDiv = this.examSelectDiv;
-      this.openPageExamDate = JSON.parse(JSON.stringify(this.examDate));
-      this.openPageExamTime = JSON.parse(JSON.stringify(this.examTime));
-      this.openPageExamSelectDiv = JSON.parse(JSON.stringify(this.examSelectDiv));
-      // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc end
-    } else {
-      this.examDate = today.format("YYYY-MM-DD");
-      this.examTime = today.format("HH:mm");
-      this.examSelectDiv = -1;
-      // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc start
-      // this.openPageExamDate = this.examDate;
-      // this.openPageExamTime = this.examTime;
-      // this.openPageExamSelectDiv = this.examSelectDiv;
-      this.openPageExamDate = JSON.parse(JSON.stringify(this.examDate));
-      this.openPageExamTime = JSON.parse(JSON.stringify(this.examTime));
-      this.openPageExamSelectDiv = JSON.parse(JSON.stringify(this.examSelectDiv));
-      // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc end
-    }
-    //mod FNSI-障害票一覧_検査結果 NO.19 劉全航 start
-    var nodeList = document.getElementsByName("examDivList");
-    nodeList[1].style.backgroundColor = "#ffff99";
-    //mod FNSI-障害票一覧_検査結果 NO.19 劉全航 end
+    this.oldCommentArray = JSON.parse(JSON.stringify(this.commentArray));
     // add #7697 【デグレ】検査データをdelキーで削除すると項目が非表示になる 鄭爽 start
     // if (this.changeDataArray.length == 0) {
     this.changeDataArray = JSON.parse(JSON.stringify(this.dataArray));
@@ -2619,10 +2953,11 @@ export default {
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc start
     this.initexamSetCd = JSON.stringify(this.localCondition.examSetCd);
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_検査結果（↓） 20231128 ztc end
+    this.enableCommentTextareaResizeAfterInitialLoad();
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
-    EventBus.$off("filterExamMain");
+  beforeUnmount() {
+    EventBus.$off("filterExamMain", this.setFilterCondition);
     //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
     // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 start
     // EventBus.$off("requestReportParams");
@@ -2630,11 +2965,21 @@ export default {
     // mod #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 end
     //add 5984 機能帳票でパラメータが正しく渡されていない 吉 end
 
+    const ownerWindow = getScopedWindow(this.$el || this) || (typeof window !== "undefined" ? window : null);
+    if (this.commentResizeFrameId != null) {
+      if (ownerWindow?.cancelAnimationFrame) {
+        ownerWindow.cancelAnimationFrame(this.commentResizeFrameId);
+      } else {
+        clearTimeout(this.commentResizeFrameId);
+      }
+      this.commentResizeFrameId = null;
+    }
+
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 start
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 start
     this.setIsOpenFlag(false);
-    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる　V1.0B 房 end
+    // add 11372 【たくしん会】機能帳票からの印刷で同一帳票が2枚プリントされる V1.0B 房 end
   }
   // add 性能改善メモリ不足 shan end
 };
@@ -2662,7 +3007,7 @@ export default {
   font-size: 1.0em;
   border:1px;
 }
-.custom-ons-input >>> .text-input {
+.custom-ons-input :deep(.text-input) {
   font-size: inherit;
 }
 /* add FutreNetWeb+SI課題管理No6464 趙 start */
@@ -2729,6 +3074,10 @@ table.scroll-table-data td > * {
   background-color: transparent;
   border-radius: 6px;
 }
+.exam-commentTextarea textarea.custom-textarea {
+  max-height: none;
+  overflow-y: hidden !important;
+}
 /* add FNSI-改修内容「テキストエリアの動作」を「追加」に変更 江 end */
 .exam-table-td {
   padding-top: 4px;
@@ -2745,8 +3094,14 @@ table.scroll-table-data td > * {
   text-align: right;
 }
 .is-input-edit {
-  border: 2px green solid !important;
 }
+
+.exam-commentTextarea.is-input-edit textarea.custom-textarea {
+  border: none !important;
+  border: 2px green solid!important;
+  outline: 0;
+}
+
 /* ボタン部 モバイル対応 */
 @media screen and (max-width: 420px) {
   .registration-btn-area {
@@ -2768,4 +3123,3 @@ table.scroll-table-data td > * {
 /* add #9461  by zhangruixue 2023-08-17 --end */
 </style>
 <!--add FNSI-入力欄右側にスピナー表示 関 end -->
-

@@ -1,27 +1,18 @@
 cd /home/ntss/.node-red
 
-npm i node-red-node-base64
-npm i node-red-contrib-flogger
-npm i node-red-contrib-zip
+npm install node-red-node-base64@1.0.0 --save-exact
+npm install node-red-contrib-flogger@1.2.2 --save-exact
+npm install node-red-contrib-zip@1.1.0 --save-exact
 
-npm install fs
-npm install chokidar
-npm install ftp
-npm install ws
-npm install net
-npm install path
-npm install date-utils
-npm install iconv-lite
-npm install xmldom
-npm install html
-npm install os
-npm install node-schedule
-npm install silly-datetime
-npm install soap
-##soapÅFNew Ver 0.35.0 is error.(TypeError [ERR_INVALID_ARG_TYPE]: The "original" argument must be of type function)
-##soapÅFVer 0.33.0 is ok.
-### npm install soap@0.33.0
-##Add 2021-04-16
-###del 2023-02-23 use the new
-npm install compressing
-npm install readline
+# fs/net/path/os/readline are Node.js built-in modules. Do not install them with npm.
+npm install chokidar@5.0.0 --save-exact
+npm install ftp@0.3.10 --save-exact
+npm install ws@8.20.1 --save-exact
+npm install date-utils@1.2.21 --save-exact
+npm install iconv-lite@0.7.2 --save-exact
+npm install @xmldom/xmldom@0.9.10 --save-exact
+npm install html@1.0.0 --save-exact
+npm install node-schedule@2.1.1 --save-exact
+npm install silly-datetime@0.1.2 --save-exact
+npm install soap@1.9.2 --save-exact
+npm install compressing@2.1.1 --save-exact

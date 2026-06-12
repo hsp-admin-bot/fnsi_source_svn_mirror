@@ -58,12 +58,12 @@
                       style="align-items: flex-end;"
                       v-show="!isHomeDialysis"
                     >
-                      <v-ons-select size="6" class="bed-list select-has-size" v-model="selectedNotPlacedBed">
+                      <v-ons-select size="6" class="bed-list select-has-size" v-model="selectedNotPlacedBedKey">
                         <option
                           class="option-bed-list"
                           v-for="(machine, idx) in notPlacedList"
                           :key="idx"
-                          :value="machine"
+                          :value="getNotPlacedBedKey(machine)"
                           :class="setClassNotPlacedBed(machine)"
                         >{{ machine.name }}</option>
                       </v-ons-select>
@@ -74,12 +74,12 @@
                       style="align-items: flex-end;"
                       v-show="isHomeDialysis"
                     >
-                      <v-ons-select size="6" class="bed-list select-has-size" v-model="selectedNotPlacedBed">
+                      <v-ons-select size="6" class="bed-list select-has-size" v-model="selectedNotPlacedBedKey">
                         <option
                           class="option-bed-list"
                           v-for="(machine, idx) in notPlacedListAtHome"
                           :key="idx"
-                          :value="machine"
+                          :value="getNotPlacedBedKey(machine)"
                         >{{ machine.name }}</option>
                       </v-ons-select>
                     </div>
@@ -157,12 +157,12 @@
                   <div class="vertical-div">
                     <div class="wrap-block vertical-label left">配置済みベッド</div>
                     <div class="nowrap-block" style="align-items: flex-end;">
-                      <v-ons-select size="6" class="bed-list select-has-size" v-model="selectedPlacedBed">
+                      <v-ons-select size="6" class="bed-list select-has-size" v-model="selectedPlacedBedKey">
                         <option
                           class="option-bed-list"
-                          v-for="(machine, idx) in placedList"
-                          :key="idx"
-                          :value="machine"
+                          v-for="machine in placedList"
+                          :key="getPlacedBedKey(machine)"
+                          :value="getPlacedBedKey(machine)"
                           :class="setClassPlacedBed(machine)"
                         >{{ machine.name }}</option>
                       </v-ons-select>
@@ -205,7 +205,7 @@
                           step="1"
                           style="width: 8em;"
                           v-model="getCanvasSize.width"
-                          @change="onCanvasWidth($event.target)"
+                          @change="onCanvasWidth($event)"
                           @mousewheel.prevent="mouseWheelWidth($event,0)"
                           @blur="formatValueWidth($event,0)"
                           @focus="handleFocus(0)"
@@ -229,7 +229,7 @@
                           step="1"
                           style="width: 8em;"
                           v-model="getCanvasSize.height"
-                          @change="onCanvasHeight($event.target)"
+                          @change="onCanvasHeight($event)"
                           @mousewheel.prevent="mouseWheelHeight($event,1)"
                           @blur="formatValueHeight($event,1)"
                           @focus="handleFocus(1)"
@@ -306,7 +306,7 @@
               <v-ons-button
                 v-show="!isHomeDialysis || adjustBtn.isHomeDialysisDisp"
                 class="adjust-btn"
-                @click="adjustBtn.event"
+                @click="runLayoutAdjust(cd)"
                 :style="adjustBtnStyle(cd)"
               >
                 <img :src="adjustBtn.img" class="adjust-img" />
@@ -319,36 +319,24 @@
         </div>
         <div :style="configBedLayoutStyles" id="configBedLayoutId">
           <!-- #9771 FNWから取得したVisualLayoutが正しく取り込めていない linjunfeng start -->
-          <!-- <grid-layout
-            :layout.sync="gridPlacementList"
-            :col-num="getCanvasSize.width / this.GRID_SIZE"
-            :row-height="this.GRID_SIZE"
-            :is-draggable="true"
-            :is-resizable="isHomeDialysis ? false : true"
-            :is-mirrored="false"
-            :vertical-compact="false"
-            :margin="[0, 0]"
-            :use-css-transforms="true"
-            :style="{
-                    backgroundColor: '#AFFF',
-                    width: getCanvasSize.width + 'px',
-                    height: getCanvasSize.height + 'px',
-                    backgroundImage: 'url(' + backgroundImage + ')',
-                    backgroundSize: 100 + '%',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'center'
-                  }"
-          > -->
           <grid-layout
-            :layout.sync="gridPlacementList"
-            :col-num="getCanvasSize.width / this.GRID_SIZE"
+            :key="gridLayoutKey"
+            v-model:layout="gridPlacementList"
+            :col-num="gridColNum"
+            :width="gridLayoutWidth"
             :row-height="this.GRID_SIZE"
+            :max-rows="gridMaxRows"
             :is-draggable="true"
             :is-resizable="isHomeDialysis ? false : true"
             :is-mirrored="false"
             :vertical-compact="false"
+            :allow-overlap="true"
             :margin="[0, 0]"
             :use-css-transforms="true"
+            draggable-cancel=".button-area, .bed-delete-btn, .bed-name, .vue-resizable-handle"
+            @drag="onGridDrag"
+            @drag-stop="onGridDragStop"
+            @resize-stop="onGridResizeStop"
             :style="{
                     backgroundColor: '#AFFF',
                     width: getCanvasSize.width + 'px',
@@ -360,35 +348,32 @@
                   }"
           >
           <!-- #9771 FNWから取得したVisualLayoutが正しく取り込めていない linjunfeng end -->
-            <grid-item
+            <div
               v-for="item in gridPlacementList"
-              :x="item.x"
-              :y="item.y"
-              :w="item.w"
-              :h="item.h"
-              :i="item.i"
               :key="item.i"
-              :minW="item.mstBed.width/10"
-              :minH="item.mstBed.height/10"
-              @resized="resizedEvevt"
+              class="grid-bed-slot"
+              @mousedown="onGridBedPointerDown(item, $event)"
+              @touchstart="onGridBedPointerDown(item, $event)"
             >
               <div
-                :class="(item.mstBed.mstBed && item.mstBed.mstBed.isHomeDialysis) ? 'bed-home' : 'bed'"
-                @mousedown="keepPlace(item)"
-                @mouseup="switchMachineSelectionState(item)"
-                @touchstart="keepPlace(item)"
-                @touchend="switchMachineSelectionState(item)"
-                :style="{ backgroundColor: machineBackgroundColor(item) }"
-                :data-name="isHomeDialysis ? item.name : ''"
+                :class="getGridBedOuterClass(item)"
+                :style="getGridBedBoxStyle(item)"
+                :data-name="getGridBedName(item)"
               >
-                <div>{{isHomeDialysis ? "" : item.name}}</div>
-                <div class="button-area">
-                  <button class="ntss-btn-outset button-delete" @click="deleteBed(item.mstBed)">
-                    <v-ons-icon icon="fa-trash"/>
+                <div class="bed-name">
+                  {{ getGridBedName(item) }}
+                </div>
+                <div v-if="showGridBedDelete(item)" class="button-area">
+                  <button
+                    type="button"
+                    class="bed-delete-btn"
+                    @click.stop="deleteBed(getGridBedModel(item))"
+                  >
+                    <v-ons-icon icon="fa-trash" />
                   </button>
                 </div>
               </div>
-            </grid-item>
+            </div>
           </grid-layout>
         </div>
         <!-- add 鞠 5808 キャンセルと保存のボタン start  -->
@@ -409,18 +394,21 @@
 </template>
 
 <script>
-import { mapGetters, mapActions, mapState } from "vuex";
+import { mapGetters, mapActions, mapState } from "@/compat/vue/vuex";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
-import $ from "jquery";
-import { GridLayout, GridItem } from "vue-grid-layout"
+
+import { GridLayout } from "@/compat/grid-layout";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getHeaderHeight, getFooterMenuClientHeight, getViewportWidth, getScopedElementsByClassName, getScopedElementById, getScopedAlertDialogs, getScopedJQuery } from "@/functions/common/LayoutMeasureHelper";
+
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 //add #12658 securify】SQLインジェクション(High) まとめ zrx start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { getLatestHeaderElement } from "@/functions/common/LayoutMeasureHelper";
 //add #12658 securify】SQLインジェクション(High) まとめ zrx end
 
 const LARGE_SIZE = {
@@ -450,8 +438,8 @@ const SMALL_SIZE = {
 
 export default {
   name: "MstStatusMapBedLayout",
-  components: {GridLayout,GridItem},
-  props: {},
+  components: { GridLayout },
+
   data() {
     return {
       // #9771 ベッドの図はかぶっているように見える linjunfeng start
@@ -459,10 +447,17 @@ export default {
       GRID_SIZE: 1,
       // #9771 ベッドの図はかぶっているように見える linjunfeng end
       isSmallHeader: false,
-      selectedNotPlacedBed: null,
-      selectedPlacedBed: null,
+      selectedNotPlacedBedKey: null,
+      selectedPlacedBedKey: null,
       comboSelectedBedLayoutId: null,
+      selectedBedName: "",
       druggingMachinePlace: null,
+      draggingGridItemId: null,
+      dragStartGridPosition: null,
+      gridDragRafId: null,
+      pendingGridBedSelect: null,
+      gridBedPointerUpHandler: null,
+      suppressLayoutMerge: false,
       inputData: {
         code: null,
         name: null,
@@ -499,121 +494,101 @@ export default {
       layoutAdjustBtnList: {
         1: {
           name: "L",
-          event: this.setLargeSizeSelectedMachine,
           isHomeDialysisDisp: false,
           img: "img/master-maintenance/mst-status-map-bed-layout/lerge.png"
         },
         2: {
           name: "M",
-          event: this.setMiddleSizeSelectedMachine,
           isHomeDialysisDisp: false,
           img: "img/master-maintenance/mst-status-map-bed-layout/midium.png"
         },
         3: {
           name: "S",
-          event: this.setSmallSizeSelectedMachine,
           isHomeDialysisDisp: false,
           img: "img/master-maintenance/mst-status-map-bed-layout/small.png"
         },
         4: {
           name: "縦横反転",
-          event: this.rotateSelectedMachine,
           isHomeDialysisDisp: false,
           img: "img/master-maintenance/mst-status-map-bed-layout/rotate.png"
         },
         5: {
           name: "横向き",
-          event: this.sidewaySelectedMachine,
           isHomeDialysisDisp: false,
           img: "img/master-maintenance/mst-status-map-bed-layout/sideway.png"
         },
         6: {
           name: "縦向き",
-          event: this.verticalSelectedMachine,
           isHomeDialysisDisp: false,
           img: "img/master-maintenance/mst-status-map-bed-layout/vertical.png"
         },
         7: {
           name: "左揃え",
-          event: this.leftAlignSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/left-align.png"
         },
         8: {
           name: "右揃え",
-          event: this.rightAlignSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/right-align.png"
         },
         9: {
           name: "左右中央揃え",
-          event: this.horizonCenterAlignSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/horizon-center-align.png"
         },
         10: {
           name: "上揃え",
-          event: this.topAlignSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/top-align.png"
         },
         11: {
           name: "下揃え",
-          event: this.bottomAlignSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/bottom-align.png"
         },
         12: {
           name: "上下中央揃え",
-          event: this.verticalCenterAlignSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/vertical-center-align.png"
         },
         13: {
           name: "垂直方向の間隔を減らす",
-          event: this.reduceVerticalGapSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/reduce-vertical-gap.png"
         },
         14: {
           name: "垂直方向の間隔を増やす",
-          event: this.increaseVerticalGapSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/increase-vertical-gap.png"
         },
         15: {
           name: "垂直方向の間隔を無くす",
-          event: this.clearVerticalGapSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/clear-vertical-gap.png"
         },
         16: {
           name: "垂直方向に等間隔で配置する",
-          event: this.setEqualIntervalVerticalSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/set-equal-interval-vertical.png"
         },
         17: {
           name: "水平方向の間隔を減らす",
-          event: this.reduceHorizontalGapSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/reduce-horizontal-gap.png"
         },
         18: {
           name: "水平方向の間隔を増やす",
-          event: this.increaseHorizontalGapSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/increase-horizontal-gap.png"
         },
         19: {
           name: "水平方向の間隔を無くす",
-          event: this.clearHorizontalGapSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/clear-horizontal-gap.png"
         },
         20: {
           name: "水平方向に等間隔で配置する",
-          event: this.setEqualIntervalHorizontalSelectedMachine,
           isHomeDialysisDisp: true,
           img: "img/master-maintenance/mst-status-map-bed-layout/set-equal-interval-horizontal.png"
         }
@@ -670,8 +645,45 @@ export default {
         minHeight: "300px"
       };
     },
-    gridPlacementList() {
-      return this.inputData.gridPlacementList;
+    gridColNum() {
+      const width = Number(this.getCanvasSize?.width);
+      if (!Number.isFinite(width) || width <= 0) {
+        return 1;
+      }
+      return Math.max(1, Math.round(width / this.GRID_SIZE));
+    },
+    gridLayoutWidth() {
+      const width = Number(this.getCanvasSize?.width);
+      if (!Number.isFinite(width) || width <= 0) {
+        return 1;
+      }
+      return width;
+    },
+    gridMaxRows() {
+      const height = Number(this.getCanvasSize?.height);
+      if (!Number.isFinite(height) || height <= 0) {
+        return Infinity;
+      }
+      return Math.max(1, Math.ceil(height / this.GRID_SIZE));
+    },
+    gridLayoutKey() {
+      // 列数は幅のみに依存する。高さを key に含めると canvas 高さ変更のたびに
+      // grid-layout が再生成され、layout 同期で mstBed/name が欠落してベッド名が消える。
+      return String(this.gridLayoutWidth);
+    },
+    gridPlacementList: {
+      get() {
+        return this.inputData.gridPlacementList;
+      },
+      set(value) {
+        if (this.suppressLayoutMerge) {
+          return;
+        }
+        this.inputData.gridPlacementList = this.mergeGridPlacementList(value);
+        if (!this.suppressLayoutMerge) {
+          this.setIsChange(true);
+        }
+      }
     },
     placedList() {
       return this.inputData.obj_list;
@@ -754,16 +766,34 @@ export default {
     machineBackgroundColor() {
       return machine => (machine.selected ? "#FEDF" : "#FFFF");
     },
-    isSelectedNotPlacedBed() {
+    selectedNotPlacedBed() {
+      if (!this.selectedNotPlacedBedKey) {
+        return null;
+      }
+      const list = this.isHomeDialysis
+        ? this.notPlacedListAtHome
+        : this.notPlacedList;
       return (
-        this.selectedNotPlacedBed !== undefined &&
-        this.selectedNotPlacedBed !== null
+        list.find(
+          bed => this.getNotPlacedBedKey(bed) === this.selectedNotPlacedBedKey
+        ) || null
       );
     },
-    isSelectedPlacedBed() {
+    selectedPlacedBed() {
+      if (!this.selectedPlacedBedKey) {
+        return null;
+      }
       return (
-        this.selectedPlacedBed !== undefined && this.selectedPlacedBed !== null
+        this.placedList.find(
+          bed => this.getPlacedBedKey(bed) === this.selectedPlacedBedKey
+        ) || null
       );
+    },
+    isSelectedNotPlacedBed() {
+      return !!this.selectedNotPlacedBedKey;
+    },
+    isSelectedPlacedBed() {
+      return !!this.selectedPlacedBedKey;
     },
     enableHomeDialysis() {
       return this.getAdvancedSettings.func_advcds.some(
@@ -774,7 +804,7 @@ export default {
     setClassNotPlacedBed: function () {
       const that = this;
       return function (data) {
-        if (that.selectedNotPlacedBed == data) {
+        if (that.getNotPlacedBedKey(data) === that.selectedNotPlacedBedKey) {
           return { "selected-color": true };
         } else {
           return {};
@@ -785,7 +815,7 @@ export default {
     setClassPlacedBed: function () {
       const that = this;
       return function (data) {
-        if (that.selectedPlacedBed == data) {
+        if (that.getPlacedBedKey(data) === that.selectedPlacedBedKey) {
           return { "selected-color": true };
         } else {
           return {};
@@ -794,6 +824,11 @@ export default {
     }
   },
   methods: {
+    requestViewForceUpdate() {
+      if (this.$?.isMounted) {
+        this.$forceUpdate();
+      }
+    },
     ...mapActions("mst-status-map-bed-layout", {
       stateInitialize: "stateInitialize",
       selectBedLayout: "selectBedLayout",
@@ -810,6 +845,88 @@ export default {
       "setMasterRecordList",
       "editRecordBeEmpty"
     ]),
+    buildGridItem(item) {
+      const bed = item?.mstBed;
+      const pixelWidth = bed?.width ?? item.w * this.GRID_SIZE;
+      const pixelHeight = bed?.height ?? item.h * this.GRID_SIZE;
+      return {
+        minW: Math.max(1, pixelWidth / this.GRID_SIZE / 10),
+        minH: Math.max(1, pixelHeight / this.GRID_SIZE / 10)
+      };
+    },
+    withGridItemConstraints(item) {
+      const constraints = this.buildGridItem(item);
+      return {
+        ...item,
+        i: String(item.i),
+        x: Number(item.x),
+        y: Number(item.y),
+        w: Number(item.w),
+        h: Number(item.h),
+        minW: constraints.minW,
+        minH: constraints.minH
+      };
+    },
+    mergeGridPlacementList(nextLayout) {
+      if (!Array.isArray(nextLayout)) {
+        return this.inputData.gridPlacementList;
+      }
+      const currentMap = new Map(
+        this.inputData.gridPlacementList.map(item => [String(item.i), item])
+      );
+      return nextLayout.map(item => {
+        const currentItem = currentMap.get(String(item.i));
+        if (!currentItem) {
+          const obj = this.inputData.obj_list.find(
+            dat => String(dat.disp_order_no) === String(item.i)
+          );
+          if (obj) {
+            const resolvedName = obj.name || obj.mstBed?.name || "";
+            return this.withGridItemConstraints({
+              i: String(item.i),
+              x: item.x,
+              y: item.y,
+              w: item.w,
+              h: item.h,
+              selected: false,
+              name: resolvedName,
+              mstBed: {
+                mstBed: obj.mstBed,
+                machine_no: obj.machine_no,
+                bed_cd: obj.bed_cd,
+                name: resolvedName,
+                width: item.w * this.GRID_SIZE,
+                height: item.h * this.GRID_SIZE,
+                top: item.y * this.GRID_SIZE,
+                left: item.x * this.GRID_SIZE,
+                disp_order_no: obj.disp_order_no,
+                sortNo: obj.sortNo
+              }
+            });
+          }
+          return item;
+        }
+        const merged = this.withGridItemConstraints({
+          ...currentItem,
+          x: item.x,
+          y: item.y,
+          w: item.w,
+          h: item.h,
+          i: String(item.i)
+        });
+        if (merged.mstBed) {
+          merged.mstBed = {
+            ...merged.mstBed,
+            width: merged.w * this.GRID_SIZE,
+            height: merged.h * this.GRID_SIZE
+          };
+        }
+        if (!this.suppressLayoutMerge) {
+          this.syncObjListFromGridItem(merged);
+        }
+        return merged;
+      });
+    },
     getValueByField(field) {
       return this.editRecord[field];
     },
@@ -824,6 +941,413 @@ export default {
     },
     resizedEvevt() {
       this.setIsChange(true);
+    },
+    applyCanvasSizeChange() {
+      this.suppressLayoutMerge = true;
+      this.restoreGridPlacementFromObjList();
+      this.$nextTick(() => {
+        this.refreshGridPlacementFromState();
+        this.requestViewForceUpdate();
+        requestAnimationFrame(() => {
+          this.suppressLayoutMerge = false;
+        });
+      });
+    },
+    restoreGridPlacementFromObjList() {
+      const currentMap = new Map(
+        this.inputData.gridPlacementList.map(item => [String(item.i), item])
+      );
+      this.inputData.gridPlacementList = this.inputData.obj_list.map(obj => {
+        const orderNo = String(obj.disp_order_no);
+        const existing = currentMap.get(orderNo);
+        const pixelWidth = Number(obj.width);
+        const pixelHeight = Number(obj.height);
+        const pixelLeft = Number(obj.left);
+        const pixelTop = Number(obj.top);
+        const mstBed = existing?.mstBed ?? {
+          mstBed: obj.mstBed,
+          machine_no: obj.machine_no,
+          bed_cd: obj.bed_cd,
+          name: obj.name,
+          width: pixelWidth,
+          height: pixelHeight,
+          top: pixelTop,
+          left: pixelLeft,
+          disp_order_no: obj.disp_order_no,
+          sortNo: obj.sortNo
+        };
+        const resolvedName =
+          obj.name ??
+          existing?.name ??
+          mstBed.name ??
+          mstBed.mstBed?.name ??
+          "";
+        return this.withGridItemConstraints({
+          ...(existing || {}),
+          i: orderNo,
+          x: pixelLeft / this.GRID_SIZE,
+          y: pixelTop / this.GRID_SIZE,
+          w: pixelWidth / this.GRID_SIZE,
+          h: pixelHeight / this.GRID_SIZE,
+          selected: existing?.selected ?? false,
+          name: resolvedName,
+          mstBed: {
+            ...mstBed,
+            name: resolvedName,
+            width: pixelWidth,
+            height: pixelHeight,
+            top: pixelTop,
+            left: pixelLeft
+          }
+        });
+      });
+    },
+    applyGridLayoutFromEvent(layout) {
+      if (!Array.isArray(layout) || !layout.length) {
+        return;
+      }
+      this.gridPlacementList = layout;
+    },
+    gridLayoutItemsOverlap(a, b) {
+      return (
+        a.x < b.x + b.w &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.h &&
+        a.y + a.h > b.y
+      );
+    },
+    gridLayoutItemsShareColumn(a, b) {
+      return a.x < b.x + b.w && a.x + a.w > b.x;
+    },
+    applyGridBedOverlapStack(items, dragged, draggedIdStr, capY) {
+      const draggedKey = String(draggedIdStr);
+      const overlapped = items.filter(
+        (item) =>
+          item.i !== draggedKey && this.gridLayoutItemsOverlap(dragged, item)
+      );
+      if (!overlapped.length) {
+        return;
+      }
+      const sorted = [...overlapped].sort((a, b) => a.y - b.y);
+      let stackEdge = dragged.y + dragged.h;
+      for (const item of sorted) {
+        const targetY = capY(stackEdge, item.h);
+        if (item.y !== targetY) {
+          item.y = targetY;
+        }
+        stackEdge = targetY + item.h;
+      }
+    },
+    resolveGridBedDisplacedChain(items, dragged, draggedIdStr, capY) {
+      const draggedKey = String(draggedIdStr);
+      const displacedIds = new Set(
+        items
+          .filter(
+            (item) =>
+              item.i !== draggedKey &&
+              this.gridLayoutItemsOverlap(dragged, item)
+          )
+          .map((item) => item.i)
+      );
+      if (!displacedIds.size) {
+        return;
+      }
+      const inDragColumn = (item) =>
+        item.i !== draggedKey && this.gridLayoutItemsShareColumn(item, dragged);
+      const maxGuard = Math.max(1, items.length * (items.length + 1));
+
+      for (let guard = 0; guard < maxGuard; guard++) {
+        let changed = false;
+        for (const item of items) {
+          if (!inDragColumn(item)) {
+            continue;
+          }
+          let pushBelow = null;
+          for (const other of items) {
+            if (item.i === other.i) {
+              continue;
+            }
+            const otherIsDragged = other.i === draggedKey;
+            const otherIsDisplaced = displacedIds.has(other.i);
+            if (!otherIsDragged && !otherIsDisplaced) {
+              continue;
+            }
+            if (
+              !this.gridLayoutItemsShareColumn(item, other) ||
+              !this.gridLayoutItemsOverlap(item, other)
+            ) {
+              continue;
+            }
+            pushBelow = Math.max(pushBelow ?? 0, other.y + other.h);
+          }
+          if (pushBelow == null) {
+            continue;
+          }
+          const targetY = capY(pushBelow, item.h);
+          if (item.y !== targetY) {
+            item.y = targetY;
+            changed = true;
+            displacedIds.add(item.i);
+          }
+        }
+        if (!changed) {
+          break;
+        }
+      }
+    },
+    resolveGridBedPushCollisions(layout, draggedId) {
+      if (!Array.isArray(layout) || draggedId == null) {
+        return layout;
+      }
+      const maxRows = Number.isFinite(this.gridMaxRows) ? this.gridMaxRows : Infinity;
+      const items = layout.map((item) => ({
+        ...item,
+        i: String(item.i),
+        x: Number(item.x),
+        y: Number(item.y),
+        w: Number(item.w),
+        h: Number(item.h)
+      }));
+      const draggedIdStr = String(draggedId);
+      const dragged = items.find((item) => item.i === draggedIdStr);
+      const capY = (y, itemH) => Math.max(0, Math.min(y, maxRows - itemH));
+
+      if (dragged) {
+        this.applyGridBedOverlapStack(items, dragged, draggedIdStr, capY);
+        this.resolveGridBedDisplacedChain(items, dragged, draggedIdStr, capY);
+      }
+      return items;
+    },
+    patchGridPlacementPositions(resolvedLayout) {
+      if (!Array.isArray(resolvedLayout) || !resolvedLayout.length) {
+        return;
+      }
+      const posMap = new Map(
+        resolvedLayout.map((item) => [String(item.i), item])
+      );
+      let changed = false;
+      const nextList = this.inputData.gridPlacementList.map((item) => {
+        const pos = posMap.get(String(item.i));
+        if (!pos) {
+          return item;
+        }
+        const x = Number(pos.x);
+        const y = Number(pos.y);
+        if (Number(item.x) === x && Number(item.y) === y) {
+          return item;
+        }
+        changed = true;
+        const patched = {
+          ...item,
+          x,
+          y,
+          i: String(item.i)
+        };
+        if (patched.mstBed) {
+          patched.mstBed = {
+            ...patched.mstBed,
+            top: y * this.GRID_SIZE,
+            left: x * this.GRID_SIZE
+          };
+        }
+        return patched;
+      });
+      if (changed) {
+        this.inputData.gridPlacementList = nextList;
+      }
+    },
+    applyGridBedPushLayout(layout) {
+      if (!Array.isArray(layout) || !layout.length) {
+        return;
+      }
+      const resolvedLayout = this.draggingGridItemId
+        ? this.resolveGridBedPushCollisions(layout, this.draggingGridItemId)
+        : layout;
+      this.patchGridPlacementPositions(resolvedLayout);
+    },
+    clearGridBedDragState() {
+      if (this.gridDragRafId != null) {
+        cancelAnimationFrame(this.gridDragRafId);
+        this.gridDragRafId = null;
+      }
+      this.suppressLayoutMerge = false;
+      this.draggingGridItemId = null;
+      this.dragStartGridPosition = null;
+    },
+    onGridDrag(layout) {
+      if (!this.draggingGridItemId) {
+        return;
+      }
+      if (this.gridDragRafId != null) {
+        cancelAnimationFrame(this.gridDragRafId);
+      }
+      this.gridDragRafId = requestAnimationFrame(() => {
+        this.gridDragRafId = null;
+        this.applyGridBedPushLayout(layout);
+      });
+    },
+    onGridDragStop(layout) {
+      const resolvedLayout = this.draggingGridItemId
+        ? this.resolveGridBedPushCollisions(layout, this.draggingGridItemId)
+        : layout;
+      this.clearGridBedDragState();
+      this.inputData.gridPlacementList = this.mergeGridPlacementList(resolvedLayout);
+      this.setIsChange(true);
+    },
+    onGridResizeStop(layout) {
+      this.resizedEvevt();
+      this.applyGridLayoutFromEvent(layout);
+    },
+    runLayoutAdjust(cd) {
+      const handlers = {
+        1: this.setLargeSizeSelectedMachine,
+        2: this.setMiddleSizeSelectedMachine,
+        3: this.setSmallSizeSelectedMachine,
+        4: this.rotateSelectedMachine,
+        5: this.sidewaySelectedMachine,
+        6: this.verticalSelectedMachine,
+        7: this.leftAlignSelectedMachine,
+        8: this.rightAlignSelectedMachine,
+        9: this.horizonCenterAlignSelectedMachine,
+        10: this.topAlignSelectedMachine,
+        11: this.bottomAlignSelectedMachine,
+        12: this.verticalCenterAlignSelectedMachine,
+        13: this.reduceVerticalGapSelectedMachine,
+        14: this.increaseVerticalGapSelectedMachine,
+        15: this.clearVerticalGapSelectedMachine,
+        16: this.setEqualIntervalVerticalSelectedMachine,
+        17: this.reduceHorizontalGapSelectedMachine,
+        18: this.increaseHorizontalGapSelectedMachine,
+        19: this.clearHorizontalGapSelectedMachine,
+        20: this.setEqualIntervalHorizontalSelectedMachine
+      };
+      const handler = handlers[Number(cd)];
+      if (typeof handler !== "function") {
+        return;
+      }
+      this.suppressLayoutMerge = true;
+      try {
+        handler.call(this);
+      } catch (error) {
+        console.error("[MstStatusMapBedLayout] runLayoutAdjust failed:", error);
+      } finally {
+        this.$nextTick(() => {
+          this.suppressLayoutMerge = false;
+        });
+      }
+    },
+    clearGridBedPointerListener() {
+      if (!this.gridBedPointerUpHandler) {
+        return;
+      }
+      window.removeEventListener("mouseup", this.gridBedPointerUpHandler);
+      window.removeEventListener("touchend", this.gridBedPointerUpHandler);
+      this.gridBedPointerUpHandler = null;
+    },
+    finishGridBedPointer(item) {
+      this.clearGridBedPointerListener();
+      const pending = this.pendingGridBedSelect;
+      this.pendingGridBedSelect = null;
+      if (!pending || String(pending.item?.i) !== String(item?.i)) {
+        this.clearGridBedDragState();
+        this.druggingMachinePlace = null;
+        return;
+      }
+      const gridItem = this.gridPlacementList.find(
+        gridEntry => String(gridEntry.i) === String(item.i)
+      );
+      if (!gridItem) {
+        this.clearGridBedDragState();
+        this.druggingMachinePlace = null;
+        return;
+      }
+      if (pending.x === gridItem.x && pending.y === gridItem.y) {
+        gridItem.selected = !gridItem.selected;
+        this.commitGridPlacementList();
+      }
+      this.clearGridBedDragState();
+      this.druggingMachinePlace = null;
+    },
+    refreshGridPlacementFromState() {
+      this.inputData.gridPlacementList = this.inputData.gridPlacementList.map(
+        gridItem => this.withGridItemConstraints({
+          ...gridItem,
+          selected: !!gridItem.selected,
+          name: gridItem.name,
+          mstBed: gridItem.mstBed ? { ...gridItem.mstBed } : gridItem.mstBed
+        })
+      );
+    },
+    commitGridPlacementList() {
+      this.refreshGridPlacementFromState();
+    },
+    onGridBedPointerDown(item, event) {
+      if (
+        event?.target?.closest?.(
+          ".button-area, .bed-delete-btn, .vue-resizable-handle, [class*='resizable-handle']"
+        )
+      ) {
+        return;
+      }
+      this.clearGridBedPointerListener();
+      this.pendingGridBedSelect = {
+        item,
+        x: item.x,
+        y: item.y
+      };
+      this.draggingGridItemId = String(item.i);
+      this.dragStartGridPosition = {
+        x: Number(item.x),
+        y: Number(item.y)
+      };
+      this.suppressLayoutMerge = true;
+      this.keepPlace(item);
+      this.selectBed(this.getGridBedModel(item));
+      this.gridBedPointerUpHandler = () => this.finishGridBedPointer(item);
+      window.addEventListener("mouseup", this.gridBedPointerUpHandler);
+      window.addEventListener("touchend", this.gridBedPointerUpHandler);
+    },
+    getGridBedModel(item) {
+      return item?.mstBed || item;
+    },
+    getGridBedName(item) {
+      if (item?.name) {
+        return item.name;
+      }
+      const bed = this.getGridBedModel(item);
+      if (!bed) {
+        return "";
+      }
+      return bed.name || bed.mstBed?.name || "";
+    },
+    getGridBedOuterClass(item) {
+      const bed = this.getGridBedModel(item);
+      const inner = bed?.mstBed || bed;
+      return {
+        bed: !inner?.isHomeDialysis,
+        "bed-home": !!inner?.isHomeDialysis,
+        "bed-selected": !!item.selected
+      };
+    },
+    getGridBedBoxStyle(item) {
+      return {
+        width: "100%",
+        height: "100%",
+        position: "relative",
+        boxSizing: "border-box"
+      };
+    },
+    showGridBedDelete(item) {
+      const bed = this.getGridBedModel(item);
+      return !(
+        this.isHomeDialysis ||
+        bed?.isHomeDialysis ||
+        bed?.mstBed?.isHomeDialysis
+      );
+    },
+    selectBed(mstBed) {
+      const bed = mstBed?.mstBed || mstBed;
+      this.selectedBedName = bed?.name || mstBed?.name || "";
     },
     /**
      * 在宅フラグのチェック
@@ -861,8 +1385,36 @@ export default {
       this.setIsChange(false);
       this.insIdx = -1;
       this.delIdx = -1;
-      this.selectedNotPlacedBed = null;
-      this.selectedPlacedBed = null;
+      this.selectedNotPlacedBedKey = null;
+      this.selectedPlacedBedKey = null;
+    },
+    getNotPlacedBedKey(bed) {
+      if (!bed) {
+        return "";
+      }
+      return `${bed.machineNo}_${bed.bedCd}`;
+    },
+    getPlacedBedKey(bed) {
+      if (!bed) {
+        return "";
+      }
+      const orderNo = this.resolveDispOrderNo(bed);
+      if (orderNo != null) {
+        return String(orderNo);
+      }
+      return `${bed.machine_no}_${bed.bed_cd}`;
+    },
+    resolveDispOrderNo(bed) {
+      if (!bed) {
+        return null;
+      }
+      if (bed.disp_order_no != null) {
+        return bed.disp_order_no;
+      }
+      if (bed.mstBed?.disp_order_no != null) {
+        return bed.mstBed.disp_order_no;
+      }
+      return null;
     },
     /**
      * キャンパスサイズリセット
@@ -875,24 +1427,42 @@ export default {
       // add bug 8358 修正 chen end
       this.inputData.canvas_size.width = 500;
       this.inputData.canvas_size.height = 500;
+      this.applyCanvasSizeChange();
+    },
+    getScopedElementById(id) {
+      return getScopedElementById(id, this.$el || this);
+    },
+    getScopedClassElement(className) {
+      return getScopedElementsByClassName(className, this.$el || this)[0] || null;
+    },
+    getScopedElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || this);
+    },
+    getScopedOwnerWindow(element = null) {
+      return element?.ownerDocument?.defaultView || this.$el?.ownerDocument?.defaultView || window;
+    },
+    getScopedComputedStyle(element) {
+      if (!element) {
+        return null;
+      }
+      return this.getScopedOwnerWindow(element).getComputedStyle(element);
     },
     setCss(value) {
       // add bug 8358 修正 chen start
       this.setIsChange(true);
       // add bug 8358 修正 chen end
-      if(value && document.getElementsByClassName("custom-input-invalid")[0])
-      document.getElementsByClassName("custom-input-invalid")[0].classList.remove("custom-input-invalid");
+      if (value && this.getScopedClassElement("custom-input-invalid")) {
+        this.getScopedClassElement("custom-input-invalid").classList.remove("custom-input-invalid");
+      }
     },
     // Windowの高さから領域の高さを算出
     calculateHeight() {
       if (!this.editingFlg) {
         const wh = this.windowHeight;
-        const hh = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .pop().clientHeight;
+        const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
         const fmh =
           (this.isDispMenu === 1
-            ? document.getElementById("footer-menu").clientHeight
+            ? getFooterMenuClientHeight(this.$el || null)
             : 0) + 5;
 
         this.formHeight = wh - hh - fmh;
@@ -900,22 +1470,22 @@ export default {
         // 縦スクロール発生抑制の為、ベッドレイアウトエリアのmaxHeightにminHeight値を設定
         // (処理中に一時的に発生した縦スクロールが各要素の表示に影響を与え、取得する要素の高さが想定値とならないケースがある)
         // (maxHeightにminHeight値を設定した状態で縦スクロール発生する場合は、一時的ではなく必ず縦スクロールが発生する)
-        document.getElementById("configBedLayoutId").style.maxHeight =
-          document.getElementById("configBedLayoutId").style.minHeight;
+        this.getScopedElementById("configBedLayoutId").style.maxHeight =
+          this.getScopedElementById("configBedLayoutId").style.minHeight;
 
-        const ch = document.getElementById("bed-layout-head");
+        const ch = this.getScopedElementById("bed-layout-head");
         const chh = ch ? ch.clientHeight : 0;
         this.formConfigAreaHeight = this.formHeight - chh;
-        const lc = document.getElementById("layout-controller");
+        const lc = this.getScopedElementById("layout-controller");
         const lh = lc ? lc.clientHeight : 0;
-        const cn = document.getElementById("condition");
+        const cn = this.getScopedElementById("condition");
         const cnh = cn ? cn.clientHeight : 0;
         this.formLayoutDesignAreaHeight = this.formConfigAreaHeight - lh - cnh +40;
         //5099 スマホレイアウトの調整 add 鞠 start
         if (this.androidFlg && this.getFontSize.toString()=="3") {
-          document.getElementsByClassName("horizontal-bed")[0].style.width = "8em"
-          document.getElementsByClassName("vertical-bed")[0].style.width = "5em"
-          document.getElementsByClassName("square-bed")[0].style.width = "5em"
+          this.getScopedClassElement("horizontal-bed") && (this.getScopedClassElement("horizontal-bed").style.width = "8em")
+          this.getScopedClassElement("vertical-bed") && (this.getScopedClassElement("vertical-bed").style.width = "5em")
+          this.getScopedClassElement("square-bed") && (this.getScopedClassElement("square-bed").style.width = "5em")
         }
         // 5808 add 鞠 拡大縮小のボタン:"▲""▼"の時に最大の高さ start
         this.$nextTick(() => {
@@ -926,16 +1496,16 @@ export default {
     },
 
     calculateConfigBedLayoutMaxHeight() {
-      const conditionHeight = document.getElementById("condition").offsetHeight;
+      const conditionHeight = this.getScopedElementById("condition").offsetHeight;
 
       // レイアウトコントローラーエリアのみmarginTopが設定されている。別途取得し、conditionエリアを開いている時はmarginTopを加算
-      const layoutControllerEl = document.getElementById("layout-controller");
-      const layoutControllerMarginTop = this.isSmallHeader ? 0 : parseInt(window.getComputedStyle(layoutControllerEl).marginTop);
+      const layoutControllerEl = this.getScopedElementById("layout-controller");
+      const layoutControllerMarginTop = this.isSmallHeader ? 0 : parseInt(this.getScopedComputedStyle(layoutControllerEl)?.marginTop || 0);
       const layoutControllerHeight = layoutControllerEl.offsetHeight + layoutControllerMarginTop;
 
-      const itemBoxConfHeight = document.getElementById("item-box-conf").offsetHeight;
+      const itemBoxConfHeight = this.getScopedElementById("item-box-conf").offsetHeight;
 
-      let configBedLayoutMaxHeight = document.getElementById("configBedLayoutId").style.minHeight;
+      let configBedLayoutMaxHeight = this.getScopedElementById("configBedLayoutId")?.style?.minHeight || "";
       // conditionエリアは閉じているか
       if (this.isSmallHeader) {
         // 計算式：this.formConfigAreaHeight－conditionエリアのoffsetHeight－レイアウトコントローラーエリアのoffsetHeight(marginTop含まない)－itemBoxConfエリアのoffsetHeight
@@ -947,40 +1517,57 @@ export default {
           this.formHeight - conditionHeight - layoutControllerHeight - itemBoxConfHeight;
       }
 
-      document.getElementById("configBedLayoutId").style.maxHeight = configBedLayoutMaxHeight + "px";
+      this.getScopedElementById("configBedLayoutId").style.maxHeight = configBedLayoutMaxHeight + "px";
     },
 
     /**
      * ベッド削除
      */
     deleteBed(placedBed) {
+      if (!placedBed) {
+        return;
+      }
       this.setIsChange(true);
-      // console.log("deleteBed/placedBed is %o.", placedBed);
-      this.delIdx = this.placedList.findIndex(
-        dat =>
-          dat.machine_no === placedBed.machine_no &&
-          dat.bed_cd === placedBed.bed_cd
-      );
-      const gridDelIdx = this.inputData.gridPlacementList.findIndex(
-        dat =>
-          dat.mstBed.machine_no === placedBed.machine_no &&
-          dat.mstBed.bed_cd === placedBed.bed_cd
-      );
+      const orderNo = this.resolveDispOrderNo(placedBed);
+      let gridDelIdx = -1;
+      if (orderNo != null) {
+        this.delIdx = this.placedList.findIndex(
+          dat => String(dat.disp_order_no) === String(orderNo)
+        );
+        gridDelIdx = this.inputData.gridPlacementList.findIndex(
+          dat => String(dat.i) === String(orderNo)
+        );
+      } else {
+        this.delIdx = this.placedList.findIndex(
+          dat =>
+            dat.machine_no === placedBed.machine_no &&
+            dat.bed_cd === placedBed.bed_cd
+        );
+        gridDelIdx = this.inputData.gridPlacementList.findIndex(
+          dat =>
+            dat.mstBed?.machine_no === placedBed.machine_no &&
+            dat.mstBed?.bed_cd === placedBed.bed_cd
+        );
+      }
       if (this.delIdx >= 0) {
         this.inputData.obj_list.splice(this.delIdx, 1);
-        this.inputData.gridPlacementList.splice(gridDelIdx, 1);
+        if (gridDelIdx >= 0) {
+          this.inputData.gridPlacementList.splice(gridDelIdx, 1);
+        }
         let blnSelect = false;
         for (let i = 0; i < this.inputData.obj_list.length + 1; i++) {
           if (this.inputData.obj_list[this.delIdx] === undefined) {
             this.delIdx = this.delIdx - 1;
           } else {
-            this.selectedPlacedBed = this.inputData.obj_list[this.delIdx];
+            this.selectedPlacedBedKey = this.getPlacedBedKey(
+              this.inputData.obj_list[this.delIdx]
+            );
             blnSelect = true;
             break;
           }
         }
         if (!blnSelect) {
-          this.selectedPlacedBed = null;
+          this.selectedPlacedBedKey = null;
         }
       }
     },
@@ -1002,7 +1589,7 @@ export default {
           h: bed.height / this.GRID_SIZE,
           x: bed.left / this.GRID_SIZE,
           y: bed.top / this.GRID_SIZE,
-          i: bed.disp_order_no,
+          i: String(bed.disp_order_no),
           selected: false
         });
       } else {
@@ -1015,7 +1602,7 @@ export default {
             h: item.height / this.GRID_SIZE,
             x: item.left / this.GRID_SIZE,
             y: item.top / this.GRID_SIZE,
-            i: item.disp_order_no,
+            i: String(item.disp_order_no),
             selected: false
           });
         })
@@ -1130,6 +1717,7 @@ export default {
           this.placementBed(element, layout.obj_list);
           // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 end
         });
+        this.applyCanvasSizeChange();
         this.inputData.backgroundImage = bedLayout.backgroundImage;
       }
     },
@@ -1140,7 +1728,7 @@ export default {
       // レイアウト名チェック
       if (this.inputData.name.length === 0) {
         isError = true;
-        document.getElementsByClassName("custom-input-required")[0]?.classList?.add("custom-input-invalid");
+        this.getScopedClassElement("custom-input-required")?.classList?.add("custom-input-invalid");
         // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
         // message = "<div>・レイアウト名が入力されていません</div>";
         message = `<div>${messageFormat(DIALOG_MESSAGES[12000130].message)}</div>`;
@@ -1337,8 +1925,8 @@ export default {
     // パンくずリストをクリックされた場合に呼び出される関数
     refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
-      if (this.selfScreenName === this.$router.currentRoute.name
-          && document.getElementsByTagName("ons-alert-dialog").length === 0) {
+      if (this.selfScreenName === this.$route.name
+          && getScopedAlertDialogs(this.$el || this).length === 0) {
         if (this.isChanged) {
           this.$ons.notification.confirm({
               // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
@@ -1386,7 +1974,7 @@ export default {
         this.cssText = fr.result+Math.random();
       };
       fr.readAsText(e.target.files[0]);
-      document.getElementById("cssFileElem").value=null;
+      this.getScopedElementById("cssFileElem").value=null;
     },
     deleteStyle() {
       // console.log(e);
@@ -1469,46 +2057,62 @@ export default {
      * 選択中のベッドサイズを変更
      */
     setSizeSelectedMachine(size) {
+      if (!this.selectedMachineList.length) {
+        return;
+      }
       this.selectedMachineList.forEach(machine => {
         this.setSize(machine, size);
       });
+      this.refreshGridPlacementFromState();
     },
     /**
      * 選択中のベッドを縦横入れ替え
      */
     rotateSelectedMachine() {
+      if (!this.selectedMachineList.length) {
+        return;
+      }
       this.selectedMachineList.forEach(machine => {
         this.setSize(machine, {
-          width: machine.h,
-          height: machine.w
+          width: machine.h * this.GRID_SIZE,
+          height: machine.w * this.GRID_SIZE
         });
       });
+      this.commitGridPlacementList();
     },
     /**
      * 選択中のベッドを横向きに
      */
     sidewaySelectedMachine() {
+      if (!this.selectedMachineList.length) {
+        return;
+      }
       this.selectedMachineList.forEach(machine => {
         if (machine.h >= machine.w) {
           this.setSize(machine, {
-            width: machine.h,
-            height: machine.w
+            width: machine.h * this.GRID_SIZE,
+            height: machine.w * this.GRID_SIZE
           });
         }
       });
+      this.commitGridPlacementList();
     },
     /**
      * 選択中のベッドを縦向きに
      */
     verticalSelectedMachine() {
+      if (!this.selectedMachineList.length) {
+        return;
+      }
       this.selectedMachineList.forEach(machine => {
         if (machine.h <= machine.w) {
           this.setSize(machine, {
-            width: machine.h,
-            height: machine.w
+            width: machine.h * this.GRID_SIZE,
+            height: machine.w * this.GRID_SIZE
           });
         }
       });
+      this.commitGridPlacementList();
     },
     /**
      * 選択中装置の垂直方向の間隔を減らす
@@ -1521,10 +2125,16 @@ export default {
     // setMachineY: (machine, value) => (machine.y = value),
     // getMachineHeight: machine => machine.h,
     getMachineX: machine => machine?.x,
-    setMachineX: (machine, value) => (machine.x = value),
+    setMachineX(machine, value) {
+      machine.x = value;
+      this.syncObjListFromGridItem(machine);
+    },
     getMachineWidth: machine => machine?.w,
     getMachineY: machine => machine?.y,
-    setMachineY: (machine, value) => (machine.y = value),
+    setMachineY(machine, value) {
+      machine.y = value;
+      this.syncObjListFromGridItem(machine);
+    },
     getMachineHeight: machine => machine?.h,
     // #9863 Error in v-on handler: "TypeError: Cannot read properties of undefined (reading 'x、y、w、h')" 横展開2 linjunfeng end
     compareMachinePos(getPos, a, b) {
@@ -1741,6 +2351,9 @@ export default {
      * ※水平/垂直は引数にした関数で決定
      */
     reduceGapSelectedMachine(getPos, setPos) {
+      if (!this.selectedMachineList.length) {
+        return;
+      }
       let moveLength = 0;
       this.selectedMachineList
         .sort((a, b) => this.compareMachinePos(getPos, a, b))
@@ -1757,12 +2370,17 @@ export default {
             );
           }
         });
+      this.commitGridPlacementList();
+      this.setIsChange(true);
     },
     /**
      * 選択中の装置の間隔を増やす
      * ※水平/垂直は引数にした関数で決定
      */
     increaseGapSelectedMachine(fieldSize, getPos, getSize, setPos) {
+      if (!this.selectedMachineList.length) {
+        return;
+      }
       let moveLength = 0;
       this.selectedMachineList
         .sort((a, b) => this.compareMachinePos(getPos, a, b))
@@ -1780,12 +2398,17 @@ export default {
             );
           }
         });
+      this.commitGridPlacementList();
+      this.setIsChange(true);
     },
     /**
      * 選択中の装置の間隔をゼロにする
      * ※水平/垂直は引数にした関数で決定
      */
     clearGapSelectedMachine(getPos, getSize, setPos) {
+      if (!this.selectedMachineList.length) {
+        return;
+      }
       this.selectedMachineList
         .sort((a, b) => this.compareMachinePos(getPos, a, b))
         .forEach((machine, idx, array) => {
@@ -1794,6 +2417,8 @@ export default {
             setPos(machine, getPos(array[idx - 1]) + getSize(array[idx - 1]));
           }
         });
+      this.commitGridPlacementList();
+      this.setIsChange(true);
     },
     /**
      * 選択中装置を等間隔に配置する
@@ -1838,6 +2463,8 @@ export default {
               );
             }
           });
+        this.commitGridPlacementList();
+        this.setIsChange(true);
       }
     },
 
@@ -1853,6 +2480,9 @@ export default {
       setPos,
       alignComp
     ) {
+      if (!this.selectedMachineList.length) {
+        return;
+      }
       // 揃える基準の装置を取得
       const alignMachine = this.selectedMachineList.reduce(
         (acc, machine) => (alignComp(acc, machine) > 0 ? acc : machine),
@@ -1872,6 +2502,8 @@ export default {
           )
         );
       });
+      this.commitGridPlacementList();
+      this.setIsChange(true);
     },
 
     /**
@@ -1933,16 +2565,60 @@ export default {
      * ベッドサイズを変更
      */
     setSize(machine, size) {
-      machine.w = size.width;
-      machine.h = size.height;
+      const pixelWidth = Number(size.width);
+      const pixelHeight = Number(size.height);
+      machine.w = pixelWidth / this.GRID_SIZE;
+      machine.h = pixelHeight / this.GRID_SIZE;
+      if (machine.mstBed) {
+        machine.mstBed.width = pixelWidth;
+        machine.mstBed.height = pixelHeight;
+      }
+      this.syncObjListFromGridItem(machine);
+      this.setIsChange(true);
+    },
+    syncObjListFromGridItem(gridItem) {
+      const bed = gridItem?.mstBed;
+      if (!bed) {
+        return;
+      }
+      const orderNo = gridItem.i ?? bed.disp_order_no;
+      let obj = this.inputData.obj_list.find(
+        dat => String(dat.disp_order_no) === String(orderNo)
+      );
+      if (!obj) {
+        obj = this.inputData.obj_list.find(
+          dat =>
+            dat.machine_no === bed.machine_no && dat.bed_cd === bed.bed_cd
+        );
+      }
+      if (!obj) {
+        return;
+      }
+      obj.width = gridItem.w * this.GRID_SIZE;
+      obj.height = gridItem.h * this.GRID_SIZE;
+      obj.top = gridItem.y * this.GRID_SIZE;
+      obj.left = gridItem.x * this.GRID_SIZE;
+    },
+    resolveNumberInputElement(ev) {
+      const candidate = ev?.target ?? ev;
+      if (!candidate) {
+        return null;
+      }
+      if (candidate.validity != null) {
+        return candidate;
+      }
+      if (typeof candidate.querySelector === "function") {
+        return candidate.querySelector("input") || candidate;
+      }
+      return candidate;
     },
     onCanvasWidth(ev) {
-      const badInput = ev.validity.badInput;
-      if (badInput) {
+      const input = this.resolveNumberInputElement(ev);
+      if (input?.validity?.badInput) {
         this.getCanvasSize.width = 0;
         return;
       }
-      const value = Number(ev.value);
+      const value = Number(input?.value ?? this.getCanvasSize.width);
       this.getCanvasSize.width = value;
       this.setIsChange(true);
       if (this.canvasMaxWidth < value) {
@@ -1962,6 +2638,7 @@ export default {
       }else{
         this.blurFlg=false;
       }
+      this.applyCanvasSizeChange();
     },
     mouseWheelWidth(e,index){
       if (!this.focusFlg[index]) {
@@ -1990,16 +2667,17 @@ export default {
       }
       this.getCanvasSize.width = value
       this.setIsChange(true)
+      this.applyCanvasSizeChange();
 
     },
     // mod #5589 2023/03/29 数値IFのスタイル全不正 張博 end
     onCanvasHeight(ev) {
-      const badInput = ev.validity.badInput;
-      if (badInput) {
+      const input = this.resolveNumberInputElement(ev);
+      if (input?.validity?.badInput) {
         this.getCanvasSize.height = 0;
         return;
       }
-      const value = Number(ev.value);
+      const value = Number(input?.value ?? this.getCanvasSize.height);
       this.setIsChange(true);
       this.getCanvasSize.height = value;
       if (this.canvasMaxHeight < value) {
@@ -2013,12 +2691,13 @@ export default {
       if (value > this.canvasMaxHeight) {
         this.getCanvasSize.height = this.canvasMinHeight;
         this.blurFlg=true;
-      } else if (ev.value < this.canvasMinHeight) {
+      } else if (value < this.canvasMinHeight) {
         this.getCanvasSize.height = this.canvasMaxHeight;
         this.blurFlg=true;
       }else{
         this.blurFlg=false;
       }
+      this.applyCanvasSizeChange();
     },
     mouseWheelHeight(e,index){
       if (!this.focusFlg[index]) {
@@ -2047,6 +2726,7 @@ export default {
       }
       this.getCanvasSize.height = value
       this.setIsChange(true)
+      this.applyCanvasSizeChange()
     },
     formatValueWidth(event,index){
       // 限界値判定
@@ -2059,7 +2739,7 @@ export default {
         this.blurFlg = false;
       }
       this.focusFlg[index]=false;
-      this.$forceUpdate();
+      this.requestViewForceUpdate();
     },
     formatValueHeight(event,index){
       // 限界値判定
@@ -2072,6 +2752,7 @@ export default {
         this.blurFlg = false;
       }
       this.focusFlg[index]=false;
+      this.requestViewForceUpdate();
     },
     handleFocus(index){
       this.focusFlg[index]=true;
@@ -2080,13 +2761,15 @@ export default {
     selectedRowNotPlaced(machineAndBedList) {
       const listSize = machineAndBedList.length;
       if (listSize === 0) {
-        this.selectedNotPlacedBed = null;
+        this.selectedNotPlacedBedKey = null;
       }
       for (let i = 0; i <= listSize; i++) {
         if (machineAndBedList[this.insIdx] === undefined) {
           this.insIdx = this.insIdx - 1;
         } else {
-          this.selectedNotPlacedBed = machineAndBedList[this.insIdx];
+          this.selectedNotPlacedBedKey = this.getNotPlacedBedKey(
+            machineAndBedList[this.insIdx]
+          );
           break;
         }
       }
@@ -2119,27 +2802,25 @@ export default {
     },
     // フォントサイズ変更時のレイアウト調整ボタンのサイズ変更
     changeAdjustBtnSize() {
+      const scoped$ = getScopedJQuery(this.$el || this) || $;
+      const setAdjustSize = (buttonSize, imageSize) => {
+        scoped$(".adjust-btn").css("width", buttonSize);
+        scoped$(".adjust-btn").css("height", buttonSize);
+        scoped$(".adjust-img").css("width", imageSize);
+      };
 
       switch(this.getFontSize.toString()) {
         case "0":
-          $(".adjust-btn").css("width", "32px");
-          $(".adjust-btn").css("height", "32px");
-          $(".adjust-img").css("width", "24px");
+          setAdjustSize("32px", "24px");
           break
         case "1":
-          $(".adjust-btn").css("width", "40px");
-          $(".adjust-btn").css("height", "40px");
-          $(".adjust-img").css("width", "32px");
+          setAdjustSize("40px", "32px");
           break
         case "2":
-          $(".adjust-btn").css("width", "48px");
-          $(".adjust-btn").css("height", "48px");
-          $(".adjust-img").css("width", "40px");
+          setAdjustSize("48px", "40px");
           break
         case "3":
-          $(".adjust-btn").css("width", "56px");
-          $(".adjust-btn").css("height", "56px");
-          $(".adjust-img").css("width", "48px");
+          setAdjustSize("56px", "48px");
           break
       }
     },
@@ -2262,14 +2943,15 @@ export default {
 
         // ツールチップ右座標の想定値を算出
         // (計算式：対象ボタン左座標＋left初期位置0.3em＋ツールチップのoffsetWidth＋右側余白1.5em)
-        const fontPixelSize = parseInt(getComputedStyle(tooltipEl).fontSize);
+        const fontPixelSize = parseInt(this.getScopedComputedStyle(tooltipEl)?.fontSize || 0);
         const rightPosition = btnWrapperRect.left + (fontPixelSize * 0.3) + tooltipEl.offsetWidth + (fontPixelSize * 1.5);
+        const viewportWidth = this.getScopedOwnerWindow(tooltipEl)?.innerWidth || getViewportWidth();
 
         // ツールチップの右座標の想定値が、ウィンドウ幅を超えるか
-        const isOverflowRight = rightPosition > window.innerWidth;
+        const isOverflowRight = rightPosition > viewportWidth;
         if (isOverflowRight) {
           // ウィンドウ外に出ないよう、飛び出した分だけツールチップの左座標をマイナス移動し表示する
-          const leftPosition = rightPosition - window.innerWidth;
+          const leftPosition = rightPosition - viewportWidth;
           tooltipEl.style.left = "-" + leftPosition + "px";
 
           // 表示位置調整後の位置情報取得
@@ -2321,6 +3003,7 @@ export default {
       if (layoutObj) {
         this.inputData.canvas_size.width = layoutObj.width;
         this.inputData.canvas_size.height = layoutObj.height;
+        this.applyCanvasSizeChange();
       }
       // #9771 FNWから取得したVisualLayoutが正しく取り込めていない linjunfeng start
       this.getMachineAndBedList.forEach(machine => {
@@ -2349,10 +3032,10 @@ export default {
     }
     // 治療状況ベッドレイアウトマスタ DU End
   },
-  beforeCreate() {},
+
   async created() {
     // 端末判別 add 鞠
-    const ua = navigator.userAgent;
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
     if (ua.match(/Android/)) {
       this.androidFlg = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -2361,7 +3044,7 @@ export default {
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("処理中・・・");
     // console.log("this.getMachineAndBedList is %o.", this.getMachineAndBedList);
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     EventBus.$on("refresh", this.refresh);
     // 内部処理用ローカル配列に、入力項目をコピー
     for (const num in this.columnDefinition) {
@@ -2387,7 +3070,8 @@ export default {
 
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
+    this.clearGridBedPointerListener();
     EventBus.$off("refresh", this.refresh);
   }
   // add 性能改善メモリ不足 shan end
@@ -2478,32 +3162,51 @@ export default {
   width: auto;
   min-width: 100%;
 }
-.bed {
-  cursor: pointer;
-  z-index: 5;
-  pointer-events: auto;
-  border: 1px solid #000;
-  border-radius: 5px;
-  background-color: #fdfdfdff;
-  /* #9771 ベッドの図はかぶっているように見える linjunfeng start */
-  /* width: 100%; */
-  /* #9771 ベッドの図はかぶっているように見える linjunfeng end */
-  height: 100%;
-}
-.bed-home {
-  cursor: pointer;
-  z-index: 5;
-  pointer-events: auto;
-  border: 1px solid #000;
-  border-radius: 30px 30px 30px 0px;
-  background-color: #fdfdfdff;
+.grid-bed-slot {
   width: 100%;
   height: 100%;
+  cursor: grab;
+}
+:deep(.vue-grid-item) .grid-bed-slot {
+  width: 100%;
+  height: 100%;
+}
+:deep(.vue-grid-item) .bed,
+:deep(.vue-grid-item) .bed-home {
+  z-index: 1;
+  pointer-events: none;
+  border: 1px solid #000;
+  border-radius: 5px;
+  background-color: #ffff;
+  box-sizing: border-box;
+}
+:deep(.vue-grid-item) .bed.bed-selected,
+:deep(.vue-grid-item) .bed-home.bed-selected {
+  background-color: #fedf;
+}
+:deep(.vue-grid-item.vue-draggable-dragging) .grid-bed-slot {
+  cursor: grabbing;
+}
+:deep(.vue-grid-item.vue-draggable-dragging) .bed,
+:deep(.vue-grid-item.vue-draggable-dragging) .bed-home {
+  cursor: grabbing;
+}
+:deep(.vue-grid-item) .bed-name,
+:deep(.vue-grid-item) div.button-area,
+:deep(.vue-grid-item) .grid-bed-slot {
+  pointer-events: auto;
+}
+:deep(.vue-grid-item > .vue-resizable-handle),
+:deep(.vue-grid-item [class*="resizable-handle"]) {
+  z-index: 10;
+}
+:deep(.vue-grid-item) .bed-home {
+  border-radius: 30px 30px 30px 0;
   transform: rotate(-45deg);
 }
-.bed-home::before {
+:deep(.vue-grid-item) .bed-home::before {
   position: absolute;
-  content: attr(data-name); /* カスタムデータ属性の指定 */
+  content: attr(data-name);
   top: -10px;
   left: 10px;
   transform: rotate(45deg);
@@ -2512,12 +3215,49 @@ export default {
   background: white;
   border-radius: 2px;
 }
-div.button-area {
+:deep(.vue-grid-item) .bed-home .bed-name {
+  display: none;
+}
+:deep(.vue-grid-item) .bed-name {
   position: absolute;
-  top: 5px; /* 上部に余白を持たせて配置 */
-  right: 5px; /* 右側に余白を持たせて配置 */
-  transform: translateX(0); /* 中央揃えの変換を解除 */
-
+  top: 4px;
+  left: 6px;
+  right: 36px;
+  z-index: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #101010;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.2;
+}
+:deep(.vue-grid-item) div.button-area {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 2;
+}
+:deep(.vue-grid-item) div.button-area .bed-delete-btn {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid #c8c8c8;
+  border-radius: 3px;
+  background-color: #fff;
+  color: #101010;
+  box-shadow: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+:deep(.vue-grid-item) div.button-area .bed-delete-btn .ons-icon {
+  font-size: 12px;
+  color: #101010;
 }
 .clearboth {
   clear: both;

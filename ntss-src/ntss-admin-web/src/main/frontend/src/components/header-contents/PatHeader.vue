@@ -1,8 +1,8 @@
 <template>
-  <div class="pat-header">
-    <v-touch :disabled="searchedPatList.length === 0 || !isPatSelected" @swipeleft="selectPatPre()">
-      <v-touch :disabled="searchedPatList.length === 0 || !isPatSelected" @swiperight="selectPatNext()">
+  <div class="pat-header" @touchstart.stop @touchmove.stop>
+    <v-touch :disabled="searchedPatList.length === 0 || !isPatSelected" @swipeleft="selectPatPre" @swiperight="selectPatNext">
         <table class="event-area">
+      <tbody>
           <tr>
             <td class="search-button-area">
               <div class="search-button"
@@ -17,7 +17,7 @@
                   ref="displayPos"
                   @mousedown="checkPatInfoLongPress(1)"
                   @mouseup="checkPatInfoLongPress(0)"
-                  @touchstart="checkPatInfoLongPress(1)"
+                  @touchstart.passive="checkPatInfoLongPress(1)"
                   @touchend="checkPatInfoLongPress(0)"
                 >
                   {{ isNullPat ? "患者割り当てをしてください。" : hospPatId }}<img v-if="isSame" class='same-icon' :src="image_src_same" />
@@ -34,7 +34,7 @@
                 </span>
                 <v-ons-popover
                   :target="popoverTarget"
-                  :visible.sync="popoverVisible"
+                  v-model:visible="popoverVisible"
                   :class="[fontSizeSet, 'popover-style']"
                   direction="down"
                   cancelable
@@ -52,7 +52,7 @@
                     <!-- 全禁忌・アレルギー -->
                     <v-ons-popover
                       :class="[fontSizeSet, 'vons-popover']"
-                      :visible.sync="isTabooAllergyVisible"
+                      v-model:visible="isTabooAllergyVisible"
                       :target="popoverTarget"
                       direction="down"
                       cancelable
@@ -83,7 +83,7 @@
                     <!-- 感染症カード -->
                     <v-ons-popover
                       :class="[fontSizeSet, 'infection-popover']"
-                      :visible.sync="isInfectionVisible"
+                      v-model:visible="isInfectionVisible"
                       :target="popoverTarget"
                       direction="down"
                       cancelable
@@ -104,7 +104,7 @@
                     <!-- インプラントカード -->
                     <v-ons-popover
                       :class="[fontSizeSet, 'implant-popover']"
-                      :visible.sync="isImplantVisible"
+                      v-model:visible="isImplantVisible"
                       :target="popoverTarget"
                       direction="down"
                       cancelable
@@ -161,7 +161,7 @@
                     <!-- 治療進捗状況表示用 -->
                     <v-ons-popover
                       :class="[fontSizeSet, 'acceptance-status-info-popover']"
-                      :visible.sync="popoverAcceptanceStatusInfoVisible"
+                      v-model:visible="popoverAcceptanceStatusInfoVisible"
                       :target="popoverAcceptanceStatusInfoTarget"
                       direction="down"
                       cancelable
@@ -191,9 +191,9 @@
               </div>
             </td>
           </tr>
-        </table>
+        
+      </tbody></table>
       </v-touch>
-    </v-touch>
 
     <!-- サイドバー -->
     <div v-if="isSideBarVisble" style="width: 0;">
@@ -217,18 +217,18 @@
 </template>
 
 <script>
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
   // del #10359_NG対応 編集権限の動作不正 dengshen start
   // // add #10359 編集権限の動作不正 dengshen start
   // import { getAuthorized } from "@/functions/common/CommonFunctions.js";
   // // add #10359 編集権限の動作不正 dengshen end
   // del #10359_NG対応 編集権限の動作不正 dengshen end
   // ライブラリ
-  import Vue from "vue";
-  import _ from "underscore";
-  import moment from "moment";
-  import VueTouch from "vue-touch";
-  import {EventBus} from "@/eventBus.js";
-  import {mapActions, mapGetters, mapMutations} from "vuex";
+  import _ from "@/compat/collections/lodash";
+  import dayjs from "@/compat/date/dayjs";
+  import VTouch from "@/components/common/VTouch.vue";
+  import {EventBus} from "@/compat/vue/event-bus.js";
+  import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
   import {calculateAge} from "@/functions/PatInfoFunctions";
   import {
     PAT_BLOOD_TYPE_ABO_OPTIONS,
@@ -255,6 +255,7 @@
   import {AUTHORITY_CODES} from "@/constants/userAuthority";
   //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
   import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
+  import { publicAssetPath } from "@/compat/assets/public-path";
   //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
   import {popoverPosthide, popoverPostShow, popoverPreShow} from "@/functions/common/CommonPopoverFunctions";
   import { createTimerManager } from "@/functions/for-componet/TimerManagerFunctions";
@@ -267,7 +268,13 @@
   // mod #6107 2023/03/22 メッセージボックス全調整 張博 end
   import { getMstInfo } from "@/apis/mst-info";
 
-  Vue.use(VueTouch);
+  import nameDuplication3Img from "../../assets/name_duplication3.png";
+  import tabooOnImg from "../../assets/taboo_on.png";
+  import tabooOffImg from "../../assets/taboo_off.png";
+  import infectionOnImg from "../../assets/infection_on.png";
+  import infectionOffImg from "../../assets/infection_off.png";
+  import implantOnImg from "../../assets/implant_on.png";
+  import implantOffImg from "../../assets/implant_off.png";
 
 /**
  * @description 患者情報ヘッダ
@@ -275,6 +282,7 @@
 export default {
   mixins: [PopoverMixin, UserAuthorityMixin],
   components: {
+    VTouch,
     "card-list": cardList,
     "side-bar": sideBar,
     "infection-items": infectionItems,
@@ -326,16 +334,16 @@ export default {
       mstImplant: null,
       srcFuncNameOnCreated: "",
       // 同姓同名アイコン
-      image_src_same: require('../../assets/name_duplication3.png'),
+      image_src_same: nameDuplication3Img,
       // 禁忌・アレルギーアイコン
-      image_src_taboo_on: require('../../assets/taboo_on.png'),
-      image_src_taboo_off: require('../../assets/taboo_off.png'),
+      image_src_taboo_on: tabooOnImg,
+      image_src_taboo_off: tabooOffImg,
       // 感染症アイコン
-      image_src_infection_on: require('../../assets/infection_on.png'),
-      image_src_infection_off: require('../../assets/infection_off.png'),
+      image_src_infection_on: infectionOnImg,
+      image_src_infection_off: infectionOffImg,
       // インプラントアイコン
-      image_src_implant_on: require('../../assets/implant_on.png'),
-      image_src_implant_off: require('../../assets/implant_off.png'),
+      image_src_implant_on: implantOnImg,
+      image_src_implant_off: implantOffImg,
       blowTimer: 0,
       popoverVisible: false,
       isAndroid: false,
@@ -382,7 +390,12 @@ export default {
     ...mapGetters("window-size", {
       windowWidth: "getMainWindowWidth"
     }),
-    ...mapGetters("account-edit", ["getStateUserAccountInfo", "getFontSize"]),
+    ...mapGetters("account-edit", [
+      "getStateUserAccountInfo",
+      "getFontSize",
+      "getPatientShareMode",
+      "getPatientShareFacilityCdMode"
+    ]),
     /**
      * @description 表示する患者名
      */
@@ -400,14 +413,11 @@ export default {
       // mod #9231 ????患者選択からほかの患者へ切り替え時　一瞬 "患者未選択"と表示される 朴 end
         return "患者未選択";
       }
-      // mod #12462 患者情報共有 Ji start
-      // return this.selectedPatName;
       const title = this.selectedPat?.pat_personal_main_title;
       const lastName = title?.pat_last_name ?? "";
       const firstName = title?.pat_first_name ?? "";
 
       return (lastName && firstName) ? `${lastName} ${firstName}` : this.selectedPatName;
-      // mod #12462 患者情報共有 Ji end
     },
 
     /**
@@ -482,10 +492,6 @@ export default {
      * @returns {String}
      */
     hospPatId() {
-      // mod #12462 患者情報共有 Ji start
-      // return this.isPatSelected
-      //   ? "ID:" + this.getPatPersonalMainColumnData("hosp_pat_id")
-      //   : "";
       return this.isPatSelected
         ? (
           this.selectedPat?.pat_personal_main_title?.hosp_pat_id
@@ -493,7 +499,6 @@ export default {
             : "ID:" + this.getPatPersonalMainColumnData("hosp_pat_id")
         )
         : "";
-	// mod #12462 患者情報共有 Ji end
     },
 
     /**
@@ -536,12 +541,9 @@ export default {
      * @returns {String}
      */
     patSex() {
-      // mod #12462 患者情報共有 Ji start
-      // const dbValue = this.getPatPersonalMainColumnData("pat_sex");
       const dbValue = this.selectedPat?.pat_personal_main_title
-        ? this.selectedPat?.pat_personal_main_title.pat_sex
+        ? this.selectedPat.pat_personal_main_title.pat_sex
         : this.getPatPersonalMainColumnData("pat_sex");
-      // mod #12462 患者情報共有 Ji end
       const patSexData = PAT_PERSONAL_MAIN_COL_PAT_SEX_OPTIONS.find(
         patSex => patSex.value === dbValue
       );
@@ -559,12 +561,9 @@ export default {
      * @returns {String}
      */
     patBloodTypeAbo() {
-      // mod #12462 患者情報共有 Ji start
-      // const dbValue = this.getPatPersonalMainColumnData("pat_blood_type_abo");
       const dbValue = this.selectedPat?.pat_personal_main_title
-        ? this.selectedPat?.pat_personal_main_title.pat_blood_type_abo 
+        ? this.selectedPat.pat_personal_main_title.pat_blood_type_abo
         : this.getPatPersonalMainColumnData("pat_blood_type_abo");
-      // mod #12462 患者情報共有 Ji end
       const patBloodTypeAboData = PAT_BLOOD_TYPE_ABO_OPTIONS.find(
         patBloodTypeAbo => patBloodTypeAbo.value === dbValue
       );
@@ -582,12 +581,9 @@ export default {
      * @returns {String}
      */
     patBloodTypeRh() {
-      // mod #12462 患者情報共有 Ji start
-      // const dbValue = this.getPatPersonalMainColumnData("pat_blood_type_rh");
       const dbValue = this.selectedPat?.pat_personal_main_title
-        ? this.selectedPat?.pat_personal_main_title.pat_blood_type_rh 
+        ? this.selectedPat.pat_personal_main_title.pat_blood_type_rh
         : this.getPatPersonalMainColumnData("pat_blood_type_rh");
-	// mod #12462 患者情報共有 Ji end
       const patBloodTypeRhData = PAT_BLOOD_TYPE_RH_OPTIONS.find(
         patBloodTypeRh => patBloodTypeRh.value === dbValue
       );
@@ -604,23 +600,16 @@ export default {
      * @returns {String}
      */
     patBirthday() {
-      // mod #12462 患者情報共有 Ji start
-      // if (this.getPatPersonalMainColumnData("pat_birthday") === null) {
-      //   return "不明";
-      // }
-      // return moment(this.getPatPersonalMainColumnData("pat_birthday")).format(
-      //   "YYYY/MM/DD"
-      // );
       const birthday = this.selectedPat?.pat_personal_main_title
-        ? this.selectedPat?.pat_personal_main_title.pat_birthday 
+        ? this.selectedPat.pat_personal_main_title.pat_birthday
         : this.getPatPersonalMainColumnData("pat_birthday");
 
       if (birthday === null) {
         return "不明";
       }
-
-      return moment(birthday).format("YYYY/MM/DD");
-      // mod #12462 患者情報共有 Ji end
+      return dayjs(birthday).format(
+        "YYYY/MM/DD"
+      );
     },
 
     /**
@@ -632,21 +621,19 @@ export default {
       // const age = calculateAge(
       //   this.getPatPersonalMainColumnData("pat_birthday")
       // );
-      // mod #12462 患者情報共有 Ji start
-      // const age = calculateAge(
-      //   this.getPatPersonalMainColumnData("pat_birthday"),this.getPatPersonalMainColumnData("is_die") == 1 ?  moment(this.getPatPersonalMainColumnData("die_date")).format("YYYYMMDD") : moment(new Date()).format("YYYYMMDD")
-      // );
       const title = this.selectedPat?.pat_personal_main_title;
       const birthday = title ? title.pat_birthday : this.getPatPersonalMainColumnData("pat_birthday");
-      const isDie = title ? title.isDie : this.getPatPersonalMainColumnData("isDie");
-      const dieDate = title ? title.dieDate : this.getPatPersonalMainColumnData("dieDate");
-
+      const isDie = title
+        ? (title.isDie ?? title.is_die)
+        : this.getPatPersonalMainColumnData("is_die");
+      const dieDate = title
+        ? (title.dieDate ?? title.die_date)
+        : this.getPatPersonalMainColumnData("die_date");
       const age = calculateAge(
         birthday,
         isDie == 1
-          ? moment(dieDate).format("YYYYMMDD")
-          : moment(new Date()).format("YYYYMMDD")
-       // mod #12462 患者情報共有 Ji end
+          ? dayjs(dieDate).format("YYYYMMDD")
+          : dayjs(new Date()).format("YYYYMMDD")
       );
       // mod 8294 死亡患者の年齢が現時点での年齢で表示されている 関  end
       return age > 0 ? `${age}歳` : "不明";
@@ -703,18 +690,13 @@ export default {
      */
     hasTabooAllergy() {
       // DBカラム名 taboo_allergy_info 配列要素0ならなし
-      // mod #12462 患者情報共有 Ji start
-      // return (
-      //   JSON.parse(this.getPatMainColumnData("taboo_allergy_info")).length !== 0
-      // );
       const tabooAllergy = this.selectedPat?.pat_main_title
-        ? JSON.parse(this.selectedPat?.pat_main_title.taboo_allergy_info )
-        : JSON.parse(this.getPatMainColumnData("taboo_allergy_info"));
+        ? this.selectedPat.pat_main_title.taboo_allergy_info
+        : this.getPatMainColumnData("taboo_allergy_info");
       return (
-        tabooAllergy.length !== 0
+        JSON.parse(tabooAllergy || "[]").length !== 0
       );
     },
-      // mod #12462 患者情報共有 Ji end
 
     /**
      * @description 感染症有無
@@ -722,16 +704,11 @@ export default {
      */
     hasInfect() {
       // DBカラム名 is_infect 仕様'0'なし'1'あり
-      // mod #12462 患者情報共有 Ji start
-      // return this.getPatMainColumnData("is_infect") === "1";
       const infect = this.selectedPat?.pat_main_title
-        ? this.selectedPat?.pat_main_title.is_infect
+        ? this.selectedPat.pat_main_title.is_infect
         : this.getPatMainColumnData("is_infect");
-      return (
-        infect === "1"
-      );
+      return infect === "1";
     },
-     // mod #12462 患者情報共有 Ji end
 
     /**
      * @description インプラント有無
@@ -739,16 +716,11 @@ export default {
      */
     hasImplant() {
       // DBカラム名 is_implant 仕様'0'なし'1'あり
-      // mod #12462 患者情報共有 Ji start
-      // return this.getPatMainColumnData("is_implant") === "1";
       const implant = this.selectedPat?.pat_main_title
-        ? this.selectedPat?.pat_main_title.is_implant
+        ? this.selectedPat.pat_main_title.is_implant
         : this.getPatMainColumnData("is_implant");
-      return (
-        implant === "1"
-      );
+      return implant === "1";
     },
-      // mod #12462 患者情報共有 Ji end
 
     /**
      * @description 患者情報3テーブルの内容を1つに展開
@@ -989,30 +961,30 @@ export default {
     getTheme(val) {
       if (val == 0) {
         if (this.direction == 'left') {
-          this.imgUrl = 'img/pat-info/left_w.png'
+          this.imgUrl = publicAssetPath('img/pat-info/left_w.png')
         } else if (this.direction == 'right') {
-          this.imgUrl = 'img/pat-info/right_w.png'
+          this.imgUrl = publicAssetPath('img/pat-info/right_w.png')
         }
       } else if (val == 1) {
         if (this.direction == 'left') {
-          this.imgUrl = 'img/pat-info/left_b.png'
+          this.imgUrl = publicAssetPath('img/pat-info/left_b.png')
         } else if (this.direction == 'right') {
-          this.imgUrl = 'img/pat-info/right_b.png'
+          this.imgUrl = publicAssetPath('img/pat-info/right_b.png')
         }
       }
     },
     direction(val) {
       if (val == 'left') {
         if (this.getTheme == 0) {
-          this.imgUrl = 'img/pat-info/left_w.png'
+          this.imgUrl = publicAssetPath('img/pat-info/left_w.png')
         } else if (this.getTheme == 1) {
-          this.imgUrl = 'img/pat-info/left_b.png'
+          this.imgUrl = publicAssetPath('img/pat-info/left_b.png')
         }
       } else if (val == 'right') {
         if (this.getTheme == 0) {
-          this.imgUrl = 'img/pat-info/right_w.png'
+          this.imgUrl = publicAssetPath('img/pat-info/right_w.png')
         } else if (this.getTheme == 1) {
-          this.imgUrl = 'img/pat-info/right_b.png'
+          this.imgUrl = publicAssetPath('img/pat-info/right_b.png')
         }
       }
     },
@@ -1040,8 +1012,8 @@ export default {
   },
 
   async created() {
-    this.timerManager = createTimerManager();
-    this.path = this.$router.currentRoute.name
+    this.timerManager = createTimerManager(this);
+    this.path = this.$route.name
     if (this.path !== "pat-viewer") {
     // mod 徐博 end
       // FNSI - add-5407  start
@@ -1051,13 +1023,18 @@ export default {
     }
     // mod 患者経過総合ビューアLoading問題対応 李 end
 
-    const ua = navigator.userAgent;
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
     if (ua.match(/Android/)) {
       this.isAndroid = true;
     } else if (ua.match(/iPhone|iPad/)) {
       this.isIOS = true;
     }
-    if (this.isPatSelected && !this.isWeightScale) {
+    const currentSelectedPatId = this.selectedPat?.pat_personal_main?.pat_id;
+    // 患者ID不一致、または患者情報画面へ遷移時のみ再取得（他画面間遷移ではstoreキャッシュを利用）
+    const shouldReloadSelectedPat =
+      currentSelectedPatId !== this.selectedPatId
+      || (this.$route.name === "pat-info" && !this.isPatInfoPageShowing);
+    if (this.isPatSelected && !this.isWeightScale && shouldReloadSelectedPat) {
       // 再描画時(別のヘッダが表示された後の再表示)はそれまで選択されていた患者をストアに格納(最新の状態にするため)
       // ※体重計画面の場合は初期化状態から始まるため行わない
       // ここでのselectPatのリアクションが終わるまでの間のフラグを設定する
@@ -1068,7 +1045,7 @@ export default {
           this.setStartRenderPatInfoContent(true);
         }
       });
-    } else {
+    } else if (this.$route.name === "pat-info") {
       this.setStartRenderPatInfoContent(true);
     }
 
@@ -1152,47 +1129,59 @@ export default {
     }
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     this.timerManager.destroy();
-    Object.assign(this.$data, this.$options.data());
   },
 
   methods: {
+    getScopedElementById(id) {
+      return getScopedElementById(id, this);
+    },
+    getScopedElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this);
+    },
+    getScopedQuery(selector) {
+      return queryScopedSelector(selector, this);
+    },
+    getScopedQueryAll(selector) {
+      return queryScopedSelectorAll(selector, this);
+    },
+
     popoverPreShow,
     popoverPostShow,
     popoverPosthide,
     //  add FNSI-ジャンプメニューの固定化 徐博 start
     menuDisplay() {
-      let name = document.getElementById("menu-bar-id");
+      let name = this.getScopedElementById("menu-bar-id");
       if (name.classList.contains("block")) {
         // FNSI - add-画面部品デザイン-じょはく start
         this.direction = "right";
         // FNSI - add-画面部品デザイン-じょはく end
         // FNSI - del-画面部品デザイン-じょはく start
-        // document.getElementById("menu-btn").src = "img/pat-info/right.png";
+        // this.getScopedElementById("menu-btn").src = "img/pat-info/right.png";
         // FNSI - del-画面部品デザイン-じょはく end
-        document.getElementById("menu-btn").style.marginLeft = "0px";
-        document.getElementById("menu-bar-id").setAttribute("class", "menu-bar-contents button-size none");
-        document.getElementsByClassName("card-infos")[0].style.marginLeft = "0px";
+        this.getScopedElementById("menu-btn").style.marginLeft = "0px";
+        this.getScopedElementById("menu-bar-id").setAttribute("class", "menu-bar-contents button-size none");
+        this.getScopedElementsByClassName("card-infos")[0].style.marginLeft = "0px";
       } else {
         // FNSI - add-画面部品デザイン-じょはく start
         this.direction = "left";
         // FNSI - add-画面部品デザイン-じょはく end
         // FNSI - del-画面部品デザイン-じょはく start
-        // document.getElementById("menu-btn").src = "img/pat-info/left.png";
+        // this.getScopedElementById("menu-btn").src = "img/pat-info/left.png";
         // FNSI - del-画面部品デザイン-じょはく end
-        document.getElementById("menu-btn").style.marginLeft = "130px";
-        document.getElementById("menu-bar-id").setAttribute("class", "menu-bar-contents button-size block");
-        document.getElementsByClassName("card-infos")[0].style.marginLeft = "143px";
+        this.getScopedElementById("menu-btn").style.marginLeft = "130px";
+        this.getScopedElementById("menu-bar-id").setAttribute("class", "menu-bar-contents button-size block");
+        this.getScopedElementsByClassName("card-infos")[0].style.marginLeft = "143px";
       }
     },
     //  add FNSI-ジャンプメニューの固定化 徐博 end
 
-    // add FNSI-体重計測定レイアウト調整　陳 start
+    // add FNSI-体重計測定レイアウト調整 陳 start
     changeBodyClass() {
       return this.getWeightMode.isWeightMode ? "pat-header_mode" : "pat-header";
     },
-    // add FNSI-体重計測定レイアウト調整　陳 end
+    // add FNSI-体重計測定レイアウト調整 陳 end
     mstCdToName,
     ...mapActions("pat-info", [
       "setInSelectPatAtPatHeaderCreated",
@@ -1309,7 +1298,6 @@ export default {
      * @description 患者選択
      * @summary 選択した患者の患者情報レコードをストアに格納する
      */
-    // mod #12462 患者情報共有 Ji start
     async setSelectedPat(selectedPatId, selectedFacility) {
       this.setIsNullPat(false);
       // del FNSI- 非同期処理中でも画面遷移ができる 徐博 start
@@ -1323,11 +1311,11 @@ export default {
         // add #9231 ????患者選択時、前患者情報が表示される ヘッダースワップ時 朴 end
         this.setIsNullPat(true);
         // 現在の表示画面が治療状況リストの場合、治療状況を再読み込みさせる
-        if (this.$router.currentRoute.name.indexOf("treatment-record") === 0) {
+        if (this.$route.name.indexOf("treatment-record") === 0) {
           EventBus.$emit("refresh");
         }
       } else {
-        await this.selectPat({selectedPatId, selectedFacility}).catch(() => {
+        await this.selectPat({ selectedPatId, selectedFacility }).catch(() => {
           //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
           getErrorMessage('PatHeader.vue', 'setSelectedPat', '患者選択失敗');
           //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -1341,7 +1329,6 @@ export default {
           });
         }
       }
-      // mod #12462 患者情報共有 Ji end
       // del FNSI- 非同期処理中でも画面遷移ができる 徐博 start
       // this.setIsLoadingPat(false);
       // del FNSI- 非同期処理中でも画面遷移ができる 徐博 end
@@ -1685,37 +1672,62 @@ export default {
       // コードをマスタの内容詳細に変換する
       const allDetail = [...otherDetailInfoList];
       for (const taboo of tabooAllergy) {
-        if (taboo.taboo_allergy_cd !== null) {
-          if (tabooAllergyClass === taboo.taboo_allergy_class) {
-            const targetMst = this.mstTabooAllergy.find(
-              mst => mst.tabooAllergyCd === taboo.taboo_allergy_cd
-            );
-            if (targetMst !== undefined) {
-              if (targetMst.detailInfo !== null) {
-                // 内容詳細JSONをデシリアライズして展開
-                const detailInfo = JSON.parse(targetMst.detailInfo).map(item => {
-                  return {
-                    ...item,
-                    // 禁忌アレルギーコード
-                    tabooAllergyCd: targetMst.tabooAllergyCd,
-                    // 参照先禁忌アレルギーが削除されているかを示すフラグ
-                    tabooAllergyDeleted: targetMst.isDisp === "0" || targetMst.isDel === "1"
-                  }
-                })
-                allDetail.push(...detailInfo);
-              }
-            }
+        if (tabooAllergyClass !== taboo.taboo_allergy_class) {
+          continue;
+        }
+
+        const rawCd = taboo.taboo_allergy_cd;
+        const hasMasterCd =
+          rawCd !== null && rawCd !== undefined && rawCd !== "";
+
+        if (hasMasterCd) {
+          const targetMst = (this.mstTabooAllergy || []).find(
+            mst => String(mst.tabooAllergyCd) === String(rawCd)
+          );
+          if (
+            targetMst !== undefined &&
+            targetMst.detailInfo &&
+            targetMst.detailInfo !== "[]"
+          ) {
+            const detailInfo = JSON.parse(targetMst.detailInfo).map(item => {
+              return {
+                ...item,
+                tabooAllergyCd: targetMst.tabooAllergyCd,
+                tabooAllergyDeleted:
+                  targetMst.isDisp === "0" || targetMst.isDel === "1",
+              };
+            });
+            allDetail.push(...detailInfo);
+          } else if (targetMst !== undefined) {
+            allDetail.push({
+              cd: null,
+              name: taboo.content,
+              classCd: PAT_HEADER.CLASS_FREEWORD,
+              tabooAllergyCd: targetMst.tabooAllergyCd,
+              tabooAllergyDeleted:
+                targetMst.isDisp === "0" || targetMst.isDel === "1",
+              type: null,
+            });
+          } else {
+            allDetail.push({
+              cd: null,
+              name: taboo.content,
+              classCd: PAT_HEADER.CLASS_FREEWORD,
+              tabooAllergyCd: rawCd,
+              tabooAllergyDeleted: false,
+              type: null,
+            });
           }
         } else {
-          if (tabooAllergyClass === taboo.taboo_allergy_class) {
-            const detailInfo = {cd: null,
-                                name: taboo.content,
-                                classCd: PAT_HEADER.CLASS_FREEWORD,
-                                tabooAllergyCd: taboo.taboo_allergy_cd,
-                                tabooAllergyDeleted: false,
-                                type: null};
-            allDetail.push(detailInfo);
-          }
+          const detailInfo = {
+            cd: null,
+            name: taboo.content,
+            classCd: PAT_HEADER.CLASS_FREEWORD,
+            tabooAllergyCd: taboo.taboo_allergy_cd,
+            tabooAllergyDeleted: false,
+            type: null,
+          };
+          allDetail.push(detailInfo);
         }
       }
 
@@ -1742,7 +1754,7 @@ export default {
 
     //yyyymmdd文字列をyyyy/mm/ddフォーマットに変換
     formatDate(date) {
-      return date === null ? null : moment(date).format("YYYY/MM/DD");
+      return date === null ? null : dayjs(date).format("YYYY/MM/DD");
     },
 
     // 導入日と除去日の日付情報から「FROM～TO」「FROM～」「～TO」「」（未出力）切り替え
@@ -1776,7 +1788,7 @@ export default {
       }
 
       const getFirstElementByClassName = (className) => {
-        const elements = document.getElementsByClassName(className);
+        const elements = this.getScopedElementsByClassName(className);
         return elements.length > 0 ? elements[0] : null;
       };
 
@@ -1791,7 +1803,7 @@ export default {
       }
 
       // 新規患者作成時は実行しない
-      const nameArea = document.getElementById("pat-header-pat-name");
+      const nameArea = this.getScopedElementById("pat-header-pat-name");
       if (nameArea && nameArea.classList && nameArea.classList.contains("pat-create")) {
         return;
       }
@@ -1799,11 +1811,11 @@ export default {
       // ID・名前エリア MAX幅
       // ヘッダー横幅 - サイドコンテンツ - ②エリア - ③④エリア - フロートメニュー
       const calcPatNameMaxWidth = () => (
-        document.getElementsByClassName("pat-header")[0].clientWidth
-        - document.getElementsByClassName("search-button-area")[0].clientWidth
-        - document.getElementsByClassName("pat-icon-area")[0].clientWidth
-        - document.getElementsByClassName("patinfo-treattime-area-scroll")[0].firstElementChild.clientWidth
-        - document.getElementById("user-menu").clientWidth
+        this.getScopedElementsByClassName("pat-header")[0].clientWidth
+        - this.getScopedElementsByClassName("search-button-area")[0].clientWidth
+        - this.getScopedElementsByClassName("pat-icon-area")[0].clientWidth
+        - this.getScopedElementsByClassName("patinfo-treattime-area-scroll")[0].firstElementChild.clientWidth
+        - this.getScopedElementById("user-menu").clientWidth
       );
       let patNameMaxWidth = getFirstElementByClassName("pat-header") ? calcPatNameMaxWidth() : 0;
 
@@ -1811,7 +1823,7 @@ export default {
       // iPhone横幅(375px) - サイドコンテンツ - ②エリア - フロートメニュー
       const searchButtonArea = getFirstElementByClassName("search-button-area");
       const patIconArea = getFirstElementByClassName("pat-icon-area");
-      const userMenu = document.getElementById("user-menu");
+      const userMenu = this.getScopedElementById("user-menu");
       const patNameMinWidth = (searchButtonArea && patIconArea && userMenu) ? (
         375
         - searchButtonArea.clientWidth
@@ -1851,7 +1863,7 @@ export default {
       }
 
       // ID・名前エリアはMIN幅・MAX幅のみ設定し、横幅を自動変更できるようにする
-      const patNameArea = document.getElementById("pat-name-area");
+      const patNameArea = this.getScopedElementById("pat-name-area");
       if (patNameArea) {
         patNameArea.style.minWidth = patNameMinWidth + "px";
         patNameArea.style.maxWidth = patNameMaxWidth + "px";
@@ -1883,17 +1895,17 @@ export default {
     // ID・名前エリアの横幅設定 体重計モード用
     calPatNameAreaWidthWeightMode() {
       // 治療進捗バーエリアを非表示
-      if(document.getElementsByClassName("treatment-time-area").length > 0) {
-        document.getElementsByClassName("treatment-time-area")[0].style.display = "none";
+      if(this.getScopedElementsByClassName("treatment-time-area").length > 0) {
+        this.getScopedElementsByClassName("treatment-time-area")[0].style.display = "none";
       }
 
       // ID・名前エリア MAX幅
       // ヘッダー横幅 - サイドコンテンツ - ②エリア - ③④エリア - フロートメニュー
-      let patNameMaxWidth = document.getElementsByClassName("pat-header")[0].clientWidth
-        - document.getElementsByClassName("search-button-area")[0].clientWidth
-        - document.getElementsByClassName("pat-icon-area")[0].clientWidth
-        - document.getElementsByClassName("patinfo-treattime-area-scroll")[0].firstElementChild.clientWidth
-        - document.getElementById("user-menu").clientWidth;
+      let patNameMaxWidth = this.getScopedElementsByClassName("pat-header")[0].clientWidth
+        - this.getScopedElementsByClassName("search-button-area")[0].clientWidth
+        - this.getScopedElementsByClassName("pat-icon-area")[0].clientWidth
+        - this.getScopedElementsByClassName("patinfo-treattime-area-scroll")[0].firstElementChild.clientWidth
+        - this.getScopedElementById("user-menu").clientWidth;
 
       // ID・名前エリア MIN幅
       // IDと同姓同名アイコンが表示できる幅(410px)で固定
@@ -1906,29 +1918,29 @@ export default {
       }
 
       // 患者名フォントサイズ：標準
-      document.getElementById("pat-header-pat-name").style.fontSize = "6em";
+      this.getScopedElementById("pat-header-pat-name").style.fontSize = "6em";
 
       // ID・名前エリアはMIN幅・MAX幅のみ設定し、横幅を自動変更できるようにする
-      document.getElementById("pat-name-area").style.minWidth = patNameMinWidth + "px" ;
-      document.getElementById("pat-name-area").style.maxWidth = patNameMaxWidth + "px" ;
-      document.getElementById("pat-header-pat-name").style.maxWidth = patNameMaxWidth + "px" ;
+      this.getScopedElementById("pat-name-area").style.minWidth = patNameMinWidth + "px" ;
+      this.getScopedElementById("pat-name-area").style.maxWidth = patNameMaxWidth + "px" ;
+      this.getScopedElementById("pat-header-pat-name").style.maxWidth = patNameMaxWidth + "px" ;
 
       // 変更後の幅を取る
-      let changedWidth = document.getElementById("pat-header-pat-name").clientWidth;
+      let changedWidth = this.getScopedElementById("pat-header-pat-name").clientWidth;
 
       // 変更後の幅がMAX幅を超える場合、フォントサイズを小さくする
       if (changedWidth >= patNameMaxWidth) {
         // 患者名フォントサイズ：第1段階
-        document.getElementById("pat-header-pat-name").style.fontSize = "5em";
+        this.getScopedElementById("pat-header-pat-name").style.fontSize = "5em";
 
         // 変更後の幅を取る
-        changedWidth = document.getElementById("pat-header-pat-name").clientWidth;
+        changedWidth = this.getScopedElementById("pat-header-pat-name").clientWidth;
 
         // 変更後の幅がMAX幅を超える場合、フォントサイズを小さくする
         // ここまで小さくしても収まらない場合、「…」で省略
         if (changedWidth >= patNameMaxWidth) {
           // 患者名フォントサイズ：第2段階
-          document.getElementById("pat-header-pat-name").style.fontSize = "4em";
+          this.getScopedElementById("pat-header-pat-name").style.fontSize = "4em";
         }
       }
     },
@@ -2095,10 +2107,10 @@ export default {
       }
 
       // "3": 経過時間表示
-      const treatmentStartDateTime = moment(start_date_time);
+      const treatmentStartDateTime = dayjs(start_date_time);
       //mod 7680 治療の進捗状態を示す棒グラフが一致しない_再発 張 start
-      // const now = moment();
-      const now = this.initDate!=null? this.initDate:moment();
+      // const now = dayjs();
+      const now = this.initDate!=null? this.initDate:dayjs();
       this.initDate=now;
       //mod 7680 治療の進捗状態を示す棒グラフが一致しない_再発 張 end
 
@@ -2167,7 +2179,7 @@ export default {
         callback: async answer => {
           if (answer == 1){
              //add 7680 治療の進捗状態を示す棒グラフが一致しない_再発 張 start
-            this.initDate = moment();
+            this.initDate = dayjs();
              //add 7680 治療の進捗状態を示す棒グラフが一致しない_再発 張 end
             this.rebuildAcceptanceStatusInfo();
 
@@ -2224,21 +2236,21 @@ export default {
   visibility: hidden;
 }
 /*mod FNSI- 徐博 start*/
-.card-list >>> .menu-bar {
+.card-list :deep(.menu-bar) {
   position: absolute;
   left: 161px !important;
   top: 20px;
 }
 /* mod #10260 文字サイズ特大にしたときに保存、キャンセルボタンの高さに白背景があっていない。不要な余白の排除 宮崎 start */
-.card-list >>> .card-infos {
+.card-list :deep(.card-infos) {
   height: 100% !important;
   margin-left: 143px;
   overflow-y: scroll;
 }
 /* mod #10260 文字サイズ特大にしたときに保存、キャンセルボタンの高さに白背景があっていない。不要な余白の排除 宮崎 end */
 /*mod FNSI- 徐博 end*/
-.card-list >>> .pat-info-header-area .btn-cancel,
-.card-list >>> .pat-info-header-area .btn-save {
+.card-list :deep(.pat-info-header-area .btn-cancel),
+.card-list :deep(.pat-info-header-area .btn-save) {
   position: absolute;
 }
 
@@ -2264,7 +2276,7 @@ table td {
   background-image:         linear-gradient(rgba(210,210,210,.2) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
   font-size: 1em;
 }
-/* add FNSI-体重計測定レイアウト調整　陳 start */
+/* add FNSI-体重計測定レイアウト調整 陳 start */
 .pat-header_mode {
   width: 100%;
   height: 8.5em;
@@ -2273,7 +2285,7 @@ table td {
   background-image:         linear-gradient(rgba(210,210,210,.2) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
   font-size: 1em;
 }
-/* add FNSI-体重計測定レイアウト調整　陳 end */
+/* add FNSI-体重計測定レイアウト調整 陳 end */
 .event-area {
   color: var(--ntss-header-color);
   width: 100%;
@@ -2422,25 +2434,25 @@ table td {
   }
 }
 
-.vons-popover >>> .popover__content {
+.vons-popover :deep(.popover__content) {
   max-width: 500px;
   margin: 3px;
 }
 
-.infection-item >>> .calender {
+.infection-item :deep(.calender) {
   display: none;
 }
 
-.infection-popover >>> .popover__content {
+.infection-popover :deep(.popover__content) {
   max-width: 500px;
   margin: 3px;
 }
 
-.infection-popover >>> input[type="date"] {
+.infection-popover :deep(input[type="date"]) {
   width: 100%;
 }
 
-.implant-popover >>> .popover__content {
+.implant-popover :deep(.popover__content) {
   max-width: 500px;
   margin: 3px;
 }
@@ -2458,30 +2470,30 @@ table td {
   height: calc(100% - 30px);
 }
 
-.acceptance-status-info-popover >>> .popover--top {
+.acceptance-status-info-popover :deep(.popover--top) {
   max-width: 150px;
 }
-.acceptance-status-info-popover >>> .popover__content {
+.acceptance-status-info-popover :deep(.popover__content) {
   min-height: auto;
   margin: 3px 3px 3px 0;
 }
-.acceptance-status-info-popover >>>.acceptance-status-info-area {
+.acceptance-status-info-popover :deep(.acceptance-status-info-area) {
   max-height: 10em;
   margin: 5px 0 0 5px;
   overflow-y: auto;
 }
-.acceptance-status-info-popover >>>.acceptance-status-info-bar {
+.acceptance-status-info-popover :deep(.acceptance-status-info-bar) {
   padding: 1px 3px 3px 1px;
 }
-.acceptance-status-info-popover >>>.acceptance-statusn-info-button-area {
+.acceptance-status-info-popover :deep(.acceptance-statusn-info-button-area) {
   text-align: right;
   padding: 5px;
 }
-.acceptance-status-info-popover >>>.common-style-ok-button {
+.acceptance-status-info-popover :deep(.common-style-ok-button) {
   width: 100%;
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 300px;
   height: 2em;
   font-size: 2em;
@@ -2518,10 +2530,10 @@ table td {
     height: auto !important;
     background-color: unset;
   }
-  .card-list >>> .menu-bar {
+  .card-list :deep(.menu-bar){
     top: 0;
   }
-  .card-list >>> div {
+  .card-list :deep(div){
     height: auto !important;
   }
   /** 見出し開閉ボタン非表示 */

@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.coop_api.utils;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.coop_api.service.LogService;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
@@ -21,6 +21,7 @@ import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -69,7 +70,7 @@ public class NotificationApiCallUtil {
    */
   final class NoProcResponseErrorHandler extends DefaultResponseErrorHandler {
     @Override
-    public void handleError(ClientHttpResponse response) throws IOException {
+    public void handleError(URI url, HttpMethod method, ClientHttpResponse response) throws IOException {
       // なにもしない→HttpStatusが異常値でも例外を発生させない
     }
   }
@@ -280,7 +281,7 @@ public class NotificationApiCallUtil {
           long start = System.currentTimeMillis();
           // リクエスト処理
           ResponseEntity<String> response = rt.exchange(request, String.class);
-          status = response.getStatusCode();
+          status = HttpStatus.valueOf(response.getStatusCode().value());
           long cost = System.currentTimeMillis() - start;
           Map<String, Object> map = new HashMap<>();
           map.put("logType", "RESTTEMPLATE-LOG");
@@ -340,7 +341,7 @@ public class NotificationApiCallUtil {
   public ResponseEntity<String>  updateExamResultCalc(Long patId) throws URISyntaxException,RuntimeException {
     if (patId == null) {
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      return new ResponseEntity<>("patIdが不正な値です。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("patIdが不正な値です。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     String addUri = "/updateExamResultCalcForCoop";
     JSONObject jsonBody = new JSONObject();

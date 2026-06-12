@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.admin_web.service.exam;
 
-import java.io.IOException;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -81,12 +80,13 @@ import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」の改修 江 end
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.response.exam.ExamRequestResponse;
 import jp.co.nikkiso.ntss.core.exception.NotExistException;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -193,6 +193,10 @@ public class ExamRequestServiceImpl implements ExamRequestService {
 
   @Autowired
   private PatNameIdentificationDao patNameIdentificationDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   @Autowired
   MstFacilitySettingDao mstFacilitySettingDao;
@@ -338,7 +342,7 @@ public class ExamRequestServiceImpl implements ExamRequestService {
       wheres.append(" to_char(reg_exam_date,'YYYY/MM/DD') = '" + params.get("beforeDate") + "' and \n");
       wheres.append(" exam_status = '0' \n");
       // logCommon設定
-      logCommon = getLogCommon(patExamMainDao, tableName, wheres, getEventLogMessage());
+      logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       setResult = logCommon.setInfo();
     } catch (Exception e) {
@@ -712,10 +716,11 @@ public class ExamRequestServiceImpl implements ExamRequestService {
    */
   //mod #12462 患者情報共有 zrx start
   @Override
-  //  public ExamRequestResponse createExamRequestResponse(List<Long> patIdList, String startDate, String endDate, String facilityCd) throws Exception {
+//  public ExamRequestResponse createExamRequestResponse(List<Long> patIdList, String startDate, String endDate, String facilityCd) throws Exception {
   public ExamRequestResponse createExamRequestResponse(
-    List<Long> patIdList, String startDate, String endDate, String facilityCd, Integer patientShareMode) throws Exception {
+      List<Long> patIdList, String startDate, String endDate, String facilityCd, Integer patientShareMode) throws Exception {
     //mod #12462 患者情報共有 zrx end
+
     SimpleDateFormat formatDate = new SimpleDateFormat("yyyy/MM/dd");
     formatDate.setLenient(false);
     //表示期間(開始日)の日付フォーマットチェック
@@ -740,33 +745,39 @@ public class ExamRequestServiceImpl implements ExamRequestService {
     List<PatTreatmentPattern> patTreatmentPatternList = patTreatmentPatternDao.selectByPatIdList(patIdList, facilityCd);
 
     //add #12462 患者は合計 by zrx  start
-    if(null!=patIdList && patientShareMode != null && patientShareMode == 0) {
-      for (Long l : patIdList) {
-        List<PatNameIdentification> listPatIdSrcFromPatTo = patNameIdentificationDao.getListPatIdSrcFromPatTo(l);
+    if (patIdList != null && patientShareMode != null && patientShareMode == 0) {
+      for (Long patId : patIdList) {
+        List<PatNameIdentification> listPatIdSrcFromPatTo = patNameIdentificationDao.getListPatIdSrcFromPatTo(patId);
         for (PatNameIdentification patIdSrcFromPatTo : listPatIdSrcFromPatTo) {
           // 患者毎の透析予定日のリストを取得
-          List<String> ordMainTreatDateListTemp = ordMainDao.selectTreatDateList(Arrays.asList(patIdSrcFromPatTo.getPatIdSrc()), patIdSrcFromPatTo.getFacilityCdSrc());
+          List<String> ordMainTreatDateListTemp =
+            ordMainDao.selectTreatDateList(Arrays.asList(patIdSrcFromPatTo.getPatIdSrc()), patIdSrcFromPatTo.getFacilityCdSrc());
           ordMainTreatDateList.addAll(ordMainTreatDateListTemp);
+
           // 施設IDを元に、検査結果を取得
-          List<PatExamMainData> patExamMainListTemp = patExamMainDao.selectPatExamMainByPatIdListExamOrder(Arrays.asList(patIdSrcFromPatTo.getPatIdSrc()), startDate, patIdSrcFromPatTo.getFacilityCdSrc());
-          patExamMainListTemp.forEach(x -> {
-            x.setPatId(l);
-            x.setOwnPatId(patIdSrcFromPatTo.getPatIdSrc());
+          List<PatExamMainData> patExamMainListTemp = patExamMainDao.selectPatExamMainByPatIdListExamOrder(
+            Arrays.asList(patIdSrcFromPatTo.getPatIdSrc()), startDate, patIdSrcFromPatTo.getFacilityCdSrc());
+          patExamMainListTemp.forEach(item -> {
+            item.setPatId(patId);
+            item.setOwnPatId(patIdSrcFromPatTo.getPatIdSrc());
           });
           patExamMainList.addAll(patExamMainListTemp);
+
           // 患者毎の検査パターンを取得
-          List<PatExamPatternData> patExamPatternListTemp = patExamPatternDao.selectPatExamPatternByPatIdList(Arrays.asList(patIdSrcFromPatTo.getPatIdSrc()), startDate);
-          patExamPatternListTemp.forEach(x -> {
-            x.setPatId(l);
-            x.setOwnPatId(patIdSrcFromPatTo.getPatIdSrc());
+          List<PatExamPatternData> patExamPatternListTemp =
+            patExamPatternDao.selectPatExamPatternByPatIdList(Arrays.asList(patIdSrcFromPatTo.getPatIdSrc()), startDate);
+          patExamPatternListTemp.forEach(item -> {
+            item.setPatId(patId);
+            item.setOwnPatId(patIdSrcFromPatTo.getPatIdSrc());
           });
           patExamPatternList.addAll(patExamPatternListTemp);
+
           // 患者毎の治療パターンを取得
-          List<PatTreatmentPattern> patTreatmentPatternListTemp = patTreatmentPatternDao.selectByPatIdList(Arrays.asList(patIdSrcFromPatTo.getPatIdSrc()), patIdSrcFromPatTo.getFacilityCdSrc());
-          patTreatmentPatternListTemp.forEach(x->x.setPatId(l));
-          patTreatmentPatternListTemp.forEach(x -> {
-            x.setPatId(l);
-            x.setOwnPatId(patIdSrcFromPatTo.getPatIdSrc());
+          List<PatTreatmentPattern> patTreatmentPatternListTemp =
+            patTreatmentPatternDao.selectByPatIdList(Arrays.asList(patIdSrcFromPatTo.getPatIdSrc()), patIdSrcFromPatTo.getFacilityCdSrc());
+          patTreatmentPatternListTemp.forEach(item -> {
+            item.setPatId(patId);
+            item.setOwnPatId(patIdSrcFromPatTo.getPatIdSrc());
           });
           patTreatmentPatternList.addAll(patTreatmentPatternListTemp);
         }
@@ -1028,7 +1039,7 @@ public class ExamRequestServiceImpl implements ExamRequestService {
             wheres.append(" WHERE\n");
             wheres.append(" pat_id = '" + patId + "'\n");
             // logCommon設定
-            logCommon = getLogCommon(patMainDao, tableName, wheres, getEventLogMessage());
+            logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
             // ログ出力カラム情報及び更新前データ情報取得
             setResult = logCommon.setInfo();
           } catch (Exception e) {
@@ -1342,7 +1353,7 @@ public class ExamRequestServiceImpl implements ExamRequestService {
       wheres.append(" pat_id = '" + e.get("patId").toString() + "' and\n");
       wheres.append(" reg_exam_date = '" + time + "' \n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patExamMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック xie End
@@ -1485,7 +1496,7 @@ public class ExamRequestServiceImpl implements ExamRequestService {
               sbExamSetInfo.insert(0, "[");
               sbExamSetInfo.append("]");
 
-            } catch (IOException e) {
+            } catch (tools.jackson.core.JacksonException e) {
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -1558,7 +1569,7 @@ public class ExamRequestServiceImpl implements ExamRequestService {
               sbExamOrderInfo.insert(0, "[");
               sbExamOrderInfo.append("]");
 
-            } catch (IOException e) {
+            } catch (tools.jackson.core.JacksonException e) {
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -1624,7 +1635,7 @@ public class ExamRequestServiceImpl implements ExamRequestService {
               sbOrderLabelInfo.insert(0, "[");
               sbOrderLabelInfo.append("]");
 
-            } catch (IOException e) {
+            } catch (tools.jackson.core.JacksonException e) {
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -1704,7 +1715,7 @@ public class ExamRequestServiceImpl implements ExamRequestService {
               sbExamOrderInfo.insert(0, "[");
               sbExamOrderInfo.append("]");
 
-            } catch (IOException e) {
+            } catch (tools.jackson.core.JacksonException e) {
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
               // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -1989,11 +2000,11 @@ public class ExamRequestServiceImpl implements ExamRequestService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

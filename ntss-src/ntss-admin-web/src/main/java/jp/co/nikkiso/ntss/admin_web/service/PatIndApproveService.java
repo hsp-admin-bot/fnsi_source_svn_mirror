@@ -21,8 +21,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
 import jp.co.nikkiso.ntss.core.dao.PatIndApproveDao;
 import jp.co.nikkiso.ntss.core.entity.PatIndApprove;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
@@ -30,6 +30,7 @@ import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 @Service
 public class PatIndApproveService {
@@ -48,6 +49,10 @@ public class PatIndApproveService {
 
   @Autowired
   private LogServiceCore logServiceCore;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // DB更新ログ出力ロジック wangzuo End
 
   // add 10739 by shiyw 20250303 start
@@ -88,7 +93,7 @@ public class PatIndApproveService {
     wheres.append(" ord_no = " + ord_no + "\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -127,7 +132,7 @@ public class PatIndApproveService {
     wheres.append(" ord_no = " + ord_no + "\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -165,7 +170,7 @@ public class PatIndApproveService {
     wheres.append(" ord_no = " + ord_no + "\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -203,7 +208,7 @@ public class PatIndApproveService {
     wheres.append(" ord_no = " + ord_no + "\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -241,7 +246,7 @@ public class PatIndApproveService {
     wheres.append(" ord_no = " + ord_no + "\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -301,7 +306,7 @@ public class PatIndApproveService {
     wheres.append(" WHERE\n");
     wheres.append(inStr + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     /**
@@ -423,7 +428,7 @@ public class PatIndApproveService {
     wheres.append(" ord_no = " + ord_no + "\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -457,7 +462,7 @@ public class PatIndApproveService {
     wheres.append(" is_user1_checked = '1'\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -495,7 +500,7 @@ public class PatIndApproveService {
     wheres.append(" is_user2_checked = '1'\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -533,7 +538,7 @@ public class PatIndApproveService {
     wheres.append(" is_user1_approved = '1'\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -571,7 +576,7 @@ public class PatIndApproveService {
     wheres.append(" is_user2_approved = '1'\n");
 
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -652,15 +657,24 @@ public class PatIndApproveService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
     return logCommon;
   }
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+  public PatIndApprove selectByOrdNoLast(Long ordNo) {
+    List<PatIndApprove> patIndApproves = patIndApproveDao.selectPatIndApproveByOrdNo(ordNo);
+    if (patIndApproves.isEmpty()) {
+      return null;
+    }
+    return patIndApproves.get(patIndApproves.size() - 1);
+  }
+  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
   // DB更新ログ出力ロジック wangzuo End
 }

@@ -76,7 +76,7 @@
     <!-- 検索条件：入力エリア -->
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -323,7 +323,7 @@
     </v-ons-popover>
 
     <message-dialog
-      :visible.sync="isMessage"
+      v-model:visible="isMessage"
       :message-cd="messageDialogInfo.messageCd"
       :title="messageDialogInfo.title"
       :type="messageDialogInfo.type"
@@ -340,9 +340,9 @@
 </template>
 
 <script>
-  import moment from "moment";
-  import { EventBus } from "@/eventBus.js";
-  import { mapGetters, mapActions } from "vuex";
+  import dayjs from "@/compat/date/dayjs";
+  import { EventBus } from "@/compat/vue/event-bus.js";
+  import { mapGetters, mapActions } from "@/compat/vue/vuex";
   import { ApiHelper } from "@/apis/AxiosHelper";
   import { deepCopy } from "@/functions/common/CommonFunctions";
   import { updateBbsList } from "@/functions/BbsInfoFunctions.js";
@@ -369,6 +369,7 @@
   // mod #6107 2023/03/22 メッセージボックス全調整 張博 end
   //#5590 2023/04/19 ×を常に表示するように修正 張博 start
   import DateInput from "@/components/common/DateInput.vue";
+  import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
   //#5590 2023/04/19 ×を常に表示するように修正 張博 end
 
   const mstKur = "mst_kur";
@@ -457,10 +458,7 @@
           messageCd: 72000001,
           title: DIALOG_MESSAGES['72000001'].title,
           type: "2"
-        },
-        /* add by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --start */
-        onIsNotEdited: null
-        /* add by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --end */
+        }
       };
     },
 
@@ -583,7 +581,7 @@
           return null;
         }
 
-        return moment(startDate, "YYYY-MM-DD").format("YYYY/MM/DD");
+        return dayjs(startDate, "YYYY-MM-DD").format("YYYY/MM/DD");
       },
 
       /**
@@ -596,7 +594,7 @@
           return null;
         }
 
-        return moment(endDate, "YYYY-MM-DD").format("YYYY/MM/DD");
+        return dayjs(endDate, "YYYY-MM-DD").format("YYYY/MM/DD");
       },
 
       /**
@@ -609,7 +607,7 @@
           return null;
         }
 
-        return moment(dialysisDate, "YYYY-MM-DD").format("YYYY/MM/DD");
+        return dayjs(dialysisDate, "YYYY-MM-DD").format("YYYY/MM/DD");
       },
 
       /**
@@ -630,10 +628,10 @@
           content: null,
           file_info: [],
           /* mod FNSI-434 改修内容 "掲示板のみに表示施設カレンダのみに表示 趙立強 start*/
-          // notice_start_date: moment().format(),
-          // notice_end_date: moment().format(),
-          notice_start_date: moment().format("YYYY-MM-DD"),
-          notice_end_date: moment().format("YYYY-MM-DD"),
+          // notice_start_date: dayjs().format(),
+          // notice_end_date: dayjs().format(),
+          notice_start_date: dayjs().format("YYYY-MM-DD"),
+          notice_end_date: dayjs().format("YYYY-MM-DD"),
           /* mod FNSI-434 改修内容 "掲示板のみに表示施設カレンダのみに表示 趙立強 end*/
           reg_staff_id: null,
           reg_staff_name: null,
@@ -643,10 +641,10 @@
           reg_date: null,
           up_date: null,
           /* mod FNSI-434 改修内容 "掲示板のみに表示施設カレンダのみに表示 趙立強 start*/
-          // notice_fac_cal_start_date: moment().format(),
-          // notice_fac_cal_end_date: moment().format(),
-          notice_fac_cal_start_date: moment().format("YYYY-MM-DD"),
-          notice_fac_cal_end_date: moment().format("YYYY-MM-DD"),
+          // notice_fac_cal_start_date: dayjs().format(),
+          // notice_fac_cal_end_date: dayjs().format(),
+          notice_fac_cal_start_date: dayjs().format("YYYY-MM-DD"),
+          notice_fac_cal_end_date: dayjs().format("YYYY-MM-DD"),
           notice_fac_cal_start_time: this.startHour + "" +this.startMinutes,
           notice_fac_cal_end_time: this.startHour + "" +this.startMinutes,
           title: null,
@@ -740,22 +738,22 @@
       },
       /*add FNSI-改修内容日付のチェックの追加対応。 趙立強 start*/
       'searchCondition.noticeEndDate'() {
-      if(document.getElementsByClassName("end-date")[0].validationMessage !== ""){
-        this.showErrorEndDate = !(document.getElementsByClassName("end-date")[0].value === "" && document.getElementsByClassName("end-date-comment")[0].value !== "");
+      if(this.getHeaderInputByClassName("end-date").validationMessage !== ""){
+        this.showErrorEndDate = !(this.getHeaderInputByClassName("end-date").value === "" && this.getHeaderInputByClassName("end-date-comment").value !== "");
       }else{
         this.showErrorEndDate = false;
       }
       },
       'searchCondition.noticeStartDate'() {
-        if(document.getElementsByClassName("start-date")[0].validationMessage !== ""){
-          this.showErrorStartDate = !(document.getElementsByClassName("start-date")[0].value === "" && document.getElementsByClassName("start-date-comment")[0].value !== "");
+        if(this.getHeaderInputByClassName("start-date").validationMessage !== ""){
+          this.showErrorStartDate = !(this.getHeaderInputByClassName("start-date").value === "" && this.getHeaderInputByClassName("start-date-comment").value !== "");
         }else{
           this.showErrorStartDate = false;
         }
       },
       'searchCondition.dialysisDate'() {
-        if(document.getElementsByClassName("dialysis-date")[0].validationMessage !== ""){
-          this.showErrorDialysisDate = !(document.getElementsByClassName("dialysis-date")[0].value === "" && document.getElementsByClassName("dialysis-date-comment")[0].value !== "");
+        if(this.getHeaderInputByClassName("dialysis-date").validationMessage !== ""){
+          this.showErrorDialysisDate = !(this.getHeaderInputByClassName("dialysis-date").value === "" && this.getHeaderInputByClassName("dialysis-date-comment").value !== "");
         }else{
           this.showErrorDialysisDate = false;
         }
@@ -763,11 +761,8 @@
       /*add FNSI-改修内容日付のチェックの追加対応。 趙立強 end*/
     },
 
-    beforeDestroy() {
-      /* update by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --start */
-      // EventBus.$off("isNotEdited", this.isNotEdited);
+    beforeUnmount() {
       EventBus.$off("isNotEdited", this.onIsNotEdited);
-      /* update by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --end */
       // mod 画面パフォーマンス対応 chen start
       this.mstBbsKind = null;
       this.mstKur = null;
@@ -844,27 +839,18 @@
       this.mstRoomBedGroup = [allSearchRoomBedGroup, ...this.mstRoomBedGroup];
 
       // 検索条件カテゴリ初期値設定
-      /* update by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --start */
       if (this.getDefaultCondition === null) {
-        // this.$nextTick(() => {
-        //   this.setUserDefaultSettings();
-        // });
-
-        await this.setUserDefaultSettings();
+        this.$nextTick(() => {
+          this.setUserDefaultSettings();
+        });
       } else {
         this.searchCondition = this.selectedCondition;
         this.setConditionList();
       }
 
-      this.search();
-
       // 掲示板詳細内容の編集有無を取得
-      // EventBus.$on("isNotEdited", data => (this.isNotEdited = data));
-      this.onIsNotEdited = (data) => {
-        this.isNotEdited = data;
-      };
+      EventBus.$off("isNotEdited", this.onIsNotEdited);
       EventBus.$on("isNotEdited", this.onIsNotEdited);
-      /* update by chamaojia 2026-02-05 [11893] キャッシュ軽減対応 --end */
     },
 
     mounted() {
@@ -872,6 +858,13 @@
     },
 
     methods: {
+      onIsNotEdited(data) {
+        this.isNotEdited = data;
+      },
+      getHeaderInputByClassName(className) {
+        return getScopedElementsByClassName(className, this.popoverTarget || this.$el || null)?.[0] || null;
+      },
+
       // ※検索条件はログイン中保持するため、ストア管理
       ...mapActions("bbs-info", [
         "setSelectedCondition",
@@ -938,13 +931,14 @@
           this.setIsSelectedCondition(true);
         }
 
-        this.message = "掲示一覧検索中...";
-        this.search();
+        // this.message = "掲示一覧検索中...";
+        // this.search();
+        EventBus.$emit("search");
       },
 
       // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 start
       onlyUnreadClick() {
-        this.message = "掲示一覧検索中...";
+        // this.message = "掲示一覧検索中...";
         this.searchCondition.limitFrom = 0;
         this.searchCondition.limitTo = PAGE_SIZE;
         if (!this.isOnlyUnread) {
@@ -966,7 +960,8 @@
           // 検索条件を設定していない場合
           this.setIsSelectedCondition(true);
         }
-        this.search();
+        // this.search();
+        EventBus.$emit("search");
       },
       // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 end
 
@@ -1029,9 +1024,7 @@
           condList.push({ name:"治療日", text: this.dialysisDate });
         }
         // クール
-        if (this.isKur) {
-          condList.push({ name:"クール", text: this.kur });
-        }
+        condList.push({ name:"クール", text: this.isKur ? this.kur : "すべて" });
         // ベッドグループ ・透析室
         if (this.isRoomBedGroup) {
           condList.push({ name:"ベッドグループ ・透析室", text: this.roomBedGroup });
@@ -1048,7 +1041,7 @@
       formattedDate(date) {
         return date === null || date === ""
           ? null
-          : moment(date).format("YYYYMMDD");
+          : dayjs(date).format("YYYYMMDD");
       },
 
       /**
@@ -1131,7 +1124,7 @@
 
         this.message = "掲示板情報を保存しています";
         // 更新日時
-        const nowDate = moment().format();
+        const nowDate = dayjs().format();
         // DB更新
         await updateBbsList(notReadList, this.userId, this.userName, nowDate);
 
@@ -1141,7 +1134,8 @@
         }
 
         // 再度検索をかけて再描画
-        this.search();
+        // this.search();
+        EventBus.$emit("search");
       },
 
       setNoticeValue(value) {
@@ -1162,8 +1156,8 @@
         this.searchCondition.categoryFuncList = ["020"];
         this.searchCondition.categoryKindList = this.initCategoryKindList;
         this.searchCondition.freeWord = "";
-        this.searchCondition.noticeStartDate = moment().format("YYYY-MM-DD");
-        this.searchCondition.noticeEndDate = moment().format("YYYY-MM-DD");
+        this.searchCondition.noticeStartDate = dayjs().format("YYYY-MM-DD");
+        this.searchCondition.noticeEndDate = dayjs().format("YYYY-MM-DD");
         this.searchCondition.dialysisDate = null;
         this.searchCondition.kur = null;
         this.searchCondition.roomBedGroup = { bedGroupCd: null, bedCdList: [] };
@@ -1173,7 +1167,9 @@
         if (defaultBbsInfo) {
           // カテゴリ
           if (defaultBbsInfo[BBS_INFO.KEY_NAME_CATEGORY_KIND_LIST] !== undefined) {
-            this.searchCondition.categoryKindList = defaultBbsInfo[BBS_INFO.KEY_NAME_CATEGORY_KIND_LIST];
+            const bbsKindNos = this.mstBbsKind.map(kind => kind.kindNo);
+            // NOTE: 削除済みは除外して設定
+            this.searchCondition.categoryKindList = defaultBbsInfo[BBS_INFO.KEY_NAME_CATEGORY_KIND_LIST].filter(value => bbsKindNos.includes(value));
           }
           // 掲載日・開始日
           if (defaultBbsInfo[BBS_INFO.KEY_NAME_NOTICE_START_DATE] !== undefined &&
@@ -1195,7 +1191,8 @@
           }
           // クール
           if (defaultBbsInfo[BBS_INFO.KEY_NAME_KUR] !== undefined &&
-            defaultBbsInfo[BBS_INFO.KEY_NAME_KUR] !== "") {
+            defaultBbsInfo[BBS_INFO.KEY_NAME_KUR] !== "" &&
+            this.mstKur.some(kur => +kur.kurCd === +defaultBbsInfo[BBS_INFO.KEY_NAME_KUR])) {
             this.searchCondition.kur = Number(defaultBbsInfo[BBS_INFO.KEY_NAME_KUR]);
           }
           // ベッドグループ・透析室
@@ -1272,22 +1269,22 @@
       },
       /*add FNSI-改修内容日付のチェックの追加対応。 趙立強 start*/
       showStartMsg(){
-      this.showErrorStartDate = document.getElementsByClassName("start-date")[0].validationMessage !== "";
+      this.showErrorStartDate = this.getHeaderInputByClassName("start-date").validationMessage !== "";
       },
       showEndMsg(){
-        this.showErrorEndDate = document.getElementsByClassName("end-date")[0].validationMessage !== "";
+        this.showErrorEndDate = this.getHeaderInputByClassName("end-date").validationMessage !== "";
       },
       showDialysisMsg(){
-        this.showErrorDialysisDate = document.getElementsByClassName("dialysis-date")[0].validationMessage !== "";
+        this.showErrorDialysisDate = this.getHeaderInputByClassName("dialysis-date").validationMessage !== "";
       },
       getStartDate(){
-        this.showErrorStartDate = document.getElementsByClassName("start-date")[0].validationMessage !== "";
+        this.showErrorStartDate = this.getHeaderInputByClassName("start-date").validationMessage !== "";
       },
       getEndDate(){
-        this.showErrorEndDate = document.getElementsByClassName("end-date")[0].validationMessage !== "";
+        this.showErrorEndDate = this.getHeaderInputByClassName("end-date").validationMessage !== "";
       },
       getDialysisDate(){
-        this.showErrorDialysisDate = document.getElementsByClassName("dialysis-date")[0].validationMessage !== "";
+        this.showErrorDialysisDate = this.getHeaderInputByClassName("dialysis-date").validationMessage !== "";
       }
       /*add FNSI-改修内容日付のチェックの追加対応。 趙立強 end*/
     }
@@ -1445,11 +1442,11 @@
     display: none;
   }
 
-  .popover-area >>> .popover-mask {
+  .popover-area :deep(.popover-mask) {
     z-index: 100;
   }
 
-  .popover-area >>> .popover {
+  .popover-area :deep(.popover) {
     z-index: 200;
     min-width: 430px;
   }
@@ -1504,6 +1501,9 @@
 }
 .checkbox-lable{
   min-width: 50px;
+}
+:deep(.k-legacy-multiselect input.k-input) {
+  width: 49px !important;
 }
 /* add FNSI-改修内容4016bug修正 関 end */
 </style>

@@ -1,7 +1,8 @@
 package jp.co.nikkiso.ntss.core.service.startStopLog;
 
-import com.amazonaws.util.EC2MetadataUtils;
+
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
+import jp.co.nikkiso.ntss.core.utils.Ec2MetadataHelper;
 import jp.co.nikkiso.ntss.core.logevent.LogEvent;
 import jp.co.nikkiso.ntss.core.logevent.LogServiceCore;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
@@ -441,7 +442,7 @@ public class StartStopLogServiceImpl implements StartStopLogService {
       ip = InetAddress.getLocalHost().getHostAddress();
     } catch (UnknownHostException e) {
       // 失敗時はEC2メタデータからプライベートIPを取得
-      ip = EC2MetadataUtils.getInstanceInfo().getPrivateIp();
+      ip = Ec2MetadataHelper.getPrivateIp();
     }
     return ip;
   }

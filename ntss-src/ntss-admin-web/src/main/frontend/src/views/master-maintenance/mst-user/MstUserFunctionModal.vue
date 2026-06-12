@@ -3,7 +3,8 @@
  */
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body">
+    <template #body>
+      <div>
       <v-ons-list modifier="inset">
         <!-- del #10136 利用者マスタで職種を変更した場合に仮利用者しかデフォルトメニュー設定/権限が展開されない。 dou start-->
         <!-- <div :style="isRemsOnly">-->
@@ -19,7 +20,7 @@
         <!--   </v-ons-list-item>-->
         <!-- </div>-->
         <!-- del #10136 利用者マスタで職種を変更した場合に仮利用者しかデフォルトメニュー設定/権限が展開されない。 dou end-->
-        <v-ons-list-header>メニューバー表示機能設定</v-ons-list-header>
+        <v-ons-list-header>1メニューバー表示機能設定</v-ons-list-header>
         <v-ons-list-item class="ntss-theme-screen print-height-auto">
           <table class="table-drag">
             <thead>
@@ -79,27 +80,30 @@
           </draggable>
         </v-ons-list-item>
       </v-ons-list>
-    </div>
-    <div slot="footer" class="flex-container">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="btn2-cancel denial-btn" @click="cancel">キャンセル</v-ons-button>
       </div>
       <div class="registration-btn-area" style="background:none">
         <v-ons-button class="btn1-execute registration-btn"  :disabled="registeredFlag" @click="registration">保存</v-ons-button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { mapState, mapActions, mapGetters } from "vuex";
+import { mapState, mapActions, mapGetters } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { sendRequestGetMstFacilitySettingValue } from "@/apis/facility-setting";
 import { FUNC_DEVICE_EDGE_OPERATION } from "@/constants/function-code";
 import { PERMISSION_CHANGE_SIGNOUT } from "@/constants/facilitySetting";
 import { MSG_SETTING_REFLECTION } from "@/constants/masterMaintenanceConstants";
-import vuedraggable from "vuedraggable";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 import { sendRequestGetMstFacilityHashByFacilityCd } from "@/apis/mst-facility-hash";
 //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
@@ -110,10 +114,19 @@ import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
-import cloneDeep from "lodash/cloneDeep";
-import isEqualWith from "lodash/isEqualWith";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
 import { customComparator } from "@/utils/util.js";
 import { fetchMenuData , validateOnRegistration } from "@/functions/MenuBarFunctions";
+import {
+  getModalContainerElement,
+  getModalFooterElement,
+  getModalToolbarElement,
+  getScopedElementById,
+  getScopedElementsByClassName,
+  getScopedNavigator
+} from "@/functions/common/LayoutMeasureHelper";
+
 //URI
 const uriGetUserInfo = "/user/get_by_id/";
 const uriFunctionAll = "/mstInfo/sysFunction";
@@ -125,7 +138,7 @@ export default {
   name: "UserFunctionModal",
   components: {
     "modal-base": ModalBase,
-    "draggable": vuedraggable
+    "draggable": VueDraggable
   },
   data() {
     return {
@@ -153,6 +166,8 @@ export default {
       signoutFlg: false,
       menuListClone: null,
       inputModelClone: null,
+      // 初期データ取得完了前は保存ボタンを非活性のままにする（非同期読込中のちらつき防止）
+      isInitialDataReady: false,
       // 施設許可OFFで画面上は非表示だが、既存設定で許可されている機能は保存時に削除しないよう退避する。
       hiddenUseAuthFuncs: []
     };
@@ -186,25 +201,20 @@ export default {
     },
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_利用者マスタ 20240105 mrx start
     registeredFlag() {
-      const inputModel= cloneDeep(this.inputModel);
-      inputModel.useAuthFuncs = inputModel.useAuthFuncs?.sort();
-      if (this.inputModelClone) {
-        return isEqualWith(this.inputModelClone, inputModel, customComparator) &&
-            isEqualWith(this.menuListClone, this.menuList, customComparator) &&
-            isEqualWith(this.selectedJobCdClone, this.selectedJobCd, customComparator);
+      if (!this.isInitialDataReady) {
+        return true;
       }
-      return true;
+      const inputModel = cloneDeep(this.inputModel);
+      inputModel.useAuthFuncs = inputModel.useAuthFuncs?.sort();
+      return isEqualWith(this.inputModelClone, inputModel, customComparator) &&
+        isEqualWith(this.menuListClone, this.menuList, customComparator) &&
+        isEqualWith(this.selectedJobCdClone, this.selectedJobCd, customComparator);
     }
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_利用者マスタ 20240105 mrx end
   },
   watch: {
     "inputModel.useAuthFuncs"() {
-      var allFuncSwitch = document.getElementById("switch-all-check");
-      if (this.menuList.length === this.inputModel.useAuthFuncs.length && this.menuList.length !== 0) {
-        allFuncSwitch.checked = true;
-      } else {
-        allFuncSwitch.checked = false;
-      }
+      this.syncAllFunctionSwitch();
     },
   },
   async created() {
@@ -240,11 +250,6 @@ export default {
         this.defaultJobCd = userAccountInfo.jobCd;
         this.userType = userAccountInfo.userType;
         this.administrator = userAccountInfo.administrator;
-        this.inputModelClone = cloneDeep(this.inputModel);
-        // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_利用者マスタ 20240105 mrx start
-        this.selectedJobCdClone = userAccountInfo.jobCd;
-        this.inputModelClone.useAuthFuncs = this.inputModelClone.useAuthFuncs.sort();
-        // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_利用者マスタ 20240105 mrx end
       })
       .catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
@@ -269,12 +274,10 @@ export default {
     ApiHelper.get(uriFunctionFacility + this.editFacilityCd)
       .then(async responseFacility => {
         const authFuncFacilityjson = JSON.parse(
-          responseFacility.data.useFunction
-        );
+          responseFacility.data.useFunction);
         for (const functionInfo of authFuncFacilityjson.func_cds) {
           const editFuncInfo = this.sysFunctions.find(
-            item => item.functionCd === functionInfo.func_cd
-          );
+            item => item.functionCd === functionInfo.func_cd);
           if (editFuncInfo) {
             this.initialMenuList.push({
               code: `${editFuncInfo.functionCd}`,
@@ -312,36 +315,18 @@ export default {
         );
 
         // 全件ON/OFFのスイッチ切り替え
-        var allFuncSwitch = document.getElementById("switch-all-check");
-        if (this.menuList.length === this.inputModel.useAuthFuncs.length && this.menuList.length !== 0) {
-          allFuncSwitch.checked = true;
-        } else {
-          allFuncSwitch.checked = false;
-        }
+        this.syncAllFunctionSwitch();
         this.inputModelClone = cloneDeep(this.inputModel);
         this.inputModelClone.useAuthFuncs = this.inputModelClone.useAuthFuncs.sort();
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_利用者マスタ 20240105 mrx start
         this.menuListClone = cloneDeep(this.menuList);
-        // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_利用者マスタ 20240105 mrx start
+        this.selectedJobCdClone = this.selectedJobCd;
+        this.isInitialDataReady = true;
+        // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_利用者マスタ 20240105 mrx end
         // スタイルの調整
-        document.getElementsByClassName("list-item")[1].style.paddingLeft = "0px";
-        // del redmine 5703 利用者マスタの使用許可機能画面を開くと患者検索のベッドグループのフォントサイズが大きくなる 宋qy start
-        // document.getElementsByClassName("select-input")[0].style.fontSize = "1.7em";
-        // del redmine 5703 利用者マスタの使用許可機能画面を開くと患者検索のベッドグループのフォントサイズが大きくなる 宋qy end
-        const dialogHeigth = document.getElementsByClassName("modal-container")[0].offsetHeight;
-        const dialogHeaderHeigth = document.getElementsByClassName("toolbar")[0].offsetHeight;
-        const dialogFooterHeigth = document.getElementsByClassName("modal-footer")[0].offsetHeight;
-        const settingAreaHeigth = document.getElementsByClassName("list-item")[0].offsetHeight;
-        const settingItemHeaderHeigth = document.getElementsByClassName("list-header")[0].offsetHeight;
-        // ヘッダー、フッター以外のマージン等の調整
-        let adjustHeigth = 0;
-        if (navigator.userAgent.match(/Android/)) {
-          adjustHeigth = 82;
-        } else {
-          adjustHeigth = 47;
-        }
-        document.getElementsByClassName("list-item")[1].style.height = (dialogHeigth - dialogHeaderHeigth - dialogFooterHeigth - settingAreaHeigth - adjustHeigth - settingItemHeaderHeigth) + "px";
-        document.getElementsByClassName("list-item")[1].firstElementChild.style.display = "unset";
+        this.$nextTick(() => {
+          this.adjustListLayout();
+        });
       })
       .catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 yuqizheng add start
@@ -541,8 +526,7 @@ export default {
     changeUseFunction(initialFunction) {
       if (!this.isChecked(initialFunction)) {
         const useAuthFuncs = this.inputModel.useAuthFuncs.concat(
-          initialFunction
-        );
+          initialFunction);
         this.inputModel.useAuthFuncs = useAuthFuncs;
       }
     },
@@ -562,12 +546,42 @@ export default {
         height: node.offsetHeight
       };
     },
+    syncAllFunctionSwitch() {
+      const allFuncSwitch = getScopedElementById("switch-all-check", this.$el || this);
+      if (!allFuncSwitch) {
+        return;
+      }
+      allFuncSwitch.checked = this.menuList.length === this.inputModel.useAuthFuncs.length && this.menuList.length !== 0;
+    },
+    adjustListLayout() {
+      const root = this.$el || this;
+      const listItems = getScopedElementsByClassName("list-item", root);
+      if (!listItems[1]) {
+        return;
+      }
+      listItems[1].style.paddingLeft = "0px";
+      const dialogHeigth = getModalContainerElement(root)?.offsetHeight || 0;
+      const dialogHeaderHeigth = getModalToolbarElement(root)?.offsetHeight || 0;
+      const dialogFooterHeigth = getModalFooterElement(root)?.offsetHeight || 0;
+      const settingAreaHeigth = listItems[0]?.offsetHeight || 0;
+      const settingItemHeaderHeigth = getScopedElementsByClassName("list-header", root)[0]?.offsetHeight || 0;
+      let adjustHeigth = 0;
+      if (getScopedNavigator(root)?.userAgent?.match(/Android/)) {
+        adjustHeigth = 82;
+      } else {
+        adjustHeigth = 47;
+      }
+      listItems[1].style.height = `${dialogHeigth - dialogHeaderHeigth - dialogFooterHeigth - settingAreaHeigth - adjustHeigth - settingItemHeaderHeigth}px`;
+      if (listItems[1].firstElementChild) {
+        listItems[1].firstElementChild.style.display = "unset";
+      }
+    },
     // del #10136 利用者マスタで職種を変更した場合に仮利用者しかデフォルトメニュー設定/権限が展開されない。 dou start
     // /**
     //  * 職種変更時処理
     //  */
     // changeItem() {
-    //   if ( this.selectedJobCd !== "" ){
+    //   if ( this.selectedJobCd !== ""){
     //     // 選択した職種に設定された使用機能情報を取得して設定する
     //     const selectJob = this.getMstJobList.filter(item => {
     //       return item.jobCd === this.selectedJobCd;
@@ -652,8 +666,9 @@ ons-list-header {
 .th-font-weight {
   font-weight: unset;
 }
+ 
 /* add #10136 利用者マスタで職種を変更した場合に仮利用者しかデフォルトメニュー設定/権限が展開されない。 dou start*/
-.list-item >>> .list-item__center {
+.list-item :deep(.list-item__center) {
   display: block;
 }
 /* add #10136 利用者マスタで職種を変更した場合に仮利用者しかデフォルトメニュー設定/権限が展開されない。 dou end*/

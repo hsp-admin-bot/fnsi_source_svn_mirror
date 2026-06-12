@@ -18,8 +18,8 @@
 </template>
 
 <script>
-import { EventBus } from "@/eventBus.js";
-import { mapGetters, mapActions } from "vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import LayoutMixin from "@/views/LayoutMixin";
 export default {
   mixins: [LayoutMixin],
@@ -100,7 +100,7 @@ export default {
       this.resetSplittableFrames();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("forceCloseDetail");
   },
 };

@@ -1,5 +1,7 @@
 package jp.co.nikkiso.ntss.client_comm.web.websocket;
 
+
+import jp.co.nikkiso.ntss.core.utils.Ec2MetadataHelper;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.Executors;
@@ -15,8 +17,6 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
-
-import com.amazonaws.util.EC2MetadataUtils;
 
 import jp.co.nikkiso.ntss.client_comm.NtssApplicationProperties;
 import jp.co.nikkiso.ntss.client_comm.service.LogService;
@@ -73,7 +73,7 @@ public class WebSocketConfig implements WebSocketConfigurer   {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang end
 
         // Resolve (first/primary) private IP
-        ip = EC2MetadataUtils.getInstanceInfo().getPrivateIp();
+        ip = Ec2MetadataHelper.getPrivateIp();
       }
       eventLogMessage.setLogMessage("Server IP : " + ip);
       logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI, null);

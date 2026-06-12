@@ -15,17 +15,22 @@
         :class="classObjectItem(json)"
       >
         <table class="card-table">
-          {{
-            index + 1
-          }}
-          <button
-            v-show="actionMode"
-            class="button-delete ntss-btn-outset"
-            @click="deleteJsonArray(arrayColName, json, index)"
-          >
-            <v-ons-icon icon="fa-trash"/>
-          </button>
-          <br />
+          <tbody>
+          <tr class="card-index-row">
+            <td colspan="3">
+              {{
+                index + 1
+              }}
+              <button
+                v-show="actionMode"
+                class="button-delete ntss-btn-outset"
+                @click="deleteJsonArray(arrayColName, json, index)"
+              >
+                <v-ons-icon icon="fa-trash"/>
+              </button>
+              <br />
+            </td>
+          </tr>
           <tr>
             <td class="item-title">内容</td>
             <td class="item-data">
@@ -40,14 +45,17 @@
               />
             </td>
             <td class="choice-button-area">
-              <v-ons-button
-                :ref="'btnSelectMst' + index"
-                class="common-style-select-button btn3-normal"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-                @click="selectImplant(index)"
-              >
-                選択
-              </v-ons-button>
+              <common-master-selector
+                :masterType="MasterType.IMPLANT_PAT_INFO"
+                :facilityCd="getIsOtherFacility ? (getOtherFacilityCd ?? getFacilityCd) : getFacilityCd"
+                :initItem="{ value: getPatDataJsonArray(json, 'implant_cd').initValue }"
+                :editItem="{ value: getPatDataJsonArray(json, 'implant_cd').editValue }"
+                :btnName="'選択'"
+                :isVisible="false"
+                :btnClass="'common-style-select-button btn3-normal'"
+                :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+                @popover-return="setImplantCd($event, index)"
+              />
             </td>
           </tr>
           <tr>
@@ -70,16 +78,11 @@
               />
             </td>
           </tr>
+          
+          </tbody>
         </table>
       </div>
     </draggable>
-    <!-- インプラント選択ポップオーバー -->
-    <pop-over
-      v-bind="popoverData"
-      :target-position-element="popoverTargetElement"
-      @popover-close="closePopover(popoverData)"
-      @popover-return="setImplantCd($event.value)"
-    />
   </div>
 </template>
 
@@ -89,8 +92,8 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 import { ApiHelper } from "@/apis/AxiosHelper";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
-import { mapGetters, mapActions } from "vuex"; //施設コード取得のために追加
-import moment from "moment";
+import { mapGetters, mapActions } from "@/compat/vue/vuex"; //施設コード取得のために追加
+import dayjs from "@/compat/date/dayjs";
 // add 編集権限の適用 じょはく start
 // del #10359 編集権限の動作不正 dengshen start
 // import { AUTHORITY_CODES } from "@/constants/userAuthority";
@@ -100,21 +103,21 @@ import moment from "moment";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 
 export default {
   name: "ImplantCard",
+  components: {
+    "common-master-selector": commonMasterSelector
+  },
   mixins: [baseCardContent],
 
   data() {
     return {
       arrayColName: "implant_info",
-      popoverData: {},
-      mstImplant: null,
-      // add #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
-      delMstImplants: null,
-      // add #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc end
+      MasterType,
       deleteMstImplant: null,// add by maxueqiang
-      selectedIndex: null,
       // implantData: [],
       // add 編集権限の適用 じょはく start
       isPatViewAuthorized: null,
@@ -156,49 +159,22 @@ export default {
         this.editRecord[this.arrayColName] = sortedAry;
       }
     },
-
-    // マスタ選択ポップオーバーの表示位置とする対象コンポーネント
-    popoverTargetElement() {
-      // 初期表示時は未選択なのでnull
-      return this.selectedIndex === null
-        ? null
-        : this.$refs[`btnSelectMst${this.selectedIndex}`][0];
-    },
-
     /**
-     * @description インプラント有無フラグ
+     * @description インプラント有無フラグ（期間内の有効レコードが1件以上あるか）
      */
     hasImplant() {
-      // add bug 5389 修正 chen start
-      let momentTd = moment().format("YYYYMMDD");
-      // add bug 5389 修正 chen end
-      if (
-        // mod FNSI-改修内容 バグ対応 趙 start
-        // this.jsonArray.length > 0 &&
-        // this.jsonArray.some(json => this.getJsonArrayCtlNo(json) >= 0) &&
-        // this.jsonArray.some(json => this.getPatDataJsonArray(json, "remove_date").editValue == null)
-        // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc start
+      const todayYmd = dayjs().format("YYYYMMDD");
+      return (
         this.jsonArray.length > 0 &&
-        this.jsonArray.some(json => this.getJsonArrayCtlNo(json) >= 0) &&
-        this.jsonArray.some(json => this.getPatDataJsonArray(json, "implant_cd").editValue !== null) &&
-        (this.jsonArray.some(json => this.getPatDataJsonArray(json, "remove_date").editValue == null) ||
-        this.jsonArray.some(json => this.getPatDataJsonArray(json, "remove_date").editValue === "") ||
-        // add bug 5389 修正 chen start
-          this.jsonArray.some(json => this.getPatDataJsonArray(json, "remove_date").editValue >= momentTd))
-        // add bug 5389 修正 chen end
-        // mod FNSI-改修内容 バグ対応 趙 end
-      ) {
-        // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc end
-        return true;
-      }
-      return false;
+        this.jsonArray.some(json => this.isImplantRecordInPeriod(json, todayYmd))
+      );
     },
 
     /**
      * 当日以前の日付を無効化
      */
     disableDatesAfter() {
-      return moment().format("YYYYMMDD");
+      return dayjs().format("YYYYMMDD");
     },
 
     implantArray() {
@@ -211,31 +187,19 @@ export default {
     selectedPatId() {
       this.refreshData();
     },
-    mstImplant() {
-      this.popoverData = this.createPopoverData(
-        "インプラント",
-        null,
-        null,
-        "内容",
-        this.mstImplant,
-        "implantCd",
-        "implantName",
-        null
-      );
-    },
-
-    /**
-     * @description インプラント有無監視
-     */
-    hasImplant() {
-      const isImplant = this.hasImplant ? "1" : "0";
-      this.setPatData("is_implant", isImplant);
-    },
-    // add #12462 患者情報共有 Ji start
     getOtherFacilityCd() {
       this.refreshData();
     },
-    // add #12462 患者情報共有 Ji end
+
+    /**
+     * @description インプラント有無監視（初回表示時も is_implant を同期）
+     */
+    hasImplant: {
+      handler() {
+        this.syncIsImplantFlag();
+      },
+      immediate: true
+    }
   },
 
   async created() {
@@ -265,9 +229,7 @@ export default {
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
   },
   // add bug #7125 修正 chen start
-  beforeDestroy() {
-    // dataの初期化
-    Object.assign(this.$data, this.$options.data());
+  beforeUnmount() {
   },
   // add bug #7125 修正 chen end
 
@@ -278,6 +240,43 @@ export default {
       return getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
+    /** 日付を YYYYMMDD 形式に正規化（比較用） */
+    normalizeImplantDateYmd(value) {
+      if (value == null || value === "") {
+        return null;
+      }
+      const ymd = String(value).replace(/-/g, "");
+      return ymd.length >= 8 ? ymd.substring(0, 8) : ymd;
+    },
+    /**
+     * 1件のインプラントが期間内か（導入日≦今日≦除去日、除去日未設定は継続中）
+     */
+    isImplantRecordInPeriod(json, todayYmd) {
+      if (this.getJsonArrayCtlNo(json) < 0) {
+        return false;
+      }
+      if (this.getPatDataJsonArray(json, "implant_cd").editValue == null) {
+        return false;
+      }
+      const regDate = this.normalizeImplantDateYmd(
+        this.getPatDataJsonArray(json, "reg_date").editValue
+      );
+      if (regDate == null || regDate > todayYmd) {
+        return false;
+      }
+      const removeDate = this.normalizeImplantDateYmd(
+        this.getPatDataJsonArray(json, "remove_date").editValue
+      );
+      if (removeDate == null) {
+        return true;
+      }
+      return removeDate >= todayYmd;
+    },
+    /** pat_main.is_implant を hasImplant の結果で更新 */
+    syncIsImplantFlag() {
+      const isImplant = this.hasImplant ? "1" : "0";
+      this.setPatData("is_implant", isImplant);
+    },
     // 項目追加処理
     addItem() {
       // 新規項目作成
@@ -296,37 +295,19 @@ export default {
       this.setLoadingScreenVisible(true);
       try {
         const requestParam = {
-          // facilityCd: this.getFacilityCd
-          facilityCd: this.getIsOtherFacility ? (this.getOtherFacilityCd ?? this.getFacilityCd) : this.getFacilityCd
+          facilityCd: this.getIsOtherFacility ? (this.getOtherFacilityCd ?? this.getFacilityCd) : this.getFacilityCd,
+          selectedPatId: this.selectedPatId
         };
         // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
-        const implantCds = this.editRecord[this.arrayColName]
-            .filter(value => value !== undefined)
-            .map(item => item?.implant_cd?.editValue);
         await ApiHelper.get("/mstInfo/mstImplantIncludeDel", requestParam)
           .then(response => {
             this.deleteMstImplant = response.data;
-            this.mstImplant = response.data.filter(item =>{
-              return item.isDisp !== "0" && item.isDel !== "1"
-            })
-            this.delMstImplants = (Array.isArray(this.deleteMstImplant) ? this.deleteMstImplant : [])
-                .filter(item => (item.isDisp === "0" || item.isDel === "1")
-                    && implantCds.includes(item.implantCd))
-                .map(item => ({
-                  ...item,
-                  implantName: (item.isDisp === "0" || item.isDel === "1")
-                      ? `【削除済み】${item.implantName}`
-                      : item.implantName,
-                }));
-          // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc end
+            // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc end
           })
           .catch(error => {
             getErrorMessage('ImplantCardContent.vue', 'created', error);
             throw error;
           });
-          // add 6283 マスタ選択のダイアログが選択ボタン位置ではなく画面左上に表示される 周安寧 start
-          this.selectedIndex = null;
-          // add 6283 マスタ選択のダイアログが選択ボタン位置ではなく画面左上に表示される 周安寧 end
       } catch (error) {
         this.setLoadingScreenVisible(false);
       }
@@ -335,55 +316,31 @@ export default {
     },
     // add bug #7125 修正 chen end
 
-    selectImplant(index) {
-      // add #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
-      this.popoverData.popoverContentDataset = this.popoverData.popoverContentDataset.filter(
-          item => !item.text.includes("【削除済み】")
-      );
-      // add #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc end
-      // selectedIndexを初期化することでgetPopoverTargetElement()で再計算を行い
-      // マスタ選択のダイアログが正しい位置に表示されるようにする
-      this.selectedIndex = null;
-
-      // 選択ボタンを押した位置を保持
-      this.selectedIndex = index;
-      const implantCd = this.getPatDataJsonArray(this.jsonArray[this.selectedIndex], "implant_cd").editValue;
-      this.popoverData.popoverContentSelected.value = implantCd;
-      // add #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
-      if (this.jsonArray[index]) {
-        const matchedRelations  = this.delMstImplants.filter(item => item.implantCd === implantCd);
-        if (matchedRelations.length > 0) {
-          this.popoverData.popoverContentDataset.push({
-            value: matchedRelations[0].implantCd,
-            text: matchedRelations[0].implantName,
-            fnValue: "",
-          })
-        }
-      }
-      // add #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc end
-      // ポップオーバーを表示
-      this.showPopover(this.popoverData);
-    },
-
     // ポップオーバー確定イベントハンドラ
-    setImplantCd(selectedCd) {
+    setImplantCd(selected, index) {
       // 選択ボタンを押した項目にインプラント内容を設定
       this.setPatDataJsonArray(
-        this.jsonArray[this.selectedIndex],
+        this.jsonArray[index],
         "implant_cd",
-        selectedCd
+        selected?.value
+      );
+      this.setPatDataJsonArray(
+        this.jsonArray[index],
+        "implant_name",
+        selected?.text
       );
     },
 
     implantName(json) {
-      // modify by maxueqiang
-      // mod FNSI7516-profile連携（XML）で受信した詳細情報（インプラント） 周 start
-      //return this.mstCdToNameIncludeDeleted(this.deleteMstImplant, this.getPatDataJsonArray(json, 'implant_cd').editValue, 'implantCd', 'implantName')
       let implantCd = this.getPatDataJsonArray(json, 'implant_cd').editValue - 0;
       // implantCd = "0"(新規行追加)の場合
       if (implantCd === 0) { implantCd = null }
-      return this.mstCdToNameIncludeDeleted(this.deleteMstImplant, implantCd, 'implantCd', 'implantName');
-      // mod FNSI7516-profile連携（XML）で受信した詳細情報（インプラント） 周 end
+      return this.mstCdToNameIncludeDeleted(
+        this.deleteMstImplant,
+        implantCd,
+        'implantCd',
+        'implantName'
+      );
     }
   }
 };
@@ -402,5 +359,8 @@ td .custom-textarea-required {
 }
 td .custom-textarea-invalid {
   background-color: rgba(255, 0, 0, 0.5);
+}
+.card-table .card-index-row td {
+  padding: 0;
 }
 </style>

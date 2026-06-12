@@ -1,6 +1,7 @@
 <template>
   <modal-base @onClose="cancel">
-    <div slot="body">
+        <template #body>
+<div>
       <div class="advanced-settings d-flex flex-column">
         <div
           class="setting d-flex flex-column"
@@ -20,9 +21,11 @@
         </div>
       </div>
     </div>
+    </template>
 
     <!-- Actions -->
-    <div slot="footer" class="flex-container">
+        <template #footer>
+<div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="button btn2-cancel denial-btn" @click="cancel">キャンセル</v-ons-button>
       </div>
@@ -32,15 +35,16 @@
         </v-ons-button>
       </div>
     </div>
+    </template>
     <!-- Actions -->
   </modal-base>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import _ from "underscore";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import _ from "@/compat/collections/lodash";
 import ModalBase from "@/components/modals/ModalBase";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";

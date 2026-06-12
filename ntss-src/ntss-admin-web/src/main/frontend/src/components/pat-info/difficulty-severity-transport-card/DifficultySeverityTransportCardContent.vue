@@ -1,6 +1,7 @@
 <template>
   <div id="difficulty-severity-transport-card-contents">
     <table class="difficulty-table">
+      <tbody>
       <tr>
         <th class="radio-area">主</th>
         <th>
@@ -29,7 +30,7 @@
               editValue: hasDialDiffEdit ? '1' :'0'
             }"
             :radio-value="0"
-            :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+            :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
             name="is_main"
             @change="clearDialDiff()"
           />
@@ -57,7 +58,7 @@
           </custom-checkbox>
         </td>
         <td class="date-area">
-          {{ getPatDataJsonArray(json, "reg_date").editValue | formatDate }}
+          {{ formatRegDate(getPatDataJsonArray(json, "reg_date").editValue) }}
         </td>
       </tr>
       <tr v-for="(json, index) in dialDiffInfo" :key="index">
@@ -67,7 +68,7 @@
             :value="getPatDataJsonArray(json, 'is_main')"
             radio-value="1"
             name="is_main"
-            :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+            :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
             @change="setIsMain(index)"
           />
         </td>
@@ -81,16 +82,8 @@
             :value="getPatDataJsonArray(json, 'is_dial_diff')"
             checked-value="1"
             unchecked-value="0"
-            :disabled="!hasDialDiffEdit || isMainDialDiff(json) || !getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
+            :disabled="!hasDialDiffEdit || isMainDialDiff(json) || !getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
           >
-            <!-- {{
-              mstCdToName(
-                mstDialDiff,
-                getPatDataJsonArray(json, "dial_diff_cd").initValue,
-                "dialysisDifficultyCd",
-                "dialysisDifficultyName"
-              )
-            }} -->
             {{
               getDialysisDifficultyName(
                 mstDialDiff,
@@ -105,63 +98,39 @@
         </td>
         <!-- 登録日時 -->
         <td class="date-area">
-          {{ getPatDataJsonArray(json, "reg_date").editValue | formatDate }}
+          {{ formatRegDate(getPatDataJsonArray(json, "reg_date").editValue) }}
         </td>
       </tr>
+    
+      </tbody>
     </table>
 
     <table class="card-table">
+      <tbody>
       <tr>
         <td class="item-title">重症度</td>
         <td colspan="2">
           <custom-simple-textarea-a
             :value="getPatData('severity_cd')"
             :display-string="
-              mstCdToNameIncludeDeleted(
-                mstSeverity,
-                getPatData('severity_cd').editValue,
-                'severityCd',
-                'severityName'
-              )
+              severityName
             "
             :disabled="true"
             style="width: 100%; vertical-align: middle; color: #1f1f21;"
           />
         </td>
         <td class="choice-button-area">
-          <!-- mod #10359 編集権限の動作不正 dengshen start -->
-          <!-- <v-ons-button -->
-          <!--   ref="btnSelectSeverity" -->
-          <!--   class="common-style-select-button btn3-normal" -->
-          <!--   :disabled="editFlag" -->
-          <!--   @click="handleShowPopover('severity_cd', popoverDataMstSeverity)" -->
-          <!-- > -->
-          <v-ons-button
-            ref="btnSelectSeverity"
-            class="common-style-select-button btn3-normal"
-            :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
-            @click="handleShowPopover('severity_cd', popoverDataMstSeverity)"
-          >
-          <!-- mod #10359 編集権限の動作不正 dengshen end -->
-            選択
-          </v-ons-button>
-          <!-- 重症度選択ポップオーバー -->
-          <!-- mod #10359 編集権限の動作不正 dengshen start -->
-          <!-- <pop-over -->
-          <!--   v-bind="popoverDataMstSeverity" -->
-          <!--   :target-position-element="$refs.btnSelectSeverity" -->
-          <!--   :disabled="editFlag" -->
-          <!--   @popover-close="closePopover(popoverDataMstSeverity)" -->
-          <!--   @popover-return="setPopOverValue('severity_cd', $event.value)" -->
-          <!-- /> -->
-          <pop-over
-            v-bind="popoverDataMstSeverity"
-            :target-position-element="$refs.btnSelectSeverity"
-            :disabled="!getItemAuthorized('PatInfo', 'default_authority')"
-            @popover-close="closePopover(popoverDataMstSeverity)"
-            @popover-return="setPopOverValue('severity_cd', $event.value)"
+          <common-master-selector
+            :masterType="MasterType.SEVERITY_PAT_INFO"
+            :facilityCd="composeFacilityCd"
+            :initItem="{ value: getPatData('severity_cd') ? getPatData('severity_cd').initValue : null }"
+            :editItem="{ value: getPatData('severity_cd') ? getPatData('severity_cd').editValue : null }"
+            :btnName="'選択'"
+            :isVisible="false"
+            :btnClass="'common-style-select-button btn3-normal'"
+            :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+            @popover-return="onSeverityReturn"
           />
-          <!-- mod #10359 編集権限の動作不正 dengshen end -->
         </td>
       </tr>
       <tr>
@@ -170,33 +139,23 @@
           <custom-simple-textarea-a
             :value="getPatData('transport_cd')"
             :display-string="
-              mstCdToNameIncludeDeleted(
-                mstTransport,
-                getPatData('transport_cd').editValue,
-                'transportCd',
-                'transportName'
-              )
+              transportName
             "
             :disabled="true"
             style="width: 100%; vertical-align: middle; color: #1f1f21;"
           />
         </td>
         <td class="choice-button-area">
-          <v-ons-button
-            ref="btnSelectTransport"
-            class="common-style-select-button btn3-normal"
-            :disabled="!getItemAuthorized('PatInfo', 'default_authority')|| getIsOtherFacility"
-            @click="handleShowPopover('transport_cd', popoverDataMstTransport)"
-          >
-            選択
-          </v-ons-button>
-          <!-- 搬送区分選択ポップオーバー -->
-          <pop-over
-            v-bind="popoverDataMstTransport"
-            :target-position-element="$refs.btnSelectTransport"
-            @popover-close="closePopover(popoverDataMstTransport)"
-            :disabled="!getItemAuthorized('PatInfo', 'default_authority')"
-            @popover-return="setPopOverValue('transport_cd', $event.value)"
+          <common-master-selector
+            :masterType="MasterType.TRANSPORT_PAT_INFO"
+            :facilityCd="composeFacilityCd"
+            :initItem="{ value: getPatData('transport_cd') ? getPatData('transport_cd').initValue : null }"
+            :editItem="{ value: getPatData('transport_cd') ? getPatData('transport_cd').editValue : null }"
+            :btnName="'選択'"
+            :isVisible="false"
+            :btnClass="'common-style-select-button btn3-normal'"
+            :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+            @popover-return="onTransportReturn"
           />
         </td>
       </tr>
@@ -222,25 +181,21 @@
           </div>
         </td>
         <td class="choice-button-area" v-if="showWheelChair">
-          <!-- 選択ボタン -->
-          <v-ons-button
-            ref="btnSelectWheelChair"
-            class="common-style-select-button btn3-normal"
-            :disabled="isPersonal || !getItemAuthorized('PatInfo', 'default_authority')"
-            @click="handleShowPopover('wheel_chair_cd', popoverDataMstWheelChair)"
-          >
-            選択
-          </v-ons-button>
-          <!-- 車いす選択ポップオーバー -->
-          <pop-over
-            v-bind="popoverDataMstWheelChair"
-            :target-position-element="$refs.btnSelectWheelChair"
-            @popover-close="closePopover(popoverDataMstWheelChair)"
-            :disabled="isPersonal || !getItemAuthorized('PatInfo', 'default_authority')"
-            @popover-return="setPopOverValue('wheel_chair_cd', $event.value); setWheelChairName(getPatData('wheel_chair_cd'))"
+          <common-master-selector
+            :masterType="MasterType.WHEEL_CHAIR_PAT_INFO"
+            :facilityCd="composeFacilityCd"
+            :initItem="{ value: getPatData('wheel_chair_cd') ? getPatData('wheel_chair_cd').initValue : null }"
+            :editItem="{ value: getPatData('wheel_chair_cd') ? getPatData('wheel_chair_cd').editValue : null }"
+            :btnName="'選択'"
+            :isVisible="false"
+            :btnClass="'common-style-select-button btn3-normal'"
+            :btnDisabled="isPersonal || !getItemAuthorized('PatInfo', 'default_authority')"
+            @popover-return="onWheelChairReturn"
           />
         </td>
       </tr>
+    
+      </tbody>
     </table>
   </div>
 </template>
@@ -250,11 +205,11 @@
 import { getAuthorized, deepCopy } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 import { ApiHelper } from "@/apis/AxiosHelper";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
 // mod 7825患者情報>車椅子利用の表示が更新されない limingyang start
-//import { mapGetters } from "vuex";
-import {mapActions, mapGetters} from "vuex";
+//import { mapGetters } from "@/compat/vue/vuex";
+import {mapActions, mapGetters} from "@/compat/vue/vuex";
 // mod 7825患者情報>車椅子利用の表示が更新されない limingyang end
 // del #10359 編集権限の動作不正 dengshen start
 // import { FUNC_PAT_INFO, FUNC_PAT_INFO_CREATE } from "@/constants/function-code";
@@ -263,31 +218,25 @@ import {mapActions, mapGetters} from "vuex";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
+import { buildMasterPopover } from "@/components/common/master-selector/builder/builderFactory";
 // del #9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 start
-// import { error } from 'highcharts';
+// import { error } from '@/compat/charts/highcharts';
 // del #9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 end
 export default {
   name: "DifficultySeverityTransportCard",
-  filters: {
-    formatDate(date) {
-      return date === null
-        ? null
-        : moment(date, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm:ss");
-    }
-  },
   mixins: [baseCardContent],
+  components: {
+    "common-master-selector": commonMasterSelector
+  },
 
   data() {
     return {
       mstDialDiff: null,
-      popoverDataMstSeverity: {},
-      popoverDataMstTransport: {},
-      mstSeverity: null,
-      // add #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
-      popOverMstSeverity: null,
-      popOverMstTransport: null,
-      // add #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc end
-      mstTransport: null,
+      MasterType,
+      severityName: "",
+      transportName: "",
       // del #10359 編集権限の動作不正 dengshen start
       // // add 編集権限の適用 liang start
       // isPatViewAuthorized: null,
@@ -300,9 +249,9 @@ export default {
       sharedDiffInfo: [],
 
       allDialDiff: false,
-      mstWheelChair: null,
-      popOverMstWheelChair: null,
-      popoverDataMstWheelChair: {},
+      severityOptions: [],
+      transportOptions: [],
+      wheelChairOptions: [],
       showWheelChair: false,
       isPersonal:false
     };
@@ -317,6 +266,8 @@ export default {
   computed: {
     ...mapGetters("pat-info", [
       "selectedPatId",
+      "getIsOtherFacility",
+      "getOtherFacilityCd",
     ]),
 
     // mod #10359、#10331 編集権限について、対応する。 dengshen start
@@ -327,7 +278,6 @@ export default {
 
     //施設コード取得用
     ...mapGetters("user", ["getFacilityCd"]),
-    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd"]),
     /**
      * 透析困難 情報のgetter/setter
      */
@@ -393,46 +343,14 @@ export default {
         // 文字選択無効class
         "custom-checkbox-select-disabled": true
       };
+    },
+
+    composeFacilityCd() {
+      return this.getIsOtherFacility ? this.getOtherFacilityCd : this.getFacilityCd;
     }
   },
 
-  // マスタ取得完了後にポップオーバーオブジェクトを作成
   watch: {
-    mstSeverity() {
-      this.popoverDataMstSeverity = this.createPopoverData(
-        "重症度",
-        null,
-        null,
-        "重症度",
-        // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
-        // this.mstSeverity.filter(item =>{
-        //   return item.isDisp !== "0" && item.isDel !== "1"
-        // }),
-        this.popOverMstSeverity,
-        // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc end
-        "severityCd",
-        "severityName",
-        null
-      );
-    },
-
-    mstTransport() {
-      this.popoverDataMstTransport = this.createPopoverData(
-        "搬送",
-        null,
-        null,
-        "搬送",
-        // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
-        // this.mstTransport.filter(item =>{
-        //   return item.isDisp !== "0" && item.isDel !== "1"
-        // }),
-        this.popOverMstTransport,
-        // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc end
-        "transportCd",
-        "transportName",
-        null
-      );
-    },
     selectedPatId() {
       this.switchingSelectedPatFlg = true;
       this.refreshData();
@@ -440,23 +358,9 @@ export default {
         this.switchingSelectedPatFlg = false;
       });
     },
-    mstWheelChair() {
-      this.popoverDataMstWheelChair = this.createPopoverData(
-        "車いす",
-        null,
-        null,
-        "車いす",
-        this.popOverMstWheelChair,
-        "wheelChairCd",
-        "wheelChairName",
-        null
-      );
-    },
-    // add #12462 患者情報共有 Ji start
     getOtherFacilityCd() {
       this.refreshData();
     },
-    // add #12462 患者情報共有 Ji end
   },
 
   async created() {
@@ -482,13 +386,16 @@ export default {
     // del #10359 編集権限の動作不正 dengshen end
   },
   // add bug #7125 修正 chen start
-  beforeDestroy() {
-    // dataの初期化
-    Object.assign(this.$data, this.$options.data());
+  beforeUnmount() {
   },
   // add bug #7125 修正 chen end
 
   methods: {
+    formatRegDate(date) {
+      return date === null
+        ? null
+        : dayjs(date, "YYYYMMDDHHmmss").format("YYYY/MM/DD HH:mm:ss");
+    },
     // add 7825患者情報>車椅子利用の表示が更新されない limingyang start
     ...mapActions("loading-screen", ["setLoadingScreenMessage","setLoadingScreenVisible"]),
     // add 7825患者情報>車椅子利用の表示が更新されない limingyang end
@@ -515,27 +422,19 @@ export default {
     async refreshData() {
       this.setLoadingScreenVisible(true);
       const requestParam = {
-        // facilityCd: this.getFacilityCd
-        facilityCd: this.getIsOtherFacility ? this.getOtherFacilityCd : this.getFacilityCd
+        facilityCd: this.getIsOtherFacility ? this.getOtherFacilityCd : this.getFacilityCd,
+        selectedPatId: this.selectedPatId
       };
 
       const [
         responseDialDiff,
-        responseSeverity,
-        responseTransport,
-        // add #9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 start
         responseWheelChair,
-        // add #9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 end
-        responseWheelChairList,
       ] = await Promise.all([
         // mod #9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 dou start
         // ApiHelper.get("/mstInfo/mstDialysisDifficulty", requestParam),
         ApiHelper.get("/master_maintenance/mst_dialysis_difficulty/data", requestParam),
         // mod #9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 dou end
-        ApiHelper.get("/mstInfo/mstSeverityIncludeDel", requestParam),
-        ApiHelper.get("/mstInfo/mstTransportInclude", requestParam),
         this.isCreationPat ? null : ApiHelper.get(`/weight_setting/wheel_chair/personal/${this.selectedPatId}`),
-        ApiHelper.get(`/weight_setting/wheel_chair/find_all/${this.getFacilityCd}`),
       ]).catch(error => {
         this.setLoadingScreenVisible(false);
         //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
@@ -554,7 +453,6 @@ export default {
           clientIp: null,
           dialysisDifficultyCd: x.code,
           dialysisDifficultyName: x.isDisp == 1 ? x.name : "【削除済み】" + x.name,
-          // facilityCd: this.getFacilityCd,
           facilityCd: this.getIsOtherFacility ? this.getOtherFacilityCd : this.getFacilityCd,
           fnDialysisDifficultyCd: null,
           inHospitalCd_1: x.inHospitalCd1,
@@ -628,50 +526,15 @@ export default {
       */
       // add #9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 end
       this.sharedDiffInfo = this.dialDiffInfo && this.dialDiffInfo.filter(e => e.readonly && e.readonly.initValue === true);
-      // mod #12462 患者情報共有 Ji start
-      if(!this.getIsOtherFacility){
+      if (!this.getIsOtherFacility) {
         this.dialDiffInfo = [];
         dialDiffInfoNew.forEach(el => this.pushJsonArray("dial_diff_com_info", el));
       }
-      // mod #12462 患者情報共有 Ji end
-
-      // 重症度マスタ
-      // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
-      // this.mstSeverity = responseSeverity.data;
-      this.mstSeverity = responseSeverity.data
-          .filter(item => (item.isDisp !== "0" && item.isDel !== "1")
-              || this.getPatData('severity_cd').editValue == item.severityCd)
-      this.popOverMstSeverity = this.mstSeverity.map(item => ({
-        ...item,
-        severityName: (item.isDisp === "0" || item.isDel === "1")
-            ? `【削除済み】${item.severityName}`
-            : item.severityName,
-      }));
-
-      // 搬送区分マスタ
-      // this.mstTransport = responseTransport;
-      this.mstTransport = responseTransport.data.filter(item => (item.isDisp !== "0" && item.isDel !== "1")
-          || this.getPatData('transport_cd').editValue == item.transportCd);
-      this.popOverMstTransport = this.mstTransport.map(item => ({
-        ...item,
-        transportName: (item.isDisp === "0" || item.isDel === "1")
-            ? `【削除済み】${item.transportName}`
-            : item.transportName,
-      }));
-      // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc end
 
       // 個人所有フラグ初期化
       this.isPersonal = false;
 
-      // 車いすマスタ
-      this.mstWheelChair = responseWheelChairList.data.filter(item => (item.isDisp !== "0" && item.isDel !== "1" && item.isPersonal === "0")
-          || this.editRecord?.wheel_chair_cd?.editValue == item.wheelChairCd);
-      this.popOverMstWheelChair = this.mstWheelChair.map(item => ({
-        ...item,
-        wheelChairName: (item.isDisp === "0" || item.isDel === "1")
-            ? `【削除済み】${item.wheelChairName}`
-            : item.wheelChairName,
-      }));
+      await this.loadComposeOptions();
       const wheelChairData = responseWheelChair?.data;
       if (wheelChairData?.length) {
         // 個人所有の車いすが存在する場合は強制チェックON
@@ -682,12 +545,6 @@ export default {
         this.wheelChairName = wheelChairData[0].wheelChairName;
         // 個人所有フラグ
         this.isPersonal = true;
-      } else if(!!this.editRecord?.wheel_chair_cd?.editValue){
-        // 共用所有の車いす情報が存在する場合は名称をセット
-        this.setWheelChairName(this.editRecord.wheel_chair_cd);
-      } else {
-        // 未登録の車いす患者の場合は「未登録」を名称にセット
-        this.wheelChairName = "未登録";
       }
       // 車いす選択欄の表示非表示を切り替え
       this.showWheelChair = (this.editRecord?.is_wheel_chair?.editValue === '1');
@@ -699,6 +556,114 @@ export default {
 
     setPopOverValue(item, value) {
       this.setPatData(item, value);
+    },
+
+    resolveOptionText(options, value, showUnregistered) {
+      const defaultText = showUnregistered ? "未登録" : "";
+      if (!options?.length || value == null || value === "") {
+        return defaultText;
+      }
+      const hit = options.find(option => String(option.value) === String(value));
+      return hit && hit.text ? String(hit.text) : defaultText;
+    },
+
+    async loadComposeOptions() {
+      const facilityCd = this.composeFacilityCd;
+      const severityCd = this.getPatData("severity_cd")?.editValue;
+      const transportCd = this.getPatData("transport_cd")?.editValue;
+      const wheelChairCd = this.getPatData("wheel_chair_cd")?.editValue;
+
+      const [severity, transport, wheelChair] = await Promise.all([
+        buildMasterPopover(MasterType.SEVERITY_PAT_INFO, {
+          facilityCd,
+          extraParams: { initValue: severityCd }
+        }),
+        buildMasterPopover(MasterType.TRANSPORT_PAT_INFO, {
+          facilityCd,
+          extraParams: { initValue: transportCd }
+        }),
+        buildMasterPopover(MasterType.WHEEL_CHAIR_PAT_INFO, {
+          facilityCd,
+          extraParams: { initValue: wheelChairCd }
+        })
+      ]);
+
+      this.severityOptions = severity?.master?.options ?? [];
+      this.transportOptions = transport?.master?.options ?? [];
+      this.wheelChairOptions = wheelChair?.master?.options ?? [];
+
+      this.severityName = this.resolveOptionText(this.severityOptions, severityCd, false);
+      this.transportName = this.resolveOptionText(this.transportOptions, transportCd, false);
+      if (!this.isPersonal) {
+        this.wheelChairName = this.resolveOptionText(this.wheelChairOptions, wheelChairCd, true);
+      }
+    },
+
+    onSeverityReturn(row) {
+      const value = row?.value ?? null;
+      this.setPatData("severity_cd", value);
+      if (row?.text === "未登録") {
+        this.severityName = "";
+        return;
+      }
+      this.severityName = row?.text != null && row.text !== ""
+        ? String(row.text)
+        : this.resolveOptionText(this.severityOptions, value, false);
+    },
+
+    onTransportReturn(row) {
+      const value = row?.value ?? null;
+      this.setPatData("transport_cd", value);
+      if (row?.text === "未登録") {
+        this.transportName = "";
+        return;
+      }
+      this.transportName = row?.text != null && row.text !== ""
+        ? String(row.text)
+        : this.resolveOptionText(this.transportOptions, value, false);
+    },
+
+    onWheelChairReturn(row) {
+      const value = row?.value ?? null;
+      this.setPatData("wheel_chair_cd", value);
+      this.wheelChairName = row?.text != null && row.text !== ""
+        ? String(row.text)
+        : this.resolveOptionText(this.wheelChairOptions, value, true);
+    },
+
+    getDialysisDifficultyName(
+      mstData,
+      mstCd,
+      mstCdColumn,
+      mstNameColumn,
+      patFnCd,
+      patName
+    ) {
+      if (!mstData || mstData.length === 0) {
+        return "削除済み";
+      }
+      if (
+        !Object.prototype.hasOwnProperty.call(mstData[0], mstCdColumn) ||
+        !Object.prototype.hasOwnProperty.call(mstData[0], mstNameColumn)
+      ) {
+        return "削除済み";
+      }
+      const mstRecord = mstData.find(
+        mst => mst[mstCdColumn] == mstCd
+      );
+      if (mstRecord && mstRecord[mstNameColumn]) {
+        return mstRecord[mstNameColumn];
+      }
+      const patFnCdRecord = mstData.find(
+        mst => mst[mstCdColumn] == patFnCd
+      );
+      if (patFnCdRecord && patFnCdRecord[mstNameColumn]) {
+        return patFnCdRecord[mstNameColumn];
+      }
+      if (patName != null) {
+        return patName;
+      }
+      return "削除済み";
     },
 
     /**
@@ -734,44 +699,11 @@ export default {
     isMainDialDiff(dialDiff) {
       return dialDiff.is_main.editValue === "1";
     },
-    // add #12462 患者情報共有 Ji start
-    getDialysisDifficultyName(
-      mstData,
-      mstCd,
-      mstCdColumn,
-      mstNameColumn,
-      patFnCd,
-      patName
-    ) {
-      if (!mstData || mstData.length === 0) {
-        return "削除済み";
-      }
-      if (!_.has(mstData[0], mstCdColumn) || !_.has(mstData[0], mstNameColumn)) {
-        return "削除済み";
-      }
-      const mstRecord = mstData.find(
-        mst => mst[mstCdColumn] == mstCd
-      );
-      if (mstRecord && mstRecord[mstNameColumn]) {
-        return mstRecord[mstNameColumn];
-      }
-      const patFnCdRecord = mstData.find(
-        mst => mst[mstCdColumn] == patFnCd
-      );
-      if (patFnCdRecord && patFnCdRecord[mstNameColumn]) {
-        return patFnCdRecord[mstNameColumn];
-      }
-      if (patName != null) {
-        return patName;
-      }
-      return "削除済み";
-    },
-    // add #12462 患者情報共有 Ji end
 
     // 登録日時をセット
     // ※保存時に呼び出す
     setRegDate() {
-      const regdate = moment().format("YYYYMMDDHHmmss");
+      const regdate = dayjs().format("YYYYMMDDHHmmss");
       // 全ての透析困難情報をループ
       this.dialDiffInfo.forEach(dialDiff => {
         if (
@@ -836,10 +768,6 @@ export default {
       }
       this.handleWheelChairChange(val.editValue);
     },
-    handleShowPopover(columnName, popoverDataMstSeverity) {
-      popoverDataMstSeverity.popoverContentSelected.value = this.editRecord[columnName].editValue;
-      this.showPopover(popoverDataMstSeverity);
-    },
     /**
      * @description 車いす有無のチェック切り替え時処理
      * @param value 1:チェックON 0:チェックOFF
@@ -850,31 +778,24 @@ export default {
         this.setPatData('wheel_chair_cd', null);
       }
       // 車いす表示名設定
-      this.setWheelChairName(this.editRecord.wheel_chair_cd);
+      const wheelChairCd = this.getPatData("wheel_chair_cd")?.editValue;
+      this.wheelChairName = this.resolveOptionText(
+        this.wheelChairOptions,
+        wheelChairCd,
+        value === "1"
+      );
       // 選択欄の表示非表示を切り替え
       this.showWheelChair = (value === '1');
-    },
-    /**
-     * @description 車いす名表示値処理
-     * @param value 車いすコード
-     */
-    setWheelChairName(value) {
-      if(!value.editValue){
-        this.wheelChairName = "未登録"
-      }else{
-        this.wheelChairName = this.mstCdToNameIncludeDeleted(
-                  this.mstWheelChair,
-                  value.editValue,
-                  'wheelChairCd',
-                  'wheelChairName'
-                )
-      }
     },
   }
 };
 </script>
 
 <style scoped>
+:deep(ons-checkbox.checkbox) {
+  margin-top: 0;
+}
+
 .difficulty-table {
   border-collapse: collapse;
   width: 100%;

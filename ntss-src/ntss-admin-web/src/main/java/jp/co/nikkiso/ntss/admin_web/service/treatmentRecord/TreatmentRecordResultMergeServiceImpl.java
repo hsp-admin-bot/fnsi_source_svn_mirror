@@ -1,10 +1,10 @@
 package jp.co.nikkiso.ntss.admin_web.service.treatmentRecord;
 
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.request.deviceEdgeOrder.DeviceEdgeOrderRequest;
 import jp.co.nikkiso.ntss.admin_web.response.checkList.dto.ReceiveRstEquipInfoDto;
@@ -70,7 +70,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Timestamp;
@@ -89,6 +88,7 @@ import java.util.stream.Collectors;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 
 /**
@@ -187,6 +187,10 @@ public class TreatmentRecordResultMergeServiceImpl implements TreatmentRecordRes
   // add #10344 merge treatment record rebuild Start
   @Autowired
   private NextPatService nextPatService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // add #10344 merge treatment record rebuild End
 
   /**
@@ -258,7 +262,7 @@ public class TreatmentRecordResultMergeServiceImpl implements TreatmentRecordRes
           }
         }
         treatmentRecordResultMerge.setRstMediInfo(mapper.writeValueAsString(tempReceiveRstMediInfoDtos));
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         EventLogMessage eventLogMessage = new EventLogMessage();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
         eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
@@ -279,7 +283,7 @@ public class TreatmentRecordResultMergeServiceImpl implements TreatmentRecordRes
           }
         }
         treatmentRecordResultMerge.setRstEquipInfo(mapper.writeValueAsString(tempReceiveRstEquipInfoDtos));
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         EventLogMessage eventLogMessage = new EventLogMessage();
         eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
         logService.log(LogLevel.ERROR, eventLogMessage,FUNCTION_CODE.FUNC_TREATMENT_RECORD,SERVICE_NAME.REMS, null);
@@ -314,7 +318,7 @@ public class TreatmentRecordResultMergeServiceImpl implements TreatmentRecordRes
       wheres.append(" data_type in (2, 4, 5, 6)" + "'\n");
 
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(mniMonitorDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -371,7 +375,7 @@ public class TreatmentRecordResultMergeServiceImpl implements TreatmentRecordRes
       wheres.append(" data_type = 1" + "\n");
 
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(mniMonitorDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -587,7 +591,7 @@ public class TreatmentRecordResultMergeServiceImpl implements TreatmentRecordRes
       wheres.append(" bio_moni_ctl_no = " + bioMniCtlNo + "\n");
 
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(mniMonitorDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -632,11 +636,11 @@ public class TreatmentRecordResultMergeServiceImpl implements TreatmentRecordRes
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -877,4 +881,3 @@ public class TreatmentRecordResultMergeServiceImpl implements TreatmentRecordRes
   }
   // #10344 Add end
 }
-

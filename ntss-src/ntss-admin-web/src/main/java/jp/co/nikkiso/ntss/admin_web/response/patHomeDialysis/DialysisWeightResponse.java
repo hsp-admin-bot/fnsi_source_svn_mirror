@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.response.patHomeDialysis;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,7 +16,7 @@ import lombok.Setter;
 //add 7311 新規に作った治療予定の存在しない施設でクールマスタを保存するとフリーズ 関俊楠 start
 @Setter
 //add 7311 新規に作った治療予定の存在しない施設でクールマスタを保存するとフリーズ 関俊楠 end
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class DialysisWeightResponse {
   
   /**

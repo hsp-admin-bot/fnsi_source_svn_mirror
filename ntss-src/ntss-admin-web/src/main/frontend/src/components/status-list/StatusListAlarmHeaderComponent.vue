@@ -79,15 +79,14 @@
 
 <!-- スクリプト処理 -->
 <script>
-/* eslint-disable */
-import { mapGetters, mapActions, mapMutations } from "vuex";
-import moment from "moment";
+import { mapGetters, mapActions, mapMutations } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 //#10715:日付IF修正Start
 import DateInput from "@/components/common/DateInput.vue";
 //#10715:日付IF修正End
 // add #9371 治療状況リストにおける警報・報知の動作不良 dou start
-import { EventBus } from "@/eventBus";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add #9371 治療状況リストにおける警報・報知の動作不良 dou end
 export default {
   components: {
@@ -120,7 +119,7 @@ export default {
         // mod #9371 治療状況リストにおける警報・報知の動作不良 dou start
         /* mod #6006 by zhangruixue 2023-05-31 --start */
         // if (this.getStatusFlg ==1 && this.getStatusList && this.getStatusList.treatDate) {
-        //   const date = moment(this.getStatusList.treatDate).format("YYYY-MM-DD")
+        //   const date = dayjs(this.getStatusList.treatDate).format("YYYY-MM-DD")
         //   this.changeOccurDate(date);
         //   this.condition.searchOccurDate = date
         //   this.setStatusFlg(0);
@@ -133,7 +132,7 @@ export default {
           return this.getOccurDate;
           // mod #9371 治療状況リストにおける警報・報知の動作不良 dou end
         } else {
-          const today = moment(new Date()).format("YYYY-MM-DD");
+          const today = dayjs(new Date()).format("YYYY-MM-DD");
           // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 start
           this.changeOccurDate(today);
           // #8029 観察記録詳細のパンくずリストを押下しても最新データを表示せず、観察記録詳細を開いた時点のデータを表示する。横展開 訾浩 end
@@ -181,7 +180,7 @@ export default {
       const info = {
         facilityCd: this.getFacilityCd,
         isClear: true,
-        occurDate: moment(values).format("YYYYMMDD")
+        occurDate: dayjs(values).format("YYYYMMDD")
       };
       await this.fetchAlarmSettingList(info);
       this.search();
@@ -247,7 +246,7 @@ export default {
     EventBus.$off("autoFiltering", this.search);
     EventBus.$on("autoFiltering", this.search);
   },
-  destroyed() {
+  unmounted() {
     EventBus.$off("initAlarm", this.init);
     EventBus.$off("autoFiltering", this.search);
   },

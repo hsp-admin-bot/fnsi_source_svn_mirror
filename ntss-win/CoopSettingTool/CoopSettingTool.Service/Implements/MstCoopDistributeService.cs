@@ -41,6 +41,18 @@ namespace CoopSettingTool.Service
         }
 
         /// <summary>
+        /// Gets the current MST coop distribute list.
+        /// </summary>
+        /// <param name="facilityCd">The facility cd.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopDistributeEntity&gt;&gt;&gt;.</returns>
+        public async Task<BaseResponse<List<MstCoopDistributeEntity>>> GetCurrentMstCoopDistributeList(string facilityCd)
+        {
+            var res = (await ServerAccess.GetInstance().GetAsync<List<MstCoopDistributeEntity>>(Constant.GET_CURRENT_MST_COOP_DISTRIBUTE_BY_FACILITY + "/" + facilityCd, null, true, false));
+
+            return res;
+        }
+
+        /// <summary>
         /// Gets the MST coop distribute by control no.
         /// </summary>
         /// <param name="ctlNo">The control no.</param>
@@ -48,6 +60,18 @@ namespace CoopSettingTool.Service
         public async Task<BaseResponse<MstCoopDistributeEntity>> GetMstCoopDistributeByCtlNo(string ctlNo)
         {
             var res = (await ServerAccess.GetInstance().PostAsync<MstCoopDistributeEntity>(Constant.GET_MST_COOP_DISTRIBUTE_BY_CTL_NO + "/" + ctlNo, null, true, false));
+
+            return res;
+        }
+
+        /// <summary>
+        /// Gets the source MST coop distribute.
+        /// </summary>
+        /// <param name="condition">The condition.</param>
+        /// <returns>Task&lt;BaseResponse&lt;List&lt;MstCoopDistributeEntity&gt;&gt;&gt;.</returns>
+        public async Task<BaseResponse<List<MstCoopDistributeEntity>>> GetSourceMstCoopDistribute(MstCoopDistributeEntity condition)
+        {
+            var res = (await ServerAccess.GetInstance().PostAsync<List<MstCoopDistributeEntity>>(Constant.GET_SOURCE_MST_COOP_DISTRIBUTE, condition, true, true));
 
             return res;
         }

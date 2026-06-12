@@ -5,6 +5,7 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
 import jp.co.nikkiso.ntss.admin_web.response.roundType.RoundTypeNameAndContentResponse;
 import jp.co.nikkiso.ntss.admin_web.service.RoundTypeService;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.admin_web.web.service.MaterialsSharingPatientInformation.MaterialsSharingPatientInfomationService;
 import jp.co.nikkiso.ntss.core.entity.PatNameIdentification;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
@@ -22,6 +24,8 @@ import java.util.List;
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 @RestController
 @Slf4j
@@ -39,6 +43,9 @@ public class RoundTypeResource {
   // wp アプリケーションログの適正化 Add Start
   @Autowired
   LogEventUtils logEventUtils;
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
   // wp アプリケーションログの適正化 Add End
 
   //add #12462 患者情報共有 zrx start
@@ -59,7 +66,8 @@ public class RoundTypeResource {
   })
   public ResponseEntity<?> getRoundTypeNameAndContent(
       @PathVariable("facility_cd") String facilityCd,
-      @PathVariable(value = "patId", required = false) String patId) {
+      @PathVariable(value = "patId", required = false) String patId,
+      @RequestParam(required = false) Long selectedPatId) {
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.ROUND_TYPE + "/name-and-content";
@@ -111,4 +119,15 @@ public class RoundTypeResource {
   private String getMethodName() {
     return Thread.currentThread().getStackTrace()[2].getMethodName();
   }
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    boolean hasAccess = ntssUser != null && (ntssUser.isNkkAdminUser() || facilityCd == null || facilityCd.equals(ntssUser.getFacilityCd()));
+    // #11205 mod 20260421 start
+    if (!hasAccess) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+    }
+    // #11205 mod 20260421 end
+    return hasAccess;
+  }
+
 }

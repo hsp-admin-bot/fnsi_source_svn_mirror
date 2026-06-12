@@ -5,7 +5,7 @@
       id="compareView_patNameArea"
       style="height:60px;color:#FFFFFF;font-size:24px;line-height:60px;"
     ></div>
-    <img src="img/pat-event/img-edit/returnlist.png" id="compareView_close" @click="onClickClose" />
+    <img :src="imgEditAsset('returnlist.png')" id="compareView_close" @click="onClickClose" />
     <div id="compareViewContainer">
       <!-- 左側 -->
       <div id="compareViewLeft">
@@ -46,7 +46,7 @@
             <img
               :src="compareViewImgLeft[0].data"
               id="compareView_VAImg_Left"
-              onerror="this.src='img/pat-event/img-edit/noimage.png';"
+              @error="onNoImageError"
               onload="startFlg = false;"
             />
           </div>
@@ -91,7 +91,7 @@
             <img
               :src="compareViewImgRight[0].data"
               id="compareView_VAImg_Right"
-              onerror="this.src='img/pat-event/img-edit/noimage.png';"
+              @error="onNoImageError"
               onload="startFlg = false;"
             />
           </div>
@@ -114,14 +114,14 @@
             <img
               :src="item.data"
               :id="'compareView_photo' + index"
-              onerror="this.src='img/pat-event/img-edit/noimage.png';"
+              @error="onNoImageError"
             />
           </div>
         </div>
       </draggable>
       <!-- 添付ファイル削除アイコン -->
       <img
-        src="img/pat-event/img-edit/delicon.png"
+        :src="imgEditAsset('delicon.png')"
         id="compareView_delfile"
         @click="onCompareViewDelfile()"
       />
@@ -131,18 +131,22 @@
   <!-- ↑比較ビュー表示エリア↑ -->
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
+import $$ from "@/compat/jquery";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { dateFormat } from "@/functions/common/DateTimeUtils";
-import $$ from "jquery";
-import vuedraggable from "vuedraggable";
-import moment from "moment";
+
+import { VueDraggable } from "@/compat/drag/VueDraggable";
+import dayjs from "@/compat/date/dayjs";
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { publicAssetPath } from "@/compat/assets/public-path";
 import { messageFormat } from '@/functions/common/MessageFormat';
+import { getScopedJQuery as createScopedJQuery } from "@/functions/common/LayoutMeasureHelper";
+
 // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
 export default {
   components: {
-    draggable: vuedraggable
+    draggable: VueDraggable
   },
   data() {
     return {
@@ -198,12 +202,34 @@ export default {
   computed: {
     ...mapGetters("pat-event/viewer", ["getCompareViewImgs"])
   },
-  mounted() {},
-  beforeDestroy() {
+
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
   methods: {
+    scopedJQuery() {
+      return createScopedJQuery(this.$el || this, $$) || $$;
+    },
+    imgEditAsset(fileName) {
+      return publicAssetPath(`img/pat-event/img-edit/${fileName}`);
+    },
+    onImageFallbackError(event) {
+      const target = event?.target;
+      if (!target || target.dataset?.ntssFallbackApplied === "1") {
+        return;
+      }
+      target.dataset.ntssFallbackApplied = "1";
+      target.src = this.imgEditAsset("noimage.png");
+    },
+    onNoImageError(event) {
+      const img = event?.target;
+      if (!img || img.dataset.ntssFallbackApplied === "true") {
+        return;
+      }
+      img.dataset.ntssFallbackApplied = "true";
+      img.src = publicAssetPath("img/pat-event/img-edit/noimage.png");
+    },
     ...mapActions("pat-event/viewer", ["clearCompareViewImgs"]),
     onClickClose() {
       //TODO: 比較ビューア用情報クリア
@@ -276,14 +302,14 @@ export default {
     initImage() {
       this.compareViewImgs = this.getCompareViewImgs;
       // 最小サイズクリア
-      $$("#compareView_VAImg_Left").css("min-height", "");
-      $$("#compareView_VAImg_Left").css("min-width", "");
-      $$("#compareView_VAImg_Right").css("min-height", "");
-      $$("#compareView_VAImg_Right").css("min-width", "");
+      this.scopedJQuery()("#compareView_VAImg_Left").css("min-height", "");
+      this.scopedJQuery()("#compareView_VAImg_Left").css("min-width", "");
+      this.scopedJQuery()("#compareView_VAImg_Right").css("min-height", "");
+      this.scopedJQuery()("#compareView_VAImg_Right").css("min-width", "");
       // 比較ビュー表示
-      $$("#compareViewArea").css("display", "block");
+      this.scopedJQuery()("#compareViewArea").css("display", "block");
       // 画像選択エリア表示
-      $$("#compareView_Sel_photoArea").css("display", "block");
+      this.scopedJQuery()("#compareView_Sel_photoArea").css("display", "block");
       // 選択可能分以外を非表示
       for (let intlop = 0; intlop < this.limitCount; intlop++) {
         let buf = this.comPadZero(intlop + 1, 1);
@@ -306,7 +332,7 @@ export default {
     formatterDate(value) {
       if (value) {
         const dt = dateFormat.utc2Jst(value);
-        return moment(dt, "YYYY-MM-DDTHH:mm:ss+09:00").format(
+        return dayjs(dt, "YYYY-MM-DDTHH:mm:ss+09:00").format(
           "YYYY/MM/DD HH:mm"
         );
       } else {
@@ -323,7 +349,6 @@ export default {
   }
 };
 </script>
-
 <style>
 @media print {
   /** 印刷時、親要素消す */
@@ -332,7 +357,6 @@ export default {
   }
 }
 </style>
-
 <style scoped>
 /*=========== 比較ビュー表示領域 [始] ==================*/
 #compareViewArea {

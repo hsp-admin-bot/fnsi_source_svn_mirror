@@ -1,45 +1,22 @@
 <template>
   <span class="flex-span">
-    <!-- #5590 2023/04/19 ×を常に表示するように修正 林峻峰 start -->
-    <!--mod FNSI- 年に6桁を避ける 徐博 start-->
-    <!-- <input
+    <date-input
       type="date"
       :value="displayDateValue"
       :disabled="disabled"
       :class="classObject"
-      @input="inputValue($event.target.value)"
-      @blur="validateValue"
-      @touchstart="focusInput"
-      v-on="$listeners"
-      max="9999-12-31"
-    /> -->
-    <date-input v-if="isShowClear"
-      type="date"
-      :value="displayDateValue"
-      :disabled="disabled"
-      :class="classObject"
+      :classes="classes"
+      :is-required="isRequired"
       max="9999-12-31"
       @input="inputValue"
       @blur="validateValue"
       @touchstart="focusInput"
-      v-on="$listeners"
+      v-bind="$attrs"
       @handleClearInput="handleClearInput"
     />
-    <input v-else
-      type="date"
-      :value="displayDateValue"
-      :disabled="disabled"
-      :class="classObject"
-      @input="inputValue($event.target.value)"
-      @blur="validateValue"
-      @touchstart="focusInput"
-      v-on="$listeners"
-      max="9999-12-31"
-    />
-    <!--mod FNSI- 年に6桁を避ける 徐博 end-->
-    <!-- #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end -->
-    <!--mod FNSI- 7778 limingyang start-->
     <common-calendar
+      v-if="isCalendarMounted"
+      ref="calendar"
       v-model="calendarValue"
       class="calender"
       :disabled="disabled"
@@ -50,29 +27,38 @@
       :disable-dates-after="disableDatesAfter"
       :cardDiff = "cardDiff"
     />
-    <!--mod FNSI- 7778 limingyang end-->
+    <button
+      v-else
+      type="button"
+      class="ntss-btn-outset calendar calender"
+      :disabled="disabled"
+      :value="displayDateValue || ''"
+      @click.stop.prevent="activateCalendar"
+    >
+      <v-ons-icon icon="fa-calendar" />
+    </button>
   </span>
 </template>
 
 <script>
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // 共通タグ用ベースコンポーネント
 import baseCustomForm from "@/components/common/custom-form-tags/BaseCustomForm";
 // 共通カレンダーコンポーネント
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
-// #5590 2023/04/19 ×を常に表示するように修正 林峻峰 start
 import DateInput from "@/components/common/DateInput.vue";
-// #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end
-import {DATE_FORMAT, dateFormat } from "@/functions/common/DateTimeUtils.js"
+import { VOnsIcon } from "@/compat/onsen/components";
 /**
  * @description 共通日付入力タグ
  */
 export default {
+  inheritAttrs: false,
   components: {
     "common-calendar": commonCalender,
     // #5590 2023/04/19 ×を常に表示するように修正 林峻峰 start
     "date-input": DateInput,
     // #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end
+    VOnsIcon
   },
 
   mixins: [baseCustomForm],
@@ -147,34 +133,29 @@ export default {
     isShowClear: {
       type: Boolean,
       default: true
+    },
+    lazyCalendar: {
+      type: Boolean,
+      default: true
     }
   },
 
   data() {
     return {
-      // 入力フィールドの値をクリアするかを判定するフラグ
-      isClear: false,
       // Android端末であることを示すフラグ
       androidFlg: false,
       // iOS端末であることを示すフラグ
-      iosFlg: false
+      iosFlg: false,
+      isCalendarMounted: !this.lazyCalendar && !this.disabled
     };
   },
 
   computed: {
     // DBの日付データの形式はYYYYMMDDなのでYYYY-MM-DDに変換
     displayDateValue() {
-      // 年のみ、月のみ、日のみを入力してフォーカスアウトすると画面に値が表示されたままクリアされない。その場合は"defaultValue"を返すことで入力値をクリアする
-      if (this.editValue === null && this.isClear) {
-        return "defaultValue";
-      }
-      if (this.editValue === null && this.isRequired) {
-        return dateFormat.format(new Date(), DATE_FORMAT);
-      } else {
-        return this.editValue === null
-          ? null
-          : moment(this.editValue).format("YYYY-MM-DD");
-      }
+      return this.editValue === null
+        ? null
+        : dayjs(this.editValue).format("YYYY-MM-DD");
     },
 
     calendarValue: {
@@ -191,21 +172,26 @@ export default {
       return {
         // 常に適用されるclass
         "custom-input-date": true,
-        // 編集時に適用されるclass
-        "custom-input-date-edited": this.isEdited,
-        // 必須項目に適用されるclass
-        "custom-input-date-required": this.isRequired,
         // add じょはく start
         // データ不正時に適用されるclass
         "custom-input-date-invalid": !this.isValid
         // add じょはく end
       };
+    },
+
+    classes() {
+      return [
+        this.isRequired && "date-input-required",
+        this.isEdited && "date-input-edited",
+      ]
+        .filter(Boolean)
+        .join(" ");
     }
   },
 
   created() {
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
     if (ua.match(/Android/)) {
       this.androidFlg = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -213,22 +199,39 @@ export default {
     }
   },
 
+  watch: {
+    disabled(value) {
+      if (value) {
+        this.isCalendarMounted = false;
+      } else if (!this.lazyCalendar) {
+        this.isCalendarMounted = true;
+      }
+    }
+  },
+
   methods: {
+    activateCalendar() {
+      if (this.disabled) {
+        return;
+      }
+      this.isCalendarMounted = true;
+      this.$nextTick(() => {
+        this.$refs.calendar?.openMenu?.();
+      });
+    },
     handleClearInput() {
       this.editValue = null;
-      this.isClear = false;
-      this.callBackFunc !== {} && this.callBackFunc(this.editValue, this.arguments);
+      if (typeof this.callBackFunc === "function") {
+        this.callBackFunc(this.editValue, this.arguments);
+      }
     },
     inputValue(value) {
       // YYYY-MM-DDで入力されるのでYYYYMMDDに変換
       // mod FNSI-徐博 start
-      this.editValue = value === "" ? null : moment(value).format("YYYYMMDD");
-      // 入力フィールドの値をクリアするかを判定するフラグを初期化
-      this.isClear = false;
+      this.editValue = value === "" ? null : dayjs(value).format("YYYYMMDD");
 
       // プロパティで受け取った関数を呼び出す
-      if (this.callBackFunc !== {}) {
-      // if (this.callBackFunc != {}) {
+      if (typeof this.callBackFunc === "function") {
         this.callBackFunc(this.editValue, this.arguments);
       }
       // mod FNSI-徐博 end
@@ -242,32 +245,17 @@ export default {
     validateValue(event) {
       let str = event.target.value;
 
-      // 空入力、欠落入力の場合
-      if (!str) {
-        // 必須入力の場合はsysdateで補正
-        if (this.isRequired) {
-          this.$emit('input', "");
-          this.$emit('blur', "");
-          // "YYYY-MM-DD"形式の日付をセット
-          str = dateFormat.format(new Date(), DATE_FORMAT);
-          this.editValue = str;
-        }
-      } else {
+      if (str) {
         // 有効な入力値かつ入力制限値を超える場合：入力制限値に上書き
         if(this.editValue !== "" && this.editValue !== null){
           // 患者経過総合ビューア 身体情報
          // mod 6880 【S 14 _旅行透析テスト】患者情報：入外・転入出クリック日払い後に日付ページを選択せずにエラー zhou start
          //this.editValue = event.target.value
 
-          let tempDate = "";
-          if (event.target){
-           tempDate = moment(event.target.value).format("YYYYMMDD");
-          }else {
-            tempDate = moment(event).format("YYYYMMDD");
-         }
+          const tempDate = event.target
+            ? dayjs(event.target.value).format("YYYYMMDD")
+            : dayjs(event).format("YYYYMMDD");
          this.editValue = isNaN(tempDate) ? null : tempDate;
-         // 日付以外の場合は入力フィールドの値をクリア
-         this.isClear = isNaN(tempDate);
 
          // mod 6880 【S 14 _旅行透析テスト】患者情報：入外・転入出クリック日払い後に日付ページを選択せずにエラー zhou end
          // 上限値を超える値:上限値をセット
@@ -287,7 +275,7 @@ export default {
     focusInput() {
       if (this.birthdayMode && !this.displayDateValue &&
          (this.androidFlg || this.iosFlg)) {
-        this.inputValue(moment()
+        this.inputValue(dayjs()
             .subtract(75, "years")
             .toDate())
       }
@@ -308,19 +296,12 @@ input {
   box-sizing: border-box;
 }
 
-.custom-input-date-edited {
-  border: 2px green solid;
-  outline: 0;
-}
-
-.custom-input-date-required {
-  color: black;
-  background-color: #ffff99;
-}
-
 /* ▼を消す */
 .custom-input-date::-webkit-calendar-picker-indicator {
   display: none;
+}
+.custom-input-date{
+  width: 100%;
 }
 
 .calender {
@@ -333,7 +314,7 @@ input {
 /*add じょはく start*/
 .custom-input-date-invalid {
   color: black;
-  background-color: #FE3E3E;
+  background-color: rgba(255, 0, 0, 0.5);
 }
 /*add じょはく end*/
 .custom-span-input-date {

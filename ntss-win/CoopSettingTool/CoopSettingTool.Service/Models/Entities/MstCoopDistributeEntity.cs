@@ -431,5 +431,19 @@ namespace CoopSettingTool.Service.Models
         {
             return (DistributeSetting + IsDel).GetHashCode();
         }
+
+        /// <summary>
+        /// Determines whether the specified distribute setting is similar.
+        /// </summary>
+        /// <param name="distribute">The distribute setting.</param>
+        /// <returns><c>true</c> if the specified distribute setting is similar; otherwise, <c>false</c>.</returns>
+        public bool IsSimilar(MstCoopDistributeEntity distribute)
+        {
+            return distribute != null
+                && string.Equals(this.CoopCd, distribute.CoopCd, StringComparison.Ordinal)
+                && string.Equals(this.CoopCdIndex, distribute.CoopCdIndex, StringComparison.Ordinal)
+                && string.Equals(this.CoopVersion, distribute.CoopVersion, StringComparison.Ordinal)
+                && string.Equals(this.Direction, distribute.Direction, StringComparison.Ordinal);
+        }
     }
 }

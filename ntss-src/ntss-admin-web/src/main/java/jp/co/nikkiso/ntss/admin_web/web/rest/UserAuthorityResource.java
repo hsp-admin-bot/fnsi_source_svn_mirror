@@ -31,14 +31,15 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 利用者権限のResourceクラス.
@@ -93,7 +94,22 @@ public class UserAuthorityResource {
     HttpServletRequest request,
     HttpServletResponse response,
     @RequestBody String userId,
-    @RequestHeader(value = "ForceSignOutReason", required = false) String forceSignOutReason) {
+    @RequestHeader(value = "ForceSignOutReason", required = false) String forceSignOutReason,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if (ntssUser != null && !ntssUser.isNkkAdminUser()) {
+        MstUser mstUser = mstUserDao.selectById(Long.valueOf(userId));
+        if (mstUser.getFacilityCd() != null && !mstUser.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstUser.getFacilityCd() + " " + "userId=" + userId ;
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     if (NtssSecurityPoricy.doAccessKeyCheck(request, response, eventLoggerFactory)) {
       ForceSignOutReason reason = ForceSignOutReason.fromName(forceSignOutReason,
         ForceSignOutReason.USER_AUTHORITY_CHANGED);
@@ -102,10 +118,10 @@ public class UserAuthorityResource {
       EventLogMessage eventLogMessage = new EventLogMessage();
       eventLogMessage.setLogMessage("NtssSecurityPoricy.doAccessKeyCheck-Return Not Found!!");
       logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
-      return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.FORBIDDEN);
     }
     // レスポンス生成
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
   // add #9386 施設設定マスタNo64で有効として権限を編集しても対象のアカウントが強制サインアウトされない dou end
   // add #10160 複数端末同時サインイン無効時の強制サインアウトが動作しない。 dou start
@@ -128,10 +144,10 @@ public class UserAuthorityResource {
       EventLogMessage eventLogMessage = new EventLogMessage();
       eventLogMessage.setLogMessage("NtssSecurityPoricy.doAccessKeyCheck-Return Not Found!!");
       logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
-      return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.FORBIDDEN);
     }
     // レスポンス生成
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
   // add #10160 複数端末同時サインイン無効時の強制サインアウトが動作しない。 dou end
 
@@ -143,7 +159,18 @@ public class UserAuthorityResource {
    */
   @GetMapping("/{user_id}/list")
   public ResponseEntity<?> getUserAuthority(
-    @PathVariable("user_id") Long userId) {
+    @PathVariable("user_id") Long userId,
+    @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 start
+    if (ntssUser != null && !ntssUser.isNkkAdminUser()) {
+      MstUser mstUser = mstUserDao.selectById(userId);
+      if (mstUser != null || mstUser.getFacilityCd() != null || !mstUser.getFacilityCd().equals(ntssUser.getFacilityCd()) ) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstUser.getFacilityCd() + " " + "userId=" + userId;
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 start
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = AdminWebConstant.Uri.USER_AUTHORITY + "/list";
@@ -229,6 +256,19 @@ public class UserAuthorityResource {
   public ResponseEntity<?> updateUserAuthority(
     @RequestBody List<UserAuthorityRequest> request,
     @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if (ntssUser != null && !ntssUser.isNkkAdminUser()) {
+      for (UserAuthorityRequest userAuthorityRequest : request) {
+        MstUser mstUser = mstUserDao.selectById(userAuthorityRequest.getUserId());
+        if (mstUser != null && mstUser.getFacilityCd() != null && !mstUser.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstUser.getFacilityCd() + " " + "userId=" + userAuthorityRequest.getUserId();
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = AdminWebConstant.Uri.USER_AUTHORITY + "/list";
@@ -260,7 +300,7 @@ public class UserAuthorityResource {
       null);
     // wp アプリケーションログの適正化 Add End
     // レスポンス生成
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   /**

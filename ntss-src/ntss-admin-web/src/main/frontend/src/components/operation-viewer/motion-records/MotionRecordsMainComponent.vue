@@ -43,7 +43,7 @@
       </table>
     </div>
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target="false"
@@ -146,10 +146,10 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { FUNC_DETAIL_MOTION_RECORD_DETAIL, FUNC_DETAIL_MOTION_RECORD_LIST } from "@/constants/function-code";
 import commonjs from "@/constants/operationViewerCommon";
 import { SERVICE_SUPPORT } from "@/constants/operationViewerCommon";
@@ -171,6 +171,7 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 import DateInput from "@/components/common/DateInput.vue";
 //#5590 2023/04/19 ×を常に表示するように修正 張博 end
 import { getHolidayStyle } from "@/functions/common/CommonFunctions";
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 /**
  * 最大表示件数.
  */
@@ -188,6 +189,7 @@ export default {
   // add bug #7299 修正 chen end
   data() {
     return {
+      _isRefreshing: false,
       popoverVisible: false,
       popoverTarget: null,
       popoverDirection: "down",
@@ -513,8 +515,8 @@ export default {
     fetch(isNeedCountTotal = false) {
       // 条件をフィルタに設定
       let nowDate = new Date();
-      this.condition.endDate = moment(nowDate).format("YYYY-MM-DD");
-      this.condition.startDate = moment(
+      this.condition.endDate = dayjs(nowDate).format("YYYY-MM-DD");
+      this.condition.startDate = dayjs(
         nowDate.setDate(nowDate.getDate() - 7)
       ).format("YYYY-MM-DD");
       const info = [];
@@ -701,59 +703,67 @@ export default {
       }
     },
     // パンくずリストをクリックされた場合に呼び出される関数
-    refresh(isMainContent, autoRefreshFlag) {
-      if (isMainContent === undefined) {
-        const paths = this.$route.matched.map(item => item.path);
-        if (!paths?.includes(this.selfScreenPath)) {
-          return;
-        }
+    async refresh(isMainContent, autoRefreshFlag) {
+      if (this._isRefreshing) {
+        return;
       }
-      // 共通ローダー:表示開始
-      this.setLoadingScreenVisible(true);
-      this.offset = 0;
-      const filterDataType = [];
-      for (let idx1 = 0; idx1 < this.condition.dataType.length; idx1++) {
-        if (this.condition.dataType[idx1]) {
-          filterDataType.push(idx1 + 1);
-        }
-      }
-      const scrollAreaRef = this.$refs.scrollArea;
-      if (scrollAreaRef) {
-        // 現在のスクロール位置を保持
-        this.scrollTop = scrollAreaRef.scrollTop;
-      }
-      const info = [];
-      info.push({
-        facilityCd: this.getHeaderInfo.facilityCd,
-        machineTypeCd: this.getMachineTypeCd,
-        machineSerial: this.getHeaderInfo.machineSerial,
-        userTypeCd: this.getStateUserAccountInfo().userType,
-        administrator: this.getStateUserAccountInfo().administrator,
-        startDate: (this.condition.startDate ?? "").replace(/-/g, ""),
-        endDate: (this.condition.endDate ?? "").replace(/-/g, ""),
-        dataType: filterDataType,
-        freeWord: this.condition.freeWord,
-      });
-      // 入力日付のチェック
-      this.checkDateRange(info);
-      this.findMotionRecords(info, false, autoRefreshFlag)
-        .then(() => {
-          if (scrollAreaRef) {
-            scrollAreaRef.scrollTop = this.scrollTop;
+      this._isRefreshing = true;
+      try {
+        if (isMainContent === undefined) {
+          const paths = this.$route.matched.map(item => item.path);
+          if (!paths?.includes(this.selfScreenPath)) {
+            return;
           }
-          // 共通ローダー:表示終了
-          this.setLoadingScreenVisible(false);
-        })
-        .catch(error => {
-          //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
-          getErrorMessage('MotionRecordsMainComponent.vue', 'refresh', error);
-          //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
-          // 共通ローダー:表示終了
-          this.setLoadingScreenVisible(false);
-          if (error.response.status === 400) {
-            // TODO 必要に応じて、適切な業務エラー処理を実装すること。
+        }
+        // 共通ローダー:表示開始
+        this.setLoadingScreenVisible(true);
+        this.offset = 0;
+        const filterDataType = [];
+        for (let idx1 = 0; idx1 < this.condition.dataType.length; idx1++) {
+          if (this.condition.dataType[idx1]) {
+            filterDataType.push(idx1 + 1);
           }
+        }
+        const scrollAreaRef = this.$refs.scrollArea;
+        if (scrollAreaRef) {
+          // 現在のスクロール位置を保持
+          this.scrollTop = scrollAreaRef.scrollTop;
+        }
+        const info = [];
+        info.push({
+          facilityCd: this.getHeaderInfo.facilityCd,
+          machineTypeCd: this.getMachineTypeCd,
+          machineSerial: this.getHeaderInfo.machineSerial,
+          userTypeCd: this.getStateUserAccountInfo().userType,
+          administrator: this.getStateUserAccountInfo().administrator,
+          startDate: (this.condition.startDate ?? "").replace(/-/g, ""),
+          endDate: (this.condition.endDate ?? "").replace(/-/g, ""),
+          dataType: filterDataType,
+          freeWord: this.condition.freeWord,
         });
+        // 入力日付のチェック
+        this.checkDateRange(info);
+        
+        await this.findMotionRecords(info, false, autoRefreshFlag);
+        
+        if (scrollAreaRef) {
+          scrollAreaRef.scrollTop = this.scrollTop;
+        }
+        // 共通ローダー:表示終了
+        this.setLoadingScreenVisible(false);
+        
+      } catch (error) {
+        //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
+        getErrorMessage('MotionRecordsMainComponent.vue', 'refresh', error);
+        //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
+        // 共通ローダー:表示終了
+        this.setLoadingScreenVisible(false);
+        if (error.response?.status === 400) {
+          // TODO 必要に応じて、適切な業務エラー処理を実装すること。
+        }
+      } finally {
+        this._isRefreshing = false;
+      }
     },
     // add bug #6997 修正 chen start
     setEventRegDate(baseDate) {
@@ -773,46 +783,36 @@ export default {
       this.motionRecords = [];
     },
     // フィルタリング時
-    findMotionRecords(info, isNeedCountTotal = false, autoRefreshFlag) {
+    async findMotionRecords(info, isNeedCountTotal = false, autoRefreshFlag) {
       const params = info[0];
       this.isFilter = true;
-      this.setLoadingScreenVisible(true);
-      return new Promise(async (resolve, reject) => {
-      try {
-        if (isNeedCountTotal) {
-          const totalResponse = await sendRequestFindMotionRecordsTotal(params);
-          this.total = totalResponse.data;
-        }
-        if (this.offset === 0) {
-          this.clearMotionRecords();
-        }
-        if (this.total === 0) {
-          resolve();
-        }
-        const motionRecordsResponse = await sendRequestFindMotionRecords({ ...params, ...{ offset: this.offset }, autoRefreshFlag});
-        const motionRecords = motionRecordsResponse.data.motionRecords;
-        // 日付でソートする用のカラムを追加
-        for (const record of motionRecords) {
-          record.sortKey = `${record.eventRegDate}_${record.eventRegTime}`;
-        }
-        motionRecordsResponse.data.motionRecords = motionRecords;
-        this.motionRecords = this.motionRecords.concat(motionRecordsResponse.data.motionRecords);
-        this.offset = this.motionRecords.length;
-        this.setLoadingScreenVisible(false);
-        resolve(motionRecordsResponse);
-        } catch (error) {
-          this.setLoadingScreenVisible(false);
-          reject(error);
-        }
-      });
+      if (isNeedCountTotal) {
+        const totalResponse = await sendRequestFindMotionRecordsTotal(params);
+        this.total = totalResponse.data;
+      }
+      if (this.offset === 0) {
+        this.clearMotionRecords();
+      }
+      if (this.total === 0) {
+        return;
+      }
+      const motionRecordsResponse = await sendRequestFindMotionRecords({ ...params, ...{ offset: this.offset }, autoRefreshFlag});
+      const motionRecords = motionRecordsResponse.data.motionRecords;
+      // 日付でソートする用のカラムを追加
+      for (const record of motionRecords) {
+        record.sortKey = `${record.eventRegDate}_${record.eventRegTime}`;
+      }
+      motionRecordsResponse.data.motionRecords = motionRecords;
+      this.motionRecords = this.motionRecords.concat(motionRecordsResponse.data.motionRecords);
+      this.offset = this.motionRecords.length;
+      return motionRecordsResponse;
     },
     // 初期表示時
-    fetchMotionRecords(info, isNeedCountTotal = false) {
+    async fetchMotionRecords(info, isNeedCountTotal = false) {
       const params = info[0];
       this.isFilter = false;
       this.setLoadingScreenVisible(true);
-      return new Promise(async (resolve, reject) => {
-         try {
+      try {
           if (isNeedCountTotal) {
             const totalResponse = await sendRequestFindMotionRecordsTotal(params);
             this.total = totalResponse.data;
@@ -821,7 +821,7 @@ export default {
             this.clearMotionRecords();
           }
           if (this.total === 0) {
-            resolve();
+            return;
           }
           const motionRecordsResponse = await sendRequestFetchMotionRecords({ ...params, ...{ offset: this.offset }});
           const motionRecords = motionRecordsResponse.data.motionRecords;
@@ -837,20 +837,21 @@ export default {
           this.motionRecords = this.motionRecords.concat(motionRecordsResponse.data.motionRecords);
           this.offset = this.motionRecords.length;
           this.setLoadingScreenVisible(false);
-          resolve(motionRecordsResponse);
-         } catch(error) {
-          this.setLoadingScreenVisible(false);
-          reject(error);
-         }
-      });
+          return motionRecordsResponse;
+      } catch(error) {
+        this.setLoadingScreenVisible(false);
+        throw error;
+      }
     },
     // add bug #6942 修正 chen end
     // add bug #7299 修正 chen start
      showStartMsg(){
-      this.showErrorStartDate = this.condition.startDate ? document.getElementsByClassName("start-date")[0].validationMessage !== "" : false;
+      const startDateInput = getScopedElementsByClassName("start-date", this.$el || this)[0];
+      this.showErrorStartDate = this.condition.startDate ? startDateInput?.validationMessage !== "" : false;
     },
     showEndMsg(){
-      this.showErrorEndDate = this.condition.endDate ? document.getElementsByClassName("end-date")[0].validationMessage !== "" : false;
+      const endDateInput = getScopedElementsByClassName("end-date", this.$el || this)[0];
+      this.showErrorEndDate = this.condition.endDate ? endDateInput?.validationMessage !== "" : false;
     },
     scroll() {
       if (this.motionRecords.length >= this.total) {
@@ -859,8 +860,8 @@ export default {
       const tbodyRef = this.$refs.tbody;
       const scrollAreaRef = this.$refs.scrollArea;
       if (tbodyRef && scrollAreaRef) {
-        const lastRow = tbodyRef.lastChild;
-        if (lastRow) {
+        const lastRow = tbodyRef.lastElementChild || tbodyRef.lastChild;
+        if (lastRow && typeof lastRow.getBoundingClientRect === "function") {
           const scrollAreaRect = scrollAreaRef.getBoundingClientRect();
           const lastRowRect = lastRow.getBoundingClientRect();
           if (lastRowRect.top >= scrollAreaRect.top &&
@@ -889,7 +890,7 @@ export default {
       }
     },
     formattedEventRegDate(regDate){
-      const date = moment(regDate, "YYYY/MM/DD");
+      const date = dayjs(regDate, "YYYY/MM/DD");
       return date.format("YYYY/MM/DD(dd)");   
     },
     /**
@@ -902,7 +903,7 @@ export default {
   // add bug #7299 修正 chen end
   async created() {
     // 画面名称取得
-    this.selfScreenPath = this.$router.currentRoute.path;
+    this.selfScreenPath = this.$route.path;
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("処理中・・・");
     // 共通ローダー:表示開始
@@ -932,13 +933,15 @@ export default {
     this.fetchMotionRecordsFirst();
     // 共通ローダー:表示終了
     this.setLoadingScreenVisible(false);
+    this.resetLoadingScreenVisibleCount();
+    
   },
   mounted() {
-    window.addEventListener("scroll", this.scroll,true);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("scroll", this.scroll,true);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.clearHolidays(); // storeの休日マスタをクリア
-    window.removeEventListener("scroll", this.scroll,true);
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("scroll", this.scroll,true);
     EventBus.$off("refresh", this.refresh);
     // dataの初期化
     Object.assign(this.$data, this.$options.data());

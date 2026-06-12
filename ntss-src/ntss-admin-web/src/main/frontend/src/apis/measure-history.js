@@ -1,11 +1,7 @@
-//@ts-check
-
 /**
  * 体重計測定記録系API
  */
-// @ts-ignore
 import { ApiHelper } from "@/apis/AxiosHelper";
-// @ts-ignore
 import store from "@/stores";
 
 /**
@@ -15,15 +11,14 @@ const MEASURE_HISTORY = "/measure_history";
 
 /**
  * 情報取得
- * @param {*} params  施設コード、開始日、終了日
+ * @param {{ FacilityCd: string; startDate: string; endDate: string }} params 施設コード、開始日、終了日
  */
 export function sendRequestGetMeasureHistory(params) {
   return getWithLoader(
-    `${MEASURE_HISTORY}/order/${params.FacilityCd}/${params.startDate}/${
-      params.endDate
-    }`
+    `${MEASURE_HISTORY}/order/${params.FacilityCd}/${params.startDate}/${params.endDate}`
   );
 }
+
 /**
  * 単体情報取得
  * @param {number} primaryKey
@@ -34,8 +29,8 @@ export function sendRequestGetSingleHistory(primaryKey) {
 
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {Record<string, unknown>} [params] パラメータ
  */
 function getWithLoader(url, params = undefined) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");

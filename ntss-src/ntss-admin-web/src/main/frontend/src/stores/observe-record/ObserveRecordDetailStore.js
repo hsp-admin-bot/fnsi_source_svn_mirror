@@ -139,7 +139,6 @@ export default {
      */
     async insertBBS(dat) {
       // TODO:掲示板データの新規登録を実装する
-      // eslint-disable-next-line no-console
       console.log(`insertBBS:${dat}`);
     },
     async deletePatObsRec({ dispatch, state }) {
@@ -173,7 +172,7 @@ export default {
       //  upDateの比較
       //    手元のデータとupDateが異なれば更新を中止する
       //    手元のデータを同じであれば更新を行う
-      let result = -1;
+      let result;
       const patObsRec = await dispatch("getPatObsRec", {
         patId: state.selectedData.patObsRec.patId,
         obsRecNo: state.selectedData.patObsRec.obsRecNo
@@ -198,7 +197,6 @@ export default {
      */
     async updateBBS(dat) {
       // TODO:掲示板データの更新登録を実装する
-      // eslint-disable-next-line no-console
       console.log(`updateBBS:${dat}`);
     },
     /**

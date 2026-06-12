@@ -52,8 +52,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.dao.MstExamSetDao;
 import jp.co.nikkiso.ntss.core.dao.MstExamItemDao;
@@ -68,6 +68,7 @@ import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.FlagType;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.FacilitySettingNo;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.TransactionManagerName;
 import jp.co.nikkiso.ntss.core.dao.PatPersonalMainDao;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 
 @Service
@@ -123,6 +124,10 @@ public class ExamRecordServiceImpl implements ExamRecordService {
 
   @Autowired
   private RadRequestService radRequestService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   // add #9811 装置設定>操作範囲>ヘマトクリットと総タンパクの検査値が不正 修正 20231113 ztc start
   @Autowired
@@ -269,7 +274,7 @@ public class ExamRecordServiceImpl implements ExamRecordService {
       wheres.append(" WHERE\n");
       wheres.append(" exam_main_cd = " + examMainCd + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patExamMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -958,7 +963,7 @@ public class ExamRecordServiceImpl implements ExamRecordService {
       wheres.append(" WHERE\n");
       wheres.append(" exam_main_cd = " + examMainCd + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patExamMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -995,7 +1000,7 @@ public class ExamRecordServiceImpl implements ExamRecordService {
       wheres.append(" WHERE\n");
       wheres.append(" exam_main_cd = " + examMainCd + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patExamMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -1050,7 +1055,7 @@ public class ExamRecordServiceImpl implements ExamRecordService {
       wheres.append(" WHERE\n");
       wheres.append(" exam_main_cd = " + examMainCd + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patExamMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -1075,7 +1080,7 @@ public class ExamRecordServiceImpl implements ExamRecordService {
         StringBuffer wheresDel = new StringBuffer("");
         wheresDel.append(" WHERE\n");
         wheresDel.append(" exam_main_cd = " + mergeTarget.getExamMainCd() + "\n");
-        DataUpdateLogCommonNew logCommonDel = getLogCommon(patExamMainDao, tableName, wheres, getEventLogMessage());
+        DataUpdateLogCommonNew logCommonDel = getLogCommon(tableName, wheres, getEventLogMessage());
         boolean setResultDel = logCommonDel.setInfo();
         // マージ元のレコードは論理削除
         int delCount = patExamMainDao.updateIsDelByExamMainCd(mergeTarget.getExamMainCd(), upStaff);
@@ -1111,7 +1116,7 @@ public class ExamRecordServiceImpl implements ExamRecordService {
       wheres.append(" WHERE\n");
       wheres.append(" exam_main_cd = " + examMainCd + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patExamMainDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -1194,11 +1199,11 @@ public class ExamRecordServiceImpl implements ExamRecordService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

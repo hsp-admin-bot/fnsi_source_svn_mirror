@@ -23,7 +23,6 @@
           >{{ item.name }}</option>
         </v-ons-select>
       </div>
-      <template>
         <div style="margin-top: 5px; line-height: 30px;">
           <v-ons-button
             class="btn3-normal ok common-style-ok-button"
@@ -32,15 +31,15 @@
             @click="addRow"
           >追加</v-ons-button>
         </div>
-      </template>
     </div>
   </v-ons-popover>
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import PopoverMixin from "@/components/PopoverMixin";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
+import { findAncestorWithAnyKey } from "@/functions/common/ComponentOwnerResolver";
 
 export default {
   mixins: [PopoverMixin],
@@ -117,8 +116,11 @@ export default {
       // 吹き出しを閉じる
       this.onCancel();
     },
+    resolveMasterCopyAddOwner() {
+      return findAncestorWithAnyKey(this, ["masterCopyAddVisible"], { maxDepth: 12 }) || this;
+    },
     handleCancel () {
-      this.$parent.masterCopyAddVisible = false
+      this.resolveMasterCopyAddOwner().masterCopyAddVisible = false
     },
     onCancel() {
       this.$emit("popover-close", null);

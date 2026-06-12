@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -304,7 +304,7 @@ public class SessionManager implements WebSocketSessionControl {
     //
     HttpComponentsClientHttpRequestFactory clientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory();
     clientHttpRequestFactory.setReadTimeout( 10 * 1000 );
-    clientHttpRequestFactory.setConnectTimeout( 5 * 1000 );
+    clientHttpRequestFactory.setConnectionRequestTimeout( 5 * 1000 );
     rt = new RestTemplate(clientHttpRequestFactory);
   }
 
@@ -1138,7 +1138,7 @@ public class SessionManager implements WebSocketSessionControl {
 
                     // ヘッダ作成
                     HttpHeaders headers = new HttpHeaders();
-                    headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+                    headers.setContentType(MediaType.APPLICATION_JSON);
                     headers.add( this.getSecurityHeaderParamName(), this.getSecurityKey() );
 
                     // ボディ作成
@@ -1482,7 +1482,7 @@ public class SessionManager implements WebSocketSessionControl {
 
             // ヘッダ作成
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+            headers.setContentType(MediaType.APPLICATION_JSON);
             headers.add( this.getSecurityHeaderParamName(), this.getSecurityKey() );
 
             // リクエスト作成
@@ -1523,7 +1523,7 @@ public class SessionManager implements WebSocketSessionControl {
           sb.setLength(0);
           sb.append("API sendMessageToAllServer() CALLED IP       : " + remoteAddr);
           sb.append(", targetId : " + sendClientMessage.getDecodeTargetId());
-          sb.append(", URI response error status  : " + e.getRawStatusCode());
+          sb.append(", URI response error status  : " + e.getStatusCode().value());
           eventLogMessage.setLogMessage(sb.toString());
           eventLogMessage.setFacilityCd(facilityCd);
           logService.log(LogLevel.INFO, eventLogMessage, null, SERVICE_NAME.FNSI, null);

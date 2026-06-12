@@ -1,7 +1,10 @@
 package jp.co.nikkiso.ntss.admin_web.service.sysDataListDetail;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import jp.co.nikkiso.ntss.core.entity.DataListAggregationParam;
+import jp.co.nikkiso.ntss.core.entity.custom.PatIdRstAnchor;
+import org.springframework.util.CollectionUtils;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import jp.co.nikkiso.ntss.admin_web.response.sysDataListDetail.SysDataListDetailResponse;
@@ -109,6 +112,7 @@ import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
 import static java.util.Map.Entry.comparingByKey;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 /**
  * データリストカテゴリ詳細の実装インタフェース
  */
@@ -475,7 +479,7 @@ public class SysDataListDetailServiceImpl implements SysDataListDetailService {
     // SQL実行でエラーが発生しても、後続処理を継続する.
     try {
 
-      Config config = Config.get(sysDataListDetailDao);
+      Config config = defaultDbConfig;
       SelectBuilder selectBuilder = createSelectBuilder(config, sql, dataKey);
       reportInfo = sysDataListDetailDao.executeSql(selectBuilder);
 
@@ -599,6 +603,10 @@ public class SysDataListDetailServiceImpl implements SysDataListDetailService {
   private MstEquipmentDao mstEquipmentDao;
   @Autowired
   private MstDialyzerDao mstDialyzerDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   @Override
   public Map<String, Object> getTemplateValue(List<Long> patIdList, String facilityCd, String startDate, String endDate, Integer templateCd){
@@ -836,6 +844,9 @@ public class SysDataListDetailServiceImpl implements SysDataListDetailService {
             ordMainMin.add(ordMainTmp.get(0));
           }
         }
+        // mod #11895 データリスト「治療予定・実績」テンプレート恒久対応 fang start
+        appendPriorRstWeightOrdMains(patStartDate, facilityCd, ordMainMin);
+        // mod #11895 データリスト「治療予定・実績」テンプレート恒久対応 fang end
         map.put("ordMainMin", ordMainMin);
         // add bug 5358 修正 chen end
         map.put("ordMains", ordMains);
@@ -1119,6 +1130,9 @@ public class SysDataListDetailServiceImpl implements SysDataListDetailService {
             ordMainMin.add(ordMainTmp.get(0));
           }
         }
+        // mod #11895 データリスト「治療予定・実績」テンプレート恒久対応 fang start
+        appendPriorRstWeightOrdMains(patStartDate, facilityCd, ordMainMin);
+        // mod #11895 データリスト「治療予定・実績」テンプレート恒久対応 fang end
         map.put("ordMainMin", ordMainMin);
         // add bug 5358 修正 chen end
         map.put("ordMains", ordMains);
@@ -1293,7 +1307,16 @@ public class SysDataListDetailServiceImpl implements SysDataListDetailService {
         }
         // add #11528 【たくしん会】データリスト並び順不正 房 end
         map.put("mstMachineDatalistMainteInit", mstMachineDatalistMainteInit);
-        List<MstMachineDatalistMainte> mstMachineDatalistMainte = mstMachineDao.selectDatalistMainte(startDate, endDate, facilityCd);
+        // mod #11718 【#11600持ち越し】データリスト画面不正② fang start
+//        List<MstMachineDatalistMainte> mstMachineDatalistMainte = mstMachineDao.selectDatalistMainte(startDate, endDate, facilityCd);
+        List<MstMachineDatalistMainte> mstMachineDatalistMainte = new ArrayList<>();
+        List<MstMachineDatalistMainte> mstMachineDatalistMaintePart1 = mstMachineDao.selectDatalistMaintePart1(startDate, endDate, facilityCd);
+        List<MstMachineDatalistMainte> mstMachineDatalistMaintePart2 = mstMachineDao.selectDatalistMaintePart2(startDate, endDate, facilityCd);
+        List<MstMachineDatalistMainte> mstMachineDatalistMaintePart3 = mstMachineDao.selectDatalistMaintePart3(startDate, endDate, facilityCd);
+        mstMachineDatalistMainte.addAll(mstMachineDatalistMaintePart1);
+        mstMachineDatalistMainte.addAll(mstMachineDatalistMaintePart2);
+        mstMachineDatalistMainte.addAll(mstMachineDatalistMaintePart3);
+        // mod #11718 【#11600持ち越し】データリスト画面不正② fang end
         map.put("mstMachineDatalistMainte", mstMachineDatalistMainte);
         List<MstPersonalUser> personalUsers = mstPersonalUserDao.selectAllUser(facilityCd, "0");
         map.put("mstPersonalUsers", personalUsers);
@@ -1335,4 +1358,148 @@ public class SysDataListDetailServiceImpl implements SysDataListDetailService {
     return mstWaterSurveyTypeDao.selectDecimal(facilityCd);
   }
   /*add FNSI-改修内容5237 任 end*/
+
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang start
+  private void editDataKeys(Map<String, Object> dataKey, List<Map<String, Object>> ruleList) throws Exception {
+    if(!CollectionUtils.isEmpty(ruleList)) {
+      Map<String, Object> rule = ruleList.get(0);
+      for(String key : rule.keySet()) {
+        if(rule.get(key) != null) {
+          Map<String, Object> ruleDetails = (Map<String, Object>)rule.get(key);
+          if("in".equals(key)) {
+            // 検索条件は「in」の場合
+            String inKey = (String)ruleDetails.get("key");
+            if(ruleDetails.get("type") != null && "text".equals(ruleDetails.get("type").toString())) {
+              List<String> inValues = (List<String>)ruleDetails.get("values");
+              dataKey.put(inKey, inValues);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  @Override
+  public List<Object> getRowDataNew(String facilityCd, Map<String, List<DataListAggregationParam>> groupMap) throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    List<Object> resultList = new ArrayList<>();
+    String sqlCd = "";
+    String detailCd = "";
+    for(String key : groupMap.keySet()) {
+      List<DataListAggregationParam> tempList = groupMap.get(key);
+      Map<String, Object> dataKey = new HashMap<String, Object>();
+      Long dataListDetailCd = tempList.get(0).getDataListDetailCd();
+      detailCd = detailCd + dataListDetailCd + "\r\n";
+      dataKey.put("ids", tempList.stream().map(DataListAggregationParam::getItemId).toList());
+      dataKey.put("idStrArr", tempList.stream().map(el -> el.getItemId() != null ? el.getItemId().toString() : "").toList());
+      dataKey.put("itemIds", tempList.stream().map(DataListAggregationParam::getItemId).toList());
+      dataKey.put("facilityCd", facilityCd);
+      if (tempList.get(0).getDateFrom() != null) {
+        dataKey.put("dateFrom", tempList.get(0).getDateFrom());
+      }
+      if (tempList.get(0).getDateTo() != null) {
+        dataKey.put("dateTo", tempList.get(0).getDateTo());
+      }
+      if (tempList.get(0).getType() != null) {
+        dataKey.put("type", tempList.get(0).getType());
+      }
+      if(tempList.get(0).getKubun() != null){
+        dataKey.put("kubun", tempList.get(0).getKubun());
+      }
+      SysDataListDetail detail = sysDataListDetailDao.selectByCd(dataListDetailCd);
+      Map<String, Object> result = new HashMap<>();
+      if (detail != null) {
+        String rowData = detail.getCellDisplay();
+        if (rowData != null) {
+          if (detail.getDataSet() != null) {
+            List<Map<String, Object>> dataSet = mapper.readValue(detail.getDataSet(),new TypeReference<List<Map<String, Object>>>() {});
+            for(Map<String, Object> i: dataSet) {
+              if(i.get("sql_cd") != null && !"".equals(String.valueOf(i.get("sql_cd")))) {
+                sqlCd = sqlCd + i.get("sql_cd") + "\r\n";
+              }
+              if(i.get("sql_cd") != null && !"null".equals(i.get("sql_cd").toString())) {
+                if(i.get("rules") != null) {
+                  List<Map<String, Object>> ruleList = (List<Map<String, Object>>)i.get("rules");
+                  editDataKeys(dataKey, ruleList);
+                }
+                List<Map<String, Object>> resultQuery = sysDataSetService.getDataList(Long.parseLong(String.valueOf(i.get("sql_cd"))), dataKey);
+                String param = String.valueOf(i.get("param"));
+                if (!resultQuery.isEmpty() && param != null ) {
+                  result.put(param, resultQuery);
+                }
+              }
+            }
+          }
+        }
+        result.put("cellDisplay", rowData);
+      }
+      if(!result.isEmpty()) {
+        for(DataListAggregationParam param : tempList) {
+          Map<String, Object> tempMap = new HashMap<>();
+          tempMap.put("cellDisplay", result.get("cellDisplay"));
+          if(result.get("unit") != null) {
+            List<Map<String, Object>> unitList = (List<Map<String, Object>>)result.get("unit");
+            List<Map<String, Object>> tempResult = unitList.stream().filter(el
+              -> el.get("cd") != null && el.get("cd").toString().equals(param.getItemId().toString())).collect(Collectors.toList());
+            if(!CollectionUtils.isEmpty(tempResult)) {
+              tempMap.put("unit", tempResult.get(0).get("unit"));
+            } else if(tempList.size() == 1 && !CollectionUtils.isEmpty(unitList)) {
+              // 単一検索結果の場合
+              tempMap.put("unit", unitList.get(0).get("unit"));
+            }
+          }
+          // 集計結果
+          if(result.get("count") != null) {
+            List<Map<String, Object>> countList = (List<Map<String, Object>>)result.get("count");
+            List<Map<String, Object>> tempResult = countList.stream().filter(el
+              -> el.get("cd") != null && el.get("cd").toString().equals(param.getItemId().toString())).collect(Collectors.toList());
+            tempMap.put("id", param.getItemId());
+            tempMap.put("detailCd", param.getDataListDetailCd());
+            if(!CollectionUtils.isEmpty(tempResult)) {
+              tempMap.put("count", tempResult);
+            } else if(tempList.size() == 1) {
+              // 単一検索結果の場合
+              tempMap.put("count", countList);
+            }
+          } else {
+            tempMap.put("count", new ArrayList<>());
+          }
+          resultList.add(tempMap);
+        }
+      }
+    }
+    return resultList;
+  }
+  // add #11718 【#11600持ち越し】データリスト画面不正② fang end
+
+  // add #11895 データリスト「治療予定・実績」テンプレート恒久対応 fang start
+  /**
+   * {@link OrdMainDao#selectByPatIdFacilityCd} の逐次呼び出しを避け、同一キー順で {@code ordMainMin} に追加する。
+   */
+  private void appendPriorRstWeightOrdMains(Map<Long, Timestamp> patStartDate, String facilityCd, List<OrdMain> ordMainMin) {
+    if (patStartDate == null || patStartDate.isEmpty()) {
+      return;
+    }
+    List<PatIdRstAnchor> pairs = new ArrayList<>(patStartDate.size());
+    for (Long patId : patStartDate.keySet()) {
+      pairs.add(new PatIdRstAnchor(patId, patStartDate.get(patId)));
+    }
+    Map<Long, OrdMain> byPatId = new HashMap<>();
+    final int chunkSize = 300;
+    for (List<PatIdRstAnchor> chunk : Lists.partition(pairs, chunkSize)) {
+      List<OrdMain> batch = ordMainDao.selectByPatIdFacilityCdBatch(chunk, facilityCd);
+      if (batch != null) {
+        for (OrdMain om : batch) {
+          byPatId.put(om.getPatId(), om);
+        }
+      }
+    }
+    for (Long patId : patStartDate.keySet()) {
+      OrdMain row = byPatId.get(patId);
+      if (row != null) {
+        ordMainMin.add(row);
+      }
+    }
+  }
+  // add #11895 データリスト「治療予定・実績」テンプレート恒久対応 fang end
 }

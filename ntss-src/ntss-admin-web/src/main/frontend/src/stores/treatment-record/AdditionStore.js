@@ -84,7 +84,6 @@ export default {
      * @param {*} ordNo オーダ番号
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     getTreatmentRecordAddition({ commit }, ordNo) {
       return sendRequestGetTreatmentRecordAddition(ordNo).then(response => {
         commit("setUpDate", response.data.up_date);
@@ -100,7 +99,6 @@ export default {
      * @param {*} payload 指示コメント情報
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     updateTreatmentRecordAddition({ commit, state }, { ordNo, payload }) {
       return sendRequestUpdateTreatmentRecordAddition(
         ordNo,
@@ -117,7 +115,6 @@ export default {
      * @param {*} payload 指示コメント情報
      */
     // TODO: 局所的なeslintの設定を削除する
-    /* eslint-disable no-unused-vars */
     updateIndComment({ commit }, payload) {
       return sendUpdateIndComment(payload);
     }
@@ -158,7 +155,7 @@ export default {
     getUnusedCommentNoList(state) {
       // #10777 患者経過総合ビューアでの指示コメント追加時指示コメント番号に101以上の番号が設定可能 linjunfeng start
       // const baseList = [...Array(100).keys()].map(i => ++i);
-      const baseList = [...Array(99).keys()].map(i => ++i);
+      const baseList = [...Array(99).keys()].map(i => i + 1);
       // #10777 患者経過総合ビューアでの指示コメント追加時指示コメント番号に101以上の番号が設定可能 linjunfeng end
       const usedNoList = state.rstIndCommentInfo.map(e => e.no);
       return baseList.filter(e => !usedNoList.includes(e));

@@ -6,13 +6,12 @@ spring:
              org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
   main:
     allow-circular-references: true
-  data:
-    mongodb:
-      host: 192.168.100.11
-      port: 27017
-      database: ntss
-      username: nkk
-      password: nkk
+  mongodb:
+    host: 192.168.100.11
+    port: 27017
+    database: ntss
+    username: nkk
+    password: nkk
   datasource:
     default:
       jdbc-url: jdbc:postgresql://192.168.100.10:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified
@@ -30,8 +29,9 @@ spring:
       username: nkk4
       password: nkk4
   jackson:
-    serialization:
-      WRITE_DATES_AS_TIMESTAMPS: false
+    datatype:
+      datetime:
+        WRITE_DATES_AS_TIMESTAMPS: false
   application:
     name: ntss-admin-web
   jmx:

@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jp.co.nikkiso.ntss.coop_api.service.LogService;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * ログアップローダー系のRestクラス

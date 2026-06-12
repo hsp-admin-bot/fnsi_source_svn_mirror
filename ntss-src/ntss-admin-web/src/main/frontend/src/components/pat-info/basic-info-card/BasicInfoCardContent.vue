@@ -1,5 +1,6 @@
 <template>
   <table class="card-table">
+    <tbody>
     <tr>
       <td class="item-title">ID</td>
       <td colspan="2" class="item-data">
@@ -15,78 +16,17 @@
             class="idInputChange"
             @input="filterInput($event, 'hosp_pat_id')"
           />
-          <ons-button
+          <v-ons-button
             v-show="isCreationPat && isShowPatientCapture"
             class="patient-capture common-style-select-button btn3-normal"
-            :disabled ="!getItemAuthorized('PatInfo', 'default_authority') || this.isEnAblePatCap"
+            :disabled ="!getItemAuthorized('PatInfo', 'default_authority') || this.isEnAblePatCap || getIsOtherFacility"
             @click="showPatCapture"
           >
             取込
-          </ons-button>
+          </v-ons-button>
         </div>
       </td>
     </tr>
-    <v-ons-modal :visible="patCaptureVisible" :class="fontSizeSet">
-      <div>
-        <transition name="modal">
-          <div class="modal-mask">
-            <div class="modal-wrapper">
-              <div class="modal-container modal-container-custom">
-                <div class="modal-header">
-                  <ons-toolbar style="background: #333333;">
-                    <div class="left toolbar__title">
-                      <span style="color: #fafafa">患者取込</span>
-                    </div>
-                    <div class="right">
-                      <ons-toolbar-button class="close-btn print-none" @click="cancelPatCapture">
-                        <ons-icon icon="fa-times" />
-                      </ons-toolbar-button>
-                    </div>
-                  </ons-toolbar>
-                </div>
-                <div id="m-content" class="modal-body m-content">
-                  <v-ons-row class="condition-row">
-                    <v-ons-col style="text-align: left">
-                      <label>
-                        患者IDを入力し患者取込ボタンを押してください
-                        <br/>
-                        （半角カンマ(,)区切りで、複数患者を指定できます。）
-                      </label>
-                      <custom-input
-                        :value="hostpatId"
-                        :validators="[validateInputId]"
-                      />
-                    </v-ons-col>
-                  </v-ons-row>
-                  <hr style="border-color: #ececec">
-                  <div class="condition-row" style="height:30px;margin-bottom:5px;margin-top:10px;">
-                    <div class="cancelbtn" style="float:left;">
-                      <v-ons-button class="clear custom-button btn2-cancel" @click="cancelPatCapture">キャンセル</v-ons-button>
-                    </div>
-                    <div style="float:right;" class="btnok">
-                      <!-- mod #10359 編集権限の動作不正 dengshen start -->
-                      <!-- <v-ons-button -->
-                      <!--   class="common-style-ok-button custom-button btn1-execute" -->
-                      <!--   @click="getInputId" -->
-                      <!--   :disabled="checkEmpty || editFlag" -->
-                      <!-- > -->
-                      <v-ons-button
-                        class="common-style-ok-button custom-button btn1-execute"
-                        @click="getInputId"
-                        :disabled="checkEmpty || !getItemAuthorized('PatInfo', 'default_authority')"
-                      >
-
-                        取込
-                      </v-ons-button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </transition>
-      </div>
-    </v-ons-modal>
     <tr>
       <td class="item-title">患者名</td>
       <td class="item-data">
@@ -158,22 +98,22 @@
     </tr>
     <tr>
       <td class="item-title">入外区分</td>
-      <custom-select
-        v-if="inOutClassValue === 2"
-        style="width: 100px;"
-        ref="in_out_class"
-        :value="getPatData('in_out_class')"
-        :options="deathOptions"
-        :disabled="true"
-      />
-      <custom-select
-        v-else
-        style="width: 100px;"
-        ref="in_out_class"
-        :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-        :value="getPatData('in_out_class')"
-        :options="optionsInOutClass"
-      />
+        <custom-select
+          v-if="inOutClassValue === 2"
+          style="width: 100px;"
+          ref="in_out_class"
+          :value="getPatData('in_out_class')"
+          :options="deathOptions"
+          :disabled="true"
+        />
+        <custom-select
+          v-else
+          style="width: 100px;"
+          ref="in_out_class"
+          :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+          :value="getPatData('in_out_class')"
+          :options="optionsInOutClass"
+        />
     </tr>
     <tr>
       <td class="item-title">在院</td>
@@ -304,6 +244,8 @@
 <!--      </td>-->
       <td class="item-data">
         <custom-simple-textarea-a
+          ref="nationalityDisplay"
+          class="nationality-textarea-field"
           :value="getPatData('nationality')"
           :display-string="mstCdToCountryName(
               mstSysCountry,
@@ -323,21 +265,16 @@
         <!--   :disabled="this.editFlag" -->
         <!--   @click="handleShowPopover()" -->
         <!-- > -->
-        <v-ons-button
-          ref="btnSelectMst"
-          class="common-style-select-button btn3-normal"
-          :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-          @click="handleShowPopover()"
-        >
-
-          選択
-        </v-ons-button>
-        <pop-over
-          v-if="popoverDataMstSysCountry.popoverVisible"
-          v-bind="popoverDataMstSysCountry"
-          :target-position-element="$refs.btnSelectMst"
-          @popover-close="closePopover(popoverDataMstSysCountry)"
-          @popover-return="setPatDataBasicInfo('nationality', $event.value)"
+        <common-master-selector
+          :masterType="MasterType.NATIONALITY_PAT_INFO"
+          :facilityCd="getFacilityCd"
+          :initItem="{ value: getPatData('nationality') ? getPatData('nationality').initValue : null }"
+          :editItem="{ value: getPatData('nationality') ? getPatData('nationality').editValue : null }"
+          :btnName="'選択'"
+          :isVisible="false"
+          :btnClass="'common-style-select-button btn3-normal'"
+          :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+          @popover-return="onNationalityReturn"
         />
       </td>
     </tr>
@@ -367,7 +304,7 @@
         <!--     mapVisible = true; -->
         <!--   " -->
         <!-- > -->
-        <v-ons-button
+        <ons-button
           class="common-style-select-button btn3-normal"
           :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
           @click="
@@ -377,13 +314,14 @@
         >
 
           住所検索
-        </v-ons-button>
+        </ons-button>
       </td>
     </tr>
     <tr>
       <td class="item-title">住所</td>
       <td colspan="2" class="item-data">
         <com-textarea
+          ref="comTextareaAddress"
           :content="patContactInfo('address')"
           :disabled = "!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
           cssClass="textarea-custom-text-font textarea-resize-vertical"
@@ -477,6 +415,7 @@
       <td class="item-title">メモ1</td>
       <td colspan="2" class="item-data">
         <com-textarea
+          ref="comTextareaMemo1"
           :content="patContactInfo('memo1')"
           :disabled = "!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
           cssClass="textarea-custom-text-font textarea-resize-vertical"
@@ -490,6 +429,7 @@
       <td class="item-title">メモ2</td>
       <td colspan="2" class="item-data">
         <com-textarea
+          ref="comTextareaMemo2"
           :content="patContactInfo('memo2')"
           :disabled = "!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
           cssClass="textarea-custom-text-font textarea-resize-vertical"
@@ -499,35 +439,103 @@
         />
       </td>
     </tr>
+  
+    </tbody>
   </table>
+    <v-ons-modal :visible="patCaptureVisible" :class="fontSizeSet">
+      <div>
+        <transition name="modal">
+          <div class="modal-mask">
+            <div class="modal-wrapper">
+              <div class="modal-container modal-container-custom">
+                <div class="modal-header">
+                  <ons-toolbar style="background: #333333;">
+                    <div class="left toolbar__title">
+                      <span style="color: #fafafa">患者取込</span>
+                    </div>
+                    <div class="right">
+                      <ons-toolbar-button class="close-btn print-none" @click="cancelPatCapture">
+                        <ons-icon icon="fa-times" />
+                      </ons-toolbar-button>
+                    </div>
+                  </ons-toolbar>
+                </div>
+                <div id="m-content" class="modal-body m-content">
+                  <v-ons-row class="condition-row">
+                    <v-ons-col style="text-align: left">
+                      <label>
+                        患者IDを入力し患者取込ボタンを押してください
+                        <br/>
+                        （半角カンマ(,)区切りで、複数患者を指定できます。）
+                      </label>
+                      <custom-input
+                        :value="hostpatId"
+                        :validators="[validateInputId]"
+                      />
+                    </v-ons-col>
+                  </v-ons-row>
+                  <hr style="border-color: #ececec">
+                  <div class="condition-row" style="height:30px;margin-bottom:5px;margin-top:10px;">
+                    <div class="cancelbtn" style="float:left;">
+                      <v-ons-button class="clear custom-button btn2-cancel" @click="cancelPatCapture">キャンセル</v-ons-button>
+                    </div>
+                    <div style="float:right;" class="btnok">
+                      <!-- mod #10359 編集権限の動作不正 dengshen start -->
+                      <!-- <v-ons-button -->
+                      <!--   class="common-style-ok-button custom-button btn1-execute" -->
+                      <!--   @click="getInputId" -->
+                      <!--   :disabled="checkEmpty || editFlag" -->
+                      <!-- > -->
+                      <v-ons-button
+                        class="common-style-ok-button custom-button btn1-execute"
+                        @click="getInputId"
+                        :disabled="checkEmpty || !getItemAuthorized('PatInfo', 'default_authority')"
+                      >
+
+                        取込
+                      </v-ons-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </transition>
+      </div>
+    </v-ons-modal>
+
 </template>
 
 <script>
   import { getAuthorized } from "@/functions/common/CommonFunctions.js";
-  import {mapActions, mapGetters} from "vuex";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   import {ApiHelper} from "@/apis/AxiosHelper";
   import {calculateAge} from "@/functions/PatInfoFunctions.js";
   import {
     PAT_PERSONAL_MAIN_COL_IN_OUT_VISIT_HISTORY_INFO_IN_OUT_CLASS,
     PAT_UNIQUE_COL_IN_OUT_VISIT_HISTORY_INFO_MOVE_IN_OUT_DB
   } from "@/constants/PatInfo.js";
-  import {EventBus} from "@/eventBus.js";
+  import {EventBus} from "@/compat/vue/event-bus.js";
   import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
   import {sendRequestGetMstFacilityByCd} from "@/apis/facility";
   import {ADVANCED_SETTINGS} from "@/constants/advancedSettings";
   import {createJournal} from "@/apis/journal";
   import CommonTextArea from "@/components/common/CommonTextArea";
   import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
-  import moment from "moment";
+  import dayjs from "@/compat/date/dayjs";
   import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
   import { messageFormat } from '@/functions/common/MessageFormat';
   import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
-
+  import _ from "@/compat/collections/lodash";
+  import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+  import * as MasterType from "@/components/common/master-selector/MasterType";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 export default {
   name: 'BasicInfoCard',
   mixins: [baseCardContent, MasterMaintenanceMixin],
   components: {
-    "com-textarea": CommonTextArea
+    "com-textarea": CommonTextArea,
+    "common-master-selector": commonMasterSelector
   },
   data() {
     return {
@@ -551,7 +559,7 @@ export default {
       patCaptureVisible: false,
       popoverDirection: "down",
       coopCd : "",
-      popoverDataMstSysCountry: {},
+      MasterType,
       mstSysCountry: null,
       // del #10359 編集権限の動作不正 dengshen start
       // // add 編集権限の適用 liang start
@@ -603,6 +611,7 @@ export default {
       // add FNSI-redmine bug #3948[患者取込ボタンが何度も押せてしまう]を修正 江 start
       clickTrue: false,
       // add FNSI-redmine bug #3948[患者取込ボタンが何度も押せてしまう]を修正 江 end
+      selectPatInfoAddressEventName: null,
 
     };
   },
@@ -694,11 +703,15 @@ export default {
      */
     age() {
       const birthday = this.getPatData("pat_birthday").editValue;
+      // 仅新規患者登録：未选择生年月日时显示「不明」
+      if (this.isCreationPat && (birthday == null || birthday === "")) {
+        return "不明";
+      }
       // mod 8294 死亡患者の年齢が現時点での年齢で表示されている 関 start
       // const age = this.calculateAge(birthday);
       // mod 8294 死亡患者の年齢が現時点での年齢で表示されている 関 start
-      // const date = this.selectedPat.pat_personal_main["is_die"] == 1 ? moment(this.selectedPat.pat_personal_main["die_date"]).format("YYYYMMDD") : moment(new Date()).format("YYYYMMDD");
-      const date = this.selectedPat === null ? moment(new Date()).format("YYYYMMDD") : this.selectedPat.pat_personal_main["is_die"] == 1 ? moment(this.selectedPat.pat_personal_main["die_date"]).format("YYYYMMDD") : moment(new Date()).format("YYYYMMDD");
+      // const date = this.selectedPat.pat_personal_main["is_die"] == 1 ? dayjs(this.selectedPat.pat_personal_main["die_date"]).format("YYYYMMDD") : dayjs(new Date()).format("YYYYMMDD");
+      const date = this.selectedPat === null ? dayjs(new Date()).format("YYYYMMDD") : this.selectedPat.pat_personal_main["is_die"] == 1 ? dayjs(this.selectedPat.pat_personal_main["die_date"]).format("YYYYMMDD") : dayjs(new Date()).format("YYYYMMDD");
       const age = this.calculateAge(birthday,date);
       // mod 8294 死亡患者の年齢が現時点での年齢で表示されている 関  end
       this.inOutClassValue = this.getPatData('in_out_class').initValue;
@@ -766,18 +779,7 @@ export default {
   // マスタ取得完了後にポップオーバーオブジェクトを作成
   watch: {
     mstSysCountry() {
-      this.popoverDataMstSysCountry = this.createPopoverData(
-        "国籍",
-        null,
-        null,
-        "国名",
-        this.mstSysCountry,
-        "countryCdAlpha3",
-        "countryName",
-        null,
-        null,
-        this.getPatData('nationality').editValue || "JPN"
-      );
+      this.resizeNationalityTextarea();
     }
   },
 
@@ -787,7 +789,7 @@ export default {
     this.inOutClassValue = inOutInitValue;
     EventBus.$off("requestReportParams", this.requestrReportParams);
     EventBus.$on("requestReportParams", this.requestrReportParams);
-    if ( inOutInitValue === "" || inOutInitValue == null ) {
+    if ( inOutInitValue === "" || inOutInitValue == null) {
       this.setPatData('in_out_class', 3);
       this.initRecord['in_out_class'] = {
         initValue: 3,
@@ -802,27 +804,22 @@ export default {
     if (this.isCreationPat) this.setPatData('pat_blood_type_abo', 0);
     if (this.isCreationPat) this.setPatData('pat_blood_type_rh', 0);
     if (this.isCreationPat) this.setPatData('pat_blood_type_serovar', 0);
-    const eventBusName = this.isCreationPat ? "selectPatInfoAddressNew" : "selectPatInfoAddressChange";
-    EventBus.$on(eventBusName, event => {
-      if (!this.mapVisible) return;
-      this.setPatDataJson("pat_contact_info", "address", event.address);
-      this.setPatDataJson("pat_contact_info", "zip_cd", event.zipCd);
-      this.mapVisible = false;
-    });
+    this.selectPatInfoAddressEventName = this.isCreationPat ? "selectPatInfoAddressNew" : "selectPatInfoAddressChange";
+    EventBus.$off(this.selectPatInfoAddressEventName, this.onSelectPatInfoAddress);
+    EventBus.$on(this.selectPatInfoAddressEventName, this.onSelectPatInfoAddress);
     // 施設拡張
     await this.setAdvancedSettings();
   },
   // add 画面印刷プレビューと印刷の実現 黄 start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("requestReportParams", this.requestrReportParams);
     // mod #10789 新患登録画面を経由すると患者情報の住所が上書きできなくなる 本田 start
     // EventBus.$off("selectPatInfoAddress");
-    const eventBusName = this.isCreationPat ? "selectPatInfoAddressNew" : "selectPatInfoAddressChange";
-    EventBus.$off(eventBusName);
+    if (this.selectPatInfoAddressEventName) {
+      EventBus.$off(this.selectPatInfoAddressEventName, this.onSelectPatInfoAddress);
+    }
     // mod #10789 新患登録画面を経由すると患者情報の住所が上書きできなくなる 本田 end
 
-    // dataの初期化
-    Object.assign(this.$data, this.$options.data());
   },
   // add 画面印刷プレビューと印刷の実現 黄 end
   methods: {
@@ -835,6 +832,12 @@ export default {
       return getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
+    onSelectPatInfoAddress(event) {
+      if (!this.mapVisible) return;
+      this.setPatDataJson("pat_contact_info", "address", event.address);
+      this.setPatDataJson("pat_contact_info", "zip_cd", event.zipCd);
+      this.mapVisible = false;
+    },
     //bug:4274 add by maxueqiang
     addFocusEvent(event){
       let element = event.target;
@@ -844,6 +847,38 @@ export default {
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
     setPatDataBasicInfo(item, value) {
       this.setPatData(item, value);
+      if (item === "nationality") {
+        this.resizeNationalityTextarea();
+      }
+    },
+
+    onNationalityReturn(ev) {
+      this.setPatDataBasicInfo("nationality", ev && ev.value != null ? ev.value : null);
+    },
+
+    resizeNationalityTextarea() {
+      this.$nextTick(() => {
+        setTimeout(() => {
+          const el = this.$refs.nationalityDisplay?.$el;
+          if (!el) {
+            return;
+          }
+          const peer = this.$refs.pat_last_name?.$el;
+          el.style.setProperty("height", "0px", "important");
+          let height = el.scrollHeight + 4;
+          if (peer?.offsetHeight) {
+            height = Math.max(height, peer.offsetHeight);
+          }
+          el.style.setProperty("height", `${height}px`, "important");
+        }, 50);
+      });
+    },
+
+    adjustCardTextareaHeights() {
+      this.resizeNationalityTextarea();
+      this.adjustComTextareaHeight("com-textarea-address", "comTextareaAddress");
+      this.adjustComTextareaHeight("com-textarea-memo1", "comTextareaMemo1");
+      this.adjustComTextareaHeight("com-textarea-memo2", "comTextareaMemo2");
     },
 
     // add bug #7125 修正 chen start
@@ -859,6 +894,7 @@ export default {
       });
       this.setLoadingScreenVisible(false);
       this.mstSysCountry = response.data;
+      this.resizeNationalityTextarea();
     },
     // add bug #7125 修正 chen end
 
@@ -883,26 +919,22 @@ export default {
           // add #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 start
           reportOneFlag: "0",
           // add #9660、#9558、#9332 機能帳票でパラメータが正しく渡されていない 高 end
-          fromDate: moment(Date.now()).format("YYYY/MM/DD"),
+          fromDate: dayjs(Date.now()).format("YYYY/MM/DD"),
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
-          //toDate: moment(new Date(curDate.getTime() + 6*24*60*60*1000)).format("YYYY/MM/DD"),
-          toDate: moment(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYYMMDD"),
+          //toDate: dayjs(new Date(curDate.getTime() + 6*24*60*60*1000)).format("YYYY/MM/DD"),
+          toDate: dayjs(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: moment(Date.now()).format("YYYYMMDD"),
+          //dialysisDate: dayjs(Date.now()).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
           //add 5984 機能帳票でパラメータが正しく渡されていない 吉 end
-          date: moment(Date.now()).format("YYYYMMDD")
+          date: dayjs(Date.now()).format("YYYYMMDD")
         };
         EventBus.$emit("sendReportParams", param);
       }
     },
     // add 画面印刷プレビューと印刷の実現 黄 end
     calculateAge,
-    handleShowPopover() {
-      this.popoverDataMstSysCountry.popoverContentSelected.value = this.editRecord['nationality'].editValue;
-      this.showPopover(this.popoverDataMstSysCountry);
-    },
     //add FNSI-画面部品デザイン じょはく start
     changeFlag() {
       this.inOutClassValue = 3;
@@ -986,7 +1018,7 @@ export default {
               hosp_pat_id: item.trim(),
               ord_no: "",
               /*add FNSI-改修内容538 連携イベントの登録適正化 任 start*/
-              base_date: moment().format("YYYYMMDD"),
+              base_date: dayjs().format("YYYYMMDD"),
               ope_cd: "017001",
               /*add FNSI-改修内容538 連携イベントの登録適正化 任 end*/
               user_id: this.getUserId
@@ -1127,7 +1159,10 @@ export default {
 
     async setAdvancedSettings() {
       // 施設拡張設定を取得
-      const responseFacility = await sendRequestGetMstFacilityByCd(this.getFacilityCd)
+      const responseFacility = await sendRequestGetMstFacilityByCd(
+        this.getFacilityCd,
+        this.selectedPatId
+      )
       .catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
         getErrorMessage('BasicInfoCardContent.vue', 'setAdvancedSettings', error);
@@ -1168,8 +1203,8 @@ export default {
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
     setBloodSerovarData() {
       if (this.isABBloodType()) {
-        const bloodSerovarTypeA = document.getElementById("blood-serovar").value;
-        const bloodSerovarTypeB = document.getElementById("blood-AB-for-B-type").value;
+        const bloodSerovarTypeA = getScopedElementById("blood-serovar", this.$el || this).value;
+        const bloodSerovarTypeB = getScopedElementById("blood-AB-for-B-type", this.$el || this).value;
         const bloodSerovarTypeAInt = parseInt(bloodSerovarTypeA) % 10;
         const bloodSerovarTypeBInt = parseInt(bloodSerovarTypeB) % 10;
         this.setPatData('pat_blood_type_serovar', "4" + bloodSerovarTypeAInt + bloodSerovarTypeBInt);
@@ -1207,7 +1242,7 @@ export default {
     //   e.target.value = e.target.value.replace(/[`~!@#$%^&*()_\-+=<>?:"{}|,./;'\\[\]·~！@#￥%……&*（）——\-+={}|《》？：“”【】、；‘’，。、]/g, '').replace(/\s/g, "");
     // },
     filterInput: _.debounce(function (e) {
-      e.target.value = e.target.value.replace(/[`~!@#$%^&*()_\-+=<>?:"{}|,./;'\\[\]·~！@#￥%……&*（）——\-+={}|《》？：“”【】、；‘’，。、＃⃣⃣]/g, '').replace(/\s/g, "");
+      e.target.value = e.target.value.replace(/[`~!@#$%^&*()_+=<>?:"{}|,./;'\\[\]·~！@#￥%……&*（）——+={}|《》？：“”【】、；‘’，。、＃-]/g, '').replace(/\s/g, "");
     }),
     // mod 患者名入力チェック不正について、対応する。 dengshen end
     getInOutClass(){
@@ -1221,6 +1256,7 @@ export default {
 <!-- カード共通スタイル読み込み -->
 <style src="../base-components/BaseCardStyle.css" scoped></style>
 <style scoped>
+  @import "../../../assets/styles/modal.css";
   .zip-hyphen {
     font-size: 10px;
   }
@@ -1231,10 +1267,10 @@ export default {
     display: flex;
     align-items: center;
   }
-  .input-date >>>.custom-input-date {
+  .input-date :deep(.custom-input-date) {
     width: auto;
   }
-  .cancelbtn >>>.clear {
+  .cancelbtn :deep(.clear) {
     width: 110px;
   }
   .patient-capture {
@@ -1244,6 +1280,11 @@ export default {
     width: 40em;
     height: 14em;
   }
+  /*** #9846 start */
+  .font-size-set-small > .modal-wrapper > .font-size-set-small{
+    height: 17em!important;
+  }
+  /*** #9846 end */
   .m-content {
     margin: 10px;
     width: calc(100% - 20px);;
@@ -1275,5 +1316,9 @@ export default {
   }
   .custom-textarea-invalid {
     background-color: rgba(255, 0, 0, 0.5);
+  }
+  :deep(textarea.nationality-textarea-field) {
+    height: auto !important;
+    min-height: 2em;
   }
 </style>

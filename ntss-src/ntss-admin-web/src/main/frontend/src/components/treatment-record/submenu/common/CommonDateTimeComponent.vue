@@ -19,7 +19,7 @@
           :disabled="disabled"
           @change="onChange"
           @blur="onBlur"
-          v-validate.immediate="{required: this.isDateRequired}"
+          v-rules.immediate="{required: this.isDateRequired}"
         /> -->
         <!-- #5590 2023/04/19 ×を常に表示するように修正 林峻峰 start -->
         <!-- <input
@@ -35,7 +35,7 @@
           @keyup="showMsg"
           @change="onChange"
           @blur="onBlur"
-          v-validate.immediate="{required: this.isDateRequired}"
+          v-rules.immediate="{required: this.isDateRequired}"
         /> -->
         <date-input
           :classes="'ntss-input-date ntss-control-size date-input-focus '+requiredClass +timeClass +inValidClass"
@@ -80,14 +80,14 @@
       </v-ons-col>
     </v-ons-row>
     <!-- add FNSI-横展開 日付のチェックの追加 徐 start -->
-    <!-- <v-ons-row class="error-message-area" v-show="errors.has('dateValue') || errors.has('timeValue')"> -->
-    <v-ons-row class="error-message-area" v-show="this.showErrorMsg || errors.has('dateValue') || errors.has('timeValue')">
+    <!-- <v-ons-row class="error-message-area" v-show="hasValidationError('dateValue') || hasValidationError('timeValue')"> -->
+    <v-ons-row class="error-message-area" v-show="this.showErrorMsg || hasValidationError('dateValue') || hasValidationError('timeValue')">
     <!-- add FNSI-横展開 日付のチェックの追加 徐 end -->
       <v-ons-col class="title">
       </v-ons-col>
       <v-ons-col class="date-error">
-        <span v-show="errors.has('dateValue')" class="error-message">
-          {{ errors.first('dateValue') }}
+        <span v-show="hasValidationError('dateValue')" class="error-message">
+          {{ getValidationError('dateValue') }}
         </span>
         <!-- add FNSI-横展開 日付のチェックの追加 徐 start -->
         <span v-show="this.showErrorMsg" class="error-message">
@@ -96,8 +96,8 @@
         <!-- add FNSI-横展開 日付のチェックの追加 徐 end -->
       </v-ons-col>
       <v-ons-col class="date-error">
-        <span v-show="errors.has('timeValue')" class="error-message">
-          {{ errors.first('timeValue') }}
+        <span v-show="hasValidationError('timeValue')" class="error-message">
+          {{ getValidationError('timeValue') }}
         </span>
       </v-ons-col>
     </v-ons-row>
@@ -105,6 +105,7 @@
 </template>
 
 <script>
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 import {
   DATE_FORMAT,
   SHORT_TIME_FORMAT,
@@ -128,11 +129,20 @@ export default {
     "time-input": TimeInput,
     // #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end
   },
+  emits: [
+    "update:modelValue",
+    "input",
+    "blur",
+    "handleCurrentDateChange",
+    "handleCurrentTimeChange",
+    "handleClearInput"
+  ],
   props: {
     labelName: {
       type: String
     },
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: Date
     },
     disabled: {
@@ -188,14 +198,14 @@ export default {
   },
   data() {
     return {
-      currentDate: this.value ? dateFormat.format(this.value, DATE_FORMAT) : null,
-      currentTime: this.value && this.timeVisible ? dateFormat.format(this.value, SHORT_TIME_FORMAT) : null,
+      currentDate: this.modelValue ? dateFormat.format(this.modelValue, DATE_FORMAT) : null,
+      currentTime: this.modelValue && this.timeVisible ? dateFormat.format(this.modelValue, SHORT_TIME_FORMAT) : null,
       // add FNSI-横展開 日付のチェックの追加 徐 start
       msgDiaLog: DIALOG_MESSAGES["99999995"].message,
       showErrorMsg: false,
       // add FNSI-横展開 日付のチェックの追加 徐 end
-      initDate: this.value ? dateFormat.format(this.value, DATE_FORMAT) : null,
-      initTime: this.value && this.timeVisible ? dateFormat.format(this.value, SHORT_TIME_FORMAT) : null,
+      initDate: this.modelValue ? dateFormat.format(this.modelValue, DATE_FORMAT) : null,
+      initTime: this.modelValue && this.timeVisible ? dateFormat.format(this.modelValue, SHORT_TIME_FORMAT) : null,
       // del #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng start
       // initDateFlag: null
       // del #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng end
@@ -205,7 +215,7 @@ export default {
     /**
      * 本コンポーネントに対するvalue(v-model)を監視し、変更された値を入力項目に反映する.
      */
-    value(newVal, oldVal) {
+    modelValue(newVal, oldVal) {
       // #10044 時刻の時分どちらか一方でも消すると日付も消える linjunfeng start
       // this.currentDate = null;
       // this.currentTime = null;
@@ -217,17 +227,21 @@ export default {
         }
       }
       //add #10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 start
-      else if (newVal === null && this.initValue === null ){
+      else if (newVal === null && this.initValue === null){
         this.currentDate = newVal;
         if (this.timeVisible === true) {
           this.currentTime = newVal;
         }
       }
       //add #10823 治療記録>治療条件で別治療日の内容を表示すると緑枠で表示されることがある 張玲 end
-      if (this.value && !this.initDate) {
-        this.initDate = oldVal ? dateFormat.format(this.value, DATE_FORMAT) : null;
+      if (this.modelValue && !this.initDate) {
+        this.initDate = oldVal
+          ? dateFormat.format(oldVal, DATE_FORMAT)
+          : dateFormat.format(this.modelValue, DATE_FORMAT);
         if (this.timeVisible === true) {
-          this.initTime = dateFormat.format(this.value, SHORT_TIME_FORMAT);
+          this.initTime = oldVal
+            ? dateFormat.format(oldVal, SHORT_TIME_FORMAT)
+            : dateFormat.format(this.modelValue, SHORT_TIME_FORMAT);
         }
       }
       // del #9404 治療記録>体重画面にて保存した後も編集した箇所が緑枠のまま残る linjunfeng start
@@ -373,7 +387,9 @@ export default {
       //mod FNSI-治療記録外結バッグ71 房 start
       if (dateValueFlg || this.currentDate == "") {
         //mod FNSI-治療記録外結バッグ71 房 end
-        this.$emit("input", this.getDateVal());
+        const dateVal = this.getDateVal();
+        this.$emit("update:modelValue", dateVal);
+        this.$emit("input", dateVal);
       }
       // add FNSI-横展開 日付のチェックの追加 徐 end
       // 内部 日付没入,データ登録できました start
@@ -419,13 +435,13 @@ export default {
           id: this.dateID,
           scope: this.dateID
         };
-      if (this.currentDate && document.getElementById(this.dateID).validationMessage) {
-        this.$validator.errors.items.push(dateValue);
+      if (this.currentDate && getScopedElementById(this.dateID, this.$el || null)?.validationMessage) {
+        this.pushValidationError(dateValue);
         if (this.errorMsg) {
           this.showErrorMsg = true;
         }
       } else {
-        this.$validator.errors.removeById(this.dateID);
+        this.removeValidationErrorById(this.dateID);
         if (this.errorMsg) {
           this.showErrorMsg = false;
         }
@@ -441,7 +457,7 @@ export default {
     },
     // #10044 時刻の時分どちらか一方でも消すと日付も消える linjunfeng start
     clearDateTime() {
-      if (!this.value) {
+      if (!this.modelValue) {
         this.currentDate = null;
         this.currentTime = null;
         this.initDate = null;
@@ -451,12 +467,12 @@ export default {
     // #10044 時刻の時分どちらか一方でも消すと日付も消える linjunfeng end
   },
   // add FNSI-横展開 日付のチェックの追加 徐 start
-  destroyed() {
-    this.$validator.errors.removeById("startDate");
-    this.$validator.errors.removeById("endDate");
-    this.$validator.errors.removeById("weightBeforeDate");
-    this.$validator.errors.removeById("ctrMeasureDate");
-    this.$validator.errors.removeById("weightAfterDate");
+  unmounted() {
+    this.removeValidationErrorById("startDate");
+    this.removeValidationErrorById("endDate");
+    this.removeValidationErrorById("weightBeforeDate");
+    this.removeValidationErrorById("ctrMeasureDate");
+    this.removeValidationErrorById("weightAfterDate");
   }
   // add FNSI-横展開 日付のチェックの追加 徐 end
 };
@@ -472,7 +488,7 @@ export default {
 .error-message-area {
   height: 2em;
 }
-.custom-input-edited >>> input {
+.custom-input-edited :deep(input) {
   border: 2px green solid;
   outline: 0;
   border-radius: 5px;
@@ -482,7 +498,7 @@ export default {
   outline: 0;
   border-radius: 5px;
 }
-div >>> .input-date-invalid {
+div :deep(.input-date-invalid) {
   color: black;
   background-color: #ff6666 !important;
 }

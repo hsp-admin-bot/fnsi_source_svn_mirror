@@ -96,8 +96,8 @@ export default {
       commit("setVaEditMaxPixel", value);
     },
     /** テキスト選択情報を施設設定から取得して設定 */
-    initStampTextInfo({ commit }) {
-      sendRequestGetTextStampCollection().then(r => {
+    initStampTextInfo({ commit }, selectedPatId) {
+      sendRequestGetTextStampCollection(selectedPatId).then(r => {
         commit("setStampTextInfo", r.data);
       });
     },

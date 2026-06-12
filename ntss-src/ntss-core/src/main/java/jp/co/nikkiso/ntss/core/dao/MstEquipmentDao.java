@@ -13,7 +13,7 @@ import java.util.Map;
 
 @ConfigAutowireable
 @Dao
-public interface MstEquipmentDao extends MasterDao<Map<String,Object>> {
+public interface MstEquipmentDao extends MasterDao<Map<String,Object>>, UnifiedByCodeListDao {
   @Select
   List<MstEquipment> selectAll(SelectOptions options, MstEquipment params);
 
@@ -92,4 +92,8 @@ public interface MstEquipmentDao extends MasterDao<Map<String,Object>> {
   @Override
   @Select
   List<Map<String,Object>> selectAllStatus(Map<String,String> params);
+
+  @Override
+  @Select
+  List<Map<String, Object>> selectAllStatusByCodeList(List<Integer> codeList);
 }

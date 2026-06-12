@@ -8,7 +8,7 @@
       v-model="editValue"
       :disabled="disabled"
       @change="changeValue()"
-      v-on="$listeners"
+      v-bind="$attrs"
     >
     </v-ons-radio> -->
     <v-ons-radio
@@ -19,7 +19,7 @@
       v-model="editValue"
       :disabled="disabled"
       @change="changeValue()"
-      v-on="$listeners"
+      v-bind="$attrs"
     >
     </v-ons-radio>
     <!-- FNSI-治療方法説明文の表示を修正 周 mod end -->
@@ -56,6 +56,7 @@ import baseCustomForm from "@/components/common/custom-form-tags/BaseCustomForm"
  *   ⇒ 項目1、または項目2を選択可能なラジオボタン
  */
 export default {
+  inheritAttrs: false,
   mixins: [baseCustomForm],
 
   props: {

@@ -1,0 +1,1474 @@
+# PostgreSQL ダンプ対象テーブル設定
+#
+# direction : both(両方向) / off2on(離線→在線のみ) / on2off(在線→離線のみ)
+# dump      : false のテーブルはダンプ対象外
+# idColumn  : PK が整数シリアルの場合に指定（PK マッピング対象）。文字列コード PK の場合は null
+# whereTemplate : facility_cd フィルター用 WHERE 句テンプレート（null = 全件対象）
+# db        : ターゲット DB 名 (ntss_db4 / ntss_db5 / ntss_db6)
+
+pg-dump:
+  tables:
+
+    # =====================================================================
+    # ntss_db4
+    # =====================================================================
+    - name: mnt_websocket_certification
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db4
+
+    - name: mst_facility_hash
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db4
+
+    - name: mst_pat_hash
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db4
+
+    - name: mst_user_authentication
+      idColumn: user_id
+      sharedPkTable: mst_personal_user
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db4
+
+    - name: sys_signin_manager
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db4
+
+    - name: sys_system_manager
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db4
+
+    # =====================================================================
+    # ntss_db5
+    # =====================================================================
+    # FK の親テーブルを先頭に配置
+    # COPY FROM（順方向）: 最初に挿入 / DELETE（逆順）: 最後に削除
+    - name: mst_facility
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_user
+      idColumn: user_id
+      sharedPkTable: mst_personal_user
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_destination_group
+      idColumn: destination_group_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_notification_message
+      idColumn: notification_message_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_prescription_set
+      idColumn: prescription_set_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: bbs_info
+      idColumn: bbs_ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: medicine_latest_no
+      idColumn: null
+      sharedPkTable: pat_personal_main
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mni_monitor
+      idColumn: bio_moni_ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_batch_manager
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_cardapp_port
+      idColumn: null
+      dump: false
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_client_connect
+      idColumn: null
+      dump: false
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_device_edge_manage
+      idColumn: manage_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_device_edge_state
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_facility_cancel_manage
+      idColumn: ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_find_machine
+      idColumn: null
+      dump: false
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_gathering_manage
+      idColumn: gathering_manage_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_if_edge_client_connect
+      idColumn: null
+      dump: false
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_if_edge_healthmon
+      idColumn: ctl_no
+      dump: false
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_if_edge_manage
+      idColumn: ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_machine_state
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_mainte_main
+      idColumn: mainte_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_motion_record
+      idColumn: motion_record_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_notification_status
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_recalc_que
+      idColumn: recalc_que_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_water_survey
+      idColumn: survey_record_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mnt_weight_state
+      idColumn: weight_cd
+      sharedPkTable: mst_weight
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_add_monitor
+      idColumn: vital_monitor_item_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_addition
+      idColumn: addition_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_alarm_notification
+      idColumn: alarm_notification_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_bbs_kind
+      idColumn: kind_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_bed
+      idColumn: bed_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_checklist
+      idColumn: checklist_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_com_fixed_phrase
+      idColumn: com_fixed_phrase_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_comp_treatment
+      idColumn: comp_treatment_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_complaint
+      idColumn: complaint_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_comsv_setting
+      idColumn: comsv_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_coop_apilink
+      idColumn: ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_coop_distribute
+      idColumn: ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_coop_facility
+      idColumn: ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_coop_filename
+      idColumn: ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_coop_ini
+      idColumn: coop_ini_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_coop_layout
+      idColumn: ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_coop_layout_detail
+      idColumn: ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_course
+      idColumn: course_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_device_edge
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_device_set_info_default
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_dialysis_difficulty
+      idColumn: dialysis_difficulty_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_dialyzer
+      idColumn: dialyzer_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_disease
+      idColumn: disease_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_equipment
+      idColumn: equipment_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_equipment_class
+      idColumn: class_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_equipment_set
+      idColumn: equipment_set_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_exam_item
+      idColumn: exam_item_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_exam_matome
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: mst_exam_set
+      idColumn: exam_set_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_facility_calendar_layout
+      idColumn: facility_calendar_layout_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_facility_setting
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_favorite_facility
+      idColumn: master_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_function_report
+      idColumn: function_report_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_graph_setting
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_holiday
+      idColumn: holiday_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_if_edge
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_if_edge_command
+      idColumn: ctl_no
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: mst_implant
+      idColumn: implant_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_infection
+      idColumn: infection_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_insurance
+      idColumn: insu_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_job
+      idColumn: job_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_kur
+      idColumn: kur_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_m_notice
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_machine
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_machine_record
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: mst_machine_record_control
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_machine_type
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: mst_mainte_category
+      idColumn: mainte_category_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_mainte_category_hst
+      idColumn: mainte_category_cd
+      sharedPkTable: mst_mainte_category
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_mainte_detail
+      idColumn: mainte_detail_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_mainte_detail_hst
+      idColumn: mainte_detail_cd
+      sharedPkTable: mst_mainte_detail
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_mainte_layout
+      idColumn: mainte_layout_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_mainte_layout_group
+      idColumn: mainte_layout_group_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_mainte_layout_group_hst
+      idColumn: mainte_layout_group_cd
+      sharedPkTable: mst_mainte_layout_group
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_mainte_layout_hst
+      idColumn: mainte_layout_cd
+      sharedPkTable: mst_mainte_layout
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_medicate_timing
+      idColumn: medicate_timing_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_medicine
+      idColumn: medicine_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_medicine_class
+      idColumn: class_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_medicine_group
+      idColumn: medicine_group_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_medicine_mix
+      idColumn: medicine_mix_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_medicine_set
+      idColumn: medicine_set_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_medicine_support
+      idColumn: medicine_support_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_menu_group
+      idColumn: menu_group_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_monitor_graph
+      idColumn: monitor_graph_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_notification_message
+      idColumn: notification_message_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_obs_kind
+      idColumn: kind_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_pat_calendar_layout
+      idColumn: pat_calendar_layout_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_pat_event_category
+      idColumn: category_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_pat_event_data_template
+      idColumn: template_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_pat_event_sub_category
+      idColumn: sub_category_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_pat_list_layout
+      idColumn: pat_list_layout_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_pat_memo
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_pat_search_detail
+      idColumn: search_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_pat_viewer_layout
+      idColumn: layout_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_personal_tab_define
+      idColumn: tab_define_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_printer
+      idColumn: printer_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_procedure
+      idColumn: procedure_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_rad_set
+      idColumn: rad_set_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_relationship
+      idColumn: relationship_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_report
+      idColumn: report_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_room_bed_group
+      idColumn: room_bed_group_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_round_type
+      idColumn: round_type_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_selector
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_self_measure_result
+      idColumn: self_measure_result_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_severity
+      idColumn: severity_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_spitz
+      idColumn: spitz_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_staff_facility
+      idColumn: null
+      dump: false
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_status_map_bed_layout
+      idColumn: layout_id
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_taboo_allergy
+      idColumn: taboo_allergy_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_take_medicine
+      idColumn: take_medicine_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_transport
+      idColumn: transport_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_treatment
+      idColumn: treatment_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_treatment_set
+      idColumn: treatment_set_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_treatment_status_disp_item
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: mst_treatment_status_layout
+      idColumn: layout_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_trend_graph_monitor_set
+      idColumn: monitor_set_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_trend_graph_template
+      idColumn: template_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_url_link_register
+      idColumn: url_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_va
+      idColumn: va_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_vital_graph
+      idColumn: vital_graph_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_ward
+      idColumn: ward_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_water_survey_point
+      idColumn: survey_point_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_water_survey_type
+      idColumn: survey_type_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_weight
+      idColumn: weight_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_weight_print
+      idColumn: content_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_weight_scale
+      idColumn: weight_scale_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: mst_wheel_chair
+      idColumn: wheel_chair_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: ord_checklist
+      idColumn: checklist_ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: ord_coop_no
+      idColumn: ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: ord_exception_period
+      idColumn: exception_period_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: ord_main
+      idColumn: ord_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+      pkGroupTables: [ord_main_restore]
+
+    - name: ord_main_restore
+      idColumn: ord_no
+      sharedPkTable: ord_main
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: ord_material_save
+      idColumn: ord_material_save_no
+      seqName: ord_material_save_seq
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: ord_prescription
+      idColumn: ord_prescription_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: ord_schedule
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: ord_treat_condition
+      idColumn: condition_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: ord_weight_scale
+      idColumn: weight_scale_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_coop_detail
+      idColumn: coop_save_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_event
+      idColumn: pat_event_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_exam_main
+      idColumn: exam_main_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+      pkGroupTables: [pat_exam_main_hst]
+
+    - name: pat_exam_main_hst
+      idColumn: exam_main_hst_cd
+      seqName: exam_main_hst_cd_seq
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_exam_pattern
+      idColumn: exam_pattern_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_group
+      idColumn: pat_group_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_group_detail
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_hhd_pattern
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_ind_approve
+      idColumn: ord_no
+      sharedPkTable: ord_main
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_ind_approve_history
+      idColumn: ind_approve_history_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_main
+      idColumn: pat_id
+      sharedPkTable: pat_personal_main
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_name_identification
+      idColumn: pat_name_id
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: pat_obs_rec
+      idColumn: obs_rec_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_rad_main
+      idColumn: rad_result_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+      pkGroupTables: [pat_rad_main_hst]
+
+    - name: pat_rad_main_hst
+      idColumn: rad_result_cd
+      sharedPkTable: pat_rad_main
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_rad_pattern
+      idColumn: rad_pattern_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_treatment_pattern
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: pat_unique
+      idColumn: pat_id
+      sharedPkTable: pat_personal_main
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: sal_subscription_manage
+      idColumn: subscription_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: sys_address
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_application
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_coop_journal
+      idColumn: ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: sys_coop_no
+      idColumn: ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: sys_country
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_daily_no
+      idColumn: ctl_no
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: sys_data_item
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: sys_data_list_category
+      idColumn: category_cd
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_data_list_detail
+      idColumn: data_list_detail_cd
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_data_set
+      idColumn: sql_cd
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_facility
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_facility_setting
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_function
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_function_advanced
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_generic_medicine
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_master_define
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_medicine
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_monitor_item
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_notification
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_notification_list
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db5
+
+    - name: sys_personal_settings_define
+      idColumn: personal_settings_cd
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_prefectures
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_release_info
+      idColumn: ctl_no
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_report_class
+      idColumn: report_class_cd
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_report_setting
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_subscription_plan
+      idColumn: subscription_plan_no
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: sys_system_define
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: table_flag_config
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: tmp_comm_failure_recovery
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: mst_test_mode2
+      idColumn: mode2_cd
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: mst_test_ref_table
+      idColumn: ref_cd
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: mst_test_table
+      idColumn: die_cd
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    - name: test_transation
+      idColumn: null
+      dump: false
+      whereTemplate: null
+      direction: both
+      db: ntss_db5
+
+    # =====================================================================
+    # ntss_db6
+    # =====================================================================
+    - name: mst_personal_user
+      idColumn: user_id
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db6
+
+    - name: ord_personal_prescription
+      idColumn: null
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db6
+
+    - name: pat_insurance
+      idColumn: insurance_cd
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db6
+
+    - name: pat_personal_main
+      idColumn: pat_id
+      dump: true
+      whereTemplate: "facility_cd IN (:facilityList)"
+      direction: both
+      db: ntss_db6

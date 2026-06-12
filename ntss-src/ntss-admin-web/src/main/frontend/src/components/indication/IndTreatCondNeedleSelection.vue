@@ -105,9 +105,9 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import {mapGetters, mapMutations} from "vuex";
+import {mapGetters, mapMutations} from "@/compat/vue/vuex";
 import IndTreatCondBase from "@/components/indication/IndTreatCondBase";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 export default {
   mixins: [IndTreatCondBase],
 
@@ -124,6 +124,25 @@ export default {
      */
     isSingleNeedleUse() {
       return this.displayInputValue.editValue == '1'; // mod #9973 value Number→文字列  shiyw
+    },
+    isMstSingleNeedleDisabled() {
+      return !!(
+        this.deviceMode &&
+        (
+          this.deviceMode === 6 ||  // AFBF
+          this.deviceMode === 10  // I-HDF
+        )
+      );
+    }
+  },
+  watch: {
+    isMstSingleNeedleDisabled: {
+      immediate: true,
+      handler(disabled) {
+        if (disabled) {
+          this.normalizeSingleNeedleDisabled();
+        }
+      }
     }
   },
   //8204 【デグレ】治療条件モーダルにて、使用しない項目を設定できてしまう add start
@@ -136,6 +155,7 @@ export default {
   //8204 【デグレ】治療条件モーダルにて、使用しない項目を設定できてしまう add end
   mounted() {
     this.treatItemCd = "12";
+    this.normalizeSingleNeedleDisabled();
     // 初期表示時にストアのSN使用フラグを現在の値に応じて書き換える
     this.setIsSingleNeedle(this.isSingleNeedleUse);
   },
@@ -152,23 +172,16 @@ export default {
     },
     ...mapMutations("pat-viewer-treat-cond", ["setIsSingleNeedle"]),
     // add 治療方法セットマスタ 指示_条件送信_治療方法セットマスタ 孔 start
-    getMstSingleNeedleDisable() {
-      if (
-        //del FNSI-障害票一覧_患者経過総合ビューア.xlsxのNo.29(外結)対応 韓 start
-        // this.isMst &&
-        //del FNSI-障害票一覧_患者経過総合ビューア.xlsxのNo.29(外結)対応 韓 end
-        this.deviceMode &&
-        (
-          this.deviceMode === 6 ||  //AFBF
-          this.deviceMode === 10  //I-HDF
-        )
-      ) {
-        // シングルニードル使用するになっていた場合は強制的にOFFにして、穿刺針(SN)を未登録にする。シングルニード使用を非活性。
-        this.displayInputValue.editValue = "0"
-        this.setIsSingleNeedle(false);
-        return true
+    normalizeSingleNeedleDisabled() {
+      if (!this.isMstSingleNeedleDisabled) {
+        return;
       }
-      return false
+      // シングルニードル使用するになっていた場合は強制的にOFFにして、穿刺針(SN)を未登録にする。シングルニード使用を非活性。
+      this.displayInputValue.editValue = "0";
+      this.setIsSingleNeedle(false);
+    },
+    getMstSingleNeedleDisable() {
+      return this.isMstSingleNeedleDisabled;
     }
     // add 治療方法セットマスタ 指示_条件送信_治療方法セットマスタ 孔 end
   }

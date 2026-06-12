@@ -2,7 +2,7 @@ import { facilityByCd } from "@/functions/mst/MstGetters.js";
 
 export default {
   namespaced: true,
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   state: {
     useFunction: []
   },

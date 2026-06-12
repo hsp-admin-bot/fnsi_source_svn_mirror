@@ -5,12 +5,15 @@
   <modal-base @onClose="cancel">
     <!--mod 6928 暗背景時のプレビューの背景が正しくない 吉 start-->
     <!--<div slot="body" class="print-preview" v-show="previewHtml !== null" v-html="previewHtml"></div>-->
-    <!--mod 8466　帳票機能が使用できない  吉 start-->
+    <!--mod 8466 帳票機能が使用できない  吉 start-->
     <!--<div slot="body" class="print-preview" :class="themeBlack" v-show="previewHtml !== null" v-html="previewHtml"></div>-->
-    <div slot="body" class="print-preview" :style="isMobileBrowser() ? 'width: 100%; box-sizing: border-box;' : 'width: fit-content'" :class="themeBlack" v-show="previewHtml !== ''" v-html="previewHtml"></div>
-    <!--mod 8466　帳票機能が使用できない  吉 end-->
+    <template #body>
+      <div class="print-preview" :class="themeBlack" v-show="previewHtml !== ''" v-html="previewHtml"></div>
+    </template>
+    <!--mod 8466 帳票機能が使用できない  吉 end-->
     <!--mod 6928 暗背景時のプレビューの背景が正しくない 吉 end-->
-    <div slot="footer" class="flex-container">
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <button class="button btn2-cancel denial-btn" @click="cancel">キャンセル</button>
       </div>
@@ -28,11 +31,11 @@
           data-non-authorize="true"
           class="printer-selection">
         <!-- mod #12107 帳票印刷失敗通知が行われない limingzhe 20251114 end -->
-          <template>
-            <option v-for="item in getMstPrinters" :key="item.printerCd" :value="item.printerCd">{{ item.dispPrinterName }}</option>
+          <template v-for="item in getMstPrinters" :key="item.printerCd">
+            <option :value="item.printerCd">{{ item.dispPrinterName }}</option>
           </template>
         </v-ons-select>
-        <!--mod 8466　帳票機能が使用できない  吉 start-->
+        <!--mod 8466 帳票機能が使用できない  吉 start-->
        <!-- <button
           class="button btn3-normal registration-btn"
           style="vertical-align:top;"
@@ -43,30 +46,24 @@
           style="vertical-align:top;"
           :disabled="!hasPrinter || previewHtml == ''"
           @click="print">印刷</button>
-        <!--mod 8466　帳票機能が使用できない  吉 end-->
+        <!--mod 8466 帳票機能が使用できない  吉 end-->
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { getFirstElementByClassName } from "@/functions/common/LayoutMeasureHelper";
+
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import ModalBase from "@/components/modals/ModalBase";
 import MultiModalMixin from "@/components/modals/MultiModalMixin";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 // add 10738 機能帳票IFにてプリンターが未登録だとプレビューができない 本田 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages'
-// add 10738 機能帳票IFにてプリンターが未登録だとプレビューができない 本田 end
 
-
-// add #10633 【たくしん会】【因島】帳票のフォント問題 高　start
-import {
-  extractFontsFromSVG,
-  isFontAvailable,
-  replaceUnavailableFonts,
-  findFirstAvailableFont
-} from "@/stores/fontUtils";
-// add #10633 【たくしん会】【因島】帳票のフォント問題 高　end
+// add #10633 【たくしん会】【因島】帳票のフォント問題 高 end
 
 export default {
   name: "printPreview",
@@ -255,7 +252,7 @@ export default {
   },
   // add 6928 暗背景時のプレビューの背景が正しくない 吉 start
   mounted() {
-    document.getElementsByClassName("print-preview")[0].parentElement.setAttribute("style","overflow-y:auto");
+    getFirstElementByClassName("print-preview", this.$el || this)?.parentElement?.setAttribute("style", "overflow-y:auto");
   },
   // add 6928 暗背景時のプレビューの背景が正しくない 吉 end
   created() {
@@ -265,7 +262,7 @@ export default {
 </script>
 <style scoped>
 /*add 6928 暗背景時のプレビューの背景が正しくない 吉 start*/
-::v-deep .ntss-list-body-tr-black {
+:deep(.ntss-list-body-tr-black) {
   background-color: white;
 }
 /*add 6928 暗背景時のプレビューの背景が正しくない 吉 end*/

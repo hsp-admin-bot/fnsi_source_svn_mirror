@@ -5,8 +5,8 @@ import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.List;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.google.common.base.Objects;
 
 import jp.co.nikkiso.ntss.device_edge.constant.Constant.DailyReportDispItemCd;

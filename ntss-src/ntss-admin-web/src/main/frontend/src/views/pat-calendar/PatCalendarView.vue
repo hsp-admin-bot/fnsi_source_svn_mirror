@@ -1,22 +1,25 @@
 <template>
   <ntss-layout>
-    <header-component slot="header-content" />
+    <template #header-content>
+      <header-component />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start -->
     <!-- <bread-crumbs-component
       slot="bread-crumbs-content"
       :history-key="historyKey"
       @refresh="refresh"
     /> -->
-    <bread-crumbs-component
-      slot="bread-crumbs-content"
-      :history-key="historyKey"
-    />
+    <template #bread-crumbs-content>
+      <bread-crumbs-component
+        :history-key="historyKey"
+      />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng end -->
-    <main-component
-      slot="main-content"
-      ref="mainComponent"
-      :history-key="historyKey"
-    />
+    <template #main-content>
+      <main-component ref="mainComponent"
+        :history-key="historyKey"
+      />
+    </template>
   </ntss-layout>
 </template>
 
@@ -30,7 +33,7 @@ import { HISTORY_KEY_PAT_CALENDAR } from "@/router/pat-calendar/HistoryKeyConsta
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import {messageFormat} from "@/functions/common/MessageFormat";
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
-import {mapGetters, mapMutations} from "vuex";
+import {mapGetters, mapMutations} from "@/compat/vue/vuex";
 // add #10053 �j���m�F�E�ۑ�����(�����ύX�܂�)�E�폜�Ή�_���ҏ�� 20231218 ztc end
 
 export default {

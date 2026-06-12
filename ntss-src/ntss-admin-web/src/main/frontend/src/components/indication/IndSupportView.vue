@@ -3,15 +3,16 @@
   <!-- mod FNSI-投薬支援242の対応 徐 start -->
   <!-- <modal-base @onClose="hideModal" style="opacity:1" id="modalBase"> -->
   <modal-base
+    ref="modalBaseRef"
     :onClose="hideModal"
-    style="opacity:1"
     id="modalBase"
     class="ind-support-view"
     :setting="settingMedicineSupport"
     :title="'投薬支援'"
   >
     <!-- mod FNSI-投薬支援242の対応 徐 end -->
-    <div slot="body" class="width-style ind-sp-flex-nowrap-center" :class="fontSizeSet" style="justify-content: space-between;">
+        <template #body>
+<div class="width-style ind-sp-flex-nowrap-center" :class="fontSizeSet" style="justify-content: space-between;">
       <div class="ind-sp-flex-nowrap-center">
         <!-- mod #10359 編集権限の動作不正 dengshen start -->
         <!-- <v-ons-select class="result-select" -->
@@ -44,13 +45,14 @@
         <!-- mod #10359 編集権限の動作不正 dengshen end -->
       </div>
       <!-- mod FNSI-患者経過総合ビューア 画面デザイン 李 start -->
-      <v-ons-range v-model="windowRange" v-on:input="changeWindow()" min='1' max='10' style="margin-left: 1em; min-width: 5em;"></v-ons-range>
+      <v-ons-range v-model="windowRange" @input="changeWindow" min="1" max="10" style="margin-left: 1em; min-width: 5em;"></v-ons-range>
     </div>
-    <div slot="body" style="margin-top: 0.5em;" :class="fontSizeSet"><hr class="width-style"/></div>
+
+<div style="margin-top: 0.5em;" :class="fontSizeSet"><hr class="width-style"/></div>
     <!-- cycling -->
     <!-- mod FNSI-投薬支援242の対応 徐 start -->
     <!-- <div slot="body" class="modal-container-custom width-style" id="cycling" width="100%"> -->
-    <div slot="body" :class="fontSizeSet" class="modal-container-custom width-style" id="cycling" width="100%">
+<div :class="fontSizeSet" class="modal-container-custom width-style" id="cycling" width="100%">
     <!-- mod FNSI-投薬支援242の対応 徐 end -->
       <div>Cycling：</div>
       <table class="tabledate" width="100%">
@@ -91,11 +93,12 @@
         </tbody>
       </table>
     </div>
-    <div slot="body" style="margin-top: 0.5em;" :class="fontSizeSet"><hr class="width-style"/></div>
+
+<div style="margin-top: 0.5em;" :class="fontSizeSet"><hr class="width-style"/></div>
     <!--検査平均値 -->
     <!-- mod FNSI-投薬支援242の対応 徐 start -->
     <!-- <div slot="body" class="modal-container-custom width-style" id="checkAvg"> -->
-    <div slot="body" class="modal-container-custom width-style" :class="fontSizeSet" id="checkAvg">
+<div class="modal-container-custom width-style" :class="fontSizeSet" id="checkAvg">
     <!-- mod FNSI-投薬支援242の対応 徐 end -->
       <div style="display: flex;">
         検査平均値：
@@ -167,11 +170,12 @@
         </tbody>
       </table>
     </div>
-    <div slot="body" style="margin-top: 0.5em;" :class="fontSizeSet"><hr class="width-style"/></div>
+
+<div style="margin-top: 0.5em;" :class="fontSizeSet"><hr class="width-style"/></div>
     <!--薬剤平均投与量 -->
     <!-- mod FNSI-投薬支援242の対応 徐 start -->
     <!-- <div slot="body" class="modal-container-custom width-style" id="avgInvest"> -->
-    <div slot="body" class="modal-container-custom width-style" :class="fontSizeSet" id="avgInvest">
+<div class="modal-container-custom width-style" :class="fontSizeSet" id="avgInvest">
     <!-- mod FNSI-投薬支援242の対応 徐 end -->
       <div style="display: flex;">
         薬剤平均投与量：
@@ -247,11 +251,12 @@
         </tbody>
       </table>
     </div>
-    <div slot="body" style="margin-top: 0.5em;" :class="fontSizeSet"><hr class="width-style"/></div>
+
+<div style="margin-top: 0.5em;" :class="fontSizeSet"><hr class="width-style"/></div>
     <!-- 投薬支援 -->
     <!-- mod FNSI-投薬支援242の対応 徐 start -->
     <!-- <div slot="body" class="modal-container-custom width-style" id="investmentSupport" width="100%"> -->
-    <div slot="body" class="modal-container-custom width-style" :class="fontSizeSet" id="investmentSupport" width="100%">
+<div class="modal-container-custom width-style" :class="fontSizeSet" id="investmentSupport" width="100%">
     <!-- mod FNSI-投薬支援242の対応 徐 end -->
       <div>投薬支援：</div>
       <table class="tabledate" width="100%">
@@ -276,7 +281,9 @@
     </div>
     <!-- mod FNSI-投薬支援242の対応 徐 start -->
     <!-- <div slot="footer" class="modal-footer-custom width-style"> -->
-    <div slot="footer" :class="fontSizeSet" class="modal-footer-custom width-style">
+    </template>
+        <template #footer>
+<div :class="fontSizeSet" class="modal-footer-custom width-style">
     <!-- mod FNSI-投薬支援242の対応 徐 end -->
       <v-ons-row>
         <v-ons-col>
@@ -308,6 +315,7 @@
         </v-ons-col>
       </v-ons-row>
     </div>
+    </template>
   </modal-base>
 </template>
 
@@ -315,7 +323,7 @@
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import { mapGetters, mapActions} from "vuex";
+import { mapGetters, mapActions} from "@/compat/vue/vuex";
 // mod FNSI-投薬支援242の対応 徐 start
 // import ModalBase from "@/components/modals/ModalBase";
 import ModalBase from "@/components/modals/WindowBase";
@@ -332,12 +340,13 @@ import { sendRequestGetRange as getRange } from "@/apis/mst-support-setting-main
 import { sendRequestGetAvgInvestData as getAvgInvestData } from "@/apis/mst-support-setting-maintenance";
 import { sendRequestGetInvestmentSupport as getInvestmentSupport } from "@/apis/mst-support-setting-maintenance";
 import { sendRequestSaveRecord as saveRecord } from "@/apis/mst-support-setting-maintenance";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 //FNSI-修正 #5660子ページのデータが保存すると、親ページが更新する lijiaxing add start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //FNSI-修正 #5660子ページのデータが保存すると、親ページが更新する lijiaxing add end
 //ADD 5527 投薬支援画面の表示不正 張 start
 import { ApiHelper } from "@/apis/AxiosHelper";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 //ADD 5527 投薬支援画面の表示不正 張 end
 export default {
   components: {
@@ -389,11 +398,13 @@ export default {
     ...mapGetters("user", { facilityCd: "getFacilityCd" }),
     ...mapGetters("pat-info", { patId: "selectedPatId" }),
     ...mapGetters("pat-viewer",["getCondition","getSelectedCondition"]),
+    ...mapGetters("multi-modal", ["getInitValues"]),
     // mod FNSI-投薬支援242の対応 徐 start
     settingMedicineSupport() {
       var medicineSupportList = "";
-      if (document.cookie.length > 0) {
-        var arr = document.cookie.trim().split(';');
+      const ownerDocument = this.$el?.ownerDocument || document;
+      if (ownerDocument.cookie.length > 0) {
+        var arr = ownerDocument.cookie.trim().split(';');
         for (var i = 0; i < arr.length; i++) {
           var arr2 = arr[i].trim().split(':');
           if (arr2[0] == 'medicineSupportList') {
@@ -424,8 +435,16 @@ export default {
     },
     // mod FNSI-投薬支援242の対応 徐 end
   },
+  watch: {
+    fontSizeSet() {
+      this.$nextTick(() => this.pinSupportWindowFontSize());
+    }
+  },
+  mounted() {
+    this.$nextTick(() => this.pinSupportWindowFontSize());
+  },
   // add FNSI-投薬支援242の対応 徐 start
-  destroyed() {
+  unmounted() {
     var medicineSupportList = this.settingMedicineSupport.left;
     medicineSupportList = medicineSupportList + "," + this.settingMedicineSupport.top;
     medicineSupportList = medicineSupportList + "," + this.settingMedicineSupport.width;
@@ -434,17 +453,150 @@ export default {
     medicineSupportList = medicineSupportList + "," + this.settingMedicineSupport.zoom[1];
     medicineSupportList = medicineSupportList + "," + this.settingMedicineSupport.zoom[2];
     medicineSupportList = medicineSupportList + "," + this.settingMedicineSupport.zoom[3];
-    window.document.cookie = "medicineSupportList:" + medicineSupportList;
-    EventBus.$off("refreshdata");
+    const ownerDocument = this.$el?.ownerDocument || document;
+    ownerDocument.cookie = "medicineSupportList:" + medicineSupportList;
+    EventBus.$off("refreshdata", this.refreshdata);
   },
   // add FNSI-投薬支援242の対応 徐 end
   methods: {
+    /** 投薬支援 Window は body 直下に teleport されるため document から取得する */
+    findSupportWindowRoot() {
+      const doc = this.$el?.ownerDocument || document;
+      const windows = doc.querySelectorAll(".k-window.font-size-set-medium, .k-window");
+      for (const win of windows) {
+        const title = win.querySelector(".k-window-title");
+        if (title?.textContent?.trim() === "投薬支援") {
+          return win;
+        }
+      }
+      return null;
+    },
+    /** UAT 同基準 18px。legacy-font .k-window.font-size-set-medium { 16px } を上書き */
+    pinSupportWindowFontSize() {
+      const sizes = ["14.4px", "18px", "19.8px", "23.4px"];
+      const px = sizes[this.getFontSize] ?? "18px";
+      const apply = () => {
+        const el = this.findSupportWindowRoot();
+        if (!el) {
+          return false;
+        }
+        el.style.setProperty("font-size", px, "important");
+        return true;
+      };
+      if (apply()) {
+        return;
+      }
+      let attempts = 0;
+      const retry = () => {
+        if (apply() || attempts >= 30) {
+          return;
+        }
+        attempts += 1;
+        requestAnimationFrame(retry);
+      };
+      requestAnimationFrame(retry);
+    },
     ...mapActions("multi-sub-modal", ["showPatExcludedPeriod"]),
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
       return getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
+    resolveBaseDay() {
+      let baseDay = null;
+      const initStartDate = this.getInitValues?.startDate;
+      if (initStartDate) {
+        baseDay = new Date(initStartDate);
+      } else if (this.getSelectedCondition?.baseDay) {
+        baseDay = new Date(this.getSelectedCondition.baseDay);
+      } else {
+        const ownerWindow = this.$el?.ownerDocument?.defaultView || globalThis;
+        const legacyValue = ownerWindow?.parent?.baseDay?.value;
+        if (legacyValue) {
+          baseDay = new Date(legacyValue);
+        }
+      }
+      if (!baseDay || Number.isNaN(baseDay.getTime())) {
+        baseDay = new Date();
+      }
+      return baseDay;
+    },
+    parseBaseDate() {
+      if (!this.baseDate) {
+        return dayjs(this.resolveBaseDay());
+      }
+      const compactDate = dayjs(String(this.baseDate), "YYYYMMDD");
+      if (compactDate.isValid()) {
+        return compactDate;
+      }
+      const hyphenDate = dayjs(String(this.baseDate), "YYYY-MM-DD");
+      if (hyphenDate.isValid()) {
+        return hyphenDate;
+      }
+      return dayjs(this.resolveBaseDay());
+    },
+    canLoadSupportDetail(cd = 0) {
+      const item = this.supportList?.[cd];
+      return !!(
+        this.facilityCd
+        && this.patId != null
+        && this.patId !== ""
+        && item?.cd
+      );
+    },
+    applyBaseDateFromDay(baseDay) {
+      var year = baseDay.getFullYear();
+      var month = baseDay.getMonth() + 1;
+      var day = baseDay.getDate();
+      var lastYear = year - 1;
+      var beforeLastYear = year - 2;
+      var nextMonth = month + 1;
+      if (month == 12) {
+        lastYear = year;
+        beforeLastYear = year - 1;
+        nextMonth = 1;
+      }
+      if (month < 10) {
+        month = "0" + month;
+      }
+      if (nextMonth < 10) {
+        nextMonth = "0" + nextMonth;
+      }
+      this.nowYearBegin = lastYear.toString() + "/" + nextMonth;
+      this.nowYearEnd = year.toString() + "/" + month;
+      this.lastYearBegin = beforeLastYear.toString() + "/" + nextMonth;
+      this.lastYearEnd = (year - 1).toString() + "/" + month;
+      this.nowYMDBegin = lastYear.toString() + nextMonth + "01";
+      this.lastYMDBegin = beforeLastYear.toString() + nextMonth + "01";
+      this.nowYMDEnd = year.toString() + month + new Date(year, month, 0).getDate();
+      this.lastYMDEnd = (year - 1).toString() + month + new Date(year, month, 0).getDate();
+      this.baseDate = year.toString() + month + (day < 10 ? "0" + day : day);
+    },
+    async loadSupportDetail(cd = 0) {
+      if (!this.canLoadSupportDetail(cd)) {
+        return;
+      }
+      const item = this.supportList[cd];
+      try {
+        const rangeMap = await getRange(item.cd);
+        if (rangeMap.data.initialrangemedicine != "" && rangeMap.data.initialrangemedicine != null) {
+          this.avgInvestTime = rangeMap.data.initialrangemedicine;
+        } else {
+          this.avgInvestTime = "1";
+        }
+        if (rangeMap.data.initialrangeexam != "" && rangeMap.data.initialrangeexam != null) {
+          this.checkAvgTime = rangeMap.data.initialrangeexam;
+        } else {
+          this.checkAvgTime = "1";
+        }
+        await this.setCycling(cd);
+        await this.setCheckAvg(this.checkAvgTime, item.cd);
+        await this.setAvgInvest(this.avgInvestTime, item.cd, item.cyclingCd);
+        await this.setInvestmentSupport(cd);
+      } catch (error) {
+        console.error("loadSupportDetail failed", error);
+      }
+    },
     async setCycling(cd) {
       // 「検査項目(cycling・予測値)」の項目名
       this.cyclingName = this.supportList[cd].cyclingText;
@@ -674,7 +826,7 @@ export default {
       }
     },
     async changeSelected() {
-      var cd = document.getElementById('support').selectedIndex;
+      var cd = getScopedElementById('support', this.$el || null)?.selectedIndex ?? 0;
 
       var rangeMap = await getRange(this.supportList[cd].cd);
       if (rangeMap.data.initialrangemedicine != "" && rangeMap.data.initialrangemedicine != null) {
@@ -704,15 +856,15 @@ export default {
       }
     },
     changeCheckAvgTime(flg) {
-      var cd = document.getElementById('support').selectedIndex;
+      var cd = getScopedElementById('support', this.$el || null)?.selectedIndex ?? 0;
       this.setCheckAvg(flg, this.supportList[cd].cd);
     },
     changeAvgInvestTime(flg) {
-      var cd = document.getElementById('support').selectedIndex;
+      var cd = getScopedElementById('support', this.$el || null)?.selectedIndex ?? 0;
       this.setAvgInvest(flg, this.supportList[cd].cd, this.supportList[cd].cyclingCd);
     },
     async save() {
-      var cd = document.getElementById('support').selectedIndex;
+      var cd = getScopedElementById('support', this.$el || null)?.selectedIndex ?? 0;
 
       const saveParameter = [];
       // 施設コード
@@ -733,15 +885,31 @@ export default {
       await saveRecord(saveParameter);
       this.hideModal();
     },
+    getSupportDialogElement() {
+      const root = this.$refs.modalBaseRef?.$el || this.$el || null;
+      if (!root) {
+        return null;
+      }
+      if (root.classList?.contains("k-window")) {
+        return root;
+      }
+      return (
+        root.querySelector?.(".k-window")
+        || getScopedElementById("modalBase", root)
+        || root.querySelector?.(".kendo-dialogs")
+      );
+    },
     changeWindow() {
-      setTimeout(() => {
-        var range = this.windowRange / 10.0;
-        document.getElementById("modalBase").style.opacity = range;
-      }, 50);
+      const dialogEl = this.getSupportDialogElement();
+      if (!dialogEl) {
+        return;
+      }
+      const opacity = Number(this.windowRange) / 10;
+      dialogEl.style.opacity = String(Number.isFinite(opacity) ? opacity : 1);
     },
     getStartData(flg) {
       var startDay = "";
-      var baseDay = moment(this.baseDate).format("YYYY-MM-DD");
+      var baseDay = this.parseBaseDate().format("YYYY-MM-DD");
       // 表示期間を計算、設定
       flg = Number(flg);
       //FNSI-修正 #6557 終了日を修正（基準日は終了日ではない） mod start
@@ -749,7 +917,7 @@ export default {
         case 1:
           // 12週
           // 月曜からスタート
-          startDay = moment(baseDay)
+          startDay = dayjs(baseDay)
             //.add(-12, "weeks")
             .add(-94, "days")
             .startOf("isoWeek")
@@ -759,7 +927,7 @@ export default {
 
         case 2:
           // 6ヶ月
-          startDay = moment(baseDay)
+          startDay = dayjs(baseDay)
             //.add(-6, "months")
             .add(-185, "days")
             .startOf("isoWeek")
@@ -769,7 +937,7 @@ export default {
 
         case 3:
           // 1年
-          startDay = moment(baseDay)
+          startDay = dayjs(baseDay)
             //.add(-1, "years")
              .add(-366, "days")
             .startOf("isoWeek")
@@ -779,9 +947,16 @@ export default {
 
         case 4:
           // 3年
-          startDay = moment(baseDay)
+          startDay = dayjs(baseDay)
             //.add(-3, "years")
             .add(-1096, "days")
+            .startOf("isoWeek")
+            .add(7, "days")
+            .format("YYYYMMDD");
+          break;
+        default:
+          startDay = dayjs(baseDay)
+            .add(-94, "days")
             .startOf("isoWeek")
             .add(7, "days")
             .format("YYYYMMDD");
@@ -791,18 +966,18 @@ export default {
       return startDay;
     },
     getEndData() {
-          var endDay = "";
-          var baseDay = moment(this.baseDate).format("YYYY-MM-DD");
-          endDay = moment(baseDay)
+          var endDay;
+          var baseDay = this.parseBaseDate().format("YYYY-MM-DD");
+          endDay = dayjs(baseDay)
             .startOf("isoWeek")
             .add(6, "days")
             .format("YYYYMMDD");
           return endDay;
         },
     getLastSunday() {
-      var lastSunday = "";
-      var baseDay = moment(this.baseDate).format("YYYY-MM-DD");
-      lastSunday = moment(baseDay)
+      var lastSunday;
+      var baseDay = this.parseBaseDate().format("YYYY-MM-DD");
+      lastSunday = dayjs(baseDay)
         .startOf("isoWeek")
         .add(-1, "days")
         .format("YYYYMMDD");
@@ -813,92 +988,41 @@ export default {
   // refreshdata() {
   async refreshdata() {
   // mod  5527 除外期間が適用されていない。張 end
-    this.setCycling(0);
-    // add  5527 除外期間が適用されていない。張 start
-     await this.setCheckAvg(this.checkAvgTime, this.supportList[0].cd);
-     await this.setAvgInvest(this.avgInvestTime, this.supportList[0].cd, this.supportList[0].cyclingCd);
-      this.setInvestmentSupport(0);
-    // add  5527 除外期間が適用されていない。張 end
+    await this.loadSupportDetail(0);
     }
   //FNSI-修正 #5660子ページのデータが保存すると、親ページが更新する lijiaxing add end
   //mod FNSI-6884 劉全航 start
     ,async changeDate(){
-      var cd = document.getElementById('support').selectedIndex;
-      var baseDay = new Date(this.getSelectedCondition.baseDay);
-      var year = baseDay.getFullYear();
-      var month = baseDay.getMonth() + 1;
-      var day = baseDay.getDate();
-      var lastYear = year - 1;
-      var beforeLastYear = year - 2;
-      var nextMonth = month + 1;
-      if (month == 12) {
-        lastYear = year;
-        beforeLastYear = year - 1;
-        nextMonth = 1;
+      if (!this.canLoadSupportDetail(0)) {
+        this.applyBaseDateFromDay(this.resolveBaseDay());
+        return;
       }
-      if (month < 10) {
-        month = "0" + month;
-      }
-      if (nextMonth < 10) {
-        nextMonth = "0" + nextMonth;
-      }
-      // 本年分
-      this.nowYearBegin = lastYear.toString() + "/" + nextMonth;
-      this.nowYearEnd = year.toString() + "/" + month;
-      // 昨年分
-      this.lastYearBegin = beforeLastYear.toString() + "/" + nextMonth;
-      this.lastYearEnd = (year - 1).toString() + "/" + month;
-
-      // 開始日
-      this.nowYMDBegin = lastYear.toString();
-      this.lastYMDBegin = beforeLastYear.toString();
-      this.nowYMDBegin = this.nowYMDBegin + nextMonth + "01";
-      this.lastYMDBegin = this.lastYMDBegin + nextMonth + "01";
-
-      // 終了日
-      this.nowYMDEnd = year.toString();
-      this.lastYMDEnd = (year - 1).toString();
-      var curMonthDays = new Date(year,month,0).getDate();
-      this.nowYMDEnd = this.nowYMDEnd + month + curMonthDays;
-      this.lastYMDEnd = this.lastYMDEnd + month + curMonthDays;
-      this.baseDate = year.toString() + month;
-
-      if (day < 10) {
-        this.baseDate = this.baseDate + "0" + day;
-      } else {
-        this.baseDate = this.baseDate + day;
-      }
-      var getCycLingRerurnList = await getMstSupportSettingData(this.facilityCd);
-      //mod FNSI-5527 劉全航 start
-      getCycLingRerurnList.data = getCycLingRerurnList.data.filter(function(o){
-        return o.isDisp === "1";
-        });
-      //mod FNSI-5527 劉全航 end
-      var rangeMap = await getRange(this.supportList[cd].cd);
-      if (rangeMap.data.initialrangemedicine != "" && rangeMap.data.initialrangemedicine != null) {
-        this.avgInvestTime = rangeMap.data.initialrangemedicine;
-      } else {
-        this.avgInvestTime = "1";
-      }
-      if (rangeMap.data.initialrangeexam != "" && rangeMap.data.initialrangeexam != null) {
-        this.checkAvgTime = rangeMap.data.initialrangeexam;
-      } else {
-        this.checkAvgTime = "1";
-      }
-      this.setCycling(cd);
-      this.setCheckAvg(this.checkAvgTime, this.supportList[cd].cd);
-      this.setAvgInvest(this.avgInvestTime, this.supportList[cd].cd, this.supportList[cd].cyclingCd);
+      var cd = getScopedElementById('support', this.$el || null)?.selectedIndex ?? 0;
+      this.applyBaseDateFromDay(this.resolveBaseDay());
+      await this.loadSupportDetail(cd);
     }
     //mod FNSI-6884 劉全航 end
   },
 
   watch:{
+    windowRange() {
+      this.changeWindow();
+    },
     //mod FNSI-6884 劉全航 start
     getSelectedCondition : {
-      handler: 'changeDate',
+      handler() {
+        if (this.supportList.length > 0) {
+          this.changeDate();
+        }
+      },
       deep : true
     }
     //mod FNSI-6884 劉全航 end
+  },
+  mounted() {
+    this.$nextTick(() => {
+      this.changeWindow();
+    });
   },
 //mod 5527 投薬支援画面の表示不正 張 start
 // async created(){
@@ -908,50 +1032,7 @@ export default {
     EventBus.$on("refreshdata", this.refreshdata);
     //FNSI-修正 #5660子ページのデータが保存すると、親ページが更新する lijiaxing add end
     // 基準日
-    var baseDay = new Date(window.parent.baseDay.value);
-    var year = baseDay.getFullYear();
-    var month = baseDay.getMonth() + 1;
-    var day = baseDay.getDate();
-    var lastYear = year - 1;
-    var beforeLastYear = year - 2;
-    var nextMonth = month + 1;
-    if (month == 12) {
-      lastYear = year;
-      beforeLastYear = year - 1;
-      nextMonth = 1;
-    }
-    if (month < 10) {
-      month = "0" + month;
-    }
-    if (nextMonth < 10) {
-      nextMonth = "0" + nextMonth;
-    }
-    // 本年分
-    this.nowYearBegin = lastYear.toString() + "/" + nextMonth;
-    this.nowYearEnd = year.toString() + "/" + month;
-    // 昨年分
-    this.lastYearBegin = beforeLastYear.toString() + "/" + nextMonth;
-    this.lastYearEnd = (year - 1).toString() + "/" + month;
-
-    // 開始日
-    this.nowYMDBegin = lastYear.toString();
-    this.lastYMDBegin = beforeLastYear.toString();
-    this.nowYMDBegin = this.nowYMDBegin + nextMonth + "01";
-    this.lastYMDBegin = this.lastYMDBegin + nextMonth + "01";
-
-    // 終了日
-    this.nowYMDEnd = year.toString();
-    this.lastYMDEnd = (year - 1).toString();
-    var curMonthDays = new Date(year,month,0).getDate();
-    this.nowYMDEnd = this.nowYMDEnd + month + curMonthDays;
-    this.lastYMDEnd = this.lastYMDEnd + month + curMonthDays;
-    this.baseDate = year.toString() + month;
-
-    if (day < 10) {
-      this.baseDate = this.baseDate + "0" + day;
-    } else {
-      this.baseDate = this.baseDate + day;
-    }
+    this.applyBaseDateFromDay(this.resolveBaseDay());
     //mod 5527 投薬支援画面の表示不正 張 start
     // var getCycLingRerurnList = await getMstSupportSettingData(this.facilityCd);
      ApiHelper.get(`/master_maintenance/mst_support_setting/${this.facilityCd}`).then(response => {
@@ -963,6 +1044,7 @@ export default {
       });
     //mod FNSI-5527 劉全航 end
     if (getCycLingRerurnList != null) {
+      this.supportList = [];
       for (var i = 0; i < getCycLingRerurnList.data.length; i++) {
         var cyclingText = "";
         var cyclingCd =  "";
@@ -998,27 +1080,12 @@ export default {
         }
       }
     }
-    //mod 5527 投薬支援画面の表示不正 張 start
-    // var rangeMap = await getRange(this.supportList[0].cd);
-     ApiHelper.get(`/master_maintenance/mst_support_range_value/${this.supportList[0].cd}`).then(response => {
-        var rangeMap =response
-    //mod 5527 投薬支援画面の表示不正 張 end
-    if (rangeMap.data.initialrangemedicine != "" && rangeMap.data.initialrangemedicine != null) {
-      this.avgInvestTime = rangeMap.data.initialrangemedicine;
-    } else {
-      this.avgInvestTime = "1";
+    if (!this.supportList.length) {
+      return;
     }
-    if (rangeMap.data.initialrangeexam != "" && rangeMap.data.initialrangeexam != null) {
-      this.checkAvgTime = rangeMap.data.initialrangeexam;
-    } else {
-      this.checkAvgTime = "1";
-    }
-
-    this.setCycling(0);
-    this.setCheckAvg(this.checkAvgTime, this.supportList[0].cd);
-    this.setAvgInvest(this.avgInvestTime, this.supportList[0].cd, this.supportList[0].cyclingCd);
-    this.setInvestmentSupport(0);
-    });
+    this.loadSupportDetail(0);
+    }).catch((error) => {
+      console.error("mst_support_setting load failed", error);
     });
 
   },
@@ -1026,15 +1093,15 @@ export default {
 </script>
 
 <style scoped>
-div >>> .erd_scroll_detection_container {
+div :deep(.erd_scroll_detection_container) {
   display: none !important;
 }
 
-.modal-container-custom >>> .k-grid {
+.modal-container-custom :deep(.k-grid) {
   width: 100%;
   font-size: 1em;
 }
-.modal-container-custom >>> .k-grid-content {
+.modal-container-custom :deep(.k-grid-content) {
   height: 50vh;
   background-color: var(--grid-background-color);
 }
@@ -1114,19 +1181,35 @@ div >>> .erd_scroll_detection_container {
   align-items: center;
 }
 .btn2-cancel {
-   width: 100px !important;
+  width: 100px !important;
 }
 
 @media print {
   #modalBase {
     display: block;
   }
-  #modalBase >>> .k-window {
+  #modalBase :deep(.k-window) {
     display: inline-block;
   }
   /** スクロールコンテナ */
-  #modalBase >>> .k-window-content {
+  #modalBase :deep(.k-window-content) {
     overflow: hidden !important;
   }
+}
+</style>
+
+<style>
+/* .k-window は teleport され k-widget クラスは付かない。body 付きで legacy-font 16px より優先 */
+body .k-window.font-size-set-small {
+  font-size: 14.4px !important;
+}
+body .k-window.font-size-set-medium {
+  font-size: 18px !important;
+}
+body .k-window.font-size-set-large {
+  font-size: 19.8px !important;
+}
+body .k-window.font-size-set-x-large {
+  font-size: 23.4px !important;
 }
 </style>

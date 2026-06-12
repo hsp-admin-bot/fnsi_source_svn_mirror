@@ -7,14 +7,13 @@ spring:
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration,
       org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
-  data:
-    mongodb:
-      host: stg-ies-docdb-cluster.cluster-clizq2mnnwjp.ap-northeast-1.docdb.amazonaws.com
-      port: 27017
-      database: ntss
-      username: nkk
-      password: nkk
-      field-naming-strategy: org.springframework.data.mapping.model.SnakeCaseFieldNamingStrategy
+  mongodb:
+    host: stg-ies-docdb-cluster.cluster-clizq2mnnwjp.ap-northeast-1.docdb.amazonaws.com
+    port: 27017
+    database: ntss
+    username: nkk
+    password: nkk
+    field-naming-strategy: org.springframework.data.mapping.model.SnakeCaseFieldNamingStrategy
 
   batch:
     chunkSize: 99999999 #ファイル単位でトランザクションをかけたいため大きい数値を設定
@@ -979,6 +978,8 @@ convert-key:
     medicine_latest_no:
 ---
 spring:
+  jackson:
+    use-jackson2-defaults: true
   profiles:
   autoconfigure:
     exclude:

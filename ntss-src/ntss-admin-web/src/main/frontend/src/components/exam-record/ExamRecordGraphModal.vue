@@ -3,48 +3,62 @@
  */
  <template>
   <modal-base @onClose="closeExamRecordGraphModal">
-    <div slot="header">
-      <component :is="header"></component>
-    </div>
-    <!-- グラフ -->
-    <div slot="body" id="custom-highchart-body">
-      <highcharts :options="options"></highcharts>
-    </div>
-    <!-- フッター -->
-    <div slot="footer" class="flex-container flex-container-footer">
-      <div class="denial-btn-area" style="background:none">
-        <button class="button btn2-cancel registration-btn" @click="closeExamRecordGraphModal">閉じる</button>
+    <template #header>
+      <div>
+        <component :is="header"></component>
       </div>
-    </div>
+    </template>
+    <!-- グラフ -->
+    <template #body>
+      <div id="custom-highchart-body">
+        <highcharts :options="options"></highcharts>
+      </div>
+    </template>
+    <!-- フッター -->
+    <template #footer>
+      <div class="flex-container flex-container-footer">
+        <div class="denial-btn-area" style="background:none">
+          <button class="button btn2-cancel registration-btn" @click="closeExamRecordGraphModal">閉じる</button>
+        </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 
-import Vue from "vue";
-import VueHighcharts from "vue-highcharts";
-import Highcharts from "highcharts";
-import Boost from "highcharts/modules/boost";
+import { Chart } from "@/compat/charts/highcharts";
+import Highcharts from "@/compat/charts/highcharts";
+import { Boost } from "@/compat/charts/highcharts";
 import {deepCopy} from "@/functions/common/CommonFunctions";
 import {DISP_ORDER_RIGHT_PAST} from "@/constants/examRecordConstants";
+import { getModalBodyElement, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
 
 //add 9403検査結果グラフのレンジが正しく表示されていない 吉 start
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 //add 9403検査結果グラフのレンジが正しく表示されていない 吉 end
 // add #10398 文字型の検査項目に対して検査値の桁合わせ処理が行われる zy start
 import {convertToHalfWidth} from "@/functions/common/CommonFunctions";
 // add #10398 文字型の検査項目に対して検査値の桁合わせ処理が行われる zy start
 
-Vue.use(VueHighcharts);
 Boost(Highcharts);
+
+function formatGraphAxisLabelValue(value) {
+  const thousandsSep = Math.abs(Number(value)) >= 10000 ? " " : "";
+  return Highcharts.numberFormat(value, -1, ".", thousandsSep);
+}
+
+function formatGraphTooltipValue(value) {
+  return Highcharts.numberFormat(value, -1, ".", " ");
+}
 
 export default {
   name: "ExamRecordGraphModal",
   components: {
-    VueHighcharts,
+    highcharts: Chart,
     "modal-base": ModalBase,
     "message-dialog": messageDialog
   },
@@ -64,26 +78,120 @@ export default {
         },
         // add FNSI-delete Hchart Button 関 end
         chart: {
-          height: 200
+          height: 200,
+          plotBorderWidth: 1,
+          plotBorderColor: '#e6e6e6',
+          spacingLeft: 10,
+          spacingRight: 10,
+          spacingTop: 22,
+          spacingBottom: 15,
+          events: {
+            load() {
+              const chart = this;
+              Highcharts.addEvent(chart.tooltip, 'refresh', function () {
+                const point = chart.hoverPoint;
+                const label = chart.tooltip?.label;
+                if (!point || !label || chart.styledMode) {
+                  return;
+                }
+                label.attr({
+                  stroke: point.color || point.series.color,
+                  'stroke-width': chart.options.tooltip?.borderWidth ?? 1
+                });
+                label.css({
+                  minWidth: '300px',
+                  whiteSpace: 'normal'
+                });
+              });
+            },
+            render() {
+              const chart = this;
+              requestAnimationFrame(() => {
+                chart.container
+                  .querySelectorAll('.highcharts-tick')
+                  .forEach(el => {
+                    el.setAttribute('stroke', '#ccd6eb');
+                  });
+
+                const yAxisLabelsGroups = chart.container.querySelectorAll('.highcharts-yaxis-labels');
+                const labelsCount = yAxisLabelsGroups.length;
+                const drawnBorderKeys = new Set();
+                yAxisLabelsGroups.forEach((labelsGroup, index) => {
+                    labelsGroup
+                      .querySelectorAll('.exam-record-yaxis-labels-border')
+                      .forEach(el => el.remove());
+
+                    if (labelsCount <= 1 || index === labelsCount - 1) {
+                      return;
+                    }
+
+                    let bbox;
+                    try {
+                      bbox = labelsGroup.getBBox();
+                    } catch (e) {
+                      return;
+                    }
+                    if (!bbox.height) {
+                      return;
+                    }
+
+                    const insetTop = 8;
+                    const insetBottom = 8;
+                    const y1 = bbox.y + insetTop;
+                    const y2 = bbox.y + bbox.height - insetBottom;
+                    if (y2 <= y1) {
+                      return;
+                    }
+
+                    const borderKey = `${Math.round(bbox.x)}-${Math.round(y1)}-${Math.round(y2)}`;
+                    if (drawnBorderKeys.has(borderKey)) {
+                      return;
+                    }
+                    drawnBorderKeys.add(borderKey);
+
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('class', 'exam-record-yaxis-labels-border');
+                    line.setAttribute('x1', String(bbox.x));
+                    line.setAttribute('x2', String(bbox.x));
+                    line.setAttribute('y1', String(y1));
+                    line.setAttribute('y2', String(y2));
+                    line.setAttribute('stroke', '#ccc');
+                    line.setAttribute('stroke-width', '1');
+                    line.setAttribute('pointer-events', 'none');
+                    labelsGroup.insertBefore(line, labelsGroup.firstChild);
+                  });
+              });
+            }
+          }
         },
         credits: {
           enabled: false
         },
         title: {
           text: "",
+          margin: 6,
+          // 患者名标题目标位置 x=845, y=24
+          x: -14,
+          y: 2
         },
         xAxis: [
           {
             tickWidth: 1,
             tickLength: 20,
-            categories: []
+            categories: [],
+            labels: {
+              distance: 6
+            }
           },{
             linkedTo: 0,
             tickWidth: 1,
             tickLength: 20,
             lineWidth: 0.1,
             margin: 0,
-            categories: []
+            categories: [],
+            labels: {
+              distance: 5
+            }
           }
         ],
         // mod FNSI-6102 劉全航 start
@@ -102,12 +210,30 @@ export default {
         // },
         yAxis: [],
         // mod FNSI-6102 劉全航 end
-        tooltip: {},
+        tooltip: {
+          // 边框色在 refresh 时设为当前系列色（与折线/● 一致）；不设 borderColor 避免固定灰色
+          borderWidth: 1,
+          padding: 12,
+          style: {
+            minWidth: '300px',
+            whiteSpace: 'normal'
+          },
+          pointFormatter: function () {
+            const value = formatGraphTooltipValue(this.y);
+            return `<span style="color:${this.color}">\u25CF</span> ${this.series.name}: <b>${value}</b><br/>`;
+          }
+        },
         legend: {
           layout: 'horizontal',
           align: 'center',
           verticalAlign: 'bottom',
-          borderWidth: 0
+          borderWidth: 0,
+          margin: 6,
+          y: -5,
+          itemHiddenStyle: {
+            color: '#cccccc',
+            textDecoration: 'line-through'
+          }
         },
         series: []
       },
@@ -144,13 +270,11 @@ export default {
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       // モーダルのbodyの高さ
-      const mh = document.getElementsByClassName("modal-body")[0]
-        .clientHeight;
+      const mh = getModalBodyElement(this.$el || this)?.clientHeight || 0;
       // モーダルのbodyの高さをグラフの高さに設定
       this.options.chart.height = mh;
       // モーダルのヘッダの高さ
-      const hh = document.getElementsByClassName("modal-header")[0]
-        .clientHeight;
+      const hh = queryScopedSelector(".modal-header", this.$el || this)?.clientHeight || 0;
       this.examrecordGridToolbarHeight = mh - hh;
       this.examrecordGridToolbarHeight =
         this.examrecordGridToolbarHeight < 300
@@ -213,12 +337,6 @@ export default {
     windowHeight() {
       this.calculateGridHeight();
     },
-    isDispMenu() {
-      this.calculateGridHeight();
-    },
-    getFontSize() {
-      this.calculateGridHeight();
-    }
   },
   created() {
     // ------------------------------------------------
@@ -245,7 +363,7 @@ export default {
     // console.log(this.selectedPat);
     //mod 9251 NKK連携 profile（標準）（拡張） 姓名を分割して保存していたデータが、姓の欄に結合して更新されてしまう。 zhou start
     //this.options.title.text = this.selectedPat.pat_personal_main.pat_last_name + this.selectedPat.pat_personal_main.pat_first_name;
-    this.options.title.text = (this.selectedPat.pat_personal_main.pat_last_name == null ? "": this.selectedPat.pat_personal_main.pat_last_name )+
+    this.options.title.text = (this.selectedPat.pat_personal_main.pat_last_name == null ? "": this.selectedPat.pat_personal_main.pat_last_name)+
      (this.selectedPat.pat_personal_main.pat_first_name == null ? "": this.selectedPat.pat_personal_main.pat_first_name);
     //mod 9251 NKK連携 profile（標準）（拡張） 姓名を分割して保存していたデータが、姓の欄に結合して更新されてしまう。 zhou end
     // カラムシリアル一覧の作成と横軸の設定
@@ -273,7 +391,10 @@ export default {
     xAxisData.push({
       tickWidth: 1,
       tickLength: 20,
-      categories: primaryCategories
+      categories: primaryCategories,
+      labels: {
+        distance: 6
+      }
     });
     xAxisData.push({
       linkedTo: 0,
@@ -281,10 +402,13 @@ export default {
       tickLength: 20,
       lineWidth: 0.1,
       margin: 0,
-      categories: secondaryCategories
+      categories: secondaryCategories,
+      labels: {
+        distance: 5
+      }
     });
     this.options.xAxis = xAxisData;
-
+    this.options.xAxis[0].gridLineWidth = 1;
     // test データをカウントする
     // let testDataCount = 0;
 
@@ -406,11 +530,15 @@ export default {
                 x: -20
               },
               labels: {
+                distance: 16,
                 style: {
                     // mod 9403 検査結果グラフのレンジが正しく表示されていない zhou start
                     //color: Highcharts.getOptions().colors[itemsIdx]
                     color: Highcharts.getOptions().colors[index]
                     // mod 9403 検査結果グラフのレンジが正しく表示されていない zhou end
+                },
+                formatter: function () {
+                  return formatGraphAxisLabelValue(this.value);
                 }
               },
               // 検査結果グラフの縦軸の数字は小数でした linjunfeng start
@@ -432,8 +560,7 @@ export default {
                 color: Highcharts.getOptions().colors[index]
                 // mod 9403 検査結果グラフのレンジが正しく表示されていない zhou end
               }]
-            }
-          )
+            })
           // add FNSI-6102 劉全航 end
           // mod 9403 検査結果グラフのレンジが正しく表示されていない zhou start
           index++;
@@ -459,7 +586,6 @@ export default {
       this.calculateGridHeight();
     });
   },
-  destroyed() { }
 };
 </script>
 
@@ -468,34 +594,80 @@ export default {
   justify-content: flex-end;
 }
 
-#custom-highchart-body >>> .highcharts-title {
+#custom-highchart-body :deep(.highcharts-title) {
   font-size: 1em !important;
 }
 
-#custom-highchart-body >>> .highcharts-root {
+#custom-highchart-body :deep(.highcharts-root) {
   font-size: unset !important;
 }
 @media print {
-  div >>> .modal-wrapper {
+  div :deep(.modal-wrapper){
     display: inline-block !important;
     width: 100%;
   }
-  div >>> .modal-container {
+  div :deep(.modal-container){
     width: 98%;
   }
-  #custom-highchart-body >>> .highcharts-container {
+  #custom-highchart-body :deep(.highcharts-container){
     width: auto !important;
     height: auto !important;
   }
-  #custom-highchart-body >>> .highcharts-root {
+  #custom-highchart-body :deep(.highcharts-root){
     width: 100%;
     height: 100%;
   }
 }
 /* 横向き印刷 */
 @media print and (orientation: landscape) {
-  #custom-highchart-body >>> .highcharts-root {
+  #custom-highchart-body :deep(.highcharts-root){
     height: 80vh;
   }
 }
+#custom-highchart-body :deep(.highcharts-axis-labels){
+  font-family: "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif!important;
+  font-size: 11px!important;
+}
+
+#custom-highchart-body :deep(.highcharts-xaxis-labels text){
+  color: #666666!important;
+  cursor: default;
+  font-size: 11px!important;
+  fill: #666666!important;
+}
+
+#custom-highchart-body :deep(.highcharts-yaxis-labels text){
+  font-size: 11px!important;
+}
+
+#custom-highchart-body :deep(.highcharts-legend-item-hidden .highcharts-graph),
+#custom-highchart-body :deep(.highcharts-legend-item-hidden .highcharts-point) {
+  stroke: #cccccc !important;
+}
+
+#custom-highchart-body :deep(.highcharts-legend-item-hidden .highcharts-point) {
+  fill: #cccccc !important;
+}
+
+/* #custom-highchart-body :deep(.highcharts-legend-item-hidden text) {
+  fill: #666666 !important;
+} */
+
+#custom-highchart-body :deep(.highcharts-tooltip) {
+  white-space: normal !important;
+}
+
+#custom-highchart-body :deep(.highcharts-tooltip span) {
+  min-width: 300px;
+  display: inline-block;
+  box-sizing: border-box;
+  line-height: 1.4;
+  font-size: 12px !important;
+}
+
+#custom-highchart-body :deep(.highcharts-no-tooltip text){
+  text-decoration:none!important;
+  color:#000000!important;
+}
+
 </style>

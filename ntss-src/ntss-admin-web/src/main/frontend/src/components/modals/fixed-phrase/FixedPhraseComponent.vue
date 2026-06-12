@@ -103,10 +103,10 @@
 </template>
 
  <script>
-   import { EventBus } from "@/eventBus.js";
-   import {mapActions, mapGetters} from "vuex";
+   import { EventBus } from "@/compat/vue/event-bus.js";
+   import {mapActions, mapGetters} from "@/compat/vue/vuex";
    import {deepCopy} from "@/functions/common/CommonFunctions";
-   import vuedraggable from "vuedraggable";
+   import { VueDraggable } from "@/compat/drag/VueDraggable";
    import CommonTextArea from "@/components/common/CommonTextArea";
    //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
    import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -114,10 +114,11 @@
    // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
    import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
    import { messageFormat } from '@/functions/common/MessageFormat';
+   import { getScopedElementById, getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
    // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
    export default {
   components: {
-    draggable: vuedraggable,
+    draggable: VueDraggable,
     "com-textarea": CommonTextArea
   },
   data() {
@@ -160,8 +161,11 @@
     onMoveCallback(evt){
       this.isDraggingCategory = false
       for(let i = 0;i<this.fixedPhraseList.length;i++){
-        let el = document.getElementById(`com-textarea-personal-phrase${i}`)
-        el.style.height = 'auto'
+        const el = getScopedElementById(`com-textarea-personal-phrase${i}`, this.$el || this);
+        if (!el) {
+          continue;
+        }
+        el.style.height = 'auto';
         if (el.scrollHeight < 40) {
           el.style.height = "41px";
         } else {
@@ -195,7 +199,6 @@
     /**
      * 保存ボタンクリックイベント処理.
      */
-    /* eslint-disable no-unused-vars */
     save() {
       // 共通ローダー:表示開始
       this.setLoadingScreenVisible(true);
@@ -272,12 +275,10 @@
      * Gridの高さを調整する
      */
     calculateGridHeight() {
-      const contentsHeight = document.getElementsByClassName(
-        "tab-contents-area"
-      )[0].clientHeight;
-      const footerHeight = document.getElementsByClassName(
-        "common-tab-footer"
-      )[0].clientHeight;
+      const contentsHeight = getScopedElementsByClassName(
+        "tab-contents-area", this.$el || this)[0]?.clientHeight || 0;
+      const footerHeight = getScopedElementsByClassName(
+        "common-tab-footer", this.$el || this)[0]?.clientHeight || 0;
       this.contentsAreaHeight = contentsHeight - footerHeight - 10;
     },
 
@@ -414,21 +415,24 @@
 .right {
   text-align: right;
 }
-.common-tab-content >>> .text-input,
-.common-tab-content >>> select {
+.common-tab-content :deep(select) {
   font-size: 1em;
 }
-.common-tab-content >>> ons-row {
+
+.common-tab-content :deep(.text-input) {
+  font-size: 1em;
+}
+.common-tab-content :deep(ons-row) {
   height: auto;
 }
-.common-tab-content >>> .tab-item {
+.common-tab-content :deep(.tab-item) {
   margin-bottom: 5px;
 }
 .item-checkbox {
   flex: 1 0 15px;
   max-width: 35px;
 }
-.common-tab-content >>> select {
+.common-tab-content :deep(select) {
   border: solid 1px var(--personal-setting-select-border-color);
 }
 .checkbox-header {
@@ -455,7 +459,7 @@
 .col-no {
   width: 2em;
 }
-div >>> .text-area-personal-phrase {
+div :deep(.text-area-personal-phrase) {
   font: inherit;
   width: 100%;
   height: 2.5em;

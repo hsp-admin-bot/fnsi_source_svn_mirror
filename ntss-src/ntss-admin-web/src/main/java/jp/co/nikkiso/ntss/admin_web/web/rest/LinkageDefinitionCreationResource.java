@@ -213,6 +213,23 @@ public class LinkageDefinitionCreationResource {
    * @return
    * @throws URISyntaxException
    */
+  @GetMapping("/coopLayout/current/{facilityCd}")
+  public ResponseEntity<?> getCurrentMstCoopLayoutsByFacilityCd(@PathVariable String facilityCd) {
+    String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopLayout/current/" + facilityCd;
+    logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
+      null);
+    try {
+      List<MstCoopLayout> mstCoopLayouts = creationService.selectCurrentMstCoopLayoutsByFacilityCd(facilityCd);
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
+        null);
+      return new ResponseEntity<>(mstCoopLayouts, HttpStatus.OK);
+    } catch (Exception e) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(),"", AFTER_LOG_FLG_ERROR, mappingUrl, null,
+        ExcetionStackTraceToString(e));
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+  }
+
   @PostMapping("/coopLayout/submit")
   public ResponseEntity<?> submitMstCoopLayout(@RequestBody MstCoopLayout mstCoopLayout,
   @AuthenticationPrincipal NtssUser ntssUser) throws URISyntaxException {
@@ -312,6 +329,23 @@ public class LinkageDefinitionCreationResource {
    * @param ctlNo
    * @return
    */
+  @GetMapping("/coopLayoutDetail/current/{facilityCd}")
+  public ResponseEntity<?> getCurrentMstCoopLayoutDetailsByFacilityCd(@PathVariable String facilityCd) {
+    String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopLayoutDetail/current/" + facilityCd;
+    logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
+      null);
+    try {
+      List<MstCoopLayoutDetail> mstCoopLayoutDetails = creationService.selectCurrentMstCoopLayoutDetailsByFacilityCd(facilityCd);
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
+        null);
+      return new ResponseEntity<>(mstCoopLayoutDetails, HttpStatus.OK);
+    } catch (Exception e) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(),"", AFTER_LOG_FLG_ERROR, mappingUrl, null,
+        ExcetionStackTraceToString(e));
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+  }
+
   @GetMapping("/coopLayoutDetail/{ctlNo}")
   public ResponseEntity<?> selectMstCoopLayoutDetailByCtlNo(@PathVariable Long ctlNo) {
 
@@ -407,6 +441,23 @@ public class LinkageDefinitionCreationResource {
    * @param ctlNo
    * @return
    */
+  @GetMapping("/coopFilename/current/{facilityCd}")
+  public ResponseEntity<?> getCurrentMstCoopFilenamesByFacilityCd(@PathVariable String facilityCd) {
+    String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopFilename/current/" + facilityCd;
+    logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
+      null);
+    try {
+      List<MstCoopFilename> mstCoopFilenames = creationService.selectCurrentMstCoopFilenamesByFacilityCd(facilityCd);
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
+        null);
+      return new ResponseEntity<>(mstCoopFilenames, HttpStatus.OK);
+    } catch (Exception e) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(),"", AFTER_LOG_FLG_ERROR, mappingUrl, null,
+        ExcetionStackTraceToString(e));
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+  }
+
   @GetMapping("/coopFilename/{ctlNo}")
   public ResponseEntity<?> selectMstCoopFilenameByCtlNo(@PathVariable Long ctlNo) {
 
@@ -583,6 +634,23 @@ public class LinkageDefinitionCreationResource {
    * @return
    * @throws URISyntaxException
    */
+  @GetMapping("/coopDistribute/current/{facilityCd}")
+  public ResponseEntity<?> getCurrentMstCoopDistributesByFacilityCd(@PathVariable String facilityCd) {
+    String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopDistribute/current/" + facilityCd;
+    logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
+      null);
+    try {
+      List<MstCoopDistribute> mstCoopDistributes = creationService.selectCurrentMstCoopDistributesByFacilityCd(facilityCd);
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
+        null);
+      return new ResponseEntity<>(mstCoopDistributes, HttpStatus.OK);
+    } catch (Exception e) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(),"", AFTER_LOG_FLG_ERROR, mappingUrl, null,
+        ExcetionStackTraceToString(e));
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+  }
+
   @PostMapping("/coopDistribute/submit")
   public ResponseEntity<?> submitMstCoopDistribute(@RequestBody MstCoopDistribute mstCoopDistribute,
   @AuthenticationPrincipal NtssUser ntssUser) throws URISyntaxException {
@@ -874,6 +942,129 @@ public class LinkageDefinitionCreationResource {
         null);
       // wp アプリケーションログの適正化 Add End
       return new ResponseEntity<>(sysCoopNos, HttpStatus.OK);
+    } catch (Exception e) {
+      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
+//      e.printStackTrace();
+      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
+
+      // wp アプリケーションログの適正化 Add Start
+      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(),"", AFTER_LOG_FLG_ERROR, mappingUrl, null, ExcetionStackTraceToString(e));
+      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
+      // wp アプリケーションログの適正化 Add End
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  /**
+   * コピー元の連携配信設定マスタEntityを取得する
+   * @param mstCoopDistribute
+   * @return
+   */
+  @PostMapping("/coopDistribute/source")
+  public ResponseEntity<?> selectSourceMstCoopDistributes(@RequestBody MstCoopDistribute mstCoopDistribute) {
+    String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopDistribute/source";
+    logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
+      mstCoopDistribute);
+    try {
+      List<MstCoopDistribute> mstCoopDistributes = creationService.selectSourceMstCoopDistributes(mstCoopDistribute);
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
+        null);
+      return new ResponseEntity<>(mstCoopDistributes, HttpStatus.OK);
+    } catch (Exception e) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_ERROR, mappingUrl, null,
+        ExcetionStackTraceToString(e));
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  /**
+   * コピー元の連携電文レイアウトマスタEntityを取得する
+   * @param mstCoopLayout
+   * @return
+   */
+  @PostMapping("/coopLayout/source")
+  public ResponseEntity<?> selectSourceMstCoopLayouts(@RequestBody MstCoopLayout mstCoopLayout) {
+    String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopLayout/source";
+    logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
+      mstCoopLayout);
+    try {
+      List<MstCoopLayout> mstCoopLayouts = creationService.selectSourceMstCoopLayouts(mstCoopLayout);
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
+        null);
+      return new ResponseEntity<>(mstCoopLayouts, HttpStatus.OK);
+    } catch (Exception e) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_ERROR, mappingUrl, null,
+        ExcetionStackTraceToString(e));
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  /**
+   * コピー元の連携電文レイアウト詳細マスタEntityを取得する
+   * @param mstCoopLayoutDetail
+   * @return
+   */
+  @PostMapping("/coopLayoutDetail/source")
+  public ResponseEntity<?> selectSourceMstCoopLayoutDetails(@RequestBody MstCoopLayoutDetail mstCoopLayoutDetail) {
+    String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopLayoutDetail/source";
+    logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
+      mstCoopLayoutDetail);
+    try {
+      List<MstCoopLayoutDetail> mstCoopLayoutDetails = creationService.selectSourceMstCoopLayoutDetails(mstCoopLayoutDetail);
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
+        null);
+      return new ResponseEntity<>(mstCoopLayoutDetails, HttpStatus.OK);
+    } catch (Exception e) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_ERROR, mappingUrl, null,
+        ExcetionStackTraceToString(e));
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  /**
+   * コピー元の連携ファイル名マスタEntityを取得する
+   * @param mstCoopFilename
+   * @return
+   */
+  @PostMapping("/coopFilename/source")
+  public ResponseEntity<?> selectSourceMstCoopFilenames(@RequestBody MstCoopFilename mstCoopFilename) {
+    String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopFilename/source";
+    logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
+      mstCoopFilename);
+    try {
+      List<MstCoopFilename> mstCoopFilenames = creationService.selectSourceMstCoopFilenames(mstCoopFilename);
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
+        null);
+      return new ResponseEntity<>(mstCoopFilenames, HttpStatus.OK);
+    } catch (Exception e) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_ERROR, mappingUrl, null,
+        ExcetionStackTraceToString(e));
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  /**
+   * コピー元の連携API関連付けマスタEntityを取得する
+   * @param mstCoopApilink
+   * @return
+   */
+  @PostMapping("/mstCoopApilink/source")
+  public ResponseEntity<?> selectSourceMstCoopApilinks(@RequestBody MstCoopApilink mstCoopApilink) {
+
+    // wp アプリケーションログの適正化 Add Start
+    String mappingUrl = Uri.LINKAGE_DEFINITION + "/mstCoopApilink/source";
+    logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
+      mstCoopApilink);
+    // wp アプリケーションログの適正化 Add End
+    try {
+      List<MstCoopApilink> mstCoopApilinks = creationService.selectSourceMstCoopApilinks(mstCoopApilink);
+
+      // wp アプリケーションログの適正化 Add Start
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
+        null);
+      // wp アプリケーションログの適正化 Add End
+      return new ResponseEntity<>(mstCoopApilinks, HttpStatus.OK);
     } catch (Exception e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();

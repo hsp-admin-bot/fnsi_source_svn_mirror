@@ -73,8 +73,10 @@ public interface OrdPrescriptionDao {
      * 処方一覧を取得
      * @return
      */
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 start
     @Select
-    List<PrescriptionList> getPrescriptionList(List<Long> patIdList, String issueDate, List<String> prescriptionTypeList);
+    List<PrescriptionList> getPrescriptionList(List<Long> patIdList, String issueDate, List<String> prescriptionTypeList, String facilityCd);
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260507 end
 
     // add FNSI-処方を追加 姜 start
     @Select

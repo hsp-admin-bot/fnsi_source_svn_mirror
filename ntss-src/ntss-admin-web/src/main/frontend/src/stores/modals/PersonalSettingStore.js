@@ -49,9 +49,7 @@ export default {
      * @param {*} commit COMMITオブジェクト
      * @param {string} facilityCd 施設コード
      */
-    /* eslint-disable no-unused-vars */
     getPersonalTabDefine({ commit }, facilityCd) {
-      /* eslint-enable no-unused-vars */
       return sendRequestGetPersonalTabDefine(facilityCd);
     },
     /**
@@ -59,9 +57,7 @@ export default {
      * @param {*} commit commitオブジェクト
      * @param {*} tabDefineCd タブ定義コード
      */
-    /* eslint-disable no-unused-vars */
     getPersonalSettingsDefine({ commit }, tabDefineCd) {
-      /* eslint-enable no-unused-vars */
       return sendRequestGetPersonalSettingsDefine(tabDefineCd);
     },
     /**
@@ -69,9 +65,7 @@ export default {
      * @param {*} commit commitオブジェクト
      * @param {*} tabDefineCd タブ定義コード
      */
-    /* eslint-disable no-unused-vars */
     getPersonalSettings({ commit }, tabDefineCd) {
-      /* eslint-enable no-unused-vars */
       return sendRequestGetPersonalSettings(tabDefineCd);
     },
     /**
@@ -79,9 +73,7 @@ export default {
      * @param {*} commit commitオブジェクト
      * @param {*} param 更新する個人設定値(personal_settingsのJSON)
      */
-    /* eslint-disable no-unused-vars */
     updatePersonalSettings({ commit }, param) {
-      /* eslint-enable no-unused-vars */
       return sendRequestUpdatePersonalSettings(param);
     },
     /**

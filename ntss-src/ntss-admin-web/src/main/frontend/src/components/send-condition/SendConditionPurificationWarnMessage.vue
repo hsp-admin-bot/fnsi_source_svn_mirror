@@ -47,11 +47,10 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 
 export default {
-  props: {},
-  components: {},
+
   data() {
     return {
       msgList: []
@@ -69,15 +68,12 @@ export default {
       });
     }
   },
-  methods: {},
   watch: {
     getPurificationWarnmessageList() {
       this.msgList = this.getPurificationWarnmessageList;
     }
   },
-  created() {},
-  mounted() {},
-  destroyed() { }
+
 };
 </script>
 <style scoped>

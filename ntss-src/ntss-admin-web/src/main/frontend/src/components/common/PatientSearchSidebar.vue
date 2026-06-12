@@ -50,6 +50,7 @@
 
 <script>
   // コンポーネント
+  import $ from "@/compat/jquery";
   import simpleSearch from "@/components/side-contents/SimpleSearch.vue";
   import patList from "@/components/side-contents/PatList.vue";
   // del 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 関 start
@@ -61,9 +62,9 @@
   // import { SearchQuery } from "@/components/side-contents/SearchDefinitions.js";
   // del FNSI-改修内容 ｶｽﾀﾑ検索ドロップダウンボックスの初期化エラー dou start
   import IndicationResultComponent from "@/components/indication-result/IndicationResultComponent";
-  import $ from "jquery";
-  import {mapActions, mapGetters, mapMutations} from "vuex";
-  import {EventBus} from "@/eventBus.js";
+
+  import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
+  import {EventBus} from "@/compat/vue/event-bus.js";
   // add FNSI-改修内容 ｶｽﾀﾑ検索ドロップダウンボックスの初期化エラー dou start
   import {ApiHelper} from "@/apis/AxiosHelper.js";
   // add FNSI-改修内容 ｶｽﾀﾑ検索ドロップダウンボックスの初期化エラー dou end
@@ -72,6 +73,14 @@
  * @description 共通患者検索サイドバー
  */
 export default {
+  inject: {
+    getNtssLayoutRootElement: {
+      default: null
+    },
+    getNtssFooterMenuElement: {
+      default: null
+    }
+  },
   components: {
     "simple-search": simpleSearch,
     "pat-list": patList,
@@ -92,7 +101,11 @@ export default {
       // flag:true,
       // del 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 関 end
       // FNSI-修正、#6129、「beforeSelectPatId」を子対象から親対象に遷移、xugj add start
-      beforeSelectPatId: ""
+      beforeSelectPatId: "",
+      onDetailedSearchUserSearchQuery: null,
+      onCalculateTableHeight: null,
+      onBeforeSelectPatIdChange: null,
+      onPatListSort: null
       // FNSI-修正、#6129、「beforeSelectPatId」を子対象から親対象に遷移、xugj add end
     };
   },
@@ -168,8 +181,53 @@ export default {
     // add FNSi6299-抽出条件を設定している状態で指示受け（指示承認）画面を開き、その後元の画面に戻ると表示順が勝手に入れ替わる 周 start
     ...mapActions("loading-screen", ["setLoadingScreenVisible", "setLoadingScreenMessage"]),
     // add FNSi6299-抽出条件を設定している状態で指示受け（指示承認）画面を開き、その後元の画面に戻ると表示順が勝手に入れ替わる 周 end
+    getSidebarRoot() {
+      return this.$el || null;
+    },
+    getLayoutRoot() {
+      return typeof this.getNtssLayoutRootElement === "function"
+        ? this.getNtssLayoutRootElement()
+        : null;
+    },
+    getScopedSearchRoots() {
+      const roots = [];
+      const pushRoot = (candidate) => {
+        if (candidate && !roots.includes(candidate)) {
+          roots.push(candidate);
+        }
+      };
+      pushRoot(this.getSidebarRoot());
+      pushRoot(this.getLayoutRoot());
+      return roots;
+    },
+    queryScoped(selector) {
+      for (const root of this.getScopedSearchRoots()) {
+        const found = root?.querySelector?.(selector);
+        if (found) {
+          return found;
+        }
+      }
+      return null;
+    },
+    queryScopedAll(selector) {
+      const results = [];
+      this.getScopedSearchRoots().forEach((root) => {
+        root?.querySelectorAll?.(selector)?.forEach?.((element) => {
+          if (!results.includes(element)) {
+            results.push(element);
+          }
+        });
+      });
+      return results;
+    },
+    getFooterMenuHeight() {
+      const footerMenu = typeof this.getNtssFooterMenuElement === "function"
+        ? this.getNtssFooterMenuElement()
+        : null;
+      return footerMenu?.clientHeight || 0;
+    },
     changeTab(e) {
-      this.selectTabId = $(e.item).index();
+      this.selectTabId = (typeof e?.itemIndex === "number" ? e.itemIndex : $(e.item).index());
       this.$nextTick(() => {
         // 患者検索の画面の高さを再計算
         this.calculateTableHeight();
@@ -180,10 +238,9 @@ export default {
       // 画面の高さを取得
       const wh = this.windowHeight;
       // フッターの高さを取得
-      const fmh =
-        this.isDispMenu === 1
-          ? document.getElementById("footer-menu").clientHeight
-          : 0;
+      const fmh = this.isDispMenu === 1
+        ? this.getFooterMenuHeight()
+        : 0;
 
       if (this.selectTabId === 0) {
         // simpleSearchAreaHight: 検索条件枠の高さ
@@ -191,21 +248,21 @@ export default {
         // srcFuncNameHeight: "指示受け・指示承認の患者一覧を表示" ラベルの高さ
         let objHeight = 0;
         // 画面の高さ変動が落ち着くまで取得処理を実施
-        const loopId = setInterval(function() {
-          const header = document.getElementById("showPatientSearchSidebarBtn");
+        const loopId = setInterval(() => {
+          const header = this.queryScoped("#showPatientSearchSidebarBtn");
           const headerHight = header && header.offsetHeight ? header.offsetHeight : 0;
-          const simpleSearchArea = document.getElementsByClassName("simple-search-area")[0];
+          const simpleSearchArea = this.queryScoped(".simple-search-area");
           const simpleSearchAreaHight = simpleSearchArea && simpleSearchArea.offsetHeight ? simpleSearchArea.offsetHeight : 0;
-          const btnnn = document.getElementsByClassName("detailed-search-button color-btn-ok")[0];
+          const btnnn = this.queryScoped(".detailed-search-button.color-btn-ok");
           const btnnnHight = btnnn && btnnn.offsetHeight ? btnnn.offsetHeight : 0;
-          const srcFuncNameArea = document.getElementsByClassName("src-func-name")[0];
-          const srcFuncNameHeight = srcFuncNameArea && srcFuncNameArea.offsetHeight ? srcFuncNameArea.offsetHeight + 5 : 0; // 5は上下余白を考慮
+          const srcFuncNameArea = this.queryScoped(".src-func-name");
+          const srcFuncNameHeight = srcFuncNameArea && srcFuncNameArea.offsetHeight ? srcFuncNameArea.offsetHeight + 5 : 0; // 5は上下位置状を考慮
           if (objHeight === simpleSearchAreaHight + btnnnHight + srcFuncNameHeight) {
             const tableTop = headerHight + simpleSearchAreaHight + btnnnHight + srcFuncNameHeight;
-            if (document.getElementsByClassName("pat-list-area") && document.getElementsByClassName("pat-list-area")[0]) {
-              document.getElementsByClassName(
-                "pat-list-area"
-              )[0].style.height = `${wh - tableTop - fmh - 20}px`;
+            const patListArea = this.queryScoped(".pat-list-area");
+            if (patListArea) {
+              const resolvedHeight = wh - tableTop - fmh - 20;
+              patListArea.style.height = `${resolvedHeight}px`;
               // 高さの調整を実施後処理を抜ける
               clearInterval(loopId);
             }
@@ -215,24 +272,24 @@ export default {
           }
         }, 300);
       } else if (this.selectTabId === 1) {
-        // Tabindex = 1 ： 予実リスト
+        // Tabindex = 1 （予実リスト）
         // 検索条件枠の高さ
         let filterAreaHight = 0;
         let objHeight = filterAreaHight;
         // 画面の高さ変動が落ち着くまで取得処理を実施
-        const loopId = setInterval(function() {
-          const headerHight = document.getElementById(
-            "showPatientSearchSidebarBtn"
-          ).offsetHeight;
-          filterAreaHight = document.getElementsByClassName("filter-area")[0]
-            .offsetHeight;
+        const loopId = setInterval(() => {
+          const headerHight = this.queryScoped("#showPatientSearchSidebarBtn")?.offsetHeight || 0;
+          const filterArea = this.queryScoped(".filter-area");
+          filterAreaHight = filterArea ? filterArea.offsetHeight : 0;
           if (objHeight === filterAreaHight) {
             const tableTop = headerHight + filterAreaHight;
-            const treeHeaderObj = document.getElementsByClassName("tree-view-header-area");
+            const treeHeaderObj = this.queryScopedAll(".tree-view-header-area");
             const treeHeaderHeight = treeHeaderObj.length > 0 ? treeHeaderObj[0].offsetHeight : 0;
-            document.getElementsByClassName(
-              "tree-view-content-area"
-            )[0].style.height = `${wh - tableTop - treeHeaderHeight - fmh - 35}px`;
+            const treeViewContentArea = this.queryScoped(".tree-view-content-area");
+            if (treeViewContentArea) {
+              const resolvedHeight = wh - tableTop - treeHeaderHeight - fmh - 35;
+              treeViewContentArea.style.height = `${resolvedHeight}px`;
+            }
             // 高さの調整を実施後処理を抜ける
             clearInterval(loopId);
           } else {
@@ -267,12 +324,23 @@ export default {
 
     // }
     async searchChange() {
-      await this.$refs.patList.sort();
+      const patList = this.$refs.patList;
+      if (!patList || typeof patList.sort !== "function") {
+        return;
+      }
+      try {
+        await patList.sort();
+      } catch (error) {
+        void error;
+      }
     },
     // mod 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 関 end
     closeMenu() {
       // フッターを閉じる
       EventBus.$emit("closeFooterList");
+    },
+    setBeforeSelectPatId(patId) {
+      this.beforeSelectPatId = patId;
     },
   },
     // mod FNSI-改修内容 ｶｽﾀﾑ検索ドロップダウンボックスの初期化エラー dou start
@@ -294,7 +362,8 @@ export default {
     //   };
     // });
     let resPatSearchDetails = await ApiHelper.get("/pat_search_detail");
-    resPatSearchDetails.data.forEach(detail => {
+    const patSearchDetails = Array.isArray(resPatSearchDetails?.data) ? resPatSearchDetails.data : [];
+    patSearchDetails.forEach(detail => {
       this.addPatSearchDetail({
         queryId: detail.searchCd,
         queryName: detail.searchName,
@@ -304,55 +373,67 @@ export default {
     this.userSearchQuery = this.patSearchDetails;
     var obj = {}
     var newArr = this.patSearchDetails.reduce((cur,next) => {
-      obj[next.queryId] ? "" : obj[next.queryId] = true && cur.push(next);
+      if (!obj[next.queryId]) {
+        obj[next.queryId] = true;
+        cur.push(next);
+      }
       return cur;
     },[])
     this.userSearchQuery = newArr;
-    // add 性能改善メモリ不足 shan start
-     EventBus.$off("detailedSearchUserSearchQuery", userQuery => {
+    this.onDetailedSearchUserSearchQuery = (userQuery) => {
       this.userSearchQuery = userQuery;
-    });
+    };
+    this.onCalculateTableHeight = () => this.calculateTableHeight();
+    this.onBeforeSelectPatIdChange = (patId) => this.setBeforeSelectPatId(patId);
+    this.onPatListSort = () => this.searchChange();
+    // add 性能改善メモリ不足 shan start
+     EventBus.$off("detailedSearchUserSearchQuery", this.onDetailedSearchUserSearchQuery);
     // del 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 関 start
     // EventBus.$off("setDreatDate", this.setDreatDate);
     // del 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 関 end
-    EventBus.$off("calculateTableHeight", this.calculateTableHeight);
+    EventBus.$off("calculateTableHeight", this.onCalculateTableHeight);
+    EventBus.$off("setPatientSearchSidebarBeforeSelectPatId", this.onBeforeSelectPatIdChange);
     // add 性能改善メモリ不足 shan end
 // mod FNSI-改修内容 ｶｽﾀﾑ検索ドロップダウンボックスの初期化エラー dou end
-    EventBus.$on("detailedSearchUserSearchQuery", userQuery => {
-      this.userSearchQuery = userQuery;
-    });
+    EventBus.$on("detailedSearchUserSearchQuery", this.onDetailedSearchUserSearchQuery);
     // del 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 関 start
     // add FNSI-No.341 患者リストのソート項目不足 吉 start
     // EventBus.$on("setDreatDate", this.setDreatDate);
     // add FNSI-No.341 患者リストのソート項目不足  吉 end
     // del 9231 透析困難マスタを追加しても、登録済み患者の患者情報に表示されない。 関 end
     // add FutreNetWeb+SI課題管理 No4072 趙 start
-    EventBus.$on("calculateTableHeight", this.calculateTableHeight);
+    EventBus.$on("calculateTableHeight", this.onCalculateTableHeight);
+    EventBus.$on("setPatientSearchSidebarBeforeSelectPatId", this.onBeforeSelectPatIdChange);
     // add FutreNetWeb+SI課題管理 No4072 趙 end
-    EventBus.$on("patlistsort", this.searchChange);
-    // サインイン時の並び順適用処理
-    // mod FNSi6299-抽出条件を設定している状態で指示受け（指示承認）画面を開き、その後元の画面に戻ると表示順が勝手に入れ替わる 周 start
-    //this.searchChange();
-    await this.searchChange();
-    this.setLoadingScreenVisible(false);
-    // mod FNSi6299-抽出条件を設定している状態で指示受け（指示承認）画面を開き、その後元の画面に戻ると表示順が勝手に入れ替わる 周 end
+    EventBus.$on("patlistsort", this.onPatListSort);
   },
   // add FutreNetWeb+SI課題管理 No4072 趙 start
-  beforeDestroy() {
+  beforeUnmount() {
     // add FNSI-性能を最適化する 李 start
-    EventBus.$off("detailedSearchUserSearchQuery", userQuery => {
-      this.userSearchQuery = userQuery;
-    });
+    EventBus.$off("detailedSearchUserSearchQuery", this.onDetailedSearchUserSearchQuery);
     // add FNSI-性能を最適化する 李 end
     //add FNSI-性能を最適化する 吉 end
     EventBus.$off("setDreatDate", this.setDreatDate);
     //add FNSI-性能を最適化する 吉 end
-    EventBus.$off("calculateTableHeight", this.calculateTableHeight);
-    EventBus.$off("patlistsort",this.searchChange);
+    EventBus.$off("calculateTableHeight", this.onCalculateTableHeight);
+    EventBus.$off("setPatientSearchSidebarBeforeSelectPatId", this.onBeforeSelectPatIdChange);
+    EventBus.$off("patlistsort", this.onPatListSort);
   },
   // add FutreNetWeb+SI課題管理 No4072 趙 end
-  mounted() {
-    this.calculateTableHeight();
+  async mounted() {
+    try {
+      this.calculateTableHeight();
+      await this.$nextTick();
+      // サインイン時の並び順適用処理
+      // mod FNSi6299-抽出条件を設定している状態で指示受け（指示承認）画面を開き、その後元の画面に戻ると表示順が勝手に入れ替わる 周 start
+      //this.searchChange();
+      await this.searchChange();
+      // mod FNSi6299-抽出条件を設定している状態で指示受け（指示承認）画面を開き、その後元の画面に戻ると表示順が勝手に入れ替わる 周 end
+    } catch (error) {
+      void error;
+    } finally {
+      this.setLoadingScreenVisible(false);
+    }
   }
 };
 </script>
@@ -383,20 +464,35 @@ ul {
 }
 
 /** padding を上書き補正*/
-.k-tabstrip > .k-content {
+.side-bar :deep(.k-tabstrip > .k-content) {
   padding: 0.5rem;
   /** 一瞬余分なスクロールバーが発生する為 */
   overflow-y: hidden;
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }
-.k-state-active{
+
+.side-bar :deep(.k-tabstrip-content.k-content) {
+  padding: 0.5rem;
+  /** 一瞬余分なスクロールバーが発生する為 */
+  overflow-y: hidden;
+  background-color: var(--ntss-base-background-color);
+  color: var(--ntss-base-color);
+}
+.side-bar :deep(.k-state-active) {
   background-color: var(--ntss-base-background-color) !important;
   color: var(--ntss-base-color) !important;
   border-color:  var(--ntss-border-color) !important;
   border-bottom-color: transparent !important;
 }
-.k-tabstrip-items {
+
+.side-bar :deep(.k-active) {
+  background-color: var(--ntss-base-background-color) !important;
+  color: var(--ntss-base-color) !important;
+  border-color:  var(--ntss-border-color) !important;
+  border-bottom-color: transparent !important;
+}
+.side-bar :deep(.k-tabstrip-items) {
   border-color:  var(--ntss-border-color) !important;
 }
 </style>

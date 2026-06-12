@@ -20,6 +20,8 @@
 </template>
 
 <script>
+import { h } from "vue";
+import nameDuplicationImg from "../../../assets/name_duplication.png";
 export default {
   props: {
     field: String,
@@ -37,7 +39,7 @@ export default {
   data() {
     return {
       // 治療状況list画面患者名の横の画像は表示されません。linjunfeng start
-      image_src_same: require("../../../assets/name_duplication.png"),
+      image_src_same: nameDuplicationImg,
       // 治療状況list画面患者名の横の画像は表示されません。linjunfeng end
     }
   },
@@ -45,6 +47,26 @@ export default {
     onClickPatName(e) {
       this.$emit("clickPatName", e, this.dataItem);
     }
+  },
+  render() {
+    const attrs = {
+      colspan: this.colSpan,
+      role: "gridcell",
+      "data-grid-col-index": this.columnIndex,
+      class: this.className,
+      onClick: this.onClickPatName
+    };
+    if (this.dataItem?.patId === null && this.dataItem?.ordNo !== null) {
+      return h("td", attrs, "？？？？");
+    }
+    const children = [this.dataItem?.[this.field]];
+    if (this.dataItem?.isSame === "1") {
+      children.push(h("img", { class: "same-icon", src: this.image_src_same }));
+    }
+    return h("td", {
+      ...attrs,
+      style: this.dataItem?.inOutClass == 1 ? "color: #A356A3;" : ""
+    }, children);
   }
 };
 </script>

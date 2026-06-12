@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.admin_web.service.statusList;
 
-import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -19,8 +18,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.OrdMainConst;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.OrdMainConst.DialysisState;
@@ -243,7 +242,7 @@ public class LargeDispListServiceImpl implements LargeDispListService {
       try {
         // 投薬情報
         dto.setIsMediDone(ord.getRstMediInfo());
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         EventLogMessage eventLogMessage = new EventLogMessage();
         eventLogMessage.setLogMessage(ExcetionStackTraceToString(e));
         eventLogMessage.setFacilityCd(facilityCd);
@@ -266,7 +265,7 @@ public class LargeDispListServiceImpl implements LargeDispListService {
           OrdMainRstWeightInfo wei = Objects.isNull(weight) || weight.isEmpty() ? new OrdMainRstWeightInfo()
               : mapper.readValue(weight, OrdMainRstWeightInfo.class);
           dto.setWeightBeforeDate(wei.getWeightBeforeDate());
-        } catch (IOException e) {
+        } catch (tools.jackson.core.JacksonException e) {
           EventLogMessage eventLogMessage = new EventLogMessage();
           eventLogMessage.setLogMessage("JSON parse error by get OrdMainRstWeightInfo : " + e.getMessage());
           logService.log(LogLevel.ERROR, eventLogMessage, null, SERVICE_NAME.FNSI, null);

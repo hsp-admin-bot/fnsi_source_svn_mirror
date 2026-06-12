@@ -1,5 +1,7 @@
 package jp.co.nikkiso.ntss.coop_api.web.rest;
 
+import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -2098,7 +2100,7 @@ public class JournalResource {
       return response;
     } catch (Exception ex) {
       EventLogMessage eventLogMessage = new EventLogMessage();
-      eventLogMessage.setLogMessage(ex.getLocalizedMessage());
+      eventLogMessage.setLogMessage(ExcetionStackTraceToString(ex));
       logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
       return new ResponseEntity<>(HttpStatus.OK);
     }

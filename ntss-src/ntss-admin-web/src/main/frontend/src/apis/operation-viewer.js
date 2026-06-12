@@ -9,14 +9,18 @@ function isNkkFacility() {
 }
 
 /**
- * パラメータ付きのAPI(Get)を実行する.
- * パラメータは以下固定とする.
- *  {
- *    isNkkFacility
- *  }
- *
- * @param {String} url リクエストするURL
- * @param 実行した結果
+ * 自動更新時のバックグラウンド呼び出し用クエリ（稼働ビューア・施設）
+ * @returns {string} 空文字 or "?__background_call__=true"
+ */
+function getOperationViewerBackgroundQuery() {
+  const forceSignOutFlag =
+    store.getters["operation-viewer/facility/getForceSignOutFlag"];
+  return forceSignOutFlag === 0 ? "?__background_call__=true" : "";
+}
+
+/**
+ * パラメータ付きの API(Get)。クエリに isNkkFacility を付与する。
+ * @param {string} url リクエストする URL
  */
 function getWithIsNkkFacility(url) {
   const param = {
@@ -28,14 +32,14 @@ function getWithIsNkkFacility(url) {
 /**
  * （稼働ビューア施設一覧）
  * 施設一覧検索.
- * @param {Number} userId ユーザーID
- * @param {Boolean} autoRefreshFlag 自動更新フラグ
+ * @param {number} userId ユーザーID
+ * @param {boolean} autoRefreshFlag 自動更新フラグ
  */
 export function sendRequestFetchFacilities(userId, autoRefreshFlag) {
-  // 自動更新サインアウトON/OFFチェック
-  const forceSignOutFlag = store.getters["operation-viewer/facility/getForceSignOutFlag"];
-  const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
-  return getWithIsNkkFacility(autoRefreshFlag ? `/facilities/${userId}${queryParams}` : `/facilities/${userId}`);
+  const queryParams = getOperationViewerBackgroundQuery();
+  return getWithIsNkkFacility(
+    autoRefreshFlag ? `/facilities/${userId}${queryParams}` : `/facilities/${userId}`
+  );
 }
 
 /**
@@ -45,10 +49,10 @@ export function sendRequestFetchFacilities(userId, autoRefreshFlag) {
  * @param {*} autoRefreshFlag 自動更新フラグ
  */
 export function sendRequestFindMachines(facilityCd, autoRefreshFlag) {
-  // 自動更新サインアウトON/OFFチェック
-  const forceSignOutFlag = store.getters["operation-viewer/facility/getForceSignOutFlag"];
-  const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
-  return getWithIsNkkFacility(autoRefreshFlag ? `/machines/${facilityCd}${queryParams}` : `/machines/${facilityCd}`);
+  const queryParams = getOperationViewerBackgroundQuery();
+  return getWithIsNkkFacility(
+    autoRefreshFlag ? `/machines/${facilityCd}${queryParams}` : `/machines/${facilityCd}`
+  );
 }
 
 /**
@@ -117,9 +121,9 @@ function buildRequestUrlForMotionRecord(urlBase, params) {
  */
 function buildMotionRecordsFilterQuery(params) {
   return {
-    dataType: (params.dataType ?? []).join(','),
-    freeWord: (params.freeWord ?? '').trim()
-  }
+    dataType: (params.dataType ?? []).join(","),
+    freeWord: (params.freeWord ?? "").trim()
+  };
 }
 
 /**
@@ -128,7 +132,7 @@ function buildMotionRecordsFilterQuery(params) {
  * @param {*} params リクエストパラメータ
  */
 export function sendRequestUpdateAllCorrection(params) {
-  return ApiHelper.put("/motion_record/detail/all_target_corrections/", params);
+  return ApiHelper.put("/motion_record/detail/all_target_corrections", params);
 }
 
 /**
@@ -150,9 +154,7 @@ export function sendRequestFetchMotionRecords(params) {
 export function sendRequestFindMotionRecords(params) {
   const { autoRefreshFlag, ..._params } = params;
   const baseUrl = buildRequestUrlForMotionRecord("/motion_record/period", _params);
-  // 自動更新サインアウトON/OFFチェック
-  const forceSignOutFlag = store.getters["operation-viewer/facility/getForceSignOutFlag"];
-  const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
+  const queryParams = getOperationViewerBackgroundQuery();
   const requestUrl = autoRefreshFlag ? `${baseUrl}${queryParams}` : baseUrl;
   return ApiHelper.get(requestUrl, buildMotionRecordsFilterQuery(_params));
 }
@@ -177,9 +179,7 @@ export function sendRequestFindMotionRecordsTotal(params) {
  */
 export function sendRequestGetPartsRunning(params) {
   const { autoRefreshFlag, ..._params } = params;
-  // 自動更新サインアウトON/OFFチェック
-  const forceSignOutFlag = store.getters["operation-viewer/facility/getForceSignOutFlag"];
-  const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
+  const queryParams = getOperationViewerBackgroundQuery();
   const baseUrl = buildRequestUrlForMotionRecord("/machines/parts_running", _params);
   const requestUrl = autoRefreshFlag ? `${baseUrl}${queryParams}` : baseUrl;
   return ApiHelper.get(requestUrl);
@@ -198,12 +198,7 @@ export function sendRequestFetchGatheringStatus(userId, facilityCd) {
 }
 
 /**
- * （装置記録詳細）
- *
- */
-/**
- * （装置記録詳細）
- * 装置記録詳細検索.
+ * （装置記録詳細）装置記録詳細検索
  * @param {*} motionRecord 装置記録情報
  */
 export function sendRequestFetchMotionRecordDetail(motionRecord) {
@@ -218,9 +213,7 @@ export function sendRequestFetchMotionRecordDetail(motionRecord) {
   ];
 
   const baseUrl = `/motion_record/detail/${params.join("/")}`;
-  // 自動更新サインアウトON/OFFチェック
-  const forceSignOutFlag = store.getters["operation-viewer/facility/getForceSignOutFlag"];
-  const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
+  const queryParams = getOperationViewerBackgroundQuery();
   const requestUrl = motionRecord.autoRefreshFlag ? `${baseUrl}${queryParams}` : baseUrl;
   return ApiHelper.get(requestUrl);
 }
@@ -251,9 +244,7 @@ export function sendRequestFetchDetailGraphs(motionRecord, testType) {
   ];
 
   const baseUrl = `/motion_record/detail/graphs/${params.join("/")}`;
-  // 自動更新サインアウトON/OFFチェック
-  const forceSignOutFlag = store.getters["operation-viewer/facility/getForceSignOutFlag"];
-  const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
+  const queryParams = getOperationViewerBackgroundQuery();
   const requestUrl = motionRecord.autoRefreshFlag ? `${baseUrl}${queryParams}` : baseUrl;
   return ApiHelper.get(requestUrl);
 }
@@ -273,9 +264,7 @@ export function sendRequestFetchDetailGraphsDissolution(motionRecord) {
   ];
 
   const baseUrl = `/motion_record/detail/graphs/dissolution/${params.join("/")}`;
-  // 自動更新サインアウトON/OFFチェック
-  const forceSignOutFlag = store.getters["operation-viewer/facility/getForceSignOutFlag"];
-  const queryParams = forceSignOutFlag == 0 ? "?__background_call__=true" : "";
+  const queryParams = getOperationViewerBackgroundQuery();
   const requestUrl = motionRecord.autoRefreshFlag ? `${baseUrl}${queryParams}` : baseUrl;
   return ApiHelper.get(requestUrl);
 }

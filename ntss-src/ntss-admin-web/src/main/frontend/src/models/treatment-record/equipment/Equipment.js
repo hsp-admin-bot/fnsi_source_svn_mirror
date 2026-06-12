@@ -65,7 +65,6 @@ export class Equipment {
   /**
    * ord_main.rst_equip_infoに設定される文字列表現を返す。
    */
-  /* eslint-disable*/
   toString() {
     const ignoreFields = [
       'be_deleted',
@@ -119,35 +118,6 @@ export class Equipment {
   }
 
   static of(obj = {}) {
-    // return new Equipment(
-    //   false,
-    //   false,
-    //   obj.class_cd,
-    //   obj.class_name,
-    //   obj.class_type,
-    //   obj.cd,
-    //   obj.name,
-    //   obj.short_name,
-    //   // del #11586 治療記録＞医療材料にてダイアライザを追加すると保存できない。 関 start
-    //   // obj.needle_type,
-    //   // del #11586 治療記録＞医療材料にてダイアライザを追加すると保存できない。 関 end
-    //   obj.amount,
-    //   obj.unit,
-    //   // obj.ind_user_id,
-    //   // obj.ind_user_last_name,
-    //   // obj.ind_user_first_name,
-    //   // obj.upd_user_id,
-    //   // obj.upd_user_last_name,
-    //   // obj.upd_user_first_name,
-    //   obj.input_class,
-    //   obj.is_editable,
-    //   obj.cop_order_no,
-    //   obj.equip_type,
-    //   //add FNSI-改修内容 新規ボタン追加 房 start
-    //   obj.isNew != undefined ? obj.isNew : false,
-    //   //add FNSI-改修内容 新規ボタン追加 房 end
-    // );
-
     const ins = new Equipment(
       false,
       false,

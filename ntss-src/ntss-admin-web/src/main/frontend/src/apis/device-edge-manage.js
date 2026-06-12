@@ -113,7 +113,7 @@ export function sendRequestDeviceEdgeConfFileUploadInfo(param) {
 }
 
 export function sendRequestFileUpload(param) {
-  return postWithLoader('/s3/upload', param);
+  return postWithLoader("/s3/upload", param);
 }
 
 /**

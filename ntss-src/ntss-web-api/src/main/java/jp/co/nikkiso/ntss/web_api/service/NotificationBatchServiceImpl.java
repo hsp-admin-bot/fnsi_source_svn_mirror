@@ -96,12 +96,12 @@ public class NotificationBatchServiceImpl implements NotificationBatchService {
       } catch (Exception e) {
         eventLogMessage.setLogMessage("JSONの値取得に失敗しました。");
         this.logService.log(LogLevel.ERROR, eventLogMessage, null, "FNSi", null);
-        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
       }
     }
 
     if (batchReq.notifications.isEmpty()) {
-      return new ResponseEntity<>(null, HttpStatus.OK);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     }
 
     if (batchReq.hasGlobal()) {
@@ -175,7 +175,7 @@ public class NotificationBatchServiceImpl implements NotificationBatchService {
           // 置換処理に失敗した場合はBad Requestを返す
           eventLogMessage.setLogMessage("メッセージ定義の置換処理に失敗しました。");
           logService.log(LogLevel.ERROR, eventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI,null);
-          return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+          return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
         }
       }
 
@@ -188,7 +188,7 @@ public class NotificationBatchServiceImpl implements NotificationBatchService {
           // 置換処理に失敗した場合はBad Requestを返す
           eventLogMessage.setLogMessage("付加情報定義の置換処理に失敗しました。");
           logService.log(LogLevel.ERROR, eventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI,null);
-          return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+          return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
         }
       }
 
@@ -272,7 +272,7 @@ public class NotificationBatchServiceImpl implements NotificationBatchService {
       EventLogMessage message = new EventLogMessage();
       message.setLogMessage(String.format("Wrong number of notification message IDs. Expected: %d, but is %d", batchReq.notifications.size(), messageNums.size()));
       this.logService.log(LogLevel.DEBUG, eventLogMessage, null, "FNSi", null);
-      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     for(int i = 0; i < batchReq.notifications.size(); ++i) {
@@ -281,7 +281,7 @@ public class NotificationBatchServiceImpl implements NotificationBatchService {
 
     this.executeSendTask(batchReq);
 
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
   }
 
   @Async("notificationExecutor")

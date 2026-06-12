@@ -6,8 +6,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import javax.validation.Constraint;
-import javax.validation.Payload;
+import jakarta.validation.Constraint;
+import jakarta.validation.Payload;
 
 /**
  * NTSS で用いる日付・日時文字列を、{@link NtssFlexibleDateTimeParseUtil} のルールで検証する.

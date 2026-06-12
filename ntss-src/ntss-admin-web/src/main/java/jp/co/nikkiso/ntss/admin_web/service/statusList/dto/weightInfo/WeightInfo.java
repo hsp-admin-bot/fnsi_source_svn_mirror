@@ -5,8 +5,8 @@ import java.math.BigDecimal;
 // add #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
 import java.util.Date;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.admin_web.service.utils.DateTimeUtils;
 import lombok.Getter;

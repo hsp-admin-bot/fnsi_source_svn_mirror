@@ -3,68 +3,81 @@
  */
 <template>
   <table class="multi-column">
-    <td>
-      <div class="pat-count-region">
-        <table class="puncture-area">
-          <tr>
-            <td class="count-label">穿刺待ち</td>
-            <td class="pat-count">{{puncWait}}</td>
-            <td class="mei">名</td>
-          </tr>
-        </table>
-      </div>
-      <div class="pat-list" :style="patListHeightStyles">
-        <table class="pat-list-table">
-          <pat-row
-            v-for="(dispItem,no) in beforeTreatList"
-            :key="'before' + no"
-            :dispItem="dispItem"
-            :dispIsSmallFont="dispIsSmallFont"
-          ></pat-row>
-        </table>
-      </div>
-    </td>
-    <td>
-      <div class="pat-count-region">
-        <table class="return-area">
-          <tr>
-            <td class="count-label">返血待ち</td>
-            <td class="pat-count">{{returnWait}}</td>
-            <td class="mei">名</td>
-          </tr>
-        </table>
-      </div>
-      <div class="pat-list" :style="patListHeightStyles">
-        <table class="pat-list-table">
-          <pat-row
-            v-for="(dispItem,no) in afterTreatList"
-            :key="'after' + no"
-            :dispItem="dispItem"
-            :dispIsSmallFont="dispIsSmallFont"
-          ></pat-row>
-          <!-- NOTE: 治療中判定が色ではわかりづらければ復活させる
-          <tr>
-            <td
-              class="annotation-label"
-              colspan="7"
-              v-if="nowTreatList.length > 0"
-            >-------------------- 以下、治療中 --------------------</td>
-          </tr>
-          -->
-          <pat-row
-            v-for="(dispItem,no) in nowTreatList"
-            :key="'now' + no"
-            :dispItem="dispItem"
-            :dispIsSmallFont="dispIsSmallFont"
-          ></pat-row>
-        </table>
-      </div>
-    </td>
+    <tbody>
+      <tr>
+        <td>
+          <div class="pat-count-region">
+            <table class="puncture-area">
+              <tbody>
+                <tr>
+                  <td class="count-label">穿刺待ち</td>
+                  <td class="pat-count">{{puncWait}}</td>
+                  <td class="mei">名</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pat-list" :style="patListHeightStyles">
+            <table class="pat-list-table">
+              <tbody>
+                <pat-row
+                  v-for="(dispItem,no) in beforeTreatList"
+                  :key="'before' + no"
+                  :dispItem="dispItem"
+                  :dispIsSmallFont="dispIsSmallFont"
+                ></pat-row>
+              </tbody>
+            </table>
+          </div>
+        </td>
+        <td>
+          <div class="pat-count-region">
+            <table class="return-area">
+              <tbody>
+                <tr>
+                  <td class="count-label">返血待ち</td>
+                  <td class="pat-count">{{returnWait}}</td>
+                  <td class="mei">名</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pat-list" :style="patListHeightStyles">
+            <table class="pat-list-table">
+              <tbody>
+                <pat-row
+                  v-for="(dispItem,no) in afterTreatList"
+                  :key="'after' + no"
+                  :dispItem="dispItem"
+                  :dispIsSmallFont="dispIsSmallFont"
+                ></pat-row>
+                <!-- NOTE: 治療中判定が色ではわかりづらければ復活させる
+                <tr>
+                  <td
+                    class="annotation-label"
+                    colspan="7"
+                    v-if="nowTreatList.length > 0"
+                  >-------------------- 以下、治療中 --------------------</td>
+                </tr>
+                -->
+                <pat-row
+                  v-for="(dispItem,no) in nowTreatList"
+                  :key="'now' + no"
+                  :dispItem="dispItem"
+                  :dispIsSmallFont="dispIsSmallFont"
+                ></pat-row>
+              </tbody>
+            </table>
+          </div>
+        </td>
+      </tr>
+    </tbody>
   </table>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import PatRow from "@/components/status-list/large-display/StatusListLargeDispPatRow";
 
 export default {
@@ -156,16 +169,16 @@ export default {
     calculateContentHeight() {
       const wh = this.windowHeight;
       const cfh = Array.prototype.slice
-        .call(document.getElementsByClassName("large-display-footer-content"))
+        .call(getScopedElementsByClassName("large-display-footer-content", this.$el || null))
         .shift().clientHeight;
       const prh = Array.prototype.slice
-        .call(document.getElementsByClassName("pat-count-region"))
+        .call(getScopedElementsByClassName("pat-count-region", this.$el || null))
         .shift().clientHeight;
 
       this.patListHeight = wh - cfh - prh - 15;
     }
   },
-  props: {},
+
   watch: {
     windowHeight() {
       this.$nextTick(() => {
@@ -173,7 +186,7 @@ export default {
       });
     }
   },
-  beforeMount() {},
+
   mounted() {
     this.$nextTick(() => {
       this.calculateContentHeight();
@@ -184,9 +197,7 @@ export default {
       this.calculateContentHeight();
     });
   },
-  created() {},
-  beforeDestroy() { },
-  destroyed() { }
+
 };
 </script>
 
@@ -198,6 +209,10 @@ export default {
 }
 .multi-column {
   display: flex;
+}
+.multi-column > tbody,
+.multi-column > tbody > tr {
+  display: contents;
 }
 .pat-list {
   overflow-y: auto;

@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.request.scheduleList.UpdateScheduleListDataRequest;
 import jp.co.nikkiso.ntss.admin_web.request.scheduleList.UpdateScheduleListDataRequestList;
 import jp.co.nikkiso.ntss.admin_web.response.OtherScheduleListResponse;
@@ -51,7 +51,7 @@ import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.EventLoggerFactory;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.seasar.doma.jdbc.Config;
@@ -64,7 +64,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -81,6 +81,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -154,6 +155,10 @@ public class ScheduleListServiceImpl implements ScheduleListService {
 
   @Autowired
   private JournalService journalService;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   @Autowired
   ExamRequestService examRequestService;
@@ -557,7 +562,7 @@ public class ScheduleListServiceImpl implements ScheduleListService {
       wheres.append("AND setting.facility_setting_no = '1022'" + "\n");
       wheres.append("AND value = '1')" + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -687,11 +692,11 @@ public class ScheduleListServiceImpl implements ScheduleListService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -2482,7 +2487,7 @@ public class ScheduleListServiceImpl implements ScheduleListService {
   }
   //add #10601 スケジュール表動作不正 end
   // add #11493 スケジュール表　更新不正 関 start
-  public Boolean checkBatchMovePatExistance(String bodydata, String facilityCd) throws JsonProcessingException {
+  public Boolean checkBatchMovePatExistance(String bodydata, String facilityCd) throws JacksonException {
     Boolean ret = true;
     ObjectMapper objectMapper = new ObjectMapper();
     List<Map<String, Object>> batchMoveList = objectMapper.readValue(bodydata, new TypeReference<List<Map<String, Object>>>() {});

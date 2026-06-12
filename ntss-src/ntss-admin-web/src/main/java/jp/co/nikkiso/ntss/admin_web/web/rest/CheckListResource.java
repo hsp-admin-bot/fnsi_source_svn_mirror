@@ -7,7 +7,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import jp.co.nikkiso.ntss.admin_web.service.log.LogEventUtils;
+import jp.co.nikkiso.ntss.core.entity.MstChecklist;
+import jp.co.nikkiso.ntss.core.entity.MstDialyzer;
+import jp.co.nikkiso.ntss.core.entity.MstEquipment;
+import jp.co.nikkiso.ntss.core.entity.MstMedicine;
 import jp.co.nikkiso.ntss.core.entity.OrdCheckListParams;
+import jp.co.nikkiso.ntss.core.entity.OrdChecklist;
+import jp.co.nikkiso.ntss.core.entity.OrdMain;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,8 +32,6 @@ import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.checkList.CheckListService;
 import jp.co.nikkiso.ntss.admin_web.service.webSocketNotify.WebSocketNotifyService;
 import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
-import jp.co.nikkiso.ntss.core.entity.OrdChecklist;
-import jp.co.nikkiso.ntss.core.entity.OrdMain;
 import lombok.extern.slf4j.Slf4j;
 import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
@@ -35,6 +39,7 @@ import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.FUNCTION_CODE;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
 
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_ERROR;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
@@ -93,7 +98,19 @@ public class CheckListResource {
   @GetMapping("ordermainshiteibi/{facilityCd}/{treatDate}")
   public ResponseEntity<?> getOrdMainShiteibi(
     @PathVariable String facilityCd,
-    @PathVariable String treatDate) {
+    @PathVariable String treatDate,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if (facilityCd != null && !facilityCd.isEmpty() &&
+      !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECK_LIST + "/ordermainshiteibi";
@@ -120,7 +137,20 @@ public class CheckListResource {
   @GetMapping("orderchecklistzen/{orderNo}/{listCd}")
   public ResponseEntity<?> getOrdCheckListZen(
     @PathVariable Long orderNo,
-    @PathVariable Short listCd) throws IOException {
+    @PathVariable Short listCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) throws IOException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    OrdMain ordMain = ordMainDao.selectByOrdNo(orderNo);
+    if (ordMain != null && ordMain.getFacilityCd() != null &&
+      !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "orderNo=" + orderNo + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECK_LIST + "/orderchecklistzen";
@@ -158,7 +188,20 @@ public class CheckListResource {
   @GetMapping("orderchecklisticou/{orderNo}/{listCd}")
   public ResponseEntity<?> getOrdCheckListIcou(
     @PathVariable Long orderNo,
-    @PathVariable Short listCd) {
+    @PathVariable Short listCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    OrdMain ordMain = ordMainDao.selectByOrdNo(orderNo);
+    if (ordMain != null && ordMain.getFacilityCd() != null &&
+      !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "orderNo=" + orderNo + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // NOTE: ord_checklistをorderNoで取得する
 
     // wp アプリケーションログの適正化 Add Start
@@ -195,6 +238,7 @@ public class CheckListResource {
       @AuthenticationPrincipal NtssUser ntssUser,
       @PathVariable Short nextPat) {
 
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECK_LIST + "/ordertreaement";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_CHECK_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -217,7 +261,19 @@ public class CheckListResource {
   @GetMapping("order/{facilityCd}/{treatDate}")
   public ResponseEntity<?> getOrderByTreatDate(
       @PathVariable String facilityCd,
-      @PathVariable String treatDate) {
+      @PathVariable String treatDate,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if (facilityCd != null && !facilityCd.isEmpty() &&
+      !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECK_LIST + "/order";
@@ -241,7 +297,20 @@ public class CheckListResource {
    */
   @GetMapping("getorder/{orderNo}")
   public ResponseEntity<?> getOrderByOrderNo(
-      @PathVariable Long orderNo) {
+      @PathVariable Long orderNo,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    OrdMain ordMain = ordMainDao.selectByOrdNo(orderNo);
+    if (ordMain != null && ordMain.getFacilityCd() != null &&
+      !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "orderNo=" + orderNo + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECK_LIST + "/order";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_CHECK_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -302,7 +371,20 @@ public class CheckListResource {
    */
   @GetMapping("getmstchecklist/{checklistCd}")
   public ResponseEntity<?> getMstChecklistByChecklistCd(
-      @PathVariable Long checklistCd) {
+      @PathVariable Long checklistCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    MstChecklist mstChecklist = checkListService.getMstChecklistByChecklistCd(checklistCd);
+    if (mstChecklist != null && mstChecklist.getFacilityCd() != null &&
+      !mstChecklist.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstChecklist.getFacilityCd() + " " + "checklistCd=" + checklistCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECK_LIST + "/getmstchecklist";
@@ -325,7 +407,22 @@ public class CheckListResource {
    */
   @GetMapping("getdialyzer/{dialyzerList}")
   public ResponseEntity<?> getMstDialyzerList(
-      @PathVariable List<Integer> dialyzerList) {
+      @PathVariable List<Integer> dialyzerList,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    List<MstDialyzer> mstDialyzerList = checkListService.getDialyzerList(dialyzerList);
+    for (MstDialyzer mstDialyzer : mstDialyzerList) {
+      if (mstDialyzer != null && mstDialyzer.getFacilityCd() != null &&
+        !mstDialyzer.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstDialyzer.getFacilityCd() + " " + "dialyzerList=" + dialyzerList + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECK_LIST + "/getdialyzer";
@@ -348,7 +445,22 @@ public class CheckListResource {
    */
   @GetMapping("getmedicine/{medicineList}")
   public ResponseEntity<?> getMstMedicineList(
-      @PathVariable List<Integer> medicineList) {
+      @PathVariable List<Integer> medicineList,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    List<MstMedicine> medicineList1 = checkListService.getMedicineList(medicineList);
+    for (MstMedicine mstDialyzer : medicineList1) {
+      if (mstDialyzer != null && mstDialyzer.getFacilityCd() != null &&
+        !mstDialyzer.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstDialyzer.getFacilityCd() + " " + "medicineList=" + medicineList + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECK_LIST + "/getmedicine";
@@ -397,7 +509,22 @@ public class CheckListResource {
    */
   @GetMapping("getequip/{equipList}")
   public ResponseEntity<?> getMstEquipList(
-      @PathVariable List<Integer> equipList) {
+      @PathVariable List<Integer> equipList,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    List<MstEquipment> mstDialyzerList = checkListService.getEquipList(equipList);
+    for (MstEquipment mstDialyzer : mstDialyzerList) {
+      if (mstDialyzer != null && mstDialyzer.getFacilityCd() != null &&
+        !mstDialyzer.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstDialyzer.getFacilityCd() + " " + "equipList=" + equipList + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECK_LIST + "/getequip";
@@ -421,7 +548,20 @@ public class CheckListResource {
    */
   @GetMapping("getorderchecklist-ordno/{orderNo}")
   public ResponseEntity<?> getOrdCheckListByListCd(
-      @PathVariable Long orderNo) {
+      @PathVariable Long orderNo,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    OrdMain ordMain = ordMainDao.selectByOrdNo(orderNo);
+    if (ordMain != null && ordMain.getFacilityCd() != null &&
+      !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "orderNo=" + orderNo + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // NOTE: ord_checklistをorderNoで取得する
 
     // wp アプリケーションログの適正化 Add Start
@@ -448,7 +588,20 @@ public class CheckListResource {
   @GetMapping("getorderchecklist-listcd/{orderNo}/{ListCd}")
   public ResponseEntity<?> getOrdCheckListByListCd(
       @PathVariable Long orderNo,
-      @PathVariable Short ListCd) {
+      @PathVariable Short ListCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    OrdMain ordMain = ordMainDao.selectByOrdNo(orderNo);
+    if (ordMain != null && ordMain.getFacilityCd() != null &&
+      !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "orderNo=" + orderNo + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // NOTE: ord_checklistをorderNoとlistCdで取得する
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECK_LIST + "/getorderchecklist-listcd";
@@ -512,7 +665,19 @@ public class CheckListResource {
    */
   @GetMapping("getstaff/{facilityCd}")
   public ResponseEntity<?> getMstPersonalUser(
-      @PathVariable String facilityCd) {
+      @PathVariable String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if (facilityCd != null &&
+      !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // NOTE: ord_mainをorderNoで取得する
 
     // NOTE: ord_checklistをorderNoとlistCdで取得する
@@ -538,7 +703,20 @@ public class CheckListResource {
    */
   @PostMapping("/updatemediinfo")
   public ResponseEntity<?> ordMainMediInfoUpdate(
-      @RequestBody OrdMain request) {
+      @RequestBody OrdMain request,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    OrdMain ordMain = ordMainDao.selectByOrdNo(request.getOrdNo());
+    if (ordMain != null && ordMain.getFacilityCd() != null &&
+      !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "orderNo=" + request.getOrdNo() + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECK_LIST + "/updatemediinfo";
@@ -580,7 +758,13 @@ public class CheckListResource {
   public ResponseEntity<?> createOrdChecklistSendCondition(
       @PathVariable Long orderNo,
       @AuthenticationPrincipal NtssUser ntssUser) {
-
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    OrdMain ordMain = ordMainDao.selectByOrdNo(orderNo);
+    if (ordMain != null && ordMain.getFacilityCd() != null &&
+            !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+      return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECK_LIST + "/updateSendCondition";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_CHECK_LIST, BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -625,7 +809,23 @@ public class CheckListResource {
    */
   @PostMapping("/deleteOrdChecklist")
   public ResponseEntity<?> mstChecklistDeleteOrdChecklist(
-    @RequestBody List<OrdChecklist> delChecklist) {
+    @RequestBody List<OrdChecklist> delChecklist,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    if (delChecklist != null && !delChecklist.isEmpty()) {
+      for (OrdChecklist ordChecklist : delChecklist) {
+        if (ordChecklist != null && ordChecklist.getFacilityCd() != null &&
+          !ordChecklist.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordChecklist.getFacilityCd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.CHECK_LIST + "/deleteOrdChecklist";
@@ -672,6 +872,18 @@ public class CheckListResource {
   public ResponseEntity<?> getOrdCheckListAll(
     @RequestBody List<OrdCheckListParams> ordCheckListParamsList,
     @AuthenticationPrincipal NtssUser ntssUser) throws IOException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+    List<OrdMain> ordMains = ordMainDao.selectByOrdNoList(ordCheckListParamsList.stream().map(OrdCheckListParams::getOrdNo).collect(Collectors.toList()));
+    if (ordMains != null && !ordMains.isEmpty()) {
+      for (OrdMain ordMain : ordMains) {
+        if (ordMains != null && ordMain.getFacilityCd() != null && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     List<List<List<Long>>> resultList = new ArrayList<>();
 

@@ -232,7 +232,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 // ストアについて
 // testStateストアの実体は/stores/modules/test-store.jsである。
 // この名前と実体ファイルの関連付けは/stores.store.jsに定義されている。
@@ -379,7 +379,6 @@ export default {
       }
     };
   },
-  components: {},
   computed: {
     ...mapGetters("master-maintenance", {
       masterName: "getMasterName",

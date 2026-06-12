@@ -3,6 +3,7 @@
     <!-- 題名 -->
     <p id="user-add-title">ユーザー追加・編集</p>
     <div class="panel">
+      <form @submit.prevent>
       <!-- 氏名 -->
       <v-ons-row>
         <v-ons-col>
@@ -82,6 +83,7 @@
               style="width: 100%"
               input-id="user-department"
               type="text"
+              autocomplete="organization"
               maxlength="40"
               name="modalUserCondition.departmentCd"
               v-model="userDepartment"
@@ -152,6 +154,7 @@
               style="width: 100%"
               input-id="user-pass"
               type="password"
+              autocomplete="new-password"
               maxlength="40"
               name="modalUserCondition.userPass"
               @focus="editUserPass"
@@ -234,6 +237,7 @@
           </v-ons-col>
         </div>
       </v-ons-row>
+      </form>
     </div>
     <loading-screen />
   </div>
@@ -487,7 +491,7 @@ export default {
     },
     editUserPass(){
       if (this.modalUserCondition.isUpdtFunction){
-         this.modalUserCondition.userPass = "";
+         this.userPassword = "";
       }
       this.isCheck = true
     },

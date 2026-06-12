@@ -45,6 +45,7 @@ import jp.co.nikkiso.ntss.core.exception.NtssException;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 @Service
 public class ConvertCommonServiceImpl implements ConvertCommonService {
@@ -118,6 +119,10 @@ public class ConvertCommonServiceImpl implements ConvertCommonService {
    */
   @Autowired
   private MstCoopIniDao mstCoopIniDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   /**
    * 連携設定マスタを取得.
@@ -493,7 +498,7 @@ public class ConvertCommonServiceImpl implements ConvertCommonService {
     wheres.append(" WHERE\n");
     wheres.append(inStr + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(sysCoopJournalDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -589,7 +594,7 @@ public class ConvertCommonServiceImpl implements ConvertCommonService {
     wheres.append(" WHERE\n");
     wheres.append(" ctl_no = " + journalCtlNo + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(sysCoopJournalDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -627,7 +632,7 @@ public class ConvertCommonServiceImpl implements ConvertCommonService {
 //    wheres.append(" WHERE\n");
 //    wheres.append(" ctl_no = " + journalCtlNo + "\n");
 //    // logCommon設定
-//    DataUpdateLogCommonNew logCommon = getLogCommon(sysCoopJournalDao, tableName, wheres, getEventLogMessage());
+//    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
 //    // ログ出力カラム情報及び更新前データ情報取得
 //    boolean setResult = logCommon.setInfo();
 //    // DB更新ログ出力ロジック wangzuo End
@@ -722,11 +727,11 @@ public class ConvertCommonServiceImpl implements ConvertCommonService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -775,7 +780,7 @@ public class ConvertCommonServiceImpl implements ConvertCommonService {
     wheres.append(" WHERE\n");
     wheres.append(" ctl_no = " + journalCtlNo + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(sysCoopJournalDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
 
@@ -811,7 +816,7 @@ public class ConvertCommonServiceImpl implements ConvertCommonService {
     wheres.append(" WHERE\n");
     wheres.append(" ctl_no = " + journalCtlNo + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(sysCoopJournalDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
 
@@ -1142,7 +1147,7 @@ public class ConvertCommonServiceImpl implements ConvertCommonService {
     wheres.append(" WHERE\n");
     wheres.append(" ctl_no = " + ctlNo + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(sysCoopJournalDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
 

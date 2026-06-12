@@ -1,6 +1,7 @@
 ﻿using CsvHelper;
 using CsvHelper.Configuration;
 using NKKWeightScaleDB.Interfaces;
+using NKKWeightScaleDB.Mapping;
 using NKKWeightScaleDB.Models;
 using System;
 using System.Collections.Generic;
@@ -30,9 +31,9 @@ namespace NKKWeightScaleDB.Services
                 using (var stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     using (StreamReader streamReader = new StreamReader(stream, Encoding.GetEncoding("shift-jis")))
-                    using (CsvReader csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture))
+                    using (CsvReader csvReader = new CsvReader(streamReader, CreateCsvConfiguration()))
                     {
-                        csvReader.Configuration.HasHeaderRecord = false;
+                        RegisterClassMaps(csvReader.Context, typeof(T));
                         result = csvReader.GetRecords<T>().ToList();
                     }
                 }
@@ -73,9 +74,9 @@ namespace NKKWeightScaleDB.Services
                 bool isSuccess = ClearAll<TModel>(3);
                 using (var stream = new StreamWriter(path,true, Encoding.GetEncoding("utf-8")))
                 {
-                    using (var csv = new CsvWriter(stream, CultureInfo.InvariantCulture))
+                    using (var csv = new CsvWriter(stream, CreateCsvConfiguration()))
                     {
-                        csv.Configuration.HasHeaderRecord = false;
+                        RegisterClassMaps(csv.Context, typeof(TModel));
                         csv.WriteRecords(currentData);
                         //stream.WriteLine("\n");
                     }
@@ -102,9 +103,9 @@ namespace NKKWeightScaleDB.Services
             {
                 using (var stream = new StreamWriter(path, true, Encoding.GetEncoding("utf-8")))
                 {
-                    using (var csv = new CsvWriter(stream, CultureInfo.InvariantCulture))
+                    using (var csv = new CsvWriter(stream, CreateCsvConfiguration()))
                     {
-                        csv.Configuration.HasHeaderRecord = false;
+                        RegisterClassMaps(csv.Context, typeof(TModel));
                         csv.WriteRecords(data);
                     }
                 }
@@ -338,11 +339,20 @@ namespace NKKWeightScaleDB.Services
             return result;
         }
 
-        private CsvConfiguration ConfigMapping<T>() where T : ClassMap
+        private static CsvConfiguration CreateCsvConfiguration()
         {
-            CsvConfiguration csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture);
-            csvConfig.RegisterClassMap<T>();
-            return csvConfig;
+            return new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                HasHeaderRecord = false
+            };
+        }
+
+        private static void RegisterClassMaps(CsvContext context, Type recordType)
+        {
+            if (recordType == typeof(Set_info))
+            {
+                context.RegisterClassMap<SetInfoCsvMapping>();
+            }
         }
     }
 }

@@ -1,7 +1,7 @@
 package jp.co.nikkiso.ntss.admin_web.web.rest;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.PatInfoService;
@@ -59,6 +59,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 /**
  * 帳票出力
@@ -145,6 +146,16 @@ public class ReportMenuResource {
     // add 2020-09-30 FNSI-改修 複数データ対象の帳票の場合の切替 夏 end
     @AuthenticationPrincipal NtssUser ntssUser
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (payload.getFacilityCd() != null && !payload.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + payload.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
     //add IES因島）sql性能試験 後で削除 liuc start
     Date beginTime = new Date();
     String facilityCd_t = payload.getFacilityCd();
@@ -626,7 +637,7 @@ public class ReportMenuResource {
         // del by shangkuiwei 2023-02-05 [Variable,CodeOptimization] --end
         // add 2020-09-30 FNSI-改修 複数データ対象の帳票の場合の切替 夏 end
         // del  2022-1-10 #6589   鄭  start
-       // return new ResponseEntity<>(null, HttpStatus.OK);
+       // return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
         // del  2022-1-10 #6589   鄭  end
       }
       // add 2020-09-30 FNSI-改修 複数データ対象の帳票の場合の切替 夏 start
@@ -768,7 +779,7 @@ public class ReportMenuResource {
             //mod Aspose.cells関連問題5の対応 王占宇 start
             //         htmlMultiPat = reportMenuService.getHtmlReportSorted(payload, ntssUser.getUserId(), ntssUser.getUsername());
             //         if (htmlMultiPat == null) {
-            //           return new ResponseEntity<>(null, HttpStatus.OK);
+            //           return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
             //         }
             //mod Aspose.cells関連問題5の対応 王占宇 start
             //         if(!(reportClass==9 || reportType.equals("1"))) {
@@ -788,7 +799,7 @@ public class ReportMenuResource {
               htmlMultiPat = reportMenuService.getHtmlReportSorted(payload, ntssUser.getUserId(), userNameStr);
               // mod 8542 紹介状（集計あり。因島様にて使用）にて出力できない項目がある 吉 end
               if (htmlMultiPat == null) {
-                return new ResponseEntity<>(null, HttpStatus.OK);
+                return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
               }
             }
             //mod Aspose.cells関連問題5の対応 王占宇 end
@@ -1094,7 +1105,7 @@ public class ReportMenuResource {
                 /*fileName += ".zip";*/
                 fileName += "_["+ dateString +"].zip";
               } else {
-                return new ResponseEntity<>(null, HttpStatus.OK);
+                return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
               }
               // ファイル名に使用できない文字を置換
               fileName = fileName.replaceAll("[\\\\/:\\*\\?<>\\|]", "_");
@@ -1102,7 +1113,7 @@ public class ReportMenuResource {
               header.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName);
 
               if (res == null || res.length == 0) {
-                return new ResponseEntity<>(null, HttpStatus.OK);
+                return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
               }
               return new ResponseEntity<>(res, header, HttpStatus.OK);
             } else {
@@ -1207,7 +1218,7 @@ public class ReportMenuResource {
                 header.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName);
                 return new ResponseEntity<>(file, header, HttpStatus.OK);
               }  else {
-                  return new ResponseEntity<>(null, HttpStatus.OK);
+                  return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
                 }
               // add 10432 出力対象患者が複数名の時「単集計」帳票が全員出力されない。　杜 start
 
@@ -1217,7 +1228,7 @@ public class ReportMenuResource {
                 header.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName);
 
                 if (res == null || res.length == 0) {
-                  return new ResponseEntity<>(null, HttpStatus.OK);
+                  return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
                 }
                 return new ResponseEntity<>(res, header, HttpStatus.OK);
               // add 10432 出力対象患者が複数名の時「単集計」帳票が全員出力されない。　杜 end
@@ -1339,10 +1350,10 @@ public class ReportMenuResource {
 //                      patHtmls = reportMenuService.getHtmlReport(payload, userNameStr);
 //                      // mod 8542 紹介状（集計あり。因島様にて使用）にて出力できない項目がある 吉 end
 //                        if (patHtmls == null) {
-//                            return new ResponseEntity<>(null, HttpStatus.OK);
+//                            return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //                        }
 //                        if (patHtmls.size() <= 0) {
-//                            return new ResponseEntity<>(null, HttpStatus.OK);
+//                            return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //                        }
 //                        for (int i = 0; i < patHtmls.size(); i++) {
 //                            Map<Long, List<byte[]>> patReport = new HashMap<>();
@@ -1484,7 +1495,7 @@ public class ReportMenuResource {
 					fileName += "_["+ dateString +"].zip";
           /*mod FNSI-改修内容帳票保存の時のファイル名が重複してしまう 任 end*/
 				} else {
-					return new ResponseEntity<>(null, HttpStatus.OK);
+					return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 				}
 
         // ファイル名に使用できない文字を置換
@@ -1493,7 +1504,7 @@ public class ReportMenuResource {
 				header.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName);
 
 				if (res == null || res.length == 0) {
-					return new ResponseEntity<>(null, HttpStatus.OK);
+					return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 				}
 				return new ResponseEntity<>(res, header, HttpStatus.OK);
 			}
@@ -1523,7 +1534,7 @@ public class ReportMenuResource {
     @RequestBody String payload
   ) {
     try {
-      return new ResponseEntity<>(null, HttpStatus.OK);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     } catch (Exception e) {
       EventLogMessage eventLogMessage = new EventLogMessage();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
@@ -1544,6 +1555,17 @@ public class ReportMenuResource {
     @AuthenticationPrincipal NtssUser ntssUser,
     @RequestBody String payload
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+      if(!ntssUser.isNkkAdminUser()) {
+        JSONObject receiveData = new JSONObject(payload);
+        if (!ntssUser.getFacilityCd().equals(receiveData.get("facilityCd").toString())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + receiveData.get("facilityCd").toString() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
     try {
       MstReport po = new MstReport();
       JSONObject receiveData = new JSONObject(payload);
@@ -1551,7 +1573,7 @@ public class ReportMenuResource {
       po.setReportCd(Long.valueOf(receiveData.get("reportCd").toString()));
       po.setReportSetting(receiveData.get("sortTargets").toString());
       reportMenuService.saveSortList(po);
-      return new ResponseEntity<>(null, HttpStatus.OK);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
     } catch (Exception e) {
       EventLogMessage eventLogMessage = new EventLogMessage();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
@@ -1744,7 +1766,7 @@ public class ReportMenuResource {
               file = reportMenuService.getExcelReportForPreparationList(payload, userNameStr);
                 // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe start
               if(file == null || file.length == 0){
-                return new ResponseEntity<>(null, HttpStatus.OK);
+                return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
               }
               // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe end
               if (file.length > 0) {
@@ -1775,7 +1797,7 @@ public class ReportMenuResource {
               file = reportMenuService.getExcelReportForDistributionListBed(payload, userNameStr);
               // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe start
               if(file == null || file.length == 0){
-                return new ResponseEntity<>(null, HttpStatus.OK);
+                return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
               }
               // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe end
               if (file.length > 0) {
@@ -1806,7 +1828,7 @@ public class ReportMenuResource {
               file = reportMenuService.getExcelReportForDistributionListGoods(payload, userNameStr);
               // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe start
               if(file == null || file.length == 0){
-                return new ResponseEntity<>(null, HttpStatus.OK);
+                return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
               }
               // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe end
               if (file.length > 0) {
@@ -1870,7 +1892,7 @@ public class ReportMenuResource {
               }
               // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe start
               if(!bHavetoShow){
-                return new ResponseEntity<>(null, HttpStatus.OK);
+                return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
               }
               // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe end
               //mod #9616 帳票印刷失敗通知がされない 李 start
@@ -1902,7 +1924,7 @@ public class ReportMenuResource {
               // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe start
               if(patExcelFileList == null || patExcelFileList.size() == 0){
                 // mod #12107 帳票印刷失敗通知が行われない limingzhe start
-                //return new ResponseEntity<>(null, HttpStatus.OK);
+                //return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
                 throw new NtssException("該当データが存在していません。");
                 // mod #12107 帳票印刷失敗通知が行われない limingzhe end
               }
@@ -1958,7 +1980,7 @@ public class ReportMenuResource {
               }
               // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe start
               if(patExcelFileList == null || patExcelFileList.size() == 0){
-                return new ResponseEntity<>(null, HttpStatus.OK);
+                return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
               }
               // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe end
               //mod #9616 帳票印刷失敗通知がされない 李 start
@@ -2003,7 +2025,7 @@ public class ReportMenuResource {
               }
               // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe start
               if(patExcelFileList == null || patExcelFileList.size() == 0){
-                return new ResponseEntity<>(null, HttpStatus.OK);
+                return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
               }
               // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe end
               //mod #9616 帳票印刷失敗通知がされない 李 start
@@ -2030,7 +2052,7 @@ public class ReportMenuResource {
 //              eventLogMessage.setLogMessage("複数患者帳票印刷失敗");
 //              logService.log(LogLevel.INFO, eventLogMessage,FUNCTION_CODE.FUNC_REPORT_MENU,SERVICE_NAME.FNSI, null);
 //              // 毛　ログ改善対応 Add End
-//              return new ResponseEntity<>(null, HttpStatus.OK);
+//              return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //            }
 //            //mod 帳票印刷の命名規則が変更されました 吉 start
 //            //                reportMenuService.printReportMultiPat(reportHtml, printerCd);
@@ -2066,7 +2088,7 @@ public class ReportMenuResource {
           }
           // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe start
           if(patExcelFileList == null || patExcelFileList.size() == 0){
-            return new ResponseEntity<>(null, HttpStatus.OK);
+            return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
           }
           // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe end
           reportMenuService.printPdfReport(patExcelFileList,reportName, printerCd);
@@ -2099,7 +2121,7 @@ public class ReportMenuResource {
           }
           // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe start
           if(patExcelFileList == null || patExcelFileList.size() == 0){
-            return new ResponseEntity<>(null, HttpStatus.OK);
+            return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
           }
           // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe end
           reportMenuService.printPdfReport(patExcelFileList,reportName, printerCd);
@@ -2129,7 +2151,7 @@ public class ReportMenuResource {
           }
           // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe start
           if(patExcelFileList == null || patExcelFileList.size() == 0){
-            return new ResponseEntity<>(null, HttpStatus.OK);
+            return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
           }
           // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe end
       //mod #9616 帳票印刷失敗通知がされない 李 start
@@ -2203,7 +2225,7 @@ public class ReportMenuResource {
       }
       // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe start
       if(tmpReportMap == null || tmpReportMap.size() == 0){
-        return new ResponseEntity<>(null, HttpStatus.OK);
+        return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.OK);
       }
       // add #10982 データ抽出条件の医療材料／薬剤の動作不良 limingzhe end
       patExcelFileList.add(tmpReportMap);
@@ -2250,10 +2272,20 @@ public class ReportMenuResource {
 	}
   // add FNSI-印刷失敗時の通知を追加 江 start
   @PutMapping("/registerNotification/{facilityCd}/{reportType}/{reportName}")
-  public void registerNotification(
+  public ResponseEntity<?> registerNotification(
     @PathVariable String facilityCd
    ,@PathVariable String reportType
-   ,@PathVariable String reportName) {
+   ,@PathVariable String reportName
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+   ,@AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+    ) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(ntssUser == null || (!ntssUser.isNkkAdminUser() && !facilityCd.equals(ntssUser.getFacilityCd()))) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
     try {
       reportMenuService.registerNotification(facilityCd,reportType,reportName);
     } catch (Exception e) {
@@ -2263,6 +2295,7 @@ public class ReportMenuResource {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
       logService.log(LogLevel.ERROR, eventLogMessage,FUNCTION_CODE.FUNC_REPORT_MENU,SERVICE_NAME.FNSI, null);
     }
+    return new ResponseEntity<>(HttpStatus.OK);
   }
   // add FNSI-印刷失敗時の通知を追加 江 end
   //add 4748 5269 5402治療方法ごとの治療経過表での出力ができない  吉 start
@@ -2271,6 +2304,16 @@ public class ReportMenuResource {
     @RequestBody ReportMenuSortContainer payload,
     @AuthenticationPrincipal NtssUser ntssUser
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 start
+    if(!ntssUser.isNkkAdminUser()) {
+      if (payload.getFacilityCd() != null && !payload.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + payload.getFacilityCd() + " ";
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260421 end
+
     try {
       List<Long> patIds = reportMenuService.getPatIdByPayLoad(payload);
       List<String>patIdList =  new ArrayList<>();

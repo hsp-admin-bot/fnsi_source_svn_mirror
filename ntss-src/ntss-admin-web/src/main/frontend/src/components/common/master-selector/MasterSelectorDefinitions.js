@@ -108,7 +108,6 @@ export const medicineAntiCoagulant = {
         { text: CODES.MEDICINE_TYPE.MIX.text, value: CODES.MEDICINE_TYPE.MIX.cd }
       ];
     },
-    /* eslint-enable no-unused-vars */
     (masterData, classData) => {
       let classNewData = classData
         .filter(
@@ -159,7 +158,6 @@ export const medicineDialysateReplacement = {
       ];
     }, */
     //#10123:透析液/補液の薬剤選択モーダルの薬剤区分の表示が不要 End
-    /* eslint-enable no-unused-vars */
     (masterData, classData) => {
       let classNewData = classData
         .filter(
@@ -360,7 +358,6 @@ export const medicineAll = {
         { text: CODES.MEDICINE_TYPE.MIX.text, value: CODES.MEDICINE_TYPE.MIX.cd }
       ];
     },
-    /* eslint-enable no-unused-vars */
     (masterData, classData) => {
       let classNewData = classData.map(item => {
         return {

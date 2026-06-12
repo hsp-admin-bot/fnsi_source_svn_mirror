@@ -233,9 +233,10 @@ const actions = {
     commit("setModal", "IndHistory");
     commit("setTitle", "指示履歴");
   },
-  showIndSupportModal({ commit }) {
+  showIndSupportModal({ commit }, initValues) {
     commit("setModal", "IndSupport");
     commit("setTitle", "投薬支援");
+    commit("setInitValues", initValues);
   },
   showIndMedicineModal({ commit }, dispDataItem) {
     commit("setModal", "IndMedicine");

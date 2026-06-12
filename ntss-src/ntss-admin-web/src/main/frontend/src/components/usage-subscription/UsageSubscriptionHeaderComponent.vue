@@ -2,6 +2,7 @@
   <v-card>
     <div class="header-item">
       <table class="event-area">
+        <tbody>
         <tr class="header-row">
           <td class="search-button-area"></td>
           <td class="plan-name-area">
@@ -28,16 +29,18 @@
             ></kendo-dropdownlist>
           </td>
         </tr>
+      
+        </tbody>
       </table>
     </div>
   </v-card>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { sendRequestGetMstFacility } from "@/apis/mst-user-maintenance";
 import { sendRequestGetPlan } from "@/apis/usage-subscription";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 export default {
   name: "UsageSubscriptionHeaderComponent",
   data() {
@@ -75,7 +78,7 @@ export default {
   },
   async created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // add 性能改善メモリ不足 shan start
     EventBus.$off("refresh", this.refresh);
     // add 性能改善メモリ不足 shan end
@@ -109,7 +112,7 @@ export default {
       this.setPlanName(null);
     },
     async refresh() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       this.clearStore();
@@ -117,7 +120,7 @@ export default {
       this.selectedFacility = null;
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
   }
 };

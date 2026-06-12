@@ -5,10 +5,8 @@
 </template>
 
 <script>
-import Vue from "vue";
-import VueHighcharts from "vue-highcharts";
-import Highcharts from "highcharts";
-import Boost from "highcharts/modules/boost";
+import Highcharts from "@/compat/charts/highcharts";
+import { Boost } from "@/compat/charts/highcharts";
 
 export default {
   props: {
@@ -122,10 +120,9 @@ export default {
     };
   },
   created() {
-    Vue.use(VueHighcharts, { Highcharts });
     Boost(Highcharts);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -139,7 +136,7 @@ export default {
         src = args.splice(0, 1)[0];
         if (toString.call(src) == "[object Object]") {
           for (p in src) {
-            if (src.hasOwnProperty(p)) {
+            if (Object.prototype.hasOwnProperty.call(src, p)) {
               if (toString.call(src[p]) == "[object Object]") {
                 dst[p] = this.mergeConfig(dst[p] || {}, src[p]);
               } else {

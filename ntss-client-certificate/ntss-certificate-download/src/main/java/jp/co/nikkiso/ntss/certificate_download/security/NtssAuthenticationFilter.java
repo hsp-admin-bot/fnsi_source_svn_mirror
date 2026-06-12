@@ -6,8 +6,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.Optional;
 
@@ -26,7 +26,7 @@ public class NtssAuthenticationFilter extends UsernamePasswordAuthenticationFilt
     HttpServletRequest request,
     HttpServletResponse response) throws AuthenticationException {
 
-    if (!HttpMethod.POST.equals(HttpMethod.resolve(request.getMethod()))) {
+    if (!HttpMethod.POST.matches(request.getMethod())) {
       throw new AuthenticationServiceException("Authentication method not supported: " + request.getMethod());
     }
 

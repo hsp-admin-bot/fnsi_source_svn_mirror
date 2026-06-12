@@ -13,7 +13,7 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 @Component
 //add FNSI-「コンソール出力のみで、ログに出力されていないメッセージがある」の改修 江 end
 public class IndicationUtils {

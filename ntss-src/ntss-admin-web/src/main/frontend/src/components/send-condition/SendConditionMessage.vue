@@ -85,11 +85,10 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 
 export default {
-  props: {},
-  components: {},
+
   data() {
     return {
       msgList: []
@@ -111,15 +110,12 @@ export default {
       });
     }
   },
-  methods: {},
   watch: {
     getCheckMessageList() {
       this.msgList = this.getCheckMessageList;
     }
   },
-  created() {},
-  mounted() {},
-  destroyed() { }
+
 };
 </script>
 <style scoped>

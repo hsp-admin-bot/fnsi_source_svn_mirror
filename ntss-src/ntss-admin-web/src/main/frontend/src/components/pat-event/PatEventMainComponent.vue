@@ -13,7 +13,7 @@
           </div>
           <div class="header-viewer-button">
             <v-ons-button class="button" id="viewer-button" v-show="isPatEvent" @click="onImageViewerClick()">
-              <img src="img/pat-event/viewer.png" id="viewer-button-icon" />
+              <img :src="patEventAsset('viewer.png')" id="viewer-button-icon" />
             </v-ons-button>
           </div>
           <div class="header-button">
@@ -38,25 +38,26 @@
         </div>
         <div class="detail-area">
           <table id="history" class="table-area list"  ref="scrollTable">
-            <div>
-              <thead>
+            <thead>
+              <tr>
                 <th
                   class="ntss-list-header-th-sticky list-event"
                   scope="col"
                   :style="viewStyles"
                 >イベント</th>
                 <th class="ntss-list-header-th-sticky list-score" scope="col" v-if="isViewScore">スコア</th>
-              </thead>
-              <tbody>
-                <template v-for="(item, index) in inputModel.history">
+              </tr>
+            </thead>
+            <tbody>
+                <template v-for="(item, index) in inputModel.history" :key="index">
                   <tr
-                    :key="index"
+                   
                     @click="selectHistory(index)"
                     :class="classRowSetting(index, item.activeRow)"
                     v-if="isPatientShared || !item.isOtherFacility"
                   >
                     <td class="ntss-list-body-td ntss-pat-event-label list-event" :style="viewStyles" :class="{ 'other-facility': isPatientShared && item.isOtherFacility }">
-                      <label>{{ item | historyItemDate }}</label>
+                      <label>{{ getHistoryItemDate(item) }}</label>
                       <br />
                       <template v-if="isPatientShared">
                         <label>{{ item.facilityName }}</label>
@@ -74,7 +75,6 @@
                   </tr>
                 </template>
               </tbody>
-            </div>
           </table>
         </div>
       </div>
@@ -92,7 +92,7 @@
     <!-- 検索ポップオーバー -->
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :direction="popoverDirection"
       :cover-target="false"
@@ -165,7 +165,7 @@
       </div>
     </v-ons-popover>
 
-    <v-ons-modal :visible="isShowViewerModal" :deviceBackButton="onDeviceBackButton" class="image-viewer-modal">
+    <v-ons-modal :visible="isShowViewerModal" @deviceBackButton="onDeviceBackButton" class="image-viewer-modal">
       <pat-event-image-viewer
         :imageSource="viewTargetImage"
         @cancelViewer="onCancelViewer"
@@ -176,11 +176,12 @@
 </template>
 
 <script>
-  import {mapActions, mapGetters} from "vuex";
-  import {EventBus} from "@/eventBus.js";
+import { publicAssetPath } from "@/compat/assets/public-path";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
+  import {EventBus} from "@/compat/vue/event-bus.js";
   import NextTransitionMixin from "@/components/NextTransitionMixin";
   import PatHeaderControlMixin from "@/components/common/PatHeadControlMixin";
-  import moment from "moment";
+  import dayjs from "@/compat/date/dayjs";
   import PatEventDetail from "@/components/pat-event/PatEventDetailComponent";
   import PatEventImageViewer from "@/components/pat-event/image-viewer/PatEventImageViewer";
   // mod #10359_NG対応 編集権限の動作不正 dengshen start
@@ -203,14 +204,14 @@
   import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
   /*add FNSI-改修内容権限関連 任 end*/
   //add オンプレミスの場合、転入患者さんの紹介状が取込できない 吉 start
-  import axios from 'axios'
-  //add オンプレミスの場合、転入患者さんの紹介状が取込できない 吉 end
-  //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
-  import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
+import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
+
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
   //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
   import {popoverPosthide, popoverPostShow, popoverPreShow} from "@/functions/common/CommonPopoverFunctions";
   //#5590 2023/04/19 ×を常に表示するように修正 張博 start
   import DateInput from "@/components/common/DateInput.vue";
+import axios from "@/compat/http/axios";
   //#5590 2023/04/19 ×を常に表示するように修正 張博 end
 
   const AnyCategoryCd = "0";
@@ -224,10 +225,10 @@
     name: "全カテゴリ"
   };
 
-  const toDate = (dateString) => moment(dateString).toDate();
-  const formatToSettingDate = (dateInfo) => moment(dateInfo).format(SETTING_DATE_FORMAT);
-  const formatToInputDate = (dateInfo) => moment(dateInfo).format("YYYY-MM-DD");
-  const formatToDisplayDate = (dateInfo) => moment(dateInfo).format("YYYY/MM/DD")
+  const toDate = (dateString) => dayjs(dateString).toDate();
+  const formatToSettingDate = (dateInfo) => dayjs(dateInfo).format(SETTING_DATE_FORMAT);
+  const formatToInputDate = (dateInfo) => dayjs(dateInfo).format("YYYY-MM-DD");
+  const formatToDisplayDate = (dateInfo) => dayjs(dateInfo).format("YYYY/MM/DD")
 
   const nomalizeNullableString = (value) => value !== null ? value : "";
 
@@ -239,7 +240,7 @@
   };
 
   export default {
-  props: {},
+
   components: {
     "common-calendar": commonCalender,
     "pat-event-detail": PatEventDetail,
@@ -253,11 +254,6 @@
   /*mixins: [NextTransitionMixin, PatHeaderControlMixin],*/
   mixins: [NextTransitionMixin, PatHeaderControlMixin,ComponentGuardMixin,PopoverMixin],
   /*mod FNSI-改修内容権限関連 任 end*/
-  filters: {
-    historyItemDate({ useType, eventStartDate, reportDate }) {
-      return (useType == 3 && reportDate != null && reportDate != "Invalid date") ? reportDate : eventStartDate;
-    }
-  },
   data() {
     return {
       inputModel: {
@@ -396,7 +392,7 @@
       /*add FNSI-No.342 患者イベント、検査結果、検査予定、一般撮影検査予定、処方の表示、機能遷移に対応 李 start*/
       "getTreatBaseDate",
       /*add FNSI-No.342 患者イベント、検査結果、検査予定、一般撮影検査予定、処方の表示、機能遷移に対応 李 end*/
-      "getIsOtherFacility"
+      "getIsOtherFacility",
     ]),
     ...mapGetters("pat-event/detail", {
       patEventRecord: "getPatEventRecord"
@@ -526,6 +522,15 @@
     },
   },
   methods: {
+    patEventAsset(fileName) {
+      return publicAssetPath(`img/pat-event/${fileName}`);
+    },
+    getScopedClassElementSafe(className) {
+      return getScopedElementsByClassName(className, this.$el || null)[0] || null;
+    },
+    getHistoryItemDate({ useType, eventStartDate, reportDate }) {
+      return useType == 3 && reportDate != null && reportDate != "Invalid date" ? reportDate : eventStartDate;
+    },
     ...mapActions("observe-record/list", [
       "setEditingOrdNo",
       "resetIsOtherFacilitys",
@@ -558,9 +563,7 @@
       "setPatEventFlg",
       // add FNSI-コントロールの削除 徐 end
       "setEventStartDate",
-      // add #12462 患者情報共有 start
-      "resetIsOtherFacility",
-      // add #12462 患者情報共有 end
+      "resetIsOtherFacility"
     ]),
     ...mapActions("pat-event/detail", [
       "setPatEventRecord",
@@ -658,7 +661,7 @@
       // 開始日/終了日のパラメータがあれば指定
       const updatedDate = (dateString, currentDate) => {
         if (dateString) {
-          const dateMoment = moment(dateString);
+          const dateMoment = dayjs(dateString);
           if (dateMoment.isValid()) {
             return dateMoment.toDate();
           }
@@ -722,7 +725,7 @@
       if (this.$route.params.startDate !== undefined) {
         // 掲示板から患者イベントに遷移した場合
         if (this.$route.params.startDate != null) {
-          const startDateMoment = moment(this.$route.params.startDate);
+          const startDateMoment = dayjs(this.$route.params.startDate);
           const startDate = startDateMoment.toDate();
           this.setConditionDateByValues(
             startDate,
@@ -731,7 +734,7 @@
               : startDateMoment.add(7, "days").toDate()
           );
         } else if (this.$route.params.endDate === null) {
-          const todayMoment = moment();
+          const todayMoment = dayjs();
           const endDate = todayMoment.toDate();
           this.setConditionDateByValues(
             todayMoment.subtract(7, "days").toDate(),
@@ -960,7 +963,8 @@
       let selectedPatEvent = null;
       const info = [];
       info.push({
-        patEventCd: this.inputModel.history[index].patEventCd
+        patEventCd: this.inputModel.history[index].patEventCd,
+        selectedPatId: this.selectedPatId
       });
       await this.findPatEventByCd(info);
       selectedPatEvent = this.getPatEventRecord[0];
@@ -1041,24 +1045,25 @@
       });
     },
     getObjectURL(file) {
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
       let url = null
-      if (window.createObjectURL !== undefined) {
-        url = window.createObjectURL(file)
-      } else if (window.webkitURL !== undefined) {
+      if (ownerWindow.createObjectURL !== undefined) {
+        url = ownerWindow.createObjectURL(file)
+      } else if (ownerWindow.webkitURL !== undefined) {
         try {
           var blob = new Blob([file], {
             type: 'application/png;charset=utf-8',
           });
-          url = window.webkitURL.createObjectURL(blob)
+          url = ownerWindow.webkitURL.createObjectURL(blob)
         } catch (error) {
           //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
           getErrorMessage('PatEventMainComponent.vue', 'getObjectURL', error);
           //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
 
         }
-      } else if (window.URL !== undefined) { // mozilla(firefox)
+      } else if (ownerWindow.URL !== undefined) { // mozilla(firefox)
         try {
-          url = window.URL.createObjectURL(file)
+          url = ownerWindow.URL.createObjectURL(file)
         } catch (error) {
           //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
           getErrorMessage('PatEventMainComponent.vue', 'getObjectURL', error);
@@ -1235,13 +1240,11 @@
         if (hasRegisteredPatEventCd) {
           info.patEventCd = options.registeredPatEventCd;
         }
-        // add #12462 患者情報共有 20260330 start
         info.patShareMode = this.getPatientShareMode;
         info.otherFacilityCd =
           this.getPatientShareMode === 1
-            ? this.getFacilityCd
+            ? this.facilityCd
             : this.getPatientShareFacilityCdMode;
-        // add #12462 患者情報共有 20260330 add
         await this.fetchPatEventRecords(info);
         // add 提示板一覧から患者イベント画面への移行初期表示が補正されていない 20230703 ztc start
         let registeredPatEventIndexByBoard = -1;
@@ -1251,12 +1254,7 @@
             this.rowSelect = registeredPatEventIndexByBoard;
           }
           // add 提示板一覧から患者イベント画面への移行初期表示が補正されていない 20230703 ztc end
-          // del #12462 患者情報共有 20260310 start
-          // const isOtherFacility = this.facilityCd !== record.facilityCd;
-          // del #12462 患者情報共有 20260310 end
-          // add #12462 患者情報共有 20260310 start
-          const isOtherFacility = false
-          // add #12462 患者情報共有 20260310 end
+          const isOtherFacility = false;
           // 追加対象でない場合は処理しない
           if (!this.isPatientShared && isOtherFacility) return;
 
@@ -1449,7 +1447,7 @@
       /*add FNSI-改修内容患者を切り替え時、キャンセルして編集した内容を保持していない、任 end*/
     },
     getConditionDateYYYYMMDD() {
-      const toYYYYMMDD = (date) => date ? moment(date).format("YYYYMMDD") : "";
+      const toYYYYMMDD = (date) => date ? dayjs(date).format("YYYYMMDD") : "";
       return  {
         startDate: toYYYYMMDD(this.getConditionDate.startDate),
         endDate: toYYYYMMDD(this.getConditionDate.endDate),
@@ -1481,7 +1479,7 @@
     async refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
       // #8016調査時のメモ：
-      // beforeRouteLeaveでawaitした場合はthis.$router.currentRoute.nameが切り替わる前にここを通るので
+      // beforeRouteLeaveでawaitした場合はthis.$route.nameが切り替わる前にここを通るので
       // 自分の画面への遷移時かどうかは判定できない
       // 自分の画面への遷移時でない場合はconfirmAllowDiscardChangesの多重呼び出し時の対応により
       // それぞれの破棄OK時の処理が行われるが最終的にbeforeRouteLeaveの処理で画面遷移して終わる
@@ -1489,7 +1487,7 @@
       // 患者イベント・紹介状のパンくずリストの自画面クリック時に
       // Viewのrefresh処理とEventBus.emitでのrefresh発生により2回呼び出されている
       // 動作の見た目上はおかしくならないがおそらく2重に処理されている
-      if (this.selfScreenName === this.$router.currentRoute.name) {
+      if (this.selfScreenName === this.$route.name) {
         if (await this.confirmAllowDiscardChanges()) {
           // 以降の処理で破棄確認が起きないようにクリアしておく
           await this.setDetailCancel(true);
@@ -1498,7 +1496,7 @@
       }
     },
     initPatIntroLetter() {
-	　let mstSubCategoryRecords = this.getMstSubCategoryRecords;
+	 let mstSubCategoryRecords = this.getMstSubCategoryRecords;
 		
       if (this.isPatIntroLetter) {
         mstSubCategoryRecords = mstSubCategoryRecords.filter(rec => rec.useType === 3);
@@ -1559,15 +1557,15 @@
 
         // add #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
         const index = this.inputModel.history && this.inputModel.history.findIndex(history => history.activeRow === true);
-        var dialysisDate = moment(Date.now()).format("YYYYMMDD");
+        var dialysisDate = dayjs(Date.now()).format("YYYYMMDD");
         if(index > -1){
-          dialysisDate = moment(this.inputModel.history[index].eventStartDate).format("YYYYMMDD");
+          dialysisDate = dayjs(this.inputModel.history[index].eventStartDate).format("YYYYMMDD");
         }
         // add #12196 紹介状作成時に参照される各データが常に最新値になるのはNG zhao start
         let reportDate = this.$refs.detail.getReportStartDateValue();
         // 新規登録の場合
         if(reportDate !== null && this.getUpdateMode === false){
-          dialysisDate = moment(reportDate).format("YYYYMMDD");
+          dialysisDate = dayjs(reportDate).format("YYYYMMDD");
         }
         // add #12196 紹介状作成時に参照される各データが常に最新値になるのはNG zhao end
         // add #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
@@ -1585,14 +1583,14 @@
           //mod 5984 機能帳票でパラメータが正しく渡されていない 吉 end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
           // mod #9558 機能帳票でパラメータが正しく渡されていない 房 start
-          //date: moment(this.inputModel.startDate).format("YYYY/MM/DD"),
+          //date: dayjs(this.inputModel.startDate).format("YYYY/MM/DD"),
           // mod #9558 機能帳票でパラメータが正しく渡されていない 房 end
-          //fromDate: moment(this.inputModel.startDate).format("YYYY/MM/DD"),
-          //toDate: moment(this.inputModel.endDate).format("YYYY/MM/DD"),
+          //fromDate: dayjs(this.inputModel.startDate).format("YYYY/MM/DD"),
+          //toDate: dayjs(this.inputModel.endDate).format("YYYY/MM/DD"),
           // mod #12328 【因島】画面内にデータリストを持つ画面の機能帳票パラメータ修正 高　start
-          // date: this.inputModel.startDate != null ? moment(this.inputModel.startDate).format("YYYYMMDD") : (this.inputModel.endDate != null ? moment(this.inputModel.endDate).format("YYYYMMDD") : moment(Date.now()).format("YYYYMMDD")),
-          // fromDate: this.inputModel.startDate != null ? moment(this.inputModel.startDate).format("YYYYMMDD") : (this.inputModel.endDate != null ? moment(this.inputModel.endDate).format("YYYYMMDD") : moment(Date.now()).format("YYYYMMDD")),
-          // toDate: this.inputModel.endDate != null ? moment(this.inputModel.endDate).format("YYYYMMDD") : (this.inputModel.startDate != null ? moment(this.inputModel.startDate).format("YYYYMMDD") : moment(Date.now()).format("YYYYMMDD")),
+          // date: this.inputModel.startDate != null ? dayjs(this.inputModel.startDate).format("YYYYMMDD") : (this.inputModel.endDate != null ? dayjs(this.inputModel.endDate).format("YYYYMMDD") : dayjs(Date.now()).format("YYYYMMDD")),
+          // fromDate: this.inputModel.startDate != null ? dayjs(this.inputModel.startDate).format("YYYYMMDD") : (this.inputModel.endDate != null ? dayjs(this.inputModel.endDate).format("YYYYMMDD") : dayjs(Date.now()).format("YYYYMMDD")),
+          // toDate: this.inputModel.endDate != null ? dayjs(this.inputModel.endDate).format("YYYYMMDD") : (this.inputModel.startDate != null ? dayjs(this.inputModel.startDate).format("YYYYMMDD") : dayjs(Date.now()).format("YYYYMMDD")),
           date: dialysisDate,
           fromDate: dialysisDate,
           toDate: dialysisDate,
@@ -1616,13 +1614,13 @@
             functionCd:"03001",
             //mod 5984 機能帳票でパラメータが正しく渡されていない 吉 end
             // mod #9558 機能帳票で正しく変数が引き渡されていない limingzhe start
-            //date: moment(Date.now()).format("YYYY/MM/DD"),
-            //fromDate: moment(this.inputModel.startDate).format("YYYY/MM/DD"),
-            //toDate: moment(this.inputModel.endDate).format("YYYY/MM/DD")
+            //date: dayjs(Date.now()).format("YYYY/MM/DD"),
+            //fromDate: dayjs(this.inputModel.startDate).format("YYYY/MM/DD"),
+            //toDate: dayjs(this.inputModel.endDate).format("YYYY/MM/DD")
             // mod #12328 【因島】画面内にデータリストを持つ画面の機能帳票パラメータ修正 高　start
-            // date: moment(Date.now()).format("YYYY/MM/DD"),
-            // fromDate: moment(Date.now()).format("YYYY/MM/DD"),
-            // toDate: moment(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYY/MM/DD"),
+            // date: dayjs(Date.now()).format("YYYY/MM/DD"),
+            // fromDate: dayjs(Date.now()).format("YYYY/MM/DD"),
+            // toDate: dayjs(new Date(curDate.setMonth(curDate.getMonth() + 1))).format("YYYY/MM/DD"),
             date: dialysisDate,
             fromDate: dialysisDate,
             toDate: dialysisDate,
@@ -1641,16 +1639,16 @@
     },
     /*add FNSI-改修内容日付のチェックの追加対応。 任 start*/
     showStartMsg(){
-      this.showErrorStartDate = document.getElementsByClassName("start-date")[0].validationMessage !== "";
+      this.showErrorStartDate = this.getScopedClassElementSafe("start-date")?.validationMessage !== "";
     },
     showEndMsg(){
-      this.showErrorEndDate = document.getElementsByClassName("end-date")[0].validationMessage !== "";
+      this.showErrorEndDate = this.getScopedClassElementSafe("end-date")?.validationMessage !== "";
     },
     getStartDate(){
-      this.showErrorStartDate = document.getElementsByClassName("start-date")[0].validationMessage !== "";
+      this.showErrorStartDate = this.getScopedClassElementSafe("start-date")?.validationMessage !== "";
     },
     getEndDate(){
-      this.showErrorEndDate = document.getElementsByClassName("end-date")[0].validationMessage !== "";
+      this.showErrorEndDate = this.getScopedClassElementSafe("end-date")?.validationMessage !== "";
     },
     /*add FNSI-改修内容権限関連 任 start*/
     // del #10359_NG対応 編集権限の動作不正 dengshen start
@@ -1662,7 +1660,10 @@
     /*add FNSI-改修内容日付のチェックの追加対応。 任 end*/
     getPublicFlag() {
       ApiHelper.get(
-        "/pat_event/getPublicFlag/" + this.getUserId
+        "/pat_event/getPublicFlag/" + this.getUserId,
+        {
+          selectedPatId: this.selectedPatId
+        }
       ).then(res => {
         this.isPatientShared = res.data.msg === 1;
       }).catch(error => {
@@ -1800,15 +1801,15 @@
   watch: {
     /*add FNSI-改修内容日付のチェックの追加対応。 任 start*/
     'inputModel.endDate'() {
-      if(document.getElementsByClassName("end-date")[0].validationMessage !== ""){
-        this.showErrorEndDate = !(document.getElementsByClassName("end-date")[0].value === "" && document.getElementsByClassName("end-date-comment")[0].value !== "");
+      if(this.getScopedClassElementSafe("end-date")?.validationMessage !== ""){
+        this.showErrorEndDate = !(this.getScopedClassElementSafe("end-date")?.value === "" && this.getScopedClassElementSafe("end-date-comment")?.value !== "");
       }else{
         this.showErrorEndDate = false;
       }
     },
     'inputModel.startDate'() {
-      if(document.getElementsByClassName("start-date")[0].validationMessage !== ""){
-        this.showErrorStartDate = !(document.getElementsByClassName("start-date")[0].value === "" && document.getElementsByClassName("start-date-comment")[0].value !== "");
+      if(this.getScopedClassElementSafe("start-date")?.validationMessage !== ""){
+        this.showErrorStartDate = !(this.getScopedClassElementSafe("start-date")?.value === "" && this.getScopedClassElementSafe("start-date-comment")?.value !== "");
       }else{
         this.showErrorStartDate = false;
       }
@@ -1888,18 +1889,18 @@
     EventBus.$off("refresh", this.refresh);
     EventBus.$off("requestReportParams", this.requestrReportParams);
     EventBus.$off("openMainList", this.onOpenMainList);
+    EventBus.$off("refreshPatEventList", this.getSelectPatEventRecords);
     // add 性能改善メモリ不足 shan end
 
     EventBus.$on("reloadPatEventRecord", this.getSelectPatEventRecords);
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     EventBus.$on("refresh", this.refresh);
 
     // 印刷パラメータ要求
     EventBus.$on("requestReportParams", this.requestrReportParams);
 
     EventBus.$on("openMainList", this.onOpenMainList);
-
     EventBus.$on("refreshPatEventList", this.getSelectPatEventRecords);
 
     this.setViewMode(true);
@@ -1917,9 +1918,9 @@
     this.setLoadingScreenVisible(true);
 
     // 画像シェーマ用の初期化設定を取得
-    this.initStampTextInfo();
+    this.initStampTextInfo(this.selectedPatId);
 
-    await this.fetchPatEventMaster();
+    await this.fetchPatEventMaster({ selectedPatId: this.selectedPatId });
     this.initPatIntroLetter();
     this.mstSubCategoryRecords = this.getMstSubCategoryRecords;
     this.mstCategoryRecords = this.getMstCategoryRecords;
@@ -1938,7 +1939,7 @@
 
     this.setLoadingScreenVisible(false);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("reloadPatEventRecord", this.getSelectPatEventRecords);
     EventBus.$off("refresh", this.refresh);
     EventBus.$off("requestReportParams", this.requestrReportParams);

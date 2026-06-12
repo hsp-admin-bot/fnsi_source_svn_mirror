@@ -2,54 +2,34 @@
 <template>
   <div class="main-content-area kendo-grid-style-page">
     <div class="shr-list-main-content">
-      <kendo-grid
-        v-if="isReady"
+      <div
         ref="shrListGrid"
-        :data-source="this.shrListData"
-        :resizable="true"
-        :scrollable="true"
-        :reorderable="true"
-        :height="kendoGridHeight"
-        :sortable-allow-unsort="true"
-        :sortable-show-indexes="true"
-        :sortable="{ compare: compareByField }"
-        :sort="sortHandler"
-        selectable="row"
-        @change="onRowClick"
-        @databound="onDataBound"
+        class="shr-list-direct-grid ntss-list check-list-main-content-list"
         :style="{ cursor: isPatInfoVisible ? 'default' : 'pointer' }"
-        class="ntss-list check-list-main-content-list"
-      >
-        <kendo-grid-column
-          v-for="column in computedColumns"
-          :key="column.key"
-          :title="column.colName"
-          :field="column.field"
-          :width="column.width"
-          :locked="column.locked"
-          :template="column.template"
-        />
-      </kendo-grid>
+      ></div>
     </div>
   </div>
 </template>
 
 <script>
+import $$ from "@/compat/jquery";
+import Kendo from "@progress/kendo-ui";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 import { sortableCompare } from "@/functions/SortFunctions";
+import { getMainContentAreaElement } from "@/functions/common/LayoutMeasureHelper";
+import nameDuplicationImg from "../../../assets/name_duplication.png";
 
 export default {
   mixins: [NextTransitionMixin, PopoverMixin],
   data() {
     return {
-      isReady: false,
-      resizeTimer: null,
-      resizeObserver: null,
-      kendoGridHeight: "100%",
-      gridWidth: 0,
+      kendoGridHeight: 300,
+      directGridWidget: null,
+      directGridLayoutRafId: null,
+      shrListDataSource: null,
       shrGridColumns: [
         {
           key: "patId",
@@ -112,7 +92,12 @@ export default {
       bloodTypesRh: { 0: "不明", 1: "(Rh+)", 2: "(Rh−)" },
       gender: { 0: "不明", 1: "男性", 2: "女性" },
       currentSort: null,
-      image_src_same: require("../../../assets/name_duplication.png"),
+      image_src_same: nameDuplicationImg,
+      shrGridHoverSyncIndex: null,
+      shrGridHoverOverHandler: null,
+      shrGridHoverOutHandler: null,
+      shrGridHoverBg: "#eef6ff",
+      shrGridHoverBgNull: "#f7e671",
     };
   },
   watch: {
@@ -122,16 +107,9 @@ export default {
         this.setFilterSignal(false);
       }
     },
-    $route(to) {
-      if (to.name === "pat-info-sharing-detail") {
-        this.$nextTick(() => {
-          this.updateGridWidth();
-        });
-      }
-    },
     getSelectedPatId(newId) {
       this.$nextTick(() => {
-        const grid = this.$refs.shrListGrid?.kendoWidget();
+        const grid = this.getShrListGridWidget();
         if (!grid) return;
         const items = grid.items();
         items.each((idx, row) => {
@@ -168,61 +146,6 @@ export default {
         this.setCondition(val);
       },
     },
-    shrListData() {
-      const shrInfoList = this.mapPatientList(this.getShrInfoList);
-      const filteredPatList = shrInfoList.filter((pat) => {
-        const patName = pat.patName;
-        const regexp = this.condition.freeWord;
-        return (
-          (patName && patName.includes(regexp)) ||
-          (pat.hospPatId && pat.hospPatId.includes(regexp))
-        );
-      });
-      return filteredPatList;
-    },
-    computedColumns() {
-      const gridWidth = this.gridWidth || 1320;
-      const lockedCols = this.shrGridColumns.filter((c) => c.locked);
-      const lockedWidth = lockedCols.reduce(
-        (sum, c) => sum + (c.width || 0),
-        0
-      );
-      const birthdayWidth = 170;
-      const otherFlexColumns = this.shrGridColumns.filter(
-        (c) => !c.locked && c.key !== "birthday"
-      );
-      const remainWidth = gridWidth - lockedWidth - birthdayWidth - 18;
-      const avgWidth = Math.max(
-        Math.floor(remainWidth / otherFlexColumns.length),
-        118
-      );
-      const imgSrc = this.image_src_same;
-      return this.shrGridColumns.map((col) => {
-        let newCol = { ...col };
-        if (!newCol.locked) {
-          if (newCol.key === "birthday") {
-            newCol.width = birthdayWidth;
-          } else {
-            newCol.width = avgWidth;
-          }
-        }
-        if (newCol.key === "patName") {
-          newCol.template = (dataItem) => {
-            const name = dataItem.patName || "";
-            if (dataItem.isSame === "1") {
-              return `
-                <span class="pat-name-container" style="display: flex; align-items: center;">
-                  <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${name}</span>
-                  <img src="${imgSrc}" class="same-icon" style="width:16px; margin-left:4px; flex-shrink:0;" />
-                </span>
-              `;
-            }
-            return `<span>${name}</span>`;
-          };
-        }
-        return newCol;
-      });
-    },
   },
   methods: {
     ...mapActions("pat-info-sharing", [
@@ -241,11 +164,184 @@ export default {
       "clearSelectedPat",
       "setSearchedShrPatList",
     ]),
+    getShrListGridRef() {
+      return this.$refs.shrListGrid || null;
+    },
+    getShrListGridWidget() {
+      return (
+        this.directGridWidget ||
+        this.getShrListGridRef()?.kendoWidget?.() ||
+        this.getShrListGridRef()?.gridWidget?.() ||
+        null
+      );
+    },
+    installDirectGridFacade() {
+      const root = this.getShrListGridRef();
+      if (!root) return;
+      root.kendoWidget = () => this.directGridWidget;
+      root.gridWidget = () => this.directGridWidget;
+    },
+    getShrGridContainerWidth() {
+      const container = this.$el?.querySelector?.(".shr-list-main-content");
+      const root = this.getShrListGridRef();
+      const width =
+        container?.getBoundingClientRect()?.width ||
+        root?.getBoundingClientRect()?.width ||
+        1320;
+      return Math.floor(width);
+    },
+    buildDirectGridColumns(gridWidth) {
+      const containerWidth = gridWidth ?? this.getShrGridContainerWidth();
+      const lockedCols = this.shrGridColumns.filter((c) => c.locked);
+      const lockedWidth = lockedCols.reduce(
+        (sum, c) => sum + (c.width || 0),
+        0
+      );
+      const birthdayWidth = 170;
+      const otherFlexColumns = this.shrGridColumns.filter(
+        (c) => !c.locked && c.key !== "birthday"
+      );
+      const remainWidth = containerWidth - lockedWidth - birthdayWidth - 18;
+      const avgWidth = Math.max(
+        Math.floor(remainWidth / otherFlexColumns.length),
+        118
+      );
+      const imgSrc = this.image_src_same;
+      return this.shrGridColumns.map((col) => {
+        let width = col.width;
+        if (!col.locked) {
+          width = col.key === "birthday" ? birthdayWidth : avgWidth;
+        }
+        return {
+          field: col.field,
+          title: col.colName,
+          width,
+          locked: col.locked,
+          ...(col.key === "patName"
+            ? {
+                template:
+                  `<span class="pat-name-container" style="display:flex;align-items:center;">` +
+                  `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">#: patName #</span>` +
+                  `# if(isSame === '1') { # <img src="${imgSrc}" class="same-icon" style="width:16px;margin-left:4px;flex-shrink:0;" /> # } #` +
+                  `</span>`,
+              }
+            : {}),
+        };
+      });
+    },
+    buildShrListDataSource() {
+      const shrInfoList = this.mapPatientList(this.getShrInfoList);
+      const freeWord = this.getCondition?.freeWord || "";
+      const filteredPatList = freeWord
+        ? shrInfoList.filter(
+            (pat) =>
+              (pat.patName && pat.patName.includes(freeWord)) ||
+              (pat.hospPatId && pat.hospPatId.includes(freeWord))
+          )
+        : shrInfoList;
+      this.shrListDataSource = new Kendo.data.DataSource({
+        data: filteredPatList,
+        sort: this.currentSort || undefined,
+      });
+    },
+    initDirectGridIfReady() {
+      const root = this.getShrListGridRef();
+      if (!root || !this.shrListDataSource) return;
+
+      if (this.directGridWidget) {
+        this.applyDirectGridDataSourceContract();
+        this.installDirectGridFacade();
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+
+      $$(root).kendoGrid({
+        dataSource: this.shrListDataSource,
+        columns: this.buildDirectGridColumns(this.getShrGridContainerWidth()),
+        editable: false,
+        reorderable: true,
+        resizable: true,
+        selectable: "row",
+        height: this.kendoGridHeight,
+        scrollable: true,
+        sortable: {
+          allowUnsort: true,
+          showIndexes: true,
+          compare: this.compareByField,
+        },
+        change: (event) => this.onRowClick(event),
+        dataBound: (event) => this.onDataBound(event),
+        sort: (event) => this.sortHandler(event),
+      });
+      this.directGridWidget = $$(root).data("kendoGrid") || null;
+      this.installDirectGridFacade();
+      this.enableShrGridLockedHoverSync();
+      this.scheduleDirectGridLayoutContract();
+    },
+    applyDirectGridDataSourceContract() {
+      const grid = this.getShrListGridWidget();
+      if (!grid || !this.shrListDataSource) return;
+      if (grid.dataSource !== this.shrListDataSource) {
+        grid.setDataSource(this.shrListDataSource);
+      } else {
+        grid.refresh();
+      }
+      this.installDirectGridFacade();
+      this.scheduleDirectGridLayoutContract();
+    },
+    scheduleDirectGridLayoutContract() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+      }
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.directGridLayoutRafId = null;
+        this.runDirectGridLayoutContract();
+      });
+    },
+    runDirectGridLayoutContract() {
+      const grid = this.getShrListGridWidget();
+      const root = this.getShrListGridRef();
+      if (!grid || !root) return;
+      root.style.width = "100%";
+      root.style.height = `${this.kendoGridHeight}px`;
+      try {
+        grid.wrapper?.height?.(this.kendoGridHeight);
+        grid.resize?.();
+      } catch (_error) {
+        // noop
+      }
+    },
+    destroyDirectGrid() {
+      this.clearShrGridLockedHoverSync();
+      try {
+        this.directGridWidget?.destroy?.();
+      } catch (_error) {
+        // noop
+      }
+      this.directGridWidget = null;
+      const root = this.getShrListGridRef();
+      if (root?.nodeType === 1) {
+        root.innerHTML = "";
+      }
+    },
+    calculateGridHeight() {
+      this.kendoGridHeight =
+        getMainContentAreaElement(this.$el || document)?.clientHeight || 300;
+      this.scheduleDirectGridLayoutContract();
+    },
+    scheduleGridRefresh() {
+      requestAnimationFrame(() => {
+        this.initDirectGridIfReady();
+        this.calculateGridHeight();
+      });
+    },
     /**
      * フィルター条件設定処理
      */
     setFilterCondition(condition) {
       this.condition = condition;
+      this.buildShrListDataSource();
+      this.scheduleGridRefresh();
     },
     /**
      * 患者情報共有リスト検索処理
@@ -260,10 +356,12 @@ export default {
           await this.$nextTick();
         }
         await this.fetchShrInfoList(this.condition);
+        this.buildShrListDataSource();
       } finally {
         this.setIsSearching(false);
         await this.setLoadingScreenVisible(false);
       }
+      this.scheduleGridRefresh();
     },
     /**
      * リスト更新処理
@@ -408,6 +506,7 @@ export default {
      * データバウンド処理
      */
     onDataBound(ev) {
+      this.clearShrGridHoverSync();
       const grid = ev.sender;
       const items = grid.items();
       let targetRow = null;
@@ -421,63 +520,107 @@ export default {
           targetRow = row;
         }
       });
-      this.$nextTick(() => {
-        this.syncHoverRow();
-      });
       if (targetRow) {
         this.scrollToRow(targetRow);
       }
     },
-    /**
-     * グリッド幅更新処理
-     */
-    updateGridWidth() {
-      if (this.resizeTimer) clearTimeout(this.resizeTimer);
-      this.resizeTimer = setTimeout(() => {
-        if (this.$refs.shrListGrid?.$el) {
-          const rect = this.$refs.shrListGrid.$el.getBoundingClientRect();
-          this.gridWidth = rect.width;
-          const grid = this.$refs.shrListGrid.kendoWidget();
-          if (grid) {
-            grid.resize();
-          }
-        }
-      }, 150);
+    getShrGridRowIndex(row) {
+      const tbody = row?.closest?.("tbody");
+      if (!tbody || !row) return -1;
+      return Array.prototype.indexOf.call(tbody.children, row);
     },
-
-    /**
-     * ロック列と通常列のホバー同期処理
-     */
-    syncHoverRow() {
-      const grid = this.$refs.shrListGrid?.kendoWidget();
+    applyShrGridHoverSync(sourceRow) {
+      const index = this.getShrGridRowIndex(sourceRow);
+      if (index < 0) return;
+      const grid = this.getShrListGridWidget();
       if (!grid) return;
-      const lockedRows = grid.lockedTable?.find("tbody tr");
-      const normalRows = grid.table?.find("tbody tr");
-      if (!lockedRows || !normalRows) return;
-      lockedRows.each(function (index) {
-        const lockedRow = this;
-        const normalRow = normalRows[index];
-        if (!normalRow) return;
-        lockedRow.addEventListener("mouseenter", () => {
-          lockedRow.classList.add("hover-sync");
-          normalRow.classList.add("hover-sync");
+      const lockedRow = grid.lockedTable?.find("tbody tr").get(index);
+      const normalRow = grid.table?.find("tbody tr").get(index);
+      if (!lockedRow && !normalRow) return;
+      const isNullRow =
+        lockedRow?.classList.contains("null-pat-id-row") ||
+        normalRow?.classList.contains("null-pat-id-row");
+      const hoverBg = isNullRow ? this.shrGridHoverBgNull : this.shrGridHoverBg;
+      if (index === this.shrGridHoverSyncIndex) {
+        [lockedRow, normalRow].forEach((row) => {
+          this.paintShrGridHoverRow(row, hoverBg);
         });
-        lockedRow.addEventListener("mouseleave", () => {
-          lockedRow.classList.remove("hover-sync");
-          normalRow.classList.remove("hover-sync");
-        });
-        normalRow.addEventListener("mouseenter", () => {
-          lockedRow.classList.add("hover-sync");
-          normalRow.classList.add("hover-sync");
-        });
-        normalRow.addEventListener("mouseleave", () => {
-          lockedRow.classList.remove("hover-sync");
-          normalRow.classList.remove("hover-sync");
-        });
+        return;
+      }
+      this.clearShrGridHoverSync();
+      this.shrGridHoverSyncIndex = index;
+      [lockedRow, normalRow].forEach((row) => {
+        this.paintShrGridHoverRow(row, hoverBg);
       });
     },
+    paintShrGridHoverRow(row, hoverBg) {
+      if (!row) return;
+      row.classList.add("hover-sync");
+      row.classList.remove("k-hover");
+      row.querySelectorAll("td, .k-table-td").forEach((cell) => {
+        cell.classList.remove("k-hover");
+        cell.style.setProperty("background-color", hoverBg, "important");
+      });
+    },
+    resetShrGridHoverRow(row) {
+      if (!row) return;
+      row.classList.remove("hover-sync", "k-hover");
+      row.querySelectorAll("td, .k-table-td").forEach((cell) => {
+        cell.classList.remove("k-hover");
+        cell.style.removeProperty("background-color");
+      });
+    },
+    clearShrGridHoverSync() {
+      if (this.shrGridHoverSyncIndex == null) return;
+      const grid = this.getShrListGridWidget();
+      if (grid) {
+        grid.lockedTable?.find("tbody tr.hover-sync").each((_, row) => {
+          this.resetShrGridHoverRow(row);
+        });
+        grid.table?.find("tbody tr.hover-sync").each((_, row) => {
+          this.resetShrGridHoverRow(row);
+        });
+      }
+      this.shrGridHoverSyncIndex = null;
+    },
+    enableShrGridLockedHoverSync() {
+      this.clearShrGridLockedHoverSync();
+      const root = this.getShrListGridRef();
+      if (!root) return;
+      this.shrGridHoverOverHandler = (event) => {
+        const row = event.target?.closest?.("tbody tr");
+        if (!row || !root.contains(row)) return;
+        this.applyShrGridHoverSync(row);
+      };
+      this.shrGridHoverOutHandler = (event) => {
+        const row = event.target?.closest?.("tbody tr");
+        if (!row || !root.contains(row)) return;
+        if (row.contains(event.relatedTarget)) return;
+        const relatedRow = event.relatedTarget?.closest?.("tbody tr");
+        if (
+          relatedRow &&
+          root.contains(relatedRow) &&
+          this.getShrGridRowIndex(relatedRow) === this.getShrGridRowIndex(row)
+        ) {
+          return;
+        }
+        this.clearShrGridHoverSync();
+      };
+      root.addEventListener("mouseover", this.shrGridHoverOverHandler);
+      root.addEventListener("mouseout", this.shrGridHoverOutHandler);
+    },
+    clearShrGridLockedHoverSync() {
+      const root = this.getShrListGridRef();
+      if (root && this.shrGridHoverOverHandler) {
+        root.removeEventListener("mouseover", this.shrGridHoverOverHandler);
+        root.removeEventListener("mouseout", this.shrGridHoverOutHandler);
+      }
+      this.shrGridHoverOverHandler = null;
+      this.shrGridHoverOutHandler = null;
+      this.clearShrGridHoverSync();
+    },
     scrollToRow(row) {
-      const grid = this.$refs.shrListGrid?.kendoWidget();
+      const grid = this.getShrListGridWidget();
       if (!grid) return;
       const content = grid.content[0];
       if (!content) return;
@@ -494,7 +637,7 @@ export default {
           block: "center",
         });
       }
-    }
+    },
   },
   async created() {
     EventBus.$off("filterPatInfoSharingList", this.setFilterCondition);
@@ -503,30 +646,23 @@ export default {
     EventBus.$on("refresh", this.refresh);
   },
   mounted() {
-    const container = this.$el.querySelector(".shr-list-main-content");
-    if (container) {
-      this.gridWidth = container.getBoundingClientRect().width;
-    }
-    this.isReady = true;
     this.$nextTick(() => {
-      if (this.$refs.shrListGrid?.$el) {
-        this.resizeObserver = new ResizeObserver(() => {
-          this.updateGridWidth();
-        });
-        this.resizeObserver.observe(container);
-      }
+      this.calculateGridHeight();
+      this.buildShrListDataSource();
+      requestAnimationFrame(() => {
+        this.initDirectGridIfReady();
+      });
     });
-    window.addEventListener("resize", this.updateGridWidth);
   },
-  async beforeDestroy() {
-    window.removeEventListener("resize", this.updateGridWidth);
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
+  async beforeUnmount() {
+    if (this.directGridLayoutRafId != null) {
+      cancelAnimationFrame(this.directGridLayoutRafId);
+      this.directGridLayoutRafId = null;
     }
+    this.destroyDirectGrid();
     EventBus.$off("filterPatInfoSharingList", this.setFilterCondition);
     EventBus.$off("refresh", this.refresh);
     this.setSelectedPatId("");
-    clearTimeout(this.timerObj);
   },
 };
 </script>
@@ -538,46 +674,62 @@ export default {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
-.shr-list-main-content >>> .k-i-sort-asc-sm::before {
+.shr-list-direct-grid {
+  width: 100%;
+  flex: 1;
+  min-width: 0;
+}
+:deep(.shr-list-direct-grid.k-grid) {
+  width: 100% !important;
+}
+.shr-list-main-content :deep(.k-i-sort-asc-sm::before) {
   content: "▲" !important;
   color: #ffffff;
 }
-.shr-list-main-content >>> .k-i-sort-desc-sm::before {
+.shr-list-main-content :deep(.k-i-sort-desc-sm::before) {
   content: "▼" !important;
   color: #ffffff;
 }
-.shr-list-main-content >>> .k-grid-content-locked {
+.shr-list-main-content :deep(.k-grid-content-locked) {
   touch-action: auto;
   -webkit-overflow-scrolling: touch;
   overflow-y: auto;
   scrollbar-width: none;
 }
-.shr-list-main-content >>> .k-grid-content-locked::-webkit-scrollbar {
+.shr-list-main-content :deep(.k-grid-content-locked)::-webkit-scrollbar {
   display: none;
 }
-::v-deep .k-grid tbody tr.null-pat-id-row:not(.selected-row) td,
-::v-deep .k-grid-content-locked tbody tr.null-pat-id-row:not(.selected-row) td {
+:deep(.k-grid tbody tr.null-pat-id-row:not(.selected-row) td),
+:deep(.k-grid-content-locked tbody tr.null-pat-id-row:not(.selected-row) td),
+:deep(.k-grid tbody tr.null-pat-id-row:not(.selected-row) .k-table-td),
+:deep(.k-grid-content-locked tbody tr.null-pat-id-row:not(.selected-row) .k-table-td) {
   background-color: #fff3a0 !important;
 }
-::v-deep .k-grid tbody tr.hover-sync:not(.selected-row) td,
-::v-deep .k-grid-content-locked tbody tr.hover-sync:not(.selected-row) td {
-  background-color: #eef6ff !important;
+/* 原生 hover は無効化し、hover-sync（JS 直書き）のみ表示 */
+.main-content-area.kendo-grid-style-page .shr-list-direct-grid.k-grid :deep(.k-grid-content tr:not(.hover-sync):not(.selected-row):hover),
+.main-content-area.kendo-grid-style-page .shr-list-direct-grid.k-grid :deep(.k-grid-content-locked tr:not(.hover-sync):not(.selected-row):hover),
+.main-content-area.kendo-grid-style-page .shr-list-direct-grid.k-grid :deep(.k-grid-content tr:not(.hover-sync):not(.selected-row).k-hover),
+.main-content-area.kendo-grid-style-page .shr-list-direct-grid.k-grid :deep(.k-grid-content-locked tr:not(.hover-sync):not(.selected-row).k-hover) {
+  background-color: transparent !important;
 }
-::v-deep .k-grid tbody tr.null-pat-id-row.hover-sync:not(.selected-row) td,
-::v-deep
-  .k-grid-content-locked
-  tbody
-  tr.null-pat-id-row.hover-sync:not(.selected-row)
-  td {
-  background-color: #f7e671 !important;
+.main-content-area.kendo-grid-style-page .shr-list-direct-grid.k-grid :deep(.k-grid-content tr:not(.hover-sync):not(.selected-row):hover > td),
+.main-content-area.kendo-grid-style-page .shr-list-direct-grid.k-grid :deep(.k-grid-content-locked tr:not(.hover-sync):not(.selected-row):hover > td),
+.main-content-area.kendo-grid-style-page .shr-list-direct-grid.k-grid :deep(.k-grid-content tr:not(.hover-sync):not(.selected-row):hover > .k-table-td),
+.main-content-area.kendo-grid-style-page .shr-list-direct-grid.k-grid :deep(.k-grid-content-locked tr:not(.hover-sync):not(.selected-row):hover > .k-table-td),
+.main-content-area.kendo-grid-style-page .shr-list-direct-grid.k-grid :deep(.k-grid-content tr:not(.hover-sync):not(.selected-row).k-hover > td),
+.main-content-area.kendo-grid-style-page .shr-list-direct-grid.k-grid :deep(.k-grid-content-locked tr:not(.hover-sync):not(.selected-row).k-hover > td),
+.main-content-area.kendo-grid-style-page .shr-list-direct-grid.k-grid :deep(.k-grid-content tr:not(.hover-sync):not(.selected-row).k-hover > .k-table-td),
+.main-content-area.kendo-grid-style-page .shr-list-direct-grid.k-grid :deep(.k-grid-content-locked tr:not(.hover-sync):not(.selected-row).k-hover > .k-table-td) {
+  background-color: inherit !important;
 }
-::v-deep .k-grid tbody tr.selected-row td,
-::v-deep .k-grid-content-locked tbody tr.selected-row td {
+:deep(.k-grid tbody tr.selected-row td),
+:deep(.k-grid-content-locked tbody tr.selected-row td) {
   background-color: rgba(0, 123, 255, 0.25) !important;
 }
-::v-deep .k-grid tbody tr.null-pat-id-row.selected-row td,
-::v-deep .k-grid-content-locked tbody tr.null-pat-id-row.selected-row td {
+:deep(.k-grid tbody tr.null-pat-id-row.selected-row td),
+:deep(.k-grid-content-locked tbody tr.null-pat-id-row.selected-row td) {
   background-color: rgba(0, 123, 255, 0.25) !important;
 }
 .main-content-area {
@@ -585,8 +737,5 @@ export default {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-}
-::v-deep .k-grid {
-  height: 100% !important;
 }
 </style>

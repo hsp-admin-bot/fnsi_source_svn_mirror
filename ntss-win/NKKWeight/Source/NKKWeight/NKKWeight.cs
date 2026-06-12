@@ -163,19 +163,19 @@ namespace NKKWeightLib
         /// 装置情報取得URI
         /// </summary>
         //----------------------------------------------------------------------------------------------------
-        private readonly String GET_MST_DEVICE_SET_INFO_URI = "/api/weight_scale_app/mst_device_set_info_export/";
+        private readonly String GET_MST_DEVICE_SET_INFO_URI = "/api/weight_scale_app/mst_device_set_info_export";
         //----------------------------------------------------------------------------------------------------
         /// <summary>
         /// ベッド情報取得URI
         /// </summary>
         //----------------------------------------------------------------------------------------------------
-        private readonly String GET_MST_BED_INFO_URI = "/api/weight_scale_app/mst_bed_export/";
+        private readonly String GET_MST_BED_INFO_URI = "/api/weight_scale_app/mst_bed_export";
         //----------------------------------------------------------------------------------------------------
         /// <summary>
         /// 車いす情報取得URI
         /// </summary>
         //----------------------------------------------------------------------------------------------------
-        private readonly String GET_MST_WHEEL_CHAIR_INFO_URI = "/api/weight_scale_app/mst_wheel_chair_export/";
+        private readonly String GET_MST_WHEEL_CHAIR_INFO_URI = "/api/weight_scale_app/mst_wheel_chair_export";
         //----------------------------------------------------------------------------------------------------
 
         // #10833 2024.08.08 del 不要な処理削除 TDC米沢 start
@@ -397,11 +397,16 @@ namespace NKKWeightLib
                 NKKWebAccess.BaseUri = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "BaseUri", String.Empty).Trim(' ', '/');
                 // mod 2022-04-22 #6860 最後のスラッシュを除く Thach end
                 // 最新ファイルダウンロード先フォルダ
-                NKKWeightInformation.DownloadSourceFolder = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFolder", String.Empty).Trim();
+                // del #11660 単体アプリの自己アップデート修正 高 start
+                //NKKWeightInformation.DownloadSourceFolder = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFolder", String.Empty).Trim();
+                // del #11660 単体アプリの自己アップデート修正 高 end
 
                 // add オンプレでの自己アップデートに対応 孫 start
                 // 最新ファイル取得先ファイル名
-                NKKWeightInformation.DownloadFileName = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFileName", "NKKWeight.zip").Trim();
+                // del #11660 単体アプリの自己アップデート修正 高 start
+                //NKKWeightInformation.DownloadFileName = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFileName", "NKKWeight.zip").Trim();
+                //NKKWeightInformation.DownloadFileName = "NKKWeightUpdate.zip";
+                // del #11660 単体アプリの自己アップデート修正 高 end
                 // add オンプレでの自己アップデートに対応 孫 end
 
                 // 体重計番号

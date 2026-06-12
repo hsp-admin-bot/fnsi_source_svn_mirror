@@ -3,7 +3,7 @@
 <configuration scan="true">
     <include resource="org/springframework/boot/logging/logback/base.xml"/>
 
-    <property name="LOG_PATH" value="/var/lib/tomcat9/webapps/monitoring/" />
+    <property name="LOG_PATH" value="/opt/tomcat/webapps/monitoring/" />
     <property name="LOG_NAME" value="monitoring" />
     <property name="LOG_LEVEL" value="INFO" />
 

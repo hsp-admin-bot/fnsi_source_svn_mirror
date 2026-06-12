@@ -200,10 +200,10 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { DEVICE_EDGE_MANAGE_CLASS } from "@/constants/deviceEdgeManageDefine";
-import moment from "moment";
-import { EventBus } from "@/eventBus.js";
+import dayjs from "@/compat/date/dayjs";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -214,11 +214,10 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 import { DATE_FORMAT, dateFormat } from "@/functions/common/DateTimeUtils.js";
 import DateInput from "@/components/common/DateInput.vue";
-
-const $$ = require("jquery");
+import { triggerScopedDownload, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
-  props: {},
+
   components: {
     "common-calendar": commonCalender,
     "date-input": DateInput,
@@ -314,7 +313,7 @@ export default {
     planInfoView() {
       // 予約があれば「予約あり + 時刻」を表示
       if (this.planInfo.manageNo) {
-        const planDate = moment(this.planInfo.managePlanDate).format("YYYY/MM/DD HH:mm:ss");
+        const planDate = dayjs(this.planInfo.managePlanDate).format("YYYY/MM/DD HH:mm:ss");
         if (this.planInfo.responseStatus === 3) {
           return `予約あり ${planDate}`;
         } if (this.planInfo.responseStatus === 2) {
@@ -533,7 +532,7 @@ export default {
         // 取得日付未設定
         return;
       }
-      const targetDate = moment(this.targetLogFileDate);
+      const targetDate = dayjs(this.targetLogFileDate);
       // ログファイルダウンロード
       this.logFileDownload(targetDate.format("YYYYMMDD"));
     },
@@ -711,18 +710,11 @@ export default {
       const blob = new Blob([this.hexStringToArrayBuffer(downloadData)], {
         type: "application/zip"
       });
-      if (window.navigator.msSaveBlob) {
-        window.navigator.msSaveBlob(blob, fileName);
-      } else {
-        const downloadUrl = (window.URL || window.webkitURL).createObjectURL(
-          blob
-        );
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = fileName;
-        link.click();
-        (window.URL || window.webkitURL).revokeObjectURL(blob);
-      }
+      triggerScopedDownload({
+        blob,
+        filename: fileName,
+        root: this.$el || this
+      });
     },
     // 16進文字列をバイト配列に変換
     hexStringToArrayBuffer(hexStr) {
@@ -760,7 +752,7 @@ export default {
       return decimalNumber;
     },
     onFilePicker() {
-      $$("#hidden-file-picker")[0].click();
+      getScopedElementById("hidden-file-picker", this.$el || this)?.click?.();
     },
     onChangeFilePath() {
       // confファイルを指定
@@ -943,7 +935,7 @@ export default {
         this.targetDlDeZipFile.message = res.data.message;
         if (res.data.exists) {
           // ダウンロード対象有り
-          const fileDate = moment(res.data.modifiedDate).format(
+          const fileDate = dayjs(res.data.modifiedDate).format(
             "YYYY/MM/DD HH:mm:ss"
           );
           this.targetDlDeZipFile.fileDate = fileDate;
@@ -956,7 +948,7 @@ export default {
     // パンくずリストをクリックされた場合に呼び出される関数
     refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
-      if (this.selfScreenName === this.$router.currentRoute.name) {
+      if (this.selfScreenName === this.$route.name) {
         this.loadData();
       }
     },
@@ -974,7 +966,7 @@ export default {
   },
   created() {
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // add 性能改善メモリ不足 shan start
     EventBus.$off("refresh", this.refresh);
     // add 性能改善メモリ不足 shan end
@@ -990,7 +982,7 @@ export default {
     });
     EventBus.$emit("calcModalButtonAreaFrontHeader");
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
     EventBus.$emit("calcModalButtonAreaFrontHeader");
   }

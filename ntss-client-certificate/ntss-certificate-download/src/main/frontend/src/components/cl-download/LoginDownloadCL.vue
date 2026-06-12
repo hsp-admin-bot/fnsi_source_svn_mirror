@@ -8,6 +8,7 @@
         <!-- 題名 -->
         <p id="login-title">ログイン</p>
         <div class="panel">
+          <form @submit.prevent>
           <v-ons-row>
             <v-ons-col>
               <div class="input-row">
@@ -50,6 +51,7 @@
                 input-id="pwd"
                 type="password"
                 v-model="pwd"
+                autocomplete="current-password"
                 maxlength="40"
                 name="password"
                 ref="pwd"
@@ -106,6 +108,7 @@
               </v-ons-col>
             </div>
           </v-ons-row>
+          </form>
         </div>
       </div>
     </div>
@@ -328,7 +331,7 @@ ons-input {
   flex: 0 0 80%;
   max-width: 80%;
 }
-ons-input >>> .text-input {
+ons-input :deep(.text-input) {
   font-size: 1.7em;
   width: 100%;
 }
@@ -377,7 +380,7 @@ ons-input >>> .text-input {
   .login-page{
     font-size: 1.4em;
   }
-  ons-input >>> .text-input {
+  ons-input :deep(.text-input) {
     font-size: 1em;
   }
   .login-page .panel {

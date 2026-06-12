@@ -2,13 +2,13 @@ package jp.co.nikkiso.ntss.core.service.startStopLog;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.boot.web.context.WebServerApplicationContext;
-import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
+import org.springframework.boot.tomcat.TomcatWebServer;
+import org.springframework.boot.web.server.context.WebServerApplicationContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 
 @Component
 public class BootLogEventMonitor {

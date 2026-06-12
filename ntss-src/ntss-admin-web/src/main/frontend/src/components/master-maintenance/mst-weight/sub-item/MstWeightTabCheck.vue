@@ -2,7 +2,7 @@
  * 測定チェックマスタ編集tab画面
  */
 <template>
-  <div class="disp-item-list" :style="ntssListStyles" v-kendo-validator="kendoValidatorSetup">
+  <div class="disp-item-list" :style="ntssListStyles">
     <kendo-grid-toolbar class="k-grid-toolbar kendo-grid-toolbar-style">
       <div class="header-btn-area right" ref="headerBtnArea">
         <v-ons-button
@@ -13,80 +13,35 @@
           @click="addRow()"
         >追加</v-ons-button>
       </div>
-      <kendo-grid
+      <div
         ref="grid"
         id="check-grid"
-        :class="fontSizeSet"
-        :data-source="dispCheckSetting"
-        :editable="true"
-        :selectable="true"
-        :reorderable="false"
-        :height="kendoGridHeight"
-        :scrollable="true"
-        :beforeEdit="editStart"
-        :cellClose="editEnd"
-        :edit="addInputAssist"
-        @save="onSave"
-      >
-        <template v-for="(column, index) in dispColumns">
-          <kendo-grid-column
-            v-if="column.field === 'delBtn'"
-            :key="index"
-            :title="column.title"
-            :field="column.field"
-            :hidden="column.hidden"
-            :editable="column.editable"
-            :template="column.template"
-            :width="column.width"
-            :format="column.format"
-            :values="column.values"
-            :attributes="{ class: 'text-align: center;' }"
-            :command="{
-              name: 'customDelete',
-              text: '',
-              iconClass: 'fa fa-trash',
-              click: deleteRow
-            }"
-          ></kendo-grid-column>
-          <kendo-grid-column
-            v-else-if="column.field === 'modal'"
-            :key="index"
-            :title="column.title"
-            :field="column.field"
-            :hidden="column.hidden"
-            :editable="column.editable"
-            :template="column.template"
-            :width="column.width"
-            :format="column.format"
-            :values="column.values"
-            :attributes="{ class: 'btn3-kendo-normal' }"
-            :command="{ text: '詳細', click: showCheckEditModal }"
-          ></kendo-grid-column>
-          <kendo-grid-column
-            v-else
-            :key="index"
-            :title="column.title"
-            :field="column.field"
-            :hidden="column.hidden"
-            :editable="column.editable"
-            :template="column.template"
-            :width="column.width"
-            :format="column.format"
-            :values="column.values"
-          ></kendo-grid-column>
-        </template>
-      </kendo-grid>
+        :class="[fontSizeSet, 'ntss-kendo-grid-legacy', 'mst-weight-tab-check-direct-grid']"
+      ></div>
     </kendo-grid-toolbar>
   </div>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
-import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
+import { markRaw } from "@/compat/vue/runtime";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import kendo from "@progress/kendo-ui";
+import $ from "jquery";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { getLatestHeaderElement, getHeaderHeight, getFooterMenuClientHeight, queryScopedSelectorAll, getScopedElementById, getScopedNumericTextBox } from "@/functions/common/LayoutMeasureHelper";
+
+function installComponentJQuery() {
+  if (typeof window !== "undefined") {
+    window.$ = window.$ || $;
+    window.jQuery = window.jQuery || $;
+  }
+  if (typeof globalThis !== "undefined") {
+    globalThis.$ = globalThis.$ || $;
+    globalThis.jQuery = globalThis.jQuery || $;
+  }
+}
 
 export default {
-  mixins: [MasterMaintenanceMixin],
   data() {
     return {
       kendoValidatorSetup: {
@@ -101,7 +56,12 @@ export default {
       isAndroid: false,
       isIOS: false,
       savedScrollTop: 0,
-      savedScrollLeft: 0
+      savedScrollLeft: 0,
+      directGridWidget: null,
+      directGridDataSource: null,
+      directGridColumnSignature: "",
+      directGridLayoutRafId: null,
+      directGridPaintRafId: null
     };
   },
   computed: {
@@ -139,9 +99,217 @@ export default {
     },
     getGridData() {
       return this.gridData;
+    },
+    fontSizeSet() {
+      const names = ["small", "medium", "large", "x-large"];
+      return `font-size-set-${names[this.getFontSize] || names[0]}`;
     }
   },
   methods: {
+    getWeightTabScopeRoot() {
+      return this.$el || this.$refs.grid || null;
+    },
+    getGridRootEl() {
+      return this.$refs.grid || null;
+    },
+    getGridWidget() {
+      return this.directGridWidget;
+    },
+    getGridContentEl() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-content") || null;
+    },
+    getGridHeaderEl() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-header") || null;
+    },
+    getGridHeaderWrapEl() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-header-wrap") || null;
+    },
+    getGridTbodyEl() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-content tbody") || null;
+    },
+    getGridTableEl() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-content table") || null;
+    },
+    getGridScrollPosition() {
+      const content = this.getGridContentEl();
+      return {
+        top: content?.scrollTop || 0,
+        left: content?.scrollLeft || 0
+      };
+    },
+    setGridScrollPosition(position = {}) {
+      const content = this.getGridContentEl();
+      if (!content) {
+        return;
+      }
+      if (Number.isFinite(position.top)) {
+        content.scrollTop = position.top;
+      }
+      if (Number.isFinite(position.left)) {
+        content.scrollLeft = position.left;
+      }
+      try {
+        $(content).trigger("scroll");
+      } catch (_error) {
+        // noop
+      }
+    },
+    getDirectGridColumnSignature() {
+      return (this.dispColumns || []).map(column => [
+        column.field,
+        column.title,
+        column.hidden ? 1 : 0,
+        column.editable ? 1 : 0,
+        column.width || "",
+        column.format || ""
+      ].join(":"))
+        .join("|");
+    },
+    buildDirectGridColumns() {
+      return (this.dispColumns || []).map(column => {
+        const gridColumn = { ...column };
+        if (gridColumn.field === "delBtn") {
+          gridColumn.attributes = { class: "text-align: center;" };
+          gridColumn.command = {
+            name: "customDelete",
+            text: "",
+            iconClass: "fa fa-trash",
+            click: event => this.deleteRow(event)
+          };
+        } else if (gridColumn.field === "modal") {
+          gridColumn.attributes = { class: "btn3-kendo-normal ntss-check-grid-modal-command" };
+          gridColumn.command = {
+            text: "詳細",
+            click: event => this.showCheckEditModal(event)
+          };
+        }
+        return gridColumn;
+      });
+    },
+    initDirectGridIfReady() {
+      const root = this.getGridRootEl();
+      if (!root || !this.dispColumns?.length) {
+        return;
+      }
+      if (this.directGridWidget) {
+        this.applyDirectGridColumnsContract();
+        this.refreshDirectGridDataFromStore(false);
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+      installComponentJQuery();
+      this.directGridDataSource = markRaw(new kendo.data.DataSource({
+        data: this.dispCheckSetting || []
+      }));
+      $(root).empty();
+      $(root).kendoGrid({
+        dataSource: this.directGridDataSource,
+        editable: true,
+        selectable: true,
+        reorderable: false,
+        height: this.kendoGridHeight,
+        scrollable: true,
+        beforeEdit: event => this.editStart(event),
+        cellClose: event => this.editEnd(event),
+        edit: event => this.addInputAssist(event),
+        save: event => this.onSave(event),
+        columns: this.buildDirectGridColumns(),
+        dataBound: () => {
+          this.applyDirectGridStyleContract();
+          this.scheduleDirectGridVisualRefresh();
+        }
+      });
+      this.directGridWidget = markRaw($(root).data("kendoGrid"));
+      this.directGridColumnSignature = this.getDirectGridColumnSignature();
+      this.installDirectGridFacade();
+      this.scheduleDirectGridLayoutContract();
+    },
+    destroyDirectGrid() {
+      if (this.directGridWidget) {
+        try {
+          this.directGridWidget.destroy();
+        } catch (_error) {
+          // noop
+        }
+      }
+      const root = this.getGridRootEl();
+      if (root) {
+        $(root).empty();
+      }
+      this.directGridWidget = null;
+      this.directGridDataSource = null;
+      this.directGridColumnSignature = "";
+    },
+    installDirectGridFacade() {
+      const root = this.getGridRootEl();
+      if (!root) {
+        return;
+      }
+      root.kendoWidget = () => this.directGridWidget;
+      root.gridWidget = () => this.directGridWidget;
+      root.gridContentEl = () => this.getGridContentEl();
+      root.refreshGrid = () => this.refreshDirectGridDataFromStore(false);
+    },
+    applyDirectGridColumnsContract() {
+      const grid = this.directGridWidget;
+      if (!grid) {
+        return;
+      }
+      const nextSignature = this.getDirectGridColumnSignature();
+      if (nextSignature !== this.directGridColumnSignature) {
+        grid.setOptions({ columns: this.buildDirectGridColumns() });
+        this.directGridColumnSignature = nextSignature;
+      }
+    },
+    refreshDirectGridDataFromStore(restoreScroll = true) {
+      const grid = this.directGridWidget;
+      if (!grid?.dataSource) {
+        return;
+      }
+      const position = this.getGridScrollPosition();
+      grid.dataSource.data(this.dispCheckSetting || []);
+      this.$nextTick(() => {
+        this.applyDirectGridStyleContract();
+        if (restoreScroll) {
+          this.setGridScrollPosition(position);
+        }
+      });
+    },
+    applyDirectGridStyleContract() {
+      const root = this.getGridRootEl();
+      if (!root) {
+        return;
+      }
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-editable", "k-display-block");
+      root.querySelectorAll(".k-grid-header th, .k-grid-header .k-table-th").forEach(th => th.classList.add("k-header"));
+      root.querySelectorAll(".k-grid-content tbody").forEach(tbody => {
+        Array.from(tbody.rows || []).forEach((row, index) => {
+          row.classList.add("k-master-row");
+          row.classList.toggle("k-alt", index % 2 === 1);
+        });
+      });
+      root.querySelectorAll(".k-grid-content tbody td").forEach(td => td.classList.add("k-td", "k-table-td"));
+      this.changeHeaderAndContentWidth();
+    },
+    scheduleDirectGridLayoutContract() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+      }
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.directGridLayoutRafId = null;
+        const grid = this.directGridWidget;
+        if (grid) {
+          grid.setOptions({ height: this.kendoGridHeight });
+          grid.resize?.(true);
+        }
+        this.applyDirectGridStyleContract();
+        this.directGridLayoutRafId = requestAnimationFrame(() => {
+          this.directGridLayoutRafId = null;
+          this.applyDirectGridStyleContract();
+          this.setGridScrollPosition({ top: this.savedScrollTop, left: this.savedScrollLeft });
+        });
+      });
+    },
     ...mapActions("master-maintenance", [
       "findRecordList",
       "setMasterRecordList",
@@ -165,18 +333,20 @@ export default {
     // 測定値チェックグリッドクリック時
     showCheckEditModal(e) {
       e.preventDefault();
-      const row = this.$refs.grid.kendoWidget();
-      const selectedRowItem = row.dataItem(e.currentTarget.closest("tr"));
+      const row = this.getGridWidget();
+      const selectedRowItem = row?.dataItem?.(e.currentTarget.closest("tr"));
 
+      if (!selectedRowItem) {
+        return;
+      }
       // ストアに保存する。
-      this.setCurrentRowData(selectedRowItem.toJSON());
+      this.setCurrentRowData(selectedRowItem.toJSON?.() || selectedRowItem);
       // 測定チェック設定画面表示
       this.showModal();
     },
     // 測定値チェック新規登録
     addRow() {
-      const gridElement = this.$refs.grid.$el;
-      this.savedScrollTop = gridElement.querySelector('.k-grid-content').scrollTop;
+      this.savedScrollTop = this.getGridContentEl()?.scrollTop || 0;
       this.setCurrentNewRowData();
       // 測定チェック設定画面表示
       this.showModal();
@@ -215,22 +385,25 @@ export default {
       // カレントデータ更新
       this.setCurrentData(currentData);
 
-      // 状態に合わせて背景色を変更
-      this.editBackgroundColor();
       // DB登録時に使用されるストアの情報を更新
       this.applyCheckConfigEdit();
+      this.refreshDirectGridDataFromStore(true);
+      // 状態に合わせて背景色を変更
+      this.editBackgroundColor();
     },
     /**
      * 行を削除する
      */
     deleteRow(ev) {
-      const gridElement = this.$refs.grid.$el;
-      this.savedScrollTop = gridElement.querySelector('.k-grid-content').scrollTop;
-      this.savedScrollLeft = gridElement.querySelector('.k-grid-content').scrollLeft;
+      this.savedScrollTop = this.getGridContentEl()?.scrollTop || 0;
+      this.savedScrollLeft = this.getGridContentEl()?.scrollLeft || 0;
       // ボタンを押した行のデータを取得する
       ev.preventDefault();
-      const row = this.$refs.grid.kendoWidget();
-      const rowData = row.dataItem(ev.currentTarget.closest("tr"));
+      const row = this.getGridWidget();
+      const rowData = row?.dataItem?.(ev.currentTarget.closest("tr"));
+      if (!rowData) {
+        return;
+      }
       // 選択された行のデータのデータに付与しているidを取得
       const selectedDataId = rowData.ctl_no;
 
@@ -244,6 +417,7 @@ export default {
 
       // カレントデータ更新
       this.setCurrentData(newCurrentData);
+      this.refreshDirectGridDataFromStore(true);
 
       // DB登録時に使用されるストアの情報を更新
       this.applyCheckConfigEdit();
@@ -252,45 +426,54 @@ export default {
       // 現在の設定値を文字列化して登録用データ作成
       this.editCheckContent = JSON.stringify(this.getSettingDataCheck);
     },
+    scheduleDirectGridVisualRefresh() {
+      if (this.directGridPaintRafId != null) {
+        cancelAnimationFrame(this.directGridPaintRafId);
+      }
+      this.directGridPaintRafId = requestAnimationFrame(() => {
+        this.directGridPaintRafId = null;
+        if (this.getIsGridEditing) {
+          return;
+        }
+        this.editBackgroundColor();
+      });
+    },
     editBackgroundColor() {
       this.$nextTick(() => {
-        let gridHeader = this.$refs.grid.$el.firstChild;
-        if (gridHeader.classList === undefined) {
-          gridHeader = this.$refs.grid.$el.firstElementChild;
-        }
+        const gridHeader = this.getGridHeaderEl() || this.getGridRootEl()?.firstElementChild;
         gridHeader?.classList?.add("master-grid-header");
         //add 測定時チェックタブの表で列幅変更できないため、内容全文が確認できない 鞠 4730 start
         this.changeHeaderAndContentWidth()
         //add 測定時チェックタブの表で列幅変更できないため、内容全文が確認できない 鞠 4730 end
-        const gridElement = this.$refs.grid.$el;
-        gridElement.querySelector('.k-grid-content').scrollTop = this.savedScrollTop;
-        gridElement.querySelector('.k-grid-content').scrollLeft = this.savedScrollLeft;
+        const gridContent = this.getGridContentEl();
+        if (gridContent) {
+          gridContent.scrollTop = this.savedScrollTop;
+          gridContent.scrollLeft = this.savedScrollLeft;
+        }
       });
     },
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       if (!this.getIsGridEditing) {
         const wh = this.windowHeight;
-        const hh = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .pop().offsetHeight;
+        const hh = getHeaderHeight(getLatestHeaderElement(this.$el || document), 0);
         const th = Array.prototype.slice
-          .call(document.getElementsByClassName("tab_item"))
-          .shift().offsetHeight;
+          .call(queryScopedSelectorAll('.tab_item', this.getWeightTabScopeRoot()))
+          .shift()?.offsetHeight || 0;
         const fmh =
           this.isDispMenu === 1
-            ? document.getElementById("footer-menu").offsetHeight
+            ? getFooterMenuClientHeight(this.$el || null)
             : 0;
-        const gfh = document.getElementById("detail-footer").offsetHeight;
+        const gfh = getScopedElementById('detail-footer', this.getWeightTabScopeRoot())?.offsetHeight || 0;
         const headerBtnAreaHeight = this.$refs.headerBtnArea.offsetHeight;
 
         // kendoGridの高さ設定(ウィンドウ高さ－ヘッダー高さ－タブ高さ－追加ボタンエリア高さ－メニューバー高さ－確定/キャンセルボタンエリア高さ)
         this.kendoGridHeight = wh - hh - th - headerBtnAreaHeight - fmh - gfh;
 
         // kendoGridのheader行高とbody行高を取得(ただし、body行高が行毎に可変の場合は対応できない。あくまで目安高。)
-        const firstTh = this.$el.querySelector('.k-grid-header tr');
+        const firstTh = this.getGridHeaderEl()?.querySelector('tr');
         const thHeight = firstTh ? firstTh.offsetHeight : 0;
-        const firstTd = this.$el.querySelector('.k-grid-content tr');
+        const firstTd = this.getGridTbodyEl()?.querySelector('tr');
         const tdHeight = firstTd ? firstTd.offsetHeight : 0;
         // kendoGrid最低5行分の高さ(header高さ＋5行分の高さ＋横スクロールの高さ目安17px)
         const gridMinHeight = thHeight + (tdHeight * 5) + 17;
@@ -304,8 +487,11 @@ export default {
     },
     //add 測定時チェックタブの表で列幅変更できないため、内容全文が確認できない 鞠 4730 start
     changeHeaderAndContentWidth() {
-      let colHeader = document.getElementsByClassName("k-grid-header-wrap k-auto-scrollable")[0].children[0].children[0]
-      let colContent = document.getElementsByClassName("k-selectable")[0].children[0]
+      const colHeader = this.getGridHeaderWrapEl()?.querySelector('table colgroup');
+      const colContent = this.getGridTableEl()?.querySelector('colgroup');
+      if (!colHeader || !colContent) {
+        return;
+      }
       for (let i = 0; i < colContent.children.length; i++) {
         switch (parseInt(this.getFontSize)) {
           case 0 :
@@ -385,9 +571,7 @@ export default {
     },
     //add 測定時チェックタブの表で列幅変更できないため、内容全文が確認できない 鞠 4730 end
     async editStart() {
-      if (this.isAndroid) {
-        await this.setIsGridEditing(true);
-      }
+      await this.setIsGridEditing(true);
     },
     editEnd() {
       this.setIsGridEditing(false);
@@ -395,8 +579,9 @@ export default {
     addInputAssist() {
       // iOS/PWA環境でスピナーをタップすると編集が終了してしまう現象の対策
       if (this.isIOS) {
-        if (document.getElementsByClassName("k-numerictextbox").length !== 0) {
-          let spinnerObj = document.getElementsByClassName("k-numerictextbox")[0].getElementsByClassName("k-select")[0];
+        const numericTextBox = getScopedNumericTextBox(this.getWeightTabScopeRoot());
+        if (numericTextBox) {
+          let spinnerObj = numericTextBox.getElementsByClassName("k-select")[0];
           // 編集が終了するとオブジェクトが削除されるため、removeEvent処理は不要
           spinnerObj.ontouchend = event => event.stopPropagation();
         }
@@ -457,29 +642,48 @@ export default {
     applyCheckConfigEdit() {
       this.createEditedRecord();
       this.updateEditRecord("checkContent", this.editCheckContent);
+      this.$nextTick(() => {
+        this.refreshDirectGridDataFromStore(true);
+      });
     },
     updateWidget() {
       this.$nextTick(() => {
         this.calculateGridHeight();
-        this.$refs.grid.updateWidget();
-        this.editBackgroundColor();
+        this.initDirectGridIfReady();
+        this.refreshDirectGridDataFromStore(true);
+        this.scheduleDirectGridLayoutContract();
+        this.scheduleDirectGridVisualRefresh();
       });
     }
   },
   watch: {
     windowHeight() {
       this.calculateGridHeight();
+      this.scheduleDirectGridLayoutContract();
     },
     isDispMenu() {
       this.calculateGridHeight();
+      this.scheduleDirectGridLayoutContract();
     },
     getFontSize() {
       this.calculateGridHeight();
+      this.scheduleDirectGridLayoutContract();
+    },
+    dispColumns() {
+      this.$nextTick(() => {
+        this.initDirectGridIfReady();
+        this.scheduleDirectGridLayoutContract();
+      });
+    },
+    getSettingDataCheck() {
+      this.$nextTick(() => {
+        this.refreshDirectGridDataFromStore(true);
+      });
     }
   },
   created() {
     // 端末判別
-    const ua = navigator.userAgent;
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
     if (ua.match(/Android/)) {
       this.isAndroid = true;
     } else if (ua.match(/iPhone|iPad/)) {
@@ -494,18 +698,29 @@ export default {
     // Gridの高さを調整する
     this.$nextTick(() => {
       this.calculateGridHeight();
+      this.initDirectGridIfReady();
+      this.scheduleDirectGridLayoutContract();
     });
   },
   updated() {
     // Storeの更新等で画面が再描画された場合に背景色を変更
-    this.editBackgroundColor();
+    this.scheduleDirectGridVisualRefresh();
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("applyCheckConfigEdit", this.applyCheckConfigEdit);
+    if (this.directGridLayoutRafId != null) {
+      cancelAnimationFrame(this.directGridLayoutRafId);
+      this.directGridLayoutRafId = null;
+    }
+    if (this.directGridPaintRafId != null) {
+      cancelAnimationFrame(this.directGridPaintRafId);
+      this.directGridPaintRafId = null;
+    }
+    this.destroyDirectGrid();
   },
   // add 性能改善メモリ不足 shan end
-  destroyed() {
+  unmounted() {
     this.clearData();
 
   }
@@ -515,6 +730,7 @@ export default {
 /* グリッドのスタイル */
 #check-grid {
   margin: 0; /* ライブラリのスタイル打消し */
+  width: 100%;
 }
 .disp-item-list {
   border-collapse: collapse;
@@ -545,7 +761,36 @@ export default {
   line-height: 2em;
   width: auto;
 }
-.k-grid-toolbar {
+.kendo-grid-toolbar-style {
   padding: 0; /* ライブラリのスタイル打消し */
 }
+/* 測定チェック Grid: 「詳細」command ボタンを横並び（狭い列／テンプレ併存時の縦積みを抑止） */
+:deep(#check-grid .k-command-cell) {
+  white-space: nowrap;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+:deep(#check-grid .k-command-cell .k-button) {
+  flex: 0 0 auto;
+}
+
+/* Vue2 kendo-grid wrapper style contract for this direct jq screen. */
+.kendo-grid-toolbar-style :deep(.toolbar-btn),
+.kendo-grid-toolbar-style :deep(.toolbar-btn *) {
+  font-family: inherit;
+}
+.kendo-grid-toolbar-style :deep(.k-grid-header th),
+.kendo-grid-toolbar-style :deep(.k-grid-header .k-table-th),
+.kendo-grid-toolbar-style :deep(.k-grid-header .k-link),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked th),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked .k-table-th),
+.kendo-grid-toolbar-style :deep(.k-grid-header-locked .k-link) {
+  border-right-color: currentColor;
+  cursor: default;
+}
+
 </style>

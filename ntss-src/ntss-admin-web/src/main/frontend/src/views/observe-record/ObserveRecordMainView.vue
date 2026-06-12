@@ -4,22 +4,27 @@
 <template>
   <ntss-layout>
     <!-- add FNSI-顯示調整 関 start -->
-    <header-component slot="header-content" />
+    <template #header-content>
+      <header-component />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start -->
     <!-- <bread-crumbs-component
-      slot="bread-crumbs-content"
+      #bread-crumbs-content
       :no-split="true"
       :history-key="historyKey"
       @refresh="refresh"
     /> -->
-    <bread-crumbs-component
-      slot="bread-crumbs-content"
-      :no-split="true"
-      :history-key="historyKey"
-    />
+    <template #bread-crumbs-content>
+      <bread-crumbs-component
+        :no-split="true"
+        :history-key="historyKey"
+      />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng end -->
     <!-- add FNSI-顯示調整 関 start -->
-    <main-component slot='main-content' ref='mainComponent' :history-key="historyKey" />
+    <template #main-content>
+      <main-component ref="mainComponent" :history-key="historyKey" />
+    </template>
   </ntss-layout>
 </template>
 
@@ -34,7 +39,7 @@ import BreadCrumbsComponent from "@/components/BreadCrumbsComponent";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import {messageFormat} from "@/functions/common/MessageFormat";
 import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
-import {mapGetters, mapMutations} from "vuex";
+import {mapGetters, mapMutations} from "@/compat/vue/vuex";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc end
 // add FNSI-顯示調整 関 start
 export default {

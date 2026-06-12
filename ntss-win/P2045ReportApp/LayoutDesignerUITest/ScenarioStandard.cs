@@ -15,6 +15,7 @@
 //******************************************************************************
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OpenQA.Selenium.Appium;
 using OpenQA.Selenium.Appium.Windows;
 using System.Threading;
 using System;
@@ -24,8 +25,8 @@ namespace LayoutDesignerUITest
     [TestClass]
     public class ScenarioStandard : DesignerSession
     {
-        private static WindowsElement header;
-        private static WindowsElement calculatorResult;
+        private static AppiumElement header;
+        private static AppiumElement calculatorResult;
 
         [TestMethod]
         public void Addition()
@@ -35,10 +36,10 @@ namespace LayoutDesignerUITest
             //session.FindElementByName("プラス").Click();
             //session.FindElementByName("7").Click();
             //session.FindElementByName("等号").Click();
-            session.FindElementByAccessibilityId("txtLoginID").SendKeys("tdc1");
-            session.FindElementByAccessibilityId("txtPassword").SendKeys("tdc1");
-            session.FindElementByAccessibilityId("btnSignIn").Click();
-            session.FindElementByAccessibilityId("7").Click();
+            session.FindElement(MobileBy.AccessibilityId("txtLoginID")).SendKeys("tdc1");
+            session.FindElement(MobileBy.AccessibilityId("txtPassword")).SendKeys("tdc1");
+            session.FindElement(MobileBy.AccessibilityId("btnSignIn")).Click();
+            session.FindElement(MobileBy.AccessibilityId("7")).Click();
             //Assert.AreEqual("8", GetCalculatorResultText());
 
         }

@@ -1,24 +1,27 @@
 <template>
   <ntss-layout>
-    <header-component slot="header-content" />
+    <template #header-content>
+      <header-component />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start -->
     <!-- <bread-crumbs-component
-      slot="bread-crumbs-content"
+      #bread-crumbs-content
       :no-split="true"
       :history-key="historyKey"
       @refresh="refresh"
     /> -->
-    <bread-crumbs-component
-      slot="bread-crumbs-content"
-      :no-split="true"
-      :history-key="historyKey"
-    />
+    <template #bread-crumbs-content>
+      <bread-crumbs-component
+        :no-split="true"
+        :history-key="historyKey"
+      />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng end -->
-    <main-component
-      slot="main-content"
-      ref="mainComponent"
-      :history-key="historyKey"
-    />
+    <template #main-content>
+      <main-component ref="mainComponent"
+        :history-key="historyKey"
+      />
+    </template>
   </ntss-layout>
 </template>
 

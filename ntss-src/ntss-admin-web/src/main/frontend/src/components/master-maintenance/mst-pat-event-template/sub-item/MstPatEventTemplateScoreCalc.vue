@@ -69,13 +69,14 @@
   </div>
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import BigEval from "@/functions/BigEvalEx";
 import CommonTextArea from "@/components/common/CommonTextArea";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 export default {
   name: "MstPatEventTemplateText",
@@ -119,15 +120,23 @@ export default {
       },
     }
   },
-  watch: {},
-  created() {},
+
   mounted() {
     this.$nextTick(() => {
-      const elements = document.querySelectorAll('[id^="com-textarea-event-score-calc"]');
+      const elements = this.queryTemplateSelectorAll('[id^="com-textarea-event-score-calc"]');
       this.resizeTextarea(elements);
     });
   },
   methods: {
+    getTemplateElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || this);
+    },
+    queryTemplateSelector(selector) {
+      return queryScopedSelector(selector, this.$el || this);
+    },
+    queryTemplateSelectorAll(selector) {
+      return queryScopedSelectorAll(selector, this.$el || this);
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("mst-pat-event-template", [
       "setInputParams",
@@ -167,11 +176,11 @@ export default {
       return flag;
     },
     setTextareaCss (e) {
-      if(e.target.value && document.getElementsByClassName("textarea" +this.propsIndex)[0])
-      document.getElementsByClassName("textarea" +this.propsIndex)[0].classList.remove("input-invalid");
+      if(e.target.value && this.getTemplateElementsByClassName("textarea" +this.propsIndex)[0])
+      this.getTemplateElementsByClassName("textarea" +this.propsIndex)[0].classList.remove("input-invalid");
     },
     changecolor(className,inIt){
-      for(let item of document.getElementsByClassName(className)){
+      for(let item of this.getTemplateElementsByClassName(className)){
         if(inIt){
           item.firstElementChild.style.backgroundColor = '#F7F7F7';
         }else if(item.value === ""){
@@ -338,10 +347,10 @@ export default {
         return true;
       }
       if(!validationResult.calcValid || !validationResult.calcIsEval) {
-        document.getElementsByClassName("textarea"+this.propsIndex)[0]?.classList?.add("input-invalid");
+        this.getTemplateElementsByClassName("textarea"+this.propsIndex)[0]?.classList?.add("input-invalid");
       }
       if(!validationResult.fieldNameValid) {
-        document.getElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
+        this.getTemplateElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
       }
       // メッセージ組み立て
       // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
@@ -448,11 +457,11 @@ export default {
 .pat-event-input {
   width: 100%;
 }
-.input-required >>> textarea{
+.input-required :deep(textarea){
   color: black;
   background-color: #ffff99 !important;
 }
-.input-invalid >>> textarea{
+.input-invalid :deep(textarea){
   color: black;
   background-color: rgba(255, 0, 0, 1) !important;
 }
@@ -470,7 +479,7 @@ export default {
   font-size: 1em;
   height: 100%;
 }
-div >>> .textarea {
+div :deep(.textarea) {
   box-sizing: border-box;
   width: 100%;
   height: 170px;
@@ -480,7 +489,7 @@ div >>> .textarea {
 /*
 add FNSI-改修内容計算項目選択レイアウトを変更 任 start
 */
-/* div >>> .select-input{
+/* div :deep(.select-input){
   height: 177px;
 } */
 /*

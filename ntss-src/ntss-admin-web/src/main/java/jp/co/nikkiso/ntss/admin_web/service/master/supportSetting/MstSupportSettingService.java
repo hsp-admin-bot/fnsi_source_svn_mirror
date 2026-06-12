@@ -43,7 +43,9 @@ public interface MstSupportSettingService {
    *
    * @return 初期レンジ.
    */
-  Map<String,Object> selectRange(String cd);
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 start
+  Map<String,Object> selectRange(String cd, String facilityCd);
+  // #11205 -ペンテスト2－4認可制御の不備  mod 20260416 end
 
   /**
    * 薬剤の取得.
@@ -115,5 +117,9 @@ public interface MstSupportSettingService {
    * @return
    */
   List<List<String>> getAvgInvestData(List<String> avgInvestParameter);
-  /* add by zhouyingying  2023-02-02 [CodeOptimization] end */
+    /* add by zhouyingying  2023-02-02 [CodeOptimization] end */
+
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    MntMedicineSupport selectMntMedicineSupportByCd(String cd);
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
 }

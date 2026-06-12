@@ -8,7 +8,7 @@
       v-if="allTabooAllergyVisible"
       cancelable
       :class="[fontSizeSet, 'vons-popover']"
-      :visible.sync="allTabooAllergyVisible"
+      v-model:visible="allTabooAllergyVisible"
       :target="$refs.showAllTabooAllergy"
       :direction="
         popoverDisplayDirection(
@@ -44,7 +44,10 @@
         :class="classObjectItem(json)"
       >
         <table class="card-table">
-          {{
+          <tbody>
+          <tr class="card-index-row">
+            <td colspan="3" class="item-data">
+              {{
             index + 1
           }}
           <!-- mod 入力必須項目のチェックがされない / 入力欄の色の不正 5795 関 start -->
@@ -57,6 +60,8 @@
           </button>
           <!-- mod 入力必須項目のチェックがされない / 入力欄の色の不正 5795 関 end -->
           <br />
+            </td>
+          </tr>
           <tr>
             <td></td>
             <td class="item-data" colspan="2">
@@ -104,31 +109,36 @@
               />
             </td>
             <td class="item-data">
-              <v-ons-button
-                :ref="'selectMst' + index"
-                class="common-style-select-button btn3-normal pat-btn-margin-right"
-                @click="selectContent(index)"
-                :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-              >
-                選択
-              </v-ons-button>
-              <v-ons-button
-                class="common-style-select-button btn2-cancel pat-btn-margin-right"
-                :disabled="isEmptyContent(json) || !getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-                style="width: 4em !important;"
-                @click="clearCd(json)"
-              >
-                クリア
-              </v-ons-button>
-              <v-ons-button
-                v-show="isClassTabooAllergy(json)"
-                :ref="'showDetail' + index"
-                class="common-style-select-button btn3-normal"
-                :disabled="isEmptyContent(json) || getIsOtherFacility"
-                @click="showTabooAllergyDetail(index)"
-              >
-                詳細
-              </v-ons-button>
+              <span class="taboo-allergy-master-actions">
+                <common-master-selector
+                  :masterType="MasterType.TABOO_ALLERGY_PAT_INFO"
+                  :facilityCd="getIsOtherFacility ? (getOtherFacilityCd ?? getFacilityCd) : getFacilityCd"
+                  :initItem="{ value: getPatDataJsonArray(json, 'taboo_allergy_cd').initValue }"
+                  :editItem="{ value: getPatDataJsonArray(json, 'taboo_allergy_cd').editValue }"
+                  :btnName="'選択'"
+                  :isVisible="false"
+                  :btnClass="'common-style-select-button btn3-normal pat-btn-margin-right'"
+                  :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+                  @popover-return="onTabooAllergyMasterReturn($event, json)"
+                />
+                <v-ons-button
+                  class="common-style-select-button btn2-cancel pat-btn-margin-right"
+                  :disabled="isEmptyContent(json) || !getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+                  style="width: 4em !important;"
+                  @click="clearCd(json)"
+                >
+                  クリア
+                </v-ons-button>
+                <v-ons-button
+                  v-show="isClassTabooAllergy(json)"
+                  :ref="'showDetail' + index"
+                  class="common-style-select-button btn3-normal"
+                  :disabled="isEmptyContent(json) || getIsOtherFacility"
+                  @click="showTabooAllergyDetail(index)"
+                >
+                  詳細
+                </v-ons-button>
+              </span>
             </td>
           </tr>
           <tr>
@@ -144,22 +154,18 @@
               />
             </td>
           </tr>
+          
+        
+          </tbody>
         </table>
       </div>
     </draggable>
-    <!-- 禁忌・アレルギー選択ポップオーバー -->
-    <pop-over
-      v-bind="popoverData"
-      :target-position-element="popoverTargetElementMst"
-      @popover-return="setTabooAllergy($event.value, $event.text)"
-      @popover-close="closePopover(popoverData)"
-    />
     <!-- 禁忌・アレルギー内容詳細ポップオーバー -->
     <v-ons-popover
       v-if="tabooAllergyDetailVisible"
       cancelable
       :class="[fontSizeSet, 'vons-popover']"
-      :visible.sync="tabooAllergyDetailVisible"
+      v-model:visible="tabooAllergyDetailVisible"
       :target="popoverTargetElementDetail"
       :direction="
         popoverDisplayDirection(
@@ -184,11 +190,11 @@
 import { getAuthorized, deepCopy } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 import { ApiHelper } from "@/apis/AxiosHelper";
-import _ from "underscore";
+import _ from "@/compat/collections/lodash";
 import { deduplicateObjects } from "@/functions/common/CommonFunctions";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
 import tabooAllergyDetail from "@/components/pat-info/taboo-allergy-card/TabooAllergyDetail";
-import { mapGetters, mapActions } from "vuex"; //施設コード取得のために追加
+import { mapGetters, mapActions } from "@/compat/vue/vuex"; //施設コード取得のために追加
 import PopoverMixin from "@/components/PopoverMixin";
 // add 編集権限の適用 じょはく start
 // del #10359 編集権限の動作不正 dengshen start
@@ -201,6 +207,9 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 import { PAT_HEADER } from "@/components/pat-info/PatInfoConfig.js"
+import { getViewportHeight, getViewportWidth } from "@/functions/common/LayoutMeasureHelper";
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 
 // 禁忌・アレルギー区分定数
 const classTaboo = "1"; // 禁忌
@@ -222,7 +231,8 @@ const INCLUDE_DELETED = "【削除済み含む】"
 export default {
   name: "TabooAllergyCard",
   components: {
-    "taboo-allergy-detail": tabooAllergyDetail
+    "taboo-allergy-detail": tabooAllergyDetail,
+    "common-master-selector": commonMasterSelector
   },
 
   mixins: [baseCardContent, PopoverMixin],
@@ -248,8 +258,7 @@ export default {
       mstDialyzer: null,
       sysGenericMedicine: null,
 
-      // マスタ選択ポップオーバー用オブジェクト
-      popoverData: {},
+      MasterType,
 
       // 選択した要素番号を保持
       selectedIndex: null,
@@ -265,12 +274,12 @@ export default {
       /**
        * @description 画面の高さ(レスポンシブ対応)
        */
-      windowHeight: window.innerHeight,
+      windowHeight: getViewportHeight(),
 
       /**
        * @description 画面の幅(レスポンシブ対応)
        */
-      windowWidth: window.innerWidth,
+      windowWidth: getViewportWidth(),
 
     };
   },
@@ -324,11 +333,6 @@ export default {
       }
       return this.jsonArray[this.selectedIndex];
     },
-    // マスタ選択ポップオーバーの表示位置とする対象コンポーネント
-    popoverTargetElementMst() {
-      return this.getPopoverTargetElement("selectMst");
-    },
-
     // 禁忌・アレルギー詳細ポップオーバーの表示位置とする対象コンポーネント
     popoverTargetElementDetail() {
       return this.getPopoverTargetElement("showDetail");
@@ -336,50 +340,63 @@ export default {
 
     // 選択された禁忌・アレルギー詳細
     selectedTabooAllergyDetail() {
-      if (!_.has(this.selectedTabooAllergyInfo, "taboo_allergy_cd")) {
-        return;
+      if (
+        !this.selectedTabooAllergyInfo ||
+        !Object.prototype.hasOwnProperty.call(this.selectedTabooAllergyInfo, "taboo_allergy_cd")
+      ) {
+        return [];
       }
 
-      // 選択された禁忌・アレルギーのマスタコードを取得
-      const targetCd = this.selectedTabooAllergyInfo.taboo_allergy_cd.editValue;
+      // compose 共通の key_cd と DB 側 tabooAllergyCd の型差（文字列／数値）を吸収
+      const rawCd = this.selectedTabooAllergyInfo.taboo_allergy_cd.editValue;
+      const hasMasterCd =
+        rawCd !== null && rawCd !== undefined && rawCd !== "";
 
       const detail = [];
 
-      if (targetCd !== null) {
-        // マスタから内容の詳細を取得
-        const targetMst = this.mstTabooAllergy.find(
-          mst => mst.tabooAllergyCd === targetCd
+      if (hasMasterCd) {
+        const targetMst = (this.mstTabooAllergy || []).find(
+          mst => String(mst.tabooAllergyCd) === String(rawCd)
         );
-        // mod #9987 コンバートによるアレルギーの調製薬剤の参照側修正 20240320 ztc start
-        // if (targetMst !== undefined) {
-        if (targetMst !== undefined && !!targetMst.detailInfo) {
-          // mod #9987 コンバートによるアレルギーの調製薬剤の参照側修正 20240320 ztc end
-          // mod #9981 禁忌・アレルギー全表示で特定の操作で削除済みと表示される limf start
-          // detail.push(...JSON.parse(targetMst.detailInfo));
-          const detailInfo = JSON.parse(targetMst.detailInfo).map(item => {
-            return {
-              ...item,
-              // 禁忌アレルギーコード
-              tabooAllergyCd: targetMst.tabooAllergyCd,
-              // 参照先禁忌アレルギーが削除されているかを示すフラグ
-              tabooAllergyDeleted: targetMst.isDisp === "0" || targetMst.isDel === "1"
-            }
-          })
+
+        if (targetMst !== undefined && !!targetMst.detailInfo && targetMst.detailInfo !== "[]") {
+          const detailInfo = JSON.parse(targetMst.detailInfo).map(item => ({
+            ...item,
+            tabooAllergyCd: targetMst.tabooAllergyCd,
+            tabooAllergyDeleted:
+              targetMst.isDisp === "0" || targetMst.isDel === "1",
+          }));
           detail.push(...detailInfo);
-          // mod #9981 禁忌・アレルギー全表示で特定の操作で削除済みと表示される limf end
+        } else if (targetMst !== undefined) {
+          detail.push({
+            cd: null,
+            name: this.selectedTabooAllergyInfo.content.editValue,
+            classCd: classFreeWord,
+            tabooAllergyCd: targetMst.tabooAllergyCd,
+            tabooAllergyDeleted:
+              targetMst.isDisp === "0" || targetMst.isDel === "1",
+            type: null,
+          });
         } else {
-          return;
+          detail.push({
+            cd: null,
+            name: this.selectedTabooAllergyInfo.content.editValue,
+            classCd: classFreeWord,
+            tabooAllergyCd: rawCd,
+            tabooAllergyDeleted: false,
+            type: null,
+          });
         }
       } else {
-        const detailInfo = {cd: null,
-                            name: this.selectedTabooAllergyInfo.content.editValue,
-                            classCd: classFreeWord,
-          // add #9981 禁忌・アレルギー全表示で特定の操作で削除済みと表示される limf start
-                            tabooAllergyCd: this.selectedTabooAllergyInfo.taboo_allergy_cd.editValue,
-                            tabooAllergyDeleted: false,
-          // add #9981 禁忌・アレルギー全表示で特定の操作で削除済みと表示される limf end
-                            type: null};
-        detail.push(detailInfo);
+        detail.push({
+          cd: null,
+          name: this.selectedTabooAllergyInfo.content.editValue,
+          classCd: classFreeWord,
+          tabooAllergyCd:
+            this.selectedTabooAllergyInfo.taboo_allergy_cd.editValue,
+          tabooAllergyDeleted: false,
+          type: null,
+        });
       }
       return detail;
     },
@@ -559,29 +576,14 @@ export default {
         this.switchingSelectedPatFlg = false;
       });
     },
-
-    // マスタ取得完了後にポップオーバーオブジェクトを作成
-    mstTabooAllergy() {
-      this.popoverData = this.createPopoverData(
-        "禁忌・アレルギー",
-        null,
-        null,
-        "禁忌・アレルギー名",
-        this.mstTabooAllergy.filter(o => o.isDisp !== "0" && o.isDel !== "1"),
-        "tabooAllergyCd",
-        "content",
-        null
-      );
-    },
-    // add #12462 患者情報共有 Ji start
     getOtherFacilityCd() {
       this.refreshData();
     },
     jsonArray: {
-      handler (val) {
+      handler(val) {
         const isEdited = val.some((item) => {
           return item.ctl_no.editValue !== item.ctl_no.initValue;
-        })
+        });
         if (isEdited) {
           this.setEditedComponent(this.$options.name);
         } else {
@@ -590,11 +592,10 @@ export default {
       },
       deep: true
     },
-    // add #12462 患者情報共有 Ji end
   },
 
   mounted() {
-    window.addEventListener("resize", this.setHeightAndWidth);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize", this.setHeightAndWidth);
   },
 
   async created() {
@@ -625,10 +626,8 @@ export default {
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
   },
   // add bug #7125 修正 chen start
-  beforeDestroy() {
-    window.removeEventListener('resize', this.setHeightAndWidth)
-    // dataの初期化
-    Object.assign(this.$data, this.$options.data());
+  beforeUnmount() {
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener('resize', this.setHeightAndWidth)
   },
   // add bug #7125 修正 chen end
 
@@ -643,18 +642,15 @@ export default {
     },
     // add #10359 編集権限の動作不正 dengshen end
     setHeightAndWidth () {
-      this.windowHeight = window.innerHeight;
-      this.windowWidth = window.innerWidth;
+      this.windowHeight = getViewportHeight();
+      this.windowWidth = getViewportWidth();
     },
 
     // add bug #7125 修正 chen start
     async refreshData() {
       this.setLoadingScreenVisible(true);
       const requestParam = {
-        // mod #12462 患者情報共有 Ji start
-        // facilityCd: this.getFacilityCd
         facilityCd: this.getIsOtherFacility ? (this.getOtherFacilityCd ?? this.getFacilityCd) : this.getFacilityCd
-	// mod #12462 患者情報共有 Ji end
       };
 
       const [
@@ -742,34 +738,35 @@ export default {
         this.getPatDataJsonArray(json, "taboo_allergy_cd").editValue !== null
         && this.getPatDataJsonArray(json, "taboo_allergy_cd").editValue !== ''
         // mod FNSI7415-profile連携（XML）で受信した詳細情報（その他アレルギー） 周 end
-      );
+        );
     },
 
     // 禁忌・アレルギー内容取得
     tabooAllergyContent(json) {
       if (this.hasCd(json)) {
-
-        // add FNSI7514-profile連携（XML）で受信した詳細情報（金属アレルギー） 周 start
-        if(json.category_class.initValue === '0' && json.taboo_allergy_class.initValue === '2'
-        && json.taboo_allergy_cd.initValue === '') {
+        // FNSI7514-profile連携（XML）
+        // 詳細情報（金属アレルギー）
+        if (
+          json.category_class.initValue === "0" &&
+          json.taboo_allergy_class.initValue === "2" &&
+          json.taboo_allergy_cd.initValue === ""
+        ) {
           return json.content.initValue;
         }
-        // add FNSI7514-profile連携（XML）で受信した詳細情報（金属アレルギー） 周 end
 
         // 詳細項目の削除有無
         const isIncludeDeleted = this.getIsIncludeDeleted(json);
 
         // コードがセットされている場合はマスタ名称
         const mstName = this.mstCdToNameIncludeDeleted(
-            this.mstTabooAllergy,
-            json.taboo_allergy_cd.editValue,
-            "tabooAllergyCd",
-            "content"
-          );
-        // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng start
-        // return isIncludeDeleted && !mstName.includes(DELETED) ? mstName + INCLUDE_DELETED : mstName;
-        return isIncludeDeleted && !mstName.includes(DELETED) ? INCLUDE_DELETED + mstName : mstName;
-        // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
+          this.mstTabooAllergy,
+          json.taboo_allergy_cd.editValue,
+          "tabooAllergyCd",
+          "content"
+        );
+        return isIncludeDeleted && !mstName.includes(DELETED)
+          ? INCLUDE_DELETED + mstName
+          : mstName;
       } else {
         // 手入力の場合はその内容
         return this.getPatDataJsonArray(json, "content").editValue;
@@ -852,7 +849,7 @@ export default {
               //mst => mst.genericCd === item.cd && mst.medicineType === item.type
               mst => mst.genericCd === item.cd && mst.medicineType == item.type
               // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
-            );
+              );
             break;
           default:
             return false;
@@ -876,39 +873,15 @@ export default {
       this.pushJsonArray(this.arrayColName, newItem);
     },
 
-    selectContent(index) {
-
-      // selectedIndexを初期化することでgetPopoverTargetElement()で再計算を行い
-      // マスタ選択のダイアログが正しい位置に表示されるようにする
-      this.selectedIndex = null;
-
-      // 選択ボタンを押した位置を保持
-      this.selectedIndex = index;
-      const taboo_allergy_cd = this.getPatDataJsonArray(this.jsonArray[this.selectedIndex], "taboo_allergy_cd").editValue;
-      this.popoverData.popoverContentSelected.value = taboo_allergy_cd;
-      // ポップオーバーを表示
-      this.showPopover(this.popoverData);
-    },
-
-    // ポップオーバー確定イベントハンドラ
-    setTabooAllergy(selectedCd, selectedName) {
-      console.log(`setTabooAllergy_${selectedCd}_${selectedName}`);
-      // 選択ボタンを押した項目に内容を設定
-      this.setPatDataJsonArray(
-        this.selectedTabooAllergyInfo,
-        "taboo_allergy_cd",
-        selectedCd
-      );
-      this.setPatDataJsonArray(
-        this.selectedTabooAllergyInfo,
-        "content",
-        selectedName
-      );
-      this.setPatDataJsonArray(
-        this.selectedTabooAllergyInfo,
-        "category_class",
-        "0"
-      );
+    onTabooAllergyMasterReturn(ev, json) {
+      const selectedCd = ev && ev.value != null ? ev.value : null;
+      let selectedName = ev && ev.text != null ? ev.text : null;
+      if (selectedName === "未登録") {
+        selectedName = "";
+      }
+      this.setPatDataJsonArray(json, "taboo_allergy_cd", selectedCd);
+      this.setPatDataJsonArray(json, "content", selectedName);
+      this.setPatDataJsonArray(json, "category_class", "0");
     },
 
     showTabooAllergyDetail(index) {
@@ -1165,7 +1138,7 @@ export default {
       tabooAllergy.forEach(cd => {
         if (tabooAllergyClass === cd.taboo_allergy_class.editValue) {
           const targetMst = this.mstTabooAllergy.find(
-            mst => mst.tabooAllergyCd === cd.taboo_allergy_cd.editValue
+            mst => String(mst.tabooAllergyCd) === String(cd.taboo_allergy_cd.editValue)
           );
           if (targetMst !== undefined && targetMst.detailInfo && targetMst.detailInfo !== '[]') {
             // 内容詳細JSONをデシリアライズして展開
@@ -1283,7 +1256,7 @@ export default {
      setJsonIndex(json, index) {
       this.selectJson = json;
       this.selectIndex = index;
-      this.deleteJsonArray( this.arrayColName, this.selectJson, this.selectIndex );
+      this.deleteJsonArray( this.arrayColName, this.selectJson, this.selectIndex);
     },
     // mod 入力必須項目のチェックがされない / 入力欄の色の不正 5795 関 end
   }
@@ -1294,14 +1267,16 @@ export default {
 <style src="../base-components/BaseCardStyle.css" scoped></style>
 <style scoped>
 /*add 適用 liang start*/
-.custom-input >>> .text-input {
+.custom-input :deep(.text-input) {
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
 }
+ 
+ 
 /*add 適用 liang end*/
 /* カード個別のスタイルはここ */
-.vons-popover >>> .popover__content {
+.vons-popover :deep(.popover__content) {
   width: 300px;
   margin: 3px;
   border: solid 1px var(--preventive-checked-border-color);
@@ -1316,7 +1291,7 @@ export default {
   height: calc(100% - 50px);
 }
 
-.vons-popover >>> .popover__arrow {
+.vons-popover :deep(.popover__arrow) {
   border-bottom: solid 1px var(--preventive-checked-border-color);
   border-left: solid 1px var(--preventive-checked-border-color);
   background-image: linear-gradient(
@@ -1329,8 +1304,24 @@ export default {
 .btn-ntss-custom{
   font-size: 1em;
 }
-.card-table >>> textarea.custom-textarea {
+.card-table :deep(textarea.custom-textarea) {
   color: black !important;
 }
+.card-table .card-index-row td {
+  padding: 0;
+}
 
+/* CommonMasterSelector 根が v-ons-col で幅100%になり後続ボタンが折り返すのを防ぐ */
+.taboo-allergy-master-actions {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  vertical-align: middle;
+}
+.taboo-allergy-master-actions :deep(ons-col),
+.taboo-allergy-master-actions :deep(.v-ons-col) {
+  width: auto;
+  flex: 0 0 auto;
+}
 </style>

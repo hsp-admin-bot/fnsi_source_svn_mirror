@@ -29,9 +29,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -41,7 +41,7 @@ import jp.co.nikkiso.ntss.core.entity.MstComplaint;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * MstComplaintResourceのテストクラス.
@@ -59,7 +59,7 @@ public class MstComplaintResourceTest extends AbstractResourceTest {
   /**
    * 愁訴処置マスタサービスクラス.
    */
-  @MockBean
+  @MockitoBean
   private ComplaintService complaintService;
 
   /**
@@ -184,7 +184,7 @@ public class MstComplaintResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/complaint/mst-comp-treatment")
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$[0].comp_treatment_cd", is(1)))
       .andExpect(jsonPath("$[0].facility_cd", is("009999")))
@@ -226,7 +226,7 @@ public class MstComplaintResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(MockMvcRequestBuilders.get("/api/complaint/mst-comp-treatment")
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", hasSize(0)))
     ;
@@ -275,7 +275,7 @@ public class MstComplaintResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/complaint/mst-complaint")
-        .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+        .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(complaintService, times(1)).updateMstComplaints(anyString(), anyList());
@@ -320,7 +320,7 @@ public class MstComplaintResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/complaint/mst-complaint")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(complaintService, times(1)).updateMstComplaints(anyString(), anyList());
@@ -377,7 +377,7 @@ public class MstComplaintResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/complaint/mst-comp-treatment")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(complaintService, times(1)).updateMstCompTreatments(anyString(), anyList());
@@ -432,7 +432,7 @@ public class MstComplaintResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(put("/api/complaint/mst-comp-treatment")
-      .contentType(MediaType.APPLICATION_JSON_UTF8).content(requestBody).with(csrf()));
+      .contentType(MediaType.APPLICATION_JSON).content(requestBody).with(csrf()));
 
     // 検証
     verify(complaintService, times(1)).updateMstCompTreatments(anyString(), anyList());

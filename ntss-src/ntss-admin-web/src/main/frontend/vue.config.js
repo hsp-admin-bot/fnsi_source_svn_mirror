@@ -1,134 +1,113 @@
-const path = require("path");
-const webpack = require('webpack');
-const TerserPlugin = require("terser-webpack-plugin");
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
 
-module.exports = {
-  publicPath: "/ntss-admin-web/",
-  outputDir: path.resolve(__dirname, "../resources/public"),
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const base = "/ntss-admin-web/";
+const fabServiceWorkerPath = path.resolve(__dirname, "src/FabServiceWorker.js");
+const buildOutDir = path.resolve(__dirname, "../resources/public");
 
-  devServer: {
+function cleanViteBuildOutputPlugin() {
+  const generatedAssetsDir = path.resolve(buildOutDir, "assets");
+  return {
+    name: "ntss-clean-vite-build-output",
+    apply: "build",
+    buildStart() {
+      if (!generatedAssetsDir.startsWith(buildOutDir + path.sep)) {
+        throw new Error(`Refusing to clean outside build output: ${generatedAssetsDir}`);
+      }
+      fs.rmSync(generatedAssetsDir, { recursive: true, force: true });
+      fs.mkdirSync(generatedAssetsDir, { recursive: true });
+    }
+  };
+}
+
+function fabServiceWorkerCompatPlugin() {
+  return {
+    name: "ntss-fab-service-worker-compat",
+    configureServer(server) {
+      server.middlewares.use(`${base}app-file.js`, (req, res) => {
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/javascript");
+        fs.createReadStream(fabServiceWorkerPath).pipe(res);
+      });
+    },
+    generateBundle() {
+      this.emitFile({
+        type: "asset",
+        fileName: "app-file.js",
+        source: fs.readFileSync(fabServiceWorkerPath, "utf8")
+      });
+    }
+  };
+}
+
+export default defineConfig(({ mode }) => ({
+  plugins: [
+    cleanViteBuildOutputPlugin(),
+    vue({
+      template: {
+        // Vue2 public/img の静的URLを JS import に変換しない
+        transformAssetUrls: false,
+        compilerOptions: {
+          // Onsen UI と Vue2 で通常要素として扱っていた legacy HTML タグはコンポーネント解決対象外にする
+          isCustomElement: (tag) => tag.startsWith("ons-") || tag === "font" || tag === "v-ond-vol"
+        }
+      }
+    }),
+    fabServiceWorkerCompatPlugin()
+  ],
+  base,
+  resolve: {
+    alias: [
+      { find: "@", replacement: path.resolve(__dirname, "src") },
+      { find: /^vue$/, replacement: "vue/dist/vue.esm-bundler.js" }
+    ],
+    extensions: [".mjs", ".js", ".mts", ".ts", ".jsx", ".tsx", ".json", ".vue"]
+  },
+  server: {
+    host: "0.0.0.0",
     port: 8000,
     proxy: {
       "/ntss-admin-web/api": {
-        target: "http://localhost:8080"
+        target: "http://localhost:8080",
+        changeOrigin: true
       }
     },
-    client: {
-      overlay: false
-    }
+    hmr: { overlay: false }
   },
-  configureWebpack: {
-    plugins:[
-        new webpack.ProvidePlugin({
-            Buffer: [ 'buffer', 'Buffer' ],
-            process: 'process/browser',
-        }),
-    ],
-    module: {
-      // Service Workerのファイルをwebpackのloader対象から除外
-      rules: [
-        {
-          test: /\.js$/,
-          exclude: [
-            path.resolve(__dirname, 'src/FabServiceWorker.js')
-          ]
-        }
-      ]
+  preview: {
+    host: "0.0.0.0",
+    port: 8000
+  },
+  define: {
+    global: "globalThis",
+    "process.env.NODE_ENV": JSON.stringify(mode === "production" ? "production" : "development"),
+    "process.env.BASE_URL": JSON.stringify(base)
+  },
+  test: {
+    globals: true,
+    environment: "jsdom"
+  },
+  build: {
+    outDir: buildOutDir,
+    emptyOutDir: false,
+    // Vue2 webpack config deletes prefetch; keep async chunks lazy instead of preloading them.
+    modulePreload: false,
+    sourcemap: false,
+    chunkSizeWarningLimit: 16000,
+    commonjsOptions: {
+      transformMixedEsModules: true
     },
-    optimization: {
-      minimizer: [
-        //ビルド対象ディレクトリのService Workerのファイルのみコードを難読化
-        new TerserPlugin({
-          include: /app-file\.js$/,
-          extractComments: false,
-          parallel: true,
-          terserOptions: {
-            compress: {
-              drop_console: true,
-              passes: 5,
-              unsafe: true,
-              unsafe_arrows: true,
-              unsafe_comps: true,
-              unsafe_math: true,
-              unsafe_symbols: true,
-              hoist_funs: true,
-              hoist_vars: true,
-              inline: 3,
-              reduce_funcs: true,
-              reduce_vars: true
-            },
-            mangle: {
-              keep_classnames: false,
-              keep_fnames: false,
-              toplevel: true
-            },
-            format: {
-              comments: false,
-              beautify: false,
-              ascii_only: true
-            }
-          }
-        })
-      ]
+    rolldownOptions: {
+      output: {
+        codeSplitting: true
+      },
+      checks: {
+        pluginTimings: false
+      }
     }
-
-    // cache: true,
-    // optimization: {
-    //   minimizer: [
-    //     new TerserPlugin({
-    //       // cache: true,
-    //       extractComments: true,
-    //       parallel: false,
-    //       // sourceMap: false, // Must be set to true if using source-maps in production
-    //       terserOptions: {
-    //         // https://github.com/webpack-contrib/terser-webpack-plugin#terseroptions
-    //       }
-    //     })
-    //   ]
-    // }
-  },
-
-  lintOnSave: false,
-  productionSourceMap: false,
-
-  chainWebpack: config => {
-    config.resolve.alias.set("vue$", "vue/dist/vue.esm.js");
-    config.resolve.alias.set("process", "process/browser");
-    // サインイン画面のprefetch定義を除外
-    config.plugins.delete('prefetch');
-    //Service Workerのファイルをビルド対象ディレクトリにコピー
-    config.plugin('copy').tap(args => {
-      args[0].patterns = [
-        ...args[0].patterns,
-        {
-          from: path.resolve(__dirname, 'src/FabServiceWorker.js'),
-          to: 'app-file.js',
-          noErrorOnMissing: false
-        }
-      ];
-      return args;
-    });
-  },
-
-  pwa: {
-    iconPaths: {
-      // favicon
-      favicon32: "img/login/NIKKISO.ico",
-      // Vueのデフォルトのファイル名が使用されて404エラーになることがあるためfavicon16も指定しておく
-      favicon16: "img/login/NIKKISO.ico",
-      // ウェブクリップアイコン
-      appleTouchIcon: "img/login/NIKKISO152_iPhone.png"
-    },
-    appleMobileWebAppCapable: "yes"
-    // カスタムSWスクリプトを利用
-    ,workboxPluginMode: 'InjectManifest'
-    ,workboxOptions: {
-      swSrc: './src/customServiceWorker.js'
-      ,swDest: 'service-worker.js'
-      /* modify by chamaojia 2023-08-30 [9599] helpフォルダとerrorフォルダの静的ファイルキャッシュの追加無視  --start */
-      ,exclude: [/\.pdf$/, /\.wav$/, /\.mp4$/, /index\.html$/, /^.*help\/.*$/, /^.*error\/.*$/, /\.msi$/]
-      /* modify by chamaojia 2023-08-30 [9599] helpフォルダとerrorフォルダの静的ファイルキャッシュの追加無視  --end */
-    }
-  },
-  parallel: false
-};
+  }
+}));

@@ -5,9 +5,17 @@ import {
 } from "@/functions/common/CommonFunctions";
 // add 10389 患者リストのソートが遅い gjn end
 
+function hasSelectedPatId(selectedPatId) {
+  return selectedPatId !== null && selectedPatId !== undefined && selectedPatId !== "";
+}
+
+function selectedPatIdConfig(selectedPatId) {
+  return hasSelectedPatId(selectedPatId) ? { params: { selectedPatId } } : undefined;
+}
+
 export default {
   namespaced: true,
-  strict: process.env.NODE_ENV !== "production",
+  strict: !import.meta.env.PROD,
   state: {
     selectedPatGroup: {
       patGroupName: "",
@@ -60,12 +68,14 @@ export default {
     },
 
     // add 10389 患者リストのソートが遅い gjn start
-    async sortPatListRight({ getters, commit, rootGetters }, sortConditions) {
+    async sortPatListRight({ getters, commit, rootGetters }, payload) {
+      const sortConditions = payload?.sortConditions ?? payload;
+      const selectedPatId = payload?.selectedPatId ?? null;
       const facilityCd = rootGetters["user/getFacilityCd"];
       const treatDate = rootGetters["report-menu/getTreatDate"];
       let isPatGroup = false;
       for (const condition of sortConditions) {
-        if (condition.hasOwnProperty("patGroup")) {
+        if (Object.prototype.hasOwnProperty.call(condition, "patGroup")) {
           isPatGroup = true;
           break;
         }
@@ -83,7 +93,7 @@ export default {
       if (patIdList.length === 0) {
         return;
       }
-      const { data: patList } = await ApiHelper.post(
+      const { data: patList } = await ApiHelper.configPost(
         "/patInfo/getPatByIdList/" + "1",
         {
           patIdList,
@@ -91,7 +101,8 @@ export default {
           treatDate,
           facilityCd,
           tmpPatList
-        }
+        },
+        selectedPatIdConfig(selectedPatId)
       ).catch(err => {
         throw new Error(err);
       });

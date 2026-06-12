@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.device_edge.util.MedicineInfo;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -10,8 +9,8 @@ import org.seasar.doma.jdbc.SelectOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.dao.MstMedicineClassDao;
 import jp.co.nikkiso.ntss.core.dao.MstMedicineDao;
@@ -40,7 +39,7 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
         JsonNode jsonNode_parent = mapper.readTree(medicineInfoJsonString);
         medicineInfoList = this.setItems(jsonNode_parent);
 
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
       }
     }
     return medicineInfoList;

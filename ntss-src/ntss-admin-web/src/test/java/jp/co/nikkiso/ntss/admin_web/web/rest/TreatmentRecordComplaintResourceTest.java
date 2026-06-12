@@ -21,14 +21,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.service.treatmentRecord.TreatmentRecordComplaintService;
 import jp.co.nikkiso.ntss.core.entity.TreatmentRecordComplaint;
 import jp.co.nikkiso.ntss.core.exception.NotExistException;
@@ -48,7 +48,7 @@ public class TreatmentRecordComplaintResourceTest extends AbstractResourceTest {
   /**
    * 治療記録(愁訴処置)Service.
    */
-  @MockBean
+  @MockitoBean
   private TreatmentRecordComplaintService treatmentRecordComplaintService;
 
   /**
@@ -75,7 +75,7 @@ public class TreatmentRecordComplaintResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(get("/api/treatment-record/{ord_no}/complaint", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
       .andExpect(jsonPath("$.rst_start_date", is("2019-05-29T13:00:00.000+09:00")))
@@ -114,7 +114,7 @@ public class TreatmentRecordComplaintResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(get("/api/treatment-record/{ord_no}/complaint", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
     ;
@@ -146,7 +146,7 @@ public class TreatmentRecordComplaintResourceTest extends AbstractResourceTest {
     // assert
     mockMvc
       .perform(get("/api/treatment-record/{ord_no}/complaint", ordNo)
-        .contentType(MediaType.APPLICATION_JSON_UTF8))
+        .contentType(MediaType.APPLICATION_JSON))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$", notNullValue()))
     ;
@@ -172,7 +172,7 @@ public class TreatmentRecordComplaintResourceTest extends AbstractResourceTest {
 
     // API実行
     ResultActions result = mockMvc.perform(get("/api/treatment-record/{ord_no}/complaint", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8));
+      .contentType(MediaType.APPLICATION_JSON));
 
     // 検証
     verify(treatmentRecordComplaintService, times(1)).getTreatmentRecordComplaint(ordNo);
@@ -218,7 +218,7 @@ public class TreatmentRecordComplaintResourceTest extends AbstractResourceTest {
 
     // action
     ResultActions result = mockMvc.perform(put("/api/treatment-record/{ord_no}/complaint", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );
@@ -268,7 +268,7 @@ public class TreatmentRecordComplaintResourceTest extends AbstractResourceTest {
 
     // action
     ResultActions result = mockMvc.perform(put("/api/treatment-record/{ord_no}/complaint", ordNo)
-      .contentType(MediaType.APPLICATION_JSON_UTF8)
+      .contentType(MediaType.APPLICATION_JSON)
       .content(requestBody)
       .with(csrf())
     );

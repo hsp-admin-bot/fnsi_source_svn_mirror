@@ -6,12 +6,12 @@
     <div v-if="isShowDetailView">
       <mst-weight-component @close="closeDetailView"/>
     </div>
-    <div v-show="!isShowDetailView" class='ntss-list' :style="ntssListStyles" v-kendo-validator="kendoValidatorSetup">
-      <kendo-grid-toolbar class="k-grid-toolbar kendo-grid-toolbar-style" :style="heightStyles">
+    <div v-show="!isShowDetailView" class='ntss-list' :style="ntssListStyles">
+      <div class="k-grid-toolbar k-header kendo-grid-toolbar-style mst-weight-direct-jq-toolbar" :style="heightStyles">
         <!-- <div class='weight-scale-area'> -->
         <mst-weight-scale-component ref="scale" :is-mobile-device="isMobileDevice" :allow-edit="allowEdit"/>
         <!-- </div> -->
-        <div :class="['header-btn-area', 'right', isMobileDevice ? 'mobile-header' : '']">
+        <div id="grid-header" :class="['header-btn-area', 'right', isMobileDevice ? 'mobile-header' : '']">
           <v-ons-button modifier="outline" class="btn3-normal toolbar-btn" style="float: left;" v-show="!isSortMode && isAllowAddRecord" @click="addRow()">追加</v-ons-button>
           <v-ons-button modifier="outline" class="btn3-normal toolbar-btn" style="float: left; margin-left: 10px;" v-show="!isSortMode && isAllowAddRecord" @click="copyAdd">コピー追加</v-ons-button>
           <v-ons-row v-show="isMobileDevice" style="float: left; width: 7em; height: 1em;">
@@ -19,50 +19,19 @@
               <label class="fab-font-color">編集</label>
             </v-ons-col>
             <v-ons-col width="55%" vertical-align="center">
-              <v-ons-switch modifier="outline" class="custom-switch" style="float: left; margin-left: 2px;" v-model="allowEdit" />
+              <v-ons-switch modifier="outline" style="float: left; margin-left: 2px;" v-model="allowEdit" />
             </v-ons-col>
           </v-ons-row>
           <v-ons-button modifier="outline" class="btn3-normal toolbar-btn" v-show="!isSortMode && isAllowSort" @click="toRankEditBtnClick()">並び順表示</v-ons-button>
           <v-ons-button modifier="outline" class="btn3-normal toolbar-btn" v-show="isSortMode && isAllowSort" @click="sortBtnClick()">反映</v-ons-button>
         </div>
-        <kendo-grid ref="grid" :class="fontSizeSet" id="under-grid"
-            :data-source="masterRecords"
-            :editable="true"
-            :selectable="true"
-            :reorderable="false"
-            :height=kendoGridHeight
-            :scrollable="true"
-            :beforeEdit=editStart
-            :edit=addInputAssist
-            :cellClose=editEnd
-            @save="onSave"
-            @databound="onDataBoundKendoGrid">
-            <template v-for="(column, index) in columns" >
-              <kendo-grid-column v-if="column.field === '$modalType'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                :attributes="{ class: 'btn3-kendo-normal' }"
-                :command="{ text: '詳細', click: showMasterEditView }">
-              </kendo-grid-column>
-              <kendo-grid-column v-else
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values">
-              </kendo-grid-column>
-            </template>
-        </kendo-grid>
-      </kendo-grid-toolbar>
+        <div
+          v-show="columns.length > 1"
+          id="under-grid"
+          ref="grid"
+          :class="[fontSizeSet, 'ntss-kendo-grid-legacy', 'mst-weight-direct-jq-grid']"
+        ></div>
+      </div>
       <div id="grid-footer">
         <v-ons-row width="100%" v-show="!isSortMode" >
           <v-ons-col width="50%">
@@ -83,40 +52,59 @@
     />
   </div>
 </template>
-
 <script>
-import { mapActions, mapGetters } from "vuex";
-import NextTransitionMixin from "@/components/NextTransitionMixin";
-import { EventBus } from "@/eventBus.js";
-import { Validator } from "@progress/kendo-validator-vue-wrapper";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { markRaw } from "@/compat/vue/runtime";
+import $ from "jquery";
+import kendo from "@progress/kendo-ui";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import MstWeightScaleComponent from "@/components/master-maintenance/mst-weight/MstWeightScaleListRecordComponent";
 import MstWeightComponent from "@/components/master-maintenance/mst-weight/sub-item/MstWeightComponent";
-import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
 import { roomBedGroup } from "@/functions/mst/MstGetters.js";
-import $$ from "jquery";
+
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 import MasterCopyAddComponent from "@/components/master-maintenance/MasterCopyAddComponent";
 // #11987 2026.02.08 add スケールベッド対応 スケールベッド機能の無効・有効取得 TDC渡辺 start
-import {sendRequestGetDefaultSettingDispOrder} from "@/apis/User";
-//機能コード
-import {
-
-    FUNC_SCALE_BED
-  } from "@/constants/function-code";
+import { sendRequestGetDefaultSettingDispOrder } from "@/apis/User";
+import { FUNC_SCALE_BED } from "@/constants/function-code";
 // #11987 2026.02.08 add スケールベッド対応 スケールベッド機能の無効・有効取得 TDC渡辺 end
+
+import { messageFormat } from "@/functions/common/MessageFormat";
+import { appendValidationCallout } from "@/compat/kendo/validator.js";
+
+const WEIGHT_RECORD_COMPARE_OMIT_KEYS = [
+  "operation",
+  "edited",
+  "dirty",
+  "dirtyFields",
+  "uid",
+  "_events",
+  "_handlers",
+  "sortInputTime"
+];
+
+function installComponentJQuery() {
+  if (typeof window !== "undefined") {
+    window.$ = window.$ || $;
+    window.jQuery = window.jQuery || $;
+  }
+  if (typeof globalThis !== "undefined") {
+    globalThis.$ = globalThis.$ || $;
+    globalThis.jQuery = globalThis.jQuery || $;
+  }
+}
+
 /**
  * TODO
  * more: モーダルで編集した項目が、一覧上で「編集済み（三角マーク）」をつけたい。
  */
 export default {
-  mixins: [NextTransitionMixin, MasterMaintenanceMixin],
-  Validator,
   components: {
     "mst-weight-scale-component": MstWeightScaleComponent,
     "mst-weight-component": MstWeightComponent,
@@ -169,12 +157,37 @@ export default {
       masterCopyAddTarget: null,
       // コピー追加 吹き出し用 end
       allowEdit: true, // NOTE: true = 編集モード、 false = 閲覧モード
+      isSorted: false,
+      lastScrollTop: 0,
+      lastScrollLeft: 0,
+      directGridDataSource: null,
+      directGridWidget: null,
+      directGridReady: false,
+      directGridMounted: false,
+      directGridLayoutRafId: null,
+      directGridLayoutRefreshRafId: null,
+      directGridFilterRefreshRafId: null,
+      directGridDataRefreshRafId: null,
+      directGridScrollSyncRafId: null,
+      directGridColumnSignature: "",
+      directGridRowVisualRafIds: markRaw(new Map()),
+      directGridSortEditedCodes: markRaw(new Set()),
+      directGridEditOriginals: markRaw(new Map()),
+      directGridLocalChanged: false,
+      weightComparisonRecordModel: "",
+      weightEditedCodes: new Set(),
+      weightEditTick: 0,
+      isMasterRefreshConfirming: false,
+      isMasterRefreshDiscarding: false,
+      kendoValidator: null,
+      validationTooltipPlacementIntervalId: null,
+      validationTooltipPlacementTimers: [],
+      validationTooltipPlacementRafId: null,
       // #11987 2025.11.13 add スケールベッド対応 スケールベッド比較文字列 TDC渡辺 start
       weightTypeNameWeight: "体重計",
       weightTypeNameScaleBed: "スケールベッド",
       // #11987 2025.11.13 add スケールベッド対応 スケールベッド比較文字列 TDC渡辺 end
       // #11987 2026.02.08 add スケールベッド対応 スケールベッド機能の無効・有効取得 TDC渡辺 start
-      // sys_function.disp_order を取得
       defaultSettingObj: [
         {
           componentName: "defScaleBedSet",
@@ -183,14 +196,9 @@ export default {
           dispOrder: null
         },
       ],
-      //スケールベット機能フラグ
-      //機能が有効な場合 true
-      // 無効な場合 false
-      ScaleBedFunction: true,
+      ScaleBedFunction: true
       // #11987 2026.02.08 add スケールベッド対応 スケールベッド機能の無効・有効取得 TDC渡辺 end
-    }
-
-    ;
+    };
   },
   computed: {
     ...mapGetters("window-size", {
@@ -206,7 +214,7 @@ export default {
     }),
     ...mapGetters("mst-weight", {
       getIsGridEditing: "getIsGridEditing",
-    // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start
+    // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start      
       getIsChangedMstWeight:"getIsChangedMstWeight"
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 end
     }),
@@ -217,6 +225,14 @@ export default {
     ntssListStyles() {
       return { display: this.columns.length == 1 ? "none" : "inherit" };
     },
+    fontSizeSet() {
+      const names = ["small", "medium", "large", "x-large"];
+      return `font-size-set-${names[this.getFontSize] || names[1]}`;
+    },
+    masterConditionSignature() {
+      const condition = this.$store?.state?.["master-maintenance"]?.condition || this.condition || {};
+      return `${condition.recordName || ""}|${condition.includeDeleted ? 1 : 0}`;
+    },
     ...mapGetters("master-maintenance", {
       getFacilitySwitch: "getFacilitySwitch",
       getMasterRecordList: "getMasterRecordList",
@@ -226,35 +242,40 @@ export default {
       columnDefinition: "getColumns",
       editRecord: "getEditRecord",
       isEdited: "isEdited",
-      hasValueColumn: "hasValueColumn",
-      isRecordModified: "isRecordModified"
+      hasValueColumn: "hasValueColumn"
     }),
     // #11987 2026.01.07 add スケールベッド対応 デバックモード判定式の追加 TDC渡辺 start
-      ...mapGetters("toggle-dev-tool", ["isLockDevTool"])
-      ,
+    ...mapGetters("toggle-dev-tool", ["isLockDevTool"]),
     // #11987 2026.01.07 add スケールベッド対応 デバックモード判定式の追加 TDC渡辺 end
+    hasWeightRecordPendingEdits() {
+      void this.weightEditTick;
+      return this.weightEditedCodes.size > 0;
+    },
+    isWeightRecordModified() {
+      if (!this.weightComparisonRecordModel) {
+        return false;
+      }
+      void this.weightEditTick;
+      const data = this.collectWeightRecordsForCompare();
+      return this.serializeWeightRecordsForCompare(data) !== this.weightComparisonRecordModel;
+    },
     masterRecords() {
       // #11987 2026.02.09 MOD スケールベッド対応 スケールベット機能がOFFの場合、体重計種別がスケールベット物は表示させない。 TDC渡辺 start
-      // storeからデータを取得
-      //return this.getFilteredMasterRecordList;
-      //からデータの場合は空で返す。
       if (!this.getFilteredMasterRecordList || !this.getFilteredMasterRecordList.data) return {};
-      // フィルタした配列をdataにセットし、他の情報はそのまま返す
-      if (this.ScaleBedFunction === false){
-              //体重計のみ表示する。
-              return {
-                ...this.getFilteredMasterRecordList,
-                data: this.getFilteredMasterRecordList.data.filter(row => row.weightType == 0)
-              };
-            }
-            else{
-              //すべて表示にする。
-              return {
-                ...this.getFilteredMasterRecordList,
-                data: this.getFilteredMasterRecordList.data
-              };
-            }
-    // #11987 2026.02.09 MOD スケールベッド対応 スケールベット機能がOFFの場合、体重計種別がスケールベット物は表示させない。 TDC渡辺 end
+      if (this.ScaleBedFunction === false) {
+        return {
+          ...this.getFilteredMasterRecordList,
+          data: this.getFilteredMasterRecordList.data.filter(row => row.weightType == 0)
+        };
+      }
+      return {
+        ...this.getFilteredMasterRecordList,
+        data: this.getFilteredMasterRecordList.data
+      };
+      // #11987 2026.02.09 MOD スケールベッド対応 スケールベット機能がOFFの場合、体重計種別がスケールベット物は表示させない。 TDC渡辺 end
+    },
+    masterRecordDataLength() {
+      return this.getRawMasterRecordData().length;
     },
     isAllowAddRecord() {
       // allowAddRecordが定義されていない場合は追加ボタンは使用不可
@@ -273,24 +294,25 @@ export default {
       }
       const wIsChanged = this.getStateUserAccountInfo !== null &&
         data !== undefined &&
-        (this.isRecordModified || !this.kendoValidator?.validate());
+        (this.isWeightRecordModified || this.hasWeightRecordPendingEdits);
 
       // add FNSI-データ初期種別と測定値送信間隔の制御 徐 start
       this.deviceClassChange();
       // add FNSI-データ初期種別と測定値送信間隔の制御 徐 end
       return (wsIsChanged || wIsChanged);
     },
-    // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start
+    // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 start      
     isChangedMstWeight(){
       return this.getIsChangedMstWeight
     },
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240125 張玲 end
     // grid表示データから吹き出しびプルダウンリストデータ生成
     copySrcData() {
-      if (!this.masterRecords || this.masterRecords.length === 0 || !this.masterRecords.data) {
+      const data = this.getDirectGridDisplayData();
+      if (!data || data.length === 0) {
         return [];
       }
-      return this.masterRecords.data
+      return data
         .filter(item => item.operation !== 1) // 追加行は除外
         .map(item => ({
           code: item.code,
@@ -303,24 +325,200 @@ export default {
   },
   watch: {
     windowHeight() {
-      this.$nextTick(() => {
-        this.calculateGridHeight();
-      });
+      this.scheduleDirectGridLayoutContract();
     },
     isDispMenu() {
-      this.calculateGridHeight();
+      this.scheduleDirectGridLayoutContract();
     },
     getFontSize() {
-      this.calculateGridHeight();
+      this.scheduleDirectGridLayoutContract();
     },
-    columns:function(val){
-      this.$nextTick(function(){
-        if (val.length > 1)
-        this.setLoadingScreenVisible(false);
+    masterConditionSignature() {
+      this.scheduleDirectGridFilterRefresh();
+    },
+    masterRecordDataLength(newLength, oldLength) {
+      if (!this.directGridReady || newLength === oldLength) {
+        return;
+      }
+      this.scheduleDirectGridDataSourceRefresh({
+        forceRebind: true,
+        scrollToBottom: newLength > oldLength
+      });
+    },
+    columns(val) {
+      this.$nextTick(() => {
+        if (val.length > 1) {
+          this.initDirectGridIfReady();
+          this.applyDirectGridColumnVisibilityContract();
+          this.applyDirectGridColumnEditableContract();
+          this.scheduleDirectGridLayoutContract();
+          this.setLoadingScreenVisible(false);
+        }
       });
     }
   },
   methods: {
+    collectWeightRecordsForCompare() {
+      const storeRows = [...this.getRawMasterRecordData()];
+      const grid = this.getGridWidget();
+      if (!grid?.dataSource) {
+        return storeRows;
+      }
+      const merged = new Map(storeRows.map(row => [String(row.code), { ...row }]));
+      (grid.dataSource.data() || []).forEach(model => {
+        const plain = typeof model?.toJSON === "function" ? model.toJSON() : { ...model };
+        if (plain.code === undefined || plain.code === null || plain.code === "") {
+          return;
+        }
+        const key = String(plain.code);
+        merged.set(key, { ...(merged.get(key) || {}), ...plain });
+      });
+      return Array.from(merged.values());
+    },
+    normalizeWeightRecordForCompare(record) {
+      if (!record || typeof record !== "object") {
+        return record;
+      }
+      const normalized = { ...record };
+      WEIGHT_RECORD_COMPARE_OMIT_KEYS.forEach(key => {
+        delete normalized[key];
+      });
+      const fields = this.getMasterRecordList?.schema?.model?.fields || {};
+      Object.keys(normalized).forEach(key => {
+        const fieldInfo = fields[key];
+        if (!fieldInfo) {
+          return;
+        }
+        const value = normalized[key];
+        if (fieldInfo.type === "number") {
+          if (value === null || value === undefined || value === "") {
+            normalized[key] = null;
+            return;
+          }
+          const numberValue = Number(String(value).replace(/,/g, "").trim());
+          normalized[key] = Number.isFinite(numberValue) ? numberValue : value;
+          return;
+        }
+        if (fieldInfo.type === "string") {
+          normalized[key] = value === null || value === undefined || value === ""
+            ? null
+            : String(value);
+        }
+      });
+      return normalized;
+    },
+    serializeWeightRecordsForCompare(data) {
+      return JSON.stringify(
+        (data || []).map(record => this.normalizeWeightRecordForCompare(record))
+      );
+    },
+    isGridRecordMatchingSnapshot(record) {
+      if (!this.weightComparisonRecordModel || !record) {
+        return false;
+      }
+      const snapshot = JSON.parse(this.weightComparisonRecordModel);
+      const snap = snapshot.find(item => String(item.code) === String(record.code));
+      if (!snap) {
+        return false;
+      }
+      return JSON.stringify(this.normalizeWeightRecordForCompare(record)) === JSON.stringify(snap);
+    },
+    isRecordDifferentFromSnapshot(rowData) {
+      if (!rowData || !this.weightComparisonRecordModel) {
+        return false;
+      }
+      const plain = typeof rowData.toJSON === "function" ? rowData.toJSON() : rowData;
+      return !this.isGridRecordMatchingSnapshot(plain);
+    },
+    isWeightGridRecordEdited(record) {
+      if (!record) {
+        return false;
+      }
+      if (this.weightComparisonRecordModel) {
+        return this.isRecordDifferentFromSnapshot(record);
+      }
+      return !!(record.edited || record.operation === 2 || (record.operation === 1 && record.edited));
+    },
+    markWeightRecordEdited(code) {
+      if (code !== undefined && code !== null && code !== "") {
+        if (!this.weightEditedCodes.has(String(code))) {
+          this.weightEditedCodes.add(String(code));
+          this.weightEditTick += 1;
+        }
+      }
+    },
+    unmarkWeightRecordEdited(code) {
+      if (code !== undefined && code !== null && code !== "") {
+        if (this.weightEditedCodes.delete(String(code))) {
+          this.weightEditTick += 1;
+        }
+      }
+    },
+    fixStoreRowFlagsAfterRevert(code) {
+      const row = this.getRawMasterRecordData().find(item => String(item.code) === String(code));
+      if (!row || !this.isGridRecordMatchingSnapshot(row)) {
+        return;
+      }
+      delete row.operation;
+      delete row.edited;
+      delete row.dirty;
+      if (row.dirtyFields) {
+        row.dirtyFields = {};
+      }
+    },
+    applyDirectGridSaveValuesToModel(ev) {
+      const model = ev?.model;
+      if (!model) {
+        return;
+      }
+      this.getDirectGridSaveFieldNames(ev).forEach(fieldName => {
+        const newValue = this.getDirectGridNewValue(ev, model, fieldName);
+        if (typeof model.set === "function") {
+          model.set(fieldName, newValue);
+        } else {
+          model[fieldName] = newValue;
+        }
+      });
+    },
+    syncDirectGridModelToStore(ev) {
+      const model = ev?.model;
+      if (!model) {
+        return;
+      }
+      const plain = typeof model.toJSON === "function" ? model.toJSON() : { ...model };
+      const matching = this.isGridRecordMatchingSnapshot(plain);
+      if (matching) {
+        delete model.operation;
+        delete model.edited;
+        delete model.dirty;
+        if (model.dirtyFields) {
+          model.dirtyFields = {};
+        }
+        this.unmarkWeightRecordEdited(model.code);
+      } else if (model.operation !== 1 && !this.isSortMode) {
+        model.operation = 2;
+        this.markWeightRecordEdited(model.code);
+      }
+      this.edit({ editRecord: model, isSortMode: this.isSortMode });
+      if (matching) {
+        this.$nextTick(() => this.fixStoreRowFlagsAfterRevert(model.code));
+      }
+    },
+    getWeightSnapshotFieldValue(code, fieldName) {
+      if (!this.weightComparisonRecordModel || code === undefined || code === null) {
+        return undefined;
+      }
+      const snapshot = JSON.parse(this.weightComparisonRecordModel);
+      const snap = snapshot.find(item => String(item.code) === String(code));
+      if (!snap || !Object.prototype.hasOwnProperty.call(snap, fieldName)) {
+        return undefined;
+      }
+      return snap[fieldName];
+    },
+    setWeightComparisonRecordModel() {
+      const data = this.collectWeightRecordsForCompare();
+      this.weightComparisonRecordModel = this.serializeWeightRecordsForCompare(data);
+    },
     ...mapActions("multi-modal", ["showMasterEdit"]),
     ...mapActions("master-maintenance", [
       "updateRecordListByFacilityCd",
@@ -331,8 +529,7 @@ export default {
       "setCondition",
       "updateRecordList",
       "setEditRecord",
-      "editRecordBeEmpty",
-      "setComparisonRecordModel"
+      "editRecordBeEmpty"
     ]),
     // 共通ローダー設定
     ...mapActions("loading-screen", {
@@ -348,30 +545,152 @@ export default {
       requestMstChangedNotify: "requestMstChangedNotify",
       // #11987 2026.05.08 add 体重計マスタの変更をアプリに通知 TDC片口 end
     }),
+    getMasterDocument() {
+      return this.$el?.ownerDocument || (typeof document !== "undefined" ? document : null);
+    },
+    getMasterOwnerWindow() {
+      return this.getMasterDocument()?.defaultView || (typeof window !== "undefined" ? window : null);
+    },
+    getMasterViewportBaseHeight() {
+      const doc = this.getMasterDocument();
+      const header = doc ? Array.prototype.slice.call(doc.getElementsByClassName("header")).pop() : null;
+      const footerMenu = doc?.getElementById("footer-menu");
+      return {
+        hh: header?.clientHeight || 0,
+        fmh: this.isDispMenu === 1 ? (footerMenu?.clientHeight || 0) : 0
+      };
+    },
+    getMasterGridFooterHeight(defaultValue = 0) {
+      return this.getMasterDocument()?.getElementById("grid-footer")?.clientHeight || defaultValue;
+    },
+    getMasterHeaderButtonAreaHeight(defaultValue = 0) {
+      return this.$el?.querySelector?.(".header-btn-area")?.clientHeight || defaultValue;
+    },
+    getGridRootElement() {
+      return this.$refs.grid || null;
+    },
+    getUnderGridElement() {
+      return this.getGridRootElement();
+    },
+    getGridWidget() {
+      return this.directGridWidget || $(this.getGridRootElement()).data("kendoGrid") || null;
+    },
+    getGridDataSource() {
+      return this.getGridWidget()?.dataSource || null;
+    },
+    getGridContentElement() {
+      return this.getGridRootElement()?.querySelector?.(".k-grid-content") || null;
+    },
+    getGridLockedContentElement() {
+      return this.getGridRootElement()?.querySelector?.(".k-grid-content-locked") || null;
+    },
+    getGridScrollContainer() {
+      return this.getGridContentElement();
+    },
+    getGridScrollHostEl() {
+      return this.getGridContentElement();
+    },
+    getGridHeaderEl() {
+      return this.getGridRootElement()?.querySelector?.(".k-grid-header") || this.getGridRootElement()?.firstElementChild || null;
+    },
+    getGridTableEl() {
+      return this.getGridContentElement()?.querySelector?.("table") || null;
+    },
+    getGridLockedTableEl() {
+      return this.getGridLockedContentElement()?.querySelector?.("table") || null;
+    },
+    getGridBodyRows() {
+      return Array.from(this.getGridTableEl()?.tBodies?.[0]?.rows || []);
+    },
+    getGridLockedBodyRows() {
+      return Array.from(this.getGridLockedTableEl()?.tBodies?.[0]?.rows || []);
+    },
+    getGridScrollPosition() {
+      const content = this.getGridContentElement();
+      return { top: content?.scrollTop || 0, left: content?.scrollLeft || 0 };
+    },
+    setGridScrollPosition(position = {}) {
+      const content = this.getGridContentElement();
+      const locked = this.getGridLockedContentElement();
+      if (content) {
+        content.scrollTop = position.top || 0;
+        content.scrollLeft = position.left || 0;
+        content.dispatchEvent?.(new Event("scroll"));
+      }
+      if (locked) {
+        locked.scrollTop = position.top || 0;
+      }
+    },
+    storeDirectGridScrollPosition() {
+      const pos = this.getGridScrollPosition();
+      this.scrollPosition.top = pos.top;
+      this.scrollPosition.left = pos.left;
+      this.lastScrollTop = pos.top;
+      this.lastScrollLeft = pos.left;
+    },
+    restoreDirectGridScrollPosition() {
+      const gridContent = this.getGridContentElement();
+      if (!gridContent) {
+        return;
+      }
+      const top = this.scrollPosition.top ?? this.lastScrollTop ?? 0;
+      const left = this.scrollPosition.left ?? this.lastScrollLeft ?? 0;
+      this.setGridScrollPosition({ top, left });
+    },
+    scheduleDirectGridPostLayoutRefresh() {
+      if (this.directGridLayoutRefreshRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRefreshRafId);
+      }
+      this.directGridLayoutRefreshRafId = requestAnimationFrame(() => {
+        this.applyDirectGridLockedWidthContract();
+        this.applyDirectGridLockedHeightContract();
+        this.directGridLayoutRefreshRafId = requestAnimationFrame(() => {
+          this.directGridLayoutRefreshRafId = null;
+          this.applyDirectGridLockedWidthContract();
+          this.applyDirectGridLockedHeightContract();
+          this.restoreDirectGridScrollPosition();
+        });
+      });
+    },
+    getAlertDialogs() {
+      const doc = this.getMasterDocument();
+      return Array.from(doc?.getElementsByTagName?.("ons-alert-dialog") || []);
+    },
+    prehideCopyAddPopover() {
+      this.masterCopyAddVisible = false;
+      this.masterCopyAddTarget = null;
+    },
+    scheduleMasterGridScrollToAddedRow() {
+      this.$nextTick(() => {
+        const content = this.getGridContentElement();
+        if (content) {
+          content.scrollTop = content.scrollHeight;
+          this.syncDirectGridLockedScrollContract();
+        }
+      });
+    },
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
       if (!this.getIsGridEditing) {
         const wh = this.windowHeight;
-        const hh = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .pop().clientHeight;
-        const fmh =
-          this.isDispMenu === 1
-            ? document.getElementById("footer-menu").clientHeight
-            : 0;
+        const { hh, fmh } = this.getMasterViewportBaseHeight();
         this.kendoGridToolbarHeight = wh - hh - fmh - 1;
         this.kendoGridToolbarHeight =
           this.kendoGridToolbarHeight < 240 ? 240 : this.kendoGridToolbarHeight;
-        const wsa = this.$refs.scale?.$el;
+        const wsa = this.$refs.scale?.$el || this.$refs.scale || null;
         let wsah = wsa ? wsa.clientHeight : 100;
         wsah = wsah < 100 ? 100 : wsah;
-        const gfh = document.getElementById("grid-footer").clientHeight;
-        let tableToolbar = 0
-        if (document.getElementsByClassName("header-btn-area") && document.getElementsByClassName("header-btn-area")[0]) {
-          tableToolbar = document.getElementsByClassName("header-btn-area")[0].clientHeight
-        }
+        const gfh = this.getMasterGridFooterHeight(0);
+        let tableToolbar = this.getMasterHeaderButtonAreaHeight(0);
         this.kendoGridHeight = this.kendoGridToolbarHeight - (gfh + wsah + tableToolbar);
       }
+    },
+
+    getCurrentTextInputElement() {
+      return this.$el?.querySelector?.('.k-input.k-textbox') || null;
+    },
+    getCurrentNumericTextBoxElement() {
+      return this.$el?.querySelector?.('.k-numerictextbox') || null;
     },
     async editStart(e) {
       if (this.isMobileDevice && !this.allowEdit) {
@@ -386,29 +705,32 @@ export default {
       if (this.isAndroid) {
         await this.setIsGridEditing(true);
       }
+      this.captureDirectGridEditOriginal(e);
       // #8745 マウスが止まると中国語のtipsが現れました 林峻峰 start
       this.$nextTick(()=>{
         if (e.sender?.editable?.options?.fields?.field === 'isDisp') {
-          const element = document.querySelector('#under-grid .k-grid-content.k-auto-scrollable');
-          element.scrollTo({
-            left: element.scrollWidth - element.clientWidth,
-            behavior: 'smooth'
-          });
+          const element = this.getGridScrollContainer();
+          if (element) {
+            element.scrollTo({
+              left: element.scrollWidth - element.clientWidth,
+              behavior: 'smooth'
+            });
+          }
         }
-        if (document.getElementsByClassName('k-input k-textbox') && document.getElementsByClassName('k-input k-textbox')[0]) {
-          document.getElementsByClassName('k-input k-textbox')[0].setAttribute('title', '');
-        }
+        this.getCurrentTextInputElement()?.setAttribute('title', '');
       })
       // #8745 マウスが止まると中国語のtipsが現れました 林峻峰 end
     },
     editEnd() {
+      this.flushDirectGridEditorValue();
       this.setIsGridEditing(false);
     },
     addInputAssist() {
       // iOS/PWA環境でスピナーをタップすると編集が終了してしまう現象の対策
       if (this.isIOS) {
-        if (document.getElementsByClassName("k-numerictextbox").length !== 0) {
-          let spinnerObj = document.getElementsByClassName("k-numerictextbox")[0].getElementsByClassName("k-select")[0];
+        const numericTextBox = this.getCurrentNumericTextBoxElement();
+        if (numericTextBox) {
+          let spinnerObj = numericTextBox.getElementsByClassName("k-select")[0];
           // 編集が終了するとオブジェクトが削除されるため、removeEvent処理は不要
           spinnerObj.ontouchend = event => event.stopPropagation();
         }
@@ -416,6 +738,7 @@ export default {
     },
     // マスタ一覧のデータを取得
     findList() {
+      this.directGridSortEditedCodes?.clear?.();
       // apiをコールして値を取得
       // mod マスタ一覧 1･施設切替を可能とする 孔 this.findRecordList => this.findRecordListByFacilityCd
       // this.findRecordList()
@@ -449,7 +772,7 @@ export default {
           // 透析室コンボボックス用データ取得
           // mod マスタ一覧 1･施設切替を可能とする 孔 this.facilityCd => this.facilitylistValue
           // roomBedGroup(this.facilityCd).then(response => {
-          roomBedGroup(this.facilitylistValue).then(response => {
+          roomBedGroup(this.facilitylistValue).then(roomBedGroupResponse => {
             let roomBedGroupList = [
               {
                 // mod FNSI-透析室コンボボックス用データの制御 徐 start
@@ -460,7 +783,7 @@ export default {
                 // mod FNSI-透析室コンボボックス用データの制御 徐 end
               }
             ];
-            for (const r of response) {
+            for (const r of roomBedGroupResponse) {
               if (r.isDel !== "1" && r.groupClass === 2) {
                 // 有効な透析室
                 roomBedGroupList.push({
@@ -475,6 +798,7 @@ export default {
                 column.values = roomBedGroupList;
               }
             });
+            this.directGridDataSource = markRaw(response.data?.localDataSource || this.getMasterRecordList || {});
             this.columns = toFunction;
 
             // 横スクロールバーを表示するために列幅を指定
@@ -508,25 +832,27 @@ export default {
               format: "",
               values: null
             });
+            this.applyWeightSchemaValidationMessages(this.directGridDataSource?.schema);
             // カラム幅等初期調整
             this.showSortColumn();
             this.$nextTick(() => {
               this.calculateGridHeight();
-              this.$refs.grid.$el.lastChild.scrollTop = this.scrollPosition.top;
-              this.$refs.grid.$el.lastChild.scrollLeft = this.scrollPosition.left;
+              this.initDirectGridIfReady();
+              this.applyDirectGridDataSourceContract();
+              this.scheduleDirectGridLayoutContract();
+              this.scheduleDirectGridPostLayoutRefresh();
+              this.restoreDirectGridScrollPosition();
+              requestAnimationFrame(() => {
+                this.restoreDirectGridScrollPosition();
+              });
+              this.$nextTick(() => {
+                this.weightEditedCodes.clear();
+                this.weightEditTick += 1;
+                this.setWeightComparisonRecordModel();
+                this.directGridLocalChanged = false;
+              });
             });
-            // 初期データ内容を保存
-            this.setComparisonRecordModel();
-            /* add スクロールの位置を維持 楊 start */
-            // this.$nextTick(() => {
-            //   document.getElementsByClassName('k-grid-content k-auto-scrollable')[1].scrollTop = this.lastScrollTop;
-            //   document.getElementsByClassName('k-grid-content k-auto-scrollable')[1].scrollLeft = this.lastScrollLeft;
-            //   setTimeout(() => {
-            //     this.lastScrollTop = 0;
-            //     this.lastScrollLeft = 0;
-            //   }, 1000)});
-            });
-            /* add スクロールの位置を維持 楊 end */
+          });
         })
         .catch(error => {
           //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
@@ -552,10 +878,7 @@ export default {
       // 共通ローダー:表示開始
       this.setLoadingScreenVisible(true);
       //イベント発生前のスクロールバーの位置を保持
-      const scrollTop = document.getElementsByClassName('k-grid-content k-auto-scrollable')[1].scrollTop;
-      const scrollLeft = document.getElementsByClassName('k-grid-content k-auto-scrollable')[1].scrollLeft;
-      this.scrollPosition.top = scrollTop;
-      this.scrollPosition.left = scrollLeft;
+      this.storeDirectGridScrollPosition();
       // グリッドでエラーが発生している場合は処理を中断
       if (!this.kendoValidator.validate()) {
         //共通ローダー：表示終了
@@ -676,60 +999,62 @@ export default {
             .then(() => {
               // #11987 2026.05.08 add 体重計マスタの変更をアプリに通知 TDC片口 start
               const updateWeightNos = this.getUpdateRecordList
-                .filter(item => item.weightNo) // weightNoが存在するレコードのみ
+                .filter(item => item.weightNo)
                 .map(item => item.weightNo);
-              this.requestMstChangedNotify({
+              return this.requestMstChangedNotify({
                 facilityCd: this.facilitylistValue,
                 weightNoList: updateWeightNos ?? []
-              })
-                .then(() => {
+              });
               // #11987 2026.05.08 add 体重計マスタの変更をアプリに通知 TDC片口 end
-                //共通ローダー：表示終了
-                this.setLoadingScreenVisible(false);
+            })
+            .then(() => {
+              //共通ローダー：表示終了
+              this.setLoadingScreenVisible(false);
+              this.$ons.notification.alert({
+                // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
+                // title: "更新完了",
+                // message: "マスタ更新が完了しました。"
+                title: DIALOG_MESSAGES[12000004].title,
+                message: messageFormat(DIALOG_MESSAGES[12000004].message),
+                // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
+              });
+
+              this.findList();
+            })
+            .catch(error => {
+              this.setGridScrollPosition({
+                top: this.scrollPosition.top,
+                left: this.scrollPosition.left
+              });
+              //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
+              getErrorMessage('MstWeightRecordComponent.vue', 'saveRecord', error);
+              //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
+              //共通ローダー：表示終了
+              this.setLoadingScreenVisible(false);
+              if (error.response.status === 400) {
                 this.$ons.notification.alert({
                   // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-                  // title: "更新完了",
-                  // message: "マスタ更新が完了しました。"
-                  title: DIALOG_MESSAGES[12000004].title,
-                  message: messageFormat(DIALOG_MESSAGES[12000004].message),
+                  // title: "更新失敗",
+                  title: DIALOG_MESSAGES["00300005"].title,
                   // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
+                  message: error.response.data.errorMessage
                 });
-
-                this.findList();
-              })
-              .catch(error => {
-                this.$refs.grid.$el.lastChild.scrollTop = this.scrollPosition.top;
-                this.$refs.grid.$el.lastChild.scrollLeft = this.scrollPosition.left;
-                //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
-                getErrorMessage('MstWeightRecordComponent.vue', 'saveRecord', error);
-                //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
-                //共通ローダー：表示終了
-                this.setLoadingScreenVisible(false);
-                if (error.response.status === 400) {
-                  this.$ons.notification.alert({
-                    // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-                    // title: "更新失敗",
-                    title: DIALOG_MESSAGES["00300005"].title,
-                    // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
-                    message: error.response.data.errorMessage
-                  });
-                } else {
-                  this.$ons.notification.alert({
-                    // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-                    // title: "更新失敗",
-                    title: DIALOG_MESSAGES["00300005"].title,
-                    // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
-                    message: error
-                  });
-                }
-              });
-            // #11987 2026.05.08 add 体重計マスタの変更をアプリに通知 TDC片口 start
+              } else {
+                this.$ons.notification.alert({
+                  // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
+                  // title: "更新失敗",
+                  title: DIALOG_MESSAGES["00300005"].title,
+                  // mod #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
+                  message: error
+                });
+              }
             });
-            // #11987 2026.05.08 add 体重計マスタの変更をアプリに通知 TDC片口 end
         })
         .catch(error => {
-            this.$refs.grid.$el.lastChild.scrollTop = this.scrollPosition.top;
-            this.$refs.grid.$el.lastChild.scrollLeft = this.scrollPosition.left;
+            this.setGridScrollPosition({
+              top: this.scrollPosition.top,
+              left: this.scrollPosition.left
+            });
           //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
           getErrorMessage('MstWeightRecordComponent.vue', 'saveRecord', error);
           //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
@@ -881,39 +1206,63 @@ export default {
         a.sortRank - b.sortRank || a.sortInputTime - b.sortInputTime;
       //グリッドデータの並び替え
       this.getMasterRecordList.data.sort(compare);
-      // add #11001 並び順の変更後反映を押しても並び順が切り替わらない。 zhangyue start
+      // add #11001 並び順の変更後反映を押しても並び順が切り替わらない。 zhangyue start 
       for (let i = 0; i < this.getMasterRecordList.data.length; i++) {
-        this.getMasterRecordList.data[i].sortRank = i + 1;
+        this.getMasterRecordList.data[i].sortRank = i + 1; 
       }
-      // add #11001 並び順の変更後反映を押しても並び順が切り替わらない。 zhangyue end
+      // add #11001 並び順の変更後反映を押しても並び順が切り替わらない。 zhangyue end 
     },
     onSave(ev) {
       //イベント発生前のスクロールバーの位置を保持
-      const scrollTop = ev.sender.content[0].scrollTop;
-      const scrollLeft = ev.sender.content[0].scrollLeft;
-      this.scrollPosition.top = scrollTop;
-      this.scrollPosition.left = scrollLeft;
+      const position = this.getGridScrollPosition();
+      this.scrollPosition.top = position.top;
+      this.scrollPosition.left = position.left;
       this.setIsGridEditing(false);
-      this.edit({ editRecord: ev.model, isSortMode: this.isSortMode });
-      ev.sender.refresh();
-      if (ev.model.operation === 1) {
-        ev.model["edited"] = true;
+      this.applyDirectGridSaveValuesToModel(ev);
+      const plain = typeof ev.model?.toJSON === "function" ? ev.model.toJSON() : { ...ev.model };
+      const matching = this.isGridRecordMatchingSnapshot(plain);
+      const changedFields = this.getDirectGridActualChangedFields(ev);
+      if (!matching) {
+        if (ev.model.operation === 1) {
+          ev.model.edited = true;
+        } else if (!this.isSortMode) {
+          ev.model.operation = 2;
+        }
+        this.markWeightRecordEdited(ev.model.code);
+        if (this.isSortMode && changedFields.includes("sortRank")) {
+          this.markDirectGridSortEdited(ev.model);
+        }
+        changedFields.forEach(fieldName => {
+          ev.model.dirtyFields = ev.model.dirtyFields || {};
+          ev.model.dirtyFields[fieldName] = true;
+          this.clearDirectGridEditOriginal(ev.model, fieldName);
+        });
+        if (changedFields.length > 0) {
+          ev.model.dirty = true;
+        }
+        this.edit({ editRecord: ev.model, isSortMode: this.isSortMode });
+      } else {
+        this.unmarkWeightRecordEdited(ev.model.code);
+        delete ev.model.operation;
+        delete ev.model.edited;
+        delete ev.model.dirty;
+        if (ev.model.dirtyFields) {
+          ev.model.dirtyFields = {};
+        }
+        changedFields.forEach(fieldName => this.clearDirectGridEditOriginal(ev.model, fieldName));
+        this.edit({ editRecord: ev.model, isSortMode: this.isSortMode });
+        this.$nextTick(() => this.fixStoreRowFlagsAfterRevert(ev.model.code));
       }
-      // 状態に合わせて背景色を変更
-      this.editBackgroundColor();
+      this.scheduleDirectGridRowVisualRefresh(ev.model, ev.model?.uid);
+      this.scheduleDirectGridLayoutContract();
     },
-        onDataBoundKendoGrid(ev) {
-
-
-    },
-    onDataBoundKendoGrid(ev) {
-      console.log('9999999999',this.scrollPosition.top);
-      
-      setTimeout(() => {
-        const grid = $$("div.k-grid-content")[1];
-        grid.scrollTop = this.scrollPosition.top;
-        grid.scrollLeft = this.scrollPosition.left;
-      }, 1000);
+    onDataBoundKendoGrid() {
+      this.applyDirectGridLegacyStyleContract();
+      this.refreshDirectGridDirtyVisualState();
+      this.scheduleDirectGridLayoutContract();
+      if (this.scrollPosition.top > 0 || this.scrollPosition.left > 0) {
+        this.$nextTick(() => this.setGridScrollPosition(this.scrollPosition));
+      }
     },
     cancel() {
       // 前画面に戻る
@@ -922,9 +1271,9 @@ export default {
     },
     showMasterEditView(e) {
       // モーダル確定時にスクロール位置が戻ってしまう問題の対処
-      // const grid = $$("#under-grid div.k-grid-content")[0];
-      // this.scrollPosition.top = grid.scrollTop;
-      // this.scrollPosition.left = grid.scrollLeft;
+      const { top: scrollTop, left: scrollLeft } = this.getGridScrollPosition();
+      this.scrollPosition.top = scrollTop;
+      this.scrollPosition.left = scrollLeft;
       // 次画面を表示
       this.isShowDetailView = true;
       EventBus.$emit("setIsDetailHeaderView", true);
@@ -934,18 +1283,23 @@ export default {
        * see: https://www.telerik.com/forums/selected-row-at-wrappers-for-vue
        */
       e.preventDefault();
-      const row = this.$refs.grid.kendoWidget();
-      const selectedRowItem = row.dataItem(e.currentTarget.closest("tr"));
+      const row = this.getGridWidget();
+      const selectedRowItem = row?.dataItem?.(e.currentTarget.closest("tr"));
       let code = selectedRowItem.code;
 
       // codeがない場合はcodeを付番
       if (!code) {
         this.edit({ editRecord: selectedRowItem, isSortMode: this.isSortMode });
-        code = this.getMasterRecordList.data[0].code;
       }
 
+      // 詳細画面で確定した直後は、GridのdataItemが古い場合があるため、storeの最新行を優先する。
+      const latestStoreItem = this.getMasterRecordList?.data?.find?.(
+        masterRecord => String(masterRecord.code) === String(code)
+      );
+      const editSourceItem = latestStoreItem || selectedRowItem;
+
       // プロパティを正規化する。
-      const normalizedItem = this.normalization(selectedRowItem);
+      const normalizedItem = this.normalization(editSourceItem);
 
       // ストアに保存する。
       this.setEditRecord(normalizedItem);
@@ -960,16 +1314,13 @@ export default {
       }, 1000);
     },
     setScrollPosition(position) {
-      $$("#under-grid div.k-grid-content")
-        .scrollTop(position.top)
-        .scrollLeft(position.left);
+      this.setGridScrollPosition({ top: position.top, left: position.left });
     },
     toRankEditBtnClick() {
            // モーダル確定時にスクロール位置が戻ってしまう問題の対処
-      const grid = $$("div.k-grid-content")[1];
-      
-      this.scrollPosition.top = grid.scrollTop;
-      this.scrollPosition.left = grid.scrollLeft;
+      const grid = this.getGridScrollContainer();
+      this.scrollPosition.top = grid?.scrollTop || 0;
+      this.scrollPosition.left = grid?.scrollLeft || 0;
       EventBus.$emit("onCloseMasterEditModal", this.onCloseMasterEditModal);
       // グリッドでエラーが発生している場合は処理を中断
       if (!this.kendoValidator.validate()) {
@@ -980,6 +1331,13 @@ export default {
       this.disableColumns();
       this.showSortColumn();
       EventBus.$emit("setSortMode", this.isSortMode);
+    },
+    getMaxSortRank() {
+      const data = this.getRawMasterRecordData();
+      return data.reduce((max, record) => {
+        const rank = Number(record?.sortRank);
+        return Number.isFinite(rank) && rank > max ? rank : max;
+      }, 0);
     },
     addRow() {
       // グリッドでエラーが発生している場合は処理を中断
@@ -1008,16 +1366,50 @@ export default {
           d[k] = this.getMaxSortRank() + 1;
         }
       });
-      this.scrollPosition.top = this.$refs.grid.$el.lastChild.scrollHeight;
+      if (Object.prototype.hasOwnProperty.call(d, "code")) {
+        d.code = null;
+      }
+      if (Object.prototype.hasOwnProperty.call(d, "isDisp")) {
+        d.isDisp = "1";
+      }
+      if (Object.prototype.hasOwnProperty.call(d, "isDel")) {
+        d.isDel = "0";
+      }
+      this.lastScrollTop = this.getGridScrollHostEl()?.scrollHeight;
+      this.lastScrollLeft = 0;
+      this.scrollPosition.left = 0;
       this.edit({ editRecord: d, isSortMode: this.isSortMode });
-      this.editBackgroundColor();
+      this.directGridLocalChanged = true;
+      this.applyDirectGridDataSourceContract({ forceRebind: true, scrollToBottom: true });
+      this.scheduleDirectGridDataSourceRefresh({ forceRebind: true, scrollToBottom: true });
+      this.$nextTick(() => {
+        const content = this.getGridContentElement();
+        if (content) {
+          content.scrollTop = content.scrollHeight;
+          content.scrollLeft = 0;
+          this.syncDirectGridLockedScrollContract();
+        }
+        requestAnimationFrame(() => {
+          const gridContent = this.getGridContentElement();
+          if (gridContent) {
+            gridContent.scrollTop = gridContent.scrollHeight;
+            gridContent.scrollLeft = 0;
+            this.syncDirectGridLockedScrollContract();
+          }
+        });
+      });
     },
     sortBtnClick() {
       this.isSortMode = false;
       this.isSorted = true;
       this.editableColumns();
       this.showSortColumn();
+      this.syncDirectGridSortRankToStore();
       this.sort();
+      if (this.directGridSortEditedCodes?.size > 0) {
+        this.directGridLocalChanged = true;
+      }
+      this.applyDirectGridDataSourceContract();
       EventBus.$emit("setSortMode", this.isSortMode);
     },
     showSortColumn() {
@@ -1034,22 +1426,14 @@ export default {
         if (dummyIndex >= 0) {
           this.columns[dummyIndex].hidden = !this.columns[sortRankIndex].hidden;
         }
-        // #11987 2026.02.08 add スケールベッド対応 スケールベッド機能がONの場合のみ表示する。 TDC渡辺 start
-        //スケールベット機能が有効・無効により体重種別を表示・非表示にする。
-        const weightTypeIndex = this.columns.findIndex(col => col.field === "weightType");
-        if (weightTypeIndex >= 0) {
-          if (this.ScaleBedFunction === false){
-            //非表示にする。
-            this.columns[weightTypeIndex].hidden = true;
-          }
-          else{
-            //表示にする。
-             this.columns[weightTypeIndex].hidden = false;
-          }
-        }
-        // #11987 2026.02.08 add スケールベッド対応 スケールベッド機能がONの場合のみ表示する。 TDC渡辺 end
       }
-
+      // #11987 2026.02.08 add スケールベッド対応 スケールベッド機能がONの場合のみ表示する。 TDC渡辺 start
+      const weightTypeIndex = this.columns.findIndex(col => col.field === "weightType");
+      if (weightTypeIndex >= 0) {
+        this.columns[weightTypeIndex].hidden = this.ScaleBedFunction === false;
+      }
+      // #11987 2026.02.08 add スケールベッド対応 スケールベッド機能がONの場合のみ表示する。 TDC渡辺 end
+      this.applyDirectGridColumnVisibilityContract();
     },
     disableColumns() {
       this.columns.forEach(column => {
@@ -1061,9 +1445,17 @@ export default {
               : () => false
             : () => false;
       });
+      this.applyDirectGridColumnEditableContract();
     },
       copyAdd(e) {
-      this.scrollPosition.top = this.$refs.grid.$el.lastChild.scrollHeight;
+      const scrollHost = this.getGridScrollContainer();
+      const inner = scrollHost?.lastChild || scrollHost;
+      this.scrollPosition.top =
+        typeof inner?.scrollHeight === "number"
+          ? inner.scrollHeight
+          : typeof scrollHost?.scrollHeight === "number"
+            ? scrollHost.scrollHeight
+            : 0;
       // グリッドでエラーが発生している場合は処理を中断
       if (this.kendoValidator && !this.kendoValidator.validate()) {
         return;
@@ -1081,6 +1473,7 @@ export default {
               ? () => true
               : () => false;
       });
+      this.applyDirectGridColumnEditableContract();
     },
     getColumnIndex(fieldName) {
       // 指定された項目がない場合はマイナスが返る
@@ -1090,51 +1483,53 @@ export default {
     editBackgroundColor(masterName = null) {
       this.$nextTick(() => {
         // グリッドが表示されていなかったら処理終了
-        const gridHeader = this.$refs.grid.$el.firstChild;
-        if (gridHeader.textContent === ' ') {
+        const gridHeader = this.getGridHeaderEl();
+        if (!gridHeader || gridHeader.textContent === ' ') {
           return;
         }
         gridHeader?.classList?.add('master-grid-header');
 
         // グリッドにレコードがなければ処理終了
-        if (!this.$refs.grid.$el.lastChild.lastChild.tBodies) {
+        if (!this.getGridTableEl()?.tBodies) {
           return;
         }
         // 固定列、可変列、データソースの取得
-        const tbodyc = this.$refs.grid.$el.lastChild.lastChild
-          .tBodies[0].children;
-        const lockTbodyc = this.$refs.grid.$el.children[1].lastChild
-          .tBodies[0].children;
-        const gridData = this.$refs.grid.dataSource;
-        const dataItem = this.masterPhysicalName === 'mst_exam_item' ? gridData._data : gridData.data
+        const tbodyc = this.getGridBodyRows();
+        const lockTbodyc = this.getGridLockedBodyRows();
+        const gridData = this.getGridDataSource();
+        if (!gridData) {
+          return;
+        }
+        const dataItem = this.getDirectGridDataItems(gridData);
         // 列の行数は固定・可変で同一なため可変列の行数を使用
         for (let rwCount = 0; rwCount < tbodyc.length; rwCount++) {
           const currentTrc = tbodyc[rwCount].children;
-          const currentLockTrc = lockTbodyc[rwCount].children;
+          const currentLockTrc = lockTbodyc[rwCount]?.children || [];
+          const currentRecord = dataItem[rwCount];
           // 並び順の色変更
-          this.changeSortColor(currentLockTrc);
+          const sortEdited = this.changeSortColor(currentLockTrc, currentTrc, currentRecord);
           // 編集項目の色を変更
-          let edited = this.changeEditColor(currentTrc, currentLockTrc);
+          let edited = this.changeEditColor(currentTrc, currentLockTrc) || sortEdited;
           // 削除対象を判定
-          const deleted = this.isDeleteRow(currentTrc);
+          const deleted = this.isDeleteRow(currentTrc, currentRecord);
 
           // モーダルからの編集も色を変更する
           if (
-            dataItem[rwCount] && this.isEdited(dataItem[rwCount].code)
+            currentRecord && this.isEdited(currentRecord.code)
           ) {
             edited = true;
           }
           // 対応範囲のテーブルのみ、operation = 1 (新規) の行に、k-dirty-cell" を入れる
           if (masterName != null
               && masterName === 'mst_alarm_notification'
-              && dataItem[rwCount].operation
-              && dataItem[rwCount].operation === 1) {
+              && currentRecord?.operation
+              && currentRecord.operation === 1) {
             edited = true;
           }
           // 並び順以外の項目が変更されていた場合は、削除か修正にあわせて並び順より後の項目の背景色を変更
           this.changeRowColor(currentTrc, currentLockTrc, edited, deleted);
           // add FNSI-8131 劉全航 start
-          if(dataItem[rwCount] && dataItem[rwCount].operation && dataItem[rwCount].operation == 1){
+          if(currentRecord && currentRecord.operation && currentRecord.operation == 1){
             continue;
           }
           // add FNSI-8131 劉全航 end
@@ -1147,22 +1542,131 @@ export default {
         }
       });
     },
-    changeSortColor(currentTrc) {
-      // 並び順が変更されていれば並び順とダミー項目背景色を変更
-      for (let clCount = 0; clCount < currentTrc.length; clCount++) {
-        if (
-          // #8519 編集した項目のバッググラウンドが黄緑にならない 訾浩 start
-          this.isEditRow(currentTrc[clCount])
-          && clCount === this.getColumnIndex('sortRank')
-        ) {
-          currentTrc[clCount]?.classList?.add('master-sort-edited');
-          const dummyIndex = this.getColumnIndex('dummy');
-          if (dummyIndex > -1) {
-            currentTrc[dummyIndex]?.classList?.add('master-sort-edited');
-          // #8519 編集した項目のバッググラウンドが黄緑にならない 訾浩 end
-          }
+    getDirectGridDataItems(gridData = this.getGridDataSource()) {
+      if (!gridData) {
+        return [];
+      }
+      if (this.masterPhysicalName === 'mst_exam_item' && Array.isArray(gridData._data)) {
+        return gridData._data;
+      }
+      if (Array.isArray(gridData.data)) {
+        return gridData.data;
+      }
+      if (typeof gridData.data === "function") {
+        return Array.from(gridData.data() || []);
+      }
+      if (Array.isArray(gridData._data)) {
+        return gridData._data;
+      }
+      return [];
+    },
+    getDirectGridRecordKey(record) {
+      if (!record) {
+        return null;
+      }
+      if (record.code !== undefined && record.code !== null && record.code !== "") {
+        return `code:${String(record.code)}`;
+      }
+      if (record.uid !== undefined && record.uid !== null && record.uid !== "") {
+        return `uid:${String(record.uid)}`;
+      }
+      return null;
+    },
+    markDirectGridSortEdited(record) {
+      const key = this.getDirectGridRecordKey(record);
+      if (key) {
+        this.directGridSortEditedCodes?.add?.(key);
+      }
+    },
+    isDirectGridSortEditedRecord(record) {
+      const key = this.getDirectGridRecordKey(record);
+      return !!key && !!this.directGridSortEditedCodes?.has?.(key);
+    },
+    getDirectSortColorRowFromCells(currentTrc) {
+      return Array.from(currentTrc || [])[0]?.parentElement || null;
+    },
+    isDirectSortColorLockedRow(row) {
+      return !!row?.closest?.(".k-grid-content-locked");
+    },
+    getDirectSortColorVisibleColumnsForRow(row) {
+      const locked = this.isDirectSortColorLockedRow(row);
+      return (this.columns || [])
+        .map((column, sourceIndex) => ({ column, sourceIndex }))
+        .filter(entry => !entry.column.hidden && !!entry.column.locked === locked);
+    },
+    getDirectSortColorCellEntryByField(row, fieldName) {
+      if (!row || !fieldName) {
+        return null;
+      }
+      const entries = this.getDirectSortColorVisibleColumnsForRow(row);
+      const index = entries.findIndex(entry => entry.column.field === fieldName);
+      if (index < 0) {
+        return null;
+      }
+      return {
+        cell: Array.from(row.children || [])[index] || null,
+        column: entries[index].column,
+        sourceIndex: entries[index].sourceIndex,
+        visibleIndex: index
+      };
+    },
+    getDirectSortColorCellByField(row, fieldName) {
+      return this.getDirectSortColorCellEntryByField(row, fieldName)?.cell || null;
+    },
+    getDirectSortColorNormalModeCellEntry(row) {
+      if (!row) {
+        return null;
+      }
+      for (const fieldName of ["code", "weightNo"]) {
+        const entry = this.getDirectSortColorCellEntryByField(row, fieldName);
+        if (entry?.cell) {
+          return entry;
         }
       }
+      const entries = this.getDirectSortColorVisibleColumnsForRow(row);
+      const domCells = Array.from(row.children || []);
+      const index = entries.findIndex(entry => {
+        const field = entry.column?.field || "";
+        return field !== "dummy" && field !== "sortRank";
+      });
+      if (index < 0) {
+        return null;
+      }
+      return {
+        ...entries[index],
+        cell: domCells[index] || null,
+        visibleIndex: index
+      };
+    },
+    changeSortColorByRow(row, forceEdited = false) {
+      const sortEntry = this.getDirectSortColorCellEntryByField(row, "sortRank");
+      const sortCell = sortEntry?.cell || null;
+      const edited = !!forceEdited || (sortCell && this.isEditRow(sortCell));
+      if (!edited) {
+        return false;
+      }
+      const targetEntry = sortCell ? sortEntry : this.getDirectSortColorNormalModeCellEntry(row);
+      const targetCell = targetEntry?.cell || null;
+      if (!targetCell) {
+        return false;
+      }
+      targetCell.classList.remove("master-edited-row", "master-deleted-row");
+      targetCell.classList.add("master-sort-edited");
+      if (sortCell) {
+        const dummyCell = this.getDirectSortColorCellByField(row, "dummy");
+        dummyCell?.classList?.add("master-sort-edited");
+      }
+      return true;
+    },
+    changeSortColor(currentTrc, currentLockTrc = null, record = null) {
+      let edited = this.isDirectGridSortEditedRecord(record);
+      [currentTrc, currentLockTrc].forEach(cells => {
+        edited = this.changeSortColorByRow(this.getDirectSortColorRowFromCells(cells), edited) || edited;
+      });
+      if (edited && record) {
+        this.markDirectGridSortEdited(record);
+      }
+      return edited;
     },
     // #8519 編集した項目のバッググラウンドが黄緑にならない 訾浩 start
     changeEditColor(currentTrc, currentLockTrc) {
@@ -1191,9 +1695,20 @@ export default {
       }
       return edited;
     },
-    isDeleteRow(currentTrc) {
+    isDeleteRow(currentTrc, record = null) {
+      if (String(record?.isDisp) === "0") {
+        return true;
+      }
       let deleted = false;
       // 削除カラムで削除が選択されている場合は削除フラグを設定
+      const row = this.getDirectSortColorRowFromCells(currentTrc);
+      const isDispCell = this.getDirectSortColorCellByField(row, "isDisp");
+      if (isDispCell && this.isEditRow(isDispCell)) {
+        const text = isDispCell.textContent || "";
+        if (text.indexOf("削除") >= 0) {
+          return true;
+        }
+      }
       for (let clCount = 0; clCount < currentTrc.length; clCount++) {
         // #8519 編集した項目のバッググラウンドが黄緑にならない 訾浩 start
         if (this.isEditRow(currentTrc[clCount])) {
@@ -1209,29 +1724,49 @@ export default {
       }
       return deleted;
     },
+    getDirectGridRowColorEntries(cells) {
+      const row = this.getDirectSortColorRowFromCells(cells);
+      const entries = this.getDirectSortColorVisibleColumnsForRow(row);
+      const domCells = Array.from(cells || []);
+      if (entries.length !== domCells.length) {
+        return domCells.map((cell, visibleIndex) => ({ cell, column: null, visibleIndex }));
+      }
+      return entries.map((entry, visibleIndex) => ({ ...entry, cell: domCells[visibleIndex], visibleIndex }));
+    },
+    shouldApplyDirectGridRowColor(entry, deleted) {
+      if (!entry?.cell) {
+        return false;
+      }
+      const field = entry.column?.field || "";
+      if (field === "dummy" || field === "sortRank" || field === "weightNo" || field === "code") {
+        return false;
+      }
+      if (!field && entry.visibleIndex === 0) {
+        return false;
+      }
+      return true;
+    },
+    applyDirectGridRowColorToCells(cells, addClass, removeClass, deleted) {
+      this.getDirectGridRowColorEntries(cells).forEach(entry => {
+        if (!entry?.cell) {
+          return;
+        }
+        if (!this.shouldApplyDirectGridRowColor(entry, deleted)) {
+          entry.cell.classList.remove("master-edited-row", "master-deleted-row");
+          return;
+        }
+        entry.cell.classList.remove(removeClass);
+        entry.cell.classList.add(addClass);
+      });
+    },
     // #8519 編集した項目のバッググラウンドが黄緑にならない 訾浩 start
     changeRowColor(currentTrc, currentLockTrc, edited, deleted) {
       // 並び順より後の項目の背景色を変更
       if (edited || deleted) {
         const addClass = deleted ? 'master-deleted-row' : 'master-edited-row';
-
-        // 固定列（ソート順付）：ソート順後のみ
-        for (
-          let lockClCount = this.getColumnIndex('sortRank') + 1;
-          lockClCount < currentLockTrc.length;
-          lockClCount++
-        ) {
-          currentLockTrc[lockClCount]?.classList?.add(addClass);
-        }
-        // 可変列：全列対象
-        for (
-          let clCount = 0;
-          // #8519 編集した項目のバッググラウンドが黄緑にならない 訾浩 end
-          clCount < currentTrc.length;
-          clCount++
-        ) {
-          currentTrc[clCount]?.classList?.add(addClass);
-        }
+        const removeClass = deleted ? 'master-edited-row' : 'master-deleted-row';
+        this.applyDirectGridRowColorToCells(currentLockTrc, addClass, removeClass, deleted);
+        this.applyDirectGridRowColorToCells(currentTrc, addClass, removeClass, deleted);
       }
     },
     // mod #9863 編集時背景色表示異常の横展開 蔡 start
@@ -1255,6 +1790,12 @@ export default {
         return;
       }
       // add #9863 編集時背景色表示異常の横展開 蔡 end
+      const codeIndex = this.getColumnIndex('code');
+      const codeCell = codeIndex >= 0 ? currentTrc[codeIndex] : null;
+      if (!codeCell) {
+        return;
+      }
+      const codeValue = String(codeCell.textContent ?? '').replaceAll(",", "");
       // コンボリストが設定されていてデータが存在するが、画面表示上は空の場合は削除済みレコードを参照として背景色を変更
       for (let clCount = 0; clCount < currentTrc.length; clCount++) {
         const columnInfo = this.columns[clCount];
@@ -1262,7 +1803,7 @@ export default {
           // #8519 編集した項目のバッググラウンドが黄緑にならない 訾浩 start
           // mod #9863 編集時背景色表示異常の横展開 蔡 start
           // currentTrc[this.getColumnIndex("code")].textContent,
-          currentTrc[this.getColumnIndex('code')].textContent.replaceAll(",", ""),
+          codeValue,
           // mod #9863 編集時背景色表示異常の横展開 蔡 end
           columnInfo.field,
         );
@@ -1283,121 +1824,42 @@ export default {
     // add FNSI-データ初期種別と測定値送信間隔の制御 徐 start
     deviceClassChange() {
       setTimeout(() => {
-        var rowxs = document.getElementById("under-grid").childNodes[1].childNodes[0].childNodes[1];
-        for (var no = 0; no < rowxs.childNodes.length; no++) {
-          var rowx = rowxs.childNodes[no].cells;
-          // #11987 2025.11.13 mod スケールベッド対応 体重計種別追加による列の変更 TDC渡辺 start
-          // #9863 加算マスタ詳細を開くとtypeエラーが発生する 横展開2 linjunfeng start
-          // if (rowx[8].textContent === this.deviceClassName) {
-          //   rowx[24].disabled = false;
-          //   rowx[25].disabled = false;
-          // } else {
-          //   rowx[24].disabled = true;
-          //   rowx[25].disabled = true;
-          //   rowx[24].textContent = "";
-          //   rowx[25].textContent = "";
-          // }
-          //if (rowx[8] && rowx[8].textContent === this.deviceClassName) {
-          //  rowx[24].disabled = false;
-          //  rowx[25].disabled = false;
-          //} else {
-          //  if (rowx[24] && rowx[25]) {
-          //    rowx[24].disabled = true;
-          //    rowx[25].disabled = true;
-          //    rowx[24].textContent = "";
-          //    rowx[25].textContent = "";
-          //  }
-          //}
-          // #9863 加算マスタ詳細を開くとtypeエラーが発生する 横展開2 linjunfeng end
-          //すべての項目を一度表示に設定する。
-          if (rowx[no]) {
-            rowx[no].disabled = false;
+        const grid = this.getGridWidget();
+        const rows = this.getGridBodyRows();
+        const setCellDisabled = (cell, disabled, clearValue = false) => {
+          if (!cell) {
+            return;
           }
-          //スケールベット機能が有効・無効により体重種別を表示・非表示にする。
-          if (this.ScaleBedFunction === false) {
-            //無効な場合、体重種別を非表示
-            if (rowx[6] && rowx[6].style) {
-              rowx[6].style.display = 'none';
-            }
-          } else {
-            //有効な場合、体重種別を表示
-            if (rowx[6] && rowx[6].style) {
-              rowx[6].style.display = '';
-            }
+          cell.disabled = disabled;
+          cell.classList.toggle("kendo-grid-disabled", disabled);
+          if (clearValue) {
+            cell.textContent = "";
           }
-          if (rowx[9] && rowx[9].textContent === this.deviceClassName) {
-            rowx[25].disabled = false;
-            rowx[26].disabled = false;
-          } else {
-            if (rowx[25] && rowx[26]) {
-              rowx[25].disabled = true;
-              rowx[26].disabled = true;
-              rowx[25].textContent = "";
-              rowx[26].textContent = "";
-              rowx[25].style.backgroundColor = '#a0a0a0';
-              rowx[26].style.backgroundColor = '#a0a0a0';
-            }
-          }
-          //スケールベッドの場合
-          if (rowx[6] && rowx[6].textContent === this.weightTypeNameScaleBed) {
-            //体重計種別
-            rowx[6].disabled = false;
-            //詳細不明
-            //rowx[7].disabled = true;
-            //体重計ポート
-            rowx[8].disabled = true;
-            rowx[8].textContent = "";
-            rowx[8].style.backgroundColor = '#a0a0a0';
-            //体重計機種
-            rowx[9].disabled = true;
-            rowx[9].textContent = "";
-            rowx[9].style.backgroundColor = '#a0a0a0';
-            //前体重自動送信
-            //前体重自動送信待ち時間(秒)
-            rowx[11].disabled = true;
-            rowx[11].textContent = "";
-            rowx[11].style.backgroundColor = '#a0a0a0';
-            //前体重自動送信待ち時間(秒)
-            rowx[14].disabled = true;
-            rowx[14].textContent = "";
-            rowx[14].style.backgroundColor = '#a0a0a0';
-            //カード有無
-            rowx[18].disabled = true;
-            rowx[18].textContent = "";
-            rowx[18].style.backgroundColor = '#a0a0a0';
-            //削除
-            //rowx[24].disabled = true;
-            //データ初期種別
-            rowx[25].disabled = true;
-            rowx[25].textContent = "";
-            rowx[25].style.backgroundColor = '#a0a0a0';
-            //測定値送信間隔
-            rowx[26].disabled = true;
-            rowx[26].textContent = "";
-            rowx[26].style.backgroundColor = '#a0a0a0';
-          }
-          //体重計の場合
-          if (rowx[6] && rowx[6].textContent === this.weightTypeNameWeight) {
-            //体重計種別
-            rowx[6].disabled = false;
-            rowx[6].style.backgroundColor = '';
-            //体重計ポート
-            rowx[8].disabled = false;
-            rowx[8].style.backgroundColor = '';
-            //体重計機種
-            rowx[9].disabled = false;
-            rowx[9].style.backgroundColor = '';
-            //前体重自動送信待ち時間(秒)
-            rowx[11].disabled = false;
-            rowx[11].style.backgroundColor = '';
-            //前体重自動送信待ち時間(秒)
-            rowx[14].disabled = false;
-            rowx[14].style.backgroundColor = '';
-            //カード有無
-            rowx[18].disabled = false;
-            rowx[18].style.backgroundColor = '';
-          }
-          // #11987 2025.11.13 add スケールベッド対応 体重計種別がスケールベッドの場合非活性化 TDC渡辺 end
+        };
+        for (const row of rows) {
+          const dataItem = grid?.dataItem?.(row) || {};
+          const weightTypeCell = this.getDirectSortColorCellByField(row, "weightType");
+          const weightTypeText = (weightTypeCell?.textContent || "").trim();
+          const isScaleBedRow =
+            String(dataItem.weightType ?? "") === "1" ||
+            weightTypeText === this.weightTypeNameScaleBed;
+          const deviceClassCell = this.getDirectSortColorCellByField(row, "deviceClass");
+          const isTanakaDevice = (deviceClassCell?.textContent || "").trim() === this.deviceClassName;
+
+          [
+            "portName",
+            "deviceClass",
+            "waitAutoSendBefore",
+            "waitAutoSendAfter",
+            "isHasCardReader"
+          ].forEach(fieldName => {
+            setCellDisabled(this.getDirectSortColorCellByField(row, fieldName), isScaleBedRow, isScaleBedRow);
+          });
+
+          ["dataSelectType", "dataSendInterval"].forEach(fieldName => {
+            const disabled = isScaleBedRow || !isTanakaDevice;
+            setCellDisabled(this.getDirectSortColorCellByField(row, fieldName), disabled, disabled);
+          });
         }
       }, 500);
     },
@@ -1418,44 +1880,1087 @@ export default {
       this.onCloseMasterEditModal();
       EventBus.$emit("setIsDetailHeaderView", false);
       this.$nextTick(() => {
+        this.applyDirectGridDataSourceContract({ forceRebind: true });
+        this.scheduleDirectGridDataSourceRefresh({ forceRebind: true });
         this.calculateGridHeight();
+        this.scheduleDirectGridLayoutContract();
       });
     },
+    getRawMasterRecordData() {
+      const source = this.getMasterRecordList || {};
+      if (Array.isArray(source)) {
+        return source;
+      }
+      if (Array.isArray(source.data)) {
+        return source.data;
+      }
+      if (typeof source.data === "function") {
+        return Array.from(source.data() || []);
+      }
+      return [];
+    },
+    isDirectGridEditedRecord(record, rawData) {
+      if (!record || !rawData) {
+        return false;
+      }
+      const target = rawData.find(row => row && row.code == record.code);
+      return !!target && ((target.operation === 1 && target.edited) || target.operation === 2);
+    },
+    isDirectGridSearchMatched(record, condition) {
+      const recordName = String(condition?.recordName || "");
+      if (recordName === "") {
+        return true;
+      }
+      if (record?.skipSearch) {
+        return true;
+      }
+      const parseString = value => (value == null ? "" : String(value));
+      if (parseString(record?.name).indexOf(recordName) !== -1) {
+        return true;
+      }
+      for (const column of this.columns || []) {
+        if (column?.dataType !== "combo1" && column?.dataType !== "combo2") {
+          continue;
+        }
+        const values = column.values || [];
+        const matchedValues = values.filter(value => parseString(value?.text).indexOf(recordName) !== -1);
+        if (matchedValues.some(value => value?.value == record?.[column.field])) {
+          return true;
+        }
+      }
+      return false;
+    },
+    getDirectGridDisplayData() {
+      const rawData = this.getRawMasterRecordData();
+      const condition = this.$store?.state?.["master-maintenance"]?.condition || this.condition || {};
+      return rawData.filter(record => {
+        const edited = this.isDirectGridEditedRecord(record, rawData);
+        if (String(record?.isDel) === "1" && !edited) {
+          return false;
+        }
+        if (condition.includeDeleted === false && String(record?.isDisp) === "0" && !edited) {
+          return false;
+        }
+        return this.isDirectGridSearchMatched(record, condition);
+      });
+    },
+    normalizeDirectGridColumnWidth(width) {
+      return width == null || width === "" ? "0" : width;
+    },
+    buildDirectGridColumns() {
+      return this.columns.map(column => {
+        const gridColumn = {
+          title: column.title,
+          field: column.field,
+          hidden: !!column.hidden,
+          locked: !!column.locked,
+          editable: column.editable,
+          width: this.normalizeDirectGridColumnWidth(column.width),
+          format: column.format,
+          values: column.values || null
+        };
+        if (column.field === "$modalType") {
+          gridColumn.attributes = { class: "btn3-kendo-normal" };
+          gridColumn.command = { text: "詳細", click: event => this.showMasterEditView(event) };
+          delete gridColumn.values;
+        }
+        return gridColumn;
+      });
+    },
+    getDirectGridColumnSignature() {
+      return (this.columns || []).map(column => [
+        column.field,
+        column.title,
+        column.hidden ? 1 : 0,
+        column.locked ? 1 : 0,
+        column.width || "",
+        column.format || "",
+        Array.isArray(column.values) ? column.values.length : 0
+      ].join(":")).join("|");
+    },
+    applyDirectGridColumnsContract(options = {}) {
+      const grid = this.getGridWidget();
+      if (!grid) {
+        return;
+      }
+      const nextSignature = this.getDirectGridColumnSignature();
+      if (options.force || this.directGridColumnSignature !== nextSignature) {
+        grid.setOptions({ columns: this.buildDirectGridColumns() });
+        this.directGridWidget = markRaw($(this.getGridRootElement()).data("kendoGrid") || grid);
+        this.directGridColumnSignature = nextSignature;
+      }
+    },
+    createDirectDataSource(data = this.getDirectGridDisplayData()) {
+      const source = this.directGridDataSource || this.getMasterRecordList || {};
+      const sourceConfig = { ...source };
+      sourceConfig.data = Array.isArray(data) ? data.slice() : data;
+      if (kendo?.data?.DataSource) {
+        return markRaw(new kendo.data.DataSource(sourceConfig));
+      }
+      return sourceConfig;
+    },
+    initDirectGridIfReady() {
+      if (!this.directGridMounted || this.columns.length <= 1 || !this.getGridRootElement()) {
+        return;
+      }
+      if (this.directGridWidget) {
+        this.applyDirectGridColumnsContract();
+        this.applyDirectGridDataSourceContract();
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+      installComponentJQuery();
+      const $gridRoot = $(this.getGridRootElement());
+      this.applyDirectGridLegacyShellClasses();
+      $gridRoot.kendoGrid({
+        dataSource: this.createDirectDataSource(),
+        editable: true,
+        selectable: true,
+        reorderable: false,
+        height: this.kendoGridHeight,
+        scrollable: true,
+        columns: this.buildDirectGridColumns(),
+        beforeEdit: this.editStart,
+        edit: this.onDirectGridEdit,
+        save: this.onDirectGridSave,
+        cellClose: this.onDirectGridCellClose,
+        dataBound: this.onDataBoundKendoGrid
+      });
+      this.directGridWidget = markRaw($gridRoot.data("kendoGrid"));
+      this.directGridReady = !!this.directGridWidget;
+      this.directGridColumnSignature = this.getDirectGridColumnSignature();
+      this.scheduleDirectGridLayoutContract();
+    },
+    destroyDirectGrid() {
+      this.clearValidationTooltipPlacementTimers();
+      this.stopValidationTooltipPlacementWatch();
+      this.clearValidationTooltipPlacementState();
+      const grid = this.directGridWidget;
+      if (grid) {
+        try {
+          grid.destroy();
+        } catch (_error) {
+          // noop
+        }
+      }
+      if (this.getGridRootElement()) {
+        $(this.getGridRootElement()).empty();
+      }
+      this.directGridWidget = null;
+      this.directGridReady = false;
+      this.directGridColumnSignature = "";
+    },
+    applyDirectGridDataSourceContract(options = {}) {
+      const grid = this.getGridWidget();
+      if (!grid?.dataSource) {
+        this.initDirectGridIfReady();
+        return;
+      }
+      const position = this.getGridScrollPosition();
+      const displayData = this.getDirectGridDisplayData();
+      try {
+        if (options.forceRebind && typeof grid.setDataSource === "function") {
+          grid.setDataSource(this.createDirectDataSource(displayData));
+          this.directGridWidget = markRaw($(this.getGridRootElement()).data("kendoGrid") || grid);
+        } else {
+          grid.dataSource.data(Array.isArray(displayData) ? displayData.slice() : displayData);
+          grid.refresh?.();
+        }
+      } catch (_error) {
+        // noop
+      }
+      this.$nextTick(() => {
+        if (options.scrollToBottom) {
+          const content = this.getGridContentElement();
+          if (content) {
+            content.scrollTop = content.scrollHeight;
+            this.syncDirectGridLockedScrollContract();
+          }
+        } else {
+          this.setGridScrollPosition(position);
+        }
+        this.scheduleDirectGridLayoutContract();
+      });
+    },
+    scheduleDirectGridDataSourceRefresh(options = {}) {
+      if (this.directGridDataRefreshRafId != null) {
+        cancelAnimationFrame(this.directGridDataRefreshRafId);
+      }
+      this.$nextTick(() => {
+        this.directGridDataRefreshRafId = requestAnimationFrame(() => {
+          this.directGridDataRefreshRafId = null;
+          this.applyDirectGridDataSourceContract(options);
+        });
+      });
+    },
+    scheduleDirectGridFilterRefresh() {
+      if (this.directGridFilterRefreshRafId != null) {
+        cancelAnimationFrame(this.directGridFilterRefreshRafId);
+      }
+      this.directGridFilterRefreshRafId = requestAnimationFrame(() => {
+        this.directGridFilterRefreshRafId = null;
+        this.applyDirectGridDataSourceContract();
+      });
+    },
+    applyDirectGridColumnVisibilityContract() {
+      if (!this.getGridWidget()) {
+        return;
+      }
+      const position = this.getGridScrollPosition();
+      this.applyDirectGridColumnsContract({ force: true });
+      this.$nextTick(() => {
+        this.setGridScrollPosition(position);
+        this.scheduleDirectGridLayoutContract();
+      });
+    },
+    applyDirectGridColumnEditableContract() {
+      const grid = this.getGridWidget();
+      if (!grid) {
+        return;
+      }
+      grid.columns?.forEach?.(gridColumn => {
+        const sourceColumn = this.columns.find(column => column.field === gridColumn.field);
+        if (sourceColumn) {
+          gridColumn.editable = sourceColumn.editable;
+        }
+      });
+    },
+    applyDirectGridLegacyShellClasses() {
+      const root = this.getGridRootElement();
+      if (!root) {
+        return;
+      }
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-editable", "k-display-block");
+    },
+    applyDirectGridLegacyStyleContract() {
+      const root = this.getGridRootElement();
+      if (!root) {
+        return;
+      }
+      this.applyDirectGridLegacyShellClasses();
+      root.querySelectorAll("th").forEach(th => th.classList.add("k-header"));
+      [".k-grid-content tbody", ".k-grid-content-locked tbody"].forEach(selector => {
+        root.querySelectorAll(selector).forEach(tbody => {
+          Array.from(tbody.children || []).forEach((tr, index) => {
+            tr.classList.add("k-master-row");
+            tr.classList.toggle("k-alt", index % 2 === 1);
+          });
+        });
+      });
+      root.querySelectorAll(".k-grid-content tbody td, .k-grid-content-locked tbody td").forEach(td => td.classList.add("k-td", "k-table-td"));
+    },
+    applyDirectGridLockedWidthContract() {
+      const root = this.getGridRootElement();
+      if (!root) {
+        return;
+      }
+      const lockedColumns = this.columns.filter(column => column.locked && !column.hidden);
+      if (lockedColumns.length === 0) {
+        return;
+      }
+      const fontSize = parseFloat(this.getMasterOwnerWindow()?.getComputedStyle?.(root)?.fontSize || "16") || 16;
+      const toPx = width => {
+        if (typeof width === "number") return width;
+        const str = String(width || "0").trim();
+        if (str.endsWith("em")) return parseFloat(str) * fontSize;
+        if (str.endsWith("px")) return parseFloat(str);
+        return parseFloat(str) || 0;
+      };
+      const lockedWidth = Math.ceil(lockedColumns.reduce((sum, column) => sum + toPx(column.width), 0));
+      if (!lockedWidth) {
+        return;
+      }
+      [
+        ".k-grid-header-locked",
+        ".k-grid-content-locked",
+        ".k-grid-footer-locked",
+        ".k-grid-lockedcolumns",
+        ".k-grid-header-locked table",
+        ".k-grid-content-locked table"
+      ].forEach(selector => {
+        root.querySelectorAll(selector).forEach(element => {
+          element.style.width = `${lockedWidth}px`;
+          element.style.minWidth = `${lockedWidth}px`;
+        });
+      });
+    },
+    applyDirectGridLockedHeightContract() {
+      const content = this.getGridContentElement();
+      const locked = this.getGridLockedContentElement();
+      if (!content || !locked) {
+        return;
+      }
+      const height = content.clientHeight;
+      if (height > 0) {
+        locked.style.height = `${height}px`;
+        locked.style.maxHeight = `${height}px`;
+      }
+    },
+    syncDirectGridLockedScrollContract() {
+      const content = this.getGridContentElement();
+      const locked = this.getGridLockedContentElement();
+      if (content && locked) {
+        locked.scrollTop = content.scrollTop;
+      }
+    },
+    runDirectGridLayoutContract() {
+      this.calculateGridHeight();
+      const grid = this.getGridWidget();
+      if (grid) {
+        try {
+          grid.wrapper?.height?.(this.kendoGridHeight);
+          grid.resize?.();
+        } catch (_error) {
+          // noop
+        }
+      }
+      this.applyDirectGridLegacyStyleContract();
+      this.applyDirectGridLockedWidthContract();
+      this.applyDirectGridLockedHeightContract();
+      this.syncDirectGridLockedScrollContract();
+    },
+    scheduleDirectGridLayoutContract() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+      }
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.runDirectGridLayoutContract();
+        this.directGridLayoutRafId = requestAnimationFrame(() => {
+          this.directGridLayoutRafId = null;
+          this.runDirectGridLayoutContract();
+        });
+      });
+    },
+    getDirectGridEditField(ev = {}, fallbackCell = null) {
+      return ev?.sender?.editable?.options?.fields?.field
+        || ev?.sender?.editable?.options?.field
+        || ev?.container?.find?.("input[name], textarea[name], select[name]")?.first?.()?.attr?.("name")
+        || this.getDirectGridFieldFromCell(fallbackCell);
+    },
+    getDirectGridEditKey(model, fieldName) {
+      if (!model || !fieldName) {
+        return "";
+      }
+      return `${model.uid || model.code || model.weightNo || "__row__"}:${fieldName}`;
+    },
+    getDirectGridOriginalValue(model, fieldName) {
+      const key = this.getDirectGridEditKey(model, fieldName);
+      if (key && this.directGridEditOriginals.has(key)) {
+        return this.directGridEditOriginals.get(key);
+      }
+      return model?.[fieldName];
+    },
+    normalizeDirectGridCompareValue(value, fieldName) {
+      if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? "" : `date:${value.getTime()}`;
+      }
+      if (value == null) {
+        return "";
+      }
+      const fieldInfo = this.getMasterRecordList?.schema?.model?.fields?.[fieldName];
+      const rawValue = typeof value === "string" ? value.replace(/,/g, "").trim() : value;
+      if (fieldInfo?.type === "number" || typeof rawValue === "number") {
+        if (rawValue === "") {
+          return "";
+        }
+        const numberValue = Number(rawValue);
+        return Number.isFinite(numberValue) ? `number:${numberValue}` : String(rawValue);
+      }
+      return String(value);
+    },
+    isDirectGridSameValue(oldValue, newValue, fieldName) {
+      return this.normalizeDirectGridCompareValue(oldValue, fieldName) === this.normalizeDirectGridCompareValue(newValue, fieldName);
+    },
+    captureDirectGridEditOriginal(ev = {}) {
+      const model = ev?.model;
+      if (!model) {
+        return;
+      }
+      const container = ev?.container;
+      const currentCell = container?.closest?.("td")?.[0] || ev?.sender?.current?.()?.[0] || null;
+      const fieldName = this.getDirectGridEditField(ev, currentCell);
+      if (!fieldName) {
+        return;
+      }
+      const key = this.getDirectGridEditKey(model, fieldName);
+      if (key && !this.directGridEditOriginals.has(key)) {
+        const snapshotValue = this.getWeightSnapshotFieldValue(model.code, fieldName);
+        this.directGridEditOriginals.set(
+          key,
+          snapshotValue !== undefined ? snapshotValue : model[fieldName]
+        );
+      }
+    },
+    clearDirectGridEditOriginal(model, fieldName) {
+      const key = this.getDirectGridEditKey(model, fieldName);
+      if (key) {
+        this.directGridEditOriginals.delete(key);
+      }
+    },
+    getDirectGridSaveFieldNames(ev = {}) {
+      const fields = new Set();
+      Object.keys(ev?.values || {}).forEach(field => fields.add(field));
+      Object.keys(ev?.model?.dirtyFields || {}).forEach(field => fields.add(field));
+      const containerCell = ev?.container?.closest?.("td")?.[0] || null;
+      const fieldName = this.getDirectGridEditField(ev, containerCell || ev?.sender?.current?.()?.[0] || null);
+      if (fieldName) {
+        fields.add(fieldName);
+      }
+      return Array.from(fields).filter(Boolean);
+    },
+    getDirectGridNewValue(ev = {}, model, fieldName) {
+      if (ev?.values && Object.prototype.hasOwnProperty.call(ev.values, fieldName)) {
+        return ev.values[fieldName];
+      }
+      const container = ev?.container;
+      const input = container
+        ?.find?.("input[name], textarea[name], select[name]")
+        ?.filter?.((_, element) => !element.disabled && element.type !== "hidden")
+        ?.first?.();
+      if (input?.length) {
+        return this.getDirectGridEditorValue(input, fieldName, { triggerChange: false });
+      }
+      return model?.[fieldName];
+    },
+    clearDirectGridUnchangedField(ev = {}, fieldName = null) {
+      const model = ev?.model;
+      if (model?.dirtyFields && fieldName) {
+        delete model.dirtyFields[fieldName];
+        if (Object.keys(model.dirtyFields).length === 0) {
+          model.dirty = false;
+        }
+      }
+      const cell = ev?.container?.closest?.("td")?.[0] || ev?.sender?.current?.()?.[0] || null;
+      if (cell) {
+        cell.classList.remove("k-dirty-cell", "master-edited-cell", "master-sort-edited");
+        cell.querySelectorAll?.(".k-dirty").forEach(element => element.remove());
+      }
+    },
+    getDirectGridActualChangedFields(ev = {}) {
+      const model = ev?.model;
+      if (!model) {
+        return [];
+      }
+      return this.getDirectGridSaveFieldNames(ev).filter(fieldName => {
+        const oldValue = this.getDirectGridOriginalValue(model, fieldName);
+        const newValue = this.getDirectGridNewValue(ev, model, fieldName);
+        const changed = !this.isDirectGridSameValue(oldValue, newValue, fieldName);
+        if (!changed) {
+          this.clearDirectGridUnchangedField(ev, fieldName);
+          this.clearDirectGridEditOriginal(model, fieldName);
+        }
+        return changed;
+      });
+    },
+    isDirectGridSortRankEdit(ev = {}) {
+      if (ev?.values && Object.prototype.hasOwnProperty.call(ev.values, "sortRank")) {
+        return true;
+      }
+      if (ev?.model?.dirtyFields && Object.prototype.hasOwnProperty.call(ev.model.dirtyFields, "sortRank")) {
+        return true;
+      }
+      const editableField = ev?.sender?.editable?.options?.fields?.field || ev?.sender?.editable?.options?.field;
+      return editableField === "sortRank";
+    },
+    getDirectGridFieldFromCell(cell) {
+      const row = cell?.parentElement || null;
+      if (!row) {
+        return null;
+      }
+      const index = Array.from(row.children || []).indexOf(cell);
+      if (index < 0) {
+        return null;
+      }
+      return this.getDirectSortColorVisibleColumnsForRow(row)[index]?.column?.field || null;
+    },
+    getDirectGridFieldFromEvent(ev) {
+      const activeField = ev?.sender?.editable?.options?.fields?.field;
+      if (activeField) {
+        return activeField;
+      }
+      return this.getDirectGridFieldFromCell(ev?.container?.[0] || ev?.container);
+    },
+    applyWeightSchemaValidationMessages(schema) {
+      const fields = schema?.model?.fields;
+      if (!fields || !Array.isArray(this.columns) || this.columns.length <= 1) {
+        return;
+      }
+      Object.keys(fields).forEach(fieldName => {
+        const targetField = fields[fieldName];
+        if (targetField?.validation?.required) {
+          const targetColumn = this.columns.find(column => column.field === fieldName);
+          if (targetColumn?.title) {
+            targetField.validation.validationMessage = `${targetColumn.title}は必須入力です。`;
+          }
+        }
+      });
+    },
+    getDirectGridFieldValidationMessage(field) {
+      if (!field) {
+        return "";
+      }
+      const schemaFields =
+        this.directGridDataSource?.schema?.model?.fields ||
+        this.getMasterRecordList?.schema?.model?.fields ||
+        {};
+      const fieldDef = schemaFields[field];
+      if (fieldDef?.validation?.validationMessage) {
+        return fieldDef.validation.validationMessage;
+      }
+      if (fieldDef?.validation?.required) {
+        const column = this.columns.find(item => item.field === field);
+        if (column?.title) {
+          return `${column.title}は必須入力です。`;
+        }
+      }
+      return "";
+    },
+    applyDirectGridEditorValidationMessage(cell, field) {
+      const message = this.getDirectGridFieldValidationMessage(field);
+      if (!message || !cell) {
+        return;
+      }
+      const root = cell?.querySelector ? cell : null;
+      if (!root) {
+        return;
+      }
+      const inputs = root.matches?.("input, select, textarea")
+        ? [root]
+        : Array.from(root.querySelectorAll?.("input, select, textarea") || []);
+      inputs.forEach(input => {
+        input.setAttribute("required", "required");
+        input.setAttribute("validationMessage", message);
+      });
+    },
+    getDirectGridSearchRoot() {
+      const widget = this.directGridWidget;
+      return widget?.wrapper?.[0] || widget?.element?.[0] || this.$refs.grid || null;
+    },
+    getDirectGridDataSourceItems() {
+      const collection = this.directGridWidget?.dataSource?.data?.();
+      return collection ? Array.from(collection) : [];
+    },
+    findActiveGridEditCell(root) {
+      const grid = this.directGridWidget;
+      const lockedCell = grid?.lockedTable?.find?.(".k-edit-cell")?.[0];
+      if (lockedCell) {
+        return lockedCell;
+      }
+      const mainCell = grid?.table?.find?.(".k-edit-cell")?.[0];
+      if (mainCell) {
+        return mainCell;
+      }
+      const searchRoot = root || this.getDirectGridSearchRoot();
+      return (
+        searchRoot?.querySelector?.(".k-grid-content-locked .k-edit-cell")
+        || searchRoot?.querySelector?.(".k-grid-content .k-edit-cell")
+        || searchRoot?.querySelector?.(".k-edit-cell")
+        || null
+      );
+    },
+    findGridScrollContentForEditCell(root, editCell) {
+      const lockedContent = editCell?.closest?.(".k-grid-content-locked");
+      if (lockedContent) {
+        return lockedContent;
+      }
+      const scrollContent = editCell?.closest?.(".k-grid-content");
+      if (scrollContent) {
+        return scrollContent;
+      }
+      return (
+        root?.querySelector?.(".k-grid-content-locked")
+        || root?.querySelector?.(".k-grid-content")
+        || null
+      );
+    },
+    findVisibleValidationTooltip(editCell) {
+      if (!editCell) {
+        return null;
+      }
+      const candidates = editCell.querySelectorAll(
+        ".k-invalid-msg, .k-tooltip-error, .k-validator-tooltip, .k-tooltip.k-tooltip-validation"
+      );
+      for (const element of candidates) {
+        if (element?.classList?.contains?.("k-hidden")) {
+          continue;
+        }
+        const text = element.textContent?.trim?.() || "";
+        const hasMessage = text.length > 0 || element.querySelector?.(".k-tooltip-content");
+        if (hasMessage || element.classList.contains("k-tooltip-error")) {
+          return element;
+        }
+      }
+      return null;
+    },
+    resetValidationTooltipCalloutDirection(editCell) {
+      editCell?.querySelectorAll?.(".k-callout")?.forEach?.(callout => {
+        callout.classList.remove("k-callout-s", "k-callout-e", "k-callout-w");
+        callout.classList.add("k-callout-n");
+      });
+    },
+    setValidationTooltipCalloutDirection(tooltip, above) {
+      const callout = tooltip?.querySelector?.(".k-callout");
+      if (!callout) {
+        return;
+      }
+      if (above) {
+        callout.classList.remove("k-callout-n", "k-callout-e", "k-callout-w");
+        callout.classList.add("k-callout-s");
+      } else {
+        callout.classList.remove("k-callout-s", "k-callout-e", "k-callout-w");
+        callout.classList.add("k-callout-n");
+      }
+    },
+    isLastDataSourceEditRow(editRow) {
+      if (!editRow) {
+        return false;
+      }
+      const grid = this.directGridWidget;
+      const dataItem = grid?.dataItem?.(editRow);
+      const items = this.getDirectGridDataSourceItems();
+      if (!items.length) {
+        return false;
+      }
+      const lastItem = items[items.length - 1];
+      if (dataItem && lastItem) {
+        return dataItem === lastItem || dataItem.uid === lastItem.uid;
+      }
+      const rowUid = editRow.getAttribute("data-uid");
+      return !!rowUid && lastItem?.uid === rowUid;
+    },
+    isLastVisibleTbodyRow(editRow) {
+      const tbody = editRow?.closest?.("tbody");
+      if (!tbody) {
+        return false;
+      }
+      const dataRows = tbody.querySelectorAll(":scope > tr[data-uid]");
+      if (!dataRows.length) {
+        return false;
+      }
+      return dataRows[dataRows.length - 1] === editRow;
+    },
+    isEditRowInVisibleBottomBand(editCell, content) {
+      const editRow = editCell?.closest?.("tr");
+      if (!editRow || !content) {
+        return false;
+      }
+      const contentRect = content.getBoundingClientRect();
+      const rowRect = editRow.getBoundingClientRect();
+      const rowBottomGap = contentRect.bottom - rowRect.bottom;
+      if (rowBottomGap < 52) {
+        return true;
+      }
+      const tbody = editRow.closest("tbody");
+      if (!tbody) {
+        return false;
+      }
+      const dataRows = Array.from(tbody.querySelectorAll(":scope > tr[data-uid]"));
+      const rowIndex = dataRows.indexOf(editRow);
+      if (rowIndex < 0) {
+        return false;
+      }
+      return rowIndex >= dataRows.length - 2;
+    },
+    shouldPlaceValidationTooltipAbove(editCell, content, anchor, tooltip) {
+      const editRow = editCell?.closest?.("tr");
+      const anchorRect = anchor.getBoundingClientRect();
+      const contentRect = content.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const rowRect = editRow?.getBoundingClientRect?.() || anchorRect;
+      const tooltipHeight = Math.max(
+        tooltip.offsetHeight || 0,
+        tooltip.scrollHeight || 0,
+        tooltipRect.height || 0,
+        36
+      );
+      const spaceBelow = contentRect.bottom - anchorRect.bottom;
+      const rowBottomGap = contentRect.bottom - rowRect.bottom;
+      const overflowsBelow =
+        tooltipRect.height > 0 && tooltipRect.bottom > contentRect.bottom - 2;
+      const projectedOverflow =
+        anchorRect.bottom + tooltipHeight + 4 > contentRect.bottom;
+      return (
+        overflowsBelow
+        || projectedOverflow
+        || spaceBelow < tooltipHeight + 4
+        || rowBottomGap < tooltipHeight + 8
+        || this.isEditRowInVisibleBottomBand(editCell, content)
+        || this.isLastDataSourceEditRow(editRow)
+        || this.isLastVisibleTbodyRow(editRow)
+      );
+    },
+    applyValidationTooltipPlacement() {
+      const root = this.getDirectGridSearchRoot();
+      if (!root) {
+        return;
+      }
+      const editCell = this.findActiveGridEditCell(root);
+      if (!editCell) {
+        this.clearValidationTooltipPlacementState();
+        return;
+      }
+      const content = this.findGridScrollContentForEditCell(root, editCell);
+      if (!content) {
+        this.clearValidationTooltipPlacementState();
+        return;
+      }
+      root.querySelectorAll(".ntss-validation-above").forEach(element => {
+        if (element !== editCell) {
+          element.classList.remove("ntss-validation-above");
+          this.resetValidationTooltipCalloutDirection(element);
+        }
+      });
+      const tooltip = this.findVisibleValidationTooltip(editCell);
+      if (!tooltip) {
+        editCell.classList.remove("ntss-validation-above");
+        this.resetValidationTooltipCalloutDirection(editCell);
+        return;
+      }
+      const anchor =
+        editCell.querySelector(".k-input.k-textbox, .k-picker, .k-input")
+        || editCell.querySelector("input, textarea, select, .k-input-inner, .k-textbox")
+        || editCell;
+      const needsAbove = this.shouldPlaceValidationTooltipAbove(
+        editCell,
+        content,
+        anchor,
+        tooltip
+      );
+      if (needsAbove) {
+        editCell.classList.add("ntss-validation-above");
+      } else {
+        editCell.classList.remove("ntss-validation-above");
+      }
+      this.setValidationTooltipCalloutDirection(tooltip, needsAbove);
+    },
+    stopValidationTooltipPlacementWatch() {
+      const ownerWindow = this.getDirectGridSearchRoot()?.ownerDocument?.defaultView || window;
+      if (this.validationTooltipPlacementIntervalId) {
+        ownerWindow.clearInterval?.(this.validationTooltipPlacementIntervalId);
+        this.validationTooltipPlacementIntervalId = null;
+      }
+    },
+    startValidationTooltipPlacementWatch() {
+      this.stopValidationTooltipPlacementWatch();
+      const ownerWindow = this.getDirectGridSearchRoot()?.ownerDocument?.defaultView || window;
+      let attempts = 0;
+      const tick = () => {
+        attempts += 1;
+        this.applyValidationTooltipPlacement();
+        const editCell = this.findActiveGridEditCell(this.getDirectGridSearchRoot());
+        const tooltip = this.findVisibleValidationTooltip(editCell);
+        if (!tooltip || attempts >= 5) {
+          this.stopValidationTooltipPlacementWatch();
+        }
+      };
+      tick();
+      this.validationTooltipPlacementIntervalId = ownerWindow.setInterval?.(tick, 100);
+    },
+    clearValidationTooltipPlacementTimers() {
+      const ownerWindow = this.getDirectGridSearchRoot()?.ownerDocument?.defaultView || window;
+      this.validationTooltipPlacementTimers.forEach(timerId => {
+        ownerWindow.clearTimeout?.(timerId);
+      });
+      this.validationTooltipPlacementTimers = [];
+      if (this.validationTooltipPlacementRafId) {
+        ownerWindow.cancelAnimationFrame?.(this.validationTooltipPlacementRafId);
+        this.validationTooltipPlacementRafId = null;
+      }
+    },
+    scheduleValidationTooltipPlacement() {
+      this.clearValidationTooltipPlacementTimers();
+      const ownerWindow = this.getDirectGridSearchRoot()?.ownerDocument?.defaultView || window;
+      const run = () => this.applyValidationTooltipPlacement();
+      run();
+      this.$nextTick(run);
+      this.validationTooltipPlacementRafId = ownerWindow.requestAnimationFrame?.(() => {
+        this.validationTooltipPlacementRafId = ownerWindow.requestAnimationFrame?.(() => {
+          this.validationTooltipPlacementRafId = null;
+          run();
+        }) || null;
+      }) || null;
+      const timerId = ownerWindow.setTimeout?.(run, 80);
+      if (timerId) {
+        this.validationTooltipPlacementTimers.push(timerId);
+      }
+      this.startValidationTooltipPlacementWatch();
+    },
+    clearValidationTooltipPlacementState() {
+      const root = this.getDirectGridSearchRoot();
+      root?.querySelectorAll?.(".ntss-validation-above")?.forEach?.(element => {
+        element.classList.remove("ntss-validation-above");
+        this.resetValidationTooltipCalloutDirection(element);
+      });
+    },
+    handleAddValidateArrow() {
+      const root = this.getDirectGridSearchRoot() || this.$el;
+      const editCell = this.findActiveGridEditCell(root);
+      const tooltip = this.findVisibleValidationTooltip(editCell);
+      if (editCell && tooltip) {
+        appendValidationCallout(tooltip);
+        this.scheduleValidationTooltipPlacement();
+        return;
+      }
+      this.clearValidationTooltipPlacementState();
+    },
+    onDirectGridCellClose(ev) {
+      this.clearValidationTooltipPlacementTimers();
+      this.stopValidationTooltipPlacementWatch();
+      const closedCell = ev?.container?.[0] || ev?.container;
+      if (closedCell?.classList) {
+        closedCell.classList.remove("ntss-validation-above");
+        this.resetValidationTooltipCalloutDirection(closedCell);
+      }
+      this.clearValidationTooltipPlacementState();
+      this.editEnd();
+    },
+    getDirectGridEditorValue(input, fieldName, options = {}) {
+      const triggerChange = options.triggerChange !== false;
+      const widgetNames = [
+        "kendoNumericTextBox",
+        "kendoDropDownList",
+        "kendoComboBox",
+        "kendoDatePicker",
+        "kendoDateTimePicker",
+        "kendoTimePicker"
+      ];
+      for (const widgetName of widgetNames) {
+        const widget = input?.data?.(widgetName);
+        if (widget && typeof widget.value === "function") {
+          if (triggerChange) {
+            widget.trigger?.("change");
+          }
+          return widget.value();
+        }
+      }
+      if (triggerChange) {
+        input?.trigger?.("change");
+      }
+      const value = input?.val?.();
+      const fieldInfo = this.getMasterRecordList?.schema?.model?.fields?.[fieldName];
+      if (fieldInfo?.type === "number") {
+        const numberValue = Number(value);
+        return Number.isNaN(numberValue) ? value : numberValue;
+      }
+      return value;
+    },
+    flushDirectGridEditorValue() {
+      const grid = this.getGridWidget();
+      if (!grid) {
+        return false;
+      }
+      const current = grid.current?.();
+      const currentCell = current?.jquery ? current[0] : (current?.[0] || null);
+      const editableElement = grid.editable?.element;
+      const container = editableElement?.jquery ? editableElement : $(editableElement || currentCell || []);
+      const input = container
+        ?.find?.("input[name], textarea[name], select[name]")
+        ?.filter?.((_, element) => !element.disabled && element.type !== "hidden")
+        ?.first?.();
+      const fieldName = grid.editable?.options?.fields?.field
+        || grid.editable?.options?.field
+        || input?.attr?.("name")
+        || this.getDirectGridFieldFromCell(currentCell);
+      if (!fieldName || !input?.length) {
+        return false;
+      }
+      const row = $(currentCell || input.closest("tr")?.[0]).closest("tr");
+      const model = grid.dataItem?.(row);
+      if (!model) {
+        return false;
+      }
+      const value = this.getDirectGridEditorValue(input, fieldName);
+      const originalValue = this.getDirectGridOriginalValue(model, fieldName);
+      if (this.isDirectGridSameValue(originalValue, value, fieldName)) {
+        this.clearDirectGridUnchangedField({ sender: grid, model }, fieldName);
+        this.clearDirectGridEditOriginal(model, fieldName);
+        this.syncDirectGridModelToStore({ model });
+        return false;
+      }
+      if (model.operation !== 1 && !this.isSortMode) {
+        model.operation = 2;
+      }
+      if (typeof model.set === "function") {
+        model.set(fieldName, value);
+      } else {
+        model[fieldName] = value;
+      }
+      model.dirty = true;
+      model.dirtyFields = model.dirtyFields || {};
+      model.dirtyFields[fieldName] = true;
+      if (this.isSortMode && fieldName === "sortRank") {
+        this.markDirectGridSortEdited(model);
+      }
+      this.markWeightRecordEdited(model.code);
+      this.edit({ editRecord: model, isSortMode: this.isSortMode });
+      this.clearDirectGridEditOriginal(model, fieldName);
+      this.scheduleDirectGridRowVisualRefresh(model, model?.uid);
+      this.weightEditTick += 1;
+      return true;
+    },
+    flushDirectGridPendingEdit() {
+      const grid = this.getGridWidget();
+      if (!grid) {
+        return false;
+      }
+      const flushed = this.flushDirectGridEditorValue();
+      try {
+        grid.closeCell?.();
+      } catch (_error) {
+        // direct jq では closeCell 失敗時に画面遷移判定を止めない。
+      }
+      if (flushed) {
+        this.refreshDirectGridDirtyVisualState();
+      }
+      return flushed;
+    },
+    validateDirectKendoGrid() {
+      const root = this.getGridRootElement();
+      const grid = this.getGridWidget();
+      this.flushDirectGridEditorValue();
+      try {
+        grid?.closeCell?.();
+      } catch (_error) {
+        // noop
+      }
+      const isValid = !root?.querySelector?.(".k-invalid, .k-invalid-msg");
+      if (!isValid) {
+        this.$nextTick(() => this.handleAddValidateArrow());
+      }
+      return isValid;
+    },
+    onDirectGridEdit(ev) {
+      this.captureDirectGridEditOriginal(ev);
+      this.addInputAssist(ev);
+      const field = this.getDirectGridFieldFromEvent(ev);
+      const cell = ev?.container?.[0] || ev?.container;
+      if (!field || !cell) {
+        return;
+      }
+      this.applyDirectGridEditorValidationMessage(cell, field);
+      this.scheduleValidationTooltipPlacement();
+      const inputElements = Array.from(
+        cell.querySelectorAll?.("input:not([type='hidden']), textarea, select") || []
+      );
+      const onValidationPlacement = () => {
+        this.scheduleValidationTooltipPlacement();
+      };
+      inputElements.forEach(input => {
+        input.addEventListener("blur", onValidationPlacement, { passive: true });
+        input.addEventListener("invalid", onValidationPlacement, { passive: true });
+      });
+    },
+    onDirectGridSave(ev) {
+      this.onSave(ev);
+    },
+    scheduleDirectGridRowVisualRefresh(record, preferredUid = null) {
+      const rowKey = preferredUid || record?.uid || record?.code || "__unknown__";
+      const oldRaf = this.directGridRowVisualRafIds.get(rowKey);
+      if (oldRaf != null) {
+        cancelAnimationFrame(oldRaf);
+      }
+      const rafId = requestAnimationFrame(() => {
+        this.directGridRowVisualRafIds.delete(rowKey);
+        this.applyDirectGridRowVisualState(record, preferredUid);
+      });
+      this.directGridRowVisualRafIds.set(rowKey, rafId);
+    },
+    applyDirectGridRowVisualState(record, preferredUid = null) {
+      const grid = this.getGridWidget();
+      if (!grid || !record) {
+        return;
+      }
+      const uid = preferredUid || record.uid;
+      const root = this.getGridRootElement();
+      const row = uid ? root?.querySelector?.(`.k-grid-content:not(.k-grid-content-locked) tr[data-uid="${uid}"]`) : null;
+      const lockedRow = uid ? root?.querySelector?.(`.k-grid-content-locked tr[data-uid="${uid}"]`) : null;
+      const deleted = String(record.isDisp) === "0";
+      const edited = this.isWeightGridRecordEdited(record) || this.isDirectGridSortEditedRecord(record);
+      [row, lockedRow].filter(Boolean).forEach(tr => {
+        tr.querySelectorAll("td").forEach(td => {
+          td.classList.remove("master-edited-row", "master-deleted-row");
+        });
+      });
+      if (edited || deleted) {
+        this.changeRowColor(row?.children || [], lockedRow?.children || [], edited, deleted);
+      }
+      if (this.isSortMode && record?.sortRank != null) {
+        [row, lockedRow].filter(Boolean).forEach(tr => this.changeSortColorByRow(tr, this.isDirectGridSortEditedRecord(record)));
+      }
+    },
+    refreshDirectGridDirtyVisualState() {
+      this.editBackgroundColor();
+    },
+    syncDirectGridSortRankToStore() {
+      const data = this.getGridDataSource()?.data?.() || [];
+      data.forEach(item => {
+        const record = this.getMasterRecordList?.data?.find?.(row => row.code === item.code);
+        if (record) {
+          record.sortRank = item.sortRank;
+          record.sortInputTime = item.sortInputTime;
+        }
+      });
+    },
+
     loadGridData(){
       // delete start #9590
         // this.setCondition(this.condition);
         // delete end #9590
       this.findList();
     },
+    refreshScaleGridWithoutDiscardConfirm() {
+      const scale = this.$refs.scale;
+      if (!scale) {
+        return;
+      }
+      if (typeof scale.loadGridData === "function") {
+        scale.loadGridData();
+        return;
+      }
+      scale.refresh?.();
+    },
+    runDiscardConfirmedRefresh() {
+      this.isMasterRefreshDiscarding = true;
+      this.clearScrollPosition();
+      this.refreshScaleGridWithoutDiscardConfirm();
+      this.loadGridData();
+      setTimeout(() => {
+        this.isMasterRefreshDiscarding = false;
+      }, 1000);
+    },
     // パンくずリストをクリックされた場合に呼び出される関数
     refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
-      if (this.selfScreenName === this.$router.currentRoute.name
-          && document.getElementsByTagName("ons-alert-dialog").length === 0) {
-        // #9194 愁訴処置マスタは空行保存ができる仕様だが、愁訴、処置が必須となっておりフォーカスアウトできない。 linjunfeng start
-        // if (this.isChanged) {
-        if (this.isChanged || !this.kendoValidator.validate()) {
-        // #9194 愁訴処置マスタは空行保存ができる仕様だが、愁訴、処置が必須となっておりフォーカスアウトできない。 linjunfeng end
-          this.$ons.notification.confirm({
-             // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
-              // title: "内容破棄",
-              title: DIALOG_MESSAGES[13000004].title,
-              // message: "編集内容が破棄されます。</br>よろしいですか？",
-              message: messageFormat(DIALOG_MESSAGES[13000004].message),
-              // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
-            callback: answer => {
-              if (answer === 1) {
-                this.clearScrollPosition();
-                this.$refs.scale.refresh();
-                this.loadGridData();
-              }
+      if (this.selfScreenName !== this.$route.name
+          || this.getAlertDialogs().length > 0
+          || this.isMasterRefreshConfirming
+          || this.isMasterRefreshDiscarding) {
+        return;
+      }
+      this.flushDirectGridPendingEdit();
+      // #9194 愁訴処置マスタは空行保存ができる仕様だが、愁訴、処置が必須となっておりフォーカスアウトできない。 linjunfeng start   
+      // if (this.isChanged) {
+      if (this.isChanged || !this.kendoValidator?.validate?.()) {
+      // #9194 愁訴処置マスタは空行保存ができる仕様だが、愁訴、処置が必須となっておりフォーカスアウトできない。 linjunfeng end
+        this.isMasterRefreshConfirming = true;
+        this.$ons.notification.confirm({
+           // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
+            // title: "内容破棄",
+            title: DIALOG_MESSAGES[13000004].title,
+            // message: "編集内容が破棄されます。</br>よろしいですか？",
+            message: messageFormat(DIALOG_MESSAGES[13000004].message),
+            // mod #6107 2023/03/23 メッセージボックス全調整 張博 end
+          callback: answer => {
+            this.isMasterRefreshConfirming = false;
+            if (answer === 1) {
+              this.runDiscardConfirmedRefresh();
             }
-          });
-        } else {
-          this.clearScrollPosition();
-          this.$refs.scale.refresh();
-          this.loadGridData();
-        }
+          }
+        });
+      } else {
+        this.clearScrollPosition();
+        this.$refs.scale.refresh();
+        this.loadGridData();
       }
     },
     /**
@@ -1470,68 +2975,101 @@ export default {
      */
     addedRow(){
       // スクロールバーを一番下にする
-      this.lastScrollTop = this.$refs.grid.$el.lastChild.scrollHeight;
+      this.lastScrollTop = this.getGridScrollHostEl()?.scrollHeight;
+      this.lastScrollLeft = 0;
+      this.scrollPosition.left = 0;
+      this.directGridLocalChanged = true;
+      this.applyDirectGridDataSourceContract({ forceRebind: true, scrollToBottom: true });
+      this.scheduleDirectGridDataSourceRefresh({ forceRebind: true, scrollToBottom: true });
+      this.$nextTick(() => {
+        const content = this.getGridContentElement();
+        if (content) {
+          content.scrollTop = content.scrollHeight;
+          content.scrollLeft = 0;
+          this.syncDirectGridLockedScrollContract();
+        }
+        requestAnimationFrame(() => {
+          const gridContent = this.getGridContentElement();
+          if (gridContent) {
+            gridContent.scrollTop = gridContent.scrollHeight;
+            gridContent.scrollLeft = 0;
+            this.syncDirectGridLockedScrollContract();
+          }
+        });
+      });
     },
   },
   async created() {
-    // #11987 2026.02.08 add スケールベッド対応 スケールベッド機能の無効・有効取得 TDC渡辺 start
-    // sys_function.disp_order を取得
-    let sysFunctionList = await sendRequestGetDefaultSettingDispOrder();
-    sysFunctionList = sysFunctionList.data;
-    this.defaultSettingObj.forEach(obj => {
-      let tmpObj = sysFunctionList.filter(func => {
-        return Number(obj.funcCode) === Number(func.functionCd);
-      });
-      tmpObj = tmpObj.length !== 0 ? tmpObj[0] : [];
-      obj.dispOrder = tmpObj.dispOrder ? Number(tmpObj.dispOrder) : null;
-    });
-    // useFunction配列を取得
-    const useFunction = this.$store.state.facility.useFunction || [];
-    // スケールベッド機能が有効か判定
-    if(useFunction.includes(FUNC_SCALE_BED)){
-      // スケールベッド機能が有効
-      this.ScaleBedFunction = true;
-    }
-    else{
-      // スケールベッド機能が無効
-      this.ScaleBedFunction = false;
-     }
-    // #11987 2026.02.08 add スケールベッド対応 スケールベッド機能の無効・有効取得 TDC渡辺 end
-
     this.setLoadingScreenVisible(true);
     // add マスタ一覧 1･施設切替を可能とする 孔s start
     this.facilitylistValue = this.getFacilitySwitch;
     // add マスタ一覧 1･施設切替を可能とする 孔s end
+    // #11987 2026.02.08 add スケールベッド対応 スケールベッド機能の無効・有効取得 TDC渡辺 start
+    const sysFunctionListResponse = await sendRequestGetDefaultSettingDispOrder();
+    const sysFunctionList = sysFunctionListResponse.data;
+    this.defaultSettingObj.forEach(defaultSetting => {
+      const matchFunction = sysFunctionList.find(
+        sysFunction => sysFunction.function_cd === defaultSetting.funcCode
+      );
+      defaultSetting.dispOrder = matchFunction?.function_disp_order || null;
+    });
+    const useFunction = this.$store?.state?.facility?.useFunction || [];
+    this.ScaleBedFunction = useFunction.includes(FUNC_SCALE_BED);
+    // #11987 2026.02.08 add スケールベッド対応 スケールベッド機能の無効・有効取得 TDC渡辺 end
     this.loadGridData();
 
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("処理中・・・");
     // 端末判別
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toLowerCase();
     if (/android/.test(ua)) {
       this.isAndroid = true;
     } else if (/iphone|ipad|mac|os/.test(ua)) {
       this.isIOS = true;
     }
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     EventBus.$on("onCloseMasterEditModal", this.onCloseMasterEditModal);
     EventBus.$on("refresh", this.refresh);
   },
-  updated() {
-    // Storeの更新等で画面が再描画された場合に背景色を変更
-    this.editBackgroundColor();
-  },
   mounted() {
+    this.directGridMounted = true;
+    this.kendoValidator = { validate: () => this.validateDirectKendoGrid() };
+    this.__weightValidateArrowHandler = () => this.handleAddValidateArrow();
+    this.getMasterDocument()?.addEventListener?.("click", this.__weightValidateArrowHandler);
     this.$nextTick(() => {
       this.calculateGridHeight();
+      this.initDirectGridIfReady();
+      this.scheduleDirectGridLayoutContract();
     });
     EventBus.$on("clearScrollPosition", this.clearScrollPosition);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("onCloseMasterEditModal", this.onCloseMasterEditModal);
     EventBus.$off("refresh", this.refresh);
     EventBus.$off("clearScrollPosition", this.clearScrollPosition);
+    if (this.__weightValidateArrowHandler) {
+      this.getMasterDocument()?.removeEventListener?.("click", this.__weightValidateArrowHandler);
+      this.__weightValidateArrowHandler = null;
+    }
+    this.clearValidationTooltipPlacementTimers();
+    this.stopValidationTooltipPlacementWatch();
+    this.clearValidationTooltipPlacementState();
+    this.destroyDirectGrid();
+    [
+      this.directGridLayoutRafId,
+      this.directGridLayoutRefreshRafId,
+      this.directGridFilterRefreshRafId,
+      this.directGridDataRefreshRafId,
+      this.directGridScrollSyncRafId
+    ].forEach(id => {
+      if (id != null) {
+        cancelAnimationFrame(id);
+      }
+    });
+    this.directGridRowVisualRafIds?.forEach?.(id => cancelAnimationFrame(id));
+    this.directGridRowVisualRafIds?.clear?.();
+    this.directGridEditOriginals?.clear?.();
   }
   // add 性能改善メモリ不足 shan end
 };
@@ -1546,7 +3084,7 @@ export default {
   height: auto;
   padding: 0.2em 0.1em 0.1em 0.1em;
 }
-.k-grid-toolbar {
+.kendo-grid-toolbar-style {
   padding: 0 0.3em;
 }
 #grid-footer {
@@ -1567,7 +3105,7 @@ export default {
   line-height: 2em;
   width: auto;
 }
-.k-grid-toolbar {
+.kendo-grid-toolbar-style {
   padding-left: 0;
 }
 .custom-switch {
@@ -1578,29 +3116,90 @@ export default {
 .mobile-header {
   min-height: 30px; /* モバイル用の高さ */
 }
-.kendo-grid-disabled {
-  background-color: #FFFFE0;
-  color: white;
-  /* opacity: 0.5; */
+
+.mst-weight-direct-jq-grid :deep(td.master-edited-row),
+.mst-weight-direct-jq-grid :deep(tr.k-selected > td.master-edited-row),
+.mst-weight-direct-jq-grid :deep(tr.k-state-selected > td.master-edited-row),
+.mst-weight-direct-jq-grid :deep(tr.k-table-row.k-selected > td.master-edited-row) {
+  color: #003300 !important;
+  background-color: #ccffcc !important;
 }
-input:disabled {
-    background-color: #FFFFE0 !important;
-    color: #f00707 !important;
-    cursor: not-allowed;
-    opacity: 0.6;
-    pointer-events: none;
+.mst-weight-direct-jq-grid :deep(td.master-edited-cell) {
+  color: #003300 !important;
+  font-weight: bold !important;
 }
-/*
-:disabled {
-  background-color: block ;
-  color: inherit block;
-  cursor: not-allowed;
+.mst-weight-direct-jq-grid :deep(td.master-sort-edited),
+.mst-weight-direct-jq-grid :deep(tr.k-selected > td.master-sort-edited),
+.mst-weight-direct-jq-grid :deep(tr.k-state-selected > td.master-sort-edited),
+.mst-weight-direct-jq-grid :deep(tr.k-table-row.k-selected > td.master-sort-edited) {
+  background-color: #ffff66 !important;
+}
+.mst-weight-direct-jq-grid :deep(td.master-deleted-row),
+.mst-weight-direct-jq-grid :deep(tr.k-selected > td.master-deleted-row),
+.mst-weight-direct-jq-grid :deep(tr.k-state-selected > td.master-deleted-row),
+.mst-weight-direct-jq-grid :deep(tr.k-table-row.k-selected > td.master-deleted-row) {
+  color: #333333 !important;
+  background-color: #9d9d9d !important;
 }
 
-:disabled {
-  background-color: block ;
-  color: inherit block;
-  cursor: not-allowed;
+.kendo-grid-toolbar-style :deep(.k-tooltip.k-tooltip-validation) {
+  width: auto;
 }
-  */
+.kendo-grid-toolbar-style :deep(.k-edit-cell) {
+  position: relative;
+  overflow: visible;
+}
+.kendo-grid-toolbar-style :deep(.k-edit-cell > .k-invalid-msg:not(.k-hidden)),
+.kendo-grid-toolbar-style :deep(.k-edit-cell > .k-form-error:not(.k-hidden)),
+.kendo-grid-toolbar-style :deep(.k-edit-cell > .k-validator-tooltip:not(.k-hidden)),
+.kendo-grid-toolbar-style :deep(.k-edit-cell > .k-tooltip-error:not(.k-hidden)),
+.mst-weight-direct-jq-grid :deep(.k-edit-cell > .k-invalid-msg:not(.k-hidden)),
+.mst-weight-direct-jq-grid :deep(.k-edit-cell > .k-tooltip-error:not(.k-hidden)) {
+  position: absolute;
+  top: calc(100% + 2px);
+  bottom: auto;
+  z-index: 10;
+  width: auto;
+  min-width: 10em;
+  max-width: min(24em, 90vw);
+  margin: 0;
+  white-space: normal;
+  display: flex !important;
+  align-items: flex-start;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: normal !important;
+  line-height: 1.4 !important;
+  box-sizing: border-box;
+  transform: none !important;
+}
+/* 下端行: JS ntss-validation-above で tooltip をセル上に表示（locked/non-locked 行ずれ防止） */
+.kendo-grid-toolbar-style :deep(td.k-edit-cell.ntss-validation-above > .k-invalid-msg),
+.kendo-grid-toolbar-style :deep(td.k-edit-cell.ntss-validation-above .k-tooltip.k-tooltip-validation),
+.mst-weight-direct-jq-grid :deep(td.k-edit-cell.ntss-validation-above > .k-invalid-msg),
+.mst-weight-direct-jq-grid :deep(td.k-edit-cell.ntss-validation-above .k-tooltip.k-tooltip-validation) {
+  position: absolute !important;
+  left: 0 !important;
+  bottom: 38px !important;
+  top: auto !important;
+  margin-top: 0 !important;
+  overflow: visible !important;
+}
+.kendo-grid-toolbar-style :deep(td.k-edit-cell.ntss-validation-above .k-callout.k-callout-s),
+.mst-weight-direct-jq-grid :deep(td.k-edit-cell.ntss-validation-above .k-callout.k-callout-s) {
+  top: auto !important;
+  bottom: calc(-12px) !important;
+  border-bottom-color: transparent !important;
+  border-block-start-color: currentColor !important;
+}
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+}
 </style>

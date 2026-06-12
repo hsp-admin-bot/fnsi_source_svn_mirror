@@ -26,7 +26,7 @@ namespace NKK.BloodPurify
         [DllImport("USER32.DLL")]
         public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);
 
-        private const String installerTitle = "FMWSi Blood Purify";
+        private const String installerTitle = "FNWSi Blood Purify";
         private const String paramenterTitle = "ModifyInstallParameter";
         // add 2022-10-31 bug #5536 インストーラの設定画面を全面にもってくる 孫 end
 

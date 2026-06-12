@@ -1,4 +1,4 @@
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { ApiHelper } from "@/apis/AxiosHelper";
 
 const uriSearch = "/bbsInfo/getBbsSearchResult";
@@ -94,7 +94,7 @@ export const searchBbsList = async (searchCondition, facilityCd) => {
  * @return {Array} 検索条件から患者を絞り込み
  */
 export const searchPatList = async searchPatIdList => {
-  let patList = [];
+  let patList;
   // 患者IDから患者名を取得
   const responsePatList = await ApiHelper.post(uriPat, searchPatIdList).catch(
     () => {
@@ -120,9 +120,12 @@ export const searchPatList = async searchPatIdList => {
  * @param {Number} bbsCtlNo: 掲示板番号
  * @return {Array}
  */
-export const selectedBbsInfo = async bbsCtlNo => {
+export const selectedBbsInfo = async (bbsCtlNo, selectedPatId) => {
+  const params = selectedPatId === null || selectedPatId === undefined || selectedPatId === ""
+    ? undefined
+    : { selectedPatId };
   // 選択した掲示板番号の詳細情報をDBから取得
-  return await ApiHelper.get(`bbsInfo/getBbsInfoById/${bbsCtlNo}`).catch(() => {
+  return await ApiHelper.get(`bbsInfo/getBbsInfoById/${bbsCtlNo}`, params).catch(() => {
     throw new Error(
       "[BbsInfoFunctions.js]selectedBbsInfo(): 掲示板詳細情報取得失敗"
     );
@@ -288,7 +291,7 @@ export const createObsToBbs = obsRecord => {
     kind_no: obsRecord.kindInfo.kind_no,
     upd_staff_id: obsRecord.regStaffInfo.reg_staff_cd,
     upd_staff_name: obsRecord.regStaffInfo.reg_staff_name,
-    up_date: moment(obsRecord.recDate).format(),
+    up_date: dayjs(obsRecord.recDate).format(),
     facility_cd: obsRecord.facilityCd,
     pat_info: JSON.stringify({
       target: "1",
@@ -304,12 +307,12 @@ export const createObsToBbs = obsRecord => {
       ]
     }),
     file_info: JSON.stringify([]),
-    notice_start_date: moment().format(),
-    notice_end_date: moment().format(),
+    notice_start_date: dayjs().format(),
+    notice_end_date: dayjs().format(),
     reg_staff_id: obsRecord.regStaffInfo.reg_staff_cd,
     reg_staff_name: obsRecord.regStaffInfo.reg_staff_name,
     transition_router_path: null,
-    reg_date: moment(obsRecord.recDate).format()
+    reg_date: dayjs(obsRecord.recDate).format()
   };
 
   const bbsRecord = getObsToBbs(obsRecord, bbsInfo);
@@ -335,7 +338,7 @@ export const updateObsToBbs = async obsRecord => {
   // 毎回管理番号を設定し直す※観察記録の更新は新規登録扱いのため、観察記録主キーを設定
   bbsInfo.upd_staff_id = obsRecord.regStaffInfo.reg_staff_cd;
   bbsInfo.upd_staff_name = obsRecord.regStaffInfo.reg_staff_name;
-  bbsInfo.up_date = moment(obsRecord.recDate).format();
+  bbsInfo.up_date = dayjs(obsRecord.recDate).format();
 
   const bbsRecord = getObsToBbs(obsRecord, bbsInfo);
 

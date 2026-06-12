@@ -33,6 +33,12 @@ public interface MstCoopFilenameDao {
   MstCoopFilename select(String facilityCd, String coopCd, String coopCdIndex, String coopVersion);
 // mod 2022-12-26 bug #7304 異なる連携の機能を組み合わせて使用する方法 孫 end
 
+  @Select
+  List<MstCoopFilename> selectSource(String coopVersion, String coopCd);
+
+  @Select
+  List<MstCoopFilename> selectCurrentByFacilityCd(String facilityCd);
+
   /**
    * 最新の連携ファイル名マスタの管理番号を施設CDで取得する
    * @param facilityCd 施設CD

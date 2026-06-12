@@ -17,7 +17,7 @@
         </div>
 
         <!-- メイン要素 -->
-        <div class="modal-body">
+        <div class="modal-body" >
           <div id="selectUnitArea" class="history-header-modal" style="overflow: auto;">
             <!-- 検索条件 -->
             <common-searcharea
@@ -29,11 +29,12 @@
 
             <!-- 装置情報 -->
             <table class="ntss-list-detail">
+              <tbody>
               <tr>
                 <th class="list-header-th-center">ベッド</th>
                 <th class="list-header-th-center">型式</th>
                 <th class="list-header-th-center">製造番号</th>
-                <th class="list-header-th-center">装置名</th>
+                <th class="list-header-th-center">装置名1</th>
               </tr>
               <tr>
                 <td class="ntss-list-body-td">{{ getMachine.bedName }}</td>
@@ -41,6 +42,8 @@
                 <td class="ntss-list-body-td">{{ getMachine.machineSerial }}</td>
                 <td class="ntss-list-body-td">{{ getMachine.machineName }}</td>
               </tr>
+            
+              </tbody>
             </table>
           </div>
 
@@ -49,47 +52,15 @@
             id="listArea"
             class="history-list-modal"
           >
-            <kendo-grid
+            <div
               ref="historyGrid"
-              class="tare-offwater"
-              :data-source="localDataSource"
-              :data-bound="gridDataBound"
-              :scrollable="true"
-              :resizable="true"
-              @columnresize="onColumnResize"
-            >
-              <kendo-grid-column
-                field="rowTitle"
-                title="点検項目<br>点検日"
-                :width="125"
-                :attributes="columnRowNameClass"
-                :header-attributes="columnRowNameHeaderClass"
-                @editable="handleEditable"
-                :locked="true"
-              />
-              <kendo-grid-column
-                field="rowTitle2"
-                title="総合合否"
-                :width="120"
-                :attributes="columnRowNameClass"
-                :header-attributes="columnRowNameHeaderClass"
-                @editable="handleEditable"
-                :locked="false"
-              />
-              <kendo-grid-column
-                v-for="(item, index) in layoutList"
-                :key="index"
-                :columns="item.columns"
-                :title="item.title"
-                :header-attributes="columnHeaderClass"
-                :header-template="item.headerTemplate"
-              />
-            </kendo-grid>
+              class="tare-offwater daily-history-direct-grid"
+            ></div>
           </div>
         </div>
 
         <!-- フッター -->
-        <div slot="footer" class="modal-footer">
+        <div class="modal-footer">
           <div class="flex-container">
             <div class="denial-btn-area">
               <button
@@ -104,9 +75,10 @@
 
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
-      target="#daily-history-condition-list"
+      v-model:visible="popoverVisible"
+      :target="popoverTarget"
       direction="down"
+      :cover-target="false"
       :class="fontSizeSet"
       style="width: auto;"
       @preshow="popoverPreShow"
@@ -232,12 +204,12 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import commonSearchArea from "@/components/common/CommonSearchArea";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
-import moment from "moment";
-import $ from "jquery";
+import dayjs from "@/compat/date/dayjs";
+
 import PopoverMixin from "@/components/PopoverMixin";
 import {
   popoverPreShow,
@@ -252,12 +224,23 @@ import {
   StatusText,
 } from "@/constants/mainteConstants";
 import { getCurrentFunctionCd } from "@/router/routing-helper";
+import {
+  getContentContainerElement,
+  getScopedWindow,
+  observeElementResize,
+  resolveRefElement,
+} from "@/functions/common/LayoutMeasureHelper";
+import "@progress/kendo-ui";
+import { restoreKendoGridScrollPosition } from "@/compat/kendo/grid-scroll.js";
+import { markRaw } from "@/compat/vue/runtime";
+import $ from "@/compat/jquery";
 import PrintMixin from "@/components/PrintMixin";
 
 const columnRowNameClass = { class: "deviceSetInfo-row-name" };
 const columnRowNameHeaderClass = { class: "deviceSetInfo-header-row-name" };
 const columnHeaderClass = { class: "deviceSetInfo-header-first-name" };
 const columnHeaderSecendClass = { class: "deviceSetInfo-header-secound-name" };
+const columnBodyClass = { class: "daily-history-grid-cell" };
 
 export default {
   components: {
@@ -269,6 +252,7 @@ export default {
   data() {
     return {
       popoverVisible: false,
+      popoverTarget: null,
       condition: {
         // 入力中の検索条件
         inProgress: createDefaultConditon(),
@@ -280,10 +264,6 @@ export default {
         schema: {
           model: {
             id: "rowNum",
-            fields: {
-              rowTitle: { nullable: false },
-              rowTitle2: { nullable: false },
-            },
           },
         },
         data: [],
@@ -294,8 +274,16 @@ export default {
       columnRowNameClass,
       columnRowNameHeaderClass,
       columnHeaderClass,
-      scrollQuerySelector: ".k-grid-content", // スクロールコンテナ
-      addClassTargetQuerySelector: [".k-grid-header-wrap table, .k-grid-content table"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
+      historyGridCleanup: [],
+      historyGridWidget: null,
+      historyGridColumnSignature: "",
+      historyGridLayoutRafId: null,
+      historyGridSyncRafId: null,
+      historyGridSettingRafId: null,
+      historyGridAppliedDataSource: null,
+      parentModalResizeCleanup: null,
+      scrollQuerySelector: ".k-grid-content",
+      addClassTargetQuerySelector: [".k-grid-header-wrap table, .k-grid-content table"],
     };
   },
   computed: {
@@ -323,7 +311,7 @@ export default {
       if (!layoutParams) return conditionList;
 
       conditionList.push({
-        text: moment(layoutParams.mainteDate).format("YYYY/MM/DD"),
+        text: dayjs(layoutParams.mainteDate).format("YYYY/MM/DD"),
       });
       conditionList.push({
         text: `過去${layoutParams.numOfMonth}か月`,
@@ -348,7 +336,7 @@ export default {
       return this.getResultMasterHis.map((item, index) => ({
         columns: createMultiColumnInfo(item, index),
         title: item.layoutName,
-        headerTemplate: `<label style="margin-left: 1em;">${item.layoutName}</label>`,
+        headerTemplate: `<span class="daily-history-layout-header">${item.layoutName}</span>`,
       }));
     },
   },
@@ -364,22 +352,419 @@ export default {
     popoverPostShow,
     popoverPosthide,
 
-    showPopover() {
+    showPopover(event) {
       // 入力値を初期化する
       Object.assign(this.condition.inProgress, this.condition.inUsed);
+      this.popoverTarget = event;
       this.popoverVisible = true;
     },
     handleEditable() {
       return false;
     },
+    getHistoryGridRootEl() {
+      const ref = this.$refs.historyGrid;
+      if (ref?.nodeType === 1) {
+        return ref;
+      }
+      return ref?.gridRootEl?.() || resolveRefElement(this, "historyGrid") || null;
+    },
+    getHistoryScrollableContentEl() {
+      const root = this.getHistoryGridRootEl();
+      return this.$refs.historyGrid?.gridAutoScrollableEl?.()
+        || this.$refs.historyGrid?.gridContentEl?.()
+        || root?.querySelector?.(".k-grid-content")
+        || null;
+    },
+    getHistoryLockedContentEl() {
+      const root = this.getHistoryGridRootEl();
+      return this.$refs.historyGrid?.gridLockedContentEl?.()
+        || root?.querySelector?.(".k-grid-content-locked")
+        || null;
+    },
+    resetHistoryGridScrollTop() {
+      const gridRoot = this.getHistoryGridRootEl();
+      if (gridRoot) {
+        restoreKendoGridScrollPosition(gridRoot, { top: 0, left: 0 });
+      }
+      const modalBody = this.getHistoryModalBodyEl();
+      if (modalBody) {
+        modalBody.scrollTop = 0;
+      }
+    },
+    scheduleHistoryGridScrollReset() {
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      return new Promise((resolve) => {
+        ownerWindow.requestAnimationFrame(() => {
+          ownerWindow.requestAnimationFrame(() => {
+            this.resetHistoryGridScrollTop();
+            resolve();
+          });
+        });
+      });
+    },
+    waitHistoryGridFrame() {
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      return new Promise(resolve => ownerWindow.requestAnimationFrame(() => resolve()));
+    },
+    async waitHistoryGridInitialRenderComplete() {
+      // Vue2 は kendo-grid wrapper の dataBound/gridSetting が終わった状態で履歴画面が操作可能になる。
+      // Vue3 direct jq では Grid 生成後の layout/paint が rAF 後に残るため、loading をここまで維持する。
+      await this.$nextTick();
+      await this.waitHistoryGridFrame();
+      await this.$nextTick();
+      await this.waitHistoryGridFrame();
+      await this.$nextTick();
+    },
+    getHistoryHeaderEl() {
+      const root = this.getHistoryGridRootEl();
+      return this.$refs.historyGrid?.gridHeaderEl?.()
+        || root?.querySelector?.(".k-grid-header-wrap")
+        || root?.querySelector?.(".k-grid-header")
+        || null;
+    },
+    getHistoryHeaderRootEl() {
+      const root = this.getHistoryGridRootEl();
+      return root?.querySelector?.(".k-grid-header") || null;
+    },
+    getHistoryHeaderWrapEl() {
+      const root = this.getHistoryGridRootEl();
+      return root?.querySelector?.(".k-grid-header-wrap") || null;
+    },
+    getHistoryLockedHeaderEl() {
+      const root = this.getHistoryGridRootEl();
+      return this.$refs.historyGrid?.gridLockedHeaderEl?.()
+        || root?.querySelector?.(".k-grid-header-locked")
+        || null;
+    },
+    getHistoryModalBodyEl() {
+      return this.$el?.querySelector?.('.modal-body') || null;
+    },
+    getHistoryListAreaEl() {
+      return this.$el?.querySelector?.('.history-list-modal') || null;
+    },
+    getHistoryFooterEl() {
+      return this.$el?.querySelector?.('.modal-footer') || null;
+    },
+    getParentModalContainer() {
+      return this.$el?.closest?.('.modal-container') || null;
+    },
+    installHistoryGridFacade() {
+      const root = this.$refs.historyGrid;
+      if (!root || root.nodeType !== 1) {
+        return;
+      }
+      root.kendoWidget = () => this.historyGridWidget;
+      root.gridWidget = () => this.historyGridWidget;
+      root.gridRootEl = () => root;
+      root.gridContentEl = () => root.querySelector(".k-grid-content");
+      root.gridAutoScrollableEl = () => root.querySelector(".k-grid-content");
+      root.gridLockedContentEl = () => root.querySelector(".k-grid-content-locked");
+      root.gridHeaderEl = () => root.querySelector(".k-grid-header-wrap") || root.querySelector(".k-grid-header");
+      root.gridLockedHeaderEl = () => root.querySelector(".k-grid-header-locked");
+      root.refreshGrid = () => this.historyGridWidget?.refresh?.();
+      root.requestGridResize = () => this.historyGridWidget?.resize?.(true);
+    },
+    buildHistoryGridColumns() {
+      return [
+        {
+          field: "rowTitle",
+          title: "点検項目<br>点検日1",
+          width: 125,
+          attributes: this.columnRowNameClass,
+          headerAttributes: this.columnRowNameHeaderClass,
+          editable: () => false,
+          locked: true,
+        },
+        {
+          field: "rowTitle2",
+          title: "総合合否",
+          width: 120,
+          attributes: this.columnRowNameClass,
+          headerAttributes: this.columnRowNameHeaderClass,
+          editable: () => false,
+          locked: false,
+        },
+        ...this.layoutList.map(item => ({
+          title: item.title,
+          headerAttributes: this.columnHeaderClass,
+          headerTemplate: item.headerTemplate,
+          columns: item.columns,
+        })),
+      ];
+    },
+    getHistoryGridColumnSignature() {
+      const summarize = column => ({
+        field: column.field || "",
+        title: column.title || "",
+        width: column.width || "",
+        locked: column.locked === true,
+        headerTemplate: !!column.headerTemplate,
+        columns: Array.isArray(column.columns) ? column.columns.map(summarize) : [],
+      });
+      return JSON.stringify(this.buildHistoryGridColumns().map(summarize));
+    },
+    getHistoryDataSourceOption() {
+      return {
+        ...this.localDataSource,
+        data: Array.isArray(this.localDataSource.data) ? this.localDataSource.data : [],
+      };
+    },
+    initHistoryDirectGridIfReady() {
+      const root = this.getHistoryGridRootEl();
+      if (!this.isDisplay || !root) {
+        return;
+      }
+      const nextColumns = this.buildHistoryGridColumns();
+      const nextSignature = this.getHistoryGridColumnSignature();
+      if (this.historyGridWidget) {
+        if (this.historyGridColumnSignature !== nextSignature) {
+          this.clearHistoryHeaderInlineHeights();
+          this.historyGridWidget.setOptions({ columns: nextColumns });
+          this.historyGridColumnSignature = nextSignature;
+          this.historyGridAppliedDataSource = null;
+        }
+        this.applyHistoryGridDataSourceContract();
+        this.installHistoryGridFacade();
+        this.scheduleHistoryGridLayoutContract();
+        return;
+      }
+      const $root = $(root);
+      $root.kendoGrid({
+        dataSource: this.getHistoryDataSourceOption(),
+        columns: nextColumns,
+        scrollable: true,
+        resizable: true,
+        dataBound: () => this.gridDataBound(),
+        columnResize: () => this.onColumnResize(),
+      });
+      this.historyGridWidget = markRaw($root.data("kendoGrid"));
+      this.historyGridColumnSignature = nextSignature;
+      this.historyGridAppliedDataSource = Array.isArray(this.localDataSource.data)
+        ? this.localDataSource.data
+        : [];
+      this.installHistoryGridFacade();
+      this.scheduleHistoryGridLayoutContract();
+    },
+    applyHistoryGridDataSourceContract() {
+      const dataSource = this.historyGridWidget?.dataSource;
+      if (!dataSource) {
+        return;
+      }
+      const nextData = Array.isArray(this.localDataSource.data) ? this.localDataSource.data : [];
+      if (this.historyGridAppliedDataSource === nextData) {
+        return;
+      }
+      dataSource.data(nextData);
+      this.historyGridAppliedDataSource = nextData;
+    },
+    applyHistoryGridStyleContract() {
+      const root = this.getHistoryGridRootEl();
+      if (!root) {
+        return;
+      }
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-display-block");
+      root.querySelectorAll(".k-grid-header th, .k-grid-header .k-table-th").forEach(th => th.classList.add("k-header"));
+      [".k-grid-content tbody", ".k-grid-content-locked tbody"].forEach(selector => {
+        root.querySelectorAll(selector).forEach(tbody => {
+          Array.from(tbody.children || []).forEach((tr, index) => {
+            tr.classList.add("k-master-row");
+            tr.classList.toggle("k-alt", index % 2 === 1);
+          });
+        });
+      });
+      // Vue2 wrapper では body 全セルへの class 後付け走査は行わない。
+      // Vue3 direct jq で 320 leaf columns × 履歴行の全 td を初期表示後に走査すると、
+      // loading 解除後の巨大 layout task を誘発するため Kendo 生成 DOM に任せる。
+      root.querySelectorAll(".k-grid-header-wrap, .k-grid-content").forEach((el) => {
+        el.classList.add("k-auto-scrollable");
+      });
+    },
+    scheduleHistoryGridLayoutContract() {
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      if (this.historyGridLayoutRafId != null) {
+        ownerWindow.cancelAnimationFrame(this.historyGridLayoutRafId);
+      }
+      // Vue2 wrapper は初期 dataBound 後に grid.resize(true) を同期実行していない。
+      // Vue3 direct jq で 320 leaf columns の Grid に対して loading 解除前後で即時 resize すると、
+      // 表示完了後のブラウザ layout/paint が長時間 main thread を占有する。
+      // 初期表示は Kendo の生成結果に任せ、Vue2 と同じく必要な外枠/行高調整だけを後続フレームで行う。
+      this.historyGridLayoutRafId = ownerWindow.requestAnimationFrame(() => {
+        this.applyHistoryGridStyleContract();
+        this.historyGridLayoutRafId = ownerWindow.requestAnimationFrame(() => {
+          this.historyGridLayoutRafId = null;
+          this.gridSetting();
+        });
+      });
+    },
+    destroyHistoryDirectGrid() {
+      try {
+        this.historyGridWidget?.destroy?.();
+      } catch (_error) {
+        // noop
+      }
+      this.historyGridWidget = null;
+      this.historyGridColumnSignature = "";
+      this.historyGridAppliedDataSource = null;
+      const root = this.$refs.historyGrid;
+      if (root?.nodeType === 1) {
+        root.innerHTML = "";
+      }
+    },
+    getHistoryGridBodyRows() {
+      return Array.from(this.getHistoryGridRootEl()?.querySelectorAll?.(".k-grid-content tbody tr") || []);
+    },
+    getHistoryGridLockedRows() {
+      return Array.from(this.getHistoryGridRootEl()?.querySelectorAll?.(".k-grid-content-locked tbody tr") || []);
+    },
+    getHistoryGridScrollSources() {
+      const gridContent = this.getHistoryScrollableContentEl();
+      if (!gridContent) {
+        return [];
+      }
+      const sources = [gridContent];
+      const inner = gridContent.firstElementChild;
+      if (inner && inner !== gridContent) {
+        sources.push(inner);
+      }
+      return sources;
+    },
+    readHistoryGridBodyScrollLeft() {
+      const sources = this.getHistoryGridScrollSources();
+      for (const source of sources) {
+        const left = source.scrollLeft;
+        if (left) {
+          return left;
+        }
+      }
+      return sources[0]?.scrollLeft || 0;
+    },
+    rebindHistoryGridWidgetScrollables() {
+      const widget = this.historyGridWidget;
+      const root = this.getHistoryGridRootEl();
+      if (!widget || !root) {
+        return;
+      }
+      const headerWrap = $(root).find(".k-grid-header-wrap");
+      const content = widget.content?.length
+        ? widget.content
+        : $(root).find(".k-grid-content").not(".k-grid-content-locked");
+      if (headerWrap.length && content?.length) {
+        widget.scrollables = headerWrap.add(content);
+        widget.content = content;
+      }
+    },
+    applyHistoryGridHorizontalScrollLeft(left) {
+      const headerWrap = this.getHistoryHeaderWrapEl();
+      if (!headerWrap || !Number.isFinite(left)) {
+        return;
+      }
+      let changed = false;
+      if (headerWrap.scrollLeft !== left) {
+        headerWrap.scrollLeft = left;
+        changed = true;
+      }
+      const sources = this.getHistoryGridScrollSources();
+      sources.forEach((source) => {
+        if (source !== headerWrap && source.scrollLeft !== left) {
+          source.scrollLeft = left;
+          changed = true;
+        }
+      });
+      const widget = this.historyGridWidget;
+      const kendo = window.kendo;
+      if (changed && widget?.scrollables?.length && kendo?.scrollLeft) {
+        kendo.scrollLeft(widget.scrollables.not(headerWrap), left);
+      }
+    },
+    syncHistoryGridHeaderScrollLeft() {
+      this.applyHistoryGridHorizontalScrollLeft(this.readHistoryGridBodyScrollLeft());
+    },
+    attachHistoryGridLockedContentScrollSync() {
+      const gridContent = this.getHistoryScrollableContentEl();
+      const headerWrap = this.getHistoryHeaderWrapEl();
+      const lockedContent = this.getHistoryLockedContentEl();
+      if (!gridContent || !headerWrap) {
+        return;
+      }
+      this.rebindHistoryGridWidgetScrollables();
+
+      const onScrollableScroll = () => {
+        if (lockedContent && lockedContent !== gridContent) {
+          lockedContent.scrollTop = gridContent.scrollTop;
+        }
+        this.syncHistoryGridHeaderScrollLeft();
+      };
+      const onHeaderScroll = () => {
+        this.applyHistoryGridHorizontalScrollLeft(headerWrap.scrollLeft);
+        if (lockedContent && lockedContent !== gridContent) {
+          lockedContent.scrollTop = gridContent.scrollTop;
+        }
+      };
+
+      this.getHistoryGridScrollSources().forEach((target) => {
+        target.addEventListener("scroll", onScrollableScroll, { passive: true });
+        this.historyGridCleanup.push(() => target.removeEventListener("scroll", onScrollableScroll));
+      });
+      headerWrap.addEventListener("scroll", onHeaderScroll, { passive: true });
+      this.historyGridCleanup.push(() => headerWrap.removeEventListener("scroll", onHeaderScroll));
+
+      // 初期表示時点の scrollLeft は 0。ここで header/body scrollLeft を同期書き込みすると、
+      // 320 leaf columns の表で強制 layout が走るため、Vue2 と同じく実スクロール発生時だけ同期する。
+    },
+    /**
+     * 親（点検）モーダルと同じ位置・サイズに履歴モーダルを合わせる
+     */
+    syncWithParentModal() {
+      const historyMask = this.$el;
+      if (!historyMask || !this.getParentModalContainer()) {
+        return;
+      }
+
+      // 親 .modal-container に transform があるため fixed の基準はビューポートではなく親コンテナ。
+      // getBoundingClientRect の座標を使うと位置がずれるので、親全体を 0,0〜100% で覆う。
+      Object.assign(historyMask.style, {
+        position: "fixed",
+        top: "0",
+        left: "0",
+        width: "100%",
+        height: "100%",
+        right: "auto",
+        bottom: "auto",
+        display: "block",
+      });
+
+      const historyWrapper = historyMask.querySelector(".modal-wrapper");
+      const historyContainer = historyMask.querySelector(".modal-container");
+      if (historyWrapper) {
+        Object.assign(historyWrapper.style, {
+          display: "block",
+          width: "100%",
+          height: "100%",
+        });
+      }
+      if (historyContainer) {
+        Object.assign(historyContainer.style, {
+          width: "100%",
+          height: "100%",
+          margin: "0",
+        });
+      }
+    },
+    getHistoryComputedStyle(element) {
+      if (!element) {
+        return null;
+      }
+      const ownerWindow = element.ownerDocument?.defaultView || this.$el?.ownerDocument?.defaultView || window;
+      return ownerWindow.getComputedStyle(element);
+    },
     setArrRow() {
-      const arrRow = Array.from(document.getElementsByClassName("deviceSetInfo-row-name"));
+      const arrRow = Array.from(this.getHistoryGridRootEl()?.getElementsByClassName("deviceSetInfo-row-name") || []);
       arrRow.forEach(item => {
         item.style.color = "var(--ntss-list-body-color)";
 
         // 日付色変更
-        const dateCurrent = moment().format("YYYYMMDD");
-        const date = moment(item.textContent.substring(0, 10));
+        const dateCurrent = dayjs().format("YYYYMMDD");
+        const date = dayjs(item.textContent.substring(0, 10));
         if (date.isSame(dateCurrent)) {
           item.style.backgroundColor = "#2ca06f";
           item.style.color = "#FFF";
@@ -403,9 +788,12 @@ export default {
     // padding取得(スクロール要素)
     getPaddingList() {
       // padding要素のpxを取得
-      const elm = document.getElementsByClassName("k-auto-scrollable")[1];
-      const paddingY = elm.getBoundingClientRect().height - parseFloat(getComputedStyle(elm).height);
-      const paddingX = elm.getBoundingClientRect().width - parseFloat(getComputedStyle(elm).width);
+      const elm = this.getHistoryScrollableContentEl();
+      if (!elm) {
+        return { x: 0, y: 0 };
+      }
+      const paddingY = elm.getBoundingClientRect().height - parseFloat(this.getHistoryComputedStyle(elm)?.height || 0);
+      const paddingX = elm.getBoundingClientRect().width - parseFloat(this.getHistoryComputedStyle(elm)?.width || 0);
       return {
         x: paddingX,
         y: paddingY,
@@ -414,9 +802,12 @@ export default {
     // padding取得(モーダル要素)
     getPaddingBody() {
       // padding要素のpxを取得
-      const elm = document.getElementsByClassName("modal-body")[1];
-      const paddingY = elm.getBoundingClientRect().height - parseFloat(getComputedStyle(elm).height);
-      const paddingX = elm.getBoundingClientRect().width - parseFloat(getComputedStyle(elm).width);
+      const elm = this.getHistoryModalBodyEl();
+      if (!elm) {
+        return { x: 0, y: 0 };
+      }
+      const paddingY = elm.getBoundingClientRect().height - parseFloat(this.getHistoryComputedStyle(elm)?.height || 0);
+      const paddingX = elm.getBoundingClientRect().width - parseFloat(this.getHistoryComputedStyle(elm)?.width || 0);
       return {
         x: paddingX,
         y: paddingY,
@@ -425,25 +816,150 @@ export default {
     /**
      * テーブル内の各行の高さの調節を行う
      */
-    rowHeightResize() {
-      // tr要素取得
-      const lockTrs = $(".k-grid-content-locked").find("tr");
-      const scrollTrs = $(".k-grid-content.k-auto-scrollable").find("tr");
+    setElementsHeight(elements, heightText) {
+      (elements || []).forEach((element) => {
+        if (!element) {
+          return;
+        }
+        element.style.height = heightText;
+        element.style.minHeight = heightText;
+        element.style.boxSizing = "border-box";
+      });
+    },
+    getHistoryHeaderCellRowSpan(cell) {
+      if (!cell) {
+        return 1;
+      }
+      const rowSpan = Number(cell.rowSpan || cell.getAttribute?.("rowspan") || 1);
+      return Number.isFinite(rowSpan) && rowSpan > 0 ? rowSpan : 1;
+    },
+    /** rowspan>1・総合合否などは行高同期から除外し、該当行の表头クラスのみ対象にする */
+    getHistoryHeaderSyncableCells(cells, rowIndex = 0) {
+      return (cells || []).filter((cell) => {
+        if (this.getHistoryHeaderCellRowSpan(cell) > 1) {
+          return false;
+        }
+        if (cell.classList?.contains("deviceSetInfo-header-row-name")) {
+          return false;
+        }
+        if (rowIndex === 0) {
+          return cell.classList?.contains("deviceSetInfo-header-first-name");
+        }
+        if (rowIndex === 1) {
+          return cell.classList?.contains("deviceSetInfo-header-secound-name");
+        }
+        return true;
+      });
+    },
+    clearHistoryHeaderInlineHeights() {
+      const root = this.getHistoryGridRootEl();
+      if (!root) {
+        return;
+      }
+      root.querySelectorAll(
+        ".k-grid-header th, .k-grid-header .k-table-th, .k-grid-header-locked th, .k-grid-header-locked .k-table-th",
+      ).forEach((cell) => {
+        cell.style.removeProperty("height");
+        cell.style.removeProperty("min-height");
+      });
+      const lockedHeader = this.getHistoryLockedHeaderEl();
+      lockedHeader?.style?.removeProperty("height");
+      lockedHeader?.querySelector?.("table")?.style?.removeProperty("height");
+      lockedHeader?.querySelector?.("table")?.style?.removeProperty("min-height");
+    },
+    isHistoryGridVisibleForLayout() {
+      if (!this.isDisplay) {
+        return false;
+      }
+      const headerWrap = this.getHistoryHeaderWrapEl();
+      return !!(headerWrap && headerWrap.offsetParent != null && headerWrap.getBoundingClientRect().height > 0);
+    },
+    scheduleHistoryGridLayoutSync() {
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      if (this.historyGridSyncRafId != null) {
+        ownerWindow.cancelAnimationFrame(this.historyGridSyncRafId);
+      }
+      this.historyGridSyncRafId = ownerWindow.requestAnimationFrame(() => {
+        this.historyGridSyncRafId = ownerWindow.requestAnimationFrame(() => {
+          this.historyGridSyncRafId = null;
+          if (!this.isHistoryGridVisibleForLayout()) {
+            return;
+          }
+          this.syncGridColumnHeights();
+        });
+      });
+    },
+    repairHistoryGridLockedColumnLayout() {
+      const lockedHeader = this.getHistoryLockedHeaderEl();
+      const lockedContent = this.getHistoryLockedContentEl();
+      [lockedHeader, lockedContent].forEach(container => {
+        const table = container?.querySelector?.("table");
+        if (table && container?.style?.width) {
+          table.style.width = container.style.width;
+          table.style.minWidth = container.style.width;
+        }
+      });
+    },
+    /** 表头：锁定列（跨行）高度 = 右侧两级表头总高；同级表头格等高 */
+    syncHeaderCellHeights() {
+      if (!this.isHistoryGridVisibleForLayout()) {
+        return;
+      }
+      const lockedHeader = this.getHistoryLockedHeaderEl();
+      const headerWrap = this.getHistoryHeaderWrapEl();
+      if (!lockedHeader || !headerWrap) {
+        return;
+      }
 
-      // 高さ設定
+      this.clearHistoryHeaderInlineHeights();
+      void headerWrap.offsetHeight;
+
+      const headerRows = Array.from(headerWrap.querySelectorAll("thead tr"));
+      headerRows.forEach((row, rowIndex) => {
+        const cells = Array.from(row.querySelectorAll("th, .k-table-th"));
+        const syncableCells = this.getHistoryHeaderSyncableCells(cells, rowIndex);
+        if (!syncableCells.length) {
+          return;
+        }
+        let rowMax = 0;
+        syncableCells.forEach((cell) => {
+          rowMax = Math.max(rowMax, Math.ceil(cell.getBoundingClientRect().height));
+        });
+        if (rowMax > 0) {
+          this.setElementsHeight(syncableCells, `${rowMax}px`);
+        }
+      });
+
+      void headerWrap.offsetHeight;
+      const headerWrapHeight = Math.ceil(headerWrap.getBoundingClientRect().height);
+      if (headerWrapHeight <= 0) {
+        return;
+      }
+      const heightText = `${headerWrapHeight}px`;
+      const lockedCells = Array.from(lockedHeader.querySelectorAll("th, .k-table-th"));
+      this.setElementsHeight(lockedCells, heightText);
+    },
+    rowHeightResize() {
+      this.repairHistoryGridLockedColumnLayout();
+
+      const lockTrs = Array.from(this.getHistoryLockedContentEl()?.querySelectorAll?.("tr") || []);
+      const scrollTrs = Array.from(this.getHistoryScrollableContentEl()?.querySelectorAll?.("tr") || []);
+
       for (let i = 0; i < lockTrs.length; i++) {
         const lockTr = lockTrs[i];
         const scrollTr = scrollTrs[i];
+        if (!scrollTr) {
+          continue;
+        }
 
-        // スタイルリセット
+        // Vue2 は高さ同期を tr のみに限定している。
+        // td 全件へ height/min-height を書くと 320 leaf columns × 履歴行分の style 書き換えになり、
+        // Grid 表示直後の巨大 layout task を誘発する。
         lockTr.style.height = "auto";
         scrollTr.style.height = "auto";
 
-        // 要素の高さを取得
-        const lockH = lockTr.getBoundingClientRect().height;
-        const scrollH = scrollTr.getBoundingClientRect().height;
-
-        // 高さが異なる場合は高いほうに合わせる
+        const lockH = Math.ceil(lockTr.getBoundingClientRect().height);
+        const scrollH = Math.ceil(scrollTr.getBoundingClientRect().height);
         if (lockH < scrollH) {
           lockTr.style.height = `${scrollH}px`;
         } else if (scrollH < lockH) {
@@ -451,23 +967,67 @@ export default {
         }
       }
     },
+    syncGridColumnHeights() {
+      // Vue2 の履歴 Grid は data 行の locked/scroll 側 tr 高さ同期だけを行う。
+      // 表头全セルの高さ同期は 320 leaf columns で強い再計算を誘発するため Kendo の header layout に任せる。
+      this.rowHeightResize();
+    },
     /**
      * スクロール可能部分の縦スクロールがヘッダとズレる場合があるため
      * スクロール可能部分のヘッダと、一覧の幅を調整する
      */
+    getVerticalScrollbarWidth() {
+      const scrollableContent = this.getHistoryScrollableContentEl();
+      if (!scrollableContent) {
+        return 0;
+      }
+      const gutter = scrollableContent.offsetWidth - scrollableContent.clientWidth;
+      if (gutter > 0) {
+        return Math.round(gutter);
+      }
+      return Math.max(0, Math.round(this.getPaddingList().x));
+    },
     scrollAbleWidthResize() {
-      // ヘッダ部のpaddingを調整
-      document.getElementsByClassName("k-grid-header")[0].style.paddingRight = `${this.getPaddingList().x}px`;
+      const gridHeader = this.getHistoryHeaderRootEl() || this.getHistoryHeaderEl();
+      const scrollableContent = this.getHistoryScrollableContentEl();
+      const headerWrap = this.getHistoryHeaderWrapEl();
+      if (!gridHeader || !scrollableContent) {
+        return;
+      }
 
-      // 要素の幅を取得
-      const gridHed = $(".k-grid-header");
-      const gridHedLocked = $(".k-grid-header-locked");
-      const allW = gridHed.get(0).getBoundingClientRect().width;
-      const lockHedW = gridHedLocked.get(0).getBoundingClientRect().width;
+      const scrollbarWidth = this.getVerticalScrollbarWidth();
+      if (scrollbarWidth > 0) {
+        const gutterText = `${scrollbarWidth}px`;
+        if (gridHeader.style.paddingRight !== gutterText) {
+          gridHeader.style.paddingRight = gutterText;
+        }
+        if (gridHeader.style.getPropertyValue("--history-header-scrollbar-gutter") !== gutterText) {
+          gridHeader.style.setProperty("--history-header-scrollbar-gutter", gutterText);
+        }
+      } else {
+        if (gridHeader.style.paddingRight) {
+          gridHeader.style.removeProperty("padding-right");
+        }
+        if (gridHeader.style.getPropertyValue("--history-header-scrollbar-gutter") !== "0px") {
+          gridHeader.style.setProperty("--history-header-scrollbar-gutter", "0px");
+        }
+      }
 
-      // あるべき幅の設定
-      const fixW = allW - lockHedW;
-      document.getElementsByClassName("k-auto-scrollable")[1].style.width = `${fixW}px`;
+      const fixW = headerWrap
+        ? Math.round(headerWrap.clientWidth)
+        : Math.round(scrollableContent.clientWidth);
+      if (fixW > 0) {
+        const widthText = `${fixW}px`;
+        if (scrollableContent.style.width !== widthText) {
+          scrollableContent.style.width = widthText;
+        }
+      } else {
+        if (scrollableContent.style.width) {
+          scrollableContent.style.removeProperty("width");
+        }
+      }
+      // 初期表示時点の scrollLeft は 0。ここで header/body scrollLeft を同期書き込みすると、
+      // 320 leaf columns の表で強制 layout が走るため、Vue2 と同じく実スクロール発生時だけ同期する。
     },
     /**
      * 表全体の幅の調整
@@ -475,29 +1035,48 @@ export default {
     setTableWidth() {
       // 幅の調整
       const MIN_WIDTH = 400;
-      const mBody = $(".modal-body");
+      const modalBody = this.getHistoryModalBodyEl();
+      if (!modalBody) {
+        return;
+      }
       // 現在の要素の幅を取得
-      const allW = mBody.get(1).getBoundingClientRect().width;
+      const allW = modalBody.getBoundingClientRect().width;
 
       // 最小幅を下回った場合
       if (allW < MIN_WIDTH) {
-        const scroll = $(".k-auto-scrollable");
-        const locked = $(document.getElementsByClassName("k-grid-content-locked")[0]);
+        const locked = $(this.getHistoryLockedContentEl());
+        const listArea = this.getHistoryListAreaEl();
         // 親のdiv要素の幅を一覧の幅に合わせる
-        document.getElementsByClassName("history-list-modal")[0].style.width = "fit-content";
+        if (listArea) {
+          listArea.style.width = "fit-content";
+        }
         // widthをautoで上書き
-        document.getElementsByClassName("k-auto-scrollable")[1].style.width = "auto";
+        const scrollableContent = this.getHistoryScrollableContentEl();
+        if (scrollableContent) {
+          scrollableContent.style.width = "auto";
+        }
         // 一覧部分の横スクロールが消えるため、固定列とスクロール列の高さを合わせる
-        document.getElementsByClassName("k-auto-scrollable")[1].style.height = `${locked.innerHeight()}px`;
+        if (scrollableContent) {
+          scrollableContent.style.height = `${locked.innerHeight()}px`;
+        }
         // カラムヘッダの横幅を明細部分に合わせる
-        const scrollW = scroll.get(1).getBoundingClientRect().width;
-        const lockedW = locked.get(0).getBoundingClientRect().width;
-        document.getElementsByClassName("k-grid-header")[0].style.width = `${scrollW + lockedW - this.getPaddingList().x}px`;
+        const scrollW = scrollableContent?.getBoundingClientRect().width || 0;
+        const lockedW = locked.get(0)?.getBoundingClientRect().width || 0;
+        const gridHeader = this.getHistoryHeaderEl();
+        if (gridHeader) {
+          gridHeader.style.width = `${scrollW + lockedW}px`;
+        }
       } else {
         // widthをautoで上書き
-        document.getElementsByClassName("k-grid-header")[0].style.width = "auto";
+        const gridHeader = this.getHistoryHeaderEl();
+        if (gridHeader) {
+          gridHeader.style.width = "auto";
+        }
         // 親のdiv要素の幅をリセット
-        document.getElementsByClassName("history-list-modal")[0].style.width = "";
+        const listArea = this.getHistoryListAreaEl();
+        if (listArea) {
+          listArea.style.width = "";
+        }
       }
     },
     /**
@@ -507,29 +1086,40 @@ export default {
       // 最小高さの設定
       const MIN_HEIGHT = 100;
       // min-heightの適用
-      document.getElementsByClassName("k-auto-scrollable")[1].style.minHeight = `${MIN_HEIGHT}px`;
-      document.getElementsByClassName("k-grid-content-locked")[0].style.minHeight = `${MIN_HEIGHT - this.getPaddingList().y}px`;
+      const scrollableContent = this.getHistoryScrollableContentEl();
+      if (scrollableContent) {
+        scrollableContent.style.minHeight = `${MIN_HEIGHT}px`;
+      }
+      const lockedContent = this.getHistoryLockedContentEl();
+      if (lockedContent) {
+        lockedContent.style.minHeight = `${MIN_HEIGHT - this.getPaddingList().y}px`;
+      }
 
       // 高さの調整
       // 座標計算の為スクロール位置を0指定
-      const mBodyScrollPosition = document.getElementsByClassName("modal-body")[1].scrollTop;
-      document.getElementsByClassName("modal-body")[1].scrollTop = 0;
+      const modalBody = this.getHistoryModalBodyEl();
+      const footerEl = this.getHistoryFooterEl();
+      if (!modalBody || !footerEl) {
+        return;
+      }
+      const mBodyScrollPosition = modalBody.scrollTop;
+      modalBody.scrollTop = 0;
 
       // 目標の高さの計算
-      const fotterTop = document.getElementsByClassName("modal-footer")[0].getBoundingClientRect().top;
-      const scrollTop = document.getElementsByClassName("k-auto-scrollable")[1].getBoundingClientRect().top;
+      const fotterTop = footerEl.getBoundingClientRect().top;
+      const scrollTop = scrollableContent?.getBoundingClientRect().top;
       const fixH = Math.floor(fotterTop - scrollTop - this.getPaddingBody().y);
 
       // スクロール位置を元に戻す
-      document.getElementsByClassName("modal-body")[1].scrollTop = mBodyScrollPosition;
+      modalBody.scrollTop = mBodyScrollPosition;
 
       // 最小の高さを下回る場合autoで設定
       if (fixH <= MIN_HEIGHT) {
-        document.getElementsByClassName("k-auto-scrollable")[1].style.height = "auto";
-        document.getElementsByClassName("k-grid-content-locked")[0].style.height = "auto";
+        if (scrollableContent) scrollableContent.style.height = "auto";
+        if (lockedContent) lockedContent.style.height = "auto";
       } else {
-        document.getElementsByClassName("k-auto-scrollable")[1].style.height = `${fixH}px`;
-        document.getElementsByClassName("k-grid-content-locked")[0].style.height = `${fixH - this.getPaddingList().y}px`;
+        if (scrollableContent) scrollableContent.style.height = `${fixH}px`;
+        if (lockedContent) lockedContent.style.height = `${fixH - this.getPaddingList().y}px`;
       }
     },
     /**
@@ -541,8 +1131,8 @@ export default {
      * 　　heightをautoとし
      * 　　外側のスクロールで表全体を見るようにする
      * 横スクロール制御
-     * 　・最小の幅よりも小さくなった場合widthをautoとし
-     * 　　外側のスクロールで表全体を見るようにする
+     *  ・最小の幅よりも小さくなった場合widthをautoとし
+     *   外側のスクロールで表全体を見るようにする
      */
     setTableWidthHeight() {
       // 高さの調整(1回目)
@@ -552,126 +1142,189 @@ export default {
       // スクロール可能幅の調整
       this.scrollAbleWidthResize();
       // 高さの調整(2回目)
-      // 　幅の調整が完了するまでモーダルの横スクロールが出るため
-      // 　スクロールバーの分だけ高さが不足してしまう
-      // 　幅の調整完了後、再度高さの調整が必要となる
+      //  幅の調整が完了するまでモーダルの横スクロールが出るため
+      //  スクロールバーの分だけ高さが不足してしまう
+      //  幅の調整完了後、再度高さの調整が必要となる
       this.setTableHeight();
     },
     gridSetting() {
-      this.$nextTick(() => {
-        // 一覧部分にスタイル設定(文字列を改行して全体表示)
-        const rowNames = Array.from(document.getElementsByClassName("deviceSetInfo-row-name"));
-        rowNames.forEach(item => {
-          item.style = "word-break: break-all; word-wrap: break-word; white-space: normal;";
-        });
-        const arr = Array.from(document.getElementsByClassName("deviceSetInfo-header-secound-name"));
-        arr.forEach(item => {
-          item.style = "word-break: break-all; word-wrap: break-word; white-space: normal;"
-          if (item.offsetHeight > 200) {
-            item.style = "";
+      const ownerWindow = this.$el?.ownerDocument?.defaultView || window;
+      if (this.historyGridSettingRafId != null) {
+        ownerWindow.cancelAnimationFrame(this.historyGridSettingRafId);
+      }
+      this.historyGridSettingRafId = ownerWindow.requestAnimationFrame(() => {
+        this.historyGridSettingRafId = null;
+        this.$nextTick(() => {
+          if (!this.historyGridWidget || !this.getHistoryGridRootEl()) {
+            return;
           }
-        })
-        this.$refs.historyGrid.$el.style.borderStyle = "none";
-        // 行高さの調整
-        this.rowHeightResize();
-        // 全体の調整
-        this.setTableWidthHeight();
-        // スタイル設定
-        this.setArrRow();
+          // 一覧部分にスタイル設定(文字列を改行して全体表示)
+          const gridRoot = this.getHistoryGridRootEl();
+          const rowNames = Array.from(gridRoot?.getElementsByClassName("deviceSetInfo-row-name") || []);
+          rowNames.forEach(item => {
+            item.style = "word-break: break-all; word-wrap: break-word; white-space: normal;";
+          });
+          const headerStyle = "word-break: break-all; word-wrap: break-word; white-space: normal; text-align: center; padding: 2px 0; overflow: visible; text-overflow: clip;";
+          Array.from(gridRoot?.getElementsByClassName("deviceSetInfo-header-first-name") || []).forEach(item => {
+            item.style.cssText = headerStyle;
+          });
+          Array.from(gridRoot?.getElementsByClassName("deviceSetInfo-header-secound-name") || []).forEach(item => {
+            item.style.cssText = headerStyle;
+          });
+          const lockedContent = this.getHistoryLockedContentEl();
+          if (lockedContent) lockedContent.style.overflowX = "none";
+          resolveRefElement(this, "historyGrid")?.style?.setProperty("border-style", "none");
+          // 全体の調整
+          this.setTableWidthHeight();
+          // 行・表头高度（表示完了後に1回だけ同期）
+          this.scheduleHistoryGridLayoutSync();
+          // スタイル設定
+          this.setArrRow();
+          // ヘッダーにスタイル適用
+          const gridHeaderEl = this.getHistoryHeaderEl();
+          if (gridHeaderEl) {
+            gridHeaderEl.style.backgroundColor = "var(--ntss-list-header-background-color)";
+            const headerTable = gridHeaderEl.querySelector("table");
+            if (headerTable) {
+              headerTable.style.borderColor = "var(--ntss-base-background-color)";
+            }
+          }
+          // 慣性スクロール用のクラスを追加
+          const scrollableContent = this.getHistoryScrollableContentEl();
+          if (scrollableContent) {
+            scrollableContent.style.WebkitOverflowScrolling = "touch";
+          }
+        });
       });
-      this.$refs.historyGrid.$el.firstElementChild.style.backgroundColor = "var(--ntss-list-header-background-color)";
-      this.$refs.historyGrid.$el.firstElementChild.firstElementChild.style.borderColor = "var(--ntss-base-background-color)";
-      document.getElementsByClassName("k-auto-scrollable")[1].style.WebkitOverflowScrolling = "touch";
+    },
+    onColumnResize() {
+      this.gridSetting();
+      this.syncHistoryLockedResizeWidth();
+    },
+    syncHistoryLockedResizeWidth() {
+      const root = this.getHistoryGridRootEl();
+      if (!root) {
+        return;
+      }
+      ["k-grid-header-locked", "k-grid-content-locked"].forEach(className => {
+        const lockedDiv = root.getElementsByClassName(className)[0];
+        const lockedTable = lockedDiv?.getElementsByTagName("table")[0];
+        if (!lockedDiv || !lockedTable) {
+          return;
+        }
+        const tableWidth = getComputedStyle(lockedTable).width;
+        if (tableWidth && getComputedStyle(lockedDiv).width !== tableWidth) {
+          lockedDiv.style.width = tableWidth;
+        }
+      });
+      this.repairHistoryGridLockedColumnLayout();
+    },
+    clearHistoryGridListeners() {
+      (this.historyGridCleanup || []).forEach((cleanup) => {
+        try {
+          cleanup();
+        } catch (_error) {
+          // noop
+        }
+      });
+      this.historyGridCleanup = [];
     },
     gridDataBound() {
+      this.clearHistoryGridListeners();
       // clickイベントの設定
-      const gridRoot = this.$refs.historyGrid.$el;
-      const gridContent = gridRoot.getElementsByClassName("k-grid-content")[0];
-      const contentTrList = gridContent.getElementsByTagName("tr");
-      const gridLocked = gridRoot.getElementsByClassName("k-grid-content-locked")[0];
-      const lockedTrList = gridLocked.getElementsByTagName("tr");
+      const gridContent = this.getHistoryScrollableContentEl();
+      const gridLocked = this.getHistoryLockedContentEl();
       const localData = this.localDataSource.data;
-      for (let i = 0; i < localData.length; i++) {
-        const rowTitle = localData[i].rowTitle;
-        const handleClick = () => {
-          const rowDate = moment(rowTitle.split("(")[0]).format("YYYY-MM-DD");
+      const addListener = (target, eventName, handler, options = undefined) => {
+        target?.addEventListener(eventName, handler, options);
+        if (target) {
+          this.historyGridCleanup.push(() => target.removeEventListener(eventName, handler, options));
+        }
+      };
+      const bindRowClick = (contentEl) => {
+        const tbody = contentEl?.querySelector?.("tbody");
+        if (!tbody) {
+          return;
+        }
+        const handleClick = (event) => {
+          const row = event.target?.closest?.("tr");
+          if (!row || !tbody.contains(row)) {
+            return;
+          }
+          const rowIndex = Array.prototype.indexOf.call(tbody.children, row);
+          const rowTitle = localData[rowIndex]?.rowTitle;
+          if (!rowTitle) {
+            return;
+          }
+          const rowDate = dayjs(rowTitle.split("(")[0]).format("YYYY-MM-DD");
           this.goToBack(rowDate);
         };
-        contentTrList[i]?.addEventListener("click", handleClick);
-        lockedTrList[i]?.addEventListener("click", handleClick);
-      }
-      // スタイル設定
-      this.gridSetting();
+        addListener(tbody, "click", handleClick);
+      };
+      bindRowClick(gridContent);
+      bindRowClick(gridLocked);
+      this.applyHistoryGridStyleContract();
 
       if (!gridLocked || !gridContent) return;
-      if (gridLocked) {
-        let startY = 0;
-        // タッチ開始位置を記録（iOS/Android対応）
-        gridLocked.addEventListener("touchstart", (e) => {
-          startY = e.touches[0].clientY;
-        }, { passive: false });
-
-        gridLocked.addEventListener("touchmove", (e) => {
-          // タッチ移動に応じてスクロール（iOS/Android対応）
-          const deltaY = startY - e.touches[0].clientY;
-          gridLocked.scrollTop += deltaY;
-          startY = e.touches[0].clientY;
-          e.preventDefault(); // 慣性スクロールを有効にするために必要
-        }, { passive: false });
-      }
-
-      if (gridLocked && gridContent) {
-        // 固定列のスクロールに応じて可動列を同期（縦スクロールの一体化）
-        gridLocked.addEventListener("scroll", () => {
-          gridContent.scrollTop = gridLocked.scrollTop;
-        });
-
-        // 可動列のスクロールに応じて固定列を同期（双方向同期）
-        gridContent.addEventListener("scroll", () => {
-          gridLocked.scrollTop = gridContent.scrollTop;
-        });
-      }
+      this.attachHistoryGridLockedContentScrollSync();
     },
     goToBack(rowDate) {
       // 点検項目入力画面に点検日を渡して点検履歴を閉じる
       this.closeHistoryWithParams({ date: rowDate });
     },
+    async refreshHistoryGridLayout() {
+      this.renewLocalDataSource();
+      // Vue2 と同じく、検索中はいったん v-if を落とし、データ準備後に Grid を作り直す。
+      this.isDisplay = true;
+      await this.$nextTick();
+      await this.$nextTick();
+      this.clearHistoryHeaderInlineHeights();
+      this.initHistoryDirectGridIfReady();
+      await this.waitHistoryGridInitialRenderComplete();
+    },
     async search() {
       this.setLoadingScreenVisible(true);
+      // Vue2 と同じく検索中はいったん履歴 Grid を非表示にする。
+      // direct jq Grid は Vue が DOM を外す前に destroy して旧 320 列 DOM を残さない。
       this.isDisplay = false;
-
-      const {
-        mainteDate,
-        numOfMonth,
-      } = this.condition.inUsed;
-      const endDate = moment(mainteDate)
-        .subtract(numOfMonth, "month")
-        .format("YYYY-MM-DD");
-      const params = {
-        machineNo: this.getMachine.machineNo,
-        date: mainteDate,
-        numOfMonth,
-      };
-      const machine = {
-        machineNo: this.getMachine.machineNo,
-        startDate: mainteDate,
-        endDate,
-        facilityCd: this.getFacilityCd,
-      };
-      await Promise.all([
-        // 点検レイアウトマスタと点検項目マスタの情報を取得
-        this.sendRequestGetDetailHistory(params),
-        // 点検結果の情報を取得
-        this.sendRequestGetMachineResult(machine),
-        // 最終更新者の氏名取得用のユーザー情報を取得
-        this.setUserAccountInfo(this.getFacilityCd),
-      ]);
-
-      // 表示データ更新
-      this.renewLocalDataSource();
-
-      this.isDisplay = true;
-      this.setLoadingScreenVisible(false);
+      this.clearHistoryGridListeners();
+      this.destroyHistoryDirectGrid();
+      await this.$nextTick();
+      try {
+        const {
+          mainteDate,
+          numOfMonth,
+        } = this.condition.inUsed;
+        const endDate = dayjs(mainteDate)
+          .subtract(numOfMonth, "month")
+          .format("YYYY-MM-DD");
+        const params = {
+          machineNo: this.getMachine.machineNo,
+          date: mainteDate,
+          numOfMonth,
+        };
+        const machine = {
+          machineNo: this.getMachine.machineNo,
+          startDate: mainteDate,
+          endDate,
+          facilityCd: this.getFacilityCd,
+        };
+        await Promise.all([
+          // 点検レイアウトマスタと点検項目マスタの情報を取得
+          this.sendRequestGetDetailHistory(params),
+          // 点検結果の情報を取得
+          this.sendRequestGetMachineResult(machine),
+          // 最終更新者の氏名取得用のユーザー情報を取得
+          this.setUserAccountInfo(this.getFacilityCd),
+        ]);
+        await this.refreshHistoryGridLayout();
+        await this.scheduleHistoryGridScrollReset();
+        await this.waitHistoryGridInitialRenderComplete();
+      } finally {
+        // loading は Grid 初期生成・scroll reset・後続 rAF まで待ってから解除する。
+        // これで「履歴の初期表示がまだ終わっていないのに loading だけ消える」状態を避ける。
+        this.setLoadingScreenVisible(false);
+      }
     },
     dialogOk() {
       const inProgress = this.condition.inProgress;
@@ -821,11 +1474,11 @@ export default {
 
       // 印刷パラメータを応答
       const toDate = (this.getLayoutParams?.mainteDate != null)
-        ? moment(this.getLayoutParams.mainteDate)
-        : moment();
-      const fromDate = moment(toDate);
+        ? dayjs(this.getLayoutParams.mainteDate)
+        : dayjs();
+      let fromDate = dayjs(toDate);
       if (this.getLayoutParams?.numOfMonth != null) {
-        fromDate.subtract(this.getLayoutParams.numOfMonth, "months");
+        fromDate = fromDate.subtract(this.getLayoutParams.numOfMonth, "months");
       }
       const mainteNos = (this.getMachineResult?.length)
         ? this.getMachineResult.map(x => x.devMenteNo)
@@ -838,9 +1491,7 @@ export default {
       } = this.getStorSimlpSearchQurey;
       const expressCondCdStr = (rstDialysisState?.length) ? (
         (rstDialysisState.length === 2) ? "予定・実績" : (
-          (rstDialysisState[0] === "1") ? "予定" : "実績"
-        )
-      ) : "";
+          (rstDialysisState[0] === "1") ? "予定" : "実績")) : "";
       const kurNamesStr = (kurNames?.length) ? kurNames.join("・") : "すべて";
       const patGroups = selectedPatGroupNames || "すべて";
       const {
@@ -866,55 +1517,34 @@ export default {
       };
       EventBus.$emit("sendReportParams", reportParams);
     },
-    onColumnResize() {
-      this.gridSetting();
-    },
-    // 固定列幅変更中のtable幅にdiv幅を追随させるためのイベントハンドラ
-    onColumnResizingMouseMove(event) {
-      // 左ボタン押下状態でなければ処理対象外
-      if (event.buttons !== 1) return;
-      // グリッド要素が存在していなければ処理対象外
-      const grid = this.$refs.historyGrid?.$el;
-      if (!grid) return;
+    /** 画面印刷の処理 */
+    handleBeforePrint() {
+      const contentContainer = getContentContainerElement(this.$el || this);
+      if (contentContainer) {
+        contentContainer.style.display = "none";
+      }
 
-      // 固定列ヘッダーと固定列ボディのdivの幅がその中のtableの幅と異なる場合は
-      // divの幅をtableの幅に合わせる
-      ["k-grid-header-locked", "k-grid-content-locked"].forEach(className => {
-        const lockedDiv = grid.getElementsByClassName(className)[0];
-        const lockedTable = lockedDiv?.getElementsByTagName("table")[0];
-        if (lockedDiv && lockedTable) {
-          const tableWidth = getComputedStyle(lockedTable).width;
-          if (getComputedStyle(lockedDiv).width !== tableWidth) {
-            lockedDiv.style.width = tableWidth;
-          }
+      const modal = this.$el?.classList?.contains("daily-history-modal")
+        ? this.$el
+        : (this.$el?.ownerDocument || document).querySelector(".daily-history-modal");
+      if (!modal?.parentNode?.children) return;
+
+      Array.from(modal.parentNode.children).forEach(el => {
+        if (el !== modal) {
+          el.dataset.printHidden = "true";
+          el.style.display = "none";
         }
       });
     },
-    
-    /** 画面印刷の処理 */
-    handleBeforePrint() {
-      // 印刷不要な要素を非表示にする
-      document.getElementsByClassName("content-container")[0].style.display = "none";
-      
-      const modal = document.querySelector('.daily-history-modal');
-      if (!modal) return;
-    
-      // 同階層の兄弟要素を取得して非表示にする
-      const siblings = modal.parentNode.children;
-      Array.from(siblings).forEach(el => {
-        if (el !== modal) {
-          el.dataset.printHidden = 'true';
-          el.style.display = 'none';
-        }
-      }); 
-    },
     handleAfterPrint() {
-      // 非表示にした要素を元に戻す
-      document.getElementsByClassName("content-container")[0].style.display = "block";
-      
-      // data-print-hidden が付いている要素を元に戻す
-      document.querySelectorAll('[data-print-hidden="true"]').forEach(el => {
-        el.style.display = '';
+      const contentContainer = getContentContainerElement(this.$el || this);
+      if (contentContainer) {
+        contentContainer.style.display = "block";
+      }
+
+      const scopedDocument = this.$el?.ownerDocument || document;
+      scopedDocument.querySelectorAll('[data-print-hidden="true"]').forEach(el => {
+        el.style.display = "";
         delete el.dataset.printHidden;
       });
     },
@@ -924,12 +1554,15 @@ export default {
      * @description フォントサイズ切り替え時
      */
     getFontSize() {
+      this.syncWithParentModal();
       this.gridSetting();
     },
     getWindowHeight() {
+      this.syncWithParentModal();
       this.gridSetting();
     },
     getWindowWidth() {
+      this.syncWithParentModal();
       this.gridSetting();
     },
   },
@@ -942,24 +1575,56 @@ export default {
     EventBus.$on("requestReportParams", this.requestReportParams);
   },
   mounted() {
-    // 固定列幅変更中のtable幅にdiv幅を追随させるためのイベントリスナを追加
-    document.addEventListener("mousemove", this.onColumnResizingMouseMove);
-    // 画面印刷のイベントリスナを追加
-    window.addEventListener("beforeprint", this.handleBeforePrint);
-    window.addEventListener("afterprint", this.handleAfterPrint);
+    this.$nextTick(() => {
+      this.syncWithParentModal();
+      const parentContainer = this.getParentModalContainer();
+      if (parentContainer) {
+        this.parentModalResizeCleanup = observeElementResize(
+          parentContainer,
+          () => {
+            this.syncWithParentModal();
+            this.gridSetting();
+          },
+        );
+      }
+    });
+
+    const scopedWindow = getScopedWindow(this.$el || this);
+    if (scopedWindow) {
+      scopedWindow.addEventListener("beforeprint", this.handleBeforePrint);
+      scopedWindow.addEventListener("afterprint", this.handleAfterPrint);
+    }
   },
-  beforeDestroy() {
+  beforeUnmount() {
+    this.parentModalResizeCleanup?.();
+    this.parentModalResizeCleanup = null;
+    if (this.historyGridLayoutRafId != null) {
+      (this.$el?.ownerDocument?.defaultView || window).cancelAnimationFrame(this.historyGridLayoutRafId);
+      this.historyGridLayoutRafId = null;
+    }
+    if (this.historyGridSyncRafId != null) {
+      (this.$el?.ownerDocument?.defaultView || window).cancelAnimationFrame(this.historyGridSyncRafId);
+      this.historyGridSyncRafId = null;
+    }
+    if (this.historyGridSettingRafId != null) {
+      (this.$el?.ownerDocument?.defaultView || window).cancelAnimationFrame(this.historyGridSettingRafId);
+      this.historyGridSettingRafId = null;
+    }
+    this.clearHistoryGridListeners();
+    this.destroyHistoryDirectGrid();
     EventBus.$off("requestReportParams", this.requestReportParams);
-    // mountedで追加したイベントリスナを削除
-    document.removeEventListener("mousemove", this.onColumnResizingMouseMove);
-    window.removeEventListener("beforeprint", this.handleBeforePrint);
-    window.removeEventListener("afterprint", this.handleAfterPrint);
+
+    const scopedWindow = getScopedWindow(this.$el || this);
+    if (scopedWindow) {
+      scopedWindow.removeEventListener("beforeprint", this.handleBeforePrint);
+      scopedWindow.removeEventListener("afterprint", this.handleAfterPrint);
+    }
   },
 };
 
 // 検索条件のデフォルト値を生成
 const createDefaultConditon = () => ({
-  mainteDate: moment().format("YYYY-MM-DD"),
+  mainteDate: dayjs().format("YYYY-MM-DD"),
   numOfMonth: 1,
   dailyRunning: true,
   dailyNotGood: true,
@@ -967,13 +1632,28 @@ const createDefaultConditon = () => ({
   notDailyDate: true,
 });
 
+// Kendo DataSource の Model から行データを取得する
+const getHistoryRowData = (dataItem) => {
+  if (dataItem == null) {
+    return {};
+  }
+  if (typeof dataItem.toJSON === "function") {
+    return dataItem.toJSON();
+  }
+  return dataItem;
+};
+
 // グリッドのレイアウトごとのカラム定義を生成
 const createMultiColumnInfo = (masterItem, masterIndex) => {
   const disabledSpan = "<span class='cell-disabled'></span>";
-  const createTemplete = (field, itemIndex) => (
-    dataItem => dataItem.cellDisable[masterIndex][itemIndex]
-      ? disabledSpan : dataItem[field]
-  );
+  const createTemplete = (field, itemIndex) => (dataItem) => {
+    const row = getHistoryRowData(dataItem);
+    if (row.cellDisable?.[masterIndex]?.[itemIndex]) {
+      return disabledSpan;
+    }
+    const value = row[field];
+    return value == null ? "" : String(value);
+  };
   const columns = masterItem.items.map((item, itemIndex) => {
     const field = `column${masterIndex}${itemIndex}`;
     return {
@@ -981,7 +1661,7 @@ const createMultiColumnInfo = (masterItem, masterIndex) => {
       title: item.menteContent1,
       width: "100px",
       headerAttributes: columnHeaderSecendClass,
-      format: "",
+      attributes: columnBodyClass,
       template: createTemplete(field, itemIndex),
     };
   });
@@ -992,7 +1672,7 @@ const createMultiColumnInfo = (masterItem, masterIndex) => {
     title: "最終更新者",
     width: "100px",
     headerAttributes: columnHeaderSecendClass,
-    format: "",
+    attributes: columnBodyClass,
     template: createTemplete(lastUserNameField, lastUserNameIndex),
   });
   const lastUpdateIndex = masterItem.items.length + 1;
@@ -1002,7 +1682,7 @@ const createMultiColumnInfo = (masterItem, masterIndex) => {
     title: "最終更新日時",
     width: "9em",
     headerAttributes: columnHeaderSecendClass,
-    format: "",
+    attributes: columnBodyClass,
     template: createTemplete(lastUpdateField, lastUpdateIndex),
   });
   return columns;
@@ -1010,89 +1690,217 @@ const createMultiColumnInfo = (masterItem, masterIndex) => {
 
 // 表示対象期間に対応する初期状態のデータを作成する
 const createInitLocalData = ({ mainteDate, numOfMonth }) => {
-  const origin = moment(mainteDate).startOf("day");
-  const month = moment(origin).subtract(numOfMonth, "months");
+  const origin = dayjs(mainteDate).startOf("day");
+  const month = dayjs(origin).subtract(numOfMonth, "months");
   const days = origin.diff(month, "days") + 1;
   const result = [];
-  const rowDate = moment(origin);
+  let rowDate = dayjs(origin);
   for (let i = 0; i < days; i++) {
     result.push({
       rowNum: i + 1,
       rowTitle: rowDate.format("YYYY/MM/DD(dd)"),
       cellDisable: [],
     });
-    rowDate.subtract(1, "days");
+    rowDate = rowDate.subtract(1, "days");
   }
   return result;
+};
+
+const getRowMainteDate = rowData => rowData.rowTitle.split("(")[0].replaceAll("/", "-");
+
+const normalizeMainteDate = (value) => {
+  if (value == null || value === "") return "";
+  const parsed = dayjs(value);
+  if (parsed.isValid()) {
+    return parsed.format("YYYY-MM-DD");
+  }
+  return String(value).split("T")[0].replaceAll("/", "-");
+};
+
+const createMainteMainKey = (mainteDate, menteLayoutCd) => `${mainteDate}|${menteLayoutCd}`;
+
+const createMainteMainEditionKey = (mainteDate, menteLayoutCd, mainteLayoutEdition) => (
+  `${mainteDate}|${menteLayoutCd}|${mainteLayoutEdition}`
+);
+
+const createDetailHistoryKey = (menteDetailCd, editionNo) => (
+  `${menteDetailCd}|${editionNo}`
+);
+
+const createDetailIdentityKey = (detailCd, cateCd, cateEdi, detailEdi) => (
+  `${detailCd}|${cateCd}|${cateEdi}|${detailEdi}`
+);
+
+const createResultItemIdentityKey = resultItem => createDetailIdentityKey(
+  resultItem.menteDetailCd,
+  resultItem.cateCd,
+  resultItem.cateEdi,
+  resultItem.detailEdi
+);
+
+const parseMainteMainDetail = (mainteMain) => {
+  if (!mainteMain?.detail) return [];
+  try {
+    const detail = JSON.parse(mainteMain.detail);
+    return Array.isArray(detail) ? detail : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+const createMainteMainIndex = (mainteMainList) => {
+  const byLayout = new Map();
+  const byLayoutEdition = new Map();
+
+  (mainteMainList || []).forEach((mainteMain) => {
+    const mainteDate = normalizeMainteDate(mainteMain.menteDate);
+    const detailList = parseMainteMainDetail(mainteMain);
+    const detailByIdentity = new Map();
+    detailList.forEach((detailItem) => {
+      detailByIdentity.set(
+        createDetailIdentityKey(
+          detailItem.detail_cd,
+          detailItem.cate_cd,
+          detailItem.cate_edi,
+          detailItem.detail_edi
+        ),
+        detailItem
+      );
+    });
+    const indexedMainteMain = {
+      source: mainteMain,
+      detailList,
+      detailByIdentity,
+    };
+    byLayout.set(
+      createMainteMainKey(mainteDate, mainteMain.menteLayoutCd),
+      indexedMainteMain
+    );
+    byLayoutEdition.set(
+      createMainteMainEditionKey(
+        mainteDate,
+        mainteMain.menteLayoutCd,
+        mainteMain.mainteLayoutEdition
+      ),
+      indexedMainteMain
+    );
+  });
+
+  return {
+    get(rowMainteDate, layoutResult) {
+      return byLayoutEdition.get(
+        createMainteMainEditionKey(
+          rowMainteDate,
+          layoutResult.menteLayoutCd,
+          layoutResult.mainteLayoutEdition
+        )
+      ) || byLayout.get(
+        createMainteMainKey(rowMainteDate, layoutResult.menteLayoutCd)
+      );
+    },
+  };
+};
+
+const createUserAccountMap = userAccount => new Map(
+  (userAccount || []).map(user => [String(user.userId), user])
+);
+
+const createDetailHistoryNameMap = (layoutResult) => {
+  const detailNameMap = new Map();
+  (layoutResult?.detailHst || []).forEach((detailHst) => {
+    detailNameMap.set(
+      createDetailHistoryKey(detailHst.menteDetailCd, detailHst.editionNo),
+      detailHst.menteContent1
+    );
+  });
+  return detailNameMap;
+};
+
+const getHistoryDetailName = (detailItem, detailHistoryNameMap) => (
+  detailHistoryNameMap.get(
+    createDetailHistoryKey(detailItem.detail_cd, detailItem.detail_edi)
+  )
+);
+
+const countItemNames = (items) => {
+  const result = new Map();
+  (items || []).forEach((item) => {
+    const name = item.menteContent1;
+    result.set(name, (result.get(name) || 0) + 1);
+  });
+  return result;
+};
+
+const createItemNameOrderList = (items) => {
+  const countMap = new Map();
+  return (items || []).map((item) => {
+    const name = item.menteContent1;
+    const nextCount = (countMap.get(name) || 0) + 1;
+    countMap.set(name, nextCount);
+    return nextCount;
+  });
+};
+
+const createDetailItemsByName = (detailList, detailHistoryNameMap) => {
+  const detailItemsByName = new Map();
+  (detailList || []).forEach((detailItem) => {
+    const name = getHistoryDetailName(detailItem, detailHistoryNameMap);
+    if (!name) return;
+    if (!detailItemsByName.has(name)) {
+      detailItemsByName.set(name, []);
+    }
+    detailItemsByName.get(name).push(detailItem);
+  });
+  return detailItemsByName;
 };
 
 // 点検結果から追加された点検項目の列のうち
 // 最新マスタ分の同一項目名の列数を考慮して
 // 点検結果を表示するのに必要な列数だけを残す補正を行う
-const deleteTrailingItems = (localData, resultMaster, mainteMainList) => {
-  resultMaster.forEach(layoutResult => {
+const deleteTrailingItems = (localData, resultMaster, mainteMainIndex) => {
+  resultMaster.forEach((layoutResult) => {
     if (!layoutResult) return;
-    // 点検結果から追加された点検項目がなければ処理不要
-    if (layoutResult.items.length === layoutResult.detailLatestCount) return;
+    const latestCount = layoutResult.detailLatestCount;
+    if (
+      latestCount == null
+      || layoutResult.items.length === latestCount
+    ) return;
 
-    // layoutResult.items を最新マスタ分と点検結果分に分けて
-    // 点検日降順で点検結果を見て結果を表示するために
-    // 最新マスタ分だけでは不足する分を点検結果分から追加する
-    const itemsNew = layoutResult.items.slice(0, layoutResult.detailLatestCount);
-    const itemsRest = layoutResult.items.slice(layoutResult.detailLatestCount);
+    const itemsNew = layoutResult.items.slice(0, latestCount);
+    const itemsRest = layoutResult.items.slice(latestCount);
+    const baseNameCounts = countItemNames(itemsNew);
+    const requiredNameCounts = new Map();
+    const detailHistoryNameMap = createDetailHistoryNameMap(layoutResult);
+
     for (const rowData of localData) {
-      const rowMainteDate = rowData.rowTitle.split("(")[0].replaceAll("/", "-");
-      // 点検結果データの仕様として
-      // 特定の（装置と）点検日とレイアウトコードの組み合わせに対して
-      // （未削除の）点検結果は1件しか存在しない想定
-      const mainteMain = mainteMainList.find(mainteMain => (
-        mainteMain.menteDate === rowMainteDate
-        && mainteMain.menteLayoutCd === layoutResult.menteLayoutCd
-      ));
-      const mainteMainDetail = mainteMain && JSON.parse(mainteMain.detail);
-      // 点検結果が持つ点検項目の項目名のリストを作成する
-      const detailNames = mainteMainDetail?.map(
-        detailItem => layoutResult.detailHst.find(
-          detailHst => (
-            detailItem.detail_cd === detailHst.menteDetailCd
-            && detailItem.detail_edi === detailHst.editionNo
-          )
-        ).menteContent1
-      );
-      if (!detailNames?.length) continue;
+      const mainteMain = mainteMainIndex.get(getRowMainteDate(rowData), layoutResult);
+      if (!mainteMain?.detailList?.length) continue;
 
-      // 点検結果が持つ点検項目の項目名ごとの件数のリストを作成する
-      const nameCountList = [];
-      detailNames.forEach(name => {
-        const countItem = nameCountList.find(item => item.name === name);
-        if (countItem) {
-          countItem.count++;
-        } else {
-          nameCountList.push({
-            name,
-            count: 1,
-          });
-        }
+      const rowNameCounts = new Map();
+      mainteMain.detailList.forEach((detailItem) => {
+        const name = getHistoryDetailName(detailItem, detailHistoryNameMap);
+        if (!name) return;
+        rowNameCounts.set(name, (rowNameCounts.get(name) || 0) + 1);
       });
-      // 点検結果が持つ点検項目の項目名ごとの件数分に
-      // itemsNew が持つ列数が足りない場合は不足数分 itemsRest から移す
-      // （itemsNew が持つ項目名ごとの列数を調整するだけでよい場面なので
-      // 　itemsRest から移す要素が持つ点検項目のコード＋版数と
-      // 　点検結果が持つ点検項目のコード＋版数を合わせる必要はない）
-      nameCountList.forEach(countItem => {
-        const nowCount = itemsNew.filter(resultItem => (
-          resultItem.menteContent1 === countItem.name
-        )).length;
-        const shortCount = countItem.count - nowCount;
-        if (shortCount < 1) return;
-        for (let i = 0; i < shortCount; i++) {
-          const index = itemsRest.findIndex(resultItem => (
-            resultItem.menteContent1 === countItem.name
-          ));
-          itemsNew.push(...itemsRest.splice(index, 1));
+
+      rowNameCounts.forEach((count, name) => {
+        if ((requiredNameCounts.get(name) || 0) < count) {
+          requiredNameCounts.set(name, count);
         }
       });
     }
+
+    requiredNameCounts.forEach((requiredCount, name) => {
+      let currentCount = baseNameCounts.get(name) || 0;
+      while (currentCount < requiredCount) {
+        const index = itemsRest.findIndex(resultItem => (
+          resultItem.menteContent1 === name
+        ));
+        if (index < 0) break;
+        itemsNew.push(...itemsRest.splice(index, 1));
+        currentCount++;
+      }
+    });
 
     layoutResult.items = itemsNew;
   });
@@ -1111,9 +1919,7 @@ const decideGroupAnswer = (answerArray) => {
     answerArray.includes(Answer.Running)
     || (
       answerArray.includes(Answer.NotDateForDb)
-      && answerArray.includes(Answer.Good)
-    )
-  ) {
+      && answerArray.includes(Answer.Good))) {
     return Answer.Running;
   }
   // 「不合格」と「点検途中」の条件に該当せず、
@@ -1154,19 +1960,21 @@ const decideTotalAnswer = (answerArrayMap) => {
   // （「未実施」しか存在しないはずなので）空欄（未実施日）とする
   return StatusText.NotDate;
 };
-
 // 点検結果履歴データを反映する
 const convertGridData = (localData, resultMaster, mainteMainList, userAccount) => {
   if (!resultMaster.length) return localData;
 
+  const mainteMainIndex = createMainteMainIndex(mainteMainList);
+  const userAccountMap = createUserAccountMap(userAccount);
+
   // 点検結果から追加された点検項目の列のうち
   // 最新マスタ分の同一項目名の列数を考慮して
   // 点検結果を表示するのに必要な列数だけを残す補正を行う
-  deleteTrailingItems(localData, resultMaster, mainteMainList);
+  deleteTrailingItems(localData, resultMaster, mainteMainIndex);
 
   for (const rowData of localData) {
     // 検査日に対応する１行分のグリッド用データを生成する
-    const rowMainteDate = rowData.rowTitle.split("(")[0].replaceAll("/", "-");
+    const rowMainteDate = getRowMainteDate(rowData);
     const answerArrayMap = {};
     let isDateFound = false;
     resultMaster.forEach((layoutResult, masterIndex) => {
@@ -1177,50 +1985,40 @@ const convertGridData = (localData, resultMaster, mainteMainList, userAccount) =
       let lastUserId = null;
       const cellDisable = [];
       const layoutKey = `${layoutResult.menteLayoutCd}`;
+      const mainteMain = mainteMainIndex.get(rowMainteDate, layoutResult);
+      const detailHistoryNameMap = createDetailHistoryNameMap(layoutResult);
+      const detailItemsByName = createDetailItemsByName(
+        mainteMain?.detailList,
+        detailHistoryNameMap
+      );
+      const itemNameOrderList = createItemNameOrderList(layoutResult.items);
       layoutResult.items.forEach((resultItem, itemIndex) => {
         // レイアウト内の点検項目の列のデータを生成する
         // 点検項目に対応する点検結果情報を探す
         let judge = Answer.NotDateForDb;
         let judgeStatus = StatusText.NotDate;
 
-        // 点検結果データの仕様として
-        // 特定の（装置と）点検日とレイアウトコードの組み合わせに対して
-        // （未削除の）点検結果は1件しか存在しない想定
-        const mainteMain = mainteMainList.find(mainteMain => (
-          mainteMain.menteDate === rowMainteDate
-          && mainteMain.menteLayoutCd === layoutResult.menteLayoutCd
-        ));
-        const mainteMainDetail = mainteMain && JSON.parse(mainteMain.detail);
-        // 点検項目は項目名ごとに列を作成するので
-        // 列の項目名と一致する点検項目の点検結果を検索する
-        const detailItems = mainteMainDetail?.filter(detailItem => (
-          resultItem.menteContent1 === layoutResult.detailHst?.find(
-            detailHst => (
-              detailItem.detail_cd === detailHst.menteDetailCd
-              && detailItem.detail_edi === detailHst.editionNo
-            )
-          )?.menteContent1
-        ));
-        // 処理対象の列が項目名が同一のもののうちの何番目かを調べて
-        // それに対応する点検結果を取得する
-        const nameCount = layoutResult.items.filter((item, index) => (
-          (index <= itemIndex)
-          && (item.menteContent1 === resultItem.menteContent1)
-        )).length;
-        const detailItem = detailItems
-          && nameCount <= detailItems.length
-          && detailItems[nameCount - 1];
+        // 点検項目は項目名ごとに列を作成するので、
+        // 履歴明細側の当時の項目名と現在の列名を突き合わせる。
+        const sameNameDetailItems = detailItemsByName.get(resultItem.menteContent1);
+        const nameOrder = itemNameOrderList[itemIndex] || 1;
+        let detailItem = sameNameDetailItems
+          && nameOrder <= sameNameDetailItems.length
+          && sameNameDetailItems[nameOrder - 1];
+        if (!detailItem && mainteMain) {
+          detailItem = mainteMain.detailByIdentity.get(createResultItemIdentityKey(resultItem));
+        }
         if (detailItem) {
           // 点検日とレイアウトのコードが一致する点検結果情報の
           // 処理対象の列に対応する点検項目の点検結果情報が見つかった場合
 
           // 最終更新日時の情報を更新
-          if (mainteMain.upDate) {
-            lastUpdate = mainteMain.upDate;
+          if (mainteMain.source.upDate) {
+            lastUpdate = mainteMain.source.upDate;
           }
           // 最終更新者の情報を更新
-          if (mainteMain.checkerId1) {
-            lastUserId = mainteMain.checkerId1;
+          if (mainteMain.source.checkerId1) {
+            lastUserId = mainteMain.source.checkerId1;
           }
           judge = detailItem.judge;
           // Answer.NotDate の値が残っていた場合はこの後の総合合否判定処理のために
@@ -1260,9 +2058,7 @@ const convertGridData = (localData, resultMaster, mainteMainList, userAccount) =
 
       const itemsLength = layoutResult.items.length;
       // 最終更新者列の情報を生成
-      const lastUser = lastUserId && userAccount.findLast(
-        item => (item.userId === lastUserId)
-      );
+      const lastUser = lastUserId && userAccountMap.get(String(lastUserId));
       const lastUserNameIndex = itemsLength;
       rowData[`column${masterIndex}${lastUserNameIndex}`] = lastUser
         ? `${lastUser.userLastName} ${lastUser.userFirstName}`
@@ -1270,14 +2066,9 @@ const convertGridData = (localData, resultMaster, mainteMainList, userAccount) =
       cellDisable[lastUserNameIndex] = lastCellDisable;
       // 最終更新日時列の情報を生成
       const lastUpdateIndex = itemsLength + 1;
-      rowData[`column${masterIndex}${lastUpdateIndex}`]
-        = (lastUser && lastUpdate)
-          ? moment(lastUpdate).format("YYYY/MM/DD(dd) HH:mm")
-          : "";
-      // #12550対応時の仕様メモ：
-      // 新規点検結果データ作成時に自動生成された未実施のままのレコードの
-      // checker_id_1 は null になっている想定で、
-      // lastUpdate が null の場合は最終更新日時も空欄とする
+      rowData[`column${masterIndex}${lastUpdateIndex}`] = lastUpdate
+        ? dayjs(lastUpdate).format("YYYY/MM/DD(dd) HH:mm")
+        : "";
       cellDisable[lastUpdateIndex] = lastCellDisable;
 
       // グレー表示判定用のデータを入れる
@@ -1293,8 +2084,7 @@ const convertGridData = (localData, resultMaster, mainteMainList, userAccount) =
       resultMaster.forEach((layoutResult, masterIndex) => {
         if (
           !layoutResult?.isCurrent
-          || !layoutResult?.items?.length
-        ) return;
+          || !layoutResult?.items?.length) return;
         // １レイアウト分の列のデータを生成する
         const latestCount = layoutResult.detailLatestCount;
         const itemCount = layoutResult.items.length;
@@ -1310,7 +2100,6 @@ const convertGridData = (localData, resultMaster, mainteMainList, userAccount) =
 
   return localData;
 };
-
 // フィルター条件を適用する
 const applyFilterLocalData = (localData, { dailyRunning, dailyNotGood, dailyGood, notDailyDate }) => {
   for (let i = localData.length - 1; i >= 0; i--) {
@@ -1329,7 +2118,6 @@ const applyFilterLocalData = (localData, { dailyRunning, dailyNotGood, dailyGood
 </script>
 
 <style>
-
 @media print {
   /* 親(点検項目入力)のヘッダを背面に移動 */
   body:has(.daily-history-modal) .modal-mask.custom-modal .modal-header:first-of-type {
@@ -1341,6 +2129,7 @@ const applyFilterLocalData = (localData, { dailyRunning, dailyNotGood, dailyGood
     margin-top: 1.5vh !important;
   }
 }
+
 /* 横印刷時 */
 @media print and (orientation: landscape) {
   body:has(.daily-history-modal) .modal-mask.custom-modal .modal-wrapper {
@@ -1350,11 +2139,23 @@ const applyFilterLocalData = (localData, { dailyRunning, dailyNotGood, dailyGood
 </style>
 
 <style scoped>
+@import "../../assets/styles/modal.css";
 /* モーダル全体の設定 */
 .daily-history-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   z-index: 10000;
+  display: block;
 }
-.daily-history-modal >>> .modal-container {
+.daily-history-modal :deep(.modal-wrapper) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.daily-history-modal :deep(.modal-container) {
   margin: 0;
   width: 100%;
   height: 100%;
@@ -1397,13 +2198,13 @@ const applyFilterLocalData = (localData, { dailyRunning, dailyNotGood, dailyGood
 .history-header-modal {
   font-size: 1.5em;
   display: flex;
-  width: 98%;
-  margin-inline: auto;
+  width: 100%;
+  margin-inline: 0;
 }
 .history-list-modal {
-  width: 98%;
-  padding-top: 10px;
-  margin-inline: auto;
+  width: 100%;
+  padding-top: 6px;
+  margin-inline: 0;
 }
 .distance-time {
   width: 48px;
@@ -1424,17 +2225,19 @@ const applyFilterLocalData = (localData, { dailyRunning, dailyNotGood, dailyGood
   color: var(--ntss-list-body-color);
 }
 
-.modal-body >>> .k-grid-content > table > tbody > tr > td:has(.cell-disabled) {
+.modal-body :deep(.k-grid-content > table > tbody > tr > td:has(.cell-disabled)) {
   background-color: var(--pat-viewer-ind-cond-info-disabled);
 }
 .modal-body {
-  margin: 0px 0;
+  margin: 0;
   position: absolute;
   top: 50px;
   width: 100%;
   height: calc(100% - 70px - 2em);
   overflow-y: auto;
   color: var(--ntss-base-color);
+  box-sizing: border-box;
+  padding-inline: 16px;
 }
 .popover-row-style {
   flex-wrap: nowrap;
@@ -1468,35 +2271,167 @@ const applyFilterLocalData = (localData, { dailyRunning, dailyNotGood, dailyGood
   margin-left: 5px;
   margin-right: 5px;
 }
-.modal-body >>> .k-grid td,
-.modal-body >>> .k-grid tr {
+.modal-body :deep(.k-grid td),
+.modal-body :deep(.k-grid tr) {
   border: solid 1px var(--ntss-list-border-color) !important;
   background-color: var(--ntss-list-background-color);
   color: var(--ntss-list-body-color);
 }
-.modal-body >>> .k-grid .k-alt,
-.modal-body >>> .k-grid .k-alt td {
+
+.modal-body :deep(.k-grid .k-table-td) {
+  border: solid 1px var(--ntss-list-border-color) !important;
+  background-color: var(--ntss-list-background-color);
+  color: var(--ntss-list-body-color);
+}
+.modal-body :deep(.k-grid .k-alt),
+.modal-body :deep(.k-grid .k-alt td) {
   background-color: var(--ntss-list-content-2nd-background-color);
 }
-::v-deep .k-grid th,
-::v-deep .k-grid td {
-  height: 2em !important;
+
+.modal-body :deep(.k-grid .k-alt .k-table-td) {
+  background-color: var(--ntss-list-content-2nd-background-color);
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked {
+.history-list-modal :deep(.k-grid-content td),
+.history-list-modal :deep(.k-grid-content .k-table-td),
+.history-list-modal :deep(.k-grid-content-locked td),
+.history-list-modal :deep(.k-grid-content-locked .k-table-td),
+.history-list-modal :deep(td.deviceSetInfo-row-name),
+.history-list-modal :deep(td.daily-history-grid-cell) {
+  height: 2em !important;
+  min-height: 2em;
+  box-sizing: border-box;
+}
+
+.history-list-modal :deep(.k-grid-header-wrap th),
+.history-list-modal :deep(.k-grid-header-wrap .k-table-th) {
+  height: auto !important;
+  box-sizing: border-box;
+  vertical-align: middle !important;
+}
+
+.history-list-modal :deep(.k-grid-header-locked th),
+.history-list-modal :deep(.k-grid-header-locked .k-table-th),
+.history-list-modal :deep(.deviceSetInfo-header-row-name) {
+  box-sizing: border-box;
+  vertical-align: middle !important;
+}
+
+.history-list-modal :deep(.daily-history-layout-header),
+.history-list-modal :deep(.deviceSetInfo-header-first-name),
+.history-list-modal :deep(.deviceSetInfo-header-secound-name) {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.history-list-modal :deep(.deviceSetInfo-header-row-name .k-link),
+.history-list-modal :deep(.deviceSetInfo-header-row-name .k-cell-inner),
+.history-list-modal :deep(.deviceSetInfo-header-first-name .k-link),
+.history-list-modal :deep(.deviceSetInfo-header-secound-name .k-link),
+.history-list-modal :deep(.deviceSetInfo-header-first-name .k-cell-inner),
+.history-list-modal :deep(.deviceSetInfo-header-secound-name .k-cell-inner) {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 100%;
+  padding: 2px 0 !important;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.history-list-modal :deep(.k-grid-header table),
+.history-list-modal :deep(.k-grid-header-locked table),
+.history-list-modal :deep(.k-grid-content table),
+.history-list-modal :deep(.k-grid-content-locked table) {
+  border-collapse: collapse;
+}
+
+/* 表头最外层右侧占位（绿色区域） */
+.history-list-modal :deep(.k-grid-header) {
+  position: relative;
+}
+
+.history-list-modal :deep(.k-grid-header)::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--history-header-scrollbar-gutter, 0px);
+  background-color: var(--ntss-list-header-background-color);
+  background-image: none;
+  pointer-events: none;
+}
+
+/* 表头可横向滚动但不显示滚动条，仅保留表体底部横向滚动条 */
+.history-list-modal :deep(.k-grid-header) {
+  overflow: hidden;
+}
+
+/* 表头 wrap 本体不额外盖色 */
+.history-list-modal :deep(.k-grid-header-wrap) {
+  margin-right: 0 !important;
+  overflow-x: scroll;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.history-list-modal :deep(.k-grid-header-wrap::-webkit-scrollbar) {
+  display: none;
+  height: 0;
+}
+
+.history-list-modal :deep(.k-grid-content),
+.history-list-modal :deep(.k-grid-content-locked) {
+  padding-right: 0 !important;
+}
+
+.history-list-modal :deep(.k-grid-header th),
+.history-list-modal :deep(.k-grid-header .k-table-th),
+.history-list-modal :deep(.deviceSetInfo-header-row-name),
+.history-list-modal :deep(.deviceSetInfo-header-first-name),
+.history-list-modal :deep(.deviceSetInfo-header-secound-name) {
+  border-right: 1px solid #fff !important;
+  border-left: none !important;
+}
+
+.history-list-modal :deep(.deviceSetInfo-header-first-name .k-column-title),
+.history-list-modal :deep(.deviceSetInfo-header-secound-name .k-column-title),
+.history-list-modal :deep(.daily-history-layout-header) {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  white-space: normal !important;
+  word-break: break-all !important;
+  word-wrap: break-word !important;
+  text-align: center !important;
+  line-height: 1.35;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.history-list-modal :deep(.daily-history-grid-cell) {
+  text-align: center !important;
+  word-break: break-all;
+  white-space: normal;
+}
+.history-list-modal :deep(.k-grid-content-locked) {
   overflow-y: scroll !important;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.kendo-grid-toolbar-style >>> .k-grid-content-locked::-webkit-scrollbar {
+.history-list-modal :deep(.k-grid-content-locked::-webkit-scrollbar) {
   display: none;
 }
 
 /* ヘッダー抽出条件 */
-#daily-history-condition-list >>> .condition-search-icon-area {
+#daily-history-condition-list :deep(.condition-search-icon-area) {
   line-height: 4.2em;
 }
-#daily-history-condition-list >>> .condition-items-area {
+#daily-history-condition-list :deep(.condition-items-area) {
   margin-left: 1.8em;
   color: #333333 !important;
 }
@@ -1511,15 +2446,14 @@ const applyFilterLocalData = (localData, { dailyRunning, dailyNotGood, dailyGood
     width: 100% !important;
   }
   .daily-history-modal {
-    
     z-index: 9998;
   }
   .modal-footer {
     display: none;
   }
-  
+
   /* ヘッダとbodyでページわかれるのを防止 */
-  .daily-history-modal >>> .modal-wrapper {
+  .daily-history-modal .modal-wrapper {
     display: inline-block !important;
     margin-top: 1.5vh !important;
   }
@@ -1539,52 +2473,62 @@ const applyFilterLocalData = (localData, { dailyRunning, dailyNotGood, dailyGood
   /* 装置名 */
   .ntss-list-detail th:nth-child(4),
   .ntss-list-detail td:nth-child(4) { min-width: 8em; width: 8em; }
-    
+
   /* 表部分 */
-  
   .history-list-modal {
     width: 100%;
   }
-  
+
   /** スクロールコンテナ */
-  .history-list-modal >>> .k-grid-header-wrap,
-  .history-list-modal >>> .k-grid-content {
+  .history-list-modal :deep(.k-grid-header-wrap),
+  .history-list-modal :deep(.k-grid-content) {
     overflow: hidden !important;
     height: auto !important;
   }
-  
+
   /** 固定列調整 */
-  .history-list-modal >>> .k-grid-content-locked {
+  .history-list-modal :deep(.k-grid-content-locked) {
     height: auto !important;
   }
   /** ヘッダのズレ原因を除去 */
-  .history-list-modal >>> .k-grid-header {
+  .history-list-modal :deep(.k-grid-header) {
     padding-right: 0 !important;
   }
   /** gridの幅 */
-  .history-list-modal >>> .k-grid {
+  .history-list-modal :deep(.k-grid) {
     width: 100vw;
     height: auto !important;
   }
 
   /** 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
   /* 右端時固定列最前面表示*/
-  .history-list-modal:has(table.scroll-rightmost) >>> .k-grid-content-locked {
+  .history-list-modal:has(table.scroll-rightmost) :deep(.k-grid-content-locked) {
     z-index: 1;
   }
-  .history-list-modal >>> .k-grid-header-wrap:has(table.scroll-rightmost),
-  .history-list-modal >>> .k-grid-content:has(table.scroll-rightmost) {
+  .history-list-modal :deep(.k-grid-header-wrap:has(table.scroll-rightmost)),
+  .history-list-modal :deep(.k-grid-content:has(table.scroll-rightmost)) {
     position: static;
   }
-  .history-list-modal >>> .k-grid-header-wrap .scroll-rightmost {
+  .history-list-modal :deep(.k-grid-header-wrap .scroll-rightmost) {
     position: relative;
     float: right;
   }
 }
+
 /* 横印刷時 */
 @media print and (orientation: landscape) {
-  .daily-history-modal >>> .modal-wrapper {
+  .daily-history-modal .modal-wrapper {
     margin-top: 3vh !important;
   }
+}
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 </style>

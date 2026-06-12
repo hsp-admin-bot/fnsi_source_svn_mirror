@@ -73,7 +73,6 @@
           <!-- #10713 小数点以下桁数指定を0～8までにする linjunfeng end -->
         </v-ons-col>
       </v-ons-row>
-      <!-- add #11801 治療条件.抗凝固剤に調整薬剤をセットしたときに配布リストの出力が不適切 susny start-->
       <v-ons-row v-if="editMixRecord.medicineSetNum.editValue !== null">
         <v-ons-col class="item-title">薬剤セット数</v-ons-col>
         <v-ons-col class="item-data list-input">
@@ -102,7 +101,6 @@
           />
         </v-ons-col>
       </v-ons-row>
-      <!-- add #11801 治療条件.抗凝固剤に調整薬剤をセットしたときに配布リストの出力が不適切 susny end-->
       <v-ons-row>
         <v-ons-col class="item-title">注射薬</v-ons-col>
         <v-ons-col class="item-data list-input">
@@ -387,30 +385,6 @@
                 </td>
                 <!-- 数量 -->
                 <td class="ntss-list-body-td ntss-list-body-td-background">
-                  <!-- mod #5589 2023/03/31 数値IFのスタイル全不正 張博 start -->
-                  <!-- <custom-input-simple-number
-                    :value="item.amount"
-                    :step-value="getMediUnitStepSimple(item)"
-                    :min-value="0"
-                    :max-value="99999999.999999999"
-                    :loop-flg="false"
-                    :style="displayStyles"
-                    @change="changeValueAmount(index,item.decPoint),changeButton()"
-                    @input="inputValueAmount($event,item.decPoint)"
-                    @keydown.69.prevent
-                  /> -->
-                  <!-- #9848+9849 数値IFのスタイル全不正 linjunfeng start -->
-                  <!-- <custom-input-simple-number
-                    :value="item.amount"
-                    :step-value="getMediUnitStepSimple(item)"
-                    :minValue="0"
-                    :maxValue="99999999.999999999"
-                    :loop-flg="false"
-                    :style="displayStyles"
-                    @change="changeValueAmount(index,item.decPoint)"
-                    @input="inputValueAmount($event,item.decPoint)"
-                    @keydown.69.prevent
-                  /> -->
                   <custom-input-number-pro
                     :value="item.amount.editValue"
                     :step="getMediUnitStepSimple(item)"
@@ -446,7 +420,7 @@
       @popover-close="closePopover(popParam)"
     />
     <v-ons-popover cancelable
-                   :visible.sync="userMenuPopoverVisible"
+                   v-model:visible="userMenuPopoverVisible"
                    :target="userMenuPopoverTarget"
                    :cover-target="false"
                    :direction="userMenuPopoverDirection"
@@ -461,10 +435,10 @@
 </template>
 
 <script>
-import _ from "underscore";
-import { mapActions, mapGetters } from "vuex";
+import _ from "@/compat/collections/lodash";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 import { showPopover, closePopover } from "@/functions/PopoverFunctions";
 import {
   encodeEditableRecord,
@@ -472,6 +446,7 @@ import {
 } from "@/functions/PatInfoFunctions";
 import customInput from "@/components/common/custom-form-tags/CustomInput";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
+import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
 import customSelect from "@/components/common/custom-form-tags/CustomMstMedicineMixSelect.vue";
 import customCheckbox from "@/components/common/custom-form-tags/CustomCheckbox";
 import MasterSelector from "@/components/common/master-selector/MasterSelector";
@@ -487,10 +462,12 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { MASTER_DELETE_DISPLAY } from "@/constants/TreatmentRecord";
 // FNSI-修正 マスタ削除の対応 楊 add end
 import PopoverMixin from "@/components/PopoverMixin";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 // add #9848+9849 数値IFのスタイル全不正 linjunfeng start
-import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro'
+import { nextId } from "@/functions/common/id";
+
+import { queryScopedSelector, getScopedElementById, getModalBodyElement, getModalContainerElement, getModalToolbarElement, getModalFooterElement } from "@/functions/common/LayoutMeasureHelper";
 // add #9848+9849 数値IFのスタイル全不正 linjunfeng end
 export default {
   name: "MstMedicineMix",
@@ -526,10 +503,8 @@ export default {
         medicateTimingCd: { initValue: null, editValue: null },
         procedureCd: { initValue: null, editValue: null },
         unitDecimalPoint:{ initValue: null, editValue: null },
-        // add #11801 治療条件.抗凝固剤に調整薬剤をセットしたときに配布リストの出力が不適切 susny start
         medicineSetNum:{ initValue: null, editValue: null },
         unitSecond:{ initValue: null, editValue: null },
-        // add #11801 治療条件.抗凝固剤に調整薬剤をセットしたときに配布リストの出力が不適切 susny end
         classiFicationFlg: null
       },
       // jsonArray型(調整薬剤情報)
@@ -628,7 +603,7 @@ export default {
         mst => mst.classCd === classCd
       );
       // 抗凝固剤フラグ
-      return classInfo ? classInfo.classType : null === 1;
+      return classInfo ? classInfo.classType === 1 : null;
     }
   },
 
@@ -703,10 +678,8 @@ export default {
         this.editMstMedicineMixRecord.inHospitalCd3.initValue!=this.editMstMedicineMixRecord.inHospitalCd3.editValue||
         this.editMstMedicineMixRecord.medicateTimingCd.initValue!=this.editMstMedicineMixRecord.medicateTimingCd.editValue||
         this.editMstMedicineMixRecord.procedureCd.initValue!=this.editMstMedicineMixRecord.procedureCd.editValue||
-        // add #11801 治療条件.抗凝固剤に調整薬剤をセットしたときに配布リストの出力が不適切 susny start
         this.editMstMedicineMixRecord.medicineSetNum.initValue!=this.editMstMedicineMixRecord.medicineSetNum.editValue||
         this.editMstMedicineMixRecord.unitSecond.initValue!=this.editMstMedicineMixRecord.unitSecond.editValue||
-        // add #11801 治療条件.抗凝固剤に調整薬剤をセットしたときに配布リストの出力が不適切  susny end
         this.editMstMedicineMixRecord.unitDecimalPoint.initValue!=this.editMstMedicineMixRecord.unitDecimalPoint.editValue
         ) {
           this.changeButton();
@@ -818,8 +791,7 @@ export default {
     editMstMedicineMix.medicateTimingCd = this.editRecord["medicateTimingCd"];
     editMstMedicineMix.procedureCd = this.editRecord["procedureCd"];
     // modify end #9301
-    // add #11801 治療条件.抗凝固剤に調整薬剤をセットしたときに配布リストの出力が不適切 susny start
-    // 新規作成時のみ、薬剤セット数が未設定の場合はデフォルト1（一覧addRowでnumber型は0になる）
+
     const isNewRecord =
       this.editRecord.operation === 1 || this.editRecord.isAddRow === true;
     const medicineSetNum = editMstMedicineMix.medicineSetNum;
@@ -832,7 +804,6 @@ export default {
     ) {
       editMstMedicineMix.medicineSetNum = 1;
     }
-    // add #11801 治療条件.抗凝固剤に調整薬剤をセットしたときに配布リストの出力が不適切 susny end
 
     this.editMstMedicineMixRecord = encodeEditableRecord(editMstMedicineMix);
     this.customInputNumberProIsShow = true;
@@ -841,7 +812,7 @@ export default {
       const mixInfo = JSON.parse(editMstMedicineMix.mixInfo);
       this.editMixInfoList = mixInfo.map(item=>
       encodeEditableRecord({
-          id: _.uniqueId("medicineMix"),
+          id: nextId("medicineMix"),
           cd:item.cd,
           amount:this.defaultValueAmount(item.amount,this.getMediUnitStepDefault(item.cd)),
           solvent:item.solvent,
@@ -862,6 +833,97 @@ export default {
   },
 
   methods: {
+    getMedicineMixDocument() {
+      return this.$el?.ownerDocument || document;
+    },
+    getMedicineMixContentRoots() {
+      return [this.getCurrentModalBody(), this.getCurrentModalContainer(), this.$el].filter(Boolean);
+    },
+    getMedicineMixTableRoots() {
+      return [this.getSetInfoListEl(), this.getCurrentModalBody(), this.getCurrentModalContainer(), this.$el].filter(Boolean);
+    },
+    getMedicineMixScopedElementFromRoots(selector, roots = this.getMedicineMixContentRoots()) {
+      for (const root of roots) {
+        const directElement = root?.querySelector?.(selector);
+        if (directElement) {
+          return directElement;
+        }
+        const scopedElement = queryScopedSelector(selector, root);
+        if (scopedElement) {
+          return scopedElement;
+        }
+      }
+      return null;
+    },
+    getMedicineMixDocumentElementByClassName(className) {
+      return this.getMedicineMixDocument().getElementsByClassName(className)[0] || null;
+    },
+    getMedicineMixDocumentElementById(id) {
+      return this.getMedicineMixDocument().getElementById(id) || null;
+    },
+    getCurrentModalContainer() {
+      return getModalContainerElement(this.$el) || this.$el?.closest?.('.modal-container') || this.getMedicineMixDocumentElementByClassName('modal-container');
+    },
+    getCurrentModalToolbar() {
+      return getModalToolbarElement(this.$el) || this.getCurrentModalContainer()?.querySelector?.('.toolbar') || this.getMedicineMixDocumentElementByClassName('toolbar');
+    },
+    getCurrentModalFooter() {
+      return getModalFooterElement(this.$el) || this.getCurrentModalContainer()?.querySelector?.('.modal-footer') || this.getMedicineMixDocumentElementByClassName('modal-footer');
+    },
+    getCurrentModalBody() {
+      return getModalBodyElement(this.$el) || this.getCurrentModalContainer()?.querySelector?.(".modal-body, .modal-body-search, .modal-body-no-footer") || this.getMedicineMixDocumentElementByClassName("modal-body");
+    },
+    getMedicineMixScopeRoot() {
+      return this.getCurrentModalContainer() || this.getCurrentModalBody() || this.$el;
+    },
+    getMedicineMixElement(selector) {
+      return this.getMedicineMixScopedElementFromRoots(selector) || queryScopedSelector(selector, this.getMedicineMixScopeRoot()) || queryScopedSelector(selector, this.$el);
+    },
+    getMedicineMixElementById(id) {
+      return getScopedElementById(id, this.getMedicineMixScopeRoot()) || getScopedElementById(id, this.$el);
+    },
+    getSetInfoListEl() {
+      return this.getMedicineMixScopedElementFromRoots('.setInfo-list.custom-setInfo-list', this.getMedicineMixContentRoots())
+        || this.getMedicineMixScopedElementFromRoots('.setInfo-list', this.getMedicineMixContentRoots())
+        || this.getMedicineMixDocumentElementByClassName('setInfo-list custom-setInfo-list')
+        || this.getMedicineMixDocumentElementByClassName('setInfo-list')
+        || null;
+    },
+    getMedicineMixTableRoot() {
+      return this.getSetInfoListEl() || this.getCurrentModalBody() || this.getCurrentModalContainer() || this.$el || null;
+    },
+    getStickyTableEl() {
+      return this.getMedicineMixScopedElementFromRoots('.sticky_table', this.getMedicineMixTableRoots())
+        || this.getMedicineMixDocumentElementByClassName('sticky_table')
+        || null;
+    },
+    getSetInfoTheadEl() {
+      return this.getMedicineMixScopedElementFromRoots('.setInfo-thead', this.getMedicineMixTableRoots())
+        || this.getMedicineMixDocumentElementByClassName('setInfo-thead')
+        || null;
+    },
+    getSetInfoTitleEl() {
+      return this.getMedicineMixScopedElementFromRoots('.setInfo-title', this.getMedicineMixTableRoots())
+        || this.getMedicineMixDocumentElementByClassName('setInfo-title')
+        || null;
+    },
+    getMixInfoWrapperEl() {
+      return this.getMedicineMixScopedElementFromRoots('.medicine-mix-info', this.getMedicineMixContentRoots())
+        || this.getMedicineMixDocumentElementByClassName('medicine-mix-info')
+        || null;
+    },
+    getPopOverMessageEl() {
+      return this.getMedicineMixScopedElementFromRoots('#popOverMessage', [this.getCurrentModalContainer(), ...this.getMedicineMixContentRoots()])
+        || this.getMedicineMixElementById('popOverMessage')
+        || this.getMedicineMixDocumentElementById('popOverMessage')
+        || null;
+    },
+    getModalScrollBodyEl() {
+      return this.getMedicineMixScopedElementFromRoots('.modal-body.modal-scroll', [this.getCurrentModalBody(), this.getCurrentModalContainer(), this.$el])
+        || this.getCurrentModalBody()
+        || this.getMedicineMixDocumentElementByClassName('modal-body modal-scroll')
+        || null;
+    },
     ...mapActions("master-maintenance", [
       "setEditRecord",
       // "findFacilitySettingInfo"
@@ -902,14 +964,17 @@ export default {
     },
     // add 4734 調製情報の余白の改修 鞠 start
     changeMedicineSet() {
-      document.getElementsByClassName("setInfo-list custom-setInfo-list")[0].style.marginTop = "12px"
+      const setInfoList = this.getSetInfoListEl();
+      if (setInfoList) {
+        setInfoList.style.marginTop = "12px";
+      }
     },
     // add 4734 調製情報の余白の改修 鞠 end
     /**
      * @description プロンプト
      */
     showPopOver(event) {
-      let pop = document.getElementById("popOverMessage");
+      let pop = this.getPopOverMessageEl();
       // add 全マスタメッセージ調整 王 start
       // pop.innerText = "指示数量1あたりの数量を入れる。";
       pop.innerText = DIALOG_MESSAGES[12000016].message;
@@ -1020,7 +1085,7 @@ export default {
     // セット情報、行追加
     addMedicineSet() {
       const addInfo = {
-        id: _.uniqueId("medicineMix"),
+        id: nextId("medicineMix"),
         cd: { initValue: null, editValue: null },
         // #9848+9849 追加希望は空欄です linjunfeng start
         // amount: { initValue: "0", editValue: "0" },
@@ -1032,7 +1097,7 @@ export default {
       };
       this.editMixInfoList = [...this.editMixInfoList, addInfo];
       this.$nextTick(() => {
-        const ele = document.getElementsByClassName("modal-body modal-scroll")[0];
+        const ele = this.getModalScrollBodyEl();
         if (ele) {
           ele.scrollTop = ele.scrollHeight;
         }
@@ -1110,10 +1175,8 @@ export default {
         medicateTimingCd: null,
         procedureCd: null,
         unitDecimalPoint: null,
-        // add #11801 治療条件.抗凝固剤に調整薬剤をセットしたときに配布リストの出力が不適切 susny start
         medicineSetNum: 1,
         unitSecond: null
-        // add #11801 治療条件.抗凝固剤に調整薬剤をセットしたときに配布リストの出力が不適切 susny end
       };
       return addRecord;
     },
@@ -1130,7 +1193,7 @@ export default {
           // isNaN(item.amount.editValue) || item.amount.editValue === null ? null: Number(item.amount.editValue)
           isNaN(item.amount.editValue) || item.amount.editValue === null ? null: item.amount.editValue
           // #10196 数値IFのスタイル全不正 linjunfeng end
-        );
+          );
         // 2.不要な項目を削除しjson用にデコード
         mixInfoList = mixInfoList.map(item =>
           _.omit(decodeEditableRecord({ ...item }), "del_check","decPoint","id")
@@ -1292,9 +1355,9 @@ export default {
      * @param decPoint 入力行小数点桁数(2ケタなど)
      */
     convertExponential(num,decPoint){
-      var decStep = 0;
-      var setStep = 0;
-      var setNum = 0;
+      var decStep;
+      var setStep;
+      var setNum;
       decStep = BigNumber(10).exponentiatedBy(BigNumber(decPoint)).valueOf();
       setStep = BigNumber(10).exponentiatedBy(BigNumber(decPoint).negated()).valueOf();
       num = BigNumber(num).multipliedBy(BigNumber(decStep)).valueOf();
@@ -1378,11 +1441,15 @@ export default {
      * スクロール時に要素を調整する
      */
      scrollHandler() {
-      const body = document.getElementsByClassName('modal-body')[0];
-      const setInfoTable  = document.getElementsByClassName('sticky_table')[0];
-      const setInfoThead  = document.getElementsByClassName('setInfo-thead')[0];
-      const setInfoTitle  = document.getElementsByClassName('setInfo-title')[0];
+      const body = this.getCurrentModalBody();
+      const tableRoot = this.getCurrentModalBody() || this.getCurrentModalContainer() || this.$el;
+      const setInfoTable  = tableRoot?.querySelector?.('.sticky_table') || this.getStickyTableEl();
+      const setInfoThead  = tableRoot?.querySelector?.('.setInfo-thead') || this.getSetInfoTheadEl();
+      const setInfoTitle  = tableRoot?.querySelector?.('.setInfo-title') || this.getSetInfoTitleEl();
 
+      if (!body || !setInfoTable || !setInfoThead || !setInfoTitle) {
+        return;
+      }
       let targetTop = setInfoTable.getBoundingClientRect().top;
       let bodyTop = body.getBoundingClientRect().top;
       if (targetTop < bodyTop) {
@@ -1407,13 +1474,13 @@ export default {
      */
     calculateListHeight() {
       // モーダル内部の高さを取得
-      const modalBody = document.getElementsByClassName("modal-body")[0];
+      const modalBody = this.getCurrentModalBody();
       // #9863 TypeError: Cannot read properties of undefined (reading 'clientHeight') 横展開2 linjunfeng start
       // const modalBodyHeight = modalBody.clientHeight;
       const modalBodyHeight = modalBody && modalBody.clientHeight ? modalBody.clientHeight : 0;
       // #9863 TypeError: Cannot read properties of undefined (reading 'clientHeight') 横展開2 linjunfeng end
       // 付帯情報部分の高さを取得
-      const infoWrapper = document.getElementsByClassName("medicine-mix-info")[0];
+      const infoWrapper = this.getMixInfoWrapperEl();
       // #9863 TypeError: Cannot read properties of undefined (reading 'clientHeight') 横展開2 linjunfeng start
       // const infoWrapperHeight = infoWrapper.clientHeight;
       const infoWrapperHeight = infoWrapper && infoWrapper.clientHeight ? infoWrapper.clientHeight : 0;
@@ -1421,8 +1488,9 @@ export default {
       const remainHeight = modalBodyHeight - infoWrapperHeight - 14;
       // #9863 TypeError: Cannot read properties of undefined (reading 'style') 横展開2 linjunfeng start
       // document.getElementsByClassName("setInfo-list")[0].style.minHeight = remainHeight + "px";
-      if (document.getElementsByClassName("setInfo-list")[0]) {
-        document.getElementsByClassName("setInfo-list")[0].style.minHeight = remainHeight + "px";
+      const setInfoList = this.getSetInfoListEl();
+      if (setInfoList) {
+        setInfoList.style.minHeight = remainHeight + "px";
       }
       // #9863 TypeError: Cannot read properties of undefined (reading 'style') 横展開2 linjunfeng end
     },
@@ -1432,7 +1500,7 @@ export default {
      * POP画面閉じる前にイベント処理を追加する
      */
     onCloseMasterEditModal() {
-      const body = document.getElementsByClassName('modal-body')[0];
+      const body = this.getCurrentModalBody();
       // #9863 Error in event handler for "onCloseMasterEditModal": "TypeError: Cannot read properties of undefined (reading 'removeEventListener')" 横展開2 linjunfeng start
       // body.removeEventListener("scroll", this.scrollHandler);
       if (body) {
@@ -1461,14 +1529,13 @@ export default {
   },
   async mounted() {
     // 縦スクロールバー表示
-    let modalObj = document.getElementsByClassName("modal-body");
-    if (modalObj.length >= 1) {
-      modalObj[0].classList.remove("modal-overflow-hidden");
-      modalObj[0]?.classList?.add("modal-scroll");
+    const modalBody = this.getCurrentModalBody();
+    if (modalBody) {
+      modalBody.classList.remove("modal-overflow-hidden");
+      modalBody?.classList?.add("modal-scroll");
+      // スクロール処理を追加する
+      modalBody.addEventListener('scroll', this.scrollHandler);
     }
-
-    // スクロール処理を追加する
-    modalObj[0].addEventListener('scroll', this.scrollHandler);
 
     // add 4734 調製情報の余白の改修 鞠 start
     this.changeMedicineSet()
@@ -1484,13 +1551,13 @@ export default {
     // });
     // del #9863 加算マスタ詳細を開くとtypeエラーが発生する 蔡 end
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // スクロール処理を解除する
-    // mod #9863 加算マスタ詳細を開くとtypeエラーが発生する 蔡 start
-    // let modalObj = document.getElementsByClassName('modal-body');
-    // modalObj[0].removeEventListener("scroll", this.scrollHandler);
+    const modalBody = this.getCurrentModalBody();
+    if (modalBody) {
+      modalBody.removeEventListener("scroll", this.scrollHandler);
+    }
     EventBus.$off("onCloseMasterEditModal", this.onCloseMasterEditModal);
-    // mod #9863 加算マスタ詳細を開くとtypeエラーが発生する 蔡 end
   }
 };
 </script>
@@ -1582,7 +1649,7 @@ table td {
 .custom-input-number {
   width: auto;
 }
-ons-input >>> .text-input {
+ons-input :deep(.text-input) {
   font-size: 100%;
 }
 
@@ -1593,7 +1660,7 @@ ons-input >>> .text-input {
   word-wrap: break-word;
 }
 
-.custom-setInfo-list >>> .button{
+.custom-setInfo-list :deep(.button){
   font-size: unset;
 }
 
@@ -1606,7 +1673,7 @@ ons-input >>> .text-input {
   overflow-x: auto;
   white-space: nowrap;
 }
-.data-table >>> ons-row {
+.data-table :deep(ons-row) {
   min-width: 640px;
 }
 

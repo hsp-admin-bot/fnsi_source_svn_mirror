@@ -26,7 +26,6 @@ import jp.co.nikkiso.ntss.core.entity.OrdMain;
 import jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 import org.apache.commons.lang3.StringUtils;
-import org.joda.time.DateTime;
 import org.json.JSONObject;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import org.springframework.aop.framework.AopProxyUtils;
@@ -35,6 +34,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -101,7 +101,7 @@ private String CONNECT_BASE_URI;
    */
   final class NoProcResponseErrorHandler extends DefaultResponseErrorHandler {
     @Override
-    public void handleError(ClientHttpResponse response) throws IOException {
+    public void handleError(URI url, HttpMethod method, ClientHttpResponse response) throws IOException {
         // なにもしない→HttpStatusが異常値でも例外を発生させない
     }
   }
@@ -145,7 +145,7 @@ private String CONNECT_BASE_URI;
       long start = System.currentTimeMillis();
       // リクエスト処理
       ResponseEntity<String> response = rt.exchange(request, String.class);
-      status = response.getStatusCode();
+      status = HttpStatus.valueOf(response.getStatusCode().value());
       ret = response.getBody();
       // log start
       long cost = System.currentTimeMillis() - start;
@@ -220,7 +220,7 @@ private String CONNECT_BASE_URI;
 	  // #9698 アプリケーションログの内容修正 20260328 mod yangxuewang start
       long start = System.currentTimeMillis();
       ResponseEntity<List<OrdSchedule>> response = rt.exchange(request, new ParameterizedTypeReference<List<OrdSchedule>>() {});
-      status = response.getStatusCode();
+      status = HttpStatus.valueOf(response.getStatusCode().value());
       ret = response.getBody();
       long cost = System.currentTimeMillis() - start;
       Map<String, Object> map = new HashMap<>();
@@ -488,7 +488,7 @@ private String CONNECT_BASE_URI;
 //  public ResponseEntity<String>  sendCondResultOnly(Long ord_no) throws URISyntaxException,RuntimeException {
 //    if (ord_no == null) {
 //      //引数は、ボディデータ,ヘッダーデータ,ステータス
-//      return new ResponseEntity<>("オーダー番号が不正な値です。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//      return new ResponseEntity<>("オーダー番号が不正な値です。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //    }
 //    String addUri = "/SendCondResultOnly";
 //    JSONObject jsonBody = new JSONObject();
@@ -526,7 +526,7 @@ private String CONNECT_BASE_URI;
   public ResponseEntity<String>  updateInfectinfo(List<Long> examMainCd) throws URISyntaxException,RuntimeException {
     if (examMainCd == null) {
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      return new ResponseEntity<>("検査結果コードが不正な値です。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("検査結果コードが不正な値です。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     String addUri = "/updateInfectinfo";
     JSONObject jsonBody = new JSONObject();
@@ -554,7 +554,7 @@ private String CONNECT_BASE_URI;
   public ResponseEntity<String>  updateExamResultCalc(List<Long> examMainCd) throws URISyntaxException,RuntimeException {
     if (examMainCd == null) {
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      return new ResponseEntity<>("検査結果コードが不正な値です。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("検査結果コードが不正な値です。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     String addUri = "/updateExamResultCalc";
     JSONObject jsonBody = new JSONObject();
@@ -587,7 +587,7 @@ private String CONNECT_BASE_URI;
     try {
       ResponseEntity<?> res = deviceEdgeOrderResource.PostOrderSendNextPat(deviceEdgeOrder, null);
 
-      status = res.getStatusCode();
+      status = HttpStatus.valueOf(res.getStatusCode().value());
       if (status != HttpStatus.OK) {
         json.put("retMsg", "通信サーバーへの通知失敗");
         json.put("isSuccess", false);
@@ -608,7 +608,7 @@ private String CONNECT_BASE_URI;
       logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 add yangxuewang end
     }
-    return new ResponseEntity<String>(json.toString(), null, status);
+    return new ResponseEntity<String>(json.toString(), (org.springframework.http.HttpHeaders) null, status);
   }
 
   /**
@@ -655,7 +655,7 @@ private String CONNECT_BASE_URI;
   public ResponseEntity<String>  registerMakerNotice(RegisterRequest request) throws URISyntaxException,RuntimeException {
     if (request == null) {
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      return new ResponseEntity<>("通知メッセージ情報が不正な値です。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("通知メッセージ情報が不正な値です。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     String addUri = "/makerNoticeReciever";
     JSONObject jsonBody = new JSONObject();
@@ -691,7 +691,7 @@ private String CONNECT_BASE_URI;
   public ResponseEntity<String>  registerNotification(Long notificationNo, String facilityCd, JSONObject replaceData) throws URISyntaxException,RuntimeException {
     if (notificationNo == null || replaceData == null) {
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      return new ResponseEntity<>("通知メッセージ情報が不正な値です。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("通知メッセージ情報が不正な値です。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     String addUri = "/notificationReciever";
     JSONObject jsonBody = new JSONObject();
@@ -724,7 +724,7 @@ private String CONNECT_BASE_URI;
   public ResponseEntity<String> cancelSharePatientInfo(List<String> facilityCdList) throws URISyntaxException,RuntimeException {
     if (facilityCdList == null) {
       //引数は、ボディデータ,ヘッダーデータ,ステータス
-      return new ResponseEntity<>("施設コードが不正な値です。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>("施設コードが不正な値です。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     String addUri = "/cancelSharePatientInfo";
     JSONObject jsonBody = new JSONObject();
@@ -752,7 +752,7 @@ private String CONNECT_BASE_URI;
 //   */
 //  public ResponseEntity<String>  calculationAddition(AdditionCalculationRequest request) throws URISyntaxException,RuntimeException {
 //    if (request == null) {
-//      return new ResponseEntity<>("リクエストパラメータが不正な値です。", null, HttpStatus.INTERNAL_SERVER_ERROR);
+//      return new ResponseEntity<>("リクエストパラメータが不正な値です。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR);
 //    }
 //    String addUri = "/calculation";
 //    JSONObject jsonBody = new JSONObject();
@@ -790,7 +790,7 @@ private String CONNECT_BASE_URI;
   //add FNSI-redmine7573 gaoey start
   public void doAutoCalculationByPatId(Long patId){
     //自動計算
-    String treatDate =  DateTime.now().toString("yyyyMMdd");
+    String treatDate =  LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
     List<Long> examMainCds = patExamMainDao.selectPatExamMainForAutoCalculationById(patId, treatDate);
     try {
       if (examMainCds != null && examMainCds.size() > 0) {

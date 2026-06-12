@@ -3,7 +3,7 @@
  */
 <template>
   <v-ons-list style="height: auto;" class="record-accordion">
-    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable :expanded.sync="isExpanded">
+    <v-ons-list-item modifier="nodivider" class="ntss-theme-screen" expandable v-model:expanded="isExpanded">
       <div class="top"><!-- OnsenUI挙動制御：自動挿入されるラッパー用divを予め書いておき適用されるスタイルを制御 -->
         <div class="center card-header color-header">
           {{ funcName }}
@@ -192,21 +192,20 @@
 </template>
 
 <script>
-  import {mapGetters, mapActions} from "vuex";
+  import {mapGetters, mapActions} from "@/compat/vue/vuex";
   /*add FNSI-改修内容4214 任 start*/
-  import $ from "jquery";
+
   /*add FNSI-改修内容4214 任 end*/
   import {deepCopy} from "@/functions/common/CommonFunctions";
   import {FUNC_PAT_GROUP, FUNC_PAT_INFO, FUNC_PAT_INFO_CREATE} from "@/constants/function-code";
   import {ADVANCED_SETTINGS} from "@/constants/advancedSettings";
   import {KEY_NAME_PAT_INFO} from "@/constants/defaultSettingConstants";
   //add FNSI-5687 劉全航 start
-  import { EventBus } from "@/eventBus.js";
+  import { EventBus } from "@/compat/vue/event-bus.js";
+import { getScopedElementById, isScopedElementDisplayInline } from "@/functions/common/LayoutMeasureHelper";
   //add FNSI-5687 劉全航 end
 
   export default {
-  components: {
-  },
   props: {
     // カード開閉初期状態
     defaultExpanded: {
@@ -429,8 +428,14 @@
     }
     /*add FNSI-改修内容4214 任 start*/
     this.$nextTick(() => {
-      if($("#phone-show-pat-info").css("display") === "inline"){
-        document.getElementById("phone-show-pat-info").innerText =  document.getElementById("phone-show-pat-info").innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+      if(isScopedElementDisplayInline("phone-show-pat-info", this.$el || this)){
+        const phoneShowElement = getScopedElementById("phone-show-pat-info", this.$el || this);
+
+        if (phoneShowElement) {
+
+          phoneShowElement.innerText = phoneShowElement.innerText + '\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0';
+
+        }
       }
       // 共通ローダー表示終了
       this.finishLoadingScreen();
@@ -438,8 +443,6 @@
     });
     /*add FNSI-改修内容4214 任 end*/
   },
-  mounted() {
-  }
 };
 </script>
 

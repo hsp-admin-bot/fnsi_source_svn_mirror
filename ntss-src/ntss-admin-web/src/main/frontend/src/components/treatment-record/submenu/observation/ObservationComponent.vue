@@ -8,10 +8,10 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex"
+import { mapGetters, mapActions } from "@/compat/vue/vuex"
 import MainComponent from "@/components/observe-record/ObserveRecordMainComponent";
 import { HISTORY_KEY_OBSERVE_RECORD_LIST } from "@/router/observe-record/HistoryKeyConstants";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 
 export default {
   components: {
@@ -37,7 +37,7 @@ export default {
     refresh() {
       // 子機能ボタンエリアの更新
       this.$emit("update");
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       this.setOrdNo(this.getOrdNo());
@@ -47,7 +47,7 @@ export default {
     // 観察記録へオーダ番号を引き渡す
     this.setOrdNo(this.getOrdNo());
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // イベント登録
     EventBus.$on("refresh", this.refresh);
 
@@ -55,7 +55,7 @@ export default {
   /**
    * コンポーネント破棄
    */
-  beforeDestroy() {
+  beforeUnmount() {
     // イベント解除
     // del refresh方法処理不正について、対応する。 dengshen start
     // EventBus.$off("refresh");
@@ -68,8 +68,8 @@ export default {
 </script>
 
 <style scoped>
-#observation-component >>> div.main-content-area,
-#observation-component >>> table.ntss-list {
+#observation-component :deep(div.main-content-area),
+#observation-component :deep(table.ntss-list) {
   position: relative;
   top: 0 !important;
 }

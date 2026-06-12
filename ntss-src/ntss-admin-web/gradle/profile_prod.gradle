@@ -23,7 +23,7 @@ task npmRunBuild(type: NpmTask, dependsOn: 'npm_install') {
   args = ["run", "build"]
 }
 
-war { webAppDirName = 'build/www/' }
+war { webAppDirectory = file('build/www/') }
 
 processResources {
   filesMatching('**/logback-spring.xml') {

@@ -41,9 +41,9 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -79,13 +79,13 @@ import jp.co.nikkiso.ntss.web_api.util.FacilityCancelStatUtil;
 @Transactional
 public class FacilityCancelResourceTest extends AbstractResourceTest {
 
-  @SpyBean
+  @MockitoSpyBean
   private MntFacilityCancelManageDao mntFacilityCancelManageDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private MstPatHashDao mstPatHashDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatMainDao patMainDao;
 
   @Autowired
@@ -99,17 +99,17 @@ public class FacilityCancelResourceTest extends AbstractResourceTest {
 
   // トランザクション制御コンポーネント
   /** サブトランザクション処理 */
-  @SpyBean
+  @MockitoSpyBean
   private SubTransactionComponent subTransactionComponent;
 
   /** 処理ステータス更新 */
-  @SpyBean
+  @MockitoSpyBean
   private ProcStatusComponent procStatusComponent;
 
   @Autowired
   private ClockWrapper clockWrapper;
 
-  @SpyBean
+  @MockitoSpyBean
   private FacilityCancelConfig config;
 
   @Rule

@@ -1,5 +1,5 @@
 <template>
-  <span>
+  <span :class="$attrs.class" :style="$attrs.style">
     <custom-radio
       v-for="(radioInfo, index) in deviceInfo.options"
       :ref="`el${index}`"
@@ -8,7 +8,7 @@
       :name="formName"
       :radio-value="radioInfo.radioValue"
       :disabled="disabled"
-      v-on="$listeners"
+      v-bind="radioAttrs"
     >
       {{ radioInfo.displayString }}
     </custom-radio>
@@ -23,6 +23,7 @@ import baseForm from "@/components/deviceset-info/base-modules/BaseDeviceSetInfo
  * @description 装置設定値(数値)入力用コンポーネント
  */
 export default {
+  inheritAttrs: false,
   components: {
     "custom-radio": customRadio
   },
@@ -30,6 +31,11 @@ export default {
   mixins: [baseForm],
 
   computed: {
+    radioAttrs() {
+      const { class: _class, style: _style, ...attrs } = this.$attrs;
+      return attrs;
+    },
+
     /**
      * @description 編集有無フラグ
      */

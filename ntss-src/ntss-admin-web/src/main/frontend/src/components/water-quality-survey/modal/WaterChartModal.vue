@@ -3,7 +3,8 @@
   <!-- <modal-base @onClose="close"> -->
   <modal-base @onClose="close">
   <!--mod FNSI-改修内容「水質管理の表示」を「修正」に変更 江 end-->
-    <div slot="body" id="water-chart" class="water-chart">
+    <template #body>
+    <div id="water-chart" class="water-chart">
       <!-- mod FNSI-redmine4008 徐 start -->
       <!-- <highcharts :options="chartOptions" ref="waterChart" /> -->
       <div id= "legend-btn" class="header-icon ion-ios-menu" style="font-size: 30px !important;" @click="legendEnableChanged()"></div>
@@ -12,7 +13,9 @@
     </div>
     <!-- add FNSI-水質管理経過グラフにボタンを追加する。 周 start -->
     <!-- フッター -->
-    <div slot="footer" class="flex-container flex-container-footer" style="margin: 0 10px 0 10px;">
+    </template>
+    <template #footer>
+      <div class="flex-container flex-container-footer" style="margin: 0 10px 0 10px;">
       <!-- mod FNSI-改修内容IES205 姜 start -->
       <div class="registration-btn-area" style="background:none">
         <button
@@ -59,22 +62,24 @@
       </div>
     </div>
     <!-- add FNSI-水質管理経過グラフにボタンを追加する。 周 end -->
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { Chart } from "highcharts-vue";
-import Highcharts from "highcharts";
-import moment from "moment";
-import { mapActions, mapGetters } from "vuex";
-import Boost from "highcharts/modules/boost";
+import { Chart } from "@/compat/charts/highcharts";
+import Highcharts from "@/compat/charts/highcharts";
+import dayjs from "@/compat/date/dayjs";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { Boost } from "@/compat/charts/highcharts";
 //add FNSI-改修内容「水質管理の表示」を「修正」に変更 江 start
 const THEME_BLACK = 1;
 //add FNSI-改修内容「水質管理の表示」を「修正」に変更 江 end
 // add FNSI-水質管理経過グラフにボタンを追加する。 周 start
-import exportingInit from 'highcharts/modules/exporting';
-import BigNumber from "bignumber.js";
+import { Exporting as exportingInit } from '@/compat/charts/highcharts';
+import BigNumber from "@/compat/number/bignumber";
+import { getScopedElementById, queryScopedSelector, getScopedDocument } from "@/functions/common/LayoutMeasureHelper";
 exportingInit(Highcharts);
 // add FNSI-水質管理経過グラフにボタンを追加する。 周 end
 Boost(Highcharts);
@@ -178,10 +183,10 @@ export default {
         },
         xAxis: [
           {
-            min: moment(this.getRangeDate[0])
+            min: dayjs(this.getRangeDate[0])
               .subtract(1, "days")
               .valueOf(),
-            max: moment(this.getRangeDate[1])
+            max: dayjs(this.getRangeDate[1])
               .add(1, "days")
               .valueOf(),
             gridLineWidth: "0",
@@ -193,8 +198,8 @@ export default {
             labels: {
               formatter: function() {
                 // mod FNSI-redmine3770 徐 start
-                // return moment(this.value).format("YYYY/MM/DD");
-                return moment(this.value).format("YYYY<br>MM/DD");
+                // return dayjs(this.value).format("YYYY/MM/DD");
+                return dayjs(this.value).format("YYYY<br>MM/DD");
                 // mod FNSI-redmine3770 徐 end
               }
               //add FNSI-改修内容「水質管理の表示」を「修正」に変更 江 start
@@ -274,13 +279,17 @@ export default {
         type: 'application/pdf',
         filename: '水質管理経過グラフ'
       };
-      const exportForm = document.createElement('form');
+      const scopedDocument = getScopedDocument(this.$el || this);
+      if (!scopedDocument) {
+        return;
+      }
+      const exportForm = scopedDocument.createElement('form');
       exportForm.action = exportUrl;
       exportForm.method = 'post';
       exportForm.target = '_blank';
 
       for (const key in exportOptions) {
-        const input = document.createElement('input');
+        const input = scopedDocument.createElement('input');
         input.type = 'hidden';
         input.name = key;
         input.value = exportOptions[key];
@@ -288,15 +297,16 @@ export default {
       }
 
       const svg = chart.getSVG();
-      const input = document.createElement('input');
+      const input = scopedDocument.createElement('input');
       input.type = 'hidden';
       input.name = 'svg';
       input.value = svg;
       exportForm.appendChild(input);
 
-      document.body.appendChild(exportForm);
+      const formParent = scopedDocument.body || scopedDocument.documentElement;
+      formParent?.appendChild?.(exportForm);
       exportForm.submit();
-      document.body.removeChild(exportForm);
+      exportForm.parentNode?.removeChild?.(exportForm);
       // this.$refs.waterChart.chart.exportChart({
       //     type: 'application/pdf',
       //     filename: '水質管理経過グラフ'
@@ -334,7 +344,7 @@ export default {
           // add FNSI-改修内容6319修正 xuty end
           // mod FutreNetWeb+SI課題管理No6319 趙 end
           data: item.surveyData.map(i => {
-            const x = moment(i.inspectionDate).valueOf();
+            const x = dayjs(i.inspectionDate).valueOf();
             // #11047 数値IF修正 mod by Z.T. start
             // let y = i.value;
             let y = Number(i.value);
@@ -366,7 +376,7 @@ export default {
           surveytypecd: `${item.surveyTypeCd}`,
           name: `${item.surveyTypeName}`,
           data: item.surveyData.map(i => {
-            const x = moment(i.inspectionDate).valueOf();
+            const x = dayjs(i.inspectionDate).valueOf();
             let y = i.value;
             return [x, y];
           })
@@ -375,7 +385,10 @@ export default {
       });
       var obj = {}
       const seriesArr1 = seriesArr.reduce((acc, cur) => {
-        obj[cur.surveytypecd] ? "" : obj[cur.surveytypecd] = true && acc.push(cur);
+        if (!obj[cur.surveytypecd]) {
+          obj[cur.surveytypecd] = true;
+          acc.push(cur);
+        }
         return acc;
       }, []);
       return seriesArr1[0] === undefined ? [{ showInLegend: false }] : seriesArr1;
@@ -384,8 +397,8 @@ export default {
 
     sortInspectionDate(item) {
       item.surveyData.sort((a, b) => {
-        const dateA = moment(a.inspectionDate);
-        const dateB = moment(b.inspectionDate);
+        const dateA = dayjs(a.inspectionDate);
+        const dateB = dayjs(b.inspectionDate);
         return dateA.diff(dateB);
       });
       item.surveyData = item.surveyData.filter(val => {
@@ -603,12 +616,15 @@ export default {
     // 水質管理の再描画
     resizeWaterChart() {
       // スクロールボディ
-      const scrollWrapper = document.getElementById("scrollbody");
+      const scrollWrapper = getScopedElementById("scrollbody", this.$el || this);
       // グラフ
-      const graphWrapper = document.querySelector("rect.highcharts-background");
+      const graphWrapper = queryScopedSelector("rect.highcharts-background", this.$el || this);
       // 凡例項目最大幅
       const maxItemWidth = this.$refs.waterChart.chart.legend.maxItemWidth;
       // チャート高さ
+      if (!scrollWrapper || !graphWrapper) {
+        return;
+      }
       scrollWrapper.style.height = "calc(100% - 70px - 2.4em)";
       this.chartHeight = this.getChartHeight(scrollWrapper.clientHeight);
       // 凡例高
@@ -617,7 +633,10 @@ export default {
       this.legendPoint = Number(graphWrapper.width.baseVal.value) - (maxItemWidth + 45);
       // 凡例ボタン位置
       const legendButtonPositon = Number(graphWrapper.width.baseVal.value) - 50;
-      document.getElementById("legend-btn").style.marginLeft = String(legendButtonPositon) + "px";
+      const legendButton = getScopedElementById("legend-btn", this.$el || this);
+      if (legendButton) {
+        legendButton.style.marginLeft = String(legendButtonPositon) + "px";
+      }
       // 再描画
       this.$refs.waterChart.chart.reflow();
     },
@@ -672,7 +691,7 @@ export default {
     width: auto !important;
     height: auto !important;
   }
-  
+
   body:has(#water-chart) .highcharts-root {
     width: 100%;
     height: 100%;
@@ -687,12 +706,12 @@ export default {
 };*/
 #water-chart {
   height: 92%;
-};
+}
 /* mod FNSI-redmine4008 徐 end */
-::v-deep .highcharts-x-axis .highcharts-grid-line {
+:deep(.highcharts-x-axis .highcharts-grid-line) {
   stroke: unset;
 }
-::v-deep .highcharts-legend-item text {
+:deep(.highcharts-legend-item text) {
   fill: #333333 !important;
 }
 /* add #11332 【たくしん会】自己診断判定マスタ詳細の対象機種範囲バージョンの追加IFの表示が不正 linjunfeng start */
@@ -714,14 +733,13 @@ export default {
 /* add #11332 【たくしん会】自己診断判定マスタ詳細の対象機種範囲バージョンの追加IFの表示が不正 linjunfeng end */
 
 @media print {
-  .modal-mask >>> .modal-wrapper {
+  .modal-mask :deep(.modal-wrapper) {
     display: inline-block !important;
   }
-  
+
   /* プレビューボタン消す */
   .button-preview {
-    display: none
+    display: none;
   }
 }
 </style>
-

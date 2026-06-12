@@ -1,4 +1,4 @@
-<template functional>
+<template>
   <div>
     <span>車いすマスタ詳細</span>
   </div>

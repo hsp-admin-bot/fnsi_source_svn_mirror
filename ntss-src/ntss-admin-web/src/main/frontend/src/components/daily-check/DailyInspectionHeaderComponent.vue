@@ -14,7 +14,7 @@
             <common-calendar
               v-model="dateInspection"
               :disableDatesAfter="todayStr"
-              @blur="applyDateInspection"
+              @update:model-value="applyDateInspection"
               @todayButtonClick="applyDateInspection"
             />
             <span class="label">{{ dateString }}の日常点検</span>
@@ -34,7 +34,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisibleAdd"
+      v-model:visible="popoverVisibleAdd"
       target="#daily-inspection-condition-list"
       direction="down"
       :cover-target="false"
@@ -60,13 +60,13 @@
               </v-ons-select>
             </v-ons-col>
           </v-ons-row>
-          <v-ons-row class="condition-row">
-            <v-ons-col vertical-align="center" class="pop-title">
+          <v-ons-row class="condition-row" style="flex-wrap: nowrap;">
+            <v-ons-col width="40%" vertical-align="center" class="pop-title">
               <label>型式</label>
             </v-ons-col>
-            <v-ons-col vertical-align="center" class="daily-machine-type-select">
+            <v-ons-col width="60%" vertical-align="center" class="daily-machine-type-select">
               <kendo-multiselect
-                :data-source="getMachineTypeList"
+                :data-source="machineInspection"
                 data-text-field="machineType"
                 data-value-field="machineTypeCd"
                 filter="contains"
@@ -140,9 +140,9 @@
 </template>
 
 <script>
-import { EventBus } from "@/eventBus";
-import { mapGetters, mapActions } from "vuex";
-import moment from "moment";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import dayjs from "@/compat/date/dayjs";
 import commonCalender from "@/components/common/custom-calendar/CustomCalendar";
 import PopoverMixin from "@/components/PopoverMixin";
 import { ApiHelper } from "@/apis/AxiosHelper";
@@ -182,6 +182,7 @@ export default {
       popoverVisibleAdd: false,
       localCondition: deepCopy(DefaultCondition),
       bedGroupList: [],
+      machineInspection: [],
     };
   },
   computed: {
@@ -189,17 +190,16 @@ export default {
       "getDailyDateSearch",
       "getCondition",
     ]),
-    ...mapGetters("mst-layout", ["getMachineTypeList"]),
     ...mapGetters("account-edit", ["getDefaultSetting"]),
 
     dateString() {
-      return moment(this.getDailyDateSearch).format("(dd)");
+      return dayjs(this.getDailyDateSearch).format("(dd)");
     },
     /**
      * カスタムカレンダーの入力制限のための本日の日付文字列
      */
     todayStr() {
-      return moment().format("YYYYMMDD");
+      return dayjs().format("YYYYMMDD");
     },
     // 共通検索エリア部品に表示するデータのリスト
     conditionList() {
@@ -264,7 +264,6 @@ export default {
       "setCondition",
       "setConditionForReportParams",
     ]),
-    ...mapActions("mst-layout", ["sendRequestGetMachineTypeList"]),
     // 共通ローダー設定
     ...mapActions("loading-screen", [
       "startLoadingScreen",
@@ -280,11 +279,14 @@ export default {
 
       this.popoverVisibleAdd = true;
     },
-    applyDateInspection() {
+    applyDateInspection(nextDate) {
+      if (typeof nextDate === "string" && nextDate) {
+        this.dateInspection = nextDate;
+      }
       // 日付未入力の場合は処理しない
       if (!this.dateInspection) return;
 
-      const today = moment().format("YYYY-MM-DD");
+      const today = dayjs().format("YYYY-MM-DD");
       if (this.dateInspection > today) {
         // 未来日の場合はシステム日付に補正する
         this.dateInspection = today;
@@ -315,7 +317,7 @@ export default {
       return !findItem ? "" : findItem.roomBedGroupName;
     },
     getMachineType(cd) {
-      const findItem = this.getMachineTypeList.find(r => r.machineTypeCd === cd);
+      const findItem = this.machineInspection.find(r => r.machineTypeCd === cd);
       return !findItem ? "" : findItem.machineType;
     },
     getConditionText(name) {
@@ -372,7 +374,8 @@ export default {
       // 型式
       const machineTypeListDefault = defaults[DAILY_CHECK.KEY_NAME_MACHINE_TYPE_LIST];
       if (machineTypeListDefault != null) {
-        condition.machineTypeList = machineTypeListDefault;
+        const validMachineTypeCds = this.getMachineTypeList.map(machineType => machineType.machineTypeCd);
+        condition.machineTypeList = machineTypeListDefault.filter(value => validMachineTypeCds.includes(value));
       }
       // フリーワード
       const keywordDefault = defaults[DAILY_CHECK.KEY_NAME_KEYWORD];
@@ -414,7 +417,7 @@ export default {
       this.dateInspection = this.getDailyDateSearch;
       if (this.$route.params.fromFacilityCalendar) {
         // 施設カレンダーから日付が渡された場合
-        const dayViewMoment = moment(this.$route.params.fromFacilityCalendar.date);
+        const dayViewMoment = dayjs(this.$route.params.fromFacilityCalendar.date);
         if (dayViewMoment.isValid()) {
           this.dateInspection = dayViewMoment.format("YYYY-MM-DD");
         }
@@ -431,13 +434,17 @@ export default {
     // 共通ローダー:表示開始
     this.startLoadingScreen();
 
-    // マスタデータを取得
-    const [responseBedGroupList] = await Promise.all([
+    const [
+      // 型式リストを取得する
+      responseMachineTypeList,
+      responseBedGroupList,
+    ] = await Promise.all([
+      ApiHelper.get("mente-main/getMachineTypeList"),
       ApiHelper.get("mente-main/getBedGroupList"),
-      this.sendRequestGetMachineTypeList(),
     ]).catch(error => {
       getErrorMessage("DailyInspectionHeaderComponent.vue", "created", error);
     });
+    this.machineInspection = responseMachineTypeList.data;
     this.bedGroupList = responseBedGroupList.data;
     this.bedGroupList.unshift({
       roomBedGroupCd: null,
@@ -463,7 +470,7 @@ export default {
   mounted() {
     EventBus.$emit("addLeftmostHeaderMargin");
   },
-  beforeDestroy() {
+  beforeUnmount() {
     Object.assign(this.$data, this.$options.data());
   }
 };
@@ -479,9 +486,11 @@ input[type="radio"] {
 .ntss-button-group {
   width: 100%;
   font-size: 1.5em;
+  display: inline-flex;
+  align-items: center;
 }
 .label {
-  width: 35%;
+  width: 25%;
   height: 1.5rem;
   padding-left: 10px;
   padding-right: 5px;
@@ -516,10 +525,10 @@ input[type="radio"] {
   display: none;
   -webkit-appearance: none;
 }
-.custom-ons-popover >>> .popover-mask {
+.custom-ons-popover :deep(.popover-mask) {
   z-index: 3;
 }
-.custom-ons-popover >>> .popover.popover--top {
+.custom-ons-popover :deep(.popover.popover--top) {
   z-index: 4;
   min-width: 400px;
 }
@@ -541,10 +550,16 @@ input[type="radio"] {
 .pop-area {
   margin: 10px;
 }
-.daily-inspection-popover >>> .popover {
+.daily-inspection-popover :deep(.popover) {
   max-width: 380px;
 }
-.daily-machine-type-select >>> .k-multiselect-wrap {
+.daily-machine-type-select :deep(.k-multiselect-wrap) {
+  max-height: 10em;
+  overflow-y: auto;
+}
+
+.daily-machine-type-select :deep(.k-input-values.k-multiselect-wrap),
+.daily-machine-type-select :deep(.k-input-values) {
   max-height: 10em;
   overflow-y: auto;
 }

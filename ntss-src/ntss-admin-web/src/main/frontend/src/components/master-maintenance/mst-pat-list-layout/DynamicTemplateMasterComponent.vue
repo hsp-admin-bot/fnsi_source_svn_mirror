@@ -65,16 +65,16 @@
 </template>
 
 <script>
-import _ from "underscore";
-import { EventBus } from "@/eventBus.js";
-import { mapGetters, mapActions } from "vuex";
+import _ from "@/compat/collections/lodash";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import { PAT_INFO_TEMPLATE_CD, VITAL_MONITORS_COMPLAINTS_CD, TREATMENT_PLAN_TREATMENT_RECORD } from "@/constants/dataListConstant";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
-import vuedraggable from "vuedraggable";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
@@ -82,7 +82,7 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 
 export default {
   components: {
-    draggable: vuedraggable,
+    draggable: VueDraggable,
   },
 
   props: {
@@ -263,7 +263,7 @@ export default {
       categories.forEach(column => {
         listDataListItem.push(column.categoryItem);
       });
-      listDataListItem = _.flatten(listDataListItem);
+      listDataListItem = listDataListItem.flat();
 
       // 全てのチェックした項目をフィルタする。
       const listDataListItemChecked = listDataListItem.filter(l => l.isChecked);
@@ -468,7 +468,7 @@ export default {
           const categoryInfo = listInfoCategory.find(
             c => c.categoryCd === categoryCd
           );
-          let categoryItem = _.flatten(listItemsOfCategory);
+          let categoryItem = listItemsOfCategory.flat();
           categoryItem.sort((a, b) => {
             if (a.categoryCd > b.categoryCd) return 1;
             if (a.categoryCd < b.categoryCd) return -1;
@@ -550,7 +550,9 @@ export default {
                 dyItem[index] = e;
               }
             });
-            select = dyItem;
+            // mod #11718 【#11600持ち越し】データリスト画面不正② fang start
+            select = select.concat(dyItem);
+            // mod #11718 【#11600持ち越し】データリスト画面不正② fang end
             info.items.forEach(t => {
               unSelect = unSelect.filter(i => i.id !== t);
             });
@@ -752,8 +754,12 @@ export default {
                     }
                   }
                 }
-                uncheckItem = this.getArrDifference(categoryItem, checkItem);
-                uncheckItem.forEach(i => i.isChecked = false);
+                // mod #11718 【#11600持ち越し】データリスト画面不正② fang start
+                // uncheckItem = this.getArrDifference(categoryItem, checkItem);
+                // uncheckItem.forEach(i => i.isChecked = false);
+                uncheckItem = checkItem.filter(i => i.isChecked == false);
+                checkItem = checkItem.filter(i => i.isChecked == true);
+                // mod #11718 【#11600持ち越し】データリスト画面不正② fang end
                 multiPatDefine.categoryItem = checkItem.concat(uncheckItem);
                 sortCheckedItemList.push(multiPatDefine);
                 break;
@@ -805,7 +811,7 @@ export default {
     EventBus.$on("filterItems", this.onFilterItems);
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("filterItems", this.onFilterItems);
   }
 };

@@ -1,28 +1,54 @@
 /**
- * 参照型コンボAPI
+ * コンボボックス用マスタ取得API
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
 import store from "@/stores";
 
+const URL_BASE = "/reference_combo";
+
+function withSelectedPatId(params = undefined, selectedPatId) {
+  if (selectedPatId === null || selectedPatId === undefined || selectedPatId === "") {
+    return params;
+  }
+  return {
+    ...(params || {}),
+    selectedPatId
+  };
+}
+
 /**
- * 参照型コンボのデータ取得
- * @param {*} masterPhysicalName マスタ物理名
- * @param {*} textColumnPhysicalName コンボに出すテキストの物理カラム名
- * @param {*} cdColumnPhysicalName 主キーの物理カラム名
+ * コンボボックス用マスタを取得
+ * @param {string} facilityCd 施設コード
+ * @param {string} classCd クラスコード
+ */
+export function sendRequestGetReferenceCombo(facilityCd, classCd) {
+  return ApiHelper.get(`${URL_BASE}/${facilityCd}/${classCd}`);
+}
+
+/**
+ * 参照型コンボのデータ取得（vue2 / ReferenceComboStore 互換）
+ * @param {string} masterPhysicalName マスタ物理名
+ * @param {string} textColumnPhysicalName コンボに出すテキストの物理カラム名
+ * @param {string} cdColumnPhysicalName 主キーの物理カラム名
  */
 export function sendRequestGetComboList(
   masterPhysicalName,
   textColumnPhysicalName,
-  cdColumnPhysicalName
+  cdColumnPhysicalName,
+  selectedPatId
 ) {
   store.dispatch("loading-screen/startLoadingScreen");
   return ApiHelper.get(
-    `/combo/${masterPhysicalName}/${textColumnPhysicalName}/${cdColumnPhysicalName}`
+    `/combo/${masterPhysicalName}/${textColumnPhysicalName}/${cdColumnPhysicalName}`,
+    withSelectedPatId(undefined, selectedPatId)
   ).finally(() => {
     store.dispatch("loading-screen/finishLoadingScreen");
   });
 }
-// add マスタ一覧 1･施設切替を可能とする 孔s start
+
+/**
+ * 参照型コンボのデータ取得（施設コード指定・vue2 互換）
+ */
 export function sendRequestGetComboListByFacilityCd(
   masterPhysicalName,
   textColumnPhysicalName,
@@ -33,4 +59,3 @@ export function sendRequestGetComboListByFacilityCd(
     `/combo/${masterPhysicalName}/${textColumnPhysicalName}/${cdColumnPhysicalName}/${facilityCd}`
   );
 }
-// add マスタ一覧 1･施設切替を可能とする 孔s end

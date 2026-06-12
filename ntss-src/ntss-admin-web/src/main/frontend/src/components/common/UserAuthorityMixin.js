@@ -1,7 +1,7 @@
 /**
  * 利用者権限用のMixin
  */
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 // mod #10371 BVMS/加算情報の権限がないメッセージが表示され遷移できない 20241012 ztc start
 import { transAuthorityList, FUNC_STATUS_LIST_LARGEDISP,
   FUNC_TREATMENT_RECORD_lIST_BVMS, FUNC_TREATMENT_RECORD_LIST_ADDITIONINFO } from "@/constants/function-code";
@@ -64,7 +64,7 @@ export default {
         // 制御対象を判定する部品を取得
         const target = this.getTargetElement(element);
         if (
-          !target.dataset.hasOwnProperty("nonAuthorize") ||
+          !Object.prototype.hasOwnProperty.call(target.dataset, "nonAuthorize") ||
           target.dataset.nonAuthorize !== "true"
         ) {
           // 部品を不活性化
@@ -78,9 +78,9 @@ export default {
     hasAuthority() {
       // 利用者権限情報を取得
       const userAuthorityCds = this.getUserAuthorityCds();
-      // add FNSI-8441　TypeError 横展開　ljx start
+      // add FNSI-8441 TypeError 横展開 ljx start
       if(this.authorityCds != null){
-      // add FNSI-8441　TypeError 横展開　ljx end
+      // add FNSI-8441 TypeError 横展開 ljx end
         return this.authorityCds.some(cd => {
           // 利用者権限情報に、指定の権限コードが１つでも含まれていればOK
           return userAuthorityCds.includes(cd);

@@ -258,7 +258,6 @@ export default {
      * @param {*} param リクエストパラメータ
      * @param {Boolean} 成功した場合trueを返却する.
      */
-    /* eslint-disable no-unused-vars */
     updateServiceSupportAll({ commit }, param) {
       return sendRequestUpdateServiceSupportAll(param);
     },

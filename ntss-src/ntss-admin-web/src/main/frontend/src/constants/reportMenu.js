@@ -388,9 +388,9 @@ export const SORT_CONDITION = {
     // mod #12410 帳票「並び替え」処理仕様の一部がシステム共通ソート仕様と異なる 高 start
     // { id: "ind_equip_cd", text: "データ種別順" },
     // { id: "ind_equip_class", text: "分類名称順" },
-    // add #12032 配布リスト（物品）の並び順に「データ分類」がない 高　start
+    // add #12032 配布リスト（物品）の並び順に「データ分類」がない 高 start
     // { id: "ind_equip_data_group", text: "治療条件順" }
-    // add #12032 配布リスト（物品）の並び順に「データ分類」がない 高　end
+    // add #12032 配布リスト（物品）の並び順に「データ分類」がない 高 end
     { id: "ind_equip_cd", text: "データ種別表示順" },
     { id: "ind_equip_class", text: "分類名称表示順" },
     { id: "ind_equip_data_group", text: "治療条件" }

@@ -38,6 +38,7 @@ export class Dialysate {
     );
     this.flowRate = dialysateFlowRateData.value;
     this.amount = dialysateAmountData.value;
+    this.unit = dialysateData.unit;
     // TODO:単位の値は元となる薬剤コードのjsonに持たせるのか表示する薬剤使用数のjsonに持たせるのか回答待ち
     // modify 9351 by kangjie 20240220 start
     // this.amountUnit = dialysateData.unit ? dialysateData.unit : dialysateAmountData.unit;
@@ -174,6 +175,7 @@ export class Dialysate {
     for (let key of keys) {
       if (!this.compareObjects(comparisonModel[key], actualModel[key])) {
         let unit = actualModel['amountUnit'] ? actualModel['amountUnit']: null;
+        let dialysateUnit = actualModel['unit'] ? actualModel['unit'] : null;
         switch (key) {
           // 透析液(15)
           case "dialysate":
@@ -189,7 +191,7 @@ export class Dialysate {
                 rstCondInfo[item.DIALYSATE.cd].medicine_type = CODES.MEDICINE_TYPE.NORMAL.cd;
               }
               rstCondInfo[item.DIALYSATE.cd].value_name_1 = this.dialysate.name;
-              rstCondInfo[item.DIALYSATE.cd].unit = unit;
+              rstCondInfo[item.DIALYSATE.cd].unit = dialysateUnit;
               // 透析液使用数(17)
               if (rstCondInfo[item.DIALYSATE_AMOUNT.cd]) {
                 rstCondInfo[item.DIALYSATE_AMOUNT.cd].unit = unit;
@@ -206,17 +208,25 @@ export class Dialysate {
           case "amount":
             rstCondInfo[item.DIALYSATE_AMOUNT.cd] = this.createEmpty();
             rstCondInfo[item.DIALYSATE_AMOUNT.cd].value = numberToString(actualModel[key]);
-            if (rstCondInfo[item.DIALYSATE.cd] && rstCondInfo[item.DIALYSATE.cd].unit) {
-              rstCondInfo[item.DIALYSATE_AMOUNT.cd].unit = rstCondInfo[item.DIALYSATE.cd].unit
-            } else {
-              rstCondInfo[item.DIALYSATE_AMOUNT.cd].unit = unit;
-            }
+            rstCondInfo[item.DIALYSATE_AMOUNT.cd].unit = unit;
             continue;
             // 透析液温度(18)
           case "temperature":
             rstCondInfo[item.DIALYSATE_TEMPERATURE.cd] = this.createEmpty();
             rstCondInfo[item.DIALYSATE_TEMPERATURE.cd].value = numberToString(actualModel[key]);
             rstCondInfo[item.DIALYSATE_TEMPERATURE.cd].unit = "℃";
+            continue;
+          case "unit":
+            if (!rstCondInfo[item.DIALYSATE.cd]) {
+              rstCondInfo[item.DIALYSATE.cd] = this.getTemplateM();
+            }
+            rstCondInfo[item.DIALYSATE.cd].unit = dialysateUnit;
+            continue;
+          case "amountUnit":
+            if (!rstCondInfo[item.DIALYSATE_AMOUNT.cd]) {
+              rstCondInfo[item.DIALYSATE_AMOUNT.cd] = this.createEmpty();
+            }
+            rstCondInfo[item.DIALYSATE_AMOUNT.cd].unit = unit;
             continue;
         }
       }

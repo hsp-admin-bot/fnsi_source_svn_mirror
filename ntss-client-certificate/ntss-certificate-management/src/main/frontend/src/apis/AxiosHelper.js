@@ -60,6 +60,19 @@ function handleSuccess(response) {
   return Promise.resolve(response);
 }
 
+function getCurrentRouteName() {
+  const curRoute = router.currentRoute && router.currentRoute.value
+    ? router.currentRoute.value
+    : router.currentRoute;
+  return curRoute && curRoute.name;
+}
+
+function pushLoginRoute(routeName) {
+  if (getCurrentRouteName() !== routeName) {
+    router.push({ name: routeName });
+  }
+}
+
 /**
  * APIエラー時ハンドラ
  * @param {*} error エラー
@@ -95,7 +108,6 @@ function handleError(error) {
 
     const isFacility = store.getters["user/isFacilityRole"];
     const isUser = store.getters["user/isUserRole"];
-    const curRoute = router.currentRoute;
 
     if (status === 401) {
       // ★追加：クロスタブ・セッション乗っ取り対策
@@ -112,11 +124,11 @@ function handleError(error) {
           callback: () => {
             isSessionErrorAlerted = false;
             if (isUser) {
-              router.push({ name: "clManagementLogin" });
+              pushLoginRoute("clManagementLogin");
             } else if (isFacility) {
-              router.push({ name: "clDownloadLogin" });
+              pushLoginRoute("clDownloadLogin");
             } else {
-              router.push({ name: "clManagementLogin" });
+              pushLoginRoute("clManagementLogin");
             }
           }
         });
@@ -127,22 +139,22 @@ function handleError(error) {
     }
 
     if (isUser) {
-      if (curRoute.name !== "clManagementLogin") {
+      if (getCurrentRouteName() !== "clManagementLogin") {
         store.dispatch("user/clearSignIn");
-        router.push({ name: "clManagementLogin" });
+        pushLoginRoute("clManagementLogin");
       }
     } else if (isFacility) {
-      if (curRoute.name !== "clDownloadLogin") {
+      if (getCurrentRouteName() !== "clDownloadLogin") {
         store.dispatch("user/clearSignIn");
-        router.push({ name: "clDownloadLogin" });
+        pushLoginRoute("clDownloadLogin");
       }
     } else {
       if (
-        curRoute.name !== "clManagementLogin" &&
-        curRoute.name !== "clDownloadLogin"
+        getCurrentRouteName() !== "clManagementLogin" &&
+        getCurrentRouteName() !== "clDownloadLogin"
       ) {
         store.dispatch("user/clearSignIn");
-        router.push({ name: "clManagementLogin" });
+        pushLoginRoute("clManagementLogin");
       }
     }
 

@@ -51,15 +51,21 @@
   </div>
 </template>
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
+
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import ExtendedCustomInputNumber from "@/components/master-maintenance/mst-pat-event-template/sub-item/ExtendedCustomInputNumber";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 export default {
   name: "MstPatEventTemplateRadio",
+  components: {
+    "extended-custom-input-number": ExtendedCustomInputNumber
+  },
   props: ["propsIndex"],
   data() {
     return {
@@ -105,7 +111,6 @@ export default {
       // add マスタ一覧 1･施設切替を可能とする 孔s end
     }
   },
-  watch: {},
   created() {
     //フィールド追加時にcreatedイベントが起動
     //モーダルウィンドウ起動時の入力値を取得
@@ -116,7 +121,7 @@ export default {
         const decimalDigitsArray = String(parseFloat(String(this.getJson.item_json.values[index].score))).split(".");
         const decimalDigits = decimalDigitsArray[1] ? decimalDigitsArray[1].length : 0;
         this.itemScoreRecordList.push({
-          initValue: initInputParam[0].item_json.values[index] ? initInputParam[0].item_json.values[index].score : null,
+          initValue: initInputParam[0].item_json.values?.[index] ? initInputParam[0].item_json.values[index].score : null,
           editValue: this.getJson.item_json.values[index].score,
           decimalDigits: decimalDigits
         });
@@ -134,8 +139,17 @@ export default {
       })
     }
   },
-  mounted() {},
+
   methods: {
+    getTemplateElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || this);
+    },
+    queryTemplateSelector(selector) {
+      return queryScopedSelector(selector, this.$el || this);
+    },
+    queryTemplateSelectorAll(selector) {
+      return queryScopedSelectorAll(selector, this.$el || this);
+    },
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("mst-pat-event-template", [
       "setInputParams",
@@ -217,8 +231,8 @@ export default {
       this.setStore();
     },
     setNameCss(e){
-      if(e.target.value && document.getElementsByClassName(e.target.name)[0])
-      document.getElementsByClassName(e.target.name)[0].classList.remove("input-invalid");
+      if(e.target.value && this.getTemplateElementsByClassName(e.target.name)[0])
+      this.getTemplateElementsByClassName(e.target.name)[0].classList.remove("input-invalid");
     },
     /**
      * スコアのキー入力イベント
@@ -293,7 +307,7 @@ export default {
       for (let i = 0; i < this.getInputParams.length; i++) {
         if (this.getInputParams[i].format_class === 8 && this.getInputParams[i].item_json.calc) {
           if(this.getInputParams[i].item_json.calc.search(name) > 0 && value === ""){
-            e.target.children[0].style = "background:red";
+            e.target.style.background = "red";
           }
         }
       }
@@ -321,7 +335,7 @@ export default {
     },
 
     initColor(e){
-      e.target.children[0].style = "background:#F7F7F7";
+      e.target.style = "background:#F7F7F7";
     },
 
     getStore() {
@@ -389,11 +403,11 @@ export default {
         return true;
       }
       if(!validationResult.fieldNameValid) {
-        document.getElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
+        this.getTemplateElementsByClassName("required"+this.propsIndex)[0]?.classList?.add("input-invalid");
       }
       if(!validationResult.nameValid) {
         this.dataErrList.forEach(element => {
-          document.getElementsByClassName("name"+this.propsIndex+element)[0]?.classList?.add("input-invalid");
+          this.getTemplateElementsByClassName("name"+this.propsIndex+element)[0]?.classList?.add("input-invalid");
         });
       }
       // メッセージ組み立て
@@ -476,11 +490,11 @@ export default {
 .disp-item-area tr td:nth-child(3) {
   text-align: left;
 }
-.input-required >>> input{
+.input-required :deep(input){
   color: black;
   background-color: #ffff99;
 }
-.input-invalid >>> input{
+.input-invalid :deep(input){
   color: black;
   background-color: rgba(255, 0, 0, 1);
 }
@@ -534,7 +548,7 @@ table.list .list-del {
 table.list .list-score {
   min-width: 10em;
 }
-table.list .list-score >>> input {
+table.list .list-score :deep(input) {
   background-color: #F7F7F7;
   color: #1f1f21;
 }

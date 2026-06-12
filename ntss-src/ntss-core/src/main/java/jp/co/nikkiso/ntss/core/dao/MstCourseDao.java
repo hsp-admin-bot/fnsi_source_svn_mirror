@@ -13,7 +13,7 @@ import jp.co.nikkiso.ntss.core.entity.MstCourse;
 
 @ConfigAutowireable
 @Dao
-public interface MstCourseDao {
+public interface MstCourseDao extends MasterDao<Map<String, Object>> {
   @Select
   List<MstCourse> selectAll(SelectOptions options, MstCourse params);
 
@@ -45,8 +45,15 @@ public interface MstCourseDao {
   @Select
   List<MstCourse> selectAllName(List<Integer> courseCds);
   // add #9823 mongoDBの患者情報履歴情報にマスタの名称などが記録されていない。 dengshen end
+
   //add 課情報の取得 #12462 患者情報共有 zrx start
   @Select
   List<PatCourseInfo> getCourseByFacilityCdList(List<String> facilityCdList);
   //add 課情報の取得#12462 患者情報共有 zrx end
+
+  /**
+   * mst-list-compose 用：診療科マスタ（削除済み含む、init を含める）
+   */
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
 }

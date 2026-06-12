@@ -71,15 +71,16 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PersonalUserSearchComponent from "@/components/master-maintenance/mst-destination-group/PersonalUserSearchComponent";
 // add 8474 送信先グループマスタ詳細画面に表示される利用者の表示順が利用者マスタの表示順と異なる 周安寧 start
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 // add 8474 送信先グループマスタ詳細画面に表示される利用者の表示順が利用者マスタの表示順と異なる 周安寧 end
-import cloneDeep from "lodash/cloneDeep";
-import isEqualWith from "lodash/isEqualWith";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
 export default {
   name: "MstDestinationGroup",
   components: {
@@ -170,16 +171,16 @@ export default {
      * Stickyな一覧のヘッダの高さが変更されたらtop位置を計算する
      */
     calculateStickyTop() {
-      const height = document.getElementById("header-email").clientHeight;
+      const height = getScopedElementById("header-email", this.$el || this)?.clientHeight || 0;
       this.stickeyTop = height + 1;
     },
     calculateListHeight() {
       // 画面の高さ
-      const fullHeight = document.getElementById("destination-group-modal-content").clientHeight;
+      const fullHeight = getScopedElementById("destination-group-modal-content", this.$el || this)?.clientHeight || 0;
       // ヘッダーの高さ
-      const headHeight = document.getElementById("group-name-form-wrapper").clientHeight
-        + document.getElementById("group-notic-wrapper").clientHeight
-        + document.getElementById("personal-user-search-wrapper").clientHeight;
+      const headHeight = (getScopedElementById("group-name-form-wrapper", this.$el || this)?.clientHeight || 0)
+        + (getScopedElementById("group-notic-wrapper", this.$el || this)?.clientHeight || 0)
+        + (getScopedElementById("personal-user-search-wrapper", this.$el || this)?.clientHeight || 0);
       // リストの高さを設定
       this.listHeight = fullHeight - headHeight - 10;
     },
@@ -328,7 +329,7 @@ export default {
     this.editRecordDefault = cloneDeep(this.editRecord);
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_送信先グループマスタ 張玲 2024/01/05 end
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.conditionsClear();
     EventBus.$off("setStaffList", this.setStaffList);
   }
@@ -352,7 +353,7 @@ export default {
 #group-name-form-wrapper {
   height: 35px;
 }
-#group-name-form-wrapper >>> ons-input .text-input {
+#group-name-form-wrapper :deep(ons-input .text-input) {
   font-size: 1.0em;
 }
 #personal-user-search-wrapper {

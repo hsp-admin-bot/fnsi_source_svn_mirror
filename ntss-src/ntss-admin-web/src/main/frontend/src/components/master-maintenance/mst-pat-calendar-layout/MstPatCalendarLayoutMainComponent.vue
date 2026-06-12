@@ -71,7 +71,7 @@
                   </label>
                   <v-ons-icon icon="fa-bars" class="category-handle" />
                 </v-ons-col>
-                
+
                 <!-- category: 大項目＞治療情報 start -->
                 <v-ons-col
                   v-if="category.categoryNo === treatmentItemCategoryNo"
@@ -470,7 +470,7 @@
                   </draggable>
                 </v-ons-col>
                 <!-- category: 大項目＞治療情報 end -->
-                
+
                 <!-- category: 大項目＞患者情報、その他 start -->
                 <v-ons-col v-else>
                   <draggable
@@ -621,7 +621,7 @@
 
     <v-ons-popover
       cancelable
-      :visible.sync="popoverInfo.popoverVisible"
+      v-model:visible="popoverInfo.popoverVisible"
       :target="popoverInfo.popoverTarget"
       :direction="popoverInfo.popoverDirection"
       :class="[fontSizeSet, 'popover-style']"
@@ -658,7 +658,7 @@
                     :max="max"
                     @handlerInput="
                       (val) => {
-                        graphMax = val;
+                        setGraphLimitInput(val, 1);
                       }
                     "
                     @blur="graphValueChange($event, 1, 0)"
@@ -680,7 +680,7 @@
                     :max="max"
                     @handlerInput="
                       (val) => {
-                        graphMin = val;
+                        setGraphLimitInput(val, 2);
                       }
                     "
                     @blur="graphValueChange($event, 2, 1)"
@@ -754,14 +754,14 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import {
   mstPatCalendarLayoutDefine,
   CATEGORY_NO,
   SUB_CATEGORY_NO,
 } from "@/constants/mstPatCalendarLayoutDefine";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import vuedraggable from "vuedraggable";
+import { VueDraggable } from "@/compat/drag/VueDraggable";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import PopoverMixin from "@/components/PopoverMixin";
 import { REPORT_GRAPH } from "@/constants/mstTreatmentDefine";
@@ -770,15 +770,16 @@ import {
   popoverPostShow,
   popoverPosthide,
 } from "@/functions/common/CommonPopoverFunctions";
-import { EventBus } from "@/eventBus";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import CustomInputNumberPro from "@/components/common/custom-form-tags/CustomInputNumberPro";
+import _ from "@/compat/collections/lodash";
 
 const MAX_COLUMN = 5;
 
 export default {
   mixins: [PopoverMixin],
   components: {
-    draggable: vuedraggable,
+    draggable: VueDraggable,
     "custom-input-number-pro": CustomInputNumberPro,
   },
   data() {
@@ -864,7 +865,7 @@ export default {
         SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_2,
         SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_3,
       ],
-      
+
       /** バイタル・モニタグラフN-1 */
       vitalMonitorSubCategoryNo1: [
         SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_1_1,
@@ -886,7 +887,7 @@ export default {
         SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_3_3,
         SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_3
       ],
-      
+
       graphMax: "",
       graphMin: "",
 
@@ -897,12 +898,12 @@ export default {
       initName: "",
       isEditedName: false,
       initDispClass: "",
-      
+
       /**
        * フリーワード入力値
        */
       popoverSearchQuery: "",
-      
+
       /**
        * 患者イベントカテゴリマスタ
        */
@@ -915,17 +916,17 @@ export default {
        * 患者イベント
        */
       mstPatEventSubCategoryPat: [],
-      
+
       /**
        * 施設イベントカテゴリマスタ
        */
       mstBbsKind: [],
-      
+
       /**
        * バイタル・モニタ項目の選択肢リスト
        */
       selectVitalMonitorItemList: [],
-      
+
       /**
        * バイタル・モニタ項目追加マスタ
        */
@@ -990,7 +991,7 @@ export default {
         `/master_maintenance/mst_add_monitor/data/${this.getFacilitySwitch}`
       ),
     ]);
-    
+
     // 患者イベントサブカテゴリマスタ
     this.mstPatEventSubCategory = mstPatEventSubCategory.data;
     // 患者イベントカテゴリマスタ
@@ -1013,10 +1014,10 @@ export default {
     this.mstPatEventSubCategoryPat = this.mstPatEventSubCategoryPat.filter(pat =>
       this.mstPatEventCategory.some(cate => cate.code === pat.categoryCd)
     );
-    
+
     // 施設イベントカテゴリマスタ
     this.mstBbsKind = mstBbsKind.data;
-    
+
     // バイタルモニタ情報セット
     for (let i = 0; i < selectVitalMonitorItemList.data.length; i++) {
       let vitalItem = {
@@ -1130,7 +1131,7 @@ export default {
       },
       deep: true,
     },
-    
+
     /**
      * フリーワード入力値
      */
@@ -1200,96 +1201,74 @@ export default {
           for (let j = 0; j < treateCategoryItemList.length; j++) {
             if (
               !excludeSubCategoryNoList.includes(
-                treateCategoryItemList[j].subCategoryNo
-              )
-            ) {
-              let treateCategoryItem = null;
+                treateCategoryItemList[j].subCategoryNo)) {
+              let treateCategoryItem;
               let vitalChild = [];
               if (
                 treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_1_1 ||
                 treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_1_2 ||
-                treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_1_3
-              ) {
-                // バイタル・モニタグラフ①-1～①-3　入室～退室
+                treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_1_3) {
+                // バイタル・モニタグラフ①-1～①-3 入室～退室
                 treateCategoryItem = treateCategoryItemList.find(
                   (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_1_1
                 );
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_1_2
-                  )
-                );
+                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_1_2));
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_1_3
-                  )
-                );
+                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_1_3));
                 excludeSubCategoryNoList.push(SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_1_1);
                 excludeSubCategoryNoList.push(SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_1_2);
                 excludeSubCategoryNoList.push(SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_1_3);
               } else if (
                 treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_2_1 ||
                 treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_2_2 ||
-                treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_2_3
-              ) {
-                // バイタル・モニタグラフ②-1～②-3　入室～退室
+                treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_2_3) {
+                // バイタル・モニタグラフ②-1～②-3 入室～退室
                 treateCategoryItem = treateCategoryItemList.find(
                   (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_2_1
                 );
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_2_2
-                  )
-                );
+                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_2_2));
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_2_3
-                  )
-                );
+                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_2_3));
                 excludeSubCategoryNoList.push(SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_2_1);
                 excludeSubCategoryNoList.push(SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_2_2);
                 excludeSubCategoryNoList.push(SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_2_3);
               } else if (
                 treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_3_1 ||
                 treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_3_2 ||
-                treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_3_3
-              ) {
-                // バイタル・モニタグラフ③-1～③-3　入室～退室
+                treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_3_3) {
+                // バイタル・モニタグラフ③-1～③-3 入室～退室
                 treateCategoryItem = treateCategoryItemList.find(
                   (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_3_1
                 );
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_3_2
-                  )
-                );
+                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_3_2));
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_3_3
-                  )
-                );
+                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_3_3));
                 excludeSubCategoryNoList.push(SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_3_1);
                 excludeSubCategoryNoList.push(SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_3_2);
                 excludeSubCategoryNoList.push(SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_3_3);
               } else if (
                 treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_1 ||
                 treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_2 ||
-                treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_3
-              ) {
-                // バイタル・モニタグラフ④-1～④-3　入室～退室
+                treateCategoryItemList[j].subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_3) {
+                // バイタル・モニタグラフ④-1～④-3 入室～退室
                 treateCategoryItem = treateCategoryItemList.find(
                   (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_1
                 );
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_2
-                  )
-                );
+                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_2));
                 vitalChild.push(
                   treateCategoryItemList.find(
-                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_3
-                  )
-                );
+                    (item) => item.subCategoryNo === SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_3));
                 excludeSubCategoryNoList.push(SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_1);
                 excludeSubCategoryNoList.push(SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_2);
                 excludeSubCategoryNoList.push(SUB_CATEGORY_NO.VITAL_MONITOR_GRAPH_IN_OUT_4_3);
@@ -1412,10 +1391,8 @@ export default {
               (subCategoryOther) => {
                 return (
                   subCategoryOther.subCategoryNo ===
-                  srcSubCategory.subCategoryNo
-                );
-              }
-            );
+                  srcSubCategory.subCategoryNo);
+              });
 
             // 編集中マスタに項目が存在しないと非表示にする
             if (!destSubCategory) {
@@ -1429,14 +1406,14 @@ export default {
               if (destSubCategory.isDisp === undefined) {
                 destSubCategory.isDisp = true;
               }
-              
+
               // 治療情報の場合
               if (CATEGORY_NO.TREATMENT_CONTENT === srcCategory.categoryNo) {
                 // 小項目番号を格納
                 const cateNo = destSubCategory.subCategoryNo;
                 // バイタル情報の場合、レイアウトマスタ情報に定義がなくても非表示にされない
                 if (this.vitalMonitorItemTargetSubCategoryNoList.includes(cateNo)) {
-                  srcSubCategory.subCategoryItem = 
+                  srcSubCategory.subCategoryItem =
                   destSubCategory.subCategoryItem;
                 }
               // 患者イベント、施設イベント
@@ -1485,9 +1462,7 @@ export default {
                       if (
                         this.isVitalMonitor(
                           srcCategory.categoryNo,
-                          srcSubCategory.subCategoryNo
-                        )
-                      ) {
+                          srcSubCategory.subCategoryNo)) {
                         return (
                           itemOther.tableType === srcItem.tableType &&
                           itemOther.itemNo === srcItem.itemNo
@@ -1569,60 +1544,59 @@ export default {
           }
         });
       });
-      
+
       // 「治療情報」表示配列の再作成
       if (res.length > 0) {
         for (let i = 0; i < res.length; i++) {
           const category = res[i];
-      
+
           // 治療情報カテゴリだけ処理
           if (category.categoryNo !== CATEGORY_NO.TREATMENT_CONTENT) continue;
-      
+
           const vitalRootNos = this.vitalMonitorSubCategoryNo1;
-      
+
           /* -----------------------------------------------------
            * 1. N-1 の下にある N-2/N-3 の subCategoryItem を isDisp で絞り込む
            * ----------------------------------------------------- */
           category.categoryItem = category.categoryItem.map((subCategory) => {
             const isVitalRoot = vitalRootNos.includes(subCategory.subCategoryNo);
-      
+
             if (isVitalRoot && Array.isArray(subCategory.vitalChild)) {
-      
+
               const newVitalChild = subCategory.vitalChild.map((child) => ({
                 ...child,
                 subCategoryItem: child.subCategoryItem.filter((item) => item.isDisp),
               }));
-      
+
               return { ...subCategory, vitalChild: newVitalChild };
             }
-      
+
             return subCategory;
           });
-      
+
           /* -----------------------------------------------------
            * 2. バイタル・モニタグラフ N単位で削除判定
            * ----------------------------------------------------- */
           category.categoryItem = category.categoryItem.filter((subCategory) => {
             if (!vitalRootNos.includes(subCategory.subCategoryNo)) return true;
-      
+
             const root = subCategory;
-      
+
             const parentHidden = root.isDisp === false;
             const allVitalChildHidden =
               root.vitalChild?.every((child) => child.isDisp === false) ?? true;
             const childrenHidden =
               root.vitalChild?.every(
-                (child) => child.subCategoryItem.length === 0
-              ) ?? true;
+                (child) => child.subCategoryItem.length === 0) ?? true;
 
             /* -----------------------------------------------------
              * 3. 条件すべて満たせば削除
-             * ----------------------------------------------------- */    
+             * ----------------------------------------------------- */
             return !(parentHidden && allVitalChildHidden && childrenHidden);
           });
         }
       }
-      
+
       return res;
     },
 
@@ -1636,10 +1610,10 @@ export default {
       // 大項目 ON/OFF
       const toggleCategory = (category, newValue) => {
         category.isDisp = newValue;
-      
+
         category.categoryItem.forEach(sub => {
           sub.isDisp = newValue;
-      
+
           if (sub.vitalChild) {
             // N-1, N-2, N-3 すべて独立して更新
             sub.vitalChild.forEach(vc => {
@@ -1647,18 +1621,18 @@ export default {
               vc.subCategoryItem.forEach(item => item.isDisp = newValue);
             });
           }
-      
+
           if (sub.subCategoryItem) {
             sub.subCategoryItem.forEach(item => item.isDisp = newValue);
           }
         });
       };
-      
+
       // 小項目の ON/OFF
       const toggleItem = (item, newValue) => {
         item.isDisp = newValue;
       };
-      
+
       // 大項目の全 OFF 判定
       const isAllOff = (category) => {
         return category.categoryItem.every(sub => {
@@ -1668,15 +1642,15 @@ export default {
                 !vc.isDisp && vc.subCategoryItem.every(i => !i.isDisp)
               )
             : true;
-      
+
           const noDispItems = sub.subCategoryItem
             ? sub.subCategoryItem.every(i => !i.isDisp)
             : true;
-      
+
           return noDispSub && noDispChild && noDispItems;
         });
       };
- 
+
       const categoryNo = path[0];
       const subCategoryNo = path[1];
       const itemNo = path[2];
@@ -1720,7 +1694,7 @@ export default {
             return item.itemNo === itemNo && item.isPatEventSub === isPatEventSub;
           });
       }
-      
+
       // =====================================================
       //  大項目
       // =====================================================
@@ -1729,13 +1703,13 @@ export default {
         toggleCategory(category, newValue);
         return;
       }
-    
+
       // =====================================================
       //  中項目
       // =====================================================
       if (type === "subCategory") {
         let targetSub = null;
-      
+
         // N-1
         if (subCategory.subCategoryNo === subCategoryNo) {
           targetSub = subCategory;
@@ -1748,40 +1722,40 @@ export default {
         else if (this.vitalMonitorSubCategoryNo3.includes(subCategoryNo)) {
           targetSub = subCategory.vitalChild[1];
         }
-      
+
         const newValue = !targetSub.isDisp;
-      
+
         // ON → 大項目 ON
         if (newValue) {
           targetSub.isDisp = true;
           category.isDisp = true;
           return;
         }
-      
+
         // OFF（小項目は連動しない）
         targetSub.isDisp = false;
-      
+
         // 大項目が全部 OFF なら大項目 OFF
         if (isAllOff(category)) {
           category.isDisp = false;
         }
         return;
       }
-    
+
       // =====================================================
       //  小項目
       // =====================================================
       if (type === "subCategoryItem") {
-      
+
         const newValue = !subCategoryItem.isDisp;
         toggleItem(subCategoryItem, newValue);
-      
+
         if (newValue) {
           // 小項目 ON → 大項目 ON
           category.isDisp = true;
           return;
         }
-      
+
         // OFF の場合
         if (isAllOff(category)) {
           category.isDisp = false;
@@ -1789,7 +1763,7 @@ export default {
         return;
       }
     },
-    
+
     /**
      * 選択されている表示項目のレイアウトを取得する
      * @param 表示項目を選択した際にレイアウト項目を入れ替える
@@ -1804,7 +1778,7 @@ export default {
         if (this.selectedDispClass === "0") {
           return category;
         }
-      
+
         // 「指示」の場合
         if (this.selectedDispClass === "1") {
           return {
@@ -1840,11 +1814,10 @@ export default {
         categoryInfo.isDisp = categoryInfo.categoryItem.some(sub => {
           // 中項目
           if (sub.isDisp) return true;
-      
+
           // バイタル・モニタグラフ N-2 / N-3
           if (sub.vitalChild?.some(vc =>
-            vc.isDisp || vc.subCategoryItem.some(item => item.isDisp)
-          )) {
+            vc.isDisp || vc.subCategoryItem.some(item => item.isDisp))) {
             return true;
           }
           // 通常小項目
@@ -1862,7 +1835,7 @@ export default {
     isSelectIcon(categoryNo, subCategoryNo) {
       return (
         this.vitalMonitorItemTargetSubCategoryNoList.includes(subCategoryNo) ||
-        categoryNo === CATEGORY_NO.PAT_EVENT_CONTENT || 
+        categoryNo === CATEGORY_NO.PAT_EVENT_CONTENT ||
         categoryNo === CATEGORY_NO.BBS_CONTENT
       )
     },
@@ -1879,20 +1852,18 @@ export default {
     showSelector(e, categoryNo, subCategoryNo, subCategoryTitle) {
       let parentSubCategoryNo = this.getParentSubCategoryNo(subCategoryNo);
 
-      let temp = this.dispItemInfo
+      const parentSubCategory = this.dispItemInfo
         .find((eleCategoryInfo) => {
           return categoryNo === eleCategoryInfo.categoryNo;
         })
         .categoryItem.find((eleSubCategoryInfo) => {
           return parentSubCategoryNo === eleSubCategoryInfo.subCategoryNo;
         });
-      if (this.vitalMonitorSubCategoryNo2.includes(subCategoryNo)) {
-        // バイタル・モニタグラフN-2
-        temp = temp.vitalChild[0];
-      } else if (this.vitalMonitorSubCategoryNo3.includes(subCategoryNo)) {
-        // バイタル・モニタグラフN-3
-        temp = temp.vitalChild[1];
-      }
+      const temp = this.vitalMonitorSubCategoryNo2.includes(subCategoryNo)
+        ? parentSubCategory.vitalChild[0]
+        : this.vitalMonitorSubCategoryNo3.includes(subCategoryNo)
+          ? parentSubCategory.vitalChild[1]
+          : parentSubCategory;
 
       // 大項目情報でループ
       this.dispItemInfo.forEach((eleCategory) => {
@@ -1962,7 +1933,7 @@ export default {
       this.popoverInfo.popoverDirection = "left";
       // ポップオーバータイトルを格納
       this.popoverInfo.titleLabel = subCategoryTitle;
-      
+
       // 選択肢情報を格納
       if (this.isVitalMonitor(categoryNo, subCategoryNo)) {
         // バイタル・モニタグラフ
@@ -2008,25 +1979,25 @@ export default {
               item !== null &&
               Object.keys(item).length > 0
           );
-          
+
       } else if (CATEGORY_NO.PAT_EVENT_CONTENT === categoryNo) {
         // 患者イベント
         // ポップオーバー選択肢生成
         this.buildPatEventOptions();
-        
+
       } else if (CATEGORY_NO.BBS_CONTENT === categoryNo) {
         // 施設イベント
         // ポップオーバー選択肢生成
-        this.buildBbsKindOptions(); 
+        this.buildBbsKindOptions();
       }
-      
+
       // 現在選択中の情報を格納
       this.popoverInfo.selectedList = deepCopy(this.selectedList);
-      
+
       if (this.isVitalMonitor(categoryNo, subCategoryNo)) {
         // バイタルモニタの場合には選択済リストを再設定する.
         // ※itemNoを変更する為
-        
+
         // this.selectedList を直接操作してしまうとキャンセルボタンをクリックされた時に
         // 期待しない状態(itemCdに*で結合された文字列が設定)となる為.
         const tempSelectedList = deepCopy(this.selectedList);
@@ -2065,7 +2036,7 @@ export default {
             };
           }
         });
-        
+
       }
 
       // 対象となる項目の情報を格納
@@ -2091,11 +2062,11 @@ export default {
       } else if (this.vitalMonitorSubCategoryNo3.includes(subCategoryNo)) {
         // バイタル・モニタグラフN-3
         exam = subCategoryInfo.vitalChild[1];
-      } else { 
+      } else {
         // 上記以外（バイタル・モニタグラフN-1含む）
         exam = subCategoryInfo;
       }
-      
+
       // グラフ上限値/下限値設定
       if (this.isVitalMonitor(categoryNo, subCategoryNo)) {
         exam.graphMax ??= "";
@@ -2162,7 +2133,7 @@ export default {
     storageInfo(info, event) {
       const selectedList = this.popoverInfo.selectedList;
       const cd = info.itemNo;
-      
+
       // 要素番号格納用
       let index = null;
       // 選択されたバイタル情報名格納用
@@ -2256,21 +2227,19 @@ export default {
     saveChanges() {
       // 選択したバイタル情報をコピー
       this.selectedList = deepCopy(this.popoverInfo.selectedList);
-      
+
       // 対象の中項目に選択した小項目を設定する
       this.setVitalInfoItem(
         this.popoverInfo.targetInfo.categoryNo,
         this.popoverInfo.targetInfo.subCategoryNo
       );
-      
+
       // カテゴリがバイタルモニタ情報の場合
       // コードを分解する.
       if (
         this.isVitalMonitor(
           this.popoverInfo.targetInfo.categoryNo,
-          this.popoverInfo.targetInfo.subCategoryNo
-        )
-      ) {
+          this.popoverInfo.targetInfo.subCategoryNo)) {
         let selectedVitalMonitorItemList = [];
         this.selectedList.forEach((item) => {
           if (item.itemNo.toString().indexOf("*") > 0) {
@@ -2300,18 +2269,18 @@ export default {
         });
         this.selectedList = selectedVitalMonitorItemList;
       }
-      
+
       // 患者イベント
       if (
         this.popoverInfo.targetInfo.categoryNo === CATEGORY_NO.PAT_EVENT_CONTENT
       ) {
-        this.selectedList.forEach((e) => { 
-          const temp = e.itemNo.split("*"); 
+        this.selectedList.forEach((e) => {
+          const temp = e.itemNo.split("*");
           e.itemNo = parseInt(temp[temp.length - 1]);
-          e.isDisp = true; 
-        });       
+          e.isDisp = true;
+        });
       }
-  
+
       this.selectedSetting.min.initValue = "";
       this.selectedSetting.min.editValue = "";
       this.selectedSetting.max.initValue = "";
@@ -2337,7 +2306,7 @@ export default {
       this.selectedList.forEach((eleInfo) => {
         subCategoryItem.push(eleInfo);
       });
-       
+
       // 大項目情報でループ
       const categoryInfo = this.dispItemInfo.find((eleCategoryInfo) => {
         // 大項目番号が一致するものを取得
@@ -2480,7 +2449,7 @@ export default {
     // 確認ボタンの活性切替
     switchButton() {
       // 編集済表示内容の取得
-      const editedDispItemInfoJSON = JSON.parse(this.editRecord.dispItemInfo); 
+      const editedDispItemInfoJSON = JSON.parse(this.editRecord.dispItemInfo);
       // 画面表示情報 ≠ 初期表示内容の場合
       if (
         this.isEditedName ||
@@ -2510,7 +2479,7 @@ export default {
         case CATEGORY_NO.EXAM_CONTENT:
           // 検査：検査予定のみ表示
           return subCategoryNo === 2;
-          
+
         case CATEGORY_NO.RAD_CONTENT:
         case CATEGORY_NO.PRESCRIPTION_CONTENT:
           // 一般撮影検査、処方
@@ -2519,57 +2488,65 @@ export default {
         default:
           // 上記以外のカテゴリは常に表示
           return true;
-      }      
+      }
     },
     closePopover() {
       this.graphMax = "";
       this.graphMin = "";
       this.popoverInfo.popoverVisible = false;
     },
-    graphValueChange(event, flag, key) {
-      // 限界値判定
+    setGraphLimitInput(value, flag) {
       if (flag === 1) {
-        let value = event.target.value;
-        if (value == this.max && this.blurFlg) {
-          this.graphMax = this.min;
-          this.blurFlg = false;
-        } else if (value == this.min && this.blurFlg) {
-          this.graphMax = this.max;
-          this.blurFlg = false;
-        }
+        this.graphMax = value;
       } else if (flag === 2) {
-        let value = event.target.value;
-        if (value == this.max && this.blurFlg) {
-          this.graphMin = this.min;
-          this.blurFlg = false;
-        } else if (value == this.min && this.blurFlg) {
-          this.graphMin = this.max;
-          this.blurFlg = false;
-        }
+        this.graphMin = value;
       }
-      this.focusFlg[key] = false;
-
-      this.graphMax =
-        this.graphMax != null && "" !== this.graphMax
-          ? Number(this.graphMax).toFixed(2)
-          : "";
-      this.graphMin =
-        this.graphMin != null && "" !== this.graphMin
-          ? Number(this.graphMin).toFixed(2)
-          : "";
-
-      let parentSubCategoryNo = this.getParentSubCategoryNo(
+      this.saveGraphLimitToTarget(flag);
+    },
+    normalizeGraphLimitValue(value) {
+      if (value === "" || value === null || value === undefined) {
+        return value;
+      }
+      const numberValue = Number(value);
+      if (Number.isNaN(numberValue)) {
+        return value;
+      }
+      if (numberValue > this.max) {
+        return this.formatGraphLimitBoundary(this.max);
+      }
+      if (numberValue < this.min) {
+        return this.formatGraphLimitBoundary(this.min);
+      }
+      return String(value);
+    },
+    formatGraphLimitBoundary(value) {
+      const valueText = String(value);
+      const decimalText = valueText.includes(".") ? valueText.split(".")[1] : "";
+      return decimalText.length > 0
+        ? Number(value).toFixed(decimalText.length)
+        : String(value);
+    },
+    saveGraphLimitToTarget(flag) {
+      if (!this.popoverInfo.targetInfo.categoryNo) {
+        return;
+      }
+      const parentSubCategoryNo = this.getParentSubCategoryNo(
         this.popoverInfo.targetInfo.subCategoryNo
       );
-
-      const CategoryInfo = this.dispItemInfo.find((eleCategoryInfo) => {
+      const categoryInfo = this.dispItemInfo.find((eleCategoryInfo) => {
         return (
           this.popoverInfo.targetInfo.categoryNo === eleCategoryInfo.categoryNo
         );
       });
-      const temp = CategoryInfo.categoryItem.find((eleSubCategoryInfo) => {
+      if (!categoryInfo) {
+        return;
+      }
+      const temp = categoryInfo.categoryItem.find((eleSubCategoryInfo) => {
         return parentSubCategoryNo === eleSubCategoryInfo.subCategoryNo;
       });
+      if (!temp) {
+        return;
+      }
 
       if (flag === 1) {
         // バイタル・モニタグラフN-2
@@ -2592,9 +2569,49 @@ export default {
           temp.graphMin = this.graphMin;
         }
       }
+    },
+    graphValueChange(event, flag, key) {
+      const eventValue = event.target ? event.target.value : event;
+      const normalizedValue = this.normalizeGraphLimitValue(eventValue);
+      if (flag === 1) {
+        this.graphMax = normalizedValue;
+      } else if (flag === 2) {
+        this.graphMin = normalizedValue;
+      }
+      // 限界値判定
+      if (flag === 1) {
+        let value = event.target ? event.target.value : event;
+        if (value == this.max && this.blurFlg) {
+          this.graphMax = this.min;
+          this.blurFlg = false;
+        } else if (value == this.min && this.blurFlg) {
+          this.graphMax = this.max;
+          this.blurFlg = false;
+        }
+      } else if (flag === 2) {
+        let value = event.target ? event.target.value : event;
+        if (value == this.max && this.blurFlg) {
+          this.graphMin = this.min;
+          this.blurFlg = false;
+        } else if (value == this.min && this.blurFlg) {
+          this.graphMin = this.max;
+          this.blurFlg = false;
+        }
+      }
+      this.focusFlg[key] = false;
+
+      this.graphMax =
+        this.graphMax != null && "" !== this.graphMax
+          ? this.normalizeGraphLimitValue(this.graphMax)
+          : "";
+      this.graphMin =
+        this.graphMin != null && "" !== this.graphMin
+          ? this.normalizeGraphLimitValue(this.graphMin)
+          : "";
+      this.saveGraphLimitToTarget(flag);
 
     },
-    
+
     /** popover選択肢の患者イベントのサブカテゴリ判定 */
     isPatEventSub(categoryNo, selectedInfo) {
       if (categoryNo === 5) {
@@ -2607,10 +2624,10 @@ export default {
     isSelectable(categoryNo, selectedInfo) {
       // 患者イベント以外は常に選択可
       if (categoryNo !== 5) return true;
-    
+
       // 患者イベントの場合のみサブカテゴリ制御
       return this.isPatEventSub(categoryNo, selectedInfo);
-    },    
+    },
 
     // 親サブカテゴリNoの取得
     getParentSubCategoryNo(subCategoryNo) {
@@ -2711,6 +2728,23 @@ ons-col.layout-item {
 .disp-item-no,
 .k-textbox {
   width: 100%;
+  padding-left: 11px;
+  box-sizing: border-box;
+  border-radius: 5px;
+  background-color: #f7f7f7;
+  font-size: 1em;
+  border: unset;
+  border-width: 2px;
+  border-style: inset;
+  border-image-repeat: stretch;
+  border-color: unset;
+}
+
+.k-textbox:focus,
+.k-textbox:focus-visible,
+.k-textbox.k-state-focused {
+  border: 2px solid green !important;
+  outline: none;
 }
 
 .disp-item-content-area {
@@ -2764,14 +2798,14 @@ ons-col.layout-item {
   margin: 0 4px;
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 500px;
   height: 100%;
   max-height: 90vh;
   padding: 25px;
 }
 
-.popover-style >>> .label-style {
+.popover-style :deep(.label-style) {
   white-space: nowrap;
 }
 
@@ -2831,7 +2865,7 @@ ons-col.layout-item {
   margin-left: 5px;
 }
 
-.graph-setting >>> label {
+.graph-setting :deep(label) {
   margin-right: 5px;
 }
 

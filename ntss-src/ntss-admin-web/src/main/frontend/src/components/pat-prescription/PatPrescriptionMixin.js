@@ -1,13 +1,14 @@
 /**
  * @description 処方セットマスタ詳細・処方画面の処方エリア用のMixin
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import { ApiHelper } from "../../apis/AxiosHelper";
-import { v4 as uuidv4 } from "uuid";
-import BigNumber from "bignumber.js";
+import { createUuid } from "@/functions/common/uuid";
+import BigNumber from "@/compat/number/bignumber";
 import { layoutArea } from "@/constants/layoutArea";
 import { sendRequestFindRecordListByFacilityCd } from "@/apis/master-maintenance";
 import { MASTER_DELETE_DISPLAY } from "@/constants/TreatmentRecord";
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
 import { 
   MEDICINE_TYPE,
   TABOO_CLASS_PREFIX,
@@ -141,14 +142,31 @@ export default {
       return this.movingIndexes.length > 0;
     },
   },
-  created() {
-  },
-  beforeDestroy() {
+
+  beforeUnmount() {
     // storeクリア
     this.clearStateEdit();
     this.setPrescriptionDetail([]);
   },
   methods: {
+    requestViewForceUpdate() {
+      if (this.$?.isMounted) {
+        this.$forceUpdate();
+      }
+    },
+    getPrescriptionScopeRoot() {
+      return this.$el || this.$refs?.prescriptionRoot || document;
+    },
+    getPrescriptionNumberInputFromWheelEvent(e) {
+      const target = e?.target;
+      const currentTarget = e?.currentTarget;
+      return target?.matches?.("input[type='number']")
+        ? target
+        : target?.querySelector?.("input[type='number']")
+          || currentTarget?.querySelector?.("input[type='number']")
+          || target?.closest?.("ons-input")?.querySelector?.("input[type='number']")
+          || null;
+    },
     ...mapActions("loading-screen", {
       setLoadingScreenVisible: "setLoadingScreenVisible"
     }),
@@ -168,7 +186,7 @@ export default {
     handleMousedown(e) {
       this.$nextTick(() => {
         this.formFlg = true;
-        if (!document.getElementById("myInput")?.contains(e.target) && (((e.target._prevClass !== 'k-icon down-arrow') && (e.target._prevClass !== 'form-ul')) && (e.target._prevClass !== '')  && this.getEditRecord && this.getEditRecord[this.index] && this.getEditRecord[this.index].buttonItems)) {
+        if (!getScopedElementById("myInput", this.getPrescriptionScopeRoot())?.contains(e.target) && (((e.target._prevClass !== 'k-icon down-arrow') && (e.target._prevClass !== 'form-ul')) && (e.target._prevClass !== '')  && this.getEditRecord && this.getEditRecord[this.index] && this.getEditRecord[this.index].buttonItems)) {
           if (this.index && this.idx) {
             this.getEditRecord[this.index].buttonItems[this.idx].showSelectFlag = false;
           }
@@ -197,7 +215,7 @@ export default {
     async changeListInput(index, i, type) {
       if (type === 'mousedown' && !this.getEditRecord[index].buttonItems[i].showSelectFlag) {
         setTimeout(() => {
-          document.getElementById('input-' + index + '-' + i).focus();
+          getScopedElementById('input-' + index + '-' + i, this.getPrescriptionScopeRoot())?.focus?.();
         }, 0);
       }
       this.index = index;
@@ -206,14 +224,14 @@ export default {
       this.arrFlag = false;
       this.emptyFlag = false;
       if (type === 'focus') {
-        this.$set(this.getEditRecord[index].buttonItems[i], 'showSelectFlag', true);
+        ((this.getEditRecord[index].buttonItems[i])['showSelectFlag'] = true);
       }
       if (type === 'mousedown' && this.getEditRecord[index].buttonItems[i].showSelectFlag === undefined) {
-        this.$set(this.getEditRecord[index].buttonItems[i], 'showSelectFlag', false);
+        ((this.getEditRecord[index].buttonItems[i])['showSelectFlag'] = false);
       }
     },
     listBlur(value, index, i) {
-      this.formFlg && this.$set(this.getEditRecord[index].buttonItems[i], 'showSelectFlag', false);
+      this.formFlg && ((this.getEditRecord[index].buttonItems[i])['showSelectFlag'] = false);
     },
     // #8575 処方の各種入力ボックスが、キーボード入力＋検索つきプルダウンでなくなっている。 訾浩 end
     /** 薬剤詳細項目行を削除 */
@@ -378,7 +396,8 @@ export default {
       
       const response = await sendRequestFindRecordListByFacilityCd(
         "mst_prescription_set",
-        facilityCd
+        facilityCd,
+        this.selectedPatId
       );
       this.prescriptionSetData = response.data.localDataSource.data.filter(item => item.isDisp === "1");
 
@@ -766,7 +785,7 @@ export default {
           listDetail.push(JSON.parse(JSON.stringify(newLayout[0])));
         }
         switch (element.type) {
-          case 1:
+          case 1: {
             // マスタ編集＞処方セット詳細表示、処方セット展開時
             // 薬剤マスタ・一般名処方マスタの名称、単位、数量補正は最新のマスタを参照
             if (!fromPatPrescription || minusValue === 0) {
@@ -797,6 +816,7 @@ export default {
             }
             listDetail.push(JSON.parse(JSON.stringify(newLayout[1])));
             break;
+          }
           case 2:
             newLayout[2].buttonItems[2].itemValue = element.F1;
             newLayout[2].buttonItems[3].itemValue = element.F2;
@@ -908,62 +928,90 @@ export default {
       const returnVal = BigNumber(num).multipliedBy(BigNumber(setStep)).valueOf();
     
       return BigNumber(returnVal).toFixed(decimal);
-    },    
+    },
+    getPrescriptionNumberMax(decimal) {
+      const parsedDecimal = Number(decimal);
+      if (!Number.isFinite(parsedDecimal) || parsedDecimal <= 0) {
+        return 999999;
+      }
+      return Number(`999999.${"9".repeat(Math.min(parsedDecimal, 9))}`);
+    },
+    normalizePrescriptionNumberValue(value, decimal) {
+      let normalized = Number(value);
+      if (!Number.isFinite(normalized)) {
+        normalized = 0;
+      }
+      if (normalized > this.maxValueInt) {
+        normalized = this.maxValueInt;
+      }
+      normalized = this.adjustDecimal(normalized, decimal);
+      if (decimal == 0 || decimal == undefined) {
+        normalized = parseInt(normalized);
+      }
+      normalized = Number(normalized);
+      return Number.isFinite(normalized) ? normalized : 0;
+    },
+    applyPrescriptionNumberValue(index, i, value, decimal, eventTarget = null) {
+      const min = Number(this.min ?? 0);
+      const max = this.getPrescriptionNumberMax(decimal);
+      let nextValue = this.normalizePrescriptionNumberValue(value, decimal);
+      this.max = max;
+      if (nextValue > max) {
+        nextValue = min;
+        this.blurFlg = true;
+      } else if (nextValue < min) {
+        nextValue = max;
+        this.blurFlg = true;
+      } else {
+        this.blurFlg = false;
+      }
+      this.dataList[index].buttonItems[i].itemValue = nextValue;
+      if (eventTarget) {
+        eventTarget.value = nextValue;
+      }
+      return nextValue;
+    },
     /** 小数点桁を変える */
     changeValuePoint(decimal, index, i, e){
-      let num = this.dataList[index].buttonItems[i].itemValue;
-      if(this.dataList[index].buttonItems[i].itemValue > this.maxValueInt) {
-        this.dataList[index].buttonItems[i].itemValue = this.maxValueInt;
-        num = this.maxValueInt;
-      }
-      if(num){
-        this.dataList[index].buttonItems[i].itemValue = parseFloat(num);
-      }else{
-        this.dataList[index].buttonItems[i].itemValue = 0;
-      }
-
-      this.dataList[index].buttonItems[i].itemValue = this.adjustDecimal(this.dataList[index].buttonItems[i].itemValue, decimal);
-
-      // mod #5589 2023/04/12 数値IFのスタイル全不正 張博 start
-      // 数値範囲内かどうかの確認
-      //mod #8877 小数点がある薬剤で数量に「999999.99」を入力しようとすると小数点以下が消える 张博 start
-      if (decimal == 0||decimal==undefined) {
-        this.dataList[index].buttonItems[i].itemValue = parseInt(this.dataList[index].buttonItems[i].itemValue);
-      }
-      let maxNumber=this.dataList[index].buttonItems[i].itemValue
-      const long = String(maxNumber).includes(".")?maxNumber.split(".")[1].length:0
-      const fractional="999999999"
-      if (long!==0) {
-        this.max='999999.'+fractional.slice(0,long)
-      }else{
-        this.max='999999'
-      }
-      e.target.value = Number(e.target.value);
-      this.max = Number(this.max);
-      //mod #8877 小数点がある薬剤で数量に「999999.99」を入力しようとすると小数点以下が消える 张博 end
-      if (this.min !== undefined && this.max !== undefined) {
-        if (e.target.value > this.max) {
-          this.dataList[index].buttonItems[i].itemValue = this.min;
-          this.blurFlg = true;
-        } else if (e.target.value < this.min) {
-          this.dataList[index].buttonItems[i].itemValue = this.max;
-          this.blurFlg = true;
-        }else{
-          this.blurFlg = false;
-        }
-      }
+      const input = e?.target;
+      this.applyPrescriptionNumberValue(index, i, input?.value, decimal, input);
       this.setEditRecord(this.dataList);
     },
     stopScrollFun(index, i, e){
-      if (!this.focusFlg[i]) {
+      const now = e?.timeStamp || Date.now();
+      const wheelKey = `${index}-${i}`;
+      if (!this.__prescriptionNumberWheelGuard) {
+        this.__prescriptionNumberWheelGuard = {};
+      }
+      const lastWheel = this.__prescriptionNumberWheelGuard[wheelKey];
+      if (lastWheel && now - lastWheel.time < 20 && lastWheel.type !== e?.type) {
         return;
       }
-      let delta = (e.wheelDelta && (e.wheelDelta > 0 ? 1 : -1)) ||
-          (e.detail && (e.wheelDelta > 0 ? -1 : 1))
-      if (!e.target.value) {
-        e.target.value = 0
+      this.__prescriptionNumberWheelGuard[wheelKey] = {
+        time: now,
+        type: e?.type
+      };
+      const input = this.getPrescriptionNumberInputFromWheelEvent(e);
+      if (!input || input.disabled) {
+        return;
       }
-      let value = parseFloat(e.target.value);
+      if (input.ownerDocument?.activeElement !== input) {
+        return;
+      }
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      this.focusFlg[i] = true;
+      let delta = 0;
+      if (typeof e.deltaY === "number" && e.deltaY !== 0) {
+        delta = e.deltaY < 0 ? 1 : -1;
+      } else {
+        delta = (e.wheelDelta && (e.wheelDelta > 0 ? 1 : -1)) ||
+            (e.detail && (e.detail < 0 ? 1 : -1));
+      }
+      if (!input.value) {
+        input.value = 0
+      }
+      let value = parseFloat(input.value);
       const parameterStep = 1;
       if (delta > 0) {
         // 上スクロール
@@ -972,15 +1020,9 @@ export default {
         // 下スクロール
         value -= parameterStep
       }
-      // 数値範囲内かどうかの確認
-      if (value > this.max) {
-        value = this.min;
-      }
-      if(value < this.min) {
-        value = this.max;
-      }
-      this.dataList[index].buttonItems[i].itemValue=value;
-      this.$forceUpdate();
+      const decimal = this.dataList?.[index]?.buttonItems?.[i]?.unitDecimalPoint;
+      this.applyPrescriptionNumberValue(index, i, value, decimal, input);
+      this.requestViewForceUpdate();
     },
     formatValue(index, i, event){
       // 限界値判定
@@ -1003,7 +1045,7 @@ export default {
      * 数字・カンマ・ドット以外のキー入力をブロックする。
      */
     blockUnecessaryDigit() {
-      let x = document.getElementsByClassName("number-input")
+      let x = getScopedElementsByClassName("number-input", this.getPrescriptionScopeRoot())
       for (let i = 0; i < x.length; i++) {
         x[i].addEventListener("keypress", (evt) => {
           if (evt.which != 8 && evt.which != 44 && evt.which != 46  && evt.which < 48 || evt.which > 57)
@@ -1049,8 +1091,9 @@ export default {
     onDragStart(event) {
       // ドラッグ中の要素取得
       const draggedFrom = event.originalEvent.target;
+      const dragRpHandle = draggedFrom?.closest?.(".dragg-rp");
       // RP単位のドラッグ時
-      if (draggedFrom.classList.contains("dragg-rp")) {
+      if (dragRpHandle || draggedFrom.classList.contains("dragg-rp")) {
         // ドラッグ中の要素とそれに続く dataButtonNo !== 1（次の区切まで）のindexのリスト取得
         this.movingIndexes = this.getMovedRows(event.oldIndex);  
       }
@@ -1065,10 +1108,24 @@ export default {
       this.movingIndexes = [];
       this.prevDataList = [];
       
-      // onMove()で設定したドラッグ中要素のstyleが残る場合があるのでクリアする
-      document.querySelectorAll(".draggable-area [style*='opacity: 0.5']").forEach(el => {
+      const scopeRoot = this.getPrescriptionScopeRoot();
+      const ownerDocument = scopeRoot?.ownerDocument || document;
+      const clearDragInlineStyle = (el) => {
+        if (!el?.style) {
+          return;
+        }
         el.style.opacity = "";
-      }); 
+        el.style.transform = "";
+        el.style.transition = "";
+        el.style.height = "";
+      };
+
+      // onMove() や Sortable fallback で付与された style のみクリア（列幅の style は触らない）
+      queryScopedSelectorAll(
+        ".draggable-area .sortable-chosen, .draggable-area .sortable-related, .draggable-area .ghost, .layout-item-fallback",
+        scopeRoot
+      ).forEach(clearDragInlineStyle);
+      ownerDocument.querySelectorAll(".layout-item-fallback").forEach(el => el.remove());
     },
     /**
      * ドラッグでの移動時の処理
@@ -1081,9 +1138,9 @@ export default {
         // 並び順がおかしくなったりするのを防ぐためブラウザの次の描画のタイミングで処理する
         this.$nextTick(() => {
           // 対象行を全て取得（ドラッグ中の要素は含まない）
-          const relatedRows = Array.from(document.querySelectorAll(".sortable-related.ghost"));
+          const relatedRows = Array.from(queryScopedSelectorAll(".sortable-related.ghost", this.getPrescriptionScopeRoot()));
           // ドラッグ中の要素を取得
-          const chosenRow = document.querySelector(".sortable-chosen.ghost");
+          const chosenRow = queryScopedSelector(".sortable-chosen.ghost", this.getPrescriptionScopeRoot());
           
           if (!chosenRow || relatedRows.length === 0) return;
           
@@ -1106,9 +1163,9 @@ export default {
           // 移動対象行をドラッグ中の要素の後に挿入
           // **移動先の行の取得がNGだった場合、drag行の前に挿入**
           if (!nextRow) {
-            nextRow = document.querySelector(".drag");
+            nextRow = queryScopedSelector(".drag", this.getPrescriptionScopeRoot());
           }
-          const fragment = document.createDocumentFragment();
+          const fragment = (this.getPrescriptionScopeRoot()?.ownerDocument || document).createDocumentFragment();
           relatedRows.forEach(row => fragment.appendChild(row));
           if (nextRow) {
             nextRow.parentNode.insertBefore(fragment, nextRow);
@@ -1157,10 +1214,11 @@ export default {
      * - :keyに一意となる値を設定しない状態でドラッグするとリストの並び順がおかしくなる
      */
     setUniqueId() {
-      this.dataList = this.dataList.map(item => ({
-        ...item,
-        uniqueId: item.uniqueId || uuidv4()
-      }));
+      this.dataList.forEach(item => {
+        if (!item.uniqueId) {
+          item.uniqueId = createUuid();
+        }
+      });
     },
     /**
      * 並び替えした行かを判定

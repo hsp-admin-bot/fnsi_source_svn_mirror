@@ -14,13 +14,8 @@ import NextTransitionMixin from "@/components/NextTransitionMixin";
 export default {
   name: "MstTestMode2",
   mixins: [NextTransitionMixin],
-  data() {
-    return {};
-  },
-  computed: {},
-  methods: {},
-  created() {},
-  destroyed() { }
+
+
 };
 </script>
 

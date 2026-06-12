@@ -2,7 +2,7 @@
  * グリッドコンポーネント
  */
 <template>
-  <div>
+  <div class="monitor-grid-container">
     <div class="scroll-table">
       <table class="treatment-record-list monitor-grid">
         <thead>
@@ -292,7 +292,7 @@
             <td class="ntss-list-body-td staff-name-cell">{{ e.updStaffName }}</td>
             <!-- 削除ボタン -->
             <td class="align-center ntss-list-body-td">
-              <button class="ntss-btn-outset button-delete" @click="delRow(index)" :disabled="!isShared">
+              <button class="ntss-btn-outset button-delete" :disabled="!isShared" @click="delRow(index)">
                 <v-ons-icon icon="fa-trash"/>
               </button>
             </td>
@@ -311,7 +311,7 @@ import MonitorNumberInputComponent from "@/components/treatment-record/submenu/m
 import { CODES } from "@/constants/TreatmentRecord";
 import CommonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
 import CustomSimpleTextareaTypeB from "@/components/common/custom-form-tags/CustomSimpleTextareaTypeB";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 import {
   dateFormat,
   DATE_FORMAT,
@@ -444,6 +444,7 @@ export default {
         // if (model.isModified()) {
         //   this.$emit("modifiedValue");
           this.$emit("modifiedValue", model.isModified());
+          this.$emit("changeValue",this.monitorData)
         // }
         // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end
       });
@@ -711,7 +712,7 @@ export default {
       }
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -725,10 +726,14 @@ export default {
 </script>
 
 <style scoped>
+.monitor-grid-container {
+  height: 100%;
+  min-height: 0;
+}
 .scroll-table {
   width: 1px;
 }
-.selectbox >>> select {
+.selectbox :deep(select) {
   width: fit-content;
 }
 .common-time-input {
@@ -797,13 +802,14 @@ export default {
   top: 0;
   height: 100%;
 }
-.monitor-grid-textarea >>> textarea {
+.monitor-grid-textarea :deep(textarea) {
   border-color: unset;
   border-style: inset;
   min-width: 100%;
 }
+ 
 /* add 6827 入力欄の編集済み表現不正（治療記録＞バイタル） 房 start */
-.custom-select-edited-box >>> select {
+.custom-select-edited-box :deep(select) {
   outline: 0 !important;
   border-radius: 5px !important;
   border: 2px green solid;

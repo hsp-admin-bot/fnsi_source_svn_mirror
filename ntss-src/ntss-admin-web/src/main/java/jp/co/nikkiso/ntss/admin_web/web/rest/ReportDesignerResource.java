@@ -11,8 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.validation.Valid;
-import javax.xml.bind.DatatypeConverter;
+import jakarta.validation.Valid;
+import java.util.HexFormat;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Uri;
@@ -48,6 +49,7 @@ import jp.co.nikkiso.ntss.admin_web.service.log.LogService;
 import jp.co.nikkiso.ntss.admin_web.service.master.MstDialysisDifficultyService;
 import jp.co.nikkiso.ntss.admin_web.service.master.equipment.EquipmentService;
 import jp.co.nikkiso.ntss.admin_web.service.reportDesigner.ReportDesignerService;
+import jp.co.nikkiso.ntss.admin_web.service.access.FacilityAccessService;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.api.service.SysDataSetService;
 import jp.co.nikkiso.ntss.core.entity.MstDialysisDifficulty;
@@ -60,6 +62,7 @@ import org.springframework.web.client.RestTemplate;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang start
 import static jp.co.nikkiso.ntss.core.utils.LogAspectorToolsUtils.toJson;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 // #9698 アプリケーションログの内容修正 20260328 add yangxuewang end
 
 /**
@@ -69,6 +72,9 @@ import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString
 @Slf4j
 @RequestMapping((Uri.REPORT_DESIGNER))
 public class ReportDesignerResource {
+  @Autowired
+  private FacilityAccessService facilityAccessService;
+
 
   @Autowired
   ReportDesignerService reportDesignerService;
@@ -93,8 +99,14 @@ public class ReportDesignerResource {
   @GetMapping("/master/{tableName}")
   public ResponseEntity<?> getMaster(
       @AuthenticationPrincipal NtssUser ntssUser,
-      @PathVariable String tableName
+      @PathVariable String tableName,
+      @RequestParam(required = false) Long selectedPatId
   ) {
+    if (!facilityAccessService.hasFacilityOrSelectedPatShareAccess(ntssUser, ntssUser.getFacilityCd(), selectedPatId)) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to get data for report layout designer. facilityCd:[" + ntssUser.getFacilityCd() +"], tableName:["+ tableName +"]");
     logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_REPORT_MENU, SERVICE_NAME.FNSI, null);
@@ -119,6 +131,14 @@ public class ReportDesignerResource {
     @PathVariable String tableName,
     @PathVariable(name = "facilityCd", required = true) String facilityCd
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to get data for report layout designer. user facilityCd:[" + ntssUser.getFacilityCd() +"], tableName:["+ tableName +"], select facilityCd:["+ facilityCd +"]");
     logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_REPORT_MENU, SERVICE_NAME.FNSI, null);
@@ -140,6 +160,14 @@ public class ReportDesignerResource {
     @PathVariable(name = "facilityCd", required = true) String facilityCd
     // add #11597 レイアウトデザイナ管理者モードでフィルタリストが選択施設のものにならない limingzhe end
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+
 
     EventLogMessage eventLogMessage = new EventLogMessage();
     // mod #11597 レイアウトデザイナ管理者モードでフィルタリストが選択施設のものにならない limingzhe start
@@ -171,6 +199,14 @@ public class ReportDesignerResource {
     @PathVariable(name = "facilityCd", required = true) String facilityCd,
     @PathVariable(name = "medflag", required = true) Integer medflag
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to get data for report layout designer. user facilityCd:["+ ntssUser.getFacilityCd() +"], FilterType:[" + "medicine" + "], select facilityCd:["+ facilityCd +"] and medflag:[" + medflag + "]");
     logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_REPORT_MENU, SERVICE_NAME.FNSI, null);
@@ -203,6 +239,14 @@ public class ReportDesignerResource {
     @PathVariable(name = "facilityCd", required = true) String facilityCd
     // add #11597 レイアウトデザイナ管理者モードでフィルタリストが選択施設のものにならない limingzhe end
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+
     // mod #11597 レイアウトデザイナ管理者モードでフィルタリストが選択施設のものにならない limingzhe start
     // ResponseEntityを返す
     // return getByCd(ntssUser.getFacilityCd());
@@ -264,6 +308,14 @@ public class ReportDesignerResource {
     @PathVariable(name = "facilityCd", required = true) String facilityCd
     // add #11597 レイアウトデザイナ管理者モードでフィルタリストが選択施設のものにならない limingzhe end
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+
     // del #11597 レイアウトデザイナ管理者モードでフィルタリストが選択施設のものにならない limingzhe start
 //    final String facilityCd = ntssUser.getFacilityCd();
     // del #11597 レイアウトデザイナ管理者モードでフィルタリストが選択施設のものにならない limingzhe end
@@ -309,6 +361,14 @@ public class ReportDesignerResource {
     @PathVariable(name = "facilityCd", required = true) String facilityCd
     // add #11597 レイアウトデザイナ管理者モードでフィルタリストが選択施設のものにならない limingzhe end
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+
     EventLogMessage eventLogMessage = new EventLogMessage();
     // mod #11597 レイアウトデザイナ管理者モードでフィルタリストが選択施設のものにならない limingzhe start
     // eventLogMessage.setLogMessage("REST request to get data for report layout designer. facilityCd:["+ ntssUser.getFacilityCd() +"], FilterType:[" + "Receipt" + "]");
@@ -373,6 +433,14 @@ public class ReportDesignerResource {
     @PathVariable(name = "facilityCd", required = true) String facilityCd,
     @PathVariable(name = "layoutClass", required = true) String layoutClass
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!user.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(user.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "user.getFacilityCd()=" + user.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+
 
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to get data for report layout designer. facilityCd:["+ user.getFacilityCd() +"], FilterType:[" + "inspection" + "], select facilityCd:["+ facilityCd +"]");
@@ -402,6 +470,14 @@ public class ReportDesignerResource {
     @PathVariable(name = "facilityCd", required = true) String facilityCd,
     @PathVariable(name = "layoutClass", required = true) String layoutClass
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!user.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(user.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "user.getFacilityCd()=" + user.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+
     EventLogMessage eventLogMessage = new EventLogMessage();
     eventLogMessage.setLogMessage("REST request to get data for report layout designer. facilityCd:["+ user.getFacilityCd() +"], Layout:[" + "MachineType" + "], select facilityCd:["+ facilityCd +"]" + " layoutClass:["+ layoutClass +"]");
     logService.log(LogLevel.DEBUG, eventLogMessage, FUNCTION_CODE.FUNC_REPORT_MENU, SERVICE_NAME.FNSI, null);
@@ -641,7 +717,7 @@ public class ReportDesignerResource {
 
     try {
       byte[] content = reportDesignerService.getReportFile(reportCd);
-      String hexString = DatatypeConverter.printHexBinary(content);
+      String hexString = HexFormat.of().withUpperCase().formatHex(content);
       return new ResponseEntity<>(hexString, HttpStatus.OK);
     } catch (Exception e) {
       // エラーメッセージをログ出力
@@ -683,7 +759,7 @@ public class ReportDesignerResource {
         Path path = Paths.get(fileLocation);
         byte[] bytes = Files.readAllBytes(path);
         // 16進数文字列に変換
-        String hexString = DatatypeConverter.printHexBinary(bytes);
+        String hexString = HexFormat.of().withUpperCase().formatHex(bytes);
         return new ResponseEntity<>(hexString, HttpStatus.OK);
         // add 9601 印刷サーバにて帳票の印刷が行われない　吉 start
       }else{
@@ -771,7 +847,7 @@ public class ReportDesignerResource {
       Path path = Paths.get(fileLocation);
       byte[] bytes = Files.readAllBytes(path);
       // 16進数文字列に変換
-      String hexString = DatatypeConverter.printHexBinary(bytes);
+      String hexString = HexFormat.of().withUpperCase().formatHex(bytes);
       return new ResponseEntity<>(hexString, HttpStatus.OK);
     } catch (Exception e) {
       // エラーメッセージをログ出力

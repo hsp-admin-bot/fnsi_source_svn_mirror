@@ -1,6 +1,7 @@
 package jp.co.nikkiso.ntss.core.dao;
 
 import java.util.List;
+import java.util.Map;
 import org.seasar.doma.Dao;
 import org.seasar.doma.Insert;
 import org.seasar.doma.Select;
@@ -11,7 +12,10 @@ import jp.co.nikkiso.ntss.core.entity.MstRelationship;
 
 @ConfigAutowireable
 @Dao
-public interface MstRelationshipDao {
+public interface MstRelationshipDao extends MasterDao<Map<String, Object>> {
+  @Select
+  List<Map<String, Object>> selectAllStatus(Map<String, String> params);
+
   @Select
   List<MstRelationship> selectAll(SelectOptions options, MstRelationship params);
 

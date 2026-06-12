@@ -1,26 +1,48 @@
-const path = require("path");
+import { fileURLToPath, URL } from "node:url";
+import path from "node:path";
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
 
-module.exports = {
-  publicPath: "/ntss-certificate-download",
-  outputDir: path.resolve(__dirname, "../resources/public"),
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-  devServer: {
+export default defineConfig({
+  base: "/ntss-certificate-download/",
+  plugins: [
+    vue({
+      template: {
+        transformAssetUrls: false,
+        compilerOptions: {
+          isCustomElement: tag => tag === "font"
+        }
+      }
+    })
+  ],
+  resolve: {
+    // Vue2/Webpack allowed extensionless .vue imports such as @/components/X.
+    // Keep that source-level semantics in the build/public layer instead of editing page/router imports.
+    extensions: [".mjs", ".js", ".mts", ".ts", ".jsx", ".tsx", ".json", ".vue"],
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "moment": fileURLToPath(new URL("./src/compat/date/moment.js", import.meta.url))
+    }
+  },
+  server: {
+    host: "0.0.0.0",
     port: 8002,
     proxy: {
       "/ntss-certificate-download/api": {
-        target: "http://localhost:8082"
+        target: "http://localhost:8082",
+        changeOrigin: true
       }
     }
   },
-  //add FNSI-【1006】最新の改修対象一覧.NO43を追加 周安寧 start 修正５
-  pwa: {
-    iconPaths: {
-      // favicon
-      favicon32: "img/favicon.ico"
-    }
+  build: {
+    outDir: path.resolve(__dirname, "../resources/public"),
+    // Vue2 webpack config deletes prefetch; keep async chunks lazy instead of preloading them.
+    modulePreload: false,
+    emptyOutDir: true
   },
-  //add FNSI-【1006】最新の改修対象一覧.NO43を追加 周安寧 end 修正５
-  chainWebpack: config => {
-    config.resolve.alias.set("vue$", "vue/dist/vue.esm.js");
+  define: {
+    "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development")
   }
-};
+});

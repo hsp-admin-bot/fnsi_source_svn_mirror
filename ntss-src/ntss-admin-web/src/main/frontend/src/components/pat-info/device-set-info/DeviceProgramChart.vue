@@ -13,8 +13,8 @@ import {
   valueInfoUfr,
   valueInfoQbqd
 } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions";
-import { Chart } from "highcharts-vue";
-import elementResizeDetectorMaker from "element-resize-detector";
+import { Chart } from "@/compat/charts/highcharts";
+import elementResizeDetectorMaker from "@/compat/resize/element-resize-detector";
 const erd = elementResizeDetectorMaker({
   strategy: "scroll"
 });
@@ -76,7 +76,7 @@ export default {
     chartOptions() {
       let yAxisData = [],
         seriesData = [],
-        tempArr = [];
+        tempArr;
 
       const xAxisData = {
         visible: false
@@ -276,7 +276,15 @@ export default {
             valueInfoQbqd.dev.A[410].maxValue
           );
 
-          xAxisData.max = this.data.xAxisMax;
+          xAxisData.max = this.data.xAxisMax || 4;
+          xAxisData.visible = true;
+          xAxisData.tickInterval = 1;
+          xAxisData.tickWidth = 0;
+          xAxisData.gridLineWidth = 1;
+          xAxisData.gridLineColor = "#e1e1e1";
+          xAxisData.labels = {
+            enabled: false
+          };
 
           seriesData = [
             {
@@ -344,6 +352,11 @@ export default {
           break;
       }
 
+      yAxisData = yAxisData.map(axis => ({
+        ...axis,
+        gridZIndex: 1
+      }));
+
       return {
         chart: {
           height: this.height,
@@ -367,6 +380,7 @@ export default {
         // add FNSI-4401 そのメニュー自体消してよい」 liumx end
         plotOptions: {
           series: {
+            zIndex: 5,
             marker: {
               enabled: false,
               states: {
@@ -394,13 +408,16 @@ export default {
 
   mounted() {
     // 親コンポネントリサイズ時にグラフのサイズを合わせて
-    erd.listenTo(this.$parent.$el, () => {
-      // mod bug 8003 修正 chen start
-      if (this.$refs.highchart) {
-        this.$refs.highchart?.chart?.reflow();
-      }
-      // mod bug 8003 修正 chen end
-    });
+    const resizeHost = this.getResizeHostElement();
+    if (resizeHost) {
+      erd.listenTo(resizeHost, () => {
+        // mod bug 8003 修正 chen start
+        if (this.$refs.highchart) {
+          this.$refs.highchart?.chart?.reflow();
+        }
+        // mod bug 8003 修正 chen end
+      });
+    }
     this.observer = new IntersectionObserver((entries, observer) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -413,6 +430,9 @@ export default {
   },
 
   methods: {
+    getResizeHostElement() {
+      return this.$el?.parentElement || null;
+    },
     /**
      * @description 除水プロ(コース)の計算
      * @param {Number} amount コース値
@@ -467,9 +487,10 @@ export default {
       return resArr;
     }
   },
-  beforeDestroy() {
-    if (this.$parent?.$el) {
-      erd.uninstall(this.$parent.$el);
+  beforeUnmount() {
+    const resizeHost = this.getResizeHostElement();
+    if (resizeHost) {
+      erd.uninstall(resizeHost);
     }
 
     if (this.observer) {

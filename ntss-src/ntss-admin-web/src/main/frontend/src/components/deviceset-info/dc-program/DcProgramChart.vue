@@ -5,8 +5,8 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
-import { Chart } from "highcharts-vue";
+import { mapGetters } from "@/compat/vue/vuex";
+import { Chart } from "@/compat/charts/highcharts";
 
 export default {
   components: {
@@ -372,6 +372,12 @@ export default {
           break;
       }
 
+      // グリッド線を系列の背面に描画（青線が灰線の上に表示される）
+      yAxisData = yAxisData.map(axis => ({
+        ...axis,
+        gridZIndex: 1
+      }));
+
       return {
         chart: {
           height: this.height,
@@ -385,6 +391,27 @@ export default {
               // setTimeout(() => {
                 this.reflow();
 //              }, 1000);
+            },
+            render: function () {
+              const chart = this;
+              // 重複作成を防止
+              if (chart.customBorder) {
+                  chart.customBorder.destroy();
+              }
+              const left = chart.plotLeft;
+              const top = chart.plotTop;
+              const width = chart.plotWidth;
+              const height = chart.plotHeight;
+              // インスタンスを保存
+              chart.customBorder = chart.renderer
+                  .rect(left,top,width,height,0)
+                  .attr({
+                      stroke: '#e1e1e1',
+                      'stroke-width': 2,
+                      fill: 'transparent',
+                      zIndex: 1
+                  })
+                  .add();
             }
           },
           marginTop: 25,
@@ -398,6 +425,8 @@ export default {
         },
         plotOptions: {
           series: {
+            // データ系列をグリッド・プロット枠線より前面に描画
+            zIndex: 5,
             marker: {
               enabled: false,
               states: {
@@ -441,7 +470,7 @@ export default {
       this.$refs.refDcProgramChart.chart.reflow();
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     const chartRef = this.$refs.refDcProgramChart;
     if (chartRef?.chart) {
       if (typeof chartRef.chart.destroy === 'function') {

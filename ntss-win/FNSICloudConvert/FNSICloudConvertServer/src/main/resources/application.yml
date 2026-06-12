@@ -1,0 +1,200 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /fnsi-cloud-convert-server
+
+spring:
+  application:
+    name: fnsi-cloud-convert-server
+
+  # --- カスタム設定ファイルの読み込み ---
+  config:
+    import:
+      - classpath:config/pg_dump_config.yaml
+      - classpath:config/mongo_dump_config.yaml
+
+  # --- JPA (convert_db 管理用) ---
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        default_schema: public
+        boot:
+          allow_jdbc_metadata_access: false
+    open-in-view: false
+
+  # --- Primary DataSource (convert_db / 管理テーブル用) ---
+  datasource:
+    jdbc-url: jdbc:postgresql://localhost:5432/convert_db?currentSchema=public
+    driver-class-name: org.postgresql.Driver
+    username: nkk
+    password: nkk
+    hikari:
+      initialization-fail-timeout: -1
+      connection-timeout: 5000
+
+  # --- ファイルアップロードサイズ制限 ---
+  servlet:
+    multipart:
+      max-file-size: 512MB
+      max-request-size: 512MB
+
+  # --- Jackson ---
+  jackson:
+    default-property-inclusion: non_null
+
+  # --- 非同期 Task スレッドプール ---
+  task:
+    execution:
+      pool:
+        core-size: 8
+        max-size: 16
+        queue-capacity: 100
+      thread-name-prefix: migration-task-
+
+# ================================================================
+# 中転庫 (Transit)
+# ================================================================
+transit:
+  # --- MongoDB ---
+  data:
+    mongodb:
+      connection-string: mongodb://nkk:nkk@localhost:27017/ntss?authSource=ntss
+
+  # --- PostgreSQL ---
+  datasource:
+    db1:                                                  # ntss_db4
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db4?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk4
+      password: nkk4
+    db2:                                                  # ntss_db5
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk5
+      password: nkk5
+    db3:                                                  # ntss_db6
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db6?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk6
+      password: nkk6
+
+# ================================================================
+# 在線本番 (Online Production)
+# ================================================================
+online:
+  # --- MongoDB ---
+  data:
+    mongodb:
+      host:     docdb-2026-04-10-05-29-32-restore.cluster-cnr7cvlcb4ym.ap-northeast-1.docdb.amazonaws.com
+      port:     27017
+      database: ntss
+      username: nkk
+      password: nkk
+      driver-mode: auto                                  # auto | modern | docdb4
+
+  # --- PostgreSQL ---
+  datasource:
+    default:                                              # ntss_db5 — 業務メイン
+      jdbc-url: jdbc:postgresql://uat-fnsi-db-real-0324-cluster.cluster-cnr7cvlcb4ym.ap-northeast-1.rds.amazonaws.com:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk5
+      password: nkk5
+    personal:                                             # ntss_db6 — 個人データ
+      jdbc-url: jdbc:postgresql://uat-fnsi-db-real-0324-cluster.cluster-cnr7cvlcb4ym.ap-northeast-1.rds.amazonaws.com:5432/ntss_db6?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk6
+      password: nkk6
+    auth:                                                 # ntss_db4 — 認証・権限
+      jdbc-url: jdbc:postgresql://uat-fnsi-db-real-0324-cluster.cluster-cnr7cvlcb4ym.ap-northeast-1.rds.amazonaws.com:5432/ntss_db4?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk4
+      password: nkk4
+
+# --- JWT ---
+security:
+  cors:
+    allowed-origin-patterns:
+      - http://localhost:*
+      - https://localhost:*
+      - http://127.0.0.1:*
+      - https://127.0.0.1:*
+  jwt:
+    secret: fnsi-cloud-converter-secret-key-change-in-production-must-be-256bit
+    expiration-hours: 1
+    refresh-expiration-hours: 24
+    renew-threshold-minutes: 10
+
+# --- OpenAPI ---
+# デフォルトでは公開せず、診断・仕様出力時のみ起動引数で有効化する。
+# 例: --springdoc.api-docs.enabled=true
+springdoc:
+  api-docs:
+    enabled: false
+    path: /openapi
+
+# --- マイグレーション設定 ---
+migration:
+  task:
+    retry-interval-ms: 5000
+  storage:
+    base-path: /tmp/migration
+    efs-path:  /efs/ntss-s3-root-service
+  pg:
+    dump-path:    /usr/bin/pg_dump
+    restore-path: /usr/bin/pg_restore
+    psql-path:    /usr/bin/psql
+    parallel-jobs: 4
+  mongo:
+    dump-path:    /usr/bin/mongodump
+    restore-path: /usr/bin/mongorestore
+    docdb4:
+      dump-path:    /usr/local/bin/mongodump
+      restore-path: /usr/local/bin/mongorestore
+
+client-log:
+  upload:
+    storage:
+      path: /efs/system/{1}/オンプレクラウドコンバートアプリ/
+
+server-log:
+  storage:
+    path: /efs/system/{1}/オンプレクラウドコンバートサーバ/
+
+connectivity:
+  check:
+    timeout-ms: 2000
+    log-initial-delay-ms: 5000
+    log-interval-ms: 5000
+
+# --- Actuator ---
+management:
+  health:
+    db:
+      enabled: false
+    mongodb:
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-components: always
+      show-details: when-authorized
+      status:
+        order: down,out-of-service,up,degraded,unknown
+        http-mapping:
+          down: 503
+          out-of-service: 503
+          degraded: 200
+
+# --- Logging ---
+logging:
+  level:
+    com.fnsi.cloudconverter: INFO
+    org.springframework.security: WARN
+    org.mongodb.driver: ERROR
+    org.postgresql: WARN

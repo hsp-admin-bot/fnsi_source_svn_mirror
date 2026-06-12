@@ -3,7 +3,7 @@
     v-model="selectedValue"
     :class="classObject"
     :disabled="disabled"
-    v-on="$listeners"
+    v-bind="$attrs"
     @blur="delFocusCss($event)"
     @focus="addFocusCss($event)"
   >
@@ -19,7 +19,6 @@
 </template>
 
 <script>
-import _ from "underscore";
 // 共通タグ用ベースコンポーネント
 import baseCustomForm from "@/components/common/custom-form-tags/BaseCustomForm";
 
@@ -40,6 +39,7 @@ import baseCustomForm from "@/components/common/custom-form-tags/BaseCustomForm"
  *   ⇒ 項目1、または項目2を選択可能なプルダウンメニュー
  */
 export default {
+  inheritAttrs: false,
   mixins: [baseCustomForm],
 
   props: {
@@ -49,9 +49,9 @@ export default {
       validator: options => {
         return options.every(
           option =>
-            _.keys(option).length === 2 &&
-            _.has(option, "value") &&
-            _.has(option, "displayValue")
+            Object.keys(option).length === 2 &&
+            Object.prototype.hasOwnProperty.call(option, "value") &&
+            Object.prototype.hasOwnProperty.call(option, "displayValue")
         );
       }
     },

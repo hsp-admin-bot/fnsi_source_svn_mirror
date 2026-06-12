@@ -16,11 +16,11 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 
 import jp.co.nikkiso.ntss.core.dao.MstCompTreatmentDao;
 import jp.co.nikkiso.ntss.core.dao.MstComplaintDao;
@@ -45,19 +45,19 @@ public class ComplaintServiceImplTest {
   /**
    * 愁訴マスタDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstComplaintDao mstComplaintDao;
 
   /**
    * 処置マスタDaoのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstCompTreatmentDao mstCompTreatmentDao;
 
   /**
    * MstSelectorのMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstSelectorDao mstSelectorDao;
 
   /**
@@ -108,9 +108,9 @@ public class ComplaintServiceImplTest {
    * MstSelectorの初期化（データあり）.
    * @param tableName テーブル物理名
    * @return
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
-  private MstSelector createMstSelectorContainsSelector(String tableName) throws JsonProcessingException {
+  private MstSelector createMstSelectorContainsSelector(String tableName) throws JacksonException {
    List<Item> items = Arrays.asList(
        new Item() {{
          setCode(1L);
@@ -141,9 +141,9 @@ public class ComplaintServiceImplTest {
    * MstSelectorの初期化（データなし）.
    * @param tableName テーブル物理名
    * @return
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
-  private MstSelector createMstSelectorNotContainsSelector(String tableName) throws JsonProcessingException {
+  private MstSelector createMstSelectorNotContainsSelector(String tableName) throws JacksonException {
     List<Item> items = emptyList();
 
     OrderSettings orderSettings = new OrderSettings();
@@ -161,9 +161,9 @@ public class ComplaintServiceImplTest {
    * MstSelectorの初期化（更新テスト前用）.
    * @param tableName テーブル物理名
    * @return
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
-  private MstSelector createMstSelectorForUpdateBefore(String tableName) throws JsonProcessingException {
+  private MstSelector createMstSelectorForUpdateBefore(String tableName) throws JacksonException {
    List<Item> items = Arrays.asList(
        new Item() {{
          setCode(1L);
@@ -187,10 +187,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：愁訴マスタと並び順管理マスタに該当のデータがある
    * 結果：施設コードに該当する愁訴マスタが取得できること（mst_selector登録順+未登録データ）
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_getAllMstComplaints_正常_愁訴マスタと並び順管理マスタに該当のデータがある() throws JsonProcessingException {
+  public void test_getAllMstComplaints_正常_愁訴マスタと並び順管理マスタに該当のデータがある() throws JacksonException {
     // arrange
     List<MstComplaint> mstComplaints = createComplaintEntity();
 
@@ -241,10 +241,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：愁訴マスタに該当のデータがあり並び順管理マスタに該当のデータがない
    * 結果：施設コードに該当する愁訴マスタが取得できること（mst_selector未登録データ）
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void getAllMstComplaints_正常_愁訴マスタに該当のデータがあり並び順管理マスタに該当のデータがない() throws JsonProcessingException {
+  public void getAllMstComplaints_正常_愁訴マスタに該当のデータがあり並び順管理マスタに該当のデータがない() throws JacksonException {
     // arrange
     List<MstComplaint> mstComplaints = createComplaintEntity();
 
@@ -295,10 +295,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：愁訴マスタに該当のデータがなく並び順管理マスタにデータがある
    * 結果：空のリストが取得できること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void getAllMstComplaints_正常_愁訴マスタに該当のデータがなく並び順管理マスタにデータがある() throws JsonProcessingException {
+  public void getAllMstComplaints_正常_愁訴マスタに該当のデータがなく並び順管理マスタにデータがある() throws JacksonException {
     // arrange
     final String facilityCd = "1001";
     given(mstComplaintDao.selectAllByFacilityCd(facilityCd))
@@ -323,10 +323,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：愁訴マスタに該当のデータがない
    * 結果：空のリストが取得できること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_getAllMstComplaints_正常_愁訴マスタに該当のデータがない() throws JsonProcessingException {
+  public void test_getAllMstComplaints_正常_愁訴マスタに該当のデータがない() throws JacksonException {
     // arrange
     final String facilityCd = "9999";
     given(mstComplaintDao.selectAllByFacilityCd(facilityCd))
@@ -462,7 +462,7 @@ public class ComplaintServiceImplTest {
    * 結果：非表示のみのリストが処置コードの昇順で取得できること
    */
   @Test
-  public void test_getAllMstCompTreatments_選択肢マスタが空() throws JsonProcessingException {
+  public void test_getAllMstCompTreatments_選択肢マスタが空() throws JacksonException {
     // arrange
     final String facilityCd = "009999";
     final String tableName = "mst_comp_treatment";
@@ -513,7 +513,7 @@ public class ComplaintServiceImplTest {
    *      選択肢マスタに存在しても処置マスタになければ対象外となること
    */
   @Test
-  public void test_getAllMstCompTreatments_選択肢マスタがあり() throws JsonProcessingException {
+  public void test_getAllMstCompTreatments_選択肢マスタがあり() throws JacksonException {
     // arrange
     final String facilityCd = "009999";
     final String tableName = "mst_comp_treatment";
@@ -594,10 +594,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：選択肢マスタが存在している場合に更新できること
    * 結果：愁訴マスタと選択肢マスタの更新ができること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_updateMstComplaints_成功_選択肢マスタが存在している場合に更新できること() throws JsonProcessingException {
+  public void test_updateMstComplaints_成功_選択肢マスタが存在している場合に更新できること() throws JacksonException {
     // arrange
     final String facilityCd = "1001";
     final String tableName = "mst_complaint";
@@ -645,10 +645,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：選択肢マスタが存在していない場合に更新できること
    * 結果：愁訴マスタと選択肢マスタの更新ができること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_updateMstComplaints_成功_選択肢マスタが存在していない場合に更新できること() throws JsonProcessingException {
+  public void test_updateMstComplaints_成功_選択肢マスタが存在していない場合に更新できること() throws JacksonException {
     // arrange
     final String facilityCd = "1001";
     final String tableName = "mst_complaint";
@@ -696,10 +696,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：愁訴マスタに追加のみできること
    * 結果：愁訴マスタと選択肢マスタの更新ができること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_updateMstComplaints_成功_愁訴マスタに追加のみできること() throws JsonProcessingException {
+  public void test_updateMstComplaints_成功_愁訴マスタに追加のみできること() throws JacksonException {
     // arrange
     final String facilityCd = "1001";
     final String tableName = "mst_complaint";
@@ -738,10 +738,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：愁訴マスタに更新のみできること
    * 結果：愁訴マスタと選択肢マスタの更新ができること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_updateMstComplaints_成功_愁訴マスタに更新のみできること() throws JsonProcessingException {
+  public void test_updateMstComplaints_成功_愁訴マスタに更新のみできること() throws JacksonException {
     // arrange
     final String facilityCd = "1001";
     final String tableName = "mst_complaint";
@@ -782,10 +782,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：更新対象以外のデータは更新されないこと
    * 結果：愁訴マスタと選択肢マスタの更新ができること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_updateMstComplaints_成功_更新対象以外のデータは更新されないこと() throws JsonProcessingException {
+  public void test_updateMstComplaints_成功_更新対象以外のデータは更新されないこと() throws JacksonException {
     // arrange
     final String facilityCd = "1001";
     final String tableName = "mst_complaint";
@@ -827,10 +827,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：選択肢マスタが存在している場合に更新できること
    * 結果：処置マスタと選択肢マスタの更新ができること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_updateMstCompTreatments_成功_選択肢マスタが存在している場合に更新できること() throws JsonProcessingException {
+  public void test_updateMstCompTreatments_成功_選択肢マスタが存在している場合に更新できること() throws JacksonException {
     // arrange
     final String facilityCd = "1001";
     final String tableName = "mst_comp_treatment";
@@ -888,10 +888,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：選択肢マスタが存在していない場合に更新できること
    * 結果：処置マスタと選択肢マスタの更新ができること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_updateMstCompTreatments_成功_選択肢マスタが存在していない場合に更新できること() throws JsonProcessingException {
+  public void test_updateMstCompTreatments_成功_選択肢マスタが存在していない場合に更新できること() throws JacksonException {
     // arrange
     final String facilityCd = "1001";
     final String tableName = "mst_comp_treatment";
@@ -949,10 +949,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：処置マスタに追加のみできること
    * 結果：処置マスタと選択肢マスタの更新ができること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_updateMstCompTreatments_成功_処置マスタに追加のみできること() throws JsonProcessingException {
+  public void test_updateMstCompTreatments_成功_処置マスタに追加のみできること() throws JacksonException {
     // arrange
     final String facilityCd = "1001";
     final String tableName = "mst_comp_treatment";
@@ -996,10 +996,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：処置マスタに更新のみできること
    * 結果：処置マスタと選択肢マスタの更新ができること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_updateMstCompTreatments_成功_処置マスタに更新のみできること() throws JsonProcessingException {
+  public void test_updateMstCompTreatments_成功_処置マスタに更新のみできること() throws JacksonException {
     // arrange
     final String facilityCd = "1001";
     final String tableName = "mst_comp_treatment";
@@ -1045,10 +1045,10 @@ public class ComplaintServiceImplTest {
    *
    * 条件：更新対象以外のデータは更新されないこと
    * 結果：処置マスタと選択肢マスタの更新ができること
-   * @throws JsonProcessingException
+   * @throws JacksonException
    */
   @Test
-  public void test_updateMstCompTreatments_成功_更新対象以外のデータは更新されないこと() throws JsonProcessingException {
+  public void test_updateMstCompTreatments_成功_更新対象以外のデータは更新されないこと() throws JacksonException {
     // arrange
     final String facilityCd = "1001";
     final String tableName = "mst_comp_treatment";

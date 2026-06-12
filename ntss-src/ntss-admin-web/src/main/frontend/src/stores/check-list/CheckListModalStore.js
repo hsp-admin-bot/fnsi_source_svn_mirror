@@ -18,8 +18,8 @@ import {
 } from "@/apis/check-list";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 import { dateFormat } from "@/functions/common/DateTimeUtils";
-import moment from "moment";
-import BigNumber from "bignumber.js";
+import dayjs from "@/compat/date/dayjs";
+import BigNumber from "@/compat/number/bignumber";
 
 // 穿刺針種類(治療条件)
 const needleType_cond = {
@@ -197,7 +197,7 @@ export default {
       //   // 表示用発生日時を作成「一覧」
       //   let vTime = null;
       //   if (item.ord_checklist.occurDate != null) {
-      //     const occurDate = moment(item.ord_checklist.occurDate);
+      //     const occurDate = dayjs(item.ord_checklist.occurDate);
       //     vTime = occurDate.format("HH:mm");
       //   }
 
@@ -290,12 +290,12 @@ export default {
             let vDate = null;
             //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 End
             if (item.ord_checklist.occurDate != null) {
-              const occurDate = moment(item.ord_checklist.occurDate);
+              const occurDate = dayjs(item.ord_checklist.occurDate);
               vTime = occurDate.format("HH:mm");
               //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 Start
               const eDateTimeLocal = occurDate
-              ? moment(occurDate).format("YYYY-MM-DDTHH:mm")
-              : moment(new Date()).format("YYYY-MM-DDTHH:mm");
+              ? dayjs(occurDate).format("YYYY-MM-DDTHH:mm")
+              : dayjs(new Date()).format("YYYY-MM-DDTHH:mm");
               vDate = eDateTimeLocal.substring(0, 10);
              //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 End 
             }
@@ -406,12 +406,12 @@ export default {
            let vDate = null;
            //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 End
           if (item.ord_checklist.occurDate != null) {
-            const occurDate = moment(item.ord_checklist.occurDate);
+            const occurDate = dayjs(item.ord_checklist.occurDate);
             vTime = occurDate.format("HH:mm");
              //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 Start
              const eDateTimeLocal = occurDate
-              ? moment(occurDate).format("YYYY-MM-DDTHH:mm")
-              : moment(new Date()).format("YYYY-MM-DDTHH:mm");
+              ? dayjs(occurDate).format("YYYY-MM-DDTHH:mm")
+              : dayjs(new Date()).format("YYYY-MM-DDTHH:mm");
              vDate = eDateTimeLocal.substring(0, 10);
              //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 End
           }
@@ -1180,7 +1180,7 @@ export default {
     //           checklist[idx].time = array[index].ord_checklist.occurDate;
     //           let vTime = "";
     //           if (array[index].ord_checklist.occurDate != null) {
-    //             const occurDate = moment(array[index].ord_checklist.occurDate);
+    //             const occurDate = dayjs(array[index].ord_checklist.occurDate);
     //             vTime = occurDate.format("HH:mm");
     //           }
     //           checklist[idx].viewtime = vTime;
@@ -1298,7 +1298,7 @@ export default {
     //         // 発生日時
     //         let vTime = null;
     //         if (ordChkItem.ord_checklist.occurDate !== null) {
-    //           const occurDate = moment(ordChkItem.ord_checklist.occurDate);
+    //           const occurDate = dayjs(ordChkItem.ord_checklist.occurDate);
     //           vTime = occurDate.format("HH:mm");
     //         }
 
@@ -1382,7 +1382,7 @@ export default {
     //         // 発生日時
     //         let vTime = null;
     //         if (ordChkItem.ord_checklist.occurDate !== null) {
-    //           const occurDate = moment(ordChkItem.ord_checklist.occurDate);
+    //           const occurDate = dayjs(ordChkItem.ord_checklist.occurDate);
     //           vTime = occurDate.format("HH:mm");
     //         }
 
@@ -1472,9 +1472,9 @@ export default {
      */
     setCheckInfo({ state, commit }, item) {
       const checklist = state.selectChecklist;
-      let chgRecord = null;
+      let chgRecord;
       //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 Start
-      let setViewDate = null;
+      let setViewDate;
       //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 End
       for (let i = 0; i < checklist.length; i++) {
         if (checklist[i].rowno === item.rowno) {
@@ -1500,9 +1500,9 @@ export default {
             // 現在時刻
             let nowTime = new Date();
             chgRecord.time = nowTime;
-            chgRecord.viewtime = moment().format("HH:mm");
+            chgRecord.viewtime = dayjs().format("HH:mm");
             //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 Start
-            setViewDate = moment(new Date()).format("YYYY-MM-DDTHH:mm");
+            setViewDate = dayjs(new Date()).format("YYYY-MM-DDTHH:mm");
             setViewDate = setViewDate.substring(0, 10);
             chgRecord.viewDate = setViewDate;
             //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 End
@@ -1575,23 +1575,24 @@ export default {
       if (rowData.user_id !== undefined) {
         setUserId = rowData.user_id;
         // 実施者が空にされた場合
-        if (rowData.user_id == -1) {
+        // MedicineModal と同様：マスタ「未登録」は value が null のため、実施チェックを外して行をクリアする
+        if (rowData.user_id == -1 || rowData.user_id == null) {
           setCheck = false;
         } else if (setTime == null) {
           // 実施時刻が入力されていない場合
           // 現在時刻セット
-          setViewTime = moment().format("HH:mm");
+          setViewTime = dayjs().format("HH:mm");
           //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 Start
-          setViewDate = moment(new Date()).format("YYYY-MM-DDTHH:mm");
+          setViewDate = dayjs(new Date()).format("YYYY-MM-DDTHH:mm");
           setViewDate = setViewDate.substring(0, 10);
            //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 End
         }
       }
 
       const checklist = state.selectChecklist;
-      let chgRecord = null;
+      let chgRecord;
       //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 Start
-      let vDate = null;
+      let vDate;
       //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 End
       for (let i = 0; i < checklist.length; i++) {
         if (checklist[i].rowno === rowData.rowno) {
@@ -1625,6 +1626,7 @@ export default {
             chgRecord.check = false;
             chgRecord.time = null;
             chgRecord.viewtime = null;
+            chgRecord.viewDate = null;
             chgRecord.user_id = -1;
             chgRecord.user_update = null;
             chgRecord.user_name = null;
@@ -1633,9 +1635,9 @@ export default {
           // 変更チェック
           const oldChecklist = state.old_selectChecklist[chgRecord.rowno];
            //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 Start
-           const eDateTimeLocal = oldChecklist.occurDate
-           ? moment(occurDate).format("YYYY-MM-DDTHH:mm")
-           : moment(new Date()).format("YYYY-MM-DDTHH:mm");
+           const eDateTimeLocal = oldChecklist.occur_date
+           ? dayjs(oldChecklist.occur_date).format("YYYY-MM-DDTHH:mm")
+           : dayjs(new Date()).format("YYYY-MM-DDTHH:mm");
            vDate = eDateTimeLocal.substring(0, 10);
           //#9226：チェックリストで画面で実施者を変更すると実施時刻がクリアされる。 End 
           // 編集前データがある場合

@@ -3,7 +3,8 @@
  */
 <template>
   <submenu-base>
-    <div slot="main" id="monitor-component">
+    <template #main>
+      <div id="monitor-component">
       <div class="monitor-chart-area">
         <div class="chart-selection-area">
           <span v-for="item in chartScaleList" :key="item.cd" class="chart-scale">
@@ -19,9 +20,6 @@
             <label style="white-space: nowrap;" :for="'chart-scale-' + item.cd">{{ item.text }}</label>
           </span>
           <!-- add FNSI-共有設定の追加 周雨晴 2020/09/22 start -->
-          <!-- <v-ons-select v-model="selectedChartType" :disabled="!isShared" data-non-authorize="true" class="chart-type-selection">
-            <option v-for="item in graphDefine" :key="item.cd" :value="item.cd">{{ item.name }}</option>
-          </v-ons-select> -->
           <v-ons-select v-model="selectedChartType" data-non-authorize="true" class="chart-type-selection">
             <option v-for="item in graphDefine" :key="item.cd" :value="item.cd">{{ item.name }}</option>
           </v-ons-select>
@@ -39,7 +37,7 @@
             ref="chartComponent"
           /> -->
           <chart-component
-            v-model="monitorData"
+            :value="monitorData"
             :start-date="rstStartDate"
             :end-date="rstEndDate"
             :chart-scale="chartScale"
@@ -52,11 +50,11 @@
           <!-- mod 6004 バイタル、モニタ画面のグラフの緑線不正、グラフ生成不正 赵 end -->
         </div>
       </div>
-      <div class="grid-area" :style="heightStyles">
+      <div class="grid-area">
         <!-- mod FNSI修正 NKK3827 房 start -->
         <!-- mod 6827 入力欄の編集済み表現不正（治療記録＞バイタル） 房 start -->
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
-        <grid-component v-model="monitorData"  @modifiedValue="setModified" @updateMonitorData="updateMonitorData"
+        <grid-component :value="monitorData"  @modifiedValue="setModified" @updateMonitorData="updateMonitorData" @changeValue="changeValue"
           :monitor-disp-format="monitorDispFormat"
           :displayMonitorItem="dispMonitorItemList"
           :displayAllMonitorItem="dispMonitorItemAllList"
@@ -66,8 +64,10 @@
         <!-- mod 6827 入力欄の編集済み表現不正（治療記録＞バイタル） 房 end -->
         <!-- mod FNSI修正 NKK3827 房 end -->
       </div>
-    </div>
-    <div slot="footer" class="flex-container justify-content-flex-end">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container justify-content-flex-end">
       <div class="registration-btn-area" style="background:none">
         <!-- 画面スタイル(ボタン)対応 姜 start -->
         <!-- <v-ons-button class="button registration-btn" :disabled="!canSave" @click="onClickSave">保存</v-ons-button> -->
@@ -76,17 +76,19 @@
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
         <!-- 画面スタイル(ボタン)対応 姜 end -->
       </div>
-    </div>
+      </div>
+    </template>
   </submenu-base>
 </template>
 
 <script>
-/* eslint-disable no-console */
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc start
-import {mapActions, mapGetters, mapMutations} from "vuex";
+import {mapActions, mapGetters, mapMutations} from "@/compat/vue/vuex";
 // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end
 import SubmenuBase from "@/components/treatment-record/SubmenuBaseComponent";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
+import PrintMixin from "@/components/PrintMixin";
 // import ComponentGuardMixin from "@/components/common/ComponentGuardMixin";
 import ChartComponent from "@/components/treatment-record/submenu/monitor/MonitorGraphComponent";
 import GridComponent from "@/components/treatment-record/submenu/monitor/MonitorGridComponent";
@@ -99,7 +101,7 @@ import {
 import { MonitorGraphDefine } from "@/models/treatment-record/monitor/MonitorGraphDefine";
 import { CODES } from "@/constants/TreatmentRecord";
 // import { AUTHORITY_CODES } from "@/constants/userAuthority";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import {
   sendRequestGetMstTreatment
 } from "@/apis/treatment-record";
@@ -110,7 +112,6 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 //#10359 add 編集権限の動作不正 2024-06-05 卓 start
 import { getAuthorized } from "@/functions/common/CommonFunctions";
 //#10359 add 編集権限の動作不正 2024-06-05 卓 end
-import PrintMixin from "@/components/PrintMixin";
 // モニタグラフ設定のデフォルト値
 const GRAPH_DEFINE_DEFAULT = new MonitorGraphDefine(
   1,
@@ -164,7 +165,6 @@ export default {
       graphTimeScale:null,
       rstDialysisState:null,
       //add 6004 バイタル、モニタ画面のグラフの緑線不正、グラフ生成不正 赵 end
-      componentAreaHeight: "auto",
       isModified: false,
 //#10359 del 編集権限の動作不正 2024-06-05 卓 start
 //       authorityCds: [ AUTHORITY_CODES.RST_PEDIT, AUTHORITY_CODES.RST_EDIT ],
@@ -194,8 +194,8 @@ export default {
       noDeleteData: [],
       //add FNSI-改修内容 新規ボタン追加 房 end
       selfScreenName: "",
-      scrollQuerySelector: ".grid-area", // スクロールコンテナ
-      addClassTargetQuerySelector: ["table.monitor-grid"], // scroll-rightmostクラスを付与する対象のクエリセレクタ
+      scrollQuerySelector: ".grid-area",
+      addClassTargetQuerySelector: ["table.monitor-grid"]
     };
   },
   computed: {
@@ -209,12 +209,6 @@ export default {
     ...mapGetters("user", ["getFacilityCd"]),
     // add 共有設定の追加 周雨晴  2020/09/22  end
 
-    /**
-     * main部の高さをCSS変数を利用して書き換える
-     */
-    heightStyles() {
-      return { height: this.componentAreaHeight };
-    },
     /**
      * 保存できるかを返す
      */
@@ -292,20 +286,6 @@ export default {
       // mod #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end
     },
     /**
-     * 高さを調整する
-     */
-    adjustHeight() {
-      this.$nextTick(function() {
-        const submenuMainHeight = document.getElementsByClassName(
-          "submenu-main"
-        )[0].clientHeight;
-        const chartHeight = document.querySelector(".monitor-chart-area").clientHeight;
-        let gridHeight = submenuMainHeight - chartHeight - 10;
-        gridHeight = gridHeight < 107 ? "auto" : `${gridHeight}px`;
-        this.componentAreaHeight = gridHeight;
-      });
-    },
-    /**
      * `保存`ボタンクリック
      */
     onClickSave() {
@@ -330,7 +310,7 @@ export default {
         this.$emit("update");
       });
       // add 6827 入力欄の編集済み表現不正（治療記録＞バイタル） 房 start
-      let elements = document.getElementsByClassName("custom-input-edited");
+      let elements = getScopedElementsByClassName("custom-input-edited", this.$el || null);
       for (let i = elements.length-1; i >= 0; i--) {
         elements[i].classList.remove("custom-input-edited");
       }
@@ -377,7 +357,9 @@ export default {
       // 保存ボタンを非活性にする
       this.isModified = false;
 
-      this.getMonitorGraphDefine().then(response => {
+      this.getMonitorGraphDefine({
+        selectedPatId: this.selectedPatId()
+      }).then(response => {
         // モニタグラフ設定をModel化
         const monitorGraphDefine = response.data;
         if (monitorGraphDefine.length > 0) {
@@ -434,28 +416,32 @@ export default {
         // モニタデータ種別
         moniDataType: CODES.MONI_DATA_TYPE.MACHINE.cd,
         // バイタルモニタ区分
-        vitalMonitorClass: CODES.VITAL_MONITOR_CLASS.MONITOR.cd
+        vitalMonitorClass: CODES.VITAL_MONITOR_CLASS.MONITOR.cd,
+        selectedPatId: this.selectedPatId()
       };
       // 特殊浄化装置用モニタ項目取得用パラメータ
       const sysMonitorItemSerachCondition2 = {
         // モニタデータ種別
         moniDataType: CODES.MONI_DATA_TYPE.PURIFICATION.cd,
         // バイタルモニタ区分
-        vitalMonitorClass: CODES.VITAL_MONITOR_CLASS.MONITOR.cd
+        vitalMonitorClass: CODES.VITAL_MONITOR_CLASS.MONITOR.cd,
+        selectedPatId: this.selectedPatId()
       };
 
       Promise.all([
-        this.getTreatmentRecordMonitor(this.getOrdNo),
-        this.getTreatmentRecordResult(this.getOrdNo),
+        this.getTreatmentRecordMonitor({
+          ordNo: this.getOrdNo,
+          selectedPatId: this.selectedPatId()
+        }),
+        this.getTreatmentRecordResult({
+          ordNo: this.getOrdNo,
+          selectedPatId: this.selectedPatId()
+        }),
         this.getSysMonitorItem(sysMonitorItemSerachCondition),
-	// mod #12462 患者情報共有 Ji start
-        sendRequestGetMstTreatment(this.getSharedFacilityCd),
-	// mod #12462 患者情報共有 Ji end
+        sendRequestGetMstTreatment(this.getSharedFacilityCd, this.selectedPatId()),
         //mod 9858 治療記録＞モニタが治療記録モニタグラフマスタで指定した上下限値でグラフレンジが生成されない zy start
         // this.getMstAddMonitor(CODES.VITAL_MONITOR_CLASS.MONITOR.cd),
-	// mod #12462 患者情報共有 Ji start
         this.getMstAddMonitorAll(this.getSharedFacilityCd),
-	// mod #12462 患者情報共有 Ji end
         //mod 9858 治療記録＞モニタが治療記録モニタグラフマスタで指定した上下限値でグラフレンジが生成されない zy end
         this.getSysMonitorItem(sysMonitorItemSerachCondition2),
       ]).then(response => {
@@ -586,7 +572,7 @@ export default {
       }
 
       // 治療方法コード判定
-      if ( rstDeviceMode === CODES.DEVICE_MODE.PURIFICATION.cd ) {
+      if ( rstDeviceMode === CODES.DEVICE_MODE.PURIFICATION.cd) {
         // 特殊浄化
 
         dispSysMonitorItemList = this.sysMonitorItemList2;
@@ -646,7 +632,7 @@ export default {
      * 再描画処理
      */
     refresh() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       // 子機能ボタンエリアの更新
@@ -665,7 +651,7 @@ export default {
     },
     //add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 start
     eventBusRefresh() {
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       if (this.isChanged && this.alertFlag) {
@@ -691,23 +677,26 @@ export default {
 //#10359 add 編集権限の動作不正 2024-06-05 卓 end
     updateMonitorData(newData) {
       this.monitorData = newData;
-    }
+    },
+    changeValue(newData){
+      this.monitorData = newData;
+    },
   },
   watch: {
     windowHeight() {
-      this.adjustHeight();
+      this.graphResize();
     },
     windowWidth() {
-      this.adjustHeight();
+      this.graphResize();
     },
     getFontSize() {
-      this.adjustHeight();
+      this.graphResize();
     }
   },
   created() {
     this.init();
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // イベント登録
     //mod #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。 張玲 start
     // EventBus.$on("refresh", this.refresh);
@@ -716,15 +705,10 @@ export default {
   },
   mounted() {
     this.$nextTick(() => {
-      this.adjustHeight();
+      this.graphResize();
     });
   },
-  updated() {
-    this.$nextTick(() => {
-      this.adjustHeight();
-    });
-  },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
     // del refresh方法処理不正について、対応する。 dengshen start
@@ -741,7 +725,15 @@ export default {
 </script>
 
 <style scoped>
+#monitor-component {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .monitor-chart-area {
+  flex: 0 0 auto;
   margin: 0 0 5px;
   display: flex;
   align-content: flex-start;
@@ -756,6 +748,8 @@ export default {
   color: var(--ntss-list-body-color);
 }
 .grid-area {
+  flex: 1 1 0;
+  min-height: 0;
   margin: 5px 0 0;
   overflow: auto;
 }
@@ -771,34 +765,34 @@ export default {
 .chart-selection-area ons-select {
   margin-left: 16px;
 }
-.chart-type-selection >>> .select-input {
+.chart-type-selection :deep(.select-input) {
   color: var(--treatment-record-input-color);
 }
 @media print {
   /** グラフ */
-  .monitor-chart-area >>> .monitorGraphView {
+  .monitor-chart-area :deep(.monitorGraphView) {
     width: 100% !important;
   }
-  .monitor-chart-area >>> .highcharts-container {
+  .monitor-chart-area :deep(.highcharts-container) {
     width: auto !important;
     height: auto !important;
   }
-  .monitor-chart-area >>> .highcharts-root {
+  .monitor-chart-area :deep(.highcharts-root) {
     width: 100%;
     height: 100%;
   }
-  
+
   /** grid */
   .grid-area {
     overflow: hidden !important;
     width: auto !important;
     height: auto !important;
   }
-  .grid-area >>> .scroll-table {
+  .grid-area :deep(.scroll-table) {
     width: 100% !important;
   }
   /* 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
-  .grid-area >>> table.scroll-rightmost {
+  .grid-area :deep(table.scroll-rightmost) {
     position: relative !important;
     float: right !important;
   }

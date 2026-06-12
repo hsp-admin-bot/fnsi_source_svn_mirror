@@ -131,18 +131,18 @@
       </div>
 
       <message-dialog
-        :visible.sync="isDialogVisble"
+        v-model:visible="isDialogVisble"
         v-bind="dialogProps"
         type="1"
       />
       <message-dialog
-        :visible.sync="isCancelDialogVisble"
+        v-model:visible="isCancelDialogVisble"
         v-bind="dialogProps"
         type="2"
         @confirm="cancelEdit"
       />
       <message-dialog
-        :visible.sync="isUpdateAllPatDialogVisble"
+        v-model:visible="isUpdateAllPatDialogVisble"
         v-bind="dialogProps"
         type="5"
         @confirm="setUpdateAllPatFlg"
@@ -157,9 +157,8 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 import { DEVICE_TYPE_CPRO } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
 import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoEditor.vue";
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
-import { mapGetters } from "vuex";
 
 /**
  * @description 濃度プロ自動設定警報設定値編集画面
@@ -183,14 +182,11 @@ export default {
     },
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return getAuthorized(pageCd, itemCd);
+      return !this.getIsOtherFacility && getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
   },
   // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
-  computed: {
-    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd"]),
-  }
 };
 </script>
 
@@ -198,5 +194,8 @@ export default {
 <style scoped>
 .device-info-content {
   max-height: 170px;
+}
+.device-info-cell-value :deep(.custom-common-number-input-pro) {
+  width: 6em;
 }
 </style>

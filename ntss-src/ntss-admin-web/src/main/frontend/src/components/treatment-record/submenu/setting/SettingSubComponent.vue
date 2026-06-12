@@ -118,6 +118,7 @@ export default {
   border-top: none;
   border-left: none;
   font-weight: unset;
+  text-align: left;
 }
 .title-table-body-td {
   position: sticky;

@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-ons-row
-      v-for="(file, index) in value"
+      v-for="(file, index) in fileInfo"
       :key="index"
       class="attachment-file"
     >
@@ -19,14 +19,17 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import { sendRequestGetDownload } from "@/apis/pat-info-sharing";
 
 export default {
   props: {
+    modelValue: {
+      type: Array,
+      default: undefined,
+    },
     value: {
       type: Array,
-      required: true,
       default() {
         return [];
       },
@@ -42,6 +45,9 @@ export default {
 
   computed: {
     ...mapGetters("pat-info-sharing", ["getSelectedShrInfo"]),
+    fileInfo() {
+      return this.modelValue !== undefined ? this.modelValue : this.value;
+    },
   },
 
   methods: {
@@ -78,7 +84,8 @@ export default {
       this.$emit("clear-error");
       const filepath = file.path;
       const filename = file.name;
-      const fileInfo = this.value.filter((i) => i !== file);
+      const fileInfo = this.fileInfo.filter((i) => i !== file);
+      this.$emit("update:modelValue", fileInfo);
       this.$emit("input", fileInfo);
       const deletefile = JSON.stringify({ name: filename, path: filepath });
       const pathList = this.getSelectedShrInfo.fileInfo.map((i) => i.path);
@@ -119,7 +126,7 @@ export default {
       return decimalNumber;
     },
   },
-  beforeDestroy() {
+  beforeUnmount() {
     Object.assign(this.$data, this.$options.data());
   },
 };

@@ -46,23 +46,32 @@
 import StatusMapMarker from "@/components/status-map/StatusMapMarkerComponent";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import PatHeaderControlMixin from "@/components/common/PatHeadControlMixin";
+import inImg from "../../../assets/in.png";
+import outImg from "../../../assets/out.png";
+import infectionOnImg from "../../../assets/infection_on.png";
+import infectionOffImg from "../../../assets/infection_off.png";
+import moOnImg from "../../../assets/mo_on.png";
+import moOffImg from "../../../assets/mo_off.png";
+import vOnImg from "../../../assets/v_on.png";
+import vOffImg from "../../../assets/v_off.png";
+
 import {
   PROCESS_STATE,
   MARKER_COLOR
 } from "@/constants/statusMapConstants.js";
-// import { mapActions } from "vuex";
+// import { mapActions } from "@/compat/vue/vuex";
 
 export default {
   data() {
     return {
-      image_src_in: require("../../../assets/in.png"),
-      image_src_out: require("../../../assets/out.png"),
-      image_src_taboo_on: require("../../../assets/infection_on.png"),
-      image_src_taboo_off: require("../../../assets/infection_off.png"),
-      image_src_mo_on: require("../../../assets/mo_on.png"),
-      image_src_mo_off: require("../../../assets/mo_off.png"),
-      image_src_v_on: require("../../../assets/v_on.png"),
-      image_src_v_off: require("../../../assets/v_off.png")
+      image_src_in: inImg,
+      image_src_out: outImg,
+      image_src_taboo_on: infectionOnImg,
+      image_src_taboo_off: infectionOffImg,
+      image_src_mo_on: moOnImg,
+      image_src_mo_off: moOffImg,
+      image_src_v_on: vOnImg,
+      image_src_v_off: vOffImg
     };
   },
   components: {
@@ -252,15 +261,11 @@ export default {
       });
     }
   },
-  watch: {},
-  beforeCreate() {},
-  created() {},
-  beforeMount() {},
-  mounted() {},
-  beforeUpdate() {},
-  updated() {},
-  beforeDestroy() { },
-  destroyed() { }
+
+
+
+
+
 };
 </script>
 <style scoped>

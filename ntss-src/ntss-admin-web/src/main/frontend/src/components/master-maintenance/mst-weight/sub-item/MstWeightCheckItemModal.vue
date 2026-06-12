@@ -3,10 +3,13 @@
  */
  <template>
   <modal-base @onClose="closeCheckSetModal">
-    <div slot="header">
+        <template #header>
+<div>
       <component :is="header"></component>
     </div>
-    <div slot="body">
+    </template>
+        <template #body>
+<div>
       <div class="main-check-area">
         <div class="left-content" @drop.prevent="onDrop" @mouseup="onDrop">
           <div class="nowrap-block">
@@ -62,7 +65,7 @@
           <div class="wrap-block">
             <label class="config-label">表示条件</label>
             <div>
-              <v-ons-select type="number" v-model.number="use_condition">
+              <v-ons-select v-model.number="use_condition">
                 <option
                   v-for="item in displayConditionItems"
                   :value="item.value"
@@ -83,12 +86,10 @@
                 ></v-ons-input>
                 <!-- mod FNSI-条件比較式名称の変更 徐 start -->
                 <!-- <v-ons-select
-                  type="number"
                   v-model.number="checkMaster.comparator"
                   v-bind:disabled="isDisabledInputState"
                 > -->
                 <v-ons-select
-                  type="number"
                   v-model.number="checkMaster.condition_ineq"
                   v-bind:disabled="isDisabledInputState"
                 >
@@ -201,7 +202,7 @@
           <div class="wrap-block">
             <label class="config-label">条件送信制限</label>
             <ons-col>
-              <v-ons-select type="number" v-model.number="checkMaster.sendable">
+              <v-ons-select v-model.number="checkMaster.sendable">
                 <option
                   v-for="item in conditionTransmissionLimitItems"
                   :value="item.value"
@@ -275,12 +276,14 @@
           >
             <kendo-grid-column :field="'value_name'" :title="'ID'" :width="140" :encoded="false"></kendo-grid-column>
             <kendo-grid-column :field="'code'" :title="'引数'" :width="100"></kendo-grid-column>
-            <kendo-grid-column :field="'sample_value'" :title="'サンプル値'"></kendo-grid-column>
+            <kendo-grid-column :field="'sample_value'" :title="'サンプル値'" :width="122"></kendo-grid-column>
           </kendo-grid>
         </div>
       </div>
     </div>
-    <div slot="footer" class="flex-container">
+    </template>
+        <template #footer>
+<div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <v-ons-button class="btn2-cancel button denial-btn" @click="closeCheckSetModal">キャンセル</v-ons-button>
       </div>
@@ -288,17 +291,19 @@
         <v-ons-button class="common-style-select-button button registration-btn" :disabled="!hasChangeFlag" @click="saveCheckSetModal">確定</v-ons-button>
       </div>
     </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
+import { getKendoGridSelectedElement } from "@/functions/common/KendoFunctions";
 import ModalBase from "@/components/modals/ModalBase";
-import { mapActions, mapGetters } from "vuex";
-import $$ from "jquery";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+
 import BigEval from "@/functions/BigEvalEx";
 import { operateLegendData, checkContent } from "@/constants/weightDefine";
-import BigNumber from "bignumber.js";
-import { EventBus } from "@/eventBus.js";
+import BigNumber from "@/compat/number/bignumber";
+import { EventBus } from "@/compat/vue/event-bus.js";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
@@ -306,9 +311,11 @@ import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
-import cloneDeep from "lodash/cloneDeep";
-import isEqualWith from "lodash/isEqualWith";
+import cloneDeep from "@/compat/collections/lodash/cloneDeep";
+import isEqualWith from "@/compat/collections/lodash/isEqualWith";
 import { customComparator } from "@/utils/util.js";
+import { getScopedElementsByClassName, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+import { findKendoGridHeader, findKendoGridRoot } from "@/compat/kendo/dom";
 
 export default {
   name: "mstWeightCheckItemModal",
@@ -364,7 +371,7 @@ export default {
   },
   created() {
     // 端末判別
-    if (navigator.userAgent.match(/Android/)) {
+    if (((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").match(/Android/)) {
       this.androidFlg = true;
     }
     this.checkMaster = this.getCurrentRowData;
@@ -392,10 +399,10 @@ export default {
     isDisabledInputState() {
       // 常に表示の場合は操作不可
       if (this.checkMaster) {
-        let dom = document.getElementsByClassName("condition");
-        if(this.checkMaster.use_condition == 0 && dom.length > 1){
-          dom[1].classList.remove("custom-input-invalid");
-          dom[2].classList.remove("custom-input-invalid");
+        let dom = this.getCheckItemElementsByClassName("condition");
+        if (this.checkMaster.use_condition == 0 && dom.length >= 2) {
+          dom[0]?.classList?.remove("custom-input-invalid");
+          dom[1]?.classList?.remove("custom-input-invalid");
         }
         return !(this.checkMaster.use_condition > 0);
       }
@@ -478,17 +485,21 @@ export default {
   // redmine 4739 体重計マスタ＞測定チェック＞詳細モーダルのレイアウト不正 宋qy start
   watch: {
     getFontSize() {
-      let colHeader = document.getElementsByClassName("k-grid-header-wrap k-auto-scrollable")[3].children[0].children[0]
-      let colContent = document.getElementsByClassName("k-selectable")[3].children[0]
-      if (parseInt(this.getFontSize) == 3) {
-        colHeader.children[0].style.width = "201px"
-        colHeader.children[1].style.width = "74px"
-        colHeader.children[2].style.width = "151px"
-
-        colContent.children[0].style.width = "201px"
-        colContent.children[1].style.width = "74px"
-        colContent.children[2].style.width = "151px"
-      }
+      this.$nextTick(() => {
+        const headerRow = this.getGridHeaderRow();
+        const contentRow = this.getGridBodyRow();
+        if (parseInt(this.getFontSize) == 3 && headerRow && contentRow) {
+          const widths = ["201px", "74px", "151px"];
+          widths.forEach((width, index) => {
+            if (headerRow.children[index]) {
+              headerRow.children[index].style.width = width;
+            }
+            if (contentRow.children[index]) {
+              contentRow.children[index].style.width = width;
+            }
+          });
+        }
+      });
     },
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_体重計マスタ 20240111 mrx start
     checkMaster: {
@@ -501,6 +512,37 @@ export default {
   },
   // redmine 4739 体重計マスタ＞測定チェック＞詳細モーダルのレイアウト不正 宋qy end
   methods: {
+    getCheckItemElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || this);
+    },
+    getCheckItemElementsByName(name) {
+      return queryScopedSelectorAll(`[name="${name}"]`, this.$el || this);
+    },
+    getGridRef() {
+      return this.$refs.grid || null;
+    },
+    getGridRootEl() {
+      return this.getGridRef()?.gridRootEl?.() || findKendoGridRoot(this.$el) || null;
+    },
+    getGridHeaderEl() {
+      return this.getGridRef()?.gridHeaderEl?.() || findKendoGridHeader(this.getGridRootEl()) || null;
+    },
+    getGridWidget() {
+      return this.getGridRef()?.gridWidget?.() || this.getGridRef()?.kendoWidget?.() || null;
+    },
+    getGridColumns() {
+      return this.getGridRef()?.gridColumns?.() || this.getGridWidget()?.columns || [];
+    },
+    getGridHeaderRow() {
+      return this.getGridRef()?.gridTheadEl?.()?.rows?.[0]
+        || this.getGridWidget()?.thead?.[0]?.rows?.[0]
+        || null;
+    },
+    getGridBodyRow() {
+      return this.getGridRef()?.gridTbodyEl?.()?.rows?.[0]
+        || this.getGridWidget()?.tbody?.[0]?.rows?.[0]
+        || null;
+    },
     ...mapActions("multi-modal", ["hideModal"]),
     ...mapActions("mst-weight/check", ["applyEditingRow"]),
     ...mapActions("mst-weight", {
@@ -519,7 +561,7 @@ export default {
     },
     // 右辺の入力制限
     matchLeft(oldVal, event) {
-      document.getElementsByClassName("condition")[1].classList.remove("custom-input-invalid");
+      this.getCheckItemElementsByClassName("condition")[0]?.classList?.remove("custom-input-invalid");
       const re = new RegExp(event.target.pattern);
       const result = re.exec(event.target.value);
       event.target.value = result ? result.input : oldVal;
@@ -527,7 +569,7 @@ export default {
     },
     // 右辺の入力制限
     matchRight(oldVal, event) {
-      document.getElementsByClassName("condition")[2].classList.remove("custom-input-invalid");
+      this.getCheckItemElementsByClassName("condition")[1]?.classList?.remove("custom-input-invalid");
       const re = new RegExp(event.target.pattern);
       const result = re.exec(event.target.value);
       event.target.value = result ? result.input : oldVal;
@@ -535,7 +577,7 @@ export default {
     },
     // 計算式の入力制限
     matchCalculate(oldVal, event) {
-      document.getElementsByName("calculate")[0].classList.remove("custom-input-invalid");
+      this.getCheckItemElementsByName("calculate")[0]?.classList?.remove("custom-input-invalid");
       const re = new RegExp(event.target.pattern);
       const result = re.exec(event.target.value);
       event.target.value = result ? result.input : oldVal;
@@ -610,12 +652,23 @@ export default {
           typeof calcAnswer === "object" &&
           this.checkMaster.decimal_point >= 0
         ) {
-          // 計算が成功している場合はBigNumberオブジェクトが返るが、失敗時は文字列
+          // 計算が成功している場合はBigNumber/bigEval オブジェクトが返るが、失敗時は文字列
+          // bignumber.js v9+: new BN(number, base) は base 指定時は第1引数が文字列必須のため除外
           const BN = BigNumber.clone({
             ROUNDING_MODE: BigNumber.ROUND_HALF_UP,
             DECIMAL_PLACES: this.checkMaster.decimal_point
           });
-          const ans = new BN(calcAnswer.toNumber(), 10);
+          let sourceStr;
+          if (BigNumber.isBigNumber(calcAnswer)) {
+            sourceStr = calcAnswer.toFixed();
+          } else if (typeof calcAnswer.toFixed === "function") {
+            sourceStr = calcAnswer.toFixed();
+          } else if (typeof calcAnswer.toNumber === "function") {
+            sourceStr = String(calcAnswer.toNumber());
+          } else {
+            sourceStr = String(calcAnswer);
+          }
+          const ans = new BN(sourceStr);
           return ans.toFixed(this.checkMaster.decimal_point);
         } else {
           return calcAnswer;
@@ -641,18 +694,36 @@ export default {
         return "";
       }
     },
-    // Grid表示カラム幅変更
+    // Grid表示カラム幅変更（Vue3/KendoGrid: databound 直後は widget が未設定のときがあるため nextTick で再試行）
     columnFit() {
-      let grid = this.$refs.grid.kendoWidget();
-      for (let i = 0; i < grid.columns.length; i++) {
-        grid.autoFitColumn(i);
+      const gridRef = this.getGridRef();
+      if (!gridRef) {
+        return;
+      }
+      const apply = () => {
+        const columns =
+          typeof gridRef.gridColumns === "function"
+            ? gridRef.gridColumns()
+            : [];
+        if (!Array.isArray(columns) || columns.length === 0) {
+          return false;
+        }
+        columns.forEach(column => {
+          if (typeof gridRef.autoFitGridColumn === "function") {
+            gridRef.autoFitGridColumn(column);
+          }
+        });
+        return true;
+      };
+      if (!apply()) {
+        this.$nextTick(() => apply());
       }
     },
     // グリッドの項目選択イベント
     onChange(event) {
       if (event.sender) {
-        const selected = $$.map(event.sender.select(), item => item);
-        const inputItem = selected[0].childNodes[1].innerText;
+        const selectedElement = getKendoGridSelectedElement(event.sender);
+        const inputItem = selectedElement?.childNodes?.[1]?.innerText || "";
         // 入力項目のデータタイプ [0:number 1:date 2:text]
         const inputItemType = this.getType(inputItem);
 
@@ -758,10 +829,7 @@ export default {
     },
     editBackgroundColor() {
       this.$nextTick(() => {
-        let gridHeader = this.$refs.grid.$el.firstChild;
-        if (gridHeader.classList === undefined) {
-          gridHeader = this.$refs.grid.$el.firstElementChild;
-        }
+        const gridHeader = this.getGridHeaderEl();
         gridHeader?.classList?.add("master-grid-header");
       });
     },
@@ -771,19 +839,20 @@ export default {
       let isValidConditionLeft = true;
       let isValidConditionRight = true;
       if (!this.isDisabledInputState) {
-        if (
-          this.checkMaster.condition_right.trim().length === 0 ||
-          this.checkMaster.condition_left.trim().length === 0
-        ) {
+        const right = this.checkMaster.condition_right?.trim() || '';
+        const left = this.checkMaster.condition_left?.trim() || '';
+
+        if (right.length === 0 || left.length === 0) {
           isValidCondition = false;
         }
-        if (this.checkMaster.condition_right.trim().length === 0) {
+
+        if (right.length === 0) {
           isValidConditionRight = false;
         }
-        if(this.checkMaster.condition_left.trim().length === 0){
+
+        if (left.length === 0) {
           isValidConditionLeft = false;
         }
-
       }
       const checkName = this.checkMaster.name;
       let isValidCalc = true;
@@ -835,16 +904,16 @@ export default {
           }
         `;
       if(!validationResult.nameValid){
-        document.getElementsByClassName("custom-input-required")[1]?.classList?.add("custom-input-invalid");
+        this.getCheckItemElementsByClassName("custom-input-required")[1]?.classList?.add("custom-input-invalid");
       }
       if(!validationResult.conditionValidLeft){
-        document.getElementsByClassName("condition")[1]?.classList?.add("custom-input-invalid");
+        this.getCheckItemElementsByClassName("condition")[0]?.classList?.add("custom-input-invalid");
       }
       if(!validationResult.conditionValidRight){
-        document.getElementsByClassName("condition")[2]?.classList?.add("custom-input-invalid");
+        this.getCheckItemElementsByClassName("condition")[1]?.classList?.add("custom-input-invalid");
       }
       if(!validationResult.calcValid){
-        document.getElementsByName("calculate")[0]?.classList?.add("custom-input-invalid");
+        this.getCheckItemElementsByName("calculate")[0]?.classList?.add("custom-input-invalid");
       }
       // ダイアログ表示
       this.$ons.notification.alert({
@@ -999,6 +1068,17 @@ export default {
 /* add redmine 4739 体重計マスタ＞測定チェック＞詳細モーダルのレイアウト不正 宋qy start */
 .config-radio-label {
   width: 8.5em;
+}
+:deep(#edit_check_grid .k-grid-header table),
+:deep(#edit_check_grid .k-grid-content table) {
+  width: auto !important;
+}
+:deep(.k-grid-header){
+  background: linear-gradient(
+  to bottom,
+  #989898 0%,
+  #2f2f2f 50%
+);
 }
 /* add redmine 4739 体重計マスタ＞測定チェック＞詳細モーダルのレイアウト不正 宋qy end */
 </style>

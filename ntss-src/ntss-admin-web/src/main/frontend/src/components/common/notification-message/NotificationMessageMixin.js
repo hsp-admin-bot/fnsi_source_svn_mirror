@@ -1,13 +1,15 @@
 /**
  * 通知メッセージ用共通コンポーネント
  */
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
-import moment from "moment";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import dayjs from "@/compat/date/dayjs";
 import commonFunctions from "@/components/status-list/StatusCommonFunction";
 import { INDICATION } from "@/constants/defaultSettingConstants";
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat'
+
+import { calcTargetDate } from "@/functions/modals/default-setting/defaultSettingUtils";
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages'
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
 
@@ -218,7 +220,7 @@ export default {
           return this.transitionWithPatId(parameters);
         // add 9583 by kangjie 20240403 start
         case "031":
-          return this.transitionExternalCoop(parameters);
+          return await this.transitionExternalCoop(parameters);
         // add 9583 by kangjie 20240403 end
         case "005":
         case "008":
@@ -232,11 +234,10 @@ export default {
           // パラメータ無し
           return await this.transitionNoParam(parameters);
       }
-      return false;
     },
 
     // add 9583 by kangjie 20240329 start 通知一覧の連携エラー通知の遷移不正
-    transitionExternalCoop(parameters) {
+    async transitionExternalCoop(parameters) {
       let jumpChangeCoopState =
         {
           "ctlNo":parameters.CTLNO,
@@ -247,7 +248,7 @@ export default {
       this.clearJumpCoopCondition();
       this.setJumpCoopCondition(jumpChangeCoopState);
       let transitionList = ["external-coop"];
-      this.setRouter(transitionList);
+      await this.setRouter(transitionList);
       return true;
     },
     // add 9583 by kangjie 20240329 end 通知一覧の連携エラー通知の遷移不正
@@ -332,7 +333,7 @@ export default {
         transitionList.push("operation-viewer-general-machines");
       }
 
-      let availableRequiredFlg = false; // 必須パラメータあり
+      let availableRequiredFlg; // 必須パラメータあり
       let requiredKeys = []; // 必須パラメータの一覧
 
       // 子画面ごとの処理分岐
@@ -447,7 +448,7 @@ export default {
       this.setQueryParameters(requiredParams);
 
       // 遷移処理
-      this.setRouter(transitionList);
+      await this.setRouter(transitionList);
 
       return true;
     },
@@ -462,8 +463,8 @@ export default {
       let transitionList = [];
       transitionList.push("device-edge-operation");
 
-      let availableRequiredFlg = false; // 必須パラメータあり
-      let requiredKeys = [];
+      let availableRequiredFlg; // 必須パラメータあり
+      let requiredKeys;
 
       if (parameters.routerName === "device-edge-manage") {
         // 子画面(デバイスエッジ遠隔保守)の場合
@@ -484,7 +485,7 @@ export default {
       }
 
       // 遷移処理
-      this.setRouter(transitionList);
+      await this.setRouter(transitionList);
 
       return true;
     },
@@ -633,7 +634,7 @@ export default {
         }
 
         // 遷移処理
-        this.setRouter(transitionList);
+        await this.setRouter(transitionList);
 
         this.setLoadingScreenVisible(false);
         return true;
@@ -678,21 +679,16 @@ export default {
               machineTypeCd: machine.machineTypeCd,
               model: machine.model
             };
-            this.setMachineInfo(machineInfo).then(() => {
-              // 画面幅に応じてサイドバーを閉じる
-              EventBus.$emit("sidebarCloseByWidth");
-              // 一旦、自画面へ
-              this.$router.push({ name: "status-list" });
+            await this.setMachineInfo(machineInfo);
+            // 画面幅に応じてサイドバーを閉じる
+            EventBus.$emit("sidebarCloseByWidth");
+            // 一旦、自画面へ
+            await this.$router.push({ name: "status-list" });
 
-              // その後、指定画面へ
-              if (parameters.routerName !== "") {
-                this.$nextTick(() => {
-                  this.$router.push({ name: parameters.routerName });
-                });
-                this.setLoadingScreenVisible(false);
-                return true;
-              }
-            });
+            // その後、指定画面へ
+            if (parameters.routerName !== "") {
+              await this.$router.push({ name: parameters.routerName });
+            }
           } else this.$router.push({ name: "status-list" }); // 透析装置または不明な装置
         } else this.$router.push({ name: "status-list" }); // 必須パラメータなし
       } else {
@@ -716,7 +712,7 @@ export default {
         let transitionUniqueList = [...new Set(transitionList)];
         // 遷移処理
         // this.setRouter(transitionList);
-        this.setRouter(transitionUniqueList);
+        await this.setRouter(transitionUniqueList);
         // mod #10371 使用許可機能権限OFF時に動作不正 20240528 ztc end
       }
 
@@ -743,7 +739,7 @@ export default {
       this.setQueryParameters(useParameters);
 
       // 遷移処理
-      this.setRouter(transitionList);
+      await this.setRouter(transitionList);
 
       this.setLoadingScreenVisible(false);
       return true;
@@ -761,14 +757,14 @@ export default {
       this.setQueryParameters(useParameters);
 
       // 遷移
-      this.$router.push({
+      await this.$router.push({
         name: "weight-mode",
         params: { footer: null }
       });
       if (funcCdTail === "04") {
         this.setMasterName("mst_wheel_chair");
         this.setLogicalMasterName("mst_wheel_chair");
-        this.$router.push({
+        await this.$router.push({
           name: parameters.routerName,
           params: { footer: null }
         });
@@ -800,7 +796,7 @@ export default {
           await this.findObserveRecordByCd([{
             patEventCd: parameters.PATEVENTNO
           }])
-          if(this.getObserveRecordForUrlDirect !== null && this.getObserveRecordForUrlDirect.hasOwnProperty("patId")) {
+          if(this.getObserveRecordForUrlDirect !== null && Object.prototype.hasOwnProperty.call(this.getObserveRecordForUrlDirect, "patId")) {
             const selectedPatEvent = this.getObserveRecordForUrlDirect;
             // 患者情報の読み込み
             await this.clearSelectedPat();
@@ -855,7 +851,7 @@ export default {
       }
 
       // 遷移処理
-      this.setRouter(transitionList);
+      await this.setRouter(transitionList);
 
       this.setLoadingScreenVisible(false);
 
@@ -882,14 +878,14 @@ export default {
           await this.clearSelectedPat();
           await this.selectPat(parameters.PATID);
           transitionList.push(parameters.routerName);
-          this.setRouter(transitionList);
+          await this.setRouter(transitionList);
           this.setLoadingScreenVisible(false);
           return true;
         }
       }
 
       // 遷移処理
-      this.setRouter(transitionList);
+      await this.setRouter(transitionList);
 
       this.setLoadingScreenVisible(false);
       return true;
@@ -926,7 +922,7 @@ export default {
             // 掲示板情報のセット
             await this.setSelectedBbsInfo(parameters.BBSCTLNO);
             transitionList.push(parameters.routerName);
-            this.setRouter(transitionList);
+            await this.setRouter(transitionList);
             this.setLoadingScreenVisible(false);
             return true;
           }
@@ -938,7 +934,7 @@ export default {
       this.setQueryParameters(useParameters);
 
       // 遷移処理
-      this.setRouter(transitionList);
+      await this.setRouter(transitionList);
 
       this.setLoadingScreenVisible(false);
       return true;
@@ -967,7 +963,7 @@ export default {
             // 掲示板情報のセット
             await this.setSelectedBbsInfo(parameters.BBSCTLNO);
             transitionList.push(parameters.routerName);
-            this.setRouter(transitionList);
+            await this.setRouter(transitionList);
             this.setLoadingScreenVisible(false);
             return true;
           }
@@ -975,7 +971,7 @@ export default {
       }
 
       // 遷移処理
-      this.setRouter(transitionList);
+      await this.setRouter(transitionList);
 
       this.setLoadingScreenVisible(false);
       return true;
@@ -1012,14 +1008,14 @@ export default {
           this.setQueryParameters(useParameters);
 
           transitionList.push(parameters.routerName);
-          this.setRouter(transitionList);
+          await this.setRouter(transitionList);
           this.setLoadingScreenVisible(false);
           return true;
         }
       }
 
       // 遷移処理
-      this.setRouter(transitionList);
+      await this.setRouter(transitionList);
 
       this.setLoadingScreenVisible(false);
       return true;
@@ -1039,12 +1035,12 @@ export default {
     //   return true;
     // },
      async transitionPatGroup(parameters) {
-      this.$router.push({
+      await this.$router.push({
               name: "pat-group",
               params: { footer: null}
             });
       // 必ず親画面に遷移
-      this.$router.push({
+      await this.$router.push({
         name: parameters.routerName,
         params: { footer: null, patGroupCd: parameters.PATGROUPCD }
       });
@@ -1220,7 +1216,11 @@ export default {
       // 処方オーダー番号に該当するレコードの存在判断
       if (ordPrescriptionNo !== null) {
         // 指定されたRPNOを持つ処方情報を取得
-        await this.findOrderPrescription(ordPrescriptionNo);
+        await this.findOrderPrescription(
+          patId !== null
+            ? { ordPrescriptionNo, selectedPatId: patId }
+            : ordPrescriptionNo
+        );
 
         if (this.getOrdPrescriptionNo > 0) {
           // 指定されたRPNOを持つ処方情報がある
@@ -1358,14 +1358,14 @@ export default {
      * 画面遷移(多段)
      * @param transitionList 遷移情報リスト
      */
-    setRouter(transitionList) {
+    async setRouter(transitionList) {
       // 遷移情報リスト分画面遷移する
-      transitionList.forEach(name => {
-        this.$router.push({
+      for (const name of transitionList) {
+        await this.$router.push({
           name,
           params: { footer: null }
         });
-      });
+      }
     },
 
     /**
@@ -1378,7 +1378,7 @@ export default {
       if (!dateStr) {
         return null;
       }
-       const date = moment(dateStr);
+       const date = dayjs(dateStr);
        if (date.isValid()) {
          return date.format(format);
        }
@@ -1412,7 +1412,7 @@ export default {
      */
     async checkRequired(parameters, keys) {
       for (const key of keys) {
-        const result = parameters.hasOwnProperty(key);
+        const result = Object.prototype.hasOwnProperty.call(parameters, key);
         if (!result) return false;
       }
       return true;
@@ -1456,7 +1456,7 @@ export default {
      * @return 対応する装置記録を返す
      */
     async setMotionRecordToStore(machineRecord) {
-      const eventRegDateTime = moment(machineRecord.eventRegDate);
+      const eventRegDateTime = dayjs(machineRecord.eventRegDate);
       const motionRecord = {
         eventRegDate: eventRegDateTime.format("YYYY/MM/DD"),
         eventRegTime: eventRegDateTime.format("HH:mm:ss"),
@@ -1510,7 +1510,7 @@ export default {
 
       let defIndSearchCond = {
         treatmentDateOpt: ISSUE_DATE,
-        treatmentStartDate: moment().format("YYYY-MM-DD"),
+        treatmentStartDate: dayjs().format("YYYY-MM-DD"),
         treatmentScheduledDate: null,
         check1: ALL,
         check2: ALL,

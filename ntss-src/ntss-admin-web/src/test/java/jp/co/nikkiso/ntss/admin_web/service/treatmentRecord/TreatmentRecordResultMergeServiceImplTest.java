@@ -12,7 +12,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -46,13 +46,13 @@ public class TreatmentRecordResultMergeServiceImplTest {
   /**
    * 治療情報のMockBean.
    */
-  @MockBean
+  @MockitoBean
   private TreatmentRecordDao treatmentRecordDao;
 
   /**
    * 患者基本情報のMoclBean.
    */
-  @MockBean
+  @MockitoBean
   private PatPersonalMainDao patPersonalMainDao;
 
   /**

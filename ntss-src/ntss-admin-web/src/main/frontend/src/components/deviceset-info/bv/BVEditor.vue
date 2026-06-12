@@ -175,7 +175,7 @@
               v-if="!isTreatRecord"
               class="common-style-ok-button"
               @click="saveConfirm()"
-              :disabled="!getItemAuthorized('DevicesetInfo', 'default_authority')"
+              :disabled="!getItemAuthorized('DevicesetInfo', 'default_authority') || getIsOtherFacility"
             >
             <!-- mod #10359 編集権限の動作不正 dengshen end -->
               {{ saveButtonLabel }}
@@ -185,18 +185,18 @@
       </div>
 
       <message-dialog
-        :visible.sync="isDialogVisble"
+        v-model:visible="isDialogVisble"
         v-bind="dialogProps"
         type="1"
       />
       <message-dialog
-        :visible.sync="isCancelDialogVisble"
+        v-model:visible="isCancelDialogVisble"
         v-bind="dialogProps"
         type="2"
         @confirm="cancelEdit"
       />
       <message-dialog
-        :visible.sync="isUpdateAllPatDialogVisble"
+        v-model:visible="isUpdateAllPatDialogVisble"
         v-bind="dialogProps"
         type="5"
         @confirm="setUpdateAllPatFlg"
@@ -215,9 +215,8 @@ import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 import { DEVICE_TYPE_BV } from "@/components/deviceset-info/base-modules/DeviceSetInfoDefinitions.js";
 import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetInfoEditor.vue";
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
-import { mapGetters } from "vuex";
 
 /**
  * @description BV設定値編集画面
@@ -234,16 +233,14 @@ export default {
   },
   async mounted() {
     // apiをコールしてΔSO2を使用する装置件数を取得
-    await getMachineSo2OptCount(this.facilityCd).then(
+    await getMachineSo2OptCount(this.facilityCd, this.selectedPatId).then(
       (response) => {
         this.so2Count = response.data;
-      }
-    );
+      });
   },
   // #11124 2025.08.26 add 酸素飽和度対応 TDC高村 end
 
   computed: {
-    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd"]),
     /**
      * @description 警報点1
      */
@@ -301,7 +298,7 @@ export default {
         this.devA[278]
       ];
 
-      if ( this.so2Count != 0 ) {
+      if ( this.so2Count != 0) {
         bvList.push(this.devA[476]);
       }
       return bvList;
@@ -333,7 +330,7 @@ export default {
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return getAuthorized(pageCd, itemCd);
+      return !this.getIsOtherFacility && getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
 
@@ -349,8 +346,7 @@ export default {
       // 警報点1 ≧ 警報点2 ？
       if (
         this.deltaLowWarning1.value.editValue <
-        this.deltaLowWarning2.value.editValue
-      ) {
+        this.deltaLowWarning2.value.editValue) {
         return {
           messageCd,
           stringParams: [
@@ -379,8 +375,7 @@ export default {
 
         if (
           this.autoMeasurementList[comparisonBaseIndex].value.editValue <
-          this.autoMeasurementList[i].value.editValue
-        ) {
+          this.autoMeasurementList[i].value.editValue) {
           // 上下関係が正しい場合は基準を再設定して次の要素へ
           comparisonBaseIndex = i;
         } else {
@@ -407,8 +402,11 @@ export default {
 }
 
 @media screen and (max-width: 530px) {
-  .device-info-cell-value >>> .custom-radio {
+  .device-info-cell-value :deep(.custom-radio) {
     display: block;
   }
+}
+.device-info-cell-value :deep(.custom-common-number-input-pro) {
+  width: 6em;
 }
 </style>

@@ -73,14 +73,14 @@
                 <!-- mod FNSI-共有を追加 王 20200921 start -->
                 <!-- mod #10359 編集権限の動作不正 start -->
                 <!-- <img
-                  src="img/pat-event/editor.png"
+                  :src="patEventAsset('editor.png')"
                   id="editor-button-icon"
                   class="edit-icon"
                   @click="onImageEditClick(imageIndex(rowIndex, index))"
                   :disabled="!isShared"
                 />  -->
                 <img
-                  src="img/pat-event/editor.png"
+                  :src="patEventAsset('editor.png')"
                   id="editor-button-icon"
                   class="edit-icon"
                   @click="onImageEditClick(imageIndex(rowIndex, index))"
@@ -95,8 +95,9 @@
                 <!-- mod #10359 編集権限の動作不正 end -->
                 <!-- mod FNSI-共有を追加 王 20200921 end -->
               </v-ons-button>
-              <!-- mod #10359 編集権限の動作不正 start -->
               <div v-else></div>
+              <!-- mod #10359 編集権限の動作不正 start -->
+
               <!-- <label
                 class="button btn3-normal"
                 :class="{ 'btn3-normal-disabled': disabled }"
@@ -159,15 +160,16 @@
                   'check' + propsIndex + '-' + imageIndex(rowIndex, index)
                 "
                 class="checkbox-va"
-                :checked="inputModel.isSendVa[imageIndex(rowIndex, index)]"
-                :disabled="
-                  inputModel.isDisable[imageIndex(rowIndex, index)] ||
-                  !getItemAuthorized(
-                    'PatEvent',
-                    'default_authority'
-                  )
-                "
-                v-show="!getViewMode && isGetUseVa2"
+                v-if="!getViewMode && isGetUseVa2"
+                v-ons-checkbox-state="{
+                  checked: inputModel.isSendVa[imageIndex(rowIndex, index)],
+                  disabled:
+                    inputModel.isDisable[imageIndex(rowIndex, index)] ||
+                    !getItemAuthorized(
+                      'PatEvent',
+                      'default_authority'
+                    )
+                }"
                 @change="changeVa(imageIndex(rowIndex, index), $event)"
               ></ons-checkbox>
               <!-- mod #10359 編集権限の動作不正 end -->
@@ -188,14 +190,14 @@
                 <ons-checkbox
                   :id="'checkComp'+ propsIndex + '-' + imageIndex(rowIndex, index)"
                   class="checkbox-comp"
-                  :checked="getCheckComp[imageIndex(rowIndex, index)]"
+                  v-ons-checkbox-state="{
+                    checked: getCheckComp[imageIndex(rowIndex, index)],
+                    disabled: !getItemAuthorized(
+                      'PatEvent',
+                      'default_authority') || getIsOtherFacility || getIsOtherFacilitys
+                  }"
                   @change="changeComp(imageIndex(rowIndex, index), $event)"
                   :input-id="'compare-viewer-' + propsIndex + '-' + imageIndex(rowIndex, index)"
-                  :disabled="
-                  !getItemAuthorized(
-                    'PatEvent',
-                    'default_authority'
-                  ) || getIsOtherFacility || getIsOtherFacilitys"
                 ></ons-checkbox>
         <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
                 <!-- mod 9821 利用者マスタの患者イベント編集権限がOFFなのに観察記録の新規作成/編集ができてしまう 関 end -->
@@ -211,7 +213,7 @@
         </div>
       </div>
     </div>
-    <v-ons-modal :visible="isShowEditorModal" :deviceBackButton="onDeviceBackButton" class="image-editor-modal">
+    <v-ons-modal :visible="isShowEditorModal" @deviceBackButton="onDeviceBackButton" class="image-editor-modal">
       <pat-event-image-editor
         ref="imageEditor"
         @cancelEditor="onCancelEditor"
@@ -220,7 +222,7 @@
     </v-ons-modal>
     <v-ons-modal
       :visible="isShowViewer"
-      :deviceBackButton="onDeviceBackButton"
+      @deviceBackButton="onDeviceBackButton"
       @click="isShowViewer=false"
     >
       <div class="viewer-frame">
@@ -231,7 +233,9 @@
 </template>
 
 <script>
-  import {mapActions, mapGetters} from "vuex";
+import { publicAssetPath } from "@/compat/assets/public-path";
+import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector, queryScopedSelectorAll } from "@/functions/common/LayoutMeasureHelper";
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   import {sendRequestGetImageDownload, sendRequestPostImageDelete, sendRequestPostImageUpload} from "@/apis/pat-event";
   import PatEventVaMasterSelector from "@/components/pat-event/sub-item/PatEventVaMasterSelector";
   import PatEventImageEditor from "@/components/pat-event/image-editor/PatEventImageEditor";
@@ -239,7 +243,7 @@
   import {va} from "@/components/common/master-selector/MasterSelectorDefinitions";
   import {Master} from "@/models/common/master-selector-condition/Master";
   import {deepCopy} from "@/functions/common/CommonFunctions";
-  import heic2any from "heic2any";
+  import heic2any from "@/compat/media/heic2any";
   //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
   import {getErrorMessage} from "@/functions/common/AppLogMessageFormat";
   //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
@@ -251,12 +255,45 @@
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 end
   import { dateFormat } from "@/functions/common/DateTimeUtils.js";
+const setOnsCheckboxState = (el, state = {}) => {
+  if (!el) {
+    return;
+  }
+  const apply = () => {
+    const input = el.querySelector?.("input") || el._input;
+    if (!input) {
+      requestAnimationFrame(apply);
+      return;
+    }
+    const checked = !!state.checked;
+    const disabled = !!state.disabled;
+    input.checked = checked;
+    input.disabled = disabled;
+    el.toggleAttribute?.("checked", checked);
+    el.toggleAttribute?.("disabled", disabled);
+    el.classList?.toggle("checkbox--checked", checked);
+    el.classList?.toggle("checkbox--disabled", disabled);
+  };
+  apply();
+  requestAnimationFrame(apply);
+};
+
 export default {
   name: "PatEventImage",
   props: ["propsIndex", "propsIsva"],
   components: {
     "com-master-selector": PatEventVaMasterSelector,
     "pat-event-image-editor": PatEventImageEditor
+  },
+  directives: {
+    onsCheckboxState: {
+      mounted(el, binding) {
+        setOnsCheckboxState(el, binding.value);
+      },
+      updated(el, binding) {
+        setOnsCheckboxState(el, binding.value);
+      }
+    }
   },
   data() {
     return {
@@ -312,12 +349,8 @@ export default {
     // add FNSI-共有を追加 王 20200921 start
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("treatment-record/common", ["getSharedFacilityCd"]),
-    // mod #12462 患者情報共有 20260312 start
     ...mapGetters("pat-event/list", ["getIsEdit", "getUpdateMode", "getIsOtherFacility"]),
-    // mod #12462 患者情報共有 20260312 end
-    // add #12462 患者情報共有 20260312 start
     ...mapGetters("observe-record/list", ["getIsOtherFacilitys"]),
-    // add #12462 患者情報共有 20260312 end
     isShared() {
       if(this.getPatEventRecord.isComRec){
         return this.getFacilityCd === this.getSharedFacilityCd;
@@ -332,7 +365,7 @@ export default {
       /*add FNSI-改修内容图像bug 任 start*/
       this.rowCount = colCount;
       /*add FNSI-改修内容图像bug 任 end*/
-      for (let idx = 0; idx < img.length; ) {
+      for (let idx = 0; idx < img.length;) {
         let clm = [];
         for (
           let colIdx = 0;
@@ -436,12 +469,11 @@ export default {
       deep: true
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
-  destroyed() { },
-  created() {},
+
   mounted() {
     //画像の枠を設定
     for (let idx = 0; idx < this.getInputImage.length; idx++) {
@@ -464,6 +496,22 @@ export default {
     this.setChecked();
   },
   methods: {
+    patEventAsset(fileName) {
+      return publicAssetPath(`img/pat-event/${fileName}`);
+    },
+    getScopedElementById(id) {
+      return getScopedElementById(id, this);
+    },
+    getScopedElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this);
+    },
+    getScopedQuery(selector) {
+      return queryScopedSelector(selector, this);
+    },
+    getScopedQueryAll(selector) {
+      return queryScopedSelectorAll(selector, this);
+    },
+
     ...mapActions("multi-modal", ["showPatEventImageEditor"]),
     ...mapActions("pat-event/detail", ["setPatEventResultParamsUpdate"]),
     ...mapActions("pat-event/viewer", [
@@ -533,8 +581,9 @@ export default {
     },
     setImageBorder(idx) {
       const targetId = "preview" + this.propsIndex + "-" + idx;
-      let preview = document.getElementById(targetId);
-      let img = document.createElement("img");
+      let preview = this.getScopedElementById(targetId);
+      const ownerDocument = preview?.ownerDocument || this.$el?.ownerDocument || document;
+      let img = ownerDocument.createElement("img");
       img.setAttribute("id", "previewImage-" + targetId);
       img.setAttribute("class", "inner_photo");
       preview.appendChild(img);
@@ -544,34 +593,29 @@ export default {
       for (let index = 0; index < this.getInputImage.length; index++) {
         const para = this.propsIndex + "-" + index;
         if (this.getViewMode) {
-          document.getElementById("label" + para).style.display = "none";
-          // mod #12462 患者情報共有 start
-          // document.getElementById("label-del" + para).style.display = "none";
-          const labelDel = document.getElementById("label-del" + para);
+          this.getScopedElementById("label" + para).style.display = "none";
+          const labelDel = this.getScopedElementById("label-del" + para);
           if (labelDel) {
             labelDel.style.display = "none";
           }
-          // mod #12462 患者情報共有 end
-          document.getElementById("labelFileName" + para).style.maxWidth = "unset";
+          this.getScopedElementById("labelFileName" + para).style.maxWidth = "unset";
         } else {
-          document.getElementById("labelFileName" + para).style.maxWidth = "";
+          this.getScopedElementById("labelFileName" + para).style.maxWidth = "";
           if (result.result_value[index] !== undefined) {
             if (result.result_value[index].file_name !== "") {
-              document.getElementById("label" + para).style.display = "none";
-              // mod #12462 患者情報共有 start
-              // document.getElementById("label-del" + para).style.display =
-              //   "inline-flex";
-              const labelDel = document.getElementById("label-del" + para);
+              this.getScopedElementById("label" + para).style.display = "none";
+              const labelDel = this.getScopedElementById("label-del" + para);
               if (labelDel) {
                 labelDel.style.display = "inline-flex";
               }
-              // mod #12462 患者情報共有 end
               continue;
             }
           }
-          document.getElementById("label" + para).style.display = "inline-flex";
-          document.getElementById("label-del" + para).style.display =
-            "inline-flex";
+          this.getScopedElementById("label" + para).style.display = "inline-flex";
+          const labelDel = this.getScopedElementById("label-del" + para);
+          if (labelDel) {
+            labelDel.style.display = "inline-flex";
+          }
         }
       }
       // 編集モードかチェック
@@ -580,7 +624,7 @@ export default {
         for (let idx = 0; idx < this.getInputImage.length; idx++) {
           let para = this.propsIndex + "-" + idx;
           // 編集モードで、ファイル選択されていれば、チェックボックスを編集可とする
-          this.inputModel.isDisable.push(!document.getElementById("labelFileName" + para).innerHTML);
+          this.inputModel.isDisable.push(!this.getScopedElementById("labelFileName" + para).innerHTML);
         }
       }
     },
@@ -610,11 +654,11 @@ export default {
     },
     changeVa(index, event) {
       if (event.target.checked) {
-        this.$set(this.sendVaList, index, "1");
-        this.$set(this.inputModel.isSendVa, index, true);
+        ((this.sendVaList)[index] = "1");
+        ((this.inputModel.isSendVa)[index] = true);
       } else {
-        this.$set(this.sendVaList, index, "0");
-        this.$set(this.inputModel.isSendVa, index, false);
+        ((this.sendVaList)[index] = "0");
+        ((this.inputModel.isSendVa)[index] = false);
       }
       const imageList = this.createJsonData();
       const formatClass = this.getPatEventResultParams[this.propsIndex]
@@ -636,7 +680,7 @@ export default {
       const targetId = "preview" + this.propsIndex + "-" + index;
       if (event.target.checked) {
         this.inputModel.isComp.splice(index, 1, true);
-        const elm = document.getElementById("previewImage-" + targetId);
+        const elm = this.getScopedElementById("previewImage-" + targetId);
         if (elm && elm.src) {
           this.editTargetImage = elm.src;
           this.setCompareViewImgs({
@@ -685,26 +729,25 @@ export default {
       const targetId = "preview" + this.propsIndex + "-" + index;
       const labelId = "label" + this.propsIndex + "-" + index;
       const labelFileName = "labelFileName" + this.propsIndex + "-" + index;
-      let preview = document.getElementById(targetId);
-      let previewImage = document.getElementById("previewImage-" + targetId);
+      let preview = this.getScopedElementById(targetId);
+      let previewImage = this.getScopedElementById("previewImage-" + targetId);
         this.setTarget(targetId);
       if (previewImage != null) {
         preview.removeChild(previewImage);
       }
       this.innerHTML = "";
-      document.getElementById(labelFileName).style.display = "none";
-      document.getElementById(labelId).style.display = "inline-flex";
+      this.getScopedElementById(labelFileName).style.display = "none";
+      this.getScopedElementById(labelId).style.display = "inline-flex";
       // 画像枠の再設定
       this.setImageBorder(index);
       // ファイル選択メッセージの初期化
-      let inputButton = document.getElementById(
-        "input" + this.propsIndex + "-" + index
-      );
+      let inputButton = this.getScopedElementById(
+        "input" + this.propsIndex + "-" + index);
       inputButton.value = "";
       // アップロードリストから削除
       const value = this.uploadImageList[index];
       //upd #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc start
-      this.$set(this.uploadImageList, index, this.isGetUseVa ?
+      ((this.uploadImageList)[index] = this.isGetUseVa ?
           { file_name: "", file_path: "", is_send_va: "0", file_modified_time: "" } : { file_name: "", file_path: "", file_modified_time: "" });
       const formatClass = this.getPatEventResultParams[this.propsIndex]
           .format_class;
@@ -721,14 +764,14 @@ export default {
         index: this.propsIndex
       });
       //upd #9364 患者イベントに関連する4つの画面のコード調整 20230831 ztc end
-      this.$set(this.inputModel.isComp, index, false);
+      ((this.inputModel.isComp)[index] = false);
       // 削除ファイルリストに追加
       this.removeImageList.push(value);
       // 画像ファイルの削除
-      this.$set(this.uploadFiles, index, "");
-      this.$set(this.inputModel.isSendVa, index, false);
-      this.$set(this.inputModel.isDisable, index, true);
-      this.$set(this.sendVaList, index, "0");
+      ((this.uploadFiles)[index] = "");
+      ((this.inputModel.isSendVa)[index] = false);
+      ((this.inputModel.isDisable)[index] = true);
+      ((this.sendVaList)[index] = "0");
       /*add FNSI-改修内容比較中の画像について、編集しても、最新の画像で適用されない 任 start*/
       this.getCompareViewImgs.forEach((item,index) => {
         if(item.patEventCd === this.getPatEventRecord.patEventCd && item.targetId === targetId){
@@ -755,9 +798,9 @@ export default {
         event.target.value = null
         return
       }
-      this.$set(this.inputModel.isDisable, targetIndex, false);
-      this.$set(this.inputModel.isSendVa, targetIndex, true);
-      this.$set(this.sendVaList, targetIndex, "1");
+      ((this.inputModel.isDisable)[targetIndex] = false);
+      ((this.inputModel.isSendVa)[targetIndex] = true);
+      ((this.sendVaList)[targetIndex] = "1");
       //拡張子がheicの場合、jpegへ変換
       let extension = file.name.toLowerCase();
       if (extension.split(".").pop() === "heic") {
@@ -795,9 +838,9 @@ export default {
       const labelId = "label" + this.propsIndex + "-" + targetIndex;
       const labelFileName =
         "labelFileName" + this.propsIndex + "-" + targetIndex;
-      let preview = document.getElementById(targetId);
-      let previewImage = document.getElementById("previewImage-" + targetId);
-      let inputButton = document.getElementById(inputId);
+      let preview = this.getScopedElementById(targetId);
+      let previewImage = this.getScopedElementById("previewImage-" + targetId);
+      let inputButton = this.getScopedElementById(inputId);
       if (file.size > MAXSIZE) {
         await this.$ons.notification
           .alert({
@@ -809,7 +852,8 @@ export default {
               preview.removeChild(previewImage);
             }
             inputButton.value = "";
-            let img = document.createElement("img");
+            const ownerDocument = preview?.ownerDocument || this.$el?.ownerDocument || document;
+            let img = ownerDocument.createElement("img");
             img.setAttribute("id", "previewImage-" + targetId);
             img.setAttribute("class", "inner_photo");
             preview.appendChild(img);
@@ -821,28 +865,28 @@ export default {
       if (previewImage != null) {
         preview.removeChild(previewImage);
       }
-      document.getElementById(labelFileName).innerHTML = file.name;
+      this.getScopedElementById(labelFileName).innerHTML = file.name;
        // add FNSI-4387。 fan start
-      document.getElementById(labelFileName).title = file.name;
+      this.getScopedElementById(labelFileName).title = file.name;
       // add FNSI-4387。 fan end
-      document.getElementById(labelFileName).style.display = "block";
-      document.getElementById(labelId).style.display = "none";
+      this.getScopedElementById(labelFileName).style.display = "block";
+      this.getScopedElementById(labelId).style.display = "none";
       this.readerOnload(targetId, preview, file);
 
-      this.$set(this.uploadFiles, targetIndex, file);
+      ((this.uploadFiles)[targetIndex] = file);
 
       this.updateParentData();
     },
     // 画像モーダルのマージン(中央よせ)調整処理
     async calculateImgMargin(imgHeight = 0) {
-      const viewImgModalObj = document.getElementsByClassName("viewer-frame-img");
+      const viewImgModalObj = this.getScopedElementsByClassName("viewer-frame-img");
       for (let idx = 0; idx < viewImgModalObj.length; idx++) {
         const imgOffsetHeight = imgHeight !== 0 ? imgHeight : viewImgModalObj[idx].offsetHeight;
         if (!imgOffsetHeight) {
           // 非表示
           continue;
         }
-        let topPx = this.windowHeight - ( imgOffsetHeight + 40 );
+        let topPx = this.windowHeight - ( imgOffsetHeight + 40);
         if (topPx <= 0) {
           viewImgModalObj[idx].style.marginTop = "0px"
         } else {
@@ -959,8 +1003,7 @@ export default {
               fieldName: fieldName,
               imageNo: count
             },
-            formData
-          ).catch(error => {
+            formData).catch(error => {
             //FNSI-修正 VUEのエラー場合のログ対応 liuxl add start
             getErrorMessage('PatEventImage.vue', 'uploadImage', error);
             //FNSI-修正 VUEのエラー場合のログ対応 liuxl add end
@@ -973,9 +1016,7 @@ export default {
         count++;
       }
 
-
       this.updateStoreData();
-
 
       this.hasImageChanged = false;
 
@@ -1031,7 +1072,6 @@ export default {
         .format_class ? this.getPatEventResultParams[this.propsIndex]
         .format_class : null;
 
-
       this.hasImageChanged = false;
 
       return {
@@ -1061,7 +1101,7 @@ export default {
         file_modified_time: dateFormat.format(new Date(), "yyyyMMddhhmmss")
       };
 
-      this.$set(this.uploadImageList, index, newItem);
+      ((this.uploadImageList)[index] = newItem);
     },
     /**
      * @description 拡張子取得
@@ -1130,20 +1170,21 @@ export default {
       );
       //読込処理
       const targetId = "preview" + this.propsIndex + "-" + targetIndex;
-      let preview = document.getElementById(targetId);
-      let previewImage = document.getElementById("previewImage-" + targetId);
+      let preview = this.getScopedElementById(targetId);
+      let previewImage = this.getScopedElementById("previewImage-" + targetId);
       if (previewImage != null) {
         preview.removeChild(previewImage);
       }
-      document.getElementById(labelFileName).innerHTML = file.file_name;
-      document.getElementById(labelFileName).style.display = "block";
-      document.getElementById(labelId).style.display = "none";
+      this.getScopedElementById(labelFileName).innerHTML = file.file_name;
+      this.getScopedElementById(labelFileName).style.display = "block";
+      this.getScopedElementById(labelId).style.display = "none";
       this.readerOnload(targetId, preview, blob);
     },
     readerOnload(targetId, preview, blob) {
       let reader = new FileReader();
       reader.onload = async () => {
-        let img = document.createElement("img");
+        const ownerDocument = preview?.ownerDocument || this.$el?.ownerDocument || document;
+        let img = ownerDocument.createElement("img");
         img.setAttribute("src", reader.result);
         img.setAttribute("id", "previewImage-" + targetId);
         img.setAttribute("class", "inner_photo");
@@ -1195,7 +1236,7 @@ export default {
     /** 画像編集ボタンクリック */
     onImageEditClick(idx) {
       const targetId = "preview" + this.propsIndex + "-" + idx;
-      const elm = document.getElementById("previewImage-" + targetId);
+      const elm = this.getScopedElementById("previewImage-" + targetId);
       const labelFileName =
         "labelFileName" + this.propsIndex + "-" + idx;
       if (elm && elm.src) {
@@ -1204,7 +1245,7 @@ export default {
         this.setTarget(targetId);
         /*add FNSI-改修内容比較中の画像について、編集しても、最新の画像で適用されない 任 end*/
         this.editTargetImage = elm.src;
-        const fNameElm = document.getElementById(labelFileName);
+        const fNameElm = this.getScopedElementById(labelFileName);
         if (fNameElm.innerHTML) {
           this.editTargetFileName = fNameElm.innerHTML;
         } else {
@@ -1260,13 +1301,13 @@ export default {
     },
     onImageViewerClick(idx) {
       // iOS/Androidでダブルタップの処理の度に発火しないように対策
-      const ua = navigator.userAgent;
+      const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "");
       if (ua.match(/Android/) || ua.match(/iPhone|iPad/)) {
         return;
       }
       const targetId = "preview" + this.propsIndex + "-" + idx;
 
-      const elm = document.getElementById("previewImage-" + targetId);
+      const elm = this.getScopedElementById("previewImage-" + targetId);
       if (elm && elm.src) {
         var image = new Image();
         image.src = elm.src;
@@ -1281,7 +1322,7 @@ export default {
     onDblTap(event, idx) {
       if(!this.tapedTwice) {
         this.tapedTwice = true;
-        setTimeout( () => { this.tapedTwice = false; }, 300 );
+        setTimeout( () => { this.tapedTwice = false; }, 300);
         return false;
       }
       event.preventDefault();
@@ -1347,13 +1388,11 @@ export default {
 
       this.updateStoreData();
 
-
       this.$emit('image-changed', {
         index: this.propsIndex,
         hasChanged: this.hasImageChanged
       });
     },
-
 
     updateStoreData() {
       const imageList = this.createJsonData();
@@ -1443,7 +1482,7 @@ export default {
   height: auto;
   min-height: 1.2em;
 }
-::v-deep .img_outer img{
+:deep(.img_outer img){
   vertical-align: top;
   width: 100%;
 }

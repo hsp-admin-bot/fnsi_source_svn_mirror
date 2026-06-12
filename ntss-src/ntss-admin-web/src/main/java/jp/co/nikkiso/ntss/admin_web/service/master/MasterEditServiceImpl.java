@@ -1,7 +1,6 @@
 package jp.co.nikkiso.ntss.admin_web.service.master;
 
 // add FNSI-改修内容 薬剤マスタ、医療材料マスタの更新にて、ord_mainのjson内容も合わせて更新する。 周 start
-import java.io.IOException;
 // add FNSI-改修内容 薬剤マスタ、医療材料マスタの更新にて、ord_mainのjson内容も合わせて更新する。 周 end
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -47,9 +46,9 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 // add FNSI-改修内容 薬剤マスタ、医療材料マスタの更新にて、ord_mainのjson内容も合わせて更新する。 周 start
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import com.google.common.base.CaseFormat;
 
 // add FNSI-改修内容 薬剤マスタ、医療材料マスタの更新にて、ord_mainのjson内容も合わせて更新する。 周 end
@@ -94,6 +93,7 @@ import jp.co.nikkiso.ntss.core.dao.PatMainDao;
 import jp.co.nikkiso.ntss.core.dao.PatPersonalMainDao;
 import jp.co.nikkiso.ntss.core.dao.PatRadMainDao;
 import jp.co.nikkiso.ntss.core.dao.SysMasterDefineDao;
+import jp.co.nikkiso.ntss.core.dao.SysSystemDefineDao;
 import jp.co.nikkiso.ntss.core.entity.MstEquipment;
 import jp.co.nikkiso.ntss.core.entity.MstExamSet;
 import jp.co.nikkiso.ntss.core.entity.MstMachineRecordControl;
@@ -117,6 +117,7 @@ import jp.co.nikkiso.ntss.core.entity.SysMasterDefine.ComboValue;
 import jp.co.nikkiso.ntss.core.entity.SysMasterDefine.Field;
 import jp.co.nikkiso.ntss.core.entity.SysMasterDefine.FieldType;
 import jp.co.nikkiso.ntss.core.entity.SysMasterDefine.ReferenceComboDef;
+import jp.co.nikkiso.ntss.core.entity.SysSystemDefine;
 import jp.co.nikkiso.ntss.core.entity.custom.MachineKeyInfo;
 import jp.co.nikkiso.ntss.core.entity.custom.MstFavoriteFacilityData;
 import jp.co.nikkiso.ntss.core.entity.custom.ReferenceCombo;
@@ -142,6 +143,7 @@ import static jp.co.nikkiso.ntss.core.dao.MasterMaintenanceGenericDao.MODAL;
 import static jp.co.nikkiso.ntss.core.dao.MasterMaintenanceGenericDao.OPERATION;
 import static jp.co.nikkiso.ntss.core.dao.MasterMaintenanceGenericDao.SORT_INPUT_TIME;
 import static jp.co.nikkiso.ntss.core.dao.MasterMaintenanceGenericDao.SORT_RANK;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
 /**
@@ -386,10 +388,23 @@ public class MasterEditServiceImpl implements MasterEditService {
 
   @Autowired
   MstMainteHisTrigger mstMainteHisTrigger;
+
+  // add #11660 単体アプリの自己アップデート修正 limingzhe start
+  /**
+   * システム設定のDaoインタフェース.
+   */
+  @Autowired
+  private SysSystemDefineDao sysSystemDefineDao;
+  // add #11660 単体アプリの自己アップデート修正 limingzhe end
+
   @Autowired
   private PatMainDao patMainDao;
   @Autowired
   private MstWheelChairDao mstWheelChairDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   @Autowired(required = false)
   private MongoTemplate mongoTemplate;
   @Autowired(required = false)
@@ -420,6 +435,12 @@ public class MasterEditServiceImpl implements MasterEditService {
         masterResponse.localDataSource.data = setDefaultValue(
           masterGenericDao.getMasterData(sysMasterDefine, facilityCd), sysMasterDefine);
 
+        // add #11660 単体アプリの自己アップデート修正 limingzhe start
+        if(masterName.equals("sys_application")) {
+          masterResponse.localDataSource.data = getSysApplicationData(masterResponse.localDataSource.data);
+        }
+        // add #11660 単体アプリの自己アップデート修正 limingzhe end
+
         // 取得したデータの並び替え
         masterResponse.localDataSource.data = sortData(masterResponse.localDataSource.data, sysMasterDefine,
           facilityCd);
@@ -428,6 +449,44 @@ public class MasterEditServiceImpl implements MasterEditService {
     // 成功レスポンス返却
     return masterResponse;
   }
+
+  // add #11660 単体アプリの自己アップデート修正 limingzhe start
+  private List<Map<String, Object>> getSysApplicationData(List<Map<String, Object>> data){
+    data.stream()
+      .forEach(p -> {
+        if(p.containsKey("filename")){
+          String fileName = String.valueOf(p.get("filename"));
+          if(!StringUtils.isEmpty(fileName)) {
+            p.put("filename", fileName.substring(fileName.lastIndexOf("/") + 1));
+          }
+        }
+        if(p.containsKey("version")){
+          String version = String.valueOf(p.get("version"));
+          Integer num = -1;
+          try {
+            num = Integer.parseInt(version);
+          } catch (NumberFormatException e) {
+
+          }
+          if(num > 0){
+            SysSystemDefine pathData = sysSystemDefineDao.selectOnPremise(num);
+            JSONArray jsonArray = new JSONArray(pathData.getValue());
+            Integer maxVersion = 0;
+            for (int i = 0; i < jsonArray.length(); i++) {
+              JSONObject jsonObject = jsonArray.getJSONObject(i);
+              String strVersion = jsonObject.getString("version").replace(".","");
+              Integer iVersion = Integer.parseInt(strVersion);
+              if(iVersion > maxVersion){
+                maxVersion = iVersion;
+                p.put("version", jsonObject.getString("version"));
+              }
+            }
+          }
+        }
+      });
+    return data;
+  }
+  // add #11660 単体アプリの自己アップデート修正 limingzhe end
 
   // add #6217 全施設マスタ画面が遅い guanhao start
   /**
@@ -1585,7 +1644,7 @@ public class MasterEditServiceImpl implements MasterEditService {
   private boolean getUpdateBeforeData(DataUpdateLogCommonNew logCommon, String tableName, StringBuffer whereSql) {
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(masterGenericDao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setDaoObject(masterGenericDao);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereSql);
@@ -1786,7 +1845,7 @@ public class MasterEditServiceImpl implements MasterEditService {
       for (int lop = 0; lop < jsonNode_array.size(); lop++) {
         JsonNode jsonNode = jsonNode_array.get(lop);
         // jsonNodeは読み取り専用のため、ObjectNodeに変換
-        ObjectNode objectNode = jsonNode.deepCopy();
+        ObjectNode objectNode = jsonNode.deepCopy().asObject();
 
         if (objectNode.get("cd").asText().equals(medicineCode)) {
           objectNode.put("name", medicineName == null ? "null" : medicineName.toString());
@@ -1802,7 +1861,7 @@ public class MasterEditServiceImpl implements MasterEditService {
           rtnBuilder.append(",");
         }
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -1857,7 +1916,7 @@ public class MasterEditServiceImpl implements MasterEditService {
       for (int lop = 0; lop < jsonNode_array.size(); lop++) {
         JsonNode jsonNode = jsonNode_array.get(lop);
         // jsonNodeは読み取り専用のため、ObjectNodeに変換
-        ObjectNode objectNode = jsonNode.deepCopy();
+        ObjectNode objectNode = jsonNode.deepCopy().asObject();
 
         if (objectNode.get("cd").asText().equals(equipCode)) {
           objectNode.put("name", equipmentName == null ? "null" : equipmentName.toString());
@@ -1873,7 +1932,7 @@ public class MasterEditServiceImpl implements MasterEditService {
           rtnBuilder.append(",");
         }
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260402 del yangxuewang end
@@ -2097,7 +2156,8 @@ public class MasterEditServiceImpl implements MasterEditService {
     Long retValue = 0L;
 
     // 対象項目が含まれ、値が設定されていれば値を返す
-    if (record.containsKey(itemName) && record.get(itemName) != null) {
+    if (record.containsKey(itemName) && record.get(itemName) != null
+      && !"".equals(record.get(itemName).toString())) {
       retValue = Long.parseLong(record.get(itemName).toString());
     }
     return retValue;

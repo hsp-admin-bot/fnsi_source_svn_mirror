@@ -14,8 +14,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,19 +40,19 @@ import jp.co.nikkiso.ntss.core.entity.MntIfEdgeManage.InnerEdgeResult;
 @Sql("classpath:resource.script/IfEdgeMntMessageHandlerTest/IfEdgeMntMessageHandlerTest.db5.before.sql")
 public class IfEdgeMntMessageHandlerTest {
   //
-  @SpyBean
+  @MockitoSpyBean
   private IfEdgeMntMessageHandler handler;
 
-  @SpyBean
+  @MockitoSpyBean
   IfEdgeMntSessionManager ifEdgeMntSessionManager;
 
-  @MockBean
+  @MockitoBean
   WebSocketConfig config;
 
   @Autowired
   ClockWrapper clockWrapper;
 
-  @SpyBean
+  @MockitoSpyBean
   IfEdgeConfigulation ifEdgeConfigulation;
 
   @Autowired

@@ -622,7 +622,7 @@
               v-if="!isTreatRecord"
               class="common-style-ok-button"
               @click="saveConfirm()"
-              :disabled="!getItemAuthorized('DevicesetInfo', 'default_authority')"
+              :disabled="!getItemAuthorized('DevicesetInfo', 'default_authority') || getIsOtherFacility"
             >
             <!-- mod #10359 編集権限の動作不正 dengshen end -->
               {{ saveButtonLabel }}
@@ -632,18 +632,18 @@
       </div>
 
       <message-dialog
-        :visible.sync="isDialogVisble"
+        v-model:visible="isDialogVisble"
         v-bind="dialogProps"
         type="1"
       />
       <message-dialog
-        :visible.sync="isCancelDialogVisble"
+        v-model:visible="isCancelDialogVisble"
         v-bind="dialogProps"
         type="2"
         @confirm="cancelEdit"
       />
       <message-dialog
-        :visible.sync="isUpdateAllPatDialogVisble"
+        v-model:visible="isUpdateAllPatDialogVisble"
         v-bind="dialogProps"
         type="5"
         @confirm="setUpdateAllPatFlg"
@@ -663,8 +663,8 @@ import baseEditor from "@/components/deviceset-info/base-modules/BaseDeviceSetIn
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
-import { mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 end
 
 /**
@@ -705,7 +705,6 @@ export default {
 
   computed: {
     ...mapGetters("master-maintenance", ["getEditRecord"]),
-    ...mapGetters("pat-info", ["getIsOtherFacility", "getOtherFacilityCd"]),
     /**
      * @description 最高血圧
      */
@@ -851,7 +850,7 @@ export default {
     });
     this.mstMachine = response.data;
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -866,7 +865,7 @@ export default {
     },
     // add #10359 編集権限の動作不正 dengshen start
     getItemAuthorized(pageCd, itemCd) {
-      return getAuthorized(pageCd, itemCd);
+      return !this.getIsOtherFacility && getAuthorized(pageCd, itemCd);
     },
     // add #10359 編集権限の動作不正 dengshen end
     // add FNSI6512-何も編集していないが、保存ボタンが押せてしまう。 周 start
@@ -1038,7 +1037,7 @@ export default {
 }
 
 @media print {
-  .device-input-number >>> .custom-input-number {
+  .device-input-number :deep(.custom-input-number){
     width: 4.5em;
   }
   .device-input-number {
@@ -1052,5 +1051,13 @@ export default {
   ons-row > ons-col:first-child:nth-last-child(n+3) ~ ons-col {
     flex: 1 1 0;
   }
+}
+.device-info-cell-value :deep(.custom-common-number-input-pro) {
+  width: 6em;
+}
+
+/* 連動動作の「動作」チェックボックスと文字の間隔 */
+.device-info-cell-value :deep(ons-row > ons-col:last-child .custom-checkbox ons-checkbox) {
+  margin-right: 9.5px;
 }
 </style>

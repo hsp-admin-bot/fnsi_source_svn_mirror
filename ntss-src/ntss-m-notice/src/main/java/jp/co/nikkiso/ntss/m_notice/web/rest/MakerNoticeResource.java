@@ -7,6 +7,7 @@ import java.util.Map;
 
 import jp.co.nikkiso.ntss.m_notice.service.LogEventUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
@@ -116,7 +117,7 @@ public class MakerNoticeResource {
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
       null);
     // wp アプリケーションログの適正化 Add End
-    return new ResponseEntity<>(null, HttpStatus.OK);
+    return new ResponseEntity<>((HttpHeaders) null, HttpStatus.OK);
   }
 
   /**

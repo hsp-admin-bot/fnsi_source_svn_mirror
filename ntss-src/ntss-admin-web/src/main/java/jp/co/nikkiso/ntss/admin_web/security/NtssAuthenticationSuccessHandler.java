@@ -2,10 +2,10 @@ package jp.co.nikkiso.ntss.admin_web.security;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 import jp.co.nikkiso.ntss.admin_web.service.FacilitySettingService;
 import jp.co.nikkiso.ntss.admin_web.service.master.user.MstUserService;
@@ -22,7 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -59,7 +59,7 @@ public class NtssAuthenticationSuccessHandler implements AuthenticationSuccessHa
   /** modify by wangying 2022-11-18[6505]サインイン・サインアウトの用語統一が行われていない -- end */
 
   @Autowired
-  MappingJackson2HttpMessageConverter httpMessageConverter;
+  JacksonJsonHttpMessageConverter httpMessageConverter;
 
   @Autowired
   FacilitySettingService facilitySettingService;
@@ -203,7 +203,7 @@ public class NtssAuthenticationSuccessHandler implements AuthenticationSuccessHa
 
 				response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 				LoginOtpResponse loginOtpResponse = new LoginOtpResponse("0", "ワンタイムパスワードが正しくありません");
-				httpMessageConverter.write(loginOtpResponse, MediaType.APPLICATION_JSON_UTF8, outputMessage);
+				httpMessageConverter.write(loginOtpResponse, MediaType.APPLICATION_JSON, outputMessage);
 				request.getSession().invalidate();
 				SecurityContextHolder.getContext().getAuthentication().setAuthenticated(false);
 
@@ -213,7 +213,7 @@ public class NtssAuthenticationSuccessHandler implements AuthenticationSuccessHa
 
 				response.setStatus(HttpServletResponse.SC_OK);
 				LoginOtpResponse loginOtpResponse = new LoginOtpResponse("1", "OTP画面にリダイレクト。");
-				httpMessageConverter.write(loginOtpResponse, MediaType.APPLICATION_JSON_UTF8, outputMessage);
+				httpMessageConverter.write(loginOtpResponse, MediaType.APPLICATION_JSON, outputMessage);
 				request.getSession().invalidate();
 				SecurityContextHolder.getContext().getAuthentication().setAuthenticated(false);
 			}
@@ -226,7 +226,7 @@ public class NtssAuthenticationSuccessHandler implements AuthenticationSuccessHa
 
 				response.setStatus(HttpServletResponse.SC_OK);
 				LoginOtpResponse loginOtpResponse = new LoginOtpResponse("2", QRcode);
-				httpMessageConverter.write(loginOtpResponse, MediaType.APPLICATION_JSON_UTF8, outputMessage);
+				httpMessageConverter.write(loginOtpResponse, MediaType.APPLICATION_JSON, outputMessage);
 				request.getSession().invalidate();
 				SecurityContextHolder.getContext().getAuthentication().setAuthenticated(false);
 			}
@@ -234,7 +234,7 @@ public class NtssAuthenticationSuccessHandler implements AuthenticationSuccessHa
 
 			LoginResponse loginResponse = new LoginResponse(ntssUser.getFacilityCd(), ntssUser.getUserId(),
 					ntssUser.getUserType());
-			httpMessageConverter.write(loginResponse, MediaType.APPLICATION_JSON_UTF8, outputMessage);
+			httpMessageConverter.write(loginResponse, MediaType.APPLICATION_JSON, outputMessage);
 			// 認証時に設定したモードをHTTPリクエストから取得
 			String paramMode = request.getParameter("mode") != null ? request.getParameter("mode") : "";
 			// 強制サインアウトする/しないフラグ初期化（0:強制サインアウトする）

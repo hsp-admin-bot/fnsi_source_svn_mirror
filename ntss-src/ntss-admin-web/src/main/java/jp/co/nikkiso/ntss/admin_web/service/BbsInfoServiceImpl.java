@@ -1,15 +1,9 @@
 package jp.co.nikkiso.ntss.admin_web.service;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import jp.co.nikkiso.ntss.admin_web.config.AwsConfiguration;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.response.bbsInfo.BbsInfoResponse;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
@@ -43,6 +37,7 @@ import jp.co.nikkiso.ntss.core.logevent.LogServiceCore;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
 import jp.co.nikkiso.ntss.core.logger.EventLoggerFactory;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
+import jp.co.nikkiso.ntss.core.utils.HexCodecUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -58,7 +53,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.xml.bind.DatatypeConverter;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
@@ -70,6 +71,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
@@ -107,6 +109,10 @@ public class BbsInfoServiceImpl implements BbsInfoService {
   @Autowired
   private LogServiceCore logServiceCore;
   // DB更新ログ出力ロジック wangzuo End
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
 
   // TODO: テスト用バケットを使用しない
   /**
@@ -154,7 +160,6 @@ public class BbsInfoServiceImpl implements BbsInfoService {
   @Override
   public Page<BbsInfo> getBbsInfoByFacilityCd(Pageable pageable, String facility_cd) throws Exception {
     SelectOptions selectOptions = SelectOptions.get();
-
     List<BbsInfo> bbsInfoList = bbsInfoDao.selectByFacilityCd(selectOptions, facility_cd);
     return new PageImpl<>(bbsInfoList, pageable, selectOptions.getCount());
   }
@@ -285,7 +290,7 @@ public class BbsInfoServiceImpl implements BbsInfoService {
     wheres.append(" WHERE\n");
     wheres.append(" bbs_ctl_no = " + bbs_ctl_no + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(bbsInfoDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -592,6 +597,7 @@ public class BbsInfoServiceImpl implements BbsInfoService {
       return resultPatIdList;
     }
     // add FutreNetWeb+SI課題管理No4292対応 趙 end
+    resultPatIdList.removeIf(Objects::isNull);
     List<Long> finalResultPatIdList = resultPatIdList;
     List<BbsInfo> collect = bbsList2.stream().filter(x -> {
       JSONObject parseObject = new JSONObject(x.getPat_info());
@@ -691,18 +697,7 @@ public class BbsInfoServiceImpl implements BbsInfoService {
    * @return s3 S3オブジェクト
    */
   @Autowired
-  private AwsConfiguration awsS3;
-  private AmazonS3 s3() {
-    return awsS3.s3();
-  }
-//  private AmazonS3 s3() {
-//    ProfileCredentialsProvider credentials = new ProfileCredentialsProvider();
-//    AmazonS3 s3 = AmazonS3ClientBuilder.standard()
-//      .withRegion("ap-northeast-1")
-//      .build();
-//
-//    return s3;
-//  }
+  private S3Client s3;
 
   /**
    * ファイルダウンロード
@@ -742,14 +737,15 @@ public class BbsInfoServiceImpl implements BbsInfoService {
       Path path = Paths.get(fileLocation);
       byte[] bytes = Files.readAllBytes(path);
         // 16進数文字列に変換
-      String hexString = DatatypeConverter.printHexBinary(bytes);
+      String hexString = HexCodecUtils.printHexBinary(bytes);
       return hexString;
     } else {
-      S3Object object = this.s3().getObject(new GetObjectRequest(s3BucketInFcd, filepath));
-
       // レスポンス用データ生成
       try (
-        InputStream is = object.getObjectContent();
+        ResponseInputStream<GetObjectResponse> is = this.s3.getObject(GetObjectRequest.builder()
+          .bucket(s3BucketInFcd)
+          .key(filepath)
+          .build());
         ByteArrayOutputStream os = new ByteArrayOutputStream();
       ) {
         byte[] buffer = new byte[1024];
@@ -762,7 +758,7 @@ public class BbsInfoServiceImpl implements BbsInfoService {
         }
         byte[] content = os.toByteArray();
         // 16進数文字列に変換
-        String hexString = DatatypeConverter.printHexBinary(content);
+        String hexString = HexCodecUtils.printHexBinary(content);
         return hexString;
       } catch (Exception e) {
         throw e;
@@ -799,10 +795,6 @@ public class BbsInfoServiceImpl implements BbsInfoService {
       jsonArray.put(jsonObject);
       String file_info = jsonArray.toString();
 
-      ObjectMetadata metadata = new ObjectMetadata();
-      metadata.setContentLength(file.getSize());
-      metadata.setContentType(file.getContentType());
-
       String localStore = null;
       String status = null;
 
@@ -826,10 +818,15 @@ public class BbsInfoServiceImpl implements BbsInfoService {
       } else {
           // ログ改善対応対応 毛 Add
           eventLogMessage.setLogMessage("S3に格納パス：s3Bucket=" + s3BucketInFcd + " path=" + path
-                  + " s3()=" + this.s3() + " file.getInputStream()=" + file.getInputStream() + " metadata=" + metadata);
+                  + " s3=" + this.s3 + " contentLength=" + file.getSize() + " contentType=" + file.getContentType());
           logService.log(LogLevel.INFO, eventLogMessage, FUNCTION_CODE.FUNC_BBS_INFO, SERVICE_NAME.FNSI, null);
         // S3アップロード
-        this.s3().putObject(new PutObjectRequest(s3BucketInFcd, path, file.getInputStream(), metadata));
+        this.s3.putObject(PutObjectRequest.builder()
+            .bucket(s3BucketInFcd)
+            .key(path)
+            .contentLength(file.getSize())
+            .contentType(file.getContentType())
+            .build(), RequestBody.fromInputStream(inputStream, file.getSize()));
       }
 
       // DB更新
@@ -889,7 +886,10 @@ public class BbsInfoServiceImpl implements BbsInfoService {
         pathFile.toFile().delete();
       } else {
         // S3ファイル削除
-        this.s3().deleteObject(new DeleteObjectRequest(s3BucketInFcd, path));
+        this.s3.deleteObject(DeleteObjectRequest.builder()
+            .bucket(s3BucketInFcd)
+            .key(path)
+            .build());
       }
     }
   }
@@ -938,11 +938,11 @@ public class BbsInfoServiceImpl implements BbsInfoService {
    * ログ出力共通クラス設定、取得
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);

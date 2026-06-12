@@ -3,7 +3,8 @@
     <!--
       モーダルの中身はモーダルと一緒に描画しないとCSSが正常に適用されないのでv-if
     -->
-    <div slot="body" class="physical-edit-area">
+    <template #body>
+      <div class="physical-edit-area">
       <div class="edit-area">
 <!-- add FNSI-改修内容身体情報でのDW追加・変更時の対応  指示履歴追加   指示受け指示承認更新   連携イベント登録 liang start       -->
 <!-- v-show="false" add by maxueqiang-->
@@ -32,7 +33,7 @@
               <v-ons-col class="input-area">
                 <!--mod   7778 limingyang start-->
                 <custom-input-date
-                  class="custom-date"
+                  class="custom-date change_date"
                   :value="getPatDataJsonArray(physicalInfoData, 'exam_day')"
                   :cardDiff="cardDiff"
                   ref = "examDate_id"
@@ -89,7 +90,7 @@
               :digits="4"
               :decimal-digits="1"
               :value="getPatDataJsonArray(physicalInfoData, 'height')"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority')"
+              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow()"
             /> -->
             <custom-input-number-pro
               :value="getPatDataJsonArray(physicalInfoData, 'height').editValue"
@@ -118,7 +119,7 @@
               :digits="5"
               :decimal-digits="2"
               :value="getPatDataJsonArray(physicalInfoData, 'ctr_weight')"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority')"
+              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow()"
             /> -->
             <custom-input-number-pro
               ref="ctr_weight"
@@ -155,7 +156,7 @@
               @wheel.prevent="
                 setCtr(physicalInfoData.breast_dia, physicalInfoData.chest_dia)
               "
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority')"
+              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow()"
             /> -->
             <custom-input-number-pro
               :value="getPatDataJsonArray(physicalInfoData, 'breast_dia').editValue"
@@ -190,7 +191,7 @@
               @wheel.prevent="
                 setCtr(physicalInfoData.breast_dia, physicalInfoData.chest_dia)
               "
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority')"
+              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow()"
             /> -->
             <custom-input-number-pro
               :value="getPatDataJsonArray(physicalInfoData, 'chest_dia').editValue"
@@ -219,7 +220,7 @@
               :digits="5"
               :decimal-digits="2"
               :value="getPatDataJsonArray(physicalInfoData, 'ctr')"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority')"
+              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow()"
             /> -->
             <custom-input-number-pro
               :value="getPatDataJsonArray(physicalInfoData, 'ctr').editValue"
@@ -253,7 +254,7 @@
               @input="dwValue($event.target.value)"
               @wheel.prevent="dwValue($event.target.value)"
               ref = "ref_dw"
-              :disabled="!getItemAuthorized('PatInfo', 'item_physical_info_card')"
+              :disabled="!getItemAuthorized('PatInfo', 'item_physical_info_card') || isOtherFacilityRow()"
             /> -->
             <custom-input-number-pro
               :required="isRequiredDw"
@@ -294,8 +295,9 @@
               v-model="isUpdateOrd"
               type="checkbox"
               :disabled="
-                getPatDataJsonArray(physicalInfoData, 'dw').editValue === null || !getItemAuthorized('PatInfo', 'item_physical_info_card')
-                || isOtherFacilityRow()
+                getPatDataJsonArray(physicalInfoData, 'dw').editValue === null ||
+                !getItemAuthorized('PatInfo', 'item_physical_info_card') ||
+                isOtherFacilityRow()
               "
             />
           </v-ons-col>
@@ -328,7 +330,7 @@
               :decimal-digits="2"
               placeholder="DWと同じ"
               :value="getPatDataJsonArray(physicalInfoData, 'target_weight')"
-              :disabled="!getItemAuthorized('PatInfo', 'item_physical_info_card')"
+              :disabled="!getItemAuthorized('PatInfo', 'item_physical_info_card') || isOtherFacilityRow()"
             /> -->
             <custom-input-number-pro
               placeholder="DWと同じ"
@@ -384,26 +386,15 @@
             <!-- <kendo-dropdownlist
               class="ntss-custom-kendo custom-select-physical"
               v-model="physicalInfoData.indicator_cd.editValue"
-              :data-source="indUserList"
+              :data-source="isOtherFacilityRow() ? otherFacilitySingleList : indUserList"
               :data-text-field="'fullName'"
               :data-value-field="'user_id'"
               style="margin-left: -1px;"
-            /> -->
-            <!-- <kendo-dropdownlist
-              id="kendo-dropdownlist-select-id"
-              class="ntss-custom-kendo custom-select-physical custom-input-full"
-              :class="{ 'input-style-required': isValidate || isRequiredDw || getPatDataJsonArray(physicalInfoData, 'dw').editValue !== null }"
-              v-model="physicalInfoData.indicator_cd.editValue"
-              :data-source="indUserList"
-              :data-text-field="'fullName'"
-              :data-value-field="'user_id'"
-              style="margin-left: -1px;"
-              :disabled="!getItemAuthorized('PatInfo', 'item_physical_info_card') || isOtherFacilityRow()"
             /> -->
             <kendo-dropdownlist
               id="kendo-dropdownlist-select-id"
               class="ntss-custom-kendo custom-select-physical custom-input-full"
-              :class="{ 'input-style-required': isValidate || isRequiredDw || getPatDataJsonArray(physicalInfoData, 'dw').editValue !== null }"
+              :class="{ 'input-style-required': isValidate || isRequiredDw || getPatDataJsonArray(physicalInfoData, 'dw').editValue !== null,'isChangeStyle':selectedPhysicalInfoData.addEditC == 2 }"
               v-model="physicalInfoData.indicator_cd.editValue"
               :data-source="isOtherFacilityRow() ? otherFacilitySingleList : indUserList"
               :data-text-field="'fullName'"
@@ -429,7 +420,7 @@
               :digits="5"
               :decimal-digits="2"
               :value="getPatDataJsonArray(physicalInfoData, 'pre_scale_upper')"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority')"
+              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow()"
             /> -->
             <custom-input-number-pro
               :value="getPatDataJsonArray(physicalInfoData, 'pre_scale_upper').editValue"
@@ -459,7 +450,7 @@
               :digits="5"
               :decimal-digits="2"
               :value="getPatDataJsonArray(physicalInfoData, 'pre_scale_lower')"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority')"
+              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow()"
             /> -->
             <custom-input-number-pro
               :value="getPatDataJsonArray(physicalInfoData, 'pre_scale_lower').editValue"
@@ -499,45 +490,46 @@
       </div>
       <message-dialog
         v-if="isDeleteConfirmation"
-        :visible.sync="isDeleteConfirmation"
+        v-model:visible="isDeleteConfirmation"
         :message-cd="11010001"
         type="2"
         @confirm="confirmSave"
       />
       <message-dialog
         v-if="isLatestDWFlg"
-        :visible.sync="isLatestDWFlg"
+        v-model:visible="isLatestDWFlg"
         :message-cd="21010001"
         type="1"
       />
       <message-dialog
         v-if="notSave"
-        :visible.sync="notSave"
+        v-model:visible="notSave"
         :message-cd="22010001"
         :string-params="messageParams"
         type="1"
       />
       <message-dialog
         v-if="isPasteLastRstWeight"
-        :visible.sync="isPasteLastRstWeight"
+        v-model:visible="isPasteLastRstWeight"
         :message-cd="21010003"
         type="1"
       />
       <message-dialog
         v-if="isIndicatorStartDateOld"
-        :visible.sync="isIndicatorStartDateOld"
+        v-model:visible="isIndicatorStartDateOld"
         :message-cd="21010004"
         type="1"
       />
       <!-- 排他エラー -->
       <message-dialog
-        :visible.sync="isHaitaErrDialogVisible"
+        v-model:visible="isHaitaErrDialogVisible"
         :message-cd="22020006"
         type="1"
       />
     </div>
-
-    <div slot="footer" class="button-area">
+    </template>
+    <template #footer>
+      <div class="button-area">
       <span>
         <v-ons-button class="btn2-cancel" style="width: 100px; margin-right: 0.5em;" @click="hideModal_plus">キャンセル</v-ons-button>
         <!-- mod FNSI-患者情報共有よりの改修 江 start -->
@@ -579,18 +571,20 @@
         <!--mod 編集権限の適用 じょはく end-->
         <!-- mod FNSI-患者情報共有よりの改修 江 end -->
       </span>
-    </div>
+          </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
+import { setKendoDropDownListEditedState } from "@/functions/common/KendoFunctions";
 // add #10359 編集権限の動作不正 dengshen start
 import { getAuthorized } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
-import _ from "underscore";
-import moment from "moment";
-import { mapGetters, mapActions, mapMutations, mapState } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import _ from "@/compat/collections/lodash";
+import dayjs from "@/compat/date/dayjs";
+import { mapGetters, mapActions, mapMutations, mapState } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { ApiHelper } from "@/apis/AxiosHelper";
 import { PAT_UNIQUE_COL_PHYSICAL_INFO_ORDER_CLASS } from "@/constants/PatInfo";
 import {
@@ -611,7 +605,7 @@ import IndUserSelectMixin from "@/components/common/IndUserSelectMixin";
 // del #10359 編集権限の動作不正 dengshen end
 // add 編集権限の適用 じょはく end
 // add 画面デザイン改善対応 李 start
-import $ from "jquery";
+
 // add 画面デザイン改善対応 李 end
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
@@ -625,10 +619,10 @@ import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
 // add #10435 患者情報>身体情報にて入力欄にフォーカスを当てた時点で自動で0が入力される linjunfeng start
 import CustomInputNumberPro from '@/components/common/custom-form-tags/CustomInputNumberPro'
-import BigNumber from "bignumber.js";
+import BigNumber from "@/compat/number/bignumber";
 // add #10435 患者情報>身体情報にて入力欄にフォーカスを当てた時点で自動で0が入力される linjunfeng end
 import { parseDate, dateFormat ,DATE_FORMAT_NORMAL} from "@/functions/common/DateTimeUtils.js";
-
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
 export default {
   components: {
     "message-dialog": messageDialog,
@@ -674,7 +668,7 @@ export default {
         // add FNSI-改修内容身体情報でのDW追加・変更時の対応  指示履歴追加   指示受け指示承認更新   連携イベント登録 liang start
         inspect_date:null,
         // add FNSI-改修内容身体情報でのDW追加・変更時の対応  指示履歴追加   指示受け指示承認更新   連携イベント登録 liang end
-        exam_date: moment().format("YYYYMMDD"),
+        exam_date: dayjs().format("YYYYMMDD"),
         exam_day: null,
         exam_time: null,
         order_class: null,
@@ -688,7 +682,7 @@ export default {
         pre_scale_lower: null,
         target_weight: null,
         indicator_cd: null,
-        indicator_start_date: moment().format("YYYYMMDD"),
+        indicator_start_date: dayjs().format("YYYYMMDD"),
         memo: null,
         facility_cd: null,
         changer_cd: null
@@ -738,6 +732,7 @@ export default {
       ],
       // 指示者リスト
       indUserList: [],
+      otherFacilitySingleList: [],
       //add dw Mongodb log を加入します顔 start
       dw_log_info: {
         is_delete : false,
@@ -765,8 +760,7 @@ export default {
       dwPreviousInfo: {
         dw: null,
         examDate: null
-      },
-      otherFacilitySingleList: []
+      }
     };
   },
 
@@ -794,9 +788,9 @@ export default {
       "selectedPhysicalInfoData"
       // add FNSI-患者情報共有よりの改修 江 start
       ,"isOwnFacility"
+      ,"getIsOtherFacility"
+      ,"getOtherFacilityCd"
       // add FNSI-患者情報共有よりの改修 江 end
-      , "getIsOtherFacility"
-      , "getOtherFacilityCd"
     ]),
 
     /**
@@ -824,14 +818,13 @@ export default {
      * @returns { Boolean } true: 編集済み, false: 編集未
      */
     isEditedTargetWeight() {
-      if (!_.has(this.physicalInfoData, "target_weight")) {
+      if (!Object.prototype.hasOwnProperty.call(this.physicalInfoData, "target_weight")) {
         return false;
       }
 
       const targetWeight = this.getPatDataJsonArray(
         this.physicalInfoData,
-        "target_weight"
-      ).editValue;
+        "target_weight").editValue;
       if (targetWeight === null || targetWeight === "") {
         return false;
       }
@@ -879,7 +872,7 @@ export default {
      * カスタムカレンダーの入力制限のための本日の日付文字列
      */
     todayStr() {
-      return moment().format("YYYYMMDD");
+      return dayjs().format("YYYYMMDD");
     },
 
     // #10443 DW編集権限-検査日時 編集 Start
@@ -898,7 +891,7 @@ export default {
     recordRemovable() {
       // 編集パターン
       if (this.selectedPhysicalInfoData.addEditC === "2") {
-        if (_.has(this.physicalInfoData, "dw")) {
+        if (Object.prototype.hasOwnProperty.call(this.physicalInfoData, "dw")) {
 
           // DWを含むレコード → 患者情報権限あり、指示権限/指示代行権限あり
           if (this.physicalInfoData.dw.initValue) {
@@ -941,11 +934,9 @@ export default {
 
       // 選択した値と初期値が異なる場合
       if (val != this.firValue) {
-        $('#kendo-dropdownlist-select-id').addClass('kendo-dropdownlist-select-edited');
-        $('#kendo-dropdownlist-select-id_listbox').addClass('kendo-dropdownlist-listbox');
+        setKendoDropDownListEditedState(this.$el || this, { enabled: true });
       } else {
-        $('#kendo-dropdownlist-select-id').removeClass('kendo-dropdownlist-select-edited');
-        $('#kendo-dropdownlist-select-id_listbox').removeClass('kendo-dropdownlist-listbox');
+        setKendoDropDownListEditedState(this.$el || this, { enabled: false });
       }
     },
     // #10435 患者情報>身体情報にて入力欄にフォーカスを当てた時点で自動で0が入力される linjunfeng start
@@ -976,13 +967,9 @@ export default {
     // this.editFlag = !(this.isOwnFacility && this.isPatViewAuthorized && this.isPatEditAuthorized);
     this.editFlag = !this.isOwnFacility;
     // mod #10359 編集権限の動作不正 dengshen end
-    // add bug 7980 修正 chen start
-    // add #12462 患者情報共有 Ji start
     if (this.isOtherFacilityRow()) {
-      const id =
-        this.physicalInfoData?.indicator_cd?.editValue;
-      const name =
-        this.physicalInfoData?.indicator_name?.editValue;
+      const id = this.physicalInfoData?.indicator_cd?.editValue;
+      const name = this.physicalInfoData?.indicator_name?.editValue;
 
       if (id == null || name == null) {
         this.otherFacilitySingleList = [];
@@ -993,10 +980,10 @@ export default {
         }];
       }
     }
-    // add #12462 患者情報共有 Ji end
-
+    // add bug 7980 修正 chen start
     const res = await ApiHelper.get("/mstInfo/mstPersonalUser", {
-      facility_cd: this.facilityCd
+      facility_cd: this.facilityCd,
+      selectedPatId: this.selectedPatId
     });
     res.data.forEach(user => {
       user.userFullName = `${user.userLastName} ${user.userFirstName}`;
@@ -1008,8 +995,7 @@ export default {
     // this.getIndUserList(
     this.getIndUserListIncludeDel(
       AUTHORITY_CODES.IND_EDIT,
-      AUTHORITY_CODES.IND_PEDIT
-    ).then(response => {
+      AUTHORITY_CODES.IND_PEDIT).then(response => {
       // mod #10659 削除済み含むの接頭文字対応 ztc 20241021 ztc start
       this.indUserList = response.doctorList.filter(item => {
         return item.is_disp == '1' || item.user_id == this.physicalInfoData.indicator_cd.editValue
@@ -1162,6 +1148,9 @@ export default {
   },
 
   methods: {
+    getPhysicalInfoElementsByClassName(className) {
+      return getScopedElementsByClassName(className, this.$el || this);
+    },
     // add getUserId  zhuhongrui start
     ...mapGetters("account-edit", ["getUserId"]),
     // add getUserId  zhuhongrui end
@@ -1303,7 +1292,7 @@ export default {
         messageArray.push("検査日時");
       }
       // add FNSI-改修内容身体情報でのDW追加・変更時の対応  指示履歴追加   指示受け指示承認更新   連携イベント登録 liang start
-      //  if (inspect_date === null || !moment(inspect_date, "YYYYMMDD", true).isValid()){
+      //  if (inspect_date === null || !dayjs(inspect_date, "YYYYMMDD", true).isValid()){
       //    validate = true;
       //    messageArray.push("検査日");
       //  }
@@ -1394,7 +1383,7 @@ export default {
       }
 
       if (this.isChangeTargetWeight.editValue === "1") {
-        validate = moment(indicatorStartDate, "YYYY-MM-DD").format("YYYYMMDD") < this.todayStr;
+        validate = dayjs(indicatorStartDate, "YYYY-MM-DD").format("YYYYMMDD") < this.todayStr;
       }
       return validate;
     },
@@ -1457,7 +1446,7 @@ export default {
       //   /* add FNSI zhuhongrui end */
       //   hosp_pat_id: this.selectedPat.pat_personal_main.hosp_pat_id,
       //   ord_no: "",
-      //   base_date:moment().format("YYYYMMDD"),
+      //   base_date:dayjs().format("YYYYMMDD"),
       //   user_id: this.getUserId()
       // };
       // createJournal(params);
@@ -1479,7 +1468,7 @@ export default {
       await this.setLoadingScreenVisible(false)
       // add/ #12489 身体情報削除時にローダ画面が表示されない tianqidong end
       //add  #9929  dw削除の場合は連携修正をトリガーします ljg start
-      // const startDate = moment(this.physicalInfoData.exam_day.editValue).format("YYYYMMDD");
+      // const startDate = dayjs(this.physicalInfoData.exam_day.editValue).format("YYYYMMDD");
       // const responsetest = await ApiHelper.get(`/mainData/getAllStateIsNotZero/${this.selectedPatId}/${startDate}`);
       // let journalList = [];
       // if(responsetest.data){
@@ -1490,7 +1479,7 @@ export default {
       //   pat_id: this.selectedPatId,
       //   hosp_pat_id: this.selectedPat.pat_personal_main.hosp_pat_id,
       //   ord_no: item,
-      //   base_date:moment().format("YYYYMMDD"),
+      //   base_date:dayjs().format("YYYYMMDD"),
       //   ope_cd:"007006",
       //   user_id: this.getUserId()
       //     })
@@ -1590,7 +1579,7 @@ export default {
               // Math.round(ctrValue * 100) / 100
               (Math.round(ctrValue * 100) / 100).toFixed(2)
               // #10435 患者情報>身体情報にて入力欄にフォーカスを当てた時点で自動で0が入力される linjunfeng end
-            );
+              );
           }
         }
       } else {
@@ -1639,7 +1628,7 @@ export default {
       let val = JSON.parse(JSON.stringify(this.physicalInfoData)).exam_date.editValue;
       if(!(_.isEmpty(time_covern_init))) {
         time_covern_change = time_covern_init.substring(0, 2) + ":" + time_covern_init.substring(2, 4);
-        val = this.dw_log_info.examTime_aft + "T" + time_covern_change +":00.000"+ moment().format().substring(19,40);
+        val = this.dw_log_info.examTime_aft + "T" + time_covern_change +":00.000"+ dayjs().format().substring(19,40);
         this.dw_log_info.examTime_aft = val;
       }
       // #10435 患者情報>身体情報にて入力欄にフォーカスを当てた時点で自動で0が入力される linjunfeng start
@@ -1655,11 +1644,11 @@ export default {
       //add dw Mongodb log を加入します顔 end
       if (this.validate()) {
         // add じょはく start
-        let arr = document.getElementsByClassName("custom-input-date-required");
-        if ( arr[0].value == "" ) {
+        let arr = this.getPhysicalInfoElementsByClassName("custom-input-date-required");
+        if ( arr[0].value == "") {
           arr[0]?.classList?.add("custom-input-date-invalid");
         }
-        if (arr.length >= 2 && arr[1].value == "" ) {
+        if (arr.length >= 2 && arr[1].value == "") {
           arr[1]?.classList?.add("custom-input-date-invalid");
         }
         // add じょはく end
@@ -1750,8 +1739,7 @@ export default {
         let physicalInfoSort = [physicalInfo, ...savePhysicalInfo];
 
         savePhysicalInfo = physicalInfoSort.sort(
-          (a, b) => moment(b.exam_date) - moment(a.exam_date)
-        );
+          (a, b) => dayjs(b.exam_date) - dayjs(a.exam_date));
         await this.saveRecord(savePhysicalInfo, hasBeenAdded, this.physicalInfoUpDate || patInfo.pat_unique.old_up_date_unique
           , physicalInfo, "I", targetWeightFlag);
       }
@@ -1789,8 +1777,7 @@ export default {
       const basePhysicalInfoList = basePhysicalInfo.sort(
         // 登録日が新しいもの順にソートする
         // @ts-ignore
-        (a, b) => moment(b.exam_date) - moment(a.exam_date)
-      );
+        (a, b) => dayjs(b.exam_date) - dayjs(a.exam_date));
       let baseDwMax = null;
       let baseDwList = [];
       for (const physicalInfo of basePhysicalInfoList) {
@@ -1812,8 +1799,7 @@ export default {
       const savePhysicalInfoList = savePhysicalInfo.sort(
         // 登録日が新しいもの順にソートする
         // @ts-ignore
-        (a, b) => moment(b.exam_date) - moment(a.exam_date)
-      );
+        (a, b) => dayjs(b.exam_date) - dayjs(a.exam_date));
       let saveDwMax = null;
       let saveDwList = [];
       for (const physicalInfo of savePhysicalInfoList) {
@@ -1867,7 +1853,7 @@ export default {
     async saveRecord(savePhysicalInfo, hasBeenAdded, old_up_date_unique, savePhysicalItem, editMod, targetWeightFlag) {
     // #9929 mod 身体情報でDWを登録しても連携イベントが発生しない 荘 2024-07-01 end
       // mod FNSI-排他処理 劉 end
-      const up_date = moment().format("YYYY-MM-DD HH:mm:ss");
+      const up_date = dayjs().format("YYYY-MM-DD HH:mm:ss");
       const physicalInfoJson = {
         pat_unique: JSON.stringify({
           physical_info: JSON.stringify(savePhysicalInfo),
@@ -1897,9 +1883,8 @@ export default {
       await ApiHelper.put(
         `${uri}/${this.selectedPatId}`,
         physicalInfoJson
-        // mod FNSI-排他処理 劉 start
-        //).catch(() => {
-        ).catch(error => {
+      ).catch(error => {
+          // mod FNSI-排他処理 劉 start
           //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
           getErrorMessage('PhysicalInfoAddEditForPatInfo.vue', 'saveRecord', "身体情報更新失敗");
           //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
@@ -1942,9 +1927,8 @@ export default {
     maxCtlNo(physicalInfo, savePhysicalInfo) {
       // コントロール番号の最大値を設定
       const ctlNoList = [physicalInfo, ...savePhysicalInfo].map(
-        info => info.ctl_no
-      );
-      const maxCtlNo = _.max(ctlNoList, el => el);
+        info => info.ctl_no);
+      const maxCtlNo = _.maxBy(ctlNoList, el => el);
 
       // コントロール番号追加
       return maxCtlNo + 1;
@@ -2044,11 +2028,10 @@ export default {
       let date = null;
 
       if (day !== null) {
-        date = moment(`${day}T${time}`, "YYYYMMDDTHHmm").format(
-          "YYYY-MM-DDTHH:mm:ss.SSSZ"
-        );
+        date = dayjs(`${day}T${time}`, "YYYYMMDDTHHmm").format(
+          "YYYY-MM-DDTHH:mm:ss.SSSZ");
         if (time === null) {
-          date = moment(`${day}`, "YYYYMMDD").format("YYYY-MM-DD");
+          date = dayjs(`${day}`, "YYYYMMDD").format("YYYY-MM-DD");
         }
       }
 
@@ -2072,7 +2055,7 @@ export default {
         return false;
       }
 
-      const json = _.max(savePhysicalInfo, el => {
+      const json = _.maxBy(savePhysicalInfo, el => {
         return this.formatterDay(el) + this.formatterTime(el);
       });
 
@@ -2086,7 +2069,7 @@ export default {
      */
     async ordMainList(indStartDate) {
       // 一年後
-      const indEndDate = moment(indStartDate, "YYYYMMDD")
+      const indEndDate = dayjs(indStartDate, "YYYYMMDD")
         .add(1, "y")
         .subtract(1, "days")
         .format("YYYY-MM-DD");
@@ -2098,7 +2081,7 @@ export default {
         // 患者ID
         pat_id: this.selectedPatId,
         // 治療開始日
-        ind_start_date: moment(indStartDate, "YYYYMMDD").format("YYYY-MM-DD"),
+        ind_start_date: dayjs(indStartDate, "YYYYMMDD").format("YYYY-MM-DD"),
         // 治療終了日
         ind_end_date: indEndDate,
         // 曜日パターン
@@ -2107,8 +2090,7 @@ export default {
       // データの取得
       const response = await ApiHelper.post(
         `/mainData/TreatDateList`,
-        paramJson
-      ).catch(error => {
+        paramJson).catch(error => {
         throw error;
       });
       return response.data.length === 0 ? null : response.data;
@@ -2169,7 +2151,7 @@ export default {
       const indStartDate = record.indicator_start_date;
 
       // 一年後
-      const indEndDate = moment(indStartDate, "YYYYMMDD")
+      const indEndDate = dayjs(indStartDate, "YYYYMMDD")
         .add(1, "y")
         .subtract(1, "days")
         .format("YYYYMMDD");
@@ -2213,7 +2195,7 @@ export default {
       };
 
       // TODO: 指示履歴残すか精査中※現在は残る挙動
-      await ApiHelper.post("/mainData/updateOrdMainInfo/", sendJson).catch(
+      await ApiHelper.post("/mainData/updateOrdMainInfo", sendJson).catch(
         error => {
           //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
           getErrorMessage('PhysicalInfoAddEditForPatInfo.vue', 'updateOrdMain', error);
@@ -2229,9 +2211,8 @@ export default {
      * @returns {String}
      */
     formatterDay(json) {
-      return moment(json.exam_date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format(
-        "YYYYMMDD"
-      );
+      return dayjs(json.exam_date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format(
+        "YYYYMMDD");
     },
 
     /**
@@ -2240,7 +2221,7 @@ export default {
      * @returns {String}
      */
     formatterTime(json) {
-      return moment(json.exam_date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format("HHmm");
+      return dayjs(json.exam_date, "YYYY-MM-DDTHH:mm:ss.SSSZ").format("HHmm");
     },
 
     /**
@@ -2305,7 +2286,7 @@ export default {
         return null;
       }
 
-      const json = _.max(dwList, el => {
+      const json = _.maxBy(dwList, el => {
         return this.formatterDay(el) + this.formatterTime(el);
       });
       return json.dw;
@@ -2356,7 +2337,7 @@ export default {
 
       // 無効な日付判定関数
       const isInvalidDate = (date,examDay) => {
-        return Number.isNaN(date.getTime()) || examDay !== moment(date).format(DATE_FORMAT_NORMAL);
+        return Number.isNaN(date.getTime()) || examDay !== dayjs(date).format(DATE_FORMAT_NORMAL);
       }
       // 検査日時欄入力値より日付を取得
       const examDay = dateFormat.normalDateWithCheck(this.physicalInfoData.exam_day.editValue);
@@ -2375,10 +2356,8 @@ export default {
         error => {
           getErrorMessage('PhysicalInfoAddEditForPatInfo.vue', 'setDwPreviousInfo', error);
           throw error;
-        }
-      ).finally(() =>
-        this.setLoadingScreenVisible(false)
-      );
+        }).finally(() =>
+        this.setLoadingScreenVisible(false));
       // 取得できない場合は初期値を設定して終了
       if(!response?.data[0]?.physical_info){
         this.dwPreviousInfo = defaultVal;
@@ -2388,8 +2367,7 @@ export default {
       // 検査日時より前のデータを抽出
       const physical_info = JSON.parse(response.data[0].physical_info);
       const dwList = physical_info.filter(data => data.dw !== null
-              && moment(data.exam_date) < moment(examDate)
-              )
+              && dayjs(data.exam_date) < dayjs(examDate))
       // 検査日時より前のデータがない場合は初期値を設定して終了
       if (dwList.length === 0) {
         this.dwPreviousInfo = defaultVal;
@@ -2397,12 +2375,12 @@ export default {
       }
 
       // リストの中で最新の検査日時のDWと日時を設定
-      const maxData = _.max(dwList, el => {
-        return moment(el.exam_date);
+      const maxData = _.maxBy(dwList, el => {
+        return dayjs(el.exam_date);
       });
       this.dwPreviousInfo = {
         dw: maxData.dw,
-        examDate: moment(maxData.exam_date).format(DATE_FORMAT_NORMAL)
+        examDate: dayjs(maxData.exam_date).format(DATE_FORMAT_NORMAL)
       }
     },
     /**
@@ -2413,7 +2391,7 @@ export default {
      */
     getDateVal(date,time) {
       let dateVal = null;
-      if (!!time) {
+      if (time) {
         // 日付＋時刻を設定
         dateVal =
           date && time
@@ -2427,19 +2405,13 @@ export default {
       }
       return dateVal;
     },
-    // add #12462 患者情報共有 Ji start
-    /**
-     * @description 該当行が他院情報かどうかを判定
-     * @returns {Boolean} true = 他施設のデータは参照のみ
-     */
     isOtherFacilityRow() {
-      const facilityCd = this.physicalInfoData.facility_cd.initValue;
+      const facilityCd = this.physicalInfoData?.facility_cd?.initValue;
       if (!facilityCd) {
         return false;
       }
       return facilityCd !== this.facilityCd;
-    }
-    // add #12462 患者情報共有 Ji end
+    },
   }
 };
 </script>
@@ -2453,13 +2425,13 @@ ons-row {
   vertical-align: middle;
   text-align: center;
 }
-.physical-edit-area >>> .ntss-custom-kendo,
-ons-select >>> .select-input {
+.physical-edit-area :deep(.ntss-custom-kendo),
+ons-select :deep(.select-input) {
   font-size: 1em;
   line-height: unset
 }
-.physical-edit-area >>> button.calender,
-.physical-edit-area >>> input.custom-input-time {
+.physical-edit-area :deep(button.calender),
+.physical-edit-area :deep(input.custom-input-time) {
   font-size: 1em;
   /* add FNSI-input -> textarea変更 江 start */
   color: black !important;
@@ -2476,7 +2448,6 @@ ons-select >>> .select-input {
 .physical-data {
   display: block;
 }
-
 
 .order-area,
 .height-area,
@@ -2513,19 +2484,20 @@ ons-select >>> .select-input {
 .unit {
   margin-left: 5px;;
 }
+
 /* TODO: 共通スタイル(modal.css)に定義 */
-div >>> .modal-header .toolbar {
+div :deep(.modal-header .toolbar) {
   background-color: var(--ntss-header-background-color);
 }
 
-div >>> .modal-header .toolbar__title.toolbar__left {
+div :deep(.modal-header .toolbar__title.toolbar__left) {
   color: var(--ntss-header-color) !important;
 }
 
-div >>> .modal-search,
-div >>> .modal-body,
-div >>> .modal-footer,
-div >>> .modal-footer .bottom-bar {
+div :deep(.modal-search),
+div :deep(.modal-body),
+div :deep(.modal-footer),
+div :deep(.modal-footer .bottom-bar) {
   background-color: var(--ntss-base-background-color);
   color: var(--ntss-base-color);
 }
@@ -2534,11 +2506,12 @@ ons-button.cancel {
   margin-right: 7.5px;
 }
 
-div >>> .modal-container {
+div :deep(.modal-container) {
   background-color: var(--ntss-base-background-color);
 }
+
 /* add FNSI-input -> textarea変更 江 start */
-.physical-edit-area >>> textarea.custom-textarea {
+.physical-edit-area :deep(textarea.custom-textarea) {
   color: black !important;
 }
 /* add FNSI-input -> textarea変更 江 end */
@@ -2591,19 +2564,19 @@ div >>> .modal-container {
     margin-left: 10px;
     width: 95%;
   }
-  .physical-edit-area >>> .calender {
+  .physical-edit-area :deep(.calender) {
     width: 2em;
   }
   .custom-date {
     max-width: 9em;
   }
-  .physical-edit-area >>> textarea.custom-textarea {
+  .physical-edit-area :deep(textarea.custom-textarea) {
     width: 83%;
   }
   .custom-input-half {
     width: 65%;
   }
-  .physical-edit-area >>> .custom-input-full {
+  .physical-edit-area :deep(.custom-input-full) {
     width: 95%;
   }
   .input-area {
@@ -2627,6 +2600,12 @@ div >>> .modal-container {
     margin-bottom: 5px;
     margin-right: 15px;
   }
+}
+:deep(.change_date){
+  width: 11.05em !important;
+}
+:deep(.isChangeStyle.k-dropdownlist),:deep(.isChangeStyle.k-dropdown .k-dropdown-wrap){
+  background-color: #ffff99 !important;
 }
 </style>
 <style>

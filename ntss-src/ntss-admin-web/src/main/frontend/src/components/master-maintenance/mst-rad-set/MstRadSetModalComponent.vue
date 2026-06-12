@@ -169,10 +169,10 @@
                   <v-ons-col style="min-width: 380px" class="item-data material-info">
                     <custom-input
                       :value="dispArr[index].ctl_name"
+                      wheel-empty-init-value="00"
                       maxlength="20"
                       class="material-info-field2"
                       @change="changeName(index)"
-                      @wheel="changeName(index)"
                     />
                   </v-ons-col>
                 </td>
@@ -181,10 +181,10 @@
                   <v-ons-col class="item-data num-info" align="center">
                     <custom-input
                       :value="dispArr[index].item_cd"
+                      wheel-empty-init-value="00"
                       maxlength="20"
                       class="material-info-field2"
                       @change="changeCd(index)"
-                      @wheel="changeCd(index)"
                     />
                   </v-ons-col>
                 </td>
@@ -193,10 +193,10 @@
                   <v-ons-col class="item-data num-info" align="center">
                     <custom-input
                       :value="dispArr[index].item_class"
+                      wheel-empty-init-value="00"
                       maxlength="20"
                       class="material-info-field2"
                       @change="changeClass(index)"
-                      @wheel="changeClass(index)"
                     />
                   </v-ons-col>
                 </td>
@@ -217,14 +217,15 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
 // [共通部品] UI関連
 import customInput from "@/components/common/custom-form-tags/CustomInput";
 import customInputNumber from "@/components/common/custom-form-tags/CustomInputNumber";
 import customCheckbox from "@/components/common/custom-form-tags/CustomCheckbox";
 import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
-import {EventBus} from "@/eventBus";
+import {EventBus} from "@/compat/vue/event-bus.js";
+import { getScopedElementById, queryScopedSelector, getModalBodyElement } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   name: "MstRadSetMainModal",
@@ -299,6 +300,12 @@ export default {
   methods: {
     ...mapActions("master-maintenance", ["setEditRecord"]),
     ...mapActions("loading-screen", ["setLoadingScreenVisible"]),
+    getCurrentModalBody() {
+      return getModalBodyElement(this.$el) || null;
+    },
+    getRadItemFieldValue(id) {
+      return getScopedElementById(id, this.getCurrentModalBody() || this.$el)?.value || "";
+    },
     getValueByField(field) {
       return this.editRecord[field];
     },
@@ -334,33 +341,33 @@ export default {
       const Iteminfo = [
         {
           ctl_no: 1,
-          ctl_name: document.getElementById("rad-info-ctl1-name").value,
-          item_cd: document.getElementById("rad-info-ctl1-cd").value
+          ctl_name: this.getRadItemFieldValue("rad-info-ctl1-name"),
+          item_cd: this.getRadItemFieldValue("rad-info-ctl1-cd")
         },
         {
           ctl_no: 2,
-          ctl_name: document.getElementById("rad-info-ctl2-name").value,
-          item_cd: document.getElementById("rad-info-ctl2-cd").value
+          ctl_name: this.getRadItemFieldValue("rad-info-ctl2-name"),
+          item_cd: this.getRadItemFieldValue("rad-info-ctl2-cd")
         },
         {
           ctl_no: 3,
-          ctl_name: document.getElementById("rad-info-ctl3-name").value,
-          item_cd: document.getElementById("rad-info-ctl3-cd").value
+          ctl_name: this.getRadItemFieldValue("rad-info-ctl3-name"),
+          item_cd: this.getRadItemFieldValue("rad-info-ctl3-cd")
         },
         {
           ctl_no: 4,
-          ctl_name: document.getElementById("rad-info-ctl4-name").value,
-          item_cd: document.getElementById("rad-info-ctl4-cd").value
+          ctl_name: this.getRadItemFieldValue("rad-info-ctl4-name"),
+          item_cd: this.getRadItemFieldValue("rad-info-ctl4-cd")
         },
         {
           ctl_no: 5,
-          ctl_name: document.getElementById("rad-info-ctl5-name").value,
-          item_cd: document.getElementById("rad-info-ctl5-cd").value
+          ctl_name: this.getRadItemFieldValue("rad-info-ctl5-name"),
+          item_cd: this.getRadItemFieldValue("rad-info-ctl5-cd")
         },
         {
           ctl_no: 6,
-          ctl_name: document.getElementById("rad-info-ctl6-name").value,
-          item_cd: document.getElementById("rad-info-ctl6-cd").value
+          ctl_name: this.getRadItemFieldValue("rad-info-ctl6-name"),
+          item_cd: this.getRadItemFieldValue("rad-info-ctl6-cd")
         }
       ];
       this.editRecord["inHospitalCd1"] = this.updateInHospitalCd1(Iteminfo);
@@ -430,7 +437,10 @@ export default {
       this.changeButton();
       // 詳細一覧の最下部までスクロールする
       this.$nextTick(() => {
-        const ele = document.getElementsByClassName("modal-body")[0];
+        const ele = this.getCurrentModalBody();
+        if (!ele) {
+          return;
+        }
         if (ele) {
           ele.scrollTop = ele.scrollHeight;
         }
@@ -489,8 +499,8 @@ export default {
         const saveName = saveArr[i].ctl_name;
         const saveCd = saveArr[i].item_cd;
         const saveClass = saveArr[i].item_class;
-        if ((!saveName || saveName.trim() === "" ) && 
-            (!saveCd || saveCd.trim() === "" ) && 
+        if ((!saveName || saveName.trim() === "") && 
+            (!saveCd || saveCd.trim() === "") && 
             (!saveClass || saveClass.trim() === "")) {
           //全部空の場合は保存用パラメータから削除
           saveArr.splice(i, 1);
@@ -507,7 +517,7 @@ export default {
   },
   async mounted() {
     // 縦スクロールバー表示
-    let scrollObj = document.getElementById("scroll-point").parentElement
+    let scrollObj = getScopedElementById("scroll-point", this.getCurrentModalBody() || this.$el)?.parentElement
       .parentElement;
     if (scrollObj.classList.contains("modal-overflow-hidden")) {
       scrollObj.classList.remove("modal-overflow-hidden");
@@ -679,7 +689,7 @@ table tr {
   overflow-x: auto;
   white-space: nowrap;
 }
-.data-table >>> ons-row {
+.data-table :deep(ons-row) {
   min-width: 640px;
 }
 
@@ -702,7 +712,7 @@ table tr {
   .table-sbt {
     min-width: 90%;
   }
-  .setInfo-list >>> .item-title {
+  .setInfo-list :deep(.item-title) {
     max-height: 62px;
   }
   .data-table {

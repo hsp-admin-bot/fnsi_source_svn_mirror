@@ -151,14 +151,15 @@ export const deleteAuthorityList = [
   }
 ];
 /* MOD #6447-改修内容「アカウント編集の権限のヘルプ文章の修正」 Thach end */ 
+
 // add #12462 患者共有権限 関 start
 export const patientSharedAuthorityList = [
   // 患者共有
   {
-    code: "1002",
+    code: "143",
     label: "患者共有",
     isDispProxy: false,
     txtHelp: "患者共有権限\n他施設で登録された情報を閲覧するための権限です。この権限を持つユーザーは、共有設定されている他施設の情報を確認することができます。"
-  },
+  }
 ];
 // add #12462 患者共有権限 関 end

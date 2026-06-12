@@ -2,13 +2,25 @@
  * 帳票系API
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
-import { dateFormat } from "@/functions/common/DateTimeUtils.js";
-//add 7297 初回リリース対象外の機能とその関連機能を隠す 姜 start
+import { createApiFormData } from "@/apis/ApiRuntime";
+import { dateFormat } from "@/functions/common/DateTimeUtils";
+
+// add 7297 初回リリース対象外の機能とその関連機能を隠す 姜 start
 import store from "@/stores";
-//add 7297 初回リリース対象外の機能とその関連機能を隠す 姜 end
+// add 7297 初回リリース対象外の機能とその関連機能を隠す 姜 end
+
+function withSelectedPatId(params = undefined, selectedPatId) {
+  if (selectedPatId === null || selectedPatId === undefined || selectedPatId === "") {
+    return params;
+  }
+  return {
+    ...(params || {}),
+    selectedPatId
+  };
+}
 /**
  * 帳票HTML取得
- * @param {*} reportParam 帳票パラメータ
+ * @param {Record<string, unknown>} reportParam 帳票パラメータ
  */
 export function sendRequestCreatingReport(reportParam) {
   return ApiHelper.post(`/report/creating-report`, addPath(reportParam));
@@ -16,10 +28,18 @@ export function sendRequestCreatingReport(reportParam) {
 
 /**
  * 帳票HTML取得(レポートコード指定)
- * @param {String} reportCd レポートコード
- * @param {*} reportParam 帳票パラメータ
+ * @param {string} reportCd レポートコード
+ * @param {Record<string, unknown>} reportParam 帳票パラメータ
  */
-export function sendRequestCreatingReportByCd(reportCd, reportParam) {
+export function sendRequestCreatingReportByCd(reportCd, reportParam, selectedPatId) {
+  const queryParams = withSelectedPatId(undefined, selectedPatId);
+  if (queryParams) {
+    return ApiHelper.configPost(
+      `/report/creating-report/${reportCd}`,
+      addPath(reportParam),
+      { params: queryParams }
+    );
+  }
   return ApiHelper.post(
     `/report/creating-report/${reportCd}`,
     addPath(reportParam)
@@ -27,63 +47,65 @@ export function sendRequestCreatingReportByCd(reportCd, reportParam) {
 }
 
 /**
- * sendRequestCreatingReportForBVMS
- * @param {*} graphName
- * @param {*} param
+ * BVMS 帳票プレビュー（ordNo 指定）
+ * @param {string} graphName グラフ名
+ * @param {Record<string, unknown>} param パラメータ
  */
 export function sendRequestCreatingReportForBVMS(graphName, param) {
-  var ordNo = param.ordNo;
+  const ordNo = param.ordNo;
   if (ordNo !== null) {
     return ApiHelper.post(`/bvms/${graphName}/preview-report/${ordNo}`, param);
   }
 }
 
 /**
- * sendRequestCreatingReportForBVMSWithUploadFile
- * @param {*} graphName
- * @param {*} param
+ * BVMS 帳票プレビュー（アップロードファイル）
+ * @param {string} graphName グラフ名
+ * @param {Record<string, unknown>} param パラメータ
  */
 export function sendRequestCreatingReportForBVMSWithUploadFile(graphName, param) {
-  var ordNo = param.ordNo;
+  const ordNo = param.ordNo;
   if (ordNo !== null) {
-    let formData = setFormData(param, graphName, false);
+    const formData = setFormData(param, graphName, false);
     return ApiHelper.post(`/bvms/${graphName}/preview-report/byUploadFile/${ordNo}`, formData);
   }
 }
 
 /**
- * printReportForBVMS
- * @param {*} graphName
- * @param {*} param
+ * BVMS 帳票印刷
+ * @param {string} graphName グラフ名
+ * @param {Record<string, unknown>} param パラメータ
  */
 export function printReportForBVMS(graphName, param) {
-  var ordNo = param.ordNo;
+  const ordNo = param.ordNo;
   if (ordNo !== null) {
     return ApiHelper.post(`/bvms/${graphName}/creating-report/${ordNo}`, addPathBVMS(param));
   }
 }
 
 /**
- * printReportForBVMSWithUploadFile
- * @param {*} graphName
- * @param {*} param
+ * BVMS 帳票印刷（アップロードファイル）
+ * @param {string} graphName グラフ名
+ * @param {Record<string, unknown>} param パラメータ
  */
 export function printReportForBVMSWithUploadFile(graphName, param) {
-  var ordNo = param.ordNo;
+  const ordNo = param.ordNo;
   if (ordNo !== null) {
-    let formData = setFormData(param, graphName, true);
+    const formData = setFormData(param, graphName, true);
     return ApiHelper.post(`/bvms/${graphName}/creating-report/byUploadFile/${ordNo}`, formData);
   }
 }
 
 /**
  * 帳票マスタ取得
- * @param {String} funcCd 機能コード
+ * @param {string} funcCd 機能コード
+ * @param {string} printFlag 印刷フラグ
+ * @param {boolean} [autoRefreshFlag] バックグラウンド取得
  */
 // mod FNSI-#522、IES364 選択された機能により、対象の帳票を表示する。 夏 start
 //export function sendRequestGetMstReport(funcCd) {
   //return ApiHelper.get(`/report/mst-report/${funcCd}`);
-export function sendRequestGetMstReport(funcCd, printFlag, autoRefreshFlag) {
+export function sendRequestGetMstReport(funcCd, printFlag, autoRefreshFlag, selectedPatId) {
   //mod 7297 初回リリース対象外の機能とその関連機能を隠す 姜 start
   // return ApiHelper.get(`/report/mst-report/${funcCd}/${printFlag}`);
   const selPat = store.getters["split-graph/getSelPat"];
@@ -95,10 +117,10 @@ export function sendRequestGetMstReport(funcCd, printFlag, autoRefreshFlag) {
       printFlag = "1";
     }
     const requestUrl = autoRefreshFlag ? `/report/mst-report/${funcCd}/${printFlag}?__background_call__=true` : `/report/mst-report/${funcCd}/${printFlag}`;
-    return ApiHelper.get(requestUrl);
+    return ApiHelper.get(requestUrl, withSelectedPatId(undefined, selectedPatId));
   } else {
     const requestUrl = autoRefreshFlag ? `/report/mst-report/${funcCd}/${printFlag}?__background_call__=true` : `/report/mst-report/${funcCd}/${printFlag}`;
-    return ApiHelper.get(requestUrl);
+    return ApiHelper.get(requestUrl, withSelectedPatId(undefined, selectedPatId));
   }
   //mod 7297 初回リリース対象外の機能とその関連機能を隠す 姜 end
 // mod FNSI-#522、IES364 選択された機能により、対象の帳票を表示する。 夏 end
@@ -107,7 +129,7 @@ export function sendRequestGetMstReport(funcCd, printFlag, autoRefreshFlag) {
 /**
  * PDF/Excelファイル格納先パスを追加
  * ※出力したくない場合は`null`を設定しておくこと
- * @param {*} reportParam 帳票パラメータ
+ * @param {Record<string, unknown>} reportParam 帳票パラメータ
  */
 function addPath(reportParam) {
   // プレビューの場合は何もしない
@@ -116,11 +138,11 @@ function addPath(reportParam) {
   }
   // mod 5831 同じ機能帳票データが複数回印刷されることがある  吉 start
   // const suffix = `${reportParam.dataKey.patId}_${reportParam.dataKey.ordNo}_${dateFormat.format(new Date(), "yyyyMMddhhmmss")}`;
-  var fileName = "" ;
-  if (null != reportParam.dataKey.ordNo) {
+  let fileName = "";
+  if (reportParam.dataKey.ordNo != null) {
     fileName = `${reportParam.dataKey.patId}_${reportParam.dataKey.ordNo}_${dateFormat.format(new Date(), "yyyyMMddhhmmss")}`;
   }
-  if (null == reportParam.dataKey.ordNo) {
+  if (reportParam.dataKey.ordNo == null) {
 
     // mod 5776 ファイル出力した時のファイル名にある処理日時のフォーマットが正しくない 姜 start
     // // mod 5826 スケジュール画面の機能帳票でスケジュール表を印刷しても正しく印刷ができない  吉 start
@@ -131,7 +153,7 @@ function addPath(reportParam) {
     // if (null != reportParam.dataKey.patId) {
     //   fileName = `${reportParam.dataKey.patId}_${dateFormat.format(new Date(), "yyyyMMddhhmmss")}`;
     // }
-    if (null != reportParam.dataKey.patId && (typeof reportParam.dataKey.patId == "string" || typeof reportParam.dataKey.patId == "number")) {
+    if (reportParam.dataKey.patId != null && (typeof reportParam.dataKey.patId === "string" || typeof reportParam.dataKey.patId === "number")) {
       fileName = `${reportParam.dataKey.patId}_${dateFormat.format(new Date(), "yyyyMMddhhmmss")}`;
     } else {
       fileName = `${dateFormat.format(new Date(), "yyyyMMddhhmmss")}`;
@@ -156,7 +178,7 @@ function addPath(reportParam) {
 /**
  * PDF/Excelファイル格納先パスを追加
  * ※出力したくない場合は`null`を設定しておくこと
- * @param {*} reportParam 帳票パラメータ
+ * @param {Record<string, unknown>} reportParam 帳票パラメータ
  */
 function addPathBVMS(reportParam) {
   // プレビューの場合は何もしない
@@ -180,13 +202,12 @@ function addPathBVMS(reportParam) {
 }
 
 function setFormData(param, graphName, isPrint) {
-  const formData = new FormData();
+  const formData = createApiFormData();
   formData.append("files", param.files);
   if (graphName === "rrGraph") {
     formData.append("graphY1From", param.graphY1From);
     formData.append("graphY1To", param.graphY1To);
-  }
-  else {
+  } else {
     formData.append("graph1Y1From", param.graph1Y1From);
     formData.append("graph1Y1To", param.graph1Y1To);
     formData.append("graph1Y2From", param.graph1Y2From);
@@ -202,6 +223,3 @@ function setFormData(param, graphName, isPrint) {
   }
   return formData;
 }
-
-
-

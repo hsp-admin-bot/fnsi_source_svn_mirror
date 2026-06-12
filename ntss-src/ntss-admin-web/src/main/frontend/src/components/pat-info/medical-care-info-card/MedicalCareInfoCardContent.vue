@@ -1,18 +1,12 @@
 <template>
   <table class="card-table">
+    <tbody>
     <tr>
       <td class="item-title">診療科</td>
       <td class="item-data">
         <custom-simple-textarea-a
           :value="medicalCareInfo('main_course_cd')"
-          :display-string="
-            mstCdToNameIncludeDeleted(
-              mainMstCourse,
-              medicalCareInfo('main_course_cd').editValue,
-              'courseCd',
-              'courseName'
-            )
-          "
+          :display-string="courseName"
           :disabled="true"
           style="vertical-align: middle; color: #1f1f21;"
         />
@@ -25,21 +19,16 @@
         <!--   class="common-style-select-button btn3-normal" -->
         <!--   @click="handleShowPopover('main_course_cd', popoverDataMstCourse)" -->
         <!-- > -->
-        <v-ons-button
-          :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-          ref="btnSelectCourse"
-          class="common-style-select-button btn3-normal"
-          @click="handleShowPopover('main_course_cd', popoverDataMstCourse)"
-        >
-        <!-- mod #10359 編集権限の動作不正 dengshen end -->
-          選択
-        </v-ons-button>
-        <!-- 診療科選択ポップオーバー -->
-        <pop-over
-          v-bind="popoverDataMstCourse"
-          :target-position-element="$refs.btnSelectCourse"
-          @popover-close="closePopover(popoverDataMstCourse)"
-          @popover-return="setPopoverData('main_course_cd', $event.value)"
+        <common-master-selector
+          :masterType="MasterType.COURSE_PAT_INFO"
+          :facilityCd="medicalCareComposeFacilityCd"
+          :initItem="{ value: medicalCareInfo('main_course_cd').initValue }"
+          :editItem="{ value: medicalCareInfo('main_course_cd').editValue }"
+          :btnName="'選択'"
+          :isVisible="false"
+          :btnClass="'common-style-select-button btn3-normal'"
+          :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+          @popover-return="onMcMainCourseReturn"
         />
       </td>
     </tr>
@@ -48,33 +37,22 @@
       <td class="item-data">
         <custom-simple-textarea-a
           :value="medicalCareInfo('dialysis_course_cd')"
-          :display-string="
-            mstCdToNameIncludeDeleted(
-              dialysisMstCourse,
-              medicalCareInfo('dialysis_course_cd').editValue,
-              'courseCd',
-              'courseName'
-            )
-          "
+          :display-string="dialysisDataName"
           :disabled="true"
           style="vertical-align: middle; color: #1f1f21;"
         />
       </td>
       <td class="item-data choice-button-area">
-        <v-ons-button
-          :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-          ref="btnSelectDialCourse"
-          class="common-style-select-button btn3-normal"
-          @click="handleShowPopover('dialysis_course_cd', popoverDataMstDialysisCourse)"
-        >
-          選択
-        </v-ons-button>
-        <!-- 透析実施科選択ポップオーバー -->
-        <pop-over
-          v-bind="popoverDataMstDialysisCourse"
-          :target-position-element="$refs.btnSelectDialCourse"
-          @popover-close="closePopover(popoverDataMstDialysisCourse)"
-          @popover-return="setPopoverData('dialysis_course_cd', $event.value)"
+        <common-master-selector
+          :masterType="MasterType.DIALYSIS_COURSE_PAT_INFO"
+          :facilityCd="medicalCareComposeFacilityCd"
+          :initItem="{ value: medicalCareInfo('dialysis_course_cd').initValue }"
+          :editItem="{ value: medicalCareInfo('dialysis_course_cd').editValue }"
+          :btnName="'選択'"
+          :isVisible="false"
+          :btnClass="'common-style-select-button btn3-normal'"
+          :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+          @popover-return="onMcDialysisCourseReturn"
         />
       </td>
     </tr>
@@ -83,33 +61,22 @@
       <td class="item-data">
         <custom-simple-textarea-a
           :value="medicalCareInfo('ward_cd')"
-          :display-string="
-            mstCdToNameIncludeDeleted(
-              deleteMstWard,
-              medicalCareInfo('ward_cd').editValue,
-              'wardCd',
-              'wardName'
-            )
-          "
+          :display-string="wardName"
           :disabled="true"
           style="vertical-align: middle; color: #1f1f21;"
         />
       </td>
       <td class="item-data choice-button-area">
-        <v-ons-button
-          ref="btnSelectWard"
-          :disabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
-          class="common-style-select-button btn3-normal"
-          @click="handleShowPopover('ward_cd', popoverDataMstWard)"
-        >
-          選択
-        </v-ons-button>
-        <!-- 病棟選択ポップオーバー -->
-        <pop-over
-          v-bind="popoverDataMstWard"
-          :target-position-element="$refs.btnSelectWard"
-          @popover-close="closePopover(popoverDataMstWard)"
-          @popover-return="setPopoverData('ward_cd', $event.value)"
+        <common-master-selector
+          :masterType="MasterType.WARD_PAT_INFO"
+          :facilityCd="medicalCareComposeFacilityCd"
+          :initItem="{ value: medicalCareInfo('ward_cd').initValue }"
+          :editItem="{ value: medicalCareInfo('ward_cd').editValue }"
+          :btnName="'選択'"
+          :isVisible="false"
+          :btnClass="'common-style-select-button btn3-normal'"
+          :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || getIsOtherFacility"
+          @popover-return="onMcWardReturn"
         />
       </td>
     </tr>
@@ -165,18 +132,20 @@
         不明
       </td>
     </tr>
+  
+    </tbody>
   </table>
 </template>
 
 <script>
 // add #10359 編集権限の動作不正 dengshen start
-import { getAuthorized } from "@/functions/common/CommonFunctions.js";
+import { getAuthorized, deepCopy } from "@/functions/common/CommonFunctions.js";
 // add #10359 編集権限の動作不正 dengshen end
 import { ApiHelper } from "@/apis/AxiosHelper";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import baseCardContent from "@/components/pat-info/base-components/BaseCardContent.vue";
-import { mapGetters, mapActions } from "vuex"; //施設コード取得のために追加
-import { deepCopy } from "@/functions/common/CommonFunctions.js";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+
 // add 編集権限の適用 じょはく start
 // del #10359 編集権限の動作不正 dengshen start
 // import { AUTHORITY_CODES } from "@/constants/userAuthority";
@@ -186,26 +155,29 @@ import { deepCopy } from "@/functions/common/CommonFunctions.js";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
+import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+import * as MasterType from "@/components/common/master-selector/MasterType";
 
 export default {
   name: "MedicalCareInfoCard",
   mixins: [baseCardContent],
+  components: {
+    "common-master-selector": commonMasterSelector
+  },
 
   data() {
     return {
-      popoverDataMstCourse: {},
-      popoverDataMstDialysisCourse: {},
-      popoverDataMstWard: {},
-      popoverDataFacility: {},
+      MasterType,
       mainMstCourse: null,
       dialysisMstCourse: null,
       mstWard: null,
       deleteMstWard: null,
-      popOverMainMstCourse: null,
-      popOverDialysisMstCourse: null,
       // add 編集権限の適用 じょはく start
       // add FNSI-患者通算透析回数 じょはく start
       patDialysisCount: "",
+      courseName: "",
+      dialysisDataName: "",
+      wardName: "",
       // del #10359 編集権限の動作不正 dengshen start
       // // add FNSI-患者通算透析回数 じょはく end
       // isPatViewAuthorized: null,
@@ -236,17 +208,22 @@ export default {
     //施設コード取得用
     ...mapGetters("user", ["getFacilityCd"]),
     ...mapGetters("pat-info", ["selectedPat", "selectedPatId", "getIsOtherFacility", "getOtherFacilityCd"]),
+
+    medicalCareComposeFacilityCd() {
+      return this.getIsOtherFacility ? this.getOtherFacilityCd : this.getFacilityCd;
+    },
+
     // 透析歴(年)
     dialHstYear() {
       const startDate = this.medicalCareInfo("dialysis_start_date").editValue;
-      const year = moment().diff(startDate, "years");
+      const year = dayjs().diff(startDate, "years");
       return year > 0 ? year : 0;
     },
 
     // 透析歴(月)
     dialHstMonth() {
       const startDate = this.medicalCareInfo("dialysis_start_date").editValue;
-      const month = moment().diff(startDate, "months") % 12;
+      const month = dayjs().diff(startDate, "months") % 12;
       return month > 0 ? month : 0;
     },
 
@@ -270,55 +247,13 @@ export default {
     }
   },
 
-  // マスタ取得完了後にポップオーバーオブジェクトを作成
   watch: {
     selectedPatId() {
       this.refreshData();
     },
-    // 診療科用
-    mainMstCourse() {
-      this.popoverDataMstCourse = this.createPopoverData(
-        "診療科",
-        null,
-        null,
-        "診療科名",
-        this.popOverMainMstCourse,
-        "courseCd",
-        "courseName",
-        null
-      );
-    },
-    // 透析実施科用
-    dialysisMstCourse() {
-      this.popoverDataMstDialysisCourse = this.createPopoverData(
-        "透析実施科",
-        null,
-        null,
-        "透析実施科名",
-        this.popOverDialysisMstCourse,
-        "courseCd",
-        "courseName",
-        null
-      );
-    },
-
-    mstWard() {
-      this.popoverDataMstWard = this.createPopoverData(
-        "病棟",
-        null,
-        null,
-        "病棟名",
-        this.mstWard,
-        "wardCd",
-        "wardName",
-        null
-      );
-    },
-    // add #12462 患者情報共有 Ji start
     getOtherFacilityCd() {
       this.refreshData();
-    },
-    // add #12462 患者情報共有 Ji end
+    }
   },
 
   created() {
@@ -370,49 +305,35 @@ export default {
       this.setLoadingScreenVisible(true);
       try {
         const requestParam = {
-	  // mod #12462 患者情報共有 Ji start
-          // facilityCd: this.getFacilityCd
-          facilityCd: this.getIsOtherFacility ? this.getOtherFacilityCd : this.getFacilityCd
-	  // mod #12462 患者情報共有 Ji end
+          facilityCd: this.getIsOtherFacility ? this.getOtherFacilityCd : this.getFacilityCd,
+          selectedPatId: this.selectedPatId
         };
 
         ApiHelper.get("/mstInfo/mstCourseIncludeDel", requestParam)
           .then(response => {
             const mainCourseCd = this.medicalCareInfo('main_course_cd').editValue;
             const dialysisCourseCd = this.medicalCareInfo('dialysis_course_cd').editValue;
-            // ポップオーバーの選択肢
             const filterData = (data, code) => {
               return data.filter(x => (x.isDisp !== "0" && x.isDel !== "1") || x.courseCd === code);
             };
-            // 画面表示マスタデータ
-            const mapData = (data, code) => {
-              return data.map(item => ({
-                courseCd: item.courseCd,
-                facilityCd: item.facilityCd,
-                fnCourseCd: item.fnCourseCd,
-                courseName: (item.isDisp === "0" || item.isDel === "1") ? "【削除済み】" + item.courseName : item.courseName,
-                standardCourseCd: item.standardCourseCd,
-                inHospitalCd_1: item.inHospitalCd_1,
-                isDisp: item.isDisp,
-                isDel: item.isDel,
-                regDate: item.regDate,
-                upDate: item.upDate,
-                operatorId: item.operatorId,
-                clientIp: item.clientIp,
-                logUserId: item.logUserId,
-                updateFlg: item.updateFlg,
-              })).filter(item => (item.isDisp !== "0" && item.isDel !== "1") || item.courseCd === code);
-            };
             // 診療科
             const mainDataFilter = filterData(response.data, mainCourseCd);
-            const mainListFilter = mapData(response.data, mainCourseCd);
             this.mainMstCourse = mainDataFilter;
-            this.popOverMainMstCourse = mainListFilter;
+            this.courseName = this.mstCdToNameIncludeDeleted(
+              this.mainMstCourse,
+              this.medicalCareInfo("main_course_cd").editValue,
+              "courseCd",
+              "courseName"
+            );
             // 透析実施科
             const dialysisDataFilter = filterData(response.data, dialysisCourseCd);
-            const dialysisListFilter = mapData(response.data, dialysisCourseCd);
             this.dialysisMstCourse = dialysisDataFilter;
-            this.popOverDialysisMstCourse = dialysisListFilter;
+            this.dialysisDataName = this.mstCdToNameIncludeDeleted(
+              this.dialysisMstCourse,
+              this.medicalCareInfo("dialysis_course_cd").editValue,
+              "courseCd",
+              "courseName"
+            );
           })
           .catch(error => {
             //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
@@ -423,6 +344,12 @@ export default {
         ApiHelper.get("/mstInfo/mstWardIncludeDel", requestParam)
           .then(response => {
             this.deleteMstWard = response.data;
+            this.wardName = this.mstCdToNameIncludeDeleted(
+              this.deleteMstWard,
+              this.medicalCareInfo("ward_cd").editValue,
+              "wardCd",
+              "wardName"
+            );
             const wardCd = this.medicalCareInfo('ward_cd').editValue;
             this.mstWard = response.data.map(item => {
               return {
@@ -478,9 +405,20 @@ export default {
       this.setPatDataJson("medical_care_info", "facility_cd", facilityCd);
       this.setPatDataJson("medical_care_info", "dialysis_start_date", date);
     },
-    handleShowPopover(jsonKey, popoverData) {
-      popoverData.popoverContentSelected.value = this.editRecord['medical_care_info'][jsonKey].editValue;
-      this.showPopover(popoverData);
+
+    onMcMainCourseReturn(ev) {
+      this.setPopoverData("main_course_cd", ev && ev.value != null ? ev.value : null);
+      this.courseName = ev?.text;
+    },
+
+    onMcDialysisCourseReturn(ev) {
+      this.setPopoverData("dialysis_course_cd", ev && ev.value != null ? ev.value : null);
+      this.dialysisDataName = ev?.text;
+    },
+
+    onMcWardReturn(ev) {
+      this.setPopoverData("ward_cd", ev && ev.value != null ? ev.value : null);
+      this.wardName = ev?.text;
     }
   }
 };

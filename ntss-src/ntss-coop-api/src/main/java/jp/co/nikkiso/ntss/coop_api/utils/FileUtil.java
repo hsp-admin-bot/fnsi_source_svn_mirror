@@ -19,8 +19,8 @@ import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.coop_api.service.LogService;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
@@ -55,7 +55,7 @@ public class FileUtil {
       ObjectMapper objectMapper = new ObjectMapper();
       HashMap<String, String> distFolder = objectMapper.readValue(systemDefine.getValue(), new TypeReference<HashMap<String, String>>(){});
       distFolderPath = distFolder.get("path");
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       outputDebugLog(null, "parse error -- distFolder : " + systemDefine.getValue());
       throw new NtssException("システム設定のオンプレミス設定のパースに失敗しました。");
     }

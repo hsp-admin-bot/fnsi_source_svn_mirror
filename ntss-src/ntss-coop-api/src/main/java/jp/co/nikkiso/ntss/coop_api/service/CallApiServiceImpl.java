@@ -1,6 +1,6 @@
 package jp.co.nikkiso.ntss.coop_api.service;
 
-import com.fasterxml.jackson.databind.JavaType;
+import tools.jackson.databind.JavaType;
 import com.google.common.base.CaseFormat;
 import jp.co.nikkiso.ntss.api.service.SysDataSetService;
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
@@ -102,7 +102,7 @@ public class CallApiServiceImpl implements CallApiService {
   public CallApiServiceImpl() {
     HttpComponentsClientHttpRequestFactory clientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory();
     clientHttpRequestFactory.setReadTimeout(0);
-    clientHttpRequestFactory.setConnectTimeout(0);
+    clientHttpRequestFactory.setConnectionRequestTimeout(0);
     restTemplate = new RestTemplate(clientHttpRequestFactory);
   }
 
@@ -208,7 +208,7 @@ public class CallApiServiceImpl implements CallApiService {
 
         // ヘッダ作成
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+        headers.setContentType(MediaType.APPLICATION_JSON);
         /* add by chamaojia 2024-06-21 [10574] communication security related additions --start */
         headers.set(headerKey, headerValue);
         /* add by chamaojia 2024-06-21 [10574] communication security related additions --end */

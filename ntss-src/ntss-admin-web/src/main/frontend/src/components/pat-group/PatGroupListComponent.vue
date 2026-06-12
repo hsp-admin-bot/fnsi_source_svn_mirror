@@ -154,25 +154,27 @@
 </template>
 
 <script>
+import { getScopedElementsByClassName, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { mountNumericTextBox } from "@/functions/common/KendoFunctions";
   // add #10359 編集権限の動作不正 dengshen start
   import { getAuthorized } from "@/functions/common/CommonFunctions.js";
   // add #10359 編集権限の動作不正 dengshen end
   /*mod FNSI-改修内容患者グループbug 任 start*/
-  /*import {mapGetters} from "vuex";*/
-  import {mapActions, mapGetters} from "vuex";
+  /*import {mapGetters} from "@/compat/vue/vuex";*/
+  import {mapActions, mapGetters} from "@/compat/vue/vuex";
   /*mod FNSI-改修内容患者グループbug 任 end*/
   import PatGroup from "@/apis/pat-group";
   /*add FNSI-改修内容患者groupbug 任 start*/
   import {ApiHelper} from "@/apis/AxiosHelper";
   /*add FNSI-改修内容患者groupbug 任 end*/
-  import {EventBus} from "@/eventBus.js";
+  import {EventBus} from "@/compat/vue/event-bus.js";
   // add 画面印刷プレビューと印刷の実現 黄 start
-  import moment from "moment";
+  import dayjs from "@/compat/date/dayjs";
   import {getCurrentFunctionCd} from "@/router/routing-helper";
   // add 画面印刷プレビューと印刷の実現 黄 end
   import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
   // add #9561 患者グループでの並び順設定が他の画面と異なる 商 start
-  import $ from "jquery";
+
   // add #9561 患者グループでの並び順設定が他の画面と異なる 商 end
   import { messageFormat } from '@/functions/common/MessageFormat';
   // 9820-利用者マスタの患者情報編集権限がOFFなのに患者経過総合ビューアで編集/保存ができてしまう zhoubin 20231114 add start
@@ -183,6 +185,7 @@
   // 9820-利用者マスタの患者情報編集権限がOFFなのに患者経過総合ビューアで編集/保存ができてしまう zhoubin 20231114 add end、
   // add #9558 機能帳票で正しく変数が引き渡されていない 杜天成 start
   import store from "@/stores";
+import $ from "@/compat/jquery";
   // add #9558 機能帳票で正しく変数が引き渡されていない 杜天成 end
 
 export default {
@@ -313,7 +316,7 @@ export default {
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe start
           //patId: this.selectedPatId,
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe start
-          //dialysisDate: moment(Date.now()).format("YYYYMMDD"),
+          //dialysisDate: dayjs(Date.now()).format("YYYYMMDD"),
           // del #11934 機能帳票出力時に検査結果と実績が不整合 limingzhe end
           // mod #11254 機能帳票でオーダ番号をキーとする情報が出ない limingzhe end
           //mod #9558 機能帳票でパラメータが正しく渡されていない 房 start
@@ -326,10 +329,10 @@ export default {
           // add #7233 デフォルト帳票について 日本指摘対応 商 start
           functionCd:"02301",
           // add #7233 デフォルト帳票について 日本指摘対応 商 end
-          date: moment(Date.now()).format("YYYY/MM/DD"),
+          date: dayjs(Date.now()).format("YYYY/MM/DD"),
           //add #9558 機能帳票でパラメータが正しく渡されていない 房 start
-          fromDate:moment((new Date())).format("YYYY/MM/DD"), // 検索条件の対象期間開始日は当日を設定する
-          toDate: moment(new Date()).format("YYYY/MM/DD") // 検索条件の対象期間終了日は当日を設定する
+          fromDate:dayjs((new Date())).format("YYYY/MM/DD"), // 検索条件の対象期間開始日は当日を設定する
+          toDate: dayjs(new Date()).format("YYYY/MM/DD") // 検索条件の対象期間終了日は当日を設定する
           //add #9558 機能帳票でパラメータが正しく渡されていない 房 end
         };
         EventBus.$emit("sendReportParams", param);
@@ -510,20 +513,27 @@ export default {
       patGroup.isEdited = true;
       const spanSort = evtTarget.getElementsByTagName("span")[0];
       spanSort.style.display='none';
-      $(
-        `<input name="list_name">`
-      ).appendTo(evtTarget)
-        .kendoNumericTextBox({
-          format: "n0",
-          min: 0,
-          max: 2147483647,
-          setp: 1,
-          value: oldValue
-        })
-        .blur(function(){$(this.parentNode.parentNode).remove();spanSort.style.display='inline';patGroup.isEdited=false})
-        .change((e)=>{this.setContentData(e.target.value,patGroup)});
+      const originalElement = $(`<input name="list_name">`).appendTo(evtTarget)[0];
+      const numericTextBox = mountNumericTextBox(originalElement, {
+        format: "n0",
+        min: 0,
+        max: 2147483647,
+        step: 1,
+        value: oldValue,
+        change: (e) => {
+          const newValue = e?.sender?.value?.() ?? e?.value;
+          this.setContentData(newValue, patGroup);
+        }
+      });
+      const cleanupSortInput = () => {
+        numericTextBox.destroy();
+        $(originalElement).remove();
+        spanSort.style.display = 'inline';
+        patGroup.isEdited = false;
+      };
+      numericTextBox.bind("blur", cleanupSortInput);
 
-      $(evtTarget).find("input").get(0).focus();
+      numericTextBox.focus();
     },
     setContentData(newValue, patGroup){
       patGroup.index = newValue;
@@ -539,7 +549,7 @@ export default {
     // add #9561 患者グループでの並び順設定が他の画面と異なる 商 end
     /*add FNSI-改修内容患者グループbug 任 start*/
     async refresh(){
-      if (this.selfScreenName !== this.$router.currentRoute.name) {
+      if (this.selfScreenName !== this.$route.name) {
         return;
       }
       if (this.isEditedSort || this.isEitedPatGroupList) {
@@ -604,7 +614,7 @@ export default {
     selectPatGroup(patGroupCd = null) {
       this.clearSelectedPatGroup();
       if (patGroupCd != null) {
-        const element = document.getElementById("patGroup_" + patGroupCd);
+        const element = getScopedElementById("patGroup_" + patGroupCd, this.$el || document);
         if (element) {
           element?.classList?.add("selected-row");
         } else {
@@ -614,7 +624,7 @@ export default {
     },
     // 患者グループ選択行のクリア
     clearSelectedPatGroup() {
-      Array.from(document.getElementsByClassName("selected-row")).forEach(element => {
+      Array.from(getScopedElementsByClassName("selected-row", this.$el || document)).forEach(element => {
         element.classList.remove("selected-row");
       });
     },
@@ -622,7 +632,7 @@ export default {
     focusInputBox() {
       this.patGroups.forEach(item => {
         if (item.isInHospitalCd_1) {
-          const element = document.getElementById("txtInHospitalCd_1_" + item.patGroupCd);
+          const element = getScopedElementById("txtInHospitalCd_1_" + item.patGroupCd, this.$el || document);
           element.focus();
         }
       })
@@ -638,7 +648,7 @@ export default {
     // mod #10359 編集権限の動作不正 dengshen end
     // // 9820-利用者マスタの患者情報編集権限がOFFなのに患者経過総合ビューアで編集/保存ができてしまう zhoubin 20231114 add end
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     this.sortStatusList = [];
     this.getPatGroups();
     /*add FNSI-改修内容患者groupbug 任 start*/
@@ -673,7 +683,7 @@ export default {
       this.focusInputBox();
     });
   },
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("filterPatGroupist", this.setFilterCondition);
     EventBus.$off("requestReportParams", this.requestrReportParams);
     EventBus.$off("refresh", this.refresh);
@@ -769,8 +779,9 @@ input.order-input {
   margin-top: 0;
   height: 100%;
 }
+ 
 /* add #9561 患者グループでの並び順設定が他の画面と異なる 商 start */
-.order-td >>> .k-numerictextbox{
+.order-td :deep(.k-numerictextbox) {
   width: calc(94% - 12px);
   font-size: 1em;
 }

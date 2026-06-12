@@ -2,8 +2,8 @@ package jp.co.nikkiso.ntss.core.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.annotation.JsonNaming;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import org.seasar.doma.Entity;
 import org.seasar.doma.Table;
@@ -16,7 +16,7 @@ import java.sql.Timestamp;
  */
 @Entity(immutable = true, naming = NamingType.SNAKE_LOWER_CASE)
 @Table(name = "ord_treat_condition")
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class TreatmentRecordSetting extends BaseBlankEntity {
 
   /**

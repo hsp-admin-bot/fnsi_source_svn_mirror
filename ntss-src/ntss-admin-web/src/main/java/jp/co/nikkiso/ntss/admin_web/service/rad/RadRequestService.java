@@ -95,6 +95,10 @@ public interface RadRequestService {
    */
   //mod #12462 患者情報共有 zrx start
 //  RadRequestResponse createRadRequestResponse(List<Long> patIdList, String startDate, String facilityCd);
+  default RadRequestResponse createRadRequestResponse(List<Long> patIdList, String startDate, String facilityCd) {
+    return createRadRequestResponse(patIdList, startDate, facilityCd, null);
+  }
+
   RadRequestResponse createRadRequestResponse(List<Long> patIdList, String startDate, String facilityCd, Integer patientShareMode);
   //mod #12462 患者情報共有 zrx end
 

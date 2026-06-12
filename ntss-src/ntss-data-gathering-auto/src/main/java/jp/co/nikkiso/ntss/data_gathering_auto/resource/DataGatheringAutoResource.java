@@ -1,5 +1,7 @@
 package jp.co.nikkiso.ntss.data_gathering_auto.resource;
 
+
+import jp.co.nikkiso.ntss.core.utils.Ec2MetadataHelper;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -11,8 +13,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.amazonaws.util.EC2MetadataUtils;
 
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
@@ -83,7 +83,7 @@ public class DataGatheringAutoResource {
     String ipAddr;
     try {
       // EC2からPrivateIPを取得
-      ipAddr = EC2MetadataUtils.getInstanceInfo().getPrivateIp();
+      ipAddr = Ec2MetadataHelper.getPrivateIp();
     } catch (Exception e) {
       // EC2からPrivateIPを取得できなかった場合(EC2以外で実行した場合、など)、以下を実行して取得を試みる
       EventLogMessage eventLogMessage = new EventLogMessage();

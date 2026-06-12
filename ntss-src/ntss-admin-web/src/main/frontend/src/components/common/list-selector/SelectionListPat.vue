@@ -55,7 +55,8 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import nameDuplicationImg from "@/assets/name_duplication.png";
 
 export default {
   props: {
@@ -74,7 +75,7 @@ export default {
   },
   data() {
     return {
-      image_src_same: require("../../../assets/name_duplication.png"),
+      image_src_same: nameDuplicationImg,
       // 直前のチェック項目インデックス
       latestCheckedIndex: null,
     };

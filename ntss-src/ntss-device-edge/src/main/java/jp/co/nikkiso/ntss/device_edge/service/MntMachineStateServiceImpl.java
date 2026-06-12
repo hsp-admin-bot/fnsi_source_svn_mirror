@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.device_edge.service;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -13,9 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.FacilitySettingNo;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
@@ -181,7 +180,7 @@ public class MntMachineStateServiceImpl implements MntMachineStateService {
           // #11827 2025.05.16 mod 仮想端末姓名結合設定に準拠 TDC米沢 end
 	      }
 	    }
-	  } catch (IOException e) {
+	  } catch (tools.jackson.core.JacksonException e) {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -278,7 +277,7 @@ public class MntMachineStateServiceImpl implements MntMachineStateService {
       for (lop = 0; lop < jsonNode_array.size(); lop++) {
         JsonNode jsonNode = jsonNode_array.get(lop);
         // jsonNodeは読み取り専用のため、ObjectNodeに変換
-        ObjectNode objectNode = jsonNode.deepCopy();
+        ObjectNode objectNode = jsonNode.deepCopy().asObject();
         if (objectNode != null) {
           if (jsonNode.get("type") != null && jsonNode.get("serial") != null && jsonNode.get("status") != null) {
        	    MntMachineState state = new MntMachineState();
@@ -323,7 +322,7 @@ public class MntMachineStateServiceImpl implements MntMachineStateService {
         rtn = mntMachineStateDao.updateMachineStateMultiple(mmsList);
       }
       // #9111 2023.07.14 add 複数装置の 装置ステータス の更新を1つのSQL文で実施 TDC山崎 end
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
         EventLogMessage eventLogMessage = new EventLogMessage();
         eventLogMessage.setLogMessage("装置ステータス一括更新失敗:" + e.getMessage());
         eventLogMessage.setFacilityCd(facilityCd);

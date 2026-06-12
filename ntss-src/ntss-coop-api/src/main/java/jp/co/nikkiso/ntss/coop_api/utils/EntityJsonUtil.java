@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.collections.MapUtils;
+import org.apache.commons.collections4.MapUtils;
 
-import com.fasterxml.jackson.databind.JavaType;
+import tools.jackson.databind.JavaType;
 
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
 import jp.co.nikkiso.ntss.core.exception.NtssException;

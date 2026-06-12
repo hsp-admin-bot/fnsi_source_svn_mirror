@@ -10,11 +10,11 @@ export default {
      * @type {Date}
      */
     treatDate: [],
-    // mod 9283 印刷順が保存されない帳票がある　吉 start
+    // mod 9283 印刷順が保存されない帳票がある 吉 start
     // sortTemp: [],
     sortTempDay: null,
     sortTempReg: null,
-    // mod 9283 印刷順が保存されない帳票がある　吉 end
+    // mod 9283 印刷順が保存されない帳票がある 吉 end
 },
 
   getters: {
@@ -24,7 +24,7 @@ export default {
       }
       return state.treatDate;
     },
-    // mod 9283 印刷順が保存されない帳票がある　吉 start
+    // mod 9283 印刷順が保存されない帳票がある 吉 start
     // getSortTemp(state){
     //   return state.sortTemp;
     // },
@@ -34,7 +34,7 @@ export default {
     getSortTempReg(state){
       return state.sortTempReg;
     },
-    // mod 9283 印刷順が保存されない帳票がある　吉 end
+    // mod 9283 印刷順が保存されない帳票がある 吉 end
   },
   mutations: {
     /**
@@ -44,7 +44,7 @@ export default {
     setSelectedTreatDate: (state, treatDate) => {
       state.treatDate = treatDate;
     },
-    // mod 9283 印刷順が保存されない帳票がある　吉 start
+    // mod 9283 印刷順が保存されない帳票がある 吉 start
     // setSortTemp: (state, sortTemp) => {
     //   state.sortTemp = sortTemp;
     // },
@@ -54,6 +54,6 @@ export default {
     setSortTempReg: (state, sortTempReg) => {
       state.sortTempReg = sortTempReg;
     },
-    // mod 9283 印刷順が保存されない帳票がある　吉 end
+    // mod 9283 印刷順が保存されない帳票がある 吉 end
   }
 };

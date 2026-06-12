@@ -21,7 +21,6 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.amazonaws.util.StringUtils;
 import com.google.common.base.Strings;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.dao.ComsvOrdMainDao;
@@ -733,7 +732,7 @@ public class ComsvSendConditionCommFailServiceImpl implements ComsvSendCondition
           if (classType != null) {
             if ("0".equals(classType.getIsDisp()) || "1".equals(classType.getIsDel())) {
               checkFlg = true;
-            } else if (!StringUtils.isNullOrEmpty(classType.getUseEndDate())) {
+            } else if (!Strings.isNullOrEmpty(classType.getUseEndDate())) {
               if (Integer.valueOf(sysDate) > Integer.valueOf(classType.getUseEndDate())) {
                 checkFlg = true;
               }
@@ -750,7 +749,7 @@ public class ComsvSendConditionCommFailServiceImpl implements ComsvSendCondition
           if (classType != null) {
             if ("0".equals(classType.getIsDisp()) || "1".equals(classType.getIsDel())) {
               checkFlg = true;
-            } else if (!StringUtils.isNullOrEmpty(classType.getUseEndDate())) {
+            } else if (!Strings.isNullOrEmpty(classType.getUseEndDate())) {
               if (Integer.valueOf(sysDate) > Integer.valueOf(classType.getUseEndDate())) {
                 checkFlg = true;
               }
@@ -767,7 +766,7 @@ public class ComsvSendConditionCommFailServiceImpl implements ComsvSendCondition
           if (dialyzer != null) {
             if ("0".equals(dialyzer.getIsDisp())) {
               checkFlg = true;
-            } else if (!StringUtils.isNullOrEmpty(dialyzer.getUseEndDate())) {
+            } else if (!Strings.isNullOrEmpty(dialyzer.getUseEndDate())) {
               if (Integer.valueOf(sysDate) > Integer.valueOf(dialyzer.getUseEndDate())) {
                 checkFlg = true;
               }
@@ -845,7 +844,7 @@ public class ComsvSendConditionCommFailServiceImpl implements ComsvSendCondition
         if (classType != null) {
           if ("0".equals(classType.getIsDisp()) || "1".equals(classType.getIsDel())) {
             checkFlg = true;
-          } else if (!StringUtils.isNullOrEmpty(classType.getUseEndDate())) {
+          } else if (!Strings.isNullOrEmpty(classType.getUseEndDate())) {
             if (Integer.valueOf(sysDate) > Integer.valueOf(classType.getUseEndDate())) {
               checkFlg = true;
             }
@@ -940,7 +939,7 @@ public class ComsvSendConditionCommFailServiceImpl implements ComsvSendCondition
         if (classType != null) {
           if ("0".equals(classType.getIsDisp()) || "1".equals(classType.getIsDel())) {
             checkFlg = true;
-          } else if (!StringUtils.isNullOrEmpty(classType.getUseEndDate())) {
+          } else if (!Strings.isNullOrEmpty(classType.getUseEndDate())) {
             if (Integer.valueOf(sysDate) > Integer.valueOf(classType.getUseEndDate())) {
               checkFlg = true;
             }
@@ -2123,7 +2122,7 @@ public class ComsvSendConditionCommFailServiceImpl implements ComsvSendCondition
     // Short rstInputClass = Short.valueOf(CONSTDEF.RST_INPUT_CLASS_MANUAL.get());
     //実績：登録区分 -> 通常(透析装置や通信サーバーなどを伴う治療)
     Short rstInputClass;
-    if (StringUtils.isNullOrEmpty(rstDialysisState)) {
+    if (Strings.isNullOrEmpty(rstDialysisState)) {
       // 実績：登録区分 -> 「透析装置や通信サーバーなどを伴う治療」
       rstInputClass = Short.valueOf(CONSTDEF.RST_INPUT_CLASS_DEFAULT.get());
     } else {

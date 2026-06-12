@@ -8,7 +8,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +24,7 @@ import jp.co.nikkiso.ntss.core.entity.SysCoopJournal;
 @Sql("classpath:resource.script/CallApiServiceImplTest/CallApiServiceImplTest.db5.before.sql")
 public class CallApiServiceImplTest extends BaseServiceTest {
 
-  @SpyBean
+  @MockitoSpyBean
   CallApiServiceImpl service;
 
   @Autowired

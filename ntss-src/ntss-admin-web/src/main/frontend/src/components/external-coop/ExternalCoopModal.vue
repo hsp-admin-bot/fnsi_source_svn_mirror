@@ -1,23 +1,31 @@
 <template>
   <modal-base @onClose="close">
-    <div slot="header">
+    <template #header>
       <component :is="header"></component>
-    </div>
+    </template>
 
-    <div :class="['body', modalMessageSize]" slot="body" style="overflow: auto;">
+    <template #body>
+      <div :class="['body', modalMessageSize]" style="overflow: auto;">
       <table style="table-layout: fixed;width: 100%;">
-        <tr>
-          <textarea
+        <tbody>
+          <tr>
+            <td>
+              <textarea
             id="com-textarea-external-coop"
             :value="dump"
             readonly
             class="com-textarea"
-          />
-        </tr>
+              />
+            </td>
+          </tr>
+      
+        </tbody>
       </table>
     </div>
+    </template>
 
-    <div slot="footer" class="flex-container">
+    <template #footer>
+      <div class="flex-container">
       <div class="denial-btn-area" style="background:none">
         <button class="button btn2-cancel" @click="close">
           閉じる
@@ -28,13 +36,15 @@
           コピー
         </button>
       </div>
-    </div>
+      </div>
+    </template>
   </modal-base>
 </template>
 
 <script>
 import ModalBase from "@/components/modals/ModalBase";
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { getModalContainerElement, queryScopedSelector, getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   name: "external-coop-modal",
@@ -72,10 +82,10 @@ export default {
     ...mapActions("multi-modal", ["hideModal"]),
     ...mapActions("external-coop", ["setEditRecord"]),
     utf8ToB64(str) {
-      return window.btoa(unescape(encodeURIComponent(str)));
+      return getScopedWindow(this.$el || this)?.btoa?.(unescape(encodeURIComponent(str))) || "";
     },
     b64ToUtf8(str) {
-      return decodeURIComponent(escape(window.atob(str)));
+      return decodeURIComponent(escape(getScopedWindow(this.$el || this)?.atob?.(str) || ""));
     },
     loadData() {
       if (this.getEditRecord) {
@@ -87,8 +97,8 @@ export default {
       }
     },
     copy() {
-      let element = document.querySelector("#com-textarea-external-coop");
-      navigator.clipboard.writeText(element.value);
+      const element = queryScopedSelector("#com-textarea-external-coop", this.$el || this);
+      getScopedWindow(this.$el || this)?.navigator?.clipboard?.writeText?.(element?.value || "");
     },
     close() {
       this.hideModal();
@@ -98,12 +108,14 @@ export default {
     this.loadData();
   },
   mounted() {
-    const modal = document.getElementsByClassName("modal-container")[0];
-    const modalHeight = modal.clientHeight;
-    const modalHeaderHeight = modal.firstElementChild.scrollHeight;
-    const modalFooterHeight = modal.lastElementChild.scrollHeight;
-    let element = document.querySelector("#com-textarea-external-coop");
-    element.style.height = modalHeight - modalHeaderHeight - modalFooterHeight + 8 + "px";
+    const modal = getModalContainerElement(this.$el || this);
+    const modalHeight = modal?.clientHeight || 0;
+    const modalHeaderHeight = modal?.firstElementChild?.scrollHeight || 0;
+    const modalFooterHeight = modal?.lastElementChild?.scrollHeight || 0;
+    const element = queryScopedSelector("#com-textarea-external-coop", this.$el || modal || this);
+    if (element) {
+      element.style.height = modalHeight - modalHeaderHeight - modalFooterHeight + 8 + "px";
+    }
   }
 };
 </script>
@@ -142,10 +154,10 @@ export default {
 }
 @media print {
   /** テキストエリアのページ跨ぎを可能とする */
-  div >>> .modal-wrapper {
+  div :deep(.modal-wrapper){
     display: inline-block !important;
   }
-  div >>> .com-textarea {
+  div :deep(.com-textarea){
     width: 100% !important;
   }
 }

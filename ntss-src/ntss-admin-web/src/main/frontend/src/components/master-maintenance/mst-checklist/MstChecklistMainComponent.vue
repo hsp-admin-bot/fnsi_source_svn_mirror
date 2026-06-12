@@ -7,7 +7,7 @@
       <div class="header-btn-area right" :class="{ 'mobile-header': isMobileDevice }">
         <div v-show="isMobileDevice" class="custom-switch-wrapper">
           <label class="fab-font-color">編集</label>
-          <v-ons-switch modifier="outline" class="custom-switch" v-model="allowEdit" />
+          <v-ons-switch modifier="outline" v-model="allowEdit" />
         </div>
         <v-ons-button
           modifier="outline"
@@ -22,80 +22,11 @@
           @click="sortBtnClick()"
         >反映</v-ons-button>
       </div>
-      <!-- チェックリスト一覧のグリッド -->
-      <!-- <div> -->
-        <!-- DEL チェックリストマスタ 詳細列を追加してそこからモーダルを起動する 孔s start-->
-        <!-- <kendo-grid
-          ref="mstChecklistGrid"
-          :class="fontSizeSet"
-          :height=kendoGridHeight
-          :data-source="checklistSetting"
-          :editable="true"
-          :selectable="'row'"
-          :scrollable="true"
-          :change="onClick"
-          :beforeEdit="editStart"
-          :cellClose="editEnd"
-          :edit="addInputAssist"
-          @save="onSave"
-        >
-          <kendo-grid-column
-            v-for="category in getMstChecklistColumn"
-            :key="category.length"
-            :title="category.title"
-            :width="category.width"
-            :field="category.field"
-            :hidden="category.hidden"
-            :locked="category.locked"
-            :editable="category.editable"
-            :template="category.template"
-          ></kendo-grid-column>
-        </kendo-grid> -->
-        <!-- DEL チェックリストマスタ 詳細列を追加してそこからモーダルを起動する 孔s end-->
-        <!-- ADD チェックリストマスタ 詳細列を追加してそこからモーダルを起動する 孔s start-->
-      <kendo-grid
+      <div
         ref="mstChecklistGrid"
-        :class="fontSizeSet"
-        :height=kendoGridHeight
-        :data-source="checklistSetting"
-        :editable="true"
-        :selectable="'row'"
-        :scrollable="true"
-        :beforeEdit="editStart"
-        :cellClose="editEnd"
-        :edit="addInputAssist"
-        @save="onSave"
-        @databound="onDataBoundKendoGrid">
-      <template v-for="(category,index) in getMstChecklistColumn">
-        <kendo-grid-column
-          v-if="category.title === '詳細'"
-          :key="index"
-          :title="category.title"
-          :width="category.width"
-          :field="category.field"
-          :hidden="category.hidden"
-          :locked="category.locked"
-          :editable="category.editable"
-          :template="category.template"
-          :attributes="{ class: 'btn3-kendo-normal' }"
-          :command="{ text: '詳細', click: onClick }"
-        ></kendo-grid-column>
-        <kendo-grid-column
-          v-else
-          :key="index"
-          :title="category.title"
-          :width="category.width"
-          :field="category.field"
-          :hidden="category.hidden"
-          :locked="category.locked"
-          :editable="category.editable"
-          :template="category.template"
-          :values="category.values"
-        ></kendo-grid-column>
-      </template>
-      </kendo-grid>
-        <!-- ADD チェックリストマスタ 詳細列を追加してそこからモーダルを起動する 孔s end-->
-      <!-- </div> -->
+        :class="[fontSizeSet, 'ntss-kendo-grid-legacy', 'mst-checklist-direct-jq-grid']"
+        :style="{ height: kendoGridHeight + 'px' }"
+      ></div>
     </div>
     <div id="grid-footer" class="btn-area nowrap-block">
       <v-ons-row width="100%" v-show="!isSortMode">
@@ -116,27 +47,33 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
-import NextTransitionMixin from "@/components/NextTransitionMixin";
-import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
-import Kendo from "@progress/kendo-ui";
+import { markRaw } from "@/compat/vue/runtime";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import kendo from "@progress/kendo-ui";
+import $ from "jquery";
 import { deepCopy } from "@/functions/common/CommonFunctions";
-import { EventBus } from "@/eventBus.js";
-import $$ from "jquery"
+import { EventBus } from "@/compat/vue/event-bus.js";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 liuimx add end
 // add #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
 import { messageFormat } from '@/functions/common/MessageFormat';
 import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
-// add #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
+import { getScopedAlertDialogs, getScopedNumericTextBox, queryScopedSelector } from "@/functions/common/LayoutMeasureHelper";
+import { bindGridEditorEnterToCloseCell } from "@/compat/kendo/grid-edit";
 
-// ストアについて
-// testStateストアの実体は/stores/modules/test-store.jsである。
-// この名前と実体ファイルの関連付けは/stores.store.jsに定義されている。
+function installComponentJQuery() {
+  if (typeof window !== "undefined") {
+    window.$ = window.$ || $;
+    window.jQuery = window.jQuery || $;
+  }
+  if (typeof globalThis !== "undefined") {
+    globalThis.$ = globalThis.$ || $;
+    globalThis.jQuery = globalThis.jQuery || $;
+  }
+}
 
 export default {
-  mixins: [NextTransitionMixin, MasterMaintenanceMixin],
   data() {
     return {
       isSortMode: false,
@@ -160,7 +97,16 @@ export default {
       dispNoListCd: [],
       // add #11001 並び順の変更後反映を押しても並び順が切り替わらない。 linjunfeng end
       allowEdit: true, // NOTE: true = 編集モード、 false = 閲覧モード
-      saveFlg: false
+      saveFlg: false,
+      directGridWidget: null,
+      directGridMounted: false,
+      directGridDataSource: null,
+      directGridLayoutRafId: null,
+      directGridFilterRefreshRafId: null,
+      directGridScrollSyncRafId: null,
+      directGridDomStructureKey: null,
+      suppressChecklistGridRefresh: false,
+      directGridRowVisualRafIds: markRaw(new Map())
     };
   },
   computed: {
@@ -170,7 +116,8 @@ export default {
       windowWidth: "getWindowWidth"
     }),
     ...mapGetters("account-edit", {
-      isDispMenu: "isDispMenu"
+      isDispMenu: "isDispMenu",
+      getFontSize: "getFontSize"
     }),
     ...mapGetters("mst-checklist", [
       "getChecklistSetting",
@@ -179,17 +126,9 @@ export default {
       "getSchema"
     ]),
     ...mapGetters("user", ["getFacilityCd"]),
-    // グリッド表示情報
-    checklistSetting() {
-      // storeからデータを取得
-      return new Kendo.data.DataSource({
-        data: this.getChecklistSetting,
-        schema: {
-          model: {
-            fields: this.getSchema
-          }
-        }
-      });
+    fontSizeSet() {
+      const names = ["small", "medium", "large", "x-large"];
+      return `font-size-set-${names[this.getFontSize] || "medium"}`;
     },
     // 変更フラグ
     isChanged() {
@@ -222,45 +161,55 @@ export default {
       // add #9539 チェックリストマスタの設定を変更して保存しても保存できない dengshen start
       this.getChecklistSetting && this.getChecklistSettingOld &&
       // add #9539 チェックリストマスタの設定を変更して保存しても保存できない dengshen end
-      this.getChecklistSetting.forEach((item, index) => {
+      this.getChecklistSetting.forEach((item) => {
+        const oldItem = this.getChecklistSettingOld?.find(old => old.list_cd === item.list_cd);
+        if (!oldItem) {
+          return;
+        }
         if (this.isPreservation && item.chgflg !== undefined) {
-          item.chgflg = false
+          item.chgflg = false;
         }
-        if ((item.dialysis_prog_name == this.getChecklistSettingOld[index].dialysis_prog_name) && (item.list_name == this.getChecklistSettingOld[index].list_name) && (JSON.stringify(item.funclist) == JSON.stringify(this.getChecklistSettingOld[index].funclist))) {
-          item.chgflg = false
+        if (
+          item.dialysis_prog_name == oldItem.dialysis_prog_name
+          && item.list_name == oldItem.list_name
+          && JSON.stringify(item.funclist) == JSON.stringify(oldItem.funclist)
+        ) {
+          item.chgflg = false;
         }
-      })
+      });
+      if (!this.suppressChecklistGridRefresh && !this.editingFlg) {
+        this.scheduleDirectGridFilterRefresh();
+      }
     },
     // getChangeFlg(val) {
     //   if(val) this.isPreservation = true;
     // },
-    MstChecklistColumn: function(val){
-      this.$nextTick(function(){
-        if (val)
-        this.setLoadingScreenVisible(false);
-        this.getChecklistSettingOld = deepCopy(this.getChecklistSetting)
+    MstChecklistColumn(val) {
+      this.$nextTick(() => {
+        if (val) {
+          this.setLoadingScreenVisible(false);
+        }
+        this.getChecklistSettingOld = deepCopy(this.getChecklistSetting);
+        this.initDirectGridIfReady();
+        this.scheduleDirectGridLayoutContract();
       });
     },
     // add redmine 5005 一覧画面で2重スクロールになる 孔 start
     windowHeight() {
-      // this.calculateColumnsWidth();
       this.calculateGridHeight();
-      // this.calculateGridWidth();
+      this.scheduleDirectGridLayoutContract();
     },
     windowWidth() {
-      // this.calculateColumnsWidth();
       this.calculateGridHeight();
-      // this.calculateGridWidth();
+      this.scheduleDirectGridLayoutContract();
     },
     isDispMenu() {
-      // this.calculateColumnsWidth();
       this.calculateGridHeight();
-      // this.calculateGridWidth();
+      this.scheduleDirectGridLayoutContract();
     },
     getFontSize() {
-      // this.calculateColumnsWidth();
       this.calculateGridHeight();
-      // this.calculateGridWidth();
+      this.scheduleDirectGridLayoutContract();
     },
     // add redmine 5005 一覧画面で2重スクロールになる 孔 end
   },
@@ -306,157 +255,427 @@ export default {
       setLoadingScreenMessage: "setLoadingScreenMessage",
       resetLoadingScreenVisibleCount: "resetLoadingScreenVisibleCount"
     }),
+    getCurrentRouteName() {
+      return this.$router?.currentRoute?.value?.name || this.$router?.currentRoute?.name || this.$route?.name || "";
+    },
+    getGridRootEl() {
+      return this.$refs.mstChecklistGrid || null;
+    },
+    getChecklistScopeRoot() {
+      return this.getGridRootEl() || this.$el || null;
+    },
+    getChecklistTextBoxElement() {
+      return queryScopedSelector('.k-input.k-textbox', this.getChecklistScopeRoot()) || null;
+    },
+    getChecklistNumericTextboxElement() {
+      return getScopedNumericTextBox(this.getChecklistScopeRoot()) || null;
+    },
+    getDirectGridScrollContent() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-content") || null;
+    },
+    getDirectGridLockedScrollContent() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-content-locked") || null;
+    },
+    getGridWidget() {
+      return this.directGridWidget || null;
+    },
+    getGridScrollPosition() {
+      const content = this.getDirectGridScrollContent();
+      return { top: content?.scrollTop || 0, left: content?.scrollLeft || 0 };
+    },
+    setGridScrollPosition(position = {}) {
+      const content = this.getDirectGridScrollContent();
+      if (!content) return;
+      content.scrollTop = position.top || 0;
+      content.scrollLeft = position.left || 0;
+      this.syncDirectGridLockedScrollPosition(content.scrollTop);
+      this.dispatchDirectGridContentScroll();
+    },
+    restoreDirectGridScrollPosition() {
+      const top = this.scrollPosition.top || 0;
+      const left = this.scrollPosition.left || 0;
+      const content = this.getDirectGridScrollContent();
+      if (!content) return;
+      content.scrollTop = top;
+      content.scrollLeft = left;
+      this.syncDirectGridLockedScrollPosition(top);
+      this.dispatchDirectGridContentScroll();
+    },
+    dispatchDirectGridContentScroll() {
+      const content = this.getDirectGridScrollContent();
+      if (!content) return;
+      try {
+        content.dispatchEvent(new Event("scroll", { bubbles: true }));
+      } catch (_error) {}
+      try {
+        $(content).trigger("scroll");
+      } catch (_error) {}
+    },
+    scheduleDirectGridPostColumnScrollSync() {
+      if (this.directGridScrollSyncRafId != null) {
+        cancelAnimationFrame(this.directGridScrollSyncRafId);
+      }
+      this.directGridScrollSyncRafId = requestAnimationFrame(() => {
+        this.restoreDirectGridScrollPosition();
+        this.directGridScrollSyncRafId = requestAnimationFrame(() => {
+          this.directGridScrollSyncRafId = null;
+          this.restoreDirectGridScrollPosition();
+        });
+      });
+    },
+    getDirectGridColumnStructureKey() {
+      return (this.getMstChecklistColumn || []).map(column => `${column.field}:${column.hidden ? 1 : 0}`).join("|");
+    },
+    createDirectGridDataSource() {
+      this.directGridDataSource = markRaw(new kendo.data.DataSource({
+        data: this.getChecklistSetting || [],
+        schema: {
+          model: {
+            fields: this.getSchema
+          }
+        }
+      }));
+      return this.directGridDataSource;
+    },
+    buildDirectGridColumns() {
+      return (this.getMstChecklistColumn || []).map(category => {
+        const gridColumn = { ...category };
+        if (category.title === "詳細") {
+          gridColumn.attributes = { class: "btn3-kendo-normal" };
+          gridColumn.command = { text: "詳細", click: event => this.onClick(event) };
+          delete gridColumn.values;
+        }
+        return gridColumn;
+      });
+    },
+    initDirectGridIfReady() {
+      const root = this.getGridRootEl();
+      if (!this.directGridMounted || !root || !Array.isArray(this.getMstChecklistColumn) || this.getMstChecklistColumn.length === 0) return;
+      if (this.directGridWidget) {
+        this.applyDirectGridColumnsContract();
+        this.scheduleDirectGridFilterRefresh();
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+      installComponentJQuery();
+      $(root).empty();
+      $(root).kendoGrid({
+        dataSource: this.createDirectGridDataSource(),
+        editable: true,
+        selectable: "row",
+        scrollable: true,
+        height: this.kendoGridHeight,
+        beforeEdit: event => this.editStart(event),
+        cellClose: event => this.editEnd(event),
+        edit: event => this.addInputAssist(event),
+        save: event => this.onSave(event),
+        dataBound: event => this.onDirectGridDataBound(event),
+        columns: this.buildDirectGridColumns()
+      });
+      this.directGridWidget = markRaw($(root).data("kendoGrid"));
+      this.installDirectGridFacade();
+      this.directGridDomStructureKey = null;
+      this.applyDirectGridDomClassContract();
+      this.applyDirectGridScrollLayoutContract();
+      this.scheduleDirectGridLayoutContract();
+    },
+    destroyDirectGrid() {
+      if (this.directGridWidget) {
+        try { this.directGridWidget.destroy(); } catch (_error) {}
+      }
+      const root = this.getGridRootEl();
+      if (root) $(root).empty();
+      this.directGridWidget = null;
+      this.directGridDataSource = null;
+      this.directGridDomStructureKey = null;
+    },
+    installDirectGridFacade() {
+      const root = this.getGridRootEl();
+      if (!root) return;
+      root.kendoWidget = () => this.directGridWidget;
+      root.gridWidget = () => this.directGridWidget;
+      root.gridRootEl = () => root;
+      root.gridDataItem = row => this.directGridWidget?.dataItem?.(row);
+      root.gridContentEl = () => this.getDirectGridScrollContent();
+      root.gridAutoScrollableEl = () => this.getDirectGridScrollContent();
+      root.gridLockedContentEl = () => this.getDirectGridLockedScrollContent();
+      root.scrollGridTo = position => this.setGridScrollPosition(position);
+    },
+    applyDirectGridColumnsContract() {
+      const grid = this.directGridWidget;
+      if (!grid) return;
+      const before = (grid.columns || []).map(column => `${column.field}:${column.hidden ? 1 : 0}`).join("|");
+      const after = this.getDirectGridColumnStructureKey();
+      if (before !== after) {
+        this.scrollPosition = this.getGridScrollPosition();
+        grid.setOptions({ columns: this.buildDirectGridColumns() });
+        this.directGridDomStructureKey = null;
+        this.$nextTick(() => {
+          this.applyDirectGridDomClassContract();
+          this.scheduleDirectGridPostColumnScrollSync();
+          this.scheduleChecklistRowVisualRefresh();
+        });
+      }
+    },
+    scheduleDirectGridFilterRefresh() {
+      if (this.editingFlg || !this.directGridWidget?.dataSource) return;
+      if (this.directGridFilterRefreshRafId != null) cancelAnimationFrame(this.directGridFilterRefreshRafId);
+      this.directGridFilterRefreshRafId = requestAnimationFrame(() => {
+        this.directGridFilterRefreshRafId = null;
+        this.refreshDirectGridDataFromStore(false);
+      });
+    },
+    refreshDirectGridDataFromStore(resetScroll = false) {
+      const grid = this.directGridWidget;
+      if (!grid?.dataSource) return;
+      grid.dataSource.data(this.getChecklistSetting || []);
+      if (resetScroll) this.setGridScrollPosition({ top: 0, left: 0 });
+      this.$nextTick(() => {
+        if (!this.editingFlg) {
+          this.editBackgroundColor();
+        }
+      });
+    },
+    applyDirectGridLockedWidthContract() {
+      const root = this.getGridRootEl();
+      if (!root) return;
+      const lockedWidth = (this.getMstChecklistColumn || []).reduce((sum, column) => {
+        if (!column.locked || column.hidden) return sum;
+        const width = `${column.width || ""}`.trim();
+        if (width.endsWith("em")) {
+          const fontSize = parseFloat(getComputedStyle(root).fontSize || "16") || 16;
+          return sum + parseFloat(width) * fontSize;
+        }
+        if (width.endsWith("px")) return sum + parseFloat(width);
+        const numeric = parseFloat(width);
+        return sum + (Number.isFinite(numeric) ? numeric : 0);
+      }, 0);
+      if (!lockedWidth) return;
+      const px = `${Math.ceil(lockedWidth)}px`;
+      root.querySelectorAll(
+        ".k-grid-header-locked,.k-grid-content-locked,.k-grid-header-locked table,.k-grid-content-locked table"
+      ).forEach(element => {
+        element.style.width = px;
+        element.style.minWidth = px;
+      });
+    },
+    applyDirectGridLockedHeightContract() {
+      const content = this.getDirectGridScrollContent();
+      const locked = this.getDirectGridLockedScrollContent();
+      if (!content || !locked) return;
+      locked.style.height = `${content.clientHeight}px`;
+      locked.style.maxHeight = `${content.clientHeight}px`;
+    },
+    syncDirectGridLockedScrollPosition(scrollTop = null) {
+      const locked = this.getDirectGridLockedScrollContent();
+      if (!locked) return;
+      const content = this.getDirectGridScrollContent();
+      locked.scrollTop = scrollTop !== null && scrollTop !== undefined ? scrollTop : (content?.scrollTop || 0);
+    },
+    applyDirectGridDomClassContract() {
+      const root = this.getGridRootEl();
+      if (!root) return;
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-editable", "k-display-block");
+      const structureKey = this.getDirectGridColumnStructureKey();
+      if (this.directGridDomStructureKey !== structureKey) {
+        root.querySelectorAll("th").forEach(th => th.classList.add("k-header"));
+        this.directGridDomStructureKey = structureKey;
+      }
+      [".k-grid-content tbody tr", ".k-grid-content-locked tbody tr"].forEach(selector => {
+        root.querySelectorAll(selector).forEach((tr, index) => {
+          tr.classList.add("k-master-row");
+          tr.classList.toggle("k-alt", index % 2 === 1);
+        });
+      });
+      root.querySelectorAll(".k-grid-content tbody td, .k-grid-content-locked tbody td").forEach(td => td.classList.add("k-td", "k-table-td"));
+    },
+    applyDirectGridScrollLayoutContract() {
+      this.applyDirectGridLockedWidthContract();
+      this.applyDirectGridLockedHeightContract();
+      this.syncDirectGridLockedScrollPosition();
+    },
+    scheduleDirectGridLayoutContract() {
+      if (this.directGridLayoutRafId != null) cancelAnimationFrame(this.directGridLayoutRafId);
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.directGridLayoutRafId = null;
+        this.resizeDirectGrid();
+        this.applyDirectGridScrollLayoutContract();
+      });
+    },
+    resizeDirectGrid() {
+      const grid = this.directGridWidget;
+      if (!grid) return;
+      try {
+        grid.setOptions({ height: this.kendoGridHeight });
+        grid.resize(true);
+      } catch (_error) {}
+    },
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
-      if (!this.editingFlg) {
-        const wh = this.windowHeight;
-        const hh = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .pop().clientHeight;
-        const fmh =
-          this.isDispMenu === 1
-            ? document.getElementById("footer-menu").clientHeight
-            : 0;
-        const tableToolbar = document.getElementsByClassName("header-btn-area")[0].clientHeight
-        this.kendoGridToolbarHeight = wh - hh - fmh - 1;
-
-        const gfh = document.getElementById("grid-footer").clientHeight;
-        this.kendoGridHeight = this.kendoGridToolbarHeight - gfh - tableToolbar;
-        // #8745 表示内容が画面上半分にしか表示されない。 林峻峰 start
-        let contentScrollableWidth = (document.getElementsByClassName('k-grid')[0].clientWidth
-                                          - document.getElementsByClassName('k-grid-content-locked')[0].clientWidth);
-        document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].style.width = `${contentScrollableWidth}px`;
-        // #8745 表示内容が画面上半分にしか表示されない。 林峻峰 start
-      }
+      if (this.editingFlg) return;
+      const wh = Number(this.windowHeight) || window.innerHeight || 0;
+      const header = document.getElementsByClassName("header");
+      const headerHeight = header?.length ? header[header.length - 1].clientHeight : 0;
+      const footerMenu = document.getElementById("footer-menu");
+      const footerMenuHeight = (this.isDispMenu === 1 && footerMenu ? footerMenu.clientHeight : 0) + 5;
+      const toolbar = document.querySelector(".mst-checklist-main-content-area .header-btn-area");
+      const toolbarHeight = toolbar ? toolbar.clientHeight : 0;
+      const gridFooter = document.getElementById("grid-footer");
+      const gridFooterHeight = gridFooter ? gridFooter.clientHeight : 0;
+      this.kendoGridHeight = Math.max(160, wh - headerHeight - footerMenuHeight - toolbarHeight - gridFooterHeight - 1);
     },
     loadData() {
       // mod マスタ一覧 1･施設切替を可能とする 孔 this.getFacilityCd => this.facilitylistValue start
       // 医療材料マスタ情報取得
-      this.fetchMstEquipClassList(this.facilitylistValue).then(async() => {
+      return this.fetchMstEquipClassList(this.facilitylistValue).then(async() => {
+        //ADD チェックリストマスタ データ種別に「投与薬剤」を「医療材料」の下の選択肢に追加する。 孔s start
+        await this.fetchMstMedicineClassList(this.facilitylistValue);
+        //ADD チェックリストマスタ データ種別に「投与薬剤」を「医療材料」の下の選択肢に追加する。 孔s end
         // チェックリスト設定情報取得
         await this.fetchCheckSettingList(this.facilitylistValue);
 
-        this.getChecklistSettingOld = deepCopy(this.getChecklistSetting)
+        this.getChecklistSettingOld = deepCopy(this.getChecklistSetting);
+        this.MstChecklistColumn = this.getMstChecklistColumn;
+        this.setLoadingScreenVisible(false);
+      }).catch(() => {
+        this.setLoadingScreenVisible(false);
       });
-      //ADD チェックリストマスタ データ種別に「投与薬剤」を「医療材料」の下の選択肢に追加する。 孔s start
-      this.fetchMstMedicineClassList(this.facilitylistValue);
-      //ADD チェックリストマスタ データ種別に「投与薬剤」を「医療材料」の下の選択肢に追加する。 孔s end
       // mod マスタ一覧 1･施設切替を可能とする 孔 this.getFacilityCd => this.facilitylistValue end
     },
     // 背景色セット
     editBackgroundColor() {
-      this.$nextTick(() => {
-        // グリッドが表示されていなかったら処理終了
-        const gridHeader = this.$refs.mstChecklistGrid.$el.firstChild;
-        if (gridHeader.textContent === " ") {
+      if (this.editingFlg) {
+        return;
+      }
+      if (this.directGridRowVisualRafIds.has("edit-background")) {
+        cancelAnimationFrame(this.directGridRowVisualRafIds.get("edit-background"));
+      }
+      const rafId = requestAnimationFrame(() => {
+        this.directGridRowVisualRafIds.delete("edit-background");
+        this.paintChecklistEditBackgroundColor();
+      });
+      this.directGridRowVisualRafIds.set("edit-background", rafId);
+    },
+    scheduleChecklistRowVisualRefresh() {
+      if (this.directGridRowVisualRafIds.has("row-visual-refresh")) {
+        cancelAnimationFrame(this.directGridRowVisualRafIds.get("row-visual-refresh"));
+      }
+      const rafId = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          this.directGridRowVisualRafIds.delete("row-visual-refresh");
+          if (!this.editingFlg) {
+            this.editBackgroundColor();
+          }
+        });
+      });
+      this.directGridRowVisualRafIds.set("row-visual-refresh", rafId);
+    },
+    paintChecklistEditBackgroundColor() {
+      const root = this.getGridRootEl();
+      const grid = this.directGridWidget;
+      const checklistSettings = this.getChecklistSetting;
+      if (!root || !grid || !Array.isArray(checklistSettings) || checklistSettings.length === 0) {
+        return;
+      }
+      root.querySelector(".k-grid-header")?.classList?.add("master-grid-header");
+      const rows = Array.from(root.querySelectorAll(".k-grid-content tbody tr[data-uid]"));
+      const lockedRows = Array.from(root.querySelectorAll(".k-grid-content-locked tbody tr[data-uid]"));
+      const lockedRowByUid = new Map();
+      lockedRows.forEach(lockedRow => {
+        const uid = lockedRow.getAttribute("data-uid");
+        if (uid) lockedRowByUid.set(uid, lockedRow);
+      });
+      rows.forEach((row, index) => {
+        const rowData = grid.dataItem(row);
+        if (!rowData) {
           return;
         }
-        gridHeader?.classList?.add("master-grid-header");
-        const tBody = this.$refs.mstChecklistGrid.$el.lastChild.lastChild.tBodies;
-        //ADD チェックリストマスタ 工程名の左のセルのセル色を変更する。 孔s START
-        const tBody2 = this.$refs.mstChecklistGrid.$el.children[1].firstChild.lastChild.children;
-        //ADD チェックリストマスタ 工程名の左のセルのセル色を変更する。 孔s END
-        if ( ! tBody || tBody.length !== 1 ) {
-          return;
+        const currentTrc = row.children;
+        const rowUid = row.getAttribute("data-uid");
+        const lockedRow = (rowUid && lockedRowByUid.get(rowUid)) || lockedRows[index] || null;
+        let edited = rowData.chgflg_dispno;
+        !this.isPreservation && this.changeDispCellColor(row, lockedRow, edited, rowData.list_cd);
+        edited = rowData.chgflg;
+        !this.isPreservation && this.changeRowColor(currentTrc, lockedRow, edited);
+        if (!this.isPreservation && edited) {
+          this.getChecklistGridCell(row, lockedRow, "disp_no")
+            ?.classList?.remove("master-edited-row");
+          this.getChecklistGridCell(row, lockedRow, "dummy_disp_no")
+            ?.classList?.remove("master-edited-row");
         }
-        const tBodyC = tBody[0].children;
-        for (let rwCount = 0; rwCount < tBodyC.length; rwCount++) {
-          const currentTrc = tBodyC[rwCount].children;
-
-          // 並び順の編集で色を変更する
-          let edited = this.getChecklistSetting[rwCount].chgflg_dispno;
-
-          // 並び順以外の項目が変更されていた場合は、削除か修正にあわせて並び順より後の項目の背景色を変更
-          //ADD チェックリストマスタ 工程名の左のセルのセル色を変更する。 孔s START
-          // this.changeDispCellColor(currentTrc, edited);
-          const currentFrontTrc = tBody2[rwCount]
-          // #11001 並び順の変更後反映を押しても並び順が切り替わらない。 linjunfeng start
-          // !this.isPreservation && this.changeDispCellColor(currentTrc, edited,currentFrontTrc);
-          !this.isPreservation && this.changeDispCellColor(currentTrc, edited,currentFrontTrc,this.getChecklistSetting[rwCount].list_cd);
-          // #11001 並び順の変更後反映を押しても並び順が切り替わらない。 linjunfeng end
-          //ADD チェックリストマスタ 工程名の左のセルのセル色を変更する。 孔s END
-
-          // モーダルからの編集で色を変更する
-          // if (!this.isPreservation) {
-          edited = this.getChecklistSetting[rwCount].chgflg;
-          // }
-          // 並び順以外の項目が変更されていた場合は、削除か修正にあわせて並び順より後の項目の背景色を変更
-          !this.isPreservation && this.changeRowColor(currentTrc, edited);
-
-          // リスト名・工程が変更されていた場合
-          !this.isPreservation && this.changeCellFont(currentTrc, this.getChecklistSetting[rwCount]);
-
-          // グリッド高さ再計算
-          this.$nextTick(() => {
-            !this.isPreservation && this.calculateGridHeight();
-            this.MstChecklistColumn = this.getMstChecklistColumn;
-          });
-        }
+        !this.isPreservation && this.changeCellFont(row, lockedRow, rowData);
       });
     },
     isEditRow(currentTd) {
-      // 編集した行を判定
-      return currentTd.classList.contains("k-dirty-cell");
+      if (!currentTd) {
+        return false;
+      }
+      return currentTd.classList.contains("k-dirty-cell")
+        || currentTd.classList.contains("k-edit-cell");
     },
     //ADD チェックリストマスタ 工程名の左のセルのセル色を変更する。 孔s START
     // changeDispCellColor(currentTrc, edited) {
     // #11001 並び順の変更後反映を押しても並び順が切り替わらない。 linjunfeng start
     // changeDispCellColor(currentTrc, edited,currentFrontTrc) {
-    changeDispCellColor(currentTrc, edited,currentFrontTrc, listCd) {
+    changeDispCellColor(row, lockedRow, edited, listCd) {
     // #11001 並び順の変更後反映を押しても並び順が切り替わらない。 linjunfeng end
     //ADD チェックリストマスタ 工程名の左のセルのセル色を変更する。 孔s END
-      // 並び順のインデックス
-      const noIdx = this.getColumnIndex("disp_no");
-      const dummyIdx = this.getColumnIndex("dummy_disp_no");
+      const noCell = this.getChecklistGridCell(row, lockedRow, "disp_no");
+      const dummyCell = this.getChecklistGridCell(row, lockedRow, "dummy_disp_no");
       // 並び順が変更されていれば並び順とダミー項目背景色を変更0
       // #11001 並び順の変更後反映を押しても並び順が切り替わらない。 linjunfeng start
-      // if (this.isEditRow(currentTrc[noIdx]) || edited) {
-      if (this.isEditRow(currentTrc[noIdx]) || this.isEditRow(currentTrc[dummyIdx]) || (edited && this.dispNoListCd.includes(listCd))) {
+      // 並び順の黄色はユーザーが並び順の値を変更した行のみ（dispNoListCd）。
+      // chgflg_dispno / k-dirty-cell は工程変更や未変更の失焦でも立つため使わない。
+      const shouldHighlight = listCd != null && this.dispNoListCd.includes(listCd);
       // #11001 並び順の変更後反映を押しても並び順が切り替わらない。 linjunfeng end
-        currentTrc[noIdx]?.classList?.add("master-sort-edited");
-        currentTrc[dummyIdx]?.classList?.add("master-sort-edited");
+      if (shouldHighlight) {
+        noCell?.classList?.add("master-sort-edited");
+        dummyCell?.classList?.add("master-sort-edited");
         //ADD チェックリストマスタ 工程名の左のセルのセル色を変更する。 孔s START
-        currentFrontTrc?.classList?.add("master-sort-edited");
+        lockedRow?.classList?.add("master-sort-edited");
         //ADD チェックリストマスタ 工程名の左のセルのセル色を変更する。 孔s END
-      } else if (currentTrc[noIdx].classList.length > 0) {
-        currentTrc[noIdx].classList.remove("master-sort-edited");
-        currentTrc[dummyIdx].classList.remove("master-sort-edited");
-        currentFrontTrc.classList.remove("master-sort-edited");
+      } else {
+        noCell?.classList?.remove("master-sort-edited");
+        dummyCell?.classList?.remove("master-sort-edited");
+        lockedRow?.classList?.remove("master-sort-edited");
       }
     },
-    changeRowColor(currentTrc, edited) {
+    changeRowColor(currentTrc, lockedRow, edited) {
       const addClass = "master-edited-row";
-      // 並び順より後の項目のインデックス
-      const idx = this.getColumnIndex("dummy_disp_no") + 1;
-      for (let clCount = idx; clCount < currentTrc.length; clCount++) {
-        // 並び順より後の項目の背景色を変更
-        if (edited) {
-          currentTrc[clCount]?.classList?.add(addClass);
-        } else if (currentTrc[clCount].classList.length > 0) {
-          currentTrc[clCount].classList.remove(addClass);
-        }
-      }
+      const toggleCell = cell => {
+        if (!cell) return;
+        cell.classList.toggle(addClass, !!edited);
+      };
+      Array.from(lockedRow?.children || []).forEach(toggleCell);
+      Array.from(currentTrc || []).forEach(toggleCell);
     },
-    changeCellFont(currentTrc, data) {
+    getChecklistGridCell(row, lockedRow, fieldName) {
+      const column = (this.getMstChecklistColumn || []).find(item => item.field === fieldName && !item.hidden);
+      if (!column) {
+        return null;
+      }
+      const targetRow = column.locked ? lockedRow : row;
+      if (!targetRow) {
+        return null;
+      }
+      const sectionColumns = (this.getMstChecklistColumn || []).filter(item => !item.hidden && !!item.locked === !!column.locked);
+      const columnIndex = sectionColumns.findIndex(item => item.field === fieldName);
+      if (columnIndex < 0) {
+        return null;
+      }
+      const cells = Array.from(targetRow.children || []);
+      return cells.find(cell => {
+        const ariaIndex = Number(cell.getAttribute("aria-colindex")) - 1;
+        const effectiveIndex = Number.isFinite(ariaIndex) ? ariaIndex : cells.indexOf(cell);
+        return effectiveIndex === columnIndex;
+      }) || cells[columnIndex] || null;
+    },
+    changeCellFont(row, lockedRow, data) {
       const addClass = "master-edited-cell";
-
-      // 工程名
-      const progIdx = this.getColumnIndex("dialysis_prog_name") - 2;
-      // 変更ありの場合
-      if (data.chgflg_progcd) {
-        currentTrc[progIdx]?.classList?.add(addClass);
-      } else if (currentTrc[progIdx].classList.length > 0) {
-        currentTrc[progIdx].classList.remove(addClass);
-      }
-
-      // リスト名
-      const listIdx = this.getColumnIndex("list_name") - 2;
-      // 変更ありの場合
-      if (data.chgflg_listname) {
-        currentTrc[listIdx]?.classList?.add(addClass);
-      } else if (currentTrc[listIdx].classList.length > 0) {
-        currentTrc[listIdx].classList.remove(addClass);
-      }
+      const progCell = this.getChecklistGridCell(row, lockedRow, "dialysis_prog_cd");
+      const listCell = this.getChecklistGridCell(row, lockedRow, "list_name");
+      progCell?.classList.toggle(addClass, !!data.chgflg_progcd);
+      listCell?.classList.toggle(addClass, !!data.chgflg_listname);
     },
     getColumnIndex(fieldName) {
       // 指定された項目がない場合はマイナスが返る
@@ -464,20 +683,14 @@ export default {
     },
     // グリッドクリック時
     onClick(event) {
-      //イベント発生前のスクロールバーの位置を保持
-      const scrollTop = document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].scrollTop;
-      const scrollLeft = document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].scrollLeft;
-      this.scrollPosition.top = scrollTop;
-      this.scrollPosition.left = scrollLeft;
+      this.scrollPosition = this.getGridScrollPosition();
       if (!this.isSortMode) {
         event.preventDefault();
-        const selRow = this.$refs.mstChecklistGrid.kendoWidget().dataItem(event.currentTarget.closest("tr"));
+        const targetRow = event.currentTarget.closest("tr");
+        const selRow = this.directGridWidget?.dataItem?.(targetRow);
+        if (!selRow) return;
         const selectedRowIndex = this.getChecklistSetting.findIndex(e => e.list_cd === selRow.list_cd);
-
-        // 選択された設定の表示順と設定情報をセット
         this.setEditChecklist(selectedRowIndex);
-        // チェックリスト設定モーダル画面表示
-        // this.showChecklistEdit("チェックリスト設定");
         this.showChecklistEdit("チェックリストマスタ詳細");
       }
     },
@@ -491,72 +704,96 @@ export default {
       }, 1000);
     },
     setScrollPosition(position) {
-      $$("div.k-grid-content")
-        .scrollTop(position.top)
-        .scrollLeft(position.left);
+      this.setGridScrollPosition(position);
     },
     onSave(ev) {
-      //イベント発生前のスクロールバーの位置を保持
-      const scrollTop = ev.sender.content[0].scrollTop;
-      const scrollLeft = ev.sender.content[0].scrollLeft;
-      this.scrollPosition.top = scrollTop;
-      this.scrollPosition.left = scrollLeft;
+      this.scrollPosition = this.getGridScrollPosition();
+      const editedField = Object.keys(ev.values)[0];
       //ADD チェックリストマスタ 工程、リスト名を一覧で修正可能とする 孔s START
-      if (Object.keys(ev.values)[0] !== "disp_no") {
+      if (editedField !== "disp_no") {
           this.editingFlg = false;
+          this.suppressChecklistGridRefresh = true;
           this.edit({ editRecord: ev.model, isSortMode: false, value: ev.values });
-          // ev.sender.refresh();
           if (ev.model.operation === 1) {
             ev.model.edited = true;
           }
           this.mstChecklistSortData(this.getChecklistSetting);
+          this.suppressChecklistGridRefresh = false;
+          this.refreshDirectGridDataFromStore(false);
       // add #11001 並び順の変更後反映を押しても並び順が切り替わらない。 linjunfeng start
-      } else if (!this.dispNoListCd.includes(ev.model.list_cd)) {
-        this.dispNoListCd.push(ev.model.list_cd);
-        this.isPreservation = false;
+      } else {
+        const newValue = ev.values.disp_no;
+        const oldValue = ev.model.disp_no;
+        if (oldValue == newValue) {
+          this.clearDispNoCellDirtyState(ev);
+          this.$nextTick(() => this.editBackgroundColor());
+          return;
+        }
+        const baselineItem = this.getChecklistSettingOld?.find(old => old.list_cd === ev.model.list_cd);
+        const baselineValue = baselineItem?.disp_no;
+        if (newValue != baselineValue) {
+          if (!this.dispNoListCd.includes(ev.model.list_cd)) {
+            this.dispNoListCd.push(ev.model.list_cd);
+          }
+          this.isPreservation = false;
+        } else {
+          const idx = this.dispNoListCd.indexOf(ev.model.list_cd);
+          if (idx >= 0) {
+            this.dispNoListCd.splice(idx, 1);
+          }
+        }
+        this.$nextTick(() => this.editBackgroundColor());
       }
       // add #11001 並び順の変更後反映を押しても並び順が切り替わらない。 linjunfeng end
       //ADD チェックリストマスタ 工程、リスト名を一覧で修正可能とする 孔s END
-      // 状態に合わせて背景色を変更
-      this.editBackgroundColor();
     },
-    onDataBoundKendoGrid(ev) {
+    onDirectGridDataBound(event) {
+      this.installDirectGridFacade();
+      this.applyDirectGridDomClassContract();
+      this.applyDirectGridScrollLayoutContract();
+      this.onDataBoundKendoGrid(event);
+    },
+    onDataBoundKendoGrid() {
       if (this.scrollPosition.top > 0 || this.scrollPosition.left > 0) {
-        //スクロールバーの位置をイベント発生前の位置に戻す
-        this.$nextTick(() => {
-          ev.sender.content[0].scrollTop = this.scrollPosition.top;
-          ev.sender.content[0].scrollLeft = this.scrollPosition.left;
-        });
+        this.$nextTick(() => this.restoreDirectGridScrollPosition());
       }
     },
     // 並び順表示
     toRankEditBtnClick() {
       this.isSortMode = true;
       this.showSortColumn();
-      //ADD チェックリストマスタ 工程、リスト名を一覧で修正可能とする 孔s START
-      this.disableColumns();
-      //ADD チェックリストマスタ 工程、リスト名を一覧で修正可能とする 孔s END
     },
     showSortColumn() {
+      this.scrollPosition = this.getGridScrollPosition();
       // 並び順列の表示/非表示
       let colSetting = this.getMstChecklistColumn;
       colSetting[0].hidden = this.isSortMode;
       colSetting[1].hidden = !this.isSortMode;
       this.setMstCheckListColumn(colSetting);
+      //ADD チェックリストマスタ 工程、リスト名を一覧で修正可能とする 孔s START
+      if (this.isSortMode) {
+        this.disableColumns();
+      } else {
+        this.editableColumns();
+      }
+      //ADD チェックリストマスタ 工程、リスト名を一覧で修正可能とする 孔s END
       this.$nextTick(() => {
         this.calculateGridHeight();
+        this.applyDirectGridColumnsContract();
+        this.scheduleDirectGridLayoutContract();
+        this.scheduleDirectGridPostColumnScrollSync();
+        this.scheduleChecklistRowVisualRefresh();
       });
     },
     // 反映
     sortBtnClick() {
       // グリッドデータ取得
-      const gridData = this.$refs.mstChecklistGrid.kendoWidget();
-      this.mstChecklistSortData(gridData.dataSource.options.data);
+      const gridData = this.directGridWidget?.dataSource?.data?.();
+      const plainData = typeof gridData?.toJSON === "function" ? gridData.toJSON() : Array.from(gridData || []);
+      this.mstChecklistSortData(plainData);
       this.isSortMode = false;
+      this.refreshDirectGridDataFromStore(false);
       this.showSortColumn();
-      //ADD チェックリストマスタ 工程、リスト名を一覧で修正可能とする 孔s START
-      this.editableColumns();
-      //ADD チェックリストマスタ 工程、リスト名を一覧で修正可能とする 孔s END
     },
     //ADD チェックリストマスタ 工程、リスト名を一覧で修正可能とする 孔s START
     editableColumns() {
@@ -742,8 +979,7 @@ export default {
     //   this.regChecklistSetting().then(async res => {
     async registration() {
       //イベント発生前のスクロールバーの位置を保持
-      const scrollTop = document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].scrollTop;
-      const scrollLeft = document.getElementsByClassName('k-grid-content k-auto-scrollable')[0].scrollLeft;
+      const { top: scrollTop, left: scrollLeft } = this.getGridScrollPosition();
       this.scrollPosition.top = scrollTop;
       this.scrollPosition.left = scrollLeft;
       this.saveFlg = true;
@@ -837,25 +1073,53 @@ export default {
         e.preventDefault();
         return;
       }
-      if (this.isAndroid) {
-        this.editingFlg = true;
-      }
+      this.editingFlg = true;
       // #9185 マウスが止まるとのtipsが現れました linjunfeng start
       this.$nextTick(()=>{
-        if (document.getElementsByClassName('k-textbox') && document.getElementsByClassName('k-textbox')[0]) {
-          document.getElementsByClassName('k-textbox')[0].setAttribute('title', '');
+        const textBox = this.getChecklistTextBoxElement();
+        if (textBox) {
+          textBox.setAttribute('title', '');
         }
       })
       // #9185 マウスが止まるとのtipsが現れました linjunfeng end
     },
     editEnd() {
       this.editingFlg = false;
+      if (this.isSortMode) {
+        this.$nextTick(() => this.editBackgroundColor());
+      }
     },
-    addInputAssist() {
+    clearDispNoCellDirtyState(ev) {
+      const uid = ev?.model?.uid;
+      const root = this.getGridRootEl();
+      const row = uid
+        ? root?.querySelector(`.k-grid-content tbody tr[data-uid="${uid}"]`)
+        : ev?.container?.closest?.("tr[data-uid]") || null;
+      const lockedRow = uid
+        ? root?.querySelector(`.k-grid-content-locked tbody tr[data-uid="${uid}"]`)
+        : null;
+      [
+        this.getChecklistGridCell(row, lockedRow, "disp_no"),
+        this.getChecklistGridCell(row, lockedRow, "dummy_disp_no")
+      ].forEach(cell => {
+        cell?.classList?.remove("k-dirty-cell", "master-sort-edited");
+        cell?.querySelectorAll?.(".k-dirty")?.forEach(element => element.remove());
+      });
+      lockedRow?.classList?.remove("master-sort-edited");
+      if (ev?.model?.dirtyFields?.disp_no != null) {
+        delete ev.model.dirtyFields.disp_no;
+        if (Object.keys(ev.model.dirtyFields).length === 0) {
+          ev.model.dirty = false;
+        }
+      }
+    },
+    addInputAssist(event) {
+      bindGridEditorEnterToCloseCell(event?.sender || this.directGridWidget, event?.container);
       // iOS/PWA環境でスピナーをタップすると編集が終了してしまう現象の対策
       if (this.isIOS) {
-        if (document.getElementsByClassName("k-numerictextbox").length !== 0) {
-          let spinnerObj = document.getElementsByClassName("k-numerictextbox")[0].getElementsByClassName("k-select")[0];
+        const numericTextbox = this.getChecklistNumericTextboxElement();
+        const spinnerObj = numericTextbox?.getElementsByClassName?.("k-select")?.[0] || null;
+        if (spinnerObj) {
           // 編集が終了するとオブジェクトが削除されるため、removeEvent処理は不要
           spinnerObj.ontouchend = event => event.stopPropagation();
         }
@@ -864,20 +1128,25 @@ export default {
     loadGridData(){
       // 並べ替えクリア
       this.isSortMode = false;
+      this.dispNoListCd = [];
       this.showSortColumn();
       // 変更フラグクリア
       this.setChangeFlg(false);
       // チェックリストマスタ情報取得
-      this.loadData();
-      this.$nextTick(() => {
-        this.calculateGridHeight();
+      this.loadData()?.finally?.(() => {
+        this.$nextTick(() => {
+          this.calculateGridHeight();
+          this.initDirectGridIfReady();
+          this.refreshDirectGridDataFromStore();
+          this.scheduleDirectGridLayoutContract();
+        });
       });
     },
     // パンくずリストをクリックされた場合に呼び出される関数
     refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
-      if (this.selfScreenName === this.$router.currentRoute.name
-          && document.getElementsByTagName("ons-alert-dialog").length === 0) {
+      if (this.selfScreenName === this.getCurrentRouteName()
+          && getScopedAlertDialogs(this.$el || this).length === 0) {
         if (this.isChanged) {
           this.$ons.notification.confirm({
             // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
@@ -890,6 +1159,7 @@ export default {
               if (answer === 1) {
                 this.scrollPosition.top = 0;
                 this.scrollPosition.left = 0;
+                this.cleanCheckSettingList();
                 this.loadGridData();
               }
             }
@@ -899,6 +1169,7 @@ export default {
             this.scrollPosition.top = 0;
             this.scrollPosition.left = 0;
           }
+          this.cleanCheckSettingList();
           this.loadGridData();
         }
       }
@@ -913,27 +1184,31 @@ export default {
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("処理中・・・");
     // 端末判別
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toLowerCase();
     if (/android/.test(ua)) {
       this.isAndroid = true;
     } else if (/iphone|ipad|mac|os/.test(ua)) {
       this.isIOS = true;
     }
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.getCurrentRouteName();
     EventBus.$on("onCloseMasterEditModal", this.onCloseMasterEditModal);
     EventBus.$on("refresh", this.refresh);
   },
   mounted() {
+    this.directGridMounted = true;
     this.loadGridData();
   },
-  updated() {
-    // Storeの更新等で画面が再描画された場合に背景色を変更
-    this.editBackgroundColor();
-  },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("onCloseMasterEditModal", this.onCloseMasterEditModal);
     EventBus.$off("refresh", this.refresh);
+    [this.directGridLayoutRafId, this.directGridFilterRefreshRafId, this.directGridScrollSyncRafId].forEach(id => {
+      if (id != null) cancelAnimationFrame(id);
+    });
+    this.directGridScrollSyncRafId = null;
+    this.directGridRowVisualRafIds?.forEach?.(id => cancelAnimationFrame(id));
+    this.directGridRowVisualRafIds?.clear?.();
+    this.destroyDirectGrid();
   }
   // add 性能改善メモリ不足 shan end
 };
@@ -1018,16 +1293,16 @@ export default {
   display: none;
 }
 
-.mst-checklist-main-content-area >>> .k-grid-content > .k-selectable {
+.mst-checklist-main-content-area :deep(.k-selectable) {
   box-shadow: 1px 0px 0px 0px white;
   border-right: 1px solid transparent;
 }
 
-.mst-checklist-main-content-area >>> .k-grid-content-locked {
+.mst-checklist-main-content-area :deep(.k-grid-content-locked) {
   border-right: 0px solid transparent !important;
 }
 
-.mst-checklist-main-content-area >>> .k-grid-header-locked {
+.mst-checklist-main-content-area :deep(.k-grid-header-locked) {
   border-right-width: 0px;
 }
 .custom-switch-wrapper {
@@ -1043,5 +1318,20 @@ export default {
 }
 .mobile-header {
   min-height: 35px; /* モバイル用の高さ */
+}
+
+.mst-checklist-direct-jq-grid {
+  width: 100%;
+}
+
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 </style>

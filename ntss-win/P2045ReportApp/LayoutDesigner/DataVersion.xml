@@ -2,7 +2,7 @@
 <Settings>
   <CommonSection>
     <!--システム・データ版-->
-    <DataVersion>2.0.0.34</DataVersion>
+    <DataVersion>2.0.0.35</DataVersion>
     <!--モデル版-->
     <ModelVersion>2.0.0.0</ModelVersion>
   </CommonSection>

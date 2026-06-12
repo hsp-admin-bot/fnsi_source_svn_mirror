@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.device_edge.service.download.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.dao.SysSystemDefineDao;
@@ -42,7 +42,7 @@ public class DownloadFileServiceImpl implements DownloadFileService {
     try {
       SysSystemDefine data = this.sysSystemDefineDao.selectOnPremise(CoreConstant.SysSystemDefine.CTL_NO_ON_PREMISE);
       return this.objectMapper.readValue(data.getValue(), new TypeReference<HashMap<String, String>>(){});
-    } catch (DomaException | JsonProcessingException e) {
+    } catch (DomaException | JacksonException e) {
       // Error Logs
       EventLogMessage eventLogMessage = new EventLogMessage();
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start

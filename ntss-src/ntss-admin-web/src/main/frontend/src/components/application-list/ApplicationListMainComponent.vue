@@ -1,6 +1,6 @@
 <template>
   <v-card>
-    <div class="grid" id="scrollArea">
+    <div ref="scrollArea" class="grid" id="scrollArea">
       <table id="master-list" class="ntss-list">
         <thead>
           <tr>
@@ -101,7 +101,7 @@
     </div>
     <v-ons-popover
       cancelable
-      :visible.sync="popoverVisible"
+      v-model:visible="popoverVisible"
       :target="popoverTarget"
       :cover-target="false"
       :direction="popoverDirection"
@@ -120,8 +120,7 @@
 </template>
 
 <script>
-const PER_PAGE = 15;
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 import NextTransitionMixin from "@/components/NextTransitionMixin";
 import {
   sendRequestGetAll,
@@ -129,7 +128,7 @@ import {
   sendUpdateCompletion,
   sendUpdateCancel
 } from "@/apis/application-list";
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import {
   DATE_TIME_FORMAT,
   dateFormat
@@ -138,11 +137,14 @@ import PopoverMixin from "@/components/PopoverMixin";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
 // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
-import { messageFormat } from '@/functions/common/MessageFormat';
+import { messageFormat } from "@/functions/common/MessageFormat";
+import { getScopedWindow } from "@/functions/common/LayoutMeasureHelper";
 // mod #6107 2023/03/22 メッセージボックス全調整 張博 end
 
+const PER_PAGE = 15;
+
 export default {
-  props: {},
+
   mixins: [NextTransitionMixin, PopoverMixin],
   name: "ApplicationListMainComponent",
   data() {
@@ -253,19 +255,23 @@ export default {
   mounted() {
     this.$nextTick(() => {
       this.calculateTableHeight();
-    });
-    this.$nextTick(() => {
-      let scrollArea = document.getElementById('scrollArea');
-      scrollArea.addEventListener('scroll', async(event) => {
-        let element = event.target;
-        if (element.scrollHeight - element.scrollTop === element.clientHeight)
-        {
+      const scrollArea = this.getScrollAreaElement();
+      if (!scrollArea) {
+        return;
+      }
+      this.scrollAreaListener = async (event) => {
+        const element = event?.target;
+        if (!element) {
+          return;
+        }
+        if (element.scrollHeight - element.scrollTop === element.clientHeight) {
           this.page++;
           await sendRequestGetAll(this.getCondition, this.page, PER_PAGE).then(res => {
             this.applicationList.push(...res.data);
           });
         }
-      });
+      };
+      scrollArea.addEventListener('scroll', this.scrollAreaListener);
     });
   },
 
@@ -280,6 +286,22 @@ export default {
     popoverPreShow,
     popoverPostShow,
     popoverPosthide,
+    getLayoutRoot() {
+      return typeof this.getNtssLayoutRootElement === "function"
+        ? this.getNtssLayoutRootElement()
+        : (this.$el || null);
+    },
+    getScrollAreaElement() {
+      return this.$refs.scrollArea || this.$el?.querySelector?.('#scrollArea') || null;
+    },
+    getHeaderElement() {
+      return this.getLayoutRoot()?.querySelector?.('div.header');
+    },
+    getFooterMenuElement() {
+      return typeof this.getNtssFooterMenuElement === "function"
+        ? this.getNtssFooterMenuElement()
+        : this.getLayoutRoot()?.querySelector?.('#footer-menu');
+    },
     /**
      * 申し込みリストをフィルターする
      */
@@ -327,10 +349,14 @@ export default {
       this.page = 1;
       await sendRequestGetAll(this.getCondition, this.page, PER_PAGE).then(res => {
         this.applicationList = res.data;
-        if (this.scrollTopPos === '') {
-          this.scrollTopPos = document.getElementById("scrollArea").scrollTop;
+        const scrollArea = this.getScrollAreaElement();
+        if (!scrollArea) {
+          return;
         }
-        document.getElementById("scrollArea").scrollTop = this.scrollTopPos;
+        if (this.scrollTopPos === '') {
+          this.scrollTopPos = scrollArea.scrollTop;
+        }
+        scrollArea.scrollTop = this.scrollTopPos;
       });
     },
     /**
@@ -338,19 +364,19 @@ export default {
      */
     calculateTableHeight() {
       const wh = this.windowHeight;
-      if (!document.querySelector("#footer-menu")) return;
-      const headerHight = document.querySelector("div.header").offsetHeight;
-      const fmh =
-        this.isDispMenu === 1
-          ? document.querySelector("#footer-menu").clientHeight
-          : 0;
+      const footerMenu = this.getFooterMenuElement();
+      if (!footerMenu) return;
+      const headerHight = this.getHeaderElement()?.offsetHeight || 0;
+      const fmh = this.isDispMenu === 1 ? footerMenu.clientHeight : 0;
       let tableHeight = 0;
-      const loopId = setInterval(() => {
-        if (document.querySelector("div.grid")) {
+      const ownerWindow = getScopedWindow(this.$el) || window;
+      const loopId = ownerWindow.setInterval(() => {
+        const grid = this.getScrollAreaElement();
+        if (grid) {
           const otherElementHeight = headerHight + fmh;
           tableHeight = wh - otherElementHeight;
-          document.querySelector("div.grid").style.height = `${tableHeight}px`;
-          clearInterval(loopId);
+          grid.style.height = `${tableHeight}px`;
+          ownerWindow.clearInterval(loopId);
         }
       }, 300);
     },
@@ -359,8 +385,8 @@ export default {
      */
     async init() {
       // add 性能改善メモリ不足 shan start
-      EventBus.$off("filterApplicationList",this.setFilterCondition);
-      EventBus.$on("filterApplicationList", await this.setFilterCondition);
+      EventBus.$off("filterApplicationList", this.setFilterCondition);
+      EventBus.$on("filterApplicationList", this.setFilterCondition);
       // add 性能改善メモリ不足 shan end
     },
     /**
@@ -461,8 +487,13 @@ export default {
     }
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("filterApplicationList", this.setFilterCondition);
+    const scrollArea = this.getScrollAreaElement();
+    if (scrollArea && this.scrollAreaListener) {
+      scrollArea.removeEventListener('scroll', this.scrollAreaListener);
+    }
+    this.scrollAreaListener = null;
   }
 };
 </script>
@@ -507,7 +538,7 @@ export default {
   font-size: 1.5em;
 }
 @media screen and (min-height:700px) {
-  .app-list-popover >>> .popover__content {
+  .app-list-popover :deep(.popover__content) {
     max-height: 600px !important;
   }
 }

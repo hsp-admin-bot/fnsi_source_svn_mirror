@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.device_edge.service.indApprove;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
@@ -14,7 +13,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ArrayNode;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.dao.MstPersonalUserDao;
 import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
@@ -27,8 +26,8 @@ import jp.co.nikkiso.ntss.device_edge.response.patIndApprove.PatIndApproveDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.api.constant.ApiConstant.FlagType;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
@@ -140,7 +139,7 @@ public class IndApproveServiceImpl implements IndApproveService {
       }
       IndScheduleUser user = new IndScheduleUser(instructorName, updaterName);
       return user;
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       return new IndScheduleUser("", "");
     }
   }

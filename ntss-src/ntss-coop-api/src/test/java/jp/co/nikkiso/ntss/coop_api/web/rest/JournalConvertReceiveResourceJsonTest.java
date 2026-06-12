@@ -14,9 +14,9 @@ import java.util.Map;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlConfig;
@@ -24,7 +24,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.JavaType;
+import tools.jackson.databind.JavaType;
 
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;
 import jp.co.nikkiso.ntss.coop_api.request.JournalConvertReceiveRequest;
@@ -56,37 +56,37 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class JournalConvertReceiveResourceJsonTest extends AbstractResourceTest {
 
-  @SpyBean
+  @MockitoSpyBean
   private MstDiseaseDao mstDiseaseDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private MstDialysisDifficultyDao mstDialysisDifficultyDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private ConvertCommonService convertCommonService;
 
-  @SpyBean
+  @MockitoSpyBean
   private SysCoopJournalDao sysCoopJournalDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatPersonalMainDao patPersonalMainDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatMainDao patMainDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatExamMainDao patExamMainDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatObsRecDao patObsRecDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatUniqueDao patUniqueDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatCoopDetailDao patCoopDetailDao;
 
-  @SpyBean
+  @MockitoSpyBean
   private PatInsuranceDao patInsuranceDao;
 
   // JSON型カラムの内容の確認

@@ -37,13 +37,13 @@
     <!-- #10977 インジェクション対応 linjunfeng end -->
     <!--mod #10894 患者イベントレイアウトマスタのファイル貼付サイズ上限がFNWより小さい 張玲 start-->
     <!-- <message-dialog
-      :visible.sync="isDialogVisible"
+      v-model:visible="isDialogVisible"
       :message-cd="messageCd"
       :type="dialogType"
       @confirm="confirm"
     /> -->
     <message-dialog
-      :visible.sync="isDialogVisible"
+      v-model:visible="isDialogVisible"
       :message-cd="messageCd"
       :type="dialogType"
       :title="title"
@@ -55,12 +55,14 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
 // 共通カレンダーコンポーネント
 import messageDialog from "@/components/common/message-dialog/MessageDialog";
 //add #10894 患者イベントレイアウトマスタのファイル貼付サイズ上限がFNWより小さい 張玲 start
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
-const MAX_SIZE = '20480'
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { getScopedDocument } from "@/functions/common/LayoutMeasureHelper";
+
+const MAX_SIZE = 20480;
 //add #10894 患者イベントレイアウトマスタのファイル貼付サイズ上限がFNWより小さい 張玲 end
 
 
@@ -69,8 +71,11 @@ export default {
     "message-dialog": messageDialog
   },
 
+  emits: ["update:modelValue", "update:isLoadingBbs", "deleteFile", "search"],
+
   props: {
-    value: {
+    // Vue3 既定 v-model は modelValue / update:modelValue を使用する。
+    modelValue: {
       type: Array,
       required: true,
       default() {
@@ -118,6 +123,8 @@ export default {
       // 保存先掲示板管理番号
       bbsCtlNo: null,
       isUpdated: false,
+      // 画面戻るフラグ（アップロード成功後、画面を戻るのは一回だけ）
+      hasNavigatedBack: false,
       //add #10894 患者イベントレイアウトマスタのファイル貼付サイズ上限がFNWより小さい 張玲 start
       title: null,
       //add #10894 患者イベントレイアウトマスタのファイル貼付サイズ上限がFNWより小さい 張玲 end
@@ -131,15 +138,15 @@ export default {
     ]),
     fileInfo() {
       const deleteNameList = this.deleteFileList.map(file => file.name);
-      const file = this.value.filter(
+      const file = this.modelValue.filter(
         file => !deleteNameList.includes(file.name)
       );
 
       return file;
     },
 
-    isRegFuncClass(){
-      if(this.selectedBbs.reg_func_class === 1){
+    isRegFuncClass() {
+      if (this.selectedBbs.reg_func_class === 1) {
         return false;
       }
       return true;
@@ -154,7 +161,7 @@ export default {
      * @summary 呼び出してからファイル選択ダイアログを表示
      */
     dropzoneClick() {
-      this.$refs.upload.kendoWidget().element.click();
+      this.$refs.upload?.browse?.();
     },
 
     /**
@@ -173,8 +180,8 @@ export default {
         return;
       }
       //add #10894 患者イベントレイアウトマスタのファイル貼付サイズ上限がFNWより小さい 張玲 start
-      for(const file of e.files){
-        if(file.size > MAX_SIZE * 1024){
+      for (const file of e.files) {
+        if (file.size > MAX_SIZE * 1024) {
           // ファイルサイズオーバー
           this.addFileEvent = e;
           this.messageCd = 72000004;
@@ -193,7 +200,7 @@ export default {
         ...e.files.map(i => ({ name: i.name, path: null }))
       ];
 
-      this.$emit("input", fileInfo);
+      this.$emit("update:modelValue", fileInfo);
       this.deleteFileList = [];
     },
 
@@ -204,25 +211,26 @@ export default {
      */
     removeFile(e) {
       const files = e.files.map(i => i.name);
-      const fileInfo = this.value.filter(i => !files.includes(i.name));
-      this.$emit("input", fileInfo);
+      const fileInfo = this.modelValue.filter(i => !files.includes(i.name));
+      this.$emit("update:modelValue", fileInfo);
     },
 
     /**
      * @description ファイルをアップロード
      */
     upload(bbsInfo) {
+      this.hasNavigatedBack = false;
       this.bbsCtlNo = bbsInfo.bbs_ctl_no;
       const bbs = `${bbsInfo.facility_cd}&${bbsInfo.bbs_ctl_no}`;
 
       // 保存先のURL
       const saveUrl = `api/bbsInfo/files/${bbs}`;
-      this.$refs.upload.$_upload.options.async.saveUrl = saveUrl;
+      this.$refs.upload.setSaveUrl(saveUrl);
 
       if(this.fileInfo.length === 0) {
         bbsInfo.file_info = [];
       } else {
-        this.$refs.upload.kendoWidget().upload();
+        this.$refs.upload?.upload?.();
       }
       if (!this.isUploaded) {
         // アップロードしない場合
@@ -322,14 +330,14 @@ export default {
      */
     async addCsrfTokenToRequestHeader(e) {
       this.isUploaded = true;
-      const fileNameList = this.value.map(file => file.name);
+      const fileNameList = this.modelValue.map(file => file.name);
       if (fileNameList.includes(e.files[0].name)) {
         // ファイル添付済み
 
         const xhr = e.XMLHttpRequest;
         if (xhr) {
           // CSRFトークンをクッキーから取得
-          const cookie = document.cookie.split(new RegExp("[=, ]"));
+          const cookie = (getScopedDocument(this.$el)?.cookie || "").split(new RegExp("[=, ]"));
           const xsrfTokenIndex = cookie.findIndex(item => {
             return item === "XSRF-TOKEN";
           });
@@ -347,7 +355,7 @@ export default {
     },
 
     hasSameRecord(addfileList) {
-      const fileList = this.value.map(file => file.name);
+      const fileList = this.modelValue.map(file => file.name);
       const addfileNameList = addfileList.map(file => file.name);
       const fileNameList = [...fileList, ...addfileNameList];
 
@@ -379,7 +387,7 @@ export default {
 
     override(addFileList) {
       const addfileNameList = addFileList.map(file => file.name);
-      const overrideFileList = this.value.filter(file =>
+      const overrideFileList = this.modelValue.filter(file =>
         addfileNameList.includes(file.name)
       );
       this.deleteFileList = overrideFileList;
@@ -389,7 +397,9 @@ export default {
     onSuccess() {
       this.isUpdated = true;
       this.loadingDisplay();
-      // 画面戻る
+      // 画面戻る（只执行一次）
+      if (this.hasNavigatedBack) return;
+      this.hasNavigatedBack = true;
       this.$router.go(-1);
     },
 
@@ -407,14 +417,14 @@ export default {
       await this.setSelectedBbsInfo(this.bbsCtlNo);
 
       // storeの掲示板一覧：新規追加、再度検索を行い一覧に新たに追加,患者名一覧：患者が除外追加され更新
-      await this.$emit("search");
+      this.$emit("search");
 
       // ロードフラグ
       this.$emit("update:isLoadingBbs", false);
     }
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   }

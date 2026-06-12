@@ -36,6 +36,7 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 
 /**
@@ -158,6 +159,17 @@ public class MstMenteLayoutResource {
     @PathVariable(name = "facilityCd", required = true) String facilityCd,
     @PathVariable(name = "layoutClass", required = true) String layoutClass
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    if(!user.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(user.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + user.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "layoutClass=" + layoutClass + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
     String mappingUrl = Uri.MENTE_LAYOUT ;
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_PERIODIC_INSPECTION, BEFORE_LOG_FLG_INFO, mappingUrl, user.getFacilityCd(),
       layoutClass);
@@ -190,7 +202,22 @@ public class MstMenteLayoutResource {
   @GetMapping("/{layoutClass}/data/{facilityCd}")
   public ResponseEntity<List<MstMenteLayout>> getLayoutListByLayoutClassAndFacilityCd(
     @PathVariable(name = "layoutClass", required = true) String layoutClass,
-    @PathVariable(name = "facilityCd", required = true) String facilityCd) {
+    @PathVariable(name = "facilityCd", required = true) String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+              !facilityCd.equals(ntssUser.getFacilityCd())) {
+              String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "layoutClass=" + layoutClass + " ";
+              InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+              return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.MENTE_LAYOUT + "/data" ;
@@ -355,7 +382,22 @@ public class MstMenteLayoutResource {
    */
   @GetMapping("machine-types/all/data/{facilityCd}")
   public ResponseEntity<List<MstMachineType>> getListMachineTypesByFacilityCd(
-    @PathVariable(name = "facilityCd", required = true) String facilityCd) {
+    @PathVariable(name = "facilityCd", required = true) String facilityCd,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+    @AuthenticationPrincipal NtssUser ntssUser
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+) {
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+              !facilityCd.equals(ntssUser.getFacilityCd())) {
+              String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd;
+              InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+              return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260326 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.MENTE_LAYOUT  +"/machine-types/all/data";

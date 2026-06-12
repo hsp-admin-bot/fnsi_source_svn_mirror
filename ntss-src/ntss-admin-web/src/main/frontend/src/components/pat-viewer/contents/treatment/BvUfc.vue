@@ -14,9 +14,9 @@
 /**
  * Vue関連
  */
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 
 /**
  * ベースコンポーネント
@@ -35,10 +35,10 @@ import BaseComponent from "@/components/pat-viewer/contents/base/BaseComponent";
 // import { deepCopy } from "@/functions/common/CommonFunctions";
 
 import deviceSetInfoCore from "@/components/pat-info/device-set-info/DeviceSetInfoCore";
-import {deepCopy} from "@/functions/common/CommonFunctions";
+
 import MODAL_TITLE from "@/components/common/ModalTitleContrast.js";
 
-// import _ from "underscore";
+// import _ from "@/compat/collections/lodash";
 
 export default {
   components: {
@@ -119,7 +119,7 @@ export default {
     });
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
   },
@@ -207,13 +207,11 @@ export default {
 
       // 基準日から直近のデータのある日付を取得
       const recentDate = this.getRecentBaseDate(rowInfo.data);
-      /* add by chamaojia 2026-03-25 [12462] 患者情報共有->患者経過総合ビューア --start */
       if (!recentDate) {
         return;
       }
-      /* add by chamaojia 2026-03-25 [12462] 患者情報共有->患者経過総合ビューア --end */
       // 開始日(基準日)
-      settingData.startDate = moment(recentDate, "YYYYMMDD").format(
+      settingData.startDate = dayjs(recentDate, "YYYYMMDD").format(
         "YYYY-MM-DD"
       );
       // 終了日(未選択)
@@ -300,11 +298,11 @@ export default {
       settingData.facilityCd = this.facilityCd;
 
       // 開始日
-      settingData.startDate = moment(cellInfo.treatDate, "YYYYMMDD").format(
+      settingData.startDate = dayjs(cellInfo.treatDate, "YYYYMMDD").format(
         "YYYY-MM-DD"
       );
       // 終了日
-      settingData.endDate = moment(cellInfo.treatDate, "YYYYMMDD").format(
+      settingData.endDate = dayjs(cellInfo.treatDate, "YYYYMMDD").format(
         "YYYY-MM-DD"
       );
       // 開始日操作不可
@@ -313,29 +311,22 @@ export default {
       settingData.endDateEdit = true;
       // 全曜日選択をfalse
       settingData.allWeek = false;
-
-      /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
       const facilitySameFlag = this.facilityCd === cellInfo.facilityCd;
       settingData.showNewEdit = facilitySameFlag;
       settingData.disIndUserEdit = !facilitySameFlag;
-      /* add by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
-      
       // 選択された曜日以外をfalseに変更
       for (let i = 0; i < 7; i++) {
         settingData[this.changeWeekStr(i)] =
-          i !== moment(cellInfo.treatDate, "YYYYMMDD").day() ? false : true;
+          i !== dayjs(cellInfo.treatDate, "YYYYMMDD").day() ? false : true;
       }
       settingData[
-        this.changeWeekStr(moment(cellInfo.treatDate, "YYYYMMDD").day())
+        this.changeWeekStr(dayjs(cellInfo.treatDate, "YYYYMMDD").day())
       ] = true;
 
       const settingChildData = {
         ordNo: cellInfo.ordNo,
         patId: this.patId,
-        /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
-        // facilityCd: this.facilityCd,
         facilityCd: cellInfo.facilityCd,
-        /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --end */
         treatDate: cellInfo.treatDate,
         listIndex: this.rowIndex,
         // 終了日操作不可 = 個別保存
@@ -357,10 +348,10 @@ export default {
 </script>
 
 <style scoped lang="scss">
-/* 患者経過総合ビューア共通スタイル定義 */
-@import "../../css/style.scss";
+@use "../../css/style.scss" as *;
 
-div /deep/ .list-content-col {
+/* 患者経過総合ビューア共通スタイル定義 */
+div :deep(.list-content-col) {
   width: 0px;
 }
 </style>

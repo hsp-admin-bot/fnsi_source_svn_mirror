@@ -16,7 +16,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.lang.reflect.InvocationTargetException;
@@ -47,19 +47,19 @@ public class TreatmentRecordServiceImpl_ResultWithConditionTest {
   /**
    * {@link MstPersonalUserDao}のMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstPersonalUserDao mstPersonalUserDao;
 
   /**
    * {@link TreatmentRecordDao}のMockBean.
    */
-  @MockBean
+  @MockitoBean
   private TreatmentRecordDao treatmentRecordDao;
 
   /**
    * {@link MstTreatmentDao}のMockBean.
    */
-  @MockBean
+  @MockitoBean
   private MstTreatmentDao mstTreatmentDao;
 
   /**
@@ -83,9 +83,7 @@ public class TreatmentRecordServiceImpl_ResultWithConditionTest {
     } catch (InvocationTargetException e) {
       throw e.getCause();
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang start
-//      e.printStackTrace();
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang end
+      e.printStackTrace();
     }
     return null;
   }
@@ -146,9 +144,7 @@ public class TreatmentRecordServiceImpl_ResultWithConditionTest {
       method.setAccessible(true);
       return (Map<String, TreatmentRecordServiceImpl.RstCondInfo>) method.invoke(target, rstCondInfo);
     } catch (NoSuchMethodException e) {
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang start
-//      e.printStackTrace();
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang end
+      e.printStackTrace();
     }
     return null;
   }
@@ -236,9 +232,7 @@ public class TreatmentRecordServiceImpl_ResultWithConditionTest {
       method.setAccessible(true);
       return (Map<String, TreatmentRecordServiceImpl.RstCondInfo>) method.invoke(target, rstCondInfoMap, targetCondInfoKey, userId);
     } catch (NoSuchMethodException e) {
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang start
-//      e.printStackTrace();
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang end
+      e.printStackTrace();
     }
     return null;
   }
@@ -455,9 +449,7 @@ public class TreatmentRecordServiceImpl_ResultWithConditionTest {
     } catch (InvocationTargetException e) {
       throw e.getCause();
     } catch (NoSuchMethodException | IllegalAccessException e) {
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang start
-//      e.printStackTrace();
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260525 del yangxuewang end
+      e.printStackTrace();
     }
     return null;
   }

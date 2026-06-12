@@ -2,88 +2,30 @@
  * 治療状況ベッドレイアウトマスタメンテナンスデータページ  MainContent
  */
 <template>
-  <div class='main-content-area master-maintenance-page'>
-    <div class='ntss-list' :style="ntssListStyles" v-kendo-validator="kendoValidatorSetup">
-      <kendo-grid-toolbar class="k-grid-toolbar kendo-grid-toolbar-style" :style="heightStyles">
-        <div class='header-btn-area right' :style="isMobileDevice ? { minHeight: '30px' } : {}">
+  <div class="main-content-area master-maintenance-page">
+    <div class="ntss-list" :style="ntssListStyles">
+      <div class="k-grid-toolbar k-header kendo-grid-toolbar-style" :style="heightStyles">
+        <div id="grid-header" :class="['header-btn-area', 'right', isMobileDevice ? 'mobile-header' : '']" :style="isMobileDevice ? { minHeight: '30px' } : {}">
           <v-ons-button modifier="outline" class="btn3-normal toolbar-btn" style="float: left;" v-show="!isSortMode && isAllowAddRecord" @click="addRow()">追加</v-ons-button>
           <v-ons-row v-show="isMobileDevice" style="float: left; width: 6em; height: 2em;">
             <v-ons-col width="45%" vertical-align="center">
               <label class="fab-font-color">編集</label>
             </v-ons-col>
             <v-ons-col width="55%" vertical-align="center">
-              <v-ons-switch modifier="outline" class="custom-switch" v-model="allowEdit" />
+              <v-ons-switch modifier="outline" v-model="allowEdit" />
             </v-ons-col>
           </v-ons-row>
-          <v-ons-button modifier="outline" class="btn3-normal csv-btn" v-show="!isSortMode && isAllowAddRecord && !iosFlg && !androidFlg && false" @click="importCsv()">CSV取込</v-ons-button>
+          <v-ons-button modifier="outline" class="btn3-normal csv-btn" v-show="!isSortMode && isAllowAddRecord && !iosFlg && !androidFlg && false" @click="importCsv($event)">CSV取込</v-ons-button>
           <v-ons-button modifier="outline" class="btn3-normal toolbar-btn" v-show="!isSortMode && isAllowSort" @click="toRankEditBtnClick()">並び順表示</v-ons-button>
           <v-ons-button modifier="outline" class="btn3-normal toolbar-btn" v-show="isSortMode && isAllowSort" @click="sortBtnClick()">反映</v-ons-button>
         </div>
-        <kendo-grid ref="grid" :class="fontSizeSet"
-            :data-source="masterRecords"
-            :editable="true"
-            :selectable="true"
-            :reorderable="false"
-            :height=kendoGridHeight
-            :scrollable="true"
-            :beforeEdit=editStart
-            :edit=addInputAssist
-            :cellClose=editEnd
-            @save="onSave"
-            @databound="onDataBoundKendoGrid">
-            <template v-for="(column, index) in columns" >
-              <kendo-grid-column v-if="column.field === '$modalType'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :attributes="{ class: 'btn3-kendo-normal' }"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                :command="{ text: '詳細', click: showMasterEditModal }">
-              </kendo-grid-column>
-              <kendo-grid-column v-else-if="column.dataType === 'date'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                @editor="eachModelCalendar">
-              </kendo-grid-column>
-              <kendo-grid-column v-else-if="column.dataType === 'color'"
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values"
-                :template="column.colorTemplate"
-                @editor="colorEditor">
-              </kendo-grid-column>
-              <kendo-grid-column v-else
-                :key="index"
-                :title="column.title"
-                :field="column.field"
-                :hidden="column.hidden"
-                :locked="column.locked"
-                :editable="column.editable"
-                :width="column.width"
-                :format="column.format"
-                :values="column.values">
-              </kendo-grid-column>
-            </template>
-        </kendo-grid>
-      </kendo-grid-toolbar>
+        <div
+          v-show="columns.length > 1"
+          id="grid-font-size"
+          ref="gridRoot"
+          :class="[fontSizeSet, 'ntss-kendo-grid-legacy', 'mst-status-map-bed-layout-direct-jq-grid']"
+        ></div>
+      </div>
       <div id="grid-footer">
         <v-ons-row width="100%" :style="{ visibility:this.isSortMode ?  'hidden' : 'visible' }" >
           <v-ons-col width="50%">
@@ -94,38 +36,50 @@
           </v-ons-col>
         </v-ons-row>
       </div>
-    <master-csv
-      :popoverVisible="masterCsvVisible"
-      :popoverTarget="masterCsvTarget"
-      @popover-close="prehideCsvPopover"
-    />
+      <master-csv
+        :popoverVisible="masterCsvVisible"
+        :popoverTarget="masterCsvTarget"
+        @popover-close="prehideCsvPopover"
+      />
     </div>
   </div>
 </template>
-
 <script>
-import { mapActions, mapGetters } from "vuex";
-import NextTransitionMixin from "@/components/NextTransitionMixin";
-import MasterMaintenanceMixin from "@/components/master-maintenance/MasterMaintenanceMixin";
-import { EventBus } from "@/eventBus.js";
-import { Validator } from "@progress/kendo-validator-vue-wrapper";
-import $ from "jquery";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import MasterCsvComponent from "@/components/master-maintenance/MasterCsvComponent";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add start
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 //FNSI-修正 VUEのエラー場合のログ対応 Sunm add end
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat';
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages';
+import { getScopedElementById, queryScopedSelector, queryScopedSelectorAll, getScopedAlertDialogs, getScopedDocument } from "@/functions/common/LayoutMeasureHelper";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+import { markRaw } from "@/compat/vue/runtime";
+import kendo from "@progress/kendo-ui";
+import $ from "jquery";
 // add #6107 2023/03/10 メッセージボックス全調整 林峻峰 end
+
+function clonePlain(value) {
+  return JSON.parse(JSON.stringify(value || {}));
+}
+
+function installComponentJQuery() {
+  if (typeof window !== "undefined") {
+    window.$ = window.$ || $;
+    window.jQuery = window.jQuery || $;
+  }
+  if (typeof globalThis !== "undefined") {
+    globalThis.$ = globalThis.$ || $;
+    globalThis.jQuery = globalThis.jQuery || $;
+  }
+}
 
 /**
  * TODO
  * more: モーダルで編集した項目が、一覧上で「編集済み（三角マーク）」をつけたい。
  */
 export default {
-  mixins: [NextTransitionMixin, MasterMaintenanceMixin],
-  Validator,
   components: {
     "master-csv": MasterCsvComponent
   },
@@ -176,6 +130,17 @@ export default {
       masterCsvVisible: false,
       masterCsvTarget: null,
       allowEdit: true, // NOTE: true = 編集モード、 false = 閲覧モード
+      directGridWidget: null,
+      directGridMounted: false,
+      directGridDataSource: null,
+      directGridLayoutRafId: null,
+      directGridFilterRefreshRafId: null,
+      directGridScrollSyncRafId: null,
+      directGridVisualRefreshRafId: null,
+      directGridRowVisualRafIds: markRaw(new Map()),
+      directSortChangedCodeSet: markRaw(new Set()),
+      kendoValidator: null,
+      isSorted: false
     };
   },
   computed: {
@@ -196,7 +161,27 @@ export default {
       return { "--height": `${this.kendoGridToolbarHeight}px` };
     },
     ntssListStyles() {
-      return { display: this.columns.length == 1 ? "none" : "inherit" };
+      if (this.columns.length == 1) {
+        return { display: "none" };
+      }
+      const height = Number(this.kendoGridToolbarHeight) || 0;
+      const heightPx = height > 0 ? `${height}px` : undefined;
+      return {
+        display: "inherit",
+        "--height": heightPx,
+        height: heightPx,
+        maxHeight: heightPx,
+        position: "relative",
+        overflow: "hidden"
+      };
+    },
+    fontSizeSet() {
+      const names = ["small", "medium", "large", "x-large"];
+      return `font-size-set-${names[this.getFontSize] || "medium"}`;
+    },
+    masterConditionSignature() {
+      const condition = this.$store?.state?.["master-maintenance"]?.condition || this.condition || {};
+      return `${condition.recordName || ""}|${condition.includeDeleted ? 1 : 0}`;
     },
     ...mapGetters("master-maintenance", {
       getMasterRecordList: "getMasterRecordList",
@@ -243,7 +228,7 @@ export default {
       return (
         this.getStateUserAccountInfo !== null &&
         data !== undefined &&
-        (this.$store.getters["master-maintenance/isRecordModified"] || data.filter(row => row.operation > 0).length || !this.kendoValidator.validate())
+        (this.$store.getters["master-maintenance/isRecordModified"] || data.filter(row => row.operation > 0 || row.edited || row.dirty).length || this.isSorted || !this.validateBeforeGridAction())
       );
     },
     isMobileDevice() {
@@ -252,30 +237,40 @@ export default {
   },
   watch: {
     windowHeight() {
-      this.calculateColumnsdWidth()
+      this.calculateColumnsdWidth();
       this.calculateGridHeight();
       this.calculateGridWidth();
+      this.scheduleDirectGridLayoutContract();
     },
     windowWidth() {
-      this.calculateColumnsdWidth()
+      this.calculateColumnsdWidth();
       this.calculateGridHeight();
       this.calculateGridWidth();
+      this.scheduleDirectGridLayoutContract();
     },
     isDispMenu() {
-      this.calculateColumnsdWidth()
+      this.calculateColumnsdWidth();
       this.calculateGridHeight();
       this.calculateGridWidth();
+      this.scheduleDirectGridLayoutContract();
     },
     getFontSize() {
-      this.calculateColumnsdWidth()
+      this.calculateColumnsdWidth();
       this.calculateGridHeight();
       this.calculateGridWidth();
+      this.scheduleDirectGridLayoutContract();
     },
-    columns:function(val){
-      this.$nextTick(function(){
-        if (val.length > 1)
-        this.setLoadingScreenVisible(false);
+    columns(val) {
+      this.$nextTick(() => {
+        if (val.length > 1) {
+          this.setLoadingScreenVisible(false);
+          this.initDirectGridIfReady();
+          this.scheduleDirectGridLayoutContract();
+        }
       });
+    },
+    masterConditionSignature() {
+      this.scheduleDirectGridFilterRefresh();
     }
   },
   methods: {
@@ -303,79 +298,698 @@ export default {
     ...mapActions("mst-status-map-bed-layout", {
       setScrollPositions: "setScrollPositions"
     }),
+    getCurrentRouteName() {
+      return this.$router?.currentRoute?.value?.name || this.$router?.currentRoute?.name || this.$route?.name || "";
+    },
+    goSpecifiedView(routeName) {
+      this.$router.push({ name: routeName });
+    },
+    validateBeforeGridAction() {
+      return this.kendoValidator?.validate?.() !== false;
+    },
+    validateDirectKendoGrid() {
+      return true;
+    },
+    getMaxSortRank() {
+      const data = this.getFilteredMasterRecordList?.data || [];
+      return data.length ? data.reduce((max, row) => Math.max(max, +row.sortRank || 0), 0) : 0;
+    },
+    getGridRootEl() {
+      return this.$refs.gridRoot || null;
+    },
+    getDirectGridScrollContent() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-content") || null;
+    },
+    getDirectGridLockedScrollContent() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-content-locked") || null;
+    },
+    getGridWidget() {
+      return this.directGridWidget || null;
+    },
+    getGridScrollContainer() {
+      return this.getDirectGridScrollContent();
+    },
+    getGridContentEl() {
+      return this.getDirectGridScrollContent();
+    },
+    getGridLockedContentEl() {
+      return this.getDirectGridLockedScrollContent();
+    },
+    getGridLockedHeaderEl() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-header-locked") || null;
+    },
+    getGridHeaderEl() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-header") || null;
+    },
+    getGridHeaderWrapEl() {
+      return this.getGridRootEl()?.querySelector?.(".k-grid-header-wrap") || null;
+    },
+    getGridTableEl() {
+      return this.directGridWidget?.table?.[0] || this.getGridRootEl()?.querySelector?.(".k-grid-content table") || null;
+    },
+    getGridBodyRows() {
+      return Array.from(this.getGridRootEl()?.querySelectorAll?.(".k-grid-content tbody tr") || []);
+    },
+    getGridLockedBodyRows() {
+      return Array.from(this.getGridRootEl()?.querySelectorAll?.(".k-grid-content-locked tbody tr") || []);
+    },
+    getGridDataSource() {
+      return this.directGridWidget?.dataSource || null;
+    },
+    getGridFirstVisibleColumn() {
+      return this.directGridWidget?.columns?.find?.(column => !column.hidden);
+    },
+    resizeGridColumn(column, width) {
+      this.directGridWidget?.resizeColumn?.(column, width);
+    },
+    getGridScrollPosition() {
+      const content = this.getDirectGridScrollContent();
+      return { top: content?.scrollTop || 0, left: content?.scrollLeft || 0 };
+    },
+    setGridScrollPosition(position = {}) {
+      const content = this.getDirectGridScrollContent();
+      if (!content) {
+        return;
+      }
+      const top = position.top || 0;
+      const left = position.left || 0;
+      content.scrollTop = top;
+      content.scrollLeft = left;
+      const headerWrap = this.getGridHeaderWrapEl();
+      if (headerWrap) {
+        headerWrap.scrollLeft = left;
+      }
+      if (typeof this.directGridWidget?._scrollLeft !== "undefined") {
+        this.directGridWidget._scrollLeft = left;
+      }
+      this.syncDirectGridLockedScrollPosition(top);
+      this.dispatchDirectGridContentScroll();
+    },
+    resizeDirectGrid() {
+      const grid = this.directGridWidget;
+      if (!grid) {
+        return;
+      }
+      try {
+        const height = Number(this.kendoGridHeight) || 0;
+        const root = this.getGridRootEl?.();
+        if (height > 0) {
+          root?.style && (root.style.height = `${height}px`);
+          root?.style && (root.style.maxHeight = `${height}px`);
+          root?.style && (root.style.overflow = "hidden");
+          grid.wrapper?.height?.(height);
+          grid.element?.height?.(height);
+        }
+        grid.setOptions({ height: this.kendoGridHeight });
+        grid.resize(true);
+        this.applyDirectGridLockedWidthContract();
+        this.applyDirectGridLockedHeightContract();
+      } catch (_error) {
+        // direct jq では resize 失敗時に追加 rebuild しない。
+      }
+    },
+    getDirectGridDataSourceOption() {
+      // Vue2 は <kendo-grid :data-source="masterRecords"> で DataSource option を参照渡ししていた。
+      // direct jq でも data/schema/model/validation の参照を保ち、表示行だけを wrapper contract として差し替える。
+      const source = this.masterRecords || this.getFilteredMasterRecordList || {};
+      return {
+        ...source,
+        data: Array.isArray(source.data) ? source.data : []
+      };
+    },
+    createDirectGridDataSource() {
+      const option = this.getDirectGridDataSourceOption();
+      this.directGridDataSource = markRaw(new kendo.data.DataSource(option));
+      return this.directGridDataSource;
+    },
+    buildDirectGridColumns() {
+      return (this.columns || []).map(column => {
+        const gridColumn = { ...column };
+        if (column.field === "$modalType") {
+          gridColumn.attributes = { class: "btn3-kendo-normal" };
+          gridColumn.command = { text: "詳細", click: event => this.showMasterEditModal(event) };
+          delete gridColumn.values;
+        } else if (column.dataType === "date") {
+          gridColumn.editor = (container, options) => this.eachModelCalendar(container, options);
+        } else if (column.dataType === "color") {
+          gridColumn.template = column.colorTemplate;
+          gridColumn.editor = (container, options) => this.colorEditor(container, options);
+        }
+        return gridColumn;
+      });
+    },
+    initDirectGridIfReady() {
+      const root = this.getGridRootEl();
+      if (!this.directGridMounted || !root || this.columns.length <= 1) {
+        return;
+      }
+      if (this.directGridWidget) {
+        this.applyDirectGridColumnsContract();
+        this.scheduleDirectGridFilterRefresh();
+        this.scheduleDirectGridLayoutContract();
+        return;
+      }
+      installComponentJQuery();
+      $(root).empty();
+      $(root).kendoGrid({
+        dataSource: this.createDirectGridDataSource(),
+        editable: true,
+        selectable: true,
+        reorderable: false,
+        height: this.kendoGridHeight,
+        scrollable: true,
+        beforeEdit: event => this.editStart(event),
+        edit: event => this.addInputAssist(event),
+        cellClose: event => this.editEnd(event),
+        save: event => this.onDirectGridSave(event),
+        dataBound: event => this.onDirectGridDataBound(event),
+        columns: this.buildDirectGridColumns()
+      });
+      this.directGridWidget = markRaw($(root).data("kendoGrid"));
+      this.applyDirectGridStyleContract();
+      this.scheduleDirectGridLayoutContract();
+    },
+    destroyDirectGrid() {
+      if (this.directGridWidget) {
+        try {
+          this.directGridWidget.destroy();
+        } catch (_error) {
+          // noop
+        }
+      }
+      const root = this.getGridRootEl();
+      if (root) {
+        $(root).empty();
+      }
+      this.directGridWidget = null;
+    },
+    applyDirectGridColumnsContract() {
+      const grid = this.directGridWidget;
+      if (!grid) {
+        return;
+      }
+      const currentFields = (grid.columns || []).map(column => column.field).join("|");
+      const nextFields = (this.columns || []).map(column => column.field).join("|");
+      if (currentFields !== nextFields) {
+        grid.setOptions({ columns: this.buildDirectGridColumns() });
+      } else {
+        this.syncDirectGridColumnStateToWidget();
+      }
+      this.applyDirectGridStyleContract();
+    },
+    syncDirectGridColumnStateToWidget() {
+      const grid = this.directGridWidget;
+      if (!grid || !Array.isArray(grid.columns)) {
+        return;
+      }
+      (this.columns || []).forEach(column => {
+        const gridColumn = grid.columns.find(item => item.field === column.field);
+        if (!gridColumn) {
+          return;
+        }
+        gridColumn.editable = column.editable;
+        gridColumn.hidden = !!column.hidden;
+        gridColumn.values = column.values;
+        gridColumn.template = column.colorTemplate || gridColumn.template;
+      });
+    },
+    scheduleDirectGridFilterRefresh() {
+      if (!this.directGridWidget?.dataSource) {
+        return;
+      }
+      if (this.directGridFilterRefreshRafId != null) {
+        cancelAnimationFrame(this.directGridFilterRefreshRafId);
+      }
+      this.directGridFilterRefreshRafId = requestAnimationFrame(() => {
+        this.directGridFilterRefreshRafId = null;
+        this.refreshDirectGridDataFromMasterRecords(true);
+      });
+    },
+    refreshDirectGridDataFromMasterRecords(resetScroll = false) {
+      const grid = this.directGridWidget;
+      if (!grid?.dataSource) {
+        return;
+      }
+      const option = this.getDirectGridDataSourceOption();
+      grid.dataSource.data(option.data || []);
+      if (resetScroll) {
+        this.setGridScrollPosition({ top: 0, left: 0 });
+      }
+      this.scheduleDirectGridVisualRefresh();
+    },
+    scheduleDirectGridVisualRefresh() {
+      if (this.editingFlg) {
+        return;
+      }
+      if (this.directGridVisualRefreshRafId != null) {
+        cancelAnimationFrame(this.directGridVisualRefreshRafId);
+      }
+      this.directGridVisualRefreshRafId = requestAnimationFrame(() => {
+        this.directGridVisualRefreshRafId = requestAnimationFrame(() => {
+          this.directGridVisualRefreshRafId = null;
+          this.applyDirectGridStyleContract();
+          this.editBackgroundColor();
+        });
+      });
+    },
+    gridDataRefresh() {
+      this.refreshDirectGridDataFromMasterRecords();
+    },
+    getDirectGridVisibleLockedWidthPx() {
+      const root = this.getGridRootEl();
+      const ownerWindow = root?.ownerDocument?.defaultView || window;
+      const fontSize = parseFloat(ownerWindow.getComputedStyle?.(root)?.fontSize || "16") || 16;
+      return (this.columns || []).reduce((sum, column) => {
+        if (!column.locked || column.hidden) {
+          return sum;
+        }
+        const width = `${column.width || ""}`.trim();
+        const numeric = parseFloat(width);
+        if (!Number.isFinite(numeric)) {
+          return sum;
+        }
+        return sum + (width.endsWith("em") ? numeric * fontSize : numeric);
+      }, 0);
+    },
+    applyDirectGridLockedWidthContract() {
+      const root = this.getGridRootEl();
+      const lockedWidth = this.getDirectGridVisibleLockedWidthPx();
+      if (!root || !lockedWidth) {
+        return;
+      }
+      const px = `${Math.ceil(lockedWidth)}px`;
+      root.querySelectorAll(".k-grid-header-locked,.k-grid-content-locked").forEach(element => {
+        element.style.width = px;
+        element.style.minWidth = px;
+      });
+      root.querySelectorAll(".k-grid-header-locked table,.k-grid-content-locked table").forEach(element => {
+        element.style.width = px;
+        element.style.minWidth = px;
+      });
+    },
+    applyDirectGridLockedHeightContract() {
+      const content = this.getDirectGridScrollContent();
+      const lockedContent = this.getDirectGridLockedScrollContent();
+      if (!content || !lockedContent) {
+        return;
+      }
+      const height = content.clientHeight;
+      lockedContent.style.height = `${height}px`;
+      lockedContent.style.maxHeight = `${height}px`;
+    },
+    applyDirectGridStyleContract() {
+      const root = this.getGridRootEl();
+      if (!root) {
+        return;
+      }
+      root.classList.add("ntss-kendo-grid-legacy", "k-widget", "k-grid", "k-editable", "k-display-block");
+      root.querySelectorAll("th").forEach(th => th.classList.add("k-header"));
+      root.querySelectorAll(".k-grid-content tr, .k-grid-content-locked tr").forEach((tr, index) => {
+        tr.classList.add("k-master-row");
+        if (index % 2 === 1) {
+          tr.classList.add("k-alt");
+        }
+      });
+      root.querySelectorAll("td").forEach(td => td.classList.add("k-td", "k-table-td"));
+      this.applyDirectGridLockedWidthContract();
+      this.applyDirectGridLockedHeightContract();
+      this.syncDirectGridLockedScrollPosition();
+    },
+    scheduleDirectGridLayoutContract() {
+      if (this.directGridLayoutRafId != null) {
+        cancelAnimationFrame(this.directGridLayoutRafId);
+      }
+      this.directGridLayoutRafId = requestAnimationFrame(() => {
+        this.resizeDirectGrid();
+        this.applyDirectGridStyleContract();
+        this.directGridLayoutRafId = requestAnimationFrame(() => {
+          this.directGridLayoutRafId = null;
+          this.applyDirectGridStyleContract();
+          this.dispatchDirectGridContentScroll();
+        });
+      });
+    },
+    syncDirectGridLockedScrollPosition(scrollTop = null) {
+      const lockedContent = this.getDirectGridLockedScrollContent();
+      if (!lockedContent) {
+        return;
+      }
+      const content = this.getDirectGridScrollContent();
+      lockedContent.scrollTop = scrollTop !== null && scrollTop !== undefined ? scrollTop : (content?.scrollTop || 0);
+    },
+    dispatchDirectGridContentScroll() {
+      const content = this.getDirectGridScrollContent();
+      if (!content) {
+        return;
+      }
+      try {
+        content.dispatchEvent(new Event("scroll", { bubbles: true }));
+      } catch (_error) {
+        // noop
+      }
+      try {
+        $(content).trigger("scroll");
+      } catch (_error) {
+        // noop
+      }
+    },
+    onDirectGridDataBound(event) {
+      this.applyDirectGridStyleContract();
+      this.onDataBoundKendoGrid(event);
+      this.editBackgroundColor();
+    },
+    onDirectGridSave(event) {
+      const model = event?.model;
+      if (!model) {
+        return;
+      }
+      const changedFields = new Set();
+      Object.keys(event.values || {}).forEach(field => {
+        const oldValue = model[field];
+        const newValue = event.values[field];
+        const changed = String(oldValue ?? "") !== String(newValue ?? "");
+        if (typeof model.set === "function") {
+          model.set(field, newValue);
+        } else {
+          model[field] = newValue;
+        }
+        if (changed) {
+          changedFields.add(field);
+        }
+      });
+      const savedFields = Object.keys(event.values || {});
+      if (savedFields.includes("sortRank") || model?.dirtyFields?.sortRank === true) {
+        this.markDirectSortChangedRecord(model);
+        if (!model.dirtyFields) {
+          model.dirtyFields = {};
+        }
+        model.dirtyFields.sortRank = true;
+      }
+      const position = this.getGridScrollPosition();
+      this.getScrollPosition.top = position.top;
+      this.getScrollPosition.left = position.left;
+      this.editingFlg = false;
+      this.edit({ editRecord: model, isSortMode: this.isSortMode });
+      if (model.operation === 1 && this.hasDirectNonSortDirtyChange(model)) {
+        model.edited = true;
+      }
+      this.scheduleDirectGridCurrentRowVisual(model);
+    },
+    scheduleDirectGridCurrentRowVisual(record) {
+      const uid = record?.uid;
+      if (!uid) {
+        return;
+      }
+      const oldId = this.directGridRowVisualRafIds.get(uid);
+      if (oldId != null) {
+        cancelAnimationFrame(oldId);
+      }
+      const rafId = requestAnimationFrame(() => {
+        this.directGridRowVisualRafIds.delete(uid);
+        this.applyDirectGridRowVisual(record);
+      });
+      this.directGridRowVisualRafIds.set(uid, rafId);
+    },
+    applyDirectGridRowVisual(record) {
+      this.applyDirectGridRowVisualByRecord(record);
+    },
+    setDirectGridColumnHidden(fieldName, hidden) {
+      const grid = this.directGridWidget;
+      if (!grid) {
+        return;
+      }
+      try {
+        hidden ? grid.hideColumn(fieldName) : grid.showColumn(fieldName);
+        this.scheduleDirectGridVisualRefresh();
+      } catch (_error) {
+        // noop
+      }
+    },
+    getDirectRecordCode(record) {
+      const code = record?.code;
+      return code === undefined || code === null ? null : String(code);
+    },
+    markDirectSortChangedRecord(record) {
+      const code = this.getDirectRecordCode(record);
+      if (code) {
+        this.directSortChangedCodeSet.add(code);
+      }
+    },
+    clearDirectSortChangedRecord(record) {
+      const code = this.getDirectRecordCode(record);
+      if (code) {
+        this.directSortChangedCodeSet.delete(code);
+      }
+    },
+    captureDirectSortDirtyRows() {
+      const rows = this.directGridWidget?.dataSource?.data?.();
+      const list = Array.from(rows || []);
+      list.forEach(row => {
+        // Only the user's direct sortRank edits are kept as sort visual targets.
+        // Rows changed later by automatic re-numbering are intentionally ignored.
+        if (row?.dirtyFields?.sortRank === true) {
+          this.markDirectSortChangedRecord(row);
+        }
+      });
+    },
+    markDirectSortChangedRows() {
+      // Vue2 では「反映」による自動採番分は visual dirty にはしない。
+      // yellow visual はユーザーが直接 sortRank を編集した行だけに限定する。
+    },
+    getDirectOriginalRecordByCode(code) {
+      if (code === null || code === undefined) {
+        return null;
+      }
+      try {
+        const raw = this.$store?.getters?.["master-maintenance/getComparisonRecordModel"] || "[]";
+        const list = typeof raw === "string" ? JSON.parse(raw || "[]") : raw;
+        return (Array.isArray(list) ? list : []).find(item => String(item.code) === String(code)) || null;
+      } catch (_error) {
+        return null;
+      }
+    },
+    isDirectUserSortChanged(record) {
+      const code = this.getDirectRecordCode(record);
+      return !!(code && this.directSortChangedCodeSet.has(code));
+    },
+    isDirectSortOnlyField(field) {
+      return ["sortRank", "sortInputTime", "dummy"].includes(field);
+    },
+    hasDirectNonSortChangedFromOriginal(record) {
+      const code = this.getDirectRecordCode(record);
+      const original = this.getDirectOriginalRecordByCode(code);
+      if (!record || !original) {
+        return false;
+      }
+      return (this.columns || [])
+        .map(column => column.field)
+        .filter(field => field && !this.isDirectSortOnlyField(field))
+        .some(field => String(original?.[field] ?? "") !== String(record?.[field] ?? ""));
+    },
+    hasDirectNonSortDirtyChange(record) {
+      const dirtyFields = record?.dirtyFields || {};
+      const dirtyFieldNames = Object.keys(dirtyFields).filter(field => dirtyFields[field]);
+      if (dirtyFieldNames.length > 0) {
+        return dirtyFieldNames.some(field => !this.isDirectSortOnlyField(field));
+      }
+      if (this.hasDirectNonSortChangedFromOriginal(record)) {
+        return true;
+      }
+      return record?.operation === 2 || (record?.operation === 1 && !!record?.edited);
+    },
+    shouldApplyDirectEditedRowVisual(record) {
+      if (!record) {
+        return false;
+      }
+      // Vue2 wrapper: direct sortRank edit also makes the row edited (green).
+      // Automatic re-numbering in sortBtnClick() must not add edited visual.
+      return this.isDirectUserSortChanged(record)
+        || this.isEdited(record.code)
+        || this.hasDirectNonSortDirtyChange(record);
+    },
+    syncDirectGridSortValuesToMasterRecords() {
+      const ds = this.directGridWidget?.dataSource?.data?.();
+      if (!ds || !Array.isArray(this.getMasterRecordList?.data)) {
+        return;
+      }
+      const rows = typeof ds.toJSON === "function" ? ds.toJSON() : Array.from(ds);
+      rows.forEach(row => {
+        const record = this.getMasterRecordList.data.find(item => String(item.code) === String(row.code));
+        if (record && row.sortRank !== undefined) {
+          record.sortRank = row.sortRank;
+          if (row.sortInputTime !== undefined) {
+            record.sortInputTime = row.sortInputTime;
+          }
+        }
+      });
+    },
+    sort() {
+      const list = this.getMasterRecordList?.data;
+      if (!Array.isArray(list)) {
+        return;
+      }
+      list.sort((a, b) => a.sortRank - b.sortRank || a.sortInputTime - b.sortInputTime);
+      let rank = 1;
+      list.forEach(row => {
+        if (row.isDisp === "1") {
+          row.sortRank = rank++;
+        }
+      });
+    },
+    sortChange(tempData) {
+      let flag = false;
+      (this.getMasterRecordList?.data || []).forEach(item => {
+        tempData.forEach(tempItem => {
+          if (item.code === tempItem.code && item.sortRank !== tempItem.sortRank) {
+            flag = true;
+          }
+        });
+      });
+      return flag;
+    },
+    toRankEditBtnClick() {
+      if (!this.validateBeforeGridAction()) {
+        return;
+      }
+      this.isSortMode = true;
+      this.disableColumns();
+      this.showSortColumn();
+      this.scheduleDirectGridVisualRefresh();
+    },
+    sortBtnClick() {
+      try {
+        this.directGridWidget?.closeCell?.();
+      } catch (_error) {
+        // noop
+      }
+      this.captureDirectSortDirtyRows();
+      this.syncDirectGridSortValuesToMasterRecords();
+      const tempData = clonePlain(this.getMasterRecordList?.data || []);
+      this.isSortMode = false;
+      this.editableColumns();
+      this.showSortColumn();
+      this.sort();
+      this.isSorted = this.sortChange(tempData);
+      this.refreshDirectGridDataFromMasterRecords();
+      this.scheduleDirectGridVisualRefresh();
+    },
+    saveRecord() {
+      this.setLoadingScreenVisible(true);
+      try {
+        this.directGridWidget?.closeCell?.();
+      } catch (_error) {
+        // noop
+      }
+      this.syncDirectGridSortValuesToMasterRecords();
+      if (!this.validateBeforeGridAction()) {
+        this.setLoadingScreenVisible(false);
+        return;
+      }
+      const records = this.getMasterRecordList;
+      records.data = records.data.filter(r => !(r.operation === 1 && !r.edited));
+      this.setMasterRecordList(records);
+      const validateMessage = this.validateRequired();
+      const validateComboMessage = this.validateComboValue();
+      let message = "";
+      if (validateMessage.length !== 0) {
+        message = messageFormat(DIALOG_MESSAGES[12000270].message) + validateMessage;
+      }
+      if (validateComboMessage.length !== 0) {
+        if (message.length !== 0) message = message + "</br>";
+        message = message + messageFormat(DIALOG_MESSAGES[12000006].message) + validateComboMessage;
+      }
+      if (message.length !== 0) {
+        this.setLoadingScreenVisible(false);
+        this.$ons.notification.alert({
+          title: DIALOG_MESSAGES[12000006].title,
+          message: '<div style="text-align:left;">' + message + "</div>"
+        });
+        return;
+      }
+      this.updateRecordListByFacilityCd({ facilityCd: this.getFacilitySwitch, request: this.getUpdateRecordList })
+        .then(response => {
+          this.updateResponse = response.data;
+          this.setLoadingScreenVisible(false);
+          this.$ons.notification.alert({
+            title: DIALOG_MESSAGES[12000004].title,
+            message: messageFormat(DIALOG_MESSAGES[12000004].message)
+          });
+          this.isSorted = false;
+          this.findList();
+        })
+        .catch(error => {
+          getErrorMessage('MstStatusMapBedLayoutMainComponent.vue', 'saveRecord', error);
+          if (error.response?.status === 400) {
+            this.setLoadingScreenVisible(false);
+            this.$ons.notification.alert({
+              title: DIALOG_MESSAGES["00300005"].title,
+              message: error.response.data.errorMessage
+            });
+          }
+        });
+    },
     // Windowの高さからGirdコンポーネント領域の高さを算出
     calculateGridHeight() {
-      if (!this.editingFlg) {
-        const wh = this.windowHeight;
-        const hh = Array.prototype.slice
-          .call(document.getElementsByClassName("header"))
-          .pop().clientHeight;
-        const fmh =
-          (this.isDispMenu === 1
-            ? document.getElementById("footer-menu").clientHeight
-            : 0) + 5;
-        this.kendoGridToolbarHeight = wh - hh - fmh - 10;
+      if (this.editingFlg) {
+        return;
+      }
+      const ownerDocument = getScopedDocument(this.$el);
+      const ownerWindow = ownerDocument.defaultView || window;
+      const wh = this.windowHeight || ownerWindow.innerHeight || 0;
+      const headerElements = ownerDocument.getElementsByClassName("header");
+      const hh = headerElements.length ? headerElements[headerElements.length - 1].clientHeight : 0;
+      const footerMenu = getScopedElementById("footer-menu", this.$el) || ownerDocument.getElementById?.("footer-menu");
+      const fmh = (this.isDispMenu === 1 && footerMenu ? footerMenu.clientHeight : 0) + 5;
+      let toolbarHeight = wh - hh - fmh - 10;
 
-        const gfh = document.getElementById("grid-footer").clientHeight;
-        this.kendoGridHeight = this.kendoGridToolbarHeight - (gfh + 45);
+      const toolbarElement = this.$el?.querySelector?.(".kendo-grid-toolbar-style");
+      const listElement = this.$el?.querySelector?.(".ntss-list");
+      const layoutTop = (toolbarElement || listElement)?.getBoundingClientRect?.().top;
+      const footerTop = this.isDispMenu === 1
+        ? footerMenu?.getBoundingClientRect?.().top
+        : ownerWindow.innerHeight;
+      const actualAvailableHeight = (Number.isFinite(layoutTop) && Number.isFinite(footerTop))
+        ? footerTop - layoutTop - 5
+        : NaN;
+      if (Number.isFinite(actualAvailableHeight) && actualAvailableHeight > 100) {
+        toolbarHeight = Math.min(toolbarHeight, actualAvailableHeight);
+      }
+      this.kendoGridToolbarHeight = toolbarHeight > 100 ? toolbarHeight : 100;
+
+      const gridFooter = getScopedElementById("grid-footer", this.$el) || ownerDocument.getElementById?.("grid-footer");
+      const footerHeight = gridFooter ? (gridFooter.offsetHeight || gridFooter.clientHeight || 0) : 0;
+      const headerArea = this.$el?.querySelector?.("#grid-header") || this.$el?.querySelector?.(".header-btn-area");
+      const headerHeight = headerArea ? (headerArea.offsetHeight || headerArea.clientHeight || 0) : 0;
+      this.kendoGridHeight = Math.max(140, this.kendoGridToolbarHeight - footerHeight - headerHeight);
+      const gridRoot = this.getGridRootEl();
+      if (gridRoot && Number.isFinite(this.kendoGridHeight)) {
+        gridRoot.style.height = `${this.kendoGridHeight}px`;
+        gridRoot.style.maxHeight = `${this.kendoGridHeight}px`;
+        gridRoot.style.overflow = "hidden";
+      }
+      if (this.$el) {
+        this.$el.style.overflowY = "hidden";
+        this.$el.style.overflowX = "hidden";
+      }
+      if (listElement) {
+        listElement.style.position = "relative";
+        listElement.style.height = `${this.kendoGridToolbarHeight}px`;
+        listElement.style.maxHeight = `${this.kendoGridToolbarHeight}px`;
+        listElement.style.overflow = "hidden";
       }
     },
     calculateGridWidth() {
-      // 描画後に実行
-      if (document.getElementsByClassName("k-grid-content-locked").length !== 0) {
-        // 固定列数のカウント
-        const lockedColmuns = this.columns
-          .filter(col => col.locked === true && col.hidden === false).length;
-
-        // 固定列幅算出
-        // ソートモード以外では -1 する(ダミー列)
-        const sortColumn = this.isSortMode ? 0 : 1;
-        const lockedColumnWidth = (lockedColmuns - sortColumn) * this.columnWidth;
-
-        // スマートフォン以外で固定行有：空白行幅の調整値
-        const targetWidth = ((this.androidFlg || this.iosFlg) || lockedColumnWidth == 0 ) ? 0 : 14;
-        // kendoGridのリサイズを呼び出して自動リサイズがされないケースがある問題に対応
-        if(this.$refs.grid != null){
-          const setWidth = parseInt(this.$refs.grid.kendoWidget().columns[0].width);
-          this.$refs.grid.kendoWidget().resizeColumn(this.$refs.grid.kendoWidget().columns[0], setWidth);
-        }
-        // 固定列の幅確保
-        document.getElementsByClassName("k-grid-header-locked")[0].style.width = lockedColumnWidth + 'em';
-        document.getElementsByClassName("k-grid-content-locked")[0].style.width = lockedColumnWidth + 'em';
-
-        // 画面幅よりも固定列の幅が大きくなった場合、可変列のヘッダが見切れるため
-        // グリッドサイズを画面幅以上に拡張する
-        if (document.getElementsByClassName('k-grid')[0].clientWidth
-             < document.getElementsByClassName("k-grid-header-locked")[0].clientWidth) {
-           // グリッドサイズ拡張
-           document.getElementsByClassName('k-grid')[0].style.width
-             = (document.getElementsByClassName("k-grid-header-locked")[0].clientWidth
-               + 100 + targetWidth)  + 'px';
-           // 拡張分の幅で可変列のヘッダ幅定義
-           document.getElementsByClassName("k-grid-header-wrap k-auto-scrollable")[0].style.width
-             = (100 + targetWidth) + 'px';
-        } else {
-          // 固定列の幅を確保
-          const headerLockWidth = ((document.getElementsByClassName('k-grid')[0].clientWidth
-               - document.getElementsByClassName("k-grid-header-locked")[0].clientWidth) + targetWidth);
-          const contentScrollableWidth = ((document.getElementsByClassName('k-grid')[0].clientWidth
-               - document.getElementsByClassName("k-grid-content-locked")[0].clientWidth) +targetWidth);
-
-          document.getElementsByClassName("k-grid-header-wrap k-auto-scrollable")[0].style.width = headerLockWidth +'px';
-          document.getElementsByClassName("k-grid-content k-auto-scrollable")[0].style.width = contentScrollableWidth +'px';
-          // 縦スクロールの幅を確保
-          if (headerLockWidth === contentScrollableWidth && lockedColumnWidth) {
-            document.getElementsByClassName("k-grid-content k-auto-scrollable")[0].style.width = (contentScrollableWidth - 17) + 'px';
-          }
-        }
-      }
+      this.resizeDirectGrid();
     },
     calculateColumnsdWidth() {
-      this.columnWidth = parseFloat(
-        window
-          .getComputedStyle(document.getElementById("app"), null)
-          .getPropertyValue("width")
-      ) > 1000 ? 14 : 9;
+      const ownerDocument = getScopedDocument(this.$el);
+      const ownerWindow = ownerDocument.defaultView || window;
+      const appRoot = getScopedElementById("app", this.$el) || ownerDocument.getElementById?.("app");
+      const appWidth = parseFloat(
+        ownerWindow
+          .getComputedStyle(appRoot || ownerDocument.documentElement, null)
+          .getPropertyValue("width")) || 0;
+      this.columnWidth = appWidth > 1000 ? 14 : 9;
     },
     editStart(e) {
       if (this.isMobileDevice && !this.allowEdit) {
@@ -391,15 +1005,18 @@ export default {
         this.editingFlg = true;
       }
     },
-    addInputAssist() {
+    addInputAssist(event = {}) {
       // iOS/PWA環境でスピナーをタップすると編集が終了してしまう現象の対策
       if (this.iosFlg) {
-        if (document.getElementsByClassName("k-numerictextbox").length !== 0) {
-          let spinnerObj = document.getElementsByClassName("k-select")[0];
+        const numericTextboxes = queryScopedSelectorAll('.k-numerictextbox', this.$el);
+        const spinnerObj = numericTextboxes[0]?.querySelector?.('.k-select') || queryScopedSelector('.k-select', this.$el);
+        if (spinnerObj) {
           // 編集が終了するとオブジェクトが削除される為、removeEvent処理は不要
           spinnerObj.ontouchend = function (event){ event.stopPropagation(); };
         }
       }
+      // Vue2 wrapper ではセルに入っただけでは dirty visual は付かない。
+      // sortRank の yellow visual は save / 反映後の実変更に限定する。
     },
     editEnd() {
       this.editingFlg = false;
@@ -413,17 +1030,20 @@ export default {
         const nowData = new Date(data.model[data.field]);
         const nowDtatString = nowData.getFullYear() + "-" + ('0' + (nowData.getMonth()+1)).slice(-2) + "-" + ('0' + nowData.getDate()).slice(-2);
         $(
-          `<input type="date" id="displayedDummyEditor" min="1880-01-01" max="2099-12-31" value="${nowDtatString}"/><input type="date" id="hiddenDateInputEditor" name="${data.field}" style="display: none;"/>`
-        ).appendTo(container);
+          `<input type="date" id="displayedDummyEditor" min="1880-01-01" max="2099-12-31" value="${nowDtatString}"/><input type="date" id="hiddenDateInputEditor" name="${data.field}" style="display: none;"/>`).appendTo(container);
+        const editorRoot = container?.[0] || container?.get?.(0) || null;
+        const editorDocument = editorRoot?.ownerDocument || this.$el?.ownerDocument || document;
+        const displayedDummyEditor = editorRoot?.querySelector?.('#displayedDummyEditor') || editorDocument.getElementById('displayedDummyEditor');
+        const hiddenDateInputEditor = editorRoot?.querySelector?.('#hiddenDateInputEditor') || editorDocument.getElementById('hiddenDateInputEditor');
         // フォーカスアウトで編集データを反映するイベントを発火
-        document.getElementById("displayedDummyEditor").addEventListener("blur", function(ev) {
+        displayedDummyEditor?.addEventListener("blur", function(ev) {
           const dayData = new Date(ev.target.value);
           const resultData = dayData.getFullYear() + "-" + ('0' + (dayData.getMonth()+1)).slice(-2) + "-" + ('0' + dayData.getDate()).slice(-2);
           // 変更前の値と比較し、同じ値の場合は処理しない
-          if (nowDtatString != resultData) {
-            document.getElementById("hiddenDateInputEditor").value = resultData;
+          if (nowDtatString != resultData && hiddenDateInputEditor) {
+            hiddenDateInputEditor.value = resultData;
             // name="${data.field}" で割り当てた箇所に付与されているchangeメソッドを発火します。次いで@saveの処理が発生します。
-            $(document.getElementById("hiddenDateInputEditor")).trigger('change');
+            $(hiddenDateInputEditor).trigger('change');
           }
         });
       }
@@ -444,14 +1064,12 @@ export default {
             height: 24
           },
           change: (e) => {
-            // コンソールにエラーが出るためにnextTickで遅らせている
             this.$nextTick(() => {
               dummyField.val(e.value).trigger("change");
             });
           }
         });
 
-      // パレットを開く
       colorPicker.data("kendoColorPicker").open();
     },
     // マスタ一覧のデータを取得
@@ -525,8 +1143,8 @@ export default {
             this.calculateGridWidth();
             // 元のスクロール位置に移動
             // mod スクロールの位置を維持
-            this.$refs.grid.$el.children[2].scrollTop = this.scrollTop;
-            this.$refs.grid.$el.children[2].scrollLeft = this.scrollLeft;
+            this.setGridScrollPosition({ top: this.scrollTop, left: this.scrollLeft });
+            
             setTimeout(() => {
               this.scrollTop = 0;
               this.scrollLeft = 0;
@@ -569,12 +1187,12 @@ export default {
       // 共通ローダー:表示開始
       this.setLoadingScreenVisible(true);
       //イベント発生前のスクロールバーの位置を保持
-      const grid = $("div.k-grid-content")[0];
+      const grid = this.getGridScrollContainer();
       this.getScrollPosition.top = grid.scrollTop;
       this.getScrollPosition.left = grid.scrollLeft;
       this.editFlg = true;
       // グリッドでエラーが発生している場合は処理を中断
-      if (!this.kendoValidator.validate()) {
+      if (!this.validateBeforeGridAction()) {
         // 共通ローダー：表示終了
         this.setLoadingScreenVisible(false);
         return;
@@ -727,29 +1345,15 @@ export default {
       return prefix + unique.join(prefix);
     },
     onSave(ev) {
-      //イベント発生前のスクロールバーの位置を保持
-      const scrollTop = ev.sender.content[0].scrollTop;
-      const scrollLeft = ev.sender.content[0].scrollLeft;
-      this.getScrollPosition.top = scrollTop;
-      this.getScrollPosition.left = scrollLeft;
-      
-      this.editingFlg = false;
-      this.edit({ editRecord: ev.model, isSortMode: this.isSortMode });
-      ev.sender.refresh();
-      if (ev.model.operation === 1) {
-        ev.model["edited"] = true;
-      }
-      // 状態に合わせて背景色を変更
-      this.editBackgroundColor();
+      this.onDirectGridSave(ev);
     },
     onDataBoundKendoGrid(ev) {
       if (this.getScrollPosition.top > 0 || this.getScrollPosition.left > 0) {
-        //スクロールバーの位置をイベント発生前の位置に戻す
         this.$nextTick(() => {
-          ev.sender.content[0].scrollTop = this.getScrollPosition.top;
-          ev.sender.content[0].scrollLeft = this.getScrollPosition.left;
+          this.setGridScrollPosition({ top: this.getScrollPosition.top, left: this.getScrollPosition.left });
         });
       }
+      this.applyDirectGridStyleContract();
     },
     cancel() {
       // 前画面に戻る
@@ -761,7 +1365,7 @@ export default {
     },
     showMasterEditModal(e) {
       // モーダル確定時にスクロール位置が戻ってしまう問題の対処
-      const grid = $("div.k-grid-content")[0];
+      const grid = this.getGridScrollContainer();
       this.getScrollPosition.top = grid.scrollTop;
       this.getScrollPosition.left = grid.scrollLeft;
       this.setScrollPositions(this.getScrollPosition);
@@ -771,14 +1375,13 @@ export default {
        * see: https://www.telerik.com/forums/selected-row-at-wrappers-for-vue
        */
       e.preventDefault();
-      const row = this.$refs.grid.kendoWidget();
-      const selectedRowItem = row.dataItem(e.currentTarget.closest("tr"));
+      const row = this.getGridWidget();
+      const selectedRowItem = row?.dataItem?.(e.currentTarget.closest("tr"));
       let code = selectedRowItem.code;
 
       // codeがない場合はcodeを付番
       if (!code) {
         this.edit({ editRecord: selectedRowItem, isSortMode: this.isSortMode });
-        code = this.getMasterRecordList.data[0].code;
       }
 
       // プロパティを正規化する。
@@ -800,13 +1403,11 @@ export default {
       }, 1000);
     },
     setScrollPosition(position) {
-      $("div.k-grid-content")
-        .scrollTop(position.top)
-        .scrollLeft(position.left);
+      this.setGridScrollPosition({ top: position.top, left: position.left });
     },
     addRow() {
       // グリッドでエラーが発生している場合は処理を中断
-      if (!this.kendoValidator.validate()) {
+      if (!this.validateBeforeGridAction()) {
         return;
       }
 
@@ -836,25 +1437,31 @@ export default {
 
       // プロパティを正規化する。
       const normalizedItem = this.normalization(d);
-      this.getScrollPosition.top = this.$refs.grid.$el.lastChild.scrollHeight;
+      const scrollContent = this.getDirectGridScrollContent();
+      this.getScrollPosition.top = scrollContent?.scrollHeight || 0;
+      this.getScrollPosition.left = 0;
+      this.scrollPosition.top = this.getScrollPosition.top;
+      this.scrollPosition.left = 0;
+      this.setScrollPositions(this.getScrollPosition);
+      this.setGridScrollPosition({ top: this.getScrollPosition.top, left: 0 });
       // ストアに保存する。
       this.setEditRecord(normalizedItem);
 
       // 詳細を表示
       this.goSpecifiedView("individual-master-ex-map-bed-layout");
     },
-    importCsv() {
+    importCsv(event) {
       // グリッドでエラーが発生している場合は処理を中断
-      if (!this.kendoValidator.validate()) {
+      if (!this.validateBeforeGridAction()) {
         return;
       }
 
-      this.masterCsvTarget = event.target;
+      this.masterCsvTarget = event?.target || null;
       this.masterCsvVisible = true;
     },
     prehideCsvPopover() {
       this.masterCsvVisible = false;
-      this.editBackgroundColor();
+      this.refreshDirectGridDataFromMasterRecords();
     },
     showSortColumn() {
       // 編集・並び順設定モードによって並び順項目の表示・非表示を切り替える
@@ -871,6 +1478,10 @@ export default {
           this.columns[dummyIndex].hidden = !this.columns[sortRankIndex].hidden;
         }
       }
+      this.setDirectGridColumnHidden?.("sortRank", !!this.columns.find(col => col.field === "sortRank")?.hidden);
+      this.setDirectGridColumnHidden?.("dummy", !!this.columns.find(col => col.field === "dummy")?.hidden);
+      this.scheduleDirectGridLayoutContract();
+      this.scheduleDirectGridVisualRefresh();
     },
     disableColumns() {
       this.columns.forEach(column => {
@@ -882,6 +1493,7 @@ export default {
               : () => false
             : () => false;
       });
+      this.applyDirectGridColumnsContract();
     },
     editableColumns() {
       this.columns.forEach(column => {
@@ -893,6 +1505,7 @@ export default {
               ? () => true
               : () => false;
       });
+      this.applyDirectGridColumnsContract();
     },
     getColumnIndex(fieldName) {
       // 指定された項目がない場合はマイナスが返る
@@ -901,27 +1514,31 @@ export default {
     editBackgroundColor() {
       this.$nextTick(() => {
         // グリッドが表示されていなかったら処理終了
-        const gridHeader = this.$refs.grid.$el.firstChild;
-        if (gridHeader.textContent === " ") {
+        const gridHeader = this.getGridHeaderEl();
+        if (!gridHeader || gridHeader.textContent === " ") {
           return;
         }
         gridHeader?.classList?.add("master-grid-header");
 
         // グリッドにレコードがなければ処理終了
-        if (!this.$refs.grid.$el.lastChild.lastChild.tBodies) {
+        if (!this.getGridTableEl()?.tBodies) {
           return;
         }
         // 固定列、可変列、データソースの取得
-        const tbodyc = this.$refs.grid.$el.lastChild.lastChild
-        .tBodies[0].children;
-        const lockTbodyc = this.$refs.grid.$el.children[1].lastChild
-        .tBodies[0].children;
-        const gridData = this.$refs.grid.dataSource;
+        const tbodyc = this.getGridBodyRows();
+        const lockTbodyc = this.getGridLockedBodyRows();
+        const grid = this.getGridWidget();
 
         // 列の行数は固定・可変で同一なため可変列の行数を使用
         for (let rwCount = 0; rwCount < tbodyc.length; rwCount++) {
-          const currentTrc = tbodyc[rwCount].children;
-          const currentLockTrc = lockTbodyc[rwCount].children;
+          const bodyRow = tbodyc[rwCount];
+          const uid = bodyRow?.getAttribute?.("data-uid");
+          const lockedRow = uid
+            ? lockTbodyc.find(row => row?.getAttribute?.("data-uid") === uid)
+            : lockTbodyc[rwCount];
+          const currentTrc = bodyRow?.children || [];
+          const currentLockTrc = lockedRow?.children || [];
+          const rowData = grid?.dataItem?.(bodyRow) || grid?.dataItem?.(lockedRow) || null;
 
           // 並び順の色変更
           // mod #11001 並び順の変更後反映を押しても並び順が切り替わらない。 zhangyue start 
@@ -933,10 +1550,10 @@ export default {
           // 削除対象を判定
           const deleted = this.isDeleteRow(currentTrc);
 
-          // モーダルからの編集も色を変更する
-          if (
-            this.isEdited(gridData.data[rwCount].code)
-          ) {
+          // モーダルからの編集も色を変更する。
+          // ユーザーが直接 sortRank を編集した行は Vue2 と同じく編集行（緑）扱いにする。
+          // ただし sortBtnClick() の自動採番だけで変わった行は対象外。
+          if (this.shouldApplyDirectEditedRowVisual(rowData)) {
             edited = true;
           }
           // 並び順以外の項目が変更されていた場合は、削除か修正にあわせて並び順より後の項目の背景色を変更
@@ -949,21 +1566,128 @@ export default {
         }
       });
     },
-    // mod #11001 並び順の変更後反映を押しても並び順が切り替わらない。 zhangyue start 
-    changeSortColor(currentLockTrc, currentTrc) {
-      // 並び順が変更されていれば並び順とダミー項目背景色を変更
-      for (let clCount = 0; clCount < currentLockTrc.length; clCount++) {
-        if (
-          this.isEditRow(currentLockTrc[clCount])
-          && clCount === this.getColumnIndex('sortRank') - 1
-        ) {
-          currentLockTrc[clCount]?.classList?.add("master-sort-edited");    
-          const dummyIndex = this.getColumnIndex("dummy");
-          if (dummyIndex > -1) {
-            currentTrc[dummyIndex]?.classList?.add("master-sort-edited");
-          }
-        }
+    getDirectGridCellFromEvent(event = {}) {
+      const container = event.container;
+      if (container?.jquery) {
+        return container[0]?.closest?.("td") || container[0] || null;
       }
+      if (container?.nodeType === 1) {
+        return container.closest?.("td") || container;
+      }
+      return event.currentTarget?.closest?.("td") || event.target?.closest?.("td") || null;
+    },
+    getDirectSortColorRowsByRecord(record) {
+      const root = this.getGridRootEl();
+      if (!root || !record) {
+        return [];
+      }
+      if (record.uid) {
+        return Array.from(root.querySelectorAll(`tr[data-uid="${record.uid}"]`));
+      }
+      if (record.code == null) {
+        return [];
+      }
+      const grid = this.getGridWidget();
+      return this.getGridBodyRows().filter(row => grid?.dataItem?.(row)?.code === record.code);
+    },
+    getDirectSortColorRowsFromRow(row) {
+      const uid = row?.getAttribute?.("data-uid");
+      const root = this.getGridRootEl();
+      return uid && root ? Array.from(root.querySelectorAll(`tr[data-uid="${uid}"]`)) : row ? [row] : [];
+    },
+    clearDirectGridRowVisual(row) {
+      row?.classList?.remove?.("master-edited-row", "master-deleted-row", "master-sort-edited");
+      Array.from(row?.children || []).forEach(cell => {
+        cell.classList.remove("master-edited-row", "master-deleted-row", "master-edited-cell", "master-sort-edited");
+      });
+    },
+    getDirectSortColorRowPairByRecord(record) {
+      const rows = this.getDirectSortColorRowsByRecord(record);
+      return {
+        lockedRow: rows.find(row => this.isDirectSortColorLockedRow(row)) || null,
+        contentRow: rows.find(row => !this.isDirectSortColorLockedRow(row)) || null
+      };
+    },
+    getDirectSortColorRowData(row) {
+      return row ? this.getGridWidget()?.dataItem?.(row) || null : null;
+    },
+    isDirectSortRankEdited(row, sortCell = null) {
+      const rowData = this.getDirectSortColorRowData(row);
+      return this.isDirectUserSortChanged(rowData);
+    },
+    applyDirectGridRowVisualByRecord(record) {
+      const { lockedRow, contentRow } = this.getDirectSortColorRowPairByRecord(record);
+      if (!lockedRow && !contentRow) {
+        return;
+      }
+      [lockedRow, contentRow].forEach(row => this.clearDirectGridRowVisual(row));
+      const currentLockTrc = lockedRow?.children || [];
+      const currentTrc = contentRow?.children || [];
+      this.changeSortColor(currentLockTrc, currentTrc);
+      let edited = this.changeEditColor(currentTrc, currentLockTrc);
+      const deleted = this.isDeleteRow(currentTrc);
+      const rowData = this.getDirectSortColorRowData(contentRow || lockedRow) || record || {};
+      if (this.shouldApplyDirectEditedRowVisual(rowData)) {
+        edited = true;
+      }
+      this.changeRowColor(currentTrc, currentLockTrc, edited, deleted);
+      this.changeRefErrorComboColor(currentTrc, deleted, currentLockTrc);
+    },
+    applyDirectSortInputVisual(event = {}) {
+      // Vue2 wrapper does not color the sortRank cell simply by entering edit mode.
+      // Visual changes are applied only after the value actually changes and save runs.
+    },
+    // mod #11001 並び順の変更後反映を押しても並び順が切り替わらない。 zhangyue start 
+    getDirectSortColorRowFromCells(currentTrc) {
+      return Array.from(currentTrc || [])[0]?.parentElement || null;
+    },
+    isDirectSortColorLockedRow(row) {
+      return !!row?.closest?.(".k-grid-content-locked");
+    },
+    getDirectSortColorVisibleColumnsForRow(row) {
+      const locked = this.isDirectSortColorLockedRow(row);
+      return (this.columns || []).filter(column => !column.hidden && !!column.locked === locked);
+    },
+    getDirectSortColorCellByField(row, fieldName) {
+      if (!row || !fieldName) {
+        return null;
+      }
+      const index = this.getDirectSortColorVisibleColumnsForRow(row).findIndex(column => column.field === fieldName);
+      if (index < 0) {
+        return null;
+      }
+      return Array.from(row.children || [])[index] || null;
+    },
+    getDirectSortColorFieldByCell(cell) {
+      const row = cell?.parentElement;
+      const index = cell?.cellIndex ?? -1;
+      return this.getDirectSortColorVisibleColumnsForRow(row)[index]?.field || null;
+    },
+    getDirectSortVisualTargetCell(row) {
+      return this.getDirectSortColorCellByField(row, "sortRank")
+        || Array.from(row?.children || []).find(cell => {
+          const field = this.getDirectSortColorFieldByCell(cell);
+          return field && field !== "dummy" && field !== "isDisp";
+        })
+        || this.getDirectSortColorCellByField(row, "dummy")
+        || Array.from(row?.children || [])[0]
+        || null;
+    },
+    changeSortColorByRow(row) {
+      const sortCell = this.getDirectSortColorCellByField(row, "sortRank");
+      if (!this.isDirectSortRankEdited(row, sortCell)) {
+        return false;
+      }
+      const targetCell = sortCell || this.getDirectSortVisualTargetCell(row);
+      targetCell?.classList?.add("master-sort-edited");
+      const dummyCell = this.getDirectSortColorCellByField(row, "dummy");
+      dummyCell?.classList?.add("master-sort-edited");
+      return true;
+    },
+    changeSortColor(currentTrc, currentLockTrc = null) {
+      [currentTrc, currentLockTrc].forEach(cells => {
+        this.changeSortColorByRow(this.getDirectSortColorRowFromCells(cells));
+      });
     },
     // mod #11001 並び順の変更後反映を押しても並び順が切り替わらない。 zhangyue end 
     changeEditColor(currentTrc,currentLockTrc) {
@@ -971,21 +1695,22 @@ export default {
       // 変更されたセルの文字色を変更(固定列と可変列の行数は一致)
       for (let lockClCount = 0; lockClCount < currentLockTrc.length; lockClCount++) {
         // 固定列セル:並び順以外の編集列
-        if (
-          this.isEditRow(currentLockTrc[lockClCount]) &&
-          lockClCount !== this.getColumnIndex("sortRank")
-        ) {
-          currentLockTrc[lockClCount]?.classList?.add("master-edited-cell");
+        const cell = currentLockTrc[lockClCount];
+        const rowData = this.getDirectSortColorRowData(cell?.parentElement);
+        const field = this.getDirectSortColorFieldByCell(cell);
+        if (this.isEditRow(cell) && (field !== "sortRank" || this.isDirectUserSortChanged(rowData))) {
+          cell?.classList?.add("master-edited-cell");
           edited = true;
         }
       }
 
       for(let clCount = 0; clCount < currentTrc.length; clCount++) {
         // 可変列セル
-        if(
-          this.isEditRow(currentTrc[clCount])
-        ){
-          currentTrc[clCount]?.classList?.add("master-edited-cell");
+        const cell = currentTrc[clCount];
+        const rowData = this.getDirectSortColorRowData(cell?.parentElement);
+        const field = this.getDirectSortColorFieldByCell(cell);
+        if (this.isEditRow(cell) && (field !== "sortRank" || this.isDirectUserSortChanged(rowData))) {
+          cell?.classList?.add("master-edited-cell");
           edited = true;
         }
       }
@@ -1026,8 +1751,7 @@ export default {
         for (
           let clCount  = 0;
           clCount < currentTrc.length;
-          clCount++
-        ){
+          clCount++){
           currentTrc[clCount]?.classList?.add(addClass);
         }
       }
@@ -1098,14 +1822,15 @@ export default {
       return (
         this.getStateUserAccountInfo !== null &&
         data !== undefined &&
-        (this.$store.getters["master-maintenance/isRecordModified"] || !this.kendoValidator.validate())
+        (this.$store.getters["master-maintenance/isRecordModified"] || !this.validateBeforeGridAction())
       );
     },
     // パンくずリストをクリックされた場合に呼び出される関数
     refresh() {
       // 他の画面に遷移したときもrefresh()が発生する為、自分の画面のみ処理する
-      if (this.selfScreenName === this.$router.currentRoute.name
-          && document.getElementsByTagName("ons-alert-dialog").length === 0) {
+      const scopedDocument = getScopedDocument(this.$el);
+      if (this.selfScreenName === this.getCurrentRouteName()
+          && getScopedAlertDialogs(this.$el || this).length === 0) {
         if (this.getIsChanged()) {
           this.$ons.notification.confirm({
               // mod #6107 2023/03/23 メッセージボックス全調整 張博 start
@@ -1138,46 +1863,50 @@ export default {
     }
   },
   created() {
+    installComponentJQuery();
     this.setLoadingScreenVisible(true);
-    this.calculateColumnsdWidth()
+    this.calculateColumnsdWidth();
     this.loadGridData();
     // 共通ローダー:表示名設定
     this.setLoadingScreenMessage("処理中・・・");
     // 端末判別
-    const ua = navigator.userAgent.toLowerCase();
+    const ua = ((this?.$el?.ownerDocument?.defaultView?.navigator?.userAgent) || globalThis?.navigator?.userAgent || "").toLowerCase();
     if (/android/.test(ua)) {
       this.androidFlg = true;
     } else if (/iphone|ipad|mac|os/.test(ua)) {
       this.iosFlg = true;
     }
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.getCurrentRouteName();
     EventBus.$on("onCloseMasterEditModal", this.onCloseMasterEditModal);
-    // EventBus.$on("refresh", this.refresh);
-  },
-  updated() {
-    // Storeの更新等で画面が再描画された場合に背景色を変更
-    this.editBackgroundColor();
-    this.$nextTick(() => {
-      this.calculateColumnsdWidth();
-      this.calculateGridHeight();
-      this.calculateGridWidth();
-    });
   },
 
   mounted() {
+    this.directGridMounted = true;
+    this.kendoValidator = { validate: () => this.validateDirectKendoGrid() };
     this.$nextTick(() => {
       this.calculateColumnsdWidth();
       this.calculateGridHeight();
       this.calculateGridWidth();
+      this.initDirectGridIfReady();
+      this.scheduleDirectGridLayoutContract();
     });
     EventBus.$on("refresh", this.refresh);
     EventBus.$on("clearScrollPosition", this.clearScrollPosition);
   },
   // add 性能改善メモリ不足 shan start
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("onCloseMasterEditModal", this.onCloseMasterEditModal);
     EventBus.$off("refresh", this.refresh);
     EventBus.$off("clearScrollPosition", this.clearScrollPosition);
+    this.destroyDirectGrid();
+    [this.directGridLayoutRafId, this.directGridFilterRefreshRafId, this.directGridScrollSyncRafId, this.directGridVisualRefreshRafId].forEach(id => {
+      if (id != null) {
+        cancelAnimationFrame(id);
+      }
+    });
+    this.directGridRowVisualRafIds?.forEach?.(id => cancelAnimationFrame(id));
+    this.directGridRowVisualRafIds?.clear?.();
+    this.directSortChangedCodeSet?.clear?.();
   }
   // add 性能改善メモリ不足 shan end
 };
@@ -1196,13 +1925,27 @@ export default {
   margin: 0;
   padding: 5px;
   bottom: 0;
+  left: 0;
+  right: 0;
   position: absolute;
-  width: inherit;
+  width: auto;
+  box-sizing: border-box;
+  background: inherit;
+  z-index: 2;
+}
+.ntss-list {
+  position: relative;
+  height: var(--height);
+  max-height: var(--height);
+  overflow: hidden;
+  box-sizing: border-box;
 }
 .kendo-grid-toolbar-style {
   --height: 200px;
   height: var(--height);
+  max-height: var(--height);
   border-bottom: none;
+  box-sizing: border-box;
 }
 .toolbar-btn {
   font-size: 1.0em;
@@ -1213,15 +1956,59 @@ export default {
 .csv-btn {
   margin-right: 1em;
 }
-.k-grid-toolbar {
+.kendo-grid-toolbar-style {
   padding: 0.1em 0.3em;
 }
-.kendo-grid-toolbar-style >>> .k-tooltip.k-tooltip-validation {
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked) {
+  overflow-y: scroll !important;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.kendo-grid-toolbar-style :deep(.k-grid-content-locked::-webkit-scrollbar) {
+  display: none;
+}
+.kendo-grid-toolbar-style :deep(.k-tooltip.k-tooltip-validation) {
   width: auto;
 }
 .custom-switch {
   transform: scale(0.85);
   transform-origin: center;
   touch-action: manipulation;
+}
+.mst-status-map-bed-layout-direct-jq-grid {
+  width: 100%;
+}
+.mst-status-map-bed-layout-direct-jq-grid :deep(td.master-edited-row),
+.mst-status-map-bed-layout-direct-jq-grid :deep(tr.k-selected > td.master-edited-row),
+.mst-status-map-bed-layout-direct-jq-grid :deep(tr.k-state-selected > td.master-edited-row) {
+  color: #003300 !important;
+  background-color: #ccffcc !important;
+}
+.mst-status-map-bed-layout-direct-jq-grid :deep(td.master-deleted-row),
+.mst-status-map-bed-layout-direct-jq-grid :deep(tr.k-selected > td.master-deleted-row),
+.mst-status-map-bed-layout-direct-jq-grid :deep(tr.k-state-selected > td.master-deleted-row) {
+  color: #333333 !important;
+  background-color: #9d9d9d !important;
+}
+.mst-status-map-bed-layout-direct-jq-grid :deep(td.master-edited-cell) {
+  color: #003300 !important;
+  font-weight: bold !important;
+}
+.mst-status-map-bed-layout-direct-jq-grid :deep(td.master-sort-edited),
+.mst-status-map-bed-layout-direct-jq-grid :deep(tr.k-selected > td.master-sort-edited),
+.mst-status-map-bed-layout-direct-jq-grid :deep(tr.k-state-selected > td.master-sort-edited) {
+  background-color: #ffff66 !important;
+}
+
+
+/* Vue2 Kendo locked layout contract.
+   Kendo 2026 renders locked content inside flex containers; keep the locked area
+   at the width Kendo/column definitions already calculated, as Kendo 2019 did. */
+:deep(.k-grid-lockedcolumns .k-grid-header-locked),
+:deep(.k-grid-lockedcolumns .k-grid-content-locked),
+:deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 </style>

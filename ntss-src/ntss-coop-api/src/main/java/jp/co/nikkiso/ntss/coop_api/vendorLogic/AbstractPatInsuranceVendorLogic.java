@@ -4,11 +4,11 @@ import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.List;
 
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.fasterxml.jackson.databind.JavaType;
+import tools.jackson.databind.JavaType;
 
 import jp.co.nikkiso.ntss.coop_api.service.LogService;
 import jp.co.nikkiso.ntss.api.utils.ObjectMapperUtil;

@@ -1,6 +1,5 @@
 package jp.co.nikkiso.ntss.device_edge.service.lcdReq;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -15,8 +14,8 @@ import jp.co.nikkiso.ntss.device_edge.service.LogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.dao.MstComsvSettingDao;
 import jp.co.nikkiso.ntss.core.dao.MstPersonalUserDao;
@@ -76,7 +75,7 @@ public class LcdReq29ServiceImpl implements LcdReq29Service {
         staffList.add(staff);
         userIdList.add(staff.userId);
       }
-    } catch (IOException e) {
+    } catch (tools.jackson.core.JacksonException e) {
       // TODO 自動生成された catch ブロック
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();

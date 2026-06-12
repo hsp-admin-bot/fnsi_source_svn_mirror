@@ -1,10 +1,7 @@
 /**
- * ローグ系API
+ * ログ参照・変更履歴系 API
  */
 import { ApiHelper } from "@/apis/AxiosHelper";
-/**
- * ストア系
- */
 import store from "@/stores";
 
 /**
@@ -21,16 +18,18 @@ const READ_LOG = "readLog";
 const URL_MST_INFO = "/mstInfo";
 const GET_DIRECTORY = "get-directory";
 const DOWNLOAD_LOG = "download-log";
+
 /**
  * すべての機能を取得する
- * @param {String} facilityCd
+ * @param {string} facilityCd 施設コード
  */
 export function getSysAllFunction(facilityCd) {
   return getWithLoader(`${URL_MST_INFO}/sysAllFunction/${facilityCd}`);
 }
 
 /**
- *
+ * モジュール一覧（クライアント側定義のマスタデータ）
+ * @returns {{ data: Array<{ moduleCd: number; moduleName: string }>; status: number }}
  */
 export function getListModule() {
   return {
@@ -112,10 +111,18 @@ export function sendRequestGetSearchCondition(userId) {
   return getWithLoader(`${URL_BASE}/${SEARCH_CONDITION}/${userId}`);
 }
 
+/**
+ * ダウンロードパス取得
+ * @param {Record<string, unknown>} path パス指定パラメータ
+ */
 export function sendRequestGetDownloadPath(path) {
   return getWithLoader(`${URL_BASE}/${GET_DIRECTORY}`, path);
 }
 
+/**
+ * ログファイルダウンロード
+ * @param {Record<string, unknown>} path パス指定パラメータ
+ */
 export function sendRequestGetDownloadLog(path) {
   return getWithLoader(`${URL_BASE}/${GET_DIRECTORY}/${DOWNLOAD_LOG}`, path, {
     responseType: "blob"
@@ -131,44 +138,36 @@ export function sendRequestLoggerSetFlgUpddate() {
 
 /**
  * 検索条件を更新する。
- * @param {number} userId ユーザーID
- * @param {Array} conditionList 検索条件リスト
+ * @param {{ userId: number; conditionList: unknown[] }} params
  */
 export function sendRequestUpdateCondition(params) {
-  const userId = params.userId;
-  const conditionList = params.conditionList;
-  return putWithLoader(
-    `${URL_BASE}/${UPDATE_CONDITION}/${userId}`,
-    conditionList
-  );
+  const { userId, conditionList } = params;
+  return putWithLoader(`${URL_BASE}/${UPDATE_CONDITION}/${userId}`, conditionList);
 }
 
 /**
- * 検索条件のローグ取得
- * @param {String} folderName フォルダ名
- * @param {Object} condition 検索条件
+ * 検索条件のログ取得
+ * @param {{ folderName: string; condition: Record<string, unknown> }} params
+ * @param {boolean} [scrollSelect] ローダ表示制御（false のときローダ非表示）
  */
-//update FNSI-mongoDBに挿入、検索できることの対応 start
-export function sendRequestGetFilterLog(params,scrollSelect) {
-  const folderName = params.folderName;
-  const condition = params.condition;
+// update FNSI-mongoDBに挿入、検索できることの対応 start
+export function sendRequestGetFilterLog(params, scrollSelect) {
+  const { folderName, condition } = params;
   return putWithLoader(
     `${URL_BASE}/${GET_FILTER_LOG}/${folderName}`,
     condition,
     scrollSelect
   );
 }
-//update FNSI-mongoDBに挿入、検索できることの対応 end
+// update FNSI-mongoDBに挿入、検索できることの対応 end
 
 // add 変更履歴画面追加 陳 start
 /**
- * 検索条件のローグ取得
- * @param {String} folderName フォルダ名
- * @param {Object} condition 検索条件
+ * 検索条件のログ取得（変更履歴）
+ * @param {{ folderName: string; condition: Record<string, unknown> }} params
  */
 export function sendRequestGetChangeLog(params) {
-  const folderName = params.folderName;
-  const condition = params.condition;
+  const { folderName, condition } = params;
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
   store.dispatch("loading-screen/setLoadingScreenVisible", true);
   return ApiHelper.put(`${URL_BASE}/${GET_CHANGE_LOG}/${folderName}`, condition).finally(() =>
@@ -178,21 +177,19 @@ export function sendRequestGetChangeLog(params) {
 // add 変更履歴画面追加 陳 end
 
 /**
- * 施設コードのローグ取得
- * @param {String} folderName フォルダ名
- * @param {String} facilityCd 施設コード
+ * 施設コードのログ取得
+ * @param {{ folderName: string; facilityCd: string }} params
  */
 export function sendRequestReadLog(params) {
-  const folderName = params.folderName;
-  const facilityCd = params.facilityCd;
+  const { folderName, facilityCd } = params;
   return putWithLoader(`${URL_BASE}/${READ_LOG}/${folderName}/${facilityCd}`);
 }
 
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {String} url URL
- * @param {*} params パラメータ
- * @param {*} config 設定
+ * @param {string} url URL
+ * @param {Record<string, unknown>} [params] パラメータ
+ * @param {Record<string, unknown>} [config] axios リクエスト設定
  */
 function getWithLoader(url, params = undefined, config = undefined) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -204,12 +201,13 @@ function getWithLoader(url, params = undefined, config = undefined) {
 
 /**
  * 共通ローダを実行するPUTリクエスト
- * @param {String} url URL
- * @param {*} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
+ * @param {boolean} [scrollSelect] false のときローダを出さない
  */
-//update FNSI-mongoDBに挿入、検索できることの対応 start
-function putWithLoader(url, params,scrollSelect) {
-  if (scrollSelect == false) {
+// update FNSI-mongoDBに挿入、検索できることの対応 start
+function putWithLoader(url, params, scrollSelect) {
+  if (scrollSelect === false) {
     store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
     store.dispatch("loading-screen/setLoadingScreenVisible", true);
   }
@@ -218,4 +216,4 @@ function putWithLoader(url, params,scrollSelect) {
     store.dispatch("loading-screen/setLoadingScreenVisible", false)
   );
 }
-//update FNSI-mongoDBに挿入、検索できることの対応 end
+// update FNSI-mongoDBに挿入、検索できることの対応 end

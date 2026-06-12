@@ -1,7 +1,7 @@
 <template>
   <textarea
     rows="1"
-    v-on="$listeners"
+    v-bind="$attrs"
     :value="valueInput"
     :class="classObject"
     @input="inputValue($event)"
@@ -26,9 +26,10 @@
 
 // 共通タグ用ベースコンポーネント
 import baseCustomForm from "@/components/common/custom-form-tags/BaseCustomForm";
-import { mapGetters } from "vuex";
+import { mapGetters } from "@/compat/vue/vuex";
 
 export default {
+  inheritAttrs: false,
   mixins: [baseCustomForm],
 
   props: {
@@ -38,9 +39,6 @@ export default {
     }
   },
 
-  data() {
-    return {};
-  },
 
   computed: {
     ...mapGetters("account-edit", { fontSize: "getFontSize" }),

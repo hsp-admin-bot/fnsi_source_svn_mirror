@@ -1,11 +1,17 @@
 <template>
   <ntss-layout>
-    <header-component slot="header-content" ref="headerComponent"/>
+    <template #header-content>
+      <header-component ref="headerComponent"/>
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng start -->
-    <!-- <bread-crumbs-component slot="bread-crumbs-content" :history-key="historyKey" :no-split="true" @refresh='refresh'/> -->
-    <bread-crumbs-component slot="bread-crumbs-content" :history-key="historyKey" :no-split="true" />
+    <!-- <bread-crumbs-component #bread-crumbs-content :history-key="historyKey" :no-split="true" @refresh='refresh'/> -->
+    <template #bread-crumbs-content>
+      <bread-crumbs-component :history-key="historyKey" :no-split="true" />
+    </template>
     <!-- #9271 パンくずを押しても内容の最新データの表示がされない。linjunfeng end -->
-    <main-component slot="main-content" ref="mainComponent" :history-key="historyKey" />
+    <template #main-content>
+      <main-component ref="mainComponent" :history-key="historyKey" />
+    </template>
   </ntss-layout>
 </template>
 
@@ -41,7 +47,7 @@ export default {
 </script>
 
 <style scoped>
-.content-container >>> * {
+.content-container :deep(*) {
   box-sizing: border-box;
 }
 </style>

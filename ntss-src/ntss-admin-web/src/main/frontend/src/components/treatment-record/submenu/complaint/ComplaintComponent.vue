@@ -3,7 +3,8 @@
  */
 <template>
   <submenu-base>
-    <div slot="header">
+    <template #header>
+      <div>
       <div class="btn-area">
         <v-ons-button
           class="button registration-btn btn3-normal"
@@ -21,8 +22,10 @@
           @click="showElectrocardiogramModal"
         >心電図</v-ons-button>
       </div>
-    </div>
-    <div slot="main" id="complaint-component">
+      </div>
+    </template>
+    <template #main>
+      <div id="complaint-component">
       <table class="treatment-record-list complaint-grid">
         <thead>
           <tr>
@@ -75,7 +78,7 @@
               <v-ons-checkbox
                 :disabled="isCheckboxDisabled(rowData)"
                 v-model="rowData.checked"
-                @click.stop.native="() => {}"
+                @click.stop="() => {}"
                 :id="`checkbox-btn${index}`"
                 @input="checkStatus(rowData)"
                 :class="index === displayList.length - 1 ? 'last-box' : ''"
@@ -123,12 +126,15 @@
         :popoverTreatment="popoverTreatment"
         @popover-close="closePopover"
       />
-    </div>
+      </div>
+    </template>
   </submenu-base>
 </template>
 
 <script>
-import { mapActions, mapGetters, mapMutations } from "vuex";
+import { getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+
+import { mapActions, mapGetters, mapMutations } from "@/compat/vue/vuex";
 import SubmenuBase from "@/components/treatment-record/SubmenuBaseComponent";
 import DiscardConfirmationMixin from "@/components/treatment-record/DiscardConfirmationMixin";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -139,11 +145,11 @@ import { ElectrocardiogramModal } from "@/models/treatment-record/complaint/Elec
 import { CODES } from "@/constants/TreatmentRecord";
 import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 import { messageFormat } from "@/functions/common/MessageFormat";
-import { EventBus } from "@/eventBus";
-import BigNumber from "bignumber.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
+import BigNumber from "@/compat/number/bignumber";
 import ComplaintComponentMixin from "@/components/treatment-record/submenu/complaint/ComplaintComponentMixin";
 import TreatmentMedicineComponent from "@/components/treatment-record/submenu/complaint/TreatmentMedicineComponent";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
 import { getAuthorized } from "@/functions/common/CommonFunctions";
 import { sendRequestGetTreatmentRecordMediInfo } from "@/apis/treatment-record";
@@ -199,6 +205,7 @@ export default {
       "getSharedFacilityCd",
     ]),
     ...mapGetters("user", ["getFacilityCd"]),
+    ...mapGetters("pat-info", ["selectedPatId"]),
     ...mapGetters("treatment-record/common", ["getDialysisState"]),
     ...mapGetters("treatment-record/complaint", {
       getDataListForIndex: "getComplaintData",
@@ -226,7 +233,7 @@ export default {
             // それに連動して displayList の再計算が行われるため
             // checked の値は再び checkFlag == "1" の条件で設定されなおす
             checked: element.checkFlag == "1",
-            occurDate: moment(element.occurDate).format("YYYY-MM-DD HH:mm:ss.SSS"),
+            occurDate: dayjs(element.occurDate).format("YYYY-MM-DD HH:mm:ss.SSS"),
             occurTime: element.occurTime,
             complaints: element.complaint,
             treatName: treatment.treatName,
@@ -243,8 +250,7 @@ export default {
       // セルの結合
       // 重複を排除したctlNoのリストを作成
       const ctlNoList = Array.from(new Set(
-        result.map(e => e.treatment.ctlNo).concat(result.map(e => e.complaints.ctlNo))
-      ));
+        result.map(e => e.treatment.ctlNo).concat(result.map(e => e.complaints.ctlNo))));
 
       // 行のソートを行う
       result.sort((a, b) => {
@@ -275,8 +281,7 @@ export default {
       ctlNoList.forEach(ctlNo => {
         const rows = result.filter(rowData => (
           (rowData.treatment.ctlNo === ctlNo || rowData.complaints.ctlNo === ctlNo)
-          && rowData.isEditable
-        ));
+          && rowData.isEditable));
         if (!rows.length) return;
 
         // 結合する行数と罫線出力有無のフラグを初期化
@@ -699,9 +704,8 @@ export default {
     makeComplaintsFromMedicineInfo(rstMediInfo, medicine) {
       const result = JSON.parse(rstMediInfo).filter(
         // 投与済み薬剤のみを対象にする
-        info => info.effect_flg === 1
-      ).map(info => {
-        const occurDateMoment = moment(info.effect_date);
+        info => info.effect_flg === 1).map(info => {
+        const occurDateMoment = dayjs(info.effect_date);
         const medicineCd = info.cd;
         const treatName = info.name;
         const treatStaffName = `${info.effect_user_last_name} ${info.effect_user_first_name}`;
@@ -773,8 +777,7 @@ export default {
               // 削除済みなどでマスタの表示順がないものは末尾に並ぶようにする
               const index = medicine.findIndex(medicineMst => (
                 medicineMst.medicineType === medicineType
-                && medicineMst.medicineCd === treatMedicine.cd
-              ));
+                && medicineMst.medicineCd === treatMedicine.cd));
               return index > -1 ? index : medicine.length;
             })(rowData.treatment),
             (medicineType => {
@@ -909,12 +912,7 @@ export default {
       // データをクリアする
       this.setComplaintData([]);
       this.medicineInfoList = [];
-      
-      // mod #12462 患者情報共有 Ji start
-      const param = {
-        ordNo: this.getOrdNo,
-        facilityCd: this.getSharedFacilityCd
-      }
+
       // API呼び出し
       const [
         response,
@@ -922,12 +920,18 @@ export default {
         medicineAllResponse,
         medicineResponse,
       ] = await Promise.all([
-        this.getTreatmentRecordComplaint(this.getOrdNo),
-        this.getMonitorMsgRecord(param),
+        this.getTreatmentRecordComplaint({
+          ordNo: this.getOrdNo,
+          selectedPatId: this.selectedPatId
+        }),
+        this.getMonitorMsgRecord({
+          ordNo: this.getOrdNo,
+          facilityCd: this.getSharedFacilityCd,
+          selectedPatId: this.selectedPatId
+        }),
         this.fetchMedicineAllTabooAllergy(),
         this.fetchMedicineInfoList(),
       ]);
-      // mod #12462 患者情報共有 Ji end
 
       // 治療記録データの取得
       const {
@@ -985,14 +989,19 @@ export default {
       // 施設設定で投与薬剤情報表示がOFFの場合はnullを返して終わる
       if (await this.isMedicineInfoDisabled()) return null;
 
-      return await sendRequestGetTreatmentRecordMediInfo(this.getOrdNo);
+      return await sendRequestGetTreatmentRecordMediInfo(
+        this.getOrdNo,
+        this.selectedPatId
+      );
     },
     // 施設設定で投与薬剤情報表示がONの場合はtrueを返す
     async isMedicineInfoDisabled() {
       if (this.medicineInfoSettingValue == null) {
         // まだ施設設定を取得していない場合
         const response = await sendRequestGetMstFacilitySettingValue(
-          this.getFacilityCd, COMPLAINT_MEDICINE_INFO
+          this.getFacilityCd,
+          COMPLAINT_MEDICINE_INFO,
+          this.selectedPatId
         );
         this.medicineInfoSettingValue = (response?.data === TOGGLE_VALUE_ON)
           ? TOGGLE_VALUE_ON
@@ -1216,9 +1225,7 @@ export default {
         new Treatment(
           treatment,
           treatStaffList.length > idx ? treatStaffList[idx] : null,
-          orgTreatmentListCount > idx ? false : true
-        )
-      ).sort((a, b) => a.rowNo - b.rowNo);
+          orgTreatmentListCount > idx ? false : true)).sort((a, b) => a.rowNo - b.rowNo);
       return { treatments, newTreatmentList };
     },
 
@@ -1235,9 +1242,7 @@ export default {
         result.unshift(
           new Complaint(
             { occur_date: this.rstStartDate, complaint: "治療開始" },
-            true
-          )
-        );
+            true));
       }
 
       // 透析終了レコードを追加する
@@ -1245,9 +1250,7 @@ export default {
         result.push(
           new Complaint(
             { occur_date: this.rstEndDate, complaint: "治療終了" },
-            true
-          )
-        );
+            true));
       }
 
       return result;
@@ -1293,7 +1296,7 @@ export default {
     refresh() {
       // 子機能ボタンエリアの更新
       this.$emit("update");
-      if (this.selfScreenName !== this.$router.currentRoute.name) return;
+      if (this.selfScreenName !== this.$route.name) return;
 
       this.init();
       this.alertFlag = true;
@@ -1303,8 +1306,7 @@ export default {
     getMedicineBottleIconSrc(rowData) {
       const medicineName = rowData.treatment.treatMedicine.name;
       const fileName = (["【禁忌】", "【禁忌・ｱﾚﾙｷﾞｰ】", "【ｱﾚﾙｷﾞｰ】"].some(
-        prefix => medicineName.includes(prefix)
-      )) ? "medicine-bottle-red" : "medicine-bottle";
+        prefix => medicineName.includes(prefix))) ? "medicine-bottle-red" : "medicine-bottle";
       return `img/treatment-record/${fileName}.png`;
     },
     checkStatus(data) {
@@ -1364,7 +1366,7 @@ export default {
       return parseInt(ctlNo) > 0;
     },
     selectConfirm(index) {
-      const element = document.getElementById(`checkbox-btn${index}`);
+      const element = getScopedElementById(`checkbox-btn${index}`, this.$el || this);
       const clickElement = element.children[0];
       clickElement.click();
     },
@@ -1383,9 +1385,7 @@ export default {
         || rowData.isDialysis
         || rowData.isMedicineInfo
         || this.isTreatmentEditDisabled(rowData.treatment.isEditable)
-	// add #12462 患者情報共有 Ji start
         || !this.isShared
-	// add #12462 患者情報共有 Ji end
       );
     },
     /**
@@ -1437,7 +1437,7 @@ export default {
   created() {
     this.init();
     // 画面名称取得
-    this.selfScreenName = this.$router.currentRoute.name;
+    this.selfScreenName = this.$route.name;
     // イベント登録
     // 保存イベントを登録
     EventBus.$on("saveCompTreatEdit", this.onSave);
@@ -1449,10 +1449,10 @@ export default {
   /**
    * コンポーネント破棄
    */
-  beforeDestroy() {
+  beforeUnmount() {
     EventBus.$off("refresh", this.refresh);
-    EventBus.$off("saveCompTreatEdit");
-    EventBus.$off("saveCompTreatCreate");
+    EventBus.$off("saveCompTreatEdit", this.onSave);
+    EventBus.$off("saveCompTreatCreate", this.onSave);
 
     // dataの初期化
     Object.assign(this.$data, this.$options.data());
@@ -1464,7 +1464,7 @@ export default {
 .ntss-list-header-th-sticky {
   z-index: 1;
 }
-.btn-area >>> ons-button {
+.btn-area :deep(ons-button) {
   margin: 8px;
 }
 .scroll-table {

@@ -16,8 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import jp.co.nikkiso.ntss.core.dao.SysSystemManagerDao;
 import java.util.regex.Pattern;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -29,7 +29,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
+import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 
 /**
  * サインイン管理のリソースクラス
@@ -89,12 +92,24 @@ public class SysSigninManagerResource {
    */
   @GetMapping("/autoLogin")
   public ResponseEntity<?> getLoginInfo(@RequestParam("userId") String userId
-          , @RequestParam("facilityCd") String facilityCd) {
+          , @RequestParam("facilityCd") String facilityCd,
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260512 start
+          @AuthenticationPrincipal NtssUser ntssUser
+          // #11205 -ペンテスト2－4認可制御の不備  add 20260512 end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260512 start
+    // 施設越え抑止: 既に認証済みセッションがある場合のみ有効（未認証は Security 側で 401、本 if はスキップ）
+    if (ntssUser != null && !ntssUser.isNkkAdminUser() && facilityCd != null
+        && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260512 end
+
     try {
       return new ResponseEntity<>(sysSigninManagerService.getAutoLoginInfo(userId, facilityCd), HttpStatus.OK);
     } catch (Exception e) {
       outputLog(LogLevel.ERROR, NtssUtils.ExcetionStackTraceToString(e));
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     }
   }
   /* add by chamaojia 2025-03-18 [11587] add automatic logon --end */
@@ -124,7 +139,7 @@ public class SysSigninManagerResource {
     } catch (Exception e) {
       String errorMessage = "サインイン管理検索API実行(端末固有文字列)に失敗しました.";
       outputLog(LogLevel.ERROR, errorMessage + e.getLocalizedMessage());
-      return new ResponseEntity<>(null,
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null,
         HttpStatus.BAD_REQUEST);
     } finally {
       // ログ出力
@@ -139,7 +154,11 @@ public class SysSigninManagerResource {
    * @return 利用者IDに該当するサインイン管理
    */
   @GetMapping("/select/user/{userId}")
-  public ResponseEntity<?> getByUserId(@PathVariable("userId") Long userId) {
+  public ResponseEntity<?> getByUserId(@PathVariable("userId") Long userId,
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 end
+) {
     // ログ出力
     outputLog(LogLevel.DEBUG, "サインイン管理検索API実行(利用者ID):" + userId.toString());
     try {
@@ -148,11 +167,23 @@ public class SysSigninManagerResource {
       sysSigninManager.setUserId(userId);
       // レスポンス生成
       List<SysSigninManager> sysSigninManagerList = sysSigninManagerService.getByParam(sysSigninManager);
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 start
+      if (ntssUser == null) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+      if (!ntssUser.isNkkAdminUser()) {
+        for (SysSigninManager signinManager : sysSigninManagerList) {
+          if (signinManager.getFacilityCd() != null && !signinManager.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260512 end
       return new ResponseEntity<>(sysSigninManagerList, HttpStatus.OK);
     } catch (Exception e) {
       String errorMessage = "サインイン管理検索API実行(利用者ID)に失敗しました.";
       outputLog(LogLevel.ERROR, errorMessage + e.getLocalizedMessage());
-      return new ResponseEntity<>(null,
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null,
         HttpStatus.BAD_REQUEST);
     } finally {
       // ログ出力
@@ -234,7 +265,7 @@ public class SysSigninManagerResource {
       return new ResponseEntity<>(colorCode, HttpStatus.OK);
     } catch (Exception e) {
       outputLog(LogLevel.ERROR, NtssUtils.ExcetionStackTraceToString(e));
-      return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, HttpStatus.BAD_REQUEST);
     } finally {
       // ログ出力
       outputLog(LogLevel.DEBUG, "背景色のカラーコード取得処理終了");

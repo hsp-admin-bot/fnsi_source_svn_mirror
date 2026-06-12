@@ -30,7 +30,7 @@ import {
   sortSetCdList,
 } from "@/functions/exam-request/ExamRequestFunctions";
 import { getDeadlineDate } from "@/functions/common/DateTimeUtils";
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 import { toFixed } from "@/functions/common/NumberFunctions";
 import { deepCopy } from "@/functions/common/CommonFunctions";
 
@@ -359,14 +359,14 @@ export default {
         // すべて 0 が設定されているが、
         // 念のためすべての区分のデータを処理する形にしておく
         ["1", "2", "0"].forEach(regOrderClass => {
-          const itemSet = obj.radItemSet[regOrderClass];
+          const itemSet = obj.radItemSet[regOrderClass] || {};
           const setCdList = Object.keys(itemSet);
           if (!setCdList.length) return;
           headerObj.rowspan += setCdList.length;
 
           // 検査セットリストの並び順に合わせた順で表示用データを追加する
           // （削除済みなどで検査セットリストに存在しないものは
-          // 　末尾に検査セットコードの昇順で追加する）
+          //  末尾に検査セットコードの昇順で追加する）
           sortSetCdList(setCdList, getters.getSetOrderMap);
           setCdList.forEach(radSetCd => {
             const setObj = itemSet[radSetCd];
@@ -384,9 +384,7 @@ export default {
               radStatus: setObj.status,
               radStatusDetail: setObj.statusDetail,
               nowIsLock: setObj.isLock,
-              // add #12462 患者情報共有 Ji start
-              facilityCd: Object.values(setObj.facilityCd)[0]
-              // add #12462 患者情報共有 Ji end
+              facilityCd: Object.values(setObj.facilityCd || {})[0],
             });
           });
         });
@@ -580,7 +578,7 @@ export default {
             if (!physicalInfoList.length) return;
             const foundInfo = physicalInfoList.find(info => info.exam_date !== "" && info.ctr !== null);
             if (foundInfo) {
-              exam_date = moment(foundInfo.exam_date).format("YYYY/MM/DD");
+              exam_date = dayjs(foundInfo.exam_date).format("YYYY/MM/DD");
               ctr = toFixed(foundInfo.ctr, 2);
             }
           });
@@ -636,9 +634,7 @@ export default {
                 status: {},
                 statusDetail: {},
                 isLock: {},
-                // add #12462 患者情報共有 Ji start
                 facilityCd: {},
-                // add #12462 患者情報共有 Ji end
               };
             }
             const targetObjSetCd = targetObjOrderClass[obj.rad_set_cd];
@@ -646,9 +642,7 @@ export default {
             targetObjSetCd.data[data.strRadDate] = SAVED;
             targetObjSetCd.dataDetail[strRadDateTime] = SAVED;
             targetObjSetCd.time[data.strRadDate] = data.strRadTime;
-            // add #12462 患者情報共有 Ji start
             targetObjSetCd.facilityCd[data.strRadDate] = data.facilityCd;
-            // add #12462 患者情報共有 Ji end
             targetObjSetCd.dateTime.push(strRadDateTime);
             // 「結果あり」フラグ(同日に有効なフラグがあった場合はそちらを優先する)
             const dateStatus = targetObjSetCd.status[data.strRadDate];
@@ -658,7 +652,7 @@ export default {
             targetObjSetCd.statusDetail[strRadDateTime] = data.radStatus;
             // 締切フラグ(締切は日単位で変動する為、日付毎のデータで持つ)
             if (state.deadlineCondition.deadlineFlg) {
-              if (moment(deadlineDate).isAfter(data.strRadDate)) {
+              if (dayjs(deadlineDate).isAfter(data.strRadDate)) {
                 // 締切を過ぎている
                 targetObjSetCd.isLock[data.strRadDate] = "1";
               } else {
@@ -692,31 +686,35 @@ export default {
       return sendRequestUpdateRecordList(obj);
     },
     // 検査セット一覧取得
-    searchRadSetNameList({ commit }, facilityCd) {
+    searchRadSetNameList({ commit }, payload) {
+      const facilityCd = typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = typeof payload === "object" ? payload.selectedPatId : undefined;
       commit("setRadSetNameList", []);
-      return sendRequestGetMstRadSetList(facilityCd).then(response => {
+      return sendRequestGetMstRadSetList(facilityCd, selectedPatId).then(response => {
         commit("setRadSetNameList", response.data);
         return Promise.resolve(response.data);
       });
     },
     // 締切設定を施設設定から取得
-    setRadDeadline({ commit }, facilityCd) {
+    setRadDeadline({ commit }, payload) {
+      const facilityCd = payload && typeof payload === "object" ? payload.facilityCd : payload;
+      const selectedPatId = payload && typeof payload === "object" ? payload.selectedPatId : undefined;
       // 検査締切有無
-      sendRequestGetMstFacilitySettingValue(facilityCd, RAD_DEADLINE).then(response => {
+      sendRequestGetMstFacilitySettingValue(facilityCd, RAD_DEADLINE, selectedPatId).then(response => {
         commit("setDeadlineCondition", {
           code: RAD_DEADLINE,
           data: response.data === 1,
         });
       });
       // 検査依頼変更締切り日数
-      sendRequestGetMstFacilitySettingValue(facilityCd, RAD_DEADLINE_DATE_COUNT).then(response => {
+      sendRequestGetMstFacilitySettingValue(facilityCd, RAD_DEADLINE_DATE_COUNT, selectedPatId).then(response => {
         commit("setDeadlineCondition", {
           code: RAD_DEADLINE_DATE_COUNT,
           data: response.data,
         });
       });
       // 検査依頼変更締切り時間
-      sendRequestGetMstFacilitySettingValue(facilityCd, RAD_DEADLINE_TIME_COUNT).then(response => {
+      sendRequestGetMstFacilitySettingValue(facilityCd, RAD_DEADLINE_TIME_COUNT, selectedPatId).then(response => {
         const chkStr = "^(?:(?:[0-2][0-3])|(?:[0-1][0-9])):[0-5][0-9]$";
         const strResponse = String(response.data);
         const rtnTime = strResponse.match(chkStr) ? strResponse : "00:00";
@@ -750,9 +748,7 @@ export default {
     updateRadSetTargetList({ commit }, data) {
       commit("setRadSetTargetList", data);
     },
-    // mod #12462 患者情報共有 Ji start
-    dayAllClear({ state }, {targetDate, facilityCd}) {
-    // mod #12462 患者情報共有 Ji end
+    dayAllClear({ state }, { targetDate, facilityCd }) {
       state.editRadRequestList.forEach(pat => {
         // 一般撮影検査依頼には検査区分の指定はなく
         // すべて 0 が設定されているが、
@@ -764,10 +760,8 @@ export default {
           const itemData = item.data;
           const status = itemData[targetDate];
           if (status == null) return;
-          // add #12462 患者情報共有 Ji start
-          const facility = item.facilityCd?.[targetDate];
-          if (facility && facility !== facilityCd) return;
-          // add #12462 患者情報共有 Ji end
+          const itemFacilityCd = item.facilityCd?.[targetDate];
+          if (itemFacilityCd && itemFacilityCd !== facilityCd) return;
 
           const dataDetail = item.dataDetail;
           const detailKeys = Object.keys(dataDetail);
@@ -821,10 +815,7 @@ export default {
       // state.editRadRequestListの要素内の情報を更新したリアクションを起こさせる
       state.editRadRequestList.splice();
     },
-    // mod #12462 患者情報共有 Ji start
-    // dayAllClearDetail({ state }, targetDateTime) {
-    dayAllClearDetail({ state }, {targetDateTime, facilityCd}) {
-    // mod #12462 患者情報共有 Ji end
+    dayAllClearDetail({ state }, { targetDateTime, facilityCd }) {
       state.editRadRequestList.forEach(pat => {
         // 一般撮影検査依頼には検査区分の指定はなく
         // すべて 0 が設定されているが、
@@ -833,11 +824,9 @@ export default {
           allItem.push(...Object.values(pat.radItemSet[regOrderClass]));
           return allItem;
         }, []).forEach(item => {
-          // add #12462 患者情報共有 Ji start
-          const targetDate = targetDateTime.slice(0, 8)
-          const itemFacilityCd = item.facilityCd?.[targetDate]
-          if (itemFacilityCd && itemFacilityCd !== facilityCd) return
-          // add #12462 患者情報共有 Ji end
+          const targetDate = targetDateTime.slice(0, 8);
+          const itemFacilityCd = item.facilityCd?.[targetDate];
+          if (itemFacilityCd && itemFacilityCd !== facilityCd) return;
           const dataDetail = item.dataDetail;
           const status = dataDetail[targetDateTime];
           if (status == null) return;
@@ -903,8 +892,10 @@ export default {
       state.editRadRequestList.splice();
     },
     // 患者情報の取得
-    getPatInfoList({}, patIdList) {
-      return sendRequestGetPatInfoList(patIdList).then(response => {
+    getPatInfoList(_ctx, payload) {
+      const patIdList = Array.isArray(payload) ? payload : payload.patIdList;
+      const selectedPatId = Array.isArray(payload) ? undefined : payload.selectedPatId;
+      return sendRequestGetPatInfoList(patIdList, selectedPatId).then(response => {
         return Promise.resolve(response.data);
       });
     },

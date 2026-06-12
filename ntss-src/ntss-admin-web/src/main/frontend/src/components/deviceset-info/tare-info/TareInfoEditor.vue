@@ -18,16 +18,14 @@
 <script>
 import BaseTareAndOffWaterInfoEditor from "@/components/deviceset-info/base-modules/BaseTareAndOffWaterInfoEditor";
 import BaseTareForDeviceSet from "@/components/deviceset-info/base-modules/BaseTareAndOffWaterInfoForDeviceSet";
+import DeviceSetOwnerMixin from "@/components/deviceset-info/base-modules/DeviceSetOwnerMixin";
 // mod FNSI-連携イベントの登録適正化 楊 start
-import {mapActions, mapGetters} from "vuex";
-// mod FNSI-連携イベントの登録適正化 楊 end
-//FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
-//FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
-// del #11004 連携イベント発生部分不正 piao start
-// import { sendRequestGetCoopIniSchModifySendClass } from "@/apis/treatment-record";
+import {mapActions, mapGetters} from "@/compat/vue/vuex";
+
 // del #11004 連携イベント発生部分不正 piao end
 
 export default {
+  mixins: [DeviceSetOwnerMixin],
   components: {
     "base-editor": BaseTareAndOffWaterInfoEditor,
     "base-editor-for-device-set": BaseTareForDeviceSet
@@ -81,7 +79,7 @@ export default {
 
   created() {
     // 親のスタイル修正
-    this.$parent.$parent.styleObj = { "max-width": "500px", width: "100%" };
+    this._deviceSetDialogOwner().styleObj = { "max-width": "500px", width: "100%" };
   },
   // mod FNSI-連携イベントの登録適正化 楊 start
   computed: {
@@ -135,7 +133,10 @@ export default {
     },
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc start
     isEdit() {
-      return this.$refs.baseEditor.isEdit();
+      return this.$refs.baseEditor?.isEdit() ?? false;
+    },
+    async resetComponentIndData(structData) {
+      await this.$refs.baseEditor?.resetComponentIndData(structData);
     },
     // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者経過総合ビューア 20231214 ztc end
     /**
@@ -147,8 +148,8 @@ export default {
       //add #10266  end
       // 1つの治療予定限定時に未編集チェックを実施
       if (
-        this.$parent.$parent.settingData.startDateEdit &&
-        this.$parent.$parent.settingData.endDateEdit
+        this._deviceSetDialogOwner().settingData.startDateEdit &&
+        this._deviceSetDialogOwner().settingData.endDateEdit
       ) {
         if (this.checkEdit()) {
           return;
@@ -159,14 +160,14 @@ export default {
       // 子で更新用関数を呼ぶ
       // del 8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。zhou start
       //add by ztc 2023-02-27 [Optimize runtime No.5482] --start
-      // this.$set(structData, "opeCd", "004030");
-      // this.$set(structData, "crud", "U");
-      // this.$set(structData, "facilityCd", this.propsFacilityCd);
-      // this.$set(structData, "hospPatId", this.selectedPat.pat_personal_main.hosp_pat_id);
-      // this.$set(structData, "patId", this.selectedPat.pat_personal_main.pat_id);
-      // this.$set(structData, "ordNo", this.settingIndData.ordNo);
-      // this.$set(structData, "baseDate", "");
-      // this.$set(structData, "indUser", this.getStateUserAccountInfo.userId);
+      // this._compatSet(structData, "opeCd", "004030");
+      // this._compatSet(structData, "crud", "U");
+      // this._compatSet(structData, "facilityCd", this.propsFacilityCd);
+      // this._compatSet(structData, "hospPatId", this.selectedPat.pat_personal_main.hosp_pat_id);
+      // this._compatSet(structData, "patId", this.selectedPat.pat_personal_main.pat_id);
+      // this._compatSet(structData, "ordNo", this.settingIndData.ordNo);
+      // this._compatSet(structData, "baseDate", "");
+      // this._compatSet(structData, "indUser", this.getStateUserAccountInfo.userId);
       //add by ztc 2023-02-27 [Optimize runtime No.5482] --end
       // del 8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。zhou end
       await this.$refs.baseEditor.updateInfo(structData);
@@ -498,17 +499,17 @@ export default {
      */
     showMessage(code, type, stringParams, targetName) {
       // メッセージコードを格納
-      this.$parent.$parent.messageDialogInfo.messageCd = code;
+      this._deviceSetDialogOwner().messageDialogInfo.messageCd = code;
       // メッセージタイプを格納
-      this.$parent.$parent.messageDialogInfo.type = type;
+      this._deviceSetDialogOwner().messageDialogInfo.type = type;
       // メッセージ置換文字列を格納
-      this.$parent.$parent.messageDialogInfo.stringParams =
+      this._deviceSetDialogOwner().messageDialogInfo.stringParams =
         undefined !== stringParams ? stringParams : [];
       // メッセージ表示対象名を格納
-      this.$parent.$parent.messageDialogInfo.targetName = targetName;
+      this._deviceSetDialogOwner().messageDialogInfo.targetName = targetName;
       // メッセージを表示
       setTimeout(() => {
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._deviceSetDialogOwner().messageDialogInfo.isDialogVisible = true;
       }, 10);
     },
 
@@ -516,7 +517,7 @@ export default {
      * モーダルを閉じる
      */
     hideModal() {
-      this.$parent.$parent.$emit("hide-modal");
+      this._hideDeviceSetModal();
     }
   }
 };

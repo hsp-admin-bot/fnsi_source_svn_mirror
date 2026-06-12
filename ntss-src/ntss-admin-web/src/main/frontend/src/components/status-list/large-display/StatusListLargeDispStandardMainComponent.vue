@@ -3,77 +3,88 @@
  */
 <template>
   <table>
-    <td class="pat-list-area">
-      <div class="pat-list-region">
-        <div id="puncture-region-icon" />
-        <div class="region-label large-display-label">穿刺</div>
-        <div id="return-region-icon" />
-        <div class="region-label large-display-label">返血予定</div>
-        <div id="returned-region-icon" />
-        <div class="region-label large-display-label">返血</div>
-      </div>
-      <div class="pat-list" :style="patListHeightStyles">
-        <table class="pat-list-table">
-          <pat-row
-            v-for="(dispItem, no) in beforeTreatList"
-            :key="'before' + no"
-            :dispItem="dispItem"
-          ></pat-row>
-          <pat-row
-            v-for="(dispItem, no) in afterTreatList"
-            :key="'after' + no"
-            :dispItem="dispItem"
-          ></pat-row>
-          <!-- NOTE: 治療中判定が色ではわかりづらければ復活させる
-          <tr>
-            <td
-              class="annotation-label"
-              colspan="7"
-              v-if="nowTreatList.length > 0"
-            >-------------------- 以下、治療中 --------------------</td>
-          </tr>
-          -->
-          <pat-row
-            v-for="(dispItem, no) in nowTreatList"
-            :key="'now' + no"
-            :dispItem="dispItem"
-          ></pat-row>
-        </table>
-      </div>
-    </td>
+    <tbody>
+      <tr>
+        <td class="pat-list-area">
+          <div class="pat-list-region">
+            <div id="puncture-region-icon" />
+            <div class="region-label large-display-label">穿刺</div>
+            <div id="return-region-icon" />
+            <div class="region-label large-display-label">返血予定</div>
+            <div id="returned-region-icon" />
+            <div class="region-label large-display-label">返血</div>
+          </div>
+          <div class="pat-list" :style="patListHeightStyles">
+            <table class="pat-list-table">
+              <tbody>
+                <pat-row
+                  v-for="(dispItem, no) in beforeTreatList"
+                  :key="'before' + no"
+                  :dispItem="dispItem"
+                ></pat-row>
+                <pat-row
+                  v-for="(dispItem, no) in afterTreatList"
+                  :key="'after' + no"
+                  :dispItem="dispItem"
+                ></pat-row>
+                <!-- NOTE: 治療中判定が色ではわかりづらければ復活させる
+                <tr>
+                  <td
+                    class="annotation-label"
+                    colspan="7"
+                    v-if="nowTreatList.length > 0"
+                  >-------------------- 以下、治療中 --------------------</td>
+                </tr>
+                -->
+                <pat-row
+                  v-for="(dispItem, no) in nowTreatList"
+                  :key="'now' + no"
+                  :dispItem="dispItem"
+                ></pat-row>
+              </tbody>
+            </table>
+          </div>
+        </td>
 
-    <td class="info-area">
-      <div id="pat-count-area">
-        <div class="title large-display-label">穿刺待ち</div>
-        <table class="puncture-area">
-          <tr>
-            <td></td>
-            <td colspan="2" class="pat-count">{{puncWait}}</td>
-            <td class="mei">名</td>
-          </tr>
-        </table>
-        <div class="title large-display-label">返血待ち</div>
-        <table class="return-area">
-          <tr>
-            <td></td>
-            <td colspan="2" class="pat-count">{{returnWait}}</td>
-            <td class="mei">名</td>
-          </tr>
-        </table>
-        <div class="title large-display-label">お知らせ</div>
-      </div>
-      <div class="info" :style="infoHeightStyles">
-        <div v-for="(data, idx) in info" :key="idx">
-          <div class="info-title large-display-label">{{ data.title }}</div>
-          <div class="info-content large-display-label">{{ data.content }}</div>
-        </div>
-      </div>
-    </td>
+        <td class="info-area">
+          <div id="pat-count-area">
+            <div class="title large-display-label">穿刺待ち</div>
+            <table class="puncture-area">
+              <tbody>
+                <tr>
+                  <td></td>
+                  <td colspan="2" class="pat-count">{{puncWait}}</td>
+                  <td class="mei">名</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="title large-display-label">返血待ち</div>
+            <table class="return-area">
+              <tbody>
+                <tr>
+                  <td></td>
+                  <td colspan="2" class="pat-count">{{returnWait}}</td>
+                  <td class="mei">名</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="title large-display-label">お知らせ</div>
+          </div>
+          <div class="info" :style="infoHeightStyles">
+            <div v-for="(data, idx) in info" :key="idx">
+              <div class="info-title large-display-label">{{ data.title }}</div>
+              <div class="info-content large-display-label">{{ data.content }}</div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </tbody>
   </table>
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { getScopedElementsByClassName, getScopedElementById } from "@/functions/common/LayoutMeasureHelper";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
 import PatRow from "@/components/status-list/large-display/StatusListLargeDispPatRow";
 
 export default {
@@ -159,12 +170,12 @@ export default {
     calculateContentHeight() {
       const wh = this.windowHeight;
       const cfh = Array.prototype.slice
-        .call(document.getElementsByClassName("large-display-footer-content"))
+        .call(getScopedElementsByClassName("large-display-footer-content", this.$el || null))
         .shift().clientHeight;
       const prh = Array.prototype.slice
-        .call(document.getElementsByClassName("pat-list-region"))
+        .call(getScopedElementsByClassName("pat-list-region", this.$el || null))
         .shift().clientHeight;
-      const pch = document.getElementById("pat-count-area").clientHeight;
+      const pch = Number(getScopedElementById("pat-count-area", this.$el || null)?.clientHeight || 0);
 
       this.patListHeight = wh - cfh - prh - 15;
       if (this.patListHeight < pch + cfh) {
@@ -176,7 +187,7 @@ export default {
       }
     }
   },
-  props: {},
+
   watch: {
     windowHeight() {
       this.$nextTick(() => {
@@ -184,7 +195,7 @@ export default {
       });
     }
   },
-  beforeMount() {},
+
   mounted() {
     this.$nextTick(() => {
       this.calculateContentHeight();
@@ -195,9 +206,7 @@ export default {
       this.calculateContentHeight();
     });
   },
-  created() {},
-  beforeDestroy() { },
-  destroyed() { }
+
 };
 </script>
 
@@ -211,9 +220,11 @@ export default {
   width: 100%;
   display: flex;
   flex-direction: row;
+  margin-top: 0.75em;
 }
 .region-label {
   font-size: 2.4em;
+  margin-top: -1px;
 }
 #puncture-region-icon {
   background-color: #0066ff;
@@ -238,6 +249,7 @@ export default {
 .pat-list-area {
   margin: 15px 10px 0 10px;
   min-width: 745px;
+  vertical-align: top;
 }
 .pat-list {
   overflow-y: auto;
@@ -257,6 +269,7 @@ export default {
   margin-right: 10px;
   min-width: 370px;
   overflow-x: auto;
+  vertical-align: top;
 }
 .title {
   font-size: 2.4em;

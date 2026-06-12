@@ -1,14 +1,13 @@
 package jp.co.nikkiso.ntss.admin_web.service.statusList.dto.physicalInfo;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import lombok.Getter;
 
@@ -60,7 +59,7 @@ public class PhysicalInfo {
    * @param physicalInfo 身体情報のJSON文字列
    */
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
-  public PhysicalInfo(String physicalInfo)  throws IOException {
+  public PhysicalInfo(String physicalInfo)  throws tools.jackson.core.JacksonException {
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
     // allRecordsフィールドを初期化
     this.allRecords = new ArrayList<PhysicalInfoItem>();
@@ -153,7 +152,7 @@ public class PhysicalInfo {
     // JSON文字列として出力
     try {
       rtn = mapper.writeValueAsString(root);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       // 例外が発生した場合は空文字列を返す
       rtn = "";
     }
@@ -165,7 +164,7 @@ public class PhysicalInfo {
    * @param physicalInfo 身体情報のJSON文字列
    */
   // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang start
-  private void setPhysicalInfo(String physicalInfo)  throws IOException {
+  private void setPhysicalInfo(String physicalInfo)  throws tools.jackson.core.JacksonException {
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
     if (physicalInfo != null) {
       ObjectMapper mapper = new ObjectMapper();
@@ -173,7 +172,7 @@ public class PhysicalInfo {
         JsonNode jsonNode_parent = mapper.readTree(physicalInfo);
         this.setItems(jsonNode_parent);
 
-      } catch (IOException e) {
+      } catch (tools.jackson.core.JacksonException e) {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
 //      e.printStackTrace();
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
@@ -315,7 +314,11 @@ public class PhysicalInfo {
     rtn.height = height_node == null ? "" : height_node.asText();
     // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou start
     //rtn.ctrWeight = ctrWeight_node == null ? "" : ctrWeight_node.asText();
-    rtn.ctrWeight = ctrWeight_node == null ? null : ctrWeight_node.decimalValue();
+    String tempCtrWeight = null;
+    if(ctrWeight_node != null && !ctrWeight_node.isNull()) {
+      tempCtrWeight = ctrWeight_node.asString();
+    }
+    rtn.ctrWeight = tempCtrWeight == null ? null : new BigDecimal(tempCtrWeight);
     // mod #7475 コンバートしたord_mainにデータが正常な形でコンバートされていない dou end
     rtn.breastDia = breastDia_node == null ? "" : breastDia_node.asText();
     rtn.chestDia = chestDia_node == null ? "" : chestDia_node.asText();

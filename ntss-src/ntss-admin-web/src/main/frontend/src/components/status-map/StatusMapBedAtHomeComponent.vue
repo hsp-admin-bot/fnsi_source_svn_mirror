@@ -15,7 +15,7 @@ import {
   PROCESS_STATE,
   MARKER_COLOR
 } from "@/constants/statusMapConstants.js";
-import { mapActions } from "vuex";
+import { mapActions } from "@/compat/vue/vuex";
 
 export default {
   mixins: [NextTransitionMixin, PatHeaderControlMixin],

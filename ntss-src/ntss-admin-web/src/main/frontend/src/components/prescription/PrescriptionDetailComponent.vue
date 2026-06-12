@@ -13,20 +13,7 @@ export default {
       msg: "処方画面です。"
     };
   },
-  computed: {
-  },
-  methods: {
-  },
-  watch: {
-  },
-  created() {
-  },
-  mounted() {
-  },
-  updated() {
-  },
-  destroyed() {
-  }
+
 };
 </script>
 

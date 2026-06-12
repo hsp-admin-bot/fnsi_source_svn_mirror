@@ -1,11 +1,7 @@
-//@ts-check
-
 /**
  * 治療状況ベッドレイアウトAPI
  */
-// @ts-ignore
 import { ApiHelper } from "@/apis/AxiosHelper";
-// @ts-ignore
 import store from "@/stores";
 
 /**
@@ -15,7 +11,7 @@ const URL_BASE_BED_LAYOUT = "/bed_layout";
 
 /**
  * ベッドレイアウトリストの取得
- * @param {String} facilityCd
+ * @param {string} facilityCd 施設コード
  */
 export function sendRequestGetBedLayoutList(facilityCd) {
   return getWithLoader(`${URL_BASE_BED_LAYOUT}/${facilityCd}`);
@@ -23,7 +19,7 @@ export function sendRequestGetBedLayoutList(facilityCd) {
 
 /**
  * ベッドリストの取得
- * @param {String} facilityCd
+ * @param {string} facilityCd 施設コード
  */
 export function sendRequestGetMstBed(facilityCd) {
   const URL_BASE_MST_BED = "mst_bed";
@@ -34,8 +30,8 @@ export function sendRequestGetMstBed(facilityCd) {
 
 /**
  * ベッドレイアウト一件の取得
- * @param {String} facilityCd
- * @param {String | Number} layoutId
+ * @param {string} facilityCd 施設コード
+ * @param {string|number} layoutId レイアウトID
  */
 export function sendRequestGetBedLayout(facilityCd, layoutId) {
   return getWithLoader(`${URL_BASE_BED_LAYOUT}/${facilityCd}/${layoutId}`);
@@ -43,7 +39,7 @@ export function sendRequestGetBedLayout(facilityCd, layoutId) {
 
 /**
  * ベッドレイアウトの新規登録
- * @param {any} params
+ * @param {Record<string, unknown>} params 登録データ
  */
 export function sendRequestInsertBedLayout(params) {
   return postWithLoader(`${URL_BASE_BED_LAYOUT}/insert`, params);
@@ -51,15 +47,15 @@ export function sendRequestInsertBedLayout(params) {
 
 /**
  * ベッドレイアウトの更新
- * @param {any} params
+ * @param {Record<string, unknown>} params 更新データ
  */
 export function sendRequestUpdateBedLayout(params) {
   return putWithLoader(`${URL_BASE_BED_LAYOUT}/update`, params);
 }
 
 /**
- * ベッドリストの取得
- * @param {String} facilityCd
+ * 装置リストの取得（ベッドレイアウト配下）
+ * @param {string} facilityCd 施設コード
  */
 export function sendRequestGetMstMachine(facilityCd) {
   return getWithLoader(`${URL_BASE_BED_LAYOUT}/mst_machine/${facilityCd}`);
@@ -75,8 +71,8 @@ export function sendRequestGetMachineType() {
 
 /**
  * 共通ローダを実行するGETリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {Record<string, unknown>} [params] パラメータ
  */
 function getWithLoader(url, params = undefined) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -88,8 +84,8 @@ function getWithLoader(url, params = undefined) {
 
 /**
  * 共通ローダを実行するPUTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function putWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");
@@ -101,8 +97,8 @@ function putWithLoader(url, params) {
 
 /**
  * 共通ローダを実行するPOSTリクエスト
- * @param {String} url URL
- * @param {any} params パラメータ
+ * @param {string} url URL
+ * @param {unknown} params パラメータ
  */
 function postWithLoader(url, params) {
   store.dispatch("loading-screen/setLoadingScreenMessage", "処理中・・・");

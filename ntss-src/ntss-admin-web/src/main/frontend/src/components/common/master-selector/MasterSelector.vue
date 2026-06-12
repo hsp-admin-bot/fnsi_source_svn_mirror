@@ -3,7 +3,7 @@
 <template>
   <v-ons-popover
     v-if="popoverVisible"
-    :target="targetPositionElement"
+    :target="resolvedTargetPositionElement"
     :visible="popoverVisible"
     :direction="popoverDisplayDirection"
     :class="[fontSizeSet, 'popover-style']"
@@ -146,9 +146,12 @@
 
 <script>
 import PopoverMixin from "@/components/PopoverMixin";
-import {mapGetters} from "vuex"; // add 鞠 マスタを取得するために
+import { mapGetters } from "@/compat/vue/vuex";
 import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
-import { EventBus } from "@/eventBus.js";
+
+import { EventBus } from "@/compat/vue/event-bus.js";
+import { getViewportHeight, getViewportWidth } from "@/functions/common/LayoutMeasureHelper";
+import { resolveOnsPopoverTargetElement } from "@/functions/common/OnsenFunctions";
 
 export default {
   mixins: [PopoverMixin],
@@ -258,9 +261,7 @@ export default {
      */
     targetPositionElement: {
       type: [Object, HTMLElement],
-      default() {
-        return this.$parent;
-      }
+      default: null
     },
 
     /**
@@ -360,12 +361,12 @@ export default {
       /**
        * @description 画面の高さ(レスポンシブ対応)
        */
-      windowHeight: window.innerHeight,
+      windowHeight: getViewportHeight(),
 
       /**
        * @description 画面の幅(レスポンシブ対応)
        */
-      windowWidth: window.innerWidth,
+      windowWidth: getViewportWidth(),
 
       isChanged: false ,// add #6512 患者情報画面の分の修正 劉
       // 内部 患者情報:保険の場合、選択ボタンをクリックした後、ポップアップページを開きます。start
@@ -375,6 +376,12 @@ export default {
   },
 
   computed: {
+    resolvedTargetPositionElement() {
+      return resolveOnsPopoverTargetElement(this.targetPositionElement, this);
+    },
+    resolvedTargetRectElement() {
+      return this.resolvedTargetPositionElement;
+    },
     /**
      * add 鞠 マスタを取得するために
      */
@@ -393,12 +400,12 @@ export default {
         return 'right';
       }
       // #8710 画面をリサイズすると、ポップアップ画面の表示が不正。 林峻峰 end
-      const elemPosition = this.targetPositionElement.$el
-        ? this.targetPositionElement.$el.getBoundingClientRect()
-        : this.targetPositionElement.getBoundingClientRect();
+      const targetElement = this.resolvedTargetRectElement;
+      if (!targetElement?.getBoundingClientRect) return null;
+      const elemPosition = targetElement.getBoundingClientRect();
       let direction = "right";
       let defaultHeight =  420;
-      if(this.masterPhysicalName == "mst_treatment_set" ) {
+      if(this.masterPhysicalName == "mst_treatment_set") {
         defaultHeight = 700;
       }
       if (this.windowHeight <= defaultHeight) {
@@ -514,8 +521,7 @@ export default {
         || this.popoverTitleHeader === "診断医"
         || this.popoverTitleHeader === "病名"
         || this.popoverTitleHeader === "スタッフ"
-        || this.popoverTitleHeader === "車いす"
-      ) {
+        || this.popoverTitleHeader === "車いす") {
         return true
       } else {
         return false
@@ -544,17 +550,19 @@ export default {
 
   mounted() {
     // 内部 患者情報:保険の場合、選択ボタンをクリックした後、ポップアップページを開きます。start
-    EventBus.$on("getInsuranceInfo", data => {
-      this.initName = data.editValue
-    })
+    EventBus.$off("getInsuranceInfo", this.onGetInsuranceInfo);
+    EventBus.$on("getInsuranceInfo", this.onGetInsuranceInfo);
     // 内部 患者情報:保険の場合、選択ボタンをクリックした後、ポップアップページを開きます。end
-    window.addEventListener("resize",this.resizeEventListener);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize",this.resizeEventListener);
   },
   methods: {
     // modify by 史 for 6119 ブラウザがOut of Memoryのエラーが発生する
     resizeEventListener(){
-      this.windowHeight = window.innerHeight;
-      this.windowWidth = window.innerWidth;
+      this.windowHeight = getViewportHeight();
+      this.windowWidth = getViewportWidth();
+    },
+    onGetInsuranceInfo(data) {
+      this.initName = data.editValue;
     },
     popoverPreShow,
     popoverPostShow,
@@ -599,16 +607,21 @@ export default {
     /**
      * @description 投薬支援マスタ 薬効換算の場合,薬剤分類なし
      */
-    checkMachineSupport(filter) {
-      if (this.mstMachineSupportFlg &&
-        filter === "薬剤分類" &&
-        this.popoverFilterSelectedItem["薬剤区分"] === 3
-      ) {
-        this.popoverFilterSelectedItem["薬剤分類"] = 0
-        return true
-      } else {
-        return false
+    isMachineSupportMedicineClassDisabled() {
+      return this.mstMachineSupportFlg &&
+        this.popoverFilterSelectedItem["薬剤区分"] === 3;
+    },
+    normalizeMachineSupportFilter() {
+      if (this.isMachineSupportMedicineClassDisabled() &&
+        this.popoverFilterSelectedItem["薬剤分類"] !== 0) {
+        this.popoverFilterSelectedItem = {
+          ...this.popoverFilterSelectedItem,
+          "薬剤分類": 0
+        };
       }
+    },
+    checkMachineSupport(filter) {
+      return filter === "薬剤分類" && this.isMachineSupportMedicineClassDisabled();
     },
     /* add 投薬支援マスタ 薬効換算の場合,薬剤分類なし 孔 end */
 
@@ -644,7 +657,7 @@ export default {
 
         //#10176:ポップアップのフリーワード検索の動作不正(関連修正) Start
         let filterItem = this.popoverFilter.find(item =>item.popoverFilterLabel === "薬剤分類");
-        if (filterItem != undefined && filterItem != null ) {    
+        if (filterItem != undefined && filterItem != null) {    
             filterItem = filterItem.popoverFilterDataset.find(item => item.value === classCd);
             this.popoverFilter.forEach(item => {
               this.popoverFilterSelectedItem = {
@@ -671,6 +684,7 @@ export default {
         });
       }
 
+      this.normalizeMachineSupportFilter();
       this.checkNeedleOptionDisplay();
     },
 
@@ -699,10 +713,10 @@ export default {
       }
 
       this.$emit("popover-return", retVal);
-      // #10266 投与薬剤編集モーダル選択ボタンを押下しOK押下　NGエラー発生 linjunfeng start
+      // #10266 投与薬剤編集モーダル選択ボタンを押下しOK押下 NGエラー発生 linjunfeng start
       // this.popoverContentSelectedItem = retVal.value
       this.popoverContentSelectedItem = retVal?.value || null
-      // #10266 投与薬剤編集モーダル選択ボタンを押下しOK押下　NGエラー発生 linjunfeng end
+      // #10266 投与薬剤編集モーダル選択ボタンを押下しOK押下 NGエラー発生 linjunfeng end
       this.closePopover();
     },
 
@@ -813,32 +827,39 @@ export default {
      */
     filterChange() {
       this.clearSearch();
+      this.normalizeMachineSupportFilter();
       this.checkNeedleOptionDisplay();
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // 内部 患者情報:保険の場合、選択ボタンをクリックした後、ポップアップページを開きます。start
-    EventBus.$off('getInsuranceInfo');
+    EventBus.$off("getInsuranceInfo", this.onGetInsuranceInfo);
     // 内部 患者情報:保険の場合、選択ボタンをクリックした後、ポップアップページを開きます。end
-    window.removeEventListener("resize", this.resizeEventListener);
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize", this.resizeEventListener);
   }
 };
 </script>
 
 <style scoped>
-.popover-style >>> .popover--top,
-.popover-style >>> .popover--right,
-.popover-style >>> .popover--left,
-.popover-style >>> .popover--bottom {
+.popover-style :deep(.popover--top),
+.popover-style :deep(.popover--right),
+.popover-style :deep(.popover--left),
+.popover-style :deep(.popover--bottom) {
   width: initial;
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 500px;
   height: auto;
   padding: 25px;
   border: solid 1px var(--preventive-checked-border-color);
   margin: 3px;
+}
+
+/* 100% 表示・指示編集モーダル内でも吹き出し矢印が見えるよう調整 */
+.popover-style :deep(.popover__arrow) {
+  z-index: 0;
+  display: block;
 }
 
 .popover-header-style {
@@ -880,14 +901,14 @@ export default {
 
 /* スマホ対応 */
 @media screen and (max-width: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: auto;
     padding: 10px;
   }
 }
 
 @media screen and (max-height: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: 350px;
     padding: 5px;
   }

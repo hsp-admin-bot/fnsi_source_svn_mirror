@@ -1,4 +1,4 @@
--<template>
+<template>
   <div>
     <div
       v-for="(json, index) in jsonArray"
@@ -6,7 +6,10 @@
       :class="classObjectItem(json)"
     >
       <table class="card-table">
-        {{ index + 1 }}
+        <tbody>
+        <tr class="card-index-row">
+          <td colspan="3" class="item-data">
+            {{ index + 1 }}
         <button
           v-show="actionMode"
           class="button-delete ntss-btn-outset"
@@ -16,6 +19,8 @@
           <v-ons-icon icon="fa-trash"/>
         </button>
         <br />
+          </td>
+        </tr>
         <tr>
           <td class="item-title">区分</td>
           <td colspan="2" class="item-data">
@@ -221,86 +226,58 @@
         <tr v-if="isMoveInOutToFacilityCourseDoctor(json)">
           <td class="item-title">施設</td>
           <td class="item-data">
-            <!-- <custom-simple-textarea-a
-              ref="from_facility"
-              :value="getPatDataJsonArray(json, getFacilityJsonKey(json))"
-              :display-string="dispFacilityName(json)"
-              :disabled="isMoveInOutDeath(json) || !getItemAuthorized('PatInfo', 'default_authority')"
-              form-name="【入外・転入出】施設"
-              style="vertical-align: middle;"
-            /> -->
             <custom-simple-textarea-a
               ref="from_facility"
               :value="getPatDataJsonArray(json, getFacilityJsonKey(json))"
-              :display-string="getNameDisplay(json, dispFacilityName)"
+              :display-string="getNameDisplay(json, dispFacilityName, getFacilityJsonKey(json))"
               :disabled="isMoveInOutDeath(json) || isOtherFacilityRow(json) || !getItemAuthorized('PatInfo', 'default_authority')"
               form-name="【入外・転入出】施設"
               style="vertical-align: middle;"
             />
           </td>
           <td class="item-data choice-button-area">
-            <v-ons-button
+            <common-master-selector
               v-if="!isMoveInOutDeath(json)"
-              :ref="'btnSelectFacility' + index"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
-              class="common-style-select-button btn3-normal"
-              @click="
-              selectPopoverData(
-                'facility',
-                json,
-                popoverDataMstFacility(json),
-                index
-              )">
-              選択
-            </v-ons-button>
+              :masterType="MasterType.FACILITY_PAT_INFO"
+              :facilityCd="getFacilityCd"
+              :initItem="{ value: getPatDataJsonArray(json, getFacilityJsonKey(json)).initValue }"
+              :editItem="{ value: getPatDataJsonArray(json, getFacilityJsonKey(json)).editValue }"
+              :btnName="'選択'"
+              :isVisible="false"
+              :btnClass="'common-style-select-button btn3-normal'"
+              :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
+              @popover-return="onVisitFacilityReturn($event, json)"
+            />
           </td>
         </tr>
         <tr v-if="isMoveInOutToFacilityCourseDoctor(json)">
           <td class="item-title">診療科</td>
           <td class="item-data">
-            <!-- <custom-simple-textarea-a
-              :value="getPatDataJsonArray(json, getCourseJsonKey(json))"
-              :display-string="dispCourseName(json)"
-              :disabled="isMoveInOutDeath(json) || isOtherFacilityRow(json) || !getItemAuthorized('PatInfo', 'default_authority')"
-              style="vertical-align: middle;"
-            /> -->
             <custom-simple-textarea-a
               :value="getPatDataJsonArray(json, getCourseJsonKey(json))"
-              :display-string="getNameDisplay(json, dispCourseName)"
+              :display-string="getNameDisplay(json, dispCourseName, getCourseJsonKey(json))"
               :disabled="isMoveInOutDeath(json) || isOtherFacilityRow(json) || !getItemAuthorized('PatInfo', 'default_authority')"
               style="vertical-align: middle;"
             />
           </td>
           <td class="item-data choice-button-area">
-            <v-ons-button
+            <common-master-selector
               v-if="!isMoveInOutDeath(json)"
-              :ref="'btnSelectCourse' + index"
-              class="common-style-select-button btn3-normal"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
-              @click="selectPopoverData('course', json, popoverDataMstCourse(json), index)">
-              選択
-            </v-ons-button>
+              :masterType="MasterType.COURSE_PAT_INFO"
+              :facilityCd="getFacilityCd"
+              :initItem="{ value: getPatDataJsonArray(json, getCourseJsonKey(json)).initValue }"
+              :editItem="{ value: getPatDataJsonArray(json, getCourseJsonKey(json)).editValue }"
+              :btnName="'選択'"
+              :isVisible="false"
+              :btnClass="'common-style-select-button btn3-normal'"
+              :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
+              @popover-return="onVisitCourseReturn($event, json)"
+            />
           </td>
         </tr>
         <tr v-if="isMoveInOutToFacilityCourseDoctor(json)">
           <td class="item-title">医師</td>
           <td class="item-data">
-            <!-- <custom-simple-textarea-a
-              :value="getPatDataJsonArray(json, getDoctorJsonKey(json))"
-              :display-string="
-                doctorName(
-                  json,
-                  getDoctorJsonKey(json),
-                  getPatDataJsonArray(json, getFacilityJsonKey(json)).editValue
-                )
-              "
-              :disabled="
-                isMoveInOutDeath(json) ||
-                !getItemAuthorized('PatInfo', 'default_authority') ||
-                isOtherFacilityRow(json)
-              "
-              style="vertical-align: middle;"
-            /> -->
             <custom-simple-textarea-a
               :value="getPatDataJsonArray(json, getDoctorJsonKey(json))"
               :display-string="
@@ -319,15 +296,19 @@
             />
           </td>
           <td class="item-data choice-button-area">
-            <v-ons-button
+            <common-master-selector
               v-if="!isMoveInOutDeath(json)"
-              :ref="'btnSelectDoctor' + index"
-              class="common-style-select-button btn3-normal"
-              :disabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
-              @click="selectDoctor(json, index)"
-            >
-              選択
-            </v-ons-button>
+              :masterType="MasterType.DOCTOR_PAT_INFO"
+              :facilityCd="getFacilityCd"
+              :initItem="doctorPatInfoInitItem(json)"
+              :editItem="{ value: getPatDataJsonArray(json, getDoctorJsonKey(json)).editValue }"
+              :extraParams="doctorPatInfoExtraParams(json)"
+              :btnName="'選択'"
+              :isVisible="false"
+              :btnClass="'common-style-select-button btn3-normal'"
+              :btnDisabled="!getItemAuthorized('PatInfo', 'default_authority') || isOtherFacilityRow(json)"
+              @popover-return="onVisitDoctorReturn($event, json)"
+            />
           </td>
         </tr>
         <tr>
@@ -360,29 +341,14 @@
             />
           </td>
         </tr>
+        
+      
+        </tbody>
       </table>
     </div>
     <div>
-      <pop-over-facility
-        v-bind="popoverDataFacility"
-        :target-position-element="popoverTargetElement('btnSelectFacility')"
-        @popover-close="closePopover(popoverDataFacility)"
-        @popover-return="setPopoverDataFacility($event)"
-      />
-      <pop-over
-        v-bind="popoverDataCourse"
-        :target-position-element="popoverTargetElement('btnSelectCourse')"
-        @popover-close="closePopover(popoverDataCourse)"
-        @popover-return="setPopoverDataCourse($event)"
-      />
-      <pop-over
-        v-bind="popoverDataDoctor"
-        :target-position-element="popoverTargetElement('btnSelectDoctor')"
-        @popover-close="closePopover(popoverDataDoctor)"
-        @popover-return="setPopoverDataDoctor($event)"
-      />
       <message-dialog
-        :visible.sync="isDialogVisible"
+        v-model:visible="isDialogVisible"
         :message-cd="21120001"
         type="1"
       />
@@ -394,8 +360,8 @@
   // add #10359 編集権限の動作不正 dengshen start
   import { getAuthorized, deepCopy } from "@/functions/common/CommonFunctions.js";
   // add #10359 編集権限の動作不正 dengshen end
-  import moment from "moment";
-  import { mapGetters, mapActions } from "vuex";
+  import dayjs from "@/compat/date/dayjs";
+  import { mapGetters, mapActions } from "@/compat/vue/vuex";
   import { ApiHelper } from "@/apis/AxiosHelper";
   import {
     PAT_UNIQUE_COL_IN_OUT_VISIT_HISTORY_INFO_MOVE_IN_OUT_CLASS,
@@ -413,6 +379,8 @@
   //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
   import { getErrorMessage } from "@/functions/common/AppLogMessageFormat";
   //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
+  import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
+  import * as MasterType from "@/components/common/master-selector/MasterType";
 
   // 導入 区分値
   const MOVE_IN_OUT_CLASS_INTRODUCTION = "1";
@@ -450,11 +418,13 @@
     name: "VisitHstCard",
     components: {
       "message-dialog": messageDialog,
+      "common-master-selector": commonMasterSelector,
     },
     mixins: [baseCardContent],
 
     data() {
       return {
+        MasterType,
         // del #10359 編集権限の動作不正 dengshen start
         // // add 編集権限の適用 じょはく start
         // isPatViewAuthorized: null,
@@ -494,6 +464,8 @@
         initRecord: null,
         // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_患者情報 20231218 ztc end
         facilityNameList: [],
+        courseEchoList: [],
+        doctorEchoList: [],
       };
     },
 
@@ -523,13 +495,17 @@
       // iPhoneアクセスプログラム、画面メモリオーバーフロー改造
       // ...mapGetters("sys-facility", ["getSysFacilities", "getSysFacilitiesForName"]),
       /* del by chamaojia 2025-05-21 [11871]  --end */
-      ...mapGetters("pat-info", ["selectedPatId", "getIsOtherFacility", "getOtherFacilityCd"]),
+      ...mapGetters("pat-info", [
+        "selectedPatId",
+        "getIsOtherFacility",
+        "getOtherFacilityCd"
+      ]),
       jsonArray: {
         get() {
           let arrVisitHstInfoSorted = [];
           // 開始日の降順でソートするため、日付を確認
           for (var visHstInf of this.editRecord[this.arrayColName]) {
-            var sortDate = "";
+            var sortDate;
             if (
               visHstInf["period_start_year"].initValue &&
               visHstInf["period_start_month"].initValue &&
@@ -608,8 +584,10 @@
       async selectedPatId() {
         this.switchingSelectedPatFlg = true;
         this.refreshData();
-        // 選択患者が変更されたので、施設名リストを初期化
+        // 選択患者が変更されたので、施設名リスト・マスタPOPのエコーリストを初期化
         this.facilityNameList = [];
+        this.courseEchoList = [];
+        this.doctorEchoList = [];
         // 施設名リスト再取得
         await this.loadFacilityNameList();
         this.$nextTick(() => {
@@ -633,7 +611,9 @@
       let params = [];
       params = params.filter((e) => e !== null);
       if (params.length > 0) {
-        await ApiHelper.post("/mstInfo/mstPersonalUserByIdList", params).then(
+        await ApiHelper.configPost("/mstInfo/mstPersonalUserByIdList", params, {
+          params: { selectedPatId: this.selectedPatId }
+        }).then(
           (res) => {
             let item = [];
             for (let i = 0; i < res.data.length; i++) {
@@ -652,9 +632,7 @@
     },
 
     // add bug #7125 修正 chen start
-    beforeDestroy() {
-      // dataの初期化
-      Object.assign(this.$data, this.$options.data());
+    beforeUnmount() {
     },
     // add bug #7125 修正 chen end
 
@@ -684,6 +662,23 @@
         return getAuthorized(pageCd, itemCd);
       },
 
+      onVisitFacilityReturn(row, json) {
+        this.selectedJson = json;
+        this.setPopoverDataFacility(row);
+      },
+
+      onVisitCourseReturn(row, json) {
+        this.selectedJson = json;
+        this.setPopoverDataCourse(row);
+      },
+
+      onVisitDoctorReturn(row, json) {
+        this.selectedJson = json;
+        const idx = this.jsonArray.indexOf(json);
+        this.selectedIndex = idx >= 0 ? idx : null;
+        this.setPopoverDataDoctor(row);
+      },
+
       //
       changeinputfree(json, Flag) {
         this.setPatDataJsonArray(json, 'period_start_input_free', Flag);
@@ -706,7 +701,9 @@
       async refreshData() {
         this.setLoadingScreenVisible(true);
         try {
-          const responseCourse = await ApiHelper.get("/mstInfo/mstAllCourse").catch(
+          this.courseEchoList = [];
+          this.doctorEchoList = [];
+          const responseCourse = await ApiHelper.get("/mstInfo/mstAllCourse", { selectedPatId: this.selectedPatId }).catch(
             (error) => {
               getErrorMessage("VisitHstCardContent.vue", "created", error);
               throw error;
@@ -716,7 +713,10 @@
 
           // 登録済みの医師を取得
           const facility_cd = this.getFacilityCd;
-          const responseUser = await this.getDoctorsAtFacilityIncludeDel(facility_cd).catch(
+          const responseUser = await this.getDoctorsAtFacilityIncludeDel({
+            facilityCd: facility_cd,
+            selectedPatId: this.selectedPatId
+          }).catch(
             (error) => {
               getErrorMessage("VisitHstCardContent.vue", "created", error);
               throw error;
@@ -730,6 +730,61 @@
         this.initRecord = deepCopy(this.editRecord);
       },
 
+      /**
+       * mod 11872 医師POP：編集値が空のとき init を載せず extraParams でログインユーザに寄せる（既往歴・診断医と同様）
+       */
+      doctorPatInfoInitItem(json) {
+        const key = this.getDoctorJsonKey(json);
+        const cur = this.getPatDataJsonArray(json, key);
+        if (!cur) return {};
+        const editVal = cur.editValue;
+        if (
+          editVal == null ||
+          editVal === "" ||
+          String(editVal).trim() === ""
+        ) {
+          return { value: null };
+        }
+        return { value: cur.initValue };
+      },
+
+      doctorPatInfoExtraParams(json) {
+        const key = this.getDoctorJsonKey(json);
+        const cur = key ? this.getPatDataJsonArray(json, key) : null;
+        const editVal = cur && cur.editValue;
+        if (
+          editVal != null &&
+          editVal !== "" &&
+          String(editVal).trim() !== ""
+        ) {
+          return {};
+        }
+        const uid =
+          this.getStateUserAccountInfo &&
+          this.getStateUserAccountInfo.userId != null &&
+          this.getStateUserAccountInfo.userId !== ""
+            ? String(this.getStateUserAccountInfo.userId).trim()
+            : "";
+        if (!uid) return {};
+        return { initValue: uid };
+      },
+
+      /**
+       * @description マスタ選択の code / 表示名をエコー用リストへ格納（同一 code は上書き）
+       */
+      upsertMasterEcho(list, cd, name) {
+        if (cd == null || cd === "") return;
+        const text = name != null && name !== "" ? name : null;
+        if (!text) return;
+        const idx = list.findIndex((item) => item.cd == cd);
+        const row = { cd, name: text };
+        if (idx >= 0) {
+          list.splice(idx, 1, row);
+        } else {
+          list.push(row);
+        }
+      },
+
       setJsonIndex(json, index) {
         this.selectJson = json;
         this.selectIndex = index;
@@ -737,8 +792,9 @@
         const delItem = (json) => {
           let ctlNo = json["ctl_no"].editValue;
           if (ctlNo === 0) {
-            this.jsonArray.splice(index, 1);
-            this.jsonArray = [...this.jsonArray];
+            const newArray = [...this.jsonArray];
+            newArray.splice(index, 1);
+            this.jsonArray = newArray;
           } else if (ctlNo > 0){
             json["ctl_no"].editValue = ctlNo * -1;
           }
@@ -768,7 +824,6 @@
        * @param {String} jsonKey
        * @returns {String}
        */
-      // mod #12462 患者情報共有 Ji start
       getFacilityJsonKey(json) {
         const isOtherFacility = json.facility_cd?.initValue !== this.getFacilityCd;
         if (this.isToData(json)) {
@@ -776,7 +831,6 @@
         }
         return isOtherFacility ? "from_facility_name" : "from_facility";
       },
-      // mod #12462 患者情報共有 Ji end
 
       /**
        * @description キー名を返す関数
@@ -785,7 +839,6 @@
        * @param {String} jsonKey
        * @returns {String}
        */
-      // mod #12462 患者情報共有 Ji start
       getCourseJsonKey(json) {
         const isOtherFacility = json.facility_cd?.initValue !== this.getFacilityCd;
         if (this.isToData(json)) {
@@ -793,7 +846,6 @@
         }
         return isOtherFacility ? "from_course_name" : "from_course";
       },
-      // mod #12462 患者情報共有 Ji end
 
       /**
        * @description キー名を返す関数
@@ -802,7 +854,6 @@
        * @param {String} jsonKey
        * @returns {String}
        */
-      // mod #12462 患者情報共有 Ji start
       getDoctorJsonKey(json) {
         const isOtherFacility = json.facility_cd?.initValue !== this.getFacilityCd;
         if (this.isToData(json)) {
@@ -810,7 +861,6 @@
         }
         return isOtherFacility ? "from_doctor_name" : "from_doctor";
       },
-      // mod #12462 患者情報共有 Ji end
 
       /**
        * @description 区分が選択されたか判定
@@ -1068,7 +1118,10 @@
        */
       async selectDoctor(json, index) {
         const facility_cd = this.getFacilityCd;
-        const responseUser = await this.getDoctorsAtFacility(facility_cd).catch(
+        const responseUser = await this.getDoctorsAtFacility({
+          facilityCd: facility_cd,
+          selectedPatId: this.selectedPatId
+        }).catch(
           (error) => {
             //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
             getErrorMessage("VisitHstCardContent.vue", "selectDoctor", error);
@@ -1095,9 +1148,9 @@
         const all = { text: "すべて", value: 0 };
         const filterJobCdArr = [
           all,
-          ...this.mstJob?.filter((item) => {
+          ...(this.mstJob ?? []).filter((item) => {
             return item.isDoctor === '1';
-          })?.map((item) => ({
+          }).map((item) => ({
             text: item.jobName,
             value: String(item.jobCd),
           })),
@@ -1173,7 +1226,7 @@
         if (!this.isMoveInOutTemporarilyMovingOut(json)) {
           this.setPatDataJsonArray(json, "period_end", null);
           this.setPatDataJsonArray(json, "period_end_date", null);
-          this.$delete(json, "period_end_date");
+          delete ((json)["period_end_date"]);
           this.setPatDataJsonArray(json, "period_end_year", null);
           this.setPatDataJsonArray(json, "period_end_month", null);
           this.setPatDataJsonArray(json, "period_end_day", null);
@@ -1377,7 +1430,7 @@
         if (
           moveInOutValue != undefined &&
           moveInOutValue != null &&
-          moveInOutValue != ""
+          moveInOutValue.length > 0
         ) {
           // mod No.15 じょはく start
           // flag = true;
@@ -1396,20 +1449,40 @@
         return flag;
       },
 
+      /**
+       * 本人情報の入外区分連動で自動追加した行の period_start 系を同期する
+       * period_start_date は従来どおり別途設定する
+       */
+      syncPeriodStartFromAutoAdd(json, date) {
+        if (!json) {
+          return;
+        }
+        const startDate = dayjs(date, "YYYYMMDD");
+        if (!startDate.isValid()) {
+          return;
+        }
+        this.setPatDataJsonArray(json, "period_start", startDate.format("YYYYMMDD"));
+        this.setPatDataJsonArray(json, "period_start_year", startDate.format("YYYY"));
+        this.setPatDataJsonArray(json, "period_start_month", startDate.format("MM"));
+        this.setPatDataJsonArray(json, "period_start_day", startDate.format("DD"));
+      },
+
       async setInOutVal(val) {
         // console.log("setInOutVal is begin : ", val);
-        const date = moment().format("YYYYMMDD");
+        const date = dayjs().format("YYYYMMDD");
         if (val == 1) {
           //  入院
           await this.addItem();
           this.jsonArray[0].move_in_out.editValue = "4";
           this.jsonArray[0].period_start_date.editValue = date;
+          this.syncPeriodStartFromAutoAdd(this.jsonArray[0], date);
           this.jsonArray[0].in_out.editValue = 1;
         } else if (val == 0) {
           //  外来
           await this.addItem();
           this.jsonArray[0].move_in_out.editValue = "6";
           this.jsonArray[0].period_start_date.editValue = date;
+          this.syncPeriodStartFromAutoAdd(this.jsonArray[0], date);
           this.jsonArray[0].in_out.editValue = 0;
         }
           // ③本人情報の入外区分：不明（3）を選択した場合
@@ -1437,7 +1510,7 @@
         // console.log("setInOutEditVal is begin", val, val1);
         let length = this.$refs.move_in_out.length;
         let length1 = 1;
-        const date = moment().format("YYYYMMDD");
+        const date = dayjs().format("YYYYMMDD");
         if (val == 1 && val1 == 4) {
           // 両方は入院
           return false;
@@ -1483,6 +1556,7 @@
           await this.addItem();
           this.jsonArray[length].move_in_out.editValue = "4";
           this.jsonArray[length].period_start_date.editValue = date;
+          this.syncPeriodStartFromAutoAdd(this.jsonArray[length], date);
           this.jsonArray[length].in_out.editValue = 1;
         } else if (val == 0 && val1 != 6) {
           // 本人情報は外来、入外は外来ではない
@@ -1513,7 +1587,7 @@
               // mod 6625【ST試験】【S12_患者の既往・転入履歴】患者情報：患者状態が変更された場合、ページ頭部状態は変更されない zhou　end
               return false;
             } else {
-              for(var i = 0; i <= length - 1; i++){
+              for (let i = 0; i <= length - 1; i++) {
                 if(this.jsonArray[i].period_start_date.editValue < date){
                   length1 = length1 + 1;
                 }
@@ -1533,6 +1607,7 @@
           await this.addItem();
           this.jsonArray[length].move_in_out.editValue = "6";
           this.jsonArray[length].period_start_date.editValue = date;
+          this.syncPeriodStartFromAutoAdd(this.jsonArray[length], date);
           this.jsonArray[length].in_out.editValue = 0;
         } else {
           // 不明とnullの時、操作しない
@@ -1696,13 +1771,21 @@
        */
       setPopoverData(selectedMst, jsonKey) {
         /* add by chamaojia 2025-05-21 [11871]  --start */
-        // iPhoneアクセスプログラム、画面メモリオーバーフロー改造
-        // バウンディングボックスで選択したデータは、エコー用の配列に格納されます。
-        let obj = {
-          cd:selectedMst.value,
-          name:selectedMst.text
-        };
-        this.facilityNameList.push(obj);
+        // 施設 / 診療科 / 医師はコード空間が異なるためエコーリストを分離（MedicalHst と同様）
+        const cd = selectedMst.value;
+        const text = selectedMst.text;
+        if (jsonKey === "from_facility" || jsonKey === "to_facility") {
+          this.upsertMasterEcho(this.facilityNameList, cd, text);
+        } else if (jsonKey === "from_course" || jsonKey === "to_course") {
+          this.upsertMasterEcho(this.courseEchoList, cd, text);
+        } else if (jsonKey === "from_doctor" || jsonKey === "to_doctor") {
+          this.upsertMasterEcho(this.doctorEchoList, cd, text);
+          const doctorNameKey =
+            jsonKey === "to_doctor" ? "to_doctor_name" : "from_doctor_name";
+          if (text != null && String(text).trim() !== "") {
+            this.setPatDataJsonArray(this.selectedJson, doctorNameKey, text);
+          }
+        }
         /* add by chamaojia 2025-05-21 [11871]  --end */
         if (
           this.isMoveInOutMovingOut(this.selectedJson) ||
@@ -1717,31 +1800,60 @@
       },
 
       /**
+       * 施設担当医マスタから表示名（姓 名）を取得。
+       * ※mstCdToNameFreeWord は数値コード前提の isNaN 判定があり、ユーザーIDが非数値のとき常に空になるためここでは raw find を使う。
+       */
+      doctorDisplayFromMstUser(doctorCd) {
+        if (
+          doctorCd == null ||
+          doctorCd === "" ||
+          !this.mstUser ||
+          !this.mstUser.length
+        ) {
+          return null;
+        }
+        const rec = this.mstUser.find((u) => u.user_id == doctorCd);
+        if (!rec) return null;
+        const last =
+          rec.user_last_name != null ? String(rec.user_last_name) : "";
+        const first =
+          rec.user_first_name != null ? String(rec.user_first_name) : "";
+        const joined = `${last} ${first}`.trim();
+        return joined || null;
+      },
+
+      /**
        * @description 担当医コードを名字と名前に変換する
        * @param {Object} json
-       * @param {String} jsonKey
        * @returns {String}
        */
-      doctorName(json, jsonKey) {
+      doctorName(json) {
+        const jsonKey = this.getDoctorJsonKey(json);
         const doctor = this.getPatDataJsonArray(json, jsonKey).editValue;
-        if (!doctor || !this.mstUser) return "";
-        const lastName = this.mstCdToNameFreeWord(
-          this.mstUser,
-          doctor,
-          "user_id",
-          "user_last_name"
-        );
-        const firstName = this.mstCdToNameFreeWord(
-          this.mstUser,
-          doctor,
-          "user_id",
-          "user_first_name"
-        );
-        if (!lastName || !firstName) {
-          this.setPatDataJsonArray(json, "doctor_is_free", "1");
-          return `${doctor}`;
+        if (!doctor) return "";
+
+        const echoDoctor = this.doctorEchoList.find((item) => item.cd == doctor);
+        if (echoDoctor && echoDoctor.name) {
+          this.setPatDataJsonArray(json, "doctor_is_free", "0");
+          return echoDoctor.name;
         }
-        return `${lastName} ${firstName}`;
+
+        const doctorNameKey =
+          jsonKey === "to_doctor" ? "to_doctor_name" : "from_doctor_name";
+        const stored = this.getPatDataJsonArray(json, doctorNameKey).editValue;
+        if (stored != null && String(stored).trim() !== "") {
+          this.setPatDataJsonArray(json, "doctor_is_free", "0");
+          return String(stored).trim();
+        }
+
+        const fromMst = this.doctorDisplayFromMstUser(doctor);
+        if (fromMst) {
+          this.setPatDataJsonArray(json, "doctor_is_free", "0");
+          return fromMst;
+        }
+
+        this.setPatDataJsonArray(json, "doctor_is_free", "1");
+        return `${doctor}`;
       },
 
       isMoveInOutValue(json) {
@@ -1759,11 +1871,11 @@
           return null;
         }
         if (value.length === 8) {
-          return moment(value, "YYYYMMDD").format("YYYY/MM/DD");
+          return dayjs(value, "YYYYMMDD").format("YYYY/MM/DD");
         } else if (value.length === 6) {
-          return moment(value, "YYYYMMDD").format("YYYY/MM");
+          return dayjs(value, "YYYYMMDD").format("YYYY/MM");
         } else if (value.length === 4) {
-          return moment(value, "YYYYMMDD").format("YYYY");
+          return dayjs(value, "YYYYMMDD").format("YYYY");
         }
       },
 
@@ -1888,9 +2000,7 @@
       deleteDeathItem(deleteJson) {
         if (
           this.jsonArray.find(
-            (json) => json.move_in_out.editValue === MOVE_IN_OUT_CLASS_DEATH
-          )
-        ) {
+            (json) => json.move_in_out.editValue === MOVE_IN_OUT_CLASS_DEATH)) {
           const period_start = deleteJson.period_start.initValue;
           const from_facility = deleteJson.diagnosis_facility_cd.initValue;
           const from_course = deleteJson.course_cd.initValue;
@@ -1951,8 +2061,8 @@
       // 転出日を返す
       getMoveOutDate() {
         let periodStart = "";
-        let moveOutDate = moment(new Date());
-        let moveOutDateCmp = moment(new Date(9999, 12, 31));
+        let moveOutDate = dayjs(new Date());
+        let moveOutDateCmp = dayjs(new Date(9999, 12, 31));
         let moveOutFlg = false;
         // 項目名称を返す
         let rtnParamName = "";
@@ -1993,21 +2103,18 @@
               // 開始日が年月日すべて入力されている場合
               periodStart = this.getPatDataJsonArray(
                 json,
-                "period_start"
-              ).editValue;
-              moveOutDate = moment(
+                "period_start").editValue;
+              moveOutDate = dayjs(
                 new Date(
                   periodStart.slice(0, 4),
                   periodStart.slice(4, 6) - 1,
-                  periodStart.slice(6)
-                )
-              );
+                  periodStart.slice(6)));
             } else {
               // 開始日の年/月/日いずれかが未入力の場合→当日日付を起点とする
-              moveOutDate = moment(new Date());
+              moveOutDate = dayjs(new Date());
             }
             // 最小の日付を設定する
-            if (moment(moveOutDate).isBefore(moveOutDateCmp)) {
+            if (dayjs(moveOutDate).isBefore(moveOutDateCmp)) {
               moveOutDateCmp = moveOutDate;
               // 項目名称を設定
               rtnParamName = tmpParamName;
@@ -2029,11 +2136,11 @@
       getIsCheckResetDifficulty() {
         let resetFlg = false;
         let deleteFlg = false;
-        const today = moment(new Date());
-        let initDate = moment(new Date());
-        let editDate = moment(new Date());
-        let initCmpDate = moment(new Date(1900, 1, 1));
-        let editCmpDate = moment(new Date(1900, 1, 1));
+        const today = dayjs(new Date());
+        let initDate = dayjs(new Date());
+        let editDate = dayjs(new Date());
+        let initCmpDate = dayjs(new Date(1900, 1, 1));
+        let editCmpDate = dayjs(new Date(1900, 1, 1));
         let initInOut = null;
         let editInOut = null;
 
@@ -2041,41 +2148,33 @@
         for (const json of this.jsonArray) {
           const initPeriodStart = this.getPatDataJsonArray(
             json,
-            "period_start"
-          ).initValue;
+            "period_start").initValue;
           const editPeriodStart = this.getPatDataJsonArray(
             json,
-            "period_start"
-          ).editValue;
+            "period_start").editValue;
           if (initPeriodStart !== null) {
-            initDate = moment(
+            initDate = dayjs(
               new Date(
                 initPeriodStart.slice(0, 4),
                 initPeriodStart.slice(4, 6) - 1,
-                initPeriodStart.slice(6)
-              )
-            );
+                initPeriodStart.slice(6)));
             if (
-              !moment(today).isBefore(initDate) &&
-              !moment(initCmpDate).isAfter(initDate)
-            ) {
+              !dayjs(today).isBefore(initDate) &&
+              !dayjs(initCmpDate).isAfter(initDate)) {
               initCmpDate = initDate;
               initInOut = this.getPatDataJsonArray(json, "in_out").initValue;
               deleteFlg = this.isMoveInOutValueDelete(json);
             }
           }
           if (editPeriodStart !== null && !this.isMoveInOutValueDelete(json)) {
-            editDate = moment(
+            editDate = dayjs(
               new Date(
                 editPeriodStart.slice(0, 4),
                 editPeriodStart.slice(4, 6) - 1,
-                editPeriodStart.slice(6)
-              )
-            );
+                editPeriodStart.slice(6)));
             if (
-              !moment(today).isBefore(editDate) &&
-              !moment(editCmpDate).isAfter(editDate)
-            ) {
+              !dayjs(today).isBefore(editDate) &&
+              !dayjs(editCmpDate).isAfter(editDate)) {
               editCmpDate = editDate;
               editInOut = this.getPatDataJsonArray(json, "in_out").editValue;
             }
@@ -2163,14 +2262,14 @@
         }
 
         if (value.length === 8) {
-          date.year = moment(value, "YYYYMMDD").format("YYYY");
-          date.month = moment(value, "YYYYMMDD").format("MM");
-          date.day = moment(value, "YYYYMMDD").format("DD");
+          date.year = dayjs(value, "YYYYMMDD").format("YYYY");
+          date.month = dayjs(value, "YYYYMMDD").format("MM");
+          date.day = dayjs(value, "YYYYMMDD").format("DD");
         } else if (value.length === 6) {
-          date.year = moment(value, "YYYYMMDD").format("YYYY");
-          date.month = moment(value, "YYYYMMDD").format("MM");
+          date.year = dayjs(value, "YYYYMMDD").format("YYYY");
+          date.month = dayjs(value, "YYYYMMDD").format("MM");
         } else if (value.length === 4) {
-          date.year = moment(value, "YYYYMMDD").format("YYYY");
+          date.year = dayjs(value, "YYYYMMDD").format("YYYY");
         }
         return date;
       },
@@ -2219,9 +2318,16 @@
       dispCourseName(json) {
         const courseCd = this.getPatDataJsonArray(
           json,
-          this.getCourseJsonKey(json)
-        ).editValue;
-        if (!courseCd || !this.mstCourse) return "";
+          this.getCourseJsonKey(json)).editValue;
+        if (!courseCd) return "";
+
+        const echoCourse = this.courseEchoList.find((item) => item.cd == courseCd);
+        if (echoCourse && echoCourse.name) {
+          this.setPatDataJsonArray(json, "course_is_free", "0");
+          return echoCourse.name;
+        }
+
+        if (!this.mstCourse) return "";
         const courseName = this.mstCdToNameFreeWord(
           this.mstCourse,
           courseCd,
@@ -2243,8 +2349,7 @@
       dispFacilityName(json) {
         const inputFacilityCd = this.getPatDataJsonArray(
           json,
-          this.getFacilityJsonKey(json)
-        ).editValue;
+          this.getFacilityJsonKey(json)).editValue;
 
         if (!inputFacilityCd) {
           this.setPatDataJsonArray(json, "facility_is_free", "0");
@@ -2331,20 +2436,17 @@
             setDayKey = "period_start_day";
             keyYear = this.getPatDataJsonArray(
               json,
-              "period_start_year"
-            ).editValue;
+              "period_start_year").editValue;
             keyMonth = this.getPatDataJsonArray(
               json,
-              "period_start_month"
-            ).editValue;
+              "period_start_month").editValue;
             keyDay = this.getPatDataJsonArray(json, "period_start_day").editValue;
           } else if (key.match(/period_end/)) {
             setDayKey = "period_end_day";
             keyYear = this.getPatDataJsonArray(json, "period_end_year").editValue;
             keyMonth = this.getPatDataJsonArray(
               json,
-              "period_end_month"
-            ).editValue;
+              "period_end_month").editValue;
             keyDay = this.getPatDataJsonArray(json, "period_end_day").editValue;
           }
           const maxDay = getMaxDay(keyYear, keyMonth);
@@ -2358,19 +2460,16 @@
             // 開始日が変更された場合period_startを更新
             const year = this.getPatDataJsonArray(
               json,
-              "period_start_year"
-            ).editValue;
+              "period_start_year").editValue;
             const month = this.getPatDataJsonArray(
               json,
-              "period_start_month"
-            ).editValue;
+              "period_start_month").editValue;
             const day = this.getPatDataJsonArray(
               json,
-              "period_start_day"
-            ).editValue;
+              "period_start_day").editValue;
 
             if (year && month && day) {
-              const startDate = moment(`${year}${month}${day}`);
+              const startDate = dayjs(`${year}${month}${day}`);
               // 入力された日付が正しい日付の場合のみセット
               if (startDate.isValid()) {
                 this.setPatDataJsonArray(
@@ -2398,19 +2497,16 @@
             // 終了日が変更された場合period_endを更新
             const year = this.getPatDataJsonArray(
               json,
-              "period_end_year"
-            ).editValue;
+              "period_end_year").editValue;
             const month = this.getPatDataJsonArray(
               json,
-              "period_end_month"
-            ).editValue;
+              "period_end_month").editValue;
             const day = this.getPatDataJsonArray(
               json,
-              "period_end_day"
-            ).editValue;
+              "period_end_day").editValue;
 
             if (year && month && day) {
-              const endDate = moment(`${year}${month}${day}`);
+              const endDate = dayjs(`${year}${month}${day}`);
               // 入力された日付が正しい日付の場合のみセット
               if (endDate.isValid()) {
                 this.setPatDataJsonArray(
@@ -2505,7 +2601,7 @@
         } else {
           if (!year) {
             // 年が空欄→今年
-            year = String(moment().year());
+            year = String(dayjs().year());
           }
           if (!month) {
             // 月が空欄→1月扱い
@@ -2516,7 +2612,7 @@
             day = "01";
           }
 
-          const periodDate = moment(`${year}${month}${day}`);
+          const periodDate = dayjs(`${year}${month}${day}`);
           if (periodDate.isValid()) {
             // key項目に日付をセット
             this.setPatDataJsonArray(json, key, periodDate.format("YYYYMMDD"));
@@ -2534,7 +2630,7 @@
        */
       setDateEach(value, params) {
         if (params.fromData && params.fromData === "period_start_date") {
-          const startDate = moment(value);
+          const startDate = dayjs(value);
           // 入力された日付が正しい日付の場合のみセット
           if (startDate.isValid() && params.json) {
             this.setPatDataJsonArray(
@@ -2580,7 +2676,7 @@
             );
           }
         } else if (params.fromData && params.fromData === "period_end_date") {
-          const endDate = moment(value);
+          const endDate = dayjs(value);
           // 入力された日付が正しい日付の場合のみセット
           if (endDate.isValid() && params.json) {
             this.setPatDataJsonArray(
@@ -2656,35 +2752,22 @@
           });
         }
       },
-    // add #12462 患者情報共有 Ji start
-    /**
-     * @description 該当行が他院情報かどうかを判定
-     * @param {Object} json - 患者情報
-     * @returns {Boolean} true = 他施設のデータは参照のみ
-     */
-      isOtherFacilityRow(json) {return (json.facility_cd?.initValue !== this.getFacilityCd || this.getIsOtherFacility);
+
+      isOtherFacilityRow(json) {
+        return json.facility_cd?.initValue !== this.getFacilityCd || this.getIsOtherFacility;
       },
-    /**
-     *
-     * @param json - 患者情報
-     * @param displayFunc - 変換Function
-     */
+
       getNameDisplay(json, displayFunc, nameKey) {
         if (json.facility_cd?.initValue !== this.getFacilityCd) {
           const nameObj = this.getPatDataJsonArray(json, nameKey);
-          return nameObj.editValue;
+          return nameObj?.editValue ?? "";
         }
         return displayFunc(json);
       },
 
       getDoctorDisplay(json) {
-        return this.doctorName(
-          json,
-          this.getDoctorJsonKey(json),
-          this.getPatDataJsonArray(json, this.getFacilityJsonKey(json)).editValue
-        );
-      }
-     // add #12462 患者情報共有 Ji end
+        return this.doctorName(json);
+      },
     },
   };
 </script>
@@ -2699,7 +2782,7 @@
     width: auto;
   }
 
-  .death-date >>> .custom-input-date {
+  .death-date :deep(.custom-input-date) {
     width: auto;
   }
 
@@ -2716,11 +2799,14 @@
   .span-flex {
     display: inline-flex;
   }
-  .card-table >>> textarea.custom-textarea {
+  .card-table :deep(textarea.custom-textarea) {
     color: black !important;
   }
   /* ntss.css の .custom-textarea:disabled と競合する為、個別定義 */
   td .custom-textarea-edited {
     border: 2px green solid;
   }
+  .card-table .card-index-row td {
+    padding: 0;
+  }                       
 </style>

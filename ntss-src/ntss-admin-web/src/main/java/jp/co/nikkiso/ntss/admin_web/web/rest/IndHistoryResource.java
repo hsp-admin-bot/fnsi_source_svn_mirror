@@ -39,6 +39,9 @@ import jp.co.nikkiso.ntss.admin_web.request.patientCapture.JournalCreateRequestP
 
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 
 
 @RestController
@@ -84,7 +87,23 @@ public class IndHistoryResource {
       IndHistory params,
       IndHistoryOptions options,
       Pageable pageable
-      ) throws URISyntaxException {
+      ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260420 start
+    if(!ntssUser.isNkkAdminUser()) {
+      String facilityCd = params.getFacilityCd();
+      if (facilityCd != null && !facilityCd.isEmpty() &&
+        !facilityCd.equals(ntssUser.getFacilityCd())) {
+        String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "params.getFacilityCd()=" + params.getFacilityCd();
+        InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+      }
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260420 end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.IND_HISTORY;
@@ -113,7 +132,12 @@ public class IndHistoryResource {
   @GetMapping("create")
   public ResponseEntity<IndHistory> createMongo(
       IndHistory params
-      ) throws URISyntaxException {
+      ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.IND_HISTORY + "/create";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -138,7 +162,12 @@ public class IndHistoryResource {
   @PostMapping("searchList")
   public ResponseEntity<List<IndSearchResult>> searchByFilter(@RequestBody
       IndicationSearch params
-      ) throws URISyntaxException {
+      ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                              @AuthenticationPrincipal NtssUser ntssUser
+                                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.IND_HISTORY + "/searchList";
@@ -190,7 +219,23 @@ public class IndHistoryResource {
    */
   @PostMapping("updIndHistoryList")
   public ResponseEntity<?> updateIndHistoryInList(
-		  @RequestBody IndListUpdateCondition params ) {
+		  @RequestBody IndListUpdateCondition params ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = params.getFacility_cd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "userId=" + params.getUserId() + " " + "baseDate=" + params.getBase_date() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.IND_HISTORY + "/updIndHistoryList";
@@ -274,7 +319,7 @@ public class IndHistoryResource {
     }
     // add by zs 2023-03-06 [#6118無期限予定の中止：js foreach call journalをjava batch call journalに変更] --end
     // レスポンス生成
-    return new ResponseEntity<>(null, result ? HttpStatus.OK : HttpStatus.INTERNAL_SERVER_ERROR);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, result ? HttpStatus.OK : HttpStatus.INTERNAL_SERVER_ERROR);
   }
 
   /**
@@ -285,22 +330,30 @@ public class IndHistoryResource {
    */
   @PostMapping("updIndHistoryDetail")
   public ResponseEntity<?> updateIndHistoryInDetailScreen(
-		  @RequestBody List<IndDetailUpdateCondition> params ) {
+		  @RequestBody List<IndDetailUpdateCondition> params ,
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 end
+) {
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.IND_HISTORY + "/updIndHistoryDetail";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
       null);
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 start
+    boolean result = indHistoryService.updateIndHistoryInDetailScreen(
+      params,
+      ntssUser != null && !ntssUser.isNkkAdminUser() ? ntssUser.getFacilityCd() : null
+    );
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260427 end
     // wp アプリケーションログの適正化 Add End
-
-    // 表示形式パターンの更新
-    boolean result = indHistoryService.updateIndHistoryInDetailScreen(params);
     // wp アプリケーションログの適正化 Add Start
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
       null);
     // wp アプリケーションログの適正化 Add End
     // レスポンス生成
-    return new ResponseEntity<>(null, result ? HttpStatus.OK : HttpStatus.INTERNAL_SERVER_ERROR);
+    return new ResponseEntity<>((org.springframework.http.HttpHeaders) null, result ? HttpStatus.OK : HttpStatus.INTERNAL_SERVER_ERROR);
   }
   /**
    * 指示履歴取得処理
@@ -316,7 +369,23 @@ public class IndHistoryResource {
       IndHistory params,
       IndHistoryOptions options,
       Pageable pageable
-      ) throws URISyntaxException {
+      ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = params.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "params.getFacilityCd()=" + params.getFacilityCd();
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.IND_HISTORY + "/dynamo";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -343,7 +412,12 @@ public class IndHistoryResource {
   @GetMapping("dynamoCreate")
   public ResponseEntity<IndHistory> createDynamo(
       IndHistory params
-      ) throws URISyntaxException {
+      ,
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.IND_HISTORY + "/dynamoCreate";

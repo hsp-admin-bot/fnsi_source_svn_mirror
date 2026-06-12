@@ -1,5 +1,4 @@
-import Vue from "vue";
-import VueRouter from "vue-router";
+import { createRouter, createWebHashHistory } from "vue-router";
 import store from "@/stores";
 
 import ClCertificateDownload from "@/components/cl-download/ClCertificateDownload";
@@ -8,8 +7,6 @@ import LoginDownloadCL from "@/components/cl-download/LoginDownloadCL";
 import LoginDownloadReset from "@/components/cl-download/LoginDownloadReset";
 //add FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 end
 import P12MergePage from "@/components/cl-download/P12MergePage";
-Vue.use(VueRouter);
-
 const routes = [
   {
     path: "/",
@@ -37,8 +34,8 @@ const routes = [
   }
 ];
   //add FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 end
-const router = new VueRouter({
-  mode: "hash",
+const router = createRouter({
+  history: createWebHashHistory(),
   routes
 });
 

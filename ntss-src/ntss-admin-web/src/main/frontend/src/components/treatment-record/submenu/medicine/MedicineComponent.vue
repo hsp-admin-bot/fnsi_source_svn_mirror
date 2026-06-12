@@ -3,7 +3,8 @@
 */
 <template>
   <submenu-base v-if="hasOrdNo">
-    <div slot="main" id="medicine-component" style="width: calc(100% - 1px);">
+    <template #main>
+      <div id="medicine-component" style="width: calc(100% - 1px);">
       <div>
         <table class="treatment-record-list">
           <thead>
@@ -11,12 +12,14 @@
           <!-- start 治療記録バッグ修正 改修2 房 start -->
           <!-- mod FNSI-共有を追加 王 20200921 start -->
           <tr>
-            <div>
+            <th colspan="9" style="background-image: none;">
+              <div>
               <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
               <!-- <v-ons-button class="button toolbar-btn btn3-normal" :disabled="!isShared" style="float: left;" @click="addRow()">追加</v-ons-button> -->
               <v-ons-button class="button toolbar-btn btn3-normal" :disabled="!isShared|| !getItemAuthorized('TreatmentRecord', 'default_authority')" style="float: left;" @click="addRow()">追加</v-ons-button>
               <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
-            </div>
+              </div>
+            </th>
           </tr>
           <!-- mod FNSI-共有を追加 王 20200921 end -->
           <!-- start 治療記録バッグ修正 改修2 房 end -->
@@ -33,18 +36,18 @@
           </tr>
           </thead>
           <tbody>
-          <template v-for="(data, index) in mediInfoList.value()" >
-            <tr :key="index"  :class="['ntss-list-body-tr', data.is_new ? 'added-item' : '', data.be_deleted ? 'deleted-item' : '']">
+          <template v-for="(data, index) in mediInfoList.value()" :key="index">
+            <tr  :class="['ntss-list-body-tr', data.is_new ? 'added-item' : '', data.be_deleted ? 'deleted-item' : '']">
               <td class='ntss-list-body-td align-center'>
                 <v-ons-button
-                  :class="['button-area', data.effect_flg == 1 ? 'done' : 'not-yet']"
+                  :class="['button', 'button-area', data.effect_flg == 1 ? 'done' : 'not-yet']"
                   @click="clickChangeEffectStatus(index)"
                 >
                   {{ data.getEffectStatus() }}
                 </v-ons-button>
               </td>
               <!--   #5590 2023/05/12 iPadでSafariを使うと、数字に×が被る。修正 張博 start -->
-              <td class='ntss-list-body-td' style="min-width:9.5em">
+              <td class='ntss-list-body-td' style="min-width:9em">
                 <!-- mod FNSI-共有を追加 王 20200921 start -->
                 <!-- #5590 2023/04/19 ×を常に表示するように修正 林峻峰 start -->
                 <!-- <com-time-input
@@ -72,7 +75,7 @@
                   :classes="'' + inputClass('effect_time', index)"
                   :disabled="!isShared || !getItemAuthorized('TreatmentRecord', 'default_authority')"
                   input-id="effect-time"
-                  :value="data.effect_time"
+                  v-model="data.effect_time"
                   :index="index"
                   @focus="onFocusTime(index)"
                   @input="updateEffectDate"
@@ -129,30 +132,29 @@
                     :masterDefine="masterDefine"
                     v-model="medicines[index]"
                     @input="onSelectMedicine"
-                    :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority')"
+                    :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
                     :isActiveBtn="false"
                   />-->
                 <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
                 <common-master-selector
-                  :masterType="MasterType.ANTICOAGULANT_INDICATION"
-                  :initItem="{text:medicines[index].name, value: medicines[index].cd}"
-                  :editItem="{text:data.name, value: data.cd}"
+                  :masterType="MasterType.MEDICATION_TREATMENT_RECORD"
+                  :initItem="{text:medicines[index].name, value: medicines[index].cd, unit: medicines[index] && medicines[index].unit != null ? medicines[index].unit : null}"
+                  :editItem="{text:data.name, value: data.cd, unit: data.unit, procedureCd: data.procedure_cd, medicateTimingCd: data.timing_cd}"
                   :patientId="selectedPatId"
-                  :extraParams="{treatDate: treatDate,rstInfo:{ rstName:medicines[index].name, rstUnit:data.unit}}"
+                  :extraParams="{ treatDate: treatDate, rstInfo: { rstName: medicines[index].name, rstUnit: data.unit }, medicineType: data.type != null ? data.type : (medicines[index].type != null ? medicines[index].type : data.medicine_type), actualName: medicines[index].name || data.name || '', compareProcedure: true, compareTiming: true, currentProcedureCd: data.procedure_cd, currentTimingCd: data.timing_cd }"
                   :facilityCd="getFacilityCd"
                   :dialysisState="Number(rstDialysisState)"
                   :hasChangedOption="true"
+                  :changeOptionMode="'nameAndUnit'"
                   :selectedItemClass="'com-basic-sub-input'"
                   :backgroundColor="'#f7f7f7'"
                   :btnClass="'com-basic-sub-btn'"
-                  :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
+                  :btnDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority')"
                   :isSelectionRequired="true"
                   :hasUnregisteredOption="false"
                   @popover-return="masterUpdateInput($event,index);"
                 />
-              </v-ons-col>
               <!--// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end-->
-                </v-ons-row>
               </td>
               <td class='ntss-list-body-td number-input' style='width:1em'>
                 <!-- mod FNSI-共有を追加 王 20200921 start -->
@@ -299,12 +301,6 @@
                   @changePersonalUser="setEffectUserByIndex"
                 /> -->
                 <v-ons-row>
-                  <v-ons-col>
-                    <show-selected-item
-                      :propEditValue="effectUsers[index].name"
-                      propBackgroundColor="#ebebe4"
-                    />
-                  </v-ons-col>
              <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 start-->
 
                   <!-- mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm start-->
@@ -321,25 +317,24 @@
 <!--                    @changePersonalUser="setEffectUserByIndex"-->
 <!--                    :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority')"-->
 <!--                  />-->
-                  <com-master-selector
-                    :index="index"
-                    name="personal-user-all"
-                    labelName=""
-                    :showLabelName="false"
-                    :showClassFilter="true"
-                    :readMasterData="fetchPersonalUserAll"
-                    :masterDefine="personalUser"
-                    :value="createEffectUserValue(index)"
-                    @input="data.is_edited = true"
-                    @changePersonalUser="setEffectUserByIndex"
-                    :isDisabled="!getItemAuthorized('TreatmentRecord', 'default_authority') || !isShared"
+                  <common-master-selector
+                    :masterType="MasterType.PERSONAL_USER_TREATMENT_RECORD"
+                    :facilityCd="getFacilityCd"
+                    :initItem="{ text: effectUsers[index] ? effectUsers[index].name : null, value: effectUsers[index] ? effectUsers[index].cd : null }"
+                    :editItem="{ text: effectUsers[index] ? effectUsers[index].name : null, value: effectUsers[index] ? effectUsers[index].cd : null }"
+                    :selectedItemClass="'com-basic-sub-input'"
+                    :backgroundColor="'#f7f7f7'"
+                    :btnClass="'com-basic-sub-btn'"
+                    :hasUnregisteredOption="true"
+                    :btnDisabled="!isShared || !getItemAuthorized('TreatmentRecord', 'default_authority')"
+                    @popover-return="onPopoverEffectUser($event, index)"
                   />
                   <!-- mod 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm end-->
              <!-- #10359 mod 編集権限の動作不正 2024-06-05 卓 end-->
                 </v-ons-row>
               </td>
               <td class="ntss-list-body-td">
-                <button class="ntss-btn-outset button-delete" @click="deleteMediInfo(index)" :disabled="!isShared">
+                <button class="ntss-btn-outset button-delete" @click="deleteMediInfo(index)">
                   <v-ons-icon icon="fa-trash"/>
                 </button>
               </td>
@@ -348,8 +343,10 @@
           </tbody>
         </table>
       </div>
-    </div>
-    <div slot="footer" class="flex-container justify-content-flex-end">
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex-container justify-content-flex-end">
       <!-- mod FNSI-共有を追加 王 20200921 start -->
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 start -->
       <div class="registration-btn-area">
@@ -363,14 +360,18 @@
       </div>
       <!-- mod FNSI修正 画面スタイル(ボタン)対応 房 end -->
       <!-- mod FNSI-共有を追加 王 20200921 end -->
-    </div>
+      </div>
+    </template>
   </submenu-base>
 </template>
 
 <script>
-  import moment from "moment";
+import { getScopedElementsByClassName } from "@/functions/common/LayoutMeasureHelper";
+
+import { parseStoredArray } from "@/functions/common/CommonFunctions";
+  import dayjs from "@/compat/date/dayjs";
   // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc start
-  import {mapGetters, mapActions, mapMutations} from "vuex";
+  import {mapGetters, mapActions, mapMutations} from "@/compat/vue/vuex";
   // add #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療記録 20231207 ztc end
   import SubmenuBase from "@/components/treatment-record/SubmenuBaseComponent";
   import CommonTimeComponent from "@/components/treatment-record/submenu/common/CommonTimeComponent";
@@ -403,8 +404,8 @@
     SHORT_TIME_FORMAT,
     dateFormat
   } from "@/functions/common/DateTimeUtils";
-  import { EventBus } from "@/eventBus.js";
-  import BigNumber from "bignumber.js";
+  import { EventBus } from "@/compat/vue/event-bus.js";
+  import BigNumber from "@/compat/number/bignumber";
   import CommonCalender from "@/components/common/custom-calendar/CustomCalendar.vue";
   import CustomDivShowSelectedItem from "@/components/common/custom-form-tags/CustomDivShowSelectedItem";
   import { sendRequestGetMstPersonalUser, sendRequestMstGetJobs } from "@/apis/user-selector-popover";
@@ -432,6 +433,7 @@
   import commonMasterSelector from "@/components/common/master-selector/CommonMasterSelector.vue";
   import * as MasterType from "@/components/common/master-selector/MasterType";
   import { getMstListCompose } from "@/apis/pat-prescription"
+  import { getMasterConfig } from "@/components/common/master-selector/builder/masterPopoverConfig";
   // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
   export default {
 //#10359 mod 編集権限の動作不正 2024-06-05 卓 start
@@ -562,11 +564,32 @@
       async masterUpdateInput(data,index){
         //this.medicinesp[index].name = data.text
         //this.medicinesp[index].cd = data.value
-        await this.onSelectMedicine({name:data.text,cd: Number(data.value),type:data.kbnValue},index)
+        const medicineKbn = data.kbnValue ?? data.key_type ?? data._sourceTag;
+        await this.onSelectMedicine({name:data.text,cd: Number(data.value),type:medicineKbn},index)
         //this.medicines[index].name = this.mediInfoList.get(index).name
         this.mediInfoList.get(index).cd = Number(data.value)
         this.mediInfoList.get(index).name = data.text
-        
+        this.mediInfoList.get(index).unit = data && data.unit != null ? data.unit : this.mediInfoList.get(index).unit
+        const row = this.mediInfoList.get(index);
+        const procedureCd =
+          data && (data.procedureCd != null ? data.procedureCd : (data.procedure_cd != null ? data.procedure_cd : null));
+        const timingCd =
+          data && (data.medicateTimingCd != null ? data.medicateTimingCd :
+            (data.medicate_timing_cd != null ? data.medicate_timing_cd :
+              (data.timingCd != null ? data.timingCd : (data.timing_cd != null ? data.timing_cd : null))));
+        if (procedureCd != null && procedureCd !== "") row.procedure_cd = procedureCd;
+        if (timingCd != null && timingCd !== "") row.timing_cd = timingCd;
+
+        if (procedureCd != null && procedureCd !== "") {
+          const procOpts = this.procedureCombo2DArray && this.procedureCombo2DArray[index] ? this.procedureCombo2DArray[index] : [];
+          const procOpt = procOpts.find(opt => opt && String(opt.cd) === String(procedureCd));
+          if (procOpt && procOpt.text != null) row.procedure_name = procOpt.text;
+        }
+        if (timingCd != null && timingCd !== "") {
+          const timingOpts = this.medicateTiming2DArray && this.medicateTiming2DArray[index] ? this.medicateTiming2DArray[index] : [];
+          const timingOpt = timingOpts.find(opt => opt && String(opt.cd) === String(timingCd));
+          if (timingOpt && timingOpt.text != null) row.timing_name = timingOpt.text;
+        }
       },
       // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
       // #5835【リクレーション】治疗记录药剂不能实施 訾浩 statr
@@ -681,7 +704,9 @@
               cd = m.cd;
               // mod/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
             }
-            return new Master(cd, m.name);
+            const master = new Master(cd, m.name);
+            master.unit = m && m.unit != null ? m.unit : null;
+            return master;
             // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
           }
           // 薬剤コード
@@ -718,10 +743,9 @@
             reMedicineName = medicineByCd === undefined ? `【削除】${m.name}` : medicineName;
           }
           //add 治療記録バッグ修正 改修2 房 end
-          return new Master(
-            medicineCd,
-            reMedicineName
-          );
+          const master = new Master(medicineCd, reMedicineName);
+          master.unit = m && m.unit != null ? m.unit : null;
+          return master;
         });
       },
       // add 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm start
@@ -742,6 +766,7 @@
         else {
           userId = this.stateUserAccountInfo.userId;
         }
+        // return this.effectUsers[index] || new Master(userId, '' !== lName || '' !== fName ? lName + " " + fName : '');
         this.effectUsers[index] = new Master(userId, '' !== lName || '' !== fName ? lName + " " + fName : '');
         return this.effectUsers[index];
       },
@@ -764,15 +789,15 @@
         // });
         this.effectUsers = this.mediInfoList.value().map(m => {
           let fName = '';
-          if ( m.effect_user_first_name != null && m.effect_user_first_name.toString().trim() != "" ) {
+          if ( m.effect_user_first_name != null && m.effect_user_first_name.toString().trim() != "") {
             fName = m.effect_user_first_name.toString();
           }
           let lName = '';
-          if ( m.effect_user_last_name != null && m.effect_user_last_name.toString().trim() != "" ) {
+          if ( m.effect_user_last_name != null && m.effect_user_last_name.toString().trim() != "") {
             lName = m.effect_user_last_name.toString();
           }
           let userId = '';
-          if ( m.effect_user_id != null && m.effect_user_id.toString().trim() != "" ) {
+          if ( m.effect_user_id != null && m.effect_user_id.toString().trim() != "") {
             userId = m.effect_user_id.toString();
           }
           return new Master(userId, '' != lName || '' != fName ? lName + " " + fName : '');
@@ -845,68 +870,31 @@
       /**
        * 薬剤マスタ及び調整薬剤マスタ、薬剤分類を取得する.
        */
-      fetchMedicineAllWithMix() {
+      fetchMedicineAllWithMix(opts = {}) {
         // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start
-        const item = {
-          lists: [
-            {
-              id: "list1",
-              name: "固定分类",
-              sourceType: "FIXED",
-              fixedItems: [
-                { value: "0", text: "すべて" },
-                { value: "1", text: "通常薬剤" },
-                { value: "2", text: "調製薬剤" }
-              ],
-              keyMapping: [
-                { keyName: "key_type", valueFrom: "value" }
-              ]
-            },
-            {
-              id: "list2",
-              name: "药剂分类MST",
-              sourceType: "MST",
-              mstSource: {
-                mstCode: "mstMedicineClassDaoImpl",
-                sqlParams: { facilityCd: this.facilityCd }
-              },
-              keyMapping: [
-                { keyName: "key_class", valueFrom: "classCd" }
-              ]
-            },
-            {
-              id: "list3",
-              name: "通常药剂 + 调制药剂 合并",
-              sourceType: "MST_COMBINED",
-              mstSourceList: [
-                {
-                  mstCode: "mstMedicineDaoImpl",
-                  sourceTag: "1",
-                  sqlParams: { facilityCd: this.facilityCd,patId: this.selectedPatId },
-                  keyMapping: [
-                    { keyName: "key_type", valueFrom: "sourceTag" },
-                    { keyName: "key_class", valueFrom: "classCd" },
-                    { keyName: "key_cd", valueFrom: "medicineCd" }
-                  ]
-                },
-                {
-                  mstCode: "mstMedicineMixDaoImpl",
-                  sourceTag: "2",
-                  sqlParams: { facilityCd: this.facilityCd,patId: this.selectedPatId },
-                  keyMapping: [
-                    { keyName: "key_type", valueFrom: "sourceTag" },
-                    { keyName: "key_class", valueFrom: "classCd" },
-                    { keyName: "key_cd", valueFrom: "medicineMixCd" }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
+        const initCd =
+          opts.initCd != null && opts.initCd !== "" ? String(opts.initCd).trim() : null;
+        const medicineType = opts.medicineType;
+        const extraParams = {
+          treatDate: this.treatDate || "",
+          rstInfo: { rstName: "", rstUnit: "" },
+          ...(medicineType != null ? { medicineType } : {}),
+          ...(initCd != null ? { initValue: initCd } : {})
+        };
+        const context = {
+          facilityCd: this.facilityCd,
+          patientId: this.selectedPatId,
+          extraParams,
+          initItem: initCd != null ? { value: initCd } : {},
+          selectedItem: initCd != null ? { value: initCd } : {},
+          dialysisState: Number(this.rstDialysisState || 0),
+          allowedFields: {}
+        };
+        const item = getMasterConfig(MasterType.MEDICATION_TREATMENT_RECORD, context);
         return Promise.all([
           sendRequestGetMstMedicineTabooAllergy(this.selectedPatId),
           sendRequestGetMstMedicineMixTabooAllergy(this.selectedPatId),
-          sendRequestGetMstMedicineClass(),
+          sendRequestGetMstMedicineClass(this.selectedPatId),
           getMstListCompose(item)
         ]);
         // add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong end
@@ -925,7 +913,7 @@
         const name = this.mediInfoListInitial.get(index).name;
         let medicineList = Promise.all([
           getMedicineAllTabooAllergy(this.selectedPatId),
-          sendRequestGetMstMedicineClass()
+          sendRequestGetMstMedicineClass(this.selectedPatId)
         ]);
         await medicineList.then(async (response)=>{
           let medicinePopover = response[0].data;
@@ -979,7 +967,10 @@
         // #10659 禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 linjunfeng end
       },
       fetchPersonalUserAll() {
-        return Promise.all([sendRequestGetMstPersonalUser(this.facilityCd), sendRequestMstGetJobs(this.facilityCd)]);
+        return Promise.all([
+          sendRequestGetMstPersonalUser(this.facilityCd, this.selectedPatId),
+          sendRequestMstGetJobs(this.facilityCd, this.selectedPatId)
+        ]);
       },
       /**
        * 薬剤選択時イベント
@@ -1099,13 +1090,34 @@
         }
         this.checkHandle(index)
         // add 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm start
-        this.createEffectUserValue(index);
+        if (effectUserInfo === undefined) {
+          this.effectUsers[index] = new Master();
+        } else {
+          this.createEffectUserValue(index);
+        }
         // add 11778 【因島】実績の穿刺者や返血者の選択ダイアログでログイン者が選択されていない zkm end
+      },
+      onPopoverEffectUser(item, index) {
+        if (!item) return;
+        const uid = item.value != null ? item.value : item.key_cd ?? item.userId;
+        if (uid == null || uid === "") {
+          this.setEffectUserByIndex(undefined, index);
+          return;
+        }
+        const personal = item.personalUserInfo;
+        const userInfo = personal
+          ? { id: personal.id, lastName: personal.lastName, firstName: personal.firstName }
+          : {
+              id: uid,
+              lastName: item.userLastName != null ? item.userLastName : null,
+              firstName: item.userFirstName != null ? item.userFirstName : null
+            };
+        this.setEffectUserByIndex(userInfo, index);
       },
       updateEffectDateByCalendar(index) {
         //mod FNSI-改修内容：初期flag追加 房 start
-        //this.mediInfoList.get(index).setOnlyEffectDate(index, moment(this.mediInfoList.get(index).effect_date).format('YYYYMMDD'), true);
-        this.mediInfoList.get(index).setOnlyEffectDate(moment(this.mediInfoList.get(index).effect_date).format('YYYYMMDD'), this.initFlg);
+        //this.mediInfoList.get(index).setOnlyEffectDate(index, dayjs(this.mediInfoList.get(index).effect_date).format('YYYYMMDD'), true);
+        this.mediInfoList.get(index).setOnlyEffectDate(dayjs(this.mediInfoList.get(index).effect_date).format('YYYYMMDD'), this.initFlg);
         //mod FNSI-改修内容：初期flag追加 房 end
       },
       /**
@@ -1121,8 +1133,8 @@
           const newVal = effectTime;
           this.mediInfoList.get(index).effect_time = newVal;
           // mod 治療記録バッグ修正 改修 周雨晴 start
-          if (this.mediInfoList.get(index).effect_date === null ) {
-            this.mediInfoList.get(index).setOnlyEffectDate(moment().format('YYYYMMDD'), this.initFlg);
+          if (this.mediInfoList.get(index).effect_date === null) {
+            this.mediInfoList.get(index).setOnlyEffectDate(dayjs().format('YYYYMMDD'), this.initFlg);
           }
           // mod 治療記録バッグ修正 改修 周雨晴 end
 
@@ -1147,7 +1159,7 @@
             // FNSI-修正 #6525 投与薬剤の実施判定不正、xugj mod end
             return;
           }
-          const effectDate = moment(this.mediInfoList.get(index).effect_date).format('YYYYMMDD');
+          const effectDate = dayjs(this.mediInfoList.get(index).effect_date).format('YYYYMMDD');
           this.mediInfoList
             .get(index)
             .setEffectDate(this.treatDate, this.stateUserAccountInfo, effectDate);
@@ -1285,9 +1297,15 @@
         }).then(() => {
           //add FNSI内容修正 外部Api調用 房 start
           if (this.mediNoticeFlag) {
-            this.sendGetNoticeMedi(this.getOrdNo).then(results=>{
+            this.sendGetNoticeMedi({
+              ordNo: this.getOrdNo,
+              selectedPatId: this.selectedPatId
+            }).then(results=>{
               if (results.data == true) {
-                this.getMstMachineByOrdNoRst(this.getOrdNo).then(machineRes => {
+                this.getMstMachineByOrdNoRst({
+                  ordNo: this.getOrdNo,
+                  selectedPatId: this.selectedPatId
+                }).then(machineRes => {
                   const params = {
                     ordNo: this.getOrdNo, //オーダー番号
                     machineNo: machineRes.data[0].machineNo, //装置マスタ.装置番号
@@ -1395,7 +1413,10 @@
         // 初期化処理を実行
         this.mediInfoList.deleteAll();
         this.mediInfoListInitial.deleteAll();
-        const response = await this.getTreatmentRecordMediInfo(this.getOrdNo);
+        const response = await this.getTreatmentRecordMediInfo({
+          ordNo: this.getOrdNo,
+          selectedPatId: this.selectedPatId
+        });
         const mediInfo = response.data;
 
         /* modify by chamaojia 2024-04-02 [10196] add null judgment processing  --start */
@@ -1404,8 +1425,19 @@
         const mediInfoArray = (mediInfo && mediInfo.rst_medi_info) ? JSON.parse(mediInfo.rst_medi_info) : [];
         /* modify by chamaojia 2024-04-02 [10196] add null judgment processing  --end */
 
+        this.treatDate = mediInfo.treat_date;
+        this.rstEndDate = mediInfo.rst_end_date;
+        this.rstDialysisState = mediInfo.rst_dialysis_state;
+        this.rstStartDate = mediInfo.rst_start_date;
+
+        const firstRow = mediInfoArray[0];
+        const initOpts =
+          firstRow && firstRow.cd != null && firstRow.cd !== ""
+            ? { initCd: firstRow.cd, medicineType: firstRow.medicine_type }
+            : {};
+
         //const medicineAndClassResponse = await this.fetchMedicineAll();
-        const medicineAndClassResponse = await this.fetchMedicineAllWithMix();
+        const medicineAndClassResponse = await this.fetchMedicineAllWithMix(initOpts);
         const latestMedicineResponse = medicineAndClassResponse[0];
         const latestMedicineMixResponse = medicineAndClassResponse[1];
         const latestMedicineClassResponse = medicineAndClassResponse[2];
@@ -1425,10 +1457,6 @@
         const latestPersonalUserResponse = await this.fetchPersonalUserAll();
         this.latestPersonalUser = latestPersonalUserResponse[0].data;
 
-        this.treatDate = mediInfo.treat_date;
-        this.rstEndDate = mediInfo.rst_end_date;
-        this.rstDialysisState = mediInfo.rst_dialysis_state;
-        this.rstStartDate = mediInfo.rst_start_date;
         //add FNSI-修正 #8356 【デグレ】治療記録－投与薬剤の表示順が施設設定の設定順序とならない　周安寧 start
         //mod 9706 ljx start
         const patIdParam = this.selectedPatId == null?-1:this.selectedPatId
@@ -1447,20 +1475,20 @@
         //mod 9706 ljx end
         // add 7886 施設設定マスタ＞No.106, 107の表示・動作不備 start
         const procedureSelector = await ApiHelper.get(
-          `/report_designer/master/mst_procedure`
-        ).catch(err => {
+          `/report_designer/master/mst_procedure`,
+          { selectedPatId: this.selectedPatId }).catch(err => {
           getErrorMessage('Medicine.vue', 'created', err);
           throw err;
         });
         const timingSelector = await ApiHelper.get(
-          `/report_designer/master/mst_medicate_timing`
-        ).catch(err => {
+          `/report_designer/master/mst_medicate_timing`,
+          { selectedPatId: this.selectedPatId }).catch(err => {
            getErrorMessage('Medicine.vue', 'created', err);
            throw err;
         });
         const classSelector = await ApiHelper.get(
-          `/report_designer/master/mst_medicine_class`
-        ).catch(err => {
+          `/report_designer/master/mst_medicine_class`,
+          { selectedPatId: this.selectedPatId }).catch(err => {
           getErrorMessage('Medicine.vue', 'created', err);
           throw err;
         });
@@ -1500,9 +1528,12 @@
           var facility_cd = this.facilityCd;
           //mod FNSI-7270 劉全航 end
           const response = await ApiHelper.get(
-            "/mainData/displayOrder"
+            "/mainData/displayOrder",
             //mod FNSI-7270 劉全航 start
-            ,{facility_cd}
+            {
+              facility_cd,
+              selectedPatId: this.selectedPatId
+            }
             //mod FNSI-7270 劉全航 end
           ).catch(err => {
             //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
@@ -1515,7 +1546,7 @@
             let medOrderNo = response.data.find(item => item.facilitySettingNo == '3007');
             if (medOrderNo) {
               //FNSI-修正 #5880 投薬の表示順の修正　ljx start
-              let medOrderNoValueArray = eval(medOrderNo.value);
+              let medOrderNoValueArray = parseStoredArray(medOrderNo.value);
               let sortKeyObj = {};
               for(let i=0;i<medOrderNoValueArray.length;i++){
                 switch (medOrderNoValueArray[i]){
@@ -1613,11 +1644,15 @@
 
         // コンボデータの取得
         const emptyOption = { text: null, cd: null };
-        const procedureComboResponse = await this.getProcedureComboList();
+        const procedureComboResponse = await this.getProcedureComboList({
+          selectedPatId: this.selectedPatId
+        });
         this.procedureComboList = [emptyOption].concat(
           procedureComboResponse.data
         );
-        const medicateTimingComboResponse = await this.getMedicateTimingComboList();
+        const medicateTimingComboResponse = await this.getMedicateTimingComboList({
+          selectedPatId: this.selectedPatId
+        });
         this.medicateTimingComboList = [emptyOption].concat(
           medicateTimingComboResponse.data
         );
@@ -1669,7 +1704,7 @@
         //#10359 mod 編集権限の動作不正 2024-06-05 卓 end
         });
         // add FNSI-共有を追加 王 20200921 start
-        const selectBtn = document.getElementsByClassName("button select-btn");
+        const selectBtn = getScopedElementsByClassName("button select-btn", this.$el || this);
         if (this.getSharedFacilityCd !== undefined && this.getSharedFacilityCd != null) {
           if (this.getSharedFlag === 1 && this.facilityCd !== this.getSharedFacilityCd) {
             for (let i = 0; i < selectBtn.length; i++) {
@@ -1708,7 +1743,7 @@
       refresh() {
         // 子機能ボタンエリアの更新
         this.$emit("update");
-        if (this.selfScreenName !== this.$router.currentRoute.name) {
+        if (this.selfScreenName !== this.$route.name) {
           return;
         }
         //mod メッセージ順番修正 房 start
@@ -1725,7 +1760,7 @@
       },
       // add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start
       eventBusRefresh() {
-        if (this.selfScreenName !== this.$router.currentRoute.name) {
+        if (this.selfScreenName !== this.$route.name) {
           return;
         }
         if (this.isChanged && this.alertFlag) {
@@ -1791,7 +1826,7 @@
           for (let index = 0; index < this.mediInfoListInitial.list.length; index++) {
             let beforeTarget =
               {
-                effect_date:moment(this.mediInfoListInitial.get(index).effect_date).format('YYYYMMDD'),
+                effect_date:dayjs(this.mediInfoListInitial.get(index).effect_date).format('YYYYMMDD'),
                 effect_time:this.mediInfoListInitial.get(index).effect_time,
                 cd:this.mediInfoListInitial.get(index).cd,
                 name:this.mediInfoListInitial.get(index).name,
@@ -1808,7 +1843,7 @@
 
             let afterTarget =
               {
-                effect_date:moment(this.mediInfoList.get(index).effect_date).format('YYYYMMDD'),
+                effect_date:dayjs(this.mediInfoList.get(index).effect_date).format('YYYYMMDD'),
                 effect_time:this.mediInfoList.get(index).effect_time,
                 cd:this.mediInfoList.get(index).cd,
                 name:this.mediInfoList.get(index).name,
@@ -1859,7 +1894,7 @@
           props.push(obj)
         }
         var cps = [];
-        var asc = true;
+        var asc;
         if (props.length < 1) {
           for (var p in item1) {
             if (item1[p] > item2[p]) {
@@ -1948,7 +1983,7 @@
     },
     async created() {
       // 画面名称取得
-      this.selfScreenName = this.$router.currentRoute.name;
+      this.selfScreenName = this.$route.name;
       EventBus.$on("refresh", this.eventBusRefresh);
       // OrdMainレコードをチェックする
       if (!this.checkOrdNo()) {
@@ -1964,7 +1999,7 @@
         deep: true,
       }
     },
-    beforeDestroy() {
+    beforeUnmount() {
       // dataの初期化
       Object.assign(this.$data, this.$options.data());
       // del refresh方法処理不正について、対応する。 dengshen start
@@ -1981,42 +2016,53 @@
 </script>
 
 <style scoped>
+  .ntss-list-body-td :deep(ons-button.button) {
+    width: 3em;
+  }
+  .ntss-list-body-td :deep(ons-row) {
+    flex-wrap: nowrap;
+  }
+  .ntss-list-body-td :deep(ons-col) {
+    flex: 1 1 0%;
+    width: auto;          /* 避免 Safari 按 100% 撑满 */
+    min-width: 0;
+    margin-right: 5px;
+  }
   .ntss-list-header-th-sticky {
     z-index: 1;
   }
-
   .align-center {
     text-align: center;
   }
   .scroll-table {
     width: 1px;
   }
-  .medicine-selector-td >>> ons-col.text-value,
-  .personal-select-td >>> ons-col.text-value {
+  .medicine-selector-td :deep(ons-col.text-value),
+  .personal-select-td :deep(ons-col.text-value) {
     display: flex;
     align-items: center;
   }
-  .medicine-selector-td >>> .select-btn,
-  .personal-select-td >>> .select-btn {
+  .medicine-selector-td :deep(.select-btn),
+  .personal-select-td :deep(.select-btn) {
     font-size: 1em;
   }
-  .number-input >>> .num-value label {
+  .number-input :deep(.num-value label) {
     margin-left: 0em;
   }
-  .number-input >>> .num-value ons-input {
+  .number-input :deep(.num-value ons-input) {
     width: 5em;
   }
-  .ntss-list-body-td >>> .select-input {
+  .ntss-list-body-td :deep(.select-input) {
     border: solid 1px var(--treatment-record-select-border-color);
   }
   .button-calendar {
     margin-left: 2px;
     width: 2em;
   }
-  div >>> .common-time-input {
+  div :deep(.common-time-input) {
     width: calc(100% - 30px);
   }
-  div >>> .common-time-input > input[type="time"] {
+  div :deep(.common-time-input > input[type="time"]) {
     width: 100%;
   }
   .toolbar-btn {
@@ -2029,7 +2075,7 @@
   td ons-select {
     width: 100%;
   }
-  .custom-input-edited >>> select {
+  .custom-input-edited :deep(select) {
     border: 2px green solid !important;
     outline: 0 !important;
     border-radius: 5px !important;
@@ -2082,10 +2128,10 @@
     box-shadow: unset;
   }
     /*// add/ #12441 患者経過総合ビューアの実績抗凝固剤が表示されなくなる tianqidong start*/
-    ::v-deep .com-basic-sub-btn {
+    :deep(.com-basic-sub-btn) {
       margin-left: 5px
     }
-    ::v-deep .com-basic-sub-input {
+    :deep(.com-basic-sub-input) {
       min-width: 13em;
       width: 100%;
       max-width: 28em;

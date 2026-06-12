@@ -2,9 +2,9 @@ package jp.co.nikkiso.ntss.core.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
 import jp.co.nikkiso.ntss.core.entity.entityListener.BaseEntityListener;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
 import lombok.Getter;
@@ -76,7 +76,7 @@ public class MstUser extends BaseEntity {
       try {
         SettingValue obj = objectMapper.readValue(value, SettingValue.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("共通設定タブ定義設定項目情報の個人設定内容が不正です", e);
       }
     }
@@ -89,7 +89,7 @@ public class MstUser extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -141,7 +141,7 @@ public class MstUser extends BaseEntity {
       try {
         PersonalSetting obj = objectMapper.readValue(value, PersonalSetting.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("共通設定タブ定義設定項目情報の個人設定内容が不正です", e);
       }
     }
@@ -154,7 +154,7 @@ public class MstUser extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -311,7 +311,7 @@ public class MstUser extends BaseEntity {
       try {
         UserSettings obj = objectMapper.readValue(value, UserSettings.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("利用者マスタのユーザ設定内容が不正です", e);
       }
     }
@@ -325,7 +325,7 @@ public class MstUser extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }

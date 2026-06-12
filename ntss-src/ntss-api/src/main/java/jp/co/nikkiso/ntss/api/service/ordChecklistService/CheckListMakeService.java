@@ -5,7 +5,7 @@ import java.util.List;
 
 
 import jp.co.nikkiso.ntss.core.entity.OrdChecklist;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import jp.co.nikkiso.ntss.core.entity.custom.OrdMainForCheckListSchedule;
 
 public interface CheckListMakeService {

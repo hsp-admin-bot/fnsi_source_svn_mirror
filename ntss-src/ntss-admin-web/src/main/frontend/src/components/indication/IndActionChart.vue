@@ -7,7 +7,7 @@
   <!-- mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 end -->
     <v-ons-row v-for="(component, index) in componentData" :key="index">
       <!-- mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 start -->
-      <!--<div
+      <!--<component
         :is="component.name"
         :key="index"
         :ref="index"
@@ -16,7 +16,7 @@
         @input="e => (component.fields.value = e)"
       />-->
       <!-- //8204 【デグレ】治療条件モーダルにて、使用しない項目を設定できてしまう mod start -->
-      <!-- <div
+      <!-- <component
         :is="component.name"
         :key="index"
         :ref="index"
@@ -26,7 +26,7 @@
         @input="e => (component.fields.value = e)"
       /> -->
       <!-- #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng start -->
-      <!-- <div
+      <!-- <component
         :is="component.name"
         :key="index"
         :ref="index"
@@ -36,7 +36,7 @@
         :is-indication="component.fields.isIndication"
         @input="e => (component.fields.value = e)"
       />-->
-      <div
+      <component
         :is="component.name"
         :key="index"
         :ref="index"
@@ -56,16 +56,16 @@
 </template>
 
 <script>
-import _ from "underscore";
+import _ from "@/compat/collections/lodash";
 import { ApiHelper } from "@/apis/AxiosHelper";
 // mod FNSI-【1006】最新の改修対象一覧の483対応 韓 start
-//import { mapGetters } from "vuex";
+//import { mapGetters } from "@/compat/vue/vuex";
 //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 start
-//import { mapGetters, mapMutations } from "vuex";
-import { mapGetters, mapMutations, mapActions } from "vuex";
+//import { mapGetters, mapMutations } from "@/compat/vue/vuex";
+import { mapGetters, mapMutations, mapActions } from "@/compat/vue/vuex";
 //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 end
 // mod FNSI-【1006】最新の改修対象一覧の483対応 韓 end
-import { EventBus } from "@/eventBus.js";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import { dateFormat, fitTermCheckForUpdate } from "@/functions/common/DateTimeUtils";
 import IndTreatCondTime from "@/components/indication/IndTreatCondEditTime";
 import IndTreatCondVa from "@/components/indication/IndTreatCondVa";
@@ -121,7 +121,7 @@ import { valueInfoOpe } from "@/components/deviceset-info/base-modules/DeviceSet
 import { LIQUID_AMOUNT_TEXT,LIQUID_SPEED_TEXT } from "@/constants/PatViewerConstants.js";
 // add FNSI-【1006】最新の改修対象一覧の412対応 韓 end
 // add FNSI-外部連携APIの修正 徐 start
-import moment from "moment";
+import dayjs from "@/compat/date/dayjs";
 // add FNSI-外部連携APIの修正 徐 end
 // add FNSI-【1006】最新の改修対象一覧の679対応 韓 start
 //del FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 start
@@ -156,9 +156,10 @@ import {accSub} from "../../functions/common/NumberFunctions";
 //add #10150 piao end
 import { normalizeValue } from "@/functions/common/CommonFunctions";
 
+import IndicationOwnerMixin from '@/components/indication/IndicationOwnerMixin';
 export default {
+  mixins: [IndicationOwnerMixin],
   // TODO: vue/no-unused-components
-  /* eslint-disable */
   components: {
     "ind-treat-time": IndTreatCondTime,
     "ind-treat-va": IndTreatCondVa,
@@ -202,7 +203,6 @@ export default {
     "ind-treat-ip-monitor-off": IndTreatCondIpMonitorOff,
     "ind-treat-ip-monitor-off-timing": IndTreatCondIpMonitorOffTiming
   },
-  /* eslint-enable */
   //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 start
   /**
   props: {
@@ -1019,7 +1019,7 @@ export default {
       if (value) {
         this.$nextTick(() => {
            // リセット時、親に対してリセット検知のフラグを立てる
-           this.$parent.$parent.isIndActionChartReset = true;
+           this._indicationResultOwner().isIndActionChartReset = true;
         });
       }
     },
@@ -1139,36 +1139,35 @@ export default {
       await this.getIndTreatCondIvMode(structData);
       if (this.isEdit()) {
         if(this.newIndTreatCondIvMode === this.oldIndTreatCondIvMode){
-          this.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+          this._indicationDialogOwner().messageDialogInfo.messageCd = 70000028;
           /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-          this.$parent.$parent.messageDialogInfo.type = "9";
+          this._indicationDialogOwner().messageDialogInfo.type = "9";
           /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
-          //add 9664補液及び透析液仕様修正します yangqingzhe start 
-          this.$parent.$parent.messageDialogInfo.title = DIALOG_MESSAGES[70000028].title
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
+          //add 9664補液及び透析液仕様修正します yangqingzhe start
+          this._indicationDialogOwner().messageDialogInfo.title = DIALOG_MESSAGES[70000028].title
           //add 9664補液及び透析液仕様修正します yangqingzhe end
           return;
         } else {
           if(this.oldIndTreatCondIvMode !== "noIv"){
-            this.$parent.$parent.messageDialogInfo.messageCd = 13000169;
-            this.$parent.$parent.messageDialogInfo.type = "1";
-            this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
-            this.$parent.$parent.messageDialogInfo.title = DIALOG_MESSAGES[13000169].title
+            this._indicationDialogOwner().messageDialogInfo.messageCd = 13000169;
+            this._indicationDialogOwner().messageDialogInfo.type = "1";
+            this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
+            this._indicationDialogOwner().messageDialogInfo.title = DIALOG_MESSAGES[13000169].title
           }else{
-            this.$parent.$parent.messageDialogInfo.messageCd = 70000028;
+            this._indicationDialogOwner().messageDialogInfo.messageCd = 70000028;
             /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
-            this.$parent.$parent.messageDialogInfo.type = "9";
+            this._indicationDialogOwner().messageDialogInfo.type = "9";
             /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx end */
-            this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
-            //add 9664補液及び透析液仕様修正します yangqingzhe start 
-            this.$parent.$parent.messageDialogInfo.title = DIALOG_MESSAGES[70000028].title
+            this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
+            //add 9664補液及び透析液仕様修正します yangqingzhe start
+            this._indicationDialogOwner().messageDialogInfo.title = DIALOG_MESSAGES[70000028].title
             //add 9664補液及び透析液仕様修正します yangqingzhe end
             return;
           }
         }
       }
-      this.getComponentData(structData,2);
-      return;
+      return this.getComponentData(structData,2);
     },
     //add #10150 piao start
     async getIndTreatCondIvMode(structData) {
@@ -1279,8 +1278,7 @@ export default {
         // 対象日時の治療情報取得(開始日付・治療方法・クールで絞り込み)
         const response = await ApiHelper.post(
           "/mainData/getOrdMainDataInfo",
-          paramJson
-        ).catch(error => {
+          paramJson).catch(error => {
           getErrorMessage('IndActionChart.vue', 'resetComponentData', error);
           throw error;
         });
@@ -1408,7 +1406,7 @@ export default {
         // add 8204 【デグレ】治療条件モーダルにて、使用しない項目を設定できてしまう 周安寧 end
         // (null !== medicine_type && undefined != medicine_type) ? String(medicine_type) : null;
         const initMdicineType = (null !== medicine_type && undefined != medicine_type) ? Number(medicine_type) : null;
-        if (cd === 17 || cd === 22 || cd === 26 ||cd === 27 || cd === 28 ) {
+        if (cd === 17 || cd === 22 || cd === 26 ||cd === 27 || cd === 28) {
           this.componentData[index].fields = {
             rstDialysisState: rstDialysisState,
             value: value,
@@ -1432,18 +1430,16 @@ export default {
           let dw = this.ordMainData[0].indDw;
           if (dw === null || dw === undefined) {
             // indDwが取得できないならば身体情報から治療日最直近のDWを取得
-            const tDate = moment(ordMainData[0].indStartDate, "YYYYMMDD").add(1, "day");
+            const tDate = dayjs(ordMainData[0].indStartDate, "YYYYMMDD").add(1, "day");
             for (const physicalInfo of this.getPhysicalInfo) {
               if (
                 physicalInfo &&
                 physicalInfo.exam_date &&
-                moment(physicalInfo.exam_date) < tDate
-              ) {
+                dayjs(physicalInfo.exam_date) < tDate) {
                 // 治療日より未来の登録日を除外する
                 if (
                   physicalInfo.dw !== undefined &&
-                  physicalInfo.dw !== null
-                ) {
+                  physicalInfo.dw !== null) {
                   dw = physicalInfo.dw;
                   break;
                 }
@@ -1512,8 +1508,8 @@ export default {
       //   }
       // }
       // del #10150 piao end
-      await this.$parent.$parent.getDeviceSetInfoInd();
-      this.$parent.$parent.showOhdfComment();
+      await this._indicationResultOwner().getDeviceSetInfoInd();
+      this._indicationResultOwner().showOhdfComment();
       // mod #10150 piao start
       // if (selectedTreatItem.length > 0) {
       //   this.setDeviceMode(selectedTreatItem[0]);
@@ -2002,10 +1998,10 @@ export default {
         this.$nextTick(() => {
           //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 start
           //this.$parent.$parent.messageDialogInfo.messageCd = "00400002";
-          this.$parent.$parent.messageDialogInfo.messageCd = 10400002;
+          this._indicationDialogOwner().messageDialogInfo.messageCd = 10400002;
           //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
-          this.$parent.$parent.messageDialogInfo.type = "2";
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.type = "2";
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
           this.itemDisplayFlg = false;
         });
 
@@ -2031,32 +2027,32 @@ export default {
       this.answerFlg = this.answerFlg + answer;
       if(messageCd==10400003){
         if(this.IPOneShotAmountChange==true){
-          this.$parent.$parent.messageDialogInfo.messageCd = 10400004;
+          this._indicationDialogOwner().messageDialogInfo.messageCd = 10400004;
           // #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng start
           // this.$parent.$parent.messageDialogInfo.type = "2";
-          this.$parent.$parent.messageDialogInfo.type = "1";
+          this._indicationDialogOwner().messageDialogInfo.type = "1";
           // #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng end
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
           return;
         }else if(this.IPSpeedChange==true){
-          this.$parent.$parent.messageDialogInfo.messageCd = 10400005;
+          this._indicationDialogOwner().messageDialogInfo.messageCd = 10400005;
           // #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng start
           // this.$parent.$parent.messageDialogInfo.type = "2";
-          this.$parent.$parent.messageDialogInfo.type = "1";
+          this._indicationDialogOwner().messageDialogInfo.type = "1";
           // #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng end
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
           return;
         }else{
           this.updateInfo(this.itemStructData);
         }
       }else if(messageCd==10400004){
         if(this.IPSpeedChange==true){
-          this.$parent.$parent.messageDialogInfo.messageCd = 10400005;
+          this._indicationDialogOwner().messageDialogInfo.messageCd = 10400005;
           // #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng start
           // this.$parent.$parent.messageDialogInfo.type = "2";
-          this.$parent.$parent.messageDialogInfo.type = "1";
+          this._indicationDialogOwner().messageDialogInfo.type = "1";
           // #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng end
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
           return;
         }else{
           this.updateInfo(this.itemStructData);
@@ -2157,9 +2153,7 @@ export default {
             ||(treatCondItems[key][0]?.displayInputValue.initValue != treatCondItems[key][0]?.displayInputValue.editValue)
             ||(treatCondItems[key][0].treatItemCd === "28" && this.checkDisabled)
             || (["28"].includes(treatCondItems[key][0].treatItemCd) && coagulantAmountTotalHiddenFlg)
-            || (["26", "27"].includes(treatCondItems[key][0].treatItemCd) && coagulantAmountAndRateIsHidden && this.facilitySettingAnticoagulantDefaultValue === 1)
-          )
-        ) {
+            || (["26", "27"].includes(treatCondItems[key][0].treatItemCd) && coagulantAmountAndRateIsHidden && this.facilitySettingAnticoagulantDefaultValue === 1))) {
         // mod #10150 shiyw 2024-09-09 start
         // #10196 切り替え補液,補液使用数小桁未更新です linjunfeng end
         // #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng end
@@ -2224,7 +2218,7 @@ export default {
       //add FNSI-障害票一覧_患者経過総合ビューア.xlsxのNo.56(外結)対応 韓 start
       if (this.settingIndData.headerTitle === "治療条件" || this.settingIndData.headerTitle === "穿刺針情報編集") {
         let ordMainData = this.ordMainData();
-        ordMainData = ordMainData[moment(structData.indStartDate).format("YYYYMMDD")];
+        ordMainData = ordMainData[dayjs(structData.indStartDate).format("YYYYMMDD")];
         // mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.28(外結)対応 韓 start
         // const indCondInfo = ordMainData ? JSON.parse(ordMainData.indCondInfo) : null;
         indCondInfo = ordMainData ? JSON.parse(ordMainData.indCondInfo) : null;
@@ -2275,7 +2269,7 @@ export default {
       //del FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 end
         //del FNSI-障害票一覧_患者経過総合ビューア.xlsxのNo.56(外結)対応 韓 start
         // let ordMainData = this.ordMainData();
-        // ordMainData = ordMainData[moment(structData.indStartDate).format("YYYYMMDD")];
+        // ordMainData = ordMainData[dayjs(structData.indStartDate).format("YYYYMMDD")];
         // const indCondInfo = ordMainData ? JSON.parse(ordMainData.indCondInfo) : null;
         //del FNSI-障害票一覧_患者経過総合ビューア.xlsxのNo.56(外結)対応 韓 end
         //del FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 start
@@ -2392,7 +2386,7 @@ export default {
       // add 11790 抗凝固剤持続総量の計算をするとマイナスになる事がある zkm start
       if (!this.checkDisabled && this.hasAntiCoagulantAmountTotal(indInfo)) {
         let ordMainData = this.ordMainData();
-        ordMainData = ordMainData[moment(structData.indStartDate).format("YYYYMMDD")];
+        ordMainData = ordMainData[dayjs(structData.indStartDate).format("YYYYMMDD")];
         var ordMainCondInfo = ordMainData ? JSON.parse(ordMainData.indCondInfo) : null;
         if (this.validateAntiCoagulantAmountTotal(indInfo, ordMainCondInfo)) {
           await this.$ons.notification.alert({
@@ -2479,8 +2473,7 @@ export default {
       const startDate = structData.indStartDate.replace(/-/g, '');
       const endDate = structData.indEndDate == null ? null : structData.indEndDate.replace(/-/g, '');
       const searchData = await ApiHelper.get(
-        `/mainData/getByPatIdAndTreatDate/${structData.facilityCd}/${structData.patId}/${startDate}/${endDate}`
-      ).catch(error => {
+        `/mainData/getByPatIdAndTreatDate/${structData.facilityCd}/${structData.patId}/${startDate}/${endDate}`).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('IndActionChart.vue', 'updateInfo', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -2523,9 +2516,8 @@ export default {
       }
       // add FNSI-【1006】最新の改修対象一覧のIES475対応 韓 end
       const response = await ApiHelper.post(
-        "/mainData/updateOrdMainInfo/",
-        sendJson
-      ).catch(error => {
+        "/mainData/updateOrdMainInfo",
+        sendJson).catch(error => {
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
         getErrorMessage('IndActionChart.vue', 'updateInfo', error);
         //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -2547,8 +2539,7 @@ export default {
               let mstMachine = machineRes.data;
               if (mstMachine.length > 0){
                 ApiHelper.get(
-                  `/master_maintenance/mst_comsv_setting/data/${structData.facilityCd}`
-                ).then((response) =>
+                  `/master_maintenance/mst_comsv_setting/data/${structData.facilityCd}`).then((response) =>
                   {
                     let diviceEgeList = response.data.localDataSource.data;
                     let diviceEge = diviceEgeList.find(o =>{
@@ -2606,8 +2597,7 @@ export default {
                       };
                       this.sendNextPatInfoViewer(params);
                     }
-                  }
-                ).catch(error => {
+                  }).catch(error => {
                   //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add start
                   getErrorMessage('IndActionChart.vue', 'updateInfo', '送信失敗しました。');
                   //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
@@ -2659,14 +2649,14 @@ export default {
         //   }
         // }
         // });
-        this.$parent.$parent.messageDialogInfo.messageCd = 12000000;
+        this._indicationDialogOwner().messageDialogInfo.messageCd = 12000000;
         //mod #10154_#10183 zhao start
         //this.$parent.$parent.messageDialogInfo.title = "注意";
-        this.$parent.$parent.messageDialogInfo.title = "指示組合せ注意";
+        this._indicationDialogOwner().messageDialogInfo.title = "指示組合せ注意";
         //mod #10154_#10183 zhao end
-        this.$parent.$parent.messageDialogInfo.type = "1";
-        this.$parent.$parent.messageDialogInfo.stringParams = [messages];
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.type = "1";
+        this._indicationDialogOwner().messageDialogInfo.stringParams = [messages];
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         console.log("IndActionChart.vue updateInfo return; this.finishLoadingScreen();");
         this.finishLoadingScreen();
         // mod 10553 連携イベント発生部分不正 関  start
@@ -2688,14 +2678,14 @@ export default {
         // if ([22020003, 22020007, 22020008].includes(response.data.msgCd)) {
         //   this.$parent.$parent.messageDialogInfo.title = '変更確認';
         // }
-        this.$parent.$parent.messageDialogInfo.title = DIALOG_MESSAGES[response.data.msgCd].title;
+        this._indicationDialogOwner().messageDialogInfo.title = DIALOG_MESSAGES[response.data.msgCd].title;
         // mod 11169 治療時間を長時間として指示変更した場合に、ダミースケジュールの衝突があると、不正な治療時間で更新してしまう。 関 end
         // mod #8178 条件送信後に治療条件を変更した際のメッセージ不正 dou end
         // add FNSI-FutreNetWeb+SI課題管理No.4704 李 end
-        this.$parent.$parent.messageDialogInfo.messageCd = response.data.msgCd;
-        this.$parent.$parent.messageDialogInfo.type = "1";
-        this.$parent.$parent.messageDialogInfo.stringParams = [""];
-        this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+        this._indicationDialogOwner().messageDialogInfo.messageCd = response.data.msgCd;
+        this._indicationDialogOwner().messageDialogInfo.type = "1";
+        this._indicationDialogOwner().messageDialogInfo.stringParams = [""];
+        this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
         // 処理終了
         console.log("IndActionChart.vue updateInfo return; this.finishLoadingScreen();");
         this.finishLoadingScreen();
@@ -2865,7 +2855,7 @@ export default {
       console.log("IndActionChart.vue updateInfo this.finishLoadingScreen();");
       this.finishLoadingScreen();
       // モーダルを閉じる
-      this.$parent.$parent.$emit("hide-modal");
+      this._hideIndicationModal();
     },
 
     //add FNSI-障害票一覧_患者経過総合ビューア.xlsxのNo.56(外結)対応 韓 start
@@ -3077,9 +3067,9 @@ export default {
       });
       if (msg) {
         let rtn = false;
-        const parentObj = this.$parent.$parent;
+        const parentObj = this._indicationDialogOwner();
         // 処理中スクリーンを一旦解除
-        this.$parent.$parent.isUpdating = false;
+        this._indicationDialogOwner().isUpdating = false;
         await this.$ons.notification.confirm({
           // mod #6107 2023/03/22 メッセージボックス全調整 張博 start
           // title: "",
@@ -3123,7 +3113,7 @@ export default {
       })
       return isChange;
       // mod #10054 破棄確認・保存活性(複数変更含む)・削除対応#9809 20260210 huanshuai end
-      
+
       // const treatCondItems = this.$refs;
       // let editCount = 0;
       // Object.keys(treatCondItems).forEach(key => {
@@ -3216,9 +3206,9 @@ export default {
           messageType = "2";
         }
       }
-      this.$parent.$parent.messageDialogInfo.messageCd = messageCd;
-      this.$parent.$parent.messageDialogInfo.type = messageType;
-      this.$parent.$parent.messageDialogInfo.isDialogVisible = showMessage;
+      this._indicationDialogOwner().messageDialogInfo.messageCd = messageCd;
+      this._indicationDialogOwner().messageDialogInfo.type = messageType;
+      this._indicationDialogOwner().messageDialogInfo.isDialogVisible = showMessage;
       return showMessage;
     },
     //mod FNSI-改修内容 redmine 4880 4882 劉祥霖 end
@@ -3265,9 +3255,9 @@ export default {
           messageType = "2";
         }
       }
-      this.$parent.$parent.messageDialogInfo.messageCd = messageCd;
-      this.$parent.$parent.messageDialogInfo.type = messageType;
-      this.$parent.$parent.messageDialogInfo.isDialogVisible = showMessage;
+      this._indicationDialogOwner().messageDialogInfo.messageCd = messageCd;
+      this._indicationDialogOwner().messageDialogInfo.type = messageType;
+      this._indicationDialogOwner().messageDialogInfo.isDialogVisible = showMessage;
       return showMessage;
     },
     // add FNSI-改修内容 患者経過総合ビューアレイアウトマスタにて非表示とした場合の変更点 穆 start
@@ -3565,6 +3555,7 @@ export default {
               this. IPSpeedChange=true;
               }
             }
+            coagulantItemCont++;
             break;
           // #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng end
           case 26:
@@ -3579,6 +3570,7 @@ export default {
             // // 抗凝固剤持続総量表示の場合
             // this.accountItemCd = 1;
             // break;
+            /* falls through */
           case 31:
             // /**
             //  * 31->IPワンショット量
@@ -3591,6 +3583,7 @@ export default {
             //   this.accountItemCd = 4;
             // }
             // break;
+            /* falls through */
           case 32:
             // /**
             //  * 32->IP速度
@@ -3610,15 +3603,16 @@ export default {
             // }
             // break;
           //mod FNSI redmine 5161劉祥霖 end
-          case 25:
-
+          /* falls through */
           case 29:
           case 30:
           case 33:
           case 34:
+          /* falls through */
           // del #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng start
           // case 35:
           // del #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng end
+          /* falls through */
           case 37:
           case 38:
             /**
@@ -3646,54 +3640,54 @@ export default {
       // 血流量
       //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 start
       //if (itemMsgCd_14 !== '') {
-      if (itemMsgCd_14 !== '' && this.$parent.$parent.itemMsgCd14Flg) {
+      if (itemMsgCd_14 !== '' && this._indicationResultOwner().itemMsgCd14Flg) {
       //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
         itemMsgCd_14 = await this.getItemMsgCd(structData, itemNumber_14, null, itemMsgCd_14);
         if ('Key_14_HDF' === itemMsgCd_14) {
           //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 start
           //this.$parent.$parent.messageDialogInfo.messageCd = "00400011";
           //this.$parent.$parent.messageDialogInfo.type = "1";
-          this.$parent.$parent.messageDialogInfo.title = "血流量上限チェック"
-          this.$parent.$parent.messageDialogInfo.messageCd = 10400011;
-          this.$parent.$parent.messageDialogInfo.type = "2";
+          this._indicationDialogOwner().messageDialogInfo.title = "血流量上限チェック"
+          this._indicationDialogOwner().messageDialogInfo.messageCd = 10400011;
+          this._indicationDialogOwner().messageDialogInfo.type = "2";
           //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
           return true;
         }
       }
       // 透析液温度
       //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 start
       //if (itemMsgCd_18 !== '') {
-      if (itemMsgCd_18 !== '' && this.$parent.$parent.itemMsgCd18Flg) {
+      if (itemMsgCd_18 !== '' && this._indicationResultOwner().itemMsgCd18Flg) {
         //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
         itemMsgCd_18 = await this.getItemMsgCd(structData, itemNumber_18, null, itemMsgCd_18);
         if ('Key_18_HDF' === itemMsgCd_18) {
           //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 start
           //this.$parent.$parent.messageDialogInfo.messageCd = "00400012";
           //this.$parent.$parent.messageDialogInfo.type = "1";
-          this.$parent.$parent.messageDialogInfo.messageCd = 10400012;
+          this._indicationDialogOwner().messageDialogInfo.messageCd = 10400012;
           // mod FNSI-FutreNetWeb+SI課題管理No.5528 李 start
           // this.$parent.$parent.messageDialogInfo.title = "透析液温度上限チェック"
-          this.$parent.$parent.messageDialogInfo.title = "透析液温度の確認"
+          this._indicationDialogOwner().messageDialogInfo.title = "透析液温度の確認"
           // mod FNSI-FutreNetWeb+SI課題管理No.5528 李 end
-          this.$parent.$parent.messageDialogInfo.type = "2";
+          this._indicationDialogOwner().messageDialogInfo.type = "2";
           //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
           return true;
         }
       }
       // 補液量
       //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 start
       //if (itemMsgCd_20 !== '') {
-      if (itemMsgCd_20 !== '' && this.$parent.$parent.itemMsgCd20Flg) {
-        this.$parent.$parent.messageDialogInfo.title = "補液量上限チェック"
+      if (itemMsgCd_20 !== '' && this._indicationResultOwner().itemMsgCd20Flg) {
+        this._indicationDialogOwner().messageDialogInfo.title = "補液量上限チェック"
       //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
         if ('Key_20_HDF' === itemMsgCd_20) {
           //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 start
           //this.$parent.$parent.messageDialogInfo.messageCd = "00400008";
           //this.$parent.$parent.messageDialogInfo.type = "1";
-          this.$parent.$parent.messageDialogInfo.messageCd = 10400008;
-          this.$parent.$parent.messageDialogInfo.type = "2";
+          this._indicationDialogOwner().messageDialogInfo.messageCd = 10400008;
+          this._indicationDialogOwner().messageDialogInfo.type = "2";
           //mod FNSI-5532 劉全航 start
           let stringParams = structData.initTreatOptions[0].text;
           let length = structData.initTreatOptions.length;
@@ -3702,10 +3696,10 @@ export default {
               stringParams = stringParams.concat("、", structData.initTreatOptions[i].text);
             }
           }
-          this.$parent.$parent.messageDialogInfo.stringParams = [stringParams];
+          this._indicationDialogOwner().messageDialogInfo.stringParams = [stringParams];
           //mod FNSI-5532 劉全航 end
           //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
           return true;
         } else if ('Key_20_OHDF' === itemMsgCd_20) {
           itemMsgCd_20 = await this.getItemMsgCd(structData, itemNumber_20, null, itemMsgCd_20);
@@ -3713,8 +3707,8 @@ export default {
             //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 start
             //this.$parent.$parent.messageDialogInfo.messageCd = "00400009";
             //this.$parent.$parent.messageDialogInfo.type = "1";
-            this.$parent.$parent.messageDialogInfo.messageCd = 10400009;
-            this.$parent.$parent.messageDialogInfo.type = "2";
+            this._indicationDialogOwner().messageDialogInfo.messageCd = 10400009;
+            this._indicationDialogOwner().messageDialogInfo.type = "2";
             //mod FNSI-5532 劉全航 start
             let stringParams = structData.initTreatOptions[0].text;
             let length = structData.initTreatOptions.length;
@@ -3723,10 +3717,10 @@ export default {
                 stringParams = stringParams.concat("、", structData.initTreatOptions[i].text);
               }
             }
-            this.$parent.$parent.messageDialogInfo.stringParams = [stringParams];
+            this._indicationDialogOwner().messageDialogInfo.stringParams = [stringParams];
             //mod FNSI-5532 劉全航 end
             //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
-            this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+            this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
             return true;
           }
         }
@@ -3748,7 +3742,7 @@ export default {
 
       // mod FNSI-FutreNetWeb+SI課題管理No.4642 李 start
       // if (itemMsgCd_24 !== '' && itemNumber_21 !== null && this.$parent.$parent.itemMsgCd24Flg) {
-      if (itemMsgCd_24 !== '' && chooseValue !== null && this.$parent.$parent.itemMsgCd24Flg) {
+      if (itemMsgCd_24 !== '' && chooseValue !== null && this._indicationResultOwner().itemMsgCd24Flg) {
         //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
         itemMsgCd_24 = await this.getItemMsgCd(structData, itemNumber_24, chooseValue, itemMsgCd_24);
         if ('Key_24_SPEED' === itemMsgCd_24) {
@@ -3758,13 +3752,13 @@ export default {
           // add FNSI-FutreNetWeb+SI課題管理No.5528 李 start
           // upd No.8812 補液速度が補液速度上限を超えた時のメッセージNG 20230609 ztc start
           // this.$parent.$parent.messageDialogInfo.title = "補液速度の確認"
-          this.$parent.$parent.messageDialogInfo.title = "補液速度上限チェック"
+          this._indicationDialogOwner().messageDialogInfo.title = "補液速度上限チェック"
           // upd No.8812 補液速度が補液速度上限を超えた時のメッセージNG 20230609 ztc end
           // add FNSI-FutreNetWeb+SI課題管理No.5528 李 end
-          this.$parent.$parent.messageDialogInfo.messageCd = 10400010;
-          this.$parent.$parent.messageDialogInfo.type = "2";
+          this._indicationDialogOwner().messageDialogInfo.messageCd = 10400010;
+          this._indicationDialogOwner().messageDialogInfo.type = "2";
           //mod FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.97(外結)対応 韓 end
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
           return true;
         }
       }
@@ -3833,7 +3827,7 @@ export default {
           this.itemDisplayFlg = true;
         // #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng start
         // }else if (this.IPOneShotAmountChange==true) {
-        }else if (this.IPOneShotAmountChange==true && this.facilitySettingAnticoagulantAutoValue === 1) {
+        }else if (this.IPSpeedChange==true && this.facilitySettingAnticoagulantAutoValue === 1) {
         // #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng end
           showMessage = true;
           messageCd = 10400005;
@@ -3856,9 +3850,9 @@ export default {
         //}
 
         if (messageCd !== null) {
-          this.$parent.$parent.messageDialogInfo.messageCd = messageCd;
-          this.$parent.$parent.messageDialogInfo.type = messageType;
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = showMessage;
+          this._indicationDialogOwner().messageDialogInfo.messageCd = messageCd;
+          this._indicationDialogOwner().messageDialogInfo.type = messageType;
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = showMessage;
           return true;
         // del FNSI-改修内容 補液量、補液速度、血流量、透析温度のチェックを追加 穆 start
         // } else {
@@ -4006,8 +4000,7 @@ export default {
             getErrorMessage('IndActionChart.vue', 'getItemMsgCd', error);
             //FNSI-修正 VUEのエラー場合のログ対応 xiebzh add end
             throw new Error(error);
-          }
-        );
+          });
 
       if (!deviceSetInfo) {
         return '';
@@ -4181,7 +4174,7 @@ export default {
         // mod FNSI-FutreNetWeb+SI課題管理No.4642 李 start
         // } else if (key === '396') {
             // upd No.8812 補液速度が補液速度上限を超えた時のメッセージNG 20230609 ztc start
-        } else if (key === '396' && 'Key_24_OHDF' === itemMsgCd && itemNumber_21 == '1' ) {// mod #9973 value Number→文字列  shiyw
+        } else if (key === '396' && 'Key_24_OHDF' === itemMsgCd && itemNumber_21 == '1') {// mod #9973 value Number→文字列  shiyw
           // upd No.8812 補液速度が補液速度上限を超えた時のメッセージNG 20230609 ztc end
           itemOHDF_24_Max = healthmonFacilityConn[key];
           // 補液量設定算出の場合
@@ -4255,10 +4248,10 @@ export default {
         // IP電源OKモニタ切時間
         const ipMonitorOffTiming = indInfo["38"].value;
         if (ipAutoOffTiming > ipMonitorOffTiming) {
-          this.$parent.$parent.messageDialogInfo.messageCd = 50000002;
-          this.$parent.$parent.messageDialogInfo.type = "1";
-          this.$parent.$parent.messageDialogInfo.isDialogVisible = true;
-          this.$parent.$parent.messageDialogInfo.stringParams = [
+          this._indicationDialogOwner().messageDialogInfo.messageCd = 50000002;
+          this._indicationDialogOwner().messageDialogInfo.type = "1";
+          this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
+          this._indicationDialogOwner().messageDialogInfo.stringParams = [
             "「IP電源OKモニタ切り時間」",
             "「IP電源自動切り時間」"
           ];
@@ -4269,21 +4262,21 @@ export default {
     },
 
     hasIP(indInfo) {
-      const IP35 = _.has(indInfo, "35");
-      const IP36 = _.has(indInfo, "36");
-      const IP37 = _.has(indInfo, "37");
-      const IP38 = _.has(indInfo, "38");
+      const IP35 = Object.prototype.hasOwnProperty.call(indInfo, "35");
+      const IP36 = Object.prototype.hasOwnProperty.call(indInfo, "36");
+      const IP37 = Object.prototype.hasOwnProperty.call(indInfo, "37");
+      const IP38 = Object.prototype.hasOwnProperty.call(indInfo, "38");
       return IP35 && IP36 && IP37 && IP38;
     },
 
     // add 11790 抗凝固剤持続総量の計算をするとマイナスになる事がある zkm start
     hasAntiCoagulantAmountTotal(indInfo) {
-      const IP1 = _.has(indInfo, "1");
+      const IP1 = Object.prototype.hasOwnProperty.call(indInfo, "1");
       // add 12183 特定の治療方法で治療時間を変更すると処理中のままになる zkm start
-      const IP29 = _.has(indInfo, "29");
+      const IP29 = Object.prototype.hasOwnProperty.call(indInfo, "29");
       // add 12183 特定の治療方法で治療時間を変更すると処理中のままになる zkm end
-      const IP35 = _.has(indInfo, "35");
-      const IP36 = _.has(indInfo, "36");
+      const IP35 = Object.prototype.hasOwnProperty.call(indInfo, "35");
+      const IP36 = Object.prototype.hasOwnProperty.call(indInfo, "36");
       // mod 12183 特定の治療方法で治療時間を変更すると処理中のままになる zkm start
       // return IP35 || IP36 || IP1;
       return IP35 || IP36 || IP1 || IP29;
@@ -4292,22 +4285,22 @@ export default {
 
     validateAntiCoagulantAmountTotal(indInfo, indCondInfo) {
       // add 12183 特定の治療方法で治療時間を変更すると処理中のままになる zkm start
-      if (!_.has(indInfo, "29") && !_.has(indCondInfo, "29")) {
+      if (!Object.prototype.hasOwnProperty.call(indInfo, "29") && !Object.prototype.hasOwnProperty.call(indCondInfo, "29")) {
         return false;
       }
       // add 12183 特定の治療方法で治療時間を変更すると処理中のままになる zkm end
-      const statusAutoOff = _.has(indInfo, "35") ? indInfo["35"].value : indCondInfo["35"].value;
+      const statusAutoOff = Object.prototype.hasOwnProperty.call(indInfo, "35") ? indInfo["35"].value : indCondInfo["35"].value;
       // add 11943 抗凝固剤治療指示のバグ修正 追加 zkm start
-      const statusIpUseOff = _.has(indInfo, "29") ? indInfo["29"].value : indCondInfo["29"].value;
+      const statusIpUseOff = Object.prototype.hasOwnProperty.call(indInfo, "29") ? indInfo["29"].value : indCondInfo["29"].value;
       // add 11943 抗凝固剤治療指示のバグ修正 追加 zkm end
       // 「1: 入り」なら
       // mod 11943 抗凝固剤治療指示のバグ修正 追加 zkm start
       // if (statusAutoOff === '1') {
       if (statusAutoOff === '1' && statusIpUseOff === '1') {
         // mod 11943 抗凝固剤治療指示のバグ修正 追加 zkm end
-        const treatTime = _.has(indInfo, "1") ? indInfo["1"].value : indCondInfo["1"].value;
+        const treatTime = Object.prototype.hasOwnProperty.call(indInfo, "1") ? indInfo["1"].value : indCondInfo["1"].value;
         // IP電源自動切り時間
-        const ipAutoOffTiming = _.has(indInfo, "36") ? indInfo["36"].value : indCondInfo["36"].value;
+        const ipAutoOffTiming = Object.prototype.hasOwnProperty.call(indInfo, "36") ? indInfo["36"].value : indCondInfo["36"].value;
         return accSub(treatTime, ipAutoOffTiming) <= 0;
       }
       return false;
@@ -4331,8 +4324,7 @@ export default {
         devInfoPat === "" ||
         devInfoPat === null ||
         devInfoOrd === "" ||
-        devInfoOrd === null
-      ) {
+        devInfoOrd === null) {
         throw new Error("装置設定がnullです");
       }
 
@@ -4409,7 +4401,7 @@ export default {
         this.setOhdfCommentIsShow(false);
         if (structData.selectedTreat.length ===1){
           let selectedTreat = structData["treatOptions"].find(element => element.value === structData.selectedTreat[0]);
-          if (selectedTreat.text === "OHDF" && this.$parent.$parent.supplyLiquidSpeedFlg){
+          if (selectedTreat.text === "OHDF" && this._indicationResultOwner().supplyLiquidSpeedFlg){
             this.setOhdfCommentIsShow(true);
            }
         }
@@ -4421,7 +4413,7 @@ export default {
     async getSupplyLiquidSpeedSettingValue() {
       getMstFacilitySettingValue(this.facilityCd, REPLENISHER_QDQS_SETTING)
         .then(response => {
-          this.$parent.$parent.supplyLiquidSpeedFlg = response.data === 1;
+          this._indicationResultOwner().supplyLiquidSpeedFlg = response.data === 1;
         });
 
     }
@@ -4441,7 +4433,7 @@ export default {
     // #10247 施設設定マスタの設定にかかわらず、総量計算がされず、動作が正しくない linjunfeng end
     await this.getSupplyLiquidSpeedSettingValue();
     // add FNSI-【1006】最新の改修対象一覧の483対応 韓 start
-    this.$parent.$parent.isIndActionChart = true;
+    this._indicationResultOwner().isIndActionChart = true;
     // add FNSI-【1006】最新の改修対象一覧の483対応 韓 end
 
     switch (this.settingIndData.headerTitle) {
@@ -4460,7 +4452,7 @@ export default {
       case "目標体重編集":
       case "除水量制限編集":
         //FNSI-修正 #5525 横展開対応、xugj add start
-        this.$parent.$parent.isSendNextPatInfoFlg = true;
+        this._indicationResultOwner().isSendNextPatInfoFlg = true;
         //FNSI-修正 #5525 横展開対応、xugj add end
         break;
       default:
@@ -4472,9 +4464,10 @@ export default {
       case "治療条件":
       case "治療条件編集":
         //add 8485 2023-03-25透析治療で治療時間を10時間より大きい数値を入力しても注意喚起メッセージが表示されない 張 start
+        /* falls through */
       case "治療時間編集":
         //add 8485 2023-03-25透析治療で治療時間を10時間より大きい数値を入力しても注意喚起メッセージが表示されない 張 end
-        this.$parent.$parent.isTreatTimeSettingFlg = true;
+        this._indicationResultOwner().isTreatTimeSettingFlg = true;
         break;
       default:
         break;
@@ -4502,25 +4495,25 @@ export default {
   box-sizing: border-box;
 }
 
-.column-style >>> .custom-div-show-selected-item{
+.column-style :deep(.custom-div-show-selected-item){
   width: 100%;
   max-width: 400px;
 }
 
-.column-style >>> .action-condition-column {
+.column-style :deep(.action-condition-column) {
   flex: 0 0 calc(12em);
   max-width: 100%;
   width: 100%;
 }
 
 @media screen and (max-width: 660px) {
-  .column-style >>> .action-condition-column {
+  .column-style :deep(.action-condition-column) {
     flex: none;
     max-width: 100%;
     width: -webkit-fill-available;
   }
 
-  .column-style >>> .action-condition-data-column {
+  .column-style :deep(.action-condition-data-column) {
     padding-left: 0;
   }
 }

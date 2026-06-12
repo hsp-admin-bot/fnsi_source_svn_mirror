@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
 /**
@@ -132,6 +133,13 @@ public class PrinterResource {
     @AuthenticationPrincipal NtssUser ntssUser,
     @PathVariable(name = "facilityCd", required = true) String facilityCd
   ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
 
     // ログ出力
     EventLogMessage eventLogMessage = new EventLogMessage();
@@ -164,7 +172,18 @@ public class PrinterResource {
    * @return
    */
   @GetMapping("/printer-date/{facilityCd}")
-  public ResponseEntity<?> getPrinters(@PathVariable String facilityCd) {
+  public ResponseEntity<?> getPrinters(@PathVariable String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
+  ) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 start
+    if (!ntssUser.isNkkAdminUser() && facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260421 end
     try {
       List<jp.co.nikkiso.ntss.core.entity.MstPrinter> printers = mstDao.getPrinters(facilityCd);
       return new ResponseEntity<>(printers, HttpStatus.OK);

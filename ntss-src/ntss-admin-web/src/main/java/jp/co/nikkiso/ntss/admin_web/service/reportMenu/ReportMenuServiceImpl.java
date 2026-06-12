@@ -1,8 +1,8 @@
 package jp.co.nikkiso.ntss.admin_web.service.reportMenu;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.google.common.base.Objects;
 import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.FindIterable;
@@ -144,6 +144,7 @@ import static com.mongodb.client.model.Filters.in;
 import static com.mongodb.client.model.Filters.lt;
 import static com.mongodb.client.model.Sorts.descending;
 import static java.util.stream.Collectors.toList;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
 
 //add #9058【IES起票】状況マップ画面にて単患者帳票機能帳票印刷後線とプレビューが不一致 liuc start
@@ -6699,6 +6700,10 @@ public class ReportMenuServiceImpl implements ReportMenuService {
    */
   @Autowired
   private BaseEntityDao baseEntityDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   // TODO ■■
   /**
    * データセット（mongoDB）のインタフェース (並び替え処理用).
@@ -6970,7 +6975,7 @@ public class ReportMenuServiceImpl implements ReportMenuService {
         if (item.keySet().contains(CoreConstant.ReportMenu.DIALYSIS_DAY)) {
 // mod #9323 donghao start
 //          // 透析日データを取得 ( 透析日は、開始日～終了日で検索し、開始日に近いほうのデータを使用してソートを行う )
-//          Config config = Config.get(baseEntityDao);
+//          Config config = defaultDbConfig;
 //          SelectBuilder builder = SelectBuilder.newInstance(config);
 //          builder.sql("select pat_id, min(treat_date) as treat_date from ord_main where pat_id in (");
 //          for (Long patId : patIdList) {
@@ -6993,7 +6998,7 @@ public class ReportMenuServiceImpl implements ReportMenuService {
 //          }
           if (reportMenu.getIsDialysisDate()) {
             // 透析日データを取得 ( 透析日は、開始日～終了日で検索し、開始日に近いほうのデータを使用してソートを行う )
-            Config config = Config.get(baseEntityDao);
+            Config config = defaultDbConfig;
             SelectBuilder builder = SelectBuilder.newInstance(config);
             builder.sql("select pat_id, min(treat_date) as treat_date from ord_main where pat_id in (");
             for (Long patId : patIdList) {
@@ -10209,7 +10214,7 @@ public class ReportMenuServiceImpl implements ReportMenuService {
 
       if (item.keySet().contains(CoreConstant.ReportMenu.DIALYSIS_DAY)) {
 
-        Config config = Config.get(baseEntityDao);
+        Config config = defaultDbConfig;
         SelectBuilder builder = SelectBuilder.newInstance(config);
         builder.sql("select pat_id, min(treat_date) as treat_date from ord_main where pat_id in (");
         for (Object patId : repeatPatId) {
@@ -14816,7 +14821,7 @@ public class ReportMenuServiceImpl implements ReportMenuService {
         if(reportCd.toString().equals(reportCdDb.asText())){
           editPatEventList.add(patEvent);
         }
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         throw new RuntimeException(e);
       }
     }

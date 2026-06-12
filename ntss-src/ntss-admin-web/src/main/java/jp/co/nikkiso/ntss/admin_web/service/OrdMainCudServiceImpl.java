@@ -1,6 +1,23 @@
 package jp.co.nikkiso.ntss.admin_web.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import jp.co.nikkiso.ntss.core.entity.EquipmentLatestNo;
+import jp.co.nikkiso.ntss.core.entity.MstDialyzer;
+import jp.co.nikkiso.ntss.core.entity.MstEquipment;
+import jp.co.nikkiso.ntss.core.entity.MstEquipmentClass;
+import jp.co.nikkiso.ntss.core.entity.MstMedicateTiming;
+import jp.co.nikkiso.ntss.core.entity.MstMedicine;
+import jp.co.nikkiso.ntss.core.entity.MstMedicineClass;
+import jp.co.nikkiso.ntss.core.entity.MstMedicineMix;
+import jp.co.nikkiso.ntss.core.entity.MstPersonalUser;
+import jp.co.nikkiso.ntss.core.entity.MstProcedure;
+import jp.co.nikkiso.ntss.core.entity.MstTabooAllergy;
+import jp.co.nikkiso.ntss.core.entity.MstTreatment;
+import jp.co.nikkiso.ntss.core.entity.OrdMain;
+import jp.co.nikkiso.ntss.core.entity.OrdMaterialSave;
+import jp.co.nikkiso.ntss.core.entity.PatIndApprove;
+import jp.co.nikkiso.ntss.core.entity.PatMain;
+import jp.co.nikkiso.ntss.core.entity.PatPersonalMain;
+import tools.jackson.databind.ObjectMapper;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant;
 import jp.co.nikkiso.ntss.admin_web.request.patientCapture.JournalCreateRequestPayload;
 import jp.co.nikkiso.ntss.admin_web.response.ordMain.JournalCreateRequestResponse;
@@ -43,7 +60,6 @@ import jp.co.nikkiso.ntss.core.dao.SysCoopJournalDao;
 import jp.co.nikkiso.ntss.core.dto.OrdMain.OrdMainMedicineDelete;
 import jp.co.nikkiso.ntss.core.dto.OrdMain.OrdMainRequest;
 import jp.co.nikkiso.ntss.core.dto.OrdMain.UpdateOrdMainMediInfoDTO;
-import jp.co.nikkiso.ntss.core.entity.*;
 import jp.co.nikkiso.ntss.core.entity.custom.EquipCodeAndType;
 import jp.co.nikkiso.ntss.core.entity.custom.FacilitySettingInfo;
 import jp.co.nikkiso.ntss.core.logevent.DataUpdateLogCommonNew;
@@ -68,7 +84,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.net.URISyntaxException;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
@@ -89,6 +105,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 @Service
 public class OrdMainCudServiceImpl implements OrdMainCudService {
@@ -213,6 +230,10 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
 
   @Autowired
   private PatMainDao patMainDao;
+
+  @Autowired
+  @DefaultDb
+  private Config defaultDbConfig;
   //add #10659 【00】禁忌、アレルギー、削除済み、分類不一致、期限切れ、削除済み含むの接頭文字対応 zhaoqi 20240913 end
 
   // add #8315 ord_material_save.supplies_cd, supplies_class_medicine_mix_cdの登録・更新不正 dou start
@@ -256,7 +277,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end.setLogMessage(ExcetionStackTraceToString(e));
       logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
       JournalCreateRequestResponse response = new JournalCreateRequestResponse();
-      response.setResponse(new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR));
+      response.setResponse(new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR));
       response.setCtlNoList(ctlNoList);
       return response;
     }
@@ -600,7 +621,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
         logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
         JournalCreateRequestResponse response = new JournalCreateRequestResponse();
-        response.setResponse(new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR));
+        response.setResponse(new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR));
         response.setCtlNoList(ctlNoList);
         return response;
       }
@@ -913,7 +934,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
       // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
       logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
       JournalCreateRequestResponse response = new JournalCreateRequestResponse();
-      response.setResponse(new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR));
+      response.setResponse(new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR));
       response.setCtlNoList(ctlNoList);
       return response;
     }
@@ -1109,7 +1130,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
         // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260407 mod yangxuewang end
         logService.log(LogLevel.ERROR, eventLogMessage, "", SERVICE_NAME.FNSI, null);
         JournalCreateRequestResponse response = new JournalCreateRequestResponse();
-        response.setResponse(new ResponseEntity<>("DBの更新に失敗しました。", null, HttpStatus.INTERNAL_SERVER_ERROR));
+        response.setResponse(new ResponseEntity<>("DBの更新に失敗しました。", (org.springframework.http.HttpHeaders) null, HttpStatus.INTERNAL_SERVER_ERROR));
         response.setCtlNoList(ctlNoList);
         return response;
       }
@@ -1401,7 +1422,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
     JSONObject responseData = new JSONObject("{}");
     if(ordMain.isEmpty()){
       JournalCreatecallNextPatIdRequestResponse response = new JournalCreatecallNextPatIdRequestResponse();
-      response.setResponse(new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK));
+      response.setResponse(new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK));
       response.setCtlNoList(ctlNoList);
       response.setCallNextPatList(nextPatList);
       return response;
@@ -1918,7 +1939,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
 
     if(editedOrdMainSize == 0){
       JournalCreatecallNextPatIdRequestResponse response = new JournalCreatecallNextPatIdRequestResponse();
-      response.setResponse(new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK));
+      response.setResponse(new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK));
       response.setCtlNoList(ctlNoList);
       response.setCallNextPatList(nextPatList);
       return response;
@@ -2046,7 +2067,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
 
 //del 8190 投与薬剤編集画面で2剤以上の薬剤追加を行うと連携イベントの登録が行われない start
 //    if (firstBodyData.getHosp_pat_id() == null || "".equals(firstBodyData.getHosp_pat_id())) {
-//      return new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK);
+//      return new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK);
 //    }
 //del 8190 投与薬剤編集画面で2剤以上の薬剤追加を行うと連携イベントの登録が行われない end
 
@@ -2161,7 +2182,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
       }
     }
     JournalCreatecallNextPatIdRequestResponse response = new JournalCreatecallNextPatIdRequestResponse();
-    response.setResponse(new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK));
+    response.setResponse(new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK));
     response.setCtlNoList(ctlNoList);
     response.setCallNextPatList(nextPatList);
     return response;
@@ -2215,7 +2236,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
     JSONObject responseData = new JSONObject("{}");
     if(ordMain.isEmpty()){
       JournalCreatecallNextPatIdRequestResponse response = new JournalCreatecallNextPatIdRequestResponse();
-      response.setResponse(new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK));
+      response.setResponse(new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK));
       response.setCtlNoList(ctlNoList);
       response.setCallNextPatList(nextPatList);
       return response;
@@ -2742,7 +2763,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
 
     if (bodyData.getHosp_pat_id() == null || "".equals(bodyData.getHosp_pat_id())) {
       JournalCreatecallNextPatIdRequestResponse response = new JournalCreatecallNextPatIdRequestResponse();
-      response.setResponse(new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK));
+      response.setResponse(new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK));
       response.setCtlNoList(ctlNoList);
       response.setCallNextPatList(nextPatList);
       return response;
@@ -2851,7 +2872,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
       }
     }
     JournalCreatecallNextPatIdRequestResponse response = new JournalCreatecallNextPatIdRequestResponse();
-    response.setResponse(new ResponseEntity<>(responseData.toString(), null, HttpStatus.OK));
+    response.setResponse(new ResponseEntity<>(responseData.toString(), (org.springframework.http.HttpHeaders) null, HttpStatus.OK));
     response.setCtlNoList(ctlNoList);
     response.setCallNextPatList(nextPatList);
     //mod 7213 2023-03-25 治療途中に追加した薬剤の投与タイミング通知が装置に表示されない 張 end
@@ -4046,7 +4067,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
     wheres.append(" WHERE\n");
     wheres.append(" ord_no = " + ord.getOrdNo() + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -4152,7 +4173,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
     wheres.append(inStr + "\n");
 //    wheres.append(" ord_no = " + ord.getOrdNo() + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -4292,7 +4313,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
     if (updateCount > 0) {
       tableName = "pat_ind_approve";
       // logCommon設定
-      DataUpdateLogCommonNew patIndApprovelogCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew patIndApprovelogCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean patIndApproveSetResult = patIndApprovelogCommon.setInfo();
 
@@ -4356,7 +4377,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
     wheres.append(" WHERE\n");
     wheres.append(" ord_no = " + ord_no + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -4400,7 +4421,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
     wheres.append(" WHERE\n");
     wheres.append(inStr + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -4439,7 +4460,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
       /* modify by chamaojia 2023-03-27 ログ補完 --start */
       tableName = "pat_ind_approve";
       // logCommon設定
-      DataUpdateLogCommonNew patIndApprovelogCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew patIndApprovelogCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean patIndApproveSetResult = patIndApprovelogCommon.setInfo();
 
@@ -4508,7 +4529,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
     wheres.append(" WHERE\n");
     wheres.append(" ord_no = " + ord_no + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -4553,7 +4574,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
     wheres.append(" WHERE\n");
     wheres.append(inStr + "\n");
     // logCommon設定
-    DataUpdateLogCommonNew logCommon = getLogCommon(ordMainDao, tableName, wheres, getEventLogMessage());
+    DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
     // ログ出力カラム情報及び更新前データ情報取得
     boolean setResult = logCommon.setInfo();
     // DB更新ログ出力ロジック wangzuo End
@@ -4588,7 +4609,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
     if (0 != updateCount) {
       tableName = "pat_ind_approve";
       // logCommon設定
-      DataUpdateLogCommonNew patIndApprovelogCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew patIndApprovelogCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean patIndApproveSetResult = patIndApprovelogCommon.setInfo();
 
@@ -4713,7 +4734,7 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
       wheres.append(" WHERE\n");
       wheres.append(inStr + "\n");
       // logCommon設定
-      DataUpdateLogCommonNew logCommon = getLogCommon(patIndApproveDao, tableName, wheres, getEventLogMessage());
+      DataUpdateLogCommonNew logCommon = getLogCommon(tableName, wheres, getEventLogMessage());
       // ログ出力カラム情報及び更新前データ情報取得
       boolean setResult = logCommon.setInfo();
       // DB更新ログ出力ロジック wangzuo End
@@ -4760,11 +4781,11 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
    *
    * @return logCommon ログ出力共通クラス
    */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
+  private DataUpdateLogCommonNew getLogCommon(String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
     DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
     logCommon.setEventLoggerFactory(eventLoggerFactory);
     logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
+    logCommon.setConfig(defaultDbConfig);
     logCommon.setTableName(tableName);
     logCommon.setWhereStr(whereStr);
     logCommon.setCommonEventLogMessage(eventLogMessage);
@@ -4798,8 +4819,8 @@ public class OrdMainCudServiceImpl implements OrdMainCudService {
    * @param setMedi    投与薬剤情報
    */
   private List<OrdMaterialSave> createMediOrdMaterialSaveObj(String indRstClass, ApiEntityOrdMain.ValiOrdMaterialSave conditions,
-                                               JSONArray setMedi, List<Integer> editMediCodeList,
-                                               MasterCacheHandler masterCacheHandler) {
+                                                             JSONArray setMedi, List<Integer> editMediCodeList,
+                                                             MasterCacheHandler masterCacheHandler) {
     List<OrdMaterialSave> ordMaterialSaveList = new ArrayList<>();
     if (null == setMedi || setMedi.length() == 0) {
       return ordMaterialSaveList;

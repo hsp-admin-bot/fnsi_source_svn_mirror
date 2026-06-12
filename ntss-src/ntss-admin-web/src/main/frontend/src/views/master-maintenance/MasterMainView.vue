@@ -3,7 +3,9 @@
  */
  <template>
    <ntss-layout>
-     <main-component slot='main-content' ref='mainComponent' :history-key="historyKey" />
+     <template #main-content>
+       <main-component ref="mainComponent" :history-key="historyKey" />
+     </template>
    </ntss-layout>
  </template>
 
@@ -26,7 +28,7 @@ export default {
 };
 </script>
 <style scoped>
-::v-deep .k-grid-header {
+:deep(.k-grid-header) {
   border: solid 1px var(--ntss-list-border-color);
   color: #fff;
   background-color: var(--ntss-list-header-background-color);

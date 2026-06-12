@@ -34,7 +34,7 @@
       </v-ons-row>
     </div>
     <v-ons-popover cancelable
-                   :visible.sync='popoverVisible'
+                   v-model:visible='popoverVisible'
                    :target='popoverTarget'
                    :direction='popoverDirection'
                    :cover-target=false
@@ -46,7 +46,7 @@
             <label>部署符号</label>
           </v-ons-col>
           <v-ons-col width='60%' vertical-align='center'>
-            <v-ons-select float v-model='inProgressCondition.departmentCd'>
+            <v-ons-select v-model='inProgressCondition.departmentCd'>
               <!-- mod FNSI redmine #4243 修正 鄧シン start -->
               <!-- <option>-</option> -->
               <option></option>
@@ -61,7 +61,7 @@
             <label>都道府県</label>
           </v-ons-col>
           <v-ons-col width='60%' vertical-align='center'>
-            <v-ons-select float v-model='inProgressCondition.prefName' style="display:">
+            <v-ons-select v-model='inProgressCondition.prefName' style="display:">
               <!-- mod FNSI redmine #4243 修正 鄧シン start -->
               <!-- <option>-</option> -->
               <option></option>
@@ -102,8 +102,8 @@
 
 <!-- スクリプト処理 -->
 <script>
-import { mapActions, mapGetters } from "vuex";
-import { EventBus } from "@/eventBus.js";
+import { mapActions, mapGetters } from "@/compat/vue/vuex";
+import { EventBus } from "@/compat/vue/event-bus.js";
 import PopoverMixin from "@/components/PopoverMixin";
 import {
   IS_ALARM_TEXT
